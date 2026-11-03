@@ -1,164 +1,196 @@
-/* NOX HELION · ModelCenter WOW v2 · Rule 10+10+10
-   Realism: obsidian/metal/glass, heat only on active surfaces, micro-texture
-   WOW: living scene, 8 cores coexist, events drive light, reactive glass
-   Cinema: slow drift, rack-focus, continuous navigation, readable always
+/* NOX HELION · ModelCenter WOW v3 · Harkonnen + Iron Man
+   Realism: obsidian metal, heat only on active surfaces, micro-texture
+   WOW: living scene, 8 cores, events drive light, reactive glass
+   Cinema: slow drift, rack-focus, continuous navigation
+   Sources: Material Symbols (Apache-2.0), pure CSS, Web Audio API
 */
 
 :root {
-  --obsidian: #07090d;
-  --lava: #ff5a1f;
-  --amber: #ffc06a;
-  --cyan: #6ad4ff;
-  --glass-bg: rgba(12, 14, 20, 0.62);
-  --glass-border: rgba(255, 190, 120, 0.28);
-  --text: #f0eee9;
-  --muted: #9a958e;
-  --shadow: 0 20px 60px rgba(0,0,0,0.55);
+  --obsidian: #05070b;
+  --lava: #ff4d1a;
+  --amber: #ffb86a;
+  --arc: #5ce1ff;
+  --glass-bg: rgba(10, 12, 18, 0.68);
+  --glass-border: rgba(255, 160, 80, 0.32);
+  --text: #f4f1ea;
+  --muted: #a39e96;
 }
 
 .nox-mc {
   position: relative;
   min-height: 100vh;
   background:
-    radial-gradient(ellipse 80% 50% at 50% 110%, #2a1006 0%, transparent 55%),
-    radial-gradient(circle at 20% 20%, rgba(40,20,10,0.3) 0%, transparent 40%),
+    radial-gradient(ellipse 90% 60% at 50% 115%, #1a0a04 0%, transparent 50%),
+    radial-gradient(circle at 15% 15%, rgba(30,15,8,0.35) 0%, transparent 35%),
     var(--obsidian);
   color: var(--text);
-  font-family: "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+  font-family: "Segoe UI Variable", system-ui, sans-serif;
   overflow: hidden;
+}
+
+/* 1. Material Symbols */
+.ms {
+  font-family: "Material Symbols Outlined";
+  font-weight: normal;
+  font-style: normal;
+  font-size: 1.15rem;
+  line-height: 1;
+  vertical-align: middle;
+  margin-right: 0.35rem;
+}
+
+/* 5. Holographic scanlines */
+.nox-scan {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0px,
+    transparent 2px,
+    rgba(0,0,0,0.12) 3px
+  );
+  mix-blend-mode: multiply;
+  opacity: 0.35;
 }
 
 /* Volumetric smoke */
 .nox-smoke {
   position: absolute;
-  inset: -10%;
+  inset: -15%;
   pointer-events: none;
   background:
-    radial-gradient(circle at 15% 100%, rgba(90,45,20,0.18) 0%, transparent 35%),
-    radial-gradient(circle at 85% 95%, rgba(70,35,15,0.14) 0%, transparent 40%),
-    radial-gradient(circle at 50% 105%, rgba(50,25,10,0.1) 0%, transparent 50%);
-  filter: blur(40px);
-  animation: smoke-rise 22s ease-in-out infinite alternate;
+    radial-gradient(circle at 20% 105%, rgba(80,35,15,0.2) 0%, transparent 32%),
+    radial-gradient(circle at 80% 100%, rgba(60,25,10,0.16) 0%, transparent 38%);
+  filter: blur(48px);
+  animation: smoke-rise 24s ease-in-out infinite alternate;
   mix-blend-mode: screen;
 }
 @keyframes smoke-rise {
-  0%   { transform: translateY(10px) scale(1); opacity: 0.5; }
-  100% { transform: translateY(-40px) scale(1.08); opacity: 0.8; }
+  0%   { transform: translateY(15px) scale(1); opacity: 0.45; }
+  100% { transform: translateY(-50px) scale(1.1); opacity: 0.75; }
 }
 
-/* Fire corona on primary buttons */
+/* 6. Plasma shell on buttons */
 .nox-btn-fire {
   position: relative;
-  background: linear-gradient(180deg, #2a1208 0%, #0d0604 100%);
-  border: 1px solid rgba(255,90,30,0.6);
+  background: linear-gradient(180deg, #241008 0%, #080402 100%);
+  border: 1px solid rgba(255,70,20,0.65);
   color: var(--amber);
-  padding: 0.75rem 1.6rem;
+  padding: 0.8rem 1.7rem;
   border-radius: 14px;
   overflow: hidden;
   isolation: isolate;
   cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
 }
 .nox-btn-fire:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 0 24px rgba(255,90,30,0.45);
+  transform: translateY(-2px);
+  box-shadow: 0 0 28px rgba(255,70,20,0.5), 0 0 8px var(--arc);
 }
 .nox-btn-fire::before {
   content: "";
   position: absolute;
-  inset: -60% -30%;
+  inset: -70% -40%;
   background:
-    radial-gradient(circle at 50% 80%, rgba(255,80,20,0.55) 0%, transparent 55%),
-    radial-gradient(circle at 30% 90%, rgba(255,140,40,0.3) 0%, transparent 45%);
-  animation: fire-corona 2.2s ease-in-out infinite;
+    radial-gradient(circle at 50% 85%, rgba(255,60,10,0.6) 0%, transparent 50%),
+    conic-gradient(from 0deg, transparent, rgba(90,225,255,0.15), transparent 30%);
+  animation: plasma 2.6s ease-in-out infinite;
   z-index: -1;
-  filter: blur(18px);
+  filter: blur(20px);
 }
-@keyframes fire-corona {
-  0%, 100% { transform: scale(0.85) rotate(-2deg); opacity: 0.45; }
-  50%      { transform: scale(1.2) rotate(2deg); opacity: 0.9; }
+@keyframes plasma {
+  0%, 100% { transform: scale(0.8) rotate(-3deg); opacity: 0.4; }
+  50%      { transform: scale(1.25) rotate(3deg); opacity: 0.95; }
 }
 
-/* Glass panel with inner light */
+/* Glass + 3. Heat traces */
 .nox-glass {
   background: var(--glass-bg);
-  backdrop-filter: blur(18px) saturate(1.5);
-  -webkit-backdrop-filter: blur(18px) saturate(1.5);
+  backdrop-filter: blur(20px) saturate(1.55);
+  -webkit-backdrop-filter: blur(20px) saturate(1.55);
   border: 1px solid var(--glass-border);
   border-radius: 18px;
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.1),
-    inset 0 -1px 0 rgba(255,100,30,0.05),
-    var(--shadow);
+    inset 0 1px 0 rgba(255,255,255,0.09),
+    0 18px 50px rgba(0,0,0,0.5);
   position: relative;
 }
-.nox-glass::after {
+.nox-glass::before {
   content: "";
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  background: linear-gradient(135deg, rgba(255,255,255,0.06) 0%, transparent 40%);
+  background: linear-gradient(115deg, transparent 40%, rgba(255,80,20,0.08) 50%, transparent 60%);
+  background-size: 200% 100%;
+  animation: heat-trace 8s linear infinite;
   pointer-events: none;
+  mix-blend-mode: screen;
+}
+@keyframes heat-trace {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
-/* Orbital system */
+/* 2. Arc Reactor style sun */
 .nox-orbits {
   position: relative;
-  width: 320px;
-  height: 320px;
-  margin: 1.5rem auto 2rem;
+  width: 340px;
+  height: 340px;
+  margin: 1.2rem auto 1.8rem;
 }
 .nox-sun {
   position: absolute;
-  inset: 32%;
+  inset: 30%;
   border-radius: 50%;
   background:
-    radial-gradient(circle at 40% 35%, #3a1a0a 0%, #0a0402 60%, #000 100%);
+    radial-gradient(circle at 38% 32%, #2a1208 0%, #050202 55%, #000 100%);
   box-shadow:
-    0 0 30px rgba(255,80,20,0.4),
-    inset 0 0 20px rgba(255,60,10,0.3);
-  animation: sun-breathe 7s ease-in-out infinite;
+    0 0 20px rgba(255,60,10,0.5),
+    0 0 40px rgba(90,225,255,0.15),
+    inset 0 0 18px rgba(255,40,0,0.4);
+  animation: sun-breathe 8s ease-in-out infinite;
 }
 .nox-sun::before {
   content: "";
   position: absolute;
-  inset: -18%;
+  inset: -22%;
   border-radius: 50%;
-  background: conic-gradient(from 0deg, transparent, rgba(255,100,30,0.25), transparent 40%);
-  animation: corona-spin 14s linear infinite;
-  filter: blur(8px);
+  background: conic-gradient(from 0deg, transparent 0%, rgba(255,80,20,0.3) 8%, transparent 16%, rgba(90,225,255,0.2) 50%, transparent 58%);
+  animation: corona-spin 16s linear infinite;
+  filter: blur(6px);
 }
 @keyframes sun-breathe {
-  0%, 100% { box-shadow: 0 0 25px rgba(255,80,20,0.3); }
-  50%      { box-shadow: 0 0 60px rgba(255,140,40,0.55); }
+  0%, 100% { box-shadow: 0 0 18px rgba(255,60,10,0.35), 0 0 30px rgba(90,225,255,0.1); }
+  50%      { box-shadow: 0 0 50px rgba(255,100,30,0.6), 0 0 25px rgba(90,225,255,0.25); }
 }
 @keyframes corona-spin { to { transform: rotate(360deg); } }
 
 .nox-core {
   position: absolute;
-  width: 26px;
-  height: 26px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, var(--amber), #4a2208 70%);
-  box-shadow: 0 0 14px var(--lava), inset 0 0 6px rgba(255,200,100,0.5);
-  animation: orbit 24s linear infinite;
+  background: radial-gradient(circle at 32% 28%, var(--amber), #3a1806 65%);
+  box-shadow: 0 0 12px var(--lava), 0 0 4px var(--arc);
+  animation: orbit 26s linear infinite;
 }
-.nox-core:nth-child(2) { animation-duration: 28s; animation-delay: -3s; }
-.nox-core:nth-child(3) { animation-duration: 20s; animation-delay: -7s; }
-.nox-core:nth-child(4) { animation-duration: 32s; animation-delay: -11s; }
-.nox-core:nth-child(5) { animation-duration: 22s; animation-delay: -15s; }
-.nox-core:nth-child(6) { animation-duration: 30s; animation-delay: -19s; }
-.nox-core:nth-child(7) { animation-duration: 26s; animation-delay: -23s; }
-.nox-core:nth-child(8) { animation-duration: 34s; animation-delay: -27s; }
+.nox-core:nth-child(2) { animation-duration: 30s; animation-delay: -4s; }
+.nox-core:nth-child(3) { animation-duration: 22s; animation-delay: -8s; }
+.nox-core:nth-child(4) { animation-duration: 34s; animation-delay: -12s; }
+.nox-core:nth-child(5) { animation-duration: 24s; animation-delay: -16s; }
+.nox-core:nth-child(6) { animation-duration: 32s; animation-delay: -20s; }
+.nox-core:nth-child(7) { animation-duration: 28s; animation-delay: -24s; }
+.nox-core:nth-child(8) { animation-duration: 36s; animation-delay: -28s; }
 @keyframes orbit {
-  from { transform: rotate(0deg) translateX(125px) rotate(0deg); }
-  to   { transform: rotate(360deg) translateX(125px) rotate(-360deg); }
+  from { transform: rotate(0deg) translateX(132px) rotate(0deg); }
+  to   { transform: rotate(360deg) translateX(132px) rotate(-360deg); }
 }
 
-/* Progress with heat glow */
+/* Progress */
 .nox-progress {
-  height: 7px;
-  background: rgba(255,255,255,0.07);
+  height: 8px;
+  background: rgba(255,255,255,0.06);
   border-radius: 4px;
   overflow: hidden;
   position: relative;
@@ -167,49 +199,50 @@
   display: block;
   height: 100%;
   width: 0%;
-  background: linear-gradient(90deg, #4a1a08, var(--lava) 40%, var(--amber) 70%, #fff8 100%);
-  box-shadow: 0 0 12px var(--lava);
-  transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  background: linear-gradient(90deg, #3a1206, var(--lava) 35%, var(--amber) 65%, #fff 100%);
+  box-shadow: 0 0 14px var(--lava);
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
 }
 .nox-progress > span::after {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
-  animation: shimmer 1.8s infinite;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
+  animation: shimmer 1.6s infinite;
 }
 @keyframes shimmer {
   0% { transform: translateX(-100%); }
-  100% { transform: translateX(200%); }
+  100% { transform: translateX(220%); }
 }
 
-/* Status pill */
 .nox-status-live {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
   color: var(--amber);
-  font-size: 0.85rem;
-  letter-spacing: 0.06em;
+  font-size: 0.82rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 .nox-status-live::before {
   content: "";
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   background: var(--lava);
-  box-shadow: 0 0 8px var(--lava);
-  animation: pulse 1.6s ease-in-out infinite;
+  box-shadow: 0 0 8px var(--lava), 0 0 3px var(--arc);
+  animation: pulse 1.5s ease-in-out infinite;
 }
 @keyframes pulse {
-  0%, 100% { opacity: 0.6; transform: scale(0.9); }
-  50% { opacity: 1; transform: scale(1.15); }
+  0%, 100% { opacity: 0.55; transform: scale(0.85); }
+  50% { opacity: 1; transform: scale(1.2); }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .nox-smoke, .nox-btn-fire::before, .nox-sun, .nox-sun::before,
-  .nox-core, .nox-progress > span::after, .nox-status-live::before {
+  .nox-core, .nox-progress > span::after, .nox-status-live::before,
+  .nox-glass::before {
     animation: none !important;
   }
 }
