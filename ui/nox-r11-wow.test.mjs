@@ -144,3 +144,24 @@ test('ticker button opens corresponding existing read-only native action on user
   f.queue.push({state:'COMPLETED',result:{jobs:[]}});button.click();await flush();
   assert.equal(f.requests.at(-1).route,'models.queue');r.destroy();
 });
+
+test('browser.open native HOLD is surfaced immediately without fake navigation success',async()=>{
+  const f=fixture(),r=f.make();const panel=f.root.querySelector('[data-nox-r11="mounted"]');
+  const input=panel.children.find(x=>x.type==='url');
+  const button=panel.children.find(x=>x.textContent==='Открыть HTTPS');
+  const feedback=panel.children.find(x=>x.className==='nox-r11-feedback');
+  input.value='https://docs.example.org';
+  f.queue.push({state:'HOLD',errorCode:'BROWSER_NATIVE_POLICY_HOLD'});
+  button.click();await flush();
+  assert.equal(f.requests.at(-1).route,'browser.open');
+  assert.equal(feedback.dataset.state,'HOLD');
+  assert.match(feedback.textContent,/BROWSER_NATIVE_POLICY_HOLD/);
+  f.queue.push({state:'COMPLETED',result:{status:'NAVIGATION_REQUESTED'}});
+  button.click();await flush();
+  assert.equal(feedback.dataset.state,'pending');
+  assert.match(feedback.textContent,/не подтверждён/);
+  input.value='http://unsafe.example.org';button.click();await flush();
+  assert.equal(f.requests.length,2);
+  assert.equal(feedback.dataset.state,'HOLD');
+  r.destroy();
+});

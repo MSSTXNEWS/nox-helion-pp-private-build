@@ -93,11 +93,25 @@ export function mountR11WowMenu({root,documentRef,windowRef,request,scope,native
           !target.username && !target.password && !!target.hostname;
       } catch { /* Native owner must never receive malformed URLs. */ }
     }
-    if(!valid){ feedback.textContent='HOLD · только HTTPS без внешнего порта';return; }
+    if(!valid){ feedback.dataset.state='HOLD';feedback.textContent='HOLD · только HTTPS без внешнего порта';return; }
     busy.add('browser.open');browserOpen.disabled=true;
     feedback.textContent='REQUESTED · подтвердите точный адрес в Windows';
-    try { await request('browser.open',{url}); }
-    catch { if(!dead)feedback.textContent='HOLD · Browser не подтверждён'; }
+    try {
+      const reply=await request('browser.open',{url});
+      if(dead)return;
+      const nativeResult=projectNativeReply(reply);
+      if(nativeResult.state==='HOLD') {
+        feedback.dataset.state='HOLD';
+        feedback.textContent='Browser · '+nativeResult.label;
+      } else {
+        // browser.open intentionally revokes the old document on NAV_START.
+        // A pending/replied request is NOT proof of completed navigation.
+        feedback.dataset.state='pending';
+        feedback.textContent='REQUESTED · факт навигации не подтверждён';
+      }
+    } catch {
+      if(!dead){feedback.dataset.state='HOLD';feedback.textContent='HOLD · Browser не подтверждён';}
+    }
     finally { busy.delete('browser.open');if(!dead)browserOpen.disabled=false; }
   });
   root.prepend(panel);statusHost.append(ticker);
