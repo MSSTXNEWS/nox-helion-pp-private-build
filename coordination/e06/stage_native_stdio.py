@@ -116,7 +116,23 @@ def pinned_bytes(src:Path, expected:str)->bytes:
     raise RuntimeError("E06_NATIVE_OWNER_BLOB_SHA_HOLD:"+str(src))
 
 def stage(source:Path)->dict:
-    source=source.resolve(strict=True)
+    # The named disposable root and all its ancestors must be plain BEFORE
+    # resolve() can follow any junction/symlink to an unapproved directory.
+    named_root=source.absolute()
+    for node in (named_root,*named_root.parents):
+        try:
+            info=node.lstat()
+        except FileNotFoundError:
+            continue
+        except OSError as exc:
+            raise RuntimeError("E06_NATIVE_STAGING_ROOT_PATH_HOLD") from exc
+        if (stat.S_ISLNK(info.st_mode) or
+            bool(getattr(info,"st_file_attributes",0) &
+                 getattr(stat,"FILE_ATTRIBUTE_REPARSE_POINT",0))):
+            raise RuntimeError("E06_NATIVE_STAGING_ROOT_REPARSE_HOLD")
+    if not named_root.is_dir():
+        raise RuntimeError("E06_NATIVE_STAGING_ROOT_REQUIRED")
+    source=named_root.resolve(strict=True)
     app=source/"helion/app.py"
     refuse_reparse_components(source,app)
     if not app.is_file() or app.is_symlink():
