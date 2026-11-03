@@ -109,6 +109,21 @@ export function createNativeMenuClient({webview,cryptoRef=globalThis.crypto,
   });
 }
 
+// Native COMPLETED is a transport envelope, never owner approval. Preserve the
+// existing owner ACK byte-for-byte in meaning, and require S03 provenance before
+// advertising a selfbuilder proposal as queued. No authorization is inferred.
+export function nativeOwnerActionReceipt(reply,route,action) {
+  const owner=reply?.result;
+  if(reply?.routeId!==route || reply?.state!=='COMPLETED' ||
+     !owner || typeof owner!=='object' || Array.isArray(owner) || owner.ack!==true)
+    return {ack:false,errorCode:reply?.errorCode||owner?.errorCode||'NATIVE_ACK_UNCONFIRMED'};
+  if(action==='selfbuilder.propose' &&
+     (typeof owner.run_id!=='string'||!/^S03-[A-Za-z0-9._:-]{1,128}$/.test(owner.run_id) ||
+      typeof owner.source_head!=='string'||!/^[a-f0-9]{40}(?:[a-f0-9]{24})?$/.test(owner.source_head)))
+    return {ack:false,errorCode:'S03_PROPOSAL_RECEIPT_UNVERIFIED'};
+  return {...owner,ack:true};
+}
+
 export function isNativeChatTerminal(reply){
   // Called only AFTER createNativeMenuClient validates a UA-trusted WebView2
   // response with the matching request nonce and exact route. A real native
@@ -243,7 +258,7 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
         const route=request.actionId==='selfbuilder.train.request'?'training.start':'chat.commands';
         const result=await client.request(route,{...(route==='chat.commands'?{action:request.actionId}:{}),...scope,
           ...(request.task?{task:request.task}:{}),...(request.job_id?{job_id:request.job_id}:{})});display(result);
-        return result.state==='COMPLETED'?{...result.result,ack:true}:{ack:false,errorCode:result.errorCode};
+        return nativeOwnerActionReceipt(result,route,request.actionId);
       }});
   }
   // R11: one cosmetic cockpit on existing, already-mounted MENU10 DOM. No second host.
