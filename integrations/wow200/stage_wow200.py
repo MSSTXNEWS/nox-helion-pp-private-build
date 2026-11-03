@@ -61,10 +61,10 @@ MENU_V2_SHA256 = {
 }
 
 P01_OWNER_BLOBS = {
-    "proposals/P01/WOW-MAX10/mount-p01.mjs": "11db3fe98e377173c755aeeb837d488dbfca0a10",
-    "proposals/P01/WOW-MAX10/p01-cinematic-menu.mjs": "8de9918b48af2c56582e2c453b80cc0df43cc1e7",
+    "proposals/P01/WOW-MAX10/mount-p01.mjs": "e08be1d18f2760010e1b9e96dbe1f6f0da4203a9",
+    "proposals/P01/WOW-MAX10/p01-cinematic-menu.mjs": "ddb33ae231b091c5be9a068a65db07c76e9c12b8",
     "proposals/P01/WOW-MAX10/p01-cinematic-menu.css": "7205f4b747ed6b95856e0207a9b52cce29f9d118",
-    "proposals/P01/WOW-MAX10/scene-contract.mjs": "4f273275113b4f2045f5249f1b93067512c13b22",
+    "proposals/P01/WOW-MAX10/scene-contract.mjs": "66e0dd2920fa98ce1af3d9d98d788c094daf945f",
     "proposals/P01/WOW-MAX10/route-dispatch.mjs": "6e1d24fe81211c19c9fefa14592753eab8235d41",
     "proposals/P01/WOW-MAX10/d02-native-events.mjs": "085fea4af1c0c8a0982abf4296cf21627e639516",
     "proposals/P01/WOW-MAX10/p01-visual-approval.mjs": "1f8a55ac2f579f544a9f00471aa187555c8e6dcd",
