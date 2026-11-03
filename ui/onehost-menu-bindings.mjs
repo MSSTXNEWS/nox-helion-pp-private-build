@@ -21,7 +21,7 @@ const ACTIONS = new Set([...SELFBUILDER_MENU.map(x=>x.actionId),
   'selfbuilder.activator.status','selfbuilder.a1.status','selfbuilder.a1.boot',
   'selfbuilder.a1.tick','selfbuilder.propose']);
 const ROUTES = new Set(['helion.chat','chat.history','chat.stop','chat.model','chat.commands',
-  'models.catalog','models.queue','models.preflight','models.pull','models.cancel','models.retry','models.gguf.import','gpu.preflight','training.start','system.autostart','browser.open']);
+  'models.catalog','models.queue','models.preflight','models.pull','models.cancel','models.retry','models.gguf.import','gpu.preflight','training.start','system.autostart','browser.open','browser.navidle','menu.dispatch','menu.binding']);
 const AUTHORITY = new Set(['tenant','principal','windows_sid','session_id','scopes',
   'private_approved','native_approve','nativeConsent','admin']);
 
@@ -445,4 +445,19 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
 if(typeof document!=='undefined'){
   const boot=()=>{try{mountOneHostMenu();}catch(error){console.warn('NOX MENU HOLD',error.message);}};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
+}
+
+
+export function installShellKeys(doc=document){
+  doc.addEventListener('keydown', (event) => {
+    if (event.key === 'F11') {
+      event.preventDefault();
+      const el = doc.documentElement;
+      if (!doc.fullscreenElement) el.requestFullscreen?.();
+      else doc.exitFullscreen?.();
+    }
+    if (event.key === 'Escape' && doc.fullscreenElement) {
+      doc.exitFullscreen?.();
+    }
+  });
 }

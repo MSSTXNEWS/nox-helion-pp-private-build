@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NOX HELION · MENU</title>
+<link rel="stylesheet" href="menu.css">
+</head>
+<body class="nox-fx">
+<header class="top">
+  <div class="brand">NOX HELION</div>
+  <input class="search" placeholder="Глобальный поиск (Ctrl + K)" aria-label="search">
+  <div class="clock" id="clock"></div>
+</header>
+<nav class="sections" id="sections" aria-label="sections"></nav>
+<main id="panel"></main>
+<nav class="dock" aria-label="dock">
+  <button data-go="work">Главная</button>
+  <button data-go="intellect">Чат</button>
+  <button data-go="knowledge">Файлы</button>
+  <button data-go="creation">Мультимедиа</button>
+  <button data-go="evolution">Обучение</button>
+  <button data-go="system">Настройки</button>
+</nav>
+<canvas id="fx" class="fx-canvas"></canvas>
+<script src="three.min.js"></script>
+<script type="module">import { mountNoxWow } from "./nox-wow-scene.js"; mountNoxWow(document.getElementById("fx"));</script>
+<script src="menu.js"></script>
+</body>
+</html>

@@ -25,7 +25,7 @@ public partial class MainWindow
         "chat.rag","chat.voice","chat.stop","calls.history","chat.commands",
         "models.installed","models.digest","gpu.preflight","training.start",
         "training.pause","training.resume","training.checkpoints","training.evaluate",
-        "system.autostart", "browser.open"
+        "system.autostart", "browser.open", "browser.navidle", "menu.dispatch", "menu.binding", "selfwrite.ack", "selflearn.ack"
     };
     private Process? _nativeP02Process;
     private NativePythonPipe? _nativeP02Pipe;
@@ -168,6 +168,75 @@ public partial class MainWindow
     private async Task<NativePipeResult> DispatchNativeOwnerAsync(string route, JsonElement payload,
         CancellationToken cancel)
     {
+        if (route == "selflearn.ack") {
+            // Self-learn native ACK. Learning may start only with owner proof.
+            if (cancel.IsCancellationRequested || _nativeP02Core is not { } core ||
+                _nativeP02Bridge is not { } bridge || bridge.BrowserExternalActive ||
+                _nativeP02Process is not { HasExited: false })
+                return new NativePipeResult("", false, null, "SELFLEARN_ACK_HOLD");
+            return new NativePipeResult("", true,
+                JsonSerializer.SerializeToElement(new { status = "SELFLEARN_ACK", epoch = Interlocked.Read(ref _a1OwnerStopEpoch) }), null);
+        }
+        if (route == "selfwrite.ack") {
+            // Self-write native ACK. Forge/sandbox may proceed only with owner proof.
+            if (cancel.IsCancellationRequested || _nativeP02Core is not { } core ||
+                _nativeP02Bridge is not { } bridge || bridge.BrowserExternalActive ||
+                _nativeP02Process is not { HasExited: false })
+                return new NativePipeResult("", false, null, "SELFWRITE_ACK_HOLD");
+            return new NativePipeResult("", true,
+                JsonSerializer.SerializeToElement(new { status = "SELFWRITE_ACK", epoch = Interlocked.Read(ref _a1OwnerStopEpoch) }), null);
+        }
+        if (route == "menu.binding") {
+            // B8: native MENU bindings. Buttons, models, SELF-BUILDER/STOP, native ACK.
+            // No second host. Unknown action is HOLD.
+            if (cancel.IsCancellationRequested || _nativeP02Core is not { } core ||
+                _nativeP02Bridge is not { } bridge || bridge.BrowserExternalActive ||
+                payload.ValueKind != JsonValueKind.Object ||
+                !payload.TryGetProperty("action", out var action) ||
+                action.ValueKind != JsonValueKind.String ||
+                action.GetString() is not string name)
+                return new NativePipeResult("", false, null, "MENU_BINDING_HOLD");
+            var allowed = new HashSet<string>(StringComparer.Ordinal) {
+                "button", "model", "selfbuilder", "stop"
+            };
+            if (!allowed.Contains(name))
+                return new NativePipeResult("", false, null, "MENU_BINDING_DENIED");
+            if (name == "stop") {
+                Interlocked.Increment(ref _a1OwnerStopEpoch);
+                return new NativePipeResult("", true,
+                    JsonSerializer.SerializeToElement(new { status = "MENU_STOP_ACK", action = name }), null);
+            }
+            return new NativePipeResult("", true,
+                JsonSerializer.SerializeToElement(new { status = "MENU_BINDING_ACK", action = name }), null);
+        }
+        if (route == "menu.dispatch") {
+            // B7: MENU10 route-dispatch. Eight tiles only, native ACL, no D02/HOME change.
+            if (cancel.IsCancellationRequested || _nativeP02Core is not { } core ||
+                _nativeP02Bridge is not { } bridge || bridge.BrowserExternalActive ||
+                payload.ValueKind != JsonValueKind.Object ||
+                !payload.TryGetProperty("tile", out var tile) ||
+                tile.ValueKind != JsonValueKind.String ||
+                tile.GetString() is not string name)
+                return new NativePipeResult("", false, null, "MENU_DISPATCH_HOLD");
+            var allowed = new HashSet<string>(StringComparer.Ordinal) {
+                "РАБОТА","ИНТЕЛЛЕКТ","ЗНАНИЯ","ТВОРЧЕСТВО","ЛЮДИ","РАЗВИТИЕ","МИР","СИСТЕМА"
+            };
+            if (!allowed.Contains(name))
+                return new NativePipeResult("", false, null, "MENU_TILE_DENIED");
+            return new NativePipeResult("", true,
+                JsonSerializer.SerializeToElement(new { status = "MENU_DISPATCHED", tile = name }), null);
+        }
+        if (route == "browser.navidle") {
+            // B6: native idle entry for NOX Browser. No second WebView.
+            // Reports NAV_IDLE only when the original core is alive and not external.
+            if (cancel.IsCancellationRequested || _nativeP02Core is not { } core ||
+                _nativeP02Bridge is not { } bridge ||
+                ReferenceEquals(core, _failedNativeP02Core) ||
+                bridge.BrowserExternalActive)
+                return new NativePipeResult("", false, null, "NAV_IDLE_HOLD");
+            return new NativePipeResult("", true,
+                JsonSerializer.SerializeToElement(new { status = "NAV_IDLE" }), null);
+        }
         if (route == "browser.open") {
             if (cancel.IsCancellationRequested || _nativeP02Core is not { } core ||
                 _nativeP02Bridge is not { } bridge ||
