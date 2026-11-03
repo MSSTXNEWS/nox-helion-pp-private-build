@@ -26,7 +26,7 @@ Before shipping, WPF/WebView2 must initialize both globals before the page adapt
 - window.noxNativePort: the existing host port implementing isAvailable(routeId), invokeRoute({routeId, origin}) and, for sensitive routes, authorizeSensitive({routeId, origin}).
 - window.NOX_ADMINATOR_ROUTE_BINDINGS: an explicit key-to-route map using only canonical legacy route IDs. No route is guessed from page title or link text.
 
-The default binding map is empty. Until WPF supplies capabilities and bindings, native action controls remain HOLD. Telemetry is delivered using window.NOX_ADMINATOR_UI.updateTelemetry(snapshot) or a nox:telemetry event.
+The default binding map is empty. Binding values must be exact native action IDs already admitted by `ui/onehost-menu-bindings.mjs` (for example `helion.chat`, `chat.commands`, `models.catalog`, `models.pull`, `models.cancel`, `training.start`). Legacy screen IDs such as `model-library`, `gpu-training`, and `commands` are not native action IDs and are rejected. Until WPF supplies capabilities and bindings, native action controls remain HOLD. Telemetry is delivered using window.NOX_ADMINATOR_UI.updateTelemetry(snapshot) or a nox:telemetry event.
 
 Snapshot contract:
 
