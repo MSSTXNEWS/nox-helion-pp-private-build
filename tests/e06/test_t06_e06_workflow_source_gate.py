@@ -3,6 +3,8 @@
 Source-only checks. No Windows install/model/network call is made.
 """
 from pathlib import Path
+import importlib.util
+import re
 import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -52,6 +54,20 @@ class T06WorkflowSourceGate(unittest.TestCase):
         for name in TESTS:
             with self.subTest(name=name):
                 self.assertIn("'" + name + "'", self.windows)
+
+    def test_staged_receipt_gate_matches_all_pinned_source_sets(self):
+        path = ROOT / "integrations/wow200/stage_wow200.py"
+        spec = importlib.util.spec_from_file_location("e06_wow_stage_contract", path)
+        stage = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(stage)
+        # Includes retained legacy copies, catalog, runtime assets and both HTML edits.
+        expected = (stage.DONOR_FILE_COUNT + len(stage.OWNER1_D02_ENGINE) + 1 +
+                    len(stage.MENU_V2_SHA256) + len(stage.P01_OWNER_BLOBS) + 4 + 2)
+        counts = re.findall(r"\$receipt\.count -ne (\d+)", self.windows)
+        self.assertEqual(counts, [str(expected)])
+        self.assertIn(f"@($receipt.files).Count -ne {expected}", self.windows)
+        self.assertIn(f"@($receipt.menu_v2_atomic_source_sha256.PSObject.Properties).Count -ne {len(stage.MENU_V2_SHA256)}", self.windows)
+        self.assertIn(f"@($receipt.p01_owner_source_git_blobs.PSObject.Properties).Count -ne {len(stage.P01_OWNER_BLOBS)}", self.windows)
 
     def test_original_build_route_remains_strict(self):
         self.assertIn("needs: visual-source-stage", self.source)

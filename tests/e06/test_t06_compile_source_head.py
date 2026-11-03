@@ -58,7 +58,8 @@ compiler = importlib.util.module_from_spec(spec)
 try:
     spec.loader.exec_module(compiler)
 except FileNotFoundError as error:
-    assert Path(error.filename) == source.with_name("t06_package_original_onehost.py")
+    # Windows TEMP may use its 8.3 alias; compare canonical paths, not spelling.
+    assert Path(error.filename).resolve() == source.resolve().with_name("t06_package_original_onehost.py")
 else:
     raise AssertionError("MISSING_SIBLING_OWNER_WAS_ACCEPTED")
 """
