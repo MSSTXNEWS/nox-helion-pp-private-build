@@ -926,6 +926,23 @@ $c11NsiPatched=$c11NsiOriginal.Substring(0,$c11Pos)+
 if ($c11NsiPatched.IndexOf('C11OldPayloadChecked:',[StringComparison]::Ordinal) -lt 0) {
   throw 'C11_NSIS_ROLLBACK_FENCE_STAGE_HOLD'
 }
+# W04 R108: original R11 NSIS UninstallString emits warning 6000 due to
+# backslash-escaped quotes. Stage the officially documented quote form ONLY
+# in the disposable R11 source; original 729 archive remains immutable.
+$uninstallRegistryBad='  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_ID}" "UninstallString" ''\"$INSTDIR\Uninstall.exe\"'''
+$uninstallRegistryApproved='  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_ID}" "UninstallString" ''"$INSTDIR\Uninstall.exe"'''
+$uninstallRegistryBadCount=([regex]::Matches($c11NsiPatched,[regex]::Escape($uninstallRegistryBad))).Count
+$uninstallRegistryApprovedCount=([regex]::Matches($c11NsiPatched,[regex]::Escape($uninstallRegistryApproved))).Count
+if ($uninstallRegistryBadCount -eq 1 -and $uninstallRegistryApprovedCount -eq 0) {
+  $c11NsiPatched=$c11NsiPatched.Replace($uninstallRegistryBad,$uninstallRegistryApproved)
+} elseif ($uninstallRegistryBadCount -ne 0 -or $uninstallRegistryApprovedCount -ne 1) {
+  throw 'P01_NSIS_UNINSTALL_REGISTRY_PREIMAGE_HOLD'
+}
+if ($c11NsiPatched.Contains($uninstallRegistryBad) -or
+    ([regex]::Matches($c11NsiPatched,[regex]::Escape($uninstallRegistryApproved))).Count -ne 1) {
+  throw 'P01_NSIS_UNINSTALL_REGISTRY_QUOTE_HOLD'
+}
+Write-Host 'P01_NSIS_UNINSTALL_REGISTRY_QUOTE_STAGE_PASS'
 [IO.File]::WriteAllText($c11NsiPath,$c11NsiPatched,(New-Object System.Text.UTF8Encoding($false)))
 Write-Host "C11_NSIS_ROLLBACK_OLD_PAYLOAD_SHA_GATE_STAGED"
 $setup=Join-Path $out 'NOX-HELION-V16-DIAGNOSTIC-SETUP.exe'
