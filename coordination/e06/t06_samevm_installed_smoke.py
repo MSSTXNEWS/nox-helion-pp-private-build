@@ -822,8 +822,22 @@ def rollback_slot_layout(install:Path,previous:Path,saved:Path,base:Path)->dict:
     return {"previous_consumed":True,"restored_owned":True,"saved_owned":True}
 
 
+def original_nsis_uninstall_budget(owned_count: int) -> float:
+    """Wait for a detached ORIGINAL NSIS child to hash/remove its owned snapshot.
+
+    The immutable original manifest is already validated by owned_payload_paths;
+    this only sets a finite wait, never changes admission or deletes any file.
+    Windows R114 physically had 1004 owned entries and a 30-second timeout,
+    while a single unchanged original SHA verification took ~9 seconds.
+    Three conservative per-file passes plus NSIS child startup can exceed 30s.
+    """
+    require(type(owned_count) is int and 1 <= owned_count <= 50000,
+            "T06_NSIS_UNINSTALL_COUNT_UNTRUSTED")
+    return min(180.0, max(30.0, 20.0 + owned_count * 0.08))
+
+
 def await_original_uninstall(install: Path, owned_files: tuple[Path, ...],
-                             *, timeout_seconds: float = 30.0,
+                             *, timeout_seconds: float | None = None,
                              poll_seconds: float = 0.2) -> None:
     """Allow NSIS /S's deferred child to finish; never accept without full verification.
 
@@ -832,8 +846,10 @@ def await_original_uninstall(install: Path, owned_files: tuple[Path, ...],
     unchanged fail-closed manifest/reparse/registry verifier runs. A timeout
     only produces the original HOLD; it never produces PASS.
     """
+    if timeout_seconds is None:
+        timeout_seconds = original_nsis_uninstall_budget(len(owned_files))
     require(isinstance(install, Path) and bool(owned_files) and
-            0 < poll_seconds <= 2 and 0 < timeout_seconds <= 60,
+            0 < poll_seconds <= 2 and 0 < timeout_seconds <= 180,
             "T06_NSIS_UNINSTALL_WAIT_BAD_INPUT")
     deadline = time.monotonic() + timeout_seconds
     metadata = (install/"payload.sha256.json", install/"nox-p01-owned.txt",
@@ -1012,6 +1028,7 @@ def main()->int:
         uninstalled=run([str(uninstall),"/S"],220)
         report["installer_lifecycle"]["uninstall"]=uninstalled
         require(uninstalled["code"]==0,"T06_CONSERVATIVE_UNINSTALL_EXIT_HOLD")
+        report["installer_lifecycle"]["uninstall_owned_wait_budget_seconds"]=original_nsis_uninstall_budget(len(owned_files))
         await_original_uninstall(install,owned_files)
         report["installer_lifecycle"]["uninstall_owned_files_checked"]=len(owned_files)
         report["installer_lifecycle"]["uninstall_registry_views_checked"]=2
