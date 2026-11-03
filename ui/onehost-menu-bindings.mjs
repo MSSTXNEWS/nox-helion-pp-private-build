@@ -446,3 +446,18 @@ if(typeof document!=='undefined'){
   const boot=()=>{try{mountOneHostMenu();}catch(error){console.warn('NOX MENU HOLD',error.message);}};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 }
+
+
+export function installShellKeys(doc=document){
+  doc.addEventListener('keydown', (event) => {
+    if (event.key === 'F11') {
+      event.preventDefault();
+      const el = doc.documentElement;
+      if (!doc.fullscreenElement) el.requestFullscreen?.();
+      else doc.exitFullscreen?.();
+    }
+    if (event.key === 'Escape' && doc.fullscreenElement) {
+      doc.exitFullscreen?.();
+    }
+  });
+}
