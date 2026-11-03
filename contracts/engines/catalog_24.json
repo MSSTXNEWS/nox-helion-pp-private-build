@@ -1,0 +1,151 @@
+{
+  "schema": "NOX-EXPRESS-CATALOG-24",
+  "count": 24,
+  "note": "24 official Ollama tags. Only two are downloaded. Licenses not invented.",
+  "models": [
+    {
+      "tag": "qwen2.5-coder:7b",
+      "official_url": "https://ollama.com/library/qwen2.5-coder",
+      "status": "DOWNLOADED_SHA_VERIFIED",
+      "license_status": "OWNER_REVIEW_REQUIRED"
+    },
+    {
+      "tag": "qwen3-embedding:0.6b",
+      "official_url": "https://ollama.com/library/qwen3-embedding",
+      "status": "DOWNLOADED_SHA_VERIFIED",
+      "license_status": "OWNER_REVIEW_REQUIRED"
+    },
+    {
+      "tag": "qwen2.5-coder:14b",
+      "official_url": "https://ollama.com/library/qwen2.5-coder",
+      "status": "CATALOG_ONLY",
+      "license_status": "OWNER_REVIEW_REQUIRED"
+    },
+    {
+      "tag": "qwen2.5-coder:32b",
+      "official_url": "https://ollama.com/library/qwen2.5-coder",
+      "status": "CATALOG_ONLY",
+      "license_status": "OWNER_REVIEW_REQUIRED"
+    },
+    {
+      "tag": "qwen2.5:7b",
+      "official_url": "https://ollama.com/library/qwen2.5",
+      "status": "CATALOG_ONLY",
+      "license_status": "OWNER_REVIEW_REQUIRED"
+    },
+    {
+      "tag": "qwen2.5:14b",
+      "official_url": "https://ollama.com/library/qwen2.5",
+      "status": "CATALOG_ONLY",
+      "license_status": "OWNER_REVIEW_REQUIRED"
+    },
+    {
+      "tag": "llama3.1:8b",
+      "official_url": "https://ollama.com/library/llama3.1",
+      "status": "CATALOG_ONLY",
+      "license_status": "OWNER_REVIEW_REQUIRED"
+    },
+    {
+      "tag": "llama3.2:3b",
+      "official_url": "https://ollama.com/library/llama3.2",
+      "status": "CATALOG_ONLY",
+      "license_status": "OWNER_REVIEW_REQUIRED"
+    },
+    {
+      "tag": "mistral:7b",
+      "official_url": "https://ollama.com/library/mistral",
+      "status": "CATALOG_ONLY",
+      "license_status": "OWNER_REVIEW_REQUIRED"
+    },
+    {
+      "tag": "mixtral:8x7b",
+      "official_url": "https://ollama.com/library/mixtral",
+      "status": "CATALOG_ONLY",
+      "license_status": "OWNER_REVIEW_REQUIRED"
+    },
+    {
+      "tag": "phi3:mini",
+      "official_url": "https://ollama.com/library/phi3",
+      "status": "CATALOG_ONLY",
+      "license_status": "OWNER_REVIEW_REQUIRED"
+    },
+    {
+      "tag": "phi3:medium",
+      "official_url": "https://ollama.com/library/phi3",
+      "status": "CATALOG_ONLY",
+      "license_status": "OWNER_REVIEW_REQUIRED"
+    },
+    {
+      "tag": "gemma2:9b",
+      "official_url": "https://ollama.com/library/gemma2",
+      "status": "CATALOG_ONLY",
+      "license_status": "OWNER_REVIEW_REQUIRED"
+    },
+    {
+      "tag": "gemma2:2b",
+      "official_url": "https://ollama.com/library/gemma2",
+      "status": "CATALOG_ONLY",
+      "license_status": "OWNER_REVIEW_REQUIRED"
+    },
+    {
+      "tag": "codellama:7b",
+      "official_url": "https://ollama.com/library/codellama",
+      "status": "CATALOG_ONLY",
+      "license_status": "OWNER_REVIEW_REQUIRED"
+    },
+    {
+      "tag": "codellama:13b",
+      "official_url": "https://ollama.com/library/codellama",
+      "status": "CATALOG_ONLY",
+      "license_status": "OWNER_REVIEW_REQUIRED"
+    },
+    {
+      "tag": "deepseek-coder:6.7b",
+      "official_url": "https://ollama.com/library/deepseek-coder",
+      "status": "CATALOG_ONLY",
+      "license_status": "OWNER_REVIEW_REQUIRED"
+    },
+    {
+      "tag": "deepseek-r1:7b",
+      "official_url": "https://ollama.com/library/deepseek-r1",
+      "status": "CATALOG_ONLY",
+      "license_status": "OWNER_REVIEW_REQUIRED"
+    },
+    {
+      "tag": "nomic-embed-text",
+      "official_url": "https://ollama.com/library/nomic-embed-text",
+      "status": "CATALOG_ONLY",
+      "license_status": "OWNER_REVIEW_REQUIRED"
+    },
+    {
+      "tag": "mxbai-embed-large",
+      "official_url": "https://ollama.com/library/mxbai-embed-large",
+      "status": "CATALOG_ONLY",
+      "license_status": "OWNER_REVIEW_REQUIRED"
+    },
+    {
+      "tag": "llava:7b",
+      "official_url": "https://ollama.com/library/llava",
+      "status": "CATALOG_ONLY",
+      "license_status": "OWNER_REVIEW_REQUIRED"
+    },
+    {
+      "tag": "starcoder2:7b",
+      "official_url": "https://ollama.com/library/starcoder2",
+      "status": "CATALOG_ONLY",
+      "license_status": "OWNER_REVIEW_REQUIRED"
+    },
+    {
+      "tag": "yi:6b",
+      "official_url": "https://ollama.com/library/yi",
+      "status": "CATALOG_ONLY",
+      "license_status": "OWNER_REVIEW_REQUIRED"
+    },
+    {
+      "tag": "command-r:35b",
+      "official_url": "https://ollama.com/library/command-r",
+      "status": "CATALOG_ONLY",
+      "license_status": "OWNER_REVIEW_REQUIRED"
+    }
+  ]
+}
