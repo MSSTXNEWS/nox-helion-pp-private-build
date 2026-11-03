@@ -7,145 +7,194 @@
       "tag": "qwen2.5-coder:7b",
       "official_url": "https://ollama.com/library/qwen2.5-coder",
       "status": "DOWNLOADED_SHA_VERIFIED",
-      "license_status": "OWNER_REVIEW_REQUIRED"
+      "license_status": "OWNER_REVIEW_REQUIRED",
+      "license": "Apache-2.0",
+      "license_source": "public model card, not a downloaded LICENSE file"
     },
     {
       "tag": "qwen3-embedding:0.6b",
       "official_url": "https://ollama.com/library/qwen3-embedding",
       "status": "DOWNLOADED_SHA_VERIFIED",
-      "license_status": "OWNER_REVIEW_REQUIRED"
+      "license_status": "OWNER_REVIEW_REQUIRED",
+      "license": "Apache-2.0",
+      "license_source": "public model card, not a downloaded LICENSE file"
     },
     {
       "tag": "qwen2.5-coder:14b",
       "official_url": "https://ollama.com/library/qwen2.5-coder",
       "status": "CATALOG_ONLY",
-      "license_status": "OWNER_REVIEW_REQUIRED"
+      "license_status": "OWNER_REVIEW_REQUIRED",
+      "license": "Apache-2.0",
+      "license_source": "public model card, not a downloaded LICENSE file"
     },
     {
       "tag": "qwen2.5-coder:32b",
       "official_url": "https://ollama.com/library/qwen2.5-coder",
       "status": "CATALOG_ONLY",
-      "license_status": "OWNER_REVIEW_REQUIRED"
+      "license_status": "OWNER_REVIEW_REQUIRED",
+      "license": "Apache-2.0",
+      "license_source": "public model card, not a downloaded LICENSE file"
     },
     {
       "tag": "qwen2.5:7b",
       "official_url": "https://ollama.com/library/qwen2.5",
       "status": "CATALOG_ONLY",
-      "license_status": "OWNER_REVIEW_REQUIRED"
+      "license_status": "OWNER_REVIEW_REQUIRED",
+      "license": "Apache-2.0",
+      "license_source": "public model card, not a downloaded LICENSE file"
     },
     {
       "tag": "qwen2.5:14b",
       "official_url": "https://ollama.com/library/qwen2.5",
       "status": "CATALOG_ONLY",
-      "license_status": "OWNER_REVIEW_REQUIRED"
+      "license_status": "OWNER_REVIEW_REQUIRED",
+      "license": "Apache-2.0",
+      "license_source": "public model card, not a downloaded LICENSE file"
     },
     {
       "tag": "llama3.1:8b",
       "official_url": "https://ollama.com/library/llama3.1",
       "status": "CATALOG_ONLY",
-      "license_status": "OWNER_REVIEW_REQUIRED"
+      "license_status": "OWNER_REVIEW_REQUIRED",
+      "license": "Llama 3.1 Community",
+      "license_source": "public model card, not a downloaded LICENSE file"
     },
     {
       "tag": "llama3.2:3b",
       "official_url": "https://ollama.com/library/llama3.2",
       "status": "CATALOG_ONLY",
-      "license_status": "OWNER_REVIEW_REQUIRED"
+      "license_status": "OWNER_REVIEW_REQUIRED",
+      "license": "Llama 3.2 Community",
+      "license_source": "public model card, not a downloaded LICENSE file"
     },
     {
       "tag": "mistral:7b",
       "official_url": "https://ollama.com/library/mistral",
       "status": "CATALOG_ONLY",
-      "license_status": "OWNER_REVIEW_REQUIRED"
+      "license_status": "OWNER_REVIEW_REQUIRED",
+      "license": "Apache-2.0",
+      "license_source": "public model card, not a downloaded LICENSE file"
     },
     {
       "tag": "mixtral:8x7b",
       "official_url": "https://ollama.com/library/mixtral",
       "status": "CATALOG_ONLY",
-      "license_status": "OWNER_REVIEW_REQUIRED"
+      "license_status": "OWNER_REVIEW_REQUIRED",
+      "license": "Apache-2.0",
+      "license_source": "public model card, not a downloaded LICENSE file"
     },
     {
       "tag": "phi3:mini",
       "official_url": "https://ollama.com/library/phi3",
       "status": "CATALOG_ONLY",
-      "license_status": "OWNER_REVIEW_REQUIRED"
+      "license_status": "OWNER_REVIEW_REQUIRED",
+      "license": "MIT",
+      "license_source": "public model card, not a downloaded LICENSE file"
     },
     {
       "tag": "phi3:medium",
       "official_url": "https://ollama.com/library/phi3",
       "status": "CATALOG_ONLY",
-      "license_status": "OWNER_REVIEW_REQUIRED"
+      "license_status": "OWNER_REVIEW_REQUIRED",
+      "license": "MIT",
+      "license_source": "public model card, not a downloaded LICENSE file"
     },
     {
       "tag": "gemma2:9b",
       "official_url": "https://ollama.com/library/gemma2",
       "status": "CATALOG_ONLY",
-      "license_status": "OWNER_REVIEW_REQUIRED"
+      "license_status": "OWNER_REVIEW_REQUIRED",
+      "license": "Gemma",
+      "license_source": "public model card, not a downloaded LICENSE file"
     },
     {
       "tag": "gemma2:2b",
       "official_url": "https://ollama.com/library/gemma2",
       "status": "CATALOG_ONLY",
-      "license_status": "OWNER_REVIEW_REQUIRED"
+      "license_status": "OWNER_REVIEW_REQUIRED",
+      "license": "Gemma",
+      "license_source": "public model card, not a downloaded LICENSE file"
     },
     {
       "tag": "codellama:7b",
       "official_url": "https://ollama.com/library/codellama",
       "status": "CATALOG_ONLY",
-      "license_status": "OWNER_REVIEW_REQUIRED"
+      "license_status": "OWNER_REVIEW_REQUIRED",
+      "license": "Llama 2 Community",
+      "license_source": "public model card, not a downloaded LICENSE file"
     },
     {
       "tag": "codellama:13b",
       "official_url": "https://ollama.com/library/codellama",
       "status": "CATALOG_ONLY",
-      "license_status": "OWNER_REVIEW_REQUIRED"
+      "license_status": "OWNER_REVIEW_REQUIRED",
+      "license": "Llama 2 Community",
+      "license_source": "public model card, not a downloaded LICENSE file"
     },
     {
       "tag": "deepseek-coder:6.7b",
       "official_url": "https://ollama.com/library/deepseek-coder",
       "status": "CATALOG_ONLY",
-      "license_status": "OWNER_REVIEW_REQUIRED"
+      "license_status": "OWNER_REVIEW_REQUIRED",
+      "license": "DeepSeek License (weights) + MIT (code)",
+      "license_source": "public model card, not a downloaded LICENSE file"
     },
     {
       "tag": "deepseek-r1:7b",
       "official_url": "https://ollama.com/library/deepseek-r1",
       "status": "CATALOG_ONLY",
-      "license_status": "OWNER_REVIEW_REQUIRED"
+      "license_status": "OWNER_REVIEW_REQUIRED",
+      "license": "MIT",
+      "license_source": "public model card, not a downloaded LICENSE file"
     },
     {
       "tag": "nomic-embed-text",
       "official_url": "https://ollama.com/library/nomic-embed-text",
       "status": "CATALOG_ONLY",
-      "license_status": "OWNER_REVIEW_REQUIRED"
+      "license_status": "OWNER_REVIEW_REQUIRED",
+      "license": "Apache-2.0",
+      "license_source": "public model card, not a downloaded LICENSE file"
     },
     {
       "tag": "mxbai-embed-large",
       "official_url": "https://ollama.com/library/mxbai-embed-large",
       "status": "CATALOG_ONLY",
-      "license_status": "OWNER_REVIEW_REQUIRED"
+      "license_status": "OWNER_REVIEW_REQUIRED",
+      "license": "Apache-2.0",
+      "license_source": "public model card, not a downloaded LICENSE file"
     },
     {
       "tag": "llava:7b",
       "official_url": "https://ollama.com/library/llava",
       "status": "CATALOG_ONLY",
-      "license_status": "OWNER_REVIEW_REQUIRED"
+      "license_status": "OWNER_REVIEW_REQUIRED",
+      "license": "Llama 2 Community",
+      "license_source": "public model card, not a downloaded LICENSE file"
     },
     {
       "tag": "starcoder2:7b",
       "official_url": "https://ollama.com/library/starcoder2",
       "status": "CATALOG_ONLY",
-      "license_status": "OWNER_REVIEW_REQUIRED"
+      "license_status": "OWNER_REVIEW_REQUIRED",
+      "license": "BigCode OpenRAIL-M",
+      "license_source": "public model card, not a downloaded LICENSE file"
     },
     {
       "tag": "yi:6b",
       "official_url": "https://ollama.com/library/yi",
       "status": "CATALOG_ONLY",
-      "license_status": "OWNER_REVIEW_REQUIRED"
+      "license_status": "OWNER_REVIEW_REQUIRED",
+      "license": "Apache-2.0",
+      "license_source": "public model card, not a downloaded LICENSE file"
     },
     {
       "tag": "command-r:35b",
       "official_url": "https://ollama.com/library/command-r",
       "status": "CATALOG_ONLY",
-      "license_status": "OWNER_REVIEW_REQUIRED"
+      "license_status": "OWNER_REVIEW_REQUIRED",
+      "license": "CC-BY-NC-4.0",
+      "license_source": "public model card, not a downloaded LICENSE file"
     }
-  ]
+  ],
+  "license_note": "Licenses from public cards. Confirm on the weight LICENSE file before commercial use."
 }
