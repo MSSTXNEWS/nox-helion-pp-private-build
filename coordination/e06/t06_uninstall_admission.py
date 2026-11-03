@@ -125,6 +125,34 @@ def verify_original_uninstall(install: Path, owned_paths: tuple[Path, ...],
             print("T06_UNINSTALL_FIRST_MANIFEST_RESIDUE " +
                   json.dumps(relative[:160], ensure_ascii=True),
                   file=sys.stderr, flush=True)
+            # R116: gather read-only evidence of the FIRST actual physical
+            # uninstall failure. Never rerun the remover, alter owned files,
+            # accept residue, or replace this original fail-closed verdict.
+            try:
+                import importlib.util
+                witness_source = Path(__file__).resolve().with_name(
+                    "t06_uninstall_firstfail_witness.py")
+                spec = importlib.util.spec_from_file_location(
+                    "nox_t06_uninstall_readonly_witness", witness_source)
+                if spec is None or spec.loader is None:
+                    raise ImportError("T06_UNINSTALL_READONLY_WITNESS_MISSING")
+                witness_module = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(witness_module)
+                repo_root = Path(__file__).resolve().parents[2]
+                remover_candidates = (
+                    repo_root / "work/e06/staged/R11/Installer/Remove-InstalledPayload.ps1",
+                    repo_root / "work/t06-wpf-p02-compile/R11/Installer/Remove-InstalledPayload.ps1",
+                )
+                remover = next((p for p in remover_candidates if p.is_file()), None)
+                witness = witness_module.read_only_uninstall_failure_snapshot(
+                    install, owned_paths, remover)
+                print("T06_UNINSTALL_READONLY_FIRSTFAIL_WITNESS " +
+                      json.dumps(witness, sort_keys=True, ensure_ascii=True),
+                      file=sys.stderr, flush=True)
+            except Exception as witness_error:
+                print("T06_UNINSTALL_READONLY_WITNESS_HOLD " +
+                      type(witness_error).__name__[:80],
+                      file=sys.stderr, flush=True)
             raise RuntimeError("T06_CONSERVATIVE_UNINSTALL_MANIFEST_FILE_REMAINS")
     for metadata in ("payload.sha256.json", "nox-p01-owned.txt", "Uninstall.exe"):
         path = install / metadata
