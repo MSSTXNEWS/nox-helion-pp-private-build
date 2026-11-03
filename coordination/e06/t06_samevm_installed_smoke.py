@@ -838,8 +838,13 @@ def await_original_uninstall(install: Path, owned_files: tuple[Path, ...],
     deadline = time.monotonic() + timeout_seconds
     metadata = (install/"payload.sha256.json", install/"nox-p01-owned.txt",
                 install/"Uninstall.exe")
+    # A detached NSIS /S child can remove its metadata before the last
+    # manifest-owned DLL. Metadata disappearance alone is NOT quiescence.
+    # Wait for the entire original manifest snapshot; the unchanged final
+    # verifier still rejects linked paths, registry residue and user-data loss.
+    tracked = tuple(owned_files) + metadata
     while any(p.exists() or p.is_symlink() or
-              getattr(p, "is_junction", lambda: False)() for p in metadata):
+              getattr(p, "is_junction", lambda: False)() for p in tracked):
         remaining = deadline - time.monotonic()
         if remaining <= 0:
             break
