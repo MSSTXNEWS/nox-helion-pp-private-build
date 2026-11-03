@@ -453,9 +453,18 @@ export function bootstrapMega814(s,menuV2){
  if(!menu||!control||document.getElementById("nox-mega814-menu"))throw Error("MEGA814_OWNER_PAGE_MISSING");
  // Host-origin messages are only model state, NEVER a page-granted ACL.
  const host=window.chrome?.webview;
+ // Original OneHost virtual HOME gate; renderer grants no native authority.
+ const loc=window.location;
+ const trustedOwnerOrigin=loc?.origin==="https://nox.local"&&loc.pathname==="/"&&
+   loc.search===""&&loc.hash==="";
+ let aiClient=null;
+ if(trustedOwnerOrigin&&host){
+   try{aiClient=createNativeMenuClient({webview:host,cryptoRef:window.crypto});}
+   catch{/* Native chat stays HOLD on missing/untrusted bridge. */}
+ }
  const probe=createNativeReadOnlyPort(host);
  const store=createE05ReadOnlyStore(host);
- const world=menuWorlds(menu,s,probe,menuV2);
+ const world=menuWorlds(menu,s,probe,menuV2,aiClient);
  const work=workViews(control,s,store,probe);
  const castPanel=cast(control,s);
  const spacePanel=space(control,store);
