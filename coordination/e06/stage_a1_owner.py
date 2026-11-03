@@ -18,6 +18,7 @@ ROOT = Path(__file__).resolve().parents[2]
 MANIFEST = Path(__file__).with_name('A1_BUILD_SOURCES.lock.json')
 _SHA = re.compile(r'[0-9a-f]{40}\Z')
 _BASE = 'src/nox_selfbuilder/'
+_WINDOWS_STAT = os.name == 'nt'
 REQUIRED = (
     'worms.py', 'worm_providers.py', 'worm_idea_loop.py',
     'growth_sandbox.py', 'growth_forge.py', 'worm_autopilot.py',
@@ -64,6 +65,25 @@ def trusted_anchor(path: Path, *, is_directory: bool, label: str) -> None:
         raise ValueError('A1_' + label + '_ROOT_TYPE_HOLD')
 
 
+
+def _descriptor_identity(info):
+    """Descriptor-before/after change time remains mandatory on every OS."""
+    return (info.st_dev, info.st_ino, info.st_size,
+            info.st_mtime_ns, info.st_ctime_ns)
+
+
+def _same_named_descriptor(named, opened) -> bool:
+    """Windows CPython 3.12 path ctime and fd ctime have different meanings."""
+    if not _WINDOWS_STAT:
+        return _descriptor_identity(named) == _descriptor_identity(opened)
+    birth = getattr(named, 'st_birthtime_ns', None)
+    opened_birth = getattr(opened, 'st_birthtime_ns', None)
+    return (type(birth) is int and type(opened_birth) is int and
+            birth == opened_birth and
+            (named.st_dev, named.st_ino, named.st_size, named.st_mtime_ns) ==
+            (opened.st_dev, opened.st_ino, opened.st_size, opened.st_mtime_ns))
+
+
 def trusted_manifest_bytes(path: Path) -> bytes:
     """Pin the lock's descriptor and live pathname, including its ancestors."""
     trusted_anchor(path, is_directory=False, label='MANIFEST')
@@ -74,20 +94,16 @@ def trusted_manifest_bytes(path: Path) -> bytes:
     except OSError as exc:
         raise ValueError('A1_MANIFEST_OPEN_IDENTITY_HOLD') from exc
 
-    def identity(info):
-        return (info.st_dev, info.st_ino, info.st_size,
-                info.st_mtime_ns, info.st_ctime_ns)
-
     with os.fdopen(fd, 'rb') as stream:
         opened = os.fstat(stream.fileno())
-        if not stat.S_ISREG(opened.st_mode) or identity(before) != identity(opened):
+        if not stat.S_ISREG(opened.st_mode) or not _same_named_descriptor(before, opened):
             raise ValueError('A1_MANIFEST_OPEN_IDENTITY_HOLD')
         payload = stream.read(65537)
         if len(payload) > 65536:
             raise ValueError('A1_MANIFEST_BOUNDED_REQUIRED')
         trusted_anchor(path, is_directory=False, label='MANIFEST')
-        if (identity(os.fstat(stream.fileno())) != identity(opened) or
-                identity(path.lstat()) != identity(opened)):
+        if (_descriptor_identity(os.fstat(stream.fileno())) != _descriptor_identity(opened) or
+                not _same_named_descriptor(path.lstat(), opened)):
             raise ValueError('A1_MANIFEST_CHANGED_DURING_READ')
     return payload
 
@@ -113,13 +129,9 @@ def trusted_source_bytes(path: Path, base: Path) -> bytes:
     except OSError as exc:
         raise ValueError('A1_SOURCE_OPEN_IDENTITY_HOLD') from exc
 
-    def identity(info):
-        return (info.st_dev, info.st_ino, info.st_size,
-                info.st_mtime_ns, info.st_ctime_ns)
-
     with os.fdopen(fd, 'rb') as stream:
         opened = os.fstat(stream.fileno())
-        if not stat.S_ISREG(opened.st_mode) or identity(before) != identity(opened):
+        if not stat.S_ISREG(opened.st_mode) or not _same_named_descriptor(before, opened):
             raise ValueError('A1_SOURCE_OPEN_IDENTITY_HOLD')
         payload = stream.read(256001)
         regular_owned(path, base)
@@ -128,7 +140,7 @@ def trusted_source_bytes(path: Path, base: Path) -> bytes:
             end = os.fstat(stream.fileno())
         except OSError as exc:
             raise ValueError('A1_SOURCE_CHANGED_DURING_READ') from exc
-        if identity(live) != identity(opened) or identity(end) != identity(opened):
+        if not _same_named_descriptor(live, opened) or _descriptor_identity(end) != _descriptor_identity(opened):
             raise ValueError('A1_SOURCE_CHANGED_DURING_READ')
     if len(payload) > 256000:
         raise ValueError('A1_EXACT_GIT_SOURCE_SHA_HOLD')
@@ -143,7 +155,7 @@ def stage(source: Path, *, repo: Path = ROOT, manifest_path: Path = MANIFEST) ->
     trusted_anchor(manifest_path, is_directory=False, label='MANIFEST')
     repo = repo.resolve(strict=True)
     source = source.resolve(strict=True)
-    if manifest_path.absolute() != repo / 'coordination/e06/A1_BUILD_SOURCES.lock.json':
+    if manifest_path.resolve(strict=True) != repo / 'coordination/e06/A1_BUILD_SOURCES.lock.json':
         raise ValueError('A1_CANONICAL_SOURCE_LOCK_REQUIRED')
     if source == repo or source.is_relative_to(repo / 'src') or source.is_relative_to(repo / 'coordination'):
         raise ValueError('A1_DISPOSABLE_STAGE_REQUIRED')

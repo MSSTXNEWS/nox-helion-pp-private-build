@@ -3,6 +3,9 @@ from __future__ import annotations
 import hashlib
 import importlib.util
 import json
+import re
+from types import SimpleNamespace
+from unittest.mock import patch
 from pathlib import Path
 import tempfile
 import unittest
@@ -42,7 +45,8 @@ class CumulativeStage(unittest.TestCase):
                 existing = self.target / 'nox_selfbuilder' / name
                 existing.parent.mkdir(parents=True, exist_ok=True)
                 existing.write_bytes(raw)
-        self.manifest = base / 'lock.json'
+        self.manifest = self.repo / 'coordination/e06/A1_BUILD_SOURCES.lock.json'
+        self.manifest.parent.mkdir(parents=True)
         self.manifest.write_text(json.dumps({
             'schema': 'NOX-A1-ONEHOST-STAGE-LOCK-v1', 'sources': pins
         }), encoding='utf-8')
@@ -114,6 +118,84 @@ class CumulativeStage(unittest.TestCase):
                       'A1_VERIFIED_REUSE_MISSING_FROM_NATIVE_RUNTIME',
                       "Count + 1", 'A1_ONEHOST_NATIVE_STAGE_FAILED'):
             self.assertIn(token, script)
+
+
+    def test_private_builder_pin_matches_reviewed_a1_stage(self):
+        script = (ROOT / 'private_build.ps1').read_text('utf-8')
+        pinned = re.findall(r"\$a1OwnerPin='([0-9a-f]{40})'", script)
+        self.assertEqual(pinned, [A1.git_blob((ROOT / 'coordination/e06/stage_a1_owner.py').read_bytes())])
+        self.assertIn("throw 'A1_ONEHOST_STAGE_SOURCE_PIN_HOLD'", script)
+
+    def test_rewritten_manifest_and_sources_keep_real_file_identity(self):
+        # Exercise the real readers after multiple updates, not a fresh-file-only proof.
+        raw = self.manifest.read_bytes()
+        src = self.repo / 'src/nox_selfbuilder/worms.py'
+        source_bytes = src.read_bytes()
+        for _ in range(12):
+            self.manifest.write_bytes(raw)
+            src.write_bytes(source_bytes)
+            self.assertEqual(A1.trusted_manifest_bytes(self.manifest), raw)
+            self.assertEqual(A1.trusted_source_bytes(src, self.repo), source_bytes)
+        self.assertEqual(self.apply()['reused_staged_count'], 9)
+
+    def test_noncanonical_manifest_is_rejected(self):
+        alias = self.repo / 'different-lock.json'
+        alias.write_bytes(self.manifest.read_bytes())
+        with self.assertRaisesRegex(ValueError, 'A1_CANONICAL_SOURCE_LOCK_REQUIRED'):
+            A1.stage(self.target, repo=self.repo, manifest_path=alias)
+
+
+class WindowsFileMetadata(unittest.TestCase):
+    @staticmethod
+    def info(**changes):
+        values = dict(st_dev=2, st_ino=7, st_size=16, st_mtime_ns=300,
+                      st_ctime_ns=100, st_birthtime_ns=100)
+        values.update(changes)
+        return SimpleNamespace(**values)
+
+    def test_windows_cross_api_ctime_difference_is_not_a_source_replacement(self):
+        with patch.object(A1, '_WINDOWS_STAT', True):
+            self.assertTrue(A1._same_named_descriptor(self.info(), self.info(st_ctime_ns=200)))
+
+    def test_windows_identity_metadata_changes_still_fail_closed(self):
+        with patch.object(A1, '_WINDOWS_STAT', True):
+            for key in ('st_dev', 'st_ino', 'st_size', 'st_mtime_ns', 'st_birthtime_ns'):
+                with self.subTest(field=key):
+                    self.assertFalse(A1._same_named_descriptor(
+                        self.info(), self.info(**{key: getattr(self.info(), key)+1})))
+            for value in (None, True, 100.0, '100'):
+                self.assertFalse(A1._same_named_descriptor(
+                    self.info(st_birthtime_ns=value), self.info(st_birthtime_ns=value)))
+
+    def test_posix_change_time_remains_mandatory(self):
+        with patch.object(A1, '_WINDOWS_STAT', False):
+            self.assertFalse(A1._same_named_descriptor(self.info(), self.info(st_ctime_ns=200)))
+
+    def test_in_read_descriptor_change_time_mutation_still_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            path = root / 'fixture.json'
+            path.write_bytes(b'{"safe":true}')
+            original_fstat = A1.os.fstat
+            for kind in ('manifest', 'source'):
+                count = [0]
+                def changed(fd):
+                    real = original_fstat(fd)
+                    fields = {key: getattr(real, key) for key in
+                              ('st_dev', 'st_ino', 'st_size', 'st_mode', 'st_mtime_ns', 'st_ctime_ns')}
+                    count[0] += 1
+                    if count[0] == 2:
+                        fields['st_ctime_ns'] += 1
+                    return SimpleNamespace(**fields)
+                with self.subTest(reader=kind), \
+                     patch.object(A1.os, 'fstat', side_effect=changed), \
+                     patch.object(A1, '_same_named_descriptor', return_value=True):
+                    with self.assertRaisesRegex(ValueError, 'CHANGED_DURING_READ'):
+                        if kind == 'manifest':
+                            A1.trusted_manifest_bytes(path)
+                        else:
+                            A1.trusted_source_bytes(path, root)
+                self.assertEqual(count[0], 2)
 
 if __name__ == '__main__':
     unittest.main()

@@ -355,12 +355,14 @@ try {
         }
         # A.1 V3.1 stages into existing OneHost Python, no separate backend.
         $a1Script=Join-Path $root 'coordination/e06/stage_a1_owner.py'
-        $a1OwnerPin='86f6e613a66a39f3cc94207fc2992009532efce6'
+        $a1OwnerPin='67d3428d20ee1f97410fa619c3bb586eb5489240'
         if (!(Test-Path -LiteralPath $a1Script -PathType Leaf)) { throw 'A1_ONEHOST_STAGE_SOURCE_MISSING' }
         $a1ActualPin=(& git hash-object -- $a1Script)
         if ($LASTEXITCODE -ne 0 -or ([string]$a1ActualPin).Trim().ToLowerInvariant() -cne $a1OwnerPin) {
             throw 'A1_ONEHOST_STAGE_SOURCE_PIN_HOLD'
         }
+        & $venvPython -I -m unittest discover -s (Join-Path $root 'tests/e06') -p 'test_e06_a1_cumulative_reuse.py' -v
+        if ($LASTEXITCODE -ne 0) { throw 'A1_ORIGINAL_STAGE_REGRESSION_HOLD' }
         $a1StageJson=@(& $venvPython -I $a1Script $source)
         if ($LASTEXITCODE -ne 0) { throw 'A1_ONEHOST_NATIVE_STAGE_FAILED' }
         $a1Stage=($a1StageJson -join "`n") | ConvertFrom-Json
