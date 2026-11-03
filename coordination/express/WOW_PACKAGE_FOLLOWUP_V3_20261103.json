@@ -1,8 +1,8 @@
 {
   "schema": "NOX_WOW_PACKAGE_FOLLOWUP_V3_V1",
-  "checked_at_utc": "2026-11-03T15:11:51.036822+00:00",
+  "checked_at_utc": "2026-11-03T15:18:20.959482+00:00",
   "task": "Reconcile newly arriving v2/v3 artifacts with the already integrated canonical source and latest autoexecutor progress",
-  "canonical_parent": "a65a4de398d68256076de5bfd3fe794dbf03bd1c",
+  "canonical_parent": "bff64e4d5749faac0e588a6c501ebe93a5526789",
   "previous_receipt": "coordination/express/WOW_PACKAGE_MERGE_20261103.json",
   "drive_scan": {
     "folder_id": "1qYf9_jD9-2AYuurZpGPqwtt8uXW7NXh-",
@@ -379,12 +379,18 @@
     },
     "python_compile": "PASS",
     "git_diff_check": "PASS",
-    "windows_confirmation": "PENDING_NEW_CI",
+    "windows_confirmation": {
+      "status": "PASS",
+      "source_sha": "bff64e4d5749faac0e588a6c501ebe93a5526789",
+      "acquisition_tests_passed": 10,
+      "next_firstboot_tests_passed": 29,
+      "run_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/41661619545/job/126005990506"
+    },
     "production_changed": false,
     "checks_weakened": false
   },
   "latest_progress": {
-    "canonical_head_rechecked": "a65a4de398d68256076de5bfd3fe794dbf03bd1c",
+    "canonical_head_rechecked": "bff64e4d5749faac0e588a6c501ebe93a5526789",
     "no_newer_auto_commit_observed": true,
     "r90_preserved": true,
     "github_a65_jobs": {
@@ -413,5 +419,60 @@
     "installed_current_source_release": "NOT_RUN",
     "independent_same_setup_E07": "NOT_RUN",
     "release_accepted": false
+  },
+  "initial_followup_parent": "a65a4de398d68256076de5bfd3fe794dbf03bd1c",
+  "integration_history": [
+    {
+      "commit": "a65a4de398d68256076de5bfd3fe794dbf03bd1c",
+      "changes": "First four artifact reconciliation, compatible theater changes, source pin/checkout/import/test repairs; all R89/R90 progress preserved."
+    },
+    {
+      "commit": "bff64e4d5749faac0e588a6c501ebe93a5526789",
+      "changes": "Additional v2/v3 artifact review and explicit SQLite acquisition fixture connection close."
+    }
+  ],
+  "discovery_fixture_followup": {
+    "path": "tests/test_c04_p03_ack_scalar_rejection.py",
+    "preimage_git_blob": "fe1f406a77b86c9b92e8afc6ec7b998f6fbbd9f6",
+    "new_git_blob": "fb0184ce19ab2d109b9c882e99b93ea7a95715c1",
+    "motivating_source_sha": "bff64e4d5749faac0e588a6c501ebe93a5526789",
+    "windows_job_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/41661619545/job/126005990506",
+    "observed_failure": "setUpClass FileNotFoundError for repo/discover; 0 ACK tests ran; P03_SCALAR_ACK_REGRESSION_HOLD. This was a test discovery/CLI path error, not observed native ACK failure.",
+    "change": "Move optional source-path argv handling into __main__; imports use canonical path relative to __file__. Exact original AST checks, assertions and custom-source CLI retained.",
+    "existing_step6_discovery_tests": [
+      {
+        "name": "test_a1_native_command.py",
+        "pass": 21
+      },
+      {
+        "name": "test_c05_a1_partial_binding_fence.py",
+        "pass": 5
+      },
+      {
+        "name": "test_c04_pull_registry_race.py",
+        "pass": 4
+      },
+      {
+        "name": "test_c04_p03_ack_scalar_rejection.py",
+        "pass": 5
+      },
+      {
+        "name": "test_ev_a04_model_retry_source.py",
+        "pass": 11
+      },
+      {
+        "name": "test_ci_windows_runner_selector.py",
+        "pass": 4
+      }
+    ],
+    "step6_total": 50,
+    "direct_script_tests_passed": 5,
+    "direct_custom_source_tests_passed": 5,
+    "local_platform": "Linux",
+    "compile": "PASS",
+    "diff_check": "PASS",
+    "new_windows_confirmation": "PENDING_NEW_CI",
+    "production_changed": false,
+    "gate_or_assertions_weakened": false
   }
 }

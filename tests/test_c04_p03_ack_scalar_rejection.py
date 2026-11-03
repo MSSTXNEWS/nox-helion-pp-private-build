@@ -12,11 +12,8 @@ from pathlib import Path
 import sys
 import unittest
 
-SOURCE = (Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else
-          Path(__file__).resolve().parents[1] /
+SOURCE = (Path(__file__).resolve().parents[1] /
           'Packages/P03/Source/python-host/p03_onehost_port.py')
-if len(sys.argv) > 1:
-    sys.argv[:] = sys.argv[:1]
 
 class P03PortHold(RuntimeError):
     pass
@@ -80,4 +77,8 @@ class P03RealAckBranchTest(unittest.TestCase):
         self.assertFalse(self.respond(value)['result']['cancelled'])
 
 if __name__ == '__main__':
+    # Discovery owns its arguments; a source override belongs to this CLI only.
+    if len(sys.argv) > 1:
+        SOURCE = Path(sys.argv[1]).resolve()
+        sys.argv[:] = sys.argv[:1]
     unittest.main(verbosity=2)
