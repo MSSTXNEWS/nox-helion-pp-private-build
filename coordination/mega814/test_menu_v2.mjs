@@ -30,10 +30,12 @@ try {
  let submenus=0, navigable=0, handlers=0; const seenRoutes=[];
  for(const w of catalog.worlds){
   const target=element('div');
-  const detail=appendMenuV2(target,w,catalog,(route,label)=>{
-   handlers++;
-   assert.ok(['chat','core-status','model-library'].includes(route));
-   const button=element('button');button.textContent=label;button.disabled=true;
+  const detail=appendMenuV2(target,w,catalog,(route,label,payload)=>{
+   handlers++;seenRoutes.push(route);
+   assert.ok(['helion.chat','chat','core-status','model-library','nox.parent-navigation'].includes(route));
+   if(route==='helion.chat')assert.equal(typeof payload?.text,'string');
+   const button=element('button');button.textContent=label;
+   button.disabled=!(route==='helion.chat'||route==='nox.parent-navigation');
    return button;
   });
   assert.equal(detail.tag,'section','MENU V2 uses a static screen, never details/summary dropdown');
@@ -69,14 +71,16 @@ try {
  }
  assert.equal(submenus,10);
  assert.equal(navigable,193);
- assert.equal(handlers,0); // All owner actions are lazy, not invoked by menu rendering.
+ assert.equal(handlers,40); // Each item open creates parent navigation plus the AI action.
  for(const w of catalog.worlds){
   const nativeItems=w.items.map((item,index)=>({item,index})).filter(x=>x.item.native_route);
   if(!nativeItems.length)continue;
   const target=element('div');
-  const detail=appendMenuV2(target,w,catalog,(route,label)=>{
-   handlers++;
-   const native=element('button');native.disabled=true;native.textContent=label;
+  const detail=appendMenuV2(target,w,catalog,(route,label,payload)=>{
+   handlers++;seenRoutes.push(route);
+   assert.ok(['helion.chat','chat','core-status','model-library','nox.parent-navigation'].includes(route));
+   if(route==='helion.chat')assert.equal(typeof payload?.text,'string');
+   const native=element('button');native.disabled=!(route==='helion.chat'||route==='nox.parent-navigation');native.textContent=label;
    return native;
   });
   const list=detail.children[2],feature=detail.children[3];
@@ -90,7 +94,10 @@ try {
    assert.ok(feature.children[1].textContent.includes('E07 HOLD'));
   }
  }
- assert.equal(handlers,3);
+ assert.equal(handlers,49);
+ assert.equal(seenRoutes.filter(x=>x==='helion.chat').length,23);
+ assert.equal(seenRoutes.filter(x=>x==='nox.parent-navigation').length,23);
+ assert.equal(seenRoutes.filter(x=>['chat','core-status','model-library'].includes(x)).length,3);
  // An owner adapter may throw when offline/revoked: navigation still opens,
  // while no privileged UI/action is surfaced or falsely marked successful.
  const withNative=catalog.worlds.find(w=>w.items.some(item=>item.native_route));
