@@ -1,5 +1,13 @@
 name: NOX P01 EXPRESS · canonical D02 + verified native buttons
 on:
+  push:
+    branches:
+      - integration/nox-v16-unified-candidate-20261028-r01
+    paths:
+      - 'proposals/P01/WOW-MAX10/**'
+      - 'coordination/mega814/**'
+      - 'integrations/adminator-nox/**'
+      - '.github/workflows/p01-pr162-express.yml'
   pull_request:
     paths:
       - 'proposals/P01/WOW-MAX10/**'
@@ -53,6 +61,13 @@ jobs:
           npm install --ignore-scripts --no-audit --no-fund --package-lock=false
           npm run prepare:donor
           node --test tests/*.test.mjs
+      - name: Retain source-verified 18-page NOX UI work-area candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: nox-express-adminator-source-candidate
+          path: integrations/adminator-nox/artifacts/adminator-dist/
+          retention-days: 14
+          if-no-files-found: error
       - name: Keep original D02 gravity and WOW unified source regressions
         shell: bash
         run: |
