@@ -23,6 +23,14 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Reject a CRLF checkout of the payload
+        shell: pwsh
+        run: |
+          $version = [IO.File]::ReadAllBytes((Resolve-Path -LiteralPath '.\build_inputs\m2\VERSION.txt'))
+          if ($version -contains 13) { throw 'PAYLOAD_CRLF_CHECKOUT' }
+          $menu = [IO.File]::ReadAllBytes((Resolve-Path -LiteralPath '.\build_inputs\m2\product_payload\helion\data\menu_v2_full_catalog.json'))
+          if ($menu -contains 13) { throw 'MENU_CRLF_CHECKOUT' }
+
       - name: Set up pinned Python
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
