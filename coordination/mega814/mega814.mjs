@@ -163,8 +163,9 @@ function menuWorlds(menu,s,probe,menuV2,aiClient){
   people:[56.3,81.9],creative:[73.1,74.5],business:[82.1,55.2],
   world:[79.7,33.4],pc:[66.7,16]
  });
- const controlsFor=new Map();
+ const controlsFor=new Map();let destroyed=false;
  function activate(w){
+  if(destroyed)return;
   detail.hidden=false;heading.textContent=w.label;controls.replaceChildren();
   // First show the canonical world's 193-tree subsections immediately:
   // a second click on a collapsed section is NOT part of the approved MENU.
@@ -204,6 +205,7 @@ function menuWorlds(menu,s,probe,menuV2,aiClient){
  home.type="button";home.setAttribute("aria-label","Вернуться на HOME к восьми ядрам");
  home.title="HOME";home.style.left="50%";home.style.top="47.2%";
  home.addEventListener("click",()=>{
+  if(destroyed)return;
   const target=document.querySelector('.nav [data-screen="home"]');
   if(target && !target.disabled){detail.hidden=true;target.click();}
   else{detail.hidden=false;heading.textContent="HOME";controls.replaceChildren();
@@ -212,14 +214,16 @@ function menuWorlds(menu,s,probe,menuV2,aiClient){
  scene.append(home);
  const msg=note(panel,"MENU10 · проверка утверждённого оригинала");
  art.addEventListener("load",()=>{
-  if(art.hidden)return;scene.hidden=false;msg.hidden=true;
+  if(destroyed||art.hidden)return;scene.hidden=false;msg.hidden=true;
   legacyPanel?.classList.add("mega814-legacy-hidden");
  });
  art.addEventListener("error",()=>{
+  if(destroyed)return;
   panel.classList.add("mega814-image-hold");
   msg.textContent="HOLD · MENU10 media недоступно; исходные 10 кнопок доступны без подмены изображения";
  });
  void approvedImage(art,"mega814/menu10.png",s.asset.menu10SHA256,msg).then(ok=>{
+  if(destroyed)return;
   if(!ok){
    panel.classList.add("mega814-image-hold");
    msg.textContent="HOLD · MENU10 SHA/media не подтверждены; доступны кнопки миров";
@@ -227,7 +231,7 @@ function menuWorlds(menu,s,probe,menuV2,aiClient){
  });
  panel.append(scene,fallback,detail);
  if(legacyPanel)legacyPanel.after(panel);else menu.append(panel);
- return {destroy(){legacyPanel?.classList.remove("mega814-legacy-hidden");panel.remove()}};
+ return {destroy(){if(destroyed)return;destroyed=true;legacyPanel?.classList.remove("mega814-legacy-hidden");panel.remove()}};
 }
 function workViews(control,s,store,probe){
  const panel=node("section",undefined,"mega814-panel mega814-work");
