@@ -404,7 +404,16 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
             // A previously authorized queued-model STOP must overtake
             // transfers just like chat.stop. SID/ACL and bounded jobId remain
             // enforced by this bridge and by the native P03 owner.
+            // A cancellation request is never delayed by the WPF approval
+            // dialog for starting work. This exact MENU STOP still requires
+            // both its own route ACL and chat.stop ACL in the original owner.
+            var isMenuStop = route == "menu.binding" &&
+                payload.EnumerateObject().Count() == 1 &&
+                payload.TryGetProperty("action", out var menuAction) &&
+                menuAction.ValueKind == JsonValueKind.String &&
+                menuAction.GetString() == "stop";
             if (route is not ("chat.stop" or "models.cancel") &&
+                !isMenuStop &&
                 !await _nativeConsent(route, payload.Clone(), cancel))
             {
                 Reply(source, epoch, id, route, "HOLD", "NATIVE_CONSENT_DENIED");
@@ -425,13 +434,17 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
                     Reply(source, epoch, id, route, "HOLD", navigation.ErrorCode ?? "BROWSER_NATIVE_HOLD");
                 return;
             }
-            if (route == "chat.stop") Interlocked.Increment(ref _streamEpoch);
+            if (route == "chat.stop" || isMenuStop)
+                Interlocked.Increment(ref _streamEpoch);
             // P03's existing C# queue stays in this WPF host; it must not be
             // replaced by a Python downloader or sent through a second IPC.
             if (_nativeOwnerAction is not null &&
                 (route.StartsWith("models.", StringComparison.Ordinal) ||
                  route=="chat.stop" ||
                  route=="system.autostart" ||
+                 route=="browser.navidle" || route=="menu.dispatch" ||
+                 route=="menu.binding" || route=="selfwrite.ack" ||
+                 route=="selflearn.ack" ||
                  route=="chat.commands" && payload.TryGetProperty("action",out var command) &&
                  command.ValueKind==JsonValueKind.String && command.GetString() is string ownerCommand &&
                  (ownerCommand=="training.import" || ownerCommand=="selfbuilder.a1.boot" ||
@@ -469,7 +482,7 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
                         cancelled.TryGetProperty("cancelled", out var flag) &&
                         flag.ValueKind == JsonValueKind.True ? "STOP_REQUESTED" : "HOLD";
                 }
-                else if (route == "chat.stop")
+                else if (route == "chat.stop" || isMenuStop)
                     ownerState = ownerResult.Accepted ? "STOP_REQUESTED" : "HOLD";
                 Reply(source, epoch, id, route, ownerState,
                       ownerResult.ErrorCode, ownerResult.Result);

@@ -202,9 +202,20 @@ public partial class MainWindow
             if (!allowed.Contains(name))
                 return new NativePipeResult("", false, null, "MENU_BINDING_DENIED");
             if (name == "stop") {
-                Interlocked.Increment(ref _a1OwnerStopEpoch);
+                // Exact MENU STOP must reach the existing OneHost STOP path.
+                // Never return an ACK when the native Python worker rejected it.
+                if (payload.EnumerateObject().Count() != 1)
+                    return new NativePipeResult("", false, null, "MENU_STOP_PAYLOAD_HOLD");
+                var stopSid = WindowsIdentity.GetCurrent().User?.Value;
+                if (string.IsNullOrEmpty(stopSid) || !NativeP02Acl(stopSid, "chat.stop"))
+                    return new NativePipeResult("", false, null, "MENU_STOP_ACL_HOLD");
+                var nativeStop = await DispatchNativeOwnerAsync(
+                    "chat.stop", JsonSerializer.SerializeToElement(new { }), cancel);
+                if (!nativeStop.Accepted)
+                    return new NativePipeResult("", false, null,
+                        nativeStop.ErrorCode ?? "MENU_STOP_NATIVE_HOLD");
                 return new NativePipeResult("", true,
-                    JsonSerializer.SerializeToElement(new { status = "MENU_STOP_ACK", action = name }), null);
+                    JsonSerializer.SerializeToElement(new { status = "MENU_STOP_REQUESTED", action = name }), null);
             }
             return new NativePipeResult("", true,
                 JsonSerializer.SerializeToElement(new { status = "MENU_BINDING_ACK", action = name }), null);
