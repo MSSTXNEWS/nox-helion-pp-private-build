@@ -27,7 +27,7 @@ const element=tag=>({tag,children:[],events:{},className:'',textContent:'',hidde
  click(){this.events.click?.({})}});
 globalThis.document={createElement:element};
 try {
- let submenus=0, navigable=0, handlers=0;
+ let submenus=0, navigable=0, handlers=0; const seenRoutes=[];
  for(const w of catalog.worlds){
   const target=element('div');
   const detail=appendMenuV2(target,w,catalog,(route,label)=>{
