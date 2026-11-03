@@ -13,6 +13,7 @@ from pathlib import Path
 import re
 import stat
 import sys
+import tempfile
 from urllib.parse import urlsplit, unquote
 
 SCHEMA = "NOX-E06-ONEHOST-DIAGNOSTIC-NSIS-v1"
@@ -131,11 +132,22 @@ def emit(setup: Path, receipt: Path, url: str, version: int, out: Path) -> dict:
     raw = f"{PREFIX}\n{version}\n{url}\n{st.st_size}\n{sha}\n".encode("ascii")
     if not 100 <= len(raw) <= 4095:
         raise Hold("L02_MANIFEST_SIZE_INVALID")
-    # Atomic candidate publication; no implicit release or L01 pin activation.
-    with out.open("xb") as stream:
-        stream.write(raw)
-        stream.flush()
-        os.fsync(stream.fileno())
+    # A short write/fsync failure must not publish a partial final manifest.
+    # Same-directory temporary bytes are durable before a no-clobber hardlink;
+    # unlinking the temporary name keeps the final name atomic on NTFS/POSIX.
+    # Do not use os.replace(): a concurrent owner candidate must never be lost.
+    fd, temporary = tempfile.mkstemp(prefix=out.name + ".", suffix=".tmp", dir=out.parent)
+    try:
+        with os.fdopen(fd, "wb") as stream:
+            stream.write(raw)
+            stream.flush()
+            os.fsync(stream.fileno())
+        try:
+            os.link(temporary, out)
+        except FileExistsError as exc:
+            raise Hold("L02_MANIFEST_OUTPUT_UNSAFE_OR_EXISTS") from exc
+    finally:
+        os.unlink(temporary)
     return {
         "schema": "NOX-L02-L01-MANIFEST-HANDOFF-v1",
         "status": "MANIFEST_SOURCE_CANDIDATE_NOT_OWNER_APPROVED",
