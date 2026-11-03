@@ -1,0 +1,66 @@
+{
+  "schema": "nox.soul.seven_pillars.staging_manifest.v2.1",
+  "status": "RAW_STAGING_OFFTREE_NO_AUTOLOAD",
+  "source": "7 unique synthetic optimizer training tasks: 7x4481 trained parameters",
+  "models": {
+    "01_truthful_memory": {
+      "file": "01_truthful_memory.safetensors",
+      "sha256": "776ea49d348c81eca1e7374e0fcb8070b5a42b22562cc87cee9bcc5deca94df7",
+      "optimizer_state": "01_truthful_memory.adamw.safetensors",
+      "optimizer_sha256": "88d4bae69096977da64c39d2c451824bb937f6ac8f989196c2106278ae6bf4da",
+      "status": "LOCAL_RESEARCH_CANDIDATE",
+      "parameters": 4481
+    },
+    "02_causal_chronology": {
+      "file": "02_causal_chronology.safetensors",
+      "sha256": "a89eb456acd6e6f52166f7ee6e6909b8e6a340228a905011a66a8a5a1741e4b2",
+      "optimizer_state": "02_causal_chronology.adamw.safetensors",
+      "optimizer_sha256": "b992f98300750af8a76794a75a33aa3ca9cfdc65f8061cd434a433aaae052d35",
+      "status": "LOCAL_RESEARCH_CANDIDATE",
+      "parameters": 4481
+    },
+    "03_persona_voice": {
+      "file": "03_persona_voice.safetensors",
+      "sha256": "5579a47fb198802f76fac355141a3a11c1600772e84264a2ad252409f8f731af",
+      "optimizer_state": "03_persona_voice.adamw.safetensors",
+      "optimizer_sha256": "e6c06be735a4c068254d4efec15d6885f3c08bac7af771f37d95f2404a6eb684",
+      "status": "LOCAL_RESEARCH_CANDIDATE",
+      "parameters": 4481
+    },
+    "04_longform_coverage": {
+      "file": "04_longform_coverage.safetensors",
+      "sha256": "3a1c6ea806f63204fd88c7de59bb1177e61c05d2bd6b702e1bc8366476733ff0",
+      "optimizer_state": "04_longform_coverage.adamw.safetensors",
+      "optimizer_sha256": "995c5487dd6f6385f082d628f0ce805b7269b5876a90bd7163e97d59b0c76eab",
+      "status": "LOCAL_RESEARCH_CANDIDATE",
+      "parameters": 4481
+    },
+    "05_anti_template": {
+      "file": "05_anti_template.safetensors",
+      "sha256": "4d5bce3ba481d6f0011c63eb335eb6c6469bb0c2e4d37739f65643a7660eb611",
+      "optimizer_state": "05_anti_template.adamw.safetensors",
+      "optimizer_sha256": "12d106b809eb209af32152c536b011a6d80b1a4c38b51d38c16e747ef5bdf359",
+      "status": "LOCAL_RESEARCH_CANDIDATE",
+      "parameters": 4481
+    },
+    "06_empathy_boundaries": {
+      "file": "06_empathy_boundaries.safetensors",
+      "sha256": "d9cf323af82c4afa80406cee9a7d20da2d176e162069eff572aeba31a3ba8b60",
+      "optimizer_state": "06_empathy_boundaries.adamw.safetensors",
+      "optimizer_sha256": "0a01b7aeaf714e35477c650a286b21f6fb4fb424b9b488f0cf223bf09311296c",
+      "status": "LOCAL_RESEARCH_CANDIDATE",
+      "parameters": 4481
+    },
+    "07_reflection_correction": {
+      "file": "07_reflection_correction.safetensors",
+      "sha256": "85126e27f5ba2e547801258af29d8f24a34b8dce296bc370c3049a8b836dc934",
+      "optimizer_state": "07_reflection_correction.adamw.safetensors",
+      "optimizer_sha256": "bda2ce030ec34a4b2a89eb3cea0c70f7efce6f0c7cec4a4b769cda56b44d438e",
+      "status": "LOCAL_RESEARCH_CANDIDATE",
+      "parameters": 4481
+    }
+  },
+  "two_full_retrains_all_14_files_byte_exact": true,
+  "no_llm_or_real_S03": "True",
+  "warning": "Never bypass real host C approvals or treat scores as authorization"
+}

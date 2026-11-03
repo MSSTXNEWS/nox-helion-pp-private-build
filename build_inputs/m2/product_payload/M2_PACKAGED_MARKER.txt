@@ -1,0 +1,3 @@
+NOX_M2_0_PAYLOAD_PACKAGED
+version=M2.0-PP
+not_reference_exe=true

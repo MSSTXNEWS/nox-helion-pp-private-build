@@ -21,6 +21,13 @@ Dependencies:
 - `requirements-qa-win64-hashed.txt` adds ten exact, SHA-pinned Windows-compatible wheels: Pillow 13.0.0, python-docx 1.2.0, python-pptx 1.0.2, XlsxWriter 3.3.0, ReportLab 5.1.0, charset-normalizer 3.5.2, pypdf 6.21.2, lxml 6.1.3, typing_extensions 4.16.0, and tzdata 2026.5.
 - On Windows, the runner downloads only binary wheels with `--require-hashes`, verifies each SHA, then installs from its local QA wheel cache with `--no-index` into the isolated interpreter before PyInstaller and the final source QA. This makes the E11 PPTX/PDF imports available to the GUI EXE analysis as well as to QA. The exact lock and wheels are retained in `ci-evidence`; `QA_DEPENDENCY_NOTICES.txt` is copied into the candidate output.
 
+M2.0 payload and fixtures:
+- `build_inputs/m2/product_payload` and `build_inputs/m2/fixtures` are build inputs.
+- They are real bytes copied from the pinned source (research scorers, menu catalog, trait seed, persona catalog, unbound model config, and the 173-row media-rights inventory).
+- The Qwen layer, tokenizer, adapter, RAG index, and cultural index are not in this repository and are not fabricated. `product_payload/GATE_HOLD.json` records that hold.
+- `private_build.ps1` verifies the pinned source tree first, then overlays distinct output names `NOX_HELION_M2_0_PAYLOAD.exe` and `NOX_HELION_M2_0_BACKGROUND.exe`. It does not emit `NOX_HELION_PRIVATE_CANDIDATE.exe`.
+- The reference executable sha256 `93a329ba1ece9cfd66951b377e04e9c1166ec6ba3ce13a5911ba8e36de99dfb8` is refused if a produced file matches it.
+
 The workflow retains a pre-release candidate and exact logs even when later QA fails.
 EXE presence is not release acceptance. Product payload, real AI runtime, profile/rights gates,
 full mandatory GUI scenarios, and owner acceptance remain separate release gates.

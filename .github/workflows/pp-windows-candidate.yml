@@ -1,19 +1,22 @@
-name: PRE-PRE Windows candidate
+name: PRE-PRE M2.0 payload candidate
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - cursor/m2-payload-fixtures-12ae
 
 permissions:
   contents: read
 
 concurrency:
-  group: pp-windows-candidate-${{ github.ref }}
+  group: pp-m2-payload-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
   candidate:
     runs-on: windows-2025
-    timeout-minutes: 60
+    timeout-minutes: 90
     steps:
       - name: Check out private build inputs
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
@@ -33,29 +36,43 @@ jobs:
         shell: pwsh
         run: '& .\private_build.ps1'
 
-      - name: Preserve candidate binaries, build receipt, and logs
+      - name: Refuse the reference executable name
+        if: always()
+        shell: pwsh
+        run: |
+          $forbidden = Get-ChildItem -LiteralPath . -Filter 'NOX_HELION_PRIVATE_CANDIDATE.exe' -File -Recurse -ErrorAction SilentlyContinue
+          if ($forbidden) { throw 'REFERENCE_EXE_NAME_PRESENT' }
+          $reference = '93a329ba1ece9cfd66951b377e04e9c1166ec6ba3ce13a5911ba8e36de99dfb8'
+          Get-ChildItem -LiteralPath .\work\candidate -Filter '*.exe' -File -ErrorAction SilentlyContinue | ForEach-Object {
+            $sha = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+            if ($sha -eq $reference) { throw 'REFERENCE_EXE_SHA_PRESENT' }
+            Write-Host ("{0} {1} {2}" -f $_.Name, $_.Length, $sha)
+          }
+
+      - name: Preserve M2 candidate, payload, receipt, and logs
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: PP-001-C1-R3-Windows-candidate-${{ github.run_id }}
+          name: NOX_HELION_M2_0_PAYLOAD_FIXTURES_20261103-windows-${{ github.run_id }}
           path: |
-            work/candidate/dist/NOX_HELION_PRIVATE_CANDIDATE.exe
-            work/candidate/dist/NOX_HELION_BACKGROUND_CANDIDATE.exe
+            work/candidate/NOX_HELION_M2_0_PAYLOAD.exe
+            work/candidate/NOX_HELION_M2_0_BACKGROUND.exe
+            work/candidate/M2_ACK_RECEIPT.json
+            work/candidate/M2_PAYLOAD_INTEGRITY.html
+            work/candidate/SHA256SUMS.txt
+            work/candidate/m2-import-smoke.log
+            work/candidate/M2_PAYLOAD_MANIFEST.json
+            work/candidate/product_payload/**
+            work/candidate/fixtures/**
             work/candidate/C_RELEASE_SPRINT_BUILD_RECEIPT.json
             work/candidate/CANDIDATE_README.txt
             work/candidate/BUILD_STATUS.txt
-            work/candidate/launch_background_user.ps1
-            work/candidate/register_windows_background.ps1
-            work/candidate/unregister_windows_background.ps1
             work/candidate/DEPENDENCY_NOTICES.txt
             work/candidate/QA_DEPENDENCY_NOTICES.txt
-            work/NOX_NATIVE_SMOKE_*/**
             ci-evidence/p01-sourcelock.json
             ci-evidence/p01-prerequisites.json
             ci-evidence/build-attempt.json
             ci-evidence/windows-build-transcript.txt
-            ci-evidence/requirements-qa-win64-hashed.txt
-            ci-evidence/qa-wheelhouse-*/*.whl
           if-no-files-found: warn
           retention-days: 14
 
@@ -68,3 +85,62 @@ jobs:
             exit 1
           }
           Write-Host 'Build script returned success. This remains a pre-release candidate; product gates are separate.'
+
+  linux_payload:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Check out private build inputs
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12.10'
+          check-latest: false
+
+      - name: Reassemble the pinned source snapshot
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/noxsrc
+          cat source_00.part source_01.part source_02.part > /tmp/noxsrc/NOX_PP_SOURCE.zip
+          python - << 'PY'
+          import hashlib
+          p='/tmp/noxsrc/NOX_PP_SOURCE.zip'
+          h=hashlib.sha256()
+          with open(p,'rb') as f:
+              for chunk in iter(lambda: f.read(1024*1024), b''):
+                  h.update(chunk)
+          digest=h.hexdigest()
+          expected='ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a'
+          if digest!=expected:
+              raise SystemExit('SOURCE_SHA_MISMATCH:'+digest)
+          print('SOURCE_SHA_OK', digest)
+          PY
+          rm -rf /tmp/noxsrc/tree
+          unzip -q /tmp/noxsrc/NOX_PP_SOURCE.zip -d /tmp/noxsrc/tree
+          echo "NOX_SOURCE_ROOT=/tmp/noxsrc/tree" >> "$GITHUB_ENV"
+
+      - name: Test payload fixtures and build the Linux package
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check cryptography==50.0.2
+          python -m unittest discover -s tools/m2_payload/tests -v
+          bash tools/m2_payload/build_linux_package.sh "$GITHUB_WORKSPACE/work/linux-m2"
+
+      - name: Preserve the Linux payload package
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: NOX_HELION_M2_0_PAYLOAD_FIXTURES_20261103-linux-${{ github.run_id }}
+          path: |
+            work/linux-m2/NOX_HELION_M2_0_linux_x64.tar.gz
+            work/linux-m2/dist/NOX_HELION_M2_0_PAYLOAD_STATUS
+            work/linux-m2/staged-receipt/M2_ACK_RECEIPT.json
+            work/linux-m2/staged-receipt/M2_PAYLOAD_INTEGRITY.html
+            work/linux-m2/staged-receipt/m2-import-smoke.log
+            work/linux-m2/staged-receipt/SHA256SUMS.txt
+          if-no-files-found: warn
+          retention-days: 14
