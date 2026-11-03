@@ -15,6 +15,37 @@ def git(repo, *args):
     return subprocess.check_output(["git", "-C", str(repo), *args], stderr=subprocess.PIPE).decode().strip()
 
 
+def _committed_source_blobs(repo: Path) -> dict[str, str]:
+    """Bind archive bytes to immutable HEAD, not a mutable Git index.
+
+    Git status can suppress tracked edits using assume-unchanged or
+    skip-worktree. Reject Git symlinks and submodules rather than packaging
+    them as regular build inputs.
+    """
+    entries = subprocess.check_output(
+        ["git", "-C", str(repo), "ls-tree", "-r", "--full-tree", "-z", "HEAD"],
+        stderr=subprocess.PIPE,
+    ).split(b"\0")
+    pins = {}
+    for entry in entries:
+        if not entry:
+            continue
+        metadata, sep, filename = entry.partition(b"\t")
+        fields = metadata.split(b" ")
+        if not sep or len(fields) != 3:
+            raise ValueError("INVALID_HEAD_TREE_ENTRY")
+        mode, kind, blob = fields
+        if mode not in (b"100644", b"100755") or kind != b"blob" or len(blob) != 40:
+            raise ValueError("NONREGULAR_HEAD_TREE_ENTRY")
+        name = filename.decode("utf-8", "surrogateescape")
+        if name in pins:
+            raise ValueError("DUPLICATE_HEAD_TREE_PATH")
+        pins[name] = blob.decode("ascii")
+    if not pins:
+        raise ValueError("EMPTY_HEAD_TREE_HOLD")
+    return pins
+
+
 def build(repo: Path, sha: str, destination: Path):
     repo = repo.resolve(strict=True)
     if len(sha) != 40 or any(ch not in "0123456789abcdef" for ch in sha.lower()):
@@ -27,6 +58,9 @@ def build(repo: Path, sha: str, destination: Path):
         raise ValueError("DIRTY_CHECKOUT_HOLD")
     names = subprocess.check_output(["git", "-C", str(repo), "ls-files", "-z"]).split(b"\0")
     names = sorted(p.decode("utf-8", "surrogateescape") for p in names if p)
+    committed = _committed_source_blobs(repo)
+    if len(names) != len(committed) or set(names) != set(committed):
+        raise ValueError("HEAD_INDEX_PATHS_MISMATCH")
     seen = set()
     records = []
     destination.parent.mkdir(parents=True, exist_ok=True)
@@ -46,6 +80,8 @@ def build(repo: Path, sha: str, destination: Path):
                     raise ValueError("NONREGULAR_TRACKED_PATH: " + name)
                 size = source.stat().st_size
                 digest = hashlib.sha256()
+                # Bind the exact ZIP-written bytes to Git's immutable HEAD blob.
+                immutable_blob = hashlib.sha1(b"blob " + str(size).encode() + b"\0")
                 entry = zipfile.ZipInfo("source/" + name, (1980, 1, 1, 0, 0, 0))
                 entry.compress_type = zipfile.ZIP_DEFLATED
                 entry.external_attr = 0o100644 << 16
@@ -55,10 +91,14 @@ def build(repo: Path, sha: str, destination: Path):
                         if not chunk:
                             break
                         digest.update(chunk)
+                        immutable_blob.update(chunk)
                         target.write(chunk)
                 if source.stat().st_size != size:
                     raise ValueError("SOURCE_CHANGED: " + name)
-                records.append({"path": name, "size": size, "sha256": digest.hexdigest()})
+                if immutable_blob.hexdigest() != committed[name]:
+                    raise ValueError("TRACKED_GIT_BLOB_MISMATCH: " + name)
+                records.append({"path": name, "size": size, "sha256": digest.hexdigest(),
+                                "git_blob_sha1": committed[name]})
             manifest = {
                 "schema": "nox.express.source-snapshot.v1",
                 "git_sha": sha,
