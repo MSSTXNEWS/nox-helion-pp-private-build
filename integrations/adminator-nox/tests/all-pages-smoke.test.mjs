@@ -13,11 +13,11 @@ test("all 18 donor pages mount as NOX pages with no dropdown navigation", async 
   assert.ok(pages.length >= 18, "complete donor distribution must contain at least 18 pages");
   for (const page of pages) {
     const html = await readFile(join(rootPath, page), "utf8");
-    assert.equal((html.match(/nox-adminator-entry\\.mjs/g) || []).length, 1,
+    assert.equal(html.split("nox-adminator-entry.mjs").length - 1, 1,
       page + ": NOX native entry must be in the actual staged page");
-    assert.equal((html.match(/nox-adminator-theme\\.css/g) || []).length, 1,
+    assert.equal(html.split("nox-adminator-theme.css").length - 1, 1,
       page + ": NOX theme must be in the actual staged page");
-    assert.ok(!/fonts\\.(?:googleapis|gstatic)\\.com/i.test(html),
+    assert.ok(!html.includes("fonts.googleapis.com") && !html.includes("fonts.gstatic.com"),
       page + ": no live Google Fonts dependency in offline EXE");
     const dom = new JSDOM(html, { url: "https://nox.local/" + page });
     const doc = dom.window.document;
