@@ -421,6 +421,17 @@ jobs:
             if ($LASTEXITCODE -ne 0) { Write-Warning 'NSIS diagnostic refused; original installation remains HOLD' }
           }
           exit 0
+      - name: Read-only immutable R11 NSIS registry preimage (failure witness, never PASS)
+        if: failure()
+        shell: pwsh
+        run: |
+          if (Test-Path -LiteralPath 'work/e06/staged/R11/Installer/NOX-HELION-Setup.nsi' -PathType Leaf) {
+            python coordination/e06/t06_nsis_registry_readonly_witness.py
+            if ($LASTEXITCODE -ne 0) { Write-Warning 'R11_REGISTRY_PREIMAGE_WITNESS_HOLD (prior failed step remains failed)' }
+          } else {
+            Write-Host 'R11_REGISTRY_PREIMAGE_WITNESS_NOT_AVAILABLE_HOLD'
+          }
+          exit 0
       - name: Download exact Microsoft.WindowsAppSDK NuGet to Windows CI evidence cache (no install)
         if: always()
         shell: pwsh
@@ -467,6 +478,7 @@ jobs:
             work/e06/onehost-wow-diagnostic/E07_BUILT_HANDOFF.json
             work/e06/onehost-wow-diagnostic/T06_INSTALLED_SMOKE.json
             work/e06/onehost-wow-diagnostic/T06_NSIS_FAILURE_DIAGNOSTICS.json
+            work/e06/registry-firstfail/T06_R11_REGISTRY_FIRSTFAIL_WITNESS.json
             work/e06/onehost-wow-diagnostic/D02_VISUAL_PUBLISH_RECEIPT.json
             work/e06/onehost-wow-diagnostic/D02_ORIGINAL_PUBLISHED_INDEX_BACKUP.html
             work/e06/onehost-wow-diagnostic/NOX-HELION-V16-DIAGNOSTIC-SETUP.exe
