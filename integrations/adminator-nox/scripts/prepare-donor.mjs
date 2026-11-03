@@ -88,6 +88,7 @@ await writeFile(join(outputRoot, "nox-adminator-adapter.mjs"), adapter);
 for (const page of pages) {
   let html = await readFile(page, "utf8");
   html = html.replace(/<link[^>]+(?:fonts\.googleapis\.com|fonts\.gstatic\.com)[^>]*>\s*/gi, "");
+  html = html.replace(/<link[^>]+(?:rel=["\'](?:preconnect|dns-prefetch)["\'][^>]*fonts\.(?:googleapis|gstatic)\.com|fonts\.(?:googleapis|gstatic)\.com[^>]*rel=["\'](?:preconnect|dns-prefetch)["\'])[^>]*>\s*/gi, "");
   html = html.replace(/<iframe([^>]*src=["'][^"']*(?:google\.com\/maps|maps\.googleapis\.com)[^"']*["'][^>]*)><\/iframe>/gi,
     '<div class="nox-external-resource-hold" role="status">MAP PROVIDER NOT CONNECTED</div>');
   const injection = '<link rel="stylesheet" href="./nox-adminator-theme.css">\n' +
@@ -95,8 +96,15 @@ for (const page of pages) {
   if (!html.includes("nox-adminator-entry.mjs")) {
     html = html.replace(/<\/body>/i, injection + "\n</body>");
     if (!html.includes("nox-adminator-entry.mjs")) throw new Error("ADMINATOR_PAGE_INJECTION_FAILED");
-    await writeFile(page, html);
   }
+  // The original donor under node_modules is immutable: write the patched
+  // HTML into the staged output tree that NSIS/artifacts actually consume.
+  const stagedPage = join(outputRoot, relative(distRoot, page));
+  if ((html.match(/nox-adminator-entry\.mjs/g) || []).length !== 1 ||
+      (html.match(/nox-adminator-theme\.css/g) || []).length !== 1) {
+    throw new Error("NOX_UI_SCRIPT_OR_THEME_INJECTION_COUNT_HOLD");
+  }
+  await writeFile(stagedPage, html);
 }
 
 const outputFiles = await walk(outputRoot);
