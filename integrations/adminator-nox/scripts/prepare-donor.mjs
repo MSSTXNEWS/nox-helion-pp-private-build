@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
-import { cp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
-import { dirname, join, relative, resolve } from "node:path";
+import { cp, lstat, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -36,26 +36,45 @@ await cp(join(packageRoot, "nox-adminator-entry.mjs"), join(outputRoot, "nox-adm
 let adapter = await readFile(join(packageRoot, "nox-adminator-adapter.mjs"), "utf8");
 // Stage the ORIGINAL OneHost client in the donor distribution. The client is
 // not bundled into a second backend. Its relative imports are copied intact.
-const hostBundle = [
-  "ui/onehost-menu-bindings.mjs",
-  "ui/selfbuilder-menu-v2.mjs",
-  "ui/selfbuilder-wow-workbench.mjs",
-  "ui/nox-r11-wow.mjs",
-  "proposals/P01/WOW-MAX10/scene-contract.mjs"
-];
+const hostBundle = ["ui/onehost-menu-bindings.mjs"];
 const repositoryRoot = resolve(packageRoot, "../..");
-for (const relativePath of hostBundle) {
-  const source = resolve(repositoryRoot, relativePath);
-  const target = join(outputRoot, "nox-native", relativePath);
-  if (!source.startsWith(repositoryRoot + "/") && source !== repositoryRoot) {
+const pending = [...hostBundle];
+const inspected = new Set();
+while (pending.length) {
+  const requested = pending.shift();
+  if (isAbsolute(requested)) throw new Error("NOX_NATIVE_ABSOLUTE_SOURCE_HOLD");
+  const source = resolve(repositoryRoot, requested);
+  const name = relative(repositoryRoot, source);
+  if (name === "" || name === ".." || name.startsWith("../") ||
+      name.startsWith("..\\\\") || isAbsolute(name)) {
     throw new Error("NOX_NATIVE_SOURCE_OUTSIDE_REPO");
   }
-  const bytes = await readFile(source);
-  if (bytes.length === 0 || bytes.length > 2000000) {
-    throw new Error("NOX_NATIVE_MODULE_SOURCE_SIZE_HOLD:" + relativePath);
+  if (inspected.has(name)) continue;
+  const info = await lstat(source);
+  if (!info.isFile() || info.isSymbolicLink() || info.size === 0 ||
+      info.size > 2000000) {
+    throw new Error("NOX_NATIVE_MODULE_SOURCE_SIZE_OR_TYPE_HOLD:" + name);
   }
-  await mkdir(dirname(target), { recursive: true });
-  await writeFile(target, bytes);
+  const contents = await readFile(source, "utf8");
+  inspected.add(name);
+  for (const match of contents.matchAll(/\\b(?:from\\s*|import\\s*)["']([^"']+)["']/g)) {
+    const dependency = match[1];
+    if (!dependency.startsWith("./") && !dependency.startsWith("../")) {
+      throw new Error("NOX_NATIVE_NONLOCAL_MODULE_IMPORT_HOLD:" + name);
+    }
+    const relativeDependency = relative(repositoryRoot,
+      resolve(dirname(source), dependency));
+    if (relativeDependency === "" || relativeDependency === ".." ||
+        relativeDependency.startsWith("../") ||
+        relativeDependency.startsWith("..\\\\") ||
+        isAbsolute(relativeDependency)) {
+      throw new Error("NOX_NATIVE_IMPORT_ESCAPES_SOURCE_HOLD:" + name);
+    }
+    pending.push(relativeDependency);
+  }
+  const target = join(outputRoot, "nox-native", name);
+  await mkdir(dirname(target), {recursive:true});
+  await writeFile(target, contents);
 }
 const importBefore = 'from "../../ui/onehost-menu-bindings.mjs"';
 const importAfter = 'from "./nox-native/ui/onehost-menu-bindings.mjs"';
