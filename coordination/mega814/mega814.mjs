@@ -81,6 +81,17 @@ function safeRoute(route,probe,label=route,aiClient=null,payload={},parentIndex=
     "HOLD · исходный раздел не открылся";
   });
  }
+ if(button.disabled && Number.isInteger(parentIndex) && parentIndex>=0 && parentIndex<=7){
+  button.disabled=false;
+  status.textContent="Legacy-маршрут · переход к существующему родительскому разделу; отдельное действие не подтверждено";
+  button.addEventListener("click",()=>{
+   if(button.disabled)return;
+   const opened=legacy(parentIndex);
+   status.textContent=opened?
+    "Открыт исходный родительский раздел · конкретная функция не подтверждена E07":
+    "HOLD · родительский раздел не открылся";
+  });
+ }
  if(route==="helion.chat"&&aiClient){
   button.disabled=false;button.textContent=label||"СПРОСИТЬ NOX";
   status.textContent="Готово к отправке в существующий AI / OneHost канал";
@@ -120,6 +131,13 @@ function safeRoute(route,probe,label=route,aiClient=null,payload={},parentIndex=
      }finally{button.disabled=false}
    });
  }
+ if(route!=="helion.chat"&&route!=="nox.parent-navigation"&&aiClient){
+  const prompt={text:("Помоги с исходным маршрутом «"+String(route).slice(0,80)+
+   "». Используй только разрешённые возможности NOX. Если действие не подключено, объясни это и предложи безопасный следующий шаг.")
+   .slice(0,560)};
+  line.append(safeRoute("helion.chat",probe,"СПРОСИТЬ NOX",aiClient,prompt));
+ }
+
  line.append(button,status);return line;
 }
 /* OWNER MENU V2: the TEN original pictured asteroid objects ARE buttons.
