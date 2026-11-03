@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NOX HELION · NAV</title>
+  <style>
+    :root {
+      --obsidian: #05070b;
+      --amber: #ffb86a;
+      --lava: #ff4d1a;
+      --cyan: #5ce1ff;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      background: radial-gradient(ellipse 80% 60% at 50% 100%, #1a0a04 0%, var(--obsidian) 65%);
+      color: #f4f1ea;
+      font-family: "Segoe UI Variable", system-ui, sans-serif;
+      overflow: hidden;
+    }
+    .view {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.45s ease;
+    }
+    .view.active { opacity: 1; pointer-events: auto; }
+    /* Sun / Planet */
+    .core-obj {
+      width: min(28vw, 200px);
+      height: min(28vw, 200px);
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 30%, #2a1208 0%, #0a0402 50%, #000 100%);
+      box-shadow: 0 0 40px rgba(255,70,20,0.45), inset 0 0 25px rgba(255,40,0,0.35);
+      cursor: pointer;
+      animation: breathe 8s ease-in-out infinite;
+    }
+    @keyframes breathe {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.04); }
+    }
+    /* Asteroid grid */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+      gap: 1.2rem;
+      width: min(92vw, 720px);
+      padding: 1rem;
+    }
+    .ast {
+      position: relative;
+      aspect-ratio: 1.3;
+      background:
+        radial-gradient(circle at 30% 25%, #5a3010 0%, #2a1408 40%, #0a0402 100%);
+      border-radius: 45% 55% 50% 50%;
+      box-shadow:
+        0 0 14px rgba(255,70,20,0.4),
+        inset 0 -4px 8px rgba(255,40,0,0.3);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: clamp(0.65rem, 2vw, 0.8rem);
+      letter-spacing: 0.04em;
+      text-align: center;
+      color: var(--amber);
+      text-shadow: 0 1px 2px #000;
+      transition: transform 0.2s ease;
+    }
+    .ast::before {
+      content: "";
+      position: absolute;
+      inset: -8px;
+      border-radius: inherit;
+      background: radial-gradient(circle at 50% 80%, rgba(255,60,10,0.5) 0%, transparent 55%);
+      filter: blur(6px);
+      animation: smoke 2.4s ease-in-out infinite;
+      z-index: -1;
+      pointer-events: none;
+    }
+    @keyframes smoke {
+      0%, 100% { opacity: 0.4; transform: scale(0.9); }
+      50% { opacity: 0.8; transform: scale(1.1); }
+    }
+    .ast:hover { transform: scale(1.08); }
+    .ast:active { transform: scale(0.96); }
+    /* Back */
+    .back {
+      position: absolute;
+      top: 1rem;
+      left: 1rem;
+      width: 44px;
+      height: 32px;
+      background: radial-gradient(circle at 30% 30%, #4a2810, #1a0a04);
+      border-radius: 40% 60% 50% 50%;
+      box-shadow: 0 0 10px rgba(255,70,20,0.4);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+      color: var(--amber);
+    }
+    .title {
+      position: absolute;
+      top: 1rem;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 0.85rem;
+      letter-spacing: 0.1em;
+      color: var(--amber);
+      text-transform: uppercase;
+    }
+    @media (max-width: 480px) {
+      .grid { grid-template-columns: repeat(2, 1fr); gap: 0.8rem; }
+      .core-obj { width: 140px; height: 140px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation: none !important; transition: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="view active" id="home">
+    <div class="core-obj" data-go="menu" title="MENU"></div>
+  </div>
+
+  <div class="view" id="menu">
+    <div class="back" data-go="home">←</div>
+    <div class="title">MENU</div>
+    <div class="grid" id="menu-grid"></div>
+  </div>
+
+  <div class="view" id="section">
+    <div class="back" data-go="menu">←</div>
+    <div class="title" id="sec-title"></div>
+    <div class="grid" id="sec-grid"></div>
+  </div>
+
+  <div class="view" id="sub">
+    <div class="back" data-go="section">←</div>
+    <div class="title" id="sub-title"></div>
+    <div class="grid" id="sub-grid"></div>
+  </div>
+
+  <script>
+    const WORLDS = [
+      { id: 'work', label: 'РАБОТА', items: ['Обзор', 'Проекты', 'Задачи', 'Команда'] },
+      { id: 'intel', label: 'ИНТЕЛЛЕКТ', items: ['Чат', 'Модели', 'ModelCenter', 'Агенты'] },
+      { id: 'know', label: 'ЗНАНИЯ', items: ['База', 'Поиск', 'RAG', 'Граф'] },
+      { id: 'learn', label: 'ОБУЧЕНИЕ', items: ['LoRA', 'Датасеты', 'Метрики', 'Rollback'] },
+      { id: 'fun', label: 'РАЗВЛЕЧЕНИЯ', items: ['Cinema', 'Музыка', 'Библиотека'] },
+      { id: 'people', label: 'ЛЮДИ', items: ['Persona', 'Память', 'Голос'] },
+      { id: 'create', label: 'ТВОРЧЕСТВО', items: ['Изображения', 'Видео', 'Аудио'] },
+      { id: 'biz', label: 'БИЗНЕС', items: ['Аналитика', 'Отчёты'] },
+      { id: 'world', label: 'МИР', items: ['Карты', 'Симуляции'] },
+      { id: 'pc', label: 'ПК / NOX', items: ['Файлы', 'Настройки', 'STOP', 'Статус'] },
+    ];
+
+    const views = {
+      home: document.getElementById('home'),
+      menu: document.getElementById('menu'),
+      section: document.getElementById('section'),
+      sub: document.getElementById('sub'),
+    };
+    let currentWorld = null;
+
+    function show(name) {
+      Object.values(views).forEach(v => v.classList.remove('active'));
+      views[name].classList.add('active');
+    }
+
+    function makeAst(label, onClick) {
+      const el = document.createElement('div');
+      el.className = 'ast';
+      el.textContent = label;
+      el.addEventListener('click', onClick);
+      return el;
+    }
+
+    // MENU worlds
+    const menuGrid = document.getElementById('menu-grid');
+    WORLDS.forEach(w => {
+      menuGrid.appendChild(makeAst(w.label, () => openSection(w)));
+    });
+
+    function openSection(world) {
+      currentWorld = world;
+      document.getElementById('sec-title').textContent = world.label;
+      const grid = document.getElementById('sec-grid');
+      grid.innerHTML = '';
+      world.items.forEach(item => {
+        grid.appendChild(makeAst(item, () => openSub(item)));
+      });
+      show('section');
+    }
+
+    function openSub(item) {
+      document.getElementById('sub-title').textContent = item;
+      const grid = document.getElementById('sub-grid');
+      grid.innerHTML = '';
+      ['Открыть', 'Настройки', 'Статус'].forEach(act => {
+        grid.appendChild(makeAst(act, () => {
+          alert(item + ' → ' + act);
+        }));
+      });
+      show('sub');
+    }
+
+    document.querySelectorAll('[data-go]').forEach(el => {
+      el.addEventListener('click', () => show(el.dataset.go));
+    });
+  </script>
+</body>
+</html>
