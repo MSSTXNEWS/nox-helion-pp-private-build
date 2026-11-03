@@ -1,4 +1,5 @@
 """Megapatch A: real SQLite FTS5 and real-byte readback, no fake downloads."""
+from contextlib import closing
 import hashlib
 import json
 from pathlib import Path
@@ -18,7 +19,7 @@ class AcquisitionTests(unittest.TestCase):
         self.addCleanup(self.tmp.cleanup)
         self.root = Path(self.tmp.name)
         self.db = self.root / 'library.sqlite'
-        with sqlite3.connect(self.db) as con:
+        with closing(sqlite3.connect(self.db)) as con, con:
             con.execute('CREATE VIRTUAL TABLE acquisitions USING fts5(title, origin)')
             con.executemany('INSERT INTO acquisitions VALUES (?,?)',
                             [(f'asset-{i}', 'official') for i in range(143)])
