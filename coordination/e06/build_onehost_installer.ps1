@@ -10,6 +10,7 @@ param(
  [string]$CreativeSourceRoot='',
  [string]$WowSourceRoot='',
  [string]$PersonaBundlePath='',
+ [switch]$IncludeMega814,
  [string]$L01ApprovedInstallerUrl='',
  [int]$L01BootstrapVersion=0
 )
@@ -256,6 +257,7 @@ if ($alreadyCanonical) {
 
 # The original diagnostic builder keeps its existing behavior unless BOTH visual
 # sources are explicitly supplied. Never silently use an old D02 donor.
+if ($IncludeMega814 -and [string]::IsNullOrWhiteSpace($CreativeSourceRoot)) { throw 'MEGAB_REQUIRES_CANONICAL_D02_WOW_STAGING' }
 $wantsCreative= -not [string]::IsNullOrWhiteSpace($CreativeSourceRoot)
 $wantsWow= -not [string]::IsNullOrWhiteSpace($WowSourceRoot)
 if ($wantsCreative -ne $wantsWow) { throw 'D02_VISUAL_STAGE_PAIR_REQUIRED' }
@@ -399,6 +401,30 @@ if ($wantsCreative) {
   $homeScriptCount=([regex]::Matches($homeHtml,[regex]::Escape('creative/wow200/runtime/home-scene.mjs'))).Count
   if ($homeScriptCount -ne 1) {
     throw 'D02_HOME_LOADER_DUPLICATE_OR_ABSENT'
+  }
+  if ($IncludeMega814) {
+    # Stage the existing approved planetary MENU10 ONLY in the disposable R11.
+    # No new host, no replacement of the eight original CoreID routes.
+    $menuRoot=Join-Path $repoRoot 'coordination/mega814'
+    $menuStage=Join-Path $menuRoot 'stage_original_r11.py'
+    $menuGate=Join-Path $menuRoot 'qa_source_gate.py'
+    $menuPublisher=Join-Path $menuRoot 'publish_onehost_payload.py'
+    foreach ($candidate in @(
+      @{Path=$menuStage;Blob='dc0fe71a7e62ab97a2108bd5ed11242a4a5b9e0d'},
+      @{Path=$menuGate;Blob='d5b1ee5f3dbf622c21acc16594f980ebc04ceb1d'},
+      @{Path=$menuPublisher;Blob='6e2a943ab3f0a69d3dea641fdd78748922675dd8'}
+    )) {
+      Assert-E06PlainPathAncestors -Candidate $candidate.Path -Scope 'MENU10_SOURCE'
+      if (!(Test-Path -LiteralPath $candidate.Path -PathType Leaf) -or
+          (Get-E06CanonicalGitBlobSha $candidate.Path) -cne $candidate.Blob) {
+        throw 'MEGAB_SOURCE_SCRIPT_PIN_HOLD'
+      }
+    }
+    & $py.Source $menuGate
+    if ($LASTEXITCODE -ne 0) { throw 'MEGAB_APPROVED_MENU10_SOURCE_QA_HOLD' }
+    & $py.Source $menuStage --r11 $source
+    if ($LASTEXITCODE -ne 0) { throw 'MEGAB_OWNER_R11_MENU10_STAGE_HOLD' }
+    Write-Host 'E06_APPROVED_MENU10_10_WORLDS_STAGED_NOT_E07'
   }
   if ($wantsPersona) {
     # Optional, exact SHA pinned local owner media. No network or synthetic faces.
@@ -698,6 +724,18 @@ if ($wantsCreative) {
   }
   [IO.File]::WriteAllText($visualPayloadReceipt,($proof | ConvertTo-Json -Depth 8),(New-Object System.Text.UTF8Encoding($false)))
 }
+if ($IncludeMega814) {
+  # Verify the actual WPF published Content path, including 10 asteroid media,
+  # 193-entry catalog, native relative import and exact owner receipt.
+  & $stagePython.Source $menuPublisher --r11 $source --payload $payload
+  if ($LASTEXITCODE -ne 0) { throw 'MEGAB_APPROVED_MENU10_PUBLISHED_PAYLOAD_HOLD' }
+  $menu10Published=Join-Path $payload 'Assets/mega814/menu10.png'
+  if (!(Test-Path -LiteralPath $menu10Published -PathType Leaf) -or
+      (Get-FileHash -LiteralPath $menu10Published -Algorithm SHA256).Hash.ToLowerInvariant() -cne
+      '1cdc1d9d6f17033bf4a1c6a8ec1b8f5816ab35ddd5ed6d682eb8a190e1943dca') {
+    throw 'MEGAB_OWNER_MENU10_CANONICAL_IMAGE_SHA_HOLD'
+  }
+}
 $backend=Join-Path $payload 'Backend'
 New-Item -ItemType Directory -Path $backend -Force | Out-Null
 Copy-Item -LiteralPath $original -Destination (Join-Path $backend 'NOX_HELION_PRIVATE_CANDIDATE.exe')
@@ -742,6 +780,20 @@ $entries=@(Get-ChildItem -LiteralPath $payload -File -Recurse -Force | Sort-Obje
   $relative=$_.FullName.Substring($payload.Length).TrimStart('\')
   [ordered]@{path=$relative.Replace('\','/');bytes=$_.Length;sha256=(Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()}
 })
+if ($IncludeMega814) {
+  foreach ($expectedMenuAsset in @(
+    'Assets/mega814/menu10.png',
+    'Assets/mega814/mega814.mjs',
+    'Assets/mega814/mega814.css',
+    'Assets/mega814/menu-v2-193.json',
+    'Assets/mega814/MEGA814_RECEIPT.json',
+    'Assets/creative/wow200/ui/onehost-menu-bindings.mjs'
+  )) {
+    if (@($entries | Where-Object { $_.path -ceq $expectedMenuAsset }).Count -ne 1) {
+      throw "MEGAB_MENU10_NSIS_MANIFEST_ASSET_MISSING:$expectedMenuAsset"
+    }
+  }
+}
 $manifest=[ordered]@{schema='NOX_P01_PAYLOAD_SHA256_V1';entrypoint='NOX.P01.Shell.exe';taskId='NOX-V16-E06-EXPRESS-ONEHOST';runId=$RunId;version='16.0.0';files=$entries}
 $manifestPath=Join-Path $payload 'payload.sha256.json'
 [IO.File]::WriteAllText($manifestPath,($manifest | ConvertTo-Json -Depth 7),(New-Object System.Text.UTF8Encoding($false)))

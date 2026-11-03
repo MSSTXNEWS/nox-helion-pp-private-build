@@ -30,7 +30,7 @@ def publish(staged,payload):
  source=under_plain(staged,staged/"Assets/mega814")
  assets=under_plain(payload,payload/"Assets")
  dest=under_plain(payload,assets/"mega814")
- if not source.is_dir() or not assets.is_dir() or dest.exists():
+ if not source.is_dir() or not assets.is_dir():
   raise RuntimeError("MEGAB_STAGE_OR_PAYLOAD_COLLISION")
  source_index=under_plain(staged,staged/"Assets/index.html")
  published_index=under_plain(payload,assets/"index.html")
@@ -69,6 +69,31 @@ def publish(staged,payload):
   if seen>50000000:raise RuntimeError("MEGAB_SOURCE_SIZE_CAP")
  if next(r["sha256"] for r in rows if r["name"]=="menu10.png")!=MENU_SHA:
   raise RuntimeError("MEGAB_MENU10_CANONICAL_SHA_HOLD")
+ # The installed WebView2 root is Assets/. Resolve native imports only
+ # against the original approved WOW200 module tree, not a phantom /ui/ root.
+ menu_js=(source/"mega814.mjs").read_text("utf-8")
+ if 'from "../creative/wow200/ui/onehost-menu-bindings.mjs"' not in menu_js:
+  raise RuntimeError("MEGAB_NATIVE_CLIENT_RELATIVE_IMPORT_HOLD")
+ native_src=under_plain(staged,staged/"Assets/creative/wow200/ui/onehost-menu-bindings.mjs")
+ native_dest=under_plain(payload,payload/"Assets/creative/wow200/ui/onehost-menu-bindings.mjs")
+ if not native_src.is_file() or not native_dest.is_file() or digest(native_src)!=digest(native_dest):
+  raise RuntimeError("MEGAB_NATIVE_CLIENT_PUBLISHED_SHA_HOLD")
+ if dest.exists() or dest.is_symlink():
+  # dotnet publish may already copy Content Assets/**. In that case verify
+  # it in place, never overwrite an untrusted published output.
+  if not dest.is_dir() or dest.is_symlink() or (
+      {x.name for x in dest.iterdir()}!=EXPECTED|{"MEGA814_RECEIPT.json"}):
+   raise RuntimeError("MEGAB_PUBLISHED_ASSET_SET_HOLD")
+  for row in rows:
+   existing=under_plain(payload,dest/row["name"])
+   if (not existing.is_file() or existing.stat().st_size!=row["bytes"]
+       or digest(existing)!=row["sha256"]):
+    raise RuntimeError("MEGAB_PUBLISHED_ASSET_SHA_HOLD:"+row["name"])
+  saved=under_plain(payload,dest/"MEGA814_RECEIPT.json")
+  if not saved.is_file() or digest(saved)!=digest(receipt_path):
+   raise RuntimeError("MEGAB_PUBLISHED_RECEIPT_SHA_HOLD")
+  return dict(status="SOURCE_PUBLISHED_VERIFIED_NOT_E07",files=len(rows),
+              menu10_sha256=MENU_SHA,release_accepted=False)
  temp=Path(tempfile.mkdtemp(prefix=".nox-megab-",dir=str(assets)))
  try:
   for row in rows:

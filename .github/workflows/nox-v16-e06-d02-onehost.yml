@@ -354,7 +354,8 @@ jobs:
             -OutputRoot work/e06/onehost-wow-diagnostic `
             -RunId "NOX-E06-D02-${{ github.run_id }}" `
             -CreativeSourceRoot integrations/creative `
-            -WowSourceRoot integrations/wow200
+            -WowSourceRoot integrations/wow200 `
+            -IncludeMega814
           if ($LASTEXITCODE -ne 0 -or -not (Test-Path 'work/e06/onehost-wow-diagnostic/ONEHOST_DIAGNOSTIC_RECEIPT.json')) {
             throw 'COMBINED_INSTALLER_BUILD_HOLD'
           }
