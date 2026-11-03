@@ -132,7 +132,7 @@ class FastlaneTests(unittest.TestCase):
             self.choose()
 
     def test_14_untrusted_lease_path_denied(self):
-        self.leases['items']=[{'task_id':'A1','owner':'M01','run_id':'M01-run-01',
+        self.leases['items']=[{'task_id':'A1','owner':'M05','run_id':'M05-run-01',
                               'active':True,'paths':['ui/menu.mjs']}]
         with self.assertRaisesRegex(a.FastlaneHold,'LEASE_TASK_PATH_MISMATCH'):
             self.choose()
@@ -247,8 +247,14 @@ class FastlaneTests(unittest.TestCase):
 
     def test_27_identical_candidate_not_promoted(self):
         candidate=self.base/'same.py'
-        candidate.write_bytes((self.repo/'src/first.py').read_bytes())
+        # Compare exact committed bytes; a clean Windows checkout may contain CRLF.
+        # Do not normalize candidate bytes or weaken the production blob guard.
+        source = subprocess.run(
+            ['git', 'show', f'{self.head}:src/first.py'], cwd=self.repo,
+            check=True, capture_output=True, timeout=10).stdout
+        candidate.write_bytes(source)
         p=self.choose(lane='A',preferred='A1')
+        self.assertEqual(a.git_blob(source), p['selected_preimages']['src/first.py'])
         with self.assertRaisesRegex(a.FastlaneHold,'CANDIDATE_IDENTICAL_TO_SOURCE'):
             a.save_handoff(repo=self.repo,output=self.base/'out',candidate=candidate,
                            plan=p,task_id='A1',run_id='M01-real-run')
@@ -300,6 +306,19 @@ class FastlaneTests(unittest.TestCase):
         p=self.choose(stopped=True,preferred='A1')
         self.assertIsNone(p['selected'])
         self.assertFalse(p['autonomous_merge'])
+
+
+    def test_35_identical_committed_candidate_rejected_with_crlf_checkout(self):
+        # Reproduce Windows newline conversion on every platform without
+        # changing global git settings or the actual source checkout.
+        command('git', 'config', 'core.autocrlf', 'true', cwd=self.repo)
+        path = self.repo / 'src/first.py'
+        path.write_bytes(b'READY=True\r\n')
+        command('git', 'add', '--', 'src/first.py', cwd=self.repo)
+        self.assertEqual(command('git', 'status', '--porcelain', cwd=self.repo), '')
+        self.assertNotEqual(a.git_blob(path.read_bytes()),
+                            self.snap['regular_blobs']['src/first.py'])
+        self.test_27_identical_candidate_not_promoted()
 
 
 if __name__=='__main__':
