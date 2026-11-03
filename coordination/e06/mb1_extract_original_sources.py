@@ -5,6 +5,7 @@ original approved WPF/HOME/MENU/WORK. It exports ONLY bounded UTF-8 source
 snippets required to reuse real Store/chat, navigation and D02 assets.
 """
 from __future__ import annotations
+import importlib.util
 import hashlib
 import io
 import json
@@ -26,12 +27,32 @@ def require(ok,reason):
     if not ok:raise RuntimeError(reason)
 def git_blob(data:bytes)->str:
     return hashlib.sha1(b"blob "+str(len(data)).encode()+b"\x00"+data).hexdigest()
+def _owner_part_reader():
+    """Reuse the immutable 729 owner's checked descriptor/ancestor reader.
+
+    An archive SHA pins content but does not permit a symlinked parent,
+    reparse redirection, or name-to-open-descriptor identity mismatch.
+    """
+    source = Path(__file__).with_name("verify_original_729_source.py")
+    require(source.is_file() and not source.is_symlink(),
+            "MB1_SOURCELOCK_OWNER_READER_UNAVAILABLE")
+    spec = importlib.util.spec_from_file_location("mb1_verified_owner_reader", source)
+    require(spec is not None and spec.loader is not None,
+            "MB1_SOURCELOCK_OWNER_READER_INVALID")
+    owner = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(owner)
+    reader = getattr(owner, "_trusted_part_reader", None)
+    require(callable(reader), "MB1_SOURCELOCK_OWNER_READER_INVALID")
+    return reader
+
+
 def join_and_verify_python():
     buffer=io.BytesIO();dig=hashlib.sha256()
+    reader=_owner_part_reader()
     for name in ("source_00.part","source_01.part","source_02.part"):
         path=ROOT/name
         require(path.is_file() and not path.is_symlink(),"MB1_SOURCE_PART_MISSING")
-        with path.open("rb") as f:
+        with reader(path) as f:
             while block:=f.read(1048576):
                 buffer.write(block);dig.update(block)
     require(dig.hexdigest()==PYSHA and buffer.tell()==60364346,
