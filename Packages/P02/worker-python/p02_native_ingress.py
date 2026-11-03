@@ -186,15 +186,22 @@ class NativeIngress:
         try:
             # Only host-supplied session objects; do not import an identity
             # from untrusted WebView JSON or invent a local user account.
-            trusted_session = self._session()
-            if trusted_session is None:
-                raise ProtocolHold("NATIVE_AUTHENTICATED_SESSION_REQUIRED")
             if route in ("chat.stop", "training.pause"):
+                # STOP must bypass a blocked serial owner and use the current
+                # host-authenticated session; page-supplied authority is ignored.
+                trusted_session = self._session()
+                if trusted_session is None:
+                    raise ProtocolHold("NATIVE_AUTHENTICATED_SESSION_REQUIRED")
                 result = self._dispatch.execute(route, payload, trusted_session)
             else:
-                # Shared native SQLite connections may not be thread safe.
-                # STOP is deliberately not queued behind this lock.
+                # Resolve the current native grant INSIDE the dispatcher lock.
+                # A queued call must not reuse a consent snapshot resolved while
+                # an earlier call held the lock, then revoked before dispatch.
+                # Shared SQLite access remains serial; STOP never waits here.
                 with self._serial:
+                    trusted_session = self._session()
+                    if trusted_session is None:
+                        raise ProtocolHold("NATIVE_AUTHENTICATED_SESSION_REQUIRED")
                     result = self._dispatch.execute(route, payload, trusted_session)
             # A trusted owner's negative result is NOT a completed native
             # operation, even when that owner returns a JSON object instead
