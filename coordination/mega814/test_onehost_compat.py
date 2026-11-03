@@ -23,7 +23,9 @@ class TestOneHostCompatibility(unittest.TestCase):
   with self.assertRaisesRegex(RuntimeError,"MARKERS"):
    verified_index_mode(self.decorated().replace(APPROVED_BODY[0].encode(),b""),self.sha)
  def test_duplicate_import_rejected(self):
-  with self.assertRaisesRegex(RuntimeError,"MARKERS"):
+  # Canonical anchored insertion remains present, but an extra adjacent tag
+  # must invalidate the restored original SHA. Both fail-closed paths are safe.
+  with self.assertRaisesRegex(RuntimeError,"PREIMAGE_SHA_HOLD"):
    verified_index_mode(self.decorated().replace(APPROVED_HEAD[0].encode(),APPROVED_HEAD[0].encode()*2),self.sha)
  def test_mega814_native_client_import_resolves_inside_wpf_assets(self):
   """WebView2 maps Assets/ to https://nox.local; no /ui/ root exists."""
