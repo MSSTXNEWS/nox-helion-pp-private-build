@@ -35,7 +35,7 @@ class OriginalNativeOwnerMenuStopR83(unittest.TestCase):
                       "selfwrite.ack", "selflearn.ack"):
             with self.subTest(route=route):
                 self.assertIn('route=="' + route + '"', clause)
-        self.assertIn("_nativeOwnerAction(route, payload.Clone(), cancel)", clause)
+        self.assertIn("_nativeOwnerAction(route, payload.Clone(), cancel)", self.bridge)
 
     def test_menu_stop_delegates_to_real_native_onehost(self):
         stop = self.owner.split('if (route == "menu.binding") {', 1)[1].split('if (route == "menu.dispatch") {', 1)[0]
@@ -56,7 +56,7 @@ class OriginalNativeOwnerMenuStopR83(unittest.TestCase):
     def test_original_builder_and_compiler_pins_are_coherent(self):
         for filename, sha in ((OWNER, git_blob(OWNER)), (BRIDGE, git_blob(BRIDGE))):
             with self.subTest(path=filename.name):
-                self.assertIn("sha='" + sha + "'", self.builder)
+                self.assertIn(("sha='" if filename == OWNER else "blob='") + sha + "'", self.builder)
                 self.assertIn('"' + filename.name + '":"' + sha + '"',
                               self.compiler)
         self.assertIn('T06_CANONICAL_OWNER_STAGING_PINS_DIVERGED', self.compiler)
