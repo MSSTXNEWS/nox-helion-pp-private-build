@@ -12,6 +12,7 @@ from pathlib import Path
 import sys
 import unittest
 
+# Imports under unittest discovery must neither consume nor mutate runner argv.
 SOURCE = (Path(__file__).resolve().parents[1] /
           'Packages/P03/Source/python-host/p03_onehost_port.py')
 
@@ -76,9 +77,48 @@ class P03RealAckBranchTest(unittest.TestCase):
         self.assertEqual(self.respond(value), value)
         self.assertFalse(self.respond(value)['result']['cancelled'])
 
+
+class P03InvocationTest(unittest.TestCase):
+    def test_discovery_import_preserves_runner_arguments_and_owner_source(self):
+        import runpy
+        from unittest.mock import patch
+        expected = (Path(__file__).resolve().parents[1] /
+                    'Packages/P03/Source/python-host/p03_onehost_port.py')
+        for tail in (['discover', '-s', 'tests', '-v'],
+                     ['test_c04_p03_ack_scalar_rejection', '-v']):
+            argv = ['python -m unittest', *tail]
+            before = argv[:]
+            with self.subTest(argv=before), patch.object(sys, 'argv', argv):
+                loaded = runpy.run_path(str(Path(__file__).resolve()),
+                                       run_name='p03_invocation_probe')
+                self.assertEqual(sys.argv, before)
+                self.assertEqual(loaded['SOURCE'], expected)
+
+    def test_direct_fixture_argument_preserves_unittest_flags(self):
+        import runpy
+        from unittest.mock import patch
+        fixture = Path(__file__).resolve().with_name('reviewed_p03_fixture.py')
+        argv = [str(Path(__file__).resolve()), str(fixture), '-v']
+        with patch.object(sys, 'argv', argv), patch('unittest.main') as runner:
+            loaded = runpy.run_path(str(Path(__file__).resolve()), run_name='__main__')
+            self.assertEqual(loaded['SOURCE'], fixture)
+            self.assertEqual(sys.argv, [str(Path(__file__).resolve()), '-v'])
+            runner.assert_called_once_with(verbosity=2)
+
+    def test_direct_unittest_flag_is_not_a_source_filename(self):
+        import runpy
+        from unittest.mock import patch
+        argv = [str(Path(__file__).resolve()), '-v']
+        with patch.object(sys, 'argv', argv), patch('unittest.main') as runner:
+            loaded = runpy.run_path(str(Path(__file__).resolve()), run_name='__main__')
+            self.assertEqual(loaded['SOURCE'], Path(__file__).resolve().parents[1] /
+                             'Packages/P03/Source/python-host/p03_onehost_port.py')
+            self.assertEqual(sys.argv, [str(Path(__file__).resolve()), '-v'])
+            runner.assert_called_once_with(verbosity=2)
+
 if __name__ == '__main__':
-    # Discovery owns its arguments; a source override belongs to this CLI only.
-    if len(sys.argv) > 1:
-        SOURCE = Path(sys.argv[1]).resolve()
-        sys.argv[:] = sys.argv[:1]
+    # Only direct script invocation accepts the optional reviewed source fixture.
+    # Leave unittest flags intact; discovery uses the repository's actual owner.
+    if len(sys.argv) > 1 and not sys.argv[1].startswith('-'):
+        SOURCE = Path(sys.argv.pop(1)).resolve()
     unittest.main(verbosity=2)
