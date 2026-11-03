@@ -56,7 +56,7 @@ export async function invokeP01NativeRouteFeedback(dispatcher,routeId){
 }
 export function mountP01Owner(spec){
   const summary=validateOwnerP01(spec);
-  const {root,orbs,menu,logicalMenu,buttons,hostPort,secondary=null,
+  const {root,orbs,menu,logicalMenu=[],buttons,hostPort,secondary=null,
     controls=[],panels=[],mode="BALANCED",shortcuts={},homeActive}=spec;
   if(mounted.has(root)||!validateMode(mode)||
      typeof homeActive!=="function"||
@@ -114,7 +114,7 @@ export function mountP01Owner(spec){
     syncVisibility();
     // One host-owned subscription: exact CoreIDs + the existing secondary WOW.
     nativeBus=createD02NativeVisualBus(hostPort,fx,orbs.slice(1).map(x=>x.id));
-    // Exact eight approved original visual tiles and ten existing submenu nodes.
+    // Eight EXPRESS tiles with optional preserved legacy submenu nodes.
     // Cosmetic only: the original native dispatcher owns every click/ACK/ACL.
     try {
       cinemaMenu=mountCanonicalMenuCinematics({

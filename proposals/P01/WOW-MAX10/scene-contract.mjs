@@ -1,5 +1,5 @@
 /* E01 WOW MAX10: T01 original 9 orbs, T02 8 distinct CoreID,
-   T03 exactly 10 approved MENU worlds + 5 function controls, T04 preserve original nodes,
+   T03 eight EXPRESS MENU tiles + five controls; ten legacy submenu worlds optional, T04 preserve original nodes,
    T05 secondary WOW must never replace D02 HOME. */
 import {validateScene} from "../../NOX-CINEMA-FX/nox-cinema.mjs";
 const ID=/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
@@ -27,7 +27,9 @@ function checkEntries(root,items,expected,kind){
   return {elements,routes};
 }
 export function validateOwnerP01(spec){
-  const {root,orbs,menu,logicalMenu,buttons,secondary,hostPort}=spec||{};
+  const {root,orbs,menu,logicalMenu: optionalWorlds,buttons,secondary,hostPort}=spec||{};
+  // EXPRESS has eight required MENU directions; legacy worlds are optional.
+  const logicalMenu=optionalWorlds??[];
   if(!root||root.nodeType!==1||typeof root.contains!=="function"||
      !root.ownerDocument?.addEventListener)throw Error("ORIGINAL_ROOT_REQUIRED");
   validateScene(orbs);
@@ -37,7 +39,7 @@ export function validateOwnerP01(spec){
   const m=checkEntries(root,menu,8,"EIGHT_MENU_TILES");
   if(menu.some((entry,index)=>entry.id!==APPROVED_MENU_TILES[index]))
     throw Error("EIGHT_MENU_OWNER_TILE_IDENTITY_HOLD");
-  const l=checkEntries(root,logicalMenu,10,"TEN_LOGICAL_ROUTES");
+  const l=checkEntries(root,logicalMenu,logicalMenu.length===0?0:10,"TEN_LOGICAL_ROUTES");
   if(logicalMenu.some((entry,index)=>entry.id!==OWNER_MENU_WORLDS[index] ||
       entry.parentTileId!==LOGICAL_MENU_PARENTS[entry.id]))
     throw Error("TEN_LOGICAL_MENU_PARENT_OR_WORLD_HOLD");
@@ -55,7 +57,7 @@ export function validateOwnerP01(spec){
      typeof hostPort?.invokeRoute!=="function"||
      typeof hostPort?.subscribeNative!=="function")
     throw Error("E06_NATIVE_PORT_REQUIRED");
-  return Object.freeze({helion:1,cores:8,menuTiles:8,logicalMenuRoutes:10,buttons:5,
+  return Object.freeze({helion:1,cores:8,menuTiles:8,logicalMenuRoutes:logicalMenu.length,buttons:5,
     wow51to200:secondary!=null,existingNodesPreserved:true});
 }
 export function shortcutRoute(e,{homeActive=false,searchRoute,fullscreenRoute,escapeRoute}={}){

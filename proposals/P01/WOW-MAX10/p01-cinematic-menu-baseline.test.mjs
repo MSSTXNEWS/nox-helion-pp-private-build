@@ -82,3 +82,11 @@ test('failed mount also retains preexisting classes and original owner offsets',
   assert.equal(f.tiles[0].element.classList.contains('nox-r11-cinematic-tile'),true);
   baseline(f.tiles[0].element);
 });
+
+test('EXPRESS mounts the eight cinematic tiles without optional ten worlds',()=>{
+  const f=fixture();f.worlds.length=0;
+  const scene=f.mount();
+  assert.equal(scene.status().originalMenuTiles,8);
+  assert.equal(scene.status().originalSubworlds,0);
+  scene.destroy();
+});

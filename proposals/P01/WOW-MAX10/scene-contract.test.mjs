@@ -25,6 +25,13 @@ test("T01 original 9 nodes and T02 unique 8 CoreID",()=>{
  const x=fixture();x.orbs[1].id="HELION";
  assert.throws(()=>validateOwnerP01(x),/CORE_IDS/);
 });
+test("EXPRESS eight directions and five actions do not require legacy worlds",()=>{
+ const x=fixture();delete x.logicalMenu;
+ assert.equal(validateOwnerP01(x).logicalMenuRoutes,0);
+ const y=fixture();y.logicalMenu=[];
+ assert.equal(validateOwnerP01(y).logicalMenuRoutes,0);
+ assert.equal(validateOwnerP01(y).buttons,5);
+});
 test("T03 ten approved logical MENU worlds remain reachable as submenu nodes",()=>{
  const x=fixture();x.logicalMenu.pop();
  assert.throws(()=>validateOwnerP01(x),/TEN_LOGICAL_ROUTES_COUNT/);

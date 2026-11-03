@@ -1,6 +1,6 @@
 /** NOX R11 · Cinematic skin for the EIGHT ORIGINAL P01 menu tiles.
  * Rendering-only layer. The native P01 dispatcher exclusively owns clicks/ACK/ACL.
- * Preserves the ten logical submenu nodes, original media and five native controls.
+ * Preserves optional legacy submenu nodes, original media and five native controls.
  */
 export const APPROVED_EIGHT=Object.freeze(['work','intelligence','knowledge','creative','people','development','world','system']);
 export const APPROVED_TEN=Object.freeze(['work','intelligence','knowledge','learning','entertainment','people','creative','business','world','pc']);
@@ -8,12 +8,12 @@ const MODES=new Set(['MAX','BALANCED','ECO','REDUCED']);
 const mounted=new WeakSet();
 
 /** No new tile or route may be created. Fail closed on a stale source. */
-export function validateCinematicMenu(root,tiles,worlds){
+export function validateCinematicMenu(root,tiles,worlds=[]){
   if(!root||root.nodeType!==1||!root.ownerDocument||typeof root.contains!=='function'||
     root.dataset?.noxPage==='home'||root.closest?.('[data-nox-page="home"]'))
     throw Error('NOX_R11_CANONICAL_MENU_ROOT_REQUIRED');
-  if(!Array.isArray(tiles)||tiles.length!==8||!Array.isArray(worlds)||worlds.length!==10)
-    throw Error('NOX_R11_CANONICAL_EIGHT_TEN_REQUIRED');
+  if(!Array.isArray(tiles)||tiles.length!==8||!Array.isArray(worlds)||![0,10].includes(worlds.length))
+    throw Error('NOX_R11_CANONICAL_EIGHT_OPTIONAL_TEN_REQUIRED');
   for(const [items,expected,label] of [[tiles,APPROVED_EIGHT,'TILE'],[worlds,APPROVED_TEN,'WORLD']]){
     const elements=new Set();
     items.forEach((item,i)=>{
@@ -27,7 +27,7 @@ export function validateCinematicMenu(root,tiles,worlds){
   return true;
 }
 
-export function mountCanonicalMenuCinematics({root,tiles,worlds,mode='BALANCED',
+export function mountCanonicalMenuCinematics({root,tiles,worlds=[],mode='BALANCED',
   documentRef=root?.ownerDocument,windowRef=documentRef?.defaultView}={}){
   validateCinematicMenu(root,tiles,worlds);
   if(mounted.has(root)||root.querySelector?.('[data-nox-r11-scene="true"]')||!MODES.has(mode)||
@@ -120,7 +120,7 @@ export function mountCanonicalMenuCinematics({root,tiles,worlds,mode='BALANCED',
     else if(motion?.addListener){motion.addListener(sync);clean.push(()=>motion.removeListener(sync));}
     sync();mounted.add(root);
     return Object.freeze({
-      status:()=>Object.freeze({originalMenuTiles:8,originalSubworlds:10,
+      status:()=>Object.freeze({originalMenuTiles:8,originalSubworlds:worlds.length,
         effectiveMode:root.dataset.noxR11CinematicMode,sourceOnly:true,nativeRoutesPreserved:true}),
       setMode(next){if(dead||!MODES.has(next))return false;requested=next;sync();return true;},
       destroy(){
