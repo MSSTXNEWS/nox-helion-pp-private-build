@@ -44,6 +44,7 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
     private readonly Func<string, JsonElement, CancellationToken, Task<bool>> _nativeConsent;
     private readonly SynchronizationContext _uiContext;
     private readonly Func<string, JsonElement, CancellationToken, Task<NativePipeResult>>? _nativeOwnerAction;
+    private readonly Action<CoreWebView2>? _onBrowserProcessExited;
     private readonly HashSet<string> _usedIds = new(StringComparer.Ordinal);
     private readonly CancellationTokenSource _lifetime = new();
     private CancellationTokenSource _document = new();
@@ -71,7 +72,8 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
         Func<string, string, bool> nativeAcl,
         Func<string, JsonElement, CancellationToken, Task<bool>> nativeConsent,
         Action<string> writeDiagnostic,
-        Func<string, JsonElement, CancellationToken, Task<NativePipeResult>>? nativeOwnerAction = null)
+        Func<string, JsonElement, CancellationToken, Task<NativePipeResult>>? nativeOwnerAction = null,
+        Action<CoreWebView2>? onBrowserProcessExited = null)
     {
         _web = existingCore ?? throw new ArgumentNullException(nameof(existingCore));
         _virtualOrigin = trustedMappedOrigin ?? throw new ArgumentNullException(nameof(trustedMappedOrigin));
@@ -80,6 +82,7 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
         _nativeConsent = nativeConsent ?? throw new ArgumentNullException(nameof(nativeConsent));
         _writeDiagnostic = writeDiagnostic ?? throw new ArgumentNullException(nameof(writeDiagnostic));
         _nativeOwnerAction = nativeOwnerAction;
+        _onBrowserProcessExited = onBrowserProcessExited;
         _uiContext = SynchronizationContext.Current ??
             throw new InvalidOperationException("E06_NATIVE_UI_CONTEXT_REQUIRED");
         if (_virtualOrigin.Scheme != Uri.UriSchemeHttps ||
@@ -279,6 +282,11 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
             _browserProcessLost = true;
             _rendererAwaitingTrustedContent = true;
             _rendererReloadInitiated = false;
+            // BrowserProcessExited closes THIS CoreWebView2. Notify the original
+            // WPF owner to revoke its Python pipe and consent, never Reload a
+            // closed Core or create a second UI/backend from the bridge.
+            try { _onBrowserProcessExited?.Invoke(_web); }
+            catch (Exception) { /* fail closed: _browserProcessLost remains set */ }
             return;
         }
         if (e.ProcessFailedKind != CoreWebView2ProcessFailedKind.RenderProcessExited)

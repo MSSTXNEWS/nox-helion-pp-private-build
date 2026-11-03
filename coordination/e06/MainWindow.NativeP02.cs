@@ -33,6 +33,8 @@ public partial class MainWindow
     private ModelCenterNativeRoutes? _nativeModels;
     private CancellationTokenSource _nativeModelsStop = new();
     private CoreWebView2? _nativeP02Core;
+    private CoreWebView2? _failedNativeP02Core;
+    private bool _nativeModelsStopDisposed;
     private long _nativeDocumentEpoch;
     private readonly HashSet<string> _nativeP03Nonces = new(StringComparer.Ordinal);
     // One child-only WPF consent key; never included in renderer JSON.
@@ -463,13 +465,42 @@ public partial class MainWindow
             return true;
         } catch { return false; }
     }
+    // A closed browser CoreWebView2 is not a recoverable renderer reload.
+    // The original WPF owner must tear down the private child, invalidate A1
+    // proof, and require a NEW original control/core for any next handshake.
+    private void OnNativeP02BrowserProcessExited(CoreWebView2 failedCore)
+    {
+        if (!Dispatcher.CheckAccess()) {
+            Dispatcher.BeginInvoke(new Action(() => OnNativeP02BrowserProcessExited(failedCore)));
+            return;
+        }
+        if (!ReferenceEquals(_nativeP02Core, failedCore)) return;
+        _failedNativeP02Core = failedCore;
+        WriteLog("P02_BROWSER_PROCESS_EXIT_OWNER_SHUTDOWN");
+        ShutdownNativeP02();
+    }
+    private void OnNativeP02NavigationStarting(object? sender, CoreWebView2NavigationStartingEventArgs e)
+    { Interlocked.Increment(ref _nativeDocumentEpoch); }
+    private void OnNativeP02SourceChanged(object? sender, CoreWebView2SourceChangedEventArgs e)
+    { Interlocked.Increment(ref _nativeDocumentEpoch); }
+    private void OnNativeP02ContentLoading(object? sender, CoreWebView2ContentLoadingEventArgs e)
+    { Interlocked.Increment(ref _nativeDocumentEpoch); }
+
     private async Task InitializeNativeP02Async(CoreWebView2 core)
     {
+        if (ReferenceEquals(_failedNativeP02Core, core)) {
+            WriteLog("P02_BROWSER_CLOSED_CORE_RECREATE_REQUIRED");
+            return;
+        }
+        // Another genuine Core means the previous bridge/child must not keep
+        // the old window's permissions or callbacks after control recreation.
+        if (_nativeP02Core is not null && !ReferenceEquals(_nativeP02Core, core))
+            ShutdownNativeP02();
         if (_nativeP02Process is not null || _nativeP02Pipe is not null) return;
-        _nativeP02Core=core;
-        core.NavigationStarting += (_,_) => Interlocked.Increment(ref _nativeDocumentEpoch);
-        core.SourceChanged += (_,_) => Interlocked.Increment(ref _nativeDocumentEpoch);
-        core.ContentLoading += (_,_) => Interlocked.Increment(ref _nativeDocumentEpoch);
+        if (_nativeModelsStopDisposed) {
+            _nativeModelsStop = new CancellationTokenSource();
+            _nativeModelsStopDisposed = false;
+        }
         var binary=Path.Combine(AppContext.BaseDirectory,"Backend","NOX_HELION_PRIVATE_CANDIDATE.exe");
         Process? child=null; NativePythonPipe? transport=null;
         try {
@@ -505,9 +536,11 @@ public partial class MainWindow
             var handshake=await transport.RequestAsync("chat.model",new {},
                 TimeSpan.FromSeconds(40)); // Allows P02's bounded discovery timeout to return honest OFFLINE.
             if(!handshake.Accepted)throw new IOException("P02_REAL_NATIVE_INGRESS_NOT_READY");
+            _nativeP02Core=core;
             _nativeP02Bridge=new OneHostP02WebView2Bridge(core,
                 new Uri("https://nox.local/"),transport,sid,
-                NativeP02Acl,ConfirmP02NativeAsync,WriteLog,DispatchNativeOwnerAsync);
+                NativeP02Acl,ConfirmP02NativeAsync,WriteLog,DispatchNativeOwnerAsync,
+                OnNativeP02BrowserProcessExited);
             _nativeBrowserOnShell = (_, _) => {
                 if (_nativeP02Bridge is { BrowserExternalActive: false } &&
                     Uri.TryCreate(core.Source, UriKind.Absolute, out var source) &&
@@ -526,6 +559,10 @@ public partial class MainWindow
                     "3b47af8b85aefd88408dd5cc63ad9615da87427d4d0cb2b56b0f5a4246ffbd60"),
                 PickNativeGgufAsync);
             core.WebMessageReceived += OnP03WebMessageReceived;
+            core.NavigationStarting += OnNativeP02NavigationStarting;
+            core.SourceChanged += OnNativeP02SourceChanged;
+            core.ContentLoading += OnNativeP02ContentLoading;
+            _failedNativeP02Core=null;
             WriteLog("P02_ORIGINAL_NATIVE_PIPE_HANDSHAKE_OK");
         } catch(Exception exception) {
             _a1OwnerApprovedAction=null;
@@ -537,6 +574,13 @@ public partial class MainWindow
             WriteLog("P02_ORIGINAL_NATIVE_HOLD "+exception.GetType().Name);
             _nativeP02Bridge?.Dispose();_nativeP02Bridge=null;
             _nativeModels?.Dispose();_nativeModels=null;
+            core.WebMessageReceived -= OnP03WebMessageReceived;
+            core.NavigationStarting -= OnNativeP02NavigationStarting;
+            core.SourceChanged -= OnNativeP02SourceChanged;
+            core.ContentLoading -= OnNativeP02ContentLoading;
+            if (_nativeBrowserOnShell is not null) core.ContentLoading -= _nativeBrowserOnShell;
+            _nativeBrowserOnShell=null;
+            _nativeP02Core=null;
             if(transport is not null)await transport.DisposeAsync();
             if(child is not null) {
                 try {if(!child.HasExited)child.Kill(entireProcessTree:true);}catch{}
@@ -700,8 +744,12 @@ public partial class MainWindow
         }
         try{_nativeModelsStop.Cancel();}catch(ObjectDisposedException){}
         _nativeModelsStop.Dispose();
+        _nativeModelsStopDisposed=true;
         if (_nativeP02Core is { } web) {
             web.WebMessageReceived -= OnP03WebMessageReceived;
+            web.NavigationStarting -= OnNativeP02NavigationStarting;
+            web.SourceChanged -= OnNativeP02SourceChanged;
+            web.ContentLoading -= OnNativeP02ContentLoading;
             if (_nativeBrowserFilter is not null) web.WebResourceRequested -= _nativeBrowserFilter;
             if (_nativeBrowserOnShell is not null) web.ContentLoading -= _nativeBrowserOnShell;
         }
