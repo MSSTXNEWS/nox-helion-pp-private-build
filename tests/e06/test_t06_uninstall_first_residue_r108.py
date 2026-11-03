@@ -51,4 +51,28 @@ class ResidueDiagnostics(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError,"MANIFEST_FILE_REMAINS"):
                 verify_original_uninstall(self.install,(owner,),NoKeys())
         self.assertEqual(outside.read_bytes(),b"untracked")
-        self.assertIn('"lin...[truncated]
+        self.assertIn('"linked-owned.bin"', output.getvalue())
+        self.assertNotIn(str(outside), output.getvalue())
+
+    def test_long_manifest_name_is_bounded_without_install_path_leak(self):
+        owned=self.install/('A'*180+'.bin')
+        owned.write_bytes(b"original")
+        output=io.StringIO()
+        with contextlib.redirect_stderr(output):
+            with self.assertRaisesRegex(RuntimeError,"^T06_CONSERVATIVE_UNINSTALL_MANIFEST_FILE_REMAINS$"):
+                verify_original_uninstall(self.install,(owned,),NoKeys())
+        self.assertIn('T06_UNINSTALL_FIRST_MANIFEST_RESIDUE',output.getvalue())
+        self.assertNotIn(str(self.install),output.getvalue())
+        self.assertNotIn('A'*161,output.getvalue())
+        self.assertTrue(owned.is_file())
+
+    def test_clean_owned_removal_never_deletes_untracked_file(self):
+        owned=self.install/'already-removed.bin'
+        personal=self.install/'personal-untracked.bin'
+        personal.write_bytes(b"user")
+        verify_original_uninstall(self.install,(owned,),NoKeys())
+        self.assertEqual(personal.read_bytes(),b"user")
+
+
+if __name__ == "__main__":
+    unittest.main()
