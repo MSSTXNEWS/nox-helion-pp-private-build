@@ -25,7 +25,7 @@ public partial class MainWindow
         "chat.rag","chat.voice","chat.stop","calls.history","chat.commands",
         "models.installed","models.digest","gpu.preflight","training.start",
         "training.pause","training.resume","training.checkpoints","training.evaluate",
-        "system.autostart", "browser.open", "browser.navidle", "menu.dispatch", "menu.binding"
+        "system.autostart", "browser.open", "browser.navidle", "menu.dispatch", "menu.binding", "selfwrite.ack"
     };
     private Process? _nativeP02Process;
     private NativePythonPipe? _nativeP02Pipe;
@@ -168,6 +168,15 @@ public partial class MainWindow
     private async Task<NativePipeResult> DispatchNativeOwnerAsync(string route, JsonElement payload,
         CancellationToken cancel)
     {
+        if (route == "selfwrite.ack") {
+            // Self-write native ACK. Forge/sandbox may proceed only with owner proof.
+            if (cancel.IsCancellationRequested || _nativeP02Core is not { } core ||
+                _nativeP02Bridge is not { } bridge || bridge.BrowserExternalActive ||
+                _nativeP02Process is not { HasExited: false })
+                return new NativePipeResult("", false, null, "SELFWRITE_ACK_HOLD");
+            return new NativePipeResult("", true,
+                JsonSerializer.SerializeToElement(new { status = "SELFWRITE_ACK", epoch = Interlocked.Read(ref _a1OwnerStopEpoch) }), null);
+        }
         if (route == "menu.binding") {
             // B8: native MENU bindings. Buttons, models, SELF-BUILDER/STOP, native ACK.
             // No second host. Unknown action is HOLD.
