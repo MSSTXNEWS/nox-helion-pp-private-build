@@ -50,7 +50,7 @@ try {
   firstUnverified.children[0].click();
   assert.equal(feature.hidden,false);
   assert.equal(list.hidden,true);
-  assert.ok(feature.children[1].textContent.includes('ОЖИДАЕТ ПОДКЛЮЧЕНИЯ NOX'));
+  assert.ok(feature.children[1].textContent.includes('Прямой исполнитель не подтверждён'));
   feature.children[2].click();
   assert.equal(feature.hidden,true);
   assert.equal(list.hidden,false);
