@@ -34,14 +34,35 @@ await cp(join(packageRoot, "nox-adminator-theme.css"), join(outputRoot, "nox-adm
 await cp(join(packageRoot, "nox-adminator-entry.mjs"), join(outputRoot, "nox-adminator-entry.mjs"));
 
 let adapter = await readFile(join(packageRoot, "nox-adminator-adapter.mjs"), "utf8");
-// WebView2 maps the existing application root to https://nox.local/.
-// Keep all UI sources in that same origin; do not create another host.
-adapter = adapter.replace(
-  'from "../../ui/onehost-menu-bindings.mjs"',
-  'from "/ui/onehost-menu-bindings.mjs"'
-);
-if (adapter.includes("../../ui/onehost-menu-bindings.mjs")) {
-  throw new Error("NOX_ONEHOST_MODULE_ROOT_REWRITE_FAILED");
+// Stage the ORIGINAL OneHost client in the donor distribution. The client is
+// not bundled into a second backend. Its relative imports are copied intact.
+const hostBundle = [
+  "ui/onehost-menu-bindings.mjs",
+  "ui/selfbuilder-menu-v2.mjs",
+  "ui/selfbuilder-wow-workbench.mjs",
+  "ui/nox-r11-wow.mjs",
+  "proposals/P01/WOW-MAX10/scene-contract.mjs"
+];
+const repositoryRoot = resolve(packageRoot, "../..");
+for (const relativePath of hostBundle) {
+  const source = resolve(repositoryRoot, relativePath);
+  const target = join(outputRoot, "nox-native", relativePath);
+  if (!source.startsWith(repositoryRoot + "/") && source !== repositoryRoot) {
+    throw new Error("NOX_NATIVE_SOURCE_OUTSIDE_REPO");
+  }
+  const bytes = await readFile(source);
+  if (bytes.length === 0 || bytes.length > 2000000) {
+    throw new Error("NOX_NATIVE_MODULE_SOURCE_SIZE_HOLD:" + relativePath);
+  }
+  await mkdir(dirname(target), { recursive: true });
+  await writeFile(target, bytes);
+}
+const importBefore = 'from "../../ui/onehost-menu-bindings.mjs"';
+const importAfter = 'from "./nox-native/ui/onehost-menu-bindings.mjs"';
+if (!adapter.includes(importBefore)) throw new Error("NOX_NATIVE_CLIENT_IMPORT_ANCHOR_HOLD");
+adapter = adapter.replace(importBefore, importAfter);
+if (adapter.includes(importBefore) || !adapter.includes(importAfter)) {
+  throw new Error("NOX_NATIVE_CLIENT_RELATIVE_REWRITE_HOLD");
 }
 await writeFile(join(outputRoot, "nox-adminator-adapter.mjs"), adapter);
 
