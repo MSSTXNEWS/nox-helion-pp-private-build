@@ -158,6 +158,11 @@ def inspect(profile: str, gpu_index: int) -> dict:
         if temperature >= limit:
             raise RuntimeError("GPU_THERMAL_HEADROOM_UNAVAILABLE")
         memory = train_qlora.gpu_vram_headroom(exe, selected["uuid"], profile)
+        # Inventory and UUID-scoped telemetry must agree on physical VRAM;
+        # a changed/MIG/driver view is not proof of the selected GPU budget.
+        if (type(memory) is not dict or type(memory.get("total_mib")) is not int
+                or memory["total_mib"] != int(selected["memory_total_mib"])):
+            raise RuntimeError("GPU_TOTAL_MEMORY_SNAPSHOT_DRIFT")
         report["gpu"] = {
             "name": selected["name"], "uuid": selected["uuid"],
             "temperature_c": temperature, **memory
