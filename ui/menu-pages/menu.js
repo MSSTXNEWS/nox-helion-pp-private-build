@@ -30,11 +30,7 @@ function render(id){
     </div>
     <p id="status" class="card">Выбери кнопку.</p>`;
   panel.querySelectorAll('.tile').forEach(btn=>{
-    btn.onclick=()=>{
-      btn.dataset.state='RUNNING';
-      document.getElementById('status').textContent=s.title+' · '+btn.dataset.item+' · RUNNING';
-      setTimeout(()=>{btn.dataset.state='OK'; document.getElementById('status').textContent=s.title+' · '+btn.dataset.item+' · OK';}, 500);
-    };
+    btn.onclick=()=>runAction(s, btn);
   });
 }
 SECTIONS.forEach(s=>{
@@ -49,3 +45,29 @@ document.addEventListener('keydown', e=>{
 });
 setInterval(()=>{ document.getElementById('clock').textContent=new Date().toLocaleString('ru'); },1000);
 render('work');
+
+function runAction(section, btn){
+  const item = btn.dataset.item;
+  const status = document.getElementById('status');
+  btn.dataset.state = 'RUNNING';
+  if (item === 'Чат HELION') {
+    const q = prompt('Сообщение в локальный чат');
+    status.textContent = q ? ('ЛОКАЛЬНЫЙ ЧАТ · '+q+' · нет Ollama, ответ не от модели') : 'Чат отменён';
+    btn.dataset.state = q ? 'HOLD' : '';
+    return;
+  }
+  if (item === 'Веб-браузер' || item === 'Веб-контент') {
+    const url = prompt('URL', 'https://ollama.com');
+    if (url) window.open(url, '_blank', 'noopener');
+    status.textContent = url ? ('Браузер открыт · '+url) : 'Браузер отменён';
+    btn.dataset.state = url ? 'OK' : '';
+    return;
+  }
+  if (item === 'Почта' || item === 'Звонки' || item === 'Голосовое управление' || item === 'Управление ПК' || item === 'Обучение весов') {
+    status.textContent = item+' · HOLD · нужен Windows EXE и native ACK';
+    btn.dataset.state = 'HOLD';
+    return;
+  }
+  status.textContent = section.title+' · '+item+' · OK';
+  btn.dataset.state = 'OK';
+}
