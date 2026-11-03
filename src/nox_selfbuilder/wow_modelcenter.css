@@ -1,134 +1,215 @@
-/* NOX HELION · ModelCenter WOW · Rule 10+10+10
-   Realism: obsidian/metal/glass, heat only on active surfaces
-   WOW: living scene, 8 cores coexist, events drive light
-   Cinema: slow drift, focus pull, continuous navigation
-   Sources: pure CSS glassmorphism, CSS fire/smoke, Fluent icon slots (MIT)
+/* NOX HELION · ModelCenter WOW v2 · Rule 10+10+10
+   Realism: obsidian/metal/glass, heat only on active surfaces, micro-texture
+   WOW: living scene, 8 cores coexist, events drive light, reactive glass
+   Cinema: slow drift, rack-focus, continuous navigation, readable always
 */
 
 :root {
-  --obsidian: #0a0c10;
-  --lava: #ff6b2c;
-  --amber: #ffb347;
-  --glass-bg: rgba(18, 20, 28, 0.55);
-  --glass-border: rgba(255, 180, 100, 0.25);
-  --text: #e8e6e3;
-  --muted: #8a8680;
+  --obsidian: #07090d;
+  --lava: #ff5a1f;
+  --amber: #ffc06a;
+  --cyan: #6ad4ff;
+  --glass-bg: rgba(12, 14, 20, 0.62);
+  --glass-border: rgba(255, 190, 120, 0.28);
+  --text: #f0eee9;
+  --muted: #9a958e;
+  --shadow: 0 20px 60px rgba(0,0,0,0.55);
 }
 
 .nox-mc {
   position: relative;
   min-height: 100vh;
-  background: radial-gradient(ellipse at 50% 100%, #1a0a04 0%, var(--obsidian) 70%);
+  background:
+    radial-gradient(ellipse 80% 50% at 50% 110%, #2a1006 0%, transparent 55%),
+    radial-gradient(circle at 20% 20%, rgba(40,20,10,0.3) 0%, transparent 40%),
+    var(--obsidian);
   color: var(--text);
   font-family: "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
   overflow: hidden;
 }
 
-/* Smoke layer */
+/* Volumetric smoke */
 .nox-smoke {
   position: absolute;
-  inset: 0;
+  inset: -10%;
   pointer-events: none;
   background:
-    radial-gradient(circle at 20% 110%, rgba(80,40,20,0.15) 0%, transparent 40%),
-    radial-gradient(circle at 80% 105%, rgba(60,30,15,0.12) 0%, transparent 45%);
-  animation: smoke-drift 18s ease-in-out infinite alternate;
+    radial-gradient(circle at 15% 100%, rgba(90,45,20,0.18) 0%, transparent 35%),
+    radial-gradient(circle at 85% 95%, rgba(70,35,15,0.14) 0%, transparent 40%),
+    radial-gradient(circle at 50% 105%, rgba(50,25,10,0.1) 0%, transparent 50%);
+  filter: blur(40px);
+  animation: smoke-rise 22s ease-in-out infinite alternate;
+  mix-blend-mode: screen;
 }
-@keyframes smoke-drift {
-  from { opacity: 0.6; transform: translateY(0); }
-  to   { opacity: 0.85; transform: translateY(-20px); }
+@keyframes smoke-rise {
+  0%   { transform: translateY(10px) scale(1); opacity: 0.5; }
+  100% { transform: translateY(-40px) scale(1.08); opacity: 0.8; }
 }
 
-/* Fire accent on primary buttons */
+/* Fire corona on primary buttons */
 .nox-btn-fire {
   position: relative;
-  background: linear-gradient(180deg, #3a1a0a, #1a0a04);
-  border: 1px solid var(--lava);
+  background: linear-gradient(180deg, #2a1208 0%, #0d0604 100%);
+  border: 1px solid rgba(255,90,30,0.6);
   color: var(--amber);
-  padding: 0.7rem 1.4rem;
-  border-radius: 12px;
+  padding: 0.75rem 1.6rem;
+  border-radius: 14px;
   overflow: hidden;
   isolation: isolate;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.nox-btn-fire:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 0 24px rgba(255,90,30,0.45);
 }
 .nox-btn-fire::before {
   content: "";
   position: absolute;
-  inset: -40% -20%;
-  background: radial-gradient(circle, rgba(255,100,30,0.45) 0%, transparent 60%);
-  animation: fire-pulse 2.4s ease-in-out infinite;
+  inset: -60% -30%;
+  background:
+    radial-gradient(circle at 50% 80%, rgba(255,80,20,0.55) 0%, transparent 55%),
+    radial-gradient(circle at 30% 90%, rgba(255,140,40,0.3) 0%, transparent 45%);
+  animation: fire-corona 2.2s ease-in-out infinite;
   z-index: -1;
-  filter: blur(12px);
+  filter: blur(18px);
 }
-@keyframes fire-pulse {
-  0%, 100% { transform: scale(0.9); opacity: 0.5; }
-  50%      { transform: scale(1.15); opacity: 0.85; }
+@keyframes fire-corona {
+  0%, 100% { transform: scale(0.85) rotate(-2deg); opacity: 0.45; }
+  50%      { transform: scale(1.2) rotate(2deg); opacity: 0.9; }
 }
 
-/* Glass panel */
+/* Glass panel with inner light */
 .nox-glass {
   background: var(--glass-bg);
-  backdrop-filter: blur(16px) saturate(1.4);
-  -webkit-backdrop-filter: blur(16px) saturate(1.4);
+  backdrop-filter: blur(18px) saturate(1.5);
+  -webkit-backdrop-filter: blur(18px) saturate(1.5);
   border: 1px solid var(--glass-border);
-  border-radius: 16px;
+  border-radius: 18px;
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.08),
-    0 12px 40px rgba(0,0,0,0.45);
+    inset 0 1px 0 rgba(255,255,255,0.1),
+    inset 0 -1px 0 rgba(255,100,30,0.05),
+    var(--shadow);
+  position: relative;
+}
+.nox-glass::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(135deg, rgba(255,255,255,0.06) 0%, transparent 40%);
+  pointer-events: none;
 }
 
-/* Orbital cores (8 HF) */
+/* Orbital system */
 .nox-orbits {
   position: relative;
-  width: 280px;
-  height: 280px;
-  margin: 2rem auto;
+  width: 320px;
+  height: 320px;
+  margin: 1.5rem auto 2rem;
 }
 .nox-sun {
   position: absolute;
-  inset: 35%;
+  inset: 32%;
   border-radius: 50%;
-  background: radial-gradient(circle, #1a0804 30%, #000 70%);
-  box-shadow: 0 0 40px rgba(255,100,30,0.35);
-  animation: sun-breathe 6s ease-in-out infinite;
+  background:
+    radial-gradient(circle at 40% 35%, #3a1a0a 0%, #0a0402 60%, #000 100%);
+  box-shadow:
+    0 0 30px rgba(255,80,20,0.4),
+    inset 0 0 20px rgba(255,60,10,0.3);
+  animation: sun-breathe 7s ease-in-out infinite;
+}
+.nox-sun::before {
+  content: "";
+  position: absolute;
+  inset: -18%;
+  border-radius: 50%;
+  background: conic-gradient(from 0deg, transparent, rgba(255,100,30,0.25), transparent 40%);
+  animation: corona-spin 14s linear infinite;
+  filter: blur(8px);
 }
 @keyframes sun-breathe {
-  0%, 100% { box-shadow: 0 0 30px rgba(255,100,30,0.25); }
-  50%      { box-shadow: 0 0 55px rgba(255,140,40,0.5); }
+  0%, 100% { box-shadow: 0 0 25px rgba(255,80,20,0.3); }
+  50%      { box-shadow: 0 0 60px rgba(255,140,40,0.55); }
 }
+@keyframes corona-spin { to { transform: rotate(360deg); } }
+
 .nox-core {
   position: absolute;
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
-  background: radial-gradient(circle, var(--amber), #3a1a08);
-  box-shadow: 0 0 12px var(--lava);
-  animation: orbit 22s linear infinite;
+  background: radial-gradient(circle at 35% 30%, var(--amber), #4a2208 70%);
+  box-shadow: 0 0 14px var(--lava), inset 0 0 6px rgba(255,200,100,0.5);
+  animation: orbit 24s linear infinite;
 }
-.nox-core:nth-child(2) { animation-duration: 26s; }
-.nox-core:nth-child(3) { animation-duration: 19s; }
-.nox-core:nth-child(4) { animation-duration: 31s; }
+.nox-core:nth-child(2) { animation-duration: 28s; animation-delay: -3s; }
+.nox-core:nth-child(3) { animation-duration: 20s; animation-delay: -7s; }
+.nox-core:nth-child(4) { animation-duration: 32s; animation-delay: -11s; }
+.nox-core:nth-child(5) { animation-duration: 22s; animation-delay: -15s; }
+.nox-core:nth-child(6) { animation-duration: 30s; animation-delay: -19s; }
+.nox-core:nth-child(7) { animation-duration: 26s; animation-delay: -23s; }
+.nox-core:nth-child(8) { animation-duration: 34s; animation-delay: -27s; }
 @keyframes orbit {
-  from { transform: rotate(0deg) translateX(110px) rotate(0deg); }
-  to   { transform: rotate(360deg) translateX(110px) rotate(-360deg); }
+  from { transform: rotate(0deg) translateX(125px) rotate(0deg); }
+  to   { transform: rotate(360deg) translateX(125px) rotate(-360deg); }
 }
 
-/* Progress bar with heat */
+/* Progress with heat glow */
 .nox-progress {
-  height: 6px;
-  background: rgba(255,255,255,0.08);
-  border-radius: 3px;
+  height: 7px;
+  background: rgba(255,255,255,0.07);
+  border-radius: 4px;
   overflow: hidden;
+  position: relative;
 }
 .nox-progress > span {
   display: block;
   height: 100%;
-  background: linear-gradient(90deg, #6b2a0a, var(--lava), var(--amber));
-  box-shadow: 0 0 10px var(--lava);
-  transition: width 0.4s ease;
+  width: 0%;
+  background: linear-gradient(90deg, #4a1a08, var(--lava) 40%, var(--amber) 70%, #fff8 100%);
+  box-shadow: 0 0 12px var(--lava);
+  transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+.nox-progress > span::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+  animation: shimmer 1.8s infinite;
+}
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
+}
+
+/* Status pill */
+.nox-status-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--amber);
+  font-size: 0.85rem;
+  letter-spacing: 0.06em;
+}
+.nox-status-live::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--lava);
+  box-shadow: 0 0 8px var(--lava);
+  animation: pulse 1.6s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 0.6; transform: scale(0.9); }
+  50% { opacity: 1; transform: scale(1.15); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .nox-smoke, .nox-btn-fire::before, .nox-sun, .nox-core {
+  .nox-smoke, .nox-btn-fire::before, .nox-sun, .nox-sun::before,
+  .nox-core, .nox-progress > span::after, .nox-status-live::before {
     animation: none !important;
   }
 }
