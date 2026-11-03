@@ -17,6 +17,27 @@ test('incomplete feature dialog owns acceleration; no fake telemetry or direct i
  assert.match(src,/function pending\(/);assert.match(src,/УСКОРИТЬ NOX/);
  assert.match(src,/selfbuilder\.propose/);assert.match(src,/createNativeMenuClient/);
  assert.doesNotMatch(src,/Math\.random|window\.open|fetch\(/);
- assert.match(src,/if\(client\)/); // attempt native submission only when host is connected
+ assert.match(src,/if\(!client\)/); // attempt native submission only when host is connected
  assert.match(src,/else\{/); // otherwise prepare a copyable task, never fake an ACK
+});
+
+test('priority routes owner-selected native scope and truthful S03 ACK',()=>{
+ const src=readFileSync(new URL('./menu.js',import.meta.url),'utf8');
+ assert.match(src,/selectedCore=null,selectedPersona=null/);
+ assert.match(src,/canonicalChatContext\(selectedCore,PERSONA_TO_OWNER\[selectedPersona\]\)/);
+ assert.match(src,/else if\(!scope\)\{offerCopy\(\)/);
+ assert.match(src,/selfbuilder\.propose',task,\.\.\.scope/);
+ assert.match(src,/receipt\?\.ack===true/);
+ assert.match(src,/\^S03-/);
+ assert.match(src,/receipt\.source_head/);
+ assert.doesNotMatch(src,/Разработка и обучение выполняются/);
+ assert.match(src,/chip\.addEventListener\('keydown'/);
+ assert.match(src,/b\.dataset\.core=id/);
+});
+
+test('LIVE chat source still retains model selection, streaming, STOP and terminal receipt',()=>{
+ const src=readFileSync(new URL('./menu.js',import.meta.url),'utf8');
+ for(const token of ["function liveChat(","isNativeChatTerminal", "helion.chat", "chat.stop", "chat.model", "chatInFlight", "STREAMING"])assert.ok(src.includes(token),token);
+ assert.match(src,/const chooseCore=v=>\{core=v;selectedCore=/);
+ assert.match(src,/const choosePersona=v=>\{persona=v;selectedPersona=/);
 });

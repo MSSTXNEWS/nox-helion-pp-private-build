@@ -1,10 +1,17 @@
 import {DIRECTIONS,WORLDS,CORE_IDS,PERSONAS,PRIMARY,ROUTE_COUNT,getWorld,getRoute} from './express-layout.mjs';
-import {createNativeMenuClient,isNativeChatTerminal} from '../onehost-menu-bindings.mjs';
+import {createNativeMenuClient,isNativeChatTerminal,canonicalChatContext} from '../onehost-menu-bindings.mjs';
 const doc=document,$=id=>doc.getElementById(id);
 const el=(tag,cls,label)=>{const x=doc.createElement(tag);if(cls)x.className=cls;if(label!==undefined)x.textContent=label;return x;};
 const button=(label,cls,click)=>{const b=el('button',cls,label);b.type='button';b.addEventListener('click',click);return b;};
 const P={directions:$('directions'),planets:$('planets'),details:$('details'),status:$('status'),actions:$('actions'),title:$('title'),subtitle:$('subtitle'),search:$('search'),cores:$('cores'),fx:$('fx'),host:$('host')};
 let client=null,active=null,requesting=false,chatInFlight=false,chatStopPending=false;
+let selectedCore=null,selectedPersona=null;
+const PERSONA_TO_OWNER=Object.freeze({KV:'kairen',AM:'adrian',LA:'leon',EV:'elina',KW:'cassien'});
+function ownerScope(){
+ if(!selectedCore||!selectedPersona)return null;
+ const scope=canonicalChatContext(selectedCore,PERSONA_TO_OWNER[selectedPersona]);
+ return scope.core_id&&scope.persona_id?scope:null;
+}
 if(window.location.origin==='https://nox.local'&&window.location.pathname==='/'&&window.location.search===''&&window.location.hash===''&&window.chrome?.webview){
  try{client=createNativeMenuClient({webview:window.chrome.webview});P.host.textContent='ТРАНСПОРТ НАЙДЕН';}
  catch{client=null;}
@@ -67,15 +74,19 @@ function pending(id,label){
   };
   // Existing native ACL/consent remains the only route. Never claim autonomous work on click.
   try{
+   const scope=ownerScope();
    if(!client){offerCopy();say('План ускорения подготовлен. Подключите локальный OneHost или скопируйте его.');}
+   else if(!scope){offerCopy();say('Выберите CoreID и Persona для памяти S03; пока задание только для копирования.');}
    else{
-    say('Связываюсь с локальным ядром для назначения приоритета...');
-    const result=await client.request('chat.commands',{action:'selfbuilder.propose',task});
-    const receipt=result?.result||{};
-    const runId=receipt.run_id||receipt.runId||receipt.RunID;
-    if(result?.state==='COMPLETED'&&typeof runId==='string'&&runId.length>0){
-     say('Приоритет NOX зарегистрирован: RunID '+runId+'. Разработка и обучение выполняются только по разрешённому сценарию.');
-    }else{offerCopy();say('Постановка в рабочую очередь не подтверждена RunID. Сохраните задание для NOX.');}
+    say('Запрашиваю подтверждение владельца для очереди S03...');
+    const result=await client.request('chat.commands',{action:'selfbuilder.propose',task,...scope});
+    const receipt=result?.result;
+    const runId=receipt?.run_id;
+    if(result?.state==='COMPLETED'&&receipt?.ack===true&&
+       typeof runId==='string'&&/^S03-[A-Za-z0-9._:-]{1,128}$/.test(runId)&&
+       typeof receipt.source_head==='string'&&/^[0-9a-f]{40}(?:[0-9a-f]{24})?$/.test(receipt.source_head)){
+     say('Задание принято в S03: RunID '+runId+'. Это не сборка патча и не автоматическое обучение.');
+    }else{offerCopy();say('ACK/RunID не подтверждён OneHost. Задание доступно для копирования.');}
    }
   }catch{offerCopy();say('Нет подтверждённого ответа OneHost. Приоритетное задание доступно для копирования.');}
   finally{requesting=false;priority.disabled=false;}
@@ -133,7 +144,8 @@ function liveChat(label){
  }
  const cores=CORE_IDS.map(id=>['core.'+id.toLowerCase(),id]);
  const personas=PERSONAS.map((id,i)=>[['persona.kairen_voss','persona.adrian_marrow','persona.leon_ardis','persona.elina_veil','persona.kassien_veir'][i],id]);
- const chooseCore=v=>{core=v;};const choosePersona=v=>{persona=v;};
+ const chooseCore=v=>{core=v;selectedCore=CORE_IDS.find(id=>'core.'+id.toLowerCase()===v)||null;};
+ const choosePersona=v=>{persona=v;selectedPersona=PERSONAS[['persona.kairen_voss','persona.adrian_marrow','persona.leon_ardis','persona.elina_veil','persona.kassien_veir'].indexOf(v)]||null;};
  chips(coreRow,cores,core,chooseCore);chips(personaRow,personas,persona,choosePersona);
  const row=(who,content)=>{const item=el('p','nox-chat-bubble nox-chat-'+who,content);log.append(item);log.scrollTop=log.scrollHeight;return item;};
  async function loadModels(){
@@ -246,7 +258,28 @@ WORLDS.forEach(w=>{
  b.setAttribute('aria-pressed','false');b.append(el('span','planet-label',w.title),el('small','',w.routes.length+' ФУНКЦИЙ'));P.planets.append(b);
 });
 PRIMARY.forEach(name=>{const b=button(name,'main-action',()=>mainAction(name));b.dataset.action=name;P.actions.append(b);});
-CORE_IDS.forEach(id=>{P.cores.append(button(id,'core',()=>pending('core-'+id,id+' · ЯДРО')));});
+CORE_IDS.forEach(id=>{
+ const b=button(id,'core',()=>{
+  selectedCore=id;
+  P.cores.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',String(x.dataset.core===id)));
+  say('Выбрано ядро '+id+'. Для заявки на ускорение также выберите Persona.');
+ });
+ b.dataset.core=id;b.setAttribute('aria-pressed','false');P.cores.append(b);
+});
+doc.querySelectorAll('.persona span').forEach(chip=>{
+ const id=chip.textContent?.trim();
+ if(!PERSONAS.includes(id))return;
+ chip.setAttribute('role','button');chip.setAttribute('tabindex','0');
+ chip.setAttribute('aria-label','Выбрать Persona '+id);
+ chip.setAttribute('aria-pressed','false');
+ const choose=()=>{
+  selectedPersona=id;
+  doc.querySelectorAll('.persona span').forEach(x=>x.setAttribute('aria-pressed',String(x===chip)));
+  say('Выбрана Persona '+id+'. Предложение только через согласие OneHost.');
+ };
+ chip.addEventListener('click',choose);
+ chip.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();choose();}});
+});
 P.search.addEventListener('input',()=>{
  const q=P.search.value.trim().toLocaleLowerCase('ru');if(!q){overview();return;}
  const results=WORLDS.flatMap(w=>w.routes.map(r=>({...r,world:w}))).filter(x=>
