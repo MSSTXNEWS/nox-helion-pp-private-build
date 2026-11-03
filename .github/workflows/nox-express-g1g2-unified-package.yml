@@ -70,13 +70,6 @@ jobs:
                   if p.name!='SHA256SUMS.txt':o.write(f'{sha256(p)}  {p.name}\n')
           print(json.dumps(receipt))
           PY
-      - name: Upload one source-and-cache-reference archive
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with:
-          name: NOX_HELION_EXPRESS_G1G2_SINGLE_PACKAGE
-          path: dist/nox-express-package/
-          if-no-files-found: error
-          retention-days: 7
       - name: G2 P04 original syntax gate (not Windows proof)
         shell: bash
         run: |
@@ -88,3 +81,10 @@ jobs:
           ast.parse(p.read_text(encoding='utf-8'),filename=str(p))
           print('P04_SYNTAX_PASS_ONLY')
           PY
+      - name: Upload one source-and-cache-reference archive
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: NOX_HELION_EXPRESS_G1G2_SINGLE_PACKAGE
+          path: dist/nox-express-package/
+          if-no-files-found: error
+          retention-days: 7
