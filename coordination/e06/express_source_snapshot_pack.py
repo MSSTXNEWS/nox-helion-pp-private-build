@@ -15,6 +15,32 @@ def git(repo, *args):
     return subprocess.check_output(["git", "-C", str(repo), *args], stderr=subprocess.PIPE).decode().strip()
 
 
+
+# Windows WPF/NSIS must consume the same immutable Linux-built source ZIP.
+# Git permits device aliases and punctuation that Win32 normalizes/rejects.
+# Fail closed BEFORE opening the output archive rather than publishing an
+# apparently SHA-locked bundle that cannot safely stage on Windows.
+_WINDOWS_DEVICES = frozenset(
+    {"CON", "PRN", "AUX", "NUL"}
+    | {f"{prefix}{suffix}" for prefix in ("COM", "LPT")
+       for suffix in "123456789¹²³"}
+)
+_WINDOWS_FORBIDDEN = frozenset('<>:"\\|?*')
+
+
+def _validate_windows_source_path(name: str) -> None:
+    if not name or name.startswith("/") or "\\" in name:
+        raise ValueError("WINDOWS_SOURCE_PATH_HOLD: " + repr(name))
+    for part in name.split("/"):
+        if (not part or part in (".", "..") or part.endswith((".", " ")) or
+                len(part.encode("utf-16-le", "surrogatepass")) // 2 > 255 or
+                any(ord(ch) < 32 or ord(ch) == 127 or
+                    0xD800 <= ord(ch) <= 0xDFFF or
+                    ch in _WINDOWS_FORBIDDEN for ch in part) or
+                part.split(".", 1)[0].upper() in _WINDOWS_DEVICES):
+            raise ValueError("WINDOWS_SOURCE_PATH_HOLD: " + repr(name))
+
+
 def _committed_source_blobs(repo: Path) -> dict[str, str]:
     """Bind archive bytes to immutable HEAD, not a mutable Git index.
 
@@ -72,6 +98,7 @@ def build(repo: Path, sha: str, destination: Path):
                 path = Path(name)
                 if path.is_absolute() or ".." in path.parts or "\\" in name:
                     raise ValueError("UNSAFE_PATH: " + name)
+                _validate_windows_source_path(name)
                 if name.casefold() in seen:
                     raise ValueError("WINDOWS_CASE_COLLISION: " + name)
                 seen.add(name.casefold())

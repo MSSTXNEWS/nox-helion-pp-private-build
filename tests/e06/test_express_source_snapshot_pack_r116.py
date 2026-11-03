@@ -81,5 +81,42 @@ class ExpressSourceProvenanceR116(unittest.TestCase):
         self.assertFalse(self.target.exists())
 
 
+    def _commit_extra_name(self, name: str):
+        target = self.repo / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(b"extra committed bytes\\n")
+        run(self.repo, 'add', '--', name)
+        run(self.repo, 'commit', '-qm', 'freeze test path')
+        self.head = run(self.repo, 'rev-parse', 'HEAD')
+
+    def test_win32_device_alias_is_rejected_before_publication(self):
+        self._commit_extra_name('CON.txt')
+        with self.assertRaisesRegex(ValueError, 'WINDOWS_SOURCE_PATH_HOLD'):
+            self.packer.build(self.repo, self.head, self.target)
+        self.assertFalse(self.target.exists())
+
+    def test_win32_illegal_punctuation_is_rejected_before_publication(self):
+        self._commit_extra_name('models/bad?.gguf')
+        with self.assertRaisesRegex(ValueError, 'WINDOWS_SOURCE_PATH_HOLD'):
+            self.packer.build(self.repo, self.head, self.target)
+        self.assertFalse(self.target.exists())
+
+    def test_win32_trailing_dot_is_rejected_before_publication(self):
+        self._commit_extra_name('notes.')
+        with self.assertRaisesRegex(ValueError, 'WINDOWS_SOURCE_PATH_HOLD'):
+            self.packer.build(self.repo, self.head, self.target)
+        self.assertFalse(self.target.exists())
+
+    def test_regular_nested_windows_path_preserves_git_provenance(self):
+        self._commit_extra_name('models/Qwen3.gguf')
+        receipt = self.packer.build(self.repo, self.head, self.target)
+        self.assertEqual(receipt['files'], 2)
+        with zipfile.ZipFile(self.target) as archive:
+            manifest = json.loads(archive.read('SOURCE_MANIFEST.json'))
+            self.assertEqual(manifest['file_count'], 2)
+            self.assertEqual(
+                archive.read('source/models/Qwen3.gguf'), b"extra committed bytes\\n")
+
+
 if __name__ == '__main__':
     unittest.main()
