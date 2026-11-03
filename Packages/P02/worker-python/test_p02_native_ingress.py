@@ -260,5 +260,29 @@ class IngressTests(unittest.TestCase):
         with self.assertRaisesRegex(ProtocolHold, "AUTHENTICATED"):
             ingress.handle(packet(8))
 
+    def test_negative_owner_status_never_upgraded_to_native_ok_r93(self):
+        negatives = (
+            "BLOCKED", "BLOCKED_POLICY", "STOPPED", "NOT_READY",
+            "UNAUTHORIZED", "FORBIDDEN", "CONSENT_REQUIRED",
+            "ABORTED", "TIMED_OUT", "EXPIRED",
+        )
+        for n, status in enumerate(negatives, 300):
+            with self.subTest(status=status):
+                self.provider.execute = lambda *_, status=status: {"status": status}
+                with self.assertRaisesRegex(ProtocolHold, "NATIVE_OWNER_RESULT_HOLD"):
+                    self.router.handle(packet(n))
+
+    def test_negative_status_cannot_override_ok_true_r93(self):
+        self.provider.execute = lambda *_: {
+            "ok": True, "status": "CONSENT_REQUIRED"}
+        with self.assertRaisesRegex(ProtocolHold, "NATIVE_OWNER_RESULT_HOLD"):
+            self.router.handle(packet(311))
+
+    def test_completed_stop_ack_still_admitted_r93(self):
+        self.provider.execute = lambda *_: {"status": "STOPPED", "ok": True}
+        reply = json.loads(self.router.handle(packet(312, route="chat.stop")))
+        self.assertEqual(reply["status"], "OK")
+        self.assertEqual(reply["result"]["status"], "STOPPED")
+
 if __name__ == "__main__":
     unittest.main()

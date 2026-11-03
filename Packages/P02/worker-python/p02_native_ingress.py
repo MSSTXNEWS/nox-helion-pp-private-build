@@ -206,10 +206,20 @@ class NativeIngress:
                 # padded negative status or a string/integer `ok` flag must
                 # never become a success through permissive normalization.
                 normalized = state.strip().upper() if type(state) is str else None
+                # Never translate a negative owner ACK into native status OK.
+                # Queued jobs remain valid; STOPPED is success only for STOP
+                # itself, not for a chat/model/training-start operation.
+                negative_prefixes = (
+                    "HOLD", "ERROR", "BLOCKED", "NOT_READY", "UNAUTHORIZED",
+                    "FORBIDDEN", "CONSENT_REQUIRED", "ABORTED", "TIMED_OUT",
+                    "EXPIRED",
+                )
                 if (("ok" in result and type(ok) is not bool) or
                     ok is False or
                     (normalized is not None and
-                     (normalized.startswith(("HOLD", "ERROR")) or
+                     (normalized.startswith(negative_prefixes) or
+                      (normalized.startswith("STOPPED") and
+                       route not in ("chat.stop", "training.pause")) or
                       normalized in ("FAILED", "DENIED", "REJECTED",
                                      "CANCELLED", "OFFLINE", "NEEDS_AUTH")))):
                     raise ProtocolHold("NATIVE_OWNER_RESULT_HOLD")
