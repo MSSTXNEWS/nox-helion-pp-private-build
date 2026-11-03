@@ -4,16 +4,18 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>NOX HELION · ModelCenter</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0">
   <link rel="stylesheet" href="wow_modelcenter.css">
 </head>
 <body class="nox-mc">
   <div class="nox-smoke"></div>
+  <div class="nox-scan"></div>
 
-  <main style="position:relative; z-index:1; padding:2.2rem 1.5rem; max-width:880px; margin:0 auto;">
-    <header style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:0.5rem;">
+  <main style="position:relative; z-index:1; padding:2rem 1.4rem; max-width:900px; margin:0 auto;">
+    <header style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:0.4rem;">
       <div>
-        <h1 style="margin:0; font-weight:600; letter-spacing:0.03em; font-size:1.8rem;">ModelCenter</h1>
-        <p style="margin:0.2rem 0 0; color:var(--muted); font-size:0.95rem;">qwen2.5-coder:7b · живой provider</p>
+        <h1 style="margin:0; font-weight:600; letter-spacing:0.04em; font-size:1.85rem;">ModelCenter</h1>
+        <p style="margin:0.15rem 0 0; color:var(--muted); font-size:0.92rem;">qwen2.5-coder:7b · живой provider</p>
       </div>
       <div class="nox-status-live">LIVE</div>
     </header>
@@ -30,37 +32,54 @@
       <div class="nox-core" title="HF08 ОБЩЕНИЕ"></div>
     </div>
 
-    <section class="nox-glass" style="padding:1.6rem;">
-      <h2 style="margin:0 0 0.6rem; font-size:1.15rem;">Модель</h2>
-      <p style="margin:0 0 1rem;">qwen2.5-coder:7b <span class="nox-status-live" style="margin-left:0.5rem;">готова</span></p>
+    <section class="nox-glass" style="padding:1.5rem;">
+      <h2 style="margin:0 0 0.5rem; font-size:1.12rem;">Модель</h2>
+      <p style="margin:0 0 1rem;">qwen2.5-coder:7b <span class="nox-status-live" style="margin-left:0.45rem;">готова</span></p>
 
-      <div class="nox-progress" style="margin:1.2rem 0;"><span id="bar"></span></div>
+      <div class="nox-progress" style="margin:1.1rem 0;"><span id="bar"></span></div>
 
-      <div style="display:flex; gap:0.8rem; flex-wrap:wrap; margin-top:1.2rem;">
-        <button class="nox-btn-fire" data-action="download">Скачать веса</button>
-        <button class="nox-btn-fire" data-action="train">Обучить LoRA</button>
-        <button class="nox-glass" style="padding:0.75rem 1.4rem; color:var(--text); cursor:pointer; border:none;" data-action="describe">Self-description</button>
+      <div style="display:flex; gap:0.75rem; flex-wrap:wrap; margin-top:1.1rem;">
+        <button class="nox-btn-fire" data-action="download"><span class="ms">download</span>Скачать веса</button>
+        <button class="nox-btn-fire" data-action="train"><span class="ms">model_training</span>Обучить LoRA</button>
+        <button class="nox-glass" style="padding:0.8rem 1.5rem; color:var(--text); cursor:pointer; border:none;" data-action="describe"><span class="ms">psychology</span>Self-description</button>
       </div>
 
-      <pre id="out" style="margin-top:1.4rem; font-size:0.82rem; color:var(--muted); white-space:pre-wrap; min-height:3rem;"></pre>
+      <pre id="out" style="margin-top:1.3rem; font-size:0.8rem; color:var(--muted); white-space:pre-wrap; min-height:2.8rem;"></pre>
     </section>
   </main>
 
   <script>
     const bar = document.getElementById('bar');
     const out = document.getElementById('out');
+    let audioCtx;
+
+    function impact() {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(90, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(30, audioCtx.currentTime + 0.18);
+      gain.gain.setValueAtTime(0.18, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.22);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.25);
+    }
 
     function animateProgress(label) {
+      impact();
       let p = 0;
       out.textContent = label + ' …';
       const id = setInterval(() => {
-        p = Math.min(100, p + 3 + Math.random() * 4);
+        p = Math.min(100, p + 2.5 + Math.random() * 3.5);
         bar.style.width = p + '%';
         if (p >= 100) {
           clearInterval(id);
           out.textContent = label + ' — завершено (receipt записан)';
         }
-      }, 70);
+      }, 65);
     }
 
     document.querySelectorAll('[data-action]').forEach(btn => {
@@ -69,6 +88,7 @@
         if (act === 'download') animateProgress('Скачивание qwen2.5-coder:7b');
         else if (act === 'train') animateProgress('Обучение LoRA');
         else if (act === 'describe') {
+          impact();
           out.textContent = 'Я — qwen2.5-coder:7b, живое ядро NOX HELION.\nHF01–HF08 привязаны. Готов к задачам.';
           bar.style.width = '100%';
         }
