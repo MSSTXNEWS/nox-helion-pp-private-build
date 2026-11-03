@@ -120,7 +120,8 @@ def main(argv=None):
         try:receipt=acquire(tag,root,args.execute)
         except Exception as error:receipt={'tag':tag,'status':'HOLD','error':f'{type(error).__name__}:{str(error)[:250]}','integrated':False,'installed':False}
         receipts.append(receipt)
-        (root/'NOX_MODEL_DOWNLOAD_RECEIPT.json').write_text(json.dumps({'models':receipts,'source':'Ollama official registry','gate':'REGISTRY_PENDING_OWNER'},indent=2,ensure_ascii=False),encoding='utf-8')
+        root.mkdir(parents=True, exist_ok=True)
+    (root/'NOX_MODEL_DOWNLOAD_RECEIPT.json').write_text(json.dumps({'models':receipts,'source':'Ollama official registry','gate':'REGISTRY_PENDING_OWNER'},indent=2,ensure_ascii=False),encoding='utf-8')
         print(f'{tag}: {receipt["status"]}',flush=True)
     return 0 if args.execute and all(r['status']=='DOWNLOADED_ALL_LAYERS_SHA256_VERIFIED' for r in receipts) else (2 if args.execute else 0)
 
