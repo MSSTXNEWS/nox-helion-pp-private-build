@@ -1,0 +1,39 @@
+name: NOX V16 EXPRESS one-source no-loss audit
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - e06/final-express-20261028-r22
+    paths:
+      - 'coordination/express/**'
+      - 'tests/express/**'
+      - '.github/workflows/nox-v16-express-source-lock.yml'
+permissions:
+  contents: read
+jobs:
+  original-source-and-owner-code:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Test frozen preflight semantics
+        run: python -m unittest discover -s tests/express -p 'test_*.py' -v
+      - name: Verify ORIGINAL 25 Git blobs, preserve all staged donors, audit existing 729-file ZIP exactly once
+        shell: bash
+        run: |
+          python coordination/express/verify_stage.py \
+            --root . \
+            --lock coordination/express/NOX_V16_EXPRESS_MAIN_BLOB_LOCK.json \
+            --output "$RUNNER_TEMP/NOX_V16_EXPRESS_STAGE_EVIDENCE.json"
+      - name: Upload source-only evidence (never final EXE acceptance)
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nox-v16-express-source-only-evidence
+          path: ${{ runner.temp }}/NOX_V16_EXPRESS_STAGE_EVIDENCE.json
+          retention-days: 30
