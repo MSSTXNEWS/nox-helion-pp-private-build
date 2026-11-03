@@ -75,4 +75,18 @@ evalCode('state.activeId="qwen3";render()');
 const dna=els.get('dnaList').children.map(x=>x.textContent);
 ok(!dna.includes('unverified-license')&&!dna.includes('unreviewed:tag'),'DNA hides unreviewed values');
 ok(dna.includes('REVIEW_REQUIRED'),'DNA keeps honest review indicator');
+// W06 R96: transient null active-job snapshot must not revoke native STOP.
+const stopR96='abcdef12-abcd-abcd-abcd-abcdef123456';
+post({...snap(),activeJob:{...job,jobId:stopR96,state:'Running'}});
+ok(!els.get('stopBtn').disabled,'Running queue exposes STOP');
+post({...snap(),activeJob:null});
+ok(evalCode('state.activeJob?.jobId')===stopR96&&!els.get('stopBtn').disabled,
+   'null owner snapshot cannot erase unconfirmed STOP target');
+const sentR96=sent.length;
+evalCode("sendAction('stop')");
+ok(sent.length===sentR96+1&&sent[sentR96].type==='p03.command.v1'&&
+   sent[sentR96].action==='stop'&&sent[sentR96].jobId===stopR96,
+   'STOP issued to actual durable jobId after null snapshot');
+post({...snap(),activeJob:{...job,jobId:stopR96,state:'Cancelled'}});
+ok(els.get('stopBtn').disabled,'confirmed terminal Cancelled disables STOP');
 console.log('E03_EXPRESS_R05_RUNTIME_PASS '+total+' scenarios, no real weights or Windows EXE');

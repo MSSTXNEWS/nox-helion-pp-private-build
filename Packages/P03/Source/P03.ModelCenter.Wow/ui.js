@@ -270,8 +270,10 @@ function processMessage(data){if(!data||typeof data!=='object'||!['p03.snapshot.
     modelId:typeof incoming.modelId==='string'&&modelId(incoming.modelId)?incoming.modelId:null,
     state:incoming.state,status:publicLifecycleStatus(incoming.status,incoming.state==='Completed'),
     completedBytes:incoming.completedBytes,totalBytes:incoming.totalBytes}:null;
-  // An absent/null job is not confirmation of the durable STOP request.
-  if(next===null&&old?.state==='Cancelling')next={...old};
+  // An absent/null snapshot is not a terminal queue receipt: retain the
+  // last nonterminal job so a transient empty frame cannot disable native STOP.
+  // Never infer Completed or Installed; the host still validates the jobId.
+  if(next===null&&old&&['Queued','Running','Cancelling'].includes(old.state))next={...old};
   if(next){
     const done=numeric(next.completedBytes),total=numeric(next.totalBytes);
     if(done!==null&&total!==null&&done>total)return;

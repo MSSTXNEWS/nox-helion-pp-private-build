@@ -408,7 +408,7 @@ if ($wantsCreative) {
   $microwowFiles=@(
     @{relative='index.html';blob='e44efa7b5e2ffdfda6481c734f92c064fe1f458b'},
     @{relative='ui.css';blob='52757928eab65e474b9f500ab95b49adf3abe340'},
-    @{relative='ui.js';blob='23ff1238b124e20bdb8ea310739bbb67812b0804'},
+    @{relative='ui.js';blob='4e9ecd0290ce78e61847078c691ab2bf20693372'},
     @{relative='THIRD_PARTY_LICENSES.txt';blob='4661952f5f4c9888c759ec94a3a28a31d26fc81f'},
     @{relative='icons/checkmark.svg';blob='e4ffbdc3d7f4f3e16a7612b7ab6bc145ad8874b6'},
     @{relative='icons/info.svg';blob='bd8e0cf27356e76acc68780ba6fd80cbfffbdf4f'},
