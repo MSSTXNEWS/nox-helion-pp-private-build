@@ -29,6 +29,13 @@
       "onehost_executed": false
     }
   },
+  "boost_staging_python": {
+    "required_version": "3.12.10",
+    "source": "coordination/e06/build_onehost_with_boost.ps1",
+    "verification": "NOT_VERIFIED_IN_BOOST_CACHE",
+    "missing_runtime_blocks_build": true,
+    "note": "The cached Python 3.13.2 offline installer is NOT the wrapper's pinned 3.12.10 staging interpreter; do not infer compatible runtime from cache."
+  },
   "offline_toolchains": {
     "dotnet": {
       "version": "8.0.427",
@@ -42,6 +49,7 @@
     },
     "python": {
       "version": "3.13.2",
+      "role": "OFFLINE_INSTALLER_CACHE_NOT_BOOST_STAGER",
       "platform": "win-x64",
       "file": "python-3.13.2-amd64.exe",
       "bytes": 28604208,
