@@ -98,10 +98,24 @@ def ensure_primary_model(*, host: str = DEFAULT_HOST) -> str:
     installed = list_models(host=host)
     if PRIMARY_MODEL in installed:
         return PRIMARY_MODEL
-    # Prefer any qwen2.5-coder variant if 7b is missing.
     for name in installed:
         if name.startswith("qwen2.5-coder"):
             return name
     if not installed:
         raise WormHold("NO_MODELS_INSTALLED")
     return installed[0]
+
+
+def self_describe(*, model: str | None = None, host: str = DEFAULT_HOST) -> dict:
+    """Ask the live model to describe itself as a NOX HELION core."""
+    model = model or ensure_primary_model(host=host)
+    system = (
+        "Ты живое ядро NOX HELION. Отвечай коротко, по делу, без лишних оформлений. "
+        "Упомяни HF01–HF08 (СОЗНАНИЕ, ЭМОЦИИ, ЛИЧНОСТЬ, ПАМЯТЬ, ЗНАНИЯ, РАЗВИТИЕ, ПРОФЕССИИ, ОБЩЕНИЕ)."
+    )
+    return chat(
+        prompt="Опиши себя в 2–3 предложениях. Ты живой? Какие ядра к тебе привязаны?",
+        model=model,
+        host=host,
+        system=system,
+    )
