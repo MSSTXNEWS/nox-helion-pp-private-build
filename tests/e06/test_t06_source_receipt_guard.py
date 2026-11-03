@@ -4,6 +4,7 @@ import importlib.util
 import json
 from pathlib import Path
 import tempfile
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
@@ -54,6 +55,15 @@ class CandidateReceiptTests(unittest.TestCase):
 
     def verify(self):
         return GUARD.attest_candidate(HEAD, self.compile, self.candidate, self.setup, R11)
+
+    def test_rewritten_valid_receipts_keep_the_same_file_identity(self):
+        # Real path/fd checks, including Windows files whose metadata changed
+        # after creation. Fixture remains source-only, not an installed EXE.
+        for iteration in range(16):
+            self.comp["fixture_revision"] = iteration
+            self.cand["fixture_revision"] = iteration
+            self.save()
+            self.assertEqual(self.verify(), self.cand["setup_sha256"])
 
     def test_real_source_and_setup_bytes(self):
         self.assertEqual(self.verify(), self.cand["setup_sha256"])
@@ -216,6 +226,87 @@ class CandidateReceiptTests(unittest.TestCase):
         with patch.object(Path, "lstat", self._race_leaf_to_symlink_after_lstat(self.setup)):
             with self.assertRaisesRegex(RuntimeError, "SETUP_IDENTITY"):
                 self.verify()
+
+
+class CrossApiFileIdentityTests(unittest.TestCase):
+    @staticmethod
+    def info(**changes):
+        values = dict(st_mode=GUARD.stat.S_IFREG | 0o600, st_dev=7,
+                      st_ino=29, st_size=123, st_mtime_ns=300,
+                      st_ctime_ns=100, st_birthtime_ns=100)
+        values.update(changes)
+        return SimpleNamespace(**values)
+
+    def same(self, current, opened, *, windows):
+        with patch.object(GUARD, "_WINDOWS_STAT", windows, create=True), \
+             patch.object(Path, "lstat", return_value=current), \
+             patch.object(GUARD, "_trusted_regular_path", return_value=True):
+            return GUARD._same_open_file(Path("receipt.json"), opened)
+
+    def test_windows_path_creation_time_and_fd_change_time_are_not_compared(self):
+        # CPython 3.12 path stat maps ctime to creation time; fstat retains
+        # ChangeTime. Both APIs expose the same independent birthtime_ns.
+        current = self.info(st_ctime_ns=100)
+        opened = self.info(st_ctime_ns=200)
+        self.assertTrue(self.same(current, opened, windows=True))
+
+    def test_windows_identity_and_modification_fields_still_reject_replacement(self):
+        opened = self.info(st_ctime_ns=200)
+        for field in ("st_dev", "st_ino", "st_size", "st_mtime_ns", "st_birthtime_ns"):
+            with self.subTest(field=field):
+                current = self.info(**{field: getattr(opened, field) + 1})
+                self.assertFalse(self.same(current, opened, windows=True))
+
+    def test_windows_missing_or_noninteger_creation_metadata_fails_closed(self):
+        for bad in (None, True, 100.0, "100"):
+            with self.subTest(bad=bad):
+                self.assertFalse(self.same(self.info(st_birthtime_ns=bad),
+                                           self.info(st_birthtime_ns=bad), windows=True))
+        missing = self.info()
+        del missing.st_birthtime_ns
+        self.assertFalse(self.same(missing, missing, windows=True))
+
+    def test_posix_change_time_mismatch_is_still_denied(self):
+        self.assertFalse(self.same(self.info(st_ctime_ns=100),
+                                   self.info(st_ctime_ns=200), windows=False))
+        self.assertTrue(self.same(self.info(), self.info(), windows=False))
+
+    def test_nonregular_open_descriptor_is_denied(self):
+        self.assertFalse(self.same(self.info(),
+                                   self.info(st_mode=GUARD.stat.S_IFDIR), windows=True))
+
+    def test_untrusted_path_still_denied_when_metadata_matches(self):
+        with patch.object(GUARD, "_WINDOWS_STAT", True, create=True), \
+             patch.object(Path, "lstat", return_value=self.info()), \
+             patch.object(GUARD, "_trusted_regular_path", return_value=False):
+            self.assertFalse(GUARD._same_open_file(Path("receipt.json"), self.info()))
+
+    def test_descriptor_change_time_mutation_during_read_still_denied(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "source.bin"
+            path.write_bytes(b"same-size bytes")
+            real_fstat = GUARD.os.fstat
+            calls = []
+
+            def changed_metadata(descriptor):
+                actual = real_fstat(descriptor)
+                calls.append(descriptor)
+                fields = {name: getattr(actual, name) for name in
+                          ("st_dev", "st_ino", "st_mode", "st_size",
+                           "st_mtime_ns", "st_ctime_ns")}
+                fields["st_birthtime_ns"] = 100
+                if len(calls) == 2:
+                    fields["st_ctime_ns"] += 1
+                return SimpleNamespace(**fields)
+
+            # Isolate descriptor-before/after protection from path comparison:
+            # identical creation time must not conceal an in-read ctime change.
+            with patch.object(GUARD.os, "fstat", side_effect=changed_metadata), \
+                 patch.object(GUARD, "_same_open_file", return_value=True):
+                with self.assertRaisesRegex(OSError, "changed during read"):
+                    with GUARD._trusted_binary_reader(path) as stream:
+                        self.assertEqual(stream.read(), b"same-size bytes")
+            self.assertEqual(len(calls), 2)
 
 
 if __name__ == "__main__":

@@ -16,6 +16,7 @@ import stat
 
 _SHA1 = re.compile(r"[0-9a-f]{40}\Z")
 _SHA256 = re.compile(r"[0-9a-f]{64}\Z")
+_WINDOWS_STAT = os.name == "nt"
 
 
 def _trusted_regular_path(path: Path) -> bool:
@@ -42,12 +43,23 @@ def _same_open_file(path: Path, opened) -> bool:
         current = path.lstat()
     except OSError:
         return False
+    if _WINDOWS_STAT:
+        # CPython 3.12 Windows path stat exposes creation time as ctime,
+        # whereas fstat exposes metadata change time. Compare birthtime
+        # across those APIs; descriptor-before/after ctime stays strict below.
+        current_birth = getattr(current, "st_birthtime_ns", None)
+        opened_birth = getattr(opened, "st_birthtime_ns", None)
+        same_timestamp = (type(current_birth) is int and
+                          type(opened_birth) is int and
+                          current_birth == opened_birth)
+    else:
+        same_timestamp = current.st_ctime_ns == opened.st_ctime_ns
     return (_trusted_regular_path(path) and
-            stat.S_ISREG(opened.st_mode) and
+            stat.S_ISREG(opened.st_mode) and same_timestamp and
             (current.st_dev, current.st_ino, current.st_size,
-             current.st_mtime_ns, current.st_ctime_ns) ==
+             current.st_mtime_ns) ==
             (opened.st_dev, opened.st_ino, opened.st_size,
-             opened.st_mtime_ns, opened.st_ctime_ns))
+             opened.st_mtime_ns))
 
 
 @contextmanager
