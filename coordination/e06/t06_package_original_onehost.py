@@ -166,6 +166,9 @@ def download_artifact(relative,target):
 # Exact reviewed original P01 installed-file verifier, not a new backend/installer.
 # Original ZIP729 remains immutable. Only the disposable R11 Installer copy changes.
 P01_INSTALLED_VERIFIER_GIT_BLOB = "2fe86cad7e96eaf1a67354dfce3cf3f96dd33dfa"
+# The immutable original R11/C07 installer verifier, evidenced by E06 physical staging.
+# GitLab and GitHub E06 must admit the SAME exact archived preimage before C09.
+P01_ARCHIVED_VERIFIER_SHA256 = "e741c131ddc1af45391ed64b4cdce686895aa78bd67e6bd4795fa97f548d455b"
 
 def _git_blob(raw):
     return hashlib.sha1(b"blob "+str(len(raw)).encode("ascii")+b"\0"+raw).hexdigest()
@@ -209,6 +212,11 @@ def stage_reviewed_installed_payload_verifier(owner_script, reviewed_script):
          "T06_P01_VERIFY_APPROVED_POLICY_INCOMPLETE_HOLD")
     changed = original != canonical
     if changed:
+        # Unknown R11 bytes cannot be overwritten just because marker text matches.
+        # The approved C09 verifier is permitted without an archived preimage only
+        # when it is already the exact canonical Git-blob-pinned content.
+        need(hashlib.sha256(original).hexdigest() == P01_ARCHIVED_VERIFIER_SHA256,
+             "T06_P01_VERIFY_ARCHIVE_PREIMAGE_SHA_HOLD")
         owner_script.write_bytes(canonical)
     need(_git_blob(owner_script.read_bytes()) == P01_INSTALLED_VERIFIER_GIT_BLOB,
          "T06_P01_VERIFY_STAGED_READBACK_HOLD")
