@@ -111,5 +111,40 @@ class CanonicalOriginalPartFd(unittest.TestCase):
                     original.audit(root / "redirect", 1)
 
 
+
+class WindowsNamedDescriptorParity(unittest.TestCase):
+    """Windows CPython path/descriptor ctime differ; birthtime remains pinned."""
+
+    def _stat(self, *, birth=123, ctime=500, inode=17, size=8, mtime=42):
+        from types import SimpleNamespace
+        return SimpleNamespace(st_dev=9, st_ino=inode, st_size=size,
+                               st_mtime_ns=mtime, st_ctime_ns=ctime,
+                               st_birthtime_ns=birth)
+
+    def test_windows_path_fd_ctime_differ_birthtime_equal_passes(self):
+        with mock.patch.object(original, "_WINDOWS_STAT", True):
+            self.assertTrue(original._same_named_descriptor(
+                self._stat(ctime=100), self._stat(ctime=200)))
+
+    def test_windows_name_swap_same_bytes_other_inode_or_birth_denied(self):
+        with mock.patch.object(original, "_WINDOWS_STAT", True):
+            reference = self._stat()
+            self.assertFalse(original._same_named_descriptor(reference, self._stat(inode=18)))
+            self.assertFalse(original._same_named_descriptor(reference, self._stat(birth=124)))
+            self.assertFalse(original._same_named_descriptor(reference, self._stat(size=9)))
+            self.assertFalse(original._same_named_descriptor(reference, self._stat(mtime=43)))
+
+    def test_linux_ctime_mismatch_still_denied(self):
+        with mock.patch.object(original, "_WINDOWS_STAT", False):
+            self.assertFalse(original._same_named_descriptor(
+                self._stat(ctime=100), self._stat(ctime=200)))
+
+    def test_windows_missing_birthtime_fails_closed(self):
+        with mock.patch.object(original, "_WINDOWS_STAT", True):
+            from types import SimpleNamespace
+            no_birth = SimpleNamespace(st_dev=9, st_ino=17, st_size=8,
+                                       st_mtime_ns=42, st_ctime_ns=500)
+            self.assertFalse(original._same_named_descriptor(no_birth, self._stat()))
+
 if __name__ == "__main__":
     unittest.main()

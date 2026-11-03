@@ -31,6 +31,27 @@ def _trusted_part_parent(part: pathlib.Path) -> None:
             raise ValueError("SOURCE_PART_PARENT_REPARSE_OR_UNSAFE")
 
 
+_WINDOWS_STAT = os.name == "nt"
+
+
+def _descriptor_identity(info):
+    """Pin metadata across descriptor reads; ctime remains mandatory on all OSes."""
+    return (info.st_dev, info.st_ino, info.st_size,
+            info.st_mtime_ns, info.st_ctime_ns)
+
+
+def _same_named_descriptor(named, opened):
+    """Windows CPython 3.12 path/descriptor ctime differ; compare birthtime and file ID."""
+    if not _WINDOWS_STAT:
+        return _descriptor_identity(named) == _descriptor_identity(opened)
+    birth = getattr(named, "st_birthtime_ns", None)
+    opened_birth = getattr(opened, "st_birthtime_ns", None)
+    return (type(birth) is int and type(opened_birth) is int and
+            birth == opened_birth and
+            (named.st_dev, named.st_ino, named.st_size, named.st_mtime_ns) ==
+            (opened.st_dev, opened.st_ino, opened.st_size, opened.st_mtime_ns))
+
+
 @contextlib.contextmanager
 def _trusted_part_stream(part: pathlib.Path):
     """Pin a regular descriptor and its live name through the entire read."""
@@ -54,10 +75,6 @@ def _trusted_part_stream(part: pathlib.Path):
         os.close(fd)
         raise
 
-    def identity(attrs):
-        return (attrs.st_dev, attrs.st_ino, attrs.st_size,
-                attrs.st_mtime_ns, attrs.st_ctime_ns)
-
     with reader:
         opened = os.fstat(reader.fileno())
 
@@ -69,12 +86,13 @@ def _trusted_part_stream(part: pathlib.Path):
                 return False
             return (stat.S_ISREG(live.st_mode) and not stat.S_ISLNK(live.st_mode)
                     and not (getattr(live, "st_file_attributes", 0) & reparse)
-                    and identity(live) == identity(opened))
+                    and _same_named_descriptor(live, opened))
 
-        if identity(initial) != identity(opened) or not same_path():
+        if not _same_named_descriptor(initial, opened) or not same_path():
             raise ValueError("SOURCE_PART_OPEN_IDENTITY_MISMATCH")
         yield reader
-        if identity(os.fstat(reader.fileno())) != identity(opened) or not same_path():
+        if (_descriptor_identity(os.fstat(reader.fileno())) != _descriptor_identity(opened)
+                or not same_path()):
             raise ValueError("SOURCE_PART_CHANGED_DURING_READ")
 
 def safe_name(name: str) -> bool:

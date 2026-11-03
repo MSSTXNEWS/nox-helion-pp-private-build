@@ -71,10 +71,11 @@ class NativeResultStopAtomicity(unittest.TestCase):
         states = self.actor.call(lambda store: [
             json.loads(raw)["state"] for (raw,) in store.conn.execute(
                 "SELECT metadata FROM audit WHERE action='NOX_NATIVE_WORK_RESULT' ORDER BY id")])
+        # Original StoreActor deliberately detaches cross-thread lists to immutable tuples.
         return record["state"], states
 
     def test_01_normal_completion_has_one_durable_result(self):
-        self.assertEqual(self.run_native(lambda: {"status": "DONE"}), ("DONE", ["DONE"]))
+        self.assertEqual(self.run_native(lambda: {"status": "DONE"}), ("DONE", ("DONE",)))
 
     def test_02_stop_during_result_audit_rolls_back_done(self):
         def revoke(action, data):
@@ -82,21 +83,21 @@ class NativeResultStopAtomicity(unittest.TestCase):
                 self.epoch += 1
                 self.stopped = True
         self.audit_hook = revoke
-        self.assertEqual(self.run_native(lambda: {"status": "DONE"}), ("HOLD", ["HOLD"]))
+        self.assertEqual(self.run_native(lambda: {"status": "DONE"}), ("HOLD", ("HOLD",)))
 
     def test_03_consent_revoked_during_audit_rolls_back_done(self):
         def revoke(action, data):
             if action == "NOX_NATIVE_WORK_RESULT" and data["state"] == "DONE":
                 self.allowed = False
         self.audit_hook = revoke
-        self.assertEqual(self.run_native(lambda: {"status": "DONE"}), ("HOLD", ["HOLD"]))
+        self.assertEqual(self.run_native(lambda: {"status": "DONE"}), ("HOLD", ("HOLD",)))
 
     def test_04_stop_during_callback_never_persists_done(self):
         def task():
             self.epoch += 1
             self.stopped = True
             return {"status": "DONE"}
-        self.assertEqual(self.run_native(task), ("HOLD", ["HOLD"]))
+        self.assertEqual(self.run_native(task), ("HOLD", ("HOLD",)))
 
 
 if __name__ == "__main__":
