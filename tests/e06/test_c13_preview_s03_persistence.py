@@ -19,16 +19,20 @@ class OriginalS03PreviewPersistenceTest(unittest.TestCase):
         class AuditQueue:
             def __init__(self):
                 self.writes = []
+                self.authority = []
 
-            def record(self, session, task_id, state, result):
+            def record(self, session, task_id, state, result, *,
+                       expected_epoch, permission):
                 # Serialize as existing NativeWorkQueue.record does before S03.
+                self.authority.append((session, task_id, expected_epoch, permission))
                 self.writes.append((state, json.loads(json.dumps(result))))
                 return True
 
             def submit_source(self, session, task_id, callback):
                 # Existing NativeWorkQueue._start also records callback output.
                 result = callback()
-                self.record(session, task_id, result["status"], result)
+                self.record(session, task_id, result["status"], result,
+                            expected_epoch=1, permission="selfbuilder.propose")
                 return {"status": "QUEUED", "task_id": task_id}
 
         preview = {"files": [{"path": "src/sample.py",
@@ -56,6 +60,8 @@ class OriginalS03PreviewPersistenceTest(unittest.TestCase):
                 existing_service, "owner-session", 7, {"source_head": "a" * 40})
 
         self.assertEqual(len(queue.writes), 2)
+        self.assertEqual(queue.authority,
+                         [("owner-session", 7, 1, "selfbuilder.propose")] * 2)
         for state, stored in queue.writes:
             self.assertEqual(state, "CANDIDATE_REVIEW_REQUIRED")
             durable = stored["receipt"]
