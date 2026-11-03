@@ -42,6 +42,10 @@ const canonicalDispatcher = resolve(packageRoot, "../../proposals/P01/WOW-MAX10/
 await cp(canonicalDispatcher, join(outputRoot, "nox-route-dispatch.mjs"));
 for (const page of pages) {
   let html = await readFile(page, "utf8");
+  // Keep the Windows EXE self-contained: no Google Fonts, CDN fonts or live map iframe.
+  html = html.replace(/<link[^>]+(?:fonts\\.googleapis\\.com|fonts\\.gstatic\\.com)[^>]*>\\s*/gi, "");
+  html = html.replace(/<iframe([^>]*src=["'][^"']*(?:google\\.com\\/maps|maps\\.googleapis\\.com)[^"']*["'][^>]*)><\\/iframe>/gi,
+    '<div class="nox-external-resource-hold" role="status">MAP PROVIDER NOT CONNECTED</div>');
   if (!html.includes("nox-adminator-entry.mjs")) {
     const injection = '<link rel="stylesheet" href="./nox-adminator-theme.css">\n' +
       '<script type="module" src="./nox-adminator-entry.mjs"></script>';
