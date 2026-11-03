@@ -797,6 +797,42 @@ if ($IncludeMega814) {
 $manifest=[ordered]@{schema='NOX_P01_PAYLOAD_SHA256_V1';entrypoint='NOX.P01.Shell.exe';taskId='NOX-V16-E06-EXPRESS-ONEHOST';runId=$RunId;version='16.0.0';files=$entries}
 $manifestPath=Join-Path $payload 'payload.sha256.json'
 [IO.File]::WriteAllText($manifestPath,($manifest | ConvertTo-Json -Depth 7),(New-Object System.Text.UTF8Encoding($false)))
+# W10 R105: original R11 SHA-locked verifier lacks installed-metadata mode.
+# Reuse the already-reviewed original C09 verifier ONLY in the disposable R11
+# installer stage. It extends strict owned-file checks to the two NSIS files
+# required after /S and for C11 rollback; never patch the immutable 729 archive.
+$reviewedVerifier=Join-Path $repoRoot 'stage/proposals/P01/C09/Installer/Verify-Payload.ps1'
+$originalStagedVerifier=Join-Path $installer 'Verify-Payload.ps1'
+Assert-E06PlainPathAncestors -Candidate $reviewedVerifier -Scope 'P01_C09_APPROVED_VERIFIER'
+Assert-E06PlainPathAncestors -Candidate $originalStagedVerifier -Scope 'P01_R11_STAGED_VERIFIER'
+$reviewedItem=Get-Item -LiteralPath $reviewedVerifier -Force -ErrorAction Stop
+$stagedItem=Get-Item -LiteralPath $originalStagedVerifier -Force -ErrorAction Stop
+if ($reviewedItem.PSIsContainer -or $stagedItem.PSIsContainer -or
+    ($reviewedItem.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0 -or
+    ($stagedItem.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+  throw 'P01_C09_APPROVED_VERIFIER_UNSAFE_PATH_HOLD'
+}
+$stagedOriginalSha=(Get-FileHash -LiteralPath $originalStagedVerifier -Algorithm SHA256).Hash.ToLowerInvariant()
+if ($stagedOriginalSha -cne 'e741c131ddc1af45391ed64b4cdce686895aa78bd67e6bd4795fa97f548d455b') {
+  throw 'P01_C09_ORIGINAL_R11_PREIMAGE_SHA_HOLD'
+}
+$reviewedGitBlob=((& $gitTool.Source -C $repoRoot hash-object -- $reviewedVerifier) | Out-String).Trim().ToLowerInvariant()
+if ($LASTEXITCODE -ne 0 -or $reviewedGitBlob -cne '2fe86cad7e96eaf1a67354dfce3cf3f96dd33dfa') {
+  throw 'P01_C09_APPROVED_VERIFIER_BLOB_HOLD'
+}
+$reviewedContent=[IO.File]::ReadAllText($reviewedVerifier)
+foreach ($guard in @('[switch]$AllowInstalledMetadata', 'Assert-P01UniqueManifestMembers',
+                    'Assert-NoReparseAncestors', 'invalid backup ownership marker',
+                    'sha mismatch', 'file count mismatch', 'Uninstall.exe')) {
+  if (!$reviewedContent.Contains($guard)) { throw 'P01_C09_APPROVED_VERIFIER_CONTRACT_HOLD' }
+}
+$reviewedSha=(Get-FileHash -LiteralPath $reviewedVerifier -Algorithm SHA256).Hash.ToLowerInvariant()
+[IO.File]::Copy($reviewedVerifier,$originalStagedVerifier,$true)
+$stagedApprovedSha=(Get-FileHash -LiteralPath $originalStagedVerifier -Algorithm SHA256).Hash.ToLowerInvariant()
+if ($stagedApprovedSha -cne $reviewedSha) {
+  throw 'P01_C09_DISPOSABLE_VERIFIER_READBACK_HOLD'
+}
+Write-Host "P01_C09_APPROVED_INSTALLED_METADATA_STAGE_PASS original_sha256=$stagedOriginalSha reviewed_git_blob=$reviewedGitBlob approved_sha256=$stagedApprovedSha"
 # W01 R102: only the disposable SHA-verified original R11 verifier is adapted.
 # The NSIS child Windows PowerShell 5.1 lacks Get-FileHash on the proven
 # runner. Preserve original JSON/path/reparse/length/SHA and rollback checks.
