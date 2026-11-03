@@ -12,11 +12,11 @@ def sha(raw):return hashlib.sha256(raw).hexdigest()
 # Exact Git blob preimages of the eight original GitLab R75 donor sources.
 # A self-generated staging SHA256 receipt is NOT independent provenance.
 OWNER_BLOB_PINS={
- "mega814.mjs": "c3c91bae4f22214c0e39d0e1b95e1ccef1205bd4",
- "mega814.css": "24e5eecf7d55994f6b2e1f32c296305503a63d5a",
+ "mega814.mjs": "23b5332e512bebd73660f18953587540157dd61c",
+ "mega814.css": "3d7ca3028b8ec84189bb3bdec9edb2f7614d0d8e",
  "manifest.json": "2b98f4c4182750eedcec879f5e2e696167aaf4e9",
  "menu-v2-193.json": "a57ced96e6edb5d77d99a83f945c47dbe97bbaf8",
- "menu-v2-adapter.mjs": "7cbbea82529259403320bdb7b06b05fd2dc34c8e",
+ "menu-v2-adapter.mjs": "859dbabdd1915979cac79f8e7478326d63e44a59",
  "owner-dispatch.mjs": "f4eb000843bc78af116e4015ed06528b032ee991",
  "owner-e05.mjs": "1dcf0df656cdce6f4231f5f411db9150d0768ead",
  "native-readonly.mjs": "e698d3605646df0e2d39c7f2943c55d2364778c0"
@@ -86,7 +86,7 @@ def run(source,menu=None,personas=None):
   if not p.is_file() or p.is_symlink():raise RuntimeError("MEGA814_SOURCE_MISSING")
   asset_raw=approved_source(p,name)
   source_pins={"menu-v2-193.json":"0e300d0675930c5f5b83a03fc768868e89fd5f5545fd3ba5009493680c0d743b",
-               "menu-v2-adapter.mjs":"83e501025b05c7a1b2d753ab174e6bb5970b277bf1179f07b6a7a7803e452239"}
+               "menu-v2-adapter.mjs":"cee7e06fb60406c5f4e37cc84b974f36de147696011607578fc6808fe6af2e05"}
   if name in source_pins and sha(asset_raw)!=source_pins[name]:
    raise RuntimeError("MEGA814_MENU_V2_SOURCE_SHA_HOLD:"+name)
   files.append((name,asset_raw))
