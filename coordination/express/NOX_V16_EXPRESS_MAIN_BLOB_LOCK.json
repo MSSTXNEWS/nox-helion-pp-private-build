@@ -1,0 +1,109 @@
+{
+  "schema": "NOX_V16_EXPRESS_MAIN_BLOB_LOCK_V1",
+  "repository": "MSSTXNEWS/nox-helion-pp-private-build",
+  "original_main_commit": "0b3a7d435be735148d64171deb9027093a89646e",
+  "base_unified_stage_commit": "575eff89ec6e28b8451b2f1a5fe3f5062eebffad",
+  "note": "Immutable 25 original Git blobs, including source_00/01/02. All donor alternatives preserved. SOURCE lock, not EXE acceptance.",
+  "files": [
+    {
+      "path": ".gitattributes",
+      "git_blob_sha1": "19384f581a91bf2bbe3a3752f450cce445ec10d9"
+    },
+    {
+      "path": ".github/workflows/pp-exact-candidate-launch.yml",
+      "git_blob_sha1": "d7c94b5d73f4ead8d9ea8697e90e7f44fc8343ef"
+    },
+    {
+      "path": ".github/workflows/pp-windows-candidate.yml",
+      "git_blob_sha1": "ca26ce7195ac6cfaf60a13fe279e4b8d96dfa053"
+    },
+    {
+      "path": "A05_FONT_BUNDLE.patch",
+      "git_blob_sha1": "1dbb2b358f0e21b1a048d6867e40a9772291fb5b"
+    },
+    {
+      "path": "BUILD_INPUTS_README.txt",
+      "git_blob_sha1": "494ea6ca1f185d6bd5874397db0343488c8f6280"
+    },
+    {
+      "path": "coordination/nox_hourly_waves.py",
+      "git_blob_sha1": "c8660a11fc8d257e5b673dff5936d85d337c23a8"
+    },
+    {
+      "path": "evidence/NOX_HELION_PORTABLE_PREREQUISITES_RUN40210839317.md",
+      "git_blob_sha1": "0e778ca54ca6fac68337c933c34db39eb3e3a9bb"
+    },
+    {
+      "path": "evidence/NOX_HELION_PORTABLE_PREREQUISITES_RUN40210839317.md.b64",
+      "git_blob_sha1": "20f4a148622bea0f4b4f63d6a5c832ff395cdc27"
+    },
+    {
+      "path": "evidence/pp_same_exe_acceptance.ps1",
+      "git_blob_sha1": "18722ded64c4f646c5046a1877392fb523cc8087"
+    },
+    {
+      "path": "evidence/PP-ONE-037-C2-SOURCE-FREEZE.json",
+      "git_blob_sha1": "c993891660344ae9687c1ec321f0e7da1064cff3"
+    },
+    {
+      "path": "evidence/PP-ONE-037-C2-SOURCE-FREEZE.json.b64",
+      "git_blob_sha1": "bbb1a19e1b680c9f77475ceca224804aa74fb8d6"
+    },
+    {
+      "path": "evidence/PP-ONE-037-QWEN-LAYER-DRIVE-BINDING.json",
+      "git_blob_sha1": "2e8d7bf152a93536d4eb639e343e38a12dea016e"
+    },
+    {
+      "path": "evidence/PP-ONE-037-QWEN-LAYER-DRIVE-BINDING.json.b64",
+      "git_blob_sha1": "fc4dd42e1df2d925c4f265b43e57ae237948f9e5"
+    },
+    {
+      "path": "NOX_A04_BUILD_PATCH.zip",
+      "git_blob_sha1": "688f45cce694e0620c3f8ef4c9b43c4ceb7a35b1"
+    },
+    {
+      "path": "PP_FAST_CANDIDATE_MODE.patch",
+      "git_blob_sha1": "ebb348a7efadee94561ddaaa6a5f24677c5331bf"
+    },
+    {
+      "path": "PP_MENU_CATALOG_BUNDLE.patch",
+      "git_blob_sha1": "02705f05d207a680852d5c439da77067f4114d52"
+    },
+    {
+      "path": "private_build.ps1",
+      "git_blob_sha1": "75fb303d65d83ab7b272b02bce44a9d3be0956aa"
+    },
+    {
+      "path": "QA_DEPENDENCY_NOTICES.txt",
+      "git_blob_sha1": "2e746b8e074bc0aa8db76fbca3c4f753efcaf166"
+    },
+    {
+      "path": "requirements-qa-win64-hashed.txt",
+      "git_blob_sha1": "c050a625b41d5df5ade4b4b531720d0c2a78cf05"
+    },
+    {
+      "path": "source_00.part",
+      "git_blob_sha1": "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b"
+    },
+    {
+      "path": "source_01.part",
+      "git_blob_sha1": "7853cb43ff4ba0ed3023e8d794d8222eedea56a6"
+    },
+    {
+      "path": "source_02.part",
+      "git_blob_sha1": "cbd9deb30860737f15e2adbaef2eaaf5d607a0de"
+    },
+    {
+      "path": "wheelhouse_00.part",
+      "git_blob_sha1": "701e6a79dce4b69524faac88f99710cbf41bbddf"
+    },
+    {
+      "path": "wheelhouse_01.part",
+      "git_blob_sha1": "8a620100572bb66987fcfdb1b8586f2b4ec5ee88"
+    },
+    {
+      "path": "wheelhouse_02.part",
+      "git_blob_sha1": "773f2b8c7fe01c65404f645628703154f1149e15"
+    }
+  ]
+}

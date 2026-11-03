@@ -1,0 +1,74 @@
+name: NOX V16 EXPRESS P02 one-host owner contracts
+on:
+  push:
+    branches:
+      - integration/nox-v16-express-onehost-lock-20261028-r01
+    paths:
+      - 'Packages/P02/**'
+      - 'Packages/P04/**'
+      - 'proposals/NOX-PACK01-50/**'
+      - '.github/workflows/nox-v16-express-p02-contract.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  existing-p02-pack01-p04:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Pinned original P02/P04/PACK01 checkouts, not duplicate services
+        shell: bash
+        run: |
+          test -f Packages/P02/worker-python/p02_runtime.py
+          test -f Packages/P02/worker-python/p02_chat_bridge.py
+          test -f Packages/P02/worker-python/p02_framed_worker.py
+          test -f Packages/P04/rag_python_compat.py
+          test -f proposals/NOX-PACK01-50/native_bridge.py
+          test -f proposals/NOX-PACK01-50/catalog.json
+          python -m compileall -q Packages/P02/worker-python Packages/P04 proposals/NOX-PACK01-50
+      - name: Real original P02 store + existing P04 RAG + 50-route PACK01 tests
+        shell: bash
+        env:
+          PYTHONPATH: Packages/P02/worker-python
+          NOX_PACK01_CHECKOUT: proposals/NOX-PACK01-50
+          NOX_P04_SOURCE_DIR: Packages/P04
+        run: |
+          python -W ignore::ResourceWarning -m unittest discover -s Packages/P02/worker-python -p 'test_p02*.py' -v
+          python -W ignore::ResourceWarning -m unittest discover -s proposals/NOX-PACK01-50 -p 'test_native_bridge.py' -v
+      - name: Label runtime proof truthfully
+        shell: bash
+        run: |
+          echo 'P02_PACK01_P04_SOURCE_COMPONENT=PASS'
+          echo 'ORIGINAL_WPF_WINDOWS_HOST=NOT_TESTED; PHYSICAL_OLLAMA=NOT_TESTED'
+          echo 'MAESTRO_VOICE_SIP=NOT_TESTED; E07_RELEASE=HOLD'
+  existing-native-pipe-windows:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Existing owner2 .NET duplex uses original P02 worker OS process
+        shell: pwsh
+        env:
+          PYTHON: python
+        run: |
+          dotnet run --project Packages/P02/worker-chat/pipe-smoke/P02.NativePipeSmoke.csproj -c Release
+          if ($LASTEXITCODE -ne 0) { throw 'P02_PRIVATE_OS_PIPE_HOLD' }
+          Write-Host 'OS_PIPE_COMPONENT_PASS; REAL_WPF_HOST=NOT_BOUND; FINAL_EXE=HOLD'
