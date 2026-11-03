@@ -68,6 +68,12 @@ jobs:
           path: integrations/adminator-nox/artifacts/adminator-dist/
           retention-days: 14
           if-no-files-found: error
+      - name: Gate original MENU10 asset provenance and WebView2 native import
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 coordination/mega814/qa_source_gate.py
+          python3 -m unittest discover -s coordination/mega814 -p 'test_*.py' -v
       - name: Keep original D02 gravity and WOW unified source regressions
         shell: bash
         run: |
