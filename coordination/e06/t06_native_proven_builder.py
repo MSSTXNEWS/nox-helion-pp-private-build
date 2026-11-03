@@ -210,6 +210,12 @@ for record in data_files:
         raise RuntimeError("T06_RUNTIME_DATA_SHA_DRIFT")
     cmd[-1:-1] = ["--add-data", str(candidate.resolve()) + os.pathsep + destination]
 print("T06_RUNTIME_DATA_SHA_PINNED", len(data_files), flush=True)
+# Use the already admitted source manifest, not another incomplete hand list.
+# This adds no runtime authority and does not replace any original module.
+from t06_frozen_source_coverage import module_plan, verify_frozen_binary
+frozen_plan = module_plan(native_root, module.ADDONS)
+for included in frozen_plan:
+    cmd[-1:-1] = ["--hidden-import", included["module"]]
 built=subprocess.run(cmd,cwd=native_root,capture_output=True,text=True,timeout=900)
 (out/"PYINSTALLER_WINDOWS_BUILD_LOG.txt").write_text(
     built.stdout+"\nSTDERR:\n"+built.stderr,encoding="utf-8",errors="replace")
@@ -221,6 +227,19 @@ exe=candidate_dir/(exe_name+".exe")
 if not exe.is_file() or exe.stat().st_size<1000000:
     raise RuntimeError("T06_NATIVE_PYTHON_EXE_MISSING_OR_TRUNCATED")
 exe_hash=hashlib.sha256(exe.read_bytes()).hexdigest()
+# A successful compiler exit is not evidence that every admitted module/data
+# reached the executable. Inspect this SAME binary before any success receipt.
+coverage_data = list(data_files) + [{
+    "runtime_path": "helion/e06_native_stdio_owner.py",
+    "sha256": hashlib.sha256((native_root/"helion/e06_native_stdio_owner.py").read_bytes()).hexdigest(),
+}]
+coverage = verify_frozen_binary(exe, frozen_plan, coverage_data)
+if coverage["binary_sha256"] != exe_hash:
+    raise RuntimeError("T06_FROZEN_COVERAGE_BINARY_SHA_DRIFT")
+(candidate_dir/"NATIVE_FROZEN_SOURCE_COVERAGE.json").write_text(
+    json.dumps(dict(coverage, modules=frozen_plan), indent=2), encoding="utf-8")
+print("T06_FROZEN_SOURCE_COVERAGE", coverage["modules_checked"],
+      coverage["data_files_checked"], exe_hash, flush=True)
 # R66 CI: build only the real frozen EXE, with NO claim of IPC or a model.
 # The next CircleCI job attaches this SAME binary by SHA and runs the real
 # framed-IPC / SQLite acceptance. Normal builder behavior is unchanged.
@@ -229,6 +248,7 @@ if os.environ.get("NOX_T06_BUILD_ONLY")=="YES":
         json.dumps({"phase":"BUILT_NOT_NATIVE_VERIFIED",
             "exe_file":exe.name,"exe_size":exe.stat().st_size,
             "exe_sha256":exe_hash,"source_original_archive_sha256":original_expected,
+            "frozen_source_coverage":coverage,
             "original_729_unchanged":True,"release_accepted":False},indent=2),
         encoding="utf-8")
     print("NOX_R66_FROZEN_BINARY_BUILT_NOT_IPC_VERIFIED",exe_hash,flush=True)
@@ -313,6 +333,7 @@ p03_proof={"phase":"BUILT_AND_NATIVE_STDIO_SMOKE_PASS",
     "staged_original_app_sha256":overlay_receipt["staged_app_sha256"],
     "exe_file":exe.name,"exe_size":exe.stat().st_size,
     "exe_sha256":exe_hash,"native_windows_exe_request_reply":"PASS",
+    "frozen_source_coverage":coverage,
     "run_id_matched":True,"request_id_matched":True,
     "supported_route_verified":"chat.model",
     "frozen_chat_model_response_status":frozen_chat_model_status,
