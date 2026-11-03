@@ -6,6 +6,7 @@ export const NOX_NATIVE_ROUTES = Object.freeze([
 ]);
 const routeSet = new Set(NOX_NATIVE_ROUTES);
 const safeNumber = (value) => Number.isFinite(value) && value >= 0 && value <= 100;
+const svgNS = "http://www.w3.org/2000/svg";
 
 export function validateRouteBindings(bindings = {}) {
   if (!bindings || typeof bindings !== "object" || Array.isArray(bindings)) {
@@ -66,11 +67,11 @@ function flattenNavigation(root) {
     }
     group.classList.add("nox-expanded-nav-group");
   }
-  // Demo notification/profile popovers contain sample identities and fake data.
   for (const wrapper of root.querySelectorAll(".dd-wrap")) wrapper.remove();
 }
 
 function replaceSelects(root) {
+  const EventCtor = root.ownerDocument.defaultView.Event;
   for (const select of root.querySelectorAll("select:not([data-nox-select-replaced])")) {
     const fieldset = root.ownerDocument.createElement("fieldset");
     fieldset.className = "nox-choice-group";
@@ -97,7 +98,7 @@ function replaceSelects(root) {
       button.addEventListener("click", () => {
         if (select.multiple) option.selected = !option.selected;
         else select.value = option.value;
-        select.dispatchEvent(new Event("change", { bubbles: true }));
+        select.dispatchEvent(new EventCtor("change", { bubbles: true }));
         sync();
       });
       fieldset.append(button);
@@ -110,9 +111,13 @@ function replaceSelects(root) {
 }
 
 function guardUnboundControls(root) {
+  const localSelectors = [
+    "#themeToggle", "[data-drawer-open]", "[data-tab-target]",
+    "[data-accordion-trigger]", "[data-nox-local-action]"
+  ].join(",");
   for (const anchor of root.querySelectorAll("a[href]")) {
     const href = anchor.getAttribute("href") || "";
-    const internalPage = /^(?!https?:|javascript:|#)([./][^:]*|[a-zA-Z0-9_-]+\.html)(?:[?#].*)?$/.test(href);
+    const internalPage = /^(?!https?:|javascript:|#)([./][^:]*|[a-zA-Z0-9_-]+\\.html)(?:[?#].*)?$/.test(href);
     if (!internalPage && !anchor.dataset.noxRoute) {
       anchor.removeAttribute("href");
       anchor.setAttribute("aria-disabled", "true");
@@ -120,12 +125,74 @@ function guardUnboundControls(root) {
       anchor.title = "Внешнее или демонстрационное действие отключено";
     }
   }
-  for (const button of root.querySelectorAll('button[type="submit"], input[type="submit"]')) {
-    if (!button.dataset.noxRoute && !button.dataset.noxLocalAction) {
+  for (const button of root.querySelectorAll("button:not([data-nox-route])")) {
+    if (!button.matches(localSelectors)) {
       button.disabled = true;
       button.dataset.noxNativeState = "hold";
       button.title = "Действие не подключено к OneHost";
     }
+  }
+}
+
+function createCosmicScene(root) {
+  const doc = root.ownerDocument || root;
+  const host = root.querySelector(".content") || root.querySelector("main") || root.body;
+  if (!host || host.querySelector(".nox-cosmic-stage")) return () => {};
+  const stage = doc.createElement("div");
+  stage.className = "nox-cosmic-stage";
+  stage.setAttribute("aria-hidden", "true");
+  stage.innerHTML = `
+    <div class="nox-cosmic-nebula"></div>
+    <div class="nox-core-orb">
+      <span class="nox-core-corona"></span><span class="nox-core-crust"></span>
+      <span class="nox-core-lava"></span><span class="nox-core-glint"></span>
+    </div>
+    <div class="nox-orbit nox-orbit-a"><i></i></div>
+    <div class="nox-orbit nox-orbit-b"><i></i></div>
+    <div class="nox-orbit nox-orbit-c"><i></i></div>
+    <div class="nox-cosmic-dust"></div>`;
+  host.prepend(stage);
+  return () => stage.remove();
+}
+
+function suppressDonorSamples(root) {
+  // Adminator's showcase includes seeded analytics; never display those as NOX telemetry.
+  const demoSelectors = [
+    ".kpi-value", ".kpi-pill", ".kpi-compare", ".chart-meta-value",
+    ".sv-region-value", ".sv-radial-chart .pct", ".stat-cell-value"
+  ];
+  for (const selector of demoSelectors) {
+    for (const node of root.querySelectorAll(selector)) {
+      node.textContent = "—";
+      node.dataset.noxMetricState = "unavailable";
+    }
+  }
+  const welcome = root.querySelector(".hero-sub");
+  if (welcome) {
+    welcome.textContent = "NOX HELION · показатели появятся после подключения подтверждённых данных OneHost.";
+    welcome.dataset.noxDemoText = "removed";
+  }
+  const date = root.querySelector("#heroDate");
+  if (date) date.textContent = "NOX HELION · LIVE SYSTEM";
+  for (const canvas of root.querySelectorAll("canvas[data-chart-key]")) {
+    const panel = root.createElement("div");
+    panel.className = "nox-live-chart-placeholder";
+    panel.dataset.noxSeries = canvas.dataset.chartKey;
+    panel.dataset.noxSeriesState = "unavailable";
+    panel.setAttribute("aria-label", "График ожидает подтверждённые данные OneHost");
+    const svg = root.createElementNS(svgNS, "svg");
+    svg.setAttribute("viewBox", "0 0 320 72");
+    svg.setAttribute("role", "img");
+    svg.setAttribute("preserveAspectRatio", "none");
+    const line = root.createElementNS(svgNS, "polyline");
+    line.setAttribute("points", "0,36 320,36");
+    line.setAttribute("class", "nox-live-chart-line");
+    svg.append(line);
+    const caption = root.createElement("span");
+    caption.className = "nox-live-chart-caption";
+    caption.textContent = "ОЖИДАНИЕ ДАННЫХ ONEHOST";
+    panel.append(svg, caption);
+    canvas.replaceWith(panel);
   }
 }
 
@@ -138,18 +205,19 @@ function renderSnapshot(root, snapshot = {}) {
   }
   for (const node of root.querySelectorAll("[data-nox-series]")) {
     const values = snapshot.series && snapshot.series[node.dataset.noxSeries];
-    const polyline = node.querySelector("polyline");
+    const line = node.querySelector("polyline");
     const points = buildSparkline(values);
-    if (!polyline || !points) {
+    if (!line || !points) {
       node.dataset.noxSeriesState = "unavailable";
       node.setAttribute("aria-label", "Нет подтверждённых данных");
     } else {
-      polyline.setAttribute("points", points);
+      line.setAttribute("points", points);
       node.dataset.noxSeriesState = "live";
+      node.setAttribute("aria-label", "График с данными OneHost");
     }
   }
-  root.dataset.noxTelemetryAt = typeof snapshot.timestamp === "string" ?
-    snapshot.timestamp : "unavailable";
+  root.documentElement.dataset.noxTelemetryAt =
+    typeof snapshot.timestamp === "string" ? snapshot.timestamp : "unavailable";
 }
 
 export function mountAdminatorNox({
@@ -163,12 +231,14 @@ export function mountAdminatorNox({
   const hasHost = !!hostPort && typeof hostPort.isAvailable === "function" &&
     typeof hostPort.invokeRoute === "function";
   const dispatcher = hasHost ? createP01RouteDispatcher(hostPort) : null;
-  let disposed = false;
 
   flattenNavigation(root);
   replaceSelects(root);
   guardUnboundControls(root);
+  const removeCosmicScene = createCosmicScene(root);
+  suppressDonorSamples(root);
 
+  let disposed = false;
   const onClick = async (event) => {
     const element = event.target && event.target.closest ?
       event.target.closest("[data-nox-route]") : null;
@@ -185,7 +255,8 @@ export function mountAdminatorNox({
     try {
       const result = await dispatcher.invoke(routeId);
       if (disposed) return;
-      if (result && result.ok === true && typeof result.receiptId === "string") {
+      if (result && result.ok === true && result.routeId === routeId &&
+          typeof result.receiptId === "string") {
         element.dataset.noxNativeAck = "true";
         element.dataset.noxNativeReceipt = result.receiptId;
         setState(element, "confirmed");
@@ -198,7 +269,6 @@ export function mountAdminatorNox({
       delete element.dataset.noxPending;
     }
   };
-
   const onTelemetry = (event) => {
     if (!disposed) renderSnapshot(root, event.detail || {});
   };
@@ -213,7 +283,8 @@ export function mountAdminatorNox({
       disposed = true;
       root.removeEventListener("click", onClick, true);
       if (doc.defaultView) doc.defaultView.removeEventListener("nox:telemetry", onTelemetry);
-      if (dispatcher) dispatcher.close();
+      dispatcher?.close();
+      removeCosmicScene();
     }
   });
 }
