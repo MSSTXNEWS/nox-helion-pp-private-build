@@ -26,3 +26,6 @@
 @media(prefers-reduced-motion:reduce){
   .nox-fx:before,.nox-fx:after,.nox-fx-smoke,.nox-sb-tile:after{animation:none!important}
 }
+.nox-fx-canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0}
+.nox-fx-smoke{position:absolute;right:6%;bottom:0;width:min(180px,40%);opacity:.65;pointer-events:none;z-index:1}
+.nox-fx > *{position:relative;z-index:2}

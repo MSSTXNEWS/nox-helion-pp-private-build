@@ -102,6 +102,17 @@ export function mountSelfBuilderMenuV2({root,invokeNative,getTrustedState,ownerA
   if(root.dataset?.noxPage==='home'||root.closest?.('[data-nox-page="home"]'))throw Error('D02_HOME_LOCK');
   if(root.querySelector?.('[data-nox-selfbuilder="v2"]'))throw Error('DUPLICATE_MENU_EXTENSION');
   const wrapper=make(doc,'section','nox-sb-panel');wrapper.dataset.noxSelfbuilder='v2';
+  wrapper.classList.add('nox-fx');
+  const smoke=make(doc,'img','nox-fx-smoke');
+  smoke.src=new URL('./fx/smoke.svg', import.meta.url).href;
+  smoke.alt='';
+  smoke.setAttribute('aria-hidden','true');
+  const canvas=make(doc,'canvas','nox-fx-canvas');
+  canvas.setAttribute('aria-hidden','true');
+  wrapper.prepend(canvas, smoke);
+  if (globalThis.THREE) {
+    import('./fx/nox-wow-scene.js').then(m => m.mountNoxWow(canvas)).catch(()=>{});
+  }
   wrapper.dataset.noxView='source-candidate';
   const heading=make(doc,'h2','nox-sb-heading','NOX · Эволюция и программирование');
   const info=make(doc,'p','nox-sb-subtitle','Настоящие задания, модели и обучение. Данные только из подтверждённого ядра.');
