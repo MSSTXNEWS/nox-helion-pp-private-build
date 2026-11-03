@@ -272,10 +272,40 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
         }
         RevokeDocument();
     }
+    // Telemetry is read only. Never send WebView process paths, command lines,
+    // profile directories, or crash-report contents to the shell log.
+    private static string SafeFailureModule(string? fullPath)
+    {
+        if (string.IsNullOrWhiteSpace(fullPath)) return "none";
+        try {
+            var leaf = System.IO.Path.GetFileName(fullPath.Replace('/', '\\'));
+            return leaf.Length > 0 && leaf.Length <= 96 &&
+                Regex.IsMatch(leaf, @"\A[A-Za-z0-9][A-Za-z0-9_.-]{0,95}\z",
+                              RegexOptions.CultureInvariant) ? leaf : "none";
+        } catch (Exception) { return "none"; }
+    }
+
+    private static string FormatWebViewProcessFailure(CoreWebView2ProcessFailedEventArgs e)
+    {
+        // Some pinned SDK versions do not expose FailureSourceModulePath.
+        // Its absence is UNKNOWN, not proof that no DLL failed Code Integrity.
+        string? modulePath = null;
+        try { modulePath = e.GetType().GetProperty("FailureSourceModulePath")?
+            .GetValue(e) as string; }
+        catch (Exception) { /* Optional metadata is not an admission gate. */ }
+        var code = e.ExitCode;
+        return "WEBVIEW_PROCESS_FAILED " + e.ProcessFailedKind.ToString() +
+            " reason=" + e.Reason.ToString() +
+            " exit=" + code.ToString(System.Globalization.CultureInfo.InvariantCulture) +
+            " hex=0x" + unchecked((uint)code).ToString("X8",
+                System.Globalization.CultureInfo.InvariantCulture) +
+            " module=" + SafeFailureModule(modulePath);
+    }
+
     private void OnProcessFailed(object? sender, CoreWebView2ProcessFailedEventArgs e)
     {
         RevokeDocument();
-        try { _writeDiagnostic("WEBVIEW_PROCESS_FAILED " + e.ProcessFailedKind.ToString()); }
+        try { _writeDiagnostic(FormatWebViewProcessFailure(e)); }
         catch (Exception) { /* Diagnostics must never interrupt the process-failure fence. */ }
         if (e.ProcessFailedKind == CoreWebView2ProcessFailedKind.BrowserProcessExited)
         {
