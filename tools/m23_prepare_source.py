@@ -35,8 +35,17 @@ def run(cmd: list[str], *, cwd: Path) -> None:
 
 
 def apply_patch(source: Path, patch: Path) -> None:
-    run(['git', 'apply', '--whitespace=nowarn', '--check', str(patch)], cwd=source)
-    run(['git', 'apply', '--whitespace=nowarn', str(patch)], cwd=source)
+    # A checkout with autocrlf may hand us a CRLF patch. Git apply wants LF.
+    payload = patch.read_bytes().replace(b'\r\n', b'\n')
+    normalized = source.parent / (patch.name + '.lf.patch')
+    normalized.write_bytes(payload)
+    command = ['git', '-c', 'core.autocrlf=false', '-c', 'core.eol=lf',
+               'apply', '--whitespace=nowarn']
+    try:
+        run(command + ['--check', str(normalized)], cwd=source)
+        run(command + [str(normalized)], cwd=source)
+    finally:
+        normalized.unlink(missing_ok=True)
 
 
 def prepare(repo: Path, dest: Path) -> None:
