@@ -11,3 +11,30 @@
 .nox-sb-tile[data-state='ERROR'],.nox-sb-tile[data-state='HOLD']{border-color:rgba(209,155,88,.6);}
 .nox-sb-feedback{min-height:1.5rem;color:#afd8d8;line-height:1.5;font-size:.92em;}
 @media (prefers-reduced-motion:reduce){.nox-sb-tile{transition:none}.nox-sb-tile:hover:not(:disabled){transform:none}}
+
+/* B-UI polish 2026-11-03: states, touch, focus, narrow */
+.nox-sb-tile,.nox-r11-action,.nox-r11-stop,.nox-wow-workbench button{
+  min-height:48px;min-width:44px;touch-action:manipulation;
+}
+.nox-sb-tile[data-state="HOLD"],.nox-sb-tile[data-state="ERROR"]{
+  border-color:#d19b58;box-shadow:inset 0 0 0 1px rgba(209,155,88,.45);
+}
+.nox-sb-tile[data-state="RUNNING"],.nox-sb-tile[data-state="PENDING"]{
+  border-color:#55c4d2;box-shadow:0 0 18px rgba(85,196,210,.28);
+}
+.nox-sb-tile[data-state="OK"]{border-color:#7dcea0;}
+.nox-sb-tile:focus-visible,.nox-r11-action:focus-visible,.nox-r11-stop:focus-visible,
+.nox-wow-workbench button:focus-visible{
+  outline:2px solid #6ad6dc;outline-offset:3px;
+}
+@media (max-width:800px){
+  .nox-sb-grid,.nox-r11-actions{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}
+}
+@media (max-width:480px){
+  .nox-sb-grid,.nox-r11-actions,.nox-wow-workbench__variants{grid-template-columns:1fr;}
+  .nox-sb-panel,.nox-r11-cockpit,.nox-wow-workbench{padding:12px;border-radius:12px;}
+}
+@media (prefers-reduced-motion:reduce){
+  .nox-sb-tile,.nox-r11-action,.nox-r11-stop{transition:none;transform:none;}
+}
+
