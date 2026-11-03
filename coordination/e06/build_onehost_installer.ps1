@@ -797,6 +797,60 @@ if ($IncludeMega814) {
 $manifest=[ordered]@{schema='NOX_P01_PAYLOAD_SHA256_V1';entrypoint='NOX.P01.Shell.exe';taskId='NOX-V16-E06-EXPRESS-ONEHOST';runId=$RunId;version='16.0.0';files=$entries}
 $manifestPath=Join-Path $payload 'payload.sha256.json'
 [IO.File]::WriteAllText($manifestPath,($manifest | ConvertTo-Json -Depth 7),(New-Object System.Text.UTF8Encoding($false)))
+# W01 R102: only the disposable SHA-verified original R11 verifier is adapted.
+# The NSIS child Windows PowerShell 5.1 lacks Get-FileHash on the proven
+# runner. Preserve original JSON/path/reparse/length/SHA and rollback checks.
+$verifierPath=Join-Path $installer 'Verify-Payload.ps1'
+Assert-E06PlainPathAncestors -Candidate $verifierPath -Scope 'P01_VERIFIER_COMPAT'
+$verifierInfo=Get-Item -LiteralPath $verifierPath -Force -ErrorAction Stop
+if ($verifierInfo.PSIsContainer -or
+    ($verifierInfo.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+  throw 'P01_VERIFIER_COMPAT_UNSAFE_SOURCE_HOLD'
+}
+$verifierBefore=[IO.File]::ReadAllText($verifierPath)
+$oldHash='  $actual = (Get-FileHash -LiteralPath $full -Algorithm SHA256).Hash.ToLowerInvariant()'
+$oldHeader='$ErrorActionPreference = ''Stop'''
+if (([regex]::Matches($verifierBefore,[regex]::Escape($oldHash))).Count -ne 1 -or
+    ([regex]::Matches($verifierBefore,[regex]::Escape($oldHeader))).Count -ne 1 -or
+    !$verifierBefore.Contains('P01_PAYLOAD_VERIFY_FAILED') -or
+    !$verifierBefore.Contains('Assert-NoReparseAncestors') -or
+    !$verifierBefore.Contains('sha mismatch') -or
+    $verifierBefore.Contains('Get-P01VerifiedSha256')) {
+  throw 'P01_VERIFIER_COMPAT_ORIGINAL_PREIMAGE_HOLD'
+}
+$nl=if ($verifierBefore.Contains(([string][char]13+[string][char]10))) {
+  [string][char]13+[string][char]10
+} else { [string][char]10 }
+$hashHelper=@'
+function Get-P01VerifiedSha256([string]$Path) {
+  $inputStream=$null
+  $digest=$null
+  try {
+    $inputStream=[IO.File]::Open($Path,[IO.FileMode]::Open,[IO.FileAccess]::Read,[IO.FileShare]::Read)
+    $digest=[Security.Cryptography.SHA256]::Create()
+    return ([BitConverter]::ToString($digest.ComputeHash($inputStream))).Replace('-','').ToLowerInvariant()
+  } finally {
+    if ($null -ne $digest) { $digest.Dispose() }
+    if ($null -ne $inputStream) { $inputStream.Dispose() }
+  }
+}
+'@
+$hashHelper=$hashHelper.Replace(([string][char]13+[string][char]10),([string][char]10)).Replace(([string][char]10),$nl)
+$verifierAfter=$verifierBefore.Replace($oldHeader,$oldHeader+$nl+$hashHelper+$nl).Replace(
+  $oldHash,'  $actual = Get-P01VerifiedSha256 $full')
+if ($verifierAfter -ceq $verifierBefore -or
+    $verifierAfter.Contains($oldHash) -or
+    ([regex]::Matches($verifierAfter,'Get-P01VerifiedSha256')).Count -ne 2) {
+  throw 'P01_VERIFIER_COMPAT_TRANSFORM_HOLD'
+}
+$verifierBeforeSha=(Get-FileHash -LiteralPath $verifierPath -Algorithm SHA256).Hash.ToLowerInvariant()
+[IO.File]::WriteAllText($verifierPath,$verifierAfter,(New-Object System.Text.UTF8Encoding($false)))
+$verifierAfterSha=(Get-FileHash -LiteralPath $verifierPath -Algorithm SHA256).Hash.ToLowerInvariant()
+if ($verifierBeforeSha -ceq $verifierAfterSha -or
+    [IO.File]::ReadAllText($verifierPath) -cne $verifierAfter) {
+  throw 'P01_VERIFIER_COMPAT_WRITE_READBACK_HOLD'
+}
+Write-Host "P01_PS51_DOTNET_SHA256_STAGED before=$verifierBeforeSha after=$verifierAfterSha ORIGINAL_SHA_CHECK_RETAINED"
 & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File (Join-Path $installer 'Verify-Payload.ps1') -Root $payload -Manifest $manifestPath
 if ($LASTEXITCODE -ne 0) { throw 'ORIGINAL_NSIS_PAYLOAD_SHA_GATE_HOLD' }
 # C11: patch ONLY the disposable ORIGINAL NSIS source before makensis.
