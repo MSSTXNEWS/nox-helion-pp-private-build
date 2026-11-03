@@ -173,10 +173,6 @@ if ($webviewBegin -lt 0 -or $webviewFinish -le $webviewBegin -or
   throw 'E06_WEBVIEW2_PREFLIGHT_ATOMIC_PREIMAGE_HOLD'
 }
 $webviewLegacy=$preflightOriginal.Substring($webviewBegin,$webviewFinish-$webviewBegin)
-foreach ($mustContain in @('Registry::HKEY_CURRENT_USER','Registry::HKEY_LOCAL_MACHINE',
-                          'Get-ItemProperty','[version]','pv')) {
-  if (!$webviewLegacy.Contains($mustContain)) { throw 'E06_WEBVIEW2_PREFLIGHT_UNKNOWN_SOURCE_HOLD' }
-}
 $webviewReplacement=@'
 # Official Microsoft WebView2 Evergreen Runtime: inspect the explicit 32/64-bit
 # Windows registry views. Registry provider redirection is not relied upon.
@@ -211,20 +207,40 @@ foreach ($hive in @([Microsoft.Win32.RegistryHive]::LocalMachine,
 '@
 $eol=if ($preflightOriginal.Contains("`r`n")) { "`r`n" } else { "`n" }
 $webviewReplacement=[regex]::Replace($webviewReplacement,'\r?\n',$eol)
-$webviewPatched=$preflightOriginal.Substring(0,$webviewBegin)+
-                $webviewReplacement+$eol+
-                $preflightOriginal.Substring($webviewFinish)
-if ($webviewPatched -ceq $preflightOriginal -or
+# Another approved stage may already have applied this exact 32/64-bit registry
+# gate in the disposable R11. Accept byte-identical canonical content only.
+$canonicalWebviewBlock=$webviewReplacement+$eol
+$alreadyCanonical=($webviewLegacy -ceq $canonicalWebviewBlock)
+if (!$alreadyCanonical) {
+  foreach ($mustContain in @('Registry::HKEY_CURRENT_USER','Registry::HKEY_LOCAL_MACHINE',
+                            'Get-ItemProperty','[version]','pv')) {
+    if (!$webviewLegacy.Contains($mustContain)) {
+      throw 'E06_WEBVIEW2_PREFLIGHT_UNKNOWN_SOURCE_HOLD'
+    }
+  }
+  $webviewPatched=$preflightOriginal.Substring(0,$webviewBegin)+
+                  $canonicalWebviewBlock+
+                  $preflightOriginal.Substring($webviewFinish)
+} else {
+  $webviewPatched=$preflightOriginal
+}
+if ((!$alreadyCanonical -and $webviewPatched -ceq $preflightOriginal) -or
     $webviewPatched -notmatch '\[Microsoft\.Win32\.RegistryView\]::Registry32' -or
     $webviewPatched -notmatch '\[Microsoft\.Win32\.RegistryView\]::Registry64' -or
     $webviewPatched -notmatch 'P01_WEBVIEW2_RUNTIME_MISSING') {
   throw 'E06_WEBVIEW2_PREFLIGHT_REPLACEMENT_GUARD_HOLD'
 }
 $preflightBefore=(Get-FileHash -LiteralPath $webviewPreflight -Algorithm SHA256).Hash.ToLowerInvariant()
-[IO.File]::WriteAllText($webviewPreflight,$webviewPatched,(New-Object System.Text.UTF8Encoding($false)))
-$preflightAfter=(Get-FileHash -LiteralPath $webviewPreflight -Algorithm SHA256).Hash.ToLowerInvariant()
-if ($preflightBefore -ceq $preflightAfter) { throw 'E06_WEBVIEW2_PREFLIGHT_PATCH_NOT_APPLIED_HOLD' }
-Write-Host "E06_WEBVIEW2_REGISTRY_VIEW_GUARDED_STAGE before_sha256=$preflightBefore after_sha256=$preflightAfter owner=I0"
+if ($alreadyCanonical) {
+  # No rewrite of an already approved byte-identical preflight.
+  $preflightAfter=$preflightBefore
+  Write-Host "E06_WEBVIEW2_PREFLIGHT_ALREADY_STAGED_EXACT_REGISTRY32_64 sha256=$preflightBefore"
+} else {
+  [IO.File]::WriteAllText($webviewPreflight,$webviewPatched,(New-Object System.Text.UTF8Encoding($false)))
+  $preflightAfter=(Get-FileHash -LiteralPath $webviewPreflight -Algorithm SHA256).Hash.ToLowerInvariant()
+  if ($preflightBefore -ceq $preflightAfter) { throw 'E06_WEBVIEW2_PREFLIGHT_PATCH_NOT_APPLIED_HOLD' }
+  Write-Host "E06_WEBVIEW2_REGISTRY_VIEW_GUARDED_STAGE before_sha256=$preflightBefore after_sha256=$preflightAfter owner=I0"
+}
 
 # The original diagnostic builder keeps its existing behavior unless BOTH visual
 # sources are explicitly supplied. Never silently use an old D02 donor.
