@@ -1,0 +1,171 @@
+# NOX V16 / Azure Pipelines Windows fallback
+# Manual/opt-in DIAGNOSTIC only. Does not replace PR162, owner sources or E07 release acceptance.
+# Builds fixed fork 9706a488... and publishes private DIAGNOSTIC setup for later independent QA.
+trigger: none
+pr: none
+name: NOX-V16-AZURE-$(Date:yyyyMMdd).$(Rev:r)
+
+pool:
+  vmImage: windows-2022
+
+stages:
+  - stage: SourceIntegrity
+    displayName: Original 729 SourceLock and NO-LOSS
+    jobs:
+      - job: AuditOriginal
+        timeoutInMinutes: 35
+        steps:
+          - checkout: self
+            clean: true
+            fetchDepth: 0
+            persistCredentials: false
+          - pwsh: |
+              $ErrorActionPreference = 'Stop'
+              $out = '$(Build.ArtifactStagingDirectory)'
+              New-Item -ItemType Directory -Path $out -Force | Out-Null
+              $commit = (& git rev-parse HEAD).Trim()
+              if ($LASTEXITCODE -ne 0 -or $commit -notmatch '^[a-f0-9]{40}$') { throw 'AZURE_GIT_COMMIT_IDENTITY_HOLD' }
+              if ($commit -cne '$(Build.SourceVersion)') { throw 'AZURE_SOURCE_VERSION_DRIFT_HOLD' }
+              # This branch deliberately builds the exact original integration snapshot.
+              # Do NOT silently absorb an advancing PR162 or change product files.
+              $approvedFork='9706a488762725791be60db811a55d172631bac6'
+              & git cat-file -e ($approvedFork + '^{commit}')
+              if ($LASTEXITCODE -ne 0) { throw 'AZURE_APPROVED_FORK_COMMIT_MISSING' }
+              & git merge-base --is-ancestor $approvedFork HEAD
+              if ($LASTEXITCODE -ne 0) { throw 'AZURE_UNAPPROVED_GIT_ANCESTRY_HOLD' }
+              $allowed=@('azure-pipelines.yml','coordination/azure-ci/README_RU.md')
+              $changes=@(& git diff --name-only $approvedFork HEAD)
+              if ($LASTEXITCODE -ne 0 -or @($changes | Where-Object { $allowed -cnotcontains $_ }).Count -gt 0) {
+                throw 'AZURE_UNAPPROVED_PRODUCT_FILE_DRIFT_HOLD'
+              }
+              if (@($changes | Where-Object { $allowed -ccontains $_ }).Count -ne 2) {
+                throw 'AZURE_EXPECTED_CI_ONLY_DELTA_HOLD'
+              }
+              $proof = [ordered]@{
+                schema = 'NOX_V16_AZURE_SOURCE_PIN_V1'
+                git_commit = $commit
+                source_branch = '$(Build.SourceBranch)'
+                azure_build_id = '$(Build.BuildId)'
+                source_status = 'PENDING_SOURCE_ONLY_NOT_E07_ACCEPTED'
+                approved_source_fork_sha = $approvedFork
+                source_changes = @($changes)
+                source_is_latest_pr162 = $false
+              }
+              $proof | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $out 'azure-source-identity.json') -Encoding UTF8
+              & python --version
+              if ($LASTEXITCODE -ne 0) { throw 'PYTHON_REQUIRED_HOLD' }
+              & dotnet --version
+              if ($LASTEXITCODE -ne 0) { throw 'DOTNET_REQUIRED_HOLD' }
+            displayName: Pin exact checkout commit on Windows
+          - pwsh: |
+              $ErrorActionPreference = 'Stop'
+              & python -m unittest discover -s tests/e07 -p 'test_original_archive_namespace.py' -v
+              if ($LASTEXITCODE -ne 0) { throw 'EXISTING_ZIP_NAMESPACE_REGRESSION_HOLD' }
+            displayName: Reuse existing E07 malicious ZIP regression
+          - pwsh: |
+              $ErrorActionPreference = 'Stop'
+              $out = '$(Build.ArtifactStagingDirectory)'
+              & python coordination/e06/verify_original_729_source.py --parts-dir . --out (Join-Path $out 'source729-e06.json') --run-id 'AZURE-NOX-V16-$(Build.BuildId)'
+              if ($LASTEXITCODE -ne 0) { throw 'RAW_729_SOURCELOCK_HOLD' }
+              & python coordination/source-lock/verify_original_archive.py --parts-dir . --output (Join-Path $out 'source729-main.json') --expected-files 729
+              if ($LASTEXITCODE -ne 0) { throw 'SECOND_ORIGINAL_SOURCELOCK_HOLD' }
+              Write-Host 'SOURCE_ONLY_729_DOUBLE_VERIFIED_NOT_E07_RELEASE'
+            displayName: Read original 3 ZIP parts and independently hash 729 members
+          - task: PublishPipelineArtifact@1
+            condition: always()
+            displayName: Preserve source-only SHA evidence
+            inputs:
+              targetPath: '$(Build.ArtifactStagingDirectory)'
+              artifact: nox-v16-azure-source-proof
+              publishLocation: pipeline
+
+  - stage: DiagnosticWindows
+    displayName: Diagnostic WPF WebView2 NSIS build (never release)
+    dependsOn: SourceIntegrity
+    condition: succeeded()
+    jobs:
+      - job: BuildDiagnostic
+        timeoutInMinutes: 55
+        steps:
+          - checkout: self
+            clean: true
+            fetchDepth: 0
+            persistCredentials: false
+          - pwsh: |
+              $ErrorActionPreference = 'Stop'
+              $actual = (& git rev-parse HEAD).Trim()
+              if ($LASTEXITCODE -ne 0 -or $actual -cne '$(Build.SourceVersion)') { throw 'BUILD_CHECKOUT_DRIFT_HOLD' }
+              # Existing owner builder requires the Windows py launcher and exact 3.12.10;
+              # reject other hosted image versions before the expensive frozen rebuild.
+              if (!(Get-Command py -CommandType Application -ErrorAction SilentlyContinue)) {
+                throw 'PY_LAUNCHER_REQUIRED_BY_ORIGINAL_BUILDER'
+              }
+              & py -3.12 -c 'import sys; assert sys.version_info[:3] == (3,12,10), sys.version'
+              if ($LASTEXITCODE -ne 0) { throw 'PINNED_PYTHON_3_12_10_NOT_AVAILABLE' }
+              & ./private_build.ps1
+              if ($LASTEXITCODE -ne 0) { throw 'ORIGINAL_PRIVATE_BUILD_HOLD' }
+              & python coordination/e06/stage_p01.py
+              if ($LASTEXITCODE -ne 0) { throw 'PINNED_R11_STAGE_HOLD' }
+              & python -m unittest discover -s integrations/wow200/tests -p 'test_stage_wow200.py' -v
+              if ($LASTEXITCODE -ne 0) { throw 'D02_WOW_REGRESSION_HOLD' }
+              $expected = '4e488372cf3f6410d268a7ef72b3e4b359a7a3e6642c7a16ac2e6f7eb06fc5f3'
+              $hits = @(Get-ChildItem -LiteralPath 'work/candidate' -Recurse -File -Filter 'NOX_HELION_PRIVATE_CANDIDATE.exe' | Where-Object { (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant() -ceq $expected })
+              if ($hits.Count -ne 1) { throw 'PINNED_PYTHON_EXE_NOT_FOUND_HOLD' }
+              $out = 'work/e06/azure-onehost-diagnostic'
+              $settings = @{
+                SourceRoot = 'work/e06/staged/R11'
+                PythonExe = $hits[0].FullName
+                OutputRoot = $out
+                RunId = 'NOX-V16-AZURE-$(Build.BuildId)'
+                CreativeSourceRoot = 'integrations/creative'
+                WowSourceRoot = 'integrations/wow200'
+              }
+              & ./coordination/e06/build_onehost_installer.ps1 @settings
+              if ($LASTEXITCODE -ne 0) { throw 'EXISTING_ONEHOST_BUILDER_HOLD' }
+              $setup = Join-Path $out 'NOX-HELION-V16-DIAGNOSTIC-SETUP.exe'
+              $exe = Join-Path $out 'payload/NOX.P01.Shell.exe'
+              $receipt = Join-Path $out 'ONEHOST_DIAGNOSTIC_RECEIPT.json'
+              foreach ($file in @($setup, $exe, $receipt)) {
+                if (!(Test-Path -LiteralPath $file -PathType Leaf)) { throw 'DIAGNOSTIC_ARTIFACT_MISSING_HOLD' }
+              }
+              $ownerReceipt = Get-Content -LiteralPath $receipt -Raw -Encoding UTF8 | ConvertFrom-Json
+              if ($ownerReceipt.release_accepted -ne $false -or $ownerReceipt.installer_lifecycle_tested -ne $false -or
+                  $ownerReceipt.native_bridge_scope -cne 'ORIGINAL_PYTHON_READ_ONLY_DIAGNOSE') {
+                throw 'DIAGNOSTIC_MISLABELLED_RELEASE_HOLD'
+              }
+              $proof = [ordered]@{
+                schema = 'NOX_V16_AZURE_DIAGNOSTIC_BINARY_PROOF_V1'
+                git_commit = $actual
+                azure_build_id = '$(Build.BuildId)'
+                setup_sha256 = (Get-FileHash -LiteralPath $setup -Algorithm SHA256).Hash.ToLowerInvariant()
+                wpf_exe_sha256 = (Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash.ToLowerInvariant()
+                installed_exe_sha256 = $null
+                setup_bytes = (Get-Item -LiteralPath $setup).Length
+                wpf_exe_bytes = (Get-Item -LiteralPath $exe).Length
+                native_windows_e2e_passed = 0
+                release_accepted = $false
+                status = 'DIAGNOSTIC_ONLY_NOT_E07_ACCEPTED'
+              }
+              $stage = '$(Build.ArtifactStagingDirectory)'
+              New-Item -ItemType Directory -Path $stage -Force | Out-Null
+              $proof | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $stage 'azure-diagnostic-proof.json') -Encoding UTF8
+              Copy-Item -LiteralPath $receipt -Destination (Join-Path $stage 'ONEHOST_DIAGNOSTIC_RECEIPT.json')
+              # E07 must receive the SAME actual bytes, not only a textual SHA claim.
+              # Private Azure Pipeline artifact; never a public GitHub Release.
+              $setupArtifact = Join-Path $stage 'NOX-HELION-V16-DIAGNOSTIC-SETUP.exe'
+              $wpfArtifact = Join-Path $stage 'NOX.P01.Shell.exe'
+              Copy-Item -LiteralPath $setup -Destination $setupArtifact -ErrorAction Stop
+              Copy-Item -LiteralPath $exe -Destination $wpfArtifact -ErrorAction Stop
+              if ((Get-FileHash -LiteralPath $setupArtifact -Algorithm SHA256).Hash.ToLowerInvariant() -cne $proof.setup_sha256 -or
+                  (Get-FileHash -LiteralPath $wpfArtifact -Algorithm SHA256).Hash.ToLowerInvariant() -cne $proof.wpf_exe_sha256) {
+                throw 'DIAGNOSTIC_ARTIFACT_COPY_SHA_MISMATCH_HOLD'
+              }
+              Write-Host 'WINDOWS_DIAGNOSTIC_BINARY_SHA_VERIFIED_NOT_INSTALLED_OR_E07_ACCEPTED'
+            displayName: Reuse existing pinned build, D02 WOW WPF and NSIS
+          - task: PublishPipelineArtifact@1
+            condition: always()
+            displayName: Publish diagnostics and SHA receipts only
+            inputs:
+              targetPath: '$(Build.ArtifactStagingDirectory)'
+              artifact: nox-v16-azure-windows-diagnostic-proof
+              publishLocation: pipeline
