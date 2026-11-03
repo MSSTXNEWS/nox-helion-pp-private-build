@@ -108,7 +108,9 @@ function flattenNavigation(root) {
 }
 
 function replaceSelects(root) {
-  const EventCtor = root.ownerDocument.defaultView.Event;
+  const documentRef = root.nodeType === 9 ? root : root.ownerDocument;
+  if (!documentRef?.defaultView?.Event) throw new Error("NOX_DOCUMENT_EVENT_UNAVAILABLE");
+  const EventCtor = documentRef.defaultView.Event;
   for (const select of root.querySelectorAll("select:not([data-nox-select-replaced])")) {
     const fieldset = root.ownerDocument.createElement("fieldset");
     fieldset.className = "nox-choice-group";
