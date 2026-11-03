@@ -150,7 +150,7 @@ function replaceSelects(root) {
 function guardUnboundControls(root) {
   const localSelectors = [
     "#themeToggle", "[data-drawer-open]", "[data-tab-target]",
-    "[data-accordion-trigger]", "[data-nox-local-action]"
+    "[data-accordion-trigger]", ".nox-choice-button", "[data-nox-local-action]"
   ].join(",");
   for (const anchor of root.querySelectorAll("a[href]")) {
     const href = anchor.getAttribute("href") || "";
