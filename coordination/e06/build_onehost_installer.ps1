@@ -212,10 +212,22 @@ $webviewReplacement=[regex]::Replace($webviewReplacement,'\r?\n',$eol)
 $canonicalWebviewBlock=$webviewReplacement+$eol
 $alreadyCanonical=($webviewLegacy -ceq $canonicalWebviewBlock)
 if (!$alreadyCanonical) {
-  foreach ($mustContain in @('Registry::HKEY_CURRENT_USER','Registry::HKEY_LOCAL_MACHINE',
-                            'Get-ItemProperty','[version]','pv')) {
-    if (!$webviewLegacy.Contains($mustContain)) {
-      throw 'E06_WEBVIEW2_PREFLIGHT_UNKNOWN_SOURCE_HOLD'
+  # The immutable C07 original (ZIP SHA256
+  # 90076eba83a213ba2b410632ced3288d41a6691ab63f81ad0520aa3cbbbfcb52)
+  # has a legacy pv nonzero check without the later [version] cast.
+  # Accept that known historical preimage only by exact SHA-256, then replace
+  # with the approved strict Registry32/Registry64 + [version] gate below.
+  $legacySha=[Convert]::ToHexString(
+    [Security.Cryptography.SHA256]::HashData(
+      [Text.Encoding]::UTF8.GetBytes(($webviewLegacy -replace "`r`n","`n"))
+    )).ToLowerInvariant()
+  $knownC07Legacy=($legacySha -ceq 'a61e2e7adcbf836109249829f4d103e0d991873c0088483b0b3550216a4b4c8e')
+  if (!$knownC07Legacy) {
+    foreach ($mustContain in @('Registry::HKEY_CURRENT_USER','Registry::HKEY_LOCAL_MACHINE',
+                              'Get-ItemProperty','[version]','pv')) {
+      if (!$webviewLegacy.Contains($mustContain)) {
+        throw 'E06_WEBVIEW2_PREFLIGHT_UNKNOWN_SOURCE_HOLD'
+      }
     }
   }
   $webviewPatched=$preflightOriginal.Substring(0,$webviewBegin)+
