@@ -6,6 +6,8 @@ replace user data, spin up another backend, or imply a released EXE.
 """
 from __future__ import annotations
 import hashlib
+import os
+import tempfile
 from pathlib import Path
 import sys
 import stat
@@ -168,23 +170,39 @@ def stage(source:Path)->dict:
                 raise RuntimeError(
                     "E06_NATIVE_PINNED_PYTHON_SYNTAX_HOLD:" +
                     str(target.relative_to(source))) from exc
-    # All source/addon checks complete before writing any disposable output.
-    for target,data in sources:
-        refuse_reparse_components(source,target)
-        target.parent.mkdir(parents=True,exist_ok=True)
-        refuse_reparse_components(source,target)
-        with target.open("xb") as f:f.write(data)
-        refuse_reparse_components(source,target)
-    refuse_reparse_components(source,app)
-    app.write_bytes(updated.encode("utf-8"))
-    refuse_reparse_components(source,app)
-    if app.read_bytes()!=updated.encode("utf-8"):
-        raise RuntimeError("E06_NATIVE_ORIGINAL_APP_READBACK_HOLD")
-    return dict(original_app_sha256=ORIGINAL_APP_SHA256,
-                staged_app_sha256=hashlib.sha256(app.read_bytes()).hexdigest(),
+    # All pinned sources are validated before touching the disposable copy.
+    # Roll back ONLY new files created by this call on a failed publication.
+    staged_app=updated.encode("utf-8")
+    data_by_dest={dest:data for (_rel,dest,_blob),(_target,data) in zip(ADDONS,sources)}
+    created=[]
+    temp_app=None
+    try:
+        for target,data in sources:
+            refuse_reparse_components(source,target)
+            target.parent.mkdir(parents=True,exist_ok=True)
+            refuse_reparse_components(source,target)
+            with target.open("xb") as f:
+                created.append(target)  # Include partial writes in rollback.
+                f.write(data)
+            refuse_reparse_components(source,target)
+            if target.read_bytes()!=data:
+                raise RuntimeError("E06_NATIVE_ADDON_READBACK_HOLD")
+        refuse_reparse_components(source,app)
+        fd,temp_name=tempfile.mkstemp(prefix=".nox-native-",suffix=".tmp",dir=app.parent)
+        temp_app=Path(temp_name)
+        with os.fdopen(fd,"wb") as f:
+            f.write(staged_app)
+            f.flush()
+            os.fsync(f.fileno())
+        refuse_reparse_components(source,temp_app)
+        if temp_app.read_bytes()!=staged_app or app.read_bytes()!=original:
+            raise RuntimeError("E06_NATIVE_APP_PUBLISH_PREIMAGE_HOLD")
+        # Prepare all receipts before the irreversible final app publication.
+        receipt = dict(original_app_sha256=ORIGINAL_APP_SHA256,
+                staged_app_sha256=hashlib.sha256(staged_app).hexdigest(),
                 pinned_addons=len(sources),original_archive_modified=False,
                 runtime_data_files=[dict(source=rel, runtime_path=dest,
-                    sha256=hashlib.sha256((source/dest).read_bytes()).hexdigest(),
+                    sha256=hashlib.sha256(data_by_dest[dest]).hexdigest(),
                     pyinstaller_destination=str(Path(dest).parent))
                     for rel,dest,_blob in ADDONS
                     if dest.endswith((".json", ".zip")) or dest.startswith("Packages/P04/")
@@ -205,6 +223,22 @@ def stage(source:Path)->dict:
                                 "nox_selfbuilder/foundation_readiness.py")],
                 native_python_source_smoke_verified_separately=True,
                 installed_windows_exe_accepted=False)
+
+        refuse_reparse_components(source,app)
+        os.replace(temp_app,app)
+        temp_app=None
+        return receipt
+    except BaseException:
+        rollback_failed=False
+        if temp_app is not None:
+            try: temp_app.unlink(missing_ok=True)
+            except OSError: rollback_failed=True
+        for target in reversed(created):
+            try: target.unlink(missing_ok=True)
+            except OSError: rollback_failed=True
+        if rollback_failed:
+            raise RuntimeError("E06_NATIVE_STAGE_ROLLBACK_INCOMPLETE_HOLD")
+        raise
 
 if __name__=="__main__":
     if len(sys.argv)!=2:raise SystemExit("USAGE: stage_native_stdio.py ORIGINAL_SOURCE_COPY")
