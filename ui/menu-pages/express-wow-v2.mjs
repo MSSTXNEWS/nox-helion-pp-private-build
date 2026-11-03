@@ -19,6 +19,8 @@ function startWow(){
   frame=view.requestAnimationFrame(()=>{
    frame=0;if(!selected)return;
    const p=selected;selected=null;
+   // FX/OS motion can switch after pointermove but before this queued frame.
+   if(!safe()){slots.forEach(reset);return;}
    p.node.style.setProperty(p.node===sun?'--sun-y':'--tilt-y',String((p.nx*9).toFixed(2))+'deg');
    p.node.style.setProperty(p.node===sun?'--sun-x':'--tilt-x',String((-p.ny*9).toFixed(2))+'deg');
   });
@@ -36,11 +38,15 @@ function startWow(){
  sun.addEventListener('keydown',ev=>{if(ev.key==='Enter'||ev.key===' '){ev.preventDefault();overview();}});
  const fx=d.getElementById('fx');
  fx?.setAttribute('aria-label','Переключить качество графики: BALANCED, MAX, ECO');
- function resync(){if(!safe())slots.forEach(reset);}
+ function resync(){if(!safe()){
+  if(frame){view.cancelAnimationFrame(frame);frame=0;}
+  selected=null;slots.forEach(reset);
+ }}
  fx?.addEventListener('click',resync);
  reduce?.addEventListener?.('change',resync);
  view.addEventListener('pagehide',()=>{
-  if(frame)view.cancelAnimationFrame(frame);
+  if(frame){view.cancelAnimationFrame(frame);frame=0;}
+  selected=null;slots.forEach(reset);
   reduce?.removeEventListener?.('change',resync);
  },{once:true});
 }
