@@ -62,7 +62,7 @@ ADDONS=(
     ('src/nox_selfbuilder/wow_onehost_port.py', 'nox_selfbuilder/wow_onehost_port.py', '8101bfb4657e776d519e8a98cfc862709fee1e1c'),
     ('src/nox_selfbuilder/wow_owner_binding.py', 'nox_selfbuilder/wow_owner_binding.py', 'b9dadf87f02b1e3345efb20523a6799f1586423d'),
     ('Packages/P04/train_qlora.py', 'Packages/P04/train_qlora.py', '82fad1f4aec3bc9ebb34958ece3fd5786e1adbea'),
-    ('Packages/P04/preflight_local_gpu.py', 'Packages/P04/preflight_local_gpu.py', '15d6807033040711ac54c4c9f63432c5653e62bd'),
+    ('Packages/P04/preflight_local_gpu.py', 'Packages/P04/preflight_local_gpu.py', '50756c056cd298152d2d3da5a9de2ec877f6cb86'),
     ('Packages/P04/merge_qlora_adapter.py', 'Packages/P04/merge_qlora_adapter.py', '51a27181e94cf5e766e2faf943f8aa17ec6418c7'),
     ('assets/NOX_SOUL_CPU_REAL_WEIGHTS_TRAINED_V1_20261022.zip', 'assets/NOX_SOUL_CPU_REAL_WEIGHTS_TRAINED_V1_20261022.zip', '35ee9b4ad6500af6cd219becc4244333c7c5f618'),
 )
