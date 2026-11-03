@@ -222,8 +222,13 @@ html[data-mega814-motion="REDUCED"] .mega814-spatial::after{animation:none!impor
 .mega814-v2-legacy{margin-top:8px;padding:6px 10px;border-top:1px solid rgba(204,166,112,.2)}
 .mega814-v2-legacy>summary{cursor:pointer;min-height:40px;color:#bbac9d;padding-top:10px}
 .mega814-v2-section{margin-top:14px;border-top:1px solid rgba(204,166,112,.25);padding-top:12px}
-.mega814-v2-section>summary{cursor:pointer;color:#d9bd91;padding:9px;line-height:1.5;min-height:44px}
-.mega814-v2-section>summary:focus-visible{outline:2px solid #e9c692}
+.mega814-v2-section-title{color:#d9bd91;padding:9px 10px;line-height:1.5;min-height:44px;margin:0 0 8px;
+ font-size:clamp(17px,2.1vw,22px);letter-spacing:.08em;font-weight:650;
+ border-bottom:1px solid rgba(204,166,112,.25);text-shadow:0 0 14px rgba(226,173,105,.16)}
+.mega814-v2-section{display:block!important;visibility:visible!important;opacity:1!important}
+.mega814-v2-subitem>button{width:100%;min-height:48px;text-align:left;cursor:pointer}
+.mega814-v2-subitem>button:focus-visible{outline:2px solid #e9c692;outline-offset:3px}
+.mega814-v2-subitem>button:hover{border-color:#efbd7b;box-shadow:0 0 18px rgba(239,189,123,.18)}
 .mega814-v2-subitems{display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:9px;max-height:45vh;overflow:auto;padding:10px}
 .mega814-v2-subitem{display:grid;gap:2px}
 .mega814-v2-subitem>small{color:#b7a58b;font-size:11px}
