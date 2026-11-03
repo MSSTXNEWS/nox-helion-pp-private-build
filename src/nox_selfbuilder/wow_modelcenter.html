@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <title>NOX HELION · ModelCenter WOW</title>
+  <link rel="stylesheet" href="wow_modelcenter.css">
+</head>
+<body class="nox-mc">
+  <div class="nox-smoke"></div>
+
+  <main style="position:relative; z-index:1; padding:2rem; max-width:900px; margin:0 auto;">
+    <h1 style="font-weight:600; letter-spacing:0.04em;">ModelCenter</h1>
+    <p style="color:var(--muted); margin-top:-0.5rem;">qwen2.5-coder:7b · живой provider</p>
+
+    <div class="nox-orbits" aria-hidden="true">
+      <div class="nox-sun"></div>
+      <div class="nox-core" title="HF01 СОЗНАНИЕ"></div>
+      <div class="nox-core" title="HF02 ЭМОЦИИ"></div>
+      <div class="nox-core" title="HF03 ЛИЧНОСТЬ"></div>
+      <div class="nox-core" title="HF04 ПАМЯТЬ"></div>
+      <div class="nox-core" title="HF05 ЗНАНИЯ"></div>
+      <div class="nox-core" title="HF06 РАЗВИТИЕ"></div>
+      <div class="nox-core" title="HF07 ПРОФЕССИИ"></div>
+      <div class="nox-core" title="HF08 ОБЩЕНИЕ"></div>
+    </div>
+
+    <section class="nox-glass" style="padding:1.5rem; margin-top:1rem;">
+      <h2 style="margin-top:0;">Модель</h2>
+      <p>qwen2.5-coder:7b <span style="color:var(--amber);">● LIVE</span></p>
+      <div class="nox-progress" style="margin:1rem 0;"><span style="width:0%;"></span></div>
+      <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
+        <button class="nox-btn-fire" data-action="download">Скачать веса</button>
+        <button class="nox-btn-fire" data-action="train">Обучить (LoRA)</button>
+        <button class="nox-glass" style="padding:0.7rem 1.4rem; color:var(--text); cursor:pointer;" data-action="status">Статус</button>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    document.querySelectorAll('[data-action]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const bar = document.querySelector('.nox-progress > span');
+        let p = 0;
+        const id = setInterval(() => {
+          p = Math.min(100, p + 4);
+          bar.style.width = p + '%';
+          if (p >= 100) clearInterval(id);
+        }, 80);
+      });
+    });
+  </script>
+</body>
+</html>
