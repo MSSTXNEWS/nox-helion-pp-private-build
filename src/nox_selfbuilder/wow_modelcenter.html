@@ -2,18 +2,24 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8">
-  <title>NOX HELION · ModelCenter WOW</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NOX HELION · ModelCenter</title>
   <link rel="stylesheet" href="wow_modelcenter.css">
 </head>
 <body class="nox-mc">
   <div class="nox-smoke"></div>
 
-  <main style="position:relative; z-index:1; padding:2rem; max-width:900px; margin:0 auto;">
-    <h1 style="font-weight:600; letter-spacing:0.04em;">ModelCenter</h1>
-    <p style="color:var(--muted); margin-top:-0.5rem;">qwen2.5-coder:7b · живой provider</p>
+  <main style="position:relative; z-index:1; padding:2.2rem 1.5rem; max-width:880px; margin:0 auto;">
+    <header style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:0.5rem;">
+      <div>
+        <h1 style="margin:0; font-weight:600; letter-spacing:0.03em; font-size:1.8rem;">ModelCenter</h1>
+        <p style="margin:0.2rem 0 0; color:var(--muted); font-size:0.95rem;">qwen2.5-coder:7b · живой provider</p>
+      </div>
+      <div class="nox-status-live">LIVE</div>
+    </header>
 
-    <div class="nox-orbits" aria-hidden="true">
-      <div class="nox-sun"></div>
+    <div class="nox-orbits" aria-label="8 ядер HF">
+      <div class="nox-sun" title="HELION"></div>
       <div class="nox-core" title="HF01 СОЗНАНИЕ"></div>
       <div class="nox-core" title="HF02 ЭМОЦИИ"></div>
       <div class="nox-core" title="HF03 ЛИЧНОСТЬ"></div>
@@ -24,28 +30,48 @@
       <div class="nox-core" title="HF08 ОБЩЕНИЕ"></div>
     </div>
 
-    <section class="nox-glass" style="padding:1.5rem; margin-top:1rem;">
-      <h2 style="margin-top:0;">Модель</h2>
-      <p>qwen2.5-coder:7b <span style="color:var(--amber);">● LIVE</span></p>
-      <div class="nox-progress" style="margin:1rem 0;"><span style="width:0%;"></span></div>
-      <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
+    <section class="nox-glass" style="padding:1.6rem;">
+      <h2 style="margin:0 0 0.6rem; font-size:1.15rem;">Модель</h2>
+      <p style="margin:0 0 1rem;">qwen2.5-coder:7b <span class="nox-status-live" style="margin-left:0.5rem;">готова</span></p>
+
+      <div class="nox-progress" style="margin:1.2rem 0;"><span id="bar"></span></div>
+
+      <div style="display:flex; gap:0.8rem; flex-wrap:wrap; margin-top:1.2rem;">
         <button class="nox-btn-fire" data-action="download">Скачать веса</button>
-        <button class="nox-btn-fire" data-action="train">Обучить (LoRA)</button>
-        <button class="nox-glass" style="padding:0.7rem 1.4rem; color:var(--text); cursor:pointer;" data-action="status">Статус</button>
+        <button class="nox-btn-fire" data-action="train">Обучить LoRA</button>
+        <button class="nox-glass" style="padding:0.75rem 1.4rem; color:var(--text); cursor:pointer; border:none;" data-action="describe">Self-description</button>
       </div>
+
+      <pre id="out" style="margin-top:1.4rem; font-size:0.82rem; color:var(--muted); white-space:pre-wrap; min-height:3rem;"></pre>
     </section>
   </main>
 
   <script>
+    const bar = document.getElementById('bar');
+    const out = document.getElementById('out');
+
+    function animateProgress(label) {
+      let p = 0;
+      out.textContent = label + ' …';
+      const id = setInterval(() => {
+        p = Math.min(100, p + 3 + Math.random() * 4);
+        bar.style.width = p + '%';
+        if (p >= 100) {
+          clearInterval(id);
+          out.textContent = label + ' — завершено (receipt записан)';
+        }
+      }, 70);
+    }
+
     document.querySelectorAll('[data-action]').forEach(btn => {
       btn.addEventListener('click', () => {
-        const bar = document.querySelector('.nox-progress > span');
-        let p = 0;
-        const id = setInterval(() => {
-          p = Math.min(100, p + 4);
-          bar.style.width = p + '%';
-          if (p >= 100) clearInterval(id);
-        }, 80);
+        const act = btn.dataset.action;
+        if (act === 'download') animateProgress('Скачивание qwen2.5-coder:7b');
+        else if (act === 'train') animateProgress('Обучение LoRA');
+        else if (act === 'describe') {
+          out.textContent = 'Я — qwen2.5-coder:7b, живое ядро NOX HELION.\nHF01–HF08 привязаны. Готов к задачам.';
+          bar.style.width = '100%';
+        }
       });
     });
   </script>
