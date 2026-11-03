@@ -54,7 +54,15 @@ class OriginalSourcePartFDTests(unittest.TestCase):
             with self.assertRaisesRegex(module.SourceHold, "SOURCE_PART_CHANGED_DURING_READ"):
                 with module._trusted_part_reader(part) as reader:
                     self.assertEqual(reader.read(), b"original")
-                    part.rename(backup)
+                    try:
+                        part.rename(backup)
+                    except PermissionError as exc:
+                        if os.name != "nt":
+                            raise
+                        # Windows prevents renaming a live descriptor; the race
+                        # could not be induced. No fake source-level swap PASS.
+                        self.assertTrue(part.is_file())
+                        self.skipTest("Windows denied the open-file rename: " + str(exc))
                     try:
                         part.symlink_to(backup)
                     except (OSError, NotImplementedError) as exc:
@@ -67,7 +75,12 @@ class OriginalSourcePartFDTests(unittest.TestCase):
             with self.assertRaisesRegex(module.SourceHold, "SOURCE_PART_CHANGED_DURING_READ"):
                 with module._trusted_part_reader(part) as reader:
                     reader.read()
+                    before = part.stat()
                     part.write_bytes(b"tampered")
+                    # Windows timestamp granularity may hide an immediate
+                    # same-size write; force a real, detectable mtime change.
+                    os.utime(part, ns=(before.st_atime_ns,
+                                       before.st_mtime_ns + 10_000_000_000))
 
     def test_nonregular_part_denied(self):
         with tempfile.TemporaryDirectory() as td:
