@@ -25,6 +25,15 @@ class TestOneHostCompatibility(unittest.TestCase):
  def test_duplicate_import_rejected(self):
   with self.assertRaisesRegex(RuntimeError,"MARKERS"):
    verified_index_mode(self.decorated()+D02_TAGS[1].encode(),self.sha)
+ def test_mega814_native_client_import_resolves_inside_wpf_assets(self):
+  """WebView2 maps Assets/ to https://nox.local; no /ui/ root exists."""
+  source=(pathlib.Path(__file__).resolve().parent/"mega814.mjs").read_text("utf-8")
+  self.assertIn('from "../creative/wow200/ui/onehost-menu-bindings.mjs"',source)
+  self.assertNotIn('from "../../ui/onehost-menu-bindings.mjs"',source)
+  # The provider file is published by the pinned WOW200 owner stage.
+  wow=pathlib.Path(__file__).resolve().parents[2]/"integrations/wow200/stage_wow200.py"
+  self.assertTrue(wow.is_file())
+
  def test_exact_source_payload(self):
   self.assertEqual(len(EXPECTED),14)
   self.assertNotIn("persona-EV.png",EXPECTED)

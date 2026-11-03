@@ -6,7 +6,7 @@ import {createP01RouteDispatcher} from "./owner-dispatch.mjs";
 import {validateMenuV2,appendMenuV2} from "./menu-v2-adapter.mjs";
 import {projectSpaceView} from "./owner-e05.mjs";
 import {createNativeReadOnlyPort} from "./native-readonly.mjs";
-import {createNativeMenuClient} from "../../ui/onehost-menu-bindings.mjs";
+import {createNativeMenuClient} from "../creative/wow200/ui/onehost-menu-bindings.mjs";
 const validId=x=>typeof x==="string"&&/^[a-zA-Z0-9._:-]{1,128}$/.test(x);
 const unique=x=>new Set(x).size===x.length;
 const hex=x=>typeof x==="string"&&/^[0-9a-f]{64}$/.test(x);

@@ -12,7 +12,7 @@ def sha(raw):return hashlib.sha256(raw).hexdigest()
 # Exact Git blob preimages of the eight original GitLab R75 donor sources.
 # A self-generated staging SHA256 receipt is NOT independent provenance.
 OWNER_BLOB_PINS={
- "mega814.mjs": "03d08c63fd4e36e00bbbacce5d99ccc1981ac347",
+ "mega814.mjs": "56c5ca52982bc39aae595597e7d0f9e5e3506f44",
  "mega814.css": "3d7ca3028b8ec84189bb3bdec9edb2f7614d0d8e",
  "manifest.json": "2b98f4c4182750eedcec879f5e2e696167aaf4e9",
  "menu-v2-193.json": "a57ced96e6edb5d77d99a83f945c47dbe97bbaf8",
