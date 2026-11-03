@@ -1,0 +1,25 @@
+{
+  "approved": false,
+  "consent": "PENDING",
+  "fictional": true,
+  "license": "PENDING",
+  "note": "Identity text is copied from the pinned source. Consent, license, and revoke stay unsigned.",
+  "owner_signed": false,
+  "portrait_bytes_in_payload": false,
+  "revoke": "PENDING",
+  "runtime_display_name": "Элина Вейл",
+  "runtime_persona_id": "persona.elina_veil",
+  "runtime_role": "координатор",
+  "schema": "NOX_M2_PERSONA_FIXTURE_V1",
+  "signed": false,
+  "source_files": [
+    "helion/personas.py",
+    "assets/personas_5.json"
+  ],
+  "status": "SOURCE_CATALOG_NOT_A_SIGNED_RUNTIME_PROFILE",
+  "traits_catalog_id": "EV",
+  "traits_catalog_name": "Элина Вейл",
+  "traits_catalog_role": "Координация и редактура",
+  "traits_filled": 0,
+  "traits_total": 64
+}

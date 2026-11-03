@@ -1,0 +1,14 @@
+{
+  "asserts_valid": false,
+  "must_be_absent_kinds": [
+    "base_model",
+    "tokenizer",
+    "adapter",
+    "rag_index",
+    "cultural_index"
+  ],
+  "note": "Treating the empty Qwen slot or the research scorers as a base model must fail.",
+  "qwen_layer_sha256_not_present": "c5396e06af294bd101b30dce59131a76d2b773e76950acc870eda801d3ab0515",
+  "reason": "product_bytes_absent",
+  "schema": "NOX_M2_EXPECTED_V1"
+}

@@ -1,0 +1,243 @@
+{
+  "bound_reference_exe_sha256": "93a329ba1ece9cfd66951b377e04e9c1166ec6ba3ce13a5911ba8e36de99dfb8",
+  "entries": [
+    {
+      "bytes": 331,
+      "rel_path": "VERSION.txt",
+      "sha256": "88db51b1d0227a5a1b89396e1626f19a5355742d6204db0d409e51b1e7d30366",
+      "status": "PRESENT"
+    },
+    {
+      "bytes": 726,
+      "rel_path": "fixtures/README.md",
+      "sha256": "f587ad4e553c0bad4d2a0047ceb2229bb1904a2c83be0766024dcfbb9adf16aa",
+      "status": "PRESENT"
+    },
+    {
+      "bytes": 271,
+      "rel_path": "fixtures/consent_receipt.template.json",
+      "sha256": "ecc46154f0b6e3895572a62b1fa9be077276bcd187daf99a46ccbdd812e67bcb",
+      "status": "PRESENT"
+    },
+    {
+      "bytes": 276,
+      "rel_path": "fixtures/expected/exe_in_kit_forbidden.expected.json",
+      "sha256": "dc7e648548ba1d5a79b32b49755cfdb6caa9b1d6729ef315ae7c3ebbb0615c5e",
+      "status": "PRESENT"
+    },
+    {
+      "bytes": 159,
+      "rel_path": "fixtures/expected/fake_rights_rows_forbidden.expected.json",
+      "sha256": "4de858e932d7b41d6424343b52fb7cc532f78470ea0310c7a9a34e7279e1bb5d",
+      "status": "PRESENT"
+    },
+    {
+      "bytes": 163,
+      "rel_path": "fixtures/expected/owner_ack_unsigned.expected.json",
+      "sha256": "b17baac7f3e935dbc8ffd805be894765e4fe8006a16caafa8b53a5cd21c9923e",
+      "status": "PRESENT"
+    },
+    {
+      "bytes": 416,
+      "rel_path": "fixtures/expected/product_bytes_absent.expected.json",
+      "sha256": "23e0e59281bd9927ff69a2eed67d1c20a6cb8b4f755767240fe4ce667041b02c",
+      "status": "PRESENT"
+    },
+    {
+      "bytes": 309,
+      "rel_path": "fixtures/license_notice.template.json",
+      "sha256": "ecf7cd5dffadc8aba1afbdc4b1daa7fa5a6cd32ce88a2a86ae3bdbb2c744754f",
+      "status": "PRESENT"
+    },
+    {
+      "bytes": 108,
+      "rel_path": "fixtures/model_config.json",
+      "sha256": "a55184817de53fe31c519dafb1ed852fd9fa1a36c1730c6814beb1596adaf83c",
+      "status": "PRESENT"
+    },
+    {
+      "bytes": 827,
+      "rel_path": "fixtures/personas/persona.adrian_marrow.json",
+      "sha256": "ad8a2c96af74d0c9c93462f02005c05e1812d1c96b6e96d509c82d1ad896b1cb",
+      "status": "PRESENT"
+    },
+    {
+      "bytes": 816,
+      "rel_path": "fixtures/personas/persona.elina_veil.json",
+      "sha256": "c0363ea22cb02d59716cb305e1d813069a649a539a7cec56f8c2c887dbfcfbea",
+      "status": "PRESENT"
+    },
+    {
+      "bytes": 815,
+      "rel_path": "fixtures/personas/persona.kairen_voss.json",
+      "sha256": "107661aed93418aa7f9b468008d1e5b3470c446f4f5b5bf70be0e026727aa136",
+      "status": "PRESENT"
+    },
+    {
+      "bytes": 828,
+      "rel_path": "fixtures/personas/persona.kassien_veir.json",
+      "sha256": "570c67212ffa61126f881f5c4f95a6c6bc663f1b7dd57b9941dee7469c706fa0",
+      "status": "PRESENT"
+    },
+    {
+      "bytes": 790,
+      "rel_path": "fixtures/personas/persona.leon_ardis.json",
+      "sha256": "fb22439daea6231c899432a9ca9934addb3544ed9f5dfce1c7627817512be389",
+      "status": "PRESENT"
+    },
+    {
+      "bytes": 75974,
+      "rel_path": "fixtures/rights/media_rights_index.json",
+      "sha256": "672bab66835eabe60b5ce336caa68b808ce546ecf237bb404ec48e00a366cbb9",
+      "status": "PRESENT"
+    },
+    {
+      "bytes": 94446,
+      "rel_path": "fixtures/rights/media_source_inventory_20261020.csv",
+      "sha256": "4c7751f09fc2e78164c05f839cb3b7de6ed8f9e30d381c99589af0acf9ca5b1a",
+      "status": "PRESENT"
+    },
+    {
+      "bytes": 783,
+      "rel_path": "product_payload/GATE_HOLD.json",
+      "sha256": "ef6d19d53443562e81698d53925f2027add87d3bd831397525652e15f4f0f734",
+      "status": "PRESENT"
+    },
+    {
+      "bytes": 65,
+      "rel_path": "product_payload/M2_PACKAGED_MARKER.txt",
+      "sha256": "df14a648e95437d4e2cfc12efb44ee91323353df910de4234bd97b9dd09716eb",
+      "status": "PRESENT"
+    },
+    {
+      "bytes": 1048,
+      "rel_path": "product_payload/README.md",
+      "sha256": "86680837fc3d505c4e1d75e8aaa8f061f6fa617690b94c57913fdce96dc20f51",
+      "status": "PRESENT"
+    },
+    {
+      "bytes": 9215,
+      "rel_path": "product_payload/app_import_manifest.json",
+      "sha256": "23a61e027b97ea090b02e2abee341021e43350ebff24ab90eb85754c08988503",
+      "status": "PRESENT"
+    },
+    {
+      "bytes": 6975,
+      "rel_path": "product_payload/assets/asset_manifest.json",
+      "sha256": "bf8e9cd4a1eaa5f8cbb223129d9eb4f8d882b65794c45c42ece6940ebb151636",
+      "status": "PRESENT"
+    },
+    {
+      "bytes": 14524,
+      "rel_path": "product_payload/assets/personas_5.json",
+      "sha256": "d5c316266ca24f2e8dd7df049ce25651c40da72b3fa0c3b44451fb84f0a36b15",
+      "status": "PRESENT"
+    },
+    {
+      "bytes": 42157,
+      "rel_path": "product_payload/helion/data/menu_v2_full_catalog.json",
+      "sha256": "17404e0846dedbd57236c65918b05e6a8df00a7c000dcfd321d794e668490719",
+      "status": "PRESENT"
+    },
+    {
+      "bytes": 31573,
+      "rel_path": "product_payload/helion/data/traits_seed_64.json",
+      "sha256": "9605c08d6f39feb6ef219fc5e643979fb510a7c39a2ac0ff3d7c252c64e89069",
+      "status": "PRESENT"
+    },
+    {
+      "bytes": 108,
+      "rel_path": "product_payload/model_config.example.json",
+      "sha256": "a55184817de53fe31c519dafb1ed852fd9fa1a36c1730c6814beb1596adaf83c",
+      "status": "PRESENT"
+    },
+    {
+      "bytes": 18428,
+      "rel_path": "product_payload/weights/01_truthful_memory.safetensors",
+      "sha256": "776ea49d348c81eca1e7374e0fcb8070b5a42b22562cc87cee9bcc5deca94df7",
+      "status": "PRESENT"
+    },
+    {
+      "bytes": 18428,
+      "rel_path": "product_payload/weights/02_causal_chronology.safetensors",
+      "sha256": "a89eb456acd6e6f52166f7ee6e6909b8e6a340228a905011a66a8a5a1741e4b2",
+      "status": "PRESENT"
+    },
+    {
+      "bytes": 18420,
+      "rel_path": "product_payload/weights/03_persona_voice.safetensors",
+      "sha256": "5579a47fb198802f76fac355141a3a11c1600772e84264a2ad252409f8f731af",
+      "status": "PRESENT"
+    },
+    {
+      "bytes": 18428,
+      "rel_path": "product_payload/weights/04_longform_coverage.safetensors",
+      "sha256": "3a1c6ea806f63204fd88c7de59bb1177e61c05d2bd6b702e1bc8366476733ff0",
+      "status": "PRESENT"
+    },
+    {
+      "bytes": 18420,
+      "rel_path": "product_payload/weights/05_anti_template.safetensors",
+      "sha256": "4d5bce3ba481d6f0011c63eb335eb6c6469bb0c2e4d37739f65643a7660eb611",
+      "status": "PRESENT"
+    },
+    {
+      "bytes": 18428,
+      "rel_path": "product_payload/weights/06_empathy_boundaries.safetensors",
+      "sha256": "d9cf323af82c4afa80406cee9a7d20da2d176e162069eff572aeba31a3ba8b60",
+      "status": "PRESENT"
+    },
+    {
+      "bytes": 18428,
+      "rel_path": "product_payload/weights/07_reflection_correction.safetensors",
+      "sha256": "85126e27f5ba2e547801258af29d8f24a34b8dce296bc370c3049a8b836dc934",
+      "status": "PRESENT"
+    },
+    {
+      "bytes": 3304,
+      "rel_path": "product_payload/weights/MODEL_FEATURE_CONTRACT.json",
+      "sha256": "652f511528057c21e26bbfd297348d3499bf397a347b8c63cda22738440c0a24",
+      "status": "PRESENT"
+    },
+    {
+      "bytes": 3174,
+      "rel_path": "product_payload/weights/STAGING_MANIFEST.json",
+      "sha256": "a961ddc63f5abd8e8c6cb7b04fc6e34c8ede9a7d2807160fddb3c39c8d9c4764",
+      "status": "PRESENT"
+    },
+    {
+      "kind": "base_model",
+      "rel_path": "product_payload/missing/base_model",
+      "status": "ABSENT"
+    },
+    {
+      "kind": "tokenizer",
+      "rel_path": "product_payload/missing/tokenizer",
+      "status": "ABSENT"
+    },
+    {
+      "kind": "adapter",
+      "rel_path": "product_payload/missing/adapter",
+      "status": "ABSENT"
+    },
+    {
+      "kind": "rag_index",
+      "rel_path": "product_payload/missing/rag_index",
+      "status": "ABSENT"
+    },
+    {
+      "kind": "cultural_index",
+      "rel_path": "product_payload/missing/cultural_index",
+      "status": "ABSENT"
+    },
+    {
+      "bytes_not_present": 397807936,
+      "rel_path": "product_payload/models/qwen2.5-0.5b-instruct-q4_K_M/",
+      "sha256_not_present": "c5396e06af294bd101b30dce59131a76d2b773e76950acc870eda801d3ab0515",
+      "status": "ABSENT"
+    }
+  ],
+  "reference_exe_included": false,
+  "schema": "NOX_M2_SMOKE_IMPORT_LIST_V1",
+  "version": "M2.0-PP"
+}

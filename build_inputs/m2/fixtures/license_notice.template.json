@@ -1,0 +1,9 @@
+{
+  "approved": false,
+  "license_id": null,
+  "note": "The pinned source has no owner-acknowledged base-model license. Research scorers are not a substitute.",
+  "owner_license_acknowledged": false,
+  "schema": "NOX_M2_LICENSE_NOTICE_TEMPLATE_V1",
+  "signed": false,
+  "status": "NO_BUNDLED_MODEL_LICENSE"
+}

@@ -1,0 +1,1571 @@
+{
+  "note": "Projected from docs/media_source_inventory_20261020.csv. No rights row was marked cleared.",
+  "rights_cleared_count": 0,
+  "rights_status_counts": {
+    "SOURCE_RIGHTS_NOT_REVERIFIED": 173
+  },
+  "row_count": 173,
+  "rows": [
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/ADRIAN_MERROW/BATCH01_MIN/ADRIAN_BATCH01_QA_ATLAS_NATIVE.png",
+      "bytes": 7034379,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "CANDIDATE_PREVIS_OR_SOURCE",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "5ca4a9d850af1ff4ed417e9eeec3c3f8af27a5c8aa1440ba07ea91482b12b143",
+      "source_name": "ADRIAN_BATCH01_QA_ATLAS_NATIVE.png"
+    },
+    {
+      "archive_path": "assets/approved_reference/Library/PERSONAS/ADRIAN_MERROW/ADRIAN_OWNER_APPROVED_IDENTITY_MASTER_20261020.png",
+      "bytes": 2476318,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "IDENTITY_LOCKED_SOURCE",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "8b97945fed08095b39dbd703c2587a9d3b8943e671f7347c37b0ee8dfa0254f9",
+      "source_name": "ADRIAN_OWNER_APPROVED_IDENTITY_MASTER_20261020.png"
+    },
+    {
+      "archive_path": "",
+      "bytes": 2476318,
+      "disposition": "EXACT_SHA256_DUPLICATE",
+      "lifecycle_status": "SOURCE_STATUS_UNVERIFIED",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "8b97945fed08095b39dbd703c2587a9d3b8943e671f7347c37b0ee8dfa0254f9",
+      "source_name": "AM-01-OWNER_APPROVED_IDENTITY_DUPLICATE_REFERENCE.png"
+    },
+    {
+      "archive_path": "assets/historical_unverified/Library/PERSONAS/ADRIAN_MERROW/AM-02-earlier-nox-dossier.png",
+      "bytes": 2520110,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "SOURCE_STATUS_UNVERIFIED",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "bd99f8d6a0c7bcb58102cdd2c0fc42ddf6629631781facf17a7ca92d227b04aa",
+      "source_name": "AM-02-earlier-nox-dossier.png"
+    },
+    {
+      "archive_path": "assets/historical_unverified/Library/PERSONAS/ADRIAN_MERROW/AM-03-cinematic-dossier.png",
+      "bytes": 2383825,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "SOURCE_STATUS_UNVERIFIED",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "e65d789aa2ccd93822d9eb3ee8f4fd6c7496ce54f0eb02ee93f21046ca64caed",
+      "source_name": "AM-03-cinematic-dossier.png"
+    },
+    {
+      "archive_path": "assets/historical_unverified/Library/PERSONAS/ADRIAN_MERROW/AM-04-gold-profile.png",
+      "bytes": 2300011,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "SOURCE_STATUS_UNVERIFIED",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "45613b5c59bf620b6ab615eb38c9832ff6589e8aed5f6bb93908575ba2e5a998",
+      "source_name": "AM-04-gold-profile.png"
+    },
+    {
+      "archive_path": "assets/historical_unverified/Library/PERSONAS/ADRIAN_MERROW/AM-05-original-dossier.png",
+      "bytes": 2294194,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "SOURCE_STATUS_UNVERIFIED",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "7b89a7ae636711febc6904abdbb9de41e16c5b09c1f7ab94fd52172e977ac011",
+      "source_name": "AM-05-original-dossier.png"
+    },
+    {
+      "archive_path": "assets/historical_unverified/Library/PERSONAS/ADRIAN_MERROW/AM-06-early-cast-composite.png",
+      "bytes": 2458166,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "SOURCE_STATUS_UNVERIFIED",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "e8963708b0e5e9d76328a849f0ac6f0caa9813af5521a11c7c66d079a43c8526",
+      "source_name": "AM-06-early-cast-composite.png"
+    },
+    {
+      "archive_path": "",
+      "bytes": 2455589,
+      "disposition": "EXACT_SHA256_DUPLICATE",
+      "lifecycle_status": "SOURCE_STATUS_UNVERIFIED",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "a10aaf8ae6d30b201931c24dad25dba8b2a3e0227cc87287d1c5cd51f7f0122e",
+      "source_name": "AM-07-study-portrait.png"
+    },
+    {
+      "archive_path": "",
+      "bytes": 2468922,
+      "disposition": "EXACT_SHA256_DUPLICATE",
+      "lifecycle_status": "SOURCE_STATUS_UNVERIFIED",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "b22343a3647da4ab7c179f4477d0ae0851834ccda64bafa563304419dd003652",
+      "source_name": "AM-08-photo-reference.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/ADRIAN_MERROW/AM-09-test-01.png",
+      "bytes": 2496644,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "CANDIDATE_PREVIS_OR_SOURCE",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "c5bb8a05e18946a6a6d4a57e6c4eb539b5f5f4a7245f086f25500a3dbcd907d4",
+      "source_name": "AM-09-test-01.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/ADRIAN_MERROW/AM-10-test-02.png",
+      "bytes": 2626296,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "CANDIDATE_PREVIS_OR_SOURCE",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "8135940f3dac37db0f7c313c49c1662fd1d6094896920e1496b22367c1d4efc3",
+      "source_name": "AM-10-test-02.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/ADRIAN_MERROW/AM-11-test-03.png",
+      "bytes": 2524179,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "CANDIDATE_PREVIS_OR_SOURCE",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "aa8cfcfa6c971e9a9effea7b73ab99d47d0424c999375f2347350d49ffb4eb71",
+      "source_name": "AM-11-test-03.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/ADRIAN_MERROW/AM-12-test-04.png",
+      "bytes": 2608733,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "CANDIDATE_PREVIS_OR_SOURCE",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "91403a2ef42e9280533f95d286f7c61dbf7fbb257880d59cb439113996a40ae5",
+      "source_name": "AM-12-test-04.png"
+    },
+    {
+      "archive_path": "assets/historical_unverified/Library/PERSONAS/ADRIAN_MERROW/AM-13-gallery-1.png",
+      "bytes": 9074966,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "SOURCE_STATUS_UNVERIFIED",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "5c9065ef8d0ce1850368c39879886b1fc52e0ace8267b15c58fd94471709412f",
+      "source_name": "AM-13-gallery-1.png"
+    },
+    {
+      "archive_path": "assets/historical_unverified/Library/PERSONAS/ADRIAN_MERROW/AM-14-gallery-2.png",
+      "bytes": 9493963,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "SOURCE_STATUS_UNVERIFIED",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "b5cfcd32874c5e1e96673b01536f0368dde6fbf8ad8bf6ed2307d9ab98d59078",
+      "source_name": "AM-14-gallery-2.png"
+    },
+    {
+      "archive_path": "assets/historical_unverified/Library/PERSONAS/ADRIAN_MERROW/AM-15-gallery-3.png",
+      "bytes": 10210522,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "SOURCE_STATUS_UNVERIFIED",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "226842b85a7d2a3ce83f8dc36cfb820f82a3308cee3ce35fecf7db5577db6ee6",
+      "source_name": "AM-15-gallery-3.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/ADRIAN_MERROW/AM_MIN25_ATLASES/AM-MIN-MA-01_ARCHIVE_REUSE_PREVIS.png",
+      "bytes": 981224,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "PREVIS_ARCHIVE_REUSE_ONLY",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "16bd31ed0c8c98f1d3eefa5da348411d5a1ca29f8e57853eed46e555f890b687",
+      "source_name": "AM-MIN-MA-01_ARCHIVE_REUSE_PREVIS.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/ADRIAN_MERROW/AM_MIN25_ATLASES/AM-MIN-MA-02_ARCHIVE_REUSE_PREVIS.png",
+      "bytes": 878157,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "PREVIS_ARCHIVE_REUSE_ONLY",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "a4c87919b3c071d526ad287fdad9bbc166e64e8c4911cb56974b149d94b54de7",
+      "source_name": "AM-MIN-MA-02_ARCHIVE_REUSE_PREVIS.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/ADRIAN_MERROW/AM_MIN25_ATLASES/AM-MIN-MA-03_ARCHIVE_REUSE_PREVIS.png",
+      "bytes": 789368,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "PREVIS_ARCHIVE_REUSE_ONLY",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "12c0a22ea64771fa2ef2d04b49101667f786e3c1f4e4e2ddbdd1223dfd528643",
+      "source_name": "AM-MIN-MA-03_ARCHIVE_REUSE_PREVIS.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/ADRIAN_MERROW/AM_MIN25_ATLASES/AM-MIN-MA-04_ARCHIVE_REUSE_PREVIS.png",
+      "bytes": 910222,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "PREVIS_ARCHIVE_REUSE_ONLY",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "010161cd7166e5845f40215fa009d317f8308b926116aeb99cb36e8fd0010029",
+      "source_name": "AM-MIN-MA-04_ARCHIVE_REUSE_PREVIS.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/ADRIAN_MERROW/AM_MIN25_ATLASES/AM-MIN-MA-05_ARCHIVE_REUSE_PREVIS.png",
+      "bytes": 691544,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "PREVIS_ARCHIVE_REUSE_ONLY",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "53ace585951450d1b9800ac14aecca369359c65d07bf0bd39c980ae3748243b1",
+      "source_name": "AM-MIN-MA-05_ARCHIVE_REUSE_PREVIS.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/ADRIAN_MERROW/AM_MIN25_ATLASES/AM-MIN-MA-06_ARCHIVE_REUSE_PREVIS.png",
+      "bytes": 1013962,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "PREVIS_ARCHIVE_REUSE_ONLY",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "ef05c85b0618673b0f83c8b8b9d2d5321e7ef3a56a640c825e56a2d4dfb7309f",
+      "source_name": "AM-MIN-MA-06_ARCHIVE_REUSE_PREVIS.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/ADRIAN_MERROW/AM_MIN25_ATLASES/AM-MIN-MA-07_ARCHIVE_REUSE_PREVIS.png",
+      "bytes": 940918,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "PREVIS_ARCHIVE_REUSE_ONLY",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "575330b72a9f63d4a71ececf0a95a727a4bbae418dda1484d4ee35f6312e22b2",
+      "source_name": "AM-MIN-MA-07_ARCHIVE_REUSE_PREVIS.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/ADRIAN_MERROW/AM_MIN25_ATLASES/AM-MIN-MA-08_ARCHIVE_REUSE_PREVIS.png",
+      "bytes": 675263,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "PREVIS_ARCHIVE_REUSE_ONLY",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "d6bde0ce0efb152709967688e9525e21de2fe7856c255c0f4c2d1ec3c1c1fbad",
+      "source_name": "AM-MIN-MA-08_ARCHIVE_REUSE_PREVIS.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/ADRIAN_MERROW/AM_MIN25_ATLASES/AM-MIN-MA-09_ARCHIVE_REUSE_PREVIS.png",
+      "bytes": 952026,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "PREVIS_ARCHIVE_REUSE_ONLY",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "420b828074bef4c073612acd6c262934162baa42d15c65dd356d95f2eb474eae",
+      "source_name": "AM-MIN-MA-09_ARCHIVE_REUSE_PREVIS.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/ADRIAN_MERROW/AM_MIN25_ATLASES/AM-MIN-MA-10_ARCHIVE_REUSE_PREVIS.png",
+      "bytes": 1012010,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "PREVIS_ARCHIVE_REUSE_ONLY",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "797b95287b6af3568f57d610dbfbbf9090304220cabc74b704a9c7c81600fff4",
+      "source_name": "AM-MIN-MA-10_ARCHIVE_REUSE_PREVIS.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/ADRIAN_MERROW/AM_MIN25_ATLASES/AM-MIN-MA-11_ARCHIVE_REUSE_PREVIS.png",
+      "bytes": 663371,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "PREVIS_ARCHIVE_REUSE_ONLY",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "16f3d60eb6eddd571b2840eb607c144dc325a620193b5c659cdc2c2109291eb9",
+      "source_name": "AM-MIN-MA-11_ARCHIVE_REUSE_PREVIS.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/ADRIAN_MERROW/AM_MIN25_ATLASES/AM-MIN-MA-12_ARCHIVE_REUSE_PREVIS.png",
+      "bytes": 719777,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "PREVIS_ARCHIVE_REUSE_ONLY",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "8e8b4bc6d08216a7998f6116a8a3300e32f1b64030274043b2dbeef61cb6e582",
+      "source_name": "AM-MIN-MA-12_ARCHIVE_REUSE_PREVIS.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/ADRIAN_MERROW/AM_MIN25_ATLASES/AM-MIN-MA-13_ARCHIVE_REUSE_PREVIS.png",
+      "bytes": 1030396,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "PREVIS_ARCHIVE_REUSE_ONLY",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "12948399bbcfabe14ff8ce399de23f6ac91709969499e4fb0466f9072c542f9b",
+      "source_name": "AM-MIN-MA-13_ARCHIVE_REUSE_PREVIS.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/ADRIAN_MERROW/AM_MIN25_ATLASES/AM-MIN-MA-14_ARCHIVE_REUSE_PREVIS.png",
+      "bytes": 890023,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "PREVIS_ARCHIVE_REUSE_ONLY",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "2bdd873a3f57f8998f530388a760f17c8708075a38549030aa95a7527f68249f",
+      "source_name": "AM-MIN-MA-14_ARCHIVE_REUSE_PREVIS.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/ADRIAN_MERROW/AM_MIN25_ATLASES/AM-MIN-MA-15_ARCHIVE_REUSE_PREVIS.png",
+      "bytes": 898987,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "PREVIS_ARCHIVE_REUSE_ONLY",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "0990e4addf5e01571d4533344522fbae201769132bd19170e5ca79682ba3d185",
+      "source_name": "AM-MIN-MA-15_ARCHIVE_REUSE_PREVIS.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/ADRIAN_MERROW/AM_MIN25_ATLASES/AM-MIN-MA-16_ARCHIVE_REUSE_PREVIS.png",
+      "bytes": 768396,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "PREVIS_ARCHIVE_REUSE_ONLY",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "278ff97c6ee76e9da384032536eb356e364846f33e610f2eaa39aa3818966ce0",
+      "source_name": "AM-MIN-MA-16_ARCHIVE_REUSE_PREVIS.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/ADRIAN_MERROW/AM_MIN25_ATLASES/AM-MIN-MA-17_ARCHIVE_REUSE_PREVIS.png",
+      "bytes": 822446,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "PREVIS_ARCHIVE_REUSE_ONLY",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "02d5112f47dda09ad8f77c5fa3f1df0203ce21b544d5d75b7095a33084f2d23b",
+      "source_name": "AM-MIN-MA-17_ARCHIVE_REUSE_PREVIS.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/ADRIAN_MERROW/AM_MIN25_ATLASES/AM-MIN-MA-18_ARCHIVE_REUSE_PREVIS.png",
+      "bytes": 970151,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "PREVIS_ARCHIVE_REUSE_ONLY",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "9103e808ae93c0dc99293c28ee42d8c05c6d0b55de7b2927679f5d4fc06aa83c",
+      "source_name": "AM-MIN-MA-18_ARCHIVE_REUSE_PREVIS.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/ADRIAN_MERROW/AM_MIN25_ATLASES/AM-MIN-MA-19_ARCHIVE_REUSE_PREVIS.png",
+      "bytes": 852012,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "PREVIS_ARCHIVE_REUSE_ONLY",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "078c14944a4c91ea040d3ad244705465c5d96769406cfb6b2c64fe4ba4b0db07",
+      "source_name": "AM-MIN-MA-19_ARCHIVE_REUSE_PREVIS.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/ADRIAN_MERROW/AM_MIN25_ATLASES/AM-MIN-MA-20_ARCHIVE_REUSE_PREVIS.png",
+      "bytes": 592717,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "PREVIS_ARCHIVE_REUSE_ONLY",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "38950ee1c1d7b5aa2c182fa01974bcf91da296c607a287258f2315e13ed4ec42",
+      "source_name": "AM-MIN-MA-20_ARCHIVE_REUSE_PREVIS.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/ADRIAN_MERROW/AM_MIN25_ATLASES/AM-MIN-MA-21_ARCHIVE_REUSE_PREVIS.png",
+      "bytes": 563515,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "PREVIS_ARCHIVE_REUSE_ONLY",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "402c734bf000c02951879a18fc5653a6892470e2a5ba17e286df5f47beb48c8b",
+      "source_name": "AM-MIN-MA-21_ARCHIVE_REUSE_PREVIS.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/ADRIAN_MERROW/AM_MIN25_ATLASES/AM-MIN-MA-22_ARCHIVE_REUSE_PREVIS.png",
+      "bytes": 954089,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "PREVIS_ARCHIVE_REUSE_ONLY",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "87c2a7ff988ef26f11d2800f43777769fd2cee7ecc8cd391e03ccf5965983b08",
+      "source_name": "AM-MIN-MA-22_ARCHIVE_REUSE_PREVIS.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/ADRIAN_MERROW/AM_MIN25_ATLASES/AM-MIN-MA-23_ARCHIVE_REUSE_PREVIS.png",
+      "bytes": 767571,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "PREVIS_ARCHIVE_REUSE_ONLY",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "dd550bc33109f68ab9777c97764981b2f73e4b96e67f7ec8921172ab2a56acda",
+      "source_name": "AM-MIN-MA-23_ARCHIVE_REUSE_PREVIS.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/ADRIAN_MERROW/AM_MIN25_ATLASES/AM-MIN-MA-24_ARCHIVE_REUSE_PREVIS.png",
+      "bytes": 896054,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "PREVIS_ARCHIVE_REUSE_ONLY",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "c19410d9f2de7910d4a04f82fad179b6e943227502f00366ea52e2ae917b3bc5",
+      "source_name": "AM-MIN-MA-24_ARCHIVE_REUSE_PREVIS.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/ADRIAN_MERROW/AM_MIN25_ATLASES/AM-MIN-MA-25_ARCHIVE_REUSE_PREVIS.png",
+      "bytes": 1010770,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "PREVIS_ARCHIVE_REUSE_ONLY",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "9fe8d9840bf35b0436ce24b038648054baa69e4a328f499767a8ac9bca5b8c28",
+      "source_name": "AM-MIN-MA-25_ARCHIVE_REUSE_PREVIS.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/ADRIAN_MERROW/AM_MIN25_ATLASES/AM_MIN25_ALL_25_OVERVIEW.png",
+      "bytes": 876862,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "PREVIS_ARCHIVE_REUSE_ONLY",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "b0900c9b16b590503ac020d72f14270dc98eca3ea0ab6cc2b4ddf6207369e554",
+      "source_name": "AM_MIN25_ALL_25_OVERVIEW.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/ADRIAN_MERROW/BATCH01_MIN/CANDIDATE_01.png",
+      "bytes": 2455589,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "CANDIDATE_PREVIS_OR_SOURCE",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "a10aaf8ae6d30b201931c24dad25dba8b2a3e0227cc87287d1c5cd51f7f0122e",
+      "source_name": "CANDIDATE_01.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/ADRIAN_MERROW/BATCH01_MIN/CANDIDATE_02.png",
+      "bytes": 2468922,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "CANDIDATE_PREVIS_OR_SOURCE",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "b22343a3647da4ab7c179f4477d0ae0851834ccda64bafa563304419dd003652",
+      "source_name": "CANDIDATE_02.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/KASSIEN_VEIR/WORK_V22/E_SET_01_AMBER_LOUNGE_GEOMETRY_CANDIDATE.glb",
+      "bytes": 89636,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "3D_CANDIDATE",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "94c8174628423f8e6b7e6e1218a575ef2bb1f617839f8b0ab5dc28b193a13ef4",
+      "source_name": "E_SET_01_AMBER_LOUNGE_GEOMETRY_CANDIDATE.glb"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/HELION_INSTAGRAM_TELEGRAM_BRIDGE_MOCKUP_20261019.png",
+      "bytes": 2565348,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "CANDIDATE_PREVIS_OR_SOURCE",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "947f531046f8b9100bafd946fab0120b66658cdb976704c22c8728df58daa4b4",
+      "source_name": "HELION_INSTAGRAM_TELEGRAM_BRIDGE_MOCKUP_20261019.png"
+    },
+    {
+      "archive_path": "assets/historical_unverified/Library/HELION_SOCIAL_UI_MOCKUP_CONCEPT_20261019.png",
+      "bytes": 2243112,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "NOT_APPROVED_CONCEPT",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "fce8bf62a9aa8bdb8a617adf63d204c0458cc1a98127ed88fe2f63e3a05f79d3",
+      "source_name": "HELION_SOCIAL_UI_MOCKUP_CONCEPT_20261019.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/KW_MIN25_ATLASES/KW-MIN-MA-01_PREVIS.png",
+      "bytes": 1392386,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "PREVIS_ONLY_NON_NATIVE4K",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "d1493f79c21b5a3daa188f9e3404f132e3aeb0d86aaeac0037813a8e7c836d6c",
+      "source_name": "KW-MIN-MA-01_PREVIS.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/KW_MIN25_ATLASES/KW-MIN-MA-02_PREVIS.png",
+      "bytes": 1440847,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "PREVIS_ONLY_NON_NATIVE4K",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "af307ae26604f8bd78f7bda82aa73dcc0bc120767a2324d050f0bdac5ebe2511",
+      "source_name": "KW-MIN-MA-02_PREVIS.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/KW_MIN25_ATLASES/KW-MIN-MA-03_PREVIS.png",
+      "bytes": 1070963,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "PREVIS_ONLY_NON_NATIVE4K",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "9a25279669f3e38830b8dd73559d7cd56f6bddc94dc5936b55b045293bd639a6",
+      "source_name": "KW-MIN-MA-03_PREVIS.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/KW_MIN25_ATLASES/KW-MIN-MA-04_PREVIS.png",
+      "bytes": 1366220,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "PREVIS_ONLY_NON_NATIVE4K",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "c01c2fbbf2e0f0eba15ccf23a81c46948d53eaa7171deff3ed6d68caa12e0e37",
+      "source_name": "KW-MIN-MA-04_PREVIS.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/KW_MIN25_ATLASES/KW-MIN-MA-05_PREVIS.png",
+      "bytes": 1346266,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "PREVIS_ONLY_NON_NATIVE4K",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "a5a0d0a0751ec0747f3fc36005f7764d5f6b46de5fdc5ef0a8c859246079b4b1",
+      "source_name": "KW-MIN-MA-05_PREVIS.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/KW_MIN25_ATLASES/KW-MIN-MA-06_PREVIS.png",
+      "bytes": 1341931,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "PREVIS_ONLY_NON_NATIVE4K",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "2b3da9cdc1a894c528262634d77a9c6216e88c9044f96048978fdad0db407a93",
+      "source_name": "KW-MIN-MA-06_PREVIS.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/KW_MIN25_ATLASES/KW-MIN-MA-07_PREVIS.png",
+      "bytes": 1330429,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "PREVIS_ONLY_NON_NATIVE4K",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "e5dd634cbaa2599aae47e43ee20fa064a2969e64f64b59f2796bbf69e6ceef60",
+      "source_name": "KW-MIN-MA-07_PREVIS.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/KW_MIN25_ATLASES/KW-MIN-MA-08_PREVIS.png",
+      "bytes": 1265444,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "PREVIS_ONLY_NON_NATIVE4K",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "79f4f8938a87e817c4e8f8ec96638c1a48ec78f6b17f473fd760d45c8b5f9524",
+      "source_name": "KW-MIN-MA-08_PREVIS.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/KW_MIN25_ATLASES/KW-MIN-MA-09_PREVIS.png",
+      "bytes": 1394225,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "PREVIS_ONLY_NON_NATIVE4K",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "62230fe9a642fea2a0144e727538a7de8f2056982ec1a43ace8a35edd5ccb381",
+      "source_name": "KW-MIN-MA-09_PREVIS.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/KW_MIN25_ATLASES/KW-MIN-MA-10_PREVIS.png",
+      "bytes": 1278499,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "PREVIS_ONLY_NON_NATIVE4K",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "1d0b548f38810dbde5d00aa48d1ad945f445ad502b6fe78c9c6350dfe9bca898",
+      "source_name": "KW-MIN-MA-10_PREVIS.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/KW_MIN25_ATLASES/KW-MIN-MA-11_PREVIS.png",
+      "bytes": 1394202,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "PREVIS_ONLY_NON_NATIVE4K",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "b8d317cc46484de8808ab3589a125c707c3474a89dcf66374d97b7cd96562f56",
+      "source_name": "KW-MIN-MA-11_PREVIS.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/KW_MIN25_ATLASES/KW-MIN-MA-12_PREVIS.png",
+      "bytes": 1463105,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "PREVIS_ONLY_NON_NATIVE4K",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "da8161261179a0ed9339e6649fdf7c591dd8f87952d470f10e041498ef680fb7",
+      "source_name": "KW-MIN-MA-12_PREVIS.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/KW_MIN25_ATLASES/KW-MIN-MA-13_PREVIS.png",
+      "bytes": 1452171,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "PREVIS_ONLY_NON_NATIVE4K",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "66400417a5c4161c7b4377e28d38ffa5249529d10fc4a2cb90b13151b456fd0a",
+      "source_name": "KW-MIN-MA-13_PREVIS.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/KW_MIN25_ATLASES/KW-MIN-MA-14_PREVIS.png",
+      "bytes": 1362988,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "PREVIS_ONLY_NON_NATIVE4K",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "6d3ed617ec59ea489c3e52ab96810ffd0709e49936e96e8a2d0a043ea32de374",
+      "source_name": "KW-MIN-MA-14_PREVIS.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/KW_MIN25_ATLASES/KW-MIN-MA-15_PREVIS.png",
+      "bytes": 1419067,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "PREVIS_ONLY_NON_NATIVE4K",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "945d95c22a78d72e0ec704b778e947c2203f12c99f22a5415d19fab55289a1ec",
+      "source_name": "KW-MIN-MA-15_PREVIS.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/KW_MIN25_ATLASES/KW-MIN-MA-16_PREVIS.png",
+      "bytes": 1414962,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "PREVIS_ONLY_NON_NATIVE4K",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "928026c5351c4ca5c7508674d5a3d95d867da0e0dbd8d57da1747186f7f1b1ff",
+      "source_name": "KW-MIN-MA-16_PREVIS.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/KW_MIN25_ATLASES/KW-MIN-MA-17_PREVIS.png",
+      "bytes": 1414422,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "PREVIS_ONLY_NON_NATIVE4K",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "64332f28cdaf773acc727ff995a59e8eeb7080260ec71ed63cd5b0e0bb21aa4a",
+      "source_name": "KW-MIN-MA-17_PREVIS.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/KW_MIN25_ATLASES/KW-MIN-MA-18_PREVIS.png",
+      "bytes": 1245302,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "PREVIS_ONLY_NON_NATIVE4K",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "5752ea5e822a5f9a09721921d515a9cec4056935d7b39866387cfd95a68f59b1",
+      "source_name": "KW-MIN-MA-18_PREVIS.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/KW_MIN25_ATLASES/KW-MIN-MA-19_PREVIS.png",
+      "bytes": 1296647,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "PREVIS_ONLY_NON_NATIVE4K",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "2d2e5314d07f28471a35dba01e033488a058d65cbca7e39168f3176e7469b7b9",
+      "source_name": "KW-MIN-MA-19_PREVIS.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/KW_MIN25_ATLASES/KW-MIN-MA-20_PREVIS.png",
+      "bytes": 1295621,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "PREVIS_ONLY_NON_NATIVE4K",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "22bb38d2eb1ef508f1576f132c0415568de40c4cc472fcf96a5ca6d5a90b7805",
+      "source_name": "KW-MIN-MA-20_PREVIS.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/KW_MIN25_ATLASES/KW-MIN-MA-21_PREVIS.png",
+      "bytes": 1123962,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "PREVIS_ONLY_NON_NATIVE4K",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "47013784b7e33b83c136938d6245364d8b8d0c6edb37d88f5d67251f24c40f86",
+      "source_name": "KW-MIN-MA-21_PREVIS.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/KW_MIN25_ATLASES/KW-MIN-MA-22_PREVIS.png",
+      "bytes": 1344664,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "PREVIS_ONLY_NON_NATIVE4K",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "49d6158479cc6861508074eedfe7759f4e42046ee332b786c2af86749a3eb954",
+      "source_name": "KW-MIN-MA-22_PREVIS.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/KW_MIN25_ATLASES/KW-MIN-MA-23_PREVIS.png",
+      "bytes": 1287140,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "PREVIS_ONLY_NON_NATIVE4K",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "b7d53ac0bcf3adc94cfcf12978e20bccd690c10b95e9841934c05dc002012448",
+      "source_name": "KW-MIN-MA-23_PREVIS.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/KW_MIN25_ATLASES/KW-MIN-MA-24_PREVIS.png",
+      "bytes": 1295813,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "PREVIS_ONLY_NON_NATIVE4K",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "7ed6121c6b1170cf91b1eca77b77afac4625ef11f5259c78eb30f075839c4fa8",
+      "source_name": "KW-MIN-MA-24_PREVIS.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/KW_MIN25_ATLASES/KW-MIN-MA-25_PREVIS.png",
+      "bytes": 1359650,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "PREVIS_ONLY_NON_NATIVE4K",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "448d7f10e5009f6fcb6d7e4fcb9d7e613690b69aa2699903d2db902c7c711cb6",
+      "source_name": "KW-MIN-MA-25_PREVIS.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/LEON_ARDIS/MIN24_20261020/LE-M24-01.png",
+      "bytes": 2464864,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "UNVERIFIED_CONTACT_CANDIDATE",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "1842f27d3821dd3fc1b43085f216afa8816940625b3067581fbb91309e9f6017",
+      "source_name": "LE-M24-01.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/LEON_ARDIS/MIN24_20261020/LE-M24-02.png",
+      "bytes": 2451316,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "UNVERIFIED_CONTACT_CANDIDATE",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "de0fee4f91161fa976f9005d7faac27e46f21e59b3bcaaf90a87d92f9ab35382",
+      "source_name": "LE-M24-02.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/LEON_ARDIS/MIN24_20261020/LE-M24-03.png",
+      "bytes": 2509130,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "UNVERIFIED_CONTACT_CANDIDATE",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "c13e92a767d75f70bc189be14d0fd3726918dbe14d4d0c9ab3d9688bcd74875d",
+      "source_name": "LE-M24-03.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/LEON_ARDIS/MIN24_20261020/LE-M24-04.png",
+      "bytes": 2325140,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "UNVERIFIED_CONTACT_CANDIDATE",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "16efb0f3d40f87487891a945624a4c15c1ae78475b5c1c1d495ae41eeb0ac632",
+      "source_name": "LE-M24-04.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/LEON_ARDIS/MIN24_20261020/LE-M24-05.png",
+      "bytes": 2580035,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "UNVERIFIED_CONTACT_CANDIDATE",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "e89934e71c2bfee72bafd98f0dfee0fb7f83e2cc1ed40aa035372f5ddb20bcc5",
+      "source_name": "LE-M24-05.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/LEON_ARDIS/MIN24_20261020/LE-M24-06.png",
+      "bytes": 2484196,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "UNVERIFIED_CONTACT_CANDIDATE",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "f21d0218ea75c0f9d717fd2904b8166bbcbabf6748028574c576ad77847b3ab0",
+      "source_name": "LE-M24-06.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/LEON_ARDIS/MIN24_20261020/LE-M24-07.png",
+      "bytes": 2458346,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "UNVERIFIED_CONTACT_CANDIDATE",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "d6f14624b04c1b72ffd5494f4ea0698c29bd4cc715435b32cbed796184b0f5f1",
+      "source_name": "LE-M24-07.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/LEON_ARDIS/MIN24_20261020/LE-M24-08.png",
+      "bytes": 2481129,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "UNVERIFIED_CONTACT_CANDIDATE",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "0869d3fbd77958328d92f9d509b678af6846f6193391df6277d9c78de503f2fb",
+      "source_name": "LE-M24-08.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/LEON_ARDIS/MIN24_20261020/LE-M24-09.png",
+      "bytes": 2424279,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "UNVERIFIED_CONTACT_CANDIDATE",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "61062858619717d1a10b47da59b70bdb7aabf4f8403b168deda44c0237b11ab1",
+      "source_name": "LE-M24-09.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/LEON_ARDIS/MIN24_20261020/LE-M24-10.png",
+      "bytes": 2596274,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "UNVERIFIED_CONTACT_CANDIDATE",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "958a68df1bbf7b1732222947cbf78e7c3068fe9e8891a19fc90f80dee2829d5a",
+      "source_name": "LE-M24-10.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/LEON_ARDIS/MIN24_20261020/LE-M24-11.png",
+      "bytes": 2551271,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "UNVERIFIED_CONTACT_CANDIDATE",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "5a8fe9641c0172399ca7021373599be92a1280a8ec025ed31ad9b35b1e059de3",
+      "source_name": "LE-M24-11.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/LEON_ARDIS/MIN24_20261020/LE-M24-12.png",
+      "bytes": 2232721,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "UNVERIFIED_CONTACT_CANDIDATE",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "3c85f0e16ba93b894a7d473e6048c811129c8aff1cd99f307ea69e956090b07d",
+      "source_name": "LE-M24-12.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/LEON_ARDIS/MIN24_20261020/LE-M24-13.png",
+      "bytes": 2531731,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "UNVERIFIED_CONTACT_CANDIDATE",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "4e560bf336d155a6e734086805b99780704dc6ec5dc1d37864fa28755fa330ac",
+      "source_name": "LE-M24-13.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/LEON_ARDIS/MIN24_20261020/LE-M24-14.png",
+      "bytes": 2461067,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "UNVERIFIED_CONTACT_CANDIDATE",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "eac11d73cd3e00baa5ec96971ffb66352212c4813f659c53b61aa2a016b8411c",
+      "source_name": "LE-M24-14.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/LEON_ARDIS/MIN24_20261020/LE-M24-15.png",
+      "bytes": 2479815,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "UNVERIFIED_CONTACT_CANDIDATE",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "c8b04d185b9e2db7ef813a38d2ab931036f33bf99595eec274f239d65aa75ae7",
+      "source_name": "LE-M24-15.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/LEON_ARDIS/MIN24_20261020/LE-M24-16.png",
+      "bytes": 2462942,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "UNVERIFIED_CONTACT_CANDIDATE",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "55bd9a98c0f6d919e4a37cb89960a1bc1d987381f73a37d5165e4d073ebf19e0",
+      "source_name": "LE-M24-16.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/LEON_ARDIS/MIN24_20261020/LE-M24-17.png",
+      "bytes": 2720158,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "UNVERIFIED_CONTACT_CANDIDATE",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "cabe452d5724a3882f85cb143bf96208b61e8b69ac0fae9bf207cb2be90115fa",
+      "source_name": "LE-M24-17.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/LEON_ARDIS/MIN24_20261020/LE-M24-18.png",
+      "bytes": 2753324,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "UNVERIFIED_CONTACT_CANDIDATE",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "9ba99f6cf08e80d383c0ec43aa1de6eb7881d616c2ef8dba1ea5c543ec6a535d",
+      "source_name": "LE-M24-18.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/LEON_ARDIS/MIN24_20261020/LE-M24-19.png",
+      "bytes": 3035437,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "UNVERIFIED_CONTACT_CANDIDATE",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "2e9be15df50530f1955184006c4538e34f6b4338098be2b6755c79991b37c720",
+      "source_name": "LE-M24-19.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/LEON_ARDIS/MIN24_20261020/LE-M24-20.png",
+      "bytes": 2594716,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "UNVERIFIED_CONTACT_CANDIDATE",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "8e12898bd785ab8464c02c21e380cb28353b1f5ff11de0314ac9fd99bbe7c541",
+      "source_name": "LE-M24-20.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/LEON_ARDIS/MIN24_20261020/LE-M24-21.png",
+      "bytes": 2541881,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "UNVERIFIED_CONTACT_CANDIDATE",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "c35c94a67eeab3e8bcf486ae052d84489893d9693a45148769bdebc0da4f3148",
+      "source_name": "LE-M24-21.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/LEON_ARDIS/MIN24_20261020/LE-M24-22.png",
+      "bytes": 2417512,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "UNVERIFIED_CONTACT_CANDIDATE",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "bd4f079f5cfe66da27cb8bad7b7dc475281dae6849f4feee58c56781ee3f43b9",
+      "source_name": "LE-M24-22.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/LEON_ARDIS/MIN24_20261020/LE-M24-23.png",
+      "bytes": 2342157,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "UNVERIFIED_CONTACT_CANDIDATE",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "b5d70dd80d1056b90ae79bd6c1cb35f02d69b77bc7bc46e59b403aa3602d6618",
+      "source_name": "LE-M24-23.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/LEON_ARDIS/MIN24_20261020/LE-M24-24.png",
+      "bytes": 2608994,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "UNVERIFIED_CONTACT_CANDIDATE",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "08cfe850de6f06dd09a9693b6ffc07b9c58a8eb7d4ca70097a37fcd1c1eb6da2",
+      "source_name": "LE-M24-24.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/NOX_ADRIAN_V0_IDENTITY_QA_CONTACT_UNSCALED.png",
+      "bytes": 11892682,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "QA_CONTACT_NOT_PHOTO_MASTER",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "dc6a8fc67a051f9f6500cc9aae2b54254b8d11580815d0ea870f93df0731325c",
+      "source_name": "NOX_ADRIAN_V0_IDENTITY_QA_CONTACT_UNSCALED.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/ELINA_VEIL/NOX_ELINA_ATLAS01_DUPLICATE_REVIEW_A_20261020.png",
+      "bytes": 2748055,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "CANDIDATE_PREVIS_OR_QA",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "e3f1b487e97e67ca4115cb28e593c8cde632cecbd08cd9b29d6ea86936b20af2",
+      "source_name": "NOX_ELINA_ATLAS01_DUPLICATE_REVIEW_A_20261020.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/ELINA_VEIL/NOX_ELINA_ATLAS01_DUPLICATE_REVIEW_B_20261020.png",
+      "bytes": 2740193,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "CANDIDATE_PREVIS_OR_QA",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "4d69006cf0fecc925af4118157951ae395bc0ec21dc31716f7e5405fad67b850",
+      "source_name": "NOX_ELINA_ATLAS01_DUPLICATE_REVIEW_B_20261020.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/ELINA_VEIL/NOX_ELINA_ATLAS01_FACE_CONTACT_CANDIDATE_20261020.png",
+      "bytes": 2668073,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "CANDIDATE_PREVIS_OR_QA",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "96fcc12a983f65112adb552ca14296814a78c4f11840f741999ea33ce9e2de11",
+      "source_name": "NOX_ELINA_ATLAS01_FACE_CONTACT_CANDIDATE_20261020.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/ELINA_VEIL/NOX_ELINA_MIN24_CURATED_CONTACT_ATLAS_20261020.png",
+      "bytes": 1767145,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "CANDIDATE_PREVIS_OR_QA",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "c0d486c7ea6b558dfba1a9e7696fcc8bc1437355871ed8fdf1e45b3d5cb446a1",
+      "source_name": "NOX_ELINA_MIN24_CURATED_CONTACT_ATLAS_20261020.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/ELINA_VEIL/NOX_ELINA_MIN25_PLAN_PREVIEW.png",
+      "bytes": 48108,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "CANDIDATE_PREVIS_OR_QA",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "3b22a64789d4525bf988a98625a94fce85509fefe11738dca13a89803d4fa139",
+      "source_name": "NOX_ELINA_MIN25_PLAN_PREVIEW.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/ELINA_VEIL/NOX_ELINA_MIN25_VISUAL_INDEX_20261020.png",
+      "bytes": 2932761,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "CANDIDATE_PREVIS_OR_QA",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "ecd67e0fb6b6b0e4b04c3735b762b54f36accfc36212b9f06289225fba7bbb5a",
+      "source_name": "NOX_ELINA_MIN25_VISUAL_INDEX_20261020.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/ELINA_VEIL/NOX_ELINA_MIN_CONTACT_01_20261020.png",
+      "bytes": 2675334,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "CANDIDATE_PREVIS_OR_QA",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "e40848f7c083badae8e613f45a9c51cf2a2dda63dda09349e2d2a29fffe5bfed",
+      "source_name": "NOX_ELINA_MIN_CONTACT_01_20261020.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/ELINA_VEIL/NOX_ELINA_MIN_CONTACT_02_20261020.png",
+      "bytes": 2648632,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "CANDIDATE_PREVIS_OR_QA",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "1e2c3a67a5bf412793eaceab231df1e7a00594b947e0cbe8fdb4e9b227e8045d",
+      "source_name": "NOX_ELINA_MIN_CONTACT_02_20261020.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/ELINA_VEIL/NOX_ELINA_MIN_CONTACT_03_DUPLICATE_QA_20261020.png",
+      "bytes": 2817537,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "CANDIDATE_PREVIS_OR_QA",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "6e51b470520337026c582e45760c002b78dde570de784f968b12e043449bdf82",
+      "source_name": "NOX_ELINA_MIN_CONTACT_03_DUPLICATE_QA_20261020.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/ELINA_VEIL/NOX_ELINA_MIN_CONTACT_04_DUPLICATE_QA_20261020.png",
+      "bytes": 2773933,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "CANDIDATE_PREVIS_OR_QA",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "e8010aea93f399bd6110daffd826b483279efa6461765d1eaba86ff63511b565",
+      "source_name": "NOX_ELINA_MIN_CONTACT_04_DUPLICATE_QA_20261020.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/ELINA_VEIL/NOX_ELINA_MIN_CONTACT_05_DUPLICATE_QA_20261020.png",
+      "bytes": 2791541,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "CANDIDATE_PREVIS_OR_QA",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "d98db7cabdf777f1c4191d081df807c3e00c416edc6f243272af869dbfdfba30",
+      "source_name": "NOX_ELINA_MIN_CONTACT_05_DUPLICATE_QA_20261020.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/ELINA_VEIL/NOX_ELINA_PASSPORT_SAVED_20261020.png",
+      "bytes": 2517763,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "SAVED_REQUIRES_IDENTITY_QA",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "978fe4a82ea9be0277dfab759912d2591896fd26ca1eba452bc2d2b79416162f",
+      "source_name": "NOX_ELINA_PASSPORT_SAVED_20261020.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/02_CORE_AND_SECTION_CONCEPTS/NOX_HELION_05_08_OVERVIEW_20261020.png",
+      "bytes": 3760257,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "CANDIDATE_PREVIS_OR_SOURCE",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "5834057198aa8354dd683a6cfb18cb4119cff94ca66004efd5a3ab024997d6cd",
+      "source_name": "NOX_HELION_05_08_OVERVIEW_20261020.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/02_CORE_AND_SECTION_CONCEPTS/NOX_HELION_8_SECTIONS_WORK_STYLE_COLLAGE_2x4_20261020.jpg",
+      "bytes": 3996517,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "CANDIDATE_PREVIS_OR_SOURCE",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "ba5249ce41c14b1b79e7311bb06ff64669d596c018f020f6b30d33e6f473f2b0",
+      "source_name": "NOX_HELION_8_SECTIONS_WORK_STYLE_COLLAGE_2x4_20261020.jpg"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/02_CORE_AND_SECTION_CONCEPTS/NOX_HELION_8_SECTIONS_WORK_STYLE_COLLAGE_4x2_20261020.jpg",
+      "bytes": 4394495,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "CANDIDATE_PREVIS_OR_SOURCE",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "ec7ef6927dfdbd1075b6208adec0cfaea3e23cdbf2632a55988241091578c5b3",
+      "source_name": "NOX_HELION_8_SECTIONS_WORK_STYLE_COLLAGE_4x2_20261020.jpg"
+    },
+    {
+      "archive_path": "assets/approved_reference/Library/APPROVED_UI_20261019/NOX_HELION_APPROVED_CORE_01_CONSCIOUSNESS_20261020.png",
+      "bytes": 2285847,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "OWNER_APPROVED_CANONICAL",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "343e5c73539358fe2c086706b4155cc0f9cd9702fcd40a98b4aab130585bec97",
+      "source_name": "NOX_HELION_APPROVED_CORE_01_CONSCIOUSNESS_20261020.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/NOX_HELION_CAST_COLLAGE_PLAN_DASHBOARD.png",
+      "bytes": 137482,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "CANDIDATE_PREVIS_OR_SOURCE",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "07222abf89b1575aa47502957be6d303f6ac855986a59a32eb840bafad5ab70c",
+      "source_name": "NOX_HELION_CAST_COLLAGE_PLAN_DASHBOARD.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/APPROVED_UI_20261019/NOX_HELION_CORE_COLLAGE_VISUAL_APPROVED_LABELS_HOLD_20261020.png",
+      "bytes": 2617346,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "HOLD",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "31daf80427e67bf36ba89accdf1f8aa0d51e6089d51a6a6980d7f115db292142",
+      "source_name": "NOX_HELION_CORE_COLLAGE_VISUAL_APPROVED_LABELS_HOLD_20261020.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/02_CORE_AND_SECTION_CONCEPTS/NOX_HELION_CREATION_WORK_STYLE_CANDIDATE_20261020.png",
+      "bytes": 1711755,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "CANDIDATE_PREVIS_OR_SOURCE",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "1577999ad191933ab45b1c7af119b8b2484ca7b375addab3a2297b4c9cb8a278",
+      "source_name": "NOX_HELION_CREATION_WORK_STYLE_CANDIDATE_20261020.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/02_CORE_AND_SECTION_CONCEPTS/NOX_HELION_EVOLUTION_WORK_STYLE_CANDIDATE_20261020.png",
+      "bytes": 1711275,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "CANDIDATE_PREVIS_OR_SOURCE",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "cc7394d349aba3dc226a088e1ae808e78b79fbe515e75b7f3fd914a6175d3302",
+      "source_name": "NOX_HELION_EVOLUTION_WORK_STYLE_CANDIDATE_20261020.png"
+    },
+    {
+      "archive_path": "assets/approved_reference/Library/NOX_HELION_FIVE_CAST_KASSIEN_MATURE_ONLY.png",
+      "bytes": 463610,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "OWNER_APPROVED_CAST_REFERENCE",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "30d7cd6e10a4aa45f68bf81e5f461868c711d04d59a093492fc71078b10081d0",
+      "source_name": "NOX_HELION_FIVE_CAST_KASSIEN_MATURE_ONLY.png"
+    },
+    {
+      "archive_path": "assets/demo_preview/Library/APPROVED_UI_20261019/NOX_HELION_HOME_CINEMATIC_MOTION_DEMO_20261019.gif",
+      "bytes": 1188026,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "DEMO_OR_MOTION_PREVIEW",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "76e6b1bf1c2c70122d9b5125cc99eaa7cc9b9080630d369014a59afe34cf3f82",
+      "source_name": "NOX_HELION_HOME_CINEMATIC_MOTION_DEMO_20261019.gif"
+    },
+    {
+      "archive_path": "assets/demo_preview/Library/APPROVED_UI_20261019/NOX_HELION_HOME_CINEMATIC_MOTION_DEMO_20261019.mp4",
+      "bytes": 413049,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "DEMO_OR_MOTION_PREVIEW",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "4843930323b592c14cece6df49cb9de95917d9c709c8fdc27e05d877d11b32d7",
+      "source_name": "NOX_HELION_HOME_CINEMATIC_MOTION_DEMO_20261019.mp4"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/NOX_HELION_HOME_KASSIEN_MATURE_REFERENCE.png",
+      "bytes": 2664268,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "PROPOSAL_REFERENCE",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "b2fbfb788d9ba8777d50e3463bed9edd453f35e748223954849aea9b276fe295",
+      "source_name": "NOX_HELION_HOME_KASSIEN_MATURE_REFERENCE.png"
+    },
+    {
+      "archive_path": "assets/approved_reference/Library/NOX_HELION_HOME_OWNER_APPROVED_20261019.png",
+      "bytes": 2785545,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "OWNER_APPROVED_CANONICAL",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "0dd0460227740e9d2f001d4db36fe0915f5535f465700253d595c06b5506fd9e",
+      "source_name": "NOX_HELION_HOME_OWNER_APPROVED_20261019.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/02_CORE_AND_SECTION_CONCEPTS/NOX_HELION_INTELLECT_SCREEN_CANDIDATE_USER_SHOWN_20261020.png",
+      "bytes": 2455954,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "CANDIDATE_PREVIS_OR_SOURCE",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "c244e71cd70995cedcaf7188fff45ff7b81a7dd17d5043c3b257d764777126b4",
+      "source_name": "NOX_HELION_INTELLECT_SCREEN_CANDIDATE_USER_SHOWN_20261020.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/02_CORE_AND_SECTION_CONCEPTS/NOX_HELION_INTELLECT_WORK_STYLE_CANDIDATE_20261020.png",
+      "bytes": 1704771,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "CANDIDATE_PREVIS_OR_SOURCE",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "8e1e881f1e2bdf60b576b1131e91f77b4714daeb85bc5ef9d48f2cb9717a594c",
+      "source_name": "NOX_HELION_INTELLECT_WORK_STYLE_CANDIDATE_20261020.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/02_CORE_AND_SECTION_CONCEPTS/NOX_HELION_KNOWLEDGE_WORK_STYLE_CANDIDATE_20261020.png",
+      "bytes": 1703320,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "CANDIDATE_PREVIS_OR_SOURCE",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "48be7bf85f39fbc97ae7fa5069abc4a3907ea75686bff25f8b4700b2d87b1ca6",
+      "source_name": "NOX_HELION_KNOWLEDGE_WORK_STYLE_CANDIDATE_20261020.png"
+    },
+    {
+      "archive_path": "assets/historical_unverified/Library/NOX_HELION_LEON_PROFILE_CONCEPT.png",
+      "bytes": 2249667,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "NOT_APPROVED_CONCEPT",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "a1bc37eebce12cee6ab9d8aec2219afb5dd5ea7eb107322547c7276536cdebab",
+      "source_name": "NOX_HELION_LEON_PROFILE_CONCEPT.png"
+    },
+    {
+      "archive_path": "assets/historical_unverified/Library/NOX_HELION_LEON_SCENES_CONCEPT.png",
+      "bytes": 2175121,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "NOT_APPROVED_CONCEPT",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "6c9c1e905986664fab6740735b29280bde918d8527f1830da10e57263dbc8031",
+      "source_name": "NOX_HELION_LEON_SCENES_CONCEPT.png"
+    },
+    {
+      "archive_path": "assets/approved_reference/Library/APPROVED_UI_20261019/NOX_HELION_MENU_8_SECTIONS_COLLAGE_APPROVED_20261020.png",
+      "bytes": 2662583,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "OWNER_APPROVED_CANONICAL",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "7d181604f913cf9956c173c14da3dc7fd0238c389322896588cec4407b4024a4",
+      "source_name": "NOX_HELION_MENU_8_SECTIONS_COLLAGE_APPROVED_20261020.png"
+    },
+    {
+      "archive_path": "assets/approved_reference/Library/APPROVED_UI_20261019/NOX_HELION_MENU_OWNER_APPROVED_20261019.png",
+      "bytes": 2304970,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "OWNER_APPROVED_CANONICAL",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "4c73d137e6d25f496abb006dbb8af08b1fe272d2f935c5006f0f42b6fd9992b9",
+      "source_name": "NOX_HELION_MENU_OWNER_APPROVED_20261019.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/02_CORE_AND_SECTION_CONCEPTS/NOX_HELION_PEOPLE_WORK_STYLE_CANDIDATE_20261020.png",
+      "bytes": 1702854,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "CANDIDATE_PREVIS_OR_SOURCE",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "188cc222b9a7cfd33d4dbc568fb70c28ab98b0f0859743c435a5d9c98d903b3b",
+      "source_name": "NOX_HELION_PEOPLE_WORK_STYLE_CANDIDATE_20261020.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/02_CORE_AND_SECTION_CONCEPTS/NOX_HELION_SYSTEM_WORK_STYLE_CANDIDATE_20261020.png",
+      "bytes": 1713625,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "CANDIDATE_PREVIS_OR_SOURCE",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "2257f00d0cb9381e796657b1793ffad65258ba981d75cee68b5e8cd77e437706",
+      "source_name": "NOX_HELION_SYSTEM_WORK_STYLE_CANDIDATE_20261020.png"
+    },
+    {
+      "archive_path": "assets/approved_reference/Library/APPROVED_UI_20261019/NOX_HELION_WORK_OWNER_APPROVED_20261019.png",
+      "bytes": 2299227,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "OWNER_APPROVED_CANONICAL",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "f8ff2e086fec728cd228fa942294d79e3ff1c63df81e989ec43419128cd4dd14",
+      "source_name": "NOX_HELION_WORK_OWNER_APPROVED_20261019.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/02_CORE_AND_SECTION_CONCEPTS/NOX_HELION_WORLD_WORK_STYLE_CANDIDATE_20261020.png",
+      "bytes": 1705504,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "CANDIDATE_PREVIS_OR_SOURCE",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "a4bc1ff0e32777d2c0a487e9f64f754f8eeaf3d1b197596fa5d6f5aa7667b7c0",
+      "source_name": "NOX_HELION_WORLD_WORK_STYLE_CANDIDATE_20261020.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/NOX_KAIREN_3D_BLOCKING_3_SETS_V1.glb",
+      "bytes": 34784,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "3D_BLOCKING_PREVIS",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "e1cc303ba284a9d59e02aee4f6dc55d1698b8d61e3b566ef28acc882837187e9",
+      "source_name": "NOX_KAIREN_3D_BLOCKING_3_SETS_V1.glb"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/NOX_KAIREN_6K_PRESERVED_SOURCE_ATLAS.png",
+      "bytes": 23985432,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "SOURCE_ATLAS_NOT_NATIVE_6K_PHOTO",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "db2417091ded0d2636eddf92be222458bbc1b1eb73e4c5a9ac6b969b1976a7ab",
+      "source_name": "NOX_KAIREN_6K_PRESERVED_SOURCE_ATLAS.png"
+    },
+    {
+      "archive_path": "assets/demo_preview/Library/NOX_KAIREN_NATIVE_BOARD_PREVIEW_8S_V1.mp4",
+      "bytes": 2168554,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "PREVIS_VIDEO",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "e0dc12fdea05fc131c97d187fe38e3603f7cc21e5bf71ff49d53f799b3ccc407",
+      "source_name": "NOX_KAIREN_NATIVE_BOARD_PREVIEW_8S_V1.mp4"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/KAIREN_VOSS/WORK_V22/NOX_KAIREN_WORK_ATLAS_03_SOURCE_LOCKED_PREVIS.png",
+      "bytes": 1423805,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "CANDIDATE_PREVIS_OR_SOURCE",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "11b6ebe3b98ad21a884ab9cb5aadf9ff394adc871c3849ded627a2e748e48c57",
+      "source_name": "NOX_KAIREN_WORK_ATLAS_03_SOURCE_LOCKED_PREVIS.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/KAIREN_VOSS/WORK_V22/NOX_KAIREN_WORK_ATLAS_04_SOURCE_LOCKED_PREVIS.png",
+      "bytes": 1839503,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "CANDIDATE_PREVIS_OR_SOURCE",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "846f0140c14fa4323b8cb1ff0fff36ee4a3f0ed5eb23a907839db85f297cfa9a",
+      "source_name": "NOX_KAIREN_WORK_ATLAS_04_SOURCE_LOCKED_PREVIS.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/KAIREN_VOSS/WORK_V22/NOX_KAIREN_WORK_ATLAS_05_SOURCE_LOCKED_PREVIS.png",
+      "bytes": 1515465,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "CANDIDATE_PREVIS_OR_SOURCE",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "83e23a669051c31c71dcf334712f4bb89021eaa7c6ae5546158bc0da306ca1f7",
+      "source_name": "NOX_KAIREN_WORK_ATLAS_05_SOURCE_LOCKED_PREVIS.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/KAIREN_VOSS/WORK_V22/NOX_KAIREN_WORK_VISIBLE_RECOMPOSED_02_TO_05.png",
+      "bytes": 2533069,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "CONTACT_GALLERY_ONLY",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "56bd8335675a947530867760175336ce55d4e5c9cfe3834060e44eccc34306de",
+      "source_name": "NOX_KAIREN_WORK_VISIBLE_RECOMPOSED_02_TO_05.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/KAIREN_VOSS/WORK_V22/NOX_KAIREN_WORK_VISIBLE_SOURCE_ATLASES_01.png",
+      "bytes": 6827984,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "CONTACT_GALLERY_ONLY",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "993f16e011e5d42966003e0eeb1cd4867aaeb061a21ef300d02b2a36538d0582",
+      "source_name": "NOX_KAIREN_WORK_VISIBLE_SOURCE_ATLASES_01.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/KAIREN_VOSS/WORK_V22/NOX_KAIREN_WORK_VISIBLE_SOURCE_ATLASES_02.png",
+      "bytes": 6799246,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "CONTACT_GALLERY_ONLY",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "48401697e39749f6bf240fa1628065bbadfb4b4232ec390e6d131684423c09af",
+      "source_name": "NOX_KAIREN_WORK_VISIBLE_SOURCE_ATLASES_02.png"
+    },
+    {
+      "archive_path": "assets/approved_reference/Library/NOX_KW_KASSIEN_OWNER_APPROVED_PASSPORT_20261020.png",
+      "bytes": 2603287,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "OWNER_APPROVED_IDENTITY_REFERENCE",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "d1b2162db7e2d17fe18f052f1c88f5163dd410585348a501529e164035158051",
+      "source_name": "NOX_KW_KASSIEN_OWNER_APPROVED_PASSPORT_20261020.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/Library/PERSONAS/LEON_ARDIS/MIN24_20261020/NOX_LEON_MIN24_CONTACT_INDEX_20261020.png",
+      "bytes": 4517988,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "UNVERIFIED_CONTACT_CANDIDATE",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "afb226b85b81c49a920ca29519ad992d03d0199b677327c8af2296c3da7f2ead",
+      "source_name": "NOX_LEON_MIN24_CONTACT_INDEX_20261020.png"
+    },
+    {
+      "archive_path": "assets/historical_unverified/GoogleDrive/Концепт интерфейса NOX HELION 北京赛车怎么.png",
+      "bytes": 2419215,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "HISTORICAL_UNVERIFIED",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "42f1f0370b00ce589e7a96943893f016f4a2b7ef7b541afea1a244cdaa94f223",
+      "source_name": "Концепт интерфейса NOX HELION 北京赛车怎么.png"
+    },
+    {
+      "archive_path": "assets/historical_unverified/GoogleDrive/NOX HELION_ Кинематографическая панель будущего.png",
+      "bytes": 2222139,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "HISTORICAL_UNVERIFIED",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "97bc30fbf62f25c5f7207bd53309d0469464353ee92e92476ffe3e3d0740ca46",
+      "source_name": "NOX HELION_ Кинематографическая панель будущего.png"
+    },
+    {
+      "archive_path": "assets/historical_unverified/GoogleDrive/Футуристическая панель NOX HELION(1).png",
+      "bytes": 2102131,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "HISTORICAL_UNVERIFIED",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "ebbff9246327cdfc0748ac6e0a4fd981c4a213e055cbe5b7ff33e5840eaa4d10",
+      "source_name": "Футуристическая панель NOX HELION(1).png"
+    },
+    {
+      "archive_path": "",
+      "bytes": 2045120,
+      "disposition": "EXACT_SHA256_DUPLICATE",
+      "lifecycle_status": "HISTORICAL_UNVERIFIED",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "5efa8746da67ef9b242a320c8caf75022d408f9c85d3e473fe581fd98a3a6732",
+      "source_name": "Кинематографичный интерфейс NOX HELION(1).png"
+    },
+    {
+      "archive_path": "assets/historical_unverified/GoogleDrive/Кинематографичный интерфейс NOX HELION(1) (1).png",
+      "bytes": 2045120,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "HISTORICAL_UNVERIFIED",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "5efa8746da67ef9b242a320c8caf75022d408f9c85d3e473fe581fd98a3a6732",
+      "source_name": "Кинематографичный интерфейс NOX HELION(1) (1).png"
+    },
+    {
+      "archive_path": "assets/historical_unverified/GoogleDrive/Персоны NOX HELION_ Выбор роли.png",
+      "bytes": 1982375,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "HISTORICAL_UNVERIFIED",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "a2f0cdc4b9bc996e776f31c12da863809262e84a6fa1aa29a1c81ebd1c6cf45f",
+      "source_name": "Персоны NOX HELION_ Выбор роли.png"
+    },
+    {
+      "archive_path": "",
+      "bytes": 2123119,
+      "disposition": "EXACT_SHA256_DUPLICATE",
+      "lifecycle_status": "HISTORICAL_UNVERIFIED",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "74d175ac14420a1cf3e72ac9f6559dda183ebf7a8840369c7b1684b289938883",
+      "source_name": "Футуристическая панель управления NOX HELION(1).png"
+    },
+    {
+      "archive_path": "assets/historical_unverified/GoogleDrive/Футуристическая панель управления NOX HELION(1) (1).png",
+      "bytes": 2123119,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "HISTORICAL_UNVERIFIED",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "74d175ac14420a1cf3e72ac9f6559dda183ebf7a8840369c7b1684b289938883",
+      "source_name": "Футуристическая панель управления NOX HELION(1) (1).png"
+    },
+    {
+      "archive_path": "",
+      "bytes": 1982375,
+      "disposition": "EXACT_SHA256_DUPLICATE",
+      "lifecycle_status": "HISTORICAL_UNVERIFIED",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "a2f0cdc4b9bc996e776f31c12da863809262e84a6fa1aa29a1c81ebd1c6cf45f",
+      "source_name": "Персоны NOX HELION_ Выбор роли (1).png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/GoogleDrive/NOX_HELION_MENU_SUBSECTION_INTELLECT_PREVIEW_20261020.png",
+      "bytes": 1531830,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "CANDIDATE_PREVIS_OR_SOURCE",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "96c727b38e99fd4646ab24d863db77502d86f9d92c87490a8fdcbb3b12332f71",
+      "source_name": "NOX_HELION_MENU_SUBSECTION_INTELLECT_PREVIEW_20261020.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/GoogleDrive/NOX_HELION_MENU_PREVIEW_V1_20261020.png",
+      "bytes": 2249502,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "CANDIDATE_PREVIS_OR_SOURCE",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "ab585977b17a5d859571b6b300a066b574258ea1327c4d30ced42751319a75aa",
+      "source_name": "NOX_HELION_MENU_PREVIEW_V1_20261020.png"
+    },
+    {
+      "archive_path": "assets/demo_preview/GoogleDrive/NOX_HELION_CONSCIOUSNESS_LIVE_MOTION_V1.gif",
+      "bytes": 4075502,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "DEMO_OR_MOTION_PREVIEW",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "8041275edf9937c9cf991a17223a0ce35efe9336df90169417c56043a9d94ad6",
+      "source_name": "NOX_HELION_CONSCIOUSNESS_LIVE_MOTION_V1.gif"
+    },
+    {
+      "archive_path": "assets/candidate_previs/GoogleDrive/NOX_HELION_CONSCIOUSNESS_LIVE_MAX_PREVIEW.png",
+      "bytes": 970576,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "CANDIDATE_PREVIS_OR_SOURCE",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "cf93846e62405e8184d6ba4a7db6253d0213b4595341353ead82b11e80c3a517",
+      "source_name": "NOX_HELION_CONSCIOUSNESS_LIVE_MAX_PREVIEW.png"
+    },
+    {
+      "archive_path": "assets/demo_preview/GoogleDrive/NOX_HELION_MINIMAL_BEAUTY_MOTION_20261020.gif",
+      "bytes": 1121084,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "DEMO_OR_MOTION_PREVIEW",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "051e8823fbbccd990f9afddd20083ea2ae4430ec8f96007fe141ce2e8e8682d7",
+      "source_name": "NOX_HELION_MINIMAL_BEAUTY_MOTION_20261020.gif"
+    },
+    {
+      "archive_path": "assets/candidate_previs/GoogleDrive/NOX_HELION_HOME_LIVE_ORBITS_PREVIEW.png",
+      "bytes": 2541079,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "CANDIDATE_PREVIS_OR_SOURCE",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "51aa5b60c1c374f7af2143c2476ade353733de3076f7be49c564ad3e7708aff3",
+      "source_name": "NOX_HELION_HOME_LIVE_ORBITS_PREVIEW.png"
+    },
+    {
+      "archive_path": "assets/historical_unverified/GoogleDrive/helion_d02_orbital_stage.webp",
+      "bytes": 100666,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "HISTORICAL_UNVERIFIED",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "2435d9169a25a3ce1f99c5361d64e17723f8f581a678c67de23d66030f2dfe36",
+      "source_name": "helion_d02_orbital_stage.webp"
+    },
+    {
+      "archive_path": "assets/historical_unverified/GoogleDrive/NOX_HELION_4_MASTER_COLLAGES_APPROVED_20261020.png",
+      "bytes": 2835851,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "UNVERIFIED_APPROVAL_CLAIM",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "c75ac94e3c18f0ec85441669568a7287f355ee8cb86b6715a207f3558f2bdadf",
+      "source_name": "NOX_HELION_4_MASTER_COLLAGES_APPROVED_20261020.png"
+    },
+    {
+      "archive_path": "",
+      "bytes": 1188026,
+      "disposition": "EXACT_SHA256_DUPLICATE",
+      "lifecycle_status": "DEMO_OR_MOTION_PREVIEW",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "76e6b1bf1c2c70122d9b5125cc99eaa7cc9b9080630d369014a59afe34cf3f82",
+      "source_name": "NOX_HELION_HOME_CINEMATIC_MOTION_DEMO.gif"
+    },
+    {
+      "archive_path": "assets/candidate_previs/GoogleDrive/NOX_HELION_CORE_DETAIL_REVIEW.png",
+      "bytes": 2796940,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "CANDIDATE_PREVIS_OR_SOURCE",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "5f1e6b51e8df9c77deaded984a8af5372a20feb471cb21fd05526c126bc57115",
+      "source_name": "NOX_HELION_CORE_DETAIL_REVIEW.png"
+    },
+    {
+      "archive_path": "assets/historical_unverified/GoogleDrive/NOX_HELION_HELION_CHAT_ACCEPTED_PREVIOUS.png",
+      "bytes": 2756757,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "HISTORICAL_UNVERIFIED",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "00532e9ea72c22ea3366b763580558f443777cbdccef5be32a53be22562180a8",
+      "source_name": "NOX_HELION_HELION_CHAT_ACCEPTED_PREVIOUS.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/GoogleDrive/NOX_HELION_8_LIVING_CORES_COLLAGE_PREVIEW.png",
+      "bytes": 1270052,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "CANDIDATE_PREVIS_OR_SOURCE",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "69c75c651a5f3d5617c12664e63f9b8b7d9b6f329351601677a47a1604a5512b",
+      "source_name": "NOX_HELION_8_LIVING_CORES_COLLAGE_PREVIEW.png"
+    },
+    {
+      "archive_path": "",
+      "bytes": 2796940,
+      "disposition": "EXACT_SHA256_DUPLICATE",
+      "lifecycle_status": "CANDIDATE_PREVIS_OR_SOURCE",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "5f1e6b51e8df9c77deaded984a8af5372a20feb471cb21fd05526c126bc57115",
+      "source_name": "NOX_HELION_FOUR_CORE_PAGES_CONCEPT.png"
+    },
+    {
+      "archive_path": "assets/historical_unverified/GoogleDrive/NOX_HELION_EIGHT_CORES_ACCEPTED_COLLAGE.png",
+      "bytes": 2809802,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "HISTORICAL_UNVERIFIED",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "ed7dfe66da8db476f8ab05e5bfacdc3f0adcd1fa5ec3062dbcf6d2a4c7a5bc2e",
+      "source_name": "NOX_HELION_EIGHT_CORES_ACCEPTED_COLLAGE.png"
+    },
+    {
+      "archive_path": "assets/candidate_previs/GoogleDrive/NOX_HELION_HOME_MASTER_1_PREVIEW.png",
+      "bytes": 2540457,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "CANDIDATE_PREVIS_OR_SOURCE",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "5235c106a40eb8e7f0d3727c2d122e48b7863e07de1f60d2673901552da59d23",
+      "source_name": "NOX_HELION_HOME_MASTER_1_PREVIEW.png"
+    },
+    {
+      "archive_path": "assets/historical_unverified/GoogleDrive/image-gen-4(20261018-140638).png",
+      "bytes": 2587093,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "HISTORICAL_UNVERIFIED",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "7df8dd382eb638868c203a726add7c3d28b2e8e07ea3f9c35826c48b539207e8",
+      "source_name": "image-gen-4(20261018-140638).png"
+    },
+    {
+      "archive_path": "assets/historical_unverified/GoogleDrive/Интерфейс Нокс Хелион_ Чёрное Солнце.png",
+      "bytes": 2210623,
+      "disposition": "INCLUDED",
+      "lifecycle_status": "HISTORICAL_UNVERIFIED",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "77f95d6a45981cc0f441547ed5696c371641f3a144f8b6cd020e537c71389778",
+      "source_name": "Интерфейс Нокс Хелион_ Чёрное Солнце.png"
+    },
+    {
+      "archive_path": "",
+      "bytes": 2210623,
+      "disposition": "EXACT_SHA256_DUPLICATE",
+      "lifecycle_status": "HISTORICAL_UNVERIFIED",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "77f95d6a45981cc0f441547ed5696c371641f3a144f8b6cd020e537c71389778",
+      "source_name": "Интерфейс Нокс Хелион_ Чёрное Солнце (1).png"
+    },
+    {
+      "archive_path": "",
+      "bytes": 2476318,
+      "disposition": "EXACT_SHA256_DUPLICATE",
+      "lifecycle_status": "HISTORICAL_UNVERIFIED",
+      "rights_status": "SOURCE_RIGHTS_NOT_REVERIFIED",
+      "sha256": "8b97945fed08095b39dbd703c2587a9d3b8943e671f7347c37b0ee8dfa0254f9",
+      "source_name": "AM-01-OWNER_APPROVED_IDENTITY_ARCHIVE.png"
+    }
+  ],
+  "schema": "NOX_M2_MEDIA_RIGHTS_INDEX_V1",
+  "source_csv": "rights/media_source_inventory_20261020.csv",
+  "source_csv_sha256": "4c7751f09fc2e78164c05f839cb3b7de6ed8f9e30d381c99589af0acf9ca5b1a",
+  "status": "SOURCE_RIGHTS_NOT_REVERIFIED"
+}
