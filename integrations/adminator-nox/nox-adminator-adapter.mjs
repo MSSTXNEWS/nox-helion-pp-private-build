@@ -1,0 +1,219 @@
+import { createP01RouteDispatcher } from "../../proposals/P01/WOW-MAX10/route-dispatch.mjs";
+
+export const NOX_NATIVE_ROUTES = Object.freeze([
+  "evolution", "study-queue", "learning-proofs", "weights",
+  "gpu-training", "model-library", "core-status", "commands", "progress"
+]);
+const routeSet = new Set(NOX_NATIVE_ROUTES);
+const safeNumber = (value) => Number.isFinite(value) && value >= 0 && value <= 100;
+
+export function validateRouteBindings(bindings = {}) {
+  if (!bindings || typeof bindings !== "object" || Array.isArray(bindings)) {
+    throw new TypeError("NOX_ROUTE_BINDINGS_OBJECT_REQUIRED");
+  }
+  const result = Object.create(null);
+  for (const [key, routeId] of Object.entries(bindings)) {
+    if (!/^[a-zA-Z0-9._/-]{1,120}$/.test(key) || !routeSet.has(routeId)) {
+      throw new Error("NOX_ROUTE_BINDING_NOT_IN_CANONICAL_ALLOWLIST");
+    }
+    result[key] = routeId;
+  }
+  return Object.freeze(result);
+}
+
+export function formatMetric(value, suffix = "%") {
+  if (!safeNumber(value)) return "—";
+  return String(Math.round(value * 10) / 10) + suffix;
+}
+
+export function buildSparkline(values, width = 320, height = 72) {
+  if (!Array.isArray(values) || values.length < 2 || values.length > 240 ||
+      !values.every(Number.isFinite)) return null;
+  const min = Math.min(...values), max = Math.max(...values);
+  const span = Math.max(1, max - min);
+  return values.map((value, index) => {
+    const x = (index / (values.length - 1)) * width;
+    const y = height - ((value - min) / span) * (height - 8) - 4;
+    return x.toFixed(1) + "," + y.toFixed(1);
+  }).join(" ");
+}
+
+function setState(element, state, reason = "") {
+  element.dataset.noxNativeState = state;
+  if (reason) element.dataset.noxNativeReason = reason;
+  else delete element.dataset.noxNativeReason;
+  if (state !== "confirmed") {
+    delete element.dataset.noxNativeAck;
+    delete element.dataset.noxNativeReceipt;
+  }
+}
+
+function flattenNavigation(root) {
+  for (const group of root.querySelectorAll("[data-nav-group]")) {
+    const toggle = group.querySelector("[data-nav-toggle]");
+    const submenu = group.querySelector(".nav-submenu");
+    if (toggle) {
+      toggle.removeAttribute("data-nav-toggle");
+      toggle.setAttribute("aria-expanded", "true");
+      toggle.hidden = true;
+      toggle.tabIndex = -1;
+    }
+    if (submenu) {
+      submenu.hidden = false;
+      submenu.removeAttribute("aria-hidden");
+      submenu.classList.add("nox-direct-action-grid");
+      submenu.style.display = "grid";
+    }
+    group.classList.add("nox-expanded-nav-group");
+  }
+  // Demo notification/profile popovers contain sample identities and fake data.
+  for (const wrapper of root.querySelectorAll(".dd-wrap")) wrapper.remove();
+}
+
+function replaceSelects(root) {
+  for (const select of root.querySelectorAll("select:not([data-nox-select-replaced])")) {
+    const fieldset = root.ownerDocument.createElement("fieldset");
+    fieldset.className = "nox-choice-group";
+    fieldset.setAttribute("aria-label",
+      select.labels && select.labels[0] ? select.labels[0].textContent.trim() :
+      (select.getAttribute("aria-label") || "Выбор"));
+    const options = Array.from(select.options).filter((option) =>
+      !option.disabled && option.value !== "");
+    if (!options.length) continue;
+    const sync = () => {
+      for (const button of fieldset.querySelectorAll("button")) {
+        const option = select.options[Number(button.dataset.optionIndex)];
+        const selected = !!(option && option.selected);
+        button.setAttribute("aria-pressed", String(selected));
+        button.classList.toggle("is-selected", selected);
+      }
+    };
+    for (const option of options) {
+      const button = root.ownerDocument.createElement("button");
+      button.type = "button";
+      button.className = "nox-choice-button";
+      button.textContent = option.textContent.trim();
+      button.dataset.optionIndex = String(option.index);
+      button.addEventListener("click", () => {
+        if (select.multiple) option.selected = !option.selected;
+        else select.value = option.value;
+        select.dispatchEvent(new Event("change", { bubbles: true }));
+        sync();
+      });
+      fieldset.append(button);
+    }
+    select.dataset.noxSelectReplaced = "true";
+    select.classList.add("nox-visually-hidden-select");
+    select.before(fieldset);
+    sync();
+  }
+}
+
+function guardUnboundControls(root) {
+  for (const anchor of root.querySelectorAll("a[href]")) {
+    const href = anchor.getAttribute("href") || "";
+    const internalPage = /^(?!https?:|javascript:|#)([./][^:]*|[a-zA-Z0-9_-]+\.html)(?:[?#].*)?$/.test(href);
+    if (!internalPage && !anchor.dataset.noxRoute) {
+      anchor.removeAttribute("href");
+      anchor.setAttribute("aria-disabled", "true");
+      anchor.dataset.noxNativeState = "hold";
+      anchor.title = "Внешнее или демонстрационное действие отключено";
+    }
+  }
+  for (const button of root.querySelectorAll('button[type="submit"], input[type="submit"]')) {
+    if (!button.dataset.noxRoute && !button.dataset.noxLocalAction) {
+      button.disabled = true;
+      button.dataset.noxNativeState = "hold";
+      button.title = "Действие не подключено к OneHost";
+    }
+  }
+}
+
+function renderSnapshot(root, snapshot = {}) {
+  const metrics = snapshot.metrics && typeof snapshot.metrics === "object" ? snapshot.metrics : {};
+  for (const node of root.querySelectorAll("[data-nox-metric]")) {
+    const value = metrics[node.dataset.noxMetric];
+    node.textContent = formatMetric(value, node.dataset.suffix || "%");
+    node.dataset.noxMetricState = safeNumber(value) ? "live" : "unavailable";
+  }
+  for (const node of root.querySelectorAll("[data-nox-series]")) {
+    const values = snapshot.series && snapshot.series[node.dataset.noxSeries];
+    const polyline = node.querySelector("polyline");
+    const points = buildSparkline(values);
+    if (!polyline || !points) {
+      node.dataset.noxSeriesState = "unavailable";
+      node.setAttribute("aria-label", "Нет подтверждённых данных");
+    } else {
+      polyline.setAttribute("points", points);
+      node.dataset.noxSeriesState = "live";
+    }
+  }
+  root.dataset.noxTelemetryAt = typeof snapshot.timestamp === "string" ?
+    snapshot.timestamp : "unavailable";
+}
+
+export function mountAdminatorNox({
+  root = document,
+  hostPort = globalThis.noxNativePort,
+  routeBindings = globalThis.NOX_ADMINATOR_ROUTE_BINDINGS || {}
+} = {}) {
+  const doc = root.nodeType === 9 ? root : root.ownerDocument;
+  if (!doc || !root.querySelectorAll) throw new TypeError("NOX_ADMINATOR_ROOT_REQUIRED");
+  const bindings = validateRouteBindings(routeBindings);
+  const hasHost = !!hostPort && typeof hostPort.isAvailable === "function" &&
+    typeof hostPort.invokeRoute === "function";
+  const dispatcher = hasHost ? createP01RouteDispatcher(hostPort) : null;
+  let disposed = false;
+
+  flattenNavigation(root);
+  replaceSelects(root);
+  guardUnboundControls(root);
+
+  const onClick = async (event) => {
+    const element = event.target && event.target.closest ?
+      event.target.closest("[data-nox-route]") : null;
+    if (!element || !root.contains(element)) return;
+    event.preventDefault();
+    if (disposed || element.dataset.noxPending === "true") return;
+    const routeId = bindings[element.dataset.noxRoute];
+    if (!routeId || !dispatcher) {
+      setState(element, "hold", "NATIVE_HOST_OR_ROUTE_UNAVAILABLE");
+      return;
+    }
+    element.dataset.noxPending = "true";
+    setState(element, "pending");
+    try {
+      const result = await dispatcher.invoke(routeId);
+      if (disposed) return;
+      if (result && result.ok === true && typeof result.receiptId === "string") {
+        element.dataset.noxNativeAck = "true";
+        element.dataset.noxNativeReceipt = result.receiptId;
+        setState(element, "confirmed");
+      } else {
+        setState(element, "hold", result && result.reason || "ACK_MISSING");
+      }
+    } catch {
+      setState(element, "hold", "NATIVE_DISPATCH_FAILED");
+    } finally {
+      delete element.dataset.noxPending;
+    }
+  };
+
+  const onTelemetry = (event) => {
+    if (!disposed) renderSnapshot(root, event.detail || {});
+  };
+  root.addEventListener("click", onClick, true);
+  if (doc.defaultView) doc.defaultView.addEventListener("nox:telemetry", onTelemetry);
+  renderSnapshot(root, { metrics: {}, series: {}, timestamp: "unavailable" });
+
+  return Object.freeze({
+    renderSnapshot(snapshot) { if (!disposed) renderSnapshot(root, snapshot); },
+    destroy() {
+      if (disposed) return;
+      disposed = true;
+      root.removeEventListener("click", onClick, true);
+      if (doc.defaultView) doc.defaultView.removeEventListener("nox:telemetry", onTelemetry);
+      if (dispatcher) dispatcher.close();
+    }
+  });
+}
