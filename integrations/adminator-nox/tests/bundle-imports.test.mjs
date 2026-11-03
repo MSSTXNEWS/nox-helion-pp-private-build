@@ -20,7 +20,7 @@ test("offline native bundle contains only internally resolvable imports", async 
     const sourcePath = resolve(root, asset);
     assert.ok(!relative(root, sourcePath).startsWith(".."), asset + " outside dist");
     const text = await readFile(sourcePath, "utf8");
-    const rx = /\bfrom\s+["']([^"']+)["']/g;
+    const rx = /^\s*import\s+(?:[^;\n]*?\s+from\s+)?["']([^"']+)["']/gm;
     for (const match of text.matchAll(rx)) {
       const specifier = match[1];
       assert.ok(specifier.startsWith("./") || specifier.startsWith("../"),
