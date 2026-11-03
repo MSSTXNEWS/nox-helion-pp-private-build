@@ -6,6 +6,7 @@ import {createP01RouteDispatcher} from "./owner-dispatch.mjs";
 import {validateMenuV2,appendMenuV2} from "./menu-v2-adapter.mjs";
 import {projectSpaceView} from "./owner-e05.mjs";
 import {createNativeReadOnlyPort} from "./native-readonly.mjs";
+import {createNativeMenuClient} from "../../ui/onehost-menu-bindings.mjs";
 const validId=x=>typeof x==="string"&&/^[a-zA-Z0-9._:-]{1,128}$/.test(x);
 const unique=x=>new Set(x).size===x.length;
 const hex=x=>typeof x==="string"&&/^[0-9a-f]{64}$/.test(x);
@@ -53,7 +54,7 @@ function openExistingScreen(route) {
  target.click();
  return document.getElementById(screen).classList.contains("active");
 }
-function safeRoute(route,probe,label=route){
+function safeRoute(route,probe,label=route,aiClient=null,payload={}){
  const line=node("div",undefined,"mega814-action");
  const button=node("button",label,"mega814-button");
  const status=node("small","HOLD · не подтверждён native handler");
@@ -67,6 +68,31 @@ function safeRoute(route,probe,label=route){
        "Открыт существующий экран · backend требует отдельной QA":
        "HOLD · исходный экран недоступен";
    });
+ }
+ if(route==="helion.chat"&&aiClient){
+  button.disabled=false;button.textContent=label||"СПРОСИТЬ NOX";
+  status.textContent="Готово к отправке в существующий AI / OneHost канал";
+  const answer=node("pre",undefined,"mega814-ai-answer");answer.hidden=true;
+  button.addEventListener("click",async()=>{
+   if(button.dataset.pending==="true")return;
+   button.dataset.pending="true";button.disabled=true;
+   status.textContent="NOX AI · запрос отправлен · ожидание native-ответа";
+   answer.hidden=true;answer.textContent="";
+   try{
+    const reply=await aiClient.request("helion.chat",payload);
+    if(reply?.routeId==="helion.chat"&&reply.state==="COMPLETED"){
+     const value=reply.result;
+     const rendered=typeof value?.answer==="string"?value.answer:
+      typeof value?.text==="string"?value.text:JSON.stringify(value,null,2);
+     answer.textContent=String(rendered||"AI ответил без текстового содержимого").slice(0,12000);
+     answer.hidden=false;
+     status.textContent="AI-ответ получен · выполнение запрошенной операции отдельно не подтверждено";
+    }else status.textContent="HOLD · "+String(reply?.errorCode||"NOX_AI_NATIVE_HOLD");
+   }catch(error){
+    status.textContent="HOLD · "+(error&&/^[A-Z0-9_]{1,80}$/.test(error.message)?error.message:"NOX_AI_REQUEST_FAILED");
+   }finally{delete button.dataset.pending;button.disabled=false}
+  });
+  line.append(answer);
  }
  if(route==="model-library"&&probe?.available===true){
    button.disabled=false;
@@ -86,7 +112,7 @@ function safeRoute(route,probe,label=route){
 }
 /* OWNER MENU V2: the TEN original pictured asteroid objects ARE buttons.
    Never draw a second navigation bar or replace approved PNG pixels. */
-function menuWorlds(menu,s,probe,menuV2){
+function menuWorlds(menu,s,probe,menuV2,aiClient){
  const panel=node("section",undefined,"mega814-menu-scene");
  panel.id="nox-mega814-menu";
  const scene=node("div",undefined,"mega814-spatial");scene.hidden=true;
@@ -112,7 +138,7 @@ function menuWorlds(menu,s,probe,menuV2){
   detail.hidden=false;heading.textContent=w.label;controls.replaceChildren();
   // First show the canonical world's 193-tree subsections immediately:
   // a second click on a collapsed section is NOT part of the approved MENU.
-  appendMenuV2(controls,w,menuV2,(route,label)=>safeRoute(route,probe,label));
+  appendMenuV2(controls,w,menuV2,(route,label,payload)=>safeRoute(route,probe,label,aiClient,payload));
   const originalRoutes=node("details",undefined,"mega814-v2-legacy");
   originalRoutes.append(node("summary","Исходные маршруты · "+w.routes.length));
   const open=node("button","ОТКРЫТЬ СУЩЕСТВУЮЩИЙ РАЗДЕЛ","mega814-button");
@@ -419,7 +445,7 @@ export function bootstrapMega814(s,menuV2){
  const destroy=()=>{if(closed)return;closed=true;
     motionObserver?.disconnect();motionPref?.removeEventListener?.("change",syncMotion);
     lowPref?.removeEventListener?.("change",syncMotion);
-    probe.close();store.close();world.destroy();work.destroy();castPanel.remove();spacePanel.destroy();};
+    probe.close();aiClient?.destroy();store.close();world.destroy();work.destroy();castPanel.remove();spacePanel.destroy();};
  window.addEventListener("pagehide",destroy,{once:true});
  return {summary,nativeReady:probe.available,e07:"HOLD",destroy};
 }
