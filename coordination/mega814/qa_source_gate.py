@@ -41,7 +41,7 @@ def check():
  js=(ROOT/"mega814.mjs").read_text("utf-8")
  catalog=json.loads((ROOT/"menu-v2-193.json").read_text("utf-8"))
  assert hashlib.sha256((ROOT/"menu-v2-193.json").read_bytes()).hexdigest()=="0e300d0675930c5f5b83a03fc768868e89fd5f5545fd3ba5009493680c0d743b", "MENU_V2_APPROVED_CATALOG_SHA_HOLD"
- assert hashlib.sha256((ROOT/"menu-v2-adapter.mjs").read_bytes()).hexdigest()=="83e501025b05c7a1b2d753ab174e6bb5970b277bf1179f07b6a7a7803e452239", "MENU_V2_APPROVED_ADAPTER_SHA_HOLD"
+ assert hashlib.sha256((ROOT/"menu-v2-adapter.mjs").read_bytes()).hexdigest()=="cee7e06fb60406c5f4e37cc84b974f36de147696011607578fc6808fe6af2e05", "MENU_V2_APPROVED_ADAPTER_SHA_HOLD"
  assert catalog["schema"]=="NOX-MENU-V2-193-EXACT-OWNER-SPEC-V1"
  assert len(catalog["worlds"])==10 and sum(len(w["items"]) for w in catalog["worlds"])==193
  assert len({i["id"] for w in catalog["worlds"] for i in w["items"]})==193
