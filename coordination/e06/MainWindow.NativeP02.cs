@@ -25,7 +25,7 @@ public partial class MainWindow
         "chat.rag","chat.voice","chat.stop","calls.history","chat.commands",
         "models.installed","models.digest","gpu.preflight","training.start",
         "training.pause","training.resume","training.checkpoints","training.evaluate",
-        "system.autostart", "browser.open", "browser.navidle"
+        "system.autostart", "browser.open", "browser.navidle", "menu.dispatch"
     };
     private Process? _nativeP02Process;
     private NativePythonPipe? _nativeP02Pipe;
@@ -168,6 +168,23 @@ public partial class MainWindow
     private async Task<NativePipeResult> DispatchNativeOwnerAsync(string route, JsonElement payload,
         CancellationToken cancel)
     {
+        if (route == "menu.dispatch") {
+            // B7: MENU10 route-dispatch. Eight tiles only, native ACL, no D02/HOME change.
+            if (cancel.IsCancellationRequested || _nativeP02Core is not { } core ||
+                _nativeP02Bridge is not { } bridge || bridge.BrowserExternalActive ||
+                payload.ValueKind != JsonValueKind.Object ||
+                !payload.TryGetProperty("tile", out var tile) ||
+                tile.ValueKind != JsonValueKind.String ||
+                tile.GetString() is not string name)
+                return new NativePipeResult("", false, null, "MENU_DISPATCH_HOLD");
+            var allowed = new HashSet<string>(StringComparer.Ordinal) {
+                "РАБОТА","ИНТЕЛЛЕКТ","ЗНАНИЯ","ТВОРЧЕСТВО","ЛЮДИ","РАЗВИТИЕ","МИР","СИСТЕМА"
+            };
+            if (!allowed.Contains(name))
+                return new NativePipeResult("", false, null, "MENU_TILE_DENIED");
+            return new NativePipeResult("", true,
+                JsonSerializer.SerializeToElement(new { status = "MENU_DISPATCHED", tile = name }), null);
+        }
         if (route == "browser.navidle") {
             // B6: native idle entry for NOX Browser. No second WebView.
             // Reports NAV_IDLE only when the original core is alive and not external.
