@@ -87,8 +87,6 @@ class CompleteTests(unittest.TestCase):
   with self.assertRaises(ForgeHold):request_gpu_training(model_sha='a'*64,dataset_sha='b'*64,owner_consent=False,rights_verified=True,original_p04_readiness={'status':'HARDWARE_READY_ONLY','runtime_training_verified':False})
  def test_forge_gpu_not_ready(self):
   with self.assertRaises(ForgeHold):request_gpu_training(model_sha='a'*64,dataset_sha='b'*64,owner_consent=True,rights_verified=True,original_p04_readiness={'status':'HOLD','runtime_training_verified':False})
-if __name__=='__main__':unittest.main()
-
 class IntegrationWorker(unittest.TestCase):
  def test_evolution_multilang_existing_host(self):
   from nox_selfbuilder.evolution import EvolutionWorker
@@ -118,3 +116,6 @@ class IntegrationWorker(unittest.TestCase):
    self.assertEqual(r.status,'HOLD')
    self.assertIn('NATIVE_SOURCE_ADMISSION_CALLBACK_REQUIRED',r.receipt['reason'])
    self.assertEqual(h.call_count,0)
+
+if __name__=='__main__':
+ unittest.main()
