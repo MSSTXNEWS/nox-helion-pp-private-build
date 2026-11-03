@@ -21,7 +21,7 @@ const ACTIONS = new Set([...SELFBUILDER_MENU.map(x=>x.actionId),
   'selfbuilder.activator.status','selfbuilder.a1.status','selfbuilder.a1.boot',
   'selfbuilder.a1.tick','selfbuilder.propose']);
 const ROUTES = new Set(['helion.chat','chat.history','chat.stop','chat.model','chat.commands',
-  'models.catalog','models.queue','models.preflight','models.pull','models.cancel','models.retry','models.gguf.import','gpu.preflight','training.start','system.autostart','browser.open']);
+  'models.catalog','models.queue','models.preflight','models.pull','models.cancel','models.retry','models.gguf.import','gpu.preflight','training.start','system.autostart','browser.open','browser.navidle','menu.dispatch','menu.binding']);
 const AUTHORITY = new Set(['tenant','principal','windows_sid','session_id','scopes',
   'private_approved','native_approve','nativeConsent','admin']);
 
