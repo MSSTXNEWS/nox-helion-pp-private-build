@@ -1,0 +1,25 @@
+:root{--bg:#070b12;--card:#121820ee;--gold:#ddad6a;--ice:#70c9cf;--line:rgba(190,208,224,.22)}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(ellipse at 70% 0%,#1a2838,var(--bg) 55%);color:#edf3f5;font:16px/1.45 Segoe UI,sans-serif}
+.top{display:flex;gap:16px;align-items:center;padding:14px 20px}
+.brand{letter-spacing:.18em;color:var(--gold)}
+.search{flex:1;background:#0f1822;border:1px solid var(--line);color:inherit;border-radius:20px;padding:10px 16px}
+.sections{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:0 20px}
+.sections button,.dock button,.tile{background:linear-gradient(145deg,rgba(26,36,48,.9),rgba(16,24,32,.92));color:inherit;border:1px solid var(--line);border-radius:12px;min-height:48px;padding:12px 14px;cursor:pointer;text-align:left}
+.sections button.active,.tile:focus-visible{border-color:var(--ice);box-shadow:0 0 18px rgba(112,201,207,.28);outline:2px solid #6ad6dc;outline-offset:2px}
+main{padding:16px 20px 100px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;backdrop-filter:blur(6px)}
+.card h3{margin:0 0 8px;color:var(--gold);font-size:1rem}
+.bar{height:8px;background:#0c1218;border-radius:8px;overflow:hidden}
+.bar span{display:block;height:100%;background:linear-gradient(90deg,var(--ice),var(--gold))}
+.sensors{display:flex;gap:10px;flex-wrap:wrap}
+.sensor{min-width:140px;flex:1}
+.tile[data-state="HOLD"]{border-color:#d19b58}
+.tile[data-state="RUNNING"]{border-color:#55c4d2;box-shadow:0 0 16px rgba(85,196,210,.3)}
+.tile[data-state="OK"]{border-color:#7dcea0}
+.dock{position:fixed;left:0;right:0;bottom:0;display:flex;justify-content:center;gap:8px;padding:10px;background:rgba(7,11,18,.94)}
+.note{opacity:.75;font-size:.85rem}
+@media(max-width:800px){.sections{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:480px){.sections,.grid{grid-template-columns:1fr}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
