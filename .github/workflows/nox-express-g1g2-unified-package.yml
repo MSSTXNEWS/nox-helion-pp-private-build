@@ -30,7 +30,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 -m unittest discover -s tests/e06 -p test_express_source_snapshot_pack_r116.py -v
+          PYTHONDONTWRITEBYTECODE=1 python3 -B -m unittest discover -s tests/e06 -p test_express_source_snapshot_pack_r116.py -v
       - name: Build full SHA-locked tracked source archive
         shell: bash
         run: |
