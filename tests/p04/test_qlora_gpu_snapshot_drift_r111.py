@@ -29,4 +29,15 @@ class GpuTrainInventoryParity(unittest.TestCase):
 
     def test_early_rejection_precedes_gpu_lock(self):
         main = inspect.getsource(engine.main)
-        early = 'require_gpu_snapshot_consistency(chosen["memory_total_mib"], vram_he¶»§q«^
+        early = 'require_gpu_snapshot_consistency(chosen["memory_total_mib"], vram_headroom)'
+        self.assertIn(early, main)
+        self.assertLess(main.index(early), main.index("lock_fd = acquire_gpu_lock"))
+
+    def test_live_monitor_rechecks_identity_before_recording_free_vram(self):
+        main = inspect.getsource(engine.main)
+        live = 'require_gpu_snapshot_consistency(chosen["memory_total_mib"], current_vram)'
+        self.assertIn(live, main)
+        self.assertLess(main.index(live), main.index('monitor["vram_free_mib"] = current_vram["free_mib"]'))
+
+if __name__ == "__main__":
+    unittest.main()
