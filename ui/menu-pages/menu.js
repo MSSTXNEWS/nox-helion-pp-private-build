@@ -1,10 +1,10 @@
 import {DIRECTIONS,WORLDS,CORE_IDS,PERSONAS,PRIMARY,ROUTE_COUNT,getWorld,getRoute} from './express-layout.mjs';
-import {createNativeMenuClient} from '../onehost-menu-bindings.mjs';
+import {createNativeMenuClient,isNativeChatTerminal} from '../onehost-menu-bindings.mjs';
 const doc=document,$=id=>doc.getElementById(id);
 const el=(tag,cls,label)=>{const x=doc.createElement(tag);if(cls)x.className=cls;if(label!==undefined)x.textContent=label;return x;};
 const button=(label,cls,click)=>{const b=el('button',cls,label);b.type='button';b.addEventListener('click',click);return b;};
 const P={directions:$('directions'),planets:$('planets'),details:$('details'),status:$('status'),actions:$('actions'),title:$('title'),subtitle:$('subtitle'),search:$('search'),cores:$('cores'),fx:$('fx'),host:$('host')};
-let client=null,active=null,requesting=false;
+let client=null,active=null,requesting=false,chatInFlight=false,chatStopPending=false;
 if(window.location.origin==='https://nox.local'&&window.location.pathname==='/'&&window.location.search===''&&window.location.hash===''&&window.chrome?.webview){
  try{client=createNativeMenuClient({webview:window.chrome.webview});P.host.textContent='ТРАНСПОРТ НАЙДЕН';}
  catch{client=null;}
@@ -98,9 +98,121 @@ async function nativeRequest(route,payload,label){
   }else{pending(label.id,label.name);say('Native обработчик пока не подтвердил действие.');}
  }catch{pending(label.id,label.name);say('Локальный OneHost недоступен или действие отклонено.');}
 }
+
+/* LIVE native CHAT for EXPRESS. One existing WebView2 owner, bounded rendering and native STOP.
+   Never show success or release an in-flight request without a native terminal receipt. */
+function liveChat(label){
+ const top=el('div','detail-top');
+ top.append(button('← К МИРУ','back',()=>world(label.world)),el('span','eyebrow','P02 · LOCAL ONEHOST'));
+ const surface=el('div','nox-chat'),heading=el('div','nox-chat-heading');
+ heading.append(el('h2','','HELION · LIVE CHAT'),el('span','nox-chat-trust',client?'NATIVE ТРАНСПОРТ ОБНАРУЖЕН':'OFFLINE · ONEHOST НЕТ'));
+ const coreRow=el('div','nox-chat-chips'),personaRow=el('div','nox-chat-chips'),modelsRow=el('div','nox-chat-chips');
+ coreRow.setAttribute('aria-label','Выбор ядра');personaRow.setAttribute('aria-label','Выбор персоны');
+ modelsRow.setAttribute('aria-label','Локальная модель');
+ const log=el('div','nox-chat-log');log.setAttribute('role','log');log.setAttribute('aria-label','Локальный диалог HELION');
+ const form=el('form','nox-chat-compose'),input=el('textarea','nox-chat-input');
+ input.rows=3;input.maxLength=4000;input.placeholder='Сообщение локальному ядру (Enter — отправить, Shift+Enter — перенос)';
+ input.setAttribute('aria-label','Текст сообщения');
+ const send=button('ОТПРАВИТЬ','nox-chat-send',()=>{}),stop=button('■ STOP','nox-chat-stop',()=>{});
+ const info=el('p','nox-chat-info',client?'Выберите установленную модель. Ответы подтверждает OneHost.':'Для ответов необходим установленный OneHost.');
+ info.setAttribute('role','status');info.setAttribute('aria-live','polite');
+ const controls=el('div','nox-chat-controls');controls.append(send,stop);
+ form.append(input,controls);
+ surface.append(heading,el('p','nox-chat-label','ЯДРО'),coreRow,el('p','nox-chat-label','ПЕРСОНА'),personaRow,
+  el('p','nox-chat-label','УСТАНОВЛЕННЫЕ МОДЕЛИ'),modelsRow,log,form,info);
+ setDetails(top,surface);
+ let core='core.core',persona='persona.kairen_voss',model='',chatEpoch=0;
+ const enabled=()=>!!client&&!!model&&!chatInFlight;
+ const redraw=()=>{send.disabled=!enabled();stop.disabled=!client||!chatInFlight||chatStopPending;};
+ function chips(parent,items,current,onSelect){
+  parent.replaceChildren();
+  for(const [value,label] of items){
+   const b=button(label,'nox-chat-chip',()=>{if(chatInFlight)return;onSelect(value);chips(parent,items,value,onSelect);});
+   b.setAttribute('aria-pressed',String(current===value));b.disabled=chatInFlight;parent.append(b);
+  }
+ }
+ const cores=CORE_IDS.map(id=>['core.'+id.toLowerCase(),id]);
+ const personas=PERSONAS.map((id,i)=>[['persona.kairen_voss','persona.adrian_marrow','persona.leon_ardis','persona.elina_veil','persona.kassien_veir'][i],id]);
+ const chooseCore=v=>{core=v;};const choosePersona=v=>{persona=v;};
+ chips(coreRow,cores,core,chooseCore);chips(personaRow,personas,persona,choosePersona);
+ const row=(who,content)=>{const item=el('p','nox-chat-bubble nox-chat-'+who,content);log.append(item);log.scrollTop=log.scrollHeight;return item;};
+ async function loadModels(){
+  if(!client){modelsRow.append(el('span','nox-chat-empty','Локальное ядро не подключено'));redraw();return;}
+  try{
+   const reply=await client.request('chat.model',{});
+   if(!modelsRow.isConnected)return;
+   if(reply?.state!=='COMPLETED'||!Array.isArray(reply.result?.models)){throw Error('NO_MODELS');}
+   const names=[...new Set(reply.result.models.filter(v=>typeof v==='string'&&v.length&&v.length<=160))].slice(0,32);
+   model=names.includes(reply.result.selectedModel)?reply.result.selectedModel:'';
+   const render=()=>{
+    modelsRow.replaceChildren();
+    if(!names.length)modelsRow.append(el('span','nox-chat-empty','Модели не установлены · откройте MODELS'));
+    for(const name of names){
+     const b=button(name,'nox-chat-chip',async()=>{
+      if(chatInFlight)return;
+      b.disabled=true;info.textContent='Выбор модели проверяется ядром...';
+      try{
+       const a=await client.request('chat.model',{model:name});
+       if(a?.state==='COMPLETED'&&a.result?.selectedModel===name){model=name;info.textContent='Модель подтверждена: '+name;}
+       else info.textContent='HOLD · OneHost не подтвердил выбор модели';
+      }catch{info.textContent='HOLD · нет подтверждения выбора модели';}
+      render();redraw();
+     });
+     b.setAttribute('aria-pressed',String(name===model));b.disabled=chatInFlight;modelsRow.append(b);
+    }
+   };
+   render();redraw();
+   info.textContent=model?'Выбрана локальная модель: '+model:'Выберите модель из списка, подтверждённого OneHost';
+  }catch{modelsRow.replaceChildren(el('span','nox-chat-empty','Не удалось получить локальные модели'));info.textContent='HOLD · каталог моделей недоступен';redraw();}
+ }
+ async function submit(ev){
+  ev?.preventDefault?.();
+  const text=input.value.trim();if(!enabled()||!text)return;
+  chatInFlight=true;chatStopPending=false;const epoch=++chatEpoch;redraw();
+  chips(coreRow,cores,core,chooseCore);chips(personaRow,personas,persona,choosePersona);
+  input.value='';row('user',text);
+  const replyRow=row('assistant','');info.textContent='REQUESTED · запрос в OneHost';
+  function terminal(reply){
+   if(!isNativeChatTerminal(reply))return;
+   chatInFlight=false;chatStopPending=false;
+   if(!info.isConnected)return;
+   if(reply.state==='COMPLETED'&&typeof reply.result?.answer==='string')replyRow.textContent=reply.result.answer.slice(0,100000);
+   info.textContent=reply.state==='COMPLETED'?'COMPLETED · ответ локальной модели':'HOLD · '+(reply.errorCode||'операция отклонена');
+   redraw();chips(coreRow,cores,core,chooseCore);chips(personaRow,personas,persona,choosePersona);
+  }
+  try{
+   const result=await client.request('helion.chat',{text,model,core_id:core,persona_id:persona},ev=>{
+    if(epoch!==chatEpoch||!replyRow.isConnected||typeof ev.delta!=='string')return;
+    if(replyRow.textContent.length<100000)replyRow.textContent=(replyRow.textContent+ev.delta).slice(0,100000);
+    info.textContent='STREAMING · локальный OneHost';log.scrollTop=log.scrollHeight;
+   },terminal);
+   terminal(result);
+   if(!isNativeChatTerminal(result)&&info.isConnected)info.textContent='HOLD · нет терминального подтверждения; STOP доступен';
+  }catch(err){
+   if(err.message!=='TIMEOUT'){chatInFlight=false;chatStopPending=false;redraw();}
+   if(info.isConnected)info.textContent=err.message==='TIMEOUT'?'HOLD · истекло ожидание, STOP доступен':'HOLD · native ответ не получен';
+  }
+ }
+ form.addEventListener('submit',submit);
+ send.addEventListener('click',submit);
+ input.addEventListener('keydown',ev=>{if(ev.key==='Enter'&&!ev.shiftKey&&!ev.isComposing){ev.preventDefault();void submit(ev);}});
+ stop.addEventListener('click',async()=>{
+  if(!client||!chatInFlight||chatStopPending)return;
+  chatStopPending=true;redraw();info.textContent='STOP REQUESTED · ожидаем native подтверждение';
+  try{
+   const r=await client.request('chat.stop',{});
+   if(info.isConnected)info.textContent=r?.state==='HOLD'?'HOLD · STOP отклонён':
+    'STOP запрошен; ждём терминальный результат исходного запроса';
+  }catch{if(info.isConnected)info.textContent='HOLD · STOP не подтверждён';}
+  finally{chatStopPending=false;redraw();}
+ });
+ redraw();void loadModels();
+}
+
 function openRoute(id){
  const item=getRoute(id);if(!item)return;
  const label={id,name:item.label,world:item.world.id};
+ if(id==='chat'){liveChat(label);return;}
  // Only read-only native routes with an existing client contract; no fake success.
  const reads={
  'model-library':['models.catalog',{}],'model-load':['models.catalog',{}],
