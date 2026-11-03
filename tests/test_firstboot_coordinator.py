@@ -171,6 +171,39 @@ class Tests(unittest.TestCase):
         self.assertEqual(s.app.run('S',now=NOW)['reason'],'NATIVE_S03_INTENT_READBACK_REQUIRED')
         self.assertEqual(s.calls,[])
 
+    def test_native_queue_ack_id_rejects_numeric_or_string_aliases(self):
+        # Python compares 31.0 == 31; native identity must be exact int.
+        for invalid in (31.0, "31", None):
+            with self.subTest(invalid=invalid):
+                s = State()
+                dispatch = s.dispatch
+                def wrong_identity(session, route, artifact):
+                    receipt = dispatch(session, route, artifact)
+                    receipt["id"] = invalid
+                    return receipt
+                s.app.callbacks = replace(s.app.callbacks, dispatch=wrong_identity)
+                result = s.app.run("owner_A", now=NOW)
+                self.assertEqual(result["status"], "HOLD")
+                self.assertEqual(result["enqueued_ids"], [])
+                self.assertEqual(result["held"],
+                                 [{"id": 31, "reason": "NATIVE_QUEUE_ACK_OR_DIGEST_MISMATCH"}])
+                self.assertEqual(len(s.calls), 1)
+
+    def test_native_queue_ack_requires_explicit_dedupe_witness(self):
+        s = State()
+        dispatch = s.dispatch
+        def missing_witness(session, route, artifact):
+            receipt = dispatch(session, route, artifact)
+            receipt.pop("already_queued")
+            return receipt
+        s.app.callbacks = replace(s.app.callbacks, dispatch=missing_witness)
+        result = s.app.run("owner_A", now=NOW)
+        self.assertEqual(result["status"], "HOLD")
+        self.assertEqual(result["enqueued_ids"], [])
+        self.assertEqual(result["held"],
+                         [{"id": 31, "reason": "NATIVE_QUEUE_ACK_OR_DIGEST_MISMATCH"}])
+        self.assertEqual(len(s.calls), 1)
+
     def test_idempotent_queue_ack_digest(self):
         s=State()
         s.fake_digest=True
