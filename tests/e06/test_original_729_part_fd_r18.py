@@ -5,6 +5,7 @@ import importlib.util
 import os
 from pathlib import Path
 import tempfile
+from types import SimpleNamespace
 import unittest
 from unittest import mock
 
@@ -73,6 +74,40 @@ class OriginalSourcePartFDTests(unittest.TestCase):
             with self.assertRaisesRegex(module.SourceHold, "SOURCE_PART_UNTRUSTED_PATH"):
                 with module._trusted_part_reader(Path(td)) as reader:
                     reader.read()
+
+    def test_windows_path_stat_uses_birthtime_without_ignoring_identity(self):
+        path = SimpleNamespace(st_dev=4, st_ino=21, st_size=100,
+                               st_mtime_ns=800, st_ctime_ns=1200,
+                               st_birthtime_ns=3333)
+        fd = SimpleNamespace(st_dev=4, st_ino=21, st_size=100,
+                             st_mtime_ns=800, st_ctime_ns=1999,
+                             st_birthtime_ns=3333)
+        with mock.patch.object(module, "_WINDOWS_STAT", True):
+            self.assertTrue(module._trusted_open_identity(path, fd))
+            self.assertEqual(module._fd_identity(fd),
+                             (4, 21, 100, 800, 1999))
+            for key, value in (("st_birthtime_ns", 4444),
+                               ("st_ino", 22), ("st_dev", 7),
+                               ("st_mtime_ns", 801), ("st_size", 101)):
+                altered = SimpleNamespace(**{**vars(path), key: value})
+                self.assertFalse(module._trusted_open_identity(altered, fd))
+            no_birth = SimpleNamespace(**{k: v for k, v in vars(path).items()
+                                          if k != "st_birthtime_ns"})
+            self.assertFalse(module._trusted_open_identity(no_birth, fd))
+            float_birth = SimpleNamespace(**{**vars(path), "st_birthtime_ns": 3333.0})
+            self.assertFalse(module._trusted_open_identity(float_birth, fd))
+
+    def test_posix_path_stat_and_fd_change_time_remain_strict(self):
+        path = SimpleNamespace(st_dev=1, st_ino=9, st_size=12,
+                               st_mtime_ns=100, st_ctime_ns=777)
+        fd = SimpleNamespace(**vars(path))
+        with mock.patch.object(module, "_WINDOWS_STAT", False):
+            self.assertTrue(module._trusted_open_identity(path, fd))
+            changed = SimpleNamespace(**{**vars(path), "st_ctime_ns": 778})
+            self.assertFalse(module._trusted_open_identity(changed, fd))
+        after = SimpleNamespace(**{**vars(fd), "st_ctime_ns": 778})
+        self.assertNotEqual(module._fd_identity(fd), module._fd_identity(after))
+
 
 
 if __name__ == "__main__":
