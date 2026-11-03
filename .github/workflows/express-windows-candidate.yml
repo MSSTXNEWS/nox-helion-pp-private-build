@@ -1,0 +1,21 @@
+name: EXPRESS Windows candidate
+on:
+  workflow_dispatch:
+jobs:
+  candidate:
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up pinned Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12.10'
+      - name: Fail closed until a paid Windows runner exists
+        shell: pwsh
+        run: |
+          if (Test-Path .\private_build_express.ps1) {
+            & .\private_build_express.ps1
+            exit $LASTEXITCODE
+          }
+          Write-Output 'EXPRESS_ENTRY_MISSING'
+          exit 2
