@@ -931,15 +931,36 @@ if ($c11NsiPatched.IndexOf('C11OldPayloadChecked:',[StringComparison]::Ordinal) 
 # in the disposable R11 source; original 729 archive remains immutable.
 $uninstallRegistryBad='  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_ID}" "UninstallString" ''\"$INSTDIR\Uninstall.exe\"'''
 $uninstallRegistryApproved='  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_ID}" "UninstallString" ''"$INSTDIR\Uninstall.exe"'''
-$uninstallRegistryBadCount=([regex]::Matches($c11NsiPatched,[regex]::Escape($uninstallRegistryBad))).Count
-$uninstallRegistryApprovedCount=([regex]::Matches($c11NsiPatched,[regex]::Escape($uninstallRegistryApproved))).Count
-if ($uninstallRegistryBadCount -eq 1 -and $uninstallRegistryApprovedCount -eq 0) {
-  $c11NsiPatched=$c11NsiPatched.Replace($uninstallRegistryBad,$uninstallRegistryApproved)
-} elseif ($uninstallRegistryBadCount -ne 0 -or $uninstallRegistryApprovedCount -ne 1) {
-  throw 'P01_NSIS_UNINSTALL_REGISTRY_PREIMAGE_HOLD'
+# R110: one complete original NSIS registry assignment; never substring match.
+# Indent and known quote encodings vary in immutable R11 sources.
+# Admit ONLY four exact preapproved literal values; unknown/multiple HOLD.
+$uninstallRegistryHold='P01_NSIS_UNINSTALL_REGISTRY_PREIMAGE_HOLD'
+$uninstallRegistryLinePattern='(?m)^[ \t]*WriteRegStr[ \t]+[^\r\n]*"UninstallString"[ \t]+[^\r\n]*'
+$uninstallRegistryMatches=[regex]::Matches($c11NsiPatched,$uninstallRegistryLinePattern)
+if ($uninstallRegistryMatches.Count -ne 1) { throw $uninstallRegistryHold }
+$uninstallRegistryMatch=$uninstallRegistryMatches[0]
+$uninstallRegistryBody=$uninstallRegistryMatch.Value.TrimStart()
+$uninstallRegistryApprovedBody=$uninstallRegistryApproved.TrimStart()
+$uninstallRegistryValueAt=$uninstallRegistryApprovedBody.IndexOf('"UninstallString" ',[StringComparison]::Ordinal)
+if ($uninstallRegistryValueAt -lt 0) { throw $uninstallRegistryHold }
+$uninstallRegistryKey=$uninstallRegistryApprovedBody.Substring(0,$uninstallRegistryValueAt+'"UninstallString" '.Length)
+$uninstallRegistryAllowed=@(
+  $uninstallRegistryBad.TrimStart(),
+  $uninstallRegistryApprovedBody,
+  ($uninstallRegistryKey + '"\"$INSTDIR\Uninstall.exe\""'),
+  ($uninstallRegistryKey + '"$INSTDIR\Uninstall.exe"')
+)
+if ($uninstallRegistryAllowed -cnotcontains $uninstallRegistryBody) {
+  throw $uninstallRegistryHold
 }
-if ($c11NsiPatched.Contains($uninstallRegistryBad) -or
-    ([regex]::Matches($c11NsiPatched,[regex]::Escape($uninstallRegistryApproved))).Count -ne 1) {
+$uninstallRegistryIndent=$uninstallRegistryMatch.Value.Substring(0,$uninstallRegistryMatch.Value.Length-$uninstallRegistryBody.Length)
+$uninstallRegistryReplacement=$uninstallRegistryIndent+$uninstallRegistryApprovedBody
+$c11NsiPatched=$c11NsiPatched.Substring(0,$uninstallRegistryMatch.Index)+
+               $uninstallRegistryReplacement+
+               $c11NsiPatched.Substring($uninstallRegistryMatch.Index+$uninstallRegistryMatch.Length)
+$uninstallRegistryReadback=[regex]::Matches($c11NsiPatched,$uninstallRegistryLinePattern)
+if ($uninstallRegistryReadback.Count -ne 1 -or
+    $uninstallRegistryReadback[0].Value -cne $uninstallRegistryReplacement) {
   throw 'P01_NSIS_UNINSTALL_REGISTRY_QUOTE_HOLD'
 }
 Write-Host 'P01_NSIS_UNINSTALL_REGISTRY_QUOTE_STAGE_PASS'
