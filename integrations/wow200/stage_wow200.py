@@ -50,13 +50,13 @@ REQUIRED_DONORS = frozenset({
 # One immutable commit admits the R4 MENU module, matching CSS and native adapter.
 # Keep all these pins together; a partial UI publication must fail before copy.
 MENU_V2_SHA256 = {
-    'ui/selfbuilder-menu-v2.mjs': '5fd912a8ddba30ca6797f786e7b538571c11d8baf615077e50c8cc7db8978274',
-    'ui/selfbuilder-menu-v2.css': '6c8e37d658e0b6540ddd00ded406f3765481dc3adbe00e869d23404c47526d80',
-    'ui/onehost-menu-bindings.mjs': '0591ef1a1b109b2c28632931d9cce905412ff431a3b901a7956461035dae7c71',
-    'ui/nox-r11-wow.mjs': 'fe720ffc42962799a896f755cd297ef05bb6fee463d3636cf69d5172731117b5',
-    'ui/nox-r11-wow.css': 'aadd7d633a65609ea24467bb6d39442cc0d94d748c1712f5d2b54c72ff13489a',
+    'ui/selfbuilder-menu-v2.mjs': '5b878f49a9e89bbdd56d153e44dabb130bf8c3031c20f24811451fdcad99f4f7',
+    'ui/selfbuilder-menu-v2.css': '65979f2e8650adc097fc28352189f57aef8577654b534db5a9e9f20be89a3229',
+    'ui/onehost-menu-bindings.mjs': 'c60ae6701980395a29bb8fdc621e0223dea2ef5b070e11c3464d39390b917e1f',
+    'ui/nox-r11-wow.mjs': '93455f888f0de964200a72ced4ee4cb309b407175ab180a1a0df39338904d5a8',
+    'ui/nox-r11-wow.css': 'a05ed1e82d931940eeca0e92dd8f6880bb498f6176438949fecaf8fad8e28591',
     'ui/selfbuilder-wow-workbench.mjs': 'bd65520a6f349439fe2a2b2215520dcc84f3f4254b52aaa277201071423d6f17',
-    'ui/selfbuilder-wow-workbench.css': 'bad615430856cb1ce0201bc21b77f33258d0d5fd3cbc7fa12b1f63af086dea24',
+    'ui/selfbuilder-wow-workbench.css': 'a5ee4ea99ab109388f154e7ebd80c1524a6228be85b6d5a460bdce13b7e92eb1',
     'contracts/menu_v2_existing_routes.json': '7bb81852e3f28a170d94873d603253f89e5017f268d0af6942f4bcba3b55beea',
 }
 

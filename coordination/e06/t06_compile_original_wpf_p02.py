@@ -627,9 +627,9 @@ def main():
         import importlib.util
         for label,relative,blob in (
             ("CREATIVE","integrations/creative/stage_creative.py",
-             "d89911ccf3260e0ad7fe82f954a1d4adf560372c"),
+             "151caf9bdaabdcd24965fa2b030c5c700663cdf9"),
             ("WOW200","integrations/wow200/stage_wow200.py",
-             "393b47edf1c9b6f92716b6dea44a02f7797fb5b4")):
+             "c90e0b902d5204242c1599b02fb78a83287637bb")):
             candidate=ROOT/relative
             require(candidate.is_file() and not candidate.is_symlink(),
                     "T06_D02_"+label+"_SOURCE_MISSING")
@@ -648,7 +648,7 @@ def main():
             require(evidence.get("release_accepted") is False,
                     "T06_D02_"+label+"_SOURCE_RECEIPT_HOLD")
             if label=="WOW200":
-                require(evidence.get("count")==65 and
+                require(evidence.get("count")==82 and
                         evidence.get("active_d02_engine")=="OWNER1_PR144_PINNED" and
                         evidence.get("pack01_catalog_routes")==50 and
                         evidence.get("legacy_d02_runtime_imported") is False,
