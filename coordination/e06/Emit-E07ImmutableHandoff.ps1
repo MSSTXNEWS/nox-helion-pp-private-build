@@ -166,12 +166,31 @@ $receipt=[ordered]@{
 if (Test-Path -LiteralPath $Output) { throw 'E07_HANDOFF_ALREADY_EXISTS' }
 $parent=Split-Path -Parent $Output
 if ([string]::IsNullOrWhiteSpace($parent)) { throw 'E07_OUTPUT_PARENT_REQUIRED' }
-New-Item -ItemType Directory -Path $parent -Force | Out-Null
-foreach ($ancestor in @(Get-Item -LiteralPath $parent) + @(Get-Item -LiteralPath $parent).Parent) {
- if (($ancestor.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
-   throw 'E07_OUTPUT_REPARSE_PARENT'
+# BEFORE any directory write, check the entire existing ancestry, not just
+# parent and grandparent. A junction above those levels could otherwise
+# redirect New-Item and the immutable receipt outside the owned CI folder.
+# File.GetAttributes and Path.GetDirectoryName are supported by Windows PS 5.1.
+function Assert-E07SafeOutputAncestry([string]$candidate) {
+ $cursor=[IO.Path]::GetFullPath($candidate)
+ while (-not [string]::IsNullOrEmpty($cursor)) {
+  try {
+   $attributes=[IO.File]::GetAttributes($cursor)
+   if (($attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+    throw 'E07_OUTPUT_REPARSE_PARENT'
+   }
+  }
+  catch [IO.FileNotFoundException] { }
+  catch [IO.DirectoryNotFoundException] { }
+  $next=[IO.Path]::GetDirectoryName($cursor)
+  if ([string]::IsNullOrEmpty($next) -or $next -ceq $cursor) { break }
+  $cursor=$next
  }
 }
+Assert-E07SafeOutputAncestry $Output
+New-Item -ItemType Directory -Path $parent -Force | Out-Null
+# Detect a changed ancestor before sealing; this is a source-level guard,
+# not a claim of race-free NTFS handles or independent E07 Windows QA.
+Assert-E07SafeOutputAncestry $Output
 # FileMode.CreateNew makes the no-clobber guarantee atomic across processes.
 # Test-Path above is advisory only; the exclusive create is authoritative.
 function WriteReceiptNoClobber([string]$path, [string]$content) {
