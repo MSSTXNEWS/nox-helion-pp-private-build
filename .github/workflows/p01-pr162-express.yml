@@ -3,6 +3,8 @@ on:
   pull_request:
     paths:
       - 'proposals/P01/WOW-MAX10/**'
+      - 'coordination/mega814/**'
+      - 'integrations/adminator-nox/**'
       - '.github/workflows/p01-pr162-express.yml'
   workflow_dispatch:
 permissions:
@@ -43,6 +45,11 @@ jobs:
           set -euo pipefail
           for file in proposals/P01/WOW-MAX10/*.mjs; do node --check "$file"; done
           node --test proposals/P01/WOW-MAX10/*.test.mjs
+          node --check coordination/mega814/menu-v2-adapter.mjs
+          node --check integrations/adminator-nox/nox-adminator-adapter.mjs
+          node --check integrations/adminator-nox/nox-adminator-entry.mjs
+          node --test coordination/mega814/test_menu_v2.mjs
+          node --test integrations/adminator-nox/tests/*.test.mjs
       - name: Keep original D02 gravity and WOW unified source regressions
         shell: bash
         run: |
