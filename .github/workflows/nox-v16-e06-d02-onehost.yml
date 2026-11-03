@@ -228,6 +228,11 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'ORIGINAL_PYTHON_CANDIDATE_BUILD_HOLD' }
           python coordination/e06/stage_p01.py
           if ($LASTEXITCODE -ne 0) { throw 'ORIGINAL_R11_SOURCELOCK_HOLD' }
+          # Validate the path/stat/fstat trust invariant before the expensive
+          # 729-file verification. Explicitly exercise Windows birthtime parity
+          # and preserve the mutation/symlink/descriptor ctime fail-closed tests.
+          python -m unittest discover -s tests/e06 -p test_original_729_part_fd_r18.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'E06_SOURCE_PART_FD_REGRESSION_HOLD' }
           python coordination/source-lock/verify_original_archive.py --parts-dir . --output work/e06/original-729-manifest.json --expected-files 729
           if ($LASTEXITCODE -ne 0) { throw 'E07_ORIGINAL_729_SOURCELOCK_HOLD' }
           # The E06 owner-specific original 729 receipt must independently match.
