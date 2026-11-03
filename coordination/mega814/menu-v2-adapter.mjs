@@ -116,7 +116,7 @@ export function appendMenuV2(controls, world, catalogue, createOwnerRouteButton)
       ownerMount.replaceChildren();
       if (route) {
         try {
-          const ownerAction = createOwnerRouteButton(route, item.label);
+          const ownerAction = createOwnerRouteButton(route, item.label, null, world);
           if (!ownerAction) throw new Error('NOX_MENU_V2_NATIVE_OWNER_CALLBACK_HOLD');
           ownerMount.append(ownerAction);
           status.textContent = 'Существующий экран доступен · функция и права проверяются отдельно; E07 HOLD.';
@@ -125,6 +125,14 @@ export function appendMenuV2(controls, world, catalogue, createOwnerRouteButton)
         }
       } else {
         status.textContent = 'Прямой исполнитель не подтверждён · можно поручить NOX разобрать задачу и определить доступный безопасный способ.';
+      }
+      try {
+        const parentNavigation = createOwnerRouteButton(
+          'nox.parent-navigation', 'ОТКРЫТЬ РОДИТЕЛЬСКИЙ РАЗДЕЛ', null, world
+        );
+        if (parentNavigation) ownerMount.append(parentNavigation);
+      } catch {
+        status.textContent += ' · исходный родительский раздел недоступен.';
       }
       // Every catalog item gets an explicit route through the EXISTING AI pipe.
       // The response confirms only that AI replied; it does not prove the requested
