@@ -37,29 +37,18 @@
       vertical-align: middle;
       margin-right: 0.35rem;
     }
-    /* 5. Grain overlay */
     .grain {
-      position: fixed;
-      inset: 0;
-      pointer-events: none;
+      position: fixed; inset: 0; pointer-events: none;
       background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-      opacity: 0.04;
-      mix-blend-mode: overlay;
+      opacity: 0.04; mix-blend-mode: overlay;
     }
-    /* Scanlines */
     .scan {
-      position: fixed;
-      inset: 0;
-      pointer-events: none;
+      position: fixed; inset: 0; pointer-events: none;
       background: repeating-linear-gradient(to bottom, transparent 0px, transparent 2px, rgba(0,0,0,0.12) 3px);
-      mix-blend-mode: multiply;
-      opacity: 0.35;
+      mix-blend-mode: multiply; opacity: 0.35;
     }
-    /* Smoke */
     .smoke {
-      position: fixed;
-      inset: -15%;
-      pointer-events: none;
+      position: fixed; inset: -15%; pointer-events: none;
       background:
         radial-gradient(circle at 20% 105%, rgba(80,35,15,0.2) 0%, transparent 32%),
         radial-gradient(circle at 80% 100%, rgba(60,25,10,0.16) 0%, transparent 38%);
@@ -71,21 +60,10 @@
       0%   { transform: translateY(15px) scale(1); opacity: 0.45; }
       100% { transform: translateY(-50px) scale(1.1); opacity: 0.75; }
     }
-    /* 1. Heat particles */
-    .particles {
-      position: fixed;
-      inset: 0;
-      pointer-events: none;
-      overflow: hidden;
-    }
+    .particles { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
     .particle {
-      position: absolute;
-      width: 3px;
-      height: 3px;
-      background: var(--lava);
-      border-radius: 50%;
-      opacity: 0;
-      animation: rise 6s linear infinite;
+      position: absolute; width: 3px; height: 3px; background: var(--lava);
+      border-radius: 50%; opacity: 0; animation: rise 6s linear infinite;
       box-shadow: 0 0 6px var(--lava);
     }
     @keyframes rise {
@@ -93,28 +71,19 @@
       15%  { opacity: 0.7; }
       100% { transform: translateY(-10vh) scale(1.2); opacity: 0; }
     }
-    /* 2. HUD brackets */
     .hud {
-      position: fixed;
-      inset: 18px;
-      pointer-events: none;
+      position: fixed; inset: 18px; pointer-events: none;
       border: 1px solid rgba(90,225,255,0.15);
     }
     .hud::before, .hud::after {
-      content: "";
-      position: absolute;
-      width: 28px;
-      height: 28px;
-      border-color: var(--arc);
-      border-style: solid;
-      opacity: 0.5;
+      content: ""; position: absolute; width: 28px; height: 28px;
+      border-color: var(--arc); border-style: solid; opacity: 0.5;
     }
     .hud::before { top: -1px; left: -1px; border-width: 2px 0 0 2px; }
     .hud::after  { bottom: -1px; right: -1px; border-width: 0 2px 2px 0; }
     main { position: relative; z-index: 1; padding: 2rem 1.4rem; max-width: 900px; margin: 0 auto; }
     header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 0.4rem; }
     h1 { margin: 0; font-weight: 600; letter-spacing: 0.04em; font-size: 1.85rem; }
-    /* 3. Breathing ambient */
     .glass {
       background: var(--glass-bg);
       backdrop-filter: blur(20px) saturate(1.55);
@@ -122,8 +91,7 @@
       border: 1px solid var(--glass-border);
       border-radius: 18px;
       box-shadow: inset 0 1px 0 rgba(255,255,255,0.09), 0 18px 50px rgba(0,0,0,0.5);
-      padding: 1.5rem;
-      position: relative;
+      padding: 1.5rem; position: relative;
       animation: breathe 9s ease-in-out infinite;
     }
     @keyframes breathe {
@@ -131,15 +99,11 @@
       50%      { box-shadow: inset 0 1px 0 rgba(255,255,255,0.12), 0 18px 60px rgba(255,70,20,0.15); }
     }
     .glass::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      border-radius: inherit;
+      content: ""; position: absolute; inset: 0; border-radius: inherit;
       background: linear-gradient(115deg, transparent 40%, rgba(255,80,20,0.08) 50%, transparent 60%);
       background-size: 200% 100%;
       animation: heat-trace 8s linear infinite;
-      pointer-events: none;
-      mix-blend-mode: screen;
+      pointer-events: none; mix-blend-mode: screen;
     }
     @keyframes heat-trace {
       0% { background-position: 200% 0; }
@@ -162,42 +126,28 @@
       box-shadow: 0 0 28px rgba(255,70,20,0.5), 0 0 8px var(--arc);
     }
     .btn-fire::before {
-      content: "";
-      position: absolute;
-      inset: -70% -40%;
+      content: ""; position: absolute; inset: -70% -40%;
       background:
         radial-gradient(circle at 50% 85%, rgba(255,60,10,0.6) 0%, transparent 50%),
         conic-gradient(from 0deg, transparent, rgba(90,225,255,0.15), transparent 30%);
       animation: plasma 2.6s ease-in-out infinite;
-      z-index: -1;
-      filter: blur(20px);
+      z-index: -1; filter: blur(20px);
     }
     @keyframes plasma {
       0%, 100% { transform: scale(0.8) rotate(-3deg); opacity: 0.4; }
       50%      { transform: scale(1.25) rotate(3deg); opacity: 0.95; }
     }
-    .orbits {
-      position: relative;
-      width: 340px;
-      height: 340px;
-      margin: 1.2rem auto 1.8rem;
-    }
+    .orbits { position: relative; width: 340px; height: 340px; margin: 1.2rem auto 1.8rem; }
     .sun {
-      position: absolute;
-      inset: 30%;
-      border-radius: 50%;
+      position: absolute; inset: 30%; border-radius: 50%;
       background: radial-gradient(circle at 38% 32%, #2a1208 0%, #050202 55%, #000 100%);
       box-shadow: 0 0 20px rgba(255,60,10,0.5), 0 0 40px rgba(90,225,255,0.15), inset 0 0 18px rgba(255,40,0,0.4);
       animation: sun-breathe 8s ease-in-out infinite;
     }
     .sun::before {
-      content: "";
-      position: absolute;
-      inset: -22%;
-      border-radius: 50%;
+      content: ""; position: absolute; inset: -22%; border-radius: 50%;
       background: conic-gradient(from 0deg, transparent 0%, rgba(255,80,20,0.3) 8%, transparent 16%, rgba(90,225,255,0.2) 50%, transparent 58%);
-      animation: corona-spin 16s linear infinite;
-      filter: blur(6px);
+      animation: corona-spin 16s linear infinite; filter: blur(6px);
     }
     @keyframes sun-breathe {
       0%, 100% { box-shadow: 0 0 18px rgba(255,60,10,0.35), 0 0 30px rgba(90,225,255,0.1); }
@@ -205,14 +155,10 @@
     }
     @keyframes corona-spin { to { transform: rotate(360deg); } }
     .core {
-      position: absolute;
-      width: 24px;
-      height: 24px;
-      border-radius: 50%;
+      position: absolute; width: 24px; height: 24px; border-radius: 50%;
       background: radial-gradient(circle at 32% 28%, var(--amber), #3a1806 65%);
       box-shadow: 0 0 12px var(--lava), 0 0 4px var(--arc);
-      animation: orbit 26s linear infinite;
-      cursor: pointer;
+      animation: orbit 26s linear infinite; cursor: pointer;
     }
     .core:nth-child(2) { animation-duration: 30s; animation-delay: -4s; }
     .core:nth-child(3) { animation-duration: 22s; animation-delay: -8s; }
@@ -225,43 +171,27 @@
       from { transform: rotate(0deg) translateX(132px) rotate(0deg); }
       to   { transform: rotate(360deg) translateX(132px) rotate(-360deg); }
     }
-    /* 4. Core labels */
     .core::after {
       content: attr(data-label);
-      position: absolute;
-      left: 50%;
-      top: -22px;
-      transform: translateX(-50%);
-      font-size: 0.65rem;
-      color: var(--amber);
-      white-space: nowrap;
-      opacity: 0;
-      transition: opacity 0.2s;
-      pointer-events: none;
+      position: absolute; left: 50%; top: -22px; transform: translateX(-50%);
+      font-size: 0.65rem; color: var(--amber); white-space: nowrap;
+      opacity: 0; transition: opacity 0.2s; pointer-events: none;
       text-shadow: 0 0 6px #000;
     }
     .core:hover::after { opacity: 1; }
     .progress {
-      height: 8px;
-      background: rgba(255,255,255,0.06);
-      border-radius: 4px;
-      overflow: hidden;
-      position: relative;
-      margin: 1.1rem 0;
+      height: 8px; background: rgba(255,255,255,0.06); border-radius: 4px;
+      overflow: hidden; position: relative; margin: 1.1rem 0;
     }
     .progress > span {
-      display: block;
-      height: 100%;
-      width: 0%;
+      display: block; height: 100%; width: 0%;
       background: linear-gradient(90deg, #3a1206, var(--lava) 35%, var(--amber) 65%, #fff 100%);
       box-shadow: 0 0 14px var(--lava);
       transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       position: relative;
     }
     .progress > span::after {
-      content: "";
-      position: absolute;
-      inset: 0;
+      content: ""; position: absolute; inset: 0;
       background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
       animation: shimmer 1.6s infinite;
     }
@@ -270,21 +200,12 @@
       100% { transform: translateX(220%); }
     }
     .status-live {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.4rem;
-      color: var(--amber);
-      font-size: 0.82rem;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      color: var(--amber); font-size: 0.82rem; letter-spacing: 0.08em; text-transform: uppercase;
     }
     .status-live::before {
-      content: "";
-      width: 7px;
-      height: 7px;
-      border-radius: 50%;
-      background: var(--lava);
-      box-shadow: 0 0 8px var(--lava), 0 0 3px var(--arc);
+      content: ""; width: 7px; height: 7px; border-radius: 50%;
+      background: var(--lava); box-shadow: 0 0 8px var(--lava), 0 0 3px var(--arc);
       animation: pulse 1.5s ease-in-out infinite;
     }
     @keyframes pulse {
@@ -293,21 +214,13 @@
     }
     .btns { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 1.1rem; }
     .btn-glass {
-      padding: 0.8rem 1.5rem;
-      color: var(--text);
-      cursor: pointer;
-      border: none;
-      background: var(--glass-bg);
-      backdrop-filter: blur(12px);
-      border-radius: 14px;
-      border: 1px solid var(--glass-border);
+      padding: 0.8rem 1.5rem; color: var(--text); cursor: pointer; border: none;
+      background: var(--glass-bg); backdrop-filter: blur(12px);
+      border-radius: 14px; border: 1px solid var(--glass-border);
     }
     #out {
-      margin-top: 1.3rem;
-      font-size: 0.8rem;
-      color: var(--muted);
-      white-space: pre-wrap;
-      min-height: 2.8rem;
+      margin-top: 1.3rem; font-size: 0.8rem; color: var(--muted);
+      white-space: pre-wrap; min-height: 2.8rem;
     }
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { animation: none !important; }
@@ -327,7 +240,7 @@
         <h1>ModelCenter</h1>
         <p style="margin:0.15rem 0 0; color:var(--muted); font-size:0.92rem;">qwen2.5-coder:7b · живой provider</p>
       </div>
-      <div class="status-live">LIVE</div>
+      <div class="status-live" id="live">LIVE</div>
     </header>
 
     <div class="orbits" aria-label="8 ядер HF">
@@ -359,9 +272,9 @@
     const bar = document.getElementById('bar');
     const out = document.getElementById('out');
     const particles = document.getElementById('particles');
+    const live = document.getElementById('live');
     let audioCtx;
 
-    // Heat particles
     for (let i = 0; i < 18; i++) {
       const p = document.createElement('div');
       p.className = 'particle';
@@ -400,17 +313,45 @@
       }, 65);
     }
 
+    async function call(action) {
+      try {
+        const r = await fetch('/modelcenter/' + action, { method: 'POST' });
+        if (!r.ok) throw new Error(r.status);
+        return await r.json();
+      } catch (e) {
+        return null;
+      }
+    }
+
     document.querySelectorAll('[data-action]').forEach(btn => {
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', async () => {
         const act = btn.dataset.action;
-        if (act === 'download') animateProgress('Скачивание qwen2.5-coder:7b');
-        else if (act === 'train') animateProgress('Обучение LoRA');
-        else if (act === 'describe') {
+        if (act === 'download') {
+          animateProgress('Скачивание qwen2.5-coder:7b');
+          const res = await call('download');
+          if (res && res.receipt) out.textContent += '\n' + JSON.stringify(res.receipt, null, 2);
+        } else if (act === 'train') {
+          animateProgress('Обучение LoRA');
+          const res = await call('train');
+          if (res && res.receipt) out.textContent += '\n' + JSON.stringify(res.receipt, null, 2);
+        } else if (act === 'describe') {
           impact();
-          out.textContent = 'Я — qwen2.5-coder:7b, живое ядро NOX HELION.\nHF01–HF08 привязаны. Готов к задачам.';
-          bar.style.width = '100%';
+          out.textContent = 'Запрос к модели…';
+          const res = await call('describe');
+          if (res && res.result) {
+            out.textContent = res.result.response || 'Ответ получен';
+            bar.style.width = '100%';
+          } else {
+            out.textContent = 'Я — qwen2.5-coder:7b, живое ядро NOX HELION.\nHF01–HF08 привязаны. Готов к задачам.\n(offline fallback)';
+            bar.style.width = '100%';
+          }
         }
       });
+    });
+
+    // Initial status
+    call('status').then(res => {
+      if (res && res.status === 'OFFLINE') live.textContent = 'OFFLINE';
     });
   </script>
 </body>
