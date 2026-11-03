@@ -12,6 +12,23 @@ BUILD = ROOT / "coordination/e06/build_onehost_installer.ps1"
 E07 = ROOT / "coordination/e06/Emit-E07ImmutableHandoff.ps1"
 
 
+def assert_original_nsis_references(case, build):
+    """Four reviewed uses of ONE owner script, including the newer path guard."""
+    expected = (
+        "Assert-E06PlainPathAncestors -Candidate (Join-Path $installer 'NOX-HELION-Setup.nsi') -Scope 'NSIS_OWNER'",
+        "if (!(Test-Path -LiteralPath (Join-Path $installer 'NOX-HELION-Setup.nsi') -PathType Leaf)) { throw 'ORIGINAL_NSIS_OWNER_SOURCE_MISSING' }",
+        "$c11NsiPath=Join-Path $installer 'NOX-HELION-Setup.nsi'",
+    )
+    for reference in expected:
+        case.assertEqual(build.count(reference), 1, reference)
+    compiler_calls = re.findall(r"(?m)^& \$makensisPath [^\r\n]*$", build)
+    case.assertEqual(len(compiler_calls), 1, "one original NSIS compile invocation")
+    case.assertTrue(compiler_calls[0].endswith(
+        "(Join-Path $installer 'NOX-HELION-Setup.nsi')"),
+        "the existing compiler must target the same original owner script")
+    case.assertEqual(build.count("NOX-HELION-Setup.nsi"), len(expected) + 1)
+
+
 class E07SameSourceCommit(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -47,9 +64,31 @@ class E07SameSourceCommit(unittest.TestCase):
         self.assertIn("release_accepted=$false", self.handoff)
 
     def test_existing_onehost_and_nsis_not_replaced(self):
-        self.assertEqual(self.build.count("NOX-HELION-Setup.nsi"), 3)
+        assert_original_nsis_references(self, self.build)
         self.assertIn("NOX-E06-ONEHOST-DIAGNOSTIC-NSIS-v1", self.build)
         self.assertIn("NOX_V16_E07_IMMUTABLE_HANDOFF_V1", self.handoff)
+
+
+    def test_nsis_contract_rejects_removed_guard_even_with_same_name_count(self):
+        guard = "Assert-E06PlainPathAncestors -Candidate (Join-Path $installer 'NOX-HELION-Setup.nsi') -Scope 'NSIS_OWNER'"
+        changed = self.build.replace(guard, "# removed guard for NOX-HELION-Setup.nsi", 1)
+        self.assertNotEqual(changed, self.build)
+        with self.assertRaises(AssertionError):
+            assert_original_nsis_references(self, changed)
+
+    def test_nsis_contract_rejects_redirected_compiler_with_same_name_count(self):
+        call = re.findall(r"(?m)^& \$makensisPath [^\r\n]*$", self.build)[0]
+        changed = self.build.replace(call, call.replace(
+            "(Join-Path $installer 'NOX-HELION-Setup.nsi')",
+            "(Join-Path $otherOwner 'NOX-HELION-Setup.nsi')"), 1)
+        self.assertNotEqual(changed, self.build)
+        with self.assertRaises(AssertionError):
+            assert_original_nsis_references(self, changed)
+
+    def test_nsis_contract_rejects_second_compile_invocation(self):
+        call = re.findall(r"(?m)^& \$makensisPath [^\r\n]*$", self.build)[0]
+        with self.assertRaises(AssertionError):
+            assert_original_nsis_references(self, self.build + "\n" + call + "\n")
 
 
 if __name__ == "__main__":
