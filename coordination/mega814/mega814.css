@@ -219,8 +219,12 @@ html[data-mega814-motion="REDUCED"] .mega814-spatial::after{animation:none!impor
 /* MENU V2 in-world navigation, never a second app or top header. */
 .mega814-world-detail .mega814-options>.mega814-v2-section,
 .mega814-world-detail .mega814-options>.mega814-v2-legacy{grid-column:1/-1;width:100%;min-width:0}
-.mega814-v2-legacy{margin-top:8px;padding:6px 10px;border-top:1px solid rgba(204,166,112,.2)}
-.mega814-v2-legacy>summary{cursor:pointer;min-height:40px;color:#bbac9d;padding-top:10px}
+.mega814-v2-legacy{display:block!important;margin-top:14px;padding:12px 10px;border-top:1px solid rgba(204,166,112,.2)}
+.mega814-v2-legacy-title{color:#bbac9d;font-size:13px;letter-spacing:.15em;margin:4px 0 10px}
+.mega814-v2-legacy .mega814-action{min-width:0}
+.mega814-v2-legacy .mega814-action>button{width:100%;min-height:44px;text-align:left}
+.mega814-v2-legacy .mega814-action>small{display:block;color:#a99c87;font-size:10px;line-height:1.35;padding:4px 2px}
+.mega814-ai-answer{white-space:pre-wrap;max-height:32vh;overflow:auto;color:#e7decf;border-left:2px solid #e9bd80;padding:10px;background:rgba(0,0,0,.3)}
 .mega814-v2-section{margin-top:14px;border-top:1px solid rgba(204,166,112,.25);padding-top:12px}
 .mega814-v2-section-title{color:#d9bd91;padding:9px 10px;line-height:1.5;min-height:44px;margin:0 0 8px;
  font-size:clamp(17px,2.1vw,22px);letter-spacing:.08em;font-weight:650;
