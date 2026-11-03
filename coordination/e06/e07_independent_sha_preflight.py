@@ -113,6 +113,27 @@ def _physical_pe(path: Path) -> str:
     return digest
 
 
+def _require_distinct_lifecycle_logs(logs: dict[str, Path], frozen: tuple[Path, ...]) -> None:
+    """Five physical phase logs must not reuse any receipt or binary inode.
+
+    A matching digest alone cannot distinguish five independent lifecycle
+    observations from the same file (including Windows hardlink aliases).
+    This is identity preflight only; contents never grant E07 acceptance.
+    """
+    seen = list(frozen)
+    for name in LOG_NAMES:
+        candidate = logs[name]
+        _no_reparse(candidate)
+        for prior in seen:
+            _no_reparse(prior)
+            try:
+                same = os.path.samefile(candidate, prior)
+            except OSError as exc:
+                raise Hold('E07_INDEPENDENT_LIFECYCLE_LOG_IDENTITY_HOLD') from exc
+            need(not same, 'E07_INDEPENDENT_LIFECYCLE_LOG_ALIASED:' + name)
+        seen.append(candidate)
+
+
 def check(built_path: Path, installed_path: Path, setup: Path,
           published: Path, installed_exe: Path, logs: dict[str, Path],
           expected_commit: str, expected_setup_sha: str) -> dict:
@@ -159,6 +180,8 @@ def check(built_path: Path, installed_path: Path, setup: Path,
     need(type(hashes) is dict and set(hashes) == set(LOG_NAMES) and
          set(logs) == set(LOG_NAMES),
          'E07_INDEPENDENT_LIFECYCLE_EVIDENCE_MISSING')
+    _require_distinct_lifecycle_logs(
+        logs, (built_path, installed_path, setup, published, installed_exe))
     need(_physical_pe(setup) == expected_setup_sha,
          'E07_INDEPENDENT_PHYSICAL_SETUP_SHA_DRIFT')
     published_sha = _physical_pe(published)

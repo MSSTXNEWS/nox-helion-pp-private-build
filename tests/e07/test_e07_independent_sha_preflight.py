@@ -114,6 +114,38 @@ class FrozenIndependentShaTests(unittest.TestCase):
         self.logs['rollback'].write_text('tampered', encoding='utf-8')
         self.held('E07_INDEPENDENT_LIFECYCLE_LOG_SHA_DRIFT:rollback')
 
+
+    def test_one_log_cannot_impersonate_five_lifecycle_phases(self):
+        first = self.logs['install']
+        for name in gate.LOG_NAMES:
+            self.logs[name] = first
+            self.installed_row['lifecycle_log_sha256'][name] = digest(first.read_bytes())
+        self.save()
+        self.held('E07_INDEPENDENT_LIFECYCLE_LOG_ALIASED:launch')
+
+    def test_lifecycle_log_cannot_alias_published_binary(self):
+        self.logs['rollback'] = self.published
+        self.installed_row['lifecycle_log_sha256']['rollback'] = self.wpf_sha
+        self.save()
+        self.held('E07_INDEPENDENT_LIFECYCLE_LOG_ALIASED:rollback')
+
+    def test_lifecycle_log_cannot_alias_receipt(self):
+        self.logs['update'] = self.built
+        self.installed_row['lifecycle_log_sha256']['update'] = digest(self.built.read_bytes())
+        self.save()
+        self.held('E07_INDEPENDENT_LIFECYCLE_LOG_ALIASED:update')
+
+    def test_hardlinked_lifecycle_log_cannot_impersonate_phase(self):
+        link = self.root / 'hardlinked-rollback.log'
+        try:
+            link.hardlink_to(self.logs['install'])
+        except OSError:
+            self.skipTest('hardlinks unavailable')
+        self.logs['rollback'] = link
+        self.installed_row['lifecycle_log_sha256']['rollback'] = digest(link.read_bytes())
+        self.save()
+        self.held('E07_INDEPENDENT_LIFECYCLE_LOG_ALIASED:rollback')
+
     def test_duplicate_json_receipt_rejected(self):
         raw = self.built.read_text('utf-8')
         self.built.write_text(raw[:-1] + ', "release_accepted": true}', encoding='utf-8')
