@@ -38,3 +38,5 @@
   .nox-sb-tile,.nox-r11-action,.nox-r11-stop{transition:none;transform:none;}
 }
 
+
+/* uses ui/nox-wow-fx.css — add class nox-fx on the page root */
