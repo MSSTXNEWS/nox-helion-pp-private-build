@@ -49,6 +49,9 @@ class OneHostP02(ExistingP02Adapter):
         return session, payload
 
     def list_models(self, session, args):
+        # STOP is allowed to overtake the potentially blocking model inventory.
+        with self._stop_lock:
+            selection_stop_generation = self._stop_generation
         session, args = self._scope(session, args)
         if set(args) - {'model'}:
             raise HostDenied('Only installed model selection is accepted')
@@ -69,8 +72,13 @@ class OneHostP02(ExistingP02Adapter):
             if not callable(lineage_gate):
                 raise HostHold('SEED_LINEAGE_GATE_REQUIRED')
             lineage_gate()
-            with self._selection_lock:
-                self._selected = requested
+            # A late inventory/lineage response must not commit selection
+            # after native STOP. Share the epoch lock with stop() itself.
+            with self._stop_lock:
+                if self._stop_generation != selection_stop_generation:
+                    raise ProtocolHold('NATIVE_CHAT_STOP')
+                with self._selection_lock:
+                    self._selected = requested
         with self._selection_lock:
             if self._selected not in models:
                 self._selected = None
