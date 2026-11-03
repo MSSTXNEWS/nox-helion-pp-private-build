@@ -5,7 +5,7 @@ const el=(tag,cls,label)=>{const x=doc.createElement(tag);if(cls)x.className=cls
 const button=(label,cls,click)=>{const b=el('button',cls,label);b.type='button';b.addEventListener('click',click);return b;};
 const P={directions:$('directions'),planets:$('planets'),details:$('details'),status:$('status'),actions:$('actions'),title:$('title'),subtitle:$('subtitle'),search:$('search'),cores:$('cores'),fx:$('fx'),host:$('host')};
 let client=null,active=null,requesting=false;
-if(window.location.origin==='https://nox.local'&&window.location.pathname==='/'&&window.chrome?.webview){
+if(window.location.origin==='https://nox.local'&&window.location.pathname==='/'&&window.location.search===''&&window.location.hash===''&&window.chrome?.webview){
  try{client=createNativeMenuClient({webview:window.chrome.webview});P.host.textContent='ТРАНСПОРТ НАЙДЕН';}
  catch{client=null;}
 }
@@ -20,7 +20,11 @@ function draft(id,name){return [
  'Не запускать обучение, установку, управление ПК или патчи без разрешения; STOP и rollback обязательны.',
  'Передать владельцу RunID, SHA, результат и ошибки. Никакого вымышленного PASS.'
  ].join('\n');}
-function setDetails(...children){P.details.hidden=false;P.details.replaceChildren(...children);}
+function setDetails(...children){
+ P.details.hidden=false;P.details.replaceChildren(...children);
+ // Navigation panels live beneath the universe: actually bring the opened function into view.
+ window.requestAnimationFrame?.(()=>{if(!P.details.hidden)P.details.scrollIntoView?.({block:'start',behavior:'auto'});});
+}
 function overview(){
  active=null;P.details.hidden=true;P.details.replaceChildren();
  P.title.textContent='10 МИРОВ HELION';
@@ -45,31 +49,36 @@ function world(id){
 }
 function pending(id,label){
  const h=el('h2','',''+label),top=el('div','detail-top');
- top.append(button('← НАЗАД','back',()=>world(getRoute(id)?.world.id||active)),el('span','eyebrow',id));
+ top.append(button('← НАЗАД','back',()=>{const parent=getRoute(id)?.world.id||active;if(parent)world(parent);else overview();}),el('span','eyebrow',id));
  const p=el('p','body-copy','Этот модуль уже имеет своё место во вселенной NOX. Его рабочий обработчик, права доступа и результаты пока не подтверждены. Можно поставить разработку в приоритет.');
  const steps=el('div','steps');
  ['АНАЛИЗ','РАЗРАБОТКА','ПРОВЕРКА','АКТИВАЦИЯ'].forEach((s,i)=>steps.append(el('span','step',String(i+1).padStart(2,'0')+' · '+s)));
  const priority=button('✦ УСКОРИТЬ NOX','boost',async()=>{
   if(requesting)return;requesting=true;priority.disabled=true;
   const task=draft(id,label);
-  // The user must activate a separate native owner-approved action; no silent queue.
-  if(client){
-   say('Проверяется возможность поставить функцию в приоритет...');
-   try{
-    const result=await client.request('chat.commands',{action:'selfbuilder.propose',task});
-    say(result?.state==='COMPLETED'
-     ?'OneHost принял запрос. Проверьте RunID и приоритет в журнале; обучение не запускалось.'
-     :'OneHost не подтвердил постановку задачи. Задание можно сохранить вручную.');
-   }catch{say('Локальный OneHost пока не принял заявку на развитие.');}
-  }else{
+  const offerCopy=()=>{
+   if(P.details.querySelector('.task-copy'))return;
    const field=el('textarea','task-copy');field.readOnly=true;field.value=task;field.setAttribute('aria-label','Приоритетное задание для NOX');
    const copy=button('КОПИРОВАТЬ ЗАДАНИЕ','back',async()=>{
-    try{await navigator.clipboard.writeText(task);say('Техническое задание скопировано для отправки в NOX.');}
-    catch{field.select();say('Выделите и скопируйте задание вручную.');}
+    try{await navigator.clipboard.writeText(task);say('Задание скопировано. Для постановки в очередь нужно подтверждение NOX.');}
+    catch{field.select();say('Выделите задание и скопируйте вручную.');}
    });
-   P.details.append(field,copy);say('Приоритетное задание подготовлено. Подключите OneHost либо скопируйте его.');
-  }
-  requesting=false;priority.disabled=false;
+   P.details.append(field,copy);
+  };
+  // Existing native ACL/consent remains the only route. Never claim autonomous work on click.
+  try{
+   if(!client){offerCopy();say('План ускорения подготовлен. Подключите локальный OneHost или скопируйте его.');}
+   else{
+    say('Связываюсь с локальным ядром для назначения приоритета...');
+    const result=await client.request('chat.commands',{action:'selfbuilder.propose',task});
+    const receipt=result?.result||{};
+    const runId=receipt.run_id||receipt.runId||receipt.RunID;
+    if(result?.state==='COMPLETED'&&typeof runId==='string'&&runId.length>0){
+     say('Приоритет NOX зарегистрирован: RunID '+runId+'. Разработка и обучение выполняются только по разрешённому сценарию.');
+    }else{offerCopy();say('Постановка в рабочую очередь не подтверждена RunID. Сохраните задание для NOX.');}
+   }
+  }catch{offerCopy();say('Нет подтверждённого ответа OneHost. Приоритетное задание доступно для копирования.');}
+  finally{requesting=false;priority.disabled=false;}
  });
  setDetails(top,el('div','notready','В РАЗРАБОТКЕ'),h,p,steps,priority);
  say(label+' · в плане развития HELION');
@@ -125,7 +134,7 @@ WORLDS.forEach(w=>{
  b.setAttribute('aria-pressed','false');b.append(el('span','planet-label',w.title),el('small','',w.routes.length+' ФУНКЦИЙ'));P.planets.append(b);
 });
 PRIMARY.forEach(name=>{const b=button(name,'main-action',()=>mainAction(name));b.dataset.action=name;P.actions.append(b);});
-CORE_IDS.forEach(id=>{P.cores.append(button(id,'core',()=>say(id+' · показания появятся после native events.v3')));});
+CORE_IDS.forEach(id=>{P.cores.append(button(id,'core',()=>pending('core-'+id,id+' · ЯДРО')));});
 P.search.addEventListener('input',()=>{
  const q=P.search.value.trim().toLocaleLowerCase('ru');if(!q){overview();return;}
  const results=WORLDS.flatMap(w=>w.routes.map(r=>({...r,world:w}))).filter(x=>
