@@ -433,7 +433,9 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
                  route=="chat.stop" ||
                  route=="system.autostart" ||
                  route=="chat.commands" && payload.TryGetProperty("action",out var command) &&
-                 command.ValueKind==JsonValueKind.String && command.GetString()=="training.import"))
+                 command.ValueKind==JsonValueKind.String && command.GetString() is string ownerCommand &&
+                 (ownerCommand=="training.import" || ownerCommand=="selfbuilder.a1.boot" ||
+                  ownerCommand=="selfbuilder.a1.tick")))
             {
                 var ownerResult = await _nativeOwnerAction(route, payload.Clone(), cancel);
                 if (!IsCurrent(source, epoch) || !NativeSidMatches() ||
