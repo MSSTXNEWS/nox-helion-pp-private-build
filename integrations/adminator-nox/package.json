@@ -9,5 +9,6 @@
     "prepare:donor": "node ./scripts/prepare-donor.mjs",
     "test": "node --test"
   },
-  "dependencies": { "adminator-admin-dashboard": "4.4.0" },\n  "devDependencies": { "jsdom": "30.1.2" }
+  "dependencies": { "adminator-admin-dashboard": "4.4.0" },
+  "devDependencies": { "jsdom": "30.1.2" }
 }
