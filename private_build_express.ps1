@@ -8,3 +8,5 @@ Write-Output "source_head=$SourceHead"
 Write-Output "pr162=OPEN integration/nox-v16-unified-candidate-20261028-r01"
 Write-Output "release_accepted=false"
 exit 2
+
+# EXPRESS head is fix/b6-navidle-20261103. PRE-PRE private_build.ps1 is unchanged.
