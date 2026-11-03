@@ -221,6 +221,7 @@ class NativeIngress:
                     "FORBIDDEN", "CONSENT_REQUIRED", "ABORTED", "TIMED_OUT",
                     "EXPIRED", "CONSENT_REVOKED", "REVOKED",
                     "STOP_REQUESTED", "STOPPING", "CANCELED", "CANCELLED",
+                    "FAILED", "DENIED", "REJECTED", "OFFLINE", "NEEDS_AUTH",
                 )
                 if (("ok" in result and type(ok) is not bool) or
                     ok is False or
