@@ -30,13 +30,51 @@ function create(){
   const head=document.createElement('h3');head.textContent='WOW 001–200 · кинематографические эффекты NOX';
   const expl=document.createElement('p');expl.textContent='Сохранены исходные эффекты и анимации. Предпросмотр — художественная сцена, а не обучение ИИ или подтверждение готового EXE.';
   const controls=document.createElement('div');controls.className='nox-w200-controls';
-  const label=document.createElement('label');label.textContent='Выбрать эффект 51–200';
-  const select=document.createElement('select');select.id='nox-wow200-id';
-  for(let id=51;id<=200;id++){const o=document.createElement('option');o.value=String(id);o.textContent=`${id} · ${detail.get(id)||'WOW NOX'}`;select.append(o)}
-  label.append(select);
-  const modLabel=document.createElement('label');modLabel.textContent='Производительность';
-  const mod=document.createElement('select');mod.id='nox-wow200-mode';
-  for(const v of validModes){const o=document.createElement('option');o.value=v;o.textContent=v;mod.append(o)}mod.value=mode();modLabel.append(mod);
+  // Original secondary WOW: graphic-only controls. Keep hidden scalar state so
+  // existing R14 mode/preview consumers keep their exact semantics and IDs.
+  const label=document.createElement('div');label.className='nox-w200-control-label';label.textContent='Эффекты 51–200';
+  const select=document.createElement('input');select.type='hidden';select.id='nox-wow200-id';select.value='51';
+  const effectGrid=document.createElement('div');effectGrid.id='nox-wow200-effects';effectGrid.className='nox-w200-effect-grid';
+  effectGrid.setAttribute('role','group');effectGrid.setAttribute('aria-label','Кинематографические эффекты 51–200');
+  const effectButtons=[];
+  function selectEffect(id){
+    if(!Number.isInteger(id)||id<51||id>200)return false;
+    select.value=String(id);
+    for(const button of effectButtons){
+      const active=button.dataset.effectId===String(id);
+      button.className=active?'nox-w200-effect-tile is-active':'nox-w200-effect-tile';
+      button.setAttribute('aria-pressed',String(active));
+    }
+    return true;
+  }
+  for(let id=51;id<=200;id++){
+    const button=document.createElement('button');button.type='button';
+    button.dataset.effectId=String(id);
+    button.className=id===51?'nox-w200-effect-tile is-active':'nox-w200-effect-tile';
+    button.textContent=String(id);button.title=detail.get(id)||'WOW NOX';
+    button.setAttribute('aria-label',`Эффект ${id} · ${detail.get(id)||'WOW NOX'}`);
+    button.setAttribute('aria-pressed',String(id===51));
+    button.onclick=()=>selectEffect(id);
+    effectButtons.push(button);effectGrid.append(button);
+  }
+  label.append(select,effectGrid);
+  const modLabel=document.createElement('div');modLabel.className='nox-w200-control-label';modLabel.textContent='Производительность';
+  const mod=document.createElement('input');mod.type='hidden';mod.id='nox-wow200-mode';mod.value=mode();
+  const modeGrid=document.createElement('div');modeGrid.id='nox-wow200-modes';modeGrid.className='nox-w200-mode-grid';
+  modeGrid.setAttribute('role','group');modeGrid.setAttribute('aria-label','Режим анимации');
+  const modeButtons=[];
+  const syncModeButtons=()=>{for(const button of modeButtons){
+    const active=button.dataset.mode===mod.value;
+    button.className=active?'nox-w200-mode-chip is-active':'nox-w200-mode-chip';
+    button.setAttribute('aria-pressed',String(active));
+  }};
+  for(const value of validModes){
+    const button=document.createElement('button');button.type='button';button.textContent=value;
+    button.dataset.mode=value;button.setAttribute('aria-label','Режим '+value);
+    button.onclick=()=>{mod.value=value;mod.onchange?.()};
+    modeButtons.push(button);modeGrid.append(button);
+  }
+  syncModeButtons();modLabel.append(mod,modeGrid);
   const btn=document.createElement('button');btn.type='button';btn.id='nox-wow200-preview';btn.textContent='Показать эффект';
   controls.append(label,modLabel,btn);
   const preview=document.createElement('div');preview.className='nox-w200-cinema';
@@ -54,7 +92,7 @@ function create(){
     btn.onclick=()=>{const id=Number(select.value);if(!Number.isInteger(id)||id<51||id>200)return;
       const current=applyMode();const cue=scene.preview(id);
       note('DEMO · '+id+' · '+(cue.name||cue.title||'киноэффект')+' · режим '+current+' · не подтверждение работы GPU');};
-    mod.onchange=applyMode;
+    mod.onchange=()=>{syncModeButtons();return applyMode()};
     if(typeof motion?.addEventListener==='function')motion.addEventListener('change',applyMode);
     else if(typeof motion?.addListener==='function')motion.addListener(applyMode);
   }catch(e){note('HOLD визуального движка: '+e.message)}

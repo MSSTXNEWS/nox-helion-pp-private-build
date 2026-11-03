@@ -7,7 +7,7 @@ const source=readFileSync(new URL('./loader.mjs',import.meta.url),'utf8')
 function fixture({reduced=false,noMedia=false,legacy=false,bodyClass='',invalidCatalog=false}={}){
  const nodes=[];
  class El{constructor(tag){this.tag=tag;this.id='';this.value='';this.dataset={};this.children=[];this.className='';this.textContent='';this.classList={contains:v=>v===bodyClass};}
- append(...xs){this.children.push(...xs);}appendChild(x){this.children.push(x);}closest(){return null;}}
+ append(...xs){this.children.push(...xs);}appendChild(x){this.children.push(x);}setAttribute(k,v){(this.attributes??={})[k]=String(v);}closest(){return null;}}
  const screen=new El('div');screen.id='screen-immersive';nodes.push(screen);
  const document={body:new El('body'),readyState:'complete',createElement(tag){let e=new El(tag);nodes.push(e);return e;},getElementById(id){return nodes.find(x=>x.id===id)||null;},addEventListener(){}};
  const callbacks=[],motion=noMedia?null:{matches:reduced};
@@ -18,7 +18,7 @@ function fixture({reduced=false,noMedia=false,legacy=false,bodyClass='',invalidC
  const mountCinematic=()=>({decorate(){},setMode:v=>out.pack.push(v)});
  const fetch=()=>Promise.resolve({ok:true,json:()=>Promise.resolve({version:invalidCatalog?'UNREVIEWED':'NOX-INTEGRATION-PACK-01',actions:Array.from({length:50},(_,i)=>({taskId:'NIP01-'+String(i+1).padStart(2,'0'),routeId:'route.test'+String(i+1),title:'Test route '+(i+1),category:'chat',owner:2}))})});
  runInNewContext(source,{document,window,fetch,mountUnifiedCinema,mountCinematic,reviewWowScopes:()=>{},CUES:[],SHOTS:[],COMPOSITIONS:[]},{timeout:1000});
- return {out,find:id=>document.getElementById(id),async ready(){for(let i=0;i<7;i++)await Promise.resolve();},
+ return {out,nodes,find:id=>document.getElementById(id),async ready(){for(let i=0;i<7;i++)await Promise.resolve();},
  reduced(v){motion.matches=v;callbacks.forEach(cb=>cb({matches:v}));}};
 }
 test('E01-W2-R14-01 initial scene forced REDUCED by OS',()=>{const x=fixture({reduced:true,bodyClass:'mode-max'});assert.equal(x.out.mount.mode,'REDUCED');assert.equal(x.out.mount.reducedMotion,true);});
@@ -36,3 +36,30 @@ test('E01-W2-R14-11 invalid PACK01 catalog cannot activate routes or effects',as
  assert.match(x.find('nox-wow200-routes').textContent,/HOLD/);
 });
 test('E01-W2-R14-10 missing and legacy matchMedia remain safe',async()=>{const n=fixture({noMedia:true});await n.ready();assert.equal(n.out.mount.mode,'BALANCED');const l=fixture({legacy:true});await l.ready();l.reduced(true);assert.equal(l.out.scene.at(-1),'REDUCED');assert.equal(l.out.pack.at(-1),'reduced');});
+
+test('W08 R100 graphical UI is 150 actual effect buttons and four mode buttons, without dropdowns',async()=>{
+ const x=fixture();await x.ready();
+ assert.equal(x.nodes.filter(e=>e.tag==='select').length,0);
+ assert.equal(x.find('nox-wow200-effects').children.length,150);
+ assert.equal(x.find('nox-wow200-modes').children.length,4);
+ assert.equal(x.find('nox-wow200-id').type,'hidden');
+ assert.equal(x.find('nox-wow200-mode').type,'hidden');
+});
+test('W08 R100 clicking graphical effect selects only requested preview, never native route',async()=>{
+ const x=fixture();await x.ready();
+ const buttons=x.find('nox-wow200-effects').children;
+ buttons[149].onclick();assert.equal(x.find('nox-wow200-id').value,'200');
+ assert.equal(buttons[149].attributes['aria-pressed'],'true');
+ assert.equal(buttons[0].attributes['aria-pressed'],'false');
+ assert.equal(x.out.preview.length,0);
+ x.find('nox-wow200-preview').onclick();
+ assert.deepEqual(x.out.preview,[200]);
+});
+test('W08 R100 graphical mode buttons respect OS Reduced Motion on both original FX engines',async()=>{
+ const x=fixture({reduced:true});await x.ready();
+ const max=x.find('nox-wow200-modes').children.find(e=>e.dataset.mode==='MAX');
+ max.onclick();assert.equal(max.attributes['aria-pressed'],'true');
+ assert.equal(x.find('nox-wow200-mode').value,'MAX');
+ assert.equal(x.out.scene.at(-1),'REDUCED');assert.equal(x.out.pack.at(-1),'reduced');
+ x.reduced(false);assert.equal(x.out.scene.at(-1),'MAX');assert.equal(x.out.pack.at(-1),'max');
+});
