@@ -383,14 +383,15 @@ def create_existing_ingress(store, run_id: str, *, client=None, event_sink=None,
     def stop(session, args):
         nonlocal a1_wpf_proof
         try:
-            result = adapter.stop(session, args)
+            return adapter.stop(session, args)
         finally:
             # STOP revokes the Python-side acceptance capability, including
             # failure before the original monotonic STOP epoch can advance.
             a1_wpf_proof = None
-        for hook in stop_hooks:
-            hook()
-        return result
+            # Background P04 and other original work must stop even when the
+            # P02 adapter's STOP operation fails; never strand active workers.
+            for hook in stop_hooks:
+                hook()
     for route, method in (("helion.chat", adapter.chat),
                           ("chat.history", adapter.history),
                           ("chat.stop", stop),

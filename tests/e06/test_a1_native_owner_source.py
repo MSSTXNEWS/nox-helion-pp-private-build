@@ -93,7 +93,7 @@ class A1StopRevokesNativeTicket(unittest.TestCase):
             stop(None, {})
         self.assertIsNone(peek())
         self.assertEqual(adapter.epoch, 1)
-        self.assertEqual(hooks, [])
+        self.assertEqual(hooks, ["called"])
 
 
 class A1FirstBootSharedStopClock(unittest.TestCase):
