@@ -410,7 +410,7 @@ if ($wantsCreative) {
     $menuGate=Join-Path $menuRoot 'qa_source_gate.py'
     $menuPublisher=Join-Path $menuRoot 'publish_onehost_payload.py'
     foreach ($candidate in @(
-      @{Path=$menuStage;Blob='dc0fe71a7e62ab97a2108bd5ed11242a4a5b9e0d'},
+      @{Path=$menuStage;Blob='878a4213eeeeb804352ba02c3165299575d42c83'},
       @{Path=$menuGate;Blob='d5b1ee5f3dbf622c21acc16594f980ebc04ceb1d'},
       @{Path=$menuPublisher;Blob='6e2a943ab3f0a69d3dea641fdd78748922675dd8'}
     )) {
