@@ -36,7 +36,9 @@ try {
    const button=element('button');button.textContent=label;button.disabled=true;
    return button;
   });
-  assert.equal(detail.open,true,'MENU V2 submenus visible immediately after asteroid activation');
+  assert.equal(detail.tag,'section','MENU V2 uses a static screen, never details/summary dropdown');
+  assert.equal(detail.children[0].tag,'h3','World heading is always visible');
+  assert.equal(detail.children.some(x=>x.tag==='details'||x.tag==='summary'),false);
   const expected=w.items.length;
   const search=detail.children[1],list=detail.children[2],feature=detail.children[3];
   assert.equal(list.children.length,expected);
