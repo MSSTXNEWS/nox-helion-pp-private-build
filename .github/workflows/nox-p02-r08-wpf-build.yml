@@ -1,0 +1,183 @@
+name: NOX E02 pinned R08 WPF diagnostic with existing E06 repairs
+on:
+  push:
+    branches:
+      - codex/v16-executor2-ollama-contract-20261027
+      - e06/v16-r08-binary-diagnostic-20261028
+    paths:
+      - '.github/workflows/nox-p02-r08-wpf-build.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  current-wpf-diagnostic:
+    runs-on: windows-2025
+    timeout-minutes: 35
+    steps:
+      - name: Checkout owner 2 branch (CI metadata only)
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Checkout E06 sealed R08 diagnostic source (read-only)
+        uses: actions/checkout@v4
+        with:
+          repository: MSSTXNEWS/nox-helion-pp-private-build
+          ref: 6f41831c69d41adec6899b07c074b0b19cd68b28
+          path: .e06-r08-source
+          persist-credentials: false
+      - name: Checkout E06 previously implemented compiler fixes (read-only)
+        uses: actions/checkout@v4
+        with:
+          repository: MSSTXNEWS/nox-helion-pp-private-build
+          ref: 0a832004d4b57127f08d3b045dc864ddf149d8a4
+          path: .e06-existing-fixes
+          persist-credentials: false
+      - name: Official .NET 8 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Python stdlib only
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate R08 original source and isolate diagnostic stage
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $source='.e06-r08-source/proposals/E06/express/NOX_R08_WPF_DIAG_CODE_ONLY.zip'
+          $expected='fbeab580b90930e93f80ea83bea610a034f3411f00f3433b2e688d5ae0d921a9'
+          if (!(Test-Path -LiteralPath $source -PathType Leaf)) { throw 'R08_PINNED_SOURCE_MISSING' }
+          if ((Get-FileHash -LiteralPath $source -Algorithm SHA256).Hash.ToLowerInvariant() -cne $expected) { throw 'R08_SOURCE_SHA256_MISMATCH' }
+          New-Item -ItemType Directory -Path 'work/e06/staged' -Force | Out-Null
+          Expand-Archive -LiteralPath $source -DestinationPath 'work/e06/staged'
+          $manifest=Get-Content 'work/e06/staged/EXPRESS_SOURCE_MANIFEST.json' -Raw | ConvertFrom-Json
+          if ($manifest.schema -cne 'NOX_EXPRESS_R08_ORIGINAL_SOURCE_INVENTORY_V1' -or $manifest.original_full_zip_sha256 -cne '67ba6deae9b315fbdfcd6f1cc076be68f6e33e1920a8bd829794d12f14573689') { throw 'R08_MANIFEST_HOLD' }
+          $checked=0
+          foreach ($file in $manifest.files) {
+            if ($file.in_compile_subset -ne $true) { continue }
+            $path=[string]$file.path
+            if ($path -notmatch '^R11/[A-Za-z0-9._/\\-]+$' -or $path.Contains('..')) { throw 'UNSAFE_R08_MEMBER_PATH' }
+            $full=Join-Path 'work/e06/staged' $path
+            if (!(Test-Path -LiteralPath $full -PathType Leaf)) { throw 'R08_MEMBER_MISSING' }
+            if ((Get-Item $full).Length -ne [long]$file.bytes) { throw 'R08_MEMBER_SIZE_HOLD' }
+            if ((Get-FileHash $full -Algorithm SHA256).Hash.ToLowerInvariant() -cne [string]$file.sha256) { throw 'R08_MEMBER_SHA_HOLD' }
+            $checked++
+          }
+          if ($checked -lt 90) { throw 'R08_INCOMPLETE_SUBSET' }
+          'R08_PINNED_SOURCE_PASS' | Set-Content -LiteralPath 'work/e06/staged/R08-source-seal.txt'
+          New-Item -ItemType Directory -Path 'coordination/e06' -Force | Out-Null
+          Copy-Item '.e06-existing-fixes/coordination/e06/patch_legacy_p05_html.py' 'coordination/e06/patch_legacy_p05_html.py'
+          Copy-Item '.e06-existing-fixes/coordination/e06/patch_legacy_compiler.py' 'coordination/e06/patch_legacy_compiler.py'
+      - name: Recover the four approved D02 images from verified frozen original archive
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $targetRoot='work/e06/staged/R11/Assets'
+          if (!(Test-Path -LiteralPath $targetRoot -PathType Container)) { throw 'NOX_R08_ASSETS_FOLDER_MISSING' }
+          $tmp=Join-Path $env:RUNNER_TEMP 'NOX_E06_APPROVED_D02_ORIGINAL.zip'
+          if (Test-Path $tmp) { throw 'NOX_D02_TEMP_ARCHIVE_ALREADY_EXISTS' }
+          $writer=[IO.FileStream]::new($tmp,[IO.FileMode]::CreateNew,[IO.FileAccess]::Write,[IO.FileShare]::None)
+          try {
+            foreach ($name in @('source_00.part','source_01.part','source_02.part')) {
+              if (!(Test-Path -LiteralPath $name -PathType Leaf)) { throw "NOX_ORIGINAL_SOURCE_PART_MISSING:$name" }
+              $reader=[IO.File]::OpenRead((Resolve-Path -LiteralPath $name).Path)
+              try { $reader.CopyTo($writer) } finally { $reader.Dispose() }
+            }
+          } finally { $writer.Dispose() }
+          if ((Get-Item -LiteralPath $tmp).Length -ne 60364346) { throw 'NOX_ORIGINAL_SOURCE_SIZE_HOLD' }
+          if ((Get-FileHash -LiteralPath $tmp -Algorithm SHA256).Hash.ToLowerInvariant() -cne 'ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a') { throw 'NOX_ORIGINAL_SOURCE_SHA_HOLD' }
+          Add-Type -AssemblyName System.IO.Compression
+          $assets=@(
+            @{from='assets/HOME_OWNER_APPROVED.png';to='home.png';sha='382c1069afcaaaed11c319796f2c553d2bd977d7e46c68ecd7d55af26e132a4a'},
+            @{from='assets/approved_ui/NOX_HELION_MENU_OWNER_APPROVED_20261019.png';to='menu.png';sha='4c73d137e6d25f496abb006dbb8af08b1fe272d2f935c5006f0f42b6fd9992b9'},
+            @{from='assets/approved_ui/NOX_HELION_APPROVED_CORE_01_CONSCIOUSNESS_20261020.png';to='core01.png';sha='343e5c73539358fe2c086706b4155cc0f9cd9702fcd40a98b4aab130585bec97'},
+            @{from='assets/approved_ui/NOX_HELION_MENU_8_SECTIONS_COLLAGE_APPROVED_20261020.png';to='menu_sections.png';sha='7d181604f913cf9956c173c14da3dc7fd0238c389322896588cec4407b4024a4'}
+          )
+          $receipt=[ordered]@{schema='NOX_E06_D02_BYTE_EXACT_ASSETS_V1'; originalArchiveSha256='ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a'; files=@()}
+          $zip=[IO.Compression.ZipFile]::OpenRead($tmp)
+          try {
+            foreach($asset in $assets) {
+              $entry=$zip.GetEntry($asset.from)
+              if ($null -eq $entry) { throw "NOX_D02_APPROVED_ASSET_MISSING:$($asset.from)" }
+              $dest=Join-Path $targetRoot $asset.to
+              if (!(Test-Path -LiteralPath $dest -PathType Leaf)) {
+                $input=$entry.Open()
+                $output=[IO.FileStream]::new([IO.Path]::GetFullPath($dest),[IO.FileMode]::CreateNew,[IO.FileAccess]::Write,[IO.FileShare]::None)
+                try { $input.CopyTo($output) } finally { $output.Dispose(); $input.Dispose() }
+              }
+              $observed=(Get-FileHash -LiteralPath $dest -Algorithm SHA256).Hash.ToLowerInvariant()
+              if ($observed -cne $asset.sha) { throw "NOX_D02_ASSET_PREIMAGE_CONFLICT:$($asset.to)" }
+              $receipt.files+=@([ordered]@{source=$asset.from;target=$asset.to;sha256=$observed;bytes=(Get-Item -LiteralPath $dest).Length})
+            }
+          } finally { $zip.Dispose(); Remove-Item -LiteralPath $tmp -Force }
+          $receipt | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath 'work/e06/staged/d02-byte-exact-receipt.json' -Encoding utf8
+          Write-Host 'NOX_D02_FOUR_ORIGINAL_IMAGES_BYTE_EXACT_PASS'
+      - name: Apply E06's original exact-SHA P05 HTML compatibility fix to staged bytes only
+        shell: pwsh
+        run: python coordination/e06/patch_legacy_p05_html.py
+      - name: Reuse original E06 compiler fix with exact R08 source hash
+        shell: pwsh
+        run: python Packages/P02/diagnostics/r08_exact_reuse_e06_repairs.py
+      - name: Apply bounded E02 compiler compatibility overlay only inside isolated stage
+        shell: pwsh
+        run: python Packages/P02/diagnostics/r08_apply_minimal_compile_fixes.py
+      - name: Compile R08 original WPF/WebView2 host using existing repaired stage
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $project='work/e06/staged/R11/NOX.P01.Shell.csproj'
+          dotnet restore $project --runtime win-x64 --verbosity minimal
+          if ($LASTEXITCODE -ne 0) { throw 'NOX_R08_DOTNET_RESTORE_HOLD' }
+          dotnet build $project -c Release -r win-x64 --no-restore --nologo --verbosity minimal
+          if ($LASTEXITCODE -ne 0) { throw 'NOX_R08_DOTNET_BUILD_HOLD' }
+      - name: Publish diagnostic EXE and write SHA receipt (not accepted release)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $project='work/e06/staged/R11/NOX.P01.Shell.csproj'
+          dotnet publish $project -c Release -r win-x64 --self-contained false --no-restore -p:PublishSingleFile=false -p:PublishTrimmed=false -o 'work/e06/staged/diagnostic-payload' --nologo --verbosity minimal
+          if ($LASTEXITCODE -ne 0) { throw 'NOX_R08_DOTNET_PUBLISH_HOLD' }
+          $exe='work/e06/staged/diagnostic-payload/NOX.P01.Shell.exe'
+          if (!(Test-Path -LiteralPath $exe)) { throw 'DIAGNOSTIC_EXE_MISSING' }
+          [ordered]@{
+            schema='NOX_V16_E02_PINNED_R08_DIAGNOSTIC_v1'
+            buildRunId=$env:GITHUB_RUN_ID
+            owner2Commit=$env:GITHUB_SHA
+            e06SourceCommit='6f41831c69d41adec6899b07c074b0b19cd68b28'
+            e06LegacyPatchesCommit='0a832004d4b57127f08d3b045dc864ddf149d8a4'
+            zipFullOriginalSha256='67ba6deae9b315fbdfcd6f1cc076be68f6e33e1920a8bd829794d12f14573689'
+            diagnosticExeSha256=(Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash.ToLowerInvariant()
+            diagnosticExeBytes=(Get-Item -LiteralPath $exe).Length
+            sourceSubsetOnly=$true
+            originalApprovedD02AssetsIncluded=$true
+            stagedRepairsRequireOwnerApproval=$true
+            originalSourceUntouched=$true
+            fullProductIntegrated=$false
+            E07Accepted=$false
+          } | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath 'work/e06/staged/diagnostic-receipt.json'
+          Write-Host 'WPF_DIAGNOSTIC_EXE_BUILT_NOT_FINAL_RELEASE'
+      - name: Preserve diagnostic evidence even if compile fails
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nox-e02-r08-pinned-diagnostic-evidence
+          path: |
+            work/e06/staged/R08-source-seal.txt
+            work/e06/staged/P05-diagnostic-repair-receipt.json
+            work/e06/staged/legacy-compiler-repair-receipts.json
+            work/e06/staged/E02-compiler-compat-receipt.json
+            work/e06/staged/diagnostic-receipt.json
+            work/e06/staged/d02-byte-exact-receipt.json
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Save Windows diagnostic binaries, including EXE (NOT final release)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nox-e06-r08-diagnostic-binary-${{ github.run_id }}
+          path: |
+            work/e06/staged/diagnostic-payload/**
+            work/e06/staged/diagnostic-receipt.json
+          if-no-files-found: warn
+          retention-days: 14
