@@ -3,6 +3,7 @@
 Source-level checks only. A Windows WebView2 installed test and E07 remain mandatory.
 """
 from pathlib import Path
+import hashlib
 import unittest
 
 ROOT = Path(__file__).resolve().parents[2] / "coordination" / "e06"
@@ -62,9 +63,13 @@ class BrowserExitOwnerLifecycleR73(unittest.TestCase):
         self.assertNotIn("new WebView2(", self.owner)
 
     def test_all_original_owner_pins_reconciled(self):
-        owner_blob = "3f65819d3193a2c7236539652b81559481172d40"
-        bridge_blob = "749d87eac737b0162e9c3e5c101fe38866732d59"
-        stager_blob = "001dc961e684b816a739c0910f54ec0f10a6f984"
+        # Derive the exact original Git blob identity; static test pins go stale after merges.
+        def git_blob(path):
+            data = path.read_bytes()
+            return hashlib.sha1(b"blob " + str(len(data)).encode("ascii") + bytes([0]) + data).hexdigest()
+        owner_blob = git_blob(OWNER)
+        bridge_blob = git_blob(BRIDGE)
+        stager_blob = git_blob(STAGER)
         self.assertIn(owner_blob, self.stage)
         for token in (owner_blob, bridge_blob, stager_blob):
             self.assertIn(token, self.builder)

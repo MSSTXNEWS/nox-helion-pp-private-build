@@ -1,5 +1,6 @@
 """Source-contract regression for R74: original ONE WPF bridge, no mocked E07."""
 import pathlib
+import hashlib
 import re
 import unittest
 
@@ -7,7 +8,9 @@ ROOT = pathlib.Path(__file__).resolve().parents[2]
 BRIDGE = ROOT / "coordination/e06/OneHostP02WebView2Bridge.cs"
 COMPILER = ROOT / "coordination/e06/t06_compile_original_wpf_p02.py"
 BUILDER = ROOT / "coordination/e06/build_onehost_installer.ps1"
-EXPECTED_BLOB = "d99bd2f7bc69c3ab917954d28e91cd6edf328a2b"
+def actual_bridge_blob():
+    data = BRIDGE.read_bytes()
+    return hashlib.sha1(b"blob " + str(len(data)).encode("ascii") + bytes([0]) + data).hexdigest()
 
 class ProcessFailedOwnerTelemetry(unittest.TestCase):
     @classmethod
@@ -41,8 +44,8 @@ class ProcessFailedOwnerTelemetry(unittest.TestCase):
         self.assertIn("OnNativeP02BrowserProcessExited", (ROOT / "coordination/e06/MainWindow.NativeP02.cs").read_text(encoding="utf-8"))
 
     def test_all_existing_builder_consumers_pin_exact_new_bridge_blob(self):
-        self.assertIn(EXPECTED_BLOB, self.compiler)
-        self.assertIn(EXPECTED_BLOB, self.builder)
+        self.assertIn(actual_bridge_blob(), self.compiler)
+        self.assertIn(actual_bridge_blob(), self.builder)
         self.assertNotIn("749d87eac737b0162e9c3e5c101fe38866732d59", self.compiler)
         self.assertNotIn("749d87eac737b0162e9c3e5c101fe38866732d59", self.builder)
 
