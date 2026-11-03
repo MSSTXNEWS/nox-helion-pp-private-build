@@ -119,13 +119,28 @@ export function appendMenuV2(controls, world, catalogue, createOwnerRouteButton)
           const ownerAction = createOwnerRouteButton(route, item.label);
           if (!ownerAction) throw new Error('NOX_MENU_V2_NATIVE_OWNER_CALLBACK_HOLD');
           ownerMount.append(ownerAction);
-          status.textContent = 'Существующий переход · реальная функция и права проверяются отдельно; E07 HOLD.';
+          status.textContent = 'Существующий экран доступен · функция и права проверяются отдельно; E07 HOLD.';
         } catch {
-          ownerMount.replaceChildren();
-          status.textContent = 'HOLD · native обработчик недоступен; переход сохранён, действие не выполнено.';
+          status.textContent = 'HOLD · прямой native обработчик недоступен; AI-помощник остаётся отдельным действием.';
         }
       } else {
-        status.textContent = 'ОЖИДАЕТ ПОДКЛЮЧЕНИЯ NOX · этот подраздел доступен для навигации, но реальный обработчик пока не подтверждён.';
+        status.textContent = 'Прямой исполнитель не подтверждён · можно поручить NOX разобрать задачу и определить доступный безопасный способ.';
+      }
+      // Every catalog item gets an explicit route through the EXISTING AI pipe.
+      // The response confirms only that AI replied; it does not prove the requested
+      // operational task was executed.
+      try {
+        const prompt = {
+          text: ('В разделе «' + section.title + '» помоги с пунктом «' + item.label +
+            '». Используй только реально доступные разрешённые функции. Если прямое действие недоступно, ' +
+            'объясни ограничение и предложи следующий безопасный шаг. Не утверждай, что действие выполнено без подтверждения.')
+            .slice(0, 720)
+        };
+        const ask = createOwnerRouteButton('helion.chat', 'СПРОСИТЬ NOX', prompt);
+        if (!ask) throw new Error('NOX_MENU_V2_AI_ROUTE_UNAVAILABLE');
+        ownerMount.append(ask);
+      } catch {
+        status.textContent += ' · AI-канал пока недоступен.';
       }
       list.hidden = true;
       search.hidden = true;
