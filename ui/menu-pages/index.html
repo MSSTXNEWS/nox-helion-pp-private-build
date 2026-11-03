@@ -22,6 +22,9 @@
   <button data-go="evolution">Обучение</button>
   <button data-go="system">Настройки</button>
 </nav>
+<canvas id="fx" class="fx-canvas"></canvas>
+<script src="three.min.js"></script>
+<script type="module">import { mountNoxWow } from "./nox-wow-scene.js"; mountNoxWow(document.getElementById("fx"));</script>
 <script src="menu.js"></script>
 </body>
 </html>
