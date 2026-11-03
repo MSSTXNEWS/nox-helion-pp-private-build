@@ -323,6 +323,26 @@ jobs:
           if (!(Test-Path -LiteralPath (Join-Path $workerDist 'NOX_CreativeWorker.exe') -PathType Leaf)) { throw 'GITHUB_CREATIVE_WORKER_BINARY_MISSING_HOLD' }
           $builderCopy=Join-Path $workerRoot 'build_onehost_creative_disposable.ps1'
           Copy-Item -LiteralPath 'coordination/e06/build_onehost_installer.ps1' -Destination $builderCopy -ErrorAction Stop
+          # The original builder resolves TWO mandatory companion guards from
+          # PSScriptRoot. Relocating only the PS1 drops the native JSON verifier
+          # (E06_NATIVE_RECEIPT_STRICT_JSON_HOLD) and later L01 bridge.
+          # Copy unchanged canonical blobs into the same disposable directory.
+          foreach ($sidecar in @(
+            @{Name='verify_native_receipt_json.py'; Blob='b14809eb5479d612b78282fd6eb210ad55d72cce'},
+            @{Name='l01_manifest_bridge.py'; Blob='5d971b1d0dc582029d7095d625e6e775df527d52'}
+          )) {
+            $src=Join-Path 'coordination/e06' $sidecar.Name
+            $actual=(& git hash-object -- $src | Out-String).Trim().ToLowerInvariant()
+            if ($LASTEXITCODE -ne 0 -or $actual -cne $sidecar.Blob) {
+              throw ('E06_BUILDER_SIDECAR_SOURCE_PIN_HOLD:'+$sidecar.Name)
+            }
+            $dst=Join-Path $workerRoot $sidecar.Name
+            Copy-Item -LiteralPath $src -Destination $dst -ErrorAction Stop
+            $after=(& git hash-object -- $dst | Out-String).Trim().ToLowerInvariant()
+            if ($LASTEXITCODE -ne 0 -or $after -cne $sidecar.Blob) {
+              throw ('E06_BUILDER_SIDECAR_COPY_PIN_HOLD:'+$sidecar.Name)
+            }
+          }
           & $workerPython (Join-Path $creativeRoot 'patch_installer.py') $builderCopy $workerDist
           if ($LASTEXITCODE -ne 0) { throw 'GITHUB_CREATIVE_INSTALLER_STAGE_HOLD' }
           $patchedBuilder=Get-Content -LiteralPath $builderCopy -Raw -Encoding UTF8
