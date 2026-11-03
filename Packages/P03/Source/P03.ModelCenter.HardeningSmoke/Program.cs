@@ -9,6 +9,29 @@ void MustReject(Action fn, string name) {
     catch (InvalidDataException) { Console.WriteLine("PASS " + name); pass++; return; }
     throw new Exception("FAIL " + name);
 }
+// R99: a non-default HTTPS port is a different official-source origin.
+// This is a focused reviewed-registry source test, not installed-model proof.
+var reviewedOrigin = new ModelArtifactReviewCandidate(
+    FamilyId: "tinyllama", OfficialSourceUrl: "https://ollama.com/library/tinyllama",
+    ExactTag: "tinyllama:test-r99", Version: "test-r99",
+    LicenseId: "test-fixture", LicenseEvidenceUrl: "https://ollama.com/library/tinyllama",
+    ArtifactBytes: 1024, RequiredDiskBytes: 2048, RecommendedRamBytes: 4096,
+    RecommendedVramBytes: null, ArtifactSha256: new string('a', 64),
+    ManifestSha256: new string('b', 64),
+    CompatibilityEvidenceUrl: "https://ollama.com/library/tinyllama",
+    ImmutableRevision: "sha256:" + new string('b', 64),
+    CompatibilityReviewed: true, ReviewerReceiptId: "r99-fixture",
+    ReviewStatus: "OWNER_VERIFIED");
+Assert(ModelArtifactReviewRegistry.TryPromote(reviewedOrigin, true, out var canonicalReviewed)
+    && canonicalReviewed?.CanOfferOneClickPull == true,
+    "R99 canonical owner-reviewed source accepted");
+Assert(!ModelArtifactReviewRegistry.TryPromote(
+    reviewedOrigin with { OfficialSourceUrl = "https://ollama.com:444/library/tinyllama" },
+    true, out _),
+    "R99 nondefault Ollama port rejected");
+Assert(!ModelArtifactReviewRegistry.TryPromote(reviewedOrigin, false, out _),
+    "R99 native-reviewed receipt still required");
+
 using var correct = JsonDocument.Parse("{\"models\":[{\"name\":\"m:1\",\"digest\":\"sha256:" + new string('a',64) + "\"}]}");
 Assert(ModelLocalAttestation.ParseUnambiguousModelDigest(correct.RootElement, "m:1") == "sha256:" + new string('a',64), "T01 pinned local digest");
 Assert(ModelLocalAttestation.ParseUnambiguousModelDigest(correct.RootElement, "missing:1") is null, "T02 absent tag stays unknown");

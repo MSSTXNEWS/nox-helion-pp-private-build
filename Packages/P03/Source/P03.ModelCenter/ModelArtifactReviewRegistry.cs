@@ -23,6 +23,7 @@ public static class ModelArtifactReviewRegistry
         string.IsNullOrEmpty(uri.UserInfo) && string.IsNullOrEmpty(uri.Fragment);
     private static bool Official(string source, string family) => Https(source, out var uri) &&
         uri!.Host.Equals("ollama.com", StringComparison.OrdinalIgnoreCase) &&
+        uri.IsDefaultPort &&
         uri.AbsolutePath.Equals("/library/" + family, StringComparison.OrdinalIgnoreCase) &&
         string.IsNullOrWhiteSpace(uri.Query);
     public static IReadOnlyList<ModelArtifactReviewCandidate> ReadTemplate(string path)

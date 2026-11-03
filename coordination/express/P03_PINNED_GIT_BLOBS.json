@@ -418,12 +418,15 @@
     {
       "path": "Packages/P03/Source/P03.ModelCenter/ModelArtifactReviewRegistry.cs",
       "owner": 3,
-      "run_id": "NOX-E03-PR162-PIN-RECONCILE-20261101",
+      "run_id": "W06-R99-P03-REVIEWED-OFFICIAL-PORT-GATE-20261103",
       "pre_git_blob_sha1": "c057fea02f9e53121ba21110b12b12f2128a8fb2",
-      "post_git_blob_sha1": "ddc473ef4082c484a99c8d0681d0a3bb2e86e3bb",
-      "post_bytes": 7793,
-      "source_commit": "3ec73f893961a8dce0dc3bdbc202afd4a54773a0",
-      "acceptance": "SOURCE_INTEGRITY_ONLY_NOT_MODEL_RIGHTS_WINDOWS_E07"
+      "post_git_blob_sha1": "06795f2e4c6688e4e2f12897182dae3f571e17d6",
+      "post_bytes": 7822,
+      "acceptance": "SOURCE_ORIGIN_PORT_STRICT_REGRESSION_NOT_MODEL_RIGHTS_OR_WINDOWS_E07",
+      "prior_approved_run_id": "NOX-E03-PR162-PIN-RECONCILE-20261101",
+      "prior_approved_source_commit": "3ec73f893961a8dce0dc3bdbc202afd4a54773a0",
+      "prior_approved_post_git_blob_sha1": "ddc473ef4082c484a99c8d0681d0a3bb2e86e3bb",
+      "prior_approved_post_bytes": 7793
     },
     {
       "path": "Packages/P03/Source/P03.ModelCenter/ModelCatalog.cs",
@@ -551,6 +554,15 @@
       "post_bytes": 1707,
       "source_commit": "83b9c444042bfc300cbd447b8367f61d3e3f2846",
       "acceptance": "SOURCE_INTEGRITY_ONLY_NOT_MODEL_RIGHTS_WINDOWS_E07"
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter.HardeningSmoke/Program.cs",
+      "owner": 3,
+      "run_id": "W06-R99-P03-REVIEWED-OFFICIAL-PORT-GATE-20261103",
+      "pre_git_blob_sha1": "13ae4b4e9bf465a8fb31e8893cd381b1464c4702",
+      "post_git_blob_sha1": "af895122f2a355fba6ae655aa546a380eecdbbd6",
+      "post_bytes": 20193,
+      "acceptance": "SOURCE_CSHARP_REGRESSION_ONLY_NOT_WINDOWS_E07"
     }
   ],
   "override_chain": [
