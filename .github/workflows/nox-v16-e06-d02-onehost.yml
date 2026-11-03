@@ -1,5 +1,13 @@
 name: NOX V16 E06 exact D02 visual stage into ONEHOST diagnostic installer
 on:
+  push:
+    branches:
+      - 'integration/nox-v16-unified-candidate-20261028-r01'
+    paths:
+      - '.github/workflows/nox-v16-e06-d02-onehost.yml'
+      - 'private_build.ps1'
+      - 'coordination/e06/**'
+      - 'tests/e06/**'
   workflow_dispatch:
     inputs:
       native_smoke_model:
@@ -32,6 +40,7 @@ on:
       - 'tests/e06/test_i2_local_bridge_receipt_gate.py'
       - 'tests/e06/test_t06_gitlab_runner_authorization.py'
       - 'tests/e06/test_t06_e06_workflow_source_gate.py'
+      - 'tests/e06/test_e06_direct_branch_trigger.py'
       - 'tests/e06/test_native_busy_retry_r12.py'
       - 'proposals/P01/WOW-MAX10/**'
       - 'private_build.ps1'
@@ -39,7 +48,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: nox-e06-onehost-${{ github.event.pull_request.number || github.ref }}
+  group: nox-e06-onehost-${{ github.event.pull_request.head.ref || github.ref_name }}
   # Keep the running exact-SHA Windows job alive; queue only the newest PR head.
   cancel-in-progress: false
 jobs:
@@ -71,7 +80,7 @@ jobs:
           # Real original P01 source tests, not a fake browser/installed E07 receipt.
           node --test proposals/P01/WOW-MAX10/route-dispatch.test.mjs proposals/P01/WOW-MAX10/menu-route-pending.test.mjs
           # Original T06 source/provenance guards: CI source evidence, never E07.
-          for test in test_checkout_source_bytes.py test_t06_compile_source_head.py test_t06_source_receipt_guard.py test_i2_local_bridge_receipt_gate.py test_t06_gitlab_runner_authorization.py test_t06_e06_workflow_source_gate.py test_a1_native_gate_auth_race.py; do
+          for test in test_checkout_source_bytes.py test_t06_compile_source_head.py test_t06_source_receipt_guard.py test_i2_local_bridge_receipt_gate.py test_t06_gitlab_runner_authorization.py test_t06_e06_workflow_source_gate.py test_e06_direct_branch_trigger.py test_a1_native_gate_auth_race.py; do
             python -m unittest discover -s tests/e06 -p "$test" -v
           done
   visual-source-stage:
@@ -141,7 +150,7 @@ jobs:
       - name: Original T06 current HEAD and same-VM receipts (source regressions only)
         shell: pwsh
         run: |
-          foreach ($test in @('test_checkout_source_bytes.py','test_t06_compile_source_head.py','test_t06_source_receipt_guard.py','test_i2_local_bridge_receipt_gate.py','test_t06_gitlab_runner_authorization.py','test_t06_e06_workflow_source_gate.py','test_a1_native_gate_auth_race.py')) {
+          foreach ($test in @('test_checkout_source_bytes.py','test_t06_compile_source_head.py','test_t06_source_receipt_guard.py','test_i2_local_bridge_receipt_gate.py','test_t06_gitlab_runner_authorization.py','test_t06_e06_workflow_source_gate.py','test_e06_direct_branch_trigger.py','test_a1_native_gate_auth_race.py')) {
             python -m unittest discover -s tests/e06 -p $test -v
             if ($LASTEXITCODE -ne 0) { throw "E06_T06_SOURCE_RECEIPT_GATE_HOLD:$test" }
           }
@@ -190,7 +199,7 @@ jobs:
   diagnostic-onehost:
     # Reuse the existing Windows job for canonical PR162 so that the first
     # real WPF/NSIS failure and receipts are visible in GitHub Actions.
-    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.number == 162)
+    if: github.repository == 'MSSTXNEWS/nox-helion-pp-private-build' && (github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.number == 162) || (github.event_name == 'push' && github.ref == 'refs/heads/integration/nox-v16-unified-candidate-20261028-r01'))
     needs: visual-source-stage
     env:
       NOX_NATIVE_SMOKE_MODEL: ${{ inputs.native_smoke_model }}
