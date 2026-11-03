@@ -85,6 +85,33 @@ def safe_member(name: str, directory: bool) -> str:
     return path
 
 
+# Windows CPython 3.12 pathname stat can expose creation time as ctime,
+# while fstat exposes metadata-change time. Match trusted path to descriptor
+# via birthtime, as already done in t06_source_receipt_guard.py. Never weaken
+# the strict descriptor-before/after ctime comparison.
+_WINDOWS_STAT = os.name == "nt"
+
+
+def _fd_identity(info):
+    return (info.st_dev, info.st_ino, info.st_size,
+            info.st_mtime_ns, info.st_ctime_ns)
+
+
+def _trusted_open_identity(path_info, descriptor_info):
+    path_basis = (path_info.st_dev, path_info.st_ino, path_info.st_size,
+                  path_info.st_mtime_ns)
+    fd_basis = (descriptor_info.st_dev, descriptor_info.st_ino,
+                descriptor_info.st_size, descriptor_info.st_mtime_ns)
+    if path_basis != fd_basis:
+        return False
+    if _WINDOWS_STAT:
+        path_birth = getattr(path_info, "st_birthtime_ns", None)
+        fd_birth = getattr(descriptor_info, "st_birthtime_ns", None)
+        return (type(path_birth) is int and type(fd_birth) is int
+                and path_birth == fd_birth)
+    return path_info.st_ctime_ns == descriptor_info.st_ctime_ns
+
+
 @contextmanager
 def _trusted_part_reader(candidate: Path):
     """Pin each immutable SourceLock part to a verified regular descriptor."""
@@ -107,9 +134,6 @@ def _trusted_part_reader(candidate: Path):
     except BaseException:
         os.close(fd)
         raise
-    def identity(info):
-        return (info.st_dev, info.st_ino, info.st_size,
-                info.st_mtime_ns, info.st_ctime_ns)
     with stream:
         opened = os.fstat(stream.fileno())
         def same_path():
@@ -118,14 +142,14 @@ def _trusted_part_reader(candidate: Path):
                 live = candidate.lstat()
             except (SourceHold, OSError):
                 return False
-            return (stat.S_ISREG(live.st_mode) and not stat.S_ISLNK(live.st_mode)
-                    and not (getattr(live, "st_file_attributes", 0) & reparse)
-                    and identity(live) == identity(opened))
-        if not same_path() or identity(original) != identity(opened):
+            return (_trusted_open_identity(live, opened) and
+                    stat.S_ISREG(live.st_mode) and not stat.S_ISLNK(live.st_mode)
+                    and not (getattr(live, "st_file_attributes", 0) & reparse))
+        if not same_path() or not _trusted_open_identity(original, opened):
             raise SourceHold("SOURCE_PART_OPEN_IDENTITY_MISMATCH")
         yield stream
         after = os.fstat(stream.fileno())
-        if identity(after) != identity(opened) or not same_path():
+        if _fd_identity(after) != _fd_identity(opened) or not same_path():
             raise SourceHold("SOURCE_PART_CHANGED_DURING_READ")
 
 
