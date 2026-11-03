@@ -54,7 +54,7 @@ function openExistingScreen(route) {
  target.click();
  return document.getElementById(screen).classList.contains("active");
 }
-function safeRoute(route,probe,label=route,aiClient=null,payload={}){
+function safeRoute(route,probe,label=route,aiClient=null,payload={},parentIndex=null){
  const line=node("div",undefined,"mega814-action");
  const button=node("button",label,"mega814-button");
  const status=node("small","HOLD · не подтверждён native handler");
@@ -68,6 +68,18 @@ function safeRoute(route,probe,label=route,aiClient=null,payload={}){
        "Открыт существующий экран · backend требует отдельной QA":
        "HOLD · исходный экран недоступен";
    });
+ }
+ if(route==="nox.parent-navigation"){
+  button.disabled=!Number.isInteger(parentIndex)||parentIndex<0||parentIndex>7;
+  status.textContent=button.disabled?"HOLD · исходный раздел недоступен":
+    "Переход в исходный родительский раздел; отдельное действие проверяется отдельно";
+  button.addEventListener("click",()=>{
+   if(button.disabled)return;
+   const opened=legacy(parentIndex);
+   status.textContent=opened?
+    "Открыт исходный раздел · конкретная функция не подтверждена E07":
+    "HOLD · исходный раздел не открылся";
+  });
  }
  if(route==="helion.chat"&&aiClient){
   button.disabled=false;button.textContent=label||"СПРОСИТЬ NOX";
@@ -138,14 +150,19 @@ function menuWorlds(menu,s,probe,menuV2,aiClient){
   detail.hidden=false;heading.textContent=w.label;controls.replaceChildren();
   // First show the canonical world's 193-tree subsections immediately:
   // a second click on a collapsed section is NOT part of the approved MENU.
-  appendMenuV2(controls,w,menuV2,(route,label,payload)=>safeRoute(route,probe,label,aiClient,payload));
-  const originalRoutes=node("details",undefined,"mega814-v2-legacy");
-  originalRoutes.append(node("summary","Исходные маршруты · "+w.routes.length));
-  const open=node("button","ОТКРЫТЬ СУЩЕСТВУЮЩИЙ РАЗДЕЛ","mega814-button");
+  appendMenuV2(controls,w,menuV2,(route,label,payload,worldContext)=>safeRoute(
+    route,probe,label,aiClient,payload,worldContext?.legacyIndex));
+  const originalRoutes=node("section",undefined,"mega814-v2-legacy");
+  originalRoutes.append(node("h3","ИСХОДНЫЕ МАРШРУТЫ · "+w.routes.length,"mega814-v2-legacy-title"));
+  const open=node("button","ОТКРЫТЬ РОДИТЕЛЬСКИЙ РАЗДЕЛ","mega814-button");
   open.type="button";
   open.addEventListener("click",()=>{if(!legacy(w.legacyIndex))note(controls,"HOLD · исходный раздел не готов")});
   originalRoutes.append(open);
-  for(const route of w.routes)originalRoutes.append(safeRoute(route,probe));
+  const routeGrid=node("div",undefined,"mega814-v2-subitems");
+  routeGrid.setAttribute("role","group");
+  routeGrid.setAttribute("aria-label","Исходные маршруты "+w.label);
+  for(const route of w.routes)routeGrid.append(safeRoute(route,probe,route,aiClient,{},w.legacyIndex));
+  originalRoutes.append(routeGrid);
   controls.append(originalRoutes);
   for(const [id,buttons] of controlsFor){
    for(const button of buttons)button.setAttribute("aria-pressed",String(id===w.id));
