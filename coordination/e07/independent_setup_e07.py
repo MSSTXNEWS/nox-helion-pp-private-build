@@ -1353,10 +1353,20 @@ def lifecycle(setup: Path, result: dict, *, frozen_source: str = "", physical_na
             "status": "HOLD",
             "error": str(exc) if isinstance(exc, Hold) else
                      "E07_NATIVE_STORE_" + type(exc).__name__.upper() + "_HOLD"}
+    pre_nav_visual = []
     def physical_initial_home_probe(hwnd: int) -> dict:
         # Fail closed on a real current WPF HWND and physically acquired PNG.
         # A screenshot never establishes scene correctness or UIA behavior.
         require(final_probe_dir is not None,"E07_HOME_PHOTO_DIR_HOLD")
+        # The five D02 quality planets live on HOME, before any navigation.
+        # Freeze that ORIGINAL same-HWND visual evidence before CHAT/SETTINGS
+        # and native consent can replace or obscure the scene.
+        from probe_final_same_setup import run as probe_run
+        visual, _ = probe_run(hwnd, install, local, source_sha=frozen_source,
+                              setup_sha=sha256(setup), out_dir=final_probe_dir,
+                              visual_only=True)
+        require(not pre_nav_visual, "E07_PRENAV_VISUAL_DUPLICATE_HOLD")
+        pre_nav_visual.append(visual)
         screenshot=final_probe_dir/"D02_HOME_PRENAV.png"
         require(not screenshot.exists() and not screenshot.is_symlink(),
                 "E07_HOME_PHOTO_UNOWNED_PATH_HOLD")
@@ -1380,8 +1390,10 @@ def lifecycle(setup: Path, result: dict, *, frozen_source: str = "", physical_na
         # their individual PASS/HOLD gates are evaluated only after cleanup.
         from probe_final_same_setup import run as probe_run
         require(final_probe_dir is not None, "E07_FINAL_EVIDENCE_DIR_REQUIRED")
+        require(len(pre_nav_visual)==1,"E07_PRENAV_VISUAL_NOT_OBSERVED_HOLD")
         visual, functions = probe_run(hwnd, install, local, source_sha=frozen_source,
-                                      setup_sha=sha256(setup), out_dir=final_probe_dir)
+                                      setup_sha=sha256(setup), out_dir=final_probe_dir,
+                                      precomputed_visual=pre_nav_visual[0])
         for name, value in (("VISUAL", visual), ("FUNCTIONS", functions)):
             target = final_probe_dir / ("E07_FINAL_"+name+".json")
             require(not target.exists(), "E07_FINAL_RECEIPT_COLLISION_HOLD")
