@@ -393,6 +393,11 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
     if(chatBusy)return;chatBusy=true;
     const send=doc.getElementById('chat-send'),stop=doc.getElementById('chat-stop');
     const visible=()=>sameSelection(epoch,scope,model);
+    // A native terminal envelope is not proof of an AI answer. Only actual
+    // owner text or a nonempty trusted native STREAMING delta may complete UI.
+    let receivedNonemptyStream=false;
+    const verifiedNativeText=reply=>receivedNonemptyStream ||
+      (typeof reply?.result?.answer==='string'&&reply.result.answer.trim().length>0);
     const release=reply=>{
       if(!chatTerminal(reply))return;
       chatBusy=false;
@@ -400,8 +405,10 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
         if(send)send.disabled=chatBusy||!nativeModelReady(value('chat-model'),modelConfirmed,modelSelectionPending);
         if(stop)stop.disabled=false;
         if(visible()&&reply.state==='COMPLETED'){
-          if(typeof reply.result?.answer==='string')row.textContent=reply.result.answer;
-          chatStatus('COMPLETED · локальная модель');
+          if(typeof reply.result?.answer==='string'&&reply.result.answer.trim())
+            row.textContent=reply.result.answer;
+          chatStatus(verifiedNativeText(reply)?'COMPLETED · локальная модель':
+            'HOLD · пустой ответ локальной модели');
         }
       }
     };
@@ -410,13 +417,17 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
     doc.getElementById('chat-log')?.append(row);if(visible())chatStatus('REQUESTED · локальное ядро');
     try{
       const reply=await client.request('helion.chat',{text,model,...scope},event=>{
+        if(typeof event?.delta==='string'&&event.delta.trim())receivedNonemptyStream=true;
         if(visible()&&row.isConnected){row.textContent+=event.delta;chatStatus('STREAMING · локальная модель');}
       },release);
       if(disposed)return;
       release(reply);
       if(visible()){
-        if(reply.state==='COMPLETED'&&typeof reply.result?.answer==='string')row.textContent=reply.result.answer;
-        chatStatus(reply.state==='HOLD'?'HOLD · '+(reply.errorCode||'NO_MODEL_REPLY'):reply.result?.done===true?'COMPLETED':'HOLD · ответ не завершён');
+        if(reply.state==='COMPLETED'&&typeof reply.result?.answer==='string'&&reply.result.answer.trim())
+          row.textContent=reply.result.answer;
+        chatStatus(reply.state==='HOLD'?'HOLD · '+(reply.errorCode||'NO_MODEL_REPLY'):
+          reply.result?.done===true?(verifiedNativeText(reply)?'COMPLETED · локальная модель':
+            'HOLD · пустой ответ локальной модели'):'HOLD · ответ не завершён');
       }
     }catch(error){
       if(['NOX_NATIVE_REQUEST_DENIED','NOX_NATIVE_CLIENT_DISPOSED','NOX_NATIVE_REQUEST_LIMIT',
