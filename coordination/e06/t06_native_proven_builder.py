@@ -312,10 +312,23 @@ if not 1<=p03_size<=1048576 or len(p03_result.stdout)!=p03_size+4:
 p03_answer=strict_native_json(p03_result.stdout[4:],"T06_FROZEN_MODEL_CENTER_JSON_HOLD")
 if (p03_answer.get("protocol")!=p03_request["protocol"] or
     p03_answer.get("requestId")!=p03_request["requestId"] or
-    p03_answer.get("runId")!=p03_request["runId"] or
-    p03_answer.get("status")!="OK" or
-    type(p03_answer.get("result")) is not dict or
-    type(p03_answer["result"].get("models")) is not list):
+    p03_answer.get("runId")!=p03_request["runId"]):
+    raise RuntimeError("T06_FROZEN_MODEL_CENTER_FRAME_AUTH_HOLD")
+# An absent local Ollama service is not an installed-model PASS.
+# The original P02 host must have independently reported OFFLINE+[] from
+# the same frozen EXE; only then admit P03's exact fail-closed provider HOLD
+# as diagnostic source/IPC evidence. Never claim model downloads/inference.
+p03_installed_pass = (p03_answer.get("status")=="OK" and
+    type(p03_answer.get("result")) is dict and
+    type(p03_answer["result"].get("models")) is list)
+p03_offline_hold = (p03_answer.get("status")=="HOLD" and
+    p03_answer.get("errorCode")=="NATIVE_PROVIDER_HOLD" and
+    p03_answer.get("result") is None and
+    answer.get("status")=="OK" and
+    type(answer.get("result")) is dict and
+    answer["result"].get("provider_state")=="OFFLINE" and
+    answer["result"].get("models")==[])
+if not (p03_installed_pass or p03_offline_hold):
     # Preserve the exact bounded native HOLD code for root-cause diagnostics.
     # Do not output local model names, paths, credentials or full payloads.
     try:
@@ -340,10 +353,13 @@ p03_proof={"phase":"BUILT_AND_NATIVE_STDIO_SMOKE_PASS",
     "real_ollama_model_inference_tested":False,
     "original_729_unchanged":True,"installed_wpf_e07":False,
     "release_accepted":False,
-    "native_modelcenter_installed_read_only":"PASS",
-    "models_installed_uses_original_local_discovery":True}
+    "native_modelcenter_installed_read_only":
+        "PASS" if p03_installed_pass else "PROVIDER_OFFLINE_HOLD",
+    "models_installed_uses_original_local_discovery":p03_installed_pass,
+    "modelcenter_provider_offline_verified":p03_offline_hold}
 # Do not emit a successful build receipt until the SECOND real frozen EXE
 # route has completed, even when chat.model correctly reports provider HOLD.
 p03_receipt.write_text(json.dumps(p03_proof,indent=2),encoding="utf-8")
 print("T06_NATIVE_ORIGINAL_PYINSTALLER_EXE_IPC_OK",exe_hash,
-      "P03_MODELS_INSTALLED_PASS",flush=True)
+      "P03_MODELS_INSTALLED_PASS" if p03_installed_pass else
+      "P03_OFFLINE_PROVIDER_HOLD_NOT_INSTALLED_PASS",flush=True)
