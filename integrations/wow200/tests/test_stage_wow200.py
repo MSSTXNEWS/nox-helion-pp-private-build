@@ -46,7 +46,8 @@ class WowStageTests(unittest.TestCase):
    rel=f'proposals/NOX-WOW151-200/fake_{i:02}.mjs'
    p=self.src/rel;p.unlink();manifest.pop(rel)
   for rel in ['runtime/loader.mjs','runtime/stage.css','runtime/home-scene.mjs','runtime/home-guard.css']:
-   p=self.src/rel;p.parent.mkdir(parents=True,exist_ok=True);p.write_text('// sample')
+   p=self.src/rel;p.parent.mkdir(parents=True,exist_ok=True)
+   p.write_bytes((repository/'integrations/wow200'/rel).read_bytes() if rel=='runtime/home-guard.css' else b'// sample')
   for rel in eng.OWNER1_D02_ENGINE:
    eng.OWNER1_D02_ENGINE[rel]["legacy_blob"]=manifest[rel]
   (self.src/'DONOR_BLOBS.json').write_text(json.dumps({'schema':'NOX_WOW200_OWNER_BLOB_PIN_V1','count':56,'files':manifest}))
@@ -69,6 +70,11 @@ class WowStageTests(unittest.TestCase):
   original={n:digest(self.stage/'Assets'/n) for n in D02}
   receipt=stage(self.stage,self.src)
   self.assertEqual(len(receipt['files']),82)
+  orb=(self.stage/'Assets/creative/wow200/runtime/home-guard.css').read_bytes()
+  self.assertEqual(orb,(self.src/'runtime/home-guard.css').read_bytes())
+  self.assertIn(b'NOX D02 ORB STEP01',orb)
+  self.assertIn(b'pointer-events:none',orb)
+  self.assertIn(b'prefers-reduced-motion:reduce',orb)
   self.assertEqual(receipt['menu_v2_atomic_source_sha256'],eng.MENU_V2_SHA256)
   self.assertTrue(receipt['p01_owner_source_staged'])
   self.assertFalse(receipt['p01_owner_native_mount_activated'])

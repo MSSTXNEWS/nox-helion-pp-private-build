@@ -12,3 +12,42 @@
 @media(prefers-reduced-motion:reduce){
   .nox-orbit-stage .nox-cinema-orb__layers * {animation:none!important;}
 }
+/* NOX D02 ORB STEP01: original plasma ring only around existing HELION.
+   Concept researched from React Bits; NO third-party source code imported.
+   No new DOM, moving hitboxes, routing, native actions or telemetry. */
+.nox-orbit-stage .nox-eclipse.nox-cinema-orb > .nox-cinema-orb__layers::before,
+.nox-orbit-stage .nox-eclipse.nox-cinema-orb > .nox-cinema-orb__layers::after{
+ content:"";position:absolute;inset:-7%;border-radius:50%;
+ pointer-events:none!important;z-index:0;
+}
+.nox-orbit-stage .nox-eclipse.nox-cinema-orb > .nox-cinema-orb__layers::before{
+ background:conic-gradient(from 30deg,transparent,rgba(97,199,225,.47),
+ transparent,rgba(221,123,66,.22),transparent,rgba(129,133,225,.28),transparent);
+ opacity:.63;filter:blur(5px);mix-blend-mode:screen;
+ animation:nox-d02-orb-rotate 37s linear infinite;
+}
+.nox-orbit-stage .nox-eclipse.nox-cinema-orb > .nox-cinema-orb__layers::after{
+ border:1px solid rgba(146,217,228,.44);
+ box-shadow:0 0 18px rgba(105,205,220,.25),0 0 45px rgba(223,138,75,.16);
+ opacity:.6;animation:nox-d02-orb-pulse 8s ease-in-out infinite alternate;
+}
+@keyframes nox-d02-orb-rotate{to{transform:rotate(360deg)}}
+@keyframes nox-d02-orb-pulse{
+ from{transform:scale(.97);opacity:.35}to{transform:scale(1.02);opacity:.8}
+}
+.nox-orbit-stage[data-nox-fx-mode="eco"] .nox-eclipse .nox-cinema-orb__layers::before,
+.nox-orbit-stage[data-nox-fx-mode="eco"] .nox-eclipse .nox-cinema-orb__layers::after,
+body.nox-wow-eco .nox-orbit-stage .nox-eclipse .nox-cinema-orb__layers::before,
+body.nox-wow-eco .nox-orbit-stage .nox-eclipse .nox-cinema-orb__layers::after{
+ animation:none!important;filter:none;opacity:.32;
+}
+@media(prefers-reduced-motion:reduce){
+ .nox-orbit-stage .nox-eclipse .nox-cinema-orb__layers::before,
+ .nox-orbit-stage .nox-eclipse .nox-cinema-orb__layers::after{
+  animation:none!important;transform:none!important;filter:none;
+ }
+}
+@media(forced-colors:active){
+ .nox-orbit-stage .nox-eclipse .nox-cinema-orb__layers::before,
+ .nox-orbit-stage .nox-eclipse .nox-cinema-orb__layers::after{display:none!important}
+}
