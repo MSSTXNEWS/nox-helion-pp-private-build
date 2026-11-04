@@ -123,6 +123,68 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'P03_NATIVE_JOBID_ACK_REGRESSION_HOLD' }
           python -B -m unittest discover -s tests/p03 -p test_p03_ollama_tags_digest_u06.py -v
           if ($LASTEXITCODE -ne 0) { throw 'P03_OLLAMA_TAG_DIGEST_REGRESSION_HOLD' }
+      # READ-ONLY P0 check on the actual hosted Windows runner. Metadata, Git
+      # manifests and Drive part listings are NOT installed inference evidence.
+      - name: P0 Windows Qwen OFFLINE readiness (no installation / no fake PASS)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $tag='qwen2.5:0.5b-instruct-q4_K_M'
+          $digest='c5396e06af294bd101b30dce59131a76d2b773e76950acc870eda801d3ab0515'
+          $size=[long]397807936
+          $store=if ($env:OLLAMA_MODELS) { $env:OLLAMA_MODELS } else { Join-Path $env:USERPROFILE '.ollama/models' }
+          $blob=Join-Path $store ('blobs/sha256-'+$digest)
+          $report=[ordered]@{
+            schema='NOX-P0-WINDOWS-QWEN-READONLY-v1'
+            source_commit=$env:GITHUB_SHA
+            windows_runner='windows-2022'
+            model=$tag
+            cli_found=$false
+            local_api_reachable=$false
+            api_tag_present=$false
+            layer_present=$false
+            layer_size_expected=$size
+            layer_sha256_verified=$false
+            owner_license_receipt_on_runner=$false
+            live_tokens_generated=0
+            active_stop_observed=$false
+            sqlite_restart_nonempty_verified=$false
+            independent_e07='NOT_RUN'
+            release_accepted=$false
+            first_failure='UNDETERMINED_PROBE_HOLD'
+          }
+          $cmd=Get-Command ollama -ErrorAction SilentlyContinue
+          $report.cli_found=($null -ne $cmd)
+          try {
+            $tags=Invoke-RestMethod -Uri 'http://127.0.0.1:11434/api/tags' -TimeoutSec 4 -ErrorAction Stop
+            $report.local_api_reachable=$true
+            $report.api_tag_present=(@($tags.models | Where-Object { $_.name -ceq $tag }).Count -eq 1)
+          } catch {
+            $report.first_failure='WINDOWS_OLLAMA_LOOPBACK_API_UNREACHABLE'
+          }
+          if (Test-Path -LiteralPath $blob -PathType Leaf) {
+            $node=Get-Item -LiteralPath $blob -Force
+            $safe=(($node.Attributes -band [IO.FileAttributes]::ReparsePoint) -eq 0)
+            if ($safe -and $node.Length -eq $size) {
+              $report.layer_present=$true
+              $report.layer_sha256_verified=((Get-FileHash -LiteralPath $blob -Algorithm SHA256).Hash.ToLowerInvariant() -ceq $digest)
+            }
+          }
+          if (-not $report.local_api_reachable) {
+            $report.first_failure='WINDOWS_OLLAMA_LOOPBACK_API_UNREACHABLE'
+          } elseif (-not $report.layer_sha256_verified) {
+            $report.first_failure='QWEN_OFFLINE_LAYER_MISSING_OR_SHA256_MISMATCH_ON_WINDOWS'
+          } elseif (-not $report.api_tag_present) {
+            $report.first_failure='QWEN_MODEL_NOT_INSTALLED_IN_LIVE_OLLAMA_TAGS'
+          } else {
+            $report.first_failure='QWEN_LIVE_GENERATION_STOP_AND_LICENSE_E07_NOT_RUN'
+          }
+          New-Item -ItemType Directory -Force -Path work/e06 | Out-Null
+          $report | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath work/e06/QWEN_WINDOWS_READINESS.json -Encoding utf8
+          Write-Host ('QWEN_REAL_WINDOWS_FIRST_FAILURE='+$report.first_failure)
+          Write-Host ('QWEN_REAL_WINDOWS_CLI='+$report.cli_found+' API='+$report.local_api_reachable+' INSTALLED_TAG='+$report.api_tag_present+' LAYER_SHA256='+$report.layer_sha256_verified)
+          Write-Host 'QWEN_GENERATION=NOT_RUN ACTIVE_STOP=NOT_RUN SQLITE_RESTART=NOT_RUN E07=HOLD'
+          if (!(Test-Path -LiteralPath work/e06/QWEN_WINDOWS_READINESS.json -PathType Leaf)) { throw 'QWEN_WINDOWS_READINESS_RECEIPT_MISSING' }
       - name: Official portable NSIS 3.13, pinned SHA256, no Chocolatey dependency
         shell: pwsh
         run: |
@@ -305,6 +367,7 @@ jobs:
           }
           $receipt | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $dest 'BUILD_RECEIPT.json') -Encoding utf8
           foreach ($file in @(
+            'work/e06/QWEN_WINDOWS_READINESS.json',
             'work/t06-local-bridge/T06_INSTALLED_SMOKE.json',
             'work/t06-local-bridge/01_NATIVE_PYINSTALLER.log',
             'work/t06-local-bridge/02_WPF_NSIS_ONEHOST.log',
