@@ -129,6 +129,13 @@ def nonempty_response_text(reply: dict) -> int:
     return sum(len(x.encode("utf-8")) for x in texts)
 
 
+def qwen_probe_exit_code(report: dict) -> int:
+    """History must survive a fresh native process before a Qwen probe succeeds."""
+    return (0 if (report.get("installed_native") == "LIVE_NONEMPTY_RESPONSE_VERIFIED"
+                  and report.get("native_history_restart") == "PASS"
+                  and report.get("first_unmet_gate") ==
+                  "NATIVE_ACTIVE_STOP_AND_FIVE_GUI_CLICKS_E07") else 2)
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--backend", required=True, type=Path)
@@ -235,7 +242,7 @@ def main() -> int:
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(report, indent=2, sort_keys=True), encoding="utf-8")
     print("NOX_QWEN_INSTALLED_FIRST_GATE", report["first_unmet_gate"], flush=True)
-    return 0 if report["installed_native"] == "LIVE_NONEMPTY_RESPONSE_VERIFIED" else 2
+    return qwen_probe_exit_code(report)
 
 
 if __name__ == "__main__":
