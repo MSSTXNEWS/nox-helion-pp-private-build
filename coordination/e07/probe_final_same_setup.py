@@ -46,7 +46,7 @@ def _bounded_uia_failure(stdout: object, phase: str) -> str:
     allowed = (r"E07_FINAL_UIA_" + re.escape(phase)
         + r"_(?:PRIMARY_DOCK_NOT_UNIQUE|BUTTON_(?:CHAT|INSTALL|MODELS|LEARN|SETTINGS)_NOT_UNIQUE|"
           r"NO_ROOT|TREE_LIMIT|NO_INVOKE|RECT|MOVE|PRINT|"
-          r"FX_UNIQUE|FX_INVOKE|FX_STATE|UNKNOWN_OP|VISUAL_STAGE_(?:RESIZE|DOCK|CAPTURE|RESTORE)_HOLD")
+          r"FX_UNIQUE|FX_INVOKE|FX_STATE|UNKNOWN_OP|VISUAL_STAGE_(?:RESIZE|DOCK|CAPTURE|RESTORE))_HOLD")
     return reason if re.fullmatch(allowed, reason) else fallback
 
 
