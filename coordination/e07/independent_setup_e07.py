@@ -573,14 +573,25 @@ for ($i=0; $i -lt $scanCount; $i++) {
 
 
 def classify_chat_invoke_witness(response: dict) -> dict:
-    """UIA InvokePattern is an observed input, NOT proof of navigation or model."""
+    """Only a NEW visible CHAT heading after a real UIA click proves navigation.
+
+    Presence of the original button or a live HWND does not prove a route.
+    A preexisting heading is not transition evidence. Model/visual E07 stay HOLD.
+    """
     require(type(response) is dict and
-            set(response) == {"schema", "action", "invoked", "sameHwndAlive"} and
-            response.get("schema") == "NOX-E07-CHAT-INPUT-v1" and
+            set(response) == {"schema", "action", "invoked", "sameHwndAlive",
+                              "beforeChatHeading", "afterChatHeading"} and
+            response.get("schema") == "NOX-E07-CHAT-INPUT-v2" and
             response.get("action") == "CHAT" and response.get("invoked") is True and
-            response.get("sameHwndAlive") is True, "E07_CHAT_ACTION_UNTRUSTED_HOLD")
+            response.get("sameHwndAlive") is True and
+            type(response.get("beforeChatHeading")) is bool and
+            type(response.get("afterChatHeading")) is bool,
+            "E07_CHAT_ACTION_UNTRUSTED_HOLD")
+    changed = response["beforeChatHeading"] is False and response["afterChatHeading"] is True
     return {"status": "OBSERVED", "action": "CHAT", "actions_invoked": 1,
-            "method": "NATIVE_UIA_INVOKEPATTERN", "navigation_verified": "NOT_TESTED",
+            "method": "NATIVE_UIA_INVOKEPATTERN",
+            "navigation_verified": "PASS" if changed else "NOT_TESTED",
+            "navigation_proof": "NEW_VISIBLE_UIA_CHAT_HEADING" if changed else "NONE",
             "visual_e07": "HOLD", "model_inference": "NOT_TESTED"}
 
 
@@ -609,11 +620,34 @@ for($i=0;$i -lt $tree.Count;$i++){
   if($v.IsEnabled -and -not $v.IsOffscreen -and $rect.Width -ge 20 -and $rect.Height -ge 12){$matching.Add($el)}
 }
 if($matching.Count -ne 1){throw 'CHAT_NOT_UNIQUE'}
+# Read the ORIGINAL installed WebView2 accessibility tree, not HTML from repository.
+# Require a freshly appearing visible heading, not a button click or static label.
+function Test-ChatHeading($root){
+  $nodes=$root.FindAll([System.Windows.Automation.TreeScope]::Descendants,[System.Windows.Automation.Condition]::TrueCondition)
+  if($nodes.Count -gt 2048){throw 'CHAT_TREE_UNBOUNDED'}
+  for($j=0;$j -lt $nodes.Count;$j++){
+    $v=$nodes.Item($j).Current
+    if($v.ControlType -ne [System.Windows.Automation.ControlType]::Text){continue}
+    if(($v.Name+'').Trim() -ne 'HELION · LIVE CHAT'){continue}
+    $rect=$v.BoundingRectangle
+    if(-not $v.IsOffscreen -and $rect.Width -ge 20 -and $rect.Height -ge 12){return $true}
+  }
+  return $false
+}
+$beforeHeading=Test-ChatHeading $root
 $pattern=$matching.Item(0).GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)
 if($null -eq $pattern){throw 'NO_INVOKEPATTERN'}
 $pattern.Invoke()
+$afterHeading=$false
+$deadline=[DateTime]::UtcNow.AddSeconds(8)
+do {
+  Start-Sleep -Milliseconds 180
+  $fresh=[System.Windows.Automation.AutomationElement]::FromHandle($hwnd)
+  if($null -eq $fresh){break}
+  $afterHeading=Test-ChatHeading $fresh
+} until($afterHeading -or [DateTime]::UtcNow -ge $deadline)
 $alive=$null -ne [System.Windows.Automation.AutomationElement]::FromHandle($hwnd)
-[pscustomobject]@{schema='NOX-E07-CHAT-INPUT-v1';action='CHAT';invoked=$true;sameHwndAlive=$alive}|ConvertTo-Json -Compress
+[pscustomobject]@{schema='NOX-E07-CHAT-INPUT-v2';action='CHAT';invoked=$true;sameHwndAlive=$alive;beforeChatHeading=$beforeHeading;afterChatHeading=$afterHeading}|ConvertTo-Json -Compress
 """.replace("__HWND__", str(hwnd))
     import base64
     encoded=base64.b64encode(ps.encode("utf-16le")).decode("ascii")
