@@ -4,6 +4,7 @@ on:
     branches: [qa/nox-installed-qwen-20261104]
     paths:
       - coordination/e07/probe_installed_qwen.py
+      - coordination/e07/probe_native_active_stop.py
       - .github/workflows/nox-qwen-installed-physical.yml
   workflow_dispatch:
 permissions:
@@ -114,12 +115,24 @@ jobs:
           python -B coordination/e07/probe_installed_qwen.py --backend "$backend" --out work/qwen-installed/QWEN_INSTALLED_RECEIPT.json
           if ($LASTEXITCODE -ne 0) { throw 'NOX_INSTALLED_QWEN_OR_STREAM_HOLD' }
           Write-Host 'INSTALLED_NOX_QWEN_LIVE_EVIDENCE_NOT_FULL_E07'
+      - name: Real NOX active STOP during installed Qwen streaming
+        id: livestop
+        continue-on-error: true
+        shell: pwsh
+        timeout-minutes: 8
+        run: |
+          $ErrorActionPreference='Stop'
+          $backend=Join-Path $env:LOCALAPPDATA 'Programs/NOX HELION/Backend/NOX_HELION_PRIVATE_CANDIDATE.exe'
+          python -B -m py_compile coordination/e07/probe_native_active_stop.py
+          if ($LASTEXITCODE -ne 0) { throw 'NATIVE_ACTIVE_STOP_PROBE_SYNTAX_HOLD' }
+          python -B coordination/e07/probe_native_active_stop.py --backend "$backend" --out work/qwen-installed/NATIVE_ACTIVE_STOP_RECEIPT.json
+          if ($LASTEXITCODE -ne 0) { throw 'NATIVE_ACTIVE_STOP_PHYSICAL_HOLD' }
       - name: Preserve evidence without falsely promoting incomplete release
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: NOX-QWEN-INSTALLED-REAL-${{ github.sha }}-${{ github.run_id }}
-          path: work/qwen-installed/QWEN_INSTALLED_RECEIPT.json
+          path: work/qwen-installed/*.json
           if-no-files-found: warn
           retention-days: 14
       - name: Do not promote a provider-only pass to a NOX release
@@ -127,4 +140,5 @@ jobs:
         shell: pwsh
         run: |
           if ('${{ steps.realprobe.outcome }}' -ne 'success') { throw 'NOX_REAL_QWEN_INSTALLED_HOLD' }
-          Write-Host 'REAL_QWEN_INITIAL_PROBE_PASSED; NOX active STOP, 5 UI clicks and E07 still unverified'
+          if ('${{ steps.livestop.outcome }}' -ne 'success') { throw 'NOX_ACTIVE_STOP_NOT_ACCEPTED_HOLD' }
+          Write-Host 'REAL_QWEN_AND_ACTIVE_STOP_PROBES_PASSED; five UI clicks and independent E07 still unverified'
