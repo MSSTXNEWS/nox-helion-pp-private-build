@@ -42,7 +42,7 @@ ORIGINAL_CHROME_COMPACT_BLOB = "8e3cffe7cb91564ae5817e55cb35e5fbb0feeb50"
 WOW_RUNTIME_BLOBS = {
     "runtime/loader.mjs": "9b4596a68525384a92ddc1c17af5d51d37cc0458",
     "runtime/stage.css": "e6fd8eaea8a38deb0095e6359010be7539a4a7bc",
-    "runtime/home-scene.mjs": "82249beb4357c93e692ac9fad07a449d9a83d034",
+    "runtime/home-scene.mjs": "51302a21f96884d1113bcfce170fb00c452bd6c3",
     "runtime/home-guard.css": "6adbc536976709388b94f0cb2be495ac9d7d49eb",
     "runtime/vendor/gauge.min.js": "0deb4ebdbf58b10bab9a4b270781556dffeb6387",
     "runtime/vendor/SVG-GAUGE.LICENSE": "7abad7e4b79bea9c3a8f930f490f40f46898b17a",

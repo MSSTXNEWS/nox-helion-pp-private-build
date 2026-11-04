@@ -8,10 +8,17 @@ import {installNoxCinemaFX} from '../proposals/NOX-CINEMA-FX/nox-cinema.mjs';
 export const CANONICAL_CORES=Object.freeze([
   'CONSCIOUSNESS','PERSONA','ATLAS','VOICE','REFLECTION','CORE','NEXUS','FORGE'
 ]);
-let mounted=null,observer=null,bodyObserver=null;
+let mounted=null,mountedHome=null,observer=null,bodyObserver=null;
 
 export function mountApprovedHome(doc=document){
-  if(mounted)return mounted;
+  if(mounted){
+    // Original R11 SPA can replace HOME after navigation. Never reuse
+    // an FX dock or observers attached to a stale, detached DOM root.
+    if(mountedHome?.isConnected && mountedHome.ownerDocument===doc &&
+       doc.getElementById('home')===mountedHome)return mounted;
+    mounted.destroy();
+    if(mounted)throw Error('D02_STALE_HOME_FX_CLEANUP_HOLD');
+  }
   const home=doc.getElementById('home');
   const stage=home?.querySelector('.nox-orbit-stage');
   if(!home||!stage||!home.classList.contains('screen'))
@@ -94,7 +101,7 @@ export function mountApprovedHome(doc=document){
       try{delete element.dataset.noxVerifiedFx;}catch(_){}
     }
     try{film?.destroy();}catch(_){}
-    try{scene.destroy();}finally{mounted=null;}
+    try{scene.destroy();}finally{mounted=null;mountedHome=null;}
   }
   try{
     sync=()=>{
@@ -139,6 +146,7 @@ export function mountApprovedHome(doc=document){
     doc.addEventListener('visibilitychange',onAutoVisibility);
     const oldDetach=detachMotion;
     detachMotion=()=>{doc.removeEventListener('visibilitychange',onAutoVisibility);oldDetach();};
+    mountedHome=home;
     mounted=Object.freeze({
       snapshot:()=>({...scene.snapshot(),kind:'decorative-d02',backendAccepted:false,source:'PR30'}),
       setProfile:mode=>{
