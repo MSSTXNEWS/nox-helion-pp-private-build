@@ -44,11 +44,29 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference='Stop'
-          $url='https://sourceforge.net/projects/nsis/files/NSIS%203/3.13/nsis-3.13.zip/download'
           $expected='ba63dffc4410ee89193e1cb5a41989991bd77c61068da17e3156d136b7b0b3d8'
           $zip=Join-Path $env:RUNNER_TEMP 'nox-nsis-3.13.zip'
-          Invoke-WebRequest -Uri $url -OutFile $zip -MaximumRedirection 10 -TimeoutSec 120
-          $actual=(Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          # SourceForge /download can yield HTML instead of bytes on CI; try official direct mirrors.
+          # Nothing executes or extracts unless its SHA256 equals SourceForge's published checksum.
+          $urls=@(
+            'https://downloads.sourceforge.net/project/nsis/NSIS%203/3.13/nsis-3.13.zip',
+            'https://master.dl.sourceforge.net/project/nsis/NSIS%203/3.13/nsis-3.13.zip',
+            'https://netix.dl.sourceforge.net/project/nsis/NSIS%203/3.13/nsis-3.13.zip',
+            'https://sourceforge.net/projects/nsis/files/NSIS%203/3.13/nsis-3.13.zip/download'
+          )
+          $actual=''
+          foreach ($url in $urls) {
+            try {
+              if (Test-Path -LiteralPath $zip) { Remove-Item -LiteralPath $zip -Force }
+              Invoke-WebRequest -Uri $url -OutFile $zip -MaximumRedirection 10 -TimeoutSec 70 -ErrorAction Stop
+              if (!(Test-Path -LiteralPath $zip -PathType Leaf)) { continue }
+              $actual=(Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+              if ($actual -ceq $expected) { break }
+              Write-Warning ('NSIS313_MIRROR_BYTES_UNVERIFIED '+([Uri]$url).Host)
+            } catch {
+              Write-Warning ('NSIS313_MIRROR_UNAVAILABLE '+([Uri]$url).Host)
+            }
+          }
           if ($actual -cne $expected) { throw 'NSIS313_OFFICIAL_ZIP_SHA256_HOLD' }
           $root=Join-Path $env:RUNNER_TEMP 'nox-approved-nsis313'
           Expand-Archive -LiteralPath $zip -DestinationPath $root
