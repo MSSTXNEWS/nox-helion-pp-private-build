@@ -21,7 +21,7 @@ class FrozenSetupDescriptor(unittest.TestCase):
     def test_single_fd_sha_and_header_match_exact_bytes(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory).resolve()
-            raw = b"MZ" + bytes(62) + b"PE\\0\\0" + bytes(6000)
+            raw = b"MZ" + bytes(62) + b"PE\0\0" + bytes(6000)
             path = root / "Setup.exe"
             path.write_bytes(raw)
             digest = hashlib.sha256(raw).hexdigest()
@@ -29,7 +29,7 @@ class FrozenSetupDescriptor(unittest.TestCase):
                 path, root, len(raw), digest, return_pe_header=True)
             self.assertEqual(got, digest)
             self.assertEqual(header, raw[:4096])
-            self.assertEqual(header[64:68], b"PE\\0\\0")
+            self.assertEqual(header[64:68], b"PE\0\0")
             self.assertEqual(MOD.installed_file_sha_locked(
                 path, root, len(raw), digest), digest)
 
@@ -70,7 +70,7 @@ class FrozenSetupDescriptor(unittest.TestCase):
     def test_setup_lock_uses_locked_header_not_second_path_open(self):
         source = FILE.read_text(encoding="utf-8")
         segment = source.split("def setup_lock(", 1)[1].split(
-            "\\ndef manifest_owner(", 1)[0]
+            "\ndef manifest_owner(", 1)[0]
         self.assertIn("return_pe_header=True", segment)
         self.assertNotIn("sha256(setup)", segment)
         self.assertNotIn('with setup.open("rb")', segment)
