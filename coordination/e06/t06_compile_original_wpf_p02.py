@@ -222,7 +222,15 @@ def stage_exact_owner_webview2_registry_views(r11, canonical_script):
     if begin >= end:
         raise RuntimeError("T06_WEBVIEW2_PREFLIGHT_ANCHOR_ORDER_HOLD")
     legacy = original[begin:end]
-    if any(token not in legacy for token in (
+    # Frozen original C07 R11 has the earlier pv presence probe without
+    # [version]. Its immutable exact preimage is independently pinned by the
+    # canonical E06 owner builder; only that full SHA can omit [version].
+    # Unknown or partially matching preimages still HOLD before staging.
+    legacy_sha = hashlib.sha256(
+        legacy.replace("\r\n", "\n").encode("utf-8")).hexdigest()
+    known_c07_legacy = (legacy_sha ==
+        "a61e2e7adcbf836109249829f4d103e0d991873c0088483b0b3550216a4b4c8e")
+    if not known_c07_legacy and any(token not in legacy for token in (
             "Registry::HKEY_CURRENT_USER", "Registry::HKEY_LOCAL_MACHINE",
             "Get-ItemProperty", "[version]", "pv")):
         raise RuntimeError("T06_WEBVIEW2_ORIGINAL_PREFLIGHT_PREIMAGE_HOLD")
