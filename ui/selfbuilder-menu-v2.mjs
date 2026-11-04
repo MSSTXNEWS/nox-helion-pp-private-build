@@ -49,7 +49,8 @@ export const SELFBUILDER_MENU = Object.freeze([
 // action IDs, native approvals, scheduler or backend. All entries remain reachable.
 export const NOX_NAV_GROUPS=Object.freeze([
  Object.freeze({id:'status',label:'ОБЗОР И СТАТУС'}),
- Object.freeze({id:'models',label:'МОДЕЛИ И ОБУЧЕНИЕ'}),
+ Object.freeze({id:'models',label:'МОДЕЛИ И ОЧЕРЕДЬ'}),
+ Object.freeze({id:'weights',label:'ВЕСА И GPU'}),
  Object.freeze({id:'source',label:'ИСХОДНИКИ И КОД'}),
  Object.freeze({id:'control',label:'УПРАВЛЕНИЕ'})
 ]);
@@ -57,7 +58,8 @@ export function groupForNoxAction(item){
  const action=String(item?.actionId||'');
  if(action.endsWith('.stop'))return 'control';
  if(item?.subview==='code'||action==='selfbuilder.propose'||action.includes('.sources.'))return 'source';
- if(/model|seed|weight|train|training|learning|study|gpu|coding/i.test(action))return 'models';
+ if(/^training\.|\.train\.request$|gpu/i.test(action))return 'weights';
+ if(/model|seed|weight|learning|study|coding/i.test(action))return 'models';
  if(item?.mode==='restricted')return 'control';
  return 'status';
 }

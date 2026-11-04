@@ -14,11 +14,14 @@ test('no-loss navigation: 8 original directions and 10 logical pages',()=>{
 });
 test('every previously reviewed action is still assigned to one reachable group',()=>{
  const groups=new Set(NOX_NAV_GROUPS.map(g=>g.id));
- assert.deepEqual(groups,new Set(['status','models','source','control']));
+ assert.deepEqual(groups,new Set(['status','models','weights','source','control']));
  assert.ok(SELFBUILDER_MENU.length>=18);
  const categories=SELFBUILDER_MENU.map(groupForNoxAction);
  for(const category of categories)assert.ok(groups.has(category),category);
- for(const group of groups)assert.ok(categories.includes(group),group+' must be reachable');
+ for(const group of groups){
+  const count=categories.filter(category=>category===group).length;
+  assert.ok(count>=1&&count<=5,group+' must show at most five actions');
+ }
  assert.ok(SELFBUILDER_MENU.some(item=>item.actionId==='selfbuilder.worker.stop'));
  assert.ok(SELFBUILDER_MENU.some(item=>item.actionId==='selfbuilder.propose'));
 });
