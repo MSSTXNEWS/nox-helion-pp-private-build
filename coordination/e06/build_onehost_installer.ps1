@@ -887,24 +887,6 @@ if ($verifierBeforeSha -ceq $verifierAfterSha -or
   throw 'P01_VERIFIER_COMPAT_WRITE_READBACK_HOLD'
 }
 Write-Host "P01_PS51_DOTNET_SHA256_STAGED before=$verifierBeforeSha after=$verifierAfterSha ORIGINAL_SHA_CHECK_RETAINED"
-# U04: the ORIGINAL SHA-pinned R11 NSIS remover also invokes Get-FileHash.
-# The NSIS child PowerShell 5.1 lacks that cmdlet on the proven Windows runner.
-# Keep the original rollback-safe/remove-only-owned policy unchanged; adapt ONLY
-# the disposable R11 copy to the already-reviewed stream-based .NET SHA256 owner.
-$removerPath=Join-Path $installer 'Remove-InstalledPayload.ps1'
-Assert-E06PlainPathAncestors -Candidate $removerPath -Scope 'P01_NSIS_ORIGINAL_REMOVER'
-$removerInfo=Get-Item -LiteralPath $removerPath -Force -ErrorAction Stop
-if ($removerInfo.PSIsContainer -or
-    ($removerInfo.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0 -or
-    $removerInfo.Length -ne 4013) {
-  throw 'P01_NSIS_PS51_ORIGINAL_REMOVER_PREIMAGE_HOLD'
-}
-$removerShaBefore=(Get-FileHash -LiteralPath $removerPath -Algorithm SHA256).Hash.ToLowerInvariant()
-if ($removerShaBefore -cne '6853f3d4a32eb5946c3c68d22b0d61e3a402b729ebda225cd3f6b8b154b1ec55') {
-  throw 'P01_NSIS_PS51_ORIGINAL_REMOVER_SHA_HOLD'
-}
-$removerBefore=[IO.File]::ReadAllText($removerPath)
-$removerHeader=[regex]::Matches($removerBefore,'(?m)^[ \t]*\$ErrorActionPreference[ \t]*=[ \t]*''Stop''[ \t]*
 & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File (Join-Path $installer 'Verify-Payload.ps1') -Root $payload -Manifest $manifestPath
 if ($LASTEXITCODE -ne 0) { throw 'ORIGINAL_NSIS_PAYLOAD_SHA_GATE_HOLD' }
 # C11: patch ONLY the disposable ORIGINAL NSIS source before makensis.
