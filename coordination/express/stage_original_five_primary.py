@@ -109,6 +109,19 @@ def publish(original: bytes) -> tuple[bytes, dict]:
         raise ValueError("U08_ORIGINAL_HOME_UTF8_HOLD") from exc
     if html.lower().count("</body>") != 1 or MARKER in html or "nox-express-primary-bind" in html:
         raise ValueError("U08_ORIGINAL_HOME_HTML_ANCHOR_HOLD")
+    # R11 original has a chatLog TDZ: a wheel listener is installed before
+    # the later const declaration. Repair ONLY this integrity-pinned staged
+    # copy so the remaining existing native HOME callbacks can initialize.
+    # Original donors, host, permission gates and NSIS payload owners stay put.
+    tdz_decl = "chatLog=document.getElementById('chat-log'),"
+    tdz_anchor = "let chatScrollFrame=0;"
+    if (html.count(tdz_decl) != 1 or html.count(tdz_anchor) != 1
+            or html.index(tdz_anchor) >= html.index(tdz_decl)):
+        raise ValueError("U07_ORIGINAL_CHATLOG_TDZ_PREIMAGE_HOLD")
+    html = html.replace(tdz_decl, "", 1)
+    html = html.replace(tdz_anchor,
+                        "const chatLog=document.getElementById('chat-log');" + tdz_anchor, 1)
+
     close = html.lower().rfind("</body>")
     derived = (html[:close] + INSERT + html[close:]).encode("utf-8")
     if derived.count(b'data-nox-primary=') != 5:
