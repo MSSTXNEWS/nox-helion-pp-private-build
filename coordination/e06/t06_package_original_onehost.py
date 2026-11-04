@@ -731,12 +731,19 @@ def build(root,staged):
          sha(published_home)==HOME_R11_EXPECTED_SHA256,
          "U08_PUBLISHED_HOME_PREIMAGE_HOLD")
     five_published,five_proof=five_module.publish(original_home.read_bytes())
-    # Attest that the real original HOME publisher contains the same read-only
-    # A1 owner-status probe. This is inclusion, NOT runtime A1/E07 acceptance.
-    need(five_published.count(b'data-nox-check="A1"') == 1 and
-         b'NOX-A1-NATIVE-COMMAND-STATUS-v1' in five_published and
-         b'selfbuilder.a1.status' in five_published,
-         "U08_ORIGINAL_A1_NATIVE_PROBE_NOT_PUBLISHED")
+    # Keep the original approved EXPRESS scope: five real source-bound
+    # controls, not a new unimplemented A1 status/owner callback. Native
+    # A1 capability and user consent must be proven separately before READY;
+    # neither HTML string presence nor this stage can grant an A1 PASS.
+    need(five_published.count(b'data-nox-primary=') == 5 and
+         all(five_published.count(b'data-nox-primary="' + name + b'"') == 1
+             for name in (b"CHAT", b"INSTALL", b"MODELS", b"LEARN", b"SETTINGS")) and
+         five_published.count(b'id="nox-express-primary-bind"') == 1 and
+         five_proof.get("visible_primary_buttons") ==
+             ["CHAT", "INSTALL", "MODELS", "LEARN", "SETTINGS"] and
+         five_proof.get("installed_ui_automation") == "NOT_RUN" and
+         five_proof.get("release_accepted") is False,
+         "U08_ORIGINAL_FIVE_PRIMARY_ACTIONS_SOURCE_HOLD")
     temp_home=published_home.with_name("index.html.u08tmp")
     need(not temp_home.exists() and not temp_home.is_symlink(),
          "U08_FIVE_HOME_TEMP_COLLISION_HOLD")
