@@ -18,6 +18,8 @@ on:
       - tests/e06/test_t06_source_receipt_guard.py
       - tests/e06/test_t06_manifest_pwsh_host_r120.py
       - tests/e06/test_t06_nsis_candidate_binary_r40.py
+      - coordination/e06/t06_samevm_installed_smoke.py
+      - tests/e06/test_t06_github_samevm_bridge_auth_r122.py
       - tests/e06/test_t06_frozen_source_coverage.py
       - tests/e06/test_t06_nx03_stage_pin_r118.py
   workflow_dispatch:
@@ -65,6 +67,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'T06_P01_VERIFIER_PWSH_HOST_TEST_HOLD' }
           python -B -m unittest discover -s tests/e06 -p test_t06_nsis_candidate_binary_r40.py -v
           if ($LASTEXITCODE -ne 0) { throw 'T06_WINDOWS_NSIS_PE_SHA_IDENTITY_TEST_HOLD' }
+          python -B -m unittest discover -s tests/e06 -p test_t06_github_samevm_bridge_auth_r122.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'T06_GITHUB_DISPOSABLE_BRIDGE_AUTH_REGRESSION_HOLD' }
           $archive=Join-Path $env:RUNNER_TEMP ('NOX_HELION_EXPRESS_SOURCE_'+$env:GITHUB_SHA+'.zip')
           python -B coordination/e06/express_source_snapshot_pack.py --repo . --sha $env:GITHUB_SHA --out $archive
           if ($LASTEXITCODE -ne 0) { throw 'SOURCE_PACK_PHYSICAL_HOLD' }
@@ -118,6 +122,7 @@ jobs:
         env:
           NOX_T06_LOCAL_BRIDGE: 'YES'
           NOX_M1_CI_INSTALL_WEBVIEW2: 'YES'
+          NOX_E07_CI_WINDOWS_DISPOSABLE: 'YES'
           PYTHONUNBUFFERED: '1'
         run: |
           python -B coordination/e06/t06_local_onehost_bridge.py

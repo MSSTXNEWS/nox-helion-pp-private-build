@@ -903,10 +903,37 @@ def await_original_uninstall(install: Path, owned_files: tuple[Path, ...],
         time.sleep(min(poll_seconds, remaining))
     verify_original_uninstall(install, owned_files)
 
+def github_disposable_bridge_authorized(env, system_platform, machine, bits):
+    """Only the approved current GitHub-hosted Windows OneHost CI may install.
+
+    This is authorization for SAME-VM diagnostic lifecycle, never independent
+    E07 or release acceptance. Reject self-hosted, foreign or local processes.
+    """
+    run_id=env.get("GITHUB_RUN_ID","")
+    return (system_platform=="win32" and bits==64 and
+            machine.casefold() in ("amd64","x86_64") and
+            env.get("NOX_T06_LOCAL_BRIDGE")=="YES" and
+            env.get("NOX_E07_CI_WINDOWS_DISPOSABLE")=="YES" and
+            env.get("GITHUB_ACTIONS")=="true" and
+            env.get("RUNNER_OS")=="Windows" and
+            env.get("RUNNER_ARCH")=="X64" and
+            env.get("RUNNER_ENVIRONMENT")=="github-hosted" and
+            env.get("GITHUB_REPOSITORY")==
+                "MSSTXNEWS/nox-helion-pp-private-build" and
+            env.get("GITHUB_REF")==
+                "refs/heads/integration/nox-v16-unified-candidate-20261028-r01" and
+            env.get("GITHUB_WORKFLOW")==
+                "NOX EXPRESS single-SHA Windows Setup and source" and
+            env.get("GITHUB_EVENT_NAME") in ("push","workflow_dispatch") and
+            type(run_id) is str and run_id.isascii() and
+            run_id.isdecimal() and 1<=len(run_id)<=20)
+
 def main()->int:
     started=time.monotonic()
     report={"schema":"NOX-T06-INSTALLED-SMOKE-v1","phase":"HOLD",
-            "environment":("GITLAB_WINDOWS_EPHEMERAL_ONLY" if ON_LOCAL_BRIDGE else
+            "environment":("GITHUB_WINDOWS_EPHEMERAL_BRIDGE_NOT_E07"
+                           if ON_LOCAL_BRIDGE and ON_GITHUB else
+                           "GITLAB_WINDOWS_EPHEMERAL_ONLY" if ON_LOCAL_BRIDGE else
                            "GITHUB_WINDOWS_EPHEMERAL_ONLY" if ON_GITHUB else
                            "CIRCLECI_WINDOWS_EPHEMERAL_ONLY"),
             "setup_sha256":None,"installed_wpf_sha256":None,
@@ -936,7 +963,12 @@ def main()->int:
                        platform.machine(), struct.calcsize("P") * 8) and
                    gitlab_id.isascii() and gitlab_id.isdecimal() and
                    1 <= len(gitlab_id) <= 20)
-        require(sys.platform=="win32" and (circle_ci or github_ci or gitlab_ci),
+        github_local_ci=(ON_LOCAL_BRIDGE and ON_GITHUB and
+                         github_disposable_bridge_authorized(
+                             os.environ,sys.platform,platform.machine(),
+                             struct.calcsize("P")*8))
+        require(sys.platform=="win32" and
+                (circle_ci or github_ci or gitlab_ci or github_local_ci),
                 "T06_INSTALL_SMOKE_REQUIRES_AUTHORIZED_DISPOSABLE_WINDOWS")
         ci_run_id=(gitlab_id if gitlab_ci else
                    os.environ["CIRCLE_BUILD_NUM"] if circle_ci else
