@@ -88,8 +88,7 @@ trap {
  $reason='E07_FINAL_UIA_'+$__e07Operation+'_PROCESS_EXIT_HOLD'
  if($why -eq 'PRIMARY_DOCK_NOT_UNIQUE'){
    $reason='E07_FINAL_UIA_'+$__e07Operation+'_PRIMARY_DOCK_NOT_UNIQUE_HOLD'
- } elseif($why -cmatch '^BUTTON_(CHAT|INSTALL|MODELS|LEARN|SETTINGS)_NOT_UNIQUE
-                      'FX_UNIQUE','FX_INVOKE','FX_STATE','UNKNOWN_OP')){
+ } elseif(($why -cmatch '^BUTTON_(CHAT|INSTALL|MODELS|LEARN|SETTINGS)_NOT_UNIQUE$') -or (@('NO_ROOT','TREE_LIMIT','NO_INVOKE','RECT','MOVE','PRINT','FX_UNIQUE','FX_INVOKE','FX_STATE','UNKNOWN_OP') -ccontains $why)) {
    $reason='E07_FINAL_UIA_'+$__e07Operation+'_'+$why+'_HOLD'
  }
  Write-Output $reason
