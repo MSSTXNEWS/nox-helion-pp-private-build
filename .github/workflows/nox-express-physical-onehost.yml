@@ -80,7 +80,7 @@ jobs:
           $compiler=($candidates | Sort-Object { $_.FullName.Length } | Select-Object -First 1).FullName
           $version=(& $compiler /VERSION | Out-String).Trim()
           if ($LASTEXITCODE -ne 0 -or $version -notmatch '^v?3\.13$') { throw 'NSIS313_COMPILER_VERSION_HOLD' }
-          Add-Content -LiteralPath $env:GITHUB_PATH -Value $candidates[0].DirectoryName
+          Add-Content -LiteralPath $env:GITHUB_PATH -Value (Split-Path -Parent $compiler)
           Write-Host ('NSIS313_OFFICIAL_SHA_VERIFIED '+$actual)
       - name: G2 G3 G4 original OneHost WPF Python NSIS plus installed smoke
         id: compile
