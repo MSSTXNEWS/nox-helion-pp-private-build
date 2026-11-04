@@ -43,6 +43,30 @@ class FunctionalTruth(unittest.TestCase):
         self.assertLess(body.index("visual_first_hold=None"),body.index("    actions={}"))
         self.assertNotIn('e07.require(e07.clean_file(png) and 20_000<=png.stat()',body)
 
+    def test_one_failed_real_action_does_not_mask_other_action_results(self):
+        import ast
+        source=PATH.read_text(encoding="utf-8")
+        main=next(n for n in ast.parse(source).body
+                  if isinstance(n,ast.FunctionDef) and n.name=="run")
+        attempt=next(n for n in main.body
+                     if isinstance(n,ast.FunctionDef) and n.name=="attempt")
+        snippet=ast.get_source_segment(source,attempt)
+        namespace={"e07":module.e07,"subprocess":module.subprocess}
+        exec("def owner():\\n    actions={}\\n"+
+             snippet+"\\n    return attempt,actions\\n",namespace)
+        attempt_fn,results=namespace["owner"]()
+        def failed():
+            raise module.e07.Hold("E07_FINAL_INSTALL_RESULT_HOLD")
+        attempt_fn("INSTALL",failed)
+        attempt_fn("MODELS",lambda:results.update({"MODELS":{
+            "result":"HOLD","function_verified":"NOT_TESTED",
+            "permissions_verified":"NOT_TESTED"}}))
+        self.assertEqual(set(results),{"INSTALL","MODELS"})
+        self.assertEqual(results["INSTALL"]["error_code"],
+                         "E07_FINAL_INSTALL_RESULT_HOLD")
+        self.assertEqual(results["INSTALL"]["result"],"HOLD")
+        self.assertEqual(results["INSTALL"]["permissions_verified"],"NOT_TESTED")
+
     def test_fx_failure_does_not_skip_other_functional_observations(self):
         source=PATH.read_text(encoding="utf-8")
         self.assertIn('fx={"fx_control":"HOLD","first_unmet_gate":str(exc)}',source)
