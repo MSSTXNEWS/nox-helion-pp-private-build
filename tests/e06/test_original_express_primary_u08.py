@@ -32,6 +32,9 @@ class FivePrimaryTests(unittest.TestCase):
         self.assertEqual(proof['installed_ui_automation'], 'NOT_RUN')
         self.assertIs(proof['release_accepted'], False)
         self.assertEqual(proof['source_sha256'], hashlib.sha256(self.raw).hexdigest())
+        self.assertIn("target.click();", target.INSERT)
+        self.assertNotIn("if(name==='MODELS')target.click();", target.INSERT)
+        self.assertIn("original handlers, native", target.INSERT)
 
     def test_tampered_bytes_rejected(self):
         with self.assertRaisesRegex(ValueError, 'SHA_HOLD'):
