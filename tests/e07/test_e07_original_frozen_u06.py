@@ -30,7 +30,7 @@ class FrozenOriginalU06(unittest.TestCase):
             with self.assertRaisesRegex(MOD.Hold,"E07_ORIGINAL_CANDIDATE_PATH_HOLD"):
                 MOD.setup_lock_original(base/"wrong.exe",base)
     def test_actual_pe_sig_excludes_escape_backsplash(self):
-        src=(ROOT/"coordination/e07/independent_setup_e07.py").read_text()
+        src=(ROOT/"coordination/e07/independent_setup_e07.py").read_text(encoding="utf-8")
         self.assertIn('header[offset:offset+4]==bytes.fromhex("50450000")',src)
         self.assertEqual(bytes.fromhex("50450000"),b"PE"+bytes(2))
     def test_real_uia_tree_roles_are_button_presence_not_clicks(self):
@@ -51,7 +51,7 @@ class FrozenOriginalU06(unittest.TestCase):
         with self.assertRaisesRegex(MOD.Hold,"E07_UIA_DIAGNOSTIC_UNTRUSTED_HOLD"):
             MOD.classify_primary_uia_evidence({**physical,"treeScanned":1})
     def test_original_workflow_single_hash_frozen(self):
-        workflow=(ROOT/".github/workflows/nox-express-independent-e07-candidate.yml").read_text()
+        workflow=(ROOT/".github/workflows/nox-express-independent-e07-candidate.yml").read_text(encoding="utf-8")
         # Both historical immutable candidates remain code-admissible, but
         # this workflow must select exactly ONE internally consistent candidate.
         approved = (
@@ -73,7 +73,7 @@ class FrozenOriginalU06(unittest.TestCase):
         self.assertEqual(MOD.ORIGINAL_E06_SOURCE, "fe21790af418c8c1083946595811b67c9c03c49d")
         self.assertEqual(MOD.ORIGINAL_E06_SETUP_SHA, "1b78fba3fa158673814b31f211063022fd2bff0ae7ff25f14ba3db2a47c484c2")
     def test_release_stays_hold(self):
-        script=(ROOT/"coordination/e07/independent_setup_e07.py").read_text()
+        script=(ROOT/"coordination/e07/independent_setup_e07.py").read_text(encoding="utf-8")
         self.assertIn('"release_accepted":False}',script)
         self.assertIn('result["error"]="E07_REAL_MODEL_AND_VISUAL_ACCEPTANCE_NOT_COMPLETE"',script)
 if __name__=="__main__": unittest.main()
