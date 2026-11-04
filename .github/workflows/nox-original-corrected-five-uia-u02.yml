@@ -4,6 +4,7 @@ on:
     branches: [integration/nox-v16-unified-candidate-20261028-r01]
     paths:
       - .github/workflows/nox-original-corrected-five-uia-u02.yml
+      - coordination/e07/independent_setup_e07.py
   workflow_dispatch:
 permissions:
   contents: read
