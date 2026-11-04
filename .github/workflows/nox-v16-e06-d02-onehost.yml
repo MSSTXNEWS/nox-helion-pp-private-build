@@ -9,6 +9,8 @@ on:
       - 'coordination/e06/**'
       - 'integrations/wow200/stage_wow200.py'
       - 'integrations/wow200/tests/test_stage_wow200.py'
+      - 'integrations/wow200/tests/fake_d02_dom.mjs'
+      - 'integrations/wow200/runtime/home-scene.lifecycle.r17.test.mjs'
       - 'tests/e06/**'
       - 'tests/test_c04_p03_ack_scalar_rejection.py'
       - 'tests/p03/test_p03_cancel_retry_jobid_bind_u06.py'
