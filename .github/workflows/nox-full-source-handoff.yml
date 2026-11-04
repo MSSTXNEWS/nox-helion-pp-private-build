@@ -1,0 +1,62 @@
+name: NOX FULL SOURCE - exact SHA handoff
+on:
+  push:
+    branches:
+      - handoff/nox-full-source-20261104-a0a3a881
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: nox-full-source-handoff-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  full-source:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          lfs: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12.10'
+      - name: Verify immutable checkout and build entire Git-tracked source archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA" || { echo 'HEAD_SHA_HOLD'; exit 2; }
+          test -z "$(git status --porcelain --untracked-files=normal)" || { echo 'DIRTY_CHECKOUT_HOLD'; exit 2; }
+          mkdir -p dist/full-source
+          python3 -B coordination/e06/express_source_snapshot_pack.py --repo . --sha "$GITHUB_SHA" --out "dist/full-source/NOX_HELION_FULL_SOURCE_${GITHUB_SHA}.zip" > dist/full-source/EXACT_SOURCE_RECEIPT.json
+          python3 -B - <<'PY'
+          import pathlib, hashlib, json, zipfile, subprocess, os
+          root=pathlib.Path("dist/full-source")
+          sha=os.environ["GITHUB_SHA"]
+          p=root/("NOX_HELION_FULL_SOURCE_"+sha+".zip")
+          with zipfile.ZipFile(p) as z:
+              m=json.loads(z.read("SOURCE_MANIFEST.json"))
+              files=m["files"]
+              tracked={f for f in subprocess.check_output(["git","ls-files","-z"]).decode().split("\0") if f}
+              assert m["git_sha"]==sha
+              assert len(files)==len(tracked)
+              assert {f["path"] for f in files}==tracked
+              assert {x for x in z.namelist() if x.startswith("source/")}=={"source/"+f for f in tracked}
+              for f in files:
+                  h=hashlib.sha256()
+                  with z.open("source/"+f["path"]) as stream:
+                      for chunk in iter(lambda:stream.read(1048576),b""): h.update(chunk)
+                  assert h.hexdigest()==f["sha256"], f["path"]
+          h=hashlib.file_digest(p.open("rb"),"sha256").hexdigest()
+          receipt={"schema":"nox.full-source-handoff.v1","git_sha":sha,"tracked_files":len(tracked),"zip_sha256":h,"per_file_verified":True,"windows_setup_test":"NOT_RUN","live_qwen":"NOT_RUN","independent_e07":"NOT_RUN","release_accepted":False}
+          (root/"HANDOFF_RECEIPT.json").write_text(json.dumps(receipt,indent=2)+"\n")
+          (root/"SHA256SUMS.txt").write_text(h+"  "+p.name+"\n")
+          print(json.dumps(receipt))
+          PY
+      - name: Upload one canonical full-source handoff
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: NOX_HELION_FULL_SOURCE_${{ github.sha }}
+          path: dist/full-source/
+          if-no-files-found: error
+          retention-days: 30
