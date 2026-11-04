@@ -229,15 +229,31 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
 
     private void OnNavigationStarting(object? sender, CoreWebView2NavigationStartingEventArgs e)
     {
-        RevokeDocument();
+        // Reject an untrusted navigation BEFORE revoking the current trusted
+        // document: a denied target must not cancel a live Qwen stream/STOP
+        // session that remains on the original authenticated HOME.
         if (_externalMode)
         {
-            if (_nativeReturnPending && ExactShellReturn(e.Uri)) return;
+            if (_nativeReturnPending && ExactShellReturn(e.Uri))
+            {
+                RevokeDocument();
+                return;
+            }
             // Recheck EVERY redirect; no DNS suffix spoof, insecure scheme or port.
-            if (!IsApprovedExternal(e.Uri)) e.Cancel = true;
+            if (!IsApprovedExternal(e.Uri))
+            {
+                e.Cancel = true;
+                return;
+            }
+            RevokeDocument();
             return;
         }
-        if (!Trusted(e.Uri)) e.Cancel = true;
+        if (!Trusted(e.Uri))
+        {
+            e.Cancel = true;
+            return;
+        }
+        RevokeDocument();
     }
     private void OnNavigationCompleted(object? sender, CoreWebView2NavigationCompletedEventArgs e)
     {

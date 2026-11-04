@@ -62,6 +62,20 @@ class BrowserExitOwnerLifecycleR73(unittest.TestCase):
             self.assertIn(marker, self.owner)
         self.assertNotIn("new WebView2(", self.owner)
 
+    def test_rejected_navigation_cannot_revoke_live_trusted_chat(self):
+        # Source admission regression. Windows-installed WebView2/E07 still required.
+        block = self.bridge.split("private void OnNavigationStarting(", 1)[1]
+        block = block.split("private void OnNavigationCompleted(", 1)[0]
+        self.assertNotIn("RevokeDocument();\n        if (_externalMode)", block)
+        self.assertIn("if (!IsApprovedExternal(e.Uri))", block)
+        self.assertIn("if (!Trusted(e.Uri))", block)
+        self.assertEqual(block.count("e.Cancel = true;"), 2)
+        self.assertEqual(block.count("RevokeDocument();"), 3)
+        for guard in ("if (!IsApprovedExternal(e.Uri))", "if (!Trusted(e.Uri))"):
+            denied = block.split(guard, 1)[1].split("RevokeDocument();", 1)[0]
+            self.assertIn("e.Cancel = true;", denied)
+            self.assertIn("return;", denied)
+
     def test_all_original_owner_pins_reconciled(self):
         # Derive the exact original Git blob identity; static test pins go stale after merges.
         def git_blob(path):
