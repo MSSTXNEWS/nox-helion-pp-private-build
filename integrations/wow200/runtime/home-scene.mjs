@@ -66,7 +66,8 @@ export function mountApprovedHome(doc=document){
         if(next!==autoQuality){autoQuality=next;autoChanged=now;sync();}
       }
     }
-    autoRaf=view.requestAnimationFrame(sampleAuto);
+    // An adaptive sync may already have scheduled the next sample.
+    if(!autoRaf)autoRaf=view.requestAnimationFrame(sampleAuto);
   }
   function beginAuto(){
     if(selectedQuality==='AUTO'&&!autoRaf&&!doc.hidden&&!reducedMotion?.matches){
@@ -119,7 +120,7 @@ export function mountApprovedHome(doc=document){
       if(choice==='AUTO')beginAuto();
       return true;
     };
-    dock=mountNoxGraphicsDock(home,doc,chooseQuality);
+    dock=mountNoxGraphicsDock(home,doc,chooseQuality,()=>scene.snapshot());
     observer=new view.MutationObserver(sync);
     observer.observe(home,{attributes:true,attributeFilter:['class']});
     bodyObserver=new view.MutationObserver(sync);
@@ -169,54 +170,178 @@ export function mountApprovedHome(doc=document){
  * Visual performance only: never changes AI learning, GPU training, model
  * queue, source patches, STOP, permissions or native owner state.
  */
-function mountNoxGraphicsDock(home,doc,onSelect){
-  const entries=[
-    ['MAX_WOW','MAX WOW','ПОЛНЫЙ','✦'],
-    ['CINEMA','CINEMA','КИНО','◉'],
-    ['ECO','ECO','ЭКОНОМ','◌'],
-    ['MINI_START','MINI START','МИНИ','·'],
-    ['AUTO','AUTO','АДАПТИВНО','◇']
-  ];
-  const dock=doc.createElement('nav');
-  dock.className='nox-quality-dock';dock.dataset.noxGraphicsDock='v1';
-  dock.setAttribute('aria-label','Качество графики NOX');
-  const top=doc.createElement('div');top.className='nox-quality-dock__head';
-  const title=doc.createElement('strong');title.textContent='✦ ГРАФИКА';
-  const status=doc.createElement('output');status.className='nox-quality-dock__status';
-  status.setAttribute('aria-live','polite');top.append(title,status);
-  const row=doc.createElement('div');row.className='nox-quality-dock__row';
-  row.setAttribute('role','group');row.setAttribute('aria-label','Режим графики');
-  const buttons=new Map();
-  for(const [id,name,hint,glyph] of entries){
-    const button=doc.createElement('button');button.type='button';
-    button.className='nox-quality-planet';button.dataset.quality=id;
-    button.setAttribute('aria-label',name+' — '+hint);
-    button.setAttribute('aria-pressed','false');
-    const sphere=doc.createElement('span');sphere.className='nox-quality-planet__sphere';
-    sphere.setAttribute('aria-hidden','true');sphere.textContent=glyph;
-    const label=doc.createElement('strong');label.textContent=name;
-    const sub=doc.createElement('small');sub.textContent=hint;
-    button.append(sphere,label,sub);
-    button.addEventListener('click',()=>onSelect(id));
-    buttons.set(id,button);row.append(button);
-  }
-  dock.append(top,row);
-  home.append(dock); // Never a child of the moving orbit / hitboxes.
-  return Object.freeze({
-    render(selected,effective,osReduced){
-      for(const [id,button] of buttons){
-        const active=id===selected;
-        button.setAttribute('aria-pressed',String(active));
-        button.classList.toggle('is-selected',active);
-      }
-      status.textContent=osReduced
-        ? 'СИСТЕМА · МИНИМУМ ДВИЖЕНИЯ'
-        : selected==='AUTO'
-          ? 'AUTO · '+({'MAX':'MAX WOW','BALANCED':'CINEMA','ECO':'ECO'}[effective]||effective)
-          : 'РУЧНОЙ · '+(buttons.get(selected)?.querySelector('strong')?.textContent||'CINEMA');
-    },
-    destroy(){dock.remove();}
-  });
+
+/* NOX PLANETARY WORLDS V2 — each planet is a theme and optional cockpit,
+ * NEVER an authorization to run learning, mutate code or invoke native IPC.
+ * Two links target existing source-staged local pages inside one WebView2 host.
+ * All chart samples come from the actual D02 renderer snapshot only.
+ */
+function mountNoxGraphicsDock(home,doc,onSelect,getSceneSnapshot){
+ const entries=[
+  ['MAX_WOW','MAX WOW','ПОЛНЫЙ','✦'],
+  ['CINEMA','CINEMA','КИНО','◉'],
+  ['ECO','ECO','ЭКОНОМ','◌'],
+  ['MINI_START','MINI START','МИНИ','·'],
+  ['AUTO','AUTO','АДАПТИВНО','◇']
+ ];
+ const worlds=Object.freeze({
+  MAX_WOW:Object.freeze({title:'СИНГУЛЯРНОСТЬ · МИР МАКСИМУМА',description:
+   'Полная плазма, аккреция, частицы и плотная корона. Творчество, образы и WOW.',
+   primary:'✦ КИНОСТУДИЯ',secondary:'◉ МОДЕЛИ И ВЕСА',palette:['ember','obsidian','aurora']}),
+  CINEMA:Object.freeze({title:'КИНОСФЕРА · ЖИВОЙ КОСМОС',description:
+   'Сбалансированная кинографика, световые волны и кинематографическая атмосфера.',
+   primary:'✦ КИНО И ЭФФЕКТЫ',secondary:'◉ ВЫБОР МОДЕЛЕЙ',palette:['aurora','ion','obsidian']}),
+  ECO:Object.freeze({title:'ЭКОСФЕРА · ПРОСТРАНСТВО ДЛЯ ОБУЧЕНИЯ',description:
+   'Экономия ресурсов визуализации. Обучение ИИ остаётся отдельным действием с согласием.',
+   primary:'◉ МОДЕЛИ / ВЕСА',secondary:'✦ КАТАЛОГ ЭФФЕКТОВ',palette:['verdant','slate','aurora']}),
+  MINI_START:Object.freeze({title:'ЛУНА · ЛЁГКИЙ ЗАПУСК',description:
+   'Статическая графика и минимум визуальной нагрузки. Ядро, STOP и права не меняются.',
+   primary:'◉ ПЕРВЫЕ МОДЕЛИ',secondary:'✦ ДОСТУПНЫЕ ЭФФЕКТЫ',palette:['slate','obsidian','verdant']}),
+  AUTO:Object.freeze({title:'АДАПТИВНАЯ ТУМАННОСТЬ',description:
+   'Только по выбору владельца. Качество подстраивается по времени кадров, а не по выдуманной нагрузке GPU.',
+   primary:'◉ МОНИТОР МОДЕЛЕЙ',secondary:'✦ КИНОСТУДИЯ',palette:['ion','aurora','slate']})
+ });
+ const view=doc.defaultView;
+ const dock=doc.createElement('nav');dock.className='nox-quality-dock';
+ dock.dataset.noxGraphicsDock='v2';dock.setAttribute('aria-label','Графические миры NOX');
+ const head=doc.createElement('div');head.className='nox-quality-dock__head';
+ const title=doc.createElement('strong');title.textContent='✦ ПЛАНЕТЫ · ГРАФИКА';
+ const status=doc.createElement('output');status.className='nox-quality-dock__status';
+ status.setAttribute('aria-live','polite');
+ const toggle=doc.createElement('button');toggle.type='button';
+ toggle.className='nox-quality-dock__toggle';toggle.textContent='ОТКРЫТЬ МИР';
+ toggle.setAttribute('aria-expanded','false');toggle.setAttribute('aria-controls','nox-quality-world');
+ head.append(title,status,toggle);
+ const row=doc.createElement('div');row.className='nox-quality-dock__row';
+ row.setAttribute('role','group');row.setAttribute('aria-label','Режим графики NOX');
+ const buttons=new Map();
+ for(const [id,name,hint,glyph] of entries){
+   const b=doc.createElement('button');b.type='button';
+   b.className='nox-quality-planet';b.dataset.quality=id;
+   b.setAttribute('aria-label',name+' — '+hint);b.setAttribute('aria-pressed','false');
+   const sphere=doc.createElement('span');sphere.className='nox-quality-planet__sphere';
+   sphere.setAttribute('aria-hidden','true');sphere.textContent=glyph;
+   const label=doc.createElement('strong');label.textContent=name;
+   const sub=doc.createElement('small');sub.textContent=hint;
+   b.append(sphere,label,sub);b.addEventListener('click',()=>onSelect(id));
+   buttons.set(id,b);row.append(b);
+ }
+ const panel=doc.createElement('section');panel.id='nox-quality-world';
+ panel.className='nox-quality-world';panel.hidden=true;
+ panel.setAttribute('aria-label','Мир выбранной планеты');
+ const worldTitle=doc.createElement('h3');worldTitle.className='nox-quality-world__title';
+ const summary=doc.createElement('p');summary.className='nox-quality-world__summary';
+ const paletteRow=doc.createElement('div');paletteRow.className='nox-quality-world__palettes';
+ paletteRow.setAttribute('role','group');paletteRow.setAttribute('aria-label','Графические шаблоны мира');
+ const actions=doc.createElement('div');actions.className='nox-quality-world__actions';
+ const studio=doc.createElement('a');studio.href='/creative/studio.html';
+ studio.className='nox-quality-world__action';studio.dataset.action='studio';
+ const models=doc.createElement('a');models.href='/creative/modelcenter/index.html';
+ models.className='nox-quality-world__action';models.dataset.action='models';
+ const check=doc.createElement('button');check.type='button';
+ check.className='nox-quality-world__action';check.textContent='⌁ ИЗМЕРИТЬ РЕНДЕР';
+ actions.append(studio,models,check);
+ const observatory=doc.createElement('div');observatory.className='nox-quality-world__observatory';
+ const readout=doc.createElement('output');readout.className='nox-quality-world__reading';
+ readout.setAttribute('aria-live','polite');
+ const spark=doc.createElementNS('http://www.w3.org/2000/svg','svg');
+ spark.setAttribute('viewBox','0 0 240 42');spark.setAttribute('aria-hidden','true');
+ spark.classList.add('nox-quality-world__spark');
+ const poly=doc.createElementNS('http://www.w3.org/2000/svg','polyline');
+ poly.setAttribute('fill','none');poly.setAttribute('stroke','currentColor');
+ poly.setAttribute('stroke-width','2.3');poly.setAttribute('stroke-linecap','round');
+ poly.setAttribute('stroke-linejoin','round');spark.append(poly);
+ observatory.append(readout,spark);
+ panel.append(worldTitle,summary,paletteRow,actions,observatory);
+ dock.append(head,row,panel);home.append(dock);
+ const palettes=new Map(),history=[];
+ let active='CINEMA',sampleTimer=null,previous=null,closed=false;
+ function stopSampling(){if(sampleTimer!==null){view.clearInterval(sampleTimer);sampleTimer=null;}previous=null;}
+ function sample(){
+   if(panel.hidden||doc.hidden||closed)return;
+   let snapshot;
+   try{snapshot=getSceneSnapshot();}catch(_){snapshot=null;}
+   const now=view.performance.now();
+   if(!snapshot||!Number.isSafeInteger(snapshot.frames)||!Number.isFinite(snapshot.particles)){
+     readout.textContent='РЕНДЕР Н/Д · ЧАСТИЦЫ Н/Д';return;
+   }
+   let observed=null;
+   if(previous && now>previous.time){
+     observed=Math.min(240,Math.max(0,(snapshot.frames-previous.frames)*1000/(now-previous.time)));
+     if(Number.isFinite(observed)){history.push(observed);if(history.length>40)history.shift();}
+   }
+   previous={time:now,frames:snapshot.frames};
+   readout.textContent='РЕНДЕР '+(observed===null?'Н/Д':observed.toFixed(1)+' FPS')+
+     ' · ЧАСТИЦЫ '+Math.max(0,Math.floor(snapshot.particles))+' · GPU Н/Д';
+   // The sparkline uses observed frame counts. No animated random data.
+   poly.setAttribute('points',history.map((n,i)=>
+     (i*240/Math.max(1,history.length-1)).toFixed(1)+','+
+     (39-Math.min(36,n/60*36)).toFixed(1)).join(' '));
+ }
+ function renderPalettes(id){
+   const p=worlds[id];paletteRow.replaceChildren();
+   let chosen=palettes.get(id)||p.palette[0];
+   for(const theme of p.palette){
+     const button=doc.createElement('button');button.type='button';
+     button.className='nox-quality-world__palette';
+     button.textContent=({ember:'◉ ПЛАЗМА',obsidian:'◆ ОБСИДИАН',
+       aurora:'◌ АВРОРА',ion:'✧ ИОН',verdant:'✦ БИОСФЕРА',slate:'◇ ТИТАН'}[theme]||theme);
+     button.dataset.palette=theme;
+     button.setAttribute('aria-pressed',String(chosen===theme));
+     button.addEventListener('click',()=>{
+       chosen=theme;palettes.set(id,theme);dock.dataset.noxPalette=theme;
+       for(const child of paletteRow.children){
+         child.setAttribute('aria-pressed',String(child===button));
+       }
+     });
+     paletteRow.append(button);
+   }
+   dock.dataset.noxPalette=chosen;
+ }
+ function show(value){
+   if(closed)return;panel.hidden=!value;
+   toggle.textContent=value?'СВЕРНУТЬ МИР':'ОТКРЫТЬ МИР';
+   toggle.setAttribute('aria-expanded',String(value));
+   stopSampling();history.length=0;poly.removeAttribute('points');
+   if(value&&!doc.hidden){sample();sampleTimer=view.setInterval(sample,2200);}
+ }
+ function onKey(event){if(event.key==='Escape'&&!panel.hidden){show(false);toggle.focus();}}
+ doc.addEventListener('keydown',onKey);
+ check.addEventListener('click',sample);
+ toggle.addEventListener('click',()=>show(panel.hidden));
+ return Object.freeze({
+   render(selected,effective,osReduced){
+     if(closed||!worlds[selected])return;
+     home.dataset.noxPlanetWorld=selected.toLowerCase();
+     dock.dataset.noxEffective=String(effective).toLowerCase();
+     dock.dataset.noxSelected=selected.toLowerCase();
+     for(const [id,button] of buttons){
+       const selectedNow=id===selected;
+       button.classList.toggle('is-selected',selectedNow);
+       button.setAttribute('aria-pressed',String(selectedNow));
+     }
+     status.textContent=osReduced?'СИСТЕМА · МИНИМУМ ДВИЖЕНИЯ':
+       selected==='AUTO'?'AUTO · '+({MAX:'MAX WOW',BALANCED:'CINEMA',ECO:'ECO'}[effective]||effective):
+       'РУЧНОЙ · '+(buttons.get(selected)?.querySelector('strong')?.textContent||'CINEMA');
+     if(active!==selected){
+       active=selected;const spec=worlds[selected];
+       worldTitle.textContent=spec.title;summary.textContent=spec.description;
+       studio.textContent=spec.secondary;
+       models.textContent=spec.primary;
+       if(selected==='MAX_WOW'||selected==='CINEMA'||selected==='AUTO'){
+         studio.textContent=spec.primary;models.textContent=spec.secondary;
+       }
+       renderPalettes(selected);
+       history.length=0;previous=null;poly.removeAttribute('points');
+       if(!panel.hidden)sample();
+     }
+   },
+   destroy(){
+     if(closed)return;closed=true;stopSampling();
+     doc.removeEventListener('keydown',onKey);
+     delete home.dataset.noxPlanetWorld;dock.remove();
+   }
+ });
 }
 
 function mountNoxFilm(stage,view,doc){
