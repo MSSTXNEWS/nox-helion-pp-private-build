@@ -3,7 +3,7 @@
 No model is admitted or installed into a user's Ollama by this script.
 Use --execute on an authorized network-capable CI/Windows host.
 """
-import argparse, hashlib, json, os, re, shutil, sys, tempfile, time, urllib.request
+import argparse, hashlib, json, os, re, shutil, stat, sys, tempfile, time, urllib.request
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -181,22 +181,55 @@ def acquire(tag,out,execute=False):
     receipt.update(status='DOWNLOADED_ALL_LAYERS_SHA256_VERIFIED',bytes=sum(x['bytes'] for x in layers),manifest_store_path=str(manifest_target.relative_to(out)),manifest_file_sha256=sha_file(manifest_target),license_status='OWNER_REVIEW_OF_LICENSE_LAYER_REQUIRED')
     return receipt
 
+def _reparse_or_link(node, entry):
+    return (stat.S_ISLNK(entry.st_mode) or bool(
+        getattr(entry, 'st_file_attributes', 0) & getattr(stat, 'FILE_ATTRIBUTE_REPARSE_POINT', 0)))
+
+
+def strict_staging_root(raw):
+    """Preserve lexical staging path: never bless a junction by resolving it first."""
+    root = Path(os.path.abspath(os.fspath(raw)))
+    for node in (root, *root.parents):
+        try:
+            entry = node.lstat()
+        except (FileNotFoundError, NotADirectoryError):
+            continue
+        if _reparse_or_link(node, entry):
+            raise ValueError('UNSAFE_MODEL_STAGING_ROOT_REPARSE')
+        if not stat.S_ISDIR(entry.st_mode):
+            raise ValueError('UNSAFE_MODEL_STAGING_ROOT_COMPONENT')
+    return root
+
+
+def safe_receipt_target(root):
+    target = strict_staging_root(root) / 'NOX_MODEL_DOWNLOAD_RECEIPT.json'
+    try:
+        entry = target.lstat()
+    except FileNotFoundError:
+        return target
+    if _reparse_or_link(target, entry) or not stat.S_ISREG(entry.st_mode):
+        raise ValueError('UNSAFE_MODEL_RECEIPT_PATH')
+    return target
+
+
 def main(argv=None):
     ap=argparse.ArgumentParser()
     ap.add_argument('--out',required=True,help='Standalone staging dir, not the live Ollama store')
     ap.add_argument('--execute',action='store_true',help='Actively fetch model layers; without this flag only reports allowed models')
     ap.add_argument('--models',nargs='+',default=list(MODELS),choices=list(MODELS))
     args=ap.parse_args(argv)
-    root=Path(args.out).resolve()
+    root=strict_staging_root(args.out)
     root.mkdir(parents=True,exist_ok=True)
+    strict_staging_root(root)
     receipts=[]
     for tag in args.models:
         try:receipt=acquire(tag,root,args.execute)
         except Exception as error:receipt={'tag':tag,'status':'HOLD','error':f'{type(error).__name__}:{str(error)[:250]}','integrated':False,'installed':False}
         receipts.append(receipt)
         print(f'{tag}: {receipt["status"]}',flush=True)
-    root.mkdir(parents=True, exist_ok=True)
-    (root/'NOX_MODEL_DOWNLOAD_RECEIPT.json').write_text(json.dumps({'models':receipts,'source':'Ollama official registry','gate':'REGISTRY_PENDING_OWNER'},indent=2,ensure_ascii=False),encoding='utf-8')
+    root=strict_staging_root(root)
+    receipt_target=safe_receipt_target(root)
+    receipt_target.write_text(json.dumps({'models':receipts,'source':'Ollama official registry','gate':'REGISTRY_PENDING_OWNER'},indent=2,ensure_ascii=False),encoding='utf-8')
     return 0 if args.execute and all(r['status']=='DOWNLOADED_ALL_LAYERS_SHA256_VERIFIED' for r in receipts) else (2 if args.execute else 0)
 
 if __name__=='__main__':sys.exit(main())
