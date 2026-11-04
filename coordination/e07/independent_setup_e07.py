@@ -700,17 +700,36 @@ def verify_uninstall_no_loss(install: Path, stage: Path, previous: Path,
             "E07_NSIS_UNINSTALL_STAGE_OR_PREVIOUS_RESIDUE_HOLD")
 
 
+def verify_fresh_install_targets(local: Path, install: Path, stage: Path,
+                                 previous: Path, saved: Path) -> None:
+    """Reject reparse/alias install roots and recovery slots before NSIS /S.
+
+    A dangling Windows junction can have exists()==False and is_symlink()==False.
+    The base directory must also be trusted: otherwise a clean-looking slot can
+    point outside the runner through LOCALAPPDATA/Programs.
+    """
+    require(clean_dir(local), "E07_LOCALAPPDATA_UNTRUSTED")
+    base = local / "Programs"
+    require(not base.is_symlink() and
+            not getattr(base, "is_junction", lambda: False)() and
+            (not base.exists() or clean_dir(base)),
+            "E07_INSTALL_BASE_REPARSE_HOLD")
+    require(all(slot.parent == base and not slot.exists() and
+                not slot.is_symlink() and
+                not getattr(slot, "is_junction", lambda: False)()
+                for slot in (install, stage, previous, saved)),
+            "E07_VM_NOT_FRESH_SKIP")
+
+
 def lifecycle(setup: Path, result: dict) -> None:
     local = Path(os.environ["LOCALAPPDATA"])
-    require(clean_dir(local), "E07_LOCALAPPDATA_UNTRUSTED")
     base = local / "Programs"
     install = base / "NOX HELION"
     stage = Path(str(install)+".__p01_stage")
     previous = Path(str(install)+".__p01_previous")
     saved = Path(str(install)+".__p01_rollback_saved")
-    # Never touch an existing installation or recovery slot.
-    require(all(not x.exists() and not x.is_symlink() for x in
-                (install, stage, previous, saved)), "E07_VM_NOT_FRESH_SKIP")
+    # Validate parent and all four slots BEFORE writing user data or running /S.
+    verify_fresh_install_targets(local, install, stage, previous, saved)
     userdata = local/"NOX_HELION"/"P01"
     require(all(not p.is_symlink() and not getattr(p,"is_junction",lambda:False)()
                 for p in (userdata,*userdata.parents)), "E07_USERDATA_REPARSE_HOLD")
