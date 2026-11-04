@@ -63,6 +63,9 @@ def stage(source: Path, receipt_path: Path) -> dict:
     created_identity = None
     receipt_identity = None
     receipt_committed = False
+    # A path can retain our inode while another process changes its bytes.
+    # Only remove artifacts whose contents still match this invocation.
+    receipt_verified_bytes = None
     try:
         # Reserve the receipt BEFORE modifying HOME. A concurrent receipt owner
         # cannot leave us with changed HOME and no trustworthy evidence.
@@ -103,6 +106,7 @@ def stage(source: Path, receipt_path: Path) -> dict:
             os.fsync(stream.fileno())
         if json.loads(receipt_path.read_text("utf-8")) != evidence:
             raise ValueError("D02_PRIMARY_RECEIPT_READBACK_HOLD")
+        receipt_verified_bytes = receipt_path.read_bytes()
         # Only after a verified, fsynced receipt may the single staged HOME
         # replace the disposable original. Foreign source archives stay intact.
         # Recheck exact owner inodes and bytes immediately before atomic publish.
@@ -138,8 +142,9 @@ def stage(source: Path, receipt_path: Path) -> dict:
             except FileNotFoundError:
                 pass
             else:
-                if (_regular(staging) and
-                        (current.st_dev, current.st_ino) == created_identity):
+                if (_regular(staging) and current.st_nlink == 1 and
+                        (current.st_dev, current.st_ino) == created_identity and
+                        staging.read_bytes() == published):
                     staging.unlink()
         # Never retain a false partial receipt; never remove foreign bytes.
         if receipt_identity is not None and not receipt_committed:
@@ -148,8 +153,13 @@ def stage(source: Path, receipt_path: Path) -> dict:
             except FileNotFoundError:
                 pass
             else:
-                if (_regular(receipt_path) and
-                        (current.st_dev, current.st_ino) == receipt_identity):
+                # Reserved empty receipts and exact fsynced/read-back receipts
+                # may be cleaned; foreign or partially written bytes survive.
+                if (_regular(receipt_path) and current.st_nlink == 1 and
+                        (current.st_dev, current.st_ino) == receipt_identity and
+                        (receipt_path.read_bytes() == b"" or
+                         (receipt_verified_bytes is not None and
+                          receipt_path.read_bytes() == receipt_verified_bytes))):
                     receipt_path.unlink()
 
 
