@@ -57,8 +57,9 @@ permissions:
   contents: read
 concurrency:
   group: nox-e06-onehost-${{ github.event.pull_request.head.ref || github.ref_name }}
-  # Keep the running exact-SHA Windows job alive; queue only the newest PR head.
-  cancel-in-progress: false
+  # Finish-fast: stale producer runs must not block the newest exact-HEAD candidate.
+  # Independent E07 has its own concurrency group and remains unaffected.
+  cancel-in-progress: true
 jobs:
   activator-portable-source:
     # Cross-platform code check, deliberately NOT Windows EXE/E07 evidence.
