@@ -686,6 +686,32 @@ body.nox-wow-eco .nox-orbit-stage .nox-eclipse .nox-cinema-orb__filaments::after
  #home .nox-quality-world__reading{color:CanvasText}
 }
 
+/* NOX EXPRESS D02 COLLAPSED-DOCK NO-OVERLAP v1.
+   The original five-action/A1 rail is fixed to the viewport bottom.
+   The closed graphics dock must sit above that rail, not at the same Y.
+   This applies even before the first OPEN WORLD click (no data attribute).
+   No CoreID, hitbox, native route or consent code is changed. */
+#home:not([data-nox-world-open="true"]) .nox-quality-dock{
+ bottom:calc(244px + env(safe-area-inset-bottom,0px))!important;
+}
+@media(max-width:600px){
+ #home:not([data-nox-world-open="true"]) .nox-quality-dock{
+  bottom:calc(248px + env(safe-area-inset-bottom,0px))!important;
+ }
+}
+/* On short windows, avoid clipping the two stacked rails altogether:
+   the visual dock returns to scrollable home flow; the primary rail stays
+   visible and keeps original keyboard focus/native handlers. */
+@media(max-height:650px){
+ #home{overflow-y:auto!important;overflow-x:hidden!important;}
+ #home:not([data-nox-world-open="true"]) .nox-quality-dock{
+  position:relative!important;left:auto!important;bottom:auto!important;
+  transform:none!important;
+  width:min(96vw,780px)!important;
+  margin:18px auto calc(200px + env(safe-area-inset-bottom,0px))!important;
+ }
+}
+
 /* NOX PLANETARY WORLDS V3 FLOW-SAFE: collapsed dock floats at the bottom;
    expanded cockpit reenters document flow AFTER the approved D02 orbit.
    No original CoreID coordinates, click regions or STOP controls are moved. */
