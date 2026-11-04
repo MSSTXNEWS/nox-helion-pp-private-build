@@ -27,4 +27,16 @@ assert.ok(!js.includes("['Failed','Cancelled','Paused'].includes(j.state)"),'Pau
 assert.ok(js.includes("verified?bytes(m?.artifactBytes):unknown"),'Unreviewed size not displayed as verified');
 assert.ok(js.includes("new Date(evt.atUtc||evt.AtUtc||'')"),'Events without host time must not use fake current time');
 assert.ok(!js.includes('fetch('),'WebView2 must not create second downloader');
+// Official development sources are graphical links, NOT silently executed commands.
+const toolSources=(html.match(/class="tool-source-card"/g)||[]).length;
+assert.equal(toolSources,12,'Exactly twelve graphical official tool sources');
+const officialTools=html.match(/href="https:\/\/[^"]+"/g)||[];
+for(const link of officialTools){
+ const u=new URL(link.slice(6,-1));
+ assert.equal(u.protocol,'https:','No plaintext official sources');
+ assert.ok(['python.org','www.python.org','ollama.com','git-scm.com','dotnet.microsoft.com',
+ 'developer.nvidia.com','pytorch.org','github.com'].includes(u.hostname),'Unexpected tools host '+u.hostname);
+}
+assert.ok(html.includes('rel="noopener noreferrer"'),'No opener for external tool links');
+assert.ok(html.includes("connect-src 'none'"),'WebView must not fetch installers or weights');
 console.log('P03_QUICK20_UI_CONTRACT_PASS slots=20; STOP_QUEUED; LICENSE_ACK; NO_SECOND_DOWNLOADER');
