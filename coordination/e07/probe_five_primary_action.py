@@ -6,6 +6,7 @@ candidate. Reuse existing reviewed GUI/UIA witnesses; no second GUI or backend.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -16,6 +17,31 @@ from independent_setup_e07 import (Hold, clean_dir, clean_file, gui_hwnd,
                                    installed_file_sha_locked, manifest_owner, require)
 
 PRIMARY = ("CHAT", "INSTALL", "MODELS", "LEARN", "SETTINGS")
+
+
+def snapshot_installed_owner(install: Path) -> tuple:
+    """Verify owned bytes and owner metadata both sides of the real GUI UIA run.
+
+    The existing independent installed-manifest verifier binds every file SHA
+    to its physical descriptor. A UIA navigation witness is not admissible if
+    any owned byte or owner metadata changes while the GUI is running.
+    Unknown and unowned user files are never modified, scanned, or removed.
+    This is an identity witness ONLY, not a visual/function/release PASS.
+    """
+    _, files = manifest_owner(install)
+    root = install.resolve(strict=True)
+    meta = []
+    for name in ("nox-p01-owned.txt", "payload.sha256.json"):
+        item = install / name
+        require(clean_file(item) and item.stat().st_size <= 8388608,
+                "E07_PRIMARY_OWNER_METADATA_HOLD")
+        size = item.stat().st_size
+        digest = hashlib.sha256(item.read_bytes()).hexdigest()
+        locked = installed_file_sha_locked(item, root, size, digest)
+        require(locked == digest, "E07_PRIMARY_OWNER_METADATA_SHA_HOLD")
+        meta.append((name, size, locked))
+    owned_names = tuple(str(p.relative_to(install)) for p in files)
+    return owned_names, tuple(meta)
 
 
 def evaluate(witness: object) -> dict:
@@ -160,10 +186,14 @@ def main() -> int:
         require(clean_dir(install) and not install.is_symlink() and
                 not getattr(install, "is_junction", lambda: False)(),
                 "E07_PRIMARY_INSTALLED_ROOT_HOLD")
-        _, files = manifest_owner(install)  # SHA of EVERY owned installed byte
-        require(install / "NOX.P01.Shell.exe" in files,
+        pre_gui_owner = snapshot_installed_owner(install)
+        require("NOX.P01.Shell.exe" in pre_gui_owner[0],
                 "E07_PRIMARY_INSTALLED_SHELL_UNOWNED_HOLD")
         witness = gui_hwnd(install / "NOX.P01.Shell.exe", local, safe_nav=True)
+        post_gui_owner = snapshot_installed_owner(install)
+        require(pre_gui_owner == post_gui_owner,
+                "E07_PRIMARY_OWNED_PAYLOAD_CHANGED_DURING_UIA_HOLD")
+        receipt["owner_pre_post_gui_sha_verified_not_e07"] = True
         # Record the actual lower-layer first failure before evaluate() fail-closes.
         # Whitelist fields: do not leak UI text, paths, logs or user data.
         receipt["first_failure_diagnostics"] = bounded_primary_diagnostics(witness)
@@ -183,7 +213,8 @@ def main() -> int:
                 for name, item in action_results.items()
                 if name in PRIMARY[1:] and type(item) is dict
             }
-        receipt.update({"source_setup": identity, "installed_files_sha_verified": len(files),
+        receipt.update({"source_setup": identity,
+                        "installed_files_sha_verified": len(post_gui_owner[0]),
                         "five_primary": evaluate(witness), "status": "PASS", "error": None})
     except (Hold, OSError, KeyError, ValueError) as exc:
         receipt["error"] = str(exc) if isinstance(exc, Hold) else "E07_PRIMARY_RUNTIME_HOLD"
