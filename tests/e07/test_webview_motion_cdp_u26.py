@@ -40,6 +40,9 @@ class PhysicalWebviewMotion(unittest.TestCase):
         self.assertNotIn("Runtime.callFunctionOn",source)
         self.assertIn("http://127.0.0.1:9222/json/list",source)
         self.assertIn("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS",source)
+        self.assertIn("https://nox.local/",source)
+        self.assertNotIn("file:///",source)
+        self.assertIn("'PAGE_NOT_UNIQUE'",source)
 
     def test_current_release_requires_real_webview_evidence(self):
         source=(ROOT/"coordination/e07/probe_final_same_setup.py").read_text(encoding="utf-8")
