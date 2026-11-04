@@ -40,9 +40,10 @@ test('priority routes owner-selected native scope and truthful S03 ACK',()=>{
  assert.match(src,/canonicalChatContext\(selectedCore,PERSONA_TO_OWNER\[selectedPersona\]\)/);
  assert.match(src,/else if\(!scope\)\{offerCopy\(\)/);
  assert.match(src,/selfbuilder\.propose',task,\.\.\.scope/);
- assert.match(src,/receipt\?\.ack===true/);
- assert.match(src,/\^S03-/);
- assert.match(src,/receipt\.source_head/);
+ assert.match(src,/nativeOwnerActionReceipt\(result,'chat.commands','selfbuilder.propose'\)/);
+ assert.match(src,/const runId=approved\.run_id/);
+ assert.match(src,/if\(approved\.ack===true\)/);
+ assert.doesNotMatch(src,/if\(result\?\.state==='COMPLETED'&&receipt\?\.ack===true/);
  assert.doesNotMatch(src,/Разработка и обучение выполняются/);
  assert.match(src,/chip\.addEventListener\('keydown'/);
  assert.match(src,/b\.dataset\.core=id/);
