@@ -32,6 +32,15 @@ OWNER1_D02_ENGINE = {
         "legacy_blob": "95b2562e8b6f5c07b785d3a381661d0dbfe5de83",
     },
 }
+# Exact current Git object identity of all executable/styled shipped runtime assets.
+# No unreviewed copyfile fallback: source-pinned bytes only, even on Windows CRLF.
+WOW_RUNTIME_BLOBS = {
+    "runtime/loader.mjs": "9b4596a68525384a92ddc1c17af5d51d37cc0458",
+    "runtime/stage.css": "e6fd8eaea8a38deb0095e6359010be7539a4a7bc",
+    "runtime/home-scene.mjs": "da4a4e26d913636649bf22901ef4a07d37fdb718",
+    "runtime/home-guard.css": "a914f55b487d6d1428c9f0205ccc9e8a44a4411b",
+}
+
 REQUIRED_DONORS = frozenset({
     "proposals/NOX-WOW51-100/catalog.mjs",
     "proposals/NOX-WOW51-100/wow51-100.mjs",
@@ -205,9 +214,15 @@ def stage(root:Path, source:Path)->dict:
         else:
             plans.append((origin,dest/rel))
     # Do not modify approved art or any existing source file until all inputs pass.
-    for rel in ["runtime/loader.mjs","runtime/stage.css","runtime/home-scene.mjs","runtime/home-guard.css"]:
+    for rel, expected in WOW_RUNTIME_BLOBS.items():
         origin=source/rel
-        if not origin.is_file() or origin.is_symlink():raise ValueError("WOW_RUNTIME_SOURCE_HOLD")
+        if (not origin.is_file() or origin.is_symlink() or
+                any(parent.is_symlink() for parent in origin.parents if parent != source)):
+            raise ValueError("WOW_RUNTIME_SOURCE_HOLD:"+rel)
+        verified=pinned_source_bytes(origin,expected)
+        if verified is None:
+            raise ValueError("WOW_RUNTIME_BLOB_HOLD:"+rel)
+        pinned_content[origin]=verified
         plans.append((origin,dest/rel))
     old=html.read_text(encoding="utf-8-sig")
     old_home=home_html.read_text(encoding="utf-8-sig")
@@ -263,6 +278,7 @@ def stage(root:Path, source:Path)->dict:
         receipt={"schema":"NOX_V16_WOW200_ADDITIVE_R13_STAGE", "source":"PR44/PR38/PR14/PR15 immutable Git blobs", "files":copied,
           "count":len(copied),"D02_original_SHA256":D02,"same_EXE_QA":"NOT_RUN","GPU":"NOT_RUN",
           "source_only":True,"release_accepted":False,"donor_file_count":DONOR_FILE_COUNT,
+          "wow_runtime_git_blobs":WOW_RUNTIME_BLOBS,
           "pack01_catalog_blob":PACK01_CATALOG_BLOB,"pack01_catalog_routes":50,
           "home_pr30_renderer_staged":True,
           "menu_v2_atomic_source_sha256":MENU_V2_SHA256,
