@@ -45,12 +45,17 @@ def _run_ps(source: str, *, timeout: int=90, env: dict|None=None) -> dict:
                          encoding="utf-8",errors="replace",env=env)
     except (OSError,subprocess.TimeoutExpired):
         raise e07.Hold("E07_FINAL_UIA_PROCESS_HOLD") from None
-    e07.require(p.returncode==0 and 0 < len(p.stdout) <= 131072,
-                "E07_FINAL_UIA_EXECUTION_HOLD")
+    # Keep bounded, non-sensitive diagnostic codes so one physical Windows
+    # attempt identifies which probe phase failed. No stderr/stdout, paths,
+    # window titles, user data or arbitrary PowerShell output enter receipts.
+    if p.returncode != 0:
+        raise e07.Hold("E07_FINAL_UIA_"+operation+"_PROCESS_EXIT_HOLD")
+    if not 0 < len(p.stdout) <= 131072:
+        raise e07.Hold("E07_FINAL_UIA_"+operation+"_OUTPUT_BOUNDS_HOLD")
     try:
         result=json.loads(p.stdout.strip())
     except (ValueError,UnicodeError):
-        raise e07.Hold("E07_FINAL_UIA_JSON_HOLD") from None
+        raise e07.Hold("E07_FINAL_UIA_"+operation+"_JSON_HOLD") from None
     e07.require(type(result) is dict,"E07_FINAL_UIA_JSON_HOLD")
     return result
 
