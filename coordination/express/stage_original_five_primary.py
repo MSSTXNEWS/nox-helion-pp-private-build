@@ -34,6 +34,9 @@ INSERT = r'''<!-- NOX EXPRESS 5 original-home primary actions; no additional hos
 #nox-express-primary [data-nox-state]{width:100%;font-size:11px;text-align:center;font-weight:400;min-height:14px}
 @media(max-width:550px){#nox-express-primary{bottom:max(3px,env(safe-area-inset-bottom,0px));width:calc(100vw - 12px);max-width:calc(100vw - 12px);display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:3px;padding:5px;box-sizing:border-box}#nox-express-primary button{width:100%;min-width:0;min-height:56px;padding:6px 1px;font-size:9px;letter-spacing:0;line-height:1.2;white-space:nowrap}#nox-express-primary button::before{width:22px;height:22px}#nox-express-primary [data-nox-state]{grid-column:1 / -1;min-width:0;overflow-wrap:anywhere}}
 @media(prefers-reduced-motion:reduce){#nox-express-primary,#nox-express-primary *,#nox-express-primary button::before{animation:none!important;transition:none!important;scroll-behavior:auto!important}#nox-express-primary button::before{transform:none!important}}
+#nox-express-primary [data-nox-check="A1"]{min-width:82px;min-height:27px;padding:4px 8px;font-size:10px;letter-spacing:.03em;line-height:1.2}
+#nox-express-primary [data-nox-check="A1"]::before{display:none}
+@media(max-width:550px){#nox-express-primary [data-nox-check="A1"]{grid-column:1/-1;min-height:30px;width:100%}}
 </style>
 <nav id="nox-express-primary" aria-label="NOX HELION EXPRESS — основные действия">
 <button type="button" data-nox-primary="CHAT" aria-label="CHAT">CHAT</button>
@@ -41,6 +44,7 @@ INSERT = r'''<!-- NOX EXPRESS 5 original-home primary actions; no additional hos
 <button type="button" data-nox-primary="MODELS" aria-label="MODELS">MODELS</button>
 <button type="button" data-nox-primary="LEARN" aria-label="LEARN">LEARN</button>
 <button type="button" data-nox-primary="SETTINGS" aria-label="SETTINGS">SETTINGS</button>
+<button type="button" data-nox-check="A1" aria-label="ПРОВЕРИТЬ A1">A1 · СТАТУС</button>
 <span data-nox-state role="status" aria-live="polite"></span>
 </nav>
 <script id="nox-express-primary-bind">
@@ -199,6 +203,49 @@ nav.addEventListener('click',event=>{
  original.click();
  if(name==='CHAT'&&!document.getElementById('chat')?.classList.contains('active'))
    state.textContent='CHAT: исходный экран не открылся · HOLD';
+});
+
+// Read-only original A1 native status. One physical click, one cryptographic
+// request ID, no boot/tick, no fabricated owner consent, no second host.
+const a1Button=nav.querySelector('button[data-nox-check="A1"]');
+let a1Pending=false;
+a1Button?.addEventListener('click',event=>{
+ if(!event.isTrusted||a1Pending)return;
+ const native=window.chrome?.webview;
+ const random=window.crypto?.getRandomValues;
+ if(!native||typeof native.postMessage!=='function'||
+    typeof native.addEventListener!=='function'||typeof random!=='function'){
+   state.textContent='A1: доверенный OneHost недоступен · HOLD';return;
+ }
+ const bytes=new Uint8Array(16);
+ try{window.crypto.getRandomValues(bytes);}
+ catch{state.textContent='A1: защищённый идентификатор недоступен · HOLD';return;}
+ const requestId=Array.from(bytes,x=>x.toString(16).padStart(2,'0')).join('');
+ a1Pending=true;a1Button.disabled=true;
+ state.textContent='A1: запрос нативного статуса…';
+ let timer;
+ const done=message=>{
+   clearTimeout(timer);native.removeEventListener('message',onNative);
+   a1Pending=false;a1Button.disabled=false;state.textContent=message;
+ };
+ const onNative=reply=>{
+   if(reply?.isTrusted!==true||reply.source!==native)return;
+   const value=reply.data;
+   if(!value||value.kind!=='p02NativeResult'||value.requestId!==requestId||
+      value.routeId!=='chat.commands')return;
+   const owner=value.result;
+   const verified=value.state==='COMPLETED'&&
+       owner?.schema==='NOX-A1-NATIVE-COMMAND-STATUS-v1'&&
+       owner?.state==='ACTIVE_NATIVE_BOOT_RECEIPT'&&
+       owner?.native_bound===true&&
+       owner?.boot_state==='READY_FOR_EXISTING_IDLE_TICK';
+   done(verified?'A1: живой нативный Boot подтверждён':'A1: нативный статус не подтверждён · HOLD');
+ };
+ native.addEventListener('message',onNative);
+ timer=setTimeout(()=>{if(a1Pending)done('A1: нативный ответ не получен · HOLD');},12000);
+ try{native.postMessage({kind:'p02.native',requestId,routeId:'chat.commands',
+                       payload:{action:'selfbuilder.a1.status'}});}
+ catch{done('A1: запрос отклонён OneHost · HOLD');}
 });
 })();
 </script>

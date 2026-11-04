@@ -14,7 +14,7 @@ SPEC.loader.exec_module(target)
 
 class FivePrimaryTests(unittest.TestCase):
     def setUp(self):
-        self.raw = b'<html><body><a href="/chat">CHAT</a><main>ORIGINAL</main></body></html>'
+        self.raw = b'<html><body><script>let chatScrollFrame=0;const items=[chatLog=document.getElementById('chat-log'),1];</script><a href="/chat">CHAT</a><main>ORIGINAL</main></body></html>'
         self.guard = (patch.object(target, 'ORIGINAL_BYTES', len(self.raw)),
                       patch.object(target, 'ORIGINAL_SHA256', hashlib.sha256(self.raw).hexdigest()))
         for item in self.guard: item.start()
@@ -24,7 +24,8 @@ class FivePrimaryTests(unittest.TestCase):
 
     def test_original_preserved_five_buttons_source_only(self):
         output, proof = target.publish(self.raw)
-        self.assertIn(self.raw.split(b'</body>')[0], output)
+        self.assertIn(b'<main>ORIGINAL</main>', output)
+        self.assertIn(b"const chatLog=document.getElementById('chat-log');", output)
         self.assertEqual(output.count(b'data-nox-primary='), 5)
         self.assertIn(b'prefers-reduced-motion', output)
         self.assertIn(b'event.isTrusted', output)
@@ -37,6 +38,11 @@ class FivePrimaryTests(unittest.TestCase):
         self.assertIn("button#pc-install", target.INSERT)
         self.assertNotIn("if(name==='MODELS')target.click();", target.INSERT)
         self.assertIn("No direct privileged IPC", target.INSERT)
+        self.assertIn('data-nox-check="A1"', target.INSERT)
+        self.assertIn('NOX-A1-NATIVE-COMMAND-STATUS-v1', target.INSERT)
+        self.assertIn("payload:{action:'selfbuilder.a1.status'}", target.INSERT)
+        self.assertNotIn("payload:{action:'selfbuilder.a1.boot'}", target.INSERT)
+        self.assertNotIn("payload:{action:'selfbuilder.a1.tick'}", target.INSERT)
 
     def test_tampered_bytes_rejected(self):
         with self.assertRaisesRegex(ValueError, 'SHA_HOLD'):
