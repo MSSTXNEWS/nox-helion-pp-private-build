@@ -111,6 +111,30 @@ class NativeAtomicStreamStopU08(unittest.TestCase):
             self.invoke()
         self.assertEqual(self.store.exchanges, [])
 
+    def test_empty_terminal_completion_does_not_persist_or_ack(self):
+        self.client.chunks = [{'delta': '', 'done': True}]
+        with self.assertRaisesRegex(native.HostHold, 'Empty Ollama completion'):
+            self.invoke()
+        self.assertEqual(self.store.exchanges, [])
+        self.assertEqual(self.store.messages, [])
+
+    def test_whitespace_only_terminal_completion_does_not_persist(self):
+        self.client.chunks = [
+            {'delta': '   ', 'done': False},
+            {'delta': '\n\t', 'done': True},
+        ]
+        with self.assertRaisesRegex(native.HostHold, 'Empty Ollama completion'):
+            self.invoke()
+        self.assertEqual(self.store.exchanges, [])
+
+    def test_nonempty_before_empty_terminal_still_commits(self):
+        self.client.chunks = [
+            {'delta': 'real answer', 'done': False},
+            {'delta': '', 'done': True},
+        ]
+        self.assertEqual(self.invoke(), {'answer': 'real answer', 'done': True})
+        self.assertEqual(len(self.store.exchanges), 1)
+
     def test_missing_terminal_done_fails_without_exchange(self):
         self.client.chunks = [{'delta': 'partial', 'done': False}]
         with self.assertRaises(native.HostHold):

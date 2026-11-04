@@ -342,6 +342,10 @@ class ExistingP02Adapter:
             if chunk.get("done") is True:done = True
         if not done:raise HostHold("Missing Ollama terminal completion")
         text = "".join(answer)
+        # A done=True frame alone is not actual nonempty model output.
+        # Never persist or acknowledge a blank provider completion as CHAT.
+        if not text.strip():
+            raise HostHold("Empty Ollama completion")
         # Commit BOTH rows together through the existing P02Store transaction.
         # Native revoke/STOP during commit aborts without orphan messages.
         self.store.add_exchange(session.tenant,session.principal,
