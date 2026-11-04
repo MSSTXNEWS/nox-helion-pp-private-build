@@ -16,6 +16,7 @@ on:
       - tests/p02/test_original_terminal_fence_u11.py
       - tests/p02/test_original_atomic_stream_stop_u08.py
       - ui/menu-pages/menu.js
+      - ui/menu-pages/express-layout.test.mjs
       - ui/onehost-menu-bindings.mjs
       - tests/ui/test_u06_chat_model_selection_ack.mjs
       - src/nox_selfbuilder/onehost_builder.py
