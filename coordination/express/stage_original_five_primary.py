@@ -38,12 +38,26 @@ INSERT = r'''<!-- NOX EXPRESS 5 original-home primary actions; no additional hos
 const nav=document.getElementById('nox-express-primary');if(!nav)return;
 const state=nav.querySelector('[data-nox-state]');
 const screenNames={CHAT:['ЧАТ','CHAT'],INSTALL:['УСТАНОВКА','INSTALL'],LEARN:['ОБУЧЕНИЕ','LEARN'],REPORTS:['ОТЧЁТЫ','ОТЧЕТЫ','REPORTS']};
+function safeOriginalLink(a){
+ // No external/privileged routes from a text-matched original anchor.
+ const href=(a.getAttribute('href')||'').trim();
+ if(!href || href.startsWith('//') || /\\/.test(href) ||
+    /^[A-Za-z][A-Za-z0-9+.-]*:/.test(href))return false;
+ try{
+   const destination=new URL(href,document.baseURI);
+   const original=new URL(document.baseURI);
+   if(destination.origin!==original.origin)return false;
+   if(original.protocol==='file:')return destination.pathname===original.pathname && destination.search===original.search;
+   return (original.protocol==='http:'||original.protocol==='https:') &&
+          destination.protocol===original.protocol;
+ }catch{return false;}
+}
 function findOriginalScreen(name){
  const terms=screenNames[name]||[];
- // Only original navigation links: never invoke a training/install mutation.
+ // Resolve only a pre-existing safe original route; otherwise explicit HOLD.
  return Array.from(document.querySelectorAll('a[href]')).find(a=>!nav.contains(a)&&
    terms.includes((a.textContent||'').trim().toLocaleUpperCase('ru'))&&
-   !/^javascript:/i.test(a.getAttribute('href')||''));
+   safeOriginalLink(a));
 }
 nav.addEventListener('click',event=>{
  const target=event.target.closest('button[data-nox-primary]');
