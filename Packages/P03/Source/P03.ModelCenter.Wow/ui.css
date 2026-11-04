@@ -16,3 +16,17 @@
 .lead-card small{color:var(--gold);font-size:9px}.lead-hold{font-size:9px;color:var(--dim)}
 @media(max-width:1100px){.external-leads-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:600px){.external-leads-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+
+/* Official tools catalog: keyboard-accessible graphic launch tiles, never auto-execute. */
+.tool-source-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:14px}
+.tool-source-card{display:flex;min-height:112px;flex-direction:column;gap:6px;align-items:flex-start;justify-content:center;box-sizing:border-box;padding:12px 15px;border-radius:15px;border:1px solid rgba(201,168,112,.45);background:radial-gradient(ellipse at 25% 10%,rgba(60,116,136,.28),transparent 68%),linear-gradient(145deg,#222934,#090e17);box-shadow:inset 0 1px rgba(250,230,207,.12),0 10px 24px rgba(0,0,0,.25);color:#f7e1bf;text-decoration:none;transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease}
+.tool-source-emblem{font-size:20px;line-height:1;color:#e8bd82;text-shadow:0 0 15px rgba(238,166,91,.75)}
+.tool-source-card strong{font-size:13px;font-weight:700;line-height:1.2}
+.tool-source-card small{font-size:10px;color:#9cc4cf;line-height:1.5}
+.tool-source-card:hover,.tool-source-card:focus-visible{border-color:#d5eef6;box-shadow:0 0 0 2px rgba(117,216,231,.3),0 0 30px rgba(113,199,217,.18);transform:translateY(-2px)}
+.tool-source-card:focus-visible{outline:2px solid #b8efff;outline-offset:2px}
+@media(max-width:1100px){.tool-source-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:650px){.tool-source-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:360px){.tool-source-grid{grid-template-columns:1fr}}
+@media(prefers-reduced-motion:reduce){.tool-source-card{transition:none!important}.tool-source-card:hover{transform:none!important}}
