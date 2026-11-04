@@ -77,7 +77,7 @@ function FiveRects {
 }
 function NoOverlap($rects){for($i=0;$i -lt $rects.Count;$i++){for($j=$i+1;$j -lt $rects.Count;$j++){$a=$rects[$i];$b=$rects[$j];if($a.x -lt ($b.x+$b.width) -and ($a.x+$a.width) -gt $b.x -and $a.y -lt ($b.y+$b.height) -and ($a.y+$a.height) -gt $b.y){return $false}}};return $true}
 $op='__OP__'
-if($op -in @('CHAT','INSTALL','MODELS','LEARN','SETTINGS')){ [pscustomobject]@{invoked=(InvokePrimary '__ACTION__');sameHwndAlive=($null -ne [System.Windows.Automation.AutomationElement]::FromHandle($handle))}|ConvertTo-Json -Compress; exit 0 }
+if($op -in @('CHAT','INSTALL','MODELS','LEARN')){ [pscustomobject]@{invoked=(InvokePrimary '__ACTION__');sameHwndAlive=($null -ne [System.Windows.Automation.AutomationElement]::FromHandle($handle))}|ConvertTo-Json -Compress; exit 0 }
 if($op -eq 'SETTINGS'){
  $null=InvokePrimary 'SETTINGS';$seen=$false
  for($n=0;$n -lt 40;$n++){Start-Sleep -Milliseconds 200;$a=Tree (Root);for($i=0;$i -lt $a.Count;$i++){try{$v=$a.Item($i).Current;if($v.ControlType -eq [System.Windows.Automation.ControlType]::Text -and ($v.Name+'').Trim() -ceq 'СИСТЕМА' -and (Visible $v)){$seen=$true;break}}catch{}};if($seen){break}}
