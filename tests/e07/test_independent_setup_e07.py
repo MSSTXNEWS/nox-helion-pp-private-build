@@ -79,7 +79,15 @@ class IndependentE07(unittest.TestCase):
                        "$current.BoundingRectangle", "five_primary_buttons",
                        '"visual_e07": "HOLD"'):
             self.assertIn(needle,source)
-        self.assertNotIn("InvokePattern",source)
+        # Read-only button enumeration remains non-actuating. A separate, explicitly
+        # gated CHAT-only UIA action probe is allowed to invoke, never E07 PASS.
+        readonly=source.split("def observe_original_primary_buttons(",1)[1].split(
+            "\ndef classify_chat_invoke_witness(",1)[0]
+        self.assertNotIn("InvokePattern",readonly)
+        action=source.split("def observe_chat_input(",1)[1].split(
+            "\ndef original_wpf_hwnd(",1)[0]
+        self.assertIn("InvokePattern",action)
+        self.assertNotIn("MODELS",action.split('ps = r"""',1)[1].split('"""',1)[0])
         with patch.object(MOD.sys,"platform","linux"):
             with self.assertRaisesRegex(MOD.Hold,"E07_UIA_NOT_WINDOWS_OR_BAD_HWND"):
                 MOD.observe_original_primary_buttons(8)
