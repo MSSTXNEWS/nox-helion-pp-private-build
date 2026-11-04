@@ -93,17 +93,53 @@ jobs:
           $ollama=Join-Path $env:LOCALAPPDATA 'Programs/Ollama/ollama.exe'
           if (-not (Test-Path -LiteralPath $ollama -PathType Leaf)) { throw 'OLLAMA_INSTALLED_CLI_ABSENT' }
           $env:OLLAMA_CLI=$ollama
-          $proc=Start-Process -FilePath $ollama -ArgumentList 'serve' -WindowStyle Hidden -PassThru
-          $ready=$false
-          for($i=0;$i -lt 120;$i++) {
-            Start-Sleep -Seconds 2
+          # First failure 41832219158: serve process exited after successful signed
+          # installer identity checks. Do NOT mistake detached/auto-started daemon
+          # for offline, do NOT claim readiness without a real loopback API.
+          function Test-LocalProvider {
             try {
               $health=Invoke-RestMethod -Uri 'http://127.0.0.1:11434/api/tags' -TimeoutSec 3 -ErrorAction Stop
-              if ($null -ne $health.models) { $ready=$true; break }
-            } catch { }
-            if ($proc.HasExited) { throw 'OLLAMA_LOCAL_SERVER_EXITED' }
+              return ($null -ne $health.models)
+            } catch { return $false }
           }
-          if (-not $ready) { throw 'OLLAMA_LOCAL_SERVER_NOT_READY' }
+          $proc=$null
+          $ready=Test-LocalProvider
+          $reason='NOT_READY'
+          $stderrPath=Join-Path $env:RUNNER_TEMP 'nox-u09-ollama-serve-stderr.log'
+          $stdoutPath=Join-Path $env:RUNNER_TEMP 'nox-u09-ollama-serve-stdout.log'
+          if (-not $ready) {
+            $proc=Start-Process -FilePath $ollama -ArgumentList 'serve' -WindowStyle Hidden -PassThru -RedirectStandardError $stderrPath -RedirectStandardOutput $stdoutPath
+            for($i=0;$i -lt 120;$i++) {
+              Start-Sleep -Seconds 2
+              $ready=Test-LocalProvider
+              if ($ready) { break }
+              if ($proc.HasExited) {
+                # A wrapper may exit while an installed Ollama child is coming up.
+                # Observe another bounded 10 seconds, never re-run same binary blindly.
+                for($grace=0;$grace -lt 5;$grace++) {
+                  Start-Sleep -Seconds 2
+                  $ready=Test-LocalProvider
+                  if ($ready) { break }
+                }
+                if (-not $ready) { $reason='SERVE_PROCESS_EXITED_NO_LOCAL_API' }
+                break
+              }
+            }
+          }
+          if (-not $ready) {
+            if ($reason -eq 'NOT_READY') { $reason='LOOPBACK_API_TIMEOUT' }
+            if ($proc -and $proc.HasExited) { Write-Host ('OLLAMA_SERVE_EXIT_CODE=' + $proc.ExitCode) }
+            # Classify fresh runner error without leaking arbitrary stderr/paths.
+            $safecode='UNKNOWN'
+            if (Test-Path -LiteralPath $stderrPath -PathType Leaf) {
+              $raw=Get-Content -LiteralPath $stderrPath -Raw -ErrorAction SilentlyContinue
+              if ($raw -match '(?i)address already in use|only one usage of each socket|bind:') { $safecode='PORT_BIND_CONFLICT' }
+              elseif ($raw -match '(?i)access is denied|permission denied') { $safecode='ACCESS_DENIED' }
+              elseif ($raw -match '(?i)no such file|missing') { $safecode='MISSING_FILE' }
+            }
+            Write-Host ('OLLAMA_STARTUP_SAFE_DIAGNOSTIC=' + $reason + '/' + $safecode)
+            throw 'OLLAMA_LOCAL_SERVER_NOT_READY_HOLD'
+          }
           Write-Host 'REAL_LOCAL_OLLAMA_API_READY_NO_MODEL_PASS_YET'
       - name: Pull official Qwen2.5 Coder 1.5B and verify Ollama-reported manifest digest
         shell: pwsh
