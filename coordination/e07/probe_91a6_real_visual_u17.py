@@ -40,7 +40,8 @@ def validate_quality_witness(payload: object) -> dict:
                     item.get("pressed") is True and
                     item.get("same_hwnd") is True and
                     item.get("invocation_method") in
-                    ("INVOKE_PATTERN", "LEGACY_DEFAULT_ACTION"),
+                    ("INVOKE_PATTERN", "LEGACY_DEFAULT_ACTION",
+                     "SAME_WPF_PHYSICAL_POINTER"),
                     "U17_D02_QUALITY_REAL_TRANSITION_HOLD")
     return {"fx_control": "PASS", "actual_invocations": len(QUALITY_NAMES),
             "observed_modes": list(QUALITY_NAMES),
@@ -61,6 +62,20 @@ $ErrorActionPreference='Stop'
 [Console]::OutputEncoding=[System.Text.Encoding]::UTF8
 Add-Type -AssemblyName UIAutomationClient
 Add-Type -AssemblyName UIAutomationTypes
+# Physical pointer fallback ONLY for the exact five approved D02 visual mode
+# controls. Restrict every coordinate to the original WPF HWND.
+Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+public static class NoxD02NativeInput {
+ [StructLayout(LayoutKind.Sequential)] public struct RECT {public int Left,Top,Right,Bottom;}
+ [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
+ [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h);
+ [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr h,out RECT r);
+ [DllImport("user32.dll")] public static extern bool SetCursorPos(int x,int y);
+ [DllImport("user32.dll")] public static extern void mouse_event(uint flags,uint x,uint y,uint buttons,uint extraInfo);
+}
+'@
 try {
  $h=[IntPtr]__HWND__
  $root=[System.Windows.Automation.AutomationElement]::FromHandle($h)
@@ -114,9 +129,41 @@ try {
      $legacy=$null
      try {$legacy=$btn.GetCurrentPattern([System.Windows.Automation.LegacyIAccessiblePattern]::Pattern)}
      catch {}
-     if($null -eq $legacy){throw 'U17_D02_QUALITY_NO_NATIVE_ACCESSIBILITY_ACTION_HOLD'}
-     $legacy.DoDefaultAction()
-     $method='LEGACY_DEFAULT_ACTION'
+     if($null -ne $legacy){
+       $legacy.DoDefaultAction()
+       $method='LEGACY_DEFAULT_ACTION'
+     } else {
+       # Exact UIA-identified visual button, confirmed inside SAME foreground
+       # original WPF. Never click arbitrary screen coordinates or a host action.
+       $rc=[NoxD02NativeInput+RECT]::new()
+       if(-not [NoxD02NativeInput]::GetWindowRect($h,[ref]$rc)){
+         throw 'U17_D02_POINTER_WPF_RECT_HOLD'
+       }
+       $box=$btn.Current.BoundingRectangle
+       $x=[int][Math]::Floor($box.Left+$box.Width/2)
+       $y=[int][Math]::Floor($box.Top+$box.Height/2)
+       if($box.Left -lt $rc.Left -or $box.Top -lt $rc.Top -or
+          $box.Right -gt $rc.Right -or $box.Bottom -gt $rc.Bottom -or
+          $x -le $rc.Left -or $x -ge $rc.Right -or
+          $y -le $rc.Top -or $y -ge $rc.Bottom){
+         throw 'U17_D02_POINTER_OUTSIDE_ORIGINAL_WPF_HOLD'
+       }
+       $null=[NoxD02NativeInput]::SetForegroundWindow($h)
+       Start-Sleep -Milliseconds 250
+       if([NoxD02NativeInput]::GetForegroundWindow() -ne $h){
+         throw 'U17_D02_POINTER_FOREGROUND_NOT_WPF_HOLD'
+       }
+       if(-not [NoxD02NativeInput]::SetCursorPos($x,$y)){
+         throw 'U17_D02_POINTER_MOVE_HOLD'
+       }
+       try{
+         [NoxD02NativeInput]::mouse_event([uint32]2,0,0,0,0)
+         Start-Sleep -Milliseconds 70
+       } finally {
+         [NoxD02NativeInput]::mouse_event([uint32]4,0,0,0,0)
+       }
+       $method='SAME_WPF_PHYSICAL_POINTER'
+     }
    }
    Start-Sleep -Milliseconds 500
    $current=ExactRealButton $label
