@@ -19,7 +19,7 @@ const win={chrome:{webview:{postMessage:m=>sent.push(m),
   addEventListener(type,fn){if(type==='message')listener=fn}}}};
 const app=new Function('document','window','URL','setTimeout','clearTimeout','setInterval',
   src+'\nreturn {state,processMessage,sendAction};')(doc,win,URL,()=>1,()=>{},()=>0);
-const field=id=>doc.getElementById(id),post=data=>listener({data});
+const field=id=>doc.getElementById(id),post=data=>listener({data,isTrusted:true,source:win.chrome.webview});
 const id='11111111-1111-4111-8111-111111111111',tag='qwen3:0.6b';
 const queued={jobId:id,modelId:'qwen3',modelTag:tag,state:'Queued',completedBytes:0,totalBytes:100};
 const models=JSON.parse(JSON.stringify(app.state.models));

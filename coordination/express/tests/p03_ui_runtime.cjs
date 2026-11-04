@@ -26,8 +26,16 @@ vm.runInContext(src,ctx,{filename:'P03.ModelCenter.Wow/ui.js'});
 // The real UI announces readiness after registering its native listener.
 // This is a lifecycle notification, not a user action or install command.
 assert.equal(sent.shift()?.type,'p03.ready.v1');
-const evalCode=s=>vm.runInContext(s,ctx),post=data=>callback({data});let total=0;
+const evalCode=s=>vm.runInContext(s,ctx),post=data=>callback({data,isTrusted:true,source:win.chrome.webview});let total=0;
 function ok(value,msg){assert.ok(value,msg);total++}
+// Synthetic renderer events cannot create a native owner snapshot or ACK.
+const forged={type:'p03.snapshot.v1',models:[{id:'forged',name:'Forged'}],activeJob:null};
+callback({isTrusted:false,source:win.chrome.webview,data:forged});
+ok(!evalCode('state.hostReady'),'renderer event cannot forge native catalog');
+callback({isTrusted:true,source:{},data:forged});
+ok(!evalCode('state.hostReady'),'foreign message source cannot impersonate OneHost');
+callback({source:win.chrome.webview,data:forged});
+ok(!evalCode('state.hostReady'),'missing native trust marker is rejected');
 const seed=JSON.parse(JSON.stringify(evalCode('state.models'))),uuid='12345678-1234-1234-1234-123456789abc';
 const model={...seed.find(m=>m.id==='qwen3'),artifactVerified:true,exactTag:'qwen3:0.6b',immutableRevision:'a'.repeat(64),license:'synthetic',licenseEvidenceUrl:'https://ollama.com/library/qwen3',artifactBytes:10000,sha256:'b'.repeat(64),manifestSha256:'c'.repeat(64),requiredDiskGiB:1,requiredVramGiB:1,compatibilityReviewed:true};
 const job={jobId:uuid,modelId:'qwen3',modelTag:'qwen3:0.6b',state:'Running',completedBytes:10,totalBytes:100};

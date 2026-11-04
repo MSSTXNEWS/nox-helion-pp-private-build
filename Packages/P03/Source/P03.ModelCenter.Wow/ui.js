@@ -504,7 +504,13 @@ $('stopBtn').addEventListener('click',()=>sendAction('stop'));
 $('retryBtn').addEventListener('click',()=>sendAction('retry'));
 $('diagBtn').addEventListener('click',()=>sendAction('diagnose'));
 document.addEventListener('keydown',e=>{if(e.key==='/'&&!['INPUT','TEXTAREA'].includes(document.activeElement?.tagName)){e.preventDefault();$('search').focus();}});
-if(window.chrome?.webview?.addEventListener)window.chrome.webview.addEventListener('message',e=>processMessage(e.data));
+// Only UA-trusted native OneHost WebView2 frames may mutate model rights,
+// native job progress, capability flags, or command ACK state.
+// Renderer-dispatched MessageEvents are never evidence from Windows.
+if(window.chrome?.webview?.addEventListener)window.chrome.webview.addEventListener('message',e=>{
+  if(e?.isTrusted!==true || e.source!==window.chrome.webview)return;
+  processMessage(e.data);
+});
 setInterval(refreshNativeEventSignal,5000);
 render();renderTrace();
 // Return to the unchanged original D02 HOME, never to a second application.

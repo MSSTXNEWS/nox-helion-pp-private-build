@@ -502,7 +502,7 @@ if ($wantsCreative) {
   $microwowFiles=@(
     @{relative='index.html';blob='d4b80dbdc7669272da9391bb17db51bfad68de7e'},
     @{relative='ui.css';blob='dfac6e254f205d121330a71cad206e2158cf2de2'},
-    @{relative='ui.js';blob='a1f2bcf0dd319d950808d0ca2cc58dda5ea9ed57'},
+    @{relative='ui.js';blob='f464ea25670958661de127a638f1cf0ffa48f5dd'},
     @{relative='vendor/uPlot.iife.min.js';blob='6749c4f02499c6999245f406f4bd208985f89aee'},
     @{relative='vendor/uPlot.min.css';blob='976000608e7ee21ef0c700b08ad6f90834b40055'},
     @{relative='vendor/uPlot.LICENSE.txt';blob='cde4b3f8352d147d5e626fea36358797c4fc06f2'},
