@@ -549,6 +549,68 @@ for ($i=0; $i -lt $scanCount; $i++) {
     return classify_primary_uia_evidence(response)
 
 
+
+def classify_chat_invoke_witness(response: dict) -> dict:
+    """UIA InvokePattern is an observed input, NOT proof of navigation or model."""
+    require(type(response) is dict and
+            set(response) == {"schema", "action", "invoked", "sameHwndAlive"} and
+            response.get("schema") == "NOX-E07-CHAT-INPUT-v1" and
+            response.get("action") == "CHAT" and response.get("invoked") is True and
+            response.get("sameHwndAlive") is True, "E07_CHAT_ACTION_UNTRUSTED_HOLD")
+    return {"status": "OBSERVED", "action": "CHAT", "actions_invoked": 1,
+            "method": "NATIVE_UIA_INVOKEPATTERN", "navigation_verified": "NOT_TESTED",
+            "visual_e07": "HOLD", "model_inference": "NOT_TESTED"}
+
+
+def observe_chat_input(hwnd: int) -> dict:
+    """Input-only witness against installed WPF HWND; no privileged button invoked."""
+    require(sys.platform == "win32" and type(hwnd) is int and hwnd > 0,
+            "E07_CHAT_ACTION_HOST_HOLD")
+    ps = r"""
+$ErrorActionPreference='Stop'
+[Console]::OutputEncoding=[System.Text.Encoding]::UTF8
+Add-Type -AssemblyName UIAutomationClient
+Add-Type -AssemblyName UIAutomationTypes
+$hwnd=[IntPtr]__HWND__
+$root=[System.Windows.Automation.AutomationElement]::FromHandle($hwnd)
+if($null -eq $root){throw 'NO_ROOT'}
+$tree=$root.FindAll([System.Windows.Automation.TreeScope]::Descendants,[System.Windows.Automation.Condition]::TrueCondition)
+if($tree.Count -gt 2048){throw 'TREE_UNBOUNDED'}
+$matching=[System.Collections.Generic.List[System.Windows.Automation.AutomationElement]]::new()
+for($i=0;$i -lt $tree.Count;$i++){
+  $el=$tree.Item($i)
+  $v=$el.Current
+  if($v.ControlType -ne [System.Windows.Automation.ControlType]::Button){continue}
+  $name=($v.Name+'').Trim().TrimStart([char[]]@([char]0x2726,[char]0x2605,[char]0x2022,[char]0x20)).Trim().ToUpperInvariant()
+  if($name -ne 'CHAT'){continue}
+  $rect=$v.BoundingRectangle
+  if($v.IsEnabled -and -not $v.IsOffscreen -and $rect.Width -ge 20 -and $rect.Height -ge 12){$matching.Add($el)}
+}
+if($matching.Count -ne 1){throw 'CHAT_NOT_UNIQUE'}
+$pattern=$matching.Item(0).GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)
+if($null -eq $pattern){throw 'NO_INVOKEPATTERN'}
+$pattern.Invoke()
+$alive=$null -ne [System.Windows.Automation.AutomationElement]::FromHandle($hwnd)
+[pscustomobject]@{schema='NOX-E07-CHAT-INPUT-v1';action='CHAT';invoked=$true;sameHwndAlive=$alive}|ConvertTo-Json -Compress
+""".replace("__HWND__", str(hwnd))
+    import base64
+    encoded=base64.b64encode(ps.encode("utf-16le")).decode("ascii")
+    try:
+        p=subprocess.run(["powershell.exe","-NoProfile","-NonInteractive",
+                          "-EncodedCommand",encoded],
+                         cwd=os.environ["RUNNER_TEMP"], capture_output=True,
+                         timeout=30, check=False, encoding="utf-8", errors="replace")
+    except (OSError,subprocess.TimeoutExpired,KeyError):
+        raise Hold("E07_CHAT_ACTION_EXECUTION_HOLD") from None
+    require(p.returncode == 0 and 0 < len(p.stdout) <= 2048,
+            "E07_CHAT_ACTION_PROCESS_HOLD")
+    try:
+        witness=json.loads(p.stdout.strip())
+    except (ValueError,UnicodeError):
+        raise Hold("E07_CHAT_ACTION_JSON_HOLD") from None
+    return classify_chat_invoke_witness(witness)
+
+
 def original_wpf_hwnd(pid: int) -> int | None:
     """Original reviewed Win32 WPF class/PID/size witness; never generic HWND."""
     require(clean_file(_WPF_WITNESS_PATH), "E07_ORIGINAL_WPF_WITNESS_MISSING")
@@ -614,10 +676,19 @@ def gui_hwnd(shell: Path, local: Path) -> dict:
                     except Hold as exc:
                         buttons = {"status": "HOLD", "error": str(exc),
                                    "actions_invoked": 0}
+                    # Actuate only existing CHAT, keep remaining 4 untouched.
+                    action = {"status": "HOLD", "actions_invoked": 0,
+                              "navigation_verified": "NOT_TESTED", "visual_e07": "HOLD"}
+                    if buttons.get("status") == "PASS":
+                        try:
+                            action = observe_chat_input(handle)
+                        except Hold as exc:
+                            action["error"] = str(exc)
                     return {"gui_visible_hwnd": "PASS", "stable_seconds": 8,
                             "webview_navigation": "PASS", "shell_native_ipc": "PASS",
                             "independent_webview_log": "CURRENT_PROCESS_FRESH_NAV_AND_IPC",
                             "five_primary_buttons": buttons,
+                            "ui_chat_action_probe": action,
                             "visual_e07": "HOLD"}
             else:
                 started = None

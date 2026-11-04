@@ -358,4 +358,22 @@ class IndependentE07(unittest.TestCase):
         self.assertIn('stages["uninstall_owned_files_checked"] == expected_owned_files', source)
         self.assertNotIn('smoke.get("uninstall_owned_files_checked")', source)
 
+    def test_u04_chat_input_witness_never_forges_route_or_model(self):
+        candidate={"schema":"NOX-E07-CHAT-INPUT-v1","action":"CHAT",
+                   "invoked":True,"sameHwndAlive":True}
+        proof=MOD.classify_chat_invoke_witness(candidate)
+        self.assertEqual(proof["actions_invoked"],1)
+        self.assertEqual(proof["navigation_verified"],"NOT_TESTED")
+        self.assertEqual(proof["visual_e07"],"HOLD")
+        self.assertEqual(proof["model_inference"],"NOT_TESTED")
+        for key,value in (("action","INSTALL"),("invoked",False),("invoked",1),
+                          ("sameHwndAlive",False),("sameHwndAlive",1),
+                          ("schema","NOX-E07-UIA-V1")):
+            bad=dict(candidate);bad[key]=value
+            with self.subTest(key=key,value=value):
+                with self.assertRaisesRegex(MOD.Hold,"E07_CHAT_ACTION_UNTRUSTED_HOLD"):
+                    MOD.classify_chat_invoke_witness(bad)
+        with self.assertRaisesRegex(MOD.Hold,"E07_CHAT_ACTION_UNTRUSTED_HOLD"):
+            MOD.classify_chat_invoke_witness(dict(candidate,navigation_verified="PASS"))
+
 if __name__=='__main__':unittest.main()
