@@ -1,0 +1,79 @@
+name: NOX EXPRESS RELEASE FREEZE exact-Setup independent E07
+on:
+  push:
+    branches: [repair/nox-express-freeze-u02-e07-20261104]
+    paths:
+      - .github/workflows/nox-express-freeze-e07.yml
+      - coordination/e07/independent_setup_e07.py
+      - tests/e07/test_freeze_eec879_admission_u02.py
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: nox-freeze-e07-eec879-exact-217cf34
+  cancel-in-progress: false
+jobs:
+  independent-windows-freeze:
+    if: github.repository == 'MSSTXNEWS/nox-helion-pp-private-build'
+    runs-on: windows-2022
+    timeout-minutes: 45
+    steps:
+      - name: Checkout independent verifier candidate (NOT producer)
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Pinned Python for native Windows E07
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12.10'
+          architecture: x64
+          check-latest: false
+      - name: Strict frozen source regression before installer execution
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          python -B -m py_compile coordination/e07/independent_setup_e07.py
+          if ($LASTEXITCODE -ne 0) { throw 'E07_FREEZE_SYNTAX_HOLD' }
+          python -B -m unittest discover -s tests/e07 -p test_freeze_eec879_admission_u02.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'E07_FREEZE_ADMISSION_REGRESSION_HOLD' }
+          python -B -m unittest discover -s tests/e07 -p test_independent_setup_e07.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'E07_ORIGINAL_REGRESSION_HOLD' }
+          python -B -m unittest discover -s tests/e07 -p test_e07_original_frozen_u06.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'E07_LEGACY_PAIR_REGRESSION_HOLD' }
+          python -B -m unittest discover -s tests/e07 -p test_e07_install_root_reparse_u09.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'E07_PATH_SAFETY_REGRESSION_HOLD' }
+      - name: Download EXACT immutable owner-approved freeze Setup from other-source E06
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 41809242875
+          github-token: ${{ github.token }}
+          name: NOX-EXPRESS-ONEHOST-eec879d78eef343a8bfc6a4653961bb951d1c208
+          path: input-frozen-eec879
+      - name: Independent Windows physical E07 on exact Setup SHA256 217cf34a3fb577f6bf20fcec2d10ebcdf4b0b616b54816bc0cdf4b78009050b0
+        id: test
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          python -B coordination/e07/independent_setup_e07.py --artifact-dir input-frozen-eec879 --artifact-kind original-eec879 --out work/e07-freeze/E07_FROZEN_RECEIPT.json
+          if ($LASTEXITCODE -ne 0) { throw 'E07_FREEZE_NOT_ACCEPTED' }
+      - name: Preserve signed-by-hash physical E07 evidence even on HOLD
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: NOX-FREEZE-E07-EEC879-${{ github.run_id }}
+          path: work/e07-freeze/E07_FROZEN_RECEIPT.json
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Never release offline or incomplete visual/STOP test
+        if: always()
+        shell: pwsh
+        run: |
+          $receipt='work/e07-freeze/E07_FROZEN_RECEIPT.json'
+          if (!(Test-Path -LiteralPath $receipt -PathType Leaf)) { throw 'E07_FREEZE_RECEIPT_NOT_CREATED' }
+          $data=Get-Content -LiteralPath $receipt -Raw -Encoding UTF8 | ConvertFrom-Json
+          if ($data.release_accepted -ne $true -or $data.independent_e07 -ne 'PASS' -or
+              '${{ steps.test.outcome }}' -ne 'success') {
+            throw 'E07_FROZEN_DIAGNOSTIC_HOLD_NOT_RELEASE'
+          }

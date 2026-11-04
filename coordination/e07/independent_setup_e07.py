@@ -248,8 +248,18 @@ ORIGINAL_E06_PUBLISHED_HOME_SHA = "37c7952d98e820b22ea59c72c967bc4f7ecf01da013b3
 
 def setup_lock_original(setup: Path, base: Path, *, frozen: str = "legacy") -> dict:
     """Bind each immutable original E06 candidate to its own physical receipts."""
-    require(frozen in ("legacy", "e888"), "E07_ORIGINAL_PIN_KIND_HOLD")
-    if frozen == "e888":
+    require(frozen in ("legacy", "e888") or frozen == "eec879", "E07_ORIGINAL_PIN_KIND_HOLD")
+    if frozen == "eec879":
+        # Independent artifact: run 41809242875, ID 13312095913.
+        # Actual E06 producer is the immutable RELEASE FREEZE, not verifier HEAD.
+        expected_source = "eec879d78eef343a8bfc6a4653961bb951d1c208"
+        expected_setup_sha = "217cf34a3fb577f6bf20fcec2d10ebcdf4b0b616b54816bc0cdf4b78009050b0"
+        expected_setup_bytes = 87338388
+        expected_source_zip_sha = "50cf2e318c8757bbc35b95d425d8ca33449bdc8c743a9945a3c93269c9b9628d"
+        expected_owned_files = 485
+        expected_home_bytes = 99768
+        expected_home_sha = "5661491ddf07b3f5fa7c8097ff64838209057bee6a0bec8ed867b8c8553a40d0"
+    elif frozen == "e888":
         # Physical source and ZIP independently cross-checked by a different worker,
         # artifact 13309335494 from producer Windows E06 41803143292.
         expected_source = "e888941626191c17d19d372889b1f96842c15e1b"
@@ -953,7 +963,7 @@ def lifecycle(setup: Path, result: dict) -> None:
 def main() -> int:
     p=argparse.ArgumentParser()
     p.add_argument("--artifact-dir",required=True,type=Path)
-    p.add_argument("--artifact-kind",choices=("d02","original","original-e888"),default="d02")
+    p.add_argument("--artifact-kind",choices=("d02","original","original-e888","original-eec879"),default="d02")
     p.add_argument("--out",required=True,type=Path)
     args=p.parse_args()
     frozen_ids = {
@@ -961,6 +971,9 @@ def main() -> int:
         "original-e888": (
             "e888941626191c17d19d372889b1f96842c15e1b",
             "96ff9b47ca12a21017374e527786eda8b8fbf2b0e62cc6cfea1f59182cc8e61b"),
+        "original-eec879": (
+            "eec879d78eef343a8bfc6a4653961bb951d1c208",
+            "217cf34a3fb577f6bf20fcec2d10ebcdf4b0b616b54816bc0cdf4b78009050b0"),
     }
     source_sha, setup_sha = frozen_ids.get(args.artifact_kind, (SOURCE_SHA, SETUP_SHA))
     result={"schema":"NOX-EXPRESS-INDEPENDENT-E07-CANDIDATE-v1",
@@ -978,7 +991,8 @@ def main() -> int:
         if args.artifact_kind in frozen_ids:
             setup=source/"NOX_HELION_EXPRESS_CANDIDATE_SETUP.exe"
             result["checks"]["artifact"] = setup_lock_original(
-                setup,source,frozen="e888" if args.artifact_kind=="original-e888" else "legacy")
+                setup,source,frozen={"original":"legacy","original-e888":"e888",
+                                     "original-eec879":"eec879"}[args.artifact_kind])
         else:
             setup=source/"e06"/"onehost-wow-diagnostic"/"NOX-HELION-V16-DIAGNOSTIC-SETUP.exe"
             receipt=source/"e06"/"onehost-wow-diagnostic"/"E07_BUILT_HANDOFF.json"
