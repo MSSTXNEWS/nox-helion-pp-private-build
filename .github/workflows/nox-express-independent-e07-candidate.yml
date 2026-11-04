@@ -6,6 +6,8 @@ on:
       - .github/workflows/nox-express-independent-e07-candidate.yml
       - coordination/e07/independent_setup_e07.py
       - tests/e07/test_independent_setup_e07.py
+      - tests/e07/test_e07_original_frozen_u06.py
+      - tests/e07/test_e07_install_root_reparse_u09.py
   workflow_dispatch:
 permissions:
   actions: read
@@ -48,6 +50,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'E07_BASE_REGRESSION_HOLD' }
           python -B -m unittest discover -s tests/e07 -p test_e07_original_frozen_u06.py -v
           if ($LASTEXITCODE -ne 0) { throw 'E07_SOURCE_REGRESSION_HOLD' }
+          python -B -m unittest discover -s tests/e07 -p test_e07_install_root_reparse_u09.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'E07_INSTALL_ROOT_REGRESSION_HOLD' }
           python -B coordination/e07/independent_setup_e07.py --artifact-dir input-frozen-e06 --artifact-kind original --out work/e07-independent/E07_CANDIDATE_RECEIPT.json
           if ($LASTEXITCODE -ne 0) { throw 'INDEPENDENT_E07_NOT_ACCEPTED' }
       - name: Save independent evidence even on HOLD
