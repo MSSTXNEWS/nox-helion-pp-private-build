@@ -504,7 +504,9 @@ def build(root,staged):
         "stage/proposals/P01/C09/Installer/Verify-Payload.ps1")
     print("T06_P01_INSTALLED_VERIFIER_PINNED_SOURCE_ONLY "+
           json.dumps(verifier_proof,sort_keys=True),flush=True)
-    proof=subprocess.run(["powershell.exe","-NoProfile","-NonInteractive",
+    # GitHub Windows runner PowerShell 7 has Get-FileHash available; the
+    # original C09 verifier is still executed unchanged, with the same manifest.
+    proof=subprocess.run(["pwsh.exe","-NoProfile","-NonInteractive",
         "-ExecutionPolicy","Bypass","-File",
         str(installer_dir/"Verify-Payload.ps1"),"-Root",str(payload),
         "-Manifest",str(manifest_file)],capture_output=True,text=True,timeout=180)

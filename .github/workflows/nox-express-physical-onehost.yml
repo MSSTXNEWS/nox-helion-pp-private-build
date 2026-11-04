@@ -16,6 +16,7 @@ on:
       - coordination/e06/t06_package_original_onehost.py
       - coordination/e06/t06_source_receipt_guard.py
       - tests/e06/test_t06_source_receipt_guard.py
+      - tests/e06/test_t06_manifest_pwsh_host_r120.py
       - tests/e06/test_t06_frozen_source_coverage.py
       - tests/e06/test_t06_nx03_stage_pin_r118.py
   workflow_dispatch:
@@ -59,6 +60,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'T06_WEBVIEW2_ORIGINAL_SOURCE_TEST_HOLD' }
           python -B -m unittest discover -s tests/e06 -p test_t06_source_receipt_guard.py -v
           if ($LASTEXITCODE -ne 0) { throw 'T06_SOURCE_RECEIPT_R11_94_TEST_HOLD' }
+          python -B -m unittest discover -s tests/e06 -p test_t06_manifest_pwsh_host_r120.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'T06_P01_VERIFIER_PWSH_HOST_TEST_HOLD' }
           $archive=Join-Path $env:RUNNER_TEMP ('NOX_HELION_EXPRESS_SOURCE_'+$env:GITHUB_SHA+'.zip')
           python -B coordination/e06/express_source_snapshot_pack.py --repo . --sha $env:GITHUB_SHA --out $archive
           if ($LASTEXITCODE -ne 0) { throw 'SOURCE_PACK_PHYSICAL_HOLD' }
