@@ -1,6 +1,9 @@
 """Source admission and frozen-container coverage are not Windows/E07 acceptance."""
 import hashlib
 import importlib.util
+import os
+import subprocess
+import sys
 from pathlib import Path
 import tempfile
 import unittest
@@ -129,6 +132,29 @@ class FrozenCoverage(unittest.TestCase):
         raw_data[0]["sha256"] = "0" * 64
         with self.assertRaisesRegex(RuntimeError, "FROZEN_DATA_SHA_HOLD"):
             MOD.verify_archive_contents(reader, plan, raw_data)
+
+    def test_snapshot_reader_import_does_not_dirty_repository(self):
+        # Child Python deliberately runs without -B or PYTHONDONTWRITEBYTECODE.
+        # The real packer imports an adjacent SourceLock owner by spec; an
+        # unguarded exec_module emits __pycache__ and fails clean Git checkout.
+        with tempfile.TemporaryDirectory() as sandbox:
+            root = Path(sandbox)
+            pack = root / "express_source_snapshot_pack.py"
+            pack.write_bytes((ROOT / "coordination/e06/express_source_snapshot_pack.py").read_bytes())
+            (root / "verify_original_729_source.py").write_text(
+                "def _trusted_part_reader(path):\n    return path\n",
+                encoding="utf-8")
+            env = {key: value for key, value in os.environ.items()
+                   if key not in ("PYTHONDONTWRITEBYTECODE", "PYTHONPYCACHEPREFIX")}
+            probe = subprocess.run(
+                [sys.executable, "-c",
+                 "import runpy,sys; ns=runpy.run_path(sys.argv[1],"
+                 "run_name='snapshot_import_probe'); "
+                 "assert callable(ns['_verified_source_reader']())",
+                 str(pack)],
+                cwd=root, env=env, capture_output=True, text=True, timeout=12)
+            self.assertEqual(probe.returncode, 0, probe.stderr)
+            self.assertFalse((root / "__pycache__").exists())
 
     def test_snapshot_output_regular_absent_path_allowed(self):
         self.assertIsNone(PACK._verify_output_path(

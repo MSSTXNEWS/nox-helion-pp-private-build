@@ -31,7 +31,14 @@ def _verified_source_reader():
     if spec is None or spec.loader is None:
         raise ValueError("SOURCELOCK_ORIGINAL_FD_READER_INVALID")
     owner = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(owner)
+    # The strict pristine-checkout gate must not be dirtied by this import.
+    # It is intentionally scoped: no source bytes or SourceLock rules change.
+    was_writebytecode_disabled = sys.dont_write_bytecode
+    try:
+        sys.dont_write_bytecode = True
+        spec.loader.exec_module(owner)
+    finally:
+        sys.dont_write_bytecode = was_writebytecode_disabled
     reader = getattr(owner, "_trusted_part_reader", None)
     if not callable(reader):
         raise ValueError("SOURCELOCK_ORIGINAL_FD_READER_INVALID")
