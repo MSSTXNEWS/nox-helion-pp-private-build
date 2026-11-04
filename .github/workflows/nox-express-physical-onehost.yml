@@ -49,6 +49,9 @@ jobs:
           # SourceForge /download can yield HTML instead of bytes on CI; try official direct mirrors.
           # Nothing executes or extracts unless its SHA256 equals SourceForge's published checksum.
           $urls=@(
+            # Official NSIS archive mirrored by Tauri's vendor-pinned binary-release toolchain.
+            # SHA1 is also pinned in tauri-bundler; SHA256 below must match official SourceForge.
+            'https://github.com/tauri-apps/binary-releases/releases/download/nsis-3.13/nsis-3.13.zip',
             'https://downloads.sourceforge.net/project/nsis/NSIS%203/3.13/nsis-3.13.zip',
             'https://master.dl.sourceforge.net/project/nsis/NSIS%203/3.13/nsis-3.13.zip',
             'https://netix.dl.sourceforge.net/project/nsis/NSIS%203/3.13/nsis-3.13.zip',
@@ -71,8 +74,10 @@ jobs:
           $root=Join-Path $env:RUNNER_TEMP 'nox-approved-nsis313'
           Expand-Archive -LiteralPath $zip -DestinationPath $root
           $candidates=@(Get-ChildItem -LiteralPath $root -Recurse -File -Filter makensis.exe)
-          if ($candidates.Count -ne 1) { throw 'NSIS313_COMPILER_UNIQUE_PATH_HOLD' }
-          $compiler=$candidates[0].FullName
+          if ($candidates.Count -lt 1) { throw 'NSIS313_COMPILER_NOT_FOUND' }
+          # The authentic ZIP may ship both root makensis.exe and Bin/makensis.exe.
+          # Pick the shortest trusted extracted path; ZIP SHA256 covers both.
+          $compiler=($candidates | Sort-Object { $_.FullName.Length } | Select-Object -First 1).FullName
           $version=(& $compiler /VERSION | Out-String).Trim()
           if ($LASTEXITCODE -ne 0 -or $version -notmatch '^v?3\.13$') { throw 'NSIS313_COMPILER_VERSION_HOLD' }
           Add-Content -LiteralPath $env:GITHUB_PATH -Value $candidates[0].DirectoryName
