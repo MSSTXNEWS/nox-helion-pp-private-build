@@ -157,15 +157,48 @@ def framed(binary:Path,data_dir:Path,receipt:dict)->dict:
     answer=strict_json_object(content[4:],"T06_INSTALLED_NATIVE_REPLY_JSON_HOLD")
     require(answer.get("protocol")==request["protocol"] and
             answer.get("runId")==request["runId"] and
-            answer.get("requestId")==request["requestId"] and
-            answer.get("status")=="OK" and
-            type(answer.get("result")) is dict and
-            type(answer["result"].get("models")) is list,
+            answer.get("requestId")==request["requestId"],
             "T06_INSTALLED_BACKEND_FRAME_IDENTITY_OR_MODEL_HOLD")
-    return {"status":"PASS","route":route,
+    inventory_ok = (answer.get("status")=="OK" and
+                    type(answer.get("result")) is dict and
+                    type(answer["result"].get("models")) is list)
+    # A missing Ollama provider is a genuine authenticated native HOLD, never
+    # evidence of a local model, active inference, or independent E07.
+    offline_hold = (ON_LOCAL_BRIDGE and
+                    receipt.get("native_source_receipt")==
+                    "ORIGINAL_FROZEN_MODELCENTER_PROVIDER_OFFLINE_HOLD_NOT_E07" and
+                    answer.get("status")=="HOLD" and
+                    answer.get("errorCode")=="NATIVE_PROVIDER_HOLD" and
+                    answer.get("result") is None)
+    require(inventory_ok or offline_hold,
+            "T06_INSTALLED_BACKEND_FRAME_IDENTITY_OR_MODEL_HOLD")
+    return {"status":"PASS" if inventory_ok else "PROVIDER_OFFLINE_HOLD",
+            "route":route,"model_inventory_route_verified":inventory_ok,
+            "real_model_inference_tested":False,
             "run_id_matched":True,"request_id_matched":True,
             "duration_seconds":round(time.monotonic()-start,2),
             "binary_sha256":sha(binary)}
+
+def verified_native_model_inventory_state(native:dict)->str:
+    """Admit only exactly attested frozen P03 inventory or honest offline HOLD.
+
+    The frozen producer checks BOTH the original P02 chat.model and P03 route
+    before issuing either mutually exclusive receipt. An empty disposable CI
+    machine is not evidence of installed models or local inference.
+    """
+    require(type(native) is dict,"T06_BRIDGE_NATIVE_MODEL_INVENTORY_HOLD")
+    success=(native.get("native_modelcenter_installed_read_only")=="PASS" and
+             native.get("models_installed_uses_original_local_discovery") is True and
+             native.get("modelcenter_provider_offline_verified") is False and
+             native.get("real_ollama_model_inference_tested") is False)
+    offline=(native.get("native_modelcenter_installed_read_only")==
+             "PROVIDER_OFFLINE_HOLD" and
+             native.get("models_installed_uses_original_local_discovery") is False and
+             native.get("modelcenter_provider_offline_verified") is True and
+             native.get("frozen_chat_model_response_status")=="OK" and
+             native.get("real_ollama_model_inference_tested") is False)
+    require(success or offline,"T06_BRIDGE_NATIVE_MODEL_INVENTORY_HOLD")
+    return "INSTALLED_INVENTORY_PASS" if success else "PROVIDER_OFFLINE_HOLD"
 
 def bridge_candidate_gate()->dict:
     """Admit the ORIGINAL imported T06 OneHost output, never forge E07 evidence."""
@@ -210,8 +243,6 @@ def bridge_candidate_gate()->dict:
             "T06_BRIDGE_SETUP_SOURCE_IDENTITY_HOLD")
     require(native.get("phase")=="BUILT_AND_NATIVE_STDIO_SMOKE_PASS" and
             native.get("native_windows_exe_request_reply")=="PASS" and
-            native.get("native_modelcenter_installed_read_only")=="PASS" and
-            native.get("models_installed_uses_original_local_discovery") is True and
             native.get("original_729_unchanged") is True and
             native.get("source_original_archive_sha256")==original_zip and
             native.get("installed_wpf_e07") is False and
@@ -222,6 +253,7 @@ def bridge_candidate_gate()->dict:
             native.get("exe_sha256")==source.get("backend_sha256") and
             sha(backend)==source["backend_sha256"],
             "T06_BRIDGE_NATIVE_SOURCE_SHA_HOLD")
+    model_inventory_state=verified_native_model_inventory_state(native)
     require(original.get("phase")=="ORIGINAL_PYTHON_SOURCE_EXECUTION_WINDOWS" and
             original.get("source_zip_sha256")==original_zip and
             original.get("original_archive_unchanged") is True and
@@ -259,7 +291,11 @@ def bridge_candidate_gate()->dict:
             "wpf_sha256":source["wpf_sha256"],
             "backend_sha256":source["backend_sha256"],
             "manifest_sha256":source["manifest_sha256"],
-            "native_source_receipt":"ORIGINAL_FROZEN_MODELCENTER_PASS_NOT_E07",
+            "native_source_receipt":(
+                "ORIGINAL_FROZEN_MODELCENTER_PASS_NOT_E07"
+                if model_inventory_state=="INSTALLED_INVENTORY_PASS"
+                else "ORIGINAL_FROZEN_MODELCENTER_PROVIDER_OFFLINE_HOLD_NOT_E07"),
+            "native_model_inventory_state":model_inventory_state,
             "manifest_files_checked":len(seen)}
 
 def candidate_gate()->dict:
@@ -1034,8 +1070,14 @@ def main()->int:
         report["installer_lifecycle"]["uninstall_registry_views_checked"]=2
         require(marker.is_file() and marker.read_bytes()==signature,
                 "T06_ORIGINAL_NSIS_UNINSTALL_USER_DATA_LOSS")
-        report["phase"]="INSTALLED_GUI_IPC_UPDATE_ROLLBACK_NOLOSS_PASS_NOT_E07"
-        print("T06_SAME_VM_INSTALL_NATIVE_UNINSTALL_PASS",
+        provider_offline=(report["installer_lifecycle"]["native_ipc"]["status"]==
+                          "PROVIDER_OFFLINE_HOLD")
+        report["phase"]=(
+            "INSTALLED_GUI_IPC_UPDATE_ROLLBACK_NOLOSS_PROVIDER_OFFLINE_HOLD_NOT_E07"
+            if provider_offline else
+            "INSTALLED_GUI_IPC_UPDATE_ROLLBACK_NOLOSS_PASS_NOT_E07")
+        print("T06_SAME_VM_INSTALL_LIFECYCLE_PROVIDER_OFFLINE_HOLD"
+              if provider_offline else "T06_SAME_VM_INSTALL_NATIVE_UNINSTALL_PASS",
               evidence["setup_sha256"],flush=True)
         code=0
     except Exception as exc:
