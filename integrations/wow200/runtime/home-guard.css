@@ -351,3 +351,90 @@ body.nox-wow-eco .nox-orbit-stage .nox-eclipse .nox-cinema-orb__filaments::after
 }
 /* No overlapping orbit movement: irregular motion is inside per-core textures
    and shader fog only. Button hitboxes, tab order and CoreIDs remain fixed. */
+
+
+/* NOX D02 GRAPHICS PLANET DOCK V1 — fixed bottom-of-HOME graphic switches.
+   AUTO is explicit opt-in. Static controls; no movement of existing eight CoreIDs. */
+#home .nox-quality-dock{
+ position:fixed;left:50%;bottom:max(8px,env(safe-area-inset-bottom));
+ transform:translateX(-50%);z-index:95;width:min(92vw,780px);
+ box-sizing:border-box;padding:8px 12px 11px;
+ border:1px solid rgba(205,178,138,.4);border-radius:22px;
+ background:radial-gradient(ellipse at 50% -20%,rgba(77,111,146,.3),transparent 62%),
+ linear-gradient(140deg,rgba(5,9,15,.96),rgba(20,20,31,.95) 60%,rgba(9,12,18,.97));
+ box-shadow:0 10px 36px #000b,inset 0 1px 0 rgba(253,242,216,.12),
+ 0 0 35px rgba(56,100,128,.13);
+ backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+ color:#e8e2d7;font:inherit;isolation:isolate;
+}
+#home .nox-quality-dock__head{
+ display:flex;justify-content:space-between;align-items:center;gap:12px;
+ padding:0 6px 7px;font-size:10px;letter-spacing:.11em;
+ color:#ddc7a1;text-shadow:0 0 8px #dbb77b26;
+}
+#home .nox-quality-dock__status{color:#a6d1d9;font-size:10px;letter-spacing:.045em;}
+#home .nox-quality-dock__row{
+ display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px;
+}
+#home .nox-quality-planet{
+ --planet-a:#a0b9ca;--planet-b:#3b536d;
+ min-width:0;min-height:86px;box-sizing:border-box;position:relative;
+ display:flex;flex-direction:column;align-items:center;justify-content:center;
+ gap:3px;padding:5px 6px 7px;cursor:pointer;overflow:visible;
+ border:1px solid rgba(148,178,203,.26);border-radius:16px;
+ background:linear-gradient(150deg,rgba(30,44,57,.72),rgba(7,12,20,.93));
+ color:#ede4d7;font:inherit;font-size:10px;font-weight:700;letter-spacing:.035em;
+ text-align:center;transition:border-color .18s,background .18s,box-shadow .18s;
+}
+#home .nox-quality-planet__sphere{
+ display:grid;place-items:center;width:42px;height:42px;flex-shrink:0;
+ border-radius:50%;color:#fff1d9;font-size:21px;
+ background:radial-gradient(circle at 29% 24%,rgba(255,255,255,.47),
+ var(--planet-a) 17%,var(--planet-b) 49%,#060911 82%);
+ box-shadow:inset -7px -9px 14px #000b,inset 3px 3px 5px #ffffff30,
+ 0 0 14px color-mix(in srgb,var(--planet-a),transparent 65%);
+ text-shadow:0 0 8px #ffffff7a;
+ transition:box-shadow .18s,filter .18s;
+}
+#home .nox-quality-planet strong{font-size:11px;line-height:1.1;white-space:normal;}
+#home .nox-quality-planet small{font-size:9px;font-weight:500;letter-spacing:.03em;color:#b4c7d1;}
+#home .nox-quality-planet[data-quality="MAX_WOW"]{--planet-a:#f8b87e;--planet-b:#9d431d}
+#home .nox-quality-planet[data-quality="CINEMA"]{--planet-a:#96d8ea;--planet-b:#255c76}
+#home .nox-quality-planet[data-quality="ECO"]{--planet-a:#91c8a2;--planet-b:#346c56}
+#home .nox-quality-planet[data-quality="MINI_START"]{--planet-a:#a7a8b5;--planet-b:#4b5265}
+#home .nox-quality-planet[data-quality="AUTO"]{--planet-a:#c4b4ff;--planet-b:#60599a}
+#home .nox-quality-planet.is-selected{
+ border-color:rgba(239,211,163,.9);
+ background:linear-gradient(145deg,rgba(45,56,70,.97),rgba(24,19,27,.98));
+ box-shadow:0 0 0 1px rgba(249,213,155,.38),0 0 22px rgba(210,163,93,.23);
+}
+#home .nox-quality-planet.is-selected .nox-quality-planet__sphere{
+ box-shadow:inset -7px -9px 14px #000b,inset 3px 3px 5px #ffffff40,
+ 0 0 21px var(--planet-a),0 0 37px color-mix(in srgb,var(--planet-a),transparent 60%);
+}
+#home .nox-quality-planet:focus-visible{
+ outline:3px solid #bbf4ff;outline-offset:2px;
+}
+#home .nox-quality-planet:hover:not(.is-selected){
+ border-color:rgba(185,220,235,.7);
+}
+@media(max-width:600px){
+ #home .nox-quality-dock{width:min(96vw,460px);padding:6px 7px 8px;border-radius:17px}
+ #home .nox-quality-dock__row{grid-template-columns:repeat(5,minmax(0,1fr));gap:3px}
+ #home .nox-quality-planet{min-height:75px;padding:4px 2px 5px;border-radius:11px}
+ #home .nox-quality-planet__sphere{width:30px;height:30px;font-size:16px}
+ #home .nox-quality-planet strong{font-size:8px;letter-spacing:0}
+ #home .nox-quality-planet small{font-size:7px;letter-spacing:0}
+ #home .nox-quality-dock__head{font-size:9px;padding-bottom:4px}
+ #home .nox-quality-dock__status{font-size:8px}
+}
+@media(prefers-reduced-motion:reduce){
+ #home .nox-quality-dock,#home .nox-quality-planet,
+ #home .nox-quality-planet__sphere{transition:none!important;animation:none!important;}
+}
+@media(forced-colors:active){
+ #home .nox-quality-dock{background:Canvas;color:CanvasText;border:1px solid CanvasText;backdrop-filter:none}
+ #home .nox-quality-planet{background:Canvas;color:CanvasText;border:1px solid ButtonText}
+ #home .nox-quality-planet__sphere{background:ButtonFace;color:ButtonText;box-shadow:none}
+ #home .nox-quality-planet.is-selected{border:2px solid Highlight}
+}
