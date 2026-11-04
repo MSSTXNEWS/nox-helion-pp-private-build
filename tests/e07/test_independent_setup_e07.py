@@ -642,4 +642,105 @@ class IndependentE07(unittest.TestCase):
                 MOD.native_store_stop_probe(backend,
                                             Path(temp)/"nox-e07-native-store")
 
+
+    def test_final_acceptance_requires_same_setup_physical_receipts(self):
+        visual = {
+            "schema": MOD.FINAL_VISUAL_SCHEMA,
+            "source_sha": MOD.SOURCE_SHA,
+            "setup_sha256": MOD.SETUP_SHA,
+            "release_accepted": False,
+            "physical_capture": "PASS",
+            "d02_visual": "PASS",
+            "adaptive_layout": "PASS",
+            "reduced_motion": "PASS",
+            "screenshot_sha256": "1" * 64,
+        }
+        functions = {
+            "schema": MOD.FINAL_FUNCTION_SCHEMA,
+            "source_sha": MOD.SOURCE_SHA,
+            "setup_sha256": MOD.SETUP_SHA,
+            "release_accepted": False,
+            "actions": {
+                name: {
+                    "function_verified": "PASS",
+                    "permissions_verified": "PASS",
+                    "result": "PASS",
+                    "receipt_sha256": format(i + 2, "x") * 64,
+                }
+                for i, name in enumerate(MOD.FINAL_FUNCTIONS)
+            },
+        }
+        accepted = MOD.evaluate_final_acceptance(
+            visual, functions, source_sha=MOD.SOURCE_SHA, setup_sha=MOD.SETUP_SHA)
+        self.assertEqual(accepted["status"], "PASS")
+        self.assertEqual(set(accepted["privileged_functions"]), set(MOD.FINAL_FUNCTIONS))
+
+    def test_final_acceptance_rejects_visual_navigation_only_or_wrong_setup(self):
+        visual = {
+            "schema": MOD.FINAL_VISUAL_SCHEMA,
+            "source_sha": MOD.SOURCE_SHA,
+            "setup_sha256": MOD.SETUP_SHA,
+            "release_accepted": False,
+            "physical_capture": "PASS",
+            "d02_visual": "PASS",
+            "adaptive_layout": "PASS",
+            "reduced_motion": "NOT_TESTED",
+            "screenshot_sha256": "a" * 64,
+        }
+        functions = {
+            "schema": MOD.FINAL_FUNCTION_SCHEMA,
+            "source_sha": MOD.SOURCE_SHA,
+            "setup_sha256": MOD.SETUP_SHA,
+            "release_accepted": False,
+            "actions": {
+                name: {
+                    "function_verified": "PASS",
+                    "permissions_verified": "PASS",
+                    "result": "PASS",
+                    "receipt_sha256": "b" * 64,
+                }
+                for name in MOD.FINAL_FUNCTIONS
+            },
+        }
+        with self.assertRaisesRegex(MOD.Hold, "E07_FINAL_VISUAL_ACCEPTANCE_HOLD"):
+            MOD.evaluate_final_acceptance(
+                visual, functions, source_sha=MOD.SOURCE_SHA, setup_sha=MOD.SETUP_SHA)
+        visual["reduced_motion"] = "PASS"
+        functions["setup_sha256"] = "f" * 64
+        with self.assertRaisesRegex(MOD.Hold, "E07_FINAL_FUNCTION_IDENTITY_HOLD"):
+            MOD.evaluate_final_acceptance(
+                visual, functions, source_sha=MOD.SOURCE_SHA, setup_sha=MOD.SETUP_SHA)
+
+    def test_final_acceptance_rejects_unverified_privileged_action(self):
+        visual = {
+            "schema": MOD.FINAL_VISUAL_SCHEMA,
+            "source_sha": MOD.SOURCE_SHA,
+            "setup_sha256": MOD.SETUP_SHA,
+            "release_accepted": False,
+            "physical_capture": "PASS",
+            "d02_visual": "PASS",
+            "adaptive_layout": "PASS",
+            "reduced_motion": "PASS",
+            "screenshot_sha256": "c" * 64,
+        }
+        functions = {
+            "schema": MOD.FINAL_FUNCTION_SCHEMA,
+            "source_sha": MOD.SOURCE_SHA,
+            "setup_sha256": MOD.SETUP_SHA,
+            "release_accepted": False,
+            "actions": {
+                name: {
+                    "function_verified": "PASS",
+                    "permissions_verified": "PASS",
+                    "result": "PASS",
+                    "receipt_sha256": "d" * 64,
+                }
+                for name in MOD.FINAL_FUNCTIONS
+            },
+        }
+        functions["actions"]["LEARN"]["function_verified"] = "NOT_TESTED"
+        with self.assertRaisesRegex(MOD.Hold, "E07_FINAL_LEARN_FUNCTION_HOLD"):
+            MOD.evaluate_final_acceptance(
+                visual, functions, source_sha=MOD.SOURCE_SHA, setup_sha=MOD.SETUP_SHA)
+
 if __name__=='__main__':unittest.main()
