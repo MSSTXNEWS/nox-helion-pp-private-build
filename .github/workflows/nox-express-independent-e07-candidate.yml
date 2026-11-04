@@ -7,6 +7,8 @@ on:
       - coordination/e07/independent_setup_e07.py
       - coordination/e07/probe_final_same_setup.py
       - tests/e07/test_final_primary_dispatch_u18.py
+      - tests/e07/test_live_final_wiring_u19.py
+      - tests/e07/test_final_truth_scope_u20.py
       - tests/e07/test_independent_setup_e07.py
       - tests/e07/test_e07_original_frozen_u06.py
       - tests/e07/test_e07_install_root_reparse_u09.py
@@ -51,6 +53,17 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'E07_BASE_REGRESSION_HOLD' }
           python -B -m unittest discover -s tests/e07 -p test_final_primary_dispatch_u18.py -v
           if ($LASTEXITCODE -ne 0) { throw 'E07_FINAL_UIA_TREE_REGRESSION_HOLD' }
+          python -B -m unittest discover -s tests/e07 -p test_live_final_wiring_u19.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'E07_FINAL_SAME_SETUP_REGRESSION_HOLD' }
+          python -B -m unittest discover -s tests/e07 -p test_final_truth_scope_u20.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'E07_FUNCTION_TRUTH_REGRESSION_HOLD' }
+          # Parse the actual generated native Windows PowerShell UIA script
+          # BEFORE any huge artifact download or Ollama install.
+          python -B -c "import sys,pathlib;sys.path.insert(0,'coordination/e07');import probe_final_same_setup as p;pathlib.Path('e07-visual-preflight.ps1').write_text(p._uia_script(12345,'VISUAL',png=pathlib.Path('e07-visual-preflight.png')),encoding='utf-8')"
+          if ($LASTEXITCODE -ne 0) { throw 'E07_UIA_SCRIPT_GENERATION_HOLD' }
+          $tokens=$null; $parseErrors=$null
+          $null=[System.Management.Automation.Language.Parser]::ParseFile((Join-Path (Get-Location).Path 'e07-visual-preflight.ps1'),[ref]$tokens,[ref]$parseErrors)
+          if (@($parseErrors).Count -ne 0) { throw 'E07_UIA_POWERSHELL_PARSE_HOLD' }
           python -B -m unittest discover -s tests/e07 -p test_e07_original_frozen_u06.py -v
           if ($LASTEXITCODE -ne 0) { throw 'E07_SOURCE_REGRESSION_HOLD' }
           python -B -m unittest discover -s tests/e07 -p test_e07_install_root_reparse_u09.py -v
@@ -139,7 +152,11 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: NOX-EXPRESS-E07-FULL-D02-F842-${{ github.run_id }}
-          path: work/e07-independent/E07_CANDIDATE_RECEIPT.json
+          path: |
+            work/e07-independent/E07_CANDIDATE_RECEIPT.json
+            work/e07-independent/same-setup-final/E07_FINAL_VISUAL.json
+            work/e07-independent/same-setup-final/E07_FINAL_FUNCTIONS.json
+            work/e07-independent/same-setup-final/D02_FINAL_SAME_SETUP.png
           if-no-files-found: error
           retention-days: 14
       - name: Preserve NOT-RELEASE when actual model or visual E07 incomplete
