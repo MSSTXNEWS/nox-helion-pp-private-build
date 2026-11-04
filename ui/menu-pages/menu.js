@@ -269,7 +269,7 @@ function liveChat(label){
  // Transport COMPLETED is not provider success; bind model/chat status to
  // the existing native owner denial predicate, including envelope errorCode.
  const nativeCompleted=reply=>reply?.state==='COMPLETED'&&
-  (reply.errorCode==null||reply.errorCode==='')&&
+  !nativeOwnerReceiptHolds(reply)&&
   !nativeOwnerReceiptHolds(reply.result);
  const enabled=()=>!!client&&!!model&&!chatInFlight&&!modelSelectionPending;
  const redraw=()=>{send.disabled=!enabled();stop.disabled=!client||!chatInFlight||chatStopPending;};

@@ -55,6 +55,18 @@ test('model selection is serialized and requires its own exact native ACK', asyn
  pending.shift()({state:'COMPLETED',result:{selectedModel:'qwen:0.6b',status:'PROVIDER_OFFLINE_HOLD'}});
  await embedded;
  assert.equal(send.disabled,true,'COMPLETED with provider status HOLD must not enable SEND');
+ const envelopeStatus=models()[0].onclick();
+ pending.shift()({state:'COMPLETED',status:'PROVIDER_OFFLINE_HOLD',result:{selectedModel:'qwen:0.6b'}});
+ await envelopeStatus;
+ assert.equal(send.disabled,true,'COMPLETED with outer provider HOLD must not enable SEND');
+ const envelopeAck=models()[0].onclick();
+ pending.shift()({state:'COMPLETED',ack:false,result:{selectedModel:'qwen:0.6b'}});
+ await envelopeAck;
+ assert.equal(send.disabled,true,'COMPLETED with outer owner ack=false must not enable SEND');
+ const envelopeOk=models()[0].onclick();
+ pending.shift()({state:'COMPLETED',ok:false,result:{selectedModel:'qwen:0.6b'}});
+ await envelopeOk;
+ assert.equal(send.disabled,true,'COMPLETED with outer owner ok=false must not enable SEND');
  assert.ok(models().every(x=>x.attrs['aria-pressed']!=='true'));
  const denied=models()[0].onclick();
  pending.shift()({state:'HOLD',errorCode:'DENIED'});
