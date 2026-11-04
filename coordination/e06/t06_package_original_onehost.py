@@ -706,6 +706,42 @@ def build(root,staged):
                  "T06_PUBLISHED_ASSET_SOURCE_MISMATCH")
         else:shutil.copy2(file,out)
         verify_source_tree_entry(out,payload)
+    # U08 EXPRESS five-primary HOME controls in this SAME WPF WebView2 payload.
+    # Immutable original R11 and all existing render/IPC/STOP remain intact.
+    import importlib.util
+    five_script=Path(__file__).resolve().parents[2]/"coordination/express/stage_original_five_primary.py"
+    verify_source_tree_entry(five_script,Path(__file__).resolve().parents[2])
+    need(_git_blob(five_script.read_bytes())=="a595f4e1c1b0de1945940d8c730cbf0b26aaf01d",
+         "U08_FIVE_PRIMARY_STAGE_PIN_HOLD")
+    five_spec=importlib.util.spec_from_file_location("nox_express_five_primary",five_script)
+    need(five_spec is not None and five_spec.loader is not None,
+         "U08_FIVE_PRIMARY_IMPORT_HOLD")
+    five_module=importlib.util.module_from_spec(five_spec)
+    five_spec.loader.exec_module(five_module)
+    original_home=original_assets/"index.html"
+    published_home=payload/"Assets/index.html"
+    need(published_home.is_file() and not published_home.is_symlink() and
+         sha(published_home)==HOME_R11_EXPECTED_SHA256,
+         "U08_PUBLISHED_HOME_PREIMAGE_HOLD")
+    five_published,five_proof=five_module.publish(original_home.read_bytes())
+    temp_home=published_home.with_name("index.html.u08tmp")
+    need(not temp_home.exists() and not temp_home.is_symlink(),
+         "U08_FIVE_HOME_TEMP_COLLISION_HOLD")
+    with temp_home.open("xb") as five_out:
+        five_out.write(five_published)
+        five_out.flush()
+        os.fsync(five_out.fileno())
+    verify_source_tree_entry(temp_home,payload)
+    need(temp_home.stat().st_size==five_proof["published_bytes"] and
+         sha(temp_home)==five_proof["published_sha256"] and
+         sha(published_home)==HOME_R11_EXPECTED_SHA256,
+         "U08_FIVE_HOME_STAGED_BYTES_HOLD")
+    os.replace(temp_home,published_home)
+    verify_source_tree_entry(published_home,payload)
+    need(sha(published_home)==five_proof["published_sha256"],
+         "U08_FIVE_HOME_PUBLISHED_READBACK_HOLD")
+    print("U08_ORIGINAL_EXPRESS_FIVE_PRIMARY_SOURCE_ONLY "+
+          json.dumps(five_proof,sort_keys=True),flush=True)
     # The EXISTING R76 owner MENU10 integration is verified in the same
     # disposable WPF tree and the SAME published NSIS payload. Do not copy
     # another UI, overwrite approved art, or claim Windows E07 from source QA.
@@ -743,6 +779,7 @@ def build(root,staged):
         print("T06_MEGAB_R76_SAME_ONEHOST_ASSETS_14_PASS_NOT_E07",flush=True)
     home_evidence=attest_original_home_provenance(
         original_assets/"index.html",payload/"Assets/index.html")
+    home_evidence["five_primary_staged_source_only"]=five_proof
     backend=payload/"Backend"
     backend.mkdir(exist_ok=True)
     shutil.copy2(exe_path,backend/exe_path.name)
