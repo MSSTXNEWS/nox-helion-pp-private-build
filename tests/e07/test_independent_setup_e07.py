@@ -168,6 +168,30 @@ class IndependentE07(unittest.TestCase):
                         hashlib.sha256(b'payload').hexdigest())
             self.assertEqual(payload.read_bytes(),b'payload')
 
+
+    def test_windows_fd_ctime_discrepancy_keeps_path_ctime_and_inode_guards(self):
+        # Fixture based on actual Windows runner 41778686243: ONLY the
+        # os.fstat creation/change-time view can differ from path.lstat.
+        # File identity (dev/ino/size/mtime), pathname ctime and SHA remain pinned.
+        from types import SimpleNamespace
+        with tempfile.TemporaryDirectory() as t:
+            root=Path(t)
+            payload=root/'native.dll'
+            raw=b'unchanged-installed-payload'
+            payload.write_bytes(raw)
+            real_fstat=MOD.os.fstat
+            def biased_fd_stat(fd):
+                original=real_fstat(fd)
+                keys=('st_mode','st_dev','st_ino','st_size','st_mtime_ns','st_ctime_ns')
+                values={key:getattr(original,key) for key in keys}
+                values['st_ctime_ns'] += 100000000
+                return SimpleNamespace(**values)
+            with patch.object(MOD.os,'fstat',side_effect=biased_fd_stat):
+                got=MOD.installed_file_sha_locked(payload,root.resolve(strict=True),
+                        len(raw),hashlib.sha256(raw).hexdigest())
+            self.assertEqual(got,hashlib.sha256(raw).hexdigest())
+            self.assertEqual(payload.read_bytes(),raw)
+
     def test_manifest_detects_mutated_file(self):
         with tempfile.TemporaryDirectory() as t:
             root=Path(t)

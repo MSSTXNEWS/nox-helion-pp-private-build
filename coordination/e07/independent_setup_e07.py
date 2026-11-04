@@ -66,6 +66,12 @@ def installed_file_sha_locked(path: Path, root: Path, expected_size: int, expect
     """
     def identity(info):
         return (info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns, info.st_ctime_ns)
+    def descriptor_identity(info):
+        # Windows os.fstat(fd).st_ctime_ns need not agree with pathname lstat()
+        # for an unchanged file (observed physical E07 run 41778686243).
+        # Preserve strict pathname ctime before/after AND file ID/volume/size/
+        # mtime before/open/after. Never accept swapped names or file contents.
+        return (info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns)
     def allowed_path():
         return (path.is_file() and not path.is_symlink() and
                 not getattr(path, "is_junction", lambda: False)() and
@@ -86,7 +92,7 @@ def installed_file_sha_locked(path: Path, root: Path, expected_size: int, expect
             if not stat.S_ISREG(opened.st_mode):
                 raise Hold("E07_INSTALLED_FILE_OPEN_NONREGULAR_HOLD")
             # Bounded, privacy-safe failure kind: never return local names or IDs.
-            fields = ("st_dev", "st_ino", "st_size", "st_mtime_ns", "st_ctime_ns")
+            fields = ("st_dev", "st_ino", "st_size", "st_mtime_ns")
             mismatch = [field.removeprefix("st_").upper() for field in fields
                         if getattr(before, field) != getattr(opened, field)]
             if mismatch:
@@ -94,10 +100,13 @@ def installed_file_sha_locked(path: Path, root: Path, expected_size: int, expect
             digest = hashlib.sha256()
             while block := os.read(fd, 1048576):
                 digest.update(block)
-            if identity(opened) != identity(os.fstat(fd)):
+            if descriptor_identity(opened) != descriptor_identity(os.fstat(fd)):
                 raise Hold("E07_INSTALLED_FILE_FD_MUTATED_HOLD")
-            if identity(opened) != identity(path.lstat()):
+            after = path.lstat()
+            if identity(before) != identity(after):
                 raise Hold("E07_INSTALLED_FILE_PATH_MUTATED_HOLD")
+            if descriptor_identity(opened) != descriptor_identity(after):
+                raise Hold("E07_INSTALLED_FILE_FD_PATH_MISMATCH_HOLD")
             if not allowed_path():
                 raise Hold("E07_INSTALLED_FILE_REPARSE_OR_ESCAPE_HOLD")
             if digest.hexdigest() != expected_digest:
