@@ -1,6 +1,0 @@
-NOX V16 E02 WOW5 candidate
-File: Packages/P02/wow/p02-five-wow.css
-Feature flag: data-nox-wow-five=on on existing .nox-p02-chat.
-CSS hooks: .nw-reply (live stream), .nw-model (verified model), .nw-evidence (real sources), .nw-file (stored attachment), .nw-dock (existing buttons).
-Owner #1: trusted chat markup. Owner #6: source-bound events.v3 wiring. Owner #7: final Windows QA.
-Reduced motion and ECO supported. No new dependencies, HOME changes or second browser. No Windows acceptance claim.

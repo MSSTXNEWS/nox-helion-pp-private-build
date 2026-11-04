@@ -53,7 +53,9 @@ def collect(owner, *, platform_name=None, env=None):
                   'T06_NSIS_DIAGNOSTICS_DISPOSABLE_WINDOWS_ONLY')
     failure_path = owner.OUTPUT / 'T06_INSTALLED_SMOKE.json'
     failure = owner.strict_receipt(failure_path, 'T06_NSIS_DIAGNOSTIC_RECEIPT_HOLD')
-    owner.require(failure.get('reason') == 'T06_NSIS_SILENT_INSTALL_FAILED' and
+    reason = failure.get('reason')
+    owner.require(reason in ('T06_NSIS_SILENT_INSTALL_FAILED',
+                             'T06_CONSERVATIVE_UNINSTALL_MANIFEST_FILE_REMAINS') and
                   failure.get('phase') == 'HOLD' and
                   failure.get('release_accepted') is False,
                   'T06_NSIS_DIAGNOSTICS_NO_MATCHING_FAILURE')
@@ -105,16 +107,25 @@ def collect(owner, *, platform_name=None, env=None):
     wow = system / 'SysWOW64/WindowsPowerShell/v1.0/powershell.exe'
     if system.is_absolute() and owner.plain_parents(wow, Path(system.anchor)) and owner.regular(wow):
         powershells.append(('x86', str(wow)))
-    stage = Path(str(install) + '.__p01_stage')
-    manifest = stage / 'payload.sha256.json'
-    if stage.is_dir() and owner.regular(manifest):
+    # A real /S uninstall failure leaves the installed slot, not the staging
+    # slot. Run the SAME pinned read-only C09 verifier against actual residue;
+    # never execute the remover or promote this diagnostic to acceptance.
+    uninstall = reason == 'T06_CONSERVATIVE_UNINSTALL_MANIFEST_FILE_REMAINS'
+    target = install if uninstall else Path(str(install) + '.__p01_stage')
+    manifest = target / 'payload.sha256.json'
+    if target.is_dir() and owner.regular(manifest):
         owner.require(owner.plain_parents(manifest, Path(local.anchor)),
                       'T06_NSIS_DIAGNOSTICS_MANIFEST_PATH_HOLD')
         for architecture, executable in powershells:
-            result = owner.run([executable, '-NoProfile', '-NonInteractive',
-                '-ExecutionPolicy', 'Bypass', '-File', str(verifier),
-                '-Root', str(stage), '-Manifest', str(manifest)], 100)
-            report['verifications'].append({'architecture': architecture, **result})
+            argv = [executable, '-NoProfile', '-NonInteractive',
+                    '-ExecutionPolicy', 'Bypass', '-File', str(verifier),
+                    '-Root', str(target), '-Manifest', str(manifest)]
+            if uninstall:
+                argv.append('-AllowInstalledMetadata')
+            result = owner.run(argv, 100)
+            report['verifications'].append({'architecture': architecture,
+                                            'target': 'installed' if uninstall else 'stage',
+                                            **result})
     return report
 
 

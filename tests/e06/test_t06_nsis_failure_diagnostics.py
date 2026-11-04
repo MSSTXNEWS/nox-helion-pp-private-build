@@ -67,6 +67,36 @@ class PostmortemGuards(unittest.TestCase):
         self.assertEqual((self.stage / 'payload.sha256.json').read_bytes(), before)
         self.assertEqual(timeout, 100)
 
+    def test_real_conservative_uninstall_failure_probes_only_installed_payload(self):
+        # Reproduce the actual 41767729413 /S uninstall residue class.
+        installed = self.local / 'Programs/NOX HELION'
+        installed.mkdir()
+        manifest = installed / 'payload.sha256.json'
+        manifest.write_text('{}')
+        before = manifest.read_bytes()
+        self.failure['reason'] = 'T06_CONSERVATIVE_UNINSTALL_MANIFEST_FILE_REMAINS'
+        report = self.collect()
+        self.assertEqual(report['original_failure'], self.failure['reason'])
+        self.assertFalse(report['release_accepted'])
+        self.assertEqual(report['phase'], 'DIAGNOSTIC_ONLY')
+        self.assertEqual(report['verifications'][0]['target'], 'installed')
+        self.assertEqual(len(self.calls), 1)
+        argv, timeout = self.calls[0]
+        self.assertEqual(timeout, 100)
+        self.assertEqual(argv[0], 'powershell.exe')
+        self.assertEqual(argv[argv.index('-Root') + 1], str(installed))
+        self.assertEqual(argv[argv.index('-Manifest') + 1], str(manifest))
+        self.assertIn('-AllowInstalledMetadata', argv)
+        self.assertNotIn('/S', argv)
+        self.assertNotIn('Remove-InstalledPayload.ps1', ' '.join(argv))
+        self.assertEqual(manifest.read_bytes(), before)
+
+    def test_uninstall_missing_installed_manifest_never_probes_stage(self):
+        self.failure['reason'] = 'T06_CONSERVATIVE_UNINSTALL_MANIFEST_FILE_REMAINS'
+        result = self.collect()
+        self.assertEqual(result['verifications'], [])
+        self.assertEqual(self.calls, [])
+
     def test_requires_explicit_disposable_windows_environment(self):
         for key in ('GITHUB_ACTIONS', 'RUNNER_OS', 'NOX_E07_CI_WINDOWS_DISPOSABLE', 'GITHUB_RUN_ID'):
             with self.subTest(key=key):
