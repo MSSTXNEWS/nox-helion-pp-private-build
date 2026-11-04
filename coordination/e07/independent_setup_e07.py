@@ -29,6 +29,10 @@ SETUP_SIZE = 169665062
 RECEIPT_SCHEMA = "nox.express.onehost.same-sha.v1"
 PROTOCOL = "NOX-P02-NATIVE-v1"
 
+FINAL_VISUAL_SCHEMA = "NOX-E07-FINAL-VISUAL-v1"
+FINAL_FUNCTION_SCHEMA = "NOX-E07-FINAL-FUNCTIONS-v1"
+FINAL_FUNCTIONS = ("INSTALL", "MODELS", "LEARN", "SETTINGS")
+
 class Hold(RuntimeError):
     """Fail-closed gate with a bounded public reason code."""
 
@@ -1137,6 +1141,68 @@ def installed_live_qwen_gates(backend: Path) -> dict:
             "release_accepted": False}
 
 
+
+def evaluate_final_acceptance(visual: object, functions: object, *,
+                              source_sha: str, setup_sha: str) -> dict:
+    """Admit release only from two same-Setup, bounded physical acceptance receipts.
+
+    This function never manufactures visual/function PASS. Both receipts must
+    be independently produced against the immutable candidate and remain
+    non-release subreceipts until this final gate binds them together.
+    """
+    require(type(visual) is dict and visual.get("schema") == FINAL_VISUAL_SCHEMA,
+            "E07_FINAL_VISUAL_RECEIPT_SCHEMA_HOLD")
+    require(visual.get("source_sha") == source_sha and
+            visual.get("setup_sha256") == setup_sha and
+            visual.get("release_accepted") is False,
+            "E07_FINAL_VISUAL_IDENTITY_HOLD")
+    require(visual.get("physical_capture") == "PASS" and
+            visual.get("d02_visual") == "PASS" and
+            visual.get("adaptive_layout") == "PASS" and
+            visual.get("reduced_motion") == "PASS" and
+            type(visual.get("screenshot_sha256")) is str and
+            re.fullmatch(r"[0-9a-f]{64}", visual["screenshot_sha256"]) is not None,
+            "E07_FINAL_VISUAL_ACCEPTANCE_HOLD")
+
+    require(type(functions) is dict and
+            functions.get("schema") == FINAL_FUNCTION_SCHEMA,
+            "E07_FINAL_FUNCTION_RECEIPT_SCHEMA_HOLD")
+    require(functions.get("source_sha") == source_sha and
+            functions.get("setup_sha256") == setup_sha and
+            functions.get("release_accepted") is False,
+            "E07_FINAL_FUNCTION_IDENTITY_HOLD")
+    actions = functions.get("actions")
+    require(type(actions) is dict and set(actions) == set(FINAL_FUNCTIONS),
+            "E07_FINAL_FUNCTION_SET_HOLD")
+    accepted = {}
+    for action in FINAL_FUNCTIONS:
+        item = actions[action]
+        require(type(item) is dict and
+                item.get("function_verified") == "PASS" and
+                item.get("permissions_verified") == "PASS" and
+                item.get("result") == "PASS" and
+                type(item.get("receipt_sha256")) is str and
+                re.fullmatch(r"[0-9a-f]{64}", item["receipt_sha256"]) is not None,
+                "E07_FINAL_" + action + "_FUNCTION_HOLD")
+        accepted[action] = "PASS"
+    return {
+        "status": "PASS",
+        "source_sha": source_sha,
+        "setup_sha256": setup_sha,
+        "visual": "PASS",
+        "adaptive_layout": "PASS",
+        "reduced_motion": "PASS",
+        "privileged_functions": accepted,
+        "scope": "SAME_SETUP_VISUAL_AND_FUNCTION_ACCEPTANCE",
+    }
+
+
+def load_final_acceptance_receipt(path: Path | None, code: str) -> dict:
+    """Read only a small regular JSON subreceipt; no missing/stale evidence is accepted."""
+    require(path is not None and clean_file(path) and
+            1 <= path.stat().st_size <= 1048576, code)
+    return _read_locked_e06_json(path)
+
 def verify_uninstall_no_loss(install: Path, stage: Path, previous: Path,
                              tracked: tuple[Path, ...], witness: Path,
                              expected: bytes) -> None:
@@ -1264,6 +1330,8 @@ def main() -> int:
     p.add_argument("--artifact-dir",required=True,type=Path)
     p.add_argument("--artifact-kind",choices=("d02","original","original-e888","original-30a"),default="d02")
     p.add_argument("--out",required=True,type=Path)
+    p.add_argument("--visual-receipt",type=Path)
+    p.add_argument("--function-receipt",type=Path)
     args=p.parse_args()
     frozen_ids = {
         "original": (ORIGINAL_E06_SOURCE, ORIGINAL_E06_SETUP_SHA),
@@ -1319,9 +1387,19 @@ def main() -> int:
         live = result["checks"].get("installed_live_qwen_stream_stop_sqlite")
         require(type(live) is dict and live.get("status") == "PASS",
                 "E07_LIVE_QWEN_STREAM_STOP_SQLITE_NOT_ACCEPTED")
-        # Real installed Qwen and five navigation invocations do not certify
-        # D02 pixels or privileged INSTALL/LEARN/SETTINGS actions.
-        result["error"] = "E07_VISUAL_AND_PRIVILEGED_FUNCTION_ACCEPTANCE_NOT_TESTED"
+        # Final release is admitted only when independently produced same-Setup
+        # visual and functional subreceipts are supplied and pass strict shape,
+        # identity and per-action checks. Missing evidence stays HOLD.
+        visual_receipt = load_final_acceptance_receipt(
+            args.visual_receipt, "E07_FINAL_VISUAL_RECEIPT_NOT_PROVIDED")
+        function_receipt = load_final_acceptance_receipt(
+            args.function_receipt, "E07_FINAL_FUNCTION_RECEIPT_NOT_PROVIDED")
+        result["checks"]["final_acceptance"] = evaluate_final_acceptance(
+            visual_receipt, function_receipt,
+            source_sha=source_sha, setup_sha=setup_sha)
+        result["release_accepted"] = True
+        result["independent_e07"] = "PASS"
+        result["error"] = None
     except (Hold,FileNotFoundError,ValueError,TimeoutError,
             subprocess.TimeoutExpired,PermissionError) as exc:
         result["error"]=(str(exc) if isinstance(exc,Hold) else
