@@ -75,12 +75,12 @@ try {
    # WebView2 UIA may omit the subtitle or normalize Cyrillic punctuation;
    # accept only the canonical full approved label or its EXACT source title.
    # Never fuzzy-match arbitrary controls, and never relax uniqueness/pressed state.
-   $base=($label -split '\\s+—\\s+')[0]
-   $canonical=[regex]::Replace($label.ToUpperInvariant(),'[^\\p{L}\\p{N}]+',' ').Trim()
-   $short=[regex]::Replace($base.ToUpperInvariant(),'[^\\p{L}\\p{N}]+',' ').Trim()
+   $base=($label -split '\s+—\s+')[0]
+   $canonical=[regex]::Replace($label.ToUpperInvariant(),'[^\p{L}\p{N}]+',' ').Trim()
+   $short=[regex]::Replace($base.ToUpperInvariant(),'[^\p{L}\p{N}]+',' ').Trim()
    $matches=@()
    foreach($item in $nodes){
-     $accessible=[regex]::Replace(($item.Current.Name+'').ToUpperInvariant(),'[^\\p{L}\\p{N}]+',' ').Trim()
+     $accessible=[regex]::Replace(($item.Current.Name+'').ToUpperInvariant(),'[^\p{L}\p{N}]+',' ').Trim()
      if($accessible -ceq $canonical -or $accessible -ceq $short){$matches+=,$item}
    }
    if($matches.Count -ne 1){
