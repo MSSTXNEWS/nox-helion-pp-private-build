@@ -1,0 +1,56 @@
+name: NOX full D02 original Setup independent five real UIA - NOT full E07
+on:
+  push:
+    branches: [integration/nox-v16-unified-candidate-20261028-r01]
+    paths:
+      - .github/workflows/nox-full-d02-five-uia-physical.yml
+      - coordination/e07/probe_full_d02_5uia_u09.py
+      - tests/e07/test_full_d02_5uia_u09.py
+permissions:
+  actions: read
+  contents: read
+concurrency:
+  group: nox-full-d02-five-uia
+  cancel-in-progress: false
+jobs:
+  physical-d02-five-uia:
+    runs-on: windows-2022
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12.10'
+          architecture: x64
+          check-latest: false
+      - name: Fail-closed source checks before downloading already-built Setup
+        shell: pwsh
+        run: |
+          python -B -m py_compile coordination/e07/independent_setup_e07.py coordination/e07/probe_full_d02_5uia_u09.py
+          if ($LASTEXITCODE -ne 0) { throw 'D02_QA_PYTHON_SYNTAX_HOLD' }
+          python -B -m unittest discover -s tests/e07 -p test_full_d02_5uia_u09.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'D02_QA_SOURCE_TEST_HOLD' }
+          python -B -m unittest discover -s tests/e07 -p test_probe_five_primary_action_u06.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'U06_FIVE_UIA_TEST_HOLD' }
+      - uses: actions/download-artifact@v4
+        with:
+          run-id: 41818231793
+          github-token: ${{ github.token }}
+          name: nox-v16-e06-onehost-diagnostic-41818231793
+          path: input/full-d02
+      - name: Real installed D02 GUI UIA actions plus update rollback uninstall
+        id: physical
+        shell: pwsh
+        run: |
+          python -B coordination/e07/probe_full_d02_5uia_u09.py --artifact-dir input/full-d02 --out work/full-d02/E07_FIVE_UIA.json
+          if ($LASTEXITCODE -ne 0) { throw 'D02_REAL_FIVE_UIA_HOLD_NOT_RELEASE' }
+      - name: Preserve receipt even for HOLD
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: NOX-FULL-D02-FIVE-UIA
+          path: work/full-d02/E07_FIVE_UIA.json
+          if-no-files-found: warn
+          retention-days: 14
