@@ -1,0 +1,158 @@
+name: NOX U04 ORIGINAL corrected CHAT physical UIA first-failure witness
+on:
+  push:
+    branches: [integration/nox-v16-unified-candidate-20261028-r01]
+    paths:
+      - .github/workflows/nox-original-chat-witness-u04.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: nox-u04-original-chat-witness-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  native-original-chat-witness:
+    if: github.repository == 'MSSTXNEWS/nox-helion-pp-private-build'
+    runs-on: windows-2022
+    timeout-minutes: 30
+    steps:
+      - name: Checkout pinned QA source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Python 3.12 on actual Windows runner
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12.10'
+          architecture: x64
+          check-latest: false
+      - name: Python syntax and existing strict five-button regressions
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          python -B -m py_compile coordination/e07/probe_five_primary_action.py coordination/e07/independent_setup_e07.py
+          if ($LASTEXITCODE -ne 0) { throw 'U04_ORIGINAL_SOURCE_SYNTAX_HOLD' }
+          python -B -m unittest discover -s tests/e07 -p test_probe_five_primary_action_u06.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'U04_ORIGINAL_FIVE_BUTTON_REGRESSION_HOLD' }
+      - name: Download one immutable original five-SETTINGS producer artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          run-id: 41825380857
+          name: NOX-EXPRESS-ONEHOST-fbbe084c23eb1ea2462814b6d5bfded5ff6951c6
+          github-token: ${{ github.token }}
+          path: pinned
+      - name: Physically SHA-verify the original Setup receipt before installation
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $src='fbbe084c23eb1ea2462814b6d5bfded5ff6951c6'
+          $sha='b658756ca5969536fb2d294038b58c6a6948694b13ebd596efdfc04b5ec7f908'
+          $root=Join-Path $PWD 'pinned'
+          $file=Join-Path $root 'NOX_HELION_EXPRESS_CANDIDATE_SETUP.exe'
+          $receipt=Join-Path $root 'BUILD_RECEIPT.json'
+          if (-not (Test-Path -LiteralPath $file -PathType Leaf) -or -not (Test-Path -LiteralPath $receipt -PathType Leaf)) { throw 'U04_ORIGINAL_PRODUCER_FILES_MISSING' }
+          if ((Get-Item -LiteralPath $file -Force).Attributes -band [IO.FileAttributes]::ReparsePoint) { throw 'U04_ORIGINAL_PRODUCER_REPARSE_HOLD' }
+          $r=Get-Content -LiteralPath $receipt -Raw -Encoding UTF8 | ConvertFrom-Json
+          if ($r.source_commit -cne $src -or $r.setup_sha256 -cne $sha -or $r.physical_setup_built -ne $true -or $r.release_accepted -ne $false) { throw 'U04_ORIGINAL_PRODUCER_RECEIPT_HOLD' }
+          if ((Get-Item -LiteralPath $file).Length -ne 87336473 -or [long]$r.setup_bytes -ne 87336473) { throw 'U04_ORIGINAL_PRODUCER_BYTES_HOLD' }
+          if ((Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash.ToLowerInvariant() -cne $sha) { throw 'U04_ORIGINAL_SETUP_SHA_HOLD' }
+          Write-Host "U04_PHYSICAL_ORIGINAL_SHA_PASS=$sha SOURCE=$src BYTES=87336473 E07=HOLD"
+      - name: Silent actual NSIS install of pinned candidate
+        shell: pwsh
+        timeout-minutes: 8
+        run: |
+          $ErrorActionPreference='Stop'
+          $exe=(Resolve-Path 'pinned/NOX_HELION_EXPRESS_CANDIDATE_SETUP.exe').Path
+          $p=Start-Process -FilePath $exe -ArgumentList '/S' -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "U04_ORIGINAL_NSIS_INSTALL_EXIT_$($p.ExitCode)" }
+          Write-Host 'U04_ORIGINAL_SETUP_INSTALLED_NOT_E07'
+      - name: Capture bounded native CHAT InvokePattern and actual heading witness even on HOLD
+        id: witness
+        shell: pwsh
+        timeout-minutes: 8
+        run: |
+          $ErrorActionPreference='Stop'
+          $env:PYTHONIOENCODING='utf-8'
+          @'
+          import json, os, sys
+          from pathlib import Path
+          sys.path.insert(0, 'coordination/e07')
+          import probe_five_primary_action as qa
+          out=Path('work/e07-u04/CHAT_FIRSTFAIL_WITNESS.json')
+          out.parent.mkdir(parents=True,exist_ok=True)
+          src='fbbe084c23eb1ea2462814b6d5bfded5ff6951c6'
+          sha='b658756ca5969536fb2d294038b58c6a6948694b13ebd596efdfc04b5ec7f908'
+          report={'schema':'NOX-U04-ORIGINAL-CHAT-UIA-FIRSTFAIL-v1',
+                  'source_sha':src,'setup_sha256':sha,'release_accepted':False,
+                  'e07_10_of_10':'HOLD','status':'HOLD','error':'NOT_RUN'}
+          def enum(value, allowed):
+              return value if type(value) is str and value in allowed else 'UNVERIFIED'
+          def code(value):
+              import re
+              return value[:100] if type(value) is str and len(value)<=100 and re.fullmatch(r'[A-Z0-9_]+',value) else 'REDACTED'
+          try:
+              qa.require(sys.platform=='win32' and os.environ.get('GITHUB_ACTIONS')=='true' and
+                         os.environ.get('RUNNER_OS')=='Windows' and
+                         os.environ.get('RUNNER_ENVIRONMENT')=='github-hosted' and
+                         os.environ.get('GITHUB_REPOSITORY')=='MSSTXNEWS/nox-helion-pp-private-build',
+                         'U04_UNAUTHORIZED_WINDOWS_RUNNER_HOLD')
+              identity=qa.checked_source_setup(Path('pinned'),src,sha)
+              local=Path(os.environ['LOCALAPPDATA'])
+              installed=local/'Programs'/'NOX HELION'
+              qa.require(qa.clean_dir(installed),'U04_INSTALLED_ROOT_HOLD')
+              _, owned=qa.manifest_owner(installed)
+              qa.require(installed/'NOX.P01.Shell.exe' in owned,'U04_ORIGINAL_WPF_UNOWNED_HOLD')
+              report['installed_manifest_count']=len(owned)
+              report['physical_setup_source_bound']=identity
+              witness=qa.gui_hwnd(installed/'NOX.P01.Shell.exe',local,safe_nav=True)
+              buttons=witness.get('five_primary_buttons') or {}
+              chat=witness.get('ui_chat_action_probe') or {}
+              nav=witness.get('ui_safe_primary_navigation') or {}
+              PRIMARY=tuple(qa.PRIMARY)
+              report['buttons']={'status':enum(buttons.get('status'),('PASS','HOLD')),
+                                 'present':[name for name in PRIMARY if name in (buttons.get('buttons_present') or [])],
+                                 'missing':[name for name in PRIMARY if name in (buttons.get('buttons_missing') or [])],
+                                 'uia_tree_scanned':buttons.get('uia_tree_scanned') if type(buttons.get('uia_tree_scanned')) is int else None}
+              report['chat']={'actions_invoked':chat.get('actions_invoked') if type(chat.get('actions_invoked')) is int else None,
+                              'method':enum(chat.get('method'),('NATIVE_UIA_INVOKEPATTERN','UNVERIFIED')),
+                              'navigation_verified':enum(chat.get('navigation_verified'),('PASS','NOT_TESTED','HOLD')),
+                              'navigation_proof':enum(chat.get('navigation_proof'),('NEW_VISIBLE_UIA_CHAT_HEADING','NONE','UNVERIFIED')),
+                              'error_code':code(chat.get('error')) if 'error' in chat else None}
+              each=nav.get('per_action') if type(nav.get('per_action')) is dict else {}
+              report['four_nav']={'actions_invoked':nav.get('actions_invoked') if type(nav.get('actions_invoked')) is int else None,
+                                  'navigation_verified':enum(nav.get('navigation_verified'),('PASS','NOT_TESTED','HOLD')),
+                                  'error_code':code(nav.get('error')) if 'error' in nav else None,
+                                  'per_action':{name:{
+                                    'button_actuated':enum((each.get(name) or {}).get('button_actuated'),('OBSERVED','NOT_TESTED','HOLD')),
+                                    'navigation_verified':enum((each.get(name) or {}).get('navigation_verified'),('PASS','NOT_TESTED','HOLD'))}
+                                    for name in PRIMARY[1:]}}
+              # Existing strict evaluator remains authoritative: never weaken a real UIA gate.
+              gate=qa.evaluate(witness)
+              report['status']='PASS_FIVE_UIA_NAV_ONLY'
+              report['error']=None
+              report['five_real_click_gate']=gate
+          except (qa.Hold,OSError,ValueError,KeyError,TimeoutError) as exc:
+              report['error']=code(str(exc)) if isinstance(exc,qa.Hold) else 'U04_'+type(exc).__name__.upper()+'_HOLD'
+          finally:
+              out.write_text(json.dumps(report,sort_keys=True,indent=2,ensure_ascii=True),encoding='utf-8')
+              print('NOX_U04_ORIGINAL_UIA_FIRSTFAIL '+report['status']+' '+str(report['error']),flush=True)
+          sys.exit(0 if report['status']=='PASS_FIVE_UIA_NAV_ONLY' else 1)
+          '@ | python -B -
+          if ($LASTEXITCODE -ne 0) { throw 'U04_PHYSICAL_CHAT_FIRST_FAILURE_HOLD_READ_ARTIFACT' }
+      - name: Preserve actual redacted witness on PASS or HOLD
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: NOX-U04-CHAT-FIRSTFAIL-${{ github.run_id }}
+          path: work/e07-u04/CHAT_FIRSTFAIL_WITNESS.json
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Never promote any GUI click witness to Qwen or E07 acceptance
+        if: always()
+        shell: pwsh
+        run: |
+          Write-Host 'QWEN_REAL_INFERENCE_ON_THIS_SOURCE=NOT_TESTED'
+          Write-Host 'INDEPENDENT_E07_10_OF_10=HOLD'
+          Write-Host 'NOX_RELEASE_ACCEPTED=false'
+          if ('${{ steps.witness.outcome }}' -ne 'success') { throw 'U04_GUI_CLICK_UNACCEPTED_FIRST_FAILURE' }
