@@ -382,9 +382,14 @@ function liveChat(label){
    // The trusted WebView2 route may report STOP_REQUESTED, not a finished
    // chat. A generic COMPLETED / embedded provider HOLD is not STOP ACK.
    const owner=r?.result;
+   // A real transport STOP_REQUESTED can acknowledge a request, but an outer
+   // provider/consent/owner denial must never be presented as accepted STOP.
+   // Normalize only its expected transport state for strict owner validation.
+   const stopTransport={...r,state:'COMPLETED',
+    status:r?.status==='STOP_REQUESTED'?'COMPLETED':r?.status};
    const acknowledged=r?.routeId==='chat.stop' &&
     (r.state==='STOP_REQUESTED'||r.state==='COMPLETED'&&owner?.ack===true) &&
-    (r.errorCode==null||r.errorCode==='') && r.ack!==false &&
+    !nativeOwnerReceiptHolds(stopTransport) &&
     (owner==null||!nativeOwnerReceiptHolds(owner));
    // A late STOP receipt must never overwrite a completed/removed chat.
    if(info.isConnected&&epoch===chatEpoch&&chatInFlight)
