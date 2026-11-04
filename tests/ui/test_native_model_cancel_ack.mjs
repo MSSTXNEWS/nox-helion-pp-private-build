@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
-import {nativeModelCancelAck,nativeOwnerReceiptHolds} from '../../ui/onehost-menu-bindings.mjs';
+import {nativeModelCancelAck,nativeOwnerReceiptHolds,nativeCompletedOwnerReply,nativeOwnerActionReceipt} from '../../ui/onehost-menu-bindings.mjs';
 
 const jobId='job-17';
 test('P03 native cancel only confirms exact real job and approved owner receipt',()=>{
@@ -71,4 +71,18 @@ test('native owner rejects pending privilege, SID and consent states while retai
   }
   for(const state of ['COMPLETED','QUEUED','IN_PROGRESS','READY'])
     assert.equal(nativeOwnerReceiptHolds({state,ok:true,ack:true}),false,state);
+});
+
+test('G2 native owner explicit errorMessage/error_message cannot be privileged ACK',()=>{
+  for(const field of ['errorMessage','error_message']){
+    for(const denial of ['CONSENT_REQUIRED','ACL_DENIED',{code:'PROVIDER_OFFLINE_HOLD'}]){
+      const owner={ok:true,ack:true,run_id:'S03-original-1',source_head:'a'.repeat(40),[field]:denial};
+      const reply={routeId:'chat.commands',state:'COMPLETED',result:owner};
+      assert.equal(nativeOwnerReceiptHolds(owner),true,field+' receipt denial');
+      assert.equal(nativeCompletedOwnerReply(reply),false,field+' transport denial');
+      assert.equal(nativeOwnerActionReceipt(reply,'chat.commands','selfbuilder.propose').ack,false,field+' owner denial');
+    }
+    const owner={ok:true,ack:true,run_id:'S03-original-1',source_head:'a'.repeat(40),[field]:''};
+    assert.equal(nativeOwnerReceiptHolds(owner),false,field+' empty error keeps valid receipt');
+  }
 });

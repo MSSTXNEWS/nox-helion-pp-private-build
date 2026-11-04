@@ -125,7 +125,8 @@ export function nativeOwnerReceiptHolds(owner) {
       owner.errorCode!=null && String(owner.errorCode).trim()!=='') return true;
   // Native owner/provider failures may use snake_case or an error field.
   // A COMPLETED transport carrying either is never an accepted owner result.
-  for (const key of ['error','error_code']) {
+  // Native errorMessage/error_message are error envelopes too, never owner consent.
+  for (const key of ['error','error_code','errorMessage','error_message']) {
     if (Object.prototype.hasOwnProperty.call(owner,key) && owner[key]!=null &&
         (typeof owner[key]!=='string' || owner[key].trim()!=='')) return true;
   }
