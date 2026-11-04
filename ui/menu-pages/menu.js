@@ -132,8 +132,8 @@ function liveChat(label){
  surface.append(heading,el('p','nox-chat-label','ЯДРО'),coreRow,el('p','nox-chat-label','ПЕРСОНА'),personaRow,
   el('p','nox-chat-label','УСТАНОВЛЕННЫЕ МОДЕЛИ'),modelsRow,log,form,info);
  setDetails(top,surface);
- let core='core.core',persona='persona.kairen_voss',model='',chatEpoch=0;
- const enabled=()=>!!client&&!!model&&!chatInFlight;
+ let core='core.core',persona='persona.kairen_voss',model='',chatEpoch=0,modelSelectionPending=false;
+ const enabled=()=>!!client&&!!model&&!chatInFlight&&!modelSelectionPending;
  const redraw=()=>{send.disabled=!enabled();stop.disabled=!client||!chatInFlight||chatStopPending;};
  function chips(parent,items,current,onSelect){
   parent.replaceChildren();
@@ -161,16 +161,20 @@ function liveChat(label){
     if(!names.length)modelsRow.append(el('span','nox-chat-empty','Модели не установлены · откройте MODELS'));
     for(const name of names){
      const b=button(name,'nox-chat-chip',async()=>{
-      if(chatInFlight)return;
-      b.disabled=true;info.textContent='Выбор модели проверяется ядром...';
+      // Serialize native selections: competing ACKs must not select a stale model.
+      if(chatInFlight||modelSelectionPending)return;
+      modelSelectionPending=true;
+      model=''; // Unknown until the native owner confirms this exact selection.
+      render();redraw();
+      info.textContent='Выбор модели проверяется ядром...';
       try{
        const a=await client.request('chat.model',{model:name});
        if(a?.state==='COMPLETED'&&a.result?.selectedModel===name){model=name;info.textContent='Модель подтверждена: '+name;}
        else info.textContent='HOLD · OneHost не подтвердил выбор модели';
       }catch{info.textContent='HOLD · нет подтверждения выбора модели';}
-      render();redraw();
+      finally{modelSelectionPending=false;render();redraw();}
      });
-     b.setAttribute('aria-pressed',String(name===model));b.disabled=chatInFlight;modelsRow.append(b);
+     b.setAttribute('aria-pressed',String(name===model));b.disabled=chatInFlight||modelSelectionPending;modelsRow.append(b);
     }
    };
    render();redraw();
