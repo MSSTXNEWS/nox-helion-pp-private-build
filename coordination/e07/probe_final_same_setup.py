@@ -320,6 +320,16 @@ function Normalize([string]$s) { return ($s+'').Trim().TrimStart([char[]]@([char
 # The original WPF window may expose a second CHAT button outside EXPRESS.
 # Select the unique *five-button horizontal dock*, not an arbitrary name match.
 # Every accepted element must be a real visible/enabled UIA Button in this HWND.
+# UIA may expose multiple wrappers of the same original native element.
+# Collapse ONLY Compare-identical controls; distinct original buttons stay
+# separate and still fail strict unique-five-dock admission.
+function SameElementSeen($items,$candidate) {
+ foreach($prior in $items) {
+  try { if([System.Windows.Automation.Automation]::Compare($prior,$candidate)) { return $true } }
+  catch { } # Failure to compare never implies identical elements.
+ }
+ return $false
+}
 function PrimaryDock {
  $names=@('CHAT','INSTALL','MODELS','LEARN','SETTINGS')
  $seen=@{};foreach($n in $names){$seen[$n]=New-Object System.Collections.ArrayList}
@@ -332,7 +342,9 @@ function PrimaryDock {
    if($name -notin $names -or -not (Visible $v)){continue}
    $rect=$v.BoundingRectangle
    if($rect.Width -lt 20 -or $rect.Height -lt 12){continue}
-   [void]$seen[$name].Add($el)
+   if(-not (SameElementSeen -items ($seen[$name]) -candidate $el)) {
+    [void]$seen[$name].Add($el)
+   }
   }catch{}
  }
  $clusters=New-Object System.Collections.ArrayList

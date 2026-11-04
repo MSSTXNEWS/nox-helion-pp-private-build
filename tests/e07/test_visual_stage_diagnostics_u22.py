@@ -56,6 +56,15 @@ class PhysicalVisualFailureStages(unittest.TestCase):
         self.assertIn("if($clusters.Count -ne 1)",script)
         self.assertIn("if($null -eq $rects){throw 'PRIMARY_DOCK_NOT_UNIQUE'}",script)
 
+    def test_identical_uia_wrappers_do_not_double_count_original_control(self):
+        script=probe._uia_script(12345,"VISUAL",png=Path("screenshot.png"))
+        self.assertIn("function SameElementSeen($items,$candidate)",script)
+        self.assertIn("[System.Windows.Automation.Automation]::Compare($prior,$candidate)",script)
+        self.assertIn("Failure to compare never implies identical elements",script)
+        self.assertIn("if(-not (SameElementSeen -items ($seen[$name]) -candidate $el))",script)
+        self.assertIn("if($matching.Count -ne 1)",script)
+        self.assertIn("if($clusters.Count -ne 1)",script)
+
     def test_release_gate_stays_strict(self):
         gate = (ROOT / "coordination/e07/independent_setup_e07.py").read_text(
             encoding="utf-8")
