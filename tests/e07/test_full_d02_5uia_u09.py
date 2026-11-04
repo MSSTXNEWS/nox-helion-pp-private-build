@@ -6,9 +6,9 @@ class U09(unittest.TestCase):
     def test_probe_syntax_and_pins(self):
         s=(R/"coordination/e07/probe_full_d02_5uia_u09.py").read_text()
         ast.parse(s)
-        for v in ("7b3d22d5d607abf9b9d478d82507f33153c23d9f",
-                  "71fb254ae8feeefb49f4830e57974c8be59b96f1b049915edd9eaa09714d4092",
-                  "NOX-V16-4250d24270a1db1573c6979c",
+        for v in ("dbda3c0e6cd529cdcfbb031994a3e0ac699d2a5a",
+                  "0fd80b7bb55fcbd60fe22971ea9292cadeaa6f99f9d174b38c205f7cea3989ab",
+                  "NOX-V16-d990509dfd4a6460a21213e7",
                   "source_receipts_729_parity_verified",
                   "samevm_lifecycle_verified",
                   "installed_file_sha_locked"):

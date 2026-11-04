@@ -36,9 +36,9 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'U06_FIVE_UIA_TEST_HOLD' }
       - uses: actions/download-artifact@v4
         with:
-          run-id: 41818231793
+          run-id: 41827407408
           github-token: ${{ github.token }}
-          name: nox-v16-e06-onehost-diagnostic-41818231793
+          name: nox-v16-e06-onehost-diagnostic-41827407408
           path: input/full-d02
       - name: Real installed D02 GUI UIA actions plus update rollback uninstall
         id: physical

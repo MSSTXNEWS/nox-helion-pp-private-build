@@ -5,10 +5,10 @@ from pathlib import Path
 import independent_setup_e07 as e07
 from probe_five_primary_action import evaluate
 
-SOURCE="7b3d22d5d607abf9b9d478d82507f33153c23d9f"
-SETUP_SHA="71fb254ae8feeefb49f4830e57974c8be59b96f1b049915edd9eaa09714d4092"
-BYTES=169607287
-BUILDID="NOX-V16-4250d24270a1db1573c6979c"
+SOURCE="dbda3c0e6cd529cdcfbb031994a3e0ac699d2a5a"
+SETUP_SHA="0fd80b7bb55fcbd60fe22971ea9292cadeaa6f99f9d174b38c205f7cea3989ab"
+BYTES=169603017
+BUILDID="NOX-V16-d990509dfd4a6460a21213e7"
 def candidate(folder):
     root=folder/"e06"/"onehost-wow-diagnostic"
     setup=root/"NOX-HELION-V16-DIAGNOSTIC-SETUP.exe"
