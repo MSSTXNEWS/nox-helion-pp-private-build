@@ -580,3 +580,108 @@ body.nox-wow-eco .nox-orbit-stage .nox-eclipse .nox-cinema-orb__filaments::after
  #home .nox-quality-planet__sphere::before,
  #home .nox-quality-planet__sphere::after{display:none!important}
 }
+
+
+/* NOX PLANETARY WORLDS V2 STYLE — one translucent HUD, five visual planets,
+   independent palettes and real local scene-activity graph. No moving controls. */
+#home .nox-quality-dock__head{flex-wrap:wrap}
+#home .nox-quality-dock__toggle{
+ margin-left:auto;min-height:31px;padding:5px 12px;cursor:pointer;
+ border:1px solid rgba(160,217,239,.46);border-radius:99px;
+ background:linear-gradient(140deg,rgba(42,67,85,.58),rgba(13,18,27,.5));
+ color:#b9effb;font:700 10px/1.3 Segoe UI,sans-serif;letter-spacing:.07em;
+}
+#home .nox-quality-dock__toggle:hover,#home .nox-quality-dock__toggle:focus-visible{
+ border-color:#e4d2b5;box-shadow:0 0 12px rgba(130,204,233,.24);
+}
+#home .nox-quality-dock__toggle:focus-visible{outline:2px solid #bff4ff;outline-offset:3px}
+#home .nox-quality-world[hidden]{display:none!important}
+#home .nox-quality-world{
+ display:grid;gap:10px;margin-top:10px;padding:12px;
+ border:1px solid rgba(160,195,214,.30);border-radius:16px;
+ background:radial-gradient(ellipse at 85% -45%,rgba(126,89,178,.22),transparent 80%),
+ linear-gradient(150deg,rgba(11,17,30,.82),rgba(18,22,31,.83));
+ box-shadow:inset 0 1px rgba(249,244,227,.1);
+ color:#dbe6ed;max-height:min(42vh,320px);overflow-x:hidden;overflow-y:auto;
+ overscroll-behavior:contain;
+}
+#home .nox-quality-world__title{font:700 13px/1.4 Segoe UI,sans-serif;
+ letter-spacing:.06em;color:#f7dab0;margin:0}
+#home .nox-quality-world__summary{font:12px/1.5 Segoe UI,sans-serif;
+ color:#b2ccd7;margin:0;max-width:76ch}
+#home .nox-quality-world__palettes,
+#home .nox-quality-world__actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+#home .nox-quality-world__palette,#home .nox-quality-world__action{
+ display:flex;align-items:center;justify-content:center;gap:6px;min-width:0;
+ min-height:43px;padding:8px 10px;box-sizing:border-box;text-align:center;
+ border:1px solid rgba(153,194,210,.4);border-radius:12px;
+ background:linear-gradient(125deg,rgba(29,48,66,.78),rgba(12,18,29,.85));
+ color:#d4edf4;text-decoration:none;cursor:pointer;
+ font:700 11px/1.3 Segoe UI,sans-serif;letter-spacing:.02em;
+ transition:border-color .18s,box-shadow .18s,background .18s;
+}
+#home .nox-quality-world__palette[aria-pressed="true"]{
+ color:#ffe5bc;border-color:rgba(255,205,134,.82);
+ box-shadow:inset 0 0 13px rgba(247,174,93,.12),0 0 13px rgba(199,160,101,.21);
+}
+#home .nox-quality-world__palette:focus-visible,
+#home .nox-quality-world__action:focus-visible{
+ outline:2px solid #c3f5ff;outline-offset:2px;
+}
+#home .nox-quality-world__observatory{
+ display:flex;align-items:center;justify-content:space-between;gap:12px;
+ border:1px solid rgba(102,160,182,.24);border-radius:12px;
+ background:linear-gradient(90deg,rgba(18,39,53,.77),rgba(8,15,25,.86));
+ padding:8px 11px;min-height:48px;
+}
+#home .nox-quality-world__reading{
+ flex:1;max-width:70%;font:700 11px/1.4 ui-monospace,monospace;
+ color:#afedec;font-variant-numeric:tabular-nums;letter-spacing:.01em;
+ overflow-wrap:anywhere;
+}
+#home .nox-quality-world__spark{width:min(32%,220px);height:38px;flex-shrink:0;
+ color:#e2b988;filter:drop-shadow(0 0 5px #e8a65435)}
+#home[data-nox-planet-world="max_wow"] .nox-quality-world{
+ border-color:rgba(249,154,94,.37);
+ background:radial-gradient(ellipse at 18% 0,rgba(205,86,33,.24),transparent 63%),rgba(16,12,20,.93);
+}
+#home[data-nox-planet-world="cinema"] .nox-quality-world{
+ background:radial-gradient(ellipse at 84% 0,rgba(57,142,182,.3),transparent 68%),rgba(12,21,33,.92);
+}
+#home[data-nox-planet-world="eco"] .nox-quality-world{
+ background:radial-gradient(ellipse at 85% 0,rgba(64,132,105,.25),transparent 65%),rgba(10,23,23,.91);
+}
+#home[data-nox-planet-world="mini_start"] .nox-quality-world{
+ background:linear-gradient(145deg,rgba(25,29,39,.92),rgba(11,13,22,.96));
+ box-shadow:none;backdrop-filter:none;
+}
+#home[data-nox-planet-world="auto"] .nox-quality-world{
+ background:radial-gradient(ellipse at 85% 0,rgba(116,82,174,.29),transparent 72%),rgba(17,13,31,.94);
+}
+/* Template palettes modify BACKDROP tint only: text and all interactive
+   approved HELION / 8 CoreID textures retain their original identity. */
+#home[data-nox-planet-palette="ember"] .nox-cinema-film{filter:hue-rotate(-15deg) saturate(1.18);}
+#home[data-nox-planet-palette="aurora"] .nox-cinema-film{filter:hue-rotate(24deg) saturate(1.12);}
+#home[data-nox-planet-palette="ion"] .nox-cinema-film{filter:hue-rotate(54deg) saturate(1.19);}
+#home[data-nox-planet-palette="verdant"] .nox-cinema-film{filter:hue-rotate(95deg) saturate(.72);}
+#home[data-nox-planet-palette="slate"] .nox-cinema-film{filter:saturate(.35) brightness(.8);}
+#home[data-nox-planet-palette="obsidian"] .nox-cinema-film{filter:saturate(.5) contrast(1.12);}
+@media(max-width:660px){
+ #home .nox-quality-dock__head{gap:5px;}
+ #home .nox-quality-world{padding:8px;max-height:36vh}
+ #home .nox-quality-world__palettes{grid-template-columns:repeat(3,minmax(0,1fr))}
+ #home .nox-quality-world__actions{grid-template-columns:repeat(2,minmax(0,1fr))}
+ #home .nox-quality-world__action:last-child{grid-column:1/-1}
+ #home .nox-quality-world__palette,#home .nox-quality-world__action{min-height:39px;padding:7px 4px;font-size:9px}
+ #home .nox-quality-world__reading{font-size:10px}
+}
+@media(prefers-reduced-motion:reduce){
+ #home .nox-quality-world *,#home .nox-quality-world *::before,#home .nox-quality-world *::after{
+ animation:none!important;transition:none!important;
+ }
+}
+@media(forced-colors:active){
+ #home .nox-quality-world{background:Canvas;color:CanvasText;border:1px solid CanvasText}
+ #home .nox-quality-world__palette,#home .nox-quality-world__action{background:ButtonFace;color:ButtonText;border:1px solid ButtonText}
+ #home .nox-quality-world__reading{color:CanvasText}
+}
