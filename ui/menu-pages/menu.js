@@ -210,8 +210,14 @@ function liveChat(label){
    if(!isNativeChatTerminal(reply))return;
    chatInFlight=false;chatStopPending=false;
    if(!info.isConnected)return;
-   if(reply.state==='COMPLETED'&&typeof reply.result?.answer==='string')replyRow.textContent=reply.result.answer.slice(0,100000);
-   info.textContent=reply.state==='COMPLETED'?'COMPLETED · ответ локальной модели':'HOLD · '+(reply.errorCode||'операция отклонена');
+   // A native terminal envelope is not proof of generated text. Accept only
+   // actual nonempty native answer or already received native stream bytes.
+   const answer=typeof reply.result?.answer==='string'?reply.result.answer:'';
+   const streamed=replyRow.textContent.trim().length>0;
+   const generated=reply.state==='COMPLETED'&&(answer.trim().length>0||streamed);
+   if(generated&&answer.trim())replyRow.textContent=answer.slice(0,100000);
+   info.textContent=generated?'COMPLETED · ответ локальной модели':
+     'HOLD · '+(reply.state==='COMPLETED'?'нативное завершение без текста':(reply.errorCode||'операция отклонена'));
    redraw();chips(coreRow,cores,core,chooseCore);chips(personaRow,personas,persona,choosePersona);
   }
   try{
