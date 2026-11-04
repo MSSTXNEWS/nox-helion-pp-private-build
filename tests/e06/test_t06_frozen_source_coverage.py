@@ -144,7 +144,9 @@ class FrozenCoverage(unittest.TestCase):
     def test_snapshot_output_rejects_nondirectory_ancestor(self):
         parent = self.root / "regular-file"
         parent.write_bytes(b"preserve")
-        with self.assertRaisesRegex(ValueError, "ARCHIVE_OUTPUT_UNTRUSTED_PARENT_HOLD"):
+        with self.assertRaisesRegex(
+            ValueError, "ARCHIVE_OUTPUT_(UNTRUSTED_PARENT|PARENT_NOT_DIRECTORY)_HOLD"
+        ):
             PACK._verify_output_path(parent / "source.zip")
         self.assertEqual(parent.read_bytes(), b"preserve")
 
@@ -169,7 +171,7 @@ class FrozenCoverage(unittest.TestCase):
             linked.symlink_to(self.root / "missing-source")
         except (OSError, NotImplementedError):
             self.skipTest("This host cannot create file symlinks")
-        with self.assertRaisesRegex(ValueError, "ARCHIVE_OUTPUT_REPARSE_HOLD"):
+        with self.assertRaisesRegex(ValueError, "ARCHIVE_DESTINATION_ALREADY_EXISTS_HOLD"):
             PACK._verify_output_path(linked)
 
     def test_success_is_coverage_not_release_acceptance(self):

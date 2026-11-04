@@ -77,12 +77,12 @@ def _verify_output_path(destination: Path) -> None:
             continue
         except (NotADirectoryError, PermissionError) as exc:
             raise ValueError("ARCHIVE_OUTPUT_UNTRUSTED_PARENT_HOLD") from exc
+        if node == destination:
+            raise ValueError("ARCHIVE_DESTINATION_ALREADY_EXISTS_HOLD")
         if (stat.S_ISLNK(meta.st_mode) or
                 getattr(meta, "st_file_attributes", 0) & 0x400 or
                 getattr(node, "is_junction", lambda: False)()):
             raise ValueError("ARCHIVE_OUTPUT_REPARSE_HOLD: " + str(node))
-        if node == destination:
-            raise ValueError("ARCHIVE_DESTINATION_ALREADY_EXISTS_HOLD")
         if not stat.S_ISDIR(meta.st_mode):
             raise ValueError("ARCHIVE_OUTPUT_PARENT_NOT_DIRECTORY_HOLD: " + str(node))
 
