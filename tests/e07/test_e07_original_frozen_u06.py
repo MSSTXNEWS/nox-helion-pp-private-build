@@ -79,5 +79,8 @@ class FrozenOriginalU06(unittest.TestCase):
     def test_release_stays_hold(self):
         script=(ROOT/"coordination/e07/independent_setup_e07.py").read_text(encoding="utf-8")
         self.assertIn('"release_accepted":False}',script)
-        self.assertIn('result["error"]="E07_REAL_MODEL_AND_VISUAL_ACCEPTANCE_NOT_COMPLETE"',script)
+        self.assertIn('"release_accepted":False,"independent_e07":"HOLD"',script)
+        self.assertIn('result["checks"]["installed_five_primary_actions"] = evaluate_primary(',script)
+        self.assertIn('E07_LIVE_INFERENCE_AND_VISUAL_CAPTURE_NOT_TESTED',script)
+        self.assertIn('return 0 if result["independent_e07"]=="PASS" else 1',script)
 if __name__=="__main__": unittest.main()
