@@ -164,7 +164,7 @@ class IndependentE07(unittest.TestCase):
             with patch.object(MOD.os,'open',side_effect=deny_only_payload):
                 with self.assertRaisesRegex(MOD.Hold,
                                             'E07_INSTALLED_FILE_IO_13_HOLD'):
-                    MOD.installed_file_sha_locked(payload,root,7,
+                    MOD.installed_file_sha_locked(payload,root.resolve(strict=True),7,
                         hashlib.sha256(b'payload').hexdigest())
             self.assertEqual(payload.read_bytes(),b'payload')
 
