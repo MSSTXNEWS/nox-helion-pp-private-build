@@ -30,3 +30,47 @@
 @media(max-width:650px){.tool-source-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:360px){.tool-source-grid{grid-template-columns:1fr}}
 @media(prefers-reduced-motion:reduce){.tool-source-card{transition:none!important}.tool-source-card:hover{transform:none!important}}
+
+
+/* NOX OBSERVATORY UPlot V1 — real host data, no synthetic telemetry.
+ * Original uPlot MIT distribution is pinned and bundled locally. */
+.nox-observatory{--obs-line:rgba(130,222,235,.5);position:relative;margin:0 0 15px;
+ padding:18px 20px;border:1px solid rgba(147,202,221,.36);border-radius:19px;
+ background:radial-gradient(ellipse 70% 80% at 22% 2%,rgba(58,103,135,.27),transparent 77%),
+  radial-gradient(ellipse at 94% 90%,rgba(121,62,88,.12),transparent 55%),
+  linear-gradient(145deg,rgba(7,16,29,.93),rgba(9,10,18,.94));
+ box-shadow:inset 0 1px rgba(211,242,255,.12),0 13px 28px rgba(0,0,0,.22);
+ isolation:isolate}
+.observatory-head{display:flex;gap:10px;justify-content:space-between;align-items:center;flex-wrap:wrap}
+.observatory-head h3{margin:5px 0;font-size:17px;color:#d0f1f6;letter-spacing:.05em}
+.observatory-state{font:700 10px/1.4 Segoe UI,sans-serif;color:#aec6d2;letter-spacing:.07em;
+ padding:7px 10px;border:1px solid rgba(151,194,206,.28);border-radius:30px}
+.observatory-state[data-live="true"]{color:#c8fae7;border-color:#6ebf9d75;box-shadow:0 0 18px #61ccaa21}
+.observatory-buttons{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin:12px 0}
+.observatory-planet{min-width:0;min-height:47px;color:#bfdde6;background:linear-gradient(135deg,#142a3a,#101722);
+ border:1px solid #6c9ea94d;border-radius:14px;font-size:11px;font-weight:700;
+ cursor:pointer;transition:border-color .16s,box-shadow .16s,filter .16s}
+.observatory-planet[data-trace="transfer"]{--obs-ring:#e6ad79}
+.observatory-planet[data-trace="vram"]{--obs-ring:#83cfea}
+.observatory-planet[data-trace="ram"]{--obs-ring:#b9a3e9}
+.observatory-planet.is-active{border-color:var(--obs-ring);color:#fff1d9;
+ background:radial-gradient(circle at 18% 10%,#4b718966,#182232 75%);
+ box-shadow:inset 0 1px rgba(255,255,255,.1),0 0 16px color-mix(in srgb,var(--obs-ring),transparent 80%)}
+.observatory-planet:focus-visible{outline:2px solid #bef1ff;outline-offset:3px}
+.observatory-chart{min-height:208px;position:relative;overflow:hidden;border:1px solid rgba(147,200,220,.25);
+ background:repeating-linear-gradient(0deg,transparent 0 41px,rgba(150,195,225,.07) 42px 43px),
+ repeating-linear-gradient(90deg,transparent 0 68px,rgba(150,195,225,.04) 69px 70px),
+ radial-gradient(ellipse at 50% 100%,rgba(42,85,117,.2),transparent 60%),rgba(3,8,15,.81);
+ border-radius:13px;padding:7px}
+.observatory-chart .u-wrap{max-width:100%;margin:0 auto}
+.observatory-chart .u-over{pointer-events:none}
+.observatory-chart .u-legend{font-size:11px;color:#d9eef4}
+.observatory-placeholder{position:absolute;top:48%;left:50%;transform:translate(-50%,-50%);
+ text-align:center;width:min(90%,430px);font-size:12px;color:#9eb4c0;pointer-events:none}
+.observatory-readout{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:10px;
+ font-size:11px;color:#b9cfdb;letter-spacing:.05em}
+#noxTraceLast{font-variant-numeric:tabular-nums;color:#c7e2e7}
+@media(max-width:650px){.nox-observatory{padding:12px}.observatory-head h3{font-size:15px}
+ .observatory-planet{font-size:10px;min-height:44px}.observatory-chart{min-height:173px}}
+@media(prefers-reduced-motion:reduce){.nox-observatory *, .nox-observatory *::before,
+ .nox-observatory *::after{animation:none!important;transition:none!important}}
