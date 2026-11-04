@@ -58,7 +58,8 @@ def clean_dir(path: Path) -> bool:
 
 
 
-def installed_file_sha_locked(path: Path, root: Path, expected_size: int, expected_digest: str) -> str:
+def installed_file_sha_locked(path: Path, root: Path, expected_size: int, expected_digest: str,
+                              *, return_pe_header: bool = False) -> str | tuple[str, bytes]:
     """Bind an installed owned-file SHA to one regular descriptor and the same path identity.
 
     Do not trust a pathname hash after a separate stat/resolve: a same-byte file
@@ -98,7 +99,12 @@ def installed_file_sha_locked(path: Path, root: Path, expected_size: int, expect
             if mismatch:
                 raise Hold("E07_INSTALLED_FILE_OPEN_IDENTITY_HOLD:" + ",".join(mismatch))
             digest = hashlib.sha256()
+            header = bytearray()
             while block := os.read(fd, 1048576):
+                # Capture PE header from the SAME descriptor as all SHA bytes.
+                # Never reopen a mutable pathname after source identity checks.
+                if return_pe_header and len(header) < 4096:
+                    header.extend(block[:4096 - len(header)])
                 digest.update(block)
             if descriptor_identity(opened) != descriptor_identity(os.fstat(fd)):
                 raise Hold("E07_INSTALLED_FILE_FD_MUTATED_HOLD")
@@ -111,7 +117,8 @@ def installed_file_sha_locked(path: Path, root: Path, expected_size: int, expect
                 raise Hold("E07_INSTALLED_FILE_REPARSE_OR_ESCAPE_HOLD")
             if digest.hexdigest() != expected_digest:
                 raise Hold("E07_INSTALLED_FILE_SHA_HOLD")
-            return digest.hexdigest()
+            verified = digest.hexdigest()
+            return (verified, bytes(header)) if return_pe_header else verified
         finally:
             os.close(fd)
     except OSError as exc:
@@ -206,10 +213,11 @@ def setup_lock(setup: Path, receipt: Path) -> dict:
             smoke.get("e07_independent_acceptance") == "NOT_RUN" and
             samevm_lifecycle_verified(stages),
             "E07_E06_SAMEVM_RECEIPT_HOLD")
-    require(setup.stat().st_size == SETUP_SIZE and sha256(setup) == SETUP_SHA,
-            "E07_SETUP_SHA_HOLD")
-    with setup.open("rb") as source:
-        header = source.read(4096)
+    require(clean_dir(setup.parent), "E07_SETUP_PARENT_REPARSE_HOLD")
+    locked_sha, header = installed_file_sha_locked(
+        setup, setup.parent.resolve(strict=True), SETUP_SIZE, SETUP_SHA,
+        return_pe_header=True)
+    require(locked_sha == SETUP_SHA, "E07_SETUP_SHA_HOLD")
     require(len(header) >= 64 and header[:2] == b"MZ", "E07_SETUP_WINDOWS_PE_HOLD")
     offset = struct.unpack_from("<I", header, 0x3c)[0]
     require(offset <= len(header)-6 and header[offset:offset+4] == b"PE\0\0",
