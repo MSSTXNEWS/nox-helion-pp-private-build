@@ -735,7 +735,7 @@ $ErrorActionPreference='Stop'
 Add-Type -AssemblyName UIAutomationClient
 Add-Type -AssemblyName UIAutomationTypes
 $handle=[IntPtr]__HWND__
-$titles=@{INSTALL='Система NOX';MODELS='Каталог моделей';LEARN='Эволюция';SETTINGS='Настройки'}
+$titles=@{INSTALL='Система NOX';MODELS='Каталог моделей';LEARN='Эволюция';SETTINGS='СИСТЕМА'}
 function Get-SameRoot {
   $v=[System.Windows.Automation.AutomationElement]::FromHandle($handle)
   if($null -eq $v){throw 'E07_PRIMARY_NAV_HWND_LOST'}
