@@ -132,7 +132,7 @@ nav.addEventListener('click',event=>{
    // Top-level LEARN performs the original bounded training environment
    // diagnostic. Actual QLoRA start remains an explicit in-panel action with
    // dataset, immutable-revision and owner-confirmation gates.
-   LEARN:['control','button#training-start','button#training-diagnostic']
+   LEARN:['control','button#training-diagnostic','button#training-diagnostic']
  };
  if(Object.prototype.hasOwnProperty.call(destinations,name)){
    const [screen,selector,invokeSelector]=destinations[name];
