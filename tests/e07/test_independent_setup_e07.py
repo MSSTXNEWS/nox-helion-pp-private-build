@@ -227,4 +227,29 @@ class IndependentE07(unittest.TestCase):
         self.assertIn("_MIN_GUI_CLIENT_WIDTH = 160", witness)
         self.assertIn("_visible_window_for_pid(pid, user32, callback_type)", witness)
 
+
+    def test_new_e06_setup_identity_and_receipt_rejects_duplicates(self):
+        self.assertEqual(MOD.SOURCE_SHA,"c35c1d330b36900c61d41f65661c535dcd6fc78a")
+        self.assertEqual(MOD.SETUP_SHA,"af87a6181dee5e04d2a83bc33e738aec16534fa32bc407b40c009ab169129879")
+        self.assertEqual(MOD.SETUP_SIZE,169590852)
+        self.assertEqual(MOD.E06_BUILD_ID,"NOX-V16-4a0070cdb51d1d2d37a8d295")
+        with tempfile.TemporaryDirectory() as home:
+            path=Path(home)/"E07_BUILT_HANDOFF.json"
+            path.write_text('{"source_commit_sha1":"a","source_commit_sha1":"b"}')
+            with self.assertRaisesRegex(MOD.Hold,"E07_E06_RECEIPT_DUPLICATE_FIELD"):
+                MOD._read_locked_e06_json(path)
+            path.write_text('{"value":NaN}')
+            with self.assertRaisesRegex(MOD.Hold,"E07_E06_RECEIPT_NONFINITE_NUMBER"):
+                MOD._read_locked_e06_json(path)
+
+    def test_wrong_e06_receipt_holds_before_install(self):
+        with tempfile.TemporaryDirectory() as home:
+            root=Path(home)
+            setup=root/"NOX-HELION-V16-DIAGNOSTIC-SETUP.exe"
+            receipt=root/"E07_BUILT_HANDOFF.json"
+            setup.write_bytes(b"MZdiagnostic-synthetic")
+            receipt.write_text('{"schema":"invalid"}')
+            with self.assertRaisesRegex(MOD.Hold,"E07_E06_RECEIPT_NOT_REGULAR"):
+                MOD.setup_lock(setup,receipt)
+
 if __name__=='__main__':unittest.main()

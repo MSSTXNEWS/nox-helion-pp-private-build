@@ -11,7 +11,7 @@ permissions:
   actions: read
   contents: read
 concurrency:
-  group: nox-express-e07-frozen-4249188
+  group: nox-express-e07-frozen-c35c1d33
   cancel-in-progress: false
 jobs:
   independent-windows:
@@ -32,9 +32,9 @@ jobs:
       - name: Download immutable candidate from DIFFERENT Windows CI run
         uses: actions/download-artifact@v4
         with:
-          run-id: 41758811297
+          run-id: 41769983592
           github-token: ${{ github.token }}
-          name: NOX-EXPRESS-ONEHOST-4249188fbce7242ace05a536f26121096746b52a
+          name: nox-v16-e06-onehost-diagnostic-41769983592
           path: input-frozen-e06
       - name: Independent installed E07 candidate lifecycle, never release by default
         id: test
@@ -52,7 +52,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: NOX-EXPRESS-E07-CANDIDATE-4249188-${{ github.run_id }}
+          name: NOX-EXPRESS-E07-CANDIDATE-c35c1d33-${{ github.run_id }}
           path: work/e07-independent/E07_CANDIDATE_RECEIPT.json
           if-no-files-found: error
           retention-days: 14

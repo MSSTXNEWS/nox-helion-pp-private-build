@@ -22,9 +22,9 @@ import subprocess
 import sys
 import time
 
-SOURCE_SHA = "4249188fbce7242ace05a536f26121096746b52a"
-SETUP_SHA = "a5097c11f60d0906dcc96984dcbeab13d7f07307a02651fa4c3c1a2bae53ccde"
-SETUP_SIZE = 87331353
+SOURCE_SHA = "c35c1d330b36900c61d41f65661c535dcd6fc78a"
+SETUP_SHA = "af87a6181dee5e04d2a83bc33e738aec16534fa32bc407b40c009ab169129879"
+SETUP_SIZE = 169590852
 RECEIPT_SCHEMA = "nox.express.onehost.same-sha.v1"
 PROTOCOL = "NOX-P02-NATIVE-v1"
 
@@ -62,26 +62,89 @@ def run(args: list[str], *, limit: int) -> int:
     return result.returncode
 
 
+E06_BUILD_ID = "NOX-V16-4a0070cdb51d1d2d37a8d295"
+ORIGINAL_ZIP_SHA = "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a"
+
+
+def _read_locked_e06_json(path: Path) -> dict:
+    require(clean_file(path) and path.stat().st_size <= 1048576,
+            "E07_E06_RECEIPT_NOT_REGULAR")
+    def unique_pairs(pairs):
+        obj = {}
+        for key, value in pairs:
+            if key in obj:
+                raise Hold("E07_E06_RECEIPT_DUPLICATE_FIELD")
+            obj[key] = value
+        return obj
+    try:
+        with path.open("r", encoding="utf-8-sig") as stream:
+            data = json.load(stream, object_pairs_hook=unique_pairs,
+                parse_constant=lambda unused: (_ for _ in ()).throw(
+                    Hold("E07_E06_RECEIPT_NONFINITE_NUMBER")))
+    except (OSError, UnicodeError, json.JSONDecodeError):
+        raise Hold("E07_E06_RECEIPT_INVALID_JSON") from None
+    require(type(data) is dict, "E07_E06_RECEIPT_SCHEMA_HOLD")
+    return data
+
+
 def setup_lock(setup: Path, receipt: Path) -> dict:
+    """Pin physical latest E06 Setup to three same-identity receipts, then verify bytes.
+
+    Prior E06 same-VM lifecycle is NOT independent E07; lifecycle() must rerun.
+    """
     require(clean_file(setup) and clean_file(receipt), "E07_SOURCE_ARTIFACT_NOT_REGULAR")
-    with receipt.open("r", encoding="utf-8-sig") as f:
-        proof = json.load(f)
-    require(type(proof) is dict and proof.get("schema") == RECEIPT_SCHEMA and
-            proof.get("source_commit") == SOURCE_SHA and
-            proof.get("setup_sha256") == SETUP_SHA and
-            proof.get("setup_bytes") == SETUP_SIZE and
-            proof.get("physical_setup_built") is True and
-            proof.get("release_accepted") is False and
-            proof.get("independent_e07") == "NOT_RUN", "E07_SOURCE_RECEIPT_HOLD")
+    require(setup.parent == receipt.parent and receipt.name == "E07_BUILT_HANDOFF.json",
+            "E07_E06_HANDOFF_PATH_HOLD")
+    handoff = _read_locked_e06_json(receipt)
+    diagnostic = _read_locked_e06_json(receipt.parent/"ONEHOST_DIAGNOSTIC_RECEIPT.json")
+    smoke = _read_locked_e06_json(receipt.parent/"T06_INSTALLED_SMOKE.json")
+    require(handoff.get("schema") == "NOX_V16_E07_IMMUTABLE_HANDOFF_V1" and
+            handoff.get("source_commit_sha1") == SOURCE_SHA and
+            handoff.get("build_id") == E06_BUILD_ID and
+            handoff.get("phase") == "BUILT" and
+            handoff.get("original_zip_sha256") == ORIGINAL_ZIP_SHA and
+            handoff.get("source_files") == 729 and
+            handoff.get("source_receipts_729_parity_verified") is True and
+            handoff.get("setup_sha256") == SETUP_SHA and
+            type(handoff.get("independent_e07_cases_accepted")) is int and
+            handoff["independent_e07_cases_accepted"] == 0 and
+            handoff.get("release_accepted") is False and
+            handoff.get("status") == "PENDING_E07_INDEPENDENT_SAME_SHA_QA",
+            "E07_E06_HANDOFF_IDENTITY_HOLD")
+    require(diagnostic.get("schema") == "NOX-E06-ONEHOST-DIAGNOSTIC-NSIS-v1" and
+            diagnostic.get("source_commit_sha1") == SOURCE_SHA and
+            diagnostic.get("installer_sha256") == SETUP_SHA and
+            type(diagnostic.get("installer_bytes")) is int and
+            diagnostic["installer_bytes"] == SETUP_SIZE and
+            diagnostic.get("release_accepted") is False and
+            diagnostic.get("status") == "WINDOWS_INSTALLER_CANDIDATE_NOT_E07_ACCEPTED",
+            "E07_E06_DIAGNOSTIC_IDENTITY_HOLD")
+    stages = smoke.get("installer_lifecycle")
+    require(smoke.get("schema") == "NOX-T06-INSTALLED-SMOKE-v1" and
+            smoke.get("phase") == "INSTALLED_GUI_IPC_UPDATE_ROLLBACK_NOLOSS_PASS_NOT_E07" and
+            smoke.get("build_id") == E06_BUILD_ID and
+            smoke.get("setup_sha256") == SETUP_SHA and
+            smoke.get("release_accepted") is False and
+            smoke.get("e07_independent_acceptance") == "NOT_RUN" and
+            type(smoke.get("uninstall_owned_files_checked")) is int and
+            smoke["uninstall_owned_files_checked"] == 1004 and
+            type(stages) is dict and
+            all(type(stages.get(name)) is dict and
+                type(stages[name].get("code")) is int and
+                stages[name]["code"] == 0
+                for name in ("install","verify","update","rollback","uninstall")),
+            "E07_E06_SAMEVM_RECEIPT_HOLD")
     require(setup.stat().st_size == SETUP_SIZE and sha256(setup) == SETUP_SHA,
             "E07_SETUP_SHA_HOLD")
-    with setup.open("rb") as f:
-        header = f.read(4096)
+    with setup.open("rb") as source:
+        header = source.read(4096)
+    require(len(header) >= 64 and header[:2] == b"MZ", "E07_SETUP_WINDOWS_PE_HOLD")
     offset = struct.unpack_from("<I", header, 0x3c)[0]
-    require(header[:2] == b"MZ" and offset <= len(header)-6 and
-            header[offset:offset+4] == b"PE\0\0", "E07_SETUP_WINDOWS_PE_HOLD")
-    return {"source_sha": SOURCE_SHA, "setup_sha256": SETUP_SHA,
-            "setup_bytes": SETUP_SIZE, "pe_machine":hex(struct.unpack_from("<H",header,offset+4)[0])}
+    require(offset <= len(header)-6 and header[offset:offset+4] == b"PE\0\0",
+            "E07_SETUP_WINDOWS_PE_HOLD")
+    return {"source_sha":SOURCE_SHA,"setup_sha256":SETUP_SHA,
+            "setup_bytes":SETUP_SIZE,"pe_machine":hex(struct.unpack_from("<H",header,offset+4)[0]),
+            "build_id":E06_BUILD_ID,"e06_samevm_pass_not_e07":True}
 
 
 def manifest_owner(install: Path) -> tuple[dict, tuple[Path, ...]]:
@@ -540,8 +603,8 @@ def main() -> int:
                 os.environ.get("GITHUB_REPOSITORY")=="MSSTXNEWS/nox-helion-pp-private-build",
                 "E07_HOST_NOT_AUTHORIZED")
         source = args.artifact_dir
-        setup=source/"NOX_HELION_EXPRESS_CANDIDATE_SETUP.exe"
-        receipt=source/"BUILD_RECEIPT.json"
+        setup=source/"e06"/"onehost-wow-diagnostic"/"NOX-HELION-V16-DIAGNOSTIC-SETUP.exe"
+        receipt=source/"e06"/"onehost-wow-diagnostic"/"E07_BUILT_HANDOFF.json"
         result["checks"]["artifact"] = setup_lock(setup,receipt)
         lifecycle(setup,result)
         # Model inference, visual click navigation and independent screenshot
