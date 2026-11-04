@@ -1,0 +1,148 @@
+{
+  "task_id": "MP1_K02",
+  "base_head": "55eb47362cd513ce2c10a07306afa281cfe61577",
+  "status": "SOURCE_PATCH_READY",
+  "owned_files": [
+    {
+      "path": "private_build.ps1",
+      "pre_sha256": "75bace10684cde087abd4e5a9dab3edf696c53bae4bcd4fbb7410b4a28c866bb",
+      "pre_git_blob": "75fb303d65d83ab7b272b02bce44a9d3be0956aa",
+      "post_sha256": "bf415e483dd4b62eb74831fd1a35b927ef618b99df4da7a200bc3f012a8c8116"
+    }
+  ],
+  "changes": [
+    "Opt-in -OneHostNative -RunId mode in EXISTING private_build.ps1; same source freeze, patches, isolated pinned dependencies; historical diagnostic default preserved",
+    "Stage native CLI into immutable-copy original tree, package console run_helion.py as the one Python backend (windowed run_first_release did not handle native-stdio)",
+    "Validate exact staged runtime_data_files paths/destinations/SHA and required SEED/catalog/P04 inputs",
+    "Include original assets/traits/weights and staged catalogue/P04 scripts in existing PyInstaller invocation",
+    "After actual build use CArchiveReader to verify five bundled runtime files by staged SHA; no stage-only success substituted",
+    "Write actual backend provenance receipt consumed by existing E06 workflow and K01 smoke, without hardcoded previous EXE SHA"
+  ],
+  "validation": {
+    "runtime_data_files": [
+      {
+        "runtime_path": "catalog30.discovery.json",
+        "destination": ".",
+        "sha256": "001a2bb8a1f2fbca715f756badae7aa132cf34d053ee209896d84be81c268d76",
+        "bytes": 5970
+      },
+      {
+        "runtime_path": "Packages/P04/train_qlora.py",
+        "destination": "Packages/P04",
+        "sha256": "836afa2847aa39dfe15160b88d4a2c4b3e7653c431c4984e17b5927859cd9712",
+        "bytes": 62396
+      },
+      {
+        "runtime_path": "Packages/P04/preflight_local_gpu.py",
+        "destination": "Packages/P04",
+        "sha256": "a59bb04884ff0de9cfa561366935e0d7a708ed0b3092afc7463b59d6cef2aaff",
+        "bytes": 7916
+      },
+      {
+        "runtime_path": "Packages/P04/merge_qlora_adapter.py",
+        "destination": "Packages/P04",
+        "sha256": "8839132e2c68c46ddc04918008ad17ea208212c86ff2f2fd8c57b1ff3ea62484",
+        "bytes": 17156
+      },
+      {
+        "runtime_path": "assets/NOX_SOUL_CPU_REAL_WEIGHTS_TRAINED_V1_20261022.zip",
+        "destination": "assets",
+        "sha256": "b1bc0c27997d76b4c654842101d28738080e8c83d3b077b12585aaa28b500c9f",
+        "bytes": 855782
+      }
+    ],
+    "embedded_python_snippets_compiled": 2,
+    "input_validation": "PASS",
+    "powershell_execution": "NOT_AVAILABLE_LINUX",
+    "powershell_version": "7.6.9",
+    "powershell_release_url": "https://github.com/PowerShell/PowerShell/releases/tag/v7.6.9",
+    "powershell_tar_sha256": "1da6d6d6035d651f20e70ddee7c4c15ac6ab8b9fb40ee92240d91263f28a884b",
+    "actual_powershell_parse": [
+      {
+        "path": "private_build.ps1",
+        "sha256": "bf415e483dd4b62eb74831fd1a35b927ef618b99df4da7a200bc3f012a8c8116",
+        "parse_errors": 0
+      },
+      {
+        "path": "coordination/e06/build_onehost_installer.ps1",
+        "sha256": "85e24663ed97ae6b0f81ef2365b8be5eb4b1fa7e4e5fbb6f8fa46dc41879b5bb",
+        "parse_errors": 0
+      },
+      {
+        "path": "coordination/e06/gitlab_windows_entrypoint.ps1",
+        "sha256": "f6658c25f999257b6a6ab0be3818552df8f5d4dd896c512f67f6d16acbe7a6d9",
+        "parse_errors": 0
+      }
+    ],
+    "proof_predicate_synthetic": {
+      "passing_cases": [
+        "valid offline predicate",
+        "wrong HEAD rejected",
+        "missing history route rejected",
+        "false live promotion rejected"
+      ],
+      "defects": [
+        "integer run_id_matched=1 accepted",
+        "string process_restart_verified=True accepted",
+        "string concurrent_native_executables_max=1 accepted"
+      ],
+      "scope": "Synthetic predicate checks executed with actual PowerShell; NOT physical Windows/native receipts",
+      "owner_notified": "root",
+      "fix_recheck": {
+        "root_installer_sha256": "85e24663ed97ae6b0f81ef2365b8be5eb4b1fa7e4e5fbb6f8fa46dc41879b5bb",
+        "cases": [
+          {
+            "actual_acceptance": true,
+            "scope": "SYNTHETIC_PREDICATE_ONLY_NOT_NATIVE_PROOF",
+            "reason": null,
+            "result": "WINDOWS_EXE_OFFLINE_BACKBONE_PASS_LIVE_MODEL_HOLD",
+            "expected_acceptance": true,
+            "test": "valid_offline_synthetic",
+            "matched": true
+          },
+          {
+            "actual_acceptance": false,
+            "scope": "SYNTHETIC_PREDICATE_ONLY_NOT_NATIVE_PROOF",
+            "reason": "E06_NATIVE_PROOF_BOOLEAN_TYPE_REQUIRED",
+            "result": null,
+            "expected_acceptance": false,
+            "test": "integer_as_boolean",
+            "matched": true
+          },
+          {
+            "actual_acceptance": false,
+            "scope": "SYNTHETIC_PREDICATE_ONLY_NOT_NATIVE_PROOF",
+            "reason": "E06_NATIVE_PROOF_BOOLEAN_TYPE_REQUIRED",
+            "result": null,
+            "expected_acceptance": false,
+            "test": "string_as_boolean",
+            "matched": true
+          },
+          {
+            "actual_acceptance": false,
+            "scope": "SYNTHETIC_PREDICATE_ONLY_NOT_NATIVE_PROOF",
+            "reason": "E06_NATIVE_PROOF_PROCESS_COUNT_TYPE_REQUIRED",
+            "result": null,
+            "expected_acceptance": false,
+            "test": "string_as_count",
+            "matched": true
+          }
+        ],
+        "status": "4_OF_4_PASS",
+        "scope": "Actual PowerShell predicate execution; synthetic inputs only, no Windows/native acceptance"
+      },
+      "defect_status": "FIXED_BY_ROOT_AND_RECHECKED"
+    }
+  },
+  "patch_chain_checked": "A04/menu/fast source patches modify builders/tests only; original helion/app.py preimage is unchanged before stage_native_stdio",
+  "invocation": "& ./private_build.ps1 -OneHostNative -RunId <run_id>",
+  "output_receipt": "work/candidate/ONEHOST_PYTHON_BUILD_RECEIPT.json",
+  "native_execution": "PowerShell 7.6.9 parsing and synthetic gate predicates executed on Linux; Windows packaging/native smoke NOT_RUN",
+  "release_accepted": false,
+  "remaining": [
+    "Root refresh stage_native_stdio pins for final changed source bytes",
+    "K06 existing workflow invokes native mode and consumes receipt",
+    "K01 real Windows native-stdio smoke required after build; physical packaging not claimed here"
+  ],
+  "no_remote_writes": true
+}

@@ -1,0 +1,83 @@
+{
+  "schema": "NOX-V16-OPEN-SOURCE-SUPPLY-CHAIN-CANDIDATES-R10",
+  "reviewDate": "2026-10-29",
+  "status": "RESEARCH_ONLY_NOT_INCLUDED_IN_EXE_NOT_MODEL_WEIGHTS",
+  "policy": {
+    "oneHost": "Always inject into existing P01/P02/P04 native owner; never create second WPF/IPC/LLM host",
+    "downloads": "Manual owner-approved download only after exact commit/package/model license check and SHA-256. No automatic package install, network fetch or weights embedded by this manifest",
+    "rights": "Software license is not model weights license. Model cards and dataset rights must be checked independently.",
+    "sourceFreeze": "A candidate becomes active only after source fingerprint, owner receipt, native availability and real component tests on canonical PR162.",
+    "crossPlatform": "Windows owner-runtime source QA first. Web/mobile only through existing approved gateways."
+  },
+  "candidates": [
+    {
+      "name": "whisper.cpp",
+      "role": "P02 local RU/ES audio transcription alternative",
+      "upstream": "ggml-org/whisper.cpp",
+      "release": "v1.9.5",
+      "gitCommit": "d1be6fde11ac6e0407606b4e42fe72d34add8037",
+      "releasePublished": "2026-10-06",
+      "codeLicense": "MIT",
+      "integration": "Existing local ASR owner port only",
+      "state": "OPTIONAL_SOURCE_NOT_INSTALLED"
+    },
+    {
+      "name": "faster-whisper",
+      "role": "P02 local RU/ES ASR alternative to whisper.cpp (choose ONE)",
+      "upstream": "SYSTRAN/faster-whisper",
+      "release": "v1.2.1",
+      "gitCommit": "65882eee9f5cdbeeb2d877f1131d48cf241b327d",
+      "releasePublished": "2025-10-31",
+      "codeLicense": "MIT",
+      "integration": "Existing Python LocalVoicePipeline only, never parallel ASR",
+      "state": "OPTIONAL_SOURCE_NOT_INSTALLED"
+    },
+    {
+      "name": "ComfyUI",
+      "role": "Existing Creative Studio / P04 image/video inference backend",
+      "upstream": "Comfy-Org/ComfyUI",
+      "release": "v0.43.0",
+      "gitCommit": "426f5eea52a7ece1dd599fff4cb6cd1f352ddd24",
+      "releasePublished": "2026-10-27",
+      "codeLicense": "GPL-3.0",
+      "integration": "Existing localhost ComfyUI worker /api/prompt/history/view through current NOX Creative bridge; check API compatibility; do not bundle GPL executable without owner review",
+      "state": "EXISTING_OPTIONAL_ADAPTER_LICENSE_REVIEW"
+    },
+    {
+      "name": "Piper",
+      "role": "P02 local speech synthesis candidate",
+      "upstream": "OHF-Voice/piper1-gpl",
+      "release": "v1.8.0",
+      "gitCommit": "639388b6317fc4731e91d53da42aea68fd4166ff",
+      "releasePublished": "2026-09-04",
+      "codeLicense": "GPL-3.0",
+      "integration": "Optional external locally installed voice engine only; do not import archived rhasspy/piper MIT license as current OHF license",
+      "state": "LICENSE_REVIEW_HOLD"
+    },
+    {
+      "name": "FFmpeg",
+      "role": "Existing Creative Studio movie stitching/subtitles",
+      "upstream": "https://ffmpeg.org/legal.html",
+      "release": "BUILD-SPECIFIC",
+      "gitCommit": null,
+      "codeLicense": "LGPL-2.1+ by default; GPL-2+ if GPL components enabled",
+      "integration": "Use existing installed ffmpeg executable only. Validate actual binary/version/configure flags and redistributability.",
+      "state": "EXISTING_BACKEND_BUILD_LICENSE_REVIEW"
+    }
+  ],
+  "checkedReferences": [
+    "https://github.com/ggml-org/whisper.cpp/releases/tag/v1.9.5",
+    "https://github.com/SYSTRAN/faster-whisper/releases/tag/v1.2.1",
+    "https://github.com/Comfy-Org/ComfyUI/releases/tag/v0.43.0",
+    "https://github.com/OHF-Voice/piper1-gpl/releases/tag/v1.8.0",
+    "https://ffmpeg.org/legal.html"
+  ],
+  "claims": {
+    "sourceDependenciesDownloaded": false,
+    "softwareInstalled": false,
+    "modelsDownloaded": false,
+    "licenseOwnersReviewed": false,
+    "oneHostNativeIntegrationVerified": false,
+    "windowsE07Accepted": false
+  }
+}

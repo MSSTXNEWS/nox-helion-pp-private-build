@@ -1,0 +1,53 @@
+{
+  "schema": "NOX_V16_E04_SOURCE_RECEIPT_V1",
+  "run_id": "NOX-V16-E04-G1-20261028T1046MSK-R06",
+  "status": "SOURCE_CANDIDATE_NOT_MERGED",
+  "repository": "MSSTXNEWS/nox-helion-pp-private-build",
+  "immutable_project_baseline_commit": "0b3a7d435be735148d64171deb9027093a89646e",
+  "immutable_project_baseline_tree": "f108d604c444f718b32aaecfd07b90b8f91b9a6f",
+  "parent_owner_commit": "e2b1346087580171c7bd75edbcd8b9b1f9d2f63b",
+  "parent_owner_tree": "75e1d6c7d3c003ed45e97e576ea3f06aa506fb9a",
+  "owner": "E04",
+  "intended_branch": "e04/v16-g1-04-strict-authorization-json-20261028-r06",
+  "changes": [
+    {
+      "path": "Packages/P04/train_qlora.py",
+      "owner": "E04",
+      "pre_sha256": "1219c0569666e2bf22f78fe0dfc4c6f3a4af54471fc161426397c90d336f38e6",
+      "post_sha256": "e327d58146c6329430acffd88ca61923bfa936e1d819aa156208c0772d416d0c",
+      "pre_git_blob_sha1": "0e6e95a6cebb694938637ce09dac3a581f37f18e",
+      "diff": "strict read_object: reject nested duplicate keys, NaN/Infinity, float overflow and invalid JSON before authorization or resume",
+      "post_git_blob_sha1": "d82889460c911c7ff44afc9071003026fe50d749"
+    },
+    {
+      "path": "tests/P04/test_e04_authorization_json_gate.py",
+      "owner": "E04",
+      "pre_sha256": "ABSENT",
+      "post_sha256": "37a0e23931c8a2ed32188f38a449f819ff9143cc719581dbbeb2e12695d81b6e",
+      "pre_git_blob_sha1": "ABSENT",
+      "diff": "8 actual-module CPU-only unit tests for authorization and checkpoint JSON",
+      "post_git_blob_sha1": "3539ac828784e8a73aa789c7c7802dd04e76633e"
+    },
+    {
+      "path": ".github/workflows/nox-e04-g1-holdout-integrity.yml",
+      "owner": "E04",
+      "pre_sha256": "011372837f3578a6369511741ffe3d5a9dcef549a2ee18cc1d471ca1ea5f9ccd",
+      "post_sha256": "2c4e8e9dc3dc5f39f029b302db5b74ab03627ad72c74e977005fde33b19afc87",
+      "pre_git_blob_sha1": "e32ee49b7a7bdcd1ae037e01100b86452954642c",
+      "diff": "run new gate on R06 branch, preserve prior tests",
+      "post_git_blob_sha1": "11eab403d9a76313db0275646529a861fdde3cc1"
+    }
+  ],
+  "checks": {
+    "original_preimages": "SHA256/Git blobs verified",
+    "isolated_parser_behavior": "8/8 PASS isolated mirror; NOT actual-source acceptance",
+    "actual_module_unittest": "AUTHORED_NOT_RUN",
+    "CI": "PENDING",
+    "NVIDIA_CUDA_RIGHTS": "HOLD",
+    "E06_integration": "HOLD",
+    "E07_windows": "NOT_RUN"
+  },
+  "conflicts": "PR6/7/12, PR66, PR99, original archives, D02, WOW untouched; owner E06 must accept before integration",
+  "one_lesson": "P04_AUTHORIZATION_JSON_SINGLE_SEMANTICS_GATE: immutable authorizations/model locks/paused receipts reject duplicate and nonfinite JSON before weight training",
+  "github_readback": "PENDING"
+}

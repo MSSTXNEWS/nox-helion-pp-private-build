@@ -1,0 +1,27 @@
+{
+  "schema": "NOX_V16_T06_REPEAT_PREMATURE_STOP_ROOT_CAUSE_V1",
+  "run_id": "NOX-V16-T06-ROOT-STOP-20261029-R01",
+  "error": "REPEATED_EARLY_ASSISTANT_FINAL_WHILE_T06_NOT_8_OF_8",
+  "scope": "T06 source-integration coordination process; not product defect",
+  "severity": "PROCESS_P0",
+  "prior_error": "Repeated responses terminated after a partial Git commit, report, HANDOFF or HOLD, despite explicit no-stop-until-100 instruction. Progress bar sometimes omitted.",
+  "journal_search": "Master/E06/Lessons were read; no exact PREMATURE_CLOSEOUT root-cause record observed before this receipt.",
+  "root_cause": [
+    "Plain language self-improvement does not enforce run completion or propagate across independent executors.",
+    "No machine-checked T06 8/8 closeout gate was applied before claiming DONE.",
+    "Shared Docs write ownership belongs only to T02, so personal source receipts had not become central enforced lessons.",
+    "A synchronous assistant turn cannot guarantee further computation after it is ended; automation is separate."
+  ],
+  "fix": [
+    "Add t06_closeout_guard.py and focused negative tests in sole canonical source branch.",
+    "Require exact RunID, eight criteria, evidence keys and owner/independent QA on final HEAD; reject premature DONE.",
+    "Require every T06 report to include bar, before/after and remaining 7 if only 1/8 accepted.",
+    "Send immutable Git receipt to T02 sole Docs writer and request a shared recurring gate for T01-T11.",
+    "Never call guard PASS product acceptance; test it against deliberately false DONE."
+  ],
+  "current_source_head_at_preparation": "244d2c6c7ffd1cddbf6282839eb6f7ad9d036a8d",
+  "history": "T06 source merges PR214, PR216 and PR217 remain preserved; source freeze and SOURCE_READY still independent",
+  "report_gate": "PENDING_ACTUAL_GIT_READBACK",
+  "no_exe_nsis_gitlab_e07": true,
+  "lesson": "Fix repeated premature stop by enforcing one machine-readable gate, not by adding another promise."
+}

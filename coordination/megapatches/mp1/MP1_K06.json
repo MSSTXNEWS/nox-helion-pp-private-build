@@ -1,0 +1,82 @@
+{
+  "task": "MP1_K06",
+  "base_commit": "55eb47362cd513ce2c10a07306afa281cfe61577",
+  "status": "SOURCE_COMPLETE_ROOT_OFFLINE_DIAGNOSTIC_ADMISSION_APPLIED",
+  "files": [
+    {
+      "path": "coordination/e06/gitlab_windows_entrypoint.ps1",
+      "pre_sha256": "afba96b6b1f0546c3115c6c5eb5d53fb3ca1015913ee9ffb48857289962a38fa",
+      "post_sha256": "f6658c25f999257b6a6ab0be3818552df8f5d4dd896c512f67f6d16acbe7a6d9"
+    },
+    {
+      "path": "azure-pipelines-nox-v16.yml",
+      "pre_sha256": "82d95862e97672fbdded1d327e4b082d49ff927df01bfd288b1860c534ea884f",
+      "post_sha256": "c45a7fa00aa179bf883f724cafcdaf1ee3cf7e3d2452483add588c7b6a1ab6e9"
+    },
+    {
+      "path": ".github/workflows/nox-v16-e06-d02-onehost.yml",
+      "pre_sha256": "b210aca6f0456b829bc258197504b9933a7d46da9b8ab703cfa661b183d7f611",
+      "post_sha256": "3229cb33d217f3980ffc5635352c8e65f451f9c4c5f09c029ac7f4de827bca77"
+    }
+  ],
+  "changes": [
+    "Existing Azure/GitHub onehost workflows call existing private_build.ps1 -OneHostNative -RunId; no second builder",
+    "Replace stale hardcoded backend hash with exact current source_commit/source_tree and actual executable SHA from native build receipt",
+    "Execute actual K01 native_onehost_smoke.py and pass its receipt to existing installer -PythonNativeSmokeReceipt",
+    "Reuse existing Azure CreativeWorker packaging in GitHub, preserve D02/Creative/WOW source and original 729 archive hashes",
+    "GitLab still replays exactly four canonical Azure stages; rejects stale native staging wiring before execution",
+    "GitLab retains bounded actual native build/smoke receipts on HOLD/failure even when publication stage not reached",
+    "Fix existing Azure absolute-path publication bug: FullName slicing now uses absolute payload source root",
+    "Require genuine JSON booleans for eight native proof flags and two build proof flags; require int/long single-process count before PowerShell value comparisons"
+  ],
+  "build_inputs": {
+    "recipe": "private_build.ps1 -OneHostNative -RunId <current-run>",
+    "build_receipt": "work/candidate/ONEHOST_PYTHON_BUILD_RECEIPT.json",
+    "backend": "work/candidate/NOX_HELION_PRIVATE_CANDIDATE.exe",
+    "native_smoke": "coordination/e06/native_onehost_smoke.py --exe <backend> --build-receipt <receipt> --source-head <HEAD> --output work/candidate/NATIVE_ONEHOST_SMOKE.json",
+    "model": "optional explicit owner-provided NOX_NATIVE_SMOKE_MODEL; never auto-install or infer",
+    "installer": "coordination/e06/build_onehost_installer.ps1 -PythonExe <backend> -PythonNativeSmokeReceipt <actual-proof>",
+    "toolchain": "Windows; Python3.12.10 x64; .NET8; existing NSIS + CreativeWorker pinned dependencies"
+  },
+  "checks": {
+    "yaml_parse": "PASS_AFTER_FINAL_TYPE_GUARDS",
+    "canonical_azure_blocks": 4,
+    "existing_gitlab_source_gate_tests": {
+      "passed": 9,
+      "failed": 0,
+      "after_final_changes": false,
+      "note": "Prior 9 tests passed; not rerun for final type-only guards per root instruction"
+    },
+    "native_windows_build": "NOT_RUN",
+    "native_powershell_runtime": "NOT_RUN"
+  },
+  "admission_policy": {
+    "current": "Exit0 full native PASS OR exit2 actual Windows transport/offline-backbone PASS with live-model HOLD permits diagnostic Setup only; exact build/source/EXE/archive/staged-app proof required; exit1 blocks",
+    "proof_binding": [
+      "NOX_NATIVE_ONEHOST_SMOKE_V2",
+      "win32",
+      "transport_status PASS",
+      "offline_backbone_status PASS",
+      "run/request identity",
+      "actual process restart",
+      "isolated test data",
+      "one concurrent native backend",
+      "source commit/tree",
+      "build run_id",
+      "EXE SHA256",
+      "build receipt SHA256",
+      "original archive SHA256",
+      "staged original app SHA256",
+      "strict bool flags and int/long process count; no PowerShell string/numeric coercion"
+    ],
+    "propagation": "Original native proof retained; actual live_model_status in private payload manifest and GitLab final receipt; release_accepted and installed_wpf_e07 always false",
+    "root_installer_alignment": "Root separately implements same V2 admission"
+  },
+  "remote_writes": false,
+  "ci_triggered": false,
+  "release_accepted": false,
+  "runner_facts": {
+    "github": "Root reports browser-confirmed billing/payment/spending-limit blocker before runner; no retry until changed",
+    "gitlab": "Existing source workflow only; no run triggered by K06; connectivity/runner recovery owned by root/K05"
+  }
+}

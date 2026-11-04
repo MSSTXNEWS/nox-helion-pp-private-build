@@ -1,0 +1,1311 @@
+{
+  "schema": "NOX_V16_NOLOSS_CROSS_SOURCE_INVENTORY_V1",
+  "date": "2026-10-28",
+  "status": "INVENTORY_ONLY_NOT_MERGED_NOT_RELEASE_ACCEPTED",
+  "source": "github connector current default branch and Google Drive search",
+  "repositories": [
+    {
+      "repo": "MSSTXNEWS/nox-helion-pp-private-build",
+      "commit": "0b3a7d435be735148d64171deb9027093a89646e",
+      "tree": "f108d604c444f718b32aaecfd07b90b8f91b9a6f",
+      "truncated": false,
+      "files": [
+        {
+          "path": ".gitattributes",
+          "size": 72,
+          "git_blob_sha1": "19384f581a91bf2bbe3a3752f450cce445ec10d9"
+        },
+        {
+          "path": ".github/workflows/pp-exact-candidate-launch.yml",
+          "size": 16086,
+          "git_blob_sha1": "d7c94b5d73f4ead8d9ea8697e90e7f44fc8343ef"
+        },
+        {
+          "path": ".github/workflows/pp-windows-candidate.yml",
+          "size": 2484,
+          "git_blob_sha1": "ca26ce7195ac6cfaf60a13fe279e4b8d96dfa053"
+        },
+        {
+          "path": "A05_FONT_BUNDLE.patch",
+          "size": 527797,
+          "git_blob_sha1": "1dbb2b358f0e21b1a048d6867e40a9772291fb5b"
+        },
+        {
+          "path": "BUILD_INPUTS_README.txt",
+          "size": 2346,
+          "git_blob_sha1": "494ea6ca1f185d6bd5874397db0343488c8f6280"
+        },
+        {
+          "path": "NOX_A04_BUILD_PATCH.zip",
+          "size": 20237,
+          "git_blob_sha1": "688f45cce694e0620c3f8ef4c9b43c4ceb7a35b1"
+        },
+        {
+          "path": "PP_FAST_CANDIDATE_MODE.patch",
+          "size": 5138,
+          "git_blob_sha1": "ebb348a7efadee94561ddaaa6a5f24677c5331bf"
+        },
+        {
+          "path": "PP_MENU_CATALOG_BUNDLE.patch",
+          "size": 1252,
+          "git_blob_sha1": "02705f05d207a680852d5c439da77067f4114d52"
+        },
+        {
+          "path": "QA_DEPENDENCY_NOTICES.txt",
+          "size": 125489,
+          "git_blob_sha1": "2e746b8e074bc0aa8db76fbca3c4f753efcaf166"
+        },
+        {
+          "path": "coordination/nox_hourly_waves.py",
+          "size": 12753,
+          "git_blob_sha1": "c8660a11fc8d257e5b673dff5936d85d337c23a8"
+        },
+        {
+          "path": "evidence/NOX_HELION_PORTABLE_PREREQUISITES_RUN40210839317.md",
+          "size": 4456,
+          "git_blob_sha1": "0e778ca54ca6fac68337c933c34db39eb3e3a9bb"
+        },
+        {
+          "path": "evidence/NOX_HELION_PORTABLE_PREREQUISITES_RUN40210839317.md.b64",
+          "size": 5944,
+          "git_blob_sha1": "20f4a148622bea0f4b4f63d6a5c832ff395cdc27"
+        },
+        {
+          "path": "evidence/PP-ONE-037-C2-SOURCE-FREEZE.json",
+          "size": 3111,
+          "git_blob_sha1": "c993891660344ae9687c1ec321f0e7da1064cff3"
+        },
+        {
+          "path": "evidence/PP-ONE-037-C2-SOURCE-FREEZE.json.b64",
+          "size": 4148,
+          "git_blob_sha1": "bbb1a19e1b680c9f77475ceca224804aa74fb8d6"
+        },
+        {
+          "path": "evidence/PP-ONE-037-QWEN-LAYER-DRIVE-BINDING.json",
+          "size": 2331,
+          "git_blob_sha1": "2e8d7bf152a93536d4eb639e343e38a12dea016e"
+        },
+        {
+          "path": "evidence/PP-ONE-037-QWEN-LAYER-DRIVE-BINDING.json.b64",
+          "size": 3108,
+          "git_blob_sha1": "fc4dd42e1df2d925c4f265b43e57ae237948f9e5"
+        },
+        {
+          "path": "evidence/pp_same_exe_acceptance.ps1",
+          "size": 13696,
+          "git_blob_sha1": "18722ded64c4f646c5046a1877392fb523cc8087"
+        },
+        {
+          "path": "private_build.ps1",
+          "size": 26124,
+          "git_blob_sha1": "75fb303d65d83ab7b272b02bce44a9d3be0956aa"
+        },
+        {
+          "path": "requirements-qa-win64-hashed.txt",
+          "size": 971,
+          "git_blob_sha1": "c050a625b41d5df5ade4b4b531720d0c2a78cf05"
+        },
+        {
+          "path": "source_00.part",
+          "size": 20971520,
+          "git_blob_sha1": "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b"
+        },
+        {
+          "path": "source_01.part",
+          "size": 20971520,
+          "git_blob_sha1": "7853cb43ff4ba0ed3023e8d794d8222eedea56a6"
+        },
+        {
+          "path": "source_02.part",
+          "size": 18421306,
+          "git_blob_sha1": "cbd9deb30860737f15e2adbaef2eaaf5d607a0de"
+        },
+        {
+          "path": "wheelhouse_00.part",
+          "size": 7291445,
+          "git_blob_sha1": "701e6a79dce4b69524faac88f99710cbf41bbddf"
+        },
+        {
+          "path": "wheelhouse_01.part",
+          "size": 7291445,
+          "git_blob_sha1": "8a620100572bb66987fcfdb1b8586f2b4ec5ee88"
+        },
+        {
+          "path": "wheelhouse_02.part",
+          "size": 7291445,
+          "git_blob_sha1": "773f2b8c7fe01c65404f645628703154f1149e15"
+        }
+      ]
+    },
+    {
+      "repo": "MSSTXNEWS/nox-helion-windows-build",
+      "commit": "c1edec664fdceaa5dd4c32286ee7bebbccdcdcb4",
+      "tree": "8c4697656ff0f5b3b02779c92d36b53cd6b2be19",
+      "truncated": false,
+      "files": [
+        {
+          "path": ".github/workflows/windows-exe-smoke.yml",
+          "size": 2704,
+          "git_blob_sha1": "fb5ca79c9c47b12e32c9cb644eac7178a68e47b6"
+        },
+        {
+          "path": "README.md",
+          "size": 1625,
+          "git_blob_sha1": "c48e78fb2ba06f4908e8df0e7e000de0ff8fd393"
+        }
+      ]
+    },
+    {
+      "repo": "MSSTXNEWS/nox-helion-release1-windows",
+      "commit": "4cd50c5f4315fed177cb37fc6c86364338b9a4be",
+      "tree": "47c73dc273561a2211725b204570183ffebf11cc",
+      "truncated": false,
+      "files": [
+        {
+          "path": ".github/workflows/a06-installed-environment.yml",
+          "size": 3293,
+          "git_blob_sha1": "4c3471e0a2db4bfd3f6e2c2216cb0055ef52d2c7"
+        },
+        {
+          "path": ".github/workflows/r1-two-exe.yml",
+          "size": 18667,
+          "git_blob_sha1": "1649df03e03f42425e7b8465588c7c9c91ad70d8"
+        },
+        {
+          "path": "README.md",
+          "size": 759,
+          "git_blob_sha1": "0cbb93f0ee87430c835b0d506f88ca2dbeefa836"
+        },
+        {
+          "path": "requirements-build-win64-hashed.txt",
+          "size": 2706,
+          "git_blob_sha1": "d0d22f3ec8d16b4dea7b73a78d9d5573fc18d56b"
+        },
+        {
+          "path": "source-parts.json",
+          "size": 14835,
+          "git_blob_sha1": "3b77a5e20f139d653996f6bf28d882b76802c6da"
+        },
+        {
+          "path": "source-parts/part-0000.bin",
+          "size": 262144,
+          "git_blob_sha1": "05fd936eaf3ab68f3087213623a9db828c6c76f3"
+        },
+        {
+          "path": "source-parts/part-0001.bin",
+          "size": 262144,
+          "git_blob_sha1": "cd94c52b8ee164a2d52caf96179b3ddb1682ffa2"
+        },
+        {
+          "path": "source-parts/part-0002.bin",
+          "size": 262144,
+          "git_blob_sha1": "8775fd4826613e443f72bab0b9e61c902a2fc065"
+        },
+        {
+          "path": "source-parts/part-0003.bin",
+          "size": 262144,
+          "git_blob_sha1": "00956c367c610eeec6668b1ece36defa69d9bf77"
+        },
+        {
+          "path": "source-parts/part-0004.bin",
+          "size": 262144,
+          "git_blob_sha1": "7e97e8ae1e34e20790261326ca579d3f04650f44"
+        },
+        {
+          "path": "source-parts/part-0005.bin",
+          "size": 262144,
+          "git_blob_sha1": "0a3e83df3b24a76a3693712a7c1d49bffcebc503"
+        },
+        {
+          "path": "source-parts/part-0006.bin",
+          "size": 262144,
+          "git_blob_sha1": "a9e3adbcceb2cc2b4c214043666950a5ea73251a"
+        },
+        {
+          "path": "source-parts/part-0007.bin",
+          "size": 262144,
+          "git_blob_sha1": "b4735597ef32e0b2161436177e5f30a9c51c00a8"
+        },
+        {
+          "path": "source-parts/part-0008.bin",
+          "size": 262144,
+          "git_blob_sha1": "082f076fa6ac17da8cdb6238258420bdde41d179"
+        },
+        {
+          "path": "source-parts/part-0009.bin",
+          "size": 262144,
+          "git_blob_sha1": "58b4f6fcf8144bbc6a5712118bfe183ecf1d1a2d"
+        },
+        {
+          "path": "source-parts/part-0010.bin",
+          "size": 262144,
+          "git_blob_sha1": "2698cc64f485c114b15c3d97da4079460a27f1af"
+        },
+        {
+          "path": "source-parts/part-0011.bin",
+          "size": 262144,
+          "git_blob_sha1": "10d422a20eb49ea8f077d22aa76890a101423b9a"
+        },
+        {
+          "path": "source-parts/part-0012.bin",
+          "size": 262144,
+          "git_blob_sha1": "d6a8bae0ebfdf324ceabba7ddfda3af69fc05902"
+        },
+        {
+          "path": "source-parts/part-0013.bin",
+          "size": 262144,
+          "git_blob_sha1": "feaf46788ea3028c818d5118c92b16ebb99cf6cb"
+        },
+        {
+          "path": "source-parts/part-0014.bin",
+          "size": 262144,
+          "git_blob_sha1": "7102100094f070615f232f196bd7e96cb0b32b01"
+        },
+        {
+          "path": "source-parts/part-0015.bin",
+          "size": 262144,
+          "git_blob_sha1": "81546bddd7a289b194cb019dd72bfa7e7f5273e5"
+        },
+        {
+          "path": "source-parts/part-0016.bin",
+          "size": 262144,
+          "git_blob_sha1": "de9c7ac3e07388a2cdc06f5514efb6b6e967ba08"
+        },
+        {
+          "path": "source-parts/part-0017.bin",
+          "size": 262144,
+          "git_blob_sha1": "47ca32d5e4e454de42b3705fa14a3acf764f1217"
+        },
+        {
+          "path": "source-parts/part-0018.bin",
+          "size": 262144,
+          "git_blob_sha1": "c53b2b0288c62513925ccaf4ebc14fc6730ea0ba"
+        },
+        {
+          "path": "source-parts/part-0019.bin",
+          "size": 262144,
+          "git_blob_sha1": "9065eb6ad96572b1312fa1d72b5617c21190816e"
+        },
+        {
+          "path": "source-parts/part-0020.bin",
+          "size": 262144,
+          "git_blob_sha1": "1683bcd8748f36e83d51e04c49bcbeaf5744555c"
+        },
+        {
+          "path": "source-parts/part-0021.bin",
+          "size": 262144,
+          "git_blob_sha1": "0672a10d2e350ef4702ea633c1dfde7372defea4"
+        },
+        {
+          "path": "source-parts/part-0022.bin",
+          "size": 262144,
+          "git_blob_sha1": "19e0bb5e6bdac97bdeb7b8b4a2446767fdb70853"
+        },
+        {
+          "path": "source-parts/part-0023.bin",
+          "size": 262144,
+          "git_blob_sha1": "ab3fdfc3b169ca2f317e475bfb1fc01e8ea6083a"
+        },
+        {
+          "path": "source-parts/part-0024.bin",
+          "size": 262144,
+          "git_blob_sha1": "36346317d70e6050e9c7cf8f765eb534d77b8bf3"
+        },
+        {
+          "path": "source-parts/part-0025.bin",
+          "size": 262144,
+          "git_blob_sha1": "ac2d17160528c55219530366ea9641a3184565e0"
+        },
+        {
+          "path": "source-parts/part-0026.bin",
+          "size": 262144,
+          "git_blob_sha1": "0cd250e8edf46f3b7fb30c281381eafb2a4105a6"
+        },
+        {
+          "path": "source-parts/part-0027.bin",
+          "size": 262144,
+          "git_blob_sha1": "4b73ff577c2b83eba6d35d5a0cc9698551a03169"
+        },
+        {
+          "path": "source-parts/part-0028.bin",
+          "size": 262144,
+          "git_blob_sha1": "d272c91e29cb11d70fb331c0e94df48e7f6b897f"
+        },
+        {
+          "path": "source-parts/part-0029.bin",
+          "size": 262144,
+          "git_blob_sha1": "0b3b6b33dd709d50c01179fab9f575a5e798a4e4"
+        },
+        {
+          "path": "source-parts/part-0030.bin",
+          "size": 262144,
+          "git_blob_sha1": "8f993b94c5f104c5832aab0cd2cf067a0b522e7b"
+        },
+        {
+          "path": "source-parts/part-0031.bin",
+          "size": 262144,
+          "git_blob_sha1": "1b523e25b1696f39643d1df7438e108b7391e910"
+        },
+        {
+          "path": "source-parts/part-0032.bin",
+          "size": 262144,
+          "git_blob_sha1": "550258ed66a081568cf0c2417743e9a4f3e82c87"
+        },
+        {
+          "path": "source-parts/part-0033.bin",
+          "size": 262144,
+          "git_blob_sha1": "fbe38f53f0115804bcdb6d187cb7c256163d9073"
+        },
+        {
+          "path": "source-parts/part-0034.bin",
+          "size": 262144,
+          "git_blob_sha1": "de5d4946357e3cf18dd846c74742acf2907074d5"
+        },
+        {
+          "path": "source-parts/part-0035.bin",
+          "size": 262144,
+          "git_blob_sha1": "f89ad0c38d8be55de70b5a42497d8e6586f0d9fe"
+        },
+        {
+          "path": "source-parts/part-0036.bin",
+          "size": 262144,
+          "git_blob_sha1": "38d78859fde57beba6346641ece75c8e41b2ab26"
+        },
+        {
+          "path": "source-parts/part-0037.bin",
+          "size": 262144,
+          "git_blob_sha1": "6d3ecf28348bd9051d5b88f600db342fa97abc29"
+        },
+        {
+          "path": "source-parts/part-0038.bin",
+          "size": 262144,
+          "git_blob_sha1": "55236d6363491dc3c8733ad0e2354ebb49eb66f9"
+        },
+        {
+          "path": "source-parts/part-0039.bin",
+          "size": 262144,
+          "git_blob_sha1": "01fb868c9d70d6a392f4bf125d6ed05c7b90f92b"
+        },
+        {
+          "path": "source-parts/part-0040.bin",
+          "size": 262144,
+          "git_blob_sha1": "7ec2ad567f60b3c9310313ee05747752fa675d3d"
+        },
+        {
+          "path": "source-parts/part-0041.bin",
+          "size": 262144,
+          "git_blob_sha1": "2b2a089991519b5756ef42f0ef56a0a3b19ab447"
+        },
+        {
+          "path": "source-parts/part-0042.bin",
+          "size": 262144,
+          "git_blob_sha1": "4c96f3c6309f067bab69e3ddeedb63479c73d4a5"
+        },
+        {
+          "path": "source-parts/part-0043.bin",
+          "size": 262144,
+          "git_blob_sha1": "c4b64897a976406d3fe4d62c433c1a9bb7dd16d3"
+        },
+        {
+          "path": "source-parts/part-0044.bin",
+          "size": 262144,
+          "git_blob_sha1": "32b802acaa17225fc6ce13cc038b49a164a38714"
+        },
+        {
+          "path": "source-parts/part-0045.bin",
+          "size": 262144,
+          "git_blob_sha1": "7911cb5b8dfd12ad379d5b31b1c757ec5c37b5a4"
+        },
+        {
+          "path": "source-parts/part-0046.bin",
+          "size": 262144,
+          "git_blob_sha1": "f93ccb2c0f7f3eced3be04d36cd7d036783f005a"
+        },
+        {
+          "path": "source-parts/part-0047.bin",
+          "size": 262144,
+          "git_blob_sha1": "417e6ef0b74f15435164d092fdbdefab73d73b1c"
+        },
+        {
+          "path": "source-parts/part-0048.bin",
+          "size": 262144,
+          "git_blob_sha1": "359c2e61e5673a11edf62048f5ad94b03d716e62"
+        },
+        {
+          "path": "source-parts/part-0049.bin",
+          "size": 262144,
+          "git_blob_sha1": "2f347a5c10ba5b0e5125a941568de0e104ff8985"
+        },
+        {
+          "path": "source-parts/part-0050.bin",
+          "size": 262144,
+          "git_blob_sha1": "ee056bbfe3d21061e50a604f8d3f474407a93706"
+        },
+        {
+          "path": "source-parts/part-0051.bin",
+          "size": 262144,
+          "git_blob_sha1": "3f0d3afda59f887849e5b32deb9074391d97d4c8"
+        },
+        {
+          "path": "source-parts/part-0052.bin",
+          "size": 262144,
+          "git_blob_sha1": "012567210d07eca285a69ab2b535e9fa79384951"
+        },
+        {
+          "path": "source-parts/part-0053.bin",
+          "size": 262144,
+          "git_blob_sha1": "e938a08fca2afd30ebc05a8a526435099c9f10ea"
+        },
+        {
+          "path": "source-parts/part-0054.bin",
+          "size": 262144,
+          "git_blob_sha1": "9aa49af85b6a4f879e189a3d9dee147fd87d93f2"
+        },
+        {
+          "path": "source-parts/part-0055.bin",
+          "size": 262144,
+          "git_blob_sha1": "aa008552e3210fd498bd7fb79b8735461e8b025e"
+        },
+        {
+          "path": "source-parts/part-0056.bin",
+          "size": 262144,
+          "git_blob_sha1": "511011bc9d581ab864c8d5c7533177804820499f"
+        },
+        {
+          "path": "source-parts/part-0057.bin",
+          "size": 262144,
+          "git_blob_sha1": "b10bb551f8881afa89add1d7b3dde366ce6778e7"
+        },
+        {
+          "path": "source-parts/part-0058.bin",
+          "size": 262144,
+          "git_blob_sha1": "636aab7fbd41e969fa7924bdf0b46fc2291af44e"
+        },
+        {
+          "path": "source-parts/part-0059.bin",
+          "size": 262144,
+          "git_blob_sha1": "e5e6a0031125b6390a9008deffab73ec92a3e73d"
+        },
+        {
+          "path": "source-parts/part-0060.bin",
+          "size": 262144,
+          "git_blob_sha1": "1bfcd2d9fb545541cb0a431d2a14bb6938d33003"
+        },
+        {
+          "path": "source-parts/part-0061.bin",
+          "size": 262144,
+          "git_blob_sha1": "ef9fafdce2aba2c495d40de859c4446c9f89840c"
+        },
+        {
+          "path": "source-parts/part-0062.bin",
+          "size": 262144,
+          "git_blob_sha1": "bef4989ddec5f99d8ecfe4701c437182d628a1af"
+        },
+        {
+          "path": "source-parts/part-0063.bin",
+          "size": 262144,
+          "git_blob_sha1": "144223545f1faaf21e7511404aa130e2f9063e98"
+        },
+        {
+          "path": "source-parts/part-0064.bin",
+          "size": 262144,
+          "git_blob_sha1": "77ca5cc727c82bfcfc0e35f29527d453a40f1e81"
+        },
+        {
+          "path": "source-parts/part-0065.bin",
+          "size": 262144,
+          "git_blob_sha1": "a38b03c952aa7c00d5c7d4e8f5c3d91805c7d776"
+        },
+        {
+          "path": "source-parts/part-0066.bin",
+          "size": 262144,
+          "git_blob_sha1": "9143262b076dfcea8c3770b47aeb9fe9dee9ded4"
+        },
+        {
+          "path": "source-parts/part-0067.bin",
+          "size": 262144,
+          "git_blob_sha1": "4322d7a7bbb476607b86b9922481c3de51e38687"
+        },
+        {
+          "path": "source-parts/part-0068.bin",
+          "size": 262144,
+          "git_blob_sha1": "baec0751dca3736493c77fa4abc9970cb8fe6df6"
+        },
+        {
+          "path": "source-parts/part-0069.bin",
+          "size": 262144,
+          "git_blob_sha1": "178e26740920eca89dc1b0343be7c1c93e204f45"
+        },
+        {
+          "path": "source-parts/part-0070.bin",
+          "size": 262144,
+          "git_blob_sha1": "505aaee16ac4e087a16008134d8d0424dca35ebd"
+        },
+        {
+          "path": "source-parts/part-0071.bin",
+          "size": 262144,
+          "git_blob_sha1": "cfeb19bb10da8415f687e955d535ab2575bc7012"
+        },
+        {
+          "path": "source-parts/part-0072.bin",
+          "size": 262144,
+          "git_blob_sha1": "926de1e23f6ca0ae8f9df85756b7181c0e06e1ca"
+        },
+        {
+          "path": "source-parts/part-0073.bin",
+          "size": 262144,
+          "git_blob_sha1": "e9c207b64550d4597f00cd3040c0b3ac940156c4"
+        },
+        {
+          "path": "source-parts/part-0074.bin",
+          "size": 262144,
+          "git_blob_sha1": "cb3a973908d3f48a273dd821ad656924904c7378"
+        },
+        {
+          "path": "source-parts/part-0075.bin",
+          "size": 262144,
+          "git_blob_sha1": "4a9a919b8d24b91c8eede3b2fb83f753529c1f45"
+        },
+        {
+          "path": "source-parts/part-0076.bin",
+          "size": 262144,
+          "git_blob_sha1": "5535f6cec19fc1865d9a619211c9c9865b7b68b4"
+        },
+        {
+          "path": "source-parts/part-0077.bin",
+          "size": 262144,
+          "git_blob_sha1": "9d2e0cf61265d389811721c57c9230ef7f58336d"
+        },
+        {
+          "path": "source-parts/part-0078.bin",
+          "size": 262144,
+          "git_blob_sha1": "4eeda4b6ad3fcd49876b479b4d32015fe9ca6e9e"
+        },
+        {
+          "path": "source-parts/part-0079.bin",
+          "size": 262144,
+          "git_blob_sha1": "3f18319278b436dd7f20a76c96849e9261894cc4"
+        },
+        {
+          "path": "source-parts/part-0080.bin",
+          "size": 262144,
+          "git_blob_sha1": "943c4316bf537322a9daa30fd2ba2b446c6612f8"
+        },
+        {
+          "path": "source-parts/part-0081.bin",
+          "size": 262144,
+          "git_blob_sha1": "605bf69ddc6d93ac3e82b034e209c2893aa56179"
+        },
+        {
+          "path": "source-parts/part-0082.bin",
+          "size": 262144,
+          "git_blob_sha1": "20ee05bb1c6f8f3c4546d69d926d0f4750a44d66"
+        },
+        {
+          "path": "source-parts/part-0083.bin",
+          "size": 262144,
+          "git_blob_sha1": "a3bef0d9b6db3662f83766ca98690189697468b8"
+        },
+        {
+          "path": "source-parts/part-0084.bin",
+          "size": 262144,
+          "git_blob_sha1": "a395d7d90ba0b009db30b0466c32cbcaf1ec3255"
+        },
+        {
+          "path": "source-parts/part-0085.bin",
+          "size": 262144,
+          "git_blob_sha1": "f6d199b1acfbdb4d3100838b6d4bed4f5fa7bd8c"
+        },
+        {
+          "path": "source-parts/part-0086.bin",
+          "size": 262144,
+          "git_blob_sha1": "18036314f50c2c822762afdc71ef6409ac0b8370"
+        },
+        {
+          "path": "source-parts/part-0087.bin",
+          "size": 262144,
+          "git_blob_sha1": "ac4db9c2a12ce842e9b8d41b84f5cd0c05f813be"
+        },
+        {
+          "path": "source-parts/part-0088.bin",
+          "size": 262144,
+          "git_blob_sha1": "da85e0eb3f96abfa4f10584e9352b1d57341fe3a"
+        },
+        {
+          "path": "source-parts/part-0089.bin",
+          "size": 139260,
+          "git_blob_sha1": "d0a3acc85ff9d8b3a4af3827dcd9fa3a3e073b04"
+        },
+        {
+          "path": "tools/a06-capture-installed-locks.ps1",
+          "size": 5028,
+          "git_blob_sha1": "fcb84787f7a7d2578f11eef5b4e60a4b524bcb2d"
+        }
+      ]
+    }
+  ],
+  "pr_index": [
+    {
+      "number": 56,
+      "title": "E01 P01 WOW MAX10 · original D02 + unified WOW 1–200 host-only controls",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/56"
+    },
+    {
+      "number": 65,
+      "title": "E04: GPU worker ACK is not PAUSE/STOP training proof; native lifecycle harness",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/65"
+    },
+    {
+      "number": 20,
+      "title": "E06 V16 TURBO10: no-loss pinned source intake and executable 10-gate preflight",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/20"
+    },
+    {
+      "number": 63,
+      "title": "E01 D02 WOW TURBO10 · real native 8 CoreID feed + original cinema preserved",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/63"
+    },
+    {
+      "number": 13,
+      "title": "[Draft] P02 V16 — Ollama, SQLite/ACL, attachments, NOX SPACE boundary",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/13"
+    },
+    {
+      "number": 51,
+      "title": "E06 R16: exact owner1 full P01 NSIS admission into one WPF+Python installer",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/51"
+    },
+    {
+      "number": 64,
+      "title": "E02 C12: SQLite chronology guard + explicit-column P02 writer (NO-LOSS HOLD)",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/64"
+    },
+    {
+      "number": 17,
+      "title": "[Draft] E03 C40 P03 source closure candidate + Windows component smoke",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/17"
+    },
+    {
+      "number": 61,
+      "title": "P05 TURBO10: host-owned live sampling into existing events.v3 (no second bus)",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/61"
+    },
+    {
+      "number": 60,
+      "title": "NOX V16 · exact WOW 001–200 sources + one-screen runtime + D02 no-loss Windows integration",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/60"
+    },
+    {
+      "number": 62,
+      "title": "E04 V16 TURBO10: fail-closed RAG file-import fd/path consistency",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/62"
+    },
+    {
+      "number": 57,
+      "title": "E04 TURBO10 · RAG provenance + GPU workload safety · PR7/12 no-loss hardening",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/57"
+    },
+    {
+      "number": 59,
+      "title": "E05 R17 · NOX SPACE percentages require independently sealed owner receipts (no raw scalar)",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/59"
+    },
+    {
+      "number": 58,
+      "title": "[DRAFT E02] Stable SQLite V2 admission in existing P02Store — NO-LOSS / requires E06 approval",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/58"
+    },
+    {
+      "number": 55,
+      "title": "E01 P01 EXPRESS · no-loss owner handoff, Windows native validation HOLD",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/55"
+    },
+    {
+      "number": 54,
+      "title": "NOX R13: real Creative Studio integration · chat + models + ComfyUI + FFmpeg + projector",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/54"
+    },
+    {
+      "number": 9,
+      "title": "E05 V16 C14 · 75/75 Windows CI · verified progress + licensed NOX SPACE · E06 SourceLock HOLD",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/9"
+    },
+    {
+      "number": 12,
+      "title": "E04: P04 training safety regression tests",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/12"
+    },
+    {
+      "number": 53,
+      "title": "NOX FINISH R16 · Windows runner fallback · exact owner1 one-host install proof",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/53"
+    },
+    {
+      "number": 52,
+      "title": "NOX Creative FastPack + WOW200 · no-loss source intake for E06",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/52"
+    },
+    {
+      "number": 46,
+      "title": "E07: independently attest frozen diagnostic Windows setup, D02 SHA and NSIS lifecycle (not final acceptance)",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/46"
+    },
+    {
+      "number": 49,
+      "title": "E06 R14: native install exact R13 combined NOX EXE, Python --diagnose and data-safe uninstall",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/49"
+    },
+    {
+      "number": 48,
+      "title": "E06 R13–R14: signed WebView2 PASS, 486-file no-loss combined NSIS rebuild; native install HOLD",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/48"
+    },
+    {
+      "number": 50,
+      "title": "NOX V16 · enforce RUN/REPORT/LESSON evidence protocol + exact 111111111 nine-cycle trigger",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/50"
+    },
+    {
+      "number": 28,
+      "title": "E01 C11: P01 installer verified-source completion candidate (no loss)",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/28"
+    },
+    {
+      "number": 45,
+      "title": "E06 R12: inspect real original Python runtime from immutable combined NSIS installer",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/45"
+    },
+    {
+      "number": 47,
+      "title": "E06 R13: correct original combined installer WebView2 registry detection with exact P01 owner source",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/47"
+    },
+    {
+      "number": 43,
+      "title": "[E06 R10] One WPF host + exact original Python diagnose bridge + original NSIS candidate",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/43"
+    },
+    {
+      "number": 36,
+      "title": "NOX V16 FINISH LOCK: build original E06 R08 WPF candidate on Windows (no-loss diagnostic)",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/36"
+    },
+    {
+      "number": 35,
+      "title": "E06 EXPRESS: immutable R08 WPF/WebView2 Windows diagnostic build (no-loss)",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/35"
+    },
+    {
+      "number": 41,
+      "title": "E06 EXPRESS: build real R08 WPF application with original P01 NSIS (diagnostic, no-loss)",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/41"
+    },
+    {
+      "number": 40,
+      "title": "[E06 candidate] Built R08 WPF EXE + original D02 byte-exact assets (not final release)",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/40"
+    },
+    {
+      "number": 44,
+      "title": "NOX V16 · one cinema scene for 1–200 WOW · D02/learning protected",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/44"
+    },
+    {
+      "number": 4,
+      "title": "Secure E07 process-start probe for exact main artifact #15",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/4"
+    },
+    {
+      "number": 42,
+      "title": "E06 · Verify actual combined diagnostic NSIS install + SHA + safe uninstall on Windows",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/42"
+    },
+    {
+      "number": 39,
+      "title": "NOX V16 · WOW151–200 + real Three.js Super Cinema + 12 video generators / native-safe ComfyUI",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/39"
+    },
+    {
+      "number": 33,
+      "title": "NOX V16 PACK01 · cinematic WOW upgrade for all first 50 actions",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/33"
+    },
+    {
+      "number": 38,
+      "title": "NOX V16 · first 50 WOW finish: secure native events, replay/expiry and cinema states",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/38"
+    },
+    {
+      "number": 37,
+      "title": "E06 Windows: repair exact original Python candidate build and collect EXE SHA",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/37"
+    },
+    {
+      "number": 34,
+      "title": "V16 WOW 1–150 · canonical events.v3, single-scene gate, replay protection and no-loss Windows CI",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/34"
+    },
+    {
+      "number": 32,
+      "title": "NOX V16 WOW 101–150 · 50 cinematic director shot choreographies · D02 preserved",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/32"
+    },
+    {
+      "number": 22,
+      "title": "V16 PACK01: real P02 Ollama/SQLite bindings + 50-route native guard",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/22"
+    },
+    {
+      "number": 31,
+      "title": "NOX V16 · Cinematic WOW 51–100 · 50 lightweight filmic cues (D02 safe)",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/31"
+    },
+    {
+      "number": 30,
+      "title": "V16 D02 WOW: real molten obsidian, 9 coronas and gravitational ejecta with GPU-budget modes",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/30"
+    },
+    {
+      "number": 29,
+      "title": "NOX V16 PACK02 — 50 working offline tools + guarded secondary UI (no loss)",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/29"
+    },
+    {
+      "number": 27,
+      "title": "V16 PACK01: audit 18 remaining routes against exact sealed original 729-file NOX app",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/27"
+    },
+    {
+      "number": 24,
+      "title": "[Draft E06 R03] Original 729-file Python SourceLock + 50-route owner compatibility gate",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/24"
+    },
+    {
+      "number": 25,
+      "title": "V16 PACK01: six original P04 RAG/GPU owner bindings + Windows smoke",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/25"
+    },
+    {
+      "number": 26,
+      "title": "E01 V16 C09 · P01 no-loss installer safety, prerequisites, native Windows candidate",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/26"
+    },
+    {
+      "number": 23,
+      "title": "[Draft E06 R02] Ten hardened no-loss integration gates (stacked on PR #20)",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/23"
+    },
+    {
+      "number": 21,
+      "title": "V16 PACK 01/50 · Fifty NOX functions in one guarded glass UI",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/21"
+    },
+    {
+      "number": 19,
+      "title": "V16 NO-LOSS registry: preserve every useful file, feature, WOW and branch",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/19"
+    },
+    {
+      "number": 18,
+      "title": "V16 · local voice RU↔ES + MAESTRO tutor + consent-gated SIP UI",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/18"
+    },
+    {
+      "number": 16,
+      "title": "V16 · responsive NOX Mobile + secure private gateway handoff",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/16"
+    },
+    {
+      "number": 15,
+      "title": "V16 WOW-5: five lightweight live secondary-screen effects (no HOME changes)",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/15"
+    },
+    {
+      "number": 14,
+      "title": "NOX V16: lightweight WOW5 optional UI sidecar (for E01/E06)",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/14"
+    },
+    {
+      "number": 10,
+      "title": "[Draft] P03 E03: isolated Ollama pull and GGUF import candidate",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/10"
+    },
+    {
+      "number": 7,
+      "title": "P04: stage RAG, QLoRA, GPU Guardian source candidate",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/7"
+    },
+    {
+      "number": 8,
+      "title": "A6: add fail-closed model catalog and durable queue candidates",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/8"
+    },
+    {
+      "number": 6,
+      "title": "B11: add fail-closed P05 training control plane",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/6"
+    },
+    {
+      "number": 5,
+      "title": "[Draft] Add fail-closed P03 model artifact window candidate",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/5"
+    },
+    {
+      "number": 1,
+      "title": "Reuse exact pinned Windows build input archives",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/1"
+    },
+    {
+      "number": 3,
+      "title": "Fix Windows candidate source-freeze manifest path",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/3"
+    },
+    {
+      "number": 2,
+      "title": "Fix source freeze manifest path in Windows candidate build",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/2"
+    }
+  ],
+  "drive_v16_index": [
+    {
+      "id": "1wxNP8iMhXiqBYCG76ZtmFLG4R1PIATp4W9Bks7r2Kx0",
+      "title": "NOX FIN ZAGR V16 · Executor 2 · P02 candidate receipt · 2026-10-27",
+      "mime": "application/vnd.google-apps.document",
+      "url": "https://docs.google.com/document/d/1wxNP8iMhXiqBYCG76ZtmFLG4R1PIATp4W9Bks7r2Kx0/edit?usp=drivesdk"
+    },
+    {
+      "id": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+      "title": "NOX FIN ZAGR V16 — Единое ТЗ 1–7 · WOW FUNCTION LOCK · +15% ceiling",
+      "mime": "application/vnd.google-apps.document",
+      "url": "https://docs.google.com/document/d/11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc/edit?usp=drivesdk"
+    },
+    {
+      "id": "17W45AV_YbeUUgVRCAWeRusltyqrvZiOrDJ41csjwSxM",
+      "title": "NOX V16 · E03 C37 · Run Report · 2026-10-27",
+      "mime": "application/vnd.google-apps.document",
+      "url": "https://docs.google.com/document/d/17W45AV_YbeUUgVRCAWeRusltyqrvZiOrDJ41csjwSxM/edit?usp=drivesdk"
+    },
+    {
+      "id": "1zOedasRksEAxWq6QZSFhW8Xas2QqZVWBx35lXGvnifU",
+      "title": "NOX V16 · E01 P01 · source audit and handoff · 2026-10-27",
+      "mime": "application/vnd.google-apps.document",
+      "url": "https://docs.google.com/document/d/1zOedasRksEAxWq6QZSFhW8Xas2QqZVWBx35lXGvnifU/edit?usp=drivesdk"
+    },
+    {
+      "id": "1fZV15t2xfs6Qm7CoHrLMdBSe2EUcR2xpoa8T0W74xZ8",
+      "title": "NOX V16 · E03 C37 · Error + Self Improvement · 2026-10-27",
+      "mime": "application/vnd.google-apps.document",
+      "url": "https://docs.google.com/document/d/1fZV15t2xfs6Qm7CoHrLMdBSe2EUcR2xpoa8T0W74xZ8/edit?usp=drivesdk"
+    },
+    {
+      "id": "1ahkp44rI0srhQnIXDXhqvpoUW3s8L6nukelprPHs8co",
+      "title": "NOX V16 · E02 · TURBO10 · SELF IMPROVEMENT · 2026-10-28",
+      "mime": "application/vnd.google-apps.document",
+      "url": "https://docs.google.com/document/d/1ahkp44rI0srhQnIXDXhqvpoUW3s8L6nukelprPHs8co/edit?usp=drivesdk"
+    },
+    {
+      "id": "14DEJDCOxDtjrKqqQ6IiPRMcQcuDLFS2CPvOMGvvgjhg",
+      "title": "NOX V16 · E03 G1-03 TURBO10 · E06 ModelCenter C40 run report · 2026-10-28",
+      "mime": "application/vnd.google-apps.document",
+      "url": "https://docs.google.com/document/d/14DEJDCOxDtjrKqqQ6IiPRMcQcuDLFS2CPvOMGvvgjhg/edit?usp=drivesdk"
+    },
+    {
+      "id": "1NNit7dYPF_T-BQ3GtAT5XCgxuIOddOl_0V7RRgg-Hws",
+      "title": "NOX HELION · V16 PACK02/50 · RUN REPORT · 2026-10-28",
+      "mime": "application/vnd.google-apps.document",
+      "url": "https://docs.google.com/document/d/1NNit7dYPF_T-BQ3GtAT5XCgxuIOddOl_0V7RRgg-Hws/edit?usp=drivesdk"
+    },
+    {
+      "id": "1yPS7sxajrzy4Q3u1fUclhEfQzJ49k1xfx86GO1gpqWE",
+      "title": "NOX V16 · E05 TURBO10 · LIVE SYSTEM · Run report · 2026-10-28",
+      "mime": "application/vnd.google-apps.document",
+      "url": "https://docs.google.com/document/d/1yPS7sxajrzy4Q3u1fUclhEfQzJ49k1xfx86GO1gpqWE/edit?usp=drivesdk"
+    },
+    {
+      "id": "1mJA2eGuTwe-sQNgB_nrCl7is8jkIM7O-tGS5VRxyXX8",
+      "title": "NOX V16 · E01 P01 EXPRESS FINISH · 2026-10-28 · Owner receipt",
+      "mime": "application/vnd.google-apps.document",
+      "url": "https://docs.google.com/document/d/1mJA2eGuTwe-sQNgB_nrCl7is8jkIM7O-tGS5VRxyXX8/edit?usp=drivesdk"
+    },
+    {
+      "id": "16E0saHW-Jbv8a1I-W-CAkaOTvitjLjjVOI3KV0p7TTg",
+      "title": "NOX V16 · E03 QUICK20 BRIDGE GATES · RUN REPORT · 2026-10-28",
+      "mime": "application/vnd.google-apps.document",
+      "url": "https://docs.google.com/document/d/16E0saHW-Jbv8a1I-W-CAkaOTvitjLjjVOI3KV0p7TTg/edit?usp=drivesdk"
+    },
+    {
+      "id": "1gz-N43V4ngK0XeR5fDByuFX0H0C_U8CHwiVTs61vmK4",
+      "title": "NOX V16 · E03 G1-03 TURBO10 · one E06 self-improvement · 2026-10-28",
+      "mime": "application/vnd.google-apps.document",
+      "url": "https://docs.google.com/document/d/1gz-N43V4ngK0XeR5fDByuFX0H0C_U8CHwiVTs61vmK4/edit?usp=drivesdk"
+    },
+    {
+      "id": "1JUGXUzgrwebIG9Vt_HIX9Y5x6SnMeSj15ckvyd55C0E",
+      "title": "NOX V16 · E05 TURBO10 · Self-improvement · 2026-10-28",
+      "mime": "application/vnd.google-apps.document",
+      "url": "https://docs.google.com/document/d/1JUGXUzgrwebIG9Vt_HIX9Y5x6SnMeSj15ckvyd55C0E/edit?usp=drivesdk"
+    },
+    {
+      "id": "1E2QRlcN7_W7RZnIZjBnyjMTn0qPPTAPz83tH86QSD50",
+      "title": "NOX V16 · Super Cinema + 12 Video Models · hardware correction 16→24 · 2026-10-28",
+      "mime": "application/vnd.google-apps.document",
+      "url": "https://docs.google.com/document/d/1E2QRlcN7_W7RZnIZjBnyjMTn0qPPTAPz83tH86QSD50/edit?usp=drivesdk"
+    },
+    {
+      "id": "1ad238qjCqZkZ7dqj6f0A0nbMDtd25Npl7hghhzBoHSI",
+      "title": "NOX V16 · WOW 101–150 · Source run and Windows evidence · 2026-10-28",
+      "mime": "application/vnd.google-apps.document",
+      "url": "https://docs.google.com/document/d/1ad238qjCqZkZ7dqj6f0A0nbMDtd25Npl7hghhzBoHSI/edit?usp=drivesdk"
+    },
+    {
+      "id": "1dLWwfT9INA8r20tNKt1-lWUOZhtnsHWhYqpk1n_wUPI",
+      "title": "NOX V16 · WOW 51–100 · Cinematic source run report · 2026-10-28",
+      "mime": "application/vnd.google-apps.document",
+      "url": "https://docs.google.com/document/d/1dLWwfT9INA8r20tNKt1-lWUOZhtnsHWhYqpk1n_wUPI/edit?usp=drivesdk"
+    },
+    {
+      "id": "1y1QrxVkjLFxOztUDS61Qw3XXnQferUtXn6hv9vK_7Lw",
+      "title": "NOX V16 · E03 QUICK20 · ONE SELF-IMPROVEMENT · 2026-10-28",
+      "mime": "application/vnd.google-apps.document",
+      "url": "https://docs.google.com/document/d/1y1QrxVkjLFxOztUDS61Qw3XXnQferUtXn6hv9vK_7Lw/edit?usp=drivesdk"
+    },
+    {
+      "id": "1p8Lbpu7xdUuMHxcRZXAOQg2fBubPvsl8F-pLZD2Umyw",
+      "title": "NOX V16 · E04 TURBO10 · SELF IMPROVEMENT · 2026-10-28",
+      "mime": "application/vnd.google-apps.document",
+      "url": "https://docs.google.com/document/d/1p8Lbpu7xdUuMHxcRZXAOQg2fBubPvsl8F-pLZD2Umyw/edit?usp=drivesdk"
+    },
+    {
+      "id": "1XtfoFmhIVwdS03MEjX_Srlosj5T5exZYqKIvr0mEGWo",
+      "title": "NOX V16 · E04 TURBO10 · OWNER RUN REPORT · 2026-10-28",
+      "mime": "application/vnd.google-apps.document",
+      "url": "https://docs.google.com/document/d/1XtfoFmhIVwdS03MEjX_Srlosj5T5exZYqKIvr0mEGWo/edit?usp=drivesdk"
+    },
+    {
+      "id": "1VRxNi0g7-zwXE5EWLdIh7Qmh4hxgu2mZRqWveObEg3k",
+      "title": "NOX V16 · E03 TURBO11 · FINAL RUN REPORT · 2026-10-28",
+      "mime": "application/vnd.google-apps.document",
+      "url": "https://docs.google.com/document/d/1VRxNi0g7-zwXE5EWLdIh7Qmh4hxgu2mZRqWveObEg3k/edit?usp=drivesdk"
+    },
+    {
+      "id": "1P__RHxWuH4f5cZ_4vwSIF-BN82FIGTzGzlhqCizMD1I",
+      "title": "NOX V16 · E01 P01 EXPRESS · Self-improvement · 2026-10-28",
+      "mime": "application/vnd.google-apps.document",
+      "url": "https://docs.google.com/document/d/1P__RHxWuH4f5cZ_4vwSIF-BN82FIGTzGzlhqCizMD1I/edit?usp=drivesdk"
+    },
+    {
+      "id": "1d0i8mXKQvfI8MUUe22OwiUCp53fzD5zd-WoF3ATsNso",
+      "title": "NOX V16 · P03 15 Model Sources + SourceLock · FAST SUPPORT HANDOFF",
+      "mime": "application/vnd.google-apps.document",
+      "url": "https://docs.google.com/document/d/1d0i8mXKQvfI8MUUe22OwiUCp53fzD5zd-WoF3ATsNso/edit?usp=drivesdk"
+    },
+    {
+      "id": "1KBjEy7FSK9MJNBnOGL6yaeBrhpyA9X8LiKazYInjVMU",
+      "title": "NOX V16 · FAST EXTERNAL UNBLOCK · HANDOFF №6 · 2026-10-27",
+      "mime": "application/vnd.google-apps.document",
+      "url": "https://docs.google.com/document/d/1KBjEy7FSK9MJNBnOGL6yaeBrhpyA9X8LiKazYInjVMU/edit?usp=drivesdk"
+    },
+    {
+      "id": "1l9uu7MdLDF8bELhCwmIr_KOsdUIFT-qO4Il7YVSxpgI",
+      "title": "NOX V16 · WOW 101–150 · Errors, lessons and source lock · 2026-10-28",
+      "mime": "application/vnd.google-apps.document",
+      "url": "https://docs.google.com/document/d/1l9uu7MdLDF8bELhCwmIr_KOsdUIFT-qO4Il7YVSxpgI/edit?usp=drivesdk"
+    },
+    {
+      "id": "1iO4nlDbAQirDHrkTnxdRVOfhZ0SgMbNqPRovcIoKvLg",
+      "title": "NOX V16 · WOW 51–100 · Error and self-improvement · 2026-10-28",
+      "mime": "application/vnd.google-apps.document",
+      "url": "https://docs.google.com/document/d/1iO4nlDbAQirDHrkTnxdRVOfhZ0SgMbNqPRovcIoKvLg/edit?usp=drivesdk"
+    },
+    {
+      "id": "1eJtdEPrlcfh_be3HNGGncEvkiovKsvGdPjQozpdWwjA",
+      "title": "NOX V16 · E03 TURBO11 · ERROR AND SELF-IMPROVEMENT · 2026-10-28",
+      "mime": "application/vnd.google-apps.document",
+      "url": "https://docs.google.com/document/d/1eJtdEPrlcfh_be3HNGGncEvkiovKsvGdPjQozpdWwjA/edit?usp=drivesdk"
+    },
+    {
+      "id": "1E2ZxfXVYn1rSMRZvHK9FbR-E2Z88Y80DFCBvKDJKchc",
+      "title": "NOX V16 · Video generator self-improvement & VRAM safeguards · 2026-10-28",
+      "mime": "application/vnd.google-apps.document",
+      "url": "https://docs.google.com/document/d/1E2ZxfXVYn1rSMRZvHK9FbR-E2Z88Y80DFCBvKDJKchc/edit?usp=drivesdk"
+    },
+    {
+      "id": "1etz35GsyMzwGOpDWlDVlJp1idcpywesNdpJU-o5ZUmM",
+      "title": "NOX HELION · V16 PACK02/50 · ERROR + SELF IMPROVEMENT · 2026-10-28",
+      "mime": "application/vnd.google-apps.document",
+      "url": "https://docs.google.com/document/d/1etz35GsyMzwGOpDWlDVlJp1idcpywesNdpJU-o5ZUmM/edit?usp=drivesdk"
+    },
+    {
+      "id": "1KO-fA-iWoal_S011sVgaDjkdlXSpvr_2sYP8yMELyIo",
+      "title": "NOX V16 · SIX-LANE MEGABLOCK · P03-P02-P04 / CORE / SOURCELOCK / QA",
+      "mime": "application/vnd.google-apps.document",
+      "url": "https://docs.google.com/document/d/1KO-fA-iWoal_S011sVgaDjkdlXSpvr_2sYP8yMELyIo/edit?usp=drivesdk"
+    },
+    {
+      "id": "1_ZVGqqo9fvLFMmfRXa5kwS-Hsn4xKLzDYhy0HN1bkw4",
+      "title": "NOX FIN ZAGR V16 — P03 C41 run report — 2026-10-27",
+      "mime": "application/vnd.google-apps.document",
+      "url": "https://docs.google.com/document/d/1_ZVGqqo9fvLFMmfRXa5kwS-Hsn4xKLzDYhy0HN1bkw4/edit?usp=drivesdk"
+    },
+    {
+      "id": "1MhHS8oymgY53_ciKqy6S0lwqifzfwsl3DCC5wAlKCbI",
+      "title": "ARCHIVE · NOX HELION MAIN · PRE SOUL V3 · 2026-10-22 · READ-ONLY HISTORICAL",
+      "mime": "application/vnd.google-apps.document",
+      "url": "https://docs.google.com/document/d/1MhHS8oymgY53_ciKqy6S0lwqifzfwsl3DCC5wAlKCbI/edit?usp=drivesdk"
+    },
+    {
+      "id": "1ORTJtAimPQY7MYjhWxVWnf1Pgawrq9OgujeK7755pPw",
+      "title": "NOX HELION · ROLE 4 · EXACT-HEAD D4 SOURCE QA · REPORT_V3 · 2026-10-22",
+      "mime": "application/vnd.google-apps.document",
+      "url": "https://docs.google.com/document/d/1ORTJtAimPQY7MYjhWxVWnf1Pgawrq9OgujeK7755pPw/edit?usp=drivesdk"
+    },
+    {
+      "id": "1Ij-8k2jmVTnDtM1jFQ5DVTq46aiYtTDvJfBkwx_HjiY",
+      "title": "VUNEO V2 temporary original-media transfer",
+      "mime": "application/vnd.google-apps.document",
+      "url": "https://docs.google.com/document/d/1Ij-8k2jmVTnDtM1jFQ5DVTq46aiYtTDvJfBkwx_HjiY/edit?usp=drivesdk"
+    },
+    {
+      "id": "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ",
+      "title": "NOX Group B Task 14 E06 coordinator — self-improvement 2026-10-27",
+      "mime": "application/vnd.google-apps.document",
+      "url": "https://docs.google.com/document/d/14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ/edit?usp=drivesdk"
+    },
+    {
+      "id": "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4",
+      "title": "NOX Group B Task 14 E06 coordinator — run report 2026-10-27",
+      "mime": "application/vnd.google-apps.document",
+      "url": "https://docs.google.com/document/d/17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4/edit?usp=drivesdk"
+    },
+    {
+      "id": "1E8qj82vu9S1_Ao-nJKWk0clUBNi7eTJ4bfUFXEBqcEA",
+      "title": "NOX Group A Task 1 P01 installer — self-improvement 2026-10-27",
+      "mime": "application/vnd.google-apps.document",
+      "url": "https://docs.google.com/document/d/1E8qj82vu9S1_Ao-nJKWk0clUBNi7eTJ4bfUFXEBqcEA/edit?usp=drivesdk"
+    },
+    {
+      "id": "113C5GAAPFYHVh1WGzQoiEiB1Q7QjeGS9mwe7SWvWRtY",
+      "title": "NOX Group B Task 10 P04 RAG — self-improvement 2026-10-27",
+      "mime": "application/vnd.google-apps.document",
+      "url": "https://docs.google.com/document/d/113C5GAAPFYHVh1WGzQoiEiB1Q7QjeGS9mwe7SWvWRtY/edit?usp=drivesdk"
+    },
+    {
+      "id": "12YZv4pdJV8UGCnIGh19afZfhRiZLw4U2",
+      "title": "NOX_V16_WOW200_NOLOSS_GAP_AUDIT_20261028.md",
+      "mime": "text/markdown",
+      "url": "https://drive.google.com/file/d/12YZv4pdJV8UGCnIGh19afZfhRiZLw4U2/view?usp=drivesdk"
+    },
+    {
+      "id": "1qVXRiP5XbnP_Jg0YVsuQ-2Tzh3h-om98",
+      "title": "NOX_V16_WOW200_INTEGRATION_REPORT_20261028.md",
+      "mime": "text/markdown",
+      "url": "https://drive.google.com/file/d/1qVXRiP5XbnP_Jg0YVsuQ-2Tzh3h-om98/view?usp=drivesdk"
+    },
+    {
+      "id": "1vdxRFa9mdspL7PPOplHA8o6lrri4P5kX",
+      "title": "M4_R1_C14_C15_G42_V14_HANDOFF.md",
+      "mime": "text/markdown",
+      "url": "https://drive.google.com/file/d/1vdxRFa9mdspL7PPOplHA8o6lrri4P5kX/view?usp=drivesdk"
+    },
+    {
+      "id": "1aYU2jfrBw_0h4WxmZnqIavwfD8ackpkk",
+      "title": "NOX_V16_WOW200_SELF_IMPROVEMENT_20261028.md",
+      "mime": "text/markdown",
+      "url": "https://drive.google.com/file/d/1aYU2jfrBw_0h4WxmZnqIavwfD8ackpkk/view?usp=drivesdk"
+    },
+    {
+      "id": "1HP5l1rWI810bfB8FfWuFqgKrBqrHoHtO",
+      "title": "NOX_HELION_CONSCIOUSNESS_LIVE_MAX_V1.html",
+      "mime": "text/html",
+      "url": "https://drive.google.com/file/d/1HP5l1rWI810bfB8FfWuFqgKrBqrHoHtO/view?usp=drivesdk"
+    },
+    {
+      "id": "13hWJjOFGmMLW6oUcCabrzeRGOrVR1d63",
+      "title": "NOX_V16_E03_TURBO12_HOTFIX1.patch",
+      "mime": "text/plain",
+      "url": "https://drive.google.com/file/d/13hWJjOFGmMLW6oUcCabrzeRGOrVR1d63/view?usp=drivesdk"
+    },
+    {
+      "id": "1C5VkOmAdByxfnogtSGkJeeXMT_426DhB",
+      "title": "NOX_V16_E03_TURBO12_from_TURBO10.patch",
+      "mime": "text/plain",
+      "url": "https://drive.google.com/file/d/1C5VkOmAdByxfnogtSGkJeeXMT_426DhB/view?usp=drivesdk"
+    },
+    {
+      "id": "1gMYAdg_iI_h-kY49z5WbsxJs-8S1hyRmMutMICePNAE",
+      "title": "NOX Group B Task 10 P04 RAG — run report 2026-10-27",
+      "mime": "application/vnd.google-apps.document",
+      "url": "https://docs.google.com/document/d/1gMYAdg_iI_h-kY49z5WbsxJs-8S1hyRmMutMICePNAE/edit?usp=drivesdk"
+    },
+    {
+      "id": "1tkMZU3_HhqwbrtC1LvvbB7iiNibMacz2",
+      "title": "NOX_E03_FINAL_PATCH_FROM_CONSOLIDATE.patch",
+      "mime": "text/plain",
+      "url": "https://drive.google.com/file/d/1tkMZU3_HhqwbrtC1LvvbB7iiNibMacz2/view?usp=drivesdk"
+    },
+    {
+      "id": "1xWxjmZeKe9Qf4Gz7UUNjDz6bTcVR3T0E",
+      "title": "NOX_P01_C12_NSI_SOURCE.txt",
+      "mime": "text/plain",
+      "url": "https://drive.google.com/file/d/1xWxjmZeKe9Qf4Gz7UUNjDz6bTcVR3T0E/view?usp=drivesdk"
+    },
+    {
+      "id": "1CM_EEBPYvr3Qmo7z4nBZDv-HWrFrs98M",
+      "title": "NOX_E03_CROSS_WINDOW_STOP_EXACT_PATCH.patch",
+      "mime": "text/plain",
+      "url": "https://drive.google.com/file/d/1CM_EEBPYvr3Qmo7z4nBZDv-HWrFrs98M/view?usp=drivesdk"
+    },
+    {
+      "id": "1vzJQ_B7COcwm3FjWuCnWBq4D7Bu-bVe4vwXtR5lRd6o",
+      "title": "NOX HELION · MAIN · PRE-PRE 7 ручных · RELEASE1 15 авто",
+      "mime": "application/vnd.google-apps.spreadsheet",
+      "url": "https://docs.google.com/spreadsheets/d/1vzJQ_B7COcwm3FjWuCnWBq4D7Bu-bVe4vwXtR5lRd6o/edit?usp=drivesdk"
+    },
+    {
+      "id": "1SQ2J-923uN5lZx3RGixEECQBXQeOdfAlrwAYkb_Wfog",
+      "title": "NOX HELION · 24-часовой срез и исполнители · EXE SHA · 24.10.2026",
+      "mime": "application/vnd.google-apps.presentation",
+      "url": "https://docs.google.com/presentation/d/1SQ2J-923uN5lZx3RGixEECQBXQeOdfAlrwAYkb_Wfog/edit?usp=drivesdk"
+    },
+    {
+      "id": "1OVDya-9wlDLnilqT8gLKWNS2PVJ43_8MQ4d3Ed6t5H0",
+      "title": "NOX HELION · 24-часовой срез и исполнители · 24.10.2026",
+      "mime": "application/vnd.google-apps.presentation",
+      "url": "https://docs.google.com/presentation/d/1OVDya-9wlDLnilqT8gLKWNS2PVJ43_8MQ4d3Ed6t5H0/edit?usp=drivesdk"
+    },
+    {
+      "id": "1BeIx8b6RfebpLFgVKZ8OGmDD53gv2EnuJemcHcoaSHo",
+      "title": "NOX Group B Task 9 P03 weights UI — report 2026-10-27",
+      "mime": "application/vnd.google-apps.document",
+      "url": "https://docs.google.com/document/d/1BeIx8b6RfebpLFgVKZ8OGmDD53gv2EnuJemcHcoaSHo/edit?usp=drivesdk"
+    },
+    {
+      "id": "1T0AtLfQVZPaAM4RL95ssSzXgzPC5vvPc",
+      "title": "NOX_E01_C08_README.md",
+      "mime": "text/markdown",
+      "url": "https://drive.google.com/file/d/1T0AtLfQVZPaAM4RL95ssSzXgzPC5vvPc/view?usp=drivesdk"
+    },
+    {
+      "id": "1FjYv-Tqmln-EnGNWqLE7LzQCY5BQ_oKP",
+      "title": "NOX_HELION_FULL_SOURCE_AND_SITE_AUDIT_20261022.md",
+      "mime": "text/markdown",
+      "url": "https://drive.google.com/file/d/1FjYv-Tqmln-EnGNWqLE7LzQCY5BQ_oKP/view?usp=drivesdk"
+    }
+  ],
+  "original_source_expected": {
+    "archive_bytes": 60364346,
+    "archive_sha256_from_build_script": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+    "reconstructed_bytes_verified": false,
+    "actual_sha256_verified": false,
+    "source_file_sha256_verified": false
+  },
+  "constraints": [
+    "No PR auto-merge: draft and stacked bases, owner SHA and Windows E07 acceptance pending",
+    "Git SHA-1 git blobs are not SHA-256 of raw files",
+    "DO NOT overwrite D02/WOW/Persona/archives/EXE",
+    "Use only matching exact commit/tree and owner pre/post SHA",
+    "Record HOLD for files inside segmented archives until reconstructed and independently hashed",
+    "Source list covers Git tracked files in three main commits only; not every Drive object or PR tree"
+  ],
+  "status_of_build": "BLOCKED; diagnostic historical EXE only, current candidate Windows CI failures observed"
+}

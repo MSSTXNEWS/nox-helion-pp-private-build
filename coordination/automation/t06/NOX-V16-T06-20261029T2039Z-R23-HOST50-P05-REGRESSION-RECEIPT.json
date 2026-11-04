@@ -1,0 +1,74 @@
+{
+  "schema": "NOX_V16_T06_R23_EXISTING_TASK_SOURCE_REGRESSION_V1",
+  "run_id": "NOX-V16-T06-20261029T2039Z-R23-HOST50-P05",
+  "role": "manual-1/T06",
+  "branch": "integration/nox-v16-unified-candidate-20261028-r01",
+  "head_pre": "d23956686fd9634225512f456b194fc723eda933",
+  "source_head_post": "ac175df5da253f13f1e0c1991cc6161ac4a58292",
+  "changes": [
+    {
+      "path": "proposals/NOX-PACK01-50/binding_map.test.mjs",
+      "pre_blob": "efcbbff688a3b141c9744155645c7d40e2ba242e",
+      "post_blob": "ee6e53f114dab9e342bfd05e484c86d870b7be54",
+      "commit": "5b589c16fc152c0928465799a7f5759184ffc063",
+      "evidence": "8/8 connector-bound JSON invariants PASS"
+    },
+    {
+      "path": "Packages/P05/Space/tests/Program.cs",
+      "pre_blob": "16cf9bf1182244622e316e6f42a2de324a1e6f18",
+      "post_blob": "682a33faf4ff5d0db955619b2b2ab9de4c168aaa",
+      "commit": "11ea612bfcae8d32a6caf0ad312e0278e8bf1e6a",
+      "evidence": "C# smoke declaration was hidden by literal escaped newline; source corrected"
+    },
+    {
+      "path": "coordination/e06/test_p05_smoke_declaration_r23.py",
+      "pre_blob": null,
+      "post_blob": "0a6a9413ef7797e8394b34be1fd453be9f33bc9e",
+      "commit": "ac175df5da253f13f1e0c1991cc6161ac4a58292",
+      "evidence": "Source-level regression added; 8/8 connector-based guards PASS, standalone unittest NOT_RUN"
+    }
+  ],
+  "host50": {
+    "source_bound": 39,
+    "source_unbound": 11,
+    "native_pending": 14,
+    "legacy_hold": 13,
+    "owner_map_blob": "3a5071a10e3d94057b5b19562a371f30811aaca5",
+    "native_accepted": false
+  },
+  "tests": {
+    "local_t06_original": 3,
+    "local_ci_triage": 4,
+    "host50_connector_invariants": 8,
+    "p05_connector_invariants": 8,
+    "updated_p05_dotnet": "NOT_RUN_DOTNET_SDK_UNAVAILABLE",
+    "p04_dotnet": "NOT_RUN_DOTNET_SDK_UNAVAILABLE",
+    "t08_independent": "PENDING"
+  },
+  "errors": [
+    "ERR-SRC-003",
+    "ERR-SRC-004",
+    "ERR-SRC-005",
+    "ERR-SYS-002",
+    "NOX-V16-T06-ROOT-STOP-20261029-R01",
+    "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01"
+  ],
+  "shared_error_register": {
+    "blob": "967932904afa9caa743fb33b29bbd807c59f714b",
+    "entries": 11,
+    "writer": "T02_ONLY",
+    "updated_by_t06": false
+  },
+  "handoff": {
+    "t08": "IN_PROGRESS; MUST VERIFY SAME HEAD",
+    "t02": "IN_PROGRESS; shared docs not reported updated",
+    "t09": "HOLD until T08 disposition",
+    "t10": "SOURCE_READY HOLD"
+  },
+  "status": "INTEGRATED_SOURCE_ONLY_INCOMPLETE",
+  "qa_accepted": false,
+  "source_ready": false,
+  "exe_build": false,
+  "gitlab_ci": false,
+  "release": false
+}

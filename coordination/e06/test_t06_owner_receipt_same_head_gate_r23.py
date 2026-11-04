@@ -1,0 +1,101 @@
+"""One focused regression for T06 immutable Git receipt verifier."""
+import hashlib
+import importlib.util
+import json
+from pathlib import Path
+import unittest
+from unittest.mock import patch
+
+SCRIPT=Path(__file__).with_name("t06_owner_receipt_same_head_gate_r23.py")
+spec=importlib.util.spec_from_file_location("nox_r23_owner_gate",SCRIPT)
+gate=importlib.util.module_from_spec(spec)
+spec.loader.exec_module(gate)
+
+
+class OwnerReceiptGateR23(unittest.TestCase):
+    def test_unsafe_owner_paths_are_rejected(self):
+        # Source-only: Windows reparse-style separators and embedded NUL must
+        # not reach Git show / receipt path matching on any host platform.
+        self.assertFalse(gate.safe_path(r"Packages\P04\model.py"))
+        self.assertFalse(gate.safe_path("Packages/P04/model\x00.py"))
+        self.assertFalse(gate.safe_path("Packages/../secret"))
+        self.assertFalse(gate.safe_path("/absolute/path"))
+        self.assertTrue(gate.safe_path("Packages/P04/model.py"))
+
+    def test_windows_sensitive_source_paths_fail_closed(self):
+        invalid = [
+            "test/COM1:stream", "test/x\n.txt", "test/file?.json",
+            "test/AUX", "test/trail .txt", "test/a|b.json",
+            "test/file\x7f.txt", "test/C:relative", "test/CON.txt",
+            "test/LPT¹.txt", "test/trail.", "test/hidden\u202e.txt",
+        ]
+        for candidate in invalid:
+            with self.subTest(path=repr(candidate)):
+                self.assertFalse(gate.safe_path(candidate))
+        for valid in ("Packages/P04/model.py", "test/P01.source", "docs/HELION File.md"):
+            with self.subTest(path=valid):
+                self.assertTrue(gate.safe_path(valid))
+
+    def test_receipt_sha_must_resolve_to_git_blob_not_tree_or_commit(self):
+        target="Packages/P04/model_snapshot_probe.py"
+        sha="a"*40
+        def fake_git(*args):
+            if args[:1]==("rev-parse",):
+                return (sha+"\n").encode()
+            if args[:2]==("cat-file","-t"):
+                return b"tree\n"
+            raise AssertionError(args)
+        with patch.object(gate,"git",side_effect=fake_git):
+            self.assertIsNone(gate.blob_at("b"*40,target))
+        with patch.object(gate,"git",side_effect=lambda *args:(sha+"\n").encode() if args[0]=="rev-parse" else b"blob\n"):
+            self.assertEqual(gate.blob_at("b"*40,target),sha)
+
+    def test_true_git_receipts_do_not_claim_native_and_stale_receipts_fail(self):
+        rows={}
+        files={}
+        for owner,receipt in gate.RECEIPTS.items():
+            path="test/"+owner+".source"
+            if owner=="P01":
+                items=[{"path":path,"git_blob_sha1":"a"*40}]
+                rows[receipt]={"parts":items}
+            elif owner=="P02":
+                body=b"actual-utf8-owner-source"
+                items=[{"path":path,"sha256":hashlib.sha256(body).hexdigest()}]
+                files[path]=body
+                rows[receipt]={"paths":items}
+            else:
+                items=[{"path":path,"post_git_blob_sha1":"a"*40}]
+                rows[receipt]={"files":items}
+        mapping="proposals/NOX-PACK01-50/owner-binding-map.json"
+        rows[mapping]={"routes":[{"routeId":"chat.voice","sourceBinding":"owner.py"},
+                                  {"routeId":"training.start","sourceBinding":None}],
+                       "remainingNativeBlockers":[{"routeId":"chat.voice"},
+                                                  {"routeId":"training.start"}]}
+        def fetch(_head,path):
+            if path in rows:return json.dumps(rows[path]).encode()
+            return files[path]
+        def blob(_head,path):
+            return "a"*40 if path in rows or path.startswith("test/") else None
+        with patch.object(gate,"read_at",side_effect=fetch),patch.object(
+                gate,"blob_at",side_effect=blob):
+            out=gate.audit("b"*40)
+            self.assertTrue(out["all_source_receipts_match"])
+            rows[gate.RECEIPTS["P01"]]["parts"][0]["git_blob_sha1"]=123
+            invalid=gate.audit("b"*40)
+            self.assertFalse(invalid["all_source_receipts_match"])
+            self.assertEqual(invalid["owners"]["P01"]["matched"],0)
+            rows[gate.RECEIPTS["P01"]]["parts"][0]["git_blob_sha1"]="a"*40
+            self.assertIs(out["source_ready"],False)
+            self.assertIs(out["owner_qa_accepted"],False)
+            self.assertEqual(out["native_windows"],"NOT_RUN")
+            self.assertEqual(len(out["host50"]["native_pending"]),2)
+            with patch.object(gate,"blob_at",side_effect=lambda h,p:(
+                    "c"*40 if p=="test/P05.source" else blob(h,p))):
+                stale=gate.audit("b"*40)
+            self.assertFalse(stale["all_source_receipts_match"])
+            self.assertEqual(stale["owners"]["P05"]["matched"],0)
+            self.assertEqual(stale["status"],"STALE_OWNER_RECEIPTS_NATIVE_NOT_ACCEPTED")
+
+
+if __name__=="__main__":
+    unittest.main()

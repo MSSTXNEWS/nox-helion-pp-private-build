@@ -1,0 +1,42 @@
+{
+  "schema": "NOX-V16-E04-OWNER-SOURCE-RECEIPT-v1",
+  "run_id": "NOX-V16-W4-01-E04-20261029T0008MSK-R17",
+  "task_id": "E04-P04-NFC-CASEFOLD-JSON-PARITY-R17",
+  "owner": "W4·01/E04/P04",
+  "expected_staging_head": "e53cd01529f718f3670703d3c34b9574bcd32c70",
+  "expected_staging_tree": "04ffc2e9d3a156b19e207e47af7aeba30dc0f32d",
+  "immutable_historical_baseline": "0b3a7d435be735148d64171deb9027093a89646e",
+  "prior_lesson": "MODEL_LOCK_RIGHTS_IDENTITIES_TYPED_NONBLANK_BEFORE_TREE",
+  "prior_lesson_applied": "YES, retained model lock typed and nonblank pre-tree; 1 real-source test authored, not executed",
+  "error": "Case/NFC-equivalent distinct JSON properties accepted at P04 model/dataset lock, attestation and JSONL boundaries.",
+  "cause": "Object pairs hooks only tested exact Python string keys, unlike cross-runtime case-insensitive consumers.",
+  "fix": "NFC+casefold duplicate-key identity enforced recursively at three existing parsers. Original error codes retained, no extra workers.",
+  "files": [
+    {
+      "path": "Packages/P04/train_qlora.py",
+      "owner": "E04",
+      "pre_sha256": "773a02d6176ea267d58b5df5a4145f1e52b03377379238bb45ce872d74f3f027",
+      "post_sha256": "ba3d91b4efa558d858649f750e6ce13f0cede57d817b2af6ec0e1d1bc70eb99f",
+      "pre_git_blob_sha1": "b3c85bac47cbe570cb525f283c61504564a8f5ff",
+      "post_git_blob_sha1": "eb59393947ebfcd77e733a3d70fc01c85fbfd8a6"
+    },
+    {
+      "path": "tests/P04/test_e04_nfc_casefold_json_keys_r17.py",
+      "owner": "E04",
+      "pre_sha256": "ABSENT",
+      "post_sha256": "b538fbf1b1bf5238ea69750572772a0a7c5263ce96e842af02b918a931e3aa87",
+      "pre_git_blob_sha1": "ABSENT",
+      "post_git_blob_sha1": "03b447d4a5a11ee22c94ea5c611d18f2701e1d90"
+    }
+  ],
+  "regression": {
+    "isolated_before": "RED 3 failures / 8 tests",
+    "isolated_after": "GREEN 5/5 selected PASS",
+    "actual_production_module": "10 authored; NOT_RUN",
+    "gpu": "NOT_RUN",
+    "windows": "NOT_RUN"
+  },
+  "lesson": "P04_JSON_NFC_CASEFOLD_PROPERTY_IDENTITY_BEFORE_AUTH_OR_TRAIN",
+  "admission": "SOURCE_ONLY: manual #1 must run real module tests, verify owner SHA and independent SOURCE_READY gate",
+  "preservation": "No edits to P01/P02/P03/P05, SourceLock, D02, WOW or original ZIP."
+}

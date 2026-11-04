@@ -1,0 +1,140 @@
+{
+  "schema": "NOX-P04-MODULE-CANDIDATES-V1",
+  "product": "NOX HELION EXPRESS INTEGRATOR",
+  "state": "DISCOVERY_ONLY",
+  "training_worker": "Packages/P04/train_qlora.py",
+  "gpu_preflight": "Packages/P04/preflight_local_gpu.py",
+  "module_autoinstall": false,
+  "items": [
+    {
+      "name": "ollama",
+      "source": "https://ollama.com/download/windows",
+      "role": "runtime",
+      "version": null,
+      "sha256": null,
+      "license_receipt": null,
+      "compatibility": "REVIEW_REQUIRED",
+      "download_enabled": false
+    },
+    {
+      "name": "torch",
+      "source": "https://pytorch.org/get-started/locally/",
+      "role": "CUDA",
+      "version": null,
+      "sha256": null,
+      "license_receipt": null,
+      "compatibility": "REVIEW_REQUIRED",
+      "download_enabled": false
+    },
+    {
+      "name": "transformers",
+      "source": "https://pypi.org/project/transformers/",
+      "role": "model_loader",
+      "version": null,
+      "sha256": null,
+      "license_receipt": null,
+      "compatibility": "REVIEW_REQUIRED",
+      "download_enabled": false
+    },
+    {
+      "name": "peft",
+      "source": "https://pypi.org/project/peft/",
+      "role": "LoRA",
+      "version": null,
+      "sha256": null,
+      "license_receipt": null,
+      "compatibility": "REVIEW_REQUIRED",
+      "download_enabled": false
+    },
+    {
+      "name": "accelerate",
+      "source": "https://pypi.org/project/accelerate/",
+      "role": "training",
+      "version": null,
+      "sha256": null,
+      "license_receipt": null,
+      "compatibility": "REVIEW_REQUIRED",
+      "download_enabled": false
+    },
+    {
+      "name": "trl",
+      "source": "https://pypi.org/project/trl/",
+      "role": "tuning",
+      "version": null,
+      "sha256": null,
+      "license_receipt": null,
+      "compatibility": "REVIEW_REQUIRED",
+      "download_enabled": false
+    },
+    {
+      "name": "bitsandbytes",
+      "source": "https://pypi.org/project/bitsandbytes/",
+      "role": "quantization",
+      "version": null,
+      "sha256": null,
+      "license_receipt": null,
+      "compatibility": "REVIEW_REQUIRED",
+      "download_enabled": false
+    },
+    {
+      "name": "datasets",
+      "source": "https://pypi.org/project/datasets/",
+      "role": "datasets",
+      "version": null,
+      "sha256": null,
+      "license_receipt": null,
+      "compatibility": "REVIEW_REQUIRED",
+      "download_enabled": false
+    },
+    {
+      "name": "safetensors",
+      "source": "https://pypi.org/project/safetensors/",
+      "role": "model_storage",
+      "version": null,
+      "sha256": null,
+      "license_receipt": null,
+      "compatibility": "REVIEW_REQUIRED",
+      "download_enabled": false
+    },
+    {
+      "name": "tokenizers",
+      "source": "https://pypi.org/project/tokenizers/",
+      "role": "tokenization",
+      "version": null,
+      "sha256": null,
+      "license_receipt": null,
+      "compatibility": "REVIEW_REQUIRED",
+      "download_enabled": false
+    },
+    {
+      "name": "huggingface-hub",
+      "source": "https://pypi.org/project/huggingface-hub/",
+      "role": "metadata",
+      "version": null,
+      "sha256": null,
+      "license_receipt": null,
+      "compatibility": "REVIEW_REQUIRED",
+      "download_enabled": false
+    },
+    {
+      "name": "sentence-transformers",
+      "source": "https://pypi.org/project/sentence-transformers/",
+      "role": "embedding",
+      "version": null,
+      "sha256": null,
+      "license_receipt": null,
+      "compatibility": "REVIEW_REQUIRED",
+      "download_enabled": false
+    },
+    {
+      "name": "pyinstaller",
+      "source": "https://pypi.org/project/pyinstaller/",
+      "role": "existing_build",
+      "version": null,
+      "sha256": null,
+      "license_receipt": null,
+      "compatibility": "REVIEW_REQUIRED",
+      "download_enabled": false
+    }
+  ]
+}

@@ -1,0 +1,150 @@
+{
+  "task": "MP1_K04",
+  "base_head": "55eb47362cd513ce2c10a07306afa281cfe61577",
+  "status": "ACTUAL_WPF_CROSS_COMPILE_PASS",
+  "owned_product_files": [
+    "coordination/e06/MainWindow.NativeP02.cs",
+    "coordination/e06/OneHostP02WebView2Bridge.cs"
+  ],
+  "changed_product_files": [],
+  "source_fixes_required": false,
+  "scope": "Compile original P01 WPF with existing additive native P02/P03 source integration; no UX/media changes",
+  "sdk": "8.0.427",
+  "target_framework": "net8.0-windows",
+  "host": "Linux",
+  "configuration": "Debug",
+  "command": "DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1 intake/mp1-dotnet/sdk/dotnet build intake/mp1_k04/R11/NOX.P01.Shell.csproj -p:EnableWindowsTargeting=true --no-self-contained -v:minimal",
+  "original_donor": {
+    "path": "donors/p01.zip",
+    "sha256": "90076eba83a213ba2b410632ced3288d41a6691ab63f81ad0520aa3cbbbfcb52",
+    "selected_original_compile_files": 25
+  },
+  "stage_repairs": [
+    "17 original P05 malformed HTML strings repaired by existing pinned stage script",
+    "Existing identical P03 duplicates removed and original OpenAI namespace corrected by pinned compatibility script",
+    "Existing R51 event null typing, P03 queue member types and global usings applied"
+  ],
+  "input_sha256": {
+    "coordination/e06/MainWindow.NativeP02.cs": "68163ccf488df00cf7489671809d12b445c2dc874b4269af19089753686fd299",
+    "coordination/e06/OneHostP02WebView2Bridge.cs": "0c44f9ff6563af29be49848ed696dce63e957ab9b5cf4dbaba498cea2d58f88d",
+    "coordination/e06/stage_native_p02.py": "7e1996e685671ba0f431fd9d4aa1ece644d08ace652c08946b939818643dae5b",
+    "coordination/e06/stage_p05_html_verbatim.py": "c7ff37b6381ed7b8b5c7508c7c6cd9fd0919beedea6377fa8fdd422cb8944bac",
+    "coordination/e06/stage_wpf_compat_no_loss.py": "cddfae5fe570feaf389f4f7bc2419d997483c187e143ce7e6799126518bd8831",
+    "coordination/e06/stage_wpf_final8_no_loss.py": "f0f0397232408e750e320eccd189e7e3621a4ed6f73dbde2e11e2fadd0ceac6a"
+  },
+  "native_source_snapshot": [
+    {
+      "source": "Packages/P02/worker-chat/NativePythonPipe.cs",
+      "stage": "Integration/NativePythonPipe.cs",
+      "sha256": "d59e0a7785bc12a81066d480b43324ddc8b360e0b6acd498c89e311f9cb179aa"
+    },
+    {
+      "source": "coordination/e06/OneHostP02WebView2Bridge.cs",
+      "stage": "Integration/OneHostP02WebView2Bridge.cs",
+      "sha256": "0c44f9ff6563af29be49848ed696dce63e957ab9b5cf4dbaba498cea2d58f88d"
+    },
+    {
+      "source": "Packages/P03/Source/P03.ModelCenter/ModelArtifactReviewRegistry.cs",
+      "stage": "Integration/P03/ModelArtifactReviewRegistry.cs",
+      "sha256": "4a5ada97a82cf5befa4f16c2586292c680e21b481179e524a199aa5162e2cb3f"
+    },
+    {
+      "source": "Packages/P03/Source/P03.ModelCenter/ModelCatalog.cs",
+      "stage": "Integration/P03/ModelCatalog.cs",
+      "sha256": "3b569938d864f27110aced9ffcb03fba6e52248b1692743e9b4336ff4ee14859"
+    },
+    {
+      "source": "Packages/P03/Source/P03.ModelCenter/ModelCenterNativeRoutes.cs",
+      "stage": "Integration/P03/ModelCenterNativeRoutes.cs",
+      "sha256": "9ef492cc8040a948842f24c90dd5f09bf49eecadb9a744264c05a898eb21ad38"
+    },
+    {
+      "source": "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueStore.cs",
+      "stage": "Integration/P03/ModelDownloadQueueStore.cs",
+      "sha256": "38b7ddae2d3ec1c56edaf0daaa147ef84b018a159a0c2e6b1de80217564b91ce"
+    },
+    {
+      "source": "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueWorker.cs",
+      "stage": "Integration/P03/ModelDownloadQueueWorker.cs",
+      "sha256": "f1bb69ee9e8d9b1876e1b1629d420c8d447c3d0ae7d2cc8dc608bc529e17003e"
+    },
+    {
+      "source": "Packages/P03/Source/P03.ModelCenter/ModelLifecycleEvents.cs",
+      "stage": "Integration/P03/ModelLifecycleEvents.cs",
+      "sha256": "8602022bd4abf448d28c7f019740ccdc36aff4857c6100a362456fddbeab99bc"
+    },
+    {
+      "source": "Packages/P03/Source/P03.ModelCenter/ModelLocalAttestation.cs",
+      "stage": "Integration/P03/ModelLocalAttestation.cs",
+      "sha256": "f29bb73f895bcc2d985618b7236972bb07d122a38f4a5de9a9adc1bb5fb8f175"
+    },
+    {
+      "source": "Packages/P03/Source/P03.ModelCenter/ModelQuickActions.cs",
+      "stage": "Integration/P03/ModelQuickActions.cs",
+      "sha256": "f3206aaec6b98cd512bad3ecc86cce195cfd024175894f8b51f2689a744a9c3f"
+    },
+    {
+      "source": "Packages/P03/Source/P03.ModelCenter/ModelSafetensorsImport.cs",
+      "stage": "Integration/P03/ModelSafetensorsImport.cs",
+      "sha256": "97d6ba296773359b4c7469919a161d68dc4ff7d6665d3b0443197e2fb2e95dde"
+    },
+    {
+      "source": "Packages/P03/Source/P03.ModelCenter/ModelTagReviewLeads.cs",
+      "stage": "Integration/P03/ModelTagReviewLeads.cs",
+      "sha256": "e1311f67de48eb975b3308f86d3ed162e4d1f3b92cd8a21cdd9549915e4280dd"
+    },
+    {
+      "source": "Packages/P03/Source/P03.ModelCenter/ModelWowBridgeContract.cs",
+      "stage": "Integration/P03/ModelWowBridgeContract.cs",
+      "sha256": "112ac87ce9b9cb192d6964e7b62d8825777547eae9e160ba8ef2e1f34670e8f9"
+    },
+    {
+      "source": "Packages/P03/Source/P03.ModelCenter/OllamaLoopbackHttpClientFactory.cs",
+      "stage": "Integration/P03/OllamaLoopbackHttpClientFactory.cs",
+      "sha256": "90a0eadc1688e95c62682a027865aa07261555ff1217f1fda69d9a161e2df1ef"
+    },
+    {
+      "source": "Packages/P03/Source/P03.ModelCenter/OllamaModelAdapter.cs",
+      "stage": "Integration/P03/OllamaModelAdapter.cs",
+      "sha256": "b65ff078cfe929449227d74028e17fab4c2a94aa8fd39143dc978dc89729f9ec"
+    },
+    {
+      "source": "Packages/P03/Source/P03.ModelCenter/WindowsHardwareFacts.cs",
+      "stage": "Integration/P03/WindowsHardwareFacts.cs",
+      "sha256": "3763fe76d35f711327f5fa8cc255d50fc70800c76266505033dab284f4e48ca1"
+    }
+  ],
+  "validation": {
+    "build": "PASS",
+    "errors": 0,
+    "warnings": 5,
+    "elapsed_seconds": 32.22,
+    "current_source_matches_compiled_inputs": true
+  },
+  "warnings": [
+    "P03 ModelDownloadQueueStore.cs109 CS8602",
+    "Original OpenAiResponsesProvider.cs603 CS9107",
+    "Original ModelPreflight.cs78 CS8604",
+    "Original MainWindow trainingMonitorCts CS0649",
+    "Original MainWindow trainingModelRevision CS0169"
+  ],
+  "output": {
+    "path": "/workspace/scratch/16ae9c869232/intake/mp1_k04/R11/bin/Debug/net8.0-windows/NOX.P01.Shell.dll",
+    "sha256": "2d6d3d3c2612d4117071dc1dc2ac5178f82d5587ebb89147bbadd4bfcb23942d",
+    "kind": "Windows-targeted managed DLL compile output, not released EXE/installer"
+  },
+  "log": {
+    "path": "intake/mp1_k04/build.log",
+    "sha256": "768fbf45f30a49df78626a2ccbd7f1669550ffeec17b2b1e326185f62a24ae2d"
+  },
+  "environment_issue": {
+    "initial": "dotnet CLI aborted in Process.GetStat before build",
+    "resolved_by": "DOTNET_CLI_TELEMETRY_OPTOUT=1 and DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1; no permission or data changes"
+  },
+  "holds": [
+    "No Windows native launch or installed acceptance performed",
+    "Final Windows release packaging and same-SHA E07 remain separate",
+    "Any subsequent modified P03/P02 input requires only targeted recompile of changed snapshot"
+  ],
+  "release": "HOLD"
+}

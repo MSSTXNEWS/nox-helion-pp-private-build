@@ -1,0 +1,65 @@
+/* NOX HELION EXPRESS · WOW V4 / native CHAT + cinematic controls.
+   Additive, local assets only. Respects ECO, narrow viewports and reduced motion. */
+:root{--nox-neon:#99dff0;--nox-flame:#ffbe7f;--nox-violet:#a794f9;--nox-glass:rgba(10,17,29,.85)}
+.shell{max-width:1720px}
+.header{position:relative;z-index:5}
+.logo{filter:drop-shadow(0 0 19px #d8925944)}
+.logo b{background:linear-gradient(105deg,#fff0d4,#ffa964 58%,#d7eeff);background-clip:text;-webkit-background-clip:text;color:transparent}
+.metrics{position:relative;padding:10px 14px;border:1px solid #a3cbd32b;border-radius:13px;background:linear-gradient(100deg,#0e1823b5,#1c161d77);box-shadow:inset 0 1px #ffffff0c}
+.metrics::before{content:"";position:absolute;top:0;left:18%;right:18%;height:1px;background:linear-gradient(90deg,transparent,#9adeeb44,transparent)}
+.main-action{display:grid;place-items:center;align-content:center;gap:3px;min-height:92px!important;border-radius:26px 38px 24px 36px!important;text-align:center;font-size:12px;isolation:isolate}
+.main-action::after{content:"✧";position:relative;display:block;font-size:25px;line-height:1;color:#f9cd8d;text-shadow:0 0 18px #efaa67b3;order:-1}
+.main-action[data-action="CHAT"]::after{content:"◈";color:#a7f3fa}
+.main-action[data-action="INSTALL"]::after{content:"⬡"}
+.main-action[data-action="MODELS"]::after{content:"◉";color:#b6caff}
+.main-action[data-action="LEARN"]::after{content:"✦";color:#e5c5ff}
+.main-action[data-action="REPORTS"]::after{content:"▥"}
+.main-action:focus-visible,.direction:focus-visible,.route:focus-visible{outline:2px solid #b9edff;outline-offset:4px}
+.direction{display:flex;align-items:center;gap:10px}
+.direction::after{content:"◇";order:-1;font-size:18px;color:#f4b980;text-shadow:0 0 12px #c7797280}
+.direction[data-section="intelligence"]::after,.direction[data-section="knowledge"]::after{color:#a5e6f5}
+.direction[data-section="development"]::after,.direction[data-section="creative"]::after{color:#dab5f5}
+.universe[data-wow-v3="1"] .sun{background:radial-gradient(circle at 47% 46%,#000 0%,#120c12 42%,#080510 59%,#a75a3a 78%,#f5aa623e 88%,#070a12 100%);box-shadow:inset 0 0 45px #000,0 0 50px #f19a514e,0 0 155px #af5e4b27}
+.universe[data-wow-v3="1"] .sun-photo{opacity:.65;filter:contrast(1.2) saturate(1.2)}
+.universe[data-wow-v3="1"] .sun::after{background:radial-gradient(circle at 32% 24%,#ffffff2b,transparent 24%),radial-gradient(circle at 55% 56%,transparent 49%,#e88c4459 75%,transparent 88%)}
+.universe[data-wow-v3="1"] .planet{border:1px solid #f9d9a375;text-shadow:0 2px 12px #01040a;transition:transform .24s ease,box-shadow .24s ease,border-color .2s}
+.universe[data-wow-v3="1"] .planet::after{box-shadow:0 -3px 18px #d8a47e62,0 0 24px #76bbd42a}
+.universe[data-wow-v3="1"] .planet[aria-pressed="true"]{border-color:#c2f2ff;box-shadow:inset -12px -15px 29px #0009,0 0 24px #90e2f18c,0 0 72px #d5856e3a}
+.core-section{position:relative;padding-top:24px}
+.core-section::before{content:"";position:absolute;inset:0 0 auto;height:2px;background:linear-gradient(90deg,transparent,#d9a86d88,#86cfe099,transparent)}
+.core{position:relative;min-height:44px;border-radius:16px 8px 16px 8px;background:linear-gradient(120deg,#1d2333,#080f1a 72%);box-shadow:inset 0 1px #ebfaff15}
+.core::before{content:"◆";font-size:8px;margin-right:5px;color:#8bddf2}
+.core:focus-visible{outline:2px solid #b8f3ff;outline-offset:3px}
+.details{border-color:#d8b18477;box-shadow:0 18px 70px #000c,0 0 32px #8c5b4a1c}
+.nox-chat{position:relative;display:grid;gap:12px;min-width:0}
+.nox-chat-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.nox-chat-heading h2{font-size:clamp(21px,2.4vw,31px);font-weight:550;letter-spacing:.1em;margin:0;color:#f9dbb5}
+.nox-chat-trust{font-size:10px;letter-spacing:.1em;border:1px solid #76bec858;border-radius:20px;padding:8px 12px;color:#a0d8dc;background:#0b1d28}
+.nox-chat-label{margin:8px 0 -5px;color:#a7b6c0;font-size:10px;font-weight:750;letter-spacing:.22em}
+.nox-chat-chips{display:flex;flex-wrap:wrap;gap:8px;align-items:center;max-width:100%;padding:4px 0}
+.nox-chat-chip{background:linear-gradient(145deg,#1e2634,#101521);color:#d7dbe0;border:1px solid #95a9bd55;border-radius:12px 5px 12px 5px;padding:9px 12px;min-height:39px;max-width:100%;overflow-wrap:anywhere;font-size:11px;letter-spacing:.04em;transition:transform .18s,background .18s,box-shadow .18s}
+.nox-chat-chip:hover,.nox-chat-chip:focus-visible{background:#26354a;transform:translateY(-2px);border-color:#b1efff}
+.nox-chat-chip[aria-pressed="true"]{background:linear-gradient(115deg,#225368,#1c293c);color:#e4fbff;border-color:#9ce7f4;box-shadow:0 0 18px #70cce452,inset 0 1px #c3f9ff52}
+.nox-chat-chip:disabled{opacity:.64;cursor:not-allowed;transform:none}
+.nox-chat-empty{font-size:11px;color:#e5b994}
+.nox-chat-log{min-height:195px;max-height:340px;overflow-y:auto;overflow-wrap:anywhere;overscroll-behavior:contain;display:flex;flex-direction:column;gap:12px;border:1px solid #8bb9c247;border-radius:18px;padding:17px;background:radial-gradient(ellipse at 50% 120%,#31505b30,transparent 70%),#060b14;box-shadow:inset 0 0 37px #0009}
+.nox-chat-log:empty::before{content:"Локальный диалог появится здесь после отправки сообщения";color:#81929f;font-size:12px;margin:auto;text-align:center}
+.nox-chat-bubble{margin:0;max-width:min(88%,680px);padding:12px 15px;border-radius:15px;white-space:pre-wrap;line-height:1.5;font-size:13px}
+.nox-chat-user{align-self:flex-end;background:linear-gradient(120deg,#5f4135,#3c2930);border:1px solid #d4a17e65;color:#ffe6ce}
+.nox-chat-assistant{align-self:flex-start;background:linear-gradient(120deg,#1c3745,#192231);border:1px solid #70becd66;color:#d8f8fa}
+.nox-chat-assistant:empty::before{content:"◌";color:#93dbe7;animation:nox-chat-pulse 1.2s ease-in-out infinite alternate}
+.nox-chat-compose{display:grid;gap:9px}
+.nox-chat-input{width:100%;min-height:88px;resize:vertical;max-height:240px;background:#0a121e;color:#f4ecdf;border:1px solid #ae987a78;border-radius:14px;padding:14px;box-shadow:inset 0 4px 15px #0008}
+.nox-chat-input:focus-visible{outline:2px solid #a1e1f3;outline-offset:2px}
+.nox-chat-controls{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap}
+.nox-chat-send,.nox-chat-stop{min-width:145px;min-height:45px;font-weight:750;letter-spacing:.08em;border-radius:12px;border:1px solid #f2c68a80;background:linear-gradient(120deg,#905633,#422d2c);color:#ffedd5;box-shadow:0 3px 22px #b86c3940}
+.nox-chat-stop{border-color:#c77b8480;background:linear-gradient(120deg,#52313f,#261c2b);color:#ffd4da}
+.nox-chat-send:hover,.nox-chat-stop:hover{filter:brightness(1.18)}
+.nox-chat-send:disabled,.nox-chat-stop:disabled{filter:grayscale(1);opacity:.46;cursor:not-allowed}
+.nox-chat-info{color:#abc9d0;font-size:11px;margin:0;min-height:22px}
+@keyframes nox-chat-pulse{to{opacity:.3;transform:scale(.92)}}
+body[data-fx="ECO"] .nox-chat-assistant:empty::before{animation:none}
+body[data-fx="ECO"] .main-action,body[data-fx="ECO"] .planet{box-shadow:inset 0 2px 9px #0007,0 2px 9px #0008}
+@media(max-width:800px){.nox-chat{gap:8px}.main-action{min-height:80px!important}.metrics{letter-spacing:.08em}}
+@media(max-width:520px){.main-action{min-height:74px!important;font-size:10px;letter-spacing:.08em}.main-action::after{font-size:20px}.nox-chat-heading{align-items:flex-start}.nox-chat-chip{padding:8px 9px}.nox-chat-log{min-height:175px}.nox-chat-bubble{max-width:98%}.nox-chat-controls>*{flex:1}.core{min-height:42px}.universe[data-wow-v3="1"] .planet{transition:none}}
+@media(prefers-reduced-motion:reduce){.nox-chat-assistant:empty::before{animation:none}.nox-chat-chip{transition:none!important}.nox-chat-chip:hover{transform:none}.main-action:hover::before,.boost:hover::before{transition:none}}

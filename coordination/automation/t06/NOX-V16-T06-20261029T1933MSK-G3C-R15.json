@@ -1,0 +1,119 @@
+{
+  "schema": "NOX_V16_T06_G3C_R15_OWNER_SAFE_SOURCE_CONTRACT_RECEIPT",
+  "run_id": "NOX-V16-T06-20261029T1933MSK-G3C-R15",
+  "owner": "T06/M1 sole PR162 source writer",
+  "status": "INCOMPLETE_1_OF_8_SOURCE_ONLY",
+  "gate_A": {
+    "canon_revision": "AHj4eMQBdNwVtwzPnq79HyIQOXSOqWDmTjA5_66HQJRcwkw5ah_pH3Kx6Wz1ouUA_Huc94KSNI5IZJuabMfqMwP-AtaaunAsf8QolSG-FRU",
+    "canon_paragraphs": 679,
+    "rules_33": "56/56",
+    "sections": "1-33,54-56,R29",
+    "register_blob": "2c8e374ec17f66b1a435e386e496f8cc8662ca00",
+    "register_status_counts": {
+      "OPEN": 5,
+      "FIX_APPLIED_UNVERIFIED": 4,
+      "VERIFIED_CLOSED": 2
+    },
+    "all_11_error_ids": [
+      "ERR-SYS-001",
+      "ERR-SYS-002",
+      "ERR-SRC-003",
+      "ERR-SRC-004",
+      "ERR-SRC-005",
+      "ERR-SYS-006",
+      "ERR-SYS-007",
+      "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+      "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+      "NOX-V16-T06-ROOT-STOP-20261029-R01",
+      "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+    ],
+    "source_head_pre": "0132da889ed0de42fc05098a61ddf9dc71b16ec8",
+    "source_tree_pre": "200e2520a5fca30e7a723ef796fe617cf3da0b51",
+    "master_e06_lessons_c34": "fresh R22 reads; T02 exclusive shared-writer",
+    "prior_receipt_blob": "558bf022978c2554938c5444b47befddf79f3ea7"
+  },
+  "gate_B": {
+    "action": "ONE OWNER SOURCE MEGABLOCK: include missing T06 P02 one-host negative regression in deterministic runner; SHA-pin E06 G2 and P01 original source snapshots; introduce P01 3-callee NSIS to PowerShell CLI signature regression that rejects R09 -PathOnly and partial donor verifier switches without compiling/installing",
+    "source_changes": [
+      {
+        "path": "coordination/e06/run_source_integrations_r13.py",
+        "pre": "e124a33066d25736851e3860c6292dd13d0ff71b",
+        "post": "5fc83d43d5da248938c2e6bc76f7011536663330"
+      },
+      {
+        "path": "tests/e06/test_t06_r09_native_source_owner.py",
+        "pre": "73ce76dde019e4f87efa51971b0d39c31eb3ae46",
+        "post": "93dfa098e2cd54df7b6fdfc505f9864c21d26006"
+      },
+      {
+        "path": "tests/e06/test_t06_p01_nsis_powershell_contract_r15.py",
+        "pre": null,
+        "post": "10786b314eb1fc20ae66c539132c50da7daf1852"
+      }
+    ],
+    "static_validation": "LIVE exact 4/4 NSIS-to-PS invocations compatible; synthetic unknown -PathOnly and -MissingNativeVerifierFlag rejected 2/2; PRE git blobs SHA-1 recalculated 3/3",
+    "python_unittest": "NOT_RUN_V8_SOURCE_ONLY",
+    "native_windows": "NOT_RUN",
+    "no_exe_nsis_gitlab_ci_e07": true
+  },
+  "gate_C": {
+    "immutable_receipt_path": "coordination/automation/t06/NOX-V16-T06-20261029T1933MSK-G3C-R15.json",
+    "write": "COMMIT_AND_READBACK_REQUIRED",
+    "shared_register_master_e06_lessons": "T02_ONLY_NOT_WRITTEN",
+    "t02_handoff": [
+      "ERR-SRC-004 P01 source candidate unsupported -PathOnly blocked on exact PRE G1A approval; current canonical P01 keep target",
+      "ERR-SRC-005 pin SourceLock G2 and P01 snapshot and include one-owner collision regression; T08 same-SHA independent proof still needed",
+      "ERR-T06-20261029-DUPLICATE-P02-OWNER-ROUTE prior T06 source applied 0132da... but native and T02 register proof pending"
+    ]
+  },
+  "gate_D": {
+    "active_discovered": 11,
+    "active_acknowledged": 11,
+    "archived_fingerprints": 419,
+    "history_coverage": "PARTIAL_OLDER_T02_RECEIPTS_UNVERIFIED",
+    "deduplicated_clusters": 6,
+    "applied": 2,
+    "already_fixed": 1,
+    "delegated": 2,
+    "not_applicable_closed": 1,
+    "blocked": 0,
+    "remaining_live_source_criteria": 7,
+    "lessons": [
+      "Never trust donor PowerShell flags without exact callee signature; reject partial NSIS plus verifier patch",
+      "Pin P01 and G2 owner sources into SHA-verified fixtures before running tests, not mutable checkout",
+      "Runner must actually include the P02 duplicate-route regression; static source receipt alone is not runtime QA"
+    ],
+    "source_contract_acceptance": "INCOMPLETE",
+    "native_13_accepted": 0
+  },
+  "owner_handoff": {
+    "G1A": "Sign or reject R10 candidate patch blob fe346fb50e29b62cedcb5125618fae215219109f against T04 KEEP_TARGET. Current NSIS 87d901... remains intact.",
+    "T08": "Run source-level same-SHA independent test & native signed 13/13 Host50 evidence, do not elevate 1/8.",
+    "T02": "Append dedup error/handoff with PRE/POST and incident linkage, Git CAS/readback solely by T02."
+  },
+  "protected": {
+    "T04": "34/34 preserved",
+    "ZIP": "729/729 3 parts preserved",
+    "D02_WOW": "WOW001-200 unmodified",
+    "core_persona": "8 CoreID/5 Persona unmodified",
+    "security": "STOP/ACL/native consent/permissions/user data unchanged"
+  },
+  "progress": {
+    "before": "1/8",
+    "after": "1/8",
+    "before_percent": 12.5,
+    "after_percent": 12.5,
+    "delta_pp": 0,
+    "bar": "█░░░░░░░░░",
+    "remaining": [
+      "P01",
+      "P02",
+      "P03",
+      "P04",
+      "P05",
+      "Host50_D02_WOW_E06_NOLOSS",
+      "owner_accepted_HEAD_TREE_MANIFEST"
+    ]
+  },
+  "post_commit_and_post_tree": "MUST_BE_VERIFIED_BY_EXTERNAL_GIT_READBACK_NO_SELF_REFERENCE"
+}

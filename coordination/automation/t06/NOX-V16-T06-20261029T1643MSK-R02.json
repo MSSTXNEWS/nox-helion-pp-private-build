@@ -1,0 +1,90 @@
+{
+  "schema": "NOX_V16_T06_ISOLATED_SOURCE_CANDIDATE_R02",
+  "runId": "NOX-V16-T06-20261029T1643MSK-R02",
+  "project": "NOX HELION EXPRESS INTEGRATOR loader-only",
+  "target": "source-only owner-staging branch, not canonical PR162",
+  "base": {
+    "pr": 162,
+    "head": "47a817f6d1f47b5d73f858c3f986de4d3fb7d219",
+    "tree": "4255004c379a77c72bb02cdc54d56fe29e6aec9f"
+  },
+  "branch": "coordination/t06-safe-source-stage-20261029-r02",
+  "adoptedSource": {
+    "owner": "G2-A",
+    "issue": "P02 short write partial frame",
+    "path": "Packages/P02/worker-python/p02_framed_worker.py",
+    "preGitBlob": "255dfb7ab330c825fcc362b619614189c4915e6c",
+    "postGitBlob": "8af1338bee7ebb03ffbb0dd4bfdeed7af7870bc1",
+    "ownerCodeCommit": "4686e323cf3f64b85b933cb0fdc2f1db612439fc",
+    "sourceIntegrationCommit": "21aa354621cdf0fb2019d5c7f57eb98732331bf1",
+    "testPath": "Packages/P02/worker-python/test_p02_framed_partial_write_r30_g2a.py",
+    "testBlob": "3674906d2f021f2ff5722baf6f1d689ceb29de26",
+    "testIntegrationCommit": "2fcd72a001c084697e696d6a44dd1a47d7c8a0e0",
+    "ownerReportedTest": "isolated Python 4/4 PASS; T06 did not rerun native tests",
+    "sourceReadback": "PASS same blob, 2 files changed, 0 deleted, 0 unrelated owner files"
+  },
+  "upstream": {
+    "T01": "100 historical TaskIDs restored; user product acceptance not implied; receipt commit 9bcf1e8ce035424592ebcb3c9619a7bdf795b451",
+    "T03": "ownership self denial resolved, blob bb41f403080b51332f80db6cfed7dce6d0b98f73; DONE 5/5",
+    "T04": "17 historical duplicates skip, 17 different source paths owner HOLD; manifest blob 78861bb9512acaf7e14d253263aa5fd3331a1eee",
+    "T05": "13/13 candidates classified, 1 preimage-compatible source, 12 HOLD; manifest blob e1db8ff1f24b97041209eb162313fa4c8ab1d3a7",
+    "T07": "binary-safe ZIP source parts unavailable, measured 729 SHA 0/729; expected archive SHA must not be presented as computed",
+    "T08": "no new proven fixable P0/P1 on unfrozen PR162",
+    "T09": "freeze HOLD, one signed common source identity missing",
+    "T10": "SOURCE_READY HOLD",
+    "T11": "GitLab Free preparation only, no build"
+  },
+  "donorDecisions": {
+    "R30": "Other 12 R30 source changes HOLD due to exact target PRE mismatch or missing owner scope. No unconditional file copying.",
+    "PR207": "Draft 4-file donor; two source files diverge from target, existing test diverges, one new test; entire patch HOLD until owner semantic review.",
+    "PR210": "Draft 22-file onehost source-first candidate; multiple cross-owner code and tests, integration not owner-approved; no wholesale merge.",
+    "Host50": "37 candidate / 13 SOURCE HOLD; not native accepted"
+  },
+  "noLoss": {
+    "existingSourceFilesRemoved": 0,
+    "originalArchivePartsNotModified": true,
+    "previousDonePreserved": true,
+    "functionalPreservation": [
+      "HOME/MENU/CORE",
+      "D02/WOW001-200",
+      "8 CoreID",
+      "5 Persona",
+      "PACK01/02",
+      "Host50",
+      "Voice",
+      "RAG",
+      "GPU",
+      "SPACE",
+      "user data"
+    ],
+    "knownLimits": "Source-only Git tree evidence, not Windows running host functionality or approved 729 physical archive attestation"
+  },
+  "gates": {
+    "T06": "PARTIAL_STAGING_ONLY",
+    "canonicalApprovedHead": null,
+    "canonicalApprovedTree": null,
+    "SourceLock": "HOLD",
+    "SOURCE_CODE_COMPLETE": "HOLD",
+    "T09": "HOLD",
+    "T10": "HOLD",
+    "EXE": "NOT_RUN",
+    "NSIS": "NOT_RUN",
+    "GitLabCI": "NOT_RUN",
+    "E07": "NOT_RUN",
+    "P01_P05": "N/D"
+  },
+  "fixedT06AcceptanceCriteria": {
+    "count": 8,
+    "accepted": 1,
+    "description": "Official base selected. P02 isolated staged, but not accepted in final unified tree."
+  },
+  "oneCriticalBlocker": "Manual owner #1 must accept selected source with CAS and authorize semantic conflict winners for T04/PR207/PR210; T07 source archive proof remains an independent freeze gate.",
+  "lessonApplied": "Exact current preimage + owner-approved postimage + CAS/readback, never broad donor merge. Avoid rereading historical tests and never count isolated staging as canonical completion.",
+  "handoffRecipients": [
+    "T02 as sole shared Docs writer",
+    "T09 frozen HEAD gate",
+    "T10 independent SOURCE_READY",
+    "T11 GitLab preparation"
+  ],
+  "noBuildNoSecondBackend": true
+}
