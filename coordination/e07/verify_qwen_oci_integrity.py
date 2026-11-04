@@ -92,14 +92,54 @@ def verify(root: Path, manifest_digest: str) -> dict:
     if not re.fullmatch(r"[0-9a-f]{64}", manifest_digest):
         raise IntegrityHold("OCI_EXPECTED_MANIFEST_DIGEST_INVALID")
     root = root.absolute()
-    manifest_path = root / "manifests/registry.ollama.ai/library/qwen2.5-coder/1.5b"
+    # Ollama v0.40.13 writes a SHA-pinned named manifest into manifests-v2.
+    # Always prefer that canonical store to a possibly stale legacy manifest.
+    # A present but invalid v2 entry MUST HOLD; no downgrade to the legacy path.
+    v2 = root / "manifests-v2/ollama.com/library/qwen2.5-coder/1.5b"
+    legacy = root / "manifests/registry.ollama.ai/library/qwen2.5-coder/1.5b"
+    manifest_path = v2 if (v2.exists() or v2.is_symlink() or
+                           getattr(v2, "is_junction", lambda: False)()) else legacy
     payload = _read_hash(manifest_path, root, manifest_digest, capture=True)
     try:
         manifest = json.loads(payload.decode("utf-8"), object_pairs_hook=_unique,
                               parse_constant=lambda _: (_ for _ in ()).throw(IntegrityHold("OCI_JSON_NONFINITE_HOLD")))
     except (UnicodeError, ValueError):
         raise IntegrityHold("OCI_MANIFEST_JSON_HOLD") from None
-    if (type(manifest) is not dict or type(manifest.get("config")) is not dict or
+    if type(manifest) is not dict:
+        raise IntegrityHold("OCI_MANIFEST_SCHEMA_HOLD")
+    # A v2 tag can point to an Ollama manifest-list. Its PARENT hash is pinned
+    # above; follow only one local runner's content-addressed child and verify
+    # that child byte-for-byte before touching any weights.
+    if manifest.get("mediaType") == "application/vnd.ollama.manifest.list.v2+json":
+        options = manifest.get("manifests")
+        if (manifest.get("schemaVersion") != 2 or type(options) is not list or
+                not 1 <= len(options) <= 16 or
+                any(type(item) is not dict for item in options)):
+            raise IntegrityHold("OCI_MANIFEST_LIST_SCHEMA_HOLD")
+        child = None
+        for runner in ("llamacpp", "ggml", "mlx"):
+            matches = [item for item in options if item.get("runner") == runner]
+            if matches:
+                if len(matches) != 1:
+                    raise IntegrityHold("OCI_MANIFEST_RUNNER_AMBIGUOUS_HOLD")
+                child = matches[0]
+                break
+        if child is None or child.get("mediaType") != "application/vnd.docker.distribution.manifest.v2+json":
+            raise IntegrityHold("OCI_MANIFEST_RUNNER_NOT_FOUND_HOLD")
+        if "digest" in child:
+            match = _DIGEST.fullmatch(str(child["digest"]))
+            if not match:
+                raise IntegrityHold("OCI_MANIFEST_CHILD_DIGEST_HOLD")
+            child_raw = _read_hash(root / "blobs" / ("sha256-" + match.group(1)),
+                                   root, match.group(1), capture=True)
+            try:
+                manifest = json.loads(child_raw.decode("utf-8"), object_pairs_hook=_unique)
+            except (UnicodeError, ValueError):
+                raise IntegrityHold("OCI_MANIFEST_CHILD_JSON_HOLD") from None
+        else:
+            # Inline child is authenticated by the already-verified parent SHA.
+            manifest = child
+    if (type(manifest.get("config")) is not dict or
             type(manifest.get("layers")) is not list or not manifest["layers"] or
             len(manifest["layers"]) > 48):
         raise IntegrityHold("OCI_MANIFEST_SCHEMA_HOLD")

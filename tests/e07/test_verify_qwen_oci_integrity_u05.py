@@ -41,6 +41,37 @@ class OCIGate(unittest.TestCase):
         self.assertFalse(receipt["release_accepted"])
         self.assertEqual(receipt["verified_blobs"], 2)
 
+    def test_v2_manifest_preferred_over_stale_legacy(self):
+        v2 = self.root / "manifests-v2/ollama.com/library/qwen2.5-coder/1.5b"
+        v2.parent.mkdir(parents=True)
+        v2.write_bytes(self.manifest_path.read_bytes())
+        self.manifest_path.write_bytes(b"STALE_LEGACY_MANIFEST")
+        self.assertEqual(m.verify(self.root, self.expected)["verified_blobs"], 2)
+        # No silent fallback if the selected v2 file is corrupted.
+        v2.write_bytes(b"CORRUPTED_V2")
+        with self.assertRaisesRegex(m.IntegrityHold, "OCI_SHA256"):
+            m.verify(self.root, self.expected)
+
+    def test_v2_manifest_list_content_addressed_child(self):
+        v2 = self.root / "manifests-v2/ollama.com/library/qwen2.5-coder/1.5b"
+        v2.parent.mkdir(parents=True)
+        child = dict(self.manifest, mediaType="application/vnd.docker.distribution.manifest.v2+json")
+        child_raw = json.dumps(child, separators=(",", ":")).encode()
+        digest = hashlib.sha256(child_raw).hexdigest()
+        (self.blobs / ("sha256-" + digest)).write_bytes(child_raw)
+        parent = {"schemaVersion": 2,
+                  "mediaType": "application/vnd.ollama.manifest.list.v2+json",
+                  "manifests": [{"mediaType": child["mediaType"],
+                                 "runner": "llamacpp", "digest": "sha256:" + digest}]}
+        data = json.dumps(parent, separators=(",", ":")).encode()
+        v2.write_bytes(data)
+        pinned = hashlib.sha256(data).hexdigest()
+        self.assertEqual(m.verify(self.root, pinned)["verified_blobs"], 2)
+        # A hash-mismatched referenced child cannot be blessed by a valid parent.
+        (self.blobs / ("sha256-" + digest)).write_bytes(b"BAD_CHILD")
+        with self.assertRaisesRegex(m.IntegrityHold, "OCI_SHA256"):
+            m.verify(self.root, pinned)
+
     def test_wrong_approved_manifest_digest(self):
         with self.assertRaisesRegex(m.IntegrityHold, "OCI_SHA256"):
             m.verify(self.root, "0" * 64)
