@@ -514,15 +514,16 @@ class IndependentE07(unittest.TestCase):
         self.assertEqual(proof["model_inference"],"NOT_TESTED")
         self.assertEqual(proof["visual_e07"],"HOLD")
         self.assertIs(proof["release_accepted"],False)
-        # The physical witness MUST observe the actual original destination
-        # as a VISIBLE screen plus a freshly FOCUSED existing control.
-        # INSTALL/MODELS/LEARN may share R11's original CONTROL CENTER,
-        # but focus the distinct approved buttons and never trigger mutation.
+        # The original INSTALL/LEARN routes are WebView2 informational
+        # pages, NOT the global WPF install/train controls. Verify distinct
+        # route headings and one enabled visible route-local control instead.
+        # MODELS/SETTINGS retain the stricter keyboard-focus requirement.
+        # This is only a navigation witness; no privileged action is proven.
         wire=FILE.read_text(encoding="utf-8")
-        for original in ("$headingVisible=($name -eq 'INSTALL')", "УСТАНОВИТЬ NOX",
+        for original in ("Система NOX", "Эволюция", "✦ УСКОРИТЬ NOX",
                          "NOX · CONTROL CENTER", "МОДЕЛИ И КОМПОНЕНТЫ",
-                         "ЗАПУСТИТЬ ОБУЧЕНИЕ", "СИСТЕМА",
-                         "← НАЗАД В МЕНЮ", "$v.HasKeyboardFocus",
+                         "СИСТЕМА", "← НАЗАД В МЕНЮ",
+                         "$v.HasKeyboardFocus", "$spec.requiresFocus",
                          "Test-RealDestination $root $name",
                          "Test-RealDestination $fresh $name"):
             self.assertIn(original,wire)
