@@ -30,14 +30,14 @@ INSERT = r'''<!-- NOX EXPRESS 5 original-home primary actions; no additional hos
 <button type="button" data-nox-primary="INSTALL" aria-label="INSTALL">INSTALL</button>
 <button type="button" data-nox-primary="MODELS" aria-label="MODELS">MODELS</button>
 <button type="button" data-nox-primary="LEARN" aria-label="LEARN">LEARN</button>
-<button type="button" data-nox-primary="REPORTS" aria-label="REPORTS">REPORTS</button>
+<button type="button" data-nox-primary="SETTINGS" aria-label="SETTINGS">SETTINGS</button>
 <span data-nox-state role="status" aria-live="polite"></span>
 </nav>
 <script id="nox-express-primary-bind">
 (()=>{'use strict';
 const nav=document.getElementById('nox-express-primary');if(!nav)return;
 const state=nav.querySelector('[data-nox-state]');
-const screenNames={CHAT:['ЧАТ','CHAT'],INSTALL:['УСТАНОВКА','INSTALL'],LEARN:['ОБУЧЕНИЕ','LEARN'],REPORTS:['ОТЧЁТЫ','ОТЧЕТЫ','REPORTS']};
+const screenNames={CHAT:['ЧАТ','CHAT'],INSTALL:['УСТАНОВКА','INSTALL'],LEARN:['ОБУЧЕНИЕ','LEARN'],SETTINGS:['НАСТРОЙКИ','SETTINGS']};
 function safeOriginalLink(a){
  // No external/privileged routes from a text-matched original anchor.
  const href=(a.getAttribute('href')||'').trim();
@@ -67,7 +67,7 @@ function findOriginalControl(name){
    INSTALL:'button#install-app',
    MODELS:'button#model-center',
    LEARN:'.nav button[data-screen="control"]',
-   REPORTS:'button#native-report'
+   SETTINGS:'.nav button[data-screen="settings"],button#settings'
  };
  const selector=selectors[name];if(!selector)return null;
  const matches=document.querySelectorAll(selector);
@@ -130,7 +130,7 @@ def publish(original: bytes) -> tuple[bytes, dict]:
         "source_sha256": original_sha,
         "published_sha256": hashlib.sha256(derived).hexdigest(),
         "published_bytes": len(derived),
-        "visible_primary_buttons": ["CHAT", "INSTALL", "MODELS", "LEARN", "REPORTS"],
+        "visible_primary_buttons": ["CHAT", "INSTALL", "MODELS", "LEARN", "SETTINGS"],
         "installed_ui_automation": "NOT_RUN",
         "release_accepted": False,
     }
