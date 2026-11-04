@@ -224,7 +224,7 @@ jobs:
           $w['nsis_inner_exit_phases']=@()
           if (Test-Path -LiteralPath $trace -PathType Leaf) {
             $w['nsis_inner_exit_phases']=@(Get-Content -LiteralPath $trace |
-              Where-Object { $_ -match '^(PREFLIGHT_EXIT|VERIFY_EXIT)=(?:error|[0-9]{1,5})$' } |
+              Where-Object { $_ -match '^(PREFLIGHT_EXIT|VERIFY_EXIT|UNINSTALL_ENTER|UNINSTALL_REMOVE_EXIT)=(?:error|[0-9]{1,5})$' } |
               Select-Object -Last 8)
           }
           $target=Join-Path $dest 'NSIS_FIRSTFAIL_READONLY.json'

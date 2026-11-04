@@ -479,7 +479,11 @@ def stage_reviewed_webview2_preflight(owner_script: Path, reviewed_script: Path)
 
 
 def stage_ci_nsis_first_failure_trace(path: Path):
-    """CI-only original installer /S phase markers. Never a release or E07 proof."""
+    """Diagnostic-only ORIGINAL NSIS phase witnesses on authorized CI Windows.
+
+    Only the disposable staged script is touched; no release claim, deletion,
+    verifier bypass, permission change, registry write or live application edit.
+    """
     need(path.name == "NOX-HELION-Setup.nsi" and path.parent.name == "Installer" and
          path.is_file() and not path.is_symlink(), "T06_NSIS_TRACE_PATH_HOLD")
     original = path.read_bytes()
@@ -487,7 +491,8 @@ def stage_ci_nsis_first_failure_trace(path: Path):
     eol = "\r\n" if "\r\n" in text else "\n"
     normalized = text.replace("\r\n", "\n")
     marker = 'Section "NOX HELION application" SEC_MAIN'
-    need(normalized.count(marker) == 1 and
+    unmarker = 'Section "Uninstall"'
+    need(normalized.count(marker) == 1 and normalized.count(unmarker) == 1 and
          "NOX_EXPRESS_CI_NSIS_TRACE.txt" not in normalized,
          "T06_NSIS_TRACE_PREIMAGE_HOLD")
     start = normalized.index(marker)
@@ -496,22 +501,50 @@ def stage_ci_nsis_first_failure_trace(path: Path):
     section = normalized[start:end]
     gate = '  Pop $CheckResult\n  ${If} $ExitCode != "0"'
     need(section.count(gate) == 2, "T06_NSIS_TRACE_GATE_HOLD")
-    for label in ("PREFLIGHT_EXIT", "VERIFY_EXIT"):
-        probe = ('  FileOpen $9 "$TEMP\\NOX_EXPRESS_CI_NSIS_TRACE.txt" a\n'
-                 '  FileWrite $9 "' + label + '=$ExitCode$\\r$\\n"\n'
-                 '  FileClose $9\n')
-        section = section.replace(
-            gate, '  Pop $CheckResult\n' + probe +
-            '  ${If} $ExitCode != "0"', 1)
+    def probe(label):
+        return ('  FileOpen $9 "$TEMP\\NOX_EXPRESS_CI_NSIS_TRACE.txt" a\n'
+                '  FileWrite $9 "' + label + '=$ExitCode$\\r$\\n"\n'
+                '  FileClose $9\n')
+    before_pre, between, after_verify = section.split(gate)
+    need('Preflight-InstallPath.ps1' in before_pre and
+         'Verify-Payload.ps1' in between and
+         'Verify-Payload.ps1' not in before_pre,
+         "T06_NSIS_TRACE_PHASE_ORDER_HOLD")
+    section = (before_pre + '  Pop $CheckResult\n' + probe("PREFLIGHT_EXIT") +
+               '  ${If} $ExitCode != "0"' + between +
+               '  Pop $CheckResult\n' + probe("VERIFY_EXIT") +
+               '  ${If} $ExitCode != "0"' + after_verify)
     changed = normalized[:start] + section + normalized[end:]
-    need(changed.count("NOX_EXPRESS_CI_NSIS_TRACE.txt") == 2 and
-         changed.count("PREFLIGHT_EXIT=$ExitCode") == 1 and
-         changed.count("VERIFY_EXIT=$ExitCode") == 1,
-         "T06_NSIS_TRACE_INCOMPLETE_HOLD")
-    result = (b"\xef\xbb\xbf" if original.startswith(b"\xef\xbb\xbf") else b"") + changed.replace("\n", eol).encode("utf-8")
+    un_start = changed.index(unmarker)
+    un_end = changed.find("\nSectionEnd", un_start)
+    need(un_end > un_start, "T06_NSIS_UNINSTALL_TRACE_SECTION_HOLD")
+    uninstall = changed[un_start:un_end]
+    remove_line = next((line for line in uninstall.splitlines(keepends=True)
+                        if 'nsExec::ExecToStack' in line and
+                           'Remove-InstalledPayload.ps1' in line), None)
+    need(remove_line is not None and uninstall.count(remove_line) == 1 and
+         uninstall.count(gate) == 1,
+         "T06_NSIS_UNINSTALL_TRACE_PREIMAGE_HOLD")
+    begin = ('  FileOpen $9 "$TEMP\\NOX_EXPRESS_CI_NSIS_TRACE.txt" a\n'
+             '  FileWrite $9 "UNINSTALL_ENTER=0$\\r$\\n"\n'
+             '  FileClose $9\n')
+    uninstall = uninstall.replace(remove_line, begin + remove_line, 1)
+    uninstall = uninstall.replace(gate,
+        '  Pop $CheckResult\n' + probe("UNINSTALL_REMOVE_EXIT") +
+        '  ${If} $ExitCode != "0"', 1)
+    changed = changed[:un_start] + uninstall + changed[un_end:]
+    for label in ("PREFLIGHT_EXIT", "VERIFY_EXIT", "UNINSTALL_ENTER",
+                  "UNINSTALL_REMOVE_EXIT"):
+        need(changed.count(label + "=") == 1,
+             "T06_NSIS_TRACE_INCOMPLETE_HOLD")
+    need(changed.count("NOX_EXPRESS_CI_NSIS_TRACE.txt") == 4,
+         "T06_NSIS_TRACE_COUNT_HOLD")
+    result = ((b"\xef\xbb\xbf" if original.startswith(b"\xef\xbb\xbf") else b"") +
+              changed.replace("\n", eol).encode("utf-8"))
     path.write_bytes(result)
     need(path.read_bytes() == result, "T06_NSIS_TRACE_READBACK_HOLD")
-    return {"trace_probes": 2, "release_accepted": False, "e07": "NOT_RUN"}
+    return {"trace_probes": 4, "release_accepted": False, "e07": "NOT_RUN"}
+
 
 def build(root,staged):
     staged=Path(staged).resolve(strict=True)
