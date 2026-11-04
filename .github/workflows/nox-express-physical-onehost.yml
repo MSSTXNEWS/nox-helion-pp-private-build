@@ -12,6 +12,7 @@ on:
       - tests/p03/test_p03_cancel_retry_jobid_bind_u06.py
       - tests/p03/test_p03_ollama_tags_digest_u06.py
       - tests/p02/test_original_terminal_fence_u11.py
+      - tests/p02/test_original_atomic_stream_stop_u08.py
       - src/nox_selfbuilder/onehost_builder.py
       - src/nox_selfbuilder/nx03_model_firstcycle.py
       - src/nox_selfbuilder/firstcycle_native.py
@@ -69,6 +70,10 @@ jobs:
           # Real ORIGINAL P02 adapter terminal-frame safety regression, not E07/model proof.
           python -B -m unittest discover -s tests/p02 -p test_original_terminal_fence_u11.py -v
           if ($LASTEXITCODE -ne 0) { throw 'P02_TERMINAL_STREAM_FENCE_REGRESSION_HOLD' }
+          # Original P02 adapter: bounded stream, real STOP epoch, and atomic exchange.
+          # Source-only test doubles; never promote this to live Ollama or E07 PASS.
+          python -B -m unittest discover -s tests/p02 -p test_original_atomic_stream_stop_u08.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'P02_ATOMIC_STREAM_STOP_REGRESSION_HOLD' }
           python -B -m unittest discover -s tests/e06 -p test_t06_nx03_stage_pin_r118.py -v
           if ($LASTEXITCODE -ne 0) { throw 'T06_NX03_NATIVE_STAGE_PIN_HOLD' }
           python -B -m unittest discover -s tests/e06 -p test_t06_nsis_uninstall_quote_r128.py -v
