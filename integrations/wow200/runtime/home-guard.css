@@ -697,13 +697,19 @@ body.nox-wow-eco .nox-orbit-stage .nox-eclipse .nox-cinema-orb__filaments::after
  position:relative!important;
  left:auto!important;right:auto!important;bottom:auto!important;
  transform:none!important;
- margin:20px auto 26px!important;
+ /* Expanded graphics mode is document-flow content; the original EXPRESS
+    five-button bar remains fixed. Preserve a scrollable clearance between
+    these real buttons instead of covering the graphics planet controls. */
+ margin:20px auto calc(156px + env(safe-area-inset-bottom,0px))!important;
+ scroll-margin-bottom:calc(156px + env(safe-area-inset-bottom,0px));
  width:min(92vw,780px);
  z-index:5;
 }
 @media(max-width:600px){
  #home[data-nox-world-open="true"] .nox-quality-dock{
-  width:min(96vw,460px);margin:10px auto 18px!important;
+  width:min(96vw,460px);
+  margin:10px auto calc(188px + env(safe-area-inset-bottom,0px))!important;
+  scroll-margin-bottom:calc(188px + env(safe-area-inset-bottom,0px));
  }
 }
 @media(prefers-reduced-motion:reduce){
