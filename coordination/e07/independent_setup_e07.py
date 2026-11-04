@@ -1188,9 +1188,30 @@ def main() -> int:
             result["checks"]["artifact"] = setup_lock(setup,receipt)
         lifecycle(setup,result,frozen_source=source_sha,
                   physical_nav=args.artifact_kind=="original-30a")
-        # Model inference, visual click navigation and independent screenshot
-        # remain mandatory for release; do not forge them from HWND and IPC.
-        result["error"]="E07_REAL_MODEL_AND_VISUAL_ACCEPTANCE_NOT_COMPLETE"
+        # The complete physical install/update/rollback/uninstall lifecycle ran
+        # on this exact Setup. These facts do NOT prove inference or final E07.
+        result["checks"]["installed_lifecycle"] = {
+            "status": "PASS",
+            "scope": "SAME_SETUP_INSTALL_UPDATE_ROLLBACK_UNINSTALL_NO_LOSS",
+            "release_accepted": False,
+        }
+        # The original GUI probe returns real Windows UIA witnesses, but its
+        # navigation errors are intentionally nonfatal to conservative cleanup.
+        # Evaluate them strictly AFTER cleanup, on this same physical install.
+        # Never infer five functioning buttons from their mere presence.
+        from probe_five_primary_action import evaluate as evaluate_primary
+        result["checks"]["installed_five_primary_actions"] = evaluate_primary(
+            result["checks"]["installed_gui"])
+        # A successful idle STOP and empty SQLite history are useful physical
+        # facts, but not an interrupted live model stream.
+        store = result["checks"].get("installed_native_store_stop")
+        require(type(store) is dict and store.get("status") == "PASS",
+                "E07_NATIVE_STORE_STOP_NOT_ACCEPTED")
+        # No model weights/live inference or screenshot/visual-quality witness
+        # was tested in this independent job. Keep release closed, with an
+        # explicit remaining acceptance requirement rather than an ambiguous
+        # lifecycle failure.
+        result["error"] = "E07_LIVE_INFERENCE_AND_VISUAL_CAPTURE_NOT_TESTED"
     except (Hold,FileNotFoundError,ValueError,TimeoutError,
             subprocess.TimeoutExpired,PermissionError) as exc:
         result["error"]=(str(exc) if isinstance(exc,Hold) else
