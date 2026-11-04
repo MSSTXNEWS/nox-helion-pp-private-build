@@ -127,7 +127,7 @@ nav.addEventListener('click',event=>{
  // navigation button was clicked. The user still chooses the original action
  // inside its own panel, under existing native ACL and consent.
  const destinations={
-   INSTALL:['home','button#install-app','button#pc-install'],
+   INSTALL:['home','button#pc-install','button#pc-install'],
    MODELS:['control','button#model-center','button#model-center'],
    // Top-level LEARN performs the original bounded training environment
    // diagnostic. Actual QLoRA start remains an explicit in-panel action with
@@ -164,12 +164,14 @@ nav.addEventListener('click',event=>{
    // MODELS opens the original WPF Model Center; LEARN runs the original
    // environment diagnostic while QLoRA start remains separately consented.
    const invokeMatches=document.querySelectorAll(invokeSelector);
-   if(invokeMatches.length!==1||invokeMatches[0].tagName!=='BUTTON'||
-      !invokeMatches[0].isConnected||invokeMatches[0].disabled){
+   if(invokeMatches.length!==1||invokeMatches[0]!==target||
+      invokeMatches[0].tagName!=='BUTTON'||!invokeMatches[0].isConnected||
+      invokeMatches[0].disabled||invokeMatches[0].getClientRects().length===0||
+      document.activeElement!==invokeMatches[0]){
      state.textContent=name+': исходная функция недоступна · HOLD';return;
    }
    invokeMatches[0].click();
-   state.textContent=name+': исходная функция вызвана · результат подтверждает native NOX';
+   state.textContent=name+': запрос передан исходному обработчику · результат ожидается';
    return;
  }
  // SETTINGS enters the original MENU first, then uses its ORIGINAL system tile.
