@@ -302,22 +302,32 @@ def run(hwnd: int, install: Path, local: Path, *, source_sha: str, setup_sha: st
     def install_check():
         app=local/"NOX_HELION_Integrator"/"app"
         server=app/"server.py"
-        e07.require(not server.exists(),"E07_FINAL_INSTALL_PREEXISTING_RESULT_HOLD")
+        # The original installed app can already own server.py. Neither its
+        # presence nor an OLD success log is evidence of this UI invocation.
+        before_server_sha=e07.sha256(server) if e07.clean_file(server) else None
+        log=local/"NOX_HELION"/"P01"/"logs"/"shell.log"
+        before_log_size=log.stat().st_size if e07.clean_file(log) else 0
         invoke_primary(hwnd,"INSTALL")
         deadline=time.monotonic()+120
-        while time.monotonic()<deadline and not e07.clean_file(server):
-            time.sleep(.5)
-        e07.require(e07.clean_file(server),"E07_FINAL_INSTALL_RESULT_HOLD")
-        log=local/"NOX_HELION"/"P01"/"logs"/"shell.log"
-        deadline=time.monotonic()+30;log_text=""
+        fresh_owner_completion=False
         while time.monotonic()<deadline:
             if e07.clean_file(log):
-                log_text=log.read_text(encoding="utf-8",errors="replace")[-200000:]
-                if "ACTION_END install exit=0" in log_text: break
+                with log.open("rb") as handle:
+                    size=handle.seek(0,os.SEEK_END)
+                    # A fresh same-action owner success must be APPENDED after
+                    # invocation. Truncation/rotation/oversize remain HOLD.
+                    if before_log_size<=size<=before_log_size+200000:
+                        handle.seek(before_log_size)
+                        fresh_owner_completion=(
+                            b"ACTION_END install exit=0" in handle.read(200000))
+            if fresh_owner_completion and e07.clean_file(server):
+                break
             time.sleep(.4)
-        e07.require("ACTION_END install exit=0" in log_text,
-                    "E07_FINAL_INSTALL_EXIT_HOLD")
-        observed("INSTALL",{"server_sha256":e07.sha256(server),"action_exit":0,
+        e07.require(fresh_owner_completion,"E07_FINAL_INSTALL_FRESH_OWNER_EXIT_HOLD")
+        e07.require(e07.clean_file(server),"E07_FINAL_INSTALL_RESULT_HOLD")
+        observed("INSTALL",{"server_sha256":e07.sha256(server),
+                            "preexisting_server_sha256":before_server_sha,
+                            "action_exit":0,
                             "scope":"ORIGINAL_PC_INSTALL_UI_TO_NOX_ACTIONS"})
 
     def models_check():
