@@ -35,7 +35,20 @@ class NativeBackSource(unittest.TestCase):
         self.assertIn("_web.Navigate(_virtualOrigin.AbsoluteUri); return true;",SRC)
         self.assertIn("e.Handled = true;",SRC)
         self.assertIn("if (Volatile.Read(ref _disposed) != 0 || _externalMode ||",SRC)
-        self.assertIn("if (!IsApprovedExternal(e.Uri)) e.Cancel = true;",SRC)
+        # Current bridge uses an explicit block so the rejected redirect returns
+        # before document revocation. Preserve that stronger fail-closed shape.
+        self.assertIn("if (!IsApprovedExternal(e.Uri))",SRC)
+        self.assertIn("e.Cancel = true;",SRC)
+        start=SRC.index("private void OnNavigationStarting(")
+        end=SRC.index("private void OnNavigationCompleted(",start)
+        handler=SRC[start:end]
+        denied=handler.index("if (!IsApprovedExternal(e.Uri))")
+        cancelled=handler.index("e.Cancel = true;",denied)
+        returned=handler.index("return;",cancelled)
+        revoked=handler.index("RevokeDocument();",returned)
+        self.assertLess(denied,cancelled)
+        self.assertLess(cancelled,returned)
+        self.assertLess(returned,revoked)
         self.assertIn("private bool NativeSidMatches()", SRC)
         self.assertIn("_nativeAcl(_ownerWindowsSid, route)",SRC)
         self.assertIn("_document.Cancel();",SRC)
