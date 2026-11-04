@@ -275,52 +275,93 @@ def run(hwnd: int, install: Path, local: Path, *, source_sha: str, setup_sha: st
         # authorized owner operation or persisted configuration change.
         actions[action]=nonrelease_action_observation(action,detail)
 
-    app=local/"NOX_HELION_Integrator"/"app"
-    server=app/"server.py"
-    e07.require(not server.exists(),"E07_FINAL_INSTALL_PREEXISTING_RESULT_HOLD")
-    invoke_primary(hwnd,"INSTALL")
-    deadline=time.monotonic()+120
-    while time.monotonic()<deadline and not e07.clean_file(server): time.sleep(.5)
-    e07.require(e07.clean_file(server),"E07_FINAL_INSTALL_RESULT_HOLD")
-    log=local/"NOX_HELION"/"P01"/"logs"/"shell.log"
-    deadline=time.monotonic()+30;log_text=""
-    while time.monotonic()<deadline:
-        if e07.clean_file(log):
-            log_text=log.read_text(encoding="utf-8",errors="replace")[-200000:]
-            if "ACTION_END install exit=0" in log_text: break
-        time.sleep(.4)
-    e07.require("ACTION_END install exit=0" in log_text,"E07_FINAL_INSTALL_EXIT_HOLD")
-    observed("INSTALL",{"server_sha256":e07.sha256(server),"action_exit":0,
-                        "scope":"ORIGINAL_PC_INSTALL_UI_TO_NOX_ACTIONS"})
+    def attempt(action: str, callback) -> None:
+        # Collect every safe physical original-owner observation from the SAME
+        # installed WPF. A failure must not manufacture PASS or hide evidence
+        # for other actions; all privileged permission checks remain outside
+        # this diagnostic wrapper and remain NOT_TESTED until truly verified.
+        try:
+            callback()
+        except (e07.Hold, OSError, ValueError, subprocess.TimeoutExpired) as exc:
+            reason=(str(exc) if isinstance(exc,e07.Hold)
+                    else "E07_FINAL_"+action+"_"+type(exc).__name__.upper()+"_HOLD")
+            actions[action]={"function_verified":"NOT_TESTED",
+                             "permissions_verified":"NOT_TESTED",
+                             "result":"HOLD","error_code":reason[:140],
+                             "scope":"SAME_SETUP_PHYSICAL_ACTION_FAILED"}
+        except Exception as exc:
+            actions[action]={"function_verified":"NOT_TESTED",
+                             "permissions_verified":"NOT_TESTED",
+                             "result":"HOLD",
+                             "error_code":"E07_FINAL_"+action+"_UNEXPECTED_"+
+                                          type(exc).__name__.upper()+"_HOLD",
+                             "scope":"SAME_SETUP_PHYSICAL_ACTION_FAILED"}
 
-    invoke_primary(hwnd,"MODELS")
-    model=_run_ps(_uia_script(hwnd,"MODEL_WINDOW"),timeout=35,phase="MODEL_WINDOW")
-    e07.require(model.get("modelWindowVisible") is True and model.get("windowCount")==1,
-                "E07_FINAL_MODELS_WINDOW_HOLD")
-    observed("MODELS",{"model_center_window":"PASS","window_title":"NOX HELION · MODEL CENTER"})
+    def install_check():
+        app=local/"NOX_HELION_Integrator"/"app"
+        server=app/"server.py"
+        e07.require(not server.exists(),"E07_FINAL_INSTALL_PREEXISTING_RESULT_HOLD")
+        invoke_primary(hwnd,"INSTALL")
+        deadline=time.monotonic()+120
+        while time.monotonic()<deadline and not e07.clean_file(server):
+            time.sleep(.5)
+        e07.require(e07.clean_file(server),"E07_FINAL_INSTALL_RESULT_HOLD")
+        log=local/"NOX_HELION"/"P01"/"logs"/"shell.log"
+        deadline=time.monotonic()+30;log_text=""
+        while time.monotonic()<deadline:
+            if e07.clean_file(log):
+                log_text=log.read_text(encoding="utf-8",errors="replace")[-200000:]
+                if "ACTION_END install exit=0" in log_text: break
+            time.sleep(.4)
+        e07.require("ACTION_END install exit=0" in log_text,
+                    "E07_FINAL_INSTALL_EXIT_HOLD")
+        observed("INSTALL",{"server_sha256":e07.sha256(server),"action_exit":0,
+                            "scope":"ORIGINAL_PC_INSTALL_UI_TO_NOX_ACTIONS"})
 
-    reports=local/"NOX_HELION"/"P01"/"reports"
-    before=set(reports.glob("P01_DIAGNOSTICS_*.json")) if reports.is_dir() else set()
-    invoke_primary(hwnd,"LEARN")
-    diag=None;deadline=time.monotonic()+60
-    while time.monotonic()<deadline:
-        diag=_newest(before,reports,"P01_DIAGNOSTICS_*.json")
-        if diag is not None: break
-        time.sleep(.4)
-    e07.require(diag is not None,"E07_FINAL_LEARN_DIAGNOSTIC_HOLD")
-    data=e07._read_locked_e06_json(diag)
-    e07.require(type(data.get("cpu")) is int and data["cpu"]>0 and
-                type(data.get("windows")) is str and type(data.get("dotnet")) is str and
-                type(data.get("webview2")) is str and data.get("releaseGate")=="BLOCKED",
-                "E07_FINAL_LEARN_DIAGNOSTIC_SCHEMA_HOLD")
-    observed("LEARN",{"diagnostics_sha256":e07.sha256(diag),"cpu":data["cpu"],
-                      "scope":"ORIGINAL_TRAINING_ENVIRONMENT_PREFLIGHT"})
+    def models_check():
+        invoke_primary(hwnd,"MODELS")
+        model=_run_ps(_uia_script(hwnd,"MODEL_WINDOW"),
+                      timeout=35,phase="MODEL_WINDOW")
+        e07.require(model.get("modelWindowVisible") is True and
+                    model.get("windowCount")==1,"E07_FINAL_MODELS_WINDOW_HOLD")
+        observed("MODELS",{"model_center_window":"PASS",
+                           "window_title":"NOX HELION · MODEL CENTER"})
 
-    settings=_run_ps(_uia_script(hwnd,"SETTINGS"),timeout=35,phase="SETTINGS")
-    e07.require(settings.get("invoked") is True and settings.get("systemHeadingVisible") is True and
-                settings.get("sameHwndAlive") is True,"E07_FINAL_SETTINGS_ROUTE_HOLD")
-    observed("SETTINGS",{"system_screen":"PASS","same_original_hwnd":True,
-                         "scope":"ORIGINAL_SYSTEM_SETTINGS_SCREEN"})
+    def learn_check():
+        reports=local/"NOX_HELION"/"P01"/"reports"
+        before=set(reports.glob("P01_DIAGNOSTICS_*.json")) if reports.is_dir() else set()
+        invoke_primary(hwnd,"LEARN")
+        diag=None;deadline=time.monotonic()+60
+        while time.monotonic()<deadline:
+            diag=_newest(before,reports,"P01_DIAGNOSTICS_*.json")
+            if diag is not None: break
+            time.sleep(.4)
+        e07.require(diag is not None,"E07_FINAL_LEARN_DIAGNOSTIC_HOLD")
+        data=e07._read_locked_e06_json(diag)
+        e07.require(type(data.get("cpu")) is int and data["cpu"]>0 and
+                    type(data.get("windows")) is str and
+                    type(data.get("dotnet")) is str and
+                    type(data.get("webview2")) is str and
+                    data.get("releaseGate")=="BLOCKED",
+                    "E07_FINAL_LEARN_DIAGNOSTIC_SCHEMA_HOLD")
+        observed("LEARN",{"diagnostics_sha256":e07.sha256(diag),
+                          "cpu":data["cpu"],
+                          "scope":"ORIGINAL_TRAINING_ENVIRONMENT_PREFLIGHT"})
+
+    def settings_check():
+        settings=_run_ps(_uia_script(hwnd,"SETTINGS"),
+                         timeout=35,phase="SETTINGS")
+        e07.require(settings.get("invoked") is True and
+                    settings.get("systemHeadingVisible") is True and
+                    settings.get("sameHwndAlive") is True,
+                    "E07_FINAL_SETTINGS_ROUTE_HOLD")
+        observed("SETTINGS",{"system_screen":"PASS","same_original_hwnd":True,
+                             "scope":"ORIGINAL_SYSTEM_SETTINGS_SCREEN"})
+
+    for name,callback in (
+        ("INSTALL",install_check),("MODELS",models_check),
+        ("LEARN",learn_check),("SETTINGS",settings_check)):
+        attempt(name,callback)
 
     functions={"schema":e07.FINAL_FUNCTION_SCHEMA,"source_sha":source_sha,
                "setup_sha256":setup_sha,"release_accepted":False,"actions":actions}
