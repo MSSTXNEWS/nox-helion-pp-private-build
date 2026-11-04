@@ -2,7 +2,11 @@ name: NOX EXPRESS single-SHA Windows Setup and source
 on:
   push:
     branches: [integration/nox-v16-unified-candidate-20261028-r01]
-    paths: [.github/workflows/nox-express-physical-onehost.yml]
+    paths:
+      - .github/workflows/nox-express-physical-onehost.yml
+      - coordination/e06/t06_frozen_source_coverage.py
+      - coordination/e06/t06_native_proven_builder.py
+      - tests/e06/test_t06_frozen_source_coverage.py
   workflow_dispatch:
 permissions:
   contents: read
@@ -36,6 +40,8 @@ jobs:
           # Syntax validation here makes no pycache/untracked files; the physical pack below is the real gate.
           python -B -c "import ast; from pathlib import Path; ast.parse(Path('coordination/e06/express_source_snapshot_pack.py').read_text(encoding='utf-8'))"
           if ($LASTEXITCODE -ne 0) { throw 'SOURCE_PACK_SYNTAX_HOLD' }
+          python -B -m unittest discover -s tests/e06 -p test_t06_frozen_source_coverage.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'T06_FROZEN_SOURCE_COVERAGE_TEST_HOLD' }
           $archive=Join-Path $env:RUNNER_TEMP ('NOX_HELION_EXPRESS_SOURCE_'+$env:GITHUB_SHA+'.zip')
           python -B coordination/e06/express_source_snapshot_pack.py --repo . --sha $env:GITHUB_SHA --out $archive
           if ($LASTEXITCODE -ne 0) { throw 'SOURCE_PACK_PHYSICAL_HOLD' }
