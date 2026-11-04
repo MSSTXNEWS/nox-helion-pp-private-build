@@ -225,7 +225,6 @@ def stage(root:Path, source:Path)->dict:
         len({a["taskId"] for a in actions})!=50):
         raise ValueError("PACK01_CATALOG_50_ROUTES_HOLD")
     pinned_content={pack01_catalog:pinned_source_bytes(pack01_catalog,PACK01_CATALOG_BLOB)}
-    pinned_content.update(menu_verified)
     for rel,pins in OWNER1_D02_ENGINE.items():
         archived=source/rel
         active=owner1_root/rel
@@ -244,6 +243,7 @@ def stage(root:Path, source:Path)->dict:
     menu_verified={}
     menu_plans=menu_stage_plan(owner1_root,dest,menu_verified)
     plans.extend(menu_plans)
+    pinned_content.update(menu_verified)
     p01_plans,p01_content=p01_owner_stage_plan(owner1_root,dest)
     plans.extend(p01_plans)
     pinned_content.update(p01_content)
