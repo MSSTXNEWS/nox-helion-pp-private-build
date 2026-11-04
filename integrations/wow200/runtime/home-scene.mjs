@@ -255,7 +255,7 @@ function mountNoxGraphicsDock(home,doc,onSelect,getSceneSnapshot){
  panel.append(worldTitle,summary,paletteRow,actions,observatory);
  dock.append(head,row,panel);home.append(dock);
  const palettes=new Map(),history=[];
- let active='CINEMA',sampleTimer=null,previous=null,closed=false;
+ let active=null,sampleTimer=null,previous=null,closed=false;
  function stopSampling(){if(sampleTimer!==null){view.clearInterval(sampleTimer);sampleTimer=null;}previous=null;}
  function sample(){
    if(panel.hidden||doc.hidden||closed)return;
@@ -290,6 +290,7 @@ function mountNoxGraphicsDock(home,doc,onSelect,getSceneSnapshot){
      button.setAttribute('aria-pressed',String(chosen===theme));
      button.addEventListener('click',()=>{
        chosen=theme;palettes.set(id,theme);dock.dataset.noxPalette=theme;
+       home.dataset.noxPlanetPalette=theme;
        for(const child of paletteRow.children){
          child.setAttribute('aria-pressed',String(child===button));
        }
@@ -297,6 +298,7 @@ function mountNoxGraphicsDock(home,doc,onSelect,getSceneSnapshot){
      paletteRow.append(button);
    }
    dock.dataset.noxPalette=chosen;
+   home.dataset.noxPlanetPalette=chosen;
  }
  function show(value){
    if(closed)return;panel.hidden=!value;
@@ -339,7 +341,8 @@ function mountNoxGraphicsDock(home,doc,onSelect,getSceneSnapshot){
    destroy(){
      if(closed)return;closed=true;stopSampling();
      doc.removeEventListener('keydown',onKey);
-     delete home.dataset.noxPlanetWorld;dock.remove();
+     delete home.dataset.noxPlanetWorld;
+     delete home.dataset.noxPlanetPalette;dock.remove();
    }
  });
 }
