@@ -144,7 +144,7 @@ export function nativeCompletedOwnerReply(reply) {
   // Transport COMPLETED does not certify native OWNER/CONSENT/provider success.
   // Never turn an envelope error or embedded HOLD into buttons, model ACK or AI PASS.
   return reply?.state==='COMPLETED' &&
-    (reply.errorCode==null || reply.errorCode==='') &&
+    !nativeOwnerReceiptHolds(reply) &&
     !nativeOwnerReceiptHolds(reply.result);
 }
 
@@ -255,9 +255,9 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
       actions.append(b);
     }
   };
-  const display=v=>{
+  const display=(v,expectedRoute)=>{
     if(disposed)return;
-    const approved=nativeReadVerified(v,v?.routeId),data=approved?v.result:null;actions.replaceChildren();
+    const approved=nativeReadVerified(v,expectedRoute),data=approved?v.result:null;actions.replaceChildren();
     function action(label,route,key,id){
       const b=doc.createElement('button');b.type='button';b.className='nox-sb-tile';b.textContent=label;
       b.dataset.nativeRoute=route;b.dataset.nativeKey=key;b.dataset.nativeValue=id;actions.append(b);
@@ -310,7 +310,7 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
       invokeP03Queue:async()=>{
         root.append(status,detail,actions);detail.hidden=true;
         const reply=await client.request('models.queue',{});
-        if(!disposed&&doc.getElementById('detail-title')?.textContent?.trim()==='РАЗВИТИЕ')display(reply);
+        if(!disposed&&doc.getElementById('detail-title')?.textContent?.trim()==='РАЗВИТИЕ')display(reply,'models.queue');
         return nativeReadVerified(reply,'models.queue')&&Array.isArray(reply.result?.jobs)
           ? {ack:true,jobs:reply.result.jobs}
           : {ack:false,errorCode:reply.errorCode||'P03_QUEUE_UNAVAILABLE'};
@@ -330,7 +330,7 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
         if(!scope.core_id||!scope.persona_id)throw Error('SELECT_CORE_AND_PERSONA');
         const route=request.actionId==='selfbuilder.train.request'?'training.start':'chat.commands';
         const result=await client.request(route,{...(route==='chat.commands'?{action:request.actionId}:{}),...scope,
-          ...(request.task?{task:request.task}:{}),...(request.job_id?{job_id:request.job_id}:{})});display(result);
+          ...(request.task?{task:request.task}:{}),...(request.job_id?{job_id:request.job_id}:{})});display(result,route);
         return nativeOwnerActionReceipt(result,route,request.actionId);
       }});
   }
@@ -349,7 +349,7 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
   if(title)sectionObserver?.observe(title,{childList:true,characterData:true,subtree:true});
   // One passive local probe on first MENU mount. No download, training or patch.
   if(root)void client.request('chat.commands',{action:'selfbuilder.activator.status'})
-    .then(reply=>{if(!disposed&&activatorSection())display(reply);})
+    .then(reply=>{if(!disposed&&activatorSection())display(reply,'chat.commands');})
     .catch(()=>{if(!disposed&&activatorSection())status.textContent='ACTIVATOR HOLD · локальная проверка недоступна';});
   async function refresh(){
     const epoch=selectionEpoch,run=++capabilityEpoch,scope=context();
@@ -365,7 +365,7 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
           if(s&&typeof s==='object')states[action]={available:s.available===true,
             status:typeof s.status==='string'?s.status:'HOLD',ownerConsent:s.ownerConsent===true,requiresNativeConsent:s.requiresNativeConsent===true};
         }
-      menu?.refresh();display(reply);
+      menu?.refresh();display(reply,'chat.commands');
     }catch(error){if(run===capabilityEpoch&&sameSelection(epoch,scope)){states=Object.create(null);menu?.refresh();status.textContent=(error.message==='TIMEOUT'?'TIMEOUT':'HOLD')+' · нет ответа ядра';}}
   }
   // Bind only explicit existing controls; keep their source geometry and art.
@@ -525,7 +525,7 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
     const visibleSection=doc.getElementById('detail-title')?.textContent;
     try{
       const reply=await client.request(route,payload);
-      if(!disposed&&button.isConnected&&doc.getElementById('detail-title')?.textContent===visibleSection)display(reply);
+      if(!disposed&&button.isConnected&&doc.getElementById('detail-title')?.textContent===visibleSection)display(reply,route);
     }catch(error){
       if(!disposed&&button.isConnected&&doc.getElementById('detail-title')?.textContent===visibleSection)
         status.textContent=(error.message==='TIMEOUT'?'TIMEOUT':'HOLD')+' · запрос не подтверждён';
