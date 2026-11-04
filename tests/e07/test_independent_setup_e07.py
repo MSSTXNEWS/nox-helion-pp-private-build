@@ -35,6 +35,32 @@ class IndependentE07(unittest.TestCase):
         self.assertTrue(flags["NAV_FAIL"])
         self.assertTrue(any(flags[x] for x in MOD._WPF_FATAL))
 
+    def test_exact_five_button_presence_is_not_click_acceptance(self):
+        got=MOD.classify_primary_button_names(["✦ CHAT","INSTALL","MODELS","LEARN","REPORTS"])
+        self.assertEqual(got["status"],"PASS")
+        self.assertEqual(got["actions_invoked"],0)
+        self.assertEqual(got["buttons_missing"],[])
+
+    def test_uia_rejects_near_matches_missing_and_untrusted(self):
+        got=MOD.classify_primary_button_names(["CHAT","INSTALL NOW","MODELS","LEARN","REPORTS"])
+        self.assertEqual(got["status"],"HOLD")
+        self.assertEqual(got["buttons_missing"],["INSTALL"])
+        for invalid in ("CHAT INSTALL",["CHAT",object()]):
+            with self.assertRaisesRegex(MOD.Hold,"E07_UIA_UNTRUSTED_LABELS"):
+                MOD.classify_primary_button_names(invalid)
+
+    def test_uia_windows_bound_read_only_and_offscreen_rejection(self):
+        source=FILE.read_text(encoding="utf-8")
+        for needle in ("FromHandle([IntPtr]","ControlType]::Button",
+                       "$current.IsEnabled", "$current.IsOffscreen",
+                       "$current.BoundingRectangle", "five_primary_buttons",
+                       '"visual_e07": "HOLD"'):
+            self.assertIn(needle,source)
+        self.assertNotIn("InvokePattern",source)
+        with patch.object(MOD.sys,"platform","linux"):
+            with self.assertRaisesRegex(MOD.Hold,"E07_UIA_NOT_WINDOWS_OR_BAD_HWND"):
+                MOD.observe_original_primary_buttons(8)
+
     def test_sha_pins_and_candidate_only(self):
         self.assertRegex(MOD.SETUP_SHA,r'^[0-9a-f]{64}$')
         self.assertRegex(MOD.SOURCE_SHA,r'^[0-9a-f]{40}$')

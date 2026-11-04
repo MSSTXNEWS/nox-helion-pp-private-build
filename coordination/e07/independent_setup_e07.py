@@ -183,6 +183,74 @@ def wpf_marker_flags(window: str) -> dict[str, bool]:
 
 _WPF_WITNESS_PATH = Path(__file__).resolve().parents[1] / "e06" / "t06_windows_hwnd_witness.py"
 
+
+_UIA_MAIN_BUTTONS = ("CHAT", "INSTALL", "MODELS", "LEARN", "REPORTS")
+
+def classify_primary_button_names(labels: list[str]) -> dict:
+    """Evidence of button presence only, never a click or inference PASS."""
+    require(type(labels) is list and len(labels) <= 2048 and
+            all(type(x) is str and len(x) <= 128 for x in labels),
+            "E07_UIA_UNTRUSTED_LABELS")
+    found = set()
+    for label in labels:
+        label = label.strip().lstrip("✦★•").strip().upper()
+        if label in _UIA_MAIN_BUTTONS:
+            found.add(label)
+    missing = [name for name in _UIA_MAIN_BUTTONS if name not in found]
+    return {"status": "HOLD" if missing else "PASS",
+            "buttons_present": [v for v in _UIA_MAIN_BUTTONS if v in found],
+            "buttons_missing": missing,
+            "proof": "VISIBLE_ENABLED_UIA_BUTTONS_ONLY", "actions_invoked": 0}
+
+
+def observe_original_primary_buttons(hwnd: int) -> dict:
+    """Read-only UI Automation rooted at the existing strict WPF HWND witness."""
+    require(sys.platform == "win32" and type(hwnd) is int and hwnd > 0,
+            "E07_UIA_NOT_WINDOWS_OR_BAD_HWND")
+    ps = r"""
+$ErrorActionPreference = 'Stop'
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+Add-Type -AssemblyName UIAutomationClient
+Add-Type -AssemblyName UIAutomationTypes
+$root = [System.Windows.Automation.AutomationElement]::FromHandle([IntPtr]__HWND__)
+if ($null -eq $root) { throw 'E07_UIA_NO_ROOT' }
+$filter = [System.Windows.Automation.PropertyCondition]::new(
+    [System.Windows.Automation.AutomationElement]::ControlTypeProperty,
+    [System.Windows.Automation.ControlType]::Button)
+$elements = $root.FindAll([System.Windows.Automation.TreeScope]::Descendants, $filter)
+$labels = [System.Collections.Generic.List[string]]::new()
+for ($i=0; $i -lt $elements.Count; $i++) {
+    $current = $elements.Item($i).Current
+    $rect = $current.BoundingRectangle
+    if ($current.IsEnabled -and -not $current.IsOffscreen -and
+        $rect.Width -ge 20 -and $rect.Height -ge 12 -and
+        -not [string]::IsNullOrWhiteSpace($current.Name)) {
+        $labels.Add($current.Name)
+    }
+}
+[pscustomobject]@{schema='NOX-E07-UIA-V1';labels=@($labels.ToArray())} |
+    ConvertTo-Json -Compress -Depth 3
+""".replace("__HWND__", str(hwnd))
+    import base64
+    encoded = base64.b64encode(ps.encode("utf-16le")).decode("ascii")
+    try:
+        p = subprocess.run(["powershell.exe", "-NoProfile", "-NonInteractive",
+                            "-EncodedCommand", encoded],
+                           cwd=os.environ["RUNNER_TEMP"], capture_output=True,
+                           timeout=35, check=False, encoding="utf-8", errors="replace")
+    except (OSError, subprocess.TimeoutExpired, KeyError):
+        raise Hold("E07_UIA_EXECUTION_HOLD") from None
+    require(p.returncode == 0 and len(p.stdout) <= 262144,
+            "E07_UIA_PROCESS_HOLD")
+    try:
+        response = json.loads(p.stdout.strip())
+    except (ValueError, UnicodeError):
+        raise Hold("E07_UIA_BAD_JSON_HOLD") from None
+    require(type(response) is dict and response.get("schema") == "NOX-E07-UIA-V1",
+            "E07_UIA_BAD_SCHEMA_HOLD")
+    return classify_primary_button_names(response.get("labels"))
+
+
 def original_wpf_hwnd(pid: int) -> int | None:
     """Original reviewed Win32 WPF class/PID/size witness; never generic HWND."""
     require(clean_file(_WPF_WITNESS_PATH), "E07_ORIGINAL_WPF_WITNESS_MISSING")
@@ -243,9 +311,15 @@ def gui_hwnd(shell: Path, local: Path) -> dict:
                 if time.monotonic() - started >= 8:
                     require(original_wpf_hwnd(proc.pid) == handle,
                             "E07_WPF_HWND_REPLACED_HOLD")
+                    try:
+                        buttons = observe_original_primary_buttons(handle)
+                    except Hold as exc:
+                        buttons = {"status": "HOLD", "error": str(exc),
+                                   "actions_invoked": 0}
                     return {"gui_visible_hwnd": "PASS", "stable_seconds": 8,
                             "webview_navigation": "PASS", "shell_native_ipc": "PASS",
                             "independent_webview_log": "CURRENT_PROCESS_FRESH_NAV_AND_IPC",
+                            "five_primary_buttons": buttons,
                             "visual_e07": "HOLD"}
             else:
                 started = None
