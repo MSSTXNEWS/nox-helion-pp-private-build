@@ -77,7 +77,7 @@ function FiveRects {
 }
 function NoOverlap($rects){for($i=0;$i -lt $rects.Count;$i++){for($j=$i+1;$j -lt $rects.Count;$j++){$a=$rects[$i];$b=$rects[$j];if($a.x -lt ($b.x+$b.width) -and ($a.x+$a.width) -gt $b.x -and $a.y -lt ($b.y+$b.height) -and ($a.y+$a.height) -gt $b.y){return $false}}};return $true}
 $op='__OP__'
-if($op -eq 'CLICK'){ [pscustomobject]@{invoked=(InvokePrimary '__ACTION__');sameHwndAlive=($null -ne [System.Windows.Automation.AutomationElement]::FromHandle($handle))}|ConvertTo-Json -Compress; exit 0 }
+if($op -in @('CHAT','INSTALL','MODELS','LEARN','SETTINGS')){ [pscustomobject]@{invoked=(InvokePrimary '__ACTION__');sameHwndAlive=($null -ne [System.Windows.Automation.AutomationElement]::FromHandle($handle))}|ConvertTo-Json -Compress; exit 0 }
 if($op -eq 'SETTINGS'){
  $null=InvokePrimary 'SETTINGS';$seen=$false
  for($n=0;$n -lt 40;$n++){Start-Sleep -Milliseconds 200;$a=Tree (Root);for($i=0;$i -lt $a.Count;$i++){try{$v=$a.Item($i).Current;if($v.ControlType -eq [System.Windows.Automation.ControlType]::Text -and ($v.Name+'').Trim() -ceq 'СИСТЕМА' -and (Visible $v)){$seen=$true;break}}catch{}};if($seen){break}}
@@ -108,8 +108,10 @@ throw 'UNKNOWN_OP'
 
 def invoke_primary(hwnd: int, action: str) -> dict:
     e07.require(action in PRIMARY,"E07_FINAL_ACTION_NAME_HOLD")
-    script=_uia_script(hwnd,"CLICK")
-    script=script.replace("InvokePrimary 'CLICK'","InvokePrimary '"+action+"'")
+    # Substitute the allowlisted action directly into the encoded UIA script.
+    # The old CLICK placeholder produced InvokePrimary '' and could never invoke
+    # the original installed control, even when that control was working.
+    script=_uia_script(hwnd,action)
     result=_run_ps(script,timeout=35)
     e07.require(result.get("invoked") is True and result.get("sameHwndAlive") is True,
                 "E07_FINAL_"+action+"_UIA_HOLD")
