@@ -114,6 +114,14 @@ def stage(source: Path, receipt_path: Path) -> dict:
                 home_now.st_nlink != 1 or receipt_now.st_nlink != 1 or
                 home.read_bytes() != before):
             raise ValueError("D02_PRIMARY_PREPUBLISH_OWNER_CHANGED_HOLD")
+        # Check our own staged inode again immediately before replacing HOME.
+        # A foreign writer may substitute even byte-identical pending content
+        # after its early readback; that must never be published as our payload.
+        staged_now = staging.lstat()
+        if (not _regular(staging) or
+                (staged_now.st_dev, staged_now.st_ino) != created_identity or
+                staged_now.st_nlink != 1 or staging.read_bytes() != published):
+            raise ValueError("D02_PRIMARY_PREPUBLISH_STAGED_OWNER_CHANGED_HOLD")
         os.replace(staging, home)
         # HOME is now altered; retain the already fsynced provenance receipt
         # if post-publish IO fails rather than erasing the only evidence.

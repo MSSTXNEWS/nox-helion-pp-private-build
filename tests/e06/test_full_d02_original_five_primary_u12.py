@@ -116,6 +116,28 @@ class D02OriginalFivePrimary(unittest.TestCase):
   self.assertTrue(swapped[0])
   self.assertEqual(self.home.read_bytes(),before)
   self.assertFalse(self.receipt.exists())
+ def test_foreign_same_byte_pending_inode_rejected_after_receipt(self):
+  before=self.home.read_bytes()
+  derived=b'<nav>'+b''.join(('data-nox-primary="'+n+'"').encode() for n in ('CHAT','INSTALL','MODELS','LEARN','SETTINGS'))+b'</nav>'
+  proof={'source_sha256':hashlib.sha256(before).hexdigest(),'published_sha256':hashlib.sha256(derived).hexdigest(),'installed_ui_automation':'NOT_RUN','release_accepted':False}
+  pending=self.home.with_name('index.html.nox-u12-pending')
+  json_loads=module.json.loads
+  changed=[False]
+  def substitute_after_receipt(data,*args,**kwargs):
+   if not changed[0]:
+    foreign=self.folder/'unmanaged_same_bytes_pending'
+    foreign.write_bytes(derived)
+    foreign.replace(pending)
+    changed[0]=True
+   return json_loads(data,*args,**kwargs)
+  with patch.object(module,'publish',return_value=(derived,proof)), patch.object(module.json,'loads',side_effect=substitute_after_receipt):
+   with self.assertRaisesRegex(ValueError,'D02_PRIMARY_PREPUBLISH_STAGED_OWNER_CHANGED_HOLD'):
+    module.stage(self.root,self.receipt)
+  self.assertTrue(changed[0])
+  self.assertEqual(self.home.read_bytes(),before)
+  self.assertFalse(self.receipt.exists())
+  self.assertEqual(pending.read_bytes(),derived)
+
  def test_post_replace_readback_failure_keeps_receipt(self):
   before=self.home.read_bytes()
   derived=b'<nav>'+b''.join(('data-nox-primary="'+n+'"').encode() for n in ('CHAT','INSTALL','MODELS','LEARN','SETTINGS'))+b'</nav>'
