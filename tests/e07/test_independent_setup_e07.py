@@ -124,7 +124,7 @@ class IndependentE07(unittest.TestCase):
         import os
         with tempfile.TemporaryDirectory() as t:
             root = Path(t)
-            (root / 'nox-p01-owned.txt').write_text('NOXHELION.P01 V16\\n')
+            (root / 'nox-p01-owned.txt').write_text('NOXHELION.P01 V16' + chr(10))
             payload = root / 'entry.exe'
             original = b'owned-file-original-bytes'
             payload.write_bytes(original)
