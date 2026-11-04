@@ -8,6 +8,9 @@ on:
       - coordination/e06/t06_native_proven_builder.py
       - coordination/e06/stage_native_stdio.py
       - proposals/NOX-PACK01-50/native_bridge.py
+      - Packages/P03/Source/python-host/p03_onehost_port.py
+      - tests/p03/test_p03_cancel_retry_jobid_bind_u06.py
+      - tests/p03/test_p03_ollama_tags_digest_u06.py
       - tests/p02/test_original_terminal_fence_u11.py
       - src/nox_selfbuilder/onehost_builder.py
       - src/nox_selfbuilder/nx03_model_firstcycle.py
@@ -88,6 +91,14 @@ jobs:
           python -B coordination/e06/express_source_snapshot_pack.py --repo . --sha $env:GITHUB_SHA --out $archive
           if ($LASTEXITCODE -ne 0) { throw 'SOURCE_PACK_PHYSICAL_HOLD' }
           Write-Host ('EXACT_SOURCE_ZIP_SHA256 '+(Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash)
+      - name: G2 existing P03 owner JobID ACK and Ollama tags digest identity
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          python -B -m unittest discover -s tests/p03 -p test_p03_cancel_retry_jobid_bind_u06.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'P03_NATIVE_JOBID_ACK_REGRESSION_HOLD' }
+          python -B -m unittest discover -s tests/p03 -p test_p03_ollama_tags_digest_u06.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'P03_OLLAMA_TAG_DIGEST_REGRESSION_HOLD' }
       - name: Official portable NSIS 3.13, pinned SHA256, no Chocolatey dependency
         shell: pwsh
         run: |
