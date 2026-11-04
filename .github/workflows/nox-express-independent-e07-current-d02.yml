@@ -13,6 +13,8 @@ on:
       - tests/e07/test_navigation_consent_cleanup_u25.py
       - tests/e07/test_install_fresh_owner_log_u26.py
       - coordination/e07/probe_final_same_setup.py
+      - coordination/e07/probe_webview_motion.py
+      - tests/e07/test_webview_motion_cdp_u26.py
       - coordination/e07/probe_91a6_real_visual_u17.py
       - coordination/e07/probe_installed_qwen.py
       - coordination/e07/probe_native_active_stop.py
