@@ -113,6 +113,13 @@ class FinalPrimaryDispatch(unittest.TestCase):
         self.assertIn("requested=@($width,$height)", script)
         self.assertNotIn("foreach($size in @(@(1044,788),@(800,600)))", script)
 
+    def test_final_capture_uses_valid_rect_and_checks_the_window(self):
+        script = probe._uia_script(12345, "VISUAL", png=Path("test.png"))
+        self.assertNotIn("New-Object NoxFinalWin32+RECT", script)
+        self.assertEqual(script.count("[NoxFinalWin32+RECT]::new()"), 3)
+        self.assertIn("if(-not [NoxFinalWin32]::GetWindowRect($handle,[ref]$rr)){throw 'RECT'}", script)
+        self.assertIn("[System.Drawing.Bitmap]::new([int]$w,[int]$h)", script)
+
     def test_non_action_does_not_invoke_privileged_button(self):
         script = probe._uia_script(12345, "FX")
         self.assertIn("$op='FX'", script)
