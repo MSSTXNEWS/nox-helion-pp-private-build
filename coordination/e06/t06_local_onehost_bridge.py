@@ -297,7 +297,12 @@ def verified_samevm_lifecycle_state(smoke:dict, third:dict)->str:
             raise RuntimeError(error)
     owned=lifecycle.get("uninstall_owned_files_checked")
     views=lifecycle.get("uninstall_registry_views_checked")
+    # Source provenance already pinned the payload manifest count.  A
+    # positive subset (e.g. 1 of 485 files) is NOT full conservative uninstall.
+    manifest_count=smoke.get("manifest_files_checked")
     if (type(owned) is not int or owned<1 or
+        type(manifest_count) is not int or not 1<=manifest_count<=50000 or
+        owned!=manifest_count or
         type(views) is not int or views!=2):
         raise RuntimeError(error)
     phase=smoke.get("phase")

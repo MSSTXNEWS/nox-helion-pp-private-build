@@ -21,6 +21,7 @@ class BridgeLifecycleR147(unittest.TestCase):
                         if offline else "INSTALLED_GUI_IPC_UPDATE_ROLLBACK_NOLOSS_PASS_NOT_E07"),
                 "release_accepted":False,"e07_independent_acceptance":"NOT_RUN",
                 "original_home_and_core01_sha_verified":True,
+                "manifest_files_checked":485,
                 "installer_lifecycle":{
                     **{name:{"code":0} for name in (
                         "preflight_final","install","verify","update",
@@ -92,6 +93,24 @@ class BridgeLifecycleR147(unittest.TestCase):
                 with self.assertRaisesRegex(RuntimeError,
                         "T06_M1_REAL_WINDOWS_GUI_IPC_LIFECYCLE_GATE_HOLD"):
                     verify(data,{"return_code":0})
+
+    def test_uninstall_must_cover_entire_source_verified_manifest(self):
+        for invalid in (None, False, 0, 1, 484, 486, 50001, "485"):
+            with self.subTest(source_count=invalid):
+                data=self.fixture(False)
+                data["manifest_files_checked"]=invalid
+                with self.assertRaisesRegex(RuntimeError,
+                        "T06_M1_REAL_WINDOWS_GUI_IPC_LIFECYCLE_GATE_HOLD"):
+                    verify(data,{"return_code":0})
+        for invalid in (1, 484, 486, 50001):
+            with self.subTest(owned_count=invalid):
+                data=self.fixture(False)
+                data["installer_lifecycle"]["uninstall_owned_files_checked"]=invalid
+                with self.assertRaisesRegex(RuntimeError,
+                        "T06_M1_REAL_WINDOWS_GUI_IPC_LIFECYCLE_GATE_HOLD"):
+                    verify(data,{"return_code":0})
+        self.assertEqual(verify(self.fixture(False),{"return_code":0}),
+                         "INSTALLED_NATIVE_INVENTORY_DIAGNOSTIC_NOT_E07")
 
     def test_no_silent_undocumented_phase(self):
         data=self.fixture();data["phase"]="INSTALLED_GUI_IPC_UPDATE_ROLLBACK_NOLOSS_PASS_NOT_E07"
