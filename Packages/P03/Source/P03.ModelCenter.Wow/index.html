@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="ru"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; font-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'">
-<title>NOX · MODEL CORE</title><link rel="stylesheet" href="ui.css"></head>
+<title>NOX · MODEL CORE</title><link rel="stylesheet" href="ui.css"><link rel="stylesheet" href="vendor/uPlot.min.css"></head>
 <body>
 <div class="frame" id="app">
   <header class="topbar"><div class="brand"><span class="brand-symbol" aria-hidden="true">◉</span><span><strong>NOX HELION</strong><small>MODEL CORE / P03</small></span></div><div class="topmeta"><span class="dot" id="hostLight"></span><span id="hostStatus">Ожидание связи с ядром</span><span class="edition">V16 · MICRO-WOW</span></div></header>
@@ -30,6 +30,20 @@
 <a class="tool-source-card" href="https://github.com/bitsandbytes-foundation/bitsandbytes/releases" target="_blank" rel="noopener noreferrer" aria-label="Открыть официальный источник: bitsandbytes"><span class="tool-source-emblem" aria-hidden="true">✧</span><strong>bitsandbytes</strong><small>Квантование моделей</small></a>
 <a class="tool-source-card" href="https://github.com/ggml-org/llama.cpp/releases" target="_blank" rel="noopener noreferrer" aria-label="Открыть официальный источник: llama.cpp"><span class="tool-source-emblem" aria-hidden="true">✧</span><strong>llama.cpp</strong><small>Локальный runtime GGUF</small></a>
 <a class="tool-source-card" href="https://github.com/Comfy-Org/ComfyUI/releases" target="_blank" rel="noopener noreferrer" aria-label="Открыть официальный источник: ComfyUI"><span class="tool-source-emblem" aria-hidden="true">✧</span><strong>ComfyUI</strong><small>Творческий GPU pipeline</small></a></div></section>
+      <section class="nox-observatory" id="noxObservatory" aria-label="Пульсы подтверждённых процессов">
+  <div class="observatory-head">
+    <div><small class="eyebrow">NOX TELEMETRY · HOST-ONLY</small><h3>Живые кривые и пульс системы</h3></div>
+    <span class="observatory-state" id="noxTraceStatus" role="status">НЕТ ПОДТВЕРЖДЁННЫХ ДАННЫХ</span>
+  </div>
+  <p class="panel-descr">Только измерения OneHost: байты реальной загрузки, свободная VRAM и RAM. Без искусственной активности, без вымышленных результатов обучения.</p>
+  <div class="observatory-buttons" role="group" aria-label="Выбор живого графика">
+    <button type="button" class="observatory-planet is-active" data-trace="transfer" aria-pressed="true">◈ ЗАГРУЗКА</button>
+    <button type="button" class="observatory-planet" data-trace="vram" aria-pressed="false">◉ VRAM</button>
+    <button type="button" class="observatory-planet" data-trace="ram" aria-pressed="false">◇ RAM</button>
+  </div>
+  <div class="observatory-chart" id="noxTracePlot" role="img" aria-label="График только подтверждённых измерений"><span class="observatory-placeholder" id="noxTracePlaceholder">Ожидаются реальные события Windows OneHost.</span></div>
+  <div class="observatory-readout" role="status"><span id="noxTraceLast">Н/Д</span><span id="noxTraceSource">ОЖИДАНИЕ HOST</span></div>
+</section>
       <section class="content-grid">
         <article class="panel dna"><div class="panel-heading"><div><div class="eyebrow">01 / ПРОИСХОЖДЕНИЕ</div><h3>MODEL DNA</h3></div><img class="panel-icon" src="icons/info.svg" alt=""></div><p class="panel-descr">Паспорт артефакта. Поля без источника остаются неизвестными.</p><dl id="dnaList" class="dna-list"></dl><div class="panel-foot"><a id="sourceLink" class="source-link" rel="noopener noreferrer" target="_blank" href="https://ollama.com/library">Открыть официальный источник ↗</a></div></article>
         <article class="panel preflight"><div class="panel-heading"><div><div class="eyebrow">02 / ПРОВЕРКА</div><h3>PRE-FLIGHT RADAR</h3></div><img class="panel-icon" src="icons/checkmark.svg" alt=""></div><p class="panel-descr">Проверки перед установкой. Неполные данные никогда не считаются разрешением.</p><div id="preflightList" class="checks"></div><div class="ready-summary" id="readySummary">Установка недоступна — нужны подтверждения.</div></article>
@@ -40,5 +54,5 @@
     </main>
   </div>
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
-</div><script src="ui.js" defer></script>
+</div><script src="vendor/uPlot.iife.min.js" defer></script><script src="ui.js" defer></script>
 </body></html>
