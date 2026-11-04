@@ -173,6 +173,15 @@ NEW_D02_SETUP_SIZE = 169665842
 NEW_D02_BUILD_ID = "NOX-V16-5d42f812b3ab0697d2da15ff"
 NEW_D02_OWNED_COUNT = 1011
 
+# Additional immutable FULL-D02 physical candidate. Source and installer identity
+# from Windows E06 41895699906 receipts, recomputed over actual Setup.exe.
+# Historical 91a6 and earlier candidate pins remain unchanged/non-promoted.
+F842_D02_SOURCE_SHA = "f842297b79ec0bca0689d37af3ce7de7929fc450"
+F842_D02_SETUP_SHA = "326f9ef5ac447a263f2af6aa920927f45b39498913cbf9d2dac72f24558575a1"
+F842_D02_SETUP_SIZE = 169668831
+F842_D02_BUILD_ID = "NOX-V16-3885169a467f2d1b53d57588"
+F842_D02_OWNED_COUNT = 1011
+
 
 def samevm_lifecycle_verified(
     stages: object, *, expected_owned_files: int = FROZEN_E06_OWNED_COUNT
@@ -198,8 +207,12 @@ def setup_lock(setup: Path, receipt: Path, *, candidate: str = "d02") -> dict:
 
     Prior E06 same-VM lifecycle is NOT independent E07; lifecycle() must rerun.
     """
-    require(candidate in ("d02", "d02-91a6"), "E07_CANDIDATE_PIN_KIND_HOLD")
-    if candidate == "d02-91a6":
+    require(candidate in ("d02", "d02-91a6", "d02-f842"), "E07_CANDIDATE_PIN_KIND_HOLD")
+    if candidate == "d02-f842":
+        expected_source, expected_setup_sha = F842_D02_SOURCE_SHA, F842_D02_SETUP_SHA
+        expected_setup_size, expected_build_id = F842_D02_SETUP_SIZE, F842_D02_BUILD_ID
+        expected_owned_count = F842_D02_OWNED_COUNT
+    elif candidate == "d02-91a6":
         expected_source, expected_setup_sha = NEW_D02_SOURCE_SHA, NEW_D02_SETUP_SHA
         expected_setup_size, expected_build_id = NEW_D02_SETUP_SIZE, NEW_D02_BUILD_ID
         expected_owned_count = NEW_D02_OWNED_COUNT
@@ -1376,7 +1389,7 @@ def lifecycle(setup: Path, result: dict, *, frozen_source: str = "", physical_na
 def main() -> int:
     p=argparse.ArgumentParser()
     p.add_argument("--artifact-dir",required=True,type=Path)
-    p.add_argument("--artifact-kind",choices=("d02","d02-91a6","original","original-e888","original-30a"),default="d02")
+    p.add_argument("--artifact-kind",choices=("d02","d02-91a6","d02-f842","original","original-e888","original-30a"),default="d02")
     p.add_argument("--out",required=True,type=Path)
     p.add_argument("--visual-receipt",type=Path)
     p.add_argument("--function-receipt",type=Path)
@@ -1390,7 +1403,9 @@ def main() -> int:
             "30a4f7c43649e3c3d66d0d46ec370b2105a69faa",
             "ceb4aab254a6a61b16b25a225ba443149bf1260c3ac410f0c00047842ab9c48c"),
     }
-    if args.artifact_kind == "d02-91a6":
+    if args.artifact_kind == "d02-f842":
+        source_sha, setup_sha = F842_D02_SOURCE_SHA, F842_D02_SETUP_SHA
+    elif args.artifact_kind == "d02-91a6":
         source_sha, setup_sha = NEW_D02_SOURCE_SHA, NEW_D02_SETUP_SHA
     else:
         source_sha, setup_sha = frozen_ids.get(args.artifact_kind, (SOURCE_SHA, SETUP_SHA))
@@ -1418,7 +1433,7 @@ def main() -> int:
         # not imported from an unrelated workflow or a previous candidate.
         physical_dir = args.out.parent / "same-setup-final"
         lifecycle(setup,result,frozen_source=source_sha,
-                  physical_nav=args.artifact_kind in ("original-30a", "d02") or args.artifact_kind == "d02-91a6",
+                  physical_nav=args.artifact_kind in ("original-30a", "d02", "d02-91a6", "d02-f842"),
                   final_probe_dir=physical_dir if args.artifact_kind in ("d02", "d02-91a6") else None)
         # The complete physical install/update/rollback/uninstall lifecycle ran
         # on this exact Setup. These facts do NOT prove inference or final E07.

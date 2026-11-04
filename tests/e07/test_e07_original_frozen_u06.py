@@ -69,9 +69,16 @@ class FrozenOriginalU06(unittest.TestCase):
         # The active FULL D02 producer is separately source/Setup/BuildID pinned,
         # never an implicit promotion of any historical original candidate.
         self.assertEqual(sum(matches), 0, "E07_ORIGINAL_WORKFLOW_FROZEN_PAIR_HOLD")
-        self.assertIn("run-id: 41885544063", workflow)
-        self.assertIn("nox-v16-e06-onehost-diagnostic-41885544063", workflow)
-        self.assertIn("--artifact-kind d02-91a6 --out", workflow)
+        self.assertIn("run-id: 41895699906", workflow)
+        self.assertIn("nox-v16-e06-onehost-diagnostic-41895699906", workflow)
+        self.assertIn("--artifact-kind d02-f842 --out", workflow)
+        self.assertNotIn("run-id: 41885544063", workflow)
+        self.assertEqual(MOD.F842_D02_SOURCE_SHA, "f842297b79ec0bca0689d37af3ce7de7929fc450")
+        self.assertEqual(MOD.F842_D02_SETUP_SHA, "326f9ef5ac447a263f2af6aa920927f45b39498913cbf9d2dac72f24558575a1")
+        self.assertEqual(MOD.F842_D02_SETUP_SIZE, 169668831)
+        self.assertEqual(MOD.F842_D02_BUILD_ID, "NOX-V16-3885169a467f2d1b53d57588")
+        self.assertEqual(MOD.F842_D02_OWNED_COUNT, 1011)
+        self.assertEqual(MOD.NEW_D02_SOURCE_SHA, "91a6c104c6412a63085352e224328d3c0ab3ff86")
         self.assertNotIn("run-id: 41785340462", workflow)
         # The old reviewed source+Setup bytes are still frozen in native code.
         self.assertEqual(MOD.ORIGINAL_E06_SOURCE, "fe21790af418c8c1083946595811b67c9c03c49d")

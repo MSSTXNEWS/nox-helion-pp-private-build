@@ -1,4 +1,4 @@
-name: NOX EXPRESS independent E07 frozen full D02 91a6 candidate
+name: NOX EXPRESS independent E07 frozen full D02 f842 candidate
 on:
   push:
     branches: [integration/nox-v16-unified-candidate-20261028-r01]
@@ -18,7 +18,7 @@ permissions:
   actions: read
   contents: read
 concurrency:
-  group: nox-express-e07-frozen-d02-91a6c104-9884a3
+  group: nox-express-e07-frozen-d02-f842297b-326f9e
   cancel-in-progress: false
 jobs:
   independent-windows:
@@ -56,10 +56,10 @@ jobs:
       - name: Download immutable candidate from DIFFERENT Windows CI run
         uses: actions/download-artifact@v4
         with:
-          run-id: 41885544063
+          run-id: 41895699906
           github-token: ${{ github.token }}
-          name: nox-v16-e06-onehost-diagnostic-41885544063
-          path: input-verified-91a6
+          name: nox-v16-e06-onehost-diagnostic-41895699906
+          path: input-verified-f842
       - name: Download prior SHA-pinned Authenticode-verified official Ollama x64 bytes
         uses: actions/download-artifact@v4
         with:
@@ -128,13 +128,13 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference='Stop'
-          python -B coordination/e07/independent_setup_e07.py --artifact-dir input-verified-91a6 --artifact-kind d02-91a6 --out work/e07-independent/E07_CANDIDATE_RECEIPT.json
+          python -B coordination/e07/independent_setup_e07.py --artifact-dir input-verified-f842 --artifact-kind d02-f842 --out work/e07-independent/E07_CANDIDATE_RECEIPT.json
           if ($LASTEXITCODE -ne 0) { throw 'INDEPENDENT_E07_NOT_ACCEPTED' }
       - name: Save independent evidence even on HOLD
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: NOX-EXPRESS-E07-FULL-D02-91A6-${{ github.run_id }}
+          name: NOX-EXPRESS-E07-FULL-D02-F842-${{ github.run_id }}
           path: work/e07-independent/E07_CANDIDATE_RECEIPT.json
           if-no-files-found: error
           retention-days: 14
