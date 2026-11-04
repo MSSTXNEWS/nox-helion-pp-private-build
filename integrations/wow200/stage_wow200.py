@@ -54,7 +54,7 @@ MENU_V2_SHA256 = {
     'ui/selfbuilder-menu-v2.css': '65979f2e8650adc097fc28352189f57aef8577654b534db5a9e9f20be89a3229',
     'ui/onehost-menu-bindings.mjs': 'd36f11911df97e095bbc510c95ea6452cc04571d7f29596642852e42e5cb92cf',
     'ui/nox-r11-wow.mjs': '93455f888f0de964200a72ced4ee4cb309b407175ab180a1a0df39338904d5a8',
-    'ui/nox-r11-wow.css': 'e1d1a4ae2fd983bf517cd49615078a1db6e56260f1e089b5a658112a45760f0b',
+    'ui/nox-r11-wow.css': 'ce1f36811e3d2c42de84b3db9b76f9fa5f09cf9de9d3c21e24f02654ea2e1616',
     'ui/selfbuilder-wow-workbench.mjs': 'bd65520a6f349439fe2a2b2215520dcc84f3f4254b52aaa277201071423d6f17',
     'ui/selfbuilder-wow-workbench.css': 'a5ee4ea99ab109388f154e7ebd80c1524a6228be85b6d5a460bdce13b7e92eb1',
     'contracts/menu_v2_existing_routes.json': '7bb81852e3f28a170d94873d603253f89e5017f268d0af6942f4bcba3b55beea',

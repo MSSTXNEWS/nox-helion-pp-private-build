@@ -156,3 +156,111 @@ body.nox-wow-eco .nox-r11-world::before{animation:none!important;opacity:.4}
   html body #nox-express-primary > button[data-nox-primary]::before,
   .nox-r11-enhanced .nox-r11-world::before{display:none}
 }
+/*
+NOX R11 CINEMA V6 / OPEN PROPS
+Vendor source for the easing tokens below:
+Open Props, https://github.com/argyleink/open-props/blob/main/src/props.easing.css
+Copyright (c) 2021 Adam Argyle · MIT License
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+Only three upstream easing values are vendored, the cinematic selectors and
+animations are original, confined to the existing approved Windows WebView2
+R11 MENU/HOME. There are NO external runtime, CDN or network dependencies.
+*/
+:where(html){
+  --nox-cinema-ease-out:cubic-bezier(.19,1,.22,1);
+  --nox-cinema-ease-in-out:cubic-bezier(.785,.135,.15,.86);
+  --nox-cinema-ease-elastic:cubic-bezier(.5,1,.75,1.25);
+}
+/* Approved 10 logical worlds within 8 original MENU directions.
+   Aurora is strictly decorative; NO synthetic status or native authority. */
+.nox-r11-enhanced [data-nox-worlds="canonical-10-within-8"]::after{
+  content:"";position:absolute;inset:-20% -8%;
+  border-radius:inherit;pointer-events:none;z-index:0;
+  background:radial-gradient(ellipse at 20% 40%,rgba(75,175,204,.21),transparent 54%),
+             radial-gradient(ellipse at 78% 58%,rgba(240,134,68,.16),transparent 48%),
+             radial-gradient(ellipse at 50% 94%,rgba(119,91,183,.12),transparent 64%);
+  opacity:.55;transform:translate3d(-2%,0,0);
+  animation:nox-cinema-v6-aurora 22s ease-in-out infinite alternate;
+}
+.nox-r11-enhanced .nox-r11-world{
+  transform-style:preserve-3d;
+  transition:transform .4s var(--nox-cinema-ease-out),border-color .25s ease,filter .3s ease;
+}
+.nox-r11-enhanced .nox-r11-world:hover:not(:disabled),
+.nox-r11-enhanced .nox-r11-world:focus-visible{
+  transform:translate3d(0,-5px,0) scale(1.025);
+  border-color:rgba(232,238,242,.9);
+  filter:drop-shadow(0 0 15px rgba(124,211,228,.42));
+}
+.nox-r11-enhanced .nox-r11-cockpit::after{
+  content:"";position:absolute;inset:0;pointer-events:none;z-index:0;
+  border-radius:inherit;
+  background:linear-gradient(108deg,transparent 0%,rgba(255,214,160,.055) 48%,transparent 65%);
+  opacity:.65;transform:translate3d(-30%,0,0);
+  animation:nox-cinema-v6-reveal 18s linear infinite;
+}
+.nox-r11-enhanced .nox-r11-cockpit > *{position:relative;z-index:1}
+html body #nox-express-primary > button[data-nox-primary]{
+  transition:transform .33s var(--nox-cinema-ease-out),
+             box-shadow .29s ease,border-color .24s ease;
+}
+html body #nox-express-primary > button[data-nox-primary]:active:not(:disabled){
+  transform:translateY(0) scale(.985);transition-duration:.09s;
+}
+html body #nox-express-primary > button[data-nox-primary]::after{
+  content:"";position:absolute;inset:1px;pointer-events:none;border-radius:inherit;
+  opacity:.7;background:linear-gradient(155deg,rgba(232,249,255,.09),transparent 35%,rgba(240,172,92,.07) 90%);
+}
+@keyframes nox-cinema-v6-aurora{
+  0%{opacity:.36;transform:translate3d(-2%,0,0)}
+  100%{opacity:.78;transform:translate3d(2%,0,0)}
+}
+@keyframes nox-cinema-v6-reveal{
+  0%{opacity:.17;transform:translate3d(-30%,0,0)}
+  50%{opacity:.5;transform:translate3d(0,0,0)}
+  100%{opacity:.12;transform:translate3d(30%,0,0)}
+}
+/* Reduce motion is an OS authority above MAX; ECO stays static on all devices. */
+body[data-fx="ECO"] .nox-r11-enhanced [data-nox-worlds="canonical-10-within-8"]::after,
+body[data-fx="ECO"] .nox-r11-enhanced .nox-r11-cockpit::after,
+body.nox-wow-eco .nox-r11-enhanced [data-nox-worlds="canonical-10-within-8"]::after,
+body.nox-wow-eco .nox-r11-enhanced .nox-r11-cockpit::after{
+  animation:none!important;transform:none!important;opacity:.23;
+}
+@media(max-width:520px){
+  .nox-r11-enhanced [data-nox-worlds="canonical-10-within-8"]::after{opacity:.20}
+  .nox-r11-enhanced .nox-r11-cockpit::after{display:none}
+}
+@media(prefers-reduced-motion:reduce){
+  .nox-r11-enhanced [data-nox-worlds="canonical-10-within-8"]::after,
+  .nox-r11-enhanced .nox-r11-cockpit::after{
+    animation:none!important;transform:none!important;opacity:.16;
+  }
+  .nox-r11-enhanced .nox-r11-world,
+  html body #nox-express-primary > button[data-nox-primary]{
+    animation:none!important;transition:none!important;transform:none!important;
+  }
+}
+@media(forced-colors:active){
+  .nox-r11-enhanced [data-nox-worlds="canonical-10-within-8"]::after,
+  .nox-r11-enhanced .nox-r11-cockpit::after,
+  html body #nox-express-primary > button[data-nox-primary]::after{display:none}
+}

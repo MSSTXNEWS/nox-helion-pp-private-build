@@ -86,6 +86,13 @@ class WowStageTests(unittest.TestCase):
   # R11 WOW V5 is physically staged with the original HOME and source pin.
   fx=(self.stage/'Assets/creative/wow200/ui/nox-r11-wow.css').read_text(encoding='utf-8')
   self.assertIn('NOX R11 WOW V5 / ORIGINAL WINDOWS SCENE',fx)
+  self.assertIn('NOX R11 CINEMA V6 / OPEN PROPS',fx)
+  self.assertIn('Copyright (c) 2021 Adam Argyle',fx)
+  self.assertIn('@keyframes nox-cinema-v6-aurora',fx)
+  self.assertIn('--nox-cinema-ease-out:cubic-bezier(.19,1,.22,1)',fx)
+  self.assertIn('body[data-fx="ECO"]',fx)
+  self.assertIn('@media(prefers-reduced-motion:reduce)',fx)
+  self.assertIn('pointer-events:none',fx)
   self.assertIn('html body #nox-express-primary > button[data-nox-primary]',fx)
   self.assertIn('.nox-r11-enhanced .nox-r11-world::before',fx)
   self.assertIn('@media(prefers-reduced-motion:reduce)',fx)
