@@ -670,6 +670,16 @@ def build(root,staged):
         str(installer_dir/"Verify-Payload.ps1"),"-Root",str(payload),
         "-Manifest",str(manifest_file)],capture_output=True,text=True,timeout=180)
     need(proof.returncode==0,"T06_ORIGINAL_OWNER_MANIFEST_VERIFY_HOLD:"+proof.stdout[-900:]+proof.stderr[-900:])
+    # Review-only C09 owner replaces the exact immutable R11 uninstall script
+    # in this disposable CI stage; the archived donor and C09 source are not
+    # modified. Preserves manifest/SHA/no-loss checks for uninstall.
+    from nx03_reviewed_uninstall_stage import stage_reviewed_remove
+    remove_proof = stage_reviewed_remove(
+        installer_dir/"Remove-InstalledPayload.ps1",
+        Path(__file__).resolve().parents[2]/
+        "stage/proposals/P01/C09/Installer/Remove-InstalledPayload.ps1")
+    print("NX03_C09_REVIEWED_REMOVE_STAGE "+
+          json.dumps(remove_proof,sort_keys=True),flush=True)
     quote_proof=stage_c07_uninstall_quote(
         installer_dir/"NOX-HELION-Setup.nsi",
         Path(__file__).resolve().parents[2]/
