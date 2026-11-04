@@ -41,9 +41,15 @@ jobs:
           python -B -m py_compile coordination/e07/independent_setup_e07.py coordination/e07/probe_five_primary_action.py coordination/e07/probe_installed_qwen.py coordination/e07/probe_native_active_stop.py coordination/e07/verify_qwen_oci_integrity.py coordination/e07/probe_final_same_setup.py
           if ($LASTEXITCODE -ne 0) { throw 'E07_PYTHON_SOURCE_SYNTAX_HOLD' }
           python -B -m unittest discover -s tests/e07 -p test_independent_setup_e07.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'E07_BASE_REGRESSION_HOLD' }
           python -B -m unittest discover -s tests/e07 -p test_nav_a2_source.py -v
           if ($LASTEXITCODE -ne 0) { throw 'E07_NAV_A2_EXACT_SETUP_SOURCE_HOLD' }
-          if ($LASTEXITCODE -ne 0) { throw 'E07_BASE_REGRESSION_HOLD' }
+          # Fail before 1.6 GB signed Ollama bytes + model download if either
+          # new source regression fails. This cannot upgrade a physical E07.
+          python -B -m unittest discover -s tests/e07 -p test_os_animation_observation_u21.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'E07_OS_ANIMATION_EVIDENCE_HOLD' }
+          python -B -m unittest discover -s tests/e07 -p test_visual_stage_diagnostics_u22.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'E07_VISUAL_STAGE_DIAGNOSTICS_HOLD' }
           python -B -m unittest discover -s tests/e07 -p test_final_primary_dispatch_u18.py -v
           if ($LASTEXITCODE -ne 0) { throw 'E07_FINAL_UIA_TREE_REGRESSION_HOLD' }
           python -B -m unittest discover -s tests/e07 -p test_91a6_real_visual_u17.py -v
