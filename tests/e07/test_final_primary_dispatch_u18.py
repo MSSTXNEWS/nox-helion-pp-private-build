@@ -28,6 +28,18 @@ class FinalPrimaryDispatch(unittest.TestCase):
                 self.assertNotIn("InvokePrimary ''", script)
                 self.assertNotIn("__ACTION__", script)
 
+    def test_windows_uia_tree_returns_original_collection_not_flattened_array(self):
+        # A PowerShell function implicitly enumerates an IEnumerable on return.
+        # Returning Tree's AutomationElementCollection without unary comma
+        # makes the original .Item(i) UIA lookup fail on installed Windows.
+        for operation in ("VISUAL", "INSTALL", "MODELS", "LEARN", "SETTINGS"):
+            with self.subTest(operation=operation):
+                script = probe._uia_script(12345, operation)
+                self.assertIn("return ,$a }", script)
+                self.assertNotIn("return $a }", script)
+                self.assertIn("$el=$a.Item($i)", script)
+                self.assertIn("if($a.Count -gt 4096){throw 'TREE_LIMIT'}", script)
+
     def test_runtime_entry_point_does_not_use_click_placeholder(self):
         import inspect
         source = inspect.getsource(probe.invoke_primary)
