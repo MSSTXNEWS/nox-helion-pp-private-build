@@ -154,11 +154,43 @@ def framed_backend(backend: Path, scratch: Path) -> dict:
             "real_model_inference":"NOT_TESTED"}
 
 
-def gui_hwnd(shell: Path) -> dict:
+_WPF_EVENTS = (
+    "INIT_BEGIN", "NAV_START", "NAV_OK", "NAV_FAIL", "BLOCK_NAV",
+    "WEBVIEW_PROCESS_FAILED", "P02_ORIGINAL_NATIVE_PIPE_HANDSHAKE_OK",
+    "INIT_ERROR", "P02_ORIGINAL_NATIVE_HOLD",
+)
+_WPF_FATAL = frozenset(("NAV_FAIL", "BLOCK_NAV", "WEBVIEW_PROCESS_FAILED",
+                         "INIT_ERROR", "P02_ORIGINAL_NATIVE_HOLD"))
+
+
+def wpf_marker_flags(window: str) -> dict[str, bool]:
+    """Strict bracket-prefixed complete events, never substring success."""
+    flags = {name: False for name in _WPF_EVENTS}
+    for line in window.splitlines():
+        if not line.startswith("["):
+            continue
+        prefix, sep, text = line.partition("] ")
+        if not sep or not 2 <= len(prefix) <= 160:
+            continue
+        code = text.split(" ", 1)[0].rstrip("\r")
+        if code in flags:
+            flags[code] = True
+    return flags
+
+
+def gui_hwnd(shell: Path, local: Path) -> dict:
+    """Independently prove fresh WPF/WebView2 NAV_OK+native handshake+HWND."""
     require(clean_file(shell), "E07_WPF_SHELL_MISSING")
-    proc = subprocess.Popen([str(shell)],cwd=str(shell.parent),
-                            stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+    log = local / "NOX_HELION/P01/logs/shell.log"
+    initial = log.stat() if clean_file(log) else None
+    identity = (initial.st_dev, initial.st_ino) if initial else None
+    offset = initial.st_size if initial else 0
+    boundary = ""
+    flags = {name: False for name in _WPF_EVENTS}
+    proc = subprocess.Popen([str(shell)], cwd=str(shell.parent),
+                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     handle = None
+    started = None
     try:
         user32 = ctypes.windll.user32
         enum_proto = ctypes.WINFUNCTYPE(ctypes.c_bool, wintypes.HWND, wintypes.LPARAM)
@@ -171,26 +203,57 @@ def gui_hwnd(shell: Path) -> dict:
                 return False
             return True
         callback = enum_proto(inspect)
-        stop = time.monotonic()+35
-        while time.monotonic() < stop and proc.poll() is None and not handle:
-            user32.EnumWindows(callback,0)
-            if not handle:
-                time.sleep(0.5)
-        require(handle is not None and proc.poll() is None,"E07_WPF_VISIBLE_HWND_HOLD")
-        time.sleep(8)
-        require(proc.poll() is None and user32.IsWindow(handle),
-                "E07_WPF_STABLE_VISIBLE_HWND_HOLD")
-        return {"gui_visible_hwnd":"PASS", "stable_seconds":8,
-                "webview_navigation":"NOT_INDEPENDENTLY_TESTED",
-                "visual_e07":"HOLD"}
+        deadline = time.monotonic() + 65
+        while time.monotonic() < deadline and proc.poll() is None:
+            if clean_file(log):
+                st = log.stat()
+                now_identity = (st.st_dev, st.st_ino)
+                if identity is None:
+                    identity = now_identity
+                require(now_identity == identity and st.st_size >= offset,
+                        "E07_WPF_LOG_REPLACEMENT_HOLD")
+                if st.st_size > offset:
+                    with log.open("rb") as f:
+                        f.seek(offset)
+                        block = f.read(min(65536, st.st_size - offset))
+                    offset += len(block)
+                    window = boundary + block.decode("utf-8", errors="replace")
+                    complete, delim, tail = window.rpartition("\n")
+                    if delim:
+                        fresh = wpf_marker_flags(complete)
+                        for name in flags:
+                            flags[name] = flags[name] or fresh[name]
+                        boundary = tail[-4096:]
+                    else:
+                        boundary = window[-4096:]
+            require(not any(flags[name] for name in _WPF_FATAL),
+                    "E07_WPF_NAVIGATION_FATAL_HOLD")
+            handle = None
+            user32.EnumWindows(callback, 0)
+            ready = (handle is not None and flags["NAV_OK"] and
+                     flags["P02_ORIGINAL_NATIVE_PIPE_HANDSHAKE_OK"] and
+                     not flags["NAV_FAIL"] and proc.poll() is None)
+            if ready:
+                if started is None:
+                    started = time.monotonic()
+                if time.monotonic() - started >= 8:
+                    require(user32.IsWindow(handle), "E07_WPF_HWND_REPLACED_HOLD")
+                    return {"gui_visible_hwnd": "PASS", "stable_seconds": 8,
+                            "webview_navigation": "PASS", "shell_native_ipc": "PASS",
+                            "independent_webview_log": "CURRENT_PROCESS_FRESH_NAV_AND_IPC",
+                            "visual_e07": "HOLD"}
+            else:
+                started = None
+            time.sleep(0.45)
+        raise Hold("E07_WPF_FRESH_NAV_OR_HWND_TIMEOUT")
     finally:
         if proc.poll() is None:
             proc.terminate()
             try:
                 proc.wait(timeout=10)
             except subprocess.TimeoutExpired:
-                subprocess.run(["taskkill.exe","/PID",str(proc.pid),"/T","/F"],
-                               timeout=15,capture_output=True,check=False)
+                subprocess.run(["taskkill.exe", "/PID", str(proc.pid), "/T", "/F"],
+                               timeout=15, capture_output=True, check=False)
 
 
 def lifecycle(setup: Path, result: dict) -> None:
@@ -218,7 +281,7 @@ def lifecycle(setup: Path, result: dict) -> None:
     native = framed_backend(install/"Backend"/"NOX_HELION_PRIVATE_CANDIDATE.exe",
                             Path(os.environ["RUNNER_TEMP"])/"nox-e07-native-data")
     result["checks"]["installed_native_ipc"] = native
-    result["checks"]["installed_gui"] = gui_hwnd(install/"NOX.P01.Shell.exe")
+    result["checks"]["installed_gui"] = gui_hwnd(install/"NOX.P01.Shell.exe",local)
     require(run([str(setup),"/S"],limit=300)==0 and clean_dir(previous),
             "E07_NSIS_UPDATE_HOLD")
     manifest_owner(previous)

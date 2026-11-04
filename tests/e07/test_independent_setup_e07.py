@@ -13,6 +13,23 @@ MOD=importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(MOD)
 
 class IndependentE07(unittest.TestCase):
+    def test_fresh_webview_markers_require_exact_log_events(self):
+        line = "[2026-11-04 05:00:00] INIT_BEGIN\n" + \
+               "[2026-11-04 05:00:01] NAV_START\n" + \
+               "[2026-11-04 05:00:02] NAV_OK\n" + \
+               "[2026-11-04 05:00:03] P02_ORIGINAL_NATIVE_PIPE_HANDSHAKE_OK\n"
+        flags = MOD.wpf_marker_flags(line)
+        self.assertTrue(flags["NAV_OK"])
+        self.assertTrue(flags["P02_ORIGINAL_NATIVE_PIPE_HANDSHAKE_OK"])
+        self.assertFalse(any(flags[x] for x in MOD._WPF_FATAL))
+    def test_unprefixed_or_embedded_nav_ok_not_admitted(self):
+        invalid="NAV_OK\nnoise NAV_OK\n[2026] NOTE NAV_OK\n"
+        self.assertFalse(MOD.wpf_marker_flags(invalid)["NAV_OK"])
+        failed="[2026] NAV_OK\n[2026] NAV_FAIL SomeError\n"
+        flags=MOD.wpf_marker_flags(failed)
+        self.assertTrue(flags["NAV_FAIL"])
+        self.assertTrue(any(flags[x] for x in MOD._WPF_FATAL))
+
     def test_sha_pins_and_candidate_only(self):
         self.assertRegex(MOD.SETUP_SHA,r'^[0-9a-f]{64}$')
         self.assertRegex(MOD.SOURCE_SHA,r'^[0-9a-f]{40}$')
