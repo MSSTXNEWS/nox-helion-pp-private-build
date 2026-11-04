@@ -230,10 +230,15 @@ class P03OneHostPort:
             raise P03PortHold("Model absent or ambiguous in /api/tags")
         reported = matching[0].get("digest")
         if reported is not None:
-            if (not isinstance(reported, str) or not re.fullmatch(
-                    r"sha256:[a-fA-F0-9]{64}", reported)):
+            # Official Ollama GET /api/tags reports a bare 64-hex digest.
+            # Keep the legacy sha256: wire form for compatibility, but never
+            # promote provider metadata to weight/license/install proof.
+            if not isinstance(reported, str):
                 raise P03PortHold("Invalid Ollama manifest digest")
-            reported = reported.lower()
+            match = re.fullmatch(r"(?:sha256:)?([a-fA-F0-9]{64})", reported)
+            if match is None:
+                raise P03PortHold("Invalid Ollama manifest digest")
+            reported = "sha256:" + match.group(1).lower()
         return {
             "modelTag": tag,
             "ollamaReportedManifestDigest": reported,
