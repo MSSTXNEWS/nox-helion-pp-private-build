@@ -46,7 +46,7 @@ def _bounded_uia_failure(stdout: object, phase: str) -> str:
     allowed = (r"E07_FINAL_UIA_" + re.escape(phase)
         + r"_(?:PRIMARY_DOCK_NOT_UNIQUE|BUTTON_(?:CHAT|INSTALL|MODELS|LEARN|SETTINGS)_NOT_UNIQUE|"
           r"NO_ROOT|TREE_LIMIT|NO_INVOKE|RECT|MOVE|PRINT|"
-          r"FX_UNIQUE|FX_INVOKE|FX_STATE|UNKNOWN_OP)_HOLD")
+          r"FX_UNIQUE|FX_INVOKE|FX_STATE|UNKNOWN_OP|VISUAL_STAGE_(?:RESIZE|DOCK|CAPTURE|RESTORE)_HOLD")
     return reason if re.fullmatch(allowed, reason) else fallback
 
 
@@ -81,11 +81,15 @@ def _uia_script(hwnd: int, operation: str, *, png: Path|None=None) -> str:
     return r'''$ErrorActionPreference='Stop'
 [Console]::OutputEncoding=[System.Text.Encoding]::UTF8
 $__e07Operation='__OP__'
+$__e07Stage='INIT'
 # Deliberately allowlist physical UIA exceptions: no user paths, stderr,
 # arbitrary titles, model data or tokens may enter the independent receipt.
 trap {
  $why=$_.Exception.Message+''
  $reason='E07_FINAL_UIA_'+$__e07Operation+'_PROCESS_EXIT_HOLD'
+ if($__e07Operation -eq 'VISUAL' -and $__e07Stage -in @('RESIZE','DOCK','CAPTURE','RESTORE')) {
+   $reason='E07_FINAL_UIA_VISUAL_VISUAL_STAGE_'+$__e07Stage+'_HOLD'
+ }
  if($why -eq 'PRIMARY_DOCK_NOT_UNIQUE'){
    $reason='E07_FINAL_UIA_'+$__e07Operation+'_PRIMARY_DOCK_NOT_UNIQUE_HOLD'
  } elseif(($why -cmatch '^BUTTON_(CHAT|INSTALL|MODELS|LEARN|SETTINGS)_NOT_UNIQUE$') -or (@('NO_ROOT','TREE_LIMIT','NO_INVOKE','RECT','MOVE','PRINT','FX_UNIQUE','FX_INVOKE','FX_STATE','UNKNOWN_OP') -ccontains $why)) {
@@ -188,13 +192,15 @@ if($op -eq 'VISUAL'){
  $r=[NoxFinalWin32+RECT]::new();if(-not [NoxFinalWin32]::GetWindowRect($handle,[ref]$r)){throw 'RECT'}
  $ox=$r.Left;$oy=$r.Top;$ow=$r.Right-$r.Left;$oh=$r.Bottom-$r.Top;$sizes=@()
  try {
- foreach($size in @([pscustomobject]@{width=1044;height=788},[pscustomobject]@{width=800;height=600})){$width=[int]$size.width;$height=[int]$size.height;if(-not [NoxFinalWin32]::MoveWindow($handle,$ox,$oy,$width,$height,$true)){throw 'MOVE'};Start-Sleep -Milliseconds 700;$rr=[NoxFinalWin32+RECT]::new();$null=[NoxFinalWin32]::GetWindowRect($handle,[ref]$rr);$rects=FiveRects;$sizes+=([pscustomobject]@{requested=@($width,$height);actual=@($rr.Right-$rr.Left,$rr.Bottom-$rr.Top);visiblePrimary=$rects.Count;noOverlap=(NoOverlap $rects)})}
+ $__e07Stage='RESIZE'
+ foreach($size in @([pscustomobject]@{width=1044;height=788},[pscustomobject]@{width=800;height=600})){$width=[int]$size.width;$height=[int]$size.height;if(-not [NoxFinalWin32]::MoveWindow($handle,$ox,$oy,$width,$height,$true)){throw 'MOVE'};Start-Sleep -Milliseconds 700;$rr=[NoxFinalWin32+RECT]::new();$null=[NoxFinalWin32]::GetWindowRect($handle,[ref]$rr);$__e07Stage='DOCK';$rects=FiveRects;$sizes+=([pscustomobject]@{requested=@($width,$height);actual=@($rr.Right-$rr.Left,$rr.Bottom-$rr.Top);visiblePrimary=$rects.Count;noOverlap=(NoOverlap $rects)})}
  } finally {
   # Restore original WPF HWND even when a UIA resize or button lookup fails.
-  $null=[NoxFinalWin32]::MoveWindow($handle,$ox,$oy,$ow,$oh,$true)
+  $__e07Stage='RESTORE';$null=[NoxFinalWin32]::MoveWindow($handle,$ox,$oy,$ow,$oh,$true)
   Start-Sleep -Milliseconds 500
  }
  $rr=[NoxFinalWin32+RECT]::new();if(-not [NoxFinalWin32]::GetWindowRect($handle,[ref]$rr)){throw 'RECT'};$w=$rr.Right-$rr.Left;$h=$rr.Bottom-$rr.Top
+ $__e07Stage='CAPTURE'
  $bmp=[System.Drawing.Bitmap]::new([int]$w,[int]$h);try{$g=[System.Drawing.Graphics]::FromImage($bmp);try{$dc=$g.GetHdc();try{$ok=[NoxFinalWin32]::PrintWindow($handle,$dc,2)}finally{$g.ReleaseHdc($dc)}}finally{$g.Dispose()};if(-not $ok){throw 'PRINT'};$bmp.Save('__PNG__',[System.Drawing.Imaging.ImageFormat]::Png)}finally{$bmp.Dispose()}
  [pscustomobject]@{sizes=@($sizes);capture=@($w,$h);fiveVisible=(FiveRects).Count}|ConvertTo-Json -Compress -Depth 6;exit 0
 }
