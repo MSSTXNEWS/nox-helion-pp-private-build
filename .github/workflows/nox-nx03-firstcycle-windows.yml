@@ -6,7 +6,9 @@ on:
       - integration/nox-v16-unified-candidate-20261028-r01
     paths:
       - src/nox_selfbuilder/firstcycle_native.py
+      - src/nox_selfbuilder/nx03_model_firstcycle.py
       - tests/test_selfwrite_firstcycle_native.py
+      - tests/test_nx03_model_firstcycle.py
       - .github/workflows/nox-nx03-firstcycle-windows.yml
   workflow_dispatch:
 
@@ -33,4 +35,6 @@ jobs:
           $ErrorActionPreference='Stop'
           python -B -m unittest discover -s tests -p test_selfwrite_firstcycle_native.py -v
           if ($LASTEXITCODE -ne 0) { throw 'NX03_FIRSTCYCLE_WINDOWS_SOURCE_TEST_HOLD' }
-          Write-Host 'NX03_WINDOWS_SANDBOX_FIRSTCYCLE_SOURCE_PASS_ONLY_NOT_INSTALLED_NOX'
+          python -B -m unittest discover -s tests -p test_nx03_model_firstcycle.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'NX03_P02_TO_NATIVE_CYCLE_SOURCE_HOLD' }
+          Write-Host 'NX03_WINDOWS_MODEL_BRIDGE_CONTRACT_PASS_ONLY_NOT_INSTALLED_NOX'
