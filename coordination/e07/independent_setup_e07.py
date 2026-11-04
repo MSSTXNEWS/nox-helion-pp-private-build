@@ -1042,6 +1042,31 @@ def native_store_stop_probe(backend: Path, scratch: Path) -> dict:
             "real_model_inference": "NOT_TESTED"}
 
 
+def _bounded_live_probe_failure(path: Path, *, expected_schema: str,
+                                default_code: str) -> str:
+    """Retain a child's *real* first HOLD without copying logs, paths or claims.
+
+    Existing Windows E07 used to collapse every failed Qwen/STOP child into a
+    generic code, losing the OCI/ownership reason after lifecycle cleanup.
+    Never turn a child receipt into PASS, and never expose arbitrary text.
+    """
+    try:
+        if not clean_file(path) or path.stat().st_size > 65536:
+            return default_code
+        evidence = _read_locked_e06_json(path)
+        if (evidence.get("schema") != expected_schema or
+                evidence.get("release_accepted") is not False or
+                evidence.get("independent_e07") != "HOLD"):
+            return default_code
+        reason = evidence.get("first_unmet_gate")
+        if type(reason) is not str or re.fullmatch(
+                r"[A-Z][A-Z0-9_]{3,110}", reason) is None:
+            return default_code
+        return default_code + ":" + reason
+    except (Hold, OSError, UnicodeError, ValueError):
+        return default_code
+
+
 def installed_live_qwen_gates(backend: Path) -> dict:
     """Re-use approved physical probes on the SAME installed backend before NSIS uninstall.
 
@@ -1077,7 +1102,17 @@ def installed_live_qwen_gates(backend: Path) -> dict:
             (proof / "active-stop-native").mkdir()
         completed = subprocess.run(command, cwd=str(repository), check=False,
                                    capture_output=True, timeout=480)
-        require(completed.returncode == 0, failure)
+        if completed.returncode != 0:
+            # Never copy subprocess stdout/stderr or human text into receipts.
+            # Read only its fresh, schema-bound, release-HOLD JSON, and only a
+            # bounded machine reason. Unknown/malformed evidence stays HOLD.
+            detail = _bounded_live_probe_failure(
+                qwen_out if command is commands[0][0] else stop_out,
+                expected_schema=("nox.installed.qwen.e07-diagnostic.v1"
+                                 if command is commands[0][0]
+                                 else "nox.native.active-stop.physical.v1"),
+                default_code=failure)
+            raise Hold(detail)
     qwen = _read_locked_e06_json(qwen_out)
     stop = _read_locked_e06_json(stop_out)
     require(qwen.get("installed_backend_sha256") == sha256(backend) and
