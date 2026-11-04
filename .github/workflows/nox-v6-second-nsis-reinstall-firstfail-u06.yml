@@ -35,7 +35,7 @@ jobs:
         with:
           run-id: 41833271465
           name: nox-v16-e06-onehost-diagnostic-41833271465
-          github-token: \${{ github.token }}
+          github-token: ${{ github.token }}
           path: input/nox
       - name: Strict fresh Windows full D02 five UIA and conservative lifecycle
         shell: pwsh
@@ -118,7 +118,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: NOX-U06-NSIS-DIAG-\${{ github.sha }}-\${{ github.run_id }}
+          name: NOX-U06-NSIS-DIAG-${{ github.sha }}-${{ github.run_id }}
           path: |
             work/u06-nsis/FIVE_PRIMARY.json
             work/u06-nsis/SECOND_INSTALL_DIAG.json
