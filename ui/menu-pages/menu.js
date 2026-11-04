@@ -5,7 +5,7 @@ const doc=document,$=id=>doc.getElementById(id);
 const el=(tag,cls,label)=>{const x=doc.createElement(tag);if(cls)x.className=cls;if(label!==undefined)x.textContent=label;return x;};
 const button=(label,cls,click)=>{const b=el('button',cls,label);b.type='button';b.addEventListener('click',click);return b;};
 const P={directions:$('directions'),planets:$('planets'),details:$('details'),status:$('status'),actions:$('actions'),title:$('title'),subtitle:$('subtitle'),search:$('search'),cores:$('cores'),fx:$('fx'),host:$('host')};
-let client=null,active=null,requesting=false,chatInFlight=false,chatStopPending=false;
+let client=null,active=null,requesting=false,chatInFlight=false,chatStopPending=false,chatEpoch=0;
 let selectedCore=null,selectedPersona=null;
 const PERSONA_TO_OWNER=Object.freeze({KV:'kairen',AM:'adrian',LA:'leon',EV:'elina',KW:'cassien'});
 function ownerScope(){
@@ -234,7 +234,7 @@ function liveChat(label){
  surface.append(heading,el('p','nox-chat-label','ЯДРО'),coreRow,el('p','nox-chat-label','ПЕРСОНА'),personaRow,
   el('p','nox-chat-label','УСТАНОВЛЕННЫЕ МОДЕЛИ'),modelsRow,style,neural,history,log,form,info);
  setDetails(top,surface);
- let core='core.core',persona='persona.kairen_voss',model='',chatEpoch=0,modelSelectionPending=false;
+ let core='core.core',persona='persona.kairen_voss',model='',modelSelectionPending=false;
  // A selected model belongs to its native-confirmed UI scope, never to a different CoreID/Persona.
  let scopeEpoch=0,renderModels=()=>{};
 
@@ -344,6 +344,8 @@ function liveChat(label){
   input.value='';row('user',text);
   const replyRow=row('assistant','');info.textContent='REQUESTED · запрос в OneHost';
   function terminal(reply){
+   // A late native terminal must not release a newer stream or its STOP lock.
+   if(epoch!==chatEpoch)return;
    if(!isNativeChatTerminal(reply))return;
    chatInFlight=false;chatStopPending=false;
    if(!info.isConnected)return;
@@ -366,6 +368,7 @@ function liveChat(label){
    terminal(result);
    if(!isNativeChatTerminal(result)&&info.isConnected)info.textContent='HOLD · нет терминального подтверждения; STOP доступен';
   }catch(err){
+   if(epoch!==chatEpoch)return;
    if(err.message!=='TIMEOUT'){chatInFlight=false;chatStopPending=false;redraw();}
    if(info.isConnected)info.textContent=err.message==='TIMEOUT'?'HOLD · истекло ожидание, STOP доступен':'HOLD · native ответ не получен';
   }
@@ -399,7 +402,7 @@ function liveChat(label){
   }catch{
    if(info.isConnected&&epoch===chatEpoch&&chatInFlight)
     info.textContent='HOLD · STOP не подтверждён';
-  }finally{chatStopPending=false;redraw();}
+  }finally{if(epoch===chatEpoch){chatStopPending=false;redraw();}}
  });
  redraw();void loadModels();
 }
