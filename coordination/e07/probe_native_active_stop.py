@@ -159,6 +159,59 @@ def live_active_stop(backend: Path, data_dir: Path, model: str) -> dict:
         thread.join(timeout=3)
 
 
+
+def require_ephemeral_stop_dir(data_dir: Path, runner_temp: Path) -> None:
+    """Never let an active native STOP probe write to a user's existing data."""
+    if (not data_dir.is_absolute() or not runner_temp.is_absolute() or
+            ".." in data_dir.parts or ".." in runner_temp.parts or
+            data_dir == runner_temp or not data_dir.is_relative_to(runner_temp)):
+        raise GateHold("NOX_STOP_SCRATCH_OUTSIDE_RUNNER_HOLD")
+    # Check provenance BEFORE resolve: resolving a Windows junction first
+    # would hide the untrusted path component from this gate.
+    for item in (runner_temp, *runner_temp.parents, data_dir, *data_dir.parents):
+        if item.is_symlink() or getattr(item, "is_junction", lambda: False)():
+            raise GateHold("NOX_STOP_SCRATCH_REPARSE_HOLD")
+    if not runner_temp.is_dir() or not data_dir.is_dir():
+        raise GateHold("NOX_STOP_SCRATCH_DIRECTORY_HOLD")
+    if any(data_dir.iterdir()):
+        raise GateHold("NOX_STOP_SCRATCH_PREEXISTING_DATA_HOLD")
+
+
+def verify_owned_stop_backend(backend: Path, install: Path) -> str:
+    """Admit ONLY original manifest-owned installed OneHost; never a caller EXE.
+
+    Use the existing reviewed 1007-file-capable E07 manifest/FD-hash policy,
+    rather than inventing a second registry or weakening SourceLock.
+    """
+    from independent_setup_e07 import (Hold as OwnerHold, manifest_owner,
+                                       installed_file_sha_locked)
+    expected = install / "Backend" / "NOX_HELION_PRIVATE_CANDIDATE.exe"
+    if (not backend.is_absolute() or not install.is_absolute() or
+            ".." in backend.parts or ".." in install.parts or
+            backend != expected):
+        raise GateHold("NOX_STOP_NOT_ORIGINAL_INSTALLED_BACKEND_HOLD")
+    for item in (install, *install.parents, backend, backend.parent):
+        if item.is_symlink() or getattr(item, "is_junction", lambda: False)():
+            raise GateHold("NOX_STOP_BACKEND_REPARSE_HOLD")
+    try:
+        manifest, owned = manifest_owner(install)
+        if backend not in owned:
+            raise GateHold("NOX_STOP_BACKEND_NOT_MANIFEST_OWNED_HOLD")
+        matching = [entry for entry in manifest["files"]
+                    if entry["path"].replace("\\\\", "/").casefold() ==
+                    "backend/nox_helion_private_candidate.exe"]
+        if len(matching) != 1:
+            raise GateHold("NOX_STOP_BACKEND_MANIFEST_ENTRY_HOLD")
+        entry = matching[0]
+        digest = installed_file_sha_locked(backend, install.resolve(strict=True),
+                                           entry["bytes"], entry["sha256"])
+        if digest != entry["sha256"]:
+            raise GateHold("NOX_STOP_BACKEND_BYTES_CHANGED_HOLD")
+        return digest
+    except OwnerHold:
+        raise GateHold("NOX_STOP_OWNED_PAYLOAD_INTEGRITY_HOLD") from None
+
+
 def main() -> int:
     p = argparse.ArgumentParser()
     p.add_argument("--backend", type=Path, required=True)
@@ -175,13 +228,21 @@ def main() -> int:
                 os.getenv("RUNNER_ENVIRONMENT") == "github-hosted" and
                 os.getenv("GITHUB_REPOSITORY") == "MSSTXNEWS/nox-helion-pp-private-build"):
             raise GateHold("NOX_WINDOWS_PHYSICAL_RUNNER_REQUIRED")
-        if not args.backend.is_file() or args.backend.is_symlink():
-            raise GateHold("NOX_INSTALLED_BACKEND_MISSING")
-        if not args.data_dir.is_dir() or args.data_dir.is_symlink() or args.data_dir.is_junction():
-            raise GateHold("NOX_NATIVE_DATA_DIR_UNSAFE_HOLD")
-        with args.backend.open("rb") as stream:
-            receipt["backend_sha256"] = hashlib.file_digest(stream, "sha256").hexdigest()
+        runner_temp = os.environ.get("RUNNER_TEMP", "")
+        local_appdata = os.environ.get("LOCALAPPDATA", "")
+        if not runner_temp or not local_appdata:
+            raise GateHold("NOX_STOP_WINDOWS_PATH_ENV_HOLD")
+        require_ephemeral_stop_dir(args.data_dir, Path(runner_temp))
+        install = Path(local_appdata) / "Programs" / "NOX HELION"
+        digest = verify_owned_stop_backend(args.backend, install)
+        receipt["backend_sha256"] = digest
+        receipt["owned_manifest_integrity"] = "PASS"
+        receipt["ephemeral_data_preflight"] = "PASS"
         receipt.update(live_active_stop(args.backend, args.data_dir, args.model))
+        # Fail closed if source bytes or owner provenance changed while the
+        # subprocess streamed; terminal ACK alone is not source identity.
+        if verify_owned_stop_backend(args.backend, install) != digest:
+            raise GateHold("NOX_STOP_BACKEND_IDENTITY_CHANGED_HOLD")
         receipt["native_active_stop"] = "PASS"
         receipt["first_unmet_gate"] = "HISTORY_RESTART_AND_INDEPENDENT_E07"
     except Exception as exc:
