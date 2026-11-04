@@ -45,9 +45,9 @@ jobs:
           python -B -m unittest discover -s tests/e07 -p test_independent_setup_e07.py -v
           if ($LASTEXITCODE -ne 0) { throw 'E07_BASE_REGRESSION_HOLD' }
           python -B -m unittest discover -s tests/e07 -p test_nav_a2_source.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'E07_NAV_A2_EXACT_SETUP_SOURCE_HOLD' }
           python -B -m unittest discover -s tests/e07 -p test_current_d02_pin_u23.py -v
           if ($LASTEXITCODE -ne 0) { throw 'E07_CURRENT_D02_SOURCE_PIN_HOLD' }
-          if ($LASTEXITCODE -ne 0) { throw 'E07_NAV_A2_EXACT_SETUP_SOURCE_HOLD' }
           # Fail before 1.6 GB signed Ollama bytes + model download if either
           # new source regression fails. This cannot upgrade a physical E07.
           python -B -m unittest discover -s tests/e07 -p test_os_animation_observation_u21.py -v
