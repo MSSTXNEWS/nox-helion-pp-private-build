@@ -408,10 +408,19 @@ if ($wantsCreative) {
   $wowReceiptPath=Join-Path (Split-Path -Parent $source) 'WOW200_STAGE_RECEIPT.json'
   if (!(Test-Path -LiteralPath $wowReceiptPath -PathType Leaf)) { throw 'D02_WOW_STAGE_RECEIPT_MISSING' }
   $wowReceipt=Get-Content -LiteralPath $wowReceiptPath -Raw -Encoding UTF8 | ConvertFrom-Json
+  # 56 pinned donors + 2 active canonical D02 copies + 8 MENU files +
+  # 9 P01 owner files + 8 reviewed runtime files + catalog + 2 HTML = 86.
+  # Reject omitted or duplicated staged paths BEFORE WPF/NSIS publish.
+  $wowPaths=@($wowReceipt.files | ForEach-Object { [string]$_.path })
+  if ($wowReceipt.count -ne 86 -or $wowPaths.Count -ne 86 -or
+      @($wowPaths | Sort-Object -Unique).Count -ne 86 -or
+      @($wowPaths | Where-Object { [string]::IsNullOrWhiteSpace($_) }).Count -ne 0) {
+    throw 'D02_WOW_STAGE_RECEIPT_FILESET_HOLD'
+  }
   if ($wowReceipt.original_chrome_compact_git_blob -cne '8e3cffe7cb91564ae5817e55cb35e5fbb0feeb50' -or
       $wowReceipt.original_chrome_source_staged -ne $true -or
       $wowReceipt.original_chrome_visual_e07 -cne 'HOLD' -or
-      $wowReceipt.count -ne 82 -or $wowReceipt.p01_owner_source_staged -ne $true -or $wowReceipt.p01_owner_native_mount_activated -ne $false -or $wowReceipt.p01_owner_native_route_e2e -cne 'NOT_RUN' -or $wowReceipt.menu_v2_native_ui_staged -ne $true -or $wowReceipt.active_d02_engine -cne 'OWNER1_PR144_PINNED' -or
+      $wowReceipt.count -ne 86 -or $wowReceipt.p01_owner_source_staged -ne $true -or $wowReceipt.p01_owner_native_mount_activated -ne $false -or $wowReceipt.p01_owner_native_route_e2e -cne 'NOT_RUN' -or $wowReceipt.menu_v2_native_ui_staged -ne $true -or $wowReceipt.active_d02_engine -cne 'OWNER1_PR144_PINNED' -or
       $wowReceipt.legacy_d02_runtime_imported -ne $false -or
       $wowReceipt.pack01_catalog_routes -ne 50 -or
       $wowReceipt.source_only -ne $true -or $wowReceipt.release_accepted -ne $false) {

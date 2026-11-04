@@ -91,7 +91,12 @@ class WowStageTests(unittest.TestCase):
  def test_additive_preimage_and_readback(self):
   original={n:digest(self.stage/'Assets'/n) for n in D02}
   receipt=stage(self.stage,self.src)
-  self.assertEqual(len(receipt['files']),82)
+  # 56 donors + 2 active D02 variants + 8 MENU + 9 P01 + 8 runtime + catalog + 2 HTML.
+  expected=56+2+len(eng.MENU_V2_SHA256)+len(eng.P01_OWNER_BLOBS)+len(eng.WOW_RUNTIME_BLOBS)+3
+  self.assertEqual(expected,86)
+  self.assertEqual(receipt['count'],expected)
+  self.assertEqual(len(receipt['files']),expected)
+  self.assertEqual(len({f['path'] for f in receipt['files']}),expected)
   orb=(self.stage/'Assets/creative/wow200/runtime/home-guard.css').read_bytes()
   self.assertEqual(orb,(self.src/'runtime/home-guard.css').read_bytes())
   self.assertIn(b'NOX D02 ORB STEP01',orb)
@@ -181,7 +186,9 @@ class WowStageTests(unittest.TestCase):
   p.write_bytes(normalized.replace(b'\n',b'\r\n'))
   eng.DONOR_MANIFEST_BLOB=gitsha(normalized)
   result=stage(self.stage,self.src)
-  self.assertEqual(len(result['files']),82)
+  self.assertEqual(result['count'],86)
+  self.assertEqual(len(result['files']),86)
+  self.assertEqual(len({f['path'] for f in result['files']}),86)
  def test_checkout_crlf_donor_script_uses_pinned_canonical_bytes(self):
   p=self.src/'proposals/NOX-WOW51-100/catalog.mjs'
   normalized=p.read_bytes()
