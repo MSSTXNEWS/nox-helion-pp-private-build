@@ -887,6 +887,47 @@ if ($verifierBeforeSha -ceq $verifierAfterSha -or
   throw 'P01_VERIFIER_COMPAT_WRITE_READBACK_HOLD'
 }
 Write-Host "P01_PS51_DOTNET_SHA256_STAGED before=$verifierBeforeSha after=$verifierAfterSha ORIGINAL_SHA_CHECK_RETAINED"
+
+# U04: NSIS child PS5.1 also invokes Get-FileHash in ORIGINAL remover.
+# Modify only the strict-SHA original disposable R11 remover, never donor.
+$rmPath=Join-Path $installer 'Remove-InstalledPayload.ps1'
+Assert-E06PlainPathAncestors -Candidate $rmPath -Scope 'P01_REMOVER_PS51_STAGE'
+$rmInfo=Get-Item -LiteralPath $rmPath -Force -ErrorAction Stop
+if ($rmInfo.PSIsContainer -or
+    ($rmInfo.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0 -or
+    $rmInfo.Length -ne 4013 -or
+    (Get-FileHash -LiteralPath $rmPath -Algorithm SHA256).Hash.ToLowerInvariant() -cne
+    '6853f3d4a32eb5946c3c68d22b0d61e3a402b729ebda225cd3f6b8b154b1ec55') {
+  throw 'P01_REMOVER_PS51_PREIMAGE_HOLD'
+}
+$rmBefore=[IO.File]::ReadAllText($rmPath)
+$rmHeader='$ErrorActionPreference = ''Stop'''
+$rmHashRx='(?m)^([ \t]*\$actual[ \t]*=[ \t]*)\(Get-FileHash[ \t]+-LiteralPath[ \t]+(\$[A-Za-z][A-Za-z0-9_.]*)[ \t]+-Algorithm[ \t]+SHA256\)\.Hash\.ToLowerInvariant\(\)[ \t]*$'
+$rmHashMatches=[regex]::Matches($rmBefore,$rmHashRx)
+if ($rmHashMatches.Count -ne 1 -or
+    ([regex]::Matches($rmBefore,[regex]::Escape($rmHeader))).Count -ne 1 -or
+    $rmBefore.Contains('Get-P01VerifiedSha256')) {
+  throw 'P01_REMOVER_PS51_HASH_ANCHOR_HOLD'
+}
+$rmMatch=$rmHashMatches[0]
+$rmNext=$rmBefore.Substring(0,$rmMatch.Index)+$rmMatch.Groups[1].Value+
+  '(Get-P01VerifiedSha256 '+$rmMatch.Groups[2].Value+')'+
+  $rmBefore.Substring($rmMatch.Index+$rmMatch.Length)
+$rmNext=$rmNext.Replace($rmHeader,$rmHeader+$nl+$hashHelper+$nl)
+if ($rmNext -ceq $rmBefore -or
+    ([regex]::Matches($rmNext,'Get-P01VerifiedSha256')).Count -ne 2 -or
+    $rmNext.Contains('(Get-FileHash -LiteralPath')) {
+  throw 'P01_REMOVER_PS51_TRANSFORM_HOLD'
+}
+[IO.File]::WriteAllText($rmPath,$rmNext,(New-Object System.Text.UTF8Encoding($false)))
+$rmAfter=Get-Item -LiteralPath $rmPath -Force -ErrorAction Stop
+if ($rmAfter.PSIsContainer -or
+    ($rmAfter.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0 -or
+    [IO.File]::ReadAllText($rmPath) -cne $rmNext) {
+  throw 'P01_REMOVER_PS51_READBACK_HOLD'
+}
+Write-Host 'P01_PS51_UNINSTALL_DOTNET_SHA256_STAGED ORIGINAL_NOLOSS_RETAINED'
+
 & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File (Join-Path $installer 'Verify-Payload.ps1') -Root $payload -Manifest $manifestPath
 if ($LASTEXITCODE -ne 0) { throw 'ORIGINAL_NSIS_PAYLOAD_SHA_GATE_HOLD' }
 # C11: patch ONLY the disposable ORIGINAL NSIS source before makensis.
