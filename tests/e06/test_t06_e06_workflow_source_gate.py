@@ -62,10 +62,13 @@ class T06WorkflowSourceGate(unittest.TestCase):
         spec.loader.exec_module(stage)
         # Includes retained legacy copies, catalog, runtime assets and both HTML edits.
         expected = (stage.DONOR_FILE_COUNT + len(stage.OWNER1_D02_ENGINE) + 1 +
-                    len(stage.MENU_V2_SHA256) + len(stage.P01_OWNER_BLOBS) + 4 + 2)
+                    len(stage.MENU_V2_SHA256) + len(stage.P01_OWNER_BLOBS) +
+                    len(stage.WOW_RUNTIME_BLOBS) + 2)
         counts = re.findall(r"\$receipt\.count -ne (\d+)", self.windows)
         self.assertEqual(counts, [str(expected)])
-        self.assertIn(f"@($receipt.files).Count -ne {expected}", self.windows)
+        self.assertIn(f"$receiptPaths.Count -ne {expected}", self.windows)
+        self.assertIn("@($receiptPaths | Sort-Object -Unique).Count -ne", self.windows)
+        self.assertIn("IsNullOrWhiteSpace($_)", self.windows)
         self.assertIn(f"@($receipt.menu_v2_atomic_source_sha256.PSObject.Properties).Count -ne {len(stage.MENU_V2_SHA256)}", self.windows)
         self.assertIn(f"@($receipt.p01_owner_source_git_blobs.PSObject.Properties).Count -ne {len(stage.P01_OWNER_BLOBS)}", self.windows)
 
