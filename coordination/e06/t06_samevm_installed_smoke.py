@@ -928,6 +928,19 @@ def github_disposable_bridge_authorized(env, system_platform, machine, bits):
             type(run_id) is str and run_id.isascii() and
             run_id.isdecimal() and 1<=len(run_id)<=20)
 
+def proven_wpf_gui(gui: object) -> bool:
+    """Admit GUI PASS only from the current real installed WPF/HWND/IPC witness."""
+    return (type(gui) is dict and
+            gui.get("new_nav_ok") is True and
+            gui.get("new_python_ipc_handshake") is True and
+            gui.get("stable_ready_window_pass") is True and
+            gui.get("real_wpf_visible_pid_hwnd") is True and
+            gui.get("live_process_at_receipt") is True and
+            gui.get("init_error") is False and
+            gui.get("native_hold") is False and
+            gui.get("log_replaced") is False)
+
+
 def main()->int:
     started=time.monotonic()
     report={"schema":"NOX-T06-INSTALLED-SMOKE-v1","phase":"HOLD",
@@ -1040,8 +1053,9 @@ def main()->int:
         report["original_home_and_core01_sha_verified"]=True
         gui=live_original_wpf_probe(wpf,Path(local))
         report["installer_lifecycle"]["original_wpf_gui"]=gui
-        require(gui["new_nav_ok"] and gui["new_python_ipc_handshake"],
+        require(proven_wpf_gui(gui),
                 "T06_ORIGINAL_WPF_WEBVIEW2_AND_PYTHON_RUNTIME_NOT_PROVEN")
+        report["installed_process_gui_webview2"]="PASS"
         # User data lives OUTSIDE the program install location.
         persistent=Path(local)/"NOX_HELION"/"P01"
         require(plain_parents(persistent,local_base),
