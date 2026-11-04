@@ -647,7 +647,7 @@ function Test-ChatHeading($root){
   for($j=0;$j -lt $nodes.Count;$j++){
     $v=$nodes.Item($j).Current
     if($v.ControlType -ne [System.Windows.Automation.ControlType]::Text){continue}
-    if(($v.Name+'').Trim() -ne 'HELION · LIVE CHAT'){continue}
+    if(($v.Name+'').Trim() -ne 'ЖИВОЙ ЧАТ'){continue}
     $rect=$v.BoundingRectangle
     if(-not $v.IsOffscreen -and $rect.Width -ge 20 -and $rect.Height -ge 12){return $true}
   }
@@ -688,25 +688,25 @@ $alive=$null -ne [System.Windows.Automation.AutomationElement]::FromHandle($hwnd
 
 
 def classify_readonly_primary_navigation_witness(response: dict) -> dict:
-    """Physical SAFE navigation only; never a functional INSTALL/LEARN/model PASS."""
+    """Physical route to a visible original screen and focused real control; not install/training execution."""
     expected = ("INSTALL", "MODELS", "LEARN", "SETTINGS")
     require(type(response) is dict and set(response) == {"schema", "actions"} and
-            response["schema"] == "NOX-E07-PRIMARY-NAV-v1" and
+            response["schema"] == "NOX-E07-PRIMARY-NAV-v2" and
             type(response["actions"]) is list and len(response["actions"]) == 4,
             "E07_PRIMARY_NAV_SCHEMA_HOLD")
     checks = {}
     for index, raw in enumerate(response["actions"]):
         require(type(raw) is dict and
                 set(raw) == {"action", "invoked", "sameHwndAlive",
-                             "beforeHeading", "afterHeading"} and
+                             "beforeDestination", "afterDestination"} and
                 type(raw["action"]) is str and raw["action"] == expected[index] and
                 type(raw["invoked"]) is bool and
                 type(raw["sameHwndAlive"]) is bool and
-                type(raw["beforeHeading"]) is bool and
-                type(raw["afterHeading"]) is bool,
+                type(raw["beforeDestination"]) is bool and
+                type(raw["afterDestination"]) is bool,
                 "E07_PRIMARY_NAV_UNTRUSTED_HOLD")
         changed = (raw["invoked"] is True and raw["sameHwndAlive"] is True and
-                   raw["beforeHeading"] is False and raw["afterHeading"] is True)
+                   raw["beforeDestination"] is False and raw["afterDestination"] is True)
         checks[raw["action"]] = {
             "button_actuated": "OBSERVED" if raw["invoked"] else "HOLD",
             "navigation_verified": "PASS" if changed else "NOT_TESTED",
@@ -721,7 +721,7 @@ def classify_readonly_primary_navigation_witness(response: dict) -> dict:
 
 
 def observe_readonly_primary_navigation(hwnd: int) -> dict:
-    """On the frozen e888 source ONLY: invoke four known read-only MENU routes.
+    """Invoke four source-locked original HOME routes on installed Windows UI.
 
     Original menu.js: INSTALL/system and LEARN/evolution are non-mutating
     informational panels; MODELS/catalog and SETTINGS/settings are read-only
@@ -735,26 +735,40 @@ $ErrorActionPreference='Stop'
 Add-Type -AssemblyName UIAutomationClient
 Add-Type -AssemblyName UIAutomationTypes
 $handle=[IntPtr]__HWND__
-$titles=@{INSTALL='Система NOX';MODELS='Каталог моделей';LEARN='Эволюция';SETTINGS='СИСТЕМА'}
+$destinations=@{
+ INSTALL=@{title='КОНТРОЛЬ СИСТЕМЫ';control='УСТАНОВИТЬ NOX'}
+ MODELS=@{title='NOX · CONTROL CENTER';control='МОДЕЛИ И КОМПОНЕНТЫ'}
+ LEARN=@{title='NOX · CONTROL CENTER';control='ЗАПУСТИТЬ ОБУЧЕНИЕ'}
+ SETTINGS=@{title='СИСТЕМА';control='← НАЗАД В МЕНЮ'}
+}
 function Get-SameRoot {
   $v=[System.Windows.Automation.AutomationElement]::FromHandle($handle)
   if($null -eq $v){throw 'E07_PRIMARY_NAV_HWND_LOST'}
   return $v
 }
-function Test-VisibleHeading($hostRoot,[string]$title) {
+# A route must expose the ORIGINAL visible screen AND keyboard-focus its
+# ORIGINAL destination control. Distinct buttons on the same CONTROL CENTER
+# screen cannot be verified by repeated headings alone.
+function Test-RealDestination($hostRoot,[string]$name) {
+  $spec=$destinations[$name]
   $tree=$hostRoot.FindAll([System.Windows.Automation.TreeScope]::Descendants,
                          [System.Windows.Automation.Condition]::TrueCondition)
   if($tree.Count -gt 2048){throw 'E07_PRIMARY_NAV_TREE_LIMIT'}
+  $headingVisible=$false
+  $focusedControls=0
   for($k=0;$k -lt $tree.Count;$k++){
     try{
       $v=$tree.Item($k).Current
-      if($v.ControlType -ne [System.Windows.Automation.ControlType]::Text){continue}
-      if(($v.Name+'').Trim() -ne $title){continue}
-      $box=$v.BoundingRectangle
-      if(-not $v.IsOffscreen -and $box.Width -ge 20 -and $box.Height -ge 12){return $true}
+      $rect=$v.BoundingRectangle
+      if($v.IsOffscreen -or $rect.Width -lt 20 -or $rect.Height -lt 12){continue}
+      if($v.ControlType -eq [System.Windows.Automation.ControlType]::Text -and
+         ($v.Name+'').Trim() -ceq $spec.title){$headingVisible=$true}
+      if($v.ControlType -eq [System.Windows.Automation.ControlType]::Button -and
+         ($v.Name+'').Trim() -ceq $spec.control -and $v.IsEnabled -and
+         $v.HasKeyboardFocus){$focusedControls++}
     }catch{}
   }
-  return $false
+  return $headingVisible -and $focusedControls -eq 1
 }
 $actions=@()
 foreach($name in @('INSTALL','MODELS','LEARN','SETTINGS')){
@@ -776,7 +790,7 @@ foreach($name in @('INSTALL','MODELS','LEARN','SETTINGS')){
     }catch{}
   }
   if($found.Count -ne 1){throw 'E07_PRIMARY_NAV_BUTTON_NOT_UNIQUE'}
-  $before=Test-VisibleHeading $root $titles[$name]
+  $before=Test-RealDestination $root $name
   $pattern=$found.Item(0).GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)
   if($null -eq $pattern){throw 'E07_PRIMARY_NAV_INVOKEPATTERN_MISSING'}
   $pattern.Invoke()
@@ -784,13 +798,13 @@ foreach($name in @('INSTALL','MODELS','LEARN','SETTINGS')){
   for($retry=0;$retry -lt 28;$retry++){
     Start-Sleep -Milliseconds 180
     $fresh=Get-SameRoot
-    if(Test-VisibleHeading $fresh $titles[$name]){$after=$true;break}
+    if(Test-RealDestination $fresh $name){$after=$true;break}
   }
   $alive=$null -ne [System.Windows.Automation.AutomationElement]::FromHandle($handle)
   $actions+=([pscustomobject]@{action=$name;invoked=$true;sameHwndAlive=$alive;
-                              beforeHeading=$before;afterHeading=$after})
+                              beforeDestination=$before;afterDestination=$after})
 }
-[pscustomobject]@{schema='NOX-E07-PRIMARY-NAV-v1';actions=@($actions)} |
+[pscustomobject]@{schema='NOX-E07-PRIMARY-NAV-v2';actions=@($actions)} |
   ConvertTo-Json -Compress -Depth 5
 """.replace("__HWND__", str(hwnd))
     import base64
