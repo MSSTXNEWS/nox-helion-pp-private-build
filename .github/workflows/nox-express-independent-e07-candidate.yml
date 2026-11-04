@@ -6,6 +6,8 @@ on:
       - .github/workflows/nox-express-independent-e07-candidate.yml
       - coordination/e07/independent_setup_e07.py
       - coordination/e07/probe_final_same_setup.py
+      - coordination/e07/probe_91a6_real_visual_u17.py
+      - tests/e07/test_91a6_real_visual_u17.py
       - tests/e07/test_final_primary_dispatch_u18.py
       - tests/e07/test_live_final_wiring_u19.py
       - tests/e07/test_final_truth_scope_u20.py
@@ -53,6 +55,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'E07_BASE_REGRESSION_HOLD' }
           python -B -m unittest discover -s tests/e07 -p test_final_primary_dispatch_u18.py -v
           if ($LASTEXITCODE -ne 0) { throw 'E07_FINAL_UIA_TREE_REGRESSION_HOLD' }
+          python -B -m unittest discover -s tests/e07 -p test_91a6_real_visual_u17.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'E07_GRAPHICAL_NATIVE_ACCESSIBILITY_SOURCE_HOLD' }
           python -B -m unittest discover -s tests/e07 -p test_live_final_wiring_u19.py -v
           if ($LASTEXITCODE -ne 0) { throw 'E07_FINAL_SAME_SETUP_REGRESSION_HOLD' }
           python -B -m unittest discover -s tests/e07 -p test_final_truth_scope_u20.py -v
