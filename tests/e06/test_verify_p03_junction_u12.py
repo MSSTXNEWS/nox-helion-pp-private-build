@@ -28,7 +28,7 @@ class VerifyP03JunctionFailClosed(TestCase):
         data = b"SOURCE_PINNED_SAMPLE"
         self.payload.write_bytes(data)
         blob = hashlib.sha1(
-            ("blob " + str(len(data))).encode("ascii") + b"\\0" + data
+            ("blob " + str(len(data))).encode("ascii") + b"\0" + data
         ).hexdigest()
         (self.root / "P03_PINNED_GIT_BLOBS.json").write_text(json.dumps({
             "schema": "NOX_EXPRESS_E03_OWNER_PINNED_V1",
