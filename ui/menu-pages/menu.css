@@ -46,3 +46,82 @@ body[data-fx="ECO"] .planet,body[data-fx="ECO"] .nebula:after,body[data-fx="ECO"
 @media(max-width:800px){.workspace{grid-template-columns:1fr}.sidebar{border-right:0}.directions{grid-template-columns:repeat(4,minmax(0,1fr))}.universe{height:auto;min-height:520px}.actions{grid-template-columns:repeat(3,minmax(0,1fr))}.cores{grid-template-columns:repeat(4,1fr)}}
 @media(max-width:520px){.shell{padding:16px}.header{flex-wrap:wrap}.header-controls{width:100%}#search{width:100%;min-width:0}.actions{grid-template-columns:repeat(2,minmax(0,1fr))}.directions{grid-template-columns:repeat(2,minmax(0,1fr))}.universe{min-height:0;height:auto;padding:255px 0 0}.orbit,.sun{top:110px}.sun{width:180px;height:180px}.planets{position:relative;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;justify-items:center}.planet,.planet:nth-child(n){position:relative;left:auto;top:auto;transform:none;width:138px;height:138px}.planet:hover{transform:scale(1.04)}.planet:nth-child(10){width:138px;height:138px}.cores{grid-template-columns:repeat(2,1fr)}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+
+
+/* NOX EXPRESS / PAGE NAVIGATION A — original CSS, adapted from the
+ * hierarchy/disclosure principles documented by shadcn/ui and Radix.
+ * No new framework, host, network resource, or hidden original action.
+ * OBSIDIAN · satin gold · cold cyan · 320px to 4K. */
+.nox-breadcrumb{display:flex;flex-wrap:wrap;align-items:center;gap:7px 9px;
+ padding:10px 12px;margin:0 0 17px;border:1px solid #bd975f42;border-radius:14px;
+ background:linear-gradient(110deg,#17233383,#0e111dd9 60%,#291d1b65);
+ box-shadow:inset 0 1px #e8c7a91b;min-width:0}
+.nox-crumb-link,.nox-crumb-current{padding:6px 9px;border:0;border-radius:9px;
+ background:transparent;color:#dfbf99;font-size:11px;letter-spacing:.045em;
+ overflow-wrap:anywhere;text-align:left}
+.nox-crumb-link:hover,.nox-crumb-link:focus-visible{color:#fff2d9;
+ background:#e2b57c19;box-shadow:inset 0 0 0 1px #ffe0a444}
+.nox-crumb-current{color:#e8f6ff;font-weight:700}
+.nox-crumb-separator{color:#83b6c4;opacity:.75;user-select:none}
+.nox-subsection-head{display:flex;align-items:center;justify-content:space-between;
+ gap:12px;flex-wrap:wrap;margin:4px 0 14px}
+.nox-muted{font-size:12px;color:#b4b3b8;margin:4px 0 16px;line-height:1.45}
+.nox-subsection-head .nox-muted{margin:0}
+.nox-category-grid,.nox-action-grid{display:grid;
+ grid-template-columns:repeat(auto-fit,minmax(min(100%,225px),1fr));gap:11px;
+ align-items:stretch;min-width:0}
+.nox-category-grid{max-width:960px}
+.nox-action-grid{max-width:990px}
+.nox-catalog-card{display:flex;flex-direction:column;justify-content:space-between;
+ gap:17px;position:relative;isolation:isolate;min-height:105px;width:100%;
+ padding:16px 18px;text-align:left;overflow:hidden;
+ border:1px solid #d9b07b59;border-radius:19px;
+ color:#f2dfc9;background:
+ radial-gradient(ellipse at 85% 3%,#4cb8ee14,transparent 57%),
+ linear-gradient(140deg,#202530e8,#111724ed 55%,#231a21f5);
+ box-shadow:inset 0 1px #fff0cf13,0 7px 25px #0005;
+ transition:border-color .17s,transform .17s,box-shadow .17s}
+.nox-catalog-card::before{content:"";position:absolute;inset:0;
+ background:linear-gradient(115deg,transparent 15%,#d9b78a0e 50%,transparent 80%);
+ pointer-events:none;z-index:-1}
+.nox-catalog-card:hover,.nox-catalog-card:focus-visible{
+ border-color:#ffe3ad;transform:translateY(-2px);
+ box-shadow:0 10px 32px #0009,0 0 22px #caab7728,inset 0 1px #fff0cf28}
+.nox-card-copy{display:grid;gap:7px;min-width:0}
+.nox-card-title{font-size:15px;font-weight:650;letter-spacing:.025em;color:#f4e0c6}
+.nox-card-desc{font-size:11px;color:#a8bec4;line-height:1.35;overflow-wrap:anywhere}
+.nox-card-foot{display:flex;justify-content:space-between;align-items:center;gap:10px;
+ padding-top:10px;border-top:1px solid #d2b89624}
+.nox-card-count{font-size:10px;color:#c1a78b;letter-spacing:.11em}
+.nox-card-arrow{display:grid;place-items:center;border:1px solid #7ed4ee4a;
+ background:#2f789a20;color:#b3eaff;width:26px;height:26px;border-radius:50%;
+ font-size:17px}
+.nox-action-grid .nox-catalog-card{min-height:88px}
+.nox-action-grid .nox-card-title{font-size:13px}
+.nox-more{display:block;width:fit-content;margin:17px auto 0;padding:12px 21px;
+ border:1px solid #8bcfe56a;border-radius:13px;color:#d3f0ff;background:#16242bdc}
+.nox-more[hidden]{display:none}
+.nox-more:hover,.nox-more:focus-visible{border-color:#d7f9ff;background:#1c3b45}
+@media(max-width:800px){
+ .details{padding:14px}
+ .nox-category-grid,.nox-action-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:520px){
+ .nox-category-grid,.nox-action-grid{grid-template-columns:1fr}
+ .nox-breadcrumb{gap:3px;padding:8px}
+ .nox-crumb-link,.nox-crumb-current{font-size:10px;padding:5px}
+ .nox-catalog-card{min-height:85px;padding:12px 14px}
+ .nox-subsection-head{align-items:flex-start}
+}
+@media(min-width:1900px){
+ .nox-category-grid,.nox-action-grid{gap:15px}
+ .nox-catalog-card{min-height:125px}
+}
+@media(prefers-reduced-motion:reduce){
+ .nox-catalog-card,.nox-catalog-card::before{transition:none!important;animation:none!important}
+ .nox-catalog-card:hover{transform:none}
+}
+@media(forced-colors:active){
+ .nox-breadcrumb,.nox-catalog-card,.nox-more{background:Canvas;color:CanvasText;border:1px solid CanvasText;box-shadow:none}
+ .nox-card-title,.nox-card-desc,.nox-card-count,.nox-card-arrow{color:CanvasText}
+}

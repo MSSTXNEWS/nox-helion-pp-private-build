@@ -1,4 +1,4 @@
-import {DIRECTIONS,WORLDS,CORE_IDS,PERSONAS,PRIMARY,ROUTE_COUNT,getWorld,getRoute} from './express-layout.mjs';
+import {DIRECTIONS,WORLDS,CORE_IDS,PERSONAS,PRIMARY,ROUTE_COUNT,getWorld,getRoute,worldGroups} from './express-layout.mjs';
 import {createNativeMenuClient,isNativeChatTerminal,canonicalChatContext,nativeOwnerReceiptHolds} from '../onehost-menu-bindings.mjs';
 import {firstBootTruth} from '../firstboot-truth.mjs';
 const doc=document,$=id=>doc.getElementById(id);
@@ -36,24 +36,64 @@ function setDetails(...children){
 function overview(){
  active=null;P.details.hidden=true;P.details.replaceChildren();
  P.title.textContent='8 НАПРАВЛЕНИЙ HELION';
- P.subtitle.textContent='8 графических направлений · 5 основных действий · 8 CoreID';
+ P.subtitle.textContent='8 направлений · '+WORLDS.length+' страниц · '+ROUTE_COUNT+' маршрута · 8 CoreID';
  [...P.planets.querySelectorAll('button'),...P.directions.querySelectorAll('button')].forEach(b=>b.setAttribute('aria-pressed','false'));
  say('NOX EXPRESS · функциям требуется подтверждение от локального ядра');
 }
-function world(id){
- const w=getWorld(id);if(!w)return;
- active=id;P.title.textContent=w.title;P.subtitle.textContent=w.description;
- const top=el('div','detail-top');
- top.append(button('← НАПРАВЛЕНИЯ','back',overview),el('span','eyebrow',w.routes.length+' ФУНКЦИЙ'));
- const grid=el('div','route-grid');
- w.routes.forEach(r=>{
-  const b=button(r.label,'route',()=>openRoute(r.id));b.dataset.route=r.id;
-  b.append(el('small','',r.id));grid.append(b);
+// Light, source-preserving nested navigation. Page > subsection > action.
+// Original route IDs / OneHost ACL are unchanged; no second UI or backend.
+function sectionTitle(section){
+ return DIRECTIONS.find(entry=>entry[0]===section)?.[1]||section;
+}
+function catalogBreadcrumb(items){
+ const nav=el('nav','nox-breadcrumb');nav.setAttribute('aria-label','Навигационная цепочка');
+ items.forEach((item,index)=>{
+  if(index){const sep=el('span','nox-crumb-separator','›');sep.setAttribute('aria-hidden','true');nav.append(sep);}
+  if(typeof item.click==='function')nav.append(button(item.label,'nox-crumb-link',item.click));
+  else nav.append(el('span','nox-crumb-current',item.label));
  });
- setDetails(top,grid);
+ return nav;
+}
+function catalogCard(title,description,count,click,kind='section'){
+ const b=button('', 'nox-catalog-card nox-catalog-'+kind,click);
+ const copy=el('span','nox-card-copy');
+ copy.append(el('strong','nox-card-title',title),el('small','nox-card-desc',description));
+ const foot=el('span','nox-card-foot');
+ foot.append(el('span','nox-card-count',String(count)+' '+(kind==='route'?'ДЕЙСТВИЕ':'ФУНКЦИИ')),
+             el('span','nox-card-arrow','↗'));
+ foot.lastChild.setAttribute('aria-hidden','true');
+ b.append(copy,foot);return b;
+}
+function world(id,subsectionId=null){
+ const w=getWorld(id);if(!w)return;
+ active=id;
+ const groups=worldGroups(id);
+ const subsection=groups.find(group=>group.id===subsectionId)||null;
+ P.title.textContent=w.title;
+ P.subtitle.textContent=subsection?subsection.label:w.description;
+ const crumbs=[
+  {label:'НАПРАВЛЕНИЯ',click:overview},
+  {label:sectionTitle(w.section),click:()=>direction(w.section)},
+  {label:w.title,click:subsection?()=>world(id):null}
+ ];
+ if(subsection)crumbs.push({label:subsection.label});
+ const crumb=catalogBreadcrumb(crumbs);
+ const headline=el('div','nox-subsection-head');
+ headline.append(el('span','eyebrow',subsection?'ДЕЙСТВИЯ · '+subsection.routes.length:'ПОДРАЗДЕЛЫ · '+groups.length),
+                 el('p','nox-muted',subsection?'Выберите реальную функцию NOX':'Открывайте только нужный раздел — без перегрузки экрана'));
+ const grid=el('div',subsection?'nox-action-grid':'nox-category-grid');
+ if(subsection){
+  subsection.routes.forEach(route=>{
+   const b=catalogCard(route.label,'Открыть исходный маршрут',1,()=>openRoute(route.id),'route');
+   b.dataset.route=route.id;grid.append(b);
+  });
+ }else{
+  groups.forEach(group=>grid.append(catalogCard(group.label,w.title,group.routes.length,()=>world(id,group.id))));
+ }
+ setDetails(crumb,headline,grid);
  P.planets.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.section===w.section)));
  P.directions.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.section===w.section)));
- say(w.title+' · выберите нужную функцию');
+ say(w.title+' · '+(subsection?subsection.label:'выберите подраздел'));
 }
 function pending(id,label){
  const h=el('h2','',''+label),top=el('div','detail-top');
@@ -377,10 +417,12 @@ function openRoute(id){
 function direction(id){
  const worlds=WORLDS.filter(w=>w.section===id);
  if(worlds.length===1){world(worlds[0].id);return;}
- const grid=el('div','route-grid');
- worlds.forEach(w=>grid.append(button(w.title,'route',()=>world(w.id))));
- P.title.textContent=DIRECTIONS.find(x=>x[0]===id)?.[1]||id;P.subtitle.textContent='Дополнительные функции направления';
- setDetails(button('← НАПРАВЛЕНИЯ','back',overview),grid);
+ P.title.textContent=sectionTitle(id);
+ P.subtitle.textContent=worlds.length+' СТРАНИЦЫ · '+worlds.reduce((n,w)=>n+w.routes.length,0)+' ФУНКЦИЙ';
+ const grid=el('div','nox-category-grid');
+ worlds.forEach(w=>grid.append(catalogCard(w.title,w.description,w.routes.length,()=>world(w.id))));
+ setDetails(catalogBreadcrumb([{label:'НАПРАВЛЕНИЯ',click:overview},{label:sectionTitle(id)}]),
+            el('p','nox-muted','Выберите страницу направления'),grid);
  P.planets.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.section===id)));
  P.directions.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.section===id)));
 }
@@ -425,10 +467,24 @@ doc.querySelectorAll('.persona span').forEach(chip=>{
 P.search.addEventListener('input',()=>{
  const q=P.search.value.trim().toLocaleLowerCase('ru');if(!q){overview();return;}
  const results=WORLDS.flatMap(w=>w.routes.map(r=>({...r,world:w}))).filter(x=>
- x.label.toLocaleLowerCase('ru').includes(q)||x.id.includes(q)||x.world.title.toLocaleLowerCase('ru').includes(q));
+  x.label.toLocaleLowerCase('ru').includes(q)||x.id.includes(q)||x.world.title.toLocaleLowerCase('ru').includes(q));
  P.title.textContent='ПОИСК';P.subtitle.textContent='Найдено '+results.length+' функций';
- const grid=el('div','route-grid');results.forEach(r=>grid.append(button(r.world.title+' / '+r.label,'route',()=>openRoute(r.id))));
- setDetails(grid);
+ const grid=el('div','nox-action-grid');
+ const more=button('ПОКАЗАТЬ ЕЩЁ','nox-more',()=>appendNext());
+ let offset=0;const pageSize=12;
+ function appendNext(){
+  results.slice(offset,offset+pageSize).forEach(r=>{
+   const b=catalogCard(r.label,r.world.title,1,()=>openRoute(r.id),'route');
+   b.dataset.route=r.id;grid.append(b);
+  });
+  offset=Math.min(offset+pageSize,results.length);
+  more.hidden=offset>=results.length;
+  more.textContent='ПОКАЗАТЬ ЕЩЁ · '+(results.length-offset);
+ }
+ setDetails(catalogBreadcrumb([{label:'НАПРАВЛЕНИЯ',click:overview},{label:'ПОИСК'}]),
+            el('p','nox-muted','Поиск по существующим функциям. Каждая кнопка ведёт в исходный маршрут.'),
+            grid,more);
+ appendNext();
 });
 const modes=['BALANCED','MAX','ECO'];let idx=0;
 P.fx.addEventListener('click',()=>{idx=(idx+1)%modes.length;doc.body.dataset.fx=modes[idx];P.fx.textContent='FX '+modes[idx];});
