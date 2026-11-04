@@ -1,0 +1,78 @@
+name: NOX EXPRESS corrected original five UIA - U02 physical
+on:
+  push:
+    branches: [integration/nox-v16-unified-candidate-20261028-r01]
+    paths:
+      - .github/workflows/nox-original-corrected-five-uia-u02.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: nox-five-uia-corrected-original-u02
+  cancel-in-progress: false
+jobs:
+  five-real-ui-invocations:
+    if: github.repository == 'MSSTXNEWS/nox-helion-pp-private-build'
+    runs-on: windows-2022
+    timeout-minutes: 25
+    steps:
+      - name: Checkout immutable verifier sources
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Python Windows 3.12
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12.10'
+          architecture: x64
+          check-latest: false
+      - name: Download exact physical E06 candidate (never Qwen or Ollama)
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          run-id: 41825380857
+          github-token: ${{ github.token }}
+          name: NOX-EXPRESS-ONEHOST-fbbe084c23eb1ea2462814b6d5bfded5ff6951c6
+          path: frozen-candidate
+      - name: SHA-bind physical Setup, install, five genuine UIA InvokePattern transitions
+        id: five
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $src = 'fbbe084c23eb1ea2462814b6d5bfded5ff6951c6'
+          $sha = 'b658756ca5969536fb2d294038b58c6a6948694b13ebd596efdfc04b5ec7f908'
+          $dir = Join-Path $PWD 'frozen-candidate'
+          $setup = Join-Path $dir 'NOX_HELION_EXPRESS_CANDIDATE_SETUP.exe'
+          $receipt = Join-Path $dir 'BUILD_RECEIPT.json'
+          $out = 'work/e07-five-uia/FIVE_UIA_RECEIPT.json'
+          New-Item -ItemType Directory -Force (Split-Path $out) | Out-Null
+          if (-not (Test-Path -LiteralPath $setup -PathType Leaf) -or -not (Test-Path -LiteralPath $receipt -PathType Leaf)) { throw 'E07_PRIMARY_EXACT_PRODUCER_FILES_MISSING' }
+          $producer = Get-Content -LiteralPath $receipt -Encoding UTF8 -Raw | ConvertFrom-Json
+          if ($producer.source_commit -cne $src -or $producer.setup_sha256 -cne $sha -or $producer.physical_setup_built -ne $true -or $producer.release_accepted -ne $false) { throw 'E07_PRIMARY_PRODUCER_RECEIPT_MISMATCH' }
+          if ((Get-FileHash -LiteralPath $setup -Algorithm SHA256).Hash.ToLowerInvariant() -cne $sha) { throw 'E07_PRIMARY_SETUP_BYTE_SHA_HOLD' }
+          if ((Get-Item -LiteralPath $setup).Length -ne [long]$producer.setup_bytes) { throw 'E07_PRIMARY_SETUP_SIZE_HOLD' }
+          Write-Host "PINNED_SETUP_SOURCE=$src PINNED_SETUP_SHA256=$sha BYTES=$($producer.setup_bytes)"
+          python -B -m py_compile coordination/e07/independent_setup_e07.py coordination/e07/probe_five_primary_action.py
+          if ($LASTEXITCODE -ne 0) { throw 'E07_PRIMARY_SOURCE_SYNTAX_HOLD' }
+          python -B -m unittest discover -s tests/e07 -p test_probe_five_primary_action_u06.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'E07_PRIMARY_REGRESSION_HOLD' }
+          $exe = Start-Process -FilePath $setup -ArgumentList '/S' -PassThru -Wait
+          if ($exe.ExitCode -ne 0) { throw "E07_PRIMARY_NSIS_INSTALL_EXIT_$($exe.ExitCode)" }
+          python -B coordination/e07/probe_five_primary_action.py --artifact-dir $dir --source-sha $src --setup-sha $sha --out $out
+          if ($LASTEXITCODE -ne 0) { throw 'E07_PRIMARY_FIVE_REAL_UIA_INVOKES_NOT_PROVEN' }
+          Write-Host 'FIVE_UIA_INVOKEPATTERN_NAVIGATION_PASS_EXACT_SOURCE_SETUP_ONLY_NOT_E07'
+      - name: Save physical read-only UIA witness, including HOLD
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: NOX-FIVE-UIA-ORIGINAL-U02-${{ github.run_id }}
+          path: work/e07-five-uia/FIVE_UIA_RECEIPT.json
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Never promote five clicks to E07 or release
+        if: always()
+        shell: pwsh
+        run: |
+          Write-Host 'NOX_FULL_E07_10_OF_10=HOLD'
+          Write-Host 'NOX_RELEASE_ACCEPTED=false'
+          if ('${{ steps.five.outcome }}' -ne 'success') { throw 'NOX_FIVE_UIA_PHYSICAL_FIRST_UNMET_HOLD' }
