@@ -256,6 +256,21 @@ def gui_hwnd(shell: Path, local: Path) -> dict:
                                timeout=15, capture_output=True, check=False)
 
 
+def verify_uninstall_no_loss(install: Path, stage: Path, previous: Path,
+                             tracked: tuple[Path, ...], witness: Path,
+                             expected: bytes) -> None:
+    """Delete only manifest-owned payload; preserve independent unmanaged bytes."""
+    def present(p: Path) -> bool:
+        return p.exists() or p.is_symlink() or getattr(p, "is_junction", lambda: False)()
+    require(not any(present(p) for p in tracked),
+            "E07_NSIS_UNINSTALL_OWNED_RESIDUE_HOLD")
+    require(clean_dir(install) and witness.parent == install and
+            clean_file(witness) and witness.read_bytes() == expected,
+            "E07_NSIS_UNINSTALL_UNOWNED_DATA_LOSS_HOLD")
+    require(not any(present(p) for p in (stage, previous)),
+            "E07_NSIS_UNINSTALL_STAGE_OR_PREVIOUS_RESIDUE_HOLD")
+
+
 def lifecycle(setup: Path, result: dict) -> None:
     local = Path(os.environ["LOCALAPPDATA"])
     require(clean_dir(local), "E07_LOCALAPPDATA_UNTRUSTED")
@@ -293,6 +308,13 @@ def lifecycle(setup: Path, result: dict) -> None:
     _, owned = manifest_owner(install)
     require(user_marker.read_bytes()==signature,"E07_ROLLBACK_USER_DATA_LOSS")
     result["checks"]["rollback"]={"status":"PASS","restored_verified":True}
+    # Unlisted bytes inside the install root must survive conservative uninstall.
+    witness=install/"e07-independent-unmanaged-keep.txt"
+    expected_witness=b"NOX_E07_UNMANAGED_INSTALL_DATA_PRESERVED\n"
+    require(not witness.exists() and not witness.is_symlink(),
+            "E07_UNMANAGED_WITNESS_COLLISION")
+    witness.write_bytes(expected_witness)
+    require(clean_file(witness), "E07_UNMANAGED_WITNESS_NONREGULAR")
     uninstaller=install/"Uninstall.exe"
     require(clean_file(uninstaller),"E07_UNINSTALL_EXE_MISSING")
     require(run([str(uninstaller),"/S"],limit=240)==0,"E07_NSIS_UNINSTALL_EXIT_HOLD")
@@ -300,12 +322,14 @@ def lifecycle(setup: Path, result: dict) -> None:
     deadline=time.monotonic()+180
     while any(p.exists() or p.is_symlink() for p in tracked) and time.monotonic()<deadline:
         time.sleep(0.3)
-    require(not any(p.exists() or p.is_symlink() for p in tracked) and
-            not install.is_dir(),"E07_NSIS_UNINSTALL_RESIDUE_HOLD")
+    verify_uninstall_no_loss(install,stage,previous,tracked,witness,expected_witness)
     require(user_marker.is_file() and user_marker.read_bytes()==signature,
             "E07_UNINSTALL_USER_DATA_LOSS")
     result["checks"]["uninstall"]={"status":"PASS", "owned_files_absent":len(owned),
-                                    "userdata_preserved":True}
+                                    "userdata_preserved":True,
+                                    "unmanaged_install_bytes_preserved":True,
+                                    "install_root_retained_for_unmanaged_data":True,
+                                    "stage_previous_absent":True}
     require(clean_dir(saved),"E07_BACKUP_POLICY_VIOLATED")
     result["checks"]["backup_retention"]={"status":"PASS","saved_rollback_slot_retained":True}
 

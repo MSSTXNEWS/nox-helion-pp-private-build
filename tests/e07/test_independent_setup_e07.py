@@ -74,4 +74,42 @@ class IndependentE07(unittest.TestCase):
             with self.assertRaisesRegex(MOD.Hold,'E07_INSTALLED_FILE_SHA_HOLD'):
                 MOD.manifest_owner(root)
 
+    def test_uninstall_no_loss_preserves_unmanaged_install_data(self):
+        with tempfile.TemporaryDirectory() as t:
+            root=Path(t); install=root/"NOX HELION"; install.mkdir()
+            witness=install/"unmanaged.txt"; witness.write_bytes(b"keep-me")
+            MOD.verify_uninstall_no_loss(install,root/"stage",root/"previous",
+                                          (install/"removed-owned.dll",),witness,b"keep-me")
+            self.assertEqual(witness.read_bytes(),b"keep-me")
+
+    def test_uninstall_no_loss_rejects_changed_or_deleted_unmanaged(self):
+        with tempfile.TemporaryDirectory() as t:
+            root=Path(t); install=root/"NOX HELION"; install.mkdir()
+            witness=install/"unmanaged.txt"; witness.write_bytes(b"tampered")
+            for _ in range(2):
+                with self.assertRaisesRegex(MOD.Hold,"UNOWNED_DATA_LOSS_HOLD"):
+                    MOD.verify_uninstall_no_loss(install,root/"stage",root/"previous",
+                                                  (),witness,b"original")
+                witness.unlink(missing_ok=True)
+
+    def test_uninstall_no_loss_rejects_owned_residue(self):
+        with tempfile.TemporaryDirectory() as t:
+            root=Path(t); install=root/"NOX HELION"; install.mkdir()
+            witness=install/"unmanaged.txt"; witness.write_bytes(b"keep")
+            owned=install/"owned.dll"; owned.write_bytes(b"should-have-gone")
+            with self.assertRaisesRegex(MOD.Hold,"OWNED_RESIDUE_HOLD"):
+                MOD.verify_uninstall_no_loss(install,root/"stage",root/"previous",
+                                              (owned,),witness,b"keep")
+
+    def test_uninstall_no_loss_rejects_stage_and_previous_residue(self):
+        with tempfile.TemporaryDirectory() as t:
+            root=Path(t); install=root/"NOX HELION"; install.mkdir()
+            witness=install/"unmanaged.txt"; witness.write_bytes(b"keep")
+            for name in ("stage","previous"):
+                stale=root/name; stale.mkdir()
+                with self.assertRaisesRegex(MOD.Hold,"STAGE_OR_PREVIOUS_RESIDUE_HOLD"):
+                    MOD.verify_uninstall_no_loss(install,root/"stage",root/"previous",
+                                                  (),witness,b"keep")
+                stale.rmdir()
+
 if __name__=='__main__':unittest.main()
