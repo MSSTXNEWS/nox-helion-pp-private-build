@@ -6,6 +6,7 @@ on:
       - src/nox_selfbuilder/engines/fetch_ollama_weight_layers.py
       - tests/selfbuilder/test_model_cache_manifest_byte_parity.py
       - tests/selfbuilder/test_model_manifest_cache_reparse_u12.py
+      - tests/selfbuilder/test_oci_staging_root_alias_u12.py
       - .github/workflows/nox-express-model-oci-byte-parity.yml
 permissions:
   contents: read
@@ -33,7 +34,7 @@ jobs:
       - name: Compile actual cache engine and regression
         shell: pwsh
         run: |
-          python -B -m py_compile src/nox_selfbuilder/engines/fetch_ollama_weight_layers.py tests/selfbuilder/test_model_cache_manifest_byte_parity.py tests/selfbuilder/test_model_manifest_cache_reparse_u12.py
+          python -B -m py_compile src/nox_selfbuilder/engines/fetch_ollama_weight_layers.py tests/selfbuilder/test_model_cache_manifest_byte_parity.py tests/selfbuilder/test_model_manifest_cache_reparse_u12.py tests/selfbuilder/test_oci_staging_root_alias_u12.py
           if ($LASTEXITCODE -ne 0) { throw 'OCI_CACHE_SYNTAX_HOLD' }
       - name: Verify exact upstream-manifest bytes are cached, without network
         shell: pwsh
@@ -45,6 +46,11 @@ jobs:
         run: |
           python -B -m unittest discover -s tests/selfbuilder -p test_model_manifest_cache_reparse_u12.py -v
           if ($LASTEXITCODE -ne 0) { throw 'OCI_MANIFEST_CACHE_REPARSE_HOLD' }
+      - name: Refuse redirected output staging roots and receipt aliases (no network)
+        shell: pwsh
+        run: |
+          python -B -m unittest discover -s tests/selfbuilder -p test_oci_staging_root_alias_u12.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'OCI_STAGING_ROOT_ALIAS_HOLD' }
       - name: State strict acceptance boundary
         shell: pwsh
         run: |
