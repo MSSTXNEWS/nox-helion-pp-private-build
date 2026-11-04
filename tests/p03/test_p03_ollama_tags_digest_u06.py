@@ -55,4 +55,71 @@ class OllamaTagDigestTest(unittest.TestCase):
                      [{"name":"different:7b","digest":HEX}]):
             with self.assertRaises(p03.P03PortHold):self.get(HEX,models=rows)
 
+
+# This actual native-ingress test executes the original P02 byte-framed handler
+# and the existing P03 owner license method. It never grants pull rights.
+INGRESS_SOURCE=(Path(__file__).resolve().parents[2]/"Packages"/"P02"/"worker-python"/"p02_native_ingress.py")
+ingress_spec=importlib.util.spec_from_file_location("p02_u06_license_read", INGRESS_SOURCE)
+assert ingress_spec and ingress_spec.loader
+native_ingress=importlib.util.module_from_spec(ingress_spec)
+ingress_spec.loader.exec_module(native_ingress)
+
+class P03NativeLicenseReadTest(unittest.TestCase):
+    def _setup(self, *, enabled=True, owner=3):
+        port=p03.P03OneHostPort.__new__(p03.P03OneHostPort)
+        port.family_cards=({"id":"qwen3","name":"Qwen3"},)
+        scope=SimpleNamespace(tenant="local",principal="owner",chat_id="default",
+                              allowed=frozenset({"models.licenses"}))
+        bound=SimpleNamespace(owner=owner, evidence_id="P03_SOURCELOCK_RECEIPT",
+                              call=port.licenses, available=lambda: True)
+        dispatcher=SimpleNamespace(routes={"models.licenses":{"owner":3}},
+                                   ports={"models.licenses":bound})
+        dispatcher.execute=lambda route,payload,session: dispatcher.ports[route].call(session,payload)
+        ingress=native_ingress.NativeIngress(dispatcher,lambda:scope,
+                         expected_run_id="u06-native-license-run",
+                         allow_modelcenter_reads=enabled)
+        return ingress,dispatcher
+
+    def _frame(self,route="models.licenses",payload=None):
+        return json.dumps({"protocol":"NOX-P02-NATIVE-v1",
+                           "runId":"u06-native-license-run",
+                           "requestId":"a"*32,"route":route,
+                           "payload":{} if payload is None else payload}).encode("utf-8")
+
+    def test_native_licensediscovery_reaches_original_owner_without_rights(self):
+        ingress,_=self._setup()
+        answer=json.loads(ingress.handle(self._frame()))
+        self.assertEqual(answer["status"],"OK")
+        proof=answer["result"]
+        self.assertIs(proof["licenseEvidenceVerified"],False)
+        self.assertEqual(proof["models"][0]["reviewStatus"],"REVIEW_REQUIRED")
+        self.assertIs(proof["models"][0]["downloadEligible"],False)
+        self.assertIsNone(proof["models"][0]["license"])
+
+    def test_native_license_read_requires_owner_optin_and_receipt(self):
+        for opts in ({"enabled":False},{"owner":2}):
+            with self.subTest(opts=opts):
+                ingress,_=self._setup(**opts)
+                with self.assertRaises(native_ingress.ProtocolHold):
+                    ingress.handle(self._frame())
+
+    def test_native_license_read_requires_exact_bound_owner_port(self):
+        ingress,dispatcher=self._setup()
+        dispatcher.ports["models.licenses"].evidence_id=""
+        with self.assertRaises(native_ingress.ProtocolHold):
+            ingress.handle(self._frame())
+
+    def test_browser_cannot_assert_license_authorization(self):
+        ingress,_=self._setup()
+        with self.assertRaises(native_ingress.ProtocolHold):
+            ingress.handle(self._frame(payload={"licenseVerified":True}))
+
+    def test_no_model_mutations_admitted_by_readonly_gate(self):
+        for route in ("models.pull","models.queue","models.cancel",
+                      "models.retry","models.gguf.import"):
+            with self.subTest(route=route):
+                ingress,_=self._setup()
+                with self.assertRaises(native_ingress.ProtocolHold):
+                    ingress.handle(self._frame(route=route))
+
 if __name__=="__main__":unittest.main()

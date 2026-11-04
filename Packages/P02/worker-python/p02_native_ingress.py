@@ -25,7 +25,7 @@ P02_ROUTES = frozenset({
 # Optional P03 read-only admission. Sensitive model actions stay outside this
 # ingress until the native owner explicitly binds and authorizes them.
 P03_NATIVE_READ_ROUTES = frozenset({
-    "models.catalog", "models.installed", "models.digest",
+    "models.catalog", "models.installed", "models.digest", "models.licenses",
 })
 
 

@@ -32,7 +32,7 @@ ADDONS=(
     ('src/nox_selfbuilder/growth_forge.py', 'nox_selfbuilder/growth_forge.py', 'ffdb0239ae54c4c1ac27d0eaceac5153ff6f8069'),
     ('src/nox_selfbuilder/a1_official_catalog.py', 'nox_selfbuilder/a1_official_catalog.py', 'efa4f3c6f44875d90f6c74a914f062fa45d09517'),
     ('src/nox_selfbuilder/a1_wpf_owner_proof.py', 'nox_selfbuilder/a1_wpf_owner_proof.py', 'af42b4737be450039ca7f9c8b3c767aa931ccbf2'),
-    ('Packages/P02/worker-python/p02_native_ingress.py', 'p02_native_ingress.py', '41dc01d25fa1459584582f6ba3659d55ad861b20'),
+    ('Packages/P02/worker-python/p02_native_ingress.py', 'p02_native_ingress.py', 'cf0604d68cce5a2abfc459ef60f4e898c81a484b'),
     ('Packages/P02/worker-python/p02_framed_worker.py', 'p02_framed_worker.py', '5e7df6b7b93b4d01f19ca3ece90266b1eb30611c'),
     ('Packages/P02/worker-python/p02_runtime.py', 'p02_runtime.py', '56d61a0e9b3e5dc8052e6030d29acc0f301a31e6'),
     ('Packages/P02/worker-python/p02_chat_bridge.py', 'p02_chat_bridge.py', '0b83e0a391b4cda18b9cb7726607927013c3fa4e'),
