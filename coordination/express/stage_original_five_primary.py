@@ -230,6 +230,19 @@ a1Button?.addEventListener('click',event=>{
    clearTimeout(timer);native.removeEventListener('message',onNative);
    a1Pending=false;a1Button.disabled=false;state.textContent=message;
  };
+ // Authenticated transport completion may still carry owner/provider denial.
+ function a1ReceiptDenied(envelope){
+  if(!envelope||typeof envelope!=='object')return true;
+  if(envelope.ack===false||envelope.ok===false)return true;
+  for(const key of ['error','error_code','errorCode']){
+   if(envelope[key]!=null&&String(envelope[key]).trim()!=='')return true;
+  }
+  for(const key of ['status','state']){
+   if(typeof envelope[key]==='string'&&
+      /(?:HOLD|DENIED|REJECT|FAIL|ERROR|OFFLINE|CONSENT|UNAUTHORIZED|FORBIDDEN)/i.test(envelope[key]))return true;
+  }
+  return false;
+ }
  const onNative=reply=>{
    if(reply?.isTrusted!==true||reply.source!==native)return;
    const value=reply.data;
@@ -237,6 +250,7 @@ a1Button?.addEventListener('click',event=>{
       value.routeId!=='chat.commands')return;
    const owner=value.result;
    const verified=value.state==='COMPLETED'&&
+       !a1ReceiptDenied(value)&&!a1ReceiptDenied(owner)&&
        owner?.schema==='NOX-A1-NATIVE-COMMAND-STATUS-v1'&&
        owner?.state==='ACTIVE_NATIVE_BOOT_RECEIPT'&&
        owner?.native_bound===true&&

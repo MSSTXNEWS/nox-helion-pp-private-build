@@ -107,6 +107,16 @@ class OriginalButtonRoutes(unittest.TestCase):
         self.assertEqual(proof['installed_ui_automation'], 'NOT_RUN')
         self.assertFalse(proof['release_accepted'])
 
+    def test_original_a1_fails_closed_on_owner_denial(self):
+        # A COMPLETED transport with explicit consent/provider denial is HOLD.
+        js = stage.INSERT
+        self.assertIn("function a1ReceiptDenied(envelope){", js)
+        self.assertIn("!a1ReceiptDenied(value)&&!a1ReceiptDenied(owner)", js)
+        for field in ("'error'", "'error_code'", "'errorCode'",
+                      "'status'", "'state'", "envelope.ack===false",
+                      "envelope.ok===false", "CONSENT", "OFFLINE"):
+            self.assertIn(field, js)
+
     def test_windows_builder_attests_five_published_actions_not_optional_a1(self):
         """E06 regression: missing unimplemented A1 marker cannot block five originals."""
         builder = (ROOT / 'coordination/e06/build_onehost_installer.ps1').read_text(encoding='utf-8')
