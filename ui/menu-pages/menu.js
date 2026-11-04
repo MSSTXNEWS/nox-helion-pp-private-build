@@ -133,6 +133,8 @@ function liveChat(label){
   el('p','nox-chat-label','УСТАНОВЛЕННЫЕ МОДЕЛИ'),modelsRow,log,form,info);
  setDetails(top,surface);
  let core='core.core',persona='persona.kairen_voss',model='',chatEpoch=0,modelSelectionPending=false;
+ // A selected model belongs to its native-confirmed UI scope, never to a different CoreID/Persona.
+ let scopeEpoch=0,renderModels=()=>{};
  const enabled=()=>!!client&&!!model&&!chatInFlight&&!modelSelectionPending;
  const redraw=()=>{send.disabled=!enabled();stop.disabled=!client||!chatInFlight||chatStopPending;};
  function chips(parent,items,current,onSelect){
@@ -144,18 +146,31 @@ function liveChat(label){
  }
  const cores=CORE_IDS.map(id=>['core.'+id.toLowerCase(),id]);
  const personas=PERSONAS.map((id,i)=>[['persona.kairen_voss','persona.adrian_marrow','persona.leon_ardis','persona.elina_veil','persona.kassien_veir'][i],id]);
- const chooseCore=v=>{core=v;selectedCore=CORE_IDS.find(id=>'core.'+id.toLowerCase()===v)||null;};
- const choosePersona=v=>{persona=v;selectedPersona=PERSONAS[['persona.kairen_voss','persona.adrian_marrow','persona.leon_ardis','persona.elina_veil','persona.kassien_veir'].indexOf(v)]||null;};
+ const invalidateModelScope=()=>{
+  ++scopeEpoch;model='';renderModels();redraw();
+  if(info.isConnected)info.textContent='HOLD · контекст изменился; подтвердите модель через OneHost';
+ };
+ const chooseCore=v=>{
+  const changed=core!==v;core=v;selectedCore=CORE_IDS.find(id=>'core.'+id.toLowerCase()===v)||null;
+  if(changed)invalidateModelScope();
+ };
+ const choosePersona=v=>{
+  const changed=persona!==v;persona=v;
+  selectedPersona=PERSONAS[['persona.kairen_voss','persona.adrian_marrow','persona.leon_ardis','persona.elina_veil','persona.kassien_veir'].indexOf(v)]||null;
+  if(changed)invalidateModelScope();
+ };
  chips(coreRow,cores,core,chooseCore);chips(personaRow,personas,persona,choosePersona);
  const row=(who,content)=>{const item=el('p','nox-chat-bubble nox-chat-'+who,content);log.append(item);log.scrollTop=log.scrollHeight;return item;};
  async function loadModels(){
+  const inventoryEpoch=scopeEpoch;
   if(!client){modelsRow.append(el('span','nox-chat-empty','Локальное ядро не подключено'));redraw();return;}
   try{
    const reply=await client.request('chat.model',{});
    if(!modelsRow.isConnected)return;
    if(reply?.state!=='COMPLETED'||!Array.isArray(reply.result?.models)){throw Error('NO_MODELS');}
    const names=[...new Set(reply.result.models.filter(v=>typeof v==='string'&&v.length&&v.length<=160))].slice(0,32);
-   model=names.includes(reply.result.selectedModel)?reply.result.selectedModel:'';
+   // An inventory reply which began in a previous scope cannot authorize SEND.
+   model=inventoryEpoch===scopeEpoch&&names.includes(reply.result.selectedModel)?reply.result.selectedModel:'';
    const render=()=>{
     modelsRow.replaceChildren();
     if(!names.length)modelsRow.append(el('span','nox-chat-empty','Модели не установлены · откройте MODELS'));
@@ -167,17 +182,20 @@ function liveChat(label){
       model=''; // Unknown until the native owner confirms this exact selection.
       render();redraw();
       info.textContent='Выбор модели проверяется ядром...';
+      const requestedScopeEpoch=scopeEpoch;
       try{
        const a=await client.request('chat.model',{model:name});
-       if(a?.state==='COMPLETED'&&a.result?.selectedModel===name){model=name;info.textContent='Модель подтверждена: '+name;}
-       else info.textContent='HOLD · OneHost не подтвердил выбор модели';
+       if(requestedScopeEpoch===scopeEpoch&&modelsRow.isConnected&&
+          a?.state==='COMPLETED'&&a.result?.selectedModel===name){
+        model=name;info.textContent='Модель подтверждена: '+name;
+       }else info.textContent='HOLD · нет актуального native ACK выбранной модели и контекста';
       }catch{info.textContent='HOLD · нет подтверждения выбора модели';}
       finally{modelSelectionPending=false;render();redraw();}
      });
      b.setAttribute('aria-pressed',String(name===model));b.disabled=chatInFlight||modelSelectionPending;modelsRow.append(b);
     }
    };
-   render();redraw();
+   renderModels=render;render();redraw();
    info.textContent=model?'Выбрана локальная модель: '+model:'Выберите модель из списка, подтверждённого OneHost';
   }catch{modelsRow.replaceChildren(el('span','nox-chat-empty','Не удалось получить локальные модели'));info.textContent='HOLD · каталог моделей недоступен';redraw();}
  }

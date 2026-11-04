@@ -56,3 +56,45 @@ test('model selection is serialized and requires its own exact native ACK', asyn
  assert.equal(send.disabled,false);
  assert.equal(models().filter(x=>x.attrs['aria-pressed']==='true').length,1);
 });
+test('changing CoreID or Persona invalidates model ACK; stale owner replies cannot re-enable SEND', async()=>{
+ class Elem {
+  constructor(tag,cls,label){this.tag=tag;this.className=cls||'';this.textContent=label??'';this.children=[];this.attrs={};this.isConnected=true;this.disabled=false;this.value='';this.listeners={};}
+  append(...x){this.children.push(...x);}
+  replaceChildren(...x){this.children=x;}
+  setAttribute(k,v){this.attrs[k]=v;}
+  addEventListener(k,fn){this.listeners[k]=fn;}
+ }
+ const nodes=[];
+ const el=(tag,cls,label)=>{const x=new Elem(tag,cls,label);nodes.push(x);return x;};
+ const button=(label,cls,click)=>{const x=el('button',cls,label);x.onclick=click;return x;};
+ const waits=[];
+ const client={request:(route,payload)=>{
+  assert.equal(route,'chat.model');
+  if(!payload.model)return Promise.resolve({state:'COMPLETED',result:{models:['qwen:0.6b','mistral:7b'],selectedModel:'qwen:0.6b'}});
+  return new Promise(resolve=>waits.push(resolve));
+ }};
+ const live=new Function('el','button','client','setDetails','CORE_IDS','PERSONAS','chatInFlight','chatStopPending','selectedCore','selectedPersona',fragment+'\nreturn liveChat;')(
+  el,button,client,()=>{},['CORE','ATLAS'],['KV','AM'],false,false,null,null);
+ live({world:'pc',name:'Чат'});
+ await Promise.resolve();await Promise.resolve();
+ const rows=nodes.filter(x=>x.className==='nox-chat-chips');
+ const send=nodes.find(x=>x.className==='nox-chat-send');
+ const models=()=>rows[2].children;
+ assert.equal(send.disabled,false,'initial selectedModel belongs to current scope');
+ rows[0].children[1].onclick(); // Change CoreID before sending.
+ assert.equal(send.disabled,true,'previous model is not confirmed in new CoreID');
+ assert.equal(models().filter(b=>b.attrs['aria-pressed']==='true').length,0);
+ const pending=models()[0].onclick();
+ assert.equal(waits.length,1);
+ rows[1].children[1].onclick(); // Invalidate request during native ACK.
+ waits.shift()({state:'COMPLETED',result:{selectedModel:'qwen:0.6b'}});
+ await pending;
+ assert.equal(send.disabled,true,'stale ACK after Persona switch must not authorize SEND');
+ assert.equal(models().filter(b=>b.attrs['aria-pressed']==='true').length,0);
+ const confirmed=models()[1].onclick();
+ waits.shift()({state:'COMPLETED',result:{selectedModel:'mistral:7b'}});
+ await confirmed;
+ assert.equal(send.disabled,false,'fresh explicit model ACK restores CHAT');
+ rows[0].children[0].onclick();
+ assert.equal(send.disabled,true,'subsequent CoreID change immediately revokes ACK');
+});
