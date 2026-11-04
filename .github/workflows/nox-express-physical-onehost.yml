@@ -34,7 +34,7 @@ jobs:
           $ver=''
           if (Test-Path -LiteralPath $nsis -PathType Leaf) { $ver=(& $nsis /VERSION | Out-String).Trim() }
           if ($ver -notmatch '^v?3\.13$') {
-            choco install nsis.install --version=3.13.0 --yes --no-progress
+            choco upgrade nsis --version=3.13.0 --yes --no-progress
             if ($LASTEXITCODE -ne 0) { throw 'NSIS313_INSTALL_HOLD' }
           }
           if (!(Test-Path -LiteralPath $nsis -PathType Leaf)) { throw 'NSIS313_NOT_FOUND' }
