@@ -238,6 +238,36 @@ def _physical_adaptive_sized(sizes: object) -> bool:
     )
 
 
+def probe_windows_animation_setting() -> dict:
+    """Collect OS animation preference; it is not proof that WebView2 obeys it.
+
+    Read-only physical signal on the same hosted Windows VM. Never change a
+    user's accessibility setting and never promote this signal to visual PASS.
+    """
+    script = r"""
+$ErrorActionPreference='Stop'
+try {
+  $ui=[Windows.UI.ViewManagement.UISettings,Windows.UI.ViewManagement,ContentType=WindowsRuntime]::new()
+  $enabled=[bool]$ui.AnimationsEnabled
+  [pscustomobject]@{os_ui_animations_enabled=$enabled;source='WinRT.UISettings.AnimationsEnabled';webview2_media_query='NOT_TESTED'} | ConvertTo-Json -Compress
+} catch {
+  [pscustomobject]@{os_ui_animations_enabled=$null;source='WinRT.UISettings.UNAVAILABLE';webview2_media_query='NOT_TESTED'} | ConvertTo-Json -Compress
+}
+"""
+    try:
+        result = _run_ps(script, timeout=15, phase="VISUAL")
+    except e07.Hold as exc:
+        return {"os_ui_animations_enabled":None,
+                "source":"WINRT_QUERY_HOLD",
+                "webview2_media_query":"NOT_TESTED",
+                "diagnostic_hold":str(exc)}
+    if type(result.get("os_ui_animations_enabled")) not in (bool,type(None)):
+        return {"os_ui_animations_enabled":None,
+                "source":"WINRT_INVALID_VALUE",
+                "webview2_media_query":"NOT_TESTED"}
+    return result
+
+
 def _newest(paths: set[Path], folder: Path, pattern: str) -> Path|None:
     now=set(folder.glob(pattern)) if folder.is_dir() else set()
     fresh=[p for p in now-paths if e07.clean_file(p)]
@@ -315,6 +345,7 @@ def run(hwnd: int, install: Path, local: Path, *, source_sha: str, setup_sha: st
                     "E07_FINAL_D02_FIVE_GRAPHICS_MODE_HOLD")
     except e07.Hold as exc:
         fx={"fx_control":"HOLD","first_unmet_gate":str(exc)}
+    os_animation=probe_windows_animation_setting()
     visual={"schema":e07.FINAL_VISUAL_SCHEMA,"source_sha":source_sha,
             "setup_sha256":setup_sha,"release_accepted":False,
             "physical_capture":"PASS" if actual_png and visual_first_hold is None else "HOLD",
@@ -328,7 +359,8 @@ def run(hwnd: int, install: Path, local: Path, *, source_sha: str, setup_sha: st
             "visual_first_unmet_gate":visual_first_hold or
                  (fx.get("first_unmet_gate") if fx["fx_control"]!="PASS"
                   else "E07_INDEPENDENT_VISUAL_REVIEW_NOT_RUN"),
-            "reduced_motion_evidence":"OS_MEDIA_QUERY_NOT_PHYSICALLY_VERIFIED"}
+            "reduced_motion_evidence":"OS_SETTING_OBSERVED_WEBVIEW2_MEDIA_QUERY_NOT_PHYSICALLY_VERIFIED",
+            "os_animation_observation":os_animation}
 
     actions={}
     def observed(action: str, detail: dict) -> None:
