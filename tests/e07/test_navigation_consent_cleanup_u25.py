@@ -51,6 +51,41 @@ class CatalogConsentSafety(unittest.TestCase):
                                             "E07_FINAL_NAV_DIALOG_NEGATIVE_RECEIPT_HOLD"):
                     module.dismiss_readonly_models_catalog_consent(123)
 
+    def test_disposable_qa_may_approve_only_readonly_catalog_owner_dialog(self):
+        from unittest.mock import patch
+        import os
+        allowed={"GITHUB_ACTIONS":"true","RUNNER_OS":"Windows",
+                 "RUNNER_ENVIRONMENT":"github-hosted",
+                 "GITHUB_REPOSITORY":"MSSTXNEWS/nox-helion-pp-private-build"}
+        for status in ("ABSENT","QA_READONLY_CATALOG_APPROVED"):
+            witness={"schema":"NOX-E07-QA-CATALOG-CONSENT-v1","status":status,
+                     "sameOwnerProcess":True,
+                     "readOnlyCatalogConsentGranted":status=="QA_READONLY_CATALOG_APPROVED",
+                     "fullModelPermissionsVerified":False}
+            with self.subTest(status=status),patch.dict(os.environ,allowed),patch.object(
+                  module.sys,"platform","win32"),patch.object(module,"_run_ps",return_value=witness):
+                actual=module.qa_approve_readonly_catalog_consent(123)
+                self.assertFalse(actual["fullModelPermissionsVerified"])
+        bad={"schema":"NOX-E07-QA-CATALOG-CONSENT-v1",
+             "status":"QA_READONLY_CATALOG_APPROVED",
+             "sameOwnerProcess":True,"readOnlyCatalogConsentGranted":True,
+             "fullModelPermissionsVerified":True}
+        with patch.dict(os.environ,allowed),patch.object(module.sys,"platform","win32"),patch.object(module,"_run_ps",return_value=bad):
+            with self.assertRaisesRegex(module.e07.Hold,"E07_CATALOG_QA_CONSENT_RECEIPT_HOLD"):
+                module.qa_approve_readonly_catalog_consent(123)
+        with patch.dict(os.environ,{"GITHUB_ACTIONS":"false"}),patch.object(module.sys,"platform","win32"):
+            with self.assertRaisesRegex(module.e07.Hold,"E07_CATALOG_QA_HOST_NOT_AUTHORIZED_HOLD"):
+                module.qa_approve_readonly_catalog_consent(123)
+
+    def test_no_other_native_permission_can_be_auto_granted(self):
+        text=SOURCE.read_text(encoding="utf-8")
+        self.assertIn("Разрешить локальный маршрут NOX: models.catalog?",text)
+        self.assertIn("'QA_READONLY_CATALOG_APPROVED'",text)
+        self.assertIn("fullModelPermissionsVerified=$false",text)
+        self.assertIn('\"model_pull\":\"NOT_TESTED\"',text)
+        self.assertIn('\"model_download_queue\":\"NOT_TESTED\"',text)
+        self.assertNotIn('"permissions_verified":"PASS"',text)
+
     def test_separate_from_native_function_and_release_acceptance(self):
         source=SOURCE.read_text(encoding="utf-8")
         self.assertLess(source.index("navigation_consent = dismiss_readonly_models_catalog_consent"),

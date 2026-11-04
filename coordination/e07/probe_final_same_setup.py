@@ -166,6 +166,93 @@ if(-not $closed){throw 'E07_NAV_DIALOG_NEGATIVE_NOT_CLOSED_HOLD'}
                 "E07_FINAL_NAV_DIALOG_NEGATIVE_RECEIPT_HOLD")
     return raw
 
+
+def qa_approve_readonly_catalog_consent(hwnd: int) -> dict:
+    """Test-only owner consent for exactly models.catalog on ephemeral GitHub Windows.
+
+    This is NOT approval for downloading models, installation or training.
+    The real WPF Yes action is accepted only for one exact same-PID dialog and
+    route. User-owned Windows machines can never call this QA helper.
+    """
+    e07.require(type(hwnd) is int and hwnd>0 and sys.platform=="win32" and
+                os.environ.get("GITHUB_ACTIONS")=="true" and
+                os.environ.get("RUNNER_OS")=="Windows" and
+                os.environ.get("RUNNER_ENVIRONMENT")=="github-hosted" and
+                os.environ.get("GITHUB_REPOSITORY")=="MSSTXNEWS/nox-helion-pp-private-build",
+                "E07_CATALOG_QA_HOST_NOT_AUTHORIZED_HOLD")
+    ps = r'''
+$ErrorActionPreference='Stop'
+[Console]::OutputEncoding=[System.Text.Encoding]::UTF8
+Add-Type -AssemblyName UIAutomationClient
+Add-Type -AssemblyName UIAutomationTypes
+$h=[IntPtr]__HWND__
+$root=[System.Windows.Automation.AutomationElement]::FromHandle($h)
+if($null -eq $root){throw 'E07_CATALOG_QA_ORIGINAL_HWND_HOLD'}
+$pidNumber=[int]$root.Current.ProcessId
+if($pidNumber -le 0){throw 'E07_CATALOG_QA_ORIGINAL_PID_HOLD'}
+$desktop=[System.Windows.Automation.AutomationElement]::RootElement
+function MatchCatalogDialog {
+ $wins=$desktop.FindAll([System.Windows.Automation.TreeScope]::Children,
+                         [System.Windows.Automation.Condition]::TrueCondition)
+ if($wins.Count -gt 2048){throw 'E07_CATALOG_QA_TREE_LIMIT_HOLD'}
+ $found=@()
+ foreach($w in $wins){
+  try{
+   $v=$w.Current
+   if($v.ProcessId -eq $pidNumber -and
+      ($v.Name+'').Trim() -ceq 'NOX HELION · Native consent' -and
+      $v.ControlType -eq [System.Windows.Automation.ControlType]::Window){
+    $found+=,$w
+   }
+  }catch{}
+ }
+ return $found
+}
+$dialogs=@(MatchCatalogDialog)
+if($dialogs.Count -gt 1){throw 'E07_CATALOG_QA_MULTIPLE_OWNER_DIALOGS_HOLD'}
+if($dialogs.Count -eq 0){
+ [pscustomobject]@{schema='NOX-E07-QA-CATALOG-CONSENT-v1';status='ABSENT';
+  sameOwnerProcess=$true;readOnlyCatalogConsentGranted=$false;
+  fullModelPermissionsVerified=$false}|ConvertTo-Json -Compress;exit 0
+}
+$tree=$dialogs[0].FindAll([System.Windows.Automation.TreeScope]::Descendants,
+                          [System.Windows.Automation.Condition]::TrueCondition)
+if($tree.Count -gt 512){throw 'E07_CATALOG_QA_CHILDREN_LIMIT_HOLD'}
+$routeCount=0;$yes=@()
+foreach($element in $tree){
+ try{
+  $v=$element.Current
+  if($v.ControlType -eq [System.Windows.Automation.ControlType]::Text -and
+     ($v.Name+'').Trim() -ceq 'Разрешить локальный маршрут NOX: models.catalog?'){$routeCount++}
+  if($v.ControlType -eq [System.Windows.Automation.ControlType]::Button -and
+     ($v.Name+'').Trim() -in @('Yes','Да') -and $v.IsEnabled -and
+     -not $v.IsOffscreen -and $v.BoundingRectangle.Width -ge 20){$yes+=,$element}
+ }catch{}
+}
+if($routeCount -ne 1 -or $yes.Count -ne 1){throw 'E07_CATALOG_QA_UNEXPECTED_CONSENT_HOLD'}
+$pattern=$yes[0].GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)
+if($null -eq $pattern){throw 'E07_CATALOG_QA_YES_INVOKE_HOLD'}
+$pattern.Invoke()
+$closed=$false
+for($i=0;$i -lt 20;$i++){
+ Start-Sleep -Milliseconds 200
+ if(@(MatchCatalogDialog).Count -eq 0){$closed=$true;break}
+}
+if(-not $closed){throw 'E07_CATALOG_QA_YES_STILL_VISIBLE_HOLD'}
+[pscustomobject]@{schema='NOX-E07-QA-CATALOG-CONSENT-v1';status='QA_READONLY_CATALOG_APPROVED';
+ sameOwnerProcess=$true;readOnlyCatalogConsentGranted=$true;
+ fullModelPermissionsVerified=$false}|ConvertTo-Json -Compress
+'''.replace("__HWND__",str(hwnd))
+    value=_run_ps(ps,timeout=25,phase="UNKNOWN")
+    e07.require(value.get("schema")=="NOX-E07-QA-CATALOG-CONSENT-v1" and
+                value.get("status") in ("ABSENT","QA_READONLY_CATALOG_APPROVED") and
+                value.get("sameOwnerProcess") is True and
+                value.get("fullModelPermissionsVerified") is False and
+                value.get("readOnlyCatalogConsentGranted") is
+                    (value.get("status")=="QA_READONLY_CATALOG_APPROVED"),
+                "E07_CATALOG_QA_CONSENT_RECEIPT_HOLD")
+    return value
+
 def _uia_script(hwnd: int, operation: str, *, png: Path|None=None) -> str:
     e07.require(type(hwnd) is int and hwnd>0,"E07_FINAL_BAD_HWND_HOLD")
     png_path=(str(png).replace("'","''") if png else "")
@@ -560,6 +647,9 @@ def run(hwnd: int, install: Path, local: Path, *, source_sha: str, setup_sha: st
 
     def models_check():
         invoke_primary(hwnd,"MODELS")
+        # Only the exact read-only models.catalog WPF consent can be approved
+        # by this ephemeral CI test owner, never model pull/training permissions.
+        catalog_consent=qa_approve_readonly_catalog_consent(hwnd)
         model=_run_ps(_uia_script(hwnd,"MODEL_WINDOW"),
                       timeout=35,phase="MODEL_WINDOW")
         e07.require(model.get("modelWindowVisible") is True and
@@ -567,7 +657,10 @@ def run(hwnd: int, install: Path, local: Path, *, source_sha: str, setup_sha: st
                     model.get("sameOwnerProcess") is True,
                     "E07_FINAL_MODELS_WINDOW_HOLD")
         observed("MODELS",{"model_center_window":"PASS",
-                           "window_title":"NOX HELION · MODEL CENTER"})
+                           "window_title":"NOX HELION · MODEL CENTER",
+                           "catalog_qa_consent":catalog_consent,
+                           "model_pull":"NOT_TESTED",
+                           "model_download_queue":"NOT_TESTED"})
 
     def learn_check():
         reports=local/"NOX_HELION"/"P01"/"reports"
