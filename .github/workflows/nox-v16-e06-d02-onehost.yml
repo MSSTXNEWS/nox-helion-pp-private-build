@@ -57,7 +57,7 @@ permissions:
   contents: read
 concurrency:
   group: nox-e06-onehost-${{ github.event.pull_request.head.ref || github.ref_name }}
-  # Preserve an in-flight exact-SHA Windows build; later heads queue behind it.
+  # Preserve an in-flight exact-SHA Windows build; later heads queue behind it. FINAL FUNCTIONAL candidate trigger.
   cancel-in-progress: false
 jobs:
   activator-portable-source:
