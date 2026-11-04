@@ -65,7 +65,13 @@ class FinalPrimaryDispatch(unittest.TestCase):
         self.assertIn("probe_d02_quality_modes(hwnd)", witness)
         self.assertIn('fx.get("actual_invocations")==5', witness)
         self.assertIn('"reduced_motion":"HOLD"', witness)
-        self.assertIn("OS_MEDIA_QUERY_NOT_PHYSICALLY_VERIFIED", witness)
+        # Drive C34 lesson: tests track the CURRENT producer contract, not
+        # an obsolete literal after adding a read-only OS animation probe.
+        # The actual WebView2 media query is still unverified: never PASS.
+        self.assertIn("OS_SETTING_OBSERVED_WEBVIEW2_MEDIA_QUERY_NOT_PHYSICALLY_VERIFIED", witness)
+        self.assertIn("probe_windows_animation_setting()", witness)
+        self.assertIn('"os_animation_observation":os_animation', witness)
+        self.assertNotIn('"reduced_motion":"PASS"', witness)
         self.assertNotIn('_uia_script(hwnd,"FX")', witness)
 
     def test_bounded_phase_diagnostics_do_not_leak_windows_output(self):
