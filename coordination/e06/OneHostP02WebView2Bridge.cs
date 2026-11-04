@@ -376,6 +376,30 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
 
     // A transport ACK with an explicit native rejection is NOT a completed
     // model, training, permission or STOP action. The owner remains authoritative.
+    // Native result may reject LEARN/SETTINGS after transport-level Accepted.
+    // Never present a denied owner, provider, SID, ACL or consent result as done.
+    private static bool NativeOwnerStatusDenied(string? status)
+    {
+        if (string.IsNullOrWhiteSpace(status)) return true;
+        var value = status.Trim().ToUpperInvariant();
+        if (value is "HOLD" or "DENIED" or "ERROR" or "FAILED" or "REJECTED" or
+            "OFFLINE" or "UNAVAILABLE" or "NOT_READY" or "AWAITING_CONSENT" or
+            "NEEDS_CONSENT" or "CONSENT_PENDING" or "NOT_AUTHORIZED" or
+            "NOT_AUTHENTICATED" or "FORBIDDEN") return true;
+        return value.EndsWith("_HOLD", StringComparison.Ordinal) ||
+               value.EndsWith("_DENIED", StringComparison.Ordinal) ||
+               value.EndsWith("_REJECTED", StringComparison.Ordinal) ||
+               value.EndsWith("_FAILED", StringComparison.Ordinal) ||
+               value.EndsWith("_ERROR", StringComparison.Ordinal) ||
+               value.EndsWith("_REQUIRED", StringComparison.Ordinal) ||
+               value.EndsWith("_MISMATCH", StringComparison.Ordinal) ||
+               value.EndsWith("_UNAVAILABLE", StringComparison.Ordinal) ||
+               value.EndsWith("_OFFLINE", StringComparison.Ordinal) ||
+               value.StartsWith("NOT_AUTHORIZED", StringComparison.Ordinal) ||
+               value.StartsWith("NOT_AUTHENTICATED", StringComparison.Ordinal);
+    }
+
+    // Original transport and original native owner must BOTH agree on success.
     private static bool NativeResultExplicitlyDenied(JsonElement? candidate)
     {
         if (candidate is not JsonElement result || result.ValueKind != JsonValueKind.Object)
@@ -395,16 +419,11 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
             }
             if (field.Name is "status" or "state")
             {
-                if (field.Value.ValueKind != JsonValueKind.String)
-                    return true;
-                var state = field.Value.GetString();
-                if (state is null ||
-                    state.EndsWith("_HOLD", StringComparison.OrdinalIgnoreCase) ||
-                    state.EndsWith("_DENIED", StringComparison.OrdinalIgnoreCase) ||
-                    state is "HOLD" or "DENIED" or "ERROR" or "FAILED" or "REJECTED")
+                if (field.Value.ValueKind != JsonValueKind.String ||
+                    NativeOwnerStatusDenied(field.Value.GetString()))
                     return true;
             }
-            if (field.Name is "result" or "receipt" or "nativeResult" &&
+            if (field.Name is "result" or "receipt" or "nativeResult" or "owner" &&
                 NativeResultExplicitlyDenied(field.Value))
                 return true;
         }

@@ -66,6 +66,22 @@ class OriginalNativeOwnerMenuStopR83(unittest.TestCase):
         self.assertIn('field.Name is "result" or "receipt" or "nativeResult"', self.bridge)
         self.assertIn('"NATIVE_OWNER_RESULT_HOLD"', self.bridge)
 
+    def test_learn_settings_native_denial_is_not_completion(self):
+        # SOURCE_ONLY assertion; native Windows WPF and E07 are separate.
+        scope = self.bridge.split("private static bool NativeOwnerStatusDenied(", 1)[1].split(
+            "private async void OnWebMessageReceived(", 1)[0]
+        for label in ("_HOLD", "_DENIED", "_REQUIRED", "_MISMATCH",
+                      "_UNAVAILABLE", "_OFFLINE", "CONSENT_PENDING",
+                      "NOT_AUTHORIZED", "AWAITING_CONSENT"):
+            with self.subTest(label=label):
+                self.assertIn('"' + label + '"', scope)
+        self.assertIn('NativeOwnerStatusDenied(field.Value.GetString())', scope)
+        self.assertIn('field.Name is "result" or "receipt" or "nativeResult" or "owner"', scope)
+        self.assertIn('NativeResultExplicitlyDenied(ownerResult.Result)', self.bridge)
+        self.assertIn('NativeResultExplicitlyDenied(result.Result)', self.bridge)
+        self.assertIn('!await _nativeConsent(route, payload.Clone(), cancel)', self.bridge)
+        self.assertIn('!_nativeAcl(_ownerWindowsSid, route)', self.bridge)
+
     def test_original_builder_and_compiler_pins_are_coherent(self):
         for filename, sha in ((OWNER, git_blob(OWNER)), (BRIDGE, git_blob(BRIDGE))):
             with self.subTest(path=filename.name):
