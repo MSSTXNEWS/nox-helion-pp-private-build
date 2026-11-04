@@ -37,14 +37,17 @@ def load_real_result_branch():
     wrapper = ast.FunctionDef(
         name='respond',
         args=ast.arguments(posonlyargs=[], args=[ast.arg(arg=v)
-                    for v in ('func', 'session', 'args')], vararg=None,
+                    for v in ('func', 'session', 'args', 'route', 'job_id')], vararg=None,
                     kwonlyargs=[], kw_defaults=[], kwarg=None,
-                    defaults=[]),
+                    defaults=[ast.Constant(value='models.queue'), ast.Constant(value=None)]),
         body=[branch], decorator_list=[])
     module = ast.fix_missing_locations(ast.Module(body=[wrapper], type_ignores=[]))
     namespace = {'P03PortHold': P03PortHold, 'P03PortDenied': P03PortDenied}
     exec(compile(module, str(SOURCE), 'exec'), namespace)
-    return lambda value: namespace['respond'](lambda *_: value, None, {})
+    # The response branch is REAL production AST; supply its route/job guard
+    # scope explicitly rather than masking NameError as a false operation HOLD.
+    return lambda value, route='models.queue', job_id=None: namespace['respond'](
+        lambda *_: value, None, {}, route, job_id)
 
 
 class P03RealAckBranchTest(unittest.TestCase):
@@ -76,6 +79,18 @@ class P03RealAckBranchTest(unittest.TestCase):
         value = {'status': 'COMPLETED', 'result': {'cancelled': False}}
         self.assertEqual(self.respond(value), value)
         self.assertFalse(self.respond(value)['result']['cancelled'])
+
+    def test_cancel_retry_ack_identity_on_actual_source_branch(self):
+        for route, status in (('models.cancel', 'CANCEL_REQUESTED'),
+                              ('models.retry', 'QUEUED')):
+            with self.subTest(route=route):
+                wrong = {'jobId': 'foreign', 'status': status}
+                with self.assertRaises(P03PortHold):
+                    self.respond(wrong, route=route, job_id='requested')
+                valid = {'jobId': 'requested', 'status': status}
+                self.assertEqual(self.respond(valid, route=route, job_id='requested'), valid)
+                with self.assertRaises(P03PortHold):
+                    self.respond({'status': status}, route=route, job_id='requested')
 
 
 class P03InvocationTest(unittest.TestCase):
