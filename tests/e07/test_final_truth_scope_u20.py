@@ -51,8 +51,10 @@ class FunctionalTruth(unittest.TestCase):
                   if isinstance(n,ast.FunctionDef) and n.name=="run")
         attempt=next(n for n in main.body
                      if isinstance(n,ast.FunctionDef) and n.name=="attempt")
-        snippet=textwrap.indent(textwrap.dedent("".join(
-            source.splitlines(keepends=True)[attempt.lineno-1:attempt.end_lineno])), "    ")
+        # AST positions count logical Python lines, while splitlines() also
+        # splits Unicode separators inside embedded script literals. Rebuild
+        # the tested real function from its AST to avoid shifted line slices.
+        snippet=textwrap.indent(ast.unparse(attempt), "    ")
         namespace={"e07":module.e07,"subprocess":module.subprocess}
         exec("def owner():\n    actions={}\n"+
              snippet+"\n    return attempt,actions\n",namespace)
