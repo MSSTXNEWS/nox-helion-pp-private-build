@@ -8,6 +8,7 @@ import argparse
 import base64
 import json
 import os
+import re
 from pathlib import Path
 import subprocess
 import sys
@@ -179,7 +180,13 @@ def is_real_visual_witness(obj):
         obj.get("adaptive_layout") == "NOT_TESTED" and
         obj.get("reduced_motion") == "NOT_TESTED" and
         type(pic) is dict and pic.get("physical_capture") == "PASS" and
-        type(pic.get("sha256")) is str and len(pic["sha256"]) == 64 and
+        type(pic.get("sha256")) is str and
+        re.fullmatch(r"[0-9a-f]{64}", pic["sha256"]) is not None and
+        type(pic.get("bytes")) is int and 30_000 <= pic["bytes"] <= 16_000_000 and
+        type(pic.get("width")) is int and 640 <= pic["width"] <= 7680 and
+        type(pic.get("height")) is int and 480 <= pic["height"] <= 4320 and
+        pic.get("independent_visual_review") == "NOT_RUN" and
+        pic.get("reduced_motion") == "NOT_TESTED" and
         type(fx) is dict and fx.get("fx_control") == "PASS" and
         obj.get("original_wpf_ipc") == "PASS" and
         all(obj.get(k) == "PASS" for k in ("update", "rollback", "uninstall")))

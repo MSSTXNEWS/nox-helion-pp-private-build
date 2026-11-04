@@ -17,7 +17,10 @@ class SourceVisualProof(unittest.TestCase):
           "setup_sha256":e07.NEW_D02_SETUP_SHA,"release_accepted":False,
           "visual_e07":"HOLD","adaptive_layout":"NOT_TESTED",
           "reduced_motion":"NOT_TESTED",
-          "photo":{"physical_capture":"PASS","sha256":"a"*64},
+          "photo":{"physical_capture":"PASS","sha256":"a"*64,
+                   "bytes":200000,"width":1044,"height":788,
+                   "independent_visual_review":"NOT_RUN",
+                   "reduced_motion":"NOT_TESTED"},
           "fx":{"fx_control":"PASS"},"original_wpf_ipc":"PASS",
           "update":"PASS","rollback":"PASS","uninstall":"PASS"}
         self.assertTrue(module.is_real_visual_witness(good))
@@ -27,6 +30,16 @@ class SourceVisualProof(unittest.TestCase):
                             ("photo",None),("fx",None),("original_wpf_ipc","HOLD"),
                             ("update","HOLD"),("rollback","HOLD"),("uninstall","HOLD")):
             bad={**good,field:value}
+            self.assertFalse(module.is_real_visual_witness(bad),field)
+        for field,value in (("sha256","x"*64),("sha256","A"*64),
+                            ("bytes",True),("width",True),("height",0),
+                            ("independent_visual_review","PASS"),
+                            ("reduced_motion","PASS")):
+            bad={**good,"photo":{**good["photo"],field:value}}
+            self.assertFalse(module.is_real_visual_witness(bad),(field,value))
+        for field in ("bytes","width","height","independent_visual_review",
+                      "reduced_motion"):
+            bad={**good,"photo":{k:v for k,v in good["photo"].items() if k!=field}}
             self.assertFalse(module.is_real_visual_witness(bad),field)
         original=PATH.read_text(encoding="utf-8")
         for token in ('candidate="d02-91a6"','capture_window(hwnd, a.png)',
