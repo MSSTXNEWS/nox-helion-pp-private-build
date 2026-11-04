@@ -186,6 +186,11 @@ jobs:
           python -B -m unittest discover -s tests/e06 -p test_planetary_worlds_uplot_v2.py -v
           if ($LASTEXITCODE -ne 0) { throw 'NOX_PLANET_WORLDS_UPLOT_SOURCE_HOLD' }
           Write-Host 'PLANET_WORLDS_AND_LICENSED_NATIVE_CHARTS_SOURCE_PASS_NOT_E07'
+      - name: Node runtime interactive five-planet quality lifecycle
+        shell: pwsh
+        run: |
+          node --test integrations/wow200/tests/test_home_scene.mjs integrations/wow200/runtime/home-scene.lifecycle.r17.test.mjs
+          if ($LASTEXITCODE -ne 0) { throw 'NOX_D02_PLANET_RUNTIME_INTERACTION_HOLD' }
       - name: Real D02 staging unit tests and negative tampering cases
         shell: pwsh
         run: |
