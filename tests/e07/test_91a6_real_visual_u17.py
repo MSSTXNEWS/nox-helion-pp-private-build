@@ -34,5 +34,10 @@ class SourceVisualProof(unittest.TestCase):
                       'e07.sha256(a.png) == screenshots[0].get("sha256")'):
             self.assertIn(token,original)
         self.assertNotIn('result["visual_e07"] = "PASS"',original)
+        self.assertIn('photo_errors[0] if photo_errors else', original)
+        self.assertIn('fx_errors[0] if fx_errors else', original)
+        self.assertIn('result["physical_capture"] = "PASS"', original)
+        self.assertIn('result["witness_status"] = "PASS"', original)
+        self.assertIn('return 0 if result["witness_status"] == "PASS" else 2', original)
 if __name__=="__main__":
     unittest.main()

@@ -43,7 +43,8 @@ def main():
         "build_id": e07.NEW_D02_BUILD_ID,
         "release_accepted": False, "visual_e07": "HOLD",
         "adaptive_layout": "NOT_TESTED", "reduced_motion": "NOT_TESTED",
-        "physical_capture": "HOLD", "first_unmet_gate": "NOT_RUN"}
+        "physical_capture": "HOLD", "witness_status": "HOLD",
+        "first_unmet_gate": "NOT_RUN"}
     try:
         e07.require(sys.platform == "win32" and
             os.getenv("GITHUB_ACTIONS") == "true" and
@@ -64,10 +65,20 @@ def main():
                     "U17_SETUP_SHA_HOLD")
         screenshots = []
         fx_states = []
+        photo_errors = []
+        fx_errors = []
         previous = e07.observe_original_primary_buttons
         def probe(hwnd):
-            screenshots.append(capture_window(hwnd, a.png))
-            fx_states.append(probe_fx_cycle(hwnd))
+            try:
+                screenshots.append(capture_window(hwnd, a.png))
+            except e07.Hold as error:
+                photo_errors.append(str(error))
+            try:
+                fx_states.append(probe_fx_cycle(hwnd))
+            except e07.Hold as error:
+                fx_errors.append(str(error))
+            # Even when the optional photo or FX test fails, the original GUI
+            # observer still runs and the E07 lifecycle gets to uninstall.
             return previous(hwnd)
         checks = {}
         e07.observe_original_primary_buttons = probe
@@ -76,17 +87,27 @@ def main():
                           frozen_source=e07.NEW_D02_SOURCE_SHA, physical_nav=True)
         finally:
             e07.observe_original_primary_buttons = previous
-        e07.require(len(screenshots) == 1 and len(fx_states) == 1 and
-                    e07.clean_file(a.png) and
-                    e07.sha256(a.png) == screenshots[0].get("sha256"),
+        e07.require(len(screenshots) == 1,
+                    photo_errors[0] if photo_errors else
+                    "U17_PHYSICAL_SCREENSHOT_NOT_OBSERVED_HOLD")
+        e07.require(e07.clean_file(a.png),
+                    "U17_PHYSICAL_SCREENSHOT_MISSING_OR_REPARSE_HOLD")
+        e07.require(e07.sha256(a.png) == screenshots[0].get("sha256"),
                     "U17_PHYSICAL_SCREENSHOT_SHA_HOLD")
-        result.update(photo=screenshots[0], fx=fx_states[0],
+        result["photo"] = screenshots[0]
+        result["physical_capture"] = "PASS"
+        result["fx"] = fx_states[0] if len(fx_states) == 1 else {
+            "fx_control": "HOLD",
+            "reason": fx_errors[0] if fx_errors else "U17_FX_NOT_OBSERVED_HOLD"}
+        result.update(
             original_wpf_ipc=checks.get("installed_gui", {}).get("shell_native_ipc"),
             update=checks.get("update", {}).get("status"),
             rollback=checks.get("rollback", {}).get("status"),
             uninstall=checks.get("uninstall", {}).get("status"))
+        e07.require(len(fx_states) == 1,
+                    fx_errors[0] if fx_errors else "U17_FX_NOT_OBSERVED_HOLD")
         e07.require(is_real_visual_witness(result), "U17_PHYSICAL_UIA_OR_NSIS_HOLD")
-        result["physical_capture"] = "PASS"
+        result["witness_status"] = "PASS"
         result["first_unmet_gate"] = "ADAPTIVE_REDUCED_MOTION_AND_INDEPENDENT_VISUAL_REVIEW"
     except (e07.Hold, OSError, ValueError, KeyError, TimeoutError) as exc:
         result["first_unmet_gate"] = (
@@ -99,7 +120,7 @@ def main():
         a.out.write_text(json.dumps(result, indent=2, sort_keys=True), encoding="utf-8")
         print("U17_PHYSICAL_WPF_VISUAL", result["physical_capture"],
               result["first_unmet_gate"], flush=True)
-    return 0 if result["physical_capture"] == "PASS" else 2
+    return 0 if result["witness_status"] == "PASS" else 2
 
 if __name__ == "__main__":
     raise SystemExit(main())
