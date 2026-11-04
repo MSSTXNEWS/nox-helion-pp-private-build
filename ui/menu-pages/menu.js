@@ -105,14 +105,20 @@ async function nativeRequest(route,payload,label){
   // An authenticated transport COMPLETED envelope is not a native result.
   // Missing payload, unrelated route and explicit native owner HOLD stay HOLD.
   const data=reply?.result??reply?.data;
+  // A transport COMPLETED does not overrule native envelope HOLD/errorCode.
+  // Late replies cannot overwrite the status of a newer selected screen.
+  if(!output.isConnected)return;
   const valid=reply?.routeId===route&&reply?.state==='COMPLETED'&&
-    data!==null&&data!==undefined&&
+    !nativeOwnerReceiptHolds(reply)&&data!==null&&data!==undefined&&
     !(data&&typeof data==='object'&&!Array.isArray(data)&&nativeOwnerReceiptHolds(data));
   if(valid){
    output.textContent=JSON.stringify(data,null,2).slice(0,9000);
    say('Получены данные от OneHost. Выполнение всей функции отдельно не подтверждено.');
   }else{pending(label.id,label.name);say('Native обработчик пока не подтвердил действие.');}
- }catch{pending(label.id,label.name);say('Локальный OneHost недоступен или действие отклонено.');}
+ }catch{
+  if(!output.isConnected)return;
+  pending(label.id,label.name);say('Локальный OneHost недоступен или действие отклонено.');
+ }
 }
 
 /* LIVE native CHAT for EXPRESS. One existing WebView2 owner, bounded rendering and native STOP.
