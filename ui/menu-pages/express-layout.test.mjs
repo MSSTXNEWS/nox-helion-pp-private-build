@@ -18,7 +18,7 @@ test('the fifth graphical primary action opens the EXISTING settings route, not 
  assert.ok(WORLDS.some(world=>world.section==='system'&&world.routes.some(route=>route.id==='settings')));
  actual('REPORTS');
  assert.equal(opened.length,5,'deprecated REPORTS primary may not be silently substituted');
- assert.match(source,/P\.primary\.append/);
+ assert.match(source,/P\.actions\.append\(b\)/);
 });
 test('all 64 route ids are unique and discoverable',()=>{
  const ids=WORLDS.flatMap(w=>w.routes.map(r=>r.id));
