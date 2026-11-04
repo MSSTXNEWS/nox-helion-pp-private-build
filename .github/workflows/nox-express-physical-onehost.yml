@@ -1,7 +1,7 @@
 name: NOX EXPRESS single-SHA Windows Setup and source
 on:
   push:
-    branches: [integration/nox-v16-unified-candidate-20261028-r01]
+    branches: [integration/nox-v16-unified-candidate-20261028-r01, repair/nox-express-freeze-u01-native-model-ack-20261104]
     paths:
       - .github/workflows/nox-express-physical-onehost.yml
       - coordination/e06/t06_frozen_source_coverage.py
@@ -16,6 +16,7 @@ on:
       - ui/menu-pages/menu.js
       - ui/onehost-menu-bindings.mjs
       - tests/ui/test_u06_chat_model_selection_ack.mjs
+      - tests/ui/test_u09_legacy_native_model_ack.mjs
       - src/nox_selfbuilder/onehost_builder.py
       - src/nox_selfbuilder/nx03_model_firstcycle.py
       - src/nox_selfbuilder/firstcycle_native.py
@@ -83,6 +84,9 @@ jobs:
           # Source-extracted Node test, NOT a live Ollama or independent E07 PASS.
           node --test tests/ui/test_u06_chat_model_selection_ack.mjs
           if ($LASTEXITCODE -ne 0) { throw 'P02_NATIVE_MODEL_ACK_SERIAL_REGRESSION_HOLD' }
+          # Frozen candidate: exact native chat.model ACK and in-flight Send fail closed.
+          node --test tests/ui/test_u09_legacy_native_model_ack.mjs
+          if ($LASTEXITCODE -ne 0) { throw 'P02_FROZEN_NATIVE_MODEL_ACK_HOLD' }
           python -B -m unittest discover -s tests/e06 -p test_t06_nx03_stage_pin_r118.py -v
           if ($LASTEXITCODE -ne 0) { throw 'T06_NX03_NATIVE_STAGE_PIN_HOLD' }
           python -B -m unittest discover -s tests/e06 -p test_t06_nsis_uninstall_quote_r128.py -v
