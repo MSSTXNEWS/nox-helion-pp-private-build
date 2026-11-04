@@ -242,6 +242,64 @@ def stage_reviewed_installed_payload_verifier(owner_script, reviewed_script):
             "release_accepted": False}
 
 
+def stage_reviewed_ps51_sha_compat(owner_script: Path) -> dict:
+    """Keep C09 verification identical under the original NSIS PowerShell 5.1.
+
+    The immutable approved C09 source remains in Git. The active NSIS /S invokes
+    powershell.exe (not pwsh.exe); the separate original OneHost build route
+    already uses this same .NET SHA-256 helper for that host. Only a disposable
+    C07 staged copy can be transformed, after its exact approved Git blob is
+    independently verified. Unknown bytes fail without being overwritten.
+    """
+    need(owner_script.name == "Verify-Payload.ps1" and
+         owner_script.parent.name == "Installer" and
+         all(not part.is_symlink() and
+             not getattr(part, "is_junction", lambda: False)()
+             for part in (owner_script, *owner_script.parents)),
+         "T06_PS51_VERIFIER_UNSAFE_PATH_HOLD")
+    before = owner_script.read_bytes()
+    need(_git_blob(before) == P01_INSTALLED_VERIFIER_GIT_BLOB,
+         "T06_PS51_VERIFIER_UNAPPROVED_PREIMAGE_HOLD")
+    text = before.decode("utf-8-sig")
+    old_header = "$ErrorActionPreference = 'Stop'"
+    old_hash = "  $actual = (Get-FileHash -LiteralPath $full -Algorithm SHA256).Hash.ToLowerInvariant()"
+    need(text.count(old_header) == 1 and text.count(old_hash) == 1 and
+         "Get-P01VerifiedSha256" not in text and
+         all(marker in text for marker in (
+             "Assert-P01UniqueManifestMembers", "Assert-NoReparseAncestors",
+             "P01_PAYLOAD_VERIFY_FAILED", "sha mismatch", "Uninstall.exe")),
+         "T06_PS51_VERIFIER_CONTRACT_PREIMAGE_HOLD")
+    helper = """function Get-P01VerifiedSha256([string]$Path) {
+  $inputStream=$null
+  $digest=$null
+  try {
+    $inputStream=[IO.File]::Open($Path,[IO.FileMode]::Open,[IO.FileAccess]::Read,[IO.FileShare]::Read)
+    $digest=[Security.Cryptography.SHA256]::Create()
+    return ([BitConverter]::ToString($digest.ComputeHash($inputStream))).Replace('-','').ToLowerInvariant()
+  } finally {
+    if ($null -ne $digest) { $digest.Dispose() }
+    if ($null -ne $inputStream) { $inputStream.Dispose() }
+  }
+}
+"""
+    eol = "\r\n" if "\r\n" in text else "\n"
+    helper = helper.replace("\n", eol)
+    updated = text.replace(old_header, old_header + eol + helper + eol).replace(
+        old_hash, "  $actual = Get-P01VerifiedSha256 $full")
+    changed = updated.encode("utf-8")
+    need(changed != before and updated.count("Get-P01VerifiedSha256") == 2 and
+         old_hash not in updated and "Get-FileHash" not in updated,
+         "T06_PS51_VERIFIER_TRANSFORM_HOLD")
+    owner_script.write_bytes(changed)
+    need(owner_script.read_bytes() == changed,
+         "T06_PS51_VERIFIER_STAGED_READBACK_HOLD")
+    return {"approved_preimage_git_blob": P01_INSTALLED_VERIFIER_GIT_BLOB,
+            "staged_sha256": hashlib.sha256(changed).hexdigest(),
+            "staged_bytes": len(changed),
+            "compatibility_scope": "POWERSHELL51_DOTNET_SHA256_ONLY",
+            "release_accepted": False}
+
+
 # Reuse approved C09 original NSIS registry line only in disposable C07 stage.
 C09_NSIS_REVIEW_BLOB = "87d901c3846359a91be3e8288f24302cc7060257"
 C07_NSIS_REGISTRY_LINE_SHA256 = "6ab87005e57b21c50252b13173784aafc348aeff3953aef60e1226f6154651d4"
@@ -563,8 +621,14 @@ def build(root,staged):
         "stage/proposals/P01/C09/Installer/Verify-Payload.ps1")
     print("T06_P01_INSTALLED_VERIFIER_PINNED_SOURCE_ONLY "+
           json.dumps(verifier_proof,sort_keys=True),flush=True)
-    # GitHub Windows runner PowerShell 7 has Get-FileHash available; the
-    # original C09 verifier is still executed unchanged, with the same manifest.
+    # NSIS /S and original same-VM installed rollback both invoke powershell.exe.
+    # Reuse the already-reviewed PS5.1 .NET SHA helper in this disposable C07
+    # copy only, after the exact C09 Git-blob admission above; no policy relaxed.
+    verifier_ps51_proof=stage_reviewed_ps51_sha_compat(
+        installer_dir/"Verify-Payload.ps1")
+    print("T06_P01_VERIFIER_PS51_STAGED_SHA "+
+          json.dumps(verifier_ps51_proof,sort_keys=True),flush=True)
+    # Verify the EXACT copy that NSIS compiles against before emitting Setup.
     proof=subprocess.run(["pwsh.exe","-NoProfile","-NonInteractive",
         "-ExecutionPolicy","Bypass","-File",
         str(installer_dir/"Verify-Payload.ps1"),"-Root",str(payload),
