@@ -126,8 +126,8 @@ def setup_lock(setup: Path, receipt: Path) -> dict:
             smoke.get("setup_sha256") == SETUP_SHA and
             smoke.get("release_accepted") is False and
             smoke.get("e07_independent_acceptance") == "NOT_RUN" and
-            type(smoke.get("uninstall_owned_files_checked")) is int and
-            smoke["uninstall_owned_files_checked"] == 1004 and
+            type(stages.get("uninstall_owned_files_checked")) is int and
+            stages["uninstall_owned_files_checked"] == 1004 and
             type(stages) is dict and
             all(type(stages.get(name)) is dict and
                 type(stages[name].get("code")) is int and

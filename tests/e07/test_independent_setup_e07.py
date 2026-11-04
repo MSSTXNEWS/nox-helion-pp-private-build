@@ -252,4 +252,11 @@ class IndependentE07(unittest.TestCase):
             with self.assertRaisesRegex(MOD.Hold,"E07_E06_RECEIPT_NOT_REGULAR"):
                 MOD.setup_lock(setup,receipt)
 
+
+    def test_smoke_owned_count_is_nested_in_installer_lifecycle(self):
+        source = FILE.read_text(encoding="utf-8")
+        self.assertIn('type(stages.get("uninstall_owned_files_checked")) is int', source)
+        self.assertIn('stages["uninstall_owned_files_checked"] == 1004', source)
+        self.assertNotIn('smoke.get("uninstall_owned_files_checked")', source)
+
 if __name__=='__main__':unittest.main()
