@@ -22,6 +22,13 @@ class BridgeLifecycleR147(unittest.TestCase):
                 "release_accepted":False,"e07_independent_acceptance":"NOT_RUN",
                 "original_home_and_core01_sha_verified":True,
                 "installer_lifecycle":{
+                    **{name:{"code":0} for name in (
+                        "preflight_final","install","verify","update",
+                        "backup_payload_verify","rollback",
+                        "rollback_payload_restored","rollback_payload_superseded",
+                        "uninstall")},
+                    "uninstall_owned_files_checked":485,
+                    "uninstall_registry_views_checked":2,
                     "original_wpf_gui":{"new_nav_ok":True,"new_python_ipc_handshake":True},
                     "native_ipc":{"route":"models.installed","status":("PROVIDER_OFFLINE_HOLD" if offline else "PASS"),
                                   "model_inventory_route_verified":not offline,
@@ -57,6 +64,35 @@ class BridgeLifecycleR147(unittest.TestCase):
             data=self.fixture();data["installer_lifecycle"]["original_wpf_gui"][key]=False
             with self.assertRaisesRegex(RuntimeError,"T06_M1_REAL_WINDOWS_GUI_IPC_LIFECYCLE_GATE_HOLD"):
                 verify(data,{"return_code":0})
+    def test_no_physical_stage_can_be_skipped_or_faked(self):
+        stages=("preflight_final","install","verify","update",
+                "backup_payload_verify","rollback","rollback_payload_restored",
+                "rollback_payload_superseded","uninstall")
+        for stage in stages:
+            for invalid in (None,{},{"code":1},{"code":False},
+                            {"code":"0"},{"code":0.0}):
+                with self.subTest(stage=stage,invalid=invalid):
+                    data=self.fixture()
+                    data["installer_lifecycle"][stage]=invalid
+                    with self.assertRaisesRegex(RuntimeError,
+                            "T06_M1_REAL_WINDOWS_GUI_IPC_LIFECYCLE_GATE_HOLD"):
+                        verify(data,{"return_code":0})
+
+    def test_owned_uninstall_receipt_must_be_physical(self):
+        for key,invalid in (("uninstall_owned_files_checked",None),
+                            ("uninstall_owned_files_checked",False),
+                            ("uninstall_owned_files_checked",0),
+                            ("uninstall_owned_files_checked","485"),
+                            ("uninstall_registry_views_checked",True),
+                            ("uninstall_registry_views_checked",0),
+                            ("uninstall_registry_views_checked","2")):
+            with self.subTest(key=key,invalid=invalid):
+                data=self.fixture(False)
+                data["installer_lifecycle"][key]=invalid
+                with self.assertRaisesRegex(RuntimeError,
+                        "T06_M1_REAL_WINDOWS_GUI_IPC_LIFECYCLE_GATE_HOLD"):
+                    verify(data,{"return_code":0})
+
     def test_no_silent_undocumented_phase(self):
         data=self.fixture();data["phase"]="INSTALLED_GUI_IPC_UPDATE_ROLLBACK_NOLOSS_PASS_NOT_E07"
         with self.assertRaisesRegex(RuntimeError,"T06_M1_REAL_WINDOWS_GUI_IPC_LIFECYCLE_GATE_HOLD"):
