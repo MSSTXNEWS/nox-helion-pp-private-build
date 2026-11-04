@@ -64,8 +64,15 @@ def join_and_verify_wpf():
     manifest_path=ROOT/"donors/P01_C07/P01_C07_RECEIPT.json"
     with reader(manifest_path) as stream:
         manifest=json.load(stream)
+    require(type(manifest) is dict and type(manifest.get("parts")) is list and
+            len(manifest["parts"]) == 28, "MB1_WPF_PART_MANIFEST_HOLD")
     combined=io.BytesIO();digest=hashlib.sha256()
-    for part in manifest["parts"]:
+    for index, part in enumerate(manifest["parts"]):
+        # A SHA-matching donor may not be selected outside the 28 immutable
+        # SourceLock-owned names by an altered provenance manifest.
+        require(type(part) is dict and
+                part.get("path") == f"donors/P01_C07/P01_C07_{index:02d}.part",
+                "MB1_WPF_PART_PATH_HOLD")
         f=ROOT/part["path"]
         require(f.is_file() and not f.is_symlink(),"MB1_WPF_PART_MISSING")
         with reader(f) as stream:
