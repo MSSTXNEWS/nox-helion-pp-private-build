@@ -14,3 +14,7 @@ assert.equal(forged.verified.a1,false);
 const late=firstBootTruth({routeId:'chat.commands',state:'HOLD',result:{schema:'NOX-A1-NATIVE-COMMAND-STATUS-v1',state:'ACTIVE_NATIVE_BOOT_RECEIPT',native_bound:true}},null,null);
 assert.equal(late.verified.a1,false);
 console.log('FIRSTBOOT_TRUTH_PASS 9 ASSERTIONS');
+
+const providerHold=firstBootTruth(null,null,{routeId:'chat.model',state:'COMPLETED',result:{status:'HOLD',models:[{name:'fake'}]}});
+assert.equal(providerHold.verified.modelInventory,false);
+assert.equal(firstBootTruth(null,{routeId:'chat.commands',state:'COMPLETED',result:{status:'SOURCE_SERVICE',ack:false,actions:{'selfbuilder.propose':{available:true,status:'AVAILABLE'}}}},null).verified.selfbuildRequest,false);

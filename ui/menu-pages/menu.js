@@ -448,19 +448,26 @@ async function showNativeFirstBoot(){
  const title=el('h2','','NOX HELION · ПЕРВЫЙ ЗАПУСК');
  const message=el('p','', 'Получаю подтверждения OneHost...');
  const facts=el('ul','');
- panel.append(title,message,facts);
+ const verify=button('ПРОВЕРИТЬ ONEHOST','nox-firstboot-verify',()=>{void refresh();});
+ panel.append(title,message,verify,facts);
  const style=el('style','',`.nox-firstboot-truth{margin:12px auto;padding:12px 16px;max-width:940px;border:1px solid #80d7e155;border-radius:16px;background:rgba(9,20,29,.85);color:#d7f5fb}.nox-firstboot-truth h2{font-size:14px;letter-spacing:.12em}.nox-firstboot-truth p,.nox-firstboot-truth li{font-size:13px}.nox-firstboot-truth ul{display:flex;flex-wrap:wrap;gap:8px 18px;padding:0;list-style:none}.nox-firstboot-truth li{border:1px solid #80d7e133;padding:5px 9px;border-radius:10px}@media(prefers-reduced-motion:reduce){.nox-firstboot-truth *{animation:none!important}}`);
  panel.prepend(style);
  P.status.insertAdjacentElement('afterend',panel);
  const get=async(route,payload)=>{try{return await client.request(route,payload);}catch{return null;}};
- const replies=client?await Promise.all([
-   get('chat.commands',{action:'selfbuilder.a1.status'}),
-   get('chat.commands',{action:'selfbuilder.capabilities'}),
-   get('chat.model',{})
- ]):[null,null,null];
- if(!panel.isConnected)return;
- const truth=firstBootTruth(...replies);
- message.textContent=truth.summary;
- facts.replaceChildren(...truth.items.map(([name,value])=>el('li','',name+' · '+value)));
+ async function refresh(){
+  if(!client||!panel.isConnected){message.textContent='OneHost недоступен · HOLD';return;}
+  verify.disabled=true;message.textContent='Проверяю реальные подтверждения OneHost...';
+  try{
+   const replies=await Promise.all([get('chat.commands',{action:'selfbuilder.a1.status'}),
+     get('chat.commands',{action:'selfbuilder.capabilities'}),get('chat.model',{})]);
+   if(!panel.isConnected)return;
+   const truth=firstBootTruth(...replies);
+   message.textContent=truth.summary;
+   facts.replaceChildren(...truth.items.map(([name,value])=>el('li','',name+' · '+value)));
+  }finally{verify.disabled=false;}
+ }
+ if(!client){verify.disabled=true;message.textContent='OneHost недоступен · HOLD';}
+ else message.textContent='Для проверки нажмите кнопку. Разрешения подтверждает Windows.';
+
 }
 void showNativeFirstBoot();
