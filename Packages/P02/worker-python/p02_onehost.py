@@ -79,6 +79,23 @@ class OneHostP02(ExistingP02Adapter):
                     raise ProtocolHold('NATIVE_CHAT_STOP')
                 with self._selection_lock:
                     self._selected = requested
+        # First-launch convenience on the owner's local machine: the user has
+        # already installed and configured this named Ollama model. Never
+        # download, impersonate the native owner or bypass S03 lineage/STOP.
+        if requested is None and 'nox-helion:latest' in models:
+            with self._selection_lock:
+                needs_default = self._selected not in models
+            if needs_default:
+                lineage_gate = getattr(self.store, 'assert_model_switch_safe', None)
+                if callable(lineage_gate):
+                    # Exactly the same frozen-lineage gate as explicit model selection.
+                    lineage_gate()
+                    with self._stop_lock:
+                        if (self._stop_generation == selection_stop_generation
+                                and not self.stop_event.is_set()):
+                            with self._selection_lock:
+                                if self._selected not in models:
+                                    self._selected = 'nox-helion:latest'
         with self._selection_lock:
             if self._selected not in models:
                 self._selected = None
