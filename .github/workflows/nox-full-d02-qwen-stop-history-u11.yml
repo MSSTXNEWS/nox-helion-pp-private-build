@@ -1,0 +1,161 @@
+name: NOX FULL D02 pinned Windows live Qwen + SQLite restart + native active STOP U11
+on:
+  push:
+    branches: [integration/nox-v16-unified-candidate-20261028-r01]
+    paths:
+      - .github/workflows/nox-full-d02-qwen-stop-history-u11.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: nox-full-d02-live-qwen-u11-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  live-qwen-on-installed-nox:
+    if: github.repository == 'MSSTXNEWS/nox-helion-pp-private-build'
+    runs-on: windows-2022
+    timeout-minutes: 65
+    steps:
+      - name: Checkout exact QA source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Use pinned Python 3.12 on Windows
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12.10'
+          architecture: x64
+          check-latest: false
+      - name: Compile existing installed Qwen native probe before costly downloads
+        shell: pwsh
+        run: |
+          python -B -m py_compile coordination/e07/probe_installed_qwen.py
+          if ($LASTEXITCODE -ne 0) { throw 'QWEN_PROBE_SYNTAX_HOLD' }
+      - name: Download already-verified Ollama Windows installer
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 41324910974
+          name: nox-r11-official-ollama-41324910974
+          github-token: ${{ github.token }}
+          path: input/ollama
+      - name: Download exact successful NOX Windows Setup
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 41818231793
+          name: nox-v16-e06-onehost-diagnostic-41818231793
+          github-token: ${{ github.token }}
+          path: input/nox
+      - name: Verify both physical installers without relaxing any source pins
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $ollama='input/ollama/OllamaSetup-v0.40.13-x64.exe'
+          $candidateFiles=@(Get-ChildItem -LiteralPath 'input/nox' -File -Recurse -Filter 'NOX-HELION-V16-DIAGNOSTIC-SETUP.exe' -ErrorAction Stop)
+          if ($candidateFiles.Count -ne 1) { throw 'FULL_D02_SETUP_UNIQUE_ARTIFACT_HOLD' }
+          $nox=$candidateFiles[0].FullName
+          $setupItem=Get-Item -LiteralPath $nox -Force -ErrorAction Stop
+          if (($setupItem.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { throw 'FULL_D02_SETUP_REPARSE_HOLD' }
+          if (-not (Test-Path -LiteralPath $ollama -PathType Leaf)) { throw 'PINNED_OLLAMA_INSTALLER_NOT_FOUND' }
+          if (-not (Test-Path -LiteralPath $nox -PathType Leaf)) { throw 'PINNED_NOX_SETUP_NOT_FOUND' }
+          if ((Get-Item -LiteralPath $ollama).Length -ne 1676266440) { throw 'OLLAMA_ORIGINAL_BYTES_HOLD' }
+          if ((Get-FileHash -LiteralPath $ollama -Algorithm SHA256).Hash.ToLowerInvariant() -ne '9e3c76e54e7184c68e88a2378b909bf59bbe454f83c076cb4f4a717e946ae719') { throw 'OLLAMA_ORIGINAL_SHA256_HOLD' }
+          $sig=Get-AuthenticodeSignature -LiteralPath $ollama
+          if ($sig.Status -ne 'Valid') { throw 'OLLAMA_AUTHENTICODE_NOT_VALID_HOLD' }
+          if ((Get-Item -LiteralPath $nox).Length -lt 10485760) { throw 'FULL_D02_SETUP_BYTES_HOLD' }
+          if ((Get-FileHash -LiteralPath $nox -Algorithm SHA256).Hash.ToLowerInvariant() -ne '71fb254ae8feeefb49f4830e57974c8be59b96f1b049915edd9eaa09714d4092') { throw 'NOX_SETUP_SHA256_HOLD' }
+          Write-Host 'PINNED_SIGNED_OLLAMA_AND_PHYSICAL_FULL_D02_SETUP_SHA256_PASS_NO_RELEASE'
+      - name: Install Ollama from verified bytes and start original local provider
+        shell: pwsh
+        timeout-minutes: 12
+        run: |
+          $ErrorActionPreference='Stop'
+          $env:OLLAMA_NO_CLOUD='1'
+          $env:OLLAMA_HOST='127.0.0.1:11434'
+          $p=Start-Process -FilePath (Resolve-Path 'input/ollama/OllamaSetup-v0.40.13-x64.exe').Path -ArgumentList '/VERYSILENT /NORESTART /SUPPRESSMSGBOXES /SP-' -PassThru
+          # Wait only for the installer process, not the long-lived Ollama app children.
+          if (-not $p.WaitForExit(180000)) { throw 'OLLAMA_INSTALLER_PROCESS_TIMEOUT_HOLD' }
+          if ($p.ExitCode -ne 0) { throw 'OLLAMA_INSTALL_EXIT_HOLD' }
+          $ollama=Join-Path $env:LOCALAPPDATA 'Programs/Ollama/ollama.exe'
+          if (-not (Test-Path -LiteralPath $ollama -PathType Leaf)) { throw 'OLLAMA_INSTALLED_CLI_ABSENT' }
+          $env:OLLAMA_CLI=$ollama
+          $proc=Start-Process -FilePath $ollama -ArgumentList 'serve' -WindowStyle Hidden -PassThru
+          $ready=$false
+          for($i=0;$i -lt 120;$i++) {
+            Start-Sleep -Seconds 2
+            try {
+              $health=Invoke-RestMethod -Uri 'http://127.0.0.1:11434/api/tags' -TimeoutSec 3 -ErrorAction Stop
+              if ($null -ne $health.models) { $ready=$true; break }
+            } catch { }
+            if ($proc.HasExited) { throw 'OLLAMA_LOCAL_SERVER_EXITED' }
+          }
+          if (-not $ready) { throw 'OLLAMA_LOCAL_SERVER_NOT_READY' }
+          Write-Host 'REAL_LOCAL_OLLAMA_API_READY_NO_MODEL_PASS_YET'
+      - name: Pull official Qwen2.5 Coder 1.5B and verify Ollama-reported manifest digest
+        shell: pwsh
+        timeout-minutes: 30
+        run: |
+          $ErrorActionPreference='Stop'
+          $env:OLLAMA_NO_CLOUD='1'
+          $env:OLLAMA_HOST='127.0.0.1:11434'
+          $ollama=Join-Path $env:LOCALAPPDATA 'Programs/Ollama/ollama.exe'
+          & $ollama pull qwen2.5-coder:1.5b
+          if ($LASTEXITCODE -ne 0) { throw 'QWEN_OFFICIAL_OCI_PULL_FAILED' }
+          $tags=Invoke-RestMethod -Uri 'http://127.0.0.1:11434/api/tags' -TimeoutSec 30 -ErrorAction Stop
+          $one=@($tags.models | Where-Object {$_.name -eq 'qwen2.5-coder:1.5b'})
+          if ($one.Count -ne 1 -or $one[0].digest -notmatch '^d7372fd82851[0-9a-f]{52}$') { throw 'QWEN_15B_MANIFEST_TAG_HOLD' }
+          Write-Host 'QWEN_15B_OFFICIAL_MANIFEST_DIGEST_PRESENT'
+      - name: Install the exact frozen NOX Setup and probe REAL installed OneHost
+        id: realprobe
+        shell: pwsh
+        timeout-minutes: 14
+        run: |
+          $ErrorActionPreference='Stop'
+          $env:OLLAMA_NO_CLOUD='1'
+          $env:OLLAMA_HOST='127.0.0.1:11434'
+          $candidateFiles=@(Get-ChildItem -LiteralPath 'input/nox' -File -Recurse -Filter 'NOX-HELION-V16-DIAGNOSTIC-SETUP.exe' -ErrorAction Stop)
+          if ($candidateFiles.Count -ne 1) { throw 'FULL_D02_SETUP_UNIQUE_ARTIFACT_HOLD' }
+          $nox=$candidateFiles[0].FullName
+          $setupItem=Get-Item -LiteralPath $nox -Force -ErrorAction Stop
+          if (($setupItem.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { throw 'FULL_D02_SETUP_REPARSE_HOLD' }
+          $p=Start-Process -FilePath $nox -ArgumentList '/S' -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw 'FULL_D02_EXACT_SETUP_INSTALL_FAILED' }
+          $backend=Join-Path $env:LOCALAPPDATA 'Programs/NOX HELION/Backend/NOX_HELION_PRIVATE_CANDIDATE.exe'
+          if (-not (Test-Path -LiteralPath $backend -PathType Leaf)) { throw 'FULL_D02_INSTALLED_ONEHOST_MISSING' }
+          python -B coordination/e07/probe_installed_qwen.py --backend "$backend" --out work/qwen-installed/QWEN_INSTALLED_RECEIPT.json
+          if ($LASTEXITCODE -ne 0) { throw 'NOX_INSTALLED_QWEN_OR_STREAM_HOLD' }
+          Write-Host 'FULL_D02_QWEN_NATIVE_HISTORY_PROBE_PASS_E07_STILL_HOLD'
+      - name: Real in-flight STOP in SAME installed FULL D02 OneHost on identical SetupSHA
+        id: native_active_stop
+        shell: pwsh
+        timeout-minutes: 8
+        run: |
+          $ErrorActionPreference='Stop'
+          $env:OLLAMA_NO_CLOUD='1'
+          $env:OLLAMA_HOST='127.0.0.1:11434'
+          $backend=Join-Path $env:LOCALAPPDATA 'Programs/NOX HELION/Backend/NOX_HELION_PRIVATE_CANDIDATE.exe'
+          if (-not (Test-Path -LiteralPath $backend -PathType Leaf)) { throw 'FULL_D02_NATIVE_STOP_OWNER_MISSING' }
+          $dataDir=Join-Path $env:RUNNER_TEMP 'NOX-U11-ACTIVE-STOP-DATA'
+          New-Item -ItemType Directory -Path $dataDir -Force -ErrorAction Stop | Out-Null
+          python -B coordination/e07/probe_native_active_stop.py --backend "$backend" --data-dir "$dataDir" --model 'qwen2.5-coder:1.5b' --out work/qwen-installed/ACTIVE_STOP_FULL_D02_RECEIPT.json
+          if ($LASTEXITCODE -ne 0) { throw 'FULL_D02_NATIVE_ACTIVE_STREAM_STOP_HOLD' }
+          $proof=Get-Content -LiteralPath 'work/qwen-installed/ACTIVE_STOP_FULL_D02_RECEIPT.json' -Raw -Encoding UTF8 | ConvertFrom-Json
+          if ($proof.native_active_stop -cne 'PASS' -or $proof.interrupted_chat_terminal -cne 'NATIVE_CHAT_STOP' -or $proof.native_stop_ack -cne 'PASS' -or $proof.release_accepted -ne $false) { throw 'FULL_D02_NATIVE_STOP_PROOF_HOLD' }
+          Write-Host 'FULL_D02_NATIVE_ACTIVE_STOP_PASS_NO_E07'
+      - name: Preserve evidence without falsely promoting incomplete release
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: NOX-FULL-D02-LIVE-STOP-HISTORY-U11-${{ github.sha }}-${{ github.run_id }}
+          path: |
+            work/qwen-installed/QWEN_INSTALLED_RECEIPT.json
+            work/qwen-installed/ACTIVE_STOP_FULL_D02_RECEIPT.json
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Do not promote a provider-only pass to a NOX release
+        if: always()
+        shell: pwsh
+        run: |
+          if ('${{ steps.realprobe.outcome }}' -ne 'success') { throw 'NOX_REAL_QWEN_INSTALLED_HOLD' }
+          if ('${{ steps.native_active_stop.outcome }}' -ne 'success') { throw 'FULL_D02_NATIVE_STOP_GATE_HOLD' }
+          Write-Host 'FULL_D02_LIVE_CHAT_SQLITE_RESTART_AND_ACTIVE_STOP_PASSED_NO_INDEPENDENT_E07'
