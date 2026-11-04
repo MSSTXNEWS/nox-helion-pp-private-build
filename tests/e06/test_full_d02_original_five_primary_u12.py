@@ -100,6 +100,41 @@ class D02OriginalFivePrimary(unittest.TestCase):
   self.assertEqual(self.home.read_bytes(),before)
   self.assertFalse(self.receipt.exists())
   self.assertFalse(self.home.with_name('index.html.nox-u12-pending').exists())
+ def test_foreign_same_byte_inode_rejected(self):
+  before=self.home.read_bytes()
+  derived=b'<nav>'+b''.join(('data-nox-primary="'+n+'"').encode() for n in ('CHAT','INSTALL','MODELS','LEARN','SETTINGS'))+b'</nav>'
+  proof={'source_sha256':hashlib.sha256(before).hexdigest(),'published_sha256':hashlib.sha256(derived).hexdigest(),'installed_ui_automation':'NOT_RUN','release_accepted':False}
+  loads=module.json.loads
+  swapped=[False]
+  def race(data,*args,**kwargs):
+   if not swapped[0]:
+    other=self.folder/'foreign_same_bytes';other.write_bytes(before);other.replace(self.home);swapped[0]=True
+   return loads(data,*args,**kwargs)
+  with patch.object(module,'publish',return_value=(derived,proof)), patch.object(module.json,'loads',side_effect=race):
+   with self.assertRaisesRegex(ValueError,'D02_PRIMARY_PREPUBLISH_OWNER_CHANGED_HOLD'):
+    module.stage(self.root,self.receipt)
+  self.assertTrue(swapped[0])
+  self.assertEqual(self.home.read_bytes(),before)
+  self.assertFalse(self.receipt.exists())
+ def test_post_replace_readback_failure_keeps_receipt(self):
+  before=self.home.read_bytes()
+  derived=b'<nav>'+b''.join(('data-nox-primary="'+n+'"').encode() for n in ('CHAT','INSTALL','MODELS','LEARN','SETTINGS'))+b'</nav>'
+  proof={'source_sha256':hashlib.sha256(before).hexdigest(),'published_sha256':hashlib.sha256(derived).hexdigest(),'installed_ui_automation':'NOT_RUN','release_accepted':False}
+  actual=Path.read_bytes
+  counts=[0]
+  def fail_after_swap(path):
+   if path==self.home:
+    counts[0]+=1
+    if counts[0]==4:raise OSError('INJECTED_POST_SWAP_IO_HOLD')
+   return actual(path)
+  with patch.object(module,'publish',return_value=(derived,proof)), patch.object(Path,'read_bytes',fail_after_swap):
+   with self.assertRaisesRegex(OSError,'INJECTED_POST_SWAP_IO_HOLD'):
+    module.stage(self.root,self.receipt)
+  self.assertEqual(self.home.read_bytes(),derived)
+  self.assertTrue(self.receipt.exists())
+  saved=json.loads(self.receipt.read_text('utf-8'))
+  self.assertEqual(saved['published_sha256'],hashlib.sha256(derived).hexdigest())
+  self.assertFalse(saved['release_accepted'])
  def test_reparse_home_rejected(self):
   self.home.unlink()
   other=self.folder/'unmanaged';other.write_text('unmanaged')

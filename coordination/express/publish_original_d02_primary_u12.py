@@ -44,6 +44,12 @@ def stage(source: Path, receipt_path: Path) -> dict:
             staging.exists() or staging.is_symlink()):
         raise ValueError("D02_PRIMARY_DISPOSABLE_PATH_HOLD")
     before = home.read_bytes()
+    # A same-byte foreign inode must never be overwritten as our own HOME.
+    original_info = home.lstat()
+    if (not stat.S_ISREG(original_info.st_mode) or
+            not original_info.st_ino or original_info.st_nlink != 1):
+        raise ValueError("D02_PRIMARY_ORIGINAL_INODE_HOLD")
+    original_identity = (original_info.st_dev, original_info.st_ino)
     published, proof = publish(before)  # strict immutable original byte/SHA pins
     if hashlib.sha256(before).hexdigest() != proof["source_sha256"] or not (
             all(item.encode("utf-8") in published for item in
@@ -99,10 +105,21 @@ def stage(source: Path, receipt_path: Path) -> dict:
             raise ValueError("D02_PRIMARY_RECEIPT_READBACK_HOLD")
         # Only after a verified, fsynced receipt may the single staged HOME
         # replace the disposable original. Foreign source archives stay intact.
+        # Recheck exact owner inodes and bytes immediately before atomic publish.
+        home_now = home.lstat()
+        receipt_now = receipt_path.lstat()
+        if (not _regular(home) or not _regular(receipt_path) or
+                (home_now.st_dev, home_now.st_ino) != original_identity or
+                (receipt_now.st_dev, receipt_now.st_ino) != receipt_identity or
+                home_now.st_nlink != 1 or receipt_now.st_nlink != 1 or
+                home.read_bytes() != before):
+            raise ValueError("D02_PRIMARY_PREPUBLISH_OWNER_CHANGED_HOLD")
         os.replace(staging, home)
+        # HOME is now altered; retain the already fsynced provenance receipt
+        # if post-publish IO fails rather than erasing the only evidence.
+        receipt_committed = True
         if home.read_bytes() != published:
             raise ValueError("D02_PRIMARY_ATOMIC_PUBLISH_HOLD")
-        receipt_committed = True
         return evidence
     finally:
         # Only unlink a still-present inode created by THIS exclusive open.
