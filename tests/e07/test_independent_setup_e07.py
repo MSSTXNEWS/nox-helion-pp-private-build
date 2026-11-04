@@ -33,10 +33,15 @@ class IndependentE07(unittest.TestCase):
         with self.assertRaisesRegex(MOD.Hold, "E07_ORIGINAL_PIN_KIND_HOLD"):
             MOD.setup_lock_original(Path("none.exe"), Path("none"), frozen="unverified")
         workflow = (ROOT / ".github/workflows/nox-express-independent-e07-candidate.yml").read_text(encoding="utf-8")
-        self.assertIn("run-id: 41867828741", workflow)
-        self.assertIn("NOX-EXPRESS-ONEHOST-30a4f7c43649e3c3d66d0d46ec370b2105a69faa", workflow)
+        # Active independent E07 must use the physically verified frozen FULL
+        # D02 producer. Historic originals remain source-pinned, not selected.
+        self.assertIn("run-id: 41872700529", workflow)
+        self.assertIn("name: nox-v16-e06-onehost-diagnostic-41872700529", workflow)
+        self.assertIn("path: input-verified-834", workflow)
+        self.assertNotIn("run-id: 41867828741", workflow)
         self.assertIn("--artifact-kind d02", workflow)
         self.assertIn('"original-e888"', source)
+        self.assertIn('"original-30a"', source)
 
     def test_fresh_webview_markers_require_exact_log_events(self):
         line = "[2026-11-04 05:00:00] INIT_BEGIN\n" + \
