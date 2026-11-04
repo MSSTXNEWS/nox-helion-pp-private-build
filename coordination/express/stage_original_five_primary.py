@@ -19,11 +19,21 @@ MARKER = 'id="nox-express-primary"'
 INSERT = r'''<!-- NOX EXPRESS 5 original-home primary actions; no additional host -->
 <style id="nox-express-primary-style">
 #nox-express-primary{position:fixed;left:50%;bottom:12px;transform:translateX(-50%);z-index:990;display:flex;gap:7px;max-width:calc(100vw - 20px);width:max-content;flex-wrap:wrap;justify-content:center;padding:9px;border:1px solid rgba(115,207,255,.4);border-radius:18px;background:rgba(5,11,25,.94);box-shadow:0 0 28px rgba(60,140,225,.25);color:#eaf6ff;font:600 12px/1.3 system-ui,sans-serif}
-#nox-express-primary button{appearance:none;cursor:pointer;min-height:44px;min-width:92px;padding:10px 12px;border:1px solid #4484a5;border-radius:12px;background:linear-gradient(145deg,#162f51,#081320);color:#f0faff;font:inherit;letter-spacing:.04em}
+#nox-express-primary button{--nox-planet:#4ba3f1;--nox-planet-light:#a7edff;appearance:none;cursor:pointer;min-height:70px;min-width:92px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:4px;padding:7px 11px;border:1px solid rgba(115,207,255,.45);border-radius:15px;background:linear-gradient(160deg,rgba(24,53,85,.94),rgba(6,15,33,.98));color:#f0faff;font:inherit;letter-spacing:.04em;text-shadow:0 1px 3px #020714}
+#nox-express-primary button::before{content:"";display:block;width:30px;height:30px;flex:none;border-radius:50%;background:radial-gradient(circle at 29% 23%,#fff 0%,var(--nox-planet-light) 14%,var(--nox-planet) 43%,#08172d 86%);box-shadow:inset -4px -5px 8px rgba(1,5,17,.85),inset 2px 2px 5px rgba(255,255,255,.55),0 0 13px var(--nox-planet);animation:noxPrimaryFloat 5.6s ease-in-out infinite}
+#nox-express-primary button[data-nox-primary="CHAT"]{--nox-planet:#55b6f8;--nox-planet-light:#c3f2ff}
+#nox-express-primary button[data-nox-primary="INSTALL"]{--nox-planet:#e39863;--nox-planet-light:#ffe4b7}
+#nox-express-primary button[data-nox-primary="MODELS"]{--nox-planet:#a481ee;--nox-planet-light:#f4d8ff}
+#nox-express-primary button[data-nox-primary="LEARN"]{--nox-planet:#58c9ae;--nox-planet-light:#c7ffe5}
+#nox-express-primary button[data-nox-primary="SETTINGS"]{--nox-planet:#e3bc58;--nox-planet-light:#fff4bc}
+#nox-express-primary button:nth-of-type(even)::before{animation-delay:-2.8s}
+#nox-express-primary button:focus-visible::before{box-shadow:0 0 0 3px #e6fcff,0 0 17px var(--nox-planet)}
+@keyframes noxPrimaryFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+
 #nox-express-primary button:hover,#nox-express-primary button:focus-visible{border-color:#9ce7ff;outline:2px solid #9ce7ff;outline-offset:2px}
 #nox-express-primary [data-nox-state]{width:100%;font-size:11px;text-align:center;font-weight:400;min-height:14px}
 @media(max-width:550px){#nox-express-primary{bottom:3px;gap:4px;padding:5px}#nox-express-primary button{min-width:67px;padding:8px 5px;font-size:10px}}
-@media(prefers-reduced-motion:reduce){#nox-express-primary,#nox-express-primary *{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+@media(prefers-reduced-motion:reduce){#nox-express-primary,#nox-express-primary *,#nox-express-primary button::before{animation:none!important;transition:none!important;transform:none!important;scroll-behavior:auto!important}}
 </style>
 <nav id="nox-express-primary" aria-label="NOX HELION EXPRESS — основные действия">
 <button type="button" data-nox-primary="CHAT" aria-label="CHAT">CHAT</button>
