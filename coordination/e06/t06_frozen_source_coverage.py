@@ -99,7 +99,14 @@ def verify_archive_contents(reader, plan, data_files):
         expected = row.get("sha256")
         _hold(type(expected) is str and re.fullmatch(r"[0-9a-f]{64}", expected), "DATA_SHA_HOLD")
         name = names.get(rel.casefold())
-        _hold(name is not None and reader.toc[name][-1] == "x", "FROZEN_DATA_MISSING:" + rel)
+        kind = reader.toc[name][-1] if name is not None else None
+        # PyInstaller can classify a byte-for-byte .py data asset as binary
+        # ('b') when Windows reports the source file as executable. Accept
+        # that archive storage type ONLY for pinned .py assets; the exact
+        # SHA-256 comparison below still decides whether it is authentic.
+        _hold(name is not None and
+              (kind == "x" or (kind == "b" and rel.endswith(".py"))),
+              "FROZEN_DATA_MISSING:" + rel)
         _hold(0 <= reader.toc[name][2] <= 512 * 1024 * 1024, "FROZEN_DATA_SIZE_HOLD")
         raw = reader.extract(name)
         _hold(type(raw) is bytes and hashlib.sha256(raw).hexdigest() == expected,
