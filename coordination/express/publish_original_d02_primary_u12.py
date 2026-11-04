@@ -54,8 +54,15 @@ def stage(source: Path, receipt_path: Path) -> dict:
             proof["installed_ui_automation"] == "NOT_RUN" and
             proof["release_accepted"] is False):
         raise ValueError("D02_PRIMARY_SOURCE_PROOF_HOLD")
+    created_identity = None
     try:
         with staging.open("xb") as stream:
+            # This exclusive open is the ownership boundary. A file that
+            # raced in after the earlier absence check belongs to someone else.
+            info = os.fstat(stream.fileno())
+            if not stat.S_ISREG(info.st_mode) or not info.st_ino:
+                raise ValueError("D02_PRIMARY_STAGED_IDENTITY_HOLD")
+            created_identity = (info.st_dev, info.st_ino)
             stream.write(published)
             stream.flush()
             os.fsync(stream.fileno())
@@ -78,9 +85,17 @@ def stage(source: Path, receipt_path: Path) -> dict:
             raise ValueError("D02_PRIMARY_RECEIPT_READBACK_HOLD")
         return evidence
     finally:
-        # Unpublished temporary is owned by this operation; no recursive delete.
-        if staging.is_file() and not staging.is_symlink():
-            staging.unlink()
+        # Only unlink a still-present inode created by THIS exclusive open.
+        # If an unrelated writer won or replaced the path, preserve its bytes.
+        if created_identity is not None:
+            try:
+                current = staging.lstat()
+            except FileNotFoundError:
+                pass
+            else:
+                if (_regular(staging) and
+                        (current.st_dev, current.st_ino) == created_identity):
+                    staging.unlink()
 
 
 if __name__ == "__main__":

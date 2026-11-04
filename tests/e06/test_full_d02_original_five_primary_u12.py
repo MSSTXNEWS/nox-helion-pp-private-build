@@ -48,6 +48,25 @@ class D02OriginalFivePrimary(unittest.TestCase):
   with self.assertRaisesRegex(ValueError,'D02_PRIMARY_DISPOSABLE_PATH_HOLD'):
    module.stage(self.root,self.receipt)
   self.assertEqual(self.receipt.read_text(),'already owned')
+ def test_foreign_pending_racing_exclusive_open_is_preserved(self):
+  derived=b"<nav>"+b"".join(("data-nox-primary=\\\""+s+"\\\"").encode() for s in ("CHAT","INSTALL","MODELS","LEARN","SETTINGS"))+b"</nav>"
+  proof={"source_sha256":hashlib.sha256(self.home.read_bytes()).hexdigest(),
+         "published_sha256":hashlib.sha256(derived).hexdigest(),
+         "installed_ui_automation":"NOT_RUN","release_accepted":False}
+  pending=self.home.with_name("index.html.nox-u12-pending")
+  from pathlib import Path as _Path
+  real_open=_Path.open
+  before=self.home.read_bytes()
+  def competing_open(path,mode="r",*args,**kwargs):
+   if path==pending and mode=="xb":
+    with real_open(pending,"wb") as f: f.write(b"FOREIGN_UNMANAGED_BYTES")
+    raise FileExistsError("competing writer created the pending file")
+   return real_open(path,mode,*args,**kwargs)
+  with patch.object(module,"publish",return_value=(derived,proof)), patch.object(_Path,"open",competing_open):
+   with self.assertRaises(FileExistsError):module.stage(self.root,self.receipt)
+  self.assertEqual(pending.read_bytes(),b"FOREIGN_UNMANAGED_BYTES")
+  self.assertEqual(self.home.read_bytes(),before)
+  self.assertFalse(self.receipt.exists())
  def test_reparse_home_rejected(self):
   self.home.unlink()
   other=self.folder/'unmanaged';other.write_text('unmanaged')
