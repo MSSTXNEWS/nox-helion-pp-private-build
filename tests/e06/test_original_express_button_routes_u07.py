@@ -57,6 +57,15 @@ class OriginalButtonRoutes(unittest.TestCase):
                 count = len(re.findall(r'<button\b[^>]*id="' + re.escape(identifier) + '"', html))
             self.assertEqual(count, 1, name)
 
+    def test_graphical_planet_css_does_not_count_as_html_button(self):
+        # CSS attribute equality accepts whitespace; count only five real
+        # buttons, never five selectors plus five markup attributes.
+        for name in ('CHAT','INSTALL','MODELS','LEARN','SETTINGS'):
+            self.assertIn('button[data-nox-primary = "'+name+'"]', stage.INSERT)
+            self.assertEqual(stage.INSERT.count('data-nox-primary="'+name+'"'), 1)
+        self.assertEqual(stage.INSERT.count('data-nox-primary='), 5)
+        self.assertIn('@media(prefers-reduced-motion:reduce)', stage.INSERT)
+
     def test_original_buttons_are_delegated_without_direct_ipc_or_false_ack(self):
         js = stage.INSERT
         self.assertIn('function findOriginalControl(name){', js)
