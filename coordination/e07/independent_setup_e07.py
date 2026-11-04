@@ -1318,7 +1318,8 @@ def lifecycle(setup: Path, result: dict, *, frozen_source: str = "", physical_na
                      "E07_NATIVE_STORE_" + type(exc).__name__.upper() + "_HOLD"}
     def physical_final_probe(hwnd: int) -> dict:
         # Source-only scripts or old-Setup receipts cannot replace installed
-        # same-WPF measurements. The probe emits both subreceipts only on success.
+        # same-WPF measurements. Both subreceipts describe observations;
+        # their individual PASS/HOLD gates are evaluated only after cleanup.
         from probe_final_same_setup import run as probe_run
         require(final_probe_dir is not None, "E07_FINAL_EVIDENCE_DIR_REQUIRED")
         visual, functions = probe_run(hwnd, install, local, source_sha=frozen_source,
@@ -1327,7 +1328,8 @@ def lifecycle(setup: Path, result: dict, *, frozen_source: str = "", physical_na
             target = final_probe_dir / ("E07_FINAL_"+name+".json")
             require(not target.exists(), "E07_FINAL_RECEIPT_COLLISION_HOLD")
             target.write_text(json.dumps(value, sort_keys=True, indent=2), encoding="utf-8")
-        return {"status":"PASS", "source_sha":frozen_source, "setup_sha256":sha256(setup),
+        return {"status":"OBSERVED_NOT_RELEASE", "source_sha":frozen_source,
+                "setup_sha256":sha256(setup),
                 "visual_receipt":"E07_FINAL_VISUAL.json", "function_receipt":"E07_FINAL_FUNCTIONS.json"}
 
     result["checks"]["installed_gui"] = gui_hwnd(
@@ -1462,7 +1464,9 @@ def main() -> int:
         # identity and per-action checks. Missing evidence stays HOLD.
         if args.artifact_kind in ("d02", "d02-91a6", "d02-f842"):
             witness = result["checks"].get("installed_final_physical", {})
-            require(witness.get("status") == "PASS" and
+            # Observing a live HWND and writing receipts is never itself a
+            # functional or visual PASS; the final evaluator must inspect both.
+            require(witness.get("status") == "OBSERVED_NOT_RELEASE" and
                     witness.get("setup_sha256") == setup_sha and
                     witness.get("source_sha") == source_sha,
                     witness.get("error", "E07_FINAL_SAME_SETUP_PHYSICAL_HOLD"))
