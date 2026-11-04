@@ -76,7 +76,7 @@ def build(repo: Path, sha: str, destination: Path):
     repo = repo.resolve(strict=True)
     if len(sha) != 40 or any(ch not in "0123456789abcdef" for ch in sha.lower()):
         raise ValueError("full 40-character SHA required")
-    if git(repo, "rev-parse", "--show-toplevel") != str(repo):
+    if os.path.normcase(str(Path(git(repo, "rev-parse", "--show-toplevel")).resolve(strict=True))) != os.path.normcase(str(repo)):
         raise ValueError("must use repository root")
     if git(repo, "rev-parse", "HEAD") != sha:
         raise ValueError("HEAD_SHA_MISMATCH")
