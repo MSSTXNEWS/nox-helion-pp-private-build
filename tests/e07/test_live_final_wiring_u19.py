@@ -35,7 +35,9 @@ class LiveEvidenceWiring(unittest.TestCase):
 
     def test_final_gate_requires_original_witness(self):
         body=ast.get_source_segment(self.source,self.funcs["main"])
-        self.assertIn('witness.get("status") == "PASS"',body)
+        self.assertIn('witness.get("status") == "OBSERVED_NOT_RELEASE"',body)
+        self.assertIn('return {"status":"OBSERVED_NOT_RELEASE"',ast.get_source_segment(
+            self.source,self.funcs["lifecycle"]))
         self.assertIn('witness.get("setup_sha256") == setup_sha',body)
         self.assertIn('witness.get("source_sha") == source_sha',body)
         self.assertLess(body.index("evaluate_final_acceptance("),body.index('result["release_accepted"] = True'))
