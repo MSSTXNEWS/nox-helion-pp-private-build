@@ -647,7 +647,7 @@ function Test-ChatHeading($root){
   for($j=0;$j -lt $nodes.Count;$j++){
     $v=$nodes.Item($j).Current
     if($v.ControlType -ne [System.Windows.Automation.ControlType]::Text){continue}
-    if(($v.Name+'').Trim() -ne 'HELION · LIVE CHAT'){continue}
+    if(($v.Name+'').Trim() -ne 'ЖИВОЙ ЧАТ'){continue}
     $rect=$v.BoundingRectangle
     if(-not $v.IsOffscreen -and $rect.Width -ge 20 -and $rect.Height -ge 12){return $true}
   }
