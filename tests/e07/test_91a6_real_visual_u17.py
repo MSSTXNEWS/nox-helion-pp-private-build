@@ -87,7 +87,9 @@ class SourceVisualProof(unittest.TestCase):
         source=PATH.read_text(encoding="utf-8")
         self.assertIn("LegacyIAccessiblePattern]::Pattern",source)
         self.assertIn("$legacy.DoDefaultAction()",source)
-        self.assertIn("U17_D02_QUALITY_NO_NATIVE_ACCESSIBILITY_ACTION_HOLD",source)
+        self.assertIn("U17_D02_POINTER_FOREGROUND_NOT_WPF_HOLD",source)
+        self.assertIn("U17_D02_POINTER_OUTSIDE_ORIGINAL_WPF_HOLD",source)
+        self.assertIn("U17_D02_QUALITY_PRESSED_UIA_NOT_EXPOSED_HOLD",source)
         with self.assertRaises(module.e07.Hold):
             module.validate_quality_witness({"schema":"NOX-D02-QUALITY-UIA-v1","actions":[]})
 
