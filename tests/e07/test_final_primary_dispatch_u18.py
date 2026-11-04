@@ -68,6 +68,37 @@ class FinalPrimaryDispatch(unittest.TestCase):
                         probe._run_ps("test", phase=phase)
                     self.assertNotIn("PRIVATE", str(raised.exception))
 
+    def test_specific_real_uia_first_failure_is_bounded_no_raw_output(self):
+        for phase in ("VISUAL", "INSTALL", "MODELS", "LEARN", "SETTINGS"):
+            expected = "E07_FINAL_UIA_" + phase + "_BUTTON_CHAT_NOT_UNIQUE_HOLD"
+            self.assertEqual(
+                probe._bounded_uia_failure(expected + "\\r\\n", phase),
+                "E07_FINAL_UIA_" + phase + "_PROCESS_EXIT_HOLD")
+            self.assertEqual(probe._bounded_uia_failure(expected + "\r\n", phase), expected)
+            self.assertEqual(
+                probe._bounded_uia_failure(
+                    "E07_FINAL_UIA_" + phase + "_NO_ROOT_HOLD", phase),
+                "E07_FINAL_UIA_" + phase + "_NO_ROOT_HOLD")
+            for private in (
+                    "C:\\Users\\runner\\private.txt",
+                    "E07_FINAL_UIA_" + phase + "_UNKNOWN_UNAUTHORIZED_HOLD",
+                    expected + "\nTOKEN_DO_NOT_LOG",
+                    "A" * 300,
+                    "E07_FINAL_UIA_ANOTHER_PHASE_NO_ROOT_HOLD"):
+                with self.subTest(phase=phase, private=private[:18]):
+                    self.assertEqual(
+                        probe._bounded_uia_failure(private, phase),
+                        "E07_FINAL_UIA_" + phase + "_PROCESS_EXIT_HOLD")
+
+    def test_produced_ps_has_failclosed_trap_before_real_uia(self):
+        for phase in ("VISUAL", "INSTALL", "MODELS", "LEARN", "SETTINGS"):
+            script = probe._uia_script(12345, phase)
+            self.assertIn("$__e07Operation='" + phase + "'", script)
+            self.assertIn("trap {", script)
+            self.assertIn("Write-Output $reason", script)
+            self.assertIn("exit 2", script)
+            self.assertIn("Add-Type -AssemblyName UIAutomationClient", script)
+
     def test_uia_phase_is_strictly_allowlisted(self):
         with self.assertRaisesRegex(probe.e07.Hold, "E07_FINAL_UIA_PHASE_HOLD"):
             probe._run_ps("test", phase="INJECTED_NAME")

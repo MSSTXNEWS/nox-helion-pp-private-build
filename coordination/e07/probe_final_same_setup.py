@@ -37,6 +37,19 @@ def nonrelease_action_observation(action: str, detail: dict) -> dict:
             "scope":"INSTALLED_UI_OBSERVATION_NOT_FULL_FUNCTION_PASS"}
 
 
+def _bounded_uia_failure(stdout: object, phase: str) -> str:
+    """Only exact known UIA failure codes; no raw Windows output in receipts."""
+    fallback = "E07_FINAL_UIA_" + phase + "_PROCESS_EXIT_HOLD"
+    if type(stdout) is not str or not (1 <= len(stdout) <= 140):
+        return fallback
+    reason = stdout.strip()
+    allowed = (r"E07_FINAL_UIA_" + re.escape(phase)
+        + r"_(?:BUTTON_(?:CHAT|INSTALL|MODELS|LEARN|SETTINGS)_NOT_UNIQUE|"
+          r"NO_ROOT|TREE_LIMIT|NO_INVOKE|RECT|MOVE|PRINT|"
+          r"FX_UNIQUE|FX_INVOKE|FX_STATE|UNKNOWN_OP)_HOLD")
+    return reason if re.fullmatch(allowed, reason) else fallback
+
+
 def _run_ps(source: str, *, timeout: int=90, phase: str="UNKNOWN", env: dict|None=None) -> dict:
     e07.require(phase in (*PRIMARY, "VISUAL", "MODEL_WINDOW", "FX", "UNKNOWN"),
                 "E07_FINAL_UIA_PHASE_HOLD")
@@ -51,7 +64,7 @@ def _run_ps(source: str, *, timeout: int=90, phase: str="UNKNOWN", env: dict|Non
     # attempt identifies which probe phase failed. No stderr/stdout, paths,
     # window titles, user data or arbitrary PowerShell output enter receipts.
     if p.returncode != 0:
-        raise e07.Hold("E07_FINAL_UIA_"+phase+"_PROCESS_EXIT_HOLD")
+        raise e07.Hold(_bounded_uia_failure(p.stdout, phase))
     if not 0 < len(p.stdout) <= 131072:
         raise e07.Hold("E07_FINAL_UIA_"+phase+"_OUTPUT_BOUNDS_HOLD")
     try:
@@ -67,6 +80,21 @@ def _uia_script(hwnd: int, operation: str, *, png: Path|None=None) -> str:
     png_path=(str(png).replace("'","''") if png else "")
     return r'''$ErrorActionPreference='Stop'
 [Console]::OutputEncoding=[System.Text.Encoding]::UTF8
+$__e07Operation='__OP__'
+# Deliberately allowlist physical UIA exceptions: no user paths, stderr,
+# arbitrary titles, model data or tokens may enter the independent receipt.
+trap {
+ $why=$_.Exception.Message+''
+ $reason='E07_FINAL_UIA_'+$__e07Operation+'_PROCESS_EXIT_HOLD'
+ if($why -cmatch '^BUTTON_(CHAT|INSTALL|MODELS|LEARN|SETTINGS)_NOT_UNIQUE$'){
+   $reason='E07_FINAL_UIA_'+$__e07Operation+'_BUTTON_'+$Matches[1]+'_NOT_UNIQUE_HOLD'
+ } elseif($why -cin @('NO_ROOT','TREE_LIMIT','NO_INVOKE','RECT','MOVE','PRINT',
+                      'FX_UNIQUE','FX_INVOKE','FX_STATE','UNKNOWN_OP')){
+   $reason='E07_FINAL_UIA_'+$__e07Operation+'_'+$why+'_HOLD'
+ }
+ Write-Output $reason
+ exit 2
+}
 Add-Type -AssemblyName UIAutomationClient
 Add-Type -AssemblyName UIAutomationTypes
 Add-Type -AssemblyName System.Drawing
