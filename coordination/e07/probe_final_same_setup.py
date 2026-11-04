@@ -184,9 +184,11 @@ if($op -eq 'SETTINGS'){
  [pscustomobject]@{invoked=$true;systemHeadingVisible=$seen;sameHwndAlive=($null -ne [System.Windows.Automation.AutomationElement]::FromHandle($handle))}|ConvertTo-Json -Compress;exit 0
 }
 if($op -eq 'MODEL_WINDOW'){
+ $ownerRoot=Root;$ownerProcessId=[int]$ownerRoot.Current.ProcessId
+ if($ownerProcessId -le 0){throw 'NO_ROOT'}
  $desktop=[System.Windows.Automation.AutomationElement]::RootElement;$seen=$false;$count=0
- for($n=0;$n -lt 50;$n++){Start-Sleep -Milliseconds 200;$wins=$desktop.FindAll([System.Windows.Automation.TreeScope]::Children,[System.Windows.Automation.Condition]::TrueCondition);$found=@();for($i=0;$i -lt $wins.Count;$i++){try{$v=$wins.Item($i).Current;if($v.ControlType -eq [System.Windows.Automation.ControlType]::Window -and ($v.Name+'').Trim() -ceq 'NOX HELION · MODEL CENTER' -and (Visible $v)){$found+=$wins.Item($i)}}catch{}};$count=$found.Count;if($count -eq 1){$seen=$true;try{$wp=$found[0].GetCurrentPattern([System.Windows.Automation.WindowPattern]::Pattern);$wp.Close()}catch{};break}}
- [pscustomobject]@{modelWindowVisible=$seen;windowCount=$count}|ConvertTo-Json -Compress;exit 0
+ for($n=0;$n -lt 50;$n++){Start-Sleep -Milliseconds 200;$wins=$desktop.FindAll([System.Windows.Automation.TreeScope]::Children,[System.Windows.Automation.Condition]::TrueCondition);$found=@();for($i=0;$i -lt $wins.Count;$i++){try{$v=$wins.Item($i).Current;if($v.ControlType -eq [System.Windows.Automation.ControlType]::Window -and $v.ProcessId -eq $ownerProcessId -and ($v.Name+'').Trim() -ceq 'NOX HELION · MODEL CENTER' -and (Visible $v)){$found+=$wins.Item($i)}}catch{}};$count=$found.Count;if($count -eq 1){$seen=$true;try{$wp=$found[0].GetCurrentPattern([System.Windows.Automation.WindowPattern]::Pattern);$wp.Close()}catch{};break}}
+ [pscustomobject]@{modelWindowVisible=$seen;windowCount=$count;sameOwnerProcess=($seen -and $count -eq 1)}|ConvertTo-Json -Compress;exit 0
 }
 if($op -eq 'VISUAL'){
  $r=[NoxFinalWin32+RECT]::new();if(-not [NoxFinalWin32]::GetWindowRect($handle,[ref]$r)){throw 'RECT'}
@@ -433,7 +435,9 @@ def run(hwnd: int, install: Path, local: Path, *, source_sha: str, setup_sha: st
         model=_run_ps(_uia_script(hwnd,"MODEL_WINDOW"),
                       timeout=35,phase="MODEL_WINDOW")
         e07.require(model.get("modelWindowVisible") is True and
-                    model.get("windowCount")==1,"E07_FINAL_MODELS_WINDOW_HOLD")
+                    model.get("windowCount")==1 and
+                    model.get("sameOwnerProcess") is True,
+                    "E07_FINAL_MODELS_WINDOW_HOLD")
         observed("MODELS",{"model_center_window":"PASS",
                            "window_title":"NOX HELION · MODEL CENTER"})
 
