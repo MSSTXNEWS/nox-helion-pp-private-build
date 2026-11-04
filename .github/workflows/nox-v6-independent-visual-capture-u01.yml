@@ -1,0 +1,62 @@
+name: NOX V6 physical WPF D02 visual screenshot witness U01 - release HOLD
+on:
+  push:
+    branches: [integration/nox-v16-unified-candidate-20261028-r01]
+    paths:
+      - .github/workflows/nox-v6-independent-visual-capture-u01.yml
+      - coordination/e07/probe_v6_visual_physical_u01.py
+      - tests/e07/test_v6_visual_physical_u01.py
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: nox-v6-independent-visual-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  physical-original-wpf-d02-capture:
+    if: github.repository == 'MSSTXNEWS/nox-helion-pp-private-build'
+    runs-on: windows-2022
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12.10'
+          architecture: x64
+          check-latest: false
+      - name: Strict original WPF probe and visual photo source regressions
+        shell: pwsh
+        run: |
+          python -B -m py_compile coordination/e07/independent_setup_e07.py coordination/e07/probe_full_d02_722399_u13.py coordination/e07/probe_v6_visual_physical_u01.py
+          if ($LASTEXITCODE -ne 0) { throw 'V6_VISUAL_SOURCE_SYNTAX_HOLD' }
+          python -B -m unittest discover -s tests/e07 -p test_v6_visual_physical_u01.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'V6_VISUAL_SOURCE_REGRESSION_HOLD' }
+      - name: Download exact immutable V6 FULL D02 Windows Setup
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          run-id: 41833271465
+          name: nox-v16-e06-onehost-diagnostic-41833271465
+          github-token: ${{ github.token }}
+          path: input/full-d02
+      - name: Physically capture original installed WPF HWND after fresh WebView2 NAV and IPC
+        id: physical
+        shell: pwsh
+        timeout-minutes: 18
+        run: |
+          $ErrorActionPreference='Stop'
+          $photo=Join-Path $env:RUNNER_TEMP 'nox-v6-physical-d02.png'
+          python -B coordination/e07/probe_v6_visual_physical_u01.py --artifact-dir input/full-d02 --out work/u01/V6_VISUAL_WPF_PHYSICAL_RECEIPT.json --png "$photo"
+          if ($LASTEXITCODE -ne 0) { throw 'V6_PHYSICAL_WPF_VISUAL_CAPTURE_HOLD_NOT_RELEASE' }
+          Write-Host 'V6_SAME_SETUP_ORIGINAL_WPF_PHOTO_CAPTURED_NOT_VISUALLY_APPROVED_NOT_E07'
+      - name: Preserve original Windows evidence only; no release or download offer
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: NOX-V6-ORIGINAL-WPF-VISUAL-U01-${{ github.run_id }}
+          path: |
+            work/u01/V6_VISUAL_WPF_PHYSICAL_RECEIPT.json
+            ${{ runner.temp }}/nox-v6-physical-d02.png
+          if-no-files-found: warn
+          retention-days: 14
