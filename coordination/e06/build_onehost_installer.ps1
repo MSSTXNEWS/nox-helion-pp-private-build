@@ -497,8 +497,8 @@ if ($wantsCreative) {
   $microwowRoot=Join-Path (Resolve-Path -LiteralPath (Join-Path $source '../../../..')).Path 'Packages/P03/Source/P03.ModelCenter.Wow'
   $microwowTarget=Join-Path $source 'Assets/creative/modelcenter'
   $microwowFiles=@(
-    @{relative='index.html';blob='e44efa7b5e2ffdfda6481c734f92c064fe1f458b'},
-    @{relative='ui.css';blob='52757928eab65e474b9f500ab95b49adf3abe340'},
+    @{relative='index.html';blob='9647bc28aec278fb4ea41e8d90ac4c2bb1af0104'},
+    @{relative='ui.css';blob='60ade7fe94bd5bfdcc6f9ba3c3b31bee7d2ab7ad'},
     @{relative='ui.js';blob='4e9ecd0290ce78e61847078c691ab2bf20693372'},
     @{relative='THIRD_PARTY_LICENSES.txt';blob='4661952f5f4c9888c759ec94a3a28a31d26fc81f'},
     @{relative='icons/checkmark.svg';blob='e4ffbdc3d7f4f3e16a7612b7ab6bc145ad8874b6'},
