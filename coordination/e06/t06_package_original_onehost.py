@@ -477,6 +477,42 @@ def stage_reviewed_webview2_preflight(owner_script: Path, reviewed_script: Path)
             "runtime_installed_verified":False,
             "e07_accepted":False}
 
+
+def stage_ci_nsis_first_failure_trace(path: Path):
+    """CI-only original installer /S phase markers. Never a release or E07 proof."""
+    need(path.name == "NOX-HELION-Setup.nsi" and path.parent.name == "Installer" and
+         path.is_file() and not path.is_symlink(), "T06_NSIS_TRACE_PATH_HOLD")
+    original = path.read_bytes()
+    text = original.decode("utf-8-sig")
+    eol = "\r\n" if "\r\n" in text else "\n"
+    normalized = text.replace("\r\n", "\n")
+    marker = 'Section "NOX HELION application" SEC_MAIN'
+    need(normalized.count(marker) == 1 and
+         "NOX_EXPRESS_CI_NSIS_TRACE.txt" not in normalized,
+         "T06_NSIS_TRACE_PREIMAGE_HOLD")
+    start = normalized.index(marker)
+    end = normalized.find("\nSectionEnd", start)
+    need(end > start, "T06_NSIS_TRACE_SECTION_HOLD")
+    section = normalized[start:end]
+    gate = '  Pop $CheckResult\n  ${If} $ExitCode != "0"'
+    need(section.count(gate) == 2, "T06_NSIS_TRACE_GATE_HOLD")
+    for label in ("PREFLIGHT_EXIT", "VERIFY_EXIT"):
+        probe = ('  FileOpen $9 "$TEMP\\NOX_EXPRESS_CI_NSIS_TRACE.txt" a\n'
+                 '  FileWrite $9 "' + label + '=$ExitCode$\\r$\\n"\n'
+                 '  FileClose $9\n')
+        section = section.replace(
+            gate, '  Pop $CheckResult\n' + probe +
+            '  ${If} $ExitCode != "0"', 1)
+    changed = normalized[:start] + section + normalized[end:]
+    need(changed.count("NOX_EXPRESS_CI_NSIS_TRACE.txt") == 2 and
+         changed.count("PREFLIGHT_EXIT=$ExitCode") == 1 and
+         changed.count("VERIFY_EXIT=$ExitCode") == 1,
+         "T06_NSIS_TRACE_INCOMPLETE_HOLD")
+    result = (b"\xef\xbb\xbf" if original.startswith(b"\xef\xbb\xbf") else b"") + changed.replace("\n", eol).encode("utf-8")
+    path.write_bytes(result)
+    need(path.read_bytes() == result, "T06_NSIS_TRACE_READBACK_HOLD")
+    return {"trace_probes": 2, "release_accepted": False, "e07": "NOT_RUN"}
+
 def build(root,staged):
     staged=Path(staged).resolve(strict=True)
     root=Path(root).resolve(strict=True)
@@ -640,6 +676,20 @@ def build(root,staged):
         "stage/proposals/P01/C09/Installer/NOX-HELION-Setup.nsi")
     print("T06_C09_REVIEWED_NSIS_UNINSTALL_QUOTE_STAGE "+
           json.dumps(quote_proof,sort_keys=True),flush=True)
+    if os.environ.get("NOX_CI_NSIS_TRACE") == "YES":
+        need(os.environ.get("GITHUB_ACTIONS") == "true" and
+             os.environ.get("RUNNER_ENVIRONMENT") == "github-hosted" and
+             os.environ.get("RUNNER_OS") == "Windows" and
+             os.environ.get("GITHUB_REPOSITORY") ==
+                 "MSSTXNEWS/nox-helion-pp-private-build" and
+             os.environ.get("GITHUB_REF") ==
+                 "refs/heads/integration/nox-v16-unified-candidate-20261028-r01",
+             "T06_NSIS_CI_TRACE_AUTH_HOLD")
+        trace_file = Path(os.environ["TEMP"]) / "NOX_EXPRESS_CI_NSIS_TRACE.txt"
+        need(not trace_file.exists() and not trace_file.is_symlink(),
+             "T06_NSIS_CI_TRACE_COLLISION_HOLD")
+        stage_ci_nsis_first_failure_trace(installer_dir/"NOX-HELION-Setup.nsi")
+        print("T06_CI_NSIS_TRACE_DIAGNOSTIC_ONLY_NOT_RELEASE", flush=True)
     nsis,nsis_compiler_sha=preflight_nsis_compiler()
     setup=staged/"NOX-HELION-V16-ONEHOST-CANDIDATE-SETUP.exe"
     need(not setup.exists() and not setup.is_symlink(),

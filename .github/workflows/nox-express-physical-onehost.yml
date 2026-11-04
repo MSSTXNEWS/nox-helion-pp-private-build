@@ -14,6 +14,7 @@ on:
       - coordination/e06/t06_compile_original_wpf_p02.py
       - tests/e06/test_t06_samevm_webview2_preflight_stage.py
       - coordination/e06/t06_package_original_onehost.py
+      - tests/e06/test_t06_nsis_ci_trace_r132.py
       - tests/e06/test_t06_nsis_uninstall_quote_r128.py
       - coordination/e06/t06_source_receipt_guard.py
       - tests/e06/test_t06_source_receipt_guard.py
@@ -70,6 +71,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'T06_P01_VERIFIER_PWSH_HOST_TEST_HOLD' }
           python -B -m unittest discover -s tests/e06 -p test_t06_nsis_candidate_binary_r40.py -v
           if ($LASTEXITCODE -ne 0) { throw 'T06_WINDOWS_NSIS_PE_SHA_IDENTITY_TEST_HOLD' }
+          python -B -m unittest discover -s tests/e06 -p test_t06_nsis_ci_trace_r132.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'T06_NSIS_TRACE_TEST_HOLD' }
           python -B -m unittest discover -s tests/e06 -p test_t06_github_samevm_bridge_auth_r122.py -v
           if ($LASTEXITCODE -ne 0) { throw 'T06_GITHUB_DISPOSABLE_BRIDGE_AUTH_REGRESSION_HOLD' }
           $archive=Join-Path $env:RUNNER_TEMP ('NOX_HELION_EXPRESS_SOURCE_'+$env:GITHUB_SHA+'.zip')
@@ -125,6 +128,7 @@ jobs:
         env:
           NOX_T06_LOCAL_BRIDGE: 'YES'
           NOX_M1_CI_INSTALL_WEBVIEW2: 'YES'
+          NOX_CI_NSIS_TRACE: 'YES'
           NOX_E07_CI_WINDOWS_DISPOSABLE: 'YES'
           PYTHONUNBUFFERED: '1'
         run: |
@@ -211,6 +215,74 @@ jobs:
                 $w.read_only_verify_category=$category
               }
             }
+          }
+          $trace=Join-Path $env:TEMP 'NOX_EXPRESS_CI_NSIS_TRACE.txt'
+          $w['nsis_inner_exit_phases']=@()
+          if (Test-Path -LiteralPath $trace -PathType Leaf) {
+            $w['nsis_inner_exit_phases']=@(Get-Content -LiteralPath $trace |
+              Where-Object { $_ -match '^(PREFLIGHT_EXIT|VERIFY_EXIT)=(?:error|[0-9]{1,5})
+          $w | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $target -Encoding utf8
+          Write-Host ('NOX_NSIS_FIRSTFAIL_READONLY '+($w | ConvertTo-Json -Compress -Depth 5))
+      - name: Preserve physical Setup with SHA and exact-source evidence
+        if: always()
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $dest='dist/nox-express-onehost'
+          New-Item -ItemType Directory -Force -Path $dest | Out-Null
+          $source=Join-Path $env:RUNNER_TEMP ('NOX_HELION_EXPRESS_SOURCE_'+$env:GITHUB_SHA+'.zip')
+          if (Test-Path -LiteralPath $source -PathType Leaf) {
+            Copy-Item -LiteralPath $source -Destination $dest
+          }
+          $exe='work/t06-wpf-p02-compile/NOX-HELION-V16-ONEHOST-CANDIDATE-SETUP.exe'
+          $built=$false; $hash=''; $bytes=0
+          if (Test-Path -LiteralPath $exe -PathType Leaf) {
+            $bytes=(Get-Item -LiteralPath $exe).Length
+            if ($bytes -ge 1048576) {
+              $hash=(Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash.ToLowerInvariant()
+              Copy-Item -LiteralPath $exe -Destination (Join-Path $dest 'NOX_HELION_EXPRESS_CANDIDATE_SETUP.exe')
+              $built=$true
+              Write-Host "PHYSICAL_SETUP_SHA256=$hash BYTES=$bytes"
+            }
+          }
+          $receipt=[ordered]@{
+            schema='nox.express.onehost.same-sha.v1'
+            source_commit=$env:GITHUB_SHA
+            physical_setup_built=$built
+            setup_sha256=$hash
+            setup_bytes=$bytes
+            build_outcome='${{ steps.compile.outcome }}'
+            release_accepted=$false
+            independent_e07='NOT_RUN'
+            classification='DIAGNOSTIC_CANDIDATE_NOT_RELEASE'
+          }
+          $receipt | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $dest 'BUILD_RECEIPT.json') -Encoding utf8
+          foreach ($file in @(
+            'work/t06-local-bridge/T06_INSTALLED_SMOKE.json',
+            'work/t06-local-bridge/01_NATIVE_PYINSTALLER.log',
+            'work/t06-local-bridge/02_WPF_NSIS_ONEHOST.log',
+            'work/t06-wpf-p02-compile/ONEHOST_CANDIDATE_RECEIPT.json',
+            'work/t06-wpf-p02-compile/WPF_SELFCONTAINED_PUBLISH_LOG.txt',
+            'work/t06-wpf-p02-compile/NSIS_CANDIDATE_BUILD_LOG.txt'
+          )) {
+            if (Test-Path -LiteralPath $file -PathType Leaf) { Copy-Item -LiteralPath $file -Destination $dest }
+          }
+      - name: Upload a single source plus EXE candidate archive
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: NOX-EXPRESS-ONEHOST-${{ github.sha }}
+          path: dist/nox-express-onehost/
+          if-no-files-found: error
+          retention-days: 14
+      - name: Never promote a diagnostic installer to release
+        if: always()
+        shell: pwsh
+        run: |
+          if ('${{ steps.compile.outcome }}' -ne 'success') { throw 'ONEHOST_WINDOWS_E07_HOLD' }
+          Write-Host 'SAME_VM_INSTALLED_CANDIDATE_ONLY_NOT_INDEPENDENT_E07'
+ } |
+              Select-Object -Last 8)
           }
           $target=Join-Path $dest 'NSIS_FIRSTFAIL_READONLY.json'
           $w | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $target -Encoding utf8
