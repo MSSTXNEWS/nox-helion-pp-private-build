@@ -59,20 +59,35 @@ function findOriginalScreen(name){
    terms.includes((a.textContent||'').trim().toLocaleUpperCase('ru'))&&
    safeOriginalLink(a));
 }
+function findOriginalControl(name){
+ // Bind to SOURCE-LOCKED R11 buttons, not invented anchor text or direct IPC.
+ // Unknown, duplicated, replaced or disabled original controls must HOLD.
+ const selectors={
+   CHAT:'.nav button[data-screen="chat"]',
+   INSTALL:'button#install-app',
+   MODELS:'button#model-center',
+   LEARN:'.nav button[data-screen="control"]',
+   REPORTS:'button#native-report'
+ };
+ const selector=selectors[name];if(!selector)return null;
+ const matches=document.querySelectorAll(selector);
+ if(matches.length!==1)return null;
+ const button=matches[0];
+ return button.tagName==='BUTTON'&&button.isConnected&&!button.disabled&&
+        !nav.contains(button)?button:null;
+}
 nav.addEventListener('click',event=>{
  const target=event.target.closest('button[data-nox-primary]');
  if(!target||!nav.contains(target)||!event.isTrusted)return;
  const name=target.getAttribute('data-nox-primary');
  state.textContent='';
- if(name==='MODELS'){
-   if(!window.chrome||!window.chrome.webview||typeof window.chrome.webview.postMessage!=='function'){
-     state.textContent='MODELS: native WebView2 недоступен · HOLD';return;
-   }
-   // Existing WPF legacy action. Consent/ACL/rights are checked by native owner.
-   window.chrome.webview.postMessage({action:'openModelCenter',chatId:'express-home'});
-   state.textContent='MODELS: запрос отправлен исходному WPF · ожидается проверка';return;
+ if(name==='MODELS' && (!window.chrome||!window.chrome.webview||
+     typeof window.chrome.webview.postMessage!=='function')){
+   state.textContent='MODELS: native WebView2 недоступен · HOLD';return;
  }
- const original=findOriginalScreen(name);
+ // A SOURCE-LOCKED original button already has the real event listener and
+ // native IPC wrapper (SID, consent, request identity). Never forge a receipt.
+ const original=findOriginalControl(name)||findOriginalScreen(name);
  if(!original){state.textContent=name+': нет подтверждённого исходного экрана · HOLD';return;}
  original.click();
 });
