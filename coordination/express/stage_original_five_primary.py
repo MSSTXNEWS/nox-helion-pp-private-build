@@ -123,12 +123,15 @@ nav.addEventListener('click',event=>{
  // navigation button was clicked. The user still chooses the original action
  // inside its own panel, under existing native ACL and consent.
  const destinations={
-   INSTALL:['home','button#install-app'],
-   MODELS:['control','button#model-center'],
-   LEARN:['control','button#training-start']
+   INSTALL:['home','button#install-app','button#install-app'],
+   MODELS:['control','button#model-center','button#model-center'],
+   // Top-level LEARN performs the original bounded training environment
+   // diagnostic. Actual QLoRA start remains an explicit in-panel action with
+   // dataset, immutable-revision and owner-confirmation gates.
+   LEARN:['control','button#training-start','button#training-diagnostic']
  };
  if(Object.prototype.hasOwnProperty.call(destinations,name)){
-   const [screen,selector]=destinations[name];
+   const [screen,selector,invokeSelector]=destinations[name];
    const navMatches=document.querySelectorAll('.nav button[data-screen="'+screen+'"]');
    const navControl=navMatches.length===1?navMatches[0]:null;
    const matches=document.querySelectorAll(selector);
@@ -150,17 +153,18 @@ nav.addEventListener('click',event=>{
      state.textContent=name+': фокус оригинального элемента не подтверждён · HOLD';
      return;
    }
-   // Forward the trusted EXPRESS click to the exact SOURCE-LOCKED original
-   // control. INSTALL / MODELS / LEARN keep their original handlers, native
-   // ACL and owner-consent dialogs; this wrapper never calls privileged IPC.
-   // A programmatic route, synthetic ACK or second backend is forbidden.
-   // INSTALL and LEARN only navigate/focus. Their privileged original
-   // buttons require a separate deliberate click and existing native consent.
-   // MODELS preserves the source-approved read-only original catalog action.
-   if(name==='MODELS')target.click();
-   state.textContent=name==='MODELS'
-     ? 'MODELS: запрос исходному каталогу отправлен; результат подтверждает OneHost'
-     : name+': исходное действие в фокусе; нажмите его отдельно.';
+   // This trusted top-level user click delegates to an EXISTING original
+   // R11 control. No direct privileged IPC, synthetic ACK or second backend.
+   // INSTALL retains the original WebView confirmation before local install;
+   // MODELS opens the original WPF Model Center; LEARN runs the original
+   // environment diagnostic while QLoRA start remains separately consented.
+   const invokeMatches=document.querySelectorAll(invokeSelector);
+   if(invokeMatches.length!==1||invokeMatches[0].tagName!=='BUTTON'||
+      !invokeMatches[0].isConnected||invokeMatches[0].disabled){
+     state.textContent=name+': исходная функция недоступна · HOLD';return;
+   }
+   invokeMatches[0].click();
+   state.textContent=name+': исходная функция вызвана · результат подтверждает native NOX';
    return;
  }
  // SETTINGS enters the original MENU first, then uses its ORIGINAL system tile.
