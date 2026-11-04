@@ -735,7 +735,7 @@ $ErrorActionPreference='Stop'
 Add-Type -AssemblyName UIAutomationClient
 Add-Type -AssemblyName UIAutomationTypes
 $handle=[IntPtr]__HWND__
-$titles=@{INSTALL='Система NOX';MODELS='Каталог моделей';LEARN='Эволюция';SETTINGS='Настройки'}
+$titles=@{INSTALL='Система NOX';MODELS='Каталог моделей';LEARN='Эволюция';SETTINGS='СИСТЕМА'}
 function Get-SameRoot {
   $v=[System.Windows.Automation.AutomationElement]::FromHandle($handle)
   if($null -eq $v){throw 'E07_PRIMARY_NAV_HWND_LOST'}
@@ -1013,7 +1013,7 @@ def verify_fresh_install_targets(local: Path, install: Path, stage: Path,
             "E07_VM_NOT_FRESH_SKIP")
 
 
-def lifecycle(setup: Path, result: dict, *, frozen_source: str = "") -> None:
+def lifecycle(setup: Path, result: dict, *, frozen_source: str = "", physical_nav: bool = False) -> None:
     local = Path(os.environ["LOCALAPPDATA"])
     base = local / "Programs"
     install = base / "NOX HELION"
@@ -1048,7 +1048,7 @@ def lifecycle(setup: Path, result: dict, *, frozen_source: str = "") -> None:
                      "E07_NATIVE_STORE_" + type(exc).__name__.upper() + "_HOLD"}
     result["checks"]["installed_gui"] = gui_hwnd(
         install/"NOX.P01.Shell.exe", local,
-        safe_nav=frozen_source == "e888941626191c17d19d372889b1f96842c15e1b")
+        safe_nav=physical_nav or frozen_source == "e888941626191c17d19d372889b1f96842c15e1b")
     require(run([str(setup),"/S"],limit=300)==0 and clean_dir(previous),
             "E07_NSIS_UPDATE_HOLD")
     manifest_owner(previous)

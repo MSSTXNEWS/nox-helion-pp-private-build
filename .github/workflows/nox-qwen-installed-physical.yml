@@ -41,8 +41,8 @@ jobs:
       - name: Download exact successful NOX Windows Setup
         uses: actions/download-artifact@v4
         with:
-          run-id: 41818231832
-          name: NOX-EXPRESS-ONEHOST-7b3d22d5d607abf9b9d478d82507f33153c23d9f
+          run-id: 41825380857
+          name: NOX-EXPRESS-ONEHOST-fbbe084c23eb1ea2462814b6d5bfded5ff6951c6
           github-token: ${{ github.token }}
           path: input/nox
       - name: Verify both physical installers without relaxing any source pins
@@ -57,8 +57,8 @@ jobs:
           if ((Get-FileHash -LiteralPath $ollama -Algorithm SHA256).Hash.ToLowerInvariant() -ne '9e3c76e54e7184c68e88a2378b909bf59bbe454f83c076cb4f4a717e946ae719') { throw 'OLLAMA_ORIGINAL_SHA256_HOLD' }
           $sig=Get-AuthenticodeSignature -LiteralPath $ollama
           if ($sig.Status -ne 'Valid') { throw 'OLLAMA_AUTHENTICODE_NOT_VALID_HOLD' }
-          if ((Get-Item -LiteralPath $nox).Length -ne 87331309) { throw 'NOX_SETUP_BYTES_HOLD' }
-          if ((Get-FileHash -LiteralPath $nox -Algorithm SHA256).Hash.ToLowerInvariant() -ne '5af3a9aced6685a36455ec46a25383d2f5add06bf24815ef6275133cea1c909a') { throw 'NOX_SETUP_SHA256_HOLD' }
+          if ((Get-Item -LiteralPath $nox).Length -ne 87336473) { throw 'NOX_SETUP_BYTES_HOLD' }
+          if ((Get-FileHash -LiteralPath $nox -Algorithm SHA256).Hash.ToLowerInvariant() -ne 'b658756ca5969536fb2d294038b58c6a6948694b13ebd596efdfc04b5ec7f908') { throw 'NOX_SETUP_SHA256_HOLD' }
           Write-Host 'PINNED_OLLAMA_AND_NOX_INSTALLER_SHA256_PASS_NO_RELEASE'
       - name: Install Ollama from verified bytes and start original local provider
         shell: pwsh
@@ -138,7 +138,7 @@ jobs:
           $ErrorActionPreference='Stop'
           python -B -m py_compile coordination/e07/independent_setup_e07.py coordination/e07/probe_five_primary_action.py
           if ($LASTEXITCODE -ne 0) { throw 'NOX_E07_FIVE_UIA_SOURCE_SYNTAX_HOLD' }
-          python -B coordination/e07/probe_five_primary_action.py --artifact-dir input/nox --source-sha 7b3d22d5d607abf9b9d478d82507f33153c23d9f --setup-sha 5af3a9aced6685a36455ec46a25383d2f5add06bf24815ef6275133cea1c909a --out work/qwen-installed/FIVE_UIA_CLICKS_RECEIPT.json
+          python -B coordination/e07/probe_five_primary_action.py --artifact-dir input/nox --source-sha fbbe084c23eb1ea2462814b6d5bfded5ff6951c6 --setup-sha b658756ca5969536fb2d294038b58c6a6948694b13ebd596efdfc04b5ec7f908 --out work/qwen-installed/FIVE_UIA_CLICKS_RECEIPT.json
           if ($LASTEXITCODE -ne 0) { throw 'NOX_E07_FIVE_UIA_CLICKS_HOLD' }
       - name: Preserve evidence without falsely promoting incomplete release
         if: always()
