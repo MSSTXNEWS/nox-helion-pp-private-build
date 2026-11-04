@@ -160,7 +160,7 @@ class WowStageTests(unittest.TestCase):
   real_write=Path.write_text
   triggered=[False]
   def fail_home(path,data,*args,**kwargs):
-   if path==home and not triggered[0]:
+   if path.name=='index.html' and 'creative/wow200/runtime/home-scene.mjs' in data and not triggered[0]:
     triggered[0]=True
     foreign.write_bytes(b'FOREIGN BYTES MUST SURVIVE')
     raise OSError('INJECTED_AFTER_STUDIO_STAGE_HOLD')
@@ -180,7 +180,7 @@ class WowStageTests(unittest.TestCase):
   real_write=Path.write_text
   triggered=[False]
   def foreign_edit(path,data,*args,**kwargs):
-   if path==home and not triggered[0]:
+   if path.name=='index.html' and 'creative/wow200/runtime/home-scene.mjs' in data and not triggered[0]:
     triggered[0]=True
     studio.write_bytes(b'FOREIGN STUDIO EDIT MUST SURVIVE')
     raise OSError('INJECTED_FOREIGN_STUDIO_RACE_HOLD')
