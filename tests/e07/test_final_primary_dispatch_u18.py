@@ -48,6 +48,16 @@ class FinalPrimaryDispatch(unittest.TestCase):
         self.assertIn("_uia_script(hwnd,action)", source)
         self.assertNotIn('_uia_script(hwnd,"CLICK")', source)
 
+    def test_independent_same_hwnd_gdi_diagnostic_never_grants_visual_release(self):
+        code = (ROOT / "coordination" / "e07" / "probe_final_same_setup.py").read_text(encoding="utf-8")
+        self.assertIn("from probe_v6_visual_physical_u01 import capture_window", code)
+        self.assertIn("photo=capture_window(hwnd,png)", code)
+        self.assertIn("SAME_WPF_PHYSICAL_CAPTURE_NOT_VISUAL_ACCEPTANCE", code)
+        self.assertIn('diagnostic_photo={"scope":"SAME_WPF_PHYSICAL_CAPTURE_HOLD"}', code)
+        self.assertIn('"physical_capture":"PASS" if actual_png and visual_first_hold is None else "HOLD"', code)
+        self.assertIn('"reduced_motion":"HOLD"', code)
+        self.assertIn('"diagnostic_photo":diagnostic_photo', code)
+
     def test_original_d02_uses_five_quality_planets_without_fake_reduced_motion_pass(self):
         from pathlib import Path
         source = (ROOT/"coordination"/"e07"/"probe_final_same_setup.py").read_text(encoding="utf-8")

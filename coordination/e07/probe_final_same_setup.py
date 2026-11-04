@@ -276,6 +276,20 @@ def run(hwnd: int, install: Path, local: Path, *, source_sha: str, setup_sha: st
                            timeout=60,phase="VISUAL")
     except e07.Hold as exc:
         visual_first_hold=str(exc)
+    # A failing UIA probe may still leave a real photo unavailable. Obtain a
+    # strictly diagnostic screenshot from the SAME original WPF HWND, while
+    # keeping visual_first_hold and every release gate unchanged.
+    diagnostic_photo={"scope":"NOT_RUN_ORIGINALLY"}
+    if visual_first_hold is not None and not e07.clean_file(png):
+        try:
+            from probe_v6_visual_physical_u01 import capture_window
+            photo=capture_window(hwnd,png)
+            diagnostic_photo={
+                "scope":"SAME_WPF_PHYSICAL_CAPTURE_NOT_VISUAL_ACCEPTANCE",
+                "sha256":photo["sha256"],
+                "width":photo["width"],"height":photo["height"]}
+        except (e07.Hold,OSError,ValueError,KeyError):
+            diagnostic_photo={"scope":"SAME_WPF_PHYSICAL_CAPTURE_HOLD"}
     actual_png=(e07.clean_file(png) and
                 20_000<=png.stat().st_size<=40_000_000)
     sizes=visual_raw.get("sizes")
@@ -310,6 +324,7 @@ def run(hwnd: int, install: Path, local: Path, *, source_sha: str, setup_sha: st
             # Physical D02 graphics are not OS Reduced Motion or design review.
             "reduced_motion":"HOLD","screenshot_sha256":screenshot_sha,
             "physical_sizes":sizes or [],"fx_cycle":fx,
+            "diagnostic_photo":diagnostic_photo,
             "visual_first_unmet_gate":visual_first_hold or
                  (fx.get("first_unmet_gate") if fx["fx_control"]!="PASS"
                   else "E07_INDEPENDENT_VISUAL_REVIEW_NOT_RUN"),
