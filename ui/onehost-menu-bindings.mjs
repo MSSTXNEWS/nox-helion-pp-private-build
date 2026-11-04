@@ -132,6 +132,15 @@ export function isNativeChatTerminal(reply){
   return reply?.routeId==='helion.chat' &&
     (reply.state==='HOLD'||reply.state==='COMPLETED'&&reply.result?.done===true);
 }
+// Exact native owner acknowledgement, not a UI value or transport completion.
+export function nativeModelSelectionAck(reply,requested){
+  return typeof requested==='string'&&requested.length>0&&
+    reply?.routeId==='chat.model'&&reply.state==='COMPLETED'&&
+    reply.result?.selectedModel===requested;
+}
+export function nativeModelReady(model,confirmed,pending){
+  return typeof model==='string'&&model.length>0&&model===confirmed&&pending===false;
+}
 export function mountOneHostMenu({documentRef=globalThis.document,windowRef=globalThis.window}={}) {
   const doc=documentRef,view=windowRef;
   if(!doc||!view)throw Error('NOX_MENU_DOCUMENT_REQUIRED');
@@ -146,6 +155,7 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
   const client=createNativeMenuClient({webview:native,cryptoRef:view.crypto});
   let states=Object.create(null),trainingJobs=[],disposed=false,menu=null;
   let selectionEpoch=0,capabilityEpoch=0,historyEpoch=0,chatBusy=false,stopRequestPending=false;
+  let modelConfirmed='',modelSelectionPending=false;
   const sameSelection=(epoch,scope,model=null)=>{
     const now=context();
     return !disposed&&epoch===selectionEpoch&&value('chat-provider')!=='OPENAI'&&
@@ -347,7 +357,9 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
   const chatStatus=message=>{const target=doc.getElementById('chat-state');if(target)target.textContent=message;};
   async function sendChat(){
     const scope=context(),text=value('chat-input').trim(),model=value('chat-model'),epoch=selectionEpoch;
-    if(!scope.core_id||!scope.persona_id||!text||!model){chatStatus('HOLD · выберите ядро, персону, модель и введите сообщение');return;}
+    if(!scope.core_id||!scope.persona_id||!text||!nativeModelReady(model,modelConfirmed,modelSelectionPending)){
+      chatStatus('HOLD · OneHost не подтвердил выбранную локальную модель');return;
+    }
     if(chatBusy)return;chatBusy=true;
     const send=doc.getElementById('chat-send'),stop=doc.getElementById('chat-stop');
     const visible=()=>sameSelection(epoch,scope,model);
@@ -355,7 +367,7 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
       if(!chatTerminal(reply))return;
       chatBusy=false;
       if(!disposed){
-        if(send)send.disabled=!value('chat-model');
+        if(send)send.disabled=chatBusy||!nativeModelReady(value('chat-model'),modelConfirmed,modelSelectionPending);
         if(stop)stop.disabled=false;
         if(visible()&&reply.state==='COMPLETED'){
           if(typeof reply.result?.answer==='string')row.textContent=reply.result.answer;
@@ -380,19 +392,26 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
       if(['NOX_NATIVE_REQUEST_DENIED','NOX_NATIVE_CLIENT_DISPOSED','NOX_NATIVE_REQUEST_LIMIT',
         'NOX_NATIVE_NONCE_COLLISION','NOX_NATIVE_POST_FAILED'].includes(error.message))chatBusy=false;
       if(visible())chatStatus(error.message==='TIMEOUT'?'HOLD · native не завершён, STOP доступен':'HOLD · соединение с ядром');
-    }finally{if(!disposed){if(send)send.disabled=chatBusy||!value('chat-model');if(stop)stop.disabled=false;}}
+    }finally{if(!disposed){if(send)send.disabled=chatBusy||!nativeModelReady(value('chat-model'),modelConfirmed,modelSelectionPending);if(stop)stop.disabled=false;}}
   }
   async function models(){
     const select=doc.getElementById('chat-model');if(!select)return;
+    const observedEpoch=selectionEpoch;
     try{
       const reply=await client.request('chat.model',{});
-      if(disposed||reply.state!=='COMPLETED'||!Array.isArray(reply.result?.models))return;
+      if(disposed||observedEpoch!==selectionEpoch||modelSelectionPending||
+         reply.state!=='COMPLETED'||!Array.isArray(reply.result?.models))return;
       select.replaceChildren();
-      for(const name of reply.result.models){if(typeof name!=='string')continue;const option=doc.createElement('option');option.value=name;option.textContent=name;select.append(option);}
-      if(reply.result.selectedModel)select.value=reply.result.selectedModel;
-      const send=doc.getElementById('chat-send');if(send)send.disabled=!select.value;
-      chatStatus(select.value?'LOCAL · модель обнаружена':'HOLD · локальная модель не установлена');
-    }catch(_){chatStatus('HOLD · модель не обнаружена');}
+      const names=[...new Set(reply.result.models.filter(name=>
+        typeof name==='string'&&name.length>0&&name.length<=160))].slice(0,64);
+      for(const name of names){const option=doc.createElement('option');option.value=name;option.textContent=name;select.append(option);}
+      const selected=reply.result.selectedModel;
+      modelConfirmed=names.includes(selected)&&nativeModelSelectionAck(reply,selected)?selected:'';
+      select.value=modelConfirmed;
+      const send=doc.getElementById('chat-send');
+      if(send)send.disabled=!nativeModelReady(select.value,modelConfirmed,modelSelectionPending);
+      chatStatus(modelConfirmed?'LOCAL · модель подтверждена OneHost':'HOLD · локальная модель не подтверждена');
+    }catch(_){modelConfirmed='';const send=doc.getElementById('chat-send');if(send)send.disabled=true;chatStatus('HOLD · модель не обнаружена');}
   }
   async function click(event){
     const button=event.target?.closest?.('button');if(!button||button.disabled)return;
@@ -427,14 +446,33 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
   async function change(event){
     if(!['chat-core','chat-persona','chat-model','chat-provider'].includes(event.target?.id))return;
     ++selectionEpoch;const historyRun=++historyEpoch,epoch=selectionEpoch;
+    // Changing model, core, persona or provider invalidates the prior ACK.
+    modelConfirmed='';
     if(value('chat-provider')==='OPENAI')return;
-    const scope=context();if(!scope.core_id||!scope.persona_id)return;
+    const scope=context(),send=doc.getElementById('chat-send');
+    if(send)send.disabled=true;
+    if(!scope.core_id||!scope.persona_id)return;
     event.stopImmediatePropagation();
     try{
       if(event.target.id==='chat-model'){
-        const chosen=await client.request('chat.model',{model:value('chat-model'),...scope});
-        if(historyRun!==historyEpoch||!sameSelection(epoch,scope))return;
-        if(chosen.state!=='COMPLETED'){chatStatus('HOLD · модель не выбрана');return;}
+        if(modelSelectionPending){chatStatus('HOLD · выбор модели уже выполняется');return;}
+        const requested=value('chat-model');
+        if(!requested){chatStatus('HOLD · укажите модель');return;}
+        const select=doc.getElementById('chat-model');
+        modelSelectionPending=true;
+        if(select)select.disabled=true;
+        let chosen;
+        try{chosen=await client.request('chat.model',{model:requested,...scope});}
+        finally{
+          modelSelectionPending=false;
+          if(!disposed&&select)select.disabled=false;
+        }
+        if(historyRun!==historyEpoch||!sameSelection(epoch,scope,requested))return;
+        if(!nativeModelSelectionAck(chosen,requested)){
+          chatStatus('HOLD · OneHost не подтвердил выбранную модель');return;
+        }
+        modelConfirmed=requested;
+        if(send)send.disabled=chatBusy||!nativeModelReady(value('chat-model'),modelConfirmed,modelSelectionPending);
       }
       const reply=await client.request('chat.history',{limit:100,...scope});
       if(historyRun!==historyEpoch||!sameSelection(epoch,scope))return;
