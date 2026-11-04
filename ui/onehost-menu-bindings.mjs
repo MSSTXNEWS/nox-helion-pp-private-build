@@ -112,10 +112,39 @@ export function createNativeMenuClient({webview,cryptoRef=globalThis.crypto,
 // Native COMPLETED is a transport envelope, never owner approval. Preserve the
 // existing owner ACK byte-for-byte in meaning, and require S03 provenance before
 // advertising a selfbuilder proposal as queued. No authorization is inferred.
+// Native COMPLETED is a transport state, never a privileged owner ACK.
+// Deny embedded provider/consent errors even alongside a positive model tag.
+export function nativeOwnerReceiptHolds(owner) {
+  if (!owner || typeof owner!=='object' || Array.isArray(owner)) return true;
+  if (Object.prototype.hasOwnProperty.call(owner,'ok') &&
+      typeof owner.ok!=='boolean') return true;
+  if (owner.ok===false || owner.ack===false ||
+      (Object.prototype.hasOwnProperty.call(owner,'ack') &&
+       typeof owner.ack!=='boolean')) return true;
+  if (Object.prototype.hasOwnProperty.call(owner,'errorCode') &&
+      owner.errorCode!=null && String(owner.errorCode).trim()!=='') return true;
+  const blocked=new Set(['HOLD','OFFLINE','ERROR','ERRORS','FAILED','DENIED',
+    'REJECTED','CANCELLED','CANCELED','UNAVAILABLE','BLOCKED','UNAUTHORIZED',
+    'FORBIDDEN','ABORTED','REVOKED','EXPIRED','STOPPING']);
+  const pairs=new Set(['NOT_READY','AUTH_REQUIRED','NEEDS_AUTH','CONSENT_REQUIRED',
+    'TIMED_OUT','STOP_REQUESTED']);
+  for (const key of ['status','state']) {
+    const value=owner[key];
+    if(value==null)continue;
+    if(typeof value!=='string')return true;
+    const words=value.trim().toUpperCase().match(/[A-Z0-9]+/g)||[];
+    if(words.some(word=>blocked.has(word)))return true;
+    for(let i=0;i+1<words.length;i++)
+      if(pairs.has(words[i]+'_'+words[i+1]))return true;
+  }
+  return false;
+}
+
 export function nativeOwnerActionReceipt(reply,route,action) {
   const owner=reply?.result;
   if(reply?.routeId!==route || reply?.state!=='COMPLETED' ||
-     !owner || typeof owner!=='object' || Array.isArray(owner) || owner.ack!==true)
+     !owner || typeof owner!=='object' || Array.isArray(owner) ||
+     nativeOwnerReceiptHolds(owner) || owner.ack!==true)
     return {ack:false,errorCode:reply?.errorCode||owner?.errorCode||'NATIVE_ACK_UNCONFIRMED'};
   if(action==='selfbuilder.propose' &&
      (typeof owner.run_id!=='string'||!/^S03-[A-Za-z0-9._:-]{1,128}$/.test(owner.run_id) ||
@@ -136,7 +165,8 @@ export function isNativeChatTerminal(reply){
 export function nativeModelSelectionAck(reply,requested){
   return typeof requested==='string'&&requested.length>0&&
     reply?.routeId==='chat.model'&&reply.state==='COMPLETED'&&
-    reply.result?.selectedModel===requested;
+    reply.result?.selectedModel===requested &&
+    !nativeOwnerReceiptHolds(reply.result);
 }
 export function nativeModelReady(model,confirmed,pending){
   return typeof model==='string'&&model.length>0&&model===confirmed&&pending===false;
