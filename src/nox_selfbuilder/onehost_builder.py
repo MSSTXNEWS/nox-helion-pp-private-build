@@ -146,6 +146,42 @@ class OneHostSelfBuilder:
         self._a_guard(session)
         return result
 
+    def native_p02_firstcycle(self, session, *, source_head, task_id, task,
+                              preimage_sha256, native_ack, run_isolated_test):
+        """Private native-owner entry point. Never exposed by command()/WebView.
+
+        The existing P02Coder supplies a candidate; current OneHost SID/session,
+        STOP epoch, source admission and separate native test/apply/rollback
+        grants provide authority. An installed Windows E07 receipt is still
+        mandatory before SELFBUILD_READY.
+        """
+        from .p02_coder import P02Coder
+        from .nx03_model_firstcycle import run_native_model_cycle
+        self._read_scope(session)
+        if (not isinstance(self.coder, P02Coder)
+                or self.workspace is None or not self.workspace.is_dir()
+                or self.source.root is None
+                or self.workspace.resolve().is_relative_to(self.source.root.resolve())
+                or not self.source.admitted(source_head)
+                or self._stop.is_set() or self.native_stop() is not False):
+            raise PermissionError('NX03_ORIGINAL_NATIVE_OWNER_NOT_READY')
+        # Native session identity, not model/page content, becomes the ACK token.
+        import hashlib as _hashlib
+        token = _hashlib.sha256(
+            json.dumps(scope_key(session), sort_keys=True,
+                       separators=(',', ':')).encode('utf-8')).hexdigest()
+        return run_native_model_cycle(
+            coder=self.coder, native_session=session, session_token=token,
+            source_head=source_head, task_id=task_id, task=task,
+            workspace=self.workspace, preimage_sha256=preimage_sha256,
+            current_head=self.source.head, stop_epoch=self.stop_epoch,
+            stopped=lambda: (self._stop.is_set() or self.native_stop() is not False),
+            native_ack=native_ack,
+            authorize=lambda incoming, action, scope: (
+                incoming == token and
+                self.authorize(session, action, scope) is True),
+            run_isolated_test=run_isolated_test)
+
     def _a_guard(self, session):
         self._read_scope(session)
         if (self._a_native_bridge is None or

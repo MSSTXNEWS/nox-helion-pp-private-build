@@ -62,9 +62,16 @@ def parse_model_source(raw):
     forbidden = (ast.Import, ast.ImportFrom, ast.Global, ast.Nonlocal,
                  ast.ClassDef, ast.AsyncFunctionDef, ast.Lambda, ast.Await,
                  ast.Yield, ast.YieldFrom, ast.Delete)
-    sensitive = {"eval", "exec", "compile", "open", "__import__", "getattr",
+    if tree.body[0].returns is not None or any(
+            arg.annotation is not None for arg in tree.body[0].args.args):
+        raise NX03Hold("NX03_SOURCE_ANNOTATION_DENIED")
+    sensitive = {"__builtins__", "eval", "exec", "compile", "open", "__import__", "getattr",
                  "setattr", "delattr", "globals", "locals", "vars", "input"}
     for node in ast.walk(tree):
+        if isinstance(node, ast.Attribute) and node.attr != "get":
+            raise NX03Hold("NX03_SOURCE_ATTRIBUTE_DENIED")
+        if isinstance(node, ast.Name) and node.id.startswith("__"):
+            raise NX03Hold("NX03_SOURCE_DUNDER_DENIED")
         if isinstance(node, forbidden) or (isinstance(node, ast.Name)
                                               and node.id in sensitive):
             raise NX03Hold("NX03_SOURCE_CAPABILITY_DENIED")
