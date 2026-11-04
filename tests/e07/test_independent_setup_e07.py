@@ -276,6 +276,8 @@ class IndependentE07(unittest.TestCase):
             with patch.object(MOD.subprocess,"run",side_effect=run_fixture):
                 proof=MOD.native_store_stop_probe(backend,scratch)
             self.assertEqual(proof["status"],"PASS")
+            self.assertEqual(proof["empty_history_restart"],"PASS")
+            self.assertEqual(proof["history_restart"],"NOT_TESTED")
             self.assertEqual(proof["active_stream_stop"],"NOT_TESTED")
             self.assertEqual(proof["real_model_inference"],"NOT_TESTED")
             self.assertEqual([v["route"] for v in calls],

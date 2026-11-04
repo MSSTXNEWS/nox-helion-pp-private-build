@@ -634,7 +634,7 @@ def gui_hwnd(shell: Path, local: Path) -> dict:
 
 
 def native_store_stop_probe(backend: Path, scratch: Path) -> dict:
-    """Independent installed SQLite-v4/history/STOP ACK proof, not model inference.
+    """Independent installed SQLite-v4/empty-history/STOP ACK proof, not model inference.
 
     Separate native processes share only an isolated ephemeral data directory.
     An acknowledged idle STOP is NOT proof of interruption of a live stream.
@@ -681,7 +681,8 @@ def native_store_stop_probe(backend: Path, scratch: Path) -> dict:
     require(version == 4 and integrity == "ok" and "core_chat_turns" in tables,
             "E07_NATIVE_STORE_SCHEMA_HOLD")
     return {"status": "PASS", "sqlite_user_version": 4,
-            "sqlite_quick_check": "ok", "history_restart": "PASS",
+            "sqlite_quick_check": "ok", "empty_history_restart": "PASS",
+            "history_restart": "NOT_TESTED",
             "stop_ack": "PASS", "active_stream_stop": "NOT_TESTED",
             "real_model_inference": "NOT_TESTED"}
 
