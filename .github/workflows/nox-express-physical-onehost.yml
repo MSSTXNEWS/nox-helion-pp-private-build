@@ -123,6 +123,13 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'P03_NATIVE_JOBID_ACK_REGRESSION_HOLD' }
           python -B -m unittest discover -s tests/p03 -p test_p03_ollama_tags_digest_u06.py -v
           if ($LASTEXITCODE -ne 0) { throw 'P03_OLLAMA_TAG_DIGEST_REGRESSION_HOLD' }
+      - name: EXPRESS D02 WOW and five primary UI routes regression (source, not E07)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          node --test ui/menu-pages/express-layout.test.mjs ui/menu-pages/express-wow-v3.test.mjs
+          if ($LASTEXITCODE -ne 0) { throw 'EXPRESS_D02_FIVE_PRIMARY_UI_SOURCE_HOLD' }
+          Write-Host 'EXPRESS_D02_FIVE_PRIMARY_UI_SOURCE_PASS_NOT_PHYSICAL_E07'
       # READ-ONLY P0 check on the actual hosted Windows runner. Metadata, Git
       # manifests and Drive part listings are NOT installed inference evidence.
       - name: P0 Windows Qwen OFFLINE readiness (no installation / no fake PASS)
