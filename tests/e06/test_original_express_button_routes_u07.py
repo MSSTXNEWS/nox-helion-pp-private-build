@@ -20,7 +20,7 @@ EXPECTED = {
     'INSTALL': 'button#install-app',
     'MODELS': 'button#model-center',
     'LEARN': '.nav button[data-screen="control"]',
-    'REPORTS': 'button#native-report',
+    'SETTINGS': 'button.tile[data-menu-index="7"]',
 }
 
 class OriginalButtonRoutes(unittest.TestCase):
@@ -41,6 +41,14 @@ class OriginalButtonRoutes(unittest.TestCase):
         nav = re.search(r'<nav class="nav"[^>]*>(.*?)</nav>', html, re.S)
         self.assertIsNotNone(nav)
         for name, selector in EXPECTED.items():
+            if 'data-menu-index' in selector:
+                # Actual R11 creates eight source-locked tiles dynamically.
+                # Index seven is the existing system/settings direction, not
+                # a fabricated missing #settings button or a report action.
+                self.assertIn("b.dataset.menuIndex=String(i)", html)
+                self.assertIn("'СИСТЕМА'", html)
+                self.assertIn("'Настройки, файлы и безопасность'", html)
+                continue
             if 'data-screen' in selector:
                 attr = selector.split('data-screen=', 1)[1].strip('[]')
                 count = len(re.findall(r'<button\b[^>]*data-screen=' + re.escape(attr), nav.group(1)))
@@ -60,6 +68,8 @@ class OriginalButtonRoutes(unittest.TestCase):
         self.assertNotIn("window.chrome.webview.postMessage({action:", js)
         for name, selector in EXPECTED.items():
             self.assertIn(name + ":'" + selector + "'", js)
+        self.assertNotIn('data-nox-primary="REPORTS"', js)
+        self.assertIn('data-nox-primary="SETTINGS"', js)
         derived, proof = stage.publish(self.home)
         self.assertEqual(derived.count(b'data-nox-primary='), 5)
         self.assertEqual(proof['installed_ui_automation'], 'NOT_RUN')
