@@ -28,13 +28,51 @@ export function mountApprovedHome(doc=document){
   const view=doc.defaultView;
   if(!view)throw Error('D02_WINDOW_REQUIRED');
   const reducedMotion=view.matchMedia?.('(prefers-reduced-motion: reduce)')??null;
-  let requestedProfile=null;
+  // A saved graphics preference is purely visual; it NEVER authorizes
+  // training, download, native IPC, or a computer action.
+  const choices=Object.freeze({MAX_WOW:'MAX',CINEMA:'BALANCED',
+    ECO:'ECO',MINI_START:'REDUCED',AUTO:null});
+  const prefKey='nox.d02.graphics.preference.v1';
+  let selectedQuality='CINEMA';
+  try{
+    const saved=view.localStorage?.getItem(prefKey);
+    if(Object.prototype.hasOwnProperty.call(choices,saved))selectedQuality=saved;
+    else if(doc.body.classList.contains('nox-wow-eco'))selectedQuality='ECO';
+    else if(doc.body.classList.contains('nox-wow-max'))selectedQuality='MAX_WOW';
+  }catch(_){/* Local storage may be blocked: manual buttons still work. */}
+  let autoQuality='BALANCED',autoRaf=0,autoLast=0,autoSamples=[],autoChanged=0;
+  let dock=null;
   function chosenMode(){
     if(reducedMotion?.matches)return 'REDUCED';
-    if(requestedProfile!==null)return requestedProfile;
-    const body=doc.body;
-    return body.classList.contains('nox-wow-eco')?'ECO':
-      body.classList.contains('nox-wow-max')?'MAX':'BALANCED';
+    return selectedQuality==='AUTO'?autoQuality:choices[selectedQuality];
+  }
+  function stopAuto(){
+    if(autoRaf){view.cancelAnimationFrame(autoRaf);autoRaf=0;}
+    autoLast=0;autoSamples=[];
+  }
+  function sampleAuto(now){
+    autoRaf=0;
+    if(selectedQuality!=='AUTO'||disposed||doc.hidden||reducedMotion?.matches)return;
+    if(autoLast>0 && now>autoLast && now-autoLast<250)autoSamples.push(now-autoLast);
+    autoLast=now;
+    if(autoSamples.length>=120){
+      const average=autoSamples.reduce((a,b)=>a+b,0)/autoSamples.length;
+      autoSamples=[];
+      // Only real animation-frame timing, no guessed GPU utilization.
+      // Hysteresis avoids UI mode flicker; owner may override instantly.
+      if(now-autoChanged>15000){
+        const next=average>43?'ECO':average>31?'BALANCED':
+          average<18?'MAX':autoQuality;
+        if(next!==autoQuality){autoQuality=next;autoChanged=now;sync();}
+      }
+    }
+    autoRaf=view.requestAnimationFrame(sampleAuto);
+  }
+  function beginAuto(){
+    if(selectedQuality==='AUTO'&&!autoRaf&&!doc.hidden&&!reducedMotion?.matches){
+      autoLast=0;autoSamples=[];
+      autoRaf=view.requestAnimationFrame(sampleAuto);
+    }
   }
   // Existing approved PR30 source owns the visual physics of these exact nine
   // elements. No trusted events are supplied until the native bridge is attested.
@@ -45,6 +83,8 @@ export function mountApprovedHome(doc=document){
   function releaseFx(){
     if(disposed)return;
     disposed=true;
+    stopAuto();
+    try{dock?.destroy();}catch(_){}
     try{detachMotion();}catch(_){}
     try{observer?.disconnect();}catch(_){}
     try{bodyObserver?.disconnect();}catch(_){}
@@ -56,10 +96,28 @@ export function mountApprovedHome(doc=document){
     try{scene.destroy();}finally{mounted=null;}
   }
   try{
-    film=mountNoxFilm(stage,view,doc);
-    const sync=()=>{const visible=home.classList.contains('active');const mode=chosenMode();
+    const sync=()=>{
+      const visible=home.classList.contains('active'),mode=chosenMode();
       scene.setVisible(visible);scene.setProfile(mode);
-      film.setVisible(visible);film.setProfile(mode,scene.snapshot().state);};
+      // MINI START does not even allocate a WebGL context at first launch.
+      if(mode==='REDUCED'){
+        film?.destroy();film=null;
+      }else{
+        if(!film)film=mountNoxFilm(stage,view,doc);
+        film.setVisible(visible);film.setProfile(mode,scene.snapshot().state);
+      }
+      dock?.render(selectedQuality,mode,reducedMotion?.matches===true);
+    };
+    const chooseQuality=choice=>{
+      if(!Object.prototype.hasOwnProperty.call(choices,choice))return false;
+      selectedQuality=choice;stopAuto();
+      if(choice==='AUTO'){autoQuality='BALANCED';autoChanged=0;}
+      try{view.localStorage?.setItem(prefKey,choice);}catch(_){}
+      sync();
+      if(choice==='AUTO')beginAuto();
+      return true;
+    };
+    dock=mountNoxGraphicsDock(home,doc,chooseQuality);
     observer=new view.MutationObserver(sync);
     observer.observe(home,{attributes:true,attributeFilter:['class']});
     bodyObserver=new view.MutationObserver(sync);
@@ -73,6 +131,11 @@ export function mountApprovedHome(doc=document){
     }
     for(const element of [central,...items])element.dataset.noxVerifiedFx='active';
     sync();
+    if(selectedQuality==='AUTO')beginAuto();
+    const onAutoVisibility=()=>{if(doc.hidden)stopAuto();else beginAuto();};
+    doc.addEventListener('visibilitychange',onAutoVisibility);
+    const oldDetach=detachMotion;
+    detachMotion=()=>{doc.removeEventListener('visibilitychange',onAutoVisibility);oldDetach();};
     mounted=Object.freeze({
       snapshot:()=>({...scene.snapshot(),kind:'decorative-d02',backendAccepted:false,source:'PR30'}),
       setProfile:mode=>{
@@ -81,7 +144,10 @@ export function mountApprovedHome(doc=document){
         if(typeof mode!=='string'||
            !['ECO','BALANCED','MAX','REDUCED'].includes(mode))return false;
         const accepted=scene.setProfile(reducedMotion?.matches?'REDUCED':mode);
-        if(accepted===true){requestedProfile=mode;film?.setProfile(reducedMotion?.matches?'REDUCED':mode,scene.snapshot().state);}
+        if(accepted===true){
+          const chosen=Object.keys(choices).find(k=>k!=='AUTO'&&choices[k]===mode);
+          if(chosen)chooseQuality(chosen); // Any manual choice cancels AUTO.
+        }
         return accepted;
       },
       destroy(){releaseFx();}
@@ -96,6 +162,61 @@ export function mountApprovedHome(doc=document){
  * Shader methods researched alongside OGL (Unlicense), tsParticles (MIT),
  * and ashima/webgl-noise (MIT); no third-party GLSL was copied.
  */
+
+/* NOX D02 GRAPHICS PLANET DOCK V1 — five genuine graphic BUTTONS (no dropdown).
+ * Visual performance only: never changes AI learning, GPU training, model
+ * queue, source patches, STOP, permissions or native owner state.
+ */
+function mountNoxGraphicsDock(home,doc,onSelect){
+  const entries=[
+    ['MAX_WOW','MAX WOW','ПОЛНЫЙ','✦'],
+    ['CINEMA','CINEMA','КИНО','◉'],
+    ['ECO','ECO','ЭКОНОМ','◌'],
+    ['MINI_START','MINI START','МИНИ','·'],
+    ['AUTO','AUTO','АДАПТИВНО','◇']
+  ];
+  const dock=doc.createElement('nav');
+  dock.className='nox-quality-dock';dock.dataset.noxGraphicsDock='v1';
+  dock.setAttribute('aria-label','Качество графики NOX');
+  const top=doc.createElement('div');top.className='nox-quality-dock__head';
+  const title=doc.createElement('strong');title.textContent='✦ ГРАФИКА';
+  const status=doc.createElement('output');status.className='nox-quality-dock__status';
+  status.setAttribute('aria-live','polite');top.append(title,status);
+  const row=doc.createElement('div');row.className='nox-quality-dock__row';
+  row.setAttribute('role','group');row.setAttribute('aria-label','Режим графики');
+  const buttons=new Map();
+  for(const [id,name,hint,glyph] of entries){
+    const button=doc.createElement('button');button.type='button';
+    button.className='nox-quality-planet';button.dataset.quality=id;
+    button.setAttribute('aria-label',name+' — '+hint);
+    button.setAttribute('aria-pressed','false');
+    const sphere=doc.createElement('span');sphere.className='nox-quality-planet__sphere';
+    sphere.setAttribute('aria-hidden','true');sphere.textContent=glyph;
+    const label=doc.createElement('strong');label.textContent=name;
+    const sub=doc.createElement('small');sub.textContent=hint;
+    button.append(sphere,label,sub);
+    button.addEventListener('click',()=>onSelect(id));
+    buttons.set(id,button);row.append(button);
+  }
+  dock.append(top,row);
+  home.append(dock); // Never a child of the moving orbit / hitboxes.
+  return Object.freeze({
+    render(selected,effective,osReduced){
+      for(const [id,button] of buttons){
+        const active=id===selected;
+        button.setAttribute('aria-pressed',String(active));
+        button.classList.toggle('is-selected',active);
+      }
+      status.textContent=osReduced
+        ? 'СИСТЕМА · МИНИМУМ ДВИЖЕНИЯ'
+        : selected==='AUTO'
+          ? 'AUTO · '+({'MAX':'MAX WOW','BALANCED':'CINEMA','ECO':'ECO'}[effective]||effective)
+          : 'РУЧНОЙ · '+(buttons.get(selected)?.querySelector('strong')?.textContent||'CINEMA');
+    },
+    destroy(){dock.remove();}
+  });
+}
+
 function mountNoxFilm(stage,view,doc){
  const noop=Object.freeze({setVisible(){},setProfile(){},destroy(){}});
  let canvas=null,gl=null,program=null,buffer=null,observer=null,raf=0;
