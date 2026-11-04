@@ -67,6 +67,25 @@ class D02OriginalFivePrimary(unittest.TestCase):
   self.assertEqual(pending.read_bytes(),b"FOREIGN_UNMANAGED_BYTES")
   self.assertEqual(self.home.read_bytes(),before)
   self.assertFalse(self.receipt.exists())
+ def test_foreign_receipt_race_never_replaces_home(self):
+  derived=b'<nav>'+b''.join(('data-nox-primary="'+name+'"').encode() for name in ('CHAT','INSTALL','MODELS','LEARN','SETTINGS'))+b'</nav>'
+  proof={'source_sha256':hashlib.sha256(self.home.read_bytes()).hexdigest(),
+         'published_sha256':hashlib.sha256(derived).hexdigest(),
+         'installed_ui_automation':'NOT_RUN','release_accepted':False}
+  before=self.home.read_bytes()
+  from pathlib import Path as _Path
+  real_open=_Path.open
+  def competing_receipt(path,mode="r",*args,**kwargs):
+   if path==self.receipt and mode=="x":
+    with real_open(self.receipt,"w",encoding="utf-8") as foreign:
+     foreign.write("FOREIGN_RECEIPT_MUST_SURVIVE")
+    raise FileExistsError("competing receipt owner won")
+   return real_open(path,mode,*args,**kwargs)
+  with patch.object(module,'publish',return_value=(derived,proof)), patch.object(_Path,'open',competing_receipt):
+   with self.assertRaises(FileExistsError): module.stage(self.root,self.receipt)
+  self.assertEqual(self.home.read_bytes(),before)
+  self.assertEqual(self.receipt.read_text('utf-8'),"FOREIGN_RECEIPT_MUST_SURVIVE")
+  self.assertFalse(self.home.with_name("index.html.nox-u12-pending").exists())
  def test_reparse_home_rejected(self):
   self.home.unlink()
   other=self.folder/'unmanaged';other.write_text('unmanaged')

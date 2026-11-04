@@ -55,7 +55,16 @@ def stage(source: Path, receipt_path: Path) -> dict:
             proof["release_accepted"] is False):
         raise ValueError("D02_PRIMARY_SOURCE_PROOF_HOLD")
     created_identity = None
+    receipt_identity = None
+    receipt_committed = False
     try:
+        # Reserve the receipt BEFORE modifying HOME. A concurrent receipt owner
+        # cannot leave us with changed HOME and no trustworthy evidence.
+        with receipt_path.open("x", encoding="utf-8") as reservation:
+            info = os.fstat(reservation.fileno())
+            if not stat.S_ISREG(info.st_mode) or not info.st_ino:
+                raise ValueError("D02_PRIMARY_RECEIPT_RESERVATION_HOLD")
+            receipt_identity = (info.st_dev, info.st_ino)
         with staging.open("xb") as stream:
             # This exclusive open is the ownership boundary. A file that
             # raced in after the earlier absence check belongs to someone else.
@@ -77,12 +86,18 @@ def stage(source: Path, receipt_path: Path) -> dict:
                     "published_payload_uiA": "NOT_RUN", "independent_e07": "HOLD"}
         # The parent source archive is immutable. Only the disposable R11 HOME
         # and a new evidence file are written; unknown files are never removed.
-        with receipt_path.open("x", encoding="utf-8") as stream:
+        # Write only to the inode reserved by this invocation.
+        with receipt_path.open("r+", encoding="utf-8") as stream:
+            info = os.fstat(stream.fileno())
+            if (not stat.S_ISREG(info.st_mode) or
+                    (info.st_dev, info.st_ino) != receipt_identity):
+                raise ValueError("D02_PRIMARY_RECEIPT_OWNER_CHANGED_HOLD")
             json.dump(evidence, stream, sort_keys=True, ensure_ascii=False, indent=2)
             stream.flush()
             os.fsync(stream.fileno())
         if json.loads(receipt_path.read_text("utf-8")) != evidence:
             raise ValueError("D02_PRIMARY_RECEIPT_READBACK_HOLD")
+        receipt_committed = True
         return evidence
     finally:
         # Only unlink a still-present inode created by THIS exclusive open.
@@ -96,6 +111,16 @@ def stage(source: Path, receipt_path: Path) -> dict:
                 if (_regular(staging) and
                         (current.st_dev, current.st_ino) == created_identity):
                     staging.unlink()
+        # Never retain a false partial receipt; never remove foreign bytes.
+        if receipt_identity is not None and not receipt_committed:
+            try:
+                current = receipt_path.lstat()
+            except FileNotFoundError:
+                pass
+            else:
+                if (_regular(receipt_path) and
+                        (current.st_dev, current.st_ino) == receipt_identity):
+                    receipt_path.unlink()
 
 
 if __name__ == "__main__":
