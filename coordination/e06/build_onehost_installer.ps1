@@ -761,7 +761,13 @@ if ($wantsCreative) {
   # Real Windows WebView2 UIA InvokePattern is still E07 HOLD until executed.
   if (!$publishedHtml.Contains('id="nox-express-primary"') -or
       ([regex]::Matches($publishedHtml,'data-nox-primary="(?:CHAT|INSTALL|MODELS|LEARN|SETTINGS)"')).Count -ne 5 -or
-      !$publishedHtml.Contains('nox-express-primary-bind')) {
+      !$publishedHtml.Contains('nox-express-primary-bind') -or
+      !$publishedHtml.Contains('data-nox-check="A1"') -or
+      !$publishedHtml.Contains('NOX-A1-NATIVE-COMMAND-STATUS-v1') -or
+      !$publishedHtml.Contains('selfbuilder.a1.status')) {
+    throw 'D02_PUBLISHED_NATIVE_A1_PROBE_MISSING'
+  }
+  if ($false) {
     throw 'D02_PUBLISHED_FIVE_ORIGINAL_PRIMARY_ACTIONS_MISSING'
   }
   foreach ($name in @('nox-cinema.mjs','nox-cinema.css')) {

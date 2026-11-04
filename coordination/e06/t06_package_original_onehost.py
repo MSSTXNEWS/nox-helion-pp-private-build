@@ -731,6 +731,12 @@ def build(root,staged):
          sha(published_home)==HOME_R11_EXPECTED_SHA256,
          "U08_PUBLISHED_HOME_PREIMAGE_HOLD")
     five_published,five_proof=five_module.publish(original_home.read_bytes())
+    # Attest that the real original HOME publisher contains the same read-only
+    # A1 owner-status probe. This is inclusion, NOT runtime A1/E07 acceptance.
+    need(five_published.count(b'data-nox-check="A1"') == 1 and
+         b'NOX-A1-NATIVE-COMMAND-STATUS-v1' in five_published and
+         b'selfbuilder.a1.status' in five_published,
+         "U08_ORIGINAL_A1_NATIVE_PROBE_NOT_PUBLISHED")
     temp_home=published_home.with_name("index.html.u08tmp")
     need(not temp_home.exists() and not temp_home.is_symlink(),
          "U08_FIVE_HOME_TEMP_COLLISION_HOLD")
