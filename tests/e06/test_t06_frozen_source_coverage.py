@@ -10,6 +10,11 @@ SPEC = importlib.util.spec_from_file_location("coverage_gate", ROOT / "coordinat
 MOD = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(MOD)
 
+PACK_SPEC = importlib.util.spec_from_file_location(
+    "snapshot_pack", ROOT / "coordination/e06/express_source_snapshot_pack.py")
+PACK = importlib.util.module_from_spec(PACK_SPEC)
+PACK_SPEC.loader.exec_module(PACK)
+
 class FrozenCoverage(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -124,6 +129,48 @@ class FrozenCoverage(unittest.TestCase):
         raw_data[0]["sha256"] = "0" * 64
         with self.assertRaisesRegex(RuntimeError, "FROZEN_DATA_SHA_HOLD"):
             MOD.verify_archive_contents(reader, plan, raw_data)
+
+    def test_snapshot_output_regular_absent_path_allowed(self):
+        self.assertIsNone(PACK._verify_output_path(
+            self.root / "new-dir" / "source.zip"))
+
+    def test_snapshot_output_never_overwrites_existing_archive(self):
+        output = self.root / "source.zip"
+        output.write_bytes(b"previous-owner")
+        with self.assertRaisesRegex(ValueError, "ARCHIVE_DESTINATION_ALREADY_EXISTS_HOLD"):
+            PACK._verify_output_path(output)
+        self.assertEqual(output.read_bytes(), b"previous-owner")
+
+    def test_snapshot_output_rejects_nondirectory_ancestor(self):
+        parent = self.root / "regular-file"
+        parent.write_bytes(b"preserve")
+        with self.assertRaisesRegex(ValueError, "ARCHIVE_OUTPUT_UNTRUSTED_PARENT_HOLD"):
+            PACK._verify_output_path(parent / "source.zip")
+        self.assertEqual(parent.read_bytes(), b"preserve")
+
+    def test_snapshot_output_rejects_dotdot_ancestor(self):
+        with self.assertRaisesRegex(ValueError, "ARCHIVE_OUTPUT_NOT_ABSOLUTE_HOLD"):
+            PACK._verify_output_path(self.root / ".." / "escape.zip")
+
+    def test_snapshot_output_rejects_symlink_parent(self):
+        trusted = self.root / "real"
+        trusted.mkdir()
+        linked = self.root / "linked-parent"
+        try:
+            linked.symlink_to(trusted, target_is_directory=True)
+        except (OSError, NotImplementedError):
+            self.skipTest("This host cannot create directory symlinks")
+        with self.assertRaisesRegex(ValueError, "ARCHIVE_OUTPUT_REPARSE_HOLD"):
+            PACK._verify_output_path(linked / "source.zip")
+
+    def test_snapshot_output_rejects_dangling_final_link(self):
+        linked = self.root / "dangling.zip"
+        try:
+            linked.symlink_to(self.root / "missing-source")
+        except (OSError, NotImplementedError):
+            self.skipTest("This host cannot create file symlinks")
+        with self.assertRaisesRegex(ValueError, "ARCHIVE_OUTPUT_REPARSE_HOLD"):
+            PACK._verify_output_path(linked)
 
     def test_success_is_coverage_not_release_acceptance(self):
         plan, data, reader = self.fixture()

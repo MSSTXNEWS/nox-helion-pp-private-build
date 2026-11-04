@@ -5,6 +5,7 @@ import importlib.util
 import hashlib
 import json
 import os
+import stat
 from pathlib import Path
 import subprocess
 import sys
@@ -61,6 +62,31 @@ def _validate_windows_source_path(name: str) -> None:
             raise ValueError("WINDOWS_SOURCE_PATH_HOLD: " + repr(name))
 
 
+def _verify_output_path(destination: Path) -> None:
+    """Fail closed on an aliased output root or an already owned archive.
+
+    This is a pre-admission defense, not a descriptor-bound TOCTOU claim.
+    The existing hard-link publication still refuses overwrite.
+    """
+    if not destination.is_absolute() or ".." in destination.parts:
+        raise ValueError("ARCHIVE_OUTPUT_NOT_ABSOLUTE_HOLD")
+    for node in (destination, *destination.parents):
+        try:
+            meta = node.lstat()
+        except FileNotFoundError:
+            continue
+        except (NotADirectoryError, PermissionError) as exc:
+            raise ValueError("ARCHIVE_OUTPUT_UNTRUSTED_PARENT_HOLD") from exc
+        if (stat.S_ISLNK(meta.st_mode) or
+                getattr(meta, "st_file_attributes", 0) & 0x400 or
+                getattr(node, "is_junction", lambda: False)()):
+            raise ValueError("ARCHIVE_OUTPUT_REPARSE_HOLD: " + str(node))
+        if node == destination:
+            raise ValueError("ARCHIVE_DESTINATION_ALREADY_EXISTS_HOLD")
+        if not stat.S_ISDIR(meta.st_mode):
+            raise ValueError("ARCHIVE_OUTPUT_PARENT_NOT_DIRECTORY_HOLD: " + str(node))
+
+
 def _committed_source_blobs(repo: Path) -> dict[str, str]:
     """Bind archive bytes to immutable HEAD, not a mutable Git index.
 
@@ -110,7 +136,9 @@ def build(repo: Path, sha: str, destination: Path):
         raise ValueError("HEAD_INDEX_PATHS_MISMATCH")
     seen = set()
     records = []
+    _verify_output_path(destination)
     destination.parent.mkdir(parents=True, exist_ok=True)
+    _verify_output_path(destination)
     with tempfile.NamedTemporaryFile(dir=destination.parent, suffix=".tmp", delete=False) as tmp:
         pending = Path(tmp.name)
     try:
@@ -165,6 +193,7 @@ def build(repo: Path, sha: str, destination: Path):
         # A same-directory hard link is atomic and fails if *any* entry exists.
         with pending.open("rb") as handle:
             zip_sha = hashlib.file_digest(handle, "sha256").hexdigest()
+        _verify_output_path(destination)
         try:
             os.link(pending, destination)
         except FileExistsError as exc:
