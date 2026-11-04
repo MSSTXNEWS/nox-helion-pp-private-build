@@ -83,8 +83,14 @@ def installed_file_sha_locked(path: Path, root: Path, expected_size: int, expect
         fd = os.open(path, flags)
         try:
             opened = os.fstat(fd)
-            if not stat.S_ISREG(opened.st_mode) or identity(before) != identity(opened):
-                raise Hold("E07_INSTALLED_FILE_OPEN_IDENTITY_HOLD")
+            if not stat.S_ISREG(opened.st_mode):
+                raise Hold("E07_INSTALLED_FILE_OPEN_NONREGULAR_HOLD")
+            # Bounded, privacy-safe failure kind: never return local names or IDs.
+            fields = ("st_dev", "st_ino", "st_size", "st_mtime_ns", "st_ctime_ns")
+            mismatch = [field.removeprefix("st_").upper() for field in fields
+                        if getattr(before, field) != getattr(opened, field)]
+            if mismatch:
+                raise Hold("E07_INSTALLED_FILE_OPEN_IDENTITY_HOLD:" + ",".join(mismatch))
             digest = hashlib.sha256()
             while block := os.read(fd, 1048576):
                 digest.update(block)
