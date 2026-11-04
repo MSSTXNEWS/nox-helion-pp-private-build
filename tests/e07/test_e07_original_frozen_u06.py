@@ -52,10 +52,26 @@ class FrozenOriginalU06(unittest.TestCase):
             MOD.classify_primary_uia_evidence({**physical,"treeScanned":1})
     def test_original_workflow_single_hash_frozen(self):
         workflow=(ROOT/".github/workflows/nox-express-independent-e07-candidate.yml").read_text()
-        self.assertIn("run-id: 41797861187",workflow)
-        self.assertIn("NOX-EXPRESS-ONEHOST-fe21790af418c8c1083946595811b67c9c03c49d",workflow)
-        self.assertIn("--artifact-kind original",workflow)
-        self.assertNotIn("run-id: 41785340462",workflow)
+        # Both historical immutable candidates remain code-admissible, but
+        # this workflow must select exactly ONE internally consistent candidate.
+        approved = (
+            ("run-id: 41797861187",
+             "NOX-EXPRESS-ONEHOST-fe21790af418c8c1083946595811b67c9c03c49d",
+             "--artifact-kind original --out"),
+            ("run-id: 41803143292",
+             "NOX-EXPRESS-ONEHOST-e888941626191c17d19d372889b1f96842c15e1b",
+             "--artifact-kind original-e888 --out"),
+        )
+        matches = [all(token in workflow for token in group) for group in approved]
+        self.assertEqual(sum(matches), 1, "E07_ORIGINAL_WORKFLOW_FROZEN_PAIR_HOLD")
+        active = approved[matches.index(True)]
+        inactive = approved[1-matches.index(True)]
+        for token in inactive:
+            self.assertNotIn(token, workflow)
+        self.assertNotIn("run-id: 41785340462", workflow)
+        # The old reviewed source+Setup bytes are still frozen in native code.
+        self.assertEqual(MOD.ORIGINAL_E06_SOURCE, "fe21790af418c8c1083946595811b67c9c03c49d")
+        self.assertEqual(MOD.ORIGINAL_E06_SETUP_SHA, "1b78fba3fa158673814b31f211063022fd2bff0ae7ff25f14ba3db2a47c484c2")
     def test_release_stays_hold(self):
         script=(ROOT/"coordination/e07/independent_setup_e07.py").read_text()
         self.assertIn('"release_accepted":False}',script)
