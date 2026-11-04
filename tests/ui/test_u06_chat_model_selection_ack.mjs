@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
+import { nativeOwnerReceiptHolds } from '../../ui/onehost-menu-bindings.mjs';
 
 // Extract the shipped UI function, not a duplicated synthetic selection algorithm.
 const source=readFileSync(new URL('../../ui/menu-pages/menu.js', import.meta.url),'utf8');
@@ -23,8 +24,8 @@ test('model selection is serialized and requires its own exact native ACK', asyn
   if(!payload.model)return Promise.resolve({state:'COMPLETED',result:{models:['qwen:0.6b','mistral:7b'],selectedModel:'qwen:0.6b'}});
   calls.push(payload.model);return new Promise(resolve=>pending.push(resolve));
  }};
- const create=new Function('el','button','client','setDetails','CORE_IDS','PERSONAS','chatInFlight','chatStopPending','selectedCore','selectedPersona',fragment+'\nreturn liveChat;');
- const run=create(el,button,client,()=>{},['CORE','ATLAS'],['KV','AM'],false,false,null,null);
+ const create=new Function('el','button','client','setDetails','CORE_IDS','PERSONAS','chatInFlight','chatStopPending','selectedCore','selectedPersona','nativeOwnerReceiptHolds',fragment+'\nreturn liveChat;');
+ const run=create(el,button,client,()=>{},['CORE','ATLAS'],['KV','AM'],false,false,null,null,nativeOwnerReceiptHolds);
  run({world:'pc',name:'Чат'});
  await Promise.resolve();await Promise.resolve();
  const rows=nodes.filter(x=>x.className==='nox-chat-chips');
@@ -45,6 +46,14 @@ test('model selection is serialized and requires its own exact native ACK', asyn
  pending.shift()({state:'COMPLETED',result:{selectedModel:'wrong-tag'}});
  await wrong;
  assert.equal(send.disabled,true,'mismatched ACK must not enable sending');
+ const offline=models()[0].onclick();
+ pending.shift()({state:'COMPLETED',errorCode:'PROVIDER_OFFLINE_HOLD',result:{selectedModel:'qwen:0.6b'}});
+ await offline;
+ assert.equal(send.disabled,true,'COMPLETED with native envelope HOLD must not enable SEND');
+ const embedded=models()[0].onclick();
+ pending.shift()({state:'COMPLETED',result:{selectedModel:'qwen:0.6b',status:'PROVIDER_OFFLINE_HOLD'}});
+ await embedded;
+ assert.equal(send.disabled,true,'COMPLETED with provider status HOLD must not enable SEND');
  assert.ok(models().every(x=>x.attrs['aria-pressed']!=='true'));
  const denied=models()[0].onclick();
  pending.shift()({state:'HOLD',errorCode:'DENIED'});
@@ -73,8 +82,8 @@ test('changing CoreID or Persona invalidates model ACK; stale owner replies cann
   if(!payload.model)return Promise.resolve({state:'COMPLETED',result:{models:['qwen:0.6b','mistral:7b'],selectedModel:'qwen:0.6b'}});
   return new Promise(resolve=>waits.push(resolve));
  }};
- const live=new Function('el','button','client','setDetails','CORE_IDS','PERSONAS','chatInFlight','chatStopPending','selectedCore','selectedPersona',fragment+'\nreturn liveChat;')(
-  el,button,client,()=>{},['CORE','ATLAS'],['KV','AM'],false,false,null,null);
+ const live=new Function('el','button','client','setDetails','CORE_IDS','PERSONAS','chatInFlight','chatStopPending','selectedCore','selectedPersona','nativeOwnerReceiptHolds',fragment+'\nreturn liveChat;')(
+  el,button,client,()=>{},['CORE','ATLAS'],['KV','AM'],false,false,null,null,nativeOwnerReceiptHolds);
  live({world:'pc',name:'Чат'});
  await Promise.resolve();await Promise.resolve();
  const rows=nodes.filter(x=>x.className==='nox-chat-chips');

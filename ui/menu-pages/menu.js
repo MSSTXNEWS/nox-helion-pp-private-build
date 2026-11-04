@@ -140,6 +140,11 @@ function liveChat(label){
  let core='core.core',persona='persona.kairen_voss',model='',chatEpoch=0,modelSelectionPending=false;
  // A selected model belongs to its native-confirmed UI scope, never to a different CoreID/Persona.
  let scopeEpoch=0,renderModels=()=>{};
+ // Transport COMPLETED is not provider success; bind model/chat status to
+ // the existing native owner denial predicate, including envelope errorCode.
+ const nativeCompleted=reply=>reply?.state==='COMPLETED'&&
+  (reply.errorCode==null||reply.errorCode==='')&&
+  !nativeOwnerReceiptHolds(reply.result);
  const enabled=()=>!!client&&!!model&&!chatInFlight&&!modelSelectionPending;
  const redraw=()=>{send.disabled=!enabled();stop.disabled=!client||!chatInFlight||chatStopPending;};
  function chips(parent,items,current,onSelect){
@@ -172,7 +177,7 @@ function liveChat(label){
   try{
    const reply=await client.request('chat.model',{});
    if(!modelsRow.isConnected)return;
-   if(reply?.state!=='COMPLETED'||!Array.isArray(reply.result?.models)){throw Error('NO_MODELS');}
+   if(!nativeCompleted(reply)||!Array.isArray(reply.result?.models)){throw Error('NO_MODELS');}
    const names=[...new Set(reply.result.models.filter(v=>typeof v==='string'&&v.length&&v.length<=160))].slice(0,32);
    // An inventory reply which began in a previous scope cannot authorize SEND.
    model=inventoryEpoch===scopeEpoch&&names.includes(reply.result.selectedModel)?reply.result.selectedModel:'';
@@ -191,7 +196,7 @@ function liveChat(label){
       try{
        const a=await client.request('chat.model',{model:name});
        if(requestedScopeEpoch===scopeEpoch&&modelsRow.isConnected&&
-          a?.state==='COMPLETED'&&a.result?.selectedModel===name){
+          nativeCompleted(a)&&a.result?.selectedModel===name){
         model=name;info.textContent='Модель подтверждена: '+name;
        }else info.textContent='HOLD · нет актуального native ACK выбранной модели и контекста';
       }catch{info.textContent='HOLD · нет подтверждения выбора модели';}
@@ -219,7 +224,7 @@ function liveChat(label){
    // actual nonempty native answer or already received native stream bytes.
    const answer=typeof reply.result?.answer==='string'?reply.result.answer:'';
    const streamed=replyRow.textContent.trim().length>0;
-   const generated=reply.state==='COMPLETED'&&(answer.trim().length>0||streamed);
+   const generated=nativeCompleted(reply)&&(answer.trim().length>0||streamed);
    if(generated&&answer.trim())replyRow.textContent=answer.slice(0,100000);
    info.textContent=generated?'COMPLETED · ответ локальной модели':
      'HOLD · '+(reply.state==='COMPLETED'?'нативное завершение без текста':(reply.errorCode||'операция отклонена'));
