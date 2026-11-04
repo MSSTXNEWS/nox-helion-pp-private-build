@@ -137,7 +137,7 @@ body.nox-wow-eco .nox-r11-world::before{animation:none!important;opacity:.4}
 @media(max-width:520px){
   html body #nox-express-primary{gap:5px;padding:5px;border-radius:16px}
   html body #nox-express-primary > button[data-nox-primary]{
-    min-width:66px;min-height:44px;padding:8px 7px;font-size:10px;
+    min-width:0;box-sizing:border-box;min-height:44px;padding:6px 1px;font-size:9px;letter-spacing:0;
   }
   .nox-r11-enhanced .nox-r11-world::before{animation:none}
 }
@@ -294,3 +294,20 @@ body[data-nox-reactor-mode="ECO"] #chat .nox-native-flow svg{
 }
 @media(forced-colors:active){#chat .nox-native-flow{border:1px solid CanvasText;box-shadow:none}
  #chat .nox-native-flow line,#chat .nox-native-flow circle{stroke:CanvasText;fill:CanvasText}}
+
+/* D03 original D02: five primary UIA controls stay in ONE visible row at
+   320/390/800 Windows widths. A1 status and native feedback get a second row;
+   no renderer permissions, actions, legacy scenes or animation modes change. */
+@media(min-width:551px) and (max-width:900px){
+  html body #nox-express-primary{
+    display:grid;grid-template-columns:repeat(5,minmax(0,1fr));
+    width:min(650px,calc(100vw - 18px));max-width:calc(100vw - 18px);
+    box-sizing:border-box;gap:5px;
+  }
+  html body #nox-express-primary > button[data-nox-primary]{
+    min-width:0;max-width:100%;width:100%;box-sizing:border-box;
+    padding:8px 4px;line-height:1.2;
+  }
+  html body #nox-express-primary [data-nox-check="A1"],
+  html body #nox-express-primary [data-nox-state]{grid-column:1/-1}
+}

@@ -74,7 +74,7 @@ MENU_V2_SHA256 = {
     'ui/nox-lucide-LICENSE.txt': 'ed9cca1da36ca6d38c2222e444c153f8d903197512b0afbb2bd6377d7cdf5413',
     'ui/onehost-menu-bindings.mjs': '9df476dc32cdcb9e235aba746ba610831a4f621f5181b714f95d5683894a4d1e',
     'ui/nox-r11-wow.mjs': '93455f888f0de964200a72ced4ee4cb309b407175ab180a1a0df39338904d5a8',
-    'ui/nox-r11-wow.css': 'eea0a19ace537d34e7915fb1f9114b4e6ea23e15882d96b5330a07bb32fac817',
+    'ui/nox-r11-wow.css': '95ec36b0074ee65072ba83d97fdd42d90372b8ef8c327e946d4825f786e7af08',
     'ui/selfbuilder-wow-workbench.mjs': 'bd65520a6f349439fe2a2b2215520dcc84f3f4254b52aaa277201071423d6f17',
     'ui/selfbuilder-wow-workbench.css': 'a5ee4ea99ab109388f154e7ebd80c1524a6228be85b6d5a460bdce13b7e92eb1',
     'contracts/menu_v2_existing_routes.json': '7bb81852e3f28a170d94873d603253f89e5017f268d0af6942f4bcba3b55beea',
