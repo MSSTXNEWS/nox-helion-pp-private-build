@@ -6,6 +6,8 @@ on:
       - .github/workflows/nox-full-d02-five-uia-physical.yml
       - coordination/e07/probe_full_d02_5uia_u09.py
       - tests/e07/test_full_d02_5uia_u09.py
+      - tests/e07/test_primary_destination_witness_b3.py
+      - coordination/e07/independent_setup_e07.py
 permissions:
   actions: read
   contents: read
@@ -34,6 +36,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'D02_QA_SOURCE_TEST_HOLD' }
           python -B -m unittest discover -s tests/e07 -p test_probe_five_primary_action_u06.py -v
           if ($LASTEXITCODE -ne 0) { throw 'U06_FIVE_UIA_TEST_HOLD' }
+          python -B -m unittest discover -s tests/e07 -p test_primary_destination_witness_b3.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'B3_DESTINATION_COMPONENT_REGRESSION_HOLD' }
       - uses: actions/download-artifact@v4
         with:
           run-id: 41827407408

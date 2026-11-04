@@ -691,26 +691,50 @@ def classify_readonly_primary_navigation_witness(response: dict) -> dict:
     """Physical route to a visible original screen and focused real control; not install/training execution."""
     expected = ("INSTALL", "MODELS", "LEARN", "SETTINGS")
     require(type(response) is dict and set(response) == {"schema", "actions"} and
-            response["schema"] == "NOX-E07-PRIMARY-NAV-v2" and
+            response["schema"] in ("NOX-E07-PRIMARY-NAV-v2", "NOX-E07-PRIMARY-NAV-v3") and
             type(response["actions"]) is list and len(response["actions"]) == 4,
             "E07_PRIMARY_NAV_SCHEMA_HOLD")
     checks = {}
+    extended = response["schema"] == "NOX-E07-PRIMARY-NAV-v3"
     for index, raw in enumerate(response["actions"]):
         require(type(raw) is dict and
-                set(raw) == {"action", "invoked", "sameHwndAlive",
-                             "beforeDestination", "afterDestination"} and
+                set(raw) == ({"action", "invoked", "sameHwndAlive",
+                              "beforeDestination", "afterDestination"} |
+                             ({"beforeHeadingVisible", "afterHeadingVisible",
+                               "beforeFocusedControls", "afterFocusedControls"}
+                              if extended else set())) and
                 type(raw["action"]) is str and raw["action"] == expected[index] and
                 type(raw["invoked"]) is bool and
                 type(raw["sameHwndAlive"]) is bool and
                 type(raw["beforeDestination"]) is bool and
                 type(raw["afterDestination"]) is bool,
                 "E07_PRIMARY_NAV_UNTRUSTED_HOLD")
+        if extended:
+            require(type(raw["beforeHeadingVisible"]) is bool and
+                    type(raw["afterHeadingVisible"]) is bool and
+                    type(raw["beforeFocusedControls"]) is int and
+                    type(raw["afterFocusedControls"]) is int and
+                    0 <= raw["beforeFocusedControls"] <= 2 and
+                    0 <= raw["afterFocusedControls"] <= 2 and
+                    raw["beforeDestination"] is (raw["beforeHeadingVisible"] and
+                                                 raw["beforeFocusedControls"] == 1) and
+                    raw["afterDestination"] is (raw["afterHeadingVisible"] and
+                                                raw["afterFocusedControls"] == 1),
+                    "E07_PRIMARY_NAV_COMPONENT_INCONSISTENT_HOLD")
         changed = (raw["invoked"] is True and raw["sameHwndAlive"] is True and
                    raw["beforeDestination"] is False and raw["afterDestination"] is True)
         checks[raw["action"]] = {
             "button_actuated": "OBSERVED" if raw["invoked"] else "HOLD",
             "navigation_verified": "PASS" if changed else "NOT_TESTED",
             "function_verified": "NOT_TESTED"}
+        if extended:
+            # Bounded role/visibility diagnostics, no text, user data or fake PASS.
+            checks[raw["action"]]["destination_components"] = {
+                "before_heading_visible": raw["beforeHeadingVisible"],
+                "after_heading_visible": raw["afterHeadingVisible"],
+                "before_focused_controls": raw["beforeFocusedControls"],
+                "after_focused_controls": raw["afterFocusedControls"],
+            }
     complete = all(value["navigation_verified"] == "PASS" for value in checks.values())
     return {"status": "OBSERVED" if complete else "HOLD",
             "actions_invoked": sum(value["button_actuated"] == "OBSERVED"
@@ -774,7 +798,9 @@ function Test-RealDestination($hostRoot,[string]$name) {
          $v.HasKeyboardFocus){$focusedControls++}
     }catch{}
   }
-  return $headingVisible -and $focusedControls -eq 1
+  return [pscustomobject]@{confirmed=($headingVisible -and $focusedControls -eq 1);
+                          headingVisible=$headingVisible;
+                          focusedControls=[Math]::Min($focusedControls,2)}
 }
 $actions=@()
 foreach($name in @('INSTALL','MODELS','LEARN','SETTINGS')){
@@ -796,21 +822,28 @@ foreach($name in @('INSTALL','MODELS','LEARN','SETTINGS')){
     }catch{}
   }
   if($found.Count -ne 1){throw 'E07_PRIMARY_NAV_BUTTON_NOT_UNIQUE'}
-  $before=Test-RealDestination $root $name
+  $beforeState=Test-RealDestination $root $name
+  $before=$beforeState.confirmed
   $pattern=$found.Item(0).GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)
   if($null -eq $pattern){throw 'E07_PRIMARY_NAV_INVOKEPATTERN_MISSING'}
   $pattern.Invoke()
   $after=$false
+  $afterState=$beforeState
   for($retry=0;$retry -lt 28;$retry++){
     Start-Sleep -Milliseconds 180
     $fresh=Get-SameRoot
-    if(Test-RealDestination $fresh $name){$after=$true;break}
+    $afterState=Test-RealDestination $fresh $name
+    if($afterState.confirmed){$after=$true;break}
   }
   $alive=$null -ne [System.Windows.Automation.AutomationElement]::FromHandle($handle)
   $actions+=([pscustomobject]@{action=$name;invoked=$true;sameHwndAlive=$alive;
-                              beforeDestination=$before;afterDestination=$after})
+                              beforeDestination=$before;afterDestination=$after;
+                              beforeHeadingVisible=$beforeState.headingVisible;
+                              afterHeadingVisible=$afterState.headingVisible;
+                              beforeFocusedControls=$beforeState.focusedControls;
+                              afterFocusedControls=$afterState.focusedControls})
 }
-[pscustomobject]@{schema='NOX-E07-PRIMARY-NAV-v2';actions=@($actions)} |
+[pscustomobject]@{schema='NOX-E07-PRIMARY-NAV-v3';actions=@($actions)} |
   ConvertTo-Json -Compress -Depth 5
 """.replace("__HWND__", str(hwnd))
     import base64
