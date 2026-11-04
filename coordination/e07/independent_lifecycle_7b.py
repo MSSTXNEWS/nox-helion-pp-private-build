@@ -15,8 +15,8 @@ import sys
 from independent_setup_e07 import Hold, lifecycle, require
 from probe_five_primary_action import checked_source_setup
 
-SOURCE_SHA = "7b3d22d5d607abf9b9d478d82507f33153c23d9f"
-SETUP_SHA = "5af3a9aced6685a36455ec46a25383d2f5add06bf24815ef6275133cea1c909a"
+SOURCE_SHA = "a504410cd969adfbdcda4e39fdeb9aef76e78702"
+SETUP_SHA = "cd894b5a1cbd46d3106f75869733256a4adc77ea2d60d3b590bcb7353e9a7a5c"
 
 
 def run_check(artifact: Path, receipt: Path) -> int:
