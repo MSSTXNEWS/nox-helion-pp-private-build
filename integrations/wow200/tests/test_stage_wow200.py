@@ -108,7 +108,7 @@ class WowStageTests(unittest.TestCase):
   for relative in eng.MENU_V2_SHA256:
    staged=self.stage/'Assets/creative/wow200/ui'/Path(relative).name
    self.assertEqual(staged.read_bytes(),eng.canonical_menu_bytes(self.root/relative))
-  home=(self.stage/'Assets/index.html').read_text()
+  home=(self.stage/'Assets/index.html').read_text(encoding='utf-8')
   self.assertIn('creative/wow200/ui/onehost-menu-bindings.mjs',home)
   self.assertIn('creative/wow200/ui/selfbuilder-menu-v2.css',home)
   # R11 WOW V5 is physically staged with the original HOME and source pin.
@@ -138,9 +138,9 @@ class WowStageTests(unittest.TestCase):
   self.assertEqual(receipt['active_d02_engine'],'OWNER1_PR144_PINNED')
   self.assertFalse(receipt['legacy_d02_runtime_imported'])
   self.assertEqual({n:digest(self.stage/'Assets'/n) for n in D02},original)
-  html=(self.stage/'Assets/creative/studio.html').read_text()
+  html=(self.stage/'Assets/creative/studio.html').read_text(encoding='utf-8')
   self.assertIn('wow200/runtime/loader.mjs',html)
-  self.assertIn('creative/wow200/runtime/home-scene.mjs',(self.stage/'Assets/index.html').read_text())
+  self.assertIn('creative/wow200/runtime/home-scene.mjs',(self.stage/'Assets/index.html').read_text(encoding='utf-8'))
   self.assertTrue(receipt['home_pr30_renderer_staged'])
   self.assertIn('wow200/proposals/NOX-WOW51-100/wow51-100.css',html)
   self.assertTrue((self.stage.parent/'WOW200_STAGE_RECEIPT.json').is_file())
@@ -177,7 +177,7 @@ class WowStageTests(unittest.TestCase):
   self.assertFalse((self.stage/'Assets/creative/wow200').exists())
  def test_checkout_crlf_donor_manifest_still_exact_git_blob(self):
   p=self.src/'DONOR_BLOBS.json'
-  normalized=(json.dumps(json.loads(p.read_text()),indent=2)+'\n').encode()
+  normalized=(json.dumps(json.loads(p.read_text(encoding='utf-8')),indent=2)+'\n').encode()
   p.write_bytes(normalized.replace(b'\n',b'\r\n'))
   eng.DONOR_MANIFEST_BLOB=gitsha(normalized)
   result=stage(self.stage,self.src)
@@ -232,16 +232,16 @@ class WowStageTests(unittest.TestCase):
   with self.assertRaisesRegex(ValueError,'WOW_DONOR_BLOB_IDENTITY_HOLD'):stage(self.stage,self.src)
   self.assertFalse((self.stage/'Assets/creative/wow200').exists())
  def test_path_traversal_fail_closed(self):
-  p=self.src/'DONOR_BLOBS.json';obj=json.loads(p.read_text());obj['files'].pop(next(k for k in obj['files'] if '/fake_' in k));obj['files']['proposals/../../oops']='00';p.write_text(json.dumps(obj))
+  p=self.src/'DONOR_BLOBS.json';obj=json.loads(p.read_text(encoding='utf-8'));obj['files'].pop(next(k for k in obj['files'] if '/fake_' in k));obj['files']['proposals/../../oops']='00';p.write_text(json.dumps(obj))
   eng.DONOR_MANIFEST_BLOB=gitsha(p.read_bytes())
   with self.assertRaisesRegex(ValueError,'UNSAFE_WOW_SOURCE_PATH'):stage(self.stage,self.src)
  def test_manifest_tampering_is_rejected_before_mutation(self):
   p=self.src/'DONOR_BLOBS.json'
-  p.write_text(p.read_text()+'\n')
+  p.write_text(p.read_text(encoding='utf-8')+'\n')
   with self.assertRaisesRegex(ValueError,'DONOR_MANIFEST_PIN_HOLD'):stage(self.stage,self.src)
   self.assertFalse((self.stage/'Assets/creative/wow200').exists())
  def test_required_engine_missing_is_hard_hold(self):
-  p=self.src/'DONOR_BLOBS.json';obj=json.loads(p.read_text())
+  p=self.src/'DONOR_BLOBS.json';obj=json.loads(p.read_text(encoding='utf-8'))
   obj['files'].pop('proposals/NOX-CINEMA-FX/nox-cinema.mjs')
   obj['files']['proposals/NOX-WOW151-200/another_00.mjs']='f'*40
   p.write_text(json.dumps(obj));eng.DONOR_MANIFEST_BLOB=gitsha(p.read_bytes())
