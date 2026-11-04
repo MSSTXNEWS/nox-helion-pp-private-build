@@ -5,6 +5,7 @@ import json
 import hashlib
 import tempfile
 import sqlite3
+import sys
 from contextlib import closing
 import struct
 from unittest.mock import patch
@@ -156,5 +157,25 @@ class IndependentE07(unittest.TestCase):
             self.assertEqual([v["route"] for v in calls],
                              ["chat.history","chat.history","chat.stop"])
             self.assertEqual(len({v["requestId"] for v in calls}),3)
+
+    def test_original_wpf_witness_is_mandatory(self):
+        with tempfile.TemporaryDirectory() as home:
+            with patch.object(MOD, "_WPF_WITNESS_PATH", Path(home)/"missing.py"):
+                with self.assertRaisesRegex(MOD.Hold, "E07_ORIGINAL_WPF_WITNESS_MISSING"):
+                    MOD.original_wpf_hwnd(42)
+
+    def test_original_wpf_witness_rejects_non_windows(self):
+        if sys.platform != "win32":
+            self.assertIsNone(MOD.original_wpf_hwnd(42))
+
+    def test_gui_requires_original_wpf_class_not_generic_visible_pid(self):
+        source=FILE.read_text(encoding="utf-8")
+        self.assertIn("handle = original_wpf_hwnd(proc.pid)", source)
+        self.assertIn("require(original_wpf_hwnd(proc.pid) == handle", source)
+        self.assertNotIn("if pid.value == proc.pid and user32.IsWindowVisible(hwnd)", source)
+        witness=(ROOT/"coordination/e06/t06_windows_hwnd_witness.py").read_text("utf-8")
+        self.assertIn('_WPF_CLASS_PREFIX = "HwndWrapper["', witness)
+        self.assertIn("_MIN_GUI_CLIENT_WIDTH = 160", witness)
+        self.assertIn("_visible_window_for_pid(pid, user32, callback_type)", witness)
 
 if __name__=='__main__':unittest.main()

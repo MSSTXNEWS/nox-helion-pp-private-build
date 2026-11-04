@@ -7,6 +7,7 @@ The source/Setup pins are immutable, while this test has its own CI run ID.
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import ctypes
 from ctypes import wintypes
 import hashlib
@@ -180,6 +181,19 @@ def wpf_marker_flags(window: str) -> dict[str, bool]:
     return flags
 
 
+_WPF_WITNESS_PATH = Path(__file__).resolve().parents[1] / "e06" / "t06_windows_hwnd_witness.py"
+
+def original_wpf_hwnd(pid: int) -> int | None:
+    """Original reviewed Win32 WPF class/PID/size witness; never generic HWND."""
+    require(clean_file(_WPF_WITNESS_PATH), "E07_ORIGINAL_WPF_WITNESS_MISSING")
+    spec = importlib.util.spec_from_file_location("_nox_e07_reviewed_wpf", _WPF_WITNESS_PATH)
+    require(spec is not None and spec.loader is not None, "E07_ORIGINAL_WPF_WITNESS_UNLOADABLE")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    handle = module.find_visible_wpf_hwnd(pid)
+    return handle if type(handle) is int and handle > 0 else None
+
+
 def gui_hwnd(shell: Path, local: Path) -> dict:
     """Independently prove fresh WPF/WebView2 NAV_OK+native handshake+HWND."""
     require(clean_file(shell), "E07_WPF_SHELL_MISSING")
@@ -194,17 +208,6 @@ def gui_hwnd(shell: Path, local: Path) -> dict:
     handle = None
     started = None
     try:
-        user32 = ctypes.windll.user32
-        enum_proto = ctypes.WINFUNCTYPE(ctypes.c_bool, wintypes.HWND, wintypes.LPARAM)
-        def inspect(hwnd, _):
-            nonlocal handle
-            pid = wintypes.DWORD(0)
-            user32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
-            if pid.value == proc.pid and user32.IsWindowVisible(hwnd):
-                handle = int(hwnd)
-                return False
-            return True
-        callback = enum_proto(inspect)
         deadline = time.monotonic() + 65
         while time.monotonic() < deadline and proc.poll() is None:
             if clean_file(log):
@@ -230,8 +233,7 @@ def gui_hwnd(shell: Path, local: Path) -> dict:
                         boundary = window[-4096:]
             require(not any(flags[name] for name in _WPF_FATAL),
                     "E07_WPF_NAVIGATION_FATAL_HOLD")
-            handle = None
-            user32.EnumWindows(callback, 0)
+            handle = original_wpf_hwnd(proc.pid)
             ready = (handle is not None and flags["NAV_OK"] and
                      flags["P02_ORIGINAL_NATIVE_PIPE_HANDSHAKE_OK"] and
                      not flags["NAV_FAIL"] and proc.poll() is None)
@@ -239,7 +241,8 @@ def gui_hwnd(shell: Path, local: Path) -> dict:
                 if started is None:
                     started = time.monotonic()
                 if time.monotonic() - started >= 8:
-                    require(user32.IsWindow(handle), "E07_WPF_HWND_REPLACED_HOLD")
+                    require(original_wpf_hwnd(proc.pid) == handle,
+                            "E07_WPF_HWND_REPLACED_HOLD")
                     return {"gui_visible_hwnd": "PASS", "stable_seconds": 8,
                             "webview_navigation": "PASS", "shell_native_ipc": "PASS",
                             "independent_webview_log": "CURRENT_PROCESS_FRESH_NAV_AND_IPC",
