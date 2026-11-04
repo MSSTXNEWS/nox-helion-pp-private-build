@@ -91,5 +91,53 @@ class V6VisualPhysicalSourceTest(unittest.TestCase):
             with self.assertRaisesRegex(Hold,'ORIGINAL_WINDOWS_HWND'):
                 mod.capture_window(1234,self.p)
 
+    def test_real_fx_cycle_receipt_is_narrow(self):
+        got = mod.evaluate_fx_cycle({
+            "initial": "FX BALANCED",
+            "observed": ["FX MAX", "FX ECO", "FX BALANCED"],
+            "invocations": 3,
+        })
+        self.assertEqual(got["fx_control"], "PASS")
+        self.assertEqual(got["actual_invoke_transitions"], 3)
+        self.assertEqual(got["reduced_motion"], "NOT_TESTED")
+        self.assertEqual(got["independent_visual_review"], "NOT_RUN")
+        self.assertNotIn("release_accepted", got)
+
+    def test_fake_fx_count_order_label_and_extra_claims_hold(self):
+        good = {"initial": "FX BALANCED",
+                "observed": ["FX MAX", "FX ECO", "FX BALANCED"],
+                "invocations": 3}
+        bad = [
+            {**good, "initial": "FX MAX"},
+            {**good, "observed": ["FX MAX", "FX MAX", "FX BALANCED"]},
+            {**good, "observed": ["FX MAX", "FX ECO"]},
+            {**good, "invocations": True},
+            {**good, "invocations": 2},
+            {**good, "release_accepted": True},
+            {**good, "observed": "FX MAX,FX ECO,FX BALANCED"},
+            {"initial": "FX BALANCED", "invocations": 3},
+        ]
+        for item in bad:
+            with self.subTest(item=item), self.assertRaisesRegex(Hold, "V6_FX_PHYSICAL_TRANSITION_HOLD"):
+                mod.evaluate_fx_cycle(item)
+
+    def test_real_fx_script_requires_unique_native_invoke_three_times(self):
+        source = path.read_text("utf-8")
+        self.assertIn("GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)", source)
+        self.assertIn("$pattern.Invoke()", source)
+        self.assertIn("foreach($expected in @('FX MAX','FX ECO','FX BALANCED'))", source)
+        self.assertIn("[System.Windows.Automation.PropertyCondition]::new(", source)
+        self.assertIn("$foundControls.Count -ne 1", source)
+        self.assertNotIn("$matches", source.lower())
+        self.assertIn("fx_checks.append(probe_fx_cycle(hwnd))", source)
+        self.assertIn('"physical_fx_cycle": fx_checks[0]', source)
+        self.assertIn('"independent_e07_10_10": "HOLD"', source)
+
+    def test_linux_cannot_forge_fx_invoke(self):
+        if sys.platform != "win32":
+            with self.assertRaisesRegex(Hold, "V6_FX_ORIGINAL_WINDOWS_HWND_REQUIRED"):
+                mod.probe_fx_cycle(42)
+
+
 if __name__=='__main__':
     unittest.main()
