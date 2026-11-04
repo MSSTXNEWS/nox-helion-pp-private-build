@@ -1,4 +1,4 @@
-name: NOX EXPRESS independent E07 frozen 30a full candidate
+name: NOX EXPRESS independent E07 frozen full D02 834c candidate
 on:
   push:
     branches: [integration/nox-v16-unified-candidate-20261028-r01]
@@ -9,19 +9,25 @@ on:
       - tests/e07/test_e07_original_frozen_u06.py
       - tests/e07/test_e07_install_root_reparse_u09.py
       - coordination/e07/probe_five_primary_action.py
+      - coordination/e07/probe_installed_qwen.py
+      - coordination/e07/probe_native_active_stop.py
+      - coordination/e07/verify_qwen_oci_integrity.py
       - tests/e07/test_probe_five_primary_action_u06.py
   workflow_dispatch:
 permissions:
   actions: read
   contents: read
 concurrency:
-  group: nox-express-e07-frozen-30a4f7c-ceb4aab2
+  group: nox-express-e07-frozen-d02-834c443-4f78cd
   cancel-in-progress: false
 jobs:
   independent-windows:
     if: github.repository == 'MSSTXNEWS/nox-helion-pp-private-build'
     runs-on: windows-2022
-    timeout-minutes: 45
+    timeout-minutes: 95
+    env:
+      OLLAMA_NO_CLOUD: '1'
+      OLLAMA_HOST: '127.0.0.1:11434'
     steps:
       - name: Checkout independent verifier source
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
@@ -36,17 +42,79 @@ jobs:
       - name: Download immutable candidate from DIFFERENT Windows CI run
         uses: actions/download-artifact@v4
         with:
-          run-id: 41867828741
+          run-id: 41872700529
           github-token: ${{ github.token }}
-          name: NOX-EXPRESS-ONEHOST-30a4f7c43649e3c3d66d0d46ec370b2105a69faa
-          path: input-verified-30a
+          name: nox-v16-e06-onehost-diagnostic-41872700529
+          path: input-verified-834
+      - name: Download prior SHA-pinned Authenticode-verified official Ollama x64 bytes
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 41324910974
+          github-token: ${{ github.token }}
+          name: nox-r11-official-ollama-41324910974
+          path: input-signed-ollama
+      - name: Start verified local Ollama and fetch exact approved Qwen for same-VM E07
+        id: provider
+        continue-on-error: true
+        shell: pwsh
+        timeout-minutes: 38
+        run: |
+          $ErrorActionPreference='Stop'
+          $installer='input-signed-ollama/OllamaSetup-v0.40.13-x64.exe'
+          $i=Get-Item -LiteralPath $installer -ErrorAction Stop
+          if (($i.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0 -or
+              $i.Length -ne 1676266440) { throw 'E07_SIGNED_OLLAMA_INSTALLER_SOURCE_HOLD' }
+          if ((Get-FileHash -LiteralPath $installer -Algorithm SHA256).Hash.ToLowerInvariant() -cne
+              '9e3c76e54e7184c68e88a2378b909bf59bbe454f83c076cb4f4a717e946ae719' -or
+              (Get-AuthenticodeSignature -LiteralPath $installer).Status -ne 'Valid') {
+            throw 'E07_OLLAMA_SHA_AUTHENTICODE_HOLD'
+          }
+          $p=Start-Process -FilePath (Resolve-Path $installer).Path -ArgumentList '/VERYSILENT /NORESTART /SUPPRESSMSGBOXES /SP-' -PassThru -ErrorAction Stop
+          if (-not $p.WaitForExit(180000) -or $p.ExitCode -ne 0) { throw 'E07_OLLAMA_SIGNED_INSTALL_HOLD' }
+          $cli=Join-Path $env:LOCALAPPDATA 'Programs/Ollama/ollama.exe'
+          if (-not (Test-Path -LiteralPath $cli -PathType Leaf)) { throw 'E07_OLLAMA_INSTALLED_MISSING_HOLD' }
+          function Test-OllamaLocal {
+            try {
+              $r=Invoke-RestMethod -Uri 'http://127.0.0.1:11434/api/tags' -TimeoutSec 3 -ErrorAction Stop
+              return ($null -ne $r.models)
+            } catch { return $false }
+          }
+          $ready=Test-OllamaLocal
+          if (-not $ready) {
+            $out=Join-Path $env:RUNNER_TEMP 'e07-ollama.stdout'
+            $err=Join-Path $env:RUNNER_TEMP 'e07-ollama.stderr'
+            $daemon=Start-Process -FilePath $cli -ArgumentList 'serve' -WindowStyle Hidden -PassThru -RedirectStandardError $err -RedirectStandardOutput $out
+            for($i=0;$i -lt 120;$i++) {
+              Start-Sleep -Seconds 2
+              $ready=Test-OllamaLocal
+              if ($ready) { break }
+              if ($daemon.HasExited) {
+                for($grace=0;$grace -lt 5;$grace++) {
+                  Start-Sleep -Seconds 2
+                  $ready=Test-OllamaLocal
+                  if ($ready) { break }
+                }
+                break
+              }
+            }
+          }
+          if (-not $ready) { throw 'E07_OLLAMA_LOOPBACK_NOT_READY_HOLD' }
+          & $cli pull qwen2.5-coder:1.5b
+          if ($LASTEXITCODE -ne 0) { throw 'E07_QWEN_APPROVED_PULL_HOLD' }
+          $tags=Invoke-RestMethod -Uri 'http://127.0.0.1:11434/api/tags' -TimeoutSec 30 -ErrorAction Stop
+          $matching=@($tags.models | Where-Object {$_.name -eq 'qwen2.5-coder:1.5b'})
+          if ($matching.Count -ne 1 -or $matching[0].digest -cne
+              'd7372fd828518a4d38b1eb196c673c31a85f2ed302b3d1e406c4c2d1b64a0668') {
+            throw 'E07_QWEN_APPROVED_FULL_DIGEST_HOLD'
+          }
+          Write-Host 'E07_APPROVED_LOCAL_QWEN_PROVIDER_READY_NOT_YET_CHAT_PROOF'
       - name: Independent installed E07 candidate lifecycle, never release by default
         id: test
         continue-on-error: true
         shell: pwsh
         run: |
           $ErrorActionPreference='Stop'
-          python -B -m py_compile coordination/e07/independent_setup_e07.py
+          python -B -m py_compile coordination/e07/independent_setup_e07.py coordination/e07/probe_installed_qwen.py coordination/e07/probe_native_active_stop.py coordination/e07/verify_qwen_oci_integrity.py
           if ($LASTEXITCODE -ne 0) { throw 'E07_PYTHON_SOURCE_SYNTAX_HOLD' }
           python -B -m unittest discover -s tests/e07 -p test_independent_setup_e07.py -v
           if ($LASTEXITCODE -ne 0) { throw 'E07_BASE_REGRESSION_HOLD' }
@@ -58,13 +126,13 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'E07_FIVE_CLICK_SOURCE_SYNTAX_HOLD' }
           python -B -m unittest discover -s tests/e07 -p test_probe_five_primary_action_u06.py -v
           if ($LASTEXITCODE -ne 0) { throw 'E07_FIVE_CLICK_REGRESSION_HOLD' }
-          python -B coordination/e07/independent_setup_e07.py --artifact-dir input-verified-30a --artifact-kind original-30a --out work/e07-independent/E07_CANDIDATE_RECEIPT.json
+          python -B coordination/e07/independent_setup_e07.py --artifact-dir input-verified-834 --artifact-kind d02 --out work/e07-independent/E07_CANDIDATE_RECEIPT.json
           if ($LASTEXITCODE -ne 0) { throw 'INDEPENDENT_E07_NOT_ACCEPTED' }
       - name: Save independent evidence even on HOLD
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: NOX-EXPRESS-E07-ORIGINAL-30A-${{ github.run_id }}
+          name: NOX-EXPRESS-E07-FULL-D02-834C-${{ github.run_id }}
           path: work/e07-independent/E07_CANDIDATE_RECEIPT.json
           if-no-files-found: error
           retention-days: 14

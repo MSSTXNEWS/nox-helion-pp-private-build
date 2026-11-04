@@ -23,9 +23,9 @@ import subprocess
 import sys
 import time
 
-SOURCE_SHA = "c35c1d330b36900c61d41f65661c535dcd6fc78a"
-SETUP_SHA = "af87a6181dee5e04d2a83bc33e738aec16534fa32bc407b40c009ab169129879"
-SETUP_SIZE = 169590852
+SOURCE_SHA = "834c443de53fd2c214750ed3c868133b70648c42"
+SETUP_SHA = "4f78cd587e05bb1db49496a9a182225e8301bd5d84fee58a8022e9383a17c41e"
+SETUP_SIZE = 169665062
 RECEIPT_SCHEMA = "nox.express.onehost.same-sha.v1"
 PROTOCOL = "NOX-P02-NATIVE-v1"
 
@@ -131,7 +131,7 @@ def run(args: list[str], *, limit: int) -> int:
     return result.returncode
 
 
-E06_BUILD_ID = "NOX-V16-4a0070cdb51d1d2d37a8d295"
+E06_BUILD_ID = "NOX-V16-8a95972242fb9dc445f5fbe0"
 ORIGINAL_ZIP_SHA = "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a"
 
 
@@ -159,7 +159,7 @@ def _read_locked_e06_json(path: Path) -> dict:
 # Physical frozen E06 c35c1d33 / Setup af87a618 receipt observed 1004.
 # A future SetupSHA MUST explicitly pin its OWN manifest count after physical
 # verification; neither JSON claims nor source-tree size can change this value.
-FROZEN_E06_OWNED_COUNT = 1004
+FROZEN_E06_OWNED_COUNT = 1007
 
 
 def samevm_lifecycle_verified(
@@ -1041,6 +1041,67 @@ def native_store_stop_probe(backend: Path, scratch: Path) -> dict:
             "stop_ack": "PASS", "active_stream_stop": "NOT_TESTED",
             "real_model_inference": "NOT_TESTED"}
 
+
+def installed_live_qwen_gates(backend: Path) -> dict:
+    """Re-use approved physical probes on the SAME installed backend before NSIS uninstall.
+
+    No new provider, fake inference, second DB, or release promotion. Both
+    receipts originate in the isolated Windows E07 VM and fail closed.
+    """
+    require(clean_file(backend), "E07_QWEN_INSTALLED_BACKEND_MISSING_HOLD")
+    runner_temp = Path(os.environ["RUNNER_TEMP"])
+    proof = runner_temp / "nox-e07-express-live-proof"
+    require(clean_dir(runner_temp) and not proof.exists() and
+            not proof.is_symlink() and
+            not getattr(proof, "is_junction", lambda: False)(),
+            "E07_QWEN_PROOF_SCRATCH_COLLISION_HOLD")
+    proof.mkdir()
+    repository = Path(os.environ["GITHUB_WORKSPACE"])
+    scripts = repository / "coordination" / "e07"
+    qwen_script = scripts / "probe_installed_qwen.py"
+    stop_script = scripts / "probe_native_active_stop.py"
+    require(all(clean_file(p) for p in (qwen_script, stop_script)),
+            "E07_REVIEWED_NATIVE_PROBE_MISSING_HOLD")
+    qwen_out = proof / "QWEN_INSTALLED.json"
+    stop_out = proof / "ACTIVE_STOP.json"
+    commands = (
+        ([sys.executable, "-B", str(qwen_script), "--backend", str(backend),
+          "--out", str(qwen_out)], "E07_INSTALLED_QWEN_LIVE_SQLITE_HOLD"),
+        ([sys.executable, "-B", str(stop_script), "--backend", str(backend),
+          "--data-dir", str(proof / "active-stop-native"),
+          "--model", "qwen2.5-coder:1.5b", "--out", str(stop_out)],
+         "E07_INSTALLED_ACTIVE_STREAM_STOP_HOLD"),
+    )
+    for command, failure in commands:
+        if command is commands[1][0]:
+            (proof / "active-stop-native").mkdir()
+        completed = subprocess.run(command, cwd=str(repository), check=False,
+                                   capture_output=True, timeout=480)
+        require(completed.returncode == 0, failure)
+    qwen = _read_locked_e06_json(qwen_out)
+    stop = _read_locked_e06_json(stop_out)
+    require(qwen.get("installed_backend_sha256") == sha256(backend) and
+            qwen.get("installed_native") == "LIVE_NONEMPTY_RESPONSE_VERIFIED" and
+            qwen.get("native_history_restart") == "PASS" and
+            type(qwen.get("sqlite_history_rows_after_restart")) is int and
+            qwen["sqlite_history_rows_after_restart"] >= 2 and
+            qwen.get("independent_weight_sha_verified") is True and
+            qwen.get("release_accepted") is False,
+            "E07_LIVE_QWEN_WEIGHT_CHAT_SQLITE_EVIDENCE_HOLD")
+    require(stop.get("native_active_stop") == "PASS" and
+            stop.get("interrupted_chat_terminal") == "NATIVE_CHAT_STOP" and
+            stop.get("native_stop_ack") == "PASS" and
+            stop.get("release_accepted") is False,
+            "E07_LIVE_ACTIVE_STOP_EVIDENCE_HOLD")
+    return {"status": "PASS", "model": "qwen2.5-coder:1.5b",
+            "installed_backend_sha256": qwen["installed_backend_sha256"],
+            "verified_oci_blobs": qwen.get("verified_model_oci_blobs"),
+            "nonempty_native_chat": "PASS", "history_after_restart": "PASS",
+            "history_rows": qwen["sqlite_history_rows_after_restart"],
+            "active_mid_stream_stop": "PASS", "stop_ack": "PASS",
+            "release_accepted": False}
+
+
 def verify_uninstall_no_loss(install: Path, stage: Path, previous: Path,
                              tracked: tuple[Path, ...], witness: Path,
                              expected: bytes) -> None:
@@ -1113,6 +1174,19 @@ def lifecycle(setup: Path, result: dict, *, frozen_source: str = "", physical_na
     result["checks"]["installed_gui"] = gui_hwnd(
         install/"NOX.P01.Shell.exe", local,
         safe_nav=physical_nav or frozen_source == "e888941626191c17d19d372889b1f96842c15e1b")
+    # LIVE Qwen, nonempty persisted SQLite and in-flight STOP must be
+    # measured BEFORE this exact installed Setup undergoes update/uninstall.
+    # A provider-offline HOLD must never skip conservative lifecycle cleanup.
+    if frozen_source == SOURCE_SHA:
+        try:
+            result["checks"]["installed_live_qwen_stream_stop_sqlite"] = (
+                installed_live_qwen_gates(
+                    install/"Backend"/"NOX_HELION_PRIVATE_CANDIDATE.exe"))
+        except (Hold, subprocess.TimeoutExpired, OSError, ValueError) as exc:
+            result["checks"]["installed_live_qwen_stream_stop_sqlite"] = {
+                "status": "HOLD", "error": str(exc) if isinstance(exc, Hold)
+                else "E07_LIVE_QWEN_"+type(exc).__name__.upper()+"_HOLD"}
+
     require(run([str(setup),"/S"],limit=300)==0 and clean_dir(previous),
             "E07_NSIS_UPDATE_HOLD")
     manifest_owner(previous)
@@ -1187,7 +1261,7 @@ def main() -> int:
             receipt=source/"e06"/"onehost-wow-diagnostic"/"E07_BUILT_HANDOFF.json"
             result["checks"]["artifact"] = setup_lock(setup,receipt)
         lifecycle(setup,result,frozen_source=source_sha,
-                  physical_nav=args.artifact_kind=="original-30a")
+                  physical_nav=args.artifact_kind in ("original-30a", "d02"))
         # The complete physical install/update/rollback/uninstall lifecycle ran
         # on this exact Setup. These facts do NOT prove inference or final E07.
         result["checks"]["installed_lifecycle"] = {
@@ -1207,11 +1281,12 @@ def main() -> int:
         store = result["checks"].get("installed_native_store_stop")
         require(type(store) is dict and store.get("status") == "PASS",
                 "E07_NATIVE_STORE_STOP_NOT_ACCEPTED")
-        # No model weights/live inference or screenshot/visual-quality witness
-        # was tested in this independent job. Keep release closed, with an
-        # explicit remaining acceptance requirement rather than an ambiguous
-        # lifecycle failure.
-        result["error"] = "E07_LIVE_INFERENCE_AND_VISUAL_CAPTURE_NOT_TESTED"
+        live = result["checks"].get("installed_live_qwen_stream_stop_sqlite")
+        require(type(live) is dict and live.get("status") == "PASS",
+                "E07_LIVE_QWEN_STREAM_STOP_SQLITE_NOT_ACCEPTED")
+        # Real installed Qwen and five navigation invocations do not certify
+        # D02 pixels or privileged INSTALL/LEARN/SETTINGS actions.
+        result["error"] = "E07_VISUAL_AND_PRIVILEGED_FUNCTION_ACCEPTANCE_NOT_TESTED"
     except (Hold,FileNotFoundError,ValueError,TimeoutError,
             subprocess.TimeoutExpired,PermissionError) as exc:
         result["error"]=(str(exc) if isinstance(exc,Hold) else

@@ -35,7 +35,7 @@ class IndependentE07(unittest.TestCase):
         workflow = (ROOT / ".github/workflows/nox-express-independent-e07-candidate.yml").read_text(encoding="utf-8")
         self.assertIn("run-id: 41867828741", workflow)
         self.assertIn("NOX-EXPRESS-ONEHOST-30a4f7c43649e3c3d66d0d46ec370b2105a69faa", workflow)
-        self.assertIn("--artifact-kind original-30a", workflow)
+        self.assertIn("--artifact-kind d02", workflow)
         self.assertIn('"original-e888"', source)
 
     def test_fresh_webview_markers_require_exact_log_events(self):
@@ -397,10 +397,10 @@ class IndependentE07(unittest.TestCase):
 
 
     def test_new_e06_setup_identity_and_receipt_rejects_duplicates(self):
-        self.assertEqual(MOD.SOURCE_SHA,"c35c1d330b36900c61d41f65661c535dcd6fc78a")
-        self.assertEqual(MOD.SETUP_SHA,"af87a6181dee5e04d2a83bc33e738aec16534fa32bc407b40c009ab169129879")
-        self.assertEqual(MOD.SETUP_SIZE,169590852)
-        self.assertEqual(MOD.E06_BUILD_ID,"NOX-V16-4a0070cdb51d1d2d37a8d295")
+        self.assertEqual(MOD.SOURCE_SHA,"834c443de53fd2c214750ed3c868133b70648c42")
+        self.assertEqual(MOD.SETUP_SHA,"4f78cd587e05bb1db49496a9a182225e8301bd5d84fee58a8022e9383a17c41e")
+        self.assertEqual(MOD.SETUP_SIZE,169665062)
+        self.assertEqual(MOD.E06_BUILD_ID,"NOX-V16-8a95972242fb9dc445f5fbe0")
         with tempfile.TemporaryDirectory() as home:
             path=Path(home)/"E07_BUILT_HANDOFF.json"
             path.write_text('{"source_commit_sha1":"a","source_commit_sha1":"b"}')
@@ -425,15 +425,15 @@ class IndependentE07(unittest.TestCase):
         # Source fixture only; does not assert Windows installation or release.
         good = {key: {"code": 0} for key in
                 ("install", "verify", "update", "rollback", "uninstall")}
-        good["uninstall_owned_files_checked"] = 1004
+        good["uninstall_owned_files_checked"] = 1007
         self.assertTrue(MOD.samevm_lifecycle_verified(good))
-        for invalid in (None, False, 0, "1004", [], (),
-                        {"uninstall_owned_files_checked": 1004},
+        for invalid in (None, False, 0, "1007", [], (),
+                        {"uninstall_owned_files_checked": 1007},
                         {"uninstall_owned_files_checked": True}):
             with self.subTest(invalid=invalid):
                 self.assertFalse(MOD.samevm_lifecycle_verified(invalid))
-        for field, value in (("uninstall_owned_files_checked", 1003),
-                             ("uninstall_owned_files_checked", "1004"),
+        for field, value in (("uninstall_owned_files_checked", 1006),
+                             ("uninstall_owned_files_checked", "1007"),
                              ("uninstall_owned_files_checked", True),
                              ("install", {"code": True}),
                              ("rollback", {}),
@@ -542,7 +542,7 @@ class IndependentE07(unittest.TestCase):
     def test_u11_safe_navigation_only_for_pinned_original_candidate(self):
         source = FILE.read_text(encoding="utf-8")
         self.assertIn('safe_nav=physical_nav or frozen_source == "e888941626191c17d19d372889b1f96842c15e1b"', source)
-        self.assertIn('physical_nav=args.artifact_kind=="original-30a"', source)
+        self.assertIn('physical_nav=args.artifact_kind in ("original-30a", "d02")', source)
         guarded = source.split("def observe_readonly_primary_navigation(",1)[1].split(
             "\ndef original_wpf_hwnd(",1)[0]
         self.assertIn("InvokePattern",guarded)

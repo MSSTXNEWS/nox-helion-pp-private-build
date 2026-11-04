@@ -15,7 +15,7 @@ class FrozenOriginalU06(unittest.TestCase):
         self.assertEqual(MOD.ORIGINAL_E06_OWNED_FILES,485)
         self.assertEqual(MOD.ORIGINAL_E06_SOURCE_ZIP_SHA,"80e46b37260680eaa434211ebbe98d8498c8481e9b384e8895e26c810b995106")
         self.assertEqual(MOD.ORIGINAL_E06_PUBLISHED_HOME_SHA,"37c7952d98e820b22ea59c72c967bc4f7ecf01da013b3269b53e9f698062586e")
-        self.assertEqual(MOD.SOURCE_SHA,"c35c1d330b36900c61d41f65661c535dcd6fc78a")
+        self.assertEqual(MOD.SOURCE_SHA,"834c443de53fd2c214750ed3c868133b70648c42")
     def test_conservative_uninstall_count(self):
         good={k:{"code":0} for k in ("install","verify","update","rollback","uninstall")}
         good["uninstall_owned_files_checked"]=485
@@ -66,12 +66,12 @@ class FrozenOriginalU06(unittest.TestCase):
              "--artifact-kind original-30a --out"),
         )
         matches = [all(token in workflow for token in group) for group in approved]
-        self.assertEqual(sum(matches), 1, "E07_ORIGINAL_WORKFLOW_FROZEN_PAIR_HOLD")
-        active = approved[matches.index(True)]
-        for group in approved:
-            if group != active:
-                for token in group:
-                    self.assertNotIn(token, workflow)
+        # The active FULL D02 producer is separately source/Setup/BuildID pinned,
+        # never an implicit promotion of any historical original candidate.
+        self.assertEqual(sum(matches), 0, "E07_ORIGINAL_WORKFLOW_FROZEN_PAIR_HOLD")
+        self.assertIn("run-id: 41872700529", workflow)
+        self.assertIn("nox-v16-e06-onehost-diagnostic-41872700529", workflow)
+        self.assertIn("--artifact-kind d02 --out", workflow)
         self.assertNotIn("run-id: 41785340462", workflow)
         # The old reviewed source+Setup bytes are still frozen in native code.
         self.assertEqual(MOD.ORIGINAL_E06_SOURCE, "fe21790af418c8c1083946595811b67c9c03c49d")
@@ -81,6 +81,6 @@ class FrozenOriginalU06(unittest.TestCase):
         self.assertIn('"release_accepted":False}',script)
         self.assertIn('"release_accepted":False,"independent_e07":"HOLD"',script)
         self.assertIn('result["checks"]["installed_five_primary_actions"] = evaluate_primary(',script)
-        self.assertIn('E07_LIVE_INFERENCE_AND_VISUAL_CAPTURE_NOT_TESTED',script)
+        self.assertIn('E07_VISUAL_AND_PRIVILEGED_FUNCTION_ACCEPTANCE_NOT_TESTED',script)
         self.assertIn('return 0 if result["independent_e07"]=="PASS" else 1',script)
 if __name__=="__main__": unittest.main()
