@@ -86,6 +86,151 @@ Write-Host 'V6_ORIGINAL_WPF_SAME_HWND_CAPTURED_NO_VISUAL_PASS'
     return checked_png(png)
 
 
+
+def evaluate_fx_cycle(data: object) -> dict:
+    """Only genuine three sequential InvokePattern transitions count as FX evidence."""
+    e07.require(type(data) is dict and set(data) ==
+                {"initial", "observed", "invocations"} and
+                data["initial"] == "FX BALANCED" and
+                type(data["invocations"]) is int and data["invocations"] == 3 and
+                type(data["observed"]) is list and
+                data["observed"] == ["FX MAX", "FX ECO", "FX BALANCED"],
+                "V6_FX_PHYSICAL_TRANSITION_HOLD")
+    return {"fx_control": "PASS", "actual_invoke_transitions": 3,
+            "states": ["BALANCED", "MAX", "ECO", "BALANCED"],
+            "reduced_motion": "NOT_TESTED", "independent_visual_review": "NOT_RUN"}
+
+
+def probe_fx_cycle(hwnd: int) -> dict:
+    """Exercise the existing original WPF/WebView2 FX button, then restore BALANCED.
+
+    A screenshot or changing button label without real UIA InvokePattern is not proof.
+    """
+    e07.require(sys.platform == "win32" and type(hwnd) is int and hwnd > 0,
+                "V6_FX_ORIGINAL_WINDOWS_HWND_REQUIRED")
+    script = r'''
+$ErrorActionPreference='Stop'
+Add-Type -AssemblyName UIAutomationClient
+Add-Type -AssemblyName UIAutomationTypes
+$root=[System.Windows.Automation.AutomationElement]::FromHandle([IntPtr]__HWND__)
+if ($null -eq $root) { throw 'V6_FX_ORIGINAL_HWND_NOT_FOUND' }
+$filter=New-Object System.Windows.Automation.PropertyCondition(
+ [System.Windows.Automation.AutomationElement]::ControlTypeProperty,
+ [System.Windows.Automation.ControlType]::Button)
+function Get-OriginalFxButton {
+ $controls=$root.FindAll([System.Windows.Automation.TreeScope]::Descendants,$filter)
+ $matches=New-Object System.Collections.ArrayList
+ foreach($c in $controls) {
+  if (($c.Current.Name+'') -cmatch '^FX (BALANCED|MAX|ECO)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--artifact-dir", type=Path, required=True)
+    parser.add_argument("--out", type=Path, required=True)
+    parser.add_argument("--png", type=Path, required=True)
+    args = parser.parse_args()
+    receipt = {"schema": "NOX-E07-V6-PHYSICAL-VISUAL-WITNESS-v1",
+               "source_sha": frozen.SOURCE, "setup_sha256": frozen.SETUP_SHA,
+               "build_id": frozen.BUILDID, "release_accepted": False,
+               "visual_e07": "HOLD", "independent_e07_10_10": "HOLD",
+               "error": "NOT_RUN"}
+    try:
+        e07.require(sys.platform == "win32" and os.getenv("GITHUB_ACTIONS") == "true" and
+                    os.getenv("RUNNER_OS") == "Windows" and
+                    os.getenv("RUNNER_ENVIRONMENT") == "github-hosted" and
+                    os.getenv("GITHUB_REPOSITORY") == "MSSTXNEWS/nox-helion-pp-private-build",
+                    "V6_VISUAL_UNAUTHORIZED_HOST_HOLD")
+        temp = Path(os.environ["RUNNER_TEMP"]).absolute()
+        e07.require(args.png.absolute().parent == temp and
+                    args.png.name == "nox-v6-physical-d02.png" and
+                    not args.png.exists() and not args.png.is_symlink() and
+                    e07.clean_dir(temp), "V6_VISUAL_PNG_PATH_HOLD")
+        setup = frozen.candidate(args.artifact_dir)
+        local = Path(os.environ["LOCALAPPDATA"])
+        install = local / "Programs" / "NOX HELION"
+        e07.verify_fresh_install_targets(
+            local, install, Path(str(install) + ".__p01_stage"),
+            Path(str(install) + ".__p01_previous"),
+            Path(str(install) + ".__p01_rollback_saved"))
+        e07.require(e07.run([str(setup), "/S"], limit=300) == 0,
+                    "V6_VISUAL_SAME_SETUP_INSTALL_HOLD")
+        _, owned = e07.manifest_owner(install)
+        e07.require(len(owned) == 1004, "V6_VISUAL_INSTALLED_MANIFEST_HOLD")
+        original_observer = e07.observe_original_primary_buttons
+        captures: list[dict] = []
+        fx_checks: list[dict] = []
+        def observer(hwnd: int) -> dict:
+            # Native reviewed WPF HWND, fresh NAV+IPC and 8 seconds of stability
+            # are already required by gui_hwnd before it invokes this observer.
+            captures.append(capture_window(hwnd, args.png))
+            fx_checks.append(probe_fx_cycle(hwnd))
+            return original_observer(hwnd)
+        e07.observe_original_primary_buttons = observer
+        gui = e07.gui_hwnd(install / "NOX.P01.Shell.exe", local, safe_nav=False)
+        e07.require(len(captures) == 1 and len(fx_checks) == 1 and
+                    fx_checks[0].get("fx_control") == "PASS" and
+                    gui.get("gui_visible_hwnd") == "PASS" and
+                    gui.get("webview_navigation") == "PASS" and
+                    gui.get("shell_native_ipc") == "PASS" and
+                    gui.get("five_primary_buttons", {}).get("status") == "PASS",
+                    "V6_VISUAL_GUI_OR_CAPTURE_HOLD")
+        receipt.update({"physical_capture": captures[0], "physical_fx_cycle": fx_checks[0],
+                        "installed_owned_sha256_verified": 1004,
+                        "wpf_gui_ipc": "PASS", "error": None})
+    except (e07.Hold, OSError, ValueError, KeyError,
+            subprocess.TimeoutExpired) as exc:
+        receipt["error"] = (str(exc) if isinstance(exc, e07.Hold)
+                            else "V6_VISUAL_" + type(exc).__name__.upper() + "_HOLD")[:150]
+    except Exception as exc:
+        receipt["error"] = "V6_VISUAL_UNEXPECTED_" + type(exc).__name__.upper() + "_HOLD"
+    finally:
+        args.out.parent.mkdir(parents=True, exist_ok=True)
+        args.out.write_text(json.dumps(receipt, sort_keys=True, indent=2), encoding="utf-8")
+        print("V6_INDEPENDENT_PHYSICAL_VISUAL", receipt["error"], "RELEASE_HOLD", flush=True)
+    # Successful photographic acquisition is NOT the independent visual review.
+    return 0 if receipt["error"] is None else 1
+
+if __name__ == "__main__":
+    raise SystemExit(main())
+) {
+   [void]$matches.Add($c)
+  }
+ }
+ if ($matches.Count -ne 1) { throw 'V6_FX_UNIQUE_REAL_BUTTON_HOLD' }
+ return $matches[0]
+}
+$initial=(Get-OriginalFxButton).Current.Name+''
+if ($initial -cne 'FX BALANCED') { throw 'V6_FX_INITIAL_BALANCED_HOLD' }
+$observed=New-Object System.Collections.ArrayList
+$prior=$initial
+foreach($expected in @('FX MAX','FX ECO','FX BALANCED')) {
+ $button=Get-OriginalFxButton
+ if (($button.Current.Name+'') -cne $prior) { throw 'V6_FX_STALE_UIA_STATE_HOLD' }
+ $pattern=$button.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)
+ if ($null -eq $pattern) { throw 'V6_FX_NO_NATIVE_INVOKEPATTERN_HOLD' }
+ $pattern.Invoke()
+ Start-Sleep -Milliseconds 300
+ $actual=(Get-OriginalFxButton).Current.Name+''
+ if ($actual -cne $expected) { throw 'V6_FX_NO_REAL_TRANSITION_HOLD' }
+ [void]$observed.Add($actual)
+ $prior=$actual
+}
+[pscustomobject]@{initial=$initial;observed=@($observed.ToArray());invocations=3} |
+ ConvertTo-Json -Compress -Depth 3
+'''.replace("__HWND__", str(hwnd))
+    encoded = base64.b64encode(script.encode("utf-16le")).decode("ascii")
+    try:
+        run = subprocess.run(["powershell.exe", "-NoProfile", "-NonInteractive",
+                              "-EncodedCommand", encoded],
+                             capture_output=True, timeout=32, check=False)
+    except (OSError, subprocess.TimeoutExpired):
+        raise e07.Hold("V6_FX_UIA_PROCESS_HOLD") from None
+    e07.require(run.returncode == 0 and 1 <= len(run.stdout) <= 2048,
+                "V6_FX_UIA_INVOKE_OR_TRANSITION_HOLD")
+    try:
+        return evaluate_fx_cycle(json.loads(run.stdout.decode("utf-8-sig")))
+    except (UnicodeError, ValueError, json.JSONDecodeError):
+        raise e07.Hold("V6_FX_UIA_RECEIPT_HOLD") from None
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--artifact-dir", type=Path, required=True)
