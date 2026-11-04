@@ -736,7 +736,7 @@ Add-Type -AssemblyName UIAutomationClient
 Add-Type -AssemblyName UIAutomationTypes
 $handle=[IntPtr]__HWND__
 $destinations=@{
- INSTALL=@{title='КОНТРОЛЬ СИСТЕМЫ';control='УСТАНОВИТЬ NOX'}
+ INSTALL=@{title='';control='УСТАНОВИТЬ NOX'}
  MODELS=@{title='NOX · CONTROL CENTER';control='МОДЕЛИ И КОМПОНЕНТЫ'}
  LEARN=@{title='NOX · CONTROL CENTER';control='ЗАПУСТИТЬ ОБУЧЕНИЕ'}
  SETTINGS=@{title='СИСТЕМА';control='← НАЗАД В МЕНЮ'}
@@ -754,7 +754,10 @@ function Test-RealDestination($hostRoot,[string]$name) {
   $tree=$hostRoot.FindAll([System.Windows.Automation.TreeScope]::Descendants,
                          [System.Windows.Automation.Condition]::TrueCondition)
   if($tree.Count -gt 2048){throw 'E07_PRIMARY_NAV_TREE_LIMIT'}
-  $headingVisible=$false
+  # Original R11 INSTALL is a GLOBAL hostcontrols button, not a screen.
+  # Its unique visible keyboard-focused native control IS the destination.
+  # No installation is invoked and no install-function PASS can be inferred.
+  $headingVisible=($name -eq 'INSTALL')
   $focusedControls=0
   for($k=0;$k -lt $tree.Count;$k++){
     try{
