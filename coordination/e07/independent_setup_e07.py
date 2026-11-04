@@ -16,6 +16,7 @@ from pathlib import Path
 import re
 import struct
 import sqlite3
+from contextlib import closing
 import subprocess
 import sys
 import time
@@ -297,7 +298,7 @@ def native_store_stop_probe(backend: Path, scratch: Path) -> dict:
     db = scratch / "helion.sqlite3"
     require(clean_file(db) and db.stat().st_size > 0,
             "E07_NATIVE_STORE_DB_MISSING")
-    with sqlite3.connect("file:" + db.as_posix() + "?mode=ro", uri=True) as connection:
+    with closing(sqlite3.connect("file:" + db.as_posix() + "?mode=ro", uri=True)) as connection:
         version = connection.execute("PRAGMA user_version").fetchone()[0]
         integrity = connection.execute("PRAGMA quick_check").fetchone()[0]
         tables = {row[0] for row in connection.execute(

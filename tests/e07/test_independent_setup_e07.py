@@ -5,6 +5,7 @@ import json
 import hashlib
 import tempfile
 import sqlite3
+from contextlib import closing
 import struct
 from unittest.mock import patch
 import unittest
@@ -137,7 +138,7 @@ class IndependentE07(unittest.TestCase):
                 calls.append(request)
                 if not scratch.exists():
                     scratch.mkdir()
-                    with sqlite3.connect(scratch/"helion.sqlite3") as db:
+                    with closing(sqlite3.connect(scratch/"helion.sqlite3")) as db:
                         db.execute("PRAGMA user_version=4")
                         db.execute("CREATE TABLE core_chat_turns (id INTEGER)")
                 reply={"protocol":request["protocol"],"requestId":request["requestId"],
