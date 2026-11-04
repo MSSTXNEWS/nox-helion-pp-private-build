@@ -199,10 +199,10 @@ class OneHostSelfBuilder:
         validate()
         if 'chat.commands' not in session.allowed:raise PermissionError('NATIVE_COMMAND_SCOPE_DENIED')
     def reset_for_native_consent(self,session):
-        if self.queue.is_busy() or self.native_stop() or self.authorize(session,'selfbuilder.propose',{}) is not True:
+        if self.queue.is_busy() or self.native_stop() is not False or self.authorize(session,'selfbuilder.propose',{}) is not True:
             raise PermissionError('FRESH_IDLE_NATIVE_CONSENT_REQUIRED')
         self._stop.clear()
-    def _stopped(self):return self._stop.is_set() or self.native_stop() is True
+    def _stopped(self):return self._stop.is_set() or self.native_stop() is not False
     def recall(self,session,task,sources=()):
         scope=self.memory_scope(session)
         if type(scope) is not dict or set(scope)!= {'project_id','persona_id','core_id'}:
@@ -277,7 +277,7 @@ class OneHostSelfBuilder:
             queued=next((r for r in reversed(rows) if r.get('kind')=='SELF_WRITE' and r.get('state')=='QUEUED'),None)
             if queued is None:return {'status':'IDLE','weights_updated':False}
             if not self.source.admitted(queued['payload']['source_head']):raise EvolutionHold('QUEUED_SOURCE_HEAD_DRIFT')
-            if self.native_stop():raise EvolutionHold('GLOBAL_STOP_OR_REVOKE')
+            if self.native_stop() is not False:raise EvolutionHold('GLOBAL_STOP_OR_REVOKE')
             self._stop.clear()
             return self._submit_payload(session,queued['task_id'],queued['payload'])
         if set(args)-{'action','task'}:raise ValueError('UI_SOURCE_TICKET_OR_PATH_NOT_ALLOWED')

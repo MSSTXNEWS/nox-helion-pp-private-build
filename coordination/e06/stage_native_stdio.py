@@ -47,7 +47,7 @@ ADDONS=(
     ('src/nox_selfbuilder/evolution.py', 'nox_selfbuilder/evolution.py', '9c38ca9b1063cda7b0569af7ce622b739213adf4'),
     ('src/nox_selfbuilder/learning.py', 'nox_selfbuilder/learning.py', '3e1cf4f26cfab2505558d67fd5a5bd76ea172e06'),
     ('src/nox_selfbuilder/model_admission.py', 'nox_selfbuilder/model_admission.py', 'a6457f1a1f3b77364a20ff47b3e87a8a9b544b8d'),
-    ('src/nox_selfbuilder/onehost_builder.py', 'nox_selfbuilder/onehost_builder.py', 'da7e3d4cb93899ea441a44b7c5c3d3cf79b8c820'),
+    ('src/nox_selfbuilder/onehost_builder.py', 'nox_selfbuilder/onehost_builder.py', 'c49f019ed0751a8477620cc48ce9f2de9d1be06a'),
     ('src/nox_selfbuilder/firstcycle_native.py', 'nox_selfbuilder/firstcycle_native.py', 'b059b4ab30530b6b982498ce7ed5cf1d5a0716ba'),
     ('src/nox_selfbuilder/selfwrite_native_gate.py', 'nox_selfbuilder/selfwrite_native_gate.py', '3a35394d5bbc497b924ecefa10192d568aa5a021'),
     ('src/nox_selfbuilder/nx03_model_firstcycle.py', 'nox_selfbuilder/nx03_model_firstcycle.py', 'cbd40d985c55c5693a7cc9713b529480e62d7b4c'),
