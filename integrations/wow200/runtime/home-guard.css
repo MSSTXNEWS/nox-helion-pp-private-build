@@ -356,7 +356,7 @@ body.nox-wow-eco .nox-orbit-stage .nox-eclipse .nox-cinema-orb__filaments::after
 /* NOX D02 GRAPHICS PLANET DOCK V1 — fixed bottom-of-HOME graphic switches.
    AUTO is explicit opt-in. Static controls; no movement of existing eight CoreIDs. */
 #home .nox-quality-dock{
- position:fixed;left:50%;bottom:max(8px,env(safe-area-inset-bottom));
+ position:fixed;left:50%;bottom:calc(124px + env(safe-area-inset-bottom,0px));
  transform:translateX(-50%);z-index:95;width:min(92vw,780px);
  box-sizing:border-box;padding:8px 12px 11px;
  border:1px solid rgba(205,178,138,.4);border-radius:22px;
@@ -419,7 +419,7 @@ body.nox-wow-eco .nox-orbit-stage .nox-eclipse .nox-cinema-orb__filaments::after
  border-color:rgba(185,220,235,.7);
 }
 @media(max-width:600px){
- #home .nox-quality-dock{width:min(96vw,460px);padding:6px 7px 8px;border-radius:17px}
+ #home .nox-quality-dock{bottom:calc(106px + env(safe-area-inset-bottom,0px));width:min(96vw,460px);padding:6px 7px 8px;border-radius:17px}
  #home .nox-quality-dock__row{grid-template-columns:repeat(5,minmax(0,1fr));gap:3px}
  #home .nox-quality-planet{min-height:75px;padding:4px 2px 5px;border-radius:11px}
  #home .nox-quality-planet__sphere{width:30px;height:30px;font-size:16px}
