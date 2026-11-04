@@ -933,7 +933,7 @@ def original_wpf_hwnd(pid: int) -> int | None:
 
 
 def gui_hwnd(shell: Path, local: Path, *, safe_nav: bool = False,
-             final_probe=None) -> dict:
+             final_probe=None, initial_home_probe=None) -> dict:
     """Independently prove fresh WPF/WebView2 NAV_OK+native handshake+HWND."""
     require(clean_file(shell), "E07_WPF_SHELL_MISSING")
     log = local / "NOX_HELION/P01/logs/shell.log"
@@ -982,6 +982,17 @@ def gui_hwnd(shell: Path, local: Path, *, safe_nav: bool = False,
                 if time.monotonic() - started >= 8:
                     require(original_wpf_hwnd(proc.pid) == handle,
                             "E07_WPF_HWND_REPLACED_HOLD")
+                    # Capture the ORIGINAL first screen while its trusted WPF HWND
+                    # is alive and BEFORE CHAT/SETTINGS or native consent can
+                    # switch to a different page. Photo is diagnostic, NOT WOW PASS.
+                    initial_home = {"status":"NOT_RUN","visual_e07":"HOLD"}
+                    if initial_home_probe is not None:
+                        try:
+                            initial_home = initial_home_probe(handle)
+                        except (Hold, OSError, ValueError, subprocess.TimeoutExpired) as exc:
+                            initial_home = {"status":"HOLD","visual_e07":"HOLD",
+                                            "error":str(exc) if isinstance(exc,Hold)
+                                            else "E07_INITIAL_HOME_"+type(exc).__name__.upper()+"_HOLD"}
                     try:
                         buttons = observe_original_primary_buttons(handle)
                     except Hold as exc:
@@ -1017,6 +1028,7 @@ def gui_hwnd(shell: Path, local: Path, *, safe_nav: bool = False,
                             final_witness = {"status":"HOLD", "error":"E07_FINAL_UNEXPECTED_"+type(exc).__name__.upper()+"_HOLD"}
                     return {"gui_visible_hwnd": "PASS", "stable_seconds": 8,
                             "webview_navigation": "PASS", "shell_native_ipc": "PASS",
+                            "initial_home_visual":initial_home,
                             "independent_webview_log": "CURRENT_PROCESS_FRESH_NAV_AND_IPC",
                             "five_primary_buttons": buttons,
                             "ui_chat_action_probe": action,
@@ -1328,6 +1340,27 @@ def lifecycle(setup: Path, result: dict, *, frozen_source: str = "", physical_na
             "status": "HOLD",
             "error": str(exc) if isinstance(exc, Hold) else
                      "E07_NATIVE_STORE_" + type(exc).__name__.upper() + "_HOLD"}
+    def physical_initial_home_probe(hwnd: int) -> dict:
+        # Fail closed on a real current WPF HWND and physically acquired PNG.
+        # A screenshot never establishes scene correctness or UIA behavior.
+        require(final_probe_dir is not None,"E07_HOME_PHOTO_DIR_HOLD")
+        screenshot=final_probe_dir/"D02_HOME_PRENAV.png"
+        require(not screenshot.exists() and not screenshot.is_symlink(),
+                "E07_HOME_PHOTO_UNOWNED_PATH_HOLD")
+        from probe_v6_visual_physical_u01 import capture_window
+        photo=capture_window(hwnd,screenshot)
+        require(photo.get("physical_capture")=="PASS" and
+                photo.get("independent_visual_review")=="NOT_RUN" and
+                photo.get("reduced_motion")=="NOT_TESTED",
+                "E07_HOME_PHOTO_PHYSICAL_SOURCE_HOLD")
+        return {"status":"OBSERVED_NOT_RELEASE","visual_e07":"HOLD",
+                "scope":"ORIGINAL_WPF_BEFORE_FIRST_USER_ACTION_NOT_HOME_APPROVAL",
+                "source_sha":frozen_source,"setup_sha256":sha256(setup),
+                "screenshot_sha256":photo["sha256"],
+                "width":photo["width"],"height":photo["height"],
+                "home_scene_verified":"NOT_TESTED",
+                "reduced_motion":"NOT_TESTED"}
+
     def physical_final_probe(hwnd: int) -> dict:
         # Source-only scripts or old-Setup receipts cannot replace installed
         # same-WPF measurements. Both subreceipts describe observations;
@@ -1347,7 +1380,8 @@ def lifecycle(setup: Path, result: dict, *, frozen_source: str = "", physical_na
     result["checks"]["installed_gui"] = gui_hwnd(
         install/"NOX.P01.Shell.exe", local,
         safe_nav=physical_nav or frozen_source == "e888941626191c17d19d372889b1f96842c15e1b",
-        final_probe=physical_final_probe if final_probe_dir is not None else None)
+        final_probe=physical_final_probe if final_probe_dir is not None else None,
+        initial_home_probe=physical_initial_home_probe if final_probe_dir is not None else None)
     result["checks"]["installed_final_physical"] = result["checks"]["installed_gui"].get(
         "final_physical_witness", {"status":"HOLD", "error":"E07_FINAL_PHYSICAL_NOT_RUN"})
     # LIVE Qwen, nonempty persisted SQLite and in-flight STOP must be

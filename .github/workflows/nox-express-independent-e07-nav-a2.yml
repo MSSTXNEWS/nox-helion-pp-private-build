@@ -7,6 +7,8 @@ on:
       - coordination/e07/probe_final_same_setup.py
       - tests/e07/test_independent_setup_e07.py
       - tests/e07/test_91a6_real_visual_u17.py
+      - coordination/e07/independent_setup_e07.py
+      - tests/e07/test_initial_home_physical_u21.py
       - tests/e07/test_final_truth_scope_u20.py
   workflow_dispatch:
 permissions:
@@ -54,6 +56,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'E07_FINAL_UIA_TREE_REGRESSION_HOLD' }
           python -B -m unittest discover -s tests/e07 -p test_91a6_real_visual_u17.py -v
           if ($LASTEXITCODE -ne 0) { throw 'E07_GRAPHICAL_NATIVE_ACCESSIBILITY_SOURCE_HOLD' }
+          python -B -m unittest discover -s tests/e07 -p test_initial_home_physical_u21.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'E07_ORIGINAL_HOME_PRENAV_SOURCE_HOLD' }
           python -B -m unittest discover -s tests/e07 -p test_live_final_wiring_u19.py -v
           if ($LASTEXITCODE -ne 0) { throw 'E07_FINAL_SAME_SETUP_REGRESSION_HOLD' }
           python -B -m unittest discover -s tests/e07 -p test_final_truth_scope_u20.py -v
@@ -158,6 +162,7 @@ jobs:
             work/e07-independent/same-setup-final/E07_FINAL_VISUAL.json
             work/e07-independent/same-setup-final/E07_FINAL_FUNCTIONS.json
             work/e07-independent/same-setup-final/D02_FINAL_SAME_SETUP.png
+            work/e07-independent/same-setup-final/D02_HOME_PRENAV.png
           if-no-files-found: error
           retention-days: 14
       - name: Preserve NOT-RELEASE when actual model or visual E07 incomplete
