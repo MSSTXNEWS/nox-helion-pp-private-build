@@ -307,7 +307,7 @@ def setup_lock_original(setup: Path, base: Path) -> dict:
     require(checked==ORIGINAL_E06_SETUP_SHA and len(header)>=64 and
             header[:2]==b"MZ", "E07_ORIGINAL_SETUP_PE_HOLD")
     offset=struct.unpack_from("<I",header,0x3c)[0]
-    require(offset<=len(header)-6 and header[offset:offset+4]==b"PE\\0\\0",
+    require(offset<=len(header)-6 and header[offset:offset+4]==bytes.fromhex("50450000"),
             "E07_ORIGINAL_SETUP_PE_HOLD")
     return {"source_sha":ORIGINAL_E06_SOURCE,
             "setup_sha256":ORIGINAL_E06_SETUP_SHA,

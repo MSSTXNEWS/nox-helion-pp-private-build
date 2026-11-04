@@ -27,6 +27,10 @@ class FrozenOriginalU06(unittest.TestCase):
             base=Path(directory)
             with self.assertRaisesRegex(MOD.Hold,"E07_ORIGINAL_CANDIDATE_PATH_HOLD"):
                 MOD.setup_lock_original(base/"wrong.exe",base)
+    def test_actual_pe_sig_excludes_escape_backsplash(self):
+        src=(ROOT/"coordination/e07/independent_setup_e07.py").read_text()
+        self.assertIn('header[offset:offset+4]==bytes.fromhex("50450000")',src)
+        self.assertEqual(bytes.fromhex("50450000"),b"PE"+bytes(2))
     def test_original_workflow_single_hash_frozen(self):
         workflow=(ROOT/".github/workflows/nox-express-independent-e07-candidate.yml").read_text()
         self.assertIn("run-id: 41785340462",workflow)
