@@ -86,7 +86,9 @@ class P03HostPortTests(unittest.TestCase):
     def test_02_existing_p02_ollama_actual_tags(self):
         r = self.dispatch.execute("models.installed",{},self.session)
         self.assertEqual([x["tag"] for x in r["models"]],["qwen3:4b","tinyllama:1.1b"])
-        self.assertTrue(all(x["installed"] and x["digest"] is None for x in r["models"]))
+        # /api/tags is presence evidence, not independent weights/SHA proof.
+        self.assertTrue(all(not x["installed"] and x["ollamaReportedPresent"]
+                            and x["digest"] is None for x in r["models"]))
         self.assertFalse(r["digestVerified"])
 
     def test_09_digest_is_only_local_ollama_claim(self):
@@ -156,8 +158,9 @@ class P03HostPortTests(unittest.TestCase):
             host.execute("models.pull",{"userApproval":True},session)
         self.assertEqual(backend.calls,[])
         state["approved"]=True  # native out-of-band test fixture, not JS
-        result = host.execute("models.pull",{},session)
-        self.assertEqual(result["status"],"HOLD_EXTERNAL_OWNER_EXECUTION")
+        # Native approval does not elevate a backend HOLD into a pull ACK.
+        with self.assertRaisesRegex(P03PortHold, "HOLD/error"):
+            host.execute("models.pull",{},session)
         self.assertEqual(backend.calls,[("pull","principal")])
 
     def test_07_without_native_approval_never_advertise_pull(self):

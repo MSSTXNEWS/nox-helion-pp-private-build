@@ -39,7 +39,8 @@ class P03NullableOwnerAckR47(unittest.TestCase):
 
     def test_explicit_false_not_promoted_to_success(self):
         port, session = self.make(False)
-        self.assertIs(port.execute_backend(session, "models.retry", {"jobId": "existing"}), False)
+        with self.assertRaisesRegex(P03PortHold, "non-object acknowledgement"):
+            port.execute_backend(session, "models.retry", {"jobId": "existing"})
         self.assertEqual(port.backend.calls, 1)
 
 if __name__ == "__main__":

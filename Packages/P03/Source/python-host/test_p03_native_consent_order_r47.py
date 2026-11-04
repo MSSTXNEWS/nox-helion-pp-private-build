@@ -62,7 +62,7 @@ class NativeConsentR47(unittest.TestCase):
         b=Backend()
         b.pull=lambda *_: {"ok":False,"reason":"NO_PERMISSION"}
         p=port(b,lambda *_:True)
-        with self.assertRaisesRegex(P03PortHold,"HOLD/error"):
+        with self.assertRaisesRegex(P03PortHold,"non-affirmative acknowledgement"):
             p.execute_backend(session(), ROUTE, {})
         self.assertEqual(b.calls,0)
 
