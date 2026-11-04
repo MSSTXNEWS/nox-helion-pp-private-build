@@ -2,7 +2,14 @@
 import hashlib
 import unittest
 from unittest.mock import patch
-import stage_original_five_primary as target
+import importlib.util
+from pathlib import Path
+
+SOURCE = Path(__file__).resolve().parents[2] / "coordination/express/stage_original_five_primary.py"
+SPEC = importlib.util.spec_from_file_location("nox_u08_stage_original_five_primary", SOURCE)
+assert SPEC is not None and SPEC.loader is not None
+target = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(target)
 
 
 class FivePrimaryTests(unittest.TestCase):
