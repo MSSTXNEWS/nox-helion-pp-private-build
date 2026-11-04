@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
-import {nativeModelCancelAck} from '../../ui/onehost-menu-bindings.mjs';
+import {nativeModelCancelAck,nativeOwnerReceiptHolds} from '../../ui/onehost-menu-bindings.mjs';
 
 const jobId='job-17';
 test('P03 native cancel only confirms exact real job and approved owner receipt',()=>{
@@ -43,3 +43,13 @@ test('P03 completed cancel accepts terminal state only for authenticated same jo
     {routeId:'models.retry',state:'STOP_REQUESTED',result:{jobId}}
   ])assert.equal(nativeModelCancelAck(reply,jobId),false);
 });
+
+// B06: transport COMPLETED cannot mask owner/provider errors in two native field shapes.
+for (const field of ['error','error_code']) {
+  for (const value of ['CONSENT_DENIED','PROVIDER_OFFLINE_HOLD',{'code':'DENIED'}]) {
+    assert.equal(nativeOwnerReceiptHolds({state:'COMPLETED',[field]:value}),true,
+      field+' must deny any populated native owner error');
+  }
+  assert.equal(nativeOwnerReceiptHolds({state:'COMPLETED',[field]:''}),false,
+    'empty native error field alone is not a denial');
+}

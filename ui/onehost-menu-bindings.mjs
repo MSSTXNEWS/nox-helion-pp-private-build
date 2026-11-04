@@ -123,6 +123,12 @@ export function nativeOwnerReceiptHolds(owner) {
        typeof owner.ack!=='boolean')) return true;
   if (Object.prototype.hasOwnProperty.call(owner,'errorCode') &&
       owner.errorCode!=null && String(owner.errorCode).trim()!=='') return true;
+  // Native owner/provider failures may use snake_case or an error field.
+  // A COMPLETED transport carrying either is never an accepted owner result.
+  for (const key of ['error','error_code']) {
+    if (Object.prototype.hasOwnProperty.call(owner,key) && owner[key]!=null &&
+        (typeof owner[key]!=='string' || owner[key].trim()!=='')) return true;
+  }
   const blocked=new Set(['HOLD','OFFLINE','ERROR','ERRORS','FAILED','DENIED',
     'REJECTED','CANCELLED','CANCELED','UNAVAILABLE','BLOCKED','UNAUTHORIZED',
     'FORBIDDEN','ABORTED','REVOKED','EXPIRED','STOPPING']);
