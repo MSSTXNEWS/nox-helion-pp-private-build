@@ -87,8 +87,9 @@ $__e07Stage='INIT'
 trap {
  $why=$_.Exception.Message+''
  $reason='E07_FINAL_UIA_'+$__e07Operation+'_PROCESS_EXIT_HOLD'
- if($__e07Operation -eq 'VISUAL' -and $__e07Stage -in @('RESIZE','DOCK','CAPTURE','RESTORE')) {
-   $reason='E07_FINAL_UIA_VISUAL_VISUAL_STAGE_'+$__e07Stage+'_HOLD'
+ $stage=if($null -ne $__e07FailureStage){$__e07FailureStage}else{$__e07Stage}
+ if($__e07Operation -eq 'VISUAL' -and $stage -in @('RESIZE','DOCK','CAPTURE','RESTORE')) {
+   $reason='E07_FINAL_UIA_VISUAL_VISUAL_STAGE_'+$stage+'_HOLD'
  }
  if($why -eq 'PRIMARY_DOCK_NOT_UNIQUE'){
    $reason='E07_FINAL_UIA_'+$__e07Operation+'_PRIMARY_DOCK_NOT_UNIQUE_HOLD'
@@ -193,14 +194,21 @@ if($op -eq 'MODEL_WINDOW'){
 if($op -eq 'VISUAL'){
  $r=[NoxFinalWin32+RECT]::new();if(-not [NoxFinalWin32]::GetWindowRect($handle,[ref]$r)){throw 'RECT'}
  $ox=$r.Left;$oy=$r.Top;$ow=$r.Right-$r.Left;$oh=$r.Bottom-$r.Top;$sizes=@()
+ $__e07FailureStage=$null
  try {
  $__e07Stage='RESIZE'
- foreach($size in @([pscustomobject]@{width=1044;height=788},[pscustomobject]@{width=800;height=600})){$width=[int]$size.width;$height=[int]$size.height;if(-not [NoxFinalWin32]::MoveWindow($handle,$ox,$oy,$width,$height,$true)){throw 'MOVE'};Start-Sleep -Milliseconds 700;$rr=[NoxFinalWin32+RECT]::new();$null=[NoxFinalWin32]::GetWindowRect($handle,[ref]$rr);$__e07Stage='DOCK';$rects=FiveRects;$sizes+=([pscustomobject]@{requested=@($width,$height);actual=@($rr.Right-$rr.Left,$rr.Bottom-$rr.Top);visiblePrimary=$rects.Count;noOverlap=(NoOverlap $rects)})}
+ foreach($size in @([pscustomobject]@{width=1044;height=788},[pscustomobject]@{width=800;height=600})){$__e07Stage='RESIZE';$width=[int]$size.width;$height=[int]$size.height;if(-not [NoxFinalWin32]::MoveWindow($handle,$ox,$oy,$width,$height,$true)){throw 'MOVE'};Start-Sleep -Milliseconds 700;$rr=[NoxFinalWin32+RECT]::new();$null=[NoxFinalWin32]::GetWindowRect($handle,[ref]$rr);$__e07Stage='DOCK';$rects=FiveRects;$sizes+=([pscustomobject]@{requested=@($width,$height);actual=@($rr.Right-$rr.Left,$rr.Bottom-$rr.Top);visiblePrimary=$rects.Count;noOverlap=(NoOverlap $rects)})}
+ } catch {
+  # Preserve the original failure stage even though finally always restores
+  # the original size. Previously every DOCK failure was reported as RESTORE.
+  $__e07FailureStage=$__e07Stage
+  throw
  } finally {
   # Restore original WPF HWND even when a UIA resize or button lookup fails.
   $__e07Stage='RESTORE';$null=[NoxFinalWin32]::MoveWindow($handle,$ox,$oy,$ow,$oh,$true)
   Start-Sleep -Milliseconds 500
  }
+ $__e07Stage='CAPTURE'
  $rr=[NoxFinalWin32+RECT]::new();if(-not [NoxFinalWin32]::GetWindowRect($handle,[ref]$rr)){throw 'RECT'};$w=$rr.Right-$rr.Left;$h=$rr.Bottom-$rr.Top
  $__e07Stage='CAPTURE'
  $bmp=[System.Drawing.Bitmap]::new([int]$w,[int]$h);try{$g=[System.Drawing.Graphics]::FromImage($bmp);try{$dc=$g.GetHdc();try{$ok=[NoxFinalWin32]::PrintWindow($handle,$dc,2)}finally{$g.ReleaseHdc($dc)}}finally{$g.Dispose()};if(-not $ok){throw 'PRINT'};$bmp.Save('__PNG__',[System.Drawing.Imaging.ImageFormat]::Png)}finally{$bmp.Dispose()}
@@ -283,7 +291,8 @@ def _newest(paths: set[Path], folder: Path, pattern: str) -> Path|None:
 
 
 def run(hwnd: int, install: Path, local: Path, *, source_sha: str, setup_sha: str,
-        out_dir: Path) -> tuple[dict,dict]:
+        out_dir: Path, visual_only: bool=False,
+        precomputed_visual: dict|None=None) -> tuple[dict,dict]:
     e07.require(sys.platform=="win32" and os.environ.get("GITHUB_ACTIONS")=="true" and
                 os.environ.get("RUNNER_OS")=="Windows" and
                 os.environ.get("RUNNER_ENVIRONMENT")=="github-hosted" and
@@ -304,71 +313,87 @@ def run(hwnd: int, install: Path, local: Path, *, source_sha: str, setup_sha: st
         e07.require(token in html,"E07_FINAL_INSTALLED_HOME_CONTRACT_HOLD")
     out_dir.mkdir(parents=True,exist_ok=True)
 
-    png=out_dir/"D02_FINAL_SAME_SETUP.png"
-    # Visual WPF UIA may fail independently of the real function handlers.
-    # Record that physical HOLD and still collect same-Setup native actions.
-    visual_raw={}
-    visual_first_hold=None
-    try:
-        visual_raw=_run_ps(_uia_script(hwnd,"VISUAL",png=png),
-                           timeout=60,phase="VISUAL")
-    except e07.Hold as exc:
-        visual_first_hold=str(exc)
-    # A failing UIA probe may still leave a real photo unavailable. Obtain a
-    # strictly diagnostic screenshot from the SAME original WPF HWND, while
-    # keeping visual_first_hold and every release gate unchanged.
-    diagnostic_photo={"scope":"NOT_RUN_ORIGINALLY"}
-    if visual_first_hold is not None and not e07.clean_file(png):
+    if precomputed_visual is None:
+        png=out_dir/"D02_FINAL_SAME_SETUP.png"
+        # Visual WPF UIA may fail independently of the real function handlers.
+        # Record that physical HOLD and still collect same-Setup native actions.
+        visual_raw={}
+        visual_first_hold=None
         try:
-            from probe_v6_visual_physical_u01 import capture_window
-            photo=capture_window(hwnd,png)
-            diagnostic_photo={
-                "scope":"SAME_WPF_PHYSICAL_CAPTURE_NOT_VISUAL_ACCEPTANCE",
-                "sha256":photo["sha256"],
-                "width":photo["width"],"height":photo["height"]}
-        except (e07.Hold,OSError,ValueError,KeyError):
-            diagnostic_photo={"scope":"SAME_WPF_PHYSICAL_CAPTURE_HOLD"}
-    actual_png=(e07.clean_file(png) and
-                20_000<=png.stat().st_size<=40_000_000)
-    sizes=visual_raw.get("sizes")
-    actual_layout=_physical_adaptive_sized(sizes)
-    screenshot_sha=e07.sha256(png) if actual_png else None
-    if visual_first_hold is None and not actual_png:
-        visual_first_hold="E07_FINAL_VISUAL_PNG_HOLD"
-    if visual_first_hold is None and not actual_layout:
-        visual_first_hold="E07_FINAL_ADAPTIVE_LAYOUT_HOLD"
-    # The original installed D02 has five graphical quality planets, not
-    # the obsolete three-state FX BALANCED/MAX/ECO button. Reuse the existing
-    # physical original-HWND UIA probe (Invoke + actual pressed state).
-    from probe_91a6_real_visual_u17 import probe_d02_quality_modes
-    # A failing graphical-mode UIA probe MUST NOT prevent collection of the
-    # other real function witnesses on this one physical installed HWND.
-    # Keep exact failure evidence; never promote a missing FX response.
-    try:
-        fx=probe_d02_quality_modes(hwnd)
-        e07.require(fx.get("fx_control")=="PASS" and
-                    fx.get("actual_invocations")==5 and
-                    fx.get("reduced_motion")=="NOT_TESTED" and
-                    fx.get("independent_visual_review")=="NOT_RUN",
-                    "E07_FINAL_D02_FIVE_GRAPHICS_MODE_HOLD")
-    except e07.Hold as exc:
-        fx={"fx_control":"HOLD","first_unmet_gate":str(exc)}
-    os_animation=probe_windows_animation_setting()
-    visual={"schema":e07.FINAL_VISUAL_SCHEMA,"source_sha":source_sha,
-            "setup_sha256":setup_sha,"release_accepted":False,
-            "physical_capture":"PASS" if actual_png and visual_first_hold is None else "HOLD",
-            "d02_visual":"PASS" if actual_png and actual_layout and
-                         visual_first_hold is None and fx["fx_control"]=="PASS" else "HOLD",
-            "adaptive_layout":"PASS" if actual_layout else "HOLD",
-            # Physical D02 graphics are not OS Reduced Motion or design review.
-            "reduced_motion":"HOLD","screenshot_sha256":screenshot_sha,
-            "physical_sizes":sizes or [],"fx_cycle":fx,
-            "diagnostic_photo":diagnostic_photo,
-            "visual_first_unmet_gate":visual_first_hold or
-                 (fx.get("first_unmet_gate") if fx["fx_control"]!="PASS"
-                  else "E07_INDEPENDENT_VISUAL_REVIEW_NOT_RUN"),
-            "reduced_motion_evidence":"OS_SETTING_OBSERVED_WEBVIEW2_MEDIA_QUERY_NOT_PHYSICALLY_VERIFIED",
-            "os_animation_observation":os_animation}
+            visual_raw=_run_ps(_uia_script(hwnd,"VISUAL",png=png),
+                               timeout=60,phase="VISUAL")
+        except e07.Hold as exc:
+            visual_first_hold=str(exc)
+        # A failing UIA probe may still leave a real photo unavailable. Obtain a
+        # strictly diagnostic screenshot from the SAME original WPF HWND, while
+        # keeping visual_first_hold and every release gate unchanged.
+        diagnostic_photo={"scope":"NOT_RUN_ORIGINALLY"}
+        if visual_first_hold is not None and not e07.clean_file(png):
+            try:
+                from probe_v6_visual_physical_u01 import capture_window
+                photo=capture_window(hwnd,png)
+                diagnostic_photo={
+                    "scope":"SAME_WPF_PHYSICAL_CAPTURE_NOT_VISUAL_ACCEPTANCE",
+                    "sha256":photo["sha256"],
+                    "width":photo["width"],"height":photo["height"]}
+            except (e07.Hold,OSError,ValueError,KeyError):
+                diagnostic_photo={"scope":"SAME_WPF_PHYSICAL_CAPTURE_HOLD"}
+        actual_png=(e07.clean_file(png) and
+                    20_000<=png.stat().st_size<=40_000_000)
+        sizes=visual_raw.get("sizes")
+        actual_layout=_physical_adaptive_sized(sizes)
+        screenshot_sha=e07.sha256(png) if actual_png else None
+        if visual_first_hold is None and not actual_png:
+            visual_first_hold="E07_FINAL_VISUAL_PNG_HOLD"
+        if visual_first_hold is None and not actual_layout:
+            visual_first_hold="E07_FINAL_ADAPTIVE_LAYOUT_HOLD"
+        # The original installed D02 has five graphical quality planets, not
+        # the obsolete three-state FX BALANCED/MAX/ECO button. Reuse the existing
+        # physical original-HWND UIA probe (Invoke + actual pressed state).
+        from probe_91a6_real_visual_u17 import probe_d02_quality_modes
+        # A failing graphical-mode UIA probe MUST NOT prevent collection of the
+        # other real function witnesses on this one physical installed HWND.
+        # Keep exact failure evidence; never promote a missing FX response.
+        try:
+            fx=probe_d02_quality_modes(hwnd)
+            e07.require(fx.get("fx_control")=="PASS" and
+                        fx.get("actual_invocations")==5 and
+                        fx.get("reduced_motion")=="NOT_TESTED" and
+                        fx.get("independent_visual_review")=="NOT_RUN",
+                        "E07_FINAL_D02_FIVE_GRAPHICS_MODE_HOLD")
+        except e07.Hold as exc:
+            fx={"fx_control":"HOLD","first_unmet_gate":str(exc)}
+        os_animation=probe_windows_animation_setting()
+        visual={"schema":e07.FINAL_VISUAL_SCHEMA,"source_sha":source_sha,
+                "setup_sha256":setup_sha,"release_accepted":False,
+                "physical_capture":"PASS" if actual_png and visual_first_hold is None else "HOLD",
+                "d02_visual":"PASS" if actual_png and actual_layout and
+                             visual_first_hold is None and fx["fx_control"]=="PASS" else "HOLD",
+                "adaptive_layout":"PASS" if actual_layout else "HOLD",
+                # Physical D02 graphics are not OS Reduced Motion or design review.
+                "reduced_motion":"HOLD","screenshot_sha256":screenshot_sha,
+                "physical_sizes":sizes or [],"fx_cycle":fx,
+                "diagnostic_photo":diagnostic_photo,
+                "visual_first_unmet_gate":visual_first_hold or
+                     (fx.get("first_unmet_gate") if fx["fx_control"]!="PASS"
+                      else "E07_INDEPENDENT_VISUAL_REVIEW_NOT_RUN"),
+                "reduced_motion_evidence":"OS_SETTING_OBSERVED_WEBVIEW2_MEDIA_QUERY_NOT_PHYSICALLY_VERIFIED",
+                "os_animation_observation":os_animation}
+
+    else:
+        # This receipt was obtained on the original WPF HOME before any
+        # CHAT/SETTINGS navigation or native consent dialog altered the screen.
+        # Identity and non-release state are mandatory; never invent PASS.
+        e07.require(type(precomputed_visual) is dict and
+                    precomputed_visual.get("schema")==e07.FINAL_VISUAL_SCHEMA and
+                    precomputed_visual.get("source_sha")==source_sha and
+                    precomputed_visual.get("setup_sha256")==setup_sha and
+                    precomputed_visual.get("release_accepted") is False,
+                    "E07_PRENAV_VISUAL_IDENTITY_HOLD")
+        visual=precomputed_visual
+    if visual_only:
+        e07.require(precomputed_visual is None,"E07_PRENAV_VISUAL_MODE_HOLD")
+        return visual, {}
 
     actions={}
     def observed(action: str, detail: dict) -> None:
