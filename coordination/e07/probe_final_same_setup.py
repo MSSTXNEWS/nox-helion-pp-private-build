@@ -167,6 +167,25 @@ def invoke_primary(hwnd: int, action: str) -> dict:
     return result
 
 
+def _physical_adaptive_sized(sizes: object) -> bool:
+    """Fail closed when Windows clamps a requested D02 resize.
+
+    Five non-overlapping UIA buttons alone cannot certify the 800x600 layout
+    if WPF min-size constraints kept the HWND at a larger physical size.
+    Actual dimensions come from GetWindowRect after MoveWindow on that HWND.
+    """
+    expected = ((1044, 788), (800, 600))
+    return type(sizes) is list and len(sizes) == len(expected) and all(
+        type(item) is dict
+        and item.get("requested") == list(target)
+        and item.get("actual") == list(target)
+        and type(item.get("visiblePrimary")) is int
+        and item["visiblePrimary"] == 5
+        and item.get("noOverlap") is True
+        for item, target in zip(sizes, expected)
+    )
+
+
 def _newest(paths: set[Path], folder: Path, pattern: str) -> Path|None:
     now=set(folder.glob(pattern)) if folder.is_dir() else set()
     fresh=[p for p in now-paths if e07.clean_file(p)]
@@ -200,9 +219,7 @@ def run(hwnd: int, install: Path, local: Path, *, source_sha: str, setup_sha: st
     e07.require(e07.clean_file(png) and 20_000<=png.stat().st_size<=40_000_000,
                 "E07_FINAL_VISUAL_PNG_HOLD")
     sizes=visual_raw.get("sizes")
-    e07.require(type(sizes) is list and len(sizes)==2 and
-                all(type(x) is dict and x.get("visiblePrimary")==5 and x.get("noOverlap") is True
-                    for x in sizes),"E07_FINAL_ADAPTIVE_LAYOUT_HOLD")
+    e07.require(_physical_adaptive_sized(sizes),"E07_FINAL_ADAPTIVE_LAYOUT_HOLD")
     # The original installed D02 has five graphical quality planets, not
     # the obsolete three-state FX BALANCED/MAX/ECO button. Reuse the existing
     # physical original-HWND UIA probe (Invoke + actual pressed state).
