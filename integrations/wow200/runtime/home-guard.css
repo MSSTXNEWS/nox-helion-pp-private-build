@@ -438,3 +438,145 @@ body.nox-wow-eco .nox-orbit-stage .nox-eclipse .nox-cinema-orb__filaments::after
  #home .nox-quality-planet__sphere{background:ButtonFace;color:ButtonText;box-shadow:none}
  #home .nox-quality-planet.is-selected{border:2px solid Highlight}
 }
+
+
+/* NOX QUALITY PLANET ATMOSPHERES V2 — original local CSS materials.
+   Five independent atmospheric worlds, no external network or extra renderer.
+   Actual D02 scene and its eight interactive CoreIDs are untouched. */
+#home .nox-quality-dock{
+ background:radial-gradient(ellipse 95% 155% at 48% -62%,
+ rgba(95,139,164,.23),transparent 72%),
+ linear-gradient(135deg,rgba(9,16,27,.73),rgba(16,14,28,.65) 55%,rgba(6,12,21,.72));
+ border-color:rgba(181,220,231,.35);
+ box-shadow:0 13px 45px rgba(0,0,0,.48),inset 0 1px rgba(247,244,235,.13),
+  0 0 40px rgba(69,121,166,.13);
+ backdrop-filter:blur(22px) saturate(1.23);
+ -webkit-backdrop-filter:blur(22px) saturate(1.23);
+}
+#home .nox-quality-planet{
+ background:linear-gradient(145deg,rgba(54,74,92,.31),rgba(8,13,24,.37));
+ border-color:rgba(198,216,233,.22);
+}
+#home .nox-quality-planet__sphere{
+ position:relative;isolation:isolate;overflow:visible;
+ background:
+ radial-gradient(ellipse 23% 19% at 30% 19%,rgba(255,255,255,.63),transparent 90%),
+ radial-gradient(circle at 36% 28%,var(--planet-a) 2%,var(--planet-b) 45%,
+  #080d15 85%);
+}
+#home .nox-quality-planet__sphere::before,
+#home .nox-quality-planet__sphere::after{
+ content:"";position:absolute;pointer-events:none!important;border-radius:50%;
+}
+#home .nox-quality-planet__sphere::before{
+ inset:2%;opacity:.64;mix-blend-mode:screen;
+ background:conic-gradient(from 38deg at 45% 55%,
+ rgba(240,246,255,.12),transparent 16%,var(--planet-a) 28%,
+ transparent 41%,rgba(245,230,204,.21) 55%,
+ transparent 68%,var(--planet-b) 82%,transparent);
+ -webkit-mask-image:radial-gradient(circle,#000 51%,rgba(0,0,0,.38) 72%,transparent 83%);
+ mask-image:radial-gradient(circle,#000 51%,rgba(0,0,0,.38) 72%,transparent 83%);
+ animation:nox-quality-atmosphere 11s linear infinite;
+}
+#home .nox-quality-planet__sphere::after{
+ inset:-8%;border:1px solid color-mix(in srgb,var(--planet-a),transparent 40%);
+ box-shadow:0 0 11px color-mix(in srgb,var(--planet-a),transparent 42%),
+ inset 0 0 7px color-mix(in srgb,var(--planet-a),transparent 60%);
+ opacity:.68;
+ animation:nox-quality-limb 5.8s ease-in-out infinite alternate;
+}
+/* MAX WOW: furnace, glowing lava fractures, hot gas and rotating crown. */
+#home .nox-quality-planet[data-quality="MAX_WOW"] .nox-quality-planet__sphere{
+ background:
+ radial-gradient(circle at 29% 24%,#ffe3a4,transparent 18%),
+ repeating-conic-gradient(from 6deg,rgba(255,127,36,.22) 0deg,
+ transparent 14deg,rgba(119,17,10,.3) 29deg,transparent 50deg),
+ radial-gradient(circle at 43% 38%,#ffad55 4%,#a63b20 42%,#1b0b16 82%);
+ box-shadow:inset -9px -10px 16px #070508,0 0 19px #d3633877;
+}
+#home .nox-quality-planet[data-quality="MAX_WOW"] .nox-quality-planet__sphere::before{
+ animation-duration:6.4s;opacity:.91;
+ background:conic-gradient(from 0deg,transparent,#ffd28d5e 38deg,transparent 90deg,
+ #f05830a8 146deg,transparent 200deg,#ffb04d66 277deg,transparent 360deg);
+}
+#home .nox-quality-planet[data-quality="MAX_WOW"] .nox-quality-planet__sphere::after{
+ inset:-13%;border-width:2px;box-shadow:0 0 16px #f9a05e99,0 0 25px #be3e2b66;
+}
+/* CINEMA: azure gas giant with blue-white auroral ribbons. */
+#home .nox-quality-planet[data-quality="CINEMA"] .nox-quality-planet__sphere{
+ background:radial-gradient(circle at 27% 18%,#c8f8ff,transparent 16%),
+ repeating-linear-gradient(160deg,transparent 0 5px,rgba(125,218,246,.17) 6px 8px,transparent 9px 16px),
+ radial-gradient(circle at 43% 43%,#60aeda,#215579 57%,#090f2c 88%);
+}
+#home .nox-quality-planet[data-quality="CINEMA"] .nox-quality-planet__sphere::before{
+ animation-duration:13s;opacity:.62;
+}
+/* ECO: soft emerald atmosphere with slow organic cloud drift. */
+#home .nox-quality-planet[data-quality="ECO"] .nox-quality-planet__sphere{
+ background:radial-gradient(circle at 29% 22%,#d9fff1,transparent 14%),
+ radial-gradient(ellipse at 69% 62%,rgba(105,228,159,.58),transparent 38%),
+ radial-gradient(circle at 43% 40%,#82d4a2,#225c58 56%,#091a27 87%);
+}
+#home .nox-quality-planet[data-quality="ECO"] .nox-quality-planet__sphere::before{
+ animation-duration:27s;opacity:.36;
+}
+#home .nox-quality-planet[data-quality="ECO"] .nox-quality-planet__sphere::after{
+ animation-duration:19s;opacity:.28;
+}
+/* MINI START: moon material. Atmospheric movement is permanently disabled. */
+#home .nox-quality-planet[data-quality="MINI_START"] .nox-quality-planet__sphere{
+ background:
+ radial-gradient(circle at 33% 38%,rgba(24,29,44,.42) 0 9%,transparent 11%),
+ radial-gradient(circle at 67% 64%,rgba(25,29,44,.44) 0 12%,transparent 14%),
+ radial-gradient(circle at 75% 26%,rgba(25,29,44,.31) 0 6%,transparent 8%),
+ radial-gradient(circle at 29% 21%,#e4e8f0,#8b95a8 36%,#2a334b 74%,#0a0d17 100%);
+}
+#home .nox-quality-planet[data-quality="MINI_START"] .nox-quality-planet__sphere::before,
+#home .nox-quality-planet[data-quality="MINI_START"] .nox-quality-planet__sphere::after{
+ animation:none!important;opacity:.19;
+}
+/* AUTO: violet atmosphere and dynamic ionized blue halo, user opt-in only. */
+#home .nox-quality-planet[data-quality="AUTO"] .nox-quality-planet__sphere{
+ background:radial-gradient(circle at 26% 19%,#e6f5ff,transparent 18%),
+ conic-gradient(from 34deg,#5c378f,#716eb8,#2c7097,#8669ad,#3c285c,#5c378f);
+}
+#home .nox-quality-planet[data-quality="AUTO"] .nox-quality-planet__sphere::before{
+ animation-duration:9s;opacity:.8;
+ background:conic-gradient(transparent,#aef4ff88 17%,transparent 33%,
+ #bd94ffa0 54%,transparent 76%,#7db7ff77);
+}
+/* The selected graphics budget governs the PLANET previews as well as D02.
+   MAX animates all atmospheres; CINEMA slows the secondary worlds;
+   ECO freezes unselected planets; MINI freezes every animation. */
+#home .nox-quality-dock[data-nox-effective="balanced"] .nox-quality-planet:not(.is-selected) .nox-quality-planet__sphere::before{
+ animation-duration:25s;opacity:.4;
+}
+#home .nox-quality-dock[data-nox-effective="eco"] .nox-quality-planet .nox-quality-planet__sphere::before,
+#home .nox-quality-dock[data-nox-effective="eco"] .nox-quality-planet .nox-quality-planet__sphere::after{
+ animation:none!important;filter:none!important;
+}
+#home .nox-quality-dock[data-nox-effective="reduced"] .nox-quality-planet .nox-quality-planet__sphere::before,
+#home .nox-quality-dock[data-nox-effective="reduced"] .nox-quality-planet .nox-quality-planet__sphere::after{
+ animation:none!important;filter:none!important;
+}
+#home .nox-quality-dock[data-nox-effective="reduced"]{
+ -webkit-backdrop-filter:none!important;backdrop-filter:none!important;
+}
+@keyframes nox-quality-atmosphere{
+ to{transform:rotate(360deg);}
+}
+@keyframes nox-quality-limb{
+ from{opacity:.28;transform:scale(.98)}
+ to{opacity:.88;transform:scale(1.045)}
+}
+@media(prefers-reduced-motion:reduce){
+ #home .nox-quality-planet__sphere,
+ #home .nox-quality-planet__sphere::before,
+ #home .nox-quality-planet__sphere::after{
+ animation:none!important;transition:none!important;transform:none!important;
+ }
+}
+@media(forced-colors:active){
+ #home .nox-quality-planet__sphere::before,
+ #home .nox-quality-planet__sphere::after{display:none!important}
+}
