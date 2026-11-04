@@ -1339,7 +1339,7 @@ def lifecycle(setup: Path, result: dict, *, frozen_source: str = "", physical_na
     # LIVE Qwen, nonempty persisted SQLite and in-flight STOP must be
     # measured BEFORE this exact installed Setup undergoes update/uninstall.
     # A provider-offline HOLD must never skip conservative lifecycle cleanup.
-    if frozen_source in (SOURCE_SHA, NEW_D02_SOURCE_SHA):
+    if frozen_source in (SOURCE_SHA, NEW_D02_SOURCE_SHA, F842_D02_SOURCE_SHA):
         try:
             result["checks"]["installed_live_qwen_stream_stop_sqlite"] = (
                 installed_live_qwen_gates(
@@ -1434,7 +1434,7 @@ def main() -> int:
         physical_dir = args.out.parent / "same-setup-final"
         lifecycle(setup,result,frozen_source=source_sha,
                   physical_nav=args.artifact_kind in ("original-30a", "d02", "d02-91a6", "d02-f842"),
-                  final_probe_dir=physical_dir if args.artifact_kind in ("d02", "d02-91a6") else None)
+                  final_probe_dir=physical_dir if args.artifact_kind in ("d02", "d02-91a6", "d02-f842") else None)
         # The complete physical install/update/rollback/uninstall lifecycle ran
         # on this exact Setup. These facts do NOT prove inference or final E07.
         result["checks"]["installed_lifecycle"] = {
@@ -1460,7 +1460,7 @@ def main() -> int:
         # Final release is admitted only when independently produced same-Setup
         # visual and functional subreceipts are supplied and pass strict shape,
         # identity and per-action checks. Missing evidence stays HOLD.
-        if args.artifact_kind in ("d02", "d02-91a6"):
+        if args.artifact_kind in ("d02", "d02-91a6", "d02-f842"):
             witness = result["checks"].get("installed_final_physical", {})
             require(witness.get("status") == "PASS" and
                     witness.get("setup_sha256") == setup_sha and
@@ -1494,4 +1494,7 @@ def main() -> int:
     return 0 if result["independent_e07"]=="PASS" else 1
 
 if __name__=="__main__":
+    # Physical probes must share this CLI module to preserve the Hold class.
+    # Importing a second copy incorrectly labels a genuine Hold as unexpected.
+    sys.modules["independent_setup_e07"] = sys.modules[__name__]
     raise SystemExit(main())
