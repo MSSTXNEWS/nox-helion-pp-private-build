@@ -139,9 +139,15 @@ def build(repo: Path, sha: str, destination: Path):
             z.writestr(entry, json.dumps(manifest, sort_keys=True, ensure_ascii=False, indent=2))
         if git(repo, "rev-parse", "HEAD") != sha or git(repo, "status", "--porcelain", "--untracked-files=normal"):
             raise ValueError("SOURCE_MOVED_DURING_PACK")
-        os.replace(pending, destination)
-        with destination.open("rb") as handle:
+        # Publish only after validating the entire immutable ZIP. os.replace()
+        # silently destroys an older source snapshot on same-path collisions.
+        # A same-directory hard link is atomic and fails if *any* entry exists.
+        with pending.open("rb") as handle:
             zip_sha = hashlib.file_digest(handle, "sha256").hexdigest()
+        try:
+            os.link(pending, destination)
+        except FileExistsError as exc:
+            raise ValueError("ARCHIVE_DESTINATION_ALREADY_EXISTS_HOLD") from exc
         return {"sha": sha, "files": len(records), "zip_sha256": zip_sha, "archive": str(destination)}
     finally:
         pending.unlink(missing_ok=True)

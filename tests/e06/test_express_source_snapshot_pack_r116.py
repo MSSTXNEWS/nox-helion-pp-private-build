@@ -118,5 +118,25 @@ class ExpressSourceProvenanceR116(unittest.TestCase):
                 archive.read('source/models/Qwen3.gguf'), b"extra committed bytes\\n")
 
 
+    def test_existing_immutable_output_never_overwritten(self):
+        sentinel = b'FROZEN_ARCHIVE_NOLOSS\\n'
+        self.target.write_bytes(sentinel)
+        with self.assertRaisesRegex(ValueError, 'ARCHIVE_DESTINATION_ALREADY_EXISTS_HOLD'):
+            self.packer.build(self.repo, self.head, self.target)
+        self.assertEqual(self.target.read_bytes(), sentinel)
+
+    def test_existing_destination_symlink_is_not_followed_or_replaced(self):
+        sentinel_path = self.target.parent / 'other-owned.zip'
+        sentinel = b'OTHER_OWNER_ARCHIVE_UNTOUCHED\\n'
+        sentinel_path.write_bytes(sentinel)
+        try:
+            self.target.symlink_to(sentinel_path)
+        except (OSError, NotImplementedError):
+            self.skipTest('symlinks unavailable')
+        with self.assertRaisesRegex(ValueError, 'ARCHIVE_DESTINATION_ALREADY_EXISTS_HOLD'):
+            self.packer.build(self.repo, self.head, self.target)
+        self.assertTrue(self.target.is_symlink())
+        self.assertEqual(sentinel_path.read_bytes(), sentinel)
+
 if __name__ == '__main__':
     unittest.main()
