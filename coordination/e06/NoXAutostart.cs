@@ -33,7 +33,10 @@ internal static class NoXAutostart
     {
         var command = Quoted(CheckedExecutable(executable));
         using var key = Registry.CurrentUser.OpenSubKey(RunKey, writable:false);
+        // Only our exact REG_SZ command is an owned setting. REG_EXPAND_SZ
+        // and foreign value types never prove that NOX autostart is enabled.
         return key?.GetValue(Entry) is string stored &&
+            key.GetValueKind(Entry) == RegistryValueKind.String &&
             string.Equals(stored, command, StringComparison.OrdinalIgnoreCase);
     }
     internal static bool SetEnabled(string executable, bool enabled, bool nativeConsent)
@@ -42,12 +45,22 @@ internal static class NoXAutostart
         var expected = Quoted(CheckedExecutable(executable));
         using var key = Registry.CurrentUser.CreateSubKey(RunKey, writable:true)
             ?? throw new IOException("NOX_AUTOSTART_HKCU_UNAVAILABLE");
-        var old = key.GetValue(Entry) as string;
-        if (old is not null && !string.Equals(old, expected, StringComparison.OrdinalIgnoreCase))
+        // A foreign Run entry can be REG_DWORD/REG_BINARY/REG_NONE (or an
+        // expandable string). "as string" silently treated it as absent and
+        // overwrote unrelated HKCU owner data. Preserve every foreign kind.
+        var hasEntry = Array.Exists(key.GetValueNames(), name =>
+            string.Equals(name, Entry, StringComparison.OrdinalIgnoreCase));
+        if (hasEntry && (key.GetValueKind(Entry) != RegistryValueKind.String ||
+            key.GetValue(Entry) is not string old ||
+            !string.Equals(old, expected, StringComparison.OrdinalIgnoreCase)))
             throw new UnauthorizedAccessException("NOX_AUTOSTART_FOREIGN_ENTRY_HOLD");
         if (enabled) key.SetValue(Entry, expected, RegistryValueKind.String);
         else key.DeleteValue(Entry, throwOnMissingValue:false);
-        return IsEnabled(executable);
+        // A transport success is not evidence that HKCU persisted the value.
+        // A mismatch (including enabled=false on a requested enable) is HOLD.
+        var persisted = IsEnabled(executable);
+        if (persisted != enabled) throw new IOException("NOX_AUTOSTART_PERSISTENCE_UNVERIFIED");
+        return persisted;
     }
     // Original NSIS uninstaller should invoke only for a matching installed path.
     internal static void RemoveOnUninstall(string executable)
@@ -55,6 +68,7 @@ internal static class NoXAutostart
         var expected = Quoted(CheckedExecutable(executable, allowDeletedOnUninstall:true));
         using var key = Registry.CurrentUser.OpenSubKey(RunKey, writable:true);
         if (key?.GetValue(Entry) is string existing &&
+            key.GetValueKind(Entry) == RegistryValueKind.String &&
             string.Equals(existing, expected, StringComparison.OrdinalIgnoreCase))
             key.DeleteValue(Entry, throwOnMissingValue:false);
     }

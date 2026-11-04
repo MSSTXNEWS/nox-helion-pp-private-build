@@ -38,5 +38,22 @@ class NoXAutostartUninstallSource(unittest.TestCase):
         self.assertIn(declaration, builder)
         self.assertEqual(builder.count("relative='coordination/e06/NoXAutostart.cs'"), 1)
 
+
+    def test_foreign_hkcu_run_value_types_are_no_loss_and_write_is_verified(self):
+        code = SOURCE.read_text(encoding="utf-8")
+        # REG_DWORD, REG_BINARY and even REG_NONE are owned by somebody else.
+        # Mere "as string" cannot distinguish missing vs foreign Run values.
+        self.assertIn("Array.Exists(key.GetValueNames()", code)
+        self.assertIn("key.GetValueKind(Entry) != RegistryValueKind.String", code)
+        self.assertIn("key.GetValue(Entry) is not string old", code)
+        self.assertNotIn("var old = key.GetValue(Entry) as string;", code)
+        self.assertIn('NOX_AUTOSTART_FOREIGN_ENTRY_HOLD', code)
+        self.assertEqual(code.count("key.GetValueKind(Entry) == RegistryValueKind.String"), 2)
+        self.assertIn("var persisted = IsEnabled(executable);", code)
+        self.assertIn("if (persisted != enabled) throw new IOException", code)
+        self.assertIn("NOX_AUTOSTART_PERSISTENCE_UNVERIFIED", code)
+        self.assertIn("if (!nativeConsent) throw", code)
+        self.assertIn("key.DeleteValue(Entry, throwOnMissingValue:false);", code)
+
 if __name__ == "__main__":
     unittest.main()
