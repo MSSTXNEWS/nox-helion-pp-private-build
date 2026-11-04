@@ -7,6 +7,7 @@ on:
       - coordination/e07/probe_final_same_setup.py
       - tests/e07/test_independent_setup_e07.py
       - tests/e07/test_91a6_real_visual_u17.py
+      - tests/e07/test_final_truth_scope_u20.py
   workflow_dispatch:
 permissions:
   actions: read
