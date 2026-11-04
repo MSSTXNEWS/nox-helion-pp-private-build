@@ -21,13 +21,24 @@ const SAFE_COUNT = n=>Number.isSafeInteger(n)&&n>=0&&n<=1000000;
 // to a confirmed native result merely because the transport is COMPLETED.
 const R11_NATIVE_DENIAL=/(?:DENIED|REQUIRED|MISMATCH|OFFLINE|UNAVAILABLE|FAILED|ERROR|HOLD|REJECTED|AWAITING_CONSENT|NEEDS_CONSENT|CONSENT_PENDING)/i;
 function nativeReplyHasExplicitDenial(reply){
-  for(const node of [reply,reply?.result,reply?.result?.owner,reply?.result?.receipt]){
+  // A transport ACK is never proof when a nested original native owner denies
+  // a MODELS/STOP action. Inspect bounded owner/receipt/nativeResult envelopes.
+  const pending=[reply],seen=new Set();
+  let examined=0;
+  while(pending.length){
+    if(++examined>32)return true; // malformed, fail closed
+    const node=pending.pop();
     if(!node||typeof node!=='object'||Array.isArray(node))continue;
+    if(seen.has(node))return true;
+    seen.add(node);
     if(node.ok===false||node.ack===false||node.permissionGranted===false)return true;
     for(const key of ['error','error_code','errorCode','error_message','errorMessage']){
       if(node[key]!==undefined&&node[key]!==null&&node[key]!=='')return true;
     }
     if(['state','status'].some(key=>typeof node[key]==='string'&&R11_NATIVE_DENIAL.test(node[key])))return true;
+    for(const key of ['result','owner','receipt','nativeResult']){
+      if(node[key]&&typeof node[key]==='object')pending.push(node[key]);
+    }
   }
   return false;
 }

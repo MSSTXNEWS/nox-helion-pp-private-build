@@ -54,6 +54,10 @@ test('R11 original native owner rejects explicit error and denied consent/ACL de
    {...good,result:{...good.result,owner:{ok:false}}},
    {...good,result:{...good.result,receipt:{error_message:'SID_MISMATCH'}}},
    {...good,result:{...good.result,receipt:{permissionGranted:false}}},
+   {...good,result:{...good.result,nativeResult:{ok:false}}},
+   {...good,result:{...good.result,nativeResult:{receipt:{error_code:'ACL_MISMATCH'}}}},
+   {...good,result:{...good.result,owner:{result:{ack:false}}}},
+   {...good,result:{...good.result,receipt:{nativeResult:{status:'PROVIDER_OFFLINE'}}}},
    {...good,error:{reason:'NATIVE_DENIED'}},
    {state:'STOP_REQUESTED',error_code:'CONSENT_REQUIRED'}
  ];
