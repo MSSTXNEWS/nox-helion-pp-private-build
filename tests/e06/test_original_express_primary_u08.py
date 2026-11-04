@@ -34,6 +34,7 @@ class FivePrimaryTests(unittest.TestCase):
         self.assertEqual(proof['source_sha256'], hashlib.sha256(self.raw).hexdigest())
         self.assertIn("invokeMatches[0].click();", target.INSERT)
         self.assertIn("button#training-diagnostic", target.INSERT)
+        self.assertIn("button#pc-install", target.INSERT)
         self.assertNotIn("if(name==='MODELS')target.click();", target.INSERT)
         self.assertIn("No direct privileged IPC", target.INSERT)
 
