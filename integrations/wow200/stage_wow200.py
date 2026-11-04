@@ -34,6 +34,11 @@ OWNER1_D02_ENGINE = {
 }
 # Exact current Git object identity of all executable/styled shipped runtime assets.
 # No unreviewed copyfile fallback: source-pinned bytes only, even on Windows CRLF.
+# Pinned, previously reviewed ORIGINAL WPF chrome compaction donor.
+# The file is not copied as an untracked asset: the exact reviewed CSS bytes
+# are injected into the disposable HOME after all existing source-locked links.
+ORIGINAL_CHROME_COMPACT_BLOB = "8e3cffe7cb91564ae5817e55cb35e5fbb0feeb50"
+
 WOW_RUNTIME_BLOBS = {
     "runtime/loader.mjs": "9b4596a68525384a92ddc1c17af5d51d37cc0458",
     "runtime/stage.css": "e6fd8eaea8a38deb0095e6359010be7539a4a7bc",
@@ -224,6 +229,18 @@ def stage(root:Path, source:Path)->dict:
             raise ValueError("WOW_RUNTIME_BLOB_HOLD:"+rel)
         pinned_content[origin]=verified
         plans.append((origin,dest/rel))
+    # Preserve the source D02 and every native host action. Only restyle the
+    # disposable, already SHA-pinned original HOME, fail closed on any drift.
+    chrome_path=source/"runtime/p01-original-chrome-compact-v6.css"
+    if (not chrome_path.is_file() or chrome_path.is_symlink() or
+        any(parent.is_symlink() for parent in chrome_path.parents if parent != source)):
+        raise ValueError("D02_ORIGINAL_CHROME_SOURCE_PATH_HOLD")
+    chrome_bytes=pinned_source_bytes(chrome_path,ORIGINAL_CHROME_COMPACT_BLOB)
+    if chrome_bytes is None or len(chrome_bytes)>8192:
+        raise ValueError("D02_ORIGINAL_CHROME_BLOB_HOLD")
+    chrome_css=chrome_bytes.decode("utf-8", "strict")
+    if "</style" in chrome_css.lower() or "\\x00" in chrome_css:
+        raise ValueError("D02_ORIGINAL_CHROME_STYLE_HOLD")
     old=html.read_text(encoding="utf-8-sig")
     old_home=home_html.read_text(encoding="utf-8-sig")
     if old.count("</head>")!=1 or old.count("</body>")!=1 or "wow200/runtime/loader.mjs" in old:
@@ -250,7 +267,7 @@ def stage(root:Path, source:Path)->dict:
         '<link rel="stylesheet" href="creative/wow200/runtime/home-guard.css">'
         '<link rel="stylesheet" href="creative/wow200/ui/selfbuilder-menu-v2.css">'
         '<link rel="stylesheet" href="creative/wow200/ui/selfbuilder-wow-workbench.css">'
-        '<link rel="stylesheet" href="creative/wow200/ui/nox-r11-wow.css"><link rel="stylesheet" href="creative/wow200/proposals/P01/WOW-MAX10/p01-cinematic-menu.css"></head>')
+        '<link rel="stylesheet" href="creative/wow200/ui/nox-r11-wow.css"><link rel="stylesheet" href="creative/wow200/proposals/P01/WOW-MAX10/p01-cinematic-menu.css">''<style id="nox-original-chrome-compact-v6">'+chrome_css+'</style></head>')
     new_home=new_home.replace('</body>',
         '<script type="module" src="creative/wow200/runtime/home-scene.mjs"></script>'
         '<script type="module" src="creative/wow200/ui/onehost-menu-bindings.mjs"></script></body>')
@@ -278,6 +295,8 @@ def stage(root:Path, source:Path)->dict:
         receipt={"schema":"NOX_V16_WOW200_ADDITIVE_R13_STAGE", "source":"PR44/PR38/PR14/PR15 immutable Git blobs", "files":copied,
           "count":len(copied),"D02_original_SHA256":D02,"same_EXE_QA":"NOT_RUN","GPU":"NOT_RUN",
           "source_only":True,"release_accepted":False,"donor_file_count":DONOR_FILE_COUNT,
+          "original_chrome_compact_git_blob":ORIGINAL_CHROME_COMPACT_BLOB,
+          "original_chrome_source_staged":True,"original_chrome_visual_e07":"HOLD",
           "wow_runtime_git_blobs":WOW_RUNTIME_BLOBS,
           "pack01_catalog_blob":PACK01_CATALOG_BLOB,"pack01_catalog_routes":50,
           "home_pr30_renderer_staged":True,
