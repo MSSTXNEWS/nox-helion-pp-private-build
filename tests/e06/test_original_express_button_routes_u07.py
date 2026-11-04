@@ -100,4 +100,22 @@ class OriginalButtonRoutes(unittest.TestCase):
         self.assertEqual(proof['installed_ui_automation'], 'NOT_RUN')
         self.assertFalse(proof['release_accepted'])
 
+    def test_windows_builder_attests_five_published_actions_not_optional_a1(self):
+        """E06 regression: missing unimplemented A1 marker cannot block five originals."""
+        builder = (ROOT / 'coordination/e06/build_onehost_installer.ps1').read_text(encoding='utf-8')
+        self.assertEqual(builder.count("$primaryMatches=[regex]::Matches($publishedHtml"), 1)
+        block = builder.split("$primaryMatches=[regex]::Matches($publishedHtml", 1)[1].split(
+            "  foreach ($name in @('nox-cinema.mjs'", 1)[0]
+        for name in ('CHAT', 'INSTALL', 'MODELS', 'LEARN', 'SETTINGS'):
+            self.assertIn(name, block)
+        self.assertIn("$primaryMatches.Count -ne $primaryNames.Count", block)
+        self.assertIn("$_.Groups[1].Value -ceq $primaryName", block)
+        self.assertIn("id=\"nox-express-primary-bind\"", block)
+        self.assertIn("$primaryProof.installed_ui_automation -cne 'NOT_RUN'", block)
+        self.assertIn("$primaryProof.release_accepted -ne $false", block)
+        self.assertNotIn("D02_PUBLISHED_NATIVE_A1_PROBE_MISSING", block)
+        self.assertNotIn("if ($false)", block)
+        self.assertIn("D02_PUBLISHED_FIVE_ORIGINAL_PRIMARY_ACTIONS_MISSING", block)
+
+
 if __name__ == '__main__': unittest.main()

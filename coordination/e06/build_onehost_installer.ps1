@@ -757,18 +757,25 @@ if ($wantsCreative) {
   if (([regex]::Matches($publishedHtml,[regex]::Escape('creative/wow200/runtime/home-scene.mjs'))).Count -ne 1) {
     throw 'D02_PUBLISHED_HOME_RUNTIME_IMPORT_HOLD'
   }
-  # Attest the exact published payload, not merely a staged or decorative UI.
-  # Real Windows WebView2 UIA InvokePattern is still E07 HOLD until executed.
-  if (!$publishedHtml.Contains('id="nox-express-primary"') -or
-      ([regex]::Matches($publishedHtml,'data-nox-primary="(?:CHAT|INSTALL|MODELS|LEARN|SETTINGS)"')).Count -ne 5 -or
-      !$publishedHtml.Contains('nox-express-primary-bind') -or
-      !$publishedHtml.Contains('data-nox-check="A1"') -or
-      !$publishedHtml.Contains('NOX-A1-NATIVE-COMMAND-STATUS-v1') -or
-      !$publishedHtml.Contains('selfbuilder.a1.status')) {
-    throw 'D02_PUBLISHED_NATIVE_A1_PROBE_MISSING'
-  }
-  if ($false) {
+  # Verify exactly five source-bound original EXPRESS controls in final NSIS HOME.
+  # A1 is not yet a verified owner callback, and may not be a mandatory
+  # packaging marker or an implied live-AI/E07 PASS.
+  # Reject a sixth unknown control rather than counting only known names.
+  $primaryNames=@('CHAT','INSTALL','MODELS','LEARN','SETTINGS')
+  $primaryMatches=[regex]::Matches($publishedHtml,'data-nox-primary="([^"]*)"')
+  if (([regex]::Matches($publishedHtml,'id="nox-express-primary"')).Count -ne 1 -or
+      ([regex]::Matches($publishedHtml,'id="nox-express-primary-bind"')).Count -ne 1 -or
+      $primaryMatches.Count -ne $primaryNames.Count -or
+      $primaryProof.installed_ui_automation -cne 'NOT_RUN' -or
+      $primaryProof.release_accepted -ne $false) {
     throw 'D02_PUBLISHED_FIVE_ORIGINAL_PRIMARY_ACTIONS_MISSING'
+  }
+  foreach ($primaryName in $primaryNames) {
+    if (@($primaryMatches | Where-Object {
+          $_.Groups[1].Value -ceq $primaryName
+        }).Count -ne 1) {
+      throw 'D02_PUBLISHED_FIVE_ORIGINAL_PRIMARY_ACTIONS_MISSING'
+    }
   }
   foreach ($name in @('nox-cinema.mjs','nox-cinema.css')) {
     $wanted=Join-Path $source ('Assets/creative/wow200/proposals/NOX-CINEMA-FX/' + $name)
