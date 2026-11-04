@@ -150,10 +150,12 @@ nav.addEventListener('click',event=>{
      state.textContent=name+': фокус оригинального элемента не подтверждён · HOLD';
      return;
    }
-   // MODELS is a read-only catalog. Forward this trusted user click to the
-   // existing native-backed control, never trigger a model pull or install.
-   // INSTALL and LEARN remain focus-only for explicit owner consent.
-   if(name==='MODELS')target.click();
+   // Forward the trusted EXPRESS click to the exact SOURCE-LOCKED original
+   // control. INSTALL / MODELS / LEARN keep their original handlers, native
+   // ACL and owner-consent dialogs; this wrapper never calls privileged IPC.
+   // A programmatic route, synthetic ACK or second backend is forbidden.
+   target.click();
+   state.textContent=name+': действие передано исходному NOX · результат подтверждает нативный экран';
    return;
  }
  // SETTINGS enters the original MENU first, then uses its ORIGINAL system tile.
