@@ -1,6 +1,7 @@
 """NX03 exact-source C07→reviewed C09 uninstall staging, NOT E07."""
 from __future__ import annotations
 import hashlib
+from unittest import mock
 import importlib.util
 from io import BytesIO
 from pathlib import Path
@@ -95,6 +96,52 @@ class NX03ReviewedRemove(unittest.TestCase):
         with self.assertRaisesRegex(stage.ReviewedRemoveHold,"UNAPPROVED_BLOB"):
             stage.stage_reviewed_remove(self.owner,self.copy)
         self.assertEqual(self.owner.read_bytes(),self.original)
+    def test_foreign_same_bytes_pending_inode_never_published_or_deleted(self):
+        foreign = self.temp/"foreign_pending_same_bytes.ps1"
+        foreign.write_bytes(stage._ps51_uninstall_stage(
+            self.reviewed.replace(b"\\r\\n", b"\\n")))
+        read = Path.read_bytes
+        moved = [False]
+        pending_name = [None]
+        def foreign_swap(path):
+            if path == self.owner and not moved[0]:
+                pending = list(self.owner.parent.glob(".nox-nx03-*.pending"))
+                if pending:
+                    pending_name[0] = pending[0]
+                    foreign.replace(pending[0])
+                    moved[0] = True
+            return read(path)
+        with mock.patch.object(Path, "read_bytes", foreign_swap):
+            with self.assertRaisesRegex(stage.ReviewedRemoveHold,
+                                        "NX03_FOREIGN_PENDING_CHANGED_HOLD"):
+                stage.stage_reviewed_remove(self.owner, self.copy)
+        self.assertTrue(moved[0])
+        self.assertEqual(self.owner.read_bytes(), self.original)
+        self.assertIsNotNone(pending_name[0])
+        self.assertEqual(pending_name[0].read_bytes(),
+                         stage._ps51_uninstall_stage(
+                             self.reviewed.replace(b"\\r\\n", b"\\n")))
+        self.assertEqual(self.copy.read_bytes(), self.reviewed)
+
+    def test_foreign_same_inode_pending_edit_remains_for_review(self):
+        read = Path.read_bytes
+        altered = [None]
+        def foreign_write(path):
+            if path == self.owner and altered[0] is None:
+                pending = list(self.owner.parent.glob(".nox-nx03-*.pending"))
+                if pending:
+                    altered[0] = pending[0]
+                    pending[0].write_bytes(b"FOREIGN_PENDING_CONTENT")
+            return read(path)
+        with mock.patch.object(Path, "read_bytes", foreign_write):
+            with self.assertRaisesRegex(stage.ReviewedRemoveHold,
+                                        "NX03_FOREIGN_PENDING_CHANGED_HOLD"):
+                stage.stage_reviewed_remove(self.owner, self.copy)
+        self.assertEqual(self.owner.read_bytes(), self.original)
+        self.assertIsNotNone(altered[0])
+        self.assertEqual(altered[0].read_bytes(), b"FOREIGN_PENDING_CONTENT")
+        self.assertEqual(self.copy.read_bytes(), self.reviewed)
+
     def test_symlink_owner_fails_closed(self):
         outside = self.temp/"external.ps1"
         outside.write_bytes(self.original)

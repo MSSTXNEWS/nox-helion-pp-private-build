@@ -91,6 +91,14 @@ def _atomic_stage_owned(owner: Path, before: bytes, staged: bytes) -> None:
              original.st_size, original.st_nlink) or
                 owner.read_bytes() != before):
             raise ReviewedRemoveHold("NX03_FOREIGN_OWNER_CHANGED_HOLD")
+        # A concurrent writer can swap the pending name even with IDENTICAL
+        # bytes. Verify its original inode/one-link ownership immediately
+        # before publish; never trust content hashing alone for a staging path.
+        _plain(temp)
+        pending = temp.lstat()
+        if ((pending.st_dev, pending.st_ino) != temp_identity or
+                pending.st_nlink != 1 or temp.read_bytes() != staged):
+            raise ReviewedRemoveHold("NX03_FOREIGN_PENDING_CHANGED_HOLD")
         # Only an owner-verified, unique pending file may replace disposable R11.
         os.replace(temp, owner)
         temp = None
@@ -100,8 +108,11 @@ def _atomic_stage_owned(owner: Path, before: bytes, staged: bytes) -> None:
         if temp is not None and temp_identity is not None:
             try:
                 info = temp.lstat()
-                if (stat.S_ISREG(info.st_mode) and
-                        (info.st_dev, info.st_ino) == temp_identity):
+                # A foreign writer may have changed the original inode's
+                # contents. Never delete that now-foreign pending evidence.
+                if (stat.S_ISREG(info.st_mode) and info.st_nlink == 1 and
+                        (info.st_dev, info.st_ino) == temp_identity and
+                        temp.read_bytes() == staged):
                     temp.unlink()
             except FileNotFoundError:
                 pass
