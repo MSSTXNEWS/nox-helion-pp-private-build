@@ -100,6 +100,28 @@ class FrozenCoverage(unittest.TestCase):
         reader.toc["NOX_SELFBUILDER/CATALOG.JSON"] = reader.toc["nox_selfbuilder/catalog.json"]
         with self.assertRaisesRegex(RuntimeError, "ARCHIVE_NAME_COLLISION"):
             MOD.verify_archive_contents(reader, plan, data)
+    def test_pinned_python_source_preserved_when_windows_marks_data_binary(self):
+        plan, _, reader = self.fixture()
+        raw = b"VALUE = 1\\n"
+        name = "nox_selfbuilder/activator_worm.py"
+        reader.toc[name] = (0, len(raw), len(raw), 0, "b")
+        reader.extract = lambda _name: raw
+        rows = [{"runtime_path": name, "sha256": hashlib.sha256(raw).hexdigest()}]
+        proof = MOD.verify_archive_contents(reader, plan, rows)
+        self.assertEqual(proof["data_files_checked"], 1)
+        self.assertIs(proof["release_accepted"], False)
+        rows[0]["sha256"] = "0" * 64
+        with self.assertRaisesRegex(RuntimeError, "FROZEN_DATA_SHA_HOLD"):
+            MOD.verify_archive_contents(reader, plan, rows)
+        reader.toc[name] = (0, len(raw), len(raw), 0, "s")
+        with self.assertRaisesRegex(RuntimeError, "FROZEN_DATA_MISSING"):
+            MOD.verify_archive_contents(reader, plan, rows)
+        reader.toc["nox_selfbuilder/catalog.json"] = (0, len(raw), len(raw), 0, "b")
+        with self.assertRaisesRegex(RuntimeError, "FROZEN_DATA_MISSING"):
+            MOD.verify_archive_contents(
+                reader, plan, [{"runtime_path": "nox_selfbuilder/catalog.json",
+                                "sha256": hashlib.sha256(raw).hexdigest()}])
+
     def test_success_is_coverage_not_release_acceptance(self):
         plan, data, reader = self.fixture()
         proof = MOD.verify_archive_contents(reader, plan, data)
