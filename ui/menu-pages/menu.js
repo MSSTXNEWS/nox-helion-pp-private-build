@@ -334,13 +334,26 @@ function liveChat(label){
  input.addEventListener('keydown',ev=>{if(ev.key==='Enter'&&!ev.shiftKey&&!ev.isComposing){ev.preventDefault();void submit(ev);}});
  stop.addEventListener('click',async()=>{
   if(!client||!chatInFlight||chatStopPending)return;
+  const epoch=chatEpoch;
   chatStopPending=true;redraw();info.textContent='STOP REQUESTED · ожидаем native подтверждение';
   try{
    const r=await client.request('chat.stop',{});
-   if(info.isConnected)info.textContent=r?.state==='HOLD'?'HOLD · STOP отклонён':
-    'STOP запрошен; ждём терминальный результат исходного запроса';
-  }catch{if(info.isConnected)info.textContent='HOLD · STOP не подтверждён';}
-  finally{chatStopPending=false;redraw();}
+   // The trusted WebView2 route may report STOP_REQUESTED, not a finished
+   // chat. A generic COMPLETED / embedded provider HOLD is not STOP ACK.
+   const owner=r?.result;
+   const acknowledged=r?.routeId==='chat.stop' &&
+    (r.state==='STOP_REQUESTED'||r.state==='COMPLETED'&&owner?.ack===true) &&
+    (r.errorCode==null||r.errorCode==='') && r.ack!==false &&
+    (owner==null||!nativeOwnerReceiptHolds(owner));
+   // A late STOP receipt must never overwrite a completed/removed chat.
+   if(info.isConnected&&epoch===chatEpoch&&chatInFlight)
+    info.textContent=acknowledged?
+     'STOP запрошен; ждём терминальный результат исходного запроса':
+     'HOLD · STOP не подтверждён OneHost';
+  }catch{
+   if(info.isConnected&&epoch===chatEpoch&&chatInFlight)
+    info.textContent='HOLD · STOP не подтверждён';
+  }finally{chatStopPending=false;redraw();}
  });
  redraw();void loadModels();
 }
