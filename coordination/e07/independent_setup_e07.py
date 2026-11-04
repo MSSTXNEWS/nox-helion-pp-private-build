@@ -189,6 +189,15 @@ NAV_A2_SETUP_SIZE = 169665532
 NAV_A2_BUILD_ID = "NOX-V16-2dc194d7dcae0be37c2bb54f"
 NAV_A2_OWNED_COUNT = 1011
 
+# Immutable 2026-11-04 current D02 candidate from Windows E06 #41913880178.
+# Actual ZIP receipts and exact PE SHA were checked; NOT an E07 release.
+CURRENT_D02_SOURCE_SHA = "ab4d5dc24a52cd94813abdd4c803e16ab9d15536"
+CURRENT_D02_SETUP_SHA = "7067a091f8e8e4611402adf15337f995b0f4f5a6b2331b378298d9179866b05c"
+CURRENT_D02_SETUP_SIZE = 169665372
+CURRENT_D02_BUILD_ID = "NOX-V16-a4404d624fc9dca54d12dc71"
+CURRENT_D02_OWNED_COUNT = 1011
+
+
 
 
 def samevm_lifecycle_verified(
@@ -215,8 +224,12 @@ def setup_lock(setup: Path, receipt: Path, *, candidate: str = "d02") -> dict:
 
     Prior E06 same-VM lifecycle is NOT independent E07; lifecycle() must rerun.
     """
-    require(candidate in ("d02", "d02-91a6", "d02-f842", "d02-nav-a2"), "E07_CANDIDATE_PIN_KIND_HOLD")
-    if candidate == "d02-nav-a2":
+    require(candidate in ("d02", "d02-91a6", "d02-f842", "d02-nav-a2", "d02-current"), "E07_CANDIDATE_PIN_KIND_HOLD")
+    if candidate == "d02-current":
+        expected_source, expected_setup_sha = CURRENT_D02_SOURCE_SHA, CURRENT_D02_SETUP_SHA
+        expected_setup_size, expected_build_id = CURRENT_D02_SETUP_SIZE, CURRENT_D02_BUILD_ID
+        expected_owned_count = CURRENT_D02_OWNED_COUNT
+    elif candidate == "d02-nav-a2":
         expected_source, expected_setup_sha = NAV_A2_SOURCE_SHA, NAV_A2_SETUP_SHA
         expected_setup_size, expected_build_id = NAV_A2_SETUP_SIZE, NAV_A2_BUILD_ID
         expected_owned_count = NAV_A2_OWNED_COUNT
@@ -1387,7 +1400,7 @@ def lifecycle(setup: Path, result: dict, *, frozen_source: str = "", physical_na
     # LIVE Qwen, nonempty persisted SQLite and in-flight STOP must be
     # measured BEFORE this exact installed Setup undergoes update/uninstall.
     # A provider-offline HOLD must never skip conservative lifecycle cleanup.
-    if frozen_source in (SOURCE_SHA, NEW_D02_SOURCE_SHA, F842_D02_SOURCE_SHA, NAV_A2_SOURCE_SHA):
+    if frozen_source in (SOURCE_SHA, NEW_D02_SOURCE_SHA, F842_D02_SOURCE_SHA, NAV_A2_SOURCE_SHA, CURRENT_D02_SOURCE_SHA):
         try:
             result["checks"]["installed_live_qwen_stream_stop_sqlite"] = (
                 installed_live_qwen_gates(
@@ -1437,7 +1450,7 @@ def lifecycle(setup: Path, result: dict, *, frozen_source: str = "", physical_na
 def main() -> int:
     p=argparse.ArgumentParser()
     p.add_argument("--artifact-dir",required=True,type=Path)
-    p.add_argument("--artifact-kind",choices=("d02","d02-91a6","d02-f842","d02-nav-a2","original","original-e888","original-30a"),default="d02")
+    p.add_argument("--artifact-kind",choices=("d02","d02-91a6","d02-f842","d02-nav-a2","d02-current","original","original-e888","original-30a"),default="d02")
     p.add_argument("--out",required=True,type=Path)
     p.add_argument("--visual-receipt",type=Path)
     p.add_argument("--function-receipt",type=Path)
@@ -1451,7 +1464,9 @@ def main() -> int:
             "30a4f7c43649e3c3d66d0d46ec370b2105a69faa",
             "ceb4aab254a6a61b16b25a225ba443149bf1260c3ac410f0c00047842ab9c48c"),
     }
-    if args.artifact_kind == "d02-nav-a2":
+    if args.artifact_kind == "d02-current":
+        source_sha, setup_sha = CURRENT_D02_SOURCE_SHA, CURRENT_D02_SETUP_SHA
+    elif args.artifact_kind == "d02-nav-a2":
         source_sha, setup_sha = NAV_A2_SOURCE_SHA, NAV_A2_SETUP_SHA
     elif args.artifact_kind == "d02-f842":
         source_sha, setup_sha = F842_D02_SOURCE_SHA, F842_D02_SETUP_SHA
@@ -1483,8 +1498,8 @@ def main() -> int:
         # not imported from an unrelated workflow or a previous candidate.
         physical_dir = args.out.parent / "same-setup-final"
         lifecycle(setup,result,frozen_source=source_sha,
-                  physical_nav=args.artifact_kind in ("original-30a", "d02", "d02-91a6", "d02-f842", "d02-nav-a2"),
-                  final_probe_dir=physical_dir if args.artifact_kind in ("d02", "d02-91a6", "d02-f842", "d02-nav-a2") else None)
+                  physical_nav=args.artifact_kind in ("original-30a", "d02", "d02-91a6", "d02-f842", "d02-nav-a2", "d02-current"),
+                  final_probe_dir=physical_dir if args.artifact_kind in ("d02", "d02-91a6", "d02-f842", "d02-nav-a2", "d02-current") else None)
         # The complete physical install/update/rollback/uninstall lifecycle ran
         # on this exact Setup. These facts do NOT prove inference or final E07.
         result["checks"]["installed_lifecycle"] = {
@@ -1510,7 +1525,7 @@ def main() -> int:
         # Final release is admitted only when independently produced same-Setup
         # visual and functional subreceipts are supplied and pass strict shape,
         # identity and per-action checks. Missing evidence stays HOLD.
-        if args.artifact_kind in ("d02", "d02-91a6", "d02-f842", "d02-nav-a2"):
+        if args.artifact_kind in ("d02", "d02-91a6", "d02-f842", "d02-nav-a2", "d02-current"):
             witness = result["checks"].get("installed_final_physical", {})
             # Observing a live HWND and writing receipts is never itself a
             # functional or visual PASS; the final evaluator must inspect both.
