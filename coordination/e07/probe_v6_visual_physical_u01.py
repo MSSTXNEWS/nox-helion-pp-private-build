@@ -59,11 +59,11 @@ $null=[NoxVisualWin32]::ShowWindowAsync($h,9)
 $null=[NoxVisualWin32]::SetForegroundWindow($h)
 Start-Sleep -Milliseconds 700
 if([NoxVisualWin32]::GetForegroundWindow() -ne $h){throw 'V6_VISUAL_FOREGROUND_HWND_HOLD'}
-$r=New-Object NoxVisualWin32+RECT
+$r=[NoxVisualWin32+RECT]::new()
 if(-not [NoxVisualWin32]::GetWindowRect($h,[ref]$r)){throw 'V6_VISUAL_RECT_HOLD'}
 $w=$r.Right-$r.Left;$hgt=$r.Bottom-$r.Top
 if($w -lt 640 -or $hgt -lt 480 -or $w -gt 7680 -or $hgt -gt 4320){throw 'V6_VISUAL_BOUNDS_HOLD'}
-$bmp=New-Object System.Drawing.Bitmap($w,$hgt)
+$bmp=[System.Drawing.Bitmap]::new([int]$w,[int]$hgt)
 try {
  $g=[System.Drawing.Graphics]::FromImage($bmp)
  try { $g.CopyFromScreen($r.Left,$r.Top,0,0,$bmp.Size,[System.Drawing.CopyPixelOperation]::SourceCopy) }
