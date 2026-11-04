@@ -56,13 +56,13 @@ class IndependentE07(unittest.TestCase):
         self.assertTrue(any(flags[x] for x in MOD._WPF_FATAL))
 
     def test_exact_five_button_presence_is_not_click_acceptance(self):
-        got=MOD.classify_primary_button_names(["✦ CHAT","INSTALL","MODELS","LEARN","REPORTS"])
+        got=MOD.classify_primary_button_names(["✦ CHAT","INSTALL","MODELS","LEARN","SETTINGS"])
         self.assertEqual(got["status"],"PASS")
         self.assertEqual(got["actions_invoked"],0)
         self.assertEqual(got["buttons_missing"],[])
 
     def test_uia_rejects_near_matches_missing_and_untrusted(self):
-        got=MOD.classify_primary_button_names(["CHAT","INSTALL NOW","MODELS","LEARN","REPORTS"])
+        got=MOD.classify_primary_button_names(["CHAT","INSTALL NOW","MODELS","LEARN","SETTINGS"])
         self.assertEqual(got["status"],"HOLD")
         self.assertEqual(got["buttons_missing"],["INSTALL"])
         for invalid in ("CHAT INSTALL",["CHAT",object()]):
@@ -82,7 +82,7 @@ class IndependentE07(unittest.TestCase):
 
     def test_structural_uia_schema_is_bounded_and_fail_closed(self):
         good = {"schema": "NOX-E07-UIA-V1", "labels": ["CHAT", "INSTALL", "MODELS",
-                "LEARN", "REPORTS"], "treeCount": 5, "treeScanned": 5,
+                "LEARN", "SETTINGS"], "treeCount": 5, "treeScanned": 5,
                 "targetTypes": [f"{name}|ControlType.Button|VISIBLE_ENABLED"
                                 for name in MOD._UIA_MAIN_BUTTONS]}
         self.assertEqual(MOD.classify_primary_uia_evidence(good)["status"], "PASS")
@@ -112,7 +112,7 @@ class IndependentE07(unittest.TestCase):
         mixed.append(f"{names[-1]}|ControlType.Button|DISABLED")
         partial = MOD.classify_primary_uia_evidence({**base, "targetTypes": mixed})
         self.assertEqual(partial["status"], "HOLD")
-        self.assertEqual(partial["buttons_missing"], ["REPORTS"])
+        self.assertEqual(partial["buttons_missing"], ["SETTINGS"])
         # Real, role-qualified same-root witnesses still pass even if the
         # separate filtered-label enumeration races and returns no labels.
         positive = MOD.classify_primary_uia_evidence({
@@ -498,7 +498,7 @@ class IndependentE07(unittest.TestCase):
 
 
     def test_u11_readonly_primary_navigation_requires_four_genuine_fresh_routes(self):
-        labels = ("INSTALL", "MODELS", "LEARN", "REPORTS")
+        labels = ("INSTALL", "MODELS", "LEARN", "SETTINGS")
         base = {"schema":"NOX-E07-PRIMARY-NAV-v1","actions":[
             {"action":name,"invoked":True,"sameHwndAlive":True,
              "beforeHeading":False,"afterHeading":True} for name in labels]}

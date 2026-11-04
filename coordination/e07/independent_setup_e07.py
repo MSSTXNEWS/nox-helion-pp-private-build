@@ -454,7 +454,7 @@ def wpf_marker_flags(window: str) -> dict[str, bool]:
 _WPF_WITNESS_PATH = Path(__file__).resolve().parents[1] / "e06" / "t06_windows_hwnd_witness.py"
 
 
-_UIA_MAIN_BUTTONS = ("CHAT", "INSTALL", "MODELS", "LEARN", "REPORTS")
+_UIA_MAIN_BUTTONS = ("CHAT", "INSTALL", "MODELS", "LEARN", "SETTINGS")
 
 def classify_primary_button_names(labels: list[str]) -> dict:
     """Evidence of button presence only, never a click or inference PASS."""
@@ -483,7 +483,7 @@ def classify_primary_uia_evidence(response: dict) -> dict:
             type(scanned) is int and 0 <= scanned <= min(total, 2048) and
             type(targets) is list and len(targets) <= 64 and
             all(type(item) is str and re.fullmatch(
-                r"(CHAT|INSTALL|MODELS|LEARN|REPORTS)\|"
+                r"(CHAT|INSTALL|MODELS|LEARN|SETTINGS)\|"
                 r"(ControlType\.(Button|Text|Document|Hyperlink|Custom|Group|Pane|Edit)|Other)\|"
                 r"(VISIBLE_ENABLED|OFFSCREEN|DISABLED|TOO_SMALL)", item)
                 for item in targets), "E07_UIA_DIAGNOSTIC_UNTRUSTED_HOLD")
@@ -550,7 +550,7 @@ for ($i=0; $i -lt $scanCount; $i++) {
         $name = $node.Name
         if ([string]::IsNullOrWhiteSpace($name)) { continue }
         $token = $name.Trim().TrimStart([char[]]@([char]0x2726,[char]0x2605,[char]0x2022,[char]0x20)).Trim().ToUpperInvariant()
-        if ($token -notin @('CHAT','INSTALL','MODELS','LEARN','REPORTS')) { continue }
+        if ($token -notin @('CHAT','INSTALL','MODELS','LEARN','SETTINGS')) { continue }
         $kind = $node.ControlType.ProgrammaticName
         if ($kind -notin @('ControlType.Button','ControlType.Text','ControlType.Document',
                            'ControlType.Hyperlink','ControlType.Custom','ControlType.Group',
@@ -689,7 +689,7 @@ $alive=$null -ne [System.Windows.Automation.AutomationElement]::FromHandle($hwnd
 
 def classify_readonly_primary_navigation_witness(response: dict) -> dict:
     """Physical SAFE navigation only; never a functional INSTALL/LEARN/model PASS."""
-    expected = ("INSTALL", "MODELS", "LEARN", "REPORTS")
+    expected = ("INSTALL", "MODELS", "LEARN", "SETTINGS")
     require(type(response) is dict and set(response) == {"schema", "actions"} and
             response["schema"] == "NOX-E07-PRIMARY-NAV-v1" and
             type(response["actions"]) is list and len(response["actions"]) == 4,
@@ -724,7 +724,7 @@ def observe_readonly_primary_navigation(hwnd: int) -> dict:
     """On the frozen e888 source ONLY: invoke four known read-only MENU routes.
 
     Original menu.js: INSTALL/system and LEARN/evolution are non-mutating
-    informational panels; MODELS/catalog and REPORTS/progress are read-only
+    informational panels; MODELS/catalog and SETTINGS/settings are read-only
     OneHost routes. No button inside a panel, install, pull or training is invoked.
     """
     require(sys.platform == "win32" and type(hwnd) is int and hwnd > 0,
@@ -735,7 +735,7 @@ $ErrorActionPreference='Stop'
 Add-Type -AssemblyName UIAutomationClient
 Add-Type -AssemblyName UIAutomationTypes
 $handle=[IntPtr]__HWND__
-$titles=@{INSTALL='Система NOX';MODELS='Каталог моделей';LEARN='Эволюция';REPORTS='Прогресс'}
+$titles=@{INSTALL='Система NOX';MODELS='Каталог моделей';LEARN='Эволюция';SETTINGS='Настройки'}
 function Get-SameRoot {
   $v=[System.Windows.Automation.AutomationElement]::FromHandle($handle)
   if($null -eq $v){throw 'E07_PRIMARY_NAV_HWND_LOST'}
@@ -757,7 +757,7 @@ function Test-VisibleHeading($hostRoot,[string]$title) {
   return $false
 }
 $actions=@()
-foreach($name in @('INSTALL','MODELS','LEARN','REPORTS')){
+foreach($name in @('INSTALL','MODELS','LEARN','SETTINGS')){
   $root=Get-SameRoot
   $nodes=$root.FindAll([System.Windows.Automation.TreeScope]::Descendants,
                        [System.Windows.Automation.Condition]::TrueCondition)

@@ -34,7 +34,7 @@ class FrozenOriginalU06(unittest.TestCase):
         self.assertIn('header[offset:offset+4]==bytes.fromhex("50450000")',src)
         self.assertEqual(bytes.fromhex("50450000"),b"PE"+bytes(2))
     def test_real_uia_tree_roles_are_button_presence_not_clicks(self):
-        five=("CHAT","INSTALL","MODELS","LEARN","REPORTS")
+        five=("CHAT","INSTALL","MODELS","LEARN","SETTINGS")
         physical={"schema":"NOX-E07-UIA-V1","labels":[],
                   "treeCount":74,"treeScanned":74,
                   "targetTypes":[v+"|ControlType.Button|VISIBLE_ENABLED" for v in five]}
