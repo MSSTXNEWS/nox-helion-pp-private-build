@@ -27,8 +27,13 @@ def verify(root):
     if actual!=expected or len(expected)!=doc["source_files"]:raise ValueError("SOURCE_FILE_LOSS_OR_DRIFT")
     return {"run_id":doc["run_id"],"status":"SOURCE_VERIFIED_NOT_RELEASE","verified_count":len(checked),"paths":checked}
 def main():
-    ap=argparse.ArgumentParser();ap.add_argument("--root",type=pathlib.Path,default=F.resolve().parents[2]);ap.add_argument("--output",type=pathlib.Path);a=ap.parse_args()
-    try: data=verify(a.root.resolve())
+    ap=argparse.ArgumentParser();ap.add_argument("--root",type=pathlib.Path,default=F.parents[2]);ap.add_argument("--output",type=pathlib.Path);a=ap.parse_args()
+    try:
+        # Check the original path BEFORE resolve() erases symlink/junction provenance.
+        if any(node.is_symlink() or getattr(node, "is_junction", lambda: False)()
+               for node in (a.root, *a.root.parents)):
+            raise ValueError("SOURCE_ROOT_REPARSE_HOLD")
+        data=verify(a.root.resolve())
     except (ValueError,KeyError,TypeError,OSError) as ex: print("E03_HOLD",str(ex),file=sys.stderr);return 2
     if a.output:
         if a.output.exists():print("RECEIPT_EXISTS",file=sys.stderr);return 2

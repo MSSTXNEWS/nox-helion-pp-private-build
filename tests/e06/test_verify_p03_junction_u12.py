@@ -4,6 +4,7 @@ This does not accept any Windows installer, registry or independent E07 gate.
 import hashlib
 import importlib.util
 import json
+import sys
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest import TestCase, main
@@ -60,6 +61,27 @@ class VerifyP03JunctionFailClosed(TestCase):
                           lambda path: path == self.source_dir):
             with self.assertRaisesRegex(ValueError, "MISSING_OR_SYMLINK"):
                 self.run_verifier()
+        self.assertEqual(self.payload.read_bytes(), b"SOURCE_PINNED_SAMPLE")
+
+
+    def test_source_root_symlink_rejected_before_resolve(self):
+        alias = self.root / "root_alias"
+        try:
+            alias.symlink_to(self.root, target_is_directory=True)
+        except (OSError, NotImplementedError) as ex:
+            self.skipTest("Symlink privilege unavailable on this Windows runner: " + str(ex))
+        with patch.object(verifier, "F", self.registry_path), \
+             patch.object(sys, "argv", ["verify_p03.py", "--root", str(alias)]):
+            self.assertEqual(verifier.main(), 2)
+        self.assertEqual(self.payload.read_bytes(), b"SOURCE_PINNED_SAMPLE")
+
+    def test_source_root_windows_junction_rejected_before_resolve(self):
+        # A platform's resolve() can erase the junction marker. Simulate it
+        # on a real directory and require a pre-resolution fail-closed gate.
+        with patch.object(verifier, "F", self.registry_path), \
+             patch.object(Path, "is_junction", lambda path: path == self.root), \
+             patch.object(sys, "argv", ["verify_p03.py", "--root", str(self.root)]):
+            self.assertEqual(verifier.main(), 2)
         self.assertEqual(self.payload.read_bytes(), b"SOURCE_PINNED_SAMPLE")
 
 
