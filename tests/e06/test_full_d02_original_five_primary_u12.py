@@ -86,6 +86,20 @@ class D02OriginalFivePrimary(unittest.TestCase):
   self.assertEqual(self.home.read_bytes(),before)
   self.assertEqual(self.receipt.read_text('utf-8'),"FOREIGN_RECEIPT_MUST_SURVIVE")
   self.assertFalse(self.home.with_name("index.html.nox-u12-pending").exists())
+ def test_receipt_write_failure_keeps_original_home_and_no_false_receipt(self):
+  before=self.home.read_bytes()
+  derived=b'<nav>'+b''.join(('data-nox-primary="'+name+'"').encode()
+      for name in ('CHAT','INSTALL','MODELS','LEARN','SETTINGS'))+b'</nav>'
+  proof={'source_sha256':hashlib.sha256(before).hexdigest(),
+         'published_sha256':hashlib.sha256(derived).hexdigest(),
+         'installed_ui_automation':'NOT_RUN','release_accepted':False}
+  with patch.object(module,'publish',return_value=(derived,proof)), \
+       patch.object(module.json,'dump',side_effect=OSError('SIMULATED_RECEIPT_IO_HOLD')):
+   with self.assertRaisesRegex(OSError,'SIMULATED_RECEIPT_IO_HOLD'):
+    module.stage(self.root,self.receipt)
+  self.assertEqual(self.home.read_bytes(),before)
+  self.assertFalse(self.receipt.exists())
+  self.assertFalse(self.home.with_name('index.html.nox-u12-pending').exists())
  def test_reparse_home_rejected(self):
   self.home.unlink()
   other=self.folder/'unmanaged';other.write_text('unmanaged')

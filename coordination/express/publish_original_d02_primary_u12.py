@@ -78,9 +78,9 @@ def stage(source: Path, receipt_path: Path) -> dict:
         if (not _regular(staging) or not _regular(home) or
                 home.read_bytes() != before or staging.read_bytes() != published):
             raise ValueError("D02_PRIMARY_STAGED_READBACK_HOLD")
-        os.replace(staging, home)
-        if home.read_bytes() != published:
-            raise ValueError("D02_PRIMARY_ATOMIC_PUBLISH_HOLD")
+        # Validate and durably publish the evidence BEFORE replacing original
+        # HOME. If the receipt disk/write fails, its owner reservation and
+        # pending staged bytes are removed with the original HOME untouched.
         evidence = {**proof, "status": "STAGED_SOURCE_ONLY_NOT_UIA",
                     "original_source_archive_unchanged": True,
                     "published_payload_uiA": "NOT_RUN", "independent_e07": "HOLD"}
@@ -97,6 +97,11 @@ def stage(source: Path, receipt_path: Path) -> dict:
             os.fsync(stream.fileno())
         if json.loads(receipt_path.read_text("utf-8")) != evidence:
             raise ValueError("D02_PRIMARY_RECEIPT_READBACK_HOLD")
+        # Only after a verified, fsynced receipt may the single staged HOME
+        # replace the disposable original. Foreign source archives stay intact.
+        os.replace(staging, home)
+        if home.read_bytes() != published:
+            raise ValueError("D02_PRIMARY_ATOMIC_PUBLISH_HOLD")
         receipt_committed = True
         return evidence
     finally:
