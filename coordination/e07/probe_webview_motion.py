@@ -43,6 +43,16 @@ def validate(observation: object) -> dict:
             "waapi_running": 0}
 
 
+def select_unique_home_observation(observations: object) -> dict:
+    """Choose one physically observed active HOME, not the first matching CDP tab."""
+    e07.require(type(observations) is list and 1 <= len(observations) <= 4
+                and all(type(item) is dict for item in observations),
+                "E07_WEBVIEW2_CDP_PAGE_NOT_UNIQUE_HOLD")
+    homes = [item for item in observations if item.get("home_active") is True]
+    e07.require(len(homes) == 1, "E07_WEBVIEW2_CDP_PAGE_NOT_UNIQUE_HOLD")
+    return validate(homes[0])
+
+
 def probe() -> dict:
     """Read WebView2's real matchMedia/computed styles without emulation."""
     e07.require(sys.platform == "win32" and
@@ -67,14 +77,18 @@ try {
  } catch { throw 'ENDPOINT_UNREACHABLE' }
  $pages=@($targets | Where-Object {
   $_.type -eq 'page' -and
-  ($_.url+'') -ceq 'https://nox.local/'
+  ($_.url+'') -cin @('https://nox.local/','https://nox.local/index.html')
  })
- if($pages.Count -ne 1){throw 'PAGE_NOT_UNIQUE'}
- $uri=[uri]$pages[0].webSocketDebuggerUrl
- if($uri.Scheme -ne 'ws' -or $uri.Host -notin @('127.0.0.1','localhost') -or
-    $uri.Port -ne $port -or -not $uri.AbsolutePath.StartsWith('/devtools/page/')){
-    throw 'NON_LOOPBACK_CDP'
- }
+ # All candidates are REAL trusted-origin WebView2 targets on the runner.
+ # Never select by tab order; reject multiple live HOME pages after CDP probing.
+ if($pages.Count -lt 1 -or $pages.Count -gt 4){throw 'PAGE_NOT_UNIQUE'}
+ $observations=[System.Collections.Generic.List[object]]::new()
+ foreach($page in $pages){
+  $uri=[uri]$page.webSocketDebuggerUrl
+  if($uri.Scheme -ne 'ws' -or $uri.Host -notin @('127.0.0.1','localhost') -or
+     $uri.Port -ne $port -or -not $uri.AbsolutePath.StartsWith('/devtools/page/')){
+     throw 'NON_LOOPBACK_CDP'
+  }
  $expression=@'
 (() => {
  const home=document.getElementById('home');
@@ -106,7 +120,7 @@ try {
    ConvertTo-Json -Compress -Depth 5
  $ws=[Net.WebSockets.ClientWebSocket]::new()
  $cancel=[Threading.CancellationTokenSource]::new()
- $cancel.CancelAfter(15000)
+ $cancel.CancelAfter(5000)
  try {
   $ws.ConnectAsync($uri,$cancel.Token).GetAwaiter().GetResult()
   $bytes=[Text.Encoding]::UTF8.GetBytes($message)
@@ -135,11 +149,13 @@ try {
    }
   }
   if($null -eq $observed){throw 'CDP_NO_EVALUATION'}
-  $observed | ConvertTo-Json -Compress -Depth 4
+  [void]$observations.Add($observed)
  } finally {
   $ws.Dispose()
   $cancel.Dispose()
  }
+ } # each trusted WebView2 target
+ ConvertTo-Json -InputObject @($observations.ToArray()) -Compress -Depth 4
 } catch {
  $reason=$_.Exception.Message+''
  $allowed=@('ENDPOINT_UNREACHABLE','PAGE_NOT_UNIQUE','NON_LOOPBACK_CDP',
@@ -172,4 +188,4 @@ try {
         observation = json.loads(result.stdout.strip())
     except (UnicodeError, ValueError):
         raise e07.Hold("E07_WEBVIEW2_CDP_JSON_HOLD") from None
-    return validate(observation)
+    return select_unique_home_observation(observation)
