@@ -51,7 +51,8 @@ class FunctionalTruth(unittest.TestCase):
                   if isinstance(n,ast.FunctionDef) and n.name=="run")
         attempt=next(n for n in main.body
                      if isinstance(n,ast.FunctionDef) and n.name=="attempt")
-        snippet=textwrap.indent(ast.get_source_segment(source,attempt),"    ")
+        snippet=textwrap.indent(textwrap.dedent("".join(
+            source.splitlines(keepends=True)[attempt.lineno-1:attempt.end_lineno])), "    ")
         namespace={"e07":module.e07,"subprocess":module.subprocess}
         exec("def owner():\n    actions={}\n"+
              snippet+"\n    return attempt,actions\n",namespace)
