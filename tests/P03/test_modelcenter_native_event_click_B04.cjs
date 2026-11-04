@@ -15,7 +15,7 @@ const elements=new Map(), sent=[];let listener;
 const doc={getElementById(id){if(!elements.has(id))elements.set(id,el());return elements.get(id)},
   createElement:el,querySelector:s=>s==='.topbar'?doc.getElementById('_topbar'):null,
   querySelectorAll:()=>[],addEventListener(){},activeElement:{tagName:'BODY'}};
-const win={chrome:{webview:{postMessage:m=>sent.push(m),
+const win={addEventListener(){},chrome:{webview:{postMessage:m=>sent.push(m),
   addEventListener(type,fn){if(type==='message')listener=fn}}}};
 const app=new Function('document','window','URL','setTimeout','clearTimeout','setInterval',
   src+'\nreturn {state,processMessage,sendAction};')(doc,win,URL,()=>1,()=>{},()=>0);

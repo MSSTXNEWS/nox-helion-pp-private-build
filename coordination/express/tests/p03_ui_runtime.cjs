@@ -20,7 +20,7 @@ assert.equal(approvedPin[0].post_bytes,uiBytes.length,'approved UI byte length m
 class El{constructor(t='div'){this.tagName=t.toUpperCase();this.children=[];this.handlers={};this.textContent='';this.value='';this.checked=false;this.disabled=false;this.hidden=false;this.style={setProperty(){}};this.classList={add(){},remove(){},toggle(){}};this.dataset={}}append(...x){this.children.push(...x)}replaceChildren(...x){this.children=x}setAttribute(){}removeAttribute(){}addEventListener(k,fn){this.handlers[k]=fn}focus(){}}
 const els=new Map(),timers=new Map(),sent=[];let callback;let tick=0;
 const doc={getElementById(k){if(!els.has(k))els.set(k,new El());return els.get(k)},createElement:t=>new El(t),querySelector:s=>s==='.topbar'?doc.getElementById('__fixture_topbar'):null,querySelectorAll:()=>[],addEventListener(){},activeElement:{tagName:'BODY'}};
-const win={chrome:{webview:{postMessage(x){sent.push(x)},addEventListener(k,fn){callback=fn}}}};
+const win={addEventListener(){},chrome:{webview:{postMessage(x){sent.push(x)},addEventListener(k,fn){callback=fn}}}};
 const ctx=vm.createContext({document:doc,window:win,URL,setTimeout:(fn,ms)=>{timers.set(++tick,{fn,ms});return tick},clearTimeout:n=>timers.delete(n),setInterval:(fn,ms)=>{timers.set(++tick,{fn,ms,interval:true});return tick},clearInterval:n=>timers.delete(n),console,Date,Math,Set,Map,JSON,Number});
 vm.runInContext(src,ctx,{filename:'P03.ModelCenter.Wow/ui.js'});
 // The real UI announces readiness after registering its native listener.

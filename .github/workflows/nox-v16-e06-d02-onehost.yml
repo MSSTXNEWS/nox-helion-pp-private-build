@@ -186,6 +186,13 @@ jobs:
           python -B -m unittest discover -s tests/e06 -p test_planetary_worlds_uplot_v2.py -v
           if ($LASTEXITCODE -ne 0) { throw 'NOX_PLANET_WORLDS_UPLOT_SOURCE_HOLD' }
           Write-Host 'PLANET_WORLDS_AND_LICENSED_NATIVE_CHARTS_SOURCE_PASS_NOT_E07'
+      - name: Run P03 real event ACK and no-second-host runtime source regressions
+        shell: pwsh
+        run: |
+          node coordination/express/tests/p03_ui_runtime.cjs
+          if ($LASTEXITCODE -ne 0) { throw 'P03_NATIVE_EVENT_RUNTIME_REGRESSION_HOLD' }
+          node tests/P03/test_modelcenter_native_event_click_B04.cjs
+          if ($LASTEXITCODE -ne 0) { throw 'P03_NATIVE_CLICK_SOURCE_REGRESSION_HOLD' }
       - name: Node runtime interactive five-planet quality lifecycle
         shell: pwsh
         run: |
