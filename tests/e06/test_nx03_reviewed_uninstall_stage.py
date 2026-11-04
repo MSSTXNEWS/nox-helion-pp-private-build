@@ -44,7 +44,18 @@ class NX03ReviewedRemove(unittest.TestCase):
     def test_exact_archive_and_reviewed_copy_staged_only(self):
         out = stage.stage_reviewed_remove(self.owner, self.copy)
         self.assertTrue(out["changed"])
-        self.assertEqual(self.owner.read_bytes(), self.reviewed.replace(b"\r\n", b"\n"))
+        staged = self.owner.read_bytes()
+        self.assertNotEqual(staged, self.reviewed.replace(b"\r\n", b"\n"))
+        text = staged.decode("utf-8")
+        self.assertEqual(text.count("Get-P01VerifiedSha256"), 2)
+        self.assertNotIn("Get-FileHash", text)
+        self.assertIn("[Security.Cryptography.SHA256]::Create()", text)
+        self.assertIn("$actual = Get-P01VerifiedSha256 $Entry.Full", text)
+        self.assertIn("PHASE 1", text)
+        self.assertIn("PHASE 2", text)
+        self.assertIn("PHASE 3", text)
+        self.assertEqual(out["compatibility_scope"], "POWERSHELL51_DOTNET_SHA256_ONLY")
+        self.assertEqual(out["staged_sha256"], hashlib.sha256(staged).hexdigest())
         self.assertEqual(self.copy.read_bytes(), self.reviewed)
         self.assertEqual(hashlib.sha256(self.original).hexdigest(), out["original_r11_sha256"])
         self.assertFalse(out["release_accepted"])
@@ -55,6 +66,23 @@ class NX03ReviewedRemove(unittest.TestCase):
         result = stage.stage_reviewed_remove(self.owner, self.copy)
         self.assertFalse(result["changed"])
         self.assertEqual(self.owner.read_bytes(), before)
+        self.assertEqual(result["compatibility_scope"], "POWERSHELL51_DOTNET_SHA256_ONLY")
+    def test_partial_staged_script_not_accepted(self):
+        staged = stage.stage_reviewed_remove(self.owner, self.copy)
+        altered = self.owner.read_bytes().replace(
+            b"Get-P01VerifiedSha256 $Entry.Full", b"Get-P01VerifiedSha256 $Entry.Bogus")
+        self.assertNotEqual(self.owner.read_bytes(), altered)
+        self.owner.write_bytes(altered)
+        with self.assertRaisesRegex(stage.ReviewedRemoveHold, "UNKNOWN_R11_PREIMAGE"):
+            stage.stage_reviewed_remove(self.owner, self.copy)
+        self.assertEqual(self.owner.read_bytes(), altered)
+        self.assertFalse(staged["release_accepted"])
+    def test_reviewed_source_git_blob_intact_after_stage(self):
+        original_reviewed = self.copy.read_bytes()
+        stage.stage_reviewed_remove(self.owner, self.copy)
+        self.assertEqual(self.copy.read_bytes(), original_reviewed)
+        self.assertEqual(stage._blob(original_reviewed.replace(b"\r\n", b"\n")),
+                         stage._REVIEWED_BLOB)
     def test_unknown_archived_owner_no_write(self):
         altered = (b"!" if self.original[:1] != b"!" else b"?") + self.original[1:]
         self.owner.write_bytes(altered)

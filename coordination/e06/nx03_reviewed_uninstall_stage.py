@@ -40,8 +40,47 @@ def _plain(path):
             raise ReviewedRemoveHold("NX03_REVIEWED_REMOVE_REPARSE_HOLD")
 
 
+# The original NSIS /S and uninstaller use Windows PowerShell 5.1. Reuse
+# exactly the verified .NET SHA-256 stream recipe from the original C09
+# Verify-Payload.ps1 stage. No uninstall policy or ownership check changes.
+_PS51_HASH_HELPER = """function Get-P01VerifiedSha256([string]$Path) {
+  $inputStream=$null
+  $digest=$null
+  try {
+    $inputStream=[IO.File]::Open($Path,[IO.FileMode]::Open,[IO.FileAccess]::Read,[IO.FileShare]::Read)
+    $digest=[Security.Cryptography.SHA256]::Create()
+    return ([BitConverter]::ToString($digest.ComputeHash($inputStream))).Replace('-','').ToLowerInvariant()
+  } finally {
+    if ($null -ne $digest) { $digest.Dispose() }
+    if ($null -ne $inputStream) { $inputStream.Dispose() }
+  }
+}
+"""
+
+
+def _ps51_uninstall_stage(canonical: bytes) -> bytes:
+    """Exactly one reviewed hash substitution; deny any unexpected source."""
+    try:
+        text = canonical.decode("utf-8-sig")
+    except UnicodeError as exc:
+        raise ReviewedRemoveHold("NX03_REVIEWED_REMOVE_UTF8_HOLD") from exc
+    header = "$ErrorActionPreference = 'Stop'"
+    old_hash = "  $actual = (Get-FileHash -LiteralPath $Entry.Full -Algorithm SHA256).Hash.ToLowerInvariant()"
+    if (text.count(header) != 1 or text.count(old_hash) != 1 or
+            text.count("Get-FileHash") != 1 or "Get-P01VerifiedSha256" in text or
+            not all(marker in text for marker in _REQUIRED)):
+        raise ReviewedRemoveHold("NX03_REVIEWED_REMOVE_POLICY_MISSING")
+    eol = "\r\n" if "\r\n" in text else "\n"
+    updated = text.replace(header, header + eol + _PS51_HASH_HELPER.replace("\n", eol) + eol)
+    updated = updated.replace(old_hash, "  $actual = Get-P01VerifiedSha256 $Entry.Full")
+    if (updated.count("Get-P01VerifiedSha256") != 2 or "Get-FileHash" in updated or
+            not all(marker in updated for marker in _REQUIRED)):
+        raise ReviewedRemoveHold("NX03_REVIEWED_REMOVE_PS51_TRANSFORM_HOLD")
+    return updated.encode("utf-8")
+
+
 def stage_reviewed_remove(owner: Path, reviewed: Path) -> dict:
-    """Only replace exact 4013-byte R11 stage with exact reviewed C09 blob."""
+    """Stage exact reviewed C09 with pinned PowerShell 5.1 SHA compatibility."""
     _plain(owner)
     _plain(reviewed)
     if (owner.name != "Remove-InstalledPayload.ps1" or
@@ -55,25 +94,23 @@ def stage_reviewed_remove(owner: Path, reviewed: Path) -> dict:
     canonical = reviewed.read_bytes().replace(b"\r\n", b"\n")
     if _blob(canonical) != _REVIEWED_BLOB:
         raise ReviewedRemoveHold("NX03_REVIEWED_REMOVE_UNAPPROVED_BLOB")
-    try:
-        value = canonical.decode("utf-8-sig")
-    except UnicodeError as exc:
-        raise ReviewedRemoveHold("NX03_REVIEWED_REMOVE_UTF8_HOLD") from exc
-    if not all(needle in value for needle in _REQUIRED):
-        raise ReviewedRemoveHold("NX03_REVIEWED_REMOVE_POLICY_MISSING")
-    if before == canonical:
+    staged = _ps51_uninstall_stage(canonical)
+    if before == staged:
         return {"changed": False, "staged_sha256": hashlib.sha256(before).hexdigest(),
-                "reviewed_git_blob": _REVIEWED_BLOB, "release_accepted": False}
+                "reviewed_git_blob": _REVIEWED_BLOB,
+                "compatibility_scope": "POWERSHELL51_DOTNET_SHA256_ONLY",
+                "release_accepted": False}
     if len(before) != _ARCHIVED_BYTES or hashlib.sha256(before).hexdigest() != _ARCHIVED_SHA256:
         raise ReviewedRemoveHold("NX03_REVIEWED_REMOVE_UNKNOWN_R11_PREIMAGE")
-    owner.write_bytes(canonical)
-    if owner.read_bytes() != canonical or reviewed.read_bytes().replace(b"\r\n", b"\n") != canonical:
+    owner.write_bytes(staged)
+    if owner.read_bytes() != staged or reviewed.read_bytes().replace(b"\r\n", b"\n") != canonical:
         raise ReviewedRemoveHold("NX03_REVIEWED_REMOVE_READBACK_HOLD")
     return {
         "changed": True, "original_r11_sha256": _ARCHIVED_SHA256,
         "reviewed_git_blob": _REVIEWED_BLOB,
-        "staged_sha256": hashlib.sha256(canonical).hexdigest(),
-        "staged_bytes": len(canonical),
+        "staged_sha256": hashlib.sha256(staged).hexdigest(),
+        "staged_bytes": len(staged),
+        "compatibility_scope": "POWERSHELL51_DOTNET_SHA256_ONLY",
         "policy": "TWO_PHASE_PREVERIFY_THEN_ONLY_MANIFEST_OWNED_REMOVE",
         "original_donor_changed": False, "reviewed_source_changed": False,
         "independent_e07": "NOT_RUN", "release_accepted": False,
