@@ -461,7 +461,10 @@ def classify_primary_uia_evidence(response: dict) -> dict:
     # an inferred click. Only the exact visible+enabled Button role is admitted.
     witnessed = {entry.split("|", 1)[0] for entry in targets
                  if entry.endswith("|ControlType.Button|VISIBLE_ENABLED")}
-    found = set(result["buttons_present"]) | witnessed
+    # Label strings alone are not correlated to a physical Button-role node.
+    # Only same-HWND tree witnesses with visible/enabled Button role can pass.
+    # Unmatched labels remain diagnostic evidence and NEVER a release PASS.
+    found = witnessed
     result.update({"status": "PASS" if len(found) == len(_UIA_MAIN_BUTTONS) else "HOLD",
                    "buttons_present": [v for v in _UIA_MAIN_BUTTONS if v in found],
                    "buttons_missing": [v for v in _UIA_MAIN_BUTTONS if v not in found],

@@ -62,7 +62,9 @@ class IndependentE07(unittest.TestCase):
 
     def test_structural_uia_schema_is_bounded_and_fail_closed(self):
         good = {"schema": "NOX-E07-UIA-V1", "labels": ["CHAT", "INSTALL", "MODELS",
-                "LEARN", "REPORTS"], "treeCount": 5, "treeScanned": 5, "targetTypes": []}
+                "LEARN", "REPORTS"], "treeCount": 5, "treeScanned": 5,
+                "targetTypes": [f"{name}|ControlType.Button|VISIBLE_ENABLED"
+                                for name in MOD._UIA_MAIN_BUTTONS]}
         self.assertEqual(MOD.classify_primary_uia_evidence(good)["status"], "PASS")
         for bad in ({"treeCount": False, "treeScanned": 1, "targetTypes": []},
                     {"treeCount": 2, "treeScanned": 3, "targetTypes": []},
@@ -71,6 +73,35 @@ class IndependentE07(unittest.TestCase):
             with self.subTest(bad=bad):
                 with self.assertRaisesRegex(MOD.Hold, "E07_UIA_DIAGNOSTIC_UNTRUSTED_HOLD"):
                     MOD.classify_primary_uia_evidence({**good, **bad})
+
+    def test_u01_label_only_or_nonbutton_roles_cannot_fake_uia_pass(self):
+        # Regress the old false-positive: five strings with zero physical Button
+        # roles were erroneously promoted to a complete E07 UIA presence PASS.
+        names = list(MOD._UIA_MAIN_BUTTONS)
+        base = {"schema": "NOX-E07-UIA-V1", "labels": names,
+                "treeCount": 16, "treeScanned": 16, "targetTypes": []}
+        label_only = MOD.classify_primary_uia_evidence(base)
+        self.assertEqual(label_only["status"], "HOLD")
+        self.assertEqual(label_only["buttons_missing"], names)
+        self.assertEqual(label_only["actions_invoked"], 0)
+        bad_roles = [f"{name}|ControlType.Text|VISIBLE_ENABLED" for name in names]
+        text_only = MOD.classify_primary_uia_evidence({**base, "targetTypes": bad_roles})
+        self.assertEqual(text_only["status"], "HOLD")
+        self.assertEqual(text_only["buttons_missing"], names)
+        mixed = [f"{name}|ControlType.Button|VISIBLE_ENABLED" for name in names[:-1]]
+        mixed.append(f"{names[-1]}|ControlType.Button|DISABLED")
+        partial = MOD.classify_primary_uia_evidence({**base, "targetTypes": mixed})
+        self.assertEqual(partial["status"], "HOLD")
+        self.assertEqual(partial["buttons_missing"], ["REPORTS"])
+        # Real, role-qualified same-root witnesses still pass even if the
+        # separate filtered-label enumeration races and returns no labels.
+        positive = MOD.classify_primary_uia_evidence({
+            **base, "labels": [],
+            "targetTypes": [f"{name}|ControlType.Button|VISIBLE_ENABLED"
+                            for name in names]})
+        self.assertEqual(positive["status"], "PASS")
+        self.assertEqual(positive["buttons_missing"], [])
+        self.assertEqual(positive["actions_invoked"], 0)
 
     def test_uia_windows_bound_read_only_and_offscreen_rejection(self):
         source=FILE.read_text(encoding="utf-8")
