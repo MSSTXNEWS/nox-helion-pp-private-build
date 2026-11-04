@@ -1,13 +1,8 @@
 name: NOX full D02 722399 U13 independent installed five real UIA
+# This is a historical SHA-pinned FIVE-CLICK navigation probe only, not final E07.
+# Run deliberately via workflow_dispatch; current-D02 E07 owns automatic push QA.
 on:
-  push:
-    branches: [integration/nox-v16-unified-candidate-20261028-r01]
-    paths:
-      - .github/workflows/nox-full-d02-e07-722399-u13.yml
-      - coordination/e07/probe_full_d02_722399_u13.py
-      - tests/e07/test_full_d02_722399_u13.py
-      - tests/e07/test_primary_destination_witness_b3.py
-      - coordination/e07/independent_setup_e07.py
+  workflow_dispatch:
 permissions:
   actions: read
   contents: read

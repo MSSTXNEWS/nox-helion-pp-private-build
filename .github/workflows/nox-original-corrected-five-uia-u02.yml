@@ -1,11 +1,7 @@
 name: NOX EXPRESS corrected original five UIA - U02 physical
+# This is a historical SHA-pinned FIVE-CLICK navigation probe only, not final E07.
+# Run deliberately via workflow_dispatch; current-D02 E07 owns automatic push QA.
 on:
-  push:
-    branches: [integration/nox-v16-unified-candidate-20261028-r01]
-    paths:
-      - .github/workflows/nox-original-corrected-five-uia-u02.yml
-      - coordination/e07/independent_setup_e07.py
-      - coordination/e07/probe_five_primary_action.py
   workflow_dispatch:
 permissions:
   contents: read
