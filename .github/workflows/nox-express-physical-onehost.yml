@@ -26,20 +26,6 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
-      - name: Exact NSIS 3.13, no unpinned toolchain
-        shell: pwsh
-        run: |
-          $ErrorActionPreference='Stop'
-          $nsis='C:\Program Files (x86)\NSIS\makensis.exe'
-          $ver=''
-          if (Test-Path -LiteralPath $nsis -PathType Leaf) { $ver=(& $nsis /VERSION | Out-String).Trim() }
-          if ($ver -notmatch '^v?3\.13$') {
-            choco upgrade nsis --version=3.13.0 --yes --no-progress
-            if ($LASTEXITCODE -ne 0) { throw 'NSIS313_INSTALL_HOLD' }
-          }
-          if (!(Test-Path -LiteralPath $nsis -PathType Leaf)) { throw 'NSIS313_NOT_FOUND' }
-          $ver=(& $nsis /VERSION | Out-String).Trim()
-          if ($LASTEXITCODE -ne 0 -or $ver -notmatch '^v?3\.13$') { throw 'NSIS313_VERSION_HOLD' }
       - name: G1 exact HEAD + full immutable source ZIP
         shell: pwsh
         run: |
@@ -50,9 +36,26 @@ jobs:
           $archive=Join-Path $env:RUNNER_TEMP ('NOX_HELION_EXPRESS_SOURCE_'+$env:GITHUB_SHA+'.zip')
           python -B coordination/e06/express_source_snapshot_pack.py --repo . --sha $env:GITHUB_SHA --out $archive
           if ($LASTEXITCODE -ne 0) { throw 'SOURCE_PACK_PHYSICAL_HOLD' }
-          New-Item -ItemType Directory -Force -Path dist/nox-express-onehost | Out-Null
-          Copy-Item -LiteralPath $archive -Destination dist/nox-express-onehost/
           Write-Host ('EXACT_SOURCE_ZIP_SHA256 '+(Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash)
+      - name: Official portable NSIS 3.13, pinned SHA256, no Chocolatey dependency
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $url='https://sourceforge.net/projects/nsis/files/NSIS%203/3.13/nsis-3.13.zip/download'
+          $expected='ba63dffc4410ee89193e1cb5a41989991bd77c61068da17e3156d136b7b0b3d8'
+          $zip=Join-Path $env:RUNNER_TEMP 'nox-nsis-3.13.zip'
+          Invoke-WebRequest -Uri $url -OutFile $zip -MaximumRedirection 10 -TimeoutSec 120
+          $actual=(Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($actual -cne $expected) { throw 'NSIS313_OFFICIAL_ZIP_SHA256_HOLD' }
+          $root=Join-Path $env:RUNNER_TEMP 'nox-approved-nsis313'
+          Expand-Archive -LiteralPath $zip -DestinationPath $root
+          $candidates=@(Get-ChildItem -LiteralPath $root -Recurse -File -Filter makensis.exe)
+          if ($candidates.Count -ne 1) { throw 'NSIS313_COMPILER_UNIQUE_PATH_HOLD' }
+          $compiler=$candidates[0].FullName
+          $version=(& $compiler /VERSION | Out-String).Trim()
+          if ($LASTEXITCODE -ne 0 -or $version -notmatch '^v?3\.13$') { throw 'NSIS313_COMPILER_VERSION_HOLD' }
+          Add-Content -LiteralPath $env:GITHUB_PATH -Value $candidates[0].DirectoryName
+          Write-Host ('NSIS313_OFFICIAL_SHA_VERIFIED '+$actual)
       - name: G2 G3 G4 original OneHost WPF Python NSIS plus installed smoke
         id: compile
         shell: pwsh
@@ -71,6 +74,10 @@ jobs:
           $ErrorActionPreference='Stop'
           $dest='dist/nox-express-onehost'
           New-Item -ItemType Directory -Force -Path $dest | Out-Null
+          $source=Join-Path $env:RUNNER_TEMP ('NOX_HELION_EXPRESS_SOURCE_'+$env:GITHUB_SHA+'.zip')
+          if (Test-Path -LiteralPath $source -PathType Leaf) {
+            Copy-Item -LiteralPath $source -Destination $dest
+          }
           $exe='work/t06-wpf-p02-compile/NOX-HELION-V16-ONEHOST-CANDIDATE-SETUP.exe'
           $built=$false; $hash=''; $bytes=0
           if (Test-Path -LiteralPath $exe -PathType Leaf) {
