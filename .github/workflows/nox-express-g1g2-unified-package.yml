@@ -55,12 +55,12 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           css=Path('integrations/wow200/runtime/home-guard.css').read_text()
-          for marker in ('ORB STEP01','GARGANTUA STEP02','LIQUID CHROME STEP03','DARK VEIL STEP04'):
+          for marker in ('ORB STEP01','GARGANTUA STEP02','LIQUID CHROME STEP03','DARK VEIL STEP04','SUPER WOW CINEMA LAYER V7','05 Photon orbit','07 host-state energy','08 Plasma filaments','10 spatial lensing','12 eight unique atmospheric signatures','15–18 adaptive governor'):
               assert marker in css, marker
           assert 'pointer-events:none' in css
           assert 'prefers-reduced-motion:reduce' in css
           assert 'forced-colors:active' in css
-          print('WOW_01_04_SOURCE_STAGE_PASS_ONLY')
+          print('WOW_01_18_SOURCE_STAGE_PASS_ONLY')
           PY
       - name: Build full SHA-locked tracked source archive
         shell: bash
