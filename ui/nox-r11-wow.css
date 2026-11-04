@@ -264,3 +264,33 @@ body.nox-wow-eco .nox-r11-enhanced .nox-r11-cockpit::after{
   .nox-r11-enhanced .nox-r11-cockpit::after,
   html body #nox-express-primary > button[data-nox-primary]::after{display:none}
 }
+
+/* FAST02 · native neural flow. Zero new actions/permissions; static unless
+   a real owner STREAMING delta arrives. STOP request is not STOP ACK. */
+#chat .nox-native-flow{display:block;position:relative;width:100%;height:32px;
+ margin:8px 0;overflow:hidden;pointer-events:none;user-select:none;opacity:.48;
+ border:1px solid rgba(104,193,212,.19);border-radius:11px;
+ background:linear-gradient(110deg,rgba(12,26,42,.67),rgba(20,13,25,.56));
+ box-sizing:border-box;transition:opacity .2s ease,border-color .2s ease}
+#chat .nox-native-flow svg{width:100%;height:100%;fill:none;overflow:visible}
+#chat .nox-native-flow line{stroke:rgba(100,204,225,.4);stroke-width:1.2}
+#chat .nox-native-flow circle{fill:#82d4ed}
+#chat .nox-native-flow circle:nth-child(6n){fill:#e6ae79}
+#chat[data-nox-neural-flow="STREAMING"] .nox-native-flow{
+ opacity:1;border-color:rgba(124,224,236,.55);
+ box-shadow:0 0 20px rgba(66,188,220,.18)}
+#chat[data-nox-neural-flow="STREAMING"] .nox-native-flow svg{
+ animation:nox-owner-neural-breath 1.25s ease-in-out infinite alternate}
+#chat[data-nox-neural-flow="STOP_REQUESTED"] .nox-native-flow{opacity:.32}
+#chat[data-nox-neural-flow="COMPLETED"] .nox-native-flow{border-color:rgba(147,214,155,.45)}
+#chat[data-nox-neural-flow="HOLD"] .nox-native-flow{opacity:.24;filter:grayscale(.65)}
+@keyframes nox-owner-neural-breath{from{opacity:.53}to{opacity:1}}
+@media(prefers-reduced-motion:reduce){
+ #chat .nox-native-flow,#chat .nox-native-flow svg{animation:none!important;transition:none!important}
+}
+body[data-fx="ECO"] #chat .nox-native-flow svg,
+body[data-nox-reactor-mode="ECO"] #chat .nox-native-flow svg{
+ animation:none!important;
+}
+@media(forced-colors:active){#chat .nox-native-flow{border:1px solid CanvasText;box-shadow:none}
+ #chat .nox-native-flow line,#chat .nox-native-flow circle{stroke:CanvasText;fill:CanvasText}}

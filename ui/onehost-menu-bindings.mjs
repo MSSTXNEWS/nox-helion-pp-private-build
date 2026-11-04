@@ -459,12 +459,49 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
     }
   }
   const chatStatus=message=>{const target=doc.getElementById('chat-state');if(target)target.textContent=message;};
+  // FAST02 NEURAL FLOW: this original chat accent follows ONLY verified
+  // OneHost stream deltas and pending/native end states. No fake training.
+  const chatScene=doc.getElementById('chat');
+  const chatLog=doc.getElementById('chat-log');
+  let neuralFlow=null;
+  if(chatScene&&chatLog&&chatScene.contains(chatLog)&&
+     typeof doc.createElementNS==='function'&&
+     !chatScene.querySelector?.('.nox-native-flow')){
+    neuralFlow=doc.createElement('div');
+    neuralFlow.className='nox-native-flow';
+    neuralFlow.setAttribute('aria-hidden','true');
+    const ns='http://www.w3.org/2000/svg';
+    const mesh=doc.createElementNS(ns,'svg');
+    mesh.setAttribute('viewBox','0 0 320 32');
+    mesh.setAttribute('aria-hidden','true');
+    for(let i=0;i<18;i++){
+      const node=doc.createElementNS(ns,'circle');
+      const x=8+i*18,y=16+Math.sin(i*.85)*9;
+      node.setAttribute('cx',String(x));node.setAttribute('cy',String(y));
+      node.setAttribute('r',i%3===0?'1.8':'1.2');
+      mesh.append(node);
+      if(i>0){
+        const line=doc.createElementNS(ns,'line');
+        line.setAttribute('x1',String(x-18));
+        line.setAttribute('y1',String(16+Math.sin((i-1)*.85)*9));
+        line.setAttribute('x2',String(x));line.setAttribute('y2',String(y));
+        mesh.append(line);
+      }
+    }
+    neuralFlow.append(mesh);
+    chatLog.before(neuralFlow);
+    chatScene.dataset.noxNeuralFlow='IDLE';
+  }
+  const setNeuralFlow=state=>{
+    if(neuralFlow&&!disposed&&['IDLE','REQUESTED','STREAMING','COMPLETED','STOP_REQUESTED','HOLD'].includes(state))
+      chatScene.dataset.noxNeuralFlow=state;
+  };
   async function sendChat(){
     const scope=context(),text=value('chat-input').trim(),model=value('chat-model'),epoch=selectionEpoch;
     if(!scope.core_id||!scope.persona_id||!text||!nativeModelReady(model,modelConfirmed,modelSelectionPending)){
       chatStatus('HOLD · OneHost не подтвердил выбранную локальную модель');return;
     }
-    if(chatBusy)return;chatBusy=true;
+    if(chatBusy)return;chatBusy=true;setNeuralFlow('REQUESTED');
     const send=doc.getElementById('chat-send'),stop=doc.getElementById('chat-stop');
     const visible=()=>sameSelection(epoch,scope,model);
     // A native terminal envelope is not proof of an AI answer. Only actual
@@ -475,6 +512,7 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
     const release=reply=>{
       if(!chatTerminal(reply))return;
       chatBusy=false;
+      if(visible())setNeuralFlow(nativeCompletedOwnerReply(reply)&&verifiedNativeText(reply)?'COMPLETED':'HOLD');
       if(!disposed){
         if(send)send.disabled=chatBusy||!nativeModelReady(value('chat-model'),modelConfirmed,modelSelectionPending);
         if(stop)stop.disabled=false;
@@ -491,7 +529,10 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
     doc.getElementById('chat-log')?.append(row);if(visible())chatStatus('REQUESTED · локальное ядро');
     try{
       const reply=await client.request('helion.chat',{text,model,...scope},event=>{
-        if(typeof event?.delta==='string'&&event.delta.trim())receivedNonemptyStream=true;
+        if(typeof event?.delta==='string'&&event.delta.trim()){
+          receivedNonemptyStream=true;
+          if(visible())setNeuralFlow('STREAMING');
+        }
         if(visible()&&row.isConnected){row.textContent+=event.delta;chatStatus('STREAMING · локальная модель');}
       },release);
       if(disposed)return;
@@ -506,7 +547,10 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
     }catch(error){
       if(['NOX_NATIVE_REQUEST_DENIED','NOX_NATIVE_CLIENT_DISPOSED','NOX_NATIVE_REQUEST_LIMIT',
         'NOX_NATIVE_NONCE_COLLISION','NOX_NATIVE_POST_FAILED'].includes(error.message))chatBusy=false;
-      if(visible())chatStatus(error.message==='TIMEOUT'?'HOLD · native не завершён, STOP доступен':'HOLD · соединение с ядром');
+      if(visible()){
+        setNeuralFlow('HOLD');
+        chatStatus(error.message==='TIMEOUT'?'HOLD · native не завершён, STOP доступен':'HOLD · соединение с ядром');
+      }
     }finally{if(!disposed){if(send)send.disabled=chatBusy||!nativeModelReady(value('chat-model'),modelConfirmed,modelSelectionPending);if(stop)stop.disabled=false;}}
   }
   async function models(){
@@ -545,7 +589,7 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
     event.preventDefault();event.stopImmediatePropagation();
     button.closest('section')?.append(status,detail,actions);detail.hidden=true;
     if(button.id==='chat-stop'&&stopRequestPending)return;
-    if(button.id==='chat-stop')stopRequestPending=true;
+    if(button.id==='chat-stop'){stopRequestPending=true;setNeuralFlow('STOP_REQUESTED');}
     button.disabled=true;status.textContent='REQUESTED · ожидается ответ ядра';
     const task='Сверь существующие D02/HOME/MENU10/WOW и журнал ошибок с текущим SourceLock. Создай ОДИН безопасный дополнительный исходный патч для живой кнопки, раздела или графического эффекта: точный путь, рабочий обработчик, разрешения, STOP, регрессионный тест, SHA и откат. Сохрани исходные 8 астероидов, 10 миров, personas, WebView2, S03/P03, без изменения EXE без независимой приёмки.';
     if(generated&&route==='chat.history'){
@@ -575,7 +619,7 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
   }
   async function change(event){
     if(!['chat-core','chat-persona','chat-model','chat-provider'].includes(event.target?.id))return;
-    ++selectionEpoch;const historyRun=++historyEpoch,epoch=selectionEpoch;
+    ++selectionEpoch;setNeuralFlow('IDLE');const historyRun=++historyEpoch,epoch=selectionEpoch;
     // Changing model, core, persona or provider invalidates the prior ACK.
     modelConfirmed='';
     if(value('chat-provider')==='OPENAI')return;
@@ -619,7 +663,7 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
   doc.addEventListener('click',click,true);doc.addEventListener('change',change,true);
   const close=()=>{
     if(disposed)return;disposed=true;doc.removeEventListener('click',click,true);doc.removeEventListener('change',change,true);
-    view.removeEventListener('pagehide',close);sectionObserver?.disconnect();r11?.destroy();menu?.destroy();wow?.destroy();wowObserver?.disconnect();status.remove();detail.remove();actions.remove();client.destroy();
+    view.removeEventListener('pagehide',close);sectionObserver?.disconnect();r11?.destroy();menu?.destroy();wow?.destroy();wowObserver?.disconnect();status.remove();detail.remove();actions.remove();neuralFlow?.remove();if(chatScene?.dataset)delete chatScene.dataset.noxNeuralFlow;client.destroy();
   };
   view.addEventListener('pagehide',close,{once:true});
   refresh();models();
