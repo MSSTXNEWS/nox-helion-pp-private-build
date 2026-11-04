@@ -194,8 +194,13 @@ export function nativeModelCancelAck(reply,jobId) {
     }
     return nativeCompletedOwnerReply({...reply,result:terminal});
   }
-  if(reply.state!=='STOP_REQUESTED'||reply.ack===false||reply.ok===false||
-     (reply.errorCode!=null&&String(reply.errorCode).trim()!==''))return false;
+  if(reply.state!=='STOP_REQUESTED')return false;
+  // This is only a transport request ACK. Reject any outer consent/provider
+  // denial, including native snake_case/non-string error fields.
+  const envelope={...reply};
+  delete envelope.state; // only the exact STOP_REQUESTED transport state
+  if(envelope.status==='STOP_REQUESTED')delete envelope.status;
+  if(nativeOwnerReceiptHolds(envelope))return false;
   // Only the exact STOP-request state is admissible; nested denial still HOLD.
   const receipt={...owner};
   if(receipt.status==='STOP_REQUESTED')delete receipt.status;

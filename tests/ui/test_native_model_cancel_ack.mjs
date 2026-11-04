@@ -53,3 +53,11 @@ for (const field of ['error','error_code']) {
   assert.equal(nativeOwnerReceiptHolds({state:'COMPLETED',[field]:''}),false,
     'empty native error field alone is not a denial');
 }
+
+test('P03 model cancel STOP_REQUESTED does not launder outer owner denials',()=>{
+  const pending={routeId:'models.cancel',state:'STOP_REQUESTED',result:{jobId,status:'CANCEL_REQUESTED',ack:true}};
+  assert.equal(nativeModelCancelAck(pending,jobId),true);
+  for(const denial of [{error:'CONSENT_DENIED'},{error_code:'ACL_DENIED'},
+    {error:{code:'PROVIDER_OFFLINE_HOLD'}},{status:'CONSENT_REQUIRED'},{ok:false}])
+    assert.equal(nativeModelCancelAck({...pending,...denial},jobId),false);
+});
