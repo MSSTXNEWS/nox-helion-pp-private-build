@@ -318,3 +318,36 @@ body.nox-wow-eco .nox-orbit-stage .nox-eclipse .nox-cinema-orb__filaments::after
     display:none!important;
   }
 }
+
+
+/* NOX SUPER WOW CINEMA LAYER V1 · additive graphics UNDER the nine real controls.
+   The GPU canvas paints depth, photonic halo, atmospheric plasma and dust;
+   it never captures mouse/touch/key events, nor modifies orbital coordinates. */
+.nox-orbit-stage > .nox-cinema-film {
+ position:absolute!important;inset:0!important;width:100%;height:100%;
+ z-index:0;display:block;pointer-events:none!important;
+ opacity:.76;isolation:isolate;mix-blend-mode:screen;
+ filter:saturate(1.14) contrast(1.05);
+}
+.nox-orbit-stage > .nox-eclipse.nox-cinema-orb,
+.nox-orbit-stage > .nox-orbit-core.nox-cinema-orb {
+ z-index:2;
+}
+.nox-orbit-stage > .nox-cinema-film[data-nox-film-profile="max"] {
+ opacity:1;filter:saturate(1.23) contrast(1.12);
+}
+.nox-orbit-stage > .nox-cinema-film[data-nox-film-profile="eco"] {
+ opacity:.30;filter:none!important;
+}
+.nox-orbit-stage > .nox-cinema-film[data-nox-film-profile="reduced"],
+.nox-orbit-stage > .nox-cinema-film[data-nox-film="context-lost-hold"] {
+ display:none!important;
+}
+@media(prefers-reduced-motion:reduce){
+ .nox-orbit-stage > .nox-cinema-film{display:none!important;filter:none!important}
+}
+@media(forced-colors:active){
+ .nox-orbit-stage > .nox-cinema-film{display:none!important}
+}
+/* No overlapping orbit movement: irregular motion is inside per-core textures
+   and shader fog only. Button hitboxes, tab order and CoreIDs remain fixed. */
