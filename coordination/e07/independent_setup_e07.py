@@ -237,13 +237,14 @@ def setup_lock(setup: Path, receipt: Path) -> dict:
 
 
 
-# Frozen ORIGINAL OneHost E06 Setup from run 41785340462 (not D02).
+# Frozen ORIGINAL OneHost E06 Setup from run 41797861187 (not D02).
 # All three real producer receipts and binary/source SHA must agree.
-ORIGINAL_E06_SOURCE = "8e938107519fc2ca33b6024884c8410c2803e3ba"
-ORIGINAL_E06_SETUP_SHA = "d468e00b31fea04b6d726cc077f65048d8f132cd5f0bb51bf30c6241ce139c5d"
-ORIGINAL_E06_SETUP_BYTES = 87342506
-ORIGINAL_E06_SOURCE_ZIP_SHA = "6b2b75a4050f91f9962483b8a199a8670d1a71023501240727d55fb75c38eb67"
+ORIGINAL_E06_SOURCE = "fe21790af418c8c1083946595811b67c9c03c49d"
+ORIGINAL_E06_SETUP_SHA = "1b78fba3fa158673814b31f211063022fd2bff0ae7ff25f14ba3db2a47c484c2"
+ORIGINAL_E06_SETUP_BYTES = 87333614
+ORIGINAL_E06_SOURCE_ZIP_SHA = "80e46b37260680eaa434211ebbe98d8498c8481e9b384e8895e26c810b995106"
 ORIGINAL_E06_OWNED_FILES = 485
+ORIGINAL_E06_PUBLISHED_HOME_SHA = "37c7952d98e820b22ea59c72c967bc4f7ecf01da013b3269b53e9f698062586e"
 
 def setup_lock_original(setup: Path, base: Path) -> dict:
     """Fail closed on unmodified original E06 physical candidate, NOT E07 success."""
@@ -279,9 +280,9 @@ def setup_lock_original(setup: Path, base: Path) -> dict:
     require(type(home) is dict and home.get("five_primary_installed_uia")=="NOT_RUN" and
             home.get("release_accepted") is False and
             type(home.get("published_home_bytes")) is int and
-            home["published_home_bytes"]==99192 and
+            home["published_home_bytes"]==99762 and
             type(home.get("published_home_sha256")) is str and
-            re.fullmatch(r"[a-f0-9]{64}",home["published_home_sha256"]) is not None,
+            home["published_home_sha256"]==ORIGINAL_E06_PUBLISHED_HOME_SHA,
             "E07_ORIGINAL_HOME_RECEIPT_HOLD")
     require(smoke.get("schema")=="NOX-T06-INSTALLED-SMOKE-v1" and
             smoke.get("phase")=="INSTALLED_GUI_IPC_UPDATE_ROLLBACK_NOLOSS_PROVIDER_OFFLINE_HOLD_NOT_E07" and

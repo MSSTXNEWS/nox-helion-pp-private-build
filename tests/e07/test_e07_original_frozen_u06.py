@@ -9,10 +9,12 @@ MOD=importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(MOD)
 class FrozenOriginalU06(unittest.TestCase):
     def test_frozen_hash_and_unchanged_d02(self):
-        self.assertEqual(MOD.ORIGINAL_E06_SOURCE,"8e938107519fc2ca33b6024884c8410c2803e3ba")
-        self.assertEqual(MOD.ORIGINAL_E06_SETUP_SHA,"d468e00b31fea04b6d726cc077f65048d8f132cd5f0bb51bf30c6241ce139c5d")
-        self.assertEqual(MOD.ORIGINAL_E06_SETUP_BYTES,87342506)
+        self.assertEqual(MOD.ORIGINAL_E06_SOURCE,"fe21790af418c8c1083946595811b67c9c03c49d")
+        self.assertEqual(MOD.ORIGINAL_E06_SETUP_SHA,"1b78fba3fa158673814b31f211063022fd2bff0ae7ff25f14ba3db2a47c484c2")
+        self.assertEqual(MOD.ORIGINAL_E06_SETUP_BYTES,87333614)
         self.assertEqual(MOD.ORIGINAL_E06_OWNED_FILES,485)
+        self.assertEqual(MOD.ORIGINAL_E06_SOURCE_ZIP_SHA,"80e46b37260680eaa434211ebbe98d8498c8481e9b384e8895e26c810b995106")
+        self.assertEqual(MOD.ORIGINAL_E06_PUBLISHED_HOME_SHA,"37c7952d98e820b22ea59c72c967bc4f7ecf01da013b3269b53e9f698062586e")
         self.assertEqual(MOD.SOURCE_SHA,"c35c1d330b36900c61d41f65661c535dcd6fc78a")
     def test_conservative_uninstall_count(self):
         good={k:{"code":0} for k in ("install","verify","update","rollback","uninstall")}
@@ -50,10 +52,10 @@ class FrozenOriginalU06(unittest.TestCase):
             MOD.classify_primary_uia_evidence({**physical,"treeScanned":1})
     def test_original_workflow_single_hash_frozen(self):
         workflow=(ROOT/".github/workflows/nox-express-independent-e07-candidate.yml").read_text()
-        self.assertIn("run-id: 41785340462",workflow)
-        self.assertIn("NOX-EXPRESS-ONEHOST-8e938107519fc2ca33b6024884c8410c2803e3ba",workflow)
+        self.assertIn("run-id: 41797861187",workflow)
+        self.assertIn("NOX-EXPRESS-ONEHOST-fe21790af418c8c1083946595811b67c9c03c49d",workflow)
         self.assertIn("--artifact-kind original",workflow)
-        self.assertNotIn("run-id: 41769983592",workflow)
+        self.assertNotIn("run-id: 41785340462",workflow)
     def test_release_stays_hold(self):
         script=(ROOT/"coordination/e07/independent_setup_e07.py").read_text()
         self.assertIn('"release_accepted":False}',script)
