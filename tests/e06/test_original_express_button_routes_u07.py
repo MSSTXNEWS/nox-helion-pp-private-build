@@ -65,6 +65,10 @@ class OriginalButtonRoutes(unittest.TestCase):
             self.assertEqual(stage.INSERT.count('data-nox-primary="'+name+'"'), 1)
         self.assertEqual(stage.INSERT.count('data-nox-primary='), 5)
         self.assertIn('@media(prefers-reduced-motion:reduce)', stage.INSERT)
+        self.assertIn('grid-template-columns:repeat(5,minmax(0,1fr))',stage.INSERT)
+        self.assertIn('width:calc(100vw - 12px)',stage.INSERT)
+        self.assertIn('bottom:max(3px,env(safe-area-inset-bottom,0px))',stage.INSERT)
+        self.assertIn('grid-column:1 / -1',stage.INSERT)
 
     def test_original_buttons_are_delegated_without_direct_ipc_or_false_ack(self):
         js = stage.INSERT
@@ -75,6 +79,10 @@ class OriginalButtonRoutes(unittest.TestCase):
         self.assertIn('!button.disabled', js)
         self.assertIn('original.click();', js)
         self.assertIn("if(name==='MODELS')target.click();", js)
+        self.assertIn("if(name==='SETTINGS'){",js)
+        self.assertIn('menuEntries[0].click();',js)
+        self.assertIn("document.getElementById('menu-detail')?.classList.contains('active')",js)
+        self.assertIn("document.getElementById(screen)?.classList.contains('active')",js)
         self.assertIn("фокус оригинального элемента не подтверждён · HOLD';\n     return;", js)
         self.assertNotIn("if(name==='INSTALL')target.click();", js)
         self.assertNotIn("if(name==='LEARN')target.click();", js)

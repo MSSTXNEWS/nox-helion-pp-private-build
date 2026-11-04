@@ -32,7 +32,7 @@ INSERT = r'''<!-- NOX EXPRESS 5 original-home primary actions; no additional hos
 
 #nox-express-primary button:hover,#nox-express-primary button:focus-visible{border-color:#9ce7ff;outline:2px solid #9ce7ff;outline-offset:2px}
 #nox-express-primary [data-nox-state]{width:100%;font-size:11px;text-align:center;font-weight:400;min-height:14px}
-@media(max-width:550px){#nox-express-primary{bottom:3px;gap:4px;padding:5px}#nox-express-primary button{min-width:67px;padding:8px 5px;font-size:10px}}
+@media(max-width:550px){#nox-express-primary{bottom:max(3px,env(safe-area-inset-bottom,0px));width:calc(100vw - 12px);max-width:calc(100vw - 12px);display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:3px;padding:5px;box-sizing:border-box}#nox-express-primary button{width:100%;min-width:0;min-height:56px;padding:6px 1px;font-size:9px;letter-spacing:0;line-height:1.2;white-space:nowrap}#nox-express-primary button::before{width:22px;height:22px}#nox-express-primary [data-nox-state]{grid-column:1 / -1;min-width:0;overflow-wrap:anywhere}}
 @media(prefers-reduced-motion:reduce){#nox-express-primary,#nox-express-primary *,#nox-express-primary button::before{animation:none!important;transition:none!important;transform:none!important;scroll-behavior:auto!important}}
 </style>
 <nav id="nox-express-primary" aria-label="NOX HELION EXPRESS — основные действия">
@@ -134,6 +134,9 @@ nav.addEventListener('click',event=>{
      state.textContent=name+': исходный элемент недоступен · HOLD';return;
    }
    navControl.click(); // Reuse original showScreen/navigation, not a second UI.
+   if(!document.getElementById(screen)?.classList.contains('active')){
+     state.textContent=name+': исходный экран не открылся · HOLD';return;
+   }
    const target=matches[0];
    if(target.getClientRects().length===0){
      state.textContent=name+': целевой элемент не виден · HOLD';return;
@@ -149,11 +152,37 @@ nav.addEventListener('click',event=>{
    if(name==='MODELS')target.click();
    return;
  }
- // CHAT and SETTINGS reuse their original source-bound screen and system tile.
+ // SETTINGS enters the original MENU first, then uses its ORIGINAL system tile.
+ // No hidden-tile click can silently count as verified user navigation.
+ if(name==='SETTINGS'){
+   const menuEntries=document.querySelectorAll('.nav button[data-screen="menu"]');
+   const systemTiles=document.querySelectorAll('button.tile[data-menu-index="7"]');
+   if(menuEntries.length!==1||systemTiles.length!==1||
+      menuEntries[0].disabled||!systemTiles[0].isConnected||systemTiles[0].disabled){
+     state.textContent='SETTINGS: исходное направление недоступно · HOLD';return;
+   }
+   menuEntries[0].click();
+   const tile=systemTiles[0];
+   if(!document.getElementById('menu')?.classList.contains('active')||
+      tile.getClientRects().length===0){
+     state.textContent='SETTINGS: исходное MENU не открылось · HOLD';return;
+   }
+   tile.focus({preventScroll:false});
+   if(document.activeElement!==tile){
+     state.textContent='SETTINGS: системная кнопка не получила фокус · HOLD';return;
+   }
+   tile.click();
+   if(!document.getElementById('menu-detail')?.classList.contains('active'))
+     state.textContent='SETTINGS: исходная СИСТЕМА не открылась · HOLD';
+   return;
+ }
+ // CHAT reuses its original source-bound screen, not a second router.
  // A clicked top-level action never fabricates a model reply or install ACK.
  const original=findOriginalControl(name)||findOriginalScreen(name);
  if(!original){state.textContent=name+': нет подтверждённого исходного экрана · HOLD';return;}
  original.click();
+ if(name==='CHAT'&&!document.getElementById('chat')?.classList.contains('active'))
+   state.textContent='CHAT: исходный экран не открылся · HOLD';
 });
 })();
 </script>
