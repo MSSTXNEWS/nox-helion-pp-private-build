@@ -167,6 +167,23 @@ export function nativeOwnerActionReceipt(reply,route,action) {
   return {...owner,ack:true};
 }
 
+// Bind a model-cancel ACK to the exact owner-approved job, not just the
+// native transport state. STOP_REQUESTED is a request receipt, not termination.
+export function nativeModelCancelAck(reply,jobId) {
+  if(typeof jobId!=='string'||!jobId||reply?.routeId!=='models.cancel')return false;
+  const owner=reply.result;
+  if(!owner||typeof owner!=='object'||Array.isArray(owner)||owner.jobId!==jobId)return false;
+  if(reply.state==='COMPLETED')
+    return nativeCompletedOwnerReply(reply)&&owner.cancelled===true;
+  if(reply.state!=='STOP_REQUESTED'||reply.ack===false||reply.ok===false||
+     (reply.errorCode!=null&&String(reply.errorCode).trim()!==''))return false;
+  // Only the exact STOP-request state is admissible; nested denial still HOLD.
+  const receipt={...owner};
+  if(receipt.status==='STOP_REQUESTED')delete receipt.status;
+  if(receipt.state==='STOP_REQUESTED')delete receipt.state;
+  return !nativeOwnerReceiptHolds(receipt);
+}
+
 export function isNativeChatTerminal(reply){
   // Called only AFTER createNativeMenuClient validates a UA-trusted WebView2
   // response with the matching request nonce and exact route. A real native
@@ -318,9 +335,7 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
       invokeP03Cancel:async jobId=>{
         const reply=await client.request('models.cancel',{jobId});
         // Native ACK confirms STOP request acceptance, not job termination.
-        return reply.routeId==='models.cancel'&&
-          (reply.state==='STOP_REQUESTED'&&(reply.errorCode==null||reply.errorCode==='')||
-           (nativeCompletedOwnerReply(reply)&&reply.result?.cancelled===true))
+        return nativeModelCancelAck(reply,jobId)
           ? {ack:true,state:'STOP_REQUESTED'}
           : {ack:false,errorCode:reply.errorCode||'P03_STOP_UNVERIFIED'};
       },
