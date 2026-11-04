@@ -133,6 +133,13 @@ function pending(id,label){
   finally{requesting=false;priority.disabled=false;}
  });
  setDetails(top,el('div','notready','В РАЗРАБОТКЕ'),h,p,steps,priority);
+ // Keep the real route-local action visible in WPF WebView2 at compact sizes.
+ // The shared setDetails callback first exposes the route; a second frame
+ // centers its actual button without synthesizing navigation or owner ACK.
+ window.requestAnimationFrame?.(()=>{
+  if(priority.isConnected&&!P.details.hidden)
+   priority.scrollIntoView?.({block:'center',behavior:'auto'});
+ });
  say(label+' · в плане развития HELION');
 }
 async function nativeRequest(route,payload,label){
