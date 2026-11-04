@@ -819,3 +819,177 @@ body.nox-wow-eco .nox-orbit-stage .nox-eclipse .nox-cinema-orb__filaments::after
 @media(forced-colors:active){
 #home .nox-future-hud,#home .nox-future-metric,#home .nox-future-core,
 #home .nox-future-core-indicator{background:Canvas;color:CanvasText;border:1px solid CanvasText}}
+
+
+/* NOX EXPRESS · PREMIUM CINEMA BLOCK A V1 · additive source, not E07 proof.
+ * One OBSIDIAN/CYAN/AMBER visual language for HELION, eight CoreID, five
+ * planets and real-evidence HUD. Decorations never become model/owner status.
+ * Does not reposition original interactive CoreID or change hit targets. */
+
+/* 01 FIRST PULSE: a one-shot reveal which never blocks or moves controls. */
+#home.active .nox-orbit-stage .nox-eclipse{
+ animation-name:nox-block-a-reveal;
+ animation-duration:1100ms;
+ animation-timing-function:cubic-bezier(.22,.8,.22,1);
+ animation-iteration-count:1;
+}
+@keyframes nox-block-a-reveal{
+ from{opacity:.72;filter:brightness(.48) saturate(.55)}
+ 45%{filter:brightness(1.35) saturate(1.25)}
+ to{opacity:1;filter:brightness(1)}
+}
+
+/* 02 QUANTUM FOCUS: accessible focus visible regardless of visual profile. */
+#home .nox-orbit-core:focus-visible,
+#home .nox-eclipse:focus-visible,
+#home .nox-quality-planet:focus-visible,
+#home .nox-quality-dock__toggle:focus-visible,
+#home .nox-quality-world__action:focus-visible{
+ outline:2px solid #c0f5ff!important;
+ outline-offset:5px!important;
+ box-shadow:0 0 0 5px #61c8f333,0 0 26px #64d8ff88,
+            inset 0 0 11px #c8faff26!important;
+}
+#home .nox-orbit-core:active,
+#home .nox-quality-planet:active{filter:brightness(1.13)}
+
+/* 03 NANO SURFACE: premium film grain, titanium edges and shallow depth;
+   purely inside already-existing surfaces, no extra overlay hitboxes. */
+#home .nox-quality-dock{
+ border-color:#c7ab8170!important;
+ background-image:linear-gradient(145deg,#b3e5f40a,transparent 37%),
+  repeating-linear-gradient(115deg,transparent 0 5px,#c3eaff05 6px 7px),
+  linear-gradient(120deg,#080e1bed,#131e2bea 65%,#100f1bea)!important;
+ box-shadow:inset 0 1px 0 #dff7ff27,inset 0 0 19px #d9ad4810,
+            0 18px 38px #000b,0 0 23px #64cae61a!important;
+}
+#home .nox-quality-dock__head{
+ border-bottom:1px solid #96cfe51b;
+ padding-bottom:6px;
+}
+#home .nox-quality-world{
+ border-color:#9fb9c452;
+ box-shadow:inset 0 1px 0 #fff4d226,inset 0 0 28px #50bdea0d,0 6px 28px #0008;
+}
+#home .nox-future-hud{
+ border-color:#80d7f854;
+ background-image:radial-gradient(ellipse at 20% 0,#f2b46b14,transparent 47%),
+  repeating-linear-gradient(110deg,transparent 0 8px,#f5faff04 9px 10px),
+  linear-gradient(145deg,#080d18f0,#101f2ce9 67%,#0c0b18f2);
+}
+
+/* 04 REACTOR ORBIT IDENTITIES: eight source-defined CoreIDs get distinct
+   spectral materials. This is a graphic signature, not a core performance %
+   or proof of background work. */
+#home .nox-orbit-core{--nox-core-fx:#89dff1;}
+#home .nox-orbit-core[data-core-id="CONSCIOUSNESS"]{--nox-core-fx:#f8bd7e;}
+#home .nox-orbit-core[data-core-id="PERSONA"]{--nox-core-fx:#c5a3fb;}
+#home .nox-orbit-core[data-core-id="ATLAS"]{--nox-core-fx:#93d4fc;}
+#home .nox-orbit-core[data-core-id="VOICE"]{--nox-core-fx:#a4f0e4;}
+#home .nox-orbit-core[data-core-id="REFLECTION"]{--nox-core-fx:#f2a8c4;}
+#home .nox-orbit-core[data-core-id="CORE"]{--nox-core-fx:#f4c681;}
+#home .nox-orbit-core[data-core-id="NEXUS"]{--nox-core-fx:#8fcfff;}
+#home .nox-orbit-core[data-core-id="FORGE"]{--nox-core-fx:#f5a774;}
+#home .nox-orbit-core .nox-future-core-indicator{
+ border-color:var(--nox-core-fx)!important;
+ text-shadow:0 0 8px var(--nox-core-fx);
+}
+#home .nox-orbit-core .nox-future-core-indicator__dot{
+ background:var(--nox-core-fx)!important;
+ box-shadow:0 0 11px var(--nox-core-fx)!important;
+}
+#home .nox-future-core:nth-child(1){--nox-card-core:#ffc081;}
+#home .nox-future-core:nth-child(2){--nox-card-core:#c5a3fb;}
+#home .nox-future-core:nth-child(3){--nox-card-core:#93d4fc;}
+#home .nox-future-core:nth-child(4){--nox-card-core:#a4f0e4;}
+#home .nox-future-core:nth-child(5){--nox-card-core:#f2a8c4;}
+#home .nox-future-core:nth-child(6){--nox-card-core:#f4c681;}
+#home .nox-future-core:nth-child(7){--nox-card-core:#8fcfff;}
+#home .nox-future-core:nth-child(8){--nox-card-core:#f5a774;}
+#home .nox-future-core:nth-child(9){--nox-card-core:#ffcb8c;}
+#home .nox-future-core{
+ border-left:2px solid var(--nox-card-core,#80d3ef);
+}
+#home .nox-future-core__ring{
+ border-color:var(--nox-card-core,#80d3ef);
+ box-shadow:0 0 13px color-mix(in srgb,var(--nox-card-core,#80d3ef) 38%,transparent);
+}
+
+/* 05 CINEMATIC GLASS: solar glare and coherent small HUD devices.
+   Source verification still controls every displayed number. */
+#home .nox-future-metric{
+ background-image:linear-gradient(119deg,#a0e5f70c,transparent 46%),
+  linear-gradient(146deg,#1a334339,#070f1cda);
+}
+#home .nox-future-metric__value,
+#home .nox-future-core output{
+ font-variant-numeric:tabular-nums;
+ font-feature-settings:"tnum" 1;
+ text-shadow:0 0 9px #8eddf540;
+}
+#home .nox-quality-planet.is-selected .nox-quality-planet__sphere{
+ filter:drop-shadow(0 0 11px #e8ae6c72);
+}
+#home .nox-quality-world__palette[aria-pressed="true"]{
+ border-color:#edc688b0;
+ box-shadow:inset 0 0 13px #e6ac6031,0 0 10px #e6ab4b25;
+}
+
+/* 06 Responsive real command surface: compact without moving the original
+   eight CoreID or hiding STOP; controls never go under decorative canvases. */
+#home .nox-quality-dock,
+#home .nox-future-hud{box-sizing:border-box;min-width:0;max-width:100%}
+#home .nox-quality-dock__row{min-width:0;max-width:100%;overflow:visible}
+#home .nox-quality-planet{min-width:0;touch-action:manipulation}
+#home .nox-quality-world__actions{min-width:0}
+#home .nox-future-core strong{overflow-wrap:anywhere}
+@media(max-width:520px){
+ #home .nox-quality-dock{width:min(96vw,500px)!important}
+ #home .nox-quality-dock__row{gap:5px;flex-wrap:wrap;justify-content:center}
+ #home .nox-quality-planet{min-width:56px;max-width:19%;min-height:68px;padding:3px}
+ #home .nox-quality-planet strong{font-size:9px;letter-spacing:0}
+ #home .nox-future-hud__headline strong{font-size:11px;letter-spacing:.045em}
+ #home .nox-future-core{padding:5px}
+}
+@media(max-width:390px){
+ #home .nox-quality-planet{min-width:52px;max-width:19%}
+ #home .nox-quality-planet small{font-size:8px;line-height:1.1}
+ #home .nox-quality-world__actions,
+ #home .nox-quality-world__palettes{grid-template-columns:repeat(2,minmax(0,1fr))}
+ #home .nox-quality-world__palettes .nox-quality-world__palette:last-child{grid-column:1/-1}
+ #home .nox-future-hud{padding:8px}
+ #home .nox-future-metric{padding:7px 6px;min-height:70px}
+}
+@media(max-width:340px){
+ #home .nox-quality-planet{min-width:50px;max-width:31%;min-height:64px}
+ #home .nox-quality-dock__row{gap:7px}
+ #home .nox-quality-world__actions{grid-template-columns:1fr}
+ #home .nox-quality-world__action:last-child{grid-column:auto}
+}
+@media(min-width:1700px){
+ #home .nox-quality-dock{max-width:880px}
+ #home .nox-future-grid{gap:10px}
+ #home .nox-future-metric{min-height:92px}
+}
+
+/* 07 Accessibility & eco: premium surfaces remain legible without animation. */
+@media(prefers-reduced-motion:reduce){
+ #home.active .nox-orbit-stage .nox-eclipse{
+  animation:none!important;transition:none!important
+ }
+ #home .nox-quality-planet.is-selected .nox-quality-planet__sphere{
+  filter:none!important
+ }
+}
+#home[data-nox-reactor-mode="REDUCED"] .nox-quality-planet.is-selected .nox-quality-planet__sphere,
+#home[data-nox-reactor-mode="ECO"] .nox-quality-planet.is-selected .nox-quality-planet__sphere{
+ filter:none!important
+}
+@media(forced-colors:active){
+ #home .nox-quality-dock,#home .nox-quality-world,#home .nox-future-hud{
+  background:Canvas!important;color:CanvasText!important;
+  border:1px solid CanvasText!important;
+  box-shadow:none!important
+ }
+ #home .nox-future-core{border-left:2px solid Highlight}
+}
