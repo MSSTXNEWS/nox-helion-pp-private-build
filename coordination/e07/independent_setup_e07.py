@@ -453,8 +453,21 @@ def classify_primary_uia_evidence(response: dict) -> dict:
                 r"(ControlType\.(Button|Text|Document|Hyperlink|Custom|Group|Pane|Edit)|Other)\|"
                 r"(VISIBLE_ENABLED|OFFSCREEN|DISABLED|TOO_SMALL)", item)
                 for item in targets), "E07_UIA_DIAGNOSTIC_UNTRUSTED_HOLD")
+    require(len(targets) <= scanned, "E07_UIA_DIAGNOSTIC_UNTRUSTED_HOLD")
     result = classify_primary_button_names(response.get("labels"))
-    result.update({"uia_tree_total": total, "uia_tree_scanned": scanned,
+    # Chromium UIA providers can enumerate a real visible Button in unfiltered
+    # descendants even when the separate Button property-filter returns [].
+    # These are the SAME HWND-rooted physical UIA elements, NOT text/Custom or
+    # an inferred click. Only the exact visible+enabled Button role is admitted.
+    witnessed = {entry.split("|", 1)[0] for entry in targets
+                 if entry.endswith("|ControlType.Button|VISIBLE_ENABLED")}
+    found = set(result["buttons_present"]) | witnessed
+    result.update({"status": "PASS" if len(found) == len(_UIA_MAIN_BUTTONS) else "HOLD",
+                   "buttons_present": [v for v in _UIA_MAIN_BUTTONS if v in found],
+                   "buttons_missing": [v for v in _UIA_MAIN_BUTTONS if v not in found],
+                   "proof": "SAME_ROOT_UIA_VISIBLE_ENABLED_BUTTON_PRESENCE_ONLY",
+                   "actions_invoked": 0,
+                   "uia_tree_total": total, "uia_tree_scanned": scanned,
                    "uia_known_labels_by_role": targets})
     return result
 

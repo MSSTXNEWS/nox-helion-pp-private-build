@@ -31,6 +31,23 @@ class FrozenOriginalU06(unittest.TestCase):
         src=(ROOT/"coordination/e07/independent_setup_e07.py").read_text()
         self.assertIn('header[offset:offset+4]==bytes.fromhex("50450000")',src)
         self.assertEqual(bytes.fromhex("50450000"),b"PE"+bytes(2))
+    def test_real_uia_tree_roles_are_button_presence_not_clicks(self):
+        five=("CHAT","INSTALL","MODELS","LEARN","REPORTS")
+        physical={"schema":"NOX-E07-UIA-V1","labels":[],
+                  "treeCount":74,"treeScanned":74,
+                  "targetTypes":[v+"|ControlType.Button|VISIBLE_ENABLED" for v in five]}
+        evidence=MOD.classify_primary_uia_evidence(physical)
+        self.assertEqual(evidence["buttons_present"],list(five))
+        self.assertEqual(evidence["status"],"PASS")
+        self.assertEqual(evidence["actions_invoked"],0)
+        for kind in ("Text","Custom","Hyperlink"):
+            bad={**physical,"targetTypes":[v+"|ControlType."+kind+"|VISIBLE_ENABLED" for v in five]}
+            self.assertEqual(MOD.classify_primary_uia_evidence(bad)["status"],"HOLD")
+        for state in ("OFFSCREEN","DISABLED","TOO_SMALL"):
+            bad={**physical,"targetTypes":[v+"|ControlType.Button|"+state for v in five]}
+            self.assertEqual(MOD.classify_primary_uia_evidence(bad)["status"],"HOLD")
+        with self.assertRaisesRegex(MOD.Hold,"E07_UIA_DIAGNOSTIC_UNTRUSTED_HOLD"):
+            MOD.classify_primary_uia_evidence({**physical,"treeScanned":1})
     def test_original_workflow_single_hash_frozen(self):
         workflow=(ROOT/".github/workflows/nox-express-independent-e07-candidate.yml").read_text()
         self.assertIn("run-id: 41785340462",workflow)
