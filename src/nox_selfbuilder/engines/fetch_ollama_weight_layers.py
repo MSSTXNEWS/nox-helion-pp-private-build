@@ -59,8 +59,22 @@ def download_blob(model,digest,expected_size,root):
         raise ValueError('PREEXISTING_BLOB_SHA_MISMATCH')
     # No unchecked partial is ever renamed to a content-addressed blob.
     partial=folder/f'.partial-{hexsha}'
+    # A complete interrupted transfer has no remaining HTTP range (416).
+    # Preserve mismatched partials for diagnosis rather than discard their bytes.
+    if partial.is_symlink() or getattr(partial,'is_junction',lambda:False)():
+        raise ValueError('UNSAFE_PARTIAL_BLOB_PATH')
+    if partial.exists() and not partial.is_file():
+        raise ValueError('UNSAFE_PARTIAL_BLOB_PATH')
     offset=partial.stat().st_size if partial.exists() else 0
-    if offset>expected_size:partial.unlink();offset=0
+    if offset==expected_size and sha_file(partial)==hexsha:
+        os.replace(partial,done)
+        return {'digest':digest,'bytes':expected_size,'status':'RECOVERED_COMPLETE_SHA256_VERIFIED'}
+    if offset>=expected_size and partial.exists():
+        quarantine=folder/f'.corrupt-{hexsha}-{time.time_ns()}'
+        if quarantine.exists() or quarantine.is_symlink():
+            raise ValueError('PARTIAL_QUARANTINE_COLLISION')
+        partial.rename(quarantine)
+        offset=0
     headers={'User-Agent':'NOX-EXPRESS-Block2/1.0'}
     if offset: headers['Range']=f'bytes={offset}-'
     url=f'{REGISTRY}/v2/library/{model}/blobs/{digest}'
