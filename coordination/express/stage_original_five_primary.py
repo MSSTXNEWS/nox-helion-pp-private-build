@@ -86,9 +86,11 @@ function safeOriginalLink(a){
 function findOriginalScreen(name){
  const terms=screenNames[name]||[];
  // Resolve only a pre-existing safe original route; otherwise explicit HOLD.
- return Array.from(document.querySelectorAll('a[href]')).find(a=>!nav.contains(a)&&
+ const candidates=Array.from(document.querySelectorAll('a[href]')).filter(a=>!nav.contains(a)&&
    terms.includes((a.textContent||'').trim().toLocaleUpperCase('ru'))&&
    safeOriginalLink(a));
+ // Never select the first of multiple source routes for a privileged action.
+ return candidates.length===1?candidates[0]:null;
 }
 function findOriginalControl(name){
  // Bind to SOURCE-LOCKED R11 buttons, not invented anchor text or direct IPC.
@@ -127,9 +129,11 @@ nav.addEventListener('click',event=>{
  };
  if(Object.prototype.hasOwnProperty.call(destinations,name)){
    const [screen,selector]=destinations[name];
-   const navControl=document.querySelector('.nav button[data-screen="'+screen+'"]');
+   const navMatches=document.querySelectorAll('.nav button[data-screen="'+screen+'"]');
+   const navControl=navMatches.length===1?navMatches[0]:null;
    const matches=document.querySelectorAll(selector);
-   if(!navControl||navControl.disabled||matches.length!==1||
+   if(!navControl||navControl.tagName!=='BUTTON'||!navControl.isConnected||
+      navControl.disabled||matches.length!==1||
       !matches[0].isConnected||matches[0].disabled){
      state.textContent=name+': исходный элемент недоступен · HOLD';return;
    }
