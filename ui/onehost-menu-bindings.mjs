@@ -173,8 +173,21 @@ export function nativeModelCancelAck(reply,jobId) {
   if(typeof jobId!=='string'||!jobId||reply?.routeId!=='models.cancel')return false;
   const owner=reply.result;
   if(!owner||typeof owner!=='object'||Array.isArray(owner)||owner.jobId!==jobId)return false;
-  if(reply.state==='COMPLETED')
-    return nativeCompletedOwnerReply(reply)&&owner.cancelled===true;
+  if(reply.state==='COMPLETED') {
+    if(owner.cancelled!==true)return false;
+    // A confirmed cancellation is successful for THIS job. The generic
+    // nativeOwnerReceiptHolds() correctly rejects CANCELLED for other actions,
+    // but would mislabel the terminal P03 cancel acknowledgement as HOLD.
+    // Strip only the two exact terminal spellings on the isolated cancel
+    // receipt; keep ACL, consent, errorCode, ack and all other denials intact.
+    const terminal={...owner};
+    for(const key of ['status','state']) {
+      if(typeof terminal[key]==='string'&&
+         ['CANCELLED','CANCELED'].includes(terminal[key].trim().toUpperCase()))
+        delete terminal[key];
+    }
+    return nativeCompletedOwnerReply({...reply,result:terminal});
+  }
   if(reply.state!=='STOP_REQUESTED'||reply.ack===false||reply.ok===false||
      (reply.errorCode!=null&&String(reply.errorCode).trim()!==''))return false;
   // Only the exact STOP-request state is admissible; nested denial still HOLD.
