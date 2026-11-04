@@ -33,7 +33,7 @@ def _blob(data):
 
 
 def _plain(path):
-    if type(path) is not Path or not path.is_file():
+    if not isinstance(path, Path) or not path.is_file():
         raise ReviewedRemoveHold("NX03_REVIEWED_REMOVE_FILE_REQUIRED")
     for part in (path, *path.parents):
         if part.is_symlink() or getattr(part, "is_junction", lambda: False)():
