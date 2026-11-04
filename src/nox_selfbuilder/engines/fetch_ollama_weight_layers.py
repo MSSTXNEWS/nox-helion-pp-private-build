@@ -51,9 +51,23 @@ def download_blob(model,digest,expected_size,root):
     match=DIGEST.fullmatch(digest)
     if not match: raise ValueError('INVALID_LAYER_DIGEST')
     hexsha=match.group(1)
-    folder=root/'blobs';folder.mkdir(parents=True,exist_ok=True)
+    folder=root/'blobs'
+    # A valid hash must never bless a redirected cache path.  Windows
+    # junctions and symlinks can point to arbitrary user data even when the
+    # referred-to bytes happen to have the expected digest.
+    if folder.is_symlink() or getattr(folder,'is_junction',lambda:False)():
+        raise ValueError('UNSAFE_BLOB_CACHE_DIRECTORY')
+    folder.mkdir(parents=True,exist_ok=True)
+    if not folder.is_dir() or folder.is_symlink() or getattr(folder,'is_junction',lambda:False)():
+        raise ValueError('UNSAFE_BLOB_CACHE_DIRECTORY')
     done=folder/f'sha256-{hexsha}'
+    # Path.exists() is false for dangling links; reject links before any
+    # existence/hash check so they can never become a trusted OCI blob.
+    if done.is_symlink() or getattr(done,'is_junction',lambda:False)():
+        raise ValueError('UNSAFE_PREEXISTING_BLOB_PATH')
     if done.exists():
+        if not done.is_file():
+            raise ValueError('UNSAFE_PREEXISTING_BLOB_PATH')
         if done.stat().st_size==expected_size and sha_file(done)==hexsha:
             return {'digest':digest,'bytes':expected_size,'status':'ALREADY_SHA256_VERIFIED'}
         raise ValueError('PREEXISTING_BLOB_SHA_MISMATCH')
