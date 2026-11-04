@@ -373,6 +373,44 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
         catch { /* No stale delivery after WebView disposal. */ }
     }
 
+
+    // A transport ACK with an explicit native rejection is NOT a completed
+    // model, training, permission or STOP action. The owner remains authoritative.
+    private static bool NativeResultExplicitlyDenied(JsonElement? candidate)
+    {
+        if (candidate is not JsonElement result || result.ValueKind != JsonValueKind.Object)
+            return false;
+        foreach (var field in result.EnumerateObject())
+        {
+            if (field.Name is "ok" or "ack" &&
+                field.Value.ValueKind != JsonValueKind.True)
+                return true;
+            if (field.Name is "error" or "errorCode" or "error_code" or
+                "errorMessage" or "error_message")
+            {
+                if (field.Value.ValueKind != JsonValueKind.Null &&
+                    (field.Value.ValueKind != JsonValueKind.String ||
+                     !string.IsNullOrWhiteSpace(field.Value.GetString())))
+                    return true;
+            }
+            if (field.Name is "status" or "state")
+            {
+                if (field.Value.ValueKind != JsonValueKind.String)
+                    return true;
+                var state = field.Value.GetString();
+                if (state is null ||
+                    state.EndsWith("_HOLD", StringComparison.OrdinalIgnoreCase) ||
+                    state.EndsWith("_DENIED", StringComparison.OrdinalIgnoreCase) ||
+                    state is "HOLD" or "DENIED" or "ERROR" or "FAILED" or "REJECTED")
+                    return true;
+            }
+            if (field.Name is "result" or "receipt" or "nativeResult" &&
+                NativeResultExplicitlyDenied(field.Value))
+                return true;
+        }
+        return false;
+    }
+
     private async void OnWebMessageReceived(object? sender, CoreWebView2WebMessageReceivedEventArgs e)
     {
         if (Volatile.Read(ref _disposed) != 0 || _externalMode || _browserProcessLost ||
@@ -471,6 +509,8 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
                 // A denied STOP must not silence a still-active generator in the UI.
                 var ownerAccepted = ownerResult.Accepted &&
                     string.IsNullOrEmpty(ownerResult.ErrorCode);
+                if (ownerAccepted && NativeResultExplicitlyDenied(ownerResult.Result))
+                    ownerAccepted = false;
                 if ((route == "chat.stop" || isMenuStop) && ownerAccepted)
                     Interlocked.Increment(ref _streamEpoch);
                 // Owner ACK means a durable job was accepted, NOT that the
@@ -505,7 +545,8 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
                 else if (route == "chat.stop" || isMenuStop)
                     ownerState = ownerAccepted ? "STOP_REQUESTED" : "HOLD";
                 Reply(source, epoch, id, route, ownerState,
-                      ownerResult.ErrorCode, ownerResult.Result);
+                      ownerAccepted ? ownerResult.ErrorCode :
+                      (ownerResult.ErrorCode ?? "NATIVE_OWNER_RESULT_HOLD"), ownerResult.Result);
                 return;
             }
             // Track only actual model calls; native STOP may overtake the
@@ -541,12 +582,15 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
                 // Never misreport a remote model as fully aborted before proof.
                 var accepted = result.Accepted &&
                     string.IsNullOrEmpty(result.ErrorCode);
+                if (accepted && NativeResultExplicitlyDenied(result.Result))
+                    accepted = false;
                 if (route == "chat.stop" && accepted)
                     Interlocked.Increment(ref _streamEpoch);
                 var state = !accepted ? "HOLD" :
                     route == "chat.stop" ? "STOP_REQUESTED" : "COMPLETED";
                 Reply(source, epoch, id, route,
-                      state, result.ErrorCode, result.Result);
+                      state, accepted ? result.ErrorCode :
+                      (result.ErrorCode ?? "NATIVE_OWNER_RESULT_HOLD"), result.Result);
             }
             finally { if (isChat) Interlocked.Decrement(ref _activeChat); }
         }

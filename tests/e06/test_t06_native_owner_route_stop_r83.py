@@ -57,6 +57,15 @@ class OriginalNativeOwnerMenuStopR83(unittest.TestCase):
         self.assertIn('payload.EnumerateObject().Count() == 1', self.bridge)
         self.assertIn('MENU_STOP_PAYLOAD_HOLD', self.owner)
 
+    def test_nested_native_denial_blocks_owner_ack(self):
+        self.assertIn("NativeResultExplicitlyDenied(JsonElement? candidate)", self.bridge)
+        self.assertIn("if (ownerAccepted && NativeResultExplicitlyDenied(ownerResult.Result))", self.bridge)
+        self.assertIn("if (accepted && NativeResultExplicitlyDenied(result.Result))", self.bridge)
+        self.assertIn('field.Name is "ok" or "ack"', self.bridge)
+        self.assertIn('field.Name is "error" or "errorCode" or "error_code"', self.bridge)
+        self.assertIn('field.Name is "result" or "receipt" or "nativeResult"', self.bridge)
+        self.assertIn('"NATIVE_OWNER_RESULT_HOLD"', self.bridge)
+
     def test_original_builder_and_compiler_pins_are_coherent(self):
         for filename, sha in ((OWNER, git_blob(OWNER)), (BRIDGE, git_blob(BRIDGE))):
             with self.subTest(path=filename.name):
