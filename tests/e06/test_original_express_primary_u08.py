@@ -44,6 +44,22 @@ class FivePrimaryTests(unittest.TestCase):
         self.assertNotIn("payload:{action:'selfbuilder.a1.boot'}", target.INSERT)
         self.assertNotIn("payload:{action:'selfbuilder.a1.tick'}", target.INSERT)
 
+    def test_medium_wpf_webview_viewport_keeps_five_in_one_row_source_only(self):
+        # Physical 800x600 WPF can expose only 551..780 CSS px after native chrome.
+        # Without this bounded grid, flex-wrap could move SETTINGS to row two
+        # and the strict original single-dock UIA proof correctly remains HOLD.
+        css=target.INSERT
+        self.assertIn('@media (min-width:551px) and (max-width:780px)', css)
+        self.assertIn('grid-template-columns:repeat(5,minmax(0,1fr))', css)
+        self.assertIn('#nox-express-primary button[data-nox-primary]{width:100%;min-width:0;', css)
+        self.assertIn('[data-nox-check="A1"],#nox-express-primary [data-nox-state]{grid-column:1/-1;', css)
+        self.assertIn('@media(max-width:550px)',css)
+        self.assertIn('@media(prefers-reduced-motion:reduce)',css)
+        self.assertEqual(sum(css.count('data-nox-primary="'+label+'"') for label in
+                             ('CHAT','INSTALL','MODELS','LEARN','SETTINGS')),5)
+        self.assertIn('event.isTrusted',css)
+        self.assertIn("if(name==='MODELS'",css)
+
     def test_tampered_bytes_rejected(self):
         with self.assertRaisesRegex(ValueError, 'SHA_HOLD'):
             target.publish(self.raw.replace(b'ORIGINAL', b'ORIGINA!'))
