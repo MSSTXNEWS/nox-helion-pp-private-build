@@ -101,9 +101,25 @@ def acquire(tag,out,execute=False):
         receipt['layers'].append(download_blob(model,item['digest'],item['bytes'],out))
     dst=out/'manifests'/'registry.ollama.ai'/'library'/model
     dst.mkdir(parents=True,exist_ok=True)
-    # Save OCI manifest as compact JSON only when verified layers are present.
-    compact=json.dumps(json.loads(content),ensure_ascii=False,separators=(',',':')).encode('utf-8')
-    tmp=dst/(version+'.part');tmp.write_bytes(compact);os.replace(tmp,dst/version)
+    # Preserve the exact verified OCI bytes: JSON re-serialization changes the
+    # registry manifest digest even if the document is semantically identical.
+    if hashlib.sha256(content).hexdigest()!=manifest_sha:
+        raise ValueError('OFFICIAL_MANIFEST_BYTE_IDENTITY_MISMATCH')
+    # Use an unpredictable same-directory staging name; close it before the
+    # Windows atomic rename. Never follow a pre-created .part symlink.
+    staged=None
+    try:
+        with tempfile.NamedTemporaryFile(mode='wb',dir=dst,prefix='.'+version+'-',suffix='.part',delete=False) as output:
+            staged=Path(output.name)
+            output.write(content)
+            output.flush()
+            os.fsync(output.fileno())
+        if sha_file(staged)!=manifest_sha:
+            raise ValueError('STAGED_MANIFEST_SHA256_MISMATCH')
+        os.replace(staged,dst/version)
+    finally:
+        if staged is not None:
+            staged.unlink(missing_ok=True)
     receipt.update(status='DOWNLOADED_ALL_LAYERS_SHA256_VERIFIED',bytes=sum(x['bytes'] for x in layers),manifest_store_path=str((dst/version).relative_to(out)),manifest_file_sha256=sha_file(dst/version),license_status='OWNER_REVIEW_OF_LICENSE_LAYER_REQUIRED')
     return receipt
 
