@@ -716,7 +716,7 @@ def build(root,staged):
     # builder pin and fail closed if it is missing, ambiguous or mismatched.
     owner_builder=Path(__file__).resolve().parent/"build_onehost_installer.ps1"
     verify_source_tree_entry(owner_builder,Path(__file__).resolve().parents[2])
-    reviewed_pins=re.findall(rb"@\\{path=\\$primaryOwner;sha='([0-9a-f]{40})'\\}",owner_builder.read_bytes())
+    reviewed_pins=re.findall(rb"@\{path=\$primaryOwner;sha='([0-9a-f]{40})'\}",owner_builder.read_bytes())
     need(len(reviewed_pins)==1,"U08_PRIMARY_CANONICAL_BUILDER_PIN_HOLD")
     need(_git_blob(five_script.read_bytes())==reviewed_pins[0].decode("ascii"),
          "U08_FIVE_PRIMARY_STAGE_PIN_HOLD")
