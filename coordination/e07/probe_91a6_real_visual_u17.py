@@ -72,11 +72,21 @@ try {
      [System.Windows.Automation.ControlType]::Button)
    $nodes=$root.FindAll([System.Windows.Automation.TreeScope]::Descendants,$filter)
    if($nodes.Count -gt 4096){throw 'U17_D02_UIA_TREE_LIMIT_HOLD'}
+   # WebView2 UIA may omit the subtitle or normalize Cyrillic punctuation;
+   # accept only the canonical full approved label or its EXACT source title.
+   # Never fuzzy-match arbitrary controls, and never relax uniqueness/pressed state.
+   $base=($label -split '\\s+—\\s+')[0]
+   $canonical=[regex]::Replace($label.ToUpperInvariant(),'[^\\p{L}\\p{N}]+',' ').Trim()
+   $short=[regex]::Replace($base.ToUpperInvariant(),'[^\\p{L}\\p{N}]+',' ').Trim()
    $matches=@()
    foreach($item in $nodes){
-     if(($item.Current.Name+'') -ceq $label){$matches+=,$item}
+     $accessible=[regex]::Replace(($item.Current.Name+'').ToUpperInvariant(),'[^\\p{L}\\p{N}]+',' ').Trim()
+     if($accessible -ceq $canonical -or $accessible -ceq $short){$matches+=,$item}
    }
-   if($matches.Count -ne 1){throw 'U17_D02_QUALITY_UNIQUE_BUTTON_HOLD'}
+   if($matches.Count -ne 1){
+     $safe=([regex]::Replace($base.ToUpperInvariant(),'[^A-Z0-9]+','_')).Trim('_')
+     throw ('U17_D02_QUALITY_'+$safe+'_UNIQUE_BUTTON_HOLD')
+   }
    $btn=$matches[0]
    $r=$btn.Current.BoundingRectangle
    if(-not $btn.Current.IsEnabled -or $btn.Current.IsOffscreen -or
