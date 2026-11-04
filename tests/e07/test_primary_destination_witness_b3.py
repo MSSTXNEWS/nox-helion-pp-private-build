@@ -49,3 +49,33 @@ class RouteComponentWitness(unittest.TestCase):
         w=witness(after=False,focus=0)
         self.assertFalse(classify(w)["release_accepted"])
 if __name__=="__main__":unittest.main()
+
+class PhysicalRouteNavigationV4(unittest.TestCase):
+    """Actual route-local screen/control; focus is not fabricated as WPF installation."""
+    def test_route_specific_visible_witness_is_navigation_only(self):
+        actions=[]
+        for name in ACTIONS:
+            actions.append({"action":name,"invoked":True,"sameHwndAlive":True,
+                "beforeDestination":False,"afterDestination":True,
+                "beforeHeadingVisible":False,"afterHeadingVisible":True,
+                "beforeMatchedControls":0,"afterMatchedControls":1})
+        result=classify({"schema":"NOX-E07-PRIMARY-NAV-v4","actions":actions})
+        self.assertEqual(result["navigation_verified"],"PASS")
+        self.assertFalse(result["release_accepted"])
+        for action in ACTIONS:
+            self.assertEqual(result["per_action"][action]["function_verified"],"NOT_TESTED")
+        self.assertEqual(result["per_action"]["INSTALL"]["destination_components"]["control_witness"],"VISIBLE_UNIQUE_WITH_ROUTE_HEADING")
+    def test_cannot_accept_heading_only(self):
+        w={"schema":"NOX-E07-PRIMARY-NAV-v4","actions":[
+            {"action":name,"invoked":True,"sameHwndAlive":True,
+             "beforeDestination":False,"afterDestination":False,
+             "beforeHeadingVisible":False,"afterHeadingVisible":True,
+             "beforeMatchedControls":0,"afterMatchedControls":0} for name in ACTIONS]}
+        self.assertEqual(classify(w)["navigation_verified"],"HOLD")
+    def test_boolean_is_not_count_and_forged_after_rejected(self):
+        w={"schema":"NOX-E07-PRIMARY-NAV-v4","actions":[
+            {"action":name,"invoked":True,"sameHwndAlive":True,
+             "beforeDestination":False,"afterDestination":True,
+             "beforeHeadingVisible":False,"afterHeadingVisible":True,
+             "beforeMatchedControls":0,"afterMatchedControls":True} for name in ACTIONS]}
+        with self.assertRaises(Hold):classify(w)
