@@ -7,6 +7,10 @@ on:
       - '.github/workflows/nox-v16-e06-d02-onehost.yml'
       - 'private_build.ps1'
       - 'coordination/e06/**'
+      # F01: original EXPRESS native UI receipts must never evade changed-SHA Windows E06.
+      # Push only: do NOT duplicate the branch build through pull_request.
+      - 'ui/nox-r11-wow.mjs'
+      - 'ui/firstboot-truth.mjs'
       - 'integrations/wow200/stage_wow200.py'
       - 'integrations/wow200/tests/test_stage_wow200.py'
       - 'integrations/wow200/tests/fake_d02_dom.mjs'
@@ -83,6 +87,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          node --test tests/ci/test_e06_watch_native_source_f01.mjs
           python -m unittest discover -s tests/selfbuilder -p 'test_activator_worm.py' -v
           python -m unittest discover -s tests/selfbuilder -p 'test_selfbuilder.py' -v
           python -m unittest discover -s tests/selfbuilder -p 'test_r4_complete.py' -v
