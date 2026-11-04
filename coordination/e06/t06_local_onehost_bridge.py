@@ -255,6 +255,46 @@ def verify_mega814_payload_files(packaged, summary):
         seen.add(key)
     return len(seen)
 
+def verified_samevm_lifecycle_state(smoke:dict, third:dict)->str:
+    """Admit verified same-VM installation; keep offline model and E07 on HOLD.
+
+    This is a diagnostic setup candidate gate, never model inference or release.
+    The installed smoke already checks the actual NSIS/GUI/IPC/rollback
+    before emitting either phase; disallow all inconsistent mixed receipts.
+    """
+    error="T06_M1_REAL_WINDOWS_GUI_IPC_LIFECYCLE_GATE_HOLD"
+    if (type(smoke) is not dict or type(third) is not dict or
+        type(third.get("return_code")) is not int or third["return_code"]!=0 or
+        smoke.get("release_accepted") is not False or
+        smoke.get("e07_independent_acceptance")!="NOT_RUN" or
+        smoke.get("original_home_and_core01_sha_verified") is not True):
+        raise RuntimeError(error)
+    lifecycle=smoke.get("installer_lifecycle")
+    if type(lifecycle) is not dict:
+        raise RuntimeError(error)
+    gui=lifecycle.get("original_wpf_gui")
+    native=lifecycle.get("native_ipc")
+    if (type(gui) is not dict or type(native) is not dict or
+        gui.get("new_nav_ok") is not True or
+        gui.get("new_python_ipc_handshake") is not True or
+        native.get("route")!="models.installed" or
+        native.get("run_id_matched") is not True or
+        native.get("request_id_matched") is not True or
+        native.get("real_model_inference_tested") is not False):
+        raise RuntimeError(error)
+    phase=smoke.get("phase")
+    if phase=="INSTALLED_GUI_IPC_UPDATE_ROLLBACK_NOLOSS_PASS_NOT_E07":
+        if (native.get("status")!="PASS" or
+            native.get("model_inventory_route_verified") is not True):
+            raise RuntimeError(error)
+        return "INSTALLED_NATIVE_INVENTORY_DIAGNOSTIC_NOT_E07"
+    if phase=="INSTALLED_GUI_IPC_UPDATE_ROLLBACK_NOLOSS_PROVIDER_OFFLINE_HOLD_NOT_E07":
+        if (native.get("status")!="PROVIDER_OFFLINE_HOLD" or
+            native.get("model_inventory_route_verified") is not False):
+            raise RuntimeError(error)
+        return "PROVIDER_OFFLINE_HOLD_NOT_E07"
+    raise RuntimeError(error)
+
 def main():
     if OUT.exists() or OUT.is_symlink():
         raise SystemExit("T06_LOCAL_BRIDGE_OUTPUT_COLLISION")
@@ -346,12 +386,12 @@ def main():
             "home_media_sha_ok":smoke.get("original_home_and_core01_sha_verified",False),
         }
         print("NOX_EXPRESS_GATE_4_INSTALLED_RESULT "+json.dumps(report,ensure_ascii=False,sort_keys=True)[:8000],flush=True)
-        if (third["return_code"]!=0 or
-            smoke.get("phase")!="INSTALLED_GUI_IPC_UPDATE_ROLLBACK_NOLOSS_PASS_NOT_E07" or
-            smoke.get("installer_lifecycle",{}).get("original_wpf_gui",{}).get("new_nav_ok") is not True or
-            smoke.get("installer_lifecycle",{}).get("original_wpf_gui",{}).get("new_python_ipc_handshake") is not True or
-            smoke.get("original_home_and_core01_sha_verified") is not True):
-            raise RuntimeError("T06_M1_REAL_WINDOWS_GUI_IPC_LIFECYCLE_GATE_HOLD")
+        # Keep the offline Ollama result as HOLD, not a model or E07 PASS.
+        # The installed smoke has already proven the physical NSIS lifecycle.
+        model_diagnostic=verified_samevm_lifecycle_state(smoke,third)
+        data["installed_model_diagnostic"]=model_diagnostic
+        if model_diagnostic=="PROVIDER_OFFLINE_HOLD_NOT_E07":
+            print("T06_INSTALLED_PROVIDER_OFFLINE_HOLD_NOT_E07",flush=True)
         # The same SHA-locked R11 Assets MUST be present in the final NSIS
         # payload. A passing C# compiler alone is not a visual integration.
         if env.get("NOX_MEGA_8_14")=="YES":
