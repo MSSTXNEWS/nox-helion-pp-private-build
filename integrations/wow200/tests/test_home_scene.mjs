@@ -77,6 +77,10 @@ test('planetary world panels and palette switch without native model or GPU writ
  assert.equal(panelActions[0].href,'/creative/studio.html');
  assert.equal(panelActions[1].href,'/creative/modelcenter/index.html');
  assert.ok(f.intervals.size>0);
+ assert.equal(dock.children[2].querySelectorAll('.nox-future-metric').length,12);
+ assert.equal(dock.children[2].querySelectorAll('.nox-future-core').length,9);
+ assert.equal(f.cores.every(n=>n.querySelector('.nox-future-core-indicator')!==null),true);
+ assert.equal(dock.children[2].querySelector('.nox-future-metric__value').textContent,'Н/Д');
  mount.destroy();
  assert.equal(f.intervals.size,0);
  assert.equal(f.home.dataset.noxPlanetPalette,undefined);

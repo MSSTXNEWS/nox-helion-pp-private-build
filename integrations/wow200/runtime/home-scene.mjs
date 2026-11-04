@@ -120,7 +120,7 @@ export function mountApprovedHome(doc=document){
       if(choice==='AUTO')beginAuto();
       return true;
     };
-    dock=mountNoxGraphicsDock(home,doc,chooseQuality,()=>scene.snapshot());
+    dock=mountNoxGraphicsDock(home,doc,chooseQuality,()=>scene.snapshot(),orbs);
     observer=new view.MutationObserver(sync);
     observer.observe(home,{attributes:true,attributeFilter:['class']});
     bodyObserver=new view.MutationObserver(sync);
@@ -176,7 +176,168 @@ export function mountApprovedHome(doc=document){
  * Two links target existing source-staged local pages inside one WebView2 host.
  * All chart samples come from the actual D02 renderer snapshot only.
  */
-function mountNoxGraphicsDock(home,doc,onSelect,getSceneSnapshot){
+
+/* NOX SINGULARITY COMMAND V4 · real-evidence HUD.
+ * SVG Gauge/ProgressBar MIT render ONLY values from trusted owner WebView2.
+ * Idling pulse, lensing and radar sweep are clearly decorative.
+ * No IPC requests, actions, jobs, native rights, or second host are created.
+ */
+function mountFutureReactorHud(home,doc,orbs,panel,snapshot){
+ const view=doc.defaultView,native=view.chrome?.webview;
+ const definitions=[
+ ['render','FPS · РЕНДЕР'],['particles','ЧАСТИЦЫ'],['state','СОСТОЯНИЕ'],
+ ['training','ОБУЧЕНИЕ'],['knowledge','ЗНАНИЯ S03'],['model','ВЕСА / СКАЧИВАНИЕ'],
+ ['cpu','CPU'],['gpu','GPU'],['vram','VRAM'],['heat','ТЕМПЕРАТУРА'],
+ ['ready','ГОТОВНОСТЬ'],['cores','ЯДРА 8×']];
+ const wall=doc.createElement('section');wall.className='nox-future-hud';
+ wall.setAttribute('aria-label','Командный центр HELION: только подтверждённые датчики');
+ const headline=doc.createElement('div');headline.className='nox-future-hud__headline';
+ const name=doc.createElement('strong');name.textContent='✦ HELION · SINGULARITY COMMAND';
+ const subtitle=doc.createElement('small');subtitle.textContent='ПУЛЬС — АНИМАЦИЯ · МЕТРИКИ — ПОДТВЕРЖДЁННЫЕ';
+ headline.append(name,subtitle);
+ const radar=doc.createElement('div');radar.className='nox-future-radar';radar.setAttribute('aria-hidden','true');
+ const focal=doc.createElement('span');focal.className='nox-future-radar__focal';focal.textContent='HELION';
+ radar.append(focal);
+ const grid=doc.createElement('div');grid.className='nox-future-grid';
+ const fields=new Map();
+ for(const [id,label] of definitions){
+   const tile=doc.createElement('div');tile.className='nox-future-metric';tile.dataset.metric=id;
+   const title=doc.createElement('span');title.className='nox-future-metric__title';title.textContent=label;
+   const value=doc.createElement('output');value.className='nox-future-metric__value';value.textContent='Н/Д';
+   const source=doc.createElement('small');source.textContent='ИСТОЧНИК НЕ ПОДТВЕРЖДЁН';
+   const ring=doc.createElement('div');ring.className='nox-future-metric__ring';
+   ring.setAttribute('aria-hidden','true');
+   tile.append(title,value,source,ring);grid.append(tile);fields.set(id,{value,source,ring});
+ }
+ const cores=doc.createElement('div');cores.className='nox-future-cores';
+ const badges=[],coreMap=new Map(),gaugeMap=new Map();
+ for(const {id,element} of orbs){
+   const badge=doc.createElement('span');badge.className='nox-future-core-indicator';
+   badge.setAttribute('aria-hidden','true');badge.dataset.coreId=id;
+   const dot=doc.createElement('i');dot.className='nox-future-core-indicator__dot';
+   const small=doc.createElement('b');small.textContent='Н/Д';badge.append(dot,small);
+   element.append(badge);badges.push(badge);
+   const cell=doc.createElement('div');cell.className='nox-future-core';
+   const caption=doc.createElement('strong');caption.textContent=id;
+   const ring=doc.createElement('div');ring.className='nox-future-core__ring';
+   const reading=doc.createElement('output');reading.textContent='Н/Д';
+   cell.append(caption,ring,reading);cores.append(cell);
+   coreMap.set(id,{reading,ring,small});
+ }
+ const disclaimer=doc.createElement('p');disclaimer.className='nox-future-hud__disclaimer';
+ disclaimer.textContent='Живое свечение — визуальная активность. Обучение, знания, GPU и готовность без native receipt показывают Н/Д.';
+ wall.append(headline,radar,grid,cores,disclaimer);panel.append(wall);
+ let dead=false,last=null,modelRun='',modelProgress=-1,trainingRun='',trainingSeq=0;
+ let progressBar=null;
+ const range=(v,low,high)=>typeof v==='number'&&Number.isFinite(v)&&v>=low&&v<=high?v:null;
+ function metric(key,val,source,pct=null){
+   const f=fields.get(key);if(!f||dead)return;
+   f.value.textContent=String(val);f.source.textContent=source;
+   if(pct!==null&&range(pct,0,100)!==null&&key!=='model'&&typeof view.Gauge==='function'){
+     try{
+       let gauge=gaugeMap.get(key);
+       if(!gauge){gauge=view.Gauge(f.ring,{max:100,value:pct,label:()=>''});gaugeMap.set(key,gauge);}
+       else gauge.setValue(pct);
+     }catch(_){} // native value remains visible without SVG support
+   }
+   if(key==='model'&&pct!==null&&range(pct,0,100)!==null&&view.ProgressBar?.Circle){
+     try{
+       if(!progressBar)progressBar=new view.ProgressBar.Circle(f.ring,{strokeWidth:5,duration:0,color:'#f6bf75'});
+       progressBar.set(pct/100);
+     }catch(_){}
+   }
+ }
+ function trusted(event){
+   if(dead||event?.isTrusted!==true||event.source!==native)return;
+   const m=event.data;
+   if(!m||typeof m!=='object')return;
+   if(m.kind==='p02NativeEvent'&&m.routeId==='training.start'&&m.state==='STREAMING'){
+     const d=m.data;
+     if(d?.schema!=='NOX-INSTALLER-EVENT-v3'||d.source!=='P04.QLoRA'||
+       d.evidence_verified!==true||typeof d.run_id!=='string'||d.run_id.length>128||
+       !/^[A-Za-z0-9._:-]+$/.test(d.run_id)||
+       !Number.isSafeInteger(d.event_sequence)||d.event_sequence<1||
+       !Number.isSafeInteger(d.numerator)||!Number.isSafeInteger(d.denominator)||
+       d.denominator<1||d.numerator<0||d.numerator>d.denominator)return;
+     if(trainingRun===d.run_id&&d.event_sequence<=trainingSeq)return;
+     trainingRun=d.run_id;trainingSeq=d.event_sequence;
+     const percentage=100*d.numerator/d.denominator;
+     metric('training',percentage.toFixed(1)+'%','P04 · VERIFIED RUN',percentage);return;
+   }
+   if(m.kind!=='p02NativeResult'||m.state!=='COMPLETED'||!m.result||
+      typeof m.result!=='object'||Array.isArray(m.result))return;
+   const r=m.result;
+   if(m.routeId==='models.queue'&&Array.isArray(r.jobs)){
+     const job=r.jobs.find(j=>j&&typeof j==='object'&&
+       ['Running','Queued','Downloading'].includes(j.state)&&
+       range(j.completedBytes,0,Number.MAX_SAFE_INTEGER)!==null&&
+       range(j.totalBytes,1,Number.MAX_SAFE_INTEGER)!==null&&j.completedBytes<=j.totalBytes);
+     if(job){
+       const id=String(job.id||job.jobId||'');
+       if(id!==modelRun){modelRun=id;modelProgress=-1;}
+       const pct=100*job.completedBytes/job.totalBytes;
+       if(pct>=modelProgress){modelProgress=pct;metric('model',pct.toFixed(1)+'%','P03 · OWNER QUEUE',pct);}
+     }
+   }
+   if(m.routeId==='gpu.preflight'&&Array.isArray(r.sensors)){
+     let used=null,total=null,usedSource='',totalSource='';
+     for(const p of r.sensors){
+       const status=p?.Status??p?.status,key=p?.Key??p?.key;
+       const val=p?.Value??p?.value,timestamp=p?.ObservedAtUtc??p?.observedAtUtc;
+       const origin=p?.Source??p?.source,ms=Date.parse(timestamp);
+       if(status!=='LIVE'||typeof origin!=='string'||!origin||
+          !Number.isFinite(ms)||ms>Date.now()||Date.now()-ms>30000)continue;
+       if(key==='cpu.system.percent'&&range(val,0,100)!==null)
+          metric('cpu',val.toFixed(1)+'%','E05 · '+origin,val);
+       if(key==='gpu.percent'&&range(val,0,100)!==null)
+          metric('gpu',val.toFixed(1)+'%','E05 · '+origin,val);
+       if(key==='gpu.temperature.c'&&range(val,0,150)!==null)
+          metric('heat',val.toFixed(1)+'°C','E05 · '+origin);
+       if(key==='gpu.vram.used_bytes'&&range(val,0,Number.MAX_SAFE_INTEGER)!==null){used=val;usedSource=origin;}
+       if(key==='gpu.vram.total_bytes'&&range(val,1,Number.MAX_SAFE_INTEGER)!==null){total=val;totalSource=origin;}
+     }
+     if(total!==null&&used!==null&&used<=total&&usedSource===totalSource)
+       metric('vram',(used/1073741824).toFixed(1)+' GiB','E05 · '+usedSource,100*used/total);
+   }
+   // The original owner has no approved per-core performance producer yet.
+   // Never infer core readiness from a chat response or a planet animation.
+ }
+ native?.addEventListener?.('message',trusted);
+ function update(){
+   if(dead)return;
+   let s;try{s=snapshot();}catch(_){s=null;}
+   const now=view.performance?.now?.();
+   if(!s||!Number.isFinite(now))return;
+   if(Number.isSafeInteger(s.frames)&&s.frames>=0){
+     if(last&&now>last.time&&s.frames>=last.frames){
+       const fps=1000*(s.frames-last.frames)/(now-last.time);
+       if(range(fps,0,240)!==null)metric('render',fps.toFixed(1),'D02 · FRAME COUNTER');
+     }
+     last={frames:s.frames,time:now};
+   }
+   if(Number.isSafeInteger(s.particles)&&s.particles>=0)
+     metric('particles',s.particles,'D02 · RENDER');
+   const states=['idle','thinking','streaming','speaking','loading','training','paused','stopped','success','error','offline'];
+   if(typeof s.state==='string'&&states.includes(s.state)){
+     home.dataset.noxAiState=s.state;
+     metric('state',s.state.toUpperCase(),'D02 · ORIGINAL SCENE');
+   }
+ }
+ return Object.freeze({
+   update,
+   mode(value){wall.dataset.mode=value;home.dataset.noxReactorMode=value;update();},
+   destroy(){
+     if(dead)return;dead=true;native?.removeEventListener?.('message',trusted);
+     try{progressBar?.destroy?.();}catch(_){}
+     for(const g of gaugeMap.values())try{g.destroy?.();}catch(_){}
+     for(const b of badges)b.remove();
+     delete home.dataset.noxAiState;delete home.dataset.noxReactorMode;
+     wall.remove();
+   }
+ });
+}
+
+function mountNoxGraphicsDock(home,doc,onSelect,getSceneSnapshot,orbs){
  const entries=[
   ['MAX_WOW','MAX WOW','ПОЛНЫЙ','✦'],
   ['CINEMA','CINEMA','КИНО','◉'],
@@ -254,11 +415,13 @@ function mountNoxGraphicsDock(home,doc,onSelect,getSceneSnapshot){
  observatory.append(readout,spark);
  panel.append(worldTitle,summary,paletteRow,actions,observatory);
  dock.append(head,row,panel);home.append(dock);
+ const hud=mountFutureReactorHud(home,doc,orbs,panel,getSceneSnapshot);
  const palettes=new Map(),history=[];
  let active=null,sampleTimer=null,previous=null,closed=false;
  function stopSampling(){if(sampleTimer!==null){view.clearInterval(sampleTimer);sampleTimer=null;}previous=null;}
  function sample(){
    if(panel.hidden||doc.hidden||closed)return;
+   hud.update();
    let snapshot;
    try{snapshot=getSceneSnapshot();}catch(_){snapshot=null;}
    const now=view.performance.now();
@@ -321,6 +484,7 @@ function mountNoxGraphicsDock(home,doc,onSelect,getSceneSnapshot){
      home.dataset.noxPlanetWorld=selected.toLowerCase();
      dock.dataset.noxEffective=String(effective).toLowerCase();
      dock.dataset.noxSelected=selected.toLowerCase();
+     hud.mode(effective);
      for(const [id,button] of buttons){
        const selectedNow=id===selected;
        button.classList.toggle('is-selected',selectedNow);
@@ -343,7 +507,7 @@ function mountNoxGraphicsDock(home,doc,onSelect,getSceneSnapshot){
      }
    },
    destroy(){
-     if(closed)return;closed=true;stopSampling();
+     if(closed)return;closed=true;stopSampling();hud.destroy();
      doc.removeEventListener('keydown',onKey);
      delete home.dataset.noxPlanetWorld;
      delete home.dataset.noxPlanetPalette;

@@ -42,8 +42,12 @@ ORIGINAL_CHROME_COMPACT_BLOB = "8e3cffe7cb91564ae5817e55cb35e5fbb0feeb50"
 WOW_RUNTIME_BLOBS = {
     "runtime/loader.mjs": "9b4596a68525384a92ddc1c17af5d51d37cc0458",
     "runtime/stage.css": "e6fd8eaea8a38deb0095e6359010be7539a4a7bc",
-    "runtime/home-scene.mjs": "a1dab567213a42907f1debdb1dddcb757cb13136",
-    "runtime/home-guard.css": "045b3e1dff3dbdec2410cec95706c960eda0bf76",
+    "runtime/home-scene.mjs": "82249beb4357c93e692ac9fad07a449d9a83d034",
+    "runtime/home-guard.css": "2b3c2410f6696caaf28eaaa35b578bbcb608c70b",
+    "runtime/vendor/gauge.min.js": "0deb4ebdbf58b10bab9a4b270781556dffeb6387",
+    "runtime/vendor/SVG-GAUGE.LICENSE": "7abad7e4b79bea9c3a8f930f490f40f46898b17a",
+    "runtime/vendor/progressbar.min.js": "ff2f3013c663fddff02d51f5d59d576cd5ecb0ff",
+    "runtime/vendor/PROGRESSBAR.LICENSE": "a3993914ae37812b6307f099a75d5eb60c9cf87a",
 }
 
 REQUIRED_DONORS = frozenset({
@@ -269,7 +273,7 @@ def stage(root:Path, source:Path)->dict:
         '<link rel="stylesheet" href="creative/wow200/ui/selfbuilder-wow-workbench.css">'
         '<link rel="stylesheet" href="creative/wow200/ui/nox-r11-wow.css"><link rel="stylesheet" href="creative/wow200/proposals/P01/WOW-MAX10/p01-cinematic-menu.css">''<style id="nox-original-chrome-compact-v6">'+chrome_css+'</style></head>')
     new_home=new_home.replace('</body>',
-        '<script type="module" src="creative/wow200/runtime/home-scene.mjs"></script>'
+        '<script src="creative/wow200/runtime/vendor/gauge.min.js"></script><script src="creative/wow200/runtime/vendor/progressbar.min.js"></script><script type="module" src="creative/wow200/runtime/home-scene.mjs"></script>'
         '<script type="module" src="creative/wow200/ui/onehost-menu-bindings.mjs"></script></body>')
     copied=[];out=root.parent/"WOW200_STAGE_RECEIPT.json"
     if out.exists():raise ValueError("WOW200_RECEIPT_CONFLICT_HOLD")

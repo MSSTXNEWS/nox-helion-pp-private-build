@@ -55,6 +55,11 @@ class PlanetWorldsAndUplot(unittest.TestCase):
         self.assertIn("NOX QUALITY PLANET ATMOSPHERES V2", css)
         self.assertIn("nox-quality-world[hidden]", css)
         self.assertIn("NOX PLANETARY WORLDS V3 FLOW-SAFE", css)
+        self.assertIn("NOX SINGULARITY COMMAND V4", css)
+        self.assertIn("mountFutureReactorHud(", js)
+        stage=(ROOT/'integrations/wow200/stage_wow200.py').read_text(encoding='utf-8')
+        for name in ['gauge.min.js','SVG-GAUGE.LICENSE','progressbar.min.js','PROGRESSBAR.LICENSE']:
+            self.assertIn('runtime/vendor/'+name, stage)
         self.assertIn("nox-quality-planet__sphere", css)
         self.assertIn('data-nox-effective="reduced"', css)
         self.assertIn("prefers-reduced-motion:reduce", css)
