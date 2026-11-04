@@ -114,12 +114,12 @@ Add-Type -AssemblyName UIAutomationClient
 Add-Type -AssemblyName UIAutomationTypes
 $root=[System.Windows.Automation.AutomationElement]::FromHandle([IntPtr]__HWND__)
 if ($null -eq $root) { throw 'V6_FX_ORIGINAL_HWND_NOT_FOUND' }
-$filter=New-Object System.Windows.Automation.PropertyCondition(
+$filter=[System.Windows.Automation.PropertyCondition]::new(
  [System.Windows.Automation.AutomationElement]::ControlTypeProperty,
  [System.Windows.Automation.ControlType]::Button)
 function Get-OriginalFxButton {
  $controls=$root.FindAll([System.Windows.Automation.TreeScope]::Descendants,$filter)
- $matches=New-Object System.Collections.ArrayList
+ $foundControls=New-Object System.Collections.ArrayList
  foreach($c in $controls) {
   if (($c.Current.Name+'') -cmatch '^FX (BALANCED|MAX|ECO)
     parser = argparse.ArgumentParser()
@@ -191,11 +191,11 @@ function Get-OriginalFxButton {
 if __name__ == "__main__":
     raise SystemExit(main())
 ) {
-   [void]$matches.Add($c)
+   [void]$foundControls.Add($c)
   }
  }
- if ($matches.Count -ne 1) { throw 'V6_FX_UNIQUE_REAL_BUTTON_HOLD' }
- return $matches[0]
+ if ($foundControls.Count -ne 1) { throw 'V6_FX_UNIQUE_REAL_BUTTON_HOLD' }
+ return $foundControls[0]
 }
 $initial=(Get-OriginalFxButton).Current.Name+''
 if ($initial -cne 'FX BALANCED') { throw 'V6_FX_INITIAL_BALANCED_HOLD' }
