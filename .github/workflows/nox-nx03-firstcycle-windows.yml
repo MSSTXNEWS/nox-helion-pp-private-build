@@ -12,6 +12,7 @@ on:
       - tests/test_selfwrite_firstcycle_native.py
       - tests/test_nx03_model_firstcycle.py
       - tests/test_nx03_onehost_owner.py
+      - tests/selfbuilder/test_native_stop_failclosed.py
       - .github/workflows/nox-nx03-firstcycle-windows.yml
   workflow_dispatch:
 
@@ -42,4 +43,6 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'NX03_P02_TO_NATIVE_CYCLE_SOURCE_HOLD' }
           python -B -m unittest discover -s tests -p test_nx03_onehost_owner.py -v
           if ($LASTEXITCODE -ne 0) { throw 'NX03_ONEHOST_OWNER_WIRING_HOLD' }
+          python -B -m unittest discover -s tests/selfbuilder -p test_native_stop_failclosed.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'NX03_NATIVE_STOP_REGRESSION_HOLD' }
           Write-Host 'NX03_WINDOWS_MODEL_BRIDGE_AND_ONEHOST_CONTRACT_PASS_ONLY_NOT_INSTALLED_NOX'
