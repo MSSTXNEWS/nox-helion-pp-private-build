@@ -253,6 +253,24 @@ if(-not $closed){throw 'E07_CATALOG_QA_YES_STILL_VISIBLE_HOLD'}
                 "E07_CATALOG_QA_CONSENT_RECEIPT_HOLD")
     return value
 
+def classify_fresh_original_install_log(data: bytes) -> dict:
+    """Classify only bounded, newly appended REAL owner log rows.
+
+    Never infer success from a pre-existing server.py, arbitrary stdout or a
+    synthetic UI click. Expose no user paths, script output or stderr to E07.
+    """
+    e07.require(type(data) is bytes and len(data)<=200000,
+                "E07_FINAL_INSTALL_LOG_BOUNDS_HOLD")
+    stamp=rb"\[[0-9T:\.\+\-Z]{20,40}\] "
+    started=bool(re.search(rb"(?m)^"+stamp+rb"ACTION_START install\r?$",data))
+    failures=re.findall(rb"(?m)^"+stamp+rb"ACTION_FAIL install(?:\s|$)",data)
+    completed=re.findall(rb"(?m)^"+stamp+rb"ACTION_END install exit=([0-9]{1,3})(?:\s|$)",data)
+    e07.require(len(completed)<=1 and len(failures)<=1,
+                "E07_FINAL_INSTALL_DUPLICATE_OWNER_LOG_HOLD")
+    return {"started":started,
+            "owner_exit_code":int(completed[0]) if completed else None,
+            "owner_exception":bool(failures)}
+
 def _uia_script(hwnd: int, operation: str, *, png: Path|None=None) -> str:
     e07.require(type(hwnd) is int and hwnd>0,"E07_FINAL_BAD_HWND_HOLD")
     png_path=(str(png).replace("'","''") if png else "")
@@ -631,31 +649,43 @@ def run(hwnd: int, install: Path, local: Path, *, source_sha: str, setup_sha: st
     def install_check():
         app=local/"NOX_HELION_Integrator"/"app"
         server=app/"server.py"
-        # The original installed app can already own server.py. Neither its
-        # presence nor an OLD success log is evidence of this UI invocation.
+        # The approved original NoxActions.ps1: -Action install emits a real
+        # ACTION_START / ACTION_END exit=N sequence in the owner WPF shell.log.
+        # A stale file or untrusted stdout must never satisfy a new operation.
         before_server_sha=e07.sha256(server) if e07.clean_file(server) else None
         log=local/"NOX_HELION"/"P01"/"logs"/"shell.log"
-        before_log_size=log.stat().st_size if e07.clean_file(log) else 0
+        before_info=log.stat() if e07.clean_file(log) else None
+        before_log_size=before_info.st_size if before_info else 0
         invoke_primary(hwnd,"INSTALL")
-        deadline=time.monotonic()+120
-        fresh_owner_completion=False
+        started_at=time.monotonic()
+        deadline=started_at+120
+        owner={"started":False,"owner_exit_code":None,"owner_exception":False}
         while time.monotonic()<deadline:
             if e07.clean_file(log):
+                now=log.stat()
+                if before_info is not None:
+                    e07.require((now.st_dev,now.st_ino)==(before_info.st_dev,before_info.st_ino),
+                                "E07_FINAL_INSTALL_LOG_REPLACED_HOLD")
+                e07.require(before_log_size<=now.st_size<=before_log_size+200000,
+                            "E07_FINAL_INSTALL_LOG_REWOUND_OR_GROWN_HOLD")
                 with log.open("rb") as handle:
-                    size=handle.seek(0,os.SEEK_END)
-                    # A fresh same-action owner success must be APPENDED after
-                    # invocation. Truncation/rotation/oversize remain HOLD.
-                    if before_log_size<=size<=before_log_size+200000:
-                        handle.seek(before_log_size)
-                        fresh_owner_completion=(
-                            b"ACTION_END install exit=0" in handle.read(200000))
-            if fresh_owner_completion and e07.clean_file(server):
+                    handle.seek(before_log_size)
+                    owner=classify_fresh_original_install_log(handle.read(200000))
+            if owner["owner_exception"]:
+                raise e07.Hold("E07_FINAL_INSTALL_OWNER_EXCEPTION_HOLD")
+            if owner["owner_exit_code"] is not None:
+                if owner["owner_exit_code"]!=0:
+                    raise e07.Hold("E07_FINAL_INSTALL_OWNER_NONZERO_EXIT_HOLD")
                 break
+            if not owner["started"] and time.monotonic()-started_at>=12:
+                raise e07.Hold("E07_FINAL_INSTALL_OWNER_ACTION_NOT_STARTED_HOLD")
             time.sleep(.4)
-        e07.require(fresh_owner_completion,"E07_FINAL_INSTALL_FRESH_OWNER_EXIT_HOLD")
+        e07.require(owner["started"] and owner["owner_exit_code"]==0,
+                    "E07_FINAL_INSTALL_OWNER_TIMEOUT_HOLD")
         e07.require(e07.clean_file(server),"E07_FINAL_INSTALL_RESULT_HOLD")
         observed("INSTALL",{"server_sha256":e07.sha256(server),
                             "preexisting_server_sha256":before_server_sha,
+                            "fresh_original_owner_action":True,
                             "action_exit":0,
                             "scope":"ORIGINAL_PC_INSTALL_UI_TO_NOX_ACTIONS"})
 

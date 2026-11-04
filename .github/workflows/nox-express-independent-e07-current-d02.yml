@@ -11,6 +11,7 @@ on:
       - tests/e07/test_initial_home_physical_u21.py
       - tests/e07/test_final_truth_scope_u20.py
       - tests/e07/test_navigation_consent_cleanup_u25.py
+      - tests/e07/test_install_fresh_owner_log_u26.py
       - coordination/e07/probe_final_same_setup.py
       - coordination/e07/probe_91a6_real_visual_u17.py
       - coordination/e07/probe_installed_qwen.py
@@ -82,6 +83,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'E07_FUNCTION_TRUTH_REGRESSION_HOLD' }
           python -B -m unittest discover -s tests/e07 -p test_navigation_consent_cleanup_u25.py -v
           if ($LASTEXITCODE -ne 0) { throw 'E07_NAV_CATALOG_NEGATIVE_DISMISS_REGRESSION_HOLD' }
+          python -B -m unittest discover -s tests/e07 -p test_install_fresh_owner_log_u26.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'E07_INSTALL_FRESH_OWNER_PROVENANCE_REGRESSION_HOLD' }
           # Parse the actual generated native Windows PowerShell UIA script
           # BEFORE any huge artifact download or Ollama install.
           python -B -c "import sys,pathlib;sys.path.insert(0,'coordination/e07');import probe_final_same_setup as p;pathlib.Path('e07-visual-preflight.ps1').write_text(p._uia_script(12345,'VISUAL',png=pathlib.Path('e07-visual-preflight.png')),encoding='utf-8')"
