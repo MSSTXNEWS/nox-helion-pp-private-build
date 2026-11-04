@@ -65,6 +65,10 @@ class OriginalButtonRoutes(unittest.TestCase):
         self.assertIn('matches.length!==1', js)
         self.assertIn('!button.disabled', js)
         self.assertIn('original.click();', js)
+        self.assertIn("if(name==='MODELS')target.click();", js)
+        self.assertIn("фокус оригинального элемента не подтверждён · HOLD';\n     return;", js)
+        self.assertNotIn("if(name==='INSTALL')target.click();", js)
+        self.assertNotIn("if(name==='LEARN')target.click();", js)
         self.assertNotIn("window.chrome.webview.postMessage({action:", js)
         for name, selector in EXPECTED.items():
             self.assertIn(name + ":'" + selector + "'", js)

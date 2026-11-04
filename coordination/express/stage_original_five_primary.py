@@ -131,7 +131,12 @@ nav.addEventListener('click',event=>{
    target.focus({preventScroll:false});
    if(document.activeElement!==target){
      state.textContent=name+': фокус оригинального элемента не подтверждён · HOLD';
+     return;
    }
+   // MODELS is a read-only catalog. Forward this trusted user click to the
+   // existing native-backed control, never trigger a model pull or install.
+   // INSTALL and LEARN remain focus-only for explicit owner consent.
+   if(name==='MODELS')target.click();
    return;
  }
  // CHAT and SETTINGS reuse their original source-bound screen and system tile.
