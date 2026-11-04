@@ -211,12 +211,12 @@ jobs:
           python integrations/wow200/stage_wow200.py work/e06/staged/R11 integrations/wow200
           if ($LASTEXITCODE -ne 0) { throw 'SAME_R11_D02_STAGE_HOLD' }
           $receipt=Get-Content work/e06/staged/WOW200_STAGE_RECEIPT.json -Raw | ConvertFrom-Json
-          # Stage 86 exact entries: 56 donors + 2 active D02 copies + 8 MENU V2 + 9 P01 + 8 pinned runtime + 1 catalog + 2 HTML; native activation still NOT_RUN.
+          # Stage 88 exact entries: 56 donors + 2 active D02 copies + 10 MENU V2 + 9 P01 + 8 pinned runtime + 1 catalog + 2 HTML; native activation still NOT_RUN.
           $receiptPaths=@($receipt.files | ForEach-Object { [string]$_.path })
-          if ($receipt.count -ne 86 -or $receiptPaths.Count -ne 86 -or
-              @($receiptPaths | Sort-Object -Unique).Count -ne 86 -or
+          if ($receipt.count -ne 88 -or $receiptPaths.Count -ne 108 -or
+              @($receiptPaths | Sort-Object -Unique).Count -ne 108 -or
               @($receiptPaths | Where-Object { [string]::IsNullOrWhiteSpace($_) }).Count -ne 0 -or
-              @($receipt.menu_v2_atomic_source_sha256.PSObject.Properties).Count -ne 8 -or
+              @($receipt.menu_v2_atomic_source_sha256.PSObject.Properties).Count -ne 10 -or
               @($receipt.p01_owner_source_git_blobs.PSObject.Properties).Count -ne 9 -or $receipt.p01_owner_source_staged -ne $true -or $receipt.p01_owner_native_mount_activated -ne $false -or $receipt.p01_owner_native_route_e2e -cne 'NOT_RUN' -or $receipt.menu_v2_native_ui_staged -ne $true -or $receipt.active_d02_engine -cne 'OWNER1_PR144_PINNED' -or
               $receipt.legacy_d02_runtime_imported -ne $false -or $receipt.release_accepted -ne $false) {
             throw 'D02_STAGE_ACTIVE_IMPORT_RECEIPT_HOLD'
