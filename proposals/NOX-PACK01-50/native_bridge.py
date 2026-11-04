@@ -318,6 +318,10 @@ class ExistingP02Adapter:
         done = False
         for chunk in self.client.stream(model,conversation):
             require_current_scope()
+            # A terminal Ollama frame ends this exchange. Reject any further
+            # provider data rather than emitting/persisting unauthenticated tail.
+            if done:
+                raise HostHold("Ollama stream continued after terminal completion")
             if not isinstance(chunk,dict) or not isinstance(chunk.get("delta"),str):
                 raise HostHold("Invalid Ollama chunk")
             delta = chunk["delta"]
