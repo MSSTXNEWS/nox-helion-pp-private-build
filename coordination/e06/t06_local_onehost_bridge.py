@@ -31,6 +31,33 @@ def run(label,script,env,timeout):
         except subprocess.TimeoutExpired:
             code=124
     return {"step":label,"return_code":code,"elapsed_seconds":round(time.monotonic()-start,2),"log":log.name}
+def producer_failure_witness(log, exit_code):
+    """Expose only bounded failure categories from the real Windows producer log.
+
+    The original subprocess exit remains authoritative; text cannot grant PASS.
+    No full paths, arbitrary log lines or possibly secret values reach CI stdout.
+    """
+    result = {"producer_exit_code": exit_code,
+              "log_bytes": None, "diagnostic_tokens": [],
+              "exception_types": [], "release_accepted": False}
+    try:
+        info = log.lstat()
+        if not stat.S_ISREG(info.st_mode) or log.is_symlink():
+            return result
+        with log.open("rb") as stream:
+            stream.seek(0, os.SEEK_END)
+            size = stream.tell()
+            stream.seek(max(0, size - 65536))
+            tail = stream.read(65536).decode("utf-8", errors="replace")
+        result["log_bytes"] = size
+    except OSError:
+        return result
+    tokens = re.findall(r"(?<![A-Za-z0-9_])(?:T06|E06|P0[1-5]|NOX|SOURCE|PYINSTALLER)_[A-Z0-9_]{3,96}\b", tail)
+    exceptions = re.findall(r"\b(?:ModuleNotFoundError|ImportError|RuntimeError|FileNotFoundError|PermissionError|TimeoutExpired|AssertionError|SyntaxError|ValueError|OSError)\b", tail)
+    result["diagnostic_tokens"] = list(dict.fromkeys(tokens))[-10:]
+    result["exception_types"] = list(dict.fromkeys(exceptions))[-6:]
+    return result
+
 def installed_manifest_failure_evidence(lifecycle):
     """Surface bounded fail-closed owner verification category, never raw path or secrets."""
     if type(lifecycle) is not dict or type(lifecycle.get("verify")) is not dict:
@@ -236,6 +263,9 @@ def main():
         first=run("01_NATIVE_PYINSTALLER",PRODUCER,env,900)
         steps.append(first)
         if first["return_code"]!=0 or not PYRECEIPT.is_file():
+            print("T06_NATIVE_PRODUCER_FIRST_FAILURE "+json.dumps(
+                producer_failure_witness(OUT/first["log"],first["return_code"]),
+                sort_keys=True,separators=(",",":")),flush=True)
             raise RuntimeError("T06_LOCAL_NATIVE_PRODUCER_FAILED")
         py=json.loads(PYRECEIPT.read_text("utf-8"))
         executable=PYRECEIPT.with_name("NOX_HELION_PRIVATE_CANDIDATE.exe")
