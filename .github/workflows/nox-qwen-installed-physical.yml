@@ -5,6 +5,8 @@ on:
     paths:
       - coordination/e07/probe_installed_qwen.py
       - coordination/e07/probe_native_active_stop.py
+      - coordination/e07/probe_five_primary_action.py
+      - coordination/e07/independent_setup_e07.py
       - .github/workflows/nox-qwen-installed-physical.yml
   workflow_dispatch:
 permissions:
@@ -127,6 +129,17 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'NATIVE_ACTIVE_STOP_PROBE_SYNTAX_HOLD' }
           python -B coordination/e07/probe_native_active_stop.py --backend "$backend" --out work/qwen-installed/NATIVE_ACTIVE_STOP_RECEIPT.json
           if ($LASTEXITCODE -ne 0) { throw 'NATIVE_ACTIVE_STOP_PHYSICAL_HOLD' }
+      - name: Verify five real installed WPF UIA clicks on exact NOX Setup SHA
+        id: fiveuia
+        continue-on-error: true
+        timeout-minutes: 5
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          python -B -m py_compile coordination/e07/independent_setup_e07.py coordination/e07/probe_five_primary_action.py
+          if ($LASTEXITCODE -ne 0) { throw 'NOX_E07_FIVE_UIA_SOURCE_SYNTAX_HOLD' }
+          python -B coordination/e07/probe_five_primary_action.py --artifact-dir input/nox --source-sha eec879d78eef343a8bfc6a4653961bb951d1c208 --setup-sha 217cf34a3fb577f6bf20fcec2d10ebcdf4b0b616b54816bc0cdf4b78009050b0 --out work/qwen-installed/FIVE_UIA_CLICKS_RECEIPT.json
+          if ($LASTEXITCODE -ne 0) { throw 'NOX_E07_FIVE_UIA_CLICKS_HOLD' }
       - name: Preserve evidence without falsely promoting incomplete release
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -141,4 +154,5 @@ jobs:
         run: |
           if ('${{ steps.realprobe.outcome }}' -ne 'success') { throw 'NOX_REAL_QWEN_INSTALLED_HOLD' }
           if ('${{ steps.livestop.outcome }}' -ne 'success') { throw 'NOX_ACTIVE_STOP_NOT_ACCEPTED_HOLD' }
-          Write-Host 'REAL_QWEN_AND_ACTIVE_STOP_PROBES_PASSED; five UI clicks and independent E07 still unverified'
+          if ('${{ steps.fiveuia.outcome }}' -ne 'success') { throw 'NOX_E07_FIVE_UIA_NOT_ACCEPTED_HOLD' }
+          Write-Host 'REAL_QWEN_STOP_FIVE_UIA_PROBES_PASSED; full independent E07 still unverified'
