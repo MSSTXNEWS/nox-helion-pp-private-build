@@ -4,7 +4,7 @@ No HOME rewrite, no replacement of owner-approved D02 or core routes.
 Runs after stage_creative.py against a DISPOSABLE Windows R13 source tree.
 """
 from __future__ import annotations
-import hashlib, json, shutil, sys
+import hashlib, json, os, shutil, stat, sys
 from pathlib import Path
 
 D02 = {
@@ -149,6 +149,36 @@ def p01_owner_stage_plan(repo: Path, dest: Path) -> tuple[list, dict]:
         content[origin]=verified
     return plans, content
 
+
+def _restore_owned_html_only(path: Path, expected: bytes, original: bytes, owner: tuple[int, int]) -> bool:
+    """Rollback only the same regular owner inode with our exact staged bytes.
+
+    Never overwrite a replaced or foreign-modified HTML. In a contested
+    disposable stage, leave bytes in place and let the build HOLD.
+    """
+    try:
+        with path.open("r+b") as stream:
+            opened = os.fstat(stream.fileno())
+            current = path.lstat()
+            if (not stat.S_ISREG(opened.st_mode) or
+                    not stat.S_ISREG(current.st_mode) or
+                    current.st_nlink != 1 or
+                    path.is_symlink() or
+                    getattr(path, "is_junction", lambda: False)() or
+                    (opened.st_dev, opened.st_ino) != owner or
+                    (current.st_dev, current.st_ino) != owner or
+                    stream.read() != expected):
+                return False
+            stream.seek(0)
+            stream.write(original)
+            stream.truncate()
+            stream.flush()
+            os.fsync(stream.fileno())
+            return True
+    except OSError:
+        return False
+
+
 def stage(root:Path, source:Path)->dict:
     root=root.resolve();source=source.resolve()
     if not (root/"NOX.P01.Shell.csproj").is_file():raise ValueError("R13_SOURCE_ROOT_HOLD")
@@ -245,8 +275,19 @@ def stage(root:Path, source:Path)->dict:
     chrome_css=chrome_bytes.decode("utf-8", "strict")
     if "</style" in chrome_css.lower() or "\\x00" in chrome_css:
         raise ValueError("D02_ORIGINAL_CHROME_STYLE_HOLD")
-    old=html.read_text(encoding="utf-8-sig")
-    old_home=home_html.read_text(encoding="utf-8-sig")
+    # Capture original exact bytes and owner identity before any mutation.
+    html_original = html.read_bytes()
+    home_original = home_html.read_bytes()
+    owners = {}
+    for name, path in (("studio", html), ("home", home_html)):
+        info = path.lstat()
+        if (not stat.S_ISREG(info.st_mode) or info.st_nlink != 1 or
+                path.is_symlink() or
+                getattr(path, "is_junction", lambda: False)()):
+            raise ValueError("WOW_HTML_OWNER_PREIMAGE_HOLD")
+        owners[name] = (info.st_dev, info.st_ino)
+    old=html_original.decode("utf-8-sig")
+    old_home=home_original.decode("utf-8-sig")
     if old.count("</head>")!=1 or old.count("</body>")!=1 or "wow200/runtime/loader.mjs" in old:
         raise ValueError("STUDIO_HTML_PREIMAGE_DRIFT")
     # Actual D02 renderer only on the original central HELION+8 Core DOM.
@@ -289,6 +330,10 @@ def stage(root:Path, source:Path)->dict:
                 shutil.copyfile(origin,target)
             copied.append({"path":str(target.relative_to(root)).replace("\\","/"),
                            "sha256":digest(target),"bytes":target.stat().st_size})
+        # Source-lock the disposable HTML before the first write.
+        if (html.read_bytes() != html_original or
+                home_html.read_bytes() != home_original):
+            raise ValueError("WOW_HTML_PREIMAGE_CHANGED_HOLD")
         pre=digest(html);old_home_pre=digest(home_html)
         html.write_text(new,encoding="utf-8")
         copied.append({"path":"Assets/creative/studio.html","pre_sha256":pre,"sha256":digest(html)})
@@ -319,9 +364,11 @@ def stage(root:Path, source:Path)->dict:
         out.write_text(json.dumps(receipt,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
         return receipt
     except BaseException:
-        html.write_text(old,encoding="utf-8")
-        home_html.write_text(old_home,encoding="utf-8")
-        if dest.exists():shutil.rmtree(dest)
+        # Restore only verified own HTML; foreign files and edits survive.
+        _restore_owned_html_only(html, new.encode("utf-8"), html_original, owners["studio"])
+        _restore_owned_html_only(home_html, new_home.encode("utf-8"), home_original, owners["home"])
+        # Never recurse-delete dest. Another owner may have placed unknown
+        # bytes or a reparse point there while the disposable stage ran.
         raise
 
 if __name__=="__main__":

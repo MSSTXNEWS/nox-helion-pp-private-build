@@ -1,4 +1,5 @@
 import json, tempfile, unittest
+from unittest.mock import patch
 from pathlib import Path
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -150,6 +151,47 @@ class WowStageTests(unittest.TestCase):
   self.assertIn('wow200/proposals/NOX-WOW51-100/wow51-100.css',html)
   self.assertTrue((self.stage.parent/'WOW200_STAGE_RECEIPT.json').is_file())
   with self.assertRaisesRegex(ValueError,'ALREADY_INSTALLED'):stage(self.stage,self.src)
+
+ def test_failure_rolls_back_owned_html_preserving_foreign_stage_file(self):
+  studio=self.stage/'Assets/creative/studio.html'
+  home=self.stage/'Assets/index.html'
+  original_studio,original_home=studio.read_bytes(),home.read_bytes()
+  foreign=self.stage/'Assets/creative/wow200/unmanaged-user-file.txt'
+  real_write=Path.write_text
+  triggered=[False]
+  def fail_home(path,data,*args,**kwargs):
+   if path==home and not triggered[0]:
+    triggered[0]=True
+    foreign.write_bytes(b'FOREIGN BYTES MUST SURVIVE')
+    raise OSError('INJECTED_AFTER_STUDIO_STAGE_HOLD')
+   return real_write(path,data,*args,**kwargs)
+  with patch.object(Path,'write_text',new=fail_home):
+   with self.assertRaisesRegex(OSError,'INJECTED_AFTER_STUDIO_STAGE_HOLD'):
+    stage(self.stage,self.src)
+  self.assertTrue(triggered[0])
+  self.assertEqual(studio.read_bytes(),original_studio)
+  self.assertEqual(home.read_bytes(),original_home)
+  self.assertEqual(foreign.read_bytes(),b'FOREIGN BYTES MUST SURVIVE')
+
+ def test_failure_preserves_concurrent_edit_to_original_studio(self):
+  studio=self.stage/'Assets/creative/studio.html'
+  home=self.stage/'Assets/index.html'
+  original_home=home.read_bytes()
+  real_write=Path.write_text
+  triggered=[False]
+  def foreign_edit(path,data,*args,**kwargs):
+   if path==home and not triggered[0]:
+    triggered[0]=True
+    studio.write_bytes(b'FOREIGN STUDIO EDIT MUST SURVIVE')
+    raise OSError('INJECTED_FOREIGN_STUDIO_RACE_HOLD')
+   return real_write(path,data,*args,**kwargs)
+  with patch.object(Path,'write_text',new=foreign_edit):
+   with self.assertRaisesRegex(OSError,'INJECTED_FOREIGN_STUDIO_RACE_HOLD'):
+    stage(self.stage,self.src)
+  self.assertTrue(triggered[0])
+  self.assertEqual(studio.read_bytes(),b'FOREIGN STUDIO EDIT MUST SURVIVE')
+  self.assertEqual(home.read_bytes(),original_home)
+
  def test_p01_menu10_source_drift_rejected_before_all_staging(self):
   file=self.root/'proposals/P01/WOW-MAX10/mount-p01.mjs'
   file.write_bytes(file.read_bytes()+b'// unapproved change\n')
