@@ -45,6 +45,7 @@ jobs:
           python -B -m py_compile coordination/e07/independent_setup_e07.py
           if ($LASTEXITCODE -ne 0) { throw 'E07_PYTHON_SOURCE_SYNTAX_HOLD' }
           python -B -m unittest discover -s tests/e07 -p test_independent_setup_e07.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'E07_BASE_REGRESSION_HOLD' }
           python -B -m unittest discover -s tests/e07 -p test_e07_original_frozen_u06.py -v
           if ($LASTEXITCODE -ne 0) { throw 'E07_SOURCE_REGRESSION_HOLD' }
           python -B coordination/e07/independent_setup_e07.py --artifact-dir input-frozen-e06 --artifact-kind original --out work/e07-independent/E07_CANDIDATE_RECEIPT.json
