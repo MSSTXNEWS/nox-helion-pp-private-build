@@ -85,8 +85,36 @@ nav.addEventListener('click',event=>{
      typeof window.chrome.webview.postMessage!=='function')){
    state.textContent='MODELS: native WebView2 недоступен · HOLD';return;
  }
- // A SOURCE-LOCKED original button already has the real event listener and
- // native IPC wrapper (SID, consent, request identity). Never forge a receipt.
+ // Main actions navigate to SOURCE-LOCKED real controls, never run
+ // install, model downloads or training merely because their top-level
+ // navigation button was clicked. The user still chooses the original action
+ // inside its own panel, under existing native ACL and consent.
+ const destinations={
+   INSTALL:['home','button#install-app'],
+   MODELS:['control','button#model-center'],
+   LEARN:['control','button#training-start']
+ };
+ if(Object.prototype.hasOwnProperty.call(destinations,name)){
+   const [screen,selector]=destinations[name];
+   const navControl=document.querySelector('.nav button[data-screen="'+screen+'"]');
+   const matches=document.querySelectorAll(selector);
+   if(!navControl||navControl.disabled||matches.length!==1||
+      !matches[0].isConnected||matches[0].disabled){
+     state.textContent=name+': исходный элемент недоступен · HOLD';return;
+   }
+   navControl.click(); // Reuse original showScreen/navigation, not a second UI.
+   const target=matches[0];
+   if(target.getClientRects().length===0){
+     state.textContent=name+': целевой элемент не виден · HOLD';return;
+   }
+   target.focus({preventScroll:false});
+   if(document.activeElement!==target){
+     state.textContent=name+': фокус оригинального элемента не подтверждён · HOLD';
+   }
+   return;
+ }
+ // CHAT and SETTINGS reuse their original source-bound screen and system tile.
+ // A clicked top-level action never fabricates a model reply or install ACK.
  const original=findOriginalControl(name)||findOriginalScreen(name);
  if(!original){state.textContent=name+': нет подтверждённого исходного экрана · HOLD';return;}
  original.click();
