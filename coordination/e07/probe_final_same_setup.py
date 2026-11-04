@@ -111,7 +111,7 @@ function OwnerConsent {
    }
   }catch{}
  }
- return ,$found
+ return $found
 }
 $dialogs=@(OwnerConsent)
 if($dialogs.Count -gt 1){throw 'E07_NAV_DIALOG_MULTIPLE_OWNER_HOLD'}
