@@ -117,6 +117,38 @@ class IndependentE07(unittest.TestCase):
             (root/'payload.sha256.json').write_text(json.dumps(manifest))
             _,files=MOD.manifest_owner(root)
             self.assertEqual(files,(root/'entry.exe',))
+
+    def test_manifest_rejects_same_bytes_replacement_between_resolve_and_open(self):
+        # Real temporary files: the previous pathname-only SHA loop accepted
+        # this same-byte replacement without binding its inode/ctime.
+        import os
+        with tempfile.TemporaryDirectory() as t:
+            root = Path(t)
+            (root / 'nox-p01-owned.txt').write_text('NOXHELION.P01 V16\\n')
+            payload = root / 'entry.exe'
+            original = b'owned-file-original-bytes'
+            payload.write_bytes(original)
+            manifest = {'schema':'NOX_P01_PAYLOAD_SHA256_V1',
+                        'entrypoint':'NOX.P01.Shell.exe',
+                        'files':[{'path':'entry.exe','bytes':len(original),
+                                  'sha256':hashlib.sha256(original).hexdigest()}]}
+            (root/'payload.sha256.json').write_text(json.dumps(manifest))
+            real_open = MOD.os.open
+            did_swap = []
+            def replace_on_descriptor_open(path, flags, *args, **kwargs):
+                if Path(path) == payload and not did_swap:
+                    substitute = root/'same-bytes-other-inode.tmp'
+                    substitute.write_bytes(original)
+                    os.replace(substitute, payload)
+                    did_swap.append(True)
+                return real_open(path, flags, *args, **kwargs)
+            with patch.object(MOD.os, 'open', side_effect=replace_on_descriptor_open):
+                with self.assertRaisesRegex(MOD.Hold,
+                                            'E07_INSTALLED_FILE_IDENTITY_HOLD'):
+                    MOD.manifest_owner(root)
+            self.assertEqual(did_swap, [True])
+            self.assertEqual(payload.read_bytes(), original)
+
     def test_manifest_detects_mutated_file(self):
         with tempfile.TemporaryDirectory() as t:
             root=Path(t)

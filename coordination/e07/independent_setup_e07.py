@@ -13,6 +13,7 @@ from ctypes import wintypes
 import hashlib
 import json
 import os
+import stat
 from pathlib import Path
 import re
 import struct
@@ -55,6 +56,48 @@ def clean_file(path: Path) -> bool:
 def clean_dir(path: Path) -> bool:
     return path.is_dir() and not path.is_symlink() and not getattr(path, "is_junction", lambda: False)()
 
+
+
+def installed_file_sha_locked(path: Path, root: Path, expected_size: int, expected_digest: str) -> str:
+    """Bind an installed owned-file SHA to one regular descriptor and the same path identity.
+
+    Do not trust a pathname hash after a separate stat/resolve: a same-byte file
+    replacement between the lookup and descriptor opening would pass that hash.
+    """
+    def identity(info):
+        return (info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns, info.st_ctime_ns)
+    def allowed_path():
+        return (path.is_file() and not path.is_symlink() and
+                not getattr(path, "is_junction", lambda: False)() and
+                path.resolve(strict=True).is_relative_to(root) and
+                all(not parent.is_symlink() and
+                    not getattr(parent, "is_junction", lambda: False)()
+                    for parent in path.parents if parent != root and parent.is_relative_to(root)))
+    try:
+        if not allowed_path():
+            raise Hold("E07_INSTALLED_FILE_SHA_HOLD")
+        before = path.lstat()
+        if not stat.S_ISREG(before.st_mode) or before.st_size != expected_size:
+            raise Hold("E07_INSTALLED_FILE_SHA_HOLD")
+        flags = os.O_RDONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0)
+        fd = os.open(path, flags)
+        try:
+            opened = os.fstat(fd)
+            if not stat.S_ISREG(opened.st_mode) or identity(before) != identity(opened):
+                raise Hold("E07_INSTALLED_FILE_IDENTITY_HOLD")
+            digest = hashlib.sha256()
+            while block := os.read(fd, 1048576):
+                digest.update(block)
+            if (identity(opened) != identity(os.fstat(fd)) or
+                identity(opened) != identity(path.lstat()) or not allowed_path()):
+                raise Hold("E07_INSTALLED_FILE_IDENTITY_HOLD")
+            if digest.hexdigest() != expected_digest:
+                raise Hold("E07_INSTALLED_FILE_SHA_HOLD")
+            return digest.hexdigest()
+        finally:
+            os.close(fd)
+    except OSError:
+        raise Hold("E07_INSTALLED_FILE_IDENTITY_HOLD") from None
 
 def run(args: list[str], *, limit: int) -> int:
     result = subprocess.run(args, check=False, timeout=limit,
@@ -192,7 +235,7 @@ def manifest_owner(install: Path) -> tuple[dict, tuple[Path, ...]]:
                     for parent in (path, *path.parents) if parent != root_resolved) and
                 clean_file(path) and path.stat().st_size == entry["bytes"] and
                 path.resolve(strict=True).is_relative_to(root_resolved) and
-                sha256(path) == entry["sha256"], "E07_INSTALLED_FILE_SHA_HOLD")
+                installed_file_sha_locked(path, root_resolved, entry["bytes"], entry["sha256"]) == entry["sha256"], "E07_INSTALLED_FILE_SHA_HOLD")
         files.append(path)
     return m, tuple(files)
 
