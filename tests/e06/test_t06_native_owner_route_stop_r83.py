@@ -66,5 +66,21 @@ class OriginalNativeOwnerMenuStopR83(unittest.TestCase):
         self.assertIn('T06_CANONICAL_OWNER_STAGING_PINS_DIVERGED', self.compiler)
 
 
+    def test_menu_native_bindings_require_real_owner_result(self):
+        body = self.owner.split('if (route == "menu.binding") {', 1)[1].split(
+            'if (route == "menu.dispatch") {', 1)[0]
+        self.assertNotIn('status = "MENU_BINDING_ACK"', body)
+        self.assertIn('MENU_BUTTON_TARGET_REQUIRED_HOLD', body)
+        self.assertIn('name == "model" ? "models.catalog" : "chat.commands"', body)
+        self.assertIn('action = "selfbuilder.worker.status"', body)
+        self.assertIn('NativeP02Acl(ownerSid, ownerRoute)', body)
+        self.assertIn('await ConfirmP02NativeAsync(ownerRoute, ownerPayload, cancel)', body)
+        self.assertIn('await DispatchNativeOwnerAsync(ownerRoute, ownerPayload, cancel)', body)
+        self.assertIn('!ownerResult.Accepted || !string.IsNullOrEmpty(ownerResult.ErrorCode)', body)
+        self.assertIn('ownerResult.Result is not JsonElement nativeResult', body)
+        self.assertIn('MENU_NATIVE_OWNER_RESULT', body)
+        self.assertIn('!nativeStop.Accepted || !string.IsNullOrEmpty(nativeStop.ErrorCode)', body)
+
+
 if __name__ == "__main__":
     unittest.main()

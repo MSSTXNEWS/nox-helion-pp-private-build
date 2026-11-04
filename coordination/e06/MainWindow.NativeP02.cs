@@ -211,14 +211,49 @@ public partial class MainWindow
                     return new NativePipeResult("", false, null, "MENU_STOP_ACL_HOLD");
                 var nativeStop = await DispatchNativeOwnerAsync(
                     "chat.stop", JsonSerializer.SerializeToElement(new { }), cancel);
-                if (!nativeStop.Accepted)
+                if (!nativeStop.Accepted || !string.IsNullOrEmpty(nativeStop.ErrorCode))
                     return new NativePipeResult("", false, null,
                         nativeStop.ErrorCode ?? "MENU_STOP_NATIVE_HOLD");
                 return new NativePipeResult("", true,
                     JsonSerializer.SerializeToElement(new { status = "MENU_STOP_REQUESTED", action = name }), null);
             }
+            // A graphical binding is not an owner-executed operation. An
+            // unspecified button cannot prove a native action; fail closed.
+            if (name == "button")
+                return new NativePipeResult("", false, null, "MENU_BUTTON_TARGET_REQUIRED_HOLD");
+            // Reuse the original P03 model catalog / P02 worker status only.
+            // No independent menu backend, browser authority or privileged action.
+            var ownerRoute = name == "model" ? "models.catalog" : "chat.commands";
+            var ownerPayload = name == "model"
+                ? JsonSerializer.SerializeToElement(new { })
+                : JsonSerializer.SerializeToElement(new { action = "selfbuilder.worker.status" });
+            var ownerSid = WindowsIdentity.GetCurrent().User?.Value;
+            if (string.IsNullOrEmpty(ownerSid) || !NativeP02Acl(ownerSid, ownerRoute))
+                return new NativePipeResult("", false, null, "MENU_OWNER_ROUTE_ACL_HOLD");
+            // This explicit owner operation requires its own fresh WPF consent;
+            // consent to menu.binding alone is not authority for chat.commands.
+            if (cancel.IsCancellationRequested ||
+                !await ConfirmP02NativeAsync(ownerRoute, ownerPayload, cancel))
+                return new NativePipeResult("", false, null, "MENU_OWNER_ACTION_CONSENT_HOLD");
+            if (cancel.IsCancellationRequested || !NativeP02Acl(ownerSid, ownerRoute) ||
+                !ReferenceEquals(_nativeP02Bridge, bridge) || bridge.BrowserExternalActive ||
+                !ReferenceEquals(_nativeP02Core, core))
+                return new NativePipeResult("", false, null, "MENU_OWNER_REVOKED_HOLD");
+            var ownerResult = await DispatchNativeOwnerAsync(ownerRoute, ownerPayload, cancel);
+            if (!ownerResult.Accepted || !string.IsNullOrEmpty(ownerResult.ErrorCode) ||
+                ownerResult.Result is not JsonElement nativeResult ||
+                nativeResult.ValueKind is JsonValueKind.Undefined or JsonValueKind.Null)
+                return new NativePipeResult("", false, null,
+                    ownerResult.ErrorCode ?? "MENU_OWNER_OPERATION_HOLD");
+            if (cancel.IsCancellationRequested || !NativeP02Acl(ownerSid, ownerRoute) ||
+                !ReferenceEquals(_nativeP02Bridge, bridge) || bridge.BrowserExternalActive ||
+                !ReferenceEquals(_nativeP02Core, core))
+                return new NativePipeResult("", false, null, "MENU_OWNER_REVOKED_HOLD");
             return new NativePipeResult("", true,
-                JsonSerializer.SerializeToElement(new { status = "MENU_BINDING_ACK", action = name }), null);
+                JsonSerializer.SerializeToElement(new {
+                    status = "MENU_NATIVE_OWNER_RESULT", action = name,
+                    route = ownerRoute, owner = nativeResult
+                }), null);
         }
         if (route == "menu.dispatch") {
             // B7: MENU10 route-dispatch. Eight tiles only, native ACL, no D02/HOME change.
