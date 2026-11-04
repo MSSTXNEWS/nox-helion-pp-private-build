@@ -1,0 +1,58 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { test } from 'node:test';
+
+// Extract the shipped UI function, not a duplicated synthetic selection algorithm.
+const source=readFileSync(new URL('../../ui/menu-pages/menu.js', import.meta.url),'utf8');
+const fragment=source.slice(source.indexOf('function liveChat(label){'),source.indexOf('\nfunction openRoute(id){'));
+test('model selection is serialized and requires its own exact native ACK', async()=>{
+ assert.ok(fragment.startsWith('function liveChat(label){'));
+ class Elem{
+  constructor(tag,cls,label){this.tag=tag;this.className=cls||'';this.textContent=label??'';this.children=[];this.attrs={};this.isConnected=true;this.listeners={};this.disabled=false;this.value='';this.scrollHeight=0;}
+  append(...x){this.children.push(...x);}
+  replaceChildren(...x){this.children=x;}
+  setAttribute(k,v){this.attrs[k]=v;}
+  addEventListener(k,fn){this.listeners[k]=fn;}
+ }
+ const nodes=[];
+ const el=(tag,cls,label)=>{const x=new Elem(tag,cls,label);nodes.push(x);return x;};
+ const button=(label,cls,click)=>{const x=el('button',cls,label);x.onclick=click;return x;};
+ const calls=[],pending=[];
+ const client={request:(route,payload)=>{
+  assert.equal(route,'chat.model');
+  if(!payload.model)return Promise.resolve({state:'COMPLETED',result:{models:['qwen:0.6b','mistral:7b'],selectedModel:'qwen:0.6b'}});
+  calls.push(payload.model);return new Promise(resolve=>pending.push(resolve));
+ }};
+ const create=new Function('el','button','client','setDetails','CORE_IDS','PERSONAS','chatInFlight','chatStopPending','selectedCore','selectedPersona',fragment+'\nreturn liveChat;');
+ const run=create(el,button,client,()=>{},['CORE','ATLAS'],['KV','AM'],false,false,null,null);
+ run({world:'pc',name:'Чат'});
+ await Promise.resolve();await Promise.resolve();
+ const rows=nodes.filter(x=>x.className==='nox-chat-chips');
+ const models=()=>rows[2].children;
+ const send=nodes.find(x=>x.className==='nox-chat-send');
+ assert.equal(models().length,2);
+ assert.equal(send.disabled,false);
+ const first=models()[0].onclick();
+ assert.equal(calls.length,1);
+ assert.equal(send.disabled,true);
+ assert.ok(models().every(x=>x.disabled));
+ await models()[1].onclick();
+ assert.equal(calls.length,1,'competing selection may not reach the native owner');
+ pending.shift()({state:'COMPLETED',result:{selectedModel:'qwen:0.6b'}});
+ await first;
+ assert.equal(send.disabled,false);
+ const wrong=models()[1].onclick();
+ pending.shift()({state:'COMPLETED',result:{selectedModel:'wrong-tag'}});
+ await wrong;
+ assert.equal(send.disabled,true,'mismatched ACK must not enable sending');
+ assert.ok(models().every(x=>x.attrs['aria-pressed']!=='true'));
+ const denied=models()[0].onclick();
+ pending.shift()({state:'HOLD',errorCode:'DENIED'});
+ await denied;
+ assert.equal(send.disabled,true,'HOLD must not reuse previous model');
+ const recovered=models()[1].onclick();
+ pending.shift()({state:'COMPLETED',result:{selectedModel:'mistral:7b'}});
+ await recovered;
+ assert.equal(send.disabled,false);
+ assert.equal(models().filter(x=>x.attrs['aria-pressed']==='true').length,1);
+});
