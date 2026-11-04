@@ -117,10 +117,13 @@ class FrozenCoverage(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "FROZEN_DATA_MISSING"):
             MOD.verify_archive_contents(reader, plan, rows)
         reader.toc["nox_selfbuilder/catalog.json"] = (0, len(raw), len(raw), 0, "b")
-        with self.assertRaisesRegex(RuntimeError, "FROZEN_DATA_MISSING"):
-            MOD.verify_archive_contents(
-                reader, plan, [{"runtime_path": "nox_selfbuilder/catalog.json",
-                                "sha256": hashlib.sha256(raw).hexdigest()}])
+        raw_data = [{"runtime_path": "nox_selfbuilder/catalog.json",
+                     "sha256": hashlib.sha256(raw).hexdigest()}]
+        self.assertEqual(MOD.verify_archive_contents(reader, plan, raw_data)
+                         ["data_files_checked"], 1)
+        raw_data[0]["sha256"] = "0" * 64
+        with self.assertRaisesRegex(RuntimeError, "FROZEN_DATA_SHA_HOLD"):
+            MOD.verify_archive_contents(reader, plan, raw_data)
 
     def test_success_is_coverage_not_release_acceptance(self):
         plan, data, reader = self.fixture()
