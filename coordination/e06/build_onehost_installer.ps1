@@ -888,45 +888,52 @@ if ($verifierBeforeSha -ceq $verifierAfterSha -or
 }
 Write-Host "P01_PS51_DOTNET_SHA256_STAGED before=$verifierBeforeSha after=$verifierAfterSha ORIGINAL_SHA_CHECK_RETAINED"
 
-# U04: NSIS child PS5.1 also invokes Get-FileHash in ORIGINAL remover.
-# Modify only the strict-SHA original disposable R11 remover, never donor.
+# U09: The immutable R11 remover has a DIFFERENT lexical shape from the
+# reviewed C09 remover; never guess a regex replacement for archived script.
+# Reuse the already SHA/blob-pinned NX03 reviewed C09 TWO-PHASE NO-LOSS stage
+# used by t06_package_original_onehost.py, in disposable R11 only.
 $rmPath=Join-Path $installer 'Remove-InstalledPayload.ps1'
-Assert-E06PlainPathAncestors -Candidate $rmPath -Scope 'P01_REMOVER_PS51_STAGE'
-$rmInfo=Get-Item -LiteralPath $rmPath -Force -ErrorAction Stop
-if ($rmInfo.PSIsContainer -or
-    ($rmInfo.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0 -or
-    $rmInfo.Length -ne 4013 -or
-    (Get-FileHash -LiteralPath $rmPath -Algorithm SHA256).Hash.ToLowerInvariant() -cne
-    '6853f3d4a32eb5946c3c68d22b0d61e3a402b729ebda225cd3f6b8b154b1ec55') {
-  throw 'P01_REMOVER_PS51_PREIMAGE_HOLD'
+$rmReviewed=Join-Path $repoRoot 'stage/proposals/P01/C09/Installer/Remove-InstalledPayload.ps1'
+$rmStageHelper=Join-Path $repoRoot 'coordination/e06/nx03_reviewed_uninstall_stage.py'
+foreach ($candidate in @($rmPath,$rmReviewed,$rmStageHelper)) {
+  Assert-E06PlainPathAncestors -Candidate $candidate -Scope 'P01_C09_REMOVER_STAGE'
+  $item=Get-Item -LiteralPath $candidate -Force -ErrorAction Stop
+  if ($item.PSIsContainer -or ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+    throw 'P01_C09_REMOVER_STAGE_UNSAFE_PATH_HOLD'
+  }
 }
-$rmBefore=[IO.File]::ReadAllText($rmPath)
-$rmHeader='$ErrorActionPreference = ''Stop'''
-$rmHashRx='(?m)^([ \t]*\$actual[ \t]*=[ \t]*)\(Get-FileHash[ \t]+-LiteralPath[ \t]+(\$[A-Za-z][A-Za-z0-9_.]*)[ \t]+-Algorithm[ \t]+SHA256\)\.Hash\.ToLowerInvariant\(\)[ \t]*$'
-$rmHashMatches=[regex]::Matches($rmBefore,$rmHashRx)
-if ($rmHashMatches.Count -ne 1 -or
-    ([regex]::Matches($rmBefore,[regex]::Escape($rmHeader))).Count -ne 1 -or
-    $rmBefore.Contains('Get-P01VerifiedSha256')) {
-  throw 'P01_REMOVER_PS51_HASH_ANCHOR_HOLD'
+$rmReviewedBlob=((& $gitTool.Source -C $repoRoot hash-object -- $rmReviewed) | Out-String).Trim().ToLowerInvariant()
+$rmHelperBlob=((& $gitTool.Source -C $repoRoot hash-object -- $rmStageHelper) | Out-String).Trim().ToLowerInvariant()
+if ($LASTEXITCODE -ne 0 -or
+    $rmReviewedBlob -cne 'fef0f6c5dd979cfa7c148169c18f278e7e72685d' -or
+    $rmHelperBlob -cne '19495d977cf06fb4b9e0a2baa5c953cb2df6f32a') {
+  throw 'P01_C09_REMOVER_REVIEWED_BLOB_HOLD'
 }
-$rmMatch=$rmHashMatches[0]
-$rmNext=$rmBefore.Substring(0,$rmMatch.Index)+$rmMatch.Groups[1].Value+
-  '(Get-P01VerifiedSha256 '+$rmMatch.Groups[2].Value+')'+
-  $rmBefore.Substring($rmMatch.Index+$rmMatch.Length)
-$rmNext=$rmNext.Replace($rmHeader,$rmHeader+$nl+$hashHelper+$nl)
-if ($rmNext -ceq $rmBefore -or
-    ([regex]::Matches($rmNext,'Get-P01VerifiedSha256')).Count -ne 2 -or
-    $rmNext.Contains('(Get-FileHash -LiteralPath')) {
-  throw 'P01_REMOVER_PS51_TRANSFORM_HOLD'
+$rmStageCode=@'
+import json
+import sys
+from pathlib import Path
+sys.path.insert(0,sys.argv[1])
+from nx03_reviewed_uninstall_stage import stage_reviewed_remove
+print(json.dumps(stage_reviewed_remove(Path(sys.argv[2]),Path(sys.argv[3])),sort_keys=True))
+'@
+$rmStagePython=Get-Command python.exe -ErrorAction SilentlyContinue | Select-Object -First 1
+if (!$rmStagePython) { throw 'P01_C09_REMOVER_PYTHON_TOOLCHAIN_REQUIRED' }
+$rmOutput=(& $rmStagePython.Source -B -c $rmStageCode $PSScriptRoot $rmPath $rmReviewed 2>&1 | Out-String).Trim()
+if ($LASTEXITCODE -ne 0) { throw 'P01_C09_REMOVER_REVIEWED_STAGE_HOLD' }
+try { $rmProof=$rmOutput | ConvertFrom-Json -ErrorAction Stop }
+catch { throw 'P01_C09_REMOVER_RECEIPT_JSON_HOLD' }
+$rmReadback=(Get-FileHash -LiteralPath $rmPath -Algorithm SHA256).Hash.ToLowerInvariant()
+if ($rmProof.changed -ne $true -or
+    $rmProof.original_donor_changed -ne $false -or
+    $rmProof.original_r11_sha256 -cne '6853f3d4a32eb5946c3c68d22b0d61e3a402b729ebda225cd3f6b8b154b1ec55' -or
+    $rmProof.reviewed_git_blob -cne $rmReviewedBlob -or
+    $rmProof.staged_sha256 -cne $rmReadback -or
+    $rmProof.release_accepted -ne $false -or
+    $rmProof.independent_e07 -cne 'NOT_RUN') {
+  throw 'P01_C09_REMOVER_RECEIPT_READBACK_HOLD'
 }
-[IO.File]::WriteAllText($rmPath,$rmNext,(New-Object System.Text.UTF8Encoding($false)))
-$rmAfter=Get-Item -LiteralPath $rmPath -Force -ErrorAction Stop
-if ($rmAfter.PSIsContainer -or
-    ($rmAfter.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0 -or
-    [IO.File]::ReadAllText($rmPath) -cne $rmNext) {
-  throw 'P01_REMOVER_PS51_READBACK_HOLD'
-}
-Write-Host 'P01_PS51_UNINSTALL_DOTNET_SHA256_STAGED ORIGINAL_NOLOSS_RETAINED'
+Write-Host "NX03_C09_REVIEWED_REMOVE_STAGE_PASS original=$($rmProof.original_r11_sha256) stage=$rmReadback"
 
 & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File (Join-Path $installer 'Verify-Payload.ps1') -Root $payload -Manifest $manifestPath
 if ($LASTEXITCODE -ne 0) { throw 'ORIGINAL_NSIS_PAYLOAD_SHA_GATE_HOLD' }
