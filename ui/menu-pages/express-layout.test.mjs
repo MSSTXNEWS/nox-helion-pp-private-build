@@ -51,6 +51,7 @@ test('priority routes owner-selected native scope and truthful S03 ACK',()=>{
 test('LIVE chat source still retains model selection, streaming, STOP and terminal receipt',()=>{
  const src=readFileSync(new URL('./menu.js',import.meta.url),'utf8');
  for(const token of ["function liveChat(","isNativeChatTerminal", "helion.chat", "chat.stop", "chat.model", "chatInFlight", "STREAMING"])assert.ok(src.includes(token),token);
- assert.match(src,/const chooseCore=v=>\{core=v;selectedCore=/);
- assert.match(src,/const choosePersona=v=>\{persona=v;selectedPersona=/);
+ assert.match(src,/const chooseCore=v=>\{\s*const changed=core!==v;core=v;selectedCore=/);
+ assert.match(src,/const choosePersona=v=>\{\s*const changed=persona!==v;persona=v;\s*selectedPersona=/);
+ assert.match(src,/if\(changed\)invalidateModelScope\(\)/);
 });

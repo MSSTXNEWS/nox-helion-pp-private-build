@@ -12,7 +12,8 @@ test('WOW V3 loads as additive layer after main menu and V2',()=>{
 test('No network, duplicate OneHost, selfbuilder, fake graphics metrics or privileged actions',()=>{
  assert.doesNotMatch(script,/\bfetch\s*\(|XMLHttpRequest|WebSocket|chrome\.webview|selfbuilder\.propose|Math\.random|eval\s*\(/);
  assert.match(script,/aria-hidden/);
- assert.match(script,/data-wow-v3/);
+ assert.match(script,/stage\.dataset\.wowV3==='1'/);
+ assert.match(script,/stage\.dataset\.wowV3='1'/);
 });
 test('Capped paint loop, ECO, system reduced motion, visibility and teardown',()=>{
  for(const token of ['requestAnimationFrame','cancelAnimationFrame','devicePixelRatio','data-fx','visibilitychange','prefers-reduced-motion','pagehide','MutationObserver'])
