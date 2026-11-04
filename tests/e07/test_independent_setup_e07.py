@@ -103,6 +103,35 @@ class IndependentE07(unittest.TestCase):
         self.assertEqual(positive["buttons_missing"], [])
         self.assertEqual(positive["actions_invoked"], 0)
 
+    def test_u01_duplicate_primary_uia_button_roles_cannot_pass(self):
+        # Five distinct names are not proof of five unambiguous controls.
+        names = list(MOD._UIA_MAIN_BUTTONS)
+        targets = [f"{name}|ControlType.Button|VISIBLE_ENABLED"
+                   for name in names]
+        base = {"schema": "NOX-E07-UIA-V1", "labels": names,
+                "treeCount": 12, "treeScanned": 12, "targetTypes": targets}
+        exact = MOD.classify_primary_uia_evidence(base)
+        self.assertEqual(exact["status"], "PASS")
+        self.assertEqual(exact["buttons_duplicate"], [])
+        self.assertEqual(exact["actions_invoked"], 0)
+        duplicate_install = MOD.classify_primary_uia_evidence({
+            **base, "targetTypes": targets +
+            ["INSTALL|ControlType.Button|VISIBLE_ENABLED"]})
+        self.assertEqual(duplicate_install["status"], "HOLD")
+        self.assertEqual(duplicate_install["buttons_missing"], [])
+        self.assertEqual(duplicate_install["buttons_duplicate"], ["INSTALL"])
+        self.assertEqual(duplicate_install["actions_invoked"], 0)
+        duplicate_chat = MOD.classify_primary_uia_evidence({
+            **base, "targetTypes": targets +
+            ["CHAT|ControlType.Button|VISIBLE_ENABLED"]})
+        self.assertEqual(duplicate_chat["status"], "HOLD")
+        self.assertEqual(duplicate_chat["buttons_duplicate"], ["CHAT"])
+        text_only = MOD.classify_primary_uia_evidence({
+            **base, "targetTypes": targets +
+            ["INSTALL|ControlType.Text|VISIBLE_ENABLED"]})
+        self.assertEqual(text_only["status"], "PASS")
+        self.assertEqual(text_only["buttons_duplicate"], [])
+
     def test_uia_windows_bound_read_only_and_offscreen_rejection(self):
         source=FILE.read_text(encoding="utf-8")
         for needle in ("FromHandle([IntPtr]","ControlType]::Button",

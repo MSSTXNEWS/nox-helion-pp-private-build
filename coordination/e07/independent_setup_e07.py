@@ -474,15 +474,19 @@ def classify_primary_uia_evidence(response: dict) -> dict:
     # descendants even when the separate Button property-filter returns [].
     # These are the SAME HWND-rooted physical UIA elements, NOT text/Custom or
     # an inferred click. Only the exact visible+enabled Button role is admitted.
-    witnessed = {entry.split("|", 1)[0] for entry in targets
-                 if entry.endswith("|ControlType.Button|VISIBLE_ENABLED")}
+    role_witnesses = [entry.split("|", 1)[0] for entry in targets
+                      if entry.endswith("|ControlType.Button|VISIBLE_ENABLED")]
     # Label strings alone are not correlated to a physical Button-role node.
-    # Only same-HWND tree witnesses with visible/enabled Button role can pass.
+    # Count exact role-qualified nodes: duplicates make UI actions ambiguous.
     # Unmatched labels remain diagnostic evidence and NEVER a release PASS.
-    found = witnessed
-    result.update({"status": "PASS" if len(found) == len(_UIA_MAIN_BUTTONS) else "HOLD",
+    found = set(role_witnesses)
+    duplicates = [name for name in _UIA_MAIN_BUTTONS
+                  if role_witnesses.count(name) > 1]
+    result.update({"status": "PASS" if len(found) == len(_UIA_MAIN_BUTTONS)
+                    and not duplicates else "HOLD",
                    "buttons_present": [v for v in _UIA_MAIN_BUTTONS if v in found],
                    "buttons_missing": [v for v in _UIA_MAIN_BUTTONS if v not in found],
+                   "buttons_duplicate": duplicates,
                    "proof": "SAME_ROOT_UIA_VISIBLE_ENABLED_BUTTON_PRESENCE_ONLY",
                    "actions_invoked": 0,
                    "uia_tree_total": total, "uia_tree_scanned": scanned,
