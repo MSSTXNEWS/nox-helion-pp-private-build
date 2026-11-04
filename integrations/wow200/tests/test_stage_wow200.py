@@ -57,6 +57,17 @@ class WowStageTests(unittest.TestCase):
     sample=("// reviewed fixture runtime "+rel+"\n").encode('utf-8')
    p.write_bytes(sample)
    eng.WOW_RUNTIME_BLOBS[rel]=gitsha(sample.replace(b'\r\n',b'\n'))
+  # Original chrome compact source is an independently pinned product donor.
+  # Stage its real approved bytes into our disposable fixture; do not mock
+  # this pin or bypass the production path/rights checks.
+  chrome_rel='runtime/p01-original-chrome-compact-v6.css'
+  chrome_src=repository/'integrations/wow200'/chrome_rel
+  approved_chrome=eng.pinned_source_bytes(chrome_src,eng.ORIGINAL_CHROME_COMPACT_BLOB)
+  if approved_chrome is None:
+   raise RuntimeError('TEST_APPROVED_CHROME_SOURCE_HOLD')
+  chrome_dest=self.src/chrome_rel
+  chrome_dest.parent.mkdir(parents=True,exist_ok=True)
+  chrome_dest.write_bytes(approved_chrome)
   for rel in eng.OWNER1_D02_ENGINE:
    eng.OWNER1_D02_ENGINE[rel]["legacy_blob"]=manifest[rel]
   (self.src/'DONOR_BLOBS.json').write_text(json.dumps({'schema':'NOX_WOW200_OWNER_BLOB_PIN_V1','count':56,'files':manifest}))
