@@ -4,6 +4,7 @@
  *  no direct privileged bridge, simulated GPU training or autostart.
  */
 import {LOGICAL_MENU_PARENTS} from '../proposals/P01/WOW-MAX10/scene-contract.mjs';
+import {createNoxLucideIcon} from './nox-lucide-icons.mjs';
 // Use the approved original eight sections as physical navigation; ten logical
 // worlds are child views of those EXISTING tiles, not new top-level graphics.
 const P01_TILE_LABELS=Object.freeze({
@@ -112,6 +113,21 @@ export function p01ReadinessResult(action,receipt){
 const VALID=new Set(['VERIFIED','RUNNING','IDLE','PAUSED','HOLD','OFFLINE','NOT_INSTALLED','ERROR','PENDING','AVAILABLE','NATIVE_REQUEST_AVAILABLE']);
 function status(value){return VALID.has(value)?value:'HOLD';}
 function make(doc,tag,cls,text){const x=doc.createElement(tag);if(cls)x.className=cls;if(text)x.textContent=text;return x;}
+// Decorative icon geometry reuses the existing trusted UI and never changes
+// button text/route/native consent. No extra controls or HOME overlays.
+const NOX_WORLD_ICON=Object.freeze({
+ work:'briefcase-business', intelligence:'brain',knowledge:'book-open',
+ learning:'gauge',entertainment:'film',people:'heart',creative:'palette',
+ business:'chart-line',world:'globe',pc:'monitor'
+});
+const NOX_GROUP_ICON=Object.freeze({
+ status:'activity',models:'cpu',weights:'gauge',source:'code',control:'settings'
+});
+function decorateNoxIcon(doc,button,name){
+ const icon=createNoxLucideIcon(doc,name);
+ if(icon)button.prepend(icon);
+ return button;
+}
 export function mountSelfBuilderMenuV2({root,invokeNative,getTrustedState,ownerApprovedRoute,documentRef,getCurrentSection,getTrainingJobs=()=>[],invokeP03Queue=null,invokeP03Cancel=null}){
   if(!root || typeof invokeNative!=='function' || typeof getTrustedState!=='function'||
      typeof ownerApprovedRoute!=='function')throw Error('NOX_NATIVE_MENU_HOST_REQUIRED');
@@ -143,12 +159,14 @@ export function mountSelfBuilderMenuV2({root,invokeNative,getTrustedState,ownerA
   const worldFeedback=make(doc,'p','nox-sb-feedback','Выберите подраздел');
   worldFeedback.setAttribute('role','status');worldFeedback.setAttribute('aria-live','polite');
   const backWorld=make(doc,'button','nox-sb-tile','← Все подразделы');
+  decorateNoxIcon(doc,backWorld,'arrow-left');
   backWorld.type='button';backWorld.hidden=true;
   const path=make(doc,'nav','nox-sb-nav-path');
   path.setAttribute('aria-label','Путь NOX: направление, страница, подраздел');
   const groupHeading=make(doc,'h3','nox-sb-sourcehub__title','Группы действий');
   const groupGrid=make(doc,'div','nox-sb-grid nox-sb-group-grid');
   const backGroup=make(doc,'button','nox-sb-tile','← Подразделы');backGroup.type='button';backGroup.hidden=true;
+  decorateNoxIcon(doc,backGroup,'arrow-left');
   worldSection.append(worldHeading,path,worldGrid,backWorld,groupHeading,groupGrid,backGroup,worldFeedback);
   let activeWorld=null,activeGroup=null;
   const worldButtons=[];
@@ -162,6 +180,7 @@ export function mountSelfBuilderMenuV2({root,invokeNative,getTrustedState,ownerA
         ' · действия ниже требуют отдельного подтверждения NOX';
       backWorld.hidden=false;refresh();
     });
+    decorateNoxIcon(doc,b,NOX_WORLD_ICON[world.id]);
     worldGrid.append(b);worldButtons.push({world,button:b});
   }
   backWorld.addEventListener('click',()=>{
@@ -307,6 +326,7 @@ export function mountSelfBuilderMenuV2({root,invokeNative,getTrustedState,ownerA
   }
   for(const item of SELFBUILDER_MENU){
     const b=make(doc,'button','nox-sb-tile',item.label);b.type='button';b.dataset.routeId=item.routeId;
+    decorateNoxIcon(doc,b,NOX_GROUP_ICON[groupForNoxAction(item)]);
     b.dataset.actionId=item.actionId;b.dataset.section=item.section;
     const permitted=ownerApprovedRoute(item.section,item.routeId,item.actionId)===true;
     b.disabled=!permitted;b.dataset.state=permitted?'HOLD':'CONTRACT_REQUIRED';
@@ -382,6 +402,7 @@ export function mountSelfBuilderMenuV2({root,invokeNative,getTrustedState,ownerA
         button.dataset.noxActionGroup=group.id;
         button.setAttribute('aria-pressed',String(activeGroup===group.id));
         button.addEventListener('click',()=>{if(destroyed)return;activeGroup=group.id;refresh();});
+        decorateNoxIcon(doc,button,NOX_GROUP_ICON[group.id]);
         groupGrid.append(button);
       }
     }

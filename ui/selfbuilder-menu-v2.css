@@ -87,3 +87,23 @@
 @media(forced-colors:active){
  .nox-sb-nav-path,.nox-sb-group-tile{background:Canvas!important;color:CanvasText!important;border:1px solid CanvasText!important;box-shadow:none!important}
 }
+
+/* WOW FAST01 · 112 licensed static SVG icons, local WebView2 module.
+   Decorative only: existing buttons retain source text and native click wiring. */
+.nox-sb-tile:has(> .nox-ui-icon){
+ display:inline-flex;align-items:center;justify-content:flex-start;
+ gap:10px;min-width:0;
+}
+.nox-ui-icon{display:inline-block;flex:0 0 auto;width:20px;height:20px;
+ color:#9fdded;stroke:currentColor;vertical-align:middle;
+ filter:drop-shadow(0 0 7px rgba(75,196,225,.19));
+ pointer-events:none;user-select:none;transition:color .16s ease,filter .16s ease;
+}
+.nox-sb-tile:hover > .nox-ui-icon,.nox-sb-tile:focus-visible > .nox-ui-icon{
+ color:#ffe0ad;filter:drop-shadow(0 0 9px rgba(236,188,116,.32));
+}
+.nox-sb-tile:disabled > .nox-ui-icon{color:#73848b;filter:none}
+@media(max-width:390px){.nox-ui-icon{width:17px;height:17px}
+ .nox-sb-tile:has(> .nox-ui-icon){gap:7px}}
+@media(prefers-reduced-motion:reduce){.nox-ui-icon{transition:none!important;filter:none!important}}
+@media(forced-colors:active){.nox-ui-icon{color:ButtonText;filter:none}}
