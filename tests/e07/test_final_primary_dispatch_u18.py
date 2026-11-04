@@ -34,6 +34,16 @@ class FinalPrimaryDispatch(unittest.TestCase):
         self.assertIn("_uia_script(hwnd,action)", source)
         self.assertNotIn('_uia_script(hwnd,"CLICK")', source)
 
+    def test_original_d02_uses_five_quality_planets_without_fake_reduced_motion_pass(self):
+        from pathlib import Path
+        source = (ROOT/"coordination"/"e07"/"probe_final_same_setup.py").read_text(encoding="utf-8")
+        witness = source.split("def run(", 1)[1]
+        self.assertIn("probe_d02_quality_modes(hwnd)", witness)
+        self.assertIn('fx.get("actual_invocations")==5', witness)
+        self.assertIn('"reduced_motion":"HOLD"', witness)
+        self.assertIn("OS_MEDIA_QUERY_NOT_PHYSICALLY_VERIFIED", witness)
+        self.assertNotIn('_uia_script(hwnd,"FX")', witness)
+
     def test_non_action_does_not_invoke_privileged_button(self):
         script = probe._uia_script(12345, "FX")
         self.assertIn("$op='FX'", script)

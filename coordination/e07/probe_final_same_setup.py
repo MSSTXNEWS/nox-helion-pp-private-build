@@ -154,16 +154,25 @@ def run(hwnd: int, install: Path, local: Path, *, source_sha: str, setup_sha: st
     e07.require(type(sizes) is list and len(sizes)==2 and
                 all(type(x) is dict and x.get("visiblePrimary")==5 and x.get("noOverlap") is True
                     for x in sizes),"E07_FINAL_ADAPTIVE_LAYOUT_HOLD")
-    fx=_run_ps(_uia_script(hwnd,"FX"),timeout=40)
-    e07.require(fx.get("initial")=="FX BALANCED" and
-                fx.get("observed")==["FX MAX","FX ECO","FX BALANCED"] and
-                fx.get("invocations")==3,"E07_FINAL_REDUCED_MOTION_CONTROL_HOLD")
+    # The original installed D02 has five graphical quality planets, not
+    # the obsolete three-state FX BALANCED/MAX/ECO button. Reuse the existing
+    # physical original-HWND UIA probe (Invoke + actual pressed state).
+    from probe_91a6_real_visual_u17 import probe_d02_quality_modes
+    fx=probe_d02_quality_modes(hwnd)
+    e07.require(fx.get("fx_control")=="PASS" and
+                fx.get("actual_invocations")==5 and
+                fx.get("reduced_motion")=="NOT_TESTED" and
+                fx.get("independent_visual_review")=="NOT_RUN",
+                "E07_FINAL_D02_FIVE_GRAPHICS_MODE_HOLD")
     visual={"schema":e07.FINAL_VISUAL_SCHEMA,"source_sha":source_sha,
             "setup_sha256":setup_sha,"release_accepted":False,
             "physical_capture":"PASS","d02_visual":"PASS","adaptive_layout":"PASS",
-            "reduced_motion":"PASS","screenshot_sha256":e07.sha256(png),
+            # Quality mode changes do NOT measure the Windows OS
+            # prefers-reduced-motion setting. Fail closed until physically
+            # verified on this same original installed Setup SHA.
+            "reduced_motion":"HOLD","screenshot_sha256":e07.sha256(png),
             "physical_sizes":sizes,"fx_cycle":fx,
-            "reduced_motion_evidence":"INSTALLED_MEDIA_QUERY_PLUS_PHYSICAL_ECO_TRANSITION"}
+            "reduced_motion_evidence":"OS_MEDIA_QUERY_NOT_PHYSICALLY_VERIFIED"}
 
     actions={}
     def accepted(action: str, detail: dict) -> None:
