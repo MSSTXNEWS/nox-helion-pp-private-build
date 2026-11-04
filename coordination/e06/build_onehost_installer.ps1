@@ -919,7 +919,7 @@ print(json.dumps(stage_reviewed_remove(Path(sys.argv[2]),Path(sys.argv[3])),sort
 '@
 $rmStagePython=Get-Command python.exe -ErrorAction SilentlyContinue | Select-Object -First 1
 if (!$rmStagePython) { throw 'P01_C09_REMOVER_PYTHON_TOOLCHAIN_REQUIRED' }
-$rmOutput=(& $rmStagePython.Source -B -c $rmStageCode $PSScriptRoot $rmPath $rmReviewed 2>&1 | Out-String).Trim()
+$rmOutput=(& $rmStagePython.Source -B -c $rmStageCode (Join-Path $repoRoot 'coordination/e06') $rmPath $rmReviewed 2>&1 | Out-String).Trim()
 if ($LASTEXITCODE -ne 0) { throw 'P01_C09_REMOVER_REVIEWED_STAGE_HOLD' }
 try { $rmProof=$rmOutput | ConvertFrom-Json -ErrorAction Stop }
 catch { throw 'P01_C09_REMOVER_RECEIPT_JSON_HOLD' }
