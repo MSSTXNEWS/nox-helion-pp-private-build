@@ -74,6 +74,67 @@ def verify_source_tree_entry(path, root):
              (stat.S_ISDIR(info.st_mode) or stat.S_ISREG(info.st_mode)),
              "T06_PAYLOAD_NONREGULAR_COMPONENT_HOLD")
 
+
+# The ORIGINAL installed WPF owner requires a pinned registry under
+# AppContext.BaseDirectory/contracts. The alternative PowerShell stage
+# includes it; this active T06 Python NSIS path must do so as well.
+P03_REVIEWED_REGISTRY_SHA256="3b47af8b85aefd88408dd5cc63ad9615da87427d4d0cb2b56b0f5a4246ffbd60"
+
+def stage_reviewed_registry(source, payload):
+    """Copy a verified owner registry into the SAME NSIS manifest, no approvals."""
+    source, payload = Path(source), Path(payload)
+    need(source.name=="p03_reviewed_artifacts.json" and
+         source.parent.name=="contracts","T06_P03_REGISTRY_PATH_HOLD")
+    verify_source_tree_entry(source,source.parent.parent)
+    first=source.lstat()
+    need(stat.S_ISREG(first.st_mode) and 2<=first.st_size<=65536,
+         "T06_P03_REGISTRY_REGULAR_FILE_HOLD")
+    fd=os.open(source,os.O_RDONLY | getattr(os,"O_BINARY",0) |
+               getattr(os,"O_NOFOLLOW",0))
+    try:
+        opened=os.fstat(fd)
+        identity=lambda s:(s.st_dev,s.st_ino,s.st_size,s.st_mtime_ns)
+        need(stat.S_ISREG(opened.st_mode) and identity(first)==identity(opened),
+             "T06_P03_REGISTRY_IDENTITY_HOLD")
+        raw=os.read(fd,65537)
+        closed_fd=os.fstat(fd)
+        final=source.lstat()
+        need(identity(opened)==identity(closed_fd)==identity(final) and
+             first.st_ctime_ns==final.st_ctime_ns and
+             opened.st_ctime_ns==closed_fd.st_ctime_ns and
+             len(raw)==opened.st_size,
+             "T06_P03_REGISTRY_IDENTITY_HOLD")
+        verify_source_tree_entry(source,source.parent.parent)
+    finally:
+        os.close(fd)
+    digest=hashlib.sha256(raw).hexdigest()
+    need(digest==P03_REVIEWED_REGISTRY_SHA256,
+         "T06_P03_REGISTRY_SOURCELOCK_SHA_HOLD")
+    try: registry=json.loads(raw.decode("utf-8"))
+    except (ValueError,UnicodeDecodeError) as exc:
+        raise RuntimeError("T06_P03_REGISTRY_JSON_HOLD") from exc
+    need(type(registry) is dict and set(registry)=={"schema","items"} and
+         registry["schema"]=="NOX-P03-REVIEWED-ARTIFACTS-V1" and
+         type(registry["items"]) is list,
+         "T06_P03_REGISTRY_SCHEMA_HOLD")
+    target=payload/"contracts"/source.name
+    need(not target.exists() and not target.is_symlink() and
+         not getattr(target,"is_junction",lambda:False)(),
+         "T06_P03_REGISTRY_DESTINATION_COLLISION")
+    target.parent.mkdir(parents=True,exist_ok=True)
+    verify_source_tree_entry(target.parent,payload)
+    with target.open("xb") as output:
+        output.write(raw)
+        output.flush()
+        os.fsync(output.fileno())
+    verify_source_tree_entry(target,payload)
+    need(target.stat().st_size==len(raw) and sha(target)==digest,
+         "T06_P03_REGISTRY_PUBLISHED_SHA_HOLD")
+    return {"path":"contracts/p03_reviewed_artifacts.json",
+            "bytes":len(raw),"sha256":digest,
+            "reviewed_count":len(registry["items"]),
+            "release_accepted":False}
+
 def attest_nsis_compiler_unchanged(compiler, expected_sha):
     """Reject replaced/reparsed compiler before and after NSIS execution.
 
@@ -687,6 +748,11 @@ def build(root,staged):
     shutil.copy2(exe_path,backend/exe_path.name)
     need(sha(backend/exe_path.name)==candidate_sha,
          "T06_BUNDLED_NATIVE_EXE_SHA_MISMATCH")
+    registry_proof=stage_reviewed_registry(
+        Path(__file__).resolve().parents[2]/"contracts/p03_reviewed_artifacts.json",
+        payload)
+    print("T06_P03_INSTALLED_OWNER_REGISTRY_SOURCELOCK "+
+          json.dumps(registry_proof,sort_keys=True),flush=True)
     inventory=[]
     for file in sorted(payload.rglob("*")):
         verify_source_tree_entry(file,payload)
@@ -783,6 +849,7 @@ def build(root,staged):
          "source_zip_sha256":EXPECTED_ZIP_SHA,
          "wpf_sha256":sha(entry),"backend_sha256":candidate_sha,
          "manifest_sha256":sha(manifest_file),
+         "p03_reviewed_registry":registry_proof,
          "nsis_compiler_version":"3.13",
          "nsis_compiler_sha256":nsis_compiler_sha,
          "nsis_compiler_provenance":"HASHED_BINARY_ONLY_NOT_LICENSE_ATTESTED",
