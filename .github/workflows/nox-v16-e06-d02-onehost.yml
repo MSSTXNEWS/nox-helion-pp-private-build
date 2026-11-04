@@ -10,6 +10,8 @@ on:
       - 'tests/e06/**'
       - 'tests/test_c04_p03_ack_scalar_rejection.py'
       - 'tests/p03/test_p03_cancel_retry_jobid_bind_u06.py'
+      - 'Packages/P02/worker-python/p02_runtime.py'
+      - 'tests/p02/test_attachment_root_reparse_u09.py'
   workflow_dispatch:
     inputs:
       native_smoke_model:
@@ -43,6 +45,8 @@ on:
       - 'tests/e06/test_t06_gitlab_runner_authorization.py'
       - 'tests/e06/test_t06_e06_workflow_source_gate.py'
       - 'tests/e06/test_e06_direct_branch_trigger.py'
+      - 'Packages/P02/worker-python/p02_runtime.py'
+      - 'tests/p02/test_attachment_root_reparse_u09.py'
       - 'tests/e06/test_native_busy_retry_r12.py'
       - 'proposals/P01/WOW-MAX10/**'
       - 'private_build.ps1'
@@ -112,6 +116,11 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'A2_ACQUISITION_FTS5_SHA_TEST_HOLD' }
           python -m unittest discover -s tests -p 'test_firstboot_coordinator.py' -v
           if ($LASTEXITCODE -ne 0) { throw 'A2_NATIVE_FIRSTBOOT_REGRESSION_HOLD' }
+      - name: P02 existing OneHost attachment root Windows junction admission regression
+        shell: pwsh
+        run: |
+          python -B -m unittest discover -s tests/p02 -p 'test_attachment_root_reparse_u09.py' -v
+          if ($LASTEXITCODE -ne 0) { throw 'P02_ATTACHMENT_REPARSE_REGRESSION_HOLD' }
       - name: A1 + P03 source regressions before Windows setup
         shell: pwsh
         run: |
