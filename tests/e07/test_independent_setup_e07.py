@@ -144,10 +144,29 @@ class IndependentE07(unittest.TestCase):
                 return real_open(path, flags, *args, **kwargs)
             with patch.object(MOD.os, 'open', side_effect=replace_on_descriptor_open):
                 with self.assertRaisesRegex(MOD.Hold,
-                                            'E07_INSTALLED_FILE_IDENTITY_HOLD'):
+                                            'E07_INSTALLED_FILE_OPEN_IDENTITY_HOLD'):
                     MOD.manifest_owner(root)
             self.assertEqual(did_swap, [True])
             self.assertEqual(payload.read_bytes(), original)
+
+
+    def test_installed_file_os_denial_remains_a_scoped_hold(self):
+        import errno
+        with tempfile.TemporaryDirectory() as t:
+            root=Path(t)
+            payload=root/'native.dll'
+            payload.write_bytes(b'payload')
+            real_open=MOD.os.open
+            def deny_only_payload(path,flags,*args,**kwargs):
+                if Path(path)==payload:
+                    raise PermissionError(errno.EACCES,'simulated access denied')
+                return real_open(path,flags,*args,**kwargs)
+            with patch.object(MOD.os,'open',side_effect=deny_only_payload):
+                with self.assertRaisesRegex(MOD.Hold,
+                                            'E07_INSTALLED_FILE_IO_13_HOLD'):
+                    MOD.installed_file_sha_locked(payload,root,7,
+                        hashlib.sha256(b'payload').hexdigest())
+            self.assertEqual(payload.read_bytes(),b'payload')
 
     def test_manifest_detects_mutated_file(self):
         with tempfile.TemporaryDirectory() as t:

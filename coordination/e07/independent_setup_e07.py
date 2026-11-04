@@ -84,20 +84,24 @@ def installed_file_sha_locked(path: Path, root: Path, expected_size: int, expect
         try:
             opened = os.fstat(fd)
             if not stat.S_ISREG(opened.st_mode) or identity(before) != identity(opened):
-                raise Hold("E07_INSTALLED_FILE_IDENTITY_HOLD")
+                raise Hold("E07_INSTALLED_FILE_OPEN_IDENTITY_HOLD")
             digest = hashlib.sha256()
             while block := os.read(fd, 1048576):
                 digest.update(block)
-            if (identity(opened) != identity(os.fstat(fd)) or
-                identity(opened) != identity(path.lstat()) or not allowed_path()):
-                raise Hold("E07_INSTALLED_FILE_IDENTITY_HOLD")
+            if identity(opened) != identity(os.fstat(fd)):
+                raise Hold("E07_INSTALLED_FILE_FD_MUTATED_HOLD")
+            if identity(opened) != identity(path.lstat()):
+                raise Hold("E07_INSTALLED_FILE_PATH_MUTATED_HOLD")
+            if not allowed_path():
+                raise Hold("E07_INSTALLED_FILE_REPARSE_OR_ESCAPE_HOLD")
             if digest.hexdigest() != expected_digest:
                 raise Hold("E07_INSTALLED_FILE_SHA_HOLD")
             return digest.hexdigest()
         finally:
             os.close(fd)
-    except OSError:
-        raise Hold("E07_INSTALLED_FILE_IDENTITY_HOLD") from None
+    except OSError as exc:
+        # Public errno only: preserve privacy, avoid exposing installed paths.
+        raise Hold("E07_INSTALLED_FILE_IO_" + str(exc.errno if type(exc.errno) is int else "UNKNOWN") + "_HOLD") from None
 
 def run(args: list[str], *, limit: int) -> int:
     result = subprocess.run(args, check=False, timeout=limit,
