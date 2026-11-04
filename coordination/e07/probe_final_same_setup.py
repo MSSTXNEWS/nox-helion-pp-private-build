@@ -37,7 +37,9 @@ def nonrelease_action_observation(action: str, detail: dict) -> dict:
             "scope":"INSTALLED_UI_OBSERVATION_NOT_FULL_FUNCTION_PASS"}
 
 
-def _run_ps(source: str, *, timeout: int=90, env: dict|None=None) -> dict:
+def _run_ps(source: str, *, timeout: int=90, phase: str="UNKNOWN", env: dict|None=None) -> dict:
+    e07.require(phase in (*PRIMARY, "VISUAL", "MODEL_WINDOW", "FX", "UNKNOWN"),
+                "E07_FINAL_UIA_PHASE_HOLD")
     encoded=base64.b64encode(source.encode("utf-16le")).decode("ascii")
     try:
         p=subprocess.run(["powershell.exe","-NoProfile","-NonInteractive","-EncodedCommand",encoded],
@@ -49,13 +51,13 @@ def _run_ps(source: str, *, timeout: int=90, env: dict|None=None) -> dict:
     # attempt identifies which probe phase failed. No stderr/stdout, paths,
     # window titles, user data or arbitrary PowerShell output enter receipts.
     if p.returncode != 0:
-        raise e07.Hold("E07_FINAL_UIA_"+operation+"_PROCESS_EXIT_HOLD")
+        raise e07.Hold("E07_FINAL_UIA_"+phase+"_PROCESS_EXIT_HOLD")
     if not 0 < len(p.stdout) <= 131072:
-        raise e07.Hold("E07_FINAL_UIA_"+operation+"_OUTPUT_BOUNDS_HOLD")
+        raise e07.Hold("E07_FINAL_UIA_"+phase+"_OUTPUT_BOUNDS_HOLD")
     try:
         result=json.loads(p.stdout.strip())
     except (ValueError,UnicodeError):
-        raise e07.Hold("E07_FINAL_UIA_"+operation+"_JSON_HOLD") from None
+        raise e07.Hold("E07_FINAL_UIA_"+phase+"_JSON_HOLD") from None
     e07.require(type(result) is dict,"E07_FINAL_UIA_JSON_HOLD")
     return result
 
@@ -131,7 +133,7 @@ def invoke_primary(hwnd: int, action: str) -> dict:
     # The old CLICK placeholder produced InvokePrimary '' and could never invoke
     # the original installed control, even when that control was working.
     script=_uia_script(hwnd,action)
-    result=_run_ps(script,timeout=35)
+    result=_run_ps(script,timeout=35,phase=action)
     e07.require(result.get("invoked") is True and result.get("sameHwndAlive") is True,
                 "E07_FINAL_"+action+"_UIA_HOLD")
     return result
@@ -166,7 +168,7 @@ def run(hwnd: int, install: Path, local: Path, *, source_sha: str, setup_sha: st
     out_dir.mkdir(parents=True,exist_ok=True)
 
     png=out_dir/"D02_FINAL_SAME_SETUP.png"
-    visual_raw=_run_ps(_uia_script(hwnd,"VISUAL",png=png),timeout=60)
+    visual_raw=_run_ps(_uia_script(hwnd,"VISUAL",png=png),timeout=60,phase="VISUAL")
     e07.require(e07.clean_file(png) and 20_000<=png.stat().st_size<=40_000_000,
                 "E07_FINAL_VISUAL_PNG_HOLD")
     sizes=visual_raw.get("sizes")
@@ -226,7 +228,7 @@ def run(hwnd: int, install: Path, local: Path, *, source_sha: str, setup_sha: st
                         "scope":"ORIGINAL_PC_INSTALL_UI_TO_NOX_ACTIONS"})
 
     invoke_primary(hwnd,"MODELS")
-    model=_run_ps(_uia_script(hwnd,"MODEL_WINDOW"),timeout=35)
+    model=_run_ps(_uia_script(hwnd,"MODEL_WINDOW"),timeout=35,phase="MODEL_WINDOW")
     e07.require(model.get("modelWindowVisible") is True and model.get("windowCount")==1,
                 "E07_FINAL_MODELS_WINDOW_HOLD")
     observed("MODELS",{"model_center_window":"PASS","window_title":"NOX HELION · MODEL CENTER"})
@@ -248,7 +250,7 @@ def run(hwnd: int, install: Path, local: Path, *, source_sha: str, setup_sha: st
     observed("LEARN",{"diagnostics_sha256":e07.sha256(diag),"cpu":data["cpu"],
                       "scope":"ORIGINAL_TRAINING_ENVIRONMENT_PREFLIGHT"})
 
-    settings=_run_ps(_uia_script(hwnd,"SETTINGS"),timeout=35)
+    settings=_run_ps(_uia_script(hwnd,"SETTINGS"),timeout=35,phase="SETTINGS")
     e07.require(settings.get("invoked") is True and settings.get("systemHeadingVisible") is True and
                 settings.get("sameHwndAlive") is True,"E07_FINAL_SETTINGS_ROUTE_HOLD")
     observed("SETTINGS",{"system_screen":"PASS","same_original_hwnd":True,
