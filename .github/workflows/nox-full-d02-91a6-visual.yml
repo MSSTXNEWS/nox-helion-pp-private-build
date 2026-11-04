@@ -1,0 +1,65 @@
+name: NOX frozen 91a6 FULL D02 physical WPF visual witness
+on:
+  push:
+    branches: [integration/nox-v16-unified-candidate-20261028-r01]
+    paths:
+      - .github/workflows/nox-full-d02-91a6-visual.yml
+      - coordination/e07/probe_full_d02_visual_91a6.py
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: nox-full-d02-91a6-independent-visual
+  cancel-in-progress: false
+jobs:
+  original-windows-visual:
+    if: github.repository == 'MSSTXNEWS/nox-helion-pp-private-build'
+    runs-on: windows-2022
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12.10'
+          architecture: x64
+          check-latest: false
+      - name: Existing E07 regression and physical witness syntax
+        shell: pwsh
+        run: |
+          python -B -m py_compile coordination/e07/independent_setup_e07.py coordination/e07/probe_full_d02_visual_u13.py coordination/e07/probe_full_d02_visual_91a6.py
+          if ($LASTEXITCODE -ne 0) { throw 'D02_91A6_VISUAL_PYTHON_SYNTAX_HOLD' }
+          python -B -m unittest discover -s tests/e07 -p test_independent_setup_e07.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'D02_91A6_EXISTING_E07_REGRESSIONS_HOLD' }
+      - uses: actions/download-artifact@v4
+        with:
+          run-id: 41885544063
+          name: nox-v16-e06-onehost-diagnostic-41885544063
+          github-token: ${{ github.token }}
+          path: input-verified-91a6
+      - name: Real original frozen 91a6 WPF WebView2 pixels
+        id: capture
+        continue-on-error: true
+        shell: pwsh
+        timeout-minutes: 15
+        run: |
+          python -B coordination/e07/probe_full_d02_visual_91a6.py --artifact-dir input-verified-91a6 --out-dir work/visual-91a6
+          if ($LASTEXITCODE -ne 0) { throw 'D02_91A6_PHYSICAL_VISUAL_CAPTURE_HOLD' }
+      - name: Preserve original screenshot and SHA receipt, not Setup or release
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: NOX-91A6-REAL-WPF-PIXELS-${{ github.run_id }}
+          path: |
+            work/visual-91a6/D02_91A6_ORIGINAL_WPF.png
+            work/visual-91a6/VISUAL_91A6_RECEIPT.json
+          if-no-files-found: error
+          retention-days: 14
+      - name: Never claim E07 or visual design acceptance from pixels
+        if: always()
+        shell: pwsh
+        run: |
+          if ('${{ steps.capture.outcome }}' -ne 'success') { throw 'D02_91A6_VISUAL_NOT_PROVEN_HOLD' }
+          Write-Host 'REAL_WINDOWS_PIXELS_ONLY_VISUAL_APPROVAL_AND_INDEPENDENT_E07_HOLD'
