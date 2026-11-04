@@ -126,6 +126,56 @@ function liveChat(label){
  coreRow.setAttribute('aria-label','Выбор ядра');personaRow.setAttribute('aria-label','Выбор персоны');
  modelsRow.setAttribute('aria-label','Локальная модель');
  const log=el('div','nox-chat-log');log.setAttribute('role','log');log.setAttribute('aria-label','Локальный диалог HELION');
+ // Cinematic neural mesh: visual animation, never synthetic AI progress.
+ const neural=doc.createElementNS('http://www.w3.org/2000/svg','svg');
+ neural.classList.add('nox-chat-neural');neural.setAttribute('viewBox','0 0 780 180');
+ neural.setAttribute('aria-label','Декоративная сине-янтарная нейросеть');
+ const lattice=doc.createElementNS('http://www.w3.org/2000/svg','g');neural.append(lattice);
+ for(let x=0;x<21;x++)for(let y=0;y<7;y++){
+   const px=20+x*37,py=90+(y-3)*12+Math.sin(x*.65+y*.22)*23;
+   if(x<20){
+     const line=doc.createElementNS('http://www.w3.org/2000/svg','line');
+     line.setAttribute('x1',px);line.setAttribute('y1',py);
+     line.setAttribute('x2',px+37);line.setAttribute('y2',90+(y-3)*12+Math.sin((x+1)*.65+y*.22)*23);
+     line.setAttribute('stroke',x<10?'#ffb568':'#70dbff');
+     line.setAttribute('stroke-opacity','.3');lattice.append(line);
+   }
+   if(y<6){
+     const line=doc.createElementNS('http://www.w3.org/2000/svg','line');
+     line.setAttribute('x1',px);line.setAttribute('x2',px);line.setAttribute('y1',py);
+     line.setAttribute('y2',90+(y-2)*12+Math.sin(x*.65+(y+1)*.22)*23);
+     line.setAttribute('stroke',x<10?'#ffb568':'#70dbff');line.setAttribute('stroke-opacity','.2');
+     lattice.append(line);
+   }
+   const node=doc.createElementNS('http://www.w3.org/2000/svg','circle');
+   node.setAttribute('cx',px);node.setAttribute('cy',py);
+   node.setAttribute('r',x%5===0?1.9:1.15);node.setAttribute('fill',x<10?'#ffc178':'#9ae8ff');
+   lattice.append(node);
+ }
+ const style=doc.createElement('style');
+ style.textContent=`
+ .nox-chat-neural{display:block;width:100%;height:170px;border:1px solid #7ccfeb44;
+  border-radius:15px;background:radial-gradient(ellipse,#152d3f77,#050b16e8);
+  filter:drop-shadow(0 0 14px #35caff50);pointer-events:none}
+ .nox-chat-neural g{transform-origin:50% 50%;animation:nox-wave 5s ease-in-out infinite alternate}
+ .nox-chat-neural circle{animation:nox-spark 3s ease-in-out infinite alternate}
+ @keyframes nox-wave{from{transform:scaleY(.85);opacity:.65}to{transform:scaleY(1.08);opacity:1}}
+ @keyframes nox-spark{from{opacity:.4}to{opacity:1}}
+ .nox-chat-history{display:flex;flex-direction:column;gap:9px;padding:14px;
+  max-height:320px;overflow-y:auto;border:1px solid #72c5e55d;
+  border-radius:16px;background:linear-gradient(120deg,#081723,#130f20)}
+ .nox-chat-history[hidden]{display:none!important}
+ .nox-chat-history-button{border:1px solid #7ccdea88;border-radius:15px;
+  color:#d4f8ff;background:#0b2532;padding:9px 13px;min-height:38px}
+ .nox-chat-history-button[aria-expanded="true"]{border-color:#ffc78a;box-shadow:0 0 14px #ffb76b55}
+ body[data-fx="ECO"] .nox-chat-neural g,body[data-fx="ECO"] .nox-chat-neural circle{animation:none}
+ @media(prefers-reduced-motion:reduce){.nox-chat-neural g,.nox-chat-neural circle{animation:none!important}}
+ @media(max-width:520px){.nox-chat-neural{height:110px}}
+ `;
+ const history=el('section','nox-chat-history');history.hidden=true;
+ history.setAttribute('aria-label','История чата из S03 SQLite');
+ const historyButton=button('◷ ИСТОРИЯ','nox-chat-history-button',()=>{void toggleHistory();});
+ historyButton.setAttribute('aria-expanded','false');heading.append(historyButton);
  const form=el('form','nox-chat-compose'),input=el('textarea','nox-chat-input');
  input.rows=3;input.maxLength=4000;input.placeholder='Сообщение локальному ядру (Enter — отправить, Shift+Enter — перенос)';
  input.setAttribute('aria-label','Текст сообщения');
@@ -135,11 +185,40 @@ function liveChat(label){
  const controls=el('div','nox-chat-controls');controls.append(send,stop);
  form.append(input,controls);
  surface.append(heading,el('p','nox-chat-label','ЯДРО'),coreRow,el('p','nox-chat-label','ПЕРСОНА'),personaRow,
-  el('p','nox-chat-label','УСТАНОВЛЕННЫЕ МОДЕЛИ'),modelsRow,log,form,info);
+  el('p','nox-chat-label','УСТАНОВЛЕННЫЕ МОДЕЛИ'),modelsRow,style,neural,history,log,form,info);
  setDetails(top,surface);
  let core='core.core',persona='persona.kairen_voss',model='',chatEpoch=0,modelSelectionPending=false;
  // A selected model belongs to its native-confirmed UI scope, never to a different CoreID/Persona.
  let scopeEpoch=0,renderModels=()=>{};
+
+ let historyVersion=0;
+ async function toggleHistory(){
+   const visible=history.hidden;history.hidden=!visible;
+   historyButton.setAttribute('aria-expanded',String(visible));const version=++historyVersion;
+   if(!visible)return;
+   const requestedScope=scopeEpoch,requestedCore=core,requestedPersona=persona;
+   history.replaceChildren(el('p','nox-chat-empty','Загружаю историю из OneHost…'));
+   if(!client){history.replaceChildren(el('p','nox-chat-empty','История недоступна без OneHost'));return;}
+   try{
+     const result=await client.request('chat.history',{core_id:requestedCore,persona_id:requestedPersona,limit:100});
+     if(version!==historyVersion||requestedScope!==scopeEpoch||history.hidden||!history.isConnected)return;
+     if(result?.routeId!=='chat.history'||!nativeCompleted(result)||
+       !Array.isArray(result.result?.messages)||result.result.messages.length>100){
+        history.replaceChildren(el('p','nox-chat-empty','HOLD · нет подтверждённой SQLite-истории'));return;
+     }
+     history.replaceChildren();
+     for(const m of result.result.messages){
+       if((m?.role!=='user'&&m?.role!=='assistant')||
+           typeof m.content!=='string'||m.content.length>100000)continue;
+       history.append(el('p','nox-chat-bubble nox-chat-'+m.role,m.content));
+     }
+     if(!history.children.length)history.append(el('p','nox-chat-empty','История пуста'));
+   }catch(_){
+     if(version===historyVersion&&history.isConnected&&!history.hidden)
+       history.replaceChildren(el('p','nox-chat-empty','HOLD · история OneHost недоступна'));
+   }
+ }
+
  // Transport COMPLETED is not provider success; bind model/chat status to
  // the existing native owner denial predicate, including envelope errorCode.
  const nativeCompleted=reply=>reply?.state==='COMPLETED'&&
@@ -157,7 +236,8 @@ function liveChat(label){
  const cores=CORE_IDS.map(id=>['core.'+id.toLowerCase(),id]);
  const personas=PERSONAS.map((id,i)=>[['persona.kairen_voss','persona.adrian_marrow','persona.leon_ardis','persona.elina_veil','persona.kassien_veir'][i],id]);
  const invalidateModelScope=()=>{
-  ++scopeEpoch;model='';renderModels();redraw();
+  ++scopeEpoch;++historyVersion;history.hidden=true;historyButton.setAttribute('aria-expanded','false');
+  model='';renderModels();redraw();
   if(info.isConnected)info.textContent='HOLD · контекст изменился; подтвердите модель через OneHost';
  };
  const chooseCore=v=>{
