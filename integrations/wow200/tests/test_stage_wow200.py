@@ -111,6 +111,13 @@ class WowStageTests(unittest.TestCase):
   self.assertIn('margin:20px auto calc(156px + env(safe-area-inset-bottom,0px))!important;',guard)
   self.assertIn('margin:10px auto calc(188px + env(safe-area-inset-bottom,0px))!important;',guard)
   self.assertIn('scroll-margin-bottom:calc(188px + env(safe-area-inset-bottom,0px));',guard)
+  # Collapsed D02 is the initial state: OPEN WORLD remains unpressed, so
+  # this rule must match missing/false world-open state as well as explicit false.
+  self.assertIn('#home:not([data-nox-world-open="true"]) .nox-quality-dock{',guard)
+  self.assertIn('bottom:calc(244px + env(safe-area-inset-bottom,0px))!important;',guard)
+  self.assertIn('bottom:calc(248px + env(safe-area-inset-bottom,0px))!important;',guard)
+  self.assertIn('@media(max-height:650px){',guard)
+  self.assertIn('margin:18px auto calc(200px + env(safe-area-inset-bottom,0px))!important;',guard)
   self.assertEqual(receipt['menu_v2_atomic_source_sha256'],eng.MENU_V2_SHA256)
   self.assertTrue(receipt['p01_owner_source_staged'])
   self.assertFalse(receipt['p01_owner_native_mount_activated'])
