@@ -49,5 +49,26 @@ class DirectBranchBuild(unittest.TestCase):
         self.assertIn("$smoke.release_accepted -ne $false", self.build)
         self.assertEqual(self.source.count("test_e06_direct_branch_trigger.py"), 3)
 
+    def test_new_d02_four_stage_source(self):
+        css = (ROOT / "integrations/wow200/runtime/home-guard.css").read_text(encoding="utf-8")
+        for stage in ("ORB STEP01", "GARGANTUA STEP02", "LIQUID CHROME STEP03", "DARK VEIL STEP04"):
+            with self.subTest(stage=stage):
+                self.assertIn(stage, css)
+        self.assertIn("pointer-events:none", css)
+        self.assertIn("prefers-reduced-motion:reduce", css)
+        self.assertIn("forced-colors:active", css)
+
+    def test_p03_graphical_model_and_tool_source(self):
+        root = ROOT / "Packages/P03/Source/P03.ModelCenter.Wow"
+        html = (root / "index.html").read_text(encoding="utf-8")
+        css = (root / "ui.css").read_text(encoding="utf-8")
+        js = (root / "ui.js").read_text(encoding="utf-8")
+        self.assertEqual(html.count('class="tool-source-card"'), 12)
+        self.assertIn('id="quickInstallGrid"', html)
+        self.assertIn("quick20Ids", js)
+        self.assertIn(".tool-source-grid", css)
+        self.assertIn("connect-src 'none'", html)
+        self.assertIn('rel="noopener noreferrer"', html)
+
 if __name__ == "__main__":
     unittest.main()
