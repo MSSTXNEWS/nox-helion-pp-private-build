@@ -11,7 +11,7 @@ permissions:
   actions: read
 concurrency:
   group: nox-qwen-installed-physical-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 jobs:
   live-qwen-on-installed-nox:
     if: github.repository == 'MSSTXNEWS/nox-helion-pp-private-build'
