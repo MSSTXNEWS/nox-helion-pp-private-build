@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Strict Git-SHA-pinned source-only ZIP. NOT Windows Setup or E07 acceptance."""
 import argparse
+import importlib.util
 import hashlib
 import json
 import os
@@ -15,6 +16,25 @@ def git(repo, *args):
     return subprocess.check_output(["git", "-C", str(repo), *args], stderr=subprocess.PIPE).decode().strip()
 
 
+
+def _verified_source_reader():
+    """Reuse ORIGINAL 729 FD+ancestor identity guard for every Git HEAD blob.
+
+    Git SHA proves bytes, not trusted pathname ancestry or a stable opened
+    descriptor. The existing SourceLock reader supplies those checks.
+    """
+    path = Path(__file__).with_name("verify_original_729_source.py")
+    if not path.is_file() or path.is_symlink():
+        raise ValueError("SOURCELOCK_ORIGINAL_FD_READER_MISSING")
+    spec = importlib.util.spec_from_file_location("nox_existing_source_fd_owner", path)
+    if spec is None or spec.loader is None:
+        raise ValueError("SOURCELOCK_ORIGINAL_FD_READER_INVALID")
+    owner = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(owner)
+    reader = getattr(owner, "_trusted_part_reader", None)
+    if not callable(reader):
+        raise ValueError("SOURCELOCK_ORIGINAL_FD_READER_INVALID")
+    return reader
 
 # Windows WPF/NSIS must consume the same immutable Linux-built source ZIP.
 # Git permits device aliases and punctuation that Win32 normalizes/rejects.
@@ -85,6 +105,7 @@ def build(repo: Path, sha: str, destination: Path):
     names = subprocess.check_output(["git", "-C", str(repo), "ls-files", "-z"]).split(b"\0")
     names = sorted(p.decode("utf-8", "surrogateescape") for p in names if p)
     committed = _committed_source_blobs(repo)
+    trusted_reader = _verified_source_reader()
     if len(names) != len(committed) or set(names) != set(committed):
         raise ValueError("HEAD_INDEX_PATHS_MISMATCH")
     seen = set()
@@ -112,7 +133,7 @@ def build(repo: Path, sha: str, destination: Path):
                 entry = zipfile.ZipInfo("source/" + name, (1980, 1, 1, 0, 0, 0))
                 entry.compress_type = zipfile.ZIP_DEFLATED
                 entry.external_attr = 0o100644 << 16
-                with z.open(entry, "w", force_zip64=True) as target, source.open("rb") as handle:
+                with z.open(entry, "w", force_zip64=True) as target, trusted_reader(source) as handle:
                     while True:
                         chunk = handle.read(1024 * 1024)
                         if not chunk:
@@ -161,6 +182,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
     try:
         print(json.dumps(build(args.repo, args.sha, args.out), sort_keys=True))
-    except (OSError, ValueError, subprocess.CalledProcessError) as exc:
+    except (OSError, ValueError, RuntimeError, subprocess.CalledProcessError) as exc:
         print("EXPRESS_SOURCE_ARCHIVE_HOLD:", exc, file=sys.stderr)
         raise SystemExit(2)
