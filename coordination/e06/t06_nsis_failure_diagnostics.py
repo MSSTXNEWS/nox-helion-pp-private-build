@@ -8,9 +8,37 @@ import hashlib
 import importlib.util
 import json
 import os
+import re
 from pathlib import Path
 import subprocess
 import sys
+
+
+def verify_failed_setup_identity(owner, failure: dict, evidence: dict) -> None:
+    """Fail closed on immutable Setup SHA, respecting actual bridge receipt schema.
+
+    The original LOCAL_BRIDGE candidate_gate rehashes physical Setup and
+    revalidates exact source/WPF/OneHost/manifest provenance, but never emits a
+    BuildID. Do not silently invent a BuildID or skip SHA verification.
+    Other owner paths still MUST carry the same explicit nonempty BuildID.
+    Read-only diagnostic admission does not authorize install or E07.
+    """
+    left = failure.get('setup_sha256')
+    right = evidence.get('setup_sha256')
+    owner.require(type(left) is str and type(right) is str and
+                  re.fullmatch(r'[0-9a-f]{64}', right) is not None and
+                  left == right,
+                  'T06_NSIS_DIAGNOSTICS_SETUP_IDENTITY_HOLD')
+    if owner.ON_LOCAL_BRIDGE:
+        owner.require('build_id' not in failure and
+                      'build_id' not in evidence,
+                      'T06_NSIS_DIAGNOSTICS_SETUP_IDENTITY_HOLD')
+    else:
+        a = failure.get('build_id')
+        b = evidence.get('build_id')
+        owner.require(type(a) is str and len(a) > 0 and
+                      type(b) is str and a == b,
+                      'T06_NSIS_DIAGNOSTICS_SETUP_IDENTITY_HOLD')
 
 
 def collect(owner, *, platform_name=None, env=None):
@@ -30,9 +58,7 @@ def collect(owner, *, platform_name=None, env=None):
                   failure.get('release_accepted') is False,
                   'T06_NSIS_DIAGNOSTICS_NO_MATCHING_FAILURE')
     evidence = owner.candidate_gate()
-    owner.require(failure.get('setup_sha256') == evidence['setup_sha256'] and
-                  failure.get('build_id') == evidence['build_id'],
-                  'T06_NSIS_DIAGNOSTICS_SETUP_IDENTITY_HOLD')
+    verify_failed_setup_identity(owner, failure, evidence)
     local = Path(env.get('LOCALAPPDATA', ''))
     owner.require(local.is_absolute() and local.is_dir() and
                   owner.plain_parents(local, Path(local.anchor)),
