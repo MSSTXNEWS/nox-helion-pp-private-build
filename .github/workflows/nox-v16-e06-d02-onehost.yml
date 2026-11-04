@@ -7,6 +7,8 @@ on:
       - '.github/workflows/nox-v16-e06-d02-onehost.yml'
       - 'private_build.ps1'
       - 'coordination/e06/**'
+      - 'integrations/wow200/stage_wow200.py'
+      - 'integrations/wow200/tests/test_stage_wow200.py'
       - 'tests/e06/**'
       - 'tests/test_c04_p03_ack_scalar_rejection.py'
       - 'tests/p03/test_p03_cancel_retry_jobid_bind_u06.py'
