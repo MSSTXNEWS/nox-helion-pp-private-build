@@ -15,20 +15,20 @@ spec.loader.exec_module(e07)
 class CurrentD02Identity(unittest.TestCase):
     def test_physical_e06_receipt_identity_pinned(self):
         self.assertEqual(e07.CURRENT_D02_SOURCE_SHA,
-                         "ab4d5dc24a52cd94813abdd4c803e16ab9d15536")
+                         "5f44122bf01328fb2fbefbba0a40946d0be0df6e")
         self.assertEqual(e07.CURRENT_D02_SETUP_SHA,
-                         "7067a091f8e8e4611402adf15337f995b0f4f5a6b2331b378298d9179866b05c")
-        self.assertEqual(e07.CURRENT_D02_SETUP_SIZE,169665372)
-        self.assertEqual(e07.CURRENT_D02_BUILD_ID,"NOX-V16-a4404d624fc9dca54d12dc71")
-        self.assertEqual(e07.CURRENT_D02_OWNED_COUNT,1011)
+                         "c8a190224e94d529df63827e832f1e8628ec0c034c400cedbaa2846116e28b2a")
+        self.assertEqual(e07.CURRENT_D02_SETUP_SIZE,169682978)
+        self.assertEqual(e07.CURRENT_D02_BUILD_ID,"NOX-V16-9a812040d0b6abed4fa1c953")
+        self.assertEqual(e07.CURRENT_D02_OWNED_COUNT,1013)
 
     def test_same_vm_receipts_do_not_count_as_independent_e07(self):
         actual={"install":{"code":0},"verify":{"code":0},"update":{"code":0},
                 "rollback":{"code":0},"uninstall":{"code":0},
-                "uninstall_owned_files_checked":1011}
-        self.assertTrue(e07.samevm_lifecycle_verified(actual,expected_owned_files=1011))
-        actual["uninstall_owned_files_checked"]=1010
-        self.assertFalse(e07.samevm_lifecycle_verified(actual,expected_owned_files=1011))
+                "uninstall_owned_files_checked":1013}
+        self.assertTrue(e07.samevm_lifecycle_verified(actual,expected_owned_files=1013))
+        actual["uninstall_owned_files_checked"]=1012
+        self.assertFalse(e07.samevm_lifecycle_verified(actual,expected_owned_files=1013))
 
     def test_release_still_requires_current_physical_visual_and_functions(self):
         source=TARGET.read_text(encoding="utf-8")

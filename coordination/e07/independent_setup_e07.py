@@ -189,13 +189,15 @@ NAV_A2_SETUP_SIZE = 169665532
 NAV_A2_BUILD_ID = "NOX-V16-2dc194d7dcae0be37c2bb54f"
 NAV_A2_OWNED_COUNT = 1011
 
-# Immutable 2026-11-04 current D02 candidate from Windows E06 #41913880178.
+# Immutable 2026-11-04 current D02 physical candidate from Windows E06 #41926651444.
+# Setup SHA independently rehashed from the actual downloaded Windows artifact;
+# older candidate fingerprints remain in historical Git receipts, not merged.
 # Actual ZIP receipts and exact PE SHA were checked; NOT an E07 release.
-CURRENT_D02_SOURCE_SHA = "ab4d5dc24a52cd94813abdd4c803e16ab9d15536"
-CURRENT_D02_SETUP_SHA = "7067a091f8e8e4611402adf15337f995b0f4f5a6b2331b378298d9179866b05c"
-CURRENT_D02_SETUP_SIZE = 169665372
-CURRENT_D02_BUILD_ID = "NOX-V16-a4404d624fc9dca54d12dc71"
-CURRENT_D02_OWNED_COUNT = 1011
+CURRENT_D02_SOURCE_SHA = "5f44122bf01328fb2fbefbba0a40946d0be0df6e"
+CURRENT_D02_SETUP_SHA = "c8a190224e94d529df63827e832f1e8628ec0c034c400cedbaa2846116e28b2a"
+CURRENT_D02_SETUP_SIZE = 169682978
+CURRENT_D02_BUILD_ID = "NOX-V16-9a812040d0b6abed4fa1c953"
+CURRENT_D02_OWNED_COUNT = 1013
 
 
 

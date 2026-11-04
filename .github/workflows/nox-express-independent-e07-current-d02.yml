@@ -1,4 +1,4 @@
-name: NOX EXPRESS independent E07 current D02 41913880178
+name: NOX EXPRESS independent E07 current D02 41926651444
 on:
   push:
     branches: [integration/nox-v16-unified-candidate-20261028-r01]
@@ -107,9 +107,9 @@ jobs:
       - name: Download immutable candidate from DIFFERENT Windows CI run
         uses: actions/download-artifact@v4
         with:
-          run-id: 41913880178
+          run-id: 41926651444
           github-token: ${{ github.token }}
-          name: nox-v16-e06-onehost-diagnostic-41913880178
+          name: nox-v16-e06-onehost-diagnostic-41926651444
           path: input-verified-current-d02
       - name: Download prior SHA-pinned Authenticode-verified official Ollama x64 bytes
         uses: actions/download-artifact@v4
