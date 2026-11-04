@@ -37,7 +37,9 @@ def validate_quality_witness(payload: object) -> dict:
                     item.get("name") == expected and
                     item.get("invoked") is True and
                     item.get("pressed") is True and
-                    item.get("same_hwnd") is True,
+                    item.get("same_hwnd") is True and
+                    item.get("invocation_method") in
+                    ("INVOKE_PATTERN", "LEGACY_DEFAULT_ACTION"),
                     "U17_D02_QUALITY_REAL_TRANSITION_HOLD")
     return {"fx_control": "PASS", "actual_invocations": len(QUALITY_NAMES),
             "observed_modes": list(QUALITY_NAMES),
@@ -98,10 +100,23 @@ try {
  $results=@()
  foreach($label in $expected){
    $btn=ExactRealButton $label
+   # WebView2 sometimes exposes an HTML graphical button through the native
+   # LegacyIAccessible default-action pattern instead of InvokePattern.
+   # Both are real Windows accessibility actions. Never synthesize a JS ACK.
+   $invoke=$null
    try {$invoke=$btn.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)}
-   catch {throw 'U17_D02_QUALITY_INVOKEPATTERN_HOLD'}
-   if($null -eq $invoke){throw 'U17_D02_QUALITY_INVOKEPATTERN_HOLD'}
-   $invoke.Invoke()
+   catch {}
+   $method='INVOKE_PATTERN'
+   if($null -ne $invoke){
+     $invoke.Invoke()
+   } else {
+     $legacy=$null
+     try {$legacy=$btn.GetCurrentPattern([System.Windows.Automation.LegacyIAccessiblePattern]::Pattern)}
+     catch {}
+     if($null -eq $legacy){throw 'U17_D02_QUALITY_NO_NATIVE_ACCESSIBILITY_ACTION_HOLD'}
+     $legacy.DoDefaultAction()
+     $method='LEGACY_DEFAULT_ACTION'
+   }
    Start-Sleep -Milliseconds 500
    $current=ExactRealButton $label
    $pressed=$false
@@ -117,7 +132,7 @@ try {
    if(-not $pressed){throw 'U17_D02_QUALITY_PRESSED_STATE_HOLD'}
    $alive=$null -ne [System.Windows.Automation.AutomationElement]::FromHandle($h)
    if(-not $alive){throw 'U17_D02_UIA_HWND_LOST_HOLD'}
-   $results+=([pscustomobject]@{name=$label;invoked=$true;pressed=$true;same_hwnd=$true})
+   $results+=([pscustomobject]@{name=$label;invoked=$true;pressed=$true;same_hwnd=$true;invocation_method=$method})
  }
  [pscustomobject]@{schema='NOX-D02-QUALITY-UIA-v1';actions=@($results)} |
    ConvertTo-Json -Compress -Depth 5
