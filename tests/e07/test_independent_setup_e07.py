@@ -547,7 +547,7 @@ class IndependentE07(unittest.TestCase):
     def test_u11_safe_navigation_only_for_pinned_original_candidate(self):
         source = FILE.read_text(encoding="utf-8")
         self.assertIn('safe_nav=physical_nav or frozen_source == "e888941626191c17d19d372889b1f96842c15e1b"', source)
-        self.assertIn('physical_nav=args.artifact_kind in ("original-30a", "d02", "d02-91a6", "d02-f842", "d02-nav-a2")', source)
+        self.assertIn('physical_nav=args.artifact_kind in ("original-30a", "d02", "d02-91a6", "d02-f842", "d02-nav-a2", "d02-current")', source)
         guarded = source.split("def observe_readonly_primary_navigation(",1)[1].split(
             "\ndef original_wpf_hwnd(",1)[0]
         self.assertIn("InvokePattern",guarded)
