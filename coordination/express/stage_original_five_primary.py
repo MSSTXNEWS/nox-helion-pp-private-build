@@ -67,7 +67,7 @@ function findOriginalControl(name){
    INSTALL:'button#install-app',
    MODELS:'button#model-center',
    LEARN:'.nav button[data-screen="control"]',
-   SETTINGS:'.nav button[data-screen="settings"],button#settings'
+   SETTINGS:'button.tile[data-menu-index="7"]'
  };
  const selector=selectors[name];if(!selector)return null;
  const matches=document.querySelectorAll(selector);
