@@ -42,8 +42,8 @@ jobs:
       - name: Download exact successful NOX Windows Setup
         uses: actions/download-artifact@v4
         with:
-          run-id: 41818231793
-          name: nox-v16-e06-onehost-diagnostic-41818231793
+          run-id: 41827407408
+          name: nox-v16-e06-onehost-diagnostic-41827407408
           github-token: ${{ github.token }}
           path: input/nox
       - name: Verify both physical installers without relaxing any source pins
@@ -62,8 +62,19 @@ jobs:
           if ((Get-FileHash -LiteralPath $ollama -Algorithm SHA256).Hash.ToLowerInvariant() -ne '9e3c76e54e7184c68e88a2378b909bf59bbe454f83c076cb4f4a717e946ae719') { throw 'OLLAMA_ORIGINAL_SHA256_HOLD' }
           $sig=Get-AuthenticodeSignature -LiteralPath $ollama
           if ($sig.Status -ne 'Valid') { throw 'OLLAMA_AUTHENTICODE_NOT_VALID_HOLD' }
-          if ((Get-Item -LiteralPath $nox).Length -lt 10485760) { throw 'FULL_D02_SETUP_BYTES_HOLD' }
-          if ((Get-FileHash -LiteralPath $nox -Algorithm SHA256).Hash.ToLowerInvariant() -ne '71fb254ae8feeefb49f4830e57974c8be59b96f1b049915edd9eaa09714d4092') { throw 'NOX_SETUP_SHA256_HOLD' }
+          if ((Get-Item -LiteralPath $nox).Length -ne 169603017) { throw 'FULL_D02_SETUP_EXACT_BYTES_HOLD' }
+          if ((Get-FileHash -LiteralPath $nox -Algorithm SHA256).Hash.ToLowerInvariant() -ne '0fd80b7bb55fcbd60fe22971ea9292cadeaa6f99f9d174b38c205f7cea3989ab') { throw 'NOX_SETUP_SHA256_HOLD' }
+          # Frozen FULL D02 producer identity + immutable original R11 729-owner parity.
+          # A reused SetupSHA alone is not evidence of its source or BuildID.
+          $parent=Split-Path -Parent $nox
+          $handoffFile=Join-Path $parent 'E07_BUILT_HANDOFF.json'
+          $diagFile=Join-Path $parent 'ONEHOST_DIAGNOSTIC_RECEIPT.json'
+          if (!(Test-Path -LiteralPath $handoffFile -PathType Leaf) -or !(Test-Path -LiteralPath $diagFile -PathType Leaf)) { throw 'FULL_D02_SOURCE_RECEIPTS_MISSING_HOLD' }
+          $handoff=Get-Content -LiteralPath $handoffFile -Raw -Encoding UTF8 | ConvertFrom-Json
+          $diag=Get-Content -LiteralPath $diagFile -Raw -Encoding UTF8 | ConvertFrom-Json
+          if ($handoff.source_commit_sha1 -cne 'dbda3c0e6cd529cdcfbb031994a3e0ac699d2a5a' -or $handoff.build_id -cne 'NOX-V16-d990509dfd4a6460a21213e7' -or $handoff.setup_sha256 -cne '0fd80b7bb55fcbd60fe22971ea9292cadeaa6f99f9d174b38c205f7cea3989ab' -or $handoff.original_zip_sha256 -cne 'ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a' -or $handoff.source_files -ne 729 -or $handoff.source_receipts_729_parity_verified -ne $true -or $handoff.release_accepted -ne $false) { throw 'FULL_D02_FROZEN_SOURCE_R11_BUILDID_HOLD' }
+          if ($diag.source_commit_sha1 -cne 'dbda3c0e6cd529cdcfbb031994a3e0ac699d2a5a' -or $diag.installer_sha256 -cne '0fd80b7bb55fcbd60fe22971ea9292cadeaa6f99f9d174b38c205f7cea3989ab' -or $diag.installer_bytes -ne 169603017 -or $diag.release_accepted -ne $false) { throw 'FULL_D02_PRODUCER_SOURCE_RECEIPT_HOLD' }
+          Write-Host 'FULL_D02_FROZEN_R11_729_SOURCE_SETUP_BUILDID_PASS_NOT_E07'
           Write-Host 'PINNED_SIGNED_OLLAMA_AND_PHYSICAL_FULL_D02_SETUP_SHA256_PASS_NO_RELEASE'
       - name: Install Ollama from verified bytes and start original local provider
         shell: pwsh
