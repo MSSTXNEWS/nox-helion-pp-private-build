@@ -25,8 +25,14 @@ class AttachmentReparseU09(unittest.TestCase):
     @staticmethod
     def junction(target):
         original = getattr(pathlib.Path, "is_junction", lambda path: False)
+        # Windows may normalize the temporary root while resolving the native
+        # app-owned directory. Inject only the exact child node/parent labels;
+        # do not mock is_symlink or weaken P02Store's real reparse check.
         return patch.object(pathlib.Path, "is_junction",
-                            lambda path: path == target or original(path), create=True)
+                            lambda path: (path == target or
+                                          (path.name.casefold() == target.name.casefold()
+                                           and path.parent.name.casefold() == target.parent.name.casefold())
+                                          or original(path)), create=True)
 
     def test_regular_store_root_unchanged(self):
         store = P02Store(self.db, self.root / "app")
