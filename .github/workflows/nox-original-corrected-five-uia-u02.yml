@@ -5,6 +5,7 @@ on:
     paths:
       - .github/workflows/nox-original-corrected-five-uia-u02.yml
       - coordination/e07/independent_setup_e07.py
+      - coordination/e07/probe_five_primary_action.py
   workflow_dispatch:
 permissions:
   contents: read
@@ -31,17 +32,17 @@ jobs:
       - name: Download exact physical E06 candidate (never Qwen or Ollama)
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
-          run-id: 41825380857
+          run-id: 41829928630
           github-token: ${{ github.token }}
-          name: NOX-EXPRESS-ONEHOST-fbbe084c23eb1ea2462814b6d5bfded5ff6951c6
+          name: NOX-EXPRESS-ONEHOST-a504410cd969adfbdcda4e39fdeb9aef76e78702
           path: frozen-candidate
       - name: SHA-bind physical Setup, install, five genuine UIA InvokePattern transitions
         id: five
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          $src = 'fbbe084c23eb1ea2462814b6d5bfded5ff6951c6'
-          $sha = 'b658756ca5969536fb2d294038b58c6a6948694b13ebd596efdfc04b5ec7f908'
+          $src = 'a504410cd969adfbdcda4e39fdeb9aef76e78702'
+          $sha = 'cd894b5a1cbd46d3106f75869733256a4adc77ea2d60d3b590bcb7353e9a7a5c'
           $dir = Join-Path $PWD 'frozen-candidate'
           $setup = Join-Path $dir 'NOX_HELION_EXPRESS_CANDIDATE_SETUP.exe'
           $receipt = Join-Path $dir 'BUILD_RECEIPT.json'
