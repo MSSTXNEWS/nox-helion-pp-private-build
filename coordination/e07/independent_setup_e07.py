@@ -165,6 +165,14 @@ def _read_locked_e06_json(path: Path) -> dict:
 # verification; neither JSON claims nor source-tree size can change this value.
 FROZEN_E06_OWNED_COUNT = 1007
 
+# Second immutable, physically built FULL-D02 candidate from Windows 41885544063.
+# Only same-SHA evidence is admissible.  This is NOT a release receipt.
+NEW_D02_SOURCE_SHA = "91a6c104c6412a63085352e224328d3c0ab3ff86"
+NEW_D02_SETUP_SHA = "9884a33c3d6d924556602b68b0767ede7a3b2fe5432937b0cb29a49bea183a12"
+NEW_D02_SETUP_SIZE = 169665842
+NEW_D02_BUILD_ID = "NOX-V16-5d42f812b3ab0697d2da15ff"
+NEW_D02_OWNED_COUNT = 1011
+
 
 def samevm_lifecycle_verified(
     stages: object, *, expected_owned_files: int = FROZEN_E06_OWNED_COUNT
@@ -185,11 +193,20 @@ def samevm_lifecycle_verified(
                     for name in ("install", "verify", "update", "rollback", "uninstall")))
 
 
-def setup_lock(setup: Path, receipt: Path) -> dict:
+def setup_lock(setup: Path, receipt: Path, *, candidate: str = "d02") -> dict:
     """Pin physical latest E06 Setup to three same-identity receipts, then verify bytes.
 
     Prior E06 same-VM lifecycle is NOT independent E07; lifecycle() must rerun.
     """
+    require(candidate in ("d02", "d02-91a6"), "E07_CANDIDATE_PIN_KIND_HOLD")
+    if candidate == "d02-91a6":
+        expected_source, expected_setup_sha = NEW_D02_SOURCE_SHA, NEW_D02_SETUP_SHA
+        expected_setup_size, expected_build_id = NEW_D02_SETUP_SIZE, NEW_D02_BUILD_ID
+        expected_owned_count = NEW_D02_OWNED_COUNT
+    else:
+        expected_source, expected_setup_sha = SOURCE_SHA, SETUP_SHA
+        expected_setup_size, expected_build_id = SETUP_SIZE, E06_BUILD_ID
+        expected_owned_count = FROZEN_E06_OWNED_COUNT
     require(clean_file(setup) and clean_file(receipt), "E07_SOURCE_ARTIFACT_NOT_REGULAR")
     require(setup.parent == receipt.parent and receipt.name == "E07_BUILT_HANDOFF.json",
             "E07_E06_HANDOFF_PATH_HOLD")
@@ -197,47 +214,47 @@ def setup_lock(setup: Path, receipt: Path) -> dict:
     diagnostic = _read_locked_e06_json(receipt.parent/"ONEHOST_DIAGNOSTIC_RECEIPT.json")
     smoke = _read_locked_e06_json(receipt.parent/"T06_INSTALLED_SMOKE.json")
     require(handoff.get("schema") == "NOX_V16_E07_IMMUTABLE_HANDOFF_V1" and
-            handoff.get("source_commit_sha1") == SOURCE_SHA and
-            handoff.get("build_id") == E06_BUILD_ID and
+            handoff.get("source_commit_sha1") == expected_source and
+            handoff.get("build_id") == expected_build_id and
             handoff.get("phase") == "BUILT" and
             handoff.get("original_zip_sha256") == ORIGINAL_ZIP_SHA and
             handoff.get("source_files") == 729 and
             handoff.get("source_receipts_729_parity_verified") is True and
-            handoff.get("setup_sha256") == SETUP_SHA and
+            handoff.get("setup_sha256") == expected_setup_sha and
             type(handoff.get("independent_e07_cases_accepted")) is int and
             handoff["independent_e07_cases_accepted"] == 0 and
             handoff.get("release_accepted") is False and
             handoff.get("status") == "PENDING_E07_INDEPENDENT_SAME_SHA_QA",
             "E07_E06_HANDOFF_IDENTITY_HOLD")
     require(diagnostic.get("schema") == "NOX-E06-ONEHOST-DIAGNOSTIC-NSIS-v1" and
-            diagnostic.get("source_commit_sha1") == SOURCE_SHA and
-            diagnostic.get("installer_sha256") == SETUP_SHA and
+            diagnostic.get("source_commit_sha1") == expected_source and
+            diagnostic.get("installer_sha256") == expected_setup_sha and
             type(diagnostic.get("installer_bytes")) is int and
-            diagnostic["installer_bytes"] == SETUP_SIZE and
+            diagnostic["installer_bytes"] == expected_setup_size and
             diagnostic.get("release_accepted") is False and
             diagnostic.get("status") == "WINDOWS_INSTALLER_CANDIDATE_NOT_E07_ACCEPTED",
             "E07_E06_DIAGNOSTIC_IDENTITY_HOLD")
     stages = smoke.get("installer_lifecycle")
     require(smoke.get("schema") == "NOX-T06-INSTALLED-SMOKE-v1" and
             smoke.get("phase") == "INSTALLED_GUI_IPC_UPDATE_ROLLBACK_NOLOSS_PASS_NOT_E07" and
-            smoke.get("build_id") == E06_BUILD_ID and
-            smoke.get("setup_sha256") == SETUP_SHA and
+            smoke.get("build_id") == expected_build_id and
+            smoke.get("setup_sha256") == expected_setup_sha and
             smoke.get("release_accepted") is False and
             smoke.get("e07_independent_acceptance") == "NOT_RUN" and
-            samevm_lifecycle_verified(stages),
+            samevm_lifecycle_verified(stages, expected_owned_files=expected_owned_count),
             "E07_E06_SAMEVM_RECEIPT_HOLD")
     require(clean_dir(setup.parent), "E07_SETUP_PARENT_REPARSE_HOLD")
     locked_sha, header = installed_file_sha_locked(
-        setup, setup.parent.resolve(strict=True), SETUP_SIZE, SETUP_SHA,
+        setup, setup.parent.resolve(strict=True), expected_setup_size, expected_setup_sha,
         return_pe_header=True)
-    require(locked_sha == SETUP_SHA, "E07_SETUP_SHA_HOLD")
+    require(locked_sha == expected_setup_sha, "E07_SETUP_SHA_HOLD")
     require(len(header) >= 64 and header[:2] == b"MZ", "E07_SETUP_WINDOWS_PE_HOLD")
     offset = struct.unpack_from("<I", header, 0x3c)[0]
     require(offset <= len(header)-6 and header[offset:offset+4] == b"PE\0\0",
             "E07_SETUP_WINDOWS_PE_HOLD")
-    return {"source_sha":SOURCE_SHA,"setup_sha256":SETUP_SHA,
-            "setup_bytes":SETUP_SIZE,"pe_machine":hex(struct.unpack_from("<H",header,offset+4)[0]),
-            "build_id":E06_BUILD_ID,"e06_samevm_pass_not_e07":True}
+    return {"source_sha":expected_source,"setup_sha256":expected_setup_sha,
+            "setup_bytes":expected_setup_size,"pe_machine":hex(struct.unpack_from("<H",header,offset+4)[0]),
+            "build_id":expected_build_id,"e06_samevm_pass_not_e07":True}
 
 
 
@@ -1278,7 +1295,7 @@ def lifecycle(setup: Path, result: dict, *, frozen_source: str = "", physical_na
     # LIVE Qwen, nonempty persisted SQLite and in-flight STOP must be
     # measured BEFORE this exact installed Setup undergoes update/uninstall.
     # A provider-offline HOLD must never skip conservative lifecycle cleanup.
-    if frozen_source == SOURCE_SHA:
+    if frozen_source in (SOURCE_SHA, NEW_D02_SOURCE_SHA):
         try:
             result["checks"]["installed_live_qwen_stream_stop_sqlite"] = (
                 installed_live_qwen_gates(
@@ -1328,7 +1345,7 @@ def lifecycle(setup: Path, result: dict, *, frozen_source: str = "", physical_na
 def main() -> int:
     p=argparse.ArgumentParser()
     p.add_argument("--artifact-dir",required=True,type=Path)
-    p.add_argument("--artifact-kind",choices=("d02","original","original-e888","original-30a"),default="d02")
+    p.add_argument("--artifact-kind",choices=("d02","d02-91a6","original","original-e888","original-30a"),default="d02")
     p.add_argument("--out",required=True,type=Path)
     p.add_argument("--visual-receipt",type=Path)
     p.add_argument("--function-receipt",type=Path)
@@ -1342,7 +1359,10 @@ def main() -> int:
             "30a4f7c43649e3c3d66d0d46ec370b2105a69faa",
             "ceb4aab254a6a61b16b25a225ba443149bf1260c3ac410f0c00047842ab9c48c"),
     }
-    source_sha, setup_sha = frozen_ids.get(args.artifact_kind, (SOURCE_SHA, SETUP_SHA))
+    if args.artifact_kind == "d02-91a6":
+        source_sha, setup_sha = NEW_D02_SOURCE_SHA, NEW_D02_SETUP_SHA
+    else:
+        source_sha, setup_sha = frozen_ids.get(args.artifact_kind, (SOURCE_SHA, SETUP_SHA))
     result={"schema":"NOX-EXPRESS-INDEPENDENT-E07-CANDIDATE-v1",
             "source_sha":source_sha,
             "setup_sha256":setup_sha,
@@ -1362,9 +1382,9 @@ def main() -> int:
         else:
             setup=source/"e06"/"onehost-wow-diagnostic"/"NOX-HELION-V16-DIAGNOSTIC-SETUP.exe"
             receipt=source/"e06"/"onehost-wow-diagnostic"/"E07_BUILT_HANDOFF.json"
-            result["checks"]["artifact"] = setup_lock(setup,receipt)
+            result["checks"]["artifact"] = setup_lock(setup,receipt,candidate=args.artifact_kind)
         lifecycle(setup,result,frozen_source=source_sha,
-                  physical_nav=args.artifact_kind in ("original-30a", "d02"))
+                  physical_nav=args.artifact_kind in ("original-30a", "d02") or args.artifact_kind == "d02-91a6")
         # The complete physical install/update/rollback/uninstall lifecycle ran
         # on this exact Setup. These facts do NOT prove inference or final E07.
         result["checks"]["installed_lifecycle"] = {

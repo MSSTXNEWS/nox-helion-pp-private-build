@@ -35,9 +35,9 @@ class IndependentE07(unittest.TestCase):
         workflow = (ROOT / ".github/workflows/nox-express-independent-e07-candidate.yml").read_text(encoding="utf-8")
         # Active independent E07 must use the physically verified frozen FULL
         # D02 producer. Historic originals remain source-pinned, not selected.
-        self.assertIn("run-id: 41872700529", workflow)
-        self.assertIn("name: nox-v16-e06-onehost-diagnostic-41872700529", workflow)
-        self.assertIn("path: input-verified-834", workflow)
+        self.assertIn("run-id: 41885544063", workflow)
+        self.assertIn("name: nox-v16-e06-onehost-diagnostic-41885544063", workflow)
+        self.assertIn("path: input-verified-91a6", workflow)
         self.assertNotIn("run-id: 41867828741", workflow)
         self.assertIn("--artifact-kind d02", workflow)
         self.assertIn('"original-e888"', source)
