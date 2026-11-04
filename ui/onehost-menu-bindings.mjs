@@ -148,6 +148,12 @@ export function nativeCompletedOwnerReply(reply) {
     !nativeOwnerReceiptHolds(reply.result);
 }
 
+// A COMPLETED transport is not a real functional result without a matching route.
+export function nativeReadVerified(reply,route){
+  return reply?.routeId===route&&nativeCompletedOwnerReply(reply)&&
+    reply.result!==null&&typeof reply.result==='object'&&!Array.isArray(reply.result);
+}
+
 export function nativeOwnerActionReceipt(reply,route,action) {
   const owner=reply?.result;
   if(reply?.routeId!==route || !nativeCompletedOwnerReply(reply) ||
@@ -230,9 +236,28 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
       button.dataset.nativeKey='enabled';button.dataset.nativeValue=value;actions.append(button);
     }
   };
+  // Actual existing OneHost/P02 read handlers. No model pull, training,
+  // PC control, fake result or second host can originate from these probes.
+  const verifiedReadPanels=Object.freeze({
+    'РАБОТА':[['Задания','chat.commands','action','selfbuilder.worker.status']],
+    'ИНТЕЛЛЕКТ':[['Каталог моделей','models.catalog','',''],['Активатор','chat.commands','action','selfbuilder.activator.status']],
+    'ЗНАНИЯ':[['История','chat.history','',''],['Исходники','chat.commands','action','selfbuilder.sources.inspect']],
+    'РАЗВИТИЕ':[['Очередь обучения','chat.commands','action','selfbuilder.study.queue'],['Доказательства обучения','chat.commands','action','selfbuilder.learning.proofs'],['GPU preflight','gpu.preflight','','']],
+    'СИСТЕМА':[['Очередь моделей','models.queue','',''],['Каталог моделей','models.catalog','',''],['GPU preflight','gpu.preflight','',''],['Активатор','chat.commands','action','selfbuilder.a1.status']]
+  });
+  const appendFunctionalReadButtons=()=>{
+    for(const prior of actions.querySelectorAll?.('[data-nox-functional-read]')||[])prior.remove();
+    const section=(doc.getElementById('detail-title')?.textContent||'').trim();
+    for(const [label,route,key,value] of verifiedReadPanels[section]||[]){
+      const b=doc.createElement('button');b.type='button';b.className='nox-sb-tile';
+      b.textContent=label;b.dataset.noxFunctionalRead='1';
+      b.dataset.nativeRoute=route;b.dataset.nativeKey=key;b.dataset.nativeValue=value;
+      actions.append(b);
+    }
+  };
   const display=v=>{
     if(disposed)return;
-    const data=v.result,approved=nativeCompletedOwnerReply(v);actions.replaceChildren();
+    const approved=nativeReadVerified(v,v?.routeId),data=approved?v.result:null;actions.replaceChildren();
     function action(label,route,key,id){
       const b=doc.createElement('button');b.type='button';b.className='nox-sb-tile';b.textContent=label;
       b.dataset.nativeRoute=route;b.dataset.nativeKey=key;b.dataset.nativeValue=id;actions.append(b);
@@ -269,9 +294,10 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
       action('Саморазвитие · статус','chat.commands','action','selfbuilder.a1.status');
       action('Первый патч · MENU10/D02/WOW','chat.commands','action','selfbuilder.propose');
     }
-    if(v.routeId?.startsWith('models.'))action('Обновить очередь загрузки','models.queue','','');
+    if(approved&&v.routeId?.startsWith('models.'))action('Обновить очередь загрузки','models.queue','','');
     appendSystemAutostartButtons();
     appendActivatorShortcut();
+    appendFunctionalReadButtons();
     detail.hidden=!data;detail.textContent=data?JSON.stringify(data,null,2):'';
     status.textContent=(v.state==='HOLD'||v.state==='COMPLETED'&&!approved)?'HOLD · '+(v.errorCode||data?.errorCode||'NATIVE_OWNER_UNCONFIRMED'):
       v.state==='STOP_REQUESTED'?'STOP REQUESTED · ожидается завершение ядра':
@@ -285,7 +311,7 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
         root.append(status,detail,actions);detail.hidden=true;
         const reply=await client.request('models.queue',{});
         if(!disposed&&doc.getElementById('detail-title')?.textContent?.trim()==='РАЗВИТИЕ')display(reply);
-        return reply.routeId==='models.queue'&&nativeCompletedOwnerReply(reply)&&Array.isArray(reply.result?.jobs)
+        return nativeReadVerified(reply,'models.queue')&&Array.isArray(reply.result?.jobs)
           ? {ack:true,jobs:reply.result.jobs}
           : {ack:false,errorCode:reply.errorCode||'P03_QUEUE_UNAVAILABLE'};
       },
@@ -318,7 +344,7 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
         doc.getElementById('chat-persona')?.value||'')});}
     catch(error){console.warn('NOX_R11_WOW_HOLD',error?.message||'NATIVE_MENU_NOT_READY');}
   }
-  const sectionObserver=root&&view.MutationObserver?new view.MutationObserver(()=>{menu?.refresh();appendSystemAutostartButtons();appendActivatorShortcut();}):null;
+  const sectionObserver=root&&view.MutationObserver?new view.MutationObserver(()=>{menu?.refresh();appendSystemAutostartButtons();appendActivatorShortcut();appendFunctionalReadButtons();}):null;
   const title=doc.getElementById('detail-title');
   if(title)sectionObserver?.observe(title,{childList:true,characterData:true,subtree:true});
   // One passive local probe on first MENU mount. No download, training or patch.
@@ -332,8 +358,8 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
       const reply=await client.request('chat.commands',{action:'selfbuilder.capabilities',...scope});
       if(run!==capabilityEpoch||!sameSelection(epoch,scope))return;
       states=Object.create(null);trainingJobs=[];
-      if(nativeCompletedOwnerReply(reply)&&Array.isArray(reply.result?.trainingJobs))trainingJobs=reply.result.trainingJobs.filter(x=>typeof x?.id==='string');
-      if(nativeCompletedOwnerReply(reply) && reply.result?.actions && typeof reply.result.actions==='object')
+      if(nativeReadVerified(reply,'chat.commands')&&Array.isArray(reply.result?.trainingJobs))trainingJobs=reply.result.trainingJobs.filter(x=>typeof x?.id==='string');
+      if(nativeReadVerified(reply,'chat.commands') && reply.result?.actions && typeof reply.result.actions==='object')
         for(const action of ACTIONS){
           const s=reply.result.actions[action];
           if(s&&typeof s==='object')states[action]={available:s.available===true,
@@ -359,7 +385,7 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
       const scope=context();
       if(!scope.core_id||!scope.persona_id)throw Error('SELECT_CORE_AND_PERSONA');
       const reply=await client.request('chat.commands',{action,...scope,...extra});
-      if(!nativeCompletedOwnerReply(reply))throw Error('R5_NATIVE_HOLD');
+      if(nativeOwnerActionReceipt(reply,'chat.commands',action).ack!==true)throw Error('R5_NATIVE_HOLD');
       return reply.result;
     };
     wow=mountWowDesignWorkbench({
@@ -448,7 +474,7 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
     try{
       const reply=await client.request('chat.model',{});
       if(disposed||observedEpoch!==selectionEpoch||modelSelectionPending||
-         !nativeCompletedOwnerReply(reply)||!Array.isArray(reply.result?.models))return;
+         !nativeReadVerified(reply,'chat.model')||!Array.isArray(reply.result?.models))return;
       select.replaceChildren();
       const names=[...new Set(reply.result.models.filter(name=>
         typeof name==='string'&&name.length>0&&name.length<=160))].slice(0,64);
@@ -481,14 +507,29 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
     if(button.id==='chat-stop')stopRequestPending=true;
     button.disabled=true;status.textContent='REQUESTED · ожидается ответ ядра';
     const task='Сверь существующие D02/HOME/MENU10/WOW и журнал ошибок с текущим SourceLock. Создай ОДИН безопасный дополнительный исходный патч для живой кнопки, раздела или графического эффекта: точный путь, рабочий обработчик, разрешения, STOP, регрессионный тест, SHA и откат. Сохрани исходные 8 астероидов, 10 миров, personas, WebView2, S03/P03, без изменения EXE без независимой приёмки.';
-    const payload=generated&&route==='system.autostart'
+    if(generated&&route==='chat.history'){
+      const scope=context();
+      if(!scope.core_id||!scope.persona_id){
+        status.textContent='HOLD · выберите CoreID и Persona для истории';button.disabled=false;return;
+      }
+    }
+    const payload=generated&&route==='chat.history'?{limit:50,...context()}
+      :generated&&route==='system.autostart'
       ?{enabled:button.dataset.nativeValue==='true'}
       :generated&&route==='chat.commands'&&button.dataset.nativeValue==='selfbuilder.propose'
       ?{action:'selfbuilder.propose',task}
+      :generated&&route==='chat.commands'&&button.dataset.nativeKey==='action'
+      ?{action:button.dataset.nativeValue,...context()}
       :generated?(button.dataset.nativeKey?{[button.dataset.nativeKey]:button.dataset.nativeValue}:{})
       :route==='chat.commands'?{action:'selfbuilder.worker.status',...context()}:{};
-    try{display(await client.request(route,payload));}
-    catch(error){if(!disposed)status.textContent=(error.message==='TIMEOUT'?'TIMEOUT':'HOLD')+' · запрос не подтверждён';}
+    const visibleSection=doc.getElementById('detail-title')?.textContent;
+    try{
+      const reply=await client.request(route,payload);
+      if(!disposed&&button.isConnected&&doc.getElementById('detail-title')?.textContent===visibleSection)display(reply);
+    }catch(error){
+      if(!disposed&&button.isConnected&&doc.getElementById('detail-title')?.textContent===visibleSection)
+        status.textContent=(error.message==='TIMEOUT'?'TIMEOUT':'HOLD')+' · запрос не подтверждён';
+    }
     finally{if(button.id==='chat-stop')stopRequestPending=false;if(!disposed)button.disabled=false;}
   }
   async function change(event){
@@ -524,7 +565,7 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
       }
       const reply=await client.request('chat.history',{limit:100,...scope});
       if(historyRun!==historyEpoch||!sameSelection(epoch,scope))return;
-      if(!nativeCompletedOwnerReply(reply)||!Array.isArray(reply.result?.messages)){chatStatus('HOLD · история недоступна');return;}
+      if(!nativeReadVerified(reply,'chat.history')||!Array.isArray(reply.result?.messages)){chatStatus('HOLD · история недоступна');return;}
       const log=doc.getElementById('chat-log');if(log){
         log.replaceChildren();for(const row of reply.result.messages){
           if(typeof row?.content!=='string')continue;
