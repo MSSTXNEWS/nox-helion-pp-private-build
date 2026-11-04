@@ -1,5 +1,9 @@
 """Focused same-VM WebView2 staging regression (no network, no Windows PASS)."""
 import importlib.util
+import hashlib
+import io
+import json
+import zipfile
 from pathlib import Path
 import tempfile
 import unittest
@@ -74,6 +78,22 @@ class WebView2SameVmStageTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "UNKNOWN_PREIMAGE_HOLD"):
             owner.stage_exact_owner_webview2_registry_views(self.r11, DONOR)
         self.assertEqual(unsupported, self.preflight.read_text("utf-8"))
+
+    def test_actual_frozen_c07_immutable_preflight_upgrades_owner_guard(self):
+        manifest = json.loads((ROOT / "donors/P01_C07/P01_C07_RECEIPT.json").read_text("utf-8"))
+        raw_zip = b"".join((ROOT / item["path"]).read_bytes() for item in manifest["parts"])
+        with zipfile.ZipFile(io.BytesIO(raw_zip)) as archive:
+            original = archive.read("R11/Installer/Preflight-InstallPath.ps1")
+        self.assertEqual(hashlib.sha256(original).hexdigest(),
+                         "8413580656bace887478c9f82e72433987ad8e4a552af6e67c3531b09d545239")
+        self.preflight.write_bytes(original)
+        owner.stage_exact_owner_webview2_registry_views(self.r11, DONOR)
+        current = self.preflight.read_text("utf-8")
+        for token in ("P01_INSTALL_MARKER_INVALID", "P01_INSTALL_REPARSE_ANCESTOR",
+                      "Registry32", "Registry64", "P01_WEBVIEW2_RUNTIME_MISSING"):
+            self.assertIn(token, current)
+        self.assertNotIn("while ($cursor -and", current)
+        self.assertEqual(current.count("P01_INSTALL_MARKER_INVALID"), 1)
 
     def test_crlf_and_bom_are_preserved(self):
         self.preflight.write_bytes(b"\xef\xbb\xbf" + LEGACY.replace("\n", "\r\n").encode("utf-8"))

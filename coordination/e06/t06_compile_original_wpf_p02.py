@@ -291,6 +291,30 @@ def stage_exact_owner_webview2_registry_views(r11, canonical_script):
                 "[IO.Path]::GetDirectoryName($cursor)" not in legacy_guard):
             raise RuntimeError("T06_P01_PREFLIGHT_ANCESTOR_LEGACY_DRIFT_HOLD")
         after = after[:legacy_begin] + approved_guard.replace("\n", eol) + after[legacy_end:]
+    elif (after.count(old_marker) == 1 and after.count(end_marker) == 0 and
+          after.count("# Official Microsoft WebView2 Evergreen Runtime:") == 1 and
+          hashlib.sha256(raw).hexdigest() ==
+          "8413580656bace887478c9f82e72433987ad8e4a552af6e67c3531b09d545239"):
+        # Exact frozen C07 R11 has NO owner-marker guard between its
+        # legacy ancestor check and the WebView2 pv block. Graft the
+        # complete SHA-pinned reviewed C09 ancestor+ownership guard only
+        # into disposable staging; never rewrite the immutable C07 ZIP.
+        webview_marker = "# Official Microsoft WebView2 Evergreen Runtime:"
+        legacy_begin, legacy_end = after.index(old_marker), after.index(webview_marker)
+        legacy_guard = after[legacy_begin:legacy_end]
+        old_guard_sha = hashlib.sha256(
+            legacy_guard.replace("\r\n", "\n").encode("utf-8")).hexdigest()
+        if (legacy_begin >= legacy_end or
+                old_guard_sha !=
+                "fcdf553e40d1ed4559401931d37d854e48bc1fabb1209ac45cdcd8ea33620561"):
+            raise RuntimeError("T06_C07_ORIGINAL_ANCESTOR_GUARD_SHA_HOLD")
+        approved_tail_end = approved.index(begin_anchor)
+        approved_tail = approved[guard_begin:approved_tail_end]
+        if (approved_tail.count(end_marker) != 1 or
+                "P01_INSTALL_MARKER_INVALID" not in approved_tail or
+                approved_tail.count("P01_INSTALL_REPARSE_ANCESTOR") != 1):
+            raise RuntimeError("T06_C09_APPROVED_OWNER_TAIL_HOLD")
+        after = after[:legacy_begin] + approved_tail.replace("\n", eol) + after[legacy_end:]
     elif after.count(new_marker) != 1 or after.count(end_marker) != 1:
         raise RuntimeError("T06_P01_PREFLIGHT_ANCESTOR_UNKNOWN_PREIMAGE_HOLD")
     staged_guard_begin = after.index(new_marker)
