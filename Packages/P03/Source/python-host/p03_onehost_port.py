@@ -253,6 +253,14 @@ class P03OneHostPort:
         method_name = OWNER_ROUTES.get(route)
         if not method_name:
             raise P03PortHold("Owner3 operation not bound")
+        # Cancel/retry must name one existing owner job before contacting the
+        # mutating backend. Never allow empty/broad selector or implicit cancel-all.
+        job_id = None
+        if route in ("models.cancel", "models.retry"):
+            job_id = args.get("jobId")
+            if (type(job_id) is not str or
+                    re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._:-]{0,127}", job_id) is None):
+                raise P03PortDenied("Exact owner jobId required for cancel/retry")
         backend = self.backend
         try:
             func = getattr(backend, method_name, None)
@@ -359,6 +367,11 @@ class P03OneHostPort:
                     "REVIEW_REQUIRED", "CONSENT_REQUIRED", "NOT_AUTHORIZED",
                     "STOP_PENDING", "BUSY", "NOT_READY"))):
                 raise P03PortHold("Owner3 backend returned a HOLD/error, not an ACK")
+            # Status alone (or an acknowledgement for another job) cannot
+            # prove that the consented cancellation/retry touched THIS job.
+            if route in ("models.cancel", "models.retry"):
+                if type(result.get("jobId")) is not str or result["jobId"] != job_id:
+                    raise P03PortHold("Owner3 job acknowledgement identity mismatch")
             return result
         except (P03PortDenied, P03PortHold):
             raise
