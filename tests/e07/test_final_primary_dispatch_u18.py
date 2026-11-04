@@ -113,6 +113,12 @@ class FinalPrimaryDispatch(unittest.TestCase):
         self.assertIn("requested=@($width,$height)", script)
         self.assertNotIn("foreach($size in @(@(1044,788),@(800,600)))", script)
 
+    def test_primary_buttons_use_same_strict_visible_geometry_as_original(self):
+        script=probe._uia_script(12345,"VISUAL",png=Path("test.png"))
+        self.assertIn("$b.Width -ge 20 -and $b.Height -ge 12",script)
+        self.assertNotIn("$b.Width -ge 14 -and $b.Height -ge 10",script)
+        self.assertIn("BUTTON_'+$name+'_NOT_UNIQUE",script)
+
     def test_final_capture_uses_valid_rect_and_checks_the_window(self):
         script = probe._uia_script(12345, "VISUAL", png=Path("test.png"))
         self.assertNotIn("New-Object NoxFinalWin32+RECT", script)
