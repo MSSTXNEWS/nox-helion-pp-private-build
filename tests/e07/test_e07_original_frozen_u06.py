@@ -67,11 +67,11 @@ class FrozenOriginalU06(unittest.TestCase):
         )
         matches = [all(token in workflow for token in group) for group in approved]
         self.assertEqual(sum(matches), 1, "E07_ORIGINAL_WORKFLOW_FROZEN_PAIR_HOLD")
-        for i, candidate in enumerate(approved):
-            if matches[i]:
-                continue
-            for token in candidate:
-                self.assertNotIn(token, workflow)
+        active = approved[matches.index(True)]
+        for group in approved:
+            if group != active:
+                for token in group:
+                    self.assertNotIn(token, workflow)
         self.assertNotIn("run-id: 41785340462", workflow)
         # The old reviewed source+Setup bytes are still frozen in native code.
         self.assertEqual(MOD.ORIGINAL_E06_SOURCE, "fe21790af418c8c1083946595811b67c9c03c49d")
