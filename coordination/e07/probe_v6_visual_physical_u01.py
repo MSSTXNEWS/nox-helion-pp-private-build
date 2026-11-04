@@ -102,10 +102,7 @@ def evaluate_fx_cycle(data: object) -> dict:
 
 
 def probe_fx_cycle(hwnd: int) -> dict:
-    """Exercise the existing original WPF/WebView2 FX button, then restore BALANCED.
-
-    A screenshot or changing button label without real UIA InvokePattern is not proof.
-    """
+    """Exercise existing original WPF/WebView2 FX button, restore BALANCED."""
     e07.require(sys.platform == "win32" and type(hwnd) is int and hwnd > 0,
                 "V6_FX_ORIGINAL_WINDOWS_HWND_REQUIRED")
     script = r'''
@@ -121,76 +118,7 @@ function Get-OriginalFxButton {
  $controls=$root.FindAll([System.Windows.Automation.TreeScope]::Descendants,$filter)
  $foundControls=New-Object System.Collections.ArrayList
  foreach($c in $controls) {
-  if (($c.Current.Name+'') -cmatch '^FX (BALANCED|MAX|ECO)
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--artifact-dir", type=Path, required=True)
-    parser.add_argument("--out", type=Path, required=True)
-    parser.add_argument("--png", type=Path, required=True)
-    args = parser.parse_args()
-    receipt = {"schema": "NOX-E07-V6-PHYSICAL-VISUAL-WITNESS-v1",
-               "source_sha": frozen.SOURCE, "setup_sha256": frozen.SETUP_SHA,
-               "build_id": frozen.BUILDID, "release_accepted": False,
-               "visual_e07": "HOLD", "independent_e07_10_10": "HOLD",
-               "error": "NOT_RUN"}
-    try:
-        e07.require(sys.platform == "win32" and os.getenv("GITHUB_ACTIONS") == "true" and
-                    os.getenv("RUNNER_OS") == "Windows" and
-                    os.getenv("RUNNER_ENVIRONMENT") == "github-hosted" and
-                    os.getenv("GITHUB_REPOSITORY") == "MSSTXNEWS/nox-helion-pp-private-build",
-                    "V6_VISUAL_UNAUTHORIZED_HOST_HOLD")
-        temp = Path(os.environ["RUNNER_TEMP"]).absolute()
-        e07.require(args.png.absolute().parent == temp and
-                    args.png.name == "nox-v6-physical-d02.png" and
-                    not args.png.exists() and not args.png.is_symlink() and
-                    e07.clean_dir(temp), "V6_VISUAL_PNG_PATH_HOLD")
-        setup = frozen.candidate(args.artifact_dir)
-        local = Path(os.environ["LOCALAPPDATA"])
-        install = local / "Programs" / "NOX HELION"
-        e07.verify_fresh_install_targets(
-            local, install, Path(str(install) + ".__p01_stage"),
-            Path(str(install) + ".__p01_previous"),
-            Path(str(install) + ".__p01_rollback_saved"))
-        e07.require(e07.run([str(setup), "/S"], limit=300) == 0,
-                    "V6_VISUAL_SAME_SETUP_INSTALL_HOLD")
-        _, owned = e07.manifest_owner(install)
-        e07.require(len(owned) == 1004, "V6_VISUAL_INSTALLED_MANIFEST_HOLD")
-        original_observer = e07.observe_original_primary_buttons
-        captures: list[dict] = []
-        fx_checks: list[dict] = []
-        def observer(hwnd: int) -> dict:
-            # Native reviewed WPF HWND, fresh NAV+IPC and 8 seconds of stability
-            # are already required by gui_hwnd before it invokes this observer.
-            captures.append(capture_window(hwnd, args.png))
-            fx_checks.append(probe_fx_cycle(hwnd))
-            return original_observer(hwnd)
-        e07.observe_original_primary_buttons = observer
-        gui = e07.gui_hwnd(install / "NOX.P01.Shell.exe", local, safe_nav=False)
-        e07.require(len(captures) == 1 and len(fx_checks) == 1 and
-                    fx_checks[0].get("fx_control") == "PASS" and
-                    gui.get("gui_visible_hwnd") == "PASS" and
-                    gui.get("webview_navigation") == "PASS" and
-                    gui.get("shell_native_ipc") == "PASS" and
-                    gui.get("five_primary_buttons", {}).get("status") == "PASS",
-                    "V6_VISUAL_GUI_OR_CAPTURE_HOLD")
-        receipt.update({"physical_capture": captures[0], "physical_fx_cycle": fx_checks[0],
-                        "installed_owned_sha256_verified": 1004,
-                        "wpf_gui_ipc": "PASS", "error": None})
-    except (e07.Hold, OSError, ValueError, KeyError,
-            subprocess.TimeoutExpired) as exc:
-        receipt["error"] = (str(exc) if isinstance(exc, e07.Hold)
-                            else "V6_VISUAL_" + type(exc).__name__.upper() + "_HOLD")[:150]
-    except Exception as exc:
-        receipt["error"] = "V6_VISUAL_UNEXPECTED_" + type(exc).__name__.upper() + "_HOLD"
-    finally:
-        args.out.parent.mkdir(parents=True, exist_ok=True)
-        args.out.write_text(json.dumps(receipt, sort_keys=True, indent=2), encoding="utf-8")
-        print("V6_INDEPENDENT_PHYSICAL_VISUAL", receipt["error"], "RELEASE_HOLD", flush=True)
-    # Successful photographic acquisition is NOT the independent visual review.
-    return 0 if receipt["error"] is None else 1
-
-if __name__ == "__main__":
-    raise SystemExit(main())
-) {
+  if (($c.Current.Name+'') -cmatch '^FX (BALANCED|MAX|ECO)$') {
    [void]$foundControls.Add($c)
   }
  }
@@ -266,20 +194,23 @@ def main() -> int:
         e07.require(len(owned) == 1004, "V6_VISUAL_INSTALLED_MANIFEST_HOLD")
         original_observer = e07.observe_original_primary_buttons
         captures: list[dict] = []
+        fx_checks: list[dict] = []
         def observer(hwnd: int) -> dict:
             # Native reviewed WPF HWND, fresh NAV+IPC and 8 seconds of stability
             # are already required by gui_hwnd before it invokes this observer.
             captures.append(capture_window(hwnd, args.png))
+            fx_checks.append(probe_fx_cycle(hwnd))
             return original_observer(hwnd)
         e07.observe_original_primary_buttons = observer
         gui = e07.gui_hwnd(install / "NOX.P01.Shell.exe", local, safe_nav=False)
-        e07.require(len(captures) == 1 and
+        e07.require(len(captures) == 1 and len(fx_checks) == 1 and
+                    fx_checks[0].get("fx_control") == "PASS" and
                     gui.get("gui_visible_hwnd") == "PASS" and
                     gui.get("webview_navigation") == "PASS" and
                     gui.get("shell_native_ipc") == "PASS" and
                     gui.get("five_primary_buttons", {}).get("status") == "PASS",
                     "V6_VISUAL_GUI_OR_CAPTURE_HOLD")
-        receipt.update({"physical_capture": captures[0],
+        receipt.update({"physical_capture": captures[0], "physical_fx_cycle": fx_checks[0],
                         "installed_owned_sha256_verified": 1004,
                         "wpf_gui_ipc": "PASS", "error": None})
     except (e07.Hold, OSError, ValueError, KeyError,
