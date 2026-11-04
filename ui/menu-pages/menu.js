@@ -1,5 +1,6 @@
 import {DIRECTIONS,WORLDS,CORE_IDS,PERSONAS,PRIMARY,ROUTE_COUNT,getWorld,getRoute} from './express-layout.mjs';
 import {createNativeMenuClient,isNativeChatTerminal,canonicalChatContext,nativeOwnerReceiptHolds} from '../onehost-menu-bindings.mjs';
+import {firstBootTruth} from '../firstboot-truth.mjs';
 const doc=document,$=id=>doc.getElementById(id);
 const el=(tag,cls,label)=>{const x=doc.createElement(tag);if(cls)x.className=cls;if(label!==undefined)x.textContent=label;return x;};
 const button=(label,cls,click)=>{const b=el('button',cls,label);b.type='button';b.addEventListener('click',click);return b;};
@@ -437,3 +438,29 @@ doc.addEventListener('keydown',e=>{if(e.isComposing||e.defaultPrevented||e.repea
 });
 window.addEventListener('pagehide',()=>client?.destroy?.(),{once:true});
 overview();
+
+/* Read-only first-boot report: native status, NEVER a simulated model answer. */
+async function showNativeFirstBoot(){
+ if(!P.status?.parentElement)return;
+ const panel=el('section','nox-firstboot-truth');
+ panel.setAttribute('aria-label','NOX · проверенный первый запуск');
+ panel.setAttribute('aria-live','polite');
+ const title=el('h2','','NOX HELION · ПЕРВЫЙ ЗАПУСК');
+ const message=el('p','', 'Получаю подтверждения OneHost...');
+ const facts=el('ul','');
+ panel.append(title,message,facts);
+ const style=el('style','',`.nox-firstboot-truth{margin:12px auto;padding:12px 16px;max-width:940px;border:1px solid #80d7e155;border-radius:16px;background:rgba(9,20,29,.85);color:#d7f5fb}.nox-firstboot-truth h2{font-size:14px;letter-spacing:.12em}.nox-firstboot-truth p,.nox-firstboot-truth li{font-size:13px}.nox-firstboot-truth ul{display:flex;flex-wrap:wrap;gap:8px 18px;padding:0;list-style:none}.nox-firstboot-truth li{border:1px solid #80d7e133;padding:5px 9px;border-radius:10px}@media(prefers-reduced-motion:reduce){.nox-firstboot-truth *{animation:none!important}}`);
+ panel.prepend(style);
+ P.status.insertAdjacentElement('afterend',panel);
+ const get=async(route,payload)=>{try{return await client.request(route,payload);}catch{return null;}};
+ const replies=client?await Promise.all([
+   get('chat.commands',{action:'selfbuilder.a1.status'}),
+   get('chat.commands',{action:'selfbuilder.capabilities'}),
+   get('chat.model',{})
+ ]):[null,null,null];
+ if(!panel.isConnected)return;
+ const truth=firstBootTruth(...replies);
+ message.textContent=truth.summary;
+ facts.replaceChildren(...truth.items.map(([name,value])=>el('li','',name+' · '+value)));
+}
+void showNativeFirstBoot();
