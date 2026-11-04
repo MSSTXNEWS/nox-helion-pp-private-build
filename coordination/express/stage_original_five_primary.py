@@ -116,6 +116,20 @@ function findOriginalControl(name){
 nav.addEventListener('click',event=>{
  const target=event.target.closest('button[data-nox-primary]');
  if(!target||!nav.contains(target)||!event.isTrusted)return;
+ // Refuse forged, reordered, duplicated or disabled dock controls before
+ // delegating a native owner operation. Original five routes are unchanged.
+ const expectedPrimaries=['CHAT','INSTALL','MODELS','LEARN','SETTINGS'];
+ const primaryButtons=nav.querySelectorAll(':scope > button[data-nox-primary]');
+ if(primaryButtons.length!==expectedPrimaries.length ||
+    expectedPrimaries.some((name,i)=>primaryButtons[i].tagName!=='BUTTON' ||
+      primaryButtons[i].getAttribute('data-nox-primary')!==name ||
+      !primaryButtons[i].isConnected || primaryButtons[i].disabled)){
+   state.textContent='EXPRESS: состав кнопок изменён · HOLD';return;
+ }
+ if(!Array.prototype.includes.call(primaryButtons,target) ||
+    target.getClientRects().length===0){
+   state.textContent='EXPRESS: исходная кнопка недоступна · HOLD';return;
+ }
  const name=target.getAttribute('data-nox-primary');
  state.textContent='';
  if(name==='MODELS' && (!window.chrome||!window.chrome.webview||
