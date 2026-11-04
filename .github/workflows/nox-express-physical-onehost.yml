@@ -93,6 +93,22 @@ jobs:
         run: |
           python -B coordination/e06/t06_local_onehost_bridge.py
           if ($LASTEXITCODE -ne 0) { throw 'ONEHOST_INSTALLED_SMOKE_HOLD' }
+      - name: Surface bounded native producer first-failure (never a PASS)
+        if: always()
+        shell: pwsh
+        run: |
+          $p='work/t06-local-bridge/01_NATIVE_PYINSTALLER.log'
+          if (Test-Path -LiteralPath $p -PathType Leaf) {
+            $lines=Get-Content -LiteralPath $p -Tail 110
+            $hits=@($lines | Select-String -Pattern 'T06_[A-Z0-9_]+|NOX_[A-Z0-9_]+|RuntimeError|ModuleNotFoundError|ImportError|FileNotFoundError|Traceback|\bERROR\b|\bfailed\b')
+            if ($hits.Count -gt 0) {
+              foreach ($item in ($hits | Select-Object -Last 18)) {
+                $safe=([string]$item.Line) -replace '([A-Z]:\\[^ ]+)', '<WINDOWS_PATH>'
+                $safe=$safe.Substring(0,[Math]::Min($safe.Length,300))
+                Write-Host ('NATIVE_PRODUCER_FIRSTFAIL '+$safe)
+              }
+            } else { Write-Host 'NATIVE_PRODUCER_LOG_PRESENT_NO_ALLOWLIST_ERROR' }
+          } else { Write-Host 'NATIVE_PRODUCER_LOG_MISSING_OR_NOT_RUN' }
       - name: Preserve physical Setup with SHA and exact-source evidence
         if: always()
         shell: pwsh
@@ -129,6 +145,8 @@ jobs:
           $receipt | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $dest 'BUILD_RECEIPT.json') -Encoding utf8
           foreach ($file in @(
             'work/t06-local-bridge/T06_INSTALLED_SMOKE.json',
+            'work/t06-local-bridge/01_NATIVE_PYINSTALLER.log',
+            'work/t06-local-bridge/02_WPF_NSIS_ONEHOST.log',
             'work/t06-wpf-p02-compile/ONEHOST_CANDIDATE_RECEIPT.json',
             'work/t06-wpf-p02-compile/WPF_SELFCONTAINED_PUBLISH_LOG.txt',
             'work/t06-wpf-p02-compile/NSIS_CANDIDATE_BUILD_LOG.txt'
