@@ -98,7 +98,7 @@ body.nox-wow-eco .nox-orbit-stage .nox-eclipse .nox-cinema-orb__layers::before{
 /* NOX D02 LIQUID CHROME STEP03 — ferrofluid-like light on existing
    satellite shells. Does not change CoreID geometry, hitboxes or DOM. */
 .nox-orbit-stage .nox-orbit-core.nox-cinema-orb .nox-cinema-orb__layers{
-  position:absolute;inset:0;border-radius:50%;overflow:hidden;
+  position:absolute;inset:-7%;border-radius:50%;overflow:visible;
   pointer-events:none!important;isolation:isolate;
 }
 .nox-orbit-stage .nox-orbit-core.nox-cinema-orb .nox-cinema-orb__layers::before,
@@ -157,4 +157,18 @@ body.nox-wow-eco .nox-orbit-stage .nox-orbit-core .nox-cinema-orb__layers::befor
   .nox-orbit-stage .nox-orbit-core .nox-cinema-orb__layers::after{
     display:none!important;
   }
+}
+
+/* D02 source safety: the original renderer uses data-nox-mode and emits
+   gravitational ejecta beyond a satellite shell. Preserve its uncut bounds. */
+.nox-orbit-stage[data-nox-mode="eco"] .nox-eclipse .nox-cinema-orb__layers::before,
+.nox-orbit-stage[data-nox-mode="eco"] .nox-eclipse .nox-cinema-orb__layers::after,
+.nox-orbit-stage[data-nox-mode="eco"] .nox-orbit-core .nox-cinema-orb__layers::before,
+.nox-orbit-stage[data-nox-mode="reduced"] .nox-orbit-core .nox-cinema-orb__layers::before{
+ animation:none!important;filter:none!important;opacity:.26;
+}
+.nox-orbit-stage[data-nox-mode="reduced"] .nox-eclipse .nox-cinema-orb__layers::before,
+.nox-orbit-stage[data-nox-mode="reduced"] .nox-eclipse .nox-cinema-orb__layers::after,
+.nox-orbit-stage[data-nox-mode="reduced"] .nox-orbit-core .nox-cinema-orb__layers::after{
+ animation:none!important;filter:none!important;transform:none!important;
 }
