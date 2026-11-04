@@ -17,10 +17,25 @@ export const R11_READ_ACTIONS=Object.freeze([
 const VERIFIED=new Set(['COMPLETED','STOP_REQUESTED','HOLD']);
 const ID=/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
 const SAFE_COUNT = n=>Number.isSafeInteger(n)&&n>=0&&n<=1000000;
+// Original R11 status is display-only: never elevate an owner/provider denial
+// to a confirmed native result merely because the transport is COMPLETED.
+const R11_NATIVE_DENIAL=/(?:DENIED|REQUIRED|MISMATCH|OFFLINE|UNAVAILABLE|FAILED|ERROR|HOLD|REJECTED|AWAITING_CONSENT|NEEDS_CONSENT|CONSENT_PENDING)/i;
+function nativeReplyHasExplicitDenial(reply){
+  for(const node of [reply,reply?.result,reply?.result?.owner,reply?.result?.receipt]){
+    if(!node||typeof node!=='object'||Array.isArray(node))continue;
+    if(node.ok===false||node.ack===false||node.permissionGranted===false)return true;
+    for(const key of ['error','error_code','errorCode','error_message','errorMessage']){
+      if(node[key]!==undefined&&node[key]!==null&&node[key]!=='')return true;
+    }
+    if(['state','status'].some(key=>typeof node[key]==='string'&&R11_NATIVE_DENIAL.test(node[key])))return true;
+  }
+  return false;
+}
 /** UI-only projection; never call this a proof of completion beyond the native response. */
 export function projectNativeReply(reply){
   if(!reply||typeof reply!=='object'||!VERIFIED.has(reply.state))return Object.freeze({state:'HOLD',label:'Нет подтверждённого ответа ядра',value:'Н/Д'});
   if(reply.state==='HOLD')return Object.freeze({state:'HOLD',label:'HOLD · '+String(reply.errorCode||'NATIVE_HANDLER_UNAVAILABLE').slice(0,72),value:'Н/Д'});
+  if(nativeReplyHasExplicitDenial(reply))return Object.freeze({state:'HOLD',label:'HOLD · NATIVE_OWNER_DENIED',value:'Н/Д'});
   if(reply.state==='STOP_REQUESTED')return Object.freeze({state:'STOP_REQUESTED',label:'STOP запрошен · подтверждение завершения ожидается',value:'Н/Д'});
   const v=reply.result;
   const models=Array.isArray(v?.models)?v.models.length:null;

@@ -73,7 +73,7 @@ MENU_V2_SHA256 = {
     'ui/nox-lucide-icons.mjs': '0f01be889b39e9d0f0c3dae517c39ae48938812aa7477ef0615c0da24c0c8b0d',
     'ui/nox-lucide-LICENSE.txt': 'ed9cca1da36ca6d38c2222e444c153f8d903197512b0afbb2bd6377d7cdf5413',
     'ui/onehost-menu-bindings.mjs': 'afdf7d5ad6cd527c3fd3e900bb0c2eb522a0c12b8f75cdcec4778487147c375a',
-    'ui/nox-r11-wow.mjs': '93455f888f0de964200a72ced4ee4cb309b407175ab180a1a0df39338904d5a8',
+    'ui/nox-r11-wow.mjs': '44691754d4fd0ccd24225284edf267afea56b88eba40b6c6ed8b318270749ecf',
     'ui/nox-r11-wow.css': '95ec36b0074ee65072ba83d97fdd42d90372b8ef8c327e946d4825f786e7af08',
     'ui/selfbuilder-wow-workbench.mjs': 'bd65520a6f349439fe2a2b2215520dcc84f3f4254b52aaa277201071423d6f17',
     'ui/selfbuilder-wow-workbench.css': 'a5ee4ea99ab109388f154e7ebd80c1524a6228be85b6d5a460bdce13b7e92eb1',

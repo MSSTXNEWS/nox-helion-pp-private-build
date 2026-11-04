@@ -42,6 +42,25 @@ test('typed native result never invents successful AI / GPU / percent',()=>{
   assert.equal(projectNativeReply({state:'STOP_REQUESTED'}).state,'STOP_REQUESTED');
   assert.equal(projectNativeReply({state:'HOLD',errorCode:'NATIVE_DENIED'}).state,'HOLD');
 });
+test('R11 original native owner rejects explicit error and denied consent/ACL despite COMPLETED transport',()=>{
+ const good={state:'COMPLETED',result:{status:'READY',models:['one']}};
+ assert.equal(projectNativeReply(good).state,'COMPLETED');
+ const negative=[
+   {...good,error_code:'CONSENT_REQUIRED'},
+   {...good,error:'OWNER_DENIED'},
+   {...good,errorMessage:'ACL_MISMATCH'},
+   {...good,result:{...good.result,ack:false}},
+   {...good,result:{...good.result,status:'PROVIDER_OFFLINE_HOLD'}},
+   {...good,result:{...good.result,owner:{ok:false}}},
+   {...good,result:{...good.result,receipt:{error_message:'SID_MISMATCH'}}},
+   {...good,result:{...good.result,receipt:{permissionGranted:false}}},
+   {...good,error:{reason:'NATIVE_DENIED'}},
+   {state:'STOP_REQUESTED',error_code:'CONSENT_REQUIRED'}
+ ];
+ for(const response of negative)assert.equal(projectNativeReply(response).state,'HOLD');
+ assert.equal(projectNativeReply({state:'STOP_REQUESTED'}).state,'STOP_REQUESTED');
+ assert.equal(projectNativeReply({state:'COMPLETED',result:{models:[],error:''}}).state,'COMPLETED');
+});
 test('unsigned stale forged telemetry never trusted',()=>{
   const good={schema:'NOX-INSTALLER-EVENT-v3',evidence_verified:true,event_id:'x1',run_id:'run',task_id:'task',action_id:'training.eval',event_sequence:2,receipt_sha256:'a'.repeat(64),timestamp_utc:new Date(10000).toISOString()};
   assert.equal(isTrustedInstallerEvent(good,10000),true);
