@@ -31,8 +31,8 @@ jobs:
       - name: Download exact successful owner Windows candidate, NOT from this job
         uses: actions/download-artifact@v4
         with:
-          run-id: 41818231832
-          name: NOX-EXPRESS-ONEHOST-7b3d22d5d607abf9b9d478d82507f33153c23d9f
+          run-id: 41829928630
+          name: NOX-EXPRESS-ONEHOST-a504410cd969adfbdcda4e39fdeb9aef76e78702
           github-token: ${{ github.token }}
           path: input/nox
       - name: Check pinned 7b Setup and perform independent NSIS WPF IPC update rollback uninstall
