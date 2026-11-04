@@ -64,7 +64,7 @@ jobs:
           $ErrorActionPreference='Stop'
           $env:OLLAMA_NO_CLOUD='1'
           $env:OLLAMA_HOST='127.0.0.1:11434'
-          $p=Start-Process -FilePath (Resolve-Path 'input/ollama/OllamaSetup-v0.40.13-x64.exe').Path -ArgumentList '/S' -Wait -PassThru
+          $p=Start-Process -FilePath (Resolve-Path 'input/ollama/OllamaSetup-v0.40.13-x64.exe').Path -ArgumentList '/VERYSILENT /NORESTART /SUPPRESSMSGBOXES /SP-' -Wait -PassThru
           if ($p.ExitCode -ne 0) { throw 'OLLAMA_INSTALL_EXIT_HOLD' }
           $ollama=Join-Path $env:LOCALAPPDATA 'Programs/Ollama/ollama.exe'
           if (-not (Test-Path -LiteralPath $ollama -PathType Leaf)) { throw 'OLLAMA_INSTALLED_CLI_ABSENT' }
