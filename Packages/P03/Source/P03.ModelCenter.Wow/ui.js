@@ -204,6 +204,125 @@ function renderComparison(){const root=$('comparison');root.replaceChildren();if
  const grid=el('div','compare-grid');for(const id of state.compare){const m=state.models.find(x=>x.id===id);if(!m)continue;const col=el('div','compare-col');col.append(el('h4','',m.name));const dl=el('dl');
   for(const [label,value] of [['Статус',hasEvidence(m)?'VERIFIED':'REVIEW_REQUIRED'],['Размер',hasEvidence(m)?bytes(m.artifactBytes):unknown],['VRAM',hasEvidence(m)?fmtRam(m.requiredVramGiB):unknown],['Лицензия',hasEvidence(m)?safeText(m.license):'REVIEW_REQUIRED'],['Тег',hasEvidence(m)?safeText(m.exactTag):'REVIEW_REQUIRED']])dl.append(...lineItem(label,value));col.append(dl);grid.append(col);}root.append(grid);
 }
+
+/* NOX VERIFIED NATIVE OBSERVATORY.
+ * Real measurements only from admitted p03.snapshot.v1 / p03.event.v1.
+ * Uses vendored uPlot MIT. No random data, synthetic progress, polling,
+ * second host, auto-training, privileged action or network traffic.
+ */
+const traceState={
+ selected:'transfer',jobId:null,chart:null,resize:null,
+ series:{transfer:[],vram:[],ram:[]}
+};
+const traceMeta=Object.freeze({
+ transfer:Object.freeze({title:'Переданные данные',unit:'МБ',color:'#efb27d'}),
+ vram:Object.freeze({title:'Свободная видеопамять',unit:'ГиБ',color:'#86d8f1'}),
+ ram:Object.freeze({title:'Свободная память',unit:'ГиБ',color:'#c3b1f2'})
+});
+function acceptNativeTrace(key,value){
+ if(!traceMeta[key]||!state.hostReady||typeof value!=='number'||
+    !Number.isFinite(value)||value<0)return;
+ const data=traceState.series[key],prior=data[data.length-1];
+ // The browser clock indicates when a vetted native message was observed;
+ // it is not a fabricated backend timestamp.
+ const time=Date.now()/1000;
+ if(prior&&prior[1]===value)return;
+ if(prior && time<=prior[0])return;
+ if(key==='transfer'&&prior&&value<prior[1])return;
+ data.push([time,value]);
+ if(data.length>90)data.shift();
+}
+function sampleNativeTrace(){
+ const job=state.activeJob;
+ if(job && typeof job.jobId==='string'){
+   if(job.jobId!==traceState.jobId){
+     traceState.jobId=job.jobId;
+     traceState.series.transfer=[];
+   }
+   const done=numeric(job.completedBytes),total=numeric(job.totalBytes);
+   if(done!==null&&total!==null&&total>0&&done<=total){
+     acceptNativeTrace('transfer',done/1048576);
+   }
+ }
+ const hardware=state.hardware;
+ if(hardware){
+   const freeVram=numeric(hardware.vramFreeGiB);
+   const freeRam=numeric(hardware.ramFreeGiB);
+   if(freeVram!==null)acceptNativeTrace('vram',freeVram);
+   if(freeRam!==null)acceptNativeTrace('ram',freeRam);
+ }
+ renderTrace();
+}
+function renderTrace(){
+ const root=$('noxTracePlot'),placeholder=$('noxTracePlaceholder');
+ if(!root||!placeholder)return;
+ const kind=traceState.selected,points=traceState.series[kind]||[],meta=traceMeta[kind];
+ const label=$('noxTraceStatus'),last=$('noxTraceLast'),source=$('noxTraceSource');
+ const readable=points.length>0&&state.hostReady;
+ if(label){label.textContent=readable?'ПОЛУЧЕНЫ ДАННЫЕ ONEHOST':'НЕТ ПОДТВЕРЖДЁННЫХ ДАННЫХ';label.dataset.live=String(readable);}
+ if(last)last.textContent=readable?points[points.length-1][1].toFixed(2)+' '+meta.unit:'Н/Д';
+ if(source)source.textContent=readable?meta.title+' · реальный host':'ОЖИДАНИЕ HOST';
+ // A single real event makes a numeric reading; a line requires >=2 points.
+ if(!readable || points.length<2 || typeof window.uPlot!=='function'){
+   placeholder.hidden=false;
+   placeholder.textContent=typeof window.uPlot!=='function'
+     ? 'Графический движок не загружен · данные доступны в журнале'
+     : 'Для кривой нужны минимум два реальных измерения host';
+   if(traceState.chart){traceState.chart.destroy();traceState.chart=null;}
+   return;
+ }
+ const xs=points.map(x=>x[0]),ys=points.map(x=>x[1]);
+ placeholder.hidden=true;
+ if(!traceState.chart){
+   const width=Math.max(240,Math.min(1300,Math.floor(root.clientWidth-16)||420));
+   const opts={
+     width,height:190,
+     scales:{x:{time:true}},
+     padding:[8,8,0,0],
+     axes:[
+       {stroke:'#7195a8',grid:{show:false},ticks:{stroke:'#547083'}},
+       {stroke:'#90b3c2',grid:{stroke:'rgba(121,170,198,.14)'},ticks:{stroke:'#547083'}}
+     ],
+     series:[{},
+       {label:meta.title,stroke:meta.color,width:2.2,
+        fill:'rgba(97,174,204,.08)',points:{show:false}}],
+     cursor:{show:true},
+     legend:{show:false}
+   };
+   traceState.chart=new window.uPlot(opts,[xs,ys],root);
+   if(!traceState.resize && typeof ResizeObserver==='function'){
+     traceState.resize=new ResizeObserver(()=>{
+       const chart=traceState.chart;if(!chart||!root.isConnected)return;
+       const w=Math.max(240,Math.min(1300,Math.floor(root.clientWidth-16)||420));
+       if(w!==chart.width)chart.setSize({width:w,height:190});
+     });
+     traceState.resize.observe(root);
+   }
+ }else{
+   traceState.chart.setData([xs,ys]);
+ }
+}
+function selectTrace(key){
+ if(!traceMeta[key])return;
+ traceState.selected=key;
+ const buttons=document.querySelectorAll('[data-trace]');
+ for(const b of buttons){
+   const active=b.dataset.trace===key;
+   b.classList.toggle('is-active',active);
+   b.setAttribute('aria-pressed',String(active));
+ }
+ if(traceState.chart){traceState.chart.destroy();traceState.chart=null;}
+ renderTrace();
+}
+for(const button of document.querySelectorAll('[data-trace]')){
+ button.addEventListener('click',()=>selectTrace(button.dataset.trace));
+}
+window.addEventListener('pagehide',()=>{
+ traceState.resize?.disconnect();
+ traceState.chart?.destroy();
+ traceState.chart=null;
+},{once:true});
+
 function renderEvents(){const feed=$('eventFeed');feed.replaceChildren();if(state.events.length===0){feed.append(el('li','empty','Нет событий от host.'));return;}
  for(const evt of state.events.slice(0,10)){const li=el('li');const date=new Date(evt.atUtc||evt.AtUtc||'');const time=isNaN(date.getTime())?'--:--':date.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
   const label=ellipsis(`${evt.modelTag||evt.ModelTag||'MODEL'} · ${evt.phase||evt.Phase||'event'} · ${evt.status||evt.Status||''}`,150);
@@ -308,7 +427,7 @@ function processMessage(data){if(!data||typeof data!=='object'||!['p03.snapshot.
   state.capabilities=data.capabilities&&typeof data.capabilities==='object'?data.capabilities:{};
   state.diagnostics=Array.isArray(data.diagnostics)?data.diagnostics.slice(0,30):[];
   state.externalLeads=Array.isArray(data.externalLeads)?data.externalLeads.filter(x=>x.downloadAllowed===false&&x.status==='REVIEW_REQUIRED').slice(0,40):[];
-  $('hostStatus').textContent='Получен снимок Windows host';$('hostLight').classList.add('online');refreshNativeEventSignal();render();
+  $('hostStatus').textContent='Получен снимок Windows host';$('hostLight').classList.add('online');refreshNativeEventSignal();sampleNativeTrace();render();
  }else if(data.type==='p03.event.v1'){
   const evt=data.event;
   if(!evt||typeof evt!=='object'||typeof evt.jobId!=='string'||typeof evt.phase!=='string')return;
@@ -358,6 +477,7 @@ function processMessage(data){if(!data||typeof data!=='object'||!['p03.snapshot.
     if(['started','progress'].includes(evt.phase)&&job.state==='Queued')job.state='Running';
     const terminal={completed:'Completed',failed:'Failed',cancelled:'Cancelled'}[evt.phase];
     if(terminal)job.state=terminal;
+    sampleNativeTrace();
   }
   render();
  }else if(data.type==='p03.command.ack.v1'){
@@ -386,7 +506,7 @@ $('diagBtn').addEventListener('click',()=>sendAction('diagnose'));
 document.addEventListener('keydown',e=>{if(e.key==='/'&&!['INPUT','TEXTAREA'].includes(document.activeElement?.tagName)){e.preventDefault();$('search').focus();}});
 if(window.chrome?.webview?.addEventListener)window.chrome.webview.addEventListener('message',e=>processMessage(e.data));
 setInterval(refreshNativeEventSignal,5000);
-render();
+render();renderTrace();
 // Return to the unchanged original D02 HOME, never to a second application.
 const p03Home = document.createElement('a');
 p03Home.href = '/';
