@@ -66,3 +66,93 @@
 
 
 /* uses ui/nox-wow-fx.css — add class nox-fx on the page root */
+/* NOX R11 WOW V5 / ORIGINAL WINDOWS SCENE
+   Reuse approved D02 and real original HOME/MENU10. Styling ONLY:
+   no new controls, routes, native approval, model or event state.
+   Compositor-safe transform/opacity effects; no external fonts/assets/CDN. */
+html body #nox-express-primary{
+  isolation:isolate;overflow:visible;align-items:center;gap:clamp(5px,.7vw,10px);
+  padding:clamp(6px,.85vw,12px);border-radius:24px;
+  border:1px solid rgba(239,184,120,.47);
+  background:linear-gradient(118deg,rgba(6,12,25,.97),rgba(22,21,31,.94) 52%,rgba(5,20,32,.97));
+  box-shadow:inset 0 1px rgba(255,222,173,.15),0 16px 42px rgba(0,0,0,.58),0 0 32px rgba(231,140,66,.17);
+}
+html body #nox-express-primary > button[data-nox-primary]{
+  position:relative;isolation:isolate;overflow:hidden;flex:0 0 auto;
+  min-height:48px;min-width:clamp(75px,7vw,106px);padding:11px 14px;
+  border:1px solid rgba(179,209,217,.55);
+  border-radius:48% 52% 46% 54% / 58% 45% 55% 42%;
+  background:radial-gradient(ellipse at 24% 16%,rgba(184,223,241,.28),transparent 47%),
+             radial-gradient(ellipse at 76% 84%,rgba(226,143,83,.13),transparent 65%),
+             linear-gradient(152deg,#203044 0%,#101929 64%,#09101d 100%);
+  color:#f4f3ec;letter-spacing:.055em;text-shadow:0 1px 8px rgba(0,0,0,.75);
+  box-shadow:inset 3px 3px 9px rgba(231,248,255,.09),inset -9px -10px 16px rgba(0,0,0,.39),0 4px 13px rgba(0,0,0,.35);
+  transition:transform .22s cubic-bezier(.2,.7,.2,1),box-shadow .22s ease,border-color .22s ease;
+}
+html body #nox-express-primary > button[data-nox-primary]::before{
+  content:"";position:absolute;pointer-events:none;inset:3px;border:1px solid rgba(190,232,251,.26);
+  border-radius:inherit;transform:scale(.94);opacity:.37;
+  animation:nox-r11-wow-v5-aura 5.8s ease-in-out infinite alternate;
+}
+html body #nox-express-primary > button[data-nox-primary="CHAT"]{border-color:rgba(124,225,237,.69)}
+html body #nox-express-primary > button[data-nox-primary="INSTALL"]{border-color:rgba(240,186,111,.69)}
+html body #nox-express-primary > button[data-nox-primary="MODELS"]{border-color:rgba(164,185,250,.68)}
+html body #nox-express-primary > button[data-nox-primary="LEARN"]{border-color:rgba(210,177,250,.68)}
+html body #nox-express-primary > button[data-nox-primary="SETTINGS"]{border-color:rgba(147,226,190,.67)}
+html body #nox-express-primary > button[data-nox-primary]:hover:not(:disabled),
+html body #nox-express-primary > button[data-nox-primary]:focus-visible{
+  transform:translateY(-3px) scale(1.035);
+  border-color:#defaff;
+  box-shadow:inset 0 1px rgba(242,254,255,.23),0 7px 24px rgba(76,166,201,.31),0 0 22px rgba(237,176,111,.23);
+}
+html body #nox-express-primary > button[data-nox-primary]:focus-visible{
+  outline:3px solid #e8f7ff;outline-offset:3px;
+}
+html body #nox-express-primary [data-nox-state]{
+  color:#d9e6e8;text-shadow:0 0 12px rgba(107,217,235,.25);
+}
+.nox-r11-enhanced .nox-r11-world::before{
+  content:"";position:absolute;inset:-2px;z-index:0;border-radius:inherit;
+  border:1px solid rgba(255,199,134,.27);pointer-events:none;
+  opacity:.38;transform:scale(.97);
+  animation:nox-r11-wow-v5-aura 7.3s ease-in-out infinite alternate;
+}
+.nox-r11-enhanced .nox-r11-world:nth-child(3n)::before{animation-delay:-3.4s}
+.nox-r11-enhanced .nox-r11-world[aria-pressed="true"]::before{
+  opacity:.95;border-color:rgba(237,186,122,.85);
+}
+.nox-r11-enhanced .nox-r11-ticker[data-state="verified"]{border-color:rgba(100,221,226,.56)}
+.nox-r11-enhanced .nox-r11-ticker[data-state="hold"]{border-color:rgba(245,174,111,.6)}
+@keyframes nox-r11-wow-v5-aura{
+  from{opacity:.30;transform:scale(.95)}
+  to{opacity:.77;transform:scale(1.015)}
+}
+/* MAX/BALANCED/ECO are visual-only. Native events remain the sole truth. */
+body[data-fx="MAX"] #nox-express-primary > button::before,
+body.nox-wow-max #nox-express-primary > button::before{animation-duration:3.8s}
+body[data-fx="ECO"] #nox-express-primary > button::before,
+body[data-fx="ECO"] .nox-r11-world::before,
+body.nox-wow-eco #nox-express-primary > button::before,
+body.nox-wow-eco .nox-r11-world::before{animation:none!important;opacity:.4}
+@media(max-width:520px){
+  html body #nox-express-primary{gap:5px;padding:5px;border-radius:16px}
+  html body #nox-express-primary > button[data-nox-primary]{
+    min-width:66px;min-height:44px;padding:8px 7px;font-size:10px;
+  }
+  .nox-r11-enhanced .nox-r11-world::before{animation:none}
+}
+@media(prefers-reduced-motion:reduce){
+  html body #nox-express-primary > button[data-nox-primary],
+  .nox-r11-enhanced .nox-r11-world{transition:none!important}
+  html body #nox-express-primary > button[data-nox-primary]:hover,
+  html body #nox-express-primary > button[data-nox-primary]:focus-visible{transform:none!important}
+  html body #nox-express-primary > button[data-nox-primary]::before,
+  .nox-r11-enhanced .nox-r11-world::before{animation:none!important;transform:none!important}
+}
+@media(forced-colors:active){
+  html body #nox-express-primary,html body #nox-express-primary > button[data-nox-primary]{
+    background:Canvas;color:CanvasText;border-color:CanvasText;box-shadow:none;
+  }
+  html body #nox-express-primary > button[data-nox-primary]::before,
+  .nox-r11-enhanced .nox-r11-world::before{display:none}
+}
