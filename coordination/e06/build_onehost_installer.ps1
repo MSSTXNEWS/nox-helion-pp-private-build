@@ -412,9 +412,16 @@ if ($wantsCreative) {
   # 9 P01 owner files + 8 reviewed runtime files + 10 MENU pins + 3 generated assets = 88.
   # Reject omitted or duplicated staged paths BEFORE WPF/NSIS publish.
   $wowPaths=@($wowReceipt.files | ForEach-Object { [string]$_.path })
-  if ($wowReceipt.count -ne 88 -or $wowPaths.Count -ne 88 -or
-      @($wowPaths | Sort-Object -Unique).Count -ne 88 -or
-      @($wowPaths | Where-Object { [string]::IsNullOrWhiteSpace($_) }).Count -ne 0) {
+  # Classify the real installed-stage receipt before enforcing exact counts.
+  # No full paths, local folders, model data or secrets enter CI logs.
+  $wowUniqueCount=@($wowPaths | Sort-Object -Unique).Count
+  $wowBlankCount=@($wowPaths | Where-Object { [string]::IsNullOrWhiteSpace($_) }).Count
+  $wowDeclaredCount=[int]$wowReceipt.PSObject.Properties['count'].Value
+  Write-Host ("D02_STAGE_COUNT_WITNESS declared={0} paths={1} unique={2} blank={3}" -f
+    $wowDeclaredCount,$wowPaths.Count,$wowUniqueCount,$wowBlankCount)
+  if ($wowDeclaredCount -ne 88 -or $wowPaths.Count -ne 88 -or
+      $wowUniqueCount -ne 88 -or
+      $wowBlankCount -ne 0) {
     throw 'D02_WOW_STAGE_RECEIPT_FILESET_HOLD'
   }
   if ($wowReceipt.original_chrome_compact_git_blob -cne '8e3cffe7cb91564ae5817e55cb35e5fbb0feeb50' -or
