@@ -471,6 +471,9 @@ public sealed class ModelDownloadQueueStore
     {
         ValidateJobs(jobs); // Never persist a state that cannot be read back.
         var temp = _path + "." + Guid.NewGuid().ToString("N") + ".tmp";
+        // A backup can be a hardlink even when the reparse-point check passes.
+        // Never copy onto its existing inode or modify unrelated owner data.
+        var backupTemp = _path + "." + Guid.NewGuid().ToString("N") + ".bak.tmp";
         try
         {
             await using (var output = new FileStream(temp, FileMode.CreateNew, FileAccess.Write,
@@ -485,10 +488,20 @@ public sealed class ModelDownloadQueueStore
             // Backups and queue files must remain in the authorized private directory.
             ModelLocalAttestation.RequireNoExistingReparsePoint(_path);
             ModelLocalAttestation.RequireNoExistingReparsePoint(_path + ".bak");
-            // Preserve the last valid state for operator-assisted rollback.
-            if (File.Exists(_path)) File.Copy(_path, _path + ".bak", overwrite: true);
+            // A new private snapshot and directory-entry replacement avoid
+            // writing through a hardlink at the fixed backup name.
+            if (File.Exists(_path))
+            {
+                File.Copy(_path, backupTemp, overwrite: false);
+                ModelLocalAttestation.RequireNoExistingReparsePoint(_path + ".bak");
+                File.Move(backupTemp, _path + ".bak", overwrite: true);
+            }
             File.Move(temp, _path, overwrite: true);
         }
-        finally { if (File.Exists(temp)) File.Delete(temp); }
+        finally
+        {
+            if (File.Exists(temp)) File.Delete(temp);
+            if (File.Exists(backupTemp)) File.Delete(backupTemp);
+        }
     }
 }

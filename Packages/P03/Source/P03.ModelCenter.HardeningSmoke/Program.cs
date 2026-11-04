@@ -153,6 +153,29 @@ try
         "F01 multiple instances deduplicate immutable Pull");
     Assert((await new ModelDownloadQueueStore(multiRoot).ReadAsync()).Count == 1,
         "F02 queue stays durable across independent instances");
+    // G2 NO-LOSS: a .bak hardlink is not a reparse point. Backup rotation
+    // must not modify the separate target file's bytes.
+    if (OperatingSystem.IsWindows())
+    {
+        var linkRoot = Path.Combine(multiRoot, "backup-hardlink");
+        var unrelated = Path.Combine(multiRoot, "other-owner-untouched.txt");
+        const string sentinel = "P03_UNRELATED_OWNER_DATA_MUST_NOT_CHANGE";
+        await File.WriteAllTextAsync(unrelated, sentinel);
+        var protectedQueue = new ModelDownloadQueueStore(linkRoot);
+        var originalJob = await protectedQueue.EnqueueVerifiedPullAsync(model, true);
+        var backupAlias = Path.Combine(linkRoot, "p03-model-download-queue.json.bak");
+        if (!P03HardlinkFixture.CreateHardLink(backupAlias, unrelated, IntPtr.Zero))
+            throw new Exception("FAIL F02A hardlink fixture unavailable");
+        var changed = await protectedQueue.UpdateAsync(originalJob.Id,
+            j => j with { Status = "Backup rotated" });
+        Assert(changed?.Status == "Backup rotated" &&
+            (await protectedQueue.ReadAsync()).Single().Status == changed.Status,
+            "F02A model queue remains durable");
+        Assert(await File.ReadAllTextAsync(unrelated) == sentinel &&
+            (await File.ReadAllTextAsync(backupAlias)).Contains(
+                originalJob.Id.ToString("D"), StringComparison.OrdinalIgnoreCase),
+            "F02B foreign bytes preserved through queue backup rotation");
+    }
     var file = Path.Combine(multiRoot, "sample.gguf");
     await File.WriteAllBytesAsync(file, Encoding.ASCII.GetBytes("GGUFsynthetic-byteproof"));
     var sha = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(await File.ReadAllBytesAsync(file))).ToLowerInvariant();
@@ -333,4 +356,14 @@ sealed class StalledP03Stream : Stream
     public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
     public override void SetLength(long length) => throw new NotSupportedException();
     public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+}
+ 
+internal static class P03HardlinkFixture
+{
+    [System.Runtime.InteropServices.DllImport("kernel32.dll",
+        EntryPoint = "CreateHardLinkW",
+        CharSet = System.Runtime.InteropServices.CharSet.Unicode,
+        SetLastError = true)]
+    internal static extern bool CreateHardLink(string link, string existing,
+        IntPtr reserved);
 }
