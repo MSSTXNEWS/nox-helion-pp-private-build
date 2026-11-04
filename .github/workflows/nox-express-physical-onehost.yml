@@ -14,6 +14,7 @@ on:
       - coordination/e06/t06_compile_original_wpf_p02.py
       - tests/e06/test_t06_samevm_webview2_preflight_stage.py
       - coordination/e06/t06_package_original_onehost.py
+      - tests/e06/test_t06_nsis_uninstall_quote_r128.py
       - coordination/e06/t06_source_receipt_guard.py
       - tests/e06/test_t06_source_receipt_guard.py
       - tests/e06/test_t06_manifest_pwsh_host_r120.py
@@ -59,6 +60,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'T06_FROZEN_SOURCE_COVERAGE_TEST_HOLD' }
           python -B -m unittest discover -s tests/e06 -p test_t06_nx03_stage_pin_r118.py -v
           if ($LASTEXITCODE -ne 0) { throw 'T06_NX03_NATIVE_STAGE_PIN_HOLD' }
+          python -B -m unittest discover -s tests/e06 -p test_t06_nsis_uninstall_quote_r128.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'T06_NSIS_UNINSTALL_QUOTE_STAGE_HOLD' }
           python -B -m unittest discover -s tests/e06 -p test_t06_samevm_webview2_preflight_stage.py -v
           if ($LASTEXITCODE -ne 0) { throw 'T06_WEBVIEW2_ORIGINAL_SOURCE_TEST_HOLD' }
           python -B -m unittest discover -s tests/e06 -p test_t06_source_receipt_guard.py -v

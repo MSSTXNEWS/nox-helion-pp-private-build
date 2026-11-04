@@ -241,6 +241,49 @@ def stage_reviewed_installed_payload_verifier(owner_script, reviewed_script):
             "installed_metadata_switch_pinned": True,
             "release_accepted": False}
 
+
+# Reuse approved C09 original NSIS registry line only in disposable C07 stage.
+C09_NSIS_REVIEW_BLOB = "87d901c3846359a91be3e8288f24302cc7060257"
+C07_NSIS_REGISTRY_LINE_SHA256 = "6ab87005e57b21c50252b13173784aafc348aeff3953aef60e1226f6154651d4"
+C09_UNINSTALL_LINE = "  WriteRegStr HKCU \"Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\${APP_ID}\" \"UninstallString\" '\"$INSTDIR\\Uninstall.exe\"'"
+C07_UNINSTALL_LINE = "  WriteRegStr HKCU \"Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\${APP_ID}\" \"UninstallString\" '$\"$INSTDIR\\Uninstall.exe$\"'"
+
+def stage_c07_uninstall_quote(path: Path, review: Path):
+    for node in (path,review,*path.parents,*review.parents):
+        need(not node.is_symlink() and
+             not getattr(node,"is_junction",lambda:False)(),
+             "T06_NSIS_UNINSTALL_QUOTE_REPARSE_HOLD")
+    need(path.is_file() and review.is_file() and
+         path.parent.name=="Installer" and review.parent.name=="Installer",
+         "T06_NSIS_UNINSTALL_QUOTE_OWNER_PATH_HOLD")
+    approved_raw=review.read_bytes()
+    need(_git_blob(approved_raw.replace(b"\r\n",b"\n"))==C09_NSIS_REVIEW_BLOB,
+         "T06_NSIS_UNINSTALL_QUOTE_REVIEW_BLOB_HOLD")
+    need(approved_raw.decode("utf-8-sig").splitlines().count(C09_UNINSTALL_LINE)==1,
+         "T06_NSIS_UNINSTALL_QUOTE_REVIEW_LINE_HOLD")
+    before=path.read_bytes()
+    lines=before.decode("utf-8-sig").splitlines(keepends=True)
+    candidates=[(index,item) for index,item in enumerate(lines)
+                if '"UninstallString"' in item and "WriteRegStr" in item]
+    need(len(candidates)==1,"T06_NSIS_UNINSTALL_QUOTE_DUPLICATE_HOLD")
+    index,original=candidates[0]
+    content_line=original.rstrip("\r\n")
+    need(content_line in (C07_UNINSTALL_LINE,C09_UNINSTALL_LINE),
+         "T06_NSIS_UNINSTALL_QUOTE_UNREVIEWED_HOLD")
+    if content_line==C09_UNINSTALL_LINE:
+        return {"changed":False,"sha256":sha(path),"release_accepted":False}
+    need(hashlib.sha256(content_line.encode("utf-8")).hexdigest()==C07_NSIS_REGISTRY_LINE_SHA256,
+         "T06_NSIS_UNINSTALL_QUOTE_PREIMAGE_SHA_HOLD")
+    lines[index]=C09_UNINSTALL_LINE+original[len(content_line):]
+    updated=("".join(lines)).encode("utf-8")
+    if before.startswith(b"\xef\xbb\xbf"): updated=b"\xef\xbb\xbf"+updated
+    need(updated!=before,"T06_NSIS_UNINSTALL_QUOTE_NOLOSS_HOLD")
+    path.write_bytes(updated)
+    need(path.read_bytes()==updated,
+         "T06_NSIS_UNINSTALL_QUOTE_READBACK_HOLD")
+    return {"changed":True,"pre_sha256":hashlib.sha256(before).hexdigest(),
+            "sha256":sha(path),"release_accepted":False}
+
 # Exact reviewed P01 32/64-bit WebView2 Evergreen registry-source fix.
 # Stage only into disposable ORIGINAL R11, never into ZIP729 or installed NOX.
 P01_REVIEWED_PREFLIGHT_GIT_BLOB = "e683e30b4e6fc32c31652061c569d6ce77c2cb2e"
@@ -527,6 +570,12 @@ def build(root,staged):
         str(installer_dir/"Verify-Payload.ps1"),"-Root",str(payload),
         "-Manifest",str(manifest_file)],capture_output=True,text=True,timeout=180)
     need(proof.returncode==0,"T06_ORIGINAL_OWNER_MANIFEST_VERIFY_HOLD:"+proof.stdout[-900:]+proof.stderr[-900:])
+    quote_proof=stage_c07_uninstall_quote(
+        installer_dir/"NOX-HELION-Setup.nsi",
+        Path(__file__).resolve().parents[2]/
+        "stage/proposals/P01/C09/Installer/NOX-HELION-Setup.nsi")
+    print("T06_C09_REVIEWED_NSIS_UNINSTALL_QUOTE_STAGE "+
+          json.dumps(quote_proof,sort_keys=True),flush=True)
     nsis,nsis_compiler_sha=preflight_nsis_compiler()
     setup=staged/"NOX-HELION-V16-ONEHOST-CANDIDATE-SETUP.exe"
     need(not setup.exists() and not setup.is_symlink(),
