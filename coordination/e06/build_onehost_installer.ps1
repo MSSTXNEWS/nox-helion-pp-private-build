@@ -364,6 +364,43 @@ if ($wantsCreative) {
   if (Test-Path -LiteralPath (Join-Path $source 'Assets/creative')) {
     throw 'D02_CREATIVE_STAGE_ALREADY_PRESENT'
   }
+  # Existing ORIGINAL five-primary R11 publisher must run on the disposable
+  # FULL D02 Home BEFORE Creative/WOW. Old full D02 physical UIA found 0/5.
+  # No new frontend/backend, no scripted fake actions, no ACL/consent changes.
+  $primaryOwner=Join-Path $repoRoot 'coordination/express/stage_original_five_primary.py'
+  $primaryStage=Join-Path $repoRoot 'coordination/express/publish_original_d02_primary_u12.py'
+  foreach ($pinned in @(
+    @{path=$primaryOwner;sha='d4ee192227cdbc978c7c59f660af2f858fe0cbb8'},
+    @{path=$primaryStage;sha='42bc8c0d77472f3fd48c6b6b1c70cdc14e690752'})) {
+    Assert-E06PlainPathAncestors -Candidate $pinned.path -Scope 'D02_PRIMARY_SCRIPT'
+    if (!(Test-Path -LiteralPath $pinned.path -PathType Leaf) -or
+        (Get-E06CanonicalGitBlobSha $pinned.path) -cne $pinned.sha) {
+      throw 'D02_PRIMARY_REVIEWED_SOURCE_PIN_HOLD'
+    }
+  }
+  $primaryHome=Join-Path $source 'Assets/index.html'
+  Assert-E06PlainPathAncestors -Candidate $primaryHome -Scope 'D02_PRIMARY_HOME'
+  if (!(Test-Path -LiteralPath $primaryHome -PathType Leaf) -or
+      (Get-FileHash -LiteralPath $primaryHome -Algorithm SHA256).Hash.ToLowerInvariant() -cne
+      'b57d58bb001c9826feb3bf7ff19510d047c7ec2926ee8b703538dfca886a960b') {
+    throw 'D02_PRIMARY_ORIGINAL_HOME_SOURCELOCK_HOLD'
+  }
+  $primaryReceipt=Join-Path (Split-Path -Parent $source) 'EXPRESS_PRIMARY_STAGE_RECEIPT.json'
+  Assert-E06PlainPathAncestors -Candidate $primaryReceipt -Scope 'D02_PRIMARY_RECEIPT'
+  if (Test-Path -LiteralPath $primaryReceipt) { throw 'D02_PRIMARY_RECEIPT_COLLISION_HOLD' }
+  & $py.Source -B $primaryStage $source $primaryReceipt
+  if ($LASTEXITCODE -ne 0) { throw 'D02_PRIMARY_CANONICAL_ACTION_STAGE_HOLD' }
+  $primaryProof=Get-Content -LiteralPath $primaryReceipt -Raw -Encoding UTF8 | ConvertFrom-Json
+  if ($primaryProof.source_sha256 -cne
+      'b57d58bb001c9826feb3bf7ff19510d047c7ec2926ee8b703538dfca886a960b' -or
+      $primaryProof.status -cne 'STAGED_SOURCE_ONLY_NOT_UIA' -or
+      $primaryProof.installed_ui_automation -cne 'NOT_RUN' -or
+      $primaryProof.release_accepted -ne $false -or
+      $primaryProof.original_source_archive_unchanged -ne $true -or
+      (Get-FileHash -LiteralPath $primaryHome -Algorithm SHA256).Hash.ToLowerInvariant() -cne
+      $primaryProof.published_sha256) {
+    throw 'D02_PRIMARY_STAGED_SOURCE_PROOF_HOLD'
+  }
   & $py.Source $creativeScript $source $creative
   if ($LASTEXITCODE -ne 0) { throw 'D02_CREATIVE_STAGE_FAILED' }
   & $py.Source $wowScript $source $wow
@@ -705,6 +742,13 @@ if ($wantsCreative) {
   if (([regex]::Matches($publishedHtml,[regex]::Escape('creative/wow200/runtime/home-scene.mjs'))).Count -ne 1) {
     throw 'D02_PUBLISHED_HOME_RUNTIME_IMPORT_HOLD'
   }
+  # Attest the exact published payload, not merely a staged or decorative UI.
+  # Real Windows WebView2 UIA InvokePattern is still E07 HOLD until executed.
+  if (!$publishedHtml.Contains('id="nox-express-primary"') -or
+      ([regex]::Matches($publishedHtml,'data-nox-primary="(?:CHAT|INSTALL|MODELS|LEARN|SETTINGS)"')).Count -ne 5 -or
+      !$publishedHtml.Contains('nox-express-primary-bind')) {
+    throw 'D02_PUBLISHED_FIVE_ORIGINAL_PRIMARY_ACTIONS_MISSING'
+  }
   foreach ($name in @('nox-cinema.mjs','nox-cinema.css')) {
     $wanted=Join-Path $source ('Assets/creative/wow200/proposals/NOX-CINEMA-FX/' + $name)
     $published=Join-Path $payload ('Assets/creative/wow200/proposals/NOX-CINEMA-FX/' + $name)
@@ -720,7 +764,9 @@ if ($wantsCreative) {
     windows_qa_accepted=$false;original_index_sha256=$originalIndexSha;
     backup_original_index=$backupIndexPath;files=@($visualPayloadRecords);
     file_count=$visualPayloadRecords.Count;owner1_active_only=$true;
-    previous_pr30_archived=$true;release_accepted=$false
+    previous_pr30_archived=$true;express_original_five_primary_source_only=$true;
+    express_primary_stage_receipt_sha256=(Get-FileHash -LiteralPath $primaryReceipt -Algorithm SHA256).Hash.ToLowerInvariant();
+    express_primary_physical_uia='NOT_RUN';release_accepted=$false
   }
   [IO.File]::WriteAllText($visualPayloadReceipt,($proof | ConvertTo-Json -Depth 8),(New-Object System.Text.UTF8Encoding($false)))
 }
