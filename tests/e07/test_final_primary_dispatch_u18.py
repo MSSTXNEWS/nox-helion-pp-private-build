@@ -7,6 +7,8 @@ import importlib.util
 from pathlib import Path
 import sys
 import unittest
+from unittest.mock import patch
+from types import SimpleNamespace
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "coordination" / "e07"))
@@ -55,6 +57,20 @@ class FinalPrimaryDispatch(unittest.TestCase):
         self.assertIn('"reduced_motion":"HOLD"', witness)
         self.assertIn("OS_MEDIA_QUERY_NOT_PHYSICALLY_VERIFIED", witness)
         self.assertNotIn('_uia_script(hwnd,"FX")', witness)
+
+    def test_bounded_phase_diagnostics_do_not_leak_windows_output(self):
+        for phase in ("VISUAL", "INSTALL", "MODELS", "LEARN", "SETTINGS"):
+            with self.subTest(phase=phase):
+                failed = SimpleNamespace(returncode=1, stdout="", stderr="PRIVATE PATH OR TOKEN")
+                with patch.object(probe.subprocess, "run", return_value=failed):
+                    with self.assertRaisesRegex(probe.e07.Hold,
+                        "E07_FINAL_UIA_" + phase + "_PROCESS_EXIT_HOLD") as raised:
+                        probe._run_ps("test", phase=phase)
+                    self.assertNotIn("PRIVATE", str(raised.exception))
+
+    def test_uia_phase_is_strictly_allowlisted(self):
+        with self.assertRaisesRegex(probe.e07.Hold, "E07_FINAL_UIA_PHASE_HOLD"):
+            probe._run_ps("test", phase="INJECTED_NAME")
 
     def test_non_action_does_not_invoke_privileged_button(self):
         script = probe._uia_script(12345, "FX")
