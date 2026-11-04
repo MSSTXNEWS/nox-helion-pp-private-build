@@ -1,5 +1,5 @@
 import {DIRECTIONS,WORLDS,CORE_IDS,PERSONAS,PRIMARY,ROUTE_COUNT,getWorld,getRoute} from './express-layout.mjs';
-import {createNativeMenuClient,isNativeChatTerminal,canonicalChatContext} from '../onehost-menu-bindings.mjs';
+import {createNativeMenuClient,isNativeChatTerminal,canonicalChatContext,nativeOwnerReceiptHolds} from '../onehost-menu-bindings.mjs';
 const doc=document,$=id=>doc.getElementById(id);
 const el=(tag,cls,label)=>{const x=doc.createElement(tag);if(cls)x.className=cls;if(label!==undefined)x.textContent=label;return x;};
 const button=(label,cls,click)=>{const b=el('button',cls,label);b.type='button';b.addEventListener('click',click);return b;};
@@ -102,10 +102,15 @@ async function nativeRequest(route,payload,label){
  setDetails(top,el('h2','',label.name),output);
  try{
   const reply=await client.request(route,payload);
-  const valid=reply?.state==='COMPLETED';
+  // An authenticated transport COMPLETED envelope is not a native result.
+  // Missing payload, unrelated route and explicit native owner HOLD stay HOLD.
+  const data=reply?.result??reply?.data;
+  const valid=reply?.routeId===route&&reply?.state==='COMPLETED'&&
+    data!==null&&data!==undefined&&
+    !(data&&typeof data==='object'&&!Array.isArray(data)&&nativeOwnerReceiptHolds(data));
   if(valid){
-   output.textContent=JSON.stringify(reply.result??reply.data??{state:reply.state},null,2).slice(0,9000);
-   say('Получен ответ от OneHost. Выполнение всей функции отдельно не подтверждено.');
+   output.textContent=JSON.stringify(data,null,2).slice(0,9000);
+   say('Получены данные от OneHost. Выполнение всей функции отдельно не подтверждено.');
   }else{pending(label.id,label.name);say('Native обработчик пока не подтвердил действие.');}
  }catch{pending(label.id,label.name);say('Локальный OneHost недоступен или действие отклонено.');}
 }
