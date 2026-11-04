@@ -124,6 +124,8 @@ class BridgeReceiptGate(unittest.TestCase):
             "native_windows_exe_request_reply":"PASS",
             "native_modelcenter_installed_read_only":"PASS",
             "models_installed_uses_original_local_discovery":True,
+            "modelcenter_provider_offline_verified":False,
+            "real_ollama_model_inference_tested":False,
             "original_729_unchanged":True,"source_original_archive_sha256":ORIGINAL,
             "installed_wpf_e07":False,"release_accepted":False,
             "exe_file":"NOX_HELION_PRIVATE_CANDIDATE.exe",
@@ -169,7 +171,7 @@ class BridgeReceiptGate(unittest.TestCase):
     def test_provider_tag_cannot_replace_frozen_models_route(self):
         self.py["native_modelcenter_installed_read_only"]="HOLD"
         self.configure()
-        with self.assertRaisesRegex(RuntimeError,"NATIVE_SOURCE_SHA"):
+        with self.assertRaisesRegex(RuntimeError,"NATIVE_MODEL_INVENTORY_HOLD"):
             smoke.candidate_gate()
 
     def test_source_archive_and_false_e07_must_agree(self):
