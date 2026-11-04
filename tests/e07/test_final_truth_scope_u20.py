@@ -52,8 +52,8 @@ class FunctionalTruth(unittest.TestCase):
                      if isinstance(n,ast.FunctionDef) and n.name=="attempt")
         snippet=ast.get_source_segment(source,attempt)
         namespace={"e07":module.e07,"subprocess":module.subprocess}
-        exec("def owner():\\n    actions={}\\n"+
-             snippet+"\\n    return attempt,actions\\n",namespace)
+        exec("def owner():\n    actions={}\n"+
+             snippet+"\n    return attempt,actions\n",namespace)
         attempt_fn,results=namespace["owner"]()
         def failed():
             raise module.e07.Hold("E07_FINAL_INSTALL_RESULT_HOLD")
