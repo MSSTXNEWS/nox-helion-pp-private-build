@@ -62,10 +62,12 @@ $ErrorActionPreference='Stop'
 [Console]::OutputEncoding=[Text.Encoding]::UTF8
 try {
  $port=9222
- $targets=@(Invoke-RestMethod -Uri 'http://127.0.0.1:9222/json/list' -TimeoutSec 5)
+ try {
+  $targets=@(Invoke-RestMethod -Uri 'http://127.0.0.1:9222/json/list' -TimeoutSec 5)
+ } catch { throw 'ENDPOINT_UNREACHABLE' }
  $pages=@($targets | Where-Object {
   $_.type -eq 'page' -and
-  ($_.url+'') -match '(?i)^file:///.*[/\\]Assets[/\\]index\.html(?:[?#].*)?$'
+  ($_.url+'') -ceq 'https://nox.local/'
  })
  if($pages.Count -ne 1){throw 'PAGE_NOT_UNIQUE'}
  $uri=[uri]$pages[0].webSocketDebuggerUrl
@@ -139,7 +141,11 @@ try {
   $cancel.Dispose()
  }
 } catch {
- Write-Output 'E07_WEBVIEW2_CDP_READONLY_HOLD'
+ $reason=$_.Exception.Message+''
+ $allowed=@('ENDPOINT_UNREACHABLE','PAGE_NOT_UNIQUE','NON_LOOPBACK_CDP',
+   'CDP_NOT_TEXT','CDP_REPLY_TOO_LARGE','CDP_RUNTIME_ERROR','CDP_NO_EVALUATION')
+ if($allowed -notcontains $reason){$reason='READONLY'}
+ Write-Output ('E07_WEBVIEW2_CDP_'+$reason+'_HOLD')
  exit 2
 }
 """
@@ -151,7 +157,16 @@ try {
             errors="replace")
     except (OSError, subprocess.TimeoutExpired):
         raise e07.Hold("E07_WEBVIEW2_CDP_PROCESS_HOLD") from None
-    e07.require(result.returncode == 0 and 0 < len(result.stdout) <= 16384,
+    if result.returncode != 0:
+        reason=result.stdout.strip()
+        if re.fullmatch(
+            r"E07_WEBVIEW2_CDP_(?:ENDPOINT_UNREACHABLE|PAGE_NOT_UNIQUE|"
+            r"NON_LOOPBACK_CDP|CDP_NOT_TEXT|CDP_REPLY_TOO_LARGE|"
+            r"CDP_RUNTIME_ERROR|CDP_NO_EVALUATION|READONLY)_HOLD", reason
+        ):
+            raise e07.Hold(reason)
+        raise e07.Hold("E07_WEBVIEW2_CDP_READONLY_HOLD")
+    e07.require(0 < len(result.stdout) <= 16384,
                 "E07_WEBVIEW2_CDP_READONLY_HOLD")
     try:
         observation = json.loads(result.stdout.strip())
