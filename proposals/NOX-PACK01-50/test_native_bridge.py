@@ -189,6 +189,25 @@ class BridgeTest(unittest.TestCase):
         self.assertNotIn("models.pull",result["commands"])
         self.assertNotIn("system.pc_control",result["commands"])
 
+    def test_offline_ollama_never_advertises_live_chat(self):
+        with patch.object(self.client, "models", return_value=[]):
+            self.assertFalse(self.owner.available())
+            advertised=self.dispatch.advertise(self.session)
+            self.assertFalse(advertised["helion.chat"]["enabled"])
+            with self.assertRaises(bridge.HostHold):
+                self.dispatch.execute("helion.chat", {"text":"Hi","model":"qwen3:4b"}, self.session)
+
+    def test_offline_sqlite_history_and_stop_remain_authorized(self):
+        self.store.add_exchange("t1","p1","room1","offline prompt","saved answer",authorize=lambda:None)
+        with patch.object(self.client,"models",side_effect=OSError("OFFLINE")):
+            advertised=self.dispatch.advertise(self.session)
+            self.assertFalse(advertised["helion.chat"]["enabled"])
+            self.assertTrue(advertised["chat.history"]["enabled"])
+            self.assertTrue(advertised["chat.stop"]["enabled"])
+            before=self.dispatch.execute("chat.history",{},self.session)["messages"]
+            self.assertEqual([row["content"] for row in before][-2:],["offline prompt","saved answer"])
+            self.assertTrue(self.dispatch.execute("chat.stop",{},self.session)["stopRequested"])
+
     def test_uninstalled_model_denied(self):
         with self.assertRaises(bridge.HostHold):
             self.dispatch.execute("helion.chat",{"model":"not-installed","text":"Hi"},self.session)

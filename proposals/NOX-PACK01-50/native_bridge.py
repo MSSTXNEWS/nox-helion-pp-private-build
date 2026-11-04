@@ -273,8 +273,13 @@ class ExistingP02Adapter:
         self.native_selected_file = native_selected_file
 
     def available(self) -> bool:
-        try:return isinstance(self.client.models(),list)
-        except Exception:return False
+        # Empty model inventory is not a ready inference provider.
+        # Local SQLite history and native STOP are independently bound below.
+        try:
+            models = self.client.models()
+            return isinstance(models, list) and bool(models)
+        except Exception:
+            return False
 
     def list_models(self, session, args):
         return {"models":self.client.models()}
@@ -380,7 +385,9 @@ class ExistingP02Adapter:
             # Chat quick commands reflect current host route registry, not Ollama status.
             # STOP is an OS-local cancellation path, not model inventory.
             # An offline Ollama must never prevent an authorized stop request.
-            ready=(lambda:True) if route in ("chat.commands", "chat.stop") else self.available
+            # Offline history uses the existing scoped SQLite store, not Ollama.
+            # Existing NoxPackHost still enforces SID/ACL and native permission.
+            ready=(lambda:True) if route in ("chat.commands", "chat.stop", "chat.history") else self.available
             dispatcher.bind(route,BoundPort(func,ready,receipt,2))
         return frozenset(entries)
 
