@@ -10,6 +10,7 @@ export function makeFakeD02Dom({coreIds=[
    const callbacks=new Map(),attrs=new Map(),children=[];
    const node={tagName:tag.toUpperCase(),dataset:{},children,attributes:attrs,
      className:'',textContent:'',hidden:false,parentElement:null,ownerDocument:null,
+     get isConnected(){return node===body || node.parentElement?.isConnected===true;},
      setAttribute(name,value){attrs.set(name,String(value));},
      getAttribute(name){return attrs.has(name)?attrs.get(name):null;},
      removeAttribute(name){attrs.delete(name);},
@@ -53,6 +54,10 @@ export function makeFakeD02Dom({coreIds=[
  const home=element('section');home.classList.add('screen','active');
  home.querySelector=s=>s==='.nox-orbit-stage'?stage:null;
  const body=element('body'),events=new Map();
+ // HOME is connected to its original document until explicitly removed.
+ // The native browser exposes isConnected, so a fake without it must not
+ // misclassify an intact HOME as detached and force a second D02 mount.
+ body.append(home);
  class Observer{
    constructor(fn){this.fn=fn;}
    observe(){observers.push(this);}
