@@ -47,15 +47,24 @@ class SourceVisualProof(unittest.TestCase):
                                 "CINEMA — КИНО"))
         valid={"schema":"NOX-D02-QUALITY-UIA-v1",
                "actions":[{"name":name,"invoked":True,"pressed":True,
-                           "same_hwnd":True} for name in names]}
+                           "same_hwnd":True,"invocation_method":"INVOKE_PATTERN"} for name in names]}
         self.assertEqual(module.validate_quality_witness(valid)["fx_control"],"PASS")
         for index in range(len(names)):
             for key,value in (("invoked",False),("pressed",False),
-                              ("same_hwnd",False),("name","FX BALANCED")):
+                              ("same_hwnd",False),("name","FX BALANCED"),
+                              ("invocation_method","FAKE_ACK")):
                 altered={"schema":valid["schema"],"actions":[dict(a) for a in valid["actions"]]}
                 altered["actions"][index][key]=value
                 with self.assertRaises(module.e07.Hold):
                     module.validate_quality_witness(altered)
+        legacy={"schema":"NOX-D02-QUALITY-UIA-v1",
+                "actions":[{**item,"invocation_method":"LEGACY_DEFAULT_ACTION"}
+                           for item in valid["actions"]]}
+        self.assertEqual(module.validate_quality_witness(legacy)["actual_invocations"],5)
+        source=PATH.read_text(encoding="utf-8")
+        self.assertIn("LegacyIAccessiblePattern]::Pattern",source)
+        self.assertIn("$legacy.DoDefaultAction()",source)
+        self.assertIn("U17_D02_QUALITY_NO_NATIVE_ACCESSIBILITY_ACTION_HOLD",source)
         with self.assertRaises(module.e07.Hold):
             module.validate_quality_witness({"schema":"NOX-D02-QUALITY-UIA-v1","actions":[]})
 
