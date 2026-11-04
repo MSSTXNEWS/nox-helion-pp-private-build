@@ -5,6 +5,10 @@ on:
     paths:
       - .github/workflows/nox-f842-fast-visual.yml
       - coordination/e07/probe_f842_visual_fast.py
+      - coordination/e07/probe_final_same_setup.py
+      - coordination/e07/probe_91a6_real_visual_u17.py
+      - tests/e07/test_91a6_real_visual_u17.py
+      - tests/e07/test_final_primary_dispatch_u18.py
   workflow_dispatch:
 permissions:
   contents: read
@@ -33,6 +37,10 @@ jobs:
         run: |
           python -B -m py_compile coordination/e07/probe_f842_visual_fast.py coordination/e07/independent_setup_e07.py coordination/e07/probe_final_same_setup.py
           if ($LASTEXITCODE -ne 0) { throw 'F842_FAST_VISUAL_PY_SOURCE_HOLD' }
+          python -B -m unittest discover -s tests/e07 -p test_91a6_real_visual_u17.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'F842_GRAPHICAL_MODE_SOURCE_HOLD' }
+          python -B -m unittest discover -s tests/e07 -p test_final_primary_dispatch_u18.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'F842_VISIBLE_BUTTON_SOURCE_HOLD' }
       - name: Download exact existing immutable f842 Setup candidate
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
