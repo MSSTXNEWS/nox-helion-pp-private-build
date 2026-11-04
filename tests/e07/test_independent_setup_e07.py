@@ -496,6 +496,51 @@ class IndependentE07(unittest.TestCase):
 
 
 
+
+    def test_u11_readonly_primary_navigation_requires_four_genuine_fresh_routes(self):
+        labels = ("INSTALL", "MODELS", "LEARN", "REPORTS")
+        base = {"schema":"NOX-E07-PRIMARY-NAV-v1","actions":[
+            {"action":name,"invoked":True,"sameHwndAlive":True,
+             "beforeHeading":False,"afterHeading":True} for name in labels]}
+        proof = MOD.classify_readonly_primary_navigation_witness(base)
+        self.assertEqual(proof["status"],"OBSERVED")
+        self.assertEqual(proof["actions_invoked"],4)
+        self.assertEqual(proof["navigation_verified"],"PASS")
+        self.assertEqual(proof["model_inference"],"NOT_TESTED")
+        self.assertEqual(proof["visual_e07"],"HOLD")
+        self.assertIs(proof["release_accepted"],False)
+        for index in range(4):
+            for change in ({"afterHeading":False},{"beforeHeading":True},
+                           {"invoked":False},{"sameHwndAlive":False}):
+                actions=[dict(x) for x in base["actions"]]
+                actions[index].update(change)
+                actual=MOD.classify_readonly_primary_navigation_witness(
+                    dict(base,actions=actions))
+                self.assertEqual(actual["navigation_verified"],"HOLD")
+                self.assertIs(actual["release_accepted"],False)
+        for bad in (dict(base,schema="NOX-E07-PRIMARY-NAV-v0"),
+                    dict(base,actions=base["actions"][:3]),
+                    dict(base,actions=base["actions"]*2),
+                    dict(base,actions=[dict(x,invoked=1) for x in base["actions"]]),
+                    dict(base,actions=[dict(x,action="CHAT") for x in base["actions"]]),
+                    dict(base,release_accepted=True)):
+            with self.assertRaisesRegex(MOD.Hold,"E07_PRIMARY_NAV_"):
+                MOD.classify_readonly_primary_navigation_witness(bad)
+
+    def test_u11_safe_navigation_only_for_pinned_original_candidate(self):
+        source = FILE.read_text(encoding="utf-8")
+        self.assertIn('safe_nav=frozen_source == "e888941626191c17d19d372889b1f96842c15e1b"', source)
+        guarded = source.split("def observe_readonly_primary_navigation(",1)[1].split(
+            "\ndef original_wpf_hwnd(",1)[0]
+        self.assertIn("InvokePattern",guarded)
+        self.assertIn("Test-VisibleHeading",guarded)
+        self.assertIn("Get-SameRoot",guarded)
+        self.assertNotIn("models.pull",guarded)
+        self.assertNotIn("training.start",guarded)
+        self.assertNotIn("installer",guarded.lower())
+        self.assertIn('"visual_e07": "HOLD"',source)
+
+
     def test_u09_native_inventory_scratch_fails_closed_before_onehost(self):
         # Source-level safety preflight; NEVER installed model / IPC / E07 PASS.
         with tempfile.TemporaryDirectory() as temp, patch.dict(

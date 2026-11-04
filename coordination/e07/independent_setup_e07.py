@@ -686,6 +686,131 @@ $alive=$null -ne [System.Windows.Automation.AutomationElement]::FromHandle($hwnd
     return classify_chat_invoke_witness(witness)
 
 
+
+def classify_readonly_primary_navigation_witness(response: dict) -> dict:
+    """Physical SAFE navigation only; never a functional INSTALL/LEARN/model PASS."""
+    expected = ("INSTALL", "MODELS", "LEARN", "REPORTS")
+    require(type(response) is dict and set(response) == {"schema", "actions"} and
+            response["schema"] == "NOX-E07-PRIMARY-NAV-v1" and
+            type(response["actions"]) is list and len(response["actions"]) == 4,
+            "E07_PRIMARY_NAV_SCHEMA_HOLD")
+    checks = {}
+    for index, raw in enumerate(response["actions"]):
+        require(type(raw) is dict and
+                set(raw) == {"action", "invoked", "sameHwndAlive",
+                             "beforeHeading", "afterHeading"} and
+                type(raw["action"]) is str and raw["action"] == expected[index] and
+                type(raw["invoked"]) is bool and
+                type(raw["sameHwndAlive"]) is bool and
+                type(raw["beforeHeading"]) is bool and
+                type(raw["afterHeading"]) is bool,
+                "E07_PRIMARY_NAV_UNTRUSTED_HOLD")
+        changed = (raw["invoked"] is True and raw["sameHwndAlive"] is True and
+                   raw["beforeHeading"] is False and raw["afterHeading"] is True)
+        checks[raw["action"]] = {
+            "button_actuated": "OBSERVED" if raw["invoked"] else "HOLD",
+            "navigation_verified": "PASS" if changed else "NOT_TESTED",
+            "function_verified": "NOT_TESTED"}
+    complete = all(value["navigation_verified"] == "PASS" for value in checks.values())
+    return {"status": "OBSERVED" if complete else "HOLD",
+            "actions_invoked": sum(value["button_actuated"] == "OBSERVED"
+                                   for value in checks.values()),
+            "navigation_verified": "PASS" if complete else "HOLD",
+            "per_action": checks, "visual_e07": "HOLD",
+            "model_inference": "NOT_TESTED", "release_accepted": False}
+
+
+def observe_readonly_primary_navigation(hwnd: int) -> dict:
+    """On the frozen e888 source ONLY: invoke four known read-only MENU routes.
+
+    Original menu.js: INSTALL/system and LEARN/evolution are non-mutating
+    informational panels; MODELS/catalog and REPORTS/progress are read-only
+    OneHost routes. No button inside a panel, install, pull or training is invoked.
+    """
+    require(sys.platform == "win32" and type(hwnd) is int and hwnd > 0,
+            "E07_PRIMARY_NAV_HOST_HOLD")
+    ps = r"""
+$ErrorActionPreference='Stop'
+[Console]::OutputEncoding=[System.Text.Encoding]::UTF8
+Add-Type -AssemblyName UIAutomationClient
+Add-Type -AssemblyName UIAutomationTypes
+$handle=[IntPtr]__HWND__
+$titles=@{INSTALL='Система NOX';MODELS='Каталог моделей';LEARN='Эволюция';REPORTS='Прогресс'}
+function Get-SameRoot {
+  $v=[System.Windows.Automation.AutomationElement]::FromHandle($handle)
+  if($null -eq $v){throw 'E07_PRIMARY_NAV_HWND_LOST'}
+  return $v
+}
+function Test-VisibleHeading($hostRoot,[string]$title) {
+  $tree=$hostRoot.FindAll([System.Windows.Automation.TreeScope]::Descendants,
+                         [System.Windows.Automation.Condition]::TrueCondition)
+  if($tree.Count -gt 2048){throw 'E07_PRIMARY_NAV_TREE_LIMIT'}
+  for($k=0;$k -lt $tree.Count;$k++){
+    try{
+      $v=$tree.Item($k).Current
+      if($v.ControlType -ne [System.Windows.Automation.ControlType]::Text){continue}
+      if(($v.Name+'').Trim() -ne $title){continue}
+      $box=$v.BoundingRectangle
+      if(-not $v.IsOffscreen -and $box.Width -ge 20 -and $box.Height -ge 12){return $true}
+    }catch{}
+  }
+  return $false
+}
+$actions=@()
+foreach($name in @('INSTALL','MODELS','LEARN','REPORTS')){
+  $root=Get-SameRoot
+  $nodes=$root.FindAll([System.Windows.Automation.TreeScope]::Descendants,
+                       [System.Windows.Automation.Condition]::TrueCondition)
+  if($nodes.Count -gt 2048){throw 'E07_PRIMARY_NAV_TREE_LIMIT'}
+  $found=New-Object System.Collections.ArrayList
+  for($i=0;$i -lt $nodes.Count;$i++){
+    try {
+      $el=$nodes.Item($i);$v=$el.Current
+      if($v.ControlType -ne [System.Windows.Automation.ControlType]::Button){continue}
+      $token=($v.Name+'').Trim().TrimStart([char[]]@([char]0x2726,[char]0x2605,[char]0x2022,[char]0x20)).Trim().ToUpperInvariant()
+      if($token -ne $name){continue}
+      $rect=$v.BoundingRectangle
+      if($v.IsEnabled -and -not $v.IsOffscreen -and $rect.Width -ge 20 -and $rect.Height -ge 12){
+        $null=$found.Add($el)
+      }
+    }catch{}
+  }
+  if($found.Count -ne 1){throw 'E07_PRIMARY_NAV_BUTTON_NOT_UNIQUE'}
+  $before=Test-VisibleHeading $root $titles[$name]
+  $pattern=$found.Item(0).GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)
+  if($null -eq $pattern){throw 'E07_PRIMARY_NAV_INVOKEPATTERN_MISSING'}
+  $pattern.Invoke()
+  $after=$false
+  for($retry=0;$retry -lt 28;$retry++){
+    Start-Sleep -Milliseconds 180
+    $fresh=Get-SameRoot
+    if(Test-VisibleHeading $fresh $titles[$name]){$after=$true;break}
+  }
+  $alive=$null -ne [System.Windows.Automation.AutomationElement]::FromHandle($handle)
+  $actions+=([pscustomobject]@{action=$name;invoked=$true;sameHwndAlive=$alive;
+                              beforeHeading=$before;afterHeading=$after})
+}
+[pscustomobject]@{schema='NOX-E07-PRIMARY-NAV-v1';actions=@($actions)} |
+  ConvertTo-Json -Compress -Depth 5
+""".replace("__HWND__", str(hwnd))
+    import base64
+    encoded = base64.b64encode(ps.encode("utf-16le")).decode("ascii")
+    try:
+        p = subprocess.run(["powershell.exe", "-NoProfile", "-NonInteractive",
+                            "-EncodedCommand", encoded],
+                           capture_output=True, text=True, timeout=100,
+                           encoding="utf-8", errors="replace")
+    except (OSError, subprocess.TimeoutExpired):
+        raise Hold("E07_PRIMARY_NAV_EXECUTION_HOLD") from None
+    require(p.returncode == 0 and 0 < len(p.stdout) <= 8192,
+            "E07_PRIMARY_NAV_PROCESS_HOLD")
+    try:
+        witness = json.loads(p.stdout.strip())
+    except (ValueError, UnicodeError):
+        raise Hold("E07_PRIMARY_NAV_JSON_HOLD") from None
+    return classify_readonly_primary_navigation_witness(witness)
+
+
 def original_wpf_hwnd(pid: int) -> int | None:
     """Original reviewed Win32 WPF class/PID/size witness; never generic HWND."""
     require(clean_file(_WPF_WITNESS_PATH), "E07_ORIGINAL_WPF_WITNESS_MISSING")
@@ -697,7 +822,7 @@ def original_wpf_hwnd(pid: int) -> int | None:
     return handle if type(handle) is int and handle > 0 else None
 
 
-def gui_hwnd(shell: Path, local: Path) -> dict:
+def gui_hwnd(shell: Path, local: Path, *, safe_nav: bool = False) -> dict:
     """Independently prove fresh WPF/WebView2 NAV_OK+native handshake+HWND."""
     require(clean_file(shell), "E07_WPF_SHELL_MISSING")
     log = local / "NOX_HELION/P01/logs/shell.log"
@@ -759,11 +884,20 @@ def gui_hwnd(shell: Path, local: Path) -> dict:
                             action = observe_chat_input(handle)
                         except Hold as exc:
                             action["error"] = str(exc)
+                    nav = {"status":"HOLD","reason":"NOT_TESTED_UNPINNED_SOURCE",
+                           "navigation_verified":"NOT_TESTED","visual_e07":"HOLD"}
+                    if safe_nav and buttons.get("status") == "PASS":
+                        try:
+                            nav = observe_readonly_primary_navigation(handle)
+                        except Hold as exc:
+                            nav = {"status":"HOLD","error":str(exc),
+                                   "navigation_verified":"NOT_TESTED","visual_e07":"HOLD"}
                     return {"gui_visible_hwnd": "PASS", "stable_seconds": 8,
                             "webview_navigation": "PASS", "shell_native_ipc": "PASS",
                             "independent_webview_log": "CURRENT_PROCESS_FRESH_NAV_AND_IPC",
                             "five_primary_buttons": buttons,
                             "ui_chat_action_probe": action,
+                            "ui_safe_primary_navigation": nav,
                             "visual_e07": "HOLD"}
             else:
                 started = None
@@ -879,7 +1013,7 @@ def verify_fresh_install_targets(local: Path, install: Path, stage: Path,
             "E07_VM_NOT_FRESH_SKIP")
 
 
-def lifecycle(setup: Path, result: dict) -> None:
+def lifecycle(setup: Path, result: dict, *, frozen_source: str = "") -> None:
     local = Path(os.environ["LOCALAPPDATA"])
     base = local / "Programs"
     install = base / "NOX HELION"
@@ -912,7 +1046,9 @@ def lifecycle(setup: Path, result: dict) -> None:
             "status": "HOLD",
             "error": str(exc) if isinstance(exc, Hold) else
                      "E07_NATIVE_STORE_" + type(exc).__name__.upper() + "_HOLD"}
-    result["checks"]["installed_gui"] = gui_hwnd(install/"NOX.P01.Shell.exe",local)
+    result["checks"]["installed_gui"] = gui_hwnd(
+        install/"NOX.P01.Shell.exe", local,
+        safe_nav=frozen_source == "e888941626191c17d19d372889b1f96842c15e1b")
     require(run([str(setup),"/S"],limit=300)==0 and clean_dir(previous),
             "E07_NSIS_UPDATE_HOLD")
     manifest_owner(previous)
@@ -983,7 +1119,7 @@ def main() -> int:
             setup=source/"e06"/"onehost-wow-diagnostic"/"NOX-HELION-V16-DIAGNOSTIC-SETUP.exe"
             receipt=source/"e06"/"onehost-wow-diagnostic"/"E07_BUILT_HANDOFF.json"
             result["checks"]["artifact"] = setup_lock(setup,receipt)
-        lifecycle(setup,result)
+        lifecycle(setup,result,frozen_source=source_sha)
         # Model inference, visual click navigation and independent screenshot
         # remain mandatory for release; do not forge them from HWND and IPC.
         result["error"]="E07_REAL_MODEL_AND_VISUAL_ACCEPTANCE_NOT_COMPLETE"
