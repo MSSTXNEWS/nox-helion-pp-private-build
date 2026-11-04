@@ -711,7 +711,18 @@ def native_store_stop_probe(backend: Path, scratch: Path) -> dict:
     An acknowledged idle STOP is NOT proof of interruption of a live stream.
     """
     require(clean_file(backend), "E07_NATIVE_STORE_EXE_MISSING")
-    require(not scratch.exists() and not scratch.is_symlink(),
+    runner_temp = os.environ.get("RUNNER_TEMP")
+    # A missing-path Windows junction may redirect the native SQLite probe
+    # outside the isolated runner while exists() is still false.
+    require(type(runner_temp) is str and bool(runner_temp.strip()) and
+            scratch.is_absolute() and
+            scratch == Path(runner_temp) / "nox-e07-native-store" and
+            clean_dir(scratch.parent) and
+            all(not parent.is_symlink() and
+                not getattr(parent, "is_junction", lambda: False)()
+                for parent in scratch.parents) and
+            not scratch.exists() and not scratch.is_symlink() and
+            not getattr(scratch, "is_junction", lambda: False)(),
             "E07_NATIVE_STORE_SCRATCH_COLLISION")
     def request(route: str, nonce: str, run_id: str) -> dict:
         envelope = {"protocol": PROTOCOL, "requestId": nonce,

@@ -384,4 +384,46 @@ class IndependentE07(unittest.TestCase):
         with self.assertRaisesRegex(MOD.Hold,"E07_CHAT_ACTION_UNTRUSTED_HOLD"):
             MOD.classify_chat_invoke_witness(dict(candidate,navigation_verified="PASS"))
 
+
+    def test_u04_native_store_scratch_avoids_reparse_and_untrusted_paths(self):
+        # Local preflight proof; NOT physical SQLite, model, IPC or E07 PASS.
+        import os
+        with tempfile.TemporaryDirectory() as temp, patch.dict(
+                os.environ, {"RUNNER_TEMP":temp}):
+            root=Path(temp)
+            backend=root/"backend.exe"
+            backend.write_bytes(b"MZ-fake-test-only")
+            scratch=root/"nox-e07-native-store"
+            orig=getattr(Path,"is_junction",lambda unused:False)
+            for blocked in (scratch,scratch.parent):
+                with self.subTest(blocked=str(blocked)):
+                    with patch.object(Path,"is_junction",
+                                      lambda path, blocked=blocked:
+                                          path == blocked or orig(path),create=True):
+                        with patch.object(MOD.subprocess,"run",
+                                          side_effect=AssertionError("executed")):
+                            with self.assertRaisesRegex(MOD.Hold,
+                                                       "E07_NATIVE_STORE_SCRATCH_COLLISION"):
+                                MOD.native_store_stop_probe(backend,scratch)
+            with self.assertRaisesRegex(MOD.Hold,
+                                       "E07_NATIVE_STORE_SCRATCH_COLLISION"):
+                MOD.native_store_stop_probe(backend,root/"unapproved-name")
+            scratch.mkdir()
+            with self.assertRaisesRegex(MOD.Hold,
+                                       "E07_NATIVE_STORE_SCRATCH_COLLISION"):
+                MOD.native_store_stop_probe(backend,scratch)
+            scratch.rmdir()
+            with patch.object(MOD.subprocess,"run",
+                              side_effect=AssertionError("past safe preflight")):
+                with self.assertRaisesRegex(AssertionError,"past safe preflight"):
+                    MOD.native_store_stop_probe(backend,scratch)
+        with tempfile.TemporaryDirectory() as temp, patch.dict(
+                os.environ, {},clear=True):
+            backend=Path(temp)/"backend.exe"
+            backend.write_bytes(b"MZ-fake-test-only")
+            with self.assertRaisesRegex(MOD.Hold,
+                                       "E07_NATIVE_STORE_SCRATCH_COLLISION"):
+                MOD.native_store_stop_probe(backend,
+                                            Path(temp)/"nox-e07-native-store")
+
 if __name__=='__main__':unittest.main()
