@@ -430,8 +430,9 @@ class IndependentE07(unittest.TestCase):
         self.assertNotIn('smoke.get("uninstall_owned_files_checked")', source)
 
     def test_u04_chat_input_witness_never_forges_route_or_model(self):
-        candidate={"schema":"NOX-E07-CHAT-INPUT-v1","action":"CHAT",
-                   "invoked":True,"sameHwndAlive":True}
+        candidate={"schema":"NOX-E07-CHAT-INPUT-v2","action":"CHAT",
+                   "invoked":True,"sameHwndAlive":True,
+                   "beforeChatHeading":False,"afterChatHeading":False}
         proof=MOD.classify_chat_invoke_witness(candidate)
         self.assertEqual(proof["actions_invoked"],1)
         self.assertEqual(proof["navigation_verified"],"NOT_TESTED")
@@ -439,13 +440,40 @@ class IndependentE07(unittest.TestCase):
         self.assertEqual(proof["model_inference"],"NOT_TESTED")
         for key,value in (("action","INSTALL"),("invoked",False),("invoked",1),
                           ("sameHwndAlive",False),("sameHwndAlive",1),
-                          ("schema","NOX-E07-UIA-V1")):
+                          ("schema","NOX-E07-CHAT-INPUT-v1"),
+                          ("beforeChatHeading",1),("afterChatHeading",1)):
             bad=dict(candidate);bad[key]=value
             with self.subTest(key=key,value=value):
                 with self.assertRaisesRegex(MOD.Hold,"E07_CHAT_ACTION_UNTRUSTED_HOLD"):
                     MOD.classify_chat_invoke_witness(bad)
         with self.assertRaisesRegex(MOD.Hold,"E07_CHAT_ACTION_UNTRUSTED_HOLD"):
             MOD.classify_chat_invoke_witness(dict(candidate,navigation_verified="PASS"))
+
+    def test_u04_chat_navigation_requires_new_visible_heading_from_same_hwnd(self):
+        base={"schema":"NOX-E07-CHAT-INPUT-v2","action":"CHAT",
+              "invoked":True,"sameHwndAlive":True,
+              "beforeChatHeading":False,"afterChatHeading":False}
+        unseen=MOD.classify_chat_invoke_witness(base)
+        self.assertEqual(unseen["navigation_verified"],"NOT_TESTED")
+        self.assertEqual(unseen["navigation_proof"],"NONE")
+        preexisting=MOD.classify_chat_invoke_witness({**base,
+                                                      "beforeChatHeading":True,
+                                                      "afterChatHeading":True})
+        self.assertEqual(preexisting["navigation_verified"],"NOT_TESTED")
+        appeared=MOD.classify_chat_invoke_witness({**base,"afterChatHeading":True})
+        self.assertEqual(appeared["navigation_verified"],"PASS")
+        self.assertEqual(appeared["navigation_proof"],"NEW_VISIBLE_UIA_CHAT_HEADING")
+        self.assertEqual(appeared["visual_e07"],"HOLD")
+        self.assertEqual(appeared["model_inference"],"NOT_TESTED")
+        self.assertEqual(appeared["actions_invoked"],1)
+        source=FILE.read_text(encoding="utf-8")
+        ps=source.split("def observe_chat_input(",1)[1].split(
+            "\ndef original_wpf_hwnd(",1)[0]
+        for needle in ("Test-ChatHeading $root", "$beforeHeading=Test-ChatHeading $root",
+                       "$afterHeading=Test-ChatHeading $fresh",
+                       "ControlType]::Text", "IsOffscreen", "sameHwndAlive=$alive"):
+            self.assertIn(needle,ps)
+
 
 
     def test_u09_native_inventory_scratch_fails_closed_before_onehost(self):
