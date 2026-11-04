@@ -7,6 +7,8 @@ on:
       - coordination/e06/t06_frozen_source_coverage.py
       - coordination/e06/t06_native_proven_builder.py
       - coordination/e06/stage_native_stdio.py
+      - proposals/NOX-PACK01-50/native_bridge.py
+      - tests/p02/test_original_terminal_fence_u11.py
       - src/nox_selfbuilder/onehost_builder.py
       - src/nox_selfbuilder/nx03_model_firstcycle.py
       - src/nox_selfbuilder/firstcycle_native.py
@@ -61,6 +63,9 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'SOURCE_PACK_SYNTAX_HOLD' }
           python -B -m unittest discover -s tests/e06 -p test_t06_frozen_source_coverage.py -v
           if ($LASTEXITCODE -ne 0) { throw 'T06_FROZEN_SOURCE_COVERAGE_TEST_HOLD' }
+          # Real ORIGINAL P02 adapter terminal-frame safety regression, not E07/model proof.
+          python -B -m unittest discover -s tests/p02 -p test_original_terminal_fence_u11.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'P02_TERMINAL_STREAM_FENCE_REGRESSION_HOLD' }
           python -B -m unittest discover -s tests/e06 -p test_t06_nx03_stage_pin_r118.py -v
           if ($LASTEXITCODE -ne 0) { throw 'T06_NX03_NATIVE_STAGE_PIN_HOLD' }
           python -B -m unittest discover -s tests/e06 -p test_t06_nsis_uninstall_quote_r128.py -v
