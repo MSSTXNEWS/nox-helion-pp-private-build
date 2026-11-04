@@ -1,16 +1,8 @@
 name: NOX EXPRESS independent E07 same-Setup NAV A2 verified E06
+# Historical pinned Setup: manually reproducible; no automatic rerun on every shared verifier change.
 on:
-  push:
-    branches: [integration/nox-v16-unified-candidate-20261028-r01]
-    paths:
-      - .github/workflows/nox-express-independent-e07-nav-a2.yml
-      - coordination/e07/probe_final_same_setup.py
-      - tests/e07/test_independent_setup_e07.py
-      - tests/e07/test_91a6_real_visual_u17.py
-      - coordination/e07/independent_setup_e07.py
-      - tests/e07/test_initial_home_physical_u21.py
-      - tests/e07/test_final_truth_scope_u20.py
   workflow_dispatch:
+
 permissions:
   actions: read
   contents: read

@@ -1,15 +1,8 @@
 name: NOX F842 fast installed visual witness - NOT RELEASE
+# Historical pinned Setup: manually reproducible; no automatic rerun on every shared verifier change.
 on:
-  push:
-    branches: [integration/nox-v16-unified-candidate-20261028-r01]
-    paths:
-      - .github/workflows/nox-f842-fast-visual.yml
-      - coordination/e07/probe_f842_visual_fast.py
-      - coordination/e07/probe_final_same_setup.py
-      - coordination/e07/probe_91a6_real_visual_u17.py
-      - tests/e07/test_91a6_real_visual_u17.py
-      - tests/e07/test_final_primary_dispatch_u18.py
   workflow_dispatch:
+
 permissions:
   contents: read
   actions: read
