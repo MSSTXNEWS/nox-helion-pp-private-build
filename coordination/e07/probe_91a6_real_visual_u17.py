@@ -1,0 +1,105 @@
+"""Physical FULL D02 91a6 original-WPF screenshot and FX-cycle witness.
+
+E07 visual design, Reduced Motion and all functionality remain HOLD until
+independently tested on the SAME immutable Setup SHA. Never fake PASS.
+"""
+from __future__ import annotations
+import argparse
+import json
+import os
+from pathlib import Path
+import sys
+import independent_setup_e07 as e07
+from probe_v6_visual_physical_u01 import capture_window, probe_fx_cycle
+
+SCHEMA = "NOX-91A6-INSTALLED-PHYSICAL-VISUAL-WITNESS-v1"
+
+def is_real_visual_witness(obj):
+    if type(obj) is not dict:
+        return False
+    pic, fx = obj.get("photo"), obj.get("fx")
+    return (obj.get("schema") == SCHEMA and
+        obj.get("source_sha") == e07.NEW_D02_SOURCE_SHA and
+        obj.get("setup_sha256") == e07.NEW_D02_SETUP_SHA and
+        obj.get("release_accepted") is False and
+        obj.get("visual_e07") == "HOLD" and
+        obj.get("adaptive_layout") == "NOT_TESTED" and
+        obj.get("reduced_motion") == "NOT_TESTED" and
+        type(pic) is dict and pic.get("physical_capture") == "PASS" and
+        type(pic.get("sha256")) is str and len(pic["sha256"]) == 64 and
+        type(fx) is dict and fx.get("fx_control") == "PASS" and
+        obj.get("original_wpf_ipc") == "PASS" and
+        all(obj.get(k) == "PASS" for k in ("update", "rollback", "uninstall")))
+
+def main():
+    p = argparse.ArgumentParser()
+    p.add_argument("--artifact-dir", type=Path, required=True)
+    p.add_argument("--out", type=Path, required=True)
+    p.add_argument("--png", type=Path, required=True)
+    a = p.parse_args()
+    result = {
+        "schema": SCHEMA, "source_sha": e07.NEW_D02_SOURCE_SHA,
+        "setup_sha256": e07.NEW_D02_SETUP_SHA,
+        "build_id": e07.NEW_D02_BUILD_ID,
+        "release_accepted": False, "visual_e07": "HOLD",
+        "adaptive_layout": "NOT_TESTED", "reduced_motion": "NOT_TESTED",
+        "physical_capture": "HOLD", "first_unmet_gate": "NOT_RUN"}
+    try:
+        e07.require(sys.platform == "win32" and
+            os.getenv("GITHUB_ACTIONS") == "true" and
+            os.getenv("RUNNER_OS") == "Windows" and
+            os.getenv("RUNNER_ENVIRONMENT") == "github-hosted" and
+            os.getenv("GITHUB_REPOSITORY") == "MSSTXNEWS/nox-helion-pp-private-build",
+            "U17_WINDOWS_NOT_AUTHORIZED")
+        tmp = Path(os.environ["RUNNER_TEMP"]).absolute()
+        e07.require(e07.clean_dir(tmp) and
+            a.png.absolute() == tmp / "nox-91a6-real-wpf.png" and
+            not a.png.exists() and not a.png.is_symlink(),
+            "U17_PHOTO_UNOWNED_PATH_HOLD")
+        root = a.artifact_dir / "e06" / "onehost-wow-diagnostic"
+        setup = root / "NOX-HELION-V16-DIAGNOSTIC-SETUP.exe"
+        identity = e07.setup_lock(setup, root / "E07_BUILT_HANDOFF.json",
+                                  candidate="d02-91a6")
+        e07.require(identity["setup_sha256"] == e07.NEW_D02_SETUP_SHA,
+                    "U17_SETUP_SHA_HOLD")
+        screenshots = []
+        fx_states = []
+        previous = e07.observe_original_primary_buttons
+        def probe(hwnd):
+            screenshots.append(capture_window(hwnd, a.png))
+            fx_states.append(probe_fx_cycle(hwnd))
+            return previous(hwnd)
+        checks = {}
+        e07.observe_original_primary_buttons = probe
+        try:
+            e07.lifecycle(setup, {"checks": checks},
+                          frozen_source=e07.NEW_D02_SOURCE_SHA, physical_nav=True)
+        finally:
+            e07.observe_original_primary_buttons = previous
+        e07.require(len(screenshots) == 1 and len(fx_states) == 1 and
+                    e07.clean_file(a.png) and
+                    e07.sha256(a.png) == screenshots[0].get("sha256"),
+                    "U17_PHYSICAL_SCREENSHOT_SHA_HOLD")
+        result.update(photo=screenshots[0], fx=fx_states[0],
+            original_wpf_ipc=checks.get("installed_gui", {}).get("shell_native_ipc"),
+            update=checks.get("update", {}).get("status"),
+            rollback=checks.get("rollback", {}).get("status"),
+            uninstall=checks.get("uninstall", {}).get("status"))
+        e07.require(is_real_visual_witness(result), "U17_PHYSICAL_UIA_OR_NSIS_HOLD")
+        result["physical_capture"] = "PASS"
+        result["first_unmet_gate"] = "ADAPTIVE_REDUCED_MOTION_AND_INDEPENDENT_VISUAL_REVIEW"
+    except (e07.Hold, OSError, ValueError, KeyError, TimeoutError) as exc:
+        result["first_unmet_gate"] = (
+            str(exc) if isinstance(exc, e07.Hold) else
+            "U17_" + type(exc).__name__.upper() + "_HOLD")[:140]
+    except Exception as exc:
+        result["first_unmet_gate"] = "U17_UNEXPECTED_" + type(exc).__name__.upper() + "_HOLD"
+    finally:
+        a.out.parent.mkdir(parents=True, exist_ok=True)
+        a.out.write_text(json.dumps(result, indent=2, sort_keys=True), encoding="utf-8")
+        print("U17_PHYSICAL_WPF_VISUAL", result["physical_capture"],
+              result["first_unmet_gate"], flush=True)
+    return 0 if result["physical_capture"] == "PASS" else 2
+
+if __name__ == "__main__":
+    raise SystemExit(main())
