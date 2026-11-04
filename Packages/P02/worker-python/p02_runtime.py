@@ -255,12 +255,17 @@ def _check_scope(tenant: str, user: str, chat: str):
         raise ValueError("Missing or invalid tenant, user or chat scope")
 
 
+def _unsafe_attachment_alias(path: pathlib.Path) -> bool:
+    """Detect ordinary symlinks and Windows junctions before following a path."""
+    return path.is_symlink() or getattr(path, "is_junction", lambda: False)()
+
+
 def _safe_blob_path(root: pathlib.Path, storage: str) -> pathlib.Path:
     if not re.fullmatch(r"[0-9a-f]{32}", storage):
         raise P02Error("Invalid storage ID")
     path = root / (storage + ".blob")
-    if path.is_symlink():
-        raise P02Error("Symlinked attachment blocked")
+    if _unsafe_attachment_alias(path):
+        raise P02Error("Symlinked/reparse attachment blocked")
     return path
 
 
@@ -279,6 +284,12 @@ class P02Store:
         # Native owner must give the actual app-owned directory, never a symlink.
         if original_root.is_symlink():
             raise P02Error('ATTACHMENT_ROOT_SYMLINK_DENIED')
+        # Path.is_symlink() does not identify NTFS directory junctions. Check
+        # every ancestor BEFORE resolve() can turn a redirected native data
+        # root into an apparently trusted canonical path.
+        if any(_unsafe_attachment_alias(p)
+               for p in (original_root, *original_root.parents)):
+            raise P02Error('ATTACHMENT_ROOT_REPARSE_DENIED')
         self.root = original_root.resolve()
         self.staging = self.root / "staging"
         self.blobs = self.root / "stored"
@@ -286,7 +297,7 @@ class P02Store:
         # Do not follow existing symlinks for the storage subdirectories: a
         # crafted profile could otherwise redirect private attachments outside
         # the approved app-owned tree even if individual *.blob is checked.
-        if self.staging.is_symlink() or self.blobs.is_symlink():
+        if _unsafe_attachment_alias(self.staging) or _unsafe_attachment_alias(self.blobs):
             raise P02Error('ATTACHMENT_STORAGE_SYMLINK_DENIED')
         self.staging.mkdir(parents=True, exist_ok=True, mode=0o700)
         self.blobs.mkdir(parents=True, exist_ok=True, mode=0o700)
@@ -294,7 +305,11 @@ class P02Store:
         self._lock = threading.RLock()
 
     def _assert_storage_roots(self):
-        if (self.staging.is_symlink() or self.blobs.is_symlink()
+        # A profile directory can be replaced with a junction after startup.
+        # Recheck each admission; this is not a descriptor-bound race proof.
+        if (any(_unsafe_attachment_alias(p) for p in (self.root, *self.root.parents))
+                or _unsafe_attachment_alias(self.staging)
+                or _unsafe_attachment_alias(self.blobs)
                 or self.staging.resolve() != self.root / 'staging'
                 or self.blobs.resolve() != self.root / 'stored'
                 or not self.staging.is_dir() or not self.blobs.is_dir()):
