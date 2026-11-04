@@ -133,7 +133,9 @@ export function nativeOwnerReceiptHolds(owner) {
     'REJECTED','CANCELLED','CANCELED','UNAVAILABLE','BLOCKED','UNAUTHORIZED',
     'FORBIDDEN','ABORTED','REVOKED','EXPIRED','STOPPING']);
   const pairs=new Set(['NOT_READY','AUTH_REQUIRED','NEEDS_AUTH','CONSENT_REQUIRED',
-    'TIMED_OUT','STOP_REQUESTED']);
+    'TIMED_OUT','STOP_REQUESTED','PERMISSION_REQUIRED','AUTHORIZATION_REQUIRED',
+    'NOT_AUTHORIZED','NOT_AUTHENTICATED','AWAITING_CONSENT','NEEDS_CONSENT',
+    'CONSENT_PENDING','SID_MISMATCH','ACL_MISMATCH']);
   for (const key of ['status','state']) {
     const value=owner[key];
     if(value==null)continue;

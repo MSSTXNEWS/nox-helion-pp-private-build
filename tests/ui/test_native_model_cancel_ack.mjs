@@ -61,3 +61,14 @@ test('P03 model cancel STOP_REQUESTED does not launder outer owner denials',()=>
     {error:{code:'PROVIDER_OFFLINE_HOLD'}},{status:'CONSENT_REQUIRED'},{ok:false}])
     assert.equal(nativeModelCancelAck({...pending,...denial},jobId),false);
 });
+
+test('native owner rejects pending privilege, SID and consent states while retaining legitimate completion',()=>{
+  for(const state of ['PERMISSION_REQUIRED','AUTHORIZATION_REQUIRED','NOT_AUTHORIZED',
+    'NOT_AUTHENTICATED','AWAITING_CONSENT','NEEDS_CONSENT','CONSENT_PENDING',
+    'SID_MISMATCH','ACL_MISMATCH']){
+    assert.equal(nativeOwnerReceiptHolds({state,ok:true,ack:true}),true,state);
+    assert.equal(nativeOwnerReceiptHolds({status:'owner_'+state+'_gate',ok:true}),true,state+' wrapped');
+  }
+  for(const state of ['COMPLETED','QUEUED','IN_PROGRESS','READY'])
+    assert.equal(nativeOwnerReceiptHolds({state,ok:true,ack:true}),false,state);
+});
