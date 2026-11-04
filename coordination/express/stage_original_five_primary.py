@@ -154,8 +154,13 @@ nav.addEventListener('click',event=>{
    // control. INSTALL / MODELS / LEARN keep their original handlers, native
    // ACL and owner-consent dialogs; this wrapper never calls privileged IPC.
    // A programmatic route, synthetic ACK or second backend is forbidden.
-   target.click();
-   state.textContent=name+': действие передано исходному NOX · результат подтверждает нативный экран';
+   // INSTALL and LEARN only navigate/focus. Their privileged original
+   // buttons require a separate deliberate click and existing native consent.
+   // MODELS preserves the source-approved read-only original catalog action.
+   if(name==='MODELS')target.click();
+   state.textContent=name==='MODELS'
+     ? 'MODELS: запрос исходному каталогу отправлен; результат подтверждает OneHost'
+     : name+': исходное действие в фокусе; нажмите его отдельно.';
    return;
  }
  // SETTINGS enters the original MENU first, then uses its ORIGINAL system tile.
