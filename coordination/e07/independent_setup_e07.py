@@ -363,6 +363,20 @@ def manifest_owner(install: Path) -> tuple[dict, tuple[Path, ...]]:
 
 def framed_backend(backend: Path, scratch: Path) -> dict:
     require(clean_file(backend), "E07_NATIVE_EXE_MISSING")
+    # This is a separate E07 probe from native_store_stop_probe. Fail closed
+    # BEFORE the installed OneHost can create SQLite in an untrusted --data-dir.
+    # A dangling Windows directory junction may have exists() == False.
+    runner_temp = os.environ.get("RUNNER_TEMP")
+    require(type(runner_temp) is str and bool(runner_temp.strip()) and
+            scratch.is_absolute() and
+            scratch == Path(runner_temp) / "nox-e07-native-data" and
+            clean_dir(scratch.parent) and
+            all(not parent.is_symlink() and
+                not getattr(parent, "is_junction", lambda: False)()
+                for parent in scratch.parents) and
+            not scratch.exists() and not scratch.is_symlink() and
+            not getattr(scratch, "is_junction", lambda: False)(),
+            "E07_NATIVE_INVENTORY_SCRATCH_COLLISION")
     request = {"protocol":PROTOCOL, "requestId":"0123456789abcdef0123456789abcdef",
                "runId":"NOX-E07-INDEPENDENT-SHA-PIN", "route":"models.installed",
                "payload":{}}
