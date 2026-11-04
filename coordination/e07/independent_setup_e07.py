@@ -760,9 +760,12 @@ function Test-RealDestination($hostRoot,[string]$name) {
     try{
       $v=$tree.Item($k).Current
       $rect=$v.BoundingRectangle
-      if($v.IsOffscreen -or $rect.Width -lt 20 -or $rect.Height -lt 12){continue}
+      # Focus may scroll the original page, taking its genuine heading above
+      # the viewport. The original title still has to exist in this same HWND
+      # accessibility tree, while the destination CONTROL must remain onscreen.
       if($v.ControlType -eq [System.Windows.Automation.ControlType]::Text -and
          ($v.Name+'').Trim() -ceq $spec.title){$headingVisible=$true}
+      if($v.IsOffscreen -or $rect.Width -lt 20 -or $rect.Height -lt 12){continue}
       if($v.ControlType -eq [System.Windows.Automation.ControlType]::Button -and
          ($v.Name+'').Trim() -ceq $spec.control -and $v.IsEnabled -and
          $v.HasKeyboardFocus){$focusedControls++}
