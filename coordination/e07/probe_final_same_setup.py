@@ -140,8 +140,13 @@ if($op -eq 'MODEL_WINDOW'){
 if($op -eq 'VISUAL'){
  $r=[NoxFinalWin32+RECT]::new();if(-not [NoxFinalWin32]::GetWindowRect($handle,[ref]$r)){throw 'RECT'}
  $ox=$r.Left;$oy=$r.Top;$ow=$r.Right-$r.Left;$oh=$r.Bottom-$r.Top;$sizes=@()
+ try {
  foreach($size in @([pscustomobject]@{width=1044;height=788},[pscustomobject]@{width=800;height=600})){$width=[int]$size.width;$height=[int]$size.height;if(-not [NoxFinalWin32]::MoveWindow($handle,$ox,$oy,$width,$height,$true)){throw 'MOVE'};Start-Sleep -Milliseconds 700;$rr=[NoxFinalWin32+RECT]::new();$null=[NoxFinalWin32]::GetWindowRect($handle,[ref]$rr);$rects=FiveRects;$sizes+=([pscustomobject]@{requested=@($width,$height);actual=@($rr.Right-$rr.Left,$rr.Bottom-$rr.Top);visiblePrimary=$rects.Count;noOverlap=(NoOverlap $rects)})}
- $null=[NoxFinalWin32]::MoveWindow($handle,$ox,$oy,$ow,$oh,$true);Start-Sleep -Milliseconds 500
+ } finally {
+  # Restore original WPF HWND even when a UIA resize or button lookup fails.
+  $null=[NoxFinalWin32]::MoveWindow($handle,$ox,$oy,$ow,$oh,$true)
+  Start-Sleep -Milliseconds 500
+ }
  $rr=[NoxFinalWin32+RECT]::new();if(-not [NoxFinalWin32]::GetWindowRect($handle,[ref]$rr)){throw 'RECT'};$w=$rr.Right-$rr.Left;$h=$rr.Bottom-$rr.Top
  $bmp=[System.Drawing.Bitmap]::new([int]$w,[int]$h);try{$g=[System.Drawing.Graphics]::FromImage($bmp);try{$dc=$g.GetHdc();try{$ok=[NoxFinalWin32]::PrintWindow($handle,$dc,2)}finally{$g.ReleaseHdc($dc)}}finally{$g.Dispose()};if(-not $ok){throw 'PRINT'};$bmp.Save('__PNG__',[System.Drawing.Imaging.ImageFormat]::Png)}finally{$bmp.Dispose()}
  [pscustomobject]@{sizes=@($sizes);capture=@($w,$h);fiveVisible=(FiveRects).Count}|ConvertTo-Json -Compress -Depth 6;exit 0
@@ -215,11 +220,24 @@ def run(hwnd: int, install: Path, local: Path, *, source_sha: str, setup_sha: st
     out_dir.mkdir(parents=True,exist_ok=True)
 
     png=out_dir/"D02_FINAL_SAME_SETUP.png"
-    visual_raw=_run_ps(_uia_script(hwnd,"VISUAL",png=png),timeout=60,phase="VISUAL")
-    e07.require(e07.clean_file(png) and 20_000<=png.stat().st_size<=40_000_000,
-                "E07_FINAL_VISUAL_PNG_HOLD")
+    # Visual WPF UIA may fail independently of the real function handlers.
+    # Record that physical HOLD and still collect same-Setup native actions.
+    visual_raw={}
+    visual_first_hold=None
+    try:
+        visual_raw=_run_ps(_uia_script(hwnd,"VISUAL",png=png),
+                           timeout=60,phase="VISUAL")
+    except e07.Hold as exc:
+        visual_first_hold=str(exc)
+    actual_png=(e07.clean_file(png) and
+                20_000<=png.stat().st_size<=40_000_000)
     sizes=visual_raw.get("sizes")
-    e07.require(_physical_adaptive_sized(sizes),"E07_FINAL_ADAPTIVE_LAYOUT_HOLD")
+    actual_layout=_physical_adaptive_sized(sizes)
+    screenshot_sha=e07.sha256(png) if actual_png else None
+    if visual_first_hold is None and not actual_png:
+        visual_first_hold="E07_FINAL_VISUAL_PNG_HOLD"
+    if visual_first_hold is None and not actual_layout:
+        visual_first_hold="E07_FINAL_ADAPTIVE_LAYOUT_HOLD"
     # The original installed D02 has five graphical quality planets, not
     # the obsolete three-state FX BALANCED/MAX/ECO button. Reuse the existing
     # physical original-HWND UIA probe (Invoke + actual pressed state).
@@ -238,13 +256,16 @@ def run(hwnd: int, install: Path, local: Path, *, source_sha: str, setup_sha: st
         fx={"fx_control":"HOLD","first_unmet_gate":str(exc)}
     visual={"schema":e07.FINAL_VISUAL_SCHEMA,"source_sha":source_sha,
             "setup_sha256":setup_sha,"release_accepted":False,
-            "physical_capture":"PASS","d02_visual":"PASS" if fx["fx_control"]=="PASS" else "HOLD",
-            "adaptive_layout":"PASS",
-            # Quality mode changes do NOT measure the Windows OS
-            # prefers-reduced-motion setting. Fail closed until physically
-            # verified on this same original installed Setup SHA.
-            "reduced_motion":"HOLD","screenshot_sha256":e07.sha256(png),
-            "physical_sizes":sizes,"fx_cycle":fx,
+            "physical_capture":"PASS" if actual_png and visual_first_hold is None else "HOLD",
+            "d02_visual":"PASS" if actual_png and actual_layout and
+                         visual_first_hold is None and fx["fx_control"]=="PASS" else "HOLD",
+            "adaptive_layout":"PASS" if actual_layout else "HOLD",
+            # Physical D02 graphics are not OS Reduced Motion or design review.
+            "reduced_motion":"HOLD","screenshot_sha256":screenshot_sha,
+            "physical_sizes":sizes or [],"fx_cycle":fx,
+            "visual_first_unmet_gate":visual_first_hold or
+                 (fx.get("first_unmet_gate") if fx["fx_control"]!="PASS"
+                  else "E07_INDEPENDENT_VISUAL_REVIEW_NOT_RUN"),
             "reduced_motion_evidence":"OS_MEDIA_QUERY_NOT_PHYSICALLY_VERIFIED"}
 
     actions={}

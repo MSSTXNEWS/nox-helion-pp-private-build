@@ -28,6 +28,21 @@ class FunctionalTruth(unittest.TestCase):
             with self.assertRaises(module.e07.Hold):
                 module.nonrelease_action_observation(name,detail)
 
+    def test_visual_failure_does_not_suppress_real_function_observations(self):
+        source=PATH.read_text(encoding="utf-8")
+        body=source.split("def run(",1)[1]
+        self.assertIn("visual_first_hold=None",body)
+        self.assertIn("visual_first_hold=str(exc)",body)
+        self.assertIn("actual_layout=_physical_adaptive_sized(sizes)",body)
+        self.assertIn("screenshot_sha=e07.sha256(png) if actual_png else None",body)
+        self.assertIn('"physical_capture":"PASS" if actual_png and visual_first_hold is None else "HOLD"',body)
+        self.assertIn('"adaptive_layout":"PASS" if actual_layout else "HOLD"',body)
+        self.assertIn('"reduced_motion":"HOLD"',body)
+        self.assertIn("Restore original WPF HWND even when a UIA resize or button lookup fails.",source)
+        self.assertIn(" } finally {",source)
+        self.assertLess(body.index("visual_first_hold=None"),body.index("    actions={}"))
+        self.assertNotIn('e07.require(e07.clean_file(png) and 20_000<=png.stat()',body)
+
     def test_fx_failure_does_not_skip_other_functional_observations(self):
         source=PATH.read_text(encoding="utf-8")
         self.assertIn('fx={"fx_control":"HOLD","first_unmet_gate":str(exc)}',source)
