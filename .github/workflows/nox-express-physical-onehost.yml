@@ -7,6 +7,8 @@ on:
       - coordination/e06/t06_frozen_source_coverage.py
       - coordination/e06/t06_native_proven_builder.py
       - coordination/e06/stage_native_stdio.py
+      - Packages/P02/worker-python/p02_native_ingress.py
+      - Packages/P02/worker-python/test_p02_native_ingress.py
       - proposals/NOX-PACK01-50/native_bridge.py
       - Packages/P03/Source/python-host/p03_onehost_port.py
       - tests/p03/test_p03_cancel_retry_jobid_bind_u06.py
@@ -75,6 +77,11 @@ jobs:
           # Real ORIGINAL P02 adapter terminal-frame safety regression, not E07/model proof.
           python -B -m unittest discover -s tests/p02 -p test_original_terminal_fence_u11.py -v
           if ($LASTEXITCODE -ne 0) { throw 'P02_TERMINAL_STREAM_FENCE_REGRESSION_HOLD' }
+          # The actual Windows native ingress: nested owner OFFLINE/HOLD statuses
+          # must never be promoted to positive IPC acknowledgements.
+          $env:PYTHONPATH='Packages/P02/worker-python'
+          python -B -m unittest discover -s Packages/P02/worker-python -p test_p02_native_ingress.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'P02_NATIVE_COMPOUND_OWNER_HOLD_REGRESSION' }
           # Original P02 adapter: bounded stream, real STOP epoch, and atomic exchange.
           # Source-only test doubles; never promote this to live Ollama or E07 PASS.
           python -B -m unittest discover -s tests/p02 -p test_original_atomic_stream_stop_u08.py -v

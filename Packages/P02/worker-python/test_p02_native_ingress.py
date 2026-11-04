@@ -244,6 +244,28 @@ class IngressTests(unittest.TestCase):
                 with self.assertRaisesRegex(ProtocolHold, "NATIVE_OWNER_RESULT_HOLD"):
                     self.router.handle(packet(n))
 
+    def test_compound_owner_provider_holds_never_advertise_native_ok_u09(self):
+        # A true boolean cannot override a negative owner status embedded
+        # after a provider/model prefix. These are not live Ollama test results.
+        negatives = (
+            "PROVIDER_OFFLINE_HOLD", "MODEL_NOT_READY", "OLLAMA_UNAVAILABLE",
+            "OWNER_CONSENT_REQUIRED", "INFERENCE_STOP_REQUESTED",
+            "WORKER-REVOKED", "OWNER/ERROR", "SESSION_AUTH_REQUIRED",
+            "LICENSE_HOLD", "GPU_DENIED", "PROVIDER_TIMED_OUT",
+        )
+        for nonce, status in enumerate(negatives, 470):
+            with self.subTest(status=status):
+                self.provider.execute = lambda *_, status=status: {
+                    "status": status, "ok": True}
+                with self.assertRaisesRegex(ProtocolHold, "NATIVE_OWNER_RESULT_HOLD"):
+                    self.router.handle(packet(nonce))
+        for nonce, status in enumerate(("QUEUED", "COMPLETED", "MODEL_INSTALLED"), 490):
+            with self.subTest(status=status):
+                self.provider.execute = lambda *_, status=status: {
+                    "status": status, "ok": True}
+                reply = json.loads(self.router.handle(packet(nonce)))
+                self.assertEqual(reply["status"], "OK")
+
     def test_owner_success_result_still_roundtrips(self):
         self.provider.execute = lambda *_: {"status": "QUEUED", "id": "owner-job"}
         reply = json.loads(self.router.handle(packet(247)))

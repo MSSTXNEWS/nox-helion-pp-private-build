@@ -213,6 +213,22 @@ class NativeIngress:
                 # padded negative status or a string/integer `ok` flag must
                 # never become a success through permissive normalization.
                 normalized = state.strip().upper() if type(state) is str else None
+                # Owner status codes may prepend a component (PROVIDER_OFFLINE_HOLD,
+                # MODEL_NOT_READY) instead of starting with HOLD/OFFLINE. Tokenize
+                # bounded status words; never turn a nested negative into native OK.
+                status_words = re.findall(r"[A-Z0-9]+", normalized) if normalized is not None else []
+                negative_words = frozenset((
+                    "HOLD", "ERROR", "ERRORS", "FAILED", "DENIED", "REJECTED",
+                    "CANCELLED", "CANCELED", "OFFLINE", "UNAVAILABLE", "BLOCKED",
+                    "UNAUTHORIZED", "FORBIDDEN", "ABORTED", "REVOKED",
+                    "EXPIRED", "STOPPING"))
+                negative_pairs = frozenset((
+                    ("NOT", "READY"), ("AUTH", "REQUIRED"), ("NEEDS", "AUTH"),
+                    ("CONSENT", "REQUIRED"), ("STOP", "REQUESTED"),
+                    ("TIMED", "OUT")))
+                compound_negative = bool(negative_words.intersection(status_words)) or any(
+                    tuple(status_words[i:i+2]) in negative_pairs
+                    for i in range(max(0, len(status_words)-1)))
                 # Never translate a negative owner ACK into native status OK.
                 # Queued jobs remain valid; STOPPED is success only for STOP
                 # itself, not for a chat/model/training-start operation.
@@ -226,7 +242,7 @@ class NativeIngress:
                 if (("ok" in result and type(ok) is not bool) or
                     ok is False or
                     (normalized is not None and
-                     (normalized.startswith(negative_prefixes) or
+                     (compound_negative or normalized.startswith(negative_prefixes) or
                       (normalized.startswith("STOPPED") and
                        route not in ("chat.stop", "training.pause")) or
                       normalized in ("FAILED", "DENIED", "REJECTED",
