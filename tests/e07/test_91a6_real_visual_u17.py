@@ -30,7 +30,7 @@ class SourceVisualProof(unittest.TestCase):
             self.assertFalse(module.is_real_visual_witness(bad),field)
         original=PATH.read_text(encoding="utf-8")
         for token in ('candidate="d02-91a6"','capture_window(hwnd, a.png)',
-                      'probe_fx_cycle(hwnd)','e07.lifecycle(',
+                      'probe_d02_quality_modes(hwnd)','e07.lifecycle(',
                       'e07.sha256(a.png) == screenshots[0].get("sha256")'):
             self.assertIn(token,original)
         self.assertNotIn('result["visual_e07"] = "PASS"',original)
@@ -39,5 +39,25 @@ class SourceVisualProof(unittest.TestCase):
         self.assertIn('result["physical_capture"] = "PASS"', original)
         self.assertIn('result["witness_status"] = "PASS"', original)
         self.assertIn('return 0 if result["witness_status"] == "PASS" else 2', original)
+    def test_five_actual_d02_graphic_planets_not_legacy_fx(self):
+        # Original active D02 dock has five named graphical mode buttons.
+        names=module.QUALITY_NAMES
+        self.assertEqual(names,("MAX WOW — ПОЛНЫЙ","ECO — ЭКОНОМ",
+                                "MINI START — МИНИ","AUTO — АДАПТИВНО",
+                                "CINEMA — КИНО"))
+        valid={"schema":"NOX-D02-QUALITY-UIA-v1",
+               "actions":[{"name":name,"invoked":True,"pressed":True,
+                           "same_hwnd":True} for name in names]}
+        self.assertEqual(module.validate_quality_witness(valid)["fx_control"],"PASS")
+        for index in range(len(names)):
+            for key,value in (("invoked",False),("pressed",False),
+                              ("same_hwnd",False),("name","FX BALANCED")):
+                altered={"schema":valid["schema"],"actions":[dict(a) for a in valid["actions"]]}
+                altered["actions"][index][key]=value
+                with self.assertRaises(module.e07.Hold):
+                    module.validate_quality_witness(altered)
+        with self.assertRaises(module.e07.Hold):
+            module.validate_quality_witness({"schema":"NOX-D02-QUALITY-UIA-v1","actions":[]})
+
 if __name__=="__main__":
     unittest.main()

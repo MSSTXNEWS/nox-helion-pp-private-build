@@ -5,14 +5,142 @@ independently tested on the SAME immutable Setup SHA. Never fake PASS.
 """
 from __future__ import annotations
 import argparse
+import base64
 import json
 import os
 from pathlib import Path
+import subprocess
 import sys
 import independent_setup_e07 as e07
-from probe_v6_visual_physical_u01 import capture_window, probe_fx_cycle
+from probe_v6_visual_physical_u01 import capture_window
 
 SCHEMA = "NOX-91A6-INSTALLED-PHYSICAL-VISUAL-WITNESS-v1"
+
+QUALITY_NAMES = (
+    "MAX WOW — ПОЛНЫЙ",
+    "ECO — ЭКОНОМ",
+    "MINI START — МИНИ",
+    "AUTO — АДАПТИВНО",
+    "CINEMA — КИНО",
+)
+
+
+def validate_quality_witness(payload: object) -> dict:
+    """A genuine UIA-Invoke+Toggle/Selection cycle, NOT reduced-motion review."""
+    e07.require(type(payload) is dict and
+                payload.get("schema") == "NOX-D02-QUALITY-UIA-v1" and
+                type(payload.get("actions")) is list and
+                len(payload["actions"]) == len(QUALITY_NAMES),
+                "U17_D02_QUALITY_SCHEMA_HOLD")
+    for expected, item in zip(QUALITY_NAMES, payload["actions"]):
+        e07.require(type(item) is dict and
+                    item.get("name") == expected and
+                    item.get("invoked") is True and
+                    item.get("pressed") is True and
+                    item.get("same_hwnd") is True,
+                    "U17_D02_QUALITY_REAL_TRANSITION_HOLD")
+    return {"fx_control": "PASS", "actual_invocations": len(QUALITY_NAMES),
+            "observed_modes": list(QUALITY_NAMES),
+            "reduced_motion": "NOT_TESTED",
+            "independent_visual_review": "NOT_RUN"}
+
+
+def probe_d02_quality_modes(hwnd: int) -> dict:
+    """Invoke five source-approved graphical mode planets on original WPF HWND.
+
+    The legacy three-state FX BALANCED/MAX/ECO test is NOT this D02 interface.
+    Source: integrations/wow200/runtime/home-scene.mjs, exact aria-labels.
+    """
+    e07.require(sys.platform == "win32" and type(hwnd) is int and hwnd > 0,
+                "U17_D02_ORIGINAL_WPF_HWND_REQUIRED")
+    ps = r'''
+$ErrorActionPreference='Stop'
+[Console]::OutputEncoding=[System.Text.Encoding]::UTF8
+Add-Type -AssemblyName UIAutomationClient
+Add-Type -AssemblyName UIAutomationTypes
+try {
+ $h=[IntPtr]__HWND__
+ $root=[System.Windows.Automation.AutomationElement]::FromHandle($h)
+ if($null -eq $root){throw 'U17_D02_UIA_HWND_LOST_HOLD'}
+ $expected=@('MAX WOW — ПОЛНЫЙ','ECO — ЭКОНОМ',
+             'MINI START — МИНИ','AUTO — АДАПТИВНО','CINEMA — КИНО')
+ function ExactRealButton([string]$label) {
+   $root=[System.Windows.Automation.AutomationElement]::FromHandle($h)
+   if($null -eq $root){throw 'U17_D02_UIA_HWND_LOST_HOLD'}
+   $filter=[System.Windows.Automation.PropertyCondition]::new(
+     [System.Windows.Automation.AutomationElement]::ControlTypeProperty,
+     [System.Windows.Automation.ControlType]::Button)
+   $nodes=$root.FindAll([System.Windows.Automation.TreeScope]::Descendants,$filter)
+   if($nodes.Count -gt 4096){throw 'U17_D02_UIA_TREE_LIMIT_HOLD'}
+   $matches=@()
+   foreach($item in $nodes){
+     if(($item.Current.Name+'') -ceq $label){$matches+=,$item}
+   }
+   if($matches.Count -ne 1){throw 'U17_D02_QUALITY_UNIQUE_BUTTON_HOLD'}
+   $btn=$matches[0]
+   $r=$btn.Current.BoundingRectangle
+   if(-not $btn.Current.IsEnabled -or $btn.Current.IsOffscreen -or
+      $r.Width -lt 15 -or $r.Height -lt 12){
+     throw 'U17_D02_QUALITY_NOT_VISIBLE_HOLD'
+   }
+   return $btn
+ }
+ $results=@()
+ foreach($label in $expected){
+   $btn=ExactRealButton $label
+   try {$invoke=$btn.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)}
+   catch {throw 'U17_D02_QUALITY_INVOKEPATTERN_HOLD'}
+   if($null -eq $invoke){throw 'U17_D02_QUALITY_INVOKEPATTERN_HOLD'}
+   $invoke.Invoke()
+   Start-Sleep -Milliseconds 500
+   $current=ExactRealButton $label
+   $pressed=$false
+   try {
+     $toggle=$current.GetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern)
+     $pressed=$toggle.Current.ToggleState -eq [System.Windows.Automation.ToggleState]::On
+   } catch {
+     try {
+       $selected=$current.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern)
+       $pressed=$selected.Current.IsSelected
+     } catch {throw 'U17_D02_QUALITY_PRESSED_UIA_NOT_EXPOSED_HOLD'}
+   }
+   if(-not $pressed){throw 'U17_D02_QUALITY_PRESSED_STATE_HOLD'}
+   $alive=$null -ne [System.Windows.Automation.AutomationElement]::FromHandle($h)
+   if(-not $alive){throw 'U17_D02_UIA_HWND_LOST_HOLD'}
+   $results+=([pscustomobject]@{name=$label;invoked=$true;pressed=$true;same_hwnd=$true})
+ }
+ [pscustomobject]@{schema='NOX-D02-QUALITY-UIA-v1';actions=@($results)} |
+   ConvertTo-Json -Compress -Depth 5
+} catch {
+ $msg=$_.Exception.Message
+ if($msg -cmatch '^U17_[A-Z0-9_]+_HOLD$'){Write-Output $msg}
+ else {Write-Output 'U17_D02_UIA_UNEXPECTED_HOLD'}
+ exit 2
+}
+'''.replace("__HWND__", str(hwnd))
+    encoded=base64.b64encode(ps.encode("utf-16le")).decode("ascii")
+    try:
+        run=subprocess.run(
+            ["powershell.exe","-NoProfile","-NonInteractive","-EncodedCommand",encoded],
+            capture_output=True,timeout=60,check=False)
+    except (OSError,subprocess.TimeoutExpired):
+        raise e07.Hold("U17_D02_QUALITY_PROCESS_HOLD") from None
+    e07.require(0 < len(run.stdout) <= 8192,
+                "U17_D02_QUALITY_NO_UIA_OUTPUT_HOLD")
+    if run.returncode != 0:
+        try:
+            code=run.stdout.decode("utf-8-sig").strip()
+        except UnicodeError:
+            code=""
+        import re
+        if re.fullmatch(r"U17_[A-Z0-9_]+_HOLD",code):
+            raise e07.Hold(code)
+        raise e07.Hold("U17_D02_QUALITY_UIA_PROCESS_HOLD")
+    try:
+        data=json.loads(run.stdout.decode("utf-8-sig"))
+    except (ValueError,UnicodeError):
+        raise e07.Hold("U17_D02_QUALITY_UIA_JSON_HOLD") from None
+    return validate_quality_witness(data)
 
 def is_real_visual_witness(obj):
     if type(obj) is not dict:
@@ -74,7 +202,7 @@ def main():
             except e07.Hold as error:
                 photo_errors.append(str(error))
             try:
-                fx_states.append(probe_fx_cycle(hwnd))
+                fx_states.append(probe_d02_quality_modes(hwnd))
             except e07.Hold as error:
                 fx_errors.append(str(error))
             # Even when the optional photo or FX test fails, the original GUI
