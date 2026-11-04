@@ -47,7 +47,11 @@ class WowStageTests(unittest.TestCase):
    p=self.src/rel;p.unlink();manifest.pop(rel)
   for rel in ['runtime/loader.mjs','runtime/stage.css','runtime/home-scene.mjs','runtime/home-guard.css']:
    p=self.src/rel;p.parent.mkdir(parents=True,exist_ok=True)
-   p.write_bytes((repository/'integrations/wow200'/rel).read_bytes() if rel=='runtime/home-guard.css' else b'// sample')
+   # Source-pinned runtime donor bytes, never fabricated fixture placeholders.
+   reviewed=eng.pinned_source_bytes(repository/'integrations/wow200'/rel,eng.WOW_RUNTIME_BLOBS[rel])
+   if reviewed is None:
+    raise RuntimeError('TEST_APPROVED_RUNTIME_SOURCE_HOLD:'+rel)
+   p.write_bytes(reviewed)
   for rel in eng.OWNER1_D02_ENGINE:
    eng.OWNER1_D02_ENGINE[rel]["legacy_blob"]=manifest[rel]
   (self.src/'DONOR_BLOBS.json').write_text(json.dumps({'schema':'NOX_WOW200_OWNER_BLOB_PIN_V1','count':56,'files':manifest}))
@@ -167,6 +171,12 @@ class WowStageTests(unittest.TestCase):
   stage(self.stage,self.src)
   staged=self.stage/'Assets/creative/wow200/proposals/NOX-WOW51-100/catalog.mjs'
   self.assertEqual(staged.read_bytes(),normalized)
+ def test_unapproved_runtime_bytes_hold_before_any_staging(self):
+  origin=self.src/'runtime/loader.mjs'
+  origin.write_bytes(origin.read_bytes()+b'// unreviewed runtime change\\n')
+  with self.assertRaisesRegex(ValueError,'WOW_RUNTIME_BLOB_HOLD:runtime/loader.mjs'):
+   stage(self.stage,self.src)
+  self.assertFalse((self.stage/'Assets/creative/wow200').exists())
  def test_original_pack01_catalog_is_pinned(self):
   file=self.root/'proposals/NOX-PACK01-50/catalog.json'
   file.write_text(file.read_text(encoding='utf-8')+'\\n',encoding='utf-8')
