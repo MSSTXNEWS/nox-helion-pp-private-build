@@ -129,6 +129,18 @@ class FinalPrimaryDispatch(unittest.TestCase):
         self.assertIn("requested=@($width,$height)", script)
         self.assertNotIn("foreach($size in @(@(1044,788),@(800,600)))", script)
 
+    def test_visual_resizes_on_screen_but_restores_exact_original_wpf_placement(self):
+        # Native WPF can start partly outside GitHub's virtual desktop; do
+        # not measure 1044x788 and 800x600 at an inherited offscreen origin.
+        # This changes ONLY probe coordinates, never app layouts/permissions.
+        script = probe._uia_script(12345, "VISUAL", png=Path("test.png"))
+        self.assertIn("MoveWindow($handle,0,0,$width,$height,$true)",script)
+        self.assertNotIn("MoveWindow($handle,$ox,$oy,$width,$height,$true)",script)
+        self.assertIn("MoveWindow($handle,$ox,$oy,$ow,$oh,$true)",script)
+        self.assertIn("finally {",script)
+        self.assertIn("NoOverlap $rects",script)
+        self.assertIn("if($null -eq $rects){throw 'PRIMARY_DOCK_NOT_UNIQUE'}",script)
+
     def test_primary_buttons_use_same_strict_visible_geometry_as_original(self):
         script=probe._uia_script(12345,"VISUAL",png=Path("test.png"))
         self.assertIn("$b.Width -ge 20 -and $b.Height -ge 12",script)
