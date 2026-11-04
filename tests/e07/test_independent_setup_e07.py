@@ -292,7 +292,7 @@ class IndependentE07(unittest.TestCase):
             home=Path(t)
             backend=home/"native.exe"
             backend.write_bytes(b"fixture-not-a-real-windows-binary")
-            scratch=home/"isolated"
+            scratch=home/"nox-e07-native-store"
             calls=[]
             def run_fixture(args,**kwargs):
                 wire=kwargs["input"]
@@ -312,8 +312,11 @@ class IndependentE07(unittest.TestCase):
                 data=json.dumps(reply).encode("utf-8")
                 return type("MockCompletedProcess",(),{
                     "returncode":0,"stdout":struct.pack(">I",len(data))+data})()
-            with patch.object(MOD.subprocess,"run",side_effect=run_fixture):
-                proof=MOD.native_store_stop_probe(backend,scratch)
+            # Scope the synthetic fixture to the exact isolated runner temp.
+            # Do not weaken the production junction, ancestor or path guards.
+            with patch.dict(MOD.os.environ, {"RUNNER_TEMP": str(home)}):
+                with patch.object(MOD.subprocess,"run",side_effect=run_fixture):
+                    proof=MOD.native_store_stop_probe(backend,scratch)
             self.assertEqual(proof["status"],"PASS")
             self.assertEqual(proof["empty_history_restart"],"PASS")
             self.assertEqual(proof["history_restart"],"NOT_TESTED")
