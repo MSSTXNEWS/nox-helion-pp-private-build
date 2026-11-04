@@ -140,11 +140,19 @@ export function nativeOwnerReceiptHolds(owner) {
   return false;
 }
 
+export function nativeCompletedOwnerReply(reply) {
+  // Transport COMPLETED does not certify native OWNER/CONSENT/provider success.
+  // Never turn an envelope error or embedded HOLD into buttons, model ACK or AI PASS.
+  return reply?.state==='COMPLETED' &&
+    (reply.errorCode==null || reply.errorCode==='') &&
+    !nativeOwnerReceiptHolds(reply.result);
+}
+
 export function nativeOwnerActionReceipt(reply,route,action) {
   const owner=reply?.result;
-  if(reply?.routeId!==route || reply?.state!=='COMPLETED' ||
+  if(reply?.routeId!==route || !nativeCompletedOwnerReply(reply) ||
      !owner || typeof owner!=='object' || Array.isArray(owner) ||
-     nativeOwnerReceiptHolds(owner) || owner.ack!==true)
+     owner.ack!==true)
     return {ack:false,errorCode:reply?.errorCode||owner?.errorCode||'NATIVE_ACK_UNCONFIRMED'};
   if(action==='selfbuilder.propose' &&
      (typeof owner.run_id!=='string'||!/^S03-[A-Za-z0-9._:-]{1,128}$/.test(owner.run_id) ||
@@ -164,9 +172,8 @@ export function isNativeChatTerminal(reply){
 // Exact native owner acknowledgement, not a UI value or transport completion.
 export function nativeModelSelectionAck(reply,requested){
   return typeof requested==='string'&&requested.length>0&&
-    reply?.routeId==='chat.model'&&reply.state==='COMPLETED'&&
-    reply.result?.selectedModel===requested &&
-    !nativeOwnerReceiptHolds(reply.result);
+    reply?.routeId==='chat.model'&&nativeCompletedOwnerReply(reply)&&
+    reply.result?.selectedModel===requested;
 }
 export function nativeModelReady(model,confirmed,pending){
   return typeof model==='string'&&model.length>0&&model===confirmed&&pending===false;
@@ -225,12 +232,12 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
   };
   const display=v=>{
     if(disposed)return;
-    const data=v.result;actions.replaceChildren();
+    const data=v.result,approved=nativeCompletedOwnerReply(v);actions.replaceChildren();
     function action(label,route,key,id){
       const b=doc.createElement('button');b.type='button';b.className='nox-sb-tile';b.textContent=label;
       b.dataset.nativeRoute=route;b.dataset.nativeKey=key;b.dataset.nativeValue=id;actions.append(b);
     }
-    if(v.state==='COMPLETED'&&Array.isArray(data?.models))for(const model of data.models){
+    if(approved&&Array.isArray(data?.models))for(const model of data.models){
       if(model?.downloadEligible!==true||!Array.isArray(model.artifacts))continue;
       for(const artifact of model.artifacts){
         if(typeof artifact?.tag!=='string'||!artifact.tag)continue;
@@ -238,12 +245,12 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
         action('Импортировать GGUF · '+artifact.tag,'models.gguf.import','modelTag',artifact.tag);
       }
     }
-    if(v.state==='COMPLETED'&&Array.isArray(data?.jobs))for(const job of data.jobs){
+    if(approved&&Array.isArray(data?.jobs))for(const job of data.jobs){
       if(typeof job?.id!=='string')continue;
       if(['queued','running','downloading'].includes(String(job.state).toLowerCase()))action('Отменить · '+job.id,'models.cancel','jobId',job.id);
       if(['failed','cancelled','canceled'].includes(String(job.state).toLowerCase()))action('Повторить · '+job.id,'models.retry','jobId',job.id);
     }
-    if(v.state==='COMPLETED'&&data?.schema==='NOX-ACTIVATOR-WORM-STATUS-v1'){
+    if(approved&&data?.schema==='NOX-ACTIVATOR-WORM-STATUS-v1'){
       for(const item of (Array.isArray(data.models)?data.models:[]).slice(0,40)){
         if(typeof item?.tag!=='string'||typeof item.official_page!=='string')continue;
         action((item.observed_locally?'Обнаружена · ':'Открыть загрузку · ')+item.tag,
@@ -266,7 +273,7 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
     appendSystemAutostartButtons();
     appendActivatorShortcut();
     detail.hidden=!data;detail.textContent=data?JSON.stringify(data,null,2):'';
-    status.textContent=v.state==='HOLD'?'HOLD · '+(v.errorCode||'NATIVE_HANDLER_UNAVAILABLE'):
+    status.textContent=(v.state==='HOLD'||v.state==='COMPLETED'&&!approved)?'HOLD · '+(v.errorCode||data?.errorCode||'NATIVE_OWNER_UNCONFIRMED'):
       v.state==='STOP_REQUESTED'?'STOP REQUESTED · ожидается завершение ядра':
       'NOX · '+(data?.status||data?.state||v.state);
   };
@@ -278,7 +285,7 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
         root.append(status,detail,actions);detail.hidden=true;
         const reply=await client.request('models.queue',{});
         if(!disposed&&doc.getElementById('detail-title')?.textContent?.trim()==='РАЗВИТИЕ')display(reply);
-        return reply.routeId==='models.queue'&&reply.state==='COMPLETED'&&Array.isArray(reply.result?.jobs)
+        return reply.routeId==='models.queue'&&nativeCompletedOwnerReply(reply)&&Array.isArray(reply.result?.jobs)
           ? {ack:true,jobs:reply.result.jobs}
           : {ack:false,errorCode:reply.errorCode||'P03_QUEUE_UNAVAILABLE'};
       },
@@ -286,8 +293,8 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
         const reply=await client.request('models.cancel',{jobId});
         // Native ACK confirms STOP request acceptance, not job termination.
         return reply.routeId==='models.cancel'&&
-          (reply.state==='STOP_REQUESTED'||
-           (reply.state==='COMPLETED'&&reply.result?.cancelled===true))
+          (reply.state==='STOP_REQUESTED'&&(reply.errorCode==null||reply.errorCode==='')||
+           (nativeCompletedOwnerReply(reply)&&reply.result?.cancelled===true))
           ? {ack:true,state:'STOP_REQUESTED'}
           : {ack:false,errorCode:reply.errorCode||'P03_STOP_UNVERIFIED'};
       },
@@ -325,8 +332,8 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
       const reply=await client.request('chat.commands',{action:'selfbuilder.capabilities',...scope});
       if(run!==capabilityEpoch||!sameSelection(epoch,scope))return;
       states=Object.create(null);trainingJobs=[];
-      if(reply.state==='COMPLETED'&&Array.isArray(reply.result?.trainingJobs))trainingJobs=reply.result.trainingJobs.filter(x=>typeof x?.id==='string');
-      if(reply.state==='COMPLETED' && reply.result?.actions && typeof reply.result.actions==='object')
+      if(nativeCompletedOwnerReply(reply)&&Array.isArray(reply.result?.trainingJobs))trainingJobs=reply.result.trainingJobs.filter(x=>typeof x?.id==='string');
+      if(nativeCompletedOwnerReply(reply) && reply.result?.actions && typeof reply.result.actions==='object')
         for(const action of ACTIONS){
           const s=reply.result.actions[action];
           if(s&&typeof s==='object')states[action]={available:s.available===true,
@@ -352,7 +359,7 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
       const scope=context();
       if(!scope.core_id||!scope.persona_id)throw Error('SELECT_CORE_AND_PERSONA');
       const reply=await client.request('chat.commands',{action,...scope,...extra});
-      if(reply.state!=='COMPLETED')throw Error('R5_NATIVE_HOLD');
+      if(!nativeCompletedOwnerReply(reply))throw Error('R5_NATIVE_HOLD');
       return reply.result;
     };
     wow=mountWowDesignWorkbench({
@@ -404,7 +411,7 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
       if(!disposed){
         if(send)send.disabled=chatBusy||!nativeModelReady(value('chat-model'),modelConfirmed,modelSelectionPending);
         if(stop)stop.disabled=false;
-        if(visible()&&reply.state==='COMPLETED'){
+        if(visible()&&nativeCompletedOwnerReply(reply)){
           if(typeof reply.result?.answer==='string'&&reply.result.answer.trim())
             row.textContent=reply.result.answer;
           chatStatus(verifiedNativeText(reply)?'COMPLETED · локальная модель':
@@ -423,9 +430,9 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
       if(disposed)return;
       release(reply);
       if(visible()){
-        if(reply.state==='COMPLETED'&&typeof reply.result?.answer==='string'&&reply.result.answer.trim())
+        if(nativeCompletedOwnerReply(reply)&&typeof reply.result?.answer==='string'&&reply.result.answer.trim())
           row.textContent=reply.result.answer;
-        chatStatus(reply.state==='HOLD'?'HOLD · '+(reply.errorCode||'NO_MODEL_REPLY'):
+        chatStatus(!nativeCompletedOwnerReply(reply)?'HOLD · '+(reply.errorCode||reply.result?.errorCode||'NO_MODEL_REPLY'):
           reply.result?.done===true?(verifiedNativeText(reply)?'COMPLETED · локальная модель':
             'HOLD · пустой ответ локальной модели'):'HOLD · ответ не завершён');
       }
@@ -441,7 +448,7 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
     try{
       const reply=await client.request('chat.model',{});
       if(disposed||observedEpoch!==selectionEpoch||modelSelectionPending||
-         reply.state!=='COMPLETED'||!Array.isArray(reply.result?.models))return;
+         !nativeCompletedOwnerReply(reply)||!Array.isArray(reply.result?.models))return;
       select.replaceChildren();
       const names=[...new Set(reply.result.models.filter(name=>
         typeof name==='string'&&name.length>0&&name.length<=160))].slice(0,64);
@@ -517,7 +524,7 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
       }
       const reply=await client.request('chat.history',{limit:100,...scope});
       if(historyRun!==historyEpoch||!sameSelection(epoch,scope))return;
-      if(reply.state!=='COMPLETED'||!Array.isArray(reply.result?.messages)){chatStatus('HOLD · история недоступна');return;}
+      if(!nativeCompletedOwnerReply(reply)||!Array.isArray(reply.result?.messages)){chatStatus('HOLD · история недоступна');return;}
       const log=doc.getElementById('chat-log');if(log){
         log.replaceChildren();for(const row of reply.result.messages){
           if(typeof row?.content!=='string')continue;
