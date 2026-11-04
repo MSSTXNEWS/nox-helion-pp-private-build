@@ -176,6 +176,11 @@ jobs:
             python -m unittest discover -s tests/e06 -p $test -v
             if ($LASTEXITCODE -ne 0) { throw "E06_T06_SOURCE_RECEIPT_GATE_HOLD:$test" }
           }
+      - name: NOX local default model owner STOP/S03 source regression
+        shell: pwsh
+        run: |
+          python -B -m unittest discover -s tests/e06 -p test_local_nox_helion_firstboot_selection.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'NOX_LOCAL_MODEL_FIRSTBOOT_NATIVE_GATE_HOLD' }
       - name: Verify original 28-part immutable R11 donor (no guessed source)
         shell: pwsh
         run: |
