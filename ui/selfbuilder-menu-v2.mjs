@@ -45,6 +45,22 @@ export const SELFBUILDER_MENU = Object.freeze([
   {section:'РАЗВИТИЕ',routeId:'progress',label:'Мои задания',actionId:'selfbuilder.worker.status',mode:'read',subview:'code'},
   {section:'РАЗВИТИЕ',routeId:'commands',label:'STOP самодописания',actionId:'selfbuilder.worker.stop',mode:'restricted',subview:'code'}
 ]);
+// Existing approved actions grouped ONLY in the rendered menu. No new
+// action IDs, native approvals, scheduler or backend. All entries remain reachable.
+export const NOX_NAV_GROUPS=Object.freeze([
+ Object.freeze({id:'status',label:'ОБЗОР И СТАТУС'}),
+ Object.freeze({id:'models',label:'МОДЕЛИ И ОБУЧЕНИЕ'}),
+ Object.freeze({id:'source',label:'ИСХОДНИКИ И КОД'}),
+ Object.freeze({id:'control',label:'УПРАВЛЕНИЕ'})
+]);
+export function groupForNoxAction(item){
+ const action=String(item?.actionId||'');
+ if(action.endsWith('.stop'))return 'control';
+ if(item?.subview==='code'||action==='selfbuilder.propose'||action.includes('.sources.'))return 'source';
+ if(/model|seed|weight|train|training|learning|study|gpu|coding/i.test(action))return 'models';
+ if(item?.mode==='restricted')return 'control';
+ return 'status';
+}
 // One read-only, native capability dashboard: no downloads, code execution
 // or weight modification. Reuse the existing OneHost/P02/S03 actions.
 export const P01_READINESS_ACTIONS=Object.freeze([
@@ -126,15 +142,20 @@ export function mountSelfBuilderMenuV2({root,invokeNative,getTrustedState,ownerA
   worldFeedback.setAttribute('role','status');worldFeedback.setAttribute('aria-live','polite');
   const backWorld=make(doc,'button','nox-sb-tile','← Все подразделы');
   backWorld.type='button';backWorld.hidden=true;
-  worldSection.append(worldHeading,worldGrid,backWorld,worldFeedback);
-  let activeWorld=null;
+  const path=make(doc,'nav','nox-sb-nav-path');
+  path.setAttribute('aria-label','Путь NOX: направление, страница, подраздел');
+  const groupHeading=make(doc,'h3','nox-sb-sourcehub__title','Группы действий');
+  const groupGrid=make(doc,'div','nox-sb-grid nox-sb-group-grid');
+  const backGroup=make(doc,'button','nox-sb-tile','← Подразделы');backGroup.type='button';backGroup.hidden=true;
+  worldSection.append(worldHeading,path,worldGrid,backWorld,groupHeading,groupGrid,backGroup,worldFeedback);
+  let activeWorld=null,activeGroup=null;
   const worldButtons=[];
   for(const world of P01_MENU_WORLD_NAV){
     const b=make(doc,'button','nox-sb-tile',world.label);
     b.type='button';b.dataset.noxWorld=world.id;b.dataset.noxWorldParent=world.section;
     b.addEventListener('click',()=>{
       if(destroyed)return;
-      activeWorld=world.id;
+      activeWorld=world.id;activeGroup=null;
       worldFeedback.textContent='ОТКРЫТ ПОДРАЗДЕЛ · '+world.label+
         ' · действия ниже требуют отдельного подтверждения NOX';
       backWorld.hidden=false;refresh();
@@ -142,8 +163,11 @@ export function mountSelfBuilderMenuV2({root,invokeNative,getTrustedState,ownerA
     worldGrid.append(b);worldButtons.push({world,button:b});
   }
   backWorld.addEventListener('click',()=>{
-    if(destroyed)return;activeWorld=null;backWorld.hidden=true;
+    if(destroyed)return;activeWorld=null;activeGroup=null;backWorld.hidden=true;
     worldFeedback.textContent='Выберите подраздел';refresh();
+  });
+  backGroup.addEventListener('click',()=>{
+    if(destroyed)return;activeGroup=null;refresh();
   });
   const grid=make(doc,'div','nox-sb-grid');
   const sourceHub=make(doc,'section','nox-sb-sourcehub');
@@ -320,23 +344,57 @@ export function mountSelfBuilderMenuV2({root,invokeNative,getTrustedState,ownerA
     jobs.value=known.some(x=>x.id===selected)?selected:'';
     const section=typeof getCurrentSection==='function'?getCurrentSection():null;
     if(activeWorld&&!P01_MENU_WORLD_NAV.some(w=>w.id===activeWorld&&w.section===section)){
-      activeWorld=null;backWorld.hidden=true;worldFeedback.textContent='Выберите подраздел';
+      activeWorld=null;activeGroup=null;backWorld.hidden=true;
+      worldFeedback.textContent='Выберите страницу';
     }
-    worldSection.hidden=section!==null&&!MENU_V2_SECTIONS.includes(section);
     const availableWorlds=menuWorldsForSection(section);
+    worldSection.hidden=section!==null&&!MENU_V2_SECTIONS.includes(section);
     for(const {world,button} of worldButtons){
-      button.hidden=world.section!==section||(activeWorld!==null&&world.id!==activeWorld);
+      button.hidden=world.section!==section;
       button.setAttribute('aria-pressed',String(world.id===activeWorld));
     }
+    worldGrid.hidden=activeWorld!==null;
+    worldGrid.style.display=activeWorld===null?'':'none';
+    backWorld.hidden=activeWorld===null;
     worldHeading.textContent=activeWorld
-      ?'Подраздел · '+(P01_MENU_WORLD_NAV.find(w=>w.id===activeWorld)?.label||'NOX')
-      :'Подразделы NOX · '+availableWorlds.length;
-    jobs.hidden=section!==null&&section!=='РАЗВИТИЕ';
-    task.hidden=section!==null&&!['РАБОТА','РАЗВИТИЕ'].includes(section);
-    sourceHub.hidden=section!==null&&section!=='РАЗВИТИЕ';
+      ?'Страница · '+(P01_MENU_WORLD_NAV.find(w=>w.id===activeWorld)?.label||'NOX')
+      :'Страницы направления · '+availableWorlds.length;
+    path.replaceChildren();
+    const mark=(title,current)=>{
+      const crumb=make(doc,'span',current?'nox-sb-crumb-current':'nox-sb-crumb',title);
+      if(current)crumb.setAttribute('aria-current','page');
+      path.append(crumb);
+    };
+    mark(section||'HELION',!activeWorld);
+    if(activeWorld){mark(P01_MENU_WORLD_NAV.find(w=>w.id===activeWorld)?.label||activeWorld,!activeGroup);}
+    if(activeGroup){mark(NOX_NAV_GROUPS.find(g=>g.id===activeGroup)?.label||activeGroup,true);}
+    groupGrid.replaceChildren();
+    const available=SELFBUILDER_MENU.filter(item=>item.section===section);
+    if(activeWorld){
+      for(const group of NOX_NAV_GROUPS){
+        const count=available.filter(item=>groupForNoxAction(item)===group.id).length;
+        if(!count)continue;
+        const button=make(doc,'button','nox-sb-tile nox-sb-group-tile',
+          group.label+' · '+count);
+        button.type='button';
+        button.dataset.noxActionGroup=group.id;
+        button.setAttribute('aria-pressed',String(activeGroup===group.id));
+        button.addEventListener('click',()=>{if(destroyed)return;activeGroup=group.id;refresh();});
+        groupGrid.append(button);
+      }
+    }
+    groupHeading.hidden=!activeWorld||!!activeGroup;
+    groupGrid.hidden=!activeWorld||!!activeGroup;
+    groupGrid.style.display=activeWorld&&!activeGroup?'':'none';
+    backGroup.hidden=!activeGroup;
+    grid.hidden=!activeGroup;
+    grid.style.display=activeGroup?'':'none';
+    jobs.hidden=activeGroup!=='models'||section!=='РАЗВИТИЕ';
+    task.hidden=activeGroup!=='source'||!['РАБОТА','РАЗВИТИЕ'].includes(section);
+    sourceHub.hidden=activeGroup!=='source'||section!=='РАЗВИТИЕ';
     for(const {b,item,permitted} of buttons){
       if(destroyed)return;
-      b.hidden=typeof getCurrentSection==='function'&&getCurrentSection()!==item.section;
+      b.hidden=item.section!==section||!activeGroup||groupForNoxAction(item)!==activeGroup;
       const s=getTrustedState(item.actionId)||{};
       const allowed=permitted&&s.available===true&&(item.mode!=='restricted'||(s.ownerConsent===true||s.requiresNativeConsent===true));
       b.disabled=!allowed||busy.has(item.actionId);

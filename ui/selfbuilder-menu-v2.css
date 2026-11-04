@@ -55,3 +55,35 @@
 
 
 /* uses ui/nox-wow-fx.css — add class nox-fx on the page root */
+
+
+/* NOX ONEHOST nested page navigation: same native actions, fewer visible controls.
+   Compact breadcrumb + restrained OBSIDIAN/CYAN highlights, no new renderer. */
+.nox-sb-nav-path{display:flex;flex-wrap:wrap;align-items:center;gap:7px;
+ margin:8px 0 12px;padding:9px 11px;border:1px solid rgba(193,165,116,.35);
+ border-radius:12px;background:linear-gradient(115deg,rgba(14,24,34,.93),rgba(20,17,28,.83));
+ color:#cdeaf1;font-size:.8rem;letter-spacing:.03em}
+.nox-sb-crumb,.nox-sb-crumb-current{overflow-wrap:anywhere}
+.nox-sb-crumb-current{color:#ffdfb0;font-weight:700}
+.nox-sb-crumb-current:not(:first-child)::before,
+.nox-sb-crumb:not(:first-child)::before{content:"›";margin-right:7px;color:#81bcc9}
+.nox-sb-group-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));gap:10px}
+.nox-sb-group-tile{min-height:68px!important;
+ background:radial-gradient(ellipse at 80% 0,rgba(71,169,210,.14),transparent 64%),
+ linear-gradient(135deg,rgba(29,31,42,.92),rgba(10,21,32,.94))!important;
+ border:1px solid rgba(204,179,133,.49)!important;
+ box-shadow:inset 0 1px rgba(248,219,175,.12),0 8px 22px rgba(0,0,0,.25)}
+.nox-sb-group-tile:hover,.nox-sb-group-tile:focus-visible{
+ border-color:#f3d9a7!important;box-shadow:0 0 22px rgba(115,201,218,.20)}
+.nox-sb-group-grid[hidden],.nox-sb-grid[hidden],
+.nox-sb-panel [hidden]{display:none!important}
+@media(max-width:390px){
+ .nox-sb-nav-path{padding:8px;gap:4px;font-size:.72rem}
+ .nox-sb-group-grid{grid-template-columns:1fr}
+}
+@media(prefers-reduced-motion:reduce){
+ .nox-sb-group-grid,.nox-sb-group-tile{transition:none!important;animation:none!important}
+}
+@media(forced-colors:active){
+ .nox-sb-nav-path,.nox-sb-group-tile{background:Canvas!important;color:CanvasText!important;border:1px solid CanvasText!important;box-shadow:none!important}
+}
