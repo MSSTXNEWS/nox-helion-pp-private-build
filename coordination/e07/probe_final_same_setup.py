@@ -399,11 +399,32 @@ if($op -eq 'SETTINGS'){
  [pscustomobject]@{invoked=$true;systemHeadingVisible=$seen;sameHwndAlive=($null -ne [System.Windows.Automation.AutomationElement]::FromHandle($handle))}|ConvertTo-Json -Compress;exit 0
 }
 if($op -eq 'MODEL_WINDOW'){
- $ownerRoot=Root;$ownerProcessId=[int]$ownerRoot.Current.ProcessId
+ # The original approved C# OneHost does NOT spawn a second WPF Model Center:
+ # MainWindow.NativeP02.cs navigates its existing trusted WebView2 to
+ # https://nox.local/creative/modelcenter/index.html after native owner ACL
+ # and explicit catalog consent. Probe the same ORIGINAL installed HWND.
+ $root=Root;$ownerProcessId=[int]$root.Current.ProcessId
  if($ownerProcessId -le 0){throw 'NO_ROOT'}
- $desktop=[System.Windows.Automation.AutomationElement]::RootElement;$seen=$false;$count=0
- for($n=0;$n -lt 50;$n++){Start-Sleep -Milliseconds 200;$wins=$desktop.FindAll([System.Windows.Automation.TreeScope]::Children,[System.Windows.Automation.Condition]::TrueCondition);$found=@();for($i=0;$i -lt $wins.Count;$i++){try{$v=$wins.Item($i).Current;if($v.ControlType -eq [System.Windows.Automation.ControlType]::Window -and $v.ProcessId -eq $ownerProcessId -and ($v.Name+'').Trim() -ceq 'NOX HELION · MODEL CENTER' -and (Visible $v)){$found+=$wins.Item($i)}}catch{}};$count=$found.Count;if($count -eq 1){$seen=$true;try{$wp=$found[0].GetCurrentPattern([System.Windows.Automation.WindowPattern]::Pattern);$wp.Close()}catch{};break}}
- [pscustomobject]@{modelWindowVisible=$seen;windowCount=$count;sameOwnerProcess=($seen -and $count -eq 1)}|ConvertTo-Json -Compress;exit 0
+ $seen=$false;$count=0;$heading=$false
+ for($n=0;$n -lt 50;$n++){
+  Start-Sleep -Milliseconds 200
+  $a=Tree (Root);$count=0;$heading=$false
+  for($i=0;$i -lt $a.Count;$i++){
+   try{
+    $v=$a.Item($i).Current;$name=($v.Name+'').Trim()
+    if($v.ControlType -eq [System.Windows.Automation.ControlType]::Document -and
+       $name -ceq 'NOX · MODEL CORE' -and (Visible $v)){$count++}
+    if($v.ControlType -eq [System.Windows.Automation.ControlType]::Text -and
+       $name -ceq 'Модели' -and (Visible $v)){$heading=$true}
+   }catch{}
+  }
+  if($count -eq 1 -and $heading){$seen=$true;break}
+ }
+ [pscustomobject]@{
+  modelPageVisible=$seen;modelDocumentCount=$count;modelHeadingVisible=$heading;
+  sameOriginalHwndAlive=($null -ne [System.Windows.Automation.AutomationElement]::FromHandle($handle));
+  originalOwnerProcessIdPositive=($ownerProcessId -gt 0)
+ }|ConvertTo-Json -Compress;exit 0
 }
 if($op -eq 'VISUAL'){
  $r=[NoxFinalWin32+RECT]::new();if(-not [NoxFinalWin32]::GetWindowRect($handle,[ref]$r)){throw 'RECT'}
@@ -723,12 +744,14 @@ def run(hwnd: int, install: Path, local: Path, *, source_sha: str, setup_sha: st
         catalog_consent=qa_approve_readonly_catalog_consent(hwnd)
         model=_run_ps(_uia_script(hwnd,"MODEL_WINDOW"),
                       timeout=35,phase="MODEL_WINDOW")
-        e07.require(model.get("modelWindowVisible") is True and
-                    model.get("windowCount")==1 and
-                    model.get("sameOwnerProcess") is True,
-                    "E07_FINAL_MODELS_WINDOW_HOLD")
-        observed("MODELS",{"model_center_window":"PASS",
-                           "window_title":"NOX HELION · MODEL CENTER",
+        e07.require(model.get("modelPageVisible") is True and
+                    model.get("modelDocumentCount")==1 and
+                    model.get("modelHeadingVisible") is True and
+                    model.get("sameOriginalHwndAlive") is True and
+                    model.get("originalOwnerProcessIdPositive") is True,
+                    "E07_FINAL_MODELS_ORIGINAL_WEBVIEW_PAGE_HOLD")
+        observed("MODELS",{"model_center_same_webview_page":"PASS",
+                           "document_title":"NOX · MODEL CORE",
                            "catalog_qa_consent":catalog_consent,
                            "model_pull":"NOT_TESTED",
                            "model_download_queue":"NOT_TESTED"})
