@@ -35,9 +35,9 @@ class IndependentE07(unittest.TestCase):
         workflow = (ROOT / ".github/workflows/nox-express-independent-e07-candidate.yml").read_text(encoding="utf-8")
         # Active independent E07 must use the physically verified frozen FULL
         # D02 producer. Historic originals remain source-pinned, not selected.
-        self.assertIn("run-id: 41885544063", workflow)
-        self.assertIn("name: nox-v16-e06-onehost-diagnostic-41885544063", workflow)
-        self.assertIn("path: input-verified-91a6", workflow)
+        self.assertIn("run-id: 41895699906", workflow)
+        self.assertIn("name: nox-v16-e06-onehost-diagnostic-41895699906", workflow)
+        self.assertIn("path: input-verified-f842", workflow)
         self.assertNotIn("run-id: 41867828741", workflow)
         self.assertIn("--artifact-kind d02", workflow)
         self.assertIn('"original-e888"', source)
@@ -547,7 +547,7 @@ class IndependentE07(unittest.TestCase):
     def test_u11_safe_navigation_only_for_pinned_original_candidate(self):
         source = FILE.read_text(encoding="utf-8")
         self.assertIn('safe_nav=physical_nav or frozen_source == "e888941626191c17d19d372889b1f96842c15e1b"', source)
-        self.assertIn('physical_nav=args.artifact_kind in ("original-30a", "d02")', source)
+        self.assertIn('physical_nav=args.artifact_kind in ("original-30a", "d02", "d02-91a6", "d02-f842")', source)
         guarded = source.split("def observe_readonly_primary_navigation(",1)[1].split(
             "\ndef original_wpf_hwnd(",1)[0]
         self.assertIn("InvokePattern",guarded)
