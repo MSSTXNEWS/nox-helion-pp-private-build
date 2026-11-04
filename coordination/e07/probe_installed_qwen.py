@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -129,6 +130,49 @@ def nonempty_response_text(reply: dict) -> int:
     return sum(len(x.encode("utf-8")) for x in texts)
 
 
+def verify_installed_model_oci_bytes(reported_digest: str) -> dict:
+    """Reuse the existing reviewed offline OCI verifier; never trust /api/tags alone.
+
+    The approved Qwen manifest and EVERY config/layer byte must hash correctly,
+    from the exact models directory used by Ollama. Read-only, no downloads,
+    no privilege escalation, and no model / GUI / E07 success inferred.
+    """
+    script = Path(__file__).with_name("verify_qwen_oci_integrity.py")
+    if (not script.is_file() or script.is_symlink() or
+            getattr(script, "is_junction", lambda: False)()):
+        raise RuntimeError("QWEN_OCI_REVIEWED_VERIFIER_MISSING_HOLD")
+    spec = importlib.util.spec_from_file_location("nox_e07_reviewed_oci_bytes", script)
+    if spec is None or spec.loader is None:
+        raise RuntimeError("QWEN_OCI_REVIEWED_VERIFIER_IMPORT_HOLD")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    if reported_digest != module.APPROVED_MANIFEST_SHA256:
+        raise RuntimeError("QWEN_OCI_FULL_MANIFEST_DIGEST_MISMATCH_HOLD")
+    supplied = os.environ.get("OLLAMA_MODELS")
+    if supplied is not None and (not supplied.strip() or
+                                 not Path(supplied).is_absolute()):
+        raise RuntimeError("QWEN_OCI_MODEL_ROOT_NOT_ABSOLUTE_HOLD")
+    root = Path(supplied) if supplied is not None else Path.home() / ".ollama" / "models"
+    # Do not resolve() before checking user-supplied Ollama model-root provenance.
+    if any(p.is_symlink() or getattr(p, "is_junction", lambda: False)()
+           for p in (root, *root.parents)):
+        raise RuntimeError("QWEN_OCI_MODEL_ROOT_REPARSE_HOLD")
+    try:
+        evidence = module.verify(root, reported_digest)
+    except module.IntegrityHold as exc:
+        raise RuntimeError("QWEN_" + str(exc)) from None
+    if (evidence.get("schema") != "nox.qwen.oci.bytes.v1" or
+            evidence.get("manifest_sha256") != reported_digest or
+            evidence.get("independent_weights_sha_verified") is not True or
+            type(evidence.get("verified_blobs")) is not int or
+            evidence["verified_blobs"] < 2 or
+            type(evidence.get("verified_blob_bytes")) is not int or
+            evidence["verified_blob_bytes"] < 986048576 or
+            evidence.get("release_accepted") is not False):
+        raise RuntimeError("QWEN_OCI_PHYSICAL_EVIDENCE_INCOMPLETE_HOLD")
+    return evidence
+
+
 def qwen_probe_exit_code(report: dict) -> int:
     """History must survive a fresh native process before a Qwen probe succeeds."""
     return (0 if (report.get("installed_native") == "LIVE_NONEMPTY_RESPONSE_VERIFIED"
@@ -170,7 +214,14 @@ def main() -> int:
                 and digest.startswith(MODEL_DIGEST_PREFIX)):
             raise RuntimeError("QWEN_UPSTREAM_DIGEST_MISMATCH_HOLD")
         report["ollama_reported_digest"] = digest
-        report["independent_weight_sha_verified"] = False
+        # Provider-reported tag/manifest metadata is never physical weights PASS.
+        # Verify the complete approved manifest + every real local OCI blob
+        # using the existing identity-locked SHA-256 verifier BEFORE inference.
+        verified = verify_installed_model_oci_bytes(digest)
+        report["independent_weight_sha_verified"] = True
+        report["verified_model_manifest_sha256"] = verified["manifest_sha256"]
+        report["verified_model_oci_blobs"] = verified["verified_blobs"]
+        report["verified_model_oci_bytes"] = verified["verified_blob_bytes"]
         response = provider_stream(
             "Reply with a short Python function that returns 42.",
             limit=96)
