@@ -83,6 +83,61 @@ def checked_source_setup(artifact_dir: Path, expected_source: str,
             "setup_bytes": setup.stat().st_size}
 
 
+
+def bounded_primary_diagnostics(witness: object) -> dict:
+    """Bounded UIA status/error evidence only, never a click or release verdict."""
+    if type(witness) is not dict:
+        return {"error": "E07_PRIMARY_WITNESS_SCHEMA_HOLD"}
+
+    def status(value: object, choices: tuple[str, ...], default: str) -> str:
+        return value if type(value) is str and value in choices else default
+
+    def error_code(value: object) -> str:
+        return (value if type(value) is str and
+                re.fullmatch(r"E07_[A-Z0-9_]{1,80}", value) else "NOT_REPORTED")
+
+    def count(value: object, limit: int) -> int:
+        return value if type(value) is int and 0 <= value <= limit else 0
+
+    buttons = witness.get("five_primary_buttons")
+    chat = witness.get("ui_chat_action_probe")
+    nav = witness.get("ui_safe_primary_navigation")
+    buttons = buttons if type(buttons) is dict else {}
+    chat = chat if type(chat) is dict else {}
+    nav = nav if type(nav) is dict else {}
+    present = buttons.get("buttons_present")
+    present = present if type(present) is list and len(present) <= 64 else []
+    items = nav.get("per_action")
+    items = items if type(items) is dict else {}
+    return {
+        "five_presence": {
+            "status": status(buttons.get("status"), ("PASS", "HOLD"), "HOLD"),
+            "present": [name for name in PRIMARY if name in present],
+            "error_code": error_code(buttons.get("error")),
+        },
+        "chat": {
+            "actions_invoked": count(chat.get("actions_invoked"), 1),
+            "navigation_verified": status(chat.get("navigation_verified"),
+                                          ("PASS", "NOT_TESTED", "HOLD"), "NOT_TESTED"),
+            "error_code": error_code(chat.get("error")),
+        },
+        "four_navigation": {
+            "actions_invoked": count(nav.get("actions_invoked"), 4),
+            "navigation_verified": status(nav.get("navigation_verified"),
+                                          ("PASS", "NOT_TESTED", "HOLD"), "NOT_TESTED"),
+            "error_code": error_code(nav.get("error")),
+            "per_action": {
+                name: {
+                    "button_actuated": status(items[name].get("button_actuated"),
+                                              ("OBSERVED", "HOLD"), "HOLD"),
+                    "navigation_verified": status(items[name].get("navigation_verified"),
+                                                  ("PASS", "NOT_TESTED"), "NOT_TESTED"),
+                }
+                for name in PRIMARY[1:] if type(items.get(name)) is dict
+            },
+        },
+    }
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--artifact-dir", type=Path, required=True)
@@ -109,6 +164,9 @@ def main() -> int:
         require(install / "NOX.P01.Shell.exe" in files,
                 "E07_PRIMARY_INSTALLED_SHELL_UNOWNED_HOLD")
         witness = gui_hwnd(install / "NOX.P01.Shell.exe", local, safe_nav=True)
+        # Record the actual lower-layer first failure before evaluate() fail-closes.
+        # Whitelist fields: do not leak UI text, paths, logs or user data.
+        receipt["first_failure_diagnostics"] = bounded_primary_diagnostics(witness)
         # Save bounded exact-action outcomes BEFORE strict evaluation raises HOLD.
         # A previous receipt lost all four-button diagnostics on the first
         # incomplete navigation, slowing repair without strengthening safety.
