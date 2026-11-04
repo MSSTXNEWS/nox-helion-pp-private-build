@@ -402,18 +402,19 @@
     {
       "path": "Packages/P03/Source/P03.ModelCenter.Wow/ui.js",
       "owner": 3,
-      "run_id": "NOX-W06-R96-P03-NULL-SNAPSHOT-STOP-20261103",
+      "run_id": "NOX-EXPRESS-20261104-P03-EXACT-HEAD-PIN-RECONCILE",
       "pre_git_blob_sha1": "52e789074fff96464f4ef5af033ebcfa35c98924",
-      "post_git_blob_sha1": "4e9ecd0290ce78e61847078c691ab2bf20693372",
-      "post_bytes": 33237,
+      "post_git_blob_sha1": "a1f2bcf0dd319d950808d0ca2cc58dda5ea9ed57",
+      "post_bytes": 38286,
       "source_commit": "064700e349cda5c474e24d5d559cd43d77fea3a9",
-      "acceptance": "SOURCE_CATALOG_UI_PIN_CONSISTENCY_NOT_MODEL_DOWNLOAD_OR_WINDOWS_E07",
+      "acceptance": "EXACT_CURRENT_UI_SOURCE_PIN_ONLY_NOT_WINDOWS_OR_E07",
       "reconciliation_parent_sha1": "d7cce548ce3fc3ca977e60e5fd9f841de3eff345",
       "prior_approved_run_id": "NOX-BLOCK2-P03-UI-SEED-PIN-FIX-20261101",
       "prior_approved_source_commit": "3ec73f893961a8dce0dc3bdbc202afd4a54773a0",
       "prior_approved_post_git_blob_sha1": "30e836b47df04229c9c06141a2dd99c1c77453eb",
       "prior_approved_post_bytes": 30697,
-      "verification": "EXACT_GIT_BLOB_AND_ORIGINAL_WEBVIEW_SOURCE_REGRESSION_NOT_WINDOWS"
+      "verification": "CURRENT_GIT_BLOB_AND_UTF8_BYTE_LENGTH_NO_GATE_BYPASS",
+      "prior_reconciled_git_blob_sha1": "4e9ecd0290ce78e61847078c691ab2bf20693372"
     },
     {
       "path": "Packages/P03/Source/P03.ModelCenter/ModelArtifactReviewRegistry.cs",
