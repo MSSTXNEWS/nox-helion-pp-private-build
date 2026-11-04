@@ -18,6 +18,26 @@ MOD=importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(MOD)
 
 class IndependentE07(unittest.TestCase):
+    def test_u05_e888_original_candidate_pins_do_not_replace_legacy(self):
+        source = FILE.read_text(encoding="utf-8")
+        case = source.split("def setup_lock_original(", 1)[1].split("def manifest_owner(", 1)[0]
+        self.assertIn('frozen in ("legacy", "e888")', case)
+        self.assertIn("e888941626191c17d19d372889b1f96842c15e1b", case)
+        self.assertIn("96ff9b47ca12a21017374e527786eda8b8fbf2b0e62cc6cfea1f59182cc8e61b", case)
+        self.assertIn("1af961a3937d930a5f4684dd1cc88890b81b1e1ec61abfcfa3e72b250ca12683", case)
+        self.assertIn("expected_home_bytes = 99768", case)
+        self.assertIn("expected_owned_files = 485", case)
+        self.assertIn("expected_source = ORIGINAL_E06_SOURCE", case)
+        self.assertIn("expected_setup_sha = ORIGINAL_E06_SETUP_SHA", case)
+        self.assertIn("expected_home_bytes = 99762", case)
+        with self.assertRaisesRegex(MOD.Hold, "E07_ORIGINAL_PIN_KIND_HOLD"):
+            MOD.setup_lock_original(Path("none.exe"), Path("none"), frozen="unverified")
+        workflow = (ROOT / ".github/workflows/nox-express-independent-e07-candidate.yml").read_text(encoding="utf-8")
+        self.assertIn("run-id: 41803143292", workflow)
+        self.assertIn("NOX-EXPRESS-ONEHOST-e888941626191c17d19d372889b1f96842c15e1b", workflow)
+        self.assertIn("--artifact-kind original-e888", workflow)
+        self.assertIn('"original-e888"', source)
+
     def test_fresh_webview_markers_require_exact_log_events(self):
         line = "[2026-11-04 05:00:00] INIT_BEGIN\n" + \
                "[2026-11-04 05:00:01] NAV_START\n" + \

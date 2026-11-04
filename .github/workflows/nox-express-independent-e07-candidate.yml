@@ -13,7 +13,7 @@ permissions:
   actions: read
   contents: read
 concurrency:
-  group: nox-express-e07-frozen-fe21790-1b78fba3
+  group: nox-express-e07-frozen-e8889416-96ff9b47
   cancel-in-progress: false
 jobs:
   independent-windows:
@@ -34,9 +34,9 @@ jobs:
       - name: Download immutable candidate from DIFFERENT Windows CI run
         uses: actions/download-artifact@v4
         with:
-          run-id: 41797861187
+          run-id: 41803143292
           github-token: ${{ github.token }}
-          name: NOX-EXPRESS-ONEHOST-fe21790af418c8c1083946595811b67c9c03c49d
+          name: NOX-EXPRESS-ONEHOST-e888941626191c17d19d372889b1f96842c15e1b
           path: input-frozen-e06
       - name: Independent installed E07 candidate lifecycle, never release by default
         id: test
@@ -52,13 +52,13 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'E07_SOURCE_REGRESSION_HOLD' }
           python -B -m unittest discover -s tests/e07 -p test_e07_install_root_reparse_u09.py -v
           if ($LASTEXITCODE -ne 0) { throw 'E07_INSTALL_ROOT_REGRESSION_HOLD' }
-          python -B coordination/e07/independent_setup_e07.py --artifact-dir input-frozen-e06 --artifact-kind original --out work/e07-independent/E07_CANDIDATE_RECEIPT.json
+          python -B coordination/e07/independent_setup_e07.py --artifact-dir input-frozen-e06 --artifact-kind original-e888 --out work/e07-independent/E07_CANDIDATE_RECEIPT.json
           if ($LASTEXITCODE -ne 0) { throw 'INDEPENDENT_E07_NOT_ACCEPTED' }
       - name: Save independent evidence even on HOLD
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: NOX-EXPRESS-E07-ORIGINAL-8e938107-${{ github.run_id }}
+          name: NOX-EXPRESS-E07-ORIGINAL-E888-${{ github.run_id }}
           path: work/e07-independent/E07_CANDIDATE_RECEIPT.json
           if-no-files-found: error
           retention-days: 14

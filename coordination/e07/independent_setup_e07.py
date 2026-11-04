@@ -246,8 +246,27 @@ ORIGINAL_E06_SOURCE_ZIP_SHA = "80e46b37260680eaa434211ebbe98d8498c8481e9b384e889
 ORIGINAL_E06_OWNED_FILES = 485
 ORIGINAL_E06_PUBLISHED_HOME_SHA = "37c7952d98e820b22ea59c72c967bc4f7ecf01da013b3269b53e9f698062586e"
 
-def setup_lock_original(setup: Path, base: Path) -> dict:
-    """Fail closed on unmodified original E06 physical candidate, NOT E07 success."""
+def setup_lock_original(setup: Path, base: Path, *, frozen: str = "legacy") -> dict:
+    """Bind each immutable original E06 candidate to its own physical receipts."""
+    require(frozen in ("legacy", "e888"), "E07_ORIGINAL_PIN_KIND_HOLD")
+    if frozen == "e888":
+        # Physical source and ZIP independently cross-checked by a different worker,
+        # artifact 13309335494 from producer Windows E06 41803143292.
+        expected_source = "e888941626191c17d19d372889b1f96842c15e1b"
+        expected_setup_sha = "96ff9b47ca12a21017374e527786eda8b8fbf2b0e62cc6cfea1f59182cc8e61b"
+        expected_setup_bytes = 87335268
+        expected_source_zip_sha = "1af961a3937d930a5f4684dd1cc88890b81b1e1ec61abfcfa3e72b250ca12683"
+        expected_owned_files = 485
+        expected_home_bytes = 99768
+        expected_home_sha = "5661491ddf07b3f5fa7c8097ff64838209057bee6a0bec8ed867b8c8553a40d0"
+    else:
+        expected_source = ORIGINAL_E06_SOURCE
+        expected_setup_sha = ORIGINAL_E06_SETUP_SHA
+        expected_setup_bytes = ORIGINAL_E06_SETUP_BYTES
+        expected_source_zip_sha = ORIGINAL_E06_SOURCE_ZIP_SHA
+        expected_owned_files = ORIGINAL_E06_OWNED_FILES
+        expected_home_bytes = 99762
+        expected_home_sha = ORIGINAL_E06_PUBLISHED_HOME_SHA
     require(clean_dir(base) and setup.parent == base and
             setup.name == "NOX_HELION_EXPRESS_CANDIDATE_SETUP.exe",
             "E07_ORIGINAL_CANDIDATE_PATH_HOLD")
@@ -255,21 +274,21 @@ def setup_lock_original(setup: Path, base: Path) -> dict:
     candidate = _read_locked_e06_json(base/"ONEHOST_CANDIDATE_RECEIPT.json")
     smoke = _read_locked_e06_json(base/"T06_INSTALLED_SMOKE.json")
     require(build.get("schema")==RECEIPT_SCHEMA and
-            build.get("source_commit")==ORIGINAL_E06_SOURCE and
+            build.get("source_commit")==expected_source and
             build.get("physical_setup_built") is True and
-            build.get("setup_sha256")==ORIGINAL_E06_SETUP_SHA and
+            build.get("setup_sha256")==expected_setup_sha and
             type(build.get("setup_bytes")) is int and
-            build["setup_bytes"]==ORIGINAL_E06_SETUP_BYTES and
+            build["setup_bytes"]==expected_setup_bytes and
             build.get("build_outcome")=="success" and
             build.get("classification")=="DIAGNOSTIC_CANDIDATE_NOT_RELEASE" and
             build.get("release_accepted") is False and
             build.get("independent_e07")=="NOT_RUN",
             "E07_ORIGINAL_BUILD_RECEIPT_HOLD")
     require(candidate.get("schema")=="NOX-E06-ONEHOST-CANDIDATE-v1" and
-            candidate.get("source_git_sha")==ORIGINAL_E06_SOURCE and
-            candidate.get("setup_sha256")==ORIGINAL_E06_SETUP_SHA and
+            candidate.get("source_git_sha")==expected_source and
+            candidate.get("setup_sha256")==expected_setup_sha and
             type(candidate.get("setup_bytes")) is int and
-            candidate["setup_bytes"]==ORIGINAL_E06_SETUP_BYTES and
+            candidate["setup_bytes"]==expected_setup_bytes and
             candidate.get("backend_native_stdio_windows_exe_smoke")=="PASS" and
             candidate.get("wpf_source_compilation")=="PASS" and
             candidate.get("wpf_installed_interactive_qa")=="NOT_RUN" and
@@ -280,43 +299,43 @@ def setup_lock_original(setup: Path, base: Path) -> dict:
     require(type(home) is dict and home.get("five_primary_installed_uia")=="NOT_RUN" and
             home.get("release_accepted") is False and
             type(home.get("published_home_bytes")) is int and
-            home["published_home_bytes"]==99762 and
+            home["published_home_bytes"]==expected_home_bytes and
             type(home.get("published_home_sha256")) is str and
-            home["published_home_sha256"]==ORIGINAL_E06_PUBLISHED_HOME_SHA,
+            home["published_home_sha256"]==expected_home_sha,
             "E07_ORIGINAL_HOME_RECEIPT_HOLD")
     require(smoke.get("schema")=="NOX-T06-INSTALLED-SMOKE-v1" and
             smoke.get("phase")=="INSTALLED_GUI_IPC_UPDATE_ROLLBACK_NOLOSS_PROVIDER_OFFLINE_HOLD_NOT_E07" and
             smoke.get("environment")=="GITHUB_WINDOWS_EPHEMERAL_BRIDGE_NOT_E07" and
-            smoke.get("setup_sha256")==ORIGINAL_E06_SETUP_SHA and
+            smoke.get("setup_sha256")==expected_setup_sha and
             smoke.get("installed_wpf_sha256")==candidate.get("wpf_sha256") and
             smoke.get("installed_backend_sha256")==candidate.get("backend_sha256") and
             smoke.get("manifest_sha256")==candidate.get("manifest_sha256") and
             smoke.get("e07_independent_acceptance")=="NOT_RUN" and
             smoke.get("release_accepted") is False and
             type(smoke.get("manifest_files_checked")) is int and
-            smoke["manifest_files_checked"]==ORIGINAL_E06_OWNED_FILES and
+            smoke["manifest_files_checked"]==expected_owned_files and
             samevm_lifecycle_verified(smoke.get("installer_lifecycle"),
-                expected_owned_files=ORIGINAL_E06_OWNED_FILES),
+                expected_owned_files=expected_owned_files),
             "E07_ORIGINAL_SAMEVM_RECEIPT_HOLD")
-    source=base/("NOX_HELION_EXPRESS_SOURCE_"+ORIGINAL_E06_SOURCE+".zip")
-    require(clean_file(source) and sha256(source)==ORIGINAL_E06_SOURCE_ZIP_SHA,
+    source=base/("NOX_HELION_EXPRESS_SOURCE_"+expected_source+".zip")
+    require(clean_file(source) and sha256(source)==expected_source_zip_sha,
             "E07_ORIGINAL_SOURCE_ZIP_SHA_HOLD")
-    require(clean_file(setup) and setup.stat().st_size==ORIGINAL_E06_SETUP_BYTES,
+    require(clean_file(setup) and setup.stat().st_size==expected_setup_bytes,
             "E07_ORIGINAL_SETUP_BYTES_HOLD")
     checked,header=installed_file_sha_locked(setup,base.resolve(strict=True),
-        ORIGINAL_E06_SETUP_BYTES,ORIGINAL_E06_SETUP_SHA,return_pe_header=True)
-    require(checked==ORIGINAL_E06_SETUP_SHA and len(header)>=64 and
+        expected_setup_bytes,expected_setup_sha,return_pe_header=True)
+    require(checked==expected_setup_sha and len(header)>=64 and
             header[:2]==b"MZ", "E07_ORIGINAL_SETUP_PE_HOLD")
     offset=struct.unpack_from("<I",header,0x3c)[0]
     require(offset<=len(header)-6 and header[offset:offset+4]==bytes.fromhex("50450000"),
             "E07_ORIGINAL_SETUP_PE_HOLD")
-    return {"source_sha":ORIGINAL_E06_SOURCE,
-            "setup_sha256":ORIGINAL_E06_SETUP_SHA,
-            "setup_bytes":ORIGINAL_E06_SETUP_BYTES,
-            "source_zip_sha256":ORIGINAL_E06_SOURCE_ZIP_SHA,
+    return {"source_sha":expected_source,
+            "setup_sha256":expected_setup_sha,
+            "setup_bytes":expected_setup_bytes,
+            "source_zip_sha256":expected_source_zip_sha,
             "build_id":"NOT_PROVIDED_IN_E06_RECEIPT",
             "e06_samevm_pass_not_e07":True,
-            "owned_count_source_pinned":ORIGINAL_E06_OWNED_FILES,
+            "owned_count_source_pinned":expected_owned_files,
             "five_primary_installed_uia":"NOT_RUN",
             "model":"PROVIDER_OFFLINE_HOLD",
             "release_accepted":False}
@@ -934,12 +953,19 @@ def lifecycle(setup: Path, result: dict) -> None:
 def main() -> int:
     p=argparse.ArgumentParser()
     p.add_argument("--artifact-dir",required=True,type=Path)
-    p.add_argument("--artifact-kind",choices=("d02","original"),default="d02")
+    p.add_argument("--artifact-kind",choices=("d02","original","original-e888"),default="d02")
     p.add_argument("--out",required=True,type=Path)
     args=p.parse_args()
+    frozen_ids = {
+        "original": (ORIGINAL_E06_SOURCE, ORIGINAL_E06_SETUP_SHA),
+        "original-e888": (
+            "e888941626191c17d19d372889b1f96842c15e1b",
+            "96ff9b47ca12a21017374e527786eda8b8fbf2b0e62cc6cfea1f59182cc8e61b"),
+    }
+    source_sha, setup_sha = frozen_ids.get(args.artifact_kind, (SOURCE_SHA, SETUP_SHA))
     result={"schema":"NOX-EXPRESS-INDEPENDENT-E07-CANDIDATE-v1",
-            "source_sha":ORIGINAL_E06_SOURCE if args.artifact_kind=="original" else SOURCE_SHA,
-            "setup_sha256":ORIGINAL_E06_SETUP_SHA if args.artifact_kind=="original" else SETUP_SHA,
+            "source_sha":source_sha,
+            "setup_sha256":setup_sha,
             "checks":{},"release_accepted":False,"independent_e07":"HOLD",
             "error":"NOT_RUN"}
     try:
@@ -949,9 +975,10 @@ def main() -> int:
                 os.environ.get("GITHUB_REPOSITORY")=="MSSTXNEWS/nox-helion-pp-private-build",
                 "E07_HOST_NOT_AUTHORIZED")
         source = args.artifact_dir
-        if args.artifact_kind == "original":
+        if args.artifact_kind in frozen_ids:
             setup=source/"NOX_HELION_EXPRESS_CANDIDATE_SETUP.exe"
-            result["checks"]["artifact"] = setup_lock_original(setup,source)
+            result["checks"]["artifact"] = setup_lock_original(
+                setup,source,frozen="e888" if args.artifact_kind=="original-e888" else "legacy")
         else:
             setup=source/"e06"/"onehost-wow-diagnostic"/"NOX-HELION-V16-DIAGNOSTIC-SETUP.exe"
             receipt=source/"e06"/"onehost-wow-diagnostic"/"E07_BUILT_HANDOFF.json"
