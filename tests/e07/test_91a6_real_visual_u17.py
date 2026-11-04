@@ -74,6 +74,16 @@ class SourceVisualProof(unittest.TestCase):
                 "actions":[{**item,"invocation_method":"LEGACY_DEFAULT_ACTION"}
                            for item in valid["actions"]]}
         self.assertEqual(module.validate_quality_witness(legacy)["actual_invocations"],5)
+        pointer={"schema":"NOX-D02-QUALITY-UIA-v1",
+                 "actions":[{**item,"invocation_method":"SAME_WPF_PHYSICAL_POINTER"}
+                            for item in valid["actions"]]}
+        self.assertEqual(module.validate_quality_witness(pointer)["actual_invocations"],5)
+        source=PATH.read_text(encoding="utf-8")
+        self.assertIn("NoxD02NativeInput]::GetWindowRect($h",source)
+        self.assertIn("NoxD02NativeInput]::GetForegroundWindow() -ne $h",source)
+        self.assertIn("U17_D02_POINTER_OUTSIDE_ORIGINAL_WPF_HOLD",source)
+        self.assertIn("NoxD02NativeInput]::mouse_event([uint32]4",source)
+
         source=PATH.read_text(encoding="utf-8")
         self.assertIn("LegacyIAccessiblePattern]::Pattern",source)
         self.assertIn("$legacy.DoDefaultAction()",source)
