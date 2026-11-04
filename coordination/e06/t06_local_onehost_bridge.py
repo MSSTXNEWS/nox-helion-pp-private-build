@@ -282,6 +282,24 @@ def verified_samevm_lifecycle_state(smoke:dict, third:dict)->str:
         native.get("request_id_matched") is not True or
         native.get("real_model_inference_tested") is not False):
         raise RuntimeError(error)
+    # Re-attest the physical NSIS lifecycle, not just a self-labelled phase.
+    # An offline provider is acceptable for a diagnostic candidate, but a
+    # failed or missing install/verify/rollback/uninstall is never acceptable.
+    required_stages=(
+        "preflight_final", "install", "verify", "update",
+        "backup_payload_verify", "rollback", "rollback_payload_restored",
+        "rollback_payload_superseded", "uninstall",
+    )
+    for stage in required_stages:
+        receipt=lifecycle.get(stage)
+        if (type(receipt) is not dict or
+            type(receipt.get("code")) is not int or receipt["code"]!=0):
+            raise RuntimeError(error)
+    owned=lifecycle.get("uninstall_owned_files_checked")
+    views=lifecycle.get("uninstall_registry_views_checked")
+    if (type(owned) is not int or owned<1 or
+        type(views) is not int or views!=2):
+        raise RuntimeError(error)
     phase=smoke.get("phase")
     if phase=="INSTALLED_GUI_IPC_UPDATE_ROLLBACK_NOLOSS_PASS_NOT_E07":
         if (native.get("status")!="PASS" or
