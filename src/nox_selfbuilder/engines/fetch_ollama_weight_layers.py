@@ -47,6 +47,29 @@ def manifest_and_blobs(model, tag):
     if sum(i['bytes'] for i in out)>10*1024**3:raise ValueError('MODEL_OVER_BUDGET')
     return data,manifest_sha,out
 
+def manifest_cache_target(out, model, version):
+    """Reject redirected/dangling OCI manifest cache directories and files."""
+    root = Path(out)
+    if root.is_symlink() or getattr(root, 'is_junction', lambda: False)():
+        raise ValueError('UNSAFE_MANIFEST_CACHE_ROOT')
+    root.mkdir(parents=True, exist_ok=True)
+    if not root.is_dir() or root.is_symlink() or getattr(root, 'is_junction', lambda: False)():
+        raise ValueError('UNSAFE_MANIFEST_CACHE_ROOT')
+    current = root
+    for part in ('manifests', 'registry.ollama.ai', 'library', model):
+        current = current / part
+        if current.is_symlink() or getattr(current, 'is_junction', lambda: False)():
+            raise ValueError('UNSAFE_MANIFEST_CACHE_DIRECTORY')
+        if current.exists() and not current.is_dir():
+            raise ValueError('UNSAFE_MANIFEST_CACHE_DIRECTORY')
+        current.mkdir(exist_ok=True)
+        if not current.is_dir() or current.is_symlink() or getattr(current, 'is_junction', lambda: False)():
+            raise ValueError('UNSAFE_MANIFEST_CACHE_DIRECTORY')
+    target = current / version
+    if target.is_symlink() or getattr(target, 'is_junction', lambda: False)() or (target.exists() and not target.is_file()):
+        raise ValueError('UNSAFE_MANIFEST_CACHE_FILE')
+    return target
+
 def download_blob(model,digest,expected_size,root):
     match=DIGEST.fullmatch(digest)
     if not match: raise ValueError('INVALID_LAYER_DIGEST')
@@ -120,6 +143,8 @@ def acquire(tag,out,execute=False):
     if not execute:return receipt
     if shutil.disk_usage(out.parent).free<6*1024**3:
         raise RuntimeError('INSUFFICIENT_FREE_SPACE_REQUIRE_AT_LEAST_6_GIB')
+    # Refuse redirected cache paths before any network transfer.
+    manifest_cache_target(out,model,version)
     content,manifest_sha,layers=manifest_and_blobs(model,version)
     if not manifest_sha.startswith(MODELS[tag]['display_digest_prefix']):
         raise ValueError('OFFICIAL_OLLAMA_MANIFEST_DIGEST_CHANGED__OWNER_REVIEW_REQUIRED')
@@ -127,28 +152,33 @@ def acquire(tag,out,execute=False):
     receipt['layers']=[]
     for item in layers:
         receipt['layers'].append(download_blob(model,item['digest'],item['bytes'],out))
-    dst=out/'manifests'/'registry.ollama.ai'/'library'/model
-    dst.mkdir(parents=True,exist_ok=True)
-    # Preserve the exact verified OCI bytes: JSON re-serialization changes the
-    # registry manifest digest even if the document is semantically identical.
+    # Revalidate after downloads: a junction could have appeared during I/O.
+    manifest_target=manifest_cache_target(out,model,version)
+    # Preserve exact OCI bytes; JSON reserialization changes the digest.
     if hashlib.sha256(content).hexdigest()!=manifest_sha:
         raise ValueError('OFFICIAL_MANIFEST_BYTE_IDENTITY_MISMATCH')
-    # Use an unpredictable same-directory staging name; close it before the
-    # Windows atomic rename. Never follow a pre-created .part symlink.
-    staged=None
-    try:
-        with tempfile.NamedTemporaryFile(mode='wb',dir=dst,prefix='.'+version+'-',suffix='.part',delete=False) as output:
-            staged=Path(output.name)
-            output.write(content)
-            output.flush()
-            os.fsync(output.fileno())
-        if sha_file(staged)!=manifest_sha:
-            raise ValueError('STAGED_MANIFEST_SHA256_MISMATCH')
-        os.replace(staged,dst/version)
-    finally:
-        if staged is not None:
-            staged.unlink(missing_ok=True)
-    receipt.update(status='DOWNLOADED_ALL_LAYERS_SHA256_VERIFIED',bytes=sum(x['bytes'] for x in layers),manifest_store_path=str((dst/version).relative_to(out)),manifest_file_sha256=sha_file(dst/version),license_status='OWNER_REVIEW_OF_LICENSE_LAYER_REQUIRED')
+    if manifest_target.exists():
+        # Never destroy a mismatching preimage: preserve it for investigation.
+        if sha_file(manifest_target)!=manifest_sha:
+            raise ValueError('PREEXISTING_MANIFEST_SHA_MISMATCH')
+    else:
+        staged=None
+        try:
+            with tempfile.NamedTemporaryFile(mode='wb',dir=manifest_target.parent,prefix='.'+version+'-',suffix='.part',delete=False) as output:
+                staged=Path(output.name)
+                output.write(content)
+                output.flush()
+                os.fsync(output.fileno())
+            if sha_file(staged)!=manifest_sha:
+                raise ValueError('STAGED_MANIFEST_SHA256_MISMATCH')
+            manifest_target=manifest_cache_target(out,model,version)
+            if manifest_target.exists():
+                raise ValueError('MANIFEST_CACHE_PUBLICATION_COLLISION')
+            os.replace(staged,manifest_target)
+        finally:
+            if staged is not None:
+                staged.unlink(missing_ok=True)
+    receipt.update(status='DOWNLOADED_ALL_LAYERS_SHA256_VERIFIED',bytes=sum(x['bytes'] for x in layers),manifest_store_path=str(manifest_target.relative_to(out)),manifest_file_sha256=sha_file(manifest_target),license_status='OWNER_REVIEW_OF_LICENSE_LAYER_REQUIRED')
     return receipt
 
 def main(argv=None):
