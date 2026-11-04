@@ -711,7 +711,14 @@ def build(root,staged):
     import importlib.util
     five_script=Path(__file__).resolve().parents[2]/"coordination/express/stage_original_five_primary.py"
     verify_source_tree_entry(five_script,Path(__file__).resolve().parents[2])
-    need(_git_blob(five_script.read_bytes())=="d03d6e544d01d87bf65d62d864105ac359701404",
+    # A single source-locked canonical SHA serves BOTH physical packaging routes.
+    # Never accept "whatever bytes are present": verify the exact reviewed E06
+    # builder pin and fail closed if it is missing, ambiguous or mismatched.
+    owner_builder=Path(__file__).resolve().parent/"build_onehost_installer.ps1"
+    verify_source_tree_entry(owner_builder,Path(__file__).resolve().parents[2])
+    reviewed_pins=re.findall(rb"@\\{path=\\$primaryOwner;sha='([0-9a-f]{40})'\\}",owner_builder.read_bytes())
+    need(len(reviewed_pins)==1,"U08_PRIMARY_CANONICAL_BUILDER_PIN_HOLD")
+    need(_git_blob(five_script.read_bytes())==reviewed_pins[0].decode("ascii"),
          "U08_FIVE_PRIMARY_STAGE_PIN_HOLD")
     five_spec=importlib.util.spec_from_file_location("nox_express_five_primary",five_script)
     need(five_spec is not None and five_spec.loader is not None,
