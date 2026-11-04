@@ -25,6 +25,18 @@ def _receipt_sha(value: dict) -> str:
     return hashlib.sha256(raw).hexdigest()
 
 
+def nonrelease_action_observation(action: str, detail: dict) -> dict:
+    """Record one verified observation without inventing a privileged PASS."""
+    e07.require(action in PRIMARY[1:] and type(detail) is dict and bool(detail),
+                "E07_FINAL_FUNCTION_OBSERVATION_SCHEMA_HOLD")
+    return {"function_verified":"NOT_TESTED",
+            "permissions_verified":"NOT_TESTED",
+            "result":"HOLD",
+            "receipt_sha256":_receipt_sha(detail),
+            "observed_effect":detail,
+            "scope":"INSTALLED_UI_OBSERVATION_NOT_FULL_FUNCTION_PASS"}
+
+
 def _run_ps(source: str, *, timeout: int=90, env: dict|None=None) -> dict:
     encoded=base64.b64encode(source.encode("utf-16le")).decode("ascii")
     try:
@@ -158,15 +170,22 @@ def run(hwnd: int, install: Path, local: Path, *, source_sha: str, setup_sha: st
     # the obsolete three-state FX BALANCED/MAX/ECO button. Reuse the existing
     # physical original-HWND UIA probe (Invoke + actual pressed state).
     from probe_91a6_real_visual_u17 import probe_d02_quality_modes
-    fx=probe_d02_quality_modes(hwnd)
-    e07.require(fx.get("fx_control")=="PASS" and
-                fx.get("actual_invocations")==5 and
-                fx.get("reduced_motion")=="NOT_TESTED" and
-                fx.get("independent_visual_review")=="NOT_RUN",
-                "E07_FINAL_D02_FIVE_GRAPHICS_MODE_HOLD")
+    # A failing graphical-mode UIA probe MUST NOT prevent collection of the
+    # other real function witnesses on this one physical installed HWND.
+    # Keep exact failure evidence; never promote a missing FX response.
+    try:
+        fx=probe_d02_quality_modes(hwnd)
+        e07.require(fx.get("fx_control")=="PASS" and
+                    fx.get("actual_invocations")==5 and
+                    fx.get("reduced_motion")=="NOT_TESTED" and
+                    fx.get("independent_visual_review")=="NOT_RUN",
+                    "E07_FINAL_D02_FIVE_GRAPHICS_MODE_HOLD")
+    except e07.Hold as exc:
+        fx={"fx_control":"HOLD","first_unmet_gate":str(exc)}
     visual={"schema":e07.FINAL_VISUAL_SCHEMA,"source_sha":source_sha,
             "setup_sha256":setup_sha,"release_accepted":False,
-            "physical_capture":"PASS","d02_visual":"PASS","adaptive_layout":"PASS",
+            "physical_capture":"PASS","d02_visual":"PASS" if fx["fx_control"]=="PASS" else "HOLD",
+            "adaptive_layout":"PASS",
             # Quality mode changes do NOT measure the Windows OS
             # prefers-reduced-motion setting. Fail closed until physically
             # verified on this same original installed Setup SHA.
@@ -175,9 +194,11 @@ def run(hwnd: int, install: Path, local: Path, *, source_sha: str, setup_sha: st
             "reduced_motion_evidence":"OS_MEDIA_QUERY_NOT_PHYSICALLY_VERIFIED"}
 
     actions={}
-    def accepted(action: str, detail: dict) -> None:
-        actions[action]={"function_verified":"PASS","permissions_verified":"PASS",
-                         "result":"PASS","receipt_sha256":_receipt_sha(detail),"detail":detail}
+    def observed(action: str, detail: dict) -> None:
+        # An installed command, ModelCenter window, GPU preflight or settings
+        # heading is not proof of a downloaded model, completed training,
+        # authorized owner operation or persisted configuration change.
+        actions[action]=nonrelease_action_observation(action,detail)
 
     app=local/"NOX_HELION_Integrator"/"app"
     server=app/"server.py"
@@ -194,14 +215,14 @@ def run(hwnd: int, install: Path, local: Path, *, source_sha: str, setup_sha: st
             if "ACTION_END install exit=0" in log_text: break
         time.sleep(.4)
     e07.require("ACTION_END install exit=0" in log_text,"E07_FINAL_INSTALL_EXIT_HOLD")
-    accepted("INSTALL",{"server_sha256":e07.sha256(server),"action_exit":0,
+    observed("INSTALL",{"server_sha256":e07.sha256(server),"action_exit":0,
                         "scope":"ORIGINAL_PC_INSTALL_UI_TO_NOX_ACTIONS"})
 
     invoke_primary(hwnd,"MODELS")
     model=_run_ps(_uia_script(hwnd,"MODEL_WINDOW"),timeout=35)
     e07.require(model.get("modelWindowVisible") is True and model.get("windowCount")==1,
                 "E07_FINAL_MODELS_WINDOW_HOLD")
-    accepted("MODELS",{"model_center_window":"PASS","window_title":"NOX HELION · MODEL CENTER"})
+    observed("MODELS",{"model_center_window":"PASS","window_title":"NOX HELION · MODEL CENTER"})
 
     reports=local/"NOX_HELION"/"P01"/"reports"
     before=set(reports.glob("P01_DIAGNOSTICS_*.json")) if reports.is_dir() else set()
@@ -217,13 +238,13 @@ def run(hwnd: int, install: Path, local: Path, *, source_sha: str, setup_sha: st
                 type(data.get("windows")) is str and type(data.get("dotnet")) is str and
                 type(data.get("webview2")) is str and data.get("releaseGate")=="BLOCKED",
                 "E07_FINAL_LEARN_DIAGNOSTIC_SCHEMA_HOLD")
-    accepted("LEARN",{"diagnostics_sha256":e07.sha256(diag),"cpu":data["cpu"],
+    observed("LEARN",{"diagnostics_sha256":e07.sha256(diag),"cpu":data["cpu"],
                       "scope":"ORIGINAL_TRAINING_ENVIRONMENT_PREFLIGHT"})
 
     settings=_run_ps(_uia_script(hwnd,"SETTINGS"),timeout=35)
     e07.require(settings.get("invoked") is True and settings.get("systemHeadingVisible") is True and
                 settings.get("sameHwndAlive") is True,"E07_FINAL_SETTINGS_ROUTE_HOLD")
-    accepted("SETTINGS",{"system_screen":"PASS","same_original_hwnd":True,
+    observed("SETTINGS",{"system_screen":"PASS","same_original_hwnd":True,
                          "scope":"ORIGINAL_SYSTEM_SETTINGS_SCREEN"})
 
     functions={"schema":e07.FINAL_FUNCTION_SCHEMA,"source_sha":source_sha,
