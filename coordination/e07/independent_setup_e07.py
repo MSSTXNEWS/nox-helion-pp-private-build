@@ -203,6 +203,26 @@ def classify_primary_button_names(labels: list[str]) -> dict:
             "proof": "VISIBLE_ENABLED_UIA_BUTTONS_ONLY", "actions_invoked": 0}
 
 
+def classify_primary_uia_evidence(response: dict) -> dict:
+    """Bounded UIA tree diagnostics; text/non-button evidence can NEVER be a button PASS."""
+    require(type(response) is dict and response.get("schema") == "NOX-E07-UIA-V1",
+            "E07_UIA_BAD_SCHEMA_HOLD")
+    total, scanned, targets = (response.get("treeCount"), response.get("treeScanned"),
+                               response.get("targetTypes"))
+    require(type(total) is int and 0 <= total <= 100000 and
+            type(scanned) is int and 0 <= scanned <= min(total, 2048) and
+            type(targets) is list and len(targets) <= 64 and
+            all(type(item) is str and re.fullmatch(
+                r"(CHAT|INSTALL|MODELS|LEARN|REPORTS)\\|"
+                r"(ControlType\\.(Button|Text|Document|Hyperlink|Custom|Group|Pane|Edit)|Other)\\|"
+                r"(VISIBLE_ENABLED|OFFSCREEN|DISABLED|TOO_SMALL)", item)
+                for item in targets), "E07_UIA_DIAGNOSTIC_UNTRUSTED_HOLD")
+    result = classify_primary_button_names(response.get("labels"))
+    result.update({"uia_tree_total": total, "uia_tree_scanned": scanned,
+                   "uia_known_labels_by_role": targets})
+    return result
+
+
 def observe_original_primary_buttons(hwnd: int) -> dict:
     """Read-only UI Automation rooted at the existing strict WPF HWND witness."""
     require(sys.platform == "win32" and type(hwnd) is int and hwnd > 0,
@@ -228,7 +248,36 @@ for ($i=0; $i -lt $elements.Count; $i++) {
         $labels.Add($current.Name)
     }
 }
-[pscustomobject]@{schema='NOX-E07-UIA-V1';labels=@($labels.ToArray())} |
+# Read-only structural witness: never promote Text/Custom/disabled/offscreen to Button PASS.
+# Only known product button tokens and control types leave this Windows process.
+$tree = $root.FindAll([System.Windows.Automation.TreeScope]::Descendants,
+                      [System.Windows.Automation.Condition]::TrueCondition)
+$scanCount = [Math]::Min([int]$tree.Count, 2048)
+$targetTypes = [System.Collections.Generic.List[string]]::new()
+for ($i=0; $i -lt $scanCount; $i++) {
+    try {
+        $node = $tree.Item($i).Current
+        $name = $node.Name
+        if ([string]::IsNullOrWhiteSpace($name)) { continue }
+        $token = $name.Trim().TrimStart([char[]]@([char]0x2726,[char]0x2605,[char]0x2022,[char]0x20)).Trim().ToUpperInvariant()
+        if ($token -notin @('CHAT','INSTALL','MODELS','LEARN','REPORTS')) { continue }
+        $kind = $node.ControlType.ProgrammaticName
+        if ($kind -notin @('ControlType.Button','ControlType.Text','ControlType.Document',
+                           'ControlType.Hyperlink','ControlType.Custom','ControlType.Group',
+                           'ControlType.Pane','ControlType.Edit')) { $kind = 'Other' }
+        $bounds = $node.BoundingRectangle
+        $state = if (-not $node.IsEnabled) { 'DISABLED' }
+                 elseif ($node.IsOffscreen) { 'OFFSCREEN' }
+                 elseif ($bounds.Width -lt 20 -or $bounds.Height -lt 12) { 'TOO_SMALL' }
+                 else { 'VISIBLE_ENABLED' }
+        if ($targetTypes.Count -lt 64) { $targetTypes.Add("$token|$kind|$state") }
+    } catch {
+        # UIA may race on an exited WebView2 element; never elevate to proof.
+    }
+}
+[pscustomobject]@{schema='NOX-E07-UIA-V1'; labels=@($labels.ToArray());
+    treeCount=[int]$tree.Count; treeScanned=[int]$scanCount;
+    targetTypes=@($targetTypes.ToArray())} |
     ConvertTo-Json -Compress -Depth 3
 """.replace("__HWND__", str(hwnd))
     import base64
@@ -248,7 +297,7 @@ for ($i=0; $i -lt $elements.Count; $i++) {
         raise Hold("E07_UIA_BAD_JSON_HOLD") from None
     require(type(response) is dict and response.get("schema") == "NOX-E07-UIA-V1",
             "E07_UIA_BAD_SCHEMA_HOLD")
-    return classify_primary_button_names(response.get("labels"))
+    return classify_primary_uia_evidence(response)
 
 
 def original_wpf_hwnd(pid: int) -> int | None:

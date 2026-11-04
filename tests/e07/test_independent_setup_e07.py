@@ -49,6 +49,29 @@ class IndependentE07(unittest.TestCase):
             with self.assertRaisesRegex(MOD.Hold,"E07_UIA_UNTRUSTED_LABELS"):
                 MOD.classify_primary_button_names(invalid)
 
+    def test_structural_uia_text_never_becomes_button_pass(self):
+        evidence = MOD.classify_primary_uia_evidence({
+            "schema": "NOX-E07-UIA-V1", "labels": [],
+            "treeCount": 31, "treeScanned": 31,
+            "targetTypes": ["CHAT|ControlType.Text|VISIBLE_ENABLED",
+                            "MODELS|ControlType.Custom|VISIBLE_ENABLED"]})
+        self.assertEqual(evidence["status"], "HOLD")
+        self.assertEqual(evidence["buttons_missing"], list(MOD._UIA_MAIN_BUTTONS))
+        self.assertEqual(evidence["actions_invoked"], 0)
+        self.assertEqual(evidence["uia_tree_scanned"], 31)
+
+    def test_structural_uia_schema_is_bounded_and_fail_closed(self):
+        good = {"schema": "NOX-E07-UIA-V1", "labels": ["CHAT", "INSTALL", "MODELS",
+                "LEARN", "REPORTS"], "treeCount": 5, "treeScanned": 5, "targetTypes": []}
+        self.assertEqual(MOD.classify_primary_uia_evidence(good)["status"], "PASS")
+        for bad in ({"treeCount": False, "treeScanned": 1, "targetTypes": []},
+                    {"treeCount": 2, "treeScanned": 3, "targetTypes": []},
+                    {"treeCount": 1, "treeScanned": 1,
+                     "targetTypes": ["OTHER|ControlType.Text|VISIBLE_ENABLED"]}):
+            with self.subTest(bad=bad):
+                with self.assertRaisesRegex(MOD.Hold, "E07_UIA_DIAGNOSTIC_UNTRUSTED_HOLD"):
+                    MOD.classify_primary_uia_evidence({**good, **bad})
+
     def test_uia_windows_bound_read_only_and_offscreen_rejection(self):
         source=FILE.read_text(encoding="utf-8")
         for needle in ("FromHandle([IntPtr]","ControlType]::Button",
