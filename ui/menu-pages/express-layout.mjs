@@ -7,7 +7,7 @@ export const DIRECTIONS=Object.freeze([
 ]);
 export const CORE_IDS=Object.freeze(["CONSCIOUSNESS","PERSONA","ATLAS","VOICE","REFLECTION","CORE","NEXUS","FORGE"]);
 export const PERSONAS=Object.freeze(["KV","AM","LA","EV","KW"]);
-export const PRIMARY=Object.freeze(["CHAT","INSTALL","MODELS","LEARN","REPORTS"]);
+export const PRIMARY=Object.freeze(["CHAT","INSTALL","MODELS","LEARN","SETTINGS"]);
 const data=[
  ["work","РАБОТА","work","Проекты и задачи","projects~Проекты|architecture~Архитектура|commands~Команды|progress~Прогресс"],
  ["intelligence","ИНТЕЛЛЕКТ","intelligence","Локальный ИИ и исследования","chat~Чат HELION|search~Поиск|fact-atlas~Атлас фактов|browser~Браузер NOX"],
