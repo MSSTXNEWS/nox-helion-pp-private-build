@@ -1,12 +1,17 @@
 // Native receipts are the sole source of first-boot status. Never infer GPU or training.
 const obj=x=>x!==null&&typeof x==='object'&&!Array.isArray(x);
-const held=x=>obj(x)&&(x.ok===false||x.ack===false||(x.errorCode!=null&&String(x.errorCode).trim()!=='')||['HOLD','FAILED','ERROR','DENIED','REJECTED','OFFLINE','UNAVAILABLE','STOPPED'].includes(String(x.status||'').toUpperCase()));
+// A transport COMPLETED is not owner consent or proof of service readiness.
+const nonemptyError=v=>v!=null&&(typeof v!=='string'||v.trim()!=='');
+const denied=v=>typeof v==='string'&&/(?:^|[_\\s.:-])(?:HOLD|FAILED|FAILURE|ERROR|DENIED|REJECTED|OFFLINE|UNAVAILABLE|STOPPED|CONSENT_REQUIRED|PERMISSION_REQUIRED|AUTHORIZATION_REQUIRED|AUTH_REQUIRED|NOT_AUTHORIZED|NOT_AUTHENTICATED|AWAITING_CONSENT|NEEDS_CONSENT|CONSENT_PENDING|SID_MISMATCH|ACL_MISMATCH|PROVIDER_OFFLINE)(?:$|[_\\s.:-])/.test(v.toUpperCase());
+const held=x=>obj(x)&&(x.ok===false||x.ack===false||
+ ['errorCode','error_code','error','errorMessage'].some(k=>nonemptyError(x[k]))||
+ [x.status,x.state].some(denied)||(obj(x.owner)&&held(x.owner)));
 export function firstBootTruth(a1,capabilities,models){
  const a=obj(a1)&&a1.routeId==='chat.commands'&&a1.state==='COMPLETED'&&!held(a1)&&obj(a1.result)&&!held(a1.result)&&a1.result.schema==='NOX-A1-NATIVE-COMMAND-STATUS-v1'?a1.result:null;
  const c=obj(capabilities)&&capabilities.routeId==='chat.commands'&&capabilities.state==='COMPLETED'&&!held(capabilities)&&obj(capabilities.result)&&!held(capabilities.result)&&capabilities.result.status==='SOURCE_SERVICE'?capabilities.result:null;
  const m=obj(models)&&models.routeId==='chat.model'&&models.state==='COMPLETED'&&!held(models)&&obj(models.result)&&!held(models.result)&&Array.isArray(models.result.models)?models.result:null;
  const a1Ready=!!(a&&a.state==='ACTIVE_NATIVE_BOOT_RECEIPT'&&a.native_bound===true);
- const canPropose=!!(c&&obj(c.actions)&&obj(c.actions['selfbuilder.propose'])&&c.actions['selfbuilder.propose'].available===true&&c.actions['selfbuilder.propose'].status==='AVAILABLE');
+ const canPropose=!!(c&&obj(c.actions)&&obj(c.actions['selfbuilder.propose'])&&!held(c.actions['selfbuilder.propose'])&&c.actions['selfbuilder.propose'].available===true&&c.actions['selfbuilder.propose'].status==='AVAILABLE');
  const count=m?m.models.length:null;
  return {
    summary:a1Ready?'A1 подтвердил запуск; остальные возможности проверяются отдельно.':'Я запущен. Проверяю подключение и разрешения OneHost; автономность пока не подтверждена.',
