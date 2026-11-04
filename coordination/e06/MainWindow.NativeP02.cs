@@ -437,6 +437,29 @@ public partial class MainWindow
         return true;
     }
 
+    // Original legacy HOME bypasses the newer bridge reply guard.
+    private static bool LegacyOwnerDenial(JsonElement? receipt, int depth=0)
+    {
+        if (receipt is not JsonElement value || value.ValueKind!=JsonValueKind.Object) return false;
+        if (depth>=4) return true;
+        foreach(var p in value.EnumerateObject()) {
+            if (p.Name is "ok" or "ack" && p.Value.ValueKind!=JsonValueKind.True) return true;
+            if (p.Name is "error" or "errorCode" or "error_code" or "errorMessage" or "error_message" &&
+                p.Value.ValueKind!=JsonValueKind.Null &&
+                (p.Value.ValueKind!=JsonValueKind.String || !string.IsNullOrWhiteSpace(p.Value.GetString()))) return true;
+            if (p.Name is "state" or "status") {
+                if (p.Value.ValueKind!=JsonValueKind.String) return true;
+                var state=p.Value.GetString();
+                if (state is null || state.EndsWith("_HOLD",StringComparison.OrdinalIgnoreCase) ||
+                    state.EndsWith("_DENIED",StringComparison.OrdinalIgnoreCase) ||
+                    new[]{"HOLD","DENIED","OFFLINE","FAILED","ERROR","CONSENT_REQUIRED"}.Contains(state,StringComparer.OrdinalIgnoreCase))
+                    return true;
+            }
+            if (p.Name is "result" or "receipt" or "nativeResult" or "owner" &&
+                LegacyOwnerDenial(p.Value,depth+1)) return true;
+        }
+        return false;
+    }
     private async Task DispatchLegacyNativeAsync(string action, JsonElement root, string source, long epoch)
     {
         var chatId = GetString(root, "chatId");
@@ -464,8 +487,10 @@ public partial class MainWindow
                     if (item.TryGetProperty("delta",out var delta) && delta.ValueKind==JsonValueKind.String)
                         PostMessage(new {kind="chatToken",chatId,token=delta.GetString()});
                 })));
-            if (!LegacyDocumentCurrent(source,epoch)) return;
-            if (!result.Accepted) throw new NativePipeHold(result.ErrorCode??"NATIVE_PROVIDER_HOLD");
+            if (!NativeP02Acl(sid,route) || !LegacyDocumentCurrent(source,epoch)) return;
+            if (!result.Accepted || !string.IsNullOrWhiteSpace(result.ErrorCode) ||
+                LegacyOwnerDenial(result.Result))
+                throw new NativePipeHold(result.ErrorCode??"NATIVE_OWNER_DENIAL_HOLD");
             if (action == "chatModels") {
                 var models = result.Result is JsonElement data && data.TryGetProperty("models",out var list)
                     ? list.Clone() : JsonSerializer.SerializeToElement(Array.Empty<string>());
