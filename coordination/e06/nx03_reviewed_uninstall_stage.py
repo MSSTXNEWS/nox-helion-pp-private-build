@@ -5,6 +5,9 @@ strict source admission fix, not an E07 pass or permission for recursive delete.
 """
 from __future__ import annotations
 import hashlib
+import os
+import stat
+import tempfile
 from pathlib import Path
 
 _ARCHIVED_SHA256 = "6853f3d4a32eb5946c3c68d22b0d61e3a402b729ebda225cd3f6b8b154b1ec55"
@@ -33,11 +36,77 @@ def _blob(data):
 
 
 def _plain(path):
-    if not isinstance(path, Path) or not path.is_file():
+    if not isinstance(path, Path):
         raise ReviewedRemoveHold("NX03_REVIEWED_REMOVE_FILE_REQUIRED")
     for part in (path, *path.parents):
-        if part.is_symlink() or getattr(part, "is_junction", lambda: False)():
+        try:
+            info = part.lstat()
+        except OSError as exc:
+            raise ReviewedRemoveHold("NX03_REVIEWED_REMOVE_FILE_REQUIRED") from exc
+        if stat.S_ISLNK(info.st_mode) or getattr(info, "st_file_attributes", 0) & 0x400:
             raise ReviewedRemoveHold("NX03_REVIEWED_REMOVE_REPARSE_HOLD")
+        if getattr(part, "is_junction", lambda: False)():
+            raise ReviewedRemoveHold("NX03_REVIEWED_REMOVE_REPARSE_HOLD")
+    info = path.lstat()
+    if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
+        # Never truncate a hard-linked foreign file or write to special paths.
+        raise ReviewedRemoveHold("NX03_REVIEWED_REMOVE_NONEXCLUSIVE_FILE_HOLD")
+
+
+def _atomic_stage_owned(owner: Path, before: bytes, staged: bytes) -> None:
+    """Write disposable R11 via unique exclusive temp, never truncate preimage.
+
+    Exact-path ownership is still required across cooperating build workers;
+    a filesystem rename is not a global compare-and-swap with rogue writers.
+    """
+    _plain(owner)
+    original = owner.lstat()
+    temp = None
+    temp_identity = None
+    try:
+        fd, name = tempfile.mkstemp(prefix=".nox-nx03-", suffix=".pending",
+                                    dir=str(owner.parent))
+        temp = Path(name)
+        try:
+            temp_identity = (os.fstat(fd).st_dev, os.fstat(fd).st_ino)
+            with os.fdopen(fd, "wb") as stream:
+                stream.write(staged)
+                stream.flush()
+                os.fsync(stream.fileno())
+        except BaseException:
+            # fdopen owns fd only after successful construction.
+            try:
+                os.close(fd)
+            except OSError:
+                pass
+            raise
+        os.chmod(temp, stat.S_IMODE(original.st_mode))
+        if temp.read_bytes() != staged:
+            raise ReviewedRemoveHold("NX03_ATOMIC_PENDING_READBACK_HOLD")
+        _plain(owner)
+        current = owner.lstat()
+        if ((current.st_dev, current.st_ino, current.st_mtime_ns,
+             current.st_size, current.st_nlink) !=
+            (original.st_dev, original.st_ino, original.st_mtime_ns,
+             original.st_size, original.st_nlink) or
+                owner.read_bytes() != before):
+            raise ReviewedRemoveHold("NX03_FOREIGN_OWNER_CHANGED_HOLD")
+        # Only an owner-verified, unique pending file may replace disposable R11.
+        os.replace(temp, owner)
+        temp = None
+    except OSError as exc:
+        raise ReviewedRemoveHold("NX03_ATOMIC_STAGE_IO_HOLD") from exc
+    finally:
+        if temp is not None and temp_identity is not None:
+            try:
+                info = temp.lstat()
+                if (stat.S_ISREG(info.st_mode) and
+                        (info.st_dev, info.st_ino) == temp_identity):
+                    temp.unlink()
+            except FileNotFoundError:
+                pass
+            except OSError:
+                pass  # A failed cleanup is not permission to touch foreign files.
 
 
 # The original NSIS /S and uninstaller use Windows PowerShell 5.1. Reuse
@@ -102,7 +171,7 @@ def stage_reviewed_remove(owner: Path, reviewed: Path) -> dict:
                 "release_accepted": False}
     if len(before) != _ARCHIVED_BYTES or hashlib.sha256(before).hexdigest() != _ARCHIVED_SHA256:
         raise ReviewedRemoveHold("NX03_REVIEWED_REMOVE_UNKNOWN_R11_PREIMAGE")
-    owner.write_bytes(staged)
+    _atomic_stage_owned(owner, before, staged)
     if owner.read_bytes() != staged or reviewed.read_bytes().replace(b"\r\n", b"\n") != canonical:
         raise ReviewedRemoveHold("NX03_REVIEWED_REMOVE_READBACK_HOLD")
     return {
