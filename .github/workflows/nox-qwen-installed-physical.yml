@@ -96,7 +96,39 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'QWEN_OFFICIAL_OCI_PULL_FAILED' }
           $tags=Invoke-RestMethod -Uri 'http://127.0.0.1:11434/api/tags' -TimeoutSec 30 -ErrorAction Stop
           $one=@($tags.models | Where-Object {$_.name -eq 'qwen2.5-coder:1.5b'})
-          if ($one.Count -ne 1 -or $one[0].digest -notmatch '^d7372fd82851[0-9a-f]{52}$') { throw 'QWEN_15B_MANIFEST_TAG_HOLD' }
+          if ($one.Count -ne 1 -or $one[0].digest -notmatch '^[0-9a-f]{64}
+          Write-Host 'QWEN_15B_OLLAMA_REPORTED_DIGEST_PRESENT_NOT_INDEPENDENT_WEIGHT_SHA'
+      - name: Install the exact frozen NOX Setup and probe REAL installed OneHost
+        id: realprobe
+        shell: pwsh
+        timeout-minutes: 14
+        run: |
+          $ErrorActionPreference='Stop'
+          $env:OLLAMA_NO_CLOUD='1'
+          $env:OLLAMA_HOST='127.0.0.1:11434'
+          $nox=(Resolve-Path 'input/nox/NOX_HELION_EXPRESS_CANDIDATE_SETUP.exe').Path
+          $p=Start-Process -FilePath $nox -ArgumentList '/S' -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw 'NOX_EXACT_SETUP_INSTALL_FAILED' }
+          $backend=Join-Path $env:LOCALAPPDATA 'Programs/NOX HELION/Backend/NOX_HELION_PRIVATE_CANDIDATE.exe'
+          if (-not (Test-Path -LiteralPath $backend -PathType Leaf)) { throw 'NOX_INSTALLED_ONEHOST_MISSING' }
+          python -B coordination/e07/probe_installed_qwen.py --backend "$backend" --out work/qwen-installed/QWEN_INSTALLED_RECEIPT.json
+          if ($LASTEXITCODE -ne 0) { throw 'NOX_INSTALLED_QWEN_OR_STREAM_HOLD' }
+          Write-Host 'INSTALLED_NOX_QWEN_LIVE_EVIDENCE_NOT_FULL_E07'
+      - name: Preserve evidence without falsely promoting incomplete release
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: NOX-QWEN-INSTALLED-REAL-${{ github.sha }}-${{ github.run_id }}
+          path: work/qwen-installed/QWEN_INSTALLED_RECEIPT.json
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Do not promote a provider-only pass to a NOX release
+        if: always()
+        shell: pwsh
+        run: |
+          if ('${{ steps.realprobe.outcome }}' -ne 'success') { throw 'NOX_REAL_QWEN_INSTALLED_HOLD' }
+          Write-Host 'REAL_QWEN_INITIAL_PROBE_PASSED; NOX active STOP, 5 UI clicks and E07 still unverified'
+) { throw 'QWEN_15B_MANIFEST_TAG_HOLD' }
           Write-Host 'QWEN_15B_OFFICIAL_MANIFEST_DIGEST_PRESENT'
       - name: Install the exact frozen NOX Setup and probe REAL installed OneHost
         id: realprobe

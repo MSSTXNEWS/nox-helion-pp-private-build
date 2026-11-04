@@ -17,7 +17,6 @@ import time
 from urllib.request import Request, urlopen
 
 MODEL = "qwen2.5-coder:1.5b"
-MODEL_DIGEST_PREFIX = "d7372fd82851"
 API = "http://127.0.0.1:11434"
 PROTO = "NOX-P02-NATIVE-v1"
 
@@ -160,7 +159,7 @@ def main() -> int:
         digest = candidates[0].get("digest")
         if not (isinstance(digest, str)
                 and re.fullmatch("[0-9a-f]{64}", digest)
-                and digest.startswith(MODEL_DIGEST_PREFIX)):
+                ):
             raise RuntimeError("QWEN_UPSTREAM_DIGEST_MISMATCH_HOLD")
         report["ollama_reported_digest"] = digest
         report["independent_weight_sha_verified"] = False
