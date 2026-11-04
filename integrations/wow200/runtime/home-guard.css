@@ -172,3 +172,149 @@ body.nox-wow-eco .nox-orbit-stage .nox-orbit-core .nox-cinema-orb__layers::befor
 .nox-orbit-stage[data-nox-mode="reduced"] .nox-orbit-core .nox-cinema-orb__layers::after{
  animation:none!important;filter:none!important;transform:none!important;
 }
+
+
+/* NOX SUPER WOW CINEMA LAYER V7 — STAGES 05–18.
+   Original procedural design. Reuse ONE D02 renderer, nine approved objects,
+   real existing host states and original particle SVG. Never alter orbit
+   coordinates, click targets, native routes, source images, or trusted ACL.
+   Optical effects here are artistic, not simulated sensor readings.
+   Inspiration candidates: OGL (Unlicense), tsParticles (MIT), postprocessing
+   (Zlib); no unreviewed third-party code or shaders copied. */
+
+/* 05 Photon orbit + 06 gravitational ejecta trails: the original SVG
+   renderer owns emission counts, paths and lifecycle. No second scheduler. */
+.nox-orbit-stage .nox-eclipse.nox-cinema-orb .nox-cinema-orb__rim {
+  inset:-1%;border-color:rgba(247,189,120,.44);
+  box-shadow:0 0 10px rgba(246,172,91,.32),
+             0 0 42px rgba(244,147,86,.16),
+             inset 0 0 24px rgba(112,192,232,.12);
+  background:
+    conic-gradient(from 20deg,
+      transparent 0deg,rgba(254,205,125,.04) 30deg,rgba(253,218,146,.55) 83deg,
+      transparent 118deg,rgba(127,214,235,.18) 184deg,
+      transparent 253deg,rgba(253,166,86,.28) 307deg,transparent 360deg);
+}
+.nox-orbit-stage .nox-eclipse.nox-cinema-orb .nox-cinema-orb__ejecta path {
+  filter:drop-shadow(0 0 2px rgba(249,194,123,.6))
+         drop-shadow(0 0 5px rgba(127,190,231,.22));
+}
+
+/* 07 host-state energy; the D02 JS only sets these states from trusted
+   events, never from animation timer or a fabricated telemetry stream. */
+.nox-orbit-stage[data-nox-state="thinking"] .nox-eclipse .nox-cinema-orb__corona {
+  border-color:rgba(144,206,249,.68);
+  box-shadow:0 0 34px rgba(88,173,246,.27),0 0 68px rgba(131,107,212,.1);
+}
+.nox-orbit-stage[data-nox-state="streaming"] .nox-eclipse .nox-cinema-orb__corona,
+.nox-orbit-stage[data-nox-state="training"] .nox-eclipse .nox-cinema-orb__corona {
+  border-color:rgba(119,231,229,.67);
+  box-shadow:0 0 28px rgba(98,227,227,.31),0 0 70px rgba(249,166,84,.15);
+}
+.nox-orbit-stage[data-nox-state="error"] .nox-eclipse .nox-cinema-orb__corona {
+  border-color:rgba(246,111,116,.75);
+  box-shadow:0 0 35px rgba(237,77,92,.28);
+}
+.nox-orbit-stage[data-nox-state="stopped"] .nox-cinema-orb__ejecta {
+  opacity:.08;
+}
+
+/* 08 Plasma filaments + 09 liquid obsidian caustics.
+   Keep all shimmer INSIDE decorative FX elements, not on buttons. */
+.nox-orbit-stage .nox-eclipse.nox-cinema-orb .nox-cinema-orb__filaments::before,
+.nox-orbit-stage .nox-eclipse.nox-cinema-orb .nox-cinema-orb__filaments::after {
+  content:"";position:absolute;inset:0;border-radius:50%;
+  pointer-events:none!important;
+}
+.nox-orbit-stage .nox-eclipse.nox-cinema-orb .nox-cinema-orb__filaments::before {
+  background:repeating-conic-gradient(from 9deg,
+     transparent 0deg,rgba(90,166,230,.22) 5deg,transparent 13deg,
+     rgba(255,165,96,.16) 27deg,transparent 39deg,transparent 58deg);
+  -webkit-mask-image:radial-gradient(ellipse,#0000 20%,#000 56%,#0000 73%);
+  mask-image:radial-gradient(ellipse,#0000 20%,#000 56%,#0000 73%);
+  animation:nox-cinema-v7-polar-wake 32s ease-in-out infinite alternate;
+}
+.nox-orbit-stage .nox-eclipse.nox-cinema-orb .nox-cinema-orb__filaments::after {
+  inset:10%;
+  background:radial-gradient(ellipse 45% 30% at 26% 19%,
+    rgba(225,246,249,.24),transparent 95%),
+    radial-gradient(ellipse 50% 70% at 82% 81%,
+    rgba(63,103,143,.29),transparent 90%);
+  mix-blend-mode:screen;
+  animation:nox-cinema-v7-ferro-caustic 15s ease-in-out infinite alternate;
+}
+@keyframes nox-cinema-v7-polar-wake {
+  0% {transform:rotate(-18deg);opacity:.35}
+  45% {transform:rotate(7deg);opacity:.57}
+  100% {transform:rotate(20deg);opacity:.72}
+}
+@keyframes nox-cinema-v7-ferro-caustic {
+  0% {transform:translate(-1.4%,1%) scale(.97);opacity:.36}
+  52% {transform:translate(1.2%,-.6%) scale(1.02);opacity:.58}
+  100% {transform:translate(-.5%,1.4%) scale(1);opacity:.42}
+}
+
+/* 10 spatial lensing + 11 warm/cold cinema grading. Lensing is a
+   stylized dual ring, NOT literal raytracing or a second WebGL context. */
+.nox-orbit-stage[data-nox-mode="max"] .nox-eclipse.nox-cinema-orb > .nox-cinema-orb__layers::before {
+  background:
+    radial-gradient(ellipse 88% 22% at 50% 49%,
+      transparent 35%,rgba(255,220,143,.72) 48%,rgba(255,132,66,.17) 61%,transparent 76%),
+    conic-gradient(from 31deg,
+      transparent 0deg,rgba(107,176,242,.48) 66deg,transparent 113deg,
+      rgba(249,167,100,.78) 190deg,transparent 248deg,
+      rgba(152,112,236,.42) 306deg,transparent 360deg);
+  box-shadow:0 0 45px rgba(242,143,79,.18),0 0 82px rgba(88,148,230,.1);
+}
+
+/* 12 eight unique atmospheric signatures. Deterministic offsets give
+   organic motion with no positional randomness and no overlapping hitboxes. */
+.nox-orbit-stage .nox-orbit-core.nox-cinema-orb:nth-child(2n) .nox-cinema-orb__filaments {
+  animation-delay:-7.1s;
+}
+.nox-orbit-stage .nox-orbit-core.nox-cinema-orb:nth-child(3n) .nox-cinema-orb__filaments {
+  animation-duration:37s;animation-delay:-12.8s;
+}
+.nox-orbit-stage .nox-orbit-core.nox-cinema-orb:nth-child(5n) .nox-cinema-orb__rim {
+  animation-duration:53s;animation-delay:-17s;
+}
+
+/* 13 readable HUD state, 14 cinematic state transitions: shadows only;
+   do not animate transforms of buttons, orbit centers or text geometry. */
+.nox-orbit-stage .nox-orbit-core.nox-cinema-orb[data-nox-state="speaking"] .nox-cinema-orb__rim {
+  border-color:rgba(151,241,246,.72);
+  box-shadow:0 0 18px rgba(131,231,246,.4);
+}
+.nox-orbit-stage .nox-orbit-core.nox-cinema-orb[data-nox-state="training"] .nox-cinema-orb__rim {
+  border-color:rgba(211,168,247,.66);
+  box-shadow:0 0 24px rgba(195,146,231,.32);
+}
+.nox-orbit-stage .nox-orbit-core.nox-cinema-orb[data-nox-state="success"] .nox-cinema-orb__rim {
+  border-color:rgba(136,233,180,.72);
+}
+.nox-orbit-stage .nox-orbit-core.nox-cinema-orb[data-nox-state="error"] .nox-cinema-orb__rim {
+  border-color:rgba(252,122,133,.72);
+}
+
+/* 15–18 adaptive governor: in ECO / REDUCED remove new costly layers.
+   The original engine retains STOP, click handling and all route semantics. */
+.nox-orbit-stage[data-nox-mode="eco"] .nox-eclipse .nox-cinema-orb__filaments::before,
+.nox-orbit-stage[data-nox-mode="eco"] .nox-eclipse .nox-cinema-orb__filaments::after,
+.nox-orbit-stage[data-nox-mode="reduced"] .nox-eclipse .nox-cinema-orb__filaments::before,
+.nox-orbit-stage[data-nox-mode="reduced"] .nox-eclipse .nox-cinema-orb__filaments::after,
+body.nox-wow-eco .nox-orbit-stage .nox-eclipse .nox-cinema-orb__filaments::before,
+body.nox-wow-eco .nox-orbit-stage .nox-eclipse .nox-cinema-orb__filaments::after {
+  animation:none!important;filter:none!important;opacity:0!important;
+}
+@media(prefers-reduced-motion:reduce){
+  .nox-orbit-stage .nox-cinema-orb__filaments::before,
+  .nox-orbit-stage .nox-cinema-orb__filaments::after {
+    animation:none!important;transform:none!important;filter:none!important;
+  }
+}
+@media(forced-colors:active) {
+  .nox-orbit-stage .nox-cinema-orb__filaments::before,
+  .nox-orbit-stage .nox-cinema-orb__filaments::after {
+    display:none!important;
+  }
+}
