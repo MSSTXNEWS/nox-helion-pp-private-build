@@ -1055,6 +1055,41 @@ $c11NsiPatched=$c11NsiOriginal.Substring(0,$c11Pos)+
 if ($c11NsiPatched.IndexOf('C11OldPayloadChecked:',[StringComparison]::Ordinal) -lt 0) {
   throw 'C11_NSIS_ROLLBACK_FENCE_STAGE_HOLD'
 }
+# B03 G4: a completed /ROLLBACK consumes __p01_previous but retains the
+# superseded current version in __p01_rollback_saved for NO-LOSS recovery.
+# A later plain /S update currently accepts that occupied saved slot, creates
+# another __p01_previous, and leaves the next /ROLLBACK unable to save the
+# current install. Refuse that ambiguous lifecycle BEFORE staging anything.
+# This is a disposable NSIS patch; the immutable original R11 is unchanged.
+$c11SavedRollbackOriginal=@'
+  CheckBackup:
+  IfFileExists "$BackupDir" 0 Preflight
+    Abort "Previous version backup exists. Run /ROLLBACK or preserve it before another update."
+  Preflight:
+'@
+$c11SavedRollbackReplacement=@'
+  CheckBackup:
+  IfFileExists "$BackupDir" 0 C11CheckSavedRollback
+    Abort "Previous version backup exists. Run /ROLLBACK or preserve it before another update."
+  C11CheckSavedRollback:
+  IfFileExists "$INSTDIR.__p01_rollback_saved" 0 Preflight
+    Abort "Rollback-save exists; preserve it before another update."
+  Preflight:
+'@
+$c11SavedRollbackOriginal=[regex]::Replace($c11SavedRollbackOriginal,'\r?\n',$c11Eol)
+$c11SavedRollbackReplacement=[regex]::Replace($c11SavedRollbackReplacement,'\r?\n',$c11Eol)
+$c11SavedAt=$c11NsiPatched.IndexOf($c11SavedRollbackOriginal,[StringComparison]::Ordinal)
+if ($c11SavedAt -lt 0 -or
+    $c11NsiPatched.LastIndexOf($c11SavedRollbackOriginal,[StringComparison]::Ordinal) -ne $c11SavedAt -or
+    $c11NsiPatched.Contains('C11CheckSavedRollback:')) {
+  throw 'C11_NSIS_SAVED_ROLLBACK_PREIMAGE_HOLD'
+}
+$c11NsiPatched=$c11NsiPatched.Replace($c11SavedRollbackOriginal,$c11SavedRollbackReplacement)
+if ($c11NsiPatched.IndexOf('C11CheckSavedRollback:',[StringComparison]::Ordinal) -lt 0) {
+  throw 'C11_NSIS_SAVED_ROLLBACK_STAGE_HOLD'
+}
+Write-Host 'C11_NSIS_SAVED_ROLLBACK_SLOT_FENCE_STAGED'
+
 # W04 R108: original R11 NSIS UninstallString emits warning 6000 due to
 # backslash-escaped quotes. Stage the officially documented quote form ONLY
 # in the disposable R11 source; original 729 archive remains immutable.

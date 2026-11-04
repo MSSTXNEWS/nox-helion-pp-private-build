@@ -34,5 +34,27 @@ class C11RollbackSafetyTest(unittest.TestCase):
         self.assertEqual(stage.replace(guard + "\n", "", 1), donor)
 
 
+    def test_saved_rollback_slot_refuses_second_update_before_staging(self):
+        """The original R11 owner is immutable; B03 stages only a safe check."""
+        builder = BUILDER.read_text(encoding="utf-8")
+        donor = ORIGINAL.read_text(encoding="utf-8")
+        pattern = r"\$c11SavedRollback(Original|Replacement)=@'\n(?P<body>.*?)\n'@"
+        matches = {m.group(1): m.group("body") for m in re.finditer(pattern, builder, re.DOTALL)}
+        self.assertEqual(set(matches), {"Original", "Replacement"})
+        old, new = matches["Original"], matches["Replacement"]
+        self.assertEqual(donor.count(old), 1)
+        self.assertNotIn("C11CheckSavedRollback:", donor)
+        staged = donor.replace(old, new, 1)
+        self.assertEqual(staged.count("C11CheckSavedRollback:"), 1)
+        self.assertIn('IfFileExists "$BackupDir" 0 C11CheckSavedRollback', staged)
+        self.assertIn('IfFileExists "$INSTDIR.__p01_rollback_saved" 0 Preflight', staged)
+        self.assertIn('Abort "Rollback-save exists; preserve it before another update."', staged)
+        self.assertLess(staged.index("C11CheckSavedRollback:"), staged.index("  Preflight:"))
+        self.assertLess(staged.index("C11CheckSavedRollback:"), staged.index("  StagePayload:"))
+        self.assertLess(builder.index("C11_NSIS_SAVED_ROLLBACK_SLOT_FENCE_STAGED"),
+                        builder.index("& $makensisPath"))
+        self.assertEqual(staged.replace(new, old, 1), donor)
+
+
 if __name__ == "__main__":
     unittest.main()
