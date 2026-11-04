@@ -156,16 +156,25 @@ def _read_locked_e06_json(path: Path) -> dict:
     return data
 
 
-def samevm_lifecycle_verified(stages: object) -> bool:
-    """Validate the physical E06 nested uninstall receipt before E07 install.
+# Physical frozen E06 c35c1d33 / Setup af87a618 receipt observed 1004.
+# A future SetupSHA MUST explicitly pin its OWN manifest count after physical
+# verification; neither JSON claims nor source-tree size can change this value.
+FROZEN_E06_OWNED_COUNT = 1004
 
-    A missing or malformed container is a normal fail-closed receipt mismatch,
-    not an unexpected AttributeError and never evidence of release acceptance.
+
+def samevm_lifecycle_verified(
+    stages: object, *, expected_owned_files: int = FROZEN_E06_OWNED_COUNT
+) -> bool:
+    """Fail closed on exact frozen E06 owned count and five real exit codes.
+
+    E07's next physical candidate may change the source-pinned count only
+    together with its independently frozen source/Setup SHA+BuildID.
     """
-    if type(stages) is not dict:
+    if (type(stages) is not dict or type(expected_owned_files) is not int or
+            not 1 <= expected_owned_files <= 4096):
         return False
     return (type(stages.get("uninstall_owned_files_checked")) is int
-            and stages["uninstall_owned_files_checked"] == 1004
+            and stages["uninstall_owned_files_checked"] == expected_owned_files
             and all(type(stages.get(name)) is dict and
                     type(stages[name].get("code")) is int and
                     stages[name]["code"] == 0
