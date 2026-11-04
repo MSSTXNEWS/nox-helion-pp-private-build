@@ -57,6 +57,16 @@ def producer_failure_witness(log, exit_code):
     result["diagnostic_tokens"] = list(dict.fromkeys(tokens))[-10:]
     result["exception_types"] = list(dict.fromkeys(exceptions))[-6:]
     return result
+def consumer_failure_witness(log, exit_code):
+    """Expose only bounded categories from a FAILED original WPF/NSIS child.
+
+    Keep the child exit authoritative, never print raw paths/secrets and never
+    use this diagnostic as an installer, live-model or E07 release grant.
+    """
+    proof = producer_failure_witness(log, exit_code)
+    proof["consumer_exit_code"] = proof.pop("producer_exit_code")
+    return proof
+
 
 def installed_manifest_failure_evidence(lifecycle):
     """Surface bounded fail-closed owner verification category, never raw path or secrets."""
@@ -280,6 +290,9 @@ def main():
         second=run("02_WPF_NSIS_ONEHOST",CONSUMER,env,1100)
         steps.append(second)
         if second["return_code"]!=0 or not RESULT.is_file():
+            print("T06_WPF_NSIS_CONSUMER_FIRST_FAILURE "+json.dumps(
+                consumer_failure_witness(OUT/second["log"], second["return_code"]),
+                sort_keys=True,separators=(",",":")), flush=True)
             raise RuntimeError("T06_LOCAL_WPF_NSIS_CONSUMER_FAILED")
         onehost=json.loads(RESULT.read_text("utf-8"))
         if onehost.get("backend_sha256")!=py["exe_sha256"] or \

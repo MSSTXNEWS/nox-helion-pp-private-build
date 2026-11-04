@@ -15,6 +15,11 @@ assert len(HELPER) == 1, "T06_NATIVE_PRODUCER_FIRST_FAILURE_WITNESS_ABSENT"
 NS = {"os": os, "re": re, "stat": stat}
 exec(compile(ast.Module(body=HELPER, type_ignores=[]), str(SOURCE), "exec"), NS)
 witness = NS["producer_failure_witness"]
+CONSUMER_HELPER = [node for node in TREE.body
+                   if isinstance(node, ast.FunctionDef) and node.name == "consumer_failure_witness"]
+assert len(CONSUMER_HELPER) == 1, "T06_NATIVE_CONSUMER_FIRST_FAILURE_WITNESS_ABSENT"
+exec(compile(ast.Module(body=CONSUMER_HELPER, type_ignores=[]), str(SOURCE), "exec"), NS)
+consumer_witness = NS["consumer_failure_witness"]
 
 class NativeProducerFirstFailure(unittest.TestCase):
     def test_real_error_codes_no_secret_values(self):
@@ -64,6 +69,31 @@ class NativeProducerFirstFailure(unittest.TestCase):
                       SOURCE.read_text(encoding="utf-8"))
         self.assertIn('raise RuntimeError("T06_LOCAL_NATIVE_PRODUCER_FAILED")',
                       SOURCE.read_text(encoding="utf-8"))
+
+    def test_consumer_original_firstfail_bounded(self):
+        with tempfile.TemporaryDirectory() as directory:
+            log = Path(directory) / "02_WPF_NSIS_ONEHOST.log"
+            log.write_text("credential=secret-value\nRuntimeError: T06_PACKAGE_COMPILE_SOURCE_HEAD_OR_729_HOLD\n", encoding="utf-8")
+            proof = consumer_witness(log, 7)
+            self.assertEqual(proof["consumer_exit_code"], 7)
+            self.assertNotIn("producer_exit_code", proof)
+            self.assertEqual(proof["diagnostic_tokens"], ["T06_PACKAGE_COMPILE_SOURCE_HEAD_OR_729_HOLD"])
+            self.assertEqual(proof["exception_types"], ["RuntimeError"])
+            self.assertIs(proof["release_accepted"], False)
+            self.assertNotIn("secret-value", repr(proof))
+
+    def test_consumer_missing_log_still_not_pass(self):
+        with tempfile.TemporaryDirectory() as directory:
+            proof = consumer_witness(Path(directory) / "missing.log", 124)
+            self.assertEqual(proof["consumer_exit_code"], 124)
+            self.assertIsNone(proof["log_bytes"])
+            self.assertEqual(proof["diagnostic_tokens"], [])
+            self.assertIs(proof["release_accepted"], False)
+
+    def test_consumer_exact_child_log_used_and_failure_retained(self):
+        text = SOURCE.read_text(encoding="utf-8")
+        self.assertIn('consumer_failure_witness(OUT/second["log"], second["return_code"])', text)
+        self.assertIn('raise RuntimeError("T06_LOCAL_WPF_NSIS_CONSUMER_FAILED")', text)
 
 if __name__ == "__main__":
     unittest.main()
