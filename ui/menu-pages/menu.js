@@ -1,5 +1,5 @@
 import {DIRECTIONS,WORLDS,CORE_IDS,PERSONAS,PRIMARY,ROUTE_COUNT,getWorld,getRoute,worldGroups} from './express-layout.mjs';
-import {createNativeMenuClient,isNativeChatTerminal,canonicalChatContext,nativeOwnerReceiptHolds} from '../onehost-menu-bindings.mjs';
+import {createNativeMenuClient,isNativeChatTerminal,canonicalChatContext,nativeOwnerReceiptHolds,nativeOwnerActionReceipt} from '../onehost-menu-bindings.mjs';
 import {firstBootTruth} from '../firstboot-truth.mjs';
 const doc=document,$=id=>doc.getElementById(id);
 const el=(tag,cls,label)=>{const x=doc.createElement(tag);if(cls)x.className=cls;if(label!==undefined)x.textContent=label;return x;};
@@ -121,11 +121,11 @@ function pending(id,label){
    else{
     say('Запрашиваю подтверждение владельца для очереди S03...');
     const result=await client.request('chat.commands',{action:'selfbuilder.propose',task,...scope});
-    const receipt=result?.result;
-    const runId=receipt?.run_id;
-    if(result?.state==='COMPLETED'&&receipt?.ack===true&&
-       typeof runId==='string'&&/^S03-[A-Za-z0-9._:-]{1,128}$/.test(runId)&&
-       typeof receipt.source_head==='string'&&/^[0-9a-f]{40}(?:[0-9a-f]{24})?$/.test(receipt.source_head)){
+    // A transport COMPLETED is not an S03 queue acknowledgement. Reuse
+    // exact native route + owner/consent validation, never a UI-only receipt.
+    const approved=nativeOwnerActionReceipt(result,'chat.commands','selfbuilder.propose');
+    const runId=approved.run_id;
+    if(approved.ack===true){
      say('Задание принято в S03: RunID '+runId+'. Это не сборка патча и не автоматическое обучение.');
     }else{offerCopy();say('ACK/RunID не подтверждён OneHost. Задание доступно для копирования.');}
    }
