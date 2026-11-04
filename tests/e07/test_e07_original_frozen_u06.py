@@ -76,11 +76,15 @@ class FrozenOriginalU06(unittest.TestCase):
         # The old reviewed source+Setup bytes are still frozen in native code.
         self.assertEqual(MOD.ORIGINAL_E06_SOURCE, "fe21790af418c8c1083946595811b67c9c03c49d")
         self.assertEqual(MOD.ORIGINAL_E06_SETUP_SHA, "1b78fba3fa158673814b31f211063022fd2bff0ae7ff25f14ba3db2a47c484c2")
-    def test_release_stays_hold(self):
+    def test_release_stays_hold_without_final_same_setup_receipts(self):
         script=(ROOT/"coordination/e07/independent_setup_e07.py").read_text(encoding="utf-8")
         self.assertIn('"release_accepted":False}',script)
         self.assertIn('"release_accepted":False,"independent_e07":"HOLD"',script)
         self.assertIn('result["checks"]["installed_five_primary_actions"] = evaluate_primary(',script)
-        self.assertIn('E07_VISUAL_AND_PRIVILEGED_FUNCTION_ACCEPTANCE_NOT_TESTED',script)
+        self.assertIn('E07_FINAL_VISUAL_RECEIPT_NOT_PROVIDED',script)
+        self.assertIn('E07_FINAL_FUNCTION_RECEIPT_NOT_PROVIDED',script)
+        self.assertIn('result["checks"]["final_acceptance"] = evaluate_final_acceptance(',script)
+        self.assertIn('result["independent_e07"] = "PASS"',script)
+        self.assertIn('result["release_accepted"] = True',script)
         self.assertIn('return 0 if result["independent_e07"]=="PASS" else 1',script)
 if __name__=="__main__": unittest.main()
