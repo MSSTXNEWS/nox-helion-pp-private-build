@@ -14,6 +14,8 @@ import re
 import stat
 
 EXPECTED_ZIP_SHA="90076eba83a213ba2b410632ced3288d41a6691ab63f81ad0520aa3cbbbfcb52"
+HOME_R11_EXPECTED_BYTES=94908
+HOME_R11_EXPECTED_SHA256='b57d58bb001c9826feb3bf7ff19510d047c7ec2926ee8b703538dfca886a960b'
 VALIDATED_OLD_PYTHON_SHA="4e488372cf3f6410d268a7ef72b3e4b359a7a3e6642c7a16ac2e6f7eb06fc5f3"
 def sha(path):
     h=hashlib.sha256()
@@ -22,6 +24,27 @@ def sha(path):
     return h.hexdigest()
 def need(ok,msg):
     if not ok:raise RuntimeError(msg)
+
+def attest_original_home_provenance(original_home, published_home):
+    """Source-pinned R11 HOME bytes and actual NSIS payload; NOT GUI acceptance."""
+    original_home, published_home=Path(original_home),Path(published_home)
+    need(original_home.is_file() and not original_home.is_symlink(),
+         'T06_ORIGINAL_HOME_REGULAR_FILE_HOLD')
+    need(original_home.stat().st_size==HOME_R11_EXPECTED_BYTES,
+         'T06_ORIGINAL_HOME_BYTES_HOLD')
+    original_digest=sha(original_home)
+    need(original_digest==HOME_R11_EXPECTED_SHA256,
+         'T06_ORIGINAL_HOME_PIN_HOLD')
+    need(published_home.is_file() and not published_home.is_symlink(),
+         'T06_PUBLISHED_HOME_REGULAR_FILE_HOLD')
+    published_digest=sha(published_home)
+    return {'original_home_bytes':HOME_R11_EXPECTED_BYTES,
+            'original_home_sha256':original_digest,
+            'published_home_bytes':published_home.stat().st_size,
+            'published_home_sha256':published_digest,
+            'published_equals_original':published_digest==original_digest,
+            'five_primary_installed_uia':'NOT_RUN',
+            'release_accepted':False}
 
 def verify_source_tree_entry(path, root):
     """Reject unmanifested directory junctions before a directory can be skipped.
@@ -657,6 +680,8 @@ def build(root,staged):
             "release_accepted":False
         }
         print("T06_MEGAB_R76_SAME_ONEHOST_ASSETS_14_PASS_NOT_E07",flush=True)
+    home_evidence=attest_original_home_provenance(
+        original_assets/"index.html",payload/"Assets/index.html")
     backend=payload/"Backend"
     backend.mkdir(exist_ok=True)
     shutil.copy2(exe_path,backend/exe_path.name)
@@ -767,6 +792,7 @@ def build(root,staged):
          "e07":"NOT_ACCEPTED","release_accepted":False,
          "webview2_p01_preflight_sha256":webview_proof["sha256"],
          "installed_owner_verifier":verifier_proof,
+         "original_home_provenance":home_evidence,
          "webview2_p01_source_git_blob":webview_proof["source_git_blob"],
          "webview2_e06_donor_git_blob":webview_proof.get("e06_donor_git_blob")}
     if megab_attestation is not None:
