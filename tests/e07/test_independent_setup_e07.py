@@ -499,9 +499,9 @@ class IndependentE07(unittest.TestCase):
 
     def test_u11_readonly_primary_navigation_requires_four_genuine_fresh_routes(self):
         labels = ("INSTALL", "MODELS", "LEARN", "SETTINGS")
-        base = {"schema":"NOX-E07-PRIMARY-NAV-v1","actions":[
+        base = {"schema":"NOX-E07-PRIMARY-NAV-v2","actions":[
             {"action":name,"invoked":True,"sameHwndAlive":True,
-             "beforeHeading":False,"afterHeading":True} for name in labels]}
+             "beforeDestination":False,"afterDestination":True} for name in labels]}
         proof = MOD.classify_readonly_primary_navigation_witness(base)
         self.assertEqual(proof["status"],"OBSERVED")
         self.assertEqual(proof["actions_invoked"],4)
@@ -509,8 +509,20 @@ class IndependentE07(unittest.TestCase):
         self.assertEqual(proof["model_inference"],"NOT_TESTED")
         self.assertEqual(proof["visual_e07"],"HOLD")
         self.assertIs(proof["release_accepted"],False)
+        # The physical witness MUST observe the actual original destination
+        # as a VISIBLE screen plus a freshly FOCUSED existing control.
+        # INSTALL/MODELS/LEARN may share R11's original CONTROL CENTER,
+        # but focus the distinct approved buttons and never trigger mutation.
+        wire=FILE.read_text(encoding="utf-8")
+        for original in ("КОНТРОЛЬ СИСТЕМЫ", "УСТАНОВИТЬ NOX",
+                         "NOX · CONTROL CENTER", "МОДЕЛИ И КОМПОНЕНТЫ",
+                         "ЗАПУСТИТЬ ОБУЧЕНИЕ", "СИСТЕМА",
+                         "← НАЗАД В МЕНЮ", "$v.HasKeyboardFocus",
+                         "Test-RealDestination $root $name",
+                         "Test-RealDestination $fresh $name"):
+            self.assertIn(original,wire)
         for index in range(4):
-            for change in ({"afterHeading":False},{"beforeHeading":True},
+            for change in ({"afterDestination":False},{"beforeDestination":True},
                            {"invoked":False},{"sameHwndAlive":False}):
                 actions=[dict(x) for x in base["actions"]]
                 actions[index].update(change)
