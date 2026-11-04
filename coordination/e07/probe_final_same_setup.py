@@ -75,6 +75,97 @@ def _run_ps(source: str, *, timeout: int=90, phase: str="UNKNOWN", env: dict|Non
     return result
 
 
+
+def dismiss_readonly_models_catalog_consent(hwnd: int) -> dict:
+    """Close only a known *navigation-generated* dialog with its negative action.
+
+    The real same-WPF UIA navigation can leave an owner consent dialog open
+    for models.catalog. Its presence must never count as permission PASS or
+    block the separate INSTALL/MODELS/LEARN/SETTINGS physical observations.
+    Unknown/privileged dialogs remain untouched and fail closed.
+    """
+    e07.require(type(hwnd) is int and hwnd>0, "E07_FINAL_NAV_DIALOG_HWND_HOLD")
+    ps = r'''
+$ErrorActionPreference='Stop'
+[Console]::OutputEncoding=[System.Text.Encoding]::UTF8
+Add-Type -AssemblyName UIAutomationClient
+Add-Type -AssemblyName UIAutomationTypes
+$h=[IntPtr]__HWND__
+$root=[System.Windows.Automation.AutomationElement]::FromHandle($h)
+if($null -eq $root){throw 'E07_NAV_DIALOG_ORIGINAL_ROOT_HOLD'}
+$pidNumber=[int]$root.Current.ProcessId
+if($pidNumber -le 0){throw 'E07_NAV_DIALOG_ORIGINAL_PID_HOLD'}
+$desktop=[System.Windows.Automation.AutomationElement]::RootElement
+function OwnerConsent {
+ $wins=$desktop.FindAll([System.Windows.Automation.TreeScope]::Children,
+                         [System.Windows.Automation.Condition]::TrueCondition)
+ if($wins.Count -gt 2048){throw 'E07_NAV_DIALOG_TREE_LIMIT_HOLD'}
+ $found=@()
+ foreach($w in $wins){
+  try {
+   $v=$w.Current
+   if($v.ProcessId -eq $pidNumber -and
+      ($v.Name+'').Trim() -ceq 'NOX HELION · Native consent' -and
+      $v.ControlType -eq [System.Windows.Automation.ControlType]::Window){
+     $found+=,$w
+   }
+  }catch{}
+ }
+ return ,$found
+}
+$dialogs=@(OwnerConsent)
+if($dialogs.Count -gt 1){throw 'E07_NAV_DIALOG_MULTIPLE_OWNER_HOLD'}
+if($dialogs.Count -eq 0){
+ [pscustomobject]@{schema='NOX-E07-NAV-DIALOG-CLOSE-v1';status='ABSENT';
+   ownerProcessIdMatched=$true;negativeActionInvoked=$false;
+   permissionGranted=$false}|ConvertTo-Json -Compress;exit 0
+}
+$dialog=$dialogs[0]
+$tree=$dialog.FindAll([System.Windows.Automation.TreeScope]::Descendants,
+                       [System.Windows.Automation.Condition]::TrueCondition)
+if($tree.Count -gt 512){throw 'E07_NAV_DIALOG_CHILDREN_LIMIT_HOLD'}
+$routeCount=0
+$no=@()
+foreach($el in $tree){
+ try {
+  $v=$el.Current
+  if($v.ControlType -eq [System.Windows.Automation.ControlType]::Text -and
+     ($v.Name+'').Trim() -ceq 'Разрешить локальный маршрут NOX: models.catalog?'){
+    $routeCount++
+  }
+  if($v.ControlType -eq [System.Windows.Automation.ControlType]::Button -and
+     ($v.Name+'').Trim() -in @('No','Нет') -and $v.IsEnabled -and
+     -not $v.IsOffscreen -and $v.BoundingRectangle.Width -ge 20){
+    $no+=,$el
+  }
+ }catch{}
+}
+if($routeCount -ne 1 -or $no.Count -ne 1){
+ throw 'E07_NAV_DIALOG_NOT_READONLY_CATALOG_HOLD'
+}
+$p=$no[0].GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)
+if($null -eq $p){throw 'E07_NAV_DIALOG_NEGATIVE_INVOKE_HOLD'}
+$p.Invoke()
+$closed=$false
+for($i=0;$i -lt 20;$i++){
+ Start-Sleep -Milliseconds 200
+ if(@(OwnerConsent).Count -eq 0){$closed=$true;break}
+}
+if(-not $closed){throw 'E07_NAV_DIALOG_NEGATIVE_NOT_CLOSED_HOLD'}
+[pscustomobject]@{schema='NOX-E07-NAV-DIALOG-CLOSE-v1';status='NEGATIVE_DISMISSED';
+ ownerProcessIdMatched=$true;negativeActionInvoked=$true;
+ permissionGranted=$false}|ConvertTo-Json -Compress
+'''.replace("__HWND__",str(hwnd))
+    raw=_run_ps(ps,timeout=25,phase="UNKNOWN")
+    e07.require(raw.get("schema")=="NOX-E07-NAV-DIALOG-CLOSE-v1" and
+                raw.get("status") in ("ABSENT","NEGATIVE_DISMISSED") and
+                raw.get("ownerProcessIdMatched") is True and
+                raw.get("permissionGranted") is False and
+                raw.get("negativeActionInvoked") is
+                    (raw.get("status")=="NEGATIVE_DISMISSED"),
+                "E07_FINAL_NAV_DIALOG_NEGATIVE_RECEIPT_HOLD")
+    return raw
+
 def _uia_script(hwnd: int, operation: str, *, png: Path|None=None) -> str:
     e07.require(type(hwnd) is int and hwnd>0,"E07_FINAL_BAD_HWND_HOLD")
     png_path=(str(png).replace("'","''") if png else "")
@@ -395,6 +486,18 @@ def run(hwnd: int, install: Path, local: Path, *, source_sha: str, setup_sha: st
         e07.require(precomputed_visual is None,"E07_PRENAV_VISUAL_MODE_HOLD")
         return visual, {}
 
+    # Navigation to the original Model Center may display a real WPF
+    # models.catalog consent dialog. Close only that exact OWNER dialog with
+    # its NEGATIVE button before independent function attempts. This does
+    # not authorize any privileged operation or modify native ACL.
+    try:
+        navigation_consent = dismiss_readonly_models_catalog_consent(hwnd)
+    except (e07.Hold, OSError, ValueError, subprocess.TimeoutExpired) as exc:
+        navigation_consent = {"status":"HOLD",
+                              "error":str(exc) if isinstance(exc,e07.Hold)
+                              else "E07_NAV_DIALOG_"+type(exc).__name__.upper()+"_HOLD",
+                              "permissionGranted":False}
+
     actions={}
     def observed(action: str, detail: dict) -> None:
         # An installed command, ModelCenter window, GPU preflight or settings
@@ -503,5 +606,6 @@ def run(hwnd: int, install: Path, local: Path, *, source_sha: str, setup_sha: st
         attempt(name,callback)
 
     functions={"schema":e07.FINAL_FUNCTION_SCHEMA,"source_sha":source_sha,
-               "setup_sha256":setup_sha,"release_accepted":False,"actions":actions}
+               "setup_sha256":setup_sha,"release_accepted":False,"actions":actions,
+               "navigation_consent_cleanup":navigation_consent}
     return visual,functions
