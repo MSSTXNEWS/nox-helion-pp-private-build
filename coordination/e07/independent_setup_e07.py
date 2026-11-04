@@ -907,7 +907,8 @@ def original_wpf_hwnd(pid: int) -> int | None:
     return handle if type(handle) is int and handle > 0 else None
 
 
-def gui_hwnd(shell: Path, local: Path, *, safe_nav: bool = False) -> dict:
+def gui_hwnd(shell: Path, local: Path, *, safe_nav: bool = False,
+             final_probe=None) -> dict:
     """Independently prove fresh WPF/WebView2 NAV_OK+native handshake+HWND."""
     require(clean_file(shell), "E07_WPF_SHELL_MISSING")
     log = local / "NOX_HELION/P01/logs/shell.log"
@@ -977,13 +978,25 @@ def gui_hwnd(shell: Path, local: Path, *, safe_nav: bool = False) -> dict:
                         except Hold as exc:
                             nav = {"status":"HOLD","error":str(exc),
                                    "navigation_verified":"NOT_TESTED","visual_e07":"HOLD"}
+                    # The original WPF HWND is alive HERE. Running the physical
+                    # visual/function witness after this function returns would
+                    # use a terminated shell and cannot establish same-Setup proof.
+                    final_witness = {"status":"HOLD", "error":"E07_FINAL_PHYSICAL_NOT_RUN"}
+                    if final_probe is not None:
+                        try:
+                            final_witness = final_probe(handle)
+                        except (Hold, OSError, ValueError, subprocess.TimeoutExpired) as exc:
+                            final_witness = {"status":"HOLD", "error":str(exc) if isinstance(exc, Hold)
+                                             else "E07_FINAL_"+type(exc).__name__.upper()+"_HOLD"}
+                        except Exception as exc:
+                            final_witness = {"status":"HOLD", "error":"E07_FINAL_UNEXPECTED_"+type(exc).__name__.upper()+"_HOLD"}
                     return {"gui_visible_hwnd": "PASS", "stable_seconds": 8,
                             "webview_navigation": "PASS", "shell_native_ipc": "PASS",
                             "independent_webview_log": "CURRENT_PROCESS_FRESH_NAV_AND_IPC",
                             "five_primary_buttons": buttons,
                             "ui_chat_action_probe": action,
                             "ui_safe_primary_navigation": nav,
-                            "visual_e07": "HOLD"}
+                            "visual_e07": "HOLD", "final_physical_witness":final_witness}
             else:
                 started = None
             time.sleep(0.45)
@@ -1256,7 +1269,8 @@ def verify_fresh_install_targets(local: Path, install: Path, stage: Path,
             "E07_VM_NOT_FRESH_SKIP")
 
 
-def lifecycle(setup: Path, result: dict, *, frozen_source: str = "", physical_nav: bool = False) -> None:
+def lifecycle(setup: Path, result: dict, *, frozen_source: str = "", physical_nav: bool = False,
+              final_probe_dir: Path | None = None) -> None:
     local = Path(os.environ["LOCALAPPDATA"])
     base = local / "Programs"
     install = base / "NOX HELION"
@@ -1289,9 +1303,26 @@ def lifecycle(setup: Path, result: dict, *, frozen_source: str = "", physical_na
             "status": "HOLD",
             "error": str(exc) if isinstance(exc, Hold) else
                      "E07_NATIVE_STORE_" + type(exc).__name__.upper() + "_HOLD"}
+    def physical_final_probe(hwnd: int) -> dict:
+        # Source-only scripts or old-Setup receipts cannot replace installed
+        # same-WPF measurements. The probe emits both subreceipts only on success.
+        from probe_final_same_setup import run as probe_run
+        require(final_probe_dir is not None, "E07_FINAL_EVIDENCE_DIR_REQUIRED")
+        visual, functions = probe_run(hwnd, install, local, source_sha=frozen_source,
+                                      setup_sha=sha256(setup), out_dir=final_probe_dir)
+        for name, value in (("VISUAL", visual), ("FUNCTIONS", functions)):
+            target = final_probe_dir / ("E07_FINAL_"+name+".json")
+            require(not target.exists(), "E07_FINAL_RECEIPT_COLLISION_HOLD")
+            target.write_text(json.dumps(value, sort_keys=True, indent=2), encoding="utf-8")
+        return {"status":"PASS", "source_sha":frozen_source, "setup_sha256":sha256(setup),
+                "visual_receipt":"E07_FINAL_VISUAL.json", "function_receipt":"E07_FINAL_FUNCTIONS.json"}
+
     result["checks"]["installed_gui"] = gui_hwnd(
         install/"NOX.P01.Shell.exe", local,
-        safe_nav=physical_nav or frozen_source == "e888941626191c17d19d372889b1f96842c15e1b")
+        safe_nav=physical_nav or frozen_source == "e888941626191c17d19d372889b1f96842c15e1b",
+        final_probe=physical_final_probe if final_probe_dir is not None else None)
+    result["checks"]["installed_final_physical"] = result["checks"]["installed_gui"].get(
+        "final_physical_witness", {"status":"HOLD", "error":"E07_FINAL_PHYSICAL_NOT_RUN"})
     # LIVE Qwen, nonempty persisted SQLite and in-flight STOP must be
     # measured BEFORE this exact installed Setup undergoes update/uninstall.
     # A provider-offline HOLD must never skip conservative lifecycle cleanup.
@@ -1383,8 +1414,12 @@ def main() -> int:
             setup=source/"e06"/"onehost-wow-diagnostic"/"NOX-HELION-V16-DIAGNOSTIC-SETUP.exe"
             receipt=source/"e06"/"onehost-wow-diagnostic"/"E07_BUILT_HANDOFF.json"
             result["checks"]["artifact"] = setup_lock(setup,receipt,candidate=args.artifact_kind)
+        # All physical final witnesses are created on this one installed Setup,
+        # not imported from an unrelated workflow or a previous candidate.
+        physical_dir = args.out.parent / "same-setup-final"
         lifecycle(setup,result,frozen_source=source_sha,
-                  physical_nav=args.artifact_kind in ("original-30a", "d02") or args.artifact_kind == "d02-91a6")
+                  physical_nav=args.artifact_kind in ("original-30a", "d02") or args.artifact_kind == "d02-91a6",
+                  final_probe_dir=physical_dir if args.artifact_kind in ("d02", "d02-91a6") else None)
         # The complete physical install/update/rollback/uninstall lifecycle ran
         # on this exact Setup. These facts do NOT prove inference or final E07.
         result["checks"]["installed_lifecycle"] = {
@@ -1410,10 +1445,20 @@ def main() -> int:
         # Final release is admitted only when independently produced same-Setup
         # visual and functional subreceipts are supplied and pass strict shape,
         # identity and per-action checks. Missing evidence stays HOLD.
+        if args.artifact_kind in ("d02", "d02-91a6"):
+            witness = result["checks"].get("installed_final_physical", {})
+            require(witness.get("status") == "PASS" and
+                    witness.get("setup_sha256") == setup_sha and
+                    witness.get("source_sha") == source_sha,
+                    witness.get("error", "E07_FINAL_SAME_SETUP_PHYSICAL_HOLD"))
+            visual_path = physical_dir / "E07_FINAL_VISUAL.json"
+            function_path = physical_dir / "E07_FINAL_FUNCTIONS.json"
+        else:
+            visual_path, function_path = args.visual_receipt, args.function_receipt
         visual_receipt = load_final_acceptance_receipt(
-            args.visual_receipt, "E07_FINAL_VISUAL_RECEIPT_NOT_PROVIDED")
+            visual_path, "E07_FINAL_VISUAL_RECEIPT_NOT_PROVIDED")
         function_receipt = load_final_acceptance_receipt(
-            args.function_receipt, "E07_FINAL_FUNCTION_RECEIPT_NOT_PROVIDED")
+            function_path, "E07_FINAL_FUNCTION_RECEIPT_NOT_PROVIDED")
         result["checks"]["final_acceptance"] = evaluate_final_acceptance(
             visual_receipt, function_receipt,
             source_sha=source_sha, setup_sha=setup_sha)
