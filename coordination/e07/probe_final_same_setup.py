@@ -113,7 +113,9 @@ function Root { $r=[System.Windows.Automation.AutomationElement]::FromHandle($ha
 # UIA FindAll yields AutomationElementCollection (IEnumerable). Unary comma prevents
 # PowerShell function-output enumeration into Object[], preserving .Item(index).
 function Tree($r) { $a=$r.FindAll([System.Windows.Automation.TreeScope]::Descendants,[System.Windows.Automation.Condition]::TrueCondition); if($a.Count -gt 4096){throw 'TREE_LIMIT'}; return ,$a }
-function Visible($v) { $b=$v.BoundingRectangle; return ($v.IsEnabled -and -not $v.IsOffscreen -and $b.Width -ge 14 -and $b.Height -ge 10) }
+# Same admission as the independent five-button source proof: small or
+# clipped controls must never create a second real actionable button.
+function Visible($v) { $b=$v.BoundingRectangle; return ($v.IsEnabled -and -not $v.IsOffscreen -and $b.Width -ge 20 -and $b.Height -ge 12) }
 function Normalize([string]$s) { return ($s+'').Trim().TrimStart([char[]]@([char]0x2726,[char]0x2605,[char]0x2022,[char]0x20)).Trim().ToUpperInvariant() }
 function OneButton([string]$name) {
  $a=Tree (Root); $found=New-Object System.Collections.ArrayList
