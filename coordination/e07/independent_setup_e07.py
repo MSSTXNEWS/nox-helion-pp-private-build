@@ -248,7 +248,7 @@ ORIGINAL_E06_PUBLISHED_HOME_SHA = "37c7952d98e820b22ea59c72c967bc4f7ecf01da013b3
 
 def setup_lock_original(setup: Path, base: Path, *, frozen: str = "legacy") -> dict:
     """Bind each immutable original E06 candidate to its own physical receipts."""
-    require(frozen in ("legacy", "e888"), "E07_ORIGINAL_PIN_KIND_HOLD")
+    require(frozen == "30a" or frozen in ("legacy", "e888"), "E07_ORIGINAL_PIN_KIND_HOLD")
     if frozen == "e888":
         # Physical source and ZIP independently cross-checked by a different worker,
         # artifact 13309335494 from producer Windows E06 41803143292.
@@ -259,6 +259,17 @@ def setup_lock_original(setup: Path, base: Path, *, frozen: str = "legacy") -> d
         expected_owned_files = 485
         expected_home_bytes = 99768
         expected_home_sha = "5661491ddf07b3f5fa7c8097ff64838209057bee6a0bec8ed867b8c8553a40d0"
+    elif frozen == "30a":
+        # Frozen immutable physical source/Setup receipts from independent
+        # Windows producer #41867828741 / artifact #13343191933.
+        # This is still a DIAGNOSTIC candidate: no copied E07/Qwen/UIA PASS.
+        expected_source = "30a4f7c43649e3c3d66d0d46ec370b2105a69faa"
+        expected_setup_sha = "ceb4aab254a6a61b16b25a225ba443149bf1260c3ac410f0c00047842ab9c48c"
+        expected_setup_bytes = 87334495
+        expected_source_zip_sha = "07957aabe4d03cb0a63e3365bbef67f90ddf46a197b1cf0e91dceb943541eec9"
+        expected_owned_files = 485
+        expected_home_bytes = 105949
+        expected_home_sha = "32b24bb6d7cc758ef18397d32f11c704deacce38fe5e52dbde31ef2fb469280e"
     else:
         expected_source = ORIGINAL_E06_SOURCE
         expected_setup_sha = ORIGINAL_E06_SETUP_SHA
@@ -1142,7 +1153,7 @@ def lifecycle(setup: Path, result: dict, *, frozen_source: str = "", physical_na
 def main() -> int:
     p=argparse.ArgumentParser()
     p.add_argument("--artifact-dir",required=True,type=Path)
-    p.add_argument("--artifact-kind",choices=("d02","original","original-e888"),default="d02")
+    p.add_argument("--artifact-kind",choices=("d02","original","original-e888","original-30a"),default="d02")
     p.add_argument("--out",required=True,type=Path)
     args=p.parse_args()
     frozen_ids = {
@@ -1150,6 +1161,9 @@ def main() -> int:
         "original-e888": (
             "e888941626191c17d19d372889b1f96842c15e1b",
             "96ff9b47ca12a21017374e527786eda8b8fbf2b0e62cc6cfea1f59182cc8e61b"),
+        "original-30a": (
+            "30a4f7c43649e3c3d66d0d46ec370b2105a69faa",
+            "ceb4aab254a6a61b16b25a225ba443149bf1260c3ac410f0c00047842ab9c48c"),
     }
     source_sha, setup_sha = frozen_ids.get(args.artifact_kind, (SOURCE_SHA, SETUP_SHA))
     result={"schema":"NOX-EXPRESS-INDEPENDENT-E07-CANDIDATE-v1",
@@ -1167,12 +1181,13 @@ def main() -> int:
         if args.artifact_kind in frozen_ids:
             setup=source/"NOX_HELION_EXPRESS_CANDIDATE_SETUP.exe"
             result["checks"]["artifact"] = setup_lock_original(
-                setup,source,frozen="e888" if args.artifact_kind=="original-e888" else "legacy")
+                setup,source,frozen={"original-e888":"e888","original-30a":"30a"}.get(args.artifact_kind,"legacy"))
         else:
             setup=source/"e06"/"onehost-wow-diagnostic"/"NOX-HELION-V16-DIAGNOSTIC-SETUP.exe"
             receipt=source/"e06"/"onehost-wow-diagnostic"/"E07_BUILT_HANDOFF.json"
             result["checks"]["artifact"] = setup_lock(setup,receipt)
-        lifecycle(setup,result,frozen_source=source_sha)
+        lifecycle(setup,result,frozen_source=source_sha,
+                  physical_nav=args.artifact_kind=="original-30a")
         # Model inference, visual click navigation and independent screenshot
         # remain mandatory for release; do not forge them from HWND and IPC.
         result["error"]="E07_REAL_MODEL_AND_VISUAL_ACCEPTANCE_NOT_COMPLETE"

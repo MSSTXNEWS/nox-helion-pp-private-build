@@ -33,9 +33,9 @@ class IndependentE07(unittest.TestCase):
         with self.assertRaisesRegex(MOD.Hold, "E07_ORIGINAL_PIN_KIND_HOLD"):
             MOD.setup_lock_original(Path("none.exe"), Path("none"), frozen="unverified")
         workflow = (ROOT / ".github/workflows/nox-express-independent-e07-candidate.yml").read_text(encoding="utf-8")
-        self.assertIn("run-id: 41803143292", workflow)
-        self.assertIn("NOX-EXPRESS-ONEHOST-e888941626191c17d19d372889b1f96842c15e1b", workflow)
-        self.assertIn("--artifact-kind original-e888", workflow)
+        self.assertIn("run-id: 41867828741", workflow)
+        self.assertIn("NOX-EXPRESS-ONEHOST-30a4f7c43649e3c3d66d0d46ec370b2105a69faa", workflow)
+        self.assertIn("--artifact-kind original-30a", workflow)
         self.assertIn('"original-e888"', source)
 
     def test_fresh_webview_markers_require_exact_log_events(self):
@@ -514,7 +514,7 @@ class IndependentE07(unittest.TestCase):
         # INSTALL/MODELS/LEARN may share R11's original CONTROL CENTER,
         # but focus the distinct approved buttons and never trigger mutation.
         wire=FILE.read_text(encoding="utf-8")
-        for original in ("КОНТРОЛЬ СИСТЕМЫ", "УСТАНОВИТЬ NOX",
+        for original in ("$headingVisible=($name -eq 'INSTALL')", "УСТАНОВИТЬ NOX",
                          "NOX · CONTROL CENTER", "МОДЕЛИ И КОМПОНЕНТЫ",
                          "ЗАПУСТИТЬ ОБУЧЕНИЕ", "СИСТЕМА",
                          "← НАЗАД В МЕНЮ", "$v.HasKeyboardFocus",
@@ -541,11 +541,12 @@ class IndependentE07(unittest.TestCase):
 
     def test_u11_safe_navigation_only_for_pinned_original_candidate(self):
         source = FILE.read_text(encoding="utf-8")
-        self.assertIn('safe_nav=frozen_source == "e888941626191c17d19d372889b1f96842c15e1b"', source)
+        self.assertIn('safe_nav=physical_nav or frozen_source == "e888941626191c17d19d372889b1f96842c15e1b"', source)
+        self.assertIn('physical_nav=args.artifact_kind=="original-30a"', source)
         guarded = source.split("def observe_readonly_primary_navigation(",1)[1].split(
             "\ndef original_wpf_hwnd(",1)[0]
         self.assertIn("InvokePattern",guarded)
-        self.assertIn("Test-VisibleHeading",guarded)
+        self.assertIn("Test-RealDestination",guarded)
         self.assertIn("Get-SameRoot",guarded)
         self.assertNotIn("models.pull",guarded)
         self.assertNotIn("training.start",guarded)
