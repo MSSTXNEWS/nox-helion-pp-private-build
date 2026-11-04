@@ -27,8 +27,13 @@ jobs:
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA" || { echo 'HEAD_SHA_HOLD'; exit 2; }
           test -z "$(git status --porcelain --untracked-files=normal)" || { echo 'DIRTY_CHECKOUT_HOLD'; exit 2; }
+          # Keep the working Git tree CLEAN while the packer performs SourceLock.
+          # A prior workflow wrote dist/ before the packer checked git status,
+          # thereby causing its own DIRTY_CHECKOUT_HOLD.
+          mkdir -p "$RUNNER_TEMP/nox-full-source"
+          python3 -B coordination/e06/express_source_snapshot_pack.py --repo . --sha "$GITHUB_SHA" --out "$RUNNER_TEMP/nox-full-source/NOX_HELION_FULL_SOURCE_${GITHUB_SHA}.zip" > "$RUNNER_TEMP/nox-full-source/EXACT_SOURCE_RECEIPT.json"
           mkdir -p dist/full-source
-          python3 -B coordination/e06/express_source_snapshot_pack.py --repo . --sha "$GITHUB_SHA" --out "dist/full-source/NOX_HELION_FULL_SOURCE_${GITHUB_SHA}.zip" > dist/full-source/EXACT_SOURCE_RECEIPT.json
+          mv "$RUNNER_TEMP/nox-full-source/"* dist/full-source/
           python3 -B - <<'PY'
           import pathlib, hashlib, json, zipfile, subprocess, os
           root=pathlib.Path("dist/full-source")
