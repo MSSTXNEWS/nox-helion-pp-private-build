@@ -44,6 +44,8 @@ class PlanetWorldsAndUplot(unittest.TestCase):
         self.assertIn("' · GPU Н/Д'", js)
         self.assertIn("Math.max(0,(snapshot.frames-previous.frames)*1000/(now-previous.time))", js)
         self.assertIn("home.append(dock)", js)
+        self.assertIn("home.dataset.noxWorldOpen", js)
+        self.assertIn("dock.scrollIntoView", js)
         self.assertIn("new view.MutationObserver(sync)", js)
         self.assertIn("film?.destroy();film=null", js)
 
@@ -52,6 +54,7 @@ class PlanetWorldsAndUplot(unittest.TestCase):
         self.assertIn("NOX PLANETARY WORLDS V2 STYLE", css)
         self.assertIn("NOX QUALITY PLANET ATMOSPHERES V2", css)
         self.assertIn("nox-quality-world[hidden]", css)
+        self.assertIn("NOX PLANETARY WORLDS V3 FLOW-SAFE", css)
         self.assertIn("nox-quality-planet__sphere", css)
         self.assertIn('data-nox-effective="reduced"', css)
         self.assertIn("prefers-reduced-motion:reduce", css)

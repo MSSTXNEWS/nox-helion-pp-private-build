@@ -42,8 +42,8 @@ ORIGINAL_CHROME_COMPACT_BLOB = "8e3cffe7cb91564ae5817e55cb35e5fbb0feeb50"
 WOW_RUNTIME_BLOBS = {
     "runtime/loader.mjs": "9b4596a68525384a92ddc1c17af5d51d37cc0458",
     "runtime/stage.css": "e6fd8eaea8a38deb0095e6359010be7539a4a7bc",
-    "runtime/home-scene.mjs": "2f954c7ed0f959cd3b1c80fe128b122c212cf584",
-    "runtime/home-guard.css": "f69cf366d02e6adc99b8192f490e1cff3ca5df8c",
+    "runtime/home-scene.mjs": "a1dab567213a42907f1debdb1dddcb757cb13136",
+    "runtime/home-guard.css": "045b3e1dff3dbdec2410cec95706c960eda0bf76",
 }
 
 REQUIRED_DONORS = frozenset({

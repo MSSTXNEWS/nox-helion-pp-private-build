@@ -302,10 +302,14 @@ function mountNoxGraphicsDock(home,doc,onSelect,getSceneSnapshot){
  }
  function show(value){
    if(closed)return;panel.hidden=!value;
+   home.dataset.noxWorldOpen=value?'true':'false';
    toggle.textContent=value?'СВЕРНУТЬ МИР':'ОТКРЫТЬ МИР';
    toggle.setAttribute('aria-expanded',String(value));
    stopSampling();history.length=0;poly.removeAttribute('points');
-   if(value&&!doc.hidden){sample();sampleTimer=view.setInterval(sample,2200);}
+   if(value&&!doc.hidden){
+     sample();sampleTimer=view.setInterval(sample,2200);
+     view.requestAnimationFrame?.(()=>dock.scrollIntoView?.({block:'end',behavior:'auto'}));
+   }
  }
  function onKey(event){if(event.key==='Escape'&&!panel.hidden){show(false);toggle.focus();}}
  doc.addEventListener('keydown',onKey);
@@ -342,7 +346,8 @@ function mountNoxGraphicsDock(home,doc,onSelect,getSceneSnapshot){
      if(closed)return;closed=true;stopSampling();
      doc.removeEventListener('keydown',onKey);
      delete home.dataset.noxPlanetWorld;
-     delete home.dataset.noxPlanetPalette;dock.remove();
+     delete home.dataset.noxPlanetPalette;
+     delete home.dataset.noxWorldOpen;dock.remove();
    }
  });
 }

@@ -68,6 +68,7 @@ test('planetary world panels and palette switch without native model or GPU writ
  toggle.emit('click');
  assert.equal(toggle.getAttribute('aria-expanded'),'true');
  assert.equal(dock.children[2].hidden,false);
+ assert.equal(f.home.dataset.noxWorldOpen,'true','expanded cockpit must reenter document flow');
  const palettes=dock.children[2].children[2].children;
  assert.equal(palettes.length,3);
  palettes[1].emit('click');
@@ -79,4 +80,5 @@ test('planetary world panels and palette switch without native model or GPU writ
  mount.destroy();
  assert.equal(f.intervals.size,0);
  assert.equal(f.home.dataset.noxPlanetPalette,undefined);
+ assert.equal(f.home.dataset.noxWorldOpen,undefined);
 });
