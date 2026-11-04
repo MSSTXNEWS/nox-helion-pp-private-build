@@ -65,6 +65,10 @@ class OriginalButtonRoutes(unittest.TestCase):
             self.assertEqual(stage.INSERT.count('data-nox-primary="'+name+'"'), 1)
         self.assertEqual(stage.INSERT.count('data-nox-primary='), 5)
         self.assertIn('@media(prefers-reduced-motion:reduce)', stage.INSERT)
+        # Reduced Motion stops the orbit animation without uncentering HOME.
+        self.assertIn('left:50%;bottom:12px;transform:translateX(-50%)', stage.INSERT)
+        self.assertIn('transition:none!important;scroll-behavior:auto!important}#nox-express-primary button::before{transform:none!important}', stage.INSERT)
+        self.assertNotIn('animation:none!important;transition:none!important;transform:none!important;scroll-behavior:auto!important', stage.INSERT)
         self.assertIn('grid-template-columns:repeat(5,minmax(0,1fr))',stage.INSERT)
         self.assertIn('width:calc(100vw - 12px)',stage.INSERT)
         self.assertIn('bottom:max(3px,env(safe-area-inset-bottom,0px))',stage.INSERT)

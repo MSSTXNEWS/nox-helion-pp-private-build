@@ -33,7 +33,7 @@ INSERT = r'''<!-- NOX EXPRESS 5 original-home primary actions; no additional hos
 #nox-express-primary button:hover,#nox-express-primary button:focus-visible{border-color:#9ce7ff;outline:2px solid #9ce7ff;outline-offset:2px}
 #nox-express-primary [data-nox-state]{width:100%;font-size:11px;text-align:center;font-weight:400;min-height:14px}
 @media(max-width:550px){#nox-express-primary{bottom:max(3px,env(safe-area-inset-bottom,0px));width:calc(100vw - 12px);max-width:calc(100vw - 12px);display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:3px;padding:5px;box-sizing:border-box}#nox-express-primary button{width:100%;min-width:0;min-height:56px;padding:6px 1px;font-size:9px;letter-spacing:0;line-height:1.2;white-space:nowrap}#nox-express-primary button::before{width:22px;height:22px}#nox-express-primary [data-nox-state]{grid-column:1 / -1;min-width:0;overflow-wrap:anywhere}}
-@media(prefers-reduced-motion:reduce){#nox-express-primary,#nox-express-primary *,#nox-express-primary button::before{animation:none!important;transition:none!important;transform:none!important;scroll-behavior:auto!important}}
+@media(prefers-reduced-motion:reduce){#nox-express-primary,#nox-express-primary *,#nox-express-primary button::before{animation:none!important;transition:none!important;scroll-behavior:auto!important}#nox-express-primary button::before{transform:none!important}}
 </style>
 <nav id="nox-express-primary" aria-label="NOX HELION EXPRESS — основные действия">
 <button type="button" data-nox-primary="CHAT" aria-label="CHAT">CHAT</button>
