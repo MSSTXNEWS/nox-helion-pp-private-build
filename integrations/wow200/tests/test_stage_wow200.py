@@ -103,6 +103,14 @@ class WowStageTests(unittest.TestCase):
   self.assertIn(b'NOX D02 ORB STEP01',orb)
   self.assertIn(b'pointer-events:none',orb)
   self.assertIn(b'prefers-reduced-motion:reduce',orb)
+  # Source-only regression: expanded graphics must remain accessible above
+  # the fixed primary EXPRESS bar; physical E07 remains separately required.
+  guard=orb.decode('utf-8','strict')
+  self.assertIn('#home[data-nox-world-open="true"]{',guard)
+  self.assertIn('overflow-y:auto!important;',guard)
+  self.assertIn('margin:20px auto calc(156px + env(safe-area-inset-bottom,0px))!important;',guard)
+  self.assertIn('margin:10px auto calc(188px + env(safe-area-inset-bottom,0px))!important;',guard)
+  self.assertIn('scroll-margin-bottom:calc(188px + env(safe-area-inset-bottom,0px));',guard)
   self.assertEqual(receipt['menu_v2_atomic_source_sha256'],eng.MENU_V2_SHA256)
   self.assertTrue(receipt['p01_owner_source_staged'])
   self.assertFalse(receipt['p01_owner_native_mount_activated'])
