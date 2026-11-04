@@ -3,9 +3,16 @@ const obj=x=>x!==null&&typeof x==='object'&&!Array.isArray(x);
 // A transport COMPLETED is not owner consent or proof of service readiness.
 const nonemptyError=v=>v!=null&&(typeof v!=='string'||v.trim()!=='');
 const denied=v=>typeof v==='string'&&/(?:^|[_\\s.:-])(?:HOLD|FAILED|FAILURE|ERROR|DENIED|REJECTED|OFFLINE|UNAVAILABLE|STOPPED|CONSENT_REQUIRED|PERMISSION_REQUIRED|AUTHORIZATION_REQUIRED|AUTH_REQUIRED|NOT_AUTHORIZED|NOT_AUTHENTICATED|AWAITING_CONSENT|NEEDS_CONSENT|CONSENT_PENDING|SID_MISMATCH|ACL_MISMATCH|PROVIDER_OFFLINE)(?:$|[_\\s.:-])/.test(v.toUpperCase());
-const held=x=>obj(x)&&(x.ok===false||x.ack===false||
- ['errorCode','error_code','error','errorMessage'].some(k=>nonemptyError(x[k]))||
- [x.status,x.state].some(denied)||(obj(x.owner)&&held(x.owner)));
+// Treat native owner denial fields and malformed acknowledgements as HOLD,
+// even if their WebView2 transport envelope completed successfully.
+const held=x=>obj(x)&&(
+ (Object.hasOwn(x,'ok')&&typeof x.ok!=='boolean')||
+ (Object.hasOwn(x,'ack')&&typeof x.ack!=='boolean')||
+ x.ok===false||x.ack===false||
+ ['errorCode','error_code','error','errorMessage','error_message'].some(k=>nonemptyError(x[k]))||
+ ['status','state'].some(k=>x[k]!=null&&(typeof x[k]!=='string'||denied(x[k])))||
+ (Object.hasOwn(x,'owner')&&x.owner!=null&&(!obj(x.owner)||held(x.owner)))
+);
 export function firstBootTruth(a1,capabilities,models){
  const a=obj(a1)&&a1.routeId==='chat.commands'&&a1.state==='COMPLETED'&&!held(a1)&&obj(a1.result)&&!held(a1.result)&&a1.result.schema==='NOX-A1-NATIVE-COMMAND-STATUS-v1'?a1.result:null;
  const c=obj(capabilities)&&capabilities.routeId==='chat.commands'&&capabilities.state==='COMPLETED'&&!held(capabilities)&&obj(capabilities.result)&&!held(capabilities.result)&&capabilities.result.status==='SOURCE_SERVICE'?capabilities.result:null;
