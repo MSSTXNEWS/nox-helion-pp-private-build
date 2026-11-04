@@ -13,7 +13,7 @@ MODULE = ROOT/"coordination/e06/nx03_reviewed_uninstall_stage.py"
 spec = importlib.util.spec_from_file_location("nox_nx03_reviewed_remove", MODULE)
 stage = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(stage)
-DONOR = ROOT/"source/donors/P01_C07"
+DONOR = ROOT/"donors/P01_C07"
 C09 = ROOT/"stage/proposals/P01/C09/Installer/Remove-InstalledPayload.ps1"
 
 
@@ -56,7 +56,7 @@ class NX03ReviewedRemove(unittest.TestCase):
         self.assertFalse(result["changed"])
         self.assertEqual(self.owner.read_bytes(), before)
     def test_unknown_archived_owner_no_write(self):
-        altered = self.original.replace(b"Conservative uninstall", b"Other.... uninstall", 1)
+        altered = (b"!" if self.original[:1] != b"!" else b"?") + self.original[1:]
         self.owner.write_bytes(altered)
         with self.assertRaisesRegex(stage.ReviewedRemoveHold,"UNKNOWN_R11_PREIMAGE"):
             stage.stage_reviewed_remove(self.owner,self.copy)
