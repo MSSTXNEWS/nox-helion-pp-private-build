@@ -4,6 +4,9 @@ import importlib.util
 import json
 import hashlib
 import tempfile
+import sqlite3
+import struct
+from unittest.mock import patch
 import unittest
 
 ROOT=Path(__file__).resolve().parents[2]
@@ -111,5 +114,46 @@ class IndependentE07(unittest.TestCase):
                     MOD.verify_uninstall_no_loss(install,root/"stage",root/"previous",
                                                   (),witness,b"keep")
                 stale.rmdir()
+
+    def test_independent_sqlite_stop_requires_actual_installed_native_exe(self):
+        with tempfile.TemporaryDirectory() as t:
+            home=Path(t)
+            with self.assertRaisesRegex(MOD.Hold,"E07_NATIVE_STORE_EXE_MISSING"):
+                MOD.native_store_stop_probe(home/"missing.exe",home/"isolated")
+
+    def test_independent_sqlite_stop_source_mock_no_model_pass(self):
+        # Synthetic protocol fixture: source test only, never Windows/E07 PASS.
+        with tempfile.TemporaryDirectory() as t:
+            home=Path(t)
+            backend=home/"native.exe"
+            backend.write_bytes(b"fixture-not-a-real-windows-binary")
+            scratch=home/"isolated"
+            calls=[]
+            def run_fixture(args,**kwargs):
+                wire=kwargs["input"]
+                frame_bytes=struct.unpack(">I",wire[:4])[0]
+                request=json.loads(wire[4:])
+                self.assertEqual(frame_bytes,len(wire)-4)
+                calls.append(request)
+                if not scratch.exists():
+                    scratch.mkdir()
+                    with sqlite3.connect(scratch/"helion.sqlite3") as db:
+                        db.execute("PRAGMA user_version=4")
+                        db.execute("CREATE TABLE core_chat_turns (id INTEGER)")
+                reply={"protocol":request["protocol"],"requestId":request["requestId"],
+                       "runId":request["runId"],"status":"OK",
+                       "result":{"messages":[]} if request["route"]=="chat.history"
+                                else {"stopRequested":True}}
+                data=json.dumps(reply).encode("utf-8")
+                return type("MockCompletedProcess",(),{
+                    "returncode":0,"stdout":struct.pack(">I",len(data))+data})()
+            with patch.object(MOD.subprocess,"run",side_effect=run_fixture):
+                proof=MOD.native_store_stop_probe(backend,scratch)
+            self.assertEqual(proof["status"],"PASS")
+            self.assertEqual(proof["active_stream_stop"],"NOT_TESTED")
+            self.assertEqual(proof["real_model_inference"],"NOT_TESTED")
+            self.assertEqual([v["route"] for v in calls],
+                             ["chat.history","chat.history","chat.stop"])
+            self.assertEqual(len({v["requestId"] for v in calls}),3)
 
 if __name__=='__main__':unittest.main()

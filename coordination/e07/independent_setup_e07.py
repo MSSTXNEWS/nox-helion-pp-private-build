@@ -15,6 +15,7 @@ import os
 from pathlib import Path
 import re
 import struct
+import sqlite3
 import subprocess
 import sys
 import time
@@ -256,6 +257,58 @@ def gui_hwnd(shell: Path, local: Path) -> dict:
                                timeout=15, capture_output=True, check=False)
 
 
+def native_store_stop_probe(backend: Path, scratch: Path) -> dict:
+    """Independent installed SQLite-v4/history/STOP ACK proof, not model inference.
+
+    Separate native processes share only an isolated ephemeral data directory.
+    An acknowledged idle STOP is NOT proof of interruption of a live stream.
+    """
+    require(clean_file(backend), "E07_NATIVE_STORE_EXE_MISSING")
+    require(not scratch.exists() and not scratch.is_symlink(),
+            "E07_NATIVE_STORE_SCRATCH_COLLISION")
+    def request(route: str, nonce: str, run_id: str) -> dict:
+        envelope = {"protocol": PROTOCOL, "requestId": nonce,
+                    "runId": run_id, "route": route, "payload": {}}
+        raw = json.dumps(envelope, separators=(",", ":")).encode("utf-8")
+        execution = subprocess.run(
+            [str(backend), "--native-stdio", "--run-id", run_id,
+             "--data-dir", str(scratch)],
+            input=struct.pack(">I", len(raw)) + raw,
+            capture_output=True, timeout=105, cwd=str(backend.parent))
+        require(execution.returncode == 0 and len(execution.stdout) >= 5,
+                "E07_NATIVE_STORE_FRAME_HOLD")
+        length = struct.unpack(">I", execution.stdout[:4])[0]
+        require(1 <= length <= 1048576 and len(execution.stdout) == 4 + length,
+                "E07_NATIVE_STORE_FRAME_HOLD")
+        reply = json.loads(execution.stdout[4:].decode("utf-8", "strict"))
+        require(type(reply) is dict and reply.get("status") == "OK" and
+                all(reply.get(k) == envelope[k]
+                    for k in ("protocol", "runId", "requestId")) and
+                type(reply.get("result")) is dict,
+                "E07_NATIVE_STORE_ACK_HOLD")
+        return reply["result"]
+    first = request("chat.history", "e7000000000000000000000000000001", "NOX-E07-STORE-A")
+    second = request("chat.history", "e7000000000000000000000000000002", "NOX-E07-STORE-B")
+    stop = request("chat.stop", "e7000000000000000000000000000003", "NOX-E07-STORE-C")
+    require(type(first.get("messages")) is list and
+            first["messages"] == second.get("messages") == [] and
+            stop.get("stopRequested") is True,
+            "E07_NATIVE_HISTORY_OR_STOP_HOLD")
+    db = scratch / "helion.sqlite3"
+    require(clean_file(db) and db.stat().st_size > 0,
+            "E07_NATIVE_STORE_DB_MISSING")
+    with sqlite3.connect("file:" + db.as_posix() + "?mode=ro", uri=True) as connection:
+        version = connection.execute("PRAGMA user_version").fetchone()[0]
+        integrity = connection.execute("PRAGMA quick_check").fetchone()[0]
+        tables = {row[0] for row in connection.execute(
+            "SELECT name FROM sqlite_master WHERE type='table'")}
+    require(version == 4 and integrity == "ok" and "core_chat_turns" in tables,
+            "E07_NATIVE_STORE_SCHEMA_HOLD")
+    return {"status": "PASS", "sqlite_user_version": 4,
+            "sqlite_quick_check": "ok", "history_restart": "PASS",
+            "stop_ack": "PASS", "active_stream_stop": "NOT_TESTED",
+            "real_model_inference": "NOT_TESTED"}
+
 def verify_uninstall_no_loss(install: Path, stage: Path, previous: Path,
                              tracked: tuple[Path, ...], witness: Path,
                              expected: bytes) -> None:
@@ -296,6 +349,16 @@ def lifecycle(setup: Path, result: dict) -> None:
     native = framed_backend(install/"Backend"/"NOX_HELION_PRIVATE_CANDIDATE.exe",
                             Path(os.environ["RUNNER_TEMP"])/"nox-e07-native-data")
     result["checks"]["installed_native_ipc"] = native
+    # Additive installed SQLite-v4/history/idle STOP proof; not active streaming or inference.
+    try:
+        result["checks"]["installed_native_store_stop"] = native_store_stop_probe(
+            install/"Backend"/"NOX_HELION_PRIVATE_CANDIDATE.exe",
+            Path(os.environ["RUNNER_TEMP"])/"nox-e07-native-store")
+    except (Hold, sqlite3.Error, subprocess.TimeoutExpired, OSError, ValueError) as exc:
+        result["checks"]["installed_native_store_stop"] = {
+            "status": "HOLD",
+            "error": str(exc) if isinstance(exc, Hold) else
+                     "E07_NATIVE_STORE_" + type(exc).__name__.upper() + "_HOLD"}
     result["checks"]["installed_gui"] = gui_hwnd(install/"NOX.P01.Shell.exe",local)
     require(run([str(setup),"/S"],limit=300)==0 and clean_dir(previous),
             "E07_NSIS_UPDATE_HOLD")
