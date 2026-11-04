@@ -412,7 +412,7 @@ export function mountSelfBuilderMenuV2({root,invokeNative,getTrustedState,ownerA
     backGroup.hidden=!activeGroup;
     grid.hidden=!activeGroup;
     grid.style.display=activeGroup?'':'none';
-    jobs.hidden=activeGroup!=='models'||section!=='РАЗВИТИЕ';
+    jobs.hidden=section!=='РАЗВИТИЕ'||!['models','weights'].includes(activeGroup);
     task.hidden=activeGroup!=='source'||!['РАБОТА','РАЗВИТИЕ'].includes(section);
     sourceHub.hidden=activeGroup!=='source'||section!=='РАЗВИТИЕ';
     for(const {b,item,permitted} of buttons){

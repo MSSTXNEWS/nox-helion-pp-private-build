@@ -89,6 +89,11 @@ class WowStageTests(unittest.TestCase):
   eng.WOW_RUNTIME_BLOBS.update(self.original_runtime_pins)
   eng.OWNER1_D02_ENGINE.clear();eng.OWNER1_D02_ENGINE.update(self.old_engine_pins)
   self.tmp.cleanup()
+ def test_learn_training_picker_accessible_in_weights_group(self):
+  source=(Path(__file__).resolve().parents[3]/'ui/selfbuilder-menu-v2.mjs').read_text(encoding='utf-8')
+  self.assertIn("jobs.hidden=section!=='РАЗВИТИЕ'||!['models','weights'].includes(activeGroup);",source)
+  self.assertNotIn("jobs.hidden=activeGroup!=='models'||section!=='РАЗВИТИЕ';",source)
+
  def test_additive_preimage_and_readback(self):
   original={n:digest(self.stage/'Assets'/n) for n in D02}
   receipt=stage(self.stage,self.src)

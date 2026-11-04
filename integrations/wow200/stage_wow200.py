@@ -68,7 +68,7 @@ REQUIRED_DONORS = frozenset({
 # One immutable commit admits the R4 MENU module, matching CSS and native adapter.
 # Keep all these pins together; a partial UI publication must fail before copy.
 MENU_V2_SHA256 = {
-    'ui/selfbuilder-menu-v2.mjs': '2860a1cd193f2678fc5d96e7e7ef7f1e31d941204a468fc1a46b3bc620dc5b5a',
+    'ui/selfbuilder-menu-v2.mjs': 'da67639f61144f74751c295d41dd84991ec864f4c0e3a3cb617152f6cc0a8d1d',
     'ui/selfbuilder-menu-v2.css': 'c5a6e12e29f4621d26e9ff551d1bb704469d87ba616693686e6b218029faa664',
     'ui/nox-lucide-icons.mjs': '0f01be889b39e9d0f0c3dae517c39ae48938812aa7477ef0615c0da24c0c8b0d',
     'ui/nox-lucide-LICENSE.txt': 'ed9cca1da36ca6d38c2222e444c153f8d903197512b0afbb2bd6377d7cdf5413',
