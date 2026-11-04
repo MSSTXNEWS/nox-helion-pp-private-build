@@ -20,7 +20,7 @@ class U09(unittest.TestCase):
         self.assertIn('"independent_e07_10_10":"HOLD"',s)
         self.assertIn('"release_accepted":False',s)
     def test_backward_compatible_existing_e07(self):
-        s=(R/"coordination/e07/independent_setup_e07.py").read_text()
+        s=(R/"coordination/e07/independent_setup_e07.py").read_text(encoding="utf-8")
         ast.parse(s)
         self.assertIn("physical_nav: bool = False",s)
         self.assertIn('safe_nav=physical_nav or frozen_source ==',s)
