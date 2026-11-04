@@ -52,7 +52,7 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference='Stop'
-          python -B -m py_compile coordination/e07/independent_setup_e07.py coordination/e07/probe_five_primary_action.py coordination/e07/probe_installed_qwen.py coordination/e07/probe_native_active_stop.py coordination/e07/verify_qwen_oci_integrity.py coordination/e07/probe_final_same_setup.py
+          python -B -m py_compile coordination/e07/independent_setup_e07.py coordination/e07/probe_five_primary_action.py coordination/e07/probe_installed_qwen.py coordination/e07/probe_native_active_stop.py coordination/e07/verify_qwen_oci_integrity.py coordination/e07/probe_final_same_setup.py coordination/e07/probe_webview_motion.py
           if ($LASTEXITCODE -ne 0) { throw 'E07_PYTHON_SOURCE_SYNTAX_HOLD' }
           python -B -m unittest discover -s tests/e07 -p test_independent_setup_e07.py -v
           if ($LASTEXITCODE -ne 0) { throw 'E07_BASE_REGRESSION_HOLD' }
@@ -68,6 +68,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'E07_OS_ANIMATION_EVIDENCE_HOLD' }
           python -B -m unittest discover -s tests/e07 -p test_visual_stage_diagnostics_u22.py -v
           if ($LASTEXITCODE -ne 0) { throw 'E07_VISUAL_STAGE_DIAGNOSTICS_HOLD' }
+          python -B -m unittest discover -s tests/e07 -p test_webview_motion_cdp_u26.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'E07_WEBVIEW2_MEDIA_CONTRACT_HOLD' }
           python -B -m unittest discover -s tests/e07 -p test_final_primary_dispatch_u18.py -v
           if ($LASTEXITCODE -ne 0) { throw 'E07_FINAL_UIA_TREE_REGRESSION_HOLD' }
           python -B -m unittest discover -s tests/e07 -p test_91a6_real_visual_u17.py -v
@@ -166,6 +168,10 @@ jobs:
         id: test
         continue-on-error: true
         shell: pwsh
+        env:
+          # Test-only loopback CDP: no production debug server or media emulation.
+          WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: '--remote-debugging-address=127.0.0.1 --remote-debugging-port=9222'
+          NOX_E07_DEVTOOLS_PORT: '9222'
         run: |
           $ErrorActionPreference='Stop'
           python -B coordination/e07/independent_setup_e07.py --artifact-dir input-verified-current-d02 --artifact-kind d02-current --out work/e07-independent/E07_CANDIDATE_RECEIPT.json

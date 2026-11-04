@@ -542,6 +542,16 @@ def run(hwnd: int, install: Path, local: Path, *, source_sha: str, setup_sha: st
         except e07.Hold as exc:
             fx={"fx_control":"HOLD","first_unmet_gate":str(exc)}
         os_animation=probe_windows_animation_setting()
+        # Physical OS animation setting alone is NOT WebView2 media evidence.
+        # Read the actual installed page's matchMedia / computed CSS / WAAPI
+        # via read-only loopback CDP on ephemeral GitHub Windows only.
+        webview_motion={"status":"HOLD","reason":"E07_WEBVIEW2_MEDIA_NOT_TESTED_HOLD"}
+        if os_animation.get("os_ui_animations_enabled") is False:
+            try:
+                from probe_webview_motion import probe as probe_webview_motion
+                webview_motion=probe_webview_motion()
+            except e07.Hold as exc:
+                webview_motion={"status":"HOLD","reason":str(exc)}
         visual={"schema":e07.FINAL_VISUAL_SCHEMA,"source_sha":source_sha,
                 "setup_sha256":setup_sha,"release_accepted":False,
                 "physical_capture":"PASS" if actual_png and visual_first_hold is None else "HOLD",
@@ -556,7 +566,11 @@ def run(hwnd: int, install: Path, local: Path, *, source_sha: str, setup_sha: st
                      (fx.get("first_unmet_gate") if fx["fx_control"]!="PASS"
                       else "E07_INDEPENDENT_VISUAL_REVIEW_NOT_RUN"),
                 "reduced_motion_evidence":"OS_SETTING_OBSERVED_WEBVIEW2_MEDIA_QUERY_NOT_PHYSICALLY_VERIFIED",
-                "os_animation_observation":os_animation}
+                "os_animation_observation":os_animation,
+                "webview2_motion_evidence":webview_motion}
+        if (os_animation.get("os_ui_animations_enabled") is False and
+                webview_motion.get("status")=="PASS"):
+            visual["reduced_motion"]="PASS"
 
     else:
         # This receipt was obtained on the original WPF HOME before any
