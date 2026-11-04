@@ -41,10 +41,18 @@ class OCIGate(unittest.TestCase):
         self.assertFalse(receipt["release_accepted"])
         self.assertEqual(receipt["verified_blobs"], 2)
 
+    def install_v2_manifest(self, data: bytes) -> Path:
+        named = self.root / "manifests-v2/ollama.com/library/qwen2.5-coder/1.5b"
+        named.parent.mkdir(parents=True, exist_ok=True)
+        named.write_bytes(data)
+        # Ollama v0.40.13 keeps the same named bytes in the immutable blob
+        # store. Both paths must match for an accepted v2 manifest.
+        digest = hashlib.sha256(data).hexdigest()
+        (self.blobs / ("sha256-" + digest)).write_bytes(data)
+        return named
+
     def test_v2_manifest_preferred_over_stale_legacy(self):
-        v2 = self.root / "manifests-v2/ollama.com/library/qwen2.5-coder/1.5b"
-        v2.parent.mkdir(parents=True)
-        v2.write_bytes(self.manifest_path.read_bytes())
+        v2 = self.install_v2_manifest(self.manifest_path.read_bytes())
         self.manifest_path.write_bytes(b"STALE_LEGACY_MANIFEST")
         self.assertEqual(m.verify(self.root, self.expected)["verified_blobs"], 2)
         # No silent fallback if the selected v2 file is corrupted.
@@ -53,8 +61,6 @@ class OCIGate(unittest.TestCase):
             m.verify(self.root, self.expected)
 
     def test_v2_manifest_list_content_addressed_child(self):
-        v2 = self.root / "manifests-v2/ollama.com/library/qwen2.5-coder/1.5b"
-        v2.parent.mkdir(parents=True)
         child = dict(self.manifest, mediaType="application/vnd.docker.distribution.manifest.v2+json")
         child_raw = json.dumps(child, separators=(",", ":")).encode()
         digest = hashlib.sha256(child_raw).hexdigest()
@@ -64,13 +70,33 @@ class OCIGate(unittest.TestCase):
                   "manifests": [{"mediaType": child["mediaType"],
                                  "runner": "llamacpp", "digest": "sha256:" + digest}]}
         data = json.dumps(parent, separators=(",", ":")).encode()
-        v2.write_bytes(data)
-        pinned = hashlib.sha256(data).hexdigest()
-        self.assertEqual(m.verify(self.root, pinned)["verified_blobs"], 2)
+        self.install_v2_manifest(data)
+        # /api/tags reports the CHILD SHA, not the parent-list SHA.
+        self.assertEqual(m.verify(self.root, digest)["verified_blobs"], 2)
         # A hash-mismatched referenced child cannot be blessed by a valid parent.
         (self.blobs / ("sha256-" + digest)).write_bytes(b"BAD_CHILD")
         with self.assertRaisesRegex(m.IntegrityHold, "OCI_SHA256"):
-            m.verify(self.root, pinned)
+            m.verify(self.root, digest)
+
+    def test_v2_parent_sha_is_not_the_model_sha(self):
+        child = {"schemaVersion": 2,
+                 "mediaType": "application/vnd.docker.distribution.manifest.v2+json",
+                 "config": self.manifest["config"],
+                 "layers": self.manifest["layers"]}
+        canonical = json.dumps(child, separators=(",", ":")).encode()
+        child_sha = hashlib.sha256(canonical).hexdigest()
+        parent = {"schemaVersion": 2,
+                  "mediaType": "application/vnd.ollama.manifest.list.v2+json",
+                  "manifests": [dict(child, runner="llamacpp")]}
+        # Inline Go JSON includes runner in the child's trailing field.
+        inline = parent["manifests"][0]
+        inline_sha = hashlib.sha256(json.dumps(inline, separators=(",", ":")).encode()).hexdigest()
+        data = json.dumps(parent, separators=(",", ":")).encode()
+        self.install_v2_manifest(data)
+        self.assertEqual(m.verify(self.root, inline_sha)["verified_blobs"], 2)
+        # Hashing the parent list must NOT authorize the weights.
+        with self.assertRaisesRegex(m.IntegrityHold, "OCI_APPROVED_CHILD"):
+            m.verify(self.root, hashlib.sha256(data).hexdigest())
 
     def test_wrong_approved_manifest_digest(self):
         with self.assertRaisesRegex(m.IntegrityHold, "OCI_SHA256"):

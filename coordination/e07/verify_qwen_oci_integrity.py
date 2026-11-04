@@ -39,7 +39,7 @@ def _nonreparse(path: Path, root: Path) -> None:
         raise IntegrityHold("OCI_PATH_UNTRUSTED_HOLD") from None
 
 
-def _read_hash(path: Path, root: Path, expected: str, size: int | None = None,
+def _read_hash(path: Path, root: Path, expected: str | None, size: int | None = None,
                *, capture: bool = False) -> bytes | int:
     _nonreparse(path, root)
     try:
@@ -65,7 +65,8 @@ def _read_hash(path: Path, root: Path, expected: str, size: int | None = None,
                 hasher.update(part)
                 if payload is not None:
                     payload.extend(part)
-            if (hasher.hexdigest() != expected or amount != opened.st_size or
+            if ((expected is not None and hasher.hexdigest() != expected) or
+                    amount != opened.st_size or
                     (size is not None and amount != size)):
                 raise IntegrityHold("OCI_SHA256_OR_SIZE_HOLD")
             if fingerprint(opened) != fingerprint(os.fstat(fd)) or fingerprint(before) != fingerprint(path.lstat()):
@@ -97,9 +98,18 @@ def verify(root: Path, manifest_digest: str) -> dict:
     # A present but invalid v2 entry MUST HOLD; no downgrade to the legacy path.
     v2 = root / "manifests-v2/ollama.com/library/qwen2.5-coder/1.5b"
     legacy = root / "manifests/registry.ollama.ai/library/qwen2.5-coder/1.5b"
-    manifest_path = v2 if (v2.exists() or v2.is_symlink() or
-                           getattr(v2, "is_junction", lambda: False)()) else legacy
-    payload = _read_hash(manifest_path, root, manifest_digest, capture=True)
+    selected_v2 = v2.exists() or v2.is_symlink() or getattr(v2, "is_junction", lambda: False)()
+    manifest_path = v2 if selected_v2 else legacy
+    # Ollama /api/tags reports the SELECTED CHILD digest for manifest lists,
+    # not the parent list SHA. Read the parent descriptor with identity guards,
+    # then require its independently content-addressed blob on disk. The model
+    # itself remains authorized ONLY by the caller's pinned child digest.
+    payload = _read_hash(manifest_path, root, None if selected_v2 else manifest_digest,
+                         capture=True)
+    named_sha = hashlib.sha256(payload).hexdigest()
+    if selected_v2:
+        _read_hash(root / "blobs" / ("sha256-" + named_sha),
+                   root, named_sha, len(payload))
     try:
         manifest = json.loads(payload.decode("utf-8"), object_pairs_hook=_unique,
                               parse_constant=lambda _: (_ for _ in ()).throw(IntegrityHold("OCI_JSON_NONFINITE_HOLD")))
@@ -107,38 +117,55 @@ def verify(root: Path, manifest_digest: str) -> dict:
         raise IntegrityHold("OCI_MANIFEST_JSON_HOLD") from None
     if type(manifest) is not dict:
         raise IntegrityHold("OCI_MANIFEST_SCHEMA_HOLD")
-    # A v2 tag can point to an Ollama manifest-list. Its PARENT hash is pinned
-    # above; follow only one local runner's content-addressed child and verify
-    # that child byte-for-byte before touching any weights.
+    # Ollama v0.40.13 /api/tags publishes the selected child SHA for a
+    # manifest list (server/model_list.go). A parent-list hash is NOT the
+    # model identifier. Verify the SHA-pinned child before its layer names.
     if manifest.get("mediaType") == "application/vnd.ollama.manifest.list.v2+json":
         options = manifest.get("manifests")
         if (manifest.get("schemaVersion") != 2 or type(options) is not list or
                 not 1 <= len(options) <= 16 or
                 any(type(item) is not dict for item in options)):
             raise IntegrityHold("OCI_MANIFEST_LIST_SCHEMA_HOLD")
-        child = None
-        for runner in ("llamacpp", "ggml", "mlx"):
-            matches = [item for item in options if item.get("runner") == runner]
-            if matches:
-                if len(matches) != 1:
-                    raise IntegrityHold("OCI_MANIFEST_RUNNER_AMBIGUOUS_HOLD")
-                child = matches[0]
-                break
-        if child is None or child.get("mediaType") != "application/vnd.docker.distribution.manifest.v2+json":
-            raise IntegrityHold("OCI_MANIFEST_RUNNER_NOT_FOUND_HOLD")
-        if "digest" in child:
-            match = _DIGEST.fullmatch(str(child["digest"]))
-            if not match:
-                raise IntegrityHold("OCI_MANIFEST_CHILD_DIGEST_HOLD")
-            child_raw = _read_hash(root / "blobs" / ("sha256-" + match.group(1)),
-                                   root, match.group(1), capture=True)
+        approved = []
+        for child in options:
+            if (child.get("runner") not in ("llamacpp", "ggml", "mlx") or
+                    child.get("mediaType") !=
+                    "application/vnd.docker.distribution.manifest.v2+json"):
+                continue
+            if "digest" in child:
+                digest = child.get("digest")
+                if not _DIGEST.fullmatch(str(digest)):
+                    raise IntegrityHold("OCI_MANIFEST_CHILD_DIGEST_HOLD")
+                child_sha = digest[7:]
+            else:
+                # Ollama also permits inline manifest-list children. Encode
+                # in original JSON field order and accept only when the bytes
+                # hash to the OFFICIALLY PINNED /api/tags child identifier.
+                if child.get("schemaVersion") != 2:
+                    raise IntegrityHold("OCI_MANIFEST_INLINE_SCHEMA_HOLD")
+                raw_inline = json.dumps(child, ensure_ascii=False,
+                                        separators=(",", ":")).encode("utf-8")
+                child_sha = hashlib.sha256(raw_inline).hexdigest()
+            if child_sha == manifest_digest:
+                approved.append(child)
+        if len(approved) != 1:
+            raise IntegrityHold("OCI_APPROVED_CHILD_NOT_UNIQUE_HOLD")
+        selected = approved[0]
+        if "digest" in selected:
+            # Ollama's referenced child lives in the content-addressed store.
+            # The digest and exact blob bytes are both checked before parsing.
+            child_raw = _read_hash(root / "blobs" / ("sha256-" + manifest_digest),
+                                   root, manifest_digest, capture=True)
             try:
-                manifest = json.loads(child_raw.decode("utf-8"), object_pairs_hook=_unique)
+                manifest = json.loads(child_raw.decode("utf-8"),
+                                      object_pairs_hook=_unique)
             except (UnicodeError, ValueError):
                 raise IntegrityHold("OCI_MANIFEST_CHILD_JSON_HOLD") from None
         else:
-            # Inline child is authenticated by the already-verified parent SHA.
-            manifest = child
+            manifest = selected
+    elif named_sha != manifest_digest:
+        # A single manifest, unlike a manifest list, has no child indirection.
+        raise IntegrityHold("OCI_SHA256_OR_SIZE_HOLD")
     if (type(manifest.get("config")) is not dict or
             type(manifest.get("layers")) is not list or not manifest["layers"] or
             len(manifest["layers"]) > 48):
