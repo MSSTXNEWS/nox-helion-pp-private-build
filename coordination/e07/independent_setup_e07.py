@@ -213,8 +213,8 @@ def classify_primary_uia_evidence(response: dict) -> dict:
             type(scanned) is int and 0 <= scanned <= min(total, 2048) and
             type(targets) is list and len(targets) <= 64 and
             all(type(item) is str and re.fullmatch(
-                r"(CHAT|INSTALL|MODELS|LEARN|REPORTS)\\|"
-                r"(ControlType\\.(Button|Text|Document|Hyperlink|Custom|Group|Pane|Edit)|Other)\\|"
+                r"(CHAT|INSTALL|MODELS|LEARN|REPORTS)\|"
+                r"(ControlType\.(Button|Text|Document|Hyperlink|Custom|Group|Pane|Edit)|Other)\|"
                 r"(VISIBLE_ENABLED|OFFSCREEN|DISABLED|TOO_SMALL)", item)
                 for item in targets), "E07_UIA_DIAGNOSTIC_UNTRUSTED_HOLD")
     result = classify_primary_button_names(response.get("labels"))
