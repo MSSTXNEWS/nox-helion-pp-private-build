@@ -17,6 +17,7 @@ import time
 from urllib.request import Request, urlopen
 
 MODEL = "qwen2.5-coder:1.5b"
+MODEL_DIGEST_PREFIX = "d7372fd82851"
 API = "http://127.0.0.1:11434"
 PROTO = "NOX-P02-NATIVE-v1"
 
@@ -128,6 +129,13 @@ def nonempty_response_text(reply: dict) -> int:
     return sum(len(x.encode("utf-8")) for x in texts)
 
 
+def qwen_probe_exit_code(report: dict) -> int:
+    """History must survive a fresh native process before a Qwen probe succeeds."""
+    return (0 if (report.get("installed_native") == "LIVE_NONEMPTY_RESPONSE_VERIFIED"
+                  and report.get("native_history_restart") == "PASS"
+                  and report.get("first_unmet_gate") ==
+                  "NATIVE_ACTIVE_STOP_AND_FIVE_GUI_CLICKS_E07") else 2)
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--backend", required=True, type=Path)
@@ -159,7 +167,7 @@ def main() -> int:
         digest = candidates[0].get("digest")
         if not (isinstance(digest, str)
                 and re.fullmatch("[0-9a-f]{64}", digest)
-                ):
+                and digest.startswith(MODEL_DIGEST_PREFIX)):
             raise RuntimeError("QWEN_UPSTREAM_DIGEST_MISMATCH_HOLD")
         report["ollama_reported_digest"] = digest
         report["independent_weight_sha_verified"] = False
@@ -189,9 +197,44 @@ def main() -> int:
         if chat["status"] != "OK" or report["installed_native_generated_bytes"] == 0:
             raise RuntimeError("NOX_INSTALLED_LIVE_CHAT_NOT_PROVEN")
         report["installed_native"] = "LIVE_NONEMPTY_RESPONSE_VERIFIED"
-        # Remains HOLD until an actual NOX STOP interrupts an ongoing native chat
-        # and nonempty SQLite history persists across a fresh native process.
-        report["first_unmet_gate"] = "NATIVE_ACTIVE_STOP_AND_HISTORY_RESTART"
+        # A distinct --native-stdio process MUST reload the answer from the
+        # original installed SQLite store. A stream event or process-local
+        # history is not proof of durable chat persistence.
+        stored = native_request(args.backend, data_dir, "chat.history", {}, 3)
+        report["native_history_restart_status"] = stored["status"]
+        rows = []
+        for item in stored["results"]:
+            if isinstance(item, dict) and isinstance(item.get("messages"), list):
+                rows = item["messages"]
+        answers = {
+            item["answer"] for item in chat["results"]
+            if isinstance(item, dict) and isinstance(item.get("answer"), str)
+            and item["answer"].strip()
+        }
+        if stored["status"] != "OK" or not answers or not rows:
+            raise RuntimeError("NOX_INSTALLED_SQLITE_HISTORY_NOT_RELOADED_HOLD")
+        exact_prompt = "Reply with exactly: NOX_QWEN_LIVE"
+        matched_answer = None
+        for i, item in enumerate(rows):
+            if not (isinstance(item, dict) and item.get("role") == "user"
+                    and item.get("content") == exact_prompt):
+                continue
+            for later in rows[i + 1:]:
+                if (isinstance(later, dict) and later.get("role") == "assistant"
+                        and later.get("content") in answers):
+                    matched_answer = later["content"]
+                    break
+            if matched_answer is not None:
+                break
+        if matched_answer is None:
+            raise RuntimeError("NOX_SQLITE_CHAT_RESPONSE_MISMATCH_AFTER_RESTART_HOLD")
+        report["native_history_restart"] = "PASS"
+        report["sqlite_history_rows_after_restart"] = len(rows)
+        report["sqlite_reloaded_answer_sha256"] = hashlib.sha256(
+            matched_answer.encode("utf-8")).hexdigest()
+        # ACTIVE STOP is owned by the independent concurrent U04 physical gate.
+        # NEVER conflate provider HTTP abort, idle STOP or SQLite with mid-stream STOP.
+        report["first_unmet_gate"] = "NATIVE_ACTIVE_STOP_AND_FIVE_GUI_CLICKS_E07"
     except Exception as exc:
         report["first_unmet_gate"] = (
             str(exc)[:120] if isinstance(exc, RuntimeError)
@@ -199,7 +242,7 @@ def main() -> int:
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(report, indent=2, sort_keys=True), encoding="utf-8")
     print("NOX_QWEN_INSTALLED_FIRST_GATE", report["first_unmet_gate"], flush=True)
-    return 0 if report["installed_native"] == "LIVE_NONEMPTY_RESPONSE_VERIFIED" else 2
+    return qwen_probe_exit_code(report)
 
 
 if __name__ == "__main__":
