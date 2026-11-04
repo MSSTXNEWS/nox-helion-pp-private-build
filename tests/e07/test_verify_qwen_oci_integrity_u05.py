@@ -57,7 +57,9 @@ class OCIGate(unittest.TestCase):
         self.assertEqual(m.verify(self.root, self.expected)["verified_blobs"], 2)
         # No silent fallback if the selected v2 file is corrupted.
         v2.write_bytes(b"CORRUPTED_V2")
-        with self.assertRaisesRegex(m.IntegrityHold, "OCI_SHA256"):
+        # An altered v2 name no longer points to its original content-
+        # addressed parent blob. That is a provenance HOLD, never fallback.
+        with self.assertRaisesRegex(m.IntegrityHold, "OCI_PATH_UNTRUSTED"):
             m.verify(self.root, self.expected)
 
     def test_v2_manifest_list_content_addressed_child(self):
