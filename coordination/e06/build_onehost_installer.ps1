@@ -500,9 +500,12 @@ if ($wantsCreative) {
   $microwowRoot=Join-Path (Resolve-Path -LiteralPath (Join-Path $source '../../../..')).Path 'Packages/P03/Source/P03.ModelCenter.Wow'
   $microwowTarget=Join-Path $source 'Assets/creative/modelcenter'
   $microwowFiles=@(
-    @{relative='index.html';blob='9647bc28aec278fb4ea41e8d90ac4c2bb1af0104'},
-    @{relative='ui.css';blob='60ade7fe94bd5bfdcc6f9ba3c3b31bee7d2ab7ad'},
-    @{relative='ui.js';blob='4e9ecd0290ce78e61847078c691ab2bf20693372'},
+    @{relative='index.html';blob='d4b80dbdc7669272da9391bb17db51bfad68de7e'},
+    @{relative='ui.css';blob='dfac6e254f205d121330a71cad206e2158cf2de2'},
+    @{relative='ui.js';blob='a1f2bcf0dd319d950808d0ca2cc58dda5ea9ed57'},
+    @{relative='vendor/uPlot.iife.min.js';blob='6749c4f02499c6999245f406f4bd208985f89aee'},
+    @{relative='vendor/uPlot.min.css';blob='976000608e7ee21ef0c700b08ad6f90834b40055'},
+    @{relative='vendor/uPlot.LICENSE.txt';blob='cde4b3f8352d147d5e626fea36358797c4fc06f2'},
     @{relative='THIRD_PARTY_LICENSES.txt';blob='4661952f5f4c9888c759ec94a3a28a31d26fc81f'},
     @{relative='icons/checkmark.svg';blob='e4ffbdc3d7f4f3e16a7612b7ab6bc145ad8874b6'},
     @{relative='icons/info.svg';blob='bd8e0cf27356e76acc68780ba6fd80cbfffbdf4f'},
