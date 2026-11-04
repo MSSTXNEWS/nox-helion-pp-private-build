@@ -109,6 +109,22 @@ def main() -> int:
         require(install / "NOX.P01.Shell.exe" in files,
                 "E07_PRIMARY_INSTALLED_SHELL_UNOWNED_HOLD")
         witness = gui_hwnd(install / "NOX.P01.Shell.exe", local, safe_nav=True)
+        # Save bounded exact-action outcomes BEFORE strict evaluation raises HOLD.
+        # A previous receipt lost all four-button diagnostics on the first
+        # incomplete navigation, slowing repair without strengthening safety.
+        nav = witness.get("ui_safe_primary_navigation")
+        action_results = nav.get("per_action") if type(nav) is dict else None
+        if type(action_results) is dict:
+            receipt["four_clicks_observed"] = {
+                name: {
+                    "button_actuated": (item.get("button_actuated")
+                                        if item.get("button_actuated") in ("OBSERVED", "HOLD") else "HOLD"),
+                    "navigation_verified": (item.get("navigation_verified")
+                                            if item.get("navigation_verified") in ("PASS", "NOT_TESTED") else "NOT_TESTED")
+                }
+                for name, item in action_results.items()
+                if name in PRIMARY[1:] and type(item) is dict
+            }
         receipt.update({"source_setup": identity, "installed_files_sha_verified": len(files),
                         "five_primary": evaluate(witness), "status": "PASS", "error": None})
     except (Hold, OSError, KeyError, ValueError) as exc:
