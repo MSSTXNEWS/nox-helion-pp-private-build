@@ -340,14 +340,20 @@ function PrimaryDock {
   try {
    $ar=$anchor.Current.BoundingRectangle
    $mid=$ar.Y+$ar.Height/2
-   $row=@{};$valid=$true
-   foreach($name in $names){
+   # Original source may expose another CHAT far outside the EXPRESS dock.
+   # Admit only one contiguous, visible five-button row immediately to the
+   # LEFT of SETTINGS, with small physical gaps, never a guess by name alone.
+   $row=@{SETTINGS=$anchor};$valid=$true;$nextRect=$ar
+   foreach($name in @('LEARN','MODELS','INSTALL','CHAT')){
     $matching=@($seen[$name].ToArray() | Where-Object {
       $r=$_.Current.BoundingRectangle
-      [math]::Abs(($r.Y+$r.Height/2)-$mid) -le 16
+      $gap=$nextRect.Left-$r.Right
+      [math]::Abs(($r.Y+$r.Height/2)-$mid) -le 16 -and
+       $gap -ge -1 -and $gap -le 45
     })
     if($matching.Count -ne 1){$valid=$false;break}
     $row[$name]=$matching[0]
+    $nextRect=$matching[0].Current.BoundingRectangle
    }
    if(-not $valid){continue}
    $prevRight=[double]::NegativeInfinity
@@ -393,7 +399,16 @@ if($op -eq 'VISUAL'){
  $__e07FailureStage=$null
  try {
  $__e07Stage='RESIZE'
- foreach($size in @([pscustomobject]@{width=1044;height=788},[pscustomobject]@{width=800;height=600})){$__e07Stage='RESIZE';$width=[int]$size.width;$height=[int]$size.height;if(-not [NoxFinalWin32]::MoveWindow($handle,$ox,$oy,$width,$height,$true)){throw 'MOVE'};Start-Sleep -Milliseconds 700;$rr=[NoxFinalWin32+RECT]::new();$null=[NoxFinalWin32]::GetWindowRect($handle,[ref]$rr);$__e07Stage='DOCK';$rects=FiveRects;$sizes+=([pscustomobject]@{requested=@($width,$height);actual=@($rr.Right-$rr.Left,$rr.Bottom-$rr.Top);visiblePrimary=$rects.Count;noOverlap=(NoOverlap $rects)})}
+ foreach($size in @([pscustomobject]@{width=1044;height=788},[pscustomobject]@{width=800;height=600})){$__e07Stage='RESIZE';$width=[int]$size.width;$height=[int]$size.height;if(-not [NoxFinalWin32]::MoveWindow($handle,$ox,$oy,$width,$height,$true)){throw 'MOVE'};Start-Sleep -Milliseconds 700;$rr=[NoxFinalWin32+RECT]::new();$null=[NoxFinalWin32]::GetWindowRect($handle,[ref]$rr);$__e07Stage='DOCK';$rects=$null
+ for($tryDock=0;$tryDock -lt 16;$tryDock++){
+  try{$rects=FiveRects;break}
+  catch{
+   if(($_.Exception.Message+'') -ne 'PRIMARY_DOCK_NOT_UNIQUE'){throw}
+   Start-Sleep -Milliseconds 200
+  }
+ }
+ if($null -eq $rects){throw 'PRIMARY_DOCK_NOT_UNIQUE'}
+ $sizes+=([pscustomobject]@{requested=@($width,$height);actual=@($rr.Right-$rr.Left,$rr.Bottom-$rr.Top);visiblePrimary=$rects.Count;noOverlap=(NoOverlap $rects)})}
  } catch {
   # Preserve the original failure stage even though finally always restores
   # the original size. Previously every DOCK failure was reported as RESTORE.

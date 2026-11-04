@@ -48,6 +48,14 @@ class PhysicalVisualFailureStages(unittest.TestCase):
         self.assertIn("Restore original WPF HWND", script)
         self.assertIn("VISUAL_STAGE_", script)
 
+    def test_dock_requires_one_spatially_contiguous_original_row(self):
+        script = probe._uia_script(12345, "VISUAL", png=Path("screenshot.png"))
+        self.assertIn("foreach($name in @('LEARN','MODELS','INSTALL','CHAT'))",script)
+        self.assertIn("$gap -ge -1 -and $gap -le 45",script)
+        self.assertIn("if($matching.Count -ne 1)",script)
+        self.assertIn("if($clusters.Count -ne 1)",script)
+        self.assertIn("if($null -eq $rects){throw 'PRIMARY_DOCK_NOT_UNIQUE'}",script)
+
     def test_release_gate_stays_strict(self):
         gate = (ROOT / "coordination/e07/independent_setup_e07.py").read_text(
             encoding="utf-8")
