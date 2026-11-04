@@ -39,6 +39,20 @@ jobs:
           python-version: '3.12.10'
           architecture: x64
           check-latest: false
+      - name: Fast source regression gate before heavy artifacts
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          python -B -m py_compile coordination/e07/independent_setup_e07.py coordination/e07/probe_five_primary_action.py coordination/e07/probe_installed_qwen.py coordination/e07/probe_native_active_stop.py coordination/e07/verify_qwen_oci_integrity.py
+          if ($LASTEXITCODE -ne 0) { throw 'E07_PYTHON_SOURCE_SYNTAX_HOLD' }
+          python -B -m unittest discover -s tests/e07 -p test_independent_setup_e07.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'E07_BASE_REGRESSION_HOLD' }
+          python -B -m unittest discover -s tests/e07 -p test_e07_original_frozen_u06.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'E07_SOURCE_REGRESSION_HOLD' }
+          python -B -m unittest discover -s tests/e07 -p test_e07_install_root_reparse_u09.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'E07_INSTALL_ROOT_REGRESSION_HOLD' }
+          python -B -m unittest discover -s tests/e07 -p test_probe_five_primary_action_u06.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'E07_FIVE_CLICK_REGRESSION_HOLD' }
       - name: Download immutable candidate from DIFFERENT Windows CI run
         uses: actions/download-artifact@v4
         with:
@@ -108,24 +122,12 @@ jobs:
             throw 'E07_QWEN_APPROVED_FULL_DIGEST_HOLD'
           }
           Write-Host 'E07_APPROVED_LOCAL_QWEN_PROVIDER_READY_NOT_YET_CHAT_PROOF'
-      - name: Independent installed E07 candidate lifecycle, never release by default
+      - name: Independent installed E07 candidate lifecycle, final receipts required
         id: test
         continue-on-error: true
         shell: pwsh
         run: |
           $ErrorActionPreference='Stop'
-          python -B -m py_compile coordination/e07/independent_setup_e07.py coordination/e07/probe_installed_qwen.py coordination/e07/probe_native_active_stop.py coordination/e07/verify_qwen_oci_integrity.py
-          if ($LASTEXITCODE -ne 0) { throw 'E07_PYTHON_SOURCE_SYNTAX_HOLD' }
-          python -B -m unittest discover -s tests/e07 -p test_independent_setup_e07.py -v
-          if ($LASTEXITCODE -ne 0) { throw 'E07_BASE_REGRESSION_HOLD' }
-          python -B -m unittest discover -s tests/e07 -p test_e07_original_frozen_u06.py -v
-          if ($LASTEXITCODE -ne 0) { throw 'E07_SOURCE_REGRESSION_HOLD' }
-          python -B -m unittest discover -s tests/e07 -p test_e07_install_root_reparse_u09.py -v
-          if ($LASTEXITCODE -ne 0) { throw 'E07_INSTALL_ROOT_REGRESSION_HOLD' }
-          python -B -m py_compile coordination/e07/probe_five_primary_action.py
-          if ($LASTEXITCODE -ne 0) { throw 'E07_FIVE_CLICK_SOURCE_SYNTAX_HOLD' }
-          python -B -m unittest discover -s tests/e07 -p test_probe_five_primary_action_u06.py -v
-          if ($LASTEXITCODE -ne 0) { throw 'E07_FIVE_CLICK_REGRESSION_HOLD' }
           python -B coordination/e07/independent_setup_e07.py --artifact-dir input-verified-834 --artifact-kind d02 --out work/e07-independent/E07_CANDIDATE_RECEIPT.json
           if ($LASTEXITCODE -ne 0) { throw 'INDEPENDENT_E07_NOT_ACCEPTED' }
       - name: Save independent evidence even on HOLD
