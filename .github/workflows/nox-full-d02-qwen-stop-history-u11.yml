@@ -32,6 +32,16 @@ jobs:
         run: |
           python -B -m py_compile coordination/e07/probe_installed_qwen.py
           if ($LASTEXITCODE -ne 0) { throw 'QWEN_PROBE_SYNTAX_HOLD' }
+      - name: Preflight SAME-SETUP original independent physical UIA diagnostics
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          python -B -m py_compile coordination/e07/independent_setup_e07.py coordination/e07/probe_full_d02_5uia_u09.py coordination/e07/probe_five_primary_action.py
+          if ($LASTEXITCODE -ne 0) { throw 'U12_SAME_SHA_UIA_PYTHON_COMPILE_HOLD' }
+          python -B -m unittest discover -s tests/e07 -p test_full_d02_5uia_u09.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'U12_SAME_SHA_UIA_SOURCE_HOLD' }
+          python -B -m unittest discover -s tests/e07 -p test_primary_destination_witness_b3.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'U12_SAME_SHA_DESTINATION_WITNESS_HOLD' }
       - name: Download already-verified Ollama Windows installer
         uses: actions/download-artifact@v4
         with:
@@ -153,6 +163,18 @@ jobs:
           $proof=Get-Content -LiteralPath 'work/qwen-installed/ACTIVE_STOP_FULL_D02_RECEIPT.json' -Raw -Encoding UTF8 | ConvertFrom-Json
           if ($proof.native_active_stop -cne 'PASS' -or $proof.interrupted_chat_terminal -cne 'NATIVE_CHAT_STOP' -or $proof.native_stop_ack -cne 'PASS' -or $proof.release_accepted -ne $false) { throw 'FULL_D02_NATIVE_STOP_PROOF_HOLD' }
           Write-Host 'FULL_D02_NATIVE_ACTIVE_STOP_PASS_NO_E07'
+      - name: Verify five original UIA InvokePattern actions and full NSIS lifecycle on SAME physical SetupSHA
+        id: same_setup_five_uia
+        shell: pwsh
+        timeout-minutes: 16
+        run: |
+          $ErrorActionPreference='Stop'
+          # Same input/nox already verified above; original strict E07, no second GUI.
+          python -B coordination/e07/probe_full_d02_5uia_u09.py --artifact-dir input/nox --out work/qwen-installed/FIVE_UIA_SAME_SETUP_SHA.json
+          if ($LASTEXITCODE -ne 0) { throw 'U12_SAME_SETUP_FIVE_UIA_OR_NSIS_LIFECYCLE_HOLD_NOT_RELEASE' }
+          $uia=Get-Content -LiteralPath 'work/qwen-installed/FIVE_UIA_SAME_SETUP_SHA.json' -Raw -Encoding UTF8 | ConvertFrom-Json
+          if ($uia.source_sha -cne 'dbda3c0e6cd529cdcfbb031994a3e0ac699d2a5a' -or $uia.setup_sha256 -cne '0fd80b7bb55fcbd60fe22971ea9292cadeaa6f99f9d174b38c205f7cea3989ab' -or $uia.build_id -cne 'NOX-V16-d990509dfd4a6460a21213e7' -or $uia.five_uia -cne 'PASS' -or $uia.independent_e07_10_10 -cne 'HOLD' -or $uia.release_accepted -ne $false) { throw 'U12_SAME_SETUP_IDENTITY_OR_UIA_RECEIPT_HOLD' }
+          Write-Host 'U12_SAME_SHA_UIA_LIFECYCLE_DIAGNOSTIC_PASS_NOT_E07'
       - name: Preserve evidence without falsely promoting incomplete release
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -161,6 +183,7 @@ jobs:
           path: |
             work/qwen-installed/QWEN_INSTALLED_RECEIPT.json
             work/qwen-installed/ACTIVE_STOP_FULL_D02_RECEIPT.json
+            work/qwen-installed/FIVE_UIA_SAME_SETUP_SHA.json
           if-no-files-found: warn
           retention-days: 14
       - name: Do not promote a provider-only pass to a NOX release
@@ -169,4 +192,5 @@ jobs:
         run: |
           if ('${{ steps.realprobe.outcome }}' -ne 'success') { throw 'NOX_REAL_QWEN_INSTALLED_HOLD' }
           if ('${{ steps.native_active_stop.outcome }}' -ne 'success') { throw 'FULL_D02_NATIVE_STOP_GATE_HOLD' }
-          Write-Host 'FULL_D02_LIVE_CHAT_SQLITE_RESTART_AND_ACTIVE_STOP_PASSED_NO_INDEPENDENT_E07'
+          if ('${{ steps.same_setup_five_uia.outcome }}' -ne 'success') { throw 'U12_SAME_SETUP_FIVE_UIA_AND_LIFECYCLE_HOLD' }
+          Write-Host 'FULL_D02_LIVE_QWEN_CHAT_SQLITE_STOP_FIVE_UIA_SAME_SETUP_DIAGNOSTIC_PASS_NOT_INDEPENDENT_E07_10_10'
