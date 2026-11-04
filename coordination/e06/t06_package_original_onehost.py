@@ -711,7 +711,7 @@ def build(root,staged):
     import importlib.util
     five_script=Path(__file__).resolve().parents[2]/"coordination/express/stage_original_five_primary.py"
     verify_source_tree_entry(five_script,Path(__file__).resolve().parents[2])
-    need(_git_blob(five_script.read_bytes())=="a61a1c283c380382cd5542e9dad13c6f12970013",
+    need(_git_blob(five_script.read_bytes())=="ed404fb696adbd9d3528bf4035f58e71ed687eaa",
          "U08_FIVE_PRIMARY_STAGE_PIN_HOLD")
     five_spec=importlib.util.spec_from_file_location("nox_express_five_primary",five_script)
     need(five_spec is not None and five_spec.loader is not None,

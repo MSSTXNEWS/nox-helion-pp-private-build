@@ -37,6 +37,27 @@ INSERT = r'''<!-- NOX EXPRESS 5 original-home primary actions; no additional hos
 (()=>{'use strict';
 const nav=document.getElementById('nox-express-primary');if(!nav)return;
 const state=nav.querySelector('[data-nox-state]');
+// Render only an exact unique *existing* text-only original MENU label as a
+// graphical symbol. Do not replace its element, listeners, route, or siblings.
+// Unknown/multiple labels are left untouched for physical visual E07 HOLD.
+function renderOriginalMenuGlyph(){
+ const labels=Array.from(new Set(document.querySelectorAll('aside *, nav *, header *, .sidebar *')))
+  .filter(el=>!nav.contains(el)&&el.children.length===0&&
+     (el.textContent||'').trim()==='MENU');
+ if(labels.length!==1)return;
+ const label=labels[0];
+ const nodes=Array.from(label.childNodes).filter(n=>n.nodeType===3&&
+     (n.textContent||'').trim()==='MENU');
+ if(nodes.length!==1)return;
+ if(!label.hasAttribute('aria-label'))
+   label.setAttribute('aria-label','Направления HELION');
+ nodes[0].textContent='✦';
+ label.dataset.noxOriginalMenuGlyph='true';
+}
+if(document.readyState==='loading')
+ document.addEventListener('DOMContentLoaded',renderOriginalMenuGlyph,{once:true});
+else renderOriginalMenuGlyph();
+
 const screenNames={CHAT:['ЧАТ','CHAT'],INSTALL:['УСТАНОВКА','INSTALL'],LEARN:['ОБУЧЕНИЕ','LEARN'],SETTINGS:['НАСТРОЙКИ','SETTINGS']};
 function safeOriginalLink(a){
  // No external/privileged routes from a text-matched original anchor.
