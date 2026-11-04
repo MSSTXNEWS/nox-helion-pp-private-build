@@ -27,7 +27,7 @@ class D02OriginalFivePrimary(unittest.TestCase):
   self.receipt=self.folder/"D02_EXISTING_FIVE_PRIMARY_RECEIPT.json"
   self.home.write_bytes(b"ORIGINAL_FIXTURE")
  def test_atomic_publish_one_home_with_unaccepted_state(self):
-  derived=b'<nav>'+b''.join(('data-nox-primary="'+s+'"').encode() for s in ('CHAT','INSTALL','MODELS','LEARN','SETTINGS'))+b'</nav>'
+  derived=b'<nav>'+b''.join(('data-nox-primary="'+name+'"').encode() for name in ('CHAT','INSTALL','MODELS','LEARN','SETTINGS'))+b'</nav>'
   proof={'source_sha256':hashlib.sha256(self.home.read_bytes()).hexdigest(),
          'published_sha256':hashlib.sha256(derived).hexdigest(),
          'installed_ui_automation':'NOT_RUN','release_accepted':False}
