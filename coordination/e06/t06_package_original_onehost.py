@@ -134,9 +134,25 @@ def verify_nsis_setup(setup: Path) -> dict:
             total+=len(chunk)
         after_fd=os.fstat(stream.fileno())
     final=setup.stat()
-    stable=lambda s:(s.st_dev,s.st_ino,s.st_size,s.st_mtime_ns,s.st_ctime_ns)
-    need(not setup.is_symlink() and total==size and
-         stable(initial)==stable(opened)==stable(after_fd)==stable(final),
+    # On CPython 3.12 Windows, stat(path).st_ctime_ns can denote creation
+    # while fstat(descriptor).st_ctime_ns can reflect metadata-change time.
+    # Bind the SAME physical file by device/inode, size, mtime and birthtime
+    # across both APIs, and enforce unchanged ctime within each API pair.
+    # POSIX retains the original strict four-way ctime comparison.
+    identity=lambda s:(s.st_dev,s.st_ino,s.st_size,s.st_mtime_ns)
+    same_identity=(identity(initial)==identity(opened)==
+                   identity(after_fd)==identity(final))
+    if os.name=="nt":
+        births=[getattr(s,"st_birthtime_ns",None)
+                for s in (initial,opened,after_fd,final)]
+        time_ok=(all(type(value) is int for value in births) and
+                 len(set(births))==1 and
+                 initial.st_ctime_ns==final.st_ctime_ns and
+                 opened.st_ctime_ns==after_fd.st_ctime_ns)
+    else:
+        time_ok=(initial.st_ctime_ns==opened.st_ctime_ns==
+                 after_fd.st_ctime_ns==final.st_ctime_ns)
+    need(not setup.is_symlink() and total==size and same_identity and time_ok,
          "T06_NSIS_SETUP_CHANGED_DURING_VERIFY")
     return {"bytes":total,"sha256":digest.hexdigest()}
 
