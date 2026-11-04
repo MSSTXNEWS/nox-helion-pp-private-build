@@ -8,6 +8,8 @@ on:
       - 'private_build.ps1'
       - 'coordination/e06/**'
       - 'tests/e06/**'
+      - 'tests/test_c04_p03_ack_scalar_rejection.py'
+      - 'tests/p03/test_p03_cancel_retry_jobid_bind_u06.py'
   workflow_dispatch:
     inputs:
       native_smoke_model:
@@ -121,6 +123,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'P03_PULL_REVIEW_RACE_HOLD' }
           python -m unittest discover -s tests -p 'test_c04_p03_ack_scalar_rejection.py' -v
           if ($LASTEXITCODE -ne 0) { throw 'P03_SCALAR_ACK_REGRESSION_HOLD' }
+          python -B -m unittest discover -s tests/p03 -p 'test_p03_cancel_retry_jobid_bind_u06.py' -v
+          if ($LASTEXITCODE -ne 0) { throw 'P03_CANCEL_RETRY_EXACT_JOB_ACK_HOLD' }
           python -m unittest discover -s tests -p 'test_ev_a04_model_retry_source.py' -v
           if ($LASTEXITCODE -ne 0) { throw 'P03_GGUF_RETRY_REGRESSION_HOLD' }
           python -m unittest discover -s tests/e06 -p 'test_ci_windows_runner_selector.py' -v
