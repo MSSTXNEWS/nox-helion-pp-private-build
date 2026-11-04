@@ -103,6 +103,16 @@ class FinalPrimaryDispatch(unittest.TestCase):
         with self.assertRaisesRegex(probe.e07.Hold, "E07_FINAL_UIA_PHASE_HOLD"):
             probe._run_ps("test", phase="INJECTED_NAME")
 
+    def test_visual_resize_targets_remain_two_distinct_typed_dimensions(self):
+        # PowerShell nested literal arrays may flatten; typed objects retain dimensions.
+        script = probe._uia_script(12345, "VISUAL", png=Path("test.png"))
+        self.assertIn("[pscustomobject]@{width=1044;height=788}", script)
+        self.assertIn("[pscustomobject]@{width=800;height=600}", script)
+        self.assertIn("$width=[int]$size.width", script)
+        self.assertIn("$height=[int]$size.height", script)
+        self.assertIn("requested=@($width,$height)", script)
+        self.assertNotIn("foreach($size in @(@(1044,788),@(800,600)))", script)
+
     def test_non_action_does_not_invoke_privileged_button(self):
         script = probe._uia_script(12345, "FX")
         self.assertIn("$op='FX'", script)
