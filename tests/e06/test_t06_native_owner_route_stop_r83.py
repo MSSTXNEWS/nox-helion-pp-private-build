@@ -48,8 +48,12 @@ class OriginalNativeOwnerMenuStopR83(unittest.TestCase):
 
     def test_stop_overtakes_modal_and_rejects_stale_completion(self):
         self.assertIn('!isMenuStop &&\n                !await _nativeConsent(', self.bridge)
-        self.assertIn('route == "chat.stop" || isMenuStop)\n                Interlocked.Increment(ref _streamEpoch)', self.bridge)
-        self.assertIn('route == "chat.stop" || isMenuStop)\n                    ownerState = ownerResult.Accepted ? "STOP_REQUESTED" : "HOLD";', self.bridge)
+        self.assertNotIn('route == "chat.stop" || isMenuStop)\n                Interlocked.Increment(ref _streamEpoch)', self.bridge)
+        self.assertIn('if ((route == "chat.stop" || isMenuStop) && ownerAccepted)\n                    Interlocked.Increment(ref _streamEpoch)', self.bridge)
+        self.assertIn('var ownerAccepted = ownerResult.Accepted &&\n                    string.IsNullOrEmpty(ownerResult.ErrorCode);', self.bridge)
+        self.assertIn('ownerState = ownerAccepted ? "STOP_REQUESTED" : "HOLD";', self.bridge)
+        self.assertIn('var accepted = result.Accepted &&\n                    string.IsNullOrEmpty(result.ErrorCode);', self.bridge)
+        self.assertIn('if (route == "chat.stop" && accepted)\n                    Interlocked.Increment(ref _streamEpoch);', self.bridge)
         self.assertIn('payload.EnumerateObject().Count() == 1', self.bridge)
         self.assertIn('MENU_STOP_PAYLOAD_HOLD', self.owner)
 

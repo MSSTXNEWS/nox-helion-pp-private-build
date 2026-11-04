@@ -434,8 +434,6 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
                     Reply(source, epoch, id, route, "HOLD", navigation.ErrorCode ?? "BROWSER_NATIVE_HOLD");
                 return;
             }
-            if (route == "chat.stop" || isMenuStop)
-                Interlocked.Increment(ref _streamEpoch);
             // P03's existing C# queue stays in this WPF host; it must not be
             // replaced by a Python downloader or sent through a second IPC.
             if (_nativeOwnerAction is not null &&
@@ -453,14 +451,20 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
                 var ownerResult = await _nativeOwnerAction(route, payload.Clone(), cancel);
                 if (!IsCurrent(source, epoch) || !NativeSidMatches() ||
                     !_nativeAcl(_ownerWindowsSid, route)) return;
+                // Stop revokes live chat frames only on affirmative native owner ACK.
+                // A denied STOP must not silence a still-active generator in the UI.
+                var ownerAccepted = ownerResult.Accepted &&
+                    string.IsNullOrEmpty(ownerResult.ErrorCode);
+                if ((route == "chat.stop" || isMenuStop) && ownerAccepted)
+                    Interlocked.Increment(ref _streamEpoch);
                 // Owner ACK means a durable job was accepted, NOT that the
                 // entire model has been downloaded, imported or installed.
                 // Never claim cancellation when the owner reports false.
-                var ownerState = ownerResult.Accepted ? "COMPLETED" : "HOLD";
+                var ownerState = ownerAccepted ? "COMPLETED" : "HOLD";
                 if (route is "models.pull" or "models.retry" or "models.gguf.import")
                 {
                     ownerState = "HOLD";
-                    if (ownerResult.Accepted && ownerResult.Result is JsonElement job &&
+                    if (ownerAccepted && ownerResult.Result is JsonElement job &&
                         job.ValueKind == JsonValueKind.Object &&
                         job.TryGetProperty("state", out var jobState) &&
                         jobState.ValueKind == JsonValueKind.String)
@@ -476,14 +480,14 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
                 }
                 else if (route == "models.cancel")
                 {
-                    ownerState = ownerResult.Accepted &&
+                    ownerState = ownerAccepted &&
                         ownerResult.Result is JsonElement cancelled &&
                         cancelled.ValueKind == JsonValueKind.Object &&
                         cancelled.TryGetProperty("cancelled", out var flag) &&
                         flag.ValueKind == JsonValueKind.True ? "STOP_REQUESTED" : "HOLD";
                 }
                 else if (route == "chat.stop" || isMenuStop)
-                    ownerState = ownerResult.Accepted ? "STOP_REQUESTED" : "HOLD";
+                    ownerState = ownerAccepted ? "STOP_REQUESTED" : "HOLD";
                 Reply(source, epoch, id, route, ownerState,
                       ownerResult.ErrorCode, ownerResult.Result);
                 return;
@@ -519,7 +523,11 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
                 if (isChat && Interlocked.Read(ref _streamEpoch) != streamEpoch) return;
                 // STOP acknowledged by the Python owner only means requested.
                 // Never misreport a remote model as fully aborted before proof.
-                var state = !result.Accepted ? "HOLD" :
+                var accepted = result.Accepted &&
+                    string.IsNullOrEmpty(result.ErrorCode);
+                if (route == "chat.stop" && accepted)
+                    Interlocked.Increment(ref _streamEpoch);
+                var state = !accepted ? "HOLD" :
                     route == "chat.stop" ? "STOP_REQUESTED" : "COMPLETED";
                 Reply(source, epoch, id, route,
                       state, result.ErrorCode, result.Result);

@@ -552,7 +552,7 @@ $payload=Join-Path $out 'payload'
 # require native Windows E2E, not a --diagnose receipt.
 $p02StageSources=@(
   @{relative='Packages/P02/worker-chat/NativePythonPipe.cs';dest='Integration/NativePythonPipe.cs';blob='e8e4f95106f4d40c29c68d81378c7938e6a7c0f5'},
-  @{relative='coordination/e06/OneHostP02WebView2Bridge.cs';dest='Integration/OneHostP02WebView2Bridge.cs';blob='2b9b642810c5259a7e9b059dbacff6c7037b6a99'},
+  @{relative='coordination/e06/OneHostP02WebView2Bridge.cs';dest='Integration/OneHostP02WebView2Bridge.cs';blob='a233b9eda3ac0e1eeb7159d0e65872198a483596'},
   @{relative='Packages/P02/worker-chat/SpaceBrowserBoundary.cs';dest='Integration/SpaceBrowserBoundary.cs';blob='4d70c5de450837d07304d91b4fa4c0e049a2be52'},
   @{relative='coordination/e06/NoXAutostart.cs';dest='Integration/NoXAutostart.cs';blob='5ae879ce474e6279cccd57fb596705959dbb3c9e'},
   @{relative='Packages/P03/Source/P03.ModelCenter/ModelArtifactReviewRegistry.cs';dest='Integration/P03/ModelArtifactReviewRegistry.cs';blob='06795f2e4c6688e4e2f12897182dae3f571e17d6'},
