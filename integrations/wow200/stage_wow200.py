@@ -100,14 +100,20 @@ def canonical_menu_bytes(path: Path) -> bytes:
         raise ValueError("MENU_V2_UNEXPECTED_CARRIAGE_RETURN")
     return raw.replace(b'\r\n', b'\n')
 
-def menu_stage_plan(repo: Path, destination: Path) -> list:
+def menu_stage_plan(repo: Path, destination: Path, approved_bytes: dict | None = None) -> list:
+    # Freeze the exact admitted bytes; a later checkout mutation cannot
+    # silently replace SHA-verified UI in the Windows NSIS payload.
     plans=[]
     for relative, expected in MENU_V2_SHA256.items():
         origin=repo/relative
         if (not origin.is_file() or origin.is_symlink() or
-                any(parent.is_symlink() for parent in origin.parents if parent != repo) or
-                hashlib.sha256(canonical_menu_bytes(origin)).hexdigest()!=expected):
+                any(parent.is_symlink() for parent in origin.parents if parent != repo)):
             raise ValueError("MENU_V2_ATOMIC_SOURCE_PIN_HOLD:"+relative)
+        canonical=canonical_menu_bytes(origin)
+        if hashlib.sha256(canonical).hexdigest()!=expected:
+            raise ValueError("MENU_V2_ATOMIC_SOURCE_PIN_HOLD:"+relative)
+        if approved_bytes is not None:
+            approved_bytes[origin]=canonical
         plans.append((origin,destination/"ui"/origin.name))
     return plans
 
@@ -219,6 +225,7 @@ def stage(root:Path, source:Path)->dict:
         len({a["taskId"] for a in actions})!=50):
         raise ValueError("PACK01_CATALOG_50_ROUTES_HOLD")
     pinned_content={pack01_catalog:pinned_source_bytes(pack01_catalog,PACK01_CATALOG_BLOB)}
+    pinned_content.update(menu_verified)
     for rel,pins in OWNER1_D02_ENGINE.items():
         archived=source/rel
         active=owner1_root/rel
@@ -234,12 +241,12 @@ def stage(root:Path, source:Path)->dict:
         pinned_content[source/rel]=pinned_source_bytes(source/rel,pins["legacy_blob"])
         pinned_content[owner1_root/rel]=pinned_source_bytes(owner1_root/rel,pins["active_blob"])
     plans=[(pack01_catalog,dest/"pack01-catalog.json")]
-    menu_plans=menu_stage_plan(owner1_root,dest)
+    menu_verified={}
+    menu_plans=menu_stage_plan(owner1_root,dest,menu_verified)
     plans.extend(menu_plans)
     p01_plans,p01_content=p01_owner_stage_plan(owner1_root,dest)
     plans.extend(p01_plans)
     pinned_content.update(p01_content)
-    menu_origins={origin for origin,_ in menu_plans}
     for rel, expected in files.items():
         if not rel.startswith(("proposals/", "legacy/")) or ".." in Path(rel).parts or Path(rel).is_absolute():
             raise ValueError("UNSAFE_WOW_SOURCE_PATH")
@@ -318,18 +325,20 @@ def stage(root:Path, source:Path)->dict:
     new_home=new_home.replace('</body>',
         '<script src="creative/wow200/runtime/vendor/gauge.min.js"></script><script src="creative/wow200/runtime/vendor/progressbar.min.js"></script><script type="module" src="creative/wow200/runtime/home-scene.mjs"></script>'
         '<script type="module" src="creative/wow200/ui/onehost-menu-bindings.mjs"></script></body>')
+    # Pre-write recheck rejects observable concurrent changes to admitted UI.
+    # A later race is safe too: all copies use only preverified snapshots.
+    for origin,_ in menu_plans:
+        if canonical_menu_bytes(origin)!=pinned_content[origin]:
+            raise ValueError("MENU_V2_SOURCE_DRIFT_AFTER_PIN_HOLD")
+    if any(origin not in pinned_content for origin,_ in plans):
+        raise ValueError("WOW_UNPINNED_SOURCE_COPY_HOLD")
     copied=[];out=root.parent/"WOW200_STAGE_RECEIPT.json"
     if out.exists():raise ValueError("WOW200_RECEIPT_CONFLICT_HOLD")
     try:
         dest.mkdir(parents=True)
         for origin,target in plans:
             target.parent.mkdir(parents=True,exist_ok=True)
-            if origin in menu_origins:
-                target.write_bytes(canonical_menu_bytes(origin))
-            elif origin in pinned_content:
-                target.write_bytes(pinned_content[origin])
-            else:
-                shutil.copyfile(origin,target)
+            target.write_bytes(pinned_content[origin])
             copied.append({"path":str(target.relative_to(root)).replace("\\","/"),
                            "sha256":digest(target),"bytes":target.stat().st_size})
         # Source-lock the disposable HTML before the first write.

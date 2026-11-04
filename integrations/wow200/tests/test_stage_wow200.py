@@ -222,6 +222,22 @@ class WowStageTests(unittest.TestCase):
   target=self.stage/'Assets/creative/wow200/proposals/P01/WOW-MAX10/scene-contract.mjs'
   self.assertEqual(target.read_bytes(),original)
   self.assertTrue(receipt['p01_owner_source_staged'])
+ def test_menu_source_race_after_pin_rejected_before_any_staging(self):
+  # Inject an unreviewed checkout change after its SHA check, before copy.
+  changed=self.root/'ui/nox-r11-wow.css'
+  original=changed.read_bytes()
+  home=self.stage/'Assets/index.html'
+  home_before=home.read_bytes()
+  approved_plan=eng.menu_stage_plan
+  def drift(repo,destination,approved_bytes=None):
+   planned=approved_plan(repo,destination,approved_bytes)
+   changed.write_bytes(original+b'\\n/* UNAPPROVED POST PIN MUTATION */\\n')
+   return planned
+  with patch.object(eng,'menu_stage_plan',side_effect=drift):
+   with self.assertRaisesRegex(ValueError,'MENU_V2_SOURCE_DRIFT_AFTER_PIN_HOLD'):
+    stage(self.stage,self.src)
+  self.assertFalse((self.stage/'Assets/creative/wow200').exists())
+  self.assertEqual(home.read_bytes(),home_before)
  def test_windows_menu_crlf_normalizes_to_exact_pinned_content(self):
   path=self.root/'ui/selfbuilder-menu-v2.mjs'
   original=eng.canonical_menu_bytes(path)
