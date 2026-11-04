@@ -4,6 +4,7 @@ on:
     branches: [integration/nox-v16-unified-candidate-20261028-r01]
     paths:
       - .github/workflows/nox-express-independent-e07-nav-a2.yml
+      - coordination/e07/probe_final_same_setup.py
   workflow_dispatch:
 permissions:
   actions: read
