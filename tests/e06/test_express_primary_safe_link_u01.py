@@ -22,7 +22,7 @@ class OriginalNavigationSecurity(unittest.TestCase):
         node = shutil.which('node')
         if node is None:
             self.skipTest('Node unavailable; JS not executed and MUST NOT be claimed PASS')
-        fn = 'function safeOriginalLink(a){' + module.INSERT.split('function safeOriginalLink(a){', 1)[1].split('\\nfunction findOriginalScreen', 1)[0]
+        fn = 'function safeOriginalLink(a){' + module.INSERT.split('function safeOriginalLink(a){', 1)[1].split('\nfunction findOriginalScreen', 1)[0]
         checks = r'''
 const assert=require('node:assert/strict');
 const document={baseURI:'https://127.0.0.1:8822/Assets/index.html'};
@@ -44,7 +44,7 @@ for(const [href,base,expected] of cases){document.baseURI=base;
  assert.equal(safeOriginalLink(anchor(href)),expected,href);}
 console.log('11/11 PASS');
 '''
-        result = subprocess.run([node, '-e', fn+'\\n'+checks], capture_output=True,
+        result = subprocess.run([node, '-e', fn+'\n'+checks], capture_output=True,
                                 text=True, timeout=15, check=False)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn('11/11 PASS', result.stdout)
