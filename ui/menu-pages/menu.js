@@ -34,8 +34,8 @@ function setDetails(...children){
 }
 function overview(){
  active=null;P.details.hidden=true;P.details.replaceChildren();
- P.title.textContent='10 МИРОВ HELION';
- P.subtitle.textContent='8 направлений · 10 графических миров · '+ROUTE_COUNT+' маршрута';
+ P.title.textContent='8 НАПРАВЛЕНИЙ HELION';
+ P.subtitle.textContent='8 графических направлений · 5 основных действий · 8 CoreID';
  [...P.planets.querySelectorAll('button'),...P.directions.querySelectorAll('button')].forEach(b=>b.setAttribute('aria-pressed','false'));
  say('NOX EXPRESS · функциям требуется подтверждение от локального ядра');
 }
@@ -43,14 +43,14 @@ function world(id){
  const w=getWorld(id);if(!w)return;
  active=id;P.title.textContent=w.title;P.subtitle.textContent=w.description;
  const top=el('div','detail-top');
- top.append(button('← ВСЕ МИРЫ','back',overview),el('span','eyebrow',w.routes.length+' ФУНКЦИЙ'));
+ top.append(button('← НАПРАВЛЕНИЯ','back',overview),el('span','eyebrow',w.routes.length+' ФУНКЦИЙ'));
  const grid=el('div','route-grid');
  w.routes.forEach(r=>{
   const b=button(r.label,'route',()=>openRoute(r.id));b.dataset.route=r.id;
   b.append(el('small','',r.id));grid.append(b);
  });
  setDetails(top,grid);
- P.planets.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.world===id)));
+ P.planets.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.section===w.section)));
  P.directions.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.section===w.section)));
  say(w.title+' · выберите нужную функцию');
 }
@@ -269,8 +269,9 @@ function direction(id){
  if(worlds.length===1){world(worlds[0].id);return;}
  const grid=el('div','route-grid');
  worlds.forEach(w=>grid.append(button(w.title,'route',()=>world(w.id))));
- P.title.textContent=DIRECTIONS.find(x=>x[0]===id)?.[1]||id;P.subtitle.textContent='Выберите графический мир';
- setDetails(button('← ВСЕ МИРЫ','back',overview),grid);
+ P.title.textContent=DIRECTIONS.find(x=>x[0]===id)?.[1]||id;P.subtitle.textContent='Дополнительные функции направления';
+ setDetails(button('← НАПРАВЛЕНИЯ','back',overview),grid);
+ P.planets.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.section===id)));
  P.directions.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.section===id)));
 }
 function mainAction(name){
@@ -280,10 +281,13 @@ function mainAction(name){
 DIRECTIONS.forEach(([id,name])=>{
  const b=button(name,'direction',()=>direction(id));b.dataset.section=id;b.setAttribute('aria-pressed','false');P.directions.append(b);
 });
-WORLDS.forEach(w=>{
- const b=button('', 'planet planet-'+w.id,()=>world(w.id));b.dataset.world=w.id;
- b.style.setProperty('--i',String(w.index));b.setAttribute('aria-label',w.title+' · '+w.routes.length+' функций');
- b.setAttribute('aria-pressed','false');b.append(el('span','planet-label',w.title),el('small','',w.routes.length+' ФУНКЦИЙ'));P.planets.append(b);
+// EXPRESS HOME is eight graphical directions; the legacy world routes remain
+// accessible INSIDE the direction, not displayed as ten additional HOME orbs.
+DIRECTIONS.forEach(([id,title],index)=>{
+ const featureCount=WORLDS.filter(w=>w.section===id).reduce((count,w)=>count+w.routes.length,0);
+ const b=button('', 'planet planet-'+id,()=>direction(id));b.dataset.section=id;
+ b.style.setProperty('--i',String(index));b.setAttribute('aria-label',title+' · '+featureCount+' функций');
+ b.setAttribute('aria-pressed','false');b.append(el('span','planet-label',title),el('small','',featureCount+' ФУНКЦИЙ'));P.planets.append(b);
 });
 PRIMARY.forEach(name=>{const b=button(name,'main-action',()=>mainAction(name));b.dataset.action=name;P.actions.append(b);});
 CORE_IDS.forEach(id=>{

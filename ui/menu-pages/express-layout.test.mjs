@@ -55,3 +55,34 @@ test('LIVE chat source still retains model selection, streaming, STOP and termin
  assert.match(src,/const choosePersona=v=>\{\s*const changed=persona!==v;persona=v;\s*selectedPersona=/);
  assert.match(src,/if\(changed\)invalidateModelScope\(\)/);
 });
+
+test('EXPRESS HOME actually draws exactly eight graphical directions, keeps legacy routes nested',()=>{
+ const js=readFileSync(new URL('./menu.js',import.meta.url),'utf8');
+ const html=readFileSync(new URL('./index.html',import.meta.url),'utf8');
+ const orbBlock=js.match(/DIRECTIONS\.forEach\(\(\[id,title\],index\)=>\{[\s\S]*?P\.planets\.append\(b\);\n\}\);/)?.[0];
+ assert.ok(orbBlock,'original HOME must render graphic direction planets');
+ const planets=[];
+ const target={append(b){planets.push(b);}};
+ const mkButton=(label,cls,onclick)=>({
+   label,cls,onclick,dataset:{},attributes:{},style:{setProperty(k,v){this[k]=v;}},
+   setAttribute(k,v){this.attributes[k]=v;},append(...content){this.content=content;}
+ });
+ const mkEl=(tag,cls,text)=>({tag,cls,text});
+ new Function('DIRECTIONS','WORLDS','button','direction','P','el',orbBlock)(
+   DIRECTIONS,WORLDS,mkButton,()=>{}, {planets:target},mkEl);
+ assert.equal(planets.length,8,'EXPRESS HOME has exactly eight direction spheres');
+ assert.deepEqual(planets.map(p=>p.dataset.section),DIRECTIONS.map(d=>d[0]));
+ for(const orb of planets){
+   assert.equal(orb.cls,'planet planet-'+orb.dataset.section);
+   assert.ok(orb.attributes['aria-label'].includes('функций'));
+   assert.equal(orb.attributes['aria-pressed'],'false');
+ }
+ assert.equal(WORLDS.length,10,'legacy worlds are preserved as nested routes (NO-LOSS)');
+ assert.equal(ROUTE_COUNT,64,'legacy route registry must not be deleted');
+ assert.deepEqual(PRIMARY,['CHAT','INSTALL','MODELS','LEARN','SETTINGS']);
+ assert.match(js,/P\.planets\.querySelectorAll\('button'\).*b\.dataset\.section===w\.section/);
+ assert.match(html,/НАПРАВЛЕНИЯ HELION/);
+ assert.doesNotMatch(html,/>10 миров/);
+ assert.doesNotMatch(js,/P\.title\.textContent='10 МИРОВ HELION'/);
+ assert.match(js,/const routes=\{CHAT:'chat',INSTALL:'system',MODELS:'model-library',LEARN:'evolution',SETTINGS:'settings'\}/);
+});
