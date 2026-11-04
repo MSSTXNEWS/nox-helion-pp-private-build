@@ -31,6 +31,37 @@ jobs:
         run: |
           set -euo pipefail
           PYTHONDONTWRITEBYTECODE=1 python3 -B -m unittest discover -s tests/e06 -p test_express_source_snapshot_pack_r116.py -v
+      - name: Verify latest P03 download tiles and canonical quick20
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check Packages/P03/Source/P03.ModelCenter.Wow/ui.js
+          node Packages/P03/Source/P03.ModelCenter.QuickSmoke/quick20_contract.cjs
+          python3 - <<'PY'
+          from pathlib import Path
+          html=Path('Packages/P03/Source/P03.ModelCenter.Wow/index.html').read_text()
+          css=Path('Packages/P03/Source/P03.ModelCenter.Wow/ui.css').read_text()
+          assert html.count('class="tool-source-card"') == 12
+          assert '.tool-source-grid' in css
+          assert "connect-src 'none'" in html
+          assert 'id="quickInstallGrid"' in html
+          assert "rel=\"noopener noreferrer\"" in html
+          print('P03_QUICK20_AND_TOOLS_SOURCE_PASS_ONLY')
+          PY
+      - name: Verify all four sequential D02 SUPER WOW source stages
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          css=Path('integrations/wow200/runtime/home-guard.css').read_text()
+          for marker in ('ORB STEP01','GARGANTUA STEP02','LIQUID CHROME STEP03','DARK VEIL STEP04'):
+              assert marker in css, marker
+          assert 'pointer-events:none' in css
+          assert 'prefers-reduced-motion:reduce' in css
+          assert 'forced-colors:active' in css
+          print('WOW_01_04_SOURCE_STAGE_PASS_ONLY')
+          PY
       - name: Build full SHA-locked tracked source archive
         shell: bash
         run: |
