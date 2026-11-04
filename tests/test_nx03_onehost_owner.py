@@ -69,7 +69,7 @@ class NX03OneHostTests(unittest.TestCase):
     def authorize(self, session, action, scope):
         self.actions.append(action)
         return session is self.session and action in self.allowed
-    def run(self):
+    def execute_cycle(self):
         def native_ack(scope):
             return {**scope, "status": "SELFWRITE_ACK", "epoch": 5}
         return self.owner.native_p02_firstcycle(
@@ -78,7 +78,7 @@ class NX03OneHostTests(unittest.TestCase):
             preimage_sha256=sha256(BEFORE), native_ack=native_ack,
             run_isolated_test=lambda candidate: candidate == AFTER)
     def test_onehost_owner_applies_and_restores_bytes(self):
-        receipt = self.run()
+        receipt = self.execute_cycle()
         self.assertEqual(receipt["status"], "MODEL_CANDIDATE_SANDBOX_ROLLBACK_VERIFIED")
         self.assertEqual(self.target.read_bytes(), BEFORE)
         self.assertEqual(self.coder.called, 1)
@@ -89,17 +89,17 @@ class NX03OneHostTests(unittest.TestCase):
     def test_dirty_source_holds_before_generation(self):
         self.owner.source.good = False
         with self.assertRaises(PermissionError):
-            self.run()
+            self.execute_cycle()
         self.assertEqual(self.coder.called, 0)
     def test_revoked_owner_holds_before_generation(self):
         self.owner.native_stop = lambda: True
         with self.assertRaises(PermissionError):
-            self.run()
+            self.execute_cycle()
         self.assertEqual(self.coder.called, 0)
     def test_missing_native_apply_grant_holds(self):
         self.allowed.remove("selfbuilder.source.apply")
         with self.assertRaises(Exception):
-            self.run()
+            self.execute_cycle()
         self.assertEqual(self.target.read_bytes(), BEFORE)
     def test_renderer_command_cannot_invoke_native_method(self):
         with self.assertRaisesRegex(ValueError, "UNKNOWN_SELFBUILDER_ACTION"):
