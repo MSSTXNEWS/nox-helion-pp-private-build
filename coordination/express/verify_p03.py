@@ -10,7 +10,10 @@ def verify(root):
         name=item["path"]; rel=pathlib.PurePosixPath(name)
         if rel.is_absolute() or rel.as_posix()!=name or ".." in rel.parts or name.casefold() in seen:raise ValueError("AMBIGUOUS_PATH")
         seen.add(name.casefold()); path=root.joinpath(*rel.parts)
-        if not path.is_file() or path.is_symlink() or any(parent.is_symlink() for parent in path.parents if parent!=root.parent):raise ValueError("MISSING_OR_SYMLINK:"+name)
+        if (not path.is_file() or any(
+            node.is_symlink() or getattr(node, "is_junction", lambda: False)()
+            for node in (path, *path.parents) if node != root.parent
+        )):raise ValueError("MISSING_OR_SYMLINK:"+name)
         data=path.read_bytes(); actual=hashlib.sha1(("blob "+str(len(data))).encode()+bytes([0])+data).hexdigest()
         override=next((x for x in doc.get("approved_overrides",[]) if x["path"]==name),None)
         if override:
