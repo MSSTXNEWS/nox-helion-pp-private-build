@@ -14,7 +14,7 @@ SPEC.loader.exec_module(target)
 
 class FivePrimaryTests(unittest.TestCase):
     def setUp(self):
-        self.raw = b'<html><body><script>let chatScrollFrame=0;const items=[chatLog=document.getElementById('chat-log'),1];</script><a href="/chat">CHAT</a><main>ORIGINAL</main></body></html>'
+        self.raw = b'<html><body><script>let chatScrollFrame=0;const items=[chatLog=document.getElementById(\'chat-log\'),1];</script><a href="/chat">CHAT</a><main>ORIGINAL</main></body></html>'
         self.guard = (patch.object(target, 'ORIGINAL_BYTES', len(self.raw)),
                       patch.object(target, 'ORIGINAL_SHA256', hashlib.sha256(self.raw).hexdigest()))
         for item in self.guard: item.start()
@@ -43,6 +43,17 @@ class FivePrimaryTests(unittest.TestCase):
         self.assertIn("payload:{action:'selfbuilder.a1.status'}", target.INSERT)
         self.assertNotIn("payload:{action:'selfbuilder.a1.boot'}", target.INSERT)
         self.assertNotIn("payload:{action:'selfbuilder.a1.tick'}", target.INSERT)
+
+    def test_a1_native_denials_source_contract(self):
+        # Native A1 status must reject explicit owner/provider denial, not merely transport.
+        source=target.INSERT
+        self.assertIn("function a1ReceiptDenied(envelope,depth=0,trail=new Set())",source)
+        for field in ('errorMessage','error_message','nativeResult','ownerResult'):
+            self.assertIn(field,source)
+        self.assertIn("has('ack')&&envelope.ack!==true",source)
+        self.assertIn("has('ok')&&envelope.ok!==true",source)
+        self.assertIn("trail.has(envelope)",source)
+        self.assertIn("!a1ReceiptDenied(value)&&!a1ReceiptDenied(owner)",source)
 
     def test_medium_wpf_webview_viewport_keeps_five_in_one_row_source_only(self):
         # Physical 800x600 WPF can expose only 551..780 CSS px after native chrome.

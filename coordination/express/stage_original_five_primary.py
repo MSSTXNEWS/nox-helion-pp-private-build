@@ -253,16 +253,30 @@ a1Button?.addEventListener('click',event=>{
    a1Pending=false;a1Button.disabled=false;state.textContent=message;
  };
  // Authenticated transport completion may still carry owner/provider denial.
- function a1ReceiptDenied(envelope){
-  if(!envelope||typeof envelope!=='object')return true;
-  if(envelope.ack===false||envelope.ok===false)return true;
-  for(const key of ['error','error_code','errorCode']){
-   if(envelope[key]!=null&&String(envelope[key]).trim()!=='')return true;
+ function a1ReceiptDenied(envelope,depth=0,trail=new Set()){
+  // A transport COMPLETED never overrules native SID/ACL/consent/provider denial.
+  // Bound receipt traversal: cyclic, malformed or non-boolean ACKs HOLD.
+  if(!envelope||typeof envelope!=='object'||Array.isArray(envelope)||
+     depth>4||trail.has(envelope))return true;
+  trail.add(envelope);
+  const has=key=>Object.prototype.hasOwnProperty.call(envelope,key);
+  if((has('ack')&&envelope.ack!==true)||(has('ok')&&envelope.ok!==true))
+   return true;
+  for(const key of ['error','error_code','errorCode','errorMessage','error_message']){
+   if(!has(key))continue;
+   const error=envelope[key];
+   if(error!==null&&error!==undefined&&
+      (typeof error!=='string'||error.trim()!==''))return true;
   }
   for(const key of ['status','state']){
    if(typeof envelope[key]==='string'&&
-      /(?:HOLD|DENIED|REJECT|FAIL|ERROR|OFFLINE|CONSENT|UNAUTHORIZED|FORBIDDEN|PERMISSION_REQUIRED|AUTH_REQUIRED|AUTHORIZATION_REQUIRED|AUTHENTICATION_REQUIRED|NEEDS_AUTH|NOT_AUTHORIZED|NOT_AUTHENTICATED|SID_MISMATCH|ACL_MISMATCH|OWNER_MISMATCH|NOT_READY|PROVIDER_UNAVAILABLE)/i.test(envelope[key]))return true;
+      /(?:HOLD|DENIED|REJECT|FAIL|ERROR|OFFLINE|CONSENT|UNAUTHORIZED|FORBIDDEN|PERMISSION_REQUIRED|AUTH_REQUIRED|AUTHORIZATION_REQUIRED|AUTHENTICATION_REQUIRED|NEEDS_AUTH|NOT_AUTHORIZED|NOT_AUTHENTICATED|SID_MISMATCH|ACL_MISMATCH|OWNER_MISMATCH|NOT_READY|PROVIDER_UNAVAILABLE|CANCELLED|ABORTED|REVOKED|EXPIRED)/i.test(envelope[key]))return true;
   }
+  for(const key of ['result','receipt','nativeResult','owner','ownerResult']){
+   if(!has(key)||envelope[key]===null||envelope[key]===undefined)continue;
+   if(a1ReceiptDenied(envelope[key],depth+1,trail))return true;
+  }
+  trail.delete(envelope);
   return false;
  }
  const onNative=reply=>{
