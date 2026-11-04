@@ -41,7 +41,7 @@ export function mountApprovedHome(doc=document){
     else if(doc.body.classList.contains('nox-wow-max'))selectedQuality='MAX_WOW';
   }catch(_){/* Local storage may be blocked: manual buttons still work. */}
   let autoQuality='BALANCED',autoRaf=0,autoLast=0,autoSamples=[],autoChanged=0;
-  let dock=null;
+  let dock=null,sync=()=>{};
   function chosenMode(){
     if(reducedMotion?.matches)return 'REDUCED';
     return selectedQuality==='AUTO'?autoQuality:choices[selectedQuality];
@@ -96,7 +96,7 @@ export function mountApprovedHome(doc=document){
     try{scene.destroy();}finally{mounted=null;}
   }
   try{
-    const sync=()=>{
+    sync=()=>{
       const visible=home.classList.contains('active'),mode=chosenMode();
       scene.setVisible(visible);scene.setProfile(mode);
       // MINI START does not even allocate a WebGL context at first launch.
@@ -107,6 +107,8 @@ export function mountApprovedHome(doc=document){
         film.setVisible(visible);film.setProfile(mode,scene.snapshot().state);
       }
       dock?.render(selectedQuality,mode,reducedMotion?.matches===true);
+      if(selectedQuality==='AUTO' && !reducedMotion?.matches)beginAuto();
+      else if(reducedMotion?.matches)stopAuto();
     };
     const chooseQuality=choice=>{
       if(!Object.prototype.hasOwnProperty.call(choices,choice))return false;
