@@ -32,7 +32,12 @@ class PlanetWorldsAndUplot(unittest.TestCase):
         self.assertIn("nox.d02.graphics.preference.v1", js)
         self.assertIn("localStorage?.setItem(prefKey,choice)", js)
         self.assertIn("if(!autoRaf)autoRaf=view.requestAnimationFrame(sampleAuto)", js)
-        self.assertNotIn("training.start", js)
+        # The original renderer passively displays a trusted native training
+        # progress event; forbid a new training command, not that event name.
+        self.assertEqual(js.count("training.start"), 1)
+        self.assertIn("m.kind==='p02NativeEvent'&&m.routeId==='training.start'&&m.state==='STREAMING'", js)
+        self.assertNotIn("client.request('training.start'", js)
+        self.assertNotIn("postMessage({routeId:'training.start'", js)
         self.assertNotIn("models.pull", js)
 
     def test_known_host_pages_and_real_renderer_readout(self):
@@ -50,6 +55,7 @@ class PlanetWorldsAndUplot(unittest.TestCase):
         self.assertIn("film?.destroy();film=null", js)
 
     def test_film_and_quality_css_fail_closed(self):
+        js = HOME.read_text(encoding='utf-8')
         css = CSS.read_text(encoding='utf-8')
         self.assertIn("NOX PLANETARY WORLDS V2 STYLE", css)
         self.assertIn("NOX QUALITY PLANET ATMOSPHERES V2", css)
