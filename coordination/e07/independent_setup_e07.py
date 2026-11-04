@@ -87,6 +87,22 @@ def _read_locked_e06_json(path: Path) -> dict:
     return data
 
 
+def samevm_lifecycle_verified(stages: object) -> bool:
+    """Validate the physical E06 nested uninstall receipt before E07 install.
+
+    A missing or malformed container is a normal fail-closed receipt mismatch,
+    not an unexpected AttributeError and never evidence of release acceptance.
+    """
+    if type(stages) is not dict:
+        return False
+    return (type(stages.get("uninstall_owned_files_checked")) is int
+            and stages["uninstall_owned_files_checked"] == 1004
+            and all(type(stages.get(name)) is dict and
+                    type(stages[name].get("code")) is int and
+                    stages[name]["code"] == 0
+                    for name in ("install", "verify", "update", "rollback", "uninstall")))
+
+
 def setup_lock(setup: Path, receipt: Path) -> dict:
     """Pin physical latest E06 Setup to three same-identity receipts, then verify bytes.
 
@@ -126,13 +142,7 @@ def setup_lock(setup: Path, receipt: Path) -> dict:
             smoke.get("setup_sha256") == SETUP_SHA and
             smoke.get("release_accepted") is False and
             smoke.get("e07_independent_acceptance") == "NOT_RUN" and
-            type(stages.get("uninstall_owned_files_checked")) is int and
-            stages["uninstall_owned_files_checked"] == 1004 and
-            type(stages) is dict and
-            all(type(stages.get(name)) is dict and
-                type(stages[name].get("code")) is int and
-                stages[name]["code"] == 0
-                for name in ("install","verify","update","rollback","uninstall")),
+            samevm_lifecycle_verified(stages),
             "E07_E06_SAMEVM_RECEIPT_HOLD")
     require(setup.stat().st_size == SETUP_SIZE and sha256(setup) == SETUP_SHA,
             "E07_SETUP_SHA_HOLD")

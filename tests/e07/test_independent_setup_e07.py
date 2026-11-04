@@ -253,6 +253,28 @@ class IndependentE07(unittest.TestCase):
                 MOD.setup_lock(setup,receipt)
 
 
+    def test_e06_nested_lifecycle_malformed_receipt_is_a_clean_hold(self):
+        # Source fixture only; does not assert Windows installation or release.
+        good = {key: {"code": 0} for key in
+                ("install", "verify", "update", "rollback", "uninstall")}
+        good["uninstall_owned_files_checked"] = 1004
+        self.assertTrue(MOD.samevm_lifecycle_verified(good))
+        for invalid in (None, False, 0, "1004", [], (),
+                        {"uninstall_owned_files_checked": 1004},
+                        {"uninstall_owned_files_checked": True}):
+            with self.subTest(invalid=invalid):
+                self.assertFalse(MOD.samevm_lifecycle_verified(invalid))
+        for field, value in (("uninstall_owned_files_checked", 1003),
+                             ("uninstall_owned_files_checked", "1004"),
+                             ("uninstall_owned_files_checked", True),
+                             ("install", {"code": True}),
+                             ("rollback", {}),
+                             ("uninstall", None)):
+            bad = dict(good)
+            bad[field] = value
+            with self.subTest(field=field, value=value):
+                self.assertFalse(MOD.samevm_lifecycle_verified(bad))
+
     def test_smoke_owned_count_is_nested_in_installer_lifecycle(self):
         source = FILE.read_text(encoding="utf-8")
         self.assertIn('type(stages.get("uninstall_owned_files_checked")) is int', source)
