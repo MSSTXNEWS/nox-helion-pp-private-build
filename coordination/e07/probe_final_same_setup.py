@@ -109,7 +109,7 @@ throw 'UNKNOWN_OP'
 def invoke_primary(hwnd: int, action: str) -> dict:
     e07.require(action in PRIMARY,"E07_FINAL_ACTION_NAME_HOLD")
     script=_uia_script(hwnd,"CLICK")
-    script=script.replace("OneButton 'CLICK'","OneButton '"+action+"'")
+    script=script.replace("InvokePrimary 'CLICK'","InvokePrimary '"+action+"'")
     result=_run_ps(script,timeout=35)
     e07.require(result.get("invoked") is True and result.get("sameHwndAlive") is True,
                 "E07_FINAL_"+action+"_UIA_HOLD")
