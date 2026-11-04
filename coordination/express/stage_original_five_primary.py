@@ -123,7 +123,7 @@ nav.addEventListener('click',event=>{
  // navigation button was clicked. The user still chooses the original action
  // inside its own panel, under existing native ACL and consent.
  const destinations={
-   INSTALL:['home','button#install-app','button#install-app'],
+   INSTALL:['home','button#install-app','button#pc-install'],
    MODELS:['control','button#model-center','button#model-center'],
    // Top-level LEARN performs the original bounded training environment
    // diagnostic. Actual QLoRA start remains an explicit in-panel action with
@@ -155,7 +155,8 @@ nav.addEventListener('click',event=>{
    }
    // This trusted top-level user click delegates to an EXISTING original
    // R11 control. No direct privileged IPC, synthetic ACK or second backend.
-   // INSTALL retains the original WebView confirmation before local install;
+   // INSTALL delegates to the original visible PC install control, which uses
+   // the same native installApp owner without a synthetic second confirmation;
    // MODELS opens the original WPF Model Center; LEARN runs the original
    // environment diagnostic while QLoRA start remains separately consented.
    const invokeMatches=document.querySelectorAll(invokeSelector);
