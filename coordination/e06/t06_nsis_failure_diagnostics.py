@@ -29,7 +29,7 @@ def verify_failed_setup_identity(owner, failure: dict, evidence: dict) -> None:
                   re.fullmatch(r'[0-9a-f]{64}', right) is not None and
                   left == right,
                   'T06_NSIS_DIAGNOSTICS_SETUP_IDENTITY_HOLD')
-    if owner.ON_LOCAL_BRIDGE:
+    if getattr(owner, 'ON_LOCAL_BRIDGE', False) is True:
         owner.require('build_id' not in failure and
                       'build_id' not in evidence,
                       'T06_NSIS_DIAGNOSTICS_SETUP_IDENTITY_HOLD')
@@ -68,7 +68,9 @@ def collect(owner, *, platform_name=None, env=None):
               'phase': 'DIAGNOSTIC_ONLY', 'release_accepted': False,
               'original_failure': failure['reason'],
               'setup_sha256': evidence['setup_sha256'],
-              'build_id': evidence['build_id'], 'slots': {}, 'verifications': []}
+              'slots': {}, 'verifications': []}
+    if 'build_id' in evidence:
+        report['build_id'] = evidence['build_id']
     for label, slot in (('stage', Path(str(install) + '.__p01_stage')),
                         ('installed', install),
                         ('previous', Path(str(install) + '.__p01_previous'))):
