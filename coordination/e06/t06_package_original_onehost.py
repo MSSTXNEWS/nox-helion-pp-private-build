@@ -375,10 +375,10 @@ def build(root,staged):
          proof.get("source_git_sha")==source_sha and
          proof.get("original_zip_sha256")==EXPECTED_ZIP_SHA and
          type(proof.get("original_files_staged")) is int and
-         proof["original_files_staged"]==729 and
+         proof["original_files_staged"]==94 and
          type(proof.get("dotnet_build_exit")) is int and
          proof["dotnet_build_exit"]==0,
-         "T06_PACKAGE_COMPILE_SOURCE_HEAD_OR_729_HOLD")
+         "T06_PACKAGE_COMPILE_SOURCE_HEAD_OR_R11_94_HOLD")
     receipt_path=staged/"NATIVE_PYTHON_EXE_CANDIDATE_RECEIPT.json"
     exe_path=staged/"NOX_HELION_PRIVATE_CANDIDATE.exe"
     for relative,target in (

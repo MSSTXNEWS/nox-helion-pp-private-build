@@ -180,10 +180,10 @@ def attest_candidate(source_head: str, compile_receipt: Path, candidate_receipt:
     if (compile_data.get("source_git_sha") != source_head or
             compile_data.get("original_zip_sha256") != expected_r11_zip_sha256 or
             type(compile_data.get("original_files_staged")) is not int or
-            compile_data["original_files_staged"] != 729 or
+            compile_data["original_files_staged"] != 94 or
             type(compile_data.get("dotnet_build_exit")) is not int or
             compile_data["dotnet_build_exit"] != 0):
-        raise RuntimeError("T06_SOURCE_COMPILE_EXACT_HEAD_OR_729_HOLD")
+        raise RuntimeError("T06_SOURCE_COMPILE_EXACT_HEAD_OR_R11_94_HOLD")
     if (candidate.get("schema") != "NOX-E06-ONEHOST-CANDIDATE-v1" or
             candidate.get("source_git_sha") != source_head or
             candidate.get("source_zip_sha256") != expected_r11_zip_sha256 or

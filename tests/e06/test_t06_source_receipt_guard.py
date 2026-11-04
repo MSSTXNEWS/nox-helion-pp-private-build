@@ -39,7 +39,7 @@ class CandidateReceiptTests(unittest.TestCase):
         self.setup = root / "NOX-HELION-V16-ONEHOST-CANDIDATE-SETUP.exe"
         self.setup.write_bytes(_synthetic_pe32_fixture())
         self.comp = {"source_git_sha": HEAD, "original_zip_sha256": R11,
-                     "original_files_staged": 729, "dotnet_build_exit": 0}
+                     "original_files_staged": 94, "dotnet_build_exit": 0}
         self.cand = {"schema": "NOX-E06-ONEHOST-CANDIDATE-v1",
                      "source_git_sha": HEAD,
                      "source_zip_sha256": R11, "release_accepted": False,
@@ -88,17 +88,17 @@ class CandidateReceiptTests(unittest.TestCase):
     def test_stale_source_commit_hold(self):
         self.comp["source_git_sha"] = "b" * 40
         self.save()
-        with self.assertRaisesRegex(RuntimeError, "EXACT_HEAD_OR_729"):
+        with self.assertRaisesRegex(RuntimeError, "EXACT_HEAD_OR_R11_94"):
             self.verify()
 
-    def test_source729_and_r11_are_required(self):
-        for field, bad in (("original_files_staged", 728),
+    def test_r11_94_and_exact_donor_sha_are_required(self):
+        for field, bad in (("original_files_staged", 93),
                            ("original_zip_sha256", "b" * 64),
                            ("dotnet_build_exit", True)):
             old = self.comp[field]
             self.comp[field] = bad
             self.save()
-            with self.assertRaisesRegex(RuntimeError, "EXACT_HEAD_OR_729"):
+            with self.assertRaisesRegex(RuntimeError, "EXACT_HEAD_OR_R11_94"):
                 self.verify()
             self.comp[field] = old
 
