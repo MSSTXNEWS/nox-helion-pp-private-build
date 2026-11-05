@@ -111,6 +111,11 @@ class NativeWorkQueue:
                 set(authority) - {'task_id', 'outcome'}):
             raise ValueError('NATIVE_RESULT_OWNER_PAYLOAD_REQUIRED')
         frozen=json.loads(_json(result))
+        # An audit state cannot contradict the stored result. In particular,
+        # no worker may persist a positive S03 state with a different status.
+        if (type(state) is not str or not state or type(frozen) is not dict
+                or frozen.get('status') != state):
+            raise NativeQueueHold('S03_RESULT_STATUS_BINDING_HOLD')
         def require_live_result_owner():
             if expected_epoch is not None:
                 observed_epoch=self.stop_epoch()
@@ -120,7 +125,22 @@ class NativeWorkQueue:
                     raise NativeQueueHold('NATIVE_RESULT_OWNER_REVOKED')
         def write(store):
             require_live_result_owner()
-            self._read(store,scope,tid)
+            work=self._read(store,scope,tid)
+            if work.get('kind') == 'FORGE':
+                # FORGE audit is evidence, not a model activation grant.
+                # training.start/resume may publish only a bound original P04
+                # receipt, never an invented COMPLETED or selected-model result.
+                if (frozen.get('weights_updated') is not False or
+                        frozen.get('activation_allowed') is True):
+                    raise NativeQueueHold('S03_FORGE_RESULT_ADMISSION_HOLD')
+                if permission in ('training.start','training.resume') and state != 'HOLD':
+                    proof=frozen.get('receipt_sha256')
+                    if (state not in ('PAUSED','STOPPED','ADAPTER_CANDIDATE_PENDING_E07')
+                            or frozen.get('run_id') != work.get('payload',{}).get('run_id')
+                            or type(proof) is not str or len(proof) != 64
+                            or any(c not in '0123456789abcdef' for c in proof)
+                            or frozen.get('activation_allowed') is not False):
+                        raise NativeQueueHold('S03_FORGE_RESULT_ADMISSION_HOLD')
             with store.conn:
                 require_live_result_owner()
                 if expected_epoch is None:

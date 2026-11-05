@@ -177,5 +177,78 @@ class NativeResultFenceTests(unittest.TestCase):
             self.queue.submit_source(self.scope, self.task_id, lambda: {'status': 'DONE'})
         self.assertEqual(self.queue.get(self.scope, self.task_id)['state'], 'QUEUED')
 
+
+class ForgeDurableResultAdmissionTests(unittest.TestCase):
+    """Real SQLite audit: reject unbound/misleading QLoRA results before commit."""
+
+    def setUp(self):
+        self.store = AuditStore()
+        self.addCleanup(self.store.conn.close)
+        self.scope = SimpleNamespace(tenant='local', principal='owner', chat_id='chat')
+        self.epoch = 7
+        self.queue = NativeWorkQueue(
+            SimpleNamespace(call=lambda f: f(self.store)),
+            authorize=lambda scope, permission, payload: True,
+            stop_requested=lambda: False, stop_epoch=lambda: self.epoch)
+        self.task_id = self.queue.enqueue(
+            self.scope, kind='FORGE',
+            payload={'task': 'real-original-P04', 'run_id': 'qlora-run-1'},
+            permission='training.start')
+
+    def audit_count(self):
+        return self.store.conn.execute(
+            "SELECT COUNT(*) FROM audit WHERE action='NOX_NATIVE_WORK_RESULT'"
+        ).fetchone()[0]
+
+    def put(self, state, result, permission='training.start'):
+        return self.queue.record(
+            self.scope, self.task_id, state, result,
+            expected_epoch=self.epoch, permission=permission)
+
+    def candidate(self, **override):
+        result = {'status': 'ADAPTER_CANDIDATE_PENDING_E07',
+                  'run_id': 'qlora-run-1', 'receipt_sha256': 'a'*64,
+                  'weights_updated': False, 'activation_allowed': False}
+        result.update(override)
+        return result
+
+    def test_status_mismatch_cannot_be_recorded(self):
+        with self.assertRaisesRegex(NativeQueueHold, 'S03_RESULT_STATUS_BINDING_HOLD'):
+            self.put('ADAPTER_CANDIDATE_PENDING_E07',
+                     self.candidate(status='COMPLETED'))
+        self.assertEqual(self.audit_count(), 0)
+
+    def test_forged_or_unbound_training_result_cannot_be_recorded(self):
+        variants = [
+            ('COMPLETED', self.candidate(status='COMPLETED')),
+            ('ADAPTER_CANDIDATE_PENDING_E07', self.candidate(run_id='other-run')),
+            ('ADAPTER_CANDIDATE_PENDING_E07', self.candidate(receipt_sha256='bad')),
+            ('ADAPTER_CANDIDATE_PENDING_E07', self.candidate(receipt_sha256='A'*64)),
+            ('ADAPTER_CANDIDATE_PENDING_E07', self.candidate(weights_updated=True)),
+            ('ADAPTER_CANDIDATE_PENDING_E07', self.candidate(activation_allowed=True)),
+            ('ADAPTER_CANDIDATE_PENDING_E07', self.candidate(activation_allowed=None)),
+        ]
+        for state, result in variants:
+            with self.subTest(state=state, result=result):
+                with self.assertRaisesRegex(NativeQueueHold, 'S03_FORGE_RESULT_ADMISSION_HOLD'):
+                    self.put(state, result)
+                self.assertEqual(self.audit_count(), 0)
+
+    def test_exact_owner_p04_receipt_remains_candidate_only(self):
+        self.assertTrue(self.put('ADAPTER_CANDIDATE_PENDING_E07', self.candidate()))
+        row = self.queue.get(self.scope, self.task_id)
+        self.assertEqual(row['state'], 'ADAPTER_CANDIDATE_PENDING_E07')
+        self.assertEqual(row['result']['receipt_sha256'], 'a'*64)
+        self.assertIs(row['result']['activation_allowed'], False)
+        self.assertEqual(self.audit_count(), 1)
+
+    def test_error_hold_keeps_original_fail_closed_record(self):
+        self.assertTrue(self.queue.record(
+            self.scope, self.task_id, 'HOLD',
+            {'status':'HOLD','reason':'NATIVE_STOP','weights_updated':False}))
+        self.assertEqual(self.queue.get(self.scope,self.task_id)['state'], 'HOLD')
+        self.assertEqual(self.audit_count(), 1)
+
+
 if __name__ == '__main__':
     unittest.main()
