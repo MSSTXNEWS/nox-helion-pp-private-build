@@ -1129,6 +1129,48 @@ if ($uninstallRegistryReadback.Count -ne 1 -or
   throw 'P01_NSIS_UNINSTALL_REGISTRY_QUOTE_HOLD'
 }
 Write-Host 'P01_NSIS_UNINSTALL_REGISTRY_QUOTE_STAGE_PASS'
+# B03 G4 NO-LOSS: the original activation registered an UninstallString
+# before writing Uninstall.exe.  On a failed WriteUninstaller it could falsely
+# publish a broken uninstall owner.  Stage a verified binary BEFORE registry
+# or shortcut publication, never modifying immutable R11 source in the archive.
+$uninstAnchor='  ; Registry/shortcuts only after activation.'
+$uninstOld=@'
+  SetOutPath "$INSTDIR"
+  WriteUninstaller "$INSTDIR\Uninstall.exe"
+'@
+$uninstGuard=@'
+  ; Registry and shortcuts require a physically written original uninstaller.
+  SetOutPath "$INSTDIR"
+  ClearErrors
+  WriteUninstaller "$INSTDIR\Uninstall.exe"
+  IfErrors 0 +2
+    Abort "Uninstaller write failed; registry publication refused."
+  IfFileExists "$INSTDIR\Uninstall.exe" +2 0
+    Abort "Uninstaller missing; registry publication refused."
+'@
+$uninstOld=[regex]::Replace($uninstOld,'\r?\n',$c11Eol)
+$uninstGuard=[regex]::Replace($uninstGuard,'\r?\n',$c11Eol)
+$uninstAt=$c11NsiPatched.IndexOf($uninstOld,[StringComparison]::Ordinal)
+$uninstAnchorAt=$c11NsiPatched.IndexOf($uninstAnchor,[StringComparison]::Ordinal)
+if ($uninstAt -lt 0 -or $uninstAnchorAt -lt 0 -or
+    $uninstAt -le $uninstAnchorAt -or
+    $c11NsiPatched.LastIndexOf($uninstOld,[StringComparison]::Ordinal) -ne $uninstAt -or
+    $c11NsiPatched.LastIndexOf($uninstAnchor,[StringComparison]::Ordinal) -ne $uninstAnchorAt -or
+    $c11NsiPatched.Contains('Uninstaller write failed; registry publication refused.')) {
+  throw 'P01_NSIS_UNINSTALLER_ORDER_PREIMAGE_HOLD'
+}
+$c11NsiPatched=$c11NsiPatched.Remove($uninstAt,$uninstOld.Length)
+$c11NsiPatched=$c11NsiPatched.Insert($uninstAnchorAt,
+                                   $uninstGuard+$c11Eol)
+$uninstGateAt=$c11NsiPatched.IndexOf($uninstGuard,[StringComparison]::Ordinal)
+$uninstRegistryAt=$c11NsiPatched.IndexOf('  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_ID}"',[StringComparison]::Ordinal)
+if ($uninstGateAt -lt 0 -or $uninstRegistryAt -le $uninstGateAt -or
+    $c11NsiPatched.LastIndexOf($uninstGuard,[StringComparison]::Ordinal) -ne $uninstGateAt -or
+    ([regex]::Matches($c11NsiPatched,'(?m)^\s*WriteUninstaller\s+"\$INSTDIR\\Uninstall\.exe"')).Count -ne 1 -or
+    $c11NsiPatched.Contains($uninstOld)) {
+  throw 'P01_NSIS_UNINSTALLER_ORDER_STAGE_HOLD'
+}
+Write-Host 'P01_NSIS_UNINSTALLER_BEFORE_REGISTRY_STAGE_PASS'
 [IO.File]::WriteAllText($c11NsiPath,$c11NsiPatched,(New-Object System.Text.UTF8Encoding($false)))
 Write-Host "C11_NSIS_ROLLBACK_OLD_PAYLOAD_SHA_GATE_STAGED"
 $setup=Join-Path $out 'NOX-HELION-V16-DIAGNOSTIC-SETUP.exe'
