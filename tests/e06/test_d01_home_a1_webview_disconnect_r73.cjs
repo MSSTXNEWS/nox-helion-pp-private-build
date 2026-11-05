@@ -27,6 +27,9 @@ const refusedCases=[
  ['owner accepted false',x=>({...receipt,requestId:x.posted.requestId,result:{...result,accepted:false}})],
  ['ownerReceipt accepted false',x=>({...receipt,requestId:x.posted.requestId,result:{...result,ownerReceipt:{accepted:false}}})],
  ['ownerReceipt nested denial',x=>({...receipt,requestId:x.posted.requestId,result:{...result,ownerReceipt:{receipt:{status:'CONSENT_REQUIRED'}}}})],
+ ...['INVALID','STALE','TIMED_OUT','NOT_INSTALLED','RIGHTS_MISSING','ACTION_DISALLOWED'].map(status=>[
+  'ownerReceipt '+status,x=>({...receipt,requestId:x.posted.requestId,result:{...result,ownerReceipt:{status}}})
+ ]),
  ['ownerReceipt scalar malformed',x=>({...receipt,requestId:x.posted.requestId,result:{...result,ownerReceipt:42}})],
  ['cyclic ownerReceipt',x=>{const loop={};loop.ownerReceipt=loop;return {...receipt,requestId:x.posted.requestId,result:{...result,ownerReceipt:loop}};}]
 ];
@@ -40,4 +43,4 @@ accepted.reply({...receipt,requestId:accepted.posted.requestId,accepted:true,
  result:{...result,ownerReceipt:{accepted:true,ack:true}}});
 assert.match(accepted.state.textContent,/подтверждён/);
 const late=trial();late.click();late.reply({...receipt,requestId:'wrong'});assert.equal(late.button.disabled,true);late.timeout();assert.match(late.state.textContent,/HOLD/);
-console.log('D01_A1_WEBVIEW_DISCONNECT_SOURCE_ONLY 18/18 PASS');
+console.log('D01_A1_WEBVIEW_DISCONNECT_SOURCE_ONLY 24/24 PASS');
