@@ -27,17 +27,27 @@ class Backend:
         self.calls += 1
         return self.receipt
 
+    def import_gguf(self, session, args):
+        return self.pull(session, args)
+
+    def cancel(self, session, args):
+        return self.pull(session, args)
+
+    def retry(self, session, args):
+        return self.pull(session, args)
+
 
 class P03BackendAckReceiptTest(unittest.TestCase):
-    def invoke(self, receipt):
+    def invoke(self, receipt, route="models.pull"):
         port = p03.P03OneHostPort.__new__(p03.P03OneHostPort)
         backend = Backend(receipt)
         port.backend = backend
         port.native_approve = lambda session, route, payload: True
         session = SimpleNamespace(tenant="t", principal="p", chat_id="c",
-                                  allowed={"models.pull"},
-                                  private_approved={"models.pull"})
-        return port.execute_backend(session, "models.pull", {"modelTag": "safe:7b"}), backend
+                                  allowed={route}, private_approved={route})
+        payload = ({"jobId": "j1"} if route in ("models.cancel", "models.retry")
+                   else {"modelTag": "safe:7b"})
+        return port.execute_backend(session, route, payload), backend
 
     def test_ambiguous_receipts_hold(self):
         invalid = ({}, {"ok": "false"}, {"ok": 0}, {"ok": None},
@@ -67,6 +77,32 @@ class P03BackendAckReceiptTest(unittest.TestCase):
             with self.subTest(receipt=receipt):
                 with self.assertRaises(p03.P03PortHold):
                     self.invoke(receipt)
+
+    def test_metadata_only_result_is_not_mutating_owner_ack(self):
+        for route in ("models.pull", "models.gguf.import",
+                      "models.cancel", "models.retry"):
+            for receipt in ({"jobId": "j1"},
+                            {"jobId": "j1", "metadata": "not-an-ack"},
+                            {"jobId": "j1", "queued": False}):
+                with self.subTest(route=route, receipt=receipt):
+                    with self.assertRaisesRegex(p03.P03PortHold,
+                                                "no affirmative job acknowledgement"):
+                        self.invoke(receipt, route=route)
+
+    def test_cancel_retry_positive_ack_and_identity_kept(self):
+        for route, status in (("models.cancel", "CANCEL_REQUESTED"),
+                              ("models.retry", "QUEUED")):
+            with self.subTest(route=route):
+                receipt = {"jobId": "j1", "status": status}
+                self.assertEqual(self.invoke(receipt, route=route)[0], receipt)
+                with self.assertRaises(p03.P03PortHold):
+                    self.invoke({"jobId": "foreign", "status": status}, route=route)
+
+    def test_positive_boolean_legacy_receipt_kept(self):
+        for route in ("models.pull", "models.gguf.import"):
+            with self.subTest(route=route):
+                self.assertEqual(self.invoke({"ack": True}, route=route)[0],
+                                 {"ack": True})
 
     def test_existing_positive_receipts_preserved(self):
         accepted = ({"ok": True}, {"status": "QUEUED", "jobId": "j1"},

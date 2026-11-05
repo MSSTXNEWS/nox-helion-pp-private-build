@@ -583,6 +583,18 @@
       "prior_active_post_git_blob_sha1": "93df8853139bf234c48ccfbec345c32c5ed3a31c",
       "prior_active_post_bytes": 59486,
       "source_head_observed": "f21447a1eec6605f1927e84800389bf6b0082e11"
+    },
+    {
+      "path": "Packages/P03/Source/python-host/p03_onehost_port.py",
+      "owner": 3,
+      "run_id": "B04_P03_MUTATING_ACK_PROOF_20261105",
+      "pre_git_blob_sha1": "1a15ea936f445f75ae916f88c9a272f991382823",
+      "post_git_blob_sha1": "2bbb4e27238c547348577a5d5faa2b2c85f47d40",
+      "post_bytes": 27118,
+      "acceptance": "SOURCE_ONLY_PYTHON_TEST_AUTHORED_NOT_RUN_WINDOWS_E07_HOLD",
+      "prior_active_run_id": "B04_P03_NATIVE_CASE_ALIAS_OWNER_NOLOSS_20261105",
+      "source_head_observed": "f9e1d586db49b07733e4b68ea6333ac0062372a6",
+      "change_scope": "MUTATING_MODEL_ACTION_REQUIRES_POSITIVE_ACK_NOT_IDENTITY_ONLY"
     }
   ],
   "override_chain": [

@@ -399,6 +399,16 @@ class P03OneHostPort:
                      "REVIEW_REQUIRED", "CONSENT_REQUIRED", "NOT_AUTHORIZED",
                      "STOP_PENDING", "BUSY", "NOT_READY")))):
                 raise P03PortHold("Owner3 backend returned a HOLD/error, not an ACK")
+            # A matching jobId or unrelated metadata is NOT an affirmative
+            # native ACK for a mutating action. Keep legacy positive status
+            # and Boolean ACK contracts; leave queue/preflight reads unchanged.
+            if route in ("models.pull", "models.gguf.import", "models.cancel", "models.retry"):
+                positive_state = (type(state) is str and
+                                  not _owner3_status_denied(state))
+                positive_flag = any(result.get(key) is True for key in (
+                    "ok", "ack", "accepted", "success", "queued"))
+                if not (positive_state or positive_flag):
+                    raise P03PortHold("Owner3 backend returned no affirmative job acknowledgement")
             # Status alone (or an acknowledgement for another job) cannot
             # prove that the consented cancellation/retry touched THIS job.
             if route in ("models.cancel", "models.retry"):
