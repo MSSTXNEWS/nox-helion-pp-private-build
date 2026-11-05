@@ -59,18 +59,20 @@ class LiveWpfStableGuiTests(unittest.TestCase):
         # Real WPF owner allows a bounded 40s chat.model request. The installed
         # same-VM probe must not time out before that request plus a live HWND
         # stability interval; this is NOT release or model-inference evidence.
-        import re
         real_owner=(SOURCE.parent/"MainWindow.NativeP02.cs").read_text("utf-8")
-        match=re.search(
-            r'handshake=await transport\\.RequestAsync\\("chat\\.model",new \\{\\},\\s*TimeSpan\\.FromSeconds\\((\\d+)\\)',real_owner)
-        self.assertIsNotNone(match, "ORIGINAL_NATIVE_HANDSHAKE_BUDGET_UNAVAILABLE")
+        owner_call='handshake=await transport.RequestAsync("chat.model",new {},'
+        self.assertIn(owner_call, real_owner, "ORIGINAL_NATIVE_HANDSHAKE_MISSING")
+        handshake_body=real_owner.split(owner_call,1)[1].split('if(!handshake.Accepted)',1)[0]
+        self.assertIn('TimeSpan.FromSeconds(',handshake_body)
+        timeout_literal=handshake_body.split('TimeSpan.FromSeconds(',1)[1].split(')',1)[0]
+        self.assertTrue(timeout_literal.isdecimal(), "ORIGINAL_HANDSHAKE_SECONDS_UNPARSEABLE")
         parsed=ast.parse(self.source)
         timeout=next((node for node in parsed.body if isinstance(node,ast.Assign)
                       and any(isinstance(t,ast.Name) and t.id=="WPF_GUI_PROBE_DEADLINE_SECONDS"
                               for t in node.targets)),None)
         self.assertIsNotNone(timeout)
         window=ast.literal_eval(timeout.value)
-        self.assertGreaterEqual(window,int(match.group(1))+8+10)
+        self.assertGreaterEqual(window,int(timeout_literal)+8+10)
         self.assertLessEqual(window,120)
         self.assertIn("deadline=time.monotonic()+WPF_GUI_PROBE_DEADLINE_SECONDS",self.source)
 
