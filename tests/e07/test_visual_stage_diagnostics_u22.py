@@ -16,6 +16,14 @@ spec.loader.exec_module(probe)
 
 
 class PhysicalVisualFailureStages(unittest.TestCase):
+    def test_native_uia_process_avoids_oversized_windows_command_line(self):
+        source=TARGET.read_text(encoding="utf-8")
+        function=source.split("def _run_ps(",1)[1].split("def ",1)[0]
+        self.assertIn("tempfile.TemporaryDirectory",function)
+        self.assertIn("utf-8-sig",function)
+        self.assertIn("-File",function)
+        self.assertNotIn("-EncodedCommand",function)
+
     def test_stage_codes_survive_bounded_allowlist(self):
         for stage in ("RESIZE", "DOCK", "CAPTURE", "RESTORE"):
             with self.subTest(stage=stage):
