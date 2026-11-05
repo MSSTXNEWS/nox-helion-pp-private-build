@@ -55,7 +55,7 @@ ADDONS=(
     ('src/nox_selfbuilder/onehost_store.py', 'nox_selfbuilder/onehost_store.py', '686911c6102c7ab18a6f07bb2a3b3687fb9c2c45'),
     ('src/nox_selfbuilder/original_store_adapter.py', 'nox_selfbuilder/original_store_adapter.py', '6fcbd9b2f90dc54767728d7ee120ffb7595c019b'),
     ('src/nox_selfbuilder/p02_coder.py', 'nox_selfbuilder/p02_coder.py', '2a9940916424ed851b446f253ed68dab7798e675'),
-    ('src/nox_selfbuilder/p04_forge_bridge.py', 'nox_selfbuilder/p04_forge_bridge.py', 'a65c0f4bf5e04d18d5e90eec56a7ed46b3a3accf'),
+    ('src/nox_selfbuilder/p04_forge_bridge.py', 'nox_selfbuilder/p04_forge_bridge.py', '959888921cda0557d59ebeabbde9d0136696804e'),
     ('src/nox_selfbuilder/release_governor.py', 'nox_selfbuilder/release_governor.py', '4a43dd2adffec3f31cb9030c3dfeb1da596e34ba'),
     ('src/nox_selfbuilder/release_learning.py', 'nox_selfbuilder/release_learning.py', '331cb6f6b1d2a403d6134afbd27770585961018b'),
     ('src/nox_selfbuilder/seed.py', 'nox_selfbuilder/seed.py', '9b3a19cbd985620e9527cf168b02cae0ee12453a'),

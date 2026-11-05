@@ -58,11 +58,31 @@ class ExistingP04NativePorts:
     def preflight(self, scope, args):
         return self.background.preflight(self._job(scope, args))
 
+    @staticmethod
+    def _durable_queue_reply(args, receipt):
+        """Acknowledge only the original SQLite S03 CLAIM, never trained weights.
+
+        NativeWorkQueue._start commits its owner-scoped CLAIM before returning
+        this exact four-field receipt. The renderer must not retry a genuinely
+        queued training job just because the original transport lacks ack/job_id.
+        """
+        if (type(receipt) is not dict or
+                set(receipt) != {'status', 'task_id', 'durable_s03', 'execution_completed'} or
+                receipt['status'] != 'QUEUED' or
+                type(receipt['task_id']) is not int or receipt['task_id'] <= 0 or
+                receipt['durable_s03'] is not True or
+                receipt['execution_completed'] is not False):
+            raise ForgeHold('NATIVE_FORGE_DURABLE_S03_QUEUE_ACK_HOLD')
+        return {**receipt, 'ack': True, 'job_id': args['job_id'],
+                'weights_updated': False, 'training_completed': False,
+                'activation_allowed': False}
+
     def start(self, scope, args):
         # Explicit consented manual route; no assertion that the user is idle.
         job = self._job(scope, args)
         last = self.last_run(scope, job)
-        return self.submit(scope, job, lambda: self.background.run_one(job, last_run_utc=last, require_idle=False))
+        receipt = self.submit(scope, job, lambda: self.background.run_one(job, last_run_utc=last, require_idle=False))
+        return self._durable_queue_reply(args, receipt)
 
     def pause(self, scope, args):
         job = self._job(scope, args)  # native resolver authorizes caller scope
@@ -71,7 +91,8 @@ class ExistingP04NativePorts:
     def resume(self, scope, args):
         job = self._job(scope, args)
         last = self.last_run(scope, job)
-        return self.submit(scope, job, lambda: self.background.run_one(job, last_run_utc=last, resume=True, require_idle=False))
+        receipt = self.submit(scope, job, lambda: self.background.run_one(job, last_run_utc=last, resume=True, require_idle=False))
+        return self._durable_queue_reply(args, receipt)
 
     def checkpoints(self, scope, args):
         job = self._job(scope, args)
