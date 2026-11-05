@@ -341,6 +341,12 @@ nav.addEventListener('click',event=>{
        !visibleOriginalOwnerTarget(invokeMatches[0]))){
      state.textContent=name+': исходная функция недоступна · HOLD';return;
    }
+   // D03: focus/navigation may tear down the native WebView2 bridge after
+   // the first admission. Never dispatch a privileged original INSTALL
+   // handler after that owner transport has disappeared.
+   if(name==='INSTALL'&&!originalInstallTransportPresent()){
+     state.textContent='INSTALL: связь с нативным владельцем прервана · HOLD';return;
+   }
    invokeMatches[0].click();
    state.textContent=name+': запрос передан исходному обработчику · результат ожидается';
    return;
