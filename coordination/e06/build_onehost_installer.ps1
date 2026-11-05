@@ -993,7 +993,7 @@ $uPairs=@(
     if (-not $AllowInstalledUserFiles) { Fail "unexpected file $rel" }
   }
 '@},
-  @{Old="if ($" + 'actualFiles.Count -ne ($registered.Count + 1 + $metadata.Count)) { Fail ' + "'file count mismatch' }";
+  @{Old='if ($actualFiles.Count -ne ($registered.Count + 1 + $metadata.Count)) { Fail ''file count mismatch'' }';
     New=@'
 if ($AllowInstalledUserFiles) {
   if ($actualFiles.Count -lt ($registered.Count + 1 + $metadata.Count)) { Fail 'missing owned files' }
