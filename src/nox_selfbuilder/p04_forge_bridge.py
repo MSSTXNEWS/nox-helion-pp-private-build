@@ -131,6 +131,15 @@ class ExistingP04NativePorts:
 
     def resume(self, scope, args):
         job = self._job(scope, args)
+        # Verify the original P04 archived PAUSED checkpoint before S03 CLAIM.
+        # An interrupted RUNNING job without this proof must remain recoverable
+        # in owner S03; never turn it into a terminal HOLD by claiming it first.
+        try:
+            paused = self.background.verified_receipt(job)
+        except (OSError, RuntimeError, ValueError, PermissionError, KeyError, TypeError) as exc:
+            raise ForgeHold('NATIVE_FORGE_RESUME_PAUSED_PROOF_HOLD') from exc
+        if type(paused) is not dict or paused.get('status') != 'PAUSED':
+            raise ForgeHold('NATIVE_FORGE_RESUME_PAUSED_PROOF_HOLD')
         last = self.last_run(scope, job)
         receipt = self.submit(scope, job, lambda: self.background.run_one(job, last_run_utc=last, resume=True, require_idle=False), resume=True)
         return self._durable_queue_reply(args, receipt)

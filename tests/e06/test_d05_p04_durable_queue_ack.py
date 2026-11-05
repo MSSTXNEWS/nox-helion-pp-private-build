@@ -27,6 +27,9 @@ class DurableForgeOwnerAck(unittest.TestCase):
         class Background:
             def run_one(_, job, **kwargs):
                 raise AssertionError("No training is executed by the ACK test")
+            def verified_receipt(_, job):
+                # Trusted native P04 returns this only after archive/hash checks.
+                return {"status": "PAUSED"}
         self.port = ExistingP04NativePorts(
             Background(),
             job_resolver=lambda scope, job_id: self.job if job_id == "configured-job" else None,
@@ -50,6 +53,29 @@ class DurableForgeOwnerAck(unittest.TestCase):
         result = self.port.resume(self.scope, {"job_id": "configured-job"})
         self.assertEqual(result["job_id"], "configured-job")
         self.assertIs(result["execution_completed"], False)
+        self.assertEqual(self.calls[-1][3], {"resume": True})
+
+    def test_resume_requires_verified_paused_checkpoint_before_queue_claim(self):
+        # Interrupted RUNNING resume without original P04 evidence must not
+        # consume the owner's existing SQLite S03 task with a terminal HOLD.
+        for proof in (None, {}, {"status": "STOPPED"},
+                      {"status": "COMPLETED"}, {"status": "HOLD"}):
+            with self.subTest(proof=proof):
+                self.port.background.verified_receipt = lambda job, p=proof: p
+                with self.assertRaisesRegex(ForgeHold, "RESUME_PAUSED_PROOF_HOLD"):
+                    self.port.resume(self.scope, {"job_id": "configured-job"})
+                self.assertEqual(self.calls, [])
+        for error in (FileNotFoundError, ValueError, ForgeHold, PermissionError):
+            with self.subTest(error=error):
+                def missing(job, error=error):
+                    raise error("P04_CHECKPOINT_MISSING_OR_INVALID")
+                self.port.background.verified_receipt = missing
+                with self.assertRaisesRegex(ForgeHold, "RESUME_PAUSED_PROOF_HOLD"):
+                    self.port.resume(self.scope, {"job_id": "configured-job"})
+                self.assertEqual(self.calls, [])
+        self.port.background.verified_receipt = lambda job: {"status": "PAUSED"}
+        queued = self.port.resume(self.scope, {"job_id": "configured-job"})
+        self.assertEqual(queued["status"], "QUEUED")
         self.assertEqual(self.calls[-1][3], {"resume": True})
 
     def test_holds_on_missing_or_forged_queue_proof(self):
