@@ -683,6 +683,25 @@ try
         LicenseAcknowledged = false };
     await MustHoldUnreviewed(pullWithoutConsent, true,
         "D04 Pull direct adapter refuses unacknowledged license before Ollama");
+    // B04: immutable remote-review consent never grants local-tag overwrite.
+    var b04ReviewedPull = pullWithoutConsent with { LicenseAcknowledged = true };
+    async Task B04RefusePullAsync(string expected, string label)
+    {
+        try { await adapter.PullAsync(b04ReviewedPull,
+            (evt, token) => ValueTask.CompletedTask, default); }
+        catch (InvalidDataException ex) when (ex.Message == expected)
+        { Assert(true, label); return; }
+        throw new Exception("FAIL " + label);
+    }
+    ggufHandler.ExistingTag = true;
+    await B04RefusePullAsync("P03_PULL_EXISTING_TAG_NO_LOSS_HOLD",
+        "B04 pinned Pull refuses to replace installed owner's tag");
+    ggufHandler.ExistingTag = false;
+    ggufHandler.FailTagsLookup = true;
+    await B04RefusePullAsync("OLLAMA_TAGS_LOOKUP_FAILED_HOLD",
+        "B04 provider-offline tag lookup cannot authorize a Pull");
+    ggufHandler.FailTagsLookup = false;
+
     async Task RefuseUnsafeExisting(string expected, string label)
     {
         try { await adapter.ImportGgufAsync(job, (evt, token) => ValueTask.CompletedTask, default); }
@@ -825,6 +844,11 @@ sealed class StalledOllamaHandler : HttpMessageHandler
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,
         CancellationToken cancellationToken)
     {
+        // No existing installed model in F18 native shared-STOP fixture.
+        if (request.Method == HttpMethod.Get && request.RequestUri?.AbsolutePath == "/api/tags")
+            return Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK) {
+                Content = new StringContent("{\"models\":[]}", Encoding.UTF8, "application/json")
+            });
         if (request.RequestUri?.AbsolutePath != "/api/pull")
             throw new InvalidOperationException("Only synthetic Ollama Pull is available");
         return Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK) {

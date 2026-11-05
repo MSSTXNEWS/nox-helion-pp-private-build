@@ -30,6 +30,14 @@ public sealed class OllamaModelAdapter(HttpClient http, string receiptDirectory)
             !job.LicenseAcknowledged || !ReviewedHttpsLicense(job.LicenseSource) ||
             string.IsNullOrWhiteSpace(job.RightsReceiptId) || job.RightsReceiptId.Length > 128)
             throw new InvalidDataException("REVIEW_REQUIRED: no immutable artifact digest/revision or acknowledged rights.");
+        // Ollama pull mutates a mutable local tag. Reviewed artifact rights
+        // are not permission to replace an installed model under that tag.
+        // Fail closed on missing/ambiguous/offline native Ollama tag evidence.
+        // Ollama has no atomic create-if-absent CAS: foreign concurrent writers
+        // remain a separately tracked physical NO-LOSS acceptance risk.
+        if (await GetLocalModelDigestAsync(job.ModelTag, ct) is not null)
+            throw new InvalidDataException("P03_PULL_EXISTING_TAG_NO_LOSS_HOLD");
+        ct.ThrowIfCancellationRequested();
         using var response = await SendStreamingJsonAsync("api/pull", new { model = job.ModelTag, stream = true }, ct);
         response.EnsureSuccessStatusCode();
         var layers = new Dictionary<string, (long Completed, long Total)>();
