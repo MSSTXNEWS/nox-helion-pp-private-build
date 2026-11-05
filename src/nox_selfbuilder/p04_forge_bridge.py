@@ -38,11 +38,14 @@ class ExistingP04NativePorts:
         'training.checkpoints': 'checkpoints', 'training.evaluate': 'evaluate',
     }
 
-    def __init__(self, background, *, job_resolver, last_run, native_submit):
+    def __init__(self, background, *, job_resolver, last_run, native_submit,
+                 durable_result=None):
         if not all(callable(x) for x in (job_resolver, last_run, native_submit)):
             raise ForgeHold('NATIVE_JOB_SCHEDULER_REQUIRED')
         self.background, self.resolve, self.last_run, self.submit = (
             background, job_resolver, last_run, native_submit)
+        # Existing start-only ports stay compatible; result reads fail closed.
+        self.durable_result = durable_result
 
     def _job(self, scope, args):
         if (type(args) is not dict or set(args) != {'job_id'}
@@ -77,6 +80,34 @@ class ExistingP04NativePorts:
                 'weights_updated': False, 'training_completed': False,
                 'activation_allowed': False}
 
+    def _attest_recorded_training(self, scope, job, receipt):
+        """Accept trainer evaluation only with exact committed owner S03 RESULT."""
+        if not callable(self.durable_result) or type(receipt) is not dict:
+            raise ForgeHold('NATIVE_FORGE_S03_RESULT_PROOF_HOLD')
+        expected = {'PAUSED':'PAUSED', 'STOPPED':'STOPPED',
+                    'COMPLETED':'ADAPTER_CANDIDATE_PENDING_E07'}.get(receipt.get('status'))
+        if expected is None:
+            raise ForgeHold('NATIVE_FORGE_S03_RESULT_PROOF_HOLD')
+        row = self.durable_result(scope, job)
+        if type(row) is not dict:
+            raise ForgeHold('NATIVE_FORGE_S03_RESULT_PROOF_HOLD')
+        recorded = row.get('result')
+        if (row.get('kind') != 'FORGE' or type(row.get('task_id')) is not int
+                or row['task_id'] <= 0 or row.get('state') != expected
+                or type(row.get('payload')) is not dict
+                or row['payload'].get('run_id') != job.run_id
+                or type(recorded) is not dict or recorded.get('status') != expected
+                or recorded.get('run_id') != job.run_id
+                or recorded.get('weights_updated') is not False
+                or recorded.get('activation_allowed') is not False):
+            raise ForgeHold('NATIVE_FORGE_S03_RESULT_PROOF_HOLD')
+        sha = recorded.get('receipt_sha256')
+        if (type(sha) is not str or not re.fullmatch(r'[0-9a-f]{64}', sha)
+                or self.background.trainer.sha256_file(
+                    job.output_dir / 'training-receipt.json') != sha):
+            raise ForgeHold('NATIVE_FORGE_S03_RESULT_PROOF_HOLD')
+        return row
+
     def start(self, scope, args):
         # Explicit consented manual route; no assertion that the user is idle.
         job = self._job(scope, args)
@@ -99,7 +130,8 @@ class ExistingP04NativePorts:
         events = self.background.event_snapshot(job)
         try:
             receipt = self.background.verified_receipt(job)
-        except (ValueError, OSError, RuntimeError):
+            self._attest_recorded_training(scope, job, receipt)
+        except (ValueError, OSError, RuntimeError, PermissionError):
             return {'status':'HOLD', 'reason':'AWAITING_VERIFIED_CHECKPOINT',
                     'events':events, 'checkpoint':None, 'weights_updated':False,
                     'activation_allowed':False}
@@ -107,8 +139,15 @@ class ExistingP04NativePorts:
                 'events':events, 'weights_updated': False, 'activation_allowed': False}
 
     def evaluate(self, scope, args):
-        receipt = self.background.verified_receipt(self._job(scope, args))
-        # Return real trainer holdout results, never fabricate a new evaluation.
+        job = self._job(scope, args)
+        try:
+            receipt = self.background.verified_receipt(job)
+            self._attest_recorded_training(scope, job, receipt)
+        except (ValueError, OSError, RuntimeError, PermissionError):
+            return {'status':'HOLD', 'reason':'TRAINING_S03_RESULT_PROOF_HOLD',
+                    'evaluation':None, 'weights_updated':False,
+                    'activation_allowed':False, 'independent_e07':'DEFERRED'}
+        # Verified trainer file AND this owner scope's original S03 audit result.
         return {'status': 'HOLD' if receipt['status'] != 'COMPLETED' else 'CANDIDATE_ONLY',
                 'evaluation': receipt['training'], 'weights_updated': False,
                 'activation_allowed': False, 'independent_e07': 'DEFERRED'}

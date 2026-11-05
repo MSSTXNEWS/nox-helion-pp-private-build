@@ -453,7 +453,8 @@ def create_existing_ingress(store, run_id: str, *, client=None, event_sink=None,
             queue.register_forge(session, job)
             return queue.last_run(session, job)
         ports = ExistingP04NativePorts(background, job_resolver=resolve_job,
-            last_run=last_run, native_submit=submit_job)
+            last_run=last_run, native_submit=submit_job,
+            durable_result=queue.forge_result)
         def installed_digest(session, tag):
             value = p03.digest(session, {"modelTag": tag}).get("ollamaReportedManifestDigest")
             if not isinstance(value, str) or not value.startswith("sha256:"):

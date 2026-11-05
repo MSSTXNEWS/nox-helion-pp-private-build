@@ -75,6 +75,63 @@ class DurableForgeOwnerAck(unittest.TestCase):
         self.assertEqual(self.calls, [])
 
 
+class OwnerRecordedTrainingEvidence(unittest.TestCase):
+    """A receipt file alone cannot prove native owner consent or SQLite RESULT."""
+
+    def setUp(self):
+        class Trainer:
+            def sha256_file(_, path): return "a" * 64
+        class Background:
+            trainer = Trainer()
+            def verified_receipt(_, job):
+                return {"status":"COMPLETED", "training":{"adapter_eval_loss":0.2},
+                        "checkpoint":{"path":"checkpoints/step-1"}}
+            def event_snapshot(_, job): return []
+        root=Path("/native-owner-placeholder")
+        self.job=ForgeJob(run_id="native-run-1",task_id="task-1",base_model_dir=root,
+            model_lock=root,model_revision="a"*40,dataset_manifest=root,
+            rights_verifier=root,train_jsonl=root,holdout_jsonl=root,output_dir=root)
+        self.row={"kind":"FORGE","task_id":42,"payload":{"run_id":"native-run-1"},
+                  "state":"ADAPTER_CANDIDATE_PENDING_E07",
+                  "result":{"status":"ADAPTER_CANDIDATE_PENDING_E07",
+                            "run_id":"native-run-1","receipt_sha256":"a"*64,
+                            "weights_updated":False,"activation_allowed":False}}
+        self.scope=object()
+        self.port=ExistingP04NativePorts(Background(),
+            job_resolver=lambda scope,jid:self.job,
+            last_run=lambda *a:None,native_submit=lambda *a,**kw:None,
+            durable_result=lambda *a:self.row)
+
+    def test_exact_recorded_result_allows_candidate_only(self):
+        result=self.port.evaluate(self.scope,{"job_id":"native-run-1"})
+        self.assertEqual(result["status"],"CANDIDATE_ONLY")
+        self.assertIs(result["activation_allowed"],False)
+        self.assertIs(result["weights_updated"],False)
+        self.assertIsNotNone(self.port.checkpoints(self.scope,{"job_id":"native-run-1"})["checkpoint"])
+
+    def test_unrecorded_status_or_wrong_receipt_fails_closed(self):
+        import copy
+        original=copy.deepcopy(self.row)
+        variants=[]
+        for key,value in (("kind","SELF_WRITE"),("state","RUNNING"),("task_id",True)):
+            row=copy.deepcopy(original);row[key]=value;variants.append(row)
+        for key,value in (("run_id","other-job"),("receipt_sha256","b"*64),
+                          ("weights_updated",True),("activation_allowed",True),
+                          ("status","COMPLETED")):
+            row=copy.deepcopy(original);row["result"][key]=value;variants.append(row)
+        row=copy.deepcopy(original);row["payload"]["run_id"]="other-job";variants.append(row)
+        variants += [None,{},{"state":"ADAPTER_CANDIDATE_PENDING_E07"}]
+        for row in variants:
+            with self.subTest(row=row):
+                self.row=row
+                self.assertEqual(self.port.evaluate(self.scope,{"job_id":"native-run-1"})["status"],"HOLD")
+                self.assertIsNone(self.port.checkpoints(self.scope,{"job_id":"native-run-1"})["checkpoint"])
+
+    def test_missing_owner_callback_fails_closed(self):
+        self.port.durable_result=None
+        self.assertEqual(self.port.evaluate(self.scope,{"job_id":"native-run-1"})["status"],"HOLD")
+
+
 class InterruptedOriginalS03Resume(unittest.TestCase):
     """The original owner queue must not strand an interrupted GPU task."""
 

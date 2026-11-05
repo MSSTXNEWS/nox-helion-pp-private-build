@@ -206,6 +206,17 @@ class NativeWorkQueue:
         self.get(scope,item[0])
         return item[1]
 
+    def forge_result(self,scope,job):
+        """Exact owner-scoped S03 audit result; a P04 receipt file is not consent."""
+        from .background_forge import ForgeJob
+        if not isinstance(job,ForgeJob):
+            raise PermissionError('EXACT_NATIVE_FORGE_JOB_REQUIRED')
+        key=(tuple(scope_key(scope).values()),job.run_id)
+        item=self._forge_jobs.get(key)
+        if item is None or item[1] is not job:
+            raise PermissionError('EXACT_NATIVE_FORGE_JOB_REQUIRED')
+        return self.get(scope,item[0])
+
     def submit(self,scope,job,callback,*,resume=False):
         # The original native training.start is not an implicit restart.
         # A paused or previously interrupted RUNNING job requires a separate
