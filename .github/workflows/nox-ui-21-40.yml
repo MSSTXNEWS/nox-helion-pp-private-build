@@ -1,0 +1,220 @@
+name: NOX UI source packs 21-40
+on:
+  push:
+    branches: [assets/download-ui-21-31-20261105]
+    paths: [.github/workflows/nox-ui-21-40.yml]
+permissions: {contents: read}
+jobs:
+  download:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - group: '21_25'
+            repos: '21 d3 d3/d3;22 threejs mrdoob/three.js;23 postprocessing pmndrs/postprocessing;24 tsparticles tsparticles/tsparticles;25 particlesjs VincentGarreau/particles.js'
+          - group: '26_30'
+            repos: '26 ogl oframe/ogl;27 gsap greensock/GSAP;28 motion motiondivision/motion;29 lottie airbnb/lottie-web;30 lenis darkroomengineering/lenis'
+          - group: '31_35'
+            repos: '31 spline-react splinetool/react-spline;32 react-bits DavidHDev/react-bits;33 react-three-fiber pmndrs/react-three-fiber;34 drei pmndrs/drei;35 theatre theatre-js/theatre'
+          - group: '36_40'
+            repos: '36 leva pmndrs/leva;37 xyflow xyflow/xyflow;38 tweakpane cocopon/tweakpane;39 pixijs pixijs/pixijs;40 luma-gl visgl/luma.gl'
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Fetch original sources and validate each ZIP
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p source parts
+          echo "${{ matrix.repos }}" | tr ';' '\n' > repos.tsv
+          printf 'number,name,repository,commit_sha,archive,bytes,sha256\n' > source/MANIFEST.csv
+          while read -r number name repo; do
+            echo "Fetching $number $name $repo"
+            meta="$(curl -fsSL --retry 5 --max-time 120 -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/$repo")"
+            branch="$(jq -r .default_branch <<< "$meta")"
+            commit="$(curl -fsSL --retry 5 --max-time 120 -H "Authorization: Bearer $GH_TOKEN" "https://api.github.com/repos/$repo/commits/$branch" | jq -r .sha)"
+            test -n "$commit" && test "$commit" != null
+            archive="source/${number}_${name}.zip"
+            curl -fL --retry 5 --max-time 1500 "https://codeload.github.com/$repo/zip/$commit" -o "$archive"
+            test -s "$archive"
+            unzip -tqq "$archive"
+            bytes="$(stat -c '%s' "$archive")"
+            hash="$(sha256sum "$archive" | cut -d' ' -f1)"
+            printf '%s,%s,%s,%s,%s,%s,%s\n' "$number" "$name" "$repo" "$commit" "$(basename "$archive")" "$bytes" "$hash" >> source/MANIFEST.csv
+          done < repos.tsv
+          test "$(find source -name '*.zip' | wc -l)" -eq 5
+          sha256sum source/*.zip > source/SHA256SUMS.txt
+          printf 'NOX UI donor source pack %s. Original upstream sources; not installed. Spline editor itself is a hosted service; 31 is its public React runtime integration. Review licenses before commercial reuse.\n' '${{ matrix.group }}' > source/README.txt
+          (cd source && zip -0 -q ../NOX_UI_${{ matrix.group }}_SOURCES.zip ./*)
+          unzip -tqq NOX_UI_${{ matrix.group }}_SOURCES.zip
+          sha256sum NOX_UI_${{ matrix.group }}_SOURCES.zip > parts/COMPLETE_SHA256.txt
+          split -b 45000000 -d -a 2 NOX_UI_${{ matrix.group }}_SOURCES.zip parts/NOX_UI_${{ matrix.group }}_SOURCES.zip.part-
+          for f in parts/*.part-*; do test "$(stat -c '%s' "$f")" -lt 50000000; done
+      - name: Upload checksum
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_UI_${{ matrix.group }}_CHECKSUM
+          path: parts/COMPLETE_SHA256.txt
+          retention-days: 7
+      - name: Upload part 00
+        if: ${{ hashFiles('parts/*.part-00') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_UI_${{ matrix.group }}_PART_00
+          path: parts/*.part-00
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload part 01
+        if: ${{ hashFiles('parts/*.part-01') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_UI_${{ matrix.group }}_PART_01
+          path: parts/*.part-01
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload part 02
+        if: ${{ hashFiles('parts/*.part-02') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_UI_${{ matrix.group }}_PART_02
+          path: parts/*.part-02
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload part 03
+        if: ${{ hashFiles('parts/*.part-03') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_UI_${{ matrix.group }}_PART_03
+          path: parts/*.part-03
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload part 04
+        if: ${{ hashFiles('parts/*.part-04') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_UI_${{ matrix.group }}_PART_04
+          path: parts/*.part-04
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload part 05
+        if: ${{ hashFiles('parts/*.part-05') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_UI_${{ matrix.group }}_PART_05
+          path: parts/*.part-05
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload part 06
+        if: ${{ hashFiles('parts/*.part-06') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_UI_${{ matrix.group }}_PART_06
+          path: parts/*.part-06
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload part 07
+        if: ${{ hashFiles('parts/*.part-07') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_UI_${{ matrix.group }}_PART_07
+          path: parts/*.part-07
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload part 08
+        if: ${{ hashFiles('parts/*.part-08') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_UI_${{ matrix.group }}_PART_08
+          path: parts/*.part-08
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload part 09
+        if: ${{ hashFiles('parts/*.part-09') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_UI_${{ matrix.group }}_PART_09
+          path: parts/*.part-09
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload part 10
+        if: ${{ hashFiles('parts/*.part-10') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_UI_${{ matrix.group }}_PART_10
+          path: parts/*.part-10
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload part 11
+        if: ${{ hashFiles('parts/*.part-11') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_UI_${{ matrix.group }}_PART_11
+          path: parts/*.part-11
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload part 12
+        if: ${{ hashFiles('parts/*.part-12') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_UI_${{ matrix.group }}_PART_12
+          path: parts/*.part-12
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload part 13
+        if: ${{ hashFiles('parts/*.part-13') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_UI_${{ matrix.group }}_PART_13
+          path: parts/*.part-13
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload part 14
+        if: ${{ hashFiles('parts/*.part-14') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_UI_${{ matrix.group }}_PART_14
+          path: parts/*.part-14
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload part 15
+        if: ${{ hashFiles('parts/*.part-15') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_UI_${{ matrix.group }}_PART_15
+          path: parts/*.part-15
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload part 16
+        if: ${{ hashFiles('parts/*.part-16') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_UI_${{ matrix.group }}_PART_16
+          path: parts/*.part-16
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload part 17
+        if: ${{ hashFiles('parts/*.part-17') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_UI_${{ matrix.group }}_PART_17
+          path: parts/*.part-17
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload part 18
+        if: ${{ hashFiles('parts/*.part-18') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_UI_${{ matrix.group }}_PART_18
+          path: parts/*.part-18
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload part 19
+        if: ${{ hashFiles('parts/*.part-19') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_UI_${{ matrix.group }}_PART_19
+          path: parts/*.part-19
+          retention-days: 7
+          if-no-files-found: error
