@@ -407,8 +407,14 @@ const a1Button=nav.querySelector('button[data-nox-check="A1"]');
 let a1Pending=false;
 a1Button?.addEventListener('click',event=>{
  if(!event.isTrusted||a1Pending)return;
- const native=window.chrome?.webview;
- const random=window.crypto?.getRandomValues;
+ // A torn WebView2 property accessor is a native HOLD, never an exception.
+ let native,random;
+ try{
+  native=window.chrome?.webview;
+  random=window.crypto?.getRandomValues;
+ }catch{
+  state.textContent='A1: доверенный OneHost недоступен · HOLD';return;
+ }
  if(!native||typeof native.postMessage!=='function'||
     typeof native.addEventListener!=='function'||typeof random!=='function'){
    state.textContent='A1: доверенный OneHost недоступен · HOLD';return;
@@ -421,8 +427,13 @@ a1Button?.addEventListener('click',event=>{
  state.textContent='A1: запрос нативного статуса…';
  let timer;
  const done=message=>{
-   clearTimeout(timer);native.removeEventListener('message',onNative);
-   a1Pending=false;a1Button.disabled=false;state.textContent=message;
+   clearTimeout(timer);
+   // Disconnect during callback cleanup is HOLD; restore UIA accessibility.
+   let removed=true;
+   try{native.removeEventListener('message',onNative);}
+   catch{removed=false;}
+   a1Pending=false;a1Button.disabled=false;
+   state.textContent=removed?message:'A1: нативный транспорт потерян · HOLD';
  };
  // Authenticated transport completion may still carry owner/provider denial.
  function a1ReceiptDenied(envelope,depth=0,trail=new Set()){
@@ -468,7 +479,11 @@ a1Button?.addEventListener('click',event=>{
        owner?.boot_state==='READY_FOR_EXISTING_IDLE_TICK';
    done(verified?'A1: живой нативный Boot подтверждён':'A1: нативный статус не подтверждён · HOLD');
  };
- native.addEventListener('message',onNative);
+ try{native.addEventListener('message',onNative);}
+ catch{
+   a1Pending=false;a1Button.disabled=false;
+   state.textContent='A1: подписка OneHost недоступна · HOLD';return;
+ }
  timer=setTimeout(()=>{if(a1Pending)done('A1: нативный ответ не получен · HOLD');},12000);
  try{native.postMessage({kind:'p02.native',requestId,routeId:'chat.commands',
                        payload:{action:'selfbuilder.a1.status'}});}
