@@ -55,3 +55,30 @@ test('LEARN training.start native ACK is scoped to exact approved job',()=>{
   for(const id of ['',null,'../bad'])
     assert.equal(nativeOwnerActionReceipt(good,'training.start','selfbuilder.train.request',id).ack,false);
 });
+
+// B05: read the original shipped owner guard, not a reconstructed native
+// success response. A completed transport with nested consent HOLD must not
+// advertise LEARN actions or SETTINGS HKCU persistence.
+test('LEARN/SETTINGS reject nested original native owner denials',()=>{
+  const good={routeId:'system.autostart',state:'COMPLETED',
+    result:{enabled:true,ownerResult:{success:true,approved:true,authorized:true}}};
+  assert.equal(nativeAutostartPersistenceAck(good,true),true);
+  for(const nested of [
+    {ownerResult:{success:false}},
+    {ownerResult:{approved:false}},
+    {ownerResult:{authorized:false}},
+    {ownerResult:{status:'CONSENT_REQUIRED'}},
+    {receipt:{error_code:'ACL_MISMATCH'}},
+    {nativeResult:{ack:false}},
+    {result:{ownerResult:{status:'SID_MISMATCH'}}}
+  ]){
+    const response={...good,result:{enabled:true,...nested}};
+    assert.equal(nativeAutostartPersistenceAck(response,true),false);
+    assert.equal(nativeCompletedOwnerReply(response),false);
+  }
+  const denied={routeId:'chat.commands',state:'COMPLETED',
+    result:{actions:{'selfbuilder.learning.proofs':{available:true}},
+      ownerResult:{authorized:false}}};
+  assert.equal(nativeReadVerified(denied,'chat.commands'),false);
+  assert.equal(nativeOwnerReceiptHolds({success:false}),true);
+});

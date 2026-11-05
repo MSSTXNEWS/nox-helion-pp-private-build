@@ -114,13 +114,23 @@ export function createNativeMenuClient({webview,cryptoRef=globalThis.crypto,
 // advertising a selfbuilder proposal as queued. No authorization is inferred.
 // Native COMPLETED is a transport state, never a privileged owner ACK.
 // Deny embedded provider/consent errors even alongside a positive model tag.
-export function nativeOwnerReceiptHolds(owner) {
-  if (!owner || typeof owner!=='object' || Array.isArray(owner)) return true;
+export function nativeOwnerReceiptHolds(owner,depth=0,trail=new Set()) {
+  // Native transport COMPLETED is not consent. Nested owner approvals/denials
+  // must be read from the SAME bound route before admitting LEARN/SETTINGS.
+  if (!owner || typeof owner!=='object' || Array.isArray(owner) ||
+      depth>4 || trail.has(owner)) return true;
+  trail.add(owner);
   if (Object.prototype.hasOwnProperty.call(owner,'ok') &&
       typeof owner.ok!=='boolean') return true;
   if (owner.ok===false || owner.ack===false ||
       (Object.prototype.hasOwnProperty.call(owner,'ack') &&
        typeof owner.ack!=='boolean')) return true;
+  // A false native permission or operation bit is an actual owner denial,
+  // even if a surrounding IPC envelope advertises COMPLETED.
+  for (const key of ['success','approved','authorized']) {
+    if (Object.prototype.hasOwnProperty.call(owner,key) && owner[key]!==true)
+      return true;
+  }
   if (Object.prototype.hasOwnProperty.call(owner,'errorCode') &&
       owner.errorCode!=null && String(owner.errorCode).trim()!=='') return true;
   // Native owner/provider failures may use snake_case or an error field.
@@ -146,6 +156,17 @@ export function nativeOwnerReceiptHolds(owner) {
     for(let i=0;i+1<words.length;i++)
       if(pairs.has(words[i]+'_'+words[i+1]))return true;
   }
+  // Preserve data arrays as data; recursively examine only actual nested
+  // owner/receipt envelopes. Cyclic or excessively deep replies HOLD.
+  for (const key of ['ownerResult','nativeResult','owner','receipt','result']) {
+    if (!Object.prototype.hasOwnProperty.call(owner,key)) continue;
+    const child=owner[key];
+    if (child===null || child===undefined) continue;
+    if (typeof child==='object' && !Array.isArray(child)) {
+      if (nativeOwnerReceiptHolds(child,depth+1,trail)) return true;
+    } else if (key!=='result') return true;
+  }
+  trail.delete(owner);
   return false;
 }
 
