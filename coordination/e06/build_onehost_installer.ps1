@@ -978,6 +978,48 @@ if ($verifierBeforeSha -ceq $verifierAfterSha -or
 }
 Write-Host "P01_PS51_DOTNET_SHA256_STAGED before=$verifierBeforeSha after=$verifierAfterSha ORIGINAL_SHA_CHECK_RETAINED"
 
+# C11 NO-LOSS: frozen publisher verifier rejects unknown files by default.
+# A previously INSTALLED owned slot can contain user-owned files. Permit those
+# only with explicit metadata-aware read-only check. Every payload SHA, path,
+# reparse and owner marker check remains unchanged. Copy is disposable R11.
+$uFile=Join-Path $installer 'Verify-Payload.ps1'
+$uText=[IO.File]::ReadAllText($uFile)
+$uEol=if($uText.Contains([string][char]13+[string][char]10)) {[string][char]13+[string][char]10} else {[string][char]10}
+$uPairs=@(
+  @{Old='  [switch]$AllowInstalledMetadata';New=('  [switch]$AllowInstalledMetadata,'+$uEol+'  [switch]$AllowInstalledUserFiles')},
+  @{Old='  if (-not $registered.Contains($rel) -and -not $metadata.Contains($rel)) { Fail "unexpected file $rel" }';
+    New=@'
+  if (-not $registered.Contains($rel) -and -not $metadata.Contains($rel)) {
+    if (-not $AllowInstalledUserFiles) { Fail "unexpected file $rel" }
+  }
+'@},
+  @{Old="if ($" + 'actualFiles.Count -ne ($registered.Count + 1 + $metadata.Count)) { Fail ' + "'file count mismatch' }";
+    New=@'
+if ($AllowInstalledUserFiles) {
+  if ($actualFiles.Count -lt ($registered.Count + 1 + $metadata.Count)) { Fail 'missing owned files' }
+} elseif ($actualFiles.Count -ne ($registered.Count + 1 + $metadata.Count)) {
+  Fail 'file count mismatch'
+}
+'@}
+)
+foreach($uPair in $uPairs) {
+  $before=[string]$uPair.Old
+  $after=([string]$uPair.New).Replace([string][char]13+[string][char]10,[string][char]10).Replace([string][char]10,$uEol).TrimEnd([char]10,[char]13)
+  if($uText.Split(@($before),[StringSplitOptions]::None).Length -ne 2 -or $uText.Contains($after)) { throw 'C11_USER_SAFE_VERIFIER_PREIMAGE_HOLD' }
+  $uText=$uText.Replace($before,$after)
+}
+$uMetadata='if ($AllowInstalledMetadata) {'
+if($uText.Split(@($uMetadata),[StringSplitOptions]::None).Length -ne 2) { throw 'C11_USER_SAFE_METADATA_PREIMAGE_HOLD' }
+$uGate="if (" + '$AllowInstalledUserFiles -and -not $AllowInstalledMetadata) { Fail ' + "'installed-only user file mode' }"
+$uText=$uText.Replace($uMetadata,$uGate+$uEol+$uMetadata)
+if (!$uText.Contains('Assert-P01UniqueManifestMembers') -or
+    !$uText.Contains('Assert-NoReparseAncestors') -or
+    !$uText.Contains('Get-P01VerifiedSha256')) { throw 'C11_USER_SAFE_STRICT_HASH_LOSS_HOLD' }
+[IO.File]::WriteAllText($uFile,$uText,(New-Object System.Text.UTF8Encoding($false)))
+if([IO.File]::ReadAllText($uFile) -cne $uText) { throw 'C11_USER_SAFE_VERIFIER_READBACK_HOLD' }
+Write-Host 'C11_INSTALLED_USER_DATA_PRESERVE_WITH_STRICT_PAYLOAD_HASH_STAGED'
+
+
 # U09: The immutable R11 remover has a DIFFERENT lexical shape from the
 # reviewed C09 remover; never guess a regex replacement for archived script.
 # Reuse the already SHA/blob-pinned NX03 reviewed C09 TWO-PHASE NO-LOSS stage
@@ -1087,7 +1129,7 @@ $c11Guard=@'
   ; Never strand a verified new StageDir on a failed old-payload check.
   IfFileExists "$INSTDIR\nox-p01-owned.txt" 0 C11OldPayloadChecked
   File "/oname=$PLUGINSDIR\Verify-Payload.ps1" "${VERIFY_SCRIPT}"
-  nsExec::ExecToStack 'powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$PLUGINSDIR\Verify-Payload.ps1" -Root "$INSTDIR" -Manifest "$INSTDIR\payload.sha256.json" -AllowInstalledMetadata'
+  nsExec::ExecToStack 'powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$PLUGINSDIR\Verify-Payload.ps1" -Root "$INSTDIR" -Manifest "$INSTDIR\payload.sha256.json" -AllowInstalledMetadata -AllowInstalledUserFiles'
   Pop $ExitCode
   Pop $CheckResult
   ${If} $ExitCode != "0"
@@ -1523,6 +1565,22 @@ if ($c11NsiPatched.Contains($d03OriginalUninstallFailure) -or
   throw 'D03_NSIS_NATIVE_UNINSTALL_EXIT_READBACK_HOLD'
 }
 Write-Host 'D03_NSIS_REAL_UNINSTALL_EXIT_FAIL_CLOSED_STAGED'
+
+# Rollback verifies the previously installed backup, which legally includes
+# the same preserved user files. No change to strict fresh staging admission.
+$uRollbackOld=@'
+  nsExec::ExecToStack 'powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$PLUGINSDIR\Verify-Payload.ps1" -Root "$BackupDir" -Manifest "$BackupDir\payload.sha256.json" -AllowInstalledMetadata'
+'@
+$uRollbackNew=@'
+  nsExec::ExecToStack 'powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$PLUGINSDIR\Verify-Payload.ps1" -Root "$BackupDir" -Manifest "$BackupDir\payload.sha256.json" -AllowInstalledMetadata -AllowInstalledUserFiles'
+'@
+$uRollbackOld=$uRollbackOld.TrimEnd([char]10,[char]13)
+$uRollbackNew=$uRollbackNew.TrimEnd([char]10,[char]13)
+if ($c11NsiPatched.Split(@($uRollbackOld),[StringSplitOptions]::None).Length -ne 2) { throw 'C11_BACKUP_USER_SAFE_PREIMAGE_HOLD' }
+$c11NsiPatched=$c11NsiPatched.Replace($uRollbackOld,$uRollbackNew)
+if ($c11NsiPatched.Contains($uRollbackOld)) { throw 'C11_BACKUP_USER_SAFE_READBACK_HOLD' }
+Write-Host 'C11_BACKUP_USER_SAFE_VERIFY_STAGED'
+
 # D03/G4: original NSIS returned EXIT=0 without invoking its owner if the
 # ownership marker was missing or its fixed root admission failed. A skipped
 # uninstall is not a completed owner action. Keep archived R11/C09 unchanged:
