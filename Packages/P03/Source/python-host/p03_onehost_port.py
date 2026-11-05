@@ -46,7 +46,7 @@ def _owner3_status_denied(value: str) -> bool:
         return True
     words = re.findall(r"[A-Z0-9]+", value.upper())
     return bool(
-        _OWNER3_DENIAL_TOKENS.intersection(words)
+        not words or _OWNER3_DENIAL_TOKENS.intersection(words)
         or any(tuple(words[i:i + 2]) in _OWNER3_DENIAL_PAIRS
                for i in range(len(words) - 1))
     )
