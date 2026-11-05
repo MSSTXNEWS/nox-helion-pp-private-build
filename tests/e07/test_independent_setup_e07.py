@@ -60,6 +60,36 @@ class IndependentE07(unittest.TestCase):
         self.assertTrue(flags["NAV_FAIL"])
         self.assertTrue(any(flags[x] for x in MOD._WPF_FATAL))
 
+    def test_b06_installed_install_owner_log_timestamp_and_order(self):
+        # Actual independent E07 parser, run with local bytes only (SOURCE_ONLY).
+        probe = ROOT / "coordination/e07/probe_final_same_setup.py"
+        spec = importlib.util.spec_from_file_location("nox_e07_final_b06", probe)
+        module = importlib.util.module_from_spec(spec)
+        with patch.dict(sys.modules, {"independent_setup_e07": MOD}):
+            spec.loader.exec_module(module)
+        space = b"[2026-11-05 04:59:53] "
+        iso = b"[2026-11-05T01:59:54.1234567Z] "
+        start = space + b"ACTION_START install\n"
+        done = iso + b"ACTION_END install exit=0\n"
+        self.assertEqual(module.classify_fresh_original_install_log(start + done),
+                         {"started": True, "owner_exit_code": 0,
+                          "owner_exception": False})
+        self.assertIsNone(module.classify_fresh_original_install_log(start)["owner_exit_code"])
+        for bad, code in (
+            (done + start, "E07_FINAL_INSTALL_EVENT_ORDER_HOLD"),
+            (start + start + done, "E07_FINAL_INSTALL_DUPLICATE_OWNER_LOG_HOLD"),
+            (space + b"ACTION_FAIL install denied\n" + start,
+             "E07_FINAL_INSTALL_EVENT_ORDER_HOLD"),
+        ):
+            with self.subTest(bad=bad):
+                with self.assertRaisesRegex(MOD.Hold, code):
+                    module.classify_fresh_original_install_log(bad)
+        failed = module.classify_fresh_original_install_log(
+            start + iso + b"ACTION_FAIL install denied\n" + done)
+        self.assertTrue(failed["owner_exception"])
+        self.assertIsNone(module.classify_fresh_original_install_log(
+            b"[untrusted] ACTION_START install\n")["owner_exit_code"])
+
     def test_exact_five_button_presence_is_not_click_acceptance(self):
         got=MOD.classify_primary_button_names(["✦ CHAT","INSTALL","MODELS","LEARN","SETTINGS"])
         self.assertEqual(got["status"],"PASS")

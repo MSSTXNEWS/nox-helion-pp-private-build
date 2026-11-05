@@ -261,14 +261,20 @@ def classify_fresh_original_install_log(data: bytes) -> dict:
     """
     e07.require(type(data) is bytes and len(data)<=200000,
                 "E07_FINAL_INSTALL_LOG_BOUNDS_HOLD")
-    stamp=rb"\[[0-9T:\.\+\-Z]{20,40}\] "
-    started=bool(re.search(rb"(?m)^"+stamp+rb"ACTION_START install\r?$",data))
-    failures=re.findall(rb"(?m)^"+stamp+rb"ACTION_FAIL install(?:\s|$)",data)
-    completed=re.findall(rb"(?m)^"+stamp+rb"ACTION_END install exit=([0-9]{1,3})(?:\s|$)",data)
-    e07.require(len(completed)<=1 and len(failures)<=1,
+    # WPF shell.log has a space-separated timestamp; approved ISO rows also occur.
+    # Do not treat an arbitrary line containing a successful-looking word as proof.
+    stamp=rb"\[\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(?:\.\d{1,7})?(?:Z|[+-]\d{2}:\d{2})?\] "
+    starts=list(re.finditer(rb"(?m)^"+stamp+rb"ACTION_START install\r?$",data))
+    failures=list(re.finditer(rb"(?m)^"+stamp+rb"ACTION_FAIL install(?:[ \t][^\r\n]*)?\r?$",data))
+    completed=list(re.finditer(rb"(?m)^"+stamp+rb"ACTION_END install exit=([0-9]{1,3})(?:[ \t][^\r\n]*)?\r?$",data))
+    e07.require(len(starts)<=1 and len(completed)<=1 and len(failures)<=1,
                 "E07_FINAL_INSTALL_DUPLICATE_OWNER_LOG_HOLD")
-    return {"started":started,
-            "owner_exit_code":int(completed[0]) if completed else None,
+    # A log END/FAIL preceding this invocation's START cannot prove its result.
+    e07.require((not completed or (starts and starts[0].start()<completed[0].start())) and
+                (not failures or (starts and starts[0].start()<failures[0].start())),
+                "E07_FINAL_INSTALL_EVENT_ORDER_HOLD")
+    return {"started":bool(starts),
+            "owner_exit_code":int(completed[0].group(1)) if completed else None,
             "owner_exception":bool(failures)}
 
 def _uia_script(hwnd: int, operation: str, *, png: Path|None=None) -> str:
