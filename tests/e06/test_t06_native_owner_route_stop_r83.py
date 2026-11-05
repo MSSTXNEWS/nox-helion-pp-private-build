@@ -71,6 +71,30 @@ class OriginalNativeOwnerMenuStopR83(unittest.TestCase):
         self.assertIn('or "CANCELLED" or', self.bridge)
         self.assertIn('"NATIVE_OWNER_RESULT_HOLD"', self.bridge)
 
+    def test_native_spaced_denial_normalization_source_contract(self):
+        # SOURCE_ONLY: physical Windows .NET and E07 are separate requirements.
+        import re
+        scopes = (
+            self.owner.split("private static bool LegacyOwnerStatusDenied(", 1)[1].split(
+                "private static bool LegacyOwnerDenial(", 1)[0],
+            self.bridge.split("private static bool NativeOwnerStatusDenied(", 1)[1].split(
+                "private static bool NativeResultExplicitlyDenied(", 1)[0],
+        )
+        for source in scopes:
+            self.assertIn('@"[\\s-]+"', source)
+            self.assertIn('").ToUpperInvariant();', source)
+            exacts = set(re.findall(r'"([A-Z][A-Z_]+)"', source))
+            suffixes = set(re.findall(r'"(_[A-Z]+)"', source))
+            for state in ("CONSENT REQUIRED", "OWNER-DENIED", "SID MISMATCH",
+                          "PROVIDER OFFLINE", "AUTH REQUIRED", "NOT AUTHORIZED",
+                          "NOT AUTHENTICATED", "PERMISSION-DENIED",
+                          "FORBIDDEN", "UNAVAILABLE"):
+                value = re.sub(r"[\\s-]+", "_", state.strip()).upper()
+                self.assertTrue(value in exacts or any(value.endswith(s) for s in suffixes),
+                                msg=f"Unrecognized owner denial: {state}")
+            for approved in ("COMPLETED", "QUEUED", "RUNNING"):
+                self.assertFalse(approved in exacts or any(approved.endswith(s) for s in suffixes))
+
     def test_learn_settings_native_denial_is_not_completion(self):
         # SOURCE_ONLY assertion; native Windows WPF and E07 are separate.
         scope = self.bridge.split("private static bool NativeOwnerStatusDenied(", 1)[1].split(

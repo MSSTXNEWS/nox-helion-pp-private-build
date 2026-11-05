@@ -384,7 +384,8 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
     private static bool NativeOwnerStatusDenied(string? status)
     {
         if (string.IsNullOrWhiteSpace(status)) return true;
-        var value = status.Trim().ToUpperInvariant();
+        // Normalize space/hyphen-delimited native denials before ACK classification.
+        var value = Regex.Replace(status.Trim(), @"[\s-]+", "_").ToUpperInvariant();
         if (value is "HOLD" or "DENIED" or "ERROR" or "FAILED" or "REJECTED" or "CANCELLED" or
             "OFFLINE" or "UNAVAILABLE" or "NOT_READY" or "AWAITING_CONSENT" or
             "NEEDS_CONSENT" or "CONSENT_PENDING" or "NOT_AUTHORIZED" or

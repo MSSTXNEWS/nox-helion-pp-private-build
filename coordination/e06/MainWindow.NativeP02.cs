@@ -443,7 +443,8 @@ public partial class MainWindow
     private static bool LegacyOwnerStatusDenied(string? status)
     {
         if (string.IsNullOrWhiteSpace(status)) return true;
-        var value = status.Trim();
+        // Owner status separators must not turn an explicit security denial into success.
+        var value = System.Text.RegularExpressions.Regex.Replace(status.Trim(), @"[\s-]+", "_").ToUpperInvariant();
         foreach (var suffix in new[] {
             "_HOLD", "_DENIED", "_REQUIRED", "_MISMATCH", "_UNAVAILABLE",
             "_OFFLINE", "_FAILED", "_ERROR", "_BLOCKED", "_REFUSED"
@@ -452,7 +453,8 @@ public partial class MainWindow
         }
         foreach (var exact in new[] {
             "HOLD", "DENIED", "OFFLINE", "FAILED", "ERROR",
-            "CONSENT_PENDING", "NOT_AUTHORIZED", "AWAITING_CONSENT",
+            "CONSENT_PENDING", "NOT_AUTHORIZED", "NOT_AUTHENTICATED",
+            "FORBIDDEN", "UNAVAILABLE", "AWAITING_CONSENT",
             "REJECTED", "CANCELLED"
         }) {
             if (string.Equals(value,exact,StringComparison.OrdinalIgnoreCase)) return true;
