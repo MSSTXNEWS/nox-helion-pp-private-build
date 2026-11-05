@@ -170,7 +170,7 @@ export function nativeAutostartPersistenceAck(reply,requested){
     typeof reply.result.enabled==='boolean' && reply.result.enabled===requested;
 }
 
-export function nativeOwnerActionReceipt(reply,route,action) {
+export function nativeOwnerActionReceipt(reply,route,action,expectedJobId=null) {
   const owner=reply?.result;
   if(reply?.routeId!==route || !nativeCompletedOwnerReply(reply) ||
      !owner || typeof owner!=='object' || Array.isArray(owner) ||
@@ -180,6 +180,14 @@ export function nativeOwnerActionReceipt(reply,route,action) {
      (typeof owner.run_id!=='string'||!/^S03-[A-Za-z0-9._:-]{1,128}$/.test(owner.run_id) ||
       typeof owner.source_head!=='string'||!/^[a-f0-9]{40}(?:[a-f0-9]{24})?$/.test(owner.source_head)))
     return {ack:false,errorCode:'S03_PROPOSAL_RECEIPT_UNVERIFIED'};
+  // Native training ACK must identify the exact approved job the owner selected.
+  // A generic successful transport for another job is never LEARN success.
+  if(action==='selfbuilder.train.request' &&
+     (route!=='training.start' ||
+      typeof expectedJobId!=='string' ||
+      !/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(expectedJobId) ||
+      owner.job_id!==expectedJobId))
+    return {ack:false,errorCode:'TRAINING_JOB_RECEIPT_MISMATCH_HOLD'};
   return {...owner,ack:true};
 }
 
@@ -387,7 +395,7 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
         const route=request.actionId==='selfbuilder.train.request'?'training.start':'chat.commands';
         const result=await client.request(route,{...(route==='chat.commands'?{action:request.actionId}:{}),...scope,
           ...(request.task?{task:request.task}:{}),...(request.job_id?{job_id:request.job_id}:{})});display(result,route);
-        return nativeOwnerActionReceipt(result,route,request.actionId);
+        return nativeOwnerActionReceipt(result,route,request.actionId,request.job_id);
       }});
   }
   // R11: one cosmetic cockpit on existing, already-mounted MENU10 DOM. No second host.

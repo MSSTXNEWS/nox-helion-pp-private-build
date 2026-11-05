@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {nativeReadVerified,nativeCompletedOwnerReply,nativeOwnerReceiptHolds,nativeAutostartPersistenceAck} from '../../ui/onehost-menu-bindings.mjs';
+import {nativeReadVerified,nativeCompletedOwnerReply,nativeOwnerReceiptHolds,nativeAutostartPersistenceAck,nativeOwnerActionReceipt} from '../../ui/onehost-menu-bindings.mjs';
 
 test('real original OneHost COMPLETED with envelope ack:false cannot unlock functional read',()=>{
   const good={routeId:'models.catalog',state:'COMPLETED',result:{models:[]}};
@@ -37,4 +37,21 @@ test('SETTINGS must match the persisted native Boolean and owner consent',()=>{
   ])assert.equal(nativeAutostartPersistenceAck(bad,true),false);
   assert.equal(nativeAutostartPersistenceAck(good,null),false);
   assert.equal(nativeAutostartPersistenceAck(good,'true'),false);
+});
+
+// GPU training ACK must bind to the selected existing FORGE job: no synthetic success.
+test('LEARN training.start native ACK is scoped to exact approved job',()=>{
+  const job='FORGE-job-12';
+  const good={routeId:'training.start',state:'COMPLETED',result:{ack:true,job_id:job,status:'QUEUED'}};
+  assert.equal(nativeOwnerActionReceipt(good,'training.start','selfbuilder.train.request',job).ack,true);
+  for(const bad of [
+    {...good,result:{ack:true,job_id:'different'}},
+    {...good,result:{ack:true}},
+    {...good,result:{ack:true,job_id:job,status:'CONSENT_REQUIRED'}},
+    {...good,result:{ack:false,job_id:job}},
+    {...good,errorCode:'SID_MISMATCH'},
+    {...good,routeId:'chat.commands'}
+  ])assert.equal(nativeOwnerActionReceipt(bad,'training.start','selfbuilder.train.request',job).ack,false);
+  for(const id of ['',null,'../bad'])
+    assert.equal(nativeOwnerActionReceipt(good,'training.start','selfbuilder.train.request',id).ack,false);
 });
