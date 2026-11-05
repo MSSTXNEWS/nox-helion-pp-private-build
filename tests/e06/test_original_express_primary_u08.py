@@ -60,8 +60,22 @@ class FivePrimaryTests(unittest.TestCase):
         # Without this bounded grid, flex-wrap could move SETTINGS to row two
         # and the strict original single-dock UIA proof correctly remains HOLD.
         css=target.INSERT
-        self.assertIn('@media (min-width:551px) and (max-width:780px)', css)
+        self.assertIn('@media (min-width:551px) and (max-width:1120px)', css)
         self.assertIn('grid-template-columns:repeat(5,minmax(0,1fr))', css)
+        # R11 WPF leaves a 551px WebView2 viewport at compact window sizes.
+        # A fixed 12px uppercase SETTINGS label exceeds the approx. 55px cell.
+        # The original five-column dock/owner routes remain unchanged, while
+        # the source-locked compact typography must shrink without clipping.
+        self.assertIn('font-size:clamp(9px,1.5vw,12px);letter-spacing:0', css)
+        for viewport in (551, 600, 700, 800, 1044):
+            dock_width=min(650,viewport-238)
+            track=(dock_width-40)/5  # border/padding + four 5px gaps
+            font=max(9,min(12,viewport*0.015))
+            # Approximate fixture sanity only; physical WebView2/UIA still HOLD.
+            self.assertGreaterEqual(track,8*0.65*font+4)
+        for viewport in (320,390):
+            self.assertGreaterEqual((viewport-12-24)/5,8*0.65*9+2)
+
         self.assertIn('#nox-express-primary button[data-nox-primary]{width:100%;min-width:0;', css)
         self.assertIn('[data-nox-check="A1"],#nox-express-primary [data-nox-state]{grid-column:1/-1;', css)
         self.assertIn('@media(max-width:550px)',css)

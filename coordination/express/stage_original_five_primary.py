@@ -37,7 +37,7 @@ INSERT = r'''<!-- NOX EXPRESS 5 original-home primary actions; no additional hos
    viewport. A1/status must not wrap one of the five ORIGINAL UIA actions. */
 @media (min-width:551px) and (max-width:1120px){
 html body #nox-express-primary{bottom:6px;left:calc(50% + 104px);width:min(650px,calc(100vw - 238px));max-width:calc(100vw - 238px);box-sizing:border-box;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px;justify-content:stretch}
-#nox-express-primary button[data-nox-primary]{width:100%;min-width:0;box-sizing:border-box;padding:7px 2px;white-space:nowrap}
+#nox-express-primary button[data-nox-primary]{width:100%;min-width:0;box-sizing:border-box;padding:7px 2px;white-space:nowrap;font-size:clamp(9px,1.5vw,12px);letter-spacing:0}
 #nox-express-primary [data-nox-check="A1"],#nox-express-primary [data-nox-state]{grid-column:1/-1;min-width:0}
 }
 @media(max-width:550px){#nox-express-primary{bottom:max(3px,env(safe-area-inset-bottom,0px));width:calc(100vw - 12px);max-width:calc(100vw - 12px);display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:3px;padding:5px;box-sizing:border-box}#nox-express-primary button{width:100%;min-width:0;min-height:56px;padding:6px 1px;font-size:9px;letter-spacing:0;line-height:1.2;white-space:nowrap}#nox-express-primary button::before{width:22px;height:22px}#nox-express-primary [data-nox-state]{grid-column:1 / -1;min-width:0;overflow-wrap:anywhere}}
