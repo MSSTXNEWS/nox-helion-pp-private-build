@@ -103,5 +103,32 @@ class C11RollbackSafetyTest(unittest.TestCase):
         self.assertLess(builder.index("C11_NSIS_ACTIVATION_ROLLBACK_RECOVERY_GATES_STAGED"),
                         builder.index("& $makensisPath"))
 
+
+    def test_uninstaller_write_failure_cannot_replace_active_install(self):
+        """The original R11 uninstaller must be generated in StageDir, before any Rename."""
+        builder = BUILDER.read_text(encoding="utf-8")
+        donor = ORIGINAL.read_text(encoding="utf-8")
+        def source_block(name):
+            hit = re.search(r"\$" + name + r"=@'\n(?P<body>.*?)\n'@", builder, re.DOTALL)
+            self.assertIsNotNone(hit, name)
+            return hit.group("body")
+        old = source_block("uninstOld")
+        staged = source_block("uninstGuard")
+        self.assertEqual(donor.count(old), 1)
+        self.assertIn('WriteUninstaller "$INSTDIR\\Uninstall.exe"', old)
+        self.assertIn('WriteUninstaller "$StageDir\\Uninstall.exe"', staged)
+        self.assertIn('IfFileExists "$StageDir\\Uninstall.exe" +2 0', staged)
+        self.assertIn('IfErrors 0 +2', staged)
+        self.assertNotIn('WriteUninstaller "$INSTDIR\\Uninstall.exe"', staged)
+        anchor = '  SetOutPath "$TEMP" ; release current working directory before Rename'
+        self.assertEqual(donor.count(anchor), 1)
+        staged_nsi = donor.replace(old, "", 1).replace(anchor, staged + "\n" + anchor, 1)
+        for activation in ('Rename "$INSTDIR" "$BackupDir"', 'Rename "$StageDir" "$INSTDIR"'):
+            self.assertLess(staged_nsi.index(staged), staged_nsi.index(activation))
+        self.assertLess(staged_nsi.index(staged), staged_nsi.index("  WriteRegStr HKCU "))
+        self.assertEqual(staged_nsi.count('WriteUninstaller "$StageDir\\Uninstall.exe"'), 1)
+        self.assertEqual(staged_nsi.count('WriteUninstaller "$INSTDIR\\Uninstall.exe"'), 0)
+        self.assertIn("B03_NSIS_UNINSTALLER_BEFORE_ANY_ACTIVATION_STAGE_PASS", builder)
+
 if __name__ == "__main__":
     unittest.main()

@@ -1180,20 +1180,21 @@ Write-Host 'P01_NSIS_UNINSTALL_REGISTRY_QUOTE_STAGE_PASS'
 # before writing Uninstall.exe.  On a failed WriteUninstaller it could falsely
 # publish a broken uninstall owner.  Stage a verified binary BEFORE registry
 # or shortcut publication, never modifying immutable R11 source in the archive.
-$uninstAnchor='  ; Registry/shortcuts only after activation.'
+$uninstAnchor='  SetOutPath "$TEMP" ; release current working directory before Rename'
 $uninstOld=@'
   SetOutPath "$INSTDIR"
   WriteUninstaller "$INSTDIR\Uninstall.exe"
 '@
 $uninstGuard=@'
-  ; Registry and shortcuts require a physically written original uninstaller.
-  SetOutPath "$INSTDIR"
+  ; B03 NO-LOSS: write/verify the actual uninstaller in the staged tree.
+  ; An unavailable disk must fail BEFORE renaming the active program or backup.
+  SetOutPath "$StageDir"
   ClearErrors
-  WriteUninstaller "$INSTDIR\Uninstall.exe"
+  WriteUninstaller "$StageDir\Uninstall.exe"
   IfErrors 0 +2
-    Abort "Uninstaller write failed; registry publication refused."
-  IfFileExists "$INSTDIR\Uninstall.exe" +2 0
-    Abort "Uninstaller missing; registry publication refused."
+    Abort "Uninstaller write failed; current application was not changed."
+  IfFileExists "$StageDir\Uninstall.exe" +2 0
+    Abort "Uninstaller missing; current application was not changed."
 '@
 $uninstOld=[regex]::Replace($uninstOld,'\r?\n',$c11Eol)
 $uninstGuard=[regex]::Replace($uninstGuard,'\r?\n',$c11Eol)
@@ -1210,14 +1211,18 @@ $c11NsiPatched=$c11NsiPatched.Remove($uninstAt,$uninstOld.Length)
 $c11NsiPatched=$c11NsiPatched.Insert($uninstAnchorAt,
                                    $uninstGuard+$c11Eol)
 $uninstGateAt=$c11NsiPatched.IndexOf($uninstGuard,[StringComparison]::Ordinal)
+$uninstActivationAt=$c11NsiPatched.IndexOf('  Rename "$INSTDIR" "$BackupDir"',[StringComparison]::Ordinal)
+$uninstStageActivationAt=$c11NsiPatched.IndexOf('  Rename "$StageDir" "$INSTDIR"',[StringComparison]::Ordinal)
 $uninstRegistryAt=$c11NsiPatched.IndexOf('  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_ID}"',[StringComparison]::Ordinal)
-if ($uninstGateAt -lt 0 -or $uninstRegistryAt -le $uninstGateAt -or
+if ($uninstGateAt -lt 0 -or $uninstActivationAt -le $uninstGateAt -or
+    $uninstStageActivationAt -le $uninstGateAt -or
+    $uninstRegistryAt -le $uninstGateAt -or
     $c11NsiPatched.LastIndexOf($uninstGuard,[StringComparison]::Ordinal) -ne $uninstGateAt -or
     ([regex]::Matches($c11NsiPatched,'(?m)^\s*WriteUninstaller\s+"\$INSTDIR\\Uninstall\.exe"')).Count -ne 1 -or
     $c11NsiPatched.Contains($uninstOld)) {
   throw 'P01_NSIS_UNINSTALLER_ORDER_STAGE_HOLD'
 }
-Write-Host 'P01_NSIS_UNINSTALLER_BEFORE_REGISTRY_STAGE_PASS'
+Write-Host 'B03_NSIS_UNINSTALLER_BEFORE_ANY_ACTIVATION_STAGE_PASS'
 
 # B03 original NSIS fail-closed recovery: verify emergency Rename and actual
 # installer-owned target, not merely an attempted recovery. Only disposable R11.
