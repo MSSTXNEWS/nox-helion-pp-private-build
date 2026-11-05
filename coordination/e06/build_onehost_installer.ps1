@@ -1576,34 +1576,36 @@ Write-Host 'D03_NSIS_REAL_UNINSTALL_EXIT_FAIL_CLOSED_STAGED'
 $uRollbackOld=@'
   nsExec::ExecToStack 'powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$PLUGINSDIR\Verify-Payload.ps1" -Root "$BackupDir" -Manifest "$BackupDir\payload.sha256.json" -AllowInstalledMetadata'
 '@
-$uRollbackNew=@'
-  nsExec::ExecToStack 'powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$PLUGINSDIR\Verify-Payload.ps1" -Root "$BackupDir" -Manifest "$BackupDir\payload.sha256.json" -AllowInstalledMetadata -AllowInstalledUserFiles'
-'@
-$uRollbackOld=$uRollbackOld.TrimEnd([char]10,[char]13)
-$uRollbackNew=$uRollbackNew.TrimEnd([char]10,[char]13)
-# R11 owns a legacy rollback verifier. Depending on the original frozen
-# donor it may already carry the reviewed installed-metadata option, or it
-# may not. Admit ONLY these two exact original preimages, never a broad regex.
 $uRollbackLegacy=$uRollbackOld.Replace(' -AllowInstalledMetadata', '')
-$uFound=@()
-foreach ($candidate in @($uRollbackOld,$uRollbackLegacy)) {
-  $position=$c11NsiPatched.IndexOf($candidate,[StringComparison]::Ordinal)
-  if ($position -ge 0 -and
-      $c11NsiPatched.LastIndexOf($candidate,[StringComparison]::Ordinal) -eq $position) {
-    # A legacy substring is also present in the upgraded longer form.
-    # Only the longest exact line ending in a single quote is accepted.
-    $end=$position+$candidate.Length
-    if ($end -eq $c11NsiPatched.Length -or
-        $c11NsiPatched.Substring($end,1) -in @([string][char]10,[string][char]13)) {
-      $uFound+=,$candidate
-    }
+$uRollbackNew=$uRollbackOld.Replace(
+  ' -AllowInstalledMetadata' + [string][char]39,
+  ' -AllowInstalledMetadata -AllowInstalledUserFiles' + [string][char]39)
+# C11: original pinned R11 comes in two known semantic variants and may have
+# CRLF or different indentation. Compare complete physical lines after trimming
+# indentation ONLY; never admit an unknown verifier invocation or extra flags.
+$uAccepted=@($uRollbackOld.Trim(),$uRollbackLegacy.Trim())
+$uLines=[regex]::Matches($c11NsiPatched,'(?m)^[^\r\n]*Verify-Payload\.ps1[^\r\n]*BackupDir[^\r\n]*$')
+$uMatches=@()
+foreach ($match in $uLines) {
+  if ($uAccepted -ccontains $match.Value.Trim()) {
+    $uMatches+=,$match
   }
 }
-if ($uFound.Count -ne 1) { throw 'C11_BACKUP_USER_SAFE_PREIMAGE_HOLD' }
-$uRollbackOld=$uFound[0]
-$c11NsiPatched=$c11NsiPatched.Replace($uRollbackOld,$uRollbackNew)
-if ($c11NsiPatched.Contains($uRollbackOld) -or
-    $c11NsiPatched.IndexOf($uRollbackNew,[StringComparison]::Ordinal) -lt 0) {
+if ($uMatches.Count -ne 1 -or $uLines.Count -ne 1) {
+  $uActual=@($uLines | ForEach-Object { $_.Value.Trim() })
+  throw ('C11_BACKUP_USER_SAFE_PREIMAGE_HOLD exact_matches='+$uMatches.Count+
+         ' rollback_verifier_lines='+$uLines.Count+
+         ' actual='+($uActual -join ' | '))
+}
+$uOriginalLine=$uMatches[0].Value
+$uIndent=[regex]::Match($uOriginalLine,'^[ \t]*').Value
+$uReplacementLine=$uIndent+$uRollbackNew.Trim()
+$c11NsiPatched=$c11NsiPatched.Substring(0,$uMatches[0].Index)+
+               $uReplacementLine+
+               $c11NsiPatched.Substring($uMatches[0].Index+$uMatches[0].Length)
+if ([regex]::Matches($c11NsiPatched,'(?m)^[^\r\n]*Verify-Payload\.ps1[^\r\n]*BackupDir[^\r\n]*$').Count -ne 1 -or
+    !$c11NsiPatched.Contains($uReplacementLine) -or
+    $c11NsiPatched.Contains($uOriginalLine)) {
   throw 'C11_BACKUP_USER_SAFE_READBACK_HOLD'
 }
 Write-Host 'C11_BACKUP_USER_SAFE_VERIFY_STAGED'
