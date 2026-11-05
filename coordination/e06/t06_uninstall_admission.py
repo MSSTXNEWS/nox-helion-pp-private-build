@@ -164,6 +164,32 @@ def verify_original_uninstall(install: Path, owned_paths: tuple[Path, ...],
         if (not _no_reparse_components(path, allow_missing=True) or
                 path.exists() or path.is_symlink() or
                 getattr(path, "is_junction", lambda: False)()):
+            # B03 G4: Windows Setup #42046482272 actually failed here,
+            # but the old receipt hid WHICH of three owned leaves survived.
+            # This allowlisted relative name is read-only diagnostic evidence;
+            # preserve the original fail-closed result and never remove data.
+            print("T06_UNINSTALL_FIRST_METADATA_RESIDUE " +
+                  json.dumps(metadata, ensure_ascii=True),
+                  file=sys.stderr, flush=True)
+            try:
+                import importlib.util
+                witness_source = Path(__file__).resolve().with_name(
+                    "t06_uninstall_firstfail_witness.py")
+                spec = importlib.util.spec_from_file_location(
+                    "nox_t06_uninstall_metadata_witness", witness_source)
+                if spec is None or spec.loader is None:
+                    raise ImportError("T06_UNINSTALL_READONLY_WITNESS_MISSING")
+                witness_module = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(witness_module)
+                witness = witness_module.read_only_uninstall_failure_snapshot(
+                    install, owned_paths)
+                print("T06_UNINSTALL_METADATA_READONLY_WITNESS " +
+                      json.dumps(witness, sort_keys=True, ensure_ascii=True),
+                      file=sys.stderr, flush=True)
+            except Exception as witness_error:
+                print("T06_UNINSTALL_METADATA_WITNESS_HOLD " +
+                      type(witness_error).__name__[:80],
+                      file=sys.stderr, flush=True)
             raise RuntimeError("T06_CONSERVATIVE_UNINSTALL_METADATA_REMAINS")
     if not original_nsis_uninstall_registration_absent(registry):
         raise RuntimeError("T06_CONSERVATIVE_UNINSTALL_REGISTRY_REMAINS")
