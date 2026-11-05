@@ -55,6 +55,10 @@ def _read_native_config_bytes(root, file):
     before = file.lstat()
     if not stat.S_ISREG(before.st_mode) or before.st_size > 65536:
         raise ValueError("E06_NATIVE_CONFIG_FORMAT_HOLD")
+    # NTFS hardlinks are regular files, not reparse points. A config alias
+    # must never admit another owner's bytes as the OneHost owner config.
+    if before.st_nlink != 1:
+        raise ValueError("E06_NATIVE_CONFIG_HARDLINK_HOLD")
     flags = os.O_RDONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0)
     fd = os.open(file, flags)
     try:
@@ -64,12 +68,16 @@ def _read_native_config_bytes(root, file):
         if (not stat.S_ISREG(opened.st_mode) or
                 identity(before) != identity(opened)):
             raise ValueError("E06_NATIVE_CONFIG_IDENTITY_HOLD")
+        if opened.st_nlink != 1:
+            raise ValueError("E06_NATIVE_CONFIG_HARDLINK_HOLD")
         raw = os.read(fd, 65537)
         after = file.lstat()
         finished = os.fstat(fd)
         if (identity(opened) != identity(after) or
                 identity(opened) != identity(finished)):
             raise ValueError("E06_NATIVE_CONFIG_IDENTITY_HOLD")
+        if after.st_nlink != 1 or finished.st_nlink != 1:
+            raise ValueError("E06_NATIVE_CONFIG_HARDLINK_HOLD")
         _plain_path(str(root))
         _plain_path(str(file), directory=False)
         if len(raw) > 65536:

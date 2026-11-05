@@ -49,6 +49,36 @@ class NativeConfigDescriptorIdentity(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.reader(self.root, self.config)
 
+    def test_hardlink_to_foreign_config_is_denied_without_mutation(self):
+        outside = self.root / "foreign-owner.json"
+        raw = b'{"version": 1, "forge_jobs": []}'
+        outside.write_bytes(raw)
+        try:
+            os.link(outside, self.config)
+        except (OSError, NotImplementedError):
+            self.skipTest("hardlinks unavailable on test host")
+        with self.assertRaisesRegex(ValueError, "E06_NATIVE_CONFIG_HARDLINK_HOLD"):
+            self.reader(self.root, self.config)
+        self.assertEqual(outside.read_bytes(), raw)
+
+    def test_hardlink_added_during_read_is_denied_without_mutation(self):
+        raw = b'{"version": 1}'
+        self.config.write_bytes(raw)
+        alias = self.root / "late-foreign-alias.json"
+        original_read = os.read
+        def alias_during_read(fd, count):
+            data = original_read(fd, count)
+            try:
+                os.link(self.config, alias)
+            except (OSError, NotImplementedError):
+                self.skipTest("hardlinks unavailable on test host")
+            return data
+        with mock.patch.object(os, "read", side_effect=alias_during_read):
+            with self.assertRaisesRegex(ValueError, "E06_NATIVE_CONFIG_HARDLINK_HOLD"):
+                self.reader(self.root, self.config)
+        self.assertEqual(self.config.read_bytes(), raw)
+        self.assertEqual(alias.read_bytes(), raw)
+
     def test_swap_during_open_is_denied(self):
         self.config.write_bytes(b'{"version": 1}')
         original = os.open
