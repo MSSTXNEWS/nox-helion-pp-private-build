@@ -227,7 +227,7 @@ class WowStageTests(unittest.TestCase):
   self.assertEqual(home.read_bytes(),original_home)
 
  def test_receipt_exclusive_creation_race_preserves_foreign_bytes(self):
-  receipt=self.stage.parent/'WOW200_STAGE_RECEIPT.json'
+  receipt=self.stage.resolve().parent/'WOW200_STAGE_RECEIPT.json'
   studio=self.stage/'Assets/creative/studio.html'
   home=self.stage/'Assets/index.html'
   original_studio,original_home=studio.read_bytes(),home.read_bytes()
