@@ -107,6 +107,51 @@ def installed_manifest_failure_evidence(lifecycle):
             "release_accepted":False}
 
 
+
+def original_uninstall_failure_evidence(lifecycle):
+    """Surface bounded original NSIS nonzero witness; never a gate or release grant."""
+    base={"status":"NOT_RUN","release_accepted":False}
+    if type(lifecycle) is not dict:
+        return base
+    uninstall=lifecycle.get("uninstall")
+    if type(uninstall) is not dict or type(uninstall.get("code")) is not int:
+        return base
+    if uninstall["code"]==0:
+        return {"status":"ORIGINAL_EXIT_ZERO_NOT_E07","release_accepted":False}
+    hold={"status":"HOLD","original_exit_code":uninstall["code"],
+          "witness":"NOT_AVAILABLE","release_accepted":False}
+    witness=lifecycle.get("uninstall_nonzero_readonly_witness")
+    if (type(witness) is not dict or
+        witness.get("schema")!="NOX-T06-UNINSTALL-READONLY-FAILURE-WITNESS-v1" or
+        witness.get("disposition")!="DIAGNOSTIC_ONLY_RELEASE_HOLD" or
+        witness.get("witness_executed_uninstaller") is not False or
+        witness.get("witness_deleted_files") is not False or
+        witness.get("independent_e07")!="NOT_RUN"):
+        return hold
+    count=witness.get("manifest_owned_total")
+    states=witness.get("manifest_owned_states")
+    metadata=witness.get("original_nsis_metadata_states")
+    remover=witness.get("original_r11_remove_script")
+    allowed=("ABSENT","PRESENT","UNREADABLE","REPARSE_HOLD","NOT_REGULAR_HOLD")
+    if (type(count) is not int or not 1<=count<=50000 or
+        type(states) is not dict or set(states)!=set(allowed) or
+        any(type(states[key]) is not int or states[key]<0 for key in allowed) or
+        sum(states.values())!=count or
+        type(metadata) is not dict or
+        set(metadata)!={"payload.sha256.json","nox-p01-owned.txt","Uninstall.exe"} or
+        any(value not in allowed for value in metadata.values()) or
+        type(remover) is not dict or
+        type(remover.get("immutable_r11_pin_match")) is not bool):
+        return hold
+    hold.update({"witness":"READONLY_STRUCTURAL_ONLY",
+                 "manifest_owned_total":count,
+                 "manifest_owned_states":{key:states[key] for key in allowed},
+                 "original_nsis_metadata_states":{key:metadata[key] for key in
+                     ("payload.sha256.json","nox-p01-owned.txt","Uninstall.exe")},
+                 "original_r11_remove_script_pin_match":remover["immutable_r11_pin_match"]})
+    return hold
+
+
 def webview2_root_evidence(lifecycle):
     """Bounded allowlisted SAME-VM runtime evidence, never an install or E07 grant.
 
@@ -394,6 +439,14 @@ def main():
         data["installed_manifest_verify"]=owner_manifest_evidence
         print("T06_INSTALLED_MANIFEST_VERIFY_ROOT_EVIDENCE "+
               json.dumps(owner_manifest_evidence,sort_keys=True,
+                         separators=(",",":")),flush=True)
+        # Original nonzero NSIS already leaves a bounded read-only witness.
+        # Surface aggregate categories; never print private manifest-relative
+        # file names, invoke another uninstall or promote a release status.
+        uninstall_evidence=original_uninstall_failure_evidence(lifecycle)
+        data["uninstall_failure_evidence"]=uninstall_evidence
+        print("T06_ORIGINAL_UNINSTALL_FIRSTFAIL_EVIDENCE "+
+              json.dumps(uninstall_evidence,sort_keys=True,
                          separators=(",",":")),flush=True)
         print("T06_WEBVIEW2_RUNTIME_ROOT_EVIDENCE "+
               json.dumps(runtime_evidence,ensure_ascii=False,sort_keys=True,
