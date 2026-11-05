@@ -93,6 +93,15 @@ class PhysicalVisualFailureStages(unittest.TestCase):
         self.assertIn("button===originalPrimaryButtons[i]",source)
         self.assertIn("document.querySelectorAll(",source)
         self.assertIn("if(!verifiedOriginalPrimaryDock()){",source)
+        # All five original mounted UIA buttons must be visible, named
+        # and keyboard reachable, not merely connected/labelled in the DOM.
+        self.assertIn("button.getAttribute('aria-label')!==name",source)
+        self.assertIn("button.getClientRects().length===0",source)
+        self.assertIn("button.tabIndex<0",source)
+        self.assertIn("button.closest('[hidden],[inert],[aria-hidden=\\"true\\"]')",source)
+        self.assertIn("window.getComputedStyle(button)",source)
+        self.assertIn("dockStyle.pointerEvents==='none'",source)
+        self.assertIn("button.hasAttribute('role')",source)
         self.assertNotIn("Array.prototype.includes.call(primaryButtons,target)",source)
 
     def test_release_gate_stays_strict(self):

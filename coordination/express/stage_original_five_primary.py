@@ -144,14 +144,28 @@ function findOriginalControl(name){
 const originalPrimaryButtons=Array.from(nav.querySelectorAll(':scope > button[data-nox-primary]'));
 function verifiedOriginalPrimaryDock(){
  const names=['CHAT','INSTALL','MODELS','LEARN','SETTINGS'];
+ // UIA and keyboard admission must cover the ENTIRE original five-button dock:
+ // one hidden/ARIA-suppressed sibling must not count as 5/5 real actions.
+ if(!nav.isConnected||nav.closest('[hidden],[inert],[aria-hidden="true"]')||
+    nav.getClientRects().length===0)return false;
+ const dockStyle=window.getComputedStyle(nav);
+ if(!dockStyle||dockStyle.display==='none'||dockStyle.visibility!=='visible'||
+    dockStyle.pointerEvents==='none'||Number(dockStyle.opacity)===0)return false;
  const live=nav.querySelectorAll(':scope > button[data-nox-primary]');
  return live.length===names.length&&names.every((name,i)=>{
   const button=live[i],id='nox-express-primary-'+name.toLowerCase();
-  return button===originalPrimaryButtons[i]&&button.tagName==='BUTTON'&&
-    button.getAttribute('id')===id&&
-    button.getAttribute('data-nox-primary')===name&&
-    document.querySelectorAll('[id="'+id+'"]').length===1&&
-    button.isConnected&&!button.disabled;
+  if(button!==originalPrimaryButtons[i]||button.tagName!=='BUTTON'||
+     button.getAttribute('id')!==id||
+     button.getAttribute('data-nox-primary')!==name||
+     button.getAttribute('aria-label')!==name||
+     (button.hasAttribute('role')&&button.getAttribute('role')!=='button')||
+     document.querySelectorAll('[id="'+id+'"]').length!==1||
+     !button.isConnected||button.disabled||button.hidden||button.tabIndex<0||
+     button.closest('[hidden],[inert],[aria-hidden="true"]')||
+     button.getClientRects().length===0)return false;
+  const style=window.getComputedStyle(button);
+  return !!style&&style.display!=='none'&&style.visibility==='visible'&&
+     style.pointerEvents!=='none'&&Number(style.opacity)!==0;
  });
 }
 nav.addEventListener('click',event=>{
