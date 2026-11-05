@@ -154,5 +154,27 @@
       "spline-react"
     ]
   },
-  "integrator_note": "Use verified source donors first; do not enlarge current EXPRESS installer with entire source/demo ZIPs. Selectively port reviewed assets to existing WPF/WebView2 OneHost, keep 5 original primary actions, eight directions, SourceLock, permission/STOP, and one original install/SQLite. E06 source pass does not imply E07 release."
+  "integrator_note": "Use verified source donors first; do not enlarge current EXPRESS installer with entire source/demo ZIPs. Selectively port reviewed assets to existing WPF/WebView2 OneHost, keep 5 original primary actions, eight directions, SourceLock, permission/STOP, and one original install/SQLite. E06 source pass does not imply E07 release.",
+  "existing_runtime_reuse_verified": {
+    "uplot": {
+      "donor_index": 18,
+      "donor_name": "uplot",
+      "donor_upstream_version": "1.6.32",
+      "donor_path": "dist/uPlot.iife.min.js",
+      "original_runtime_path": "Packages/P03/Source/P03.ModelCenter.Wow/vendor/uPlot.iife.min.js",
+      "git_blob_sha1": "6749c4f02499c6999245f406f4bd208985f89aee",
+      "byte_identical_to_donor": true,
+      "verification": "Donor ZIP file raw Git blob recomputed from Drive, matched canonical GitHub source blob",
+      "runtime_e07_functional_verification": "NOT_ESTABLISHED_BY_THIS_CHECK"
+    },
+    "lucide": {
+      "donor_index": 14,
+      "original_runtime_path": "ui/nox-lucide-icons.mjs",
+      "git_blob_sha1": "c879004d6868b75f533ca93594199352a3570055",
+      "existing_local_icon_runtime": "SOURCE_PRESENT",
+      "byte_identical_to_donor": false,
+      "verification": "Existing generated source declares licensed local Lucide family; distinct generated module from donor archive",
+      "runtime_e07_functional_verification": "NOT_ESTABLISHED_BY_THIS_CHECK"
+    }
+  }
 }
