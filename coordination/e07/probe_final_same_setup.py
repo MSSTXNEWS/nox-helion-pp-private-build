@@ -636,6 +636,28 @@ def _newest(paths: set[Path], folder: Path, pattern: str) -> Path|None:
     return max(fresh,key=lambda p:p.stat().st_mtime_ns) if fresh else None
 
 
+
+def verify_pre_nav_visual_capture(out_dir: Path, observation: dict) -> None:
+    """Bind a pre-navigation physical PASS to its actual same-run WPF PNG.
+
+    A HOLD observation remains diagnostic and must not suppress subsequent
+    real function probes. Never promote a missing/replaced image to PASS.
+    """
+    if observation.get("physical_capture") != "PASS":
+        return
+    expected = observation.get("screenshot_sha256")
+    image = out_dir / "D02_FINAL_SAME_SETUP.png"
+    e07.require(type(expected) is str and re.fullmatch(r"[0-9a-f]{64}", expected)
+                and e07.clean_dir(out_dir) and e07.clean_file(image),
+                "E07_PRENAV_VISUAL_CAPTURE_IDENTITY_HOLD")
+    try:
+        size = image.stat().st_size
+        actual = e07.sha256(image) if 20_000 <= size <= 40_000_000 else None
+    except OSError:
+        raise e07.Hold("E07_PRENAV_VISUAL_CAPTURE_IDENTITY_HOLD") from None
+    e07.require(actual == expected, "E07_PRENAV_VISUAL_CAPTURE_IDENTITY_HOLD")
+
+
 def run(hwnd: int, install: Path, local: Path, *, source_sha: str, setup_sha: str,
         out_dir: Path, visual_only: bool=False,
         precomputed_visual: dict|None=None) -> tuple[dict,dict]:
@@ -757,6 +779,10 @@ def run(hwnd: int, install: Path, local: Path, *, source_sha: str, setup_sha: st
                     precomputed_visual.get("setup_sha256")==setup_sha and
                     precomputed_visual.get("release_accepted") is False,
                     "E07_PRENAV_VISUAL_IDENTITY_HOLD")
+        # The earlier SAME-HWND physical UIA observation is not independently
+        # admissible after navigation if its frozen screenshot is gone or changed.
+        # A genuine visual HOLD still allows collecting other real actions.
+        verify_pre_nav_visual_capture(out_dir, precomputed_visual)
         visual=precomputed_visual
     if visual_only:
         e07.require(precomputed_visual is None,"E07_PRENAV_VISUAL_MODE_HOLD")
