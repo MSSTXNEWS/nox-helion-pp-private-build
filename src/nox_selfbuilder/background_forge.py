@@ -92,6 +92,15 @@ class ExistingP04Background:
         return {"status": "HOLD", "reason": reason, "weights_updated": False,
                 "activation_allowed": False, **extra}
 
+    def _owner_training_grant(self, *, require_idle):
+        """Only literal native owner consent and a known non-STOP state admit work.
+
+        An unavailable or ambiguous STOP/idle callback must not be interpreted
+        as permission to start, resume or publish a GPU training candidate.
+        """
+        return (self.stop() is False and self.permit() is True
+                and (not require_idle or self.busy() is False))
+
     def _trusted_file(self, path):
         p = Path(path).absolute()
         self.trainer.reject_reparse_ancestors(p)
@@ -274,14 +283,14 @@ class ExistingP04Background:
             self._gate.release()
 
     def _run(self, job, monitor_seconds, max_seconds, resume, require_idle):
-        if self.stop() or not self.permit() or (require_idle and self.busy()):
+        if not self._owner_training_grant(require_idle=require_idle):
             return self._hold("NO_OWNER_IDLE_CONSENT_OR_STOP")
         preflight = self.preflight(job)
         if preflight.get("status") != "HARDWARE_READY_ONLY":
             return preflight
         out = self._output(job.output_dir, resume=resume)
         cmd, stop_marker, pause_marker = self._job_command(job, out, resume=resume)
-        if self.stop() or not self.permit() or (require_idle and self.busy()):
+        if not self._owner_training_grant(require_idle=require_idle):
             return self._hold("OWNER_REVOKED_AFTER_PREFLIGHT")
         controls = self._control(job)
         # Logs/events are outside fresh output: the original trainer owns mkdir.
@@ -299,9 +308,10 @@ class ExistingP04Background:
             requested_at = None
             while proc.poll() is None:
                 try:
-                    if self.stop() or not self.permit() or time.monotonic() - started > max_seconds:
+                    if (self.stop() is not False or self.permit() is not True
+                            or time.monotonic() - started > max_seconds):
                         self.request_stop()
-                    elif require_idle and self.busy() and self._requested is None:
+                    elif require_idle and self.busy() is not False and self._requested is None:
                         self.request_pause()
                     self.relay_events(job, live=True)
                 except Exception as exc:
@@ -324,6 +334,8 @@ class ExistingP04Background:
             return self._hold("TRAINER_MONITOR_FAILED", error_type=monitor_error)
         if forced or proc.returncode != 0:
             return self._hold("TRAINER_STOP_TIMEOUT" if forced else "TRAINER_EXIT_HOLD", return_code=proc.returncode)
+        if not self._owner_training_grant(require_idle=require_idle):
+            return self._hold("OWNER_REVOKED_AT_TRAINING_RESULT")
         receipt = self.verified_receipt(job)
         if prior_receipt_sha == self.trainer.sha256_file(out / "training-receipt.json"):
             return self._hold("RESUME_RECEIPT_NOT_UPDATED")
@@ -331,6 +343,8 @@ class ExistingP04Background:
             # Only remove this run's request after verifying all checkpoint bytes.
             self.trainer.reject_reparse_ancestors(pause_marker)
             pause_marker.unlink()
+        if not self._owner_training_grant(require_idle=require_idle):
+            return self._hold("OWNER_REVOKED_BEFORE_TRAINING_RECEIPT")
         self.relay_events(job)
         return {"status": "ADAPTER_CANDIDATE_PENDING_E07" if receipt["status"] == "COMPLETED" else receipt["status"],
                 "run_id": job.run_id, "receipt_sha256": self.trainer.sha256_file(out / "training-receipt.json"),
@@ -349,7 +363,7 @@ class ExistingP04Background:
         if not self._gate.acquire(blocking=False):
             return self._hold("TRAINER_ALREADY_ACTIVE")
         try:
-            if self.stop() or not self.permit():
+            if not self._owner_training_grant(require_idle=False):
                 return self._hold("MERGE_OWNER_REVOKED")
             receipt = self.verified_receipt(job)
             if receipt['status'] != 'COMPLETED':
@@ -373,7 +387,7 @@ class ExistingP04Background:
                                         stdout=stream, stderr=subprocess.STDOUT, shell=False)
                 while proc.poll() is None:
                     try:
-                        stop_merge = (self._merge_stop or self.stop() or not self.permit()
+                        stop_merge = (self._merge_stop or not self._owner_training_grant(require_idle=False)
                             or owner_approve(job, output_dir) is not True
                             or time.monotonic()-started > max_seconds)
                     except Exception:
@@ -388,6 +402,8 @@ class ExistingP04Background:
                     time.sleep(.1)
             if proc.returncode != 0:
                 return self._hold('EXISTING_P04_MERGE_HOLD', return_code=proc.returncode)
+            if not self._owner_training_grant(require_idle=False):
+                return self._hold('MERGE_OWNER_REVOKED_AT_RESULT')
             merge = self.trainer.read_object(destination / 'merge-receipt.json')
             if (merge.get('schema') != 'NOX-QLORA-MERGE-RECEIPT-v1'
                     or merge.get('status') != 'CREATED'
@@ -399,6 +415,8 @@ class ExistingP04Background:
             payload_sha = merger.tree_sha256(destination, skip_merge_receipt=True)
             if payload_sha != merge.get('merged_payload_sha256'):
                 raise ForgeHold('MERGE_PAYLOAD_SHA_MISMATCH')
+            if not self._owner_training_grant(require_idle=False):
+                return self._hold('MERGE_OWNER_REVOKED_BEFORE_RECEIPT')
             return {'status':'MERGED_CANDIDATE_PENDING_IMPORT', 'merged_payload_sha256':payload_sha,
                     'merge_receipt_sha256':self.trainer.sha256_file(destination / 'merge-receipt.json'),
                     'weights_updated':False, 'activation_allowed':False,
