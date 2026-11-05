@@ -40,6 +40,12 @@ on:
       - tests/e06/test_t06_github_samevm_bridge_auth_r122.py
       - tests/e06/test_t06_frozen_source_coverage.py
       - tests/e06/test_t06_nx03_stage_pin_r118.py
+      - coordination/express/stage_original_five_primary.py
+      - ui/menu-pages/express-wow-v3.test.mjs
+      - src/nox_selfbuilder/firstboot_coordinator.py
+      - src/nox_selfbuilder/a1_native_command.py
+      - src/nox_selfbuilder/acquisition_library.py
+      - tests/ci/test_physical_onehost_watch_f01.mjs
   workflow_dispatch:
 permissions:
   contents: read
@@ -68,6 +74,10 @@ jobs:
         run: |
           $ErrorActionPreference='Stop'
           if ((& git rev-parse HEAD).Trim() -cne $env:GITHUB_SHA) { throw 'HEAD_SHA_HOLD' }
+          # F01: watch original UI/owner code, not only the already-watched test/bridge.
+          # A single source-bound check runs before costly source ZIP/NSIS stages.
+          node --test tests/ci/test_physical_onehost_watch_f01.mjs
+          if ($LASTEXITCODE -ne 0) { throw 'EXPRESS_PHYSICAL_OWNER_WATCH_INPUT_HOLD' }
           # Windows cannot create the invalid-name Git fixtures (CON.txt, bad?.gguf, notes.).
           # Keep those negative security tests in the already-successful Linux G1+G2 workflow.
           # Syntax validation here makes no pycache/untracked files; the physical pack below is the real gate.
