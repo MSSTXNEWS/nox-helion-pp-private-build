@@ -194,5 +194,35 @@ class C11RollbackSafetyTest(unittest.TestCase):
             builder,
         )
 
+    def test_b03_uninstall_metadata_cleanup_fail_closed(self):
+        """Actual C09 R11 uninstall source staged once; no false success or user-file deletion."""
+        builder = BUILDER.read_text(encoding="utf-8")
+        donor = ORIGINAL.read_text(encoding="utf-8")
+        def block(name):
+            hit = re.search(r"\$" + name + r"=@'\n(?P<body>.*?)\n'@", builder, re.DOTALL)
+            self.assertIsNotNone(hit, name)
+            return hit.group("body")
+        old = block("b03UninstallMetadataOld")
+        guarded = block("b03UninstallMetadataGuard")
+        self.assertEqual(donor.count(old), 1)
+        self.assertNotIn("C11UninstallManifestHold:", donor)
+        staged = donor.replace(old, guarded, 1)
+        self.assertEqual(staged.count(guarded), 1)
+        for label in ("Manifest", "Marker", "Exe", "Registry"):
+            self.assertEqual(staged.count("C11Uninstall" + label + "Hold:"), 1)
+            self.assertIn("IfErrors C11Uninstall" + label + "Hold", guarded)
+        for name, label in (("payload.sha256.json", "Manifest"),
+                            ("nox-p01-owned.txt", "Marker"),
+                            ("Uninstall.exe", "Exe")):
+            self.assertIn('IfFileExists "$INSTDIR\\' + name + '" C11Uninstall' + label + "Hold 0", guarded)
+        self.assertLess(staged.index("C11UninstallMetadataDone:"), staged.index("DoneUninstall:"))
+        self.assertLess(guarded.index('Delete "$INSTDIR\\Uninstall.exe"'),
+                        guarded.index("DeleteRegKey HKCU"))
+        self.assertIn('RMDir "$INSTDIR"', guarded)
+        self.assertNotIn("RMDir /r", guarded)
+        self.assertNotIn("RMDir /REBOOTOK", guarded)
+        self.assertEqual(staged.replace(guarded, old, 1), donor)
+        self.assertLess(builder.index("B03_NSIS_UNINSTALL_METADATA_NO_FALSE_SUCCESS_STAGED"),
+                        builder.index("& $makensisPath"))
 if __name__ == "__main__":
     unittest.main()

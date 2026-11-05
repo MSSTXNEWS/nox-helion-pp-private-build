@@ -1419,6 +1419,73 @@ foreach ($recovery in @(
   }
 }
 Write-Host 'C11_NSIS_ACTIVATION_ROLLBACK_RECOVERY_GATES_STAGED'
+# B03 G4: The original NSIS remover can return success even when Delete fails
+# on its manifest/owner marker/uninstaller. Keep approved R11/C09 byte-identical;
+# guard only the disposable NSIS stage. Registry is published last. If unknown
+# user files remain, the non-recursive RMDir may fail normally (NO-LOSS).
+$b03UninstallMetadataOld=@'
+  Delete "$SMPROGRAMS\NOX HELION\NOX HELION.lnk"
+  RMDir "$SMPROGRAMS\NOX HELION"
+  DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_ID}"
+  SetOutPath "$TEMP"
+  Delete "$INSTDIR\payload.sha256.json"
+  Delete "$INSTDIR\nox-p01-owned.txt"
+  Delete "$INSTDIR\Uninstall.exe"
+  RMDir "$INSTDIR"
+'@
+$b03UninstallMetadataGuard=@'
+  ; B03 NO-LOSS: never report successful uninstall when owned metadata remains.
+  ; Unknown/user files may retain INSTDIR; never remove the tree recursively.
+  SetOutPath "$TEMP"
+  ClearErrors
+  Delete "$INSTDIR\payload.sha256.json"
+  IfErrors C11UninstallManifestHold
+  IfFileExists "$INSTDIR\payload.sha256.json" C11UninstallManifestHold 0
+  ClearErrors
+  Delete "$INSTDIR\nox-p01-owned.txt"
+  IfErrors C11UninstallMarkerHold
+  IfFileExists "$INSTDIR\nox-p01-owned.txt" C11UninstallMarkerHold 0
+  ClearErrors
+  Delete "$INSTDIR\Uninstall.exe"
+  IfErrors C11UninstallExeHold
+  IfFileExists "$INSTDIR\Uninstall.exe" C11UninstallExeHold 0
+  ; Publish clean uninstall registration only after all three deletions succeed.
+  Delete "$SMPROGRAMS\NOX HELION\NOX HELION.lnk"
+  RMDir "$SMPROGRAMS\NOX HELION"
+  ClearErrors
+  DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_ID}"
+  IfErrors C11UninstallRegistryHold
+  RMDir "$INSTDIR"
+  Goto C11UninstallMetadataDone
+  C11UninstallManifestHold:
+    Abort "Manifest cleanup failed; uninstall incomplete. Recovery files preserved."
+  C11UninstallMarkerHold:
+    Abort "Owner marker cleanup failed; uninstall incomplete. Recovery files preserved."
+  C11UninstallExeHold:
+    Abort "Uninstaller cleanup failed; uninstall incomplete. Recovery files preserved."
+  C11UninstallRegistryHold:
+    Abort "Uninstall registry cleanup failed; uninstall incomplete. Recovery files preserved."
+  C11UninstallMetadataDone:
+'@
+$b03UninstallMetadataOld=[regex]::Replace($b03UninstallMetadataOld,'\r?\n',$c11Eol)
+$b03UninstallMetadataGuard=[regex]::Replace($b03UninstallMetadataGuard,'\r?\n',$c11Eol)
+$b03UninstallMetadataAt=$c11NsiPatched.IndexOf($b03UninstallMetadataOld,[StringComparison]::Ordinal)
+if ($b03UninstallMetadataAt -lt 0 -or
+    $c11NsiPatched.LastIndexOf($b03UninstallMetadataOld,[StringComparison]::Ordinal) -ne $b03UninstallMetadataAt -or
+    $b03UninstallMetadataAt -le $c11NsiPatched.IndexOf('Section "Uninstall"',[StringComparison]::Ordinal) -or
+    $b03UninstallMetadataAt -ge $c11NsiPatched.IndexOf('DoneUninstall:',[StringComparison]::Ordinal) -or
+    $c11NsiPatched.Contains('C11UninstallManifestHold:')) {
+  throw 'B03_NSIS_UNINSTALL_METADATA_PREIMAGE_HOLD'
+}
+$c11NsiPatched=$c11NsiPatched.Substring(0,$b03UninstallMetadataAt)+
+                 $b03UninstallMetadataGuard+
+                 $c11NsiPatched.Substring($b03UninstallMetadataAt+$b03UninstallMetadataOld.Length)
+if ($c11NsiPatched.IndexOf($b03UninstallMetadataGuard,[StringComparison]::Ordinal) -ne $b03UninstallMetadataAt -or
+    $c11NsiPatched.LastIndexOf($b03UninstallMetadataGuard,[StringComparison]::Ordinal) -ne $b03UninstallMetadataAt -or
+    $c11NsiPatched.Contains($b03UninstallMetadataOld)) {
+  throw 'B03_NSIS_UNINSTALL_METADATA_READBACK_HOLD'
+}
+Write-Host 'B03_NSIS_UNINSTALL_METADATA_NO_FALSE_SUCCESS_STAGED'
 [IO.File]::WriteAllText($c11NsiPath,$c11NsiPatched,(New-Object System.Text.UTF8Encoding($false)))
 Write-Host "C11_NSIS_ROLLBACK_OLD_PAYLOAD_SHA_GATE_STAGED"
 $setup=Join-Path $out 'NOX-HELION-V16-DIAGNOSTIC-SETUP.exe'
