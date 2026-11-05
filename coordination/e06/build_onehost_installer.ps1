@@ -1005,12 +1005,17 @@ $uPairs=@(
 foreach($uPair in $uPairs) {
   $before=[string]$uPair.Old
   $after=([string]$uPair.New).Replace([string][char]13+[string][char]10,[string][char]10).Replace([string][char]10,$uEol).TrimEnd([char]10,[char]13)
-  if($uText.Split(@($before),[StringSplitOptions]::None).Length -ne 2 -or $uText.Contains($after)) { throw 'C11_USER_SAFE_VERIFIER_PREIMAGE_HOLD' }
+  if($uText.IndexOf($before,[StringComparison]::Ordinal) -lt 0 -or
+     $uText.IndexOf($before,[StringComparison]::Ordinal) -ne
+       $uText.LastIndexOf($before,[StringComparison]::Ordinal) -or
+     $uText.Contains($after)) { throw 'C11_USER_SAFE_VERIFIER_PREIMAGE_HOLD' }
   $uText=$uText.Replace($before,$after)
 }
 $uMetadata='if ($AllowInstalledMetadata) {'
-if($uText.Split(@($uMetadata),[StringSplitOptions]::None).Length -ne 2) { throw 'C11_USER_SAFE_METADATA_PREIMAGE_HOLD' }
-$uGate="if (" + '$AllowInstalledUserFiles -and -not $AllowInstalledMetadata) { Fail ' + "'installed-only user file mode' }"
+if($uText.IndexOf($uMetadata,[StringComparison]::Ordinal) -lt 0 -or
+   $uText.IndexOf($uMetadata,[StringComparison]::Ordinal) -ne
+     $uText.LastIndexOf($uMetadata,[StringComparison]::Ordinal)) { throw 'C11_USER_SAFE_METADATA_PREIMAGE_HOLD' }
+$uGate='if ($AllowInstalledUserFiles -and -not $AllowInstalledMetadata) { Fail ''installed-only user file mode'' }'
 $uText=$uText.Replace($uMetadata,$uGate+$uEol+$uMetadata)
 if (!$uText.Contains('Assert-P01UniqueManifestMembers') -or
     !$uText.Contains('Assert-NoReparseAncestors') -or
@@ -1576,7 +1581,11 @@ $uRollbackNew=@'
 '@
 $uRollbackOld=$uRollbackOld.TrimEnd([char]10,[char]13)
 $uRollbackNew=$uRollbackNew.TrimEnd([char]10,[char]13)
-if ($c11NsiPatched.Split(@($uRollbackOld),[StringSplitOptions]::None).Length -ne 2) { throw 'C11_BACKUP_USER_SAFE_PREIMAGE_HOLD' }
+if ($c11NsiPatched.IndexOf($uRollbackOld,[StringComparison]::Ordinal) -lt 0 -or
+    $c11NsiPatched.IndexOf($uRollbackOld,[StringComparison]::Ordinal) -ne
+      $c11NsiPatched.LastIndexOf($uRollbackOld,[StringComparison]::Ordinal)) {
+  throw 'C11_BACKUP_USER_SAFE_PREIMAGE_HOLD'
+}
 $c11NsiPatched=$c11NsiPatched.Replace($uRollbackOld,$uRollbackNew)
 if ($c11NsiPatched.Contains($uRollbackOld)) { throw 'C11_BACKUP_USER_SAFE_READBACK_HOLD' }
 Write-Host 'C11_BACKUP_USER_SAFE_VERIFY_STAGED'
