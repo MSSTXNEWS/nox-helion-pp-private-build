@@ -66,19 +66,37 @@ function renderOriginalMenuGlyph(){
  const labels=Array.from(new Set(document.querySelectorAll('aside *, nav *, header *, .sidebar *')))
   .filter(el=>!nav.contains(el)&&el.children.length===0&&
      (el.textContent||'').trim()==='MENU');
- if(labels.length!==1)return;
+ if(labels.length!==1)return false;
  const label=labels[0];
  const nodes=Array.from(label.childNodes).filter(n=>n.nodeType===3&&
      (n.textContent||'').trim()==='MENU');
- if(nodes.length!==1)return;
+ if(nodes.length!==1)return false;
  if(!label.hasAttribute('aria-label'))
    label.setAttribute('aria-label','Направления HELION');
  nodes[0].textContent='✦';
  label.dataset.noxOriginalMenuGlyph='true';
+ return true;
+}
+// Original R11 may mount its unchanged sidebar after DOMContentLoaded.
+// Keep the unique, text-only original owner and bound observation; never
+// replace listeners/elements or treat a duplicate/unknown label as accepted.
+function activateOriginalMenuGlyph(){
+ if(renderOriginalMenuGlyph())return;
+ const Observer=window.MutationObserver;
+ if(typeof Observer!=='function'||!document.documentElement)return;
+ let timer=null;
+ const watcher=new Observer(()=>{
+  if(!renderOriginalMenuGlyph())return;
+  watcher.disconnect();
+  if(timer!==null)window.clearTimeout?.(timer);
+ });
+ watcher.observe(document.documentElement,{childList:true,characterData:true,subtree:true});
+ if(typeof window.setTimeout==='function')
+  timer=window.setTimeout(()=>watcher.disconnect(),8000);
 }
 if(document.readyState==='loading')
- document.addEventListener('DOMContentLoaded',renderOriginalMenuGlyph,{once:true});
-else renderOriginalMenuGlyph();
+ document.addEventListener('DOMContentLoaded',activateOriginalMenuGlyph,{once:true});
+else activateOriginalMenuGlyph();
 
 const screenNames={CHAT:['ЧАТ','CHAT'],INSTALL:['УСТАНОВКА','INSTALL'],LEARN:['ОБУЧЕНИЕ','LEARN'],SETTINGS:['НАСТРОЙКИ','SETTINGS']};
 function safeOriginalLink(a){

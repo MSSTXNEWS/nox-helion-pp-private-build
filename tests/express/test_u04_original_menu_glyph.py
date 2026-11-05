@@ -41,7 +41,7 @@ function test(n) {
   return {textContent:'MENU',children:[],childNodes:[txt],dataset:{},
    hasAttribute(){return false},setAttribute(k,v){this.aria=v},txt};
  });
- const nav={contains(){return false},querySelector(){return {textContent:''}},addEventListener(){}};
+ const nav={contains(){return false},querySelector(){return null},addEventListener(){}};
  const doc={getElementById(){return nav},querySelectorAll(){return labels},
   readyState:'complete',addEventListener(){}};
  run(doc,{});
@@ -55,6 +55,47 @@ if(a[0].txt.textContent!=='✦' || a[0].aria!=='Направления HELION' |
         result = subprocess.run(["node", "-e", harness], capture_output=True,
                                 text=True, timeout=15, check=False)
         self.assertEqual(result.returncode, 0, result.stderr[:800])
+
+
+    @unittest.skipUnless(shutil.which("node"), "Node required for delayed original HOME binding")
+    def test_late_original_menu_mount_is_bound_once_and_duplicates_hold(self):
+        js = json.dumps(self.source())
+        harness = r"""
+const source=__SOURCE__;
+const run=new Function('document','window',source);
+function label(){
+ const txt={nodeType:3,textContent:'MENU'};
+ return {textContent:'MENU',children:[],childNodes:[txt],dataset:{},
+         hasAttribute(){return false},setAttribute(k,v){this.aria=v},txt};
+}
+function fixture(initial=0){
+ const labels=Array.from({length:initial},label);
+ let mutation=null,observer=null,timeout=null;
+ const nav={contains(){return false},querySelector(){return null},addEventListener(){}};
+ const doc={getElementById(){return nav},documentElement:{},
+            querySelectorAll(){return labels},readyState:'complete',addEventListener(){}};
+ const win={
+  MutationObserver:class{constructor(cb){mutation=cb;observer=this;this.closed=false}
+    observe(){this.observed=true}disconnect(){this.closed=true}},
+  setTimeout(cb,ms){if(ms!==8000)throw Error('unbounded watcher');timeout=cb;return 1},
+  clearTimeout(){}
+ };
+ run(doc,win);
+ return {labels,add:()=>labels.push(label()),mutate:()=>mutation?.(),
+         timeout:()=>timeout?.(),get observer(){return observer}};
+}
+const late=fixture(0);late.add();late.mutate();
+if(late.labels[0].txt.textContent!=='✦'||late.labels[0].aria!=='Направления HELION'||
+   late.labels[0].dataset.noxOriginalMenuGlyph!=='true'||!late.observer.closed)process.exit(11);
+const duplicate=fixture(0);duplicate.add();duplicate.add();duplicate.mutate();
+if(duplicate.labels.some(x=>x.txt.textContent!=='MENU')||duplicate.observer.closed)process.exit(12);
+duplicate.timeout();if(!duplicate.observer.closed)process.exit(13);
+const immediate=fixture(1);
+if(immediate.labels[0].txt.textContent!=='✦'||immediate.observer!==null)process.exit(14);
+""".replace('__SOURCE__',js)
+        result = subprocess.run(["node","-e",harness],capture_output=True,
+                                text=True,timeout=15,check=False)
+        self.assertEqual(result.returncode,0,result.stderr[:800])
 
     @unittest.skipUnless(shutil.which("node"), "Node required for inline JS syntax check")
     def test_script_parses_as_javascript(self):
