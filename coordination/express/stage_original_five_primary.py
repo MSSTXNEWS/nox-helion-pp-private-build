@@ -181,6 +181,14 @@ function verifiedOriginalPrimaryDock(){
       Math.min(rect.right,other.right)-Math.max(rect.left,other.left)>.5&&
       Math.min(rect.bottom,other.bottom)-Math.max(rect.top,other.top)>.5))
     return false;
+  // DOM/UIA tab order must match the approved visual reading order. Accept
+  // genuine adaptive wraps; never require a fixed one-row geometry.
+  const previous=dockRects[dockRects.length-1];
+  if(previous){
+    if(Math.abs(rect.top-previous.top)<=1){
+      if(rect.left<previous.right-.5)return false;
+    }else if(rect.top<previous.bottom-.5)return false;
+  }
   const hit=document.elementFromPoint(
       (rect.left+rect.right)/2,(rect.top+rect.bottom)/2);
   if(!hit||(hit!==button&&!button.contains(hit)))return false;
