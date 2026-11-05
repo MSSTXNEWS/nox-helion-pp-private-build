@@ -64,6 +64,25 @@ class OwnerManifest(unittest.TestCase):
                     self.run_gate()
                 self.assertFalse(self.out.exists())
 
+    def test_refuse_receipt_descriptor_substitution(self):
+        # A different descriptor must not replace the approved owner receipt
+        # while leaving its original pathname and stat metadata unchanged.
+        # This negative regression creates only disposable test files.
+        from unittest import mock
+        foreign = self.root / "foreign-receipt.json"
+        foreign.write_text(json.dumps(self.proof), encoding="utf-8")
+        self.proof["release_accepted"] = True
+        self.commit_receipt()
+        original_open = Path.open
+        def substituted(path, mode="r", *args, **kwargs):
+            if path == self.receipt and mode == "rb":
+                return original_open(foreign, mode, *args, **kwargs)
+            return original_open(path, mode, *args, **kwargs)
+        with mock.patch.object(Path, "open", substituted):
+            with self.assertRaisesRegex(Hold, "L02_RECEIPT_IDENTITY_OR_SIZE_HOLD"):
+                self.run_gate()
+        self.assertFalse(self.out.exists())
+
     def test_refuse_unauthorized_release_receipt(self):
         self.proof['release_accepted']=True;self.commit_receipt();self.assertRaises(Hold,self.run_gate)
     def test_refuse_unsafe_symlink(self):

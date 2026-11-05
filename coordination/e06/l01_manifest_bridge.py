@@ -130,6 +130,29 @@ def _reject_nonfinite_receipt_number(_value):
     raise Hold("L02_RECEIPT_NONFINITE_NUMBER_HOLD")
 
 
+def _stable_receipt_bytes(path: Path) -> bytes:
+    """Read E06 receipt from the same checked file descriptor.
+
+    A path can be substituted between lstat/stat and Path.read_bytes, even
+    when the original pathname is restored before the second stat. Require
+    descriptor identity before/after the bounded read and pathname identity
+    afterwards. A transport-level JSON receipt never grants release consent.
+    """
+    before = safe_regular(path)
+    if before.st_size > 1048576:
+        raise Hold("L02_RECEIPT_IDENTITY_OR_SIZE_HOLD")
+    with path.open("rb") as stream:
+        if _identity(os.fstat(stream.fileno())) != _identity(before):
+            raise Hold("L02_RECEIPT_IDENTITY_OR_SIZE_HOLD")
+        raw = stream.read(1048577)
+        if (len(raw) != before.st_size or len(raw) > 1048576 or
+                _identity(os.fstat(stream.fileno())) != _identity(before)):
+            raise Hold("L02_RECEIPT_IDENTITY_OR_SIZE_HOLD")
+    if _identity(safe_regular(path)) != _identity(before):
+        raise Hold("L02_RECEIPT_IDENTITY_OR_SIZE_HOLD")
+    return raw
+
+
 def emit(setup: Path, receipt: Path, url: str, version: int, out: Path) -> dict:
     if type(version) is not int or not 1 <= version <= 2147483647:
         raise Hold("L02_VERSION_INVALID")
@@ -140,11 +163,7 @@ def emit(setup: Path, receipt: Path, url: str, version: int, out: Path) -> dict:
     pe_installer(setup)
     url_gate(url, setup.name)
     try:
-        receipt_before = safe_regular(receipt)
-        receipt_raw = receipt.read_bytes()
-        if (len(receipt_raw) > 1048576 or
-            _identity(safe_regular(receipt)) != _identity(receipt_before)):
-            raise Hold("L02_RECEIPT_IDENTITY_OR_SIZE_HOLD")
+        receipt_raw = _stable_receipt_bytes(receipt)
         proof = json.loads(
             receipt_raw.decode("utf-8"),
             object_pairs_hook=_unique_receipt_fields,
