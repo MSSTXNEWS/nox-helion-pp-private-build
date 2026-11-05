@@ -411,6 +411,50 @@ try
     await File.WriteAllBytesAsync(file, Encoding.ASCII.GetBytes("GGUFsynthetic-byteproof"));
     var sha = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(await File.ReadAllBytesAsync(file))).ToLowerInvariant();
     var size = new FileInfo(file).Length;
+    // D04: queue admission previously persisted credentials/oversized IDs that
+    // the existing Ollama adapter would reject only AFTER owner approval.
+    var deniedGgufBaseline = (await a.ReadAsync()).Count;
+    async Task RejectUnreviewedGguf(string rights, string origin, string label)
+    {
+        var rejected = false;
+        try { await a.EnqueueVerifiedGgufAsync("local:denied-rights", file, size, sha, rights, origin); }
+        catch (InvalidDataException ex) when
+            (ex.Message == "REVIEW_REQUIRED: GGUF expected bytes/SHA-256/rights receipt.")
+        { rejected = true; }
+        Assert(rejected && (await a.ReadAsync()).Count == deniedGgufBaseline, label);
+    }
+    await RejectUnreviewedGguf(new string('r', 129), evidence,
+        "D04 GGUF oversized rights reference never queued");
+    await RejectUnreviewedGguf(string.Concat("owner", (char)10, "rights"), evidence,
+        "D04 GGUF control characters in rights receipt never queued");
+    await RejectUnreviewedGguf("reviewed", "https://token@ollama.com/library/tinyllama",
+        "D04 GGUF credential-bearing license source never queued");
+    await RejectUnreviewedGguf("reviewed", "https://ollama.com:444/library/tinyllama",
+        "D04 GGUF nondefault HTTPS port never queued");
+    // Legacy records are not erased. An invalid pre-existing GGUF job must
+    // fail before either atomic Running claim or explicit retry.
+    var unsafeLegacyDir = Path.Combine(multiRoot, "legacy-unsafe-gguf");
+    var unsafeLegacyQueue = new ModelDownloadQueueStore(unsafeLegacyDir);
+    var unsafeAt = DateTimeOffset.UtcNow;
+    var unsafeLegacyJob = new ModelJob(Guid.NewGuid(), ModelJobKind.GgufImport,
+        "local:legacy-invalid", file, true, evidence, unsafeAt, unsafeAt,
+        ExpectedLocalBytes: size, ExpectedLocalSha256: sha, RightsReceiptId: new string('r', 129));
+    await File.WriteAllTextAsync(Path.Combine(unsafeLegacyDir, "p03-model-download-queue.json"),
+        JsonSerializer.Serialize(new[] { unsafeLegacyJob }, new JsonSerializerOptions(JsonSerializerDefaults.Web)));
+    var unsafeClaimDenied = false;
+    try { await unsafeLegacyQueue.TryStartQueuedAsync(unsafeLegacyJob.Id); }
+    catch (InvalidOperationException ex) when (ex.Message == "REVIEW_REQUIRED: unreviewed GGUF cannot start.")
+    { unsafeClaimDenied = true; }
+    Assert(unsafeClaimDenied &&
+        (await unsafeLegacyQueue.ReadAsync()).Single().State == ModelJobState.Queued,
+        "D04 legacy unsafe GGUF cannot be promoted to Running");
+    await unsafeLegacyQueue.UpdateAsync(unsafeLegacyJob.Id, j => j with { State = ModelJobState.Failed });
+    var unsafeRetryDenied = false;
+    try { await unsafeLegacyQueue.RetryAsync(unsafeLegacyJob.Id); }
+    catch (InvalidOperationException ex) when (ex.Message == "REVIEW_REQUIRED: unreviewed GGUF cannot be retried.")
+    { unsafeRetryDenied = true; }
+    Assert(unsafeRetryDenied && (await unsafeLegacyQueue.ReadAsync()).Count == 1,
+        "D04 legacy unsafe GGUF retry denied without data loss");
     await Task.WhenAll(Enumerable.Range(0, 10).Select(i =>
         (i % 2 == 0 ? a : b).EnqueueVerifiedGgufAsync("local:example" + i,
             file, size, sha, "synthetic-rights", evidence)));

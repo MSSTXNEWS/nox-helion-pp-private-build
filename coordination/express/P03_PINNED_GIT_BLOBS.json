@@ -520,18 +520,6 @@
       "acceptance": "SOURCE_INTEGRITY_ONLY_NOT_MODEL_RIGHTS_WINDOWS_E07"
     },
     {
-      "path": "Packages/P03/Source/P03.ModelCenter.HardeningSmoke/Program.cs",
-      "owner": 3,
-      "run_id": "B04_20261105_CASE_ALIAS_INSTALLED_TAG_NOLOSS",
-      "pre_git_blob_sha1": "b0630e1cb411ae9446943aae1e4bdde44fb6980e",
-      "post_git_blob_sha1": "93df8853139bf234c48ccfbec345c32c5ed3a31c",
-      "post_bytes": 59486,
-      "acceptance": "SOURCE_ONLY_EXACT_OWNER_TAG_MATCH_NOT_CSHARP_OR_WINDOWS_E07",
-      "source_head_observed": "c2dea33ce370436bb8ad171a122a5f419246062f",
-      "prior_active_post_git_blob_sha1": "b0630e1cb411ae9446943aae1e4bdde44fb6980e",
-      "prior_active_post_bytes": 58633
-    },
-    {
       "path": "Packages/P03/Source/P03.ModelCenter/ModelCatalog.cs",
       "owner": 3,
       "run_id": "NOX-D04-RIGHTS-20261105",
@@ -539,18 +527,6 @@
       "post_git_blob_sha1": "fbc2d7ed8f9e7b4766395b6674290e3c3fffdd71",
       "post_bytes": 7525,
       "acceptance": "SOURCE_ONLY_OWNER_RIGHTS_CANDIDATE_NO_WINDOWS_E07"
-    },
-    {
-      "path": "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueStore.cs",
-      "owner": 3,
-      "run_id": "D04_STOP_PENDING_RETRY_20261105",
-      "pre_git_blob_sha1": "f8f33027fc2aad82a7e0b5ba72a8f8799489c90a",
-      "post_git_blob_sha1": "81337e5f004d4f337ba6fd80153a888d314ec5c9",
-      "post_bytes": 36820,
-      "acceptance": "SOURCE_ONLY_NOT_CSHARP_OR_INSTALLED_WINDOWS_E07",
-      "prior_active_post_git_blob_sha1": "f8f33027fc2aad82a7e0b5ba72a8f8799489c90a",
-      "prior_active_post_bytes": 36252,
-      "source_head_observed": "9328af1e9dcb66a3f34679cb36df18b1fa70cc2d"
     },
     {
       "path": "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueWorker.cs",
@@ -583,6 +559,30 @@
       "source_head_observed": "8631836b763eaad926ae6681e7d64a0469be3717",
       "reconciliation_source_commit": "e8c2590cbde18a9d6ece9d14310b9b1de1bde0ae",
       "reconciliation_scope": "B06_OWNER_REVIEWED_PULL_EXISTING_TAG_NO_LOSS_NO_NEW_MODEL_RIGHTS"
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueStore.cs",
+      "owner": 3,
+      "run_id": "D04_GGUF_AUTHORITY_ADMISSION_R11_20261105",
+      "pre_git_blob_sha1": "81337e5f004d4f337ba6fd80153a888d314ec5c9",
+      "post_git_blob_sha1": "3973ca17845f92d0dcce13639532f16008e78635",
+      "post_bytes": 37927,
+      "acceptance": "SOURCE_ONLY_NOT_DOTNET_OR_INSTALLED_WINDOWS_E07",
+      "prior_active_post_git_blob_sha1": "81337e5f004d4f337ba6fd80153a888d314ec5c9",
+      "prior_active_post_bytes": 36820,
+      "source_head_observed": "f21447a1eec6605f1927e84800389bf6b0082e11"
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter.HardeningSmoke/Program.cs",
+      "owner": 3,
+      "run_id": "D04_GGUF_AUTHORITY_ADMISSION_R11_20261105",
+      "pre_git_blob_sha1": "93df8853139bf234c48ccfbec345c32c5ed3a31c",
+      "post_git_blob_sha1": "27b3a0e6121ba09a7e8d791e07147309655800bf",
+      "post_bytes": 62505,
+      "acceptance": "SOURCE_ONLY_NOT_DOTNET_OR_INSTALLED_WINDOWS_E07",
+      "prior_active_post_git_blob_sha1": "93df8853139bf234c48ccfbec345c32c5ed3a31c",
+      "prior_active_post_bytes": 59486,
+      "source_head_observed": "f21447a1eec6605f1927e84800389bf6b0082e11"
     }
   ],
   "override_chain": [
@@ -929,6 +929,34 @@
       "reconciliation_scope": "SOURCE_ONLY_REVIEW_NOT_OWNER_PERMISSION_OR_WINDOWS_E07",
       "retired_from_active_set": "B04_20261105_CASE_ALIAS_NATIVE_NOLOSS",
       "retired_at_source_head": "03f77cce9ae3d41d9af847ad41fa9bea12904672"
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueStore.cs",
+      "owner": 3,
+      "run_id": "D04_STOP_PENDING_RETRY_20261105",
+      "pre_git_blob_sha1": "f8f33027fc2aad82a7e0b5ba72a8f8799489c90a",
+      "post_git_blob_sha1": "81337e5f004d4f337ba6fd80153a888d314ec5c9",
+      "post_bytes": 36820,
+      "acceptance": "SOURCE_ONLY_NOT_CSHARP_OR_INSTALLED_WINDOWS_E07",
+      "prior_active_post_git_blob_sha1": "f8f33027fc2aad82a7e0b5ba72a8f8799489c90a",
+      "prior_active_post_bytes": 36252,
+      "source_head_observed": "9328af1e9dcb66a3f34679cb36df18b1fa70cc2d",
+      "historical_approved_override": true,
+      "retired_from_active_set": "D04_GGUF_AUTHORITY_ADMISSION_R11_20261105"
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter.HardeningSmoke/Program.cs",
+      "owner": 3,
+      "run_id": "B04_20261105_CASE_ALIAS_INSTALLED_TAG_NOLOSS",
+      "pre_git_blob_sha1": "b0630e1cb411ae9446943aae1e4bdde44fb6980e",
+      "post_git_blob_sha1": "93df8853139bf234c48ccfbec345c32c5ed3a31c",
+      "post_bytes": 59486,
+      "acceptance": "SOURCE_ONLY_EXACT_OWNER_TAG_MATCH_NOT_CSHARP_OR_WINDOWS_E07",
+      "source_head_observed": "c2dea33ce370436bb8ad171a122a5f419246062f",
+      "prior_active_post_git_blob_sha1": "b0630e1cb411ae9446943aae1e4bdde44fb6980e",
+      "prior_active_post_bytes": 58633,
+      "historical_approved_override": true,
+      "retired_from_active_set": "D04_GGUF_AUTHORITY_ADMISSION_R11_20261105"
     }
   ],
   "source_expansion": {

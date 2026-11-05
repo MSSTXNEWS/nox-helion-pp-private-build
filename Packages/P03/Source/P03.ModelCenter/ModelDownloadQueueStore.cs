@@ -141,13 +141,11 @@ public sealed class ModelDownloadQueueStore
     {
         ValidateTag(tag);
         if (expectedBytes <= 4 || expectedSha256 is null || !ShaPattern.IsMatch(expectedSha256)
-            || string.IsNullOrWhiteSpace(rightsReceiptId))
+            || !HasReviewedGgufAuthority(rightsReceiptId, licenseSource))
             throw new InvalidDataException("REVIEW_REQUIRED: GGUF expected bytes/SHA-256/rights receipt.");
         if (string.IsNullOrWhiteSpace(localPath) ||
             !string.Equals(Path.GetExtension(localPath), ".gguf", StringComparison.OrdinalIgnoreCase))
             throw new InvalidDataException("GGUF path and extension required.");
-        if (!Uri.TryCreate(licenseSource, UriKind.Absolute, out var uri) || uri.Scheme != Uri.UriSchemeHttps)
-            throw new InvalidDataException("Reviewed HTTPS license evidence required.");
         var fullPath = Path.GetFullPath(localPath);
         ModelLocalAttestation.RequireRegularUnlinkedFile(fullPath);
         if (new FileInfo(fullPath).Length != expectedBytes)
@@ -254,6 +252,19 @@ public sealed class ModelDownloadQueueStore
         (job.State is ModelJobState.Queued or ModelJobState.Running or ModelJobState.Cancelling) &&
         string.Equals(job.ModelTag, tag, StringComparison.OrdinalIgnoreCase);
 
+    // GGUF owner's rights reference is durable review evidence, not arbitrary input.
+    // Existing unsafe queue snapshots remain readable for explicit owner recovery;
+    // enqueue, atomic claim and retry must refuse transferring them.
+    private static bool HasReviewedGgufAuthority(string? rightsReceiptId, string? licenseSource)
+    {
+        if (string.IsNullOrWhiteSpace(rightsReceiptId) || rightsReceiptId.Length > 128 ||
+            rightsReceiptId.Any(char.IsControl) || string.IsNullOrWhiteSpace(licenseSource) ||
+            !Uri.TryCreate(licenseSource, UriKind.Absolute, out var uri))
+            return false;
+        return uri.Scheme == Uri.UriSchemeHttps && uri.IsDefaultPort &&
+            !string.IsNullOrWhiteSpace(uri.Host) && string.IsNullOrEmpty(uri.UserInfo);
+    }
+
     private static void ValidateTag(string? tag)
     {
         if (tag is null || tag.Length > 160 || !TagPattern.IsMatch(tag) ||
@@ -282,6 +293,9 @@ public sealed class ModelDownloadQueueStore
                  string.IsNullOrWhiteSpace(old.ImmutableRevision) ||
                  string.IsNullOrWhiteSpace(old.RightsReceiptId)))
                 throw new InvalidOperationException("REVIEW_REQUIRED: unpinned Pull cannot start.");
+            if (old.Kind == ModelJobKind.GgufImport &&
+                !HasReviewedGgufAuthority(old.RightsReceiptId, old.LicenseSource))
+                throw new InvalidOperationException("REVIEW_REQUIRED: unreviewed GGUF cannot start.");
             var claimed = old with { State = ModelJobState.Running,
                 Attempts = checked(old.Attempts + 1), Status = "Starting",
                 UpdatedAtUtc = DateTimeOffset.UtcNow };
@@ -448,6 +462,9 @@ public sealed class ModelDownloadQueueStore
                  failed.RightsReceiptId.Length > 128 ||
                  !failed.LicenseAcknowledged))
                 throw new InvalidOperationException("REVIEW_REQUIRED: legacy/unreviewed pull cannot be retried.");
+            if (failed.Kind == ModelJobKind.GgufImport &&
+                !HasReviewedGgufAuthority(failed.RightsReceiptId, failed.LicenseSource))
+                throw new InvalidOperationException("REVIEW_REQUIRED: unreviewed GGUF cannot be retried.");
             bool SameApprovedPull(ModelJob job) =>
                 string.Equals(job.ModelTag, failed.ModelTag, StringComparison.Ordinal) &&
                 string.Equals(job.ExpectedOllamaDigest, failed.ExpectedOllamaDigest,
