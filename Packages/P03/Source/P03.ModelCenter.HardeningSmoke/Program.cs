@@ -89,14 +89,14 @@ try {
   // Owner-pinned artifact registry and review-template reads must never
   // consume a foreign NTFS hardlink (even with a matching expected SHA).
   var registryFile = Path.Combine(root, "reviewed-artifacts.json");
-  var registryText = "{\\"schema\\":\\"NOX-P03-REVIEWED-ARTIFACTS-V1\\",\\"items\\":[]}";
+  var registryText = "{\"schema\":\"NOX-P03-REVIEWED-ARTIFACTS-V1\",\"items\":[]}";
   await File.WriteAllTextAsync(registryFile, registryText);
   var registryPin = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
       Encoding.UTF8.GetBytes(registryText)));
   Assert(ModelArtifactReviewRegistry.LoadReviewedArtifacts(registryFile, registryPin).Count == 0,
       "T08F owner-pinned empty registry remains review-required");
   var templateFile = Path.Combine(root, "review-template.json");
-  await File.WriteAllTextAsync(templateFile, "{\\"items\\":[]}");
+  await File.WriteAllTextAsync(templateFile, "{\"items\":[]}");
   if (OperatingSystem.IsWindows())
   {
     void RequireHardlinkHold(Action action, string label)
