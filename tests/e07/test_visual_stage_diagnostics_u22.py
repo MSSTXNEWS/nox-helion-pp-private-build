@@ -65,6 +65,15 @@ class PhysicalVisualFailureStages(unittest.TestCase):
         self.assertIn("if($matching.Count -ne 1)",script)
         self.assertIn("if($clusters.Count -ne 1)",script)
 
+    def test_failed_dock_keeps_hold_and_bounded_real_resize_photo(self):
+        script=probe._uia_script(12345,"VISUAL",png=Path("screenshot.png"))
+        self.assertIn("SaveAdaptiveHold $width",script)
+        self.assertIn("D02_ADAPTIVE_",script)
+        self.assertIn("for($tryDock=0;$tryDock -lt 30;$tryDock++)",script)
+        self.assertIn("if($null -eq $rects){throw 'PRIMARY_DOCK_NOT_UNIQUE'}",script)
+        source=TARGET.read_text(encoding="utf-8")
+        self.assertIn('"adaptive_failure_diagnostics":resize_diagnostics',source)
+
     def test_release_gate_stays_strict(self):
         gate = (ROOT / "coordination/e07/independent_setup_e07.py").read_text(
             encoding="utf-8")

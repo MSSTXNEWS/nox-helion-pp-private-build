@@ -210,6 +210,8 @@ jobs:
             work/e07-independent/same-setup-final/E07_FINAL_VISUAL.json
             work/e07-independent/same-setup-final/E07_FINAL_FUNCTIONS.json
             work/e07-independent/same-setup-final/D02_FINAL_SAME_SETUP.png
+            work/e07-independent/same-setup-final/D02_ADAPTIVE_800.png
+            work/e07-independent/same-setup-final/D02_ADAPTIVE_1044.png
             work/e07-independent/same-setup-final/D02_HOME_PRENAV.png
           if-no-files-found: error
           retention-days: 14

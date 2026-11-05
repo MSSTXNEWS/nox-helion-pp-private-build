@@ -399,6 +399,28 @@ function FiveRects {
  $out=@();foreach($name in @('CHAT','INSTALL','MODELS','LEARN','SETTINGS')){$v=$dock[$name].Current;$r=$v.BoundingRectangle;$out+=([pscustomobject]@{name=$name;x=[int]$r.X;y=[int]$r.Y;width=[int]$r.Width;height=[int]$r.Height})};return @($out)
 }
 function NoOverlap($rects){for($i=0;$i -lt $rects.Count;$i++){for($j=$i+1;$j -lt $rects.Count;$j++){$a=$rects[$i];$b=$rects[$j];if($a.x -lt ($b.x+$b.width) -and ($a.x+$a.width) -gt $b.x -and $a.y -lt ($b.y+$b.height) -and ($a.y+$a.height) -gt $b.y){return $false}}};return $true}
+function SaveAdaptiveHold([int]$requestedWidth) {
+ # Diagnostic ONLY after UIA failed; never supplies a layout PASS.
+ if($requestedWidth -notin @(800,1044)){return}
+ $bounds=[NoxFinalWin32+RECT]::new()
+ if(-not [NoxFinalWin32]::GetWindowRect($handle,[ref]$bounds)){return}
+ $bw=[int]($bounds.Right-$bounds.Left);$bh=[int]($bounds.Bottom-$bounds.Top)
+ if($bw -lt 320 -or $bw -gt 2200 -or $bh -lt 320 -or $bh -gt 1600){return}
+ $photo=[System.Drawing.Bitmap]::new($bw,$bh)
+ try {
+  $graphics=[System.Drawing.Graphics]::FromImage($photo)
+  try {
+   $device=$graphics.GetHdc()
+   try {$ok=[NoxFinalWin32]::PrintWindow($handle,$device,2)}
+   finally {$graphics.ReleaseHdc($device)}
+  } finally {$graphics.Dispose()}
+  if($ok) {
+   $base=[System.IO.Path]::GetDirectoryName('__PNG__')
+   $target=[System.IO.Path]::Combine($base,'D02_ADAPTIVE_'+$requestedWidth+'.png')
+   $photo.Save($target,[System.Drawing.Imaging.ImageFormat]::Png)
+  }
+ } finally {$photo.Dispose()}
+}
 $op='__OP__'
 if($op -in @('CHAT','INSTALL','MODELS','LEARN')){ [pscustomobject]@{invoked=(InvokePrimary '__ACTION__');sameHwndAlive=($null -ne [System.Windows.Automation.AutomationElement]::FromHandle($handle))}|ConvertTo-Json -Compress; exit 0 }
 if($op -eq 'SETTINGS'){
@@ -441,13 +463,14 @@ if($op -eq 'VISUAL'){
  try {
  $__e07Stage='RESIZE'
  foreach($size in @([pscustomobject]@{width=1044;height=788},[pscustomobject]@{width=800;height=600})){$__e07Stage='RESIZE';$width=[int]$size.width;$height=[int]$size.height;if(-not [NoxFinalWin32]::MoveWindow($handle,0,0,$width,$height,$true)){throw 'MOVE'};Start-Sleep -Milliseconds 700;$rr=[NoxFinalWin32+RECT]::new();$null=[NoxFinalWin32]::GetWindowRect($handle,[ref]$rr);$__e07Stage='DOCK';$rects=$null
- for($tryDock=0;$tryDock -lt 16;$tryDock++){
+ for($tryDock=0;$tryDock -lt 30;$tryDock++){
   try{$rects=FiveRects;break}
   catch{
    if(($_.Exception.Message+'') -ne 'PRIMARY_DOCK_NOT_UNIQUE'){throw}
-   Start-Sleep -Milliseconds 200
+   Start-Sleep -Milliseconds 300
   }
  }
+ if($null -eq $rects){try{SaveAdaptiveHold $width}catch{}}
  if($null -eq $rects){throw 'PRIMARY_DOCK_NOT_UNIQUE'}
  $sizes+=([pscustomobject]@{requested=@($width,$height);actual=@($rr.Right-$rr.Left,$rr.Bottom-$rr.Top);visiblePrimary=$rects.Count;noOverlap=(NoOverlap $rects)})}
  } catch {
@@ -592,6 +615,12 @@ def run(hwnd: int, install: Path, local: Path, *, source_sha: str, setup_sha: st
                 diagnostic_photo={"scope":"SAME_WPF_PHYSICAL_CAPTURE_HOLD"}
         actual_png=(e07.clean_file(png) and
                     20_000<=png.stat().st_size<=40_000_000)
+        resize_diagnostics={}
+        for target_width in (800,1044):
+            diagnostic_path=out_dir / f"D02_ADAPTIVE_{target_width}.png"
+            if (e07.clean_file(diagnostic_path) and
+                    20_000 <= diagnostic_path.stat().st_size <= 40_000_000):
+                resize_diagnostics[str(target_width)]=e07.sha256(diagnostic_path)
         sizes=visual_raw.get("sizes")
         actual_layout=_physical_adaptive_sized(sizes)
         screenshot_sha=e07.sha256(png) if actual_png else None
@@ -636,6 +665,7 @@ def run(hwnd: int, install: Path, local: Path, *, source_sha: str, setup_sha: st
                 "reduced_motion":"HOLD","screenshot_sha256":screenshot_sha,
                 "physical_sizes":sizes or [],"fx_cycle":fx,
                 "diagnostic_photo":diagnostic_photo,
+                "adaptive_failure_diagnostics":resize_diagnostics,
                 "visual_first_unmet_gate":visual_first_hold or
                      (fx.get("first_unmet_gate") if fx["fx_control"]!="PASS"
                       else "E07_INDEPENDENT_VISUAL_REVIEW_NOT_RUN"),
