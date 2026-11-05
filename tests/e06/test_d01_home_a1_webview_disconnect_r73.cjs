@@ -43,4 +43,37 @@ accepted.reply({...receipt,requestId:accepted.posted.requestId,accepted:true,
  result:{...result,ownerReceipt:{accepted:true,ack:true}}});
 assert.match(accepted.state.textContent,/подтверждён/);
 const late=trial();late.click();late.reply({...receipt,requestId:'wrong'});assert.equal(late.button.disabled,true);late.timeout();assert.match(late.state.textContent,/HOLD/);
-console.log('D01_A1_WEBVIEW_DISCONNECT_SOURCE_ONLY 24/24 PASS');
+
+(function testTornWebView2LateReceiptCannotCompleteNewRequest(){
+ let trustedClick,timeout,nonce=0,throwOnFirstRemove=true;
+ const live=[],posted=[];
+ const button={disabled:false,addEventListener(_type,fn){trustedClick=fn;}},state={textContent:''};
+ const native={
+  postMessage(value){posted.push(value);},
+  addEventListener(_type,fn){live.push(fn);},
+  removeEventListener(_type,fn){
+   if(throwOnFirstRemove){throwOnFirstRemove=false;throw Error('torn WebView2');}
+   const at=live.indexOf(fn);if(at>=0)live.splice(at,1);
+  }
+ };
+ const win={chrome:{webview:native},crypto:{getRandomValues(bytes){bytes.fill(++nonce);return bytes;}}};
+ new Function('nav','window','state','setTimeout','clearTimeout',handler)(
+  {querySelector:()=>button},win,state,fn=>{timeout=fn;return 1;},()=>{});
+ trustedClick({isTrusted:true});const first=posted.at(-1);
+ timeout();assert.equal(button.disabled,false);assert.match(state.textContent,/HOLD/);
+ trustedClick({isTrusted:true});const second=posted.at(-1);
+ assert.notEqual(first.requestId,second.requestId);
+ const receipt=requestId=>({kind:'p02NativeResult',requestId,routeId:'chat.commands',
+  state:'COMPLETED',result:{schema:'NOX-A1-NATIVE-COMMAND-STATUS-v1',
+    state:'ACTIVE_NATIVE_BOOT_RECEIPT',native_bound:true,
+    boot_state:'READY_FOR_EXISTING_IDLE_TICK'}});
+ for(const callback of [...live])
+   callback({isTrusted:true,source:native,data:receipt(first.requestId)});
+ assert.equal(button.disabled,true,'late old A1 ACK must not complete a newer request');
+ assert.match(state.textContent,/запрос нативного статуса/);
+ for(const callback of [...live])
+   callback({isTrusted:true,source:native,data:receipt(second.requestId)});
+ assert.equal(button.disabled,false);assert.match(state.textContent,/подтверждён/);
+})();
+
+console.log('D01_A1_WEBVIEW_DISCONNECT_SOURCE_ONLY STALE_RECEIPT_GUARD_PASS');

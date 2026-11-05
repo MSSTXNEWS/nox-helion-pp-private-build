@@ -423,10 +423,14 @@ a1Button?.addEventListener('click',event=>{
  try{window.crypto.getRandomValues(bytes);}
  catch{state.textContent='A1: защищённый идентификатор недоступен · HOLD';return;}
  const requestId=Array.from(bytes,x=>x.toString(16).padStart(2,'0')).join('');
+ // A former transport callback must never finish a newer user request.
+ let a1Settled=false;
  a1Pending=true;a1Button.disabled=true;
  state.textContent='A1: запрос нативного статуса…';
  let timer;
  const done=message=>{
+   if(a1Settled)return;
+   a1Settled=true;
    clearTimeout(timer);
    // Disconnect during callback cleanup is HOLD; restore UIA accessibility.
    let removed=true;
@@ -466,7 +470,7 @@ a1Button?.addEventListener('click',event=>{
   return false;
  }
  const onNative=reply=>{
-   if(reply?.isTrusted!==true||reply.source!==native)return;
+   if(a1Settled||reply?.isTrusted!==true||reply.source!==native)return;
    const value=reply.data;
    if(!value||value.kind!=='p02NativeResult'||value.requestId!==requestId||
       value.routeId!=='chat.commands')return;
@@ -481,6 +485,7 @@ a1Button?.addEventListener('click',event=>{
  };
  try{native.addEventListener('message',onNative);}
  catch{
+   a1Settled=true;
    a1Pending=false;a1Button.disabled=false;
    state.textContent='A1: подписка OneHost недоступна · HOLD';return;
  }
