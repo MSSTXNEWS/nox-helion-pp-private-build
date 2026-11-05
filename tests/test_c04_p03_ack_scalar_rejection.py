@@ -49,7 +49,8 @@ def load_real_result_branch():
     guard_globals = [
         next(n for n in tree.body if isinstance(n, ast.Assign) and
              any(isinstance(t, ast.Name) and t.id == name for t in n.targets))
-        for name in ('_OWNER3_DENIAL_TOKENS', '_OWNER3_DENIAL_PAIRS')
+        for name in ('_OWNER3_DENIAL_TOKENS', '_OWNER3_DENIAL_PAIRS',
+                     '_OWNER3_CANCEL_ACK_STATES', '_OWNER3_RETRY_ACK_STATES')
     ]
     guard_predicate = next(n for n in tree.body
                            if isinstance(n, ast.FunctionDef) and
