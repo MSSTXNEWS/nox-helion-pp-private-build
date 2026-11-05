@@ -374,12 +374,16 @@
     {
       "path": "Packages/P03/Source/P03.ModelCenter.QuickSmoke/quick20_contract.cjs",
       "owner": 3,
-      "run_id": "NOX-E03-PR162-PIN-RECONCILE-20261101",
+      "run_id": "ABC_P03_REVIEWED_SOURCE_RECONCILE_20261105",
       "pre_git_blob_sha1": "fde5680bc8dfdbbbf21d6dc15fa0916edc091581",
-      "post_git_blob_sha1": "9e9adfa9d2376a727dd7e377a9a3abefaf5cf922",
-      "post_bytes": 2431,
+      "post_git_blob_sha1": "e8a19e192bd2ae32306fd31c2038203fcabfbb10",
+      "post_bytes": 3260,
       "source_commit": "3ec73f893961a8dce0dc3bdbc202afd4a54773a0",
-      "acceptance": "SOURCE_INTEGRITY_ONLY_NOT_MODEL_RIGHTS_WINDOWS_E07"
+      "acceptance": "EXACT_SOURCE_ONLY_NOT_INSTALLED_E07",
+      "previous_reviewed_git_blob_sha1": "9e9adfa9d2376a727dd7e377a9a3abefaf5cf922",
+      "previous_reviewed_bytes": 2431,
+      "reconciliation_source_commit": "23a9d5db62c0c083cc292da0938ad69d78f0619a",
+      "reconciliation_scope": "SOURCE_ONLY_REVIEW_NOT_OWNER_PERMISSION_OR_WINDOWS_E07"
     },
     {
       "path": "Packages/P03/Source/P03.ModelCenter.Smoke/Program.cs",
@@ -463,28 +467,36 @@
     {
       "path": "Packages/P03/Source/python-host/p03_onehost_port.py",
       "owner": 3,
-      "run_id": "NOX-E03-NATIVE-PIN-RECONCILE-20261103",
+      "run_id": "ABC_P03_REVIEWED_SOURCE_RECONCILE_20261105",
       "pre_git_blob_sha1": "8b2bf0cb3f691cfede278df29d634f60a508fd69",
-      "post_git_blob_sha1": "25ec92c638ff572718acd6ef5354411f91384b93",
-      "post_bytes": 23603,
+      "post_git_blob_sha1": "b0a23161fc3ce8f8d2cfc5605326a7c8421acee6",
+      "post_bytes": 25925,
       "source_commit": "9724715fb8088d8046ed96be062a4f6bc1b457f9",
-      "acceptance": "SOURCE_INTEGRITY_ONLY_NOT_MODEL_RIGHTS_WINDOWS_E07",
+      "acceptance": "EXACT_SOURCE_ONLY_NOT_INSTALLED_E07",
       "reconciliation_parent_sha1": "87c1b88bf95672677e21a0d84dc6402040b5eac5",
       "prior_approved_run_id": "NOX-P03-BLOCK2-ADDENDUM-20261101",
       "prior_approved_source_commit": "83b9c444042bfc300cbd447b8367f61d3e3f2846",
       "prior_approved_post_git_blob_sha1": "f8992171f6d3e39d449fac4c2103d7530f6f79e2",
       "prior_approved_post_bytes": 21851,
-      "verification": "EXACT_GIT_BLOB_AND_EXISTING_SECURITY_REGRESSIONS_NOT_WINDOWS"
+      "verification": "EXACT_GIT_BLOB_AND_EXISTING_SECURITY_REGRESSIONS_NOT_WINDOWS",
+      "previous_reviewed_git_blob_sha1": "25ec92c638ff572718acd6ef5354411f91384b93",
+      "previous_reviewed_bytes": 23603,
+      "reconciliation_source_commit": "23a9d5db62c0c083cc292da0938ad69d78f0619a",
+      "reconciliation_scope": "SOURCE_ONLY_REVIEW_NOT_OWNER_PERMISSION_OR_WINDOWS_E07"
     },
     {
       "path": "Packages/P03/Source/python-host/test_p03_onehost_port.py",
       "owner": 3,
-      "run_id": "NOX-P03-BLOCK2-ADDENDUM-20261101",
+      "run_id": "ABC_P03_REVIEWED_SOURCE_RECONCILE_20261105",
       "pre_git_blob_sha1": "c18a1dcbb543de7ab00172ad0b9b585c9b26bf92",
-      "post_git_blob_sha1": "ea4651354dc175231c352fc9a5db1ecdca959b6c",
-      "post_bytes": 13870,
+      "post_git_blob_sha1": "7d0f1ffd3710a347a4b5800dfdf01acb05803fc6",
+      "post_bytes": 14069,
       "source_commit": "83b9c444042bfc300cbd447b8367f61d3e3f2846",
-      "acceptance": "SOURCE_INTEGRITY_ONLY_NOT_MODEL_RIGHTS_WINDOWS_E07"
+      "acceptance": "EXACT_SOURCE_ONLY_NOT_INSTALLED_E07",
+      "previous_reviewed_git_blob_sha1": "ea4651354dc175231c352fc9a5db1ecdca959b6c",
+      "previous_reviewed_bytes": 13870,
+      "reconciliation_source_commit": "23a9d5db62c0c083cc292da0938ad69d78f0619a",
+      "reconciliation_scope": "SOURCE_ONLY_REVIEW_NOT_OWNER_PERMISSION_OR_WINDOWS_E07"
     },
     {
       "path": "Packages/P03/Source/python-host/catalog30.discovery.json",
