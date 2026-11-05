@@ -533,8 +533,8 @@
       "owner": 3,
       "run_id": "D04_P03_E06_REVIEW_PIN_RECONCILE_20261105",
       "pre_git_blob_sha1": "13ae4b4e9bf465a8fb31e8893cd381b1464c4702",
-      "post_git_blob_sha1": "1ad9d2f0d884b9c3a679d0ca0a80ef95cfddeb69",
-      "post_bytes": 47176,
+      "post_git_blob_sha1": "167b425487c953dbc20d242250a1ee728374b83f",
+      "post_bytes": 51675,
       "reconciled_from_git_blob_sha1": "af895122f2a355fba6ae655aa546a380eecdbbd6",
       "reconciled_from_bytes": 20193,
       "reconciliation_source_commit": "0c5fada0ea2a27a07292df5f4cb000441b0bae47",
@@ -544,7 +544,10 @@
       "previous_reviewed_bytes": 29146,
       "prior_active_post_git_blob_sha1": "612e22b0f68ad012f4c031f64042e674fca1d3bd",
       "prior_active_post_bytes": 30475,
-      "source_head_observed": "51fed5a0ba508fb678b63febe3e593a6a082361c"
+      "source_head_observed": "5163c8c11aa8e8b75118142ae5069a52314375c9",
+      "f01_prior_active_blob": "1ad9d2f0d884b9c3a679d0ca0a80ef95cfddeb69",
+      "f01_prior_active_bytes": 47176,
+      "f01_scope": "GIT_SOURCE_PIN_ONLY_NOT_WINDOWS_CSHARP_OR_E07"
     },
     {
       "path": "Packages/P03/Source/P03.ModelCenter/ModelCatalog.cs",
