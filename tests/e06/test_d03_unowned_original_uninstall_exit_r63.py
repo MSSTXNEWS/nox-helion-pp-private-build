@@ -27,5 +27,11 @@ class D03UnownedUninstallExit(unittest.TestCase):
             self.assertIn(token, self.source)
         self.assertEqual(self.source.count("& $makensisPath /V2"), 1)
 
+    def test_powershell_51_herestring_terminator(self):
+        # PS 5.1 requires the closing '@ delimiter at column zero on its
+        # own line: never concatenate a semicolon to the terminator.
+        self.assertNotIn("\n'@;\n", self.source)
+        self.assertEqual(self.source.count("D03_NSIS_UNOWNED_OWNER_ADMISSION_FAIL_CLOSED_STAGED"), 1)
+
 if __name__ == "__main__":
     unittest.main()

@@ -1531,7 +1531,7 @@ $d03UnownedAdmissions=@(
   @{
     Name='MARKER'; Old=@'
   IfFileExists "$INSTDIR\nox-p01-owned.txt" 0 DoneUninstall
-'@;
+'@
     New=@'
   ; D03 fail-closed owner admission: absent marker is not successful uninstall.
   IfFileExists "$INSTDIR\nox-p01-owned.txt" D03OwnerMarkerPresent 0
@@ -1543,7 +1543,7 @@ $d03UnownedAdmissions=@(
   @{
     Name='ROOT'; Old=@'
   StrCmp $INSTDIR "$LOCALAPPDATA\Programs\NOX HELION" 0 DoneUninstall
-'@;
+'@
     New=@'
   StrCmp $INSTDIR "$LOCALAPPDATA\Programs\NOX HELION" D03UninstallRootTrusted 0
     SetErrorLevel 1
