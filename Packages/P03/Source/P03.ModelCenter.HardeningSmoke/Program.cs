@@ -728,6 +728,53 @@ try
 }
 finally { Directory.Delete(d04RightsDir, recursive: true); }
 
+// B04: an old backup may contain stale RUNNING/CANCELLING states. Explicit
+// rollback consent does not transfer a current execution lease or STOP owner.
+var b04RestoreRoot = Path.Combine(Path.GetTempPath(),
+    "NOX_P03_BACKUP_ACTIVE_" + Guid.NewGuid().ToString("N"));
+Directory.CreateDirectory(b04RestoreRoot);
+try
+{
+    var b04Store = new ModelDownloadQueueStore(b04RestoreRoot);
+    var b04Path = Path.Combine(b04RestoreRoot, "p03-model-download-queue.json");
+    var b04Backup = b04Path + ".bak";
+    var b04When = DateTimeOffset.UtcNow;
+    var b04OwnerJob = new ModelJob(Guid.NewGuid(), ModelJobKind.OllamaPull,
+        "tinyllama:b04-rollback", null, true, "https://ollama.com/library/tinyllama",
+        b04When, b04When, ModelJobState.Queued,
+        ExpectedOllamaDigest: new string('a',64),
+        ImmutableRevision: "sha256:" + new string('a',64), RightsReceiptId: "b04-owner");
+    var b04Json = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+    var b04Original = JsonSerializer.Serialize(new[] { b04OwnerJob }, b04Json);
+    await File.WriteAllTextAsync(b04Path, b04Original);
+    async Task B04RejectStaleBackupAsync(ModelJobState state)
+    {
+        var stale = b04OwnerJob with { Id = Guid.NewGuid(), State = state };
+        await File.WriteAllTextAsync(b04Backup,
+            JsonSerializer.Serialize(new[] { stale }, b04Json));
+        try { await b04Store.RestoreBackupAsync(true); }
+        catch (InvalidDataException ex) when (ex.Message == "P03_QUEUE_BACKUP_ACTIVE_RESTORE_HOLD")
+        {
+            Assert(await File.ReadAllTextAsync(b04Path) == b04Original,
+                "B04 stale " + state + " backup rejected; owner queue bytes unchanged");
+            return;
+        }
+        throw new Exception("FAIL B04 stale " + state + " backup admitted");
+    }
+    await B04RejectStaleBackupAsync(ModelJobState.Running);
+    await B04RejectStaleBackupAsync(ModelJobState.Cancelling);
+    var b04Terminal = b04OwnerJob with { Id = Guid.NewGuid(), State = ModelJobState.Completed };
+    await File.WriteAllTextAsync(b04Backup,
+        JsonSerializer.Serialize(new[] { b04Terminal }, b04Json));
+    await b04Store.RestoreBackupAsync(true);
+    Assert((await b04Store.ReadAsync()).Single().Id == b04Terminal.Id,
+        "B04 owner-confirmed terminal backup restores without starting work");
+    Assert(Directory.GetFiles(b04RestoreRoot,
+            "p03-model-download-queue.json.pre_restore.*").Length == 1,
+        "B04 original queue snapshot preserved for NO-LOSS rollback");
+}
+finally { Directory.Delete(b04RestoreRoot, recursive: true); }
+
 // Only the official loopback API shapes used by the original GGUF importer.
 sealed class D04RightsGgufHandler(string modelTag, string localDigest) : HttpMessageHandler
 {

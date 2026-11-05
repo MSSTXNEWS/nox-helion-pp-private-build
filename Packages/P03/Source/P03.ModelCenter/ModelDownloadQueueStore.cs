@@ -514,6 +514,12 @@ public sealed class ModelDownloadQueueStore
             var snapshot = JsonSerializer.Deserialize<List<ModelJob>>(bytes, JsonOptions)
                 ?? throw new InvalidDataException("Backup queue is null.");
             ValidateJobs(snapshot);
+            // A historical backup is not a live transfer lease or owner STOP grant.
+            // Restoring RUNNING/CANCELLING would resurrect stale activity without
+            // a worker, and could misrepresent an acknowledged native STOP.
+            // Refuse before snapshot/publication; preserve both queue and backup.
+            if (snapshot.Any(j => j.State is ModelJobState.Running or ModelJobState.Cancelling))
+                throw new InvalidDataException("P03_QUEUE_BACKUP_ACTIVE_RESTORE_HOLD");
             var preserved = _path + ".pre_restore." + Guid.NewGuid().ToString("N");
             if (File.Exists(_path)) await SnapshotOwnedQueueAsync(_path, preserved, ct);
             var temp = _path + ".restore." + Guid.NewGuid().ToString("N") + ".tmp";
