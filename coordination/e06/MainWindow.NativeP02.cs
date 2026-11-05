@@ -577,10 +577,17 @@ public partial class MainWindow
                 legacyReceipt.ValueKind is JsonValueKind.Undefined or JsonValueKind.Null ||
                 LegacyOwnerDenial(result.Result))
                 throw new NativePipeHold(result.ErrorCode??"NATIVE_OWNER_DENIAL_HOLD");
+            // Native owner inventory must be an object, never scalar true.
+            // Malformed model/state fields must not become successful UI ACKs.
+            if ((action == "chatModels" || action == "openModelCenter") &&
+                legacyReceipt.ValueKind != JsonValueKind.Object)
+                throw new NativePipeHold("NATIVE_MODEL_INVENTORY_OBJECT_HOLD");
             if (action == "chatModels") {
-                var models = result.Result is JsonElement data && data.TryGetProperty("models",out var list)
+                var models = legacyReceipt.TryGetProperty("models",out var list) &&
+                    list.ValueKind == JsonValueKind.Array
                     ? list.Clone() : JsonSerializer.SerializeToElement(Array.Empty<string>());
-                var modelState = result.Result is JsonElement inventory && inventory.TryGetProperty("provider_state",out var ps)
+                var modelState = legacyReceipt.TryGetProperty("provider_state",out var ps) &&
+                    ps.ValueKind == JsonValueKind.String
                     ? ps.GetString() : "HOLD";
                 PostMessage(new {kind="chatModels",state=modelState,chatId,models,
                     history=Array.Empty<object>(),historyState="SELECT_NATIVE_PERSONA_SCOPE",
