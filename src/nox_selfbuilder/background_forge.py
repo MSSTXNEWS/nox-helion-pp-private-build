@@ -438,12 +438,23 @@ class ExistingP04Background:
             payload_sha = merger.tree_sha256(destination, skip_merge_receipt=True)
             if payload_sha != merge.get('merged_payload_sha256'):
                 raise ForgeHold('MERGE_PAYLOAD_SHA_MISMATCH')
-            if not self._owner_training_grant(require_idle=False):
+            # Owner may revoke merge approval after the trainer exits, while
+            # its SHA and receipt are being checked. Recheck before admission.
+            if (not self._owner_training_grant(require_idle=False)
+                    or owner_approve(job, output_dir) is not True):
                 return self._hold('MERGE_OWNER_REVOKED_BEFORE_RECEIPT')
-            return {'status':'MERGED_CANDIDATE_PENDING_IMPORT', 'merged_payload_sha256':payload_sha,
-                    'merge_receipt_sha256':self.trainer.sha256_file(destination / 'merge-receipt.json'),
-                    'weights_updated':False, 'activation_allowed':False,
-                    'reason':'VERIFIED_EXISTING_P03_IMPORT_REQUIRED_BEFORE_P02_SELECTION'}
+            result = {'status':'MERGED_CANDIDATE_PENDING_IMPORT', 'merged_payload_sha256':payload_sha,
+                      'merge_receipt_sha256':self.trainer.sha256_file(destination / 'merge-receipt.json'),
+                      'weights_updated':False, 'activation_allowed':False,
+                      'reason':'VERIFIED_EXISTING_P03_IMPORT_REQUIRED_BEFORE_P02_SELECTION'}
+            # STOP can be ACKed *after* the subprocess exits, during the final
+            # receipt readback. Serialize final admission with request_stop()
+            # so that an acknowledged STOP cannot be labelled as a candidate.
+            with self._control_lock:
+                if self._merge_stop:
+                    return self._hold('MERGE_STOPPED_NO_ACTIVATION')
+                self._merge_active = False
+                return result
         finally:
             with self._control_lock:
                 self._merge_active = False
