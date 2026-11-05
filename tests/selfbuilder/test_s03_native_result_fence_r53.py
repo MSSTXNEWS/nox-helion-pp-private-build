@@ -103,6 +103,20 @@ class NativeResultFenceTests(unittest.TestCase):
                               {'status': 'DONE', 'weights_updated': False})
         self.assertEqual(self.count(), 0)
 
+    def test_forge_enqueue_unknown_stop_or_invalid_epoch_does_not_mutate_sqlite(self):
+        before = self.store.conn.execute("SELECT COUNT(*) FROM tasks").fetchone()[0]
+        for stop_value, epoch_value in ((None, 7), ("UNKNOWN", 7), (False, True), (False, None)):
+            with self.subTest(stop=stop_value, epoch=epoch_value):
+                self.queue.stop_requested = lambda v=stop_value: v
+                self.queue.stop_epoch = lambda v=epoch_value: v
+                with self.assertRaisesRegex(PermissionError, 'NATIVE_QUEUE_CONSENT_REQUIRED'):
+                    self.queue.enqueue(
+                        self.scope, kind='FORGE',
+                        payload={'task': 'rejected-ambiguous-owner'},
+                        permission='selfbuilder.propose')
+                self.assertEqual(
+                    self.store.conn.execute("SELECT COUNT(*) FROM tasks").fetchone()[0], before)
+
     def test_null_stop_is_not_consent(self):
         self.queue.stop_requested = lambda: None
         with self.assertRaisesRegex(NativeQueueHold, 'NATIVE_RESULT_OWNER_REVOKED'):
@@ -241,6 +255,16 @@ class ForgeDurableResultAdmissionTests(unittest.TestCase):
         self.assertEqual(row['result']['receipt_sha256'], 'a'*64)
         self.assertIs(row['result']['activation_allowed'], False)
         self.assertEqual(self.audit_count(), 1)
+
+    def test_forge_result_cannot_smuggle_nonboolean_activation_even_if_hold(self):
+        for flag in (True, 1, "approved", None):
+            for state in ('HOLD', 'MERGED_CANDIDATE_PENDING_IMPORT'):
+                with self.subTest(state=state, activation=flag):
+                    result = {'status': state, 'weights_updated': False,
+                              'activation_allowed': flag}
+                    with self.assertRaisesRegex(NativeQueueHold, 'S03_FORGE_RESULT_ADMISSION_HOLD'):
+                        self.put(state, result, permission='training.merge')
+                    self.assertEqual(self.audit_count(), 0)
 
     def test_error_hold_keeps_original_fail_closed_record(self):
         self.assertTrue(self.queue.record(

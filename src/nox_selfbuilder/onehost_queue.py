@@ -44,13 +44,17 @@ class NativeWorkQueue:
     def enqueue(self, scope, *, kind, payload, permission):
         key=scope_key(scope)
         epoch=self.stop_epoch()
-        if (kind not in ('SELF_WRITE','FORGE') or self.stop_requested() or
+        if (type(epoch) is not int or epoch < 0 or
+                kind not in ('SELF_WRITE','FORGE') or
+                self.stop_requested() is not False or
                 self.stop_epoch()!=epoch or
                 self.authorize(scope,permission,payload) is not True):
             raise PermissionError('NATIVE_QUEUE_CONSENT_REQUIRED')
         frozen=json.loads(_json(payload))
         def require_live_permission():
-            if (self.stop_requested() or self.stop_epoch()!=epoch or
+            live_epoch = self.stop_epoch()
+            if (self.stop_requested() is not False or type(live_epoch) is not int
+                    or live_epoch != epoch or
                     self.authorize(scope,permission,frozen) is not True):
                 raise PermissionError('NATIVE_QUEUE_REVOKED')
         def write(store):
@@ -131,7 +135,8 @@ class NativeWorkQueue:
                 # training.start/resume may publish only a bound original P04
                 # receipt, never an invented COMPLETED or selected-model result.
                 if (frozen.get('weights_updated') is not False or
-                        frozen.get('activation_allowed') is True):
+                        ('activation_allowed' in frozen and frozen['activation_allowed'] is not False) or
+                        (state != 'HOLD' and frozen.get('activation_allowed') is not False)):
                     raise NativeQueueHold('S03_FORGE_RESULT_ADMISSION_HOLD')
                 if permission in ('training.start','training.resume') and state != 'HOLD':
                     proof=frozen.get('receipt_sha256')
