@@ -83,6 +83,27 @@ class OwnerManifest(unittest.TestCase):
                 self.run_gate()
         self.assertFalse(self.out.exists())
 
+    def test_refuse_setup_replaced_between_snapshot_and_hash(self):
+        # Reproduce a real disposable-filesystem TOCTOU: the first size probe
+        # sees Setup A, but the later digest open sees a different Setup B.
+        # A forged receipt describes size(A) and SHA(B); no manifest is issued.
+        from unittest import mock
+        import l01_manifest_bridge as owner
+        replacement = self.root / "replacement.exe"
+        replacement.write_bytes(self.setup.read_bytes() + b"REPLACED")
+        self.proof["installer_sha256"] = hashlib.sha256(replacement.read_bytes()).hexdigest()
+        self.commit_receipt()
+        original_sha = owner.sha256_file
+
+        def swap_before_digest(path, *, verify_pe=False):
+            os.replace(replacement, self.setup)
+            return original_sha(path, verify_pe=verify_pe)
+
+        with mock.patch.object(owner, "sha256_file", side_effect=swap_before_digest):
+            with self.assertRaisesRegex(Hold, "L02_SETUP_SOURCE_IDENTITY_CHANGED_HOLD"):
+                self.run_gate()
+        self.assertFalse(self.out.exists())
+
     def test_refuse_unauthorized_release_receipt(self):
         self.proof['release_accepted']=True;self.commit_receipt();self.assertRaises(Hold,self.run_gate)
     def test_refuse_unsafe_symlink(self):

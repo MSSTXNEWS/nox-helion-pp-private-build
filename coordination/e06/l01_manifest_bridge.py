@@ -184,6 +184,11 @@ def emit(setup: Path, receipt: Path, url: str, version: int, out: Path) -> dict:
         not HEX64.fullmatch(proof["installer_sha256"])):
         raise Hold("L02_RECEIPT_NOT_OWNER_E06_DIAGNOSTIC")
     sha = sha256_file(setup, verify_pe=True)
+    # The receipt byte-count belongs to the FIRST stable source snapshot.
+    # The PE probe and digest use later opens; refuse a renamed or replaced
+    # Setup even when its new digest matches a separately supplied receipt.
+    if _identity(safe_regular(setup)) != _identity(st):
+        raise Hold("L02_SETUP_SOURCE_IDENTITY_CHANGED_HOLD")
     if sha != proof["installer_sha256"]:
         raise Hold("L02_SETUP_SHA_DISAGREES_WITH_OWNER_RECEIPT")
     if out.exists() or out.is_symlink() or not out.parent.is_dir():
