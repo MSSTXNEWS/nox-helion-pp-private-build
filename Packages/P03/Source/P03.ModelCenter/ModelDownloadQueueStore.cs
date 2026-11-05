@@ -285,6 +285,28 @@ public sealed class ModelDownloadQueueStore
             !string.IsNullOrWhiteSpace(uri.Host) && string.IsNullOrEmpty(uri.UserInfo);
     }
 
+
+    // Preserve historical queue bytes, but bind the COMPLETE owner-reviewed
+    // GGUF job on claim/retry/worker/direct adapter reentry before Ollama I/O.
+    internal static bool HasReviewedGgufJobAuthority(ModelJob job)
+    {
+        var tag = job.ModelTag;
+        var path = job.LocalPath;
+        return job.Kind == ModelJobKind.GgufImport &&
+            job.LicenseAcknowledged &&
+            job.ExpectedLocalBytes is > 4 &&
+            job.ExpectedLocalSha256 is { Length: 64 } &&
+            ShaPattern.IsMatch(job.ExpectedLocalSha256) &&
+            !string.IsNullOrWhiteSpace(tag) && tag.Length <= 160 &&
+            TagPattern.IsMatch(tag) &&
+            !tag.Contains("..", StringComparison.Ordinal) &&
+            !tag.EndsWith(":latest", StringComparison.OrdinalIgnoreCase) &&
+            !string.IsNullOrWhiteSpace(path) &&
+            Path.IsPathFullyQualified(path) &&
+            string.Equals(Path.GetExtension(path), ".gguf", StringComparison.OrdinalIgnoreCase) &&
+            HasReviewedGgufAuthority(job.RightsReceiptId, job.LicenseSource);
+    }
+
     private static void ValidateTag(string? tag)
     {
         if (tag is null || tag.Length > 160 || !TagPattern.IsMatch(tag) ||
@@ -310,7 +332,7 @@ public sealed class ModelDownloadQueueStore
             if (old.Kind == ModelJobKind.OllamaPull && !HasReviewedPullAuthority(old))
                 throw new InvalidOperationException("REVIEW_REQUIRED: unpinned Pull cannot start.");
             if (old.Kind == ModelJobKind.GgufImport &&
-                !HasReviewedGgufAuthority(old.RightsReceiptId, old.LicenseSource))
+                !HasReviewedGgufJobAuthority(old))
                 throw new InvalidOperationException("REVIEW_REQUIRED: unreviewed GGUF cannot start.");
             var claimed = old with { State = ModelJobState.Running,
                 Attempts = checked(old.Attempts + 1), Status = "Starting",
@@ -473,7 +495,7 @@ public sealed class ModelDownloadQueueStore
             if (failed.Kind == ModelJobKind.OllamaPull && !HasReviewedPullAuthority(failed))
                 throw new InvalidOperationException("REVIEW_REQUIRED: legacy/unreviewed pull cannot be retried.");
             if (failed.Kind == ModelJobKind.GgufImport &&
-                !HasReviewedGgufAuthority(failed.RightsReceiptId, failed.LicenseSource))
+                !HasReviewedGgufJobAuthority(failed))
                 throw new InvalidOperationException("REVIEW_REQUIRED: unreviewed GGUF cannot be retried.");
             bool SameApprovedPull(ModelJob job) =>
                 string.Equals(job.ModelTag, failed.ModelTag, StringComparison.Ordinal) &&

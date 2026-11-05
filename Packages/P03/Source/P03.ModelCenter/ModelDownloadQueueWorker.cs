@@ -28,8 +28,7 @@ public sealed class ModelDownloadQueueWorker(
                 var unreviewedPull = candidate.Kind == ModelJobKind.OllamaPull &&
                     !ModelDownloadQueueStore.HasReviewedPullAuthority(candidate);
                 var unreviewedGguf = candidate.Kind == ModelJobKind.GgufImport &&
-                    !ModelDownloadQueueStore.HasReviewedGgufAuthority(
-                        candidate.RightsReceiptId, candidate.LicenseSource);
+                    !ModelDownloadQueueStore.HasReviewedGgufJobAuthority(candidate);
                 if (unreviewedPull || unreviewedGguf)
                 {
                     // Atomic update ensures concurrent STOP remains terminal.

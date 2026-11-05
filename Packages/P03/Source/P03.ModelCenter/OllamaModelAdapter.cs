@@ -82,6 +82,8 @@ public sealed class OllamaModelAdapter(HttpClient http, string receiptDirectory)
     public async Task<(long Bytes, string Sha256)> ImportGgufAsync(ModelJob job,
         Func<OllamaStreamUpdate, CancellationToken, ValueTask> progress, CancellationToken ct)
     {
+        if (!ModelDownloadQueueStore.HasReviewedGgufJobAuthority(job))
+            throw new InvalidDataException("REVIEW_REQUIRED: independent GGUF bytes/SHA/acknowledged rights proof required.");
         EnsureLocalOllama();
         if (job.ExpectedLocalBytes is not > 4 || job.ExpectedLocalSha256 is not { Length: 64 } ||
             !job.ExpectedLocalSha256.All(Uri.IsHexDigit) || !job.LicenseAcknowledged ||

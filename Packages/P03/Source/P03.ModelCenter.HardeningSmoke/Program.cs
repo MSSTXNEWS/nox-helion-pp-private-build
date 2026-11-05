@@ -481,6 +481,56 @@ try
     { unsafeRetryDenied = true; }
     Assert(unsafeRetryDenied && (await unsafeLegacyQueue.ReadAsync()).Count == 1,
         "D04 legacy unsafe GGUF retry denied without data loss");
+    // B04: legacy GGUF snapshots stay readable, but unsafe identity may not
+    // be promoted into an active installed-model mutation after owner review.
+    var unsafeGgufShapes = new (string Label, ModelJob Job)[] {
+        ("mutable-tag", unsafeLegacyJob with {
+            ModelTag = "local:latest", RightsReceiptId = "native-reviewed-rights" }),
+        ("relative-path", unsafeLegacyJob with {
+            ModelTag = "local:legacy-relative", LocalPath = "legacy-relative.gguf",
+            RightsReceiptId = "native-reviewed-rights" }),
+        ("wrong-extension", unsafeLegacyJob with {
+            ModelTag = "local:legacy-extension", LocalPath = Path.Combine(multiRoot, "not-gguf.bin"),
+            RightsReceiptId = "native-reviewed-rights" })
+    };
+    foreach (var (label, shape) in unsafeGgufShapes)
+    {
+        var legacyDir = Path.Combine(multiRoot, "legacy-gguf-" + label);
+        var legacyStore = new ModelDownloadQueueStore(legacyDir);
+        var legacy = shape with { Id = Guid.NewGuid(), State = ModelJobState.Queued };
+        var queuePath = Path.Combine(legacyDir, "p03-model-download-queue.json");
+        await File.WriteAllTextAsync(queuePath,
+            JsonSerializer.Serialize(new[] { legacy }, new JsonSerializerOptions(JsonSerializerDefaults.Web)));
+        var untouched = await File.ReadAllBytesAsync(queuePath);
+        var deniedClaim = false;
+        try { await legacyStore.TryStartQueuedAsync(legacy.Id); }
+        catch (InvalidOperationException ex) when (ex.Message == "REVIEW_REQUIRED: unreviewed GGUF cannot start.")
+        { deniedClaim = true; }
+        Assert(deniedClaim &&
+            (await File.ReadAllBytesAsync(queuePath)).SequenceEqual(untouched) &&
+            (await legacyStore.ReadAsync()).Single().State == ModelJobState.Queued,
+            "B04 legacy " + label + " GGUF claim refused without data loss");
+        using (var httpGuard = new HttpClient(new StalledOllamaHandler()) {
+            BaseAddress = new Uri("http://127.0.0.1:11434/")
+        })
+        {
+            var workerGuard = new ModelDownloadQueueWorker(legacyStore,
+                new OllamaModelAdapter(httpGuard, legacyDir),
+                new ModelLifecyclePublisher(new SilentP03Sink()));
+            await workerGuard.RunNextAsync(requestedJobId: legacy.Id);
+        }
+        var failedGuard = (await legacyStore.ReadAsync()).Single();
+        Assert(failedGuard.State == ModelJobState.Failed &&
+            failedGuard.Error == "GGUF_RIGHTS_REVIEW_REQUIRED" &&
+            failedGuard.LocalPath == legacy.LocalPath,
+            "B04 legacy " + label + " GGUF worker refused before HTTP");
+        var deniedRetry = false;
+        try { await legacyStore.RetryAsync(legacy.Id); }
+        catch (InvalidOperationException ex) when (ex.Message == "REVIEW_REQUIRED: unreviewed GGUF cannot be retried.")
+        { deniedRetry = true; }
+        Assert(deniedRetry && (await legacyStore.ReadAsync()).Count == 1,
+            "B04 legacy " + label + " GGUF retry refused");
+    }
     // D04 regression: reject a stale unsafe head and actually serve the next
     // approved queued GGUF in ONE original RunNextAsync invocation, without
     // bypassing native rights, changing history, or using a real network.
@@ -852,6 +902,10 @@ try
         "D04 GGUF direct adapter refuses unacknowledged license before Ollama");
     await MustHoldUnreviewed(job with { RightsReceiptId = new string('x', 129) }, false,
         "D04 GGUF direct adapter refuses oversized rights reference");
+    await MustHoldUnreviewed(job with { ModelTag = "tinyllama:latest" }, false,
+        "B04 GGUF direct adapter rejects mutable latest before Ollama");
+    await MustHoldUnreviewed(job with { LocalPath = "relative.gguf" }, false,
+        "B04 GGUF direct adapter rejects relative file before Ollama");
     var pullWithoutConsent = job with { Kind = ModelJobKind.OllamaPull,
         ExpectedOllamaDigest = new string('d', 64), ImmutableRevision = "sha256:" + new string('d', 64),
         LicenseAcknowledged = false };
