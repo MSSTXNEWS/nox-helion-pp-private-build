@@ -429,7 +429,7 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
         if (result.ValueKind != JsonValueKind.Object) return false;
         foreach (var field in result.EnumerateObject())
         {
-            if (field.Name is "ok" or "ack" or "success" or "approved" or "authorized" &&
+            if (field.Name is "ok" or "ack" or "success" or "approved" or "authorized" or "consented" or "ownerConsent" or "nativeConsent" or "permissionGranted" &&
                 field.Value.ValueKind != JsonValueKind.True)
                 return true;
             if (field.Name is "error" or "errorCode" or "error_code" or
