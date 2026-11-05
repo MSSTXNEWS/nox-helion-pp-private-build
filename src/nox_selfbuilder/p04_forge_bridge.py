@@ -91,7 +91,7 @@ class ExistingP04NativePorts:
     def resume(self, scope, args):
         job = self._job(scope, args)
         last = self.last_run(scope, job)
-        receipt = self.submit(scope, job, lambda: self.background.run_one(job, last_run_utc=last, resume=True, require_idle=False))
+        receipt = self.submit(scope, job, lambda: self.background.run_one(job, last_run_utc=last, resume=True, require_idle=False), resume=True)
         return self._durable_queue_reply(args, receipt)
 
     def checkpoints(self, scope, args):

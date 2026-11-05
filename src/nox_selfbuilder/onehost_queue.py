@@ -75,7 +75,9 @@ class NativeWorkQueue:
         if record.get('scope')!=scope_key(scope):raise PermissionError('S03_TASK_SCOPE_DENIED')
         latest=store.conn.execute("SELECT action,metadata,at FROM audit WHERE item_id=? AND action LIKE 'NOX_NATIVE_WORK_%' ORDER BY id DESC LIMIT 1",(tid,)).fetchone()
         state=json.loads(latest[1]);record.update(task_id=tid,state=state.get('state','HOLD'),last_at=latest[2])
-        if record['state']=='RUNNING' and self._active_task != (tuple(scope_key(scope).values()),tid):
+        if (record['state']=='RUNNING' and
+                (self._active_task != (tuple(scope_key(scope).values()),tid) or
+                 self._thread is None or not self._thread.is_alive())):
             record['runtime_state']='INTERRUPTED_HOLD'
         if 'result' in state:record['result']=state['result']
         return record
@@ -127,7 +129,7 @@ class NativeWorkQueue:
             return True
         return self.actor.call(write)
 
-    def _start(self,scope,tid,callback,permission,*,allowed_states=('QUEUED','PAUSED')):
+    def _start(self,scope,tid,callback,permission,*,allowed_states=('QUEUED','PAUSED'),recover_interrupted=False):
         if not callable(callback):raise ValueError('NATIVE_CALLABLE_REQUIRED')
         epoch=self.stop_epoch()
         with self._lock:
@@ -135,7 +137,14 @@ class NativeWorkQueue:
                 raise NativeQueueHold('EXISTING_HOST_WORKER_BUSY')
             def claim(store):
                 row=self._read(store,scope,tid)
-                if row['state'] not in allowed_states:
+                # A previous process may have died after its durable CLAIM.
+                # Only a freshly owner-consented training.resume may re-CLAIM
+                # this exact interrupted S03 task; never revive a live worker.
+                recovered = (recover_interrupted is True and
+                             permission == 'training.resume' and
+                             row['state'] == 'RUNNING' and
+                             row.get('runtime_state') == 'INTERRUPTED_HOLD')
+                if row['state'] not in allowed_states and not recovered:
                     raise NativeQueueHold('S03_TASK_ALREADY_CLAIMED_OR_TERMINAL')
                 def require_live_claim_permission():
                     if (self.stop_requested() or self.stop_epoch()!=epoch or
@@ -197,12 +206,26 @@ class NativeWorkQueue:
         self.get(scope,item[0])
         return item[1]
 
-    def submit(self,scope,job,callback):
+    def submit(self,scope,job,callback,*,resume=False):
+        # The original native training.start is not an implicit restart.
+        # A paused or previously interrupted RUNNING job requires a separate
+        # explicit training.resume owner grant, validated again in _start.
+        if type(resume) is not bool:
+            raise PermissionError('EXPLICIT_NATIVE_FORGE_RESUME_FLAG_REQUIRED')
         key=(tuple(scope_key(scope).values()),job.run_id)
         item=self._forge_jobs.get(key)
         if item is None or item[1] is not job:raise PermissionError('EXACT_NATIVE_FORGE_JOB_REQUIRED')
-        permission='training.resume' if self.get(scope,item[0])['state']=='PAUSED' else 'training.start'
-        return self._start(scope,item[0],callback,permission)
+        row=self.get(scope,item[0])
+        interrupted=(row['state']=='RUNNING' and row.get('runtime_state')=='INTERRUPTED_HOLD')
+        if resume:
+            if row['state']!='PAUSED' and not interrupted:
+                raise NativeQueueHold('FORGE_RESUME_REQUIRES_PAUSED_OR_INTERRUPTED_S03')
+            return self._start(scope,item[0],callback,'training.resume',
+                               allowed_states=('PAUSED',),recover_interrupted=interrupted)
+        if row['state']!='QUEUED':
+            raise NativeQueueHold('FORGE_START_REQUIRES_FRESH_QUEUED_S03')
+        return self._start(scope,item[0],callback,'training.start',
+                           allowed_states=('QUEUED',))
 
     def submit_followup(self,scope,job,callback,permission='training.merge'):
         """CAS a completed native FORGE task to its approved merge operation.

@@ -447,8 +447,8 @@ def create_existing_ingress(store, run_id: str, *, client=None, event_sink=None,
             if job is None:
                 raise RuntimeError("E06_APPROVED_NATIVE_FORGE_JOB_REQUIRED")
             return job
-        def submit_job(session, job, callback):
-            return queue.submit(session, job, callback)
+        def submit_job(session, job, callback, *, resume=False):
+            return queue.submit(session, job, callback, resume=resume)
         def last_run(session, job):
             queue.register_forge(session, job)
             return queue.last_run(session, job)
