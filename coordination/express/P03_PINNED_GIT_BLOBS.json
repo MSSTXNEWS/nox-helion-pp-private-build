@@ -463,19 +463,6 @@
       "post_bytes": 9530
     },
     {
-      "path": "Packages/P03/Source/python-host/p03_onehost_port.py",
-      "owner": 3,
-      "run_id": "B04_P03_NATIVE_CASE_ALIAS_OWNER_NOLOSS_20261105",
-      "pre_git_blob_sha1": "b0a23161fc3ce8f8d2cfc5605326a7c8421acee6",
-      "post_git_blob_sha1": "1a15ea936f445f75ae916f88c9a272f991382823",
-      "post_bytes": 26368,
-      "acceptance": "EXACT_SOURCE_ONLY_NOT_PYTHON_WINDOWS_OR_E07",
-      "prior_approved_run_id": "ABC_P03_REVIEWED_SOURCE_RECONCILE_20261105",
-      "source_head_observed": "03f77cce9ae3d41d9af847ad41fa9bea12904672",
-      "verification": "GIT_BLOB_ONLY_PYTHON_REGRESSION_AUTHORED_NOT_RUN",
-      "reconciliation_scope": "MATCH_CSHARP_QUEUE_CASE_INSENSITIVE_PRESENCE_NO_RIGHTS_PROMOTION"
-    },
-    {
       "path": "Packages/P03/Source/python-host/test_p03_onehost_port.py",
       "owner": 3,
       "run_id": "ABC_P03_REVIEWED_SOURCE_RECONCILE_20261105",
@@ -969,6 +956,22 @@
       "prior_active_post_bytes": 58633,
       "historical_approved_override": true,
       "retired_from_active_set": "D04_GGUF_AUTHORITY_ADMISSION_R11_20261105"
+    },
+    {
+      "path": "Packages/P03/Source/python-host/p03_onehost_port.py",
+      "owner": 3,
+      "run_id": "B04_P03_NATIVE_CASE_ALIAS_OWNER_NOLOSS_20261105",
+      "pre_git_blob_sha1": "b0a23161fc3ce8f8d2cfc5605326a7c8421acee6",
+      "post_git_blob_sha1": "1a15ea936f445f75ae916f88c9a272f991382823",
+      "post_bytes": 26368,
+      "acceptance": "EXACT_SOURCE_ONLY_NOT_PYTHON_WINDOWS_OR_E07",
+      "prior_approved_run_id": "ABC_P03_REVIEWED_SOURCE_RECONCILE_20261105",
+      "source_head_observed": "03f77cce9ae3d41d9af847ad41fa9bea12904672",
+      "verification": "GIT_BLOB_ONLY_PYTHON_REGRESSION_AUTHORED_NOT_RUN",
+      "reconciliation_scope": "MATCH_CSHARP_QUEUE_CASE_INSENSITIVE_PRESENCE_NO_RIGHTS_PROMOTION",
+      "historical_approved_override": true,
+      "retired_from_active_set": "B04_P03_MUTATING_ACK_PROOF_20261105",
+      "reconciled_in_source_sha": "bb612a1a244e8ce902b8e19c11186a42c3bfff7d"
     }
   ],
   "source_expansion": {
