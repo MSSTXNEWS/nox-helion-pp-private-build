@@ -119,11 +119,20 @@ internal static class NoXAutostart
             using var verify = Registry.CurrentUser.OpenSubKey(RunKey, writable:false);
             if (verify is not null &&
                 Array.Exists(verify.GetValueNames(), name =>
-                    string.Equals(name, Entry, StringComparison.OrdinalIgnoreCase)) &&
-                verify.GetValueKind(Entry) == RegistryValueKind.String &&
-                verify.GetValue(Entry) is string remaining &&
-                string.Equals(remaining, expected, StringComparison.OrdinalIgnoreCase))
-                throw new IOException("NOX_AUTOSTART_UNINSTALL_PERSISTENCE_UNVERIFIED");
+                    string.Equals(name, Entry, StringComparison.OrdinalIgnoreCase))) {
+                // A concurrent foreign replacement is preserved, never deleted
+                // and never considered a successful uninstall receipt.
+                if (verify.GetValueKind(Entry) == RegistryValueKind.String &&
+                    verify.GetValue(Entry) is string remaining &&
+                    string.Equals(remaining, expected, StringComparison.OrdinalIgnoreCase))
+                    throw new IOException("NOX_AUTOSTART_UNINSTALL_PERSISTENCE_UNVERIFIED");
+                throw new UnauthorizedAccessException("NOX_AUTOSTART_UNINSTALL_CONCURRENT_FOREIGN_ENTRY_HOLD");
+            }
         }
+        else if (Array.Exists(key.GetValueNames(), name =>
+            string.Equals(name, Entry, StringComparison.OrdinalIgnoreCase)))
+            // Ownership changed between read-only probe and writable check:
+            // preserve foreign data, but do not issue false cleanup success.
+            throw new UnauthorizedAccessException("NOX_AUTOSTART_UNINSTALL_OWNER_CHANGED_HOLD");
     }
 }

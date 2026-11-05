@@ -111,6 +111,12 @@ class NoXAutostartUninstallSource(unittest.TestCase):
         self.assertIn("string.Equals(remaining, expected, StringComparison.OrdinalIgnoreCase)", method)
         self.assertIn("NOX_AUTOSTART_UNINSTALL_PERSISTENCE_UNVERIFIED", method)
         self.assertEqual(method.count("key.DeleteValue("), 1)
+        # Concurrent foreign Run replacements must be preserved AND fail closed.
+        self.assertIn("NOX_AUTOSTART_UNINSTALL_OWNER_CHANGED_HOLD", method)
+        self.assertIn("NOX_AUTOSTART_UNINSTALL_CONCURRENT_FOREIGN_ENTRY_HOLD", method)
+        self.assertLess(method.index("string.Equals(existing, expected"), method.index("key.DeleteValue("))
+        self.assertLess(method.index("key.DeleteValue("), method.index("NOX_AUTOSTART_UNINSTALL_CONCURRENT_FOREIGN_ENTRY_HOLD"))
+        self.assertLess(method.index("key.DeleteValue("), method.index("NOX_AUTOSTART_UNINSTALL_OWNER_CHANGED_HOLD"))
 
     def test_legacy_status_foreign_entry_fails_closed(self):
         code = SOURCE.read_text(encoding="utf-8")
