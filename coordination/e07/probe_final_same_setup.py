@@ -736,11 +736,13 @@ def prepare_final_visual_directory(out_dir: Path, *, new_observation: bool) -> N
 
 
 def _capture_png_dimensions(path: Path) -> list[int] | None:
-    """Verify complete, bounded PNG chunks, not only a forged IHDR prefix.
+    """Bind the original HWND PNG to COMPLETE, bounded real PNG pixel bytes.
 
-    A truncated screenshot with a valid header must never become the D02
-    physical-capture witness. The independent same-HWND UIA dimensions and
-    screenshot SHA-256 are checked separately by the existing E07 gate.
+    PNG CRC/IHDR/IEND alone cannot prove that its IDAT is a valid compressed
+    image: a CRC-correct attacker-chosen stream used to pass the source probe.
+    Decode only bounded incremental DEFLATE, verify exact expected scanline
+    byte count including Adam7, and refuse trailing/reordered IDAT data.
+    This remains a screenshot-identity check, NEVER independent visual PASS.
     """
     if not e07.clean_file(path):
         return None
@@ -749,10 +751,14 @@ def _capture_png_dimensions(path: Path) -> list[int] | None:
         if not 57<=size<=40_000_000:
             return None
         with path.open("rb") as source:
-            if source.read(8)!=b"\x89PNG\r\n\x1a\n":
+            if source.read(8)!=b"\\x89PNG\\r\\n\\x1a\\n":
                 return None
             dimensions=None
+            inflater=zlib.decompressobj()
+            inflated=0
+            expected=None
             seen_idat=False
+            ended_idat=False
             for index in range(4096):
                 header=source.read(8)
                 if len(header)!=8:
@@ -771,15 +777,36 @@ def _capture_png_dimensions(path: Path) -> list[int] | None:
                     crc=zlib.crc32(ihdr,crc)
                     width=int.from_bytes(ihdr[:4],"big")
                     height=int.from_bytes(ihdr[4:8],"big")
+                    depth, color, compression, filtering, interlace=ihdr[8:]
+                    depths={0:(1,2,4,8,16),2:(8,16),3:(1,2,4,8),
+                            4:(8,16),6:(8,16)}
+                    channels={0:1,2:3,3:1,4:2,6:4}
                     if not (320<=width<=8192 and 200<=height<=8192 and
-                            ihdr[10:12]==b"\x00\x00" and ihdr[12] in (0,1)):
+                            depth in depths.get(color,()) and
+                            compression==0 and filtering==0 and
+                            interlace in (0,1)):
                         return None
                     dimensions=[width,height]
+                    passes=((0,0,1,1),) if interlace==0 else (
+                        (0,0,8,8),(4,0,8,8),(0,4,4,8),(2,0,4,4),
+                        (0,2,2,4),(1,0,2,2),(0,1,1,2))
+                    expected=0
+                    for x,y,dx,dy in passes:
+                        if x>=width or y>=height:
+                            continue
+                        cols=(width-x+dx-1)//dx
+                        rows=(height-y+dy-1)//dy
+                        expected+=rows*(1+(cols*channels[color]*depth+7)//8)
                 else:
                     if kind==b"IHDR":
                         return None
-                    if kind==b"IDAT" and length>0:
-                        seen_idat=True
+                    if kind==b"IDAT":
+                        if ended_idat:
+                            return None
+                        if length:
+                            seen_idat=True
+                    elif seen_idat:
+                        ended_idat=True
                     if kind==b"IEND" and (length!=0 or not seen_idat):
                         return None
                     remaining=length
@@ -789,13 +816,25 @@ def _capture_png_dimensions(path: Path) -> list[int] | None:
                             return None
                         crc=zlib.crc32(block,crc)
                         remaining-=len(block)
+                        if kind==b"IDAT":
+                            pending=block
+                            while pending:
+                                decoded=inflater.decompress(pending,65536)
+                                inflated+=len(decoded)
+                                if inflated>expected or inflater.unused_data:
+                                    return None
+                                pending=inflater.unconsumed_tail
+                    if kind==b"IEND" and not (
+                        inflater.eof and not inflater.unused_data and
+                        inflated==expected):
+                        return None
                 checksum=source.read(4)
                 if len(checksum)!=4 or (crc&0xffffffff)!=int.from_bytes(checksum,"big"):
                     return None
                 if kind==b"IEND":
                     return dimensions if source.read(1)==b"" else None
         return None
-    except (OSError,ValueError,OverflowError):
+    except (OSError,ValueError,OverflowError,zlib.error):
         return None
 
 

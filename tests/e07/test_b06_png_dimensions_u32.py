@@ -83,6 +83,33 @@ class B06PngIdentity(unittest.TestCase):
         self.put(header()+header()[8:]+chunk(b"IDAT",b"x")+chunk(b"IEND",b""))
         self.assertIsNone(_capture_png_dimensions(self.path))
 
+
+    def test_reject_crc_valid_invalid_deflate(self):
+        # Old parser accepted this: all PNG chunk CRCs and IEND were correct.
+        self.put(header()+chunk(b"IDAT",b"NOT A ZLIB STREAM")+
+                 chunk(b"IEND",b""))
+        self.assertIsNone(_capture_png_dimensions(self.path))
+
+    def test_reject_crc_valid_short_pixel_stream(self):
+        self.put(header()+chunk(b"IDAT",zlib.compress(b"x"))+
+                 chunk(b"IEND",b""))
+        self.assertIsNone(_capture_png_dimensions(self.path))
+
+    def test_reject_crc_valid_extra_pixel_stream(self):
+        pixels=(b"\\x00"+b"\\x00"*(800*4))*600+b"BAD_EXTRA_ROW"
+        self.put(header(800,600)+chunk(b"IDAT",zlib.compress(pixels))+
+                 chunk(b"IEND",b""))
+        self.assertIsNone(_capture_png_dimensions(self.path))
+
+    def test_reject_split_noncontiguous_idat(self):
+        raw=(b"\\x00"+b"\\x00"*(800*4))*600
+        compressed=zlib.compress(raw)
+        middle=len(compressed)//2
+        self.put(header(800,600)+chunk(b"IDAT",compressed[:middle])+
+                 chunk(b"tEXt",b"demo")+chunk(b"IDAT",compressed[middle:])+
+                 chunk(b"IEND",b""))
+        self.assertIsNone(_capture_png_dimensions(self.path))
+
     def test_missing_photo(self):
         self.assertIsNone(_capture_png_dimensions(self.path))
 
