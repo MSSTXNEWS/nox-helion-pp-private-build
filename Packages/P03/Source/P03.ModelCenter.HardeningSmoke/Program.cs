@@ -642,6 +642,91 @@ try
 finally { Directory.Delete(stopRoot, recursive: true); }
 Console.WriteLine("P03_SHARED_WORKER_STOP_PASS 4/4");
 
+// D04 owner-rights regression: exercise the ORIGINAL GGUF adapter end-to-end
+// against an in-memory loopback API, without downloading any model weights.
+var d04RightsDir = Path.Combine(Path.GetTempPath(), "NOX_P03_GGUF_RIGHTS_" + Guid.NewGuid().ToString("N"));
+Directory.CreateDirectory(d04RightsDir);
+try
+{
+    var payload = Encoding.ASCII.GetBytes("GGUF-owner-rights-fixture");
+    var path = Path.Combine(d04RightsDir, "owner-fixture.gguf");
+    await File.WriteAllBytesAsync(path, payload);
+    var sha = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(payload)).ToLowerInvariant();
+    var now = DateTimeOffset.UtcNow;
+    var job = new ModelJob(Guid.NewGuid(), ModelJobKind.GgufImport, "tinyllama:gguf-rights-fixture",
+        path, true, "https://ollama.com/library/tinyllama", now, now,
+        ExpectedLocalBytes: payload.LongLength, ExpectedLocalSha256: sha,
+        RightsReceiptId: "owner-reviewed-gguf-rights-fixture");
+    using var http = new HttpClient(new D04RightsGgufHandler(job.ModelTag, new string('d', 64))) {
+        BaseAddress = new Uri("http://127.0.0.1:11434/")
+    };
+    var adapter = new OllamaModelAdapter(http, d04RightsDir);
+    async Task MustHoldUnreviewed(ModelJob denied, bool pull, string label)
+    {
+        try
+        {
+            if (pull) await adapter.PullAsync(denied,
+                (evt, token) => ValueTask.CompletedTask, default);
+            else await adapter.ImportGgufAsync(denied,
+                (evt, token) => ValueTask.CompletedTask, default);
+        }
+        catch (InvalidDataException) { Assert(true, label); return; }
+        throw new Exception("FAIL " + label);
+    }
+    await MustHoldUnreviewed(job with { LicenseAcknowledged = false }, false,
+        "D04 GGUF direct adapter refuses unacknowledged license before Ollama");
+    await MustHoldUnreviewed(job with { RightsReceiptId = new string('x', 129) }, false,
+        "D04 GGUF direct adapter refuses oversized rights reference");
+    var pullWithoutConsent = job with { Kind = ModelJobKind.OllamaPull,
+        ExpectedOllamaDigest = new string('d', 64), ImmutableRevision = "sha256:" + new string('d', 64),
+        LicenseAcknowledged = false };
+    await MustHoldUnreviewed(pullWithoutConsent, true,
+        "D04 Pull direct adapter refuses unacknowledged license before Ollama");
+    var result = await adapter.ImportGgufAsync(job,
+        (evt, token) => ValueTask.CompletedTask, default);
+    var receiptPath = adapter.ReceiptPathFor(job.Id);
+    var saved = JsonSerializer.Deserialize<ModelInstallReceipt>(await File.ReadAllTextAsync(receiptPath),
+        new JsonSerializerOptions(JsonSerializerDefaults.Web));
+    Assert(saved is not null && saved.RightsAttestationId == job.RightsReceiptId &&
+        saved.LocalSha256 == sha && result.Sha256 == sha &&
+        result.Bytes == payload.LongLength && saved.Operation == "gguf-import",
+        "D04 original GGUF success receipt binds actual SHA and native rights");
+    await ModelLocalAttestation.VerifyReceiptAsync(receiptPath, saved!, default);
+    try
+    {
+        await ModelLocalAttestation.VerifyReceiptAsync(receiptPath,
+            saved! with { RightsAttestationId = "forged-review" }, default);
+        throw new Exception("FAIL D04 forged rights unexpectedly match receipt");
+    }
+    catch (InvalidDataException)
+    {
+        Assert(true, "D04 owner rights cannot be substituted during receipt readback");
+    }
+}
+finally { Directory.Delete(d04RightsDir, recursive: true); }
+
+// Only the official loopback API shapes used by the original GGUF importer.
+sealed class D04RightsGgufHandler(string modelTag, string localDigest) : HttpMessageHandler
+{
+    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,
+        CancellationToken cancellationToken)
+    {
+        var path = request.RequestUri?.AbsolutePath;
+        string body;
+        if (request.Method == HttpMethod.Head &&
+            path is not null && path.StartsWith("/api/blobs/sha256:", StringComparison.Ordinal))
+            body = "";
+        else if (request.Method == HttpMethod.Post && path == "/api/create")
+            body = "{\\\"status\\\":\\\"success\\\"}\\n";
+        else if (request.Method == HttpMethod.Get && path == "/api/tags")
+            body = JsonSerializer.Serialize(new { models = new[] { new { name = modelTag, digest = localDigest } } });
+        else throw new InvalidOperationException("D04 fixture refuses unexpected Ollama request");
+        return Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK) {
+            Content = new StringContent(body, Encoding.UTF8, "application/json")
+        });
+    }
+}
+
 sealed class SilentP03Sink : IModelLifecycleEventSink
 {
     public ValueTask PublishToP01Async(ModelLifecycleEvent evt, CancellationToken ct) => ValueTask.CompletedTask;

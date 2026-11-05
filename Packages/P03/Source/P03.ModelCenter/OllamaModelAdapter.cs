@@ -27,8 +27,9 @@ public sealed class OllamaModelAdapter(HttpClient http, string receiptDirectory)
         if (job.ExpectedOllamaDigest is not { Length: 64 } ||
             !job.ExpectedOllamaDigest.All(Uri.IsHexDigit) ||
             string.IsNullOrWhiteSpace(job.ImmutableRevision) ||
-            string.IsNullOrWhiteSpace(job.RightsReceiptId))
-            throw new InvalidDataException("REVIEW_REQUIRED: no immutable artifact digest/revision lock.");
+            !job.LicenseAcknowledged || !ReviewedHttpsLicense(job.LicenseSource) ||
+            string.IsNullOrWhiteSpace(job.RightsReceiptId) || job.RightsReceiptId.Length > 128)
+            throw new InvalidDataException("REVIEW_REQUIRED: no immutable artifact digest/revision or acknowledged rights.");
         using var response = await SendStreamingJsonAsync("api/pull", new { model = job.ModelTag, stream = true }, ct);
         response.EnsureSuccessStatusCode();
         var layers = new Dictionary<string, (long Completed, long Total)>();
@@ -77,8 +78,10 @@ public sealed class OllamaModelAdapter(HttpClient http, string receiptDirectory)
     {
         EnsureLocalOllama();
         if (job.ExpectedLocalBytes is not > 4 || job.ExpectedLocalSha256 is not { Length: 64 } ||
-            !job.ExpectedLocalSha256.All(Uri.IsHexDigit) || string.IsNullOrWhiteSpace(job.RightsReceiptId))
-            throw new InvalidDataException("REVIEW_REQUIRED: independent GGUF bytes/SHA/rights proof required.");
+            !job.ExpectedLocalSha256.All(Uri.IsHexDigit) || !job.LicenseAcknowledged ||
+            !ReviewedHttpsLicense(job.LicenseSource) ||
+            string.IsNullOrWhiteSpace(job.RightsReceiptId) || job.RightsReceiptId.Length > 128)
+            throw new InvalidDataException("REVIEW_REQUIRED: independent GGUF bytes/SHA/acknowledged rights proof required.");
         if (job.Kind != ModelJobKind.GgufImport || string.IsNullOrWhiteSpace(job.LocalPath))
             throw new ArgumentException("Job must contain a local GGUF path.", nameof(job));
         var path = Path.GetFullPath(job.LocalPath);
@@ -132,7 +135,8 @@ public sealed class OllamaModelAdapter(HttpClient http, string receiptDirectory)
         var ollamaDigest = RequireOllamaDigest(await GetLocalModelDigestAsync(job.ModelTag, ct));
         await WriteReceiptAsync(new ModelInstallReceipt("NOX_P03_INSTALL_RECEIPT_V1", job.Id,
             job.ModelTag, "gguf-import", DateTimeOffset.UtcNow, bytes, sha, ollamaDigest,
-            job.LicenseSource, http.BaseAddress?.ToString() ?? "http://localhost:11434/"), ct);
+            job.LicenseSource, http.BaseAddress?.ToString() ?? "http://localhost:11434/",
+            RightsAttestationId: job.RightsReceiptId), ct);
         return (bytes, sha);
     }
 
@@ -221,6 +225,14 @@ public sealed class OllamaModelAdapter(HttpClient http, string receiptDirectory)
         try { await file.ReadExactlyAsync(header, ct); return true; }
         catch (EndOfStreamException) { return false; }
     }
+
+    // The native owner supplies the reviewed HTTPS license/source. A direct
+    // adapter invocation must not bypass the durable queue's acknowledgment gate.
+    private static bool ReviewedHttpsLicense(string? source) =>
+        !string.IsNullOrWhiteSpace(source) &&
+        Uri.TryCreate(source, UriKind.Absolute, out var uri) &&
+        uri.Scheme == Uri.UriSchemeHttps && uri.IsDefaultPort &&
+        !string.IsNullOrWhiteSpace(uri.Host) && string.IsNullOrEmpty(uri.UserInfo);
 
     private void EnsureLocalOllama()
     {

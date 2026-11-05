@@ -574,7 +574,7 @@ $p02StageSources=@(
   @{relative='Packages/P03/Source/P03.ModelCenter/ModelTagReviewLeads.cs';dest='Integration/P03/ModelTagReviewLeads.cs';blob='439aa3cf82e20a77d12755c9ac4a7c5ef04c2f79'},
   @{relative='Packages/P03/Source/P03.ModelCenter/ModelWowBridgeContract.cs';dest='Integration/P03/ModelWowBridgeContract.cs';blob='0c8fa6b409e64ac5a6636a4ae2f46b36f79f1ced'},
   @{relative='Packages/P03/Source/P03.ModelCenter/OllamaLoopbackHttpClientFactory.cs';dest='Integration/P03/OllamaLoopbackHttpClientFactory.cs';blob='9785e258c563027567e83b76d22ee66bf350f064'},
-  @{relative='Packages/P03/Source/P03.ModelCenter/OllamaModelAdapter.cs';dest='Integration/P03/OllamaModelAdapter.cs';blob='e27b9959a514384a68a0a67723aff0910ecbad58'},
+  @{relative='Packages/P03/Source/P03.ModelCenter/OllamaModelAdapter.cs';dest='Integration/P03/OllamaModelAdapter.cs';blob='fa0656381b8854c6032a669c4929813988aea75a'},
   @{relative='Packages/P03/Source/P03.ModelCenter/WindowsHardwareFacts.cs';dest='Integration/P03/WindowsHardwareFacts.cs';blob='401f2cf9b318575542fce77db6571dd3ce2ee8f4'}
 )
 # Validate every donor BEFORE copying any source into the staged project.
