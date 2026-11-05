@@ -63,3 +63,9 @@ body[data-fx="ECO"] .main-action,body[data-fx="ECO"] .planet{box-shadow:inset 0 
 @media(max-width:800px){.nox-chat{gap:8px}.main-action{min-height:80px!important}.metrics{letter-spacing:.08em}}
 @media(max-width:520px){.main-action{min-height:74px!important;font-size:10px;letter-spacing:.08em}.main-action::after{font-size:20px}.nox-chat-heading{align-items:flex-start}.nox-chat-chip{padding:8px 9px}.nox-chat-log{min-height:175px}.nox-chat-bubble{max-width:98%}.nox-chat-controls>*{flex:1}.core{min-height:42px}.universe[data-wow-v3="1"] .planet{transition:none}}
 @media(prefers-reduced-motion:reduce){.nox-chat-assistant:empty::before{animation:none}.nox-chat-chip{transition:none!important}.nox-chat-chip:hover{transform:none}.main-action:hover::before,.boost:hover::before{transition:none}}
+
+/* Original FORMWORK AURUM · bounded gold-dust canvas; CSS layout only. */
+#nox-aurum-dust{position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;opacity:.54;mix-blend-mode:screen}
+body[data-fx="ECO"] #nox-aurum-dust{opacity:.18}
+@media(max-width:520px){#nox-aurum-dust{opacity:.25}}
+@media(prefers-reduced-motion:reduce){#nox-aurum-dust{opacity:.15}}
