@@ -81,6 +81,23 @@ jobs:
           $headers=@{Authorization='Bearer '+$env:E07_GITHUB_TOKEN;
                      'X-GitHub-Api-Version'='2022-11-28';
                      Accept='application/vnd.github+json'}
+          # G4: only exact current PR162 verifier source may run a physical E07.
+          # The producer SourceSHA can differ; never accept a stale/main verifier.
+          $expectedBranch='integration/nox-v16-unified-candidate-20261028-r01'
+          if ($env:GITHUB_REF -cne ('refs/heads/'+$expectedBranch) -or
+              $env:GITHUB_SHA -cnotmatch '^[0-9a-f]{40}$') {
+            throw 'E07_VERIFIER_WRONG_REF_HOLD'
+          }
+          try {
+            $livePr=Invoke-RestMethod -Uri ('https://api.github.com/repos/'+$env:GITHUB_REPOSITORY+'/pulls/162') -Headers $headers -TimeoutSec 20 -ErrorAction Stop
+          } catch { throw 'E07_VERIFIER_HEAD_LOOKUP_HOLD' }
+          if ($null -eq $livePr -or $null -eq $livePr.head -or
+              $null -eq $livePr.head.repo -or
+              $livePr.head.repo.full_name -cne $env:GITHUB_REPOSITORY -or
+              $livePr.head.ref -cne $expectedBranch -or
+              $livePr.head.sha -cne $env:GITHUB_SHA) {
+            throw 'E07_VERIFIER_STALE_HEAD_HOLD'
+          }
           $complete=$false
           for ($page=1; $page -le 10; $page++) {
             $uri='https://api.github.com/repos/'+$env:GITHUB_REPOSITORY+
@@ -104,6 +121,8 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference='Stop'
+          python -B -m unittest discover -s tests/e07 -p test_b06_current_head_r5.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'E07_VERIFIER_CURRENT_HEAD_REGRESSION_HOLD' }
           python -B -m py_compile coordination/e07/independent_setup_e07.py coordination/e07/probe_five_primary_action.py coordination/e07/probe_installed_qwen.py coordination/e07/probe_native_active_stop.py coordination/e07/verify_qwen_oci_integrity.py coordination/e07/probe_final_same_setup.py coordination/e07/probe_webview_motion.py
           if ($LASTEXITCODE -ne 0) { throw 'E07_PYTHON_SOURCE_SYNTAX_HOLD' }
           python -B -m unittest discover -s tests/e07 -p test_independent_setup_e07.py -v
