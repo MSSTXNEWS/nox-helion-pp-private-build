@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {nativeReadVerified,nativeCompletedOwnerReply,nativeOwnerReceiptHolds,nativeAutostartPersistenceAck,nativeOwnerActionReceipt} from '../../ui/onehost-menu-bindings.mjs';
+import {nativeReadVerified,nativeCompletedOwnerReply,nativeOwnerReceiptHolds,nativeAutostartPersistenceAck,nativeOwnerActionReceipt,nativeVerifiedReadAction} from '../../ui/onehost-menu-bindings.mjs';
+import {p01ReadinessResult} from '../../ui/selfbuilder-menu-v2.mjs';
 
 test('real original OneHost COMPLETED with envelope ack:false cannot unlock functional read',()=>{
   const good={routeId:'models.catalog',state:'COMPLETED',result:{models:[]}};
@@ -81,4 +82,35 @@ test('LEARN/SETTINGS reject nested original native owner denials',()=>{
       ownerResult:{authorized:false}}};
   assert.equal(nativeReadVerified(denied,'chat.commands'),false);
   assert.equal(nativeOwnerReceiptHolds({success:false}),true);
+});
+
+
+// B05 real native S03 read: never represent a task result as trained weights.
+test('B05 native READ is not training: guarded S03 result versus owner ACK',()=>{
+  const action='selfbuilder.learning.proofs';
+  const good={routeId:'chat.commands',state:'COMPLETED',result:{
+    status:'S03_READ',tasks:[{state:'HOLD',result:{status:'HOLD'}}],weights_updated:false}};
+  const read=nativeVerifiedReadAction(good,action);
+  assert.equal(read.readVerified,true);
+  assert.equal(read.ack,undefined);
+  const view=p01ReadinessResult(action,read);
+  assert.equal(view.state,'AVAILABLE'); // S03 read works, NOT trainer approval.
+  assert.match(view.message,/записей S03/);
+  assert.match(view.message,/не доказывают обучение/);
+  assert.equal(nativeOwnerActionReceipt(good,'chat.commands',action).ack,false);
+  for(const bad of [
+    {...good,ack:false},{...good,routeId:'models.catalog'},{...good,state:'HOLD'},
+    {...good,errorCode:'SID_MISMATCH'},
+    {...good,result:{...good.result,weights_updated:true}},
+    {...good,result:{...good.result,status:'COMPLETED'}},
+    {...good,result:{...good.result,tasks:'fake'}},
+    {...good,result:{...good.result,ownerResult:{approved:false}}}
+  ])assert.equal(nativeVerifiedReadAction(bad,action).readVerified,false);
+  for(const actionId of ['selfbuilder.propose','selfbuilder.train.request'])
+    assert.equal(nativeVerifiedReadAction(good,actionId).readVerified,false);
+  assert.equal(p01ReadinessResult(action,{ack:true,status:'S03_READ',tasks:[]}).state,'HOLD');
+  const queue={routeId:'training.start',state:'COMPLETED',result:{
+    ack:true,job_id:'verified-job',status:'QUEUED',task_id:4,durable_s03:true,execution_completed:false}};
+  assert.equal(nativeOwnerActionReceipt(queue,'training.start','selfbuilder.train.request','verified-job').ack,true);
+  assert.equal(nativeOwnerActionReceipt(queue,'training.start','selfbuilder.train.request','other-job').ack,false);
 });

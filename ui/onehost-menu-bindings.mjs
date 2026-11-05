@@ -197,6 +197,39 @@ export function nativeAutostartPersistenceAck(reply,requested){
     reply.result.enabled===requested;
 }
 
+
+const OWNER_S03_READ_ACTIONS=new Set([
+  'selfbuilder.capabilities','selfbuilder.worker.status','selfbuilder.study.queue',
+  'selfbuilder.learning.proofs','selfbuilder.sources.inspect','selfbuilder.coding.models'
+]);
+// A verified S03 READ is not an owner ACK, job acceptance or trained weight.
+export function nativeVerifiedReadAction(reply,action){
+  if(!OWNER_S03_READ_ACTIONS.has(action)||!nativeReadVerified(reply,'chat.commands'))
+    return {readVerified:false,errorCode:'S03_NATIVE_READ_OWNER_HOLD'};
+  const data=reply.result;
+  const record=x=>x!==null&&typeof x==='object'&&!Array.isArray(x);
+  let good=false;
+  switch(action){
+    case 'selfbuilder.capabilities':
+      good=data.status==='SOURCE_SERVICE'&&record(data.actions)&&data.weights_updated===false;break;
+    case 'selfbuilder.worker.status':
+      good=['READY_FOR_OWNER_TASK','STOPPED'].includes(data.status)&&
+        Array.isArray(data.tasks)&&data.weights_updated===false;break;
+    case 'selfbuilder.study.queue':
+    case 'selfbuilder.learning.proofs':
+      good=data.status==='S03_READ'&&Array.isArray(data.tasks)&&data.weights_updated===false;break;
+    case 'selfbuilder.sources.inspect':
+      good=data.status==='SOURCE_INVENTORY_READ_ONLY'&&Array.isArray(data.items)&&
+        Number.isInteger(data.owner_admitted_total);break;
+    case 'selfbuilder.coding.models':
+      good=data.status==='DISCOVERY_RESPONDED'&&Array.isArray(data.models)&&
+        data.download_performed===false;break;
+  }
+  if(!good)return {readVerified:false,errorCode:'S03_READ_RECEIPT_SHAPE_HOLD'};
+  // May contain queued/HOLD task results. No implied training or mutation.
+  return {...data,readVerified:true};
+}
+
 export function nativeOwnerActionReceipt(reply,route,action,expectedJobId=null) {
   const owner=reply?.result;
   if(reply?.routeId!==route || !nativeCompletedOwnerReply(reply) ||
@@ -434,7 +467,9 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
         const route=request.actionId==='selfbuilder.train.request'?'training.start':'chat.commands';
         const result=await client.request(route,{...(route==='chat.commands'?{action:request.actionId}:{}),...scope,
           ...(request.task?{task:request.task}:{}),...(request.job_id?{job_id:request.job_id}:{})});display(result,route);
-        return nativeOwnerActionReceipt(result,route,request.actionId,request.job_id);
+        return OWNER_S03_READ_ACTIONS.has(request.actionId)
+          ? nativeVerifiedReadAction(result,request.actionId)
+          : nativeOwnerActionReceipt(result,route,request.actionId,request.job_id);
       }});
   }
   // R11: one cosmetic cockpit on existing, already-mounted MENU10 DOM. No second host.

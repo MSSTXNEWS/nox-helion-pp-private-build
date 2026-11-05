@@ -76,8 +76,8 @@ export const P01_READINESS_ACTIONS=Object.freeze([
 export function p01ReadinessResult(action,receipt){
   if(!P01_READINESS_ACTIONS.some(x=>x.action===action))
     return Object.freeze({state:'HOLD',message:'Неизвестная проверка'});
-  if(receipt?.ack!==true)
-    return Object.freeze({state:'HOLD',message:'Нет подтверждённого native ACK'});
+  if(receipt?.readVerified!==true)
+    return Object.freeze({state:'HOLD',message:'Нет проверенного S03 ответа только для чтения'});
   if(action==='selfbuilder.capabilities'){
     const available=Object.values(receipt.actions||{}).filter(x=>x?.available===true).length;
     const configured=typeof receipt.source_head==='string' && /^[a-f0-9]{40,64}$/.test(receipt.source_head);
@@ -107,8 +107,8 @@ export function p01ReadinessResult(action,receipt){
   const responded=receipt.status==='S03_READ'&&Array.isArray(receipt.tasks);
   const n=responded?receipt.tasks.length:0;
   return Object.freeze({state:responded?'AVAILABLE':'HOLD',
-    message:n+' подтверждённых результатов S03; память '+(responded?'отвечает':'недоступна')+
-      '; веса не изменялись'});
+    message:n+' записей S03 с результатом; память '+(responded?'отвечает':'недоступна')+
+      '; QUEUED/HOLD не доказывают обучение; веса не изменялись этим запросом'});
 }
 const VALID=new Set(['VERIFIED','RUNNING','IDLE','PAUSED','HOLD','OFFLINE','NOT_INSTALLED','ERROR','PENDING','AVAILABLE','NATIVE_REQUEST_AVAILABLE']);
 function status(value){return VALID.has(value)?value:'HOLD';}
@@ -348,8 +348,10 @@ export function mountSelfBuilderMenuV2({root,invokeNative,getTrustedState,ownerA
         const receipt=await invokeNative({routeId:item.routeId,actionId:item.actionId,source:'NOX_MENU_V2_OWNER',
              userGesture:true,...(training?{job_id:jobs.value}:{}),...(item.actionId==='selfbuilder.propose'?{task:task.value.trim()}:{} )});
         if(item.actionId==='selfbuilder.sources.inspect')showSourceInventory(receipt);
-        feedback.textContent=receipt?.ack===true
-          ?(item.mode==='read'?'ПОЛУЧЕНО · '+item.label:
+        // A verified read is not an owner action ACK or learning receipt.
+        const accepted=item.mode==='read'?receipt?.readVerified===true:receipt?.ack===true;
+        feedback.textContent=accepted
+          ?(item.mode==='read'?'ПРОЧИТАНО · '+item.label+' · не доказательство обучения':
              typeof receipt.run_id==='string'?'QUEUED · '+item.label+' · '+receipt.run_id:training?'ОТВЕТ FORGE · '+(receipt.status||'ПОЛУЧЕНО'):'HOLD · задача не принята')
           :'HOLD · '+(receipt?.errorCode||'нет подтверждённого ответа NOX');
       }catch(_){feedback.textContent='HOLD · ошибка соединения с ядром';}
