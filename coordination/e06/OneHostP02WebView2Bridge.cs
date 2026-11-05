@@ -444,7 +444,7 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
         if (result.ValueKind != JsonValueKind.Object) return false;
         foreach (var field in result.EnumerateObject())
         {
-            if (field.Name is "ok" or "ack" or "success" or "approved" or "authorized" or "consented" or "ownerConsent" or "nativeConsent" or "permissionGranted" &&
+            if (field.Name is "ok" or "ack" or "accepted" or "success" or "approved" or "authorized" or "consented" or "ownerConsent" or "nativeConsent" or "permissionGranted" &&
                 field.Value.ValueKind != JsonValueKind.True)
                 return true;
             if (field.Name is "error" or "errorCode" or "error_code" or
@@ -461,7 +461,7 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
                     NativeOwnerStatusDenied(field.Value.GetString()))
                     return true;
             }
-            if (field.Name is "result" or "receipt" or "nativeResult" or "owner" or "ownerResult" &&
+            if (field.Name is "result" or "receipt" or "ownerReceipt" or "nativeResult" or "owner" or "ownerResult" &&
                 NativeResultExplicitlyDenied(field.Value, depth + 1))
                 return true;
         }

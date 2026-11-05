@@ -514,7 +514,7 @@ public partial class MainWindow
         foreach(var p in value.EnumerateObject()) {
             // The original legacy WPF route must not promote an explicit native
             // owner/provenance refusal to chatFinished or Model Center success.
-            if (p.Name is "ok" or "ack" or "success" or "approved" or "authorized" or "consented" or "ownerConsent" or "nativeConsent" or "permissionGranted" &&
+            if (p.Name is "ok" or "ack" or "accepted" or "success" or "approved" or "authorized" or "consented" or "ownerConsent" or "nativeConsent" or "permissionGranted" &&
                 p.Value.ValueKind!=JsonValueKind.True) return true;
             if (p.Name is "error" or "errorCode" or "error_code" or "errorMessage" or "error_message" &&
                 p.Value.ValueKind!=JsonValueKind.Null &&
@@ -524,7 +524,7 @@ public partial class MainWindow
                 var state=p.Value.GetString();
                 if (LegacyOwnerStatusDenied(state)) return true;
             }
-            if (p.Name is "result" or "receipt" or "nativeResult" or "owner" or "ownerResult" &&
+            if (p.Name is "result" or "receipt" or "ownerReceipt" or "nativeResult" or "owner" or "ownerResult" &&
                 LegacyOwnerDenial(p.Value,depth+1)) return true;
         }
         return false;
