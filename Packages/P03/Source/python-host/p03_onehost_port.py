@@ -411,6 +411,22 @@ class P03OneHostPort:
                      "REVIEW_REQUIRED", "CONSENT_REQUIRED", "NOT_AUTHORIZED",
                      "STOP_PENDING", "BUSY", "NOT_READY")))):
                 raise P03PortHold("Owner3 backend returned a HOLD/error, not an ACK")
+            # Top-level ACK may not conceal a nested native refusal.
+            # Inspect existing owner metadata only; no new routes or backend.
+            for nested_key in ("result", "receipt", "ownerReceipt"):
+                nested = result.get(nested_key)
+                if type(nested) is not dict:
+                    continue
+                if nested.get("error") not in (None, ""):
+                    raise P03PortHold("Owner3 nested backend error is not an ACK")
+                for field in ("ok", "ack", "accepted", "success"):
+                    if field in nested and nested[field] is not True:
+                        raise P03PortHold("Owner3 nested backend refused operation")
+                if "status" in nested:
+                    nested_state = nested["status"]
+                    if (type(nested_state) is not str or
+                            _owner3_status_denied(nested_state)):
+                        raise P03PortHold("Owner3 nested backend status is not an ACK")
             # A matching jobId or unrelated metadata is NOT an affirmative
             # native ACK for a mutating action. Keep legacy positive status
             # and Boolean ACK contracts; leave queue/preflight reads unchanged.

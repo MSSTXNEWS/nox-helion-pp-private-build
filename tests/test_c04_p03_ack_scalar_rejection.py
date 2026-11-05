@@ -149,6 +149,42 @@ class P03RealAckBranchTest(unittest.TestCase):
             self.assertEqual(self.respond(valid, route=route), valid)
 
 
+    def test_nested_owner_refusals_never_promote_outer_ack(self):
+        # Source's real response AST; no fake owner acceptance.
+        for route, status in (('models.pull', 'PROVIDER_OFFLINE_HOLD'),
+                              ('models.gguf.import', 'CONSENT_REQUIRED'),
+                              ('models.cancel', 'OWNER_PENDING'),
+                              ('models.retry', 'PERMISSION_DENIED')):
+            for envelope in ('result', 'receipt', 'ownerReceipt'):
+                with self.subTest(route=route, status=status, envelope=envelope):
+                    result = {'status': ('CANCEL_REQUESTED' if route == 'models.cancel'
+                                         else 'QUEUED'),
+                              'ack': True, envelope: {'status': status}}
+                    if route in ('models.cancel', 'models.retry'):
+                        result['jobId'] = 'requested'
+                    with self.assertRaises(P03PortHold):
+                        self.respond(result, route=route,
+                                     job_id='requested' if 'jobId' in result else None)
+        for field in ('ok', 'ack', 'accepted', 'success'):
+            with self.subTest(field=field), self.assertRaises(P03PortHold):
+                self.respond({'status': 'QUEUED', 'result': {field: False}},
+                             route='models.pull')
+        with self.assertRaises(P03PortHold):
+            self.respond({'status': 'QUEUED',
+                          'receipt': {'error': 'PROVIDER_OFFLINE_HOLD'}},
+                         route='models.pull')
+        with self.assertRaises(P03PortHold):
+            self.respond({'status': 'QUEUED',
+                          'result': {'status': None}}, route='models.pull')
+        valid = {'status': 'CANCEL_REQUESTED', 'jobId': 'requested',
+                 'result': {'cancelled': False}}
+        self.assertEqual(self.respond(valid, route='models.cancel',
+                                      job_id='requested'), valid)
+        queued = {'status': 'QUEUED', 'ack': True,
+                  'receipt': {'status': 'QUEUED'}}
+        self.assertEqual(self.respond(queued, route='models.pull'), queued)
+
+
 
 class P03InvocationTest(unittest.TestCase):
     def test_discovery_import_preserves_runner_arguments_and_owner_source(self):
