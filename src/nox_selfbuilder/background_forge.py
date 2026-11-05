@@ -201,6 +201,29 @@ class ExistingP04Background:
     def request_pause(self, job=None):
         return self._request("PAUSE", job=job)
 
+    @staticmethod
+    def _terminate_unacknowledged_worker(proc):
+        """Stop the existing child if its owner STOP marker could not be written.
+
+        This is an emergency process shutdown, not a native STOP ACK and never
+        a training success or evidence that weights may be activated.
+        """
+        if proc.poll() is not None:
+            return
+        try:
+            proc.terminate()
+        except ProcessLookupError:
+            if proc.poll() is None:
+                raise ForgeHold("TRAINER_UNACKNOWLEDGED_STOP_TERMINATION_HOLD")
+            return
+        try:
+            proc.wait(timeout=15)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            proc.wait(timeout=15)
+        if proc.poll() is None:
+            raise ForgeHold("TRAINER_UNACKNOWLEDGED_STOP_TERMINATION_HOLD")
+
     def _request(self, operation, *, job=None):
         with self._control_lock:
             if self._active is None:
@@ -337,7 +360,14 @@ class ExistingP04Background:
                     self.relay_events(job, live=True)
                 except Exception as exc:
                     monitor_error = type(exc).__name__
-                    self.request_stop()
+                    try:
+                        self.request_stop()
+                    except Exception:
+                        # A failed marker is not an acknowledged STOP.
+                        # Do not orphan the original GPU trainer on revocation.
+                        self._terminate_unacknowledged_worker(proc)
+                        forced = True
+                        break
                 if self._requested is not None:
                     requested_at = requested_at or time.monotonic()
                     if time.monotonic() - requested_at > 120:
