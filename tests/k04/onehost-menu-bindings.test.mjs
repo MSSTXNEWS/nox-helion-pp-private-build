@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createNativeMenuClient,mountOneHostMenu,canonicalChatContext,nativeAutostartPersistenceAck,createAutostartOwnerFlow,AUTOSTART_UIA_IDS,settingsAutostartOwnerAdmission} from '../../ui/onehost-menu-bindings.mjs';
+import {createNativeMenuClient,mountOneHostMenu,canonicalChatContext,nativeAutostartPersistenceAck,createAutostartOwnerFlow,AUTOSTART_UIA_IDS,settingsAutostartOwnerAdmission,nativeOwnerReceiptHolds,nativeOwnerActionReceipt} from '../../ui/onehost-menu-bindings.mjs';
 import {SELFBUILDER_MENU,MENU_V2_SECTIONS} from '../../ui/selfbuilder-menu-v2.mjs';
 function fixture(){let listener;const sent=[];let next=1;const webview={postMessage:x=>sent.push(x),addEventListener:(n,f)=>listener=f,removeEventListener:()=>{listener=null;}};const client=createNativeMenuClient({webview,cryptoRef:{getRandomValues:b=>{b.fill(next++);return b;}},timeoutMs:10});return {client,sent,webview,reply:x=>listener?.({data:x,source:webview,isTrusted:true}),emit:(x,source,trusted=false)=>listener?.({data:x,source,isTrusted:trusted})};}
 test('native result must correlate route and nonce; stream only that request',async()=>{
@@ -235,4 +235,39 @@ test('D06 SETTINGS refuses explicit native owner consent and permission denial o
  }
  assert.equal(nativeAutostartPersistenceAck(envelope({enabled:true,readOnly:false}),true),true);
  assert.equal(nativeAutostartPersistenceAck(envelope({enabled:false,readOnly:true}),null),true);
+});
+
+test('B05 LEARN/SETTINGS original native receipt arrays must fail closed; training ACK is only SQLite queue',()=>{
+  const ipc=(route,result)=>({routeId:route,state:'COMPLETED',result});
+  const queued={ack:true,job_id:'approved-job-5',status:'QUEUED',task_id:17,durable_s03:true,
+    execution_completed:false,training_completed:false,weights_updated:false,activation_allowed:false};
+  const submit=result=>nativeOwnerActionReceipt(ipc('training.start',result),
+    'training.start','selfbuilder.train.request','approved-job-5');
+  const good=submit(queued);
+  assert.equal(good.ack,true);
+  assert.equal(good.queueVerified,true);
+  assert.equal(good.training_completed,false);
+  assert.equal(good.weights_updated,false);
+  for(const [name,owner] of [
+    ['native permission denied',{ownerResult:{result:[{permissionGranted:false}]}}],
+    ['owner consent refused',{ownerResult:{result:[{status:'OWNER_CONSENT_REFUSED'}]}}],
+    ['provider refusal',{ownerResult:{result:[{errorCode:'TRAINER_OWNER_REFUSED'}]}}],
+    ['SID mismatch',{ownerResult:{result:[{status:'NATIVE_SID_MISMATCH'}]}}],
+    ['missing native grant',{ownerResult:{result:[{status:'OWNER_GRANT_REQUIRED'}]}}],
+    ['overlong provenance',{ownerResult:{result:Array(129).fill(null)}}],
+  ]){
+    assert.equal(submit({...queued,...owner}).ack,false,name);
+    assert.equal(nativeAutostartPersistenceAck(
+      ipc('system.autostart',{enabled:true,readOnly:false,...owner}),true),false,name);
+  }
+  assert.equal(nativeOwnerReceiptHolds({result:[{owner:{result:[{ownerConsent:false}]}}]}),true);
+  assert.equal(nativeOwnerReceiptHolds({result:[{ack:true,status:'QUEUED'}]}),false);
+  assert.equal(nativeOwnerReceiptHolds({result:Array(129).fill(null)}),true);
+  assert.equal(nativeOwnerReceiptHolds({status:'OWNER_GRANT_REQUIRED'}),true);
+  assert.equal(nativeOwnerReceiptHolds({status:'OWNER_CONSENT_REFUSED'}),true);
+  const cycle={};cycle.result=cycle;
+  assert.equal(nativeOwnerReceiptHolds(cycle),true);
+  assert.equal(nativeAutostartPersistenceAck(ipc('system.autostart',
+    {enabled:false,readOnly:true}),null),true);
+  assert.equal(nativeOwnerReceiptHolds([{ack:true}]),true,'top-level array denied');
 });

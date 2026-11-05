@@ -118,9 +118,20 @@ export function createNativeMenuClient({webview,cryptoRef=globalThis.crypto,
 export function nativeOwnerReceiptHolds(owner,depth=0,trail=new Set()) {
   // Native transport COMPLETED is not consent. Nested owner approvals/denials
   // must be read from the SAME bound route before admitting LEARN/SETTINGS.
-  if (!owner || typeof owner!=='object' || Array.isArray(owner) ||
+  if (!owner || typeof owner!=='object' ||
       depth>4 || trail.has(owner)) return true;
   trail.add(owner);
+  // Native WPF bounds nested receipt arrays; their hidden owner denials
+  // must never become a successful LEARN queue or SETTINGS HKCU readback.
+  if (Array.isArray(owner)) {
+    if (depth===0 || owner.length>128) return true;
+    for (const item of owner) {
+      if (item!==null && typeof item==='object' &&
+          nativeOwnerReceiptHolds(item,depth+1,trail)) return true;
+    }
+    trail.delete(owner);
+    return false;
+  }
   if (Object.prototype.hasOwnProperty.call(owner,'ok') &&
       typeof owner.ok!=='boolean') return true;
   if (owner.ok===false || owner.ack===false ||
@@ -147,7 +158,7 @@ export function nativeOwnerReceiptHolds(owner,depth=0,trail=new Set()) {
   }
   const blocked=new Set(['HOLD','OFFLINE','ERROR','ERRORS','FAILED','DENIED',
     'REJECTED','CANCELLED','CANCELED','UNAVAILABLE','BLOCKED','UNAUTHORIZED',
-    'FORBIDDEN','ABORTED','REVOKED','EXPIRED','STOPPING']);
+    'FORBIDDEN','ABORTED','REVOKED','EXPIRED','STOPPING','REFUSED']);
   const pairs=new Set(['NOT_READY','AUTH_REQUIRED','NEEDS_AUTH','CONSENT_REQUIRED',
     'TIMED_OUT','STOP_REQUESTED','PERMISSION_REQUIRED','AUTHORIZATION_REQUIRED',
     'NOT_AUTHORIZED','NOT_AUTHENTICATED','AWAITING_CONSENT','NEEDS_CONSENT',
@@ -158,6 +169,7 @@ export function nativeOwnerReceiptHolds(owner,depth=0,trail=new Set()) {
     if(typeof value!=='string')return true;
     const words=value.trim().toUpperCase().match(/[A-Z0-9]+/g)||[];
     if(words.some(word=>blocked.has(word)))return true;
+    if(words.length>1 && ['REQUIRED','MISMATCH'].includes(words.at(-1)))return true;
     for(let i=0;i+1<words.length;i++)
       if(pairs.has(words[i]+'_'+words[i+1]))return true;
   }
@@ -167,7 +179,7 @@ export function nativeOwnerReceiptHolds(owner,depth=0,trail=new Set()) {
     if (!Object.prototype.hasOwnProperty.call(owner,key)) continue;
     const child=owner[key];
     if (child===null || child===undefined) continue;
-    if (typeof child==='object' && !Array.isArray(child)) {
+    if (typeof child==='object') {
       if (nativeOwnerReceiptHolds(child,depth+1,trail)) return true;
     } else if (key!=='result') return true;
   }
