@@ -181,6 +181,7 @@ function verifiedOriginalPrimaryDock(){
      button.getAttribute('id')!==id||
      button.getAttribute('data-nox-primary')!==name||
      button.getAttribute('aria-label')!==name||
+     button.getAttribute('type')!=='button'||
      (button.hasAttribute('role')&&button.getAttribute('role')!=='button')||
      document.querySelectorAll('[id="'+id+'"]').length!==1||
      !button.isConnected||button.disabled||button.hidden||button.matches?.(':disabled')===true||button.tabIndex!==0||
@@ -272,6 +273,9 @@ function originalInstallTransportPresent(){
 nav.addEventListener('click',event=>{
  const target=event.target.closest('button[data-nox-primary]');
  if(!target||!nav.contains(target)||!event.isTrusted)return;
+ // Prevent mutated submit/reset controls from causing a form default action
+ // even when source-locked UIA admission returns HOLD. No original route change.
+ event.preventDefault();
  // Refuse forged, reordered, duplicated or disabled dock controls before
  // delegating a native owner operation. Original five routes are unchanged.
  if(!verifiedOriginalPrimaryDock()){

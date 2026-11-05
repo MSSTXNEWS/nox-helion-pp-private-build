@@ -17,7 +17,8 @@ function evaluate(width,change={}){
  const buttons=names.map((n,i)=>({tagName:'BUTTON',isConnected:true,disabled:false,hidden:false,tabIndex:0,rect:rects[i],
  getClientRects(){return [this.rect]},getBoundingClientRect(){return this.rect},
  closest(sel){return change.ariaDisabledButton&&i===2&&sel.includes('aria-disabled')?this:null;},contains(o){return o===this},
- getAttribute(k){return ({id:'nox-express-primary-'+n.toLowerCase(),'data-nox-primary':n,'aria-label':n})[k]??null;},hasAttribute(){return false;}}));
+ getAttribute(k){return ({id:'nox-express-primary-'+n.toLowerCase(),'data-nox-primary':n,'aria-label':n,
+ type:change.badTypeIndex===i?change.badTypeValue:'button'})[k]??null;},hasAttribute(){return false;}}));
  const originalShell={parentElement:null,hidden:change.outerHidden===true,inert:change.outerInert===true,
  getAttribute(k){return change.outerAriaDisabled&&k==='aria-disabled'?'true':null;}};
  const nav={isConnected:true,parentElement:change.outerShell?originalShell:null,
@@ -75,4 +76,11 @@ test('D01 refuses invisible ancestor shells even when the original five DOM/UIA 
   {outerInert:true},{outerAriaDisabled:true}
  ])assert.equal(evaluate(390,{outerShell:true,...change}),false,JSON.stringify(change));
  assert.equal(evaluate(390,{outerShell:true}),true);
+});
+
+test('D01 rejects mutated submit, reset and absent button type without changing HOME styling',()=>{
+ assert.equal(evaluate(390),true);
+ for(const badTypeValue of ['submit','reset',null])
+   assert.equal(evaluate(390,{badTypeIndex:2,badTypeValue}),false,String(badTypeValue));
+ assert.ok(src.includes('event.preventDefault();'),'trusted primary gesture suppresses form defaults');
 });
