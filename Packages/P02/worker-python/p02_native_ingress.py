@@ -87,6 +87,48 @@ OWNER_CONTROL_ROUTES = frozenset({
 })
 
 
+_OWNER_NEGATIVE_STATUS_WORDS = frozenset((
+    "HOLD", "ERROR", "ERRORS", "FAILED", "DENIED", "REJECTED",
+    "CANCELLED", "CANCELED", "OFFLINE", "UNAVAILABLE", "BLOCKED",
+    "UNAUTHORIZED", "FORBIDDEN", "ABORTED", "REVOKED", "EXPIRED",
+    "STOPPING",
+))
+_OWNER_NEGATIVE_STATUS_PAIRS = frozenset((
+    ("NOT", "READY"), ("CONSENT", "REQUIRED"), ("AUTH", "REQUIRED"),
+    ("NEEDS", "AUTH"), ("STOP", "REQUESTED"), ("TIMED", "OUT"),
+))
+
+
+def _owner_receipt_denied(value, route: str, depth: int = 0) -> bool:
+    """Fail closed for explicit owner denials hidden inside a transport OK.
+
+    Only designated native owner receipt wrappers are traversed; arbitrary
+    model/history payload arrays are never treated as permission assertions.
+    """
+    if type(value) is not dict:
+        return False
+    for field in ("ok", "ack", "success", "approved", "authorized"):
+        if field in value and (type(value[field]) is not bool or value[field] is False):
+            return True
+    state = value.get("status")
+    if type(state) is str:
+        words = re.findall(r"[A-Z0-9]+", state.strip().upper())
+        if (_OWNER_NEGATIVE_STATUS_WORDS.intersection(words) or
+                any(tuple(words[i:i + 2]) in _OWNER_NEGATIVE_STATUS_PAIRS
+                    for i in range(max(0, len(words) - 1))) or
+                ("STOPPED" in words and route not in ("chat.stop", "training.pause"))):
+            return True
+    for field in ("receipt", "owner_receipt", "ownerReceipt",
+                  "owner_result", "ownerResult", "result"):
+        child = value.get(field)
+        if type(child) is dict:
+            # A wrapper chain deeper than four levels is not a verifiable
+            # native owner acknowledgement; never silently ignore its denial.
+            if depth >= 3 or _owner_receipt_denied(child, route, depth + 1):
+                return True
+    return False
+
+
 class ProtocolHold(Exception):
     """The native host must not treat this request as successful."""
 
@@ -207,6 +249,8 @@ class NativeIngress:
             # operation, even when that owner returns a JSON object instead
             # of raising. Keep the existing protocol and 50-route registry.
             if type(result) is dict:
+                if _owner_receipt_denied(result, route):
+                    raise ProtocolHold("NATIVE_OWNER_RESULT_HOLD")
                 state = result.get("status")
                 ok = result.get("ok")
                 # The Python-to-native ACK is an authority boundary: a
