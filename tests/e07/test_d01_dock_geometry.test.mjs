@@ -18,10 +18,19 @@ function evaluate(width,change={}){
  getClientRects(){return [this.rect]},getBoundingClientRect(){return this.rect},
  closest(sel){return change.ariaDisabledButton&&i===2&&sel.includes('aria-disabled')?this:null;},contains(o){return o===this},
  getAttribute(k){return ({id:'nox-express-primary-'+n.toLowerCase(),'data-nox-primary':n,'aria-label':n})[k]??null;},hasAttribute(){return false;}}));
- const nav={isConnected:true,closest(sel){return change.ariaDisabledAncestor&&sel.includes('aria-disabled')?this:null;},getClientRects(){return [1]},querySelectorAll(){return buttons;}};
+ const originalShell={parentElement:null,hidden:change.outerHidden===true,inert:change.outerInert===true,
+ getAttribute(k){return change.outerAriaDisabled&&k==='aria-disabled'?'true':null;}};
+ const nav={isConnected:true,parentElement:change.outerShell?originalShell:null,
+ closest(sel){return change.ariaDisabledAncestor&&sel.includes('aria-disabled')?this:null;},getClientRects(){return [1]},querySelectorAll(){return buttons;}};
  const document={documentElement:{clientWidth:width,clientHeight:change.noheight?0:480},querySelectorAll(){return [buttons[0]];},
  elementFromPoint(x,y){if(change.overlay)return {tagName:'DIV'};return buttons.find(o=>x>=o.rect.left&&x<=o.rect.right&&y>=o.rect.top&&y<=o.rect.bottom)??null;}};
- const window={getComputedStyle(){return {display:'grid',visibility:'visible',pointerEvents:'auto',opacity:1};}};
+ const window={getComputedStyle(node){
+ const outer=node===originalShell;
+ return {display:outer&&change.outerDisplayNone?'none':'grid',
+ visibility:outer&&change.outerVisibilityHidden?'hidden':'visible',
+ pointerEvents:outer&&change.outerPointerBlocked?'none':'auto',
+ opacity:outer&&change.outerOpacityZero?'0':outer&&change.outerOpacityInvalid?'unavailable':'1'};
+ }};
  return new Function('nav','window','document','originalPrimaryButtons',fn+';return verifiedOriginalPrimaryDock();')(nav,window,document,buttons);
 }
 test('D02 original five UIA controls remain inside compact/desktop viewports',()=>{
@@ -57,4 +66,13 @@ test('D01 native original handler only receives physically pressable source cont
  assert.equal(ownerTarget(),true);
  for(const key of ['disabled','ariaDisabled','offscreen','overlay','transparent','pointerBlocked'])
    assert.equal(ownerTarget({[key]:true}),false,key);
+});
+
+test('D01 refuses invisible ancestor shells even when the original five DOM/UIA hit targets remain visible',()=>{
+ for(const change of [
+  {outerOpacityZero:true},{outerOpacityInvalid:true},{outerPointerBlocked:true},
+  {outerDisplayNone:true},{outerVisibilityHidden:true},{outerHidden:true},
+  {outerInert:true},{outerAriaDisabled:true}
+ ])assert.equal(evaluate(390,{outerShell:true,...change}),false,JSON.stringify(change));
+ assert.equal(evaluate(390,{outerShell:true}),true);
 });

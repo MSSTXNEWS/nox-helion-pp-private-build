@@ -160,6 +160,21 @@ function verifiedOriginalPrimaryDock(){
  if(!Number.isFinite(viewportWidth)||!Number.isFinite(viewportHeight)||
     viewportWidth<=0||viewportHeight<=0)return false;
  const dockRects=[];
+ // A CSS-transparent or pointer-blocked outer R11 shell can leave this
+ // dock's own computed style and its child hit targets unchanged. Do not
+ // accept invisible original HOME UIA controls as real user gestures.
+ let ancestor=nav.parentElement,ancestryDepth=0;
+ while(ancestor){
+  if(++ancestryDepth>64 || ancestor.hidden===true || ancestor.inert===true ||
+     ancestor.getAttribute?.('aria-hidden')==='true' ||
+     ancestor.getAttribute?.('aria-disabled')==='true')return false;
+  const inherited=window.getComputedStyle(ancestor);
+  if(!inherited||inherited.display==='none'||inherited.visibility!=='visible'||
+     inherited.pointerEvents==='none'||
+     !Number.isFinite(Number(inherited.opacity))||
+     Number(inherited.opacity)<=0)return false;
+  ancestor=ancestor.parentElement;
+ }
  return live.length===names.length&&names.every((name,i)=>{
   const button=live[i],id='nox-express-primary-'+name.toLowerCase();
   if(button!==originalPrimaryButtons[i]||button.tagName!=='BUTTON'||
