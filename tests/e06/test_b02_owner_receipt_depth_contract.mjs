@@ -23,4 +23,11 @@ assert.match(main,/if \(value.GetArrayLength\(\)>128\) return true;/);
 assert.match(main,/LegacyOwnerDenial\(child,depth\+1\)/);
 assert.ok(builder.includes("sha='"+mainSha+"'"),"NSIS original MainWindow must pin current source Git blob");
 assert.ok(compiler.includes('"coordination/e06/MainWindow.NativeP02.cs":"'+mainSha+'"'),"compiler original MainWindow must pin current source");
-console.log("B02_WPF_OWNER_NESTED_ARRAY_DEPTH_SOURCE_CONTRACT PASS SOURCE_ONLY (not .NET/Windows)");
+// Original WebView2 native CHAT must not reappear after authenticated native STOP.
+assert.match(src, /long chatErrorEpoch = -1;/);
+assert.match(src, /if \(route is "helion.chat" or "core.chat" or "persona.chat"\)/);
+assert.match(src, /chatErrorEpoch = Interlocked\.Read\(ref _streamEpoch\)/);
+assert.match(src, /chatErrorEpoch >= 0 && Interlocked\.Read\(ref _streamEpoch\) != chatErrorEpoch/);
+assert.match(src, /var streamEpoch = isChat \? chatErrorEpoch : Interlocked\.Read\(ref _streamEpoch\)/);
+assert.equal((src.match(/chatErrorEpoch < 0 \|\| Interlocked\.Read\(ref _streamEpoch\) == chatErrorEpoch/g)||[]).length,3);
+console.log("B02_NATIVE_CHAT_REVOKED_ERRORS_SOURCE_CONTRACT PASS SOURCE_ONLY (not .NET/Windows)");

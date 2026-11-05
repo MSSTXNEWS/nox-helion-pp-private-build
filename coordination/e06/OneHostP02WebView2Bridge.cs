@@ -462,6 +462,8 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
         var epoch = Interlocked.Read(ref _epoch);
         var cancel = _document.Token;
         string id = "", route = "";
+        // Successful native STOP revokes pending consent and late transport errors.
+        long chatErrorEpoch = -1;
         try
         {
             var raw = e.WebMessageAsJson;
@@ -485,6 +487,8 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
             id = request.GetString() ?? "";
             route = name.GetString() ?? "";
             if (!RequestId.IsMatch(id) || !Routes.Contains(route)) return;
+            if (route is "helion.chat" or "core.chat" or "persona.chat")
+                chatErrorEpoch = Interlocked.Read(ref _streamEpoch);
             if (_usedIds.Count >= 8192 || !_usedIds.Add(id))
                 return; // Never reuse even failed nonce IDs.
             if (payload.EnumerateObject().Any(p => AuthorityFields.Contains(p.Name)))
@@ -524,7 +528,8 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
                 return;
             }
             if (!IsCurrent(source, epoch) || !NativeSidMatches() ||
-                !_nativeAcl(_ownerWindowsSid, route)) return;
+                !_nativeAcl(_ownerWindowsSid, route) ||
+                (chatErrorEpoch >= 0 && Interlocked.Read(ref _streamEpoch) != chatErrorEpoch)) return;
             if (route == "browser.open") {
                 if (_nativeOwnerAction is null) {
                     Reply(source, epoch, id, route, "HOLD", "BROWSER_NATIVE_OWNER_UNAVAILABLE");
@@ -602,7 +607,7 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
             // Track only actual model calls; native STOP may overtake the
             // blocking Python worker on navigation, reload or window teardown.
             var isChat = route is "helion.chat" or "core.chat" or "persona.chat";
-            var streamEpoch = Interlocked.Read(ref _streamEpoch);
+            var streamEpoch = isChat ? chatErrorEpoch : Interlocked.Read(ref _streamEpoch);
             if (isChat) Interlocked.Increment(ref _activeChat);
             try
             {
@@ -647,15 +652,20 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
         catch (OperationCanceledException) { /* Native STOP/window close: no stale ACK. */ }
         catch (NativePipeHold hold)
         {
-            if (RequestId.IsMatch(id)) Reply(source, epoch, id, route, "HOLD", hold.Code);
+            if (RequestId.IsMatch(id) &&
+                (chatErrorEpoch < 0 || Interlocked.Read(ref _streamEpoch) == chatErrorEpoch))
+                Reply(source, epoch, id, route, "HOLD", hold.Code);
         }
         catch (TimeoutException)
         {
-            if (RequestId.IsMatch(id)) Reply(source, epoch, id, route, "HOLD", "NATIVE_CHAT_TIMEOUT");
+            if (RequestId.IsMatch(id) &&
+                (chatErrorEpoch < 0 || Interlocked.Read(ref _streamEpoch) == chatErrorEpoch))
+                Reply(source, epoch, id, route, "HOLD", "NATIVE_CHAT_TIMEOUT");
         }
         catch (Exception)
         {
-            if (id.Length == 32 && RequestId.IsMatch(id))
+            if (id.Length == 32 && RequestId.IsMatch(id) &&
+                (chatErrorEpoch < 0 || Interlocked.Read(ref _streamEpoch) == chatErrorEpoch))
                 Reply(source, epoch, id, route, "HOLD", "NATIVE_TRANSPORT_HOLD");
         }
     }
