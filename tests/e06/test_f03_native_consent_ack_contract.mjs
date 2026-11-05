@@ -18,8 +18,8 @@ for(const [path,variable] of sources){
  const keys=new Set([...clause[1].matchAll(/"([^"]+)"/g)].map(match=>match[1]));
  for(const key of ['ok','ack','success','approved','authorized','consented','ownerConsent','nativeConsent','permissionGranted'])
    assert.ok(keys.has(key),'native refusal ignored: '+path+' '+key);
- assert.match(body,/GetArrayLength\\(\\)\\s*>\\s*128/);
- assert.match(body,/depth\\s*>=\\s*4/);
+ assert.match(body,/GetArrayLength\(\)\s*>\s*128/);
+ assert.match(body,/depth\s*>=\s*4/);
 }
 const builder=read('coordination/e06/build_onehost_installer.ps1');
 const compiler=read('coordination/e06/t06_compile_original_wpf_p02.py');
