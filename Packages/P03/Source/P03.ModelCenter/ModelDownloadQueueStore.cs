@@ -203,7 +203,8 @@ public sealed class ModelDownloadQueueStore
             !ShaPattern.IsMatch(model.ExpectedManifestDigestSha256 ?? string.Empty) ||
             string.IsNullOrWhiteSpace(model.ImmutableRevision) ||
             string.IsNullOrWhiteSpace(model.ReviewedRightsReceiptId) ||
-            model.ReviewedRightsReceiptId.Length > 128)
+            model.ReviewedRightsReceiptId.Length > 128 ||
+            model.ReviewedRightsReceiptId.Any(char.IsControl))
             throw new InvalidOperationException("REVIEW_REQUIRED: exact artifact evidence is incomplete.");
         ValidateTag(model.ExactTag);
         var licenseUrl = model.LicenseEvidenceUri!.ToString();
@@ -291,7 +292,9 @@ public sealed class ModelDownloadQueueStore
                 (old.ExpectedOllamaDigest is not { Length: 64 } ||
                  !ShaPattern.IsMatch(old.ExpectedOllamaDigest) ||
                  string.IsNullOrWhiteSpace(old.ImmutableRevision) ||
-                 string.IsNullOrWhiteSpace(old.RightsReceiptId)))
+                 string.IsNullOrWhiteSpace(old.RightsReceiptId) ||
+                 old.RightsReceiptId.Length > 128 || old.RightsReceiptId.Any(char.IsControl) ||
+                 !old.LicenseAcknowledged))
                 throw new InvalidOperationException("REVIEW_REQUIRED: unpinned Pull cannot start.");
             if (old.Kind == ModelJobKind.GgufImport &&
                 !HasReviewedGgufAuthority(old.RightsReceiptId, old.LicenseSource))
@@ -460,6 +463,7 @@ public sealed class ModelDownloadQueueStore
                  string.IsNullOrWhiteSpace(failed.ImmutableRevision) ||
                  string.IsNullOrWhiteSpace(failed.RightsReceiptId) ||
                  failed.RightsReceiptId.Length > 128 ||
+                 failed.RightsReceiptId.Any(char.IsControl) ||
                  !failed.LicenseAcknowledged))
                 throw new InvalidOperationException("REVIEW_REQUIRED: legacy/unreviewed pull cannot be retried.");
             if (failed.Kind == ModelJobKind.GgufImport &&

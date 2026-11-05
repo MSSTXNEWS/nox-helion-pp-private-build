@@ -35,8 +35,12 @@ Assert(!ModelArtifactReviewRegistry.TryPromote(reviewedOrigin, false, out _),
 Assert(canonicalReviewed is not null &&
     !(canonicalReviewed with { ReviewedRightsReceiptId = null }).CanOfferOneClickPull &&
     !(canonicalReviewed with { ReviewedRightsReceiptId = "  " }).CanOfferOneClickPull &&
-    !(canonicalReviewed with { ReviewedRightsReceiptId = new string('r', 129) }).CanOfferOneClickPull,
+    !(canonicalReviewed with { ReviewedRightsReceiptId = new string('r', 129) }).CanOfferOneClickPull &&
+    !(canonicalReviewed with { ReviewedRightsReceiptId = "owner\nspoofed" }).CanOfferOneClickPull,
     "R99A unverified public model record must fail closed");
+Assert(!ModelArtifactReviewRegistry.TryPromote(
+    reviewedOrigin with { ReviewerReceiptId = "owner\nspoofed" }, true, out _),
+    "D04 native owner reviewer control-character receipt rejected");
 
 using var correct = JsonDocument.Parse("{\"models\":[{\"name\":\"m:1\",\"digest\":\"sha256:" + new string('a',64) + "\"}]}");
 Assert(ModelLocalAttestation.ParseUnambiguousModelDigest(correct.RootElement, "m:1") == "sha256:" + new string('a',64), "T01 pinned local digest");
@@ -321,6 +325,12 @@ try
         ImmutableRevision = "sha256:" + digestA, CompatibilityReviewed = true,
         LicenseEvidenceUri = new Uri(evidence), CompatibilityEvidenceUri = new Uri(evidence), ReviewedRightsReceiptId = "rights-fixture"
     };
+    var injectedReceiptDenied = false;
+    try { await a.EnqueueVerifiedPullAsync(model with {
+        ReviewedRightsReceiptId = "owner\nspoofed" }, true); }
+    catch (InvalidOperationException) { injectedReceiptDenied = true; }
+    Assert(injectedReceiptDenied && (await a.ReadAsync()).Count == 0,
+        "D04 untrusted pull rights ID never persisted");
     var sameJobs = await Task.WhenAll(Enumerable.Range(0, 20).Select(i =>
         (i % 2 == 0 ? a : b).EnqueueVerifiedPullAsync(model, true)));
     Assert(sameJobs.Select(j => j.Id).Distinct().Count() == 1,

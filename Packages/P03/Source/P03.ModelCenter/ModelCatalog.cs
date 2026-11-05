@@ -47,6 +47,7 @@ public sealed record ModelCatalogEntry(
         // A public record must retain the approved owner rights receipt.
         && !string.IsNullOrWhiteSpace(ReviewedRightsReceiptId)
         && ReviewedRightsReceiptId.Length <= 128
+        && !ReviewedRightsReceiptId.Any(char.IsControl)
         && CompatibilityReviewed;
 
     // This public record may be constructed without TryPromote. Do not allow

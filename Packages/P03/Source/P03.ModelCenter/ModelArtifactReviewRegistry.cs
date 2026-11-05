@@ -108,7 +108,7 @@ public static class ModelArtifactReviewRegistry
     {
         result=null;
         if (c is null || !ownerReceiptVerified || c.ReviewStatus!="OWNER_VERIFIED" ||
-            string.IsNullOrWhiteSpace(c.ReviewerReceiptId) || c.ReviewerReceiptId.Length>128 ||
+            string.IsNullOrWhiteSpace(c.ReviewerReceiptId) || c.ReviewerReceiptId.Length>128 || c.ReviewerReceiptId.Any(char.IsControl) ||
             !ModelCatalog.OfficialFamilies.Any(x=>x.Id.Equals(c.FamilyId,StringComparison.OrdinalIgnoreCase)) ||
             !Official(c.OfficialSourceUrl,c.FamilyId) ||
             !Https(c.LicenseEvidenceUrl,out var license) || !Https(c.CompatibilityEvidenceUrl,out var compat) ||

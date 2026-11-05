@@ -28,7 +28,8 @@ public sealed class OllamaModelAdapter(HttpClient http, string receiptDirectory)
             !job.ExpectedOllamaDigest.All(Uri.IsHexDigit) ||
             string.IsNullOrWhiteSpace(job.ImmutableRevision) ||
             !job.LicenseAcknowledged || !ReviewedHttpsLicense(job.LicenseSource) ||
-            string.IsNullOrWhiteSpace(job.RightsReceiptId) || job.RightsReceiptId.Length > 128)
+            string.IsNullOrWhiteSpace(job.RightsReceiptId) || job.RightsReceiptId.Length > 128 ||
+            job.RightsReceiptId.Any(char.IsControl))
             throw new InvalidDataException("REVIEW_REQUIRED: no immutable artifact digest/revision or acknowledged rights.");
         // Ollama pull mutates a mutable local tag. Reviewed artifact rights
         // are not permission to replace an installed model under that tag.
@@ -88,7 +89,8 @@ public sealed class OllamaModelAdapter(HttpClient http, string receiptDirectory)
         if (job.ExpectedLocalBytes is not > 4 || job.ExpectedLocalSha256 is not { Length: 64 } ||
             !job.ExpectedLocalSha256.All(Uri.IsHexDigit) || !job.LicenseAcknowledged ||
             !ReviewedHttpsLicense(job.LicenseSource) ||
-            string.IsNullOrWhiteSpace(job.RightsReceiptId) || job.RightsReceiptId.Length > 128)
+            string.IsNullOrWhiteSpace(job.RightsReceiptId) || job.RightsReceiptId.Length > 128 ||
+            job.RightsReceiptId.Any(char.IsControl))
             throw new InvalidDataException("REVIEW_REQUIRED: independent GGUF bytes/SHA/acknowledged rights proof required.");
         if (job.Kind != ModelJobKind.GgufImport || string.IsNullOrWhiteSpace(job.LocalPath))
             throw new ArgumentException("Job must contain a local GGUF path.", nameof(job));
