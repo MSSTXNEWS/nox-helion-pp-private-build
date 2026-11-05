@@ -14,7 +14,7 @@ test('the fifth graphical primary action opens the EXISTING settings route, not 
  const opened=[];
  const actual=new Function('openRoute','return ('+functionText+');')(route=>opened.push(route));
  for(const label of PRIMARY)actual(label);
- assert.deepEqual(opened,['chat','system','model-library','evolution','settings']);
+ assert.deepEqual(opened,['chat','system','model-library','gpu-training','settings']);
  assert.ok(WORLDS.some(world=>world.section==='system'&&world.routes.some(route=>route.id==='settings')));
  actual('REPORTS');
  assert.equal(opened.length,5,'deprecated REPORTS primary may not be silently substituted');
@@ -85,5 +85,5 @@ test('EXPRESS HOME actually draws exactly eight graphical directions, keeps lega
  assert.match(html,/НАПРАВЛЕНИЯ HELION/);
  assert.doesNotMatch(html,/>10 миров/);
  assert.doesNotMatch(js,/P\.title\.textContent='10 МИРОВ HELION'/);
- assert.match(js,/const routes=\{CHAT:'chat',INSTALL:'system',MODELS:'model-library',LEARN:'evolution',SETTINGS:'settings'\}/);
+ assert.match(js,/const routes=\{CHAT:'chat',INSTALL:'system',MODELS:'model-library',LEARN:'gpu-training',SETTINGS:'settings'\}/);
 });
