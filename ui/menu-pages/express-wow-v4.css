@@ -77,3 +77,9 @@ body[data-fx="ECO"] #nox-aurum-dust{opacity:.18}
 .nox-meridian-readout .odo-d{display:block;height:1em;line-height:1}
 .nox-meridian-readout .odo-fixed{display:inline-block;line-height:1}
 @media(prefers-reduced-motion:reduce){.nox-meridian-readout .odo-reel{transition:none!important}}
+
+/* FORMWORK CHROMA MIT: real WebGL metaballs within existing HELION core. */
+.sun>.nox-original-chroma{position:absolute;inset:8%;width:84%;height:84%;border:0;border-radius:50%;pointer-events:none;z-index:0;opacity:.72;filter:saturate(.6);mix-blend-mode:screen}
+.sun>span,.sun>.sun-ring{z-index:2}
+body[data-fx="ECO"] .nox-original-chroma{display:none}
+@media(prefers-reduced-motion:reduce){.nox-original-chroma{opacity:.32}}
