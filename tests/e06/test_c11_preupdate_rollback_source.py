@@ -97,7 +97,7 @@ class C11RollbackSafetyTest(unittest.TestCase):
             'FileSeek $2 0 SET',
             'FileRead $2 $4',
             'StrCpy $4 $4 17',
-            'StrCmp $4 "NOXHELION.P01 V16" C11MarkerReadbackAccept C11MarkerReadbackReject',
+            'StrCmp $4 "NOXHELION.P01 V16" 0 C11MarkerReadbackReject',
             'Abort "Ownership marker content mismatch; activation refused."',
         ):
             self.assertIn(op, guard)
@@ -119,7 +119,7 @@ class C11RollbackSafetyTest(unittest.TestCase):
             (b"NOXHELION.P01 V15\r\n", False),
         ):
             # The two checks below mirror the exact size + prefix gates above.
-            self.assertEqual(len(marker) == 19 and marker[:17] == expected[:17], valid)
+            self.assertEqual(marker == expected, valid)
 
 
     def test_failed_rename_recovery_requires_real_owner_and_slot_readback(self):
