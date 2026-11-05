@@ -136,6 +136,20 @@ class P03RealAckBranchTest(unittest.TestCase):
                     self.respond({'status': status}, route=route, job_id='requested')
 
 
+    def test_pending_backend_receipt_never_confirms_model_mutation(self):
+        # A transport ACK or job identity cannot turn unresolved native
+        # approval/progress into a confirmed model pull or GGUF import.
+        for route in ('models.pull', 'models.gguf.import'):
+            for state in ('PENDING', 'OWNER_PENDING', 'ACK_PENDING',
+                          'READY_PENDING'):
+                with self.subTest(route=route, status=state), self.assertRaises(P03PortHold):
+                    self.respond({'status': state, 'ack': True},
+                                 route=route)
+            valid = {'status': 'QUEUED', 'ack': True}
+            self.assertEqual(self.respond(valid, route=route), valid)
+
+
+
 class P03InvocationTest(unittest.TestCase):
     def test_discovery_import_preserves_runner_arguments_and_owner_source(self):
         import runpy

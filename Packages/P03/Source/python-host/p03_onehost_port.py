@@ -27,6 +27,7 @@ SENSITIVE = frozenset(("models.pull", "models.gguf.import", "models.retry"))
 ROUTES = frozenset(READ_ROUTES) | frozenset(OWNER_ROUTES)
 
 # Owner3 must not promote an explicit native/backend denial into a queue ACK.
+# A pending owner result is not an affirmative admission to a model mutation.
 # Statuses may be component-prefixed (e.g. PROVIDER_OFFLINE_HOLD), so
 # checking only startswith("HOLD") is insufficient. Positive QUEUED/
 # COMPLETED/CANCELLED states retain their original handling.
@@ -34,7 +35,7 @@ _OWNER3_DENIAL_TOKENS = frozenset({
     "HOLD", "ERROR", "FAILED", "DENIED", "REJECTED", "OFFLINE",
     "CONSENT", "PERMISSION", "AUTH", "UNAUTHORIZED", "FORBIDDEN",
     "REVOKED", "EXPIRED", "MISMATCH", "UNAVAILABLE", "INVALID", "REVIEW",
-    "BUSY", "BLOCKED", "ABORTED", "REFUSED", "STALE",
+    "BUSY", "PENDING", "BLOCKED", "ABORTED", "REFUSED", "STALE",
 })
 _OWNER3_DENIAL_PAIRS = frozenset({
     ("NOT", "READY"), ("NOT", "AUTHORIZED"), ("NOT", "INSTALLED"),

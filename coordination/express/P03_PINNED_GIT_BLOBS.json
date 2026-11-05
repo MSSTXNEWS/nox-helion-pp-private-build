@@ -572,14 +572,14 @@
     {
       "path": "Packages/P03/Source/python-host/p03_onehost_port.py",
       "owner": 3,
-      "run_id": "B04_STOP_QUEUED_RECEIPT_FENCE_R5_20261105",
-      "pre_git_blob_sha1": "924a644cfe2c90f41be48e7142073961c08c320e",
-      "post_git_blob_sha1": "2a9db8a297d65ec5ac8db11b255168fa1c8ce12b",
-      "post_bytes": 28631,
-      "acceptance": "SOURCE_ONLY_TEST_AUTHORED_NOT_RUN_WINDOWS_E07_HOLD",
-      "change_scope": "QUEUED_BOOLEAN_IS_NOT_CANCEL_STOP_EVIDENCE",
-      "source_head_observed": "3d45f8ae3d59287d44032b98bd805299d044e6a4",
-      "prior_active_run_id": "B04_OWNER_STOP_RETRY_RECEIPT_R4_20261105"
+      "run_id": "B04_OWNER_PENDING_ACK_FENCE_R11_20261105",
+      "pre_git_blob_sha1": "2a9db8a297d65ec5ac8db11b255168fa1c8ce12b",
+      "post_git_blob_sha1": "8dfd145016ffaaeef127607f829a05eeb222f627",
+      "post_bytes": 28720,
+      "acceptance": "SOURCE_ONLY_REGRESSION_AUTHORED_WINDOWS_QWEN_E07_NOT_VERIFIED",
+      "change_scope": "NATIVE_PENDING_STATUS_CANNOT_CONFIRM_PULL_OR_GGUF_MUTATION",
+      "source_head_observed": "fc735b5dddd77d074b4bc4b72a4a1679d23015af",
+      "prior_active_run_id": "B04_STOP_QUEUED_RECEIPT_FENCE_R5_20261105"
     }
   ],
   "override_chain": [
@@ -1170,6 +1170,20 @@
       "source_head_observed": "de2deb433a0ddd78bf53824627a2e1dedec8bf26",
       "historical_approved_override": true,
       "retired_from_active_set": "D04_LEGACY_REVIEW_QUEUE_HEAD_OF_LINE_HOLD_20261105"
+    },
+    {
+      "path": "Packages/P03/Source/python-host/p03_onehost_port.py",
+      "owner": 3,
+      "run_id": "B04_STOP_QUEUED_RECEIPT_FENCE_R5_20261105",
+      "pre_git_blob_sha1": "924a644cfe2c90f41be48e7142073961c08c320e",
+      "post_git_blob_sha1": "2a9db8a297d65ec5ac8db11b255168fa1c8ce12b",
+      "post_bytes": 28631,
+      "acceptance": "SOURCE_ONLY_TEST_AUTHORED_NOT_RUN_WINDOWS_E07_HOLD",
+      "change_scope": "QUEUED_BOOLEAN_IS_NOT_CANCEL_STOP_EVIDENCE",
+      "source_head_observed": "3d45f8ae3d59287d44032b98bd805299d044e6a4",
+      "prior_active_run_id": "B04_OWNER_STOP_RETRY_RECEIPT_R4_20261105",
+      "historical_approved_override": true,
+      "retired_from_active_set": "B04_OWNER_PENDING_ACK_FENCE_R11_20261105"
     }
   ],
   "source_expansion": {
