@@ -35,7 +35,7 @@ INSERT = r'''<!-- NOX EXPRESS 5 original-home primary actions; no additional hos
 
 /* At 800x600 WPF the native side panel can leave a 551–780px WebView2
    viewport. A1/status must not wrap one of the five ORIGINAL UIA actions. */
-@media (min-width:551px) and (max-width:780px){
+@media (min-width:551px) and (max-width:1120px){
 #nox-express-primary{bottom:6px;width:calc(100vw - 12px);max-width:calc(100vw - 12px);box-sizing:border-box;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px;justify-content:stretch}
 #nox-express-primary button[data-nox-primary]{width:100%;min-width:0;box-sizing:border-box;padding:7px 2px;white-space:nowrap}
 #nox-express-primary [data-nox-check="A1"],#nox-express-primary [data-nox-state]{grid-column:1/-1;min-width:0}
