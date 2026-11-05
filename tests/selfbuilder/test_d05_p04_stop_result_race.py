@@ -24,7 +24,7 @@ class D05StopResultRaceTests(unittest.TestCase):
             control.mkdir()
             owner = object.__new__(ExistingP04Background)
             owner._control_lock = threading.Lock()
-        owner._unreaped_worker = None  # match original P04 constructor quarantine state
+            owner._unreaped_worker = None  # match original P04 constructor quarantine state
             owner._active = None
             owner._requested = None
             owner.stop = lambda: False

@@ -25,7 +25,7 @@ class D05MergeStopAdmissionTests(unittest.TestCase):
             owner = object.__new__(ExistingP04Background)
             owner._gate = threading.Lock()
             owner._control_lock = threading.Lock()
-        owner._unreaped_worker = None  # match original P04 constructor quarantine state
+            owner._unreaped_worker = None  # match original P04 constructor quarantine state
             owner._active = None
             owner._merge_active = False
             owner._merge_stop = False
