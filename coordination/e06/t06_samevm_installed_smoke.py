@@ -49,6 +49,19 @@ def _load_exact_user_probe_slot():
 
 verify_exact_probe_slot=_load_exact_user_probe_slot()
 
+def verified_probe_first_failure(exc: RuntimeError) -> str:
+    """Expose only an exact existing G4 slot code, never an arbitrary local path.
+
+    The physical main receipt is consumed by Setup summarizers and the
+    independent coordinator. Keep failure provenance without leaking foreign
+    file names, making any diagnostic PASS or executing another NSIS cycle.
+    """
+    reason = str(exc)
+    return (reason if type(exc) is RuntimeError and
+            re.fullmatch(r'T06_EXACT_PROBE_SLOT_[A-Z0-9_]+_HOLD', reason)
+            else 'T06_EXACT_PROBE_SLOT_UNCLASSIFIED_HOLD')
+
+
 def read_only_nonzero_uninstall_witness(
         install: Path, owned_files: tuple[Path, ...], remover: Path | None) -> dict:
     """Inspect failed ORIGINAL NSIS /S without rerunning or deleting anything.
@@ -1234,7 +1247,11 @@ def main()->int:
             backup_check=verify_exact_probe_slot(
                 backup,unmanaged.name,unmanaged_bytes,unmanaged_identity,local_base)
         except RuntimeError as exc:
-            print("T06_UPDATE_BACKUP_PROOF_FIRST_FAILURE",str(exc),flush=True)
+            # Preserve exact verified backup first-fail in PHYSICAL JSON receipt,
+            # not merely in stdout that the outer Setup wrapper can truncate.
+            failure_code=verified_probe_first_failure(exc)
+            report["installer_lifecycle"]["backup_probe_first_failure"]=failure_code
+            print("T06_UPDATE_BACKUP_PROOF_FIRST_FAILURE",failure_code,flush=True)
             raise RuntimeError("T06_UPDATE_BACKUP_MANIFEST_VERIFY_HOLD") from exc
         report["installer_lifecycle"]["backup_payload_verify"]=backup_check
         rollback=run([str(SETUP),"/S","/ROLLBACK"],250)
@@ -1261,7 +1278,9 @@ def main()->int:
                     post_check=verify_exact_probe_slot(
                         slot,unmanaged.name,unmanaged_bytes,unmanaged_identity,local_base)
                 except RuntimeError as exc:
-                    print("T06_ROLLBACK_RESTORED_PROOF_FIRST_FAILURE",str(exc),flush=True)
+                    failure_code=verified_probe_first_failure(exc)
+                    report["installer_lifecycle"]["rollback_probe_first_failure"]=failure_code
+                    print("T06_ROLLBACK_RESTORED_PROOF_FIRST_FAILURE",failure_code,flush=True)
                     raise RuntimeError("T06_ROLLBACK_SLOT_MANIFEST_VERIFY_HOLD:"+name) from exc
             else:
                 post_check=run(["powershell.exe","-NoProfile","-NonInteractive",
