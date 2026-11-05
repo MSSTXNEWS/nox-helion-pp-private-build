@@ -26,41 +26,79 @@ class Hold(ValueError):
     pass
 
 
-def safe_regular(path: Path):
-    for ancestor in (path, *path.parents):
-        if ancestor.is_symlink():
+def _no_reparse_path(path: Path):
+    """Reject Windows junctions/reparse entries as well as POSIX symlinks."""
+    for node in (path, *path.parents):
+        try:
+            info = node.lstat()
+        except FileNotFoundError:
+            continue
+        if (stat.S_ISLNK(info.st_mode) or
+            getattr(node, "is_junction", lambda: False)() or
+            (getattr(info, "st_file_attributes", 0) & 0x400)):
             raise Hold("L02_SYMLINK_OR_REPARSE_HOLD")
+
+
+def safe_regular(path: Path):
+    _no_reparse_path(path)
     if not path.is_file():
         raise Hold("L02_REQUIRED_FILE_MISSING")
     st = path.stat()
     if not stat.S_ISREG(st.st_mode):
         raise Hold("L02_SPECIAL_FILE_HOLD")
+    if st.st_nlink != 1:
+        raise Hold("L02_HARDLINK_ALIAS_HOLD")
     return st
 
 
-def sha256_file(path: Path) -> str:
+def _identity(st):
+    return (st.st_dev, st.st_ino, st.st_nlink, st.st_size,
+            st.st_mtime_ns, st.st_ctime_ns)
+
+
+def sha256_file(path: Path, *, verify_pe: bool = False) -> str:
+    before = safe_regular(path)
     h = hashlib.sha256()
     with path.open("rb") as stream:
+        if _identity(os.fstat(stream.fileno())) != _identity(before):
+            raise Hold("L02_INPUT_FILE_IDENTITY_CHANGED_HOLD")
+        if verify_pe:
+            _pe_installer_stream(stream)
+            stream.seek(0)
         for block in iter(lambda: stream.read(1024*1024), b""):
             h.update(block)
+        if _identity(os.fstat(stream.fileno())) != _identity(before):
+            raise Hold("L02_INPUT_FILE_IDENTITY_CHANGED_HOLD")
+    if _identity(safe_regular(path)) != _identity(before):
+        raise Hold("L02_INPUT_FILE_IDENTITY_CHANGED_HOLD")
     return h.hexdigest()
 
 
-def pe_installer(path: Path):
-    with path.open("rb") as stream:
-        dos = stream.read(64)
-        if len(dos) != 64 or dos[:2] != b"MZ":
-            raise Hold("L02_SETUP_NOT_PE")
-        offset = int.from_bytes(dos[60:64], "little")
-        if not 64 <= offset <= 4096:
-            raise Hold("L02_SETUP_INVALID_PE_OFFSET")
-        stream.seek(offset)
-        header = stream.read(26)
-    # NSIS often emits an x86 bootstrap stub even while installing an x64 payload.
-    # Do not reject a legitimate existing NSIS Setup solely for that reason.
+def _pe_installer_stream(stream):
+    dos = stream.read(64)
+    if len(dos) != 64 or dos[:2] != b"MZ":
+        raise Hold("L02_SETUP_NOT_PE")
+    offset = int.from_bytes(dos[60:64], "little")
+    if not 64 <= offset <= 4096:
+        raise Hold("L02_SETUP_INVALID_PE_OFFSET")
+    stream.seek(offset)
+    header = stream.read(26)
+    # NSIS x86 bootstrap is also valid for an x64 installed payload.
     pair = (int.from_bytes(header[4:6], "little"), int.from_bytes(header[24:26], "little"))
     if len(header) < 26 or header[:4] != b"PE\0\0" or pair not in ((0x14c, 0x10b), (0x8664, 0x20b)):
         raise Hold("L02_SETUP_NOT_SUPPORTED_WINDOWS_PE")
+
+
+def pe_installer(path: Path):
+    before = safe_regular(path)
+    with path.open("rb") as stream:
+        if _identity(os.fstat(stream.fileno())) != _identity(before):
+            raise Hold("L02_INPUT_FILE_IDENTITY_CHANGED_HOLD")
+        _pe_installer_stream(stream)
+        if _identity(os.fstat(stream.fileno())) != _identity(before):
+            raise Hold("L02_INPUT_FILE_IDENTITY_CHANGED_HOLD")
+    if _identity(safe_regular(path)) != _identity(before):
+        raise Hold("L02_INPUT_FILE_IDENTITY_CHANGED_HOLD")
 
 
 def url_gate(value: str, setup_name: str):
@@ -102,8 +140,13 @@ def emit(setup: Path, receipt: Path, url: str, version: int, out: Path) -> dict:
     pe_installer(setup)
     url_gate(url, setup.name)
     try:
+        receipt_before = safe_regular(receipt)
+        receipt_raw = receipt.read_bytes()
+        if (len(receipt_raw) > 1048576 or
+            _identity(safe_regular(receipt)) != _identity(receipt_before)):
+            raise Hold("L02_RECEIPT_IDENTITY_OR_SIZE_HOLD")
         proof = json.loads(
-            receipt.read_text(encoding="utf-8"),
+            receipt_raw.decode("utf-8"),
             object_pairs_hook=_unique_receipt_fields,
             parse_constant=_reject_nonfinite_receipt_number,
         )
@@ -121,14 +164,12 @@ def emit(setup: Path, receipt: Path, url: str, version: int, out: Path) -> dict:
         not isinstance(proof.get("installer_sha256"), str) or
         not HEX64.fullmatch(proof["installer_sha256"])):
         raise Hold("L02_RECEIPT_NOT_OWNER_E06_DIAGNOSTIC")
-    sha = sha256_file(setup)
+    sha = sha256_file(setup, verify_pe=True)
     if sha != proof["installer_sha256"]:
         raise Hold("L02_SETUP_SHA_DISAGREES_WITH_OWNER_RECEIPT")
     if out.exists() or out.is_symlink() or not out.parent.is_dir():
         raise Hold("L02_MANIFEST_OUTPUT_UNSAFE_OR_EXISTS")
-    for ancestor in (out.parent, *out.parent.parents):
-        if ancestor.is_symlink():
-            raise Hold("L02_MANIFEST_PARENT_SYMLINK")
+    _no_reparse_path(out)
     raw = f"{PREFIX}\n{version}\n{url}\n{st.st_size}\n{sha}\n".encode("ascii")
     if not 100 <= len(raw) <= 4095:
         raise Hold("L02_MANIFEST_SIZE_INVALID")
@@ -154,7 +195,7 @@ def emit(setup: Path, receipt: Path, url: str, version: int, out: Path) -> dict:
         "manifest_file": out.name,
         "manifest_sha256_for_L01_rebuild_after_owner_review": hashlib.sha256(raw).hexdigest(),
         "setup_sha256": sha, "setup_bytes": st.st_size,
-        "source_receipt_sha256": sha256_file(receipt),
+        "source_receipt_sha256": hashlib.sha256(receipt_raw).hexdigest(),
         "version": version,
         "native_windows_installed_e2e": "NOT_PROVEN",
         "independent_e07": "NOT_PROVEN",

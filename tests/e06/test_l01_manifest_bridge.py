@@ -1,5 +1,6 @@
 import hashlib
 import json
+import os
 from pathlib import Path
 import tempfile
 import unittest
@@ -68,5 +69,32 @@ class OwnerManifest(unittest.TestCase):
     def test_refuse_unsafe_symlink(self):
         alias=self.root/'alias.exe';alias.symlink_to(self.setup)
         self.assertRaises(Hold,emit,alias,self.receipt,self.url,1,self.out)
+
+
+    def test_refuse_setup_hardlink_alias(self):
+        alias=self.root/'foreign-setup-alias.exe'
+        os.link(self.setup,alias)
+        with self.assertRaisesRegex(Hold,"L02_HARDLINK_ALIAS_HOLD"):
+            self.run_gate()
+        self.assertFalse(self.out.exists())
+        self.assertEqual(alias.read_bytes(),self.setup.read_bytes())
+
+    def test_refuse_receipt_hardlink_alias(self):
+        alias=self.root/'foreign-receipt-alias.json'
+        os.link(self.receipt,alias)
+        before=alias.read_bytes()
+        with self.assertRaisesRegex(Hold,"L02_HARDLINK_ALIAS_HOLD"):
+            self.run_gate()
+        self.assertFalse(self.out.exists())
+        self.assertEqual(alias.read_bytes(),before)
+
+    def test_refuse_output_parent_symlink(self):
+        foreign=self.root/'foreign'
+        foreign.mkdir()
+        linked=self.root/'linked'
+        linked.symlink_to(foreign,target_is_directory=True)
+        with self.assertRaisesRegex(Hold,"L02_SYMLINK_OR_REPARSE_HOLD"):
+            emit(self.setup,self.receipt,self.url,1,linked/self.out.name)
+        self.assertEqual(list(foreign.iterdir()),[])
 
 if __name__=='__main__':unittest.main()
