@@ -240,12 +240,50 @@ function liveChat(label){
  form.append(input,controls);
  surface.append(heading,el('p','nox-chat-label','ЯДРО'),coreRow,el('p','nox-chat-label','ПЕРСОНА'),personaRow,
   el('p','nox-chat-label','УСТАНОВЛЕННЫЕ МОДЕЛИ'),modelsRow,style,neural,history,log,form,info);
+ const center=el('div','nox-chat-main');while(surface.firstChild)center.append(surface.firstChild);
+ const left=el('aside','nox-chat-side'),right=el('aside','nox-chat-side');
+ const leftFacts=el('div','nox-chat-facts'),rightFacts=el('div','nox-chat-facts');
+ left.setAttribute('aria-label','Память S03');right.setAttribute('aria-label','GPU и обучение');
+ left.append(el('h3','','S03 · ПАМЯТЬ'),button('↻','',()=>void refreshNativePanels()),leftFacts);
+ right.append(el('h3','','GPU · FORGE'),button('↻','',()=>void refreshNativePanels()),rightFacts);
+ modelsRow.hidden=true;
+ const layout=el('style','',`.details:has(.nox-chat-three){max-width:min(96vw,1540px)!important}
+ .nox-chat-three{display:grid;grid-template-columns:minmax(160px,215px) minmax(0,1fr) minmax(170px,235px);gap:12px}
+ .nox-chat-main{min-width:0}.nox-chat-side{padding:13px;border:1px solid #6fb8d34a;border-radius:14px;background:#0b1c2bec;color:#cde5ef;min-width:0;max-height:610px;overflow:auto}
+ .nox-chat-side h3{color:#e1bd97;font-size:12px}.nox-chat-side button{background:#183249;color:#d5eeff;border:1px solid #688fa6;border-radius:7px}
+ .nox-native-fact{font-size:11px;line-height:1.5;border:1px solid #46738c66;border-radius:8px;background:#0b1d2a;padding:8px;margin:8px 0;white-space:pre-wrap;overflow-wrap:anywhere}
+ @media(max-width:1100px){.nox-chat-three{grid-template-columns:minmax(0,1fr)}.nox-chat-side{max-height:170px}}
+ @media(prefers-reduced-motion:reduce){.nox-chat-three *{animation:none!important;transition:none!important}}`);
+ const three=el('div','nox-chat-three');three.append(left,center,right);surface.append(layout,three);
  setDetails(top,surface);
  let core='core.core',persona='persona.kairen_voss',model='',modelSelectionPending=false;
  // A selected model belongs to its native-confirmed UI scope, never to a different CoreID/Persona.
  let scopeEpoch=0,renderModels=()=>{};
 
- let historyVersion=0;
+ let historyVersion=0,panelEpoch=0;
+ async function refreshNativePanels(){
+  const epoch=++panelEpoch;
+  leftFacts.textContent='Получаю историю OneHost…';rightFacts.textContent='Получаю GPU preflight…';
+  if(!client){leftFacts.textContent='HOLD · OneHost недоступен';rightFacts.textContent='HOLD · OneHost недоступен';return;}
+  const safe=async(route,payload)=>{try{return await client.request(route,payload);}catch{return null;}};
+  const [h,g,l]=await Promise.all([safe('chat.history',{core_id:core,persona_id:persona,limit:10}),safe('gpu.preflight',{}),safe('chat.commands',{action:'selfbuilder.learning.proofs'})]);
+  if(epoch!==panelEpoch||!three.isConnected)return;
+  leftFacts.replaceChildren();rightFacts.replaceChildren();
+  const fact=(parent,k,v)=>parent.append(el('div','nox-native-fact',k+' · '+String(v).slice(0,180)));
+  if(h?.routeId==='chat.history'&&nativeCompleted(h)&&Array.isArray(h.result?.messages)){
+   const msgs=h.result.messages.slice(-10).filter(m=>(m?.role==='user'||m?.role==='assistant')&&typeof m.content==='string');
+   fact(leftFacts,'SQLITE',msgs.length+' сообщений');
+   for(const m of msgs)fact(leftFacts,m.role==='user'?'ВЫ':'NOX',m.content);
+  }else fact(leftFacts,'HOLD','Нет подтверждения истории');
+  if(g?.routeId==='gpu.preflight'&&nativeCompleted(g)&&g.result&&typeof g.result==='object'){
+   fact(rightFacts,'GPU','OneHost preflight');
+   for(const [k,v] of Object.entries(g.result).slice(0,10))if(['string','number','boolean'].includes(typeof v))fact(rightFacts,k,v);
+  }else fact(rightFacts,'GPU','Н/Д · preflight не подтверждён');
+  if(l?.routeId==='chat.commands'&&nativeCompleted(l)&&l.result&&typeof l.result==='object'){
+   fact(rightFacts,'LEARN','Native квитанция');
+   for(const [k,v] of Object.entries(l.result).slice(0,6))if(['string','number','boolean'].includes(typeof v))fact(rightFacts,k,v);
+  }else fact(rightFacts,'LEARN','Н/Д · квитанция не подтверждена');
+ }
  async function toggleHistory(){
    const visible=history.hidden;history.hidden=!visible;
    historyButton.setAttribute('aria-expanded',String(visible));const version=++historyVersion;
@@ -340,7 +378,13 @@ function liveChat(label){
     }
    };
    renderModels=render;render();redraw();
-   info.textContent=model?'Выбрана локальная модель: '+model:'Выберите модель из списка, подтверждённого OneHost';
+   if(!model&&names.length&&inventoryEpoch===scopeEpoch){
+    const candidate=names.find(x=>/qwen/i.test(x))||names[0];modelSelectionPending=true;redraw();
+    try{const ack=await client.request('chat.model',{model:candidate});
+      if(inventoryEpoch===scopeEpoch&&nativeCompleted(ack)&&ack.result?.selectedModel===candidate)model=candidate;
+    }catch{model='';}finally{modelSelectionPending=false;redraw();}
+   }
+   info.textContent=model?'AUTO CORE · native подтверждён: '+model:'HOLD · модель не подтверждена OneHost';
   }catch{modelsRow.replaceChildren(el('span','nox-chat-empty','Не удалось получить локальные модели'));info.textContent='HOLD · каталог моделей недоступен';redraw();}
  }
  async function submit(ev){
@@ -411,7 +455,7 @@ function liveChat(label){
     info.textContent='HOLD · STOP не подтверждён';
   }finally{if(epoch===chatEpoch){chatStopPending=false;redraw();}}
  });
- redraw();void loadModels();
+ redraw();void loadModels();void refreshNativePanels();
 }
 
 function openRoute(id){
