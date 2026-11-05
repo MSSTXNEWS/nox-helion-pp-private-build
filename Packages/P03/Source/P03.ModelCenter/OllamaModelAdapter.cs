@@ -87,6 +87,7 @@ public sealed class OllamaModelAdapter(HttpClient http, string receiptDirectory)
         // Hash and upload the same open file handle to prevent path replacement between hashing and upload.
         await using var file = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 1 << 20,
             FileOptions.Asynchronous | FileOptions.SequentialScan);
+        ModelLocalAttestation.RequireSingleLinkFileHandle(file.SafeFileHandle);
         var bytes = file.Length;
         if (bytes < 4 || bytes != job.ExpectedLocalBytes)
             throw new InvalidDataException("GGUF size differs from reviewed evidence.");
@@ -155,6 +156,7 @@ public sealed class OllamaModelAdapter(HttpClient http, string receiptDirectory)
             ct.ThrowIfCancellationRequested();var path=Path.Combine(approval.Directory,item.Path);
             ModelLocalAttestation.RequireRegularUnlinkedFile(path);
             await using var file=new FileStream(path,FileMode.Open,FileAccess.Read,FileShare.Read,1<<20,true);
+            ModelLocalAttestation.RequireSingleLinkFileHandle(file.SafeFileHandle);
             var hash=Convert.ToHexString(await SHA256.HashDataAsync(file,ct)).ToLowerInvariant();
             if(hash!=item.Sha256 || file.Length!=item.SizeBytes)
                 throw new SafetensorsImportHold("P03_MERGED_FILE_CHANGED");

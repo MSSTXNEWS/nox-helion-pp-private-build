@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using System.Runtime.InteropServices;
 using Nox.P03;
 
 int pass = 0;
@@ -53,10 +54,38 @@ try {
     File.CreateSymbolicLink(link, file);
     MustReject(() => ModelLocalAttestation.RequireRegularUnlinkedFile(link),"T08 symlink GGUF denied");
   } catch (UnauthorizedAccessException) { Console.WriteLine("SKIP T08 Windows symlink privilege unavailable"); }
+  if (OperatingSystem.IsWindows())
+  {
+    var alias = Path.Combine(root, "foreign-alias.gguf");
+    if (!P03HardlinkProbe.Create(alias, file, IntPtr.Zero))
+        throw new InvalidOperationException("P03_HARDLINK_TEST_SETUP_FAILED");
+    MustReject(() => ModelLocalAttestation.RequireRegularUnlinkedFile(file),
+        "T08B owner GGUF with foreign hardlink denied");
+    MustReject(() => ModelLocalAttestation.RequireRegularUnlinkedFile(alias),
+        "T08C alias GGUF denied");
+    File.Delete(alias);
+    ModelLocalAttestation.RequireRegularUnlinkedFile(file);
+    Assert(true, "T08D original GGUF admitted after alias removed");
+  }
+  async Task RejectAsyncReceiptHardlink(string path, ModelInstallReceipt expected)
+  {
+    try { await ModelLocalAttestation.VerifyReceiptAsync(path, expected, default); }
+    catch (InvalidDataException) { Assert(true, "T08E foreign receipt hardlink denied"); return; }
+    throw new Exception("FAIL T08E receipt hardlink accepted");
+  }
   var receipt = new ModelInstallReceipt("NOX_P03_INSTALL_RECEIPT_V1",Guid.NewGuid(),"m:1","ollama-pull",
       DateTimeOffset.UtcNow,null,null,"sha256:"+new string('a',64),"https://ollama.com/library/m","http://localhost:11434/");
   var receiptFile = Path.Combine(root,"receipt.json");
   await File.WriteAllTextAsync(receiptFile,JsonSerializer.Serialize(receipt,new JsonSerializerOptions(JsonSerializerDefaults.Web)));
+  if (OperatingSystem.IsWindows())
+  {
+    var alias = Path.Combine(root, "foreign-receipt-alias.json");
+    if (!P03HardlinkProbe.Create(alias, receiptFile, IntPtr.Zero))
+        throw new InvalidOperationException("P03_RECEIPT_HARDLINK_TEST_SETUP_FAILED");
+    await RejectAsyncReceiptHardlink(receiptFile, receipt);
+    await RejectAsyncReceiptHardlink(alias, receipt);
+    File.Delete(alias);
+  }
   await ModelLocalAttestation.VerifyReceiptAsync(receiptFile, receipt, default);
   Assert(true,"T09 install receipt readback");
   try { await ModelLocalAttestation.VerifyReceiptAsync(receiptFile,receipt with { ModelTag="attacker:tag" },default); throw new Exception("FAIL T10"); }
@@ -423,4 +452,12 @@ internal static class P03HardlinkFixture
         SetLastError = true)]
     internal static extern bool CreateHardLink(string link, string existing,
         IntPtr reserved);
+}
+
+// Windows-only hardlink fixture, scoped to this disposable test directory.
+internal static class P03HardlinkProbe
+{
+    [DllImport("kernel32.dll", EntryPoint = "CreateHardLinkW", CharSet = CharSet.Unicode, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    internal static extern bool Create(string newPath, string existingPath, IntPtr reserved);
 }

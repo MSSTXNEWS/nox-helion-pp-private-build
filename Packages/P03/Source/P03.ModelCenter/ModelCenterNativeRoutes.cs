@@ -216,6 +216,7 @@ public sealed class ModelCenterNativeRoutes : IDisposable
             throw new SafetensorsImportHold(actual.Error??"P03_MERGED_IMPORT_NOT_COMPLETED");
         ModelLocalAttestation.RequireRegularUnlinkedFile(actual.ReceiptPath);
         await using var input=new FileStream(actual.ReceiptPath,FileMode.Open,FileAccess.Read,FileShare.Read,8192,true);
+        ModelLocalAttestation.RequireSingleLinkFileHandle(input.SafeFileHandle);
         if(input.Length>ModelLocalAttestation.MaxReceiptBytes)throw new InvalidDataException("P03_IMPORT_RECEIPT_TOO_LARGE");
         var receipt=await JsonSerializer.DeserializeAsync<ModelInstallReceipt>(input,
             new JsonSerializerOptions(JsonSerializerDefaults.Web),ct);

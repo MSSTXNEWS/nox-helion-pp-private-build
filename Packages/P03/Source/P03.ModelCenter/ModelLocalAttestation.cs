@@ -2,6 +2,8 @@ using System.Net.Http;
 using System.Text.Json;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Runtime.InteropServices;
+using Microsoft.Win32.SafeHandles;
 
 namespace Nox.P03;
 
@@ -17,6 +19,36 @@ public static class ModelLocalAttestation
     public const long MaxTagsResponseBytes = 8 * 1024 * 1024;
     public const long MaxReceiptBytes = 128 * 1024;
     private static readonly Regex HexSha = new("^[0-9a-fA-F]{64}$", RegexOptions.Compiled);
+    // NTFS hardlinks are not reparse points: always attest the OPEN handle.
+    [StructLayout(LayoutKind.Sequential)]
+    private struct OwnerFileTime { public uint Low; public uint High; }
+    [StructLayout(LayoutKind.Sequential)]
+    private struct OwnerFileIdentity
+    {
+        public uint Attributes;
+        public OwnerFileTime CreationTime;
+        public OwnerFileTime LastAccessTime;
+        public OwnerFileTime LastWriteTime;
+        public uint VolumeSerialNumber;
+        public uint FileSizeHigh;
+        public uint FileSizeLow;
+        public uint NumberOfLinks;
+        public uint FileIndexHigh;
+        public uint FileIndexLow;
+    }
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GetFileInformationByHandle(
+        SafeFileHandle file, out OwnerFileIdentity identity);
+
+    public static void RequireSingleLinkFileHandle(SafeFileHandle file)
+    {
+        if (!OperatingSystem.IsWindows()) return;
+        if (file.IsInvalid || !GetFileInformationByHandle(file, out var identity))
+            throw new InvalidDataException("P03_MODEL_FILE_IDENTITY_UNAVAILABLE_HOLD");
+        if (identity.NumberOfLinks != 1)
+            throw new InvalidDataException("P03_MODEL_FOREIGN_HARDLINK_HOLD");
+    }
 
     public static void RequireNoExistingReparsePoint(string path)
     {
@@ -43,6 +75,13 @@ public static class ModelLocalAttestation
         if (!File.Exists(path)) throw new FileNotFoundException("Model GGUF file not found.", path);
         if ((File.GetAttributes(path) & FileAttributes.Directory) != 0)
             throw new InvalidDataException("MODEL_PATH_IS_NOT_A_FILE");
+        // Preflight: later consumers must repeat on their opened data handle.
+        if (OperatingSystem.IsWindows())
+        {
+            using var input = new FileStream(path, FileMode.Open, FileAccess.Read,
+                FileShare.Read, 1, FileOptions.None);
+            RequireSingleLinkFileHandle(input.SafeFileHandle);
+        }
     }
 
     public static void RequirePrivateUnlinkedDirectory(string path)
@@ -223,6 +262,7 @@ public static class ModelLocalAttestation
         RequireRegularUnlinkedFile(path);
         await using var file = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read,
             8192, FileOptions.Asynchronous | FileOptions.SequentialScan);
+        RequireSingleLinkFileHandle(file.SafeFileHandle);
         if (file.Length < 2 || file.Length > MaxReceiptBytes)
             throw new InvalidDataException("INSTALL_RECEIPT_SIZE_INVALID");
         var stored = await JsonSerializer.DeserializeAsync<ModelInstallReceipt>(file,

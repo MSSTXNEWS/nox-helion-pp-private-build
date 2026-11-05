@@ -564,17 +564,17 @@ $p02StageSources=@(
   @{relative='coordination/e06/NoXAutostart.cs';dest='Integration/NoXAutostart.cs';blob='f8c802789a28d153ade05cde188afc0fcbcfdaad'},
   @{relative='Packages/P03/Source/P03.ModelCenter/ModelArtifactReviewRegistry.cs';dest='Integration/P03/ModelArtifactReviewRegistry.cs';blob='06795f2e4c6688e4e2f12897182dae3f571e17d6'},
   @{relative='Packages/P03/Source/P03.ModelCenter/ModelCatalog.cs';dest='Integration/P03/ModelCatalog.cs';blob='e565efa8ad53ed811f0d77158eec55b1f078ddb8'},
-  @{relative='Packages/P03/Source/P03.ModelCenter/ModelCenterNativeRoutes.cs';dest='Integration/P03/ModelCenterNativeRoutes.cs';blob='07b137096122e1df9869d75386bf657d154214a1'},
+  @{relative='Packages/P03/Source/P03.ModelCenter/ModelCenterNativeRoutes.cs';dest='Integration/P03/ModelCenterNativeRoutes.cs';blob='7446d05efa29710894a8f5e5bb1f4c42a5ec2c09'},
   @{relative='Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueStore.cs';dest='Integration/P03/ModelDownloadQueueStore.cs';blob='6046384a1a619869618a64572cae0f95787468d8'},
   @{relative='Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueWorker.cs';dest='Integration/P03/ModelDownloadQueueWorker.cs';blob='6dd5ceec428ec71a426d785304001a2d269a666f'},
   @{relative='Packages/P03/Source/P03.ModelCenter/ModelLifecycleEvents.cs';dest='Integration/P03/ModelLifecycleEvents.cs';blob='bfc2030334f78e78b35f510fc7f58ad19d1e75e4'},
-  @{relative='Packages/P03/Source/P03.ModelCenter/ModelLocalAttestation.cs';dest='Integration/P03/ModelLocalAttestation.cs';blob='e55bd2ec0e13a50ef026ae4055fe71b5f7a4e4ed'},
+  @{relative='Packages/P03/Source/P03.ModelCenter/ModelLocalAttestation.cs';dest='Integration/P03/ModelLocalAttestation.cs';blob='1e3df5aa727c10cf87764fc075e20ca47c942c27'},
   @{relative='Packages/P03/Source/P03.ModelCenter/ModelQuickActions.cs';dest='Integration/P03/ModelQuickActions.cs';blob='66d6f05c8f2deea7fab110f4c024d762d71af390'},
   @{relative='Packages/P03/Source/P03.ModelCenter/ModelSafetensorsImport.cs';dest='Integration/P03/ModelSafetensorsImport.cs';blob='6364e3ae1a525b6ec836be98eea7bcd5f268afc0'},
   @{relative='Packages/P03/Source/P03.ModelCenter/ModelTagReviewLeads.cs';dest='Integration/P03/ModelTagReviewLeads.cs';blob='439aa3cf82e20a77d12755c9ac4a7c5ef04c2f79'},
   @{relative='Packages/P03/Source/P03.ModelCenter/ModelWowBridgeContract.cs';dest='Integration/P03/ModelWowBridgeContract.cs';blob='0c8fa6b409e64ac5a6636a4ae2f46b36f79f1ced'},
   @{relative='Packages/P03/Source/P03.ModelCenter/OllamaLoopbackHttpClientFactory.cs';dest='Integration/P03/OllamaLoopbackHttpClientFactory.cs';blob='9785e258c563027567e83b76d22ee66bf350f064'},
-  @{relative='Packages/P03/Source/P03.ModelCenter/OllamaModelAdapter.cs';dest='Integration/P03/OllamaModelAdapter.cs';blob='ed4d55e053fd88f6e69911889981b566d3701661'},
+  @{relative='Packages/P03/Source/P03.ModelCenter/OllamaModelAdapter.cs';dest='Integration/P03/OllamaModelAdapter.cs';blob='704262b0b81bfaf81a0a17de7fd8c8714a9febb3'},
   @{relative='Packages/P03/Source/P03.ModelCenter/WindowsHardwareFacts.cs';dest='Integration/P03/WindowsHardwareFacts.cs';blob='401f2cf9b318575542fce77db6571dd3ce2ee8f4'}
 )
 # Validate every donor BEFORE copying any source into the staged project.
