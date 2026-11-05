@@ -438,6 +438,27 @@ public partial class MainWindow
     }
 
     // Original legacy HOME bypasses the newer bridge reply guard.
+    // A transport ACK cannot override an original owner security/provider denial.
+    // This legacy HOME path must fail closed like the native WebView2 bridge.
+    private static bool LegacyOwnerStatusDenied(string? status)
+    {
+        if (string.IsNullOrWhiteSpace(status)) return true;
+        var value = status.Trim();
+        foreach (var suffix in new[] {
+            "_HOLD", "_DENIED", "_REQUIRED", "_MISMATCH", "_UNAVAILABLE",
+            "_OFFLINE", "_FAILED", "_ERROR", "_BLOCKED", "_REFUSED"
+        }) {
+            if (value.EndsWith(suffix,StringComparison.OrdinalIgnoreCase)) return true;
+        }
+        foreach (var exact in new[] {
+            "HOLD", "DENIED", "OFFLINE", "FAILED", "ERROR",
+            "CONSENT_PENDING", "NOT_AUTHORIZED", "AWAITING_CONSENT",
+            "REJECTED", "CANCELLED"
+        }) {
+            if (string.Equals(value,exact,StringComparison.OrdinalIgnoreCase)) return true;
+        }
+        return false;
+    }
     private static bool LegacyOwnerDenial(JsonElement? receipt, int depth=0)
     {
         if (receipt is not JsonElement value || value.ValueKind!=JsonValueKind.Object) return false;
@@ -450,12 +471,9 @@ public partial class MainWindow
             if (p.Name is "state" or "status") {
                 if (p.Value.ValueKind!=JsonValueKind.String) return true;
                 var state=p.Value.GetString();
-                if (state is null || state.EndsWith("_HOLD",StringComparison.OrdinalIgnoreCase) ||
-                    state.EndsWith("_DENIED",StringComparison.OrdinalIgnoreCase) ||
-                    new[]{"HOLD","DENIED","OFFLINE","FAILED","ERROR","CONSENT_REQUIRED"}.Contains(state,StringComparer.OrdinalIgnoreCase))
-                    return true;
+                if (LegacyOwnerStatusDenied(state)) return true;
             }
-            if (p.Name is "result" or "receipt" or "nativeResult" or "owner" &&
+            if (p.Name is "result" or "receipt" or "nativeResult" or "owner" or "ownerResult" &&
                 LegacyOwnerDenial(p.Value,depth+1)) return true;
         }
         return false;

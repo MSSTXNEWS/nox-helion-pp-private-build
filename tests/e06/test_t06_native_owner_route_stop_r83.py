@@ -99,6 +99,24 @@ class OriginalNativeOwnerMenuStopR83(unittest.TestCase):
         self.assertIn('_existingPipe.RequestAsync("chat.stop", new { }', self.bridge)
         self.assertIn('NativeSidMatches() && _nativeAcl(_ownerWindowsSid, "chat.stop")', self.bridge)
 
+    def test_legacy_home_owner_security_denials_never_complete(self):
+        # SOURCE_ONLY: the actual C# WPF application and installed E07 are separate.
+        source = self.owner.split("private static bool LegacyOwnerStatusDenied(", 1)[1].split(
+            "private async Task DispatchLegacyNativeAsync(", 1)[0]
+        for suffix in ("_HOLD", "_DENIED", "_REQUIRED", "_MISMATCH",
+                       "_UNAVAILABLE", "_OFFLINE", "_FAILED", "_ERROR",
+                       "_BLOCKED", "_REFUSED"):
+            with self.subTest(suffix=suffix):
+                self.assertIn('"' + suffix + '"', source)
+        for state in ("CONSENT_PENDING", "NOT_AUTHORIZED", "AWAITING_CONSENT",
+                      "REJECTED", "CANCELLED"):
+            with self.subTest(state=state):
+                self.assertIn('"' + state + '"', source)
+        self.assertIn("LegacyOwnerStatusDenied(state)", source)
+        self.assertIn('or "ownerResult" &&', source)
+        self.assertIn("LegacyOwnerDenial(p.Value,depth+1)", source)
+        self.assertIn("!result.Accepted || !string.IsNullOrWhiteSpace(result.ErrorCode)", self.owner)
+
     def test_original_builder_and_compiler_pins_are_coherent(self):
         for filename, sha in ((OWNER, git_blob(OWNER)), (BRIDGE, git_blob(BRIDGE))):
             with self.subTest(path=filename.name):
