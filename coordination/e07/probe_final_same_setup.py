@@ -63,7 +63,7 @@ def _run_ps(source: str, *, timeout: int=90, phase: str="UNKNOWN", env: dict|Non
                                          dir=os.environ["RUNNER_TEMP"]) as temp_root:
             script_path=Path(temp_root)/"independent-uia.ps1"
             # Windows PowerShell 5.1 requires the BOM for UTF-8 Cyrillic UIA.
-            with script_path.open("x",encoding="utf-8-sig",newline="\\n") as stream:
+            with script_path.open("x",encoding="utf-8-sig",newline="\n") as stream:
                 stream.write(source)
             p=subprocess.run(
                 ["powershell.exe","-NoProfile","-NonInteractive",
