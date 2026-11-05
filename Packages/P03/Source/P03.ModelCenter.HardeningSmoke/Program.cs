@@ -717,7 +717,7 @@ sealed class D04RightsGgufHandler(string modelTag, string localDigest) : HttpMes
             path is not null && path.StartsWith("/api/blobs/sha256:", StringComparison.Ordinal))
             body = "";
         else if (request.Method == HttpMethod.Post && path == "/api/create")
-            body = "{\\\"status\\\":\\\"success\\\"}\\n";
+            body = JsonSerializer.Serialize(new { status = "success" }) + Environment.NewLine;
         else if (request.Method == HttpMethod.Get && path == "/api/tags")
             body = JsonSerializer.Serialize(new { models = new[] { new { name = modelTag, digest = localDigest } } });
         else throw new InvalidOperationException("D04 fixture refuses unexpected Ollama request");
