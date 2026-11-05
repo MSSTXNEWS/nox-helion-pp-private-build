@@ -544,6 +544,25 @@ try
         "F09B persisted queue readback preserves rights evidence");
     Assert(persistedClaim.State == ModelJobState.Running && persistedClaim.Attempts == 1,
         "F11 exactly one attempt persisted");
+    async Task RequireActiveRestoreHoldAsync(string label)
+    {
+        var queueFile = Path.Combine(atomicRoot, "p03-model-download-queue.json");
+        var backupFile = queueFile + ".bak";
+        var currentBefore = await File.ReadAllBytesAsync(queueFile);
+        var backupBefore = await File.ReadAllBytesAsync(backupFile);
+        var held = false;
+        try { await right.RestoreBackupAsync(explicitlyConfirmed: true); }
+        catch (InvalidOperationException ex)
+            when (ex.Message == "P03_QUEUE_ACTIVE_RESTORE_HOLD") { held = true; }
+        Assert(held &&
+            currentBefore.SequenceEqual(await File.ReadAllBytesAsync(queueFile)) &&
+            backupBefore.SequenceEqual(await File.ReadAllBytesAsync(backupFile)) &&
+            !Directory.EnumerateFiles(atomicRoot,
+                "p03-model-download-queue.json.pre_restore.*").Any(),
+            label);
+    }
+    await RequireActiveRestoreHoldAsync(
+        "B04R1 confirmed rollback cannot replace a Running owner's queue");
     var toCancel = await right.EnqueueVerifiedPullAsync(approved with {
         ExactTag = "tinyllama:test-cancel", ImmutableRevision = "sha256:" + new string('b', 64),
         ExpectedManifestDigestSha256 = new string('b', 64) }, true);
@@ -553,6 +572,8 @@ try
     Assert(await right.RequestCancelAsync(ticket.Id), "F14 remote STOP accepted");
     Assert((await left.ReadAsync()).Single(j => j.Id == ticket.Id).State ==
         ModelJobState.Cancelling, "F15 stop state visible to another NOX window");
+    await RequireActiveRestoreHoldAsync(
+        "B04R2 confirmed rollback cannot erase a durable active STOP");
     Assert(await left.RequestCancelAsync(ticket.Id), "F16 second STOP is idempotent");
     Assert(await right.TryStartQueuedAsync(ticket.Id) is null,
         "F17 remote STOP cannot restart an active job");

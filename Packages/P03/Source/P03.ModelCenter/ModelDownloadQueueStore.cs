@@ -494,6 +494,12 @@ public sealed class ModelDownloadQueueStore
             ModelLocalAttestation.RequireNoExistingReparsePoint(backup);
             ModelLocalAttestation.RequireNoExistingReparsePoint(_path);
             if (!File.Exists(backup)) throw new FileNotFoundException("No queue backup exists.", backup);
+            // Explicit rollback never replaces a live owner's transfer or erases
+            // an acknowledged STOP in another NOX window. The cross-process
+            // queue lease holds states stable through the restored publication.
+            var liveJobs = await ReadCoreAsync(ct);
+            if (liveJobs.Any(j => j.State is ModelJobState.Running or ModelJobState.Cancelling))
+                throw new InvalidOperationException("P03_QUEUE_ACTIVE_RESTORE_HOLD");
             byte[] bytes;
             await using (var backupInput = new FileStream(backup, FileMode.Open,
                 FileAccess.Read, FileShare.Read, 65536, FileOptions.Asynchronous))
