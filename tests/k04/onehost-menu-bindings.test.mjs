@@ -182,6 +182,35 @@ test('D06 SETTINGS WPF owner write requires a fresh native HKCU readback',async(
  assert.throws(()=>createAutostartOwnerFlow(null),/NATIVE_OWNER_REQUIRED/);
 });
 
+test('D06 SETTINGS owner flow rejects unverified native HKCU reads before returning',async()=>{
+ const receipt=(result,opts={})=>({routeId:'system.autostart',state:'COMPLETED',result,...opts});
+ const mk=response=>createAutostartOwnerFlow(async(route,payload)=>{
+   assert.equal(route,'system.autostart');assert.deepEqual(payload,{});return response;
+ });
+ const read=receipt({enabled:false,readOnly:true});
+ assert.equal((await mk(read).request({})).result.enabled,false);
+ for(const invalid of [
+   receipt({enabled:false,readOnly:false}),
+   receipt({enabled:false}),
+   receipt({enabled:false,readOnly:'true'}),
+   receipt({enabled:1,readOnly:true}),
+   receipt({enabled:false,readOnly:true,status:'QUEUED'}),
+   receipt({enabled:false,readOnly:true,ownerConsent:false}),
+   receipt({enabled:false,readOnly:true},{errorCode:'SID_MISMATCH'}),
+   {...read,state:'PENDING'},
+   {...read,routeId:'chat.history'},
+ ])await assert.rejects(mk(invalid).request({}),/NOX_AUTOSTART_READ_UNVERIFIED/);
+ // Write acceptance continues to require a second independent read-only proof.
+ const calls=[];
+ const write=createAutostartOwnerFlow(async(route,payload)=>{
+   calls.push(payload);return calls.length===1
+     ?receipt({enabled:true,readOnly:false})
+     :receipt({enabled:true,readOnly:true});
+ });
+ assert.equal((await write.request({enabled:true})).result.enabled,true);
+ assert.deepEqual(calls,[{enabled:true},{}]);
+});
+
 test('D06 SETTINGS UIA original-node / unique owner-route identity: not native consent PASS',()=>{
   const issued=new WeakSet();let nodes=[];
   const doc={querySelectorAll:sel=>nodes.filter(n=>'[id="'+n.id+'"]'===sel),

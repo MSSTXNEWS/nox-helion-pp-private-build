@@ -286,7 +286,13 @@ export function createAutostartOwnerFlow(nativeRequest){
           throw Error('NOX_AUTOSTART_BOOLEAN_REQUIRED');
         const write=keys.length===1;
         const reply=await nativeRequest('system.autostart',payload);
-        if(!write)return reply;
+        if(!write){
+          // A native read must independently attest HKCU state. Never return
+          // a transport/progress or write-shaped receipt as verified SETTINGS.
+          if(!nativeAutostartPersistenceAck(reply,null))
+            throw Error('NOX_AUTOSTART_READ_UNVERIFIED');
+          return reply;
+        }
         // Transport COMPLETED is not an independent Windows Registry readback.
         // Keep the existing WPF owner's SETTINGS lock through a fresh read-only
         // native route invocation; denied, stale, or mismatched results fail closed.
