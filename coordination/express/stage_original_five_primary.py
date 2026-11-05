@@ -47,11 +47,11 @@ html body #nox-express-primary{bottom:6px;left:calc(50% + 104px);width:min(650px
 @media(max-width:550px){#nox-express-primary [data-nox-check="A1"]{grid-column:1/-1;min-height:30px;width:100%}}
 </style>
 <nav id="nox-express-primary" aria-label="NOX HELION EXPRESS — основные действия">
-<button type="button" data-nox-primary="CHAT" aria-label="CHAT">CHAT</button>
-<button type="button" data-nox-primary="INSTALL" aria-label="INSTALL">INSTALL</button>
-<button type="button" data-nox-primary="MODELS" aria-label="MODELS">MODELS</button>
-<button type="button" data-nox-primary="LEARN" aria-label="LEARN">LEARN</button>
-<button type="button" data-nox-primary="SETTINGS" aria-label="SETTINGS">SETTINGS</button>
+<button type="button" id="nox-express-primary-chat" data-nox-primary="CHAT" aria-label="CHAT">CHAT</button>
+<button type="button" id="nox-express-primary-install" data-nox-primary="INSTALL" aria-label="INSTALL">INSTALL</button>
+<button type="button" id="nox-express-primary-models" data-nox-primary="MODELS" aria-label="MODELS">MODELS</button>
+<button type="button" id="nox-express-primary-learn" data-nox-primary="LEARN" aria-label="LEARN">LEARN</button>
+<button type="button" id="nox-express-primary-settings" data-nox-primary="SETTINGS" aria-label="SETTINGS">SETTINGS</button>
 <button type="button" data-nox-check="A1" aria-label="ПРОВЕРИТЬ A1">A1 · СТАТУС</button>
 <span data-nox-state role="status" aria-live="polite"></span>
 </nav>
@@ -139,20 +139,30 @@ function findOriginalControl(name){
  return button.tagName==='BUTTON'&&button.isConnected&&!button.disabled&&
         !nav.contains(button)?button:null;
 }
+// This is the immutable source-locked five-action HOME dock, not a name-based clone.
+// Stable HTML ids aid WebView2 UIA; reordering, replacing or duplicating a node HOLDS.
+const originalPrimaryButtons=Array.from(nav.querySelectorAll(':scope > button[data-nox-primary]'));
+function verifiedOriginalPrimaryDock(){
+ const names=['CHAT','INSTALL','MODELS','LEARN','SETTINGS'];
+ const live=nav.querySelectorAll(':scope > button[data-nox-primary]');
+ return live.length===names.length&&names.every((name,i)=>{
+  const button=live[i],id='nox-express-primary-'+name.toLowerCase();
+  return button===originalPrimaryButtons[i]&&button.tagName==='BUTTON'&&
+    button.getAttribute('id')===id&&
+    button.getAttribute('data-nox-primary')===name&&
+    document.querySelectorAll('[id="'+id+'"]').length===1&&
+    button.isConnected&&!button.disabled;
+ });
+}
 nav.addEventListener('click',event=>{
  const target=event.target.closest('button[data-nox-primary]');
  if(!target||!nav.contains(target)||!event.isTrusted)return;
  // Refuse forged, reordered, duplicated or disabled dock controls before
  // delegating a native owner operation. Original five routes are unchanged.
- const expectedPrimaries=['CHAT','INSTALL','MODELS','LEARN','SETTINGS'];
- const primaryButtons=nav.querySelectorAll(':scope > button[data-nox-primary]');
- if(primaryButtons.length!==expectedPrimaries.length ||
-    expectedPrimaries.some((name,i)=>primaryButtons[i].tagName!=='BUTTON' ||
-      primaryButtons[i].getAttribute('data-nox-primary')!==name ||
-      !primaryButtons[i].isConnected || primaryButtons[i].disabled)){
+ if(!verifiedOriginalPrimaryDock()){
    state.textContent='EXPRESS: состав кнопок изменён · HOLD';return;
  }
- if(!Array.prototype.includes.call(primaryButtons,target) ||
+ if(!Array.prototype.includes.call(originalPrimaryButtons,target) ||
     target.getClientRects().length===0){
    state.textContent='EXPRESS: исходная кнопка недоступна · HOLD';return;
  }

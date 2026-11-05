@@ -83,6 +83,18 @@ class PhysicalVisualFailureStages(unittest.TestCase):
         source=TARGET.read_text(encoding="utf-8")
         self.assertIn('"adaptive_failure_diagnostics":resize_diagnostics',source)
 
+    def test_original_home_five_primary_ids_and_dom_identity_are_guarded(self):
+        source=(ROOT / "coordination/express/stage_original_five_primary.py").read_text(encoding="utf-8")
+        for name in ("CHAT","INSTALL","MODELS","LEARN","SETTINGS"):
+            with self.subTest(name=name):
+                marker='id="nox-express-primary-'+name.lower()+'" data-nox-primary="'+name+'"'
+                self.assertEqual(source.count(marker),1)
+        self.assertIn("function verifiedOriginalPrimaryDock(){",source)
+        self.assertIn("button===originalPrimaryButtons[i]",source)
+        self.assertIn("document.querySelectorAll(",source)
+        self.assertIn("if(!verifiedOriginalPrimaryDock()){",source)
+        self.assertNotIn("Array.prototype.includes.call(primaryButtons,target)",source)
+
     def test_release_gate_stays_strict(self):
         gate = (ROOT / "coordination/e07/independent_setup_e07.py").read_text(
             encoding="utf-8")
