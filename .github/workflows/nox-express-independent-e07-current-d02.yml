@@ -158,6 +158,18 @@ jobs:
           github-token: ${{ github.token }}
           name: ${{ inputs.artifact_name }}
           path: input-verified-current-d02
+      - name: B06 lock exact E06 producer receipts before costly provider downloads
+        shell: pwsh
+        env:
+          E07_SOURCE_SHA: ${{ inputs.source_sha }}
+          E07_SETUP_SHA: ${{ inputs.setup_sha256 }}
+          E07_SETUP_BYTES: ${{ inputs.setup_bytes }}
+          E07_BUILD_ID: ${{ inputs.build_id }}
+          E07_OWNED_COUNT: ${{ inputs.owned_count }}
+        run: |
+          $ErrorActionPreference='Stop'
+          python -B coordination/e07/preflight_e07_producer.py --artifact-dir input-verified-current-d02
+          if ($LASTEXITCODE -ne 0) { throw 'E07_PRODUCER_PREPROVISION_IDENTITY_HOLD' }
       - name: Download prior SHA-pinned Authenticode-verified official Ollama x64 bytes
         uses: actions/download-artifact@v4
         with:
@@ -251,5 +263,5 @@ jobs:
         if: always()
         shell: pwsh
         run: |
-          if ('${{ steps.test.outcome }}' -ne 'success') { throw 'E07_INDEPENDENT_PHYSICAL_HOLD_NOT_RELEASE' }
+          if ('${{ steps.provider.outcome }}' -ne 'success' -or '${{ steps.test.outcome }}' -ne 'success') { throw 'E07_INDEPENDENT_PHYSICAL_HOLD_NOT_RELEASE' }
           Write-Host 'E07_INDEPENDENT_ACCEPTANCE_PASS_ON_VERIFIED_SETUP_ONLY'
