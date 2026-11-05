@@ -89,7 +89,12 @@ class OriginalButtonRoutes(unittest.TestCase):
         self.assertIn('original.click();', js)
         self.assertIn("invokeMatches[0].click();", js)
         self.assertIn("LEARN:['control','button#training-diagnostic','button#training-diagnostic']", js)
-        self.assertIn("INSTALL:['home','button#pc-install','button#pc-install']", js)
+        self.assertIn("INSTALL:['control','button#pc-install','button#pc-install']", js)
+        self.assertNotIn("INSTALL:['home','button#pc-install','button#pc-install']", js)
+        # Source-locked original R11 HOME has pc-install in CONTROL, not HOME.
+        raw=self.home.decode('utf-8-sig')
+        self.assertLess(raw.index('id="control"'),raw.index('id="pc-install"'))
+        self.assertIn("['pc-install','installApp']",raw)
         self.assertNotIn("INSTALL:['home','button#install-app','button#pc-install']", js)
         self.assertIn('invokeMatches[0]!==target', js)
         self.assertIn('document.activeElement!==invokeMatches[0]', js)

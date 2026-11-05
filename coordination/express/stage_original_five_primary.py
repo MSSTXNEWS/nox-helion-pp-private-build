@@ -167,7 +167,7 @@ nav.addEventListener('click',event=>{
  // navigation button was clicked. The user still chooses the original action
  // inside its own panel, under existing native ACL and consent.
  const destinations={
-   INSTALL:['home','button#pc-install','button#pc-install'],
+   INSTALL:['control','button#pc-install','button#pc-install'],
    MODELS:['control','button#model-center','button#model-center'],
    // Top-level LEARN performs the original bounded training environment
    // diagnostic. Actual QLoRA start remains an explicit in-panel action with
