@@ -228,8 +228,25 @@ class ExistingP04Background:
             raise ForgeHold("TRAIN_CHECKPOINT_SHA_MISMATCH")
         if receipt.get("adapter_sha256") != self.trainer.sha256_tree(out / "adapter"):
             raise ForgeHold("TRAIN_ADAPTER_SHA_MISMATCH")
-        training = receipt.get("training", {})
-        if type(training.get("global_step")) is not int or training["global_step"] < 1:
+        # Original QLoRA receipts are not model-policy grants. Recheck the
+        # owner-approved job profile, steps and current dataset consent before
+        # any PAUSED/COMPLETED result can be read back as trusted S03 evidence.
+        training = receipt.get("training")
+        manifest = self.trainer.read_object(Path(self._trusted_file(job.dataset_manifest)))
+        if (type(data) is not dict or type(training) is not dict
+                or training.get("profile") != job.profile
+                or type(training.get("max_steps")) is not int or training["max_steps"] != job.steps
+                or type(manifest) is not dict
+                or manifest.get("rights_status") != "APPROVED"
+                or manifest.get("consent_status") != "GRANTED"
+                or any(data.get(receipt_key) != manifest.get(manifest_key)
+                       for receipt_key, manifest_key in (
+                           ("id", "dataset_id"), ("revision", "dataset_revision"),
+                           ("license_id", "license_id"),
+                           ("owner_approval_id", "owner_approval_id"))):
+            raise ForgeHold("TRAIN_RECEIPT_OWNER_POLICY_DRIFT_HOLD")
+        if (type(training.get("global_step")) is not int or training["global_step"] < 1
+                or training["global_step"] > job.steps):
             raise ForgeHold("TRAIN_STEP_EVIDENCE_MISSING")
         if receipt["status"] == "COMPLETED" and (training.get("evaluation_status") != "VALID"
                 or any(self.trainer.finite_metric(training.get(k)) is None for k in
