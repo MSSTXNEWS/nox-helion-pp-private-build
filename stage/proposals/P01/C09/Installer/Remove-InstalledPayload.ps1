@@ -145,6 +145,20 @@ foreach ($entry in $checked) {
   Remove-Item -LiteralPath $entry.Full -Force -ErrorAction Stop
   $removed++
 }
+// D03 · A successful NSIS remover exit must not be based solely on
+// Remove-Item returning without an exception. Recheck every manifest-owned
+// leaf BEFORE reporting PASS. A recreated/locked/reparse leaf is a HOLD;
+// read failures other than an exact missing-item exception are also a HOLD.
+// Do not modify retained user files or the NSIS-owned metadata here.
+foreach ($entry in $checked) {
+  Assert-DirectoryChain ([IO.Path]::GetDirectoryName($entry.Full)) $root
+  try {
+    $residual = Get-Item -LiteralPath $entry.Full -Force -ErrorAction Stop
+  } catch [System.Management.Automation.ItemNotFoundException] {
+    continue
+  }
+  throw "P01_UNINSTALL_POST_REMOVE_RESIDUE:$($entry.Relative)"
+}
 foreach ($dir in @($directories | Sort-Object Length -Descending)) {
   try { if ((Get-ChildItem -LiteralPath $dir -Force -ErrorAction Stop | Measure-Object).Count -eq 0) { Remove-Item -LiteralPath $dir -Force } } catch { }
 }

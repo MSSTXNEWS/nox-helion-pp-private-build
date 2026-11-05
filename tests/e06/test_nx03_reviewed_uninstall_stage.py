@@ -78,6 +78,26 @@ class NX03ReviewedRemove(unittest.TestCase):
             stage.stage_reviewed_remove(self.owner, self.copy)
         self.assertEqual(self.owner.read_bytes(), altered)
         self.assertFalse(staged["release_accepted"])
+    def test_postremove_real_exit_requires_absent_owned_files(self):
+        # Source-only contract. Installed NSIS/PowerShell must separately run.
+        source = self.reviewed.decode("utf-8-sig")
+        expected = "P01_UNINSTALL_POST_REMOVE_RESIDUE"
+        self.assertEqual(source.count(expected), 1)
+        self.assertIn("catch [System.Management.Automation.ItemNotFoundException]", source)
+        self.assertIn("Get-Item -LiteralPath $entry.Full -Force -ErrorAction Stop", source)
+        phase3 = source.index("# PHASE 3")
+        delete = source.index("Remove-Item -LiteralPath $entry.Full -Force -ErrorAction Stop", phase3)
+        check = source.index("foreach ($entry in $checked) {\n  Assert-DirectoryChain", delete)
+        passed = source.index('Write-Output "P01_UNINSTALL_PAYLOAD_PASS', check)
+        self.assertLess(delete, check)
+        self.assertLess(check, passed)
+        self.assertIn("Assert-DirectoryChain ([IO.Path]::GetDirectoryName($entry.Full)) $root", source)
+        self.assertIn("throw \"P01_UNINSTALL_POST_REMOVE_RESIDUE:$($entry.Relative)\"", source)
+        staged = stage.stage_reviewed_remove(self.owner, self.copy)
+        self.assertTrue(staged["changed"])
+        self.assertIn(expected.encode("ascii"), self.owner.read_bytes())
+        self.assertEqual(self.copy.read_bytes(), self.reviewed)
+
     def test_reviewed_source_git_blob_intact_after_stage(self):
         original_reviewed = self.copy.read_bytes()
         stage.stage_reviewed_remove(self.owner, self.copy)

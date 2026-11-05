@@ -986,8 +986,8 @@ foreach ($candidate in @($rmPath,$rmReviewed,$rmStageHelper)) {
 $rmReviewedBlob=((& $gitTool.Source -C $repoRoot hash-object -- $rmReviewed) | Out-String).Trim().ToLowerInvariant()
 $rmHelperBlob=((& $gitTool.Source -C $repoRoot hash-object -- $rmStageHelper) | Out-String).Trim().ToLowerInvariant()
 if ($LASTEXITCODE -ne 0 -or
-    $rmReviewedBlob -cne 'fef0f6c5dd979cfa7c148169c18f278e7e72685d' -or
-    $rmHelperBlob -cne '2b0ad8c67811f3d2309182327215b32953a9b23e') {
+    $rmReviewedBlob -cne 'fed8e70a122118e2e25c6399701d9e7c26434cfe' -or
+    $rmHelperBlob -cne 'b0107364b70528011a6c2fbcf305556994be573a') {
   throw 'P01_C09_REMOVER_REVIEWED_BLOB_HOLD'
 }
 $rmStageCode=@'
