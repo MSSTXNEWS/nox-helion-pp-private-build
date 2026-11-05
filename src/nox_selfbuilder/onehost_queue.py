@@ -146,6 +146,21 @@ class NativeWorkQueue:
                             or any(c not in '0123456789abcdef' for c in proof)
                             or frozen.get('activation_allowed') is not False):
                         raise NativeQueueHold('S03_FORGE_RESULT_ADMISSION_HOLD')
+            if work.get('kind') == 'FORGE' and state != 'HOLD':
+                # A matching receipt-shaped hash is not proof that the native
+                # GPU/QLoRA worker ever ran. Positive results must follow the
+                # original owner-consented durable S03 CLAIM for this exact
+                # task and permission, never a bare QUEUED job or stale claim.
+                latest_claim = store.conn.execute(
+                    "SELECT metadata FROM audit WHERE item_id=? AND action='NOX_NATIVE_WORK_CLAIM' ORDER BY id DESC LIMIT 1",
+                    (tid,)).fetchone()
+                claim = json.loads(latest_claim[0]) if latest_claim else {}
+                if (work.get('state') != 'RUNNING'
+                        or claim.get('state') != 'RUNNING'
+                        or claim.get('scope') != scope_key(scope)
+                        or claim.get('permission') != permission
+                        or permission not in ('training.start', 'training.resume', 'training.merge')):
+                    raise NativeQueueHold('S03_FORGE_UNCLAIMED_RESULT_HOLD')
             with store.conn:
                 require_live_result_owner()
                 if expected_epoch is None:

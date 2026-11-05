@@ -233,6 +233,7 @@ class ForgeDurableResultAdmissionTests(unittest.TestCase):
         self.assertEqual(self.audit_count(), 0)
 
     def test_forged_or_unbound_training_result_cannot_be_recorded(self):
+        self.claim()
         variants = [
             ('COMPLETED', self.candidate(status='COMPLETED')),
             ('ADAPTER_CANDIDATE_PENDING_E07', self.candidate(run_id='other-run')),
@@ -248,7 +249,29 @@ class ForgeDurableResultAdmissionTests(unittest.TestCase):
                     self.put(state, result)
                 self.assertEqual(self.audit_count(), 0)
 
+    def claim(self, permission='training.start'):
+        # Fixture mirrors the original durable claim, not a UI ACK.
+        self.queue.actor.call(lambda store: self.queue._event(
+            store, self.task_id, 'CLAIM', {
+                'scope': {'tenant': 'local', 'principal': 'owner', 'chat_id': 'chat'},
+                'state': 'RUNNING', 'permission': permission}))
+
+    def test_unclaimed_receipt_shape_cannot_fake_training_result(self):
+        before = self.audit_count()
+        with self.assertRaisesRegex(NativeQueueHold, 'S03_FORGE_UNCLAIMED_RESULT_HOLD'):
+            self.put('ADAPTER_CANDIDATE_PENDING_E07', self.candidate())
+        self.assertEqual(self.audit_count(), before)
+        self.assertEqual(self.queue.get(self.scope, self.task_id)['state'], 'QUEUED')
+
+    def test_other_permission_claim_does_not_authorize_resume_result(self):
+        self.claim('training.start')
+        with self.assertRaisesRegex(NativeQueueHold, 'S03_FORGE_UNCLAIMED_RESULT_HOLD'):
+            self.put('ADAPTER_CANDIDATE_PENDING_E07', self.candidate(),
+                     permission='training.resume')
+        self.assertEqual(self.audit_count(), 0)
+
     def test_exact_owner_p04_receipt_remains_candidate_only(self):
+        self.claim()
         self.assertTrue(self.put('ADAPTER_CANDIDATE_PENDING_E07', self.candidate()))
         row = self.queue.get(self.scope, self.task_id)
         self.assertEqual(row['state'], 'ADAPTER_CANDIDATE_PENDING_E07')
