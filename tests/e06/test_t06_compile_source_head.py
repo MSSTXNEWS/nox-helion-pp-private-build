@@ -164,5 +164,23 @@ class ApprovedRegistryBuildPin(unittest.TestCase):
         self.assertEqual(pins[0], actual, "Active NSIS OneHost builder would reject reviewed P03 source")
 
 
+    def test_approved_p03_hardening_smoke_source_and_size(self):
+        """Original P03 smoke source must not silently drift from reviewed Git bytes."""
+        import json
+        root = MODULE.parents[2]
+        relative = "Packages/P03/Source/P03.ModelCenter.HardeningSmoke/Program.cs"
+        registry = json.loads((root / "coordination/express/P03_PINNED_GIT_BLOBS.json").read_text(encoding="utf-8"))
+        approved = [x for x in registry["approved_overrides"] if x.get("path") == relative]
+        self.assertEqual(len(approved), 1, "P03 hardening source needs one reviewed override")
+        proc = subprocess.run(["git", "-C", str(root), "rev-parse", "HEAD:" + relative],
+                              capture_output=True, text=True, timeout=15)
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertRegex(proc.stdout.strip(), r"^[a-f0-9]{40}$")
+        self.assertEqual(approved[0]["post_git_blob_sha1"], proc.stdout.strip(),
+                         "Approved hardening smoke source Git blob has drifted")
+        self.assertEqual(approved[0]["post_bytes"], (root / relative).stat().st_size,
+                         "Approved hardening smoke source length has drifted")
+
+
 if __name__ == "__main__":
     unittest.main()
