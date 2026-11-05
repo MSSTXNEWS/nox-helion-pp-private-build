@@ -120,6 +120,57 @@ class PostmortemGuards(unittest.TestCase):
         self.assertEqual(self.calls[0][0][1:], self.calls[1][0][1:])
         self.assertEqual(self.calls[1][0][0], str(wow))
 
+    def test_update_backup_firstfail_is_readonly_not_no_loss_acceptance(self):
+        self.failure['reason'] = 'T06_UPDATE_BACKUP_MANIFEST_VERIFY_HOLD'
+        (self.stage / 'payload.sha256.json').unlink()
+        previous = self.local / 'Programs/NOX HELION.__p01_previous'
+        previous.mkdir()
+        expected = b"NOX_G4_UNMANAGED_INSTALL_DATA_NOLOSS\\n"
+        probe = previous / 'nox-g4-unmanaged-123.bin'
+        probe.write_bytes(expected)
+        calls = []
+        def verify(slot, name, frozen_bytes, inode, base):
+            calls.append((slot, name, frozen_bytes, inode, base))
+            return {'status': 'PASS_DIAGNOSTIC_ONLY',
+                    'manifest_files_checked': 101}
+        self.owner.verify_exact_probe_slot = verify
+        report = self.collect()
+        check = report['update_backup_diagnostic']
+        self.assertEqual(check['first_failure'], 'NONE_IN_CURRENT_SNAPSHOT')
+        self.assertFalse(check['pre_update_user_inode_verified'])
+        self.assertFalse(check['release_accepted'])
+        self.assertEqual(report['original_failure'], self.failure['reason'])
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(calls[0][0], previous)
+        self.assertEqual(calls[0][2], expected)
+        self.assertEqual(self.calls, [])  # no PowerShell, Setup or native action
+
+    def test_update_backup_original_owner_failure_stays_visible_and_hold(self):
+        self.failure['reason'] = 'T06_UPDATE_BACKUP_MANIFEST_VERIFY_HOLD'
+        (self.stage / 'payload.sha256.json').unlink()
+        previous = self.local / 'Programs/NOX HELION.__p01_previous'
+        previous.mkdir()
+        (previous / 'nox-g4-unmanaged-123.bin').write_bytes(b"NOX_G4_UNMANAGED_INSTALL_DATA_NOLOSS\\n")
+        self.owner.verify_exact_probe_slot = lambda *args: (
+            (_ for _ in ()).throw(RuntimeError(
+                'T06_EXACT_PROBE_SLOT_OWNED_SHA_HOLD')))
+        proof = self.collect()['update_backup_diagnostic']
+        self.assertEqual(proof['first_failure'],
+                         'T06_EXACT_PROBE_SLOT_OWNED_SHA_HOLD')
+        self.assertFalse(proof['release_accepted'])
+        self.assertFalse(proof['pre_update_user_inode_verified'])
+        self.assertEqual(self.calls, [])
+
+    def test_update_backup_missing_does_not_become_silent_success(self):
+        self.failure['reason'] = 'T06_ORIGINAL_NSIS_UPDATE_BACKUP_HOLD'
+        (self.stage / 'payload.sha256.json').unlink()
+        self.owner.verify_exact_probe_slot = lambda *args: self.fail(
+            'owner should not execute without an existing backup')
+        proof = self.collect()['update_backup_diagnostic']
+        self.assertEqual(proof['first_failure'], 'BACKUP_NOT_PRESENT')
+        self.assertFalse(proof['release_accepted'])
+        self.assertEqual(self.calls, [])
+
     def test_workflow_keeps_original_failure_and_collects_evidence(self):
         workflow = (ROOT / '.github/workflows/nox-v16-e06-d02-onehost.yml').read_text()
         start = workflow.index('      - name: Read-only NSIS failure evidence')

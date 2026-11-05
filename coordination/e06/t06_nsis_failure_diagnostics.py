@@ -9,6 +9,7 @@ import importlib.util
 import json
 import os
 import re
+import stat
 from pathlib import Path
 import subprocess
 import sys
@@ -53,7 +54,13 @@ def collect(owner, *, platform_name=None, env=None):
                   'T06_NSIS_DIAGNOSTICS_DISPOSABLE_WINDOWS_ONLY')
     failure_path = owner.OUTPUT / 'T06_INSTALLED_SMOKE.json'
     failure = owner.strict_receipt(failure_path, 'T06_NSIS_DIAGNOSTIC_RECEIPT_HOLD')
-    owner.require(failure.get('reason') == 'T06_NSIS_SILENT_INSTALL_FAILED' and
+    # This postmortem is also needed when the original NSIS update or its
+    # fail-closed installed-backup verifier failed on a real Windows runner.
+    # Admit ONLY these three original first-fail codes, never general failure.
+    owner.require(failure.get('reason') in (
+                  'T06_NSIS_SILENT_INSTALL_FAILED',
+                  'T06_ORIGINAL_NSIS_UPDATE_BACKUP_HOLD',
+                  'T06_UPDATE_BACKUP_MANIFEST_VERIFY_HOLD') and
                   failure.get('phase') == 'HOLD' and
                   failure.get('release_accepted') is False,
                   'T06_NSIS_DIAGNOSTICS_NO_MATCHING_FAILURE')
@@ -85,6 +92,52 @@ def collect(owner, *, platform_name=None, env=None):
                 report['slots'][label][name] = {
                     'regular': owner.regular(target),
                     'bytes': target.stat().st_size if owner.regular(target) else None}
+    # Real E06 #42119061209/#42120828250 reached an UPDATE backup HOLD.
+    # A missing stage was previously undiagnosable here. Inspect only the
+    # existing CI-owned backup and the EXACT original read-only reviewer. Do
+    # not rebuild, relaunch, fix, remove, accept, or attest pre-update inode.
+    if failure['reason'] in (
+            'T06_ORIGINAL_NSIS_UPDATE_BACKUP_HOLD',
+            'T06_UPDATE_BACKUP_MANIFEST_VERIFY_HOLD'):
+        previous = Path(str(install) + '.__p01_previous')
+        probe = previous / ('nox-g4-unmanaged-' + env['GITHUB_RUN_ID'] + '.bin')
+        owner.require(owner.plain_parents(probe, Path(local.anchor)) and
+                      not probe.is_symlink() and
+                      not getattr(probe, 'is_junction', lambda: False)(),
+                      'T06_NSIS_DIAGNOSTICS_BACKUP_REPARSE_HOLD')
+        snapshot = {
+            'status': 'DIAGNOSTIC_ONLY_NOT_ACCEPTED',
+            'original_reason': failure['reason'],
+            'pre_update_user_inode_verified': False,
+            'release_accepted': False,
+            'first_failure': 'BACKUP_NOT_PRESENT'}
+        report['update_backup_diagnostic'] = snapshot
+        if previous.is_dir():
+            snapshot['first_failure'] = 'USER_PROBE_ABSENT_OR_UNSAFE'
+            if owner.regular(probe):
+                frozen = probe.lstat()
+                if (stat.S_ISREG(frozen.st_mode) and frozen.st_nlink == 1 and
+                        frozen.st_ino != 0):
+                    try:
+                        # An inode read AFTER failure only proves the current
+                        # snapshot, never the frozen pre-update NO-LOSS identity.
+                        observed = owner.verify_exact_probe_slot(
+                            previous, probe.name, b"NOX_G4_UNMANAGED_INSTALL_DATA_NOLOSS\\n",
+                            (frozen.st_dev, frozen.st_ino), local)
+                        snapshot['first_failure'] = 'NONE_IN_CURRENT_SNAPSHOT'
+                        snapshot['manifest_files_checked'] = observed.get(
+                            'manifest_files_checked')
+                    except RuntimeError as error:
+                        reason = str(error)
+                        snapshot['first_failure'] = (
+                            reason if re.fullmatch(
+                                r'T06_EXACT_PROBE_SLOT_[A-Z0-9_]+_HOLD',
+                                reason) else 'OWNER_SNAPSHOT_VERIFY_HOLD')
+                    except (OSError, ValueError):
+                        snapshot['first_failure'] = 'BACKUP_PROBE_READ_HOLD'
+                else:
+                    snapshot['first_failure'] = 'USER_PROBE_INODE_UNSAFE'
+
     # Do not run either a failed app or an arbitrary residual script. Admit the
     # existing reviewer's verifier only if it matches its committed Git bytes.
     verifier_rel = 'stage/proposals/P01/C09/Installer/Verify-Payload.ps1'
