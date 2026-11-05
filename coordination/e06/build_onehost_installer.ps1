@@ -562,7 +562,7 @@ $p02StageSources=@(
   @{relative='coordination/e06/OneHostP02WebView2Bridge.cs';dest='Integration/OneHostP02WebView2Bridge.cs';blob='5fef8c770123c3b2496ca57805c8e0ba0771eff5'},
   @{relative='Packages/P02/worker-chat/SpaceBrowserBoundary.cs';dest='Integration/SpaceBrowserBoundary.cs';blob='4d70c5de450837d07304d91b4fa4c0e049a2be52'},
   @{relative='coordination/e06/NoXAutostart.cs';dest='Integration/NoXAutostart.cs';blob='694e88396e0d5cc95ac7ea12fff96895992987fd'},
-  @{relative='Packages/P03/Source/P03.ModelCenter/ModelArtifactReviewRegistry.cs';dest='Integration/P03/ModelArtifactReviewRegistry.cs';blob='06795f2e4c6688e4e2f12897182dae3f571e17d6'},
+  @{relative='Packages/P03/Source/P03.ModelCenter/ModelArtifactReviewRegistry.cs';dest='Integration/P03/ModelArtifactReviewRegistry.cs';blob='e84da6324f56f1bc4803215a15e9da645fb25119'},
   @{relative='Packages/P03/Source/P03.ModelCenter/ModelCatalog.cs';dest='Integration/P03/ModelCatalog.cs';blob='e565efa8ad53ed811f0d77158eec55b1f078ddb8'},
   @{relative='Packages/P03/Source/P03.ModelCenter/ModelCenterNativeRoutes.cs';dest='Integration/P03/ModelCenterNativeRoutes.cs';blob='7446d05efa29710894a8f5e5bb1f4c42a5ec2c09'},
   @{relative='Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueStore.cs';dest='Integration/P03/ModelDownloadQueueStore.cs';blob='6046384a1a619869618a64572cae0f95787468d8'},

@@ -86,6 +86,40 @@ try {
     await RejectAsyncReceiptHardlink(alias, receipt);
     File.Delete(alias);
   }
+  // Owner-pinned artifact registry and review-template reads must never
+  // consume a foreign NTFS hardlink (even with a matching expected SHA).
+  var registryFile = Path.Combine(root, "reviewed-artifacts.json");
+  var registryText = "{\\"schema\\":\\"NOX-P03-REVIEWED-ARTIFACTS-V1\\",\\"items\\":[]}";
+  await File.WriteAllTextAsync(registryFile, registryText);
+  var registryPin = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
+      Encoding.UTF8.GetBytes(registryText)));
+  Assert(ModelArtifactReviewRegistry.LoadReviewedArtifacts(registryFile, registryPin).Count == 0,
+      "T08F owner-pinned empty registry remains review-required");
+  var templateFile = Path.Combine(root, "review-template.json");
+  await File.WriteAllTextAsync(templateFile, "{\\"items\\":[]}");
+  if (OperatingSystem.IsWindows())
+  {
+    void RequireHardlinkHold(Action action, string label)
+    {
+      try { action(); }
+      catch (InvalidDataException ex) when (ex.Message == "P03_MODEL_FOREIGN_HARDLINK_HOLD")
+      { Assert(true, label); return; }
+      throw new Exception("FAIL " + label + ": missing exact hardlink HOLD");
+    }
+    var registryAlias = Path.Combine(root, "foreign-registry-alias.json");
+    if (!P03HardlinkProbe.Create(registryAlias, registryFile, IntPtr.Zero))
+        throw new InvalidOperationException("P03_REVIEW_REGISTRY_HARDLINK_TEST_SETUP_FAILED");
+    RequireHardlinkHold(
+        () => ModelArtifactReviewRegistry.LoadReviewedArtifacts(registryFile, registryPin),
+        "T08G reviewed registry with foreign hardlink denied on open handle");
+    File.Delete(registryAlias);
+    var templateAlias = Path.Combine(root, "foreign-template-alias.json");
+    if (!P03HardlinkProbe.Create(templateAlias, templateFile, IntPtr.Zero))
+        throw new InvalidOperationException("P03_REVIEW_TEMPLATE_HARDLINK_TEST_SETUP_FAILED");
+    RequireHardlinkHold(() => ModelArtifactReviewRegistry.ReadTemplate(templateFile),
+        "T08H untrusted review template hardlink denied before JSON parsing");
+    File.Delete(templateAlias);
+  }
   await ModelLocalAttestation.VerifyReceiptAsync(receiptFile, receipt, default);
   Assert(true,"T09 install receipt readback");
   try { await ModelLocalAttestation.VerifyReceiptAsync(receiptFile,receipt with { ModelTag="attacker:tag" },default); throw new Exception("FAIL T10"); }

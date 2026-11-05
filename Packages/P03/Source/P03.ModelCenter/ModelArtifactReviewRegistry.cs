@@ -28,8 +28,17 @@ public static class ModelArtifactReviewRegistry
         string.IsNullOrWhiteSpace(uri.Query);
     public static IReadOnlyList<ModelArtifactReviewCandidate> ReadTemplate(string path)
     {
-        using var doc = JsonDocument.Parse(File.ReadAllText(path));
-        if (!doc.RootElement.TryGetProperty("items", out var items) || items.ValueKind != JsonValueKind.Array ||
+        // A review lead is still external input: read a bounded, owner-owned
+        // handle, never File.ReadAllText on an unbounded/reparse/hardlink path.
+        ModelLocalAttestation.RequireRegularUnlinkedFile(path);
+        using var input = new FileStream(path, FileMode.Open, FileAccess.Read,
+            FileShare.Read, 8192, FileOptions.SequentialScan);
+        ModelLocalAttestation.RequireSingleLinkFileHandle(input.SafeFileHandle);
+        if (input.Length < 2 || input.Length > 2 * 1024 * 1024)
+            throw new InvalidDataException("P03_REVIEW_TEMPLATE_SIZE_HOLD");
+        using var doc = JsonDocument.Parse(input);
+        if (doc.RootElement.ValueKind != JsonValueKind.Object ||
+            !doc.RootElement.TryGetProperty("items", out var items) || items.ValueKind != JsonValueKind.Array ||
             items.GetArrayLength() < 15 || items.GetArrayLength() > 250)
             throw new InvalidDataException("REVIEW_TEMPLATE_INVALID");
         var result = new List<ModelArtifactReviewCandidate>();
@@ -54,6 +63,9 @@ public static class ModelArtifactReviewRegistry
             throw new InvalidDataException("P03_NATIVE_REGISTRY_PIN_REQUIRED");
         ModelLocalAttestation.RequireRegularUnlinkedFile(path);
         using var input=new FileStream(path,FileMode.Open,FileAccess.Read,FileShare.Read);
+        // Preflight cannot attest a later open: reject a swapped NTFS hardlink
+        // on the actual registry handle before hashing or parsing any bytes.
+        ModelLocalAttestation.RequireSingleLinkFileHandle(input.SafeFileHandle);
         if (input.Length<2 || input.Length>2*1024*1024)
             throw new InvalidDataException("P03_REGISTRY_SIZE_INVALID");
         using var memory=new MemoryStream(); input.CopyTo(memory);
