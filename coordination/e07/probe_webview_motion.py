@@ -7,6 +7,7 @@ no DOM mutations, simulated media settings, or permission grants occur.
 from __future__ import annotations
 
 import base64
+import binascii
 import json
 import os
 import re
@@ -58,6 +59,26 @@ def select_unique_home_observation(observations: object) -> dict:
     homes = [item for item in observations if item.get("home_active") is True]
     e07.require(len(homes) == 1, "E07_WEBVIEW2_CDP_PAGE_NOT_UNIQUE_HOLD")
     return validate(homes[0])
+
+
+CDP_WIRE_PREFIX = "NOX_E07_CDP_V3:"
+
+
+def decode_observation_wire(stdout: str) -> dict:
+    """Parse a bounded ASCII frame from live CDP, never promote noisy stdout."""
+    e07.require(type(stdout) is str and 0 < len(stdout) <= 16384,
+                "E07_WEBVIEW2_CDP_READONLY_HOLD")
+    wire = stdout.strip()
+    e07.require(re.fullmatch(r"NOX_E07_CDP_V3:[A-Za-z0-9+/]+={0,2}", wire) is not None,
+                "E07_WEBVIEW2_CDP_JSON_HOLD")
+    try:
+        decoded = base64.b64decode(wire[len(CDP_WIRE_PREFIX):], validate=True)
+        if not 0 < len(decoded) <= 8192:
+            raise ValueError("bounded CDP JSON required")
+        observations = json.loads(decoded.decode("utf-8", errors="strict"))
+    except (ValueError, UnicodeError, binascii.Error):
+        raise e07.Hold("E07_WEBVIEW2_CDP_JSON_HOLD") from None
+    return select_unique_home_observation(observations)
 
 
 def probe() -> dict:
@@ -172,7 +193,14 @@ try {
   $cancel.Dispose()
  }
  } # each trusted WebView2 target
- ConvertTo-Json -InputObject @($observations.ToArray()) -Compress -Depth 4
+ # Send one bounded ASCII envelope; PowerShell host stdout codepages must not
+ # corrupt actual read-only CDP media/CSS/WAAPI evidence on Windows.
+ $receiptJson=ConvertTo-Json -InputObject @($observations.ToArray()) -Compress -Depth 6
+ if([string]::IsNullOrWhiteSpace($receiptJson) -or $receiptJson.Length -gt 8192){
+    throw 'CDP_REPLY_TOO_LARGE'
+ }
+ [Console]::Out.WriteLine('NOX_E07_CDP_V3:'+
+    [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($receiptJson)))
 } catch {
  $reason=$_.Exception.Message+''
  $allowed=@('ENDPOINT_UNREACHABLE','PAGE_NOT_UNIQUE','NON_LOOPBACK_CDP',
@@ -199,10 +227,4 @@ try {
         ):
             raise e07.Hold(reason)
         raise e07.Hold("E07_WEBVIEW2_CDP_READONLY_HOLD")
-    e07.require(0 < len(result.stdout) <= 16384,
-                "E07_WEBVIEW2_CDP_READONLY_HOLD")
-    try:
-        observation = json.loads(result.stdout.strip())
-    except (UnicodeError, ValueError):
-        raise e07.Hold("E07_WEBVIEW2_CDP_JSON_HOLD") from None
-    return select_unique_home_observation(observation)
+    return decode_observation_wire(result.stdout)

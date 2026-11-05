@@ -1,4 +1,6 @@
 """Read-only WebView2 physical Reduced Motion receipt cannot be forged."""
+import base64
+import json
 from pathlib import Path
 import importlib.util
 import sys
@@ -94,6 +96,43 @@ class PhysicalWebviewMotion(unittest.TestCase):
         self.assertIn("matchMedia('(prefers-reduced-motion: reduce)')",source)
         self.assertNotIn("Emulation.setEmulatedMedia",source)
         self.assertNotIn("--force-prefers-reduced-motion",source)
+
+
+    def test_ascii_framed_cdp_observation_still_requires_actual_media(self):
+        make_wire = lambda obj: module.CDP_WIRE_PREFIX + base64.b64encode(
+            json.dumps([obj], separators=(",", ":")).encode("utf-8")
+        ).decode("ascii")
+        self.assertEqual(module.decode_observation_wire(make_wire(self.good()))["status"], "PASS")
+        blocked = self.good()
+        blocked["media_reduced"] = False
+        with self.assertRaises(module.e07.Hold):
+            module.decode_observation_wire(make_wire(blocked))
+
+    def test_ascii_cdp_transport_rejects_corruption_and_stdout_pollution(self):
+        valid = module.CDP_WIRE_PREFIX + base64.b64encode(
+            json.dumps([self.good()], separators=(",", ":")).encode("utf-8")
+        ).decode("ascii")
+        malformed = (
+            "", "[]", valid + "WARNING: untrusted output",
+            "WARNING: untrusted output\\n" + valid,
+            module.CDP_WIRE_PREFIX + "!!!",
+            module.CDP_WIRE_PREFIX + base64.b64encode(b"not json").decode("ascii"),
+            module.CDP_WIRE_PREFIX + base64.b64encode(bytes([255])).decode("ascii"),
+            module.CDP_WIRE_PREFIX + base64.b64encode(b"[]" * 5000).decode("ascii"),
+        )
+        for bad in malformed:
+            with self.subTest(kind=bad[:30]):
+                with self.assertRaises(module.e07.Hold):
+                    module.decode_observation_wire(bad)
+
+    def test_ascii_receipt_keeps_real_readonly_cdp_and_no_media_simulation(self):
+        source = TARGET.read_text(encoding="utf-8")
+        self.assertIn("[Console]::Out.WriteLine('NOX_E07_CDP_V3:'", source)
+        self.assertIn("[Convert]::ToBase64String", source)
+        self.assertIn("base64.b64decode(wire[len(CDP_WIRE_PREFIX):], validate=True)", source)
+        self.assertIn("json.loads(decoded.decode", source)
+        self.assertNotIn("Emulation.setEmulatedMedia", source)
+        self.assertNotIn("--force-prefers-reduced-motion", source)
 
     def test_current_release_requires_real_webview_evidence(self):
         source=(ROOT/"coordination/e07/probe_final_same_setup.py").read_text(encoding="utf-8")
