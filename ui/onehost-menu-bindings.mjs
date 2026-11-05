@@ -236,7 +236,36 @@ export function settingsAutostartOwnerAdmission(button,issued){
     return false;
   // A duplicate, replaced or detached UIA node must not dispatch owner IPC.
   const matches=button.ownerDocument?.querySelectorAll?.('[id="'+id+'"]');
-  return matches?.length===1 && matches[0]===button;
+  if(matches?.length!==1 || matches[0]!==button)return false;
+  // An authentic but hidden, inert or occluded UIA node is not an owner gesture.
+  // Native WPF independently checks Windows SID, route ACL and user consent.
+  try{
+    const doc=button.ownerDocument,view=doc?.defaultView;
+    if(typeof view?.getComputedStyle!=='function' ||
+       typeof doc?.elementFromPoint!=='function' ||
+       typeof button.getBoundingClientRect!=='function')return false;
+    const rect=button.getBoundingClientRect();
+    if(!rect || ![rect.left,rect.right,rect.top,rect.bottom,
+                  view.innerWidth,view.innerHeight].every(Number.isFinite) ||
+       rect.right<=rect.left || rect.bottom<=rect.top)return false;
+    const x=(rect.left+rect.right)/2,y=(rect.top+rect.bottom)/2;
+    if(x<0 || y<0 || x>=view.innerWidth || y>=view.innerHeight)return false;
+    let node=button,depth=0;
+    while(node){
+      if(++depth>64 || node.hidden===true || node.inert===true ||
+         node.disabled===true || node.getAttribute?.('aria-hidden')==='true' ||
+         node.getAttribute?.('aria-disabled')==='true')return false;
+      const style=view.getComputedStyle(node);
+      if(!style || style.display==='none' ||
+         style.visibility==='hidden' || style.visibility==='collapse' ||
+         style.pointerEvents==='none' ||
+         !Number.isFinite(Number(style.opacity)) ||
+         Number(style.opacity)<=0)return false;
+      node=node.parentElement;
+    }
+    const hit=doc.elementFromPoint(x,y);
+    return hit===button || button.contains?.(hit)===true;
+  }catch(_){return false;}
 }
 
 /** SETTINGS owner requests are single-flight: a second ON/OFF/read cannot race

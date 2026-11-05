@@ -184,9 +184,16 @@ test('D06 SETTINGS WPF owner write requires a fresh native HKCU readback',async(
 
 test('D06 SETTINGS UIA original-node / unique owner-route identity: not native consent PASS',()=>{
   const issued=new WeakSet();let nodes=[];
-  const doc={querySelectorAll:sel=>nodes.filter(n=>'[id="'+n.id+'"]'===sel)};
-  const mk=(id,key,value)=>({id,tagName:'BUTTON',isConnected:true,ownerDocument:doc,
-    dataset:{nativeRoute:'system.autostart',nativeKey:key,nativeValue:value}});
+  const doc={querySelectorAll:sel=>nodes.filter(n=>'[id="'+n.id+'"]'===sel),
+    defaultView:{innerWidth:1280,innerHeight:800,getComputedStyle:()=>({
+      display:'block',visibility:'visible',pointerEvents:'auto',opacity:'1'})},
+    elementFromPoint:()=>nodes[0]};
+  const mk=(id,key,value)=>{
+    const node={id,tagName:'BUTTON',isConnected:true,ownerDocument:doc,
+      parentElement:null,getBoundingClientRect:()=>({left:50,right:190,top:40,bottom:84}),
+      dataset:{nativeRoute:'system.autostart',nativeKey:key,nativeValue:value}};
+    node.contains=target=>target===node;return node;
+  };
   for(const [id,key,value] of [
     [AUTOSTART_UIA_IDS.read,'',''],[AUTOSTART_UIA_IDS.on,'enabled','true'],
     [AUTOSTART_UIA_IDS.off,'enabled','false']]){
@@ -204,6 +211,40 @@ test('D06 SETTINGS UIA original-node / unique owner-route identity: not native c
     assert.equal(settingsAutostartOwnerAdmission(original,issued),false);
   }
   assert.equal(new Set(Object.values(AUTOSTART_UIA_IDS)).size,3);
+});
+
+test('D06 SETTINGS owner requires a physically visible, unobstructed UIA button',()=>{
+  const s={hit:null,style:null,rect:{left:35,right:185,top:40,bottom:82}};
+  const parent={parentElement:null,hidden:false,inert:false,disabled:false,
+    aria:null,getAttribute(name){return name===this.aria?'true':null;}};
+  const doc={defaultView:{innerWidth:800,innerHeight:600,
+    getComputedStyle:el=>el===parent&&s.style?s.style:
+      {display:'block',visibility:'visible',pointerEvents:'auto',opacity:'1'}},
+    elementFromPoint:()=>s.hit,querySelectorAll:()=>[button]};
+  const button={id:AUTOSTART_UIA_IDS.on,tagName:'BUTTON',isConnected:true,
+    ownerDocument:doc,parentElement:parent,hidden:false,inert:false,disabled:false,
+    dataset:{nativeRoute:'system.autostart',nativeKey:'enabled',nativeValue:'true'},
+    getBoundingClientRect:()=>s.rect,getAttribute:()=>null,contains:n=>n===button};
+  const issued=new WeakSet([button]),ok=()=>settingsAutostartOwnerAdmission(button,issued);
+  s.hit=button;assert.equal(ok(),true);
+  s.hit={};assert.equal(ok(),false);s.hit=button;
+  for(const key of ['hidden','inert','disabled']){
+    parent[key]=true;assert.equal(ok(),false,key);parent[key]=false;
+  }
+  for(const attr of ['aria-hidden','aria-disabled']){
+    parent.aria=attr;assert.equal(ok(),false,attr);parent.aria=null;
+  }
+  for(const [key,value] of [['display','none'],['visibility','hidden'],
+    ['pointerEvents','none'],['opacity','0']]){
+    s.style={display:'block',visibility:'visible',pointerEvents:'auto',opacity:'1',[key]:value};
+    assert.equal(ok(),false,key);s.style=null;
+  }
+  s.rect={left:820,right:960,top:30,bottom:65};assert.equal(ok(),false);
+  s.rect={left:35,right:185,top:40,bottom:82};assert.equal(ok(),true);
+  const saved=doc.defaultView.getComputedStyle;
+  doc.defaultView.getComputedStyle=()=>{throw Error('renderer missing');};
+  assert.equal(ok(),false);doc.defaultView.getComputedStyle=saved;
+  assert.equal(ok(),true);
 });
 
 test('D06 SETTINGS denies inner nonterminal or unreviewed owner status despite transport COMPLETED',()=>{
