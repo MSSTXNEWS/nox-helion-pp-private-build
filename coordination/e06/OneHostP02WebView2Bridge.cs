@@ -581,8 +581,21 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
                 // Navigation revokes the source document; do not send false
                 // COMPLETED after the page becomes untrusted.
                 var navigation = await _nativeOwnerAction(route, payload.Clone(), cancel);
-                if (!navigation.Accepted && IsCurrent(source, epoch))
-                    Reply(source, epoch, id, route, "HOLD", navigation.ErrorCode ?? "BROWSER_NATIVE_HOLD");
+                // A transport-level Accepted=true cannot override the native
+                // browser owner's refused, malformed or absent navigation proof.
+                // Navigation itself revokes this page; never post a success ACK
+                // or re-enable WebView2 IPC after an external document opens.
+                var navigationConfirmed = navigation.Accepted &&
+                    string.IsNullOrEmpty(navigation.ErrorCode) &&
+                    navigation.Result is JsonElement navReceipt &&
+                    navReceipt.ValueKind == JsonValueKind.Object &&
+                    navReceipt.EnumerateObject().Count() == 1 &&
+                    navReceipt.TryGetProperty("status", out var navState) &&
+                    navState.ValueKind == JsonValueKind.String &&
+                    navState.GetString() == "NAVIGATION_REQUESTED" &&
+                    !NativeResultExplicitlyDenied(navigation.Result);
+                if (!navigationConfirmed && IsCurrent(source, epoch))
+                    Reply(source, epoch, id, route, "HOLD", navigation.ErrorCode ?? "BROWSER_NATIVE_ACK_HOLD");
                 return;
             }
             // P03's existing C# queue stays in this WPF host; it must not be
