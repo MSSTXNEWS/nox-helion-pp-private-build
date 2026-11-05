@@ -15,9 +15,10 @@ function evaluate(width,change={}){
  if(change.overlap){rects[1]={...rects[0],left:rects[0].left+4,right:rects[0].right+4};}
  if(change.fractional){const r=rects[4];r.right=width+.25;r.width=r.right-r.left;}
  const buttons=names.map((n,i)=>({tagName:'BUTTON',isConnected:true,disabled:false,hidden:false,tabIndex:0,rect:rects[i],
- getClientRects(){return [this.rect]},getBoundingClientRect(){return this.rect},closest(){return null},contains(o){return o===this},
+ getClientRects(){return [this.rect]},getBoundingClientRect(){return this.rect},
+ closest(sel){return change.ariaDisabledButton&&i===2&&sel.includes('aria-disabled')?this:null;},contains(o){return o===this},
  getAttribute(k){return ({id:'nox-express-primary-'+n.toLowerCase(),'data-nox-primary':n,'aria-label':n})[k]??null;},hasAttribute(){return false;}}));
- const nav={isConnected:true,closest(){return null},getClientRects(){return [1]},querySelectorAll(){return buttons;}};
+ const nav={isConnected:true,closest(sel){return change.ariaDisabledAncestor&&sel.includes('aria-disabled')?this:null;},getClientRects(){return [1]},querySelectorAll(){return buttons;}};
  const document={documentElement:{clientWidth:width,clientHeight:change.noheight?0:480},querySelectorAll(){return [buttons[0]];},
  elementFromPoint(x,y){if(change.overlay)return {tagName:'DIV'};return buttons.find(o=>x>=o.rect.left&&x<=o.rect.right&&y>=o.rect.top&&y<=o.rect.bottom)??null;}};
  const window={getComputedStyle(){return {display:'grid',visibility:'visible',pointerEvents:'auto',opacity:1};}};
@@ -32,4 +33,28 @@ test('D02 UIA rejects clipped, overlapping and covered primary controls',()=>{
 });
 test('D02 fractional zoom tolerance does not alter approved design',()=>{
  assert.equal(evaluate(320,{fractional:true}),true);
+});
+
+test('D01 prevents UIA access to ARIA-disabled primary dock controls',()=>{
+ assert.equal(evaluate(320,{ariaDisabledButton:true}),false);
+ assert.equal(evaluate(390,{ariaDisabledAncestor:true}),false);
+});
+const ownerStart=src.indexOf('function visibleOriginalOwnerTarget(button){');
+const ownerEnd=src.indexOf("\nnav.addEventListener('click'",ownerStart);
+assert.ok(ownerStart>=0&&ownerEnd>ownerStart,'original R11 owner guard available');
+const ownerFn=src.slice(ownerStart,ownerEnd);
+function ownerTarget(change={}){
+ const r={left:20,top:50,right:change.offscreen?345:140,bottom:110,width:change.offscreen?325:120,height:60};
+ const b={tagName:'BUTTON',isConnected:true,disabled:!!change.disabled,
+   closest(sel){return change.ariaDisabled&&sel.includes('aria-disabled')?this:null},
+   getClientRects(){return [r]},getBoundingClientRect(){return r},contains(el){return el===this}};
+ const d={documentElement:{clientWidth:320,clientHeight:480},elementFromPoint(){return change.overlay?{}:b}};
+ const w={getComputedStyle(){return {display:'block',visibility:'visible',
+ pointerEvents:change.pointerBlocked?'none':'auto',opacity:change.transparent?'0':'1'}}};
+ return new Function('button','document','window',ownerFn+';return visibleOriginalOwnerTarget(button)')(b,d,w);
+}
+test('D01 native original handler only receives physically pressable source control',()=>{
+ assert.equal(ownerTarget(),true);
+ for(const key of ['disabled','ariaDisabled','offscreen','overlay','transparent','pointerBlocked'])
+   assert.equal(ownerTarget({[key]:true}),false,key);
 });

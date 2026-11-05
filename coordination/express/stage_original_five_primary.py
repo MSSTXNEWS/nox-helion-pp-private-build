@@ -146,7 +146,7 @@ function verifiedOriginalPrimaryDock(){
  const names=['CHAT','INSTALL','MODELS','LEARN','SETTINGS'];
  // UIA and keyboard admission must cover the ENTIRE original five-button dock:
  // one hidden/ARIA-suppressed sibling must not count as 5/5 real actions.
- if(!nav.isConnected||nav.closest('[hidden],[inert],[aria-hidden="true"]')||
+ if(!nav.isConnected||nav.closest('[hidden],[inert],[aria-hidden="true"],[aria-disabled="true"]')||
     nav.getClientRects().length===0)return false;
  const dockStyle=window.getComputedStyle(nav);
  if(!dockStyle||dockStyle.display==='none'||dockStyle.visibility!=='visible'||
@@ -169,7 +169,7 @@ function verifiedOriginalPrimaryDock(){
      (button.hasAttribute('role')&&button.getAttribute('role')!=='button')||
      document.querySelectorAll('[id="'+id+'"]').length!==1||
      !button.isConnected||button.disabled||button.hidden||button.tabIndex<0||
-     button.closest('[hidden],[inert],[aria-hidden="true"]')||
+     button.closest('[hidden],[inert],[aria-hidden="true"],[aria-disabled="true"]')||
      button.getClientRects().length===0)return false;
   const rect=button.getBoundingClientRect();
   if(!rect||![rect.left,rect.top,rect.right,rect.bottom,rect.width,rect.height]
@@ -190,6 +190,28 @@ function verifiedOriginalPrimaryDock(){
      style.pointerEvents!=='none'&&Number(style.opacity)!==0;
  });
 }
+function visibleOriginalOwnerTarget(button){
+ // Never trigger privileged original R11 handlers through offscreen,
+ // occluded or accessibility-disabled controls. Keep their design untouched.
+ if(!button||button.tagName!=='BUTTON'||!button.isConnected||button.disabled||
+    button.closest('[hidden],[inert],[aria-hidden="true"],[aria-disabled="true"]')||
+    button.getClientRects().length===0)return false;
+ const width=document.documentElement?.clientWidth;
+ const height=document.documentElement?.clientHeight;
+ const rect=button.getBoundingClientRect();
+ if(!Number.isFinite(width)||!Number.isFinite(height)||width<=0||height<=0||
+    !rect||![rect.left,rect.top,rect.right,rect.bottom,rect.width,rect.height]
+       .every(Number.isFinite)||rect.width<=0||rect.height<=0||
+    rect.left<-.5||rect.top<-.5||rect.right>width+.5||rect.bottom>height+.5)
+   return false;
+ const style=window.getComputedStyle(button);
+ if(!style||style.display==='none'||style.visibility!=='visible'||
+    style.pointerEvents==='none'||!Number.isFinite(Number(style.opacity))||
+    Number(style.opacity)<=0)return false;
+ const hit=document.elementFromPoint((rect.left+rect.right)/2,(rect.top+rect.bottom)/2);
+ return !!hit&&(hit===button||button.contains(hit));
+}
+
 nav.addEventListener('click',event=>{
  const target=event.target.closest('button[data-nox-primary]');
  if(!target||!nav.contains(target)||!event.isTrusted)return;
@@ -253,7 +275,8 @@ nav.addEventListener('click',event=>{
    if(invokeMatches.length!==1||invokeMatches[0]!==target||
       invokeMatches[0].tagName!=='BUTTON'||!invokeMatches[0].isConnected||
       invokeMatches[0].disabled||invokeMatches[0].getClientRects().length===0||
-      document.activeElement!==invokeMatches[0]){
+      (document.activeElement!==invokeMatches[0]||
+       !visibleOriginalOwnerTarget(invokeMatches[0]))){
      state.textContent=name+': исходная функция недоступна · HOLD';return;
    }
    invokeMatches[0].click();
@@ -279,6 +302,9 @@ nav.addEventListener('click',event=>{
    if(document.activeElement!==tile){
      state.textContent='SETTINGS: системная кнопка не получила фокус · HOLD';return;
    }
+   if(!visibleOriginalOwnerTarget(tile)){
+     state.textContent='SETTINGS: исходная системная кнопка перекрыта · HOLD';return;
+   }
    tile.click();
    if(!document.getElementById('menu-detail')?.classList.contains('active')){
      state.textContent='SETTINGS: исходная СИСТЕМА не открылась · HOLD';return;
@@ -295,7 +321,8 @@ nav.addEventListener('click',event=>{
      state.textContent='SETTINGS: исходная обратная кнопка не уникальна/скрыта · HOLD';return;
    }
    backButtons[0].focus({preventScroll:false});
-   if(document.activeElement!==backButtons[0])
+   if(document.activeElement!==backButtons[0]||
+      !visibleOriginalOwnerTarget(backButtons[0]))
      state.textContent='SETTINGS: исходная обратная кнопка без фокуса · HOLD';
    return;
  }
@@ -303,6 +330,9 @@ nav.addEventListener('click',event=>{
  // A clicked top-level action never fabricates a model reply or install ACK.
  const original=findOriginalControl(name)||findOriginalScreen(name);
  if(!original){state.textContent=name+': нет подтверждённого исходного экрана · HOLD';return;}
+ if(original.tagName==='BUTTON'&&!visibleOriginalOwnerTarget(original)){
+   state.textContent=name+': исходная кнопка перекрыта · HOLD';return;
+ }
  original.click();
  if(name==='CHAT'&&!document.getElementById('chat')?.classList.contains('active'))
    state.textContent='CHAT: исходный экран не открылся · HOLD';
