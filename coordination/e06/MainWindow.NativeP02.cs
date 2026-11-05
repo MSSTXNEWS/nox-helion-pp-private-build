@@ -437,8 +437,13 @@ public partial class MainWindow
         if (!root.TryGetProperty("action", out var action) || action.ValueKind != JsonValueKind.String)
             return false;
         var name = action.GetString();
-        if (name == "chatStart" && root.TryGetProperty("provider", out var provider) &&
-            string.Equals(provider.GetString(), "OPENAI", StringComparison.OrdinalIgnoreCase)) return false;
+        if (name == "chatStart" && root.TryGetProperty("provider", out var provider)) {
+            // A malformed renderer provider is neither the local owner nor the
+            // separately consented OPENAI path. Consume it without a C# JSON
+            // GetString exception or fallback to another handler.
+            if (provider.ValueKind != JsonValueKind.String) return true;
+            if (string.Equals(provider.GetString(), "OPENAI", StringComparison.OrdinalIgnoreCase)) return false;
+        }
         if (name is not ("chatModels" or "chatStart" or "chatStop" or "openModelCenter")) return false;
         if (!Uri.TryCreate(source, UriKind.Absolute, out var origin) ||
             origin.Scheme != "https" || !origin.IsDefaultPort || origin.UserInfo.Length != 0 ||
