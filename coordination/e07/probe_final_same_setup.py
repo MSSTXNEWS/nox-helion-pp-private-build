@@ -44,14 +44,14 @@ def _bounded_uia_failure(stdout: object, phase: str) -> str:
         return fallback
     reason = stdout.strip()
     allowed = (r"E07_FINAL_UIA_" + re.escape(phase)
-        + r"_(?:PRIMARY_DOCK_NOT_UNIQUE|BUTTON_(?:CHAT|INSTALL|MODELS|LEARN|SETTINGS)_NOT_UNIQUE|"
+        + r"_(?:ORIGINAL_CONTROL_NOT_UNIQUE|PRIMARY_DOCK_NOT_UNIQUE|BUTTON_(?:CHAT|INSTALL|MODELS|LEARN|SETTINGS)_NOT_UNIQUE|"
           r"NO_ROOT|TREE_LIMIT|NO_INVOKE|RECT|MOVE|PRINT|"
           r"FX_UNIQUE|FX_INVOKE|FX_STATE|UNKNOWN_OP|VISUAL_STAGE_(?:RESIZE|DOCK|CAPTURE|RESTORE))_HOLD")
     return reason if re.fullmatch(allowed, reason) else fallback
 
 
 def _run_ps(source: str, *, timeout: int=90, phase: str="UNKNOWN", env: dict|None=None) -> dict:
-    e07.require(phase in (*PRIMARY, "VISUAL", "MODEL_WINDOW", "FX", "UNKNOWN"),
+    e07.require(phase in (*PRIMARY, "VISUAL", "MODEL_WINDOW", "INSTALL_CONTROL", "FX", "UNKNOWN"),
                 "E07_FINAL_UIA_PHASE_HOLD")
     encoded=base64.b64encode(source.encode("utf-16le")).decode("ascii")
     try:
@@ -295,7 +295,9 @@ trap {
  if($__e07Operation -eq 'VISUAL' -and $stage -in @('RESIZE','DOCK','CAPTURE','RESTORE')) {
    $reason='E07_FINAL_UIA_VISUAL_VISUAL_STAGE_'+$stage+'_HOLD'
  }
- if($why -eq 'PRIMARY_DOCK_NOT_UNIQUE'){
+ if($why -eq 'ORIGINAL_CONTROL_NOT_UNIQUE'){
+   $reason='E07_FINAL_UIA_'+$__e07Operation+'_ORIGINAL_CONTROL_NOT_UNIQUE_HOLD'
+ } elseif($why -eq 'PRIMARY_DOCK_NOT_UNIQUE'){
    $reason='E07_FINAL_UIA_'+$__e07Operation+'_PRIMARY_DOCK_NOT_UNIQUE_HOLD'
  } elseif(($why -cmatch '^BUTTON_(CHAT|INSTALL|MODELS|LEARN|SETTINGS)_NOT_UNIQUE$') -or (@('NO_ROOT','TREE_LIMIT','NO_INVOKE','RECT','MOVE','PRINT','FX_UNIQUE','FX_INVOKE','FX_STATE','UNKNOWN_OP') -ccontains $why)) {
    $reason='E07_FINAL_UIA_'+$__e07Operation+'_'+$why+'_HOLD'
@@ -420,6 +422,23 @@ function OneButton([string]$name) {
  if($null -eq $dock[$name]){throw ('BUTTON_'+$name+'_NOT_UNIQUE')}
  return $dock[$name]
 }
+function OriginalPcInstall {
+ # Trigger the ORIGINAL R11 WebView2 install control, not the EXPRESS
+ # five-button dock (INSTALL only navigates to CONTROL).
+ # A missing/ambiguous UIA AutomationId must HOLD; never click by position.
+ $a=Tree (Root)
+ $matches=New-Object System.Collections.ArrayList
+ for($i=0;$i -lt $a.Count;$i++){
+  try{
+   $el=$a.Item($i);$v=$el.Current
+   if($v.ControlType -ne [System.Windows.Automation.ControlType]::Button){continue}
+   if(($v.AutomationId+'').Trim() -cne 'pc-install' -or -not (Visible $v)){continue}
+   if(-not (SameElementSeen -items $matches -candidate $el)){[void]$matches.Add($el)}
+  }catch{}
+ }
+ if($matches.Count -ne 1){throw 'ORIGINAL_CONTROL_NOT_UNIQUE'}
+ return $matches[0]
+}
 function InvokePrimary([string]$name){$b=OneButton $name;$p=$b.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern);if($null -eq $p){throw 'NO_INVOKE'};$p.Invoke();Start-Sleep -Milliseconds 400;return $true}
 function FiveRects {
  $dock=PrimaryDock
@@ -449,6 +468,13 @@ function SaveAdaptiveHold([int]$requestedWidth) {
  } finally {$photo.Dispose()}
 }
 $op='__OP__'
+if($op -eq 'INSTALL_CONTROL'){
+ $b=OriginalPcInstall
+ $p=$b.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)
+ if($null -eq $p){throw 'NO_INVOKE'}
+ $p.Invoke();Start-Sleep -Milliseconds 350
+ [pscustomobject]@{invoked=$true;sameHwndAlive=($null -ne [System.Windows.Automation.AutomationElement]::FromHandle($handle))}|ConvertTo-Json -Compress;exit 0
+}
 if($op -in @('CHAT','INSTALL','MODELS','LEARN')){ [pscustomobject]@{invoked=(InvokePrimary '__ACTION__');sameHwndAlive=($null -ne [System.Windows.Automation.AutomationElement]::FromHandle($handle))}|ConvertTo-Json -Compress; exit 0 }
 if($op -eq 'SETTINGS'){
  $null=InvokePrimary 'SETTINGS';$seen=$false
@@ -770,6 +796,24 @@ def run(hwnd: int, install: Path, local: Path, *, source_sha: str, setup_sha: st
         before_info=log.stat() if e07.clean_file(log) else None
         before_log_size=before_info.st_size if before_info else 0
         invoke_primary(hwnd,"INSTALL")
+        # The EXPRESS primary INSTALL is navigation only. Observe a physical
+        # InvokePattern on the unique original R11 #pc-install control after
+        # CONTROL loads, before accepting any fresh owner ACTION_START/END log.
+        # Never approve the WPF privileged consent dialog on behalf of a user.
+        original_control=None
+        for _ in range(20):
+            try:
+                original_control=_run_ps(_uia_script(hwnd,"INSTALL_CONTROL"),
+                                         timeout=15,phase="INSTALL_CONTROL")
+                break
+            except e07.Hold as exc:
+                if str(exc)!="E07_FINAL_UIA_INSTALL_CONTROL_ORIGINAL_CONTROL_NOT_UNIQUE_HOLD":
+                    raise
+                time.sleep(.3)
+        e07.require(type(original_control) is dict and
+                    original_control.get("invoked") is True and
+                    original_control.get("sameHwndAlive") is True,
+                    "E07_FINAL_INSTALL_REAL_CONTROL_NOT_FOUND_HOLD")
         started_at=time.monotonic()
         deadline=started_at+120
         owner={"started":False,"owner_exit_code":None,"owner_exception":False}

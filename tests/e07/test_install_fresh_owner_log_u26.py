@@ -43,5 +43,21 @@ class InstallOwnerEvidence(unittest.TestCase):
         self.assertIn('\"permissions_verified\":\"NOT_TESTED\"',source)
         self.assertNotIn('\"permissions_verified\":\"PASS\"',source)
 
+    def test_install_requires_original_secondary_native_control(self):
+        source=PATH.read_text(encoding="utf-8")
+        script=module._uia_script(1234,"INSTALL_CONTROL")
+        self.assertIn("OriginalPcInstall",script)
+        self.assertIn("AutomationId+'').Trim() -cne 'pc-install'",script)
+        self.assertIn("GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)",script)
+        self.assertIn("if($matches.Count -ne 1){throw 'ORIGINAL_CONTROL_NOT_UNIQUE'}",script)
+        self.assertIn('invoke_primary(hwnd,"INSTALL")',source)
+        self.assertIn('_run_ps(_uia_script(hwnd,"INSTALL_CONTROL")',source)
+        self.assertIn("E07_FINAL_INSTALL_REAL_CONTROL_NOT_FOUND_HOLD",source)
+        self.assertEqual(module._bounded_uia_failure(
+            "E07_FINAL_UIA_INSTALL_CONTROL_ORIGINAL_CONTROL_NOT_UNIQUE_HOLD",
+            "INSTALL_CONTROL"),
+            "E07_FINAL_UIA_INSTALL_CONTROL_ORIGINAL_CONTROL_NOT_UNIQUE_HOLD")
+        self.assertNotIn('"permissions_verified":"PASS"',source)
+
 if __name__=="__main__":
     unittest.main()
