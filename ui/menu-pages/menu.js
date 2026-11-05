@@ -1,3 +1,4 @@
+import {createNoxLucideIcon} from '../nox-lucide-icons.mjs';
 import {DIRECTIONS,WORLDS,CORE_IDS,PERSONAS,PRIMARY,ROUTE_COUNT,getWorld,getRoute,worldGroups} from './express-layout.mjs';
 import {createNativeMenuClient,isNativeChatTerminal,canonicalChatContext,nativeOwnerReceiptHolds,nativeOwnerActionReceipt} from '../onehost-menu-bindings.mjs';
 import {firstBootTruth} from '../firstboot-truth.mjs';
@@ -62,6 +63,7 @@ function catalogCard(title,description,count,click,kind='section'){
  foot.append(el('span','nox-card-count',String(count)+' '+(kind==='route'?'ДЕЙСТВИЕ':'ФУНКЦИИ')),
              el('span','nox-card-arrow','↗'));
  foot.lastChild.setAttribute('aria-hidden','true');
+ const icon=createNoxLucideIcon(doc,'arrow-up-right');if(icon){icon.classList.add('nox-card-arrow');foot.lastElementChild?.replaceWith(icon);}
  b.append(copy,foot);return b;
 }
 function world(id,subsectionId=null){
