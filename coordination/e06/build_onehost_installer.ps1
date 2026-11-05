@@ -1116,6 +1116,34 @@ $c11MarkerGuard=@'
     Abort "Could not close ownership marker."
   IfFileExists "$StageDir\nox-p01-owned.txt" +2 0
     Abort "Ownership marker absent; activation refused."
+  ; B03 G4 NO-LOSS: existence alone does not prove an intact owner marker.
+  ; FileWrite writes ANSI even for Unicode installers: 17 ASCII bytes + CRLF.
+  ; Reopen after FileClose; reject short, extra or altered data BEFORE Rename.
+  ClearErrors
+  FileOpen $2 "$StageDir\nox-p01-owned.txt" r
+  IfErrors 0 +2
+    Abort "Ownership marker readback open failed; activation refused."
+  ClearErrors
+  FileSeek $2 0 END $3
+  IfErrors C11MarkerReadbackReject
+  IntCmp $3 19 C11MarkerReadbackSizeOkay C11MarkerReadbackReject C11MarkerReadbackReject
+  C11MarkerReadbackSizeOkay:
+  ClearErrors
+  FileSeek $2 0 SET
+  IfErrors C11MarkerReadbackReject
+  ClearErrors
+  FileRead $2 $4
+  IfErrors C11MarkerReadbackReject
+  StrCpy $4 $4 17
+  StrCmp $4 "NOXHELION.P01 V16" C11MarkerReadbackAccept C11MarkerReadbackReject
+  C11MarkerReadbackReject:
+    FileClose $2
+    Abort "Ownership marker content mismatch; activation refused."
+  C11MarkerReadbackAccept:
+    ClearErrors
+    FileClose $2
+    IfErrors 0 +2
+      Abort "Ownership marker verification close failed; activation refused."
 '@
 $c11MarkerOriginal=[regex]::Replace($c11MarkerOriginal,'\r?\n',$c11Eol)
 $c11MarkerGuard=[regex]::Replace($c11MarkerGuard,'\r?\n',$c11Eol)

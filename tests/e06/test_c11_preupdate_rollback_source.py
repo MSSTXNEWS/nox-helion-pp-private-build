@@ -82,6 +82,46 @@ class C11RollbackSafetyTest(unittest.TestCase):
 
 
 
+    def test_ownership_marker_exact_byte_readback_before_any_activation(self):
+        """Disposable NSIS must not trust a present but truncated/foreign marker."""
+        builder = BUILDER.read_text(encoding="utf-8")
+        donor = ORIGINAL.read_text(encoding="utf-8")
+        hit = re.search(r"\$c11MarkerGuard=@'\n(?P<body>.*?)\n'@", builder, re.DOTALL)
+        self.assertIsNotNone(hit)
+        guard = hit.group("body")
+        self.assertNotIn("C11MarkerReadbackReject:", donor)
+        for op in (
+            'FileOpen $2 "$StageDir\\nox-p01-owned.txt" r'.replace("\\\\", "\\"),
+            'FileSeek $2 0 END $3',
+            'IntCmp $3 19 C11MarkerReadbackSizeOkay C11MarkerReadbackReject C11MarkerReadbackReject',
+            'FileSeek $2 0 SET',
+            'FileRead $2 $4',
+            'StrCpy $4 $4 17',
+            'StrCmp $4 "NOXHELION.P01 V16" C11MarkerReadbackAccept C11MarkerReadbackReject',
+            'Abort "Ownership marker content mismatch; activation refused."',
+        ):
+            self.assertIn(op, guard)
+        self.assertEqual(guard.count("C11MarkerReadbackReject:"), 1)
+        self.assertEqual(guard.count("C11MarkerReadbackAccept:"), 1)
+        self.assertLess(guard.index("Ownership marker absent; activation refused."),
+                        guard.index("C11MarkerReadbackReject:"))
+        self.assertLess(builder.index("C11_NSIS_MARKER_WRITE_GATE_STAGED"),
+                        builder.index("& $makensisPath"))
+        self.assertLess(builder.index("C11MarkerReadbackAccept:"),
+                        builder.index("$c11ActivationRecoveryOld"))
+        expected = b"NOXHELION.P01 V16\r\n"
+        self.assertEqual(len(expected), 19)
+        for marker, valid in (
+            (expected, True),
+            (expected[:-1], False),
+            (expected + b"x", False),
+            (b"WRONGOWNER.P01 V16\r\n", False),
+            (b"NOXHELION.P01 V15\r\n", False),
+        ):
+            # The two checks below mirror the exact size + prefix gates above.
+            self.assertEqual(len(marker) == 19 and marker[:17] == expected[:17], valid)
+
+
     def test_failed_rename_recovery_requires_real_owner_and_slot_readback(self):
         """B03: no false NSIS rollback/activation recovery claim after Rename fails."""
         builder = BUILDER.read_text(encoding="utf-8")
