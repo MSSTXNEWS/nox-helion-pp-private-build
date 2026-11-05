@@ -71,6 +71,18 @@ class FivePrimaryTests(unittest.TestCase):
         self.assertIn('event.isTrusted',css)
         self.assertIn("if(name==='MODELS'",css)
 
+    def test_settings_original_back_focus_source_contract(self):
+        # The real native UIA SETTINGS route requires keyboard focus on
+        # a unique original Back button AFTER the original tile opens detail.
+        # Source-only; installed WPF/WebView2 action remains E07 HOLD.
+        script=target.INSERT
+        self.assertIn("const backButtons=Array.from(document.querySelectorAll('#menu-detail button'))",script)
+        self.assertIn("backButtons.length!==1||backButtons[0].getClientRects().length===0",script)
+        self.assertIn("backButtons[0].focus({preventScroll:false});",script)
+        self.assertIn("document.activeElement!==backButtons[0]",script)
+        self.assertNotIn("backButtons[0].click();",script)
+        self.assertIn("SETTINGS: исходная обратная кнопка без фокуса · HOLD",script)
+
     def test_tampered_bytes_rejected(self):
         with self.assertRaisesRegex(ValueError, 'SHA_HOLD'):
             target.publish(self.raw.replace(b'ORIGINAL', b'ORIGINA!'))

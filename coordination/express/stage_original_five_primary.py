@@ -216,8 +216,23 @@ nav.addEventListener('click',event=>{
      state.textContent='SETTINGS: системная кнопка не получила фокус · HOLD';return;
    }
    tile.click();
-   if(!document.getElementById('menu-detail')?.classList.contains('active'))
-     state.textContent='SETTINGS: исходная СИСТЕМА не открылась · HOLD';
+   if(!document.getElementById('menu-detail')?.classList.contains('active')){
+     state.textContent='SETTINGS: исходная СИСТЕМА не открылась · HOLD';return;
+   }
+   // Original Settings navigation must leave keyboard/assistive-technology
+   // focus on the real visible BACK control, not on its newly hidden tile.
+   // Only focus, never invoke a second action or native owner operation.
+   const backButtons=Array.from(document.querySelectorAll('#menu-detail button'))
+     .filter(button=>button.tagName==='BUTTON'&&button.isConnected&&
+       !button.disabled&&
+       ((button.getAttribute('aria-label')||button.textContent||'')
+          .trim().replace(/\s+/g,' ').toLocaleUpperCase('ru')==='← НАЗАД В МЕНЮ'));
+   if(backButtons.length!==1||backButtons[0].getClientRects().length===0){
+     state.textContent='SETTINGS: исходная обратная кнопка не уникальна/скрыта · HOLD';return;
+   }
+   backButtons[0].focus({preventScroll:false});
+   if(document.activeElement!==backButtons[0])
+     state.textContent='SETTINGS: исходная обратная кнопка без фокуса · HOLD';
    return;
  }
  // CHAT reuses its original source-bound screen, not a second router.
