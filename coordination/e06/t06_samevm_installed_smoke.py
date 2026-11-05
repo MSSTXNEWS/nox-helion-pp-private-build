@@ -172,6 +172,34 @@ def original_no_loss_file_preserved(path: Path, expected: bytes, local_base: Pat
         return False
 
 
+def original_no_loss_seed_identity(path: Path, expected: bytes, local_base: Path) -> tuple[int, int]:
+    """Freeze identity of exact CI-owned data before any NSIS update or uninstall."""
+    if not original_no_loss_file_preserved(path, expected, local_base):
+        raise RuntimeError("T06_NOLOSS_SEED_BYTES_HOLD")
+    try:
+        info = path.lstat()
+    except OSError as exc:
+        raise RuntimeError("T06_NOLOSS_SEED_IDENTITY_HOLD") from exc
+    if not info.st_ino or info.st_nlink != 1 or not stat.S_ISREG(info.st_mode):
+        raise RuntimeError("T06_NOLOSS_SEED_IDENTITY_HOLD")
+    return info.st_dev, info.st_ino
+
+
+def original_no_loss_inode_preserved(
+        path: Path, original_identity: tuple[int, int], local_base: Path) -> bool:
+    """Never call byte-identical replacement of the user's file NO-LOSS."""
+    try:
+        if (type(original_identity) is not tuple or len(original_identity) != 2 or
+                not plain_parents(path, local_base) or not regular(path)):
+            return False
+        info = path.lstat()
+        return (info.st_nlink == 1 and info.st_ino != 0 and
+                (info.st_dev, info.st_ino) == original_identity and
+                plain_parents(path, local_base))
+    except (OSError, ValueError, TypeError):
+        return False
+
+
 def run(args:list[str],timeout:int)->dict:
     start=time.monotonic()
     try:
@@ -1141,7 +1169,12 @@ def main()->int:
                 not getattr(marker,"is_junction",lambda:False)(),
                 "T06_USER_DATA_PROOF_COLLISION")
         signature=b"NOX_M1_PERSISTENT_STATE_NOLOSS\n"
-        marker.write_bytes(signature)
+        # Exclusive creation prevents a same-byte foreign marker from being overwritten.
+        with marker.open("xb") as seed:
+            seed.write(signature)
+            seed.flush()
+            os.fsync(seed.fileno())
+        marker_identity=original_no_loss_seed_identity(marker,signature,local_base)
         update=run([str(SETUP),"/S"],250)
         report["installer_lifecycle"]["update"]=update
         backup=Path(str(install)+".__p01_previous")
@@ -1149,7 +1182,8 @@ def main()->int:
                 plain_parents(backup,local_base),
                 "T06_ORIGINAL_NSIS_UPDATE_BACKUP_HOLD")
         require(sha(wpf)==evidence["wpf_sha256"] and
-                original_no_loss_file_preserved(marker,signature,local_base),
+                original_no_loss_file_preserved(marker,signature,local_base) and
+                original_no_loss_inode_preserved(marker,marker_identity,local_base),
                 "T06_UPDATE_MUST_PRESERVE_BINARY_AND_DATA")
         # Verify genuine previous installed program before requesting rollback.
         backup_check=run(["powershell.exe","-NoProfile","-NonInteractive",
@@ -1162,7 +1196,8 @@ def main()->int:
         rollback=run([str(SETUP),"/S","/ROLLBACK"],250)
         report["installer_lifecycle"]["rollback"]=rollback
         require(rollback["code"]==0 and sha(wpf)==evidence["wpf_sha256"] and
-                original_no_loss_file_preserved(marker,signature,local_base),
+                original_no_loss_file_preserved(marker,signature,local_base) and
+                original_no_loss_inode_preserved(marker,marker_identity,local_base),
                 "T06_ORIGINAL_NSIS_ROLLBACK_NOLOSS_HOLD")
         saved=Path(str(install)+".__p01_rollback_saved")
         report["installer_lifecycle"]["rollback_slots"]=rollback_slot_layout(
@@ -1197,6 +1232,7 @@ def main()->int:
             os.fsync(evidence_file.fileno())
         require(regular(unmanaged) and unmanaged.read_bytes()==unmanaged_bytes,
                 "T06_NOLOSS_UNMANAGED_PROBE_SEED_HOLD")
+        unmanaged_identity=original_no_loss_seed_identity(unmanaged,unmanaged_bytes,local_base)
         uninstall=install/"Uninstall.exe"
         require(regular(uninstall),"T06_ORIGINAL_UNINSTALLER_MISSING")
         uninstalled=run([str(uninstall),"/S"],220)
@@ -1223,8 +1259,10 @@ def main()->int:
         # Inspect BOTH persistent user data and unowned in-install content
         # on EVERY native exit, including EXIT=1 and timeouts. This only reads
         # exact test-owned bytes, never erases files or grants a release PASS.
-        persistent_safe=original_no_loss_file_preserved(marker,signature,local_base)
-        unmanaged_safe=original_no_loss_file_preserved(unmanaged,unmanaged_bytes,local_base)
+        persistent_safe=(original_no_loss_file_preserved(marker,signature,local_base) and
+                         original_no_loss_inode_preserved(marker,marker_identity,local_base))
+        unmanaged_safe=(original_no_loss_file_preserved(unmanaged,unmanaged_bytes,local_base) and
+                        original_no_loss_inode_preserved(unmanaged,unmanaged_identity,local_base))
         report["installer_lifecycle"]["uninstall_any_exit_no_loss"]={
             "persistent_user_data":"PRESERVED" if persistent_safe else "HOLD",
             "unmanaged_install_data":"PRESERVED" if unmanaged_safe else "HOLD",
@@ -1243,13 +1281,14 @@ def main()->int:
         # Independently prove that original NSIS never recursed into unknown
         # user content even if its final non-recursive RMDir cannot remove
         # the now-intentionally-nonempty install directory.
-        require(plain_parents(unmanaged,local_base) and regular(unmanaged) and
-                unmanaged.read_bytes()==unmanaged_bytes,
+        require(original_no_loss_file_preserved(unmanaged,unmanaged_bytes,local_base) and
+                original_no_loss_inode_preserved(unmanaged,unmanaged_identity,local_base),
                 "T06_NOLOSS_UNMANAGED_INSTALL_DATA_LOST")
         report["installer_lifecycle"]["unmanaged_install_file_noloss"]="PRESERVED_VERIFIED"
         report["installer_lifecycle"]["uninstall_owned_files_checked"]=len(owned_files)
         report["installer_lifecycle"]["uninstall_registry_views_checked"]=2
-        require(original_no_loss_file_preserved(marker,signature,local_base),
+        require(original_no_loss_file_preserved(marker,signature,local_base) and
+                original_no_loss_inode_preserved(marker,marker_identity,local_base),
                 "T06_ORIGINAL_NSIS_UNINSTALL_USER_DATA_LOSS")
         provider_offline=(report["installer_lifecycle"]["native_ipc"]["status"]==
                           "PROVIDER_OFFLINE_HOLD")
