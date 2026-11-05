@@ -1,0 +1,158 @@
+{
+  "schema": "NOX_EXPRESS_UI_DONORS_PHYSICAL_40_SOURCE_ONLY_V1",
+  "instructions_version": "0.0.6",
+  "verified_date": "2026-11-05",
+  "drive_folder_url": "https://drive.google.com/drive/folders/1ewQ-R7z33fN0fKoMNNuFzv1_3rCEP96v",
+  "source_scope": "Direct authenticated Drive fetch; wrapper ZIP CRC, reassembled SHA256, top-level ZIP CRC; for all 40 entries, nested filename/size/SHA256, ZIP CRC, and entry traversal checks passed.",
+  "source_bundles": [
+    {
+      "range": "01-10",
+      "parts": 1,
+      "source": "NOX_UI_01_10_FULL_SOURCE_ARTIFACT.zip",
+      "bytes": 52805030,
+      "sha256": "f8c532557d33d840985caa6c66aa188541a588b1b23bdc851887c83d2442aa87",
+      "donors": [
+        "formwork-halo",
+        "formwork-heliodon",
+        "formwork-chroma",
+        "formwork-nebula",
+        "formwork-aether",
+        "formwork-meridian",
+        "formwork-aurum",
+        "formwork-zodiac",
+        "loquix",
+        "tabler"
+      ]
+    },
+    {
+      "range": "11-20",
+      "parts": 4,
+      "source": "NOX_UI_11_20_PART_XX.zip",
+      "bytes": 155058677,
+      "sha256": "30eff9a88852a25f2c15ef8a9a5e7144c5c63ae36d786333a9043f2228b4fb1f",
+      "donors": [
+        "tabler-demo",
+        "shadcn-ui",
+        "radix-ui",
+        "lucide",
+        "svg-gauge",
+        "progressbar-js",
+        "apache-echarts",
+        "uplot",
+        "apexcharts",
+        "chartjs"
+      ]
+    },
+    {
+      "range": "21-25",
+      "parts": 13,
+      "source": "NOX_UI_21_25_REPAIRED_PART_XX.zip + REPAIRED_META.zip",
+      "bytes": 1049402735,
+      "sha256": "4a15114c6ed0809369e5b5e516788e7a880fef1f4b2aab348bcb282c9b3ca0f1",
+      "donors": [
+        "d3",
+        "threejs",
+        "postprocessing",
+        "tsparticles",
+        "particlesjs"
+      ]
+    },
+    {
+      "range": "26-30",
+      "parts": 8,
+      "source": "NOX_UI_26_30_PART_XX.zip",
+      "bytes": 322038460,
+      "sha256": "abeb6a24e5050f4125de55551cbc81f9dd369ba70025eda39b73a82bdf33481d",
+      "donors": [
+        "ogl",
+        "gsap",
+        "motion",
+        "lottie",
+        "lenis"
+      ]
+    },
+    {
+      "range": "31-35",
+      "parts": 9,
+      "source": "NOX_UI_31_35_PART_XX.zip",
+      "bytes": 386874990,
+      "sha256": "f59d60b57650a1de65defcd903d2875ede399074e73e0e0ddd1fab4836a63958",
+      "donors": [
+        "spline-react",
+        "react-bits",
+        "react-three-fiber",
+        "drei",
+        "theatre"
+      ]
+    },
+    {
+      "range": "36-40",
+      "parts": 4,
+      "source": "NOX_UI_36_40_PART_XX.zip",
+      "bytes": 140334202,
+      "sha256": "ce159d1436de7da7db844d497e21094e5f746cc8a633a91002ebe42d62464450",
+      "donors": [
+        "leva",
+        "xyflow",
+        "tweakpane",
+        "pixijs",
+        "luma-gl"
+      ]
+    }
+  ],
+  "count_verified": 40,
+  "all_40_verified": true,
+  "source_integrity": "PASS",
+  "runtime_integrated": false,
+  "independent_windows_E07": "NOT_TESTED_BY_THIS_RECEIPT",
+  "license_review_required": [
+    "apexcharts",
+    "ogl",
+    "gsap",
+    "react-bits",
+    "tweakpane"
+  ],
+  "license_policy": "Do not import without checking package-specific terms. Preserve original LICENSE/NOTICE, isolate external sources, never claim a runnable OneHost route by having static donor assets.",
+  "verified_reuse_candidates": {
+    "EXPRESS_Menu_Dashboard": [
+      "tabler",
+      "tabler-demo",
+      "formwork-meridian",
+      "radix-ui",
+      "shadcn-ui"
+    ],
+    "local_icons": [
+      "lucide"
+    ],
+    "HUD_sensors_charts": [
+      "svg-gauge",
+      "progressbar-js",
+      "apache-echarts",
+      "uplot",
+      "chartjs",
+      "d3"
+    ],
+    "WOW_quality_optional": [
+      "threejs",
+      "postprocessing",
+      "tsparticles",
+      "particlesjs",
+      "motion",
+      "lottie",
+      "ogl",
+      "pixijs",
+      "luma-gl"
+    ],
+    "node_editor_optional": [
+      "xyflow",
+      "leva",
+      "tweakpane"
+    ],
+    "React_only_not_native_WPF": [
+      "react-three-fiber",
+      "drei",
+      "spline-react"
+    ]
+  },
+  "integrator_note": "Use verified source donors first; do not enlarge current EXPRESS installer with entire source/demo ZIPs. Selectively port reviewed assets to existing WPF/WebView2 OneHost, keep 5 original primary actions, eight directions, SourceLock, permission/STOP, and one original install/SQLite. E06 source pass does not imply E07 release."
+}
