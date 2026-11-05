@@ -48,5 +48,20 @@ class UninstallAnyExitNoLoss(unittest.TestCase):
             self.assertEqual(good.read_bytes(), b"evidence")
 
 
+    def test_bounded_no_loss_proof_refuses_oversized_file(self):
+        # The existing NO-LOSS marker is tiny. Swapping a huge file in its
+        # place must fail closed without Path.read_bytes() (unbounded IO).
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            marker = base / "marker.bin"
+            marker.write_bytes(b"z" * 1048576)
+            with patch.object(Path, "read_bytes", side_effect=AssertionError("unbounded read")):
+                self.assertFalse(original_no_loss_file_preserved(marker, b"expected", base))
+            self.assertEqual(marker.stat().st_size, 1048576)
+            marker.write_bytes(b"expected")
+            self.assertTrue(original_no_loss_file_preserved(marker, b"expected", base))
+
+
 if __name__ == "__main__":
     unittest.main()

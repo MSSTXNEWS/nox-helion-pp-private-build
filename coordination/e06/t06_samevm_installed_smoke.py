@@ -148,8 +148,26 @@ def original_no_loss_file_preserved(path: Path, expected: bytes, local_base: Pat
             not expected or not plain_parents(path, local_base) or
             not regular(path)):
         return False
+    # Bound reads to the *original* test-owned marker length. Re-attest the
+    # opened file identity before reading and the path after reading: a
+    # replaced/oversized file cannot consume unbounded memory or count PASS.
     try:
-        return path.read_bytes() == expected
+        before=path.lstat()
+        if (not stat.S_ISREG(before.st_mode) or
+                before.st_size!=len(expected)):
+            return False
+        with path.open("rb") as stream:
+            opened=os.fstat(stream.fileno())
+            if (not stat.S_ISREG(opened.st_mode) or
+                    (opened.st_dev,opened.st_ino)!=(before.st_dev,before.st_ino) or
+                    opened.st_size!=len(expected) or
+                    stream.read(len(expected)+1)!=expected):
+                return False
+        after=path.lstat()
+        return (stat.S_ISREG(after.st_mode) and
+                (after.st_dev,after.st_ino)==(before.st_dev,before.st_ino) and
+                after.st_size==len(expected) and
+                plain_parents(path,local_base) and regular(path))
     except (OSError, ValueError):
         return False
 
