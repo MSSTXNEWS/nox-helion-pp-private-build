@@ -35,6 +35,25 @@ def _load_uninstall_owner():
 
 owned_payload_paths,verify_original_uninstall=_load_uninstall_owner()
 
+def read_only_nonzero_uninstall_witness(
+        install: Path, owned_files: tuple[Path, ...], remover: Path | None) -> dict:
+    """Inspect failed ORIGINAL NSIS /S without rerunning or deleting anything.
+
+    This is an instantaneous snapshot after the uninstaller returned nonzero;
+    it is NEVER final removal evidence or E07 acceptance. The original exit
+    remains HOLD regardless of what the witness reports.
+    """
+    source = Path(__file__).resolve().with_name("t06_uninstall_firstfail_witness.py")
+    spec = importlib.util.spec_from_file_location(
+        "nox_t06_nonzero_uninstall_readonly_witness", source)
+    if spec is None or spec.loader is None:
+        raise ImportError("T06_NONZERO_READONLY_WITNESS_MISSING")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.read_only_uninstall_failure_snapshot(
+        install, owned_files, remover)
+
+
 ROOT=Path(__file__).resolve().parents[2]
 ON_GITHUB=os.environ.get("GITHUB_ACTIONS")=="true"
 ON_LOCAL_BRIDGE=os.environ.get("NOX_T06_LOCAL_BRIDGE")=="YES"
@@ -1131,6 +1150,24 @@ def main()->int:
         require(regular(uninstall),"T06_ORIGINAL_UNINSTALLER_MISSING")
         uninstalled=run([str(uninstall),"/S"],220)
         report["installer_lifecycle"]["uninstall"]=uninstalled
+        # A NONZERO original uninstaller previously short-circuited before its
+        # read-only failure witness; physical CI only exposed EXIT=1. Capture
+        # bounded manifest-relative residues before preserving the same HOLD.
+        # No second uninstaller, deletion, elevated process or new service.
+        if uninstalled["code"] != 0:
+            try:
+                witness = read_only_nonzero_uninstall_witness(
+                    install, owned_files, origin/"Remove-InstalledPayload.ps1")
+                report["installer_lifecycle"]["uninstall_nonzero_readonly_witness"] = witness
+                print("T06_UNINSTALL_NONZERO_READONLY_WITNESS",
+                      json.dumps(witness, sort_keys=True, ensure_ascii=True),
+                      flush=True)
+            except Exception as evidence_error:
+                # A diagnostic failure NEVER changes the native owner verdict.
+                report["installer_lifecycle"]["uninstall_nonzero_witness_error"] = (
+                    type(evidence_error).__name__[:64])
+                print("T06_UNINSTALL_NONZERO_WITNESS_HOLD",
+                      type(evidence_error).__name__[:64], flush=True)
         require(uninstalled["code"]==0,"T06_CONSERVATIVE_UNINSTALL_EXIT_HOLD")
         report["installer_lifecycle"]["uninstall_owned_wait_budget_seconds"]=original_nsis_uninstall_budget(len(owned_files))
         await_original_uninstall(install,owned_files)
