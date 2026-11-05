@@ -657,7 +657,8 @@ try
         path, true, "https://ollama.com/library/tinyllama", now, now,
         ExpectedLocalBytes: payload.LongLength, ExpectedLocalSha256: sha,
         RightsReceiptId: "owner-reviewed-gguf-rights-fixture");
-    using var http = new HttpClient(new D04RightsGgufHandler(job.ModelTag, new string('d', 64))) {
+    var ggufHandler = new D04RightsGgufHandler(job.ModelTag, new string('d', 64));
+    using var http = new HttpClient(ggufHandler) {
         BaseAddress = new Uri("http://127.0.0.1:11434/")
     };
     var adapter = new OllamaModelAdapter(http, d04RightsDir);
@@ -682,6 +683,28 @@ try
         LicenseAcknowledged = false };
     await MustHoldUnreviewed(pullWithoutConsent, true,
         "D04 Pull direct adapter refuses unacknowledged license before Ollama");
+    async Task RefuseUnsafeExisting(string expected, string label)
+    {
+        try { await adapter.ImportGgufAsync(job, (evt, token) => ValueTask.CompletedTask, default); }
+        catch (InvalidDataException ex) when (ex.Message == expected) { Assert(true, label); return; }
+        throw new Exception("FAIL " + label);
+    }
+    ggufHandler.ExistingTag = true;
+    await RefuseUnsafeExisting("P03_GGUF_EXISTING_TAG_NO_LOSS_HOLD",
+        "D04 GGUF cannot replace already installed model");
+    Assert(ggufHandler.CreateCalls == 0, "D04 existing model rejected before api/create");
+    ggufHandler.ExistingTag = false;
+    ggufHandler.FailTagsLookup = true;
+    await RefuseUnsafeExisting("OLLAMA_TAGS_LOOKUP_FAILED_HOLD",
+        "D04 unavailable Ollama tags cannot be treated as absent");
+    ggufHandler.FailTagsLookup = false;
+    ggufHandler.TagsChecks = 0;
+    ggufHandler.AppearOnSecondTagsCheck = true;
+    await RefuseUnsafeExisting("P03_GGUF_EXISTING_TAG_NO_LOSS_HOLD",
+        "D04 competing owner tag detected before api/create");
+    Assert(ggufHandler.CreateCalls == 0, "D04 second read prevents replacement");
+    ggufHandler.AppearOnSecondTagsCheck = false;
+    ggufHandler.TagsChecks = 0;
     var result = await adapter.ImportGgufAsync(job,
         (evt, token) => ValueTask.CompletedTask, default);
     var receiptPath = adapter.ReceiptPathFor(job.Id);
@@ -708,6 +731,12 @@ finally { Directory.Delete(d04RightsDir, recursive: true); }
 // Only the official loopback API shapes used by the original GGUF importer.
 sealed class D04RightsGgufHandler(string modelTag, string localDigest) : HttpMessageHandler
 {
+    public bool ExistingTag { get; set; }
+    public bool FailTagsLookup { get; set; }
+    public bool AppearOnSecondTagsCheck { get; set; }
+    public int TagsChecks { get; set; }
+    public int CreateCalls { get; private set; }
+    private bool _created;
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,
         CancellationToken cancellationToken)
     {
@@ -717,9 +746,20 @@ sealed class D04RightsGgufHandler(string modelTag, string localDigest) : HttpMes
             path is not null && path.StartsWith("/api/blobs/sha256:", StringComparison.Ordinal))
             body = "";
         else if (request.Method == HttpMethod.Post && path == "/api/create")
+        {
+            CreateCalls++; _created = true;
             body = JsonSerializer.Serialize(new { status = "success" }) + Environment.NewLine;
+        }
         else if (request.Method == HttpMethod.Get && path == "/api/tags")
-            body = JsonSerializer.Serialize(new { models = new[] { new { name = modelTag, digest = localDigest } } });
+        {
+            TagsChecks++;
+            if (FailTagsLookup)
+                return Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.ServiceUnavailable));
+            bool present = ExistingTag || _created || (AppearOnSecondTagsCheck && TagsChecks > 1);
+            body = present
+                ? JsonSerializer.Serialize(new { models = new[] { new { name = modelTag, digest = localDigest } } })
+                : "{\"models\":[]}";
+        }
         else throw new InvalidOperationException("D04 fixture refuses unexpected Ollama request");
         return Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK) {
             Content = new StringContent(body, Encoding.UTF8, "application/json")

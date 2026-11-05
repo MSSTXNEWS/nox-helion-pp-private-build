@@ -249,7 +249,10 @@ public static class ModelLocalAttestation
     public static async Task<string?> ReadUnambiguousDigestAsync(HttpClient http, string model, CancellationToken ct)
     {
         using var response = await http.GetAsync("api/tags", HttpCompletionOption.ResponseHeadersRead, ct);
-        if (!response.IsSuccessStatusCode) return null;
+        // A failed tags lookup is NOT a verified absence: never risk overwriting
+        // existing installed models when local Ollama is unavailable.
+        if (!response.IsSuccessStatusCode)
+            throw new InvalidDataException("OLLAMA_TAGS_LOOKUP_FAILED_HOLD");
         // Redirects must be DISABLED in the #6-owned HttpClientHandler before requests.
         if (response.RequestMessage?.RequestUri is { } resolved &&
             (resolved.Scheme != Uri.UriSchemeHttp ||

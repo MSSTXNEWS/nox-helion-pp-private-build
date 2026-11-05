@@ -88,6 +88,10 @@ public sealed class OllamaModelAdapter(HttpClient http, string receiptDirectory)
         ModelLocalAttestation.RequireRegularUnlinkedFile(path);
         if (!File.Exists(path) || !string.Equals(Path.GetExtension(path), ".gguf", StringComparison.OrdinalIgnoreCase))
             throw new FileNotFoundException("Select an existing .gguf file.", path);
+        // A reviewed GGUF import cannot overwrite an existing native Ollama tag.
+        // Fail before upload/create; rights approval is not overwrite consent.
+        if (await GetLocalModelDigestAsync(job.ModelTag, ct) is not null)
+            throw new InvalidDataException("P03_GGUF_EXISTING_TAG_NO_LOSS_HOLD");
 
         // Hash and upload the same open file handle to prevent path replacement between hashing and upload.
         await using var file = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 1 << 20,
@@ -121,6 +125,11 @@ public sealed class OllamaModelAdapter(HttpClient http, string receiptDirectory)
         using (var verifiedBlob = await http.SendAsync(new HttpRequestMessage(HttpMethod.Head, "api/blobs/" + digest), ct))
             verifiedBlob.EnsureSuccessStatusCode();
 
+        // Recheck immediately before api/create: another owner may have installed
+        // the tag while we verified/uploaded layers. Ollama create is not CAS.
+        ct.ThrowIfCancellationRequested();
+        if (await GetLocalModelDigestAsync(job.ModelTag, ct) is not null)
+            throw new InvalidDataException("P03_GGUF_EXISTING_TAG_NO_LOSS_HOLD");
         var payload = new { model = job.ModelTag, files = new Dictionary<string, string> { [Path.GetFileName(path)] = digest }, stream = true };
         using var create = await SendStreamingJsonAsync("api/create", payload, ct);
         create.EnsureSuccessStatusCode();
