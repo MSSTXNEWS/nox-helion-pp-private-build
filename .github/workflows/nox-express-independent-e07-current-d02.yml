@@ -1,38 +1,42 @@
 name: NOX EXPRESS independent E07 current D02 41926651444
+# New E07 accepts only a physically built, explicitly pinned producer Setup.
+# No unrelated-HEAD or historic-Setup automatic reruns.
 on:
-  push:
-    branches: [integration/nox-v16-unified-candidate-20261028-r01]
-    paths:
-      - .github/workflows/nox-express-independent-e07-current-d02.yml
-      - tests/e07/test_current_d02_pin_u23.py
-      - tests/e07/test_independent_setup_e07.py
-      - tests/e07/test_91a6_real_visual_u17.py
-      - coordination/e07/independent_setup_e07.py
-      - tests/e07/test_initial_home_physical_u21.py
-      - tests/e07/test_final_truth_scope_u20.py
-      - tests/e07/test_navigation_consent_cleanup_u25.py
-      - tests/e07/test_install_fresh_owner_log_u26.py
-      - coordination/e07/probe_final_same_setup.py
-      - coordination/e07/probe_webview_motion.py
-      - tests/e07/test_webview_motion_cdp_u26.py
-      - coordination/e07/probe_91a6_real_visual_u17.py
-      - coordination/e07/probe_installed_qwen.py
-      - coordination/e07/probe_native_active_stop.py
-      - coordination/e07/verify_qwen_oci_integrity.py
-      - tests/e07/test_final_primary_dispatch_u18.py
-      - tests/e07/test_live_final_wiring_u19.py
-      - tests/e07/test_os_animation_observation_u21.py
-      - tests/e07/test_visual_stage_diagnostics_u22.py
-      - tests/e07/test_c34_feedback_fastpath_u24.py
-      - tests/e07/test_modelcenter_same_webview_u28.py
-      - coordination/e06/MainWindow.NativeP02.cs
-      - coordination/e07/c34_feedback_rules.json
   workflow_dispatch:
+    inputs:
+      producer_run_id:
+        description: Immutable Windows E06 producer run ID
+        required: true
+        type: number
+      artifact_name:
+        description: Exact E06 producer artifact name
+        required: true
+        type: string
+      source_sha:
+        description: Verified 40-hex source commit
+        required: true
+        type: string
+      setup_sha256:
+        description: Verified Setup SHA256
+        required: true
+        type: string
+      setup_bytes:
+        description: Verified Setup file byte count
+        required: true
+        type: number
+      build_id:
+        description: Verified E06 BuildID
+        required: true
+        type: string
+      owned_count:
+        description: Exact installed owner payload count
+        required: true
+        type: number
 permissions:
   actions: read
   contents: read
 concurrency:
-  group: nox-express-e07-current-d02-7067a091
+  group: nox-express-e07-immutable-${{ inputs.setup_sha256 }}
   cancel-in-progress: false
 jobs:
   independent-windows:
@@ -107,9 +111,9 @@ jobs:
       - name: Download immutable candidate from DIFFERENT Windows CI run
         uses: actions/download-artifact@v4
         with:
-          run-id: 41926651444
+          run-id: ${{ inputs.producer_run_id }}
           github-token: ${{ github.token }}
-          name: nox-v16-e06-onehost-diagnostic-41926651444
+          name: ${{ inputs.artifact_name }}
           path: input-verified-current-d02
       - name: Download prior SHA-pinned Authenticode-verified official Ollama x64 bytes
         uses: actions/download-artifact@v4
@@ -183,7 +187,7 @@ jobs:
           NOX_E07_DEVTOOLS_PORT: '9222'
         run: |
           $ErrorActionPreference='Stop'
-          python -B coordination/e07/independent_setup_e07.py --artifact-dir input-verified-current-d02 --artifact-kind d02-current --out work/e07-independent/E07_CANDIDATE_RECEIPT.json
+          python -B coordination/e07/independent_setup_e07.py --artifact-dir input-verified-current-d02 --artifact-kind d02-pinned --pinned-source '${{ inputs.source_sha }}' --pinned-setup-sha '${{ inputs.setup_sha256 }}' --pinned-setup-bytes '${{ inputs.setup_bytes }}' --pinned-build-id '${{ inputs.build_id }}' --pinned-owned-count '${{ inputs.owned_count }}' --out work/e07-independent/E07_CANDIDATE_RECEIPT.json
           if ($LASTEXITCODE -ne 0) { throw 'INDEPENDENT_E07_NOT_ACCEPTED' }
       - name: Save independent evidence even on HOLD
         if: always()

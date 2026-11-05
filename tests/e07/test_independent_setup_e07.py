@@ -744,4 +744,25 @@ class IndependentE07(unittest.TestCase):
             MOD.evaluate_final_acceptance(
                 visual, functions, source_sha=MOD.SOURCE_SHA, setup_sha=MOD.SETUP_SHA)
 
+    def test_dynamic_setup_pins_reject_malformed_and_frozen_override(self):
+        # Source-only proof: real independent Windows E07 is still required.
+        pins = {"source_sha": "a"*40, "setup_sha256": "b"*64,
+                "setup_bytes": 169682978, "build_id": "NOX-V16-" + "c"*24,
+                "owned_count": 1013}
+        with self.assertRaisesRegex(MOD.Hold, "E07_SOURCE_ARTIFACT_NOT_REGULAR"):
+            MOD.setup_lock(Path("missing-e07-d02-pinned.exe"), Path("E07_BUILT_HANDOFF.json"),
+                           candidate="d02-pinned", pinned=pins)
+        for wrong in ({**pins, "source_sha": "z"*40},
+                      {**pins, "setup_sha256": "b"*63},
+                      {**pins, "setup_bytes": True},
+                      {**pins, "owned_count": 728},
+                      {**pins, "build_id": "NOX-V16-UNVERIFIED"}):
+            with self.subTest(wrong=wrong):
+                with self.assertRaisesRegex(MOD.Hold, "E07_PINNED_"):
+                    MOD.setup_lock(Path("missing-e07-d02-pinned.exe"), Path("E07_BUILT_HANDOFF.json"),
+                                   candidate="d02-pinned", pinned=wrong)
+        with self.assertRaisesRegex(MOD.Hold, "E07_FROZEN_PIN_OVERRIDE_HOLD"):
+            MOD.setup_lock(Path("missing-e07-d02-pinned.exe"), Path("E07_BUILT_HANDOFF.json"),
+                           candidate="d02-current", pinned=pins)
+
 if __name__=='__main__':unittest.main()

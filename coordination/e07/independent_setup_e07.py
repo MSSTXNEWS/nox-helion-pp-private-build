@@ -221,16 +221,40 @@ def samevm_lifecycle_verified(
                     for name in ("install", "verify", "update", "rollback", "uninstall")))
 
 
-def setup_lock(setup: Path, receipt: Path, *, candidate: str = "d02") -> dict:
+def setup_lock(setup: Path, receipt: Path, *, candidate: str = "d02", pinned: dict | None = None) -> dict:
     """Pin physical latest E06 Setup to three same-identity receipts, then verify bytes.
 
     Prior E06 same-VM lifecycle is NOT independent E07; lifecycle() must rerun.
     """
-    require(candidate in ("d02", "d02-91a6", "d02-f842", "d02-nav-a2", "d02-current"), "E07_CANDIDATE_PIN_KIND_HOLD")
+    require(candidate in ("d02", "d02-91a6", "d02-f842", "d02-nav-a2", "d02-current", "d02-pinned"), "E07_CANDIDATE_PIN_KIND_HOLD")
+    if candidate == "d02-pinned":
+        # Explicit fingerprints from a real producer; E06 receipts and locked PE
+        # are independently rechecked below, never replaced by CLI assertions.
+        require(type(pinned) is dict and set(pinned) ==
+                {"source_sha", "setup_sha256", "setup_bytes", "build_id", "owned_count"},
+                "E07_PINNED_IDENTITY_SCHEMA_HOLD")
+        require(type(pinned["source_sha"]) is str and
+                re.fullmatch(r"[0-9a-f]{40}", pinned["source_sha"]) is not None and
+                type(pinned["setup_sha256"]) is str and
+                re.fullmatch(r"[0-9a-f]{64}", pinned["setup_sha256"]) is not None,
+                "E07_PINNED_SOURCE_SETUP_FORMAT_HOLD")
+        require(type(pinned["setup_bytes"]) is int and
+                1_000_000 <= pinned["setup_bytes"] <= 5_000_000_000 and
+                type(pinned["owned_count"]) is int and 729 <= pinned["owned_count"] <= 20_000 and
+                type(pinned["build_id"]) is str and
+                re.fullmatch(r"NOX-V16-[0-9a-f]{24}", pinned["build_id"]) is not None,
+                "E07_PINNED_SIZE_BUILD_OWNER_FORMAT_HOLD")
+        expected_source, expected_setup_sha = pinned["source_sha"], pinned["setup_sha256"]
+        expected_setup_size, expected_build_id = pinned["setup_bytes"], pinned["build_id"]
+        expected_owned_count = pinned["owned_count"]
+    else:
+        require(pinned is None, "E07_FROZEN_PIN_OVERRIDE_HOLD")
     if candidate == "d02-current":
         expected_source, expected_setup_sha = CURRENT_D02_SOURCE_SHA, CURRENT_D02_SETUP_SHA
         expected_setup_size, expected_build_id = CURRENT_D02_SETUP_SIZE, CURRENT_D02_BUILD_ID
         expected_owned_count = CURRENT_D02_OWNED_COUNT
+    elif candidate == "d02-pinned":
+        pass  # Strictly bound to E06 receipts; no frozen SHA fallback.
     elif candidate == "d02-nav-a2":
         expected_source, expected_setup_sha = NAV_A2_SOURCE_SHA, NAV_A2_SETUP_SHA
         expected_setup_size, expected_build_id = NAV_A2_SETUP_SIZE, NAV_A2_BUILD_ID
@@ -1475,7 +1499,12 @@ def lifecycle(setup: Path, result: dict, *, frozen_source: str = "", physical_na
 def main() -> int:
     p=argparse.ArgumentParser()
     p.add_argument("--artifact-dir",required=True,type=Path)
-    p.add_argument("--artifact-kind",choices=("d02","d02-91a6","d02-f842","d02-nav-a2","d02-current","original","original-e888","original-30a"),default="d02")
+    p.add_argument("--artifact-kind",choices=("d02","d02-91a6","d02-f842","d02-nav-a2","d02-current","d02-pinned","original","original-e888","original-30a"),default="d02")
+    p.add_argument("--pinned-source")
+    p.add_argument("--pinned-setup-sha")
+    p.add_argument("--pinned-setup-bytes",type=int)
+    p.add_argument("--pinned-build-id")
+    p.add_argument("--pinned-owned-count",type=int)
     p.add_argument("--out",required=True,type=Path)
     p.add_argument("--visual-receipt",type=Path)
     p.add_argument("--function-receipt",type=Path)
@@ -1489,7 +1518,9 @@ def main() -> int:
             "30a4f7c43649e3c3d66d0d46ec370b2105a69faa",
             "ceb4aab254a6a61b16b25a225ba443149bf1260c3ac410f0c00047842ab9c48c"),
     }
-    if args.artifact_kind == "d02-current":
+    if args.artifact_kind == "d02-pinned":
+        source_sha, setup_sha = args.pinned_source, args.pinned_setup_sha
+    elif args.artifact_kind == "d02-current":
         source_sha, setup_sha = CURRENT_D02_SOURCE_SHA, CURRENT_D02_SETUP_SHA
     elif args.artifact_kind == "d02-nav-a2":
         source_sha, setup_sha = NAV_A2_SOURCE_SHA, NAV_A2_SETUP_SHA
@@ -1510,6 +1541,18 @@ def main() -> int:
                 os.environ.get("RUNNER_ENVIRONMENT")=="github-hosted" and
                 os.environ.get("GITHUB_REPOSITORY")=="MSSTXNEWS/nox-helion-pp-private-build",
                 "E07_HOST_NOT_AUTHORIZED")
+        if args.artifact_kind == "d02-pinned":
+            pinned = {
+                "source_sha": args.pinned_source, "setup_sha256": args.pinned_setup_sha,
+                "setup_bytes": args.pinned_setup_bytes, "build_id": args.pinned_build_id,
+                "owned_count": args.pinned_owned_count,
+            }
+        else:
+            pinned = None
+            require(all(v is None for v in (
+                args.pinned_source, args.pinned_setup_sha, args.pinned_setup_bytes,
+                args.pinned_build_id, args.pinned_owned_count)),
+                "E07_FROZEN_PIN_OVERRIDE_HOLD")
         source = args.artifact_dir
         if args.artifact_kind in frozen_ids:
             setup=source/"NOX_HELION_EXPRESS_CANDIDATE_SETUP.exe"
@@ -1518,13 +1561,13 @@ def main() -> int:
         else:
             setup=source/"e06"/"onehost-wow-diagnostic"/"NOX-HELION-V16-DIAGNOSTIC-SETUP.exe"
             receipt=source/"e06"/"onehost-wow-diagnostic"/"E07_BUILT_HANDOFF.json"
-            result["checks"]["artifact"] = setup_lock(setup,receipt,candidate=args.artifact_kind)
+            result["checks"]["artifact"] = setup_lock(setup,receipt,candidate=args.artifact_kind,pinned=pinned)
         # All physical final witnesses are created on this one installed Setup,
         # not imported from an unrelated workflow or a previous candidate.
         physical_dir = args.out.parent / "same-setup-final"
         lifecycle(setup,result,frozen_source=source_sha,
-                  physical_nav=args.artifact_kind in ("original-30a", "d02", "d02-91a6", "d02-f842", "d02-nav-a2", "d02-current"),
-                  final_probe_dir=physical_dir if args.artifact_kind in ("d02", "d02-91a6", "d02-f842", "d02-nav-a2", "d02-current") else None)
+                  physical_nav=args.artifact_kind in ("original-30a", "d02", "d02-91a6", "d02-f842", "d02-nav-a2", "d02-current", "d02-pinned"),
+                  final_probe_dir=physical_dir if args.artifact_kind in ("d02", "d02-91a6", "d02-f842", "d02-nav-a2", "d02-current", "d02-pinned") else None)
         # The complete physical install/update/rollback/uninstall lifecycle ran
         # on this exact Setup. These facts do NOT prove inference or final E07.
         result["checks"]["installed_lifecycle"] = {
@@ -1559,7 +1602,7 @@ def main() -> int:
         # Final release is admitted only when independently produced same-Setup
         # visual and functional subreceipts are supplied and pass strict shape,
         # identity and per-action checks. Missing evidence stays HOLD.
-        if args.artifact_kind in ("d02", "d02-91a6", "d02-f842", "d02-nav-a2", "d02-current"):
+        if args.artifact_kind in ("d02", "d02-91a6", "d02-f842", "d02-nav-a2", "d02-current", "d02-pinned"):
             witness = result["checks"].get("installed_final_physical", {})
             # Observing a live HWND and writing receipts is never itself a
             # functional or visual PASS; the final evaluator must inspect both.
