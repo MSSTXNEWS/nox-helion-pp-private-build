@@ -260,6 +260,15 @@ function visibleOriginalOwnerTarget(button){
  return !!hit&&(hit===button||button.contains(hit));
 }
 
+// Availability is NOT an owner ACK: native WPF still decides consent/exit/files.
+// Never synthesize a privileged INSTALL click when the real WebView2 bridge
+// is absent or the host object's property access throws.
+function originalInstallTransportPresent(){
+ try{return typeof window.chrome?.webview?.postMessage==='function';}
+ catch{return false;}
+}
+
+
 nav.addEventListener('click',event=>{
  const target=event.target.closest('button[data-nox-primary]');
  if(!target||!nav.contains(target)||!event.isTrusted)return;
@@ -274,6 +283,9 @@ nav.addEventListener('click',event=>{
  }
  const name=target.getAttribute('data-nox-primary');
  state.textContent='';
+ if(name==='INSTALL'&&!originalInstallTransportPresent()){
+   state.textContent='INSTALL: исходный нативный WebView2 недоступен · HOLD';return;
+ }
  if(name==='MODELS' && (!window.chrome||!window.chrome.webview||
      typeof window.chrome.webview.postMessage!=='function')){
    state.textContent='MODELS: native WebView2 недоступен · HOLD';return;
