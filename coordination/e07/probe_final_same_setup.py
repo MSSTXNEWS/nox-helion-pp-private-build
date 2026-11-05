@@ -672,6 +672,28 @@ def _newest(paths: set[Path], folder: Path, pattern: str) -> Path|None:
 
 
 
+
+def prepare_final_visual_directory(out_dir: Path, *, new_observation: bool) -> None:
+    """Create evidence once for fresh WPF HOME; reuse only on same-run continuation.
+
+    Never follow a preexisting file, junction, symlink or prior run's directory
+    when writing screenshots. The pre-navigation/function pass shares exactly
+    one admitted root, with the PNG digest checked separately.
+    """
+    e07.require(isinstance(out_dir, Path) and e07.clean_dir(out_dir.parent),
+                "E07_FINAL_EVIDENCE_PARENT_HOLD")
+    if new_observation:
+        e07.require(not os.path.lexists(out_dir),
+                    "E07_FINAL_EVIDENCE_COLLISION_HOLD")
+        try:
+            out_dir.mkdir()
+        except OSError:
+            raise e07.Hold("E07_FINAL_EVIDENCE_CREATE_HOLD") from None
+    e07.require(e07.clean_dir(out_dir) and
+                out_dir.resolve().parent == out_dir.parent.resolve(),
+                "E07_FINAL_EVIDENCE_DIR_REPARSE_HOLD")
+
+
 def verify_pre_nav_visual_capture(out_dir: Path, observation: dict) -> None:
     """Bind a pre-navigation physical PASS to its actual same-run WPF PNG.
 
@@ -714,7 +736,7 @@ def run(hwnd: int, install: Path, local: Path, *, source_sha: str, setup_sha: st
                   "@media(prefers-reduced-motion:reduce)","animation:none!important",
                   "transition:none!important","@media(max-width:550px)"):
         e07.require(token in html,"E07_FINAL_INSTALLED_HOME_CONTRACT_HOLD")
-    out_dir.mkdir(parents=True,exist_ok=True)
+    prepare_final_visual_directory(out_dir, new_observation=precomputed_visual is None)
 
     if precomputed_visual is None:
         png=out_dir/"D02_FINAL_SAME_SETUP.png"
