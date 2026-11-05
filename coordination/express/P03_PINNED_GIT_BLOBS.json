@@ -515,11 +515,14 @@
     {
       "path": "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueWorker.cs",
       "owner": 3,
-      "run_id": "NOX-D04-RIGHTS-20261105",
-      "pre_git_blob_sha1": "6dd5ceec428ec71a426d785304001a2d269a666f",
-      "post_git_blob_sha1": "135d62901100f1818ed3ea753f25f6c7c791c8df",
-      "post_bytes": 15406,
-      "acceptance": "SOURCE_ONLY_OWNER_RIGHTS_CANDIDATE_NO_WINDOWS_E07"
+      "run_id": "D04_LEGACY_REVIEW_QUEUE_HEAD_OF_LINE_HOLD_20261105",
+      "pre_git_blob_sha1": "135d62901100f1818ed3ea753f25f6c7c791c8df",
+      "post_git_blob_sha1": "2315d9716a0d73eb4be80a578283515a08081e1e",
+      "post_bytes": 15679,
+      "acceptance": "SOURCE_ONLY_NOT_NATIVE_DOTNET_OR_WINDOWS",
+      "prior_active_post_git_blob_sha1": "135d62901100f1818ed3ea753f25f6c7c791c8df",
+      "prior_active_post_bytes": 15406,
+      "source_head_observed": "d04bac08cbe603a22d4f91394cc939c21a884403"
     },
     {
       "path": "Packages/P03/Source/P03.ModelCenter/ModelCenterNativeRoutes.cs",
@@ -545,26 +548,26 @@
     {
       "path": "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueStore.cs",
       "owner": 3,
-      "run_id": "D04_NATIVE_PIN_REVISION_HOLD_20261105",
-      "pre_git_blob_sha1": "cc82c0557f6e04b7dd7659955fcd034bdc1f210a",
-      "post_git_blob_sha1": "1d6a7c59e147b6ecbf8a2cc802f11323be65ce63",
-      "post_bytes": 38512,
-      "acceptance": "SOURCE_ONLY_CSHARP_AND_WINDOWS_NOT_RUN",
-      "prior_active_post_git_blob_sha1": "cc82c0557f6e04b7dd7659955fcd034bdc1f210a",
-      "prior_active_post_bytes": 38196,
-      "source_head_observed": "de2deb433a0ddd78bf53824627a2e1dedec8bf26"
+      "run_id": "D04_LEGACY_REVIEW_QUEUE_HEAD_OF_LINE_HOLD_20261105",
+      "pre_git_blob_sha1": "1d6a7c59e147b6ecbf8a2cc802f11323be65ce63",
+      "post_git_blob_sha1": "3393126e69c790c495e8b728b235f3bfde8f09e3",
+      "post_bytes": 38513,
+      "acceptance": "SOURCE_ONLY_NOT_NATIVE_DOTNET_OR_WINDOWS",
+      "prior_active_post_git_blob_sha1": "1d6a7c59e147b6ecbf8a2cc802f11323be65ce63",
+      "prior_active_post_bytes": 38512,
+      "source_head_observed": "d04bac08cbe603a22d4f91394cc939c21a884403"
     },
     {
       "path": "Packages/P03/Source/P03.ModelCenter.HardeningSmoke/Program.cs",
       "owner": 3,
-      "run_id": "D04_NATIVE_PIN_REVISION_HOLD_20261105",
-      "pre_git_blob_sha1": "a60f5bc6ad9c5208ecd360b62024fcebeb5c0bcd",
-      "post_git_blob_sha1": "33cd0c71bed0570c0d0304e3a122bd7b64a1afe6",
-      "post_bytes": 65669,
-      "acceptance": "SOURCE_ONLY_CSHARP_AND_WINDOWS_NOT_RUN",
-      "prior_active_post_git_blob_sha1": "a60f5bc6ad9c5208ecd360b62024fcebeb5c0bcd",
-      "prior_active_post_bytes": 63160,
-      "source_head_observed": "de2deb433a0ddd78bf53824627a2e1dedec8bf26"
+      "run_id": "D04_LEGACY_REVIEW_QUEUE_HEAD_OF_LINE_HOLD_20261105",
+      "pre_git_blob_sha1": "33cd0c71bed0570c0d0304e3a122bd7b64a1afe6",
+      "post_git_blob_sha1": "2b529eebddfa257195b2b4e76fa404637522e7ff",
+      "post_bytes": 66576,
+      "acceptance": "SOURCE_ONLY_NOT_NATIVE_DOTNET_OR_WINDOWS",
+      "prior_active_post_git_blob_sha1": "33cd0c71bed0570c0d0304e3a122bd7b64a1afe6",
+      "prior_active_post_bytes": 65669,
+      "source_head_observed": "d04bac08cbe603a22d4f91394cc939c21a884403"
     },
     {
       "path": "Packages/P03/Source/python-host/p03_onehost_port.py",
@@ -1128,6 +1131,45 @@
       "source_head_observed": "9011b2fa4e3e50b3543cb0bbd9d6be9fe83d87b4",
       "historical_approved_override": true,
       "retired_from_active_set": "D04_NATIVE_PIN_REVISION_HOLD_20261105"
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueStore.cs",
+      "owner": 3,
+      "run_id": "D04_NATIVE_PIN_REVISION_HOLD_20261105",
+      "pre_git_blob_sha1": "cc82c0557f6e04b7dd7659955fcd034bdc1f210a",
+      "post_git_blob_sha1": "1d6a7c59e147b6ecbf8a2cc802f11323be65ce63",
+      "post_bytes": 38512,
+      "acceptance": "SOURCE_ONLY_CSHARP_AND_WINDOWS_NOT_RUN",
+      "prior_active_post_git_blob_sha1": "cc82c0557f6e04b7dd7659955fcd034bdc1f210a",
+      "prior_active_post_bytes": 38196,
+      "source_head_observed": "de2deb433a0ddd78bf53824627a2e1dedec8bf26",
+      "historical_approved_override": true,
+      "retired_from_active_set": "D04_LEGACY_REVIEW_QUEUE_HEAD_OF_LINE_HOLD_20261105"
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueWorker.cs",
+      "owner": 3,
+      "run_id": "NOX-D04-RIGHTS-20261105",
+      "pre_git_blob_sha1": "6dd5ceec428ec71a426d785304001a2d269a666f",
+      "post_git_blob_sha1": "135d62901100f1818ed3ea753f25f6c7c791c8df",
+      "post_bytes": 15406,
+      "acceptance": "SOURCE_ONLY_OWNER_RIGHTS_CANDIDATE_NO_WINDOWS_E07",
+      "historical_approved_override": true,
+      "retired_from_active_set": "D04_LEGACY_REVIEW_QUEUE_HEAD_OF_LINE_HOLD_20261105"
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter.HardeningSmoke/Program.cs",
+      "owner": 3,
+      "run_id": "D04_NATIVE_PIN_REVISION_HOLD_20261105",
+      "pre_git_blob_sha1": "a60f5bc6ad9c5208ecd360b62024fcebeb5c0bcd",
+      "post_git_blob_sha1": "33cd0c71bed0570c0d0304e3a122bd7b64a1afe6",
+      "post_bytes": 65669,
+      "acceptance": "SOURCE_ONLY_CSHARP_AND_WINDOWS_NOT_RUN",
+      "prior_active_post_git_blob_sha1": "a60f5bc6ad9c5208ecd360b62024fcebeb5c0bcd",
+      "prior_active_post_bytes": 63160,
+      "source_head_observed": "de2deb433a0ddd78bf53824627a2e1dedec8bf26",
+      "historical_approved_override": true,
+      "retired_from_active_set": "D04_LEGACY_REVIEW_QUEUE_HEAD_OF_LINE_HOLD_20261105"
     }
   ],
   "source_expansion": {

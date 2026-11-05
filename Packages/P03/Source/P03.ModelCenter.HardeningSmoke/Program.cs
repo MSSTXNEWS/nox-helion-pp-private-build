@@ -458,7 +458,23 @@ try
     Assert(unsafeClaimDenied &&
         (await unsafeLegacyQueue.ReadAsync()).Single().State == ModelJobState.Queued,
         "D04 legacy unsafe GGUF cannot be promoted to Running");
-    await unsafeLegacyQueue.UpdateAsync(unsafeLegacyJob.Id, j => j with { State = ModelJobState.Failed });
+    // D04: exercise the real worker on a legacy unsafe GGUF job. No HTTP request.
+    using (var legacyHttp = new HttpClient(new StalledOllamaHandler()) {
+        BaseAddress = new Uri("http://127.0.0.1:11434/")
+    })
+    {
+        var legacyAdapter = new OllamaModelAdapter(legacyHttp, unsafeLegacyDir);
+        var legacyPublisher = new ModelLifecyclePublisher(new SilentP03Sink());
+        var legacyWorker = new ModelDownloadQueueWorker(
+            unsafeLegacyQueue, legacyAdapter, legacyPublisher);
+        await legacyWorker.RunNextAsync(requestedJobId: unsafeLegacyJob.Id);
+    }
+    var rejectedLegacy = (await unsafeLegacyQueue.ReadAsync()).Single();
+    Assert(rejectedLegacy.State == ModelJobState.Failed &&
+        rejectedLegacy.Error == "GGUF_RIGHTS_REVIEW_REQUIRED" &&
+        rejectedLegacy.RightsReceiptId == unsafeLegacyJob.RightsReceiptId &&
+        rejectedLegacy.ModelTag == unsafeLegacyJob.ModelTag,
+        "D04 unreviewed legacy GGUF worker completes safely without corrupting queue");
     var unsafeRetryDenied = false;
     try { await unsafeLegacyQueue.RetryAsync(unsafeLegacyJob.Id); }
     catch (InvalidOperationException ex) when (ex.Message == "REVIEW_REQUIRED: unreviewed GGUF cannot be retried.")

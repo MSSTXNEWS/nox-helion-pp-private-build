@@ -275,7 +275,7 @@ public sealed class ModelDownloadQueueStore
     // GGUF owner's rights reference is durable review evidence, not arbitrary input.
     // Existing unsafe queue snapshots remain readable for explicit owner recovery;
     // enqueue, atomic claim and retry must refuse transferring them.
-    private static bool HasReviewedGgufAuthority(string? rightsReceiptId, string? licenseSource)
+    internal static bool HasReviewedGgufAuthority(string? rightsReceiptId, string? licenseSource)
     {
         if (string.IsNullOrWhiteSpace(rightsReceiptId) || rightsReceiptId.Length > 128 ||
             rightsReceiptId.Any(char.IsControl) || string.IsNullOrWhiteSpace(licenseSource) ||

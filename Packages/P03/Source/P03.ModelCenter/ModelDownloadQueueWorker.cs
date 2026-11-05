@@ -15,17 +15,21 @@ public sealed class ModelDownloadQueueWorker(
         {
             var job = (await store.ReadAsync(ct)).FirstOrDefault(x => x.State == ModelJobState.Queued && (requestedJobId is null || x.Id==requestedJobId));
             if (job is null) return;
-            // Legacy unpinned jobs remain preserved in the queue, but cannot execute.
-            if (job.Kind == ModelJobKind.OllamaPull &&
-                (job.ExpectedOllamaDigest is not { Length: 64 } ||
-                 string.IsNullOrWhiteSpace(job.ImmutableRevision) ||
-                 string.IsNullOrWhiteSpace(job.RightsReceiptId)))
+            // Legacy queue snapshots can survive their native authorization.
+            // Refuse both Pull and GGUF BEFORE atomic Running claim; otherwise
+            // unreviewed GGUF remains Queued and blocks later approved jobs.
+            var unreviewedPull = job.Kind == ModelJobKind.OllamaPull &&
+                !ModelDownloadQueueStore.HasReviewedPullAuthority(job);
+            var unreviewedGguf = job.Kind == ModelJobKind.GgufImport &&
+                !ModelDownloadQueueStore.HasReviewedGgufAuthority(
+                    job.RightsReceiptId, job.LicenseSource);
+            if (unreviewedPull || unreviewedGguf)
             {
-                // The queued snapshot can be cancelled by another NOX window before
-                // this review gate is persisted. Never rewrite terminal Cancelled.
+                // Concurrent STOP wins; preserve terminal history and provenance.
                 await store.UpdateAsync(job.Id, j => j.State == ModelJobState.Queued
                     ? j with { State = ModelJobState.Failed,
-                        Status = "REVIEW_REQUIRED", Error = "UNPINNED_ARTIFACT" }
+                        Status = "REVIEW_REQUIRED",
+                        Error = unreviewedGguf ? "GGUF_RIGHTS_REVIEW_REQUIRED" : "UNPINNED_ARTIFACT" }
                     : j, ct);
                 return;
             }
