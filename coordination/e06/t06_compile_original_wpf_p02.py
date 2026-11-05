@@ -673,7 +673,7 @@ def main():
             ("CREATIVE","integrations/creative/stage_creative.py",
              "151caf9bdaabdcd24965fa2b030c5c700663cdf9"),
             ("WOW200","integrations/wow200/stage_wow200.py",
-             "a877d300806e7f26b932e0bcc4bfe236e7e5efe5")):
+             "a7ce006740781bf12cdbde6f322a19503f16f6d2")):
             candidate=ROOT/relative
             require(candidate.is_file() and not candidate.is_symlink(),
                     "T06_D02_"+label+"_SOURCE_MISSING")

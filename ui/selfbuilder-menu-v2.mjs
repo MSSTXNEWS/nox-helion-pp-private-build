@@ -349,10 +349,18 @@ export function mountSelfBuilderMenuV2({root,invokeNative,getTrustedState,ownerA
              userGesture:true,...(training?{job_id:jobs.value}:{}),...(item.actionId==='selfbuilder.propose'?{task:task.value.trim()}:{} )});
         if(item.actionId==='selfbuilder.sources.inspect')showSourceInventory(receipt);
         // A verified read is not an owner action ACK or learning receipt.
-        const accepted=item.mode==='read'?receipt?.readVerified===true:receipt?.ack===true;
+        const accepted=item.mode==='read'?receipt?.readVerified===true:
+          item.actionId==='selfbuilder.train.request'
+            ? receipt?.ack===true && receipt.queueVerified===true &&
+              receipt.training_completed===false && receipt.weights_updated===false &&
+              receipt.activation_allowed===false
+            : receipt?.ack===true;
         feedback.textContent=accepted
           ?(item.mode==='read'?'ПРОЧИТАНО · '+item.label+' · не доказательство обучения':
-             typeof receipt.run_id==='string'?'QUEUED · '+item.label+' · '+receipt.run_id:training?'ОТВЕТ FORGE · '+(receipt.status||'ПОЛУЧЕНО'):'HOLD · задача не принята')
+             typeof receipt.run_id==='string'?'QUEUED · '+item.label+' · '+receipt.run_id:
+             item.actionId==='selfbuilder.train.request'
+               ?'ОЧЕРЕДЬ S03 · '+receipt.job_id+' · задача '+receipt.task_id+' · обучение НЕ завершено':
+             training?'FORGE · '+(receipt.status||'RECEIPT')+' · веса НЕ подтверждены':'HOLD · задача не принята')
           :'HOLD · '+(receipt?.errorCode||'нет подтверждённого ответа NOX');
       }catch(_){feedback.textContent='HOLD · ошибка соединения с ядром';}
       finally{busy.delete(item.actionId);if(!destroyed)refresh();}

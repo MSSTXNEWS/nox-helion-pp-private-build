@@ -240,14 +240,20 @@ export function nativeOwnerActionReceipt(reply,route,action,expectedJobId=null) 
      (typeof owner.run_id!=='string'||!/^S03-[A-Za-z0-9._:-]{1,128}$/.test(owner.run_id) ||
       typeof owner.source_head!=='string'||!/^[a-f0-9]{40}(?:[a-f0-9]{24})?$/.test(owner.source_head)))
     return {ack:false,errorCode:'S03_PROPOSAL_RECEIPT_UNVERIFIED'};
-  // Native training ACK must identify the exact approved job the owner selected.
-  // A generic successful transport for another job is never LEARN success.
-  if(action==='selfbuilder.train.request' &&
-     (route!=='training.start' ||
-      typeof expectedJobId!=='string' ||
-      !/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(expectedJobId) ||
-      owner.job_id!==expectedJobId))
-    return {ack:false,errorCode:'TRAINING_JOB_RECEIPT_MISMATCH_HOLD'};
+  // Training ACK is only an exact, durable SQLite S03 QUEUE claim. It must
+  // never be accepted as execution, completed training, or updated weights.
+  if(action==='selfbuilder.train.request'){
+    const queued=route==='training.start' &&
+      typeof expectedJobId==='string' &&
+      /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(expectedJobId) &&
+      owner.job_id===expectedJobId && owner.status==='QUEUED' &&
+      Number.isSafeInteger(owner.task_id) && owner.task_id>0 &&
+      owner.durable_s03===true && owner.execution_completed===false &&
+      owner.training_completed===false && owner.weights_updated===false &&
+      owner.activation_allowed===false;
+    if(!queued)return {ack:false,errorCode:'TRAINING_S03_QUEUE_RECEIPT_HOLD'};
+    return {...owner,ack:true,queueVerified:true};
+  }
   return {...owner,ack:true};
 }
 
