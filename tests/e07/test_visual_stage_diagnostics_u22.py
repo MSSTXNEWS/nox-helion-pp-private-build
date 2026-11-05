@@ -105,7 +105,7 @@ class PhysicalVisualFailureStages(unittest.TestCase):
                 marker='id="nox-express-primary-'+name.lower()+'" data-nox-primary="'+name+'"'
                 self.assertEqual(source.count(marker),1)
         self.assertIn("function verifiedOriginalPrimaryDock(){",source)
-        self.assertIn("button===originalPrimaryButtons[i]",source)
+        self.assertIn("button!==originalPrimaryButtons[i]",source)
         self.assertIn("document.querySelectorAll(",source)
         self.assertIn("if(!verifiedOriginalPrimaryDock()){",source)
         # All five original mounted UIA buttons must be visible, named
@@ -113,7 +113,12 @@ class PhysicalVisualFailureStages(unittest.TestCase):
         self.assertIn("button.getAttribute('aria-label')!==name",source)
         self.assertIn("button.getClientRects().length===0",source)
         self.assertIn("button.tabIndex<0",source)
-        self.assertIn("""button.closest('[hidden],[inert],[aria-hidden="true"]')""",source)
+        self.assertIn("""button.closest('[hidden],[inert],[aria-hidden="true"],[aria-disabled="true"]')""",source)
+        self.assertIn("""nav.closest('[hidden],[inert],[aria-hidden="true"],[aria-disabled="true"]')""",source)
+        self.assertIn("document.elementFromPoint(",source)
+        self.assertIn("rect.right>viewportWidth+.5",source)
+        self.assertIn("rect.bottom>viewportHeight+.5",source)
+        self.assertIn("if(!hit||(hit!==button&&!button.contains(hit)))return false;",source)
         self.assertIn("window.getComputedStyle(button)",source)
         self.assertIn("dockStyle.pointerEvents==='none'",source)
         self.assertIn("button.hasAttribute('role')",source)
