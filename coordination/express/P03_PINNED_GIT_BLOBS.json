@@ -445,19 +445,14 @@
     {
       "path": "Packages/P03/Source/P03.ModelCenter/ModelLocalAttestation.cs",
       "owner": 3,
-      "run_id": "P03_SOURCE_RECONCILE_20261105_E06",
-      "pre_git_blob_sha1": "528194ab80605f5b36dd5e6fccf6e653b7d5376e",
-      "post_git_blob_sha1": "166347ebd3975bdc724ea88031e2b4c77669b0fc",
-      "post_bytes": 15293,
-      "source_commit": "3ec73f893961a8dce0dc3bdbc202afd4a54773a0",
-      "acceptance": "EXACT_SOURCE_ONLY_NOT_OWNER_PERMISSION_OR_WINDOWS_E07",
-      "previous_reviewed_git_blob_sha1": "e55bd2ec0e13a50ef026ae4055fe71b5f7a4e4ed",
-      "previous_reviewed_bytes": 12892,
-      "reconciliation_scope": "D04_OLLAMA_TAGS_SHA256_SOURCE_ONLY_NOT_WINDOWS_E07",
-      "reconciliation_source_commit": "0c5fada0ea2a27a07292df5f4cb000441b0bae47",
-      "prior_active_post_git_blob_sha1": "528194ab80605f5b36dd5e6fccf6e653b7d5376e",
-      "prior_active_post_bytes": 15075,
-      "source_head_observed": "a86914fce7dd1f8459b0baf79ddfe0c2ce2a4995"
+      "run_id": "B04_20261105_CASE_ALIAS_INSTALLED_TAG_NOLOSS",
+      "pre_git_blob_sha1": "166347ebd3975bdc724ea88031e2b4c77669b0fc",
+      "post_git_blob_sha1": "c25da7d77b39292ebe7dce1a771fcff32b4f7c6e",
+      "post_bytes": 15640,
+      "acceptance": "SOURCE_ONLY_EXACT_OWNER_TAG_MATCH_NOT_CSHARP_OR_WINDOWS_E07",
+      "source_head_observed": "c2dea33ce370436bb8ad171a122a5f419246062f",
+      "prior_active_post_git_blob_sha1": "166347ebd3975bdc724ea88031e2b4c77669b0fc",
+      "prior_active_post_bytes": 15293
     },
     {
       "path": "Packages/P03/Source/P03.ModelCenter/ModelWowBridgeContract.cs",
@@ -534,14 +529,14 @@
     {
       "path": "Packages/P03/Source/P03.ModelCenter.HardeningSmoke/Program.cs",
       "owner": 3,
-      "run_id": "D04_STOP_PENDING_RETRY_20261105",
-      "pre_git_blob_sha1": "be8e4adf38127e4597ba1b212584c895596b8c12",
-      "post_git_blob_sha1": "b0630e1cb411ae9446943aae1e4bdde44fb6980e",
-      "post_bytes": 58633,
-      "acceptance": "SOURCE_ONLY_NOT_CSHARP_OR_INSTALLED_WINDOWS_E07",
-      "prior_active_post_git_blob_sha1": "be8e4adf38127e4597ba1b212584c895596b8c12",
-      "prior_active_post_bytes": 55298,
-      "source_head_observed": "9328af1e9dcb66a3f34679cb36df18b1fa70cc2d"
+      "run_id": "B04_20261105_CASE_ALIAS_INSTALLED_TAG_NOLOSS",
+      "pre_git_blob_sha1": "b0630e1cb411ae9446943aae1e4bdde44fb6980e",
+      "post_git_blob_sha1": "93df8853139bf234c48ccfbec345c32c5ed3a31c",
+      "post_bytes": 59486,
+      "acceptance": "SOURCE_ONLY_EXACT_OWNER_TAG_MATCH_NOT_CSHARP_OR_WINDOWS_E07",
+      "source_head_observed": "c2dea33ce370436bb8ad171a122a5f419246062f",
+      "prior_active_post_git_blob_sha1": "b0630e1cb411ae9446943aae1e4bdde44fb6980e",
+      "prior_active_post_bytes": 58633
     },
     {
       "path": "Packages/P03/Source/P03.ModelCenter/ModelCatalog.cs",
@@ -886,6 +881,39 @@
       "f01_scope": "GIT_SOURCE_PIN_ONLY_NOT_WINDOWS_CSHARP_OR_E07",
       "historical_approved_override": true,
       "retired_from_active_set": "D04_STOP_PENDING_RETRY_20261105"
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter/ModelLocalAttestation.cs",
+      "owner": 3,
+      "run_id": "P03_SOURCE_RECONCILE_20261105_E06",
+      "pre_git_blob_sha1": "528194ab80605f5b36dd5e6fccf6e653b7d5376e",
+      "post_git_blob_sha1": "166347ebd3975bdc724ea88031e2b4c77669b0fc",
+      "post_bytes": 15293,
+      "source_commit": "3ec73f893961a8dce0dc3bdbc202afd4a54773a0",
+      "acceptance": "EXACT_SOURCE_ONLY_NOT_OWNER_PERMISSION_OR_WINDOWS_E07",
+      "previous_reviewed_git_blob_sha1": "e55bd2ec0e13a50ef026ae4055fe71b5f7a4e4ed",
+      "previous_reviewed_bytes": 12892,
+      "reconciliation_scope": "D04_OLLAMA_TAGS_SHA256_SOURCE_ONLY_NOT_WINDOWS_E07",
+      "reconciliation_source_commit": "0c5fada0ea2a27a07292df5f4cb000441b0bae47",
+      "prior_active_post_git_blob_sha1": "528194ab80605f5b36dd5e6fccf6e653b7d5376e",
+      "prior_active_post_bytes": 15075,
+      "source_head_observed": "a86914fce7dd1f8459b0baf79ddfe0c2ce2a4995",
+      "historical_approved_override": true,
+      "retired_from_active_set": "B04_20261105_CASE_ALIAS_INSTALLED_TAG_NOLOSS"
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter.HardeningSmoke/Program.cs",
+      "owner": 3,
+      "run_id": "D04_STOP_PENDING_RETRY_20261105",
+      "pre_git_blob_sha1": "be8e4adf38127e4597ba1b212584c895596b8c12",
+      "post_git_blob_sha1": "b0630e1cb411ae9446943aae1e4bdde44fb6980e",
+      "post_bytes": 58633,
+      "acceptance": "SOURCE_ONLY_NOT_CSHARP_OR_INSTALLED_WINDOWS_E07",
+      "prior_active_post_git_blob_sha1": "be8e4adf38127e4597ba1b212584c895596b8c12",
+      "prior_active_post_bytes": 55298,
+      "source_head_observed": "9328af1e9dcb66a3f34679cb36df18b1fa70cc2d",
+      "historical_approved_override": true,
+      "retired_from_active_set": "B04_20261105_CASE_ALIAS_INSTALLED_TAG_NOLOSS"
     }
   ],
   "source_expansion": {

@@ -40,6 +40,18 @@ Assert(canonicalReviewed is not null &&
 
 using var correct = JsonDocument.Parse("{\"models\":[{\"name\":\"m:1\",\"digest\":\"sha256:" + new string('a',64) + "\"}]}");
 Assert(ModelLocalAttestation.ParseUnambiguousModelDigest(correct.RootElement, "m:1") == "sha256:" + new string('a',64), "T01 pinned local digest");
+
+ // B04: /api/tags case variants are NOT evidence of absence. The native queue
+ // serializes the same installation tag using OrdinalIgnoreCase.
+using var b04CaseAlias = JsonDocument.Parse("{\"models\":[{\"name\":\"M:1\",\"digest\":\"" + new string('a',64) + "\"}]}");
+Assert(ModelLocalAttestation.ParseUnambiguousModelDigest(b04CaseAlias.RootElement, "m:1") ==
+    "sha256:" + new string('a',64),
+    "B04 case-varied installed owner tag must never appear absent");
+using var b04CaseCollision = JsonDocument.Parse("{\"models\":[{\"name\":\"M:1\",\"digest\":\"" +
+    new string('a',64) + "\"},{\"name\":\"m:1\",\"digest\":\"" +
+    new string('b',64) + "\"}]}");
+MustReject(() => ModelLocalAttestation.ParseUnambiguousModelDigest(b04CaseCollision.RootElement, "m:1"),
+    "B04 case-alias duplicate installed tags fail closed before Ollama mutation");
 using var officialBareTags = JsonDocument.Parse("{\"models\":[{\"name\":\"gemma4\",\"digest\":\"c6eb396dbd5992bbe3f5cdb947e8bbc0ee413d7c17e2beaae69f5d569cf982eb\"}]}");
 Assert(ModelLocalAttestation.ParseUnambiguousModelDigest(officialBareTags.RootElement, "gemma4") ==
     "sha256:c6eb396dbd5992bbe3f5cdb947e8bbc0ee413d7c17e2beaae69f5d569cf982eb", "T01B Ollama official bare digest normalized");

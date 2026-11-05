@@ -103,7 +103,11 @@ public static class ModelLocalAttestation
             if (item.ValueKind != JsonValueKind.Object ||
                 !item.TryGetProperty("name", out var name) || name.ValueKind != JsonValueKind.String)
                 throw new InvalidDataException("OLLAMA_TAGS_MALFORMED_MODEL");
-            if (!string.Equals(name.GetString(), model, StringComparison.Ordinal)) continue;
+            // Ollama installed tags share a mutable identity with the case-insensitive
+            // native queue. A different-case installed tag must NOT be read as absent:
+            // that could authorize overwriting the existing owner's local model.
+            // Case-variant duplicates remain ambiguous and fail closed below.
+            if (!string.Equals(name.GetString(), model, StringComparison.OrdinalIgnoreCase)) continue;
             if (digest is not null) throw new InvalidDataException("OLLAMA_TAGS_AMBIGUOUS_MODEL");
             if (!item.TryGetProperty("digest", out var d) || d.ValueKind != JsonValueKind.String)
                 throw new InvalidDataException("OLLAMA_TAGS_MISSING_DIGEST");
