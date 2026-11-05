@@ -704,6 +704,12 @@ def wpf_startup_fatal_seen(seen: dict) -> bool:
 
 
 WPF_GUI_STABLE_READY_SECONDS = 8.0
+# Real original MainWindow.NativeP02.cs allows chat.model up to 40 seconds
+# for bounded local provider discovery, including an honest offline reply.
+# The installed probe must not declare GUI/IPC failure at 35 seconds while
+# that original native request is still legitimately pending. Reserve time
+# for WebView2 initialization and the unchanged 8s visible-PID/HWND witness.
+WPF_GUI_PROBE_DEADLINE_SECONDS = 75.0
 
 
 def wpf_gui_stability_step(first_ready_at: float | None, now: float, *, ready: bool):
@@ -746,7 +752,7 @@ def live_original_wpf_probe(exe:Path,local:Path)->dict:
         process=subprocess.Popen([str(exe)],cwd=exe.parent,
             stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL)
-        deadline=time.monotonic()+35
+        deadline=time.monotonic()+WPF_GUI_PROBE_DEADLINE_SECONDS
         while time.monotonic()<deadline:
             # Drain already-written terminal WPF log even after child exit.
             # Otherwise a fast WebView2 crash hides its final INIT_ERROR.
