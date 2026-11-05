@@ -138,6 +138,23 @@ try {
  const nodes=tooMany?[]:candidates;
  const d02Set=new Set(d02Nodes);
  let visible=0,d02Visible=0,cssAnimated=0,cssTransitions=0;
+ // A nonzero layout rectangle is not evidence of a *visible* original D02.
+ // Hidden/transparent/off-viewport nodes must never satisfy the physical
+ // Reduced Motion visible-D02 quota. Motion is still checked on ALL nodes.
+ const physicallyVisible=(el,rect)=>{
+   const width=Math.min(rect.right,innerWidth)-Math.max(rect.left,0);
+   const height=Math.min(rect.bottom,innerHeight)-Math.max(rect.top,0);
+   if(!Number.isFinite(width)||!Number.isFinite(height)||
+      width<5||height<5)return false;
+   for(let ancestor=el;ancestor;ancestor=ancestor.parentElement){
+     const style=getComputedStyle(ancestor);
+     const alpha=Number(style.opacity);
+     if(style.display==='none'||style.visibility!=='visible'||
+        style.contentVisibility==='hidden'||
+        !Number.isFinite(alpha)||alpha<=0)return false;
+   }
+   return true;
+ };
  const activeTime=(value)=>{
    // Computed styles must provide concrete CSS time tokens. parseFloat alone
    // silently treats unexpected values as 0, allowing a false no-motion PASS.
@@ -159,7 +176,7 @@ try {
    const rect=el.getBoundingClientRect();
    // Visibility counts remain geometric. Real CSS/WAAPI motion checks inspect
    // ALL original D02/primary nodes, including small and offscreen particles.
-   if(rect.width>=5&&rect.height>=5){
+   if(physicallyVisible(el,rect)){
      visible++;
      if(d02Set.has(el))d02Visible++;
    }
