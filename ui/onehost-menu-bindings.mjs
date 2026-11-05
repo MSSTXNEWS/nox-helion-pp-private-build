@@ -237,7 +237,26 @@ export function createAutostartOwnerFlow(nativeRequest){
     async request(payload){
       if(inFlight)throw Error('NOX_AUTOSTART_OWNER_IN_FLIGHT');
       inFlight=true;
-      try{return await nativeRequest('system.autostart',payload);}
+      try{
+        const keys=payload&&typeof payload==='object'&&!Array.isArray(payload)?
+          Object.keys(payload):[];
+        if(!(keys.length===0 ||
+          (keys.length===1&&keys[0]==='enabled'&&typeof payload.enabled==='boolean')))
+          throw Error('NOX_AUTOSTART_BOOLEAN_REQUIRED');
+        const write=keys.length===1;
+        const reply=await nativeRequest('system.autostart',payload);
+        if(!write)return reply;
+        // Transport COMPLETED is not an independent Windows Registry readback.
+        // Keep the existing WPF owner's SETTINGS lock through a fresh read-only
+        // native route invocation; denied, stale, or mismatched results fail closed.
+        if(!nativeAutostartPersistenceAck(reply,payload.enabled))
+          throw Error('NOX_AUTOSTART_WRITE_UNVERIFIED');
+        const readback=await nativeRequest('system.autostart',{});
+        if(!nativeAutostartPersistenceAck(readback,null) ||
+          readback.result.enabled!==payload.enabled)
+          throw Error('NOX_AUTOSTART_READBACK_HOLD');
+        return reply;
+      }
       finally{inFlight=false;}
     }
   });

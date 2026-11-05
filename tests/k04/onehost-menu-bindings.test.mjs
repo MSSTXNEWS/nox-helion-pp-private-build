@@ -148,28 +148,38 @@ test('D06 original SETTINGS owner requires explicit native write/read provenance
  assert.equal(nativeAutostartPersistenceAck({...envelope({enabled:true,readOnly:false}),routeId:'chat.history'},true),false);
 });
 
-test('D06 SETTINGS owner read/write is single-flight across buttons and releases after errors',async()=>{
-  let onDone,onFail,calls=[];
-  const flow=createAutostartOwnerFlow((route,payload)=>{
-    calls.push({route,payload});
-    return new Promise((resolve,reject)=>{onDone=resolve;onFail=reject;});
-  });
-  const on=flow.request({enabled:true});
-  await assert.rejects(flow.request({enabled:false}),/NOX_AUTOSTART_OWNER_IN_FLIGHT/);
-  await assert.rejects(flow.request({}),/NOX_AUTOSTART_OWNER_IN_FLIGHT/);
-  assert.deepEqual(calls,[{route:'system.autostart',payload:{enabled:true}}]);
-  onDone({state:'COMPLETED',result:{enabled:true,readOnly:false}});
-  assert.equal((await on).result.enabled,true);
-  const off=flow.request({enabled:false});
-  assert.equal(calls.length,2);
-  onFail(Error('NOX_AUTOSTART_OWNER_CONSENT_REQUIRED'));
-  await assert.rejects(off,/NOX_AUTOSTART_OWNER_CONSENT_REQUIRED/);
-  const read=flow.request({});
-  assert.equal(calls.length,3);
-  onDone({state:'COMPLETED',result:{enabled:false,readOnly:true}});
-  assert.equal((await read).result.readOnly,true);
-  assert.ok(Object.isFrozen(flow));
-  assert.throws(()=>createAutostartOwnerFlow(null),/NATIVE_OWNER_REQUIRED/);
+test('D06 SETTINGS WPF owner write requires a fresh native HKCU readback',async()=>{
+ const envelope=(enabled,readOnly,extra={})=>({routeId:'system.autostart',state:'COMPLETED',result:{enabled,readOnly,...extra}});
+ const calls=[],pending=[];
+ const flow=createAutostartOwnerFlow((route,payload)=>{calls.push({route,payload});
+   return new Promise((resolve,reject)=>pending.push({resolve,reject}));});
+ const on=flow.request({enabled:true});
+ await assert.rejects(flow.request({enabled:false}),/NOX_AUTOSTART_OWNER_IN_FLIGHT/);
+ pending.shift().resolve(envelope(true,false));await Promise.resolve();
+ assert.deepEqual(calls.map(v=>v.payload),[{enabled:true},{}]);
+ await assert.rejects(flow.request({}),/NOX_AUTOSTART_OWNER_IN_FLIGHT/);
+ pending.shift().resolve(envelope(true,true));
+ assert.equal((await on).result.enabled,true);
+ const off=flow.request({enabled:false});
+ pending.shift().resolve(envelope(false,false));await Promise.resolve();
+ pending.shift().resolve(envelope(true,true));
+ await assert.rejects(off,/NOX_AUTOSTART_READBACK_HOLD/);
+ const read=flow.request({});
+ pending.shift().resolve(envelope(false,true));
+ assert.equal((await read).result.readOnly,true);
+ const denied=flow.request({enabled:true});
+ pending.shift().resolve(envelope(true,false,{ownerConsent:false}));
+ await assert.rejects(denied,/NOX_AUTOSTART_WRITE_UNVERIFIED/);
+ const deniedRead=flow.request({enabled:true});
+ pending.shift().resolve(envelope(true,false));await Promise.resolve();
+ pending.shift().resolve(envelope(true,true,{permissionGranted:false}));
+ await assert.rejects(deniedRead,/NOX_AUTOSTART_READBACK_HOLD/);
+ const refusal=flow.request({enabled:false});
+ pending.shift().reject(Error('NOX_AUTOSTART_NATIVE_OWNER_CONSENT_REQUIRED'));
+ await assert.rejects(refusal,/NOX_AUTOSTART_NATIVE_OWNER_CONSENT_REQUIRED/);
+ await assert.rejects(flow.request({enabled:'true'}),/NOX_AUTOSTART_BOOLEAN_REQUIRED/);
+ assert.ok(Object.isFrozen(flow));
+ assert.throws(()=>createAutostartOwnerFlow(null),/NATIVE_OWNER_REQUIRED/);
 });
 
 test('D06 SETTINGS UIA original-node / unique owner-route identity: not native consent PASS',()=>{
