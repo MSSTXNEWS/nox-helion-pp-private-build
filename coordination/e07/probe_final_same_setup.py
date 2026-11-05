@@ -313,6 +313,10 @@ public static class NoxFinalWin32 {
  [StructLayout(LayoutKind.Sequential)] public struct RECT { public int Left,Top,Right,Bottom; }
  [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr h,out RECT r);
  [DllImport("user32.dll")] public static extern bool MoveWindow(IntPtr h,int x,int y,int w,int hgt,bool repaint);
+ // Resize requests must not synchronously wait for a busy WebView2/WPF UI thread.
+ // SWP_ASYNCWINDOWPOS | SWP_NOZORDER | SWP_NOACTIVATE; GetWindowRect below
+ // still measures the ACTUAL physical window and fails on clamped geometry.
+ [DllImport("user32.dll", SetLastError=true)] public static extern bool SetWindowPos(IntPtr h,IntPtr after,int x,int y,int w,int hgt,uint flags);
  [DllImport("user32.dll")] public static extern bool PrintWindow(IntPtr h,IntPtr dc,uint flags);
 }
 '@
@@ -462,7 +466,7 @@ if($op -eq 'VISUAL'){
  $__e07FailureStage=$null
  try {
  $__e07Stage='RESIZE'
- foreach($size in @([pscustomobject]@{width=1044;height=788},[pscustomobject]@{width=800;height=600})){$__e07Stage='RESIZE';$width=[int]$size.width;$height=[int]$size.height;if(-not [NoxFinalWin32]::MoveWindow($handle,0,0,$width,$height,$true)){throw 'MOVE'};Start-Sleep -Milliseconds 700;$rr=[NoxFinalWin32+RECT]::new();$null=[NoxFinalWin32]::GetWindowRect($handle,[ref]$rr);$__e07Stage='DOCK';$rects=$null
+ foreach($size in @([pscustomobject]@{width=1044;height=788},[pscustomobject]@{width=800;height=600})){$__e07Stage='RESIZE';$width=[int]$size.width;$height=[int]$size.height;if(-not [NoxFinalWin32]::SetWindowPos($handle,[IntPtr]::Zero,0,0,$width,$height,[uint32]0x4014)){throw 'MOVE'};Start-Sleep -Milliseconds 700;$rr=[NoxFinalWin32+RECT]::new();$null=[NoxFinalWin32]::GetWindowRect($handle,[ref]$rr);$__e07Stage='DOCK';$rects=$null
  for($tryDock=0;$tryDock -lt 30;$tryDock++){
   try{$rects=FiveRects;break}
   catch{
@@ -480,7 +484,7 @@ if($op -eq 'VISUAL'){
   throw
  } finally {
   # Restore original WPF HWND even when a UIA resize or button lookup fails.
-  $__e07Stage='RESTORE';$null=[NoxFinalWin32]::MoveWindow($handle,$ox,$oy,$ow,$oh,$true)
+  $__e07Stage='RESTORE';$null=[NoxFinalWin32]::SetWindowPos($handle,[IntPtr]::Zero,$ox,$oy,$ow,$oh,[uint32]0x4014)
   Start-Sleep -Milliseconds 500
  }
  $__e07Stage='CAPTURE'

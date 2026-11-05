@@ -134,9 +134,9 @@ class FinalPrimaryDispatch(unittest.TestCase):
         # not measure 1044x788 and 800x600 at an inherited offscreen origin.
         # This changes ONLY probe coordinates, never app layouts/permissions.
         script = probe._uia_script(12345, "VISUAL", png=Path("test.png"))
-        self.assertIn("MoveWindow($handle,0,0,$width,$height,$true)",script)
-        self.assertNotIn("MoveWindow($handle,$ox,$oy,$width,$height,$true)",script)
-        self.assertIn("MoveWindow($handle,$ox,$oy,$ow,$oh,$true)",script)
+        self.assertIn("SetWindowPos($handle,[IntPtr]::Zero,0,0,$width,$height,[uint32]0x4014)",script)
+        self.assertNotIn("SetWindowPos($handle,[IntPtr]::Zero,$ox,$oy,$width,$height,[uint32]0x4014)",script)
+        self.assertIn("SetWindowPos($handle,[IntPtr]::Zero,$ox,$oy,$ow,$oh,[uint32]0x4014)",script)
         self.assertIn("finally {",script)
         self.assertIn("NoOverlap $rects",script)
         self.assertIn("if($null -eq $rects){throw 'PRIMARY_DOCK_NOT_UNIQUE'}",script)
