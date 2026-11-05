@@ -68,7 +68,7 @@ def decode_observation_wire(stdout: str) -> dict:
     """Parse a bounded ASCII frame from live CDP, never promote noisy stdout."""
     e07.require(type(stdout) is str and 0 < len(stdout) <= 16384,
                 "E07_WEBVIEW2_CDP_READONLY_HOLD")
-    wire = stdout.strip()
+    wire = stdout.strip().removeprefix(chr(0xfeff))
     e07.require(re.fullmatch(r"NOX_E07_CDP_V3:[A-Za-z0-9+/]+={0,2}", wire) is not None,
                 "E07_WEBVIEW2_CDP_JSON_HOLD")
     try:
