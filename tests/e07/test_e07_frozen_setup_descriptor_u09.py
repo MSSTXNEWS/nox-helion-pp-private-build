@@ -57,6 +57,35 @@ class FrozenSetupDescriptor(unittest.TestCase):
             self.assertEqual(swaps, [1])
             self.assertEqual(path.read_bytes(), raw)
 
+
+    def test_hardlinked_owned_payload_refused_without_touching_foreign_bytes(self):
+        # Actual E07 descriptor verifier protects Setup and installed manifest bytes.
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            path = root / "Setup.exe"
+            foreign = root / "foreign-unowned.bin"
+            original = b"MZ" + b"owner-immutable" * 4096
+            path.write_bytes(original)
+            try:
+                os.link(path, foreign)
+            except OSError:
+                self.skipTest("hardlink creation unavailable")
+            digest = hashlib.sha256(original).hexdigest()
+            self.assertEqual(path.stat().st_nlink, 2)
+            with self.assertRaisesRegex(
+                    MOD.Hold, "E07_INSTALLED_FILE_HARDLINK_HOLD"):
+                MOD.installed_file_sha_locked(path, root, len(original), digest)
+            with self.assertRaisesRegex(
+                    MOD.Hold, "E07_INSTALLED_FILE_HARDLINK_HOLD"):
+                MOD.installed_file_sha_locked(
+                    path, root, len(original), digest, return_pe_header=True)
+            self.assertEqual(path.read_bytes(), original)
+            self.assertEqual(foreign.read_bytes(), original)
+            foreign.unlink()
+            self.assertEqual(
+                MOD.installed_file_sha_locked(path, root, len(original), digest),
+                digest)
+
     def test_wrong_setup_hash_never_returns_header(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory).resolve()

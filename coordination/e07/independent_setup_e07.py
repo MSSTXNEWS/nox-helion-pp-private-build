@@ -90,12 +90,17 @@ def installed_file_sha_locked(path: Path, root: Path, expected_size: int, expect
         before = path.lstat()
         if not stat.S_ISREG(before.st_mode) or before.st_size != expected_size:
             raise Hold("E07_INSTALLED_FILE_SHA_HOLD")
+        # Reject foreign NTFS hardlink aliases despite identical hashes.
+        if before.st_nlink != 1:
+            raise Hold("E07_INSTALLED_FILE_HARDLINK_HOLD")
         flags = os.O_RDONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0)
         fd = os.open(path, flags)
         try:
             opened = os.fstat(fd)
             if not stat.S_ISREG(opened.st_mode):
                 raise Hold("E07_INSTALLED_FILE_OPEN_NONREGULAR_HOLD")
+            if opened.st_nlink != 1:
+                raise Hold("E07_INSTALLED_FILE_HARDLINK_HOLD")
             # Bounded, privacy-safe failure kind: never return local names or IDs.
             fields = ("st_dev", "st_ino", "st_size", "st_mtime_ns")
             mismatch = [field.removeprefix("st_").upper() for field in fields
@@ -113,6 +118,8 @@ def installed_file_sha_locked(path: Path, root: Path, expected_size: int, expect
             if descriptor_identity(opened) != descriptor_identity(os.fstat(fd)):
                 raise Hold("E07_INSTALLED_FILE_FD_MUTATED_HOLD")
             after = path.lstat()
+            if after.st_nlink != 1:
+                raise Hold("E07_INSTALLED_FILE_HARDLINK_HOLD")
             if identity(before) != identity(after):
                 raise Hold("E07_INSTALLED_FILE_PATH_MUTATED_HOLD")
             if descriptor_identity(opened) != descriptor_identity(after):
