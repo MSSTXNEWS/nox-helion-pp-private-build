@@ -210,12 +210,24 @@ class ExistingP04Background:
                 return self._hold("NO_ACTIVE_TRAINER")
             if job is not None and self._active[2:] != (job.run_id, job.task_id):
                 raise ForgeHold("ACTIVE_TRAINER_JOB_SCOPE_MISMATCH")
-            self._requested = operation if self._requested != "STOP" else "STOP"
-            marker = self._active[0 if self._requested == "STOP" else 1]
+            requested = operation if self._requested != "STOP" else "STOP"
+            marker = self._active[0 if requested == "STOP" else 1]
             self.trainer.reject_reparse_ancestors(marker)
-            with marker.open("a", encoding="utf-8"):
-                pass
-            return {"status": self._requested + "_REQUESTED", "weights_updated": False}
+            try:
+                # Exclusive creation: never append through a replaced symlink.
+                fd = os.open(marker, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+            except FileExistsError:
+                # A repeated owner STOP/PAUSE may acknowledge a regular marker
+                # without opening or modifying an existing file. An ambiguous
+                # reparse point or directory is a hard HOLD, never an ACK.
+                self.trainer.reject_reparse_ancestors(marker)
+                if not marker.is_file() or marker.is_symlink():
+                    raise ForgeHold("TRAINER_CONTROL_MARKER_NOT_REGULAR")
+            else:
+                os.close(fd)
+            # An ACK is durable only after successful marker creation/readback.
+            self._requested = requested
+            return {"status": requested + "_REQUESTED", "weights_updated": False}
 
     def verified_receipt(self, job):
         out = self._output(job.output_dir, resume=True)
