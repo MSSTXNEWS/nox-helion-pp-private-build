@@ -387,10 +387,24 @@ function GridMatches($row,[int]$columns) {
  }
  return $true
 }
+# IsOffscreen=False can still mean a partially clipped UIA button.
+# Every accepted dock element must stay inside the original installed WPF HWND.
+# This is visual admission only, never a privileged action or release PASS.
+function WithinOriginalHwnd($rect,$frame) {
+ if($frame.IsEmpty -or $frame.Width -lt 320 -or $frame.Height -lt 200){return $false}
+ $pad=2
+ return ($rect.Left -ge ($frame.Left - $pad) -and
+         $rect.Top -ge ($frame.Top - $pad) -and
+         $rect.Right -le ($frame.Right + $pad) -and
+         $rect.Bottom -le ($frame.Bottom + $pad))
+}
 function PrimaryDock {
  $names=@('CHAT','INSTALL','MODELS','LEARN','SETTINGS')
  $seen=@{};foreach($n in $names){$seen[$n]=New-Object System.Collections.ArrayList}
- $a=Tree (Root)
+ $originalRoot=Root
+ $frame=$originalRoot.Current.BoundingRectangle
+ if($frame.IsEmpty -or $frame.Width -lt 320 -or $frame.Height -lt 200){throw 'RECT'}
+ $a=Tree $originalRoot
  for($i=0;$i -lt $a.Count;$i++){
   try{
    $el=$a.Item($i);$v=$el.Current
@@ -399,6 +413,7 @@ function PrimaryDock {
    if($name -notin $names -or -not (Visible $v)){continue}
    $rect=$v.BoundingRectangle
    if($rect.Width -lt 20 -or $rect.Height -lt 12){continue}
+   if(-not (WithinOriginalHwnd $rect $frame)){continue}
    if(-not (SameElementSeen -items ($seen[$name]) -candidate $el)) {
     [void]$seen[$name].Add([pscustomobject]@{element=$el;rect=$rect})
    }

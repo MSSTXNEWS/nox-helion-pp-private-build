@@ -74,6 +74,21 @@ class PhysicalVisualFailureStages(unittest.TestCase):
         self.assertIn("if($seen[$n].Count -lt 1 -or $seen[$n].Count -gt 6)",script)
         self.assertIn("if($clusters.Count -ne 1)",script)
 
+    def test_partially_clipped_primary_never_admitted(self):
+        # UIA can mark partly clipped buttons as IsOffscreen=False. The dock
+        # must fit within the SAME original physical WPF window.
+        script=probe._uia_script(12345,"VISUAL",png=Path("screenshot.png"))
+        self.assertIn("function WithinOriginalHwnd($rect,$frame)",script)
+        self.assertIn("$originalRoot=Root",script)
+        self.assertIn("$frame=$originalRoot.Current.BoundingRectangle",script)
+        self.assertIn("$a=Tree $originalRoot",script)
+        self.assertIn("if(-not (WithinOriginalHwnd $rect $frame)){continue}",script)
+        self.assertIn("$rect.Left -ge ($frame.Left - $pad)",script)
+        self.assertIn("$rect.Top -ge ($frame.Top - $pad)",script)
+        self.assertIn("$rect.Right -le ($frame.Right + $pad)",script)
+        self.assertIn("$rect.Bottom -le ($frame.Bottom + $pad)",script)
+        self.assertIn("if($clusters.Count -ne 1){throw 'PRIMARY_DOCK_NOT_UNIQUE'}",script)
+
     def test_failed_dock_keeps_hold_and_bounded_real_resize_photo(self):
         script=probe._uia_script(12345,"VISUAL",png=Path("screenshot.png"))
         self.assertIn("SaveAdaptiveHold $width",script)
