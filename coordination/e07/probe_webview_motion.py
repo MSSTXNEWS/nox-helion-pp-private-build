@@ -15,7 +15,7 @@ import sys
 
 import independent_setup_e07 as e07
 
-SCHEMA = "NOX-E07-WEBVIEW2-REDUCED-MOTION-v1"
+SCHEMA = "NOX-E07-WEBVIEW2-REDUCED-MOTION-v2"
 
 
 def validate(observation: object) -> dict:
@@ -24,12 +24,17 @@ def validate(observation: object) -> dict:
                 set(observation) == {"schema", "media_reduced", "home_active",
                                       "primary_controls", "visible_nodes",
                                       "css_animated", "css_transitions",
-                                      "waapi_running"} and
+                                      "waapi_running", "d02_scope_count",
+                                      "d02_visible_nodes"} and
                 observation["schema"] == SCHEMA and
                 observation["media_reduced"] is True and
                 observation["home_active"] is True and
                 type(observation["primary_controls"]) is int and
                 observation["primary_controls"] == 5 and
+                type(observation["d02_scope_count"]) is int and
+                observation["d02_scope_count"] == 1 and
+                type(observation["d02_visible_nodes"]) is int and
+                5 <= observation["d02_visible_nodes"] <= 4096 and
                 type(observation["visible_nodes"]) is int and
                 5 <= observation["visible_nodes"] <= 4096 and
                 all(type(observation[k]) is int and observation[k] == 0
@@ -39,6 +44,8 @@ def validate(observation: object) -> dict:
             "scope": "INSTALLED_WEBVIEW2_MEDIA_CSS_WAAPI_NOT_OS_SETTING_ALONE",
             "media_reduced": True,
             "visible_nodes": observation["visible_nodes"],
+            "d02_visible_nodes": observation["d02_visible_nodes"],
+            "d02_scope_count": 1,
             "css_animated": 0, "css_transitions": 0,
             "waapi_running": 0}
 
@@ -94,13 +101,22 @@ try {
  const home=document.getElementById('home');
  const dock=document.getElementById('nox-express-primary');
  const buttons=dock?[...dock.querySelectorAll('button[data-nox-primary]')]:[];
- const nodes=[...document.querySelectorAll('#home, #home *, #nox-express-primary, #nox-express-primary *')].slice(0,4096);
- let visible=0,cssAnimated=0,cssTransitions=0;
+ // Enumerate the installed ORIGINAL D02 scene first, then the five primary
+ // controls. Never silently truncate: an unobserved tail could still animate.
+ const scopes=[...document.querySelectorAll('.nox-cinema-scope')];
+ const d02Nodes=scopes.length===1?[...scopes[0].querySelectorAll('*')]:[];
+ const candidates=[...new Set([...scopes,...d02Nodes,
+   ...document.querySelectorAll('#home, #home *, #nox-express-primary, #nox-express-primary *')])];
+ const tooMany=candidates.length>4096;
+ const nodes=tooMany?[]:candidates;
+ const d02Set=new Set(d02Nodes);
+ let visible=0,d02Visible=0,cssAnimated=0,cssTransitions=0;
  const activeTime=(value)=>String(value||'').split(',').some(x=>Number.parseFloat(x)>0);
  for(const el of nodes){
    const rect=el.getBoundingClientRect();
    if(rect.width<5||rect.height<5)continue;
    visible++;
+   if(d02Set.has(el))d02Visible++;
    for(const pseudo of [null,'::before','::after']){
      const st=getComputedStyle(el,pseudo);
      if(st.animationName!=='none'&&activeTime(st.animationDuration))cssAnimated++;
@@ -108,10 +124,11 @@ try {
    }
  }
  const running=document.getAnimations({subtree:true}).filter(x=>x.playState==='running').length;
- return {schema:'NOX-E07-WEBVIEW2-REDUCED-MOTION-v1',
+ return {schema:'NOX-E07-WEBVIEW2-REDUCED-MOTION-v2',
    media_reduced:matchMedia('(prefers-reduced-motion: reduce)').matches,
    home_active:!!home&&home.classList.contains('active'),
-   primary_controls:buttons.length,visible_nodes:visible,
+   primary_controls:buttons.length,d02_scope_count:scopes.length,
+   d02_visible_nodes:d02Visible,visible_nodes:tooMany?4097:visible,
    css_animated:cssAnimated,css_transitions:cssTransitions,waapi_running:running};
 })()
 '@

@@ -16,17 +16,23 @@ class PhysicalWebviewMotion(unittest.TestCase):
     def good(self):
         return {"schema":module.SCHEMA,"media_reduced":True,
                 "home_active":True,"primary_controls":5,
-                "visible_nodes":60,"css_animated":0,
+                "visible_nodes":60,"d02_scope_count":1,
+                "d02_visible_nodes":24,"css_animated":0,
                 "css_transitions":0,"waapi_running":0}
 
     def test_only_live_schema_bounded_positive_is_accepted(self):
         item=module.validate(self.good())
         self.assertEqual(item["status"],"PASS")
         self.assertTrue(item["media_reduced"])
+        self.assertEqual(item["d02_scope_count"],1)
+        self.assertEqual(item["d02_visible_nodes"],24)
 
     def test_media_off_and_live_animation_always_hold(self):
         for key,val in (("media_reduced",False),("home_active",False),
                         ("primary_controls",4),("visible_nodes",0),
+                        ("d02_scope_count",0),("d02_scope_count",2),
+                        ("d02_visible_nodes",0),("d02_visible_nodes",4097),
+                        ("visible_nodes",4097),
                         ("css_animated",1),("css_transitions",1),
                         ("waapi_running",1)):
             with self.subTest(key=key):
@@ -82,6 +88,9 @@ class PhysicalWebviewMotion(unittest.TestCase):
         self.assertIn("PAGE_NOT_UNIQUE",source)
         self.assertIn("Runtime.evaluate",source)
         self.assertIn("getComputedStyle",source)
+        self.assertIn(".nox-cinema-scope",source)
+        self.assertIn("d02_scope_count:scopes.length",source)
+        self.assertIn("visible_nodes:tooMany?4097:visible",source)
         self.assertIn("matchMedia('(prefers-reduced-motion: reduce)')",source)
         self.assertNotIn("Emulation.setEmulatedMedia",source)
         self.assertNotIn("--force-prefers-reduced-motion",source)
