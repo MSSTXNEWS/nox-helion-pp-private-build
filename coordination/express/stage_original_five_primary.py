@@ -168,7 +168,7 @@ function verifiedOriginalPrimaryDock(){
      button.getAttribute('aria-label')!==name||
      (button.hasAttribute('role')&&button.getAttribute('role')!=='button')||
      document.querySelectorAll('[id="'+id+'"]').length!==1||
-     !button.isConnected||button.disabled||button.hidden||button.tabIndex<0||
+     !button.isConnected||button.disabled||button.hidden||button.matches?.(':disabled')===true||button.tabIndex!==0||
      button.closest('[hidden],[inert],[aria-hidden="true"],[aria-disabled="true"]')||
      button.getClientRects().length===0)return false;
   const rect=button.getBoundingClientRect();
