@@ -76,6 +76,26 @@ public sealed class ModelDownloadQueueStore
             throw new InvalidDataException("P03_QUEUE_HARDLINK_SNAPSHOT_HOLD");
     }
 
+    // Snapshot only bytes from an owner-authorized, single-link OPEN HANDLE.
+    // A path can be replaced with an NTFS hardlink between queue validation and
+    // backup rotation or rollback. Path-only reparse checks cannot detect it.
+    private static async Task SnapshotOwnedQueueAsync(string fromPath, string toPath,
+        CancellationToken ct)
+    {
+        ModelLocalAttestation.RequireNoExistingReparsePoint(fromPath);
+        await using var input = new FileStream(fromPath, FileMode.Open, FileAccess.Read,
+            FileShare.Read, 65536, FileOptions.Asynchronous | FileOptions.SequentialScan);
+        RequireSingleLinkQueueSnapshot(input.SafeFileHandle);
+        if (input.Length <= 0 || input.Length > MaxQueueFileBytes)
+            throw new InvalidDataException("P03_QUEUE_SNAPSHOT_SIZE_HOLD");
+        await using var output = new FileStream(toPath, FileMode.CreateNew,
+            FileAccess.Write, FileShare.None, 65536,
+            FileOptions.Asynchronous | FileOptions.WriteThrough);
+        await input.CopyToAsync(output, 65536, ct);
+        await output.FlushAsync(ct);
+        output.Flush(flushToDisk: true);
+    }
+
     public ModelDownloadQueueStore(string dataDirectory)
     {
         if (string.IsNullOrWhiteSpace(dataDirectory))
@@ -430,7 +450,7 @@ public sealed class ModelDownloadQueueStore
                 ?? throw new InvalidDataException("Backup queue is null.");
             ValidateJobs(snapshot);
             var preserved = _path + ".pre_restore." + Guid.NewGuid().ToString("N");
-            if (File.Exists(_path)) File.Copy(_path, preserved, overwrite: false);
+            if (File.Exists(_path)) await SnapshotOwnedQueueAsync(_path, preserved, ct);
             var temp = _path + ".restore." + Guid.NewGuid().ToString("N") + ".tmp";
             try
             {
@@ -535,7 +555,7 @@ public sealed class ModelDownloadQueueStore
             // writing through a hardlink at the fixed backup name.
             if (File.Exists(_path))
             {
-                File.Copy(_path, backupTemp, overwrite: false);
+                await SnapshotOwnedQueueAsync(_path, backupTemp, ct);
                 ModelLocalAttestation.RequireNoExistingReparsePoint(_path + ".bak");
                 File.Move(backupTemp, _path + ".bak", overwrite: true);
             }

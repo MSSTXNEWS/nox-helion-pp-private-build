@@ -209,6 +209,29 @@ try
         File.Move(foreignQueue, liveQueue);
         Assert((await protectedQueue.ReadAsync()).Single().Status == "Backup rotated",
             "F02D normal queue survives hardlink rejection");
+        // F02E: even a well-formed queue reached through a HARDLINK is not
+        // an owner-authorized snapshot for rollback; do not copy it to .pre_restore.
+        File.Delete(backupAlias); // only the disposable hardlink alias
+        File.Move(foreignBackup, backupAlias); // trusted single-link backup
+        var sourceBefore = await File.ReadAllBytesAsync(liveQueue);
+        var preservedBefore = Directory.GetFiles(linkRoot, "*.pre_restore.*").Length;
+        File.Move(liveQueue, foreignQueue);
+        if (!P03HardlinkFixture.CreateHardLink(liveQueue, foreignQueue, IntPtr.Zero))
+            throw new Exception("FAIL F02E live hardlink fixture unavailable");
+        try
+        {
+            await protectedQueue.RestoreBackupAsync(true);
+            throw new Exception("FAIL F02E hardlinked live snapshot accepted");
+        }
+        catch (InvalidDataException ex) when (ex.Message == "P03_QUEUE_HARDLINK_SNAPSHOT_HOLD")
+        {
+            Assert(true, "F02E rollback refuses a hardlinked current snapshot");
+        }
+        Assert((await File.ReadAllBytesAsync(foreignQueue)).SequenceEqual(sourceBefore) &&
+            Directory.GetFiles(linkRoot, "*.pre_restore.*").Length == preservedBefore,
+            "F02E no foreign snapshot copied and no data altered");
+        File.Delete(liveQueue); // only the disposable alias, not foreign bytes
+        File.Move(foreignQueue, liveQueue);
     }
     var file = Path.Combine(multiRoot, "sample.gguf");
     await File.WriteAllBytesAsync(file, Encoding.ASCII.GetBytes("GGUFsynthetic-byteproof"));
