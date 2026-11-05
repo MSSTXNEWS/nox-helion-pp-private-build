@@ -144,6 +144,9 @@ public sealed class ModelDownloadQueueStore
             || !HasReviewedGgufAuthority(rightsReceiptId, licenseSource))
             throw new InvalidDataException("REVIEW_REQUIRED: GGUF expected bytes/SHA-256/rights receipt.");
         if (string.IsNullOrWhiteSpace(localPath) ||
+            // Relative or drive-relative paths depend on the process working directory:
+            // never turn an unreviewed path into an owner-authorized absolute file.
+            !Path.IsPathFullyQualified(localPath) ||
             !string.Equals(Path.GetExtension(localPath), ".gguf", StringComparison.OrdinalIgnoreCase))
             throw new InvalidDataException("GGUF path and extension required.");
         var fullPath = Path.GetFullPath(localPath);

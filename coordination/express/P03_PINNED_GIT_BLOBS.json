@@ -548,38 +548,38 @@
     {
       "path": "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueStore.cs",
       "owner": 3,
-      "run_id": "B04_GGUF_COMPLETE_JOB_REENTRY_20261106",
-      "pre_git_blob_sha1": "3393126e69c790c495e8b728b235f3bfde8f09e3",
-      "post_git_blob_sha1": "342a35161c428dea71a7379202e831979c5e1d7d",
-      "post_bytes": 39520,
-      "acceptance": "SOURCE_ONLY_CONTRACT_15_OF_15_DOTNET_AND_WINDOWS_NOT_RUN",
-      "prior_active_post_git_blob_sha1": "3393126e69c790c495e8b728b235f3bfde8f09e3",
-      "prior_active_post_bytes": 38513,
-      "source_head_observed": "ae83817878646eca40f1e2744a83c9ecaab00495"
+      "run_id": "D04_GGUF_ABSOLUTE_NATIVE_PATH_ADMISSION_20261106",
+      "pre_git_blob_sha1": "342a35161c428dea71a7379202e831979c5e1d7d",
+      "post_git_blob_sha1": "763787bf9a41572f9b6e017adeac50aa74e44ddc",
+      "post_bytes": 39747,
+      "acceptance": "SOURCE_ONLY_TARGET_12_OF_12_DOTNET_AND_WINDOWS_NOT_RUN",
+      "prior_active_post_git_blob_sha1": "342a35161c428dea71a7379202e831979c5e1d7d",
+      "prior_active_post_bytes": 39520,
+      "source_head_observed": "7dbc5c9969a63939d9396df0b4d40398e1a3d2cb"
     },
     {
       "path": "Packages/P03/Source/P03.ModelCenter.HardeningSmoke/Program.cs",
       "owner": 3,
-      "run_id": "B04_GGUF_COMPLETE_JOB_REENTRY_20261106",
-      "pre_git_blob_sha1": "bac61baec8b3dfe00ed1d4bfbc83b915e7f5de5f",
-      "post_git_blob_sha1": "b6c951e392997868d95ace8473daef26e8f6f434",
-      "post_bytes": 71870,
-      "acceptance": "SOURCE_ONLY_CONTRACT_15_OF_15_DOTNET_AND_WINDOWS_NOT_RUN",
-      "prior_active_post_git_blob_sha1": "bac61baec8b3dfe00ed1d4bfbc83b915e7f5de5f",
-      "prior_active_post_bytes": 68548,
-      "source_head_observed": "ae83817878646eca40f1e2744a83c9ecaab00495"
+      "run_id": "D04_GGUF_ABSOLUTE_NATIVE_PATH_ADMISSION_20261106",
+      "pre_git_blob_sha1": "b6c951e392997868d95ace8473daef26e8f6f434",
+      "post_git_blob_sha1": "ef840826ec206f80d6436797d957111b62d045b3",
+      "post_bytes": 72701,
+      "acceptance": "SOURCE_ONLY_TARGET_12_OF_12_DOTNET_AND_WINDOWS_NOT_RUN",
+      "prior_active_post_git_blob_sha1": "b6c951e392997868d95ace8473daef26e8f6f434",
+      "prior_active_post_bytes": 71870,
+      "source_head_observed": "7dbc5c9969a63939d9396df0b4d40398e1a3d2cb"
     },
     {
       "path": "Packages/P03/Source/python-host/p03_onehost_port.py",
       "owner": 3,
-      "run_id": "B04_NESTED_CROSS_ACTION_STATUS_R15_20261106",
-      "pre_git_blob_sha1": "e485657d99a673243585e4270e4fd6040ee40ed8",
-      "post_git_blob_sha1": "ecde4663a9778be4187eb003fb3dde6f1365b45c",
-      "post_bytes": 31772,
-      "acceptance": "SOURCE_ONLY_V8_CONTRACT_PYTHON_AST_REGRESSION_AUTHORED_NOT_RUN_WINDOWS_E07_HOLD",
-      "change_scope": "NESTED_CROSS_ACTION_STOP_RETRY_RECEIPT_NOT_OWNER_ACK",
-      "source_head_observed": "d8b84d6a92f60ecb390b6fe7e870d431d955fc8c",
-      "prior_active_run_id": "B04_NESTED_JOB_IDENTITY_FENCE_R14_20261106"
+      "run_id": "B04_NESTED_JOB_IDENTITY_FENCE_R14_20261106",
+      "pre_git_blob_sha1": "bc42f88d1a567aa3573ee3a727087e190e84545c",
+      "post_git_blob_sha1": "e485657d99a673243585e4270e4fd6040ee40ed8",
+      "post_bytes": 31026,
+      "acceptance": "SOURCE_ONLY_V8_CONTRACT_PYTHON_AST_REGRESSION_AUTHORED_NOT_RUN_WINDOWS_QWEN_E07_HOLD",
+      "change_scope": "NESTED_CANCEL_RETRY_JOB_IDENTITY_MISMATCH_CANNOT_CONFIRM_OWNER_ACTION",
+      "source_head_observed": "6fb5df301cc5ea45b6b2a41dcf1983beeaab2b0d",
+      "prior_active_run_id": "B04_OWNER_DEEP_NESTED_ACK_FENCE_R13_20261105"
     }
   ],
   "override_chain": [
@@ -1312,18 +1312,32 @@
       "retired_from_active_set": "B04_GGUF_COMPLETE_JOB_REENTRY_20261106"
     },
     {
-      "path": "Packages/P03/Source/python-host/p03_onehost_port.py",
+      "path": "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueStore.cs",
       "owner": 3,
-      "run_id": "B04_NESTED_JOB_IDENTITY_FENCE_R14_20261106",
-      "pre_git_blob_sha1": "bc42f88d1a567aa3573ee3a727087e190e84545c",
-      "post_git_blob_sha1": "e485657d99a673243585e4270e4fd6040ee40ed8",
-      "post_bytes": 31026,
-      "acceptance": "SOURCE_ONLY_V8_CONTRACT_PYTHON_AST_REGRESSION_AUTHORED_NOT_RUN_WINDOWS_QWEN_E07_HOLD",
-      "change_scope": "NESTED_CANCEL_RETRY_JOB_IDENTITY_MISMATCH_CANNOT_CONFIRM_OWNER_ACTION",
-      "source_head_observed": "6fb5df301cc5ea45b6b2a41dcf1983beeaab2b0d",
-      "prior_active_run_id": "B04_OWNER_DEEP_NESTED_ACK_FENCE_R13_20261105",
+      "run_id": "B04_GGUF_COMPLETE_JOB_REENTRY_20261106",
+      "pre_git_blob_sha1": "3393126e69c790c495e8b728b235f3bfde8f09e3",
+      "post_git_blob_sha1": "342a35161c428dea71a7379202e831979c5e1d7d",
+      "post_bytes": 39520,
+      "acceptance": "SOURCE_ONLY_CONTRACT_15_OF_15_DOTNET_AND_WINDOWS_NOT_RUN",
+      "prior_active_post_git_blob_sha1": "3393126e69c790c495e8b728b235f3bfde8f09e3",
+      "prior_active_post_bytes": 38513,
+      "source_head_observed": "ae83817878646eca40f1e2744a83c9ecaab00495",
       "historical_approved_override": true,
-      "retired_from_active_set": "B04_NESTED_CROSS_ACTION_STATUS_R15_20261106"
+      "retired_from_active_set": "D04_GGUF_ABSOLUTE_NATIVE_PATH_ADMISSION_20261106"
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter.HardeningSmoke/Program.cs",
+      "owner": 3,
+      "run_id": "B04_GGUF_COMPLETE_JOB_REENTRY_20261106",
+      "pre_git_blob_sha1": "bac61baec8b3dfe00ed1d4bfbc83b915e7f5de5f",
+      "post_git_blob_sha1": "b6c951e392997868d95ace8473daef26e8f6f434",
+      "post_bytes": 71870,
+      "acceptance": "SOURCE_ONLY_CONTRACT_15_OF_15_DOTNET_AND_WINDOWS_NOT_RUN",
+      "prior_active_post_git_blob_sha1": "bac61baec8b3dfe00ed1d4bfbc83b915e7f5de5f",
+      "prior_active_post_bytes": 68548,
+      "source_head_observed": "ae83817878646eca40f1e2744a83c9ecaab00495",
+      "historical_approved_override": true,
+      "retired_from_active_set": "D04_GGUF_ABSOLUTE_NATIVE_PATH_ADMISSION_20261106"
     }
   ],
   "source_expansion": {

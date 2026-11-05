@@ -424,6 +424,19 @@ try
     // D04: queue admission previously persisted credentials/oversized IDs that
     // the existing Ollama adapter would reject only AFTER owner approval.
     var deniedGgufBaseline = (await a.ReadAsync()).Count;
+    // D04: relative GGUF input previously became an absolute path before admission.
+    // Native reviewed paths must not depend on current working directory.
+    var d04RelativeGguf = Path.GetRelativePath(Environment.CurrentDirectory, file);
+    Assert(!Path.IsPathFullyQualified(d04RelativeGguf),
+        "D04 native relative-path negative fixture is genuinely relative");
+    var d04RelativeRejected = false;
+    try { await a.EnqueueVerifiedGgufAsync("local:relative-denied", d04RelativeGguf,
+        size, sha, "reviewed", evidence); }
+    catch (InvalidDataException ex) when (ex.Message == "GGUF path and extension required.")
+    { d04RelativeRejected = true; }
+    Assert(d04RelativeRejected && (await a.ReadAsync()).Count == deniedGgufBaseline,
+        "D04 relative reviewed GGUF path denied without queue mutation");
+
     async Task RejectUnreviewedGguf(string rights, string origin, string label)
     {
         var rejected = false;
