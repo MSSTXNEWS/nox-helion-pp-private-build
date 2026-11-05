@@ -38,7 +38,7 @@ def initialize():
  if "attempts" not in [x[1] for x in con.execute("PRAGMA table_info(tasks)")]:
   con.execute("ALTER TABLE tasks ADD COLUMN attempts INTEGER NOT NULL DEFAULT 0")
  with con:
-  for name,kind,goal in tasks:con.execute("INSERT OR IGNORE INTO tasks VALUES(?,?,?,'PENDING',NULL,NULL)",(name,kind,goal))
+  for name,kind,goal in tasks:con.execute("INSERT OR IGNORE INTO tasks (id,kind,goal,state,hash,reason) VALUES(?,?,?,'PENDING',NULL,NULL)",(name,kind,goal))
  return con
 def complete_one(con):
  row=con.execute("SELECT id,kind,goal,attempts FROM tasks WHERE state='PENDING' ORDER BY rowid LIMIT 1").fetchone()
