@@ -168,6 +168,49 @@ try {
   try { await ModelLocalAttestation.VerifyReceiptAsync(receiptFile,receipt with { ModelTag="attacker:tag" },default); throw new Exception("FAIL T10"); }
   catch (InvalidDataException) { Assert(true,"T10 receipt mismatch denied"); }
 } finally { Directory.Delete(root,recursive:true); }
+// D04: independent job IDs must not hide two simultaneously active pulls
+// for one Ollama tag, including case variants imported from old queue backups.
+// Terminal historic entries must remain readable (NO-LOSS).
+var d04Root = Path.Combine(Path.GetTempPath(), "NOX_P03_ACTIVE_TAG_" + Guid.NewGuid().ToString("N"));
+Directory.CreateDirectory(d04Root);
+try
+{
+    var d04Store = new ModelDownloadQueueStore(d04Root);
+    var d04File = Path.Combine(d04Root, "p03-model-download-queue.json");
+    var d04Now = DateTimeOffset.UtcNow;
+    var d04First = new ModelJob(Guid.NewGuid(), ModelJobKind.OllamaPull,
+        "tinyllama:reviewed-a", null, true, "https://ollama.com/library/tinyllama",
+        d04Now, d04Now, ModelJobState.Queued,
+        ExpectedOllamaDigest: new string('a', 64),
+        ImmutableRevision: "sha256:" + new string('a', 64), RightsReceiptId: "owner-a");
+    var d04Second = d04First with { Id = Guid.NewGuid(),
+        ModelTag = "tinyllama:reviewed-b", State = ModelJobState.Running,
+        RightsReceiptId = "owner-b" };
+    async Task D04WriteAsync(params ModelJob[] jobs) =>
+        await File.WriteAllTextAsync(d04File, JsonSerializer.Serialize(jobs,
+            new JsonSerializerOptions(JsonSerializerDefaults.Web)));
+    await D04WriteAsync(d04First, d04Second);
+    Assert((await d04Store.ReadAsync()).Count == 2,
+        "D04A distinct concurrently active reviewed tags remain readable");
+    await D04WriteAsync(d04First, d04Second with { ModelTag = "TinyLlama:reviewed-a" });
+    var d04CaseRejected = false;
+    try { _ = await d04Store.ReadAsync(); }
+    catch (InvalidDataException e) when (e.Message == "P03_QUEUE_ACTIVE_TAG_ALIAS_HOLD")
+    { d04CaseRejected = true; }
+    Assert(d04CaseRejected, "D04B case-aliased live pull IDs fail closed");
+    await D04WriteAsync(d04First, d04Second with { ModelTag = d04First.ModelTag,
+        State = ModelJobState.Cancelling });
+    var d04StopRejected = false;
+    try { _ = await d04Store.ReadAsync(); }
+    catch (InvalidDataException e) when (e.Message == "P03_QUEUE_ACTIVE_TAG_ALIAS_HOLD")
+    { d04StopRejected = true; }
+    Assert(d04StopRejected, "D04C STOP-pending alias cannot coexist with a queued pull");
+    await D04WriteAsync(d04First, d04Second with { ModelTag = d04First.ModelTag,
+        State = ModelJobState.Completed });
+    Assert((await d04Store.ReadAsync()).Count == 2,
+        "D04D terminal same-tag history preserved without reactivating");
+}
+finally { Directory.Delete(d04Root, recursive: true); }
 Console.WriteLine($"P03_HARDENING_SMOKE_PASS {pass} verified assertions");
 
 // TURBO13 protocol and immutable receipt tests; each uses actual source methods.

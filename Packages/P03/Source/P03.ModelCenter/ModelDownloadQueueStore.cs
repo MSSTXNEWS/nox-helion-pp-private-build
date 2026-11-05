@@ -587,6 +587,15 @@ public sealed class ModelDownloadQueueStore
                     j.MergedImport.MergedPayloadSha256!=j.ExpectedLocalSha256 ||
                     j.MergedImport.Directory!=j.LocalPath || j.MergedImport.RightsAttestationId!=j.RightsReceiptId))))
                 throw new InvalidDataException("Queue contains duplicate/invalid jobs; original bytes preserved.");
+        // Snapshot restores and legacy writers can contain different job IDs for
+        // the same Ollama tag. Per-job execution leases cannot serialize them:
+        // two active aliases could pull one mutable tag under different reviews.
+        // Preserve terminal history, but refuse ambiguous active owner authority.
+        var activeTags = jobs.Where(j => j.Kind == ModelJobKind.OllamaPull &&
+                (j.State is ModelJobState.Queued or ModelJobState.Running or ModelJobState.Cancelling))
+            .Select(j => j.ModelTag).ToArray();
+        if (activeTags.Distinct(StringComparer.OrdinalIgnoreCase).Count() != activeTags.Length)
+            throw new InvalidDataException("P03_QUEUE_ACTIVE_TAG_ALIAS_HOLD");
     }
 
     private async Task SaveCoreAsync(IReadOnlyList<ModelJob> jobs, CancellationToken ct)
