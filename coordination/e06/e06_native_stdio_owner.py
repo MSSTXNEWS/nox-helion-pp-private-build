@@ -208,8 +208,12 @@ def create_existing_ingress(store, run_id: str, *, client=None, event_sink=None,
         session.validate()
         if session.tenant != "local" or session.principal != principal:
             return False
+        epoch = adapter._stop_epoch
+        if type(epoch) is not int or epoch < 0:
+            return False  # Missing/invalid STOP generation must never authorize.
         with lease_lock:
-            return leases.get((session.chat_id, action)) == adapter._stop_epoch
+            key = (session.chat_id, action)
+            return key in leases and leases[key] == epoch and adapter._stop_epoch == epoch
 
     def grant(session, action, args):
         # Authenticate the original local owner before requesting WPF consent.
@@ -217,6 +221,8 @@ def create_existing_ingress(store, run_id: str, *, client=None, event_sink=None,
         if session.tenant != "local" or session.principal != principal:
             raise PermissionError("E06_NATIVE_OWNER_SCOPE_REQUIRED")
         consent_epoch = adapter._stop_epoch
+        if type(consent_epoch) is not int or consent_epoch < 0:
+            raise PermissionError("E06_NATIVE_STOP_EPOCH_INVALID_HOLD")
         if not callable(native_approve) or native_approve(session, action, args) is not True:
             raise PermissionError("E06_FRESH_NATIVE_ACTION_CONSENT_REQUIRED")
         if adapter._stop_epoch != consent_epoch:
@@ -396,6 +402,11 @@ def create_existing_ingress(store, run_id: str, *, client=None, event_sink=None,
             # STOP revokes the Python-side acceptance capability, including
             # failure before the original monotonic STOP epoch can advance.
             a1_wpf_proof = None
+            # A failed native STOP may not advance _stop_epoch. Revoke the
+            # existing owner consent epoch anyway; STOP never retains leases.
+            with lease_lock:
+                leases.clear()
+                training_lease[0] = None
             # Background P04 and other original work must stop even when the
             # P02 adapter's STOP operation fails; never strand active workers.
             for hook in stop_hooks:
