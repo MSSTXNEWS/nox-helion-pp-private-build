@@ -429,6 +429,11 @@ class P03OneHostPort:
                         continue
                     if depth >= 3 or len(seen_receipts) >= 40:
                         raise P03PortHold("Owner3 unbounded nested receipt is not an ACK")
+                    # Nested owner job evidence cannot contradict the consented
+                    # STOP/retry target echoed by an outer transport receipt.
+                    if route in ("models.cancel", "models.retry") and "jobId" in nested:
+                        if type(nested["jobId"]) is not str or nested["jobId"] != job_id:
+                            raise P03PortHold("Owner3 nested job acknowledgement identity mismatch")
                     if nested.get("error") not in (None, ""):
                         raise P03PortHold("Owner3 nested backend error is not an ACK")
                     for field in ("ok", "ack", "accepted", "success"):

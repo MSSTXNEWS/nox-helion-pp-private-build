@@ -572,14 +572,14 @@
     {
       "path": "Packages/P03/Source/python-host/p03_onehost_port.py",
       "owner": 3,
-      "run_id": "B04_OWNER_DEEP_NESTED_ACK_FENCE_R13_20261105",
-      "pre_git_blob_sha1": "d1e9adc8e99aea89e9ea0f92e01b5f6e245db1c1",
-      "post_git_blob_sha1": "bc42f88d1a567aa3573ee3a727087e190e84545c",
-      "post_bytes": 30588,
-      "acceptance": "SOURCE_ONLY_V8_CONTRACT_PYTHON_AST_REGRESSION_AUTHORED_NOT_RUN_WINDOWS_E07_HOLD",
-      "change_scope": "DEEP_NESTED_OWNER_DENIAL_NOT_MODEL_ACTION_ACK",
-      "source_head_observed": "1c18881d35b69924016dff8683b03dfb913175fe",
-      "prior_active_run_id": "B04_NESTED_NATIVE_OWNER_REFUSAL_FENCE_R12_20261105"
+      "run_id": "B04_NESTED_JOB_IDENTITY_FENCE_R14_20261106",
+      "pre_git_blob_sha1": "bc42f88d1a567aa3573ee3a727087e190e84545c",
+      "post_git_blob_sha1": "e485657d99a673243585e4270e4fd6040ee40ed8",
+      "post_bytes": 31026,
+      "acceptance": "SOURCE_ONLY_V8_CONTRACT_PYTHON_AST_REGRESSION_AUTHORED_NOT_RUN_WINDOWS_QWEN_E07_HOLD",
+      "change_scope": "NESTED_CANCEL_RETRY_JOB_IDENTITY_MISMATCH_CANNOT_CONFIRM_OWNER_ACTION",
+      "source_head_observed": "6fb5df301cc5ea45b6b2a41dcf1983beeaab2b0d",
+      "prior_active_run_id": "B04_OWNER_DEEP_NESTED_ACK_FENCE_R13_20261105"
     }
   ],
   "override_chain": [
@@ -1240,6 +1240,20 @@
       "prior_active_run_id": "B04_OWNER_PENDING_ACK_FENCE_R11_20261105",
       "historical_approved_override": true,
       "retired_from_active_set": "B04_OWNER_DEEP_NESTED_ACK_FENCE_R13_20261105"
+    },
+    {
+      "path": "Packages/P03/Source/python-host/p03_onehost_port.py",
+      "owner": 3,
+      "run_id": "B04_OWNER_DEEP_NESTED_ACK_FENCE_R13_20261105",
+      "pre_git_blob_sha1": "d1e9adc8e99aea89e9ea0f92e01b5f6e245db1c1",
+      "post_git_blob_sha1": "bc42f88d1a567aa3573ee3a727087e190e84545c",
+      "post_bytes": 30588,
+      "acceptance": "SOURCE_ONLY_V8_CONTRACT_PYTHON_AST_REGRESSION_AUTHORED_NOT_RUN_WINDOWS_E07_HOLD",
+      "change_scope": "DEEP_NESTED_OWNER_DENIAL_NOT_MODEL_ACTION_ACK",
+      "source_head_observed": "1c18881d35b69924016dff8683b03dfb913175fe",
+      "prior_active_run_id": "B04_NESTED_NATIVE_OWNER_REFUSAL_FENCE_R12_20261105",
+      "historical_approved_override": true,
+      "retired_from_active_set": "B04_NESTED_JOB_IDENTITY_FENCE_R14_20261106"
     }
   ],
   "source_expansion": {

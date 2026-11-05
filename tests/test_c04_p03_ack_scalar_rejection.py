@@ -202,6 +202,23 @@ class P03RealAckBranchTest(unittest.TestCase):
                     self.respond(value, route=route,
                                  job_id=value.get('jobId'))
 
+    def test_nested_receipt_job_identity_is_not_other_job_stop_or_retry(self):
+        # Run against the production response AST, not a stubbed owner ACK.
+        for route, state in (("models.cancel", "CANCEL_REQUESTED"),
+                             ("models.retry", "QUEUED")):
+            for envelope in ("result", "receipt", "ownerReceipt"):
+                value = {"status": state, "ack": True, "jobId": "requested",
+                         envelope: {"status": state, "jobId": "foreign"}}
+                with self.subTest(route=route, envelope=envelope), self.assertRaises(P03PortHold):
+                    self.respond(value, route=route, job_id="requested")
+                value[envelope]["jobId"] = None
+                with self.subTest(route=route, envelope=envelope, malformed=True), self.assertRaises(P03PortHold):
+                    self.respond(value, route=route, job_id="requested")
+                value[envelope]["jobId"] = "requested"
+                self.assertEqual(self.respond(value, route=route, job_id="requested"), value)
+                del value[envelope]["jobId"]  # Preserve existing legacy receipts.
+                self.assertEqual(self.respond(value, route=route, job_id="requested"), value)
+
     def test_deep_positive_receipt_and_legacy_owner_result(self):
         valid = {'status': 'QUEUED', 'ack': True,
                  'ownerReceipt': {'receipt': {'status': 'QUEUED', 'ok': True}}}
