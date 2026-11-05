@@ -109,9 +109,25 @@ internal static class NoXAutostart
             !string.Equals(candidate, expected, StringComparison.OrdinalIgnoreCase))
             return;
         using var key = Registry.CurrentUser.OpenSubKey(RunKey, writable:true);
-        if (key?.GetValue(Entry) is string existing &&
+        // A read-only owner preflight must not silently become a successful
+        // uninstall when HKCU can no longer be opened for deletion.
+        if (key is null)
+            throw new IOException("NOX_AUTOSTART_UNINSTALL_HKCU_WRITE_UNAVAILABLE");
+        if (key.GetValue(Entry) is string existing &&
             key.GetValueKind(Entry) == RegistryValueKind.String &&
             string.Equals(existing, expected, StringComparison.OrdinalIgnoreCase))
+        {
             key.DeleteValue(Entry, throwOnMissingValue:false);
+            // Verify the owned startup value actually disappeared. A foreign
+            // value written concurrently remains untouched; never delete it.
+            using var verify = Registry.CurrentUser.OpenSubKey(RunKey, writable:false);
+            if (verify is not null &&
+                Array.Exists(verify.GetValueNames(), name =>
+                    string.Equals(name, Entry, StringComparison.OrdinalIgnoreCase)) &&
+                verify.GetValueKind(Entry) == RegistryValueKind.String &&
+                verify.GetValue(Entry) is string remaining &&
+                string.Equals(remaining, expected, StringComparison.OrdinalIgnoreCase))
+                throw new IOException("NOX_AUTOSTART_UNINSTALL_PERSISTENCE_UNVERIFIED");
+        }
     }
 }

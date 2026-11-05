@@ -93,5 +93,24 @@ class NoXAutostartUninstallSource(unittest.TestCase):
         self.assertIn("probe.GetValueKind(Entry) != RegistryValueKind.String", method)
         self.assertIn("key.GetValueKind(Entry) == RegistryValueKind.String", method)
 
+    def test_uninstall_owned_entry_must_disappear_or_hold(self):
+        code = SOURCE.read_text(encoding="utf-8")
+        method = code[code.index("internal static void RemoveOnUninstall"):]
+        # Read-only owner probe first: no mutation of foreign values.
+        self.assertLess(method.index("using var probe = "), method.index("using var key = "))
+        self.assertLess(method.index("!string.Equals(candidate, expected"), method.index("using var key = "))
+        # Owned entry + missing writable HKCU is a HOLD, not false success.
+        self.assertIn('if (key is null)', method)
+        self.assertIn("NOX_AUTOSTART_UNINSTALL_HKCU_WRITE_UNAVAILABLE", method)
+        self.assertLess(method.index("if (key is null)"), method.index("key.DeleteValue("))
+        # Original exact owner comparison must guard the only removal.
+        self.assertLess(method.index("string.Equals(existing, expected"), method.index("key.DeleteValue("))
+        # Real post-delete registry readback; don't remove a concurrent foreign value.
+        self.assertLess(method.index("key.DeleteValue("), method.index("using var verify = "))
+        self.assertIn("verify.GetValueKind(Entry) == RegistryValueKind.String", method)
+        self.assertIn("string.Equals(remaining, expected, StringComparison.OrdinalIgnoreCase)", method)
+        self.assertIn("NOX_AUTOSTART_UNINSTALL_PERSISTENCE_UNVERIFIED", method)
+        self.assertEqual(method.count("key.DeleteValue("), 1)
+
 if __name__ == "__main__":
     unittest.main()
