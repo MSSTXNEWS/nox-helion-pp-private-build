@@ -594,14 +594,16 @@
     {
       "path": "Packages/P03/Source/P03.ModelCenter/OllamaModelAdapter.cs",
       "owner": 3,
-      "run_id": "P03_SOURCE_RECONCILE_20261105_E06",
-      "pre_git_blob_sha1": "fa0656381b8854c6032a669c4929813988aea75a",
-      "post_git_blob_sha1": "6cb16e601cd7f560d063041a13723d81f061cc70",
-      "post_bytes": 17577,
-      "acceptance": "EXACT_SOURCE_ONLY_NOT_OWNER_PERMISSION_OR_WINDOWS_E07",
-      "prior_active_post_git_blob_sha1": "fa0656381b8854c6032a669c4929813988aea75a",
-      "prior_active_post_bytes": 16897,
-      "source_head_observed": "a86914fce7dd1f8459b0baf79ddfe0c2ce2a4995"
+      "run_id": "B06_P03_REVIEWED_OWNER_ADAPTER_BLOB_PIN_20261105",
+      "pre_git_blob_sha1": "6cb16e601cd7f560d063041a13723d81f061cc70",
+      "post_git_blob_sha1": "bb3b23f0aaec30940a25d36f5a87263dfe6a93af",
+      "post_bytes": 18163,
+      "acceptance": "EXACT_CURRENT_REVIEWED_SOURCE_PIN_ONLY_NO_MODEL_RIGHTS_WINDOWS_E07",
+      "prior_active_post_git_blob_sha1": "6cb16e601cd7f560d063041a13723d81f061cc70",
+      "prior_active_post_bytes": 17577,
+      "source_head_observed": "8631836b763eaad926ae6681e7d64a0469be3717",
+      "reconciliation_source_commit": "e8c2590cbde18a9d6ece9d14310b9b1de1bde0ae",
+      "reconciliation_scope": "B06_OWNER_REVIEWED_PULL_EXISTING_TAG_NO_LOSS_NO_NEW_MODEL_RIGHTS"
     }
   ],
   "override_chain": [
@@ -842,6 +844,20 @@
       "f01_scope": "GIT_SOURCE_PIN_ONLY_NOT_WINDOWS_CSHARP_OR_E07",
       "historical_approved_override": true,
       "retired_from_active_set": "D04_P03_CROSS_KIND_TAG_OWNER_HOLD_20261105"
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter/OllamaModelAdapter.cs",
+      "owner": 3,
+      "run_id": "P03_SOURCE_RECONCILE_20261105_E06",
+      "pre_git_blob_sha1": "fa0656381b8854c6032a669c4929813988aea75a",
+      "post_git_blob_sha1": "6cb16e601cd7f560d063041a13723d81f061cc70",
+      "post_bytes": 17577,
+      "acceptance": "EXACT_SOURCE_ONLY_NOT_OWNER_PERMISSION_OR_WINDOWS_E07",
+      "prior_active_post_git_blob_sha1": "fa0656381b8854c6032a669c4929813988aea75a",
+      "prior_active_post_bytes": 16897,
+      "source_head_observed": "a86914fce7dd1f8459b0baf79ddfe0c2ce2a4995",
+      "historical_approved_override": true,
+      "retired_from_active_set": "B06_20261105_REVIEWED_PULL_NOLOSS_PIN"
     }
   ],
   "source_expansion": {
