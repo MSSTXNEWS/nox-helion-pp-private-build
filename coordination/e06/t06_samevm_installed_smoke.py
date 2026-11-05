@@ -1149,7 +1149,7 @@ def main()->int:
                 plain_parents(backup,local_base),
                 "T06_ORIGINAL_NSIS_UPDATE_BACKUP_HOLD")
         require(sha(wpf)==evidence["wpf_sha256"] and
-                marker.read_bytes()==signature,
+                original_no_loss_file_preserved(marker,signature,local_base),
                 "T06_UPDATE_MUST_PRESERVE_BINARY_AND_DATA")
         # Verify genuine previous installed program before requesting rollback.
         backup_check=run(["powershell.exe","-NoProfile","-NonInteractive",
@@ -1162,7 +1162,7 @@ def main()->int:
         rollback=run([str(SETUP),"/S","/ROLLBACK"],250)
         report["installer_lifecycle"]["rollback"]=rollback
         require(rollback["code"]==0 and sha(wpf)==evidence["wpf_sha256"] and
-                marker.read_bytes()==signature,
+                original_no_loss_file_preserved(marker,signature,local_base),
                 "T06_ORIGINAL_NSIS_ROLLBACK_NOLOSS_HOLD")
         saved=Path(str(install)+".__p01_rollback_saved")
         report["installer_lifecycle"]["rollback_slots"]=rollback_slot_layout(
@@ -1249,7 +1249,7 @@ def main()->int:
         report["installer_lifecycle"]["unmanaged_install_file_noloss"]="PRESERVED_VERIFIED"
         report["installer_lifecycle"]["uninstall_owned_files_checked"]=len(owned_files)
         report["installer_lifecycle"]["uninstall_registry_views_checked"]=2
-        require(marker.is_file() and marker.read_bytes()==signature,
+        require(original_no_loss_file_preserved(marker,signature,local_base),
                 "T06_ORIGINAL_NSIS_UNINSTALL_USER_DATA_LOSS")
         provider_offline=(report["installer_lifecycle"]["native_ipc"]["status"]==
                           "PROVIDER_OFFLINE_HOLD")
