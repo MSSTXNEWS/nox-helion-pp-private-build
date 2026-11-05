@@ -43,16 +43,27 @@ class InstallOwnerEvidence(unittest.TestCase):
         self.assertIn('\"permissions_verified\":\"NOT_TESTED\"',source)
         self.assertNotIn('\"permissions_verified\":\"PASS\"',source)
 
-    def test_install_requires_original_secondary_native_control(self):
+    def test_trusted_original_install_runs_once_secondary_probe_readonly(self):
         source=PATH.read_text(encoding="utf-8")
+        stage=(ROOT/"coordination/express/stage_original_five_primary.py").read_text(encoding="utf-8")
         script=module._uia_script(1234,"INSTALL_CONTROL")
+        self.assertIn("if(!target||!nav.contains(target)||!event.isTrusted)return;",stage)
+        self.assertIn("INSTALL:['control','button#pc-install','button#pc-install']",stage)
+        self.assertIn("invokeMatches[0].click();",stage)
         self.assertIn("OriginalPcInstall",script)
         self.assertIn("AutomationId+'').Trim() -cne 'pc-install'",script)
-        self.assertIn("GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)",script)
         self.assertIn("if($matches.Count -ne 1){throw 'ORIGINAL_CONTROL_NOT_UNIQUE'}",script)
+        readonly=script.split("if($op -eq 'INSTALL_CONTROL'){",1)[1].split("if($op -in @(",1)[0]
+        self.assertIn("GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)",readonly)
+        self.assertNotIn("$p.Invoke()",readonly,"E07 must never install twice")
+        self.assertIn("originalControlPresent=$true",readonly)
+        self.assertIn("invokePatternAvailable=$true",readonly)
         self.assertIn('invoke_primary(hwnd,"INSTALL")',source)
         self.assertIn('_run_ps(_uia_script(hwnd,"INSTALL_CONTROL")',source)
+        self.assertIn('original_control.get("originalControlPresent") is True',source)
+        self.assertIn('original_control.get("invokePatternAvailable") is True',source)
         self.assertIn("E07_FINAL_INSTALL_REAL_CONTROL_NOT_FOUND_HOLD",source)
+        self.assertIn("classify_fresh_original_install_log(handle.read(200000))",source)
         self.assertEqual(module._bounded_uia_failure(
             "E07_FINAL_UIA_INSTALL_CONTROL_ORIGINAL_CONTROL_NOT_UNIQUE_HOLD",
             "INSTALL_CONTROL"),

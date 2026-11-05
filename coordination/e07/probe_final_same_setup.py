@@ -475,11 +475,12 @@ function SaveAdaptiveHold([int]$requestedWidth) {
 }
 $op='__OP__'
 if($op -eq 'INSTALL_CONTROL'){
+ # Source-locked EXPRESS primary already delegates its one trusted user click
+ # to original #pc-install. Inspect existing owner control: NEVER Invoke twice.
  $b=OriginalPcInstall
  $p=$b.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)
  if($null -eq $p){throw 'NO_INVOKE'}
- $p.Invoke();Start-Sleep -Milliseconds 350
- [pscustomobject]@{invoked=$true;sameHwndAlive=($null -ne [System.Windows.Automation.AutomationElement]::FromHandle($handle))}|ConvertTo-Json -Compress;exit 0
+ [pscustomobject]@{originalControlPresent=$true;invokePatternAvailable=$true;sameHwndAlive=($null -ne [System.Windows.Automation.AutomationElement]::FromHandle($handle))}|ConvertTo-Json -Compress;exit 0
 }
 if($op -in @('CHAT','INSTALL','MODELS','LEARN')){ [pscustomobject]@{invoked=(InvokePrimary '__ACTION__');sameHwndAlive=($null -ne [System.Windows.Automation.AutomationElement]::FromHandle($handle))}|ConvertTo-Json -Compress; exit 0 }
 if($op -eq 'SETTINGS'){
@@ -813,10 +814,11 @@ def run(hwnd: int, install: Path, local: Path, *, source_sha: str, setup_sha: st
         before_info=log.stat() if e07.clean_file(log) else None
         before_log_size=before_info.st_size if before_info else 0
         invoke_primary(hwnd,"INSTALL")
-        # The EXPRESS primary INSTALL is navigation only. Observe a physical
-        # InvokePattern on the unique original R11 #pc-install control after
-        # CONTROL loads, before accepting any fresh owner ACTION_START/END log.
-        # Never approve the WPF privileged consent dialog on behalf of a user.
+        # Current original EXPRESS source delegates its one trusted INSTALL
+        # user event to R11 #pc-install. Verify unique same-HWND UIA control
+        # read-only, not a second native installation. Only fresh real WPF
+        # ACTION_START/END plus original installed result can prove success.
+        # Never approve WPF privileged consent on behalf of a user.
         original_control=None
         for _ in range(20):
             try:
@@ -828,7 +830,8 @@ def run(hwnd: int, install: Path, local: Path, *, source_sha: str, setup_sha: st
                     raise
                 time.sleep(.3)
         e07.require(type(original_control) is dict and
-                    original_control.get("invoked") is True and
+                    original_control.get("originalControlPresent") is True and
+                    original_control.get("invokePatternAvailable") is True and
                     original_control.get("sameHwndAlive") is True,
                     "E07_FINAL_INSTALL_REAL_CONTROL_NOT_FOUND_HOLD")
         started_at=time.monotonic()
