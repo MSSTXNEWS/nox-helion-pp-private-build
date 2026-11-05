@@ -1571,7 +1571,19 @@ def main() -> int:
             result["checks"]["artifact"] = setup_lock(setup,receipt,candidate=args.artifact_kind,pinned=pinned)
         # All physical final witnesses are created on this one installed Setup,
         # not imported from an unrelated workflow or a previous candidate.
-        physical_dir = args.out.parent / "same-setup-final"
+        # Pre-navigation D02 UIA writes same-Setup evidence while the original
+        # WPF HWND is alive. Creating this parent only in the final receipt
+        # writer was too late: the actual E07 held on a missing parent before
+        # any real visual/function witnesses could be collected.
+        evidence_parent = args.out.parent
+        require(all(not item.is_symlink() and
+                    not getattr(item, "is_junction", lambda: False)()
+                    for item in (evidence_parent, *evidence_parent.parents)),
+                "E07_FINAL_EVIDENCE_PARENT_REPARSE_HOLD")
+        evidence_parent.mkdir(parents=True, exist_ok=True)
+        require(clean_dir(evidence_parent),
+                "E07_FINAL_EVIDENCE_PARENT_HOLD")
+        physical_dir = evidence_parent / "same-setup-final"
         lifecycle(setup,result,frozen_source=source_sha,
                   physical_nav=args.artifact_kind in ("original-30a", "d02", "d02-91a6", "d02-f842", "d02-nav-a2", "d02-current", "d02-pinned"),
                   final_probe_dir=physical_dir if args.artifact_kind in ("d02", "d02-91a6", "d02-f842", "d02-nav-a2", "d02-current", "d02-pinned") else None,
