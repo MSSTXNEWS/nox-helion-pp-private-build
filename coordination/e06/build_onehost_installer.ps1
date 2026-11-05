@@ -1523,6 +1523,58 @@ if ($c11NsiPatched.Contains($d03OriginalUninstallFailure) -or
   throw 'D03_NSIS_NATIVE_UNINSTALL_EXIT_READBACK_HOLD'
 }
 Write-Host 'D03_NSIS_REAL_UNINSTALL_EXIT_FAIL_CLOSED_STAGED'
+# D03/G4: original NSIS returned EXIT=0 without invoking its owner if the
+# ownership marker was missing or its fixed root admission failed. A skipped
+# uninstall is not a completed owner action. Keep archived R11/C09 unchanged:
+# change ONLY those two exact lines in the disposable original NSIS staging.
+$d03UnownedAdmissions=@(
+  @{
+    Name='MARKER'; Old=@'
+  IfFileExists "$INSTDIR\nox-p01-owned.txt" 0 DoneUninstall
+'@;
+    New=@'
+  ; D03 fail-closed owner admission: absent marker is not successful uninstall.
+  IfFileExists "$INSTDIR\nox-p01-owned.txt" D03OwnerMarkerPresent 0
+    SetErrorLevel 1
+    Abort "Uninstall owner marker missing; no files changed."
+  D03OwnerMarkerPresent:
+'@
+  },
+  @{
+    Name='ROOT'; Old=@'
+  StrCmp $INSTDIR "$LOCALAPPDATA\Programs\NOX HELION" 0 DoneUninstall
+'@;
+    New=@'
+  StrCmp $INSTDIR "$LOCALAPPDATA\Programs\NOX HELION" D03UninstallRootTrusted 0
+    SetErrorLevel 1
+    Abort "Uninstall root not owned; no files changed."
+  D03UninstallRootTrusted:
+'@
+  }
+)
+$d03UnownedSection=$c11NsiPatched.IndexOf('Section "Uninstall"',[StringComparison]::Ordinal)
+$d03UnownedRemover=$c11NsiPatched.IndexOf('nsExec::ExecToStack', $d03UnownedSection,[StringComparison]::Ordinal)
+$d03UnownedDone=$c11NsiPatched.IndexOf('DoneUninstall:', $d03UnownedSection,[StringComparison]::Ordinal)
+if ($d03UnownedSection -lt 0 -or $d03UnownedRemover -le $d03UnownedSection -or
+    $d03UnownedDone -le $d03UnownedRemover) { throw 'D03_NSIS_UNOWNED_ADMISSION_SECTION_HOLD' }
+foreach ($d03Admission in $d03UnownedAdmissions) {
+  $d03Old=[regex]::Replace($d03Admission.Old,'\r?\n',$c11Eol)
+  $d03New=[regex]::Replace($d03Admission.New,'\r?\n',$c11Eol)
+  $d03At=$c11NsiPatched.IndexOf($d03Old,[StringComparison]::Ordinal)
+  if ($d03At -le $d03UnownedSection -or $d03At -ge $d03UnownedRemover -or
+      $c11NsiPatched.LastIndexOf($d03Old,[StringComparison]::Ordinal) -ne $d03At -or
+      $c11NsiPatched.Contains($d03New)) {
+    throw ('D03_NSIS_UNOWNED_'+$d03Admission.Name+'_PREIMAGE_HOLD')
+  }
+  $c11NsiPatched=$c11NsiPatched.Substring(0,$d03At)+$d03New+
+                  $c11NsiPatched.Substring($d03At+$d03Old.Length)
+  if ($c11NsiPatched.IndexOf($d03New,[StringComparison]::Ordinal) -ne $d03At -or
+      $c11NsiPatched.LastIndexOf($d03New,[StringComparison]::Ordinal) -ne $d03At -or
+      $c11NsiPatched.Contains($d03Old)) {
+    throw ('D03_NSIS_UNOWNED_'+$d03Admission.Name+'_READBACK_HOLD')
+  }
+}
+Write-Host 'D03_NSIS_UNOWNED_OWNER_ADMISSION_FAIL_CLOSED_STAGED'
 Write-Host 'B03_NSIS_UNINSTALL_METADATA_NO_FALSE_SUCCESS_STAGED'
 [IO.File]::WriteAllText($c11NsiPath,$c11NsiPatched,(New-Object System.Text.UTF8Encoding($false)))
 Write-Host "C11_NSIS_ROLLBACK_OLD_PAYLOAD_SHA_GATE_STAGED"
