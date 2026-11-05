@@ -195,14 +195,14 @@ class OriginalNativeAddonStagePin(unittest.TestCase):
                                   "HEAD:" + relative],
                                  capture_output=True, text=True, timeout=20)
             self.assertEqual(cmd.returncode, 0, cmd.stderr)
-            self.assertRegex(cmd.stdout.strip(), r"\\A[0-9a-f]{40}\\Z")
+            self.assertRegex(cmd.stdout.strip(), r"\A[0-9a-f]{40}\Z")
             return cmd.stdout.strip()
         stage_blob = git_blob(stage_relative)
         addon_blob = git_blob(addon_relative)
         stage = (root / stage_relative).read_text(encoding="utf-8")
         builder = (root / "coordination/e06/build_onehost_installer.ps1").read_text(encoding="utf-8")
         compiler = (root / "coordination/e06/t06_compile_original_wpf_p02.py").read_text(encoding="utf-8")
-        self.assertEqual(re.findall(r'(?m)^ADDON_SHA="([0-9a-f]{40})", stage),
+        self.assertEqual(re.findall(r'(?m)^ADDON_SHA="([0-9a-f]{40})"$', stage),
                          [addon_blob], "Original R11 staging rejects the actual WPF owner")
         self.assertIn("T06_NATIVE_ADDON_GIT_BLOB_HOLD", stage)
         self.assertIn("sha='" + stage_blob + "'", builder)
