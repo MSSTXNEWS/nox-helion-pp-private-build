@@ -1030,7 +1030,7 @@ $rmCommentBefore=@'
 // Do not modify retained user files or the NSIS-owned metadata here.
 '@
 $rmCompatBefore=[IO.File]::ReadAllText($rmPath)
-$rmCompatEol=if ($rmCompatBefore.Contains("\`r\`n")) { "\`r\`n" } else { "\`n" }
+$rmCompatEol=if ($rmCompatBefore.Contains("`r`n")) { "`r`n" } else { "`n" }
 $rmCommentBefore=[regex]::Replace($rmCommentBefore,'\r?\n',$rmCompatEol)
 $rmCommentAfter=[regex]::Replace($rmCommentBefore,'(?m)^//','#')
 if (([regex]::Matches($rmCompatBefore,[regex]::Escape($rmCommentBefore))).Count -ne 1 -or

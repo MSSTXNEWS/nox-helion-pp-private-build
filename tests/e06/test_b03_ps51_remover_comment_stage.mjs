@@ -22,4 +22,6 @@ assert.ok(builder.indexOf("NX03_C09_REVIEWED_REMOVE_STAGE_PASS")<builder.indexOf
 assert.ok(builder.indexOf("B03_P01_PS51_REMOVER_COMMENT_STAGE_PASS")<builder.indexOf("& $makensisPath"));
 assert.ok(builder.includes("fed8e70a122118e2e25c6399701d9e7c26434cfe"));
 assert.ok(builder.includes("b0107364b70528011a6c2fbcf305556994be573a"));
+assert.ok(builder.includes("$rmCompatEol=if ($rmCompatBefore.Contains(\"`r`n\")) { \"`r`n\" } else { \"`n\" }"),"PowerShell newline literals must be backticks WITHOUT backslashes");
+assert.ok(!builder.includes("$rmCompatEol=if ($rmCompatBefore.Contains(\"\\`r\\`n\")) { \"\\`r\\`n\" } else { \"\\`n\" }"),"extra backslash causes stage preimage mismatch");
 console.log("B03_PS51_REMOVER_COMMENT_SOURCE_ONLY_PASS");
