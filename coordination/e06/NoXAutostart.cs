@@ -100,10 +100,15 @@ internal static class NoXAutostart
         // Do not demand write permission for an absent or foreign Run value.
         // Exact ownership is rechecked under the writable handle before delete.
         using var probe = Registry.CurrentUser.OpenSubKey(RunKey, writable:false);
-        if (probe?.GetValue(Entry) is not string candidate ||
-            probe.GetValueKind(Entry) != RegistryValueKind.String ||
+        if (probe is null || !Array.Exists(probe.GetValueNames(), name =>
+            string.Equals(name, Entry, StringComparison.OrdinalIgnoreCase)))
+            return; // Exact absence is a successful no-op; do not request HKCU write.
+        // A foreign same-name value (including REG_DWORD/REG_EXPAND_SZ) is not
+        // proof of successful NOX cleanup. Preserve it without requesting write.
+        if (probe.GetValueKind(Entry) != RegistryValueKind.String ||
+            probe.GetValue(Entry) is not string candidate ||
             !string.Equals(candidate, expected, StringComparison.OrdinalIgnoreCase))
-            return;
+            throw new UnauthorizedAccessException("NOX_AUTOSTART_UNINSTALL_FOREIGN_ENTRY_HOLD");
         using var key = Registry.CurrentUser.OpenSubKey(RunKey, writable:true);
         // A read-only owner preflight must not silently become a successful
         // uninstall when HKCU can no longer be opened for deletion.

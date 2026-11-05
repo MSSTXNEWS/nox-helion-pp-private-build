@@ -80,18 +80,24 @@ class NoXAutostartUninstallSource(unittest.TestCase):
         self.assertLess(writable, method.index("NOX_AUTOSTART_FOREIGN_ENTRY_HOLD"))
         self.assertIn("var persisted = ReadOwnedState(executable);", method)
 
-    def test_uninstall_foreign_entry_does_not_request_write_access(self):
+    def test_uninstall_foreign_entry_is_preserved_and_owner_refusal_explicit(self):
         code = SOURCE.read_text(encoding="utf-8")
         method = code[code.index("internal static void RemoveOnUninstall"):]
         readonly = method.index("using var probe = Registry.CurrentUser.OpenSubKey(RunKey, writable:false)")
-        guard = method.index("!string.Equals(candidate, expected, StringComparison.OrdinalIgnoreCase)")
-        early_return = method.index("return;", guard)
+        absence = method.index("if (probe is null || !Array.Exists(probe.GetValueNames()")
+        return_absent = method.index("return; // Exact absence is a successful no-op")
+        foreign_kind = method.index("probe.GetValueKind(Entry) != RegistryValueKind.String")
+        foreign_value = method.index("probe.GetValue(Entry) is not string candidate")
+        foreign_path = method.index("!string.Equals(candidate, expected, StringComparison.OrdinalIgnoreCase)")
+        denied = method.index("NOX_AUTOSTART_UNINSTALL_FOREIGN_ENTRY_HOLD")
         writable = method.index("using var key = Registry.CurrentUser.OpenSubKey(RunKey, writable:true)")
-        second_match = method.index("string.Equals(existing, expected, StringComparison.OrdinalIgnoreCase)")
-        delete = method.index("key.DeleteValue(Entry", second_match)
-        self.assertTrue(readonly < guard < early_return < writable < second_match < delete)
-        self.assertIn("probe.GetValueKind(Entry) != RegistryValueKind.String", method)
-        self.assertIn("key.GetValueKind(Entry) == RegistryValueKind.String", method)
+        deletion = method.index("key.DeleteValue(Entry")
+        self.assertTrue(readonly < absence < return_absent < foreign_kind < foreign_value <
+                        foreign_path < denied < writable < deletion)
+        self.assertIn("throw new UnauthorizedAccessException", method[foreign_path:writable])
+        # No foreign-kind or foreign-path branch may silently authorize uninstall.
+        self.assertEqual(method[:writable].count("return;"), 1)
+        self.assertEqual(method.count("key.DeleteValue(Entry"), 1)
 
     def test_uninstall_owned_entry_must_disappear_or_hold(self):
         code = SOURCE.read_text(encoding="utf-8")
