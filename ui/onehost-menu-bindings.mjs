@@ -128,7 +128,11 @@ export function nativeOwnerReceiptHolds(owner,depth=0,trail=new Set()) {
        typeof owner.ack!=='boolean')) return true;
   // A false native permission or operation bit is an actual owner denial,
   // even if a surrounding IPC envelope advertises COMPLETED.
-  for (const key of ['success','approved','authorized']) {
+  // An explicitly negative native grant is an owner refusal, even if the
+  // transport says COMPLETED and HKCU enabled/readOnly otherwise look valid.
+  // Absent optional grant fields remain backward-compatible with original WPF.
+  for (const key of ['success','approved','authorized',
+    'consented','ownerConsent','nativeConsent','permissionGranted']) {
     if (Object.prototype.hasOwnProperty.call(owner,key) && owner[key]!==true)
       return true;
   }

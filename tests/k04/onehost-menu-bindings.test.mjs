@@ -210,3 +210,19 @@ test('D06 SETTINGS denies inner nonterminal or unreviewed owner status despite t
  assert.equal(nativeAutostartPersistenceAck(envelope({enabled:false,readOnly:false}),false),true);
  assert.equal(nativeAutostartPersistenceAck(envelope({enabled:false,readOnly:true}),null),true);
 });
+
+test('D06 SETTINGS refuses explicit native owner consent and permission denial on read/write',()=>{
+ const envelope=result=>({routeId:'system.autostart',state:'COMPLETED',result});
+ for(const key of ['consented','ownerConsent','nativeConsent','permissionGranted']){
+   for(const invalid of [false,null,0,'true']){
+     for(const [enabled,readOnly,requested] of [[true,false,true],[false,true,null]]){
+       assert.equal(nativeAutostartPersistenceAck(envelope({enabled,readOnly,[key]:invalid}),requested),false,key+':'+String(invalid));
+     }
+   }
+   assert.equal(nativeAutostartPersistenceAck(envelope({enabled:true,readOnly:false,[key]:true}),true),true);
+   assert.equal(nativeAutostartPersistenceAck(envelope({enabled:false,readOnly:true,[key]:true}),null),true);
+   assert.equal(nativeAutostartPersistenceAck(envelope({enabled:true,readOnly:false,ownerResult:{[key]:false}}),true),false);
+ }
+ assert.equal(nativeAutostartPersistenceAck(envelope({enabled:true,readOnly:false}),true),true);
+ assert.equal(nativeAutostartPersistenceAck(envelope({enabled:false,readOnly:true}),null),true);
+});
