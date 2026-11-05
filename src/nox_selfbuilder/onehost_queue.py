@@ -146,6 +146,16 @@ class NativeWorkQueue:
                             or any(c not in '0123456789abcdef' for c in proof)
                             or frozen.get('activation_allowed') is not False):
                         raise NativeQueueHold('S03_FORGE_RESULT_ADMISSION_HOLD')
+                if permission == 'training.merge' and state != 'HOLD':
+                    # A durable CLAIM alone is not a merged-weight receipt.
+                    # Keep the original candidate-only status and both SHA witnesses.
+                    proof_names = ('merge_receipt_sha256', 'merged_payload_sha256')
+                    if (state != 'MERGED_CANDIDATE_PENDING_IMPORT' or any(
+                            type(frozen.get(name)) is not str
+                            or len(frozen[name]) != 64
+                            or any(ch not in '0123456789abcdef' for ch in frozen[name])
+                            for name in proof_names)):
+                        raise NativeQueueHold('S03_FORGE_MERGE_RECEIPT_BINDING_HOLD')
             if work.get('kind') == 'FORGE' and state != 'HOLD':
                 # A matching receipt-shaped hash is not proof that the native
                 # GPU/QLoRA worker ever ran. Positive results must follow the

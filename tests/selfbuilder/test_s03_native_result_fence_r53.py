@@ -289,6 +289,32 @@ class ForgeDurableResultAdmissionTests(unittest.TestCase):
                         self.put(state, result, permission='training.merge')
                     self.assertEqual(self.audit_count(), 0)
 
+    def test_merge_claim_without_exact_original_sha_receipts_is_not_result(self):
+        # Tests S03 admission after a matching CLAIM only; native
+        # submit_followup independently checks prior training and consent.
+        self.claim('training.merge')
+        good = {'status': 'MERGED_CANDIDATE_PENDING_IMPORT',
+                'merge_receipt_sha256': 'a'*64,
+                'merged_payload_sha256': 'b'*64,
+                'weights_updated': False, 'activation_allowed': False}
+        invalid = [
+            {'status': 'MERGED_CANDIDATE_PENDING_IMPORT',
+             'weights_updated': False, 'activation_allowed': False},
+            {**good, 'merge_receipt_sha256': None},
+            {**good, 'merge_receipt_sha256': 'A'*64},
+            {**good, 'merged_payload_sha256': 'not-a-sha'},
+            {**good, 'merged_payload_sha256': 1},
+            {**good, 'status': 'COMPLETED'},
+        ]
+        for row in invalid:
+            with self.subTest(row=row):
+                with self.assertRaisesRegex(NativeQueueHold, 'S03_FORGE_MERGE_RECEIPT_BINDING_HOLD'):
+                    self.put(row['status'], row, permission='training.merge')
+                self.assertEqual(self.audit_count(), 0)
+        self.assertTrue(self.put('MERGED_CANDIDATE_PENDING_IMPORT', good, permission='training.merge'))
+        self.assertEqual(self.audit_count(), 1)
+        self.assertIs(self.queue.get(self.scope, self.task_id)['result']['activation_allowed'], False)
+
     def test_error_hold_keeps_original_fail_closed_record(self):
         self.assertTrue(self.queue.record(
             self.scope, self.task_id, 'HOLD',
