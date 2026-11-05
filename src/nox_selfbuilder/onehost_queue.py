@@ -123,6 +123,16 @@ class NativeWorkQueue:
             self._read(store,scope,tid)
             with store.conn:
                 require_live_result_owner()
+                if expected_epoch is None:
+                    # The worker's error path may persist its first nonaccepting
+                    # HOLD, but a later stale exception cannot replace an owner-
+                    # authorized S03 RESULT or rewrite an already recorded HOLD.
+                    # Original audit history and every earlier receipt stay intact.
+                    prior = store.conn.execute(
+                        "SELECT 1 FROM audit WHERE item_id=? AND action='NOX_NATIVE_WORK_RESULT' LIMIT 1",
+                        (tid,)).fetchone()
+                    if prior is not None:
+                        raise NativeQueueHold('S03_UNFENCED_HOLD_AFTER_RESULT_DENIED')
                 self._event(store,tid,'RESULT',{'scope':scope_key(scope),'state':state,'result':frozen})
                 # STOP/ACL revocation during SQLite audit rolls back the result.
                 require_live_result_owner()

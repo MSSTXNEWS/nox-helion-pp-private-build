@@ -74,6 +74,29 @@ class NativeResultFenceTests(unittest.TestCase):
                         {'status': 'HOLD', 'reason': 'NATIVE_STOP', 'weights_updated': False}))
         self.assertEqual(self.queue.get(self.scope, self.task_id)['state'], 'HOLD')
 
+    def test_unfenced_stale_hold_preserves_accepted_owner_receipt(self):
+        self.assertTrue(self.queue.record(
+            self.scope, self.task_id, 'OWNER_ACCEPTED', {'status': 'OWNER_ACCEPTED'},
+            expected_epoch=self.epoch, permission='selfbuilder.feedback',
+            permission_payload={'task_id': self.task_id, 'outcome': 'ACCEPTED'}))
+        before = self.count()
+        with self.assertRaisesRegex(NativeQueueHold, 'S03_UNFENCED_HOLD_AFTER_RESULT_DENIED'):
+            self.queue.record(self.scope, self.task_id, 'HOLD',
+                              {'status': 'HOLD', 'reason': 'LATE_ERROR', 'weights_updated': False})
+        self.assertEqual(self.count(), before)
+        self.assertEqual(self.queue.get(self.scope, self.task_id)['state'], 'OWNER_ACCEPTED')
+
+    def test_second_unfenced_hold_cannot_rewrite_first_error(self):
+        self.assertTrue(self.queue.record(
+            self.scope, self.task_id, 'HOLD',
+            {'status': 'HOLD', 'reason': 'NATIVE_STOP', 'weights_updated': False}))
+        before = self.count()
+        with self.assertRaisesRegex(NativeQueueHold, 'S03_UNFENCED_HOLD_AFTER_RESULT_DENIED'):
+            self.queue.record(self.scope, self.task_id, 'HOLD',
+                              {'status': 'HOLD', 'reason': 'LATE_ERROR', 'weights_updated': False})
+        self.assertEqual(self.count(), before)
+        self.assertEqual(self.queue.get(self.scope, self.task_id)['result']['reason'], 'NATIVE_STOP')
+
     def test_unfenced_hold_with_positive_result_rejected(self):
         with self.assertRaisesRegex(PermissionError, 'NATIVE_RESULT_OWNER_FENCE_REQUIRED'):
             self.queue.record(self.scope, self.task_id, 'HOLD',
