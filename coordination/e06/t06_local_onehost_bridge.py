@@ -330,25 +330,51 @@ def verified_samevm_lifecycle_state(smoke:dict, third:dict)->str:
     # Re-attest the physical NSIS lifecycle, not just a self-labelled phase.
     # An offline provider is acceptable for a diagnostic candidate, but a
     # failed or missing install/verify/rollback/uninstall is never acceptable.
-    required_stages=(
-        "preflight_final", "install", "verify", "update",
-        "backup_payload_verify", "rollback", "rollback_payload_restored",
+    # Native subprocess receipts carry integer exit codes. The original D06
+    # installed-backup/rollback verifier instead returns a bounded, read-only
+    # SHA+inode receipt (no subprocess and deliberately no synthetic "code").
+    # Requiring a fake exit code made a physically successful NO-LOSS lifecycle
+    # fail this bridge even when the native smoke returned 0. Keep each
+    # attestation bound to its REAL producer and fail closed on mixed schemas.
+    native_stages=(
+        "preflight_final", "install", "verify", "update", "rollback",
         "rollback_payload_superseded", "uninstall",
     )
-    for stage in required_stages:
+    for stage in native_stages:
         receipt=lifecycle.get(stage)
         if (type(receipt) is not dict or
             type(receipt.get("code")) is not int or receipt["code"]!=0):
             raise RuntimeError(error)
     owned=lifecycle.get("uninstall_owned_files_checked")
     views=lifecycle.get("uninstall_registry_views_checked")
-    # Source provenance already pinned the payload manifest count.  A
-    # positive subset (e.g. 1 of 485 files) is NOT full conservative uninstall.
+    # Source provenance already pinned the payload manifest count. A
+    # positive subset (e.g. 1 of 485 files) is NOT a full uninstall.
     manifest_count=smoke.get("manifest_files_checked")
     if (type(owned) is not int or owned<1 or
         type(manifest_count) is not int or not 1<=manifest_count<=50000 or
         owned!=manifest_count or
         type(views) is not int or views!=2):
+        raise RuntimeError(error)
+    for stage in ("backup_payload_verify", "rollback_payload_restored"):
+        receipt=lifecycle.get(stage)
+        if (type(receipt) is not dict or
+            receipt.get("status")!="PASS_DIAGNOSTIC_ONLY" or
+            receipt.get("release_accepted") is not False or
+            receipt.get("unmanaged_probe_preserved") is not True or
+            type(receipt.get("manifest_files_checked")) is not int or
+            receipt["manifest_files_checked"]!=manifest_count or
+            "code" in receipt):
+            raise RuntimeError(error)
+    any_exit=lifecycle.get("uninstall_any_exit_no_loss")
+    if (lifecycle.get("update_unmanaged_user_data")!="PRESERVED_IN_BACKUP" or
+        lifecycle.get("rollback_unmanaged_user_data")!="PRESERVED_IN_RESTORED_INSTALL" or
+        lifecycle.get("unmanaged_install_file_noloss")!="PRESERVED_VERIFIED" or
+        type(any_exit) is not dict or
+        any_exit.get("persistent_user_data")!="PRESERVED" or
+        any_exit.get("unmanaged_install_data")!="PRESERVED" or
+        any_exit.get("read_only") is not True or
+        any_exit.get("independent_e07")!="NOT_RUN" or
+        any_exit.get("release_accepted") is not False):
         raise RuntimeError(error)
     phase=smoke.get("phase")
     if phase=="INSTALLED_GUI_IPC_UPDATE_ROLLBACK_NOLOSS_PASS_NOT_E07":
