@@ -35,17 +35,24 @@ def initialize():
  con=sqlite3.connect(dbfile,timeout=10)
  con.execute("PRAGMA journal_mode=WAL")
  con.execute("CREATE TABLE IF NOT EXISTS tasks (id TEXT PRIMARY KEY,kind TEXT,goal TEXT,state TEXT,hash TEXT,reason TEXT)")
+ if "attempts" not in [x[1] for x in con.execute("PRAGMA table_info(tasks)")]:
+  con.execute("ALTER TABLE tasks ADD COLUMN attempts INTEGER NOT NULL DEFAULT 0")
  with con:
   for name,kind,goal in tasks:con.execute("INSERT OR IGNORE INTO tasks VALUES(?,?,?,'PENDING',NULL,NULL)",(name,kind,goal))
  return con
 def complete_one(con):
- row=con.execute("SELECT id,kind,goal FROM tasks WHERE state='PENDING' ORDER BY rowid LIMIT 1").fetchone()
+ row=con.execute("SELECT id,kind,goal,attempts FROM tasks WHERE state='PENDING' ORDER BY rowid LIMIT 1").fetchone()
  if not row:return False
- name,kind,goal=row
+ name,kind,goal,attempts=row
  if (root/"STOP").exists():raise RuntimeError("OWNER_STOP")
- system="You are an assistant preparing a proposed NOX UI/code file. Return only complete "+kind+" source code, without markdown. No external scripts or CDN, no credentials or commands. It is NOT installed and must be reviewed before use."
+ with con:con.execute("UPDATE tasks SET state='RUNNING',attempts=attempts+1 WHERE id=?",(name,))
+ system=("You are NOX HELION Coder. Return ONLY a complete single-file "+kind+" source. "
+         "No explanations, no Markdown. For HTML include <!doctype html>, html, head, body, "
+         "main and closing tags; use inline CSS and no external scripts or CDN. "
+         "For Python return syntactically complete Python 3 code. No credentials, no system commands. "
+         "This is a DRAFT for review, NOT installed; never invent execution results.")
  payload={"model":"qwen2.5-coder:7b","think":False,"stream":False,
-          "options":{"num_ctx":2048,"num_predict":1100,"temperature":0.2},
+          "options":{"num_ctx":4096,"num_predict":2200,"temperature":0.2},
           "messages":[{"role":"system","content":system},{"role":"user","content":goal}]}
  req=Request("http://127.0.0.1:11434/api/chat",
              data=json.dumps(payload,ensure_ascii=False).encode("utf-8"),
@@ -59,8 +66,15 @@ def complete_one(con):
    first=re.search(r"<!doctype html|<html\b",answer,re.I)
    if first:answer=answer[first.start():]
   if not answer:raise RuntimeError("MODEL_RETURNED_EMPTY")
-  candidate=out/(name+(".html" if kind=="html" else ".py"))
-  if candidate.exists():raise FileExistsError("PRESERVE_EXISTING_CANDIDATE")
+  ext=".html" if kind=="html" else ".py"
+  candidate=out/(name+ext)
+  if candidate.exists():
+   n=max(2,attempts+1)
+   candidate=out/(name+"-r"+str(n)+ext)
+   while candidate.exists():
+    n+=1
+    candidate=out/(name+"-r"+str(n)+ext)
+  # Previous candidate bytes and receipts are always preserved.
   temp=candidate.with_suffix(candidate.suffix+".pending")
   temp.write_text(answer,encoding="utf-8")
   sha=hashlib.sha256(temp.read_bytes()).hexdigest()
@@ -78,11 +92,20 @@ def complete_one(con):
  return True
 def main():
  p=argparse.ArgumentParser()
- p.add_argument("action",choices=["status","once","run","resume"])
+ p.add_argument("action",choices=["status","once","run","resume","retry"])
  p.add_argument("--minutes",type=int,default=120)
  args=p.parse_args();con=initialize()
- if args.action=="resume":
-  with con:con.execute("UPDATE tasks SET state='PENDING' WHERE state='HOLD'")
+ if args.action=="retry":
+  # Preserve the original queue and all previous errors before any retry.
+  backup=dbfile.with_name("drafts-before-retry-"+time.strftime("%Y%m%d-%H%M%S")+".sqlite3")
+  destination=sqlite3.connect(backup)
+  try:con.backup(destination)
+  finally:destination.close()
+  with con:
+   changed=con.execute("UPDATE tasks SET state='PENDING' WHERE state IN ('HOLD','DRAFT_HOLD') AND attempts<3").rowcount
+  print("NOX_RETRY_QUEUED",changed,"QUEUE_BACKUP",backup)
+ elif args.action=="resume":
+  with con:con.execute("UPDATE tasks SET state='PENDING' WHERE state='RUNNING'")
  elif args.action in ("once","run"):
   deadline=time.monotonic()+min(180,max(1,args.minutes))*60
   while time.monotonic()<deadline:
@@ -90,6 +113,8 @@ def main():
    time.sleep(15)
  for state,count in con.execute("SELECT state,COUNT(*) FROM tasks GROUP BY state"):
   print(state,count)
+ for name,state,tries,reason in con.execute("SELECT id,state,attempts,reason FROM tasks ORDER BY rowid"):
+  print("TASK",name,state,"attempts="+str(tries),(reason or "")[:125])
  print("NOX_PROPOSALS_ONLY",out)
 if __name__=="__main__":
  try:main()
