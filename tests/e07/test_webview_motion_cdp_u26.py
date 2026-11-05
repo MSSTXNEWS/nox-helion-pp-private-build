@@ -142,7 +142,13 @@ class PhysicalWebviewMotion(unittest.TestCase):
 
     def test_current_release_requires_real_webview_evidence(self):
         source=(ROOT/"coordination/e07/probe_final_same_setup.py").read_text(encoding="utf-8")
-        self.assertIn('webview_motion.get("status")=="PASS"',source)
+        self.assertIn("def _physical_webview2_motion_verified(observation: object)",source)
+        self.assertIn('observation.get("status") == "PASS"',source)
+        self.assertIn('observation.get("media_reduced") is True',source)
+        self.assertIn('observation.get("scope") == "INSTALLED_WEBVIEW2_MEDIA_CSS_WAAPI_NOT_OS_SETTING_ALONE"',source)
+        self.assertIn("motion_verified=_physical_webview2_motion_verified(webview_motion)",source)
+        self.assertIn('if motion_verified:',source)
+        self.assertIn('visual["reduced_motion"]="PASS"',source)
         self.assertIn('"reduced_motion":"HOLD"',source)
 
 
