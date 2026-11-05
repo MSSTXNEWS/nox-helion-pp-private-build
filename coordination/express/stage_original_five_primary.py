@@ -445,7 +445,7 @@ a1Button?.addEventListener('click',event=>{
   const has=key=>Object.prototype.hasOwnProperty.call(envelope,key);
   // An explicit owner/consent refusal is never overridden by transport COMPLETED.
   // Missing optional fields are allowed; present fields require literal true.
-  for(const key of ['ack','ok','success','approved','authorized','consented']){
+  for(const key of ['ack','accepted','ok','success','approved','authorized','consented']){
    if(has(key)&&envelope[key]!==true)return true;
   }
   for(const key of ['error','error_code','errorCode','errorMessage','error_message']){
@@ -458,7 +458,7 @@ a1Button?.addEventListener('click',event=>{
    if(typeof envelope[key]==='string'&&
       /(?:HOLD|DENIED|REJECT|FAIL|ERROR|OFFLINE|CONSENT|UNAUTHORIZED|FORBIDDEN|PERMISSION_REQUIRED|AUTH_REQUIRED|AUTHORIZATION_REQUIRED|AUTHENTICATION_REQUIRED|NEEDS_AUTH|NOT_AUTHORIZED|NOT_AUTHENTICATED|SID_MISMATCH|ACL_MISMATCH|OWNER_MISMATCH|NOT_READY|PROVIDER_UNAVAILABLE|CANCELLED|ABORTED|REVOKED|EXPIRED)/i.test(envelope[key]))return true;
   }
-  for(const key of ['result','receipt','nativeResult','owner','ownerResult']){
+  for(const key of ['result','receipt','ownerReceipt','nativeResult','owner','ownerResult']){
    if(!has(key)||envelope[key]===null||envelope[key]===undefined)continue;
    if(a1ReceiptDenied(envelope[key],depth+1,trail))return true;
   }

@@ -20,5 +20,24 @@ const result={schema:'NOX-A1-NATIVE-COMMAND-STATUS-v1',state:'ACTIVE_NATIVE_BOOT
 const receipt={kind:'p02NativeResult',routeId:'chat.commands',requestId:ok.posted.requestId,state:'COMPLETED',result};
 ok.reply(receipt);assert.equal(ok.button.disabled,false);assert.match(ok.state.textContent,/подтверждён/);
 const bad=trial();bad.click();bad.reply({...receipt,requestId:bad.posted.requestId,result:{...result,ack:false}});assert.match(bad.state.textContent,/HOLD/);
+// A COMPLETED transport must not mask explicit owner or nested ownerReceipt denial.
+const refusedCases=[
+ ['outer accepted false',x=>({...receipt,requestId:x.posted.requestId,accepted:false,result})],
+ ['outer accepted nonboolean',x=>({...receipt,requestId:x.posted.requestId,accepted:'true',result})],
+ ['owner accepted false',x=>({...receipt,requestId:x.posted.requestId,result:{...result,accepted:false}})],
+ ['ownerReceipt accepted false',x=>({...receipt,requestId:x.posted.requestId,result:{...result,ownerReceipt:{accepted:false}}})],
+ ['ownerReceipt nested denial',x=>({...receipt,requestId:x.posted.requestId,result:{...result,ownerReceipt:{receipt:{status:'CONSENT_REQUIRED'}}}})],
+ ['ownerReceipt scalar malformed',x=>({...receipt,requestId:x.posted.requestId,result:{...result,ownerReceipt:42}})],
+ ['cyclic ownerReceipt',x=>{const loop={};loop.ownerReceipt=loop;return {...receipt,requestId:x.posted.requestId,result:{...result,ownerReceipt:loop}};}]
+];
+for(const [label,make] of refusedCases){
+ const t=trial();t.click();t.reply(make(t));
+ assert.equal(t.button.disabled,false,label);
+ assert.match(t.state.textContent,/HOLD/,label);
+}
+const accepted=trial();accepted.click();
+accepted.reply({...receipt,requestId:accepted.posted.requestId,accepted:true,
+ result:{...result,ownerReceipt:{accepted:true,ack:true}}});
+assert.match(accepted.state.textContent,/подтверждён/);
 const late=trial();late.click();late.reply({...receipt,requestId:'wrong'});assert.equal(late.button.disabled,true);late.timeout();assert.match(late.state.textContent,/HOLD/);
-console.log('D01_A1_WEBVIEW_DISCONNECT_SOURCE_ONLY 10/10 PASS');
+console.log('D01_A1_WEBVIEW_DISCONNECT_SOURCE_ONLY 18/18 PASS');
