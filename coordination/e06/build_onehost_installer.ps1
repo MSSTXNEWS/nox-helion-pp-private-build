@@ -1591,22 +1591,68 @@ foreach ($match in $uLines) {
     $uMatches+=,$match
   }
 }
-if ($uMatches.Count -ne 1 -or $uLines.Count -ne 1) {
-  $uActual=@($uLines | ForEach-Object { $_.Value.Trim() })
-  throw ('C11_BACKUP_USER_SAFE_PREIMAGE_HOLD exact_matches='+$uMatches.Count+
-         ' rollback_verifier_lines='+$uLines.Count+
-         ' actual='+($uActual -join ' | '))
-}
-$uOriginalLine=$uMatches[0].Value
-$uIndent=[regex]::Match($uOriginalLine,'^[ \t]*').Value
-$uReplacementLine=$uIndent+$uRollbackNew.Trim()
-$c11NsiPatched=$c11NsiPatched.Substring(0,$uMatches[0].Index)+
-               $uReplacementLine+
-               $c11NsiPatched.Substring($uMatches[0].Index+$uMatches[0].Length)
-if ([regex]::Matches($c11NsiPatched,'(?m)^[^\r\n]*Verify-Payload\.ps1[^\r\n]*BackupDir[^\r\n]*$').Count -ne 1 -or
-    !$c11NsiPatched.Contains($uReplacementLine) -or
-    $c11NsiPatched.Contains($uOriginalLine)) {
-  throw 'C11_BACKUP_USER_SAFE_READBACK_HOLD'
+# A source-locked R11 variant contains no rollback verifier at all.
+# That is not a reason to omit the guard: insert it exactly once BEFORE
+# the one destructive current->TmpDir rename, with a unique physical witness.
+if ($uLines.Count -eq 0) {
+  $uRollbackMove=[regex]::Matches(
+    $c11NsiPatched,
+    '(?m)^[ \t]*Rename[ \t]+"\$INSTDIR"[ \t]+"\$TmpDir"[ \t]*$'
+  )
+  $uRollbackRecoveryAt=$c11NsiPatched.IndexOf(
+    $c11RollbackRecoveryNew,[StringComparison]::Ordinal)
+  $uSectionAt=$c11NsiPatched.IndexOf('Section "Main"',[StringComparison]::Ordinal)
+  if ($uRollbackMove.Count -ne 1 -or $uRollbackRecoveryAt -lt 0 -or
+      $uRollbackMove[0].Index -ge $uRollbackRecoveryAt -or
+      $c11NsiPatched.Contains('C11BackupVerifiedBeforeMove:') -or
+      $c11NsiPatched.Contains('C11_BACKUP_USER_SAFE_SOURCE_VARIANT')) {
+    throw 'C11_BACKUP_USER_SAFE_MISSING_VARIANT_UNRECOGNIZED_HOLD'
+  }
+  $uRollbackGuard=@'
+  ; C11_BACKUP_USER_SAFE_SOURCE_VARIANT: verify immutable owner backup first.
+  ; Unknown or user-created files remain untouched; fail before renaming current.
+  File "/oname=$PLUGINSDIR\Verify-Payload.ps1" "${VERIFY_SCRIPT}"
+  nsExec::ExecToStack 'powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$PLUGINSDIR\Verify-Payload.ps1" -Root "$BackupDir" -Manifest "$BackupDir\payload.sha256.json" -AllowInstalledMetadata -AllowInstalledUserFiles'
+  Pop $ExitCode
+  Pop $CheckResult
+  ${If} $ExitCode != "0"
+    DetailPrint "$CheckResult"
+    SetErrorLevel 1
+    Abort "Saved backup is not verified; rollback refused before modifying current installation."
+  ${EndIf}
+  C11BackupVerifiedBeforeMove:
+'@
+  $uRollbackGuard=[regex]::Replace($uRollbackGuard,'\r?\n',$c11Eol)
+  $uMoveAt=$uRollbackMove[0].Index
+  $c11NsiPatched=$c11NsiPatched.Substring(0,$uMoveAt)+
+                 $uRollbackGuard+$c11Eol+
+                 $c11NsiPatched.Substring($uMoveAt)
+  $uRecheck=[regex]::Matches(
+    $c11NsiPatched,'(?m)^[^\r\n]*Verify-Payload\.ps1[^\r\n]*BackupDir[^\r\n]*$')
+  if ($uRecheck.Count -ne 1 -or
+      $uRecheck[0].Index -ge
+        $c11NsiPatched.IndexOf($uRollbackMove[0].Value,[StringComparison]::Ordinal) -or
+      $c11NsiPatched.IndexOf('C11BackupVerifiedBeforeMove:',[StringComparison]::Ordinal) -lt 0) {
+    throw 'C11_BACKUP_USER_SAFE_MISSING_VARIANT_READBACK_HOLD'
+  }
+} else {
+  if ($uMatches.Count -ne 1 -or $uLines.Count -ne 1) {
+    $uActual=@($uLines | ForEach-Object { $_.Value.Trim() })
+    throw ('C11_BACKUP_USER_SAFE_PREIMAGE_HOLD exact_matches='+$uMatches.Count+
+           ' rollback_verifier_lines='+$uLines.Count+
+           ' actual='+($uActual -join ' | '))
+  }
+  $uOriginalLine=$uMatches[0].Value
+  $uIndent=[regex]::Match($uOriginalLine,'^[ \t]*').Value
+  $uReplacementLine=$uIndent+$uRollbackNew.Trim()
+  $c11NsiPatched=$c11NsiPatched.Substring(0,$uMatches[0].Index)+
+                 $uReplacementLine+
+                 $c11NsiPatched.Substring($uMatches[0].Index+$uMatches[0].Length)
+  if ([regex]::Matches($c11NsiPatched,'(?m)^[^\r\n]*Verify-Payload\.ps1[^\r\n]*BackupDir[^\r\n]*$').Count -ne 1 -or
+      !$c11NsiPatched.Contains($uReplacementLine) -or
+      $c11NsiPatched.Contains($uOriginalLine)) {
+    throw 'C11_BACKUP_USER_SAFE_READBACK_HOLD'
+  }
 }
 Write-Host 'C11_BACKUP_USER_SAFE_VERIFY_STAGED'
 
