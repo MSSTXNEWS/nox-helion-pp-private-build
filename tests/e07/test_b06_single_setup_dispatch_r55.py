@@ -37,5 +37,40 @@ class B06SingleSetupDispatch(unittest.TestCase):
         self.assertLess(pos, source.index("Start verified local Ollama"))
 
 
+
+    def test_dispatch_yaml_has_one_complete_gate_and_one_real_e07(self):
+        """Guard against nested duplicated workflow fragments inside pwsh."""
+        source = WORKFLOW.read_text(encoding="utf-8")
+        unique_steps = (
+            "B06 exclusive immutable SetupSHA and previous-run admission",
+            "Fast source regression gate before heavy artifacts",
+            "Download immutable candidate from DIFFERENT Windows CI run",
+            "Download prior SHA-pinned Authenticode-verified official Ollama x64 bytes",
+            "Start verified local Ollama and fetch exact approved Qwen for same-VM E07",
+            "Independent installed E07 candidate lifecycle, final receipts required",
+            "Preserve NOT-RELEASE when actual model or visual E07 incomplete",
+        )
+        for title in unique_steps:
+            self.assertEqual(source.count("      - name: " + title + "\n"), 1, title)
+        self.assertEqual(source.count("      - name: B06 exclusive immutable"), 1)
+        gate = source.split(
+            "      - name: B06 exclusive immutable SetupSHA and previous-run admission\n", 1
+        )[1].split("      - name: Fast source regression gate before heavy artifacts\n", 1)[0]
+        self.assertIn("$env:E07_SETUP_SHA -cnotmatch '^[0-9a-f]{64}
+    unittest.main()
+", gate)
+        self.assertIn("$env:E07_SOURCE_SHA -cnotmatch '^[0-9a-f]{40}
+    unittest.main()
+", gate)
+        self.assertIn("$env:E07_PRODUCER_RUN_ID -cnotmatch '^[1-9][0-9]{0,17}
+    unittest.main()
+", gate)
+        self.assertIn("E07_SAME_SETUP_PREVIOUS_RUN_HOLD", gate)
+        self.assertIn("E07_DUPLICATE_HISTORY_INCOMPLETE_HOLD", gate)
+        self.assertNotIn("\n        shell: pwsh\n", gate)
+        self.assertNotIn("\n      - name: Download immutable candidate", gate)
+        self.assertEqual(source.count("E07_EXPLICIT_IMMUTABLE_DISPATCH_HOLD"), 1)
+
+
 if __name__ == "__main__":
     unittest.main()
