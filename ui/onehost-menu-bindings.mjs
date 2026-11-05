@@ -190,6 +190,11 @@ export function nativeReadVerified(reply,route){
 export function nativeAutostartPersistenceAck(reply,requested){
   if(!nativeReadVerified(reply,'system.autostart') ||
      typeof reply.result.enabled!=='boolean')return false;
+  // Only the original WPF {enabled,readOnly} receipt proves an HKCU result.
+  // Nested progress/status, even under transport COMPLETED, is not persisted
+  // Windows state and must never be displayed as SETTINGS success.
+  if(Object.prototype.hasOwnProperty.call(reply.result,'status') ||
+     Object.prototype.hasOwnProperty.call(reply.result,'state'))return false;
   // A new process can inspect HKCU via the original owner without mutating it.
   // Read-only state is never evidence that an ON/OFF write succeeded.
   if(requested===null)return reply.result.readOnly===true;

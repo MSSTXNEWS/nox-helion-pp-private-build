@@ -195,3 +195,18 @@ test('D06 SETTINGS UIA original-node / unique owner-route identity: not native c
   }
   assert.equal(new Set(Object.values(AUTOSTART_UIA_IDS)).size,3);
 });
+
+test('D06 SETTINGS denies inner nonterminal or unreviewed owner status despite transport COMPLETED',()=>{
+ const envelope=result=>({routeId:'system.autostart',state:'COMPLETED',result});
+ for(const field of ['status','state']){
+   for(const value of ['PENDING','QUEUED','RUNNING','IN_PROGRESS','COMPLETED','SUCCESS',null]){
+     assert.equal(nativeAutostartPersistenceAck(
+       envelope({enabled:true,readOnly:false,[field]:value}),true),false);
+     assert.equal(nativeAutostartPersistenceAck(
+       envelope({enabled:false,readOnly:true,[field]:value}),null),false);
+   }
+ }
+ assert.equal(nativeAutostartPersistenceAck(envelope({enabled:true,readOnly:false}),true),true);
+ assert.equal(nativeAutostartPersistenceAck(envelope({enabled:false,readOnly:false}),false),true);
+ assert.equal(nativeAutostartPersistenceAck(envelope({enabled:false,readOnly:true}),null),true);
+});
