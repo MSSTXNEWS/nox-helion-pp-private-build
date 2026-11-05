@@ -33,6 +33,21 @@ class LiveEvidenceWiring(unittest.TestCase):
         self.assertIn('"installed_final_physical"',body)
         self.assertLess(body.index("final_probe=physical_final_probe"),body.index('"/ROLLBACK"'))
 
+    def test_only_final_probe_invokes_original_privileged_actions(self):
+        body=ast.get_source_segment(self.source,self.funcs["gui_hwnd"])
+        self.assertIn('if final_probe is not None:',body)
+        self.assertIn('"ORIGINAL_INSTALL_AND_LEARN_ARE_PRIVILEGED"',body)
+        self.assertIn('"actions_invoked":0',body)
+        self.assertLess(body.index('"ORIGINAL_INSTALL_AND_LEARN_ARE_PRIVILEGED"'),
+                        body.index("final_probe(handle)"))
+
+    def test_navigation_hold_never_masks_physical_final_receipts(self):
+        body=ast.get_source_segment(self.source,self.funcs["main"])
+        self.assertIn('"FIVE_NAVIGATION_NOT_FUNCTION_ACCEPTANCE"',body)
+        self.assertIn('"release_accepted":False',body)
+        self.assertLess(body.index('"FIVE_NAVIGATION_NOT_FUNCTION_ACCEPTANCE"'),
+                        body.index('evaluate_final_acceptance('))
+
     def test_final_gate_requires_original_witness(self):
         body=ast.get_source_segment(self.source,self.funcs["main"])
         self.assertIn('witness.get("status") == "OBSERVED_NOT_RELEASE"',body)
