@@ -82,6 +82,23 @@ class OriginalNativeOwnerMenuStopR83(unittest.TestCase):
         self.assertIn('!await _nativeConsent(route, payload.Clone(), cancel)', self.bridge)
         self.assertIn('!_nativeAcl(_ownerWindowsSid, route)', self.bridge)
 
+    def test_revocation_only_stops_an_active_native_chat(self):
+        # SOURCE_ONLY: Windows WPF native STOP and E07 require physical proof.
+        body = self.bridge.split("private void RevokeDocument()", 1)[1].split(
+            "private async Task StopRevokedChatAsync()", 1)[0]
+        self.assertIn("var chatWasActive = Volatile.Read(ref _activeChat) > 0;", body)
+        self.assertLess(body.index("var chatWasActive = "), body.index("revoked.Cancel()"))
+        self.assertIn(
+            "if (chatWasActive && Interlocked.CompareExchange(ref _stopPending, 1, 0) == 0)",
+            body,
+        )
+        self.assertEqual(body.count("_ = StopRevokedChatAsync();"), 1)
+        self.assertIn("Interlocked.Increment(ref _epoch)", body)
+        self.assertIn("Interlocked.Increment(ref _streamEpoch)", body)
+        self.assertIn("finally { revoked.Dispose(); }", body)
+        self.assertIn('_existingPipe.RequestAsync("chat.stop", new { }', self.bridge)
+        self.assertIn('NativeSidMatches() && _nativeAcl(_ownerWindowsSid, "chat.stop")', self.bridge)
+
     def test_original_builder_and_compiler_pins_are_coherent(self):
         for filename, sha in ((OWNER, git_blob(OWNER)), (BRIDGE, git_blob(BRIDGE))):
             with self.subTest(path=filename.name):

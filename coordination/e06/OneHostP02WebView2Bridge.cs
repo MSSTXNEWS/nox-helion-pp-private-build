@@ -131,6 +131,9 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
     private void RevokeDocument()
     {
         if (Volatile.Read(ref _disposed) != 0) return;
+        // Read BEFORE cancelling: idle HOME/WebView2 navigation is not a user STOP.
+        // An already-running native chat must still receive the existing real STOP.
+        var chatWasActive = Volatile.Read(ref _activeChat) > 0;
         Interlocked.Increment(ref _epoch);
         Interlocked.Increment(ref _streamEpoch);
         // Exchange the lifetime before Cancel: reentrant callbacks must not
@@ -142,7 +145,7 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
         finally { revoked.Dispose(); }
         // Navigating away while a model is executing must request a real
         // owner STOP, not merely suppress its response in WebView2.
-        if (Interlocked.CompareExchange(ref _stopPending, 1, 0) == 0)
+        if (chatWasActive && Interlocked.CompareExchange(ref _stopPending, 1, 0) == 0)
             _ = StopRevokedChatAsync();
         // Never clear _usedIds: a page or transport must not replay native writes.
     }
