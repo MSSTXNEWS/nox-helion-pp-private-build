@@ -16,6 +16,18 @@ import re
 import stat
 
 
+def owned_file_handle_matches_path(path_stat, fd_stat):
+    """Same NTFS file from pathname vs open descriptor, independent of API timestamp presentation.
+
+    SHA-256 and full in-API pre/post timestamp+identity checks remain mandatory.
+    A different file, hard link, or size is NEVER accepted as the same owner.
+    """
+    return (path_stat.st_ino != 0 and fd_stat.st_ino != 0 and
+            path_stat.st_nlink == 1 and fd_stat.st_nlink == 1 and
+            (path_stat.st_dev, path_stat.st_ino, path_stat.st_size) ==
+            (fd_stat.st_dev, fd_stat.st_ino, fd_stat.st_size))
+
+
 def verify_exact_probe_slot(root: Path, probe_name: str, probe_bytes: bytes,
                             frozen_inode: tuple[int, int], base: Path) -> dict:
     def hold(reason: str) -> None:
@@ -117,19 +129,23 @@ def verify_exact_probe_slot(root: Path, probe_name: str, probe_bytes: bytes,
         # user data is never an owned file, even if its bytes match the manifest.
         with path.open("rb") as fp:
             opened_owned = os.fstat(fp.fileno())
-            if (opened_owned.st_dev, opened_owned.st_ino, opened_owned.st_size,
-                    opened_owned.st_mtime_ns, opened_owned.st_ctime_ns) != (
-                    before_owned.st_dev, before_owned.st_ino, before_owned.st_size,
-                    before_owned.st_mtime_ns, before_owned.st_ctime_ns):
+            # Windows path lstat vs fd fstat can present different timestamp
+            # precision. Their *file identity* must still be identical, and
+            # SHA-256 plus each API's own before/after metadata remain strict.
+            if not owned_file_handle_matches_path(before_owned, opened_owned):
                 hold("OWNED_IDENTITY")
             h = hashlib.sha256()
             while chunk := fp.read(1024 * 1024):
                 h.update(chunk)
             after_owned = os.fstat(fp.fileno())
+            # Compare handle to the same open handle, including both times:
+            # this is an actual concurrent-write check, not a path API artifact.
             if (after_owned.st_dev, after_owned.st_ino, after_owned.st_size,
-                    after_owned.st_mtime_ns, after_owned.st_ctime_ns) != (
-                    before_owned.st_dev, before_owned.st_ino, before_owned.st_size,
-                    before_owned.st_mtime_ns, before_owned.st_ctime_ns):
+                    after_owned.st_nlink, after_owned.st_mtime_ns,
+                    after_owned.st_ctime_ns) != (
+                    opened_owned.st_dev, opened_owned.st_ino, opened_owned.st_size,
+                    opened_owned.st_nlink, opened_owned.st_mtime_ns,
+                    opened_owned.st_ctime_ns):
                 hold("OWNED_RACE")
         if not safe(path):
             hold("OWNED_RACE")
