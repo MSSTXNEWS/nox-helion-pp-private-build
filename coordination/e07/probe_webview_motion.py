@@ -119,6 +119,12 @@ try {
   }
  $expression=@'
 (() => {
+ // /json/list is a pre-evaluation snapshot. A live WebView2 may navigate;
+ // bind the physical DOM evidence to CURRENT trusted origin, fail closed.
+ if(location.origin!=='https://nox.local' ||
+    !['/','/index.html'].includes(location.pathname)) {
+   throw new Error('NOX_CDP_ORIGIN_DRIFT');
+ }
  const home=document.getElementById('home');
  const dock=document.getElementById('nox-express-primary');
  const buttons=dock?[...dock.querySelectorAll('button[data-nox-primary]')]:[];
@@ -135,9 +141,12 @@ try {
  const activeTime=(value)=>String(value||'').split(',').some(x=>Number.parseFloat(x)>0);
  for(const el of nodes){
    const rect=el.getBoundingClientRect();
-   if(rect.width<5||rect.height<5)continue;
-   visible++;
-   if(d02Set.has(el))d02Visible++;
+   // Visibility counts remain geometric. Real CSS/WAAPI motion checks inspect
+   // ALL original D02/primary nodes, including small and offscreen particles.
+   if(rect.width>=5&&rect.height>=5){
+     visible++;
+     if(d02Set.has(el))d02Visible++;
+   }
    for(const pseudo of [null,'::before','::after']){
      const st=getComputedStyle(el,pseudo);
      if(st.animationName!=='none'&&activeTime(st.animationDuration))cssAnimated++;

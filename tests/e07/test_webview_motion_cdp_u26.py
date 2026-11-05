@@ -94,6 +94,12 @@ class PhysicalWebviewMotion(unittest.TestCase):
         self.assertIn("d02_scope_count:scopes.length",source)
         self.assertIn("visible_nodes:tooMany?4097:visible",source)
         self.assertIn("matchMedia('(prefers-reduced-motion: reduce)')",source)
+        self.assertIn("location.origin!=='https://nox.local'",source)
+        self.assertIn("location.pathname",source)
+        self.assertIn("NOX_CDP_ORIGIN_DRIFT",source)
+        self.assertIn("if(rect.width>=5&&rect.height>=5)",source)
+        self.assertNotIn("if(rect.width<5||rect.height<5)continue;",source)
+        self.assertIn("for(const pseudo of [null,'::before','::after'])",source)
         self.assertNotIn("Emulation.setEmulatedMedia",source)
         self.assertNotIn("--force-prefers-reduced-motion",source)
 
