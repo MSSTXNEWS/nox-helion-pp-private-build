@@ -751,7 +751,7 @@ def _capture_png_dimensions(path: Path) -> list[int] | None:
         if not 57<=size<=40_000_000:
             return None
         with path.open("rb") as source:
-            if source.read(8)!=b"\\x89PNG\\r\\n\\x1a\\n":
+            if source.read(8)!=b"\x89PNG\r\n\x1a\n":
                 return None
             dimensions=None
             inflater=zlib.decompressobj()

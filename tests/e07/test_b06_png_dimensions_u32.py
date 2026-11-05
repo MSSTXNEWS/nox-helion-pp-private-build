@@ -96,13 +96,13 @@ class B06PngIdentity(unittest.TestCase):
         self.assertIsNone(_capture_png_dimensions(self.path))
 
     def test_reject_crc_valid_extra_pixel_stream(self):
-        pixels=(b"\\x00"+b"\\x00"*(800*4))*600+b"BAD_EXTRA_ROW"
+        pixels=(b"\x00"+b"\x00"*(800*4))*600+b"BAD_EXTRA_ROW"
         self.put(header(800,600)+chunk(b"IDAT",zlib.compress(pixels))+
                  chunk(b"IEND",b""))
         self.assertIsNone(_capture_png_dimensions(self.path))
 
     def test_reject_split_noncontiguous_idat(self):
-        raw=(b"\\x00"+b"\\x00"*(800*4))*600
+        raw=(b"\x00"+b"\x00"*(800*4))*600
         compressed=zlib.compress(raw)
         middle=len(compressed)//2
         self.put(header(800,600)+chunk(b"IDAT",compressed[:middle])+
