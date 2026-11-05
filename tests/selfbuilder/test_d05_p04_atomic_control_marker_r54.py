@@ -21,12 +21,25 @@ class NativeP04AtomicMarkerTests(unittest.TestCase):
         self.root = Path(temp.name)
         owner = object.__new__(ExistingP04Background)
         owner._control_lock = threading.Lock()
+        owner._unreaped_worker = None  # match original P04 constructor quarantine state
         owner._active = (self.root / "stop.marker", self.root / "pause.marker", "run1", "task1")
         owner._requested = None
         owner._merge_active = False
         owner._merge_stop = False
         owner.trainer = SimpleNamespace(reject_reparse_ancestors=lambda path: None)
         self.owner = owner
+
+    def test_unreapable_child_does_not_ack_or_create_control_markers(self):
+        # Exercise the real original request_stop/request_pause methods with an
+        # OS-unreapable child. This is not a fake owner ACK or GPU PASS.
+        self.owner._unreaped_worker = object()
+        for action in (self.owner.request_stop, self.owner.request_pause):
+            result = action()
+            self.assertEqual(result["status"], "HOLD")
+            self.assertEqual(result["reason"], "TRAINER_CHILD_UNREAPED_QUARANTINE_HOLD")
+        self.assertIsNone(self.owner._requested)
+        self.assertFalse(self.owner._active[0].exists())
+        self.assertFalse(self.owner._active[1].exists())
 
     def test_pause_then_stop_creates_exact_markers(self):
         self.assertEqual(self.owner.request_pause()["status"], "PAUSE_REQUESTED")
