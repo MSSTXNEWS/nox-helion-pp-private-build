@@ -496,6 +496,11 @@ public partial class MainWindow
                 if (LegacyOwnerDenial(child,depth+1)) return true;
             return false;
         }
+        // Legacy HOME must reject scalar owner refusals exactly as the
+        // original WebView2 bridge rejects them (including nested receipts).
+        if (value.ValueKind==JsonValueKind.String)
+            return LegacyOwnerStatusDenied(value.GetString());
+        if (value.ValueKind==JsonValueKind.False) return true;
         if (value.ValueKind!=JsonValueKind.Object) return false;
         foreach(var p in value.EnumerateObject()) {
             // The original legacy WPF route must not promote an explicit native

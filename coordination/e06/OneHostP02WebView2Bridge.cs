@@ -426,6 +426,11 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
                 if (NativeResultExplicitlyDenied(child, depth + 1)) return true;
             return false;
         }
+        // A transport ACK may carry a scalar native refusal instead of an object.
+        // Never promote "HOLD", "DENIED" or JSON false to a completed owner action.
+        if (result.ValueKind == JsonValueKind.String)
+            return NativeOwnerStatusDenied(result.GetString());
+        if (result.ValueKind == JsonValueKind.False) return true;
         if (result.ValueKind != JsonValueKind.Object) return false;
         foreach (var field in result.EnumerateObject())
         {

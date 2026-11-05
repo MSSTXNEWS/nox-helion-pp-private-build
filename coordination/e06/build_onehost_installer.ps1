@@ -301,7 +301,7 @@ if (-not $gitTool) { throw 'E06_P02_GIT_BLOB_PROVENANCE_REQUIRED' }
 # MainWindow copied to disposable R11; no changes to HOME/MENU/WORK or main.
 $t06Stage=Join-Path $repoRoot 'coordination/e06/stage_native_p02.py'
 $t06Addon=Join-Path $repoRoot 'coordination/e06/MainWindow.NativeP02.cs'
-foreach ($part in @(@{p=$t06Stage;sha='0c3ba1e15afefc93e1c713e6b7254db7cc93fe6d'},@{p=$t06Addon;sha='02d7cd187d924c84ddba6a3b72763dd2c863c5e4'})) {
+foreach ($part in @(@{p=$t06Stage;sha='db345b40e4069a83b087deb1b9e96093f36451b0'},@{p=$t06Addon;sha='f447f729228974d3e224c25a81efaf4ad2df8d9d'})) {
   Assert-E06PlainPathAncestors -Candidate $part.p -Scope 'T06_NATIVE'
   if (!(Test-Path -LiteralPath $part.p -PathType Leaf) -or
       (& $gitTool.Source hash-object -- $part.p).Trim().ToLowerInvariant() -cne $part.sha) {
@@ -568,7 +568,7 @@ $payload=Join-Path $out 'payload'
 # require native Windows E2E, not a --diagnose receipt.
 $p02StageSources=@(
   @{relative='Packages/P02/worker-chat/NativePythonPipe.cs';dest='Integration/NativePythonPipe.cs';blob='e8e4f95106f4d40c29c68d81378c7938e6a7c0f5'},
-  @{relative='coordination/e06/OneHostP02WebView2Bridge.cs';dest='Integration/OneHostP02WebView2Bridge.cs';blob='14672b12e9638ec2642da2dc6ab23ff39b1960f8'},
+  @{relative='coordination/e06/OneHostP02WebView2Bridge.cs';dest='Integration/OneHostP02WebView2Bridge.cs';blob='7b4fd898b1afc6c1759ba53fc923258bd8d0c37d'},
   @{relative='Packages/P02/worker-chat/SpaceBrowserBoundary.cs';dest='Integration/SpaceBrowserBoundary.cs';blob='4d70c5de450837d07304d91b4fa4c0e049a2be52'},
   @{relative='coordination/e06/NoXAutostart.cs';dest='Integration/NoXAutostart.cs';blob='6bccae73ce3c53689134eb3d851592a030b9303f'},
   @{relative='Packages/P03/Source/P03.ModelCenter/ModelArtifactReviewRegistry.cs';dest='Integration/P03/ModelArtifactReviewRegistry.cs';blob='5c5259ab05c6b214810d95d1a206d3fedcb41518'},
