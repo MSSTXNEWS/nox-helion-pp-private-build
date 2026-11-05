@@ -98,7 +98,7 @@ class PhysicalVisualFailureStages(unittest.TestCase):
         self.assertIn("button.getAttribute('aria-label')!==name",source)
         self.assertIn("button.getClientRects().length===0",source)
         self.assertIn("button.tabIndex<0",source)
-        self.assertIn("button.closest('[hidden],[inert],[aria-hidden=\\"true\\"]')",source)
+        self.assertIn("""button.closest('[hidden],[inert],[aria-hidden="true"]')""",source)
         self.assertIn("window.getComputedStyle(button)",source)
         self.assertIn("dockStyle.pointerEvents==='none'",source)
         self.assertIn("button.hasAttribute('role')",source)
