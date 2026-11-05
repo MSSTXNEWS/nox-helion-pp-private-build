@@ -110,6 +110,31 @@ class B06PngIdentity(unittest.TestCase):
                  chunk(b"IEND",b""))
         self.assertIsNone(_capture_png_dimensions(self.path))
 
+    def test_reject_crc_valid_invalid_png_filter_bytes(self):
+        # PNG chunk CRC, zlib stream and pixel count all correct, but invalid
+        # scanline filter values must not certify a physical WPF screenshot.
+        for filter_byte in (5, 255):
+            with self.subTest(filter_byte=filter_byte):
+                raw=(bytes([filter_byte])+b"\x00"*(320*4))*200
+                self.put(header(320,200)+chunk(b"IDAT",zlib.compress(raw))+
+                         chunk(b"IEND",b""))
+                self.assertIsNone(_capture_png_dimensions(self.path))
+
+    def test_valid_all_five_png_filters_remain_admitted(self):
+        filters=bytes(range(5))*40
+        raw=b"".join(bytes([f])+b"\x00"*(320*4) for f in filters)
+        self.put(header(320,200)+chunk(b"IDAT",zlib.compress(raw))+
+                 chunk(b"IEND",b""))
+        self.assertEqual(_capture_png_dimensions(self.path),[320,200])
+
+    def test_reject_invalid_filter_across_consecutive_idat_chunks(self):
+        raw=(b"\x00"+b"\x00"*(320*4))*199+b"\xff"+b"\x00"*(320*4)
+        compressed=zlib.compress(raw)
+        middle=len(compressed)//2
+        self.put(header(320,200)+chunk(b"IDAT",compressed[:middle])+
+                 chunk(b"IDAT",compressed[middle:])+chunk(b"IEND",b""))
+        self.assertIsNone(_capture_png_dimensions(self.path))
+
     def test_missing_photo(self):
         self.assertIsNone(_capture_png_dimensions(self.path))
 

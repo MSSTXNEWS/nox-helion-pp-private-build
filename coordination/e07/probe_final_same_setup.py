@@ -757,6 +757,10 @@ def _capture_png_dimensions(path: Path) -> list[int] | None:
             inflater=zlib.decompressobj()
             inflated=0
             expected=None
+            # An otherwise CRC-valid PNG may inflate to exact image length
+            # but contain invalid per-scanline filter methods. Fail closed.
+            filter_offsets=[]
+            filter_index=0
             seen_idat=False
             ended_idat=False
             for index in range(4096):
@@ -796,7 +800,10 @@ def _capture_png_dimensions(path: Path) -> list[int] | None:
                             continue
                         cols=(width-x+dx-1)//dx
                         rows=(height-y+dy-1)//dy
-                        expected+=rows*(1+(cols*channels[color]*depth+7)//8)
+                        row_bytes=1+(cols*channels[color]*depth+7)//8
+                        for _ in range(rows):
+                            filter_offsets.append(expected)
+                            expected+=row_bytes
                 else:
                     if kind==b"IHDR":
                         return None
@@ -820,13 +827,23 @@ def _capture_png_dimensions(path: Path) -> list[int] | None:
                             pending=block
                             while pending:
                                 decoded=inflater.decompress(pending,65536)
-                                inflated+=len(decoded)
-                                if inflated>expected or inflater.unused_data:
+                                end=inflated+len(decoded)
+                                if end>expected or inflater.unused_data:
                                     return None
+                                # Check the real decoded stream incrementally,
+                                # including scanline boundaries split across IDAT.
+                                while (filter_index<len(filter_offsets) and
+                                       filter_offsets[filter_index]<end):
+                                    offset=filter_offsets[filter_index]-inflated
+                                    if decoded[offset]>4:
+                                        return None
+                                    filter_index+=1
+                                inflated=end
                                 pending=inflater.unconsumed_tail
                     if kind==b"IEND" and not (
                         inflater.eof and not inflater.unused_data and
-                        inflated==expected):
+                        inflated==expected and
+                        filter_index==len(filter_offsets)):
                         return None
                 checksum=source.read(4)
                 if len(checksum)!=4 or (crc&0xffffffff)!=int.from_bytes(checksum,"big"):
