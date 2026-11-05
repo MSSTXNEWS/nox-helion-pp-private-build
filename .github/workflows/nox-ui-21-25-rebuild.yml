@@ -1,0 +1,340 @@
+name: NOX UI 21-25 FULL REBUILD AND SHA REPAIR
+on:
+  push:
+    branches: [assets/download-ui-21-31-20261105]
+    paths: [.github/workflows/nox-ui-21-25-rebuild.yml]
+permissions: {contents: read}
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Fetch all five originals, rebuild, verify and count every part
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p source parts
+          cat > repos.tsv <<'EOF'
+          21 d3 d3/d3
+          22 threejs mrdoob/three.js
+          23 postprocessing pmndrs/postprocessing
+          24 tsparticles tsparticles/tsparticles
+          25 particlesjs VincentGarreau/particles.js
+          EOF
+          printf 'number,name,repo,commit,filename,bytes,sha256\n' > source/MANIFEST.csv
+          while read -r number name repo; do
+            meta="$(curl -fsSL --retry 5 --max-time 120 -H "Authorization: Bearer $GH_TOKEN" "https://api.github.com/repos/$repo")"
+            branch="$(jq -r .default_branch <<< "$meta")"
+            commit="$(curl -fsSL --retry 5 --max-time 120 -H "Authorization: Bearer $GH_TOKEN" "https://api.github.com/repos/$repo/commits/$branch" | jq -r .sha)"
+            file="source/${number}_${name}.zip"
+            curl -fL --retry 5 --max-time 1500 "https://codeload.github.com/$repo/zip/$commit" -o "$file"
+            test -s "$file"
+            unzip -tqq "$file"
+            printf '%s,%s,%s,%s,%s,%s,%s\n' "$number" "$name" "$repo" "$commit" "$(basename "$file")" "$(stat -c '%s' "$file")" "$(sha256sum "$file" | cut -d' ' -f1)" >> source/MANIFEST.csv
+          done < repos.tsv
+          test "$(find source -name '*.zip' | wc -l)" -eq 5
+          sha256sum source/*.zip > source/SHA256SUMS.txt
+          (cd source && zip -0 -q ../NOX_UI_21_25_SOURCES_REPAIRED.zip ./*)
+          unzip -tqq NOX_UI_21_25_SOURCES_REPAIRED.zip
+          sha256sum NOX_UI_21_25_SOURCES_REPAIRED.zip > parts/COMPLETE_SHA256.txt
+          split -b 85000000 -d -a 2 NOX_UI_21_25_SOURCES_REPAIRED.zip parts/NOX_UI_21_25_SOURCES_REPAIRED.zip.part-
+          num="$(find parts -name '*.part-*' | wc -l)"
+          echo "PART_COUNT=$num" | tee parts/PART_COUNT.txt
+          test "$num" -gt 0 && test "$num" -le 35
+          cat parts/*.part-* > /tmp/recombined.zip
+          cmp -s NOX_UI_21_25_SOURCES_REPAIRED.zip /tmp/recombined.zip
+          (cd /tmp && sha256sum /tmp/recombined.zip)
+          unzip -tqq /tmp/recombined.zip
+          echo 'PASS all parts accounted for and bytes verified' > parts/VERIFIED.txt
+          du -h NOX_UI_21_25_SOURCES_REPAIRED.zip
+      - name: Upload verified manifest, checksum and count
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_UI_21_25_REPAIRED_META
+          path: |
+            parts/COMPLETE_SHA256.txt
+            parts/PART_COUNT.txt
+            parts/VERIFIED.txt
+          retention-days: 7
+      - name: Upload repaired chunk 00
+        if: ${{ hashFiles('parts/*.part-00') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_UI_21_25_REPAIRED_PART_00
+          path: parts/*.part-00
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload repaired chunk 01
+        if: ${{ hashFiles('parts/*.part-01') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_UI_21_25_REPAIRED_PART_01
+          path: parts/*.part-01
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload repaired chunk 02
+        if: ${{ hashFiles('parts/*.part-02') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_UI_21_25_REPAIRED_PART_02
+          path: parts/*.part-02
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload repaired chunk 03
+        if: ${{ hashFiles('parts/*.part-03') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_UI_21_25_REPAIRED_PART_03
+          path: parts/*.part-03
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload repaired chunk 04
+        if: ${{ hashFiles('parts/*.part-04') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_UI_21_25_REPAIRED_PART_04
+          path: parts/*.part-04
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload repaired chunk 05
+        if: ${{ hashFiles('parts/*.part-05') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_UI_21_25_REPAIRED_PART_05
+          path: parts/*.part-05
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload repaired chunk 06
+        if: ${{ hashFiles('parts/*.part-06') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_UI_21_25_REPAIRED_PART_06
+          path: parts/*.part-06
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload repaired chunk 07
+        if: ${{ hashFiles('parts/*.part-07') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_UI_21_25_REPAIRED_PART_07
+          path: parts/*.part-07
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload repaired chunk 08
+        if: ${{ hashFiles('parts/*.part-08') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_UI_21_25_REPAIRED_PART_08
+          path: parts/*.part-08
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload repaired chunk 09
+        if: ${{ hashFiles('parts/*.part-09') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_UI_21_25_REPAIRED_PART_09
+          path: parts/*.part-09
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload repaired chunk 10
+        if: ${{ hashFiles('parts/*.part-10') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_UI_21_25_REPAIRED_PART_10
+          path: parts/*.part-10
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload repaired chunk 11
+        if: ${{ hashFiles('parts/*.part-11') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_UI_21_25_REPAIRED_PART_11
+          path: parts/*.part-11
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload repaired chunk 12
+        if: ${{ hashFiles('parts/*.part-12') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_UI_21_25_REPAIRED_PART_12
+          path: parts/*.part-12
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload repaired chunk 13
+        if: ${{ hashFiles('parts/*.part-13') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_UI_21_25_REPAIRED_PART_13
+          path: parts/*.part-13
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload repaired chunk 14
+        if: ${{ hashFiles('parts/*.part-14') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_UI_21_25_REPAIRED_PART_14
+          path: parts/*.part-14
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload repaired chunk 15
+        if: ${{ hashFiles('parts/*.part-15') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_UI_21_25_REPAIRED_PART_15
+          path: parts/*.part-15
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload repaired chunk 16
+        if: ${{ hashFiles('parts/*.part-16') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_UI_21_25_REPAIRED_PART_16
+          path: parts/*.part-16
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload repaired chunk 17
+        if: ${{ hashFiles('parts/*.part-17') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_UI_21_25_REPAIRED_PART_17
+          path: parts/*.part-17
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload repaired chunk 18
+        if: ${{ hashFiles('parts/*.part-18') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_UI_21_25_REPAIRED_PART_18
+          path: parts/*.part-18
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload repaired chunk 19
+        if: ${{ hashFiles('parts/*.part-19') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_UI_21_25_REPAIRED_PART_19
+          path: parts/*.part-19
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload repaired chunk 20
+        if: ${{ hashFiles('parts/*.part-20') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_UI_21_25_REPAIRED_PART_20
+          path: parts/*.part-20
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload repaired chunk 21
+        if: ${{ hashFiles('parts/*.part-21') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_UI_21_25_REPAIRED_PART_21
+          path: parts/*.part-21
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload repaired chunk 22
+        if: ${{ hashFiles('parts/*.part-22') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_UI_21_25_REPAIRED_PART_22
+          path: parts/*.part-22
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload repaired chunk 23
+        if: ${{ hashFiles('parts/*.part-23') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_UI_21_25_REPAIRED_PART_23
+          path: parts/*.part-23
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload repaired chunk 24
+        if: ${{ hashFiles('parts/*.part-24') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_UI_21_25_REPAIRED_PART_24
+          path: parts/*.part-24
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload repaired chunk 25
+        if: ${{ hashFiles('parts/*.part-25') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_UI_21_25_REPAIRED_PART_25
+          path: parts/*.part-25
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload repaired chunk 26
+        if: ${{ hashFiles('parts/*.part-26') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_UI_21_25_REPAIRED_PART_26
+          path: parts/*.part-26
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload repaired chunk 27
+        if: ${{ hashFiles('parts/*.part-27') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_UI_21_25_REPAIRED_PART_27
+          path: parts/*.part-27
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload repaired chunk 28
+        if: ${{ hashFiles('parts/*.part-28') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_UI_21_25_REPAIRED_PART_28
+          path: parts/*.part-28
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload repaired chunk 29
+        if: ${{ hashFiles('parts/*.part-29') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_UI_21_25_REPAIRED_PART_29
+          path: parts/*.part-29
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload repaired chunk 30
+        if: ${{ hashFiles('parts/*.part-30') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_UI_21_25_REPAIRED_PART_30
+          path: parts/*.part-30
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload repaired chunk 31
+        if: ${{ hashFiles('parts/*.part-31') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_UI_21_25_REPAIRED_PART_31
+          path: parts/*.part-31
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload repaired chunk 32
+        if: ${{ hashFiles('parts/*.part-32') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_UI_21_25_REPAIRED_PART_32
+          path: parts/*.part-32
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload repaired chunk 33
+        if: ${{ hashFiles('parts/*.part-33') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_UI_21_25_REPAIRED_PART_33
+          path: parts/*.part-33
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload repaired chunk 34
+        if: ${{ hashFiles('parts/*.part-34') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_UI_21_25_REPAIRED_PART_34
+          path: parts/*.part-34
+          if-no-files-found: error
+          retention-days: 7
