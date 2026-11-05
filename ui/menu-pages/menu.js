@@ -271,7 +271,15 @@ function liveChat(label){
   const [h,g,l]=await Promise.all([safe('chat.history',{core_id:core,persona_id:persona,limit:10}),safe('gpu.preflight',{}),safe('chat.commands',{action:'selfbuilder.learning.proofs'})]);
   if(epoch!==panelEpoch||!three.isConnected)return;
   leftFacts.replaceChildren();rightFacts.replaceChildren();
-  const fact=(parent,k,v)=>parent.append(el('div','nox-native-fact',k+' · '+String(v).slice(0,180)));
+  const fact=(parent,k,v)=>{
+   const row=el('div','nox-native-fact');
+   if(parent===rightFacts && typeof v==='number' && Number.isFinite(v) && window.NOXMeridian){
+     row.append(document.createTextNode(k+' · '));
+     const value=el('strong','nox-meridian-readout');
+     row.append(value);window.NOXMeridian.rollTo(value,String(v),true);
+   }else row.textContent=k+' · '+String(v).slice(0,180);
+   parent.append(row);
+  };
   if(h?.routeId==='chat.history'&&nativeCompleted(h)&&Array.isArray(h.result?.messages)){
    const msgs=h.result.messages.slice(-10).filter(m=>(m?.role==='user'||m?.role==='assistant')&&typeof m.content==='string');
    fact(leftFacts,'SQLITE',msgs.length+' сообщений');

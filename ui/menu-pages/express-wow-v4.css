@@ -69,3 +69,11 @@ body[data-fx="ECO"] .main-action,body[data-fx="ECO"] .planet{box-shadow:inset 0 
 body[data-fx="ECO"] #nox-aurum-dust{opacity:.18}
 @media(max-width:520px){#nox-aurum-dust{opacity:.25}}
 @media(prefers-reduced-motion:reduce){#nox-aurum-dust{opacity:.15}}
+
+/* FORMWORK MERIDIAN original odometer reels, native numeric receipts only. */
+.nox-meridian-readout{display:inline-flex;align-items:baseline;font-variant-numeric:tabular-nums;color:#c6f2ff;white-space:nowrap}
+.nox-meridian-readout .odo-col{position:relative;display:inline-block;height:1em;overflow:hidden;vertical-align:bottom}
+.nox-meridian-readout .odo-reel{display:flex;flex-direction:column;transition:transform .75s cubic-bezier(.22,.61,.36,1)}
+.nox-meridian-readout .odo-d{display:block;height:1em;line-height:1}
+.nox-meridian-readout .odo-fixed{display:inline-block;line-height:1}
+@media(prefers-reduced-motion:reduce){.nox-meridian-readout .odo-reel{transition:none!important}}
