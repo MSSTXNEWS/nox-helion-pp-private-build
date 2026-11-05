@@ -418,9 +418,42 @@ public sealed class ModelDownloadQueueStore
             var jobs = (await ReadCoreAsync(ct)).ToList();
             var failed = jobs.FirstOrDefault(x => x.Id == id && x.State is ModelJobState.Failed or ModelJobState.Cancelled);
             if (failed is null) return null;
+            // Re-queueing a failed owner-reviewed pull must never start a second
+            // transfer beside a newly approved active tag (or reuse stale rights).
+            // The original owner approval remains required for any explicit retry.
+            if (failed.Kind == ModelJobKind.OllamaPull &&
+                (failed.ExpectedOllamaDigest is not { Length: 64 } ||
+                 !ShaPattern.IsMatch(failed.ExpectedOllamaDigest) ||
+                 string.IsNullOrWhiteSpace(failed.ImmutableRevision) ||
+                 string.IsNullOrWhiteSpace(failed.RightsReceiptId) ||
+                 failed.RightsReceiptId.Length > 128 ||
+                 !failed.LicenseAcknowledged))
+                throw new InvalidOperationException("REVIEW_REQUIRED: legacy/unreviewed pull cannot be retried.");
+            bool SameApprovedPull(ModelJob job) =>
+                string.Equals(job.ModelTag, failed.ModelTag, StringComparison.Ordinal) &&
+                string.Equals(job.ExpectedOllamaDigest, failed.ExpectedOllamaDigest,
+                    StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(job.ImmutableRevision, failed.ImmutableRevision, StringComparison.Ordinal) &&
+                string.Equals(job.RightsReceiptId, failed.RightsReceiptId, StringComparison.Ordinal) &&
+                string.Equals(job.LicenseSource, failed.LicenseSource, StringComparison.Ordinal) &&
+                job.LicenseAcknowledged == failed.LicenseAcknowledged;
+            var activeTagPulls = jobs.Where(j => failed.Kind == ModelJobKind.OllamaPull &&
+                j.Kind == ModelJobKind.OllamaPull &&
+                (j.State is ModelJobState.Queued or ModelJobState.Running or ModelJobState.Cancelling) &&
+                string.Equals(j.ModelTag, failed.ModelTag, StringComparison.OrdinalIgnoreCase)).ToArray();
+            if (activeTagPulls.Length > 0 &&
+                (activeTagPulls.Length != 1 ||
+                 activeTagPulls[0].RetryOfJobId != failed.Id ||
+                 !SameApprovedPull(activeTagPulls[0])))
+                throw new InvalidOperationException("P03_RETRY_ACTIVE_PULL_REVIEW_CHANGED_HOLD");
             var existingRetry = jobs.FirstOrDefault(j => j.RetryOfJobId == failed.Id &&
                 (j.State is ModelJobState.Queued or ModelJobState.Running or ModelJobState.Cancelling or ModelJobState.Completed));
-            if (existingRetry is not null) return existingRetry;
+            if (existingRetry is not null)
+            {
+                if (failed.Kind == ModelJobKind.OllamaPull && !SameApprovedPull(existingRetry))
+                    throw new InvalidOperationException("P03_RETRY_ACTIVE_PULL_REVIEW_CHANGED_HOLD");
+                return existingRetry;
+            }
             var now = DateTimeOffset.UtcNow;
             var retryId = Guid.NewGuid();
             var retry = failed with { Id = retryId,

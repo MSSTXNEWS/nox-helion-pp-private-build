@@ -402,6 +402,49 @@ try
         "F09H active pull rejects case-colliding owner tag");
     Assert((await right.ReadAsync()).Count == 1,
         "F09I denied review drift makes no duplicate persisted queue job");
+
+    // Original RetryAsync must honor the SAME owner-reviewed, case-exact
+    // active-tag rules as EnqueueVerifiedPullAsync, including persisted rights.
+    var retryRoot = Path.Combine(atomicRoot, "retry-authority");
+    var retryQueue = new ModelDownloadQueueStore(retryRoot);
+    var oldReview = approved with { ExactTag = "tinyllama:retry-reviewed",
+        ReviewedRightsReceiptId = "rights-previous" };
+    var failedReview = await retryQueue.EnqueueVerifiedPullAsync(oldReview, true);
+    await retryQueue.UpdateAsync(failedReview.Id, j => j with { State = ModelJobState.Failed });
+    var newReview = await retryQueue.EnqueueVerifiedPullAsync(
+        oldReview with { ReviewedRightsReceiptId = "rights-current" }, true);
+    var oldRetryDenied = false;
+    try { await retryQueue.RetryAsync(failedReview.Id); }
+    catch (InvalidOperationException ex) when (ex.Message == "P03_RETRY_ACTIVE_PULL_REVIEW_CHANGED_HOLD")
+    { oldRetryDenied = true; }
+    Assert(oldRetryDenied, "F09J obsolete rights cannot retry beside new approved pull");
+    var reviewJobs = await retryQueue.ReadAsync();
+    Assert(reviewJobs.Count == 2 &&
+        reviewJobs.Single(j => j.Id == newReview.Id).RightsReceiptId == "rights-current" &&
+        reviewJobs.Count(j => j.State == ModelJobState.Queued) == 1,
+        "F09K denied retry leaves active approved queue and rights intact");
+    var legacyQueue = new ModelDownloadQueueStore(Path.Combine(atomicRoot, "retry-legacy"));
+    var legacyJob = await legacyQueue.EnqueueVerifiedPullAsync(
+        approved with { ExactTag = "tinyllama:legacy-retry" }, true);
+    await legacyQueue.UpdateAsync(legacyJob.Id, j => j with {
+        State = ModelJobState.Failed, RightsReceiptId = null });
+    var legacyRetryDenied = false;
+    try { await legacyQueue.RetryAsync(legacyJob.Id); }
+    catch (InvalidOperationException ex) when (
+        ex.Message == "REVIEW_REQUIRED: legacy/unreviewed pull cannot be retried")
+    { legacyRetryDenied = true; }
+    Assert(legacyRetryDenied && (await legacyQueue.ReadAsync()).Count == 1,
+        "F09L legacy pull lacking native rights cannot manufacture a retry");
+    var sameRetryQueue = new ModelDownloadQueueStore(Path.Combine(atomicRoot, "retry-idempotent"));
+    var sameParent = await sameRetryQueue.EnqueueVerifiedPullAsync(
+        approved with { ExactTag = "tinyllama:retry-identical" }, true);
+    await sameRetryQueue.UpdateAsync(sameParent.Id, j => j with { State = ModelJobState.Failed });
+    var sameChild = await sameRetryQueue.RetryAsync(sameParent.Id);
+    var sameChildAgain = await sameRetryQueue.RetryAsync(sameParent.Id);
+    Assert(sameChild is not null && sameChildAgain?.Id == sameChild.Id &&
+        (await sameRetryQueue.ReadAsync()).Count == 2,
+        "F09M original exact-rights retry stays idempotent across instances");
+    Console.WriteLine("P03_RETRY_AUTHORITY_REGRESSION_PASS 4/4");
     var claims = await Task.WhenAll(Enumerable.Range(0, 24).Select(i =>
         (i % 2 == 0 ? left : right).TryStartQueuedAsync(ticket.Id)));
     Assert(claims.Count(x => x is not null) == 1, "F10 only one process acquires model job");
