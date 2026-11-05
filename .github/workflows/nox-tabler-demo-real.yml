@@ -28,6 +28,7 @@ jobs:
           set -euo pipefail
           cd tabler
           pnpm install --frozen-lockfile
+          pnpm --dir core build
           pnpm --dir preview build
           test -d preview/dist
           find preview/dist -name '*.html' | head
