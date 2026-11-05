@@ -97,7 +97,7 @@ class C11RollbackSafetyTest(unittest.TestCase):
             'FileSeek $2 0 SET',
             'FileRead $2 $4',
             'StrCpy $4 $4 17',
-            'StrCmp $4 "NOXHELION.P01 V16" 0 C11MarkerReadbackReject',
+            'StrCmpS $4 "NOXHELION.P01 V16" 0 C11MarkerReadbackReject',
             'Abort "Ownership marker content mismatch; activation refused."',
         ):
             self.assertIn(op, guard)
@@ -117,6 +117,8 @@ class C11RollbackSafetyTest(unittest.TestCase):
             (expected + b"x", False),
             (b"WRONGOWNER.P01 V16\r\n", False),
             (b"NOXHELION.P01 V15\r\n", False),
+            (b"noxhelion.P01 V16\r\n", False),
+            (b"NOXHELION.p01 V16\r\n", False),
         ):
             # The two checks below mirror the exact size + prefix gates above.
             self.assertEqual(marker == expected, valid)
@@ -167,13 +169,13 @@ class C11RollbackSafetyTest(unittest.TestCase):
         self.assertIn('C11UninstallerAccepted:', staged)
         self.assertIn('Staged uninstaller invalid or truncated; current application was not changed.', staged)
         self.assertLess(staged.index('FileSeek $2 0 END $3'), staged.index('C11UninstallerAccepted:'))
-        self.assertLess(staged.index('C11UninstallerAccepted:'), staged_nsi.index('  WriteRegStr HKCU ') - staged_nsi.index(staged))
 
         self.assertIn('IfErrors 0 +2', staged)
         self.assertNotIn('WriteUninstaller "$INSTDIR\\Uninstall.exe"', staged)
         anchor = '  SetOutPath "$TEMP" ; release current working directory before Rename'
         self.assertEqual(donor.count(anchor), 1)
         staged_nsi = donor.replace(old, "", 1).replace(anchor, staged + "\n" + anchor, 1)
+        self.assertLess(staged.index('C11UninstallerAccepted:'), staged_nsi.index('  WriteRegStr HKCU ') - staged_nsi.index(staged))
         for activation in ('Rename "$INSTDIR" "$BackupDir"', 'Rename "$StageDir" "$INSTDIR"'):
             self.assertLess(staged_nsi.index(staged), staged_nsi.index(activation))
         self.assertLess(staged_nsi.index(staged), staged_nsi.index("  WriteRegStr HKCU "))

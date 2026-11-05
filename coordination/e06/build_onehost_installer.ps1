@@ -1135,7 +1135,7 @@ $c11MarkerGuard=@'
   FileRead $2 $4
   IfErrors C11MarkerReadbackReject
   StrCpy $4 $4 17
-  StrCmp $4 "NOXHELION.P01 V16" 0 C11MarkerReadbackReject
+  StrCmpS $4 "NOXHELION.P01 V16" 0 C11MarkerReadbackReject
   ClearErrors
   FileSeek $2 17 SET
   IfErrors C11MarkerReadbackReject
