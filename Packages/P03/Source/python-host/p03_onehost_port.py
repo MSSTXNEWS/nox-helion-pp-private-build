@@ -26,6 +26,32 @@ OWNER_ROUTES = {
 SENSITIVE = frozenset(("models.pull", "models.gguf.import", "models.retry"))
 ROUTES = frozenset(READ_ROUTES) | frozenset(OWNER_ROUTES)
 
+# Owner3 must not promote an explicit native/backend denial into a queue ACK.
+# Statuses may be component-prefixed (e.g. PROVIDER_OFFLINE_HOLD), so
+# checking only startswith("HOLD") is insufficient. Positive QUEUED/
+# COMPLETED/CANCELLED states retain their original handling.
+_OWNER3_DENIAL_TOKENS = frozenset({
+    "HOLD", "ERROR", "FAILED", "DENIED", "REJECTED", "OFFLINE",
+    "CONSENT", "PERMISSION", "AUTH", "UNAUTHORIZED", "FORBIDDEN",
+    "REVOKED", "EXPIRED", "MISMATCH", "UNAVAILABLE", "INVALID",
+})
+_OWNER3_DENIAL_PAIRS = frozenset({
+    ("NOT", "READY"), ("NOT", "AUTHORIZED"), ("NOT", "INSTALLED"),
+    ("NO", "CONSENT"), ("TIMED", "OUT"),
+})
+
+
+def _owner3_status_denied(value: str) -> bool:
+    if type(value) is not str or not value.strip() or len(value) > 128:
+        return True
+    words = re.findall(r"[A-Z0-9]+", value.upper())
+    return bool(
+        _OWNER3_DENIAL_TOKENS.intersection(words)
+        or any(tuple(words[i:i + 2]) in _OWNER3_DENIAL_PAIRS
+               for i in range(len(words) - 1))
+    )
+
+
 class P03PortHold(RuntimeError):
     """The actual native owner service or required proof is unavailable."""
 
@@ -362,10 +388,11 @@ class P03OneHostPort:
                 raise P03PortHold("Owner3 backend returned an explicit error, not an ACK")
             state = result.get("status")
             if (type(state) is str and
-                state.strip().upper().startswith((
-                    "HOLD", "ERROR", "FAILED", "DENIED", "REJECTED",
-                    "REVIEW_REQUIRED", "CONSENT_REQUIRED", "NOT_AUTHORIZED",
-                    "STOP_PENDING", "BUSY", "NOT_READY"))):
+                (_owner3_status_denied(state) or
+                 state.strip().upper().startswith((
+                     "HOLD", "ERROR", "FAILED", "DENIED", "REJECTED",
+                     "REVIEW_REQUIRED", "CONSENT_REQUIRED", "NOT_AUTHORIZED",
+                     "STOP_PENDING", "BUSY", "NOT_READY")))):
                 raise P03PortHold("Owner3 backend returned a HOLD/error, not an ACK")
             # Status alone (or an acknowledgement for another job) cannot
             # prove that the consented cancellation/retry touched THIS job.
