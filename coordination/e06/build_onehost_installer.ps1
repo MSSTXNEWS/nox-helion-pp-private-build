@@ -1016,6 +1016,46 @@ if ($rmProof.changed -ne $true -or
 }
 Write-Host "NX03_C09_REVIEWED_REMOVE_STAGE_PASS original=$($rmProof.original_r11_sha256) stage=$rmReadback"
 
+# B03 G4 / NO-LOSS: exact SHA-reviewed C09 contains five C++-style // comment
+# lines AFTER manifest payload deletion. Windows PowerShell 5.1 does not
+# recognize // as a comment. They would execute under ErrorAction Stop,
+# aborting the remover after deleting owned files and BEFORE NSIS metadata
+# cleanup. Correct ONLY these five known lines in disposable R11. The immutable
+# C09 reviewed file, NX03 pin, R11 original and deletion policy stay unchanged.
+$rmCommentBefore=@'
+// D03 · A successful NSIS remover exit must not be based solely on
+// Remove-Item returning without an exception. Recheck every manifest-owned
+// leaf BEFORE reporting PASS. A recreated/locked/reparse leaf is a HOLD;
+// read failures other than an exact missing-item exception are also a HOLD.
+// Do not modify retained user files or the NSIS-owned metadata here.
+'@
+$rmCompatBefore=[IO.File]::ReadAllText($rmPath)
+$rmCompatEol=if ($rmCompatBefore.Contains("\`r\`n")) { "\`r\`n" } else { "\`n" }
+$rmCommentBefore=[regex]::Replace($rmCommentBefore,'\r?\n',$rmCompatEol)
+$rmCommentAfter=[regex]::Replace($rmCommentBefore,'(?m)^//','#')
+if (([regex]::Matches($rmCompatBefore,[regex]::Escape($rmCommentBefore))).Count -ne 1 -or
+    ([regex]::Matches($rmCompatBefore,'(?m)^\s*//')).Count -ne 5 -or
+    $rmCompatBefore.Contains($rmCommentAfter) -or
+    !$rmCompatBefore.Contains('P01_UNINSTALL_POST_REMOVE_RESIDUE') -or
+    !$rmCompatBefore.Contains('P01_UNINSTALL_PAYLOAD_PASS')) {
+  throw 'B03_P01_PS51_REMOVER_COMMENT_PREIMAGE_HOLD'
+}
+$rmCompatAfter=$rmCompatBefore.Replace($rmCommentBefore,$rmCommentAfter)
+if ($rmCompatAfter -ceq $rmCompatBefore -or
+    ([regex]::Matches($rmCompatAfter,'(?m)^\s*//')).Count -ne 0 -or
+    !$rmCompatAfter.Contains('P01_UNINSTALL_POST_REMOVE_RESIDUE') -or
+    !$rmCompatAfter.Contains('P01_UNINSTALL_PAYLOAD_PASS')) {
+  throw 'B03_P01_PS51_REMOVER_COMMENT_TRANSFORM_HOLD'
+}
+[IO.File]::WriteAllText($rmPath,$rmCompatAfter,(New-Object System.Text.UTF8Encoding($false)))
+$rmCompatSha=(Get-FileHash -LiteralPath $rmPath -Algorithm SHA256).Hash.ToLowerInvariant()
+if ([IO.File]::ReadAllText($rmPath) -cne $rmCompatAfter -or
+    $rmCompatSha -ceq $rmReadback) {
+  throw 'B03_P01_PS51_REMOVER_COMMENT_READBACK_HOLD'
+}
+Write-Host "B03_P01_PS51_REMOVER_COMMENT_STAGE_PASS before=$rmReadback after=$rmCompatSha"
+
+
 & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File (Join-Path $installer 'Verify-Payload.ps1') -Root $payload -Manifest $manifestPath
 if ($LASTEXITCODE -ne 0) { throw 'ORIGINAL_NSIS_PAYLOAD_SHA_GATE_HOLD' }
 # C11: patch ONLY the disposable ORIGINAL NSIS source before makensis.
