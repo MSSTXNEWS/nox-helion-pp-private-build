@@ -369,8 +369,11 @@ a1Button?.addEventListener('click',event=>{
      depth>4||trail.has(envelope))return true;
   trail.add(envelope);
   const has=key=>Object.prototype.hasOwnProperty.call(envelope,key);
-  if((has('ack')&&envelope.ack!==true)||(has('ok')&&envelope.ok!==true))
-   return true;
+  // An explicit owner/consent refusal is never overridden by transport COMPLETED.
+  // Missing optional fields are allowed; present fields require literal true.
+  for(const key of ['ack','ok','success','approved','authorized','consented']){
+   if(has(key)&&envelope[key]!==true)return true;
+  }
   for(const key of ['error','error_code','errorCode','errorMessage','error_message']){
    if(!has(key))continue;
    const error=envelope[key];
