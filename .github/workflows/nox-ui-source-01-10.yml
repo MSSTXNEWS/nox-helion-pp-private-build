@@ -1,0 +1,55 @@
+name: NOX UI source archive 01-10
+on:
+  push:
+    branches:
+      - assets/download-ui-01-10-20261105
+    paths:
+      - .github/workflows/nox-ui-source-01-10.yml
+permissions:
+  contents: read
+jobs:
+  download:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Download original upstream ZIP files and validate
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p nox-ui-01-10
+          cat > repos.tsv <<'EOF'
+          01 formwork-halo shellcat-com/formwork-halo
+          02 formwork-heliodon shellcat-com/formwork-heliodon
+          03 formwork-chroma shellcat-com/formwork-chroma
+          04 formwork-nebula shellcat-com/formwork-nebula
+          05 formwork-aether shellcat-com/formwork-aether
+          06 formwork-meridian shellcat-com/formwork-meridian
+          07 formwork-aurum shellcat-com/formwork-aurum
+          08 formwork-zodiac shellcat-com/formwork-zodiac
+          09 loquix loquix-dev/loquix
+          10 tabler tabler/tabler
+          EOF
+          printf 'number,name,repository,commit_sha,archive,bytes,sha256\n' > nox-ui-01-10/MANIFEST.csv
+          while read -r number name repo; do
+            echo "Fetching $number $name from $repo"
+            metadata="$(curl -fsSL --retry 3 --max-time 90 -H "Accept: application/vnd.github+json" "https://api.github.com/repos/$repo")"
+            branch="$(jq -r .default_branch <<< "$metadata")"
+            commit="$(curl -fsSL --retry 3 --max-time 90 "https://api.github.com/repos/$repo/commits/$branch" | jq -r .sha)"
+            file="nox-ui-01-10/${number}_${name}.zip"
+            curl -fL --retry 4 --max-time 360 "https://codeload.github.com/$repo/zip/$commit" -o "$file"
+            test -s "$file"
+            unzip -tqq "$file"
+            bytes="$(stat -c '%s' "$file")"
+            hash="$(sha256sum "$file" | cut -d' ' -f1)"
+            printf '%s,%s,%s,%s,%s,%s,%s\n' "$number" "$name" "$repo" "$commit" "$(basename "$file")" "$bytes" "$hash" >> nox-ui-01-10/MANIFEST.csv
+          done < repos.tsv
+          test "$(find nox-ui-01-10 -name '*.zip' | wc -l)" -eq 10
+          sha256sum nox-ui-01-10/*.zip > nox-ui-01-10/SHA256SUMS.txt
+          cd nox-ui-01-10
+          zip -0 -q ../NOX_UI_01_10_FULL_SOURCE.zip ./*
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NOX_UI_01_10_FULL_SOURCE
+          path: NOX_UI_01_10_FULL_SOURCE.zip
+          if-no-files-found: error
+          retention-days: 2
