@@ -198,6 +198,16 @@ function verifiedOriginalPrimaryDock(){
      style.pointerEvents!=='none'&&Number(style.opacity)!==0;
  });
 }
+// Navigation-only original R11 buttons can be CSS-collapsed at 320/390px.
+// A trusted EXPRESS click may reuse their original route, but MUST refuse
+// disabled/inert/ARIA-suppressed navigation. Actual native owner actions below
+// still require physical visibility, focus and an unobstructed hit target.
+function originalNavigationAllowed(button){
+ return !!button&&button.tagName==='BUTTON'&&button.isConnected&&
+   !button.disabled&&button.matches?.(':disabled')!==true&&
+   button.getAttribute('aria-disabled')!=='true'&&
+   !button.closest('[hidden],[inert],[aria-hidden="true"],[aria-disabled="true"]');
+}
 function visibleOriginalOwnerTarget(button){
  // Never trigger privileged original R11 handlers through offscreen,
  // occluded or accessibility-disabled controls. Keep their design untouched.
@@ -257,9 +267,8 @@ nav.addEventListener('click',event=>{
    const navMatches=document.querySelectorAll('.nav button[data-screen="'+screen+'"]');
    const navControl=navMatches.length===1?navMatches[0]:null;
    const matches=document.querySelectorAll(selector);
-   if(!navControl||navControl.tagName!=='BUTTON'||!navControl.isConnected||
-      navControl.disabled||matches.length!==1||
-      !matches[0].isConnected||matches[0].disabled){
+   if(!originalNavigationAllowed(navControl)||matches.length!==1||
+      !originalNavigationAllowed(matches[0])){
      state.textContent=name+': исходный элемент недоступен · HOLD';return;
    }
    navControl.click(); // Reuse original showScreen/navigation, not a second UI.
@@ -299,7 +308,8 @@ nav.addEventListener('click',event=>{
    const menuEntries=document.querySelectorAll('.nav button[data-screen="menu"]');
    const systemTiles=document.querySelectorAll('button.tile[data-menu-index="7"]');
    if(menuEntries.length!==1||systemTiles.length!==1||
-      menuEntries[0].disabled||!systemTiles[0].isConnected||systemTiles[0].disabled){
+      !originalNavigationAllowed(menuEntries[0])||
+      !originalNavigationAllowed(systemTiles[0])){
      state.textContent='SETTINGS: исходное направление недоступно · HOLD';return;
    }
    menuEntries[0].click();
@@ -340,8 +350,8 @@ nav.addEventListener('click',event=>{
  // A clicked top-level action never fabricates a model reply or install ACK.
  const original=findOriginalControl(name)||findOriginalScreen(name);
  if(!original){state.textContent=name+': нет подтверждённого исходного экрана · HOLD';return;}
- if(original.tagName==='BUTTON'&&!visibleOriginalOwnerTarget(original)){
-   state.textContent=name+': исходная кнопка перекрыта · HOLD';return;
+ if(original.tagName==='BUTTON'&&!originalNavigationAllowed(original)){
+   state.textContent=name+': исходная навигация отключена · HOLD';return;
  }
  original.click();
  if(name==='CHAT'&&!document.getElementById('chat')?.classList.contains('active'))
