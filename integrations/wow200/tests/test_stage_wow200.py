@@ -191,15 +191,15 @@ class WowStageTests(unittest.TestCase):
   home=self.stage/'Assets/index.html'
   original_studio,original_home=studio.read_bytes(),home.read_bytes()
   foreign=self.stage/'Assets/creative/wow200/unmanaged-user-file.txt'
-  real_write=Path.write_text
+  real_write=eng._write_owned_html_only
   triggered=[False]
-  def fail_home(path,data,*args,**kwargs):
+  def fail_home(path,original,replacement,owner):
    if path == home.resolve() and not triggered[0]:
     triggered[0]=True
     foreign.write_bytes(b'FOREIGN BYTES MUST SURVIVE')
     raise OSError('INJECTED_AFTER_STUDIO_STAGE_HOLD')
-   return real_write(path,data,*args,**kwargs)
-  with patch.object(Path,'write_text',new=fail_home):
+   return real_write(path,original,replacement,owner)
+  with patch.object(eng,'_write_owned_html_only',new=fail_home):
    with self.assertRaisesRegex(OSError,'INJECTED_AFTER_STUDIO_STAGE_HOLD'):
     stage(self.stage,self.src)
   self.assertTrue(triggered[0])
@@ -211,15 +211,15 @@ class WowStageTests(unittest.TestCase):
   studio=self.stage/'Assets/creative/studio.html'
   home=self.stage/'Assets/index.html'
   original_home=home.read_bytes()
-  real_write=Path.write_text
+  real_write=eng._write_owned_html_only
   triggered=[False]
-  def foreign_edit(path,data,*args,**kwargs):
+  def foreign_edit(path,original,replacement,owner):
    if path == home.resolve() and not triggered[0]:
     triggered[0]=True
     studio.write_bytes(b'FOREIGN STUDIO EDIT MUST SURVIVE')
     raise OSError('INJECTED_FOREIGN_STUDIO_RACE_HOLD')
-   return real_write(path,data,*args,**kwargs)
-  with patch.object(Path,'write_text',new=foreign_edit):
+   return real_write(path,original,replacement,owner)
+  with patch.object(eng,'_write_owned_html_only',new=foreign_edit):
    with self.assertRaisesRegex(OSError,'INJECTED_FOREIGN_STUDIO_RACE_HOLD'):
     stage(self.stage,self.src)
   self.assertTrue(triggered[0])
