@@ -211,5 +211,37 @@ class OriginalNativeAddonStagePin(unittest.TestCase):
         self.assertIn('"' + addon_relative + '":"' + addon_blob + '"', compiler)
 
 
+
+class OriginalNsisAtomicSetupOutput(unittest.TestCase):
+    """Do not assign a fresh source SHA or build receipt to stale NSIS bytes."""
+    def test_original_nsis_output_is_atomic_and_no_clobber(self):
+        root = MODULE.parents[2]
+        script = (root / "coordination/e06/build_onehost_installer.ps1").read_text(encoding="utf-8")
+        start = "$setup=Join-Path $out 'NOX-HELION-V16-DIAGNOSTIC-SETUP.exe'"
+        self.assertEqual(script.count(start), 1)
+        block = script[script.index(start):script.index("$wpf=Join-Path $payload", script.index(start))]
+        checks = (
+            "E06_SETUP_EXISTING_OUTPUT_NOLOSS_HOLD",
+            "[Guid]::NewGuid().ToString('N')",
+            '"/DOUTPUT_SETUP=$setupCandidate"',
+            "E06_SETUP_CANDIDATE_COLLISION_HOLD",
+            "E06_SETUP_CANDIDATE_UNSAFE_HOLD",
+            "E06_SETUP_ATOMIC_NO_OVERWRITE_HOLD",
+            "E06_SETUP_PUBLISHED_IDENTITY_HOLD",
+            "try { [IO.File]::Move($setupCandidate,$setup) }",
+            "$sha=(Get-FileHash -LiteralPath $setup -Algorithm SHA256).Hash.ToLowerInvariant()",
+        )
+        for expected in checks:
+            with self.subTest(expected=expected):
+                self.assertIn(expected, block)
+        self.assertNotIn('"/DOUTPUT_SETUP=$setup"', block)
+        self.assertNotIn('Remove-Item', block)
+        self.assertLess(block.index("E06_SETUP_EXISTING_OUTPUT_NOLOSS_HOLD"),
+                        block.index("& $makensisPath /V2"))
+        self.assertLess(block.index("& $makensisPath /V2"),
+                        block.index("try { [IO.File]::Move"))
+        self.assertLess(block.index("try { [IO.File]::Move"),
+                        block.index("$sha=(Get-FileHash"))
+
 if __name__ == "__main__":
     unittest.main()

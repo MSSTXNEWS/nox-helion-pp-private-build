@@ -1327,8 +1327,32 @@ Write-Host 'C11_NSIS_ACTIVATION_ROLLBACK_RECOVERY_GATES_STAGED'
 [IO.File]::WriteAllText($c11NsiPath,$c11NsiPatched,(New-Object System.Text.UTF8Encoding($false)))
 Write-Host "C11_NSIS_ROLLBACK_OLD_PAYLOAD_SHA_GATE_STAGED"
 $setup=Join-Path $out 'NOX-HELION-V16-DIAGNOSTIC-SETUP.exe'
-& $makensisPath /V2 "/DPAYLOAD_DIR=$payload" "/DVERIFY_SCRIPT=$(Join-Path $installer 'Verify-Payload.ps1')" "/DPREFLIGHT_SCRIPT=$(Join-Path $installer 'Preflight-InstallPath.ps1')" "/DREMOVE_SCRIPT=$(Join-Path $installer 'Remove-InstalledPayload.ps1')" "/DOUTPUT_SETUP=$setup" '/DAPP_VERSION=16.0.0' (Join-Path $installer 'NOX-HELION-Setup.nsi')
-if ($LASTEXITCODE -ne 0 -or !(Test-Path -LiteralPath $setup -PathType Leaf)) { throw 'EXISTING_OWNER_NSIS_COMPILER_HOLD' }
+# D03 G2/G4: prevent a stale/pre-existing Setup from being relabelled on a
+# successful compiler exit. Never overwrite an unowned output; do not force.
+Assert-E06PlainPathAncestors -Candidate $setup -Scope 'SETUP_FINAL'
+if (Test-Path -LiteralPath $setup) { throw 'E06_SETUP_EXISTING_OUTPUT_NOLOSS_HOLD' }
+# Compile to a unique sibling on the same volume; publish with atomic
+# no-clobber File.Move ONLY after the real NSIS exit and file are verified.
+$setupCandidate=Join-Path $out ('NOX-HELION-V16-DIAGNOSTIC-SETUP.' +
+  [Guid]::NewGuid().ToString('N') + '.candidate.exe')
+Assert-E06PlainPathAncestors -Candidate $setupCandidate -Scope 'SETUP_CANDIDATE'
+if (Test-Path -LiteralPath $setupCandidate) { throw 'E06_SETUP_CANDIDATE_COLLISION_HOLD' }
+& $makensisPath /V2 "/DPAYLOAD_DIR=$payload" "/DVERIFY_SCRIPT=$(Join-Path $installer 'Verify-Payload.ps1')" "/DPREFLIGHT_SCRIPT=$(Join-Path $installer 'Preflight-InstallPath.ps1')" "/DREMOVE_SCRIPT=$(Join-Path $installer 'Remove-InstalledPayload.ps1')" "/DOUTPUT_SETUP=$setupCandidate" '/DAPP_VERSION=16.0.0' (Join-Path $installer 'NOX-HELION-Setup.nsi')
+if ($LASTEXITCODE -ne 0 -or !(Test-Path -LiteralPath $setupCandidate -PathType Leaf)) { throw 'EXISTING_OWNER_NSIS_COMPILER_HOLD' }
+Assert-E06PlainPathAncestors -Candidate $setupCandidate -Scope 'SETUP_CANDIDATE'
+$candidateItem=Get-Item -LiteralPath $setupCandidate -Force -ErrorAction Stop
+if ($candidateItem.PSIsContainer -or
+    ($candidateItem.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0 -or
+    $candidateItem.Length -lt 8192) { throw 'E06_SETUP_CANDIDATE_UNSAFE_HOLD' }
+# File.Move(source,destination) refuses an existing destination, even if
+# another builder raced after our initial no-overwrite preflight.
+try { [IO.File]::Move($setupCandidate,$setup) }
+catch { throw 'E06_SETUP_ATOMIC_NO_OVERWRITE_HOLD' }
+Assert-E06PlainPathAncestors -Candidate $setup -Scope 'SETUP_FINAL'
+$publishedItem=Get-Item -LiteralPath $setup -Force -ErrorAction Stop
+if ($publishedItem.PSIsContainer -or
+    ($publishedItem.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0 -or
+    $publishedItem.Length -ne $candidateItem.Length) { throw 'E06_SETUP_PUBLISHED_IDENTITY_HOLD' }
 $sha=(Get-FileHash -LiteralPath $setup -Algorithm SHA256).Hash.ToLowerInvariant()
 $wpf=Join-Path $payload 'NOX.P01.Shell.exe'
 # A receipt may not relabel an older binary after another owner moves HEAD.
