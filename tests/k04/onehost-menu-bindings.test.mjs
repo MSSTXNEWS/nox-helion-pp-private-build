@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createNativeMenuClient,mountOneHostMenu,canonicalChatContext,nativeAutostartPersistenceAck,createAutostartOwnerFlow} from '../../ui/onehost-menu-bindings.mjs';
+import {createNativeMenuClient,mountOneHostMenu,canonicalChatContext,nativeAutostartPersistenceAck,createAutostartOwnerFlow,AUTOSTART_UIA_IDS,settingsAutostartOwnerAdmission} from '../../ui/onehost-menu-bindings.mjs';
 import {SELFBUILDER_MENU,MENU_V2_SECTIONS} from '../../ui/selfbuilder-menu-v2.mjs';
 function fixture(){let listener;const sent=[];let next=1;const webview={postMessage:x=>sent.push(x),addEventListener:(n,f)=>listener=f,removeEventListener:()=>{listener=null;}};const client=createNativeMenuClient({webview,cryptoRef:{getRandomValues:b=>{b.fill(next++);return b;}},timeoutMs:10});return {client,sent,webview,reply:x=>listener?.({data:x,source:webview,isTrusted:true}),emit:(x,source,trusted=false)=>listener?.({data:x,source,isTrusted:trusted})};}
 test('native result must correlate route and nonce; stream only that request',async()=>{
@@ -170,4 +170,28 @@ test('D06 SETTINGS owner read/write is single-flight across buttons and releases
   assert.equal((await read).result.readOnly,true);
   assert.ok(Object.isFrozen(flow));
   assert.throws(()=>createAutostartOwnerFlow(null),/NATIVE_OWNER_REQUIRED/);
+});
+
+test('D06 SETTINGS UIA original-node / unique owner-route identity: not native consent PASS',()=>{
+  const issued=new WeakSet();let nodes=[];
+  const doc={querySelectorAll:sel=>nodes.filter(n=>'[id="'+n.id+'"]'===sel)};
+  const mk=(id,key,value)=>({id,tagName:'BUTTON',isConnected:true,ownerDocument:doc,
+    dataset:{nativeRoute:'system.autostart',nativeKey:key,nativeValue:value}});
+  for(const [id,key,value] of [
+    [AUTOSTART_UIA_IDS.read,'',''],[AUTOSTART_UIA_IDS.on,'enabled','true'],
+    [AUTOSTART_UIA_IDS.off,'enabled','false']]){
+    const original=mk(id,key,value);issued.add(original);nodes=[original];
+    assert.equal(settingsAutostartOwnerAdmission(original,issued),true);
+    const replacement=mk(id,key,value);
+    assert.equal(settingsAutostartOwnerAdmission(replacement,issued),false);
+    nodes=[original,replacement];
+    assert.equal(settingsAutostartOwnerAdmission(original,issued),false);
+    nodes=[original];original.dataset.nativeRoute='chat.commands';
+    assert.equal(settingsAutostartOwnerAdmission(original,issued),false);
+    original.dataset.nativeRoute='system.autostart';original.dataset.nativeValue='spoof';
+    assert.equal(settingsAutostartOwnerAdmission(original,issued),false);
+    original.dataset.nativeValue=value;original.isConnected=false;
+    assert.equal(settingsAutostartOwnerAdmission(original,issued),false);
+  }
+  assert.equal(new Set(Object.values(AUTOSTART_UIA_IDS)).size,3);
 });

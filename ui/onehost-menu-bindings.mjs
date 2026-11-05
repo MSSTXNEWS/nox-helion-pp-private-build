@@ -197,6 +197,27 @@ export function nativeAutostartPersistenceAck(reply,requested){
     reply.result.enabled===requested;
 }
 
+// Stable WebView2 UIA IDs are owner-bound to the original SETTINGS buttons,
+// not just matching renderer text/data. The native WPF consent check still applies.
+export const AUTOSTART_UIA_IDS=Object.freeze({
+  read:'nox-express-settings-autostart-read',
+  on:'nox-express-settings-autostart-on',
+  off:'nox-express-settings-autostart-off'
+});
+export function settingsAutostartOwnerAdmission(button,issued){
+  const id=button?.id;
+  const expected=id===AUTOSTART_UIA_IDS.read?{key:'',value:''}:
+    id===AUTOSTART_UIA_IDS.on?{key:'enabled',value:'true'}:
+    id===AUTOSTART_UIA_IDS.off?{key:'enabled',value:'false'}:null;
+  if(!expected || !issued?.has?.(button) || button.isConnected!==true ||
+     button.tagName!=='BUTTON' || button.dataset?.nativeRoute!=='system.autostart' ||
+     button.dataset.nativeKey!==expected.key || button.dataset.nativeValue!==expected.value)
+    return false;
+  // A duplicate, replaced or detached UIA node must not dispatch owner IPC.
+  const matches=button.ownerDocument?.querySelectorAll?.('[id="'+id+'"]');
+  return matches?.length===1 && matches[0]===button;
+}
+
 /** SETTINGS owner requests are single-flight: a second ON/OFF/read cannot race
  * an unconfirmed native HKCU write and misreport persisted state.
  * WPF still owns all SID/ACL/consent and Windows Registry decisions. */
@@ -371,6 +392,7 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
     button.dataset.nativeValue='selfbuilder.activator.status';
     actions.append(button);
   };
+  const issuedSettingsControls=new WeakSet();
   const appendSystemAutostartButtons=()=>{
     for(const button of actions.querySelectorAll?.('[data-native-route="system.autostart"]')||[])button.remove();
     const currentWorld=doc.getElementById('detail-title')?.textContent||'';
@@ -378,13 +400,15 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
     // Explicit owner-only registry read, including after a fresh app launch.
     // It asks for native WPF consent; it never writes HKCU or grants privileges.
     const read=doc.createElement('button');read.type='button';read.className='nox-sb-tile';
-    read.textContent='Проверить автозапуск NOX · Windows';
+    read.textContent='Проверить автозапуск NOX · Windows';read.id=AUTOSTART_UIA_IDS.read;
     read.dataset.nativeRoute='system.autostart';read.dataset.nativeKey='';read.dataset.nativeValue='';
-    actions.append(read);
+    issuedSettingsControls.add(read);actions.append(read);
     for(const [label,value] of [['Автозапуск NOX · ВКЛ','true'],['Автозапуск NOX · ВЫКЛ','false']]){
       const button=doc.createElement('button');button.type='button';button.className='nox-sb-tile';
-      button.textContent=label;button.dataset.nativeRoute='system.autostart';
-      button.dataset.nativeKey='enabled';button.dataset.nativeValue=value;actions.append(button);
+      button.textContent=label;button.id=value==='true'?AUTOSTART_UIA_IDS.on:AUTOSTART_UIA_IDS.off;
+      button.dataset.nativeRoute='system.autostart';
+      button.dataset.nativeKey='enabled';button.dataset.nativeValue=value;
+      issuedSettingsControls.add(button);actions.append(button);
     }
   };
   // Actual existing OneHost/P02 read handlers. No model pull, training,
@@ -705,6 +729,11 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
     if(button.id==='chat-send'){event.preventDefault();event.stopImmediatePropagation();await sendChat();return;}
     const generated=button.parentElement===actions||button.parentNode===actions;
     const route=controls.get(button.id)||(generated?button.dataset.nativeRoute:null);if(!route)return;
+    if(generated&&route==='system.autostart' &&
+       !settingsAutostartOwnerAdmission(button,issuedSettingsControls)){
+      event.preventDefault();event.stopImmediatePropagation();
+      status.textContent='HOLD · NOX_AUTOSTART_UIA_OWNER_IDENTITY';return;
+    }
     event.preventDefault();event.stopImmediatePropagation();
     button.closest('section')?.append(status,detail,actions);detail.hidden=true;
     if(button.id==='chat-stop'&&stopRequestPending)return;
