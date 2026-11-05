@@ -385,7 +385,7 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
     {
         if (string.IsNullOrWhiteSpace(status)) return true;
         var value = status.Trim().ToUpperInvariant();
-        if (value is "HOLD" or "DENIED" or "ERROR" or "FAILED" or "REJECTED" or
+        if (value is "HOLD" or "DENIED" or "ERROR" or "FAILED" or "REJECTED" or "CANCELLED" or
             "OFFLINE" or "UNAVAILABLE" or "NOT_READY" or "AWAITING_CONSENT" or
             "NEEDS_CONSENT" or "CONSENT_PENDING" or "NOT_AUTHORIZED" or
             "NOT_AUTHENTICATED" or "FORBIDDEN") return true;
@@ -409,7 +409,7 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
             return false;
         foreach (var field in result.EnumerateObject())
         {
-            if (field.Name is "ok" or "ack" &&
+            if (field.Name is "ok" or "ack" or "success" or "approved" or "authorized" &&
                 field.Value.ValueKind != JsonValueKind.True)
                 return true;
             if (field.Name is "error" or "errorCode" or "error_code" or
@@ -426,7 +426,7 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
                     NativeOwnerStatusDenied(field.Value.GetString()))
                     return true;
             }
-            if (field.Name is "result" or "receipt" or "nativeResult" or "owner" &&
+            if (field.Name is "result" or "receipt" or "nativeResult" or "owner" or "ownerResult" &&
                 NativeResultExplicitlyDenied(field.Value))
                 return true;
         }

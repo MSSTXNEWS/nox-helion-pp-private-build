@@ -42,7 +42,7 @@ class OriginalNativeOwnerMenuStopR83(unittest.TestCase):
         self.assertIn('await DispatchNativeOwnerAsync(', stop)
         self.assertIn('"chat.stop", JsonSerializer.SerializeToElement(new { }), cancel', stop)
         self.assertIn('NativeP02Acl(stopSid, "chat.stop")', stop)
-        self.assertIn('if (!nativeStop.Accepted)', stop)
+        self.assertIn('if (!nativeStop.Accepted || !string.IsNullOrEmpty(nativeStop.ErrorCode))', stop)
         self.assertIn('status = "MENU_STOP_REQUESTED"', stop)
         self.assertNotIn('status = "MENU_STOP_ACK"', stop)
 
@@ -64,6 +64,11 @@ class OriginalNativeOwnerMenuStopR83(unittest.TestCase):
         self.assertIn('field.Name is "ok" or "ack"', self.bridge)
         self.assertIn('field.Name is "error" or "errorCode" or "error_code"', self.bridge)
         self.assertIn('field.Name is "result" or "receipt" or "nativeResult"', self.bridge)
+        # A nested native owner denial or cancelled user action must never become
+        # a completed ACK even when the transport reports Accepted=true.
+        self.assertIn('or "ownerResult" &&', self.bridge)
+        self.assertIn('or "success" or "approved" or "authorized" &&', self.bridge)
+        self.assertIn('or "CANCELLED" or', self.bridge)
         self.assertIn('"NATIVE_OWNER_RESULT_HOLD"', self.bridge)
 
     def test_learn_settings_native_denial_is_not_completion(self):
