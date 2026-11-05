@@ -142,6 +142,8 @@ class NativeWorkQueue:
     def _start(self,scope,tid,callback,permission,*,allowed_states=('QUEUED','PAUSED'),recover_interrupted=False):
         if not callable(callback):raise ValueError('NATIVE_CALLABLE_REQUIRED')
         epoch=self.stop_epoch()
+        if type(epoch) is not int or epoch < 0:
+            raise NativeQueueHold('NATIVE_STOP_EPOCH_INVALID')
         with self._lock:
             if self._closed or self._thread is not None and self._thread.is_alive():
                 raise NativeQueueHold('EXISTING_HOST_WORKER_BUSY')
@@ -157,7 +159,9 @@ class NativeWorkQueue:
                 if row['state'] not in allowed_states and not recovered:
                     raise NativeQueueHold('S03_TASK_ALREADY_CLAIMED_OR_TERMINAL')
                 def require_live_claim_permission():
-                    if (self.stop_requested() or self.stop_epoch()!=epoch or
+                    current_epoch=self.stop_epoch()
+                    if (self.stop_requested() is not False or
+                            type(current_epoch) is not int or current_epoch != epoch or
                             self.authorize(scope,permission,{'task_id':tid}) is not True):
                         raise PermissionError('NATIVE_WORK_REVOKED')
                 require_live_claim_permission()
@@ -170,11 +174,18 @@ class NativeWorkQueue:
             self._active_task=(tuple(scope_key(scope).values()),tid)
             def run():
                 try:
-                    if self.stop_requested() or self.stop_epoch()!=epoch:raise NativeQueueHold('NATIVE_STOP')
+                    # SQLite CLAIM is not enduring authorization. Consent may be
+                    # revoked after that transaction and before this worker starts.
+                    # Never call self-write/Forge callbacks under a stale owner grant.
+                    current_epoch=self.stop_epoch()
+                    if (self.stop_requested() is not False or
+                            type(current_epoch) is not int or current_epoch != epoch or
+                            self.authorize(scope,permission,{'task_id':tid}) is not True):
+                        raise NativeQueueHold('NATIVE_WORK_REVOKED_BEFORE_EXECUTION')
                     result=callback()
                     if not isinstance(result,dict):raise NativeQueueHold('INVALID_NATIVE_RESULT')
                     state=result.get('status','HOLD')
-                    if self.stop_requested() or self.stop_epoch()!=epoch:
+                    if self.stop_requested() is not False or self.stop_epoch()!=epoch:
                         result={'status':'HOLD','reason':'NATIVE_STOP_EPOCH_CHANGED','weights_updated':False};state='HOLD'
                     self.record(scope,tid,state,result,expected_epoch=epoch,permission=permission)
                 except Exception as exc:

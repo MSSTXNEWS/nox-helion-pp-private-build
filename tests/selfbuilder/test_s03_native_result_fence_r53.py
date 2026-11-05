@@ -8,7 +8,7 @@ from src.nox_selfbuilder.onehost_queue import NativeWorkQueue, NativeQueueHold
 
 class AuditStore:
     def __init__(self):
-        self.conn = sqlite3.connect(':memory:')
+        self.conn = sqlite3.connect(':memory:', check_same_thread=False)
         self.conn.execute('CREATE TABLE tasks (id INTEGER PRIMARY KEY, title TEXT, created_at TEXT, updated_at TEXT)')
         self.conn.execute('CREATE TABLE audit (id INTEGER PRIMARY KEY, action TEXT, item_id INTEGER, metadata TEXT, at TEXT)')
         self.after_audit = None
@@ -124,6 +124,58 @@ class NativeResultFenceTests(unittest.TestCase):
                               permission_payload={'task_id': self.task_id, 'admin': True})
         self.assertEqual(self.count(), 0)
 
+
+    def test_callback_rechecks_owner_after_claim_before_side_effect(self):
+        # Two owner approvals are consumed during the durable SQLite CLAIM.
+        # The third is the worker-start check; revocation must prevent the
+        # callback itself, not merely turn its already-run result into HOLD.
+        original_auth = self.queue.authorize
+        claim_reads = []
+        def revoked_after_claim(scope, permission, payload):
+            if permission == 'selfbuilder.propose' and payload == {'task_id': self.task_id}:
+                claim_reads.append(1)
+                return len(claim_reads) <= 2
+            return original_auth(scope, permission, payload)
+        self.queue.authorize = revoked_after_claim
+        effects = []
+        self.queue.submit_source(self.scope, self.task_id,
+                                 lambda: effects.append('side_effect') or {'status': 'DONE'})
+        self.queue._thread.join(timeout=3)
+        self.assertFalse(self.queue._thread.is_alive())
+        self.assertEqual(len(claim_reads), 3)
+        self.assertEqual(effects, [])
+        row = self.queue.get(self.scope, self.task_id)
+        self.assertEqual(row['state'], 'HOLD')
+        self.assertEqual(row['result']['reason'], 'NATIVE_WORK_REVOKED_BEFORE_EXECUTION')
+
+    def test_callback_runs_with_current_owner_consent(self):
+        effects = []
+        self.queue.submit_source(self.scope, self.task_id,
+                                 lambda: effects.append('approved') or {'status': 'DONE'})
+        self.queue._thread.join(timeout=3)
+        self.assertFalse(self.queue._thread.is_alive())
+        self.assertEqual(effects, ['approved'])
+        self.assertEqual(self.queue.get(self.scope, self.task_id)['state'], 'DONE')
+
+    def test_worker_rejects_indeterminate_stop_after_claim(self):
+        reads = []
+        def stop_loses_confirmation():
+            reads.append(1)
+            return False if len(reads) <= 2 else None
+        self.queue.stop_requested = stop_loses_confirmation
+        effects = []
+        self.queue.submit_source(self.scope, self.task_id,
+                                 lambda: effects.append('unauthorized') or {'status': 'DONE'})
+        self.queue._thread.join(timeout=3)
+        self.assertFalse(self.queue._thread.is_alive())
+        self.assertEqual(effects, [])
+        self.assertEqual(self.queue.get(self.scope, self.task_id)['state'], 'HOLD')
+
+    def test_worker_rejects_boolean_stop_epoch_before_claim(self):
+        self.queue.stop_epoch = lambda: True
+        with self.assertRaisesRegex(NativeQueueHold, 'NATIVE_STOP_EPOCH_INVALID'):
+            self.queue.submit_source(self.scope, self.task_id, lambda: {'status': 'DONE'})
+        self.assertEqual(self.queue.get(self.scope, self.task_id)['state'], 'QUEUED')
 
 if __name__ == '__main__':
     unittest.main()
