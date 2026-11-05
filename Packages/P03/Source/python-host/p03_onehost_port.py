@@ -416,8 +416,13 @@ class P03OneHostPort:
             if route in ("models.pull", "models.gguf.import", "models.cancel", "models.retry"):
                 positive_state = (type(state) is str and
                                   not _owner3_status_denied(state))
+                # A queued boolean is a queue acknowledgement, never a STOP.
+                # Preserve legacy bool-only owner ACKs, but require cancel evidence
+                # rather than letting an unrelated queue flag imply cancellation.
                 positive_flag = any(result.get(key) is True for key in (
-                    "ok", "ack", "accepted", "success", "queued"))
+                    "ok", "ack", "accepted", "success"))
+                if route != "models.cancel" and result.get("queued") is True:
+                    positive_flag = True
                 if not (positive_state or positive_flag):
                     raise P03PortHold("Owner3 backend returned no affirmative job acknowledgement")
                 # Boolean ACK cannot override an explicit state for a DIFFERENT

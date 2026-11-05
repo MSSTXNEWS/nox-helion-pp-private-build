@@ -107,6 +107,22 @@ class P03RealAckBranchTest(unittest.TestCase):
         self.assertEqual(self.respond(value), value)
         self.assertFalse(self.respond(value)['result']['cancelled'])
 
+    def test_queued_only_receipt_is_not_active_stop(self):
+        # Existing backend contract: queue placement != cancellation evidence.
+        queued_only = {'jobId': 'requested', 'queued': True}
+        with self.assertRaises(P03PortHold):
+            self.respond(queued_only, route='models.cancel', job_id='requested')
+        # The identical queue receipt remains valid for a requested retry.
+        self.assertEqual(
+            self.respond(queued_only, route='models.retry', job_id='requested'),
+            queued_only)
+        # Legacy status-bound cancellation remains valid for the exact job.
+        stop_requested = {'jobId': 'requested', 'status': 'CANCEL_REQUESTED',
+                          'queued': True}
+        self.assertEqual(
+            self.respond(stop_requested, route='models.cancel',
+                         job_id='requested'), stop_requested)
+
     def test_cancel_retry_ack_identity_on_actual_source_branch(self):
         for route, status in (('models.cancel', 'CANCEL_REQUESTED'),
                               ('models.retry', 'QUEUED')):
