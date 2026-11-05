@@ -152,6 +152,14 @@ function verifiedOriginalPrimaryDock(){
  if(!dockStyle||dockStyle.display==='none'||dockStyle.visibility!=='visible'||
     dockStyle.pointerEvents==='none'||Number(dockStyle.opacity)===0)return false;
  const live=nav.querySelectorAll(':scope > button[data-nox-primary]');
+ // UIA "visible" is not enough: a nonempty DOM rect can be clipped,
+ // overlap its sibling or be covered by an overlay at the click target.
+ // Fail closed; do not move or restyle the approved D02 controls.
+ const viewportWidth=document.documentElement?.clientWidth;
+ const viewportHeight=document.documentElement?.clientHeight;
+ if(!Number.isFinite(viewportWidth)||!Number.isFinite(viewportHeight)||
+    viewportWidth<=0||viewportHeight<=0)return false;
+ const dockRects=[];
  return live.length===names.length&&names.every((name,i)=>{
   const button=live[i],id='nox-express-primary-'+name.toLowerCase();
   if(button!==originalPrimaryButtons[i]||button.tagName!=='BUTTON'||
@@ -163,6 +171,20 @@ function verifiedOriginalPrimaryDock(){
      !button.isConnected||button.disabled||button.hidden||button.tabIndex<0||
      button.closest('[hidden],[inert],[aria-hidden="true"]')||
      button.getClientRects().length===0)return false;
+  const rect=button.getBoundingClientRect();
+  if(!rect||![rect.left,rect.top,rect.right,rect.bottom,rect.width,rect.height]
+     .every(Number.isFinite)||rect.width<=0||rect.height<=0||
+     rect.left<-.5||rect.top<-.5||
+     rect.right>viewportWidth+.5||rect.bottom>viewportHeight+.5)return false;
+  // Sub-pixel tolerance avoids a false HOLD from WebView2 fractional zoom.
+  if(dockRects.some(other=>
+      Math.min(rect.right,other.right)-Math.max(rect.left,other.left)>.5&&
+      Math.min(rect.bottom,other.bottom)-Math.max(rect.top,other.top)>.5))
+    return false;
+  const hit=document.elementFromPoint(
+      (rect.left+rect.right)/2,(rect.top+rect.bottom)/2);
+  if(!hit||(hit!==button&&!button.contains(hit)))return false;
+  dockRects.push(rect);
   const style=window.getComputedStyle(button);
   return !!style&&style.display!=='none'&&style.visibility==='visible'&&
      style.pointerEvents!=='none'&&Number(style.opacity)!==0;
