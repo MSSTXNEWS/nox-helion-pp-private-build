@@ -85,5 +85,11 @@ test('EXPRESS HOME actually draws exactly eight graphical directions, keeps lega
  assert.match(html,/НАПРАВЛЕНИЯ HELION/);
  assert.doesNotMatch(html,/>10 миров/);
  assert.doesNotMatch(js,/P\.title\.textContent='10 МИРОВ HELION'/);
- assert.match(js,/const routes=\{CHAT:'chat',INSTALL:'system',MODELS:'model-library',LEARN:'gpu-training',SETTINGS:'settings'\}/);
+ // The approved primary navigates to the ORIGINAL evolution screen. Its
+ // authenticated native read (not implicit training.start) is gpu.preflight.
+ assert.match(js,/const routes=\{CHAT:'chat',INSTALL:'system',MODELS:'model-library',LEARN:'evolution',SETTINGS:'settings'\}/);
+ assert.match(js,/'evolution':\['gpu\.preflight',\{\}\]/);
+ assert.match(js,/'gpu-training':\['gpu\.preflight',\{\}\]/);
+ assert.match(js,/'study-queue':\['chat\.commands',\{action:'selfbuilder\.study\.queue'\}\]/);
+ assert.doesNotMatch(js,/'(?:evolution|gpu-training|study-queue)':\['training\.start'/);
 });
