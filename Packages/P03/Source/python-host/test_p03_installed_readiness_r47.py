@@ -37,6 +37,20 @@ class InstalledReadinessR47(unittest.TestCase):
         with self.assertRaises(P03PortHold):
             p.installed(self.session(), {})
 
+    def test_case_alias_duplicate_not_advertised(self):
+        p = self.port(["Qwen3:4B", "qwen3:4b"])
+        self.assertFalse(p._local_ready())
+        with self.assertRaises(P03PortHold):
+            p.installed(self.session(), {})
+
+    def test_single_uppercase_tag_is_presence_only(self):
+        p = self.port(["Qwen3:4B"])
+        self.assertTrue(p._local_ready())
+        result = p.installed(self.session(), {})
+        self.assertEqual(result["models"][0]["tag"], "Qwen3:4B")
+        self.assertIs(result["models"][0]["installed"], False)
+        self.assertIs(result["digestVerified"], False)
+
     def test_oversized_tags_response_not_advertised(self):
         p = self.port(["m" + str(i) for i in range(4097)])
         self.assertFalse(p._local_ready())

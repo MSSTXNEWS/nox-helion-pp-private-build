@@ -50,6 +50,22 @@ class P03StrictOllamaDigestR16Tests(unittest.TestCase):
     def test_r16_06_malformed_sha_still_holds(self):
         with self.assertRaises(P03PortHold):
             self.read(b'{"models":[{"name":"qwen3:4b","digest":"sha256:bad"}]}')
+    def test_r16_08_uppercase_alias_reports_unverified_digest(self):
+        payload = json.dumps({"models": [{"name": "Qwen3:4B", "digest": self.pin}]}).encode()
+        result = self.read(payload)
+        self.assertEqual(result["modelTag"], self.tag)
+        self.assertEqual(result["ollamaReportedManifestDigest"], self.pin)
+        self.assertFalse(result["independentlyVerified"])
+        self.assertFalse(result["licenseVerified"])
+
+    def test_r16_09_case_variant_duplicate_holds(self):
+        payload = json.dumps({"models": [
+            {"name": self.tag, "digest": self.pin},
+            {"name": "Qwen3:4B", "digest": "sha256:" + "b" * 64},
+        ]}).encode()
+        with self.assertRaises(P03PortHold):
+            self.read(payload)
+
     def test_r16_07_no_route_scope_no_metadata_read(self):
         with self.assertRaises(P03PortDenied):
             self.read(b'{"models":[]}', allowed=frozenset())

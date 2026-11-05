@@ -189,8 +189,11 @@ class P03OneHostPort:
             raise P03PortHold("Existing local Ollama unavailable") from exc
         if (not isinstance(tags, list) or len(tags) > 4096
                 or any(not isinstance(t, str) or not TAG.fullmatch(t) for t in tags)
-                or len(tags) != len(set(tags))):
+                or len(tags) != len({t.casefold() for t in tags})):
             raise P03PortHold("Installed model evidence invalid")
+        # Installed Ollama tags are mutable case-insensitive identities in the
+        # original Model Center queue. A case-variant duplicate is ambiguous;
+        # never advertise it as one owner-approved installed model.
         # /api/tags is an Ollama presence report, NOT a physical SHA-256
         # verification of the weight bytes or an approved license receipt.
         # Keep source-visible tags, but never elevate them to INSTALLED proof.
@@ -250,7 +253,9 @@ class P03OneHostPort:
             name = item["name"]
             if not TAG.fullmatch(name):
                 raise P03PortHold("Malformed local model tag")
-            if name == tag:
+            # Match the original native queue's case-insensitive tag identity.
+            # A single alias can be reported as present; duplicates fail HOLD.
+            if name.casefold() == tag.casefold():
                 matching.append(item)
         if len(matching) != 1:
             raise P03PortHold("Model absent or ambiguous in /api/tags")
@@ -462,7 +467,7 @@ class P03OneHostPort:
             tags = self.ollama.models()
             return (isinstance(tags, list) and len(tags) <= 4096
                     and all(isinstance(t, str) and TAG.fullmatch(t) for t in tags)
-                    and len(tags) == len(set(tags)))
+                    and len(tags) == len({t.casefold() for t in tags}))
         except Exception:
             return False
 
