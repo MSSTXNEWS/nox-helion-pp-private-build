@@ -311,7 +311,7 @@ class IndependentE07(unittest.TestCase):
             real_fstat=MOD.os.fstat
             def biased_fd_stat(fd):
                 original=real_fstat(fd)
-                keys=('st_mode','st_dev','st_ino','st_size','st_mtime_ns','st_ctime_ns')
+                keys=('st_mode','st_dev','st_ino','st_size','st_mtime_ns','st_ctime_ns','st_nlink')
                 values={key:getattr(original,key) for key in keys}
                 values['st_ctime_ns'] += 100000000
                 return SimpleNamespace(**values)
