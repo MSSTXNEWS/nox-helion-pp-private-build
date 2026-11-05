@@ -14,6 +14,7 @@ import re
 import subprocess
 import sys
 import time
+import tempfile
 import zlib
 
 import independent_setup_e07 as e07
@@ -54,11 +55,21 @@ def _bounded_uia_failure(stdout: object, phase: str) -> str:
 def _run_ps(source: str, *, timeout: int=90, phase: str="UNKNOWN", env: dict|None=None) -> dict:
     e07.require(phase in (*PRIMARY, "VISUAL", "MODEL_WINDOW", "INSTALL_CONTROL", "FX", "UNKNOWN"),
                 "E07_FINAL_UIA_PHASE_HOLD")
-    encoded=base64.b64encode(source.encode("utf-16le")).decode("ascii")
+    # The real native UIA script exceeds Windows' 32767-character command-line
+    # limit after UTF-16/Base64 -EncodedCommand expansion. Use one private,
+    # newly-created file on the ephemeral runner instead; no extra authority.
     try:
-        p=subprocess.run(["powershell.exe","-NoProfile","-NonInteractive","-EncodedCommand",encoded],
-                         capture_output=True,timeout=timeout,check=False,
-                         encoding="utf-8",errors="replace",env=env)
+        with tempfile.TemporaryDirectory(prefix="nox-e07-uia-",
+                                         dir=os.environ["RUNNER_TEMP"]) as temp_root:
+            script_path=Path(temp_root)/"independent-uia.ps1"
+            # Windows PowerShell 5.1 requires the BOM for UTF-8 Cyrillic UIA.
+            with script_path.open("x",encoding="utf-8-sig",newline="\\n") as stream:
+                stream.write(source)
+            p=subprocess.run(
+                ["powershell.exe","-NoProfile","-NonInteractive",
+                 "-ExecutionPolicy","Bypass","-File",str(script_path)],
+                capture_output=True,timeout=timeout,check=False,
+                encoding="utf-8",errors="replace",env=env)
     except (OSError,subprocess.TimeoutExpired):
         raise e07.Hold("E07_FINAL_UIA_PROCESS_HOLD") from None
     # Keep bounded, non-sensitive diagnostic codes so one physical Windows
