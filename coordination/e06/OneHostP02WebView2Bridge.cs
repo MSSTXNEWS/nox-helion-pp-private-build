@@ -420,7 +420,12 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
         if (candidate is not JsonElement result) return false;
         // A transport ACK cannot hide a denied nested receipt in an array.
         // Preserve normal arrays while bounding provenance parsing fail-closed.
-        if (depth >= 4) return result.ValueKind is JsonValueKind.Array or JsonValueKind.Object;
+        if (depth >= 4)
+            return result.ValueKind switch {
+                JsonValueKind.True => false,
+                JsonValueKind.String => NativeOwnerStatusDenied(result.GetString()),
+                _ => true // At recursion limit malformed owner proof cannot authorize.
+            };
         if (result.ValueKind == JsonValueKind.Array)
         {
             if (result.GetArrayLength() > 128) return true;

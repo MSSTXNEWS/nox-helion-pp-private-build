@@ -16,7 +16,7 @@ def _require_plain_stage_parents(path: Path):
         if not stat.S_ISDIR(info.st_mode):
             raise ValueError("T06_NATIVE_STAGE_NON_DIRECTORY_PARENT_HOLD")
 MAIN_SHA="6fc49544f77ec6ce2e7b2e8f3ab86c9a2a64c25d0eb3eb29547c5677851ef210"
-ADDON_SHA="b5c658bca14fd00bcca7cfed624911270dd9afd7"
+ADDON_SHA="84a63f566dd2cc9afeb9eb1fcab5f0e4227dfaa6"
 def blob(b):
     return hashlib.sha1(b"blob "+str(len(b)).encode()+b"\0"+b).hexdigest()
 def run(source,addon,backend_sha256=None):

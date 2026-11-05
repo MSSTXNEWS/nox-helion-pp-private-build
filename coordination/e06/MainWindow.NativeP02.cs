@@ -490,7 +490,12 @@ public partial class MainWindow
         if (receipt is not JsonElement value) return false;
         // Nested owner evidence may be an array. A denial in any child still
         // revokes the original owner ACK; a malformed/oversized nesting HOLDS.
-        if (depth>=4) return value.ValueKind is JsonValueKind.Array or JsonValueKind.Object;
+        if (depth>=4)
+            return value.ValueKind switch {
+                JsonValueKind.True => false,
+                JsonValueKind.String => LegacyOwnerStatusDenied(value.GetString()),
+                _ => true // At recursion limit malformed owner proof cannot authorize.
+            };
         if (value.ValueKind==JsonValueKind.Array) {
             if (value.GetArrayLength()>128) return true;
             foreach(var child in value.EnumerateArray())

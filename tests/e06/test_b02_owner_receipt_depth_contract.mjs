@@ -8,7 +8,9 @@ const builder = readFileSync(new URL("coordination/e06/build_onehost_installer.p
 const compiler = readFileSync(new URL("coordination/e06/t06_compile_original_wpf_p02.py",root),"utf8");
 const sha = createHash("sha1").update("blob "+Buffer.byteLength(src)+"\0").update(src).digest("hex");
 assert.match(src, /NativeResultExplicitlyDenied\(JsonElement\? candidate, int depth = 0\)/);
-assert.match(src, /if \(depth >= 4\) return result.ValueKind is JsonValueKind.Array or JsonValueKind.Object;/);
+// A scalar denial at the recursion limit must still deny, not fall through.
+assert.match(src,/if \(depth >= 4\)\s*return result\.ValueKind switch \{[\s\S]*?JsonValueKind\.True => false,[\s\S]*?JsonValueKind\.String => NativeOwnerStatusDenied\(result\.GetString\(\)\),[\s\S]*?_ => true[^\n]*\n\s*\};/);
+assert.equal(src.includes("if (depth >= 4) return result.ValueKind is JsonValueKind.Array or JsonValueKind.Object;"),false);
 assert.match(src, /if \(result.GetArrayLength\(\) > 128\) return true;/);
 assert.match(src, /NativeResultExplicitlyDenied\(child, depth \+ 1\)/);
 assert.match(src, /NativeResultExplicitlyDenied\(field.Value, depth \+ 1\)/);
@@ -18,7 +20,8 @@ assert.ok(compiler.includes('"coordination/e06/OneHostP02WebView2Bridge.cs":"'+s
 
 const main = readFileSync(new URL("coordination/e06/MainWindow.NativeP02.cs",root),"utf8");
 const mainSha = createHash("sha1").update("blob "+Buffer.byteLength(main)+"\0").update(main).digest("hex");
-assert.match(main,/if \(depth>=4\) return value.ValueKind is JsonValueKind.Array or JsonValueKind.Object;/);
+assert.match(main,/if \(depth>=4\)\s*return value\.ValueKind switch \{[\s\S]*?JsonValueKind\.True => false,[\s\S]*?JsonValueKind\.String => LegacyOwnerStatusDenied\(value\.GetString\(\)\),[\s\S]*?_ => true[^\n]*\n\s*\};/);
+assert.equal(main.includes("if (depth>=4) return value.ValueKind is JsonValueKind.Array or JsonValueKind.Object;"),false);
 assert.match(main,/if \(value.GetArrayLength\(\)>128\) return true;/);
 assert.match(main,/LegacyOwnerDenial\(child,depth\+1\)/);
 assert.ok(builder.includes("sha='"+mainSha+"'"),"NSIS original MainWindow must pin current source Git blob");
