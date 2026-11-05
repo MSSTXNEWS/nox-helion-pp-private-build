@@ -228,6 +228,19 @@ function visibleOriginalOwnerTarget(button){
  if(!style||style.display==='none'||style.visibility!=='visible'||
     style.pointerEvents==='none'||!Number.isFinite(Number(style.opacity))||
     Number(style.opacity)<=0)return false;
+ // Opacity and pointer-events are not inherited in computed styles.
+ // A CSS-hidden parent still leaves the original child hit-testable, and
+ // programmatic .click() would invoke its privileged owner handler.
+ // Require every ancestor to be visibly interactive before INSTALL/LEARN.
+ let ancestryDepth=0;
+ for(let ancestor=button.parentElement;ancestor;ancestor=ancestor.parentElement){
+   if(++ancestryDepth>64)return false;
+   const inherited=window.getComputedStyle(ancestor);
+   if(!inherited||inherited.display==='none'||
+      inherited.visibility!=='visible'||inherited.pointerEvents==='none'||
+      !Number.isFinite(Number(inherited.opacity))||
+      Number(inherited.opacity)<=0)return false;
+ }
  const hit=document.elementFromPoint((rect.left+rect.right)/2,(rect.top+rect.bottom)/2);
  return !!hit&&(hit===button||button.contains(hit));
 }
