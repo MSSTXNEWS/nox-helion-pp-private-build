@@ -1135,7 +1135,18 @@ $c11MarkerGuard=@'
   FileRead $2 $4
   IfErrors C11MarkerReadbackReject
   StrCpy $4 $4 17
-  StrCmp $4 "NOXHELION.P01 V16" C11MarkerReadbackAccept C11MarkerReadbackReject
+  StrCmp $4 "NOXHELION.P01 V16" 0 C11MarkerReadbackReject
+  ClearErrors
+  FileSeek $2 17 SET
+  IfErrors C11MarkerReadbackReject
+  ClearErrors
+  FileReadByte $2 $4
+  IfErrors C11MarkerReadbackReject
+  IntCmp $4 13 0 C11MarkerReadbackReject C11MarkerReadbackReject
+  ClearErrors
+  FileReadByte $2 $4
+  IfErrors C11MarkerReadbackReject
+  IntCmp $4 10 C11MarkerReadbackAccept C11MarkerReadbackReject C11MarkerReadbackReject
   C11MarkerReadbackReject:
     FileClose $2
     Abort "Ownership marker content mismatch; activation refused."
