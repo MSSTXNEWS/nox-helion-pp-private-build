@@ -49,11 +49,24 @@ class NoXAutostartUninstallSource(unittest.TestCase):
         self.assertNotIn("var old = key.GetValue(Entry) as string;", code)
         self.assertIn('NOX_AUTOSTART_FOREIGN_ENTRY_HOLD', code)
         self.assertEqual(code.count("key.GetValueKind(Entry) == RegistryValueKind.String"), 2)
-        self.assertIn("var persisted = IsEnabled(executable);", code)
+        self.assertIn("var persisted = ReadOwnedState(executable);", code)
         self.assertIn("if (persisted != enabled) throw new IOException", code)
         self.assertIn("NOX_AUTOSTART_PERSISTENCE_UNVERIFIED", code)
         self.assertIn("if (!nativeConsent) throw", code)
         self.assertIn("key.DeleteValue(Entry, throwOnMissingValue:false);", code)
+
+    def test_disable_missing_entry_is_non_mutating_and_same_state_is_idempotent(self):
+        code = SOURCE.read_text(encoding="utf-8")
+        method = code[code.index("internal static bool SetEnabled"):code.index("internal static void RemoveOnUninstall")]
+        self.assertLess(method.index("if (!nativeConsent)"), method.index("using var key = enabled"))
+        self.assertIn("? Registry.CurrentUser.CreateSubKey(RunKey, writable:true)", method)
+        self.assertIn(": Registry.CurrentUser.OpenSubKey(RunKey, writable:true)", method)
+        self.assertIn("if (!enabled && !ReadOwnedState(executable)) return false;", method)
+        self.assertLess(method.index("if (key is null)"), method.index("key.GetValueNames()"))
+        self.assertLess(method.index("NOX_AUTOSTART_FOREIGN_ENTRY_HOLD"), method.index("if (hasEntry == enabled)"))
+        self.assertLess(method.index("if (hasEntry == enabled)"), method.index("key.SetValue("))
+        self.assertIn("var unchanged = ReadOwnedState(executable);", method)
+        self.assertIn("NOX_AUTOSTART_PERSISTENCE_UNVERIFIED", method)
 
 if __name__ == "__main__":
     unittest.main()

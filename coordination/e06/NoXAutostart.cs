@@ -59,8 +59,16 @@ internal static class NoXAutostart
     {
         if (!nativeConsent) throw new UnauthorizedAccessException("NOX_AUTOSTART_OWNER_CONSENT_REQUIRED");
         var expected = Quoted(CheckedExecutable(executable));
-        using var key = Registry.CurrentUser.CreateSubKey(RunKey, writable:true)
-            ?? throw new IOException("NOX_AUTOSTART_HKCU_UNAVAILABLE");
+        // Disabling a missing Run entry must not create HKCU keys as a side effect.
+        // The owner still validates consent, the original executable and path.
+        using var key = enabled
+            ? Registry.CurrentUser.CreateSubKey(RunKey, writable:true)
+            : Registry.CurrentUser.OpenSubKey(RunKey, writable:true);
+        if (key is null) {
+            // Prove absence using the existing owner-only reader, not a guessed OFF.
+            if (!enabled && !ReadOwnedState(executable)) return false;
+            throw new IOException("NOX_AUTOSTART_HKCU_UNAVAILABLE");
+        }
         // A foreign Run entry can be REG_DWORD/REG_BINARY/REG_NONE (or an
         // expandable string). "as string" silently treated it as absent and
         // overwrote unrelated HKCU owner data. Preserve every foreign kind.
@@ -70,6 +78,13 @@ internal static class NoXAutostart
             key.GetValue(Entry) is not string old ||
             !string.Equals(old, expected, StringComparison.OrdinalIgnoreCase)))
             throw new UnauthorizedAccessException("NOX_AUTOSTART_FOREIGN_ENTRY_HOLD");
+        // Idempotent ON/OFF must never rewrite or delete an unchanged owned value.
+        // Readback still proves persistence; a foreign value was rejected above.
+        if (hasEntry == enabled) {
+            var unchanged = ReadOwnedState(executable);
+            if (unchanged != enabled) throw new IOException("NOX_AUTOSTART_PERSISTENCE_UNVERIFIED");
+            return unchanged;
+        }
         if (enabled) key.SetValue(Entry, expected, RegistryValueKind.String);
         else key.DeleteValue(Entry, throwOnMissingValue:false);
         // A transport success is not evidence that HKCU persisted the value.
