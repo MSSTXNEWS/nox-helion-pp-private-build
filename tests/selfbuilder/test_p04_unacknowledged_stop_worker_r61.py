@@ -58,8 +58,9 @@ class P04UnacknowledgedStopTests(unittest.TestCase):
         class Denied(FakeProcess):
             def terminate(self):
                 raise PermissionError('OS_DENIED')
-        with self.assertRaises(PermissionError):
-            ExistingP04Background._terminate_unacknowledged_worker(Denied())
+        p = Denied()
+        ExistingP04Background._terminate_unacknowledged_worker(p)
+        self.assertEqual((p.killed, p.poll()), (1, -9))
 
     def test_owner_stop_marker_failure_shuts_down_native_child(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -91,6 +92,47 @@ class P04UnacknowledgedStopTests(unittest.TestCase):
             self.assertIs(result['weights_updated'], False)
             self.assertEqual(p.term, 1)
             self.assertIsNotNone(p.poll())
+
+
+    def test_denied_kill_fail_closed_without_fake_stop(self):
+        from src.nox_selfbuilder.background_forge import ForgeHold
+
+        class Unreapable(FakeProcess):
+            def terminate(self):
+                raise PermissionError('OS_DENIED_TERMINATE')
+            def kill(self):
+                raise PermissionError('OS_DENIED_KILL')
+
+        with self.assertRaisesRegex(ForgeHold, "TRAINER_UNACKNOWLEDGED_STOP_TERMINATION_HOLD"):
+            ExistingP04Background._terminate_unacknowledged_worker(Unreapable())
+
+    def test_unreaped_child_quarantines_original_gate_and_keeps_stop_route(self):
+        from src.nox_selfbuilder.background_forge import ForgeJob, ForgeHold
+
+        class Unreapable(FakeProcess):
+            def terminate(self):
+                raise PermissionError('DENIED_TERMINATE')
+            def kill(self):
+                raise PermissionError('DENIED_KILL')
+
+        runner = object.__new__(ExistingP04Background)
+        runner._gate, runner._control_lock = threading.Lock(), threading.Lock()
+        runner._unreaped_worker = None
+        runner._active = (Path('stop.marker'), Path('pause.marker'), 'r', 't')
+        runner._requested = None
+        runner.due = lambda **kw: True
+        proc = Unreapable()
+        runner._run = lambda *args: runner._terminate_or_quarantine(proc)
+        job = ForgeJob('r', 't', Path('.'), Path('.'), 'a'*40, Path('.'),
+                       Path('.'), Path('.'), Path('.'), Path('.'))
+        with self.assertRaisesRegex(ForgeHold, "TRAINER_CHILD_UNREAPED_QUARANTINE_HOLD"):
+            runner.run_one(job, last_run_utc=None)
+        self.assertIs(runner._unreaped_worker, proc)
+        self.assertEqual(runner._active[2:], ('r', 't'))
+        self.assertTrue(runner._gate.locked())
+        blocked = runner.run_one(job, last_run_utc=None)
+        self.assertEqual(blocked['status'], 'HOLD')
+        self.assertEqual(blocked['reason'], 'TRAINER_ALREADY_ACTIVE')
 
 
 if __name__ == '__main__':

@@ -73,6 +73,7 @@ class ExistingP04Background:
         self._gate = threading.Lock()
         self._control_lock = threading.Lock()
         self._active = None
+        self._unreaped_worker = None  # hold original P04 gate if OS refuses to reap GPU child
         self._requested = None
         self._relayed = set()
         self._merge_active = False
@@ -201,28 +202,43 @@ class ExistingP04Background:
     def request_pause(self, job=None):
         return self._request("PAUSE", job=job)
 
+
     @staticmethod
     def _terminate_unacknowledged_worker(proc):
-        """Stop the existing child if its owner STOP marker could not be written.
-
-        This is an emergency process shutdown, not a native STOP ACK and never
-        a training success or evidence that weights may be activated.
-        """
+        """Bounded shutdown of the original GPU child; never a STOP ACK."""
         if proc.poll() is not None:
             return
         try:
             proc.terminate()
-        except ProcessLookupError:
-            if proc.poll() is None:
-                raise ForgeHold("TRAINER_UNACKNOWLEDGED_STOP_TERMINATION_HOLD")
-            return
+        except OSError:
+            # Windows can refuse graceful termination while still allowing kill.
+            if proc.poll() is not None:
+                return
+            try:
+                proc.kill()
+            except OSError as exc:
+                raise ForgeHold("TRAINER_UNACKNOWLEDGED_STOP_TERMINATION_HOLD") from exc
         try:
             proc.wait(timeout=15)
         except subprocess.TimeoutExpired:
-            proc.kill()
-            proc.wait(timeout=15)
+            try:
+                proc.kill()
+                proc.wait(timeout=15)
+            except (OSError, subprocess.TimeoutExpired) as exc:
+                raise ForgeHold("TRAINER_UNACKNOWLEDGED_STOP_TERMINATION_HOLD") from exc
+        except OSError as exc:
+            raise ForgeHold("TRAINER_UNACKNOWLEDGED_STOP_TERMINATION_HOLD") from exc
         if proc.poll() is None:
             raise ForgeHold("TRAINER_UNACKNOWLEDGED_STOP_TERMINATION_HOLD")
+
+    def _terminate_or_quarantine(self, proc):
+        """Never release the P04 gate while a GPU child may still be alive."""
+        try:
+            self._terminate_unacknowledged_worker(proc)
+        except Exception as exc:
+            with self._control_lock:
+                self._unreaped_worker = proc
+            raise ForgeHold("TRAINER_CHILD_UNREAPED_QUARANTINE_HOLD") from exc
 
     def _request(self, operation, *, job=None):
         with self._control_lock:
@@ -322,9 +338,14 @@ class ExistingP04Background:
         try:
             return self._run(job, monitor_seconds, max_seconds, resume, require_idle)
         finally:
+            # Preserve native STOP reachability and block a second GPU worker
+            # after failed OS termination. No false ACK or automatic recovery.
             with self._control_lock:
-                self._active = None
-            self._gate.release()
+                quarantined = self._unreaped_worker is not None
+                if not quarantined:
+                    self._active = None
+            if not quarantined:
+                self._gate.release()
 
     def _run(self, job, monitor_seconds, max_seconds, resume, require_idle):
         if not self._owner_training_grant(require_idle=require_idle):
@@ -365,18 +386,13 @@ class ExistingP04Background:
                     except Exception:
                         # A failed marker is not an acknowledged STOP.
                         # Do not orphan the original GPU trainer on revocation.
-                        self._terminate_unacknowledged_worker(proc)
+                        self._terminate_or_quarantine(proc)
                         forced = True
                         break
                 if self._requested is not None:
                     requested_at = requested_at or time.monotonic()
                     if time.monotonic() - requested_at > 120:
-                        proc.terminate()
-                        try:
-                            proc.wait(timeout=15)
-                        except subprocess.TimeoutExpired:
-                            proc.kill()
-                            proc.wait()
+                        self._terminate_or_quarantine(proc)
                         forced = True
                         break
                 time.sleep(monitor_seconds)
