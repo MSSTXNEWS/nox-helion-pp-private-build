@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createNativeMenuClient,mountOneHostMenu,canonicalChatContext,nativeAutostartPersistenceAck} from '../../ui/onehost-menu-bindings.mjs';
+import {createNativeMenuClient,mountOneHostMenu,canonicalChatContext,nativeAutostartPersistenceAck,createAutostartOwnerFlow} from '../../ui/onehost-menu-bindings.mjs';
 import {SELFBUILDER_MENU,MENU_V2_SECTIONS} from '../../ui/selfbuilder-menu-v2.mjs';
 function fixture(){let listener;const sent=[];let next=1;const webview={postMessage:x=>sent.push(x),addEventListener:(n,f)=>listener=f,removeEventListener:()=>{listener=null;}};const client=createNativeMenuClient({webview,cryptoRef:{getRandomValues:b=>{b.fill(next++);return b;}},timeoutMs:10});return {client,sent,webview,reply:x=>listener?.({data:x,source:webview,isTrusted:true}),emit:(x,source,trusted=false)=>listener?.({data:x,source,isTrusted:trusted})};}
 test('native result must correlate route and nonce; stream only that request',async()=>{
@@ -146,4 +146,28 @@ test('D06 original SETTINGS owner requires explicit native write/read provenance
  assert.equal(nativeAutostartPersistenceAck(envelope({enabled:true,readOnly:false},{errorCode:'SID_MISMATCH'}),true),false);
  assert.equal(nativeAutostartPersistenceAck(envelope({enabled:true,readOnly:false,ownerResult:{status:'CONSENT_REQUIRED'}}),true),false);
  assert.equal(nativeAutostartPersistenceAck({...envelope({enabled:true,readOnly:false}),routeId:'chat.history'},true),false);
+});
+
+test('D06 SETTINGS owner read/write is single-flight across buttons and releases after errors',async()=>{
+  let onDone,onFail,calls=[];
+  const flow=createAutostartOwnerFlow((route,payload)=>{
+    calls.push({route,payload});
+    return new Promise((resolve,reject)=>{onDone=resolve;onFail=reject;});
+  });
+  const on=flow.request({enabled:true});
+  await assert.rejects(flow.request({enabled:false}),/NOX_AUTOSTART_OWNER_IN_FLIGHT/);
+  await assert.rejects(flow.request({}),/NOX_AUTOSTART_OWNER_IN_FLIGHT/);
+  assert.deepEqual(calls,[{route:'system.autostart',payload:{enabled:true}}]);
+  onDone({state:'COMPLETED',result:{enabled:true,readOnly:false}});
+  assert.equal((await on).result.enabled,true);
+  const off=flow.request({enabled:false});
+  assert.equal(calls.length,2);
+  onFail(Error('NOX_AUTOSTART_OWNER_CONSENT_REQUIRED'));
+  await assert.rejects(off,/NOX_AUTOSTART_OWNER_CONSENT_REQUIRED/);
+  const read=flow.request({});
+  assert.equal(calls.length,3);
+  onDone({state:'COMPLETED',result:{enabled:false,readOnly:true}});
+  assert.equal((await read).result.readOnly,true);
+  assert.ok(Object.isFrozen(flow));
+  assert.throws(()=>createAutostartOwnerFlow(null),/NATIVE_OWNER_REQUIRED/);
 });

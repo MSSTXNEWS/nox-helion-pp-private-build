@@ -197,6 +197,21 @@ export function nativeAutostartPersistenceAck(reply,requested){
     reply.result.enabled===requested;
 }
 
+/** SETTINGS owner requests are single-flight: a second ON/OFF/read cannot race
+ * an unconfirmed native HKCU write and misreport persisted state.
+ * WPF still owns all SID/ACL/consent and Windows Registry decisions. */
+export function createAutostartOwnerFlow(nativeRequest){
+  if(typeof nativeRequest!=='function')throw Error('NOX_AUTOSTART_NATIVE_OWNER_REQUIRED');
+  let inFlight=false;
+  return Object.freeze({
+    async request(payload){
+      if(inFlight)throw Error('NOX_AUTOSTART_OWNER_IN_FLIGHT');
+      inFlight=true;
+      try{return await nativeRequest('system.autostart',payload);}
+      finally{inFlight=false;}
+    }
+  });
+}
 
 const OWNER_S03_READ_ACTIONS=new Set([
   'selfbuilder.capabilities','selfbuilder.worker.status','selfbuilder.study.queue',
@@ -325,6 +340,7 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
   const native=view.chrome?.webview;
   if(!native)return null;
   const client=createNativeMenuClient({webview:native,cryptoRef:view.crypto});
+  const autostartFlow=createAutostartOwnerFlow((route,payload)=>client.request(route,payload));
   let states=Object.create(null),trainingJobs=[],disposed=false,menu=null;
   let selectionEpoch=0,capabilityEpoch=0,historyEpoch=0,chatBusy=false,stopRequestPending=false;
   let modelConfirmed='',modelSelectionPending=false;
@@ -712,7 +728,8 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
       :route==='chat.commands'?{action:'selfbuilder.worker.status',...context()}:{};
     const visibleSection=doc.getElementById('detail-title')?.textContent;
     try{
-      const reply=await client.request(route,payload);
+      const reply=route==='system.autostart'
+        ? await autostartFlow.request(payload) : await client.request(route,payload);
       if(!disposed&&button.isConnected&&doc.getElementById('detail-title')?.textContent===visibleSection)
         display(reply,route,route==='system.autostart'?payload.enabled:null);
     }catch(error){
