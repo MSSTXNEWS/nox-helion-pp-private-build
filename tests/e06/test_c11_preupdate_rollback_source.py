@@ -81,5 +81,27 @@ class C11RollbackSafetyTest(unittest.TestCase):
 
 
 
+
+    def test_failed_rename_recovery_requires_real_owner_and_slot_readback(self):
+        """B03: no false NSIS rollback/activation recovery claim after Rename fails."""
+        builder = BUILDER.read_text(encoding="utf-8")
+        donor = ORIGINAL.read_text(encoding="utf-8")
+        for route in ("Activation", "Rollback"):
+            p = r"\$c11" + route + r"Recovery(Old|New)=@'\n(?P<body>.*?)\n'@"
+            found = {m.group(1): m.group("body")
+                     for m in re.finditer(p, builder, re.DOTALL)}
+            self.assertEqual(set(found), {"Old", "New"})
+            old, new = found["Old"], found["New"]
+            self.assertEqual(donor.count(old), 1)
+            self.assertNotIn(new, donor)
+            self.assertEqual(donor.replace(old, new, 1).replace(new, old, 1), donor)
+            self.assertIn("ClearErrors", new)
+            self.assertIn("IfErrors C11" + route + "RestoreFailed", new)
+            self.assertIn('IfFileExists "$INSTDIR\\nox-p01-owned.txt"', new)
+            self.assertNotIn("RMDir ", new)
+            self.assertNotIn("Delete ", new)
+        self.assertLess(builder.index("C11_NSIS_ACTIVATION_ROLLBACK_RECOVERY_GATES_STAGED"),
+                        builder.index("& $makensisPath"))
+
 if __name__ == "__main__":
     unittest.main()

@@ -1218,6 +1218,79 @@ if ($uninstGateAt -lt 0 -or $uninstRegistryAt -le $uninstGateAt -or
   throw 'P01_NSIS_UNINSTALLER_ORDER_STAGE_HOLD'
 }
 Write-Host 'P01_NSIS_UNINSTALLER_BEFORE_REGISTRY_STAGE_PASS'
+
+# B03 original NSIS fail-closed recovery: verify emergency Rename and actual
+# installer-owned target, not merely an attempted recovery. Only disposable R11.
+$c11ActivationRecoveryOld=@'
+  ActivateNew:
+  Rename "$StageDir" "$INSTDIR"
+  IfErrors 0 +4
+    IfFileExists "$BackupDir\nox-p01-owned.txt" 0 +2
+      Rename "$BackupDir" "$INSTDIR"
+    Abort "Activation failed; previous version restored if present."
+'@
+$c11ActivationRecoveryNew=@'
+  ActivateNew:
+  ClearErrors
+  Rename "$StageDir" "$INSTDIR"
+  IfErrors 0 C11ActivationOkay
+    IfFileExists "$BackupDir\nox-p01-owned.txt" 0 C11ActivationNoBackup
+    ClearErrors
+    Rename "$BackupDir" "$INSTDIR"
+    IfErrors C11ActivationRestoreFailed C11ActivationRestoreCheck
+  C11ActivationRestoreCheck:
+    IfFileExists "$INSTDIR\nox-p01-owned.txt" 0 C11ActivationRestoreFailed
+    IfFileExists "$BackupDir" C11ActivationRestoreFailed C11ActivationRestored
+  C11ActivationRestored:
+    Abort "Activation failed; previous installer-owned version restored."
+  C11ActivationRestoreFailed:
+    Abort "Activation and recovery failed; previous version kept for manual recovery."
+  C11ActivationNoBackup:
+    Abort "Activation failed; staged payload kept for manual recovery."
+  C11ActivationOkay:
+'@
+$c11RollbackRecoveryOld=@'
+  Rename "$BackupDir" "$INSTDIR"
+  IfErrors 0 +3
+    Rename "$TmpDir" "$INSTDIR"
+    Abort "Rollback activation failed; attempted restoration."
+'@
+$c11RollbackRecoveryNew=@'
+  ClearErrors
+  Rename "$BackupDir" "$INSTDIR"
+  IfErrors 0 C11RollbackActivated
+    ClearErrors
+    Rename "$TmpDir" "$INSTDIR"
+    IfErrors C11RollbackRestoreFailed C11RollbackRestoreCheck
+  C11RollbackRestoreCheck:
+    IfFileExists "$INSTDIR\nox-p01-owned.txt" 0 C11RollbackRestoreFailed
+    IfFileExists "$TmpDir" C11RollbackRestoreFailed C11RollbackRestored
+  C11RollbackRestored:
+    Abort "Rollback failed; current installer-owned version restored."
+  C11RollbackRestoreFailed:
+    Abort "Rollback and recovery failed; saved version retained for manual recovery."
+  C11RollbackActivated:
+'@
+foreach ($recovery in @(
+  @{Name='ACTIVATION';Old=$c11ActivationRecoveryOld;New=$c11ActivationRecoveryNew},
+  @{Name='ROLLBACK';Old=$c11RollbackRecoveryOld;New=$c11RollbackRecoveryNew}
+)) {
+  $old=[regex]::Replace($recovery.Old,'\r?\n',$c11Eol)
+  $new=[regex]::Replace($recovery.New,'\r?\n',$c11Eol)
+  $i=$c11NsiPatched.IndexOf($old,[StringComparison]::Ordinal)
+  if ($i -lt 0 -or
+      $c11NsiPatched.LastIndexOf($old,[StringComparison]::Ordinal) -ne $i -or
+      $c11NsiPatched.Contains($new)) {
+    throw ('C11_NSIS_RECOVERY_'+$recovery.Name+'_PREIMAGE_HOLD')
+  }
+  $c11NsiPatched=$c11NsiPatched.Substring(0,$i)+$new+
+                  $c11NsiPatched.Substring($i+$old.Length)
+  if ($c11NsiPatched.IndexOf($new,[StringComparison]::Ordinal) -ne $i -or
+      $c11NsiPatched.LastIndexOf($new,[StringComparison]::Ordinal) -ne $i) {
+    throw ('C11_NSIS_RECOVERY_'+$recovery.Name+'_READBACK_HOLD')
+  }
+}
+Write-Host 'C11_NSIS_ACTIVATION_ROLLBACK_RECOVERY_GATES_STAGED'
 [IO.File]::WriteAllText($c11NsiPath,$c11NsiPatched,(New-Object System.Text.UTF8Encoding($false)))
 Write-Host "C11_NSIS_ROLLBACK_OLD_PAYLOAD_SHA_GATE_STAGED"
 $setup=Join-Path $out 'NOX-HELION-V16-DIAGNOSTIC-SETUP.exe'
