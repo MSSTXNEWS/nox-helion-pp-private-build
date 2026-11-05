@@ -21,9 +21,9 @@ SRC=ROOT  # EXACT canonical GitHub owner sources; never the stale imported GitLa
 WEBVIEW2_E06_REGISTRY_BLOCK_SHA256="e9d91ac3ed0bf5437ff38f07d2179a9e7a130835c4d0d1be49fa2c563f0e8bd1"
 P01_PREFLIGHT_ANCESTOR_GIT_BLOB="e683e30b4e6fc32c31652061c569d6ce77c2cb2e"
 EXPECTED={
-"coordination/e06/MainWindow.NativeP02.cs":"c7ba9f0b94988da3531d6b0fa64ecbf47c3599e4",
+"coordination/e06/MainWindow.NativeP02.cs":"e590f7e9564149251bfce03abec513f2f6227961",
 "coordination/e06/OneHostP02WebView2Bridge.cs":"5fef8c770123c3b2496ca57805c8e0ba0771eff5",
-"coordination/e06/stage_native_p02.py":"9a7d171acb51444862be8063c17daa6ef80394c7",
+"coordination/e06/stage_native_p02.py":"e1e499e7b6e3dd7c57109d27a5cb43904e53a82e",
 "Packages/P02/worker-chat/NativePythonPipe.cs":"e8e4f95106f4d40c29c68d81378c7938e6a7c0f5"
 }
 # The existing E06 owner has ONE reviewed list of the 18 additive WPF/P02/

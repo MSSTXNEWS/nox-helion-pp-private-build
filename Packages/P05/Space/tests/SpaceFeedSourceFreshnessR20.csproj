@@ -1,4 +1,0 @@
-<Project Sdk="Microsoft.NET.Sdk">
-<PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework><EnableDefaultCompileItems>false</EnableDefaultCompileItems><ImplicitUsings>enable</ImplicitUsings></PropertyGroup>
-<ItemGroup><Compile Include="../SpaceFeedClient.cs" Link="SpaceFeedClient.cs"/><Compile Include="SpaceFeedSourceFreshnessR20.cs"/></ItemGroup>
-</Project>

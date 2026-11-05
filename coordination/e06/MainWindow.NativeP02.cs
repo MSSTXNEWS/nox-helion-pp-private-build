@@ -474,7 +474,7 @@ public partial class MainWindow
         if (receipt is not JsonElement value || value.ValueKind!=JsonValueKind.Object) return false;
         if (depth>=4) return true;
         foreach(var p in value.EnumerateObject()) {
-            if (p.Name is "ok" or "ack" && p.Value.ValueKind!=JsonValueKind.True) return true;
+            // The original legacy WPF route must not promote an explicit native\n            // owner/provenance refusal to chatFinished or Model Center success.\n            if (p.Name is "ok" or "ack" or "success" or "approved" or "authorized" &&\n                p.Value.ValueKind!=JsonValueKind.True) return true;
             if (p.Name is "error" or "errorCode" or "error_code" or "errorMessage" or "error_message" &&
                 p.Value.ValueKind!=JsonValueKind.Null &&
                 (p.Value.ValueKind!=JsonValueKind.String || !string.IsNullOrWhiteSpace(p.Value.GetString()))) return true;
