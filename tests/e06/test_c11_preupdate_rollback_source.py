@@ -158,6 +158,17 @@ class C11RollbackSafetyTest(unittest.TestCase):
         self.assertIn('WriteUninstaller "$INSTDIR\\Uninstall.exe"', old)
         self.assertIn('WriteUninstaller "$StageDir\\Uninstall.exe"', staged)
         self.assertIn('IfFileExists "$StageDir\\Uninstall.exe" +2 0', staged)
+        self.assertIn('FileOpen $2 "$StageDir\\Uninstall.exe" r', staged)
+        self.assertIn('FileSeek $2 0 END $3', staged)
+        self.assertIn('IntCmp $3 1024 C11UninstallerMax C11UninstallerReject C11UninstallerMax', staged)
+        self.assertIn('IntCmp $3 104857600 C11UninstallerHeader C11UninstallerHeader C11UninstallerReject', staged)
+        self.assertIn('IntCmp $4 77 C11UninstallerSecondByte C11UninstallerReject C11UninstallerReject', staged)
+        self.assertIn('IntCmp $4 90 C11UninstallerClose C11UninstallerReject C11UninstallerReject', staged)
+        self.assertIn('C11UninstallerAccepted:', staged)
+        self.assertIn('Staged uninstaller invalid or truncated; current application was not changed.', staged)
+        self.assertLess(staged.index('FileSeek $2 0 END $3'), staged.index('C11UninstallerAccepted:'))
+        self.assertLess(staged.index('C11UninstallerAccepted:'), staged_nsi.index('  WriteRegStr HKCU ') - staged_nsi.index(staged))
+
         self.assertIn('IfErrors 0 +2', staged)
         self.assertNotIn('WriteUninstaller "$INSTDIR\\Uninstall.exe"', staged)
         anchor = '  SetOutPath "$TEMP" ; release current working directory before Rename'

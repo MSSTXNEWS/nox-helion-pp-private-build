@@ -1234,6 +1234,40 @@ $uninstGuard=@'
     Abort "Uninstaller write failed; current application was not changed."
   IfFileExists "$StageDir\Uninstall.exe" +2 0
     Abort "Uninstaller missing; current application was not changed."
+  ; B03: existence cannot prove a readable, complete NSIS uninstaller.
+  ; Only inspect staged bytes; never touch the active install on failure.
+  ClearErrors
+  FileOpen $2 "$StageDir\Uninstall.exe" r
+  IfErrors 0 +2
+    Abort "Staged uninstaller unreadable; current application was not changed."
+  ClearErrors
+  FileSeek $2 0 END $3
+  IfErrors C11UninstallerReject
+  IntCmp $3 1024 C11UninstallerMax C11UninstallerReject C11UninstallerMax
+  C11UninstallerMax:
+  IntCmp $3 104857600 C11UninstallerHeader C11UninstallerHeader C11UninstallerReject
+  C11UninstallerHeader:
+    ClearErrors
+    FileSeek $2 0 SET
+    IfErrors C11UninstallerReject
+    ClearErrors
+    FileReadByte $2 $4
+    IfErrors C11UninstallerReject
+    IntCmp $4 77 C11UninstallerSecondByte C11UninstallerReject C11UninstallerReject
+  C11UninstallerSecondByte:
+    ClearErrors
+    FileReadByte $2 $4
+    IfErrors C11UninstallerReject
+    IntCmp $4 90 C11UninstallerClose C11UninstallerReject C11UninstallerReject
+  C11UninstallerClose:
+    ClearErrors
+    FileClose $2
+    IfErrors 0 C11UninstallerAccepted
+      Abort "Staged uninstaller close failed; current application was not changed."
+  C11UninstallerReject:
+    FileClose $2
+    Abort "Staged uninstaller invalid or truncated; current application was not changed."
+  C11UninstallerAccepted:
 '@
 $uninstOld=[regex]::Replace($uninstOld,'\r?\n',$c11Eol)
 $uninstGuard=[regex]::Replace($uninstGuard,'\r?\n',$c11Eol)
