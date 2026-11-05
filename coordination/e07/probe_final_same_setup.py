@@ -600,6 +600,26 @@ def _physical_adaptive_sized(sizes: object) -> bool:
     )
 
 
+def _physical_webview2_motion_verified(observation: object) -> bool:
+    """Require the installed WebView2 CDP's reduced-media/CSS/WAAPI evidence.
+
+    WinRT AnimationsEnabled is an independent diagnostic and may differ from
+    this specific WebView2 profile. Never infer a physical PASS from OS state.
+    """
+    return (type(observation) is dict and
+            observation.get("status") == "PASS" and
+            observation.get("scope") == "INSTALLED_WEBVIEW2_MEDIA_CSS_WAAPI_NOT_OS_SETTING_ALONE" and
+            observation.get("media_reduced") is True and
+            type(observation.get("visible_nodes")) is int and
+            5 <= observation["visible_nodes"] <= 4096 and
+            type(observation.get("d02_visible_nodes")) is int and
+            5 <= observation["d02_visible_nodes"] <= 4096 and
+            type(observation.get("d02_scope_count")) is int and
+            observation["d02_scope_count"] == 1 and
+            all(type(observation.get(k)) is int and observation[k] == 0
+                for k in ("css_animated", "css_transitions", "waapi_running")))
+
+
 def probe_windows_animation_setting() -> dict:
     """Collect OS animation preference; it is not proof that WebView2 obeys it.
 
@@ -742,12 +762,16 @@ def run(hwnd: int, install: Path, local: Path, *, source_sha: str, setup_sha: st
         # Read the actual installed page's matchMedia / computed CSS / WAAPI
         # via read-only loopback CDP on ephemeral GitHub Windows only.
         webview_motion={"status":"HOLD","reason":"E07_WEBVIEW2_MEDIA_NOT_TESTED_HOLD"}
-        if os_animation.get("os_ui_animations_enabled") is False:
-            try:
-                from probe_webview_motion import probe as probe_webview_motion
-                webview_motion=probe_webview_motion()
-            except e07.Hold as exc:
-                webview_motion={"status":"HOLD","reason":str(exc)}
+        # OS animation preference is recorded, not used as a CDP permission or
+        # release gate. Read the installed WebView2's own reduced-media state
+        # on the same GitHub-hosted Windows runner, even if OS animations are on.
+        # A media/CSS/WAAPI mismatch continues to fail closed.
+        try:
+            from probe_webview_motion import probe as probe_webview_motion
+            webview_motion=probe_webview_motion()
+        except e07.Hold as exc:
+            webview_motion={"status":"HOLD","reason":str(exc)}
+        motion_verified=_physical_webview2_motion_verified(webview_motion)
         visual={"schema":e07.FINAL_VISUAL_SCHEMA,"source_sha":source_sha,
                 "setup_sha256":setup_sha,"release_accepted":False,
                 "physical_capture":"PASS" if actual_png and visual_first_hold is None else "HOLD",
@@ -762,11 +786,13 @@ def run(hwnd: int, install: Path, local: Path, *, source_sha: str, setup_sha: st
                 "visual_first_unmet_gate":visual_first_hold or
                      (fx.get("first_unmet_gate") if fx["fx_control"]!="PASS"
                       else "E07_INDEPENDENT_VISUAL_REVIEW_NOT_RUN"),
-                "reduced_motion_evidence":"OS_SETTING_OBSERVED_WEBVIEW2_MEDIA_QUERY_NOT_PHYSICALLY_VERIFIED",
+                "reduced_motion_evidence":(
+                    "INSTALLED_WEBVIEW2_MEDIA_CSS_WAAPI_PHYSICAL"
+                    if motion_verified else
+                    "OS_SETTING_OBSERVED_WEBVIEW2_MEDIA_QUERY_NOT_PHYSICALLY_VERIFIED"),
                 "os_animation_observation":os_animation,
                 "webview2_motion_evidence":webview_motion}
-        if (os_animation.get("os_ui_animations_enabled") is False and
-                webview_motion.get("status")=="PASS"):
+        if motion_verified:
             visual["reduced_motion"]="PASS"
 
     else:
