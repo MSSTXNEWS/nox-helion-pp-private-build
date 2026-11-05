@@ -1,4 +1,5 @@
 name: NOX V16 E06 exact D02 visual stage into ONEHOST diagnostic installer
+# Current-source rebuild: frozen original SHA gates and later independent E07.
 on:
   push:
     branches:
