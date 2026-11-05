@@ -391,7 +391,7 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
             "NEEDS_CONSENT" or "CONSENT_PENDING" or "NOT_AUTHORIZED" or
             "NOT_AUTHENTICATED" or "FORBIDDEN" or
             "BLOCKED" or "REFUSED" or "REVOKED" or "ABORTED" or
-            "EXPIRED" or "STOPPED") return true;
+            "EXPIRED" or "STOPPED" or "BUSY" or "PENDING") return true;
         return value.EndsWith("_HOLD", StringComparison.Ordinal) ||
                value.EndsWith("_DENIED", StringComparison.Ordinal) ||
                value.EndsWith("_REJECTED", StringComparison.Ordinal) ||
@@ -409,7 +409,9 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
                value.EndsWith("_ABORTED", StringComparison.Ordinal) ||
                value.EndsWith("_EXPIRED", StringComparison.Ordinal) ||
                value.EndsWith("_STOPPED", StringComparison.Ordinal) ||
-               value.EndsWith("_CANCELLED", StringComparison.Ordinal);
+               value.EndsWith("_CANCELLED", StringComparison.Ordinal) ||
+                value.EndsWith("_BUSY", StringComparison.Ordinal) ||
+                value.EndsWith("_PENDING", StringComparison.Ordinal);
     }
 
     // Original transport and original native owner must BOTH agree on success.
