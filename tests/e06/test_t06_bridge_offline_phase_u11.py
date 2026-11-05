@@ -25,9 +25,22 @@ class BridgeLifecycleR147(unittest.TestCase):
                 "installer_lifecycle":{
                     **{name:{"code":0} for name in (
                         "preflight_final","install","verify","update",
-                        "backup_payload_verify","rollback",
-                        "rollback_payload_restored","rollback_payload_superseded",
+                        "rollback","rollback_payload_superseded",
                         "uninstall")},
+                    "backup_payload_verify":{
+                        "status":"PASS_DIAGNOSTIC_ONLY","manifest_files_checked":485,
+                        "unmanaged_probe_preserved":True,"release_accepted":False},
+                    "rollback_payload_restored":{
+                        "status":"PASS_DIAGNOSTIC_ONLY","manifest_files_checked":485,
+                        "unmanaged_probe_preserved":True,"release_accepted":False},
+                    "update_unmanaged_user_data":"PRESERVED_IN_BACKUP",
+                    "rollback_unmanaged_user_data":"PRESERVED_IN_RESTORED_INSTALL",
+                    "unmanaged_install_file_noloss":"PRESERVED_VERIFIED",
+                    "uninstall_any_exit_no_loss":{
+                        "persistent_user_data":"PRESERVED",
+                        "unmanaged_install_data":"PRESERVED",
+                        "read_only":True,"independent_e07":"NOT_RUN",
+                        "release_accepted":False},
                     "uninstall_owned_files_checked":485,
                     "uninstall_registry_views_checked":2,
                     "original_wpf_gui":{"new_nav_ok":True,"new_python_ipc_handshake":True},
