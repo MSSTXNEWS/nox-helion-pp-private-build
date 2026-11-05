@@ -32,6 +32,21 @@ class G4ReadOnlyUserMarker(unittest.TestCase):
         self.assertIn("T06_CONSERVATIVE_UNINSTALL_EXIT_HOLD", src)
         self.assertIn("T06_NOLOSS_UNMANAGED_INSTALL_DATA_LOST", src)
 
+    def test_in_install_unmanaged_data_is_checked_from_update_through_uninstall(self):
+        src = SOURCE.read_text("utf-8")
+        seed = src.index("unmanaged_identity=original_no_loss_seed_identity(")
+        update = src.index('update=run([str(SETUP),"/S"],250)')
+        backup = src.index('"T06_UPDATE_UNMANAGED_USER_DATA_LOSS"')
+        rollback = src.index('rollback=run([str(SETUP),"/S","/ROLLBACK"],250)')
+        restored = src.index('"T06_ROLLBACK_UNMANAGED_USER_DATA_LOSS"')
+        uninstall = src.index('uninstalled=run([str(uninstall),"/S"],220)')
+        last = src.index('"T06_NOLOSS_UNMANAGED_INSTALL_DATA_LOST"')
+        self.assertTrue(0 <= seed < update < backup < rollback < restored < uninstall < last)
+        self.assertIn("original_no_loss_inode_preserved(unmanaged_backup,unmanaged_identity,local_base)", src)
+        self.assertIn("original_no_loss_inode_preserved(unmanaged,unmanaged_identity,local_base)", src)
+        self.assertIn('report["installer_lifecycle"]["update_unmanaged_user_data"]="PRESERVED_IN_BACKUP"', src)
+        self.assertIn('report["installer_lifecycle"]["rollback_unmanaged_user_data"]="PRESERVED_IN_RESTORED_INSTALL"', src)
+
     def test_exact_user_file_and_modified_contents(self):
         with tempfile.TemporaryDirectory() as td:
             base=Path(td)

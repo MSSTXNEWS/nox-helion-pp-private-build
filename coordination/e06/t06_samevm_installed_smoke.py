@@ -1175,12 +1175,37 @@ def main()->int:
             seed.flush()
             os.fsync(seed.fileno())
         marker_identity=original_no_loss_seed_identity(marker,signature,local_base)
+        # B03 G4 NO-LOSS: the disposable Windows install also contains an
+        # UNMANAGED user file. A successful uninstaller must preserve this
+        # exact file while removing every manifest-owned original payload.
+        # Seed BEFORE update: protect unowned bytes across backup, rollback
+        # and uninstall, not merely during the last uninstall step.
+        unmanaged=install/("nox-g4-unmanaged-"+ci_run_id+".bin")
+        require(plain_parents(unmanaged,local_base) and
+                not unmanaged.exists() and not unmanaged.is_symlink() and
+                not getattr(unmanaged,"is_junction",lambda:False)(),
+                "T06_NOLOSS_UNMANAGED_PROBE_COLLISION")
+        unmanaged_bytes=b"NOX_G4_UNMANAGED_INSTALL_DATA_NOLOSS\\n"
+        with unmanaged.open("xb") as evidence_file:
+            evidence_file.write(unmanaged_bytes)
+            evidence_file.flush()
+            os.fsync(evidence_file.fileno())
+        require(regular(unmanaged) and unmanaged.read_bytes()==unmanaged_bytes,
+                "T06_NOLOSS_UNMANAGED_PROBE_SEED_HOLD")
+        unmanaged_identity=original_no_loss_seed_identity(unmanaged,unmanaged_bytes,local_base)
         update=run([str(SETUP),"/S"],250)
         report["installer_lifecycle"]["update"]=update
         backup=Path(str(install)+".__p01_previous")
         require(update["code"]==0 and backup.is_dir() and
                 plain_parents(backup,local_base),
                 "T06_ORIGINAL_NSIS_UPDATE_BACKUP_HOLD")
+        # An update moves the prior version into the original owned backup.
+        # Its unowned user file MUST survive that rename with same bytes/inode.
+        unmanaged_backup=backup/unmanaged.name
+        require(original_no_loss_file_preserved(unmanaged_backup,unmanaged_bytes,local_base) and
+                original_no_loss_inode_preserved(unmanaged_backup,unmanaged_identity,local_base),
+                "T06_UPDATE_UNMANAGED_USER_DATA_LOSS")
+        report["installer_lifecycle"]["update_unmanaged_user_data"]="PRESERVED_IN_BACKUP"
         require(sha(wpf)==evidence["wpf_sha256"] and
                 original_no_loss_file_preserved(marker,signature,local_base) and
                 original_no_loss_inode_preserved(marker,marker_identity,local_base),
@@ -1199,6 +1224,10 @@ def main()->int:
                 original_no_loss_file_preserved(marker,signature,local_base) and
                 original_no_loss_inode_preserved(marker,marker_identity,local_base),
                 "T06_ORIGINAL_NSIS_ROLLBACK_NOLOSS_HOLD")
+        require(original_no_loss_file_preserved(unmanaged,unmanaged_bytes,local_base) and
+                original_no_loss_inode_preserved(unmanaged,unmanaged_identity,local_base),
+                "T06_ROLLBACK_UNMANAGED_USER_DATA_LOSS")
+        report["installer_lifecycle"]["rollback_unmanaged_user_data"]="PRESERVED_IN_RESTORED_INSTALL"
         saved=Path(str(install)+".__p01_rollback_saved")
         report["installer_lifecycle"]["rollback_slots"]=rollback_slot_layout(
             install,backup,saved,local_base)
@@ -1215,24 +1244,6 @@ def main()->int:
         owned_files=owned_payload_paths(
             install,strict_receipt(install/"payload.sha256.json",
                                   "T06_UNINSTALL_INSTALLED_INVENTORY_JSON_HOLD"))
-        # B03 G4 NO-LOSS: the disposable Windows install also contains an
-        # UNMANAGED user file. A successful uninstaller must preserve this
-        # exact file while removing every manifest-owned original payload.
-        # Create the witness only AFTER rollback slot verification, so the
-        # installed update and rollback still use the approved exact manifest.
-        unmanaged=install/("nox-g4-unmanaged-"+ci_run_id+".bin")
-        require(plain_parents(unmanaged,local_base) and
-                not unmanaged.exists() and not unmanaged.is_symlink() and
-                not getattr(unmanaged,"is_junction",lambda:False)(),
-                "T06_NOLOSS_UNMANAGED_PROBE_COLLISION")
-        unmanaged_bytes=b"NOX_G4_UNMANAGED_INSTALL_DATA_NOLOSS\\n"
-        with unmanaged.open("xb") as evidence_file:
-            evidence_file.write(unmanaged_bytes)
-            evidence_file.flush()
-            os.fsync(evidence_file.fileno())
-        require(regular(unmanaged) and unmanaged.read_bytes()==unmanaged_bytes,
-                "T06_NOLOSS_UNMANAGED_PROBE_SEED_HOLD")
-        unmanaged_identity=original_no_loss_seed_identity(unmanaged,unmanaged_bytes,local_base)
         uninstall=install/"Uninstall.exe"
         require(regular(uninstall),"T06_ORIGINAL_UNINSTALLER_MISSING")
         uninstalled=run([str(uninstall),"/S"],220)
