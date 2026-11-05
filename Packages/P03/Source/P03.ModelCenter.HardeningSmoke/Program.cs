@@ -209,6 +209,19 @@ try
         State = ModelJobState.Completed });
     Assert((await d04Store.ReadAsync()).Count == 2,
         "D04D terminal same-tag history preserved without reactivating");
+    var d04CrossKind = d04Second with { Kind = ModelJobKind.GgufImport,
+        ModelTag = "TINYLLAMA:reviewed-a", LocalPath = Path.Combine(d04Root, "candidate.gguf"),
+        ExpectedLocalBytes = 32, ExpectedLocalSha256 = new string('b', 64),
+        ExpectedOllamaDigest = null, ImmutableRevision = null };
+    await D04WriteAsync(d04First, d04CrossKind);
+    var d04MixedDenied = false;
+    try { _ = await d04Store.ReadAsync(); }
+    catch (InvalidDataException e) when (e.Message == "P03_QUEUE_ACTIVE_TAG_ALIAS_HOLD")
+    { d04MixedDenied = true; }
+    Assert(d04MixedDenied, "D04E pull/GGUF active case-alias fails closed");
+    await D04WriteAsync(d04First, d04CrossKind with { State = ModelJobState.Completed });
+    Assert((await d04Store.ReadAsync()).Count == 2,
+        "D04F completed GGUF same-tag history remains readable");
 }
 finally { Directory.Delete(d04Root, recursive: true); }
 Console.WriteLine($"P03_HARDENING_SMOKE_PASS {pass} verified assertions");
@@ -464,6 +477,26 @@ try
         CompatibilityEvidenceUri = new Uri("https://ollama.com/library/tinyllama"), ReviewedRightsReceiptId = "rights-fixture"
     };
     var ticket = await left.EnqueueVerifiedPullAsync(approved, true);
+    var d04File = Path.Combine(atomicRoot, "cross-kind.gguf");
+    await File.WriteAllBytesAsync(d04File, Encoding.ASCII.GetBytes("GGUF synthetic cross-kind"));
+    var d04Bytes = await File.ReadAllBytesAsync(d04File);
+    var d04Digest = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(d04Bytes)).ToLowerInvariant();
+    var d04ImportDenied = false;
+    try { await right.EnqueueVerifiedGgufAsync("TINYLLAMA:1.1b", d04File,
+        d04Bytes.Length, d04Digest, "rights-fixture", approved.LicenseEvidenceUri!.ToString()); }
+    catch (InvalidOperationException ex) when (ex.Message == "P03_ACTIVE_MODEL_TAG_CONFLICT_HOLD")
+    { d04ImportDenied = true; }
+    Assert(d04ImportDenied && (await right.ReadAsync()).Count == 1,
+        "D04G GGUF cannot overwrite active reviewed pull or mutate queue");
+    var d04MixedStore = new ModelDownloadQueueStore(Path.Combine(atomicRoot, "cross-kind-reverse"));
+    await d04MixedStore.EnqueueVerifiedGgufAsync("tinyllama:1.1b", d04File,
+        d04Bytes.Length, d04Digest, "rights-fixture", approved.LicenseEvidenceUri!.ToString());
+    var d04PullDenied = false;
+    try { await d04MixedStore.EnqueueVerifiedPullAsync(approved, true); }
+    catch (InvalidOperationException ex) when (ex.Message == "P03_ACTIVE_PULL_REVIEW_CHANGED_HOLD")
+    { d04PullDenied = true; }
+    Assert(d04PullDenied && (await d04MixedStore.ReadAsync()).Count == 1,
+        "D04H reviewed pull cannot replace active GGUF under other job ID");
     Assert(ticket.RightsReceiptId == approved.ReviewedRightsReceiptId,
         "F09A queue preserves approved rights evidence");
     // A live pull can be re-used ONLY with the same exact owner authority.

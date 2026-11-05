@@ -157,6 +157,8 @@ public sealed class ModelDownloadQueueStore
         {
             using var lease = await AcquireFileLeaseAsync(ct);
             var jobs = (await ReadCoreAsync(ct)).ToList();
+            if (jobs.Any(j => HasActiveTag(j, tag)))
+                throw new InvalidOperationException("P03_ACTIVE_MODEL_TAG_CONFLICT_HOLD");
             var now = DateTimeOffset.UtcNow;
             var job = new ModelJob(Guid.NewGuid(), ModelJobKind.GgufImport, tag.Trim(), fullPath,
                 true, licenseSource, now, now, ExpectedLocalBytes: expectedBytes,
@@ -181,6 +183,8 @@ public sealed class ModelDownloadQueueStore
         try {
             using var lease=await AcquireFileLeaseAsync(ct);
             var jobs=(await ReadCoreAsync(ct)).ToList();var now=DateTimeOffset.UtcNow;
+            if (jobs.Any(j => HasActiveTag(j, tag)))
+                throw new InvalidOperationException("P03_ACTIVE_MODEL_TAG_CONFLICT_HOLD");
             var job=new ModelJob(id,ModelJobKind.SafetensorsImport,tag,Path.GetFullPath(approval.Directory),
                 true,approval.LicenseSource,now,now,ExpectedLocalBytes:files.Sum(x=>x.SizeBytes),
                 ExpectedLocalSha256:approval.MergedPayloadSha256,RightsReceiptId:approval.RightsAttestationId,
@@ -213,12 +217,14 @@ public sealed class ModelDownloadQueueStore
             // An active tag belongs to exactly one owner-reviewed transfer. Do not
             // recycle a live job after rights, licensed origin or immutable pins
             // change: that would turn an obsolete authorization into a new ACK.
-            var active = jobs.Where(j => j.Kind == ModelJobKind.OllamaPull &&
-                (j.State is ModelJobState.Queued or ModelJobState.Running or ModelJobState.Cancelling) &&
-                string.Equals(j.ModelTag, model.ExactTag, StringComparison.OrdinalIgnoreCase)).ToArray();
+            var active = jobs.Where(j => HasActiveTag(j, model.ExactTag)).ToArray();
             if (active.Length > 0)
             {
-                if (active.Length != 1 || !active[0].LicenseAcknowledged ||
+                // Never ACK a durable STOP-pending transfer as a new pull.
+                if (active.Any(j => j.State == ModelJobState.Cancelling))
+                    throw new InvalidOperationException("P03_ACTIVE_MODEL_STOP_PENDING_HOLD");
+                if (active.Length != 1 || active[0].Kind != ModelJobKind.OllamaPull ||
+                    !active[0].LicenseAcknowledged ||
                     !string.Equals(active[0].ModelTag, model.ExactTag, StringComparison.Ordinal) ||
                     !string.Equals(active[0].ExpectedOllamaDigest,
                         model.ExpectedManifestDigestSha256, StringComparison.OrdinalIgnoreCase) ||
@@ -242,6 +248,11 @@ public sealed class ModelDownloadQueueStore
         }
         finally { _gate.Release(); }
     }
+
+    // A tag is the mutable Ollama installation identity across ALL job kinds.
+    private static bool HasActiveTag(ModelJob job, string tag) =>
+        (job.State is ModelJobState.Queued or ModelJobState.Running or ModelJobState.Cancelling) &&
+        string.Equals(job.ModelTag, tag, StringComparison.OrdinalIgnoreCase);
 
     private static void ValidateTag(string? tag)
     {
@@ -445,15 +456,15 @@ public sealed class ModelDownloadQueueStore
                 string.Equals(job.RightsReceiptId, failed.RightsReceiptId, StringComparison.Ordinal) &&
                 string.Equals(job.LicenseSource, failed.LicenseSource, StringComparison.Ordinal) &&
                 job.LicenseAcknowledged == failed.LicenseAcknowledged;
-            var activeTagPulls = jobs.Where(j => failed.Kind == ModelJobKind.OllamaPull &&
-                j.Kind == ModelJobKind.OllamaPull &&
-                (j.State is ModelJobState.Queued or ModelJobState.Running or ModelJobState.Cancelling) &&
-                string.Equals(j.ModelTag, failed.ModelTag, StringComparison.OrdinalIgnoreCase)).ToArray();
-            if (activeTagPulls.Length > 0 &&
-                (activeTagPulls.Length != 1 ||
-                 activeTagPulls[0].RetryOfJobId != failed.Id ||
-                 !SameApprovedPull(activeTagPulls[0])))
-                throw new InvalidOperationException("P03_RETRY_ACTIVE_PULL_REVIEW_CHANGED_HOLD");
+            var activeTagJobs = jobs.Where(j => HasActiveTag(j, failed.ModelTag)).ToArray();
+            if (activeTagJobs.Length > 0 &&
+                (activeTagJobs.Length != 1 ||
+                 activeTagJobs[0].Kind != failed.Kind ||
+                 activeTagJobs[0].RetryOfJobId != failed.Id ||
+                 (failed.Kind == ModelJobKind.OllamaPull && !SameApprovedPull(activeTagJobs[0]))))
+                throw new InvalidOperationException(failed.Kind == ModelJobKind.OllamaPull
+                    ? "P03_RETRY_ACTIVE_PULL_REVIEW_CHANGED_HOLD"
+                    : "P03_RETRY_ACTIVE_TAG_CONFLICT_HOLD");
             var existingRetry = jobs.FirstOrDefault(j => j.RetryOfJobId == failed.Id &&
                 (j.State is ModelJobState.Queued or ModelJobState.Running or ModelJobState.Cancelling or ModelJobState.Completed));
             if (existingRetry is not null)
@@ -599,12 +610,9 @@ public sealed class ModelDownloadQueueStore
                     j.MergedImport.MergedPayloadSha256!=j.ExpectedLocalSha256 ||
                     j.MergedImport.Directory!=j.LocalPath || j.MergedImport.RightsAttestationId!=j.RightsReceiptId))))
                 throw new InvalidDataException("Queue contains duplicate/invalid jobs; original bytes preserved.");
-        // Snapshot restores and legacy writers can contain different job IDs for
-        // the same Ollama tag. Per-job execution leases cannot serialize them:
-        // two active aliases could pull one mutable tag under different reviews.
-        // Preserve terminal history, but refuse ambiguous active owner authority.
-        var activeTags = jobs.Where(j => j.Kind == ModelJobKind.OllamaPull &&
-                (j.State is ModelJobState.Queued or ModelJobState.Running or ModelJobState.Cancelling))
+        // All native job kinds mutate the same installed Ollama tag.
+        // Refuse cross-kind active collisions, while retaining terminal history.
+        var activeTags = jobs.Where(j => HasActiveTag(j, j.ModelTag))
             .Select(j => j.ModelTag).ToArray();
         if (activeTags.Distinct(StringComparer.OrdinalIgnoreCase).Count() != activeTags.Length)
             throw new InvalidDataException("P03_QUEUE_ACTIVE_TAG_ALIAS_HOLD");
