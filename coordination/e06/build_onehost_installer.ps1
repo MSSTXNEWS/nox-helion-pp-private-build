@@ -1581,13 +1581,31 @@ $uRollbackNew=@'
 '@
 $uRollbackOld=$uRollbackOld.TrimEnd([char]10,[char]13)
 $uRollbackNew=$uRollbackNew.TrimEnd([char]10,[char]13)
-if ($c11NsiPatched.IndexOf($uRollbackOld,[StringComparison]::Ordinal) -lt 0 -or
-    $c11NsiPatched.IndexOf($uRollbackOld,[StringComparison]::Ordinal) -ne
-      $c11NsiPatched.LastIndexOf($uRollbackOld,[StringComparison]::Ordinal)) {
-  throw 'C11_BACKUP_USER_SAFE_PREIMAGE_HOLD'
+# R11 owns a legacy rollback verifier. Depending on the original frozen
+# donor it may already carry the reviewed installed-metadata option, or it
+# may not. Admit ONLY these two exact original preimages, never a broad regex.
+$uRollbackLegacy=$uRollbackOld.Replace(' -AllowInstalledMetadata', '')
+$uFound=@()
+foreach ($candidate in @($uRollbackOld,$uRollbackLegacy)) {
+  $position=$c11NsiPatched.IndexOf($candidate,[StringComparison]::Ordinal)
+  if ($position -ge 0 -and
+      $c11NsiPatched.LastIndexOf($candidate,[StringComparison]::Ordinal) -eq $position) {
+    # A legacy substring is also present in the upgraded longer form.
+    # Only the longest exact line ending in a single quote is accepted.
+    $end=$position+$candidate.Length
+    if ($end -eq $c11NsiPatched.Length -or
+        $c11NsiPatched.Substring($end,1) -in @([string][char]10,[string][char]13)) {
+      $uFound+=,$candidate
+    }
+  }
 }
+if ($uFound.Count -ne 1) { throw 'C11_BACKUP_USER_SAFE_PREIMAGE_HOLD' }
+$uRollbackOld=$uFound[0]
 $c11NsiPatched=$c11NsiPatched.Replace($uRollbackOld,$uRollbackNew)
-if ($c11NsiPatched.Contains($uRollbackOld)) { throw 'C11_BACKUP_USER_SAFE_READBACK_HOLD' }
+if ($c11NsiPatched.Contains($uRollbackOld) -or
+    $c11NsiPatched.IndexOf($uRollbackNew,[StringComparison]::Ordinal) -lt 0) {
+  throw 'C11_BACKUP_USER_SAFE_READBACK_HOLD'
+}
 Write-Host 'C11_BACKUP_USER_SAFE_VERIFY_STAGED'
 
 # D03/G4: original NSIS returned EXIT=0 without invoking its owner if the
