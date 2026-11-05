@@ -150,7 +150,11 @@ class FinalPrimaryDispatch(unittest.TestCase):
     def test_final_capture_uses_valid_rect_and_checks_the_window(self):
         script = probe._uia_script(12345, "VISUAL", png=Path("test.png"))
         self.assertNotIn("New-Object NoxFinalWin32+RECT", script)
-        self.assertEqual(script.count("[NoxFinalWin32+RECT]::new()"), 3)
+        # Original capture uses three physical rectangles; the fourth is a
+        # strictly diagnostic image taken only after the dock UIA fails.
+        self.assertEqual(script.count("[NoxFinalWin32+RECT]::new()"), 4)
+        self.assertIn("if($null -eq $rects){try{SaveAdaptiveHold $width}catch{}}", script)
+        self.assertIn("if($null -eq $rects){throw 'PRIMARY_DOCK_NOT_UNIQUE'}", script)
         self.assertIn("if(-not [NoxFinalWin32]::GetWindowRect($handle,[ref]$rr)){throw 'RECT'}", script)
         self.assertIn("[System.Drawing.Bitmap]::new([int]$w,[int]$h)", script)
 
