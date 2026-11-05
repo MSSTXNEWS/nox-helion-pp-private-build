@@ -130,7 +130,7 @@ class PhysicalVisualFailureStages(unittest.TestCase):
         # and keyboard reachable, not merely connected/labelled in the DOM.
         self.assertIn("button.getAttribute('aria-label')!==name",source)
         self.assertIn("button.getClientRects().length===0",source)
-        self.assertIn("button.tabIndex<0",source)
+        self.assertIn("button.tabIndex!==0",source)
         self.assertIn("""button.closest('[hidden],[inert],[aria-hidden="true"],[aria-disabled="true"]')""",source)
         self.assertIn("""nav.closest('[hidden],[inert],[aria-hidden="true"],[aria-disabled="true"]')""",source)
         self.assertIn("document.elementFromPoint(",source)
