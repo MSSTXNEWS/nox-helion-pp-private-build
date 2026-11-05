@@ -47,4 +47,18 @@ class C06CancellationReentrancySource(unittest.TestCase):
         self.assertIn('ConfirmP02NativeAsync(ownerRoute, ownerPayload, cancel)',menu)
         self.assertIn('MENU_OWNER_REVOKED_HOLD',menu)
 
+    def test_legacy_chat_stop_revokes_pending_consent_and_ui_events(self):
+        # SOURCE_ONLY contract for the real original WPF legacy HOME path.
+        main = (SOURCE.parent / 'MainWindow.NativeP02.cs').read_text(encoding='utf-8')
+        legacy = main.split('private async Task DispatchLegacyNativeAsync(', 1)[1].split('private static string? LegacyCoreId(', 1)[0]
+        capture = 'var legacyChatStopEpoch=Interlocked.Read(ref _a1OwnerStopEpoch);'
+        guard = 'Interlocked.Read(ref _a1OwnerStopEpoch)!=legacyChatStopEpoch'
+        self.assertEqual(legacy.count(capture), 1)
+        self.assertEqual(legacy.count(guard), 4)
+        self.assertLess(legacy.index(capture), legacy.index('ConfirmP02NativeAsync(route,payload'))
+        self.assertLess(legacy.index('NATIVE_CHAT_STOP_REVOKED_HOLD'), legacy.index('_nativeP02Pipe.RequestAsync(route,payload'))
+        self.assertLess(legacy.index(guard, legacy.index('onEvent: item')), legacy.index('PostMessage(new {kind="chatToken"'))
+        self.assertLess(legacy.index(guard, legacy.index('var result = action')), legacy.index('PostMessage(new {kind="chatFinished"'))
+        self.assertIn('Interlocked.Increment(ref _a1OwnerStopEpoch);', main)
+
 if __name__=='__main__': unittest.main()

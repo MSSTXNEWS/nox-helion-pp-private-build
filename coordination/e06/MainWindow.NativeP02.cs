@@ -497,6 +497,9 @@ public partial class MainWindow
             "chatModels" => "chat.model", "chatStart" => "helion.chat",
             "chatStop" => "chat.stop", _ => "models.catalog"
         };
+        // Legacy HOME bypasses bridge stream epochs. Bind each pending chat,
+        // including its consent wait and queued UI callbacks, to native STOP.
+        var legacyChatStopEpoch=Interlocked.Read(ref _a1OwnerStopEpoch);
         try {
             var sid = WindowsIdentity.GetCurrent().User?.Value;
             if (sid is null || !NativeP02Acl(sid, route) || _nativeP02Pipe is null)
@@ -508,15 +511,23 @@ public partial class MainWindow
             }) : JsonSerializer.SerializeToElement(new {});
             if (route != "chat.stop" && !await ConfirmP02NativeAsync(route,payload,CancellationToken.None))
                 throw new NativePipeHold("NATIVE_CONSENT_DENIED");
+            // A STOP while the approval dialog is open must not start work
+            // after the user already revoked that chat generation.
+            if (action=="chatStart" && Interlocked.Read(ref _a1OwnerStopEpoch)!=legacyChatStopEpoch)
+                throw new NativePipeHold("NATIVE_CHAT_STOP_REVOKED_HOLD");
             if (!NativeP02Acl(sid,route) || !LegacyDocumentCurrent(source,epoch))
                 throw new NativePipeHold("NATIVE_PERMISSION_DENIED");
             var result = action is "openModelCenter" or "chatStop" ? await DispatchNativeOwnerAsync(route,payload,CancellationToken.None) :
                 await _nativeP02Pipe.RequestAsync(route,payload,TimeSpan.FromMinutes(3),
                 onEvent: item => Dispatcher.BeginInvoke(new Action(() => {
+                    if (action=="chatStart" &&
+                        Interlocked.Read(ref _a1OwnerStopEpoch)!=legacyChatStopEpoch) return;
                     if (!NativeP02Acl(sid,route) || !LegacyDocumentCurrent(source,epoch)) return;
                     if (item.TryGetProperty("delta",out var delta) && delta.ValueKind==JsonValueKind.String)
                         PostMessage(new {kind="chatToken",chatId,token=delta.GetString()});
                 })));
+            if (action=="chatStart" && Interlocked.Read(ref _a1OwnerStopEpoch)!=legacyChatStopEpoch)
+                return; // Never promote a STOP-revoked generator to chatFinished.
             if (!NativeP02Acl(sid,route) || !LegacyDocumentCurrent(source,epoch)) return;
             if (!result.Accepted || !string.IsNullOrWhiteSpace(result.ErrorCode) ||
                 LegacyOwnerDenial(result.Result))
@@ -537,6 +548,8 @@ public partial class MainWindow
             } else PostMessage(new {kind="chatFinished",chatId,
                 state=action=="chatStop"?"STOP_REQUESTED":"COMPLETED"});
         } catch (Exception error) {
+            if (action=="chatStart" && Interlocked.Read(ref _a1OwnerStopEpoch)!=legacyChatStopEpoch)
+                return; // Native STOP owns UI resolution; no stale late error.
             if (!LegacyDocumentCurrent(source,epoch)) return;
             PostMessage(new {kind="chatError",chatId,
                 code=error is NativePipeHold held?held.Code:"NATIVE_TRANSPORT_HOLD",
