@@ -58,7 +58,30 @@ def check():
         raise ValueError("P03_PYTHON_SOURCE_PIN_DRIFT")
     ui_blob = git_blob(PREVIEW)
     pins = json.loads((ROOT / PINS).read_text(encoding="utf-8"))
-    overrides = [x for x in pins.get("approved_overrides", []) if x["path"] == PREVIEW]
+    # The effective owner review set must have one active SHA/size per path.
+    # Preserve earlier attestations in override_chain, never count them as live.
+    active = pins.get("approved_overrides")
+    if not isinstance(active, list) or any(not isinstance(x, dict) or
+            not isinstance(x.get("path"), str) for x in active):
+        raise ValueError("P03_ACTIVE_REVIEW_SET_INVALID")
+    if len({x["path"] for x in active}) != len(active):
+        raise ValueError("P03_ACTIVE_REVIEW_SOURCE_ALIAS_HOLD")
+    for reviewed_path in (
+        MODEL,
+        "Packages/P03/Source/P03.ModelCenter/ModelArtifactReviewRegistry.cs",
+        "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueStore.cs",
+        "Packages/P03/Source/P03.ModelCenter/OllamaModelAdapter.cs",
+        "Packages/P03/Source/P03.ModelCenter.HardeningSmoke/Program.cs",
+    ):
+        approved = [x for x in active if x["path"] == reviewed_path]
+        if len(approved) != 1 or approved[0].get("post_git_blob_sha1") != git_blob(reviewed_path):
+            raise ValueError("P03_ACTIVE_REVIEW_SOURCE_PIN_HOLD:" + reviewed_path)
+        result = subprocess.run(["git", "-C", str(ROOT), "cat-file", "-s",
+                                 "HEAD:" + reviewed_path], check=True,
+                                stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        if approved[0].get("post_bytes") != int(result.stdout.strip()):
+            raise ValueError("P03_ACTIVE_REVIEW_BYTES_HOLD:" + reviewed_path)
+    overrides = [x for x in active if x["path"] == PREVIEW]
     if len(overrides) != 1 or overrides[0]["post_git_blob_sha1"] != ui_blob:
         raise ValueError("P03_OWNER_SOURCE_PIN_DRIFT")
     if overrides[0]["post_bytes"] != len((ROOT / PREVIEW).read_bytes()):

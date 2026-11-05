@@ -421,62 +421,22 @@
     {
       "path": "Packages/P03/Source/P03.ModelCenter/ModelArtifactReviewRegistry.cs",
       "owner": 3,
-      "run_id": "W06-R99-P03-REVIEWED-OFFICIAL-PORT-GATE-20261103",
+      "run_id": "D04_P03_E06_REVIEW_PIN_RECONCILE_20261105",
       "pre_git_blob_sha1": "c057fea02f9e53121ba21110b12b12f2128a8fb2",
-      "post_git_blob_sha1": "e84da6324f56f1bc4803215a15e9da645fb25119",
-      "post_bytes": 8696,
+      "post_git_blob_sha1": "3f39c15c34c76771f8176cb188880798fd4dd20c",
+      "post_bytes": 8881,
       "reconciled_from_git_blob_sha1": "06795f2e4c6688e4e2f12897182dae3f571e17d6",
       "reconciled_from_bytes": 7822,
       "reconciliation_source_commit": "42c697a4dfa252c3b2e71578c7ed89d099e0305e",
       "reconciliation_scope": "D04_SOURCE_ONLY_APPROVAL_PIN_NOT_WINDOWS_E07",
-      "acceptance": "SOURCE_ORIGIN_PORT_STRICT_REGRESSION_NOT_MODEL_RIGHTS_OR_WINDOWS_E07",
+      "acceptance": "EXACT_SOURCE_ONLY_NOT_INSTALLED_E07",
       "prior_approved_run_id": "NOX-E03-PR162-PIN-RECONCILE-20261101",
       "prior_approved_source_commit": "3ec73f893961a8dce0dc3bdbc202afd4a54773a0",
       "prior_approved_post_git_blob_sha1": "ddc473ef4082c484a99c8d0681d0a3bb2e86e3bb",
-      "prior_approved_post_bytes": 7793
-    },
-    {
-      "path": "Packages/P03/Source/P03.ModelCenter/ModelCatalog.cs",
-      "owner": 3,
-      "run_id": "NOX-P03-BLOCK2-ADDENDUM-20261101",
-      "pre_git_blob_sha1": "9b9e293be5a785369764fe378ee69c6c88c86b46",
-      "post_git_blob_sha1": "e565efa8ad53ed811f0d77158eec55b1f078ddb8",
-      "post_bytes": 7339,
-      "source_commit": "83b9c444042bfc300cbd447b8367f61d3e3f2846",
-      "acceptance": "SOURCE_INTEGRITY_ONLY_NOT_MODEL_RIGHTS_WINDOWS_E07"
-    },
-    {
-      "path": "Packages/P03/Source/P03.ModelCenter/ModelCenterNativeRoutes.cs",
-      "owner": 3,
-      "run_id": "NOX-E03-NATIVE-PIN-RECONCILE-20261103",
-      "pre_git_blob_sha1": "b63d20f9b5a7551d47d48cf96fa56569398602b4",
-      "post_git_blob_sha1": "07b137096122e1df9869d75386bf657d154214a1",
-      "post_bytes": 21228,
-      "source_commit": "d4b46ec3a36ee6da9750a907354660e8349d5108",
-      "prior_hardening_source_commit": "ad926c5933749e5ad2d38f86852419d6e3884b5e",
-      "reconciliation_parent_sha1": "87c1b88bf95672677e21a0d84dc6402040b5eac5",
-      "acceptance": "SOURCE_INTEGRITY_ONLY_NOT_MODEL_RIGHTS_WINDOWS_E07",
-      "verification": "EXACT_GIT_BLOB_AND_EXISTING_SECURITY_REGRESSIONS_NOT_WINDOWS"
-    },
-    {
-      "path": "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueStore.cs",
-      "owner": 3,
-      "run_id": "NOX-E03-PR162-PIN-RECONCILE-20261101",
-      "pre_git_blob_sha1": "2b2d57962b7aeb4b3e5bec828388784835de4261",
-      "post_git_blob_sha1": "7c9a83d9b683090f12b058ac4c8907d388e4b6a5",
-      "post_bytes": 26310,
-      "source_commit": "3ec73f893961a8dce0dc3bdbc202afd4a54773a0",
-      "acceptance": "SOURCE_INTEGRITY_ONLY_NOT_MODEL_RIGHTS_WINDOWS_E07"
-    },
-    {
-      "path": "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueWorker.cs",
-      "owner": 3,
-      "run_id": "NOX-E03-PR162-PIN-RECONCILE-20261101",
-      "pre_git_blob_sha1": "a2528be4d4045f39e6b884e3f5188bd3c1ab7d75",
-      "post_git_blob_sha1": "6dd5ceec428ec71a426d785304001a2d269a666f",
-      "post_bytes": 15322,
-      "source_commit": "3ec73f893961a8dce0dc3bdbc202afd4a54773a0",
-      "acceptance": "SOURCE_INTEGRITY_ONLY_NOT_MODEL_RIGHTS_WINDOWS_E07"
+      "prior_approved_post_bytes": 7793,
+      "prior_active_post_git_blob_sha1": "e84da6324f56f1bc4803215a15e9da645fb25119",
+      "prior_active_post_bytes": 8696,
+      "source_head_observed": "51fed5a0ba508fb678b63febe3e593a6a082361c"
     },
     {
       "path": "Packages/P03/Source/P03.ModelCenter/ModelLocalAttestation.cs",
@@ -499,16 +459,6 @@
       "pre_git_blob_sha1": "3a967b95d30e75cc8d79b1733a9884b7dcf917fd",
       "post_git_blob_sha1": "0c8fa6b409e64ac5a6636a4ae2f46b36f79f1ced",
       "post_bytes": 9530
-    },
-    {
-      "path": "Packages/P03/Source/P03.ModelCenter/OllamaModelAdapter.cs",
-      "owner": 3,
-      "run_id": "NOX-E03-PR162-PIN-RECONCILE-20261101",
-      "pre_git_blob_sha1": "146dd0ef1243e25b7a4c39c54beac8b38110d927",
-      "post_git_blob_sha1": "ed4d55e053fd88f6e69911889981b566d3701661",
-      "post_bytes": 15796,
-      "source_commit": "3ec73f893961a8dce0dc3bdbc202afd4a54773a0",
-      "acceptance": "SOURCE_INTEGRITY_ONLY_NOT_MODEL_RIGHTS_WINDOWS_E07"
     },
     {
       "path": "Packages/P03/Source/python-host/p03_onehost_port.py",
@@ -569,17 +519,20 @@
     {
       "path": "Packages/P03/Source/P03.ModelCenter.HardeningSmoke/Program.cs",
       "owner": 3,
-      "run_id": "W06-R99-P03-REVIEWED-OFFICIAL-PORT-GATE-20261103",
+      "run_id": "D04_P03_E06_REVIEW_PIN_RECONCILE_20261105",
       "pre_git_blob_sha1": "13ae4b4e9bf465a8fb31e8893cd381b1464c4702",
-      "post_git_blob_sha1": "612e22b0f68ad012f4c031f64042e674fca1d3bd",
-      "post_bytes": 30475,
+      "post_git_blob_sha1": "1ad9d2f0d884b9c3a679d0ca0a80ef95cfddeb69",
+      "post_bytes": 47176,
       "reconciled_from_git_blob_sha1": "af895122f2a355fba6ae655aa546a380eecdbbd6",
       "reconciled_from_bytes": 20193,
       "reconciliation_source_commit": "0c5fada0ea2a27a07292df5f4cb000441b0bae47",
       "reconciliation_scope": "D04_OLLAMA_TAGS_SHA256_SOURCE_ONLY_NOT_WINDOWS_E07",
-      "acceptance": "SOURCE_ONLY_MANIFEST_PIN_NOT_MODEL_RIGHTS_OR_E07",
+      "acceptance": "EXACT_SOURCE_ONLY_NOT_INSTALLED_E07",
       "previous_reviewed_git_blob_sha1": "cef44deea7d3f07be239d9989f9161780d0caeca",
-      "previous_reviewed_bytes": 29146
+      "previous_reviewed_bytes": 29146,
+      "prior_active_post_git_blob_sha1": "612e22b0f68ad012f4c031f64042e674fca1d3bd",
+      "prior_active_post_bytes": 30475,
+      "source_head_observed": "51fed5a0ba508fb678b63febe3e593a6a082361c"
     },
     {
       "path": "Packages/P03/Source/P03.ModelCenter/ModelCatalog.cs",
@@ -593,11 +546,14 @@
     {
       "path": "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueStore.cs",
       "owner": 3,
-      "run_id": "NOX-D04-RIGHTS-20261105",
+      "run_id": "D04_P03_E06_REVIEW_PIN_RECONCILE_20261105",
       "pre_git_blob_sha1": "6046384a1a619869618a64572cae0f95787468d8",
-      "post_git_blob_sha1": "74e2183335676854d3716fa4988e5b09b7c6a770",
-      "post_bytes": 30276,
-      "acceptance": "SOURCE_ONLY_OWNER_RIGHTS_CANDIDATE_NO_WINDOWS_E07"
+      "post_git_blob_sha1": "ea36b639c22af03cb0c90902eb3a86801f118a12",
+      "post_bytes": 35356,
+      "acceptance": "EXACT_SOURCE_ONLY_NOT_INSTALLED_E07",
+      "prior_active_post_git_blob_sha1": "74e2183335676854d3716fa4988e5b09b7c6a770",
+      "prior_active_post_bytes": 30276,
+      "source_head_observed": "51fed5a0ba508fb678b63febe3e593a6a082361c"
     },
     {
       "path": "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueWorker.cs",
@@ -620,11 +576,14 @@
     {
       "path": "Packages/P03/Source/P03.ModelCenter/OllamaModelAdapter.cs",
       "owner": 3,
-      "run_id": "NOX-D04-RIGHTS-20261105",
+      "run_id": "D04_P03_E06_REVIEW_PIN_RECONCILE_20261105",
       "pre_git_blob_sha1": "704262b0b81bfaf81a0a17de7fd8c8714a9febb3",
-      "post_git_blob_sha1": "e27b9959a514384a68a0a67723aff0910ecbad58",
-      "post_bytes": 16076,
-      "acceptance": "SOURCE_ONLY_OWNER_RIGHTS_CANDIDATE_NO_WINDOWS_E07"
+      "post_git_blob_sha1": "fa0656381b8854c6032a669c4929813988aea75a",
+      "post_bytes": 16897,
+      "acceptance": "EXACT_SOURCE_ONLY_NOT_INSTALLED_E07",
+      "prior_active_post_git_blob_sha1": "e27b9959a514384a68a0a67723aff0910ecbad58",
+      "prior_active_post_bytes": 16076,
+      "source_head_observed": "51fed5a0ba508fb678b63febe3e593a6a082361c"
     }
   ],
   "override_chain": [
@@ -663,6 +622,127 @@
       "source_commit": "83b9c444042bfc300cbd447b8367f61d3e3f2846",
       "run_id": "NOX-P03-BLOCK2-ADDENDUM-20261101",
       "acceptance": "SOURCE_PIN_RECONCILIATION_ONLY"
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter/ModelArtifactReviewRegistry.cs",
+      "owner": 3,
+      "run_id": "W06-R99-P03-REVIEWED-OFFICIAL-PORT-GATE-20261103",
+      "pre_git_blob_sha1": "c057fea02f9e53121ba21110b12b12f2128a8fb2",
+      "post_git_blob_sha1": "e84da6324f56f1bc4803215a15e9da645fb25119",
+      "post_bytes": 8696,
+      "reconciled_from_git_blob_sha1": "06795f2e4c6688e4e2f12897182dae3f571e17d6",
+      "reconciled_from_bytes": 7822,
+      "reconciliation_source_commit": "42c697a4dfa252c3b2e71578c7ed89d099e0305e",
+      "reconciliation_scope": "D04_SOURCE_ONLY_APPROVAL_PIN_NOT_WINDOWS_E07",
+      "acceptance": "SOURCE_ORIGIN_PORT_STRICT_REGRESSION_NOT_MODEL_RIGHTS_OR_WINDOWS_E07",
+      "prior_approved_run_id": "NOX-E03-PR162-PIN-RECONCILE-20261101",
+      "prior_approved_source_commit": "3ec73f893961a8dce0dc3bdbc202afd4a54773a0",
+      "prior_approved_post_git_blob_sha1": "ddc473ef4082c484a99c8d0681d0a3bb2e86e3bb",
+      "prior_approved_post_bytes": 7793,
+      "historical_approved_override": true,
+      "retired_from_active_set": "D04_20261105"
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter/ModelCatalog.cs",
+      "owner": 3,
+      "run_id": "NOX-P03-BLOCK2-ADDENDUM-20261101",
+      "pre_git_blob_sha1": "9b9e293be5a785369764fe378ee69c6c88c86b46",
+      "post_git_blob_sha1": "e565efa8ad53ed811f0d77158eec55b1f078ddb8",
+      "post_bytes": 7339,
+      "source_commit": "83b9c444042bfc300cbd447b8367f61d3e3f2846",
+      "acceptance": "SOURCE_INTEGRITY_ONLY_NOT_MODEL_RIGHTS_WINDOWS_E07",
+      "historical_approved_override": true,
+      "retired_from_active_set": "D04_20261105"
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter/ModelCenterNativeRoutes.cs",
+      "owner": 3,
+      "run_id": "NOX-E03-NATIVE-PIN-RECONCILE-20261103",
+      "pre_git_blob_sha1": "b63d20f9b5a7551d47d48cf96fa56569398602b4",
+      "post_git_blob_sha1": "07b137096122e1df9869d75386bf657d154214a1",
+      "post_bytes": 21228,
+      "source_commit": "d4b46ec3a36ee6da9750a907354660e8349d5108",
+      "prior_hardening_source_commit": "ad926c5933749e5ad2d38f86852419d6e3884b5e",
+      "reconciliation_parent_sha1": "87c1b88bf95672677e21a0d84dc6402040b5eac5",
+      "acceptance": "SOURCE_INTEGRITY_ONLY_NOT_MODEL_RIGHTS_WINDOWS_E07",
+      "verification": "EXACT_GIT_BLOB_AND_EXISTING_SECURITY_REGRESSIONS_NOT_WINDOWS",
+      "historical_approved_override": true,
+      "retired_from_active_set": "D04_20261105"
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueStore.cs",
+      "owner": 3,
+      "run_id": "NOX-E03-PR162-PIN-RECONCILE-20261101",
+      "pre_git_blob_sha1": "2b2d57962b7aeb4b3e5bec828388784835de4261",
+      "post_git_blob_sha1": "7c9a83d9b683090f12b058ac4c8907d388e4b6a5",
+      "post_bytes": 26310,
+      "source_commit": "3ec73f893961a8dce0dc3bdbc202afd4a54773a0",
+      "acceptance": "SOURCE_INTEGRITY_ONLY_NOT_MODEL_RIGHTS_WINDOWS_E07",
+      "historical_approved_override": true,
+      "retired_from_active_set": "D04_20261105"
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueWorker.cs",
+      "owner": 3,
+      "run_id": "NOX-E03-PR162-PIN-RECONCILE-20261101",
+      "pre_git_blob_sha1": "a2528be4d4045f39e6b884e3f5188bd3c1ab7d75",
+      "post_git_blob_sha1": "6dd5ceec428ec71a426d785304001a2d269a666f",
+      "post_bytes": 15322,
+      "source_commit": "3ec73f893961a8dce0dc3bdbc202afd4a54773a0",
+      "acceptance": "SOURCE_INTEGRITY_ONLY_NOT_MODEL_RIGHTS_WINDOWS_E07",
+      "historical_approved_override": true,
+      "retired_from_active_set": "D04_20261105"
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter/OllamaModelAdapter.cs",
+      "owner": 3,
+      "run_id": "NOX-E03-PR162-PIN-RECONCILE-20261101",
+      "pre_git_blob_sha1": "146dd0ef1243e25b7a4c39c54beac8b38110d927",
+      "post_git_blob_sha1": "ed4d55e053fd88f6e69911889981b566d3701661",
+      "post_bytes": 15796,
+      "source_commit": "3ec73f893961a8dce0dc3bdbc202afd4a54773a0",
+      "acceptance": "SOURCE_INTEGRITY_ONLY_NOT_MODEL_RIGHTS_WINDOWS_E07",
+      "historical_approved_override": true,
+      "retired_from_active_set": "D04_20261105"
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter.HardeningSmoke/Program.cs",
+      "owner": 3,
+      "run_id": "W06-R99-P03-REVIEWED-OFFICIAL-PORT-GATE-20261103",
+      "pre_git_blob_sha1": "13ae4b4e9bf465a8fb31e8893cd381b1464c4702",
+      "post_git_blob_sha1": "612e22b0f68ad012f4c031f64042e674fca1d3bd",
+      "post_bytes": 30475,
+      "reconciled_from_git_blob_sha1": "af895122f2a355fba6ae655aa546a380eecdbbd6",
+      "reconciled_from_bytes": 20193,
+      "reconciliation_source_commit": "0c5fada0ea2a27a07292df5f4cb000441b0bae47",
+      "reconciliation_scope": "D04_OLLAMA_TAGS_SHA256_SOURCE_ONLY_NOT_WINDOWS_E07",
+      "acceptance": "SOURCE_ONLY_MANIFEST_PIN_NOT_MODEL_RIGHTS_OR_E07",
+      "previous_reviewed_git_blob_sha1": "cef44deea7d3f07be239d9989f9161780d0caeca",
+      "previous_reviewed_bytes": 29146,
+      "historical_approved_override": true,
+      "retired_from_active_set": "D04_20261105"
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueStore.cs",
+      "owner": 3,
+      "run_id": "NOX-D04-RIGHTS-20261105",
+      "pre_git_blob_sha1": "6046384a1a619869618a64572cae0f95787468d8",
+      "post_git_blob_sha1": "74e2183335676854d3716fa4988e5b09b7c6a770",
+      "post_bytes": 30276,
+      "acceptance": "SOURCE_ONLY_OWNER_RIGHTS_CANDIDATE_NO_WINDOWS_E07",
+      "historical_approved_override": true,
+      "retired_from_active_set": "D04_20261105"
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter/OllamaModelAdapter.cs",
+      "owner": 3,
+      "run_id": "NOX-D04-RIGHTS-20261105",
+      "pre_git_blob_sha1": "704262b0b81bfaf81a0a17de7fd8c8714a9febb3",
+      "post_git_blob_sha1": "e27b9959a514384a68a0a67723aff0910ecbad58",
+      "post_bytes": 16076,
+      "acceptance": "SOURCE_ONLY_OWNER_RIGHTS_CANDIDATE_NO_WINDOWS_E07",
+      "historical_approved_override": true,
+      "retired_from_active_set": "D04_20261105"
     }
   ],
   "source_expansion": {
