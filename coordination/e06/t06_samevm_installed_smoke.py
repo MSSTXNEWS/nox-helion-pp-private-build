@@ -35,6 +35,20 @@ def _load_uninstall_owner():
 
 owned_payload_paths,verify_original_uninstall=_load_uninstall_owner()
 
+# Diagnostic-only installed backup verifier: exactly one frozen CI-owned
+# unmanaged file is permitted; the original strict publisher verifier is
+# intentionally unchanged for staging and for slots with no user probe.
+def _load_exact_user_probe_slot():
+    source=Path(__file__).resolve().with_name("t06_user_probe_slot.py")
+    spec=importlib.util.spec_from_file_location("nox_t06_exact_probe_slot",source)
+    if spec is None or spec.loader is None:
+        raise ImportError("T06_EXACT_PROBE_OWNER_IMPORT_HOLD")
+    module=importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.verify_exact_probe_slot
+
+verify_exact_probe_slot=_load_exact_user_probe_slot()
+
 def read_only_nonzero_uninstall_witness(
         install: Path, owned_files: tuple[Path, ...], remover: Path | None) -> dict:
     """Inspect failed ORIGINAL NSIS /S without rerunning or deleting anything.
@@ -1210,14 +1224,19 @@ def main()->int:
                 original_no_loss_file_preserved(marker,signature,local_base) and
                 original_no_loss_inode_preserved(marker,marker_identity,local_base),
                 "T06_UPDATE_MUST_PRESERVE_BINARY_AND_DATA")
-        # Verify genuine previous installed program before requesting rollback.
-        backup_check=run(["powershell.exe","-NoProfile","-NonInteractive",
-                          "-ExecutionPolicy","Bypass","-File",str(verify),
-                          "-Root",str(backup),
-                          "-Manifest",str(backup/"payload.sha256.json"),
-                          "-AllowInstalledMetadata"],130)
+        # The strict P01 staging verifier intentionally rejects ALL unmanaged
+        # files. The physical installed backup now contains one user-owned
+        # NO-LOSS witness, so apply a READ-ONLY installed-slot verifier that
+        # hashes every original manifest file, validates genuine NSIS metadata,
+        # rejects other extras and demands the exact pre-update user inode.
+        # Never relax, patch or skip the original publisher verifier.
+        try:
+            backup_check=verify_exact_probe_slot(
+                backup,unmanaged.name,unmanaged_bytes,unmanaged_identity,local_base)
+        except RuntimeError as exc:
+            print("T06_UPDATE_BACKUP_PROOF_FIRST_FAILURE",str(exc),flush=True)
+            raise RuntimeError("T06_UPDATE_BACKUP_MANIFEST_VERIFY_HOLD") from exc
         report["installer_lifecycle"]["backup_payload_verify"]=backup_check
-        require(backup_check["code"]==0,"T06_UPDATE_BACKUP_MANIFEST_VERIFY_HOLD")
         rollback=run([str(SETUP),"/S","/ROLLBACK"],250)
         report["installer_lifecycle"]["rollback"]=rollback
         require(rollback["code"]==0 and sha(wpf)==evidence["wpf_sha256"] and
@@ -1234,13 +1253,25 @@ def main()->int:
         # Same-Setup update creates byte-identical versions: require proof
         # both physical slots were moved and retain verified original payload.
         for name,slot in (("restored",install),("superseded",saved)):
-            post_check=run(["powershell.exe","-NoProfile","-NonInteractive",
-                            "-ExecutionPolicy","Bypass","-File",str(verify),
-                            "-Root",str(slot),
-                            "-Manifest",str(slot/"payload.sha256.json"),
-                            "-AllowInstalledMetadata"],130)
+            if name=="restored":
+                # The original unmanaged inode returns to the restored slot.
+                # The original verifier remains mandatory for superseded,
+                # which has NO user-owned probe.
+                try:
+                    post_check=verify_exact_probe_slot(
+                        slot,unmanaged.name,unmanaged_bytes,unmanaged_identity,local_base)
+                except RuntimeError as exc:
+                    print("T06_ROLLBACK_RESTORED_PROOF_FIRST_FAILURE",str(exc),flush=True)
+                    raise RuntimeError("T06_ROLLBACK_SLOT_MANIFEST_VERIFY_HOLD:"+name) from exc
+            else:
+                post_check=run(["powershell.exe","-NoProfile","-NonInteractive",
+                                "-ExecutionPolicy","Bypass","-File",str(verify),
+                                "-Root",str(slot),
+                                "-Manifest",str(slot/"payload.sha256.json"),
+                                "-AllowInstalledMetadata"],130)
+                require(post_check["code"]==0,
+                        "T06_ROLLBACK_SLOT_MANIFEST_VERIFY_HOLD:"+name)
             report["installer_lifecycle"]["rollback_payload_"+name]=post_check
-            require(post_check["code"]==0,"T06_ROLLBACK_SLOT_MANIFEST_VERIFY_HOLD:"+name)
         owned_files=owned_payload_paths(
             install,strict_receipt(install/"payload.sha256.json",
                                   "T06_UNINSTALL_INSTALLED_INVENTORY_JSON_HOLD"))
