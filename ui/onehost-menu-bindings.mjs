@@ -233,7 +233,11 @@ export function nativeModelCancelAck(reply,jobId) {
     }
     return nativeCompletedOwnerReply({...reply,result:terminal});
   }
-  if(reply.state!=='STOP_REQUESTED')return false;
+  // A STOP_REQUESTED transport envelope is not proof of a native P03 owner
+  // effect. The original Windows OneHost owner emits this state only after
+  // an exact job's native result attests cancelled:true. Require that same
+  // positive bit here, without equating a request with terminated weights.
+  if(reply.state!=='STOP_REQUESTED'||owner.cancelled!==true)return false;
   // This is only a transport request ACK. Reject any outer consent/provider
   // denial, including native snake_case/non-string error fields.
   const envelope={...reply};

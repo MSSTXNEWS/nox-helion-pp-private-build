@@ -5,9 +5,9 @@ import {nativeModelCancelAck,nativeOwnerReceiptHolds,nativeCompletedOwnerReply,n
 const jobId='job-17';
 test('P03 native cancel only confirms exact real job and approved owner receipt',()=>{
   assert.equal(nativeModelCancelAck({routeId:'models.cancel',state:'STOP_REQUESTED',
-    result:{jobId,status:'CANCEL_REQUESTED'}},jobId),true);
+    result:{jobId,cancelled:true,status:'CANCEL_REQUESTED'}},jobId),true);
   assert.equal(nativeModelCancelAck({routeId:'models.cancel',state:'STOP_REQUESTED',
-    result:{jobId,status:'STOP_REQUESTED',ack:true}},jobId),true);
+    result:{jobId,cancelled:true,status:'STOP_REQUESTED',ack:true}},jobId),true);
   assert.equal(nativeModelCancelAck({routeId:'models.cancel',state:'COMPLETED',
     result:{jobId,cancelled:true}},jobId),true);
 test('P03 completed cancel accepts terminal state only for authenticated same job',()=>{
@@ -55,7 +55,7 @@ for (const field of ['error','error_code']) {
 }
 
 test('P03 model cancel STOP_REQUESTED does not launder outer owner denials',()=>{
-  const pending={routeId:'models.cancel',state:'STOP_REQUESTED',result:{jobId,status:'CANCEL_REQUESTED',ack:true}};
+  const pending={routeId:'models.cancel',state:'STOP_REQUESTED',result:{jobId,cancelled:true,status:'CANCEL_REQUESTED',ack:true}};
   assert.equal(nativeModelCancelAck(pending,jobId),true);
   for(const denial of [{error:'CONSENT_DENIED'},{error_code:'ACL_DENIED'},
     {error:{code:'PROVIDER_OFFLINE_HOLD'}},{status:'CONSENT_REQUIRED'},{ok:false}])
@@ -85,4 +85,17 @@ test('G2 native owner explicit errorMessage/error_message cannot be privileged A
     const owner={ok:true,ack:true,run_id:'S03-original-1',source_head:'a'.repeat(40),[field]:''};
     assert.equal(nativeOwnerReceiptHolds(owner),false,field+' empty error keeps valid receipt');
   }
+});
+
+// F03: the original OneHost must have issued an exact-job cancellation effect.
+// A UA-trusted STOP_REQUESTED transport with no positive P03 owner bit is HOLD.
+test('P03 native STOP_REQUESTED requires explicit same-job cancelled=true',()=>{
+  const positive={routeId:'models.cancel',state:'STOP_REQUESTED',
+    result:{jobId,cancelled:true,status:'CANCEL_REQUESTED',ack:true}};
+  assert.equal(nativeModelCancelAck(positive,jobId),true);
+  for(const value of [undefined,false,null,'true',0]){
+    assert.equal(nativeModelCancelAck({...positive,result:{...positive.result,cancelled:value}},jobId),false);
+  }
+  assert.equal(nativeModelCancelAck({...positive,result:{...positive.result,ownerResult:{approved:false}}},jobId),false);
+  assert.equal(nativeModelCancelAck({...positive,result:{...positive.result,jobId:'foreign'}},jobId),false);
 });
