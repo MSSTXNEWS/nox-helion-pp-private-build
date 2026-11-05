@@ -228,6 +228,45 @@ def samevm_lifecycle_verified(
                     for name in ("install", "verify", "update", "rollback", "uninstall")))
 
 
+def samevm_provider_preflight_eligible(smoke: object, *, candidate: str,
+                                       expected_owned_files: int) -> bool:
+    """Admit a complete same-VM NSIS lifecycle to a *separate* model-provisioning E07.
+
+    A disposable E06 host normally has no Ollama. The E07 Windows workflow
+    installs the approved signed Ollama and Qwen AFTER artifact provenance
+    checking. A provider-OFFLINE E06 must not be relabeled model-ready, but
+    must not make independent E07 physically unreachable either.
+    """
+    if type(smoke) is not dict:
+        return False
+    stages = smoke.get("installer_lifecycle")
+    if not samevm_lifecycle_verified(stages, expected_owned_files=expected_owned_files):
+        return False
+    phase = smoke.get("phase")
+    if phase == "INSTALLED_GUI_IPC_UPDATE_ROLLBACK_NOLOSS_PASS_NOT_E07":
+        return True
+    if (candidate != "d02-pinned" or
+            phase != "INSTALLED_GUI_IPC_UPDATE_ROLLBACK_NOLOSS_PROVIDER_OFFLINE_HOLD_NOT_E07" or
+            type(stages) is not dict):
+        return False
+    native = stages.get("native_ipc")
+    safety = stages.get("uninstall_any_exit_no_loss")
+    # Never accept a forged "offline" label, a model PASS, an incomplete
+    # uninstall, or a lifecycle that did not preserve original user inodes.
+    return (type(native) is dict and
+            native.get("status") == "PROVIDER_OFFLINE_HOLD" and
+            native.get("model_inventory_route_verified") is False and
+            native.get("real_model_inference_tested") is False and
+            native.get("run_id_matched") is True and
+            native.get("request_id_matched") is True and
+            type(safety) is dict and
+            safety.get("persistent_user_data") == "PRESERVED" and
+            safety.get("unmanaged_install_data") == "PRESERVED" and
+            safety.get("release_accepted") is False and
+            stages.get("unmanaged_install_file_noloss") == "PRESERVED_VERIFIED" and
+            smoke.get("reason") in ("", None))
+
+
 def setup_lock(setup: Path, receipt: Path, *, candidate: str = "d02", pinned: dict | None = None) -> dict:
     """Pin physical latest E06 Setup to three same-identity receipts, then verify bytes.
 
@@ -307,7 +346,8 @@ def setup_lock(setup: Path, receipt: Path, *, candidate: str = "d02", pinned: di
             "E07_E06_DIAGNOSTIC_IDENTITY_HOLD")
     stages = smoke.get("installer_lifecycle")
     require(smoke.get("schema") == "NOX-T06-INSTALLED-SMOKE-v1" and
-            smoke.get("phase") == "INSTALLED_GUI_IPC_UPDATE_ROLLBACK_NOLOSS_PASS_NOT_E07" and
+            samevm_provider_preflight_eligible(smoke, candidate=candidate,
+                expected_owned_files=expected_owned_count) and
             smoke.get("build_id") == expected_build_id and
             smoke.get("setup_sha256") == expected_setup_sha and
             smoke.get("release_accepted") is False and
