@@ -24,12 +24,9 @@ public sealed class OllamaModelAdapter(HttpClient http, string receiptDirectory)
     {
         EnsureLocalOllama();
         if (job.Kind != ModelJobKind.OllamaPull) throw new ArgumentException("Job is not an Ollama pull.", nameof(job));
-        if (job.ExpectedOllamaDigest is not { Length: 64 } ||
-            !job.ExpectedOllamaDigest.All(Uri.IsHexDigit) ||
-            string.IsNullOrWhiteSpace(job.ImmutableRevision) ||
-            !job.LicenseAcknowledged || !ReviewedHttpsLicense(job.LicenseSource) ||
-            string.IsNullOrWhiteSpace(job.RightsReceiptId) || job.RightsReceiptId.Length > 128 ||
-            job.RightsReceiptId.Any(char.IsControl))
+        // A direct adapter invocation must obey the same native review policy
+        // as the durable queue, including immutable revision and non-latest tag.
+        if (!ModelDownloadQueueStore.HasReviewedPullAuthority(job))
             throw new InvalidDataException("REVIEW_REQUIRED: no immutable artifact digest/revision or acknowledged rights.");
         // Ollama pull mutates a mutable local tag. Reviewed artifact rights
         // are not permission to replace an installed model under that tag.

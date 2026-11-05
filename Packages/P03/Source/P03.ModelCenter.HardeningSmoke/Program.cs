@@ -635,6 +635,34 @@ try
         (await sameRetryQueue.ReadAsync()).Count == 2,
         "F09M original exact-rights retry stays idempotent across instances");
     Console.WriteLine("P03_RETRY_AUTHORITY_REGRESSION_PASS 4/4");
+    // Legacy records remain readable but floating revisions cannot become
+    // new native transfers or manufacture retry rights.
+    var d04OldDir = Path.Combine(atomicRoot, "legacy-immutable-pull");
+    var d04OldStore = new ModelDownloadQueueStore(d04OldDir);
+    var d04Old = ticket with { Id = Guid.NewGuid(),
+        ModelTag = "tinyllama:legacy-float", ImmutableRevision = "rolling-branch" };
+    var d04OldPath = Path.Combine(d04OldDir, "p03-model-download-queue.json");
+    await File.WriteAllTextAsync(d04OldPath, JsonSerializer.Serialize(new[] { d04Old },
+        new JsonSerializerOptions(JsonSerializerDefaults.Web)));
+    var d04BeforeClaim = await File.ReadAllBytesAsync(d04OldPath);
+    var d04ClaimHeld = false;
+    try { await d04OldStore.TryStartQueuedAsync(d04Old.Id); }
+    catch (InvalidOperationException ex) when (ex.Message ==
+        "REVIEW_REQUIRED: unpinned Pull cannot start.") { d04ClaimHeld = true; }
+    Assert(d04ClaimHeld && (await d04OldStore.ReadAsync()).Single().State == ModelJobState.Queued &&
+        d04BeforeClaim.SequenceEqual(await File.ReadAllBytesAsync(d04OldPath)),
+        "D04 legacy floating revision cannot claim or alter source queue");
+    var d04OldFailed = d04Old with { State = ModelJobState.Failed };
+    await File.WriteAllTextAsync(d04OldPath, JsonSerializer.Serialize(new[] { d04OldFailed },
+        new JsonSerializerOptions(JsonSerializerDefaults.Web)));
+    var d04BeforeRetry = await File.ReadAllBytesAsync(d04OldPath);
+    var d04RetryHeld = false;
+    try { await d04OldStore.RetryAsync(d04OldFailed.Id); }
+    catch (InvalidOperationException ex) when (ex.Message ==
+        "REVIEW_REQUIRED: legacy/unreviewed pull cannot be retried.") { d04RetryHeld = true; }
+    Assert(d04RetryHeld && (await d04OldStore.ReadAsync()).Count == 1 &&
+        d04BeforeRetry.SequenceEqual(await File.ReadAllBytesAsync(d04OldPath)),
+        "D04 legacy floating revision cannot retry or erase history");
     var claims = await Task.WhenAll(Enumerable.Range(0, 24).Select(i =>
         (i % 2 == 0 ? left : right).TryStartQueuedAsync(ticket.Id)));
     Assert(claims.Count(x => x is not null) == 1, "F10 only one process acquires model job");
@@ -784,6 +812,15 @@ try
         "D04 Pull direct adapter refuses unacknowledged license before Ollama");
     // B04: immutable remote-review consent never grants local-tag overwrite.
     var b04ReviewedPull = pullWithoutConsent with { LicenseAcknowledged = true };
+    var d04Floating = b04ReviewedPull with { ImmutableRevision = "rolling-branch" };
+    var d04TagsBefore = ggufHandler.TagsChecks;
+    var d04DirectHeld = false;
+    try { await adapter.PullAsync(d04Floating,
+        (evt, token) => ValueTask.CompletedTask, default); }
+    catch (InvalidDataException ex) when (ex.Message.StartsWith("REVIEW_REQUIRED:", StringComparison.Ordinal))
+    { d04DirectHeld = true; }
+    Assert(d04DirectHeld && ggufHandler.TagsChecks == d04TagsBefore,
+        "D04 direct Ollama Pull refuses floating revision before IO");
     async Task B04RefusePullAsync(string expected, string label)
     {
         try { await adapter.PullAsync(b04ReviewedPull,

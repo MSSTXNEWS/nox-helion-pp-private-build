@@ -253,6 +253,25 @@ public sealed class ModelDownloadQueueStore
         (job.State is ModelJobState.Queued or ModelJobState.Running or ModelJobState.Cancelling) &&
         string.Equals(job.ModelTag, tag, StringComparison.OrdinalIgnoreCase);
 
+    // Historical on-disk Pull entries remain readable, but immutable owner
+    // consent must be re-checked before claim, retry, or direct Ollama IO.
+    internal static bool HasReviewedPullAuthority(ModelJob job)
+    {
+        var revision = job.ImmutableRevision;
+        var pinned = revision is { Length: 64 } && ShaPattern.IsMatch(revision) ||
+            revision is { Length: 71 } &&
+            revision.StartsWith("sha256:", StringComparison.OrdinalIgnoreCase) &&
+            ShaPattern.IsMatch(revision[7..]);
+        return job.Kind == ModelJobKind.OllamaPull &&
+            job.ExpectedOllamaDigest is { Length: 64 } &&
+            ShaPattern.IsMatch(job.ExpectedOllamaDigest) && pinned &&
+            job.LicenseAcknowledged && !string.IsNullOrWhiteSpace(job.ModelTag) &&
+            job.ModelTag.Length <= 160 && TagPattern.IsMatch(job.ModelTag) &&
+            !job.ModelTag.Contains("..", StringComparison.Ordinal) &&
+            !job.ModelTag.EndsWith(":latest", StringComparison.OrdinalIgnoreCase) &&
+            HasReviewedGgufAuthority(job.RightsReceiptId, job.LicenseSource);
+    }
+
     // GGUF owner's rights reference is durable review evidence, not arbitrary input.
     // Existing unsafe queue snapshots remain readable for explicit owner recovery;
     // enqueue, atomic claim and retry must refuse transferring them.
@@ -288,13 +307,7 @@ public sealed class ModelDownloadQueueStore
             var index = jobs.FindIndex(j => j.Id == id);
             if (index < 0 || jobs[index].State != ModelJobState.Queued) return null;
             var old = jobs[index];
-            if (old.Kind == ModelJobKind.OllamaPull &&
-                (old.ExpectedOllamaDigest is not { Length: 64 } ||
-                 !ShaPattern.IsMatch(old.ExpectedOllamaDigest) ||
-                 string.IsNullOrWhiteSpace(old.ImmutableRevision) ||
-                 string.IsNullOrWhiteSpace(old.RightsReceiptId) ||
-                 old.RightsReceiptId.Length > 128 || old.RightsReceiptId.Any(char.IsControl) ||
-                 !old.LicenseAcknowledged))
+            if (old.Kind == ModelJobKind.OllamaPull && !HasReviewedPullAuthority(old))
                 throw new InvalidOperationException("REVIEW_REQUIRED: unpinned Pull cannot start.");
             if (old.Kind == ModelJobKind.GgufImport &&
                 !HasReviewedGgufAuthority(old.RightsReceiptId, old.LicenseSource))
@@ -457,14 +470,7 @@ public sealed class ModelDownloadQueueStore
             // Re-queueing a failed owner-reviewed pull must never start a second
             // transfer beside a newly approved active tag (or reuse stale rights).
             // The original owner approval remains required for any explicit retry.
-            if (failed.Kind == ModelJobKind.OllamaPull &&
-                (failed.ExpectedOllamaDigest is not { Length: 64 } ||
-                 !ShaPattern.IsMatch(failed.ExpectedOllamaDigest) ||
-                 string.IsNullOrWhiteSpace(failed.ImmutableRevision) ||
-                 string.IsNullOrWhiteSpace(failed.RightsReceiptId) ||
-                 failed.RightsReceiptId.Length > 128 ||
-                 failed.RightsReceiptId.Any(char.IsControl) ||
-                 !failed.LicenseAcknowledged))
+            if (failed.Kind == ModelJobKind.OllamaPull && !HasReviewedPullAuthority(failed))
                 throw new InvalidOperationException("REVIEW_REQUIRED: legacy/unreviewed pull cannot be retried.");
             if (failed.Kind == ModelJobKind.GgufImport &&
                 !HasReviewedGgufAuthority(failed.RightsReceiptId, failed.LicenseSource))
