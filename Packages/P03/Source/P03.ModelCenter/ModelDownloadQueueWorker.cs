@@ -13,26 +13,37 @@ public sealed class ModelDownloadQueueWorker(
         await _singleWorker.WaitAsync(ct);
         try
         {
-            var job = (await store.ReadAsync(ct)).FirstOrDefault(x => x.State == ModelJobState.Queued && (requestedJobId is null || x.Id==requestedJobId));
-            if (job is null) return;
-            // Legacy queue snapshots can survive their native authorization.
-            // Refuse both Pull and GGUF BEFORE atomic Running claim; otherwise
-            // unreviewed GGUF remains Queued and blocks later approved jobs.
-            var unreviewedPull = job.Kind == ModelJobKind.OllamaPull &&
-                !ModelDownloadQueueStore.HasReviewedPullAuthority(job);
-            var unreviewedGguf = job.Kind == ModelJobKind.GgufImport &&
-                !ModelDownloadQueueStore.HasReviewedGgufAuthority(
-                    job.RightsReceiptId, job.LicenseSource);
-            if (unreviewedPull || unreviewedGguf)
+            // A single RunNextAsync invocation must not be monopolized by a
+            // legacy unreviewed queue head. Reject it durably and continue to
+            // the next independently authorized entry in original FIFO order.
+            // A targeted run still touches only its requested JobId.
+            var queuedJobs = (await store.ReadAsync(ct))
+                .Where(x => x.State == ModelJobState.Queued &&
+                    (requestedJobId is null || x.Id == requestedJobId)).ToArray();
+            ModelJob? job = null;
+            foreach (var candidate in queuedJobs)
             {
-                // Concurrent STOP wins; preserve terminal history and provenance.
-                await store.UpdateAsync(job.Id, j => j.State == ModelJobState.Queued
-                    ? j with { State = ModelJobState.Failed,
-                        Status = "REVIEW_REQUIRED",
-                        Error = unreviewedGguf ? "GGUF_RIGHTS_REVIEW_REQUIRED" : "UNPINNED_ARTIFACT" }
-                    : j, ct);
-                return;
+                // Legacy queue snapshots can survive their native authorization.
+                // Refuse both Pull and GGUF BEFORE atomic Running claim.
+                var unreviewedPull = candidate.Kind == ModelJobKind.OllamaPull &&
+                    !ModelDownloadQueueStore.HasReviewedPullAuthority(candidate);
+                var unreviewedGguf = candidate.Kind == ModelJobKind.GgufImport &&
+                    !ModelDownloadQueueStore.HasReviewedGgufAuthority(
+                        candidate.RightsReceiptId, candidate.LicenseSource);
+                if (unreviewedPull || unreviewedGguf)
+                {
+                    // Atomic update ensures concurrent STOP remains terminal.
+                    await store.UpdateAsync(candidate.Id, j => j.State == ModelJobState.Queued
+                        ? j with { State = ModelJobState.Failed,
+                            Status = "REVIEW_REQUIRED",
+                            Error = unreviewedGguf ? "GGUF_RIGHTS_REVIEW_REQUIRED" : "UNPINNED_ARTIFACT" }
+                        : j, ct);
+                    continue;
+                }
+                job = candidate;
+                break;
             }
+            if (job is null) return;
             // Hold one OS-backed lease through the transfer so a second window
             // cannot misclassify this Running job as crashed during recovery.
             using var executionLease = store.TryAcquireExecutionLease(job.Id);

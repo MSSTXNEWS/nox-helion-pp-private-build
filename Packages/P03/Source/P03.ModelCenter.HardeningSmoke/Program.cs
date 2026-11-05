@@ -481,6 +481,37 @@ try
     { unsafeRetryDenied = true; }
     Assert(unsafeRetryDenied && (await unsafeLegacyQueue.ReadAsync()).Count == 1,
         "D04 legacy unsafe GGUF retry denied without data loss");
+    // D04 regression: reject a stale unsafe head and actually serve the next
+    // approved queued GGUF in ONE original RunNextAsync invocation, without
+    // bypassing native rights, changing history, or using a real network.
+    var fifoRoot = Path.Combine(multiRoot, "d04-legacy-fifo");
+    var fifoStore = new ModelDownloadQueueStore(fifoRoot);
+    var fifoUnsafe = unsafeLegacyJob with { Id = Guid.NewGuid() };
+    await File.WriteAllTextAsync(Path.Combine(fifoRoot, "p03-model-download-queue.json"),
+        JsonSerializer.Serialize(new[] { fifoUnsafe }, new JsonSerializerOptions(JsonSerializerDefaults.Web)));
+    var fifoApproved = await fifoStore.EnqueueVerifiedGgufAsync(
+        "local:d04-verified-next", file, size, sha, "native-verified-receipt", evidence);
+    var fifoHandler = new D04RightsGgufHandler(fifoApproved.ModelTag,
+        "sha256:" + new string('e', 64));
+    using (var fifoClient = new HttpClient(fifoHandler) {
+        BaseAddress = new Uri("http://127.0.0.1:11434/")
+    })
+    {
+        var fifoWorker = new ModelDownloadQueueWorker(fifoStore,
+            new OllamaModelAdapter(fifoClient, fifoRoot),
+            new ModelLifecyclePublisher(new SilentP03Sink()));
+        await fifoWorker.RunNextAsync();
+    }
+    var fifoAfter = await fifoStore.ReadAsync();
+    Assert(fifoAfter.Count == 2 &&
+        fifoAfter.Single(j => j.Id == fifoUnsafe.Id).State == ModelJobState.Failed &&
+        fifoAfter.Single(j => j.Id == fifoUnsafe.Id).Error == "GGUF_RIGHTS_REVIEW_REQUIRED" &&
+        fifoAfter.Single(j => j.Id == fifoApproved.Id).State == ModelJobState.Completed &&
+        fifoAfter.Single(j => j.Id == fifoApproved.Id).Attempts == 1 &&
+        fifoAfter.Single(j => j.Id == fifoApproved.Id).ComputedSha256 == sha &&
+        fifoHandler.CreateCalls == 1 &&
+        File.Exists(fifoAfter.Single(j => j.Id == fifoApproved.Id).ReceiptPath),
+        "D04 native FIFO advances past legacy unreviewed head and retains real SHA receipt");
     await Task.WhenAll(Enumerable.Range(0, 10).Select(i =>
         (i % 2 == 0 ? a : b).EnqueueVerifiedGgufAsync("local:example" + i,
             file, size, sha, "synthetic-rights", evidence)));

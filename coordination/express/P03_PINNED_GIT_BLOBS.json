@@ -515,14 +515,14 @@
     {
       "path": "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueWorker.cs",
       "owner": 3,
-      "run_id": "D04_LEGACY_REVIEW_QUEUE_HEAD_OF_LINE_HOLD_20261105",
-      "pre_git_blob_sha1": "135d62901100f1818ed3ea753f25f6c7c791c8df",
-      "post_git_blob_sha1": "2315d9716a0d73eb4be80a578283515a08081e1e",
-      "post_bytes": 15679,
-      "acceptance": "SOURCE_ONLY_NOT_NATIVE_DOTNET_OR_WINDOWS",
-      "prior_active_post_git_blob_sha1": "135d62901100f1818ed3ea753f25f6c7c791c8df",
-      "prior_active_post_bytes": 15406,
-      "source_head_observed": "d04bac08cbe603a22d4f91394cc939c21a884403"
+      "run_id": "D04_FIFO_LEGACY_HEAD_FORWARD_20261105",
+      "pre_git_blob_sha1": "2315d9716a0d73eb4be80a578283515a08081e1e",
+      "post_git_blob_sha1": "f7372675615b0d17ed8130b061e8925a57941e1a",
+      "post_bytes": 16209,
+      "acceptance": "SOURCE_ONLY_CONTRACT_CSHARP_WINDOWS_NOT_RUN",
+      "prior_active_post_git_blob_sha1": "2315d9716a0d73eb4be80a578283515a08081e1e",
+      "prior_active_post_bytes": 15679,
+      "source_head_observed": "beadea9d0db7296057b548edc589bbb5bd230708"
     },
     {
       "path": "Packages/P03/Source/P03.ModelCenter/ModelCenterNativeRoutes.cs",
@@ -560,14 +560,14 @@
     {
       "path": "Packages/P03/Source/P03.ModelCenter.HardeningSmoke/Program.cs",
       "owner": 3,
-      "run_id": "D04_LEGACY_REVIEW_QUEUE_HEAD_OF_LINE_HOLD_20261105",
-      "pre_git_blob_sha1": "33cd0c71bed0570c0d0304e3a122bd7b64a1afe6",
-      "post_git_blob_sha1": "2b529eebddfa257195b2b4e76fa404637522e7ff",
-      "post_bytes": 66576,
-      "acceptance": "SOURCE_ONLY_NOT_NATIVE_DOTNET_OR_WINDOWS",
-      "prior_active_post_git_blob_sha1": "33cd0c71bed0570c0d0304e3a122bd7b64a1afe6",
-      "prior_active_post_bytes": 65669,
-      "source_head_observed": "d04bac08cbe603a22d4f91394cc939c21a884403"
+      "run_id": "D04_FIFO_LEGACY_HEAD_FORWARD_20261105",
+      "pre_git_blob_sha1": "2b529eebddfa257195b2b4e76fa404637522e7ff",
+      "post_git_blob_sha1": "bac61baec8b3dfe00ed1d4bfbc83b915e7f5de5f",
+      "post_bytes": 68548,
+      "acceptance": "SOURCE_ONLY_CONTRACT_CSHARP_WINDOWS_NOT_RUN",
+      "prior_active_post_git_blob_sha1": "2b529eebddfa257195b2b4e76fa404637522e7ff",
+      "prior_active_post_bytes": 66576,
+      "source_head_observed": "beadea9d0db7296057b548edc589bbb5bd230708"
     },
     {
       "path": "Packages/P03/Source/python-host/p03_onehost_port.py",
@@ -1184,6 +1184,34 @@
       "prior_active_run_id": "B04_OWNER_STOP_RETRY_RECEIPT_R4_20261105",
       "historical_approved_override": true,
       "retired_from_active_set": "B04_OWNER_PENDING_ACK_FENCE_R11_20261105"
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueWorker.cs",
+      "owner": 3,
+      "run_id": "D04_LEGACY_REVIEW_QUEUE_HEAD_OF_LINE_HOLD_20261105",
+      "pre_git_blob_sha1": "135d62901100f1818ed3ea753f25f6c7c791c8df",
+      "post_git_blob_sha1": "2315d9716a0d73eb4be80a578283515a08081e1e",
+      "post_bytes": 15679,
+      "acceptance": "SOURCE_ONLY_NOT_NATIVE_DOTNET_OR_WINDOWS",
+      "prior_active_post_git_blob_sha1": "135d62901100f1818ed3ea753f25f6c7c791c8df",
+      "prior_active_post_bytes": 15406,
+      "source_head_observed": "d04bac08cbe603a22d4f91394cc939c21a884403",
+      "historical_approved_override": true,
+      "retired_from_active_set": "D04_FIFO_LEGACY_HEAD_FORWARD_20261105"
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter.HardeningSmoke/Program.cs",
+      "owner": 3,
+      "run_id": "D04_LEGACY_REVIEW_QUEUE_HEAD_OF_LINE_HOLD_20261105",
+      "pre_git_blob_sha1": "33cd0c71bed0570c0d0304e3a122bd7b64a1afe6",
+      "post_git_blob_sha1": "2b529eebddfa257195b2b4e76fa404637522e7ff",
+      "post_bytes": 66576,
+      "acceptance": "SOURCE_ONLY_NOT_NATIVE_DOTNET_OR_WINDOWS",
+      "prior_active_post_git_blob_sha1": "33cd0c71bed0570c0d0304e3a122bd7b64a1afe6",
+      "prior_active_post_bytes": 65669,
+      "source_head_observed": "d04bac08cbe603a22d4f91394cc939c21a884403",
+      "historical_approved_override": true,
+      "retired_from_active_set": "D04_FIFO_LEGACY_HEAD_FORWARD_20261105"
     }
   ],
   "source_expansion": {

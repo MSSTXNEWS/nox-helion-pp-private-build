@@ -575,7 +575,7 @@ $p02StageSources=@(
   @{relative='Packages/P03/Source/P03.ModelCenter/ModelCatalog.cs';dest='Integration/P03/ModelCatalog.cs';blob='73664042ab4e616e8f0c1e46abb9108780ebd7b3'},
   @{relative='Packages/P03/Source/P03.ModelCenter/ModelCenterNativeRoutes.cs';dest='Integration/P03/ModelCenterNativeRoutes.cs';blob='aeaedb2f90b513f14f59d854b108e4798d5977b2'},
   @{relative='Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueStore.cs';dest='Integration/P03/ModelDownloadQueueStore.cs';blob='3393126e69c790c495e8b728b235f3bfde8f09e3'},
-  @{relative='Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueWorker.cs';dest='Integration/P03/ModelDownloadQueueWorker.cs';blob='2315d9716a0d73eb4be80a578283515a08081e1e'},
+  @{relative='Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueWorker.cs';dest='Integration/P03/ModelDownloadQueueWorker.cs';blob='f7372675615b0d17ed8130b061e8925a57941e1a'},
   @{relative='Packages/P03/Source/P03.ModelCenter/ModelLifecycleEvents.cs';dest='Integration/P03/ModelLifecycleEvents.cs';blob='bfc2030334f78e78b35f510fc7f58ad19d1e75e4'},
   @{relative='Packages/P03/Source/P03.ModelCenter/ModelLocalAttestation.cs';dest='Integration/P03/ModelLocalAttestation.cs';blob='c25da7d77b39292ebe7dce1a771fcff32b4f7c6e'},
   @{relative='Packages/P03/Source/P03.ModelCenter/ModelQuickActions.cs';dest='Integration/P03/ModelQuickActions.cs';blob='66d6f05c8f2deea7fab110f4c024d762d71af390'},
