@@ -62,15 +62,16 @@ class C06CancellationReentrancySource(unittest.TestCase):
         self.assertIn('Interlocked.Increment(ref _a1OwnerStopEpoch);', main)
 
     def test_original_wpf_legacy_owner_boolean_denial_is_executable(self):
-        # B02: escaped textual \\n previously swallowed the native owner
-        # Boolean-denial if inside a C# // comment (SOURCE_ONLY).
+        # Reject a C# line-comment that hides the owner negative-ACK guard.
         main = (SOURCE.parent / 'MainWindow.NativeP02.cs').read_text(encoding='utf-8')
         owner = main.split('private static bool LegacyOwnerDenial(', 1)[1].split(
             'private async Task DispatchLegacyNativeAsync(', 1)[0]
-        self.assertNotIn(r'\\n', owner)
-        self.assertRegex(owner, r'(?m)^\\s*if \\(p\\.Name is "ok" or "ack" or "success" or "approved" or "authorized" &&\\s*
-)
-        self.assertRegex(owner, r'(?m)^\\s*p\\.Value\\.ValueKind!=JsonValueKind\\.True\\) return true;')
+        self.assertNotIn(chr(92) + 'n', owner)
+        executable = [line.strip() for line in owner.splitlines()
+                      if line.strip().startswith('if (p.Name is "ok"')]
+        self.assertEqual(len(executable), 1)
+        self.assertIn('or "authorized" &&', executable[0])
+        self.assertIn('p.Value.ValueKind!=JsonValueKind.True) return true;', owner)
         self.assertIn('LegacyOwnerStatusDenied(state)', owner)
         self.assertIn('LegacyOwnerDenial(p.Value,depth+1)', owner)
 
