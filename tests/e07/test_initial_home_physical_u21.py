@@ -29,6 +29,20 @@ class InitialHomePhysicalPhoto(unittest.TestCase):
         self.assertIn('"reduced_motion":"NOT_TESTED"',source)
         self.assertIn("initial_home_probe=physical_initial_home_probe if final_probe_dir is not None else None",source)
 
+    def test_live_home_evidence_parent_is_created_before_installed_lifecycle(self):
+        source=OWNER.read_text(encoding="utf-8")
+        entry=source.index('physical_dir = evidence_parent / "same-setup-final"')
+        guard=source.index('evidence_parent.mkdir(parents=True, exist_ok=True)')
+        reparse=source.index('"E07_FINAL_EVIDENCE_PARENT_REPARSE_HOLD"')
+        lifecycle=source.index('lifecycle(setup,result,frozen_source=source_sha,',entry)
+        self.assertLess(reparse,guard)
+        self.assertLess(guard,entry)
+        self.assertLess(entry,lifecycle)
+        self.assertIn('require(clean_dir(evidence_parent)',source)
+        # Keep the missing/preexisting-photo diagnostic fail closed.
+        self.assertIn('require(len(pre_nav_visual)==1,"E07_PRENAV_VISUAL_NOT_OBSERVED_HOLD")',source)
+        self.assertIn('precomputed_visual=pre_nav_visual[0]',source)
+
     def test_windows_artifact_retains_original_home_photo(self):
         flow=FLOW.read_text(encoding="utf-8")
         self.assertIn("D02_HOME_PRENAV.png",flow)
