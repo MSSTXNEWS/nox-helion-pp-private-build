@@ -1458,12 +1458,16 @@ $b03UninstallMetadataGuard=@'
   RMDir "$INSTDIR"
   Goto C11UninstallMetadataDone
   C11UninstallManifestHold:
+    SetErrorLevel 1
     Abort "Manifest cleanup failed; uninstall incomplete. Recovery files preserved."
   C11UninstallMarkerHold:
+    SetErrorLevel 1
     Abort "Owner marker cleanup failed; uninstall incomplete. Recovery files preserved."
   C11UninstallExeHold:
+    SetErrorLevel 1
     Abort "Uninstaller cleanup failed; uninstall incomplete. Recovery files preserved."
   C11UninstallRegistryHold:
+    SetErrorLevel 1
     Abort "Uninstall registry cleanup failed; uninstall incomplete. Recovery files preserved."
   C11UninstallMetadataDone:
 '@
@@ -1485,6 +1489,40 @@ if ($c11NsiPatched.IndexOf($b03UninstallMetadataGuard,[StringComparison]::Ordina
     $c11NsiPatched.Contains($b03UninstallMetadataOld)) {
   throw 'B03_NSIS_UNINSTALL_METADATA_READBACK_HOLD'
 }
+# D03/G4: physical Windows Setup demonstrated ORIGINAL Uninstall.exe EXIT=0
+# while original NSIS REMOVE_SCRIPT returned 1 and owned metadata remained.
+# Never let Abort alone appear successful to the caller. Preserve source-locked
+# owner refusal and byte-exact NO-LOSS: stage only this unique archived block.
+$d03OriginalUninstallFailure=@'
+  ${If} $ExitCode != "0"
+    DetailPrint "$CheckResult"
+    Abort "Conservative uninstall incomplete: modified files retained. No recursive removal."
+  ${EndIf}
+'@
+$d03UninstallFailureExit=@'
+  ${If} $ExitCode != "0"
+    DetailPrint "$CheckResult"
+    SetErrorLevel 1
+    Abort "Conservative uninstall incomplete: modified files retained. No recursive removal."
+  ${EndIf}
+'@
+$d03OriginalUninstallFailure=[regex]::Replace($d03OriginalUninstallFailure,'\r?\n',$c11Eol)
+$d03UninstallFailureExit=[regex]::Replace($d03UninstallFailureExit,'\r?\n',$c11Eol)
+$d03OwnerAt=$c11NsiPatched.IndexOf($d03OriginalUninstallFailure,[StringComparison]::Ordinal)
+$d03SectionAt=$c11NsiPatched.IndexOf('Section "Uninstall"',[StringComparison]::Ordinal)
+$d03DoneAt=$c11NsiPatched.IndexOf('DoneUninstall:',[StringComparison]::Ordinal)
+if ($d03OwnerAt -lt 0 -or $d03OwnerAt -le $d03SectionAt -or
+    $d03OwnerAt -ge $d03DoneAt -or
+    $c11NsiPatched.LastIndexOf($d03OriginalUninstallFailure,[StringComparison]::Ordinal) -ne $d03OwnerAt -or
+    $c11NsiPatched.Contains($d03UninstallFailureExit)) {
+  throw 'D03_NSIS_NATIVE_UNINSTALL_EXIT_PREIMAGE_HOLD'
+}
+$c11NsiPatched=$c11NsiPatched.Replace($d03OriginalUninstallFailure,$d03UninstallFailureExit)
+if ($c11NsiPatched.Contains($d03OriginalUninstallFailure) -or
+    $c11NsiPatched.IndexOf($d03UninstallFailureExit,[StringComparison]::Ordinal) -ne $d03OwnerAt) {
+  throw 'D03_NSIS_NATIVE_UNINSTALL_EXIT_READBACK_HOLD'
+}
+Write-Host 'D03_NSIS_REAL_UNINSTALL_EXIT_FAIL_CLOSED_STAGED'
 Write-Host 'B03_NSIS_UNINSTALL_METADATA_NO_FALSE_SUCCESS_STAGED'
 [IO.File]::WriteAllText($c11NsiPath,$c11NsiPatched,(New-Object System.Text.UTF8Encoding($false)))
 Write-Host "C11_NSIS_ROLLBACK_OLD_PAYLOAD_SHA_GATE_STAGED"
