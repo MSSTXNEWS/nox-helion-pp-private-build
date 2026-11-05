@@ -61,4 +61,17 @@ class C06CancellationReentrancySource(unittest.TestCase):
         self.assertLess(legacy.index(guard, legacy.index('var result = action')), legacy.index('PostMessage(new {kind="chatFinished"'))
         self.assertIn('Interlocked.Increment(ref _a1OwnerStopEpoch);', main)
 
+    def test_original_wpf_legacy_owner_boolean_denial_is_executable(self):
+        # B02: escaped textual \\n previously swallowed the native owner
+        # Boolean-denial if inside a C# // comment (SOURCE_ONLY).
+        main = (SOURCE.parent / 'MainWindow.NativeP02.cs').read_text(encoding='utf-8')
+        owner = main.split('private static bool LegacyOwnerDenial(', 1)[1].split(
+            'private async Task DispatchLegacyNativeAsync(', 1)[0]
+        self.assertNotIn(r'\\n', owner)
+        self.assertRegex(owner, r'(?m)^\\s*if \\(p\\.Name is "ok" or "ack" or "success" or "approved" or "authorized" &&\\s*
+)
+        self.assertRegex(owner, r'(?m)^\\s*p\\.Value\\.ValueKind!=JsonValueKind\\.True\\) return true;')
+        self.assertIn('LegacyOwnerStatusDenied(state)', owner)
+        self.assertIn('LegacyOwnerDenial(p.Value,depth+1)', owner)
+
 if __name__=='__main__': unittest.main()
