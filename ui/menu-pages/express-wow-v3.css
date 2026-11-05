@@ -1,0 +1,32 @@
+@import url("./express-wow-v4.css");
+/* NOX HELION EXPRESS · WOW V3, additive only; no native contracts or network. */
+.universe[data-wow-v3="1"]{isolation:isolate;--wow-v3-gold:#ffca91;--wow-v3-cyan:#92d9e9}
+.wow-v3-field{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0;opacity:.84;mix-blend-mode:screen}
+.wow-v3-accretion{position:absolute;inset:11% 12%;pointer-events:none;z-index:0;border-radius:50%;border:1px solid #daa46e25;box-shadow:inset 0 0 75px #b9762513,0 0 45px #9b5f2e12;transform:rotate(-21deg) scaleY(.47);animation:wow-v3-orbit 38s linear infinite}
+.wow-v3-accretion::before{content:"";position:absolute;inset:-14% -9%;border:1px dashed #aacddd40;border-radius:50%;box-shadow:0 0 28px #d4a67c20;animation:wow-v3-counter 29s linear infinite}
+.wow-v3-accretion::after{content:"";position:absolute;inset:10%;border-top:2px solid #f6d19e77;border-bottom:1px solid #86c8d055;border-radius:50%;filter:drop-shadow(0 0 8px #dca07188)}
+.universe[data-wow-v3="1"] .sun{z-index:2}
+.universe[data-wow-v3="1"] .sun-ring{border-top-width:3px;box-shadow:0 0 40px #f3a66040,0 0 85px #d4844b22}
+.universe[data-wow-v3="1"] .planets{z-index:3}
+.universe[data-wow-v3="1"] .planet{--surface:#dba677;--under:#363048;--shadow:#080d18;overflow:visible;background:radial-gradient(circle at 26% 22%,#ffffff7a 0%,transparent 14%),radial-gradient(ellipse at 34% 28%,var(--surface),transparent 48%),radial-gradient(circle at 76% 80%,var(--shadow),var(--under) 54%,#4c2930 95%);box-shadow:inset -17px -18px 28px #01030fbf,inset 8px 9px 23px #ffe6bd23,0 13px 36px #0009,0 0 26px color-mix(in srgb,var(--surface) 31%,transparent)}
+.universe[data-wow-v3="1"] .planet:nth-child(5n+1){--surface:#e6ab70;--under:#664047;--shadow:#080c1c}
+.universe[data-wow-v3="1"] .planet:nth-child(5n+2){--surface:#8dbfe3;--under:#345578;--shadow:#050d1f}
+.universe[data-wow-v3="1"] .planet:nth-child(5n+3){--surface:#cf9cdd;--under:#614271;--shadow:#15091d}
+.universe[data-wow-v3="1"] .planet:nth-child(5n+4){--surface:#84c8b7;--under:#315c56;--shadow:#07191c}
+.universe[data-wow-v3="1"] .planet:nth-child(5n){--surface:#e4a98f;--under:#75506b;--shadow:#1c0e21}
+.wow-v3-crust{position:absolute;inset:8%;border-radius:50%;pointer-events:none;z-index:0;opacity:.8;background:repeating-radial-gradient(ellipse at 28% 24%,transparent 0 7px,#ffffff0d 9px 10px,transparent 12px 23px),conic-gradient(from 20deg at 40% 40%,transparent 0 27deg,#fff5 29deg,transparent 74deg,#0003 128deg,transparent 180deg,#ffffff20 278deg,transparent 340deg);mix-blend-mode:screen;box-shadow:inset 8px 8px 18px #ffffff19,inset -9px -12px 25px #0008}
+.planet[aria-pressed="true"] .wow-v3-crust,.planet:hover .wow-v3-crust,.planet:focus-visible .wow-v3-crust{opacity:1;filter:brightness(1.25)}
+.universe[data-wow-v3="1"] .planet:focus-visible{outline:3px solid #ffe5ad;outline-offset:10px}
+.universe[data-wow-v3="1"] .planet-label,.universe[data-wow-v3="1"] .planet small{position:relative;z-index:2}
+.universe[data-wow-v3="1"] .sun:focus-visible{outline:3px solid #ffe2a6;outline-offset:14px}
+body[data-fx="MAX"] .wow-v3-field{opacity:1}
+body[data-fx="MAX"] .wow-v3-accretion{filter:drop-shadow(0 0 22px #f0ad7570)}
+body[data-fx="BALANCED"] .wow-v3-field{opacity:.73}
+body[data-fx="ECO"] .wow-v3-field{opacity:.26;mix-blend-mode:normal}
+body[data-fx="ECO"] .wow-v3-accretion,body[data-fx="ECO"] .wow-v3-accretion::before{animation:none!important}
+body[data-fx="ECO"] .wow-v3-crust{opacity:.43}
+@keyframes wow-v3-orbit{to{transform:rotate(339deg) scaleY(.47)}}
+@keyframes wow-v3-counter{to{transform:rotate(-360deg)}}
+@media(max-width:800px){.wow-v3-accretion{inset:18% 3%}.wow-v3-field{opacity:.54}}
+@media(max-width:520px){.wow-v3-accretion{display:none}.wow-v3-field{opacity:.18}.universe[data-wow-v3="1"] .planet{box-shadow:inset -11px -13px 20px #000b,0 4px 15px #0007}}
+@media(prefers-reduced-motion:reduce){.wow-v3-accretion,.wow-v3-accretion::before{animation:none!important}.wow-v3-field{opacity:.20!important;mix-blend-mode:normal}.wow-v3-crust{transition:none!important}}

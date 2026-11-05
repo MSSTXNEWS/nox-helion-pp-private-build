@@ -1,0 +1,97 @@
+"""Source-level frozen original EXPRESS admission; never a native E07 PASS."""
+import importlib.util
+from pathlib import Path
+import tempfile
+import unittest
+ROOT=Path(__file__).resolve().parents[2]
+SPEC=importlib.util.spec_from_file_location("nox_original_u06",ROOT/"coordination/e07/independent_setup_e07.py")
+MOD=importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(MOD)
+class FrozenOriginalU06(unittest.TestCase):
+    def test_frozen_hash_and_unchanged_d02(self):
+        self.assertEqual(MOD.ORIGINAL_E06_SOURCE,"fe21790af418c8c1083946595811b67c9c03c49d")
+        self.assertEqual(MOD.ORIGINAL_E06_SETUP_SHA,"1b78fba3fa158673814b31f211063022fd2bff0ae7ff25f14ba3db2a47c484c2")
+        self.assertEqual(MOD.ORIGINAL_E06_SETUP_BYTES,87333614)
+        self.assertEqual(MOD.ORIGINAL_E06_OWNED_FILES,485)
+        self.assertEqual(MOD.ORIGINAL_E06_SOURCE_ZIP_SHA,"80e46b37260680eaa434211ebbe98d8498c8481e9b384e8895e26c810b995106")
+        self.assertEqual(MOD.ORIGINAL_E06_PUBLISHED_HOME_SHA,"37c7952d98e820b22ea59c72c967bc4f7ecf01da013b3269b53e9f698062586e")
+        self.assertEqual(MOD.SOURCE_SHA,"834c443de53fd2c214750ed3c868133b70648c42")
+    def test_conservative_uninstall_count(self):
+        good={k:{"code":0} for k in ("install","verify","update","rollback","uninstall")}
+        good["uninstall_owned_files_checked"]=485
+        self.assertTrue(MOD.samevm_lifecycle_verified(good,expected_owned_files=485))
+        for num in (484,486,True,"485"):
+            wrong=dict(good)
+            wrong["uninstall_owned_files_checked"]=num
+            self.assertFalse(MOD.samevm_lifecycle_verified(wrong,expected_owned_files=485))
+    def test_invalid_path_holds_before_install(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base=Path(directory)
+            with self.assertRaisesRegex(MOD.Hold,"E07_ORIGINAL_CANDIDATE_PATH_HOLD"):
+                MOD.setup_lock_original(base/"wrong.exe",base)
+    def test_actual_pe_sig_excludes_escape_backsplash(self):
+        src=(ROOT/"coordination/e07/independent_setup_e07.py").read_text(encoding="utf-8")
+        self.assertIn('header[offset:offset+4]==bytes.fromhex("50450000")',src)
+        self.assertEqual(bytes.fromhex("50450000"),b"PE"+bytes(2))
+    def test_real_uia_tree_roles_are_button_presence_not_clicks(self):
+        five=("CHAT","INSTALL","MODELS","LEARN","SETTINGS")
+        physical={"schema":"NOX-E07-UIA-V1","labels":[],
+                  "treeCount":74,"treeScanned":74,
+                  "targetTypes":[v+"|ControlType.Button|VISIBLE_ENABLED" for v in five]}
+        evidence=MOD.classify_primary_uia_evidence(physical)
+        self.assertEqual(evidence["buttons_present"],list(five))
+        self.assertEqual(evidence["status"],"PASS")
+        self.assertEqual(evidence["actions_invoked"],0)
+        for kind in ("Text","Custom","Hyperlink"):
+            bad={**physical,"targetTypes":[v+"|ControlType."+kind+"|VISIBLE_ENABLED" for v in five]}
+            self.assertEqual(MOD.classify_primary_uia_evidence(bad)["status"],"HOLD")
+        for state in ("OFFSCREEN","DISABLED","TOO_SMALL"):
+            bad={**physical,"targetTypes":[v+"|ControlType.Button|"+state for v in five]}
+            self.assertEqual(MOD.classify_primary_uia_evidence(bad)["status"],"HOLD")
+        with self.assertRaisesRegex(MOD.Hold,"E07_UIA_DIAGNOSTIC_UNTRUSTED_HOLD"):
+            MOD.classify_primary_uia_evidence({**physical,"treeScanned":1})
+    def test_original_workflow_single_hash_frozen(self):
+        workflow=(ROOT/".github/workflows/nox-express-independent-e07-candidate.yml").read_text(encoding="utf-8")
+        # Historical candidates remain code-admissible and immutable, but
+        # this workflow must select exactly ONE internally consistent candidate.
+        approved = (
+            ("run-id: 41797861187",
+             "NOX-EXPRESS-ONEHOST-fe21790af418c8c1083946595811b67c9c03c49d",
+             "--artifact-kind original --out"),
+            ("run-id: 41803143292",
+             "NOX-EXPRESS-ONEHOST-e888941626191c17d19d372889b1f96842c15e1b",
+             "--artifact-kind original-e888 --out"),
+            ("run-id: 41867828741",
+             "NOX-EXPRESS-ONEHOST-30a4f7c43649e3c3d66d0d46ec370b2105a69faa",
+             "--artifact-kind original-30a --out"),
+        )
+        matches = [all(token in workflow for token in group) for group in approved]
+        # The active FULL D02 producer is separately source/Setup/BuildID pinned,
+        # never an implicit promotion of any historical original candidate.
+        self.assertEqual(sum(matches), 0, "E07_ORIGINAL_WORKFLOW_FROZEN_PAIR_HOLD")
+        self.assertIn("run-id: 41895699906", workflow)
+        self.assertIn("nox-v16-e06-onehost-diagnostic-41895699906", workflow)
+        self.assertIn("--artifact-kind d02-f842 --out", workflow)
+        self.assertNotIn("run-id: 41885544063", workflow)
+        self.assertEqual(MOD.F842_D02_SOURCE_SHA, "f842297b79ec0bca0689d37af3ce7de7929fc450")
+        self.assertEqual(MOD.F842_D02_SETUP_SHA, "326f9ef5ac447a263f2af6aa920927f45b39498913cbf9d2dac72f24558575a1")
+        self.assertEqual(MOD.F842_D02_SETUP_SIZE, 169668831)
+        self.assertEqual(MOD.F842_D02_BUILD_ID, "NOX-V16-3885169a467f2d1b53d57588")
+        self.assertEqual(MOD.F842_D02_OWNED_COUNT, 1011)
+        self.assertEqual(MOD.NEW_D02_SOURCE_SHA, "91a6c104c6412a63085352e224328d3c0ab3ff86")
+        self.assertNotIn("run-id: 41785340462", workflow)
+        # The old reviewed source+Setup bytes are still frozen in native code.
+        self.assertEqual(MOD.ORIGINAL_E06_SOURCE, "fe21790af418c8c1083946595811b67c9c03c49d")
+        self.assertEqual(MOD.ORIGINAL_E06_SETUP_SHA, "1b78fba3fa158673814b31f211063022fd2bff0ae7ff25f14ba3db2a47c484c2")
+    def test_release_stays_hold_without_final_same_setup_receipts(self):
+        script=(ROOT/"coordination/e07/independent_setup_e07.py").read_text(encoding="utf-8")
+        self.assertIn('"release_accepted":False}',script)
+        self.assertIn('"release_accepted":False,"independent_e07":"HOLD"',script)
+        self.assertIn('result["checks"]["installed_five_primary_actions"] = evaluate_primary(',script)
+        self.assertIn('E07_FINAL_VISUAL_RECEIPT_NOT_PROVIDED',script)
+        self.assertIn('E07_FINAL_FUNCTION_RECEIPT_NOT_PROVIDED',script)
+        self.assertIn('result["checks"]["final_acceptance"] = evaluate_final_acceptance(',script)
+        self.assertIn('result["independent_e07"] = "PASS"',script)
+        self.assertIn('result["release_accepted"] = True',script)
+        self.assertIn('return 0 if result["independent_e07"]=="PASS" else 1',script)
+if __name__=="__main__": unittest.main()

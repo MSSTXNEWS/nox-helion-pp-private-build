@@ -1,0 +1,35 @@
+name: NOX FULL (optional) · MENU10 193 + Adminator source
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  nox-full-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate optional full NOX MENU10 and Adminator sources (NOT EXPRESS release gate)
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check coordination/mega814/menu-v2-adapter.mjs
+          node --test coordination/mega814/test_menu_v2.mjs
+          python3 coordination/mega814/qa_source_gate.py
+          python3 -m unittest discover -s coordination/mega814 -p 'test_*.py' -v
+          cd integrations/adminator-nox
+          npm install --ignore-scripts --no-audit --no-fund --package-lock=false
+          npm run prepare:donor
+          node --test tests/*.test.mjs
+      - name: Preserve optional full-NOX UI source candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: nox-full-menu10-adminator-source-not-express
+          path: integrations/adminator-nox/artifacts/adminator-dist/
+          retention-days: 14
+          if-no-files-found: error

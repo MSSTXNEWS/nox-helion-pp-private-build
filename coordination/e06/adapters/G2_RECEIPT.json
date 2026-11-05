@@ -1,0 +1,266 @@
+{
+  "schema": "NOX-E06-G2-05-EXACT-PATH-RECEIPTS-V1",
+  "runId": "NOX-V16-E06-G2-05-20261028-C01",
+  "repository": "MSSTXNEWS/nox-helion-pp-private-build",
+  "branch": "e06/v16-g2-05-space-mobile-20261028-c01",
+  "owner": "E06 (#6), exclusively coordination/e06/adapters + tests/e06/adapters + dedicated CI workflow",
+  "immutableBaseline": {
+    "commitGitSha1": "0b3a7d435be735148d64171deb9027093a89646e",
+    "treeGitSha1": "f108d604c444f718b32aaecfd07b90b8f91b9a6f",
+    "wholeOriginalAppSourceLockSha256": null,
+    "sourceLockStatus": "HOLD_NOT_FROZEN",
+    "originalSourcePartsImmutable": [
+      "source_00.part",
+      "source_01.part",
+      "source_02.part"
+    ]
+  },
+  "hashSemantics": "sha256 = exact UTF-8 git file payload; gitBlobSha1 = Git object hash; native tree SHA-1 is NEVER SourceLock SHA-256; preimage ABSENT checked on immutable main for every listed path",
+  "ownerSourcePins": {
+    "P02GitCommitSha1": "4939c92342e170a41dfca101b6a82c82c180041c",
+    "P03GitCommitSha1": "8657491117f4221c053a0ea5111f68a61f5ad06a",
+    "P05GitCommitSha1": "1610523ccdd0e25ab22a1d2ed1b5ea5a118de28e",
+    "PACK01GitCommitSha1": "33774d985dd7f05e413f1830f74392f49645fe29"
+  },
+  "fileReceipts": [
+    {
+      "path": "coordination/e06/adapters/g2_space_mobile.py",
+      "owner": "E06 #6",
+      "runId": "NOX-V16-E06-G2-05-20261028-C01",
+      "taskIDs": [
+        "G2-05-02",
+        "G2-05-03",
+        "G2-05-04",
+        "G2-05-05",
+        "G2-05-06",
+        "G2-05-07",
+        "G2-05-08",
+        "G2-05-09"
+      ],
+      "immutablePreimage": {
+        "gitCommitSha1": "0b3a7d435be735148d64171deb9027093a89646e",
+        "gitTreeSha1": "f108d604c444f718b32aaecfd07b90b8f91b9a6f",
+        "state": "ABSENT",
+        "sha256": "ABSENT",
+        "gitBlobSha1": "ABSENT"
+      },
+      "postimage": {
+        "sha256": "6c04df150466ff7cb22faa1b82416d1f095285f8a833e14739f97b6730d4a8b6",
+        "gitBlobSha1": "50d28e1affb4b2d40da050b2786b1d070c09ec71",
+        "bytes": 19145
+      },
+      "diff": "NEW /dev/null -> coordination/e06/adapters/g2_space_mobile.py: Add in-process one-host P02/P03/P05/single events.v3/mobile guarded adapter; no original source replaced",
+      "receipt": "GITHUB_EXACT_PATH_READBACK_PASS",
+      "tests": "29 source test definitions; Windows runner actual execution=NOT_RUN (0 steps)"
+    },
+    {
+      "path": "tests/e06/adapters/test_g2_space_mobile.py",
+      "owner": "E06 #6",
+      "runId": "NOX-V16-E06-G2-05-20261028-C01",
+      "taskIDs": [
+        "G2-05-10"
+      ],
+      "immutablePreimage": {
+        "gitCommitSha1": "0b3a7d435be735148d64171deb9027093a89646e",
+        "gitTreeSha1": "f108d604c444f718b32aaecfd07b90b8f91b9a6f",
+        "state": "ABSENT",
+        "sha256": "ABSENT",
+        "gitBlobSha1": "ABSENT"
+      },
+      "postimage": {
+        "sha256": "225d5b8dfbdb14ef33c664ec001111b719192f19194ce44bfb752592e4f06874",
+        "gitBlobSha1": "085215cd68c1804aec28fd916e5024108752ce40",
+        "bytes": 15572
+      },
+      "diff": "NEW /dev/null -> tests/e06/adapters/test_g2_space_mobile.py: Add 29 synthetic test cases importing immutable original owner source and rejecting fake live status",
+      "receipt": "GITHUB_EXACT_PATH_READBACK_PASS",
+      "tests": "29 source test definitions; Windows runner actual execution=NOT_RUN (0 steps)"
+    },
+    {
+      "path": ".github/workflows/nox-e06-g2-space-mobile.yml",
+      "owner": "E06 #6",
+      "runId": "NOX-V16-E06-G2-05-20261028-C01",
+      "taskIDs": [
+        "G2-05-10"
+      ],
+      "immutablePreimage": {
+        "gitCommitSha1": "0b3a7d435be735148d64171deb9027093a89646e",
+        "gitTreeSha1": "f108d604c444f718b32aaecfd07b90b8f91b9a6f",
+        "state": "ABSENT",
+        "sha256": "ABSENT",
+        "gitBlobSha1": "ABSENT"
+      },
+      "postimage": {
+        "sha256": "33d7f9ec3ecbb48e8525344435e36c9c217a71d4c773a65f1f7bf4e52de72ef7",
+        "gitBlobSha1": "6b97c4c47bd7c1c1b80ff9a49d5ce42a9d76f2c0",
+        "bytes": 4468
+      },
+      "diff": "NEW /dev/null -> .github/workflows/nox-e06-g2-space-mobile.yml: Add pinned immutable owner2/owner3/PACK01/P05 Windows Python/.NET component workflow; private repo read-only checkout token",
+      "receipt": "GITHUB_EXACT_PATH_READBACK_PASS",
+      "tests": "29 source test definitions; Windows runner actual execution=NOT_RUN (0 steps)"
+    },
+    {
+      "path": "coordination/e06/adapters/G2_HANDOFF.md",
+      "owner": "E06 #6",
+      "runId": "NOX-V16-E06-G2-05-20261028-C01",
+      "taskIDs": [
+        "G2-05-01",
+        "G2-05-10"
+      ],
+      "immutablePreimage": {
+        "gitCommitSha1": "0b3a7d435be735148d64171deb9027093a89646e",
+        "gitTreeSha1": "f108d604c444f718b32aaecfd07b90b8f91b9a6f",
+        "state": "ABSENT",
+        "sha256": "ABSENT",
+        "gitBlobSha1": "ABSENT"
+      },
+      "postimage": {
+        "sha256": "402145c74ea25d4a8de07406ab75097d87ace26915422c55eb922c8e8832dd54",
+        "gitBlobSha1": "fee631b7617fa904d3dfaac5e9ee17d0a4975a53",
+        "bytes": 9754
+      },
+      "diff": "NEW /dev/null -> coordination/e06/adapters/G2_HANDOFF.md: Add exact requirements, owner pins, ten tasks, seven truthful progress statuses, E07 hold/handoff",
+      "receipt": "GITHUB_EXACT_PATH_READBACK_PASS",
+      "tests": "29 source test definitions; Windows runner actual execution=NOT_RUN (0 steps)"
+    }
+  ],
+  "intraCycleNonDestructivePostimageRevisions": [
+    {
+      "path": "coordination/e06/adapters/g2_space_mobile.py",
+      "initialCreatedAtGitCommitSha1": "f277e559958132120d9f1a6e7f210da1a060e135",
+      "initialPostSha256": "34a183a2f19567da1211e18ddb4c8a7b0e2fcd23e25ced74b5835ff648a35b42",
+      "initialPostGitBlobSha1": "299a04d039296ae0179e5d606fa6b149c541264a",
+      "finalPostSha256": "6c04df150466ff7cb22faa1b82416d1f095285f8a833e14739f97b6730d4a8b6",
+      "diff": "Added mandatory native gateway health probe fail-closed; did not delete prior state"
+    },
+    {
+      "path": "tests/e06/adapters/test_g2_space_mobile.py",
+      "initialCreatedAtGitCommitSha1": "32d44d89651aa703d589feba4ecc730e4759f624",
+      "initialPostSha256": "fa8eae5d95208600c86f24fd84fd962e0b3817b617708aaf13278ae740846059",
+      "initialPostGitBlobSha1": "577cedb7cee36696a5178f939142e35162a2dedf",
+      "finalPostSha256": "225d5b8dfbdb14ef33c664ec001111b719192f19194ce44bfb752592e4f06874",
+      "diff": "Added 29th mobile gateway NOT_CONNECTED regression and attested private host fixture"
+    },
+    {
+      "path": ".github/workflows/nox-e06-g2-space-mobile.yml",
+      "initialCreatedAtGitCommitSha1": "f90eb26ab1336afe3bc9dec50212fb961791e77f",
+      "initialPostSha256": "0c7db2c24aebb7e9b66f71c9c2f0c24d798902e283a779510c8ce5ef1e749408",
+      "initialPostGitBlobSha1": "35d0c78c286b5e32392ded78562da7de7a82c548",
+      "finalPostSha256": "33d7f9ec3ecbb48e8525344435e36c9c217a71d4c773a65f1f7bf4e52de72ef7",
+      "diff": "GitHub private SHA fetch credential scope fixed; renamed Windows suite to 29 checks"
+    }
+  ],
+  "ciEvidence": {
+    "targetedWindowsComponentCases": 29,
+    "actuallyExecutedNewCases": 0,
+    "status": "NOT_RUN",
+    "observedRuns": [
+      {
+        "runId": 40625553385,
+        "conclusion": "FAILURE",
+        "steps": null
+      },
+      {
+        "runId": 40625717044,
+        "conclusion": "FAILURE",
+        "steps": null
+      }
+    ],
+    "classification": "GitHub Actions job failure before any job step; no valid compile or test status on this SHA"
+  },
+  "integratorStatus": {
+    "source": "E06_ADAPTER_CANDIDATE",
+    "component": "NOT_RUN_ON_CURRENT_SHA",
+    "integrated": "HOLD_APP_SOURCELOCK_AND_NATIVE_HOST",
+    "windowsAccepted": "NO",
+    "originalEXEBuilt": false,
+    "originalAssetsTouched": false,
+    "ownerSourcePathsTouched": false,
+    "sourceLocksFabricated": 0,
+    "secondServers": 0,
+    "secondLLMs": 0,
+    "secondDatabases": 0,
+    "duplicateEventBuses": 0,
+    "newExternalPorts": 0,
+    "modelDownloads": 0,
+    "paidSipCalls": 0,
+    "claimsOfRealHardwareOrPrice": 0
+  },
+  "sevenIndicators": [
+    {
+      "executor": "E01",
+      "TaskLedger": "V16 §26.3 / PR63",
+      "source": "DRAFT",
+      "component": "SYNTHETIC_ONLY",
+      "integrated": "NO",
+      "windowsAccepted": "NO",
+      "percent": null
+    },
+    {
+      "executor": "E02",
+      "TaskLedger": "V16 §26.4 / PR13",
+      "source": "DRAFT",
+      "component": "OLDER_PINNED_ONLY",
+      "integrated": "NO",
+      "windowsAccepted": "NO",
+      "percent": null
+    },
+    {
+      "executor": "E03",
+      "TaskLedger": "V16 §26.5 / PR17",
+      "source": "DRAFT",
+      "component": "OLDER_PINNED_ONLY",
+      "integrated": "NO",
+      "windowsAccepted": "NO",
+      "percent": null
+    },
+    {
+      "executor": "E04",
+      "TaskLedger": "V16 §26.6 / PR65",
+      "source": "DRAFT",
+      "component": "OLDER_PINNED_ONLY",
+      "integrated": "NO",
+      "windowsAccepted": "NO",
+      "percent": null
+    },
+    {
+      "executor": "E05",
+      "TaskLedger": "V16 §26.7 / PR61",
+      "source": "DRAFT",
+      "component": "OLDER_PINNED_ONLY",
+      "integrated": "NO",
+      "windowsAccepted": "NO",
+      "percent": null
+    },
+    {
+      "executor": "E06",
+      "TaskLedger": "G2-05-01..10",
+      "source": "CANDIDATE",
+      "component": "NOT_RUN_CURRENT_SHA",
+      "integrated": "HOLD",
+      "windowsAccepted": "NO",
+      "percent": null
+    },
+    {
+      "executor": "E07",
+      "TaskLedger": "V16 §26.8 / PR46",
+      "source": "READ_ONLY_DIAGNOSTIC",
+      "component": "OLDER_DIAG_ONLY",
+      "integrated": "NOT_RUN_FINAL_EXE",
+      "windowsAccepted": "NOT_RUN",
+      "percent": null
+    }
+  ],
+  "weightsPercent": {
+    "P01": 20,
+    "P02": 25,
+    "P03": 20,
+    "P04": 25,
+    "P05": 10
+  },
+  "overallWeightedPercent": null,
+  "overallStatus": "N/D",
+  "E07Gate": "Independent same final BuildID / EXE SHA Windows accepted evidence = NOT_RUN",
+  "release": "BLOCKED",
+  "selfHash": "Not recursively included; Git SHA-1 and post SHA-256 of THIS receipt are to be recorded externally in E06 report/master"
+}

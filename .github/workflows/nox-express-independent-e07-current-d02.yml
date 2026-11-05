@@ -1,0 +1,224 @@
+name: NOX EXPRESS independent E07 exact E06 41957801150
+# New E07 accepts only a physically built, explicitly pinned producer Setup.
+# Single one-shot push on THIS workflow runs the verified E06 41957801150.
+# Later commits to unrelated source cannot re-trigger a heavy E07.
+on:
+  push:
+    branches: [integration/nox-v16-unified-candidate-20261028-r01]
+    paths:
+      - .github/workflows/nox-express-independent-e07-current-d02.yml
+      - coordination/e07/independent_setup_e07.py
+      - coordination/e07/probe_final_same_setup.py
+      - tests/e07/test_independent_setup_e07.py
+      - tests/e07/test_nav_a2_source.py
+      - tests/e07/test_final_primary_dispatch_u18.py
+      - tests/e07/test_c34_feedback_fastpath_u24.py
+      - coordination/e07/c34_feedback_rules.json
+  workflow_dispatch:
+    inputs:
+      producer_run_id:
+        description: Immutable Windows E06 producer run ID
+        required: true
+        type: number
+      artifact_name:
+        description: Exact E06 producer artifact name
+        required: true
+        type: string
+      source_sha:
+        description: Verified 40-hex source commit
+        required: true
+        type: string
+      setup_sha256:
+        description: Verified Setup SHA256
+        required: true
+        type: string
+      setup_bytes:
+        description: Verified Setup file byte count
+        required: true
+        type: number
+      build_id:
+        description: Verified E06 BuildID
+        required: true
+        type: string
+      owned_count:
+        description: Exact installed owner payload count
+        required: true
+        type: number
+permissions:
+  actions: read
+  contents: read
+concurrency:
+  group: nox-express-e07-immutable-${{ inputs.setup_sha256 || '3ec8a5749217e006fb96c214170cbd3c62e71959df9b17541f500d58d3a6e42d' }}
+  cancel-in-progress: false
+jobs:
+  independent-windows:
+    if: github.repository == 'MSSTXNEWS/nox-helion-pp-private-build'
+    runs-on: windows-2022
+    timeout-minutes: 95
+    env:
+      OLLAMA_NO_CLOUD: '1'
+      OLLAMA_HOST: '127.0.0.1:11434'
+    steps:
+      - name: Checkout independent verifier source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Python 3.12 for Windows independent verification
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12.10'
+          architecture: x64
+          check-latest: false
+      - name: Fast source regression gate before heavy artifacts
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          python -B -m py_compile coordination/e07/independent_setup_e07.py coordination/e07/probe_five_primary_action.py coordination/e07/probe_installed_qwen.py coordination/e07/probe_native_active_stop.py coordination/e07/verify_qwen_oci_integrity.py coordination/e07/probe_final_same_setup.py coordination/e07/probe_webview_motion.py
+          if ($LASTEXITCODE -ne 0) { throw 'E07_PYTHON_SOURCE_SYNTAX_HOLD' }
+          python -B -m unittest discover -s tests/e07 -p test_independent_setup_e07.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'E07_BASE_REGRESSION_HOLD' }
+          python -B -m unittest discover -s tests/e07 -p test_nav_a2_source.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'E07_NAV_A2_EXACT_SETUP_SOURCE_HOLD' }
+          python -B -m unittest discover -s tests/e07 -p test_current_d02_pin_u23.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'E07_CURRENT_D02_SOURCE_PIN_HOLD' }
+          python -B -m unittest discover -s tests/e07 -p test_c34_feedback_fastpath_u24.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'E07_C34_RECURRING_FAILURE_PREVENTION_HOLD' }
+          python -B -m unittest discover -s tests/e07 -p test_modelcenter_same_webview_u28.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'E07_MODELCENTER_SAME_ONEHOST_SOURCE_HOLD' }
+          # Fail before 1.6 GB signed Ollama bytes + model download if either
+          # new source regression fails. This cannot upgrade a physical E07.
+          python -B -m unittest discover -s tests/e07 -p test_os_animation_observation_u21.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'E07_OS_ANIMATION_EVIDENCE_HOLD' }
+          python -B -m unittest discover -s tests/e07 -p test_visual_stage_diagnostics_u22.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'E07_VISUAL_STAGE_DIAGNOSTICS_HOLD' }
+          python -B -m unittest discover -s tests/e07 -p test_webview_motion_cdp_u26.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'E07_WEBVIEW2_MEDIA_CONTRACT_HOLD' }
+          python -B -m unittest discover -s tests/e07 -p test_final_primary_dispatch_u18.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'E07_FINAL_UIA_TREE_REGRESSION_HOLD' }
+          python -B -m unittest discover -s tests/e07 -p test_91a6_real_visual_u17.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'E07_GRAPHICAL_NATIVE_ACCESSIBILITY_SOURCE_HOLD' }
+          python -B -m unittest discover -s tests/e07 -p test_initial_home_physical_u21.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'E07_ORIGINAL_HOME_PRENAV_SOURCE_HOLD' }
+          python -B -m unittest discover -s tests/e07 -p test_live_final_wiring_u19.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'E07_FINAL_SAME_SETUP_REGRESSION_HOLD' }
+          python -B -m unittest discover -s tests/e07 -p test_final_truth_scope_u20.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'E07_FUNCTION_TRUTH_REGRESSION_HOLD' }
+          python -B -m unittest discover -s tests/e07 -p test_navigation_consent_cleanup_u25.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'E07_NAV_CATALOG_NEGATIVE_DISMISS_REGRESSION_HOLD' }
+          python -B -m unittest discover -s tests/e07 -p test_install_fresh_owner_log_u26.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'E07_INSTALL_FRESH_OWNER_PROVENANCE_REGRESSION_HOLD' }
+          # Parse the actual generated native Windows PowerShell UIA script
+          # BEFORE any huge artifact download or Ollama install.
+          python -B -c "import sys,pathlib;sys.path.insert(0,'coordination/e07');import probe_final_same_setup as p;pathlib.Path('e07-visual-preflight.ps1').write_text(p._uia_script(12345,'VISUAL',png=pathlib.Path('e07-visual-preflight.png')),encoding='utf-8')"
+          if ($LASTEXITCODE -ne 0) { throw 'E07_UIA_SCRIPT_GENERATION_HOLD' }
+          $tokens=$null; $parseErrors=$null
+          $null=[System.Management.Automation.Language.Parser]::ParseFile((Join-Path (Get-Location).Path 'e07-visual-preflight.ps1'),[ref]$tokens,[ref]$parseErrors)
+          if (@($parseErrors).Count -ne 0) { throw 'E07_UIA_POWERSHELL_PARSE_HOLD' }
+          python -B -m unittest discover -s tests/e07 -p test_e07_original_frozen_u06.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'E07_SOURCE_REGRESSION_HOLD' }
+          python -B -m unittest discover -s tests/e07 -p test_e07_install_root_reparse_u09.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'E07_INSTALL_ROOT_REGRESSION_HOLD' }
+          python -B -m unittest discover -s tests/e07 -p test_probe_five_primary_action_u06.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'E07_FIVE_CLICK_REGRESSION_HOLD' }
+      - name: Download immutable candidate from DIFFERENT Windows CI run
+        uses: actions/download-artifact@v4
+        with:
+          run-id: ${{ inputs.producer_run_id || '41957801150' }}
+          github-token: ${{ github.token }}
+          name: ${{ inputs.artifact_name || 'nox-v16-e06-onehost-diagnostic-41957801150' }}
+          path: input-verified-current-d02
+      - name: Download prior SHA-pinned Authenticode-verified official Ollama x64 bytes
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 41324910974
+          github-token: ${{ github.token }}
+          name: nox-r11-official-ollama-41324910974
+          path: input-signed-ollama
+      - name: Start verified local Ollama and fetch exact approved Qwen for same-VM E07
+        id: provider
+        continue-on-error: true
+        shell: pwsh
+        timeout-minutes: 38
+        run: |
+          $ErrorActionPreference='Stop'
+          $installer='input-signed-ollama/OllamaSetup-v0.40.13-x64.exe'
+          $i=Get-Item -LiteralPath $installer -ErrorAction Stop
+          if (($i.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0 -or
+              $i.Length -ne 1676266440) { throw 'E07_SIGNED_OLLAMA_INSTALLER_SOURCE_HOLD' }
+          if ((Get-FileHash -LiteralPath $installer -Algorithm SHA256).Hash.ToLowerInvariant() -cne
+              '9e3c76e54e7184c68e88a2378b909bf59bbe454f83c076cb4f4a717e946ae719' -or
+              (Get-AuthenticodeSignature -LiteralPath $installer).Status -ne 'Valid') {
+            throw 'E07_OLLAMA_SHA_AUTHENTICODE_HOLD'
+          }
+          $p=Start-Process -FilePath (Resolve-Path $installer).Path -ArgumentList '/VERYSILENT /NORESTART /SUPPRESSMSGBOXES /SP-' -PassThru -ErrorAction Stop
+          if (-not $p.WaitForExit(180000) -or $p.ExitCode -ne 0) { throw 'E07_OLLAMA_SIGNED_INSTALL_HOLD' }
+          $cli=Join-Path $env:LOCALAPPDATA 'Programs/Ollama/ollama.exe'
+          if (-not (Test-Path -LiteralPath $cli -PathType Leaf)) { throw 'E07_OLLAMA_INSTALLED_MISSING_HOLD' }
+          function Test-OllamaLocal {
+            try {
+              $r=Invoke-RestMethod -Uri 'http://127.0.0.1:11434/api/tags' -TimeoutSec 3 -ErrorAction Stop
+              return ($null -ne $r.models)
+            } catch { return $false }
+          }
+          $ready=Test-OllamaLocal
+          if (-not $ready) {
+            $out=Join-Path $env:RUNNER_TEMP 'e07-ollama.stdout'
+            $err=Join-Path $env:RUNNER_TEMP 'e07-ollama.stderr'
+            $daemon=Start-Process -FilePath $cli -ArgumentList 'serve' -WindowStyle Hidden -PassThru -RedirectStandardError $err -RedirectStandardOutput $out
+            for($i=0;$i -lt 120;$i++) {
+              Start-Sleep -Seconds 2
+              $ready=Test-OllamaLocal
+              if ($ready) { break }
+              if ($daemon.HasExited) {
+                for($grace=0;$grace -lt 5;$grace++) {
+                  Start-Sleep -Seconds 2
+                  $ready=Test-OllamaLocal
+                  if ($ready) { break }
+                }
+                break
+              }
+            }
+          }
+          if (-not $ready) { throw 'E07_OLLAMA_LOOPBACK_NOT_READY_HOLD' }
+          & $cli pull qwen2.5-coder:1.5b
+          if ($LASTEXITCODE -ne 0) { throw 'E07_QWEN_APPROVED_PULL_HOLD' }
+          $tags=Invoke-RestMethod -Uri 'http://127.0.0.1:11434/api/tags' -TimeoutSec 30 -ErrorAction Stop
+          $matching=@($tags.models | Where-Object {$_.name -eq 'qwen2.5-coder:1.5b'})
+          if ($matching.Count -ne 1 -or $matching[0].digest -cne
+              'd7372fd828518a4d38b1eb196c673c31a85f2ed302b3d1e406c4c2d1b64a0668') {
+            throw 'E07_QWEN_APPROVED_FULL_DIGEST_HOLD'
+          }
+          Write-Host 'E07_APPROVED_LOCAL_QWEN_PROVIDER_READY_NOT_YET_CHAT_PROOF'
+      - name: Independent installed E07 candidate lifecycle, final receipts required
+        id: test
+        continue-on-error: true
+        shell: pwsh
+        env:
+          # Test-only loopback CDP: no production debug server or media emulation.
+          WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: '--remote-debugging-address=127.0.0.1 --remote-debugging-port=9222'
+          NOX_E07_DEVTOOLS_PORT: '9222'
+        run: |
+          $ErrorActionPreference='Stop'
+          python -B coordination/e07/independent_setup_e07.py --artifact-dir input-verified-current-d02 --artifact-kind d02-pinned --pinned-source '${{ inputs.source_sha || '05534b532549dd7ffe6ef2b6f69b10ce5fadfe98' }}' --pinned-setup-sha '${{ inputs.setup_sha256 || '3ec8a5749217e006fb96c214170cbd3c62e71959df9b17541f500d58d3a6e42d' }}' --pinned-setup-bytes '${{ inputs.setup_bytes || '169696386' }}' --pinned-build-id '${{ inputs.build_id || 'NOX-V16-8bdd3924989ea1649a7ac5ea' }}' --pinned-owned-count '${{ inputs.owned_count || '1013' }}' --out work/e07-independent/E07_CANDIDATE_RECEIPT.json
+          if ($LASTEXITCODE -ne 0) { throw 'INDEPENDENT_E07_NOT_ACCEPTED' }
+      - name: Save independent evidence even on HOLD
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: NOX-EXPRESS-E07-CURRENT-D02-${{ github.run_id }}
+          path: |
+            work/e07-independent/E07_CANDIDATE_RECEIPT.json
+            work/e07-independent/same-setup-final/E07_FINAL_VISUAL.json
+            work/e07-independent/same-setup-final/E07_FINAL_FUNCTIONS.json
+            work/e07-independent/same-setup-final/D02_FINAL_SAME_SETUP.png
+            work/e07-independent/same-setup-final/D02_ADAPTIVE_800.png
+            work/e07-independent/same-setup-final/D02_ADAPTIVE_1044.png
+            work/e07-independent/same-setup-final/D02_HOME_PRENAV.png
+          if-no-files-found: error
+          retention-days: 14
+      - name: Preserve NOT-RELEASE when actual model or visual E07 incomplete
+        if: always()
+        shell: pwsh
+        run: |
+          if ('${{ steps.test.outcome }}' -ne 'success') { throw 'E07_INDEPENDENT_PHYSICAL_HOLD_NOT_RELEASE' }
+          Write-Host 'E07_INDEPENDENT_ACCEPTANCE_PASS_ON_VERIFIED_SETUP_ONLY'

@@ -1,0 +1,115 @@
+{
+  "schema": "NOX_V16_E06_G2_03_HOST_MEDIA_CODE_RECEIPT_V1",
+  "RunID": "NOX-V16-E06-G2-03-P01-TURBO10-20261028T0610MSK",
+  "owner": 6,
+  "task_ids": [
+    "G2-03-01",
+    "G2-03-02",
+    "G2-03-03",
+    "G2-03-04",
+    "G2-03-05",
+    "G2-03-06",
+    "G2-03-07",
+    "G2-03-08",
+    "G2-03-09",
+    "G2-03-10"
+  ],
+  "repository": "MSSTXNEWS/nox-helion-pp-private-build",
+  "branch": "e06/v16-g2-03-host-media-20261028-a01",
+  "immutable_source": {
+    "commit": "7089da979cc35a148688d5c77f3ebbf2577506db",
+    "git_tree_sha1": "2a2afbcb5bb35f2553ac243cd3db5991a40abd42",
+    "source_lock": "PR66_inventory_only_NOT_canonical_seal",
+    "current_main_as_read": "0b3a7d435be735148d64171deb9027093a89646e",
+    "main_git_tree_sha1": "f108d604c444f718b32aaecfd07b90b8f91b9a6f"
+  },
+  "resulting_git_commit": "866fc2a06ad8ee64f3ba6b9be9917b5cb111a6e1",
+  "resulting_git_tree_sha1": "3a35eef69b3bb1579bc30b90264a4f1c11592a0b",
+  "files": [
+    {
+      "path": "integrations/creative/bridge/CreativeHostBridge.cs",
+      "owner": 6,
+      "pre_sha256": "3a203fcf14fc24703b29862b7e3a01a4b47dd99d1e32220173a655718ef50b01",
+      "post_sha256": "cce8b02f5123babb28d99d7c1a29b7e9b6398ee8630c3bfd0929703bce2c6d4d",
+      "pre_git_blob_sha1": "a81fc67068a42add05618e3ed71cc03bd9e93ab5",
+      "post_git_blob_sha1": "60bf92a411873f6954eef3dad4858214b763bac7",
+      "diff": "Existing one WPF partial MainWindow creativeInvoke now dispatches open_browser to system browser with strict HTTPS exact known origins, diagnostic-only ACK. No second host.",
+      "test": "Source syntax/static review only; .NET Windows build HOLD"
+    },
+    {
+      "path": "integrations/creative/web/studio.js",
+      "owner": 6,
+      "pre_sha256": "89125aa257a260ba6c396de6b351201d59e5f5280697254a9082dbc1d02a9708",
+      "post_sha256": "8e5ffde59e6988739e7cd9af8d5064b0c7bd518b8cf8b791269477ee33fb4a4d",
+      "pre_git_blob_sha1": "0e75803162a850da2d8acc58d278c0ee27706588",
+      "post_git_blob_sha1": "b0e741bd320c1cd99ad9c868af09458678770b2d",
+      "diff": "Replace blocked WebView2 iframe _blank anchor with real creativeInvoke/open_browser; host ACK and fail-closed error; preserve existing P03 model selection.",
+      "test": "JS parse PASS, Windows WebView2 click test HOLD"
+    },
+    {
+      "path": "integrations/creative/web/theater.html",
+      "owner": 6,
+      "pre_sha256": "bdc217ee41f48d8d0c30c558ee0e896a13ee32e4b5b4330420791aacecf24a4f",
+      "post_sha256": "1ff92e576c11e9c1264a674f13ae331be37cd26531e66fe1c93405b62bc63a63",
+      "pre_git_blob_sha1": "f9cf918de0926ff91763163e2754971dc5cd2b83",
+      "post_git_blob_sha1": "e38ba9103a965894e27fe192ed03cd8639284a4d",
+      "diff": "Repair relative theater.js path within existing https://nox.local/creative/ WebView2 virtual host, add local video and subtitles inputs/status; original background unchanged.",
+      "test": "source path checked; actual WebView2 boot HOLD"
+    },
+    {
+      "path": "integrations/creative/web/theater.js",
+      "owner": 6,
+      "pre_sha256": "7e7168a457a8ac9aa987c83524a43b8f3a7af9145a88862237d097c5d4e51bca",
+      "post_sha256": "575e33ecfd833a1b76c453a1f2d60e96936470ccf5a5649da450e27d68f193eb",
+      "pre_git_blob_sha1": "cd2aee50496e71bf2289ba655c275e888ab2dada",
+      "post_git_blob_sha1": "1a5a4395be571658faa9068a147ec943a3fec4e5",
+      "diff": "Replace non-existent static /api/media route with user-selected blob playback; add real SRT->VTT/VTT track/URL cleanup, video play/pause/fullscreen and fail-closed codec status; retain original BroadcastChannel.",
+      "test": "Node v22 4/4 unit PASS; node --check PASS; Windows codec test HOLD"
+    },
+    {
+      "path": "integrations/creative/tests/theater.test.mjs",
+      "owner": 6,
+      "pre_sha256": "ABSENT",
+      "post_sha256": "83505d512f6ea16ecb078108cf0a2f418a1d69bcf7d85afa805b55f13998ffe1",
+      "pre_git_blob_sha1": "ABSENT",
+      "post_git_blob_sha1": "564546d76c7f591a29d56d1f893e55813c8c5db0",
+      "diff": "Add deterministic self-contained node:test covering local playable video, valid SRT/VTT, invalid subtitle preservation, blocked invalid video.",
+      "test": "Node 22 --test 4/4 PASS offline, actual embedded WebView2 HOLD"
+    }
+  ],
+  "unchanged_owner_scopes": [
+    "P02",
+    "P03",
+    "P04",
+    "P05",
+    "approved D02 HOME/MENU/CORE",
+    "8 CoreID",
+    "5 Persona",
+    "WOW 001-200",
+    "original NSIS and rollback scripts",
+    "source_00.part",
+    "source_01.part",
+    "source_02.part"
+  ],
+  "test_evidence": {
+    "os": "Linux",
+    "node": "v22.16.0",
+    "command": "node --test integrations/creative/tests/theater.test.mjs",
+    "passed": 4,
+    "failed": 0,
+    "syntax": "node --check theater.js PASS; studio.js parse PASS",
+    "windows_wpf": "NOT_RUN",
+    "nsis_install_update_rollback": "NOT_RUN",
+    "same_exe_e07": "NOT_RUN",
+    "whole_archive_sha": "NOT_VERIFIED"
+  },
+  "status": {
+    "source": "CREATED_IN_ISOLATED_BRANCH",
+    "component": "PARTIAL_4_OF_4_NODE_TESTS_PASS",
+    "integrated": "HOLD_GLOBAL_SOURCELOCK_NOT_MATCHED_AND_NO_NATIVE_STAGE",
+    "windows_accepted": "HOLD_NO_WINDOWS",
+    "release": "BLOCKED"
+  },
+  "recovery": "Revert isolated branch or discard its 5 source edits; original frozen 7089da979cc35a148688d5c77f3ebbf2577506db remains intact. Never overwrite original D02 or owner source.",
+  "limitations": "No final EXE, no native Windows NSIS /S, no same-SHA E07. SourceLock PR66 remains inventory-only. Full 729-file archive SHA and 200 WOW native QA unverified."
+}

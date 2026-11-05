@@ -1,0 +1,59 @@
+{
+  "schema": "NOX_V16_T06_R41_OWNER_CODE_CLOSEOUT_V1",
+  "runId": "NOX-V16-T06-R41-P01-P04-P05-OWNER-FINAL-SOURCE-20261030",
+  "taskId": "T06",
+  "role": "MANUAL1",
+  "preHead": "98fca925bfe91d0c2bd753a97c81914d2b84da33",
+  "preTree": "da00ca508c8e10a05d34d7123125fcc7cea0a541",
+  "postHead": "READ_GIT_POST_SHA",
+  "postTree": "READ_GIT_POST_TREE",
+  "files": [
+    {
+      "path": "proposals/NOX-PACK01-50/test_p01_windows_owner_ports.py",
+      "pre": "eb92cb013f0da92b05de653ba150fbc57d7b4151",
+      "post": "41d7f6173d83d2a052ebf74639b2383936a45748"
+    },
+    {
+      "path": "Packages/P04/model_snapshot_probe.py",
+      "pre": "247fa7306210505744546b7ca87a63aa5c5b2259",
+      "post": "c370a18e058b879681a0b1da63cef3214f03b12a"
+    },
+    {
+      "path": "tests/P04/test_model_snapshot_probe.py",
+      "pre": "d54dfdc12febeb1e1ed1230d2a4c0f624a006183",
+      "post": "0290c3e01a3a3d797f3c4c3aa19668e3b58d870d"
+    },
+    {
+      "path": "Packages/P05/Space/SpaceFeedClient.cs",
+      "pre": "4437f9f111bd206c975f4af30d7b8fa95213af75",
+      "post": "bc9be82a43bb2cab701f9586fd9fb0e7e7fea99a"
+    },
+    {
+      "path": "Packages/P05/Space/tests/Program.cs",
+      "pre": "3e119720aa2b4a5e91f227f4561f3aa8492e10aa",
+      "post": "c1ef83f7a7bb179e6d11881a5e81e2b7a4c26668"
+    }
+  ],
+  "fixes": [
+    "P01 Windows short-long path test uses samefile without altering trusted pin",
+    "P02 actual PR162 MappingProxyType present; GitLab fixture has stale native_bridge.py",
+    "P04 shard/index unpaired-surrogate errors classified specifically; strict nested Unicode unchanged",
+    "P05 selected PR222 NFC duplicate JSON validator and paired .NET smoke test"
+  ],
+  "testStage": "NOT_RUN_WINDOWS_P01_P02_P04_P05_AFTER_PATCH",
+  "sourceLock": "729/3 unchanged; original HOME/MENU/WORK and passport media unchanged (full SHA verification still required)",
+  "host50": {
+    "sourceCandidateBound": 50,
+    "nativePending": 14,
+    "exeAccepted": 0
+  },
+  "qaAccepted": false,
+  "sourceReady": false,
+  "gitlabBuild": false,
+  "sharedJournal": "T02_ONLY",
+  "errors": [
+    "ERR-SRC-004",
+    "ERR-SYS-002"
+  ],
+  "next": "GitLab Windows source regression; independent T08 and T09 freeze after positive evidence"
+}

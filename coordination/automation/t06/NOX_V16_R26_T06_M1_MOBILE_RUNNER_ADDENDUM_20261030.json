@@ -1,0 +1,61 @@
+{
+  "schema": "NOX_V16_R26_T06_M1_SOURCE_TEST_RUNNER_ADDENDUM_V1",
+  "run_id": "NOX-V16-T06-M1-R26-20261030-MOBILE-RUNNER-R02",
+  "previous_run_id": "NOX-V16-T06-M1-R26-20261030-MOBILE-SOURCE-R01",
+  "task_id": "T06",
+  "role": "manual-1",
+  "pr": 162,
+  "pre_head": "020fa896f0d8c94a26ac0c5be8c6034a848e1f4e",
+  "post_head": "8530c3e7c8441d4f70e9ac74323f5771baccba0a",
+  "post_tree": "5713a91c57f379de80256d64070a2b6ee58d1af2",
+  "source_changes": [
+    {
+      "path": "coordination/e06/run_source_integrations_r13.py",
+      "git_blob_pre": "303194331b1387690f8ac935bdcc968f8312143b",
+      "git_blob_post": "0c1b471fb9f435bb7b083e26f69d2e4f226c7d1c",
+      "commit": "99f33d9cc5a07096ff2102d85acfd46c2c623c77",
+      "git_readback": "PASS"
+    },
+    {
+      "path": "coordination/e06_host50/test_t06_mobile_binding_r26.py",
+      "git_blob_pre": "10a475ffe596eb6e55efd57f11152171d7ad3dfa",
+      "git_blob_post": "6f3d0e58d8977c8649a952d3449dba1dd5e2c2a8",
+      "commit": "8530c3e7c8441d4f70e9ac74323f5771baccba0a",
+      "git_readback": "PASS"
+    }
+  ],
+  "tests": {
+    "current_head": "STATIC_SOURCE_GUARDS_PASS",
+    "runner_registration": "PASS",
+    "fixture_binding": "PASS",
+    "python_unit_execution": "NOT_RUN",
+    "windows_native": "NOT_RUN",
+    "independent_T08": "PENDING"
+  },
+  "host50": {
+    "source_bound": 40,
+    "total": 50,
+    "unbound": 10,
+    "native_pending": 14,
+    "exe_accepted": 0
+  },
+  "T06": {
+    "historical_owner_criteria_done": 1,
+    "total": 8,
+    "accepted_delta": 0,
+    "current_same_head_full_gate": "NOT_RUN",
+    "source_ready": false
+  },
+  "error_ids": [
+    "ERR-SRC-003",
+    "ERR-SRC-004",
+    "ERR-SRC-005",
+    "NOX-V16-T06-ROOT-STOP-20261029-R01"
+  ],
+  "root_cause": "New regression originally read live owner files; immutable owner copy could be ignored in R13",
+  "fix": "Use NOX_PINNED_PACK01_PATH and NOX_PINNED_G2_PATH provided by existing R13 snapshot_owner SHA-verified fixtures",
+  "next": "T08 independent on this exact HEAD/tree, run source-only Python tests; T06 continue P01/M2 only with approved owner preimages; T09/T10 HOLD",
+  "shared_journal_status": "T02_ONLY_HANDOFF_PENDING_CAS_READBACK",
+  "build_status": "NOT_AUTHORIZED",
+  "no_loss": "PRESERVED_NO_DELETIONS"
+}

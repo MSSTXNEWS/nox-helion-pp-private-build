@@ -1,0 +1,97 @@
+"""Source-only regression for real 91a6 physical screenshot boundary."""
+from pathlib import Path
+import importlib.util
+import sys
+import unittest
+ROOT=Path(__file__).resolve().parents[2]
+PATH=ROOT/"coordination/e07/probe_91a6_real_visual_u17.py"
+sys.path.insert(0,str(PATH.parent))
+spec=importlib.util.spec_from_file_location("nox_91a6_visual_u17",PATH)
+module=importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+
+class SourceVisualProof(unittest.TestCase):
+    def test_screenshot_evidence_not_full_visual_approval(self):
+        e07=module.e07
+        good={"schema":module.SCHEMA,"source_sha":e07.NEW_D02_SOURCE_SHA,
+          "setup_sha256":e07.NEW_D02_SETUP_SHA,"release_accepted":False,
+          "visual_e07":"HOLD","adaptive_layout":"NOT_TESTED",
+          "reduced_motion":"NOT_TESTED",
+          "photo":{"physical_capture":"PASS","sha256":"a"*64,
+                   "bytes":200000,"width":1044,"height":788,
+                   "independent_visual_review":"NOT_RUN",
+                   "reduced_motion":"NOT_TESTED"},
+          "fx":{"fx_control":"PASS"},"original_wpf_ipc":"PASS",
+          "update":"PASS","rollback":"PASS","uninstall":"PASS"}
+        self.assertTrue(module.is_real_visual_witness(good))
+        for field,value in (("release_accepted",True),("visual_e07","PASS"),
+                            ("adaptive_layout","PASS"),("reduced_motion","PASS"),
+                            ("setup_sha256","b"*64),("source_sha","b"*40),
+                            ("photo",None),("fx",None),("original_wpf_ipc","HOLD"),
+                            ("update","HOLD"),("rollback","HOLD"),("uninstall","HOLD")):
+            bad={**good,field:value}
+            self.assertFalse(module.is_real_visual_witness(bad),field)
+        for field,value in (("sha256","x"*64),("sha256","A"*64),
+                            ("bytes",True),("width",True),("height",0),
+                            ("independent_visual_review","PASS"),
+                            ("reduced_motion","PASS")):
+            bad={**good,"photo":{**good["photo"],field:value}}
+            self.assertFalse(module.is_real_visual_witness(bad),(field,value))
+        for field in ("bytes","width","height","independent_visual_review",
+                      "reduced_motion"):
+            bad={**good,"photo":{k:v for k,v in good["photo"].items() if k!=field}}
+            self.assertFalse(module.is_real_visual_witness(bad),field)
+        original=PATH.read_text(encoding="utf-8")
+        for token in ('candidate="d02-91a6"','capture_window(hwnd, a.png)',
+                      'probe_d02_quality_modes(hwnd)','e07.lifecycle(',
+                      'e07.sha256(a.png) == screenshots[0].get("sha256")'):
+            self.assertIn(token,original)
+        self.assertNotIn('result["visual_e07"] = "PASS"',original)
+        self.assertIn('photo_errors[0] if photo_errors else', original)
+        self.assertIn('fx_errors[0] if fx_errors else', original)
+        self.assertIn('result["physical_capture"] = "PASS"', original)
+        self.assertIn('result["witness_status"] = "PASS"', original)
+        self.assertIn('return 0 if result["witness_status"] == "PASS" else 2', original)
+    def test_five_actual_d02_graphic_planets_not_legacy_fx(self):
+        # Original active D02 dock has five named graphical mode buttons.
+        names=module.QUALITY_NAMES
+        self.assertEqual(names,("MAX WOW — ПОЛНЫЙ","ECO — ЭКОНОМ",
+                                "MINI START — МИНИ","AUTO — АДАПТИВНО",
+                                "CINEMA — КИНО"))
+        valid={"schema":"NOX-D02-QUALITY-UIA-v1",
+               "actions":[{"name":name,"invoked":True,"pressed":True,
+                           "same_hwnd":True,"invocation_method":"INVOKE_PATTERN"} for name in names]}
+        self.assertEqual(module.validate_quality_witness(valid)["fx_control"],"PASS")
+        for index in range(len(names)):
+            for key,value in (("invoked",False),("pressed",False),
+                              ("same_hwnd",False),("name","FX BALANCED"),
+                              ("invocation_method","FAKE_ACK")):
+                altered={"schema":valid["schema"],"actions":[dict(a) for a in valid["actions"]]}
+                altered["actions"][index][key]=value
+                with self.assertRaises(module.e07.Hold):
+                    module.validate_quality_witness(altered)
+        legacy={"schema":"NOX-D02-QUALITY-UIA-v1",
+                "actions":[{**item,"invocation_method":"LEGACY_DEFAULT_ACTION"}
+                           for item in valid["actions"]]}
+        self.assertEqual(module.validate_quality_witness(legacy)["actual_invocations"],5)
+        pointer={"schema":"NOX-D02-QUALITY-UIA-v1",
+                 "actions":[{**item,"invocation_method":"SAME_WPF_PHYSICAL_POINTER"}
+                            for item in valid["actions"]]}
+        self.assertEqual(module.validate_quality_witness(pointer)["actual_invocations"],5)
+        source=PATH.read_text(encoding="utf-8")
+        self.assertIn("NoxD02NativeInput]::GetWindowRect($h",source)
+        self.assertIn("NoxD02NativeInput]::GetForegroundWindow() -ne $h",source)
+        self.assertIn("U17_D02_POINTER_OUTSIDE_ORIGINAL_WPF_HOLD",source)
+        self.assertIn("NoxD02NativeInput]::mouse_event([uint32]4",source)
+
+        source=PATH.read_text(encoding="utf-8")
+        self.assertIn("LegacyIAccessiblePattern]::Pattern",source)
+        self.assertIn("$legacy.DoDefaultAction()",source)
+        self.assertIn("U17_D02_POINTER_FOREGROUND_NOT_WPF_HOLD",source)
+        self.assertIn("U17_D02_POINTER_OUTSIDE_ORIGINAL_WPF_HOLD",source)
+        self.assertIn("U17_D02_QUALITY_PRESSED_UIA_NOT_EXPOSED_HOLD",source)
+        with self.assertRaises(module.e07.Hold):
+            module.validate_quality_witness({"schema":"NOX-D02-QUALITY-UIA-v1","actions":[]})
+
+if __name__=="__main__":
+    unittest.main()

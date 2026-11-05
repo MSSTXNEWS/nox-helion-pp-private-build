@@ -1,0 +1,9 @@
+# Approved frames — SHA256
+
+home-current.png 382c1069afcaaaed11c319796f2c553d2bd977d7e46c68ecd7d55af26e132a4a
+home-max-motion.png 7531c69813c7214a6fdd0780192bd8b9818fd946cb6ba6edcc8b75aa45595ef6
+menu-8.png 4c73d137e6d25f496abb006dbb8af08b1fe272d2f935c5006f0f42b6fd9992b9
+menu-8.svg 18dbb1d377c00cc7efe584f14e32e0172e93d892f1db2f5b65bd19dcccb49648
+
+HOME current matches TZ 382c1069afcaaaed11c319796f2c553d2bd977d7e46c68ecd7d55af26e132a4a
+MENU lava 10 worlds (1cdc1d9d…) not in these zips.

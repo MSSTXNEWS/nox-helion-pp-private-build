@@ -1,0 +1,53 @@
+{
+  "schema": "NOX_P03_OWNER3_TYPED_RECEIPT_V1",
+  "RunID": "NOX-V16-G1-03-TURBO10-20261028",
+  "WorkerID": "executor3",
+  "owner": 3,
+  "repository": "MSSTXNEWS/nox-helion-pp-private-build",
+  "branch": "codex/e03-c40-source-20261028",
+  "codeHeadCommit": "2487974ed97acb598e18fb6aaa8c1c400792cf90",
+  "mainAtStart": "eb46b49fb8a022cefa679afb8606877016808db1",
+  "mainSourceLock": "HOLD_NOT_RECONSTRUCTED",
+  "changeType": "source_candidate_not_integrated",
+  "changedFiles": [
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter/ModelTagReviewLeads.cs",
+      "oldGitBlobSha1": "ABSENT",
+      "newGitBlobSha1": "439aa3cf82e20a77d12755c9ac4a7c5ef04c2f79",
+      "preSha256": "ABSENT",
+      "postSha256": "e1311f67de48eb975b3308f86d3ed162e4d1f3b92cd8a21cdd9549915e4280dd",
+      "charLength": 3276
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter/ModelQuickActions.cs",
+      "oldGitBlobSha1": "1eb49dc81dbba3adc515473f377c0651b88e8c51",
+      "newGitBlobSha1": "66d6f05c8f2deea7fab110f4c024d762d71af390",
+      "preSha256": "42ffbb1def763ecd52573a0d5d820951753909e6c3976ca2bd975ba21e4f1eea",
+      "postSha256": "f3206aaec6b98cd512bad3ecc86cce195cfd024175894f8b51f2689a744a9c3f",
+      "charLength": 6494
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter.QuickSmoke/Program.cs",
+      "oldGitBlobSha1": "74201fc2fc41e132070d8bde0434d745ad5259c8",
+      "newGitBlobSha1": "20591b63827592f38a81706dab9e49b1de4ec9af",
+      "preSha256": "8040d9f97c54a60d7ac490a22fdb45364160e542479e26e5646a1f26264dabb2",
+      "postSha256": "b33478e3c5883d36c14c5001f89a3a3366daed321951c405049ad0b59a6c9278",
+      "charLength": 3363
+    }
+  ],
+  "verifiedCodeReadback": true,
+  "artifacts": {
+    "officialTagLeads": 25,
+    "immutableLicenseShaVerified": 0,
+    "downloadsStarted": 0,
+    "newDownloaderCount": 0
+  },
+  "preserved": [
+    "OllamaModelAdapter",
+    "ModelDownloadQueueStore",
+    "ModelDownloadQueueWorker",
+    "P03.ModelCenter.Wow",
+    "NOX D02/HOME/MENU/CORE"
+  ],
+  "note": "Git blob SHA-1 is NOT SourceLock SHA-256; the original packed application/host has not been integrated; Windows CI/new head pending."
+}

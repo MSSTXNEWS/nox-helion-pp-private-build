@@ -1,0 +1,64 @@
+{
+  "schema": "NOX_V16_E05_TURBO10_R08_OWNER_RECEIPT_V1",
+  "run_id": "NOX-V16-G1-05-20261028T1249MSK-R08",
+  "owner": "E05/P05",
+  "source_baseline_commit_sha1": "0b3a7d435be735148d64171deb9027093a89646e",
+  "source_baseline_tree_sha1": "f108d604c444f718b32aaecfd07b90b8f91b9a6f",
+  "source_lock": "HOLD: PR66 is an inventory only; source_00/01/02 and 729 SHA-256 not independently verified",
+  "immutable_owner_parent_commit_sha1": "4f1fc560501c4b7befde76a70aecee7ad978f42e",
+  "branch": "e05/v16-g1-05-hardware-poll-state-20261028-r08",
+  "source_commit_sha1": "7665f4e54912c907cc6357094eae30c2e3798f0b",
+  "main_merge": "NONE",
+  "files": [
+    {
+      "path": "Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs",
+      "owner": "E05/P05",
+      "run_id": "NOX-V16-G1-05-20261028T1249MSK-R08",
+      "source_commit_sha1": "0b3a7d435be735148d64171deb9027093a89646e",
+      "source_tree_sha1": "f108d604c444f718b32aaecfd07b90b8f91b9a6f",
+      "owner_parent_commit_sha1": "4f1fc560501c4b7befde76a70aecee7ad978f42e",
+      "pre_sha256": "55e130f240ed8da5561f9f6cbd7ae298fc5e03a3d3042d96980074a456739439",
+      "post_sha256": "d5b3890220c86a51a1546c35a5fdc67c98013f038dbe640f6c29e3be6c150ea5",
+      "pre_git_blob_sha1": "f741c3aa18fea69b168138c61432be826ef576f7",
+      "post_git_blob_sha1": "753960b0b42608cb6de89ae8039cfcd5297dc14b",
+      "diff": "E05_R08_SOURCE.patch"
+    },
+    {
+      "path": "Packages/P05/E05/space/E05SpaceReadOnlyProjection.test.mjs",
+      "owner": "E05/P05",
+      "run_id": "NOX-V16-G1-05-20261028T1249MSK-R08",
+      "source_commit_sha1": "0b3a7d435be735148d64171deb9027093a89646e",
+      "source_tree_sha1": "f108d604c444f718b32aaecfd07b90b8f91b9a6f",
+      "owner_parent_commit_sha1": "4f1fc560501c4b7befde76a70aecee7ad978f42e",
+      "pre_sha256": "102ebe3ea8ed464c533c8f3fa86d6ee49108dc00f47cf5390d69ad94bd05685f",
+      "post_sha256": "2e3305fd88da10bcae33e355f4c08f10615c68c6e99fd9f8385339f8e806fbc3",
+      "pre_git_blob_sha1": "7751c2074dbfa0d5e40a3c1cad80b0c430a751b2",
+      "post_git_blob_sha1": "7f1d7caa689d25f2560f54eb115f4ef75640311e",
+      "diff": "E05_R08_SOURCE.patch"
+    }
+  ],
+  "receipt_file": {
+    "path": "Packages/P05/E05/space/E05_SPACE_R08_OWNER_RECEIPT.json",
+    "owner": "E05/P05",
+    "pre_sha256": "ABSENT",
+    "post_sha256": "SEE_INDEPENDENT_PACKAGE_MANIFEST",
+    "pre_git_blob_sha1": "ABSENT",
+    "post_git_blob_sha1": "SEE_GITHUB_READBACK"
+  },
+  "diff_sha256": "8163b1e12d2a4a7cb08277fa2678feb2b85a41ad299ec0f42bd665f209a23b19",
+  "tests": {
+    "red_r07_preimage": "FAILED ON EXPECTED REGRESSION 73 !== null",
+    "local_node_assertions_pass": 101,
+    "local_node_assertions_failed": 0,
+    "new_regressions": 12,
+    "node_syntax_checks_pass": 2,
+    "installed_windows": "NOT_RUN",
+    "native_hardware": "NOT_RUN",
+    "webview2": "NOT_RUN",
+    "app_side_drive": "NOT_RUN"
+  },
+  "one_applied_practical_improvement": "POLL_STATUS_DOMINATES_SENSOR: Treat a native polling frame marked UNAVAILABLE as controlling truth; nested sensor LIVE entries cannot be displayed until parent frame LIVE/PARTIAL_OR_LIVE. Fail closed before rendering.",
+  "no_loss": "Only isolated E05 P05 owner paths, no main merge, no second bus/network/host, no D02/WOW/assets/models/archives/EXE touches.",
+  "weighted_overall": "N/D",
+  "release": "HOLD"
+}

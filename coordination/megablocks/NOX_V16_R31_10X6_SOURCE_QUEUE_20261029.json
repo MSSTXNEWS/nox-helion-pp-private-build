@@ -1,0 +1,451 @@
+{
+  "schema": "NOX_V16_SOURCE_FIRST_R31_10_MEGABLOCKS_6_PARALLEL_LANES_V1",
+  "createdDate": "2026-10-29",
+  "sourceFirst": true,
+  "actualSpawnedSubagents": 0,
+  "parallelReadOnlyLanes": 6,
+  "executionRule": "Sequential non-force/CAS commits; per block at most one focused test group and one saved source change, no EXE until SOURCE_READY PASS",
+  "knownLimitations": [
+    "These are six parallel analysis lanes, not six true subagents.",
+    "Only Creative/WOW source changes were made in R31; other owners remain independent.",
+    "The single R13 runner is in source but was not executed against full private checkout.",
+    "One dedicated imported-media-path test was blocked by GitHub action; never claim it PASSED."
+  ],
+  "lanes": [
+    {
+      "id": "P01",
+      "owner": "P01",
+      "focus": "Installer, native safety, media/browser/PC routes",
+      "mode": "parallel source audit; native runtime HOLD"
+    },
+    {
+      "id": "P02",
+      "owner": "P02",
+      "focus": "One voice RU↔ES, STOP, SIP, SQLite",
+      "mode": "parallel source audit; native runtime HOLD"
+    },
+    {
+      "id": "P03",
+      "owner": "P03",
+      "focus": "ModelCenter queue, installed weights, revisions",
+      "mode": "parallel source audit; native runtime HOLD"
+    },
+    {
+      "id": "P04",
+      "owner": "P04",
+      "focus": "GPU/QLoRA/RAG, real model and training rights",
+      "mode": "parallel source audit; native runtime HOLD"
+    },
+    {
+      "id": "P05",
+      "owner": "P05",
+      "focus": "Trusted events.v3, telemetry, mobile source",
+      "mode": "parallel source audit; native runtime HOLD"
+    },
+    {
+      "id": "WOW",
+      "owner": "WOW/Creative",
+      "focus": "Existing D02, 200 WOW, Persona, films, project assets",
+      "mode": "source edits saved in this R31 cycle; Windows runtime HOLD"
+    }
+  ],
+  "megaBlocks": [
+    {
+      "number": 1,
+      "goal": "Bounded provider JSON",
+      "oneTest": "test_provider_json_budget_r31.py",
+      "evidence": "source_saved; isolated exact-code copy test PASS",
+      "save": "PR210 source candidate",
+      "crossLaneWork": [
+        {
+          "lane": "P01",
+          "action": "owner code source audited; no unreviewed writes",
+          "nativeAccepted": false
+        },
+        {
+          "lane": "P02",
+          "action": "owner code source audited; no unreviewed writes",
+          "nativeAccepted": false
+        },
+        {
+          "lane": "P03",
+          "action": "owner code source audited; no unreviewed writes",
+          "nativeAccepted": false
+        },
+        {
+          "lane": "P04",
+          "action": "owner code source audited; no unreviewed writes",
+          "nativeAccepted": false
+        },
+        {
+          "lane": "P05",
+          "action": "owner code source audited; no unreviewed writes",
+          "nativeAccepted": false
+        },
+        {
+          "lane": "WOW",
+          "action": "Bounded provider JSON",
+          "nativeAccepted": false
+        }
+      ]
+    },
+    {
+      "number": 2,
+      "goal": "Bounded atomic ComfyUI import",
+      "oneTest": "test_bounded_media_import_r31.py",
+      "evidence": "source_and_test_saved; full repo test NOT_RUN",
+      "save": "PR210 source candidate",
+      "crossLaneWork": [
+        {
+          "lane": "P01",
+          "action": "owner code source audited; no unreviewed writes",
+          "nativeAccepted": false
+        },
+        {
+          "lane": "P02",
+          "action": "owner code source audited; no unreviewed writes",
+          "nativeAccepted": false
+        },
+        {
+          "lane": "P03",
+          "action": "owner code source audited; no unreviewed writes",
+          "nativeAccepted": false
+        },
+        {
+          "lane": "P04",
+          "action": "owner code source audited; no unreviewed writes",
+          "nativeAccepted": false
+        },
+        {
+          "lane": "P05",
+          "action": "owner code source audited; no unreviewed writes",
+          "nativeAccepted": false
+        },
+        {
+          "lane": "WOW",
+          "action": "Bounded atomic ComfyUI import",
+          "nativeAccepted": false
+        }
+      ]
+    },
+    {
+      "number": 3,
+      "goal": "Complete structured film storyboard",
+      "oneTest": "test_storyboard_shape_r31.py",
+      "evidence": "source_and_test_saved; full repo test NOT_RUN",
+      "save": "PR210 source candidate",
+      "crossLaneWork": [
+        {
+          "lane": "P01",
+          "action": "owner code source audited; no unreviewed writes",
+          "nativeAccepted": false
+        },
+        {
+          "lane": "P02",
+          "action": "owner code source audited; no unreviewed writes",
+          "nativeAccepted": false
+        },
+        {
+          "lane": "P03",
+          "action": "owner code source audited; no unreviewed writes",
+          "nativeAccepted": false
+        },
+        {
+          "lane": "P04",
+          "action": "owner code source audited; no unreviewed writes",
+          "nativeAccepted": false
+        },
+        {
+          "lane": "P05",
+          "action": "owner code source audited; no unreviewed writes",
+          "nativeAccepted": false
+        },
+        {
+          "lane": "WOW",
+          "action": "Complete structured film storyboard",
+          "nativeAccepted": false
+        }
+      ]
+    },
+    {
+      "number": 4,
+      "goal": "Bounded ComfyUI graph/queue receipts",
+      "oneTest": "test_workflow_admission_r31.py",
+      "evidence": "source_and_test_saved; full repo test NOT_RUN",
+      "save": "PR210 source candidate",
+      "crossLaneWork": [
+        {
+          "lane": "P01",
+          "action": "owner code source audited; no unreviewed writes",
+          "nativeAccepted": false
+        },
+        {
+          "lane": "P02",
+          "action": "owner code source audited; no unreviewed writes",
+          "nativeAccepted": false
+        },
+        {
+          "lane": "P03",
+          "action": "owner code source audited; no unreviewed writes",
+          "nativeAccepted": false
+        },
+        {
+          "lane": "P04",
+          "action": "owner code source audited; no unreviewed writes",
+          "nativeAccepted": false
+        },
+        {
+          "lane": "P05",
+          "action": "owner code source audited; no unreviewed writes",
+          "nativeAccepted": false
+        },
+        {
+          "lane": "WOW",
+          "action": "Bounded ComfyUI graph/queue receipts",
+          "nativeAccepted": false
+        }
+      ]
+    },
+    {
+      "number": 5,
+      "goal": "Validated imported media identity/path",
+      "oneTest": "test_import_asset_paths_r31.py",
+      "evidence": "source_saved; GitHub rejected dedicated test write; verification HOLD",
+      "save": "PR210 source candidate",
+      "crossLaneWork": [
+        {
+          "lane": "P01",
+          "action": "owner code source audited; no unreviewed writes",
+          "nativeAccepted": false
+        },
+        {
+          "lane": "P02",
+          "action": "owner code source audited; no unreviewed writes",
+          "nativeAccepted": false
+        },
+        {
+          "lane": "P03",
+          "action": "owner code source audited; no unreviewed writes",
+          "nativeAccepted": false
+        },
+        {
+          "lane": "P04",
+          "action": "owner code source audited; no unreviewed writes",
+          "nativeAccepted": false
+        },
+        {
+          "lane": "P05",
+          "action": "owner code source audited; no unreviewed writes",
+          "nativeAccepted": false
+        },
+        {
+          "lane": "WOW",
+          "action": "Validated imported media identity/path",
+          "nativeAccepted": false
+        }
+      ]
+    },
+    {
+      "number": 6,
+      "goal": "Valid local Ollama model tags",
+      "oneTest": "test_provider_json_budget_r31.py",
+      "evidence": "source_and_test_saved; full repo test NOT_RUN",
+      "save": "PR210 source candidate",
+      "crossLaneWork": [
+        {
+          "lane": "P01",
+          "action": "owner code source audited; no unreviewed writes",
+          "nativeAccepted": false
+        },
+        {
+          "lane": "P02",
+          "action": "owner code source audited; no unreviewed writes",
+          "nativeAccepted": false
+        },
+        {
+          "lane": "P03",
+          "action": "owner code source audited; no unreviewed writes",
+          "nativeAccepted": false
+        },
+        {
+          "lane": "P04",
+          "action": "owner code source audited; no unreviewed writes",
+          "nativeAccepted": false
+        },
+        {
+          "lane": "P05",
+          "action": "owner code source audited; no unreviewed writes",
+          "nativeAccepted": false
+        },
+        {
+          "lane": "WOW",
+          "action": "Valid local Ollama model tags",
+          "nativeAccepted": false
+        }
+      ]
+    },
+    {
+      "number": 7,
+      "goal": "Project path-junction boundary",
+      "oneTest": "test_project_boundary_r31.py",
+      "evidence": "source_and_test_saved; full repo test NOT_RUN",
+      "save": "PR210 source candidate",
+      "crossLaneWork": [
+        {
+          "lane": "P01",
+          "action": "owner code source audited; no unreviewed writes",
+          "nativeAccepted": false
+        },
+        {
+          "lane": "P02",
+          "action": "owner code source audited; no unreviewed writes",
+          "nativeAccepted": false
+        },
+        {
+          "lane": "P03",
+          "action": "owner code source audited; no unreviewed writes",
+          "nativeAccepted": false
+        },
+        {
+          "lane": "P04",
+          "action": "owner code source audited; no unreviewed writes",
+          "nativeAccepted": false
+        },
+        {
+          "lane": "P05",
+          "action": "owner code source audited; no unreviewed writes",
+          "nativeAccepted": false
+        },
+        {
+          "lane": "WOW",
+          "action": "Project path-junction boundary",
+          "nativeAccepted": false
+        }
+      ]
+    },
+    {
+      "number": 8,
+      "goal": "Atomic FFmpeg final movie",
+      "oneTest": "test_atomic_movie_publish_r31.py",
+      "evidence": "source_and_test_saved; full repo test NOT_RUN",
+      "save": "PR210 source candidate",
+      "crossLaneWork": [
+        {
+          "lane": "P01",
+          "action": "owner code source audited; no unreviewed writes",
+          "nativeAccepted": false
+        },
+        {
+          "lane": "P02",
+          "action": "owner code source audited; no unreviewed writes",
+          "nativeAccepted": false
+        },
+        {
+          "lane": "P03",
+          "action": "owner code source audited; no unreviewed writes",
+          "nativeAccepted": false
+        },
+        {
+          "lane": "P04",
+          "action": "owner code source audited; no unreviewed writes",
+          "nativeAccepted": false
+        },
+        {
+          "lane": "P05",
+          "action": "owner code source audited; no unreviewed writes",
+          "nativeAccepted": false
+        },
+        {
+          "lane": "WOW",
+          "action": "Atomic FFmpeg final movie",
+          "nativeAccepted": false
+        }
+      ]
+    },
+    {
+      "number": 9,
+      "goal": "Verified local FFmpeg STOP + Comfy boolean consent",
+      "oneTest": "test_verified_local_ffmpeg_stop_r31.py",
+      "evidence": "source_and_test_saved; full repo test NOT_RUN",
+      "save": "PR210 source candidate",
+      "crossLaneWork": [
+        {
+          "lane": "P01",
+          "action": "owner code source audited; no unreviewed writes",
+          "nativeAccepted": false
+        },
+        {
+          "lane": "P02",
+          "action": "owner code source audited; no unreviewed writes",
+          "nativeAccepted": false
+        },
+        {
+          "lane": "P03",
+          "action": "owner code source audited; no unreviewed writes",
+          "nativeAccepted": false
+        },
+        {
+          "lane": "P04",
+          "action": "owner code source audited; no unreviewed writes",
+          "nativeAccepted": false
+        },
+        {
+          "lane": "P05",
+          "action": "owner code source audited; no unreviewed writes",
+          "nativeAccepted": false
+        },
+        {
+          "lane": "WOW",
+          "action": "Verified local FFmpeg STOP + Comfy boolean consent",
+          "nativeAccepted": false
+        }
+      ]
+    },
+    {
+      "number": 10,
+      "goal": "One shared R13 source gate",
+      "oneTest": "test_*_r31.py",
+      "evidence": "static runner suite inventory PASS; actual full repo tests NOT_RUN",
+      "save": "PR210 source candidate",
+      "crossLaneWork": [
+        {
+          "lane": "P01",
+          "action": "owner code source audited; no unreviewed writes",
+          "nativeAccepted": false
+        },
+        {
+          "lane": "P02",
+          "action": "owner code source audited; no unreviewed writes",
+          "nativeAccepted": false
+        },
+        {
+          "lane": "P03",
+          "action": "owner code source audited; no unreviewed writes",
+          "nativeAccepted": false
+        },
+        {
+          "lane": "P04",
+          "action": "owner code source audited; no unreviewed writes",
+          "nativeAccepted": false
+        },
+        {
+          "lane": "P05",
+          "action": "owner code source audited; no unreviewed writes",
+          "nativeAccepted": false
+        },
+        {
+          "lane": "WOW",
+          "action": "One shared R13 source gate",
+          "nativeAccepted": false
+        }
+      ]
+    }
+  ],
+  "releaseGates": {
+    "fullNativeRoutes50": false,
+    "runtimeWow200": false,
+    "sourceZip729": false,
+    "sourceReady": false,
+    "windowsE07": false
+  }
+}

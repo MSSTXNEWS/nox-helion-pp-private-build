@@ -1,0 +1,52 @@
+{
+  "schema": "NOX_V16_E02_PATCH_RECEIPT_V1",
+  "run_id": "NOX-V16-E02-FINALPASS-20261028",
+  "owner": 2,
+  "repository": "MSSTXNEWS/nox-helion-pp-private-build",
+  "base_main_commit_sha1": "eb46b49fb8a022cefa679afb8606877016808db1",
+  "candidate_pr": 13,
+  "candidate_head_before_write_sha1": "cbac788ed56225e7c1f4a3a002f2a00104cd35ea",
+  "patch_sha256": "de24b07658b27e0aaf0c8bb7d7fd0b3ee7931e6308e4deaeae87d2e484f92666",
+  "patch_bytes": 21464,
+  "files": [
+    {
+      "path": "Packages/P02/worker-python/p02_runtime.py",
+      "pre_sha256": "c59e65654df6334377861b148abb74ceca0cc91533e47d28ad8d294f7ad30971",
+      "pre_git_blob_sha1": "e1bb5d7349def46471b5cb9d5ac1d1d39b1c65e4",
+      "post_sha256": "a7f1f3906a756b89dce6fa303be0e2c5b7a36bacf7c8572f4e03c08c52c51f04",
+      "post_git_blob_sha1": "b069b3c5a2d15dcac722340d3e7cf5334653a162",
+      "post_bytes": 21441
+    },
+    {
+      "path": "Packages/P02/worker-python/p02_chat_bridge.py",
+      "pre_sha256": "7f3c43f04e44752a1262bd228cb9f3b4598857c85f5cd813ef3945452015b0b3",
+      "pre_git_blob_sha1": "556feedf1e503d33257c171413005ca7f8862d1b",
+      "post_sha256": "8b60d3bade9b78c2e10f10a041224e2f73d9f19012a118a5a3d844e6cb0e058c",
+      "post_git_blob_sha1": "34b366bed988f0452c94a3e302ecd3f1ef14b700",
+      "post_bytes": 5182
+    },
+    {
+      "path": "Packages/P02/worker-python/test_p02_runtime.py",
+      "pre_sha256": "f919a4932818c30c0e8a7a282f1da136b1117935cb9ea00bcd7bf98e23d3b706",
+      "pre_git_blob_sha1": "9db881b1c30ef1590ea8fb9a865b549ce8266913",
+      "post_sha256": "b244a1efb1e4db9e968e48d9b2f63672dee2f89a57a3a0a6c112885e3b7c411c",
+      "post_git_blob_sha1": "af7fb96a02d80366ddd15fa80ca2c035c923a381",
+      "post_bytes": 11137
+    }
+  ],
+  "component_test_command": "python -m unittest discover -v",
+  "component_test_result": "10 tests PASS, Python 3.13.5 on Linux synthetic/local fixtures",
+  "real_ollama": "NOT_TESTED",
+  "existing_app_sqlite_mapping": "HOLD",
+  "existing_app_host_events_v3": "HOLD",
+  "source_archive_verified_reconstruction": "HOLD",
+  "windows_exe": "NOT_BUILT",
+  "windows_qa": "NOT_RUN",
+  "e07_acceptance": "HOLD",
+  "accepted_task_weight": 0,
+  "warnings": [
+    "No host schema migration was performed; refuse duplicate native chat tables.",
+    "Standalone component tests do not prove Windows runtime or SourceLock integration.",
+    "SQLite application backup/recovery requires original host path and user consent."
+  ]
+}

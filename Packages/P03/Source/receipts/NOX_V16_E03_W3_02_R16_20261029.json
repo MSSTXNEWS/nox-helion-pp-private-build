@@ -1,0 +1,47 @@
+{
+  "schema": "NOX_V16_OWNER_E03_SOURCE_ONLY_R16",
+  "runId": "NOX-V16-W3-02-20261029T0055MSK-R16",
+  "owner": "E03 W3·02 P03",
+  "taskId": "V16.E03.P03.R16.STRICT_OLLAMA_TAGS_JSON",
+  "expectedParentHead": "71600344f61e3ef46766d58424d9c51af57d2b75",
+  "expectedParentTree": "c38a16be6d90fed8c9de8cd2f450d636b7e12436",
+  "sourceLock729": "HOLD_PHYSICAL_SHA_NOT_VERIFIED",
+  "historicalBase": "0b3a7d435be735148d64171deb9027093a89646e",
+  "previousLesson": {
+    "id": "OWNER3_BACKEND_CALLBACK_ERRORS_FAIL_CLOSED",
+    "applied": "N/A (read-only digest parser; existing callback error path unchanged)",
+    "evidence": "Source contains original Owner3 backend operation unavailable guard; no modification to execute_backend"
+  },
+  "product": {
+    "before": "/api/tags duplicate JSON keys or NaN/overflow could yield digest metadata without HOLD",
+    "after": "strict JSON object keys and finite numbers fail closed to P03PortHold; valid Ollama manifest remains reported-only, never verified rights or downloaded weight"
+  },
+  "tests": {
+    "red": "isolated source-derived digest 4 malformed cases FAIL (3 preserved source-derived assertions PASS)",
+    "green": "isolated source-derived patched digest 4 malformed cases PASS; valid/unverified and bad-digest preserved",
+    "realModule": "7 tests saved for actual P03 module, NOT_RUN",
+    "windows": "PROHIBITED_R20",
+    "downloads": "NONE",
+    "exe": "NOT_BUILT"
+  },
+  "files": [
+    {
+      "path": "Packages/P03/Source/python-host/p03_onehost_port.py",
+      "preSha256": "d468a7655bad299fd9b889570167f901a1979ff09d0b583d281eaac6084df510",
+      "postSha256": "04bf0282ef4a1b13a8a68ff31912310fac1d5a96fb44d53ef973d782efb9b86e",
+      "preGitBlobSha1": "0d134eff6cc9be649737cf0a5bfd3caaa0ac5a5a",
+      "postGitBlobSha1": "17bad1e52aa174ff8b1af9d39be3ea2056e7874a",
+      "diff": "one import math; reject duplicate JSON keys, NaN and floating overflow in existing models.digest /api/tags reader"
+    },
+    {
+      "path": "Packages/P03/Source/python-host/test_p03_digest_strict_r16.py",
+      "preSha256": "ABSENT",
+      "postSha256": "af99c7f445ea366e259956f69b5bb587c7437f58e8f8946c6e3c6ec8e09faece",
+      "preGitBlobSha1": "ABSENT",
+      "postGitBlobSha1": "078a6f34d035c12151dfbcd544728f905aaca3d0",
+      "diff": "seven focused source-level unittest regression cases for exact local /api/tags metadata"
+    }
+  ],
+  "oneNewLesson": "P03_STRICT_TAGS_JSON_BEFORE_DIGEST_REPORT",
+  "noLoss": "No change to original queue, Ollama Pull, GGUF, STOP/Retry, model family catalog, D02/WOW/8 CoreID/5 Persona/archives/user data."
+}

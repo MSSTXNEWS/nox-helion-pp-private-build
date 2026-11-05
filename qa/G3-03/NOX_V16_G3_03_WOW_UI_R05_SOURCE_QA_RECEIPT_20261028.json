@@ -1,0 +1,234 @@
+{
+  "schema": "NOX_V16_G3_03_UI_ONLY_SOURCE_QA_R05",
+  "run_id": "NOX-V16-G3-03-20261028T1032MSK-R05",
+  "date": "2026-10-28",
+  "status": "SOURCE_COMPONENT_VERIFIED_PARTIAL_INTEGRATION_HOLD_WINDOWS_NOT_ACCEPTED",
+  "baseline": {
+    "repo": "MSSTXNEWS/nox-helion-pp-private-build",
+    "immutable_main_commit": "0b3a7d435be735148d64171deb9027093a89646e",
+    "immutable_main_tree": "f108d604c444f718b32aaecfd07b90b8f91b9a6f",
+    "current_main_readback": "MATCH",
+    "original_729_extracted_source_lock": "N/D_HOLD",
+    "source_00_01_02_raw_sha256": "N/D_HOLD",
+    "inventory": "draft PR66; INVENTORY_ONLY"
+  },
+  "atomic_source_commit": {
+    "branch": "qa/nox-v16-g3-03-atomic-fx-20261028-r05",
+    "pre_commit": "27d33b045a647783719022fb65ab61634536f3b3",
+    "pre_tree": "7266ffc7e18db320da122275d012118ff7efa97d",
+    "commit": "06a821b4a038136595ae9912abf65123238b5ea1",
+    "tree": "769644f14191926b160ef003c777c42153053372",
+    "source_files_updated_atomically": 3,
+    "git_readback": "3/3 PASS",
+    "not_merged": true
+  },
+  "files": [
+    {
+      "path": "qa/G3-03/candidates/nox-cinema.mjs",
+      "owner": "G3-03 QA candidate ONLY; active P01 belongs to E01",
+      "run_id": "NOX-V16-G3-03-20261028T1032MSK-R05",
+      "immutable_pre_commit": "27d33b045a647783719022fb65ab61634536f3b3",
+      "pre_sha256": "ae283f6d4e8341ef3a9c5129e06faf2d7a5295870c19b265b6e8dfa56f7ffa10a",
+      "post_sha256": "e2b0940d664d6c852cfc9df9b26533927306667f1d364c12169b540b5e81e2db",
+      "pre_git_blob_sha1": "ef4602f728179f7d5fdb022aad0fb4c1585079ff",
+      "post_git_blob_sha1": "9220e3a6e277ad2675cb43bfabdd9f55e63a5edd",
+      "diff_summary": "Guard syncVisible() after destroy to prevent stale IntersectionObserver callbacks from mutating approved DOM.",
+      "receipt": "atomic source commit 06a821b4a038136595ae9912abf65123238b5ea1; independent GitHub readback PASS"
+    },
+    {
+      "path": "qa/G3-03/candidates/nox-cinema.css",
+      "owner": "G3-03 QA candidate ONLY; active P01 belongs to E01",
+      "run_id": "NOX-V16-G3-03-20261028T1032MSK-R05",
+      "immutable_pre_commit": "27d33b045a647783719022fb65ab61634536f3b3",
+      "pre_sha256": "9795af680f75e9dabd095f126ee6faf6c5b8e0a9b41628965adfca6f7b273e67",
+      "post_sha256": "312a08bbdc094fc5a960a236cc1fb530b01a85b117d65e39584c9825b3489a27",
+      "pre_git_blob_sha1": "1f4116c6650a8e9e7931843f8ab1da5db61c6362",
+      "post_git_blob_sha1": "fd06fb17a29f91e079f37be4364669a0ff20ddc7",
+      "diff_summary": "Change all 17 data-nox-mode CSS selectors to FX-owned data-nox-fx-mode; remove broad Reduced Motion wildcard that stopped native/host-owned animations.",
+      "receipt": "atomic source commit 06a821b4a038136595ae9912abf65123238b5ea1; independent GitHub readback PASS"
+    },
+    {
+      "path": "qa/G3-03/tests/nox-cinema-visibility.test.mjs",
+      "owner": "G3-03 QA candidate ONLY; active P01 belongs to E01",
+      "run_id": "NOX-V16-G3-03-20261028T1032MSK-R05",
+      "immutable_pre_commit": "27d33b045a647783719022fb65ab61634536f3b3",
+      "pre_sha256": "5d11d64430b9fac2401cba4413ff241d98b353ae3b1ee8b9eb4c184b91c462cc",
+      "post_sha256": "e1985787d64bd363323a15f8ef1421ad88e603335dae92c1e577e6d8616c2a25",
+      "pre_git_blob_sha1": "bea6363f10ffae664f06aad54dde147544a2cc3b",
+      "post_git_blob_sha1": "1877f3920535945f4f44adf2cddb2cab4b36f88e",
+      "diff_summary": "Update stale owner-mode assertion; add owner mode isolation, stale observer teardown and CSS scope negative regression tests.",
+      "receipt": "atomic source commit 06a821b4a038136595ae9912abf65123238b5ea1; independent GitHub readback PASS"
+    }
+  ],
+  "new_receipt_path": {
+    "path": "qa/G3-03/NOX_V16_G3_03_WOW_UI_R05_SOURCE_QA_RECEIPT_20261028.json",
+    "owner": "G3-03 QA",
+    "pre_sha256": "ABSENT",
+    "post_sha256": "DETERMINED_AFTER_WRITE",
+    "git_blob_sha1": "DETERMINED_AFTER_WRITE",
+    "append_only": true
+  },
+  "qa": {
+    "node_test_suite": "NOT_RUN",
+    "dynamic_v8_synchronous_tests": "15/15 PASS",
+    "node_fs_async_cases": "3 SKIP_NOT_RUN",
+    "targeted_static_checks": "5/5 PASS",
+    "real_windows_e2e": "NOT_RUN",
+    "real_original_d02_png_webp_sha256": "NOT_REHASHED",
+    "manual_visual_acceptance": "NOT_RUN",
+    "native_events_v3": "NOT_RUN",
+    "test_scope": "V8 fake DOM + static; NOT Windows or PBR/3D acceptance"
+  },
+  "checks": [
+    {
+      "task_id": "R05-01",
+      "criterion": "central HELION crust/lava/corona",
+      "status": "SOURCE; WebView2 visual HOLD",
+      "evidence": "Original D02 not replaced; layered CSS/JS only; no physical rendering proof"
+    },
+    {
+      "task_id": "R05-02",
+      "criterion": "rare gravity-return particles",
+      "status": "COMPONENT VERIFIED synthetic",
+      "evidence": "Numerical return and 15/15 synchronous V8 test suite PASS; real GPU/renderer HOLD"
+    },
+    {
+      "task_id": "R05-03",
+      "criterion": "exactly 8 unique CoreID",
+      "status": "COMPONENT VERIFIED synthetic",
+      "evidence": "Positive/negative identity validations; owner approved ID binding HOLD"
+    },
+    {
+      "task_id": "R05-04",
+      "criterion": "flying luminous actionable controls",
+      "status": "SOURCE",
+      "evidence": "Pseudo-element motion, pointer-events:none, native handlers not rewritten; Windows click/focus HOLD"
+    },
+    {
+      "task_id": "R05-05",
+      "criterion": "glass panels",
+      "status": "SOURCE",
+      "evidence": "Smoke-glass CSS + focus styles; actual contrast/graphics HOLD"
+    },
+    {
+      "task_id": "R05-06",
+      "criterion": "cinematic camera/transitions",
+      "status": "HOLD",
+      "evidence": "No verified installed WPF/WebView2 master camera rig"
+    },
+    {
+      "task_id": "R05-07",
+      "criterion": "five approved Persona",
+      "status": "NO-LOSS SOURCE; HOLD",
+      "evidence": "Assets untouched; live approved video not verified; V16 HOME nuclei-only"
+    },
+    {
+      "task_id": "R05-08",
+      "criterion": "LIVE events",
+      "status": "COMPONENT VERIFIED synthetic; native HOLD",
+      "evidence": "FX takes trusted subscribed events only; actual E06 events.v3 native E2E absent"
+    },
+    {
+      "task_id": "R05-09",
+      "criterion": "320/390/800x480/4K responsiveness",
+      "status": "SOURCE LIMITED; HOLD",
+      "evidence": "CSS max-width:650px exists; physical and WebView2 geometry not tested"
+    },
+    {
+      "task_id": "R05-10",
+      "criterion": "ECO/Reduced Motion/offscreen",
+      "status": "COMPONENT VERIFIED synthetic; Windows HOLD",
+      "evidence": "17 FX-specific CSS selectors fixed; broad wildcard removed; stale lifecycle guard; 15 V8 PASS"
+    }
+  ],
+  "indicators": [
+    {
+      "executor": "E01",
+      "task_id": "V16.26.3",
+      "package": "P01",
+      "weight_pct": 20,
+      "source_evidence": "PR90 3ce4fed",
+      "component_status": "SOURCE / COMPONENT PARTIAL",
+      "integrated_status": "HOLD",
+      "windows_accepted": "NOT_RUN",
+      "verified_progress_pct": "N/D"
+    },
+    {
+      "executor": "E02",
+      "task_id": "V16.26.4",
+      "package": "P02",
+      "weight_pct": 25,
+      "source_evidence": "PR91 eab35bb",
+      "component_status": "SOURCE / MOCK PARTIAL",
+      "integrated_status": "HOLD",
+      "windows_accepted": "NOT_RUN",
+      "verified_progress_pct": "N/D"
+    },
+    {
+      "executor": "E03",
+      "task_id": "V16.26.5",
+      "package": "P03",
+      "weight_pct": 20,
+      "source_evidence": "PR92 8d2a3ff",
+      "component_status": "SOURCE / FIXTURE PARTIAL",
+      "integrated_status": "HOLD",
+      "windows_accepted": "NOT_RUN",
+      "verified_progress_pct": "N/D"
+    },
+    {
+      "executor": "E04",
+      "task_id": "V16.26.6",
+      "package": "P04",
+      "weight_pct": 25,
+      "source_evidence": "PR89 df2be9b",
+      "component_status": "SOURCE / GPU NOT_RUN",
+      "integrated_status": "HOLD",
+      "windows_accepted": "NOT_RUN",
+      "verified_progress_pct": "N/D"
+    },
+    {
+      "executor": "E05",
+      "task_id": "V16.26.7",
+      "package": "P05",
+      "weight_pct": 10,
+      "source_evidence": "PR75 82f7769",
+      "component_status": "SOURCE / SYNTHETIC ONLY",
+      "integrated_status": "HOLD",
+      "windows_accepted": "NOT_RUN",
+      "verified_progress_pct": "N/D"
+    },
+    {
+      "executor": "E06",
+      "task_id": "V16.26.8",
+      "package": "INTEGRATOR",
+      "weight_pct": null,
+      "source_evidence": "PR96 c181c4c; source lock 729 N/D",
+      "component_status": "SOURCE / INTEGRATION HOLD",
+      "integrated_status": "HOLD",
+      "windows_accepted": "NOT_RUN",
+      "verified_progress_pct": "N/D"
+    },
+    {
+      "executor": "E07",
+      "task_id": "QA01-QA10",
+      "package": "INDEPENDENT QA",
+      "weight_pct": null,
+      "source_evidence": "PR46 historical; installed EXE absent",
+      "component_status": "SOURCE / 0 current Windows tests",
+      "integrated_status": "HOLD",
+      "windows_accepted": "NOT_RUN",
+      "verified_progress_pct": "N/D"
+    }
+  ],
+  "weighted_progress_formula": "0.20*P01 + 0.25*P02 + 0.20*P03 + 0.25*P04 + 0.10*P05",
+  "weighted_progress_pct": "N/D",
+  "holds": [
+    "E01 approved assets/individual CoreID/one renderer receipt",
+    "E06 sealed original three source parts+729 file complete SourceLock+single renderer decision",
+    "E07 same BuildID/EXE SHA native WPF/WebView2 installed acceptance",
+    "CI Windows jobs fail before test steps, root cause UNKNOWN"
+  ],
+  "no_loss": "Only qa/G3-03 candidates/tests and this new QA receipt; main, original D02 PNG/WebP, 5 Persona, EXE, archives and other owners untouched.",
+  "exactly_one_practical_self_improvement": "Make FX namespace isolation and Reduced Motion scope a mandatory automated cross-file preflight: assert JS data-nox-fx-mode equals CSS selectors, preserve owner data-nox-mode, reject broad wildcard targeting host animations and test teardown after stale observers.",
+  "handoff": "E01/E06 review draft candidate; NO MERGE or source lock promotion until owner ACK and E07 Windows acceptance."
+}

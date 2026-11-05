@@ -1,0 +1,23 @@
+{
+  "schema": "NOX-SELFBUILDER-SOURCE-ADMISSION-v1",
+  "authority": "OWNER #1 ONLY; independent E07 #2",
+  "gitlab_r77_ref": "manual/nox-r77-release-onehost-integrated-20261031",
+  "gitlab_r77_sha": "0c5f5c8d164b442bde01165a42870e0df98e1649",
+  "gitlab_r78_diagnostic_fix_sha": "2946004702749ae0bec5b244911b39e1830b6b5c",
+  "status": "SOURCE_INTEGRATION_CANDIDATE_NATIVE_E07_DEFERRED",
+  "paths_reused": [
+    "Packages/P03/Source/python-host/p03_onehost_port.py",
+    "Packages/P03/Source/P03.ModelCenter/ModelCatalog.cs",
+    "Packages/P03/Source/P03.ModelCenter/OllamaModelAdapter.cs",
+    "Packages/P04/train_qlora.py",
+    "Packages/P04/preflight_local_gpu.py",
+    "Packages/P04/rag_python_compat.py"
+  ],
+  "ownership_note": "DO NOT edit shared files or use a second downloader/trainer; implement adapter via existing authenticated owner host",
+  "released": false,
+  "windows_native_tested": false,
+  "weights_trained_by_this_patch": false,
+  "donor_github_head": "f74300d19314b41a20f0c959dc59309f7e93d409",
+  "integration_pre_head": "21b943a9b0cc7370216fa69c7ad5914ee5501472",
+  "runtime_admission": "Actual clean managed Git HEAD plus native-configured source_paths imported into original scoped S03, content verified against exact Git objects."
+}

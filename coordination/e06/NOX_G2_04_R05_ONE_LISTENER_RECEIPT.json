@@ -1,0 +1,122 @@
+{
+  "schema": "NOX_V16_E06_G2_04_R05_OWNER_RECEIPT_V1",
+  "run_id": "NOX-V16-E06-G2-04-20261028T1011MSK-R05",
+  "owner": "E06 #6",
+  "repo": "MSSTXNEWS/nox-helion-pp-private-build",
+  "branch": "e06/v16-g2-04-r05-one-listener-20261028",
+  "frozen_baseline": {
+    "main_commit": "0b3a7d435be735148d64171deb9027093a89646e",
+    "main_tree_git_sha1": "f108d604c444f718b32aaecfd07b90b8f91b9a6f",
+    "pr66": "INVENTORY_ONLY",
+    "raw_source_00_01_02_sha256": "N/D",
+    "extracted_729_sourcelock": "HOLD",
+    "current_main_matches": true
+  },
+  "immutable_parent": {
+    "pr": 93,
+    "commit": "b20a355e515e9cd59882adc141d27cef77480028",
+    "git_tree_sha1": "f6f4188b9f04c91a10170f153f89c28bb059075b"
+  },
+  "file_receipts": [
+    {
+      "path": "coordination/e06/onehost_p02_p04.py",
+      "owner": "E06",
+      "pre_sha256": "77a9efeb9604a6e0988954f81bdae39ea9e06c905b127b4cea920c4289727c17",
+      "post_sha256": "ad0910669ebc081a1d28a7c4468696d8fdbfce7ca701781c779818e7295d0c89",
+      "pre_git_blob_sha1": "22cefd7d098d05c26de4869185de16ecdb742140",
+      "post_git_blob_sha1": "93f018e17e10c1f4d5cdcbee2961c5a151e93e42",
+      "commit": "177a123cd9a4233b39a8bce6aa31bf606e492cf4",
+      "diff": "Require equality of local Ollama URL scheme, hostname and port for P02 /api/chat and P04 /api/embed; retain original port guard",
+      "unified_diff_sha256": "69369b940f1477f53951cee403282b09eff705ef37ddde9b452a6ac27ac98ca5"
+    },
+    {
+      "path": "tests/e06/test_onehost_listener_identity_r05.py",
+      "owner": "E06",
+      "pre_sha256": "ABSENT",
+      "post_sha256": "f30d003e7056d558bc419cdf0711b1125e7063cadc3b943e57b8bc053a1c15b8",
+      "pre_git_blob_sha1": "ABSENT",
+      "post_git_blob_sha1": "f96d38422ef5c2b1e574eeb95649ca3d60873989",
+      "commit": "89f3778523fa52712712f658184add26f9925029",
+      "diff": "ADD five real-owner module offline endpoint identity contract tests; this source is authored but original P02/P04 runtime test remains NOT_RUN"
+    },
+    {
+      "path": "coordination/e06/NOX_G2_04_R05_ONE_LISTENER_RECEIPT.json",
+      "owner": "E06",
+      "pre_sha256": "ABSENT",
+      "post_sha256": "EXTERNAL_READBACK_IN_E06_REPORT_NO_SELF_REFERENCE",
+      "pre_git_blob_sha1": "ABSENT",
+      "post_git_blob_sha1": "EXTERNAL_READBACK_IN_E06_REPORT",
+      "diff": "ADD receipt only; self-hash is tracked separately after saving"
+    }
+  ],
+  "permission_map": {
+    "chat.send": "Existing native Windows SID, tenant/principal/session, 8 CoreID+HELION / 5 Persona registry, resolved existing SQLite chat, per-frame pre/post authorization",
+    "chat.rag": "Existing P04 LocalRag p02_callback / owner SID only; fail closed if P02 and P04 have different scheme+hostname+port",
+    "gpu.stop/pause/resume/checkpoint/status": "ONLY owner-provided P04 worker control and native verified ACK; no training completion fabricated",
+    "gpu.observe": "ONLY native-authorized, canonicalized, P05 verified events.v3; no independent event bus",
+    "source integrity": "PR66 baseline is inventory only; source_00/01/02 and 729 full source SHA-256 not verified"
+  },
+  "test_receipts": {
+    "original_unpatched_R04_with_new_stub_tests": "25_RUN_2_EXPECTED_FAILURES_ENDPOINT_ALIAS",
+    "patched_R05_offline_stub": "25_25_PASS",
+    "python_compile": "PASS",
+    "real_P02_P04_module_five_new_tests": "AUTHORED_NOT_RUN",
+    "windows_ollama_gpu_checkpoint_evaluation_exe": "HOLD"
+  },
+  "turbo10": [
+    [
+      "E06-G2-04-R05-01",
+      "V16 master E06 lessons preread",
+      "DONE"
+    ],
+    [
+      "E06-G2-04-R05-02",
+      "main frozen commit/tree verified",
+      "DONE"
+    ],
+    [
+      "E06-G2-04-R05-03",
+      "E06 PR93 exact preimage and ownership",
+      "DONE"
+    ],
+    [
+      "E06-G2-04-R05-04",
+      "same-port different loopback listener regression",
+      "FAIL_ON_PREIMAGE_EXPECTED"
+    ],
+    [
+      "E06-G2-04-R05-05",
+      "single-host listener authority guard saved",
+      "SOURCE"
+    ],
+    [
+      "E06-G2-04-R05-06",
+      "five owner-module contract regressions authored",
+      "NOT_RUN"
+    ],
+    [
+      "E06-G2-04-R05-07",
+      "local stub 25/25 and py_compile",
+      "PASS"
+    ],
+    [
+      "E06-G2-04-R05-08",
+      "GitHub SHA/Git blob readback",
+      "PASS"
+    ],
+    [
+      "E06-G2-04-R05-09",
+      "E06 report, exactly one lesson, master append/readback, E07 handoff",
+      "PENDING"
+    ],
+    [
+      "E06-G2-04-R05-10",
+      "same-BuildID real Windows Ollama/GPU/checkpoint/E07",
+      "HOLD"
+    ]
+  ],
+  "single_practical_self_improvement": "STRICT SAME-LISTENER AUTHORITY: bind existing P02 chat and P04 RAG only after identical local scheme+hostname+port check; negative IPv4/IPv6/localhost same-port tests before fix, positive shared-listener tests after. Native process-level attestation remains HOLD.",
+  "nonchanges": "No changes to P01/P02/P03/P04/P05 owner files, main, D02, WOW, personas, weights, archives, EXE, SQLite schema or any existing worker",
+  "release": "HOLD",
+  "weighted_progress": "N/D"
+}

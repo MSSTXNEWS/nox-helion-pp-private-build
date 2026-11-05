@@ -1,0 +1,132 @@
+{
+  "schema": "NOX_V16_T06_IMMUTABLE_RECEIPT_R10",
+  "task_id": "T06",
+  "run_id": "NOX-V16-T06-20261029T173423MSK-R10",
+  "product": "NOX HELION EXPRESS INTEGRATOR Windows loader ONLY",
+  "phase": "SOURCE_ONLY",
+  "observed_start_msk": "2026-10-29T17:34:23+03:00",
+  "planned_start_msk": "2026-10-29T17:40:00+03:00",
+  "receipt_prepared_utc": "2026-10-29T14:41:47.783Z",
+  "single_source_branch": "integration/nox-v16-unified-candidate-20261028-r01",
+  "previous_checkpoint": {
+    "run_id": "NOX-V16-T06-20261029T172252MSK-R09",
+    "criteria_done": 1,
+    "total": 8,
+    "percent": 12.5
+  },
+  "current_checkpoint": {
+    "criteria_done": 1,
+    "total": 8,
+    "percent": 12.5,
+    "delta_pp": 0,
+    "remaining": 7,
+    "visual": "█░░░░░░░░░"
+  },
+  "criteria": [
+    {
+      "id": 1,
+      "name": "official_source_base",
+      "status": "DONE",
+      "evidence": "owner choice e5ba5ca3402fdbfacf6923f6add733a2b70543f3; canonical PR162 integration branch; R09 HEAD 885b3554c3c47009776b1a570dadf846dad7fec5 preserved as ancestor"
+    },
+    {
+      "id": 2,
+      "name": "P01_WPF_C09",
+      "status": "HOLD",
+      "evidence": "P01 source present on canonical tree; no complete same-tree acceptance"
+    },
+    {
+      "id": 3,
+      "name": "P02_IPC_VOICE_SQLite",
+      "status": "HOLD",
+      "evidence": "G2-A P02 framed worker 8af1338bee7ebb03ffbb0dd4bfdeed7af7870bc1 and native ingress 842f3d60f9506a7ed54a4cf4e158254bf6617df6 retained; Voice native/ACL same-tree evidence missing"
+    },
+    {
+      "id": 4,
+      "name": "P03_ModelCenter_PACK01",
+      "status": "HOLD",
+      "evidence": "onehost source present; 13 Host50 routes not native owner accepted"
+    },
+    {
+      "id": 5,
+      "name": "P04_GPU_RAG",
+      "status": "HOLD",
+      "evidence": "HEAD 0cdeb101848e97088f9c464f502a68dc28049b7b includes selected owner P04 source patches, not full test acceptance"
+    },
+    {
+      "id": 6,
+      "name": "P05_events_E06",
+      "status": "HOLD",
+      "evidence": "HEAD 0cdeb101848e97088f9c464f502a68dc28049b7b includes selected owner P05 source patches, not full functional acceptance"
+    },
+    {
+      "id": 7,
+      "name": "D02_WOW_Host50_E06_NO_LOSS",
+      "status": "HOLD",
+      "evidence": "T07/T09 verified original 729/729 original ZIP; 13 source/native host routes remain HOLD and no full 968-blob post-admission reattestation"
+    },
+    {
+      "id": 8,
+      "name": "final_same_tree_head_manifest_T09",
+      "status": "HOLD",
+      "evidence": "R10 source fix saved; no fully accepted frozen tree or independent T10 SOURCE_READY"
+    }
+  ],
+  "source_change": {
+    "path": "coordination/e06_host50/admission.py",
+    "pre_head": "0cdeb101848e97088f9c464f502a68dc28049b7b",
+    "pre_tree": "dc9475da552253e6d8ac564c14934238564fd643",
+    "pre_git_blob_sha1": "9a3cdd174da6e8a1303a5cce3ef3c42b9a32f60f",
+    "post_git_blob_sha1": "efd5af93853d04cf5c1748af41b13570fc49c0ad",
+    "pre_file_sha256": "927abf5c197283760ed43ef462dc0a2a3c267ea4df292b0dcea5537cc2954bd6",
+    "post_file_sha256": "6e253f632673687fc1d625855a1327d86321049b057c49073c83000f96f98ae6",
+    "source_commit": "244d2c6c7ffd1cddbf6282839eb6f7ad9d036a8d",
+    "post_tree": "5f15bb4ed8a232127a90f11c461c3d85993ce403",
+    "preimage_pinned": true,
+    "branch_ref_cas": "PASS",
+    "git_sha_readback": "PASS",
+    "scope": "Keep BASE_COMMIT/TREE provenance immutable. Require native HMAC-sealed exact commit/tree/owner receipt + verifier for nonbaseline Host50 admission; cap/tree/ticket bound to checked instance tree. No route auto-activated; all 13 lacking native receipt remain HOLD."
+  },
+  "validation": {
+    "git_compare": "1 ahead / 0 behind; one existing source file modified; zero deletions",
+    "static_guard_assertions": "9/9 PASS on actual patched bytes",
+    "python_existing_test_admission": "NOT_RUN",
+    "reason": "No authenticated private-source checkout in available Python runtime; no Windows/CI may be started",
+    "native_windows": "NOT_RUN",
+    "source_ready": "HOLD"
+  },
+  "prior_results_preserved": {
+    "original_archive_3_part_729": "PHYSICAL PASS via T07/T09 prior receipts",
+    "t04_34_choice": "DONE version selection only",
+    "p02_two_patches": "PRESERVED",
+    "r09_integration_runner_fix": "PRESERVED"
+  },
+  "controlling_blocker": {
+    "code": "NATIVE_SOURCE_OWNER_ATTESTATION_AND_13_ROUTE_RECEIPTS_MISSING",
+    "owner": "G6-B plus P01/P02/P04/P06 native owners; independent T08/T09/T10 QA",
+    "detail": "New admission contract fails closed unless native host authenticates a matching Git commit/tree, owner receipt, source-lock and native approval. Existing focused Python regression still must run on exact post blob before freeze."
+  },
+  "applied_lesson": "Do not replace historical BASE_TREE with the new live tree: provenance, owner binding, runtime SourceLock and native action approval are separate evidence domains. Keep STOP/ACL/consent/HMAC fail-closed.",
+  "references": [
+    "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/issues/177#issuecomment-6499480647",
+    "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/commit/244d2c6c7ffd1cddbf6282839eb6f7ad9d036a8d"
+  ],
+  "handoff_to": [
+    "T02",
+    "T08",
+    "T09",
+    "T10",
+    "T11"
+  ],
+  "safeguards": {
+    "main_untouched": true,
+    "other_source_branch_untouched": true,
+    "original_zip_untouched": true,
+    "google_master_e06_lessons_untouched": true,
+    "exe": false,
+    "nsis": false,
+    "windows_ci": false,
+    "gitlab_ci": false,
+    "e07": false
+  }
+}

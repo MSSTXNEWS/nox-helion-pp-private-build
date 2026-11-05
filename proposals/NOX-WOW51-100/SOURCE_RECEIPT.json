@@ -1,0 +1,12 @@
+{
+  "runId": "NOX-V16-WOW51-100-20261028",
+  "owner": "#1 UI FX (candidate) / #6 host integration",
+  "basePr": 30,
+  "baseCommit": "1f9c951821a615c2e0fe26243938746afa5bc446",
+  "work": "Only additive paths proposals/NOX-WOW51-100, .github/workflows/nox-wow51-100.yml",
+  "addedCues": 50,
+  "productionExeAcceptance": "NOT_RUN",
+  "originalD02": "UNTOUCHED",
+  "hostProof": "NOT_BOUND",
+  "notes": "Component CI does not constitute native EXE or Rule 10+10+10 visual acceptance"
+}

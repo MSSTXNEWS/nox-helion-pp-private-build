@@ -1,0 +1,18 @@
+diff --git a/C_RELEASE_SPRINT_BUILD.ps1 b/C_RELEASE_SPRINT_BUILD.ps1
+index 4867ac6..9c772fb 100644
+--- a/C_RELEASE_SPRINT_BUILD.ps1
++++ b/C_RELEASE_SPRINT_BUILD.ps1
+@@ -133,11 +133,12 @@ try {
+     $work=Join-Path $OutputDirectory 'scratch'
+     New-Item -ItemType Directory -Path $dist,$work -Force | Out-Null
+     $seed=Join-Path $Source 'helion/data/traits_seed_64.json'
++    $menuCatalog=Join-Path $Source 'helion/data/menu_v2_full_catalog.json'
+     $weights=Join-Path $Source 'helion/ai_weights/weights'
+     if (-not (Test-Path -LiteralPath $weights -PathType Container)) { throw 'AI_WEIGHTS_PAYLOAD_MISSING_HOLD' }
+     $assets=Join-Path $Source 'assets'
+     $cases=@(
+-        @{ Name='NOX_HELION_PRIVATE_CANDIDATE'; Entry=(Join-Path $Source 'run_first_release.py'); Mode='--windowed'; Data=@("$assets;assets", "$seed;helion/data", "$weights;helion/ai_weights/weights") },
++        @{ Name='NOX_HELION_PRIVATE_CANDIDATE'; Entry=(Join-Path $Source 'run_first_release.py'); Mode='--windowed'; Data=@("$assets;assets", "$seed;helion/data", "$menuCatalog;helion/data", "$weights;helion/ai_weights/weights") },
+         @{ Name='NOX_HELION_BACKGROUND_CANDIDATE'; Entry=$worker; Mode='--console'; Data=@() }
+     )
+     foreach ($case in $cases) {
