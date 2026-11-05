@@ -175,6 +175,40 @@ try
             (await File.ReadAllTextAsync(backupAlias)).Contains(
                 originalJob.Id.ToString("D"), StringComparison.OrdinalIgnoreCase),
             "F02B foreign bytes preserved through queue backup rotation");
+        var liveQueue = Path.Combine(linkRoot, "p03-model-download-queue.json");
+        var beforeRestore = await File.ReadAllBytesAsync(liveQueue);
+        var foreignBackup = Path.Combine(multiRoot, "foreign-owner-valid-backup.json");
+        File.Move(backupAlias, foreignBackup);
+        if (!P03HardlinkFixture.CreateHardLink(backupAlias, foreignBackup, IntPtr.Zero))
+            throw new Exception("FAIL F02C backup hardlink fixture unavailable");
+        try
+        {
+            await protectedQueue.RestoreBackupAsync(true);
+            throw new Exception("FAIL F02C hardlinked backup accepted");
+        }
+        catch (InvalidDataException ex) when (ex.Message == "P03_QUEUE_HARDLINK_SNAPSHOT_HOLD")
+        {
+            Assert(true, "F02C foreign hardlinked backup refused before read");
+        }
+        Assert((await File.ReadAllBytesAsync(liveQueue)).SequenceEqual(beforeRestore),
+            "F02C original queue preserved after backup refusal");
+        var foreignQueue = Path.Combine(multiRoot, "foreign-owner-valid-live.json");
+        File.Move(liveQueue, foreignQueue);
+        if (!P03HardlinkFixture.CreateHardLink(liveQueue, foreignQueue, IntPtr.Zero))
+            throw new Exception("FAIL F02D live hardlink fixture unavailable");
+        try
+        {
+            await protectedQueue.ReadAsync();
+            throw new Exception("FAIL F02D hardlinked live queue accepted");
+        }
+        catch (InvalidDataException ex) when (ex.Message == "P03_QUEUE_HARDLINK_SNAPSHOT_HOLD")
+        {
+            Assert(true, "F02D foreign hardlinked live queue refused before read");
+        }
+        File.Delete(liveQueue); // ephemeral fixture alias, not target data
+        File.Move(foreignQueue, liveQueue);
+        Assert((await protectedQueue.ReadAsync()).Single().Status == "Backup rotated",
+            "F02D normal queue survives hardlink rejection");
     }
     var file = Path.Combine(multiRoot, "sample.gguf");
     await File.WriteAllBytesAsync(file, Encoding.ASCII.GetBytes("GGUFsynthetic-byteproof"));

@@ -1,6 +1,8 @@
 using System.Text.Json;
 using System.Diagnostics;
 using System.Text.RegularExpressions;
+using System.Runtime.InteropServices;
+using Microsoft.Win32.SafeHandles;
 
 namespace Nox.P03;
 
@@ -41,6 +43,38 @@ public sealed class ModelDownloadQueueStore
     private readonly string _path;
     private readonly string _leasePath;
     private readonly SemaphoreSlim _gate = new(1, 1);
+
+    // Win32 BY_HANDLE_FILE_INFORMATION: hardlinks do not have ReparsePoint.
+    // Test the same live file handle used by the subsequent JSON parser.
+    [StructLayout(LayoutKind.Sequential)]
+    private struct QueueFileTime { public uint Low; public uint High; }
+    [StructLayout(LayoutKind.Sequential)]
+    private struct QueueByHandleInfo
+    {
+        public uint Attributes;
+        public QueueFileTime CreationTime;
+        public QueueFileTime LastAccessTime;
+        public QueueFileTime LastWriteTime;
+        public uint VolumeSerialNumber;
+        public uint FileSizeHigh;
+        public uint FileSizeLow;
+        public uint NumberOfLinks;
+        public uint FileIndexHigh;
+        public uint FileIndexLow;
+    }
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GetFileInformationByHandle(
+        SafeFileHandle file, out QueueByHandleInfo information);
+
+    private static void RequireSingleLinkQueueSnapshot(SafeFileHandle file)
+    {
+        if (!OperatingSystem.IsWindows()) return;
+        if (!GetFileInformationByHandle(file, out var info))
+            throw new IOException("P03_QUEUE_FILE_IDENTITY_UNAVAILABLE_HOLD");
+        if (info.NumberOfLinks != 1)
+            throw new InvalidDataException("P03_QUEUE_HARDLINK_SNAPSHOT_HOLD");
+    }
 
     public ModelDownloadQueueStore(string dataDirectory)
     {
@@ -381,9 +415,17 @@ public sealed class ModelDownloadQueueStore
             ModelLocalAttestation.RequireNoExistingReparsePoint(backup);
             ModelLocalAttestation.RequireNoExistingReparsePoint(_path);
             if (!File.Exists(backup)) throw new FileNotFoundException("No queue backup exists.", backup);
-            var bytes = await File.ReadAllBytesAsync(backup, ct);
-            if (bytes.Length == 0 || bytes.Length > MaxQueueFileBytes)
-                throw new InvalidDataException("Queue backup is invalid or too large.");
+            byte[] bytes;
+            await using (var backupInput = new FileStream(backup, FileMode.Open,
+                FileAccess.Read, FileShare.Read, 65536, FileOptions.Asynchronous))
+            {
+                // A foreign hardlink must not be read as owner-authorized backup.
+                RequireSingleLinkQueueSnapshot(backupInput.SafeFileHandle);
+                if (backupInput.Length <= 0 || backupInput.Length > MaxQueueFileBytes)
+                    throw new InvalidDataException("Queue backup is invalid or too large.");
+                bytes = new byte[checked((int)backupInput.Length)];
+                await backupInput.ReadExactlyAsync(bytes, ct);
+            }
             var snapshot = JsonSerializer.Deserialize<List<ModelJob>>(bytes, JsonOptions)
                 ?? throw new InvalidDataException("Backup queue is null.");
             ValidateJobs(snapshot);
@@ -432,6 +474,7 @@ public sealed class ModelDownloadQueueStore
         ModelLocalAttestation.RequireNoExistingReparsePoint(_path);
         if (!File.Exists(_path)) return [];
         await using var input = new FileStream(_path, FileMode.Open, FileAccess.Read, FileShare.Read, 65536, true);
+        RequireSingleLinkQueueSnapshot(input.SafeFileHandle);
         if (input.Length <= 0 || input.Length > MaxQueueFileBytes)
             throw new InvalidDataException("Queue is empty or exceeds its safety limit; original bytes preserved.");
         try
