@@ -421,6 +421,12 @@ function openRoute(id){
  // Only read-only native routes with an existing client contract; no fake success.
  const reads={
  'model-library':['models.catalog',{}],'model-load':['models.catalog',{}],
+ // The original LEARN primary route and GPU page must issue the existing
+ // native preflight, not show a placeholder or claim that training started.
+ // Queue is an existing READ contract; training.start remains a separately
+ // owner-consented, explicitly selected approved job in the original UI.
+ 'evolution':['gpu.preflight',{}],'gpu-training':['gpu.preflight',{}],
+ 'study-queue':['chat.commands',{action:'selfbuilder.study.queue'}],
  'chat-history':['chat.history',{}],
  'progress':['chat.commands',{action:'selfbuilder.worker.status'}],
  'core-status':['chat.commands',{action:'selfbuilder.capabilities'}],
@@ -442,7 +448,7 @@ function direction(id){
  P.directions.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.section===id)));
 }
 function mainAction(name){
- const routes={CHAT:'chat',INSTALL:'system',MODELS:'model-library',LEARN:'evolution',SETTINGS:'settings'};
+ const routes={CHAT:'chat',INSTALL:'system',MODELS:'model-library',LEARN:'gpu-training',SETTINGS:'settings'};
  const id=routes[name];if(id)openRoute(id);
 }
 DIRECTIONS.forEach(([id,name])=>{
