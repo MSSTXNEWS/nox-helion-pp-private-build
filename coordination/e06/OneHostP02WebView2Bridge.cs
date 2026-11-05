@@ -389,7 +389,9 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
         if (value is "HOLD" or "DENIED" or "ERROR" or "FAILED" or "REJECTED" or "CANCELLED" or
             "OFFLINE" or "UNAVAILABLE" or "NOT_READY" or "AWAITING_CONSENT" or
             "NEEDS_CONSENT" or "CONSENT_PENDING" or "NOT_AUTHORIZED" or
-            "NOT_AUTHENTICATED" or "FORBIDDEN") return true;
+            "NOT_AUTHENTICATED" or "FORBIDDEN" or
+            "BLOCKED" or "REFUSED" or "REVOKED" or "ABORTED" or
+            "EXPIRED" or "STOPPED") return true;
         return value.EndsWith("_HOLD", StringComparison.Ordinal) ||
                value.EndsWith("_DENIED", StringComparison.Ordinal) ||
                value.EndsWith("_REJECTED", StringComparison.Ordinal) ||
@@ -400,7 +402,14 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
                value.EndsWith("_UNAVAILABLE", StringComparison.Ordinal) ||
                value.EndsWith("_OFFLINE", StringComparison.Ordinal) ||
                value.StartsWith("NOT_AUTHORIZED", StringComparison.Ordinal) ||
-               value.StartsWith("NOT_AUTHENTICATED", StringComparison.Ordinal);
+               value.StartsWith("NOT_AUTHENTICATED", StringComparison.Ordinal) ||
+               value.EndsWith("_BLOCKED", StringComparison.Ordinal) ||
+               value.EndsWith("_REFUSED", StringComparison.Ordinal) ||
+               value.EndsWith("_REVOKED", StringComparison.Ordinal) ||
+               value.EndsWith("_ABORTED", StringComparison.Ordinal) ||
+               value.EndsWith("_EXPIRED", StringComparison.Ordinal) ||
+               value.EndsWith("_STOPPED", StringComparison.Ordinal) ||
+               value.EndsWith("_CANCELLED", StringComparison.Ordinal);
     }
 
     // Original transport and original native owner must BOTH agree on success.

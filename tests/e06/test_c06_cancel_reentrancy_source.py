@@ -75,4 +75,20 @@ class C06CancellationReentrancySource(unittest.TestCase):
         self.assertIn('LegacyOwnerStatusDenied(state)', owner)
         self.assertIn('LegacyOwnerDenial(p.Value,depth+1)', owner)
 
+    def test_native_owner_security_denial_vocabulary_precedes_completed_ack(self):
+        # Source contract: a transport Accepted may not turn native revocation,
+        # refusal, expiration or a cancelled worker into completed/STOP_REQUESTED.
+        method = CODE.split('private static bool NativeOwnerStatusDenied(', 1)[1].split(
+            'private static bool NativeResultExplicitlyDenied(', 1)[0]
+        for exact in ('BLOCKED', 'REFUSED', 'REVOKED', 'ABORTED', 'EXPIRED', 'STOPPED'):
+            self.assertIn('"' + exact + '"', method)
+        for suffix in ('_BLOCKED', '_REFUSED', '_REVOKED', '_ABORTED',
+                       '_EXPIRED', '_STOPPED', '_CANCELLED'):
+            self.assertIn('value.EndsWith("' + suffix + '", StringComparison.Ordinal)', method)
+        self.assertIn('NativeResultExplicitlyDenied(ownerResult.Result)', CODE)
+        self.assertLess(
+            CODE.index('NativeResultExplicitlyDenied(ownerResult.Result)'),
+            CODE.index('Reply(source, epoch, id, route, ownerState')
+        )
+
 if __name__=='__main__': unittest.main()
