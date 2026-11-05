@@ -1,6 +1,20 @@
 """T06: activate existing WPF MainWindow on disposable R11 source, never archive."""
 from pathlib import Path
-import hashlib,sys,re,os,tempfile
+import hashlib,sys,re,os,tempfile,stat
+
+def _require_plain_stage_parents(path: Path):
+    """Reject existing symlink, junction, and file ancestors during owner staging."""
+    for ancestor in (path.parent, *path.parent.parents):
+        try:
+            info = ancestor.lstat()
+        except FileNotFoundError:
+            continue
+        if (stat.S_ISLNK(info.st_mode) or
+            (getattr(info, "st_file_attributes", 0) & 0x400) or
+            getattr(ancestor, "is_junction", lambda: False)()):
+            raise ValueError("T06_NATIVE_STAGE_REPARSE_PARENT_HOLD")
+        if not stat.S_ISDIR(info.st_mode):
+            raise ValueError("T06_NATIVE_STAGE_NON_DIRECTORY_PARENT_HOLD")
 MAIN_SHA="6fc49544f77ec6ce2e7b2e8f3ab86c9a2a64c25d0eb3eb29547c5677851ef210"
 ADDON_SHA="7bcce65005861302fb33bad9fd692bee407f99e2"
 def blob(b):
@@ -8,6 +22,9 @@ def blob(b):
 def run(source,addon,backend_sha256=None):
     main=source/"MainWindow.xaml.cs"
     output=source/"Integration/MainWindow.NativeP02.cs"
+    _require_plain_stage_parents(main)
+    _require_plain_stage_parents(output)
+    _require_plain_stage_parents(addon)
     if not main.is_file() or main.is_symlink() or output.exists() or output.is_symlink():
         raise ValueError("T06_ORIGINAL_MAINWINDOW_COLLISION_OR_MISSING")
     data=main.read_bytes()
@@ -59,7 +76,9 @@ def run(source,addon,backend_sha256=None):
     # One checked staged copy. Original committed donor bytes remain immutable.
     # The R11 staging directory is disposable, but never corrupt an original
     # MainWindow or strand the addon if a write/fsync/commit fails midway.
+    _require_plain_stage_parents(output)
     output.parent.mkdir(parents=True,exist_ok=True)
+    _require_plain_stage_parents(output)
     fd,temporary_name=tempfile.mkstemp(prefix=".nox-native-stage-",suffix=".tmp",dir=main.parent)
     temporary=Path(temporary_name)
     created_addon=False
