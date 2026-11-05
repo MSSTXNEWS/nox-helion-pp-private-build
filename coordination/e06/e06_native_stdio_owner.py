@@ -95,7 +95,12 @@ def load_native_config(data_dir):
         return {}
     root = _plain_path(str(data_dir))
     file = root / "onehost-native-config.json"
-    if not file.exists():
+    # A dangling reparse-point config is not an absent optional config.
+    # Path.exists() follows the target and used to silently accept that case.
+    # Check the named entry itself before the existing descriptor identity gate.
+    try:
+        file.lstat()
+    except FileNotFoundError:
         return {}
     _plain_path(str(file), directory=False)
     raw = _read_native_config_bytes(root, file)

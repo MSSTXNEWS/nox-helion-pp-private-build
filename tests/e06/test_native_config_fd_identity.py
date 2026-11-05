@@ -21,6 +21,19 @@ def original_reader():
     return scope["_read_native_config_bytes"]
 
 
+def original_loader():
+    """Execute only the original config path guard/loader, never start a host."""
+    parsed = ast.parse(OWNER.read_text("utf-8"))
+    names = {"_plain_path", "_read_native_config_bytes", "load_native_config"}
+    funcs = [node for node in parsed.body if isinstance(node, ast.FunctionDef)
+             and node.name in names]
+    if len(funcs) != 3:
+        raise AssertionError("Original E06 config loader missing")
+    scope = {"Path": Path, "stat": stat, "os": os}
+    exec(compile(ast.Module(body=funcs, type_ignores=[]), str(OWNER), "exec"), scope)
+    return scope["load_native_config"]
+
+
 class NativeConfigDescriptorIdentity(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
@@ -125,6 +138,27 @@ class NativeConfigDescriptorIdentity(unittest.TestCase):
         with mock.patch.object(os, "read", side_effect=shorten):
             with self.assertRaisesRegex(ValueError, "E06_NATIVE_CONFIG_IDENTITY_HOLD"):
                 self.reader(self.root, self.config)
+
+
+    def test_absent_optional_config_still_returns_empty(self):
+        self.assertEqual(original_loader()(self.root), {})
+
+    def test_dangling_config_symlink_is_not_silent_absence(self):
+        missing = self.root / "missing-owner-target.json"
+        try:
+            self.config.symlink_to(missing)
+        except (OSError, NotImplementedError):
+            self.skipTest("symlinks unavailable on test host")
+        self.assertFalse(self.config.exists())
+        with self.assertRaisesRegex(ValueError, "E06_NATIVE_CONFIG_REPARSE_HOLD"):
+            original_loader()(self.root)
+        self.assertFalse(missing.exists())
+
+    def test_directory_at_config_path_is_rejected_without_mutation(self):
+        self.config.mkdir()
+        with self.assertRaisesRegex(ValueError, "E06_NATIVE_CONFIG_FORMAT_HOLD"):
+            original_loader()(self.root)
+        self.assertTrue(self.config.is_dir())
 
 
 if __name__ == "__main__":
