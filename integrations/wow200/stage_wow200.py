@@ -158,6 +158,57 @@ def p01_owner_stage_plan(repo: Path, dest: Path) -> tuple[list, dict]:
     return plans, content
 
 
+
+def _plain_stage_path(path: Path) -> bool:
+    """Refuse symlink/junction/reparse ancestors and file-as-parent paths.
+
+    Newly created target descendants may be absent. Existing ancestors must
+    be genuine directories; no source or disposable output may be redirected.
+    """
+    for node in (path, *path.parents):
+        try:
+            info = node.lstat()
+        except FileNotFoundError:
+            continue
+        except OSError:
+            return False
+        if (stat.S_ISLNK(info.st_mode) or
+                (getattr(info, "st_file_attributes", 0) &
+                 getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)) or
+                getattr(node, "is_junction", lambda: False)()):
+            return False
+        if node != path and not stat.S_ISDIR(info.st_mode):
+            return False
+    return True
+
+
+def _write_owned_html_only(path: Path, original: bytes, replacement: bytes,
+                           owner: tuple[int, int]) -> None:
+    """Write verified disposable HOME by opened inode, never path overwrite.
+
+    Reject an interposed link, foreign file, non-unique hardlink or stale
+    preimage. Restoration uses the existing equally conservative owner guard.
+    """
+    if not _plain_stage_path(path):
+        raise ValueError("WOW_HTML_PARENT_REDIRECTED_HOLD")
+    with path.open("r+b") as stream:
+        opened = os.fstat(stream.fileno())
+        current = path.lstat()
+        if (not _plain_stage_path(path) or
+                not stat.S_ISREG(opened.st_mode) or
+                not stat.S_ISREG(current.st_mode) or
+                opened.st_nlink != 1 or current.st_nlink != 1 or
+                (opened.st_dev, opened.st_ino) != owner or
+                (current.st_dev, current.st_ino) != owner or
+                stream.read() != original):
+            raise ValueError("WOW_HTML_OWNER_CHANGED_BEFORE_WRITE_HOLD")
+        stream.seek(0)
+        stream.write(replacement)
+        stream.truncate()
+        stream.flush()
+        os.fsync(stream.fileno())
+
+
 def _restore_owned_html_only(path: Path, expected: bytes, original: bytes, owner: tuple[int, int]) -> bool:
     """Rollback only the same regular owner inode with our exact staged bytes.
 
@@ -165,6 +216,8 @@ def _restore_owned_html_only(path: Path, expected: bytes, original: bytes, owner
     disposable stage, leave bytes in place and let the build HOLD.
     """
     try:
+        if not _plain_stage_path(path):
+            return False
         with path.open("r+b") as stream:
             opened = os.fstat(stream.fileno())
             current = path.lstat()
@@ -188,13 +241,22 @@ def _restore_owned_html_only(path: Path, expected: bytes, original: bytes, owner
 
 
 def stage(root:Path, source:Path)->dict:
+    if (not _plain_stage_path(Path(os.path.abspath(root))) or
+            not _plain_stage_path(Path(os.path.abspath(source)))):
+        raise ValueError("WOW_STAGE_INPUT_REPARSE_HOLD")
     root=root.resolve();source=source.resolve()
     if not (root/"NOX.P01.Shell.csproj").is_file():raise ValueError("R13_SOURCE_ROOT_HOLD")
     html=root/"Assets/creative/studio.html"
     home_html=root/"Assets/index.html"
-    if not home_html.is_file() or home_html.is_symlink():raise ValueError("ORIGINAL_D02_HTML_MISSING_HOLD")
-    if not html.is_file() or not (root/"Assets/creative/studio.js").is_file():raise ValueError("CREATIVE_NOT_STAGED_HOLD")
-    if any(not (root/"Assets"/name).is_file() or digest(root/"Assets"/name)!=sha for name,sha in D02.items()):
+    if not home_html.is_file() or home_html.is_symlink() or not _plain_stage_path(home_html):
+        raise ValueError("ORIGINAL_D02_HTML_MISSING_HOLD")
+    if (not html.is_file() or not _plain_stage_path(html) or
+            not (root/"Assets/creative/studio.js").is_file() or
+            not _plain_stage_path(root/"Assets/creative/studio.js")):
+        raise ValueError("CREATIVE_NOT_STAGED_HOLD")
+    if any(not _plain_stage_path(root/"Assets"/name) or
+           not (root/"Assets"/name).is_file() or
+           digest(root/"Assets"/name)!=sha for name,sha in D02.items()):
         raise ValueError("CANONICAL_D02_SHA_HOLD")
     manifest_path=source/"DONOR_BLOBS.json"
     if not manifest_path.is_file() or manifest_path.is_symlink() or pinned_source_bytes(manifest_path,DONOR_MANIFEST_BLOB) is None:
@@ -325,6 +387,16 @@ def stage(root:Path, source:Path)->dict:
     new_home=new_home.replace('</body>',
         '<script src="creative/wow200/runtime/vendor/gauge.min.js"></script><script src="creative/wow200/runtime/vendor/progressbar.min.js"></script><script type="module" src="creative/wow200/runtime/home-scene.mjs"></script>'
         '<script type="module" src="creative/wow200/ui/onehost-menu-bindings.mjs"></script></body>')
+    # One preflight of ALL 88 canonical destination paths before any output.
+    # Windows names are case-insensitive; a duplicate path is never a new donor.
+    planned=set()
+    for origin,target in plans:
+        key=target.relative_to(root).as_posix().casefold()
+        if (key in planned or not _plain_stage_path(origin) or
+                not _plain_stage_path(target) or target.exists() or
+                target.is_symlink()):
+            raise ValueError("WOW_STAGE_SOURCE_OR_DESTINATION_COLLISION_HOLD")
+        planned.add(key)
     # Pre-write recheck rejects observable concurrent changes to admitted UI.
     # A later race is safe too: all copies use only preverified snapshots.
     for origin,_ in menu_plans:
@@ -337,8 +409,17 @@ def stage(root:Path, source:Path)->dict:
     try:
         dest.mkdir(parents=True)
         for origin,target in plans:
+            if not _plain_stage_path(target):
+                raise ValueError("WOW_STAGE_TARGET_REDIRECTED_HOLD")
             target.parent.mkdir(parents=True,exist_ok=True)
-            target.write_bytes(pinned_content[origin])
+            if not _plain_stage_path(target):
+                raise ValueError("WOW_STAGE_TARGET_REDIRECTED_HOLD")
+            # O_EXCL never overwrites an interposed foreign file or hardlink.
+            with target.open("xb") as stream:
+                stream.write(pinned_content[origin])
+            if (not _plain_stage_path(target) or target.stat().st_nlink != 1 or
+                    digest(target) != hashlib.sha256(pinned_content[origin]).hexdigest()):
+                raise ValueError("WOW_STAGE_EXCLUSIVE_COPY_SHA_HOLD")
             copied.append({"path":str(target.relative_to(root)).replace("\\","/"),
                            "sha256":digest(target),"bytes":target.stat().st_size})
         # Source-lock the disposable HTML before the first write.
@@ -346,9 +427,9 @@ def stage(root:Path, source:Path)->dict:
                 home_html.read_bytes() != home_original):
             raise ValueError("WOW_HTML_PREIMAGE_CHANGED_HOLD")
         pre=digest(html);old_home_pre=digest(home_html)
-        html.write_text(new,encoding="utf-8")
+        _write_owned_html_only(html, html_original, new.encode("utf-8"), owners["studio"])
         copied.append({"path":"Assets/creative/studio.html","pre_sha256":pre,"sha256":digest(html)})
-        home_html.write_text(new_home,encoding="utf-8")
+        _write_owned_html_only(home_html, home_original, new_home.encode("utf-8"), owners["home"])
         copied.append({"path":"Assets/index.html","pre_sha256":old_home_pre,"sha256":digest(home_html)})
         for name,sha in D02.items():
             if digest(root/"Assets"/name)!=sha:raise ValueError("D02_POST_SHA_DRIFT")
