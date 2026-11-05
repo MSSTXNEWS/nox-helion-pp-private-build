@@ -59,6 +59,10 @@ internal static class NoXAutostart
     {
         if (!nativeConsent) throw new UnauthorizedAccessException("NOX_AUTOSTART_OWNER_CONSENT_REQUIRED");
         var expected = Quoted(CheckedExecutable(executable));
+        // Owner consent and path verification precede a read-only no-op.
+        // A foreign entry is rejected by ReadOwnedState, not overwritten.
+        // A mutation is checked again below under the writable handle.
+        if (ReadOwnedState(executable) == enabled) return enabled;
         // Disabling a missing Run entry must not create HKCU keys as a side effect.
         // The owner still validates consent, the original executable and path.
         using var key = enabled
@@ -97,6 +101,13 @@ internal static class NoXAutostart
     internal static void RemoveOnUninstall(string executable)
     {
         var expected = Quoted(CheckedExecutable(executable, allowDeletedOnUninstall:true));
+        // Do not demand write permission for an absent or foreign Run value.
+        // Exact ownership is rechecked under the writable handle before delete.
+        using var probe = Registry.CurrentUser.OpenSubKey(RunKey, writable:false);
+        if (probe?.GetValue(Entry) is not string candidate ||
+            probe.GetValueKind(Entry) != RegistryValueKind.String ||
+            !string.Equals(candidate, expected, StringComparison.OrdinalIgnoreCase))
+            return;
         using var key = Registry.CurrentUser.OpenSubKey(RunKey, writable:true);
         if (key?.GetValue(Entry) is string existing &&
             key.GetValueKind(Entry) == RegistryValueKind.String &&

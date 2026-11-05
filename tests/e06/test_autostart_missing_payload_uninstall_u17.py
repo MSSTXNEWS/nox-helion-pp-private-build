@@ -68,5 +68,30 @@ class NoXAutostartUninstallSource(unittest.TestCase):
         self.assertIn("var unchanged = ReadOwnedState(executable);", method)
         self.assertIn("NOX_AUTOSTART_PERSISTENCE_UNVERIFIED", method)
 
+
+    def test_same_state_on_off_read_only_before_hkcu_write(self):
+        code = SOURCE.read_text(encoding="utf-8")
+        method = code[code.index("internal static bool SetEnabled"):code.index("internal static void RemoveOnUninstall")]
+        consent = method.index("if (!nativeConsent)")
+        no_op = method.index("if (ReadOwnedState(executable) == enabled) return enabled;")
+        writable = method.index("using var key = enabled")
+        self.assertLess(consent, no_op)
+        self.assertLess(no_op, writable)
+        self.assertLess(writable, method.index("NOX_AUTOSTART_FOREIGN_ENTRY_HOLD"))
+        self.assertIn("var persisted = ReadOwnedState(executable);", method)
+
+    def test_uninstall_foreign_entry_does_not_request_write_access(self):
+        code = SOURCE.read_text(encoding="utf-8")
+        method = code[code.index("internal static void RemoveOnUninstall"):]
+        readonly = method.index("using var probe = Registry.CurrentUser.OpenSubKey(RunKey, writable:false)")
+        guard = method.index("!string.Equals(candidate, expected, StringComparison.OrdinalIgnoreCase)")
+        early_return = method.index("return;", guard)
+        writable = method.index("using var key = Registry.CurrentUser.OpenSubKey(RunKey, writable:true)")
+        second_match = method.index("string.Equals(existing, expected, StringComparison.OrdinalIgnoreCase)")
+        delete = method.index("key.DeleteValue(Entry", second_match)
+        self.assertTrue(readonly < guard < early_return < writable < second_match < delete)
+        self.assertIn("probe.GetValueKind(Entry) != RegistryValueKind.String", method)
+        self.assertIn("key.GetValueKind(Entry) == RegistryValueKind.String", method)
+
 if __name__ == "__main__":
     unittest.main()
