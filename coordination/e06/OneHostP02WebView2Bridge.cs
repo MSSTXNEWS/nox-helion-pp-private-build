@@ -415,12 +415,18 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
     // Original transport and original native owner must BOTH agree on success.
     private static bool NativeResultExplicitlyDenied(JsonElement? candidate, int depth = 0)
     {
-        if (candidate is not JsonElement result || result.ValueKind != JsonValueKind.Object)
+        if (candidate is not JsonElement result) return false;
+        // A transport ACK cannot hide a denied nested receipt in an array.
+        // Preserve normal arrays while bounding provenance parsing fail-closed.
+        if (depth >= 4) return result.ValueKind is JsonValueKind.Array or JsonValueKind.Object;
+        if (result.ValueKind == JsonValueKind.Array)
+        {
+            if (result.GetArrayLength() > 128) return true;
+            foreach (var child in result.EnumerateArray())
+                if (NativeResultExplicitlyDenied(child, depth + 1)) return true;
             return false;
-        // Refuse unverifiable owner provenance beyond the same bounded depth
-        // as the original legacy WPF bridge. Never recurse an untrusted
-        // Python result graph without a limit or promote its ACK to COMPLETE.
-        if (depth >= 4) return true;
+        }
+        if (result.ValueKind != JsonValueKind.Object) return false;
         foreach (var field in result.EnumerateObject())
         {
             if (field.Name is "ok" or "ack" or "success" or "approved" or "authorized" &&

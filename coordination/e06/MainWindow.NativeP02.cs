@@ -473,8 +473,17 @@ public partial class MainWindow
     }
     private static bool LegacyOwnerDenial(JsonElement? receipt, int depth=0)
     {
-        if (receipt is not JsonElement value || value.ValueKind!=JsonValueKind.Object) return false;
-        if (depth>=4) return true;
+        if (receipt is not JsonElement value) return false;
+        // Nested owner evidence may be an array. A denial in any child still
+        // revokes the original owner ACK; a malformed/oversized nesting HOLDS.
+        if (depth>=4) return value.ValueKind is JsonValueKind.Array or JsonValueKind.Object;
+        if (value.ValueKind==JsonValueKind.Array) {
+            if (value.GetArrayLength()>128) return true;
+            foreach(var child in value.EnumerateArray())
+                if (LegacyOwnerDenial(child,depth+1)) return true;
+            return false;
+        }
+        if (value.ValueKind!=JsonValueKind.Object) return false;
         foreach(var p in value.EnumerateObject()) {
             // The original legacy WPF route must not promote an explicit native
             // owner/provenance refusal to chatFinished or Model Center success.
