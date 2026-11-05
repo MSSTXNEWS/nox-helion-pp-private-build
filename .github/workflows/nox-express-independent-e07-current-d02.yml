@@ -1,4 +1,4 @@
-name: NOX EXPRESS independent E07 current D02 41926651444
+name: NOX EXPRESS independent E07 exact E06 41937676249
 # New E07 accepts only a physically built, explicitly pinned producer Setup.
 # Single one-shot push on THIS workflow runs the verified E06 41937676249.
 # Later commits to unrelated source cannot re-trigger a heavy E07.
