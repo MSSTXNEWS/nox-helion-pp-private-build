@@ -358,6 +358,29 @@ try
         "F06 two concurrent retries share one child job");
     Assert((await restarted.ReadAsync()).Count == 12,
         "F07 all prior jobs retained after retry");
+    // B04: durable STOP must win recovery after a real owner worker crash.
+    // Running-without-STOP remains Failed (F05), but a persisted Cancelling
+    // snapshot with no live execution lease must be terminal Cancelled.
+    var stoppedJob = await a.EnqueueVerifiedPullAsync(model, true);
+    var inFlightStop = await a.UpdateAsync(stoppedJob.Id,
+        j => j with { State = ModelJobState.Running });
+    Assert(inFlightStop?.State == ModelJobState.Running &&
+        await b.RequestCancelAsync(stoppedJob.Id),
+        "F07A durable STOP acknowledged by second owner window");
+    Assert((await a.ReadAsync()).Single(x => x.Id == stoppedJob.Id).State ==
+        ModelJobState.Cancelling,
+        "F07B STOP intent persisted before owner crash");
+    Assert(await restarted.RecoverInterruptedAsync() == 1,
+        "F07C owner crash finalizes one abandoned STOP without retry");
+    var persistedStop = (await new ModelDownloadQueueStore(multiRoot).ReadAsync())
+        .Single(x => x.Id == stoppedJob.Id);
+    Assert(persistedStop.State == ModelJobState.Cancelled &&
+        persistedStop.Error is null &&
+        persistedStop.Status == "Cancelled after interrupted STOP",
+        "F07D durable STOP remains Cancelled and cannot become Failed");
+    Assert((await restarted.ReadAsync()).Single(x => x.Id == sameJobs[0].Id).State ==
+        ModelJobState.Failed,
+        "F07E interrupted Running without STOP remains Failed");
 }
 finally { Directory.Delete(multiRoot, recursive: true); }
 Console.WriteLine("P03_FINAL_QUEUE_CONCURRENCY_PASS 7/7");

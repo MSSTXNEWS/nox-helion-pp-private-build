@@ -398,8 +398,16 @@ public sealed class ModelDownloadQueueStore
                 // still-running worker. OS releases the lease after a crash.
                 using var orphanLease = TryAcquireExecutionLease(jobs[i].Id);
                 if (orphanLease is null) continue;
-                jobs[i] = jobs[i] with { State = ModelJobState.Failed,
-                    Status = "Interrupted; explicit retry required", Error = "INTERRUPTED_RETRY_REQUIRED",
+                // STOP is already durably requested. If its worker crashed after
+                // relinquishing the OS execution lease, finish the cancellation;
+                // recovery must never recast an acknowledged STOP as Failed.
+                // A genuinely interrupted Running job still requires explicit retry.
+                var stopWasPersisted = jobs[i].State == ModelJobState.Cancelling;
+                jobs[i] = jobs[i] with {
+                    State = stopWasPersisted ? ModelJobState.Cancelled : ModelJobState.Failed,
+                    Status = stopWasPersisted ? "Cancelled after interrupted STOP" :
+                        "Interrupted; explicit retry required",
+                    Error = stopWasPersisted ? null : "INTERRUPTED_RETRY_REQUIRED",
                     UpdatedAtUtc = DateTimeOffset.UtcNow };
                 recovered++;
             }
