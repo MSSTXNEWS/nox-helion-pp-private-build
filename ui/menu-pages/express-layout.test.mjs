@@ -57,6 +57,32 @@ test('LIVE chat source still retains model selection, streaming, STOP and termin
  assert.match(src,/if\(changed\)invalidateModelScope\(\)/);
 });
 
+test('compact D02 HOME five-button dock stays inside mobile grid',()=>{
+ const css=readFileSync(new URL('./menu.css',import.meta.url),'utf8');
+ const html=readFileSync(new URL('./index.html',import.meta.url),'utf8');
+ const js=readFileSync(new URL('./menu.js',import.meta.url),'utf8');
+ assert.deepEqual(PRIMARY,['CHAT','INSTALL','MODELS','LEARN','SETTINGS']);
+ assert.ok(js.includes("PRIMARY.forEach(name=>{const b=button(name,'main-action'"));
+ assert.ok(html.includes('id="actions" class="actions" aria-label="Пять основных функций"'));
+ assert.ok(css.includes('.actions{display:grid;grid-template-columns:repeat(5,minmax(0,1fr))'));
+ assert.ok(css.includes('@media(max-width:800px)'));
+ assert.ok(css.includes('.actions{grid-template-columns:repeat(3,minmax(0,1fr))}'));
+ assert.ok(css.includes('@media(max-width:520px)'));
+ assert.ok(css.includes('.actions{grid-template-columns:repeat(2,minmax(0,1fr))}'));
+ assert.ok(css.includes('.planet,.planet:nth-child(n){position:relative;left:auto;top:auto;transform:none;width:min(138px,100%);height:auto;aspect-ratio:1}'));
+ for(const viewport of [320,390,800,1044]){
+  const dockCols=viewport<=520?2:viewport<=800?3:5;
+  const inner=viewport-2*(viewport<=520?16:26);
+  const dockColumnWidth=(inner-12*(dockCols-1))/dockCols;
+  assert.ok(dockColumnWidth>0,'five main actions must retain a positive grid track');
+  if(viewport<=520){
+   const sphereColumnWidth=(inner-14)/2;
+   assert.ok(Math.min(138,sphereColumnWidth)<=sphereColumnWidth,
+    'compact D02 spheres stay inside their grid cells');
+  }
+ }
+});
+
 test('EXPRESS HOME actually draws exactly eight graphical directions, keeps legacy routes nested',()=>{
  const js=readFileSync(new URL('./menu.js',import.meta.url),'utf8');
  const html=readFileSync(new URL('./index.html',import.meta.url),'utf8');
