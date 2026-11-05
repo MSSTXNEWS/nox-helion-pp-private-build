@@ -433,6 +433,9 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
         if (result.ValueKind == JsonValueKind.String)
             return NativeOwnerStatusDenied(result.GetString());
         if (result.ValueKind == JsonValueKind.False) return true;
+        // Missing or numeric native owner proof is not a successful operation.
+        // This also holds within nested owner/result arrays or objects.
+        if (result.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined or JsonValueKind.Number) return true;
         if (result.ValueKind != JsonValueKind.Object) return false;
         foreach (var field in result.EnumerateObject())
         {

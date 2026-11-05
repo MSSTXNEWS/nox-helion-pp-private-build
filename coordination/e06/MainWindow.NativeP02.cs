@@ -502,6 +502,9 @@ public partial class MainWindow
         if (value.ValueKind==JsonValueKind.String)
             return LegacyOwnerStatusDenied(value.GetString());
         if (value.ValueKind==JsonValueKind.False) return true;
+        // A native owner null/undefined/numeric receipt cannot prove completion,
+        // including when nested inside an otherwise positive transport ACK.
+        if (value.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined or JsonValueKind.Number) return true;
         if (value.ValueKind!=JsonValueKind.Object) return false;
         foreach(var p in value.EnumerateObject()) {
             // The original legacy WPF route must not promote an explicit native
