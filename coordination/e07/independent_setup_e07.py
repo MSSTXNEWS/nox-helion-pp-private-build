@@ -1026,11 +1026,20 @@ def gui_hwnd(shell: Path, local: Path, *, safe_nav: bool = False,
                     nav = {"status":"HOLD","reason":"NOT_TESTED_UNPINNED_SOURCE",
                            "navigation_verified":"NOT_TESTED","visual_e07":"HOLD"}
                     if safe_nav and buttons.get("status") == "PASS":
-                        try:
-                            nav = observe_readonly_primary_navigation(handle)
-                        except Hold as exc:
-                            nav = {"status":"HOLD","error":str(exc),
-                                   "navigation_verified":"NOT_TESTED","visual_e07":"HOLD"}
+                        if final_probe is not None:
+                            # INSTALL / LEARN on original R11 can execute native
+                            # work; only the same-Setup final probe may actuate
+                            # them. Read-only navigation must not duplicate it.
+                            nav = {"status":"DEFERRED_TO_SAME_SETUP_FUNCTION_PROBE",
+                                   "reason":"ORIGINAL_INSTALL_AND_LEARN_ARE_PRIVILEGED",
+                                   "actions_invoked":0, "navigation_verified":"NOT_TESTED",
+                                   "visual_e07":"HOLD", "release_accepted":False}
+                        else:
+                            try:
+                                nav = observe_readonly_primary_navigation(handle)
+                            except Hold as exc:
+                                nav = {"status":"HOLD","error":str(exc),
+                                       "navigation_verified":"NOT_TESTED","visual_e07":"HOLD"}
                     # The original WPF HWND is alive HERE. Running the physical
                     # visual/function witness after this function returns would
                     # use a terminated shell and cannot establish same-Setup proof.
@@ -1528,8 +1537,17 @@ def main() -> int:
         # Evaluate them strictly AFTER cleanup, on this same physical install.
         # Never infer five functioning buttons from their mere presence.
         from probe_five_primary_action import evaluate as evaluate_primary
-        result["checks"]["installed_five_primary_actions"] = evaluate_primary(
-            result["checks"]["installed_gui"])
+        try:
+            result["checks"]["installed_five_primary_actions"] = evaluate_primary(
+                result["checks"]["installed_gui"])
+        except Hold as exc:
+            # Keep a failing navigation-only witness separate from final
+            # same-Setup functional and visual truth. Never upgrade to PASS.
+            result["checks"]["installed_five_primary_actions"] = {
+                "status":"HOLD", "error":str(exc),
+                "scope":"FIVE_NAVIGATION_NOT_FUNCTION_ACCEPTANCE",
+                "release_accepted":False}
+
         # A successful idle STOP and empty SQLite history are useful physical
         # facts, but not an interrupted live model stream.
         store = result["checks"].get("installed_native_store_stop")
