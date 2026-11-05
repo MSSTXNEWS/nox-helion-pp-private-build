@@ -56,5 +56,30 @@ class C11RollbackSafetyTest(unittest.TestCase):
         self.assertEqual(staged.replace(new, old, 1), donor)
 
 
+    def test_owned_marker_write_and_close_fail_before_activation(self):
+        """Disposable C11 NSIS must not activate an incomplete ownership marker."""
+        builder = BUILDER.read_text(encoding="utf-8")
+        donor = ORIGINAL.read_text(encoding="utf-8")
+        marker = re.search(
+            r"\$c11MarkerOriginal=@'\n(?P<old>.*?)\n'@\n\$c11MarkerGuard=@'\n(?P<new>.*?)\n'@",
+            builder, re.DOTALL)
+        self.assertIsNotNone(marker)
+        old, new = marker.group("old"), marker.group("new")
+        self.assertEqual(donor.count(old), 1)
+        self.assertNotIn("Ownership marker absent; activation refused.", donor)
+        staged = donor.replace(old, new, 1)
+        self.assertEqual(staged.count('FileWrite $2 "NOXHELION.P01 V16$\\r$\\n"'), 1)
+        self.assertIn("ClearErrors\n  FileWrite $2", new)
+        self.assertIn('IfErrors 0 +3\n    FileClose $2\n    Abort "Could not write ownership marker."', new)
+        self.assertIn('IfErrors 0 +2\n    Abort "Could not close ownership marker."', new)
+        self.assertIn('IfFileExists "$StageDir\\nox-p01-owned.txt" +2 0', new)
+        self.assertLess(staged.index("Ownership marker absent; activation refused."),
+                        staged.index('Rename "$INSTDIR" "$BackupDir"'))
+        self.assertLess(builder.index("C11_NSIS_MARKER_WRITE_GATE_STAGED"),
+                        builder.index("& $makensisPath"))
+        self.assertEqual(staged.replace(new, old, 1), donor)
+
+
+
 if __name__ == "__main__":
     unittest.main()

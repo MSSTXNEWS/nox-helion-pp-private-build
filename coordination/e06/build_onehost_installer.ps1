@@ -1089,6 +1089,53 @@ if ($c11NsiPatched.IndexOf('C11CheckSavedRollback:',[StringComparison]::Ordinal)
   throw 'C11_NSIS_SAVED_ROLLBACK_STAGE_HOLD'
 }
 Write-Host 'C11_NSIS_SAVED_ROLLBACK_SLOT_FENCE_STAGED'
+# B03 G4: Original R11 checked marker FileOpen but not FileWrite/FileClose.
+# A partial marker could be activated and break later update/rollback/uninstall.
+# Modify ONLY the disposable staged NSIS, not the frozen 729 originals.
+$c11MarkerOriginal=@'
+  FileOpen $2 "$StageDir\nox-p01-owned.txt" w
+  IfErrors 0 +2
+    Abort "Could not write ownership marker."
+  FileWrite $2 "NOXHELION.P01 V16$\r$\n"
+  FileClose $2
+'@
+$c11MarkerGuard=@'
+  ; B03 C11 NO-LOSS: fail before activation on partial or absent ownership marker.
+  ClearErrors
+  FileOpen $2 "$StageDir\nox-p01-owned.txt" w
+  IfErrors 0 +2
+    Abort "Could not open ownership marker."
+  ClearErrors
+  FileWrite $2 "NOXHELION.P01 V16$\r$\n"
+  IfErrors 0 +3
+    FileClose $2
+    Abort "Could not write ownership marker."
+  ClearErrors
+  FileClose $2
+  IfErrors 0 +2
+    Abort "Could not close ownership marker."
+  IfFileExists "$StageDir\nox-p01-owned.txt" +2 0
+    Abort "Ownership marker absent; activation refused."
+'@
+$c11MarkerOriginal=[regex]::Replace($c11MarkerOriginal,'\r?\n',$c11Eol)
+$c11MarkerGuard=[regex]::Replace($c11MarkerGuard,'\r?\n',$c11Eol)
+$c11MarkerAt=$c11NsiPatched.IndexOf($c11MarkerOriginal,[StringComparison]::Ordinal)
+if ($c11MarkerAt -lt 0 -or
+    $c11NsiPatched.LastIndexOf($c11MarkerOriginal,[StringComparison]::Ordinal) -ne $c11MarkerAt -or
+    $c11NsiPatched.Contains('Ownership marker absent; activation refused.')) {
+  throw 'C11_NSIS_MARKER_WRITE_PREIMAGE_HOLD'
+}
+$c11NsiPatched=$c11NsiPatched.Replace($c11MarkerOriginal,$c11MarkerGuard)
+$c11MarkerGateAt=$c11NsiPatched.IndexOf('Ownership marker absent; activation refused.',[StringComparison]::Ordinal)
+$c11ActivationAt=$c11NsiPatched.IndexOf('Rename "$INSTDIR" "$BackupDir"',[StringComparison]::Ordinal)
+if ($c11MarkerGateAt -lt 0 -or $c11ActivationAt -lt 0 -or
+    $c11MarkerGateAt -ge $c11ActivationAt -or
+    $c11NsiPatched.LastIndexOf($c11MarkerGuard,[StringComparison]::Ordinal) -ne
+      $c11NsiPatched.IndexOf($c11MarkerGuard,[StringComparison]::Ordinal)) {
+  throw 'C11_NSIS_MARKER_WRITE_STAGE_HOLD'
+}
+Write-Host 'C11_NSIS_MARKER_WRITE_GATE_STAGED'
+
 
 # W04 R108: original R11 NSIS UninstallString emits warning 6000 due to
 # backslash-escaped quotes. Stage the officially documented quote form ONLY
