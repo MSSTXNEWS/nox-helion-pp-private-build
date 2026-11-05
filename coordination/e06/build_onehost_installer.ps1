@@ -301,7 +301,7 @@ if (-not $gitTool) { throw 'E06_P02_GIT_BLOB_PROVENANCE_REQUIRED' }
 # MainWindow copied to disposable R11; no changes to HOME/MENU/WORK or main.
 $t06Stage=Join-Path $repoRoot 'coordination/e06/stage_native_p02.py'
 $t06Addon=Join-Path $repoRoot 'coordination/e06/MainWindow.NativeP02.cs'
-foreach ($part in @(@{p=$t06Stage;sha='1d145f5f5e4e9a54624860d3f213ace9f566bdfa'},@{p=$t06Addon;sha='4e267fe7a436cba401335963c315624042c13f9a'})) {
+foreach ($part in @(@{p=$t06Stage;sha='d30185de78109f21b6087bc8ae8fb13b26e579d0'},@{p=$t06Addon;sha='7d36f41c082f07ad507c42eb0b9d313d8baef04f'})) {
   Assert-E06PlainPathAncestors -Candidate $part.p -Scope 'T06_NATIVE'
   if (!(Test-Path -LiteralPath $part.p -PathType Leaf) -or
       (& $gitTool.Source hash-object -- $part.p).Trim().ToLowerInvariant() -cne $part.sha) {

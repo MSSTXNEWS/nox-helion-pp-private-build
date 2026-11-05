@@ -455,11 +455,15 @@ public partial class MainWindow
     private static bool LegacyOwnerStatusDenied(string? status)
     {
         if (string.IsNullOrWhiteSpace(status)) return true;
-        // Owner status separators must not turn an explicit security denial into success.
+        // Keep legacy HOME native receipt denials equal to the original WebView2
+        // bridge. An accepted transport ACK never overrides a stopped/revoked
+        // owner operation or a requirement for fresh native consent.
         var value = System.Text.RegularExpressions.Regex.Replace(status.Trim(), @"[\s-]+", "_").ToUpperInvariant();
         foreach (var suffix in new[] {
             "_HOLD", "_DENIED", "_REQUIRED", "_MISMATCH", "_UNAVAILABLE",
-            "_OFFLINE", "_FAILED", "_ERROR", "_BLOCKED", "_REFUSED"
+            "_OFFLINE", "_FAILED", "_ERROR", "_BLOCKED", "_REFUSED",
+            "_REJECTED", "_REVOKED", "_ABORTED", "_EXPIRED", "_STOPPED",
+            "_CANCELLED"
         }) {
             if (value.EndsWith(suffix,StringComparison.OrdinalIgnoreCase)) return true;
         }
@@ -467,11 +471,13 @@ public partial class MainWindow
             "HOLD", "DENIED", "OFFLINE", "FAILED", "ERROR",
             "CONSENT_PENDING", "NOT_AUTHORIZED", "NOT_AUTHENTICATED",
             "FORBIDDEN", "UNAVAILABLE", "AWAITING_CONSENT",
-            "REJECTED", "CANCELLED"
+            "REJECTED", "CANCELLED", "BLOCKED", "REFUSED", "REVOKED",
+            "ABORTED", "EXPIRED", "STOPPED", "NOT_READY", "NEEDS_CONSENT"
         }) {
             if (string.Equals(value,exact,StringComparison.OrdinalIgnoreCase)) return true;
         }
-        return false;
+        return value.StartsWith("NOT_AUTHORIZED",StringComparison.Ordinal) ||
+               value.StartsWith("NOT_AUTHENTICATED",StringComparison.Ordinal);
     }
     private static bool LegacyOwnerDenial(JsonElement? receipt, int depth=0)
     {
