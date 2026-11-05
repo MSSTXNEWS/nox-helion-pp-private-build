@@ -78,8 +78,6 @@ class IndependentE07(unittest.TestCase):
         for bad, code in (
             (done + start, "E07_FINAL_INSTALL_EVENT_ORDER_HOLD"),
             (start + start + done, "E07_FINAL_INSTALL_DUPLICATE_OWNER_LOG_HOLD"),
-            (space + b"ACTION_FAIL install denied\n" + start,
-             "E07_FINAL_INSTALL_EVENT_ORDER_HOLD"),
         ):
             with self.subTest(bad=bad):
                 with self.assertRaisesRegex(MOD.Hold, code):
@@ -87,6 +85,14 @@ class IndependentE07(unittest.TestCase):
         failed = module.classify_fresh_original_install_log(
             start + iso + b"ACTION_FAIL install denied\n" + done)
         self.assertTrue(failed["owner_exception"])
+        # Failures without START are still a genuine negative owner witness.
+        lone_failure = module.classify_fresh_original_install_log(
+            iso + b"ACTION_FAIL install denied\n")
+        self.assertTrue(lone_failure["owner_exception"])
+        self.assertFalse(lone_failure["started"])
+        self.assertIsNone(lone_failure["owner_exit_code"])
+        self.assertTrue(module.classify_fresh_original_install_log(
+            space + b"ACTION_FAIL install denied\n" + start)["owner_exception"])
         self.assertIsNone(module.classify_fresh_original_install_log(
             b"[untrusted] ACTION_START install\n")["owner_exit_code"])
 

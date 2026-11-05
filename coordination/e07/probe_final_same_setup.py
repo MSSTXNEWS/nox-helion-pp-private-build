@@ -270,8 +270,10 @@ def classify_fresh_original_install_log(data: bytes) -> dict:
     e07.require(len(starts)<=1 and len(completed)<=1 and len(failures)<=1,
                 "E07_FINAL_INSTALL_DUPLICATE_OWNER_LOG_HOLD")
     # A log END/FAIL preceding this invocation's START cannot prove its result.
-    e07.require((not completed or (starts and starts[0].start()<completed[0].start())) and
-                (not failures or (starts and starts[0].start()<failures[0].start())),
+    # A standalone real ACTION_FAIL is a denial, never a success: preserve it
+    # even if the native owner could not emit START before its exception.
+    # Only successful-looking END must be strictly paired after this START.
+    e07.require(not completed or (starts and starts[0].start()<completed[0].start()),
                 "E07_FINAL_INSTALL_EVENT_ORDER_HOLD")
     return {"started":bool(starts),
             "owner_exit_code":int(completed[0].group(1)) if completed else None,
