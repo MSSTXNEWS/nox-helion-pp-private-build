@@ -307,8 +307,9 @@ trap {
 }
 Add-Type -AssemblyName UIAutomationClient
 Add-Type -AssemblyName UIAutomationTypes
-Add-Type -AssemblyName System.Drawing
-Add-Type -TypeDefinition @'
+if($__e07Operation -eq 'VISUAL'){
+ Add-Type -AssemblyName System.Drawing
+ Add-Type -TypeDefinition @'
 using System;
 using System.Runtime.InteropServices;
 public static class NoxFinalWin32 {
@@ -320,8 +321,12 @@ public static class NoxFinalWin32 {
  // still measures the ACTUAL physical window and fails on clamped geometry.
  [DllImport("user32.dll", SetLastError=true)] public static extern bool SetWindowPos(IntPtr h,IntPtr after,int x,int y,int w,int hgt,uint flags);
  [DllImport("user32.dll")] public static extern bool PrintWindow(IntPtr h,IntPtr dc,uint flags);
+ [DllImport("user32.dll")] public static extern bool ShowWindowAsync(IntPtr h,int c);
+ [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h);
+ [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
 }
 '@
+}
 $handle=[IntPtr]__HWND__
 function Root { $r=[System.Windows.Automation.AutomationElement]::FromHandle($handle); if($null -eq $r){throw 'NO_ROOT'}; return $r }
 # UIA FindAll yields AutomationElementCollection (IEnumerable). Unary comma prevents
@@ -456,15 +461,16 @@ function SaveAdaptiveHold([int]$requestedWidth) {
  try {
   $graphics=[System.Drawing.Graphics]::FromImage($photo)
   try {
-   $device=$graphics.GetHdc()
-   try {$ok=[NoxFinalWin32]::PrintWindow($handle,$device,2)}
-   finally {$graphics.ReleaseHdc($device)}
+   $null=[NoxFinalWin32]::ShowWindowAsync($handle,9)
+   $null=[NoxFinalWin32]::SetForegroundWindow($handle)
+   Start-Sleep -Milliseconds 200
+   if([NoxFinalWin32]::GetForegroundWindow() -ne $handle){return}
+   $graphics.CopyFromScreen($bounds.Left,$bounds.Top,0,0,$photo.Size,
+     [System.Drawing.CopyPixelOperation]::SourceCopy)
   } finally {$graphics.Dispose()}
-  if($ok) {
-   $base=[System.IO.Path]::GetDirectoryName('__PNG__')
-   $target=[System.IO.Path]::Combine($base,'D02_ADAPTIVE_'+$requestedWidth+'.png')
-   $photo.Save($target,[System.Drawing.Imaging.ImageFormat]::Png)
-  }
+  $base=[System.IO.Path]::GetDirectoryName('__PNG__')
+  $target=[System.IO.Path]::Combine($base,'D02_ADAPTIVE_'+$requestedWidth+'.png')
+  $photo.Save($target,[System.Drawing.Imaging.ImageFormat]::Png)
  } finally {$photo.Dispose()}
 }
 $op='__OP__'
@@ -539,7 +545,18 @@ if($op -eq 'VISUAL'){
  $__e07Stage='CAPTURE'
  $rr=[NoxFinalWin32+RECT]::new();if(-not [NoxFinalWin32]::GetWindowRect($handle,[ref]$rr)){throw 'RECT'};$w=$rr.Right-$rr.Left;$h=$rr.Bottom-$rr.Top
  $__e07Stage='CAPTURE'
- $bmp=[System.Drawing.Bitmap]::new([int]$w,[int]$h);try{$g=[System.Drawing.Graphics]::FromImage($bmp);try{$dc=$g.GetHdc();try{$ok=[NoxFinalWin32]::PrintWindow($handle,$dc,2)}finally{$g.ReleaseHdc($dc)}}finally{$g.Dispose()};if(-not $ok){throw 'PRINT'};$bmp.Save('__PNG__',[System.Drawing.Imaging.ImageFormat]::Png)}finally{$bmp.Dispose()}
+ $null=[NoxFinalWin32]::ShowWindowAsync($handle,9)
+ $null=[NoxFinalWin32]::SetForegroundWindow($handle)
+ Start-Sleep -Milliseconds 200
+ if([NoxFinalWin32]::GetForegroundWindow() -ne $handle){throw 'PRINT'}
+ $bmp=[System.Drawing.Bitmap]::new([int]$w,[int]$h)
+ try{
+  $g=[System.Drawing.Graphics]::FromImage($bmp)
+  try{$g.CopyFromScreen($rr.Left,$rr.Top,0,0,$bmp.Size,
+    [System.Drawing.CopyPixelOperation]::SourceCopy)}
+  finally{$g.Dispose()}
+  $bmp.Save('__PNG__',[System.Drawing.Imaging.ImageFormat]::Png)
+ }finally{$bmp.Dispose()}
  [pscustomobject]@{sizes=@($sizes);capture=@($w,$h);fiveVisible=(FiveRects).Count}|ConvertTo-Json -Compress -Depth 6;exit 0
 }
 if($op -eq 'FX'){

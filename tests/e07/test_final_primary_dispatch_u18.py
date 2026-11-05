@@ -153,6 +153,9 @@ class FinalPrimaryDispatch(unittest.TestCase):
         # Original capture uses three physical rectangles; the fourth is a
         # strictly diagnostic image taken only after the dock UIA fails.
         self.assertEqual(script.count("[NoxFinalWin32+RECT]::new()"), 4)
+        self.assertIn("GetForegroundWindow() -ne $handle",script)
+        self.assertIn("CopyFromScreen($rr.Left,$rr.Top",script)
+        self.assertNotIn("::PrintWindow($handle",script)
         self.assertIn("if($null -eq $rects){try{SaveAdaptiveHold $width}catch{}}", script)
         self.assertIn("if($null -eq $rects){throw 'PRIMARY_DOCK_NOT_UNIQUE'}", script)
         self.assertIn("if(-not [NoxFinalWin32]::GetWindowRect($handle,[ref]$rr)){throw 'RECT'}", script)

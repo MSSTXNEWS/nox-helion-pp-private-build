@@ -51,6 +51,9 @@ class PhysicalVisualFailureStages(unittest.TestCase):
     def test_dock_respects_original_five_three_two_responsive_grid(self):
         script = probe._uia_script(12345, "VISUAL", png=Path("screenshot.png"))
         self.assertIn("function GridMatches($row,[int]$columns)",script)
+        self.assertIn("CopyFromScreen(",script)
+        self.assertNotIn("::PrintWindow($handle",script)
+        self.assertIn("if($__e07Operation -eq 'VISUAL'){",script)
         self.assertIn("$rects+=,($row[$name].rect)",script)
         self.assertNotIn("$row[$name].Current.BoundingRectangle",script)
         self.assertIn("$r=$dock[$name].rect",script)
