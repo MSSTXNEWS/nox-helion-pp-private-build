@@ -448,7 +448,7 @@ function direction(id){
  P.directions.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.section===id)));
 }
 function mainAction(name){
- const routes={CHAT:'chat',INSTALL:'system',MODELS:'model-library',LEARN:'gpu-training',SETTINGS:'settings'};
+ const routes={CHAT:'chat',INSTALL:'system',MODELS:'model-library',LEARN:'evolution',SETTINGS:'settings'};
  const id=routes[name];if(id)openRoute(id);
 }
 DIRECTIONS.forEach(([id,name])=>{
