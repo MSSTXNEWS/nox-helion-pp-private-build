@@ -336,7 +336,7 @@ public partial class MainWindow
                 }
                 var enabled=NoXAutostart.SetEnabled(path,payload.GetProperty("enabled").GetBoolean(),nativeConsent:true);
                 return new NativePipeResult("",true,
-                    JsonSerializer.SerializeToElement(new {enabled}),null);
+                    JsonSerializer.SerializeToElement(new {enabled,readOnly=false}),null);
             } catch(OperationCanceledException) {throw;}
               catch {return new NativePipeResult("",false,null,"NOX_AUTOSTART_NATIVE_HOLD");}
         }

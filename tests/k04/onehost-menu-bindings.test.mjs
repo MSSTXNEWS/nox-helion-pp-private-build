@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createNativeMenuClient,mountOneHostMenu,canonicalChatContext} from '../../ui/onehost-menu-bindings.mjs';
+import {createNativeMenuClient,mountOneHostMenu,canonicalChatContext,nativeAutostartPersistenceAck} from '../../ui/onehost-menu-bindings.mjs';
 import {SELFBUILDER_MENU,MENU_V2_SECTIONS} from '../../ui/selfbuilder-menu-v2.mjs';
 function fixture(){let listener;const sent=[];let next=1;const webview={postMessage:x=>sent.push(x),addEventListener:(n,f)=>listener=f,removeEventListener:()=>{listener=null;}};const client=createNativeMenuClient({webview,cryptoRef:{getRandomValues:b=>{b.fill(next++);return b;}},timeoutMs:10});return {client,sent,webview,reply:x=>listener?.({data:x,source:webview,isTrusted:true}),emit:(x,source,trusted=false)=>listener?.({data:x,source,isTrusted:trusted})};}
 test('native result must correlate route and nonce; stream only that request',async()=>{
@@ -128,4 +128,22 @@ test('P01: timed-out native chats cannot starve two bounded STOP/cancel IPC slot
   nativeReply(sent[0],'COMPLETED'); // late terminal correlation is preserved
   assert.equal(lateTerminal,1);
   client.destroy();
+});
+
+// D06: transport COMPLETED and matching enabled are NOT proof of HKCU write.
+test('D06 original SETTINGS owner requires explicit native write/read provenance',()=>{
+ const envelope=(result,extra={})=>({routeId:'system.autostart',state:'COMPLETED',result,...extra});
+ for(const enabled of [true,false]){
+  assert.equal(nativeAutostartPersistenceAck(envelope({enabled,readOnly:false}),enabled),true);
+  assert.equal(nativeAutostartPersistenceAck(envelope({enabled,readOnly:true}),enabled),false);
+  assert.equal(nativeAutostartPersistenceAck(envelope({enabled}),enabled),false);
+  for(const invalid of [null,'false',0,1])
+   assert.equal(nativeAutostartPersistenceAck(envelope({enabled,readOnly:invalid}),enabled),false);
+  assert.equal(nativeAutostartPersistenceAck(envelope({enabled,readOnly:true}),null),true);
+  assert.equal(nativeAutostartPersistenceAck(envelope({enabled,readOnly:false}),null),false);
+ }
+ assert.equal(nativeAutostartPersistenceAck(envelope({enabled:true,readOnly:false}),false),false);
+ assert.equal(nativeAutostartPersistenceAck(envelope({enabled:true,readOnly:false},{errorCode:'SID_MISMATCH'}),true),false);
+ assert.equal(nativeAutostartPersistenceAck(envelope({enabled:true,readOnly:false,ownerResult:{status:'CONSENT_REQUIRED'}}),true),false);
+ assert.equal(nativeAutostartPersistenceAck({...envelope({enabled:true,readOnly:false}),routeId:'chat.history'},true),false);
 });

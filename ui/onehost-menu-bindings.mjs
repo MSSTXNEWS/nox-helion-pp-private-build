@@ -193,7 +193,7 @@ export function nativeAutostartPersistenceAck(reply,requested){
   // A new process can inspect HKCU via the original owner without mutating it.
   // Read-only state is never evidence that an ON/OFF write succeeded.
   if(requested===null)return reply.result.readOnly===true;
-  return typeof requested==='boolean' && reply.result.readOnly!==true &&
+  return typeof requested==='boolean' && reply.result.readOnly===false &&
     reply.result.enabled===requested;
 }
 
