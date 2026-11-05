@@ -17,7 +17,9 @@ public sealed class ModelDownloadQueueWorker(
             if (job is null) return;
             // Legacy unpinned jobs remain preserved in the queue, but cannot execute.
             if (job.Kind == ModelJobKind.OllamaPull &&
-                (job.ExpectedOllamaDigest is not { Length: 64 } || string.IsNullOrWhiteSpace(job.ImmutableRevision)))
+                (job.ExpectedOllamaDigest is not { Length: 64 } ||
+                 string.IsNullOrWhiteSpace(job.ImmutableRevision) ||
+                 string.IsNullOrWhiteSpace(job.RightsReceiptId)))
             {
                 // The queued snapshot can be cancelled by another NOX window before
                 // this review gate is persisted. Never rewrite terminal Cancelled.

@@ -199,7 +199,9 @@ public sealed class ModelDownloadQueueStore
             string.IsNullOrWhiteSpace(model.ExactTag) ||
             !ShaPattern.IsMatch(model.ExpectedSha256 ?? string.Empty) ||
             !ShaPattern.IsMatch(model.ExpectedManifestDigestSha256 ?? string.Empty) ||
-            string.IsNullOrWhiteSpace(model.ImmutableRevision))
+            string.IsNullOrWhiteSpace(model.ImmutableRevision) ||
+            string.IsNullOrWhiteSpace(model.ReviewedRightsReceiptId) ||
+            model.ReviewedRightsReceiptId.Length > 128)
             throw new InvalidOperationException("REVIEW_REQUIRED: exact artifact evidence is incomplete.");
         ValidateTag(model.ExactTag);
         var licenseUrl = model.LicenseEvidenceUri!.ToString();
@@ -218,7 +220,8 @@ public sealed class ModelDownloadQueueStore
             var job = new ModelJob(Guid.NewGuid(), ModelJobKind.OllamaPull,
                 model.ExactTag, null, true, licenseUrl, now, now,
                 ExpectedOllamaDigest: model.ExpectedManifestDigestSha256!.ToLowerInvariant(),
-                ImmutableRevision: model.ImmutableRevision);
+                ImmutableRevision: model.ImmutableRevision,
+                RightsReceiptId: model.ReviewedRightsReceiptId);
             jobs.Add(job);
             await SaveCoreAsync(jobs, ct);
             return job;
@@ -251,7 +254,8 @@ public sealed class ModelDownloadQueueStore
             if (old.Kind == ModelJobKind.OllamaPull &&
                 (old.ExpectedOllamaDigest is not { Length: 64 } ||
                  !ShaPattern.IsMatch(old.ExpectedOllamaDigest) ||
-                 string.IsNullOrWhiteSpace(old.ImmutableRevision)))
+                 string.IsNullOrWhiteSpace(old.ImmutableRevision) ||
+                 string.IsNullOrWhiteSpace(old.RightsReceiptId)))
                 throw new InvalidOperationException("REVIEW_REQUIRED: unpinned Pull cannot start.");
             var claimed = old with { State = ModelJobState.Running,
                 Attempts = checked(old.Attempts + 1), Status = "Starting",

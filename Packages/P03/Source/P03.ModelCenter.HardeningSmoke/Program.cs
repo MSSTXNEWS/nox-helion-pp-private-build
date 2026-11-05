@@ -32,6 +32,11 @@ Assert(!ModelArtifactReviewRegistry.TryPromote(
     "R99 nondefault Ollama port rejected");
 Assert(!ModelArtifactReviewRegistry.TryPromote(reviewedOrigin, false, out _),
     "R99 native-reviewed receipt still required");
+Assert(canonicalReviewed is not null &&
+    !(canonicalReviewed with { ReviewedRightsReceiptId = null }).CanOfferOneClickPull &&
+    !(canonicalReviewed with { ReviewedRightsReceiptId = "  " }).CanOfferOneClickPull &&
+    !(canonicalReviewed with { ReviewedRightsReceiptId = new string('r', 129) }).CanOfferOneClickPull,
+    "R99A unverified public model record must fail closed");
 
 using var correct = JsonDocument.Parse("{\"models\":[{\"name\":\"m:1\",\"digest\":\"sha256:" + new string('a',64) + "\"}]}");
 Assert(ModelLocalAttestation.ParseUnambiguousModelDigest(correct.RootElement, "m:1") == "sha256:" + new string('a',64), "T01 pinned local digest");
@@ -221,7 +226,7 @@ try
         ArtifactBytes = 100, RequiredDiskBytes = 200, RecommendedRamBytes = 300,
         ExpectedSha256 = digestB, ExpectedManifestDigestSha256 = digestA,
         ImmutableRevision = "sha256:" + digestA, CompatibilityReviewed = true,
-        LicenseEvidenceUri = new Uri(evidence), CompatibilityEvidenceUri = new Uri(evidence)
+        LicenseEvidenceUri = new Uri(evidence), CompatibilityEvidenceUri = new Uri(evidence), ReviewedRightsReceiptId = "rights-fixture"
     };
     var sameJobs = await Task.WhenAll(Enumerable.Range(0, 20).Select(i =>
         (i % 2 == 0 ? a : b).EnqueueVerifiedPullAsync(model, true)));
@@ -365,13 +370,17 @@ try
         ExpectedSha256 = new string('b', 64), ExpectedManifestDigestSha256 = new string('a', 64),
         ImmutableRevision = "sha256:" + new string('a', 64), CompatibilityReviewed = true,
         LicenseEvidenceUri = new Uri("https://ollama.com/library/tinyllama"),
-        CompatibilityEvidenceUri = new Uri("https://ollama.com/library/tinyllama")
+        CompatibilityEvidenceUri = new Uri("https://ollama.com/library/tinyllama"), ReviewedRightsReceiptId = "rights-fixture"
     };
     var ticket = await left.EnqueueVerifiedPullAsync(approved, true);
+    Assert(ticket.RightsReceiptId == approved.ReviewedRightsReceiptId,
+        "F09A queue preserves approved rights evidence");
     var claims = await Task.WhenAll(Enumerable.Range(0, 24).Select(i =>
         (i % 2 == 0 ? left : right).TryStartQueuedAsync(ticket.Id)));
     Assert(claims.Count(x => x is not null) == 1, "F10 only one process acquires model job");
     var persistedClaim = (await right.ReadAsync()).Single();
+    Assert(persistedClaim.RightsReceiptId == approved.ReviewedRightsReceiptId,
+        "F09B persisted queue readback preserves rights evidence");
     Assert(persistedClaim.State == ModelJobState.Running && persistedClaim.Attempts == 1,
         "F11 exactly one attempt persisted");
     var toCancel = await right.EnqueueVerifiedPullAsync(approved with {
@@ -409,7 +418,7 @@ try
         ImmutableRevision = "sha256:" + new string('a', 64),
         CompatibilityReviewed = true,
         LicenseEvidenceUri = new Uri("https://ollama.com/library/tinyllama"),
-        CompatibilityEvidenceUri = new Uri("https://ollama.com/library/tinyllama")
+        CompatibilityEvidenceUri = new Uri("https://ollama.com/library/tinyllama"), ReviewedRightsReceiptId = "rights-fixture"
     };
     var waitingJob = await sourceQueue.EnqueueVerifiedPullAsync(reviewed, true);
     using var loopback = new HttpClient(new StalledOllamaHandler()) {

@@ -299,6 +299,9 @@ public sealed class ModelCenterNativeRoutes : IDisposable
             ModelJobKind.OllamaPull =>
                 !string.IsNullOrWhiteSpace(prior.ExpectedOllamaDigest) &&
                 !string.IsNullOrWhiteSpace(prior.ImmutableRevision) &&
+                !string.IsNullOrWhiteSpace(prior.RightsReceiptId) &&
+                string.Equals(prior.RightsReceiptId, review.ReviewedRightsReceiptId,
+                    StringComparison.Ordinal) &&
                 string.Equals(prior.ExpectedOllamaDigest, review.ExpectedManifestDigestSha256,
                     StringComparison.OrdinalIgnoreCase) &&
                 string.Equals(prior.ImmutableRevision, review.ImmutableRevision,

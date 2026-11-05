@@ -26,7 +26,8 @@ public sealed class OllamaModelAdapter(HttpClient http, string receiptDirectory)
         if (job.Kind != ModelJobKind.OllamaPull) throw new ArgumentException("Job is not an Ollama pull.", nameof(job));
         if (job.ExpectedOllamaDigest is not { Length: 64 } ||
             !job.ExpectedOllamaDigest.All(Uri.IsHexDigit) ||
-            string.IsNullOrWhiteSpace(job.ImmutableRevision))
+            string.IsNullOrWhiteSpace(job.ImmutableRevision) ||
+            string.IsNullOrWhiteSpace(job.RightsReceiptId))
             throw new InvalidDataException("REVIEW_REQUIRED: no immutable artifact digest/revision lock.");
         using var response = await SendStreamingJsonAsync("api/pull", new { model = job.ModelTag, stream = true }, ct);
         response.EnsureSuccessStatusCode();
@@ -66,7 +67,8 @@ public sealed class OllamaModelAdapter(HttpClient http, string receiptDirectory)
             throw new InvalidDataException("OLLAMA_PULL_PINNED_DIGEST_MISMATCH");
         await WriteReceiptAsync(new ModelInstallReceipt("NOX_P03_INSTALL_RECEIPT_V1", job.Id,
             job.ModelTag, "ollama-pull", DateTimeOffset.UtcNow, null, null, local,
-            job.LicenseSource, http.BaseAddress?.ToString() ?? "http://localhost:11434/"), ct);
+            job.LicenseSource, http.BaseAddress?.ToString() ?? "http://localhost:11434/",
+            RightsAttestationId: job.RightsReceiptId), ct);
         return local;
     }
 

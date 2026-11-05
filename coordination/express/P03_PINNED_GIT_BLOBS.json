@@ -580,6 +580,51 @@
       "acceptance": "SOURCE_ONLY_MANIFEST_PIN_NOT_MODEL_RIGHTS_OR_E07",
       "previous_reviewed_git_blob_sha1": "cef44deea7d3f07be239d9989f9161780d0caeca",
       "previous_reviewed_bytes": 29146
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter/ModelCatalog.cs",
+      "owner": 3,
+      "run_id": "NOX-D04-RIGHTS-20261105",
+      "pre_git_blob_sha1": "e565efa8ad53ed811f0d77158eec55b1f078ddb8",
+      "post_git_blob_sha1": "fbc2d7ed8f9e7b4766395b6674290e3c3fffdd71",
+      "post_bytes": 7525,
+      "acceptance": "SOURCE_ONLY_OWNER_RIGHTS_CANDIDATE_NO_WINDOWS_E07"
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueStore.cs",
+      "owner": 3,
+      "run_id": "NOX-D04-RIGHTS-20261105",
+      "pre_git_blob_sha1": "6046384a1a619869618a64572cae0f95787468d8",
+      "post_git_blob_sha1": "74e2183335676854d3716fa4988e5b09b7c6a770",
+      "post_bytes": 30276,
+      "acceptance": "SOURCE_ONLY_OWNER_RIGHTS_CANDIDATE_NO_WINDOWS_E07"
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueWorker.cs",
+      "owner": 3,
+      "run_id": "NOX-D04-RIGHTS-20261105",
+      "pre_git_blob_sha1": "6dd5ceec428ec71a426d785304001a2d269a666f",
+      "post_git_blob_sha1": "135d62901100f1818ed3ea753f25f6c7c791c8df",
+      "post_bytes": 15406,
+      "acceptance": "SOURCE_ONLY_OWNER_RIGHTS_CANDIDATE_NO_WINDOWS_E07"
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter/ModelCenterNativeRoutes.cs",
+      "owner": 3,
+      "run_id": "NOX-D04-RIGHTS-20261105",
+      "pre_git_blob_sha1": "7446d05efa29710894a8f5e5bb1f4c42a5ec2c09",
+      "post_git_blob_sha1": "aeaedb2f90b513f14f59d854b108e4798d5977b2",
+      "post_bytes": 21512,
+      "acceptance": "SOURCE_ONLY_OWNER_RIGHTS_CANDIDATE_NO_WINDOWS_E07"
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter/OllamaModelAdapter.cs",
+      "owner": 3,
+      "run_id": "NOX-D04-RIGHTS-20261105",
+      "pre_git_blob_sha1": "704262b0b81bfaf81a0a17de7fd8c8714a9febb3",
+      "post_git_blob_sha1": "e27b9959a514384a68a0a67723aff0910ecbad58",
+      "post_bytes": 16076,
+      "acceptance": "SOURCE_ONLY_OWNER_RIGHTS_CANDIDATE_NO_WINDOWS_E07"
     }
   ],
   "override_chain": [

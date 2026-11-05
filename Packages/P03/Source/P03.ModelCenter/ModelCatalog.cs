@@ -44,6 +44,9 @@ public sealed record ModelCatalogEntry(
         && (RecommendedRamBytes is > 0 || RecommendedVramBytes is > 0)
         && (RecommendedRamBytes is null or > 0)
         && (RecommendedVramBytes is null or > 0)
+        // A public record must retain the approved owner rights receipt.
+        && !string.IsNullOrWhiteSpace(ReviewedRightsReceiptId)
+        && ReviewedRightsReceiptId.Length <= 128
         && CompatibilityReviewed;
 
     // This public record may be constructed without TryPromote. Do not allow
