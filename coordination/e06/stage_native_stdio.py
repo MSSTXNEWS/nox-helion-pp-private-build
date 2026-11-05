@@ -39,7 +39,7 @@ ADDONS=(
     ('Packages/P02/worker-python/p02_onehost.py', 'p02_onehost.py', 'e8f36c5348156386d55a639f86dec20f6805a0dd'),
     ('proposals/NOX-PACK01-50/native_bridge.py', 'nox_native_bridge.py', '7d3de471251fe97376105f3c99fe3f813e81f0a3'),
     ('Packages/P03/Source/python-host/p03_onehost_port.py', 'p03_onehost_port.py', 'b0a23161fc3ce8f8d2cfc5605326a7c8421acee6'),
-    ('Packages/P03/Source/python-host/catalog30.discovery.json', 'catalog30.discovery.json', 'dea8fb4bfbea61ce845d3ced17b0ef3596f6ae8a'),
+    ('Packages/P03/Source/python-host/catalog30.discovery.json', 'catalog30.discovery.json', '30835e9b9656d726a181221f63a67020a16c3866'),
     ('src/nox_selfbuilder/__init__.py', 'nox_selfbuilder/__init__.py', '1d0670e51efab53271385c13c156f2809a25adf1'),
     ('src/nox_selfbuilder/background_forge.py', 'nox_selfbuilder/background_forge.py', '1c31f492e5399e40d7fae676622f7301e8a14b59'),
     ('src/nox_selfbuilder/builder.py', 'nox_selfbuilder/builder.py', '421105f531d4342c880ab0548109fc2e4d1db746'),
