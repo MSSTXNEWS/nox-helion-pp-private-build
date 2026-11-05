@@ -8,6 +8,7 @@ For a verified source fixture run:
 No Windows, runner or native acceptance is inferred.
 """
 import ast
+import re
 from pathlib import Path
 import sys
 import unittest
@@ -41,8 +42,22 @@ def load_real_result_branch():
                     kwonlyargs=[], kw_defaults=[], kwarg=None,
                     defaults=[ast.Constant(value='models.queue'), ast.Constant(value=None)]),
         body=[branch], decorator_list=[])
-    module = ast.fix_missing_locations(ast.Module(body=[wrapper], type_ignores=[]))
-    namespace = {'P03PortHold': P03PortHold, 'P03PortDenied': P03PortDenied}
+    # Execute the exact owner denial predicate from the same reviewed source.
+    # Omitting this helper lets its NameError enter the original broad
+    # operation fence, causing genuine ACKs to look like backend outages.
+    # Never stub the predicate or bypass backend/owner approval.
+    guard_globals = [
+        next(n for n in tree.body if isinstance(n, ast.Assign) and
+             any(isinstance(t, ast.Name) and t.id == name for t in n.targets))
+        for name in ('_OWNER3_DENIAL_TOKENS', '_OWNER3_DENIAL_PAIRS')
+    ]
+    guard_predicate = next(n for n in tree.body
+                           if isinstance(n, ast.FunctionDef) and
+                           n.name == '_owner3_status_denied')
+    module = ast.fix_missing_locations(ast.Module(
+        body=[*guard_globals, guard_predicate, wrapper], type_ignores=[]))
+    namespace = {'P03PortHold': P03PortHold, 'P03PortDenied': P03PortDenied,
+                 're': re}
     exec(compile(module, str(SOURCE), 'exec'), namespace)
     # The response branch is REAL production AST; supply its route/job guard
     # scope explicitly rather than masking NameError as a false operation HOLD.
@@ -74,6 +89,17 @@ class P03RealAckBranchTest(unittest.TestCase):
         for value in (None, {'status': 'HOLD', 'ok': False}):
             with self.subTest(value=value), self.assertRaises(P03PortHold):
                 self.respond(value)
+
+    def test_prefixed_owner_denials_still_hold_with_real_guard(self):
+        for status in ('PROVIDER_OFFLINE_HOLD', 'CONSENT_REQUIRED',
+                       'NOT_AUTHORIZED', 'PERMISSION_DENIED'):
+            with self.subTest(status=status), self.assertRaises(P03PortHold):
+                self.respond({'status': status, 'jobId': 'requested'},
+                             route='models.retry', job_id='requested')
+
+    def test_legacy_queue_ack_still_accepted_without_fake_backend(self):
+        receipt = {'status': 'QUEUED', 'ack': True}
+        self.assertEqual(self.respond(receipt), receipt)
 
     def test_completed_uncancelled_preserves_factual_result(self):
         value = {'status': 'COMPLETED', 'result': {'cancelled': False}}
