@@ -225,7 +225,11 @@ export const AUTOSTART_UIA_IDS=Object.freeze({
   on:'nox-express-settings-autostart-on',
   off:'nox-express-settings-autostart-off'
 });
-export function settingsAutostartOwnerAdmission(button,issued){
+export function settingsAutostartOwnerAdmission(button,issued,event){
+  // Original DOM identity/visibility alone is not a user gesture: script
+  // .click() must not originate a privileged Windows owner consent request.
+  // Trusted click includes browser-native pointer and keyboard activation.
+  if(event?.isTrusted!==true || event?.type!=='click')return false;
   const id=button?.id;
   const expected=id===AUTOSTART_UIA_IDS.read?{key:'',value:''}:
     id===AUTOSTART_UIA_IDS.on?{key:'enabled',value:'true'}:
@@ -805,7 +809,7 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
     const generated=button.parentElement===actions||button.parentNode===actions;
     const route=controls.get(button.id)||(generated?button.dataset.nativeRoute:null);if(!route)return;
     if(generated&&route==='system.autostart' &&
-       !settingsAutostartOwnerAdmission(button,issuedSettingsControls)){
+       !settingsAutostartOwnerAdmission(button,issuedSettingsControls,event)){
       event.preventDefault();event.stopImmediatePropagation();
       status.textContent='HOLD · NOX_AUTOSTART_UIA_OWNER_IDENTITY';return;
     }

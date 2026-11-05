@@ -227,17 +227,17 @@ test('D06 SETTINGS UIA original-node / unique owner-route identity: not native c
     [AUTOSTART_UIA_IDS.read,'',''],[AUTOSTART_UIA_IDS.on,'enabled','true'],
     [AUTOSTART_UIA_IDS.off,'enabled','false']]){
     const original=mk(id,key,value);issued.add(original);nodes=[original];
-    assert.equal(settingsAutostartOwnerAdmission(original,issued),true);
+    assert.equal(settingsAutostartOwnerAdmission(original,issued,{type:'click',isTrusted:true}),true);
     const replacement=mk(id,key,value);
-    assert.equal(settingsAutostartOwnerAdmission(replacement,issued),false);
+    assert.equal(settingsAutostartOwnerAdmission(replacement,issued,{type:'click',isTrusted:true}),false);
     nodes=[original,replacement];
-    assert.equal(settingsAutostartOwnerAdmission(original,issued),false);
+    assert.equal(settingsAutostartOwnerAdmission(original,issued,{type:'click',isTrusted:true}),false);
     nodes=[original];original.dataset.nativeRoute='chat.commands';
-    assert.equal(settingsAutostartOwnerAdmission(original,issued),false);
+    assert.equal(settingsAutostartOwnerAdmission(original,issued,{type:'click',isTrusted:true}),false);
     original.dataset.nativeRoute='system.autostart';original.dataset.nativeValue='spoof';
-    assert.equal(settingsAutostartOwnerAdmission(original,issued),false);
+    assert.equal(settingsAutostartOwnerAdmission(original,issued,{type:'click',isTrusted:true}),false);
     original.dataset.nativeValue=value;original.isConnected=false;
-    assert.equal(settingsAutostartOwnerAdmission(original,issued),false);
+    assert.equal(settingsAutostartOwnerAdmission(original,issued,{type:'click',isTrusted:true}),false);
   }
   assert.equal(new Set(Object.values(AUTOSTART_UIA_IDS)).size,3);
 });
@@ -254,8 +254,13 @@ test('D06 SETTINGS owner requires a physically visible, unobstructed UIA button'
     ownerDocument:doc,parentElement:parent,hidden:false,inert:false,disabled:false,
     dataset:{nativeRoute:'system.autostart',nativeKey:'enabled',nativeValue:'true'},
     getBoundingClientRect:()=>s.rect,getAttribute:()=>null,contains:n=>n===button};
-  const issued=new WeakSet([button]),ok=()=>settingsAutostartOwnerAdmission(button,issued);
+  const issued=new WeakSet([button]),ok=()=>settingsAutostartOwnerAdmission(button,issued,{type:'click',isTrusted:true});
   s.hit=button;assert.equal(ok(),true);
+  // Programmatic clicks must never reach the WPF autostart consent owner.
+  assert.equal(settingsAutostartOwnerAdmission(button,issued,{type:'click',isTrusted:false}),false);
+  assert.equal(settingsAutostartOwnerAdmission(button,issued,{type:'click'}),false);
+  assert.equal(settingsAutostartOwnerAdmission(button,issued,{type:'keydown',isTrusted:true}),false);
+  assert.equal(settingsAutostartOwnerAdmission(button,issued),false);
   s.hit={};assert.equal(ok(),false);s.hit=button;
   for(const key of ['hidden','inert','disabled']){
     parent[key]=true;assert.equal(ok(),false,key);parent[key]=false;
