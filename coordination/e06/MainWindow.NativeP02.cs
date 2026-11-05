@@ -211,7 +211,8 @@ public partial class MainWindow
                     return new NativePipeResult("", false, null, "MENU_STOP_ACL_HOLD");
                 var nativeStop = await DispatchNativeOwnerAsync(
                     "chat.stop", JsonSerializer.SerializeToElement(new { }), cancel);
-                if (!nativeStop.Accepted || !string.IsNullOrEmpty(nativeStop.ErrorCode))
+                if (!nativeStop.Accepted || !string.IsNullOrEmpty(nativeStop.ErrorCode) ||
+                     LegacyOwnerDenial(nativeStop.Result))
                     return new NativePipeResult("", false, null,
                         nativeStop.ErrorCode ?? "MENU_STOP_NATIVE_HOLD");
                 return new NativePipeResult("", true,
@@ -241,6 +242,7 @@ public partial class MainWindow
                 return new NativePipeResult("", false, null, "MENU_OWNER_REVOKED_HOLD");
             var ownerResult = await DispatchNativeOwnerAsync(ownerRoute, ownerPayload, cancel);
             if (!ownerResult.Accepted || !string.IsNullOrEmpty(ownerResult.ErrorCode) ||
+                LegacyOwnerDenial(ownerResult.Result) ||
                 ownerResult.Result is not JsonElement nativeResult ||
                 nativeResult.ValueKind is JsonValueKind.Undefined or JsonValueKind.Null)
                 return new NativePipeResult("", false, null,

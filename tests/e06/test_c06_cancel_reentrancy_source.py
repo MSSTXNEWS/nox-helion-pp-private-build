@@ -29,4 +29,22 @@ class C06CancellationReentrancySource(unittest.TestCase):
         for marker in ('_externalMode = false', 'IsWebMessageEnabled = true',
                        'AreHostObjectsAllowed = true', 'new CoreWebView2', 'Navigate('):
             self.assertNotIn(marker,METHOD)
+    def test_menu_stop_negative_native_ack_never_becomes_requested(self):
+        # Native success must survive original owner receipt validation,
+        # not merely a transport Accepted bit. SOURCE_ONLY; .NET not run.
+        main = (SOURCE.parent / 'MainWindow.NativeP02.cs').read_text(encoding='utf-8')
+        menu = main.split('if (route == "menu.binding") {', 1)[1].split('if (route == "menu.dispatch") {', 1)[0]
+        stop = menu.split('if (name == "stop") {', 1)[1].split('if (name == "button")', 1)[0]
+        self.assertRegex(stop, r'if\s*\(!nativeStop\.Accepted\s*\|\|\s*!string\.IsNullOrEmpty\(nativeStop\.ErrorCode\)\s*\|\|\s*LegacyOwnerDenial\(nativeStop\.Result\)\)')
+        self.assertLess(stop.index('LegacyOwnerDenial(nativeStop.Result)'), stop.index('MENU_STOP_REQUESTED'))
+        self.assertIn('NativeP02Acl(stopSid, "chat.stop")',stop)
+
+    def test_menu_model_worker_negative_native_ack_never_becomes_result(self):
+        main = (SOURCE.parent / 'MainWindow.NativeP02.cs').read_text(encoding='utf-8')
+        menu = main.split('if (route == "menu.binding") {', 1)[1].split('if (route == "menu.dispatch") {', 1)[0]
+        self.assertRegex(menu,r'if\s*\(!ownerResult\.Accepted\s*\|\|\s*!string\.IsNullOrEmpty\(ownerResult\.ErrorCode\)\s*\|\|\s*LegacyOwnerDenial\(ownerResult\.Result\)\s*\|\|')
+        self.assertLess(menu.index('LegacyOwnerDenial(ownerResult.Result)'), menu.index('MENU_NATIVE_OWNER_RESULT'))
+        self.assertIn('ConfirmP02NativeAsync(ownerRoute, ownerPayload, cancel)',menu)
+        self.assertIn('MENU_OWNER_REVOKED_HOLD',menu)
+
 if __name__=='__main__': unittest.main()
