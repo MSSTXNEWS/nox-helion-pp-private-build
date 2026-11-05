@@ -1,7 +1,7 @@
 {
   "schema": "NOX-P03-PYTHON-ONEHOST-CATALOG-V1",
   "sourceFile": "Packages/P03/Source/P03.ModelCenter/ModelCatalog.cs",
-  "sourceGitBlobSha1": "e565efa8ad53ed811f0d77158eec55b1f078ddb8",
+  "sourceGitBlobSha1": "fbc2d7ed8f9e7b4766395b6674290e3c3fffdd71",
   "sourceType": "discovery_only",
   "models": [
     {
