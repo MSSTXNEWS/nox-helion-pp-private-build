@@ -43,7 +43,7 @@ WOW_RUNTIME_BLOBS = {
     "runtime/loader.mjs": "9b4596a68525384a92ddc1c17af5d51d37cc0458",
     "runtime/stage.css": "e6fd8eaea8a38deb0095e6359010be7539a4a7bc",
     "runtime/home-scene.mjs": "51302a21f96884d1113bcfce170fb00c452bd6c3",
-    "runtime/home-guard.css": "6adbc536976709388b94f0cb2be495ac9d7d49eb",
+    "runtime/home-guard.css": "a2aeaac478d1286f388266644f721c52371eea56",
     "runtime/vendor/gauge.min.js": "0deb4ebdbf58b10bab9a4b270781556dffeb6387",
     "runtime/vendor/SVG-GAUGE.LICENSE": "7abad7e4b79bea9c3a8f930f490f40f46898b17a",
     "runtime/vendor/progressbar.min.js": "ff2f3013c663fddff02d51f5d59d576cd5ecb0ff",
