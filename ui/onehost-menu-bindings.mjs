@@ -56,7 +56,8 @@ export function createNativeMenuClient({webview,cryptoRef=globalThis.crypto,
       if(!ROUTES.has(route) || !payload || typeof payload!=='object' || Array.isArray(payload) ||
         Object.keys(payload).some(k=>AUTHORITY.has(k)))return Promise.reject(Error('NOX_NATIVE_REQUEST_DENIED'));
       if(route==='system.autostart' &&
-        (Object.keys(payload).length!==1 || typeof payload.enabled!=='boolean'))
+        !(Object.keys(payload).length===0 ||
+          (Object.keys(payload).length===1 && typeof payload.enabled==='boolean')))
         return Promise.reject(Error('NOX_AUTOSTART_BOOLEAN_REQUIRED'));
       if(route==='browser.open') {
         // Syntax gate only; native Windows owner still enforces exact host/ACL.
@@ -187,8 +188,13 @@ export function nativeReadVerified(reply,route){
 // Native owner HKCU readback must match the requested SETTINGS Boolean.
 // COMPLETED is never evidence of persisted configuration by itself.
 export function nativeAutostartPersistenceAck(reply,requested){
-  return typeof requested==='boolean' && nativeReadVerified(reply,'system.autostart') &&
-    typeof reply.result.enabled==='boolean' && reply.result.enabled===requested;
+  if(!nativeReadVerified(reply,'system.autostart') ||
+     typeof reply.result.enabled!=='boolean')return false;
+  // A new process can inspect HKCU via the original owner without mutating it.
+  // Read-only state is never evidence that an ON/OFF write succeeded.
+  if(requested===null)return reply.result.readOnly===true;
+  return typeof requested==='boolean' && reply.result.readOnly!==true &&
+    reply.result.enabled===requested;
 }
 
 export function nativeOwnerActionReceipt(reply,route,action,expectedJobId=null) {
@@ -314,6 +320,12 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
     for(const button of actions.querySelectorAll?.('[data-native-route="system.autostart"]')||[])button.remove();
     const currentWorld=doc.getElementById('detail-title')?.textContent||'';
     if(!/(?:system|систем)/i.test(currentWorld))return;
+    // Explicit owner-only registry read, including after a fresh app launch.
+    // It asks for native WPF consent; it never writes HKCU or grants privileges.
+    const read=doc.createElement('button');read.type='button';read.className='nox-sb-tile';
+    read.textContent='Проверить автозапуск NOX · Windows';
+    read.dataset.nativeRoute='system.autostart';read.dataset.nativeKey='';read.dataset.nativeValue='';
+    actions.append(read);
     for(const [label,value] of [['Автозапуск NOX · ВКЛ','true'],['Автозапуск NOX · ВЫКЛ','false']]){
       const button=doc.createElement('button');button.type='button';button.className='nox-sb-tile';
       button.textContent=label;button.dataset.nativeRoute='system.autostart';
@@ -388,7 +400,9 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
     detail.hidden=!data;detail.textContent=data?JSON.stringify(data,null,2):'';
     status.textContent=expectedRoute==='system.autostart'
       ? approved
-        ? 'Автозапуск NOX · '+(expectedAutostart?'ВКЛ':'ВЫКЛ')+' · Windows подтверждено'
+        ? expectedAutostart===null
+          ? 'Состояние автозапуска NOX · '+(data.enabled?'ВКЛ':'ВЫКЛ')+' · HKCU прочитан'
+          : 'Автозапуск NOX · '+(expectedAutostart?'ВКЛ':'ВЫКЛ')+' · Windows подтверждено'
         : 'HOLD · '+(v?.errorCode||v?.result?.errorCode||'NOX_AUTOSTART_PERSISTENCE_UNVERIFIED')
       : (v.state==='HOLD'||v.state==='COMPLETED'&&!approved)?'HOLD · '+(v.errorCode||data?.errorCode||'NATIVE_OWNER_UNCONFIRMED'):
         v.state==='STOP_REQUESTED'?'STOP REQUESTED · ожидается завершение ядра':
@@ -648,7 +662,7 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
     }
     const payload=generated&&route==='chat.history'?{limit:50,...context()}
       :generated&&route==='system.autostart'
-      ?{enabled:button.dataset.nativeValue==='true'}
+      ?(button.dataset.nativeKey==='enabled'?{enabled:button.dataset.nativeValue==='true'}:{})
       :generated&&route==='chat.commands'&&button.dataset.nativeValue==='selfbuilder.propose'
       ?{action:'selfbuilder.propose',task}
       :generated&&route==='chat.commands'&&button.dataset.nativeKey==='action'

@@ -39,6 +39,22 @@ internal static class NoXAutostart
             key.GetValueKind(Entry) == RegistryValueKind.String &&
             string.Equals(stored, command, StringComparison.OrdinalIgnoreCase);
     }
+    // Owner-only, read-only durable HKCU proof after process restart.
+    // A foreign value under the same name is never reported as NOX disabled.
+    internal static bool ReadOwnedState(string executable)
+    {
+        var command = Quoted(CheckedExecutable(executable));
+        using var key = Registry.CurrentUser.OpenSubKey(RunKey, writable:false);
+        if (key is null) return false;
+        var hasEntry = Array.Exists(key.GetValueNames(), name =>
+            string.Equals(name, Entry, StringComparison.OrdinalIgnoreCase));
+        if (!hasEntry) return false;
+        if (key.GetValueKind(Entry) != RegistryValueKind.String ||
+            key.GetValue(Entry) is not string stored ||
+            !string.Equals(stored, command, StringComparison.OrdinalIgnoreCase))
+            throw new UnauthorizedAccessException("NOX_AUTOSTART_FOREIGN_ENTRY_HOLD");
+        return true;
+    }
     internal static bool SetEnabled(string executable, bool enabled, bool nativeConsent)
     {
         if (!nativeConsent) throw new UnauthorizedAccessException("NOX_AUTOSTART_OWNER_CONSENT_REQUIRED");
@@ -58,7 +74,7 @@ internal static class NoXAutostart
         else key.DeleteValue(Entry, throwOnMissingValue:false);
         // A transport success is not evidence that HKCU persisted the value.
         // A mismatch (including enabled=false on a requested enable) is HOLD.
-        var persisted = IsEnabled(executable);
+        var persisted = ReadOwnedState(executable);
         if (persisted != enabled) throw new IOException("NOX_AUTOSTART_PERSISTENCE_UNVERIFIED");
         return persisted;
     }

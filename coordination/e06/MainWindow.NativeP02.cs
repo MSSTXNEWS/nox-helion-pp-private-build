@@ -319,14 +319,22 @@ public partial class MainWindow
             }
         }
         if(route=="system.autostart") {
-            if(payload.ValueKind != JsonValueKind.Object || payload.EnumerateObject().Count()!=1 ||
-                !payload.TryGetProperty("enabled",out var requested) ||
-                requested.ValueKind is not (JsonValueKind.True or JsonValueKind.False))
+            var statusOnly=payload.ValueKind==JsonValueKind.Object &&
+                payload.EnumerateObject().Count()==0;
+            if(!statusOnly &&
+                (payload.ValueKind!=JsonValueKind.Object || payload.EnumerateObject().Count()!=1 ||
+                 !payload.TryGetProperty("enabled",out var requested) ||
+                 requested.ValueKind is not (JsonValueKind.True or JsonValueKind.False)))
                 return new NativePipeResult("",false,null,"NOX_AUTOSTART_BOOLEAN_REQUIRED");
             try {
                 cancel.ThrowIfCancellationRequested();
                 var path=Environment.ProcessPath ?? "";
-                var enabled=NoXAutostart.SetEnabled(path,requested.GetBoolean(),nativeConsent:true);
+                if(statusOnly) {
+                    var enabledNow=NoXAutostart.ReadOwnedState(path);
+                    return new NativePipeResult("",true,
+                        JsonSerializer.SerializeToElement(new {enabled=enabledNow,readOnly=true}),null);
+                }
+                var enabled=NoXAutostart.SetEnabled(path,payload.GetProperty("enabled").GetBoolean(),nativeConsent:true);
                 return new NativePipeResult("",true,
                     JsonSerializer.SerializeToElement(new {enabled}),null);
             } catch(OperationCanceledException) {throw;}
@@ -571,12 +579,17 @@ public partial class MainWindow
             label = "Открыть проверенный HTTPS только в NOX: " + target.AbsoluteUri;
         }
         if(route=="system.autostart") {
-            if(payload.ValueKind != JsonValueKind.Object ||
-                !payload.TryGetProperty("enabled",out var on) ||
-                on.ValueKind is not (JsonValueKind.True or JsonValueKind.False))
-                return Task.FromResult(false);
-            label=on.GetBoolean()?"Автозапуск NOX при входе в Windows: ВКЛ":
-                "Автозапуск NOX при входе в Windows: ВЫКЛ";
+            if(payload.ValueKind != JsonValueKind.Object) return Task.FromResult(false);
+            if(payload.EnumerateObject().Count()==0) {
+                label="Прочитать состояние автозапуска NOX в HKCU (только чтение)";
+            } else {
+                if(payload.EnumerateObject().Count()!=1 ||
+                    !payload.TryGetProperty("enabled",out var on) ||
+                    on.ValueKind is not (JsonValueKind.True or JsonValueKind.False))
+                    return Task.FromResult(false);
+                label=on.GetBoolean()?"Автозапуск NOX при входе в Windows: ВКЛ":
+                    "Автозапуск NOX при входе в Windows: ВЫКЛ";
+            }
         }
         if (route == "chat.commands") {
             if (!payload.TryGetProperty("action", out var action) ||
