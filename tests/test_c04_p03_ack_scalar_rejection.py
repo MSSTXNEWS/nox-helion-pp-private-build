@@ -219,6 +219,33 @@ class P03RealAckBranchTest(unittest.TestCase):
                 del value[envelope]["jobId"]  # Preserve existing legacy receipts.
                 self.assertEqual(self.respond(value, route=route, job_id="requested"), value)
 
+    def test_cross_action_nested_receipts_never_confirm_stop_or_retry(self):
+        # Test the original production execute_backend response AST.
+        for route, top_state, conflicting in (
+            ("models.cancel", "CANCEL_REQUESTED",
+             ("QUEUED", "RETRY_QUEUED", "RETRY_REQUESTED")),
+            ("models.retry", "QUEUED",
+             ("CANCEL_REQUESTED", "CANCELLING", "STOP_REQUESTED")),
+        ):
+            for envelope in ("result", "receipt", "ownerReceipt"):
+                for status in conflicting:
+                    data = {"status": top_state, "ack": True,
+                            "jobId": "requested",
+                            envelope: {"status": status, "jobId": "requested"}}
+                    with self.subTest(route=route, envelope=envelope,
+                                      status=status), self.assertRaises(P03PortHold):
+                        self.respond(data, route=route, job_id="requested")
+                good = {"status": top_state, "ack": True,
+                        "jobId": "requested",
+                        envelope: {"status": top_state, "jobId": "requested"}}
+                self.assertEqual(self.respond(good, route=route, job_id="requested"), good)
+        # A historical running-state observation is not a conflicting
+        # action receipt when the outer owner already requested STOP.
+        observational = {"status": "CANCEL_REQUESTED", "jobId": "requested",
+                         "receipt": {"status": "RUNNING", "jobId": "requested"}}
+        self.assertEqual(self.respond(observational, route="models.cancel",
+                                      job_id="requested"), observational)
+
     def test_deep_positive_receipt_and_legacy_owner_result(self):
         valid = {'status': 'QUEUED', 'ack': True,
                  'ownerReceipt': {'receipt': {'status': 'QUEUED', 'ok': True}}}

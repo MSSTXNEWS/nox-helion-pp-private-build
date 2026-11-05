@@ -444,6 +444,16 @@ class P03OneHostPort:
                         if (type(nested_state) is not str or
                                 _owner3_status_denied(nested_state)):
                             raise P03PortHold("Owner3 nested backend status is not an ACK")
+                        # Nested queue/retry evidence cannot certify STOP,
+                        # nor may an inner STOP request certify a new retry.
+                        # Observed RUNNING/STOPPED are not ACKs by themselves.
+                        owner_state = nested_state.strip().upper()
+                        if ((route == "models.cancel" and owner_state in (
+                                "QUEUED", "RETRY_QUEUED", "RETRY_REQUESTED")) or
+                            (route == "models.retry" and owner_state in (
+                                "CANCEL_REQUESTED", "CANCELLING", "STOP_REQUESTED"))):
+                            raise P03PortHold(
+                                "Owner3 nested receipt confirms another operation")
                     pending_receipts.append((nested, depth + 1))
             # A matching jobId or unrelated metadata is NOT an affirmative
             # native ACK for a mutating action. Keep legacy positive status
