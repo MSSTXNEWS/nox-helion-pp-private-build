@@ -1146,6 +1146,23 @@ def main()->int:
         owned_files=owned_payload_paths(
             install,strict_receipt(install/"payload.sha256.json",
                                   "T06_UNINSTALL_INSTALLED_INVENTORY_JSON_HOLD"))
+        # B03 G4 NO-LOSS: the disposable Windows install also contains an
+        # UNMANAGED user file. A successful uninstaller must preserve this
+        # exact file while removing every manifest-owned original payload.
+        # Create the witness only AFTER rollback slot verification, so the
+        # installed update and rollback still use the approved exact manifest.
+        unmanaged=install/("nox-g4-unmanaged-"+ci_run_id+".bin")
+        require(plain_parents(unmanaged,local_base) and
+                not unmanaged.exists() and not unmanaged.is_symlink() and
+                not getattr(unmanaged,"is_junction",lambda:False)(),
+                "T06_NOLOSS_UNMANAGED_PROBE_COLLISION")
+        unmanaged_bytes=b"NOX_G4_UNMANAGED_INSTALL_DATA_NOLOSS\\n"
+        with unmanaged.open("xb") as evidence_file:
+            evidence_file.write(unmanaged_bytes)
+            evidence_file.flush()
+            os.fsync(evidence_file.fileno())
+        require(regular(unmanaged) and unmanaged.read_bytes()==unmanaged_bytes,
+                "T06_NOLOSS_UNMANAGED_PROBE_SEED_HOLD")
         uninstall=install/"Uninstall.exe"
         require(regular(uninstall),"T06_ORIGINAL_UNINSTALLER_MISSING")
         uninstalled=run([str(uninstall),"/S"],220)
@@ -1171,6 +1188,13 @@ def main()->int:
         require(uninstalled["code"]==0,"T06_CONSERVATIVE_UNINSTALL_EXIT_HOLD")
         report["installer_lifecycle"]["uninstall_owned_wait_budget_seconds"]=original_nsis_uninstall_budget(len(owned_files))
         await_original_uninstall(install,owned_files)
+        # Independently prove that original NSIS never recursed into unknown
+        # user content even if its final non-recursive RMDir cannot remove
+        # the now-intentionally-nonempty install directory.
+        require(plain_parents(unmanaged,local_base) and regular(unmanaged) and
+                unmanaged.read_bytes()==unmanaged_bytes,
+                "T06_NOLOSS_UNMANAGED_INSTALL_DATA_LOST")
+        report["installer_lifecycle"]["unmanaged_install_file_noloss"]="PRESERVED_VERIFIED"
         report["installer_lifecycle"]["uninstall_owned_files_checked"]=len(owned_files)
         report["installer_lifecycle"]["uninstall_registry_views_checked"]=2
         require(marker.is_file() and marker.read_bytes()==signature,
