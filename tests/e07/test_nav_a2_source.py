@@ -24,7 +24,8 @@ class NavA2Source(unittest.TestCase):
         script = final._uia_script(12345, "VISUAL", png=Path("proof.png"))
         for fragment in ("function PrimaryDock", "ControlType]::Button",
                          "PRIMARY_DOCK_NOT_UNIQUE", "$clusters.Count -ne 1",
-                         "$r.X -lt ($prevRight-1)", "function FiveRects",
+                         "function GridMatches", "foreach($columns in @(5,3,2))",
+                         "$clusters.Count -ne 1", "function FiveRects",
                          "BUTTON_'+$name+'_NOT_UNIQUE"):
             self.assertIn(fragment, script)
         reason = "E07_FINAL_UIA_VISUAL_PRIMARY_DOCK_NOT_UNIQUE_HOLD"
