@@ -22,7 +22,7 @@ class PhysicalVisualFailureStages(unittest.TestCase):
         self.assertIn("tempfile.TemporaryDirectory",function)
         self.assertIn("utf-8-sig",function)
         self.assertIn("-File",function)
-        self.assertNotIn("-EncodedCommand",function)
+        self.assertIn('"-File",str(script_path)',function)
 
     def test_stage_codes_survive_bounded_allowlist(self):
         for stage in ("RESIZE", "DOCK", "CAPTURE", "RESTORE"):
