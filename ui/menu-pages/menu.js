@@ -258,7 +258,13 @@ function liveChat(label){
  @media(prefers-reduced-motion:reduce){.nox-chat-three *{animation:none!important;transition:none!important}}`);
  const three=el('div','nox-chat-three');three.append(left,center,right);surface.append(layout,three);
  setDetails(top,surface);
- let core='core.core',persona='persona.kairen_voss',model='',modelSelectionPending=false;
+ // HOME CoreID is authoritative for the initial native chat scope.
+ // Fallback remains the original CORE, never a second chat backend.
+ const nativePersonaIds=['persona.kairen_voss','persona.adrian_marrow','persona.leon_ardis','persona.elina_veil','persona.kassien_veir'];
+ let core=selectedCore&&CORE_IDS.includes(selectedCore)?'core.'+selectedCore.toLowerCase():'core.core';
+ let persona=selectedPersona&&PERSONAS.includes(selectedPersona)?
+   nativePersonaIds[PERSONAS.indexOf(selectedPersona)]:'persona.kairen_voss';
+ let model='',modelSelectionPending=false;
  // A selected model belongs to its native-confirmed UI scope, never to a different CoreID/Persona.
  let scopeEpoch=0,renderModels=()=>{};
 
@@ -519,9 +525,11 @@ DIRECTIONS.forEach(([id,title],index)=>{
 PRIMARY.forEach(name=>{const b=button(name,'main-action',()=>mainAction(name));b.dataset.action=name;P.actions.append(b);});
 CORE_IDS.forEach(id=>{
  const b=button(id,'core',()=>{
+  // One click opens the ONE existing native CHAT route, not a mock/chat copy.
+  // liveChat binds this actual CoreID to OneHost helion.chat and native STOP.
   selectedCore=id;
   P.cores.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',String(x.dataset.core===id)));
-  say('Выбрано ядро '+id+'. Для заявки на ускорение также выберите Persona.');
+  openRoute('chat');
  });
  b.dataset.core=id;b.setAttribute('aria-pressed','false');P.cores.append(b);
 });
