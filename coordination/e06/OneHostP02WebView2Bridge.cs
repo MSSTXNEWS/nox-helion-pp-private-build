@@ -391,7 +391,10 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
             "NEEDS_CONSENT" or "CONSENT_PENDING" or "NOT_AUTHORIZED" or
             "NOT_AUTHENTICATED" or "FORBIDDEN" or
             "BLOCKED" or "REFUSED" or "REVOKED" or "ABORTED" or
-            "EXPIRED" or "STOPPED" or "BUSY" or "PENDING") return true;
+            "EXPIRED" or "STOPPED" or "BUSY" or "PENDING" or
+             "UNAUTHORIZED" or "NO_CONSENT" or "INVALID" or "STALE" or
+             "NOT_INSTALLED" or "TIMED_OUT" or "RIGHTS_MISSING" or
+             "ACTION_DISALLOWED") return true;
         return value.EndsWith("_HOLD", StringComparison.Ordinal) ||
                value.EndsWith("_DENIED", StringComparison.Ordinal) ||
                value.EndsWith("_REJECTED", StringComparison.Ordinal) ||
@@ -411,7 +414,15 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
                value.EndsWith("_STOPPED", StringComparison.Ordinal) ||
                value.EndsWith("_CANCELLED", StringComparison.Ordinal) ||
                 value.EndsWith("_BUSY", StringComparison.Ordinal) ||
-                value.EndsWith("_PENDING", StringComparison.Ordinal);
+                value.EndsWith("_PENDING", StringComparison.Ordinal) ||
+               value.EndsWith("_UNAUTHORIZED", StringComparison.Ordinal) ||
+               value.EndsWith("_NO_CONSENT", StringComparison.Ordinal) ||
+               value.EndsWith("_INVALID", StringComparison.Ordinal) ||
+               value.EndsWith("_STALE", StringComparison.Ordinal) ||
+               value.EndsWith("_NOT_INSTALLED", StringComparison.Ordinal) ||
+               value.EndsWith("_TIMED_OUT", StringComparison.Ordinal) ||
+               value.EndsWith("_RIGHTS_MISSING", StringComparison.Ordinal) ||
+               value.EndsWith("_ACTION_DISALLOWED", StringComparison.Ordinal);
     }
 
     // Original transport and original native owner must BOTH agree on success.

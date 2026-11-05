@@ -468,7 +468,9 @@ public partial class MainWindow
             "_HOLD", "_DENIED", "_REQUIRED", "_MISMATCH", "_UNAVAILABLE",
             "_OFFLINE", "_FAILED", "_ERROR", "_BLOCKED", "_REFUSED",
             "_REJECTED", "_REVOKED", "_ABORTED", "_EXPIRED", "_STOPPED",
-            "_CANCELLED", "_BUSY", "_PENDING"
+            "_CANCELLED", "_BUSY", "_PENDING", "_UNAUTHORIZED", "_NO_CONSENT",
+            "_INVALID", "_STALE", "_NOT_INSTALLED", "_TIMED_OUT",
+            "_RIGHTS_MISSING", "_ACTION_DISALLOWED"
         }) {
             if (value.EndsWith(suffix,StringComparison.OrdinalIgnoreCase)) return true;
         }
@@ -478,7 +480,9 @@ public partial class MainWindow
             "FORBIDDEN", "UNAVAILABLE", "AWAITING_CONSENT",
             "REJECTED", "CANCELLED", "BLOCKED", "REFUSED", "REVOKED",
             "ABORTED", "EXPIRED", "STOPPED", "NOT_READY", "NEEDS_CONSENT",
-            "BUSY", "PENDING"
+            "BUSY", "PENDING", "UNAUTHORIZED", "NO_CONSENT", "INVALID",
+            "STALE", "NOT_INSTALLED", "TIMED_OUT", "RIGHTS_MISSING",
+            "ACTION_DISALLOWED"
         }) {
             if (string.Equals(value,exact,StringComparison.OrdinalIgnoreCase)) return true;
         }
