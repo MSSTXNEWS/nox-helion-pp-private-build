@@ -35,7 +35,7 @@ class C06CancellationReentrancySource(unittest.TestCase):
         main = (SOURCE.parent / 'MainWindow.NativeP02.cs').read_text(encoding='utf-8')
         menu = main.split('if (route == "menu.binding") {', 1)[1].split('if (route == "menu.dispatch") {', 1)[0]
         stop = menu.split('if (name == "stop") {', 1)[1].split('if (name == "button")', 1)[0]
-        self.assertRegex(stop, r'if\s*\(!nativeStop\.Accepted\s*\|\|\s*!string\.IsNullOrEmpty\(nativeStop\.ErrorCode\)\s*\|\|\s*LegacyOwnerDenial\(nativeStop\.Result\)\)')
+        self.assertRegex(stop, r'if\s*\(!nativeStop\.Accepted\s*\|\|\s*!string\.IsNullOrEmpty\(nativeStop\.ErrorCode\)\s*\|\|\s*nativeStop\.Result is not JsonElement stopReceipt\s*\|\|\s*stopReceipt\.ValueKind is JsonValueKind\.Undefined or JsonValueKind\.Null\s*\|\|\s*LegacyOwnerDenial\(nativeStop\.Result\)\)')
         self.assertLess(stop.index('LegacyOwnerDenial(nativeStop.Result)'), stop.index('MENU_STOP_REQUESTED'))
         self.assertIn('NativeP02Acl(stopSid, "chat.stop")',stop)
 
@@ -70,7 +70,7 @@ class C06CancellationReentrancySource(unittest.TestCase):
         executable = [line.strip() for line in owner.splitlines()
                       if line.strip().startswith('if (p.Name is "ok"')]
         self.assertEqual(len(executable), 1)
-        self.assertIn('or "authorized" &&', executable[0])
+        self.assertIn('or "authorized" or "consented" or "ownerConsent" or "nativeConsent" or "permissionGranted" &&', executable[0])
         self.assertIn('p.Value.ValueKind!=JsonValueKind.True) return true;', owner)
         self.assertIn('LegacyOwnerStatusDenied(state)', owner)
         self.assertIn('LegacyOwnerDenial(p.Value,depth+1)', owner)

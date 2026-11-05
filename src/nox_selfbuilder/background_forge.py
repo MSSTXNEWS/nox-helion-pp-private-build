@@ -261,7 +261,7 @@ class ExistingP04Background:
                        for receipt_key, manifest_key in (
                            ("id", "dataset_id"), ("revision", "dataset_revision"),
                            ("license_id", "license_id"),
-                           ("owner_approval_id", "owner_approval_id"))):
+                           ("owner_approval_id", "owner_approval_id")))):
             raise ForgeHold("TRAIN_RECEIPT_OWNER_POLICY_DRIFT_HOLD")
         if (type(training.get("global_step")) is not int or training["global_step"] < 1
                 or training["global_step"] > job.steps):
