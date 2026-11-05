@@ -34,7 +34,8 @@ def verify_exact_probe_slot(root: Path, probe_name: str, probe_bytes: bytes,
                 if a != p and not stat.S_ISDIR(s.st_mode):
                     return False
             s = p.lstat()
-            return stat.S_ISDIR(s.st_mode) if directory else stat.S_ISREG(s.st_mode)
+            return (stat.S_ISDIR(s.st_mode) if directory else
+                    stat.S_ISREG(s.st_mode) and s.st_nlink == 1 and s.st_ino != 0)
         except (OSError, ValueError):
             return False
 
@@ -85,6 +86,9 @@ def verify_exact_probe_slot(root: Path, probe_name: str, probe_bytes: bytes,
         hold("MANIFEST_SCHEMA")
     metadata = {"payload.sha256.json", "nox-p01-owned.txt", "Uninstall.exe"}
     expected = {s.casefold() for s in metadata | {probe_name}}
+    # Only directories implied by the publisher's immutable manifest exist in
+    # a valid NSIS backup. Empty foreign directories are NOT harmless evidence.
+    expected_directories = set()
     reserved = re.compile(r"(?i)^(?:CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(?:\..*)?$")
     for row in data["files"]:
         if type(row) is not dict:
@@ -99,13 +103,42 @@ def verify_exact_probe_slot(root: Path, probe_name: str, probe_bytes: bytes,
                 any(not part or part in (".", "..") or part[-1] in " ." or reserved.fullmatch(part)
                     for part in rel.split("/")) or rel.casefold() in expected):
             hold("MANIFEST_PATH")
-        path = root.joinpath(*rel.split("/"))
-        if not safe(path) or path.stat().st_size != size:
+        parts = rel.split("/")
+        for count in range(1, len(parts)):
+            expected_directories.add("/".join(parts[:count]).casefold())
+        path = root.joinpath(*parts)
+        if not safe(path):
             hold("OWNED_SIZE_OR_PATH")
+        before_owned = path.lstat()
+        if before_owned.st_size != size:
+            hold("OWNED_SIZE_OR_PATH")
+        # Open the *same file* we lstat'ed, rather than hashing an untrusted
+        # replacement reached by a second path lookup. A hard link to unrelated
+        # user data is never an owned file, even if its bytes match the manifest.
         with path.open("rb") as fp:
+            opened_owned = os.fstat(fp.fileno())
+            if (opened_owned.st_dev, opened_owned.st_ino, opened_owned.st_size,
+                    opened_owned.st_mtime_ns, opened_owned.st_ctime_ns) != (
+                    before_owned.st_dev, before_owned.st_ino, before_owned.st_size,
+                    before_owned.st_mtime_ns, before_owned.st_ctime_ns):
+                hold("OWNED_IDENTITY")
             h = hashlib.sha256()
             while chunk := fp.read(1024 * 1024):
                 h.update(chunk)
+            after_owned = os.fstat(fp.fileno())
+            if (after_owned.st_dev, after_owned.st_ino, after_owned.st_size,
+                    after_owned.st_mtime_ns, after_owned.st_ctime_ns) != (
+                    before_owned.st_dev, before_owned.st_ino, before_owned.st_size,
+                    before_owned.st_mtime_ns, before_owned.st_ctime_ns):
+                hold("OWNED_RACE")
+        if not safe(path):
+            hold("OWNED_RACE")
+        final_owned = path.lstat()
+        if (final_owned.st_dev, final_owned.st_ino, final_owned.st_size,
+                final_owned.st_mtime_ns, final_owned.st_ctime_ns) != (
+                before_owned.st_dev, before_owned.st_ino, before_owned.st_size,
+                before_owned.st_mtime_ns, before_owned.st_ctime_ns):
+            hold("OWNED_RACE")
         if h.hexdigest() != digest.lower():
             hold("OWNED_SHA")
         expected.add(rel.casefold())
@@ -123,8 +156,11 @@ def verify_exact_probe_slot(root: Path, probe_name: str, probe_bytes: bytes,
     observed = set()
     for folder, dirs, files in os.walk(root, topdown=True, followlinks=False):
         for name in dirs:
-            if not safe(Path(folder) / name, True):
+            directory = Path(folder) / name
+            if not safe(directory, True):
                 hold("DIRECTORY_REPARSE")
+            if directory.relative_to(root).as_posix().casefold() not in expected_directories:
+                hold("UNEXPECTED_DIRECTORY")
         for name in files:
             path = Path(folder) / name
             if not safe(path):

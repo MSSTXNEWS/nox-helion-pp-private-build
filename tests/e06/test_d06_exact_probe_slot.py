@@ -53,6 +53,36 @@ class OriginalSlotProbe(unittest.TestCase):
         self.assertEqual(result["manifest_files_checked"], 12)
         self.assertFalse(result["release_accepted"])
 
+    def test_unlisted_empty_directory_holds(self):
+        (self.root / "Assets" / "foreign-empty").mkdir()
+        with self.assertRaisesRegex(RuntimeError, "UNEXPECTED_DIRECTORY_HOLD"):
+            self.verify()
+
+    def test_nested_unlisted_empty_directory_holds(self):
+        (self.root / "Extra" / "deep").mkdir(parents=True)
+        with self.assertRaisesRegex(RuntimeError, "UNEXPECTED_DIRECTORY_HOLD"):
+            self.verify()
+
+    def test_manifest_owned_hardlink_holds(self):
+        owned = self.root / "Assets" / "owner-1.bin"
+        other = self.base / "foreign-owner-file.bin"
+        try:
+            os.link(owned, other)
+        except OSError:
+            self.skipTest("filesystem does not support hardlinks")
+        with self.assertRaisesRegex(RuntimeError, "OWNED_SIZE_OR_PATH_HOLD"):
+            self.verify()
+
+    def test_metadata_hardlink_holds(self):
+        manifest = self.root / "payload.sha256.json"
+        other = self.base / "foreign-manifest.json"
+        try:
+            os.link(manifest, other)
+        except OSError:
+            self.skipTest("filesystem does not support hardlinks")
+        with self.assertRaisesRegex(RuntimeError, "MANIFEST_HOLD"):
+            self.verify()
+
     def test_extra_file_still_holds(self):
         (self.root / "foreign-extra.dat").write_bytes(b"bad")
         with self.assertRaisesRegex(RuntimeError, "UNEXPECTED_FILE_HOLD"):
