@@ -10,6 +10,7 @@ on:
       - coordination/e07/independent_setup_e07.py
       - coordination/e07/probe_final_same_setup.py
       - tests/e07/test_independent_setup_e07.py
+      - tests/e07/test_nav_a2_source.py
       - tests/e07/test_final_primary_dispatch_u18.py
       - tests/e07/test_c34_feedback_fastpath_u24.py
       - coordination/e07/c34_feedback_rules.json
