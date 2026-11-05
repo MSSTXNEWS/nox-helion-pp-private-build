@@ -548,26 +548,26 @@
     {
       "path": "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueStore.cs",
       "owner": 3,
-      "run_id": "D04_GGUF_ABSOLUTE_NATIVE_PATH_ADMISSION_20261106",
-      "pre_git_blob_sha1": "342a35161c428dea71a7379202e831979c5e1d7d",
-      "post_git_blob_sha1": "763787bf9a41572f9b6e017adeac50aa74e44ddc",
-      "post_bytes": 39747,
-      "acceptance": "SOURCE_ONLY_TARGET_12_OF_12_DOTNET_AND_WINDOWS_NOT_RUN",
-      "prior_active_post_git_blob_sha1": "342a35161c428dea71a7379202e831979c5e1d7d",
-      "prior_active_post_bytes": 39520,
-      "source_head_observed": "7dbc5c9969a63939d9396df0b4d40398e1a3d2cb"
+      "run_id": "B04_P03_MERGED_OWNER_ABSOLUTE_PATH_R5_20261106",
+      "pre_git_blob_sha1": "763787bf9a41572f9b6e017adeac50aa74e44ddc",
+      "post_git_blob_sha1": "65a0377bb7bdaccfa5d6d87201c55dfa3940efa9",
+      "post_bytes": 40386,
+      "acceptance": "SOURCE_ONLY_V8_CONTRACT_DOTNET_WINDOWS_PHYSICAL_NOT_RUN",
+      "prior_active_post_git_blob_sha1": "763787bf9a41572f9b6e017adeac50aa74e44ddc",
+      "prior_active_post_bytes": 39747,
+      "source_head_observed": "117c90021309a94b443529b72eba07c4810597c6"
     },
     {
       "path": "Packages/P03/Source/P03.ModelCenter.HardeningSmoke/Program.cs",
       "owner": 3,
-      "run_id": "D04_GGUF_ABSOLUTE_NATIVE_PATH_ADMISSION_20261106",
-      "pre_git_blob_sha1": "b6c951e392997868d95ace8473daef26e8f6f434",
-      "post_git_blob_sha1": "ef840826ec206f80d6436797d957111b62d045b3",
-      "post_bytes": 72701,
-      "acceptance": "SOURCE_ONLY_TARGET_12_OF_12_DOTNET_AND_WINDOWS_NOT_RUN",
-      "prior_active_post_git_blob_sha1": "b6c951e392997868d95ace8473daef26e8f6f434",
-      "prior_active_post_bytes": 71870,
-      "source_head_observed": "7dbc5c9969a63939d9396df0b4d40398e1a3d2cb"
+      "run_id": "B04_P03_MERGED_OWNER_ABSOLUTE_PATH_R5_20261106",
+      "pre_git_blob_sha1": "ef840826ec206f80d6436797d957111b62d045b3",
+      "post_git_blob_sha1": "7a3de8fab0de61dab011ffe6db912f1619a72686",
+      "post_bytes": 74461,
+      "acceptance": "SOURCE_ONLY_V8_CONTRACT_DOTNET_WINDOWS_PHYSICAL_NOT_RUN",
+      "prior_active_post_git_blob_sha1": "ef840826ec206f80d6436797d957111b62d045b3",
+      "prior_active_post_bytes": 72701,
+      "source_head_observed": "117c90021309a94b443529b72eba07c4810597c6"
     },
     {
       "path": "Packages/P03/Source/python-host/p03_onehost_port.py",
@@ -1338,6 +1338,34 @@
       "source_head_observed": "ae83817878646eca40f1e2744a83c9ecaab00495",
       "historical_approved_override": true,
       "retired_from_active_set": "D04_GGUF_ABSOLUTE_NATIVE_PATH_ADMISSION_20261106"
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueStore.cs",
+      "owner": 3,
+      "run_id": "D04_GGUF_ABSOLUTE_NATIVE_PATH_ADMISSION_20261106",
+      "pre_git_blob_sha1": "342a35161c428dea71a7379202e831979c5e1d7d",
+      "post_git_blob_sha1": "763787bf9a41572f9b6e017adeac50aa74e44ddc",
+      "post_bytes": 39747,
+      "acceptance": "SOURCE_ONLY_TARGET_12_OF_12_DOTNET_AND_WINDOWS_NOT_RUN",
+      "prior_active_post_git_blob_sha1": "342a35161c428dea71a7379202e831979c5e1d7d",
+      "prior_active_post_bytes": 39520,
+      "source_head_observed": "7dbc5c9969a63939d9396df0b4d40398e1a3d2cb",
+      "historical_approved_override": true,
+      "retired_from_active_set": "B04_P03_MERGED_OWNER_ABSOLUTE_PATH_R5_20261106"
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter.HardeningSmoke/Program.cs",
+      "owner": 3,
+      "run_id": "D04_GGUF_ABSOLUTE_NATIVE_PATH_ADMISSION_20261106",
+      "pre_git_blob_sha1": "b6c951e392997868d95ace8473daef26e8f6f434",
+      "post_git_blob_sha1": "ef840826ec206f80d6436797d957111b62d045b3",
+      "post_bytes": 72701,
+      "acceptance": "SOURCE_ONLY_TARGET_12_OF_12_DOTNET_AND_WINDOWS_NOT_RUN",
+      "prior_active_post_git_blob_sha1": "b6c951e392997868d95ace8473daef26e8f6f434",
+      "prior_active_post_bytes": 71870,
+      "source_head_observed": "7dbc5c9969a63939d9396df0b4d40398e1a3d2cb",
+      "historical_approved_override": true,
+      "retired_from_active_set": "B04_P03_MERGED_OWNER_ABSOLUTE_PATH_R5_20261106"
     }
   ],
   "source_expansion": {

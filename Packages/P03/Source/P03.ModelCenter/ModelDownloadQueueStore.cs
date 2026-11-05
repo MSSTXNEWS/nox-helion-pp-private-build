@@ -177,6 +177,15 @@ public sealed class ModelDownloadQueueStore
         bool nativeConsent,CancellationToken ct=default)
     {
         if (!nativeConsent)throw new UnauthorizedAccessException("P03_NATIVE_MERGE_IMPORT_CONSENT_REQUIRED");
+        // These are native P04-reviewed filesystem identities, not paths relative
+        // to the caller's mutable process working directory. Reject both before
+        // normalization or queue mutation, like reviewed GGUF imports.
+        ArgumentNullException.ThrowIfNull(approval);
+        if (string.IsNullOrWhiteSpace(approval.Directory) ||
+            string.IsNullOrWhiteSpace(approval.TrainingReceiptPath) ||
+            !Path.IsPathFullyQualified(approval.Directory) ||
+            !Path.IsPathFullyQualified(approval.TrainingReceiptPath))
+            throw new InvalidDataException("P03_P04_MERGE_OWNER_ABSOLUTE_PATH_HOLD");
         approval=approval with {Directory=Path.GetFullPath(approval.Directory),TrainingReceiptPath=Path.GetFullPath(approval.TrainingReceiptPath)};
         var files=await ModelSafetensorsImport.ValidateAsync(approval,ct);
         var id=Guid.NewGuid();var tag="nox-forge-"+approval.MergedPayloadSha256[..12]+":"+id.ToString("N");

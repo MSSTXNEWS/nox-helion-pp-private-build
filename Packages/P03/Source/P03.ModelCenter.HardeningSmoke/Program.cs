@@ -881,6 +881,38 @@ Console.WriteLine("P03_SHARED_WORKER_STOP_PASS 4/4");
 
 // D04 owner-rights regression: exercise the ORIGINAL GGUF adapter end-to-end
 // against an in-memory loopback API, without downloading any model weights.
+// B04 R5: a native P04 rights receipt cannot be silently reinterpreted
+// relative to the OneHost working directory. Both original reviewed paths
+// must be fully qualified BEFORE any queue mutation.
+var b04MergedRoot = Path.Combine(Path.GetTempPath(), "NOX_B04_P04_MERGE_PATH_" + Guid.NewGuid().ToString("N"));
+try
+{
+    var mergedQueue = new ModelDownloadQueueStore(b04MergedRoot);
+    var approvedMerge = new P04MergedImportApproval(
+        "relative-merged", new string('a', 64), new string('b', 64),
+        "relative-training.json", new string('c', 64),
+        "rights-attestation", new string('d', 64),
+        "https://example.com/reviewed-license", "native-approval", true);
+    var mergeAbsoluteDir = Path.Combine(Path.GetTempPath(), "uncreated-b04-merged");
+    var mergeAbsoluteReceipt = Path.Combine(Path.GetTempPath(), "uncreated-b04-training.json");
+    foreach (var bad in new[]
+    {
+        approvedMerge with { TrainingReceiptPath = mergeAbsoluteReceipt },
+        approvedMerge with { Directory = mergeAbsoluteDir },
+        approvedMerge with { Directory = "C:drive-relative", TrainingReceiptPath = mergeAbsoluteReceipt }
+    })
+    {
+        var originalCount = (await mergedQueue.ReadAsync()).Count;
+        var held = false;
+        try { await mergedQueue.EnqueueVerifiedMergedAsync(bad, nativeConsent: true); }
+        catch (InvalidDataException ex) when (ex.Message == "P03_P04_MERGE_OWNER_ABSOLUTE_PATH_HOLD")
+        { held = true; }
+        Assert(held && (await mergedQueue.ReadAsync()).Count == originalCount,
+            "B04 P04 native owner refuses relative merge/training receipt paths without queue mutation");
+    }
+}
+finally { if (Directory.Exists(b04MergedRoot)) Directory.Delete(b04MergedRoot, recursive: true); }
+
 var d04RightsDir = Path.Combine(Path.GetTempPath(), "NOX_P03_GGUF_RIGHTS_" + Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(d04RightsDir);
 try
