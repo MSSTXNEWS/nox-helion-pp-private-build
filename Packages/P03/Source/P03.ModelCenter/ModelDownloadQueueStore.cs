@@ -457,6 +457,9 @@ public sealed class ModelDownloadQueueStore
                 string.Equals(job.LicenseSource, failed.LicenseSource, StringComparison.Ordinal) &&
                 job.LicenseAcknowledged == failed.LicenseAcknowledged;
             var activeTagJobs = jobs.Where(j => HasActiveTag(j, failed.ModelTag)).ToArray();
+            // Durable STOP cannot be reused as approval for a new retry.
+            if (activeTagJobs.Any(j => j.State == ModelJobState.Cancelling))
+                throw new InvalidOperationException("P03_RETRY_ACTIVE_STOP_PENDING_HOLD");
             if (activeTagJobs.Length > 0 &&
                 (activeTagJobs.Length != 1 ||
                  activeTagJobs[0].Kind != failed.Kind ||
@@ -469,6 +472,10 @@ public sealed class ModelDownloadQueueStore
                 (j.State is ModelJobState.Queued or ModelJobState.Running or ModelJobState.Cancelling or ModelJobState.Completed));
             if (existingRetry is not null)
             {
+                // A Safetensors retry has a fresh tag, so the parent-tag check
+                // above cannot observe its pending STOP; guard the retry itself.
+                if (existingRetry.State == ModelJobState.Cancelling)
+                    throw new InvalidOperationException("P03_RETRY_ACTIVE_STOP_PENDING_HOLD");
                 if (failed.Kind == ModelJobKind.OllamaPull && !SameApprovedPull(existingRetry))
                     throw new InvalidOperationException("P03_RETRY_ACTIVE_PULL_REVIEW_CHANGED_HOLD");
                 return existingRetry;

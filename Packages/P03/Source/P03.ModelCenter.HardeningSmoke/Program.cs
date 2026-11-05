@@ -780,6 +780,69 @@ try
 }
 finally { Directory.Delete(d04RightsDir, recursive: true); }
 
+
+ // D04: native STOP already pending on an active retry cannot be re-ACKed.
+ // No Ollama network traffic, model downloads, or user data in these tests.
+var d04RetryRoot = Path.Combine(Path.GetTempPath(), "NOX_D04_STOP_RETRY_" + Guid.NewGuid().ToString("N"));
+Directory.CreateDirectory(d04RetryRoot);
+try
+{
+    var d04Queue = new ModelDownloadQueueStore(d04RetryRoot);
+    async Task AssertStopPendingRetryAsync(ModelJob failed, string label)
+    {
+        var retry = await d04Queue.RetryAsync(failed.Id);
+        Assert(retry is not null && retry.State == ModelJobState.Queued, label + " queued");
+        Assert(await d04Queue.TryStartQueuedAsync(retry!.Id) is not null, label + " claimed");
+        Assert(await d04Queue.RequestCancelAsync(retry.Id), label + " STOP persisted");
+        var before = (await d04Queue.ReadAsync()).Select(j => j.Id).ToArray();
+        try
+        {
+            await d04Queue.RetryAsync(failed.Id);
+            throw new Exception("FAIL " + label + " STOP was re-ACKed");
+        }
+        catch (InvalidOperationException ex) when (ex.Message == "P03_RETRY_ACTIVE_STOP_PENDING_HOLD")
+        {
+            Assert(true, label + " STOP correctly blocks retry ACK");
+        }
+        var after = (await d04Queue.ReadAsync()).ToArray();
+        Assert(before.SequenceEqual(after.Select(j => j.Id)) &&
+            after.Single(j => j.Id == retry.Id).State == ModelJobState.Cancelling,
+            label + " queue/history unchanged");
+    }
+    var d04PullReviewed = ModelCatalog.Get("tinyllama") with
+    {
+        EvidenceStatus = CatalogEvidenceStatus.ArtifactVerified,
+        ExactTag = "tinyllama:d04-stop-retry", Version = "synthetic-fixture",
+        License = "synthetic-license", ArtifactBytes = 100,
+        RequiredDiskBytes = 200, RecommendedRamBytes = 300,
+        ExpectedSha256 = new string('b', 64),
+        ExpectedManifestDigestSha256 = new string('a', 64),
+        ImmutableRevision = "sha256:" + new string('a', 64),
+        CompatibilityReviewed = true,
+        LicenseEvidenceUri = new Uri("https://ollama.com/library/tinyllama"),
+        CompatibilityEvidenceUri = new Uri("https://ollama.com/library/tinyllama"),
+        ReviewedRightsReceiptId = "rights-d04-stop-fixture"
+    };
+    var d04PullFailed = await d04Queue.EnqueueVerifiedPullAsync(d04PullReviewed, true);
+    await d04Queue.UpdateAsync(d04PullFailed.Id,
+        j => j with { State = ModelJobState.Failed, Status = "Synthetic failure" });
+    await AssertStopPendingRetryAsync(d04PullFailed, "D04 Pull");
+
+    var ggufPath = Path.Combine(d04RetryRoot, "d04-stop-fixture.gguf");
+    var ggufBytes = Encoding.ASCII.GetBytes("GGUF-retry-STOP-fixture");
+    await File.WriteAllBytesAsync(ggufPath, ggufBytes);
+    var ggufSha = Convert.ToHexString(
+        System.Security.Cryptography.SHA256.HashData(ggufBytes)).ToLowerInvariant();
+    var ggufFailed = await d04Queue.EnqueueVerifiedGgufAsync(
+        "tinyllama:d04-stop-gguf", ggufPath, ggufBytes.LongLength,
+        ggufSha, "gguf-rights-d04-stop-fixture",
+        "https://ollama.com/library/tinyllama");
+    await d04Queue.UpdateAsync(ggufFailed.Id,
+        j => j with { State = ModelJobState.Failed, Status = "Synthetic failure" });
+    await AssertStopPendingRetryAsync(ggufFailed, "D04 GGUF");
+}
+finally { Directory.Delete(d04RetryRoot, recursive: true); }
+
 // B04: an old backup may contain stale RUNNING/CANCELLING states. Explicit
 // rollback consent does not transfer a current execution lease or STOP owner.
 var b04RestoreRoot = Path.Combine(Path.GetTempPath(),
