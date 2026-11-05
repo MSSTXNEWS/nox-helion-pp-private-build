@@ -1325,7 +1325,33 @@ $receipt=[ordered]@{
  installer_lifecycle_tested=$false;release_accepted=$false;owner_1_5_accepted=$false
 }
 $receiptPath=Join-Path $out 'ONEHOST_DIAGNOSTIC_RECEIPT.json'
-[IO.File]::WriteAllText($receiptPath,($receipt | ConvertTo-Json -Depth 9),(New-Object System.Text.UTF8Encoding($false)))
+# G1/G2 NO-LOSS: a previous owner receipt, hardlink or dangling reparse target
+# must never be truncated by a subsequent diagnostic build. The output is
+# disposable, but an unowned file under it is not permission to overwrite.
+Assert-E06PlainPathAncestors -Candidate $receiptPath -Scope 'OWNER_RECEIPT'
+$receiptJson=($receipt | ConvertTo-Json -Depth 9)
+$receiptBytes=[Text.Encoding]::UTF8.GetBytes([string]$receiptJson)
+if ($receiptBytes.Length -lt 256 -or $receiptBytes.Length -gt 1048576) {
+  throw 'E06_OWNER_RECEIPT_BOUNDED_BYTES_HOLD'
+}
+$receiptStream=$null
+try {
+  # CreateNew is atomic: fail on any existing pathname, including hardlinks
+  # and dangling symlinks. Never use WriteAllText/Create/Truncate here.
+  $receiptStream=[IO.File]::Open($receiptPath,[IO.FileMode]::CreateNew,[IO.FileAccess]::Write,[IO.FileShare]::None)
+  $receiptStream.Write($receiptBytes,0,$receiptBytes.Length)
+  $receiptStream.Flush($true)
+}
+finally {
+  if ($null -ne $receiptStream) { $receiptStream.Dispose() }
+}
+Assert-E06PlainPathAncestors -Candidate $receiptPath -Scope 'OWNER_RECEIPT_READBACK'
+$readbackBytes=[IO.File]::ReadAllBytes($receiptPath)
+if ($readbackBytes.Length -ne $receiptBytes.Length -or
+    [Convert]::ToBase64String($readbackBytes) -cne
+    [Convert]::ToBase64String($receiptBytes)) {
+  throw 'E06_OWNER_RECEIPT_EXCLUSIVE_READBACK_HOLD'
+}
 # L02 additive bridge to the existing L01 downloader. No new installer or trust override.
 # Owner-supplied HTTPS release asset URL is optional; absent URL means no manifest.
 # Existing E06 diagnostic receipt stays HOLD until independent installed acceptance.
