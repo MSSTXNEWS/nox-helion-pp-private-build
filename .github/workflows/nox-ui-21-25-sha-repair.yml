@@ -1,0 +1,41 @@
+name: NOX Verify and Repair UI 21-25 SHA256
+on:
+  push:
+    branches: [assets/download-ui-21-31-20261105]
+    paths: [.github/workflows/nox-ui-21-25-sha-repair.yml]
+permissions: {contents: read, actions: read}
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Download all 20 original part artifacts and checksum
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p extracted wrappers checksum results
+          for i in $(seq -w 0 19); do
+            echo "Downloading item $i"
+            gh run download 42012684216 --repo "$GITHUB_REPOSITORY" --name "NOX_UI_21_25_PART_$i" --dir "wrappers/$i"
+            test -s "wrappers/$i/NOX_UI_21_25_SOURCES.zip.part-$i"
+            cp "wrappers/$i/NOX_UI_21_25_SOURCES.zip.part-$i" "extracted/NOX_UI_21_25_SOURCES.zip.part-$i"
+          done
+          gh run download 42012684216 --repo "$GITHUB_REPOSITORY" --name "NOX_UI_21_25_CHECKSUM" --dir checksum
+          cat checksum/COMPLETE_SHA256.txt
+          cat extracted/NOX_UI_21_25_SOURCES.zip.part-* > NOX_UI_21_25_SOURCES.zip
+          sha256sum NOX_UI_21_25_SOURCES.zip | tee results/ACTUAL_SHA256.txt
+          sed 's#NOX_UI_21_25_SOURCES.zip#NOX_UI_21_25_SOURCES.zip#g' checksum/COMPLETE_SHA256.txt > results/EXPECTED_SHA256.txt
+          sha256sum -c results/EXPECTED_SHA256.txt
+          unzip -tqq NOX_UI_21_25_SOURCES.zip
+          unzip -p NOX_UI_21_25_SOURCES.zip MANIFEST.csv > results/MANIFEST.csv
+          test "$(tail -n +2 results/MANIFEST.csv | wc -l)" -eq 5
+          echo 'PASS: 20/20 actual binary parts merged, SHA256 verified and outer ZIP integrity PASS' | tee results/VERIFIED.txt
+          echo 'NOTE: Downloaded GitHub Actions artifact *.zip files are wrappers around .part-XX. Extract each wrapper first. NEVER concatenate the wrappers.' >> results/VERIFIED.txt
+      - name: Publish readback
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_UI_21_25_VERIFIED_REPAIR_RECEIPT
+          path: results/
+          retention-days: 7
