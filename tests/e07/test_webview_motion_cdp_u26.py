@@ -105,12 +105,33 @@ class PhysicalWebviewMotion(unittest.TestCase):
         self.assertIn("location.origin!=='https://nox.local'",source)
         self.assertIn("location.pathname",source)
         self.assertIn("NOX_CDP_ORIGIN_DRIFT",source)
-        self.assertIn("if(rect.width>=5&&rect.height>=5)",source)
+        # The previous fixture expected obsolete positive-rectangle logic.
+        # Current original D02 rejects hidden/transparent/off-viewport nodes.
+        self.assertIn("if(physicallyVisible(el,rect)){",source)
+        self.assertIn("const physicallyVisible=(el,rect)=>{",source)
+        self.assertIn("const width=Math.min(rect.right,innerWidth)",source)
+        self.assertIn("const alpha=Number(style.opacity);",source)
         self.assertNotIn("if(rect.width<5||rect.height<5)continue;",source)
         self.assertIn("for(const pseudo of [null,'::before','::after'])",source)
         self.assertNotIn("Emulation.setEmulatedMedia",source)
         self.assertNotIn("--force-prefers-reduced-motion",source)
 
+
+    def test_primary_dock_requires_five_unobscured_real_hit_targets(self):
+        source=TARGET.read_text(encoding="utf-8")
+        # Prevent regression to counting controls by presence, even when
+        # hidden, disabled, clipped, or covered by a pointer-catching overlay.
+        self.assertIn("buttons.length===5?buttons.filter(hitTargetVisible).length:0",source)
+        self.assertIn("if(!button.isConnected||button.disabled||",source)
+        self.assertIn("button.getAttribute('aria-disabled')==='true'",source)
+        self.assertIn("r.right>innerWidth||r.bottom>innerHeight",source)
+        self.assertIn("!physicallyVisible(button,r)",source)
+        self.assertIn("getComputedStyle(ancestor).pointerEvents==='none'",source)
+        self.assertIn("const hit=document.elementFromPoint(x,y);",source)
+        self.assertIn("hit===button||button.contains(hit)",source)
+        self.assertNotIn("primary_controls:buttons.length,d02_scope_count",source)
+        self.assertNotIn("document.dispatchEvent",source)
+        self.assertNotIn("button.click()",source)
 
     def test_ascii_framed_cdp_observation_still_requires_actual_media(self):
         make_wire = lambda obj: module.CDP_WIRE_PREFIX + base64.b64encode(

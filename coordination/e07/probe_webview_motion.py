@@ -31,6 +31,7 @@ def validate(observation: object) -> dict:
                 observation["media_reduced"] is True and
                 observation["home_active"] is True and
                 type(observation["primary_controls"]) is int and
+                # All five are real unobscured viewport hit targets, not merely DOM nodes.
                 observation["primary_controls"] == 5 and
                 type(observation["d02_scope_count"]) is int and
                 observation["d02_scope_count"] == 1 and
@@ -155,6 +156,25 @@ try {
    }
    return true;
  };
+ // A DOM count does NOT prove that a HOME control can be pressed.
+ // Require all five exact dock buttons, rendered in the current viewport
+ // and unobscured at their physical pointer center. elementFromPoint is
+ // READ-ONLY; no synthesized click, DOM mutation, or permission grant.
+ const hitTargetVisible=(button)=>{
+   if(!button.isConnected||button.disabled||
+      button.getAttribute('aria-disabled')==='true')return false;
+   const r=button.getBoundingClientRect();
+   if(![r.left,r.top,r.right,r.bottom,r.width,r.height].every(Number.isFinite)||
+      r.width<20||r.height<12||r.left<0||r.top<0||
+      r.right>innerWidth||r.bottom>innerHeight||
+      !physicallyVisible(button,r))return false;
+   for(let ancestor=button;ancestor;ancestor=ancestor.parentElement){
+     if(getComputedStyle(ancestor).pointerEvents==='none')return false;
+   }
+   const x=r.left+r.width/2,y=r.top+r.height/2;
+   const hit=document.elementFromPoint(x,y);
+   return !!hit&&(hit===button||button.contains(hit));
+ };
  const activeTime=(value)=>{
    // Computed styles must provide concrete CSS time tokens. parseFloat alone
    // silently treats unexpected values as 0, allowing a false no-motion PASS.
@@ -190,7 +210,8 @@ try {
  return {schema:'NOX-E07-WEBVIEW2-REDUCED-MOTION-v2',
    media_reduced:matchMedia('(prefers-reduced-motion: reduce)').matches,
    home_active:!!home&&home.classList.contains('active'),
-   primary_controls:buttons.length,d02_scope_count:scopes.length,
+   primary_controls:buttons.length===5?buttons.filter(hitTargetVisible).length:0,
+   d02_scope_count:scopes.length,
    d02_visible_nodes:d02Visible,visible_nodes:tooMany?4097:visible,
    css_animated:cssAnimated,css_transitions:cssTransitions,waapi_running:running};
 })()
