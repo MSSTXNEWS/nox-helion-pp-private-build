@@ -1,5 +1,8 @@
 """D05: original P04 owner queue ACK requires a real, durable S03 claim."""
 from pathlib import Path
+from dataclasses import asdict
+import hashlib
+import json
 import sys
 import unittest
 
@@ -91,7 +94,9 @@ class OwnerRecordedTrainingEvidence(unittest.TestCase):
         self.job=ForgeJob(run_id="native-run-1",task_id="task-1",base_model_dir=root,
             model_lock=root,model_revision="a"*40,dataset_manifest=root,
             rights_verifier=root,train_jsonl=root,holdout_jsonl=root,output_dir=root)
-        self.row={"kind":"FORGE","task_id":42,"payload":{"run_id":"native-run-1"},
+        job_seal=hashlib.sha256(json.dumps(asdict(self.job),sort_keys=True,default=str).encode()).hexdigest()
+        self.row={"kind":"FORGE","task_id":42,"payload":{"run_id":"native-run-1",
+                   "task_id":"task-1","job_sha256":job_seal},
                   "state":"ADAPTER_CANDIDATE_PENDING_E07",
                   "result":{"status":"ADAPTER_CANDIDATE_PENDING_E07",
                             "run_id":"native-run-1","receipt_sha256":"a"*64,
@@ -119,7 +124,9 @@ class OwnerRecordedTrainingEvidence(unittest.TestCase):
                           ("weights_updated",True),("activation_allowed",True),
                           ("status","COMPLETED")):
             row=copy.deepcopy(original);row["result"][key]=value;variants.append(row)
-        row=copy.deepcopy(original);row["payload"]["run_id"]="other-job";variants.append(row)
+        for key,value in (("run_id","other-job"),("task_id","other-task"),
+                          ("job_sha256","b"*40)):
+            row=copy.deepcopy(original);row["payload"][key]=value;variants.append(row)
         variants += [None,{},{"state":"ADAPTER_CANDIDATE_PENDING_E07"}]
         for row in variants:
             with self.subTest(row=row):

@@ -6,6 +6,9 @@ before handing back exact invocation to the preexisting native P04 runner.
 """
 from __future__ import annotations
 import re
+import hashlib
+import json
+from dataclasses import asdict
 SHA=re.compile(r'^[a-f0-9]{64}$')
 class ForgeHold(RuntimeError):pass
 
@@ -92,10 +95,17 @@ class ExistingP04NativePorts:
         if type(row) is not dict:
             raise ForgeHold('NATIVE_FORGE_S03_RESULT_PROOF_HOLD')
         recorded = row.get('result')
+        # S03 CREATE binds the full native job, not merely its reusable run_id.
+        # Reject a changed model/dataset/rights/GPU configuration before showing
+        # a completed training result, even if a historical receipt still exists.
+        sealed_job = hashlib.sha256(json.dumps(
+            asdict(job), sort_keys=True, default=str).encode()).hexdigest()
         if (row.get('kind') != 'FORGE' or type(row.get('task_id')) is not int
                 or row['task_id'] <= 0 or row.get('state') != expected
                 or type(row.get('payload')) is not dict
                 or row['payload'].get('run_id') != job.run_id
+                or row['payload'].get('task_id') != job.task_id
+                or row['payload'].get('job_sha256') != sealed_job
                 or type(recorded) is not dict or recorded.get('status') != expected
                 or recorded.get('run_id') != job.run_id
                 or recorded.get('weights_updated') is not False
