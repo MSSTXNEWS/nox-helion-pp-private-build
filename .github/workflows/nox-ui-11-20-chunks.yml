@@ -1,0 +1,58 @@
+name: NOX UI source 11-20 chunked for Drive
+on:
+  push:
+    branches: [assets/download-ui-11-20-20261105]
+    paths: [.github/workflows/nox-ui-11-20-chunks.yml]
+permissions: {contents: read, actions: read}
+jobs:
+  chunk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Retrieve previously validated source pack and create transport parts
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p original parts
+          gh run download 42011916374 --repo "$GITHUB_REPOSITORY" --name NOX_UI_11_20_FULL_SOURCE --dir original
+          test -s original/NOX_UI_11_20_FULL_SOURCE.zip
+          unzip -tqq original/NOX_UI_11_20_FULL_SOURCE.zip
+          sha256sum original/NOX_UI_11_20_FULL_SOURCE.zip > parts/COMPLETE_SHA256.txt
+          split -b 45000000 -d -a 2 original/NOX_UI_11_20_FULL_SOURCE.zip parts/NOX_UI_11_20_FULL_SOURCE.zip.part-
+          test "$(find parts -name '*.part-*' | wc -l)" -eq 4
+      - name: Upload part 00
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_UI_11_20_PART_00
+          path: parts/*.part-00
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload part 01
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_UI_11_20_PART_01
+          path: parts/*.part-01
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload part 02
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_UI_11_20_PART_02
+          path: parts/*.part-02
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload part 03
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_UI_11_20_PART_03
+          path: parts/*.part-03
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload checksum
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_UI_11_20_CHECKSUM
+          path: parts/COMPLETE_SHA256.txt
+          retention-days: 7
