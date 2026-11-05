@@ -471,12 +471,14 @@
     {
       "path": "Packages/P03/Source/python-host/catalog30.discovery.json",
       "owner": 3,
-      "run_id": "NOX-P03-BLOCK2-ADDENDUM-20261101",
-      "pre_git_blob_sha1": "5ee7213492c9a082a86a54332a36141d239a4a84",
-      "post_git_blob_sha1": "30835e9b9656d726a181221f63a67020a16c3866",
+      "run_id": "B04_E06_P03_CATALOG_SOURCE_SHA_RECONCILE_20261105",
+      "pre_git_blob_sha1": "30835e9b9656d726a181221f63a67020a16c3866",
+      "post_git_blob_sha1": "c52be579e2c4440c91a506cde45eb4f7fda7f1cd",
       "post_bytes": 6180,
-      "source_commit": "83b9c444042bfc300cbd447b8367f61d3e3f2846",
-      "acceptance": "SOURCE_INTEGRITY_ONLY_NOT_MODEL_RIGHTS_WINDOWS_E07"
+      "source_head_observed": "3cc0b7b37926052e389ed34307b143eeeed56666",
+      "prior_active_run_id": "NOX-P03-BLOCK2-ADDENDUM-20261101",
+      "acceptance": "REVIEWED_SOURCE_HASH_ONLY_NOT_MODEL_RIGHTS_WINDOWS_E07",
+      "change_scope": "MATCH_CURRENT_MODEL_CATALOG_GIT_BLOB_WITHOUT_CHANGE_TO_DISCOVERY_OR_RIGHTS"
     },
     {
       "path": "Packages/P03/Source/python-host/test_p03_catalog_json_contract_r13.py",
@@ -1057,6 +1059,19 @@
       "historical_approved_override": true,
       "retired_from_active_set": "B04_OWNER_STOP_RETRY_RECEIPT_R4_20261105",
       "reconciled_in_source_sha": "4222ebce9a82777e13068ed71d9a1adcf9ad4a64"
+    },
+    {
+      "path": "Packages/P03/Source/python-host/catalog30.discovery.json",
+      "owner": 3,
+      "run_id": "NOX-P03-BLOCK2-ADDENDUM-20261101",
+      "pre_git_blob_sha1": "5ee7213492c9a082a86a54332a36141d239a4a84",
+      "post_git_blob_sha1": "30835e9b9656d726a181221f63a67020a16c3866",
+      "post_bytes": 6180,
+      "source_commit": "83b9c444042bfc300cbd447b8367f61d3e3f2846",
+      "acceptance": "SOURCE_INTEGRITY_ONLY_NOT_MODEL_RIGHTS_WINDOWS_E07",
+      "historical_approved_override": true,
+      "retired_from_active_set": "B04_E06_P03_CATALOG_SOURCE_SHA_RECONCILE_20261105",
+      "reconciled_in_source_sha": "3cc0b7b37926052e389ed34307b143eeeed56666"
     }
   ],
   "source_expansion": {
