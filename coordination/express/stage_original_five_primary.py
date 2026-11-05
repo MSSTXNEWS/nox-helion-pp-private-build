@@ -290,8 +290,7 @@ nav.addEventListener('click',event=>{
  if(name==='INSTALL'&&!originalInstallTransportPresent()){
    state.textContent='INSTALL: исходный нативный WebView2 недоступен · HOLD';return;
  }
- if(name==='MODELS' && (!window.chrome||!window.chrome.webview||
-     typeof window.chrome.webview.postMessage!=='function')){
+ if(name==='MODELS'&&!originalInstallTransportPresent()){
    state.textContent='MODELS: native WebView2 недоступен · HOLD';return;
  }
  // Main actions navigate to SOURCE-LOCKED real controls, never run
