@@ -383,7 +383,7 @@ jobs:
           # Copy unchanged canonical blobs into the same disposable directory.
           foreach ($sidecar in @(
             @{Name='verify_native_receipt_json.py'; Blob='b14809eb5479d612b78282fd6eb210ad55d72cce'},
-            @{Name='l01_manifest_bridge.py'; Blob='40cc4b83d0a388a517808e7b614c1637f6d52c7f'}
+            @{Name='l01_manifest_bridge.py'; Blob='65c870af4523eb00eb01e2b2b716ec649da0a0ee'}
           )) {
             $src=Join-Path 'coordination/e06' $sidecar.Name
             $actual=(& git hash-object -- $src | Out-String).Trim().ToLowerInvariant()
