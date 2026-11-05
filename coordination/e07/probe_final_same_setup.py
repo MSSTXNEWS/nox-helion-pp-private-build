@@ -329,9 +329,11 @@ function Tree($r) { $a=$r.FindAll([System.Windows.Automation.TreeScope]::Descend
 # clipped controls must never create a second real actionable button.
 function Visible($v) { $b=$v.BoundingRectangle; return ($v.IsEnabled -and -not $v.IsOffscreen -and $b.Width -ge 20 -and $b.Height -ge 12) }
 function Normalize([string]$s) { return ($s+'').Trim().TrimStart([char[]]@([char]0x2726,[char]0x2605,[char]0x2022,[char]0x20)).Trim().ToUpperInvariant() }
-# The original WPF window may expose a second CHAT button outside EXPRESS.
-# Select the unique *five-button horizontal dock*, not an arbitrary name match.
-# Every accepted element must be a real visible/enabled UIA Button in this HWND.
+# The original WPF window may expose another CHAT outside EXPRESS.
+# Admit exactly one geometric five-action dock on this SAME HWND. Original
+# responsive CSS uses five columns on wide clients, three at <=800px and
+# two at <=520px: a forced horizontal-row test misclassifies real 800px UI.
+# Never infer success from just button names or a synthetic resize.
 # UIA may expose multiple wrappers of the same original native element.
 # Collapse ONLY Compare-identical controls; distinct original buttons stay
 # separate and still fail strict unique-five-dock admission.
@@ -341,6 +343,42 @@ function SameElementSeen($items,$candidate) {
   catch { } # Failure to compare never implies identical elements.
  }
  return $false
+}
+# Purely geometric admission over ACTUAL enabled/visible UIA element rectangles.
+# Row-major original order and bounded gaps distinguish the true HOME dock
+# from duplicate route buttons elsewhere in the WPF/WebView2 UIA tree.
+function GridMatches($row,[int]$columns) {
+ $names=@('CHAT','INSTALL','MODELS','LEARN','SETTINGS')
+ $rects=@();foreach($name in $names){$rects+=,($row[$name].Current.BoundingRectangle)}
+ $base=$rects[0]
+ for($i=0;$i -lt 5;$i++){
+  $r=$rects[$i];$col=$i%$columns
+  $rowStart=[int]([math]::Floor($i/$columns)*$columns)
+  if($r.Width -lt 20 -or $r.Height -lt 12 -or
+     [math]::Abs($r.Width-$base.Width) -gt [math]::Max(36,$base.Width*.25) -or
+     [math]::Abs($r.Height-$base.Height) -gt [math]::Max(20,$base.Height*.25)){return $false}
+  if($col -eq 0){
+   if($rowStart -gt 0){
+    $above=$rects[$rowStart-$columns]
+    $gap=$r.Top-$above.Bottom
+    if($gap -lt -1 -or $gap -gt 55 -or
+       [math]::Abs($r.Left-$base.Left) -gt 24){return $false}
+   }
+  } else {
+   $prev=$rects[$i-1]
+   $gap=$r.Left-$prev.Right
+   if($gap -lt -1 -or $gap -gt 45 -or
+      [math]::Abs(($r.Top+$r.Height/2)-($prev.Top+$prev.Height/2)) -gt 16){return $false}
+  }
+  if($rowStart -gt 0 -and
+     [math]::Abs($r.Left-$rects[$col].Left) -gt 24){return $false}
+  for($j=0;$j -lt $i;$j++){
+   $p=$rects[$j]
+   if($r.Left -lt $p.Right -and $r.Right -gt $p.Left -and
+      $r.Top -lt $p.Bottom -and $r.Bottom -gt $p.Top){return $false}
+  }
+ }
+ return $true
 }
 function PrimaryDock {
  $names=@('CHAT','INSTALL','MODELS','LEARN','SETTINGS')
@@ -360,35 +398,20 @@ function PrimaryDock {
   }catch{}
  }
  $clusters=New-Object System.Collections.ArrayList
- foreach($anchor in @($seen['SETTINGS'].ToArray())){
-  try {
-   $ar=$anchor.Current.BoundingRectangle
-   $mid=$ar.Y+$ar.Height/2
-   # Original source may expose another CHAT far outside the EXPRESS dock.
-   # Admit only one contiguous, visible five-button row immediately to the
-   # LEFT of SETTINGS, with small physical gaps, never a guess by name alone.
-   $row=@{SETTINGS=$anchor};$valid=$true;$nextRect=$ar
-   foreach($name in @('LEARN','MODELS','INSTALL','CHAT')){
-    $matching=@($seen[$name].ToArray() | Where-Object {
-      $r=$_.Current.BoundingRectangle
-      $gap=$nextRect.Left-$r.Right
-      [math]::Abs(($r.Y+$r.Height/2)-$mid) -le 16 -and
-       $gap -ge -1 -and $gap -le 45
-    })
-    if($matching.Count -ne 1){$valid=$false;break}
-    $row[$name]=$matching[0]
-    $nextRect=$matching[0].Current.BoundingRectangle
-   }
-   if(-not $valid){continue}
-   $prevRight=[double]::NegativeInfinity
-   foreach($name in $names){
-    $r=$row[$name].Current.BoundingRectangle
-    if($r.X -lt ($prevRight-1)){$valid=$false;break}
-    $prevRight=$r.Right
-   }
-   if($valid){[void]$clusters.Add($row)}
-  }catch{}
+ foreach($n in @('CHAT','INSTALL','MODELS','LEARN','SETTINGS')){
+  # Bound combinations: fail closed on anomalous or duplicated UIA trees.
+  if($seen[$n].Count -lt 1 -or $seen[$n].Count -gt 6){throw 'PRIMARY_DOCK_NOT_UNIQUE'}
  }
+ foreach($chat in @($seen['CHAT'].ToArray())){
+ foreach($install in @($seen['INSTALL'].ToArray())){
+ foreach($models in @($seen['MODELS'].ToArray())){
+ foreach($learn in @($seen['LEARN'].ToArray())){
+ foreach($settings in @($seen['SETTINGS'].ToArray())){
+  $row=@{CHAT=$chat;INSTALL=$install;MODELS=$models;LEARN=$learn;SETTINGS=$settings}
+  foreach($columns in @(5,3,2)){
+   if(GridMatches $row $columns){[void]$clusters.Add($row);break}
+  }
+ }}}}}
  if($clusters.Count -ne 1){throw 'PRIMARY_DOCK_NOT_UNIQUE'}
  return $clusters[0]
 }

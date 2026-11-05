@@ -48,11 +48,13 @@ class PhysicalVisualFailureStages(unittest.TestCase):
         self.assertIn("Restore original WPF HWND", script)
         self.assertIn("VISUAL_STAGE_", script)
 
-    def test_dock_requires_one_spatially_contiguous_original_row(self):
+    def test_dock_respects_original_five_three_two_responsive_grid(self):
         script = probe._uia_script(12345, "VISUAL", png=Path("screenshot.png"))
-        self.assertIn("foreach($name in @('LEARN','MODELS','INSTALL','CHAT'))",script)
-        self.assertIn("$gap -ge -1 -and $gap -le 45",script)
-        self.assertIn("if($matching.Count -ne 1)",script)
+        self.assertIn("function GridMatches($row,[int]$columns)",script)
+        self.assertIn("foreach($columns in @(5,3,2))",script)
+        self.assertIn("if(GridMatches $row $columns)",script)
+        self.assertIn("$gap -lt -1 -or $gap -gt 45",script)
+        self.assertIn("$gap -lt -1 -or $gap -gt 55",script)
         self.assertIn("if($clusters.Count -ne 1)",script)
         self.assertIn("if($null -eq $rects){throw 'PRIMARY_DOCK_NOT_UNIQUE'}",script)
 
@@ -62,7 +64,7 @@ class PhysicalVisualFailureStages(unittest.TestCase):
         self.assertIn("[System.Windows.Automation.Automation]::Compare($prior,$candidate)",script)
         self.assertIn("Failure to compare never implies identical elements",script)
         self.assertIn("if(-not (SameElementSeen -items ($seen[$name]) -candidate $el))",script)
-        self.assertIn("if($matching.Count -ne 1)",script)
+        self.assertIn("if($seen[$n].Count -lt 1 -or $seen[$n].Count -gt 6)",script)
         self.assertIn("if($clusters.Count -ne 1)",script)
 
     def test_failed_dock_keeps_hold_and_bounded_real_resize_photo(self):
