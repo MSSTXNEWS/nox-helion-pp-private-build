@@ -14,6 +14,7 @@ import re
 import subprocess
 import sys
 import time
+import zlib
 
 import independent_setup_e07 as e07
 
@@ -694,6 +695,36 @@ def prepare_final_visual_directory(out_dir: Path, *, new_observation: bool) -> N
                 "E07_FINAL_EVIDENCE_DIR_REPARSE_HOLD")
 
 
+def _capture_png_dimensions(path: Path) -> list[int] | None:
+    """Bind the WPF capture to PNG IHDR with CRC before visual PASS.
+
+    UIA separately reports same-HWND [width,height]. A filename, byte size
+    or matching screenshot digest alone cannot prove capture dimensions.
+    """
+    if not e07.clean_file(path):
+        return None
+    try:
+        with path.open("rb") as source:
+            header=source.read(33)
+        if (len(header)!=33 or header[:8]!=b"\x89PNG\r\n\x1a\n"
+                or header[8:16]!=b"\x00\x00\x00\x0dIHDR"
+                or header[26:28]!=b"\x00\x00" or header[28] not in (0,1)):
+            return None
+        if (zlib.crc32(header[12:29]) & 0xffffffff)!=int.from_bytes(header[29:33],"big"):
+            return None
+        width=int.from_bytes(header[16:20],"big")
+        height=int.from_bytes(header[20:24],"big")
+        return [width,height] if 320<=width<=8192 and 200<=height<=8192 else None
+    except OSError:
+        return None
+
+
+def _capture_matches_png(path: Path, expected: object) -> bool:
+    return (type(expected) is list and len(expected)==2
+            and all(type(dim) is int for dim in expected)
+            and _capture_png_dimensions(path)==expected)
+
+
 def verify_pre_nav_visual_capture(out_dir: Path, observation: dict) -> None:
     """Bind a pre-navigation physical PASS to its actual same-run WPF PNG.
 
@@ -705,7 +736,8 @@ def verify_pre_nav_visual_capture(out_dir: Path, observation: dict) -> None:
     expected = observation.get("screenshot_sha256")
     image = out_dir / "D02_FINAL_SAME_SETUP.png"
     e07.require(type(expected) is str and re.fullmatch(r"[0-9a-f]{64}", expected)
-                and e07.clean_dir(out_dir) and e07.clean_file(image),
+                and e07.clean_dir(out_dir) and e07.clean_file(image)
+                and _capture_matches_png(image, observation.get("capture_dimensions")),
                 "E07_PRENAV_VISUAL_CAPTURE_IDENTITY_HOLD")
     try:
         size = image.stat().st_size
@@ -764,7 +796,8 @@ def run(hwnd: int, install: Path, local: Path, *, source_sha: str, setup_sha: st
             except (e07.Hold,OSError,ValueError,KeyError):
                 diagnostic_photo={"scope":"SAME_WPF_PHYSICAL_CAPTURE_HOLD"}
         actual_png=(e07.clean_file(png) and
-                    20_000<=png.stat().st_size<=40_000_000)
+                    20_000<=png.stat().st_size<=40_000_000 and
+                    _capture_matches_png(png, visual_raw.get("capture")))
         resize_diagnostics={}
         for target_width in (800,1044):
             diagnostic_path=out_dir / f"D02_ADAPTIVE_{target_width}.png"
@@ -817,6 +850,7 @@ def run(hwnd: int, install: Path, local: Path, *, source_sha: str, setup_sha: st
                 "adaptive_layout":"PASS" if actual_layout else "HOLD",
                 # Physical D02 graphics are not OS Reduced Motion or design review.
                 "reduced_motion":"HOLD","screenshot_sha256":screenshot_sha,
+                "capture_dimensions":visual_raw.get("capture") if actual_png else None,
                 "physical_sizes":sizes or [],"fx_cycle":fx,
                 "diagnostic_photo":diagnostic_photo,
                 "adaptive_failure_diagnostics":resize_diagnostics,
