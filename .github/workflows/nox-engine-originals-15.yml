@@ -1,0 +1,342 @@
+name: NOX Engine Originals 15
+on:
+  push:
+    branches: [assets/download-nox-engines-15-20261105]
+    paths: [.github/workflows/nox-engine-originals-15.yml]
+permissions: {contents: read}
+jobs:
+  download:
+    strategy:
+      fail-fast: false
+      max-parallel: 5
+      matrix:
+        include:
+          - item: '01'
+            package: 'ripgrep'
+            upstream: 'BurntSushi/ripgrep'
+          - item: '02'
+            package: 'tree-sitter'
+            upstream: 'tree-sitter/tree-sitter'
+          - item: '03'
+            package: 'uv'
+            upstream: 'astral-sh/uv'
+          - item: '04'
+            package: 'ruff'
+            upstream: 'astral-sh/ruff'
+          - item: '05'
+            package: 'sqlite-vec'
+            upstream: 'asg017/sqlite-vec'
+          - item: '06'
+            package: 'playwright'
+            upstream: 'microsoft/playwright'
+          - item: '07'
+            package: 'crawl4ai'
+            upstream: 'unclecode/crawl4ai'
+          - item: '08'
+            package: 'trafilatura'
+            upstream: 'adbar/trafilatura'
+          - item: '09'
+            package: 'aider'
+            upstream: 'Aider-AI/aider'
+          - item: '10'
+            package: 'fluent-icons'
+            upstream: 'microsoft/fluentui-system-icons'
+          - item: '11'
+            package: 'godot'
+            upstream: 'godotengine/godot'
+          - item: '12'
+            package: 'blender'
+            upstream: 'blender/blender'
+          - item: '13'
+            package: 'comfyui'
+            upstream: 'Comfy-Org/ComfyUI'
+          - item: '14'
+            package: 'ffmpeg'
+            upstream: 'FFmpeg/FFmpeg'
+          - item: '15'
+            package: 'llama-cpp'
+            upstream: 'ggml-org/llama.cpp'
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Download exact upstream source and validate
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p out parts
+          repo='${{ matrix.upstream }}'
+          item='${{ matrix.item }}'
+          package='${{ matrix.package }}'
+          meta="$(curl -fsSL --retry 4 --max-time 120 -H "Authorization: Bearer $GH_TOKEN" "https://api.github.com/repos/$repo")"
+          branch="$(jq -r .default_branch <<< "$meta")"
+          commit="$(curl -fsSL --retry 4 --max-time 120 -H "Authorization: Bearer $GH_TOKEN" "https://api.github.com/repos/$repo/commits/$branch" | jq -r .sha)"
+          test "${#commit}" -eq 40
+          file="out/NOX_ENGINE_${item}_${package}_ORIGINAL_SOURCE.zip"
+          curl -fL --retry 4 --max-time 1800 "https://codeload.github.com/$repo/zip/$commit" -o "$file"
+          test -s "$file"
+          unzip -tqq "$file"
+          echo "repository=$repo" > out/SOURCE.txt
+          echo "commit=$commit" >> out/SOURCE.txt
+          echo "archive=$(basename "$file")" >> out/SOURCE.txt
+          sha256sum "$file" > out/SHA256SUMS.txt
+          # Split source bytes for upload to constrained Drive connector.
+          split -b 45000000 -d -a 3 "$file" "parts/NOX_ENGINE_${item}_${package}.zip.part-"
+          count="$(find parts -name '*.part-*' | wc -l)"
+          echo "$count" > out/PART_COUNT.txt
+          test "$count" -gt 0 && test "$count" -le 30
+          cat parts/*.part-* > /tmp/source_reconstructed.zip
+          cmp -s "$file" /tmp/source_reconstructed.zip
+          unzip -tqq /tmp/source_reconstructed.zip
+          echo 'PASS validated upstream zip; all parts accounted; recombined bytes identical' > out/VERIFIED.txt
+      - name: Publish metadata
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_ENGINE_${{ matrix.item }}_${{ matrix.package }}_META
+          path: |
+            out/SOURCE.txt
+            out/SHA256SUMS.txt
+            out/PART_COUNT.txt
+            out/VERIFIED.txt
+          retention-days: 7
+      - name: Upload part 000
+        if: ${{ hashFiles('parts/*.part-000') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_ENGINE_${{ matrix.item }}_${{ matrix.package }}_PART_000
+          path: parts/*.part-000
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload part 001
+        if: ${{ hashFiles('parts/*.part-001') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_ENGINE_${{ matrix.item }}_${{ matrix.package }}_PART_001
+          path: parts/*.part-001
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload part 002
+        if: ${{ hashFiles('parts/*.part-002') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_ENGINE_${{ matrix.item }}_${{ matrix.package }}_PART_002
+          path: parts/*.part-002
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload part 003
+        if: ${{ hashFiles('parts/*.part-003') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_ENGINE_${{ matrix.item }}_${{ matrix.package }}_PART_003
+          path: parts/*.part-003
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload part 004
+        if: ${{ hashFiles('parts/*.part-004') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_ENGINE_${{ matrix.item }}_${{ matrix.package }}_PART_004
+          path: parts/*.part-004
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload part 005
+        if: ${{ hashFiles('parts/*.part-005') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_ENGINE_${{ matrix.item }}_${{ matrix.package }}_PART_005
+          path: parts/*.part-005
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload part 006
+        if: ${{ hashFiles('parts/*.part-006') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_ENGINE_${{ matrix.item }}_${{ matrix.package }}_PART_006
+          path: parts/*.part-006
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload part 007
+        if: ${{ hashFiles('parts/*.part-007') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_ENGINE_${{ matrix.item }}_${{ matrix.package }}_PART_007
+          path: parts/*.part-007
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload part 008
+        if: ${{ hashFiles('parts/*.part-008') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_ENGINE_${{ matrix.item }}_${{ matrix.package }}_PART_008
+          path: parts/*.part-008
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload part 009
+        if: ${{ hashFiles('parts/*.part-009') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_ENGINE_${{ matrix.item }}_${{ matrix.package }}_PART_009
+          path: parts/*.part-009
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload part 010
+        if: ${{ hashFiles('parts/*.part-010') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_ENGINE_${{ matrix.item }}_${{ matrix.package }}_PART_010
+          path: parts/*.part-010
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload part 011
+        if: ${{ hashFiles('parts/*.part-011') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_ENGINE_${{ matrix.item }}_${{ matrix.package }}_PART_011
+          path: parts/*.part-011
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload part 012
+        if: ${{ hashFiles('parts/*.part-012') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_ENGINE_${{ matrix.item }}_${{ matrix.package }}_PART_012
+          path: parts/*.part-012
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload part 013
+        if: ${{ hashFiles('parts/*.part-013') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_ENGINE_${{ matrix.item }}_${{ matrix.package }}_PART_013
+          path: parts/*.part-013
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload part 014
+        if: ${{ hashFiles('parts/*.part-014') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_ENGINE_${{ matrix.item }}_${{ matrix.package }}_PART_014
+          path: parts/*.part-014
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload part 015
+        if: ${{ hashFiles('parts/*.part-015') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_ENGINE_${{ matrix.item }}_${{ matrix.package }}_PART_015
+          path: parts/*.part-015
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload part 016
+        if: ${{ hashFiles('parts/*.part-016') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_ENGINE_${{ matrix.item }}_${{ matrix.package }}_PART_016
+          path: parts/*.part-016
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload part 017
+        if: ${{ hashFiles('parts/*.part-017') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_ENGINE_${{ matrix.item }}_${{ matrix.package }}_PART_017
+          path: parts/*.part-017
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload part 018
+        if: ${{ hashFiles('parts/*.part-018') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_ENGINE_${{ matrix.item }}_${{ matrix.package }}_PART_018
+          path: parts/*.part-018
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload part 019
+        if: ${{ hashFiles('parts/*.part-019') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_ENGINE_${{ matrix.item }}_${{ matrix.package }}_PART_019
+          path: parts/*.part-019
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload part 020
+        if: ${{ hashFiles('parts/*.part-020') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_ENGINE_${{ matrix.item }}_${{ matrix.package }}_PART_020
+          path: parts/*.part-020
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload part 021
+        if: ${{ hashFiles('parts/*.part-021') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_ENGINE_${{ matrix.item }}_${{ matrix.package }}_PART_021
+          path: parts/*.part-021
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload part 022
+        if: ${{ hashFiles('parts/*.part-022') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_ENGINE_${{ matrix.item }}_${{ matrix.package }}_PART_022
+          path: parts/*.part-022
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload part 023
+        if: ${{ hashFiles('parts/*.part-023') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_ENGINE_${{ matrix.item }}_${{ matrix.package }}_PART_023
+          path: parts/*.part-023
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload part 024
+        if: ${{ hashFiles('parts/*.part-024') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_ENGINE_${{ matrix.item }}_${{ matrix.package }}_PART_024
+          path: parts/*.part-024
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload part 025
+        if: ${{ hashFiles('parts/*.part-025') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_ENGINE_${{ matrix.item }}_${{ matrix.package }}_PART_025
+          path: parts/*.part-025
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload part 026
+        if: ${{ hashFiles('parts/*.part-026') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_ENGINE_${{ matrix.item }}_${{ matrix.package }}_PART_026
+          path: parts/*.part-026
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload part 027
+        if: ${{ hashFiles('parts/*.part-027') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_ENGINE_${{ matrix.item }}_${{ matrix.package }}_PART_027
+          path: parts/*.part-027
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload part 028
+        if: ${{ hashFiles('parts/*.part-028') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_ENGINE_${{ matrix.item }}_${{ matrix.package }}_PART_028
+          path: parts/*.part-028
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload part 029
+        if: ${{ hashFiles('parts/*.part-029') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_ENGINE_${{ matrix.item }}_${{ matrix.package }}_PART_029
+          path: parts/*.part-029
+          retention-days: 7
+          if-no-files-found: error
