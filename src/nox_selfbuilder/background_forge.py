@@ -101,6 +101,15 @@ class ExistingP04Background:
         return (self.stop() is False and self.permit() is True
                 and (not require_idle or self.busy() is False))
 
+    @staticmethod
+    def _requested_result_conflict(requested, status):
+        """A native STOP/PAUSE ACK cannot be replaced by a raced success receipt."""
+        if requested == "STOP" and status != "STOPPED":
+            return "TRAINER_STOP_RESULT_CONFLICT"
+        if requested == "PAUSE" and status != "PAUSED":
+            return "TRAINER_PAUSE_RESULT_CONFLICT"
+        return None
+
     def _trusted_file(self, path):
         p = Path(path).absolute()
         self.trainer.reject_reparse_ancestors(p)
@@ -345,10 +354,24 @@ class ExistingP04Background:
             pause_marker.unlink()
         if not self._owner_training_grant(require_idle=require_idle):
             return self._hold("OWNER_REVOKED_BEFORE_TRAINING_RECEIPT")
+        # A native STOP/PAUSE may race the trainer's zero exit and its
+        # COMPLETED receipt. Reject the contradiction before relaying events.
+        with self._control_lock:
+            conflict = self._requested_result_conflict(self._requested, receipt["status"])
+        if conflict is not None:
+            return self._hold(conflict)
         self.relay_events(job)
-        return {"status": "ADAPTER_CANDIDATE_PENDING_E07" if receipt["status"] == "COMPLETED" else receipt["status"],
-                "run_id": job.run_id, "receipt_sha256": self.trainer.sha256_file(out / "training-receipt.json"),
-                "checkpoint": receipt["checkpoint"], "weights_updated": False, "activation_allowed": False}
+        result = {"status": "ADAPTER_CANDIDATE_PENDING_E07" if receipt["status"] == "COMPLETED" else receipt["status"],
+                  "run_id": job.run_id, "receipt_sha256": self.trainer.sha256_file(out / "training-receipt.json"),
+                  "checkpoint": receipt["checkpoint"], "weights_updated": False, "activation_allowed": False}
+        # Linearization point: if STOP arrives before admission, HOLD wins.
+        # After _active is cleared, STOP cannot ACK an already finished run.
+        with self._control_lock:
+            conflict = self._requested_result_conflict(self._requested, receipt["status"])
+            if conflict is not None:
+                return self._hold(conflict)
+            self._active = None
+            return result
 
     def merge_candidate(self, job, *, output_dir, owner_approve, max_seconds=36000):
         """Native-only merge via original P04; never switches the active model.
