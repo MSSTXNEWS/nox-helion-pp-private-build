@@ -384,6 +384,75 @@ def stage_reviewed_ps51_sha_compat(owner_script: Path) -> dict:
             "release_accepted": False}
 
 
+
+# B03 G4: Python T06 is the actual Windows Setup/NSIS producer. Unlike the
+# separate PowerShell OneHost builder, it previously bundled five C++-style
+# comments from the SHA-reviewed C09 remover into a PowerShell 5.1 child.
+# The child failed AFTER removing manifest payload, BEFORE metadata cleanup.
+# Adapt ONLY the disposable R11 copy after NX03 verified staging; never touch
+# reviewed C09 source, SourceLock729, a live install, or user files.
+_B03_REVIEWED_REMOVE_GIT_BLOB = "fed8e70a122118e2e25c6399701d9e7c26434cfe"
+_B03_PS51_REMOVER_COMMENT_BLOCK = (
+    "// D03 · A successful NSIS remover exit must not be based solely on\n"
+    "// Remove-Item returning without an exception. Recheck every manifest-owned\n"
+    "// leaf BEFORE reporting PASS. A recreated/locked/reparse leaf is a HOLD;\n"
+    "// read failures other than an exact missing-item exception are also a HOLD.\n"
+    "// Do not modify retained user files or the NSIS-owned metadata here.\n"
+)
+
+
+def stage_reviewed_remover_ps51_comments(owner_script: Path,
+                                         reviewed_receipt: dict) -> dict:
+    """Convert ONLY five exact C09 comment lines in the disposable NSIS stage."""
+    need(isinstance(owner_script, Path) and
+         owner_script.name == "Remove-InstalledPayload.ps1" and
+         owner_script.parent.name == "Installer" and
+         owner_script.parent.parent.name == "R11",
+         "B03_PS51_REMOVER_OWNER_PATH_HOLD")
+    verify_source_tree_entry(owner_script, owner_script.parent.parent)
+    before = owner_script.read_bytes()
+    need(1 <= len(before) <= 65536 and owner_script.stat().st_nlink == 1,
+         "B03_PS51_REMOVER_NONEXCLUSIVE_STAGE_HOLD")
+    need(type(reviewed_receipt) is dict and
+         reviewed_receipt.get("changed") is True and
+         reviewed_receipt.get("reviewed_git_blob") == _B03_REVIEWED_REMOVE_GIT_BLOB and
+         reviewed_receipt.get("original_donor_changed") is False and
+         reviewed_receipt.get("release_accepted") is False and
+         reviewed_receipt.get("independent_e07") == "NOT_RUN" and
+         reviewed_receipt.get("staged_sha256") == hashlib.sha256(before).hexdigest(),
+         "B03_PS51_REMOVER_REVIEWED_STAGE_RECEIPT_HOLD")
+    try:
+        text = before.decode("utf-8")
+    except UnicodeError as exc:
+        raise RuntimeError("B03_PS51_REMOVER_UTF8_HOLD") from exc
+    old = _B03_PS51_REMOVER_COMMENT_BLOCK
+    need(text.count(old) == 1 and
+         len(re.findall(r"(?m)^//", text)) == 5 and
+         "P01_UNINSTALL_POST_REMOVE_RESIDUE" in text and
+         "P01_UNINSTALL_PAYLOAD_PASS" in text and
+         text.index("P01_UNINSTALL_POST_REMOVE_RESIDUE") > text.index(old),
+         "B03_PS51_REMOVER_COMMENT_PREIMAGE_HOLD")
+    new = re.sub(r"(?m)^//", "#", old)
+    updated = text.replace(old, new)
+    need(updated != text and updated.count(new) == 1 and
+         not re.search(r"(?m)^//", updated) and
+         updated.replace(new, old) == text,
+         "B03_PS51_REMOVER_COMMENT_TRANSFORM_HOLD")
+    staged = updated.encode("utf-8")
+    verify_source_tree_entry(owner_script, owner_script.parent.parent)
+    need(owner_script.read_bytes() == before,
+         "B03_PS51_REMOVER_PREWRITE_DRIFT_HOLD")
+    owner_script.write_bytes(staged)
+    need(owner_script.read_bytes() == staged,
+         "B03_PS51_REMOVER_COMMENT_READBACK_HOLD")
+    return {"source_reviewed_git_blob": _B03_REVIEWED_REMOVE_GIT_BLOB,
+            "original_nx03_sha256": hashlib.sha256(before).hexdigest(),
+            "staged_sha256": hashlib.sha256(staged).hexdigest(),
+            "comment_lines_corrected": 5, "disposable_r11_only": True,
+            "policy": "ORIGINAL_TWO_PHASE_UNINSTALL_AND_NOLOSS_UNCHANGED",
+            "independent_e07": "NOT_RUN", "release_accepted": False}
+
+
 # Reuse approved C09 original NSIS registry line only in disposable C07 stage.
 C09_NSIS_REVIEW_BLOB = "87d901c3846359a91be3e8288f24302cc7060257"
 C07_NSIS_REGISTRY_LINE_SHA256 = "6ab87005e57b21c50252b13173784aafc348aeff3953aef60e1226f6154651d4"
@@ -861,6 +930,10 @@ def build(root,staged):
         "stage/proposals/P01/C09/Installer/Remove-InstalledPayload.ps1")
     print("NX03_C09_REVIEWED_REMOVE_STAGE "+
           json.dumps(remove_proof,sort_keys=True),flush=True)
+    ps51_remover_proof = stage_reviewed_remover_ps51_comments(
+        installer_dir/"Remove-InstalledPayload.ps1", remove_proof)
+    print("B03_PS51_ORIGINAL_REMOVER_COMMENT_STAGE "+
+          json.dumps(ps51_remover_proof,sort_keys=True),flush=True)
     quote_proof=stage_c07_uninstall_quote(
         installer_dir/"NOX-HELION-Setup.nsi",
         Path(__file__).resolve().parents[2]/
