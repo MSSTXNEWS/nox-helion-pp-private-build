@@ -985,22 +985,22 @@ Write-Host "P01_PS51_DOTNET_SHA256_STAGED before=$verifierBeforeSha after=$verif
 $uFile=Join-Path $installer 'Verify-Payload.ps1'
 $uText=[IO.File]::ReadAllText($uFile)
 $uEol=if($uText.Contains([string][char]13+[string][char]10)) {[string][char]13+[string][char]10} else {[string][char]10}
-$uPairs=@(
-  @{Old='  [switch]$AllowInstalledMetadata';New=('  [switch]$AllowInstalledMetadata,'+$uEol+'  [switch]$AllowInstalledUserFiles')},
-  @{Old='  if (-not $registered.Contains($rel) -and -not $metadata.Contains($rel)) { Fail "unexpected file $rel" }';
-    New=@'
+$uFileReplacement=@'
   if (-not $registered.Contains($rel) -and -not $metadata.Contains($rel)) {
     if (-not $AllowInstalledUserFiles) { Fail "unexpected file $rel" }
   }
-'@},
-  @{Old='if ($actualFiles.Count -ne ($registered.Count + 1 + $metadata.Count)) { Fail ''file count mismatch'' }';
-    New=@'
+'@
+$uCountReplacement=@'
 if ($AllowInstalledUserFiles) {
   if ($actualFiles.Count -lt ($registered.Count + 1 + $metadata.Count)) { Fail 'missing owned files' }
 } elseif ($actualFiles.Count -ne ($registered.Count + 1 + $metadata.Count)) {
   Fail 'file count mismatch'
 }
-'@}
+'@
+$uPairs=@(
+  @{Old='  [switch]$AllowInstalledMetadata';New=('  [switch]$AllowInstalledMetadata,'+$uEol+'  [switch]$AllowInstalledUserFiles')},
+  @{Old='  if (-not $registered.Contains($rel) -and -not $metadata.Contains($rel)) { Fail "unexpected file $rel" }';New=$uFileReplacement},
+  @{Old='if ($actualFiles.Count -ne ($registered.Count + 1 + $metadata.Count)) { Fail ''file count mismatch'' }';New=$uCountReplacement}
 )
 foreach($uPair in $uPairs) {
   $before=[string]$uPair.Old
