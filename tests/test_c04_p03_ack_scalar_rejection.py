@@ -186,6 +186,47 @@ class P03RealAckBranchTest(unittest.TestCase):
 
 
 
+    def test_deep_owner_denial_cannot_confirm_mutating_ack(self):
+        for route, state in (('models.pull', 'QUEUED'),
+                             ('models.gguf.import', 'QUEUED'),
+                             ('models.cancel', 'CANCEL_REQUESTED'),
+                             ('models.retry', 'QUEUED')):
+            for key, refused in (('ownerReceipt', {'status': 'CONSENT_REQUIRED'}),
+                                 ('receipt', {'error': 'PROVIDER_OFFLINE_HOLD'}),
+                                 ('result', {'accepted': False})):
+                value = {'status': state, 'ack': True,
+                         'receipt': {'ownerReceipt': {key: refused}}}
+                if route in ('models.cancel', 'models.retry'):
+                    value['jobId'] = 'requested'
+                with self.subTest(route=route, key=key), self.assertRaises(P03PortHold):
+                    self.respond(value, route=route,
+                                 job_id=value.get('jobId'))
+
+    def test_deep_positive_receipt_and_legacy_owner_result(self):
+        valid = {'status': 'QUEUED', 'ack': True,
+                 'ownerReceipt': {'receipt': {'status': 'QUEUED', 'ok': True}}}
+        self.assertEqual(self.respond(valid, route='models.pull'), valid)
+        legacy = {'status': 'CANCEL_REQUESTED', 'jobId': 'requested',
+                  'result': {'cancelled': False}}
+        self.assertEqual(self.respond(legacy, route='models.cancel',
+                                      job_id='requested'), legacy)
+
+    def test_cyclic_and_unbounded_nested_receipts_hold(self):
+        cycle = {'status': 'QUEUED', 'ack': True}
+        cycle['ownerReceipt'] = cycle
+        with self.assertRaises(P03PortHold):
+            self.respond(cycle, route='models.pull')
+        root = {'status': 'QUEUED', 'ack': True}
+        node = root
+        for _ in range(5):
+            child = {'status': 'QUEUED'}
+            node['ownerReceipt'] = child
+            node = child
+        with self.assertRaises(P03PortHold):
+            self.respond(root, route='models.pull')
+
+
+
 class P03InvocationTest(unittest.TestCase):
     def test_discovery_import_preserves_runner_arguments_and_owner_source(self):
         import runpy
