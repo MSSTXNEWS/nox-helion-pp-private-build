@@ -54,6 +54,22 @@ class LiveWpfLogBoundaryTests(unittest.TestCase):
         self.assertFalse(result["new_nav_ok"])
         self.assertFalse(result["new_python_ipc_handshake"])
 
+    def test_dead_wpf_drains_terminal_error_after_64k(self):
+        payload = (b"[time] INIT_BEGIN\n" + b"x" * 70000 +
+                   b"\n[time] INIT_ERROR WebView2Startup\n")
+        result = self.probe(payload=payload, dead=True)
+        self.assertTrue(result["init_error"])
+        self.assertEqual(result["new_log_bytes_scanned"], len(payload))
+        self.assertEqual(result["wpf_process_exit_code"], 1)
+        self.assertEqual(result["startup_failure_phase"], "ORIGINAL_SHELL_FATAL_EVENT")
+        self.assertFalse(result["new_nav_ok"])
+
+    def test_dead_wpf_no_error_still_not_promoted(self):
+        result = self.probe(b"[time] INIT_BEGIN\n", dead=True)
+        self.assertEqual(result["startup_failure_phase"], "WPF_EXIT_BEFORE_STABLE_READY")
+        self.assertFalse(result["new_nav_ok"])
+        self.assertFalse(result["real_wpf_visible_pid_hwnd"])
+
     def test_stale_prior_wpf_log_cannot_pass(self):
         self.log.write_bytes(b"NAV_OK\nP02_ORIGINAL_NATIVE_PIPE_HANDSHAKE_OK\n")
         result = self.probe(dead=True)

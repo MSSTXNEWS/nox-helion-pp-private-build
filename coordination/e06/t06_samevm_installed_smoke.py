@@ -748,8 +748,9 @@ def live_original_wpf_probe(exe:Path,local:Path)->dict:
             stderr=subprocess.DEVNULL)
         deadline=time.monotonic()+35
         while time.monotonic()<deadline:
-            if process.poll() is not None:
-                break
+            # Drain already-written terminal WPF log even after child exit.
+            # Otherwise a fast WebView2 crash hides its final INIT_ERROR.
+            exited_code=process.poll()
             if log.is_file():
                 current=log.stat()
                 current_identity=(current.st_dev,current.st_ino)
@@ -782,6 +783,14 @@ def live_original_wpf_probe(exe:Path,local:Path)->dict:
                         boundary=window[-4096:]
             if wpf_startup_fatal_seen(seen):
                 break
+            if exited_code is not None:
+                # Consume bounded remaining log bytes, but never attest dead GUI.
+                if log.is_file() and not log_replaced:
+                    latest=log.stat()
+                    if (identity == (latest.st_dev,latest.st_ino) and
+                            latest.st_size>offset):
+                        continue
+                break
             ready_now=False
             if seen["NAV_OK"] and seen["P02_ORIGINAL_NATIVE_PIPE_HANDSHAKE_OK"]:
                 # Drain every newly appended real shell.log line before counting
@@ -803,10 +812,17 @@ def live_original_wpf_probe(exe:Path,local:Path)->dict:
                 alive_at_proof=process.poll() is None
                 if alive_at_proof:break
             time.sleep(0.7)
-        accepted=(process.pid>0 and alive_at_proof and stable_window_pass and
+        exit_code=process.poll()
+        accepted=(process.pid>0 and exit_code is None and
+                  alive_at_proof and stable_window_pass and
                   hwnd_at_proof is not None and not log_replaced and
                   not wpf_startup_fatal_seen(seen))
         return {"pid_started":process.pid>0,
+                "wpf_process_exit_code":exit_code,
+                "startup_failure_phase":(
+                    "ORIGINAL_SHELL_FATAL_EVENT" if wpf_startup_fatal_seen(seen) else
+                    "WPF_EXIT_BEFORE_STABLE_READY" if exit_code is not None else
+                    "WPF_NAV_OR_IPC_OR_HWND_NOT_READY" if not accepted else None),
                 "new_nav_ok":accepted and seen["NAV_OK"],
                 "new_python_ipc_handshake":accepted and seen["P02_ORIGINAL_NATIVE_PIPE_HANDSHAKE_OK"],
                 "init_error":seen["INIT_ERROR"],
