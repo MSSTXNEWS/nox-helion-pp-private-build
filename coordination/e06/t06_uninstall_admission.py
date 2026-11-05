@@ -40,6 +40,11 @@ def _no_reparse_components(path: Path, *, allow_missing: bool) -> bool:
                 getattr(metadata, "st_file_attributes", 0) &
                 getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)):
             return False
+        # A missing owned child is not proof of safe removal when an ancestor
+        # has been replaced by an ordinary file (not merely a reparse point).
+        # Every existing parent of a manifest-owned path must remain a directory.
+        if component != path and not stat.S_ISDIR(metadata.st_mode):
+            return False
         try:
             if getattr(component, "is_junction", lambda: False)():
                 return False

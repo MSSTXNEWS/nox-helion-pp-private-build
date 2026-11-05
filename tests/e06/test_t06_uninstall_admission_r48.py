@@ -95,6 +95,19 @@ class OriginalNsisUninstallAdmission(unittest.TestCase):
         with self.assertRaises(PermissionError):
             original_nsis_uninstall_registration_absent(FakeRegistry(denied=True))
 
+    def test_replaced_install_directory_is_not_successful_uninstall(self):
+        # The original manifest was verified before uninstall. Afterwards,
+        # a regular file at the former install root must not count as absence
+        # of all the now-unreachable manifest children.
+        owned = owned_payload_paths(self.install, self.inventory)
+        self._remove_owned(owned)
+        (self.install / "Assets").rmdir()
+        (self.install / "Backend").rmdir()
+        self.install.rmdir()
+        self.install.write_bytes(b"unexpected-non-directory")
+        with self.assertRaisesRegex(RuntimeError, "MANIFEST_FILE_REMAINS"):
+            verify_original_uninstall(self.install, owned, FakeRegistry())
+
     def test_path_traversal_duplicate_or_omitted_binary_is_rejected(self):
         for mutation in (lambda i: i["files"].__setitem__(2, {"path": "../escape"}),
                          lambda i: i["files"].__setitem__(2, {"path": "NOX.p01.shell.EXE"}),
