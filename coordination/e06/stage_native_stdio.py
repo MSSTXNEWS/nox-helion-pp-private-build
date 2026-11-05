@@ -41,7 +41,7 @@ ADDONS=(
     ('Packages/P03/Source/python-host/p03_onehost_port.py', 'p03_onehost_port.py', 'bc42f88d1a567aa3573ee3a727087e190e84545c'),
     ('Packages/P03/Source/python-host/catalog30.discovery.json', 'catalog30.discovery.json', 'c52be579e2c4440c91a506cde45eb4f7fda7f1cd'),
     ('src/nox_selfbuilder/__init__.py', 'nox_selfbuilder/__init__.py', '1d0670e51efab53271385c13c156f2809a25adf1'),
-    ('src/nox_selfbuilder/background_forge.py', 'nox_selfbuilder/background_forge.py', '8260e3b7964fd4168c6b586e804ef94cb8862768'),
+    ('src/nox_selfbuilder/background_forge.py', 'nox_selfbuilder/background_forge.py', '6d62b96744b6865a7f3472c04431d706cdd2fdfe'),
     ('src/nox_selfbuilder/builder.py', 'nox_selfbuilder/builder.py', '421105f531d4342c880ab0548109fc2e4d1db746'),
     ('src/nox_selfbuilder/complete_builder.py', 'nox_selfbuilder/complete_builder.py', 'f82679bc1ec648135c29abdef964adc3a097e0e6'),
     ('src/nox_selfbuilder/evolution.py', 'nox_selfbuilder/evolution.py', '9c38ca9b1063cda7b0569af7ce622b739213adf4'),

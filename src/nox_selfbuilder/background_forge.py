@@ -242,6 +242,10 @@ class ExistingP04Background:
 
     def _request(self, operation, *, job=None):
         with self._control_lock:
+            # An OS-unreapable native GPU child must never receive a false
+            # STOP/PAUSE acknowledgement merely because its marker is writable.
+            if self._unreaped_worker is not None:
+                return self._hold("TRAINER_CHILD_UNREAPED_QUARANTINE_HOLD")
             if self._active is None:
                 if self._merge_active and operation == "STOP":
                     self._merge_stop = True
@@ -476,9 +480,10 @@ class ExistingP04Background:
                     if stop_merge:
                         # Existing merge publishes only after full validation; an
                         # interrupted temporary candidate is never selected.
-                        proc.terminate()
-                        try: proc.wait(timeout=15)
-                        except subprocess.TimeoutExpired: proc.kill(); proc.wait()
+                        # Use the same bounded Windows termination guard
+                        # as the original trainer. A refused kill quarantines
+                        # the live merge child instead of freeing the GPU gate.
+                        self._terminate_or_quarantine(proc)
                         return self._hold('MERGE_STOPPED_NO_ACTIVATION')
                     time.sleep(.1)
             if proc.returncode != 0:
@@ -515,8 +520,13 @@ class ExistingP04Background:
                 return result
         finally:
             with self._control_lock:
-                self._merge_active = False
-            self._gate.release()
+                quarantined = self._unreaped_worker is not None
+                if not quarantined:
+                    self._merge_active = False
+            # A refused native terminate/kill leaves the original process
+            # alive. Keep the P04 gate and STOP state held until host recovery.
+            if not quarantined:
+                self._gate.release()
 
     def event_snapshot(self, job):
         """Bounded real events for existing training.checkpoints polling.
