@@ -405,7 +405,8 @@ def stage(root:Path, source:Path)->dict:
     if any(origin not in pinned_content for origin,_ in plans):
         raise ValueError("WOW_UNPINNED_SOURCE_COPY_HOLD")
     copied=[];out=root.parent/"WOW200_STAGE_RECEIPT.json"
-    if out.exists():raise ValueError("WOW200_RECEIPT_CONFLICT_HOLD")
+    if out.exists() or out.is_symlink() or not _plain_stage_path(out):
+        raise ValueError("WOW200_RECEIPT_CONFLICT_HOLD")
     try:
         dest.mkdir(parents=True)
         for origin,target in plans:
@@ -453,7 +454,9 @@ def stage(root:Path, source:Path)->dict:
           "active_d02_runtime_path":"Assets/creative/wow200/proposals/NOX-CINEMA-FX/nox-cinema.mjs",
           "legacy_d02_runtime_imported":False,
           "complete_200_runtime_verified":False}
-        out.write_text(json.dumps(receipt,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
+        # Exclusive-create the owner receipt: never truncate interposed files.
+        with out.open("x", encoding="utf-8") as receipt_file:
+            receipt_file.write(json.dumps(receipt,ensure_ascii=False,indent=2)+"\n")
         return receipt
     except BaseException:
         # Restore only verified own HTML; foreign files and edits survive.

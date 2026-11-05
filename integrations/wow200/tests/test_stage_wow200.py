@@ -226,6 +226,26 @@ class WowStageTests(unittest.TestCase):
   self.assertEqual(studio.read_bytes(),b'FOREIGN STUDIO EDIT MUST SURVIVE')
   self.assertEqual(home.read_bytes(),original_home)
 
+ def test_receipt_exclusive_creation_race_preserves_foreign_bytes(self):
+  receipt=self.stage.parent/'WOW200_STAGE_RECEIPT.json'
+  studio=self.stage/'Assets/creative/studio.html'
+  home=self.stage/'Assets/index.html'
+  original_studio,original_home=studio.read_bytes(),home.read_bytes()
+  real_open=Path.open
+  injected=[False]
+  def receipt_race(path,mode='r',*args,**kwargs):
+   if path == receipt and mode == 'x' and not injected[0]:
+    injected[0]=True
+    receipt.write_bytes(b'FOREIGN RECEIPT MUST SURVIVE')
+   return real_open(path,mode,*args,**kwargs)
+  with patch.object(Path,'open',new=receipt_race):
+   with self.assertRaises(FileExistsError):
+    stage(self.stage,self.src)
+  self.assertTrue(injected[0])
+  self.assertEqual(receipt.read_bytes(),b'FOREIGN RECEIPT MUST SURVIVE')
+  self.assertEqual(studio.read_bytes(),original_studio)
+  self.assertEqual(home.read_bytes(),original_home)
+
  def test_p01_menu10_source_drift_rejected_before_all_staging(self):
   file=self.root/'proposals/P01/WOW-MAX10/mount-p01.mjs'
   file.write_bytes(file.read_bytes()+b'// unapproved change\n')
