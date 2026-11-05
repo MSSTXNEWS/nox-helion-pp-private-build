@@ -51,6 +51,10 @@ class PhysicalVisualFailureStages(unittest.TestCase):
     def test_dock_respects_original_five_three_two_responsive_grid(self):
         script = probe._uia_script(12345, "VISUAL", png=Path("screenshot.png"))
         self.assertIn("function GridMatches($row,[int]$columns)",script)
+        self.assertIn("$rects+=,($row[$name].rect)",script)
+        self.assertNotIn("$row[$name].Current.BoundingRectangle",script)
+        self.assertIn("$r=$dock[$name].rect",script)
+        self.assertIn("return $dock[$name].element",script)
         self.assertIn("foreach($columns in @(5,3,2))",script)
         self.assertIn("if(GridMatches $row $columns)",script)
         self.assertIn("$gap -lt -1 -or $gap -gt 45",script)
@@ -61,7 +65,7 @@ class PhysicalVisualFailureStages(unittest.TestCase):
     def test_identical_uia_wrappers_do_not_double_count_original_control(self):
         script=probe._uia_script(12345,"VISUAL",png=Path("screenshot.png"))
         self.assertIn("function SameElementSeen($items,$candidate)",script)
-        self.assertIn("[System.Windows.Automation.Automation]::Compare($prior,$candidate)",script)
+        self.assertIn("[System.Windows.Automation.Automation]::Compare($prior.element,$candidate)",script)
         self.assertIn("Failure to compare never implies identical elements",script)
         self.assertIn("if(-not (SameElementSeen -items ($seen[$name]) -candidate $el))",script)
         self.assertIn("if($seen[$n].Count -lt 1 -or $seen[$n].Count -gt 6)",script)

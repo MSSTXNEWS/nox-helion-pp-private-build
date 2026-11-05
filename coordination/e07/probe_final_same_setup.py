@@ -341,7 +341,7 @@ function Normalize([string]$s) { return ($s+'').Trim().TrimStart([char[]]@([char
 # separate and still fail strict unique-five-dock admission.
 function SameElementSeen($items,$candidate) {
  foreach($prior in $items) {
-  try { if([System.Windows.Automation.Automation]::Compare($prior,$candidate)) { return $true } }
+  try { if([System.Windows.Automation.Automation]::Compare($prior.element,$candidate)) { return $true } }
   catch { } # Failure to compare never implies identical elements.
  }
  return $false
@@ -351,7 +351,7 @@ function SameElementSeen($items,$candidate) {
 # from duplicate route buttons elsewhere in the WPF/WebView2 UIA tree.
 function GridMatches($row,[int]$columns) {
  $names=@('CHAT','INSTALL','MODELS','LEARN','SETTINGS')
- $rects=@();foreach($name in $names){$rects+=,($row[$name].Current.BoundingRectangle)}
+ $rects=@();foreach($name in $names){$rects+=,($row[$name].rect)}
  $base=$rects[0]
  for($i=0;$i -lt 5;$i++){
   $r=$rects[$i];$col=$i%$columns
@@ -395,7 +395,7 @@ function PrimaryDock {
    $rect=$v.BoundingRectangle
    if($rect.Width -lt 20 -or $rect.Height -lt 12){continue}
    if(-not (SameElementSeen -items ($seen[$name]) -candidate $el)) {
-    [void]$seen[$name].Add($el)
+    [void]$seen[$name].Add([pscustomobject]@{element=$el;rect=$rect})
    }
   }catch{}
  }
@@ -420,7 +420,7 @@ function PrimaryDock {
 function OneButton([string]$name) {
  $dock=PrimaryDock
  if($null -eq $dock[$name]){throw ('BUTTON_'+$name+'_NOT_UNIQUE')}
- return $dock[$name]
+ return $dock[$name].element
 }
 function OriginalPcInstall {
  # Trigger the ORIGINAL R11 WebView2 install control, not the EXPRESS
@@ -442,7 +442,7 @@ function OriginalPcInstall {
 function InvokePrimary([string]$name){$b=OneButton $name;$p=$b.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern);if($null -eq $p){throw 'NO_INVOKE'};$p.Invoke();Start-Sleep -Milliseconds 400;return $true}
 function FiveRects {
  $dock=PrimaryDock
- $out=@();foreach($name in @('CHAT','INSTALL','MODELS','LEARN','SETTINGS')){$v=$dock[$name].Current;$r=$v.BoundingRectangle;$out+=([pscustomobject]@{name=$name;x=[int]$r.X;y=[int]$r.Y;width=[int]$r.Width;height=[int]$r.Height})};return @($out)
+ $out=@();foreach($name in @('CHAT','INSTALL','MODELS','LEARN','SETTINGS')){$r=$dock[$name].rect;$out+=([pscustomobject]@{name=$name;x=[int]$r.X;y=[int]$r.Y;width=[int]$r.Width;height=[int]$r.Height})};return @($out)
 }
 function NoOverlap($rects){for($i=0;$i -lt $rects.Count;$i++){for($j=$i+1;$j -lt $rects.Count;$j++){$a=$rects[$i];$b=$rects[$j];if($a.x -lt ($b.x+$b.width) -and ($a.x+$a.width) -gt $b.x -and $a.y -lt ($b.y+$b.height) -and ($a.y+$a.height) -gt $b.y){return $false}}};return $true}
 function SaveAdaptiveHold([int]$requestedWidth) {
