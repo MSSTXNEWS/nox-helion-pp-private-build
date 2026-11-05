@@ -563,7 +563,9 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
                 // Stop revokes live chat frames only on affirmative native owner ACK.
                 // A denied STOP must not silence a still-active generator in the UI.
                 var ownerAccepted = ownerResult.Accepted &&
-                    string.IsNullOrEmpty(ownerResult.ErrorCode);
+                    string.IsNullOrEmpty(ownerResult.ErrorCode) &&
+                    ownerResult.Result is JsonElement ownerReceipt &&
+                    ownerReceipt.ValueKind is not (JsonValueKind.Undefined or JsonValueKind.Null);
                 if (ownerAccepted && NativeResultExplicitlyDenied(ownerResult.Result))
                     ownerAccepted = false;
                 if ((route == "chat.stop" || isMenuStop) && ownerAccepted)
@@ -636,7 +638,9 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
                 // STOP acknowledged by the Python owner only means requested.
                 // Never misreport a remote model as fully aborted before proof.
                 var accepted = result.Accepted &&
-                    string.IsNullOrEmpty(result.ErrorCode);
+                    string.IsNullOrEmpty(result.ErrorCode) &&
+                    result.Result is JsonElement nativeReceipt &&
+                    nativeReceipt.ValueKind is not (JsonValueKind.Undefined or JsonValueKind.Null);
                 if (accepted && NativeResultExplicitlyDenied(result.Result))
                     accepted = false;
                 if (route == "chat.stop" && accepted)

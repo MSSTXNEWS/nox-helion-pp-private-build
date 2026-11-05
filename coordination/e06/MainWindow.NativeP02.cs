@@ -212,7 +212,9 @@ public partial class MainWindow
                 var nativeStop = await DispatchNativeOwnerAsync(
                     "chat.stop", JsonSerializer.SerializeToElement(new { }), cancel);
                 if (!nativeStop.Accepted || !string.IsNullOrEmpty(nativeStop.ErrorCode) ||
-                     LegacyOwnerDenial(nativeStop.Result))
+                    nativeStop.Result is not JsonElement stopReceipt ||
+                    stopReceipt.ValueKind is JsonValueKind.Undefined or JsonValueKind.Null ||
+                    LegacyOwnerDenial(nativeStop.Result))
                     return new NativePipeResult("", false, null,
                         nativeStop.ErrorCode ?? "MENU_STOP_NATIVE_HOLD");
                 return new NativePipeResult("", true,
@@ -542,6 +544,8 @@ public partial class MainWindow
                 return; // Never promote a STOP-revoked generator to chatFinished.
             if (!NativeP02Acl(sid,route) || !LegacyDocumentCurrent(source,epoch)) return;
             if (!result.Accepted || !string.IsNullOrWhiteSpace(result.ErrorCode) ||
+                result.Result is not JsonElement legacyReceipt ||
+                legacyReceipt.ValueKind is JsonValueKind.Undefined or JsonValueKind.Null ||
                 LegacyOwnerDenial(result.Result))
                 throw new NativePipeHold(result.ErrorCode??"NATIVE_OWNER_DENIAL_HOLD");
             if (action == "chatModels") {
