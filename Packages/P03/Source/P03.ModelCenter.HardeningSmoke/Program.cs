@@ -35,17 +35,17 @@ Assert(!ModelArtifactReviewRegistry.TryPromote(reviewedOrigin, false, out _),
 
 using var correct = JsonDocument.Parse("{\"models\":[{\"name\":\"m:1\",\"digest\":\"sha256:" + new string('a',64) + "\"}]}");
 Assert(ModelLocalAttestation.ParseUnambiguousModelDigest(correct.RootElement, "m:1") == "sha256:" + new string('a',64), "T01 pinned local digest");
-using var officialBareTags = JsonDocument.Parse("{\\\"models\\\":[{\\\"name\\\":\\\"gemma4\\\",\\\"digest\\\":\\\"c6eb396dbd5992bbe3f5cdb947e8bbc0ee413d7c17e2beaae69f5d569cf982eb\\\"}]}");
+using var officialBareTags = JsonDocument.Parse("{\"models\":[{\"name\":\"gemma4\",\"digest\":\"c6eb396dbd5992bbe3f5cdb947e8bbc0ee413d7c17e2beaae69f5d569cf982eb\"}]}");
 Assert(ModelLocalAttestation.ParseUnambiguousModelDigest(officialBareTags.RootElement, "gemma4") ==
     "sha256:c6eb396dbd5992bbe3f5cdb947e8bbc0ee413d7c17e2beaae69f5d569cf982eb", "T01B Ollama official bare digest normalized");
-using var malformedBareTags = JsonDocument.Parse("{\\\"models\\\":[{\\\"name\\\":\\\"m:1\\\",\\\"digest\\\":\\\"" + new string('a', 63) + "\\\"}]}");
+using var malformedBareTags = JsonDocument.Parse("{\"models\":[{\"name\":\"m:1\",\"digest\":\"" + new string('a', 63) + "\"}]}");
 MustReject(() => ModelLocalAttestation.ParseUnambiguousModelDigest(malformedBareTags.RootElement, "m:1"),
     "T01C truncated bare digest rejected");
-using var wrongAlgorithmTags = JsonDocument.Parse("{\\\"models\\\":[{\\\"name\\\":\\\"m:1\\\",\\\"digest\\\":\\\"sha1:" + new string('a', 64) + "\\\"}]}");
+using var wrongAlgorithmTags = JsonDocument.Parse("{\"models\":[{\"name\":\"m:1\",\"digest\":\"sha1:" + new string('a', 64) + "\"}]}");
 MustReject(() => ModelLocalAttestation.ParseUnambiguousModelDigest(wrongAlgorithmTags.RootElement, "m:1"),
     "T01D unsupported algorithm digest rejected");
-using var mixedDuplicateTags = JsonDocument.Parse("{\\\"models\\\":[{\\\"name\\\":\\\"m:1\\\",\\\"digest\\\":\\\"" + new string('a',64) +
-    "\\\"},{\\\"name\\\":\\\"m:1\\\",\\\"digest\\\":\\\"sha256:" + new string('a',64) + "\\\"}]}");
+using var mixedDuplicateTags = JsonDocument.Parse("{\"models\":[{\"name\":\"m:1\",\"digest\":\"" + new string('a',64) +
+    "\"},{\"name\":\"m:1\",\"digest\":\"sha256:" + new string('a',64) + "\"}]}");
 MustReject(() => ModelLocalAttestation.ParseUnambiguousModelDigest(mixedDuplicateTags.RootElement, "m:1"),
     "T01E mixed bare/prefixed duplicate denied");
 Assert(ModelLocalAttestation.ParseUnambiguousModelDigest(correct.RootElement, "missing:1") is null, "T02 absent tag stays unknown");

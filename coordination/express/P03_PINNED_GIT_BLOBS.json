@@ -483,10 +483,14 @@
       "owner": 3,
       "run_id": "NOX-E03-PR162-PIN-RECONCILE-20261101",
       "pre_git_blob_sha1": "3600f2ab3e1c4de874e7c258fbd0ad20c2e0c525",
-      "post_git_blob_sha1": "e55bd2ec0e13a50ef026ae4055fe71b5f7a4e4ed",
-      "post_bytes": 12892,
+      "post_git_blob_sha1": "528194ab80605f5b36dd5e6fccf6e653b7d5376e",
+      "post_bytes": 15075,
       "source_commit": "3ec73f893961a8dce0dc3bdbc202afd4a54773a0",
-      "acceptance": "SOURCE_INTEGRITY_ONLY_NOT_MODEL_RIGHTS_WINDOWS_E07"
+      "acceptance": "SOURCE_ONLY_MANIFEST_PIN_NOT_MODEL_RIGHTS_OR_E07",
+      "previous_reviewed_git_blob_sha1": "e55bd2ec0e13a50ef026ae4055fe71b5f7a4e4ed",
+      "previous_reviewed_bytes": 12892,
+      "reconciliation_scope": "D04_OLLAMA_TAGS_SHA256_SOURCE_ONLY_NOT_WINDOWS_E07",
+      "reconciliation_source_commit": "0c5fada0ea2a27a07292df5f4cb000441b0bae47"
     },
     {
       "path": "Packages/P03/Source/P03.ModelCenter/ModelWowBridgeContract.cs",
@@ -567,13 +571,15 @@
       "owner": 3,
       "run_id": "W06-R99-P03-REVIEWED-OFFICIAL-PORT-GATE-20261103",
       "pre_git_blob_sha1": "13ae4b4e9bf465a8fb31e8893cd381b1464c4702",
-      "post_git_blob_sha1": "cef44deea7d3f07be239d9989f9161780d0caeca",
-      "post_bytes": 29146,
+      "post_git_blob_sha1": "612e22b0f68ad012f4c031f64042e674fca1d3bd",
+      "post_bytes": 30475,
       "reconciled_from_git_blob_sha1": "af895122f2a355fba6ae655aa546a380eecdbbd6",
       "reconciled_from_bytes": 20193,
-      "reconciliation_source_commit": "42c697a4dfa252c3b2e71578c7ed89d099e0305e",
-      "reconciliation_scope": "D04_SOURCE_ONLY_APPROVAL_PIN_NOT_WINDOWS_E07",
-      "acceptance": "SOURCE_CSHARP_REGRESSION_ONLY_NOT_WINDOWS_E07"
+      "reconciliation_source_commit": "0c5fada0ea2a27a07292df5f4cb000441b0bae47",
+      "reconciliation_scope": "D04_OLLAMA_TAGS_SHA256_SOURCE_ONLY_NOT_WINDOWS_E07",
+      "acceptance": "SOURCE_ONLY_MANIFEST_PIN_NOT_MODEL_RIGHTS_OR_E07",
+      "previous_reviewed_git_blob_sha1": "cef44deea7d3f07be239d9989f9161780d0caeca",
+      "previous_reviewed_bytes": 29146
     }
   ],
   "override_chain": [
