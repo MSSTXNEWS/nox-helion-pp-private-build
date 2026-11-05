@@ -113,6 +113,31 @@ try {
       Encoding.UTF8.GetBytes(registryText)));
   Assert(ModelArtifactReviewRegistry.LoadReviewedArtifacts(registryFile, registryPin).Count == 0,
       "T08F owner-pinned empty registry remains review-required");
+  // D04: SourceLock must not admit two owner-reviewed entries whose Ollama
+  // model tags alias under case-insensitive queue identity. Ordinary distinct
+  // reviewed tags remain usable; the negative fixture is SHA-pinned too.
+  var collisionFile = Path.Combine(root, "reviewed-case-collision.json");
+  async Task<string> WriteReviewedCollisionFixtureAsync(ModelArtifactReviewCandidate[] values)
+  {
+      var body = JsonSerializer.Serialize(new {
+          schema = "NOX-P03-REVIEWED-ARTIFACTS-V1", items = values
+      }, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+      await File.WriteAllTextAsync(collisionFile, body);
+      return Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
+          Encoding.UTF8.GetBytes(body)));
+  }
+  var distinctReview = reviewedOrigin with { ExactTag = "tinyllama:test-r100",
+      Version = "test-r100", ReviewerReceiptId = "r100-fixture" };
+  var distinctReviewPin = await WriteReviewedCollisionFixtureAsync(
+      new[] { reviewedOrigin, distinctReview });
+  Assert(ModelArtifactReviewRegistry.LoadReviewedArtifacts(collisionFile, distinctReviewPin).Count == 2,
+      "T08F1 distinct owner-reviewed tags survive registry admission");
+  var aliasReview = distinctReview with { ExactTag = "TinyLlama:test-r99",
+      ReviewerReceiptId = "r99-case-alias" };
+  var collisionPin = await WriteReviewedCollisionFixtureAsync(
+      new[] { reviewedOrigin, aliasReview });
+  MustReject(() => ModelArtifactReviewRegistry.LoadReviewedArtifacts(collisionFile, collisionPin),
+      "T08F2 case-colliding owner-reviewed tags fail closed");
   var templateFile = Path.Combine(root, "review-template.json");
   await File.WriteAllTextAsync(templateFile, "{\"items\":[]}");
   if (OperatingSystem.IsWindows())

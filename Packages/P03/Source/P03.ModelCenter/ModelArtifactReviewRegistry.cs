@@ -83,7 +83,9 @@ public static class ModelArtifactReviewRegistry
             items.ValueKind!=JsonValueKind.Array || items.GetArrayLength()>250)
             throw new InvalidDataException("P03_REGISTRY_SCHEMA_INVALID");
         var result=new List<ModelCatalogEntry>();
-        var tags=new HashSet<string>(StringComparer.Ordinal);
+        // The native queue and Ollama tag admission treat case variants as one identity.
+        // A SourceLock-pinned registry must not authorize conflicting case aliases.
+        var tags=new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var options=new JsonSerializerOptions(JsonSerializerDefaults.Web) {
             UnmappedMemberHandling=System.Text.Json.Serialization.JsonUnmappedMemberHandling.Disallow };
         foreach (var item in items.EnumerateArray())
