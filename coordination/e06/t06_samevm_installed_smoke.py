@@ -138,6 +138,22 @@ def plain_parents(path:Path,base:Path)->bool:
                 not getattr(base,"is_junction",lambda:False)())
     except (OSError,ValueError):return False
 
+def original_no_loss_file_preserved(path: Path, expected: bytes, local_base: Path) -> bool:
+    """READ-ONLY NO-LOSS check even when ORIGINAL NSIS exits nonzero.
+
+    Fail closed for redirected paths, non-files, unreadable or altered bytes.
+    This cannot approve an uninstall, delete data or replace the native exit.
+    """
+    if (not isinstance(path, Path) or type(expected) is not bytes or
+            not expected or not plain_parents(path, local_base) or
+            not regular(path)):
+        return False
+    try:
+        return path.read_bytes() == expected
+    except (OSError, ValueError):
+        return False
+
+
 def run(args:list[str],timeout:int)->dict:
     start=time.monotonic()
     try:
@@ -1185,6 +1201,24 @@ def main()->int:
                     type(evidence_error).__name__[:64])
                 print("T06_UNINSTALL_NONZERO_WITNESS_HOLD",
                       type(evidence_error).__name__[:64], flush=True)
+        # D03 G4: a failed original Uninstall.exe must NOT bypass NO-LOSS.
+        # Inspect BOTH persistent user data and unowned in-install content
+        # on EVERY native exit, including EXIT=1 and timeouts. This only reads
+        # exact test-owned bytes, never erases files or grants a release PASS.
+        persistent_safe=original_no_loss_file_preserved(marker,signature,local_base)
+        unmanaged_safe=original_no_loss_file_preserved(unmanaged,unmanaged_bytes,local_base)
+        report["installer_lifecycle"]["uninstall_any_exit_no_loss"]={
+            "persistent_user_data":"PRESERVED" if persistent_safe else "HOLD",
+            "unmanaged_install_data":"PRESERVED" if unmanaged_safe else "HOLD",
+            "read_only":True,"independent_e07":"NOT_RUN","release_accepted":False}
+        print("T06_UNINSTALL_ANYEXIT_NOLOSS",
+              "persistent="+("PRESERVED" if persistent_safe else "HOLD"),
+              "unmanaged="+("PRESERVED" if unmanaged_safe else "HOLD"),flush=True)
+        # Native return code remains recorded above. A detected user-data loss
+        # has priority as the first safety failure; otherwise original EXIT
+        # and subsequent manifest/registry/rollback gates remain untouched.
+        require(persistent_safe,"T06_ORIGINAL_NSIS_UNINSTALL_USER_DATA_LOSS")
+        require(unmanaged_safe,"T06_NOLOSS_UNMANAGED_INSTALL_DATA_LOST")
         require(uninstalled["code"]==0,"T06_CONSERVATIVE_UNINSTALL_EXIT_HOLD")
         report["installer_lifecycle"]["uninstall_owned_wait_budget_seconds"]=original_nsis_uninstall_budget(len(owned_files))
         await_original_uninstall(install,owned_files)
