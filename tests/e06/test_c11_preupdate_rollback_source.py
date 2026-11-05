@@ -170,5 +170,16 @@ class C11RollbackSafetyTest(unittest.TestCase):
         self.assertEqual(staged_nsi.count('WriteUninstaller "$INSTDIR\\Uninstall.exe"'), 0)
         self.assertIn("B03_NSIS_UNINSTALLER_BEFORE_ANY_ACTIVATION_STAGE_PASS", builder)
 
+        # Builder must admit the staged uninstaller (one StageDir, zero INSTDIR).
+        # A previous inverted gate blocked every real NSIS build before makensis.
+        self.assertIn(
+            r"""([regex]::Matches($c11NsiPatched,'(?m)^\s*WriteUninstaller\s+"\$StageDir\\Uninstall\.exe"')).Count -ne 1 -or""",
+            builder,
+        )
+        self.assertIn(
+            r"""([regex]::Matches($c11NsiPatched,'(?m)^\s*WriteUninstaller\s+"\$INSTDIR\\Uninstall\.exe"')).Count -ne 0 -or""",
+            builder,
+        )
+
 if __name__ == "__main__":
     unittest.main()

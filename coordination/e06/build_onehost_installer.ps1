@@ -1257,7 +1257,8 @@ if ($uninstGateAt -lt 0 -or $uninstActivationAt -le $uninstGateAt -or
     $uninstStageActivationAt -le $uninstGateAt -or
     $uninstRegistryAt -le $uninstGateAt -or
     $c11NsiPatched.LastIndexOf($uninstGuard,[StringComparison]::Ordinal) -ne $uninstGateAt -or
-    ([regex]::Matches($c11NsiPatched,'(?m)^\s*WriteUninstaller\s+"\$INSTDIR\\Uninstall\.exe"')).Count -ne 1 -or
+    ([regex]::Matches($c11NsiPatched,'(?m)^\s*WriteUninstaller\s+"\$StageDir\\Uninstall\.exe"')).Count -ne 1 -or
+    ([regex]::Matches($c11NsiPatched,'(?m)^\s*WriteUninstaller\s+"\$INSTDIR\\Uninstall\.exe"')).Count -ne 0 -or
     $c11NsiPatched.Contains($uninstOld)) {
   throw 'P01_NSIS_UNINSTALLER_ORDER_STAGE_HOLD'
 }
