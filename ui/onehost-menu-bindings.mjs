@@ -163,6 +163,13 @@ export function nativeReadVerified(reply,route){
     reply.result!==null&&typeof reply.result==='object'&&!Array.isArray(reply.result);
 }
 
+// Native owner HKCU readback must match the requested SETTINGS Boolean.
+// COMPLETED is never evidence of persisted configuration by itself.
+export function nativeAutostartPersistenceAck(reply,requested){
+  return typeof requested==='boolean' && nativeReadVerified(reply,'system.autostart') &&
+    typeof reply.result.enabled==='boolean' && reply.result.enabled===requested;
+}
+
 export function nativeOwnerActionReceipt(reply,route,action) {
   const owner=reply?.result;
   if(reply?.routeId!==route || !nativeCompletedOwnerReply(reply) ||
@@ -299,9 +306,12 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
       actions.append(b);
     }
   };
-  const display=(v,expectedRoute)=>{
+  const display=(v,expectedRoute,expectedAutostart=null)=>{
     if(disposed)return;
-    const approved=nativeReadVerified(v,expectedRoute),data=approved?v.result:null;actions.replaceChildren();
+    const approved=expectedRoute==='system.autostart'
+      ? nativeAutostartPersistenceAck(v,expectedAutostart)
+      : nativeReadVerified(v,expectedRoute);
+    const data=approved?v.result:null;actions.replaceChildren();
     function action(label,route,key,id){
       const b=doc.createElement('button');b.type='button';b.className='nox-sb-tile';b.textContent=label;
       b.dataset.nativeRoute=route;b.dataset.nativeKey=key;b.dataset.nativeValue=id;actions.append(b);
@@ -343,9 +353,13 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
     appendActivatorShortcut();
     appendFunctionalReadButtons();
     detail.hidden=!data;detail.textContent=data?JSON.stringify(data,null,2):'';
-    status.textContent=(v.state==='HOLD'||v.state==='COMPLETED'&&!approved)?'HOLD · '+(v.errorCode||data?.errorCode||'NATIVE_OWNER_UNCONFIRMED'):
-      v.state==='STOP_REQUESTED'?'STOP REQUESTED · ожидается завершение ядра':
-      'NOX · '+(data?.status||data?.state||v.state);
+    status.textContent=expectedRoute==='system.autostart'
+      ? approved
+        ? 'Автозапуск NOX · '+(expectedAutostart?'ВКЛ':'ВЫКЛ')+' · Windows подтверждено'
+        : 'HOLD · '+(v?.errorCode||v?.result?.errorCode||'NOX_AUTOSTART_PERSISTENCE_UNVERIFIED')
+      : (v.state==='HOLD'||v.state==='COMPLETED'&&!approved)?'HOLD · '+(v.errorCode||data?.errorCode||'NATIVE_OWNER_UNCONFIRMED'):
+        v.state==='STOP_REQUESTED'?'STOP REQUESTED · ожидается завершение ядра':
+        'NOX · '+(data?.status||data?.state||v.state);
   };
   if(root){
     menu=mountSelfBuilderMenuV2({root,documentRef:doc,getCurrentSection:()=>doc.getElementById('detail-title')?.textContent?.trim(),
@@ -611,7 +625,8 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
     const visibleSection=doc.getElementById('detail-title')?.textContent;
     try{
       const reply=await client.request(route,payload);
-      if(!disposed&&button.isConnected&&doc.getElementById('detail-title')?.textContent===visibleSection)display(reply,route);
+      if(!disposed&&button.isConnected&&doc.getElementById('detail-title')?.textContent===visibleSection)
+        display(reply,route,route==='system.autostart'?payload.enabled:null);
     }catch(error){
       if(!disposed&&button.isConnected&&doc.getElementById('detail-title')?.textContent===visibleSection)
         status.textContent=(error.message==='TIMEOUT'?'TIMEOUT':'HOLD')+' · запрос не подтверждён';
