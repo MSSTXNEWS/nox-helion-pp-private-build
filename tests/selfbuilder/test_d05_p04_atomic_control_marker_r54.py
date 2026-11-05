@@ -73,6 +73,18 @@ class NativeP04AtomicMarkerTests(unittest.TestCase):
             self.assertEqual(self.owner.request_stop()["status"], "STOP_REQUESTED")
         self.assertEqual(marker.read_bytes(), b"unchanged owner marker")
 
+    def test_replaced_regular_stop_marker_cannot_inherit_owner_ack(self):
+        # A previous STOP ACK does not authorize a replacement by another
+        # process, even when the replacement remains a normal regular file.
+        self.assertEqual(self.owner.request_stop()["status"], "STOP_REQUESTED")
+        marker = self.owner._active[0]
+        foreign = self.root / "replacement.marker"
+        foreign.write_bytes(b"foreign-regular-marker")
+        os.replace(foreign, marker)
+        with self.assertRaisesRegex(ForgeHold, "TRAINER_CONTROL_MARKER_REPLACED_HOLD"):
+            self.owner.request_stop()
+        self.assertEqual(marker.read_bytes(), b"foreign-regular-marker")
+
     def test_existing_symlink_cannot_touch_foreign_file_or_ack(self):
         foreign = self.root / "foreign.txt"
         foreign.write_bytes(b"foreign-preserved")

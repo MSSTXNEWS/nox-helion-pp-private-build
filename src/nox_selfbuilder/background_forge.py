@@ -75,6 +75,7 @@ class ExistingP04Background:
         self._active = None
         self._unreaped_worker = None  # hold original P04 gate if OS refuses to reap GPU child
         self._requested = None
+        self._owned_marker_identity = {}  # original live native owner marker identities
         self._relayed = set()
         self._merge_active = False
         self._merge_stop = False
@@ -271,9 +272,30 @@ class ExistingP04Background:
                 # may be reacknowledged; never claim a raced foreign creation.
                 if self._requested != requested:
                     raise ForgeHold("TRAINER_CONTROL_MARKER_UNOWNED_HOLD")
+                # Owner marker replacement by a regular file must not inherit
+                # the earlier native ACK (e.g. remove+recreate / os.replace).
+                expected = getattr(self, "_owned_marker_identity", {}).get(requested)
+                observed = os.stat(marker, follow_symlinks=False)
+                if (expected is None or observed.st_ino == 0
+                        or expected != (observed.st_dev, observed.st_ino)):
+                    raise ForgeHold("TRAINER_CONTROL_MARKER_REPLACED_HOLD")
             else:
-                os.close(fd)
-            # An ACK is durable only after successful marker creation/readback.
+                try:
+                    created = os.fstat(fd)
+                finally:
+                    os.close(fd)
+                # Bind the ACK to the just-created native file identity.
+                # Regular-file replacement, ambiguous inode or reparse is HOLD.
+                self.trainer.reject_reparse_ancestors(marker)
+                if not marker.is_file() or marker.is_symlink() or created.st_ino == 0:
+                    raise ForgeHold("TRAINER_CONTROL_MARKER_IDENTITY_HOLD")
+                observed = os.stat(marker, follow_symlinks=False)
+                if (created.st_dev, created.st_ino) != (observed.st_dev, observed.st_ino):
+                    raise ForgeHold("TRAINER_CONTROL_MARKER_REPLACED_HOLD")
+                if not hasattr(self, "_owned_marker_identity"):
+                    self._owned_marker_identity = {}
+                self._owned_marker_identity[requested] = (created.st_dev, created.st_ino)
+            # An ACK requires a native-owned, unchanged regular marker identity.
             self._requested = requested
             return {"status": requested + "_REQUESTED", "weights_updated": False}
 
@@ -353,6 +375,7 @@ class ExistingP04Background:
                 quarantined = self._unreaped_worker is not None
                 if not quarantined:
                     self._active = None
+                    self._owned_marker_identity = {}
             if not quarantined:
                 self._gate.release()
 
@@ -372,6 +395,7 @@ class ExistingP04Background:
         self.trainer.reject_reparse_ancestors(log_path)
         with self._control_lock:
             self._active, self._requested = (stop_marker, pause_marker, job.run_id, job.task_id), None
+            self._owned_marker_identity = {}
         forced = False
         monitor_error = None
         prior_receipt_sha = self.trainer.sha256_file(out / "training-receipt.json") if resume else None
