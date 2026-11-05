@@ -445,16 +445,19 @@
     {
       "path": "Packages/P03/Source/P03.ModelCenter/ModelLocalAttestation.cs",
       "owner": 3,
-      "run_id": "NOX-E03-PR162-PIN-RECONCILE-20261101",
-      "pre_git_blob_sha1": "3600f2ab3e1c4de874e7c258fbd0ad20c2e0c525",
-      "post_git_blob_sha1": "528194ab80605f5b36dd5e6fccf6e653b7d5376e",
-      "post_bytes": 15075,
+      "run_id": "P03_SOURCE_RECONCILE_20261105_E06",
+      "pre_git_blob_sha1": "528194ab80605f5b36dd5e6fccf6e653b7d5376e",
+      "post_git_blob_sha1": "166347ebd3975bdc724ea88031e2b4c77669b0fc",
+      "post_bytes": 15293,
       "source_commit": "3ec73f893961a8dce0dc3bdbc202afd4a54773a0",
-      "acceptance": "SOURCE_ONLY_MANIFEST_PIN_NOT_MODEL_RIGHTS_OR_E07",
+      "acceptance": "EXACT_SOURCE_ONLY_NOT_OWNER_PERMISSION_OR_WINDOWS_E07",
       "previous_reviewed_git_blob_sha1": "e55bd2ec0e13a50ef026ae4055fe71b5f7a4e4ed",
       "previous_reviewed_bytes": 12892,
       "reconciliation_scope": "D04_OLLAMA_TAGS_SHA256_SOURCE_ONLY_NOT_WINDOWS_E07",
-      "reconciliation_source_commit": "0c5fada0ea2a27a07292df5f4cb000441b0bae47"
+      "reconciliation_source_commit": "0c5fada0ea2a27a07292df5f4cb000441b0bae47",
+      "prior_active_post_git_blob_sha1": "528194ab80605f5b36dd5e6fccf6e653b7d5376e",
+      "prior_active_post_bytes": 15075,
+      "source_head_observed": "a86914fce7dd1f8459b0baf79ddfe0c2ce2a4995"
     },
     {
       "path": "Packages/P03/Source/P03.ModelCenter/ModelWowBridgeContract.cs",
@@ -561,14 +564,14 @@
     {
       "path": "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueStore.cs",
       "owner": 3,
-      "run_id": "D04_P03_E06_REVIEW_PIN_RECONCILE_20261105",
-      "pre_git_blob_sha1": "6046384a1a619869618a64572cae0f95787468d8",
-      "post_git_blob_sha1": "ea36b639c22af03cb0c90902eb3a86801f118a12",
-      "post_bytes": 35356,
-      "acceptance": "EXACT_SOURCE_ONLY_NOT_INSTALLED_E07",
-      "prior_active_post_git_blob_sha1": "74e2183335676854d3716fa4988e5b09b7c6a770",
-      "prior_active_post_bytes": 30276,
-      "source_head_observed": "51fed5a0ba508fb678b63febe3e593a6a082361c"
+      "run_id": "P03_SOURCE_RECONCILE_20261105_E06",
+      "pre_git_blob_sha1": "ea36b639c22af03cb0c90902eb3a86801f118a12",
+      "post_git_blob_sha1": "b2ff1762d6ed5415c67796d13264e829c5a74fa9",
+      "post_bytes": 35869,
+      "acceptance": "EXACT_SOURCE_ONLY_NOT_OWNER_PERMISSION_OR_WINDOWS_E07",
+      "prior_active_post_git_blob_sha1": "ea36b639c22af03cb0c90902eb3a86801f118a12",
+      "prior_active_post_bytes": 35356,
+      "source_head_observed": "a86914fce7dd1f8459b0baf79ddfe0c2ce2a4995"
     },
     {
       "path": "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueWorker.cs",
@@ -591,14 +594,14 @@
     {
       "path": "Packages/P03/Source/P03.ModelCenter/OllamaModelAdapter.cs",
       "owner": 3,
-      "run_id": "D04_P03_E06_REVIEW_PIN_RECONCILE_20261105",
-      "pre_git_blob_sha1": "704262b0b81bfaf81a0a17de7fd8c8714a9febb3",
-      "post_git_blob_sha1": "fa0656381b8854c6032a669c4929813988aea75a",
-      "post_bytes": 16897,
-      "acceptance": "EXACT_SOURCE_ONLY_NOT_INSTALLED_E07",
-      "prior_active_post_git_blob_sha1": "e27b9959a514384a68a0a67723aff0910ecbad58",
-      "prior_active_post_bytes": 16076,
-      "source_head_observed": "51fed5a0ba508fb678b63febe3e593a6a082361c"
+      "run_id": "P03_SOURCE_RECONCILE_20261105_E06",
+      "pre_git_blob_sha1": "fa0656381b8854c6032a669c4929813988aea75a",
+      "post_git_blob_sha1": "6cb16e601cd7f560d063041a13723d81f061cc70",
+      "post_bytes": 17577,
+      "acceptance": "EXACT_SOURCE_ONLY_NOT_OWNER_PERMISSION_OR_WINDOWS_E07",
+      "prior_active_post_git_blob_sha1": "fa0656381b8854c6032a669c4929813988aea75a",
+      "prior_active_post_bytes": 16897,
+      "source_head_observed": "a86914fce7dd1f8459b0baf79ddfe0c2ce2a4995"
     }
   ],
   "override_chain": [
@@ -758,6 +761,50 @@
       "acceptance": "SOURCE_ONLY_OWNER_RIGHTS_CANDIDATE_NO_WINDOWS_E07",
       "historical_approved_override": true,
       "retired_from_active_set": "D04_20261105"
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter/ModelLocalAttestation.cs",
+      "owner": 3,
+      "run_id": "NOX-E03-PR162-PIN-RECONCILE-20261101",
+      "pre_git_blob_sha1": "3600f2ab3e1c4de874e7c258fbd0ad20c2e0c525",
+      "post_git_blob_sha1": "528194ab80605f5b36dd5e6fccf6e653b7d5376e",
+      "post_bytes": 15075,
+      "source_commit": "3ec73f893961a8dce0dc3bdbc202afd4a54773a0",
+      "acceptance": "SOURCE_ONLY_MANIFEST_PIN_NOT_MODEL_RIGHTS_OR_E07",
+      "previous_reviewed_git_blob_sha1": "e55bd2ec0e13a50ef026ae4055fe71b5f7a4e4ed",
+      "previous_reviewed_bytes": 12892,
+      "reconciliation_scope": "D04_OLLAMA_TAGS_SHA256_SOURCE_ONLY_NOT_WINDOWS_E07",
+      "reconciliation_source_commit": "0c5fada0ea2a27a07292df5f4cb000441b0bae47",
+      "historical_approved_override": true,
+      "retired_from_active_set": "20261105_E06_PIN_RECONCILE"
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueStore.cs",
+      "owner": 3,
+      "run_id": "D04_P03_E06_REVIEW_PIN_RECONCILE_20261105",
+      "pre_git_blob_sha1": "6046384a1a619869618a64572cae0f95787468d8",
+      "post_git_blob_sha1": "ea36b639c22af03cb0c90902eb3a86801f118a12",
+      "post_bytes": 35356,
+      "acceptance": "EXACT_SOURCE_ONLY_NOT_INSTALLED_E07",
+      "prior_active_post_git_blob_sha1": "74e2183335676854d3716fa4988e5b09b7c6a770",
+      "prior_active_post_bytes": 30276,
+      "source_head_observed": "51fed5a0ba508fb678b63febe3e593a6a082361c",
+      "historical_approved_override": true,
+      "retired_from_active_set": "20261105_E06_PIN_RECONCILE"
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter/OllamaModelAdapter.cs",
+      "owner": 3,
+      "run_id": "D04_P03_E06_REVIEW_PIN_RECONCILE_20261105",
+      "pre_git_blob_sha1": "704262b0b81bfaf81a0a17de7fd8c8714a9febb3",
+      "post_git_blob_sha1": "fa0656381b8854c6032a669c4929813988aea75a",
+      "post_bytes": 16897,
+      "acceptance": "EXACT_SOURCE_ONLY_NOT_INSTALLED_E07",
+      "prior_active_post_git_blob_sha1": "e27b9959a514384a68a0a67723aff0910ecbad58",
+      "prior_active_post_bytes": 16076,
+      "source_head_observed": "51fed5a0ba508fb678b63febe3e593a6a082361c",
+      "historical_approved_override": true,
+      "retired_from_active_set": "20261105_E06_PIN_RECONCILE"
     }
   ],
   "source_expansion": {
