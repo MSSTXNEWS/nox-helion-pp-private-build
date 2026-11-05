@@ -218,10 +218,19 @@ if (!$alreadyCanonical) {
   # has a legacy pv nonzero check without the later [version] cast.
   # Accept that known historical preimage only by exact SHA-256, then replace
   # with the approved strict Registry32/Registry64 + [version] gate below.
-  $legacySha=[Convert]::ToHexString(
-    [Security.Cryptography.SHA256]::HashData(
-      [Text.Encoding]::UTF8.GetBytes(($webviewLegacy -replace "`r`n","`n"))
-    )).ToLowerInvariant()
+  # Windows PowerShell 5.1/.NET Framework has no SHA256.HashData or Convert.ToHexString.
+  # Preserve the exact known C07 SHA gate using a disposable in-memory hasher.
+  $legacyHasher=[Security.Cryptography.SHA256]::Create()
+  if ($null -eq $legacyHasher) { throw 'E06_WEBVIEW2_PREFLIGHT_HASH_ENGINE_HOLD' }
+  try {
+    $legacyBytes=[Text.Encoding]::UTF8.GetBytes(($webviewLegacy -replace "`r`n","`n"))
+    $legacyDigest=$legacyHasher.ComputeHash($legacyBytes)
+    if ($null -eq $legacyDigest -or $legacyDigest.Length -ne 32) {
+      throw 'E06_WEBVIEW2_PREFLIGHT_HASH_READBACK_HOLD'
+    }
+    $legacySha=[BitConverter]::ToString($legacyDigest).Replace('-','').ToLowerInvariant()
+  }
+  finally { $legacyHasher.Dispose() }
   $knownC07Legacy=($legacySha -ceq 'a61e2e7adcbf836109249829f4d103e0d991873c0088483b0b3550216a4b4c8e')
   if (!$knownC07Legacy) {
     foreach ($mustContain in @('Registry::HKEY_CURRENT_USER','Registry::HKEY_LOCAL_MACHINE',
