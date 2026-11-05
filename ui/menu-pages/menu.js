@@ -1,6 +1,6 @@
 import {createNoxLucideIcon} from '../nox-lucide-icons.mjs';
 import {DIRECTIONS,WORLDS,CORE_IDS,PERSONAS,PRIMARY,ROUTE_COUNT,getWorld,getRoute,worldGroups} from './express-layout.mjs';
-import {createNativeMenuClient,isNativeChatTerminal,canonicalChatContext,nativeOwnerReceiptHolds,nativeOwnerActionReceipt} from '../onehost-menu-bindings.mjs';
+import {createNativeMenuClient,isNativeChatTerminal,canonicalChatContext,nativeOwnerReceiptHolds,nativeOwnerActionReceipt,createAutostartOwnerFlow,settingsAutostartOwnerAdmission,AUTOSTART_UIA_IDS} from '../onehost-menu-bindings.mjs';
 import {firstBootTruth} from '../firstboot-truth.mjs';
 const doc=document,$=id=>doc.getElementById(id);
 const el=(tag,cls,label)=>{const x=doc.createElement(tag);if(cls)x.className=cls;if(label!==undefined)x.textContent=label;return x;};
@@ -474,10 +474,64 @@ function liveChat(label){
  redraw();void loadModels();void refreshNativePanels();
 }
 
+/* Only original OneHost owns Windows HKCU autostart, SID/ACL and consent.
+   Source-visible trusted real buttons; scripted click cannot request a write.
+   createAutostartOwnerFlow verifies exact write AND a separate native readback. */
+function nativeSettings(label){
+ const top=el('div','detail-top');
+ top.append(button('← К РАЗДЕЛУ','back',()=>world(label.world)),
+            el('span','eyebrow','SETTINGS · WINDOWS ONEHOST'));
+ const title=el('h2','','НАСТРОЙКИ NOX · АВТОЗАПУСК');
+ const message=el('p','nox-chat-info',client?
+   'Нажмите «ПРОВЕРИТЬ» для чтения фактического HKCU. Изменения требуют подтверждения Windows.' :
+   'HOLD · локальный OneHost недоступен');
+ message.setAttribute('role','status');message.setAttribute('aria-live','polite');
+ const actions=el('div','nox-chat-controls');
+ const issued=new WeakSet();
+ const flow=client?createAutostartOwnerFlow((route,payload)=>client.request(route,payload)):null;
+ let busy=false;
+ const buttons=[];
+ async function request(payload,description){
+  if(!flow||busy)return;
+  busy=true;buttons.forEach(b=>b.disabled=true);
+  message.textContent='REQUESTED · ожидаю проверенный результат OneHost';
+  try {
+   const reply=await flow.request(payload);
+   if(!message.isConnected)return;
+   const v=reply.result.enabled===true?'ВКЛЮЧЁН':'ВЫКЛЮЧЕН';
+   message.textContent='WINDOWS HKCU · '+v+
+     (Object.keys(payload).length?' · запись и независимое чтение подтверждены':' · чтение подтверждено');
+  }catch(e){
+   if(message.isConnected)message.textContent='HOLD · '+String(e?.message||'нет подтверждения Windows').slice(0,150);
+  }finally{busy=false;buttons.forEach(b=>b.disabled=!client);}
+ }
+ const defs=[
+  ['read','ПРОВЕРИТЬ',{},'', ''],
+  ['on','АВТОЗАПУСК ВКЛ', {enabled:true},'enabled','true'],
+  ['off','АВТОЗАПУСК ВЫКЛ',{enabled:false},'enabled','false']
+ ];
+ for(const [kind,labelText,payload,key,value] of defs){
+  const b=button(labelText,'nox-chat-chip',event=>{
+    if(!settingsAutostartOwnerAdmission(b,issued,event)){
+      message.textContent='HOLD · необходим настоящий видимый пользовательский ввод';return;
+    }
+    void request(payload,labelText);
+  });
+  b.id=AUTOSTART_UIA_IDS[kind];
+  b.dataset.nativeRoute='system.autostart';
+  b.dataset.nativeKey=key;
+  b.dataset.nativeValue=value;
+  b.disabled=!client;
+  issued.add(b);buttons.push(b);actions.append(b);
+ }
+ const help=el('p','nox-muted','Изменения в Windows выполняет только исходный WPF OneHost. Эта веб-страница не имеет прямого доступа к реестру.');
+ setDetails(top,title,help,actions,message);
+}
 function openRoute(id){
  const item=getRoute(id);if(!item)return;
  const label={id,name:item.label,world:item.world.id};
  if(id==='chat'){liveChat(label);return;}
+ if(id==='settings'){nativeSettings(label);return;}
  // Only read-only native routes with an existing client contract; no fake success.
  const reads={
  'model-library':['models.catalog',{}],'model-load':['models.catalog',{}],
