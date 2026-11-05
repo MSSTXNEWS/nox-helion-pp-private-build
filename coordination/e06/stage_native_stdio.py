@@ -51,7 +51,7 @@ ADDONS=(
     ('src/nox_selfbuilder/firstcycle_native.py', 'nox_selfbuilder/firstcycle_native.py', 'b059b4ab30530b6b982498ce7ed5cf1d5a0716ba'),
     ('src/nox_selfbuilder/selfwrite_native_gate.py', 'nox_selfbuilder/selfwrite_native_gate.py', '3a35394d5bbc497b924ecefa10192d568aa5a021'),
     ('src/nox_selfbuilder/nx03_model_firstcycle.py', 'nox_selfbuilder/nx03_model_firstcycle.py', 'cbd40d985c55c5693a7cc9713b529480e62d7b4c'),
-    ('src/nox_selfbuilder/onehost_queue.py', 'nox_selfbuilder/onehost_queue.py', '9db7098d55984fca04b7c82fc540c4c7888c8258'),
+    ('src/nox_selfbuilder/onehost_queue.py', 'nox_selfbuilder/onehost_queue.py', '6c6bc9c9136aa3cbc7f462a0d817fa24a9cfaa65'),
     ('src/nox_selfbuilder/onehost_store.py', 'nox_selfbuilder/onehost_store.py', '686911c6102c7ab18a6f07bb2a3b3687fb9c2c45'),
     ('src/nox_selfbuilder/original_store_adapter.py', 'nox_selfbuilder/original_store_adapter.py', '6fcbd9b2f90dc54767728d7ee120ffb7595c019b'),
     ('src/nox_selfbuilder/p02_coder.py', 'nox_selfbuilder/p02_coder.py', '2a9940916424ed851b446f253ed68dab7798e675'),
