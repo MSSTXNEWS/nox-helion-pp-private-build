@@ -438,11 +438,11 @@ function OriginalPcInstall {
    $el=$a.Item($i);$v=$el.Current
    if($v.ControlType -ne [System.Windows.Automation.ControlType]::Button){continue}
    if(($v.AutomationId+'').Trim() -cne 'pc-install' -or -not (Visible $v)){continue}
-   if(-not (SameElementSeen -items $matches -candidate $el)){[void]$matches.Add($el)}
+   if(-not (SameElementSeen -items $matches -candidate $el)){[void]$matches.Add([pscustomobject]@{element=$el})}
   }catch{}
  }
  if($matches.Count -ne 1){throw 'ORIGINAL_CONTROL_NOT_UNIQUE'}
- return $matches[0]
+ return $matches[0].element
 }
 function InvokePrimary([string]$name){$b=OneButton $name;$p=$b.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern);if($null -eq $p){throw 'NO_INVOKE'};$p.Invoke();Start-Sleep -Milliseconds 400;return $true}
 function FiveRects {
