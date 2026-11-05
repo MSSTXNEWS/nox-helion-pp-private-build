@@ -567,14 +567,14 @@
     {
       "path": "Packages/P03/Source/python-host/p03_onehost_port.py",
       "owner": 3,
-      "run_id": "B04_P03_MUTATING_ACK_PROOF_20261105",
-      "pre_git_blob_sha1": "1a15ea936f445f75ae916f88c9a272f991382823",
-      "post_git_blob_sha1": "2bbb4e27238c547348577a5d5faa2b2c85f47d40",
-      "post_bytes": 27118,
-      "acceptance": "SOURCE_ONLY_PYTHON_TEST_AUTHORED_NOT_RUN_WINDOWS_E07_HOLD",
-      "prior_active_run_id": "B04_P03_NATIVE_CASE_ALIAS_OWNER_NOLOSS_20261105",
-      "source_head_observed": "f9e1d586db49b07733e4b68ea6333ac0062372a6",
-      "change_scope": "MUTATING_MODEL_ACTION_REQUIRES_POSITIVE_ACK_NOT_IDENTITY_ONLY"
+      "run_id": "B04_OWNER_STOP_RETRY_RECEIPT_R4_20261105",
+      "pre_git_blob_sha1": "2bbb4e27238c547348577a5d5faa2b2c85f47d40",
+      "post_git_blob_sha1": "924a644cfe2c90f41be48e7142073961c08c320e",
+      "post_bytes": 28279,
+      "acceptance": "SOURCE_ONLY_TARGETED_V8_NOT_PYTHON_OR_WINDOWS_E07",
+      "prior_active_run_id": "B04_P03_MUTATING_ACK_PROOF_20261105",
+      "source_head_observed": "4222ebce9a82777e13068ed71d9a1adcf9ad4a64",
+      "change_scope": "CANCEL_AND_RETRY_ACTION_SPECIFIC_STATUS_NO_FAKE_ACTIVE_STOP"
     }
   ],
   "override_chain": [
@@ -1042,6 +1042,21 @@
       "source_head_observed": "f21447a1eec6605f1927e84800389bf6b0082e11",
       "historical_approved_override": true,
       "retired_from_active_set": "D04_NATIVE_PULL_RIGHTS_CONTROL_FENCE_20261105"
+    },
+    {
+      "path": "Packages/P03/Source/python-host/p03_onehost_port.py",
+      "owner": 3,
+      "run_id": "B04_P03_MUTATING_ACK_PROOF_20261105",
+      "pre_git_blob_sha1": "1a15ea936f445f75ae916f88c9a272f991382823",
+      "post_git_blob_sha1": "2bbb4e27238c547348577a5d5faa2b2c85f47d40",
+      "post_bytes": 27118,
+      "acceptance": "SOURCE_ONLY_PYTHON_TEST_AUTHORED_NOT_RUN_WINDOWS_E07_HOLD",
+      "prior_active_run_id": "B04_P03_NATIVE_CASE_ALIAS_OWNER_NOLOSS_20261105",
+      "source_head_observed": "f9e1d586db49b07733e4b68ea6333ac0062372a6",
+      "change_scope": "MUTATING_MODEL_ACTION_REQUIRES_POSITIVE_ACK_NOT_IDENTITY_ONLY",
+      "historical_approved_override": true,
+      "retired_from_active_set": "B04_OWNER_STOP_RETRY_RECEIPT_R4_20261105",
+      "reconciled_in_source_sha": "4222ebce9a82777e13068ed71d9a1adcf9ad4a64"
     }
   ],
   "source_expansion": {

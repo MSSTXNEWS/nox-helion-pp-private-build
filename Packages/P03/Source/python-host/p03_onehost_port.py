@@ -34,10 +34,21 @@ _OWNER3_DENIAL_TOKENS = frozenset({
     "HOLD", "ERROR", "FAILED", "DENIED", "REJECTED", "OFFLINE",
     "CONSENT", "PERMISSION", "AUTH", "UNAUTHORIZED", "FORBIDDEN",
     "REVOKED", "EXPIRED", "MISMATCH", "UNAVAILABLE", "INVALID", "REVIEW",
+    "BUSY", "BLOCKED", "ABORTED", "REFUSED", "STALE",
 })
 _OWNER3_DENIAL_PAIRS = frozenset({
     ("NOT", "READY"), ("NOT", "AUTHORIZED"), ("NOT", "INSTALLED"),
-    ("NO", "CONSENT"), ("TIMED", "OUT"),
+    ("NO", "CONSENT"), ("TIMED", "OUT"), ("STOP", "PENDING"),
+})
+
+# A QUEUED job is not evidence that an active STOP was requested.
+# A CANCEL_REQUESTED job is not evidence that retry was queued.
+# These are interpretations of existing owner receipts, not new IPC routes.
+_OWNER3_CANCEL_ACK_STATES = frozenset({
+    "CANCEL_REQUESTED", "CANCELLING", "CANCELLED", "STOP_REQUESTED", "STOPPED",
+})
+_OWNER3_RETRY_ACK_STATES = frozenset({
+    "QUEUED", "RETRY_QUEUED", "RETRY_REQUESTED", "RUNNING",
 })
 
 
@@ -409,6 +420,14 @@ class P03OneHostPort:
                     "ok", "ack", "accepted", "success", "queued"))
                 if not (positive_state or positive_flag):
                     raise P03PortHold("Owner3 backend returned no affirmative job acknowledgement")
+                # Boolean ACK cannot override an explicit state for a DIFFERENT
+                # operation. In particular, QUEUED is NOT an active STOP receipt.
+                if (route == "models.cancel" and type(state) is str and
+                        state.strip().upper() not in _OWNER3_CANCEL_ACK_STATES):
+                    raise P03PortHold("Owner3 STOP acknowledgement lacks cancellation evidence")
+                if (route == "models.retry" and type(state) is str and
+                        state.strip().upper() not in _OWNER3_RETRY_ACK_STATES):
+                    raise P03PortHold("Owner3 retry acknowledgement lacks queue evidence")
             # Status alone (or an acknowledgement for another job) cannot
             # prove that the consented cancellation/retry touched THIS job.
             if route in ("models.cancel", "models.retry"):
