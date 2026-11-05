@@ -134,9 +134,12 @@
 .nox-cinema-scope[data-nox-fx-mode="eco"] .nox-cinema-control::before,
 .nox-cinema-scope[data-nox-fx-mode="eco"] .nox-cinema-panel::before {animation-duration:25s;}
 .nox-cinema-scope[data-nox-fx-mode="eco"] .nox-cinema-control[data-nox-float="true"]::before {animation-duration:10s;}
+/* Original WebView2 HOME: the OS Reduced Motion preference must suppress
+   ALL D02 transitions and pseudo-element animations, not only orb layers.
+   Keep the original controls interactive; no media emulation or JS overrides. */
 @media(prefers-reduced-motion:reduce) {
-  .nox-cinema-orb__layers, .nox-cinema-orb__layers *,
-  .nox-cinema-control::before, .nox-cinema-panel::before {
+  .nox-cinema-scope, .nox-cinema-scope *,
+  .nox-cinema-scope *::before, .nox-cinema-scope *::after {
     animation:none!important;transition:none!important;
   }
 }

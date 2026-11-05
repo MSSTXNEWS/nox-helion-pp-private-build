@@ -28,7 +28,7 @@ OWNER1_D02_ENGINE = {
         "legacy_blob": "f7724e99b37ccbc84f1756dc797980267d58ec4e",
     },
     "proposals/NOX-CINEMA-FX/nox-cinema.css": {
-        "active_blob": "77417160147607f2d7350209b865d86bfe49abd0",
+        "active_blob": "e5203f5720dc14147870ca898247fabae0e03522",
         "legacy_blob": "95b2562e8b6f5c07b785d3a381661d0dbfe5de83",
     },
 }

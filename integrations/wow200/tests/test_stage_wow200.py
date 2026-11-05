@@ -89,6 +89,20 @@ class WowStageTests(unittest.TestCase):
   eng.WOW_RUNTIME_BLOBS.update(self.original_runtime_pins)
   eng.OWNER1_D02_ENGINE.clear();eng.OWNER1_D02_ENGINE.update(self.old_engine_pins)
   self.tmp.cleanup()
+ def test_owner1_d02_reduced_motion_entire_scope_and_pseudo(self):
+  # The actual shipped CSS, not the fixture, must match the immutable owner pin.
+  repo=Path(__file__).resolve().parents[3]
+  data=(repo/'proposals/NOX-CINEMA-FX/nox-cinema.css').read_bytes()
+  self.assertEqual(gitsha(data),self.old_engine_pins['proposals/NOX-CINEMA-FX/nox-cinema.css']['active_blob'])
+  css=data.decode('utf-8','strict')
+  reduced=css.split('@media(prefers-reduced-motion:reduce) {',1)[1].split('}',1)[0]
+  for required in ('.nox-cinema-scope,', '.nox-cinema-scope *,',
+                   '.nox-cinema-scope *::before,', '.nox-cinema-scope *::after {'):
+   with self.subTest(selector=required):self.assertIn(required,reduced)
+  self.assertIn('animation:none!important;transition:none!important;',reduced)
+  # The normal cinematic animations stay available outside OS Reduced Motion.
+  self.assertIn('animation:nox-cinema-float',css)
+
  def test_learn_training_picker_accessible_in_weights_group(self):
   source=(Path(__file__).resolve().parents[3]/'ui/selfbuilder-menu-v2.mjs').read_text(encoding='utf-8')
   self.assertIn("jobs.hidden=section!=='РАЗВИТИЕ'||!['models','weights'].includes(activeGroup);",source)
