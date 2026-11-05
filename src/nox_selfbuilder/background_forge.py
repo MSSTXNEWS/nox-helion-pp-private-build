@@ -266,6 +266,11 @@ class ExistingP04Background:
                 self.trainer.reject_reparse_ancestors(marker)
                 if not marker.is_file() or marker.is_symlink():
                     raise ForgeHold("TRAINER_CONTROL_MARKER_NOT_REGULAR")
+                # A foreign regular marker is not an owner-issued STOP/PAUSE.
+                # Only an acknowledged marker from this live owner instance
+                # may be reacknowledged; never claim a raced foreign creation.
+                if self._requested != requested:
+                    raise ForgeHold("TRAINER_CONTROL_MARKER_UNOWNED_HOLD")
             else:
                 os.close(fd)
             # An ACK is durable only after successful marker creation/readback.

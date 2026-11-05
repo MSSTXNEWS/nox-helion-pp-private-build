@@ -41,6 +41,23 @@ class NativeP04AtomicMarkerTests(unittest.TestCase):
         self.assertFalse(self.owner._active[0].exists())
         self.assertFalse(self.owner._active[1].exists())
 
+    def test_foreign_regular_marker_never_gets_first_ack(self):
+        marker = self.owner._active[0]
+        marker.write_bytes(b"foreign-existing-marker")
+        with self.assertRaisesRegex(ForgeHold, "TRAINER_CONTROL_MARKER_UNOWNED_HOLD"):
+            self.owner.request_stop()
+        self.assertIsNone(self.owner._requested)
+        self.assertEqual(marker.read_bytes(), b"foreign-existing-marker")
+
+    def test_pause_cannot_authorize_foreign_preexisting_stop_marker(self):
+        self.assertEqual(self.owner.request_pause()["status"], "PAUSE_REQUESTED")
+        marker = self.owner._active[0]
+        marker.write_bytes(b"foreign-existing-marker")
+        with self.assertRaisesRegex(ForgeHold, "TRAINER_CONTROL_MARKER_UNOWNED_HOLD"):
+            self.owner.request_stop()
+        self.assertEqual(self.owner._requested, "PAUSE")
+        self.assertEqual(marker.read_bytes(), b"foreign-existing-marker")
+
     def test_pause_then_stop_creates_exact_markers(self):
         self.assertEqual(self.owner.request_pause()["status"], "PAUSE_REQUESTED")
         self.assertTrue(self.owner._active[1].is_file())
