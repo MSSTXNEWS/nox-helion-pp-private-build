@@ -210,12 +210,26 @@ public sealed class ModelDownloadQueueStore
         {
             using var lease = await AcquireFileLeaseAsync(ct);
             var jobs = (await ReadCoreAsync(ct)).ToList();
-            var prior = jobs.FirstOrDefault(j => j.Kind == ModelJobKind.OllamaPull &&
+            // An active tag belongs to exactly one owner-reviewed transfer. Do not
+            // recycle a live job after rights, licensed origin or immutable pins
+            // change: that would turn an obsolete authorization into a new ACK.
+            var active = jobs.Where(j => j.Kind == ModelJobKind.OllamaPull &&
                 (j.State is ModelJobState.Queued or ModelJobState.Running or ModelJobState.Cancelling) &&
-                string.Equals(j.ModelTag, model.ExactTag, StringComparison.OrdinalIgnoreCase) &&
-                string.Equals(j.ExpectedOllamaDigest, model.ExpectedManifestDigestSha256, StringComparison.OrdinalIgnoreCase) &&
-                string.Equals(j.ImmutableRevision, model.ImmutableRevision, StringComparison.Ordinal));
-            if (prior is not null) return prior;
+                string.Equals(j.ModelTag, model.ExactTag, StringComparison.OrdinalIgnoreCase)).ToArray();
+            if (active.Length > 0)
+            {
+                if (active.Length != 1 || !active[0].LicenseAcknowledged ||
+                    !string.Equals(active[0].ModelTag, model.ExactTag, StringComparison.Ordinal) ||
+                    !string.Equals(active[0].ExpectedOllamaDigest,
+                        model.ExpectedManifestDigestSha256, StringComparison.OrdinalIgnoreCase) ||
+                    !string.Equals(active[0].ImmutableRevision, model.ImmutableRevision,
+                        StringComparison.Ordinal) ||
+                    !string.Equals(active[0].RightsReceiptId, model.ReviewedRightsReceiptId,
+                        StringComparison.Ordinal) ||
+                    !string.Equals(active[0].LicenseSource, licenseUrl, StringComparison.Ordinal))
+                    throw new InvalidOperationException("P03_ACTIVE_PULL_REVIEW_CHANGED_HOLD");
+                return active[0];
+            }
             var now = DateTimeOffset.UtcNow;
             var job = new ModelJob(Guid.NewGuid(), ModelJobKind.OllamaPull,
                 model.ExactTag, null, true, licenseUrl, now, now,

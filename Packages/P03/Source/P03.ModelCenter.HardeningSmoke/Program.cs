@@ -375,6 +375,33 @@ try
     var ticket = await left.EnqueueVerifiedPullAsync(approved, true);
     Assert(ticket.RightsReceiptId == approved.ReviewedRightsReceiptId,
         "F09A queue preserves approved rights evidence");
+    // A live pull can be re-used ONLY with the same exact owner authority.
+    // Rights revocation or review drift must not ACK an old queued/running job.
+    var sameApproved = await right.EnqueueVerifiedPullAsync(approved, true);
+    Assert(sameApproved.Id == ticket.Id, "F09C same owner review shares one active transfer");
+    async Task ExpectReviewDriftHold(ModelCatalogEntry changed, string name)
+    {
+        var rejected = false;
+        try { await right.EnqueueVerifiedPullAsync(changed, true); }
+        catch (InvalidOperationException ex) when (ex.Message == "P03_ACTIVE_PULL_REVIEW_CHANGED_HOLD")
+        { rejected = true; }
+        Assert(rejected, name);
+    }
+    await ExpectReviewDriftHold(approved with { ReviewedRightsReceiptId = "rights-revoked" },
+        "F09D active pull rejects changed rights receipt");
+    await ExpectReviewDriftHold(approved with {
+        LicenseEvidenceUri = new Uri("https://ollama.com/library/tinyllama?owner-review=changed") },
+        "F09E active pull rejects changed licensed origin");
+    await ExpectReviewDriftHold(approved with {
+        ExpectedManifestDigestSha256 = new string('c', 64) },
+        "F09F active pull rejects changed manifest digest");
+    await ExpectReviewDriftHold(approved with {
+        ImmutableRevision = "sha256:" + new string('c', 64) },
+        "F09G active pull rejects changed immutable revision");
+    await ExpectReviewDriftHold(approved with { ExactTag = "TinyLlama:1.1b" },
+        "F09H active pull rejects case-colliding owner tag");
+    Assert((await right.ReadAsync()).Count == 1,
+        "F09I denied review drift makes no duplicate persisted queue job");
     var claims = await Task.WhenAll(Enumerable.Range(0, 24).Select(i =>
         (i % 2 == 0 ? left : right).TryStartQueuedAsync(ticket.Id)));
     Assert(claims.Count(x => x is not null) == 1, "F10 only one process acquires model job");
