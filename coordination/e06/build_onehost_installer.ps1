@@ -1430,6 +1430,9 @@ $candidateItem=Get-Item -LiteralPath $setupCandidate -Force -ErrorAction Stop
 if ($candidateItem.PSIsContainer -or
     ($candidateItem.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0 -or
     $candidateItem.Length -lt 8192) { throw 'E06_SETUP_CANDIDATE_UNSAFE_HOLD' }
+# B03: Bind the compiler-produced bytes to the atomically published Setup.
+$candidateSha=(Get-FileHash -LiteralPath $setupCandidate -Algorithm SHA256).Hash.ToLowerInvariant()
+if ($candidateSha -cnotmatch '\A[a-f0-9]{64}\z') { throw 'E06_SETUP_CANDIDATE_SHA_HOLD' }
 # File.Move(source,destination) refuses an existing destination, even if
 # another builder raced after our initial no-overwrite preflight.
 try { [IO.File]::Move($setupCandidate,$setup) }
@@ -1440,6 +1443,7 @@ if ($publishedItem.PSIsContainer -or
     ($publishedItem.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0 -or
     $publishedItem.Length -ne $candidateItem.Length) { throw 'E06_SETUP_PUBLISHED_IDENTITY_HOLD' }
 $sha=(Get-FileHash -LiteralPath $setup -Algorithm SHA256).Hash.ToLowerInvariant()
+if ($sha -cne $candidateSha) { throw 'E06_SETUP_PUBLISHED_DIGEST_MISMATCH_HOLD' }
 $wpf=Join-Path $payload 'NOX.P01.Shell.exe'
 # A receipt may not relabel an older binary after another owner moves HEAD.
 $e06HeadAtReceipt=((& git -C $e06RepoRoot rev-parse HEAD) | Out-String).Trim().ToLowerInvariant()
