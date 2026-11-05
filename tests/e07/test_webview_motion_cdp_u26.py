@@ -139,6 +139,14 @@ class PhysicalWebviewMotion(unittest.TestCase):
                 with self.assertRaises(module.e07.Hold):
                     module.decode_observation_wire(bad)
 
+    def test_one_transport_bom_is_not_mistaken_for_untrusted_cdp_data(self):
+        frame=module.CDP_WIRE_PREFIX+base64.b64encode(
+            json.dumps([self.good()],separators=(",",":")).encode("utf-8")
+        ).decode("ascii")
+        self.assertEqual(module.decode_observation_wire(chr(0xfeff)+frame)["status"],"PASS")
+        with self.assertRaises(module.e07.Hold):
+            module.decode_observation_wire(chr(0xfeff)*2+frame)
+
     def test_ascii_receipt_keeps_real_readonly_cdp_and_no_media_simulation(self):
         source = TARGET.read_text(encoding="utf-8")
         self.assertIn("[Console]::Out.WriteLine('NOX_E07_CDP_V3:'", source)
