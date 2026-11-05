@@ -107,11 +107,17 @@ public static class ModelLocalAttestation
             if (digest is not null) throw new InvalidDataException("OLLAMA_TAGS_AMBIGUOUS_MODEL");
             if (!item.TryGetProperty("digest", out var d) || d.ValueKind != JsonValueKind.String)
                 throw new InvalidDataException("OLLAMA_TAGS_MISSING_DIGEST");
+            // Ollama GET /api/tags returns a bare 64-hex manifest digest.
+            // Older pinned receipts may use sha256:<64-hex>. Admit both exact
+            // representations, but normalize to one SHA256 form for the existing
+            // OllamaModelAdapter receipt and expected-digest comparison gates.
             var value = d.GetString();
-            if (value is null || !value.StartsWith("sha256:", StringComparison.OrdinalIgnoreCase) ||
-                value.Length != 71 || !HexSha.IsMatch(value[7..]))
+            var hex = value is { Length: 64 } ? value :
+                value is { Length: 71 } &&
+                value.StartsWith("sha256:", StringComparison.OrdinalIgnoreCase) ? value[7..] : null;
+            if (hex is null || !HexSha.IsMatch(hex))
                 throw new InvalidDataException("OLLAMA_TAGS_INVALID_DIGEST");
-            digest = value.ToLowerInvariant();
+            digest = "sha256:" + hex.ToLowerInvariant();
         }
         return digest;
     }
