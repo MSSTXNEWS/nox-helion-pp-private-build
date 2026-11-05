@@ -1599,9 +1599,12 @@ if ($uLines.Count -eq 0) {
     $c11NsiPatched,
     '(?m)^[ \t]*Rename[ \t]+"\$INSTDIR"[ \t]+"\$TmpDir"[ \t]*$'
   )
+  # Normalize the heredoc to the exact original R11 NSIS line endings;
+  # Windows R11 uses CRLF, while the staged C11 replacement is normalized.
+  $uRollbackRecoveryNormalized=[regex]::Replace(
+    $c11RollbackRecoveryNew,'\r?\n',$c11Eol)
   $uRollbackRecoveryAt=$c11NsiPatched.IndexOf(
-    $c11RollbackRecoveryNew,[StringComparison]::Ordinal)
-  $uSectionAt=$c11NsiPatched.IndexOf('Section "Main"',[StringComparison]::Ordinal)
+    $uRollbackRecoveryNormalized,[StringComparison]::Ordinal)
   if ($uRollbackMove.Count -ne 1 -or $uRollbackRecoveryAt -lt 0 -or
       $uRollbackMove[0].Index -ge $uRollbackRecoveryAt -or
       $c11NsiPatched.Contains('C11BackupVerifiedBeforeMove:') -or
