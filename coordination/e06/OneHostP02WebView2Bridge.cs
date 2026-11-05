@@ -458,6 +458,33 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
         return false;
     }
 
+    // SETTINGS is an owner-only HKCU operation: the receipt must prove the
+    // requested read/write mode and (for writes) the persisted requested bit.
+    // A generic transport Accepted=true or an empty object is not proof.
+    private static bool NativeAutostartReceiptMatches(JsonElement payload, JsonElement? candidate)
+    {
+        if (payload.ValueKind != JsonValueKind.Object ||
+            candidate is not JsonElement receipt || receipt.ValueKind != JsonValueKind.Object)
+            return false;
+        var requested = payload.EnumerateObject().ToArray();
+        if (requested.Length > 1 ||
+            (requested.Length == 1 &&
+             (requested[0].Name != "enabled" ||
+              requested[0].Value.ValueKind is not (JsonValueKind.True or JsonValueKind.False))))
+            return false;
+        var fields = receipt.EnumerateObject().ToArray();
+        if (fields.Length != 2 ||
+            fields.Select(f => f.Name).Distinct(StringComparer.Ordinal).Count() != 2 ||
+            !receipt.TryGetProperty("enabled", out var actual) ||
+            !receipt.TryGetProperty("readOnly", out var readOnly) ||
+            actual.ValueKind is not (JsonValueKind.True or JsonValueKind.False) ||
+            readOnly.ValueKind is not (JsonValueKind.True or JsonValueKind.False))
+            return false;
+        if (requested.Length == 0) return readOnly.GetBoolean();
+        return !readOnly.GetBoolean() &&
+            requested[0].Value.GetBoolean() == actual.GetBoolean();
+    }
+
     private async void OnWebMessageReceived(object? sender, CoreWebView2WebMessageReceivedEventArgs e)
     {
         if (Volatile.Read(ref _disposed) != 0 || _externalMode || _browserProcessLost ||
@@ -572,6 +599,11 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
                     ownerResult.Result is JsonElement ownerReceipt &&
                     ownerReceipt.ValueKind is not (JsonValueKind.Undefined or JsonValueKind.Null);
                 if (ownerAccepted && NativeResultExplicitlyDenied(ownerResult.Result))
+                    ownerAccepted = false;
+                // Do not promote a malformed or mismatched SETTINGS receipt to
+                // COMPLETED even if the WPF transport accepted the operation.
+                if (ownerAccepted && route == "system.autostart" &&
+                    !NativeAutostartReceiptMatches(payload, ownerResult.Result))
                     ownerAccepted = false;
                 if ((route == "chat.stop" || isMenuStop) && ownerAccepted)
                     Interlocked.Increment(ref _streamEpoch);
