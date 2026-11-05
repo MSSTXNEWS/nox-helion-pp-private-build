@@ -413,10 +413,14 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
     }
 
     // Original transport and original native owner must BOTH agree on success.
-    private static bool NativeResultExplicitlyDenied(JsonElement? candidate)
+    private static bool NativeResultExplicitlyDenied(JsonElement? candidate, int depth = 0)
     {
         if (candidate is not JsonElement result || result.ValueKind != JsonValueKind.Object)
             return false;
+        // Refuse unverifiable owner provenance beyond the same bounded depth
+        // as the original legacy WPF bridge. Never recurse an untrusted
+        // Python result graph without a limit or promote its ACK to COMPLETE.
+        if (depth >= 4) return true;
         foreach (var field in result.EnumerateObject())
         {
             if (field.Name is "ok" or "ack" or "success" or "approved" or "authorized" &&
@@ -437,7 +441,7 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
                     return true;
             }
             if (field.Name is "result" or "receipt" or "nativeResult" or "owner" or "ownerResult" &&
-                NativeResultExplicitlyDenied(field.Value))
+                NativeResultExplicitlyDenied(field.Value, depth + 1))
                 return true;
         }
         return false;
