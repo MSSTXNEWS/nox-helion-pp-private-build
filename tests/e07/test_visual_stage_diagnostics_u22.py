@@ -89,6 +89,24 @@ class PhysicalVisualFailureStages(unittest.TestCase):
         self.assertIn("$rect.Bottom -le ($frame.Bottom + $pad)",script)
         self.assertIn("if($clusters.Count -ne 1){throw 'PRIMARY_DOCK_NOT_UNIQUE'}",script)
 
+    def test_visual_requires_unoccluded_original_hwnd_hit_target(self):
+        # IsOffscreen=False alone does not prove the original button is exposed.
+        # Exact real UIA FromPoint ancestry is mandatory; no mouse simulation.
+        script=probe._uia_script(12345,"VISUAL",png=Path("screenshot.png"))
+        self.assertIn("Add-Type -AssemblyName WindowsBase",script)
+        self.assertIn("function HitTestOriginalPrimary($button,$bounds)",script)
+        self.assertIn("[System.Windows.Automation.AutomationElement]::FromPoint(",script)
+        self.assertIn("[System.Windows.Point]::new($cx,$cy)",script)
+        self.assertIn("[System.Windows.Automation.TreeWalker]::RawViewWalker",script)
+        self.assertIn("[System.Windows.Automation.Automation]::Compare($hit,$button)",script)
+        self.assertIn("for($depth=0;$depth -lt 32",script)
+        self.assertIn("if([NoxFinalWin32]::GetForegroundWindow() -ne $handle){throw 'PRINT'}",script)
+        guard="if($__e07Operation -eq 'VISUAL' -and -not (HitTestOriginalPrimary $el $rect)){continue}"
+        self.assertIn(guard,script)
+        self.assertLess(script.index("if(-not (WithinOriginalHwnd $rect $frame)){continue}"),script.index(guard))
+        self.assertLess(script.index(guard),script.index("if(-not (SameElementSeen -items"))
+        self.assertNotIn("SetCursorPos(",script)
+
     def test_failed_dock_keeps_hold_and_bounded_real_resize_photo(self):
         script=probe._uia_script(12345,"VISUAL",png=Path("screenshot.png"))
         self.assertIn("SaveAdaptiveHold $width",script)

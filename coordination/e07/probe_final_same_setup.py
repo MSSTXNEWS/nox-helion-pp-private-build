@@ -310,6 +310,7 @@ Add-Type -AssemblyName UIAutomationClient
 Add-Type -AssemblyName UIAutomationTypes
 if($__e07Operation -eq 'VISUAL'){
  Add-Type -AssemblyName System.Drawing
+ Add-Type -AssemblyName WindowsBase
  Add-Type -TypeDefinition @'
 using System;
 using System.Runtime.InteropServices;
@@ -399,6 +400,28 @@ function WithinOriginalHwnd($rect,$frame) {
          $rect.Right -le ($frame.Right + $pad) -and
          $rect.Bottom -le ($frame.Bottom + $pad))
 }
+# IsOffscreen=False and an inside-HWND rectangle cannot rule out occlusion.
+# Observe the actual UIA point on the physical Windows desktop. Unrelated
+# dialogs, sidebar overlays, or absent automation ancestry must HOLD.
+function HitTestOriginalPrimary($button,$bounds) {
+ try {
+  if($null -eq $button -or $bounds.IsEmpty -or
+     $bounds.Width -lt 20 -or $bounds.Height -lt 12){return $false}
+  $cx=[double]($bounds.Left+$bounds.Width/2)
+  $cy=[double]($bounds.Top+$bounds.Height/2)
+  if([double]::IsNaN($cx) -or [double]::IsInfinity($cx) -or
+     [double]::IsNaN($cy) -or [double]::IsInfinity($cy)){return $false}
+  $hit=[System.Windows.Automation.AutomationElement]::FromPoint(
+   [System.Windows.Point]::new($cx,$cy))
+  if($null -eq $hit){return $false}
+  $walker=[System.Windows.Automation.TreeWalker]::RawViewWalker
+  for($depth=0;$depth -lt 32 -and $null -ne $hit;$depth++){
+   if([System.Windows.Automation.Automation]::Compare($hit,$button)){return $true}
+   $hit=$walker.GetParent($hit)
+  }
+ } catch { return $false }
+ return $false
+}
 function PrimaryDock {
  $names=@('CHAT','INSTALL','MODELS','LEARN','SETTINGS')
  $seen=@{};foreach($n in $names){$seen[$n]=New-Object System.Collections.ArrayList}
@@ -415,6 +438,7 @@ function PrimaryDock {
    $rect=$v.BoundingRectangle
    if($rect.Width -lt 20 -or $rect.Height -lt 12){continue}
    if(-not (WithinOriginalHwnd $rect $frame)){continue}
+   if($__e07Operation -eq 'VISUAL' -and -not (HitTestOriginalPrimary $el $rect)){continue}
    if(-not (SameElementSeen -items ($seen[$name]) -candidate $el)) {
     [void]$seen[$name].Add([pscustomobject]@{element=$el;rect=$rect})
    }
@@ -538,6 +562,11 @@ if($op -eq 'VISUAL'){
  $__e07FailureStage=$null
  try {
  $__e07Stage='RESIZE'
+ # Actual HWND must be foreground for physical UIA point admission.
+ $null=[NoxFinalWin32]::ShowWindowAsync($handle,9)
+ $null=[NoxFinalWin32]::SetForegroundWindow($handle)
+ Start-Sleep -Milliseconds 200
+ if([NoxFinalWin32]::GetForegroundWindow() -ne $handle){throw 'PRINT'}
  foreach($size in @([pscustomobject]@{width=1044;height=788},[pscustomobject]@{width=800;height=600})){$__e07Stage='RESIZE';$width=[int]$size.width;$height=[int]$size.height;if(-not [NoxFinalWin32]::SetWindowPos($handle,[IntPtr]::Zero,0,0,$width,$height,[uint32]0x4014)){throw 'MOVE'};Start-Sleep -Milliseconds 700;$rr=[NoxFinalWin32+RECT]::new();$null=[NoxFinalWin32]::GetWindowRect($handle,[ref]$rr);$__e07Stage='DOCK';$rects=$null
  for($tryDock=0;$tryDock -lt 30;$tryDock++){
   try{$rects=FiveRects;break}
