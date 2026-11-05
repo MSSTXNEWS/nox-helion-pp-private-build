@@ -29,7 +29,7 @@ class NoXAutostartUninstallSource(unittest.TestCase):
         self.assertIn("executable.Contains('\"')", code)
         self.assertIn('path.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)', code)
         self.assertIn("item.Exists && (item.Attributes & FileAttributes.ReparsePoint)", code)
-        self.assertEqual(code.count("CheckedExecutable(executable));"), 2)
+        self.assertEqual(code.count("CheckedExecutable(executable));"), 1)
 
     def test_actual_staged_original_csharp_blob_is_re_pinned(self):
         code = SOURCE.read_bytes()
@@ -48,7 +48,7 @@ class NoXAutostartUninstallSource(unittest.TestCase):
         self.assertIn("key.GetValue(Entry) is not string old", code)
         self.assertNotIn("var old = key.GetValue(Entry) as string;", code)
         self.assertIn('NOX_AUTOSTART_FOREIGN_ENTRY_HOLD', code)
-        self.assertEqual(code.count("key.GetValueKind(Entry) == RegistryValueKind.String"), 2)
+        self.assertEqual(code.count("key.GetValueKind(Entry) == RegistryValueKind.String"), 1)
         self.assertIn("var persisted = ReadOwnedState(executable);", code)
         self.assertIn("if (persisted != enabled) throw new IOException", code)
         self.assertIn("NOX_AUTOSTART_PERSISTENCE_UNVERIFIED", code)
@@ -111,6 +111,17 @@ class NoXAutostartUninstallSource(unittest.TestCase):
         self.assertIn("string.Equals(remaining, expected, StringComparison.OrdinalIgnoreCase)", method)
         self.assertIn("NOX_AUTOSTART_UNINSTALL_PERSISTENCE_UNVERIFIED", method)
         self.assertEqual(method.count("key.DeleteValue("), 1)
+
+    def test_legacy_status_foreign_entry_fails_closed(self):
+        code = SOURCE.read_text(encoding="utf-8")
+        method = code[code.index("internal static bool IsEnabled("):code.index("internal static bool ReadOwnedState(")]
+        self.assertIn("return ReadOwnedState(executable);", method)
+        self.assertNotIn("Registry.CurrentUser.OpenSubKey", method)
+        reader = code[code.index("internal static bool ReadOwnedState("):code.index("internal static bool SetEnabled(")]
+        self.assertIn("NOX_AUTOSTART_FOREIGN_ENTRY_HOLD", reader)
+        self.assertIn("key.GetValueKind(Entry) != RegistryValueKind.String", reader)
+        self.assertIn("!string.Equals(stored, command, StringComparison.OrdinalIgnoreCase)", reader)
+        self.assertIn("if (!hasEntry) return false;", reader)
 
 if __name__ == "__main__":
     unittest.main()

@@ -31,13 +31,9 @@ internal static class NoXAutostart
     private static string Quoted(string path) => "\"" + path + "\"";
     internal static bool IsEnabled(string executable)
     {
-        var command = Quoted(CheckedExecutable(executable));
-        using var key = Registry.CurrentUser.OpenSubKey(RunKey, writable:false);
-        // Only our exact REG_SZ command is an owned setting. REG_EXPAND_SZ
-        // and foreign value types never prove that NOX autostart is enabled.
-        return key?.GetValue(Entry) is string stored &&
-            key.GetValueKind(Entry) == RegistryValueKind.String &&
-            string.Equals(stored, command, StringComparison.OrdinalIgnoreCase);
+        // Legacy status callers must share the strict owner-only reader.
+        // A foreign same-name HKCU value is HOLD, never silently OFF.
+        return ReadOwnedState(executable);
     }
     // Owner-only, read-only durable HKCU proof after process restart.
     // A foreign value under the same name is never reported as NOX disabled.
