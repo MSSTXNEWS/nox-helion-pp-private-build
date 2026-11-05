@@ -138,7 +138,23 @@ try {
  const nodes=tooMany?[]:candidates;
  const d02Set=new Set(d02Nodes);
  let visible=0,d02Visible=0,cssAnimated=0,cssTransitions=0;
- const activeTime=(value)=>String(value||'').split(',').some(x=>Number.parseFloat(x)>0);
+ const activeTime=(value)=>{
+   // Computed styles must provide concrete CSS time tokens. parseFloat alone
+   // silently treats unexpected values as 0, allowing a false no-motion PASS.
+   const parts=String(value??'').split(',');
+   if(parts.length<1||parts.length>128)throw new Error('NOX_CDP_TIMING_UNVERIFIED');
+   let active=false;
+   for(const part of parts){
+     const token=part.trim();
+     if(!/^(?:\d+(?:\.\d+)?|\.\d+)(?:ms|s)$/i.test(token))
+       throw new Error('NOX_CDP_TIMING_UNVERIFIED');
+     const secondsOrMs=Number.parseFloat(token);
+     if(!Number.isFinite(secondsOrMs)||secondsOrMs<0)
+       throw new Error('NOX_CDP_TIMING_UNVERIFIED');
+     if(secondsOrMs>0)active=true;
+   }
+   return active;
+ };
  for(const el of nodes){
    const rect=el.getBoundingClientRect();
    // Visibility counts remain geometric. Real CSS/WAAPI motion checks inspect

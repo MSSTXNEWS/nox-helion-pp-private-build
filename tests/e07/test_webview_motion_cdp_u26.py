@@ -52,6 +52,14 @@ class PhysicalWebviewMotion(unittest.TestCase):
         self.assertNotIn("file:///",source)
         self.assertIn("'PAGE_NOT_UNIQUE'",source)
 
+    def test_webview_computed_css_timing_must_fail_closed(self):
+        source=TARGET.read_text(encoding="utf-8")
+        self.assertIn("const activeTime=(value)=>{",source)
+        self.assertIn("NOX_CDP_TIMING_UNVERIFIED",source)
+        self.assertIn("if(!Number.isFinite(secondsOrMs)||secondsOrMs<0)",source)
+        self.assertNotIn("Number.parseFloat(x)>0",source)
+        self.assertIn("for(const part of parts)",source)
+
     def test_selects_exactly_one_real_active_home_not_first_tab(self):
         inactive=self.good();inactive["home_active"]=False
         self.assertEqual(
