@@ -487,6 +487,14 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
                 Reply(source, epoch, id, route, "HOLD", "NATIVE_PERMISSION_DENIED");
                 return;
             }
+            // SETTINGS HKCU is exclusively a Windows/WPF owner operation.
+            // Never let an absent native delegate fall through to Python IPC.
+            // Reject before prompting consent to a missing owner handler.
+            if (route == "system.autostart" && _nativeOwnerAction is null)
+            {
+                Reply(source, epoch, id, route, "HOLD", "NOX_AUTOSTART_NATIVE_OWNER_REQUIRED");
+                return;
+            }
             // A previously authorized queued-model STOP must overtake
             // transfers just like chat.stop. SID/ACL and bounded jobId remain
             // enforced by this bridge and by the native P03 owner.
