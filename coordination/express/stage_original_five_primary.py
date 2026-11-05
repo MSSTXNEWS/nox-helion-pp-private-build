@@ -202,6 +202,8 @@ function visibleOriginalOwnerTarget(button){
  // Never trigger privileged original R11 handlers through offscreen,
  // occluded or accessibility-disabled controls. Keep their design untouched.
  if(!button||button.tagName!=='BUTTON'||!button.isConnected||button.disabled||
+    button.matches?.(':disabled')===true||
+    button.getAttribute?.('aria-disabled')==='true'||
     button.closest('[hidden],[inert],[aria-hidden="true"],[aria-disabled="true"]')||
     button.getClientRects().length===0)return false;
  const width=document.documentElement?.clientWidth;
