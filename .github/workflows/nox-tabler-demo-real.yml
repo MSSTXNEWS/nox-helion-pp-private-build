@@ -1,0 +1,43 @@
+name: NOX Tabler genuine demo compiled
+on:
+  push:
+    branches: [assets/download-ui-11-20-20261105]
+    paths: [.github/workflows/nox-tabler-demo-real.yml]
+permissions: {contents: read}
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: tabler/tabler
+          ref: dev
+          path: tabler
+          fetch-depth: 1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@11.17.0 --activate
+      - name: Build original Tabler preview pages
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd tabler
+          pnpm install --frozen-lockfile
+          pnpm --dir preview build
+          test -d preview/dist
+          find preview/dist -name '*.html' | head
+          count=$(find preview/dist -type f -name '*.html' | wc -l)
+          test "$count" -gt 10
+          echo "Built $count real Tabler HTML pages"
+          cd preview/dist
+          zip -qr ../../../NOX_11_TABLER_REAL_DEMO_BUILT.zip .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NOX_11_TABLER_REAL_DEMO_BUILT
+          path: NOX_11_TABLER_REAL_DEMO_BUILT.zip
+          retention-days: 7
