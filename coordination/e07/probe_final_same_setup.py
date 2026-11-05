@@ -696,26 +696,66 @@ def prepare_final_visual_directory(out_dir: Path, *, new_observation: bool) -> N
 
 
 def _capture_png_dimensions(path: Path) -> list[int] | None:
-    """Bind the WPF capture to PNG IHDR with CRC before visual PASS.
+    """Verify complete, bounded PNG chunks, not only a forged IHDR prefix.
 
-    UIA separately reports same-HWND [width,height]. A filename, byte size
-    or matching screenshot digest alone cannot prove capture dimensions.
+    A truncated screenshot with a valid header must never become the D02
+    physical-capture witness. The independent same-HWND UIA dimensions and
+    screenshot SHA-256 are checked separately by the existing E07 gate.
     """
     if not e07.clean_file(path):
         return None
     try:
+        size=path.stat().st_size
+        if not 57<=size<=40_000_000:
+            return None
         with path.open("rb") as source:
-            header=source.read(33)
-        if (len(header)!=33 or header[:8]!=b"\x89PNG\r\n\x1a\n"
-                or header[8:16]!=b"\x00\x00\x00\x0dIHDR"
-                or header[26:28]!=b"\x00\x00" or header[28] not in (0,1)):
-            return None
-        if (zlib.crc32(header[12:29]) & 0xffffffff)!=int.from_bytes(header[29:33],"big"):
-            return None
-        width=int.from_bytes(header[16:20],"big")
-        height=int.from_bytes(header[20:24],"big")
-        return [width,height] if 320<=width<=8192 and 200<=height<=8192 else None
-    except OSError:
+            if source.read(8)!=b"\x89PNG\r\n\x1a\n":
+                return None
+            dimensions=None
+            seen_idat=False
+            for index in range(4096):
+                header=source.read(8)
+                if len(header)!=8:
+                    return None
+                length=int.from_bytes(header[:4],"big")
+                kind=header[4:]
+                if not all(65<=value<=90 or 97<=value<=122 for value in kind):
+                    return None
+                if length>size-source.tell()-4:
+                    return None
+                crc=zlib.crc32(kind)
+                if index==0:
+                    if kind!=b"IHDR" or length!=13:
+                        return None
+                    ihdr=source.read(13)
+                    crc=zlib.crc32(ihdr,crc)
+                    width=int.from_bytes(ihdr[:4],"big")
+                    height=int.from_bytes(ihdr[4:8],"big")
+                    if not (320<=width<=8192 and 200<=height<=8192 and
+                            ihdr[10:12]==b"\x00\x00" and ihdr[12] in (0,1)):
+                        return None
+                    dimensions=[width,height]
+                else:
+                    if kind==b"IHDR":
+                        return None
+                    if kind==b"IDAT" and length>0:
+                        seen_idat=True
+                    if kind==b"IEND" and (length!=0 or not seen_idat):
+                        return None
+                    remaining=length
+                    while remaining:
+                        block=source.read(min(65536,remaining))
+                        if not block:
+                            return None
+                        crc=zlib.crc32(block,crc)
+                        remaining-=len(block)
+                checksum=source.read(4)
+                if len(checksum)!=4 or (crc&0xffffffff)!=int.from_bytes(checksum,"big"):
+                    return None
+                if kind==b"IEND":
+                    return dimensions if source.read(1)==b"" else None
+        return None
+    except (OSError,ValueError,OverflowError):
         return None
 
 
