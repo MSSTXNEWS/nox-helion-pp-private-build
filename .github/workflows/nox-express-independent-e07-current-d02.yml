@@ -1,6 +1,6 @@
-name: NOX EXPRESS independent E07 exact E06 41957801150
+name: NOX EXPRESS independent E07 exact E06 41966861333
 # New E07 accepts only a physically built, explicitly pinned producer Setup.
-# Single one-shot push on THIS workflow runs the verified E06 41957801150.
+# Single one-shot push on THIS workflow runs the verified E06 41966861333.
 # Later commits to unrelated source cannot re-trigger a heavy E07.
 on:
   push:
@@ -48,7 +48,7 @@ permissions:
   actions: read
   contents: read
 concurrency:
-  group: nox-express-e07-immutable-${{ inputs.setup_sha256 || '3ec8a5749217e006fb96c214170cbd3c62e71959df9b17541f500d58d3a6e42d' }}
+  group: nox-express-e07-immutable-${{ inputs.setup_sha256 || '8a552091502d8401ced76dc0063acb24f851bc3d99fbc40efe130f4535b4980d' }}
   cancel-in-progress: false
 jobs:
   independent-windows:
@@ -123,9 +123,9 @@ jobs:
       - name: Download immutable candidate from DIFFERENT Windows CI run
         uses: actions/download-artifact@v4
         with:
-          run-id: ${{ inputs.producer_run_id || '41957801150' }}
+          run-id: ${{ inputs.producer_run_id || '41966861333' }}
           github-token: ${{ github.token }}
-          name: ${{ inputs.artifact_name || 'nox-v16-e06-onehost-diagnostic-41957801150' }}
+          name: ${{ inputs.artifact_name || 'nox-v16-e06-onehost-diagnostic-41966861333' }}
           path: input-verified-current-d02
       - name: Download prior SHA-pinned Authenticode-verified official Ollama x64 bytes
         uses: actions/download-artifact@v4
@@ -199,7 +199,7 @@ jobs:
           NOX_E07_DEVTOOLS_PORT: '9222'
         run: |
           $ErrorActionPreference='Stop'
-          python -B coordination/e07/independent_setup_e07.py --artifact-dir input-verified-current-d02 --artifact-kind d02-pinned --pinned-source '${{ inputs.source_sha || '05534b532549dd7ffe6ef2b6f69b10ce5fadfe98' }}' --pinned-setup-sha '${{ inputs.setup_sha256 || '3ec8a5749217e006fb96c214170cbd3c62e71959df9b17541f500d58d3a6e42d' }}' --pinned-setup-bytes '${{ inputs.setup_bytes || '169696386' }}' --pinned-build-id '${{ inputs.build_id || 'NOX-V16-8bdd3924989ea1649a7ac5ea' }}' --pinned-owned-count '${{ inputs.owned_count || '1013' }}' --out work/e07-independent/E07_CANDIDATE_RECEIPT.json
+          python -B coordination/e07/independent_setup_e07.py --artifact-dir input-verified-current-d02 --artifact-kind d02-pinned --pinned-source '${{ inputs.source_sha || '17d9eb9f9fe5db82ca88c7406bad3a49c2f68dac' }}' --pinned-setup-sha '${{ inputs.setup_sha256 || '8a552091502d8401ced76dc0063acb24f851bc3d99fbc40efe130f4535b4980d' }}' --pinned-setup-bytes '${{ inputs.setup_bytes || '169700349' }}' --pinned-build-id '${{ inputs.build_id || 'NOX-V16-d7fd031fc20be113b616bfa6' }}' --pinned-owned-count '${{ inputs.owned_count || '1013' }}' --out work/e07-independent/E07_CANDIDATE_RECEIPT.json
           if ($LASTEXITCODE -ne 0) { throw 'INDEPENDENT_E07_NOT_ACCEPTED' }
       - name: Save independent evidence even on HOLD
         if: always()
