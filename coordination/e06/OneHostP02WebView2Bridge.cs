@@ -481,6 +481,26 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
         return false;
     }
 
+    // Native WPF/P03 routes consume JsonElement directly and may bypass the
+    // PythonPipe's own recursive duplicate-name guard. An ambiguous renderer
+    // payload must never reach a native consent prompt or owner operation.
+    private static bool UnambiguousPagePayload(JsonElement node)
+    {
+        if (node.ValueKind == JsonValueKind.Object)
+        {
+            var keys = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var property in node.EnumerateObject())
+                if (!keys.Add(property.Name) || !UnambiguousPagePayload(property.Value))
+                    return false;
+        }
+        else if (node.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in node.EnumerateArray())
+                if (!UnambiguousPagePayload(item)) return false;
+        }
+        return true;
+    }
+
     // Validate the untrusted WebView2 SETTINGS request before opening a WPF
     // owner-consent prompt. The renderer-side Boolean gate is not authority.
     // An empty object is a read; writes require exactly one Boolean field.
@@ -560,6 +580,13 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
                 chatErrorEpoch = Interlocked.Read(ref _streamEpoch);
             if (_usedIds.Count >= 8192 || !_usedIds.Add(id))
                 return; // Never reuse even failed nonce IDs.
+            // WPF-native P03/model/SETTINGS actions bypass PythonPipe's
+            // duplicate-key admission. Reject at the original WebView2 ingress.
+            if (!UnambiguousPagePayload(payload))
+            {
+                Reply(source, epoch, id, route, "HOLD", "PAGE_JSON_DUPLICATE_FIELD_DENIED");
+                return;
+            }
             if (payload.EnumerateObject().Any(p => AuthorityFields.Contains(p.Name)))
             {
                 Reply(source, epoch, id, route, "HOLD", "PAGE_AUTHORITY_CLAIM_DENIED");
