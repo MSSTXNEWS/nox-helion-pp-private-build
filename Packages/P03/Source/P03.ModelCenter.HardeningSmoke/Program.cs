@@ -465,6 +465,28 @@ RequireStreamDuplicateControlHold("{\"completed\":2,\"total\":3,\"Total\":4}",
     "B04 case-aliased total count must fail closed");
 Assert(ModelLocalAttestation.ParseVerifiedEvent("{\"status\":\"downloading\",\"note\":1,\"note\":2}").Status == "downloading",
     "B04 non-control metadata leaves standard stream status valid");
+// D04: lone case-aliased NDJSON fields cannot hide an Ollama error.
+void RequireNoncanonicalControlHoldD04(string json, string label)
+{
+    try { ModelLocalAttestation.ParseVerifiedEvent(json); }
+    catch (InvalidDataException ex) when (ex.Message == "OLLAMA_STREAM_NONCANONICAL_CONTROL_FIELD_HOLD")
+    { Assert(true, label); return; }
+    throw new Exception("FAIL " + label);
+}
+RequireNoncanonicalControlHoldD04("{\"status\":\"success\",\"Error\":\"provider offline\"}",
+    "D04 single uppercase Error cannot hide provider failure");
+RequireNoncanonicalControlHoldD04("{\"Status\":\"success\"}",
+    "D04 single uppercase Status denied");
+RequireNoncanonicalControlHoldD04("{\"status\":\"pulling\",\"Completed\":5,\"total\":10}",
+    "D04 single aliased Completed counter denied");
+RequireNoncanonicalControlHoldD04("{\"status\":\"pulling\",\"Total\":10}",
+    "D04 single aliased Total counter denied");
+RequireNoncanonicalControlHoldD04("{\"Digest\":\"sha256:" + new string('a', 64) + "\"}",
+    "D04 single aliased Digest denied");
+RequireNoncanonicalControlHoldD04("{\"\\u0045rror\":\"offline\",\"status\":\"success\"}",
+    "D04 escaped single aliased Error denied");
+Assert(ModelLocalAttestation.ParseVerifiedEvent("{\"status\":\"success\"}").Status == "success",
+    "D04 canonical lowercase success remains accepted");
 // 02. Oversized first line without a terminator fails before unbounded allocation.
 await RejectAsync(() => Drain(new string('x', ModelLocalAttestation.MaxEventCharacters + 1)),
     "T13-02 oversized no-newline line denied");

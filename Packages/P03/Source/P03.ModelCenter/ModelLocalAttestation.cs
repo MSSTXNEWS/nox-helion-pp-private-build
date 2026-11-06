@@ -203,6 +203,16 @@ public static class ModelLocalAttestation
             var seenControls = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var property in root.EnumerateObject())
             {
+                // A single differently-cased Error/Status is ignored by
+                // exact-case TryGetProperty, even if 'status' says success.
+                // Reject noncanonical control names before trusting evidence.
+                if ((property.Name.Equals("status", StringComparison.OrdinalIgnoreCase) ||
+                     property.Name.Equals("error", StringComparison.OrdinalIgnoreCase) ||
+                     property.Name.Equals("digest", StringComparison.OrdinalIgnoreCase) ||
+                     property.Name.Equals("completed", StringComparison.OrdinalIgnoreCase) ||
+                     property.Name.Equals("total", StringComparison.OrdinalIgnoreCase)) &&
+                    property.Name is not ("status" or "error" or "digest" or "completed" or "total"))
+                    throw new InvalidDataException("OLLAMA_STREAM_NONCANONICAL_CONTROL_FIELD_HOLD");
                 // Case-aliased Ollama controls cannot authorize a false success.
                 if ((property.Name.Equals("status", StringComparison.OrdinalIgnoreCase) ||
                      property.Name.Equals("error", StringComparison.OrdinalIgnoreCase) ||
