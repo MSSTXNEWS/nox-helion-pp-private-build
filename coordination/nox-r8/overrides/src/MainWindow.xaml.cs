@@ -87,6 +87,10 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        // Expose the existing WPF WebView2 host to the Windows UI Automation tree.
+        // DOM controls inside the host retain their own HTML label/ARIA semantics.
+        System.Windows.Automation.AutomationProperties.SetAutomationId(Browser, "NOX_HELION_WEBVIEW2");
+        System.Windows.Automation.AutomationProperties.SetName(Browser, "NOX HELION embedded interface");
         Loaded += async (_, _) => await Initialize();
         providerReconnectTimer.Tick += (_, _) => { if (active == null) _ = CheckProvider(); };
         Closing += (_, _) => {
@@ -335,6 +339,52 @@ public partial class MainWindow : Window
             checks["real_webview2_keyboard_routes"] = keyboard == "true" ? "PASS" : "FAIL";
             if (keyboard != "true") throw new InvalidOperationException("WebView2 keyboard route/ARIA verification failed");
 
+            // D06: test the real Windows UI Automation provider, not just DOM
+            // attributes. Query off the WPF UI thread to avoid cross-thread UIA
+            // deadlocks, using the live Window HWND of this smoke process.
+            var uiaHandle = new WindowInteropHelper(this).Handle;
+            var accessibleHost = await Task.Run(() =>
+            {
+                var root = System.Windows.Automation.AutomationElement.FromHandle(uiaHandle);
+                var browser = root?.FindFirst(
+                    System.Windows.Automation.TreeScope.Descendants,
+                    new System.Windows.Automation.PropertyCondition(
+                        System.Windows.Automation.AutomationElement.AutomationIdProperty,
+                        "NOX_HELION_WEBVIEW2"));
+                return browser != null &&
+                    browser.Current.Name == "NOX HELION embedded interface";
+            });
+            if (!accessibleHost)
+                throw new InvalidOperationException("NOX_SETTINGS_WINDOWS_UIA_HOST_HOLD");
+            checks["settings_windows_uia_host"] = "PASS";
+
+            // DOM accessibility must also survive in real WebView2:
+            // visible labels, enabled buttons, live receipt region and focus.
+            var accessibleSettings = await Browser.CoreWebView2.ExecuteScriptAsync("""
+                (() => {
+                  document.querySelector('button.core[data-route="persona"]')?.click();
+                  const persona = document.getElementById('persona');
+                  const mode = document.getElementById('performance');
+                  const motion = document.getElementById('reduceMotion');
+                  const status = document.getElementById('personaStatus');
+                  const label = document.querySelector('label[for="persona"]');
+                  const modeLabel = document.querySelector('label[for="performance"]');
+                  const save = document.getElementById('savePerformance');
+                  if (!persona || !mode || !motion || !status || !label ||
+                      !modeLabel || !save || !motion.closest('label')) return false;
+                  if (!label.textContent.trim() || !modeLabel.textContent.trim() ||
+                      status.getAttribute('role') !== 'status' ||
+                      status.getAttribute('aria-live') !== 'polite' ||
+                      mode.disabled || persona.disabled || save.disabled) return false;
+                  mode.focus();
+                  return document.activeElement === mode &&
+                    [...mode.options].map(x => x.value).join(',') === 'MAX,BALANCED,ECO';
+                })()
+                """);
+            if (accessibleSettings != "true")
+                throw new InvalidOperationException("NOX_SETTINGS_WEBVIEW2_ACCESSIBILITY_HOLD");
+            checks["settings_webview2_accessible_controls"] = "PASS";
+
             // Check native SQLite isolation: no use of an existing live chat database.
             var realPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                 "NOX_HELION", "chat.sqlite3");
@@ -449,6 +499,7 @@ public partial class MainWindow : Window
             var requiredChecks = UiSmokeSettingsRestartRequested
                 ? new[] { "isolated_sqlite_path", "settings_wpf_owner_restart_readback" }
                 : new[] { "real_webview2_eight_routes", "real_webview2_keyboard_routes",
+                          "settings_windows_uia_host", "settings_webview2_accessible_controls",
                           "isolated_sqlite_path", "settings_wpf_owner_sqlite_readback",
                           "settings_wpf_motion_sqlite_readback", "settings_foreign_key_denial",
                           "native_wpf_webview2_renderer" };
@@ -879,7 +930,7 @@ public partial class MainWindow : Window
                 case "model.cancel": activeModelPull?.Cancel(); break;
                 case "tasks.list": Send("tasks", ReadTasks()); break;
                 case "tasks.add": HandleTaskAdd(Text("text"), Text("requestId")); break;
-                case "tasks.toggle": ToggleTask(request.GetProperty("id").GetInt64()); Send("tasks", ReadTasks()); break;
+                case "tasks.toggle": HandleTaskToggle(request.GetProperty("id").GetInt64(), Text("requestId")); break;
                 case "settings.get": Send("settings", ReadPreferences()); break;
                 case "settings.put": HandleSettingsPut(request); break;
                 case "health": await CheckProvider(); break;
@@ -977,19 +1028,30 @@ public partial class MainWindow : Window
 
     private async Task Generate(string prompt, string requestId)
     {
-        if (string.IsNullOrWhiteSpace(prompt)) return;
+        // A successful WebView2 post is not proof that the native owner can start.
+        // Rejected requests need a matching terminal ACK, not error-only,
+        // or the chat composer remains locked until the process restarts.
+        void RejectChat(string reason)
+        {
+            Send("error", new { requestId, message = reason });
+            Send("complete", new { requestId, ok = false, stopped = false });
+        }
+        if (string.IsNullOrWhiteSpace(prompt)) {
+            RejectChat("CHAT_EMPTY_PROMPT_DENIED");
+            return;
+        }
         // Only an explicit bounded owner ID may dispatch a native inference.
         if (requestId.Length < 8 || requestId.Length > 128 ||
             requestId.Any(c => !(char.IsLetterOrDigit(c) || c == '-' || c == '_'))) {
-            Send("error", new { requestId, message = "CHAT_REQUEST_ID_DENIED" });
+            RejectChat("CHAT_REQUEST_ID_DENIED");
             return;
         }
         if (prompt.Length > 32000) {
-            Send("error", new { requestId, message = "Prompt exceeds 32,000 characters" });
+            RejectChat("CHAT_PROMPT_TOO_LONG_DENIED");
             return;
         }
         if (!await generationLock.WaitAsync(0)) {
-            Send("error", new { requestId, message = "Generation already running. Use STOP." });
+            RejectChat("CHAT_ALREADY_RUNNING_HOLD");
             return;
         }
         using var cancellation = new CancellationTokenSource();
@@ -1212,12 +1274,53 @@ public partial class MainWindow : Window
         return id;
     }
 
-    private void ToggleTask(long id)
+    // A checkbox click is not a persisted result. Match the native request
+    // to its owner receipt and independently read back the committed SQLite row.
+    private void HandleTaskToggle(long id, string requestId)
     {
-        using var db = OpenDatabase(); using var cmd = db.CreateCommand();
-        cmd.CommandText = "UPDATE tasks SET complete=1-complete WHERE id=$id";
-        cmd.Parameters.AddWithValue("$id", id);
-        cmd.ExecuteNonQuery();
+        if (!ValidWriteRequestId(requestId) || id <= 0) {
+            Send("tasks.toggle.denied", new { requestId, id, reason = "NOX_TASK_TOGGLE_REQUEST_HOLD" });
+            return;
+        }
+        try {
+            int complete;
+            using (var db = OpenDatabase())
+            using (var tx = db.BeginTransaction()) {
+                using (var cmd = db.CreateCommand()) {
+                    cmd.Transaction = tx;
+                    cmd.CommandText = "UPDATE tasks SET complete=CASE WHEN complete=0 THEN 1 ELSE 0 END WHERE id=$id";
+                    cmd.Parameters.AddWithValue("$id", id);
+                    if (cmd.ExecuteNonQuery() != 1)
+                        throw new InvalidOperationException("NOX_TASK_TOGGLE_MISSING_ROW_HOLD");
+                }
+                using (var read = db.CreateCommand()) {
+                    read.Transaction = tx;
+                    read.CommandText = "SELECT complete FROM tasks WHERE id=$id";
+                    read.Parameters.AddWithValue("$id", id);
+                    complete = Convert.ToInt32(read.ExecuteScalar() ??
+                        throw new InvalidOperationException("NOX_TASK_TOGGLE_READ_HOLD"));
+                    if (complete is not (0 or 1))
+                        throw new InvalidOperationException("NOX_TASK_TOGGLE_STATE_HOLD");
+                }
+                tx.Commit();
+            }
+            using (var verifyDb = OpenDatabase())
+            using (var verify = verifyDb.CreateCommand()) {
+                verify.CommandText = "SELECT complete FROM tasks WHERE id=$id";
+                verify.Parameters.AddWithValue("$id", id);
+                if (verify.ExecuteScalar() is not object persisted ||
+                    Convert.ToInt32(persisted) != complete)
+                    throw new InvalidOperationException("NOX_TASK_TOGGLE_SQLITE_READBACK_HOLD");
+            }
+            Send("tasks", ReadTasks());
+            Send("tasks.toggle.receipt", new { requestId, id, complete = complete != 0, saved = true });
+        }
+        catch (SqliteException) {
+            Send("tasks.toggle.denied", new { requestId, id, reason = "NOX_TASK_TOGGLE_SQLITE_HOLD" });
+        }
+        catch (Exception) {
+            Send("tasks.toggle.denied", new { requestId, id, reason = "NOX_TASK_TOGGLE_READBACK_HOLD" });
+        }
     }
 
 

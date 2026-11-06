@@ -72,6 +72,8 @@ jobs:
                 $stamp -lt $started -or !$n.wpfWebView2Accepted -or
                 $n.checks.real_webview2_eight_routes -ne 'PASS' -or
                 $n.checks.real_webview2_keyboard_routes -ne 'PASS' -or
+                $n.checks.settings_windows_uia_host -ne 'PASS' -or
+                $n.checks.settings_webview2_accessible_controls -ne 'PASS' -or
                 $n.checks.settings_wpf_owner_sqlite_readback -ne 'PASS' -or
                 $n.checks.settings_wpf_motion_sqlite_readback -ne 'PASS' -or
                 $n.checks.settings_foreign_key_denial -ne 'PASS' -or

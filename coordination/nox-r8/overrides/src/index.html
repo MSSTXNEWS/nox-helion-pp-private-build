@@ -140,7 +140,7 @@ body.reduced .helion-fx{filter:none}body.reduced .core.active{animation:none}
 <div id="learnReceipt" class="mono" role="status">Нет подтверждённого результата.</div>
 <div id="learnQueue" class="mono" aria-live="polite">Очередь не читалась.</div><div class="meter" aria-label="Физический прогресс обучения"><span id="trainingBar"></span></div><div id="trainingMeasured" class="meterLabel">Метрика не измерена</div><div id="training" class="mono"></div></section>
 <section class="panel" data-panel="voice"><p class="intro">Озвучивание уже полученного ответа через установленный речевой движок Windows/WebView2. Это не голосовой ассистент и не запись микрофона.</p><button class="action" id="speak">Озвучить последний ответ</button><button class="action danger" id="silence">Остановить речь</button><div id="voiceStatus" class="mono">Проверка доступности речи по кнопке.</div></section>
-<section class="panel" data-panel="persona"><p class="intro">Локальные настройки SQLite. PersonaID сохраняется, но не подменяет автоматически личность модели.</p><select id="persona"><option value="KV">KV</option><option value="AM">AM</option><option value="LA">LA</option><option value="EV">EV</option><option value="KW">KW</option></select><button class="action" id="savePersona">Сохранить PersonaID</button><label><input type="checkbox" id="reduceMotion"> Отключить анимацию</label><button class="action" id="saveMotion">Сохранить движение</button><label><input type="checkbox" id="useContext" checked> Добавлять локальную память и последние диалоги в запрос</label><button class="action" id="saveContext">Сохранить использование памяти</button><label for="performance">Режим локального ИИ</label><select id="performance"><option>MAX</option><option selected>BALANCED</option><option>ECO</option></select><button class="action" id="savePerformance">Сохранить режим</button><button class="action" id="backup">Резервная копия SQLite…</button><div id="personaStatus" class="mono" role="status" aria-live="polite"></div><p class="hint">Смена PersonaID не означает наличие обученного адаптера личности. Экспорт памяти выполняется только по твоей команде.</p></section>
+<section class="panel" data-panel="persona"><p class="intro">Локальные настройки SQLite. PersonaID сохраняется, но не подменяет автоматически личность модели.</p><label for="persona">PersonaID</label><select id="persona"><option value="KV">KV</option><option value="AM">AM</option><option value="LA">LA</option><option value="EV">EV</option><option value="KW">KW</option></select><button class="action" id="savePersona">Сохранить PersonaID</button><label><input type="checkbox" id="reduceMotion"> Отключить анимацию</label><button class="action" id="saveMotion">Сохранить движение</button><label><input type="checkbox" id="useContext" checked> Добавлять локальную память и последние диалоги в запрос</label><button class="action" id="saveContext">Сохранить использование памяти</button><label for="performance">Режим локального ИИ</label><select id="performance"><option>MAX</option><option selected>BALANCED</option><option>ECO</option></select><button class="action" id="savePerformance">Сохранить режим</button><button class="action" id="backup">Резервная копия SQLite…</button><div id="personaStatus" class="mono" role="status" aria-live="polite"></div><p class="hint">Смена PersonaID не означает наличие обученного адаптера личности. Экспорт памяти выполняется только по твоей команде.</p></section>
 </aside></main>
 <script id="nox-liquid-core">
 /* NOX liquid Helion original GPU shader, offline and non-interactive. */
@@ -272,7 +272,7 @@ body.reduced .helion-fx{filter:none}body.reduced .core.active{animation:none}
     gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]),gl.STATIC_DRAW);
     const attr=gl.getAttribLocation(program,'aPosition');gl.enableVertexAttribArray(attr);gl.vertexAttribPointer(attr,2,gl.FLOAT,false,0,0);
   }catch(e){console.warn('NOX WebGL initialization fallback:',e.message);const replacement=canvas.cloneNode(false);canvas.replaceWith(replacement);startCanvas2d(replacement);return;}
-  let raf=0,mode='BALANCED',energy=0,rendered=false,last=0,started=performance.now();
+  let raf=0,mode='BALANCED',energy=0,rendered=false,last=0,started=performance.now(),gpuFrames=0;
   const reduce=()=>document.body.classList.contains('reduced') ||
     window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   let gpuActive=true;
@@ -298,7 +298,14 @@ body.reduced .helion-fx{filter:none}body.reduced .core.active{animation:none}
     try{resize();gl.useProgram(program);gl.uniform2f(res,canvas.width,canvas.height);
       gl.uniform1f(time,reduce()?0:(now-started)*.001);gl.uniform1f(ene,energy);
       gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT);gl.drawArrays(gl.TRIANGLES,0,6);
-      if(gl.isContextLost&&gl.isContextLost()){switchToCanvas2d('CONTEXT_LOST');return;}}
+      if(gl.isContextLost&&gl.isContextLost()){switchToCanvas2d('CONTEXT_LOST');return;}
+      // Drivers can report draw/VRAM errors without throwing or losing context.
+      // Sample the genuine GPU error state on the first frame and every 30th
+      // frame to avoid a readback stall every animation frame.
+      if(typeof gl.getError==='function' && (++gpuFrames===1 || gpuFrames%30===0)){
+        const gpuError=gl.getError();
+        if(gpuError!==gl.NO_ERROR)throw new Error('GL_RUNTIME_ERROR_'+gpuError);
+      }}
     catch(e){switchToCanvas2d(e.message);return;}
     raf=fps?requestAnimationFrame(frame):0;
   }
@@ -315,8 +322,8 @@ body.reduced .helion-fx{filter:none}body.reduced .core.active{animation:none}
 </script>
 <script>
 'use strict';
-const $=id=>document.getElementById(id);const post=(type,data={})=>{if(!window.chrome?.webview){$('status').textContent='NATIVE BRIDGE OFFLINE';return false}window.chrome.webview.postMessage({type,...data});return true};
-let responseBox=null,lastAnswer='',busy=false,settingsDenial='',activeChatId=null,requestSequence=0,pendingTask=null,pendingNote=null;
+const $=id=>document.getElementById(id);const post=(type,data={})=>{const bridge=window.chrome?.webview;if(typeof bridge?.postMessage!=='function'){$('status').textContent='NATIVE BRIDGE OFFLINE';return false}try{bridge.postMessage({type,...data});return true}catch{$('status').textContent='NATIVE BRIDGE DISPATCH FAILED';return false}};
+let responseBox=null,lastAnswer='',busy=false,settingsDenial='',activeChatId=null,requestSequence=0,pendingTask=null,pendingNote=null,pendingTaskToggle=null;
 const nextChatId=()=>typeof crypto!=='undefined'&&typeof crypto.randomUUID==='function'
   ? crypto.randomUUID()
   : 'r'+Date.now().toString(36)+'_'+(++requestSequence).toString(36)+'_'+Math.random().toString(36).slice(2);const headings={consciousness:'CONSCIOUSNESS',atlas:'ATLAS / TASKS',reflection:'REFLECTION / HISTORY',nexus:'NEXUS / MODELS',forge:'FORGE / TRAINING',core:'CORE / LIVE CHAT',voice:'VOICE',persona:'PERSONA'};
@@ -347,7 +354,9 @@ case 'complete':busy=false;activeChatId=null;$('generation').classList.remove('o
 case 'error':$('status').textContent='ERROR';entry($('messages'),v&&typeof v==='object'?String(v.message||'NATIVE_ERROR'):String(v),'ERROR');/* Only the matching native complete may unlock a busy chat. */break;
 case 'health':{const s=v.online?(v.modelVisible?'QWEN ONLINE':'SERVER ONLINE / MODEL ABSENT'):'PROVIDER OFFLINE';$('status').textContent=s;$('hudModel').textContent=(v.model||'QWEN').split(':')[0].toUpperCase().slice(0,13);$('hudEngine').textContent=v.modelVisible?'ONLINE':v.online?'NO MODEL':'OFFLINE';$('visualLive').textContent=v.modelVisible?'LOCAL AI ONLINE':'AI NOT READY';$('visualLiveDot').classList.toggle('on',!!v.modelVisible);const out=JSON.stringify(v,null,2);$('health').textContent=out;$('overview').textContent=out;const picker=$('modelPicker');picker.replaceChildren();(v.models||[]).forEach(name=>{let op=document.createElement('option');op.value=name;op.textContent=name;picker.append(op)});if(v.model)picker.value=v.model;if(!v.models?.length){let op=document.createElement('option');op.textContent='Нет доступных моделей';picker.append(op)}break}
 case 'history':{const box=$('history');box.replaceChildren();(v||[]).forEach(x=>entry(box,x.prompt+'\n\n'+x.answer,x.timestamp));if(!v?.length)box.textContent='Нет сохранённых диалогов';break}
-case 'tasks':{const box=$('tasks');box.replaceChildren();(v||[]).forEach(x=>{let row=element('div',undefined,'task'+(x.complete?' done':''));let cb=document.createElement('input');cb.type='checkbox';cb.checked=x.complete;cb.onchange=()=>post('tasks.toggle',{id:x.id});row.append(cb,element('span',x.title));box.append(row)});if(!v?.length)box.textContent='Задач пока нет';break}
+case 'tasks':{const box=$('tasks');box.replaceChildren();(v||[]).forEach(x=>{let row=element('div',undefined,'task'+(x.complete?' done':''));row.dataset.taskId=String(x.id);let cb=document.createElement('input');cb.type='checkbox';cb.checked=x.complete;cb.disabled=!!pendingTaskToggle;cb.onchange=()=>{if(pendingTaskToggle)return;const requestId=nextChatId();pendingTaskToggle={requestId,id:x.id,previous:x.complete};document.querySelectorAll('#tasks input[type=checkbox]').forEach(b=>b.disabled=true);if(post('tasks.toggle',{id:x.id,requestId})===false){cb.checked=x.complete;pendingTaskToggle=null;document.querySelectorAll('#tasks input[type=checkbox]').forEach(b=>b.disabled=false)}};row.append(cb,element('span',x.title));box.append(row)});if(!v?.length)box.textContent='Задач пока нет';break}
+case 'tasks.toggle.receipt':if(pendingTaskToggle&&v?.requestId===pendingTaskToggle.requestId&&v?.id===pendingTaskToggle.id&&v.saved===true){pendingTaskToggle=null;document.querySelectorAll('#tasks input[type=checkbox]').forEach(b=>b.disabled=false);$('status').textContent='TASK UPDATED · SQLITE';}break;
+case 'tasks.toggle.denied':if(pendingTaskToggle&&v?.requestId===pendingTaskToggle.requestId&&v?.id===pendingTaskToggle.id){const previous=pendingTaskToggle.previous,id=pendingTaskToggle.id;pendingTaskToggle=null;document.querySelectorAll('#tasks .task').forEach(row=>{const cb=row.querySelector('input[type=checkbox]');if(cb){if(row.dataset.taskId===String(id))cb.checked=previous;cb.disabled=false}});$('status').textContent=String(v.reason||'TASK UPDATE HOLD');post('tasks.list');}break;
 case 'tasks.add.receipt':if(pendingTask&&v?.requestId===pendingTask.requestId&&v.saved===true){if($('taskInput').value.trim()===pendingTask.text)$('taskInput').value='';pendingTask=null;$('taskAdd').disabled=false;$('status').textContent='TASK SAVED · SQLITE';}break;
 case 'tasks.add.denied':if(pendingTask&&v?.requestId===pendingTask.requestId){pendingTask=null;$('taskAdd').disabled=false;$('status').textContent=String(v.reason||'TASK SAVE HOLD');}break;
 case 'download':{$('downloadStatus').textContent=`${v.model||''}: ${v.status||''}`+(typeof v.percent==='number'?' · '+v.percent+'%':'');if(typeof v.percent==='number')$('downloadBar').style.width=Math.max(0,Math.min(100,v.percent))+'%';break;}

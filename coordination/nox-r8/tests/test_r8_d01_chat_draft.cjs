@@ -77,3 +77,38 @@ assert.equal(presses,0,'D01_COMPOSITION_MUST_NOT_SEND');
 assert.equal(keypress('Enter'),true,'D01_NORMAL_ENTER_MUST_SEND');
 assert.equal(presses,1,'D01_CHAT_SEND_ONCE');
 console.log('D01 R8 SOURCE_ONLY PASS: compact panel scroll, IME-safe Enter, Shift+Enter, single send');
+
+/* D01_NATIVE_BRIDGE_THROW_NO_LOSS: execute the real production bridge and SEND handler.
+   Even a dying WebView2 host must not discard a draft or leave SEND busy. */
+const nativeBridgeLine = html.split('\n').find(line => line.startsWith('const $=id=>document.getElementById(id);const post='));
+assert.ok(nativeBridgeLine, 'D01_NATIVE_POST_MISSING');
+function nativeBridgeCase(webview, draft = 'Невыгруженный черновик') {
+  const nodes = {status:{textContent:''}, prompt:{value:draft}, send:{}, streamHint:{textContent:''}, messages:{}};
+  const emitted = [];
+  const scope = {
+    window: webview === null ? {} : {chrome:{webview}},
+    document:{getElementById:id=>nodes[id]},
+    entry:()=>{throw new Error('DRAFT_MUST_NOT_RENDER_IF_BRIDGE_FAILED')},
+    nextChatId:()=> 'd01_native_bridge_failure_01',
+    busy:false, activeChatId:null, responseBox:null, lastAnswer:'retained'
+  };
+  vm.runInNewContext(nativeBridgeLine + '\n' + code + '\n$("send").onclick();', scope, {timeout:1500});
+  return {nodes,scope,emitted};
+}
+let disconnected = nativeBridgeCase(null);
+assert.equal(disconnected.nodes.prompt.value, 'Невыгруженный черновик');
+assert.equal(disconnected.scope.busy, false);
+assert.equal(disconnected.scope.activeChatId, null);
+assert.match(disconnected.nodes.status.textContent, /BRIDGE OFFLINE/);
+disconnected = nativeBridgeCase({});
+assert.equal(disconnected.scope.busy, false);
+assert.equal(disconnected.nodes.prompt.value, 'Невыгруженный черновик');
+let throwCount=0;
+const rejected = nativeBridgeCase({postMessage:()=>{throwCount++;throw new Error('WebView2 detached')}});
+assert.equal(throwCount,1,'D01_POST_MUST_NOT_RETRY_NATIVE_ACTION');
+assert.equal(rejected.nodes.prompt.value,'Невыгруженный черновик');
+assert.equal(rejected.scope.busy,false);
+assert.equal(rejected.scope.activeChatId,null);
+assert.match(rejected.nodes.status.textContent,/DISPATCH FAILED/);
+assert.match(rejected.nodes.streamHint.textContent,/Черновик сохранён/);
+console.log('D01 R8 SOURCE_ONLY PASS: native post missing/throw fail closed, no draft loss, no retry');

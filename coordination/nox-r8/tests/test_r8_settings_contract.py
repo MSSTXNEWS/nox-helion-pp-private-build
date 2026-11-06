@@ -23,6 +23,11 @@ for token in (
     'UiSmokeSettingsRestartRequested',
     'selftest_r8_',
     'case "stop":',
+    'AutomationProperties.SetAutomationId(Browser, "NOX_HELION_WEBVIEW2")',
+    'AutomationElement.FromHandle(uiaHandle)',
+    'settings_windows_uia_host',
+    'settings_webview2_accessible_controls',
+    'NOX_SETTINGS_WINDOWS_UIA_HOST_HOLD',
 ):
     assert token in native, token
 for token in (
@@ -32,6 +37,7 @@ for token in (
     "window.noxVisual?.setMode(v?.performance||'BALANCED')",
     '<body class="reduced">',  # Safe static frame until native SQLite motion preference arrives.
     'prefers-reduced-motion: reduce',
+    '<label for="persona">PersonaID</label>',
 ):
     assert token in web, token
 assert 'MAX сохранён для реальных параметров генерации' not in web
