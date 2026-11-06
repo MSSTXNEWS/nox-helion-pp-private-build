@@ -114,6 +114,20 @@ assert "post('tasks.add',{text});$('taskInput').value=''" not in html
 assert "post('notes.add',{title,content});$('noteTitle').value=''" not in html
 print("D05 R8 SOURCE_ONLY: native task/note owner receipts after SQLite readback and draft NO-LOSS PASS")
 
+# B04 native chat preflight denial must terminate the WebView2 owner.
+# A native post succeeds before Generate determines capacity or validity.
+# The UI intentionally unlocks ONLY on request-correlated complete, not error.
+preflight = generate.split('using var cancellation = new CancellationTokenSource();', 1)[0]
+assert 'void RejectChat(string reason)' in preflight, 'B04_CHAT_REJECT_HELPER_HOLD'
+reject = preflight.split('void RejectChat(string reason)', 1)[1].split('if (string.IsNullOrWhiteSpace(prompt))', 1)[0]
+assert 'Send("error", new { requestId, message = reason });' in reject, 'B04_CHAT_REJECT_REASON_HOLD'
+assert 'Send("complete", new { requestId, ok = false, stopped = false });' in reject, 'B04_CHAT_REJECT_COMPLETE_HOLD'
+for marker in ('CHAT_EMPTY_PROMPT_DENIED', 'CHAT_REQUEST_ID_DENIED',
+               'CHAT_PROMPT_TOO_LONG_DENIED', 'CHAT_ALREADY_RUNNING_HOLD'):
+    assert preflight.count('RejectChat("' + marker + '");') == 1, 'B04_CHAT_REJECT_PATH_HOLD ' + marker
+assert "case 'complete':busy=false;activeChatId=null" in html, 'B04_WEBVIEW_CHAT_UNLOCK_HOLD'
+print('B04 R8 SOURCE_ONLY: native preflight rejection now releases the matching WebView2 owner')
+
 # B04 live HTTP STOP acceptance regression: a task/HTTP POST beginning is not
 # evidence of a real streaming response. The self-test must wait for an actual
 # nonempty Ollama NDJSON token before pressing WebView2 STOP.

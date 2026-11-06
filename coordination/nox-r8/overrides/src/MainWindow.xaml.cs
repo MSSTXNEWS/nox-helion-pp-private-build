@@ -948,19 +948,30 @@ public partial class MainWindow : Window
 
     private async Task Generate(string prompt, string requestId)
     {
-        if (string.IsNullOrWhiteSpace(prompt)) return;
+        // A successful WebView2 post is not proof that the native owner can start.
+        // Rejected requests need a matching terminal ACK, not error-only,
+        // or the chat composer remains locked until the process restarts.
+        void RejectChat(string reason)
+        {
+            Send("error", new { requestId, message = reason });
+            Send("complete", new { requestId, ok = false, stopped = false });
+        }
+        if (string.IsNullOrWhiteSpace(prompt)) {
+            RejectChat("CHAT_EMPTY_PROMPT_DENIED");
+            return;
+        }
         // Only an explicit bounded owner ID may dispatch a native inference.
         if (requestId.Length < 8 || requestId.Length > 128 ||
             requestId.Any(c => !(char.IsLetterOrDigit(c) || c == '-' || c == '_'))) {
-            Send("error", new { requestId, message = "CHAT_REQUEST_ID_DENIED" });
+            RejectChat("CHAT_REQUEST_ID_DENIED");
             return;
         }
         if (prompt.Length > 32000) {
-            Send("error", new { requestId, message = "Prompt exceeds 32,000 characters" });
+            RejectChat("CHAT_PROMPT_TOO_LONG_DENIED");
             return;
         }
         if (!await generationLock.WaitAsync(0)) {
-            Send("error", new { requestId, message = "Generation already running. Use STOP." });
+            RejectChat("CHAT_ALREADY_RUNNING_HOLD");
             return;
         }
         using var cancellation = new CancellationTokenSource();
