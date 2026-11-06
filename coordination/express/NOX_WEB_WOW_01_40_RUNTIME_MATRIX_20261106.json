@@ -1,0 +1,287 @@
+{
+  "schema": "NOX_WEB_WOW_DONOR_01_40_R2",
+  "instructions_version": "0.0.6",
+  "purpose": "Distinguish verified sources from real selectable runtime; never count source acquisition as functional integration",
+  "branch": "integration/nox-v16-unified-candidate-20261028-r01",
+  "notes": [
+    "40 original source archives were validated separately; source ≠ runtime integration",
+    "Use GPU budget: one Three WebGL instance with shared HELIODON geometry; local HALO 2D; CHROMA existing independent WebGL under ECO guard",
+    "Do not introduce a second AI chat or native backend",
+    "React-specific packages and licensing-restricted donors require separate compatibility gate before mounting",
+    "All native actions and real telemetry must remain truthful"
+  ],
+  "entries": [
+    {
+      "id": 1,
+      "name": "FORMWORK HALO",
+      "source_verified": true,
+      "runtime_status": "implemented_selective",
+      "component": "ui/menu-pages/formwork-halo-hud.js",
+      "scope": "HOME orbital radar",
+      "proof": "Chromium 42139244196"
+    },
+    {
+      "id": 2,
+      "name": "FORMWORK HELIODON",
+      "source_verified": true,
+      "runtime_status": "implemented_selective",
+      "component": "ui/menu-pages/nox-wow-scene.js",
+      "scope": "MAX metal geometry shared Three.js",
+      "proof": "Chromium 42139948652"
+    },
+    {
+      "id": 3,
+      "name": "FORMWORK CHROMA",
+      "source_verified": true,
+      "runtime_status": "implemented_selective",
+      "component": "ui/menu-pages/chroma-fx.html",
+      "scope": "HOME center chroma shader",
+      "proof": "source present; current WEB render"
+    },
+    {
+      "id": 4,
+      "name": "FORMWORK NEBULA",
+      "source_verified": true,
+      "runtime_status": "source_only_not_connected"
+    },
+    {
+      "id": 5,
+      "name": "FORMWORK AETHER",
+      "source_verified": true,
+      "runtime_status": "implemented_selective",
+      "component": "ui/menu-pages/formwork-aether-bento.css",
+      "scope": "existing details bento cards",
+      "proof": "Chromium 42139948652"
+    },
+    {
+      "id": 6,
+      "name": "FORMWORK MERIDIAN",
+      "source_verified": true,
+      "runtime_status": "implemented_selective",
+      "component": "ui/menu-pages/meridian-readout.js",
+      "scope": "readout animation",
+      "proof": "source present; functional telemetry separate"
+    },
+    {
+      "id": 7,
+      "name": "FORMWORK AURUM",
+      "source_verified": true,
+      "runtime_status": "implemented_selective",
+      "component": "ui/menu-pages/aurum-dust.js",
+      "scope": "gold dust HOME canvas",
+      "proof": "source present"
+    },
+    {
+      "id": 8,
+      "name": "FORMWORK ZODIAC",
+      "source_verified": true,
+      "runtime_status": "source_only_not_connected"
+    },
+    {
+      "id": 9,
+      "name": "Loquix",
+      "source_verified": true,
+      "runtime_status": "implemented_selective",
+      "component": "ui/menu-pages/vendor/loquix-typing.mjs",
+      "scope": "native chat visual typing indicator only; native OneHost unchanged",
+      "proof": "bundle 42140575403; runtime regression pending"
+    },
+    {
+      "id": 10,
+      "name": "Tabler",
+      "source_verified": true,
+      "runtime_status": "source_only_not_connected"
+    },
+    {
+      "id": 11,
+      "name": "Tabler Demo",
+      "source_verified": true,
+      "runtime_status": "source_only_not_connected"
+    },
+    {
+      "id": 12,
+      "name": "shadcn/ui",
+      "source_verified": true,
+      "runtime_status": "pattern_adapted",
+      "note": "native card hierarchy adapted (not shadcn React runtime)"
+    },
+    {
+      "id": 13,
+      "name": "Radix UI",
+      "source_verified": true,
+      "runtime_status": "pattern_adapted",
+      "note": "native breadcrumb and accessible disclosure patterns (not Radix runtime)"
+    },
+    {
+      "id": 14,
+      "name": "Lucide",
+      "source_verified": true,
+      "runtime_status": "implemented_selective",
+      "component": "ui/nox-lucide-icons.mjs",
+      "scope": "existing navigation icon assets",
+      "proof": "local source and tests"
+    },
+    {
+      "id": 15,
+      "name": "SVG Gauge",
+      "source_verified": true,
+      "runtime_status": "source_only_not_connected"
+    },
+    {
+      "id": 16,
+      "name": "ProgressBar.js",
+      "source_verified": true,
+      "runtime_status": "source_only_not_connected"
+    },
+    {
+      "id": 17,
+      "name": "Apache ECharts",
+      "source_verified": true,
+      "runtime_status": "source_only_not_connected"
+    },
+    {
+      "id": 18,
+      "name": "uPlot",
+      "source_verified": true,
+      "runtime_status": "implemented_selective",
+      "component": "Packages/P03/Source/P03.ModelCenter.Wow/vendor/uPlot.iife.min.js",
+      "scope": "ModelCenter charts; not main WEB",
+      "proof": "verified original in donor receipt"
+    },
+    {
+      "id": 19,
+      "name": "ApexCharts",
+      "source_verified": true,
+      "runtime_status": "source_only_not_connected"
+    },
+    {
+      "id": 20,
+      "name": "Chart.js",
+      "source_verified": true,
+      "runtime_status": "source_only_not_connected"
+    },
+    {
+      "id": 21,
+      "name": "D3.js",
+      "source_verified": true,
+      "runtime_status": "source_only_not_connected"
+    },
+    {
+      "id": 22,
+      "name": "Three.js",
+      "source_verified": true,
+      "runtime_status": "implemented_selective",
+      "component": "ui/menu-pages/nox-wow-scene.js",
+      "scope": "MAX starfield and shared renderer",
+      "proof": "Chromium 42139948652"
+    },
+    {
+      "id": 23,
+      "name": "Postprocessing",
+      "source_verified": true,
+      "runtime_status": "source_only_not_connected"
+    },
+    {
+      "id": 24,
+      "name": "tsParticles",
+      "source_verified": true,
+      "runtime_status": "source_only_not_connected"
+    },
+    {
+      "id": 25,
+      "name": "particles.js",
+      "source_verified": true,
+      "runtime_status": "source_only_not_connected"
+    },
+    {
+      "id": 26,
+      "name": "OGL",
+      "source_verified": true,
+      "runtime_status": "source_only_not_connected"
+    },
+    {
+      "id": 27,
+      "name": "GSAP",
+      "source_verified": true,
+      "runtime_status": "source_only_not_connected"
+    },
+    {
+      "id": 28,
+      "name": "Motion",
+      "source_verified": true,
+      "runtime_status": "source_only_not_connected"
+    },
+    {
+      "id": 29,
+      "name": "Lottie",
+      "source_verified": true,
+      "runtime_status": "source_only_not_connected"
+    },
+    {
+      "id": 30,
+      "name": "Lenis",
+      "source_verified": true,
+      "runtime_status": "source_only_not_connected"
+    },
+    {
+      "id": 31,
+      "name": "Spline React",
+      "source_verified": true,
+      "runtime_status": "source_only_not_connected"
+    },
+    {
+      "id": 32,
+      "name": "React Bits",
+      "source_verified": true,
+      "runtime_status": "source_only_not_connected"
+    },
+    {
+      "id": 33,
+      "name": "React Three Fiber",
+      "source_verified": true,
+      "runtime_status": "source_only_not_connected"
+    },
+    {
+      "id": 34,
+      "name": "Drei",
+      "source_verified": true,
+      "runtime_status": "source_only_not_connected"
+    },
+    {
+      "id": 35,
+      "name": "Theatre.js",
+      "source_verified": true,
+      "runtime_status": "source_only_not_connected"
+    },
+    {
+      "id": 36,
+      "name": "Leva",
+      "source_verified": true,
+      "runtime_status": "source_only_not_connected"
+    },
+    {
+      "id": 37,
+      "name": "XYFlow",
+      "source_verified": true,
+      "runtime_status": "source_only_not_connected"
+    },
+    {
+      "id": 38,
+      "name": "Tweakpane",
+      "source_verified": true,
+      "runtime_status": "source_only_not_connected"
+    },
+    {
+      "id": 39,
+      "name": "PixiJS",
+      "source_verified": true,
+      "runtime_status": "source_only_not_connected"
+    },
+    {
+      "id": 40,
+      "name": "luma.gl",
+      "source_verified": true,
+      "runtime_status": "source_only_not_connected"
+    }
+  ]
+}
