@@ -231,7 +231,7 @@ class IndependentE07(unittest.TestCase):
         with tempfile.TemporaryDirectory() as t:
             root = Path(t)
             owner = root / "nox-p01-owned.txt"
-            owner.write_text("NOXHELION.P01 V16\\n", encoding="utf-8")
+            owner.write_text("NOXHELION.P01 V16\n", encoding="utf-8")
             payload = root / "entry.exe"
             payload_data = b"unchanged-owned-E07"
             payload.write_bytes(payload_data)
@@ -265,7 +265,7 @@ class IndependentE07(unittest.TestCase):
                     self.assertEqual(manifest.read_bytes(), before)
                     self.assertEqual(payload.read_bytes(), payload_data)
                     self.assertEqual(owner.read_text(encoding="utf-8"),
-                                     "NOXHELION.P01 V16\\n")
+                                     "NOXHELION.P01 V16\n")
             manifest.write_text(valid, encoding="utf-8")
             self.assertEqual(MOD.manifest_owner(root)[1], (payload,))
 
