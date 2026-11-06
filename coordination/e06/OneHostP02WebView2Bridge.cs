@@ -660,6 +660,24 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
                 if (ownerAccepted && route == "system.autostart" &&
                     !NativeAutostartReceiptMatches(payload, ownerResult.Result))
                     ownerAccepted = false;
+                // A successful transport is not an owner STOP ACK. An empty or
+                // malformed receipt must never revoke a live chat stream.
+                if (ownerAccepted && route == "chat.stop")
+                    ownerAccepted = ownerResult.Result is JsonElement stopProof &&
+                        stopProof.ValueKind == JsonValueKind.Object &&
+                        stopProof.TryGetProperty("stopRequested", out var stopFlag) &&
+                        stopFlag.ValueKind == JsonValueKind.True;
+                // MENU STOP is already verified against stopRequested by the
+                // original WPF owner. Bind this second ACK to its exact action.
+                if (ownerAccepted && isMenuStop)
+                    ownerAccepted = ownerResult.Result is JsonElement menuStopProof &&
+                        menuStopProof.ValueKind == JsonValueKind.Object &&
+                        menuStopProof.TryGetProperty("status", out var menuStopState) &&
+                        menuStopState.ValueKind == JsonValueKind.String &&
+                        menuStopState.GetString() == "MENU_STOP_REQUESTED" &&
+                        menuStopProof.TryGetProperty("action", out var menuStopAction) &&
+                        menuStopAction.ValueKind == JsonValueKind.String &&
+                        menuStopAction.GetString() == "stop";
                 if ((route == "chat.stop" || isMenuStop) && ownerAccepted)
                     Interlocked.Increment(ref _streamEpoch);
                 // Owner ACK means a durable job was accepted, NOT that the

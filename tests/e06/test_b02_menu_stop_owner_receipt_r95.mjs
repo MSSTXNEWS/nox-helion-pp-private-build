@@ -54,3 +54,18 @@ assert.equal((modelBinding.match(/Interlocked.Read\(ref _nativeDocumentEpoch\) !
   "owner model/command operation must fence epoch before and after dispatch");
 
 console.log("B02_MENU_STOP_OWNER_RECEIPT_SOURCE_ONLY_PASS; PHYSICAL/E07 NOT_RUN");
+
+// R5: verify the ORIGINAL WebView2 STOP owner ACK fence, not just transport
+// acceptance. This is source-only; only Windows E06 can verify runtime IPC.
+const web=read("coordination/e06/OneHostP02WebView2Bridge.cs");
+const ownerAck=web.slice(web.indexOf('var ownerResult = await _nativeOwnerAction(route, payload.Clone(), cancel);'),web.indexOf('Reply(source, epoch, id, route, ownerState,', web.indexOf('var ownerResult = await _nativeOwnerAction(route, payload.Clone(), cancel);')));
+assert.ok(ownerAck.includes('if (ownerAccepted && route == "chat.stop")'));
+assert.ok(ownerAck.includes('stopProof.TryGetProperty("stopRequested", out var stopFlag)'));
+assert.ok(ownerAck.includes('stopFlag.ValueKind == JsonValueKind.True'));
+assert.ok(ownerAck.includes('if (ownerAccepted && isMenuStop)'));
+assert.ok(ownerAck.includes('menuStopState.GetString() == "MENU_STOP_REQUESTED"'));
+assert.ok(ownerAck.includes('menuStopAction.GetString() == "stop"'));
+assert.ok(ownerAck.indexOf('if (ownerAccepted && route == "chat.stop")') < ownerAck.indexOf('Interlocked.Increment(ref _streamEpoch)'));
+assert.ok(ownerAck.indexOf('if (ownerAccepted && isMenuStop)') < ownerAck.indexOf('Interlocked.Increment(ref _streamEpoch)'));
+assert.ok(builder.includes("blob='"+blob(web)+"'"));
+assert.ok(compiler.includes('"coordination/e06/OneHostP02WebView2Bridge.cs":"'+blob(web)+'"'));
