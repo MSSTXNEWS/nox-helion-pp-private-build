@@ -31,6 +31,18 @@ try{
   assert.equal(await page.locator('canvas.nox-wow-three').isVisible(),false);
   assert.equal(await halo.isVisible(),false,'HALO must be hidden in ECO');
   assert.equal(await aetherCard.evaluate(el=>getComputedStyle(el).backdropFilter),'none','AETHER blur must be disabled in ECO');
+  await page.waitForFunction(()=>!!customElements.get('loquix-typing-indicator'));
+  const loadedLoquix=await page.evaluate(()=>{
+   const element=document.createElement('loquix-typing-indicator');
+   document.body.append(element);
+   const shadow=!!element.shadowRoot;
+   element.remove();
+   return shadow;
+  });
+  assert.equal(loadedLoquix,true,'Original Loquix Lit Web Component must render');
+  await page.locator('#actions button[data-action="CHAT"]').click();
+  assert.equal(await page.locator('.nox-chat-log').count(),1,'Original native CHAT remains reachable');
+  assert.equal(await page.locator('.nox-loquix-typing').count(),0,'No fake streaming indicator before native request');
   const buttons=await page.locator('#directions button').count();
   assert.equal(buttons,8,'All eight original navigation directions remain');
 
