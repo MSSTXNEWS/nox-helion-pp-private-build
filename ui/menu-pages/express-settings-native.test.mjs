@@ -96,5 +96,5 @@ test('D06 refusal receipts stay visible only for exact reviewed owner codes',()=
    {message:'NOX_AUTOSTART_FOREIGN_ENTRY_HOLD\\nprivate path'},null])
    assert.equal(nativeAutostartUiDenialCode(error),'NOX_AUTOSTART_NATIVE_HOLD');
  const renderer=readFileSync(new URL('../onehost-menu-bindings.mjs',import.meta.url),'utf8');
- assert.match(renderer,/route==='system\\.autostart'\\?'HOLD · '\\+nativeAutostartUiDenialCode\\(error\\)/);
+ assert.match(renderer,/route==='system\.autostart'\?'HOLD · '\+nativeAutostartUiDenialCode\(error\)/);
 });
