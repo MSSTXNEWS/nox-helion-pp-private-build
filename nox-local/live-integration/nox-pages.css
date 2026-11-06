@@ -1,0 +1,15 @@
+:root{color-scheme:dark;--nox-ink:#060a0e;--nox-metal:#d6ad7f;--nox-border:rgba(209,163,105,.2)}
+*{box-sizing:border-box}html,body{min-height:100%;background:var(--nox-ink);color:#e7e7e8}
+.nox-shell{max-width:1440px;padding:20px clamp(12px,2.6vw,35px);margin:auto;font:14px/1.5 'Segoe UI',system-ui,sans-serif}
+.nox-nav{display:flex;gap:5px;flex-wrap:wrap;align-items:center;padding:8px 0 17px;border-bottom:1px solid var(--nox-border)}
+.nox-brand{font-size:15px;font-weight:600;letter-spacing:.23em;color:#f0dcc4;margin-right:22px}
+.nox-nav a{color:#cfd7db;text-decoration:none;padding:8px 12px;min-height:42px;border:1px solid transparent;border-radius:10px}
+.nox-nav a:hover,.nox-nav a[aria-current=page]{border-color:var(--nox-border);color:#f6c389;background:rgba(199,126,45,.08)}
+.nox-main{display:grid;grid-template-columns:minmax(0,1fr) minmax(240px,300px);gap:16px;margin-top:25px}
+.nox-card{border:1px solid var(--nox-border);border-radius:15px;background:linear-gradient(130deg,rgba(60,65,69,.22),rgba(8,13,18,.77));backdrop-filter:blur(18px);padding:18px;min-width:0}
+h1{margin:0 0 8px;font-size:22px;font-weight:500;letter-spacing:.08em;color:#f4d7af}h2{font-size:13px;letter-spacing:.12em;color:#efd5b4;font-weight:500}
+.nox-muted{color:#97a3ab;font-size:13px}.nox-data-row{display:flex;gap:18px;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(240,220,185,.10);padding:12px 4px;min-width:0;overflow-wrap:anywhere}.nox-data-row strong{font-weight:500;color:#eed9be}.nox-data-row small{display:block;color:#a3b0bc}
+.nox-act,button.nox-act{display:inline-flex;align-items:center;background:linear-gradient(120deg,rgba(174,119,57,.12),rgba(54,45,35,.2));border:1px solid #a77d4a66;border-radius:9px;color:#efc68c;text-decoration:none;padding:9px 12px;min-height:40px;cursor:pointer;margin-right:5px}
+.nox-act:focus-visible{outline:2px solid #eab76c;outline-offset:2px}.nox-card p{line-height:1.5}
+@media(max-width:720px){.nox-main{grid-template-columns:1fr}.nox-nav a{font-size:12px;padding:7px 8px}.nox-shell{padding:12px}}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}}
