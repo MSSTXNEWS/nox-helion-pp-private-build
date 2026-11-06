@@ -60,7 +60,7 @@ def _process_active(pid):
     script=(
         "$x=Get-CimInstance Win32_Process -Filter 'ProcessId="+str(pid)+"';"
         "if($x -and $x.Name -match '^python' -and "
-        "$x.CommandLine -match 'train_directml_lora[.]py'){Write-Output 'YES'}"
+        "$x.CommandLine -match 'train_directml_lora[.]py|nox_gpu_safe65_v2[.]py.*--worker'){Write-Output 'YES'}"
     )
     try:
         p=subprocess.run(["powershell.exe","-NoProfile","-NonInteractive","-Command",script],
