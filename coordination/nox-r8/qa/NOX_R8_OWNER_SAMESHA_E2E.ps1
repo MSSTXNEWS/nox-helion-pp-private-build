@@ -28,6 +28,8 @@ $r=[ordered]@{
   provider='http://127.0.0.1:11436'; model='nox-qwen-clean:latest'
   providerVerified=$false; nativePid=$null; nativeExit=$null
   nativeReceiptVerified=$false; nativeChecks=@{}; ownerSqliteUnchanged=$false
+  uiSmokeAccepted=$false; uiSmokePid=$null; uiSmokeChecks=@{}
+  uiSettingsRestartVerified=$false; uiRestartPid=$null; uiRestartChecks=@{}
   physicalScopeAccepted=$false; releaseAccepted=$false; fullV16Accepted=$false
   canonicalD02='NOT_TESTED'; installerNoLoss='NOT_TESTED'
   ownerHistoryRestart='NOT_TESTED'; nativeTokenChunkCount='NOT_OBSERVED'
@@ -82,6 +84,65 @@ try {
     if($value -cne 'PASS'){throw "NATIVE_CHECK_$($name)_HOLD"}
   }
   $r.nativeReceiptVerified=$true
+
+  # Second real Windows WPF/WebView2 process: native eight-route, accessibility
+  # and isolated SQLite/settings validation. It never touches chat.sqlite3.
+  function Check-UiProcess([bool]$Restart) {
+    $uiStarted=[DateTimeOffset]::UtcNow
+    $uiArgs=if($Restart) {
+      @('--nox-ui-smoke','--nox-settings-restart-readback',"--nox-runid=$id")
+    } else { @('--nox-ui-smoke',"--nox-runid=$id") }
+    $uiProcess=$null
+    try {
+      $uiProcess=Start-Process -FilePath $exe -WorkingDirectory (Split-Path -Parent $exe) -ArgumentList $uiArgs -PassThru
+      if(!$uiProcess.WaitForExit($TimeoutSeconds*1000)) { throw 'NATIVE_UI_PROCESS_TIMEOUT_HOLD' }
+      $uiProcess.Refresh()
+      $uiPath=Join-Path $dataDir ("ui_selftest_{0}.json" -f $uiProcess.Id)
+      if(!(Test-Path -LiteralPath $uiPath -PathType Leaf)){throw 'NATIVE_UI_RECEIPT_MISSING_HOLD'}
+      $u=Get-Content -LiteralPath $uiPath -Raw -Encoding UTF8 | ConvertFrom-Json
+      $uiStamp=[DateTimeOffset]::Parse([string]$u.checkedAt)
+      if($uiProcess.ExitCode -ne 0 -or $u.schema -cne 'NOX_WPF_UI_SMOKE_R7_V1' -or
+          [int]$u.pid -ne $uiProcess.Id -or [string]$u.runId -cne $id -or
+          !$u.wpfWebView2Accepted -or
+          $uiStamp -lt $uiStarted -or $uiStamp -gt [DateTimeOffset]::UtcNow.AddMinutes(2) -or
+          ![string]::Equals([string]$u.exeSha256,$hash,[StringComparison]::OrdinalIgnoreCase)) {
+        throw 'NATIVE_UI_IDENTITY_TIMESTAMP_OR_SHA_HOLD'
+      }
+      $mustPass=if($Restart) {
+        @('isolated_sqlite_path','settings_wpf_owner_restart_readback')
+      } else {
+        @('real_webview2_eight_routes','real_webview2_keyboard_routes',
+          'settings_windows_uia_host','settings_webview2_accessible_controls',
+          'settings_wpf_owner_sqlite_readback','settings_wpf_motion_sqlite_readback',
+          'settings_foreign_key_denial','isolated_sqlite_path','native_wpf_webview2_renderer')
+      }
+      $observed=[ordered]@{}
+      foreach($key in $mustPass) {
+        $value=[string]$u.checks.$key
+        $observed[$key]=$value
+        if($value -cne 'PASS') { throw "NATIVE_UI_CHECK_$($key)_HOLD" }
+      }
+      return @{pid=$uiProcess.Id;checks=$observed;sha=$hash;restart=$Restart}
+    }
+    finally {
+      if($null -ne $uiProcess) {
+        $uiProcess.Refresh()
+        if(!$uiProcess.HasExited) {
+          $uiProcess.Kill() # Only the process created by this gate.
+          $uiProcess.WaitForExit(10000) | Out-Null
+        }
+      }
+    }
+  }
+  $ui=Check-UiProcess $false
+  $r.uiSmokePid=$ui.pid
+  $r.uiSmokeChecks=$ui.checks
+  $r.uiSmokeAccepted=$true
+  # Same run ID: a second process must read settings committed by the first.
+  $uiRestart=Check-UiProcess $true
+  $r.uiRestartPid=$uiRestart.pid
+  $r.uiRestartChecks=$uiRestart.checks
+  $r.uiSettingsRestartVerified=$true
 } catch {
   $r.error=$_.Exception.Message
 } finally {
@@ -108,9 +169,9 @@ try {
       throw 'SAME_SHA_PRE_POST_HOLD'
     }
     if(!$r.ownerSqliteUnchanged){throw 'OWNER_SQLITE_CHANGED_DURING_ACCEPTANCE_HOLD'}
-    if($r.nativeReceiptVerified -and $r.providerVerified -and !$r.error){
+    if($r.nativeReceiptVerified -and $r.providerVerified -and $r.uiSmokeAccepted -and $r.uiSettingsRestartVerified -and !$r.error){
       $r.physicalScopeAccepted=$true
-      $r.status='NATIVE_E2E_SCOPE_PASS_RELEASE_HOLD'
+      $r.status='NATIVE_QWEN_STOP_UI_SETTINGS_SCOPE_PASS_RELEASE_HOLD'
     }
   } catch {$r.error=([string]$r.error+' '+$_.Exception.Message).Trim()}
   $r['finishedAt']=[DateTimeOffset]::UtcNow.ToString('O')
