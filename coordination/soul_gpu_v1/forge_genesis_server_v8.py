@@ -113,7 +113,7 @@ def get_state(root):
         "native_exe_rebuilt":False,
         "stop":{"available":False,"reason":"Original OneHost STOP is not attached to this read-only dashboard"},
         "limits":{"intelligence_gb":70,"memory_gb":70,"skills_gb":70,
-                  "free_disk_reserve_gb":60,"pause_at_c":65,"cooling_seconds":180},
+                  "free_disk_reserve_gb":60,"pause_at_c":70,"resume_below_c":65,"cooling_seconds":180},
         "note":"All counts from local files/services, never from animation or mock data."
     }
     return status
