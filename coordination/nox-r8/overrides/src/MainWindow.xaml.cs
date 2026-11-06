@@ -1309,6 +1309,8 @@ public partial class MainWindow : Window
         if (!Directory.Exists(parent))
             throw new InvalidOperationException("NOX_BACKUP_PARENT_MISSING_HOLD");
 
+        // Disable SQLite connection pooling on temporary snapshots: Windows must
+        // release its actual file handles before atomic rename.
         // Keep staging on the same volume for a rename, never modify the chosen
         // destination until SQLite integrity and the staged SHA have been checked.
         // A crash may leave a uniquely named .partial; never erase unrelated files.
@@ -1317,13 +1319,13 @@ public partial class MainWindow : Window
         using (var reservation = new FileStream(staged, FileMode.CreateNew, FileAccess.Write, FileShare.None)) { }
         using (var source = OpenDatabase())
         using (var backup = new SqliteConnection(new SqliteConnectionStringBuilder {
-            DataSource = staged, Mode = SqliteOpenMode.ReadWriteCreate }.ToString()))
+            DataSource = staged, Mode = SqliteOpenMode.ReadWriteCreate, Pooling = false }.ToString()))
         {
             backup.Open();
             source.BackupDatabase(backup);
         }
         using (var check = new SqliteConnection(new SqliteConnectionStringBuilder {
-            DataSource = staged, Mode = SqliteOpenMode.ReadOnly }.ToString()))
+            DataSource = staged, Mode = SqliteOpenMode.ReadOnly, Pooling = false }.ToString()))
         {
             check.Open();
             using var integrity = check.CreateCommand();

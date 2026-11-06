@@ -15,6 +15,8 @@ required = (
     'FileShare.None',
     'source.BackupDatabase(backup)',
     'SqliteOpenMode.ReadOnly',
+    'DataSource = staged, Mode = SqliteOpenMode.ReadWriteCreate, Pooling = false',
+    'DataSource = staged, Mode = SqliteOpenMode.ReadOnly, Pooling = false',
     'PRAGMA quick_check',
     'NOX_BACKUP_INTEGRITY_HOLD',
     'SHA256.HashData(input)',
