@@ -157,8 +157,8 @@ with tempfile.TemporaryDirectory() as temp:
                               (1, 'KV', 'owned', 'keep backup copy', 'now')).rowcount == 1
     with closing(sqlite3.connect(db_path)) as check:
         assert check.execute('SELECT COUNT(*) FROM memory_notes WHERE id=1 AND persona=?', ('KV',)).fetchone()[0] == 0
-        assert check.execute('SELECT content FROM memory_notes WHERE persona=?', ('AM',)).fetchone()[0] == ('AM-only secret',)
+        assert check.execute('SELECT content FROM memory_notes WHERE persona=?', ('AM',)).fetchone()[0] == 'AM-only secret'
     with closing(sqlite3.connect(backup_path)) as snapshot:
-        assert snapshot.execute('SELECT content FROM memory_notes WHERE id=1').fetchone()[0] == ('keep backup copy',)
-        assert snapshot.execute('SELECT content FROM memory_notes WHERE id=2').fetchone()[0] == ('AM-only secret',)
+        assert snapshot.execute('SELECT content FROM memory_notes WHERE id=1').fetchone()[0] == 'keep backup copy'
+        assert snapshot.execute('SELECT content FROM memory_notes WHERE id=2').fetchone()[0] == 'AM-only secret'
 print('D03 R8 SOURCE_ONLY: owner consent, backup-first, foreign/changed denials and SQLite NO-LOSS PASS')
