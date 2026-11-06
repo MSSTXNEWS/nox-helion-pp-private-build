@@ -18,6 +18,7 @@ try{
    return ['active','fallback'].includes(stage?.dataset.wowThreeState);
   },null,{timeout:25000}).then(()=>page.locator('.universe').getAttribute('data-wow-three-state'));
   assert.equal(state,'active',`Three WebGL MAX not active at ${width}px: ${state}`);
+  assert.equal(await page.locator('.universe').getAttribute('data-wow-heliodon'),'active','HELIODON metal scene should be mounted within same Three renderer');
   assert.equal(await page.locator('canvas.nox-wow-three').isVisible(),true);
   await page.screenshot({path:`wow-three-${width}.png`,fullPage:true});
   await page.locator('#fx').click();
