@@ -147,8 +147,40 @@ ORIGINAL_ZIP_SHA = "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d758728462
 
 
 def _read_locked_e06_json(path: Path) -> dict:
-    require(clean_file(path) and path.stat().st_size <= 1048576,
-            "E07_E06_RECEIPT_NOT_REGULAR")
+    """Read an E06 receipt from one bounded descriptor and reject path swaps."""
+    require(clean_file(path), "E07_E06_RECEIPT_NOT_REGULAR")
+    def file_id(info):
+        # Windows descriptor ctime and pathname ctime may differ unchanged.
+        return (info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns)
+    fd = None
+    try:
+        before = path.lstat()
+        require(stat.S_ISREG(before.st_mode) and before.st_nlink == 1 and
+                0 < before.st_size <= 1048576, "E07_E06_RECEIPT_NOT_REGULAR")
+        flags = os.O_RDONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0)
+        fd = os.open(path, flags)
+        opened = os.fstat(fd)
+        require(stat.S_ISREG(opened.st_mode) and opened.st_nlink == 1 and
+                file_id(before) == file_id(opened),
+                "E07_E06_RECEIPT_OPEN_IDENTITY_HOLD")
+        chunks, count = [], 0
+        while True:
+            block = os.read(fd, min(65536, 1048577 - count))
+            if not block:
+                break
+            count += len(block)
+            require(count <= 1048576, "E07_E06_RECEIPT_TOO_LARGE_HOLD")
+            chunks.append(block)
+        after_fd, after_path = os.fstat(fd), path.lstat()
+        require(file_id(opened) == file_id(after_fd) == file_id(after_path) and
+                before.st_ctime_ns == after_path.st_ctime_ns and
+                after_path.st_nlink == 1 and clean_file(path),
+                "E07_E06_RECEIPT_MUTATED_HOLD")
+    except OSError:
+        raise Hold("E07_E06_RECEIPT_IO_HOLD") from None
+    finally:
+        if fd is not None:
+            os.close(fd)
     def unique_pairs(pairs):
         obj = {}
         for key, value in pairs:
@@ -157,15 +189,13 @@ def _read_locked_e06_json(path: Path) -> dict:
             obj[key] = value
         return obj
     try:
-        with path.open("r", encoding="utf-8-sig") as stream:
-            data = json.load(stream, object_pairs_hook=unique_pairs,
-                parse_constant=lambda unused: (_ for _ in ()).throw(
-                    Hold("E07_E06_RECEIPT_NONFINITE_NUMBER")))
-    except (OSError, UnicodeError, json.JSONDecodeError):
+        data = json.loads(b"".join(chunks).decode("utf-8-sig"), object_pairs_hook=unique_pairs,
+                          parse_constant=lambda unused: (_ for _ in ()).throw(
+                              Hold("E07_E06_RECEIPT_NONFINITE_NUMBER")))
+    except (UnicodeError, json.JSONDecodeError):
         raise Hold("E07_E06_RECEIPT_INVALID_JSON") from None
     require(type(data) is dict, "E07_E06_RECEIPT_SCHEMA_HOLD")
     return data
-
 
 # Physical frozen E06 c35c1d33 / Setup af87a618 receipt observed 1004.
 # A future SetupSHA MUST explicitly pin its OWN manifest count after physical

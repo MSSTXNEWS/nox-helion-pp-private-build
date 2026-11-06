@@ -146,6 +146,8 @@ jobs:
           python -B -m unittest discover -s tests/e07 -p test_b06_current_head_r5.py -v
           if ($LASTEXITCODE -ne 0) { throw 'E07_VERIFIER_CURRENT_HEAD_REGRESSION_HOLD' }
           python -B -m unittest discover -s tests/e07 -p test_b06_single_setup_dispatch_r55.py -v
+          python -B -m unittest discover -s tests/e07 -p test_b06_receipt_descriptor_r5.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'E07_E06_RECEIPT_DESCRIPTOR_REGRESSION_HOLD' }
           if ($LASTEXITCODE -ne 0) { throw 'E07_SINGLE_SETUP_DISPATCH_REGRESSION_HOLD' }
           python -B -m py_compile coordination/e07/independent_setup_e07.py coordination/e07/probe_five_primary_action.py coordination/e07/probe_installed_qwen.py coordination/e07/probe_native_active_stop.py coordination/e07/verify_qwen_oci_integrity.py coordination/e07/probe_final_same_setup.py coordination/e07/probe_webview_motion.py
           if ($LASTEXITCODE -ne 0) { throw 'E07_PYTHON_SOURCE_SYNTAX_HOLD' }
