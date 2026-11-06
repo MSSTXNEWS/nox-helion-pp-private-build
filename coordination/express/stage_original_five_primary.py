@@ -163,7 +163,8 @@ function verifiedOriginalPrimaryDock(){
     nav.getClientRects().length===0)return false;
  const dockStyle=window.getComputedStyle(nav);
  if(!dockStyle||dockStyle.display==='none'||dockStyle.visibility!=='visible'||
-    dockStyle.pointerEvents==='none'||Number(dockStyle.opacity)===0)return false;
+    dockStyle.pointerEvents==='none'||!Number.isFinite(Number(dockStyle.opacity))||
+    Number(dockStyle.opacity)<=0)return false;
  const live=nav.querySelectorAll(':scope > button[data-nox-primary]');
  // UIA "visible" is not enough: a nonempty DOM rect can be clipped,
  // overlap its sibling or be covered by an overlay at the click target.
@@ -224,7 +225,8 @@ function verifiedOriginalPrimaryDock(){
   dockRects.push(rect);
   const style=window.getComputedStyle(button);
   return !!style&&style.display!=='none'&&style.visibility==='visible'&&
-     style.pointerEvents!=='none'&&Number(style.opacity)!==0;
+     style.pointerEvents!=='none'&&Number.isFinite(Number(style.opacity))&&
+     Number(style.opacity)>0;
  });
 }
 // Navigation-only original R11 buttons can be CSS-collapsed at 320/390px.

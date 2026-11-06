@@ -34,7 +34,11 @@ function evaluate(width,change={}){
  return {display:outer&&change.outerDisplayNone?'none':'grid',
  visibility:outer&&change.outerVisibilityHidden?'hidden':'visible',
  pointerEvents:outer&&change.outerPointerBlocked?'none':'auto',
- opacity:outer&&change.outerOpacityZero?'0':outer&&change.outerOpacityInvalid?'unavailable':'1'};
+ opacity:outer&&change.outerOpacityZero?'0':outer&&change.outerOpacityInvalid?'unavailable':
+  node===nav&&change.dockOpacityInvalid?'unavailable':
+  node===nav&&change.dockOpacityNegative?'-0.1':
+  node?.getAttribute?.('data-nox-primary')==='MODELS'&&change.buttonOpacityInvalid?'unavailable':
+  node?.getAttribute?.('data-nox-primary')==='MODELS'&&change.buttonOpacityNegative?'-0.1':'1'};
  }};
  return new Function('nav','window','document','originalPrimaryButtons',guard+fn+';return verifiedOriginalPrimaryDock();')(nav,window,document,buttons);
 }
@@ -93,4 +97,16 @@ test('D01 uppercase ARIA owner/dock denial cannot bypass five-button UIA',()=>{
  assert.equal(evaluate(390,{ariaUpperButton:true}),false);
  assert.equal(evaluate(390,{outerShell:true,outerAriaHiddenUpper:true}),false);
  assert.equal(evaluate(390),true);
+});
+
+// D01 current-source UIA admission: opacity must be a finite, positive computed
+// value on both the original dock and each primary button. Never restyle D02.
+test('D01 refuses invalid and nonpositive primary dock / button opacity',()=>{
+ for(const width of [320,390,800]){
+  assert.equal(evaluate(width),true,'unchanged source five-button layout '+width);
+  for(const change of [
+   {dockOpacityInvalid:true},{dockOpacityNegative:true},
+   {buttonOpacityInvalid:true},{buttonOpacityNegative:true}
+  ])assert.equal(evaluate(width,change),false,width+' '+JSON.stringify(change));
+ }
 });
