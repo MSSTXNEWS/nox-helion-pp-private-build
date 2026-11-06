@@ -37,3 +37,22 @@ raw_lines=cs[raw_start:raw_end].splitlines()[1:]
 assert all(not line.strip() or line.startswith('          ') for line in raw_lines), 'CS8999 SQL raw literal indentation'
 
 print('D05 SOURCE_ONLY SQLITE/OWNER QUEUE CONTRACT PASS; GPU NOT RUN')
+
+# D05 TECH-FIRST: preparation consent + STOP require independent SQLite
+# readback; foreign trainer_state files never become authenticated GPU progress.
+learn = cs.split('private void RequestLearn()', 1)[1].split('private void CancelLearnRequest()', 1)[0]
+cancel = cs.split('private void CancelLearnRequest()', 1)[1].split('private object GetTrainingState()', 1)[0]
+training = cs.split('private object GetTrainingState()', 1)[1]
+assert 'NOX_LEARN_CONSENT_SQLITE_READBACK_HOLD' in learn
+assert learn.index('tx.Commit();') < learn.index('NOX_LEARN_CONSENT_SQLITE_READBACK_HOLD')
+assert 'SELECT model,state,consent_at,checkpoint_sha256 FROM learn_requests WHERE id=$id AND owner_sid=$sid' in learn
+assert 'NOX_LEARN_STOP_SQLITE_READBACK_HOLD' in cancel
+assert cancel.index('tx.Commit();') < cancel.index('NOX_LEARN_STOP_SQLITE_READBACK_HOLD')
+assert "WHERE owner_sid=$sid AND state='AWAITING_VERIFIED_WORKER'" in cancel
+assert 'progressVerified = false' in training
+assert 'checkpointVerified = false' in training
+assert 'measuredTrainingRuns = Array.Empty<object>()' in training
+assert 'observedExternalRuns = states' in training
+assert "case 'training':" in html and 'r.checkpointVerified===true' in html
+assert "case 'learn.queue':" in html and "case 'learn.receipt':" in html
+print('D05 TECH-FIRST SOURCE_ONLY consent/STOP SQLite readback + untrusted progress HOLD PASS')

@@ -1728,6 +1728,22 @@ public partial class MainWindow : Window
             }
             tx.Commit();
         }
+        // A queued request is not an ACK until a separate SQLite connection
+        // observes the exact consent-bearing owner row after COMMIT.
+        using (var readbackDb = OpenDatabase())
+        using (var readback = readbackDb.CreateCommand())
+        {
+            readback.CommandText = "SELECT model,state,consent_at,checkpoint_sha256 FROM learn_requests WHERE id=$id AND owner_sid=$sid";
+            readback.Parameters.AddWithValue("$id", id);
+            readback.Parameters.AddWithValue("$sid", sid);
+            using var persisted = readback.ExecuteReader();
+            if (!persisted.Read() ||
+                !string.Equals(persisted.GetString(0), model, StringComparison.Ordinal) ||
+                !string.Equals(persisted.GetString(1), "AWAITING_VERIFIED_WORKER", StringComparison.Ordinal) ||
+                !DateTimeOffset.TryParse(persisted.GetString(2), out _) ||
+                !persisted.IsDBNull(3))
+                throw new InvalidOperationException("NOX_LEARN_CONSENT_SQLITE_READBACK_HOLD");
+        }
         Send("learn.receipt", new { id, model, state="AWAITING_VERIFIED_WORKER",
             reason="NO_ATTESTED_GPU_WORKER", trainingStarted=false, checkpointSha256=(string?)null });
         Send("learn.queue", ReadLearnQueue());
@@ -1735,6 +1751,7 @@ public partial class MainWindow : Window
 
     private void CancelLearnRequest()
     {
+        string sid = OwnerSid();
         int affected;
         using (var db = OpenDatabase())
         using (var tx = db.BeginTransaction())
@@ -1742,9 +1759,18 @@ public partial class MainWindow : Window
         {
             cmd.Transaction = tx;
             cmd.CommandText = "UPDATE learn_requests SET state='CANCELLED_BY_OWNER' WHERE owner_sid=$sid AND state='AWAITING_VERIFIED_WORKER'";
-            cmd.Parameters.AddWithValue("$sid", OwnerSid());
+            cmd.Parameters.AddWithValue("$sid", sid);
             affected = cmd.ExecuteNonQuery();
             tx.Commit();
+        }
+        // STOP must be persisted, not merely an UPDATE dispatched to SQLite.
+        using (var verifyDb = OpenDatabase())
+        using (var verify = verifyDb.CreateCommand())
+        {
+            verify.CommandText = "SELECT COUNT(*) FROM learn_requests WHERE owner_sid=$sid AND state='AWAITING_VERIFIED_WORKER'";
+            verify.Parameters.AddWithValue("$sid", sid);
+            if (Convert.ToInt64(verify.ExecuteScalar()) != 0)
+                throw new InvalidOperationException("NOX_LEARN_STOP_SQLITE_READBACK_HOLD");
         }
         Send("learn.receipt", new { state=affected>0?"CANCELLED_BY_OWNER":"NO_PENDING_JOB",
             affected, trainingStarted=false, checkpointSha256=(string?)null });
@@ -1784,8 +1810,13 @@ public partial class MainWindow : Window
                     maxSteps = max,
                     progressPercent = max > 0 ? Math.Round(100.0 * step / max, 1) : (double?)null,
                     latestLoss = loss,
-                    progressVerified = max > 0,
-                    note = "Файловые метрики обучения; не доказательство улучшения качества модели"
+                    // External trainer_state.json has no owner-consent, worker
+                    // attestation, model-rights or SHA checkpoint provenance.
+                    // Even valid-looking step counts are NOT verified NOX training.
+                    progressVerified = false,
+                    checkpointVerified = false,
+                    trainingStartedByNox = false,
+                    note = "UNVERIFIED_EXTERNAL_TRAINER_STATE_NO_OWNER_WORKER_OR_SHA_RECEIPT"
                 });
             }
             catch (IOException) { /* Training may be writing this file now. */ }
@@ -1793,7 +1824,10 @@ public partial class MainWindow : Window
             catch (UnauthorizedAccessException) { }
         }
         return new { available = true, directory = path, recentFiles = files,
-            measuredTrainingRuns = states,
-            note = "Only observed checkpoint steps and loss; quality and model acceptance are NOT inferred" };
+            observedExternalRuns = states,
+            measuredTrainingRuns = Array.Empty<object>(),
+            queueOnly = true,
+            checkpointVerified = false,
+            note = "External trainer files are read-only diagnostics, not authenticated QLoRA results" };
     }
 }
