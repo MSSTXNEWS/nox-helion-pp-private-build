@@ -79,6 +79,9 @@ def owned_payload_paths(install: Path, inventory: dict) -> tuple[Path, ...]:
             if (not _no_reparse_components(path, allow_missing=False) or
                     not path.is_file() or path.is_symlink() or
                     getattr(path, "is_junction", lambda: False)() or
+                    # Hardlinks can alias files outside this manifest/root.
+                    # Never authorize an NSIS removal with ambiguous ownership.
+                    path.lstat().st_nlink != 1 or
                     not path.resolve(strict=True).is_relative_to(root)):
                 raise RuntimeError("T06_UNINSTALL_ORIGINAL_INVENTORY_PATH_HOLD")
         except (OSError, ValueError) as exc:
