@@ -221,6 +221,37 @@ public partial class MainWindow : Window
                     StringComparison.OrdinalIgnoreCase))
                 throw new InvalidOperationException("UI test attempted to open owner memory");
             checks["isolated_sqlite_path"] = "PASS";
+            // Native WebView2 click -> WPF owner route -> isolated SQLite, no
+            // mutations of the owner's real chat.sqlite3.
+            var settingsClick = await Browser.CoreWebView2.ExecuteScriptAsync("""
+                (() => {
+                  const route = document.querySelector('button.core[data-route="persona"]');
+                  const mode = document.getElementById('performance');
+                  const save = document.getElementById('savePerformance');
+                  if (!route || !mode || !save) return false;
+                  route.click();
+                  mode.value = 'ECO';
+                  save.click();
+                  return true;
+                })()
+                """);
+            if (settingsClick != "true") throw new InvalidOperationException("Settings native route unavailable");
+            bool settingsPersisted = false;
+            for (int attempt = 0; attempt < 35; attempt++)
+            {
+                if (ReadPreferencesDictionary().GetValueOrDefault("performance") == "ECO")
+                { settingsPersisted = true; break; }
+                await Task.Delay(100);
+            }
+            if (!settingsPersisted) throw new InvalidOperationException("Settings owner write not observed");
+            using (var restartedConnection = OpenDatabase())
+            using (var read = restartedConnection.CreateCommand())
+            {
+                read.CommandText = "SELECT value FROM preferences WHERE key='performance'";
+                if (!string.Equals(read.ExecuteScalar() as string, "ECO", StringComparison.Ordinal))
+                    throw new InvalidOperationException("Settings SQLite independent readback failed");
+            }
+            checks["settings_wpf_owner_sqlite_readback"] = "PASS";
             checks["native_wpf_webview2_renderer"] = Browser.CoreWebView2 != null ? "PASS" : "FAIL";
             if (Browser.CoreWebView2 == null) throw new InvalidOperationException("WebView2 unavailable");
         }
@@ -553,7 +584,7 @@ public partial class MainWindow : Window
                 case "tasks.add": AddTask(Text("text")); Send("tasks", ReadTasks()); break;
                 case "tasks.toggle": ToggleTask(request.GetProperty("id").GetInt64()); Send("tasks", ReadTasks()); break;
                 case "settings.get": Send("settings", ReadPreferences()); break;
-                case "settings.put": SavePreference(Text("key"), Text("value")); Send("settings", ReadPreferences()); break;
+                case "settings.put": HandleSettingsPut(request); break;
                 case "health": await CheckProvider(); break;
                 case "engine.start": await StartLocalEngine(); break;
                 case "training": Send("training", GetTrainingState()); Send("learn.queue", ReadLearnQueue()); break;
@@ -786,6 +817,39 @@ public partial class MainWindow : Window
         cmd.ExecuteNonQuery();
     }
 
+
+    // Existing WPF owner route: whitelist the exact shape, write only this app's
+    // preferences table, verify COMMIT via a new SQLite connection, then ACK.
+    // Denials are bounded codes, never native exception text or private paths.
+    private void HandleSettingsPut(JsonElement request)
+    {
+        var fields = request.EnumerateObject().ToArray();
+        if (fields.Length != 3 ||
+            fields.Count(x => x.Name == "type") != 1 ||
+            fields.Count(x => x.Name == "key") != 1 ||
+            fields.Count(x => x.Name == "value") != 1 ||
+            !request.TryGetProperty("key", out var keyField) || keyField.ValueKind != JsonValueKind.String ||
+            !request.TryGetProperty("value", out var valueField) || valueField.ValueKind != JsonValueKind.String)
+        {
+            Send("settings.denied", "NOX_SETTINGS_INVALID_REQUEST");
+            return;
+        }
+        string key = keyField.GetString() ?? "";
+        string value = valueField.GetString() ?? "";
+        try
+        {
+            SavePreference(key, value);
+            var verified = ReadPreferencesDictionary(); // independent read after SQLite COMMIT
+            if (!verified.TryGetValue(key, out var saved) || !string.Equals(saved, value, StringComparison.Ordinal))
+                throw new InvalidOperationException("NOX_SETTINGS_READBACK_HOLD");
+            Send("settings", verified);
+            Send("settings.receipt", new { key, value, saved = true });
+        }
+        catch (ArgumentException) { Send("settings.denied", "NOX_SETTINGS_REJECTED"); }
+        catch (SqliteException) { Send("settings.denied", "NOX_SETTINGS_SQLITE_HOLD"); }
+        catch (Exception) { Send("settings.denied", "NOX_SETTINGS_NATIVE_HOLD"); }
+    }
+
     private void SavePreference(string key, string value)
     {
         if (key != "persona" && key != "motion" && key != "performance" && key != "context") throw new ArgumentException("Unsupported preference");
@@ -793,10 +857,25 @@ public partial class MainWindow : Window
         if (key == "motion" && value != "on" && value != "off") throw new ArgumentException("Invalid motion setting");
         if (key == "performance" && value is not ("MAX" or "BALANCED" or "ECO")) throw new ArgumentException("Invalid performance mode");
         if (key == "context" && value != "on" && value != "off") throw new ArgumentException("Invalid context setting");
-        using var db = OpenDatabase(); using var cmd = db.CreateCommand();
-        cmd.CommandText = "INSERT INTO preferences(key,value) VALUES($k,$v) ON CONFLICT(key) DO UPDATE SET value=excluded.value";
-        cmd.Parameters.AddWithValue("$k", key); cmd.Parameters.AddWithValue("$v", value);
-        cmd.ExecuteNonQuery();
+        using var db = OpenDatabase();
+        using var tx = db.BeginTransaction();
+        using (var cmd = db.CreateCommand())
+        {
+            cmd.Transaction = tx;
+            cmd.CommandText = "INSERT INTO preferences(key,value) VALUES($k,$v) ON CONFLICT(key) DO UPDATE SET value=excluded.value";
+            cmd.Parameters.AddWithValue("$k", key);
+            cmd.Parameters.AddWithValue("$v", value);
+            if (cmd.ExecuteNonQuery() != 1) throw new InvalidOperationException("NOX_SETTINGS_WRITE_HOLD");
+        }
+        using (var read = db.CreateCommand())
+        {
+            read.Transaction = tx;
+            read.CommandText = "SELECT value FROM preferences WHERE key=$k";
+            read.Parameters.AddWithValue("$k", key);
+            if (read.ExecuteScalar() is not string stored || !string.Equals(stored, value, StringComparison.Ordinal))
+                throw new InvalidOperationException("NOX_SETTINGS_READBACK_HOLD");
+        }
+        tx.Commit();
     }
 
     private object ReadPreferences() => ReadPreferencesDictionary();

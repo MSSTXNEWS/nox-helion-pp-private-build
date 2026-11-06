@@ -26,6 +26,9 @@ jobs:
           Copy-Item './coordination/nox-r8/tests/test_r8_learn_owner_queue.py' './r8/test_r8_learn_owner_queue.py'
           python './r8/test_r8_learn_owner_queue.py'
           if ($LASTEXITCODE -ne 0) { throw 'D05_LEARN_SOURCE_HOLD' }
+          Copy-Item './coordination/nox-r8/tests/test_r8_settings_contract.py' './r8/test_r8_settings_contract.py'
+          python './r8/test_r8_settings_contract.py'
+          if ($LASTEXITCODE -ne 0) { throw 'D06_SETTINGS_SOURCE_HOLD' }
           dotnet publish './r8/src/NOX.HELION.csproj' -c Release -r win-x64 --self-contained true -o './out' -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:PublishTrimmed=false
           if ($LASTEXITCODE -ne 0) { throw 'BUILD_FAILED' }
           Get-FileHash './out/NOX.HELION.exe' -Algorithm SHA256
@@ -49,6 +52,7 @@ jobs:
                 $n.runId -cne $runId -or $n.pid -ne $p.Id -or
                 $stamp -lt $started -or !$n.wpfWebView2Accepted -or
                 $n.checks.real_webview2_eight_routes -ne 'PASS' -or
+                $n.checks.settings_wpf_owner_sqlite_readback -ne 'PASS' -or
                 $n.checks.isolated_sqlite_path -ne 'PASS' -or
                 $n.checks.native_wpf_webview2_renderer -ne 'PASS' -or
                 ![string]::Equals($n.exeSha256,$sha,[StringComparison]::OrdinalIgnoreCase)) {
