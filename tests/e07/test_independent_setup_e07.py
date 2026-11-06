@@ -225,6 +225,50 @@ class IndependentE07(unittest.TestCase):
             root=Path(t)
             with self.assertRaisesRegex(MOD.Hold,'E07_SOURCE_ARTIFACT_NOT_REGULAR'):
                 MOD.setup_lock(root/'absent.exe',root/'absent.json')
+    def test_b06_installed_manifest_duplicate_json_never_admitted(self):
+        # Real temporary owned files: last-wins control fields must not PASS.
+        # SOURCE_ONLY; no NSIS, model download, or Windows E07 is launched.
+        with tempfile.TemporaryDirectory() as t:
+            root = Path(t)
+            owner = root / "nox-p01-owned.txt"
+            owner.write_text("NOXHELION.P01 V16\\n", encoding="utf-8")
+            payload = root / "entry.exe"
+            payload_data = b"unchanged-owned-E07"
+            payload.write_bytes(payload_data)
+            manifest = root / "payload.sha256.json"
+            entry = {"path": "entry.exe", "bytes": len(payload_data),
+                     "sha256": hashlib.sha256(payload_data).hexdigest()}
+            valid = json.dumps({"schema": "NOX_P01_PAYLOAD_SHA256_V1",
+                                "entrypoint": "NOX.P01.Shell.exe",
+                                "files": [entry]}, separators=(",", ":"))
+            manifest.write_text(valid, encoding="utf-8")
+            self.assertEqual(MOD.manifest_owner(root)[1], (payload,))
+            invalid = (
+                (valid.replace('"files":', '"files":[],"files":', 1),
+                 "E07_INSTALLED_MANIFEST_DUPLICATE_FIELD_HOLD"),
+                (valid.replace('"sha256":', '"sha256":"' + '0'*64 + '","sha256":', 1),
+                 "E07_INSTALLED_MANIFEST_DUPLICATE_FIELD_HOLD"),
+                (valid.replace('"bytes":', '"bytes":0,"bytes":', 1),
+                 "E07_INSTALLED_MANIFEST_DUPLICATE_FIELD_HOLD"),
+                (valid[:-1] + ',"ignored":NaN}',
+                 "E07_INSTALLED_MANIFEST_NONFINITE_HOLD"),
+                (valid[:-1] + ',"ignored":Infinity}',
+                 "E07_INSTALLED_MANIFEST_NONFINITE_HOLD"),
+                ('{BROKEN}', "E07_INSTALLED_MANIFEST_INVALID_JSON_HOLD"),
+            )
+            for payload_json, expected in invalid:
+                with self.subTest(expected=expected, input=payload_json[:64]):
+                    manifest.write_text(payload_json, encoding="utf-8")
+                    before = manifest.read_bytes()
+                    with self.assertRaisesRegex(MOD.Hold, expected):
+                        MOD.manifest_owner(root)
+                    self.assertEqual(manifest.read_bytes(), before)
+                    self.assertEqual(payload.read_bytes(), payload_data)
+                    self.assertEqual(owner.read_text(encoding="utf-8"),
+                                     "NOXHELION.P01 V16\\n")
+            manifest.write_text(valid, encoding="utf-8")
+            self.assertEqual(MOD.manifest_owner(root)[1], (payload,))
+
     def test_manifest_rejects_traversal_without_deletion(self):
         with tempfile.TemporaryDirectory() as t:
             root=Path(t)

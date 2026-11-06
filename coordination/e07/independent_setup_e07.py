@@ -490,7 +490,23 @@ def manifest_owner(install: Path) -> tuple[dict, tuple[Path, ...]]:
     require(clean_file(owner) and clean_file(manifest) and
             owner.read_text(encoding="utf-8-sig").strip() == "NOXHELION.P01 V16",
             "E07_INSTALLED_OWNER_MARKER_HOLD")
-    m = json.loads(manifest.read_text(encoding="utf-8-sig"))
+    # Fail closed on duplicate JSON control keys, including nested file metadata.
+    # json.loads otherwise silently uses the LAST occurrence (unsafe for E07).
+    def unique_manifest_pairs(pairs):
+        obj = {}
+        for key, value in pairs:
+            if key in obj:
+                raise Hold("E07_INSTALLED_MANIFEST_DUPLICATE_FIELD_HOLD")
+            obj[key] = value
+        return obj
+    try:
+        m = json.loads(
+            manifest.read_text(encoding="utf-8-sig"),
+            object_pairs_hook=unique_manifest_pairs,
+            parse_constant=lambda unused: (_ for _ in ()).throw(
+                Hold("E07_INSTALLED_MANIFEST_NONFINITE_HOLD")))
+    except (OSError, UnicodeError, json.JSONDecodeError):
+        raise Hold("E07_INSTALLED_MANIFEST_INVALID_JSON_HOLD") from None
     require(type(m) is dict and m.get("schema") == "NOX_P01_PAYLOAD_SHA256_V1"
             and m.get("entrypoint") == "NOX.P01.Shell.exe" and
             type(m.get("files")) is list and 1 <= len(m["files"]) <= 50000,
