@@ -17,7 +17,7 @@ jobs:
       - name: Install isolated Chromium dependencies
         run: |
           npm install --prefix /tmp/nox-wow-browser --no-save playwright@1.58.2
-          npx --prefix /tmp/nox-wow-browser playwright install --with-deps chromium
+          test -x /usr/bin/google-chrome || command -v google-chrome
           ln -s /tmp/nox-wow-browser/node_modules node_modules
       - name: Real browser verification
         run: |
@@ -29,7 +29,7 @@ jobs:
           test -f ui/menu-pages/formwork-aether-bento.css
           test -f ui/menu-pages/formwork-heliodon.LICENSE.txt
           test -f ui/menu-pages/formwork-aether.LICENSE.txt
-          node ui/menu-pages/express-wow-three.browser.mjs
+          NOX_CHROME_PATH=$(command -v google-chrome) node ui/menu-pages/express-wow-three.browser.mjs
       - name: Collect screenshots
         if: always()
         uses: actions/upload-artifact@v4
