@@ -1614,6 +1614,14 @@ if ($uLines.Count -eq 0) {
   $uRollbackGuard=@'
   ; C11_BACKUP_USER_SAFE_SOURCE_VARIANT: verify immutable owner backup first.
   ; Unknown or user-created files remain untouched; fail before renaming current.
+  ; B03 G4: the archived R11 variant has no prior verifier and no
+  ; plugin extraction setup in its rollback path. Initialize the NSIS-owned
+  ; temporary plugin directory before staging the approved verifier.
+  InitPluginsDir
+  IfFileExists "$PLUGINSDIR" C11RollbackPluginReady 0
+    SetErrorLevel 1
+    Abort "Rollback verifier plugin staging unavailable; no directories renamed."
+  C11RollbackPluginReady:
   File "/oname=$PLUGINSDIR\Verify-Payload.ps1" "${VERIFY_SCRIPT}"
   nsExec::ExecToStack 'powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$PLUGINSDIR\Verify-Payload.ps1" -Root "$BackupDir" -Manifest "$BackupDir\payload.sha256.json" -AllowInstalledMetadata -AllowInstalledUserFiles'
   Pop $ExitCode
