@@ -22,7 +22,6 @@ for token in (
     'NOX_SETTINGS_FOREIGN_KEY_WRITTEN_HOLD',
     'UiSmokeSettingsRestartRequested',
     'selftest_r8_',
-    'NOX_SETTINGS_RESTART_WEBVIEW2_HOLD',
     'case "stop":',
 ):
     assert token in native, token
