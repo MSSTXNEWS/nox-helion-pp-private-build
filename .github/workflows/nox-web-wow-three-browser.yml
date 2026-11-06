@@ -26,6 +26,7 @@ jobs:
           node --check ui/menu-pages/formwork-halo-hud.js
           test -f ui/menu-pages/formwork-aether-bento.css
           test -f ui/menu-pages/formwork-heliodon.LICENSE.txt
+          test -f ui/menu-pages/formwork-aether.LICENSE.txt
           node ui/menu-pages/express-wow-three.browser.mjs
       - name: Collect screenshots
         if: always()
