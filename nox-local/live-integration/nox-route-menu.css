@@ -1,0 +1,5 @@
+.nox-route-menu{position:relative;z-index:10000;margin-left:auto;font:11px 'Segoe UI',system-ui,sans-serif;color:#dfc8aa}
+.nox-route-menu summary{cursor:pointer;list-style:none;border:1px solid #dcae6b66;padding:8px 11px;min-height:39px;border-radius:10px;background:rgba(18,23,29,.76)}
+.nox-route-menu summary::-webkit-details-marker{display:none}.nox-route-list{position:absolute;right:0;top:45px;max-height:70vh;overflow-y:auto;width:192px;display:grid;background:rgba(7,12,18,.96);border:1px solid #dcae6b66;border-radius:11px;padding:7px;box-shadow:0 14px 38px #000a;backdrop-filter:blur(14px)}
+.nox-route-list a{display:block;color:#e4d4bc;text-decoration:none;padding:9px 10px;min-height:38px;border-radius:7px}.nox-route-list a:hover,.nox-route-list a:focus-visible{background:#d6a15b33}
+@media(max-width:650px){.nox-route-menu{margin-left:4px}.nox-route-menu summary{padding:7px 8px;font-size:10px}}
