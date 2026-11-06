@@ -46,6 +46,9 @@ try{
   await page.locator('#actions button[data-action="CHAT"]').click();
   assert.equal(await page.locator('.nox-chat-log').count(),1,'Original native CHAT remains reachable');
   assert.equal(await page.locator('.nox-loquix-typing').count(),0,'No fake streaming indicator before native request');
+  await page.waitForFunction(()=>document.querySelector('.core-section')?.dataset.noxZodiac==='active');
+  assert.equal(await page.locator('.nox-zodiac-lines circle').count(),8,'ZODIAC must connect exactly eight original CoreID nodes');
+  assert.equal(await page.locator('#cores button.core').count(),8,'ZODIAC cannot duplicate native CoreID buttons');
   const buttons=await page.locator('#directions button').count();
   assert.equal(buttons,8,'All eight original navigation directions remain');
 
