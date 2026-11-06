@@ -556,20 +556,20 @@
       "source_head_observed": "0d939cc9694418521e8a216b8405f8f8d40d475f",
       "change_scope": "GGUF_ACTUAL_INSTALLED_MODEL_DIGEST_SEPARATE_FROM_SOURCE_GGUF_SHA"
     },
-    {
+{
       "path": "Packages/P03/Source/P03.ModelCenter/ModelSafetensorsImport.cs",
       "owner": 3,
-      "run_id": "D04_R5_P03_SAFETENSORS_HEADER_UNAMBIGUOUS_20261106",
-      "pre_git_blob_sha1": "565bb8e7e72afc2235cf34f900be7950809073ee",
-      "post_git_blob_sha1": "8345f0ab467ec4060327673903f29809f30dfbdc",
-      "post_bytes": 12115,
-      "acceptance": "SOURCE_ONLY_12_OF_12_DOTNET_WINDOWS_NOT_RUN",
+      "run_id": "D04_R5_P03_SAFETENSORS_TENSOR_SEMANTICS_20261106",
+      "pre_git_blob_sha1": "8345f0ab467ec4060327673903f29809f30dfbdc",
+      "post_git_blob_sha1": "e8c762a1bb0ffabeef5c0125347702fa055e2f32",
+      "post_bytes": 13991,
+      "acceptance": "SOURCE_ONLY_TARGET_DOTNET_WINDOWS_PHYSICAL_NOT_RUN",
       "source_pinned_baseline": true,
-      "source_head_observed": "20194614df50f7aa4fb8233072d1a9cd12ded4d8",
-      "change_scope": "NATIVE_SAFETENSORS_DUPLICATE_HEADER_AND_OVERLAP_DENIAL",
-      "prior_active_run_id": "D04_R5_P03_MERGED_NATIVE_FILE_HANDLE_IDENTITY_20261106",
-      "prior_active_post_git_blob_sha1": "565bb8e7e72afc2235cf34f900be7950809073ee",
-      "prior_active_post_bytes": 10446,
+      "source_head_observed": "40504d130868338bd1eaa9c89d3a1d66ddd77543",
+      "change_scope": "NATIVE_SAFETENSORS_DTYPE_SHAPE_EXACT_BYTES_VALIDATION",
+      "prior_active_run_id": "D04_R5_P03_SAFETENSORS_HEADER_UNAMBIGUOUS_20261106",
+      "prior_active_post_git_blob_sha1": "8345f0ab467ec4060327673903f29809f30dfbdc",
+      "prior_active_post_bytes": 12115,
       "release_accepted": false
     },
     {
@@ -602,19 +602,19 @@
       "source_head_observed": "ce1bd240c56836adca08f7e6655b5890e0b255c1",
       "release_accepted": false
     },
-    {
+{
       "path": "Packages/P03/Source/P03.ModelCenter.HardeningSmoke/Program.cs",
       "owner": 3,
-      "run_id": "D04_R5_P03_SAFETENSORS_HEADER_UNAMBIGUOUS_20261106",
-      "pre_git_blob_sha1": "a37332694779a1fa2ee47564d097a5170c81f416",
-      "post_git_blob_sha1": "f544f4c0b609331d82036beb612750b47855adea",
-      "post_bytes": 102942,
-      "acceptance": "SOURCE_ONLY_12_OF_12_DOTNET_WINDOWS_NOT_RUN",
-      "change_scope": "REAL_FILE_HEADER_POSITIVE_NEGATIVE_CSHARP_SMOKE",
-      "prior_active_run_id": "B04_R5_TERMINAL_BACKUP_NO_LOSS_20261106",
-      "prior_active_post_git_blob_sha1": "a37332694779a1fa2ee47564d097a5170c81f416",
-      "prior_active_post_bytes": 99285,
-      "source_head_observed": "20194614df50f7aa4fb8233072d1a9cd12ded4d8",
+      "run_id": "D04_R5_P03_SAFETENSORS_TENSOR_SEMANTICS_20261106",
+      "pre_git_blob_sha1": "f544f4c0b609331d82036beb612750b47855adea",
+      "post_git_blob_sha1": "4040b4299449a2df3ed26bf7452ea90270369aa4",
+      "post_bytes": 104500,
+      "acceptance": "SOURCE_ONLY_TARGET_DOTNET_WINDOWS_PHYSICAL_NOT_RUN",
+      "change_scope": "REAL_FILE_SHAPE_BYTES_NEGATIVE_AND_POSITIVE_CSHARP_FIXTURES",
+      "prior_active_run_id": "D04_R5_P03_SAFETENSORS_HEADER_UNAMBIGUOUS_20261106",
+      "prior_active_post_git_blob_sha1": "f544f4c0b609331d82036beb612750b47855adea",
+      "prior_active_post_bytes": 102942,
+      "source_head_observed": "40504d130868338bd1eaa9c89d3a1d66ddd77543",
       "release_accepted": false
     }
   ],

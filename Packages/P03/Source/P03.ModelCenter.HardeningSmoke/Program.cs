@@ -34,13 +34,31 @@ async Task<bool> AdmitHeaderD04Async(string json, int payloadBytes)
     }
     finally { File.Delete(target); }
 }
-Assert(await AdmitHeaderD04Async("{\"a\":{\"dtype\":\"F32\",\"data_offsets\":[0,4]},\"b\":{\"dtype\":\"F32\",\"data_offsets\":[4,8]}}",8),
-    "D04 two separate tensor ranges admitted");
-Assert(!await AdmitHeaderD04Async("{\"a\":{\"data_offsets\":[0,4]},\"a\":{\"data_offsets\":[4,8]}}",8),
+Assert(await AdmitHeaderD04Async("{\"a\":{\"dtype\":\"F32\",\"shape\":[1],\"data_offsets\":[0,4]},\"b\":{\"dtype\":\"F32\",\"shape\":[1],\"data_offsets\":[4,8]}}",8),
+    "D04 two separate real F32 tensor ranges admitted");
+Assert(await AdmitHeaderD04Async("{\"scalar\":{\"dtype\":\"F32\",\"shape\":[],\"data_offsets\":[0,4]}}",4),
+    "D04 scalar zero-rank tensor admitted");
+Assert(await AdmitHeaderD04Async("{\"empty\":{\"dtype\":\"F32\",\"shape\":[0,3],\"data_offsets\":[0,0]}}",0),
+    "D04 zero-element tensor admitted");
+Assert(!await AdmitHeaderD04Async("{\"bad\":{\"dtype\":\"F32\",\"data_offsets\":[0,4]}}",4),
+    "D04 missing shape rejected");
+Assert(!await AdmitHeaderD04Async("{\"bad\":{\"shape\":[1],\"data_offsets\":[0,4]}}",4),
+    "D04 missing dtype rejected");
+Assert(!await AdmitHeaderD04Async("{\"bad\":{\"dtype\":\"UNKNOWN\",\"shape\":[1],\"data_offsets\":[0,4]}}",4),
+    "D04 unsupported dtype rejected");
+Assert(!await AdmitHeaderD04Async("{\"bad\":{\"dtype\":\"F32\",\"shape\":[1],\"data_offsets\":[0,8]}}",8),
+    "D04 tensor byte size mismatch rejected");
+Assert(!await AdmitHeaderD04Async("{\"bad\":{\"dtype\":\"F32\",\"shape\":[-1],\"data_offsets\":[0,4]}}",4),
+    "D04 negative shape rejected");
+Assert(!await AdmitHeaderD04Async("{\"bad\":{\"dtype\":\"F64\",\"shape\":[9223372036854775807,2],\"data_offsets\":[0,8]}}",8),
+    "D04 shape multiplication overflow rejected");
+Assert(!await AdmitHeaderD04Async("{\"__metadata__\":{\"owner\":42},\"ok\":{\"dtype\":\"F32\",\"shape\":[1],\"data_offsets\":[0,4]}}",4),
+    "D04 non-string metadata rejected");
+Assert(!await AdmitHeaderD04Async("{\"a\":{\"dtype\":\"F32\",\"shape\":[1],\"data_offsets\":[0,4]},\"a\":{\"dtype\":\"F32\",\"shape\":[1],\"data_offsets\":[4,8]}}",8),
     "D04 duplicate tensor field rejected");
-Assert(!await AdmitHeaderD04Async("{\"a\":{\"data_offsets\":[0,4],\"data_offsets\":[4,8]}}",8),
+Assert(!await AdmitHeaderD04Async("{\"a\":{\"dtype\":\"F32\",\"shape\":[1],\"data_offsets\":[0,4],\"data_offsets\":[4,8]}}",8),
     "D04 duplicate nested offsets rejected");
-Assert(!await AdmitHeaderD04Async("{\"a\":{\"data_offsets\":[0,4]},\"b\":{\"data_offsets\":[2,6]}}",8),
+Assert(!await AdmitHeaderD04Async("{\"a\":{\"dtype\":\"F32\",\"shape\":[1],\"data_offsets\":[0,4]},\"b\":{\"dtype\":\"F32\",\"shape\":[1],\"data_offsets\":[2,6]}}",8),
     "D04 overlapping tensor ranges rejected");
 
 // R99: a non-default HTTPS port is a different official-source origin.

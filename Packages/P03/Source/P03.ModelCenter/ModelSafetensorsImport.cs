@@ -159,13 +159,48 @@ internal static class ModelSafetensorsImport
         var ranges=new List<(long Start,long End)>();
         foreach(var tensor in doc.RootElement.EnumerateObject())
         {
-            if(tensor.Name=="__metadata__")continue;
+            if(tensor.Name=="__metadata__")
+            {
+                if(tensor.Value.ValueKind!=JsonValueKind.Object ||
+                    tensor.Value.EnumerateObject().Any(x=>x.Value.ValueKind!=JsonValueKind.String))
+                    throw new InvalidDataException("P03_SAFETENSORS_METADATA_SCHEMA_HOLD");
+                continue;
+            }
             if(tensor.Value.ValueKind!=JsonValueKind.Object ||
                 !tensor.Value.TryGetProperty("data_offsets",out var offsets) ||
                 offsets.ValueKind!=JsonValueKind.Array || offsets.GetArrayLength()!=2 ||
                 !offsets[0].TryGetInt64(out var start) || !offsets[1].TryGetInt64(out var end) ||
                 start<0 || end<start || end>file.Length-8-(long)size)
                 throw new InvalidDataException("P03_SAFETENSORS_OFFSETS_INVALID");
+            // An SHA-256-pinned header must still describe a valid tensor:
+            // offsets, dtype, shape and actual byte span must agree.
+            if(!tensor.Value.TryGetProperty("dtype",out var dtype) ||
+                dtype.ValueKind!=JsonValueKind.String ||
+                !tensor.Value.TryGetProperty("shape",out var shape) ||
+                shape.ValueKind!=JsonValueKind.Array)
+                throw new InvalidDataException("P03_SAFETENSORS_TENSOR_SCHEMA_HOLD");
+            var byteWidth=dtype.GetString() switch
+            {
+                "BOOL" or "I8" or "U8" or "F8_E4M3FN" or "F8_E4M3FNUZ" or
+                    "F8_E5M2" or "F8_E5M2FNUZ" => 1,
+                "I16" or "U16" or "F16" or "BF16" => 2,
+                "I32" or "U32" or "F32" => 4,
+                "I64" or "U64" or "F64" => 8,
+                _ => 0
+            };
+            if(byteWidth==0)
+                throw new InvalidDataException("P03_SAFETENSORS_UNSUPPORTED_DTYPE_HOLD");
+            long tensorBytes=byteWidth;
+            foreach(var dimension in shape.EnumerateArray())
+            {
+                if(dimension.ValueKind!=JsonValueKind.Number ||
+                    !dimension.TryGetInt64(out var count) || count<0 ||
+                    (count>0 && tensorBytes>long.MaxValue/count))
+                    throw new InvalidDataException("P03_SAFETENSORS_SHAPE_OVERFLOW_HOLD");
+                tensorBytes*=count;
+            }
+            if(end-start!=tensorBytes)
+                throw new InvalidDataException("P03_SAFETENSORS_TENSOR_BYTES_MISMATCH_HOLD");
             if(start<end)ranges.Add((start,end)); // Empty tensors are allowed.
             tensors++;
         }
