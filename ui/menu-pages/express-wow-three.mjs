@@ -38,7 +38,7 @@
     if(disposed||!canStart())return;
     instance=mod.mountNoxWow(canvas,THREE,w);
     if(!instance){canvas.hidden=true;stage.dataset.wowThreeState='fallback';}
-    else stage.dataset.wowThreeState='active';
+    else {stage.dataset.wowThreeState='active';stage.dataset.wowHeliodon=instance.metalCount===2?'active':'fallback';}
    }catch{
     canvas.hidden=true;
     stage.dataset.wowThreeState='fallback'; /* Keep original V3/AURUM atmosphere. */
