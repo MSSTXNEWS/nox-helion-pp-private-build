@@ -118,6 +118,40 @@ jobs:
             throw 'NOX_TECH_NATIVE_GATE_HOLD'
           }
           Write-Host 'TECH_R9_NATIVE_UI_AND_SYNTHETIC_IPC_STOP_SQLITE_GATE_PASS; REAL_QWEN_PENDING'
+      - name: Compile self-contained single-file Windows EXE
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          & dotnet publish './tech-r9/src/NOX.HELION.csproj' -c Release -r win-x64 --self-contained true -p:EnableWindowsTargeting=true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:DebugType=none -p:DebugSymbols=false -o './NOX_R9_ONEFILE'
+          if($LASTEXITCODE -ne 0){throw 'ONEFILE_COMPILE_HOLD'}
+          $exe=(Resolve-Path './NOX_R9_ONEFILE/NOX.HELION.exe').Path
+          $sha=(Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash.ToLowerInvariant()
+          @{product='NOX TECH R9 SINGLEFILE'; exe_sha256=$sha; windows_compile='PASS'; native_webview2='NOT_TESTED'; synthetic_protocol_ipc_stop_sqlite='NOT_TESTED'; real_owner_qwen='NOT_TESTED'; full_v16_release=$false} | ConvertTo-Json | Set-Content './NOX_R9_ONEFILE/TECH_BUILD_RECEIPT.json' -Encoding UTF8
+          Write-Host "ONEFILE_COMPILED_SHA256=$sha"
+      - name: Native UI smoke — self-contained EXE
+        shell: pwsh
+        run: |
+          & './coordination/nox-tech-r9/run_onefile_ui_smoke.ps1' -Exe './NOX_R9_ONEFILE/NOX.HELION.exe' -OutputRoot './NOX_R9_ONEFILE'
+      - name: Native IPC STOP SQLite — self-contained EXE synthetic protocol
+        shell: pwsh
+        run: |
+          & './coordination/nox-tech-r9/run_protocol_fixture_windows.ps1' -Exe './NOX_R9_ONEFILE/NOX.HELION.exe' -OutputRoot './NOX_R9_ONEFILE'
+      - name: Strict self-contained technical gate
+        if: always()
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          if(!(Test-Path './NOX_R9_ONEFILE/TECH_BUILD_RECEIPT.json')){throw 'ONEFILE_RECEIPT_MISSING'}
+          $b=Get-Content './NOX_R9_ONEFILE/TECH_BUILD_RECEIPT.json' -Raw|ConvertFrom-Json
+          if($b.windows_compile -cne 'PASS' -or $b.native_webview2 -cne 'PASS' -or $b.synthetic_protocol_ipc_stop_sqlite -cne 'PASS' -or $b.real_owner_qwen -cne 'NOT_TESTED' -or $b.full_v16_release -ne $false){throw 'ONEFILE_NATIVE_GATE_HOLD'}
+          Write-Host 'ONEFILE_NATIVE_UI_STREAM_STOP_SQLITE_ACCEPTED (FIXTURE ONLY, REAL QWEN UNTESTED)'
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NOX-R9-ONEFILE-WIN64
+          path: NOX_R9_ONEFILE/
+          if-no-files-found: warn
+          retention-days: 14
       - uses: actions/upload-artifact@v4
         if: always()
         with:
