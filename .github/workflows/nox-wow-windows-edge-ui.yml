@@ -17,7 +17,7 @@ jobs:
       - name: Install test-only Playwright client
         shell: pwsh
         run: npm install --no-save --ignore-scripts playwright@1.58.2
-      - name: Windows Microsoft Edge 7-breakpoint WOW UI acceptance
+      - name: Windows Microsoft Edge final 7-viewports and no-overflow acceptance
         shell: pwsh
         run: |
           $p=Start-Process -FilePath node -ArgumentList @('coordination/e07/nox_wow_static_server.cjs') -PassThru -NoNewWindow
