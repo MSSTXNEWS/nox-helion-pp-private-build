@@ -23,11 +23,16 @@
  notify.onclick=async()=>{drawer.hidden=!drawer.hidden;notify.classList.remove('has-event');if(!drawer.hidden&&'Notification'in window&&Notification.permission==='default'){try{const s=await Notification.requestPermission();log(s==='granted'?'Windows уведомления разрешены':'События остаются внутри NOX')}catch(e){log('Уведомления доступны внутри NOX')}}};
  const container=PAGE==='chat'&&document.querySelector('.details')?document.querySelector('.details'):document.body;
  if(PAGE==='chat')container.prepend(hud);else container.append(hud);
- const gauge=(name,value,x,color)=>({type:'gauge',center:[x,'43%'],radius:'40%',startAngle:205,endAngle:-25,min:0,max:100,splitNumber:5,
-   axisLine:{lineStyle:{width:6,color:[[1,'rgba(152,165,171,.13)']]}},progress:{show:value!==null,width:6,roundCap:true,itemStyle:{color}},
-   pointer:{show:value!==null,length:'51%',width:2,icon:'path://M0,-1 L1,1 L0,10 L-1,1 Z',itemStyle:{color}},anchor:{show:value!==null,size:5,showAbove:true,itemStyle:{color}},
-   axisTick:{distance:-10,length:3,lineStyle:{color:'rgba(208,220,220,.23)',width:1}},splitLine:{distance:-11,length:6,lineStyle:{color:'rgba(220,226,228,.42)',width:1}},axisLabel:{show:false},
-   detail:{show:false},title:{show:false},data:[{value:value??0,name}]} );
+ const gauge=(name,value,x,color)=>({
+   type:'gauge',center:[x,'43%'],radius:'44%',startAngle:215,endAngle:-35,min:0,max:100,splitNumber:10,
+   axisLine:{roundCap:true,lineStyle:{width:9,color:[[1,'rgba(130,150,166,.21)']],shadowBlur:8,shadowColor:'rgba(130,166,185,.24)'}},
+   progress:{show:value!==null,overlap:false,roundCap:true,width:10,itemStyle:{color,shadowBlur:20,shadowColor:color,shadowOffsetY:0}},
+   pointer:{show:value!==null,length:'53%',width:3,icon:'path://M0,-1 L1,1 L0,10 L-1,1 Z',itemStyle:{color,shadowBlur:8,shadowColor:color}},
+   anchor:{show:value!==null,size:7,showAbove:true,itemStyle:{color,shadowBlur:10,shadowColor:color}},
+   axisTick:{show:true,splitNumber:4,distance:-15,length:3,lineStyle:{color:'rgba(225,233,237,.40)',width:1}},
+   splitLine:{show:true,distance:-18,length:7,lineStyle:{color:'rgba(240,242,239,.64)',width:1}},
+   axisLabel:{show:false},detail:{show:false},title:{show:false},data:[{value:value??0,name}]
+ });
  const E=window.echarts;
  if(E){try{chartObj=E.init(chart,null,{renderer:'canvas',devicePixelRatio:Math.min(window.devicePixelRatio||1,1.5)}); chartObj.setOption({animationDuration:700,backgroundColor:'transparent',series:[gauge('CPU',null,'17%','#d0a16a'),gauge('GPU',null,'50%','#8fc0cb'),gauge('RAM',null,'83%','#ad99d9')]});}catch(e){chartObj=null}}
  if(!chartObj){chart.classList.add('ch-no-chart');chart.textContent='ECharts · Н/Д';message.textContent='ECharts не загружен — графики недоступны';}
