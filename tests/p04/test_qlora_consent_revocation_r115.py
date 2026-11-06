@@ -20,6 +20,24 @@ class ConsentSnapshot(unittest.TestCase):
         try:self.path.symlink_to(x)
         except (OSError,NotImplementedError):self.skipTest("no symlinks")
         self.blocked()
+    def test_hardlink_alias_is_not_approved_consent(self):
+        import os
+        alias=pathlib.Path(self.t.name)/"second-consent-name.json"
+        try:os.link(self.path,alias)
+        except (OSError,NotImplementedError):self.skipTest("filesystem has no hardlink support")
+        self.blocked()
+    def test_identical_file_replaced_during_open_is_not_consent(self):
+        import os
+        from unittest import mock
+        replacement=pathlib.Path(self.t.name)/"identical-new-file.json"
+        replacement.write_bytes(GOOD)
+        open_original=os.open
+        def replacement_after_open(*a,**kw):
+            fd=open_original(*a,**kw)
+            os.replace(replacement,self.path)
+            return fd
+        with mock.patch.object(os,"open",side_effect=replacement_after_open):
+            self.blocked()
     def test_malformed_hash(self):
         with self.assertRaisesRegex(RuntimeError,"P04_TRAINING_CONSENT_CHANGED"):
             q.require_training_consent_unchanged(self.path,"bad")

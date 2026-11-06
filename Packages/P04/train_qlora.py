@@ -43,14 +43,44 @@ def utc_now() -> str:
 
 
 def require_training_consent_unchanged(path: Path, approved_sha256: str) -> None:
-    """Verify still-authorized local manifest bytes; external revocation is not attested."""
+    """Verify approved local consent via one stable, single-link file handle.
+
+    This checks the approved bytes at every existing trainer consent boundary;
+    it does not attest external revocation or replace native SID/ACL/consent.
+    """
     try:
         if not isinstance(approved_sha256, str) or not re.fullmatch(r"[0-9a-f]{64}", approved_sha256):
             raise ValueError("CONSENT_SHA_INVALID")
         reject_reparse_ancestors(path.absolute())
-        if path.is_symlink() or not path.is_file():
+        before = path.lstat()
+        if (not stat.S_ISREG(before.st_mode) or before.st_ino == 0
+                or before.st_nlink != 1
+                or getattr(before, "st_file_attributes", 0) & getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0)):
             raise ValueError("CONSENT_PATH_INVALID")
-        raw = path.read_bytes()
+        flags = os.O_RDONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0)
+        fd = os.open(path, flags)
+        try:
+            opened = os.fstat(fd)
+            if (not stat.S_ISREG(opened.st_mode) or opened.st_ino == 0
+                    or opened.st_nlink != 1):
+                raise ValueError("CONSENT_OPENED_FILE_UNSAFE")
+            with os.fdopen(fd, "rb", closefd=False) as stream:
+                raw = stream.read()
+            same_handle = os.fstat(fd)
+            on_path = path.lstat()
+
+            def identity(info):
+                return (info.st_dev, info.st_ino, info.st_nlink, info.st_size,
+                        info.st_mtime_ns, info.st_ctime_ns)
+
+            if (not stat.S_ISREG(on_path.st_mode) or on_path.st_nlink != 1
+                    or getattr(on_path, "st_file_attributes", 0) & getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0)
+                    or identity(before) != identity(opened)
+                    or identity(opened) != identity(same_handle)
+                    or identity(opened) != identity(on_path)):
+                raise ValueError("CONSENT_FILE_REPLACED")
+        finally:
+            os.close(fd)
         if hashlib.sha256(raw).hexdigest() != approved_sha256:
             raise ValueError("CONSENT_BYTES_CHANGED")
         obj = json.loads(raw.decode("utf-8"))
