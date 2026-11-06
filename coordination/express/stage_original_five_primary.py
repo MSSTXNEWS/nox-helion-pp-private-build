@@ -314,7 +314,10 @@ nav.addEventListener('click',event=>{
       !originalNavigationAllowed(matches[0])){
      state.textContent=name+': исходный элемент недоступен · HOLD';return;
    }
-   navControl.click(); // Reuse original showScreen/navigation, not a second UI.
+   // D03: original navigation may throw when its WebView2/screen owner tears down.
+   // No privileged INSTALL retry, no consent/exit ACK on a failed transition.
+   try{navControl.click();} // Reuse original showScreen/navigation, not a second UI.
+   catch{state.textContent=name+': исходный переход завершился исключением · HOLD';return;}
    if(!document.getElementById(screen)?.classList.contains('active')){
      state.textContent=name+': исходный экран не открылся · HOLD';return;
    }
@@ -322,7 +325,8 @@ nav.addEventListener('click',event=>{
    if(target.getClientRects().length===0){
      state.textContent=name+': целевой элемент не виден · HOLD';return;
    }
-   target.focus({preventScroll:false});
+   try{target.focus({preventScroll:false});}
+   catch{state.textContent=name+': исходный фокус завершился исключением · HOLD';return;}
    if(document.activeElement!==target){
      state.textContent=name+': фокус оригинального элемента не подтверждён · HOLD';
      return;
