@@ -257,9 +257,9 @@ def supervise():
             except Exception as ex:
                 print("NOX SENSOR HOLD:",ex,flush=True)
                 return
-            if hot<RESUME_BELOW and (ac or charge>30):
+            if hot<LIMIT and (ac or charge>30):
                 continue
-            outcome="HOTSPOT_COOLDOWN" if hot>=RESUME_BELOW else "BATTERY_HOLD"
+            outcome="HOTSPOT_COOLDOWN" if hot>=LIMIT else "BATTERY_HOLD"
         if outcome not in ("HOTSPOT>=70C","HOTSPOT_COOLDOWN"):
             print("NOX stopped, NO automatic restart:",outcome,flush=True)
             return
