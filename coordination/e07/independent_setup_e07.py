@@ -730,7 +730,7 @@ def classify_primary_uia_evidence(response: dict) -> dict:
 
 
 def observe_original_primary_buttons(hwnd: int) -> dict:
-    """Read-only UI Automation rooted at the existing strict WPF HWND witness."""
+    """Read-only UIA: five genuine buttons must have a >=44x44 device-pixel hit target."""
     require(sys.platform == "win32" and type(hwnd) is int and hwnd > 0,
             "E07_UIA_NOT_WINDOWS_OR_BAD_HWND")
     ps = r"""
@@ -749,7 +749,7 @@ for ($i=0; $i -lt $elements.Count; $i++) {
     $current = $elements.Item($i).Current
     $rect = $current.BoundingRectangle
     if ($current.IsEnabled -and -not $current.IsOffscreen -and
-        $rect.Width -ge 20 -and $rect.Height -ge 12 -and
+        $rect.Width -ge 44 -and $rect.Height -ge 44 -and
         -not [string]::IsNullOrWhiteSpace($current.Name)) {
         $labels.Add($current.Name)
     }
@@ -774,7 +774,7 @@ for ($i=0; $i -lt $scanCount; $i++) {
         $bounds = $node.BoundingRectangle
         $state = if (-not $node.IsEnabled) { 'DISABLED' }
                  elseif ($node.IsOffscreen) { 'OFFSCREEN' }
-                 elseif ($bounds.Width -lt 20 -or $bounds.Height -lt 12) { 'TOO_SMALL' }
+                 elseif ($bounds.Width -lt 44 -or $bounds.Height -lt 44) { 'TOO_SMALL' }
                  else { 'VISIBLE_ENABLED' }
         if ($targetTypes.Count -lt 64) { $targetTypes.Add("$token|$kind|$state") }
     } catch {
@@ -852,7 +852,7 @@ for($i=0;$i -lt $tree.Count;$i++){
   $name=($v.Name+'').Trim().TrimStart([char[]]@([char]0x2726,[char]0x2605,[char]0x2022,[char]0x20)).Trim().ToUpperInvariant()
   if($name -ne 'CHAT'){continue}
   $rect=$v.BoundingRectangle
-  if($v.IsEnabled -and -not $v.IsOffscreen -and $rect.Width -ge 20 -and $rect.Height -ge 12){$matching.Add($el)}
+  if($v.IsEnabled -and -not $v.IsOffscreen -and $rect.Width -ge 44 -and $rect.Height -ge 44){$matching.Add($el)}
 }
 if($matching.Count -ne 1){throw 'CHAT_NOT_UNIQUE'}
 # Read the ORIGINAL installed WebView2 accessibility tree, not HTML from repository.

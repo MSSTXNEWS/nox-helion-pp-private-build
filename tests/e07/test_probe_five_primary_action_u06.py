@@ -156,4 +156,21 @@ class FiveButtonGate(unittest.TestCase):
         with self.assertRaises(module.Hold):
             module.checked_source_setup(Path('/not/real'), 'bad', 'nope')
 
+
+    def test_d01_physical_uia_requires_compact_primary_hit_targets(self):
+        # SourceLock HOME itself requires >=44x44 CSS px for each primary.
+        # The Windows UIA witnesses must not admit a 20x12 clipped/disabled dock.
+        independent = (PATH.parent / "independent_setup_e07.py").read_text(encoding="utf-8")
+        primary = independent.split("def observe_original_primary_buttons(", 1)[1].split(
+            "def classify_chat_invoke_witness(", 1)[0]
+        chat = independent.split("def observe_chat_input(", 1)[1].split(
+            "def classify_readonly_primary_navigation_witness(", 1)[0]
+        self.assertIn("$rect.Width -ge 44 -and $rect.Height -ge 44", primary)
+        self.assertIn("$bounds.Width -lt 44 -or $bounds.Height -lt 44", primary)
+        self.assertIn("$rect.Width -ge 44 -and $rect.Height -ge 44", chat)
+        self.assertIn('ControlType.Button|VISIBLE_ENABLED', independent)
+        self.assertIn('action = observe_chat_input(handle)', independent)
+        self.assertIn('safe_nav=False', PATH.read_text(encoding="utf-8"))
+        self.assertIn('"release_accepted": False', PATH.read_text(encoding="utf-8"))
+
 if __name__ == "__main__": unittest.main()
