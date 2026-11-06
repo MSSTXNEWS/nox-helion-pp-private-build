@@ -185,7 +185,7 @@ def server(root,port):
             if self.path in ("/","/index.html"):
                 return self.respond(html,"text/html; charset=utf-8")
             if self.path=="/api/health":
-                return self.respond(json.dumps({"schema":SCHEMA,"status":"READY"}).encode())
+                return self.respond(json.dumps({"schema":"NOX-FORGE-FOCUS-LIVE-v1","status":"READY","template":"original-FORGE-FOCUS-V4"}).encode())
             if self.path=="/api/status":
                 return self.respond(json.dumps(forge_focus_live(root),ensure_ascii=False).encode())
             return self.respond(b'{"error":"not found"}',code=404)
@@ -198,6 +198,6 @@ def server(root,port):
 if __name__=="__main__":
     p=argparse.ArgumentParser()
     p.add_argument("--root",type=Path,required=True)
-    p.add_argument("--port",type=int,default=18872)
+    p.add_argument("--port",type=int,default=18873)
     a=p.parse_args()
     server(a.root.resolve(),a.port)
