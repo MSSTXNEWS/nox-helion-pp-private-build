@@ -252,7 +252,9 @@ export function settingsAutostartOwnerAdmission(button,issued,event){
     id===AUTOSTART_UIA_IDS.on?{key:'enabled',value:'true'}:
     id===AUTOSTART_UIA_IDS.off?{key:'enabled',value:'false'}:null;
   if(!expected || !issued?.has?.(button) || button.isConnected!==true ||
-     button.tagName!=='BUTTON' || button.dataset?.nativeRoute!=='system.autostart' ||
+     button.tagName!=='BUTTON' || button.getAttribute?.('type')!=='button' ||
+     (button.hasAttribute?.('role') && button.getAttribute?.('role')!=='button') ||
+     button.dataset?.nativeRoute!=='system.autostart' ||
      button.dataset.nativeKey!==expected.key || button.dataset.nativeValue!==expected.value)
     return false;
   // A duplicate, replaced or detached UIA node must not dispatch owner IPC.
@@ -273,9 +275,13 @@ export function settingsAutostartOwnerAdmission(button,issued,event){
     if(x<0 || y<0 || x>=view.innerWidth || y>=view.innerHeight)return false;
     let node=button,depth=0;
     while(node){
-      if(++depth>64 || node.hidden===true || node.inert===true ||
-         node.disabled===true || node.getAttribute?.('aria-hidden')==='true' ||
-         node.getAttribute?.('aria-disabled')==='true')return false;
+      // HTML ARIA true is case-insensitive on every ancestor. A hidden or
+      // disabled original SETTINGS UIA element cannot request owner consent.
+      const ariaHidden=node.getAttribute?.('aria-hidden');
+      const ariaDisabled=node.getAttribute?.('aria-disabled');
+      if(++depth>64 || node.hidden===true || node.inert===true || node.disabled===true ||
+         (typeof ariaHidden==='string'&&ariaHidden.trim().toLowerCase()==='true') ||
+         (typeof ariaDisabled==='string'&&ariaDisabled.trim().toLowerCase()==='true'))return false;
       const style=view.getComputedStyle(node);
       if(!style || style.display==='none' ||
          style.visibility==='hidden' || style.visibility==='collapse' ||

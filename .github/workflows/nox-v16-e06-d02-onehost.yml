@@ -11,6 +11,8 @@ on:
       # F01: original EXPRESS native UI receipts must never evade changed-SHA Windows E06.
       # Push only: do NOT duplicate the branch build through pull_request.
       - 'ui/menu-pages/menu.js'
+      - 'ui/onehost-menu-bindings.mjs'
+      - 'ui/menu-pages/express-settings-native.test.mjs'
       - 'tests/ui/test_u06_chat_model_selection_ack.mjs'
       - 'ui/nox-r11-wow.mjs'
       - 'ui/firstboot-truth.mjs'
@@ -216,7 +218,7 @@ jobs:
       - name: Node runtime interactive five-planet quality lifecycle
         shell: pwsh
         run: |
-          node --test ui/nox-native-neural.test.mjs ui/nox-lucide-icons.test.mjs ui/selfbuilder-menu-hierarchy.test.mjs ui/menu-pages/express-core-native-chat.test.mjs integrations/wow200/tests/test_home_scene.mjs integrations/wow200/runtime/home-scene.lifecycle.r17.test.mjs
+          node --test ui/nox-native-neural.test.mjs ui/nox-lucide-icons.test.mjs ui/selfbuilder-menu-hierarchy.test.mjs ui/menu-pages/express-core-native-chat.test.mjs ui/menu-pages/express-settings-native.test.mjs integrations/wow200/tests/test_home_scene.mjs integrations/wow200/runtime/home-scene.lifecycle.r17.test.mjs
           if ($LASTEXITCODE -ne 0) { throw 'NOX_D02_PLANET_RUNTIME_INTERACTION_HOLD' }
       - name: Real D02 staging unit tests and negative tampering cases
         shell: pwsh
