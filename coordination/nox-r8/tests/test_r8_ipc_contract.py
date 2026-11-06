@@ -4,7 +4,7 @@ import subprocess
 import shutil
 import re
 
-root = Path(__file__).resolve().parents[1]
+root = Path(__file__).resolve().parent  # CI stages this test beside src/ inside r8/
 cs = (root / "src" / "MainWindow.xaml.cs").read_text(encoding="utf-8")
 html = (root / "src" / "index.html").read_text(encoding="utf-8")
 required_cs = (
