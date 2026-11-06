@@ -472,13 +472,13 @@ public partial class MainWindow : Window
           CREATE TABLE IF NOT EXISTS memory_notes(id INTEGER PRIMARY KEY AUTOINCREMENT, created_at TEXT NOT NULL, title TEXT NOT NULL, content TEXT NOT NULL);
           CREATE TABLE IF NOT EXISTS feedback(id INTEGER PRIMARY KEY AUTOINCREMENT, created_at TEXT NOT NULL, rating INTEGER NOT NULL, answer TEXT NOT NULL);
           CREATE TABLE IF NOT EXISTS learn_requests (
- id INTEGER PRIMARY KEY AUTOINCREMENT, owner_sid TEXT NOT NULL, requested_at TEXT NOT NULL,
- consent_at TEXT NOT NULL, model TEXT NOT NULL,
- state TEXT NOT NULL CHECK(state IN ('AWAITING_VERIFIED_WORKER','CANCELLED_BY_OWNER')),
- checkpoint_sha256 TEXT
-);
-CREATE UNIQUE INDEX IF NOT EXISTS idx_learn_pending_owner ON learn_requests(owner_sid) WHERE state='AWAITING_VERIFIED_WORKER';
-CREATE INDEX IF NOT EXISTS idx_chat_history_time ON chat_history(timestamp);
+            id INTEGER PRIMARY KEY AUTOINCREMENT, owner_sid TEXT NOT NULL, requested_at TEXT NOT NULL,
+            consent_at TEXT NOT NULL, model TEXT NOT NULL,
+            state TEXT NOT NULL CHECK(state IN ('AWAITING_VERIFIED_WORKER','CANCELLED_BY_OWNER')),
+            checkpoint_sha256 TEXT
+          );
+          CREATE UNIQUE INDEX IF NOT EXISTS idx_learn_pending_owner ON learn_requests(owner_sid) WHERE state='AWAITING_VERIFIED_WORKER';
+          CREATE INDEX IF NOT EXISTS idx_chat_history_time ON chat_history(timestamp);
           """;
         command.ExecuteNonQuery();
         if (!selfTestRequested) ImportLegacyJsonlIfNeeded(db);

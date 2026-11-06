@@ -26,4 +26,14 @@ try:
 except sqlite3.IntegrityError: pass
 db.execute("UPDATE learn_requests SET state='CANCELLED_BY_OWNER' WHERE owner_sid=?",('S-1-5-21-test',))
 assert db.execute('SELECT state FROM learn_requests').fetchone()[0]=='CANCELLED_BY_OWNER'
+
+# C#11 raw literal contents must be at least as indented as closing delimiter.
+# The original R8 D05 Windows compile failed with CS8999 on this migration.
+raw_start=cs.index('command.CommandText = """')
+assert raw_start>=0
+raw_end=cs.index('""";',raw_start+len('command.CommandText = """'))
+assert raw_end>raw_start
+raw_lines=cs[raw_start:raw_end].splitlines()[1:]
+assert all(not line.strip() or line.startswith('          ') for line in raw_lines), 'CS8999 SQL raw literal indentation'
+
 print('D05 SOURCE_ONLY SQLITE/OWNER QUEUE CONTRACT PASS; GPU NOT RUN')
