@@ -583,16 +583,17 @@
     {
       "path": "Packages/P03/Source/python-host/p03_onehost_port.py",
       "owner": 3,
-      "run_id": "B04_R5_EXACT_BLOB_RECONCILIATION_20261106",
-      "pre_git_blob_sha1": "e485657d99a673243585e4270e4fd6040ee40ed8",
-      "post_git_blob_sha1": "ecde4663a9778be4187eb003fb3dde6f1365b45c",
-      "post_bytes": 31772,
-      "acceptance": "SOURCE_ONLY_EXACT_REPO_BLOB_NO_MODEL_OR_RUNTIME_APPROVAL",
-      "prior_active_run_id": "B04_NESTED_JOB_IDENTITY_FENCE_R14_20261106",
-      "prior_active_post_git_blob_sha1": "e485657d99a673243585e4270e4fd6040ee40ed8",
-      "prior_active_post_bytes": 31026,
-      "source_head_observed": "dc0469194026c4dcec558360abb5878ffd2992fb",
-      "change_scope": "STAGE_PIN_RECONCILIATION_WITHOUT_RIGHTS_GRANT"
+      "run_id": "B04_R5_CANCEL_QUEUED_BOOLEAN_OWNER_RECEIPT_20261106",
+      "pre_git_blob_sha1": "ecde4663a9778be4187eb003fb3dde6f1365b45c",
+      "post_git_blob_sha1": "8ec891acb74fc5ff9226bb25bfcd19997d7ba47b",
+      "post_bytes": 32185,
+      "acceptance": "SOURCE_ONLY_12_OF_12_V8_CONTRACT_PYTHON_REGRESSION_AUTHORED_NOT_RUN_QWEN_WINDOWS_E07_HOLD",
+      "prior_active_run_id": "B04_R5_EXACT_BLOB_RECONCILIATION_20261106",
+      "prior_active_post_git_blob_sha1": "ecde4663a9778be4187eb003fb3dde6f1365b45c",
+      "prior_active_post_bytes": 31772,
+      "source_head_observed": "b88e23dfcbf0c6f1bbc22d2bc38ab4f897657923",
+      "change_scope": "CANCEL_QUEUED_BOOLEAN_NESTED_RECEIPT_CANNOT_CONFIRM_ACTIVE_STOP",
+      "release_accepted": false
     }
   ],
   "override_chain": [
@@ -1496,6 +1497,23 @@
       "historical_approved_override": true,
       "retired_from_active_set": "B04_R5_EXACT_BLOB_RECONCILIATION_20261106",
       "source_check": "HISTORICAL_NOT_RELEASE_PROOF"
+    },
+    {
+      "path": "Packages/P03/Source/python-host/p03_onehost_port.py",
+      "owner": 3,
+      "run_id": "B04_R5_EXACT_BLOB_RECONCILIATION_20261106",
+      "pre_git_blob_sha1": "e485657d99a673243585e4270e4fd6040ee40ed8",
+      "post_git_blob_sha1": "ecde4663a9778be4187eb003fb3dde6f1365b45c",
+      "post_bytes": 31772,
+      "acceptance": "SOURCE_ONLY_EXACT_REPO_BLOB_NO_MODEL_OR_RUNTIME_APPROVAL",
+      "prior_active_run_id": "B04_NESTED_JOB_IDENTITY_FENCE_R14_20261106",
+      "prior_active_post_git_blob_sha1": "e485657d99a673243585e4270e4fd6040ee40ed8",
+      "prior_active_post_bytes": 31026,
+      "source_head_observed": "dc0469194026c4dcec558360abb5878ffd2992fb",
+      "change_scope": "STAGE_PIN_RECONCILIATION_WITHOUT_RIGHTS_GRANT",
+      "historical_approved_override": true,
+      "retired_from_active_set": "B04_R5_CANCEL_QUEUED_BOOLEAN_OWNER_RECEIPT_20261106",
+      "source_check": "HISTORICAL_SOURCE_ONLY_NOT_RUNTIME_PROOF"
     }
   ],
   "source_expansion": {

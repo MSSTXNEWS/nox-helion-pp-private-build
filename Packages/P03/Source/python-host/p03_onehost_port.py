@@ -423,6 +423,11 @@ class P03OneHostPort:
                 if id(envelope) in seen_receipts:
                     raise P03PortHold("Owner3 cyclic or aliased receipt is not an ACK")
                 seen_receipts.add(id(envelope))
+                # A transfer-queue ACK (including one hidden in ownerReceipt) is
+                # never proof that the consented active STOP was requested.
+                # Keep the original owner/backend; reject contradictory evidence.
+                if route == "models.cancel" and envelope.get("queued") is True:
+                    raise P03PortHold("Owner3 queued transfer is not a STOP acknowledgement")
                 for nested_key in ("result", "receipt", "ownerReceipt"):
                     nested = envelope.get(nested_key)
                     if type(nested) is not dict:

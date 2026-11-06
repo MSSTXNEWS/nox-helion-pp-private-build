@@ -75,6 +75,34 @@ class ExactOwnerJobAckTests(unittest.TestCase):
         self.assertEqual(port.execute_backend(scope, "models.cancel", {"jobId": "existing"}), receipt)
         self.assertEqual(port.backend.calls, 1)
 
+    def test_cancel_queued_flag_never_confirms_active_stop(self):
+        receipts = (
+            {"jobId": "existing", "status": "CANCEL_REQUESTED", "queued": True},
+            {"jobId": "existing", "ack": True, "queued": True},
+            {"jobId": "existing", "status": "CANCEL_REQUESTED",
+             "receipt": {"ack": True, "queued": True}},
+            {"jobId": "existing", "status": "CANCEL_REQUESTED",
+             "ownerReceipt": {"receipt": {"queued": True, "ack": True}}},
+        )
+        for receipt in receipts:
+            with self.subTest(receipt=receipt):
+                port, scope = setup("models.cancel", receipt)
+                with self.assertRaisesRegex(p03.P03PortHold, "queued transfer"):
+                    port.execute_backend(scope, "models.cancel", {"jobId": "existing"})
+                self.assertEqual(port.backend.calls, 1)
+
+    def test_cancel_boolean_ack_without_queue_flag_remains_valid(self):
+        receipt = {"jobId": "existing", "ack": True}
+        port, scope = setup("models.cancel", receipt)
+        self.assertEqual(port.execute_backend(scope, "models.cancel",
+                                              {"jobId": "existing"}), receipt)
+
+    def test_retry_queue_flag_remains_valid_for_same_owner_job(self):
+        receipt = {"jobId": "existing", "queued": True}
+        port, scope = setup("models.retry", receipt)
+        self.assertEqual(port.execute_backend(scope, "models.retry",
+                                              {"jobId": "existing"}), receipt)
+
     def test_valid_retry_preserves_existing_backend_reply(self):
         receipt = {"jobId": "existing", "status": "QUEUED"}
         port, scope = setup("models.retry", receipt)
