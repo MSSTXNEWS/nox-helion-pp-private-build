@@ -1781,11 +1781,29 @@ public partial class MainWindow : Window
                 if (label.Equals("success", StringComparison.OrdinalIgnoreCase)) { done = true; break; }
             }
             if (!done) throw new InvalidOperationException("Загрузка оборвалась до подтверждённого завершения Ollama");
+            // Provider progress "success" is not proof of an installed exact model tag.
+            cts.Token.ThrowIfCancellationRequested();
+            using (var verify = CancellationTokenSource.CreateLinkedTokenSource(cts.Token))
+            {
+                verify.CancelAfter(TimeSpan.FromSeconds(10));
+                using var tagsResponse = await transferClient.GetAsync(Api + "/api/tags", verify.Token);
+                tagsResponse.EnsureSuccessStatusCode();
+                using var tagsJson = JsonDocument.Parse(await tagsResponse.Content.ReadAsStringAsync(verify.Token));
+                bool tagPresent = tagsJson.RootElement.GetProperty("models").EnumerateArray()
+                    .Any(x => string.Equals(x.GetProperty("name").GetString(), modelName, StringComparison.Ordinal));
+                if (!tagPresent) throw new InvalidOperationException("NOX_MODEL_PULL_TAG_READBACK_HOLD");
+            }
+            cts.Token.ThrowIfCancellationRequested();
             Send("download", new { status = "DONE", model = modelName, percent = (double?)100 });
             await CheckProvider();
         }
-        catch (OperationCanceledException) {
+        catch (OperationCanceledException) when (cts.IsCancellationRequested) {
             Send("download", new { status = "STOPPED", model = modelName, percent = (double?)null });
+        }
+        catch (Exception) {
+            // Provider and transport failure are neither owner STOP nor install success.
+            Send("download", new { status = "ERROR", model = modelName, percent = (double?)null });
+            throw;
         }
         finally { activeModelPull = null; }
     }
