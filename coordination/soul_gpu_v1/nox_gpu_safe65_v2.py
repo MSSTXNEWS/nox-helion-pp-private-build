@@ -12,7 +12,10 @@ from urllib.request import urlopen
 ROOT=Path(r"C:\NOX_HELION\NOX_NEW")
 SENSOR="http://127.0.0.1:8085/data.json"
 LIMIT=70
+RESUME_BELOW=65
 COOL=180
+MAX_CYCLES=6
+MAX_THERMAL_RESTARTS=4
 
 def receipt(path,payload):
     path.parent.mkdir(parents=True,exist_ok=True)
@@ -143,7 +146,7 @@ def stop_tree(pid):
     subprocess.run(["taskkill.exe","/PID",str(pid),"/T","/F"],
                    capture_output=True,timeout=15)
 
-def supervise():
+def single_cycle():
     step,checkpoint,model,dataset=inputs()
     if shutil.disk_usage(ROOT).free<60_000_000_000:
         raise RuntimeError("60GB free disk reserve required")
@@ -217,12 +220,69 @@ def supervise():
                      "process_id":child.pid,"timestamp":datetime.now(timezone.utc).isoformat(),
                      "output_directory":str(outdir)})
     if reason:
-        print("NOX 180-second cooldown. NO AUTO-RESTART; last saved checkpoint intact.",flush=True)
-        time.sleep(COOL)
+        print("NOX SAFE70 stop:",reason,"| last SAVED checkpoint preserved.",flush=True)
     elif child.returncode!=0:
         print("NOX train error:",errs.read_text(encoding="utf-8",errors="replace")[-2500:],flush=True)
-    else:print("NOX 20 added LoRA steps saved; holdout approval still required.",flush=True)
+    else:
+        print("NOX 20 additional LoRA steps saved; evaluation still required.",flush=True)
     print("NOX OUTPUT:",outdir,flush=True)
+    if reason:
+        # A killed worker must be gone before any possible restart.
+        if child.poll() is None:
+            raise RuntimeError("GPU_WORKER_STILL_ALIVE: no restart")
+        return reason
+    return "COMPLETE" if child.returncode==0 else "TRAINING_FAILED"
+
+def supervise():
+    """Continue from the latest complete adapter ONLY after a verified cool-down.
+
+    No blind retries of a failed model; bounded cycles/restarts. Hard stops can
+    lose in-flight gradients but never overwrite already saved adapters.
+    """
+    cycles=0
+    thermal_restarts=0
+    while cycles<MAX_CYCLES:
+        outcome=single_cycle()
+        cycles+=1
+        if outcome=="COMPLETE":
+            print("NOX CYCLE",cycles,"saved; next cycle uses latest checkpoint.",flush=True)
+            if cycles>=MAX_CYCLES:
+                print("NOX capped autonomous cycles completed.",flush=True)
+                return
+            # Sample sensor before next cycle. A finished cycle is not a cooling
+            # event, but no new cycle may start while hot or on low battery.
+            try:
+                hot=temperature()
+                ac,charge=battery()
+            except Exception as ex:
+                print("NOX SENSOR HOLD:",ex,flush=True)
+                return
+            if hot<RESUME_BELOW and (ac or charge>30):
+                continue
+            outcome="HOTSPOT_COOLDOWN" if hot>=RESUME_BELOW else "BATTERY_HOLD"
+        if outcome not in ("HOTSPOT>=70C","HOTSPOT_COOLDOWN"):
+            print("NOX stopped, NO automatic restart:",outcome,flush=True)
+            return
+        thermal_restarts+=1
+        if thermal_restarts>MAX_THERMAL_RESTARTS:
+            print("NOX thermal restart limit reached; checkpoint safe.",flush=True)
+            return
+        # Always cool at least 180 seconds after any HOTSPOT>=70C stop.
+        print("NOX cooling for >=180s; next cycle requires Hot Spot <65C.",flush=True)
+        time.sleep(COOL)
+        while True:
+            try:
+                hot=temperature()
+                ac,charge=battery()
+            except Exception as ex:
+                print("NOX sensor lost; fail closed:",ex,flush=True)
+                return
+            if hot<RESUME_BELOW and (ac or charge>30):
+                print("NOX cooled to",hot,"C; restart from latest saved adapter.",flush=True)
+                break
+            print("NOX HOLD HotSpot",hot,"C; battery",charge,"%; no GPU work.",flush=True)
+            time.sleep(30)
+    print("NOX bounded cycles finished.",flush=True)
 
 if __name__=="__main__":
     ap=argparse.ArgumentParser()
