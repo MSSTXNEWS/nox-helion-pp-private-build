@@ -37,6 +37,9 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
+          & './coordination/nox-tech-r9/patch_protocol_fixture.ps1' './tech-r9/src/MainWindow.xaml.cs'
+          $c=Get-Content './tech-r9/src/MainWindow.xaml.cs' -Raw
+          if (!$c.Contains('nativeProtocolAccepted = accepted') -or !$c.Contains('nativeCoreAccepted = accepted && !ProtocolFixtureRequested')) { throw 'FIXTURE_NATIVE_CORE_SEPARATION_MISSING' }
           & dotnet publish './tech-r9/src/NOX.HELION.csproj' -c Release -r win-x64 --self-contained false -p:EnableWindowsTargeting=true -o './NOX_TECH_R9_WIN64'
           if ($LASTEXITCODE -ne 0) { throw 'TECH_R9_WIN64_BUILD_FAILED' }
           $exe=(Resolve-Path './NOX_TECH_R9_WIN64/NOX.HELION.exe').Path
@@ -48,6 +51,7 @@ jobs:
             exe_sha256=$hash
             windows_compile='PASS'
             native_webview2='NOT_TESTED'
+            synthetic_protocol_ipc_stop_sqlite='NOT_TESTED'
             real_owner_qwen='NOT_TESTED'
             canonical_d02='NOT_ACCEPTED'
             full_v16_release=$false
@@ -89,6 +93,11 @@ jobs:
             $proc.Refresh()
             if (!$proc.HasExited) { Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue }
           }
+      - name: Real native UI IPC, STOP, SQLite with synthetic loopback (not Qwen)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          & './coordination/nox-tech-r9/run_protocol_fixture_windows.ps1' -Exe './NOX_TECH_R9_WIN64/NOX.HELION.exe' -OutputRoot './NOX_TECH_R9_WIN64'
       - uses: actions/upload-artifact@v4
         if: always()
         with:
