@@ -188,9 +188,35 @@ class ExistingP04Background:
                                 text=True, encoding="utf-8", timeout=70, check=False, shell=False)
         if len(result.stdout) > 65536:
             return self._hold("GPU_PREFLIGHT_RESPONSE_BOUND")
+        # The local GPU preflight is diagnostic evidence, never a training PASS.
+        # Duplicate status/telemetry fields and non-finite numbers must not be
+        # admitted by JSON's default last-wins/NaN behavior.
+        def strict_pairs(pairs):
+            value, seen = {}, set()
+            for key, item in pairs:
+                folded = unicodedata.normalize("NFC", key).casefold()
+                if folded in seen:
+                    raise ForgeHold("GPU_PREFLIGHT_AMBIGUOUS_JSON_HOLD")
+                seen.add(folded)
+                value[key] = item
+            return value
+
+        def strict_float(token):
+            value = float(token)
+            if not math.isfinite(value):
+                raise ForgeHold("GPU_PREFLIGHT_NONFINITE_HOLD")
+            return value
+
+        def reject_constant(_token):
+            raise ForgeHold("GPU_PREFLIGHT_NONFINITE_HOLD")
+
         try:
-            report = json.loads(result.stdout)
-        except (ValueError, TypeError):
+            report = json.loads(result.stdout, object_pairs_hook=strict_pairs,
+                                parse_float=strict_float,
+                                parse_constant=reject_constant)
+        except ForgeHold as exc:
+            return self._hold(str(exc))
+        except (ValueError, TypeError, RecursionError):
             report = {}
         if (result.returncode != 0 or not isinstance(report, dict)
                 or report.get("status") != "HARDWARE_READY_ONLY"
