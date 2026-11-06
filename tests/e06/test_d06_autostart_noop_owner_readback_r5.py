@@ -30,7 +30,7 @@ class TestD06NativeNoopReadback(unittest.TestCase):
         import hashlib
         data = SOURCE.read_bytes()
         blob = hashlib.sha1(
-            b"blob " + str(len(data)).encode("ascii") + b"\\0" + data
+            b"blob " + str(len(data)).encode("ascii") + b"\0" + data
         ).hexdigest()
         self.assertIn("relative='coordination/e06/NoXAutostart.cs'", BUILDER.read_text(encoding="utf-8"))
         self.assertIn("blob='" + blob + "'", BUILDER.read_text(encoding="utf-8"))
