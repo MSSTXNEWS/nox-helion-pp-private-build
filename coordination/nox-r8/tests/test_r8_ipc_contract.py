@@ -64,3 +64,19 @@ assert re.search(r'DataSource\s*=\s*file,\s*Mode\s*=\s*SqliteOpenMode\.ReadOnly,
 assert snapshot.index('PRAGMA quick_check') < snapshot.index('File.ReadAllBytes(file)'), 'B02_SQLITE_BACKUP_INTEGRITY_ORDER_HOLD'
 
 print('B02 R8 IPC SOURCE_ONLY: owner-correlated stream/STOP, offline probe, JS parse PASS; real Windows Ollama NOT_TESTED')
+
+# B04 source-only guard; executable/owner-Qwen are not claimed as tested.
+generate = cs.split('private async Task Generate(', 1)[1].split('private void PersistChat(', 1)[0]
+persist = cs.split('private void PersistChat(', 1)[1].split('private object ReadHistory(', 1)[0]
+assert 'CancellationTokenSource.CreateLinkedTokenSource(cancellation.Token)' in generate
+assert 'readWindow.CancelAfter(TimeSpan.FromMinutes(3))' in generate
+assert 'await reader.ReadLineAsync(readWindow.Token)' in generate
+assert 'catch (OperationCanceledException) when (cancellation.IsCancellationRequested)' in generate
+assert 'catch (OperationCanceledException) {' in generate and 'OLLAMA_TIMEOUT:' in generate
+assert generate.index('cancellation.Token.ThrowIfCancellationRequested();\n            if (answer.Length > 0) PersistChat') < generate.index('Emit("complete", new { requestId, ok = answer.Length > 0')
+assert 'cmd.ExecuteNonQuery() != 1' in persist
+assert 'last_insert_rowid()' in persist
+assert 'using var verifyDb = OpenDatabase();' in persist
+assert 'FROM chat_history WHERE id=$id' in persist
+assert 'NOX_CHAT_SQLITE_READBACK_HOLD' in persist
+print('B04 R8 SOURCE_ONLY: timeout vs owner STOP, committed-row readback PASS; owner Windows Qwen NOT_TESTED')

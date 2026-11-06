@@ -900,12 +900,16 @@ public partial class MainWindow : Window
             response.EnsureSuccessStatusCode();
             using var stream = await response.Content.ReadAsStreamAsync(cancellation.Token);
             using var reader = new StreamReader(stream);
+            // B04: headers can arrive before an indefinitely stalled Ollama NDJSON body.
+            // Each line has a bounded wait; only the owner's token means STOP.
             bool completed = false;
             long evalCount = 0, evalDuration = 0, promptCount = 0;
             while (true)
             {
                 cancellation.Token.ThrowIfCancellationRequested();
-                var line = await reader.ReadLineAsync(cancellation.Token);
+                using var readWindow = CancellationTokenSource.CreateLinkedTokenSource(cancellation.Token);
+                readWindow.CancelAfter(TimeSpan.FromMinutes(3));
+                var line = await reader.ReadLineAsync(readWindow.Token);
                 if (line == null) break;
                 if (string.IsNullOrWhiteSpace(line)) continue;
                 using var json = JsonDocument.Parse(line);
@@ -983,7 +987,24 @@ public partial class MainWindow : Window
         cmd.Parameters.AddWithValue("$t", DateTimeOffset.UtcNow.ToString("O"));
         cmd.Parameters.AddWithValue("$p", prompt);
         cmd.Parameters.AddWithValue("$a", answer);
-        cmd.ExecuteNonQuery();
+        if (cmd.ExecuteNonQuery() != 1)
+            throw new InvalidOperationException("NOX_CHAT_SQLITE_INSERT_HOLD");
+        // A separate SQLite connection must see the exact committed row before
+        // the WebView2 "saved" ACK. Never replace or delete owner data.
+        using var rowIdQuery = db.CreateCommand();
+        rowIdQuery.CommandText = "SELECT last_insert_rowid()";
+        long id = Convert.ToInt64(rowIdQuery.ExecuteScalar());
+        if (id <= 0) throw new InvalidOperationException("NOX_CHAT_SQLITE_ROWID_HOLD");
+        using var verifyDb = OpenDatabase();
+        using var verify = verifyDb.CreateCommand();
+        verify.CommandText = "SELECT prompt,answer,persona FROM chat_history WHERE id=$id";
+        verify.Parameters.AddWithValue("$id", id);
+        using var row = verify.ExecuteReader();
+        if (!row.Read() ||
+            !string.Equals(row.GetString(0), prompt, StringComparison.Ordinal) ||
+            !string.Equals(row.GetString(1), answer, StringComparison.Ordinal) ||
+            !string.Equals(row.GetString(2), persona, StringComparison.Ordinal))
+            throw new InvalidOperationException("NOX_CHAT_SQLITE_READBACK_HOLD");
     }
 
     private object ReadHistory()
