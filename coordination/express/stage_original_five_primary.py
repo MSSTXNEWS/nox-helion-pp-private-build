@@ -347,6 +347,14 @@ nav.addEventListener('click',event=>{
    if((name==='INSTALL'||name==='MODELS')&&!originalInstallTransportPresent()){
      state.textContent=name+': связь с нативным владельцем прервана · HOLD';return;
    }
+   // D03 R5: do not overwrite a synchronous native owner rejection or
+   // imply a physical exit/file result. One trusted click, no retry on throw.
+   if(name==='INSTALL'){
+     state.textContent='INSTALL: передача исходному владельцу · результат не подтверждён';
+     try{invokeMatches[0].click();}
+     catch{state.textContent='INSTALL: исходный обработчик завершился исключением · HOLD';}
+     return;
+   }
    invokeMatches[0].click();
    state.textContent=name+': запрос передан исходному обработчику · результат ожидается';
    return;
