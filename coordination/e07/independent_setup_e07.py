@@ -513,29 +513,56 @@ def setup_lock_original(setup: Path, base: Path, *, frozen: str = "legacy") -> d
             "model":"PROVIDER_OFFLINE_HOLD",
             "release_accepted":False}
 
+def _read_locked_owner_marker(path: Path) -> bool:
+    """Verify the original NSIS marker from one stable, single-link descriptor."""
+    require(clean_file(path), "E07_INSTALLED_OWNER_MARKER_HOLD")
+    fd = None
+    def identity(info):
+        return (info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns)
+    try:
+        before = path.lstat()
+        require(stat.S_ISREG(before.st_mode) and before.st_nlink == 1 and
+                0 < before.st_size <= 128, "E07_INSTALLED_OWNER_MARKER_HOLD")
+        flags = os.O_RDONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0)
+        fd = os.open(path, flags)
+        opened = os.fstat(fd)
+        require(stat.S_ISREG(opened.st_mode) and opened.st_nlink == 1 and
+                identity(before) == identity(opened),
+                "E07_INSTALLED_OWNER_MARKER_IDENTITY_HOLD")
+        raw = os.read(fd, 129)
+        after_fd, after_path = os.fstat(fd), path.lstat()
+        require(len(raw) == before.st_size and
+                identity(before) == identity(after_fd) == identity(after_path) and
+                before.st_ctime_ns == after_path.st_ctime_ns and
+                after_path.st_nlink == 1 and clean_file(path),
+                "E07_INSTALLED_OWNER_MARKER_MUTATED_HOLD")
+    except OSError:
+        raise Hold("E07_INSTALLED_OWNER_MARKER_IO_HOLD") from None
+    finally:
+        if fd is not None:
+            os.close(fd)
+    try:
+        return raw.decode("utf-8-sig").strip() == "NOXHELION.P01 V16"
+    except UnicodeError:
+        return False
+
+
 def manifest_owner(install: Path) -> tuple[dict, tuple[Path, ...]]:
     require(clean_dir(install), "E07_INSTALLED_DIR_HOLD")
     owner = install / "nox-p01-owned.txt"
     manifest = install / "payload.sha256.json"
-    require(clean_file(owner) and clean_file(manifest) and
-            owner.read_text(encoding="utf-8-sig").strip() == "NOXHELION.P01 V16",
+    require(clean_file(manifest) and _read_locked_owner_marker(owner),
             "E07_INSTALLED_OWNER_MARKER_HOLD")
-    # Fail closed on duplicate JSON control keys, including nested file metadata.
-    # json.loads otherwise silently uses the LAST occurrence (unsafe for E07).
-    def unique_manifest_pairs(pairs):
-        obj = {}
-        for key, value in pairs:
-            if key in obj:
-                raise Hold("E07_INSTALLED_MANIFEST_DUPLICATE_FIELD_HOLD")
-            obj[key] = value
-        return obj
+    # Bind installed owner/manifest bytes to an attested descriptor before
+    # interpreting them. Existing E06 JSON reader rejects pathname swaps,
+    # hardlinks, duplicate nested fields, nonfinite values and oversized JSON.
     try:
-        m = json.loads(
-            manifest.read_text(encoding="utf-8-sig"),
-            object_pairs_hook=unique_manifest_pairs,
-            parse_constant=lambda unused: (_ for _ in ()).throw(
-                Hold("E07_INSTALLED_MANIFEST_NONFINITE_HOLD")))
-    except (OSError, UnicodeError, json.JSONDecodeError):
+        m = _read_locked_e06_json(manifest)
+    except Hold as exc:
+        if str(exc) == "E07_E06_RECEIPT_DUPLICATE_FIELD":
+            raise Hold("E07_INSTALLED_MANIFEST_DUPLICATE_FIELD_HOLD") from None
+        if str(exc) == "E07_E06_RECEIPT_NONFINITE_NUMBER":
+            raise Hold("E07_INSTALLED_MANIFEST_NONFINITE_HOLD") from None
         raise Hold("E07_INSTALLED_MANIFEST_INVALID_JSON_HOLD") from None
     require(type(m) is dict and m.get("schema") == "NOX_P01_PAYLOAD_SHA256_V1"
             and m.get("entrypoint") == "NOX.P01.Shell.exe" and
