@@ -780,7 +780,20 @@ public partial class MainWindow
                 child.StandardInput.BaseStream,runId);
             var handshake=await transport.RequestAsync("chat.model",new {},
                 TimeSpan.FromSeconds(40)); // Allows P02's bounded discovery timeout to return honest OFFLINE.
-            if(!handshake.Accepted)throw new IOException("P02_REAL_NATIVE_INGRESS_NOT_READY");
+            // Pipe transport success does not prove an original P02 model
+            // owner reply. Keep provider OFFLINE diagnostic, but reject
+            // absent/malformed native inventory before granting WebView2 IPC.
+            if (!handshake.Accepted ||
+                !string.IsNullOrWhiteSpace(handshake.ErrorCode) ||
+                handshake.Result is not JsonElement nativeInventory ||
+                nativeInventory.ValueKind != JsonValueKind.Object ||
+                LegacyOwnerDenial(handshake.Result) ||
+                !nativeInventory.TryGetProperty("models", out var inventoryModels) ||
+                inventoryModels.ValueKind != JsonValueKind.Array ||
+                !nativeInventory.TryGetProperty("provider_state", out var inventoryState) ||
+                inventoryState.ValueKind != JsonValueKind.String ||
+                string.IsNullOrWhiteSpace(inventoryState.GetString()))
+                throw new IOException("P02_REAL_NATIVE_INGRESS_OWNER_RECEIPT_HOLD");
             _nativeP02Core=core;
             _nativeP02Bridge=new OneHostP02WebView2Bridge(core,
                 new Uri("https://nox.local/"),transport,sid,
