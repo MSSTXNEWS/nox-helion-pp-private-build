@@ -38,6 +38,10 @@ jobs:
           Copy-Item './coordination/nox-r8/tests/test_r8_ipc_contract.py' './r8/test_r8_ipc_contract.py'
           python './r8/test_r8_ipc_contract.py'
           if ($LASTEXITCODE -ne 0) { throw 'B02_NATIVE_IPC_SOURCE_HOLD' }
+          # D01: execute actual embedded chat click handler with offline/overlength/valid drafts.
+          Copy-Item './coordination/nox-r8/tests/test_r8_d01_chat_draft.cjs' './r8/test_r8_d01_chat_draft.cjs'
+          node './r8/test_r8_d01_chat_draft.cjs'
+          if ($LASTEXITCODE -ne 0) { throw 'D01_CHAT_OWNER_DRAFT_HOLD' }
           dotnet publish './r8/src/NOX.HELION.csproj' -c Release -r win-x64 --self-contained true -o './out' -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:PublishTrimmed=false
           if ($LASTEXITCODE -ne 0) { throw 'BUILD_FAILED' }
           Get-FileHash './out/NOX.HELION.exe' -Algorithm SHA256
