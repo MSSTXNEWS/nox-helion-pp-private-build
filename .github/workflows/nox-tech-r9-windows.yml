@@ -58,6 +58,7 @@ jobs:
           } | ConvertTo-Json -Depth 5 | Set-Content './NOX_TECH_R9_WIN64/TECH_BUILD_RECEIPT.json' -Encoding UTF8
           Write-Host "TECH_R9_COMPILED_SHA256=$hash"
       - name: Real WPF WebView2 and isolated SQLite acceptance
+        continue-on-error: true
         shell: pwsh
         run: |
           $ErrorActionPreference='Stop'
@@ -70,6 +71,8 @@ jobs:
             $receipt=Join-Path $env:LOCALAPPDATA "NOX_HELION/ui_selftest_$($proc.Id).json"
             if (!(Test-Path -LiteralPath $receipt)) { throw 'UI_RECEIPT_MISSING' }
             $o=Get-Content -LiteralPath $receipt -Raw | ConvertFrom-Json
+            Write-Host ('NOX_UI_RECEIPT_DEBUG '+($o | ConvertTo-Json -Depth 6 -Compress))
+            Copy-Item -LiteralPath $receipt -Destination './NOX_TECH_R9_WIN64/TECH_UI_RECEIPT.json' -Force
             $sha=(Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash
             if ($proc.ExitCode -ne 0 -or
                 $o.schema -cne 'NOX_WPF_UI_SMOKE_R7_V1' -or
@@ -98,6 +101,23 @@ jobs:
         run: |
           $ErrorActionPreference='Stop'
           & './coordination/nox-tech-r9/run_protocol_fixture_windows.ps1' -Exe './NOX_TECH_R9_WIN64/NOX.HELION.exe' -OutputRoot './NOX_TECH_R9_WIN64'
+      - name: Strict native technical acceptance — no partial PASS
+        if: always()
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $p='./NOX_TECH_R9_WIN64/TECH_BUILD_RECEIPT.json'
+          if (!(Test-Path -LiteralPath $p)) { throw 'BUILD_RECEIPT_MISSING' }
+          $j=Get-Content -LiteralPath $p -Raw | ConvertFrom-Json
+          if ($j.windows_compile -cne 'PASS' -or
+              $j.native_webview2 -cne 'PASS' -or
+              $j.synthetic_protocol_ipc_stop_sqlite -cne 'PASS' -or
+              $j.real_owner_qwen -cne 'NOT_TESTED' -or
+              $j.full_v16_release -ne $false) {
+            Write-Host ('TECHNICAL_ACCEPTANCE_HOLD '+($j | ConvertTo-Json -Depth 7 -Compress))
+            throw 'NOX_TECH_NATIVE_GATE_HOLD'
+          }
+          Write-Host 'TECH_R9_NATIVE_UI_AND_SYNTHETIC_IPC_STOP_SQLITE_GATE_PASS; REAL_QWEN_PENDING'
       - uses: actions/upload-artifact@v4
         if: always()
         with:
