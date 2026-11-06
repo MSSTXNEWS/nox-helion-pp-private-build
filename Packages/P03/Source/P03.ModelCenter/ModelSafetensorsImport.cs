@@ -90,6 +90,8 @@ internal static class ModelSafetensorsImport
                 name.EndsWith(".txt",StringComparison.Ordinal) || name.EndsWith(".jinja",StringComparison.Ordinal)))
                 throw new InvalidDataException("P03_MERGED_FILE_TYPE_HOLD");
             await using var stream=new FileStream(path,FileMode.Open,FileAccess.Read,FileShare.Read,1<<20,true);
+            // Preflight is not enough: attest the actual opened model-weight handle.
+            ModelLocalAttestation.RequireSingleLinkFileHandle(stream.SafeFileHandle);
             if (stream.Length is <=0 or > (1L<<38))throw new InvalidDataException("P03_MERGED_FILE_SIZE_HOLD");
             total=checked(total+stream.Length);if(total>MaxTotal)throw new InvalidDataException("P03_MERGED_TOTAL_SIZE_HOLD");
             if(name.EndsWith(".safetensors",StringComparison.Ordinal))await CheckSafetensorsAsync(stream,ct);
@@ -115,6 +117,8 @@ internal static class ModelSafetensorsImport
     {
         ModelLocalAttestation.RequireRegularUnlinkedFile(path);
         await using var file=new FileStream(path,FileMode.Open,FileAccess.Read,FileShare.Read,8192,true);
+        // Pin checks alone do not authorize a substituted/hardlinked receipt inode.
+        ModelLocalAttestation.RequireSingleLinkFileHandle(file.SafeFileHandle);
         if(file.Length is <2 or > 1048576)throw new InvalidDataException("P03_P04_RECEIPT_SIZE_HOLD");
         using var memory=new MemoryStream();await file.CopyToAsync(memory,ct);var bytes=memory.ToArray();
         if(Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant()!=expected)

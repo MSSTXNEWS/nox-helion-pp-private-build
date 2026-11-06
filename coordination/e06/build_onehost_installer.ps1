@@ -579,7 +579,7 @@ $p02StageSources=@(
   @{relative='Packages/P03/Source/P03.ModelCenter/ModelLifecycleEvents.cs';dest='Integration/P03/ModelLifecycleEvents.cs';blob='bfc2030334f78e78b35f510fc7f58ad19d1e75e4'},
   @{relative='Packages/P03/Source/P03.ModelCenter/ModelLocalAttestation.cs';dest='Integration/P03/ModelLocalAttestation.cs';blob='03ac75bdd6015afe0470a7cc16158ced417d360d'},
   @{relative='Packages/P03/Source/P03.ModelCenter/ModelQuickActions.cs';dest='Integration/P03/ModelQuickActions.cs';blob='66d6f05c8f2deea7fab110f4c024d762d71af390'},
-  @{relative='Packages/P03/Source/P03.ModelCenter/ModelSafetensorsImport.cs';dest='Integration/P03/ModelSafetensorsImport.cs';blob='80624a5d09b96d5953ddc687215190ce2c7dd24a'},
+  @{relative='Packages/P03/Source/P03.ModelCenter/ModelSafetensorsImport.cs';dest='Integration/P03/ModelSafetensorsImport.cs';blob='565bb8e7e72afc2235cf34f900be7950809073ee'},
   @{relative='Packages/P03/Source/P03.ModelCenter/ModelTagReviewLeads.cs';dest='Integration/P03/ModelTagReviewLeads.cs';blob='439aa3cf82e20a77d12755c9ac4a7c5ef04c2f79'},
   @{relative='Packages/P03/Source/P03.ModelCenter/ModelWowBridgeContract.cs';dest='Integration/P03/ModelWowBridgeContract.cs';blob='0c8fa6b409e64ac5a6636a4ae2f46b36f79f1ced'},
   @{relative='Packages/P03/Source/P03.ModelCenter/OllamaLoopbackHttpClientFactory.cs';dest='Integration/P03/OllamaLoopbackHttpClientFactory.cs';blob='9785e258c563027567e83b76d22ee66bf350f064'},
