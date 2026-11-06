@@ -189,7 +189,15 @@ def main() -> int:
         pre_gui_owner = snapshot_installed_owner(install)
         require("NOX.P01.Shell.exe" in pre_gui_owner[0],
                 "E07_PRIMARY_INSTALLED_SHELL_UNOWNED_HOLD")
-        witness = gui_hwnd(install / "NOX.P01.Shell.exe", local, safe_nav=True)
+        # D01 R5: current SourceLock HOME INSTALL delegates to the original
+        # button#pc-install (native owner action), and LEARN to the existing
+        # training diagnostic. The legacy E07 safe_nav four-route helper
+        # assumes read-only informational routes; invoking it here would
+        # dispatch original native operations under a false read-only claim.
+        # Preserve physical five-button HOLD until owner-bound consent/exit
+        # receipts can verify the exact current INSTALL/LEARN actions.
+        witness = gui_hwnd(install / "NOX.P01.Shell.exe", local, safe_nav=False)
+        receipt["d01_four_native_routes"] = "NOT_RUN_OWNER_SCOPE_HOLD"
         post_gui_owner = snapshot_installed_owner(install)
         require(pre_gui_owner == post_gui_owner,
                 "E07_PRIMARY_OWNED_PAYLOAD_CHANGED_DURING_UIA_HOLD")

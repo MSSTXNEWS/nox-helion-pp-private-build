@@ -111,6 +111,26 @@ class FiveButtonGate(unittest.TestCase):
             with self.assertRaises(module.Hold):
                 module.require(after == baseline, "E07_PRIMARY_OWNED_PAYLOAD_CHANGED_DURING_UIA_HOLD")
 
+    def test_d01_current_home_install_learn_not_misclassified_as_readonly_uia(self):
+        # Original five-button HOME delegates actual native INSTALL; obsolete
+        # informational headings cannot certify the new route or owner consent.
+        stage = (PATH.parents[2] / "coordination" / "express" /
+                 "stage_original_five_primary.py").read_text(encoding="utf-8")
+        probe = PATH.read_text(encoding="utf-8")
+        self.assertIn("INSTALL:['control','button#pc-install','button#pc-install']", stage)
+        self.assertIn("LEARN:['control','button#training-diagnostic','button#training-diagnostic']", stage)
+        self.assertIn('gui_hwnd(install / "NOX.P01.Shell.exe", local, safe_nav=False)', probe)
+        self.assertNotIn('gui_hwnd(install / "NOX.P01.Shell.exe", local, safe_nav=True)', probe)
+        self.assertIn('"NOT_RUN_OWNER_SCOPE_HOLD"', probe)
+
+    def test_d01_chat_only_never_promotes_unverified_four_to_five_pass(self):
+        result = witness()
+        result["ui_safe_primary_navigation"] = {
+            "status": "HOLD", "navigation_verified": "NOT_TESTED",
+            "actions_invoked": 0, "per_action": {}}
+        with self.assertRaises(module.Hold):
+            module.evaluate(result)
+
     def test_no_source_guess(self):
         with self.assertRaises(module.Hold):
             module.checked_source_setup(Path('/not/real'), 'bad', 'nope')
