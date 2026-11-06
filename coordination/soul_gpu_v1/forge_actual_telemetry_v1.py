@@ -60,7 +60,7 @@ def _process_active(pid):
     script=(
         "$x=Get-CimInstance Win32_Process -Filter 'ProcessId="+str(pid)+"';"
         "if($x -and $x.Name -match '^python' -and "
-        "$x.CommandLine -match 'train_directml_lora[.]py|nox_gpu_safe65_v2[.]py.*--worker'){Write-Output 'YES'}"
+        "$x.CommandLine -match 'train_directml_lora[.]py|nox_gpu_(?:safe65_v2|10000)[.]py.*--worker'){Write-Output 'YES'}"
     )
     try:
         p=subprocess.run(["powershell.exe","-NoProfile","-NonInteractive","-Command",script],
@@ -74,7 +74,7 @@ def _recent_run(root):
     base=root/"brain"/"intelligence"/"adapters"
     if base.is_dir() and not base.is_symlink():
         for p in base.iterdir():
-            if not p.is_dir() or p.is_symlink() or not p.name.startswith(("NOX_GPU_","SAFE65_","GPU_")):continue
+            if not p.is_dir() or p.is_symlink() or not p.name.startswith(("NOX_GPU_","SAFE65_","GPU_","NOX_RESUME_")):continue
             file=p/"training.log"
             if file.is_file() and not file.is_symlink():candidates.append(file)
     return max(candidates,key=lambda x:x.stat().st_mtime) if candidates else None
