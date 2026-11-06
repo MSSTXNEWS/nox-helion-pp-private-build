@@ -51,8 +51,11 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
     private long _epoch;
     private int _activeChat;
     private int _stopPending;
-    // Native owner, not just the renderer, serializes SETTINGS consent and HKCU receipts.
-    private int _autostartPending;
+    // One WPF process can recreate its WebView2 bridge while an earlier async
+    // SETTINGS consent/HKCU operation is still completing. Keep the owner fence
+    // shared across bridge generations; a new bridge must not race the old one.
+    // Only the acquiring request releases this native guard in its finally.
+    private static int _autostartPending;
     private int _disposed;
     private long _streamEpoch;
     private bool _rendererAwaitingTrustedContent;

@@ -53,7 +53,7 @@ class TestAutostartNativeOwnerGuard(unittest.TestCase):
         # SOURCE_ONLY: direct p02.native messages bypass renderer admission.
         source = BRIDGE.read_text(encoding="utf-8")
         body = source.split("private async void OnWebMessageReceived(", 1)[1]
-        self.assertIn("private int _autostartPending;", source)
+        self.assertIn("private static int _autostartPending;", source)
         self.assertIn("bool autostartOwnerAcquired = false;", body)
         acl = body.index("if (!NativeSidMatches() || !_nativeAcl")
         valid = body.index('if (route == "system.autostart" && !NativeAutostartRequestValid(payload))')
@@ -73,6 +73,27 @@ class TestAutostartNativeOwnerGuard(unittest.TestCase):
         self.assertIn("Interlocked.Exchange(ref _autostartPending, 0);", body[release:])
         self.assertEqual(body.count("Interlocked.CompareExchange(ref _autostartPending, 1, 0)"), 1)
         self.assertEqual(body.count("Interlocked.Exchange(ref _autostartPending, 0)"), 1)
+
+
+    def test_recreated_bridge_cannot_bypass_prior_native_settings_operation(self):
+        # SOURCE_ONLY: prove process-wide native owner serialization across
+        # WebView2 renderer/bridge lifetimes. Actual HKCU needs Windows UIA E07.
+        source = BRIDGE.read_text(encoding="utf-8")
+        header = source.split("private async void OnWebMessageReceived(", 1)[0]
+        body = source.split("private async void OnWebMessageReceived(", 1)[1]
+        self.assertEqual(header.count("private static int _autostartPending;"), 1)
+        self.assertNotIn("private int _autostartPending;", source)
+        self.assertEqual(body.count(
+            "Interlocked.CompareExchange(ref _autostartPending, 1, 0)"), 1)
+        self.assertEqual(body.count(
+            "Interlocked.Exchange(ref _autostartPending, 0);"), 1)
+        self.assertLess(body.index("autostartOwnerAcquired = true;"),
+                        body.index("!await _nativeConsent(route, payload.Clone(), cancel)"))
+        self.assertLess(body.index("var ownerResult = await _nativeOwnerAction("),
+                        body.index("if (autostartOwnerAcquired)"))
+        self.assertNotIn("_autostartPending =", source)
+        self.assertIn("if (autostartOwnerAcquired)", body)
+        self.assertIn("if (Volatile.Read(ref _disposed) != 0", source)
 
     def test_exact_builder_and_compiler_git_pins(self):
         source = BRIDGE.read_bytes()

@@ -22,7 +22,7 @@ WEBVIEW2_E06_REGISTRY_BLOCK_SHA256="e9d91ac3ed0bf5437ff38f07d2179a9e7a130835c4d0
 P01_PREFLIGHT_ANCESTOR_GIT_BLOB="e683e30b4e6fc32c31652061c569d6ce77c2cb2e"
 EXPECTED={
 "coordination/e06/MainWindow.NativeP02.cs":"0589fb486d126f15df526e0829274df232807849",
-"coordination/e06/OneHostP02WebView2Bridge.cs":"d97aeb71a4a3c78a55a93f58af5857b4cfc45f96",
+"coordination/e06/OneHostP02WebView2Bridge.cs":"17ddc0cbd5f6766172c8f3105cdc19f1ea6c04b9",
 "coordination/e06/stage_native_p02.py":"9ff52e86970dd97459a7c1124fc20b9c0e1576ea",
 "Packages/P02/worker-chat/NativePythonPipe.cs":"e8e4f95106f4d40c29c68d81378c7938e6a7c0f5"
 }
