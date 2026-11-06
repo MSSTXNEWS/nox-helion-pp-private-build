@@ -66,6 +66,22 @@ def read_stable_manifest_bytes(path: Path) -> bytes:
     return raw
 
 
+
+def read_frozen_manifest_bytes(path: Path) -> tuple[bytes, os.stat_result]:
+    """Bind verified manifest bytes to the same pre-read pathname identity.
+
+    The caller compares the returned snapshot again after checking the whole
+    installed tree. A same-inode write in the gap between the descriptor read
+    and the former post-read snapshot must never acquire diagnostic PASS.
+    """
+    before = path.lstat()
+    raw = read_stable_manifest_bytes(path)
+    after = path.lstat()
+    if not unchanged_probe_snapshot(before, after):
+        raise RuntimeError("T06_EXACT_PROBE_SLOT_MANIFEST_RACE_HOLD")
+    return raw, before
+
+
 def verify_exact_probe_slot(root: Path, probe_name: str, probe_bytes: bytes,
                             frozen_inode: tuple[int, int], base: Path) -> dict:
     def hold(reason: str) -> None:
@@ -122,13 +138,12 @@ def verify_exact_probe_slot(root: Path, probe_name: str, probe_bytes: bytes,
     # Freeze the original backing file, not just its pathname. A concurrent
     # same-length writer must never turn an unchecked manifest into a PASS.
     try:
-        manifest_bytes = read_stable_manifest_bytes(manifest)
+        manifest_bytes, frozen_manifest = read_frozen_manifest_bytes(manifest)
     except (RuntimeError, OSError, ValueError) as exc:
         hold("MANIFEST_IDENTITY" if not isinstance(exc, RuntimeError) else
              ("MANIFEST_RACE" if "MANIFEST_RACE" in str(exc) else "MANIFEST_IDENTITY"))
     if not safe(manifest):
         hold("MANIFEST_RACE")
-    frozen_manifest = manifest.lstat()
     def unique_pairs(pairs):
         output = {}
         for k, v in pairs:

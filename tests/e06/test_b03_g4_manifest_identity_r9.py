@@ -12,7 +12,7 @@ from unittest import TestCase, main
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "coordination" / "e06"))
-from t06_user_probe_slot import read_stable_manifest_bytes
+from t06_user_probe_slot import read_stable_manifest_bytes, read_frozen_manifest_bytes
 
 
 class G4StableManifest(TestCase):
@@ -64,6 +64,25 @@ class G4StableManifest(TestCase):
         self.file.write_bytes(b"")
         with self.assertRaisesRegex(RuntimeError, "MANIFEST_IDENTITY_HOLD"):
             read_stable_manifest_bytes(self.file)
+
+
+    def test_frozen_manifest_unmodified_bytes_and_identity(self):
+        raw, snapshot = read_frozen_manifest_bytes(self.file)
+        self.assertEqual(raw, self.expected)
+        self.assertEqual(snapshot.st_ino, self.file.lstat().st_ino)
+
+    def test_manifest_write_between_read_and_final_snapshot_is_rejected(self):
+        # Real same-path write after a successful bounded descriptor read.
+        # Previous caller froze only the *new* metadata and could miss this gap.
+        original = read_stable_manifest_bytes
+        def mutate_after_read(path):
+            prior = original(path)
+            path.write_bytes(b'{"files":[1]}')
+            return prior
+        with patch("t06_user_probe_slot.read_stable_manifest_bytes",
+                   side_effect=mutate_after_read):
+            with self.assertRaisesRegex(RuntimeError, "MANIFEST_RACE_HOLD"):
+                read_frozen_manifest_bytes(self.file)
 
 
 if __name__ == "__main__":
