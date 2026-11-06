@@ -108,7 +108,14 @@ public partial class MainWindow : Window
             using var reader = new StreamReader(stream);
             Browser.CoreWebView2.NavigationCompleted += (_, args) =>
             {
-                if (!args.IsSuccess) return;
+                if (!args.IsSuccess)
+                {
+                    // A failed embedded navigation can never pass a native smoke.
+                    if (UiSmokeRequested) FailUiSmoke("WEBVIEW2_NAVIGATION_FAILED: " + args.WebErrorStatus);
+                    return;
+                }
+                try
+                {
                 Send("history", ReadHistory());
                 Send("settings", ReadPreferences());
                 Send("tasks", ReadTasks());
@@ -125,6 +132,15 @@ public partial class MainWindow : Window
                     else _ = RunNativeSelfTestAsync();
                 }
 
+                }
+                catch (Exception ex)
+                {
+                    // Preserve the original exception for ordinary owner sessions;
+                    // unattended Windows smoke must instead persist a fail-closed receipt.
+                    if (UiSmokeRequested)
+                        FailUiSmoke("WEBVIEW2_NAVIGATION_EXCEPTION: " + ex.GetType().Name + ": " + ex.Message);
+                    else throw;
+                }
             };
             Browser.CoreWebView2.NavigationStarting += (_, args) =>
             {
@@ -158,7 +174,8 @@ public partial class MainWindow : Window
                     }), Encoding.UTF8);
             }
             catch { /* Do not claim success if even diagnostic logging fails. */ }
-            if (selfTestRequested) Application.Current.Shutdown(2);
+            if (UiSmokeRequested) FailUiSmoke("INITIALIZE_FAILED: " + ex.GetType().Name + ": " + ex.Message);
+            else if (selfTestRequested) Application.Current.Shutdown(2);
             else MessageBox.Show(ex.Message, "NOX HELION startup");
         }
     }

@@ -53,7 +53,13 @@ jobs:
             Wait-Process -Id $p.Id -Timeout 95 -ErrorAction Stop
             $p.Refresh()
             $file=Join-Path $env:LOCALAPPDATA "NOX_HELION/ui_selftest_$($p.Id).json"
-            if (!(Test-Path -LiteralPath $file)) { throw 'NOX_R8_UI_RECEIPT_MISSING' }
+            if (!(Test-Path -LiteralPath $file)) {
+              # Missing UI receipts are not a PASS. Surface the process-bound
+              # startup failure rather than hiding its native error.
+              $startup=Join-Path $env:LOCALAPPDATA "NOX_HELION/startup_failure_$($p.Id).json"
+              $detail=if (Test-Path -LiteralPath $startup) { Get-Content -LiteralPath $startup -Raw } else { 'NO_STARTUP_FAILURE_RECEIPT' }
+              throw "NOX_R8_UI_RECEIPT_MISSING PID=$($p.Id) EXIT=$($p.ExitCode) STARTUP=$detail"
+            }
             $n=Get-Content $file -Raw | ConvertFrom-Json
             $sha=(Get-FileHash $exe -Algorithm SHA256).Hash
             $stamp=[DateTimeOffset]::Parse([string]$n.checkedAt).UtcDateTime
