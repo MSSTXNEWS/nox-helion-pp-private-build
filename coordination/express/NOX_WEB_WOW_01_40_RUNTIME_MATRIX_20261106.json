@@ -10,7 +10,8 @@
     "React-specific packages and licensing-restricted donors require separate compatibility gate before mounting",
     "All native actions and real telemetry must remain truthful",
     "Tabler demo (#11) intentionally shares upstream with #10; loading twice would be a duplicate. No fake page.",
-    "SVG Gauge (#15) selectively integrated, never displays synthetic metrics; gauge only rendered after nativeCompleted and routeId check."
+    "SVG Gauge (#15) selectively integrated, never displays synthetic metrics; gauge only rendered after nativeCompleted and routeId check.",
+    "Production decision: don’t load all 40 simultaneously; unrelated React, scroll and rendering engines remain source-only to prevent duplicate runtimes and GPU contention."
   ],
   "entries": [
     {
@@ -299,22 +300,36 @@
     }
   ],
   "latest_acceptance": {
-    "run_id": 42151215045,
-    "status": "SUCCESS",
-    "scope": "real headless Chromium + source-level gauge truth tests; Windows Edge separate",
-    "checks": [
-      "SVG Gauge runtime and rejection of nonpercent untrusted metrics",
-      "HALO",
-      "HELIODON",
-      "Three",
-      "AETHER",
-      "Loquix",
+    "linux_chromium": {
+      "run_id": 42151215045,
+      "result": "SUCCESS",
+      "scope": "WOW 01-40 selective real UI and native-receipt-only gauge"
+    },
+    "windows_edge": {
+      "run_id": 42151969627,
+      "result": "SUCCESS",
+      "scope": "Physical Windows Microsoft Edge render of existing NOX UI (not native WebView2)",
+      "screen_widths": [
+        390,
+        800,
+        1920
+      ],
+      "motion": "MAX ECO reduced-motion"
+    },
+    "native_windows_webview2": "NOT_CONFIRMED",
+    "verified_effects": [
+      "FORMWORK HALO",
+      "FORMWORK HELIODON",
+      "FORMWORK AETHER",
+      "FORMWORK ZODIAC",
+      "FORMWORK CHROMA source integration",
+      "FORMWORK AURUM source integration",
+      "FORMWORK MERIDIAN source integration",
+      "Three.js",
       "Tabler",
-      "ZODIAC",
-      "390/800/1920",
-      "Reduced Motion",
-      "ECO"
+      "Loquix",
+      "SVG Gauge"
     ],
-    "windows_webview2": "NOT_CONFIRMED"
+    "no_fake_GPU_sensors": true
   }
 }
