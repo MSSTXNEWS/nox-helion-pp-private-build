@@ -165,6 +165,25 @@ public partial class MainWindow
             sid_sha256=sidHash,native_stop_epoch=stopEpoch,nonce,issued_unix=now,expires_unix=expiry,mac};
     }
 
+    // Only exact native owner failures can be reported to the renderer.
+    // Never expose arbitrary exception text, Windows paths or HKCU data.
+    private static string AutostartNativeDenialCode(Exception error)
+    {
+        if (error is FileNotFoundException)
+            return "NOX_AUTOSTART_OWNER_EXE_NOT_FOUND";
+        if (error is UnauthorizedAccessException &&
+            (error.Message == "NOX_AUTOSTART_FOREIGN_ENTRY_HOLD" ||
+             error.Message == "NOX_AUTOSTART_OWNER_CONSENT_REQUIRED" ||
+             error.Message == "NOX_AUTOSTART_REPARSE_DENIED"))
+            return error.Message;
+        if (error is IOException &&
+            (error.Message == "NOX_AUTOSTART_NOOP_READBACK_CHANGED_HOLD" ||
+             error.Message == "NOX_AUTOSTART_HKCU_UNAVAILABLE" ||
+             error.Message == "NOX_AUTOSTART_PERSISTENCE_UNVERIFIED"))
+            return error.Message;
+        return "NOX_AUTOSTART_NATIVE_HOLD";
+    }
+
     private async Task<NativePipeResult> DispatchNativeOwnerAsync(string route, JsonElement payload,
         CancellationToken cancel)
     {
@@ -342,7 +361,7 @@ public partial class MainWindow
                 return new NativePipeResult("",true,
                     JsonSerializer.SerializeToElement(new {enabled,readOnly=false}),null);
             } catch(OperationCanceledException) {throw;}
-              catch {return new NativePipeResult("",false,null,"NOX_AUTOSTART_NATIVE_HOLD");}
+              catch (Exception error) {return new NativePipeResult("",false,null,AutostartNativeDenialCode(error));}
         }
         if(route=="chat.stop") {
             Interlocked.Increment(ref _a1OwnerStopEpoch);

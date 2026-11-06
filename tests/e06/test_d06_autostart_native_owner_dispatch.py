@@ -53,5 +53,38 @@ class TestAutostartNativeOwnerGuard(unittest.TestCase):
         self.assertLess(source.index(guard),
                         source.index('var ownerState = ownerAccepted ? "COMPLETED" : "HOLD";'))
 
+
+    def test_native_hkcu_denial_receipt_keeps_safe_exact_codes(self):
+        owner = (ROOT / "coordination/e06/MainWindow.NativeP02.cs").read_text(encoding="utf-8")
+        method = owner.split("private static string AutostartNativeDenialCode(", 1)[1].split(
+            "private async Task<NativePipeResult> DispatchNativeOwnerAsync(", 1)[0]
+        for code in ("NOX_AUTOSTART_FOREIGN_ENTRY_HOLD",
+                     "NOX_AUTOSTART_OWNER_CONSENT_REQUIRED",
+                     "NOX_AUTOSTART_REPARSE_DENIED",
+                     "NOX_AUTOSTART_NOOP_READBACK_CHANGED_HOLD",
+                     "NOX_AUTOSTART_HKCU_UNAVAILABLE",
+                     "NOX_AUTOSTART_PERSISTENCE_UNVERIFIED"):
+            self.assertEqual(method.count('error.Message == "' + code + '"'), 1)
+        self.assertIn('return "NOX_AUTOSTART_NATIVE_HOLD";', method)
+        self.assertIn("if (error is FileNotFoundException)", method)
+        self.assertIn('AutostartNativeDenialCode(error)', owner)
+        self.assertIn('ownerResult.ErrorCode ?? "NATIVE_OWNER_RESULT_HOLD"',
+                      BRIDGE.read_text(encoding="utf-8"))
+
+    def test_pinned_native_owner_after_denial_change(self):
+        import hashlib
+        def gitblob(p):
+            raw = p.read_bytes()
+            return hashlib.sha1(b"blob " + str(len(raw)).encode() + b"\0" + raw).hexdigest()
+        addon = ROOT / "coordination/e06/MainWindow.NativeP02.cs"
+        stage = ROOT / "coordination/e06/stage_native_p02.py"
+        builder = (ROOT / "coordination/e06/build_onehost_installer.ps1").read_text(encoding="utf-8")
+        compiler = (ROOT / "coordination/e06/t06_compile_original_wpf_p02.py").read_text(encoding="utf-8")
+        addon_sha, stage_sha = gitblob(addon), gitblob(stage)
+        self.assertIn('ADDON_SHA="' + addon_sha + '"', stage.read_text(encoding="utf-8"))
+        for sha in (addon_sha, stage_sha):
+            self.assertIn("sha='" + sha + "'", builder)
+            self.assertIn(':"' + sha + '"', compiler)
+
 if __name__ == "__main__":
     unittest.main()
