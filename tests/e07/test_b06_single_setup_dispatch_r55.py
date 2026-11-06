@@ -100,5 +100,17 @@ class B06SingleSetupDispatch(unittest.TestCase):
         first = source.index("Fast source regression gate before heavy artifacts")
         self.assertLess(first, source.index("Download immutable candidate from DIFFERENT Windows CI run"))
 
+    def test_b06_immutable_download_action_pin(self):
+        """The sole E07 cannot use an auto-moving artifact downloader tag."""
+        source = WORKFLOW.read_text(encoding="utf-8")
+        action = "uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093"
+        self.assertEqual(source.count(action), 2)
+        self.assertNotIn("uses: actions/download-artifact@v4", source)
+        self.assertIn("Download immutable candidate from DIFFERENT Windows CI run", source)
+        self.assertIn("Download prior SHA-pinned Authenticode-verified official Ollama x64 bytes", source)
+        self.assertLess(source.index("E07_EXPLICIT_SINGLE_SETUP_DISPATCH_ADMITTED_NOT_PHYSICAL_PASS"),
+                        source.index("Download immutable candidate from DIFFERENT Windows CI run"))
+        self.assertIn("E07_SAME_SETUP_PREVIOUS_RUN_HOLD", source)
+
 if __name__ == "__main__":
     unittest.main()
