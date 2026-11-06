@@ -112,3 +112,35 @@ assert.equal(rejected.scope.activeChatId,null);
 assert.match(rejected.nodes.status.textContent,/DISPATCH FAILED/);
 assert.match(rejected.nodes.streamHint.textContent,/Черновик сохранён/);
 console.log('D01 R8 SOURCE_ONLY PASS: native post missing/throw fail closed, no draft loss, no retry');
+
+/* D01_HIDDEN_PANEL_FOCUS: real route() handler contract; WebView2 UIA separately gated. */
+const navLine=html.split('\n').find(s=>s.startsWith('function route(id){'));
+assert.ok(navLine,'D01_REAL_ROUTE_MISSING');
+const navIds=[...html.matchAll(/<button class="core[^"]*" data-route="([^"]+)"/g)].map(m=>m[1]);
+assert.equal(navIds.length,8,'D01_COREID_NO_LOSS');
+const navDoc={activeElement:null},title={textContent:''};
+function node(data){
+ const cls=new Set();
+ return {dataset:data,classList:{toggle(k,on){on?cls.add(k):cls.delete(k)},contains:k=>cls.has(k)},
+  setAttribute(k,v){this[k]=v},removeAttribute(k){delete this[k]},
+  focus(){navDoc.activeElement=this},closest(){return this.parentPanel||null}};
+}
+const buttons=navIds.map(route=>node({route})),panels=navIds.map(panel=>node({panel}));
+navDoc.querySelectorAll=s=>s==='.core[data-route]'?buttons:panels;
+navDoc.querySelector=s=>buttons.find(b=>s==='button.core[data-route="'+b.dataset.route+'"]')||null;
+const scope={document:navDoc,headings:Object.fromEntries(navIds.map(id=>[id,id.toUpperCase()])),
+  $:()=>title,post:()=>true};
+vm.runInNewContext(navLine,scope,{timeout:1500});
+const child=node({});child.parentPanel=panels.find(p=>p.dataset.panel==='consciousness');
+navDoc.activeElement=child;assert.equal(scope.route('core'),true);
+assert.equal(navDoc.activeElement,buttons.find(b=>b.dataset.route==='core'),'D01_FOCUS_HIDDEN_PANEL');
+assert.equal(buttons.find(b=>b.dataset.route==='core')['aria-current'],'page');
+child.parentPanel=panels.find(p=>p.dataset.panel==='core');navDoc.activeElement=child;
+scope.route('core');assert.equal(navDoc.activeElement,child,'D01_SAME_ROUTE_FOCUS_CHANGED');
+navDoc.activeElement=buttons[0];scope.route('atlas');
+assert.equal(navDoc.activeElement,buttons[0],'D01_NAV_FOCUS_CHANGED');
+assert.equal(scope.route('unknown'),false,'D01_UNKNOWN_ROUTE_ALLOWED');
+for(const id of navIds){assert.equal(scope.route(id),true);assert.equal(
+ panels.find(p=>p.dataset.panel===id).classList.contains('active'),true);
+ assert.equal(buttons.find(b=>b.dataset.route===id)['aria-current'],'page');}
+console.log('D01 R8 SOURCE_ONLY PASS: hidden panel focus, eight routes, ARIA, keyboard preservation');
