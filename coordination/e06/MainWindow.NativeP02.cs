@@ -593,6 +593,11 @@ public partial class MainWindow
                     history=Array.Empty<object>(),historyState="SELECT_NATIVE_PERSONA_SCOPE",
                     message="Модели из единого локального P02; история доступна в выбранной Persona."});
             } else if (action=="openModelCenter") {
+                // The real P03 models.catalog owner returns an array; an empty
+                // or unrelated JSON object is not proof of a catalog operation.
+                if (!legacyReceipt.TryGetProperty("models",out var ownerCatalog) ||
+                    ownerCatalog.ValueKind != JsonValueKind.Array)
+                    throw new NativePipeHold("NATIVE_MODEL_CATALOG_ARRAY_HOLD");
                 PostMessage(new {kind="p02NativeResult",routeId=route,state="COMPLETED",result=result.Result});
                 // Approved secondary page inside the SAME original WebView2.
                 if (_nativeP02Core is { } web && LegacyDocumentCurrent(source,epoch))

@@ -15,6 +15,9 @@ assert.ok(route,"missing original legacy WPF handler");
 for(const gate of [
  'legacyReceipt.ValueKind != JsonValueKind.Object',
  'NATIVE_MODEL_INVENTORY_OBJECT_HOLD',
+ 'NATIVE_MODEL_CATALOG_ARRAY_HOLD',
+ 'legacyReceipt.TryGetProperty("models",out var ownerCatalog)',
+ 'ownerCatalog.ValueKind != JsonValueKind.Array',
  'list.ValueKind == JsonValueKind.Array',
  'ps.ValueKind == JsonValueKind.String',
  'ps.GetString() : "HOLD"',
@@ -23,9 +26,10 @@ for(const gate of [
  'Interlocked.Read(ref _a1OwnerStopEpoch)!=legacyChatStopEpoch'
 ]) assert.ok(route.includes(gate),"original owner gate missing: "+gate);
 assert.ok(!route.includes('result.Result is JsonElement inventory && inventory.TryGetProperty("provider_state"'),"unsafe untyped state");
+assert.ok(route.indexOf('NATIVE_MODEL_CATALOG_ARRAY_HOLD') < route.indexOf('PostMessage(new {kind="p02NativeResult"'),"catalog must not report success before native shape proof");
 assert.ok(stage.includes('ADDON_SHA="'+blob(main)+'"'),"stage addon pin drift");
 assert.ok(compiler.includes('"coordination/e06/MainWindow.NativeP02.cs":"'+blob(main)+'"'),"compile addon pin drift");
 assert.ok(compiler.includes('"coordination/e06/stage_native_p02.py":"'+blob(stage)+'"'),"compile stage pin drift");
 assert.ok(builder.includes("@{p=$t06Addon;sha='"+blob(main)+"'}"),"builder addon pin drift");
 assert.ok(builder.includes("@{p=$t06Stage;sha='"+blob(stage)+"'}"),"builder stage pin drift");
-console.log("B02_LEGACY_INVENTORY_OWNER_SOURCE_ONLY_PASS 15/15");
+console.log("B02_LEGACY_INVENTORY_OWNER_SOURCE_ONLY_PASS 19/19");
