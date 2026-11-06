@@ -13,7 +13,8 @@ const compiler=read("coordination/e06/t06_compile_original_wpf_p02.py");
 const builder=read("coordination/e06/build_onehost_installer.ps1");
 const blob = s => {
   const b=Buffer.from(s,"utf8");
-  return createHash("sha1").update(Buffer.concat([Buffer.from("blob "+b.length+"\\0".replace("\\\\0","\\0")),b])).digest("hex");
+  // Git object header ends with one NUL byte, not a backslash and digit 0.
+  return createHash("sha1").update(Buffer.concat([Buffer.from("blob "+b.length+"\0","utf8"),b])).digest("hex");
 };
 assert.ok(owner.includes('return {"stopRequested":True}'),"real PACK01 STOP owner receipt contract");
 const start=main.indexOf('if (name == "stop")');

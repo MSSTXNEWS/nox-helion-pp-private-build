@@ -35,7 +35,22 @@ class C06CancellationReentrancySource(unittest.TestCase):
         main = (SOURCE.parent / 'MainWindow.NativeP02.cs').read_text(encoding='utf-8')
         menu = main.split('if (route == "menu.binding") {', 1)[1].split('if (route == "menu.dispatch") {', 1)[0]
         stop = menu.split('if (name == "stop") {', 1)[1].split('if (name == "button")', 1)[0]
-        self.assertRegex(stop, r'if\s*\(!nativeStop\.Accepted\s*\|\|\s*!string\.IsNullOrEmpty\(nativeStop\.ErrorCode\)\s*\|\|\s*nativeStop\.Result is not JsonElement stopReceipt\s*\|\|\s*stopReceipt\.ValueKind is JsonValueKind\.Undefined or JsonValueKind\.Null\s*\|\|\s*LegacyOwnerDenial\(nativeStop\.Result\)\)')
+        self.assertRegex(stop, r'if\s*\(!nativeStop\.Accepted\s*\|\|\s*!string\.IsNullOrEmpty\(nativeStop\.ErrorCode\)\s*\|\|')
+        for required in (
+            'nativeStop.Result is not JsonElement stopReceipt',
+            'stopReceipt.ValueKind != JsonValueKind.Object',
+            '!stopReceipt.TryGetProperty("stopRequested", out var nativeStopRequested)',
+            'nativeStopRequested.ValueKind != JsonValueKind.True',
+            'LegacyOwnerDenial(nativeStop.Result)',
+            'cancel.IsCancellationRequested || !NativeP02Acl(stopSid, "chat.stop")',
+            '!ReferenceEquals(_nativeP02Core, core)',
+            '!ReferenceEquals(_nativeP02Bridge, bridge) || bridge.BrowserExternalActive',
+            '"MENU_STOP_REVOKED_HOLD"'
+        ):
+            self.assertIn(required, stop)
+        self.assertLess(stop.index('nativeStopRequested.ValueKind != JsonValueKind.True'),
+                        stop.index('MENU_STOP_NATIVE_HOLD'))
+        self.assertLess(stop.index('MENU_STOP_REVOKED_HOLD'), stop.index('MENU_STOP_REQUESTED'))
         self.assertLess(stop.index('LegacyOwnerDenial(nativeStop.Result)'), stop.index('MENU_STOP_REQUESTED'))
         self.assertIn('NativeP02Acl(stopSid, "chat.stop")',stop)
 
