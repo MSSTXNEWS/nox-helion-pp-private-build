@@ -1,0 +1,87 @@
+name: NOX HELION R5 Windows executable (single source SHA)
+
+on:
+  push:
+    branches:
+      - nox-local-r5-windows-20261106
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nox-r5-windows-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Windows x64 physical compilation
+    runs-on: windows-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Verify pinned single source archive
+        shell: pwsh
+        run: |
+          $archive = Join-Path $env:GITHUB_WORKSPACE 'nox_local_r5/NOX_HELION_R5_NATIVE_ACCEPTANCE.zip'
+          if (!(Test-Path $archive)) { throw 'R5_SOURCE_ARCHIVE_NOT_FOUND' }
+          $actual = (Get-FileHash -Algorithm SHA256 $archive).Hash.ToLowerInvariant()
+          if ($actual -cne 'd1fc72748697dcef6d2a9e0d98a4504e780f38603fdc9b8b78e61bf6984beefd') { throw 'R5_SOURCE_SHA256_MISMATCH' }
+          $src = Join-Path $env:RUNNER_TEMP 'nox_r5_src'
+          New-Item -ItemType Directory -Force -Path $src | Out-Null
+          Expand-Archive -LiteralPath $archive -DestinationPath $src
+          "NOX_R5_SRC=$src" >> $env:GITHUB_ENV
+
+      - name: Verify source contract and SQLite schema
+        shell: pwsh
+        run: |
+          python -m pip install --disable-pip-version-check pygments
+          python "$env:NOX_R5_SRC/verify_package.py"
+          if ($LASTEXITCODE -ne 0) { throw 'SOURCE_PACKAGE_QA_FAILED' }
+          python "$env:NOX_R5_SRC/test_knowledge_schema.py"
+          if ($LASTEXITCODE -ne 0) { throw 'SQLITE_FTS5_SCHEMA_FAILED' }
+          python "$env:NOX_R5_SRC/test_r5_acceptance.py"
+          if ($LASTEXITCODE -ne 0) { throw 'NATIVE_ACCEPTANCE_SOURCE_CONTRACT_FAILED' }
+          python "$env:NOX_R5_SRC/validate_source.py"
+          if ($LASTEXITCODE -ne 0) { throw 'SOURCE_STRUCTURE_FAILED' }
+
+      - name: Compile physical WPF WebView2 Windows EXE
+        shell: pwsh
+        run: |
+          $out = Join-Path $env:GITHUB_WORKSPACE 'nox_local_r5/windows_x64'
+          dotnet publish "$env:NOX_R5_SRC/src/NOX.HELION.csproj" -c Release -r win-x64 --self-contained false -o $out -p:ContinuousIntegrationBuild=true
+          if ($LASTEXITCODE -ne 0) { throw "WINDOWS_DOTNET_PUBLISH_FAILED_$LASTEXITCODE" }
+          $exe = Join-Path $out 'NOX.HELION.exe'
+          if (!(Test-Path -LiteralPath $exe -PathType Leaf)) { throw 'WINDOWS_EXE_MISSING' }
+          Copy-Item -LiteralPath "$env:NOX_R5_SRC/START_NOX.ps1" -Destination $out
+          $sha = (Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash.ToLowerInvariant()
+          $receipt = @{
+            schema = 'NOX_R5_WINDOWS_BUILD_V1'
+            git_source_commit = '${{ github.sha }}'
+            pinned_source_zip_sha256 = 'd1fc72748697dcef6d2a9e0d98a4504e780f38603fdc9b8b78e61bf6984beefd'
+            exe_sha256 = $sha
+            exe_bytes = (Get-Item $exe).Length
+            windows_dotnet_publish = 'PASS'
+            wpf_webview2_runtime = 'NOT_TESTED'
+            local_qwen_inference = 'NOT_TESTED'
+            native_stop_sqlite_end_to_end = 'NOT_TESTED'
+            canonical_d02_visual = 'NOT_TESTED'
+            v16_complete = $false
+          } | ConvertTo-Json -Depth 5
+          Set-Content -LiteralPath (Join-Path $out 'WINDOWS_BUILD_RECEIPT.json') -Value $receipt -Encoding utf8
+          Write-Host "COMPILED WINDOWS EXE SHA256=$sha"
+
+      - name: Upload real Windows executable and dependencies
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX-HELION-R5-WINDOWS-${{ github.sha }}
+          path: nox_local_r5/windows_x64/
+          if-no-files-found: error
+          retention-days: 14
