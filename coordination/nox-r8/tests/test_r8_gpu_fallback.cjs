@@ -1,5 +1,5 @@
 'use strict';
-/* D04: R8 WebGL2 runtime fallback contract. SOURCE_ONLY. No user GPU or live WebView2 claim. */
+/* D04: R8 WebGL2 -> Canvas2D -> static CSS fail-closed lifecycle. SOURCE_ONLY, no owner GPU claim. */
 const fs=require('node:fs'),path=require('node:path');
 const html=fs.readFileSync(path.resolve(__dirname,'src','index.html'),'utf8');
 const match=html.match(/<script id="nox-liquid-core">([\s\S]*?)<\/script>/);
@@ -51,11 +51,14 @@ function exercise(kind){
     const canvas={width:0,height:0,parentElement:sphere,
       getBoundingClientRect(){return {width:900,height:900};},
       getContext(type){
-        if(type==='webgl2'){if(kind==='throwContext')throw Error('WEBGL_BLOCKED');return kind==='noGpu'||kind==='reducedCpu'?null:gl;}
-        if(type==='2d')return new Proxy({
+        if(type==='webgl2'){if(kind==='throwContext')throw Error('WEBGL_BLOCKED');return ['noGpu','reducedCpu','no2d','throw2d','draw2dFail'].includes(kind)?null:gl;}
+        if(type==='2d'){
+          if(kind==='throw2d')throw Error('CANVAS_2D_CONTEXT_BLOCKED');
+          if(kind==='no2d')return null;
+          return new Proxy({
           createRadialGradient(){return {addColorStop(){}};},
-          clearRect(){cpuFrames++;}
-        },{get(target,key){return key in target?target[key]:()=>{};},set(target,key,value){target[key]=value;if(key==='shadowBlur')maxBlur=Math.max(maxBlur,Number(value));return true;}});
+          clearRect(){if(kind==='draw2dFail')throw Error('CANVAS_2D_DRAW_BLOCKED');cpuFrames++;}
+        },{get(target,key){return key in target?target[key]:()=>{};},set(target,key,value){target[key]=value;if(key==='shadowBlur')maxBlur=Math.max(maxBlur,Number(value));return true;}});}
         return null;
       },
       addEventListener(key,callback){events[key]=callback;},
@@ -80,6 +83,15 @@ function exercise(kind){
   const cancelAnimationFrame=id=>queue.delete(id);
   render(document,window,{now(){return 0;}},requestAnimationFrame,cancelAnimationFrame,{warn(){}});
   function tick(){check(queue.size>0,kind+' scheduled frame');const [id,fn]=queue.entries().next().value;queue.delete(id);fn(100+(++ticks)*140);}
+  if(kind==='no2d'||kind==='throw2d'||kind==='draw2dFail'){
+    if(kind==='draw2dFail')tick();
+    check(sphere.dataset.fx==='disabled',kind+' must show original CSS, never fake a live Canvas2D');
+    check(typeof window.noxVisual?.setMode==='function',kind+' static API remains available');
+    window.noxVisual.setMode('ECO');window.noxVisual.setEnergy(true);window.noxVisual.refresh();
+    check(queue.size===0,kind+' never spins retrying a failed Canvas2D');
+    check(currentCanvas===original,kind+' preserves existing DOM and native IPC');
+    return;
+  }
   if(kind==='reducedGpu'||kind==='reducedCpu'){
     tick();check(queue.size===0,kind+' first static frame stopped');
     check((kind==='reducedGpu'?gpuFrames:cpuFrames)===1,kind+' first static frame rendered');
@@ -120,6 +132,6 @@ function exercise(kind){
   document.hidden=false;document.fire('visibilitychange');tick();
   check(cpuFrames>=3,kind+' visible redraw');
 }
-for(const kind of ['noGpu','throwContext','compileFail','setupFail','ok','contextLost','drawFail','viewportFail','uniformFail','glError','lateGlError','reducedGpu','reducedCpu'])exercise(kind);
+for(const kind of ['noGpu','throwContext','compileFail','setupFail','ok','contextLost','drawFail','viewportFail','uniformFail','glError','lateGlError','reducedGpu','reducedCpu','no2d','throw2d','draw2dFail'])exercise(kind);
 check(html.includes("case 'complete':busy=false;activeChatId=null;$('generation').classList.remove('on');window.noxVisual?.setEnergy(false);"),'native completion clears renderer energy');
-console.log('D04 R8 GPU failover SOURCE_ONLY: 13 scenarios PASS (GL setup, viewport, uniform, draw, context loss, MAX/energy retention, reduced motion); owner GPU NOT_TESTED');
+console.log('D04 R8 GPU failover SOURCE_ONLY: 16 scenarios PASS (WebGL2, Canvas2D context/draw errors, static CSS, IPC, reduced motion); owner GPU NOT_TESTED');

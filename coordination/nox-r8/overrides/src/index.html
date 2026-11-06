@@ -88,6 +88,8 @@ body.reduced *,body.reduced *:before,body.reduced *:after{animation:none!importa
 .helion{overflow:visible;contain:layout style;will-change:filter}
 .helion-fx{position:absolute;z-index:2;inset:-24%;width:148%;height:148%;pointer-events:none;border-radius:50%;opacity:.97;mix-blend-mode:screen;filter:drop-shadow(0 0 17px #e6a16f66)}
 .helion-core{z-index:1;opacity:.14;pointer-events:none}
+.helion[data-fx="disabled"] .helion-fx{display:none}
+.helion[data-fx="disabled"] .helion-core{opacity:1}
 .helion[data-fx="active"]{background:radial-gradient(circle at 50% 50%,#000 13%,#010307 64%,#2b1c19 75%,transparent 82%)}
 .helion[data-fx="disabled"] .helion-fx{display:none}
 .core{transform:translateZ(0)}.core:after{content:"";position:absolute;inset:8px;border:1px solid #d69b5638;border-radius:50%;box-shadow:inset -6px -7px 13px #0009;pointer-events:none}
@@ -153,16 +155,26 @@ body.reduced .helion-fx{filter:none}body.reduced .core.active{animation:none}
     const canvas=fallbackCanvas;
     // 2D fallback retains visible fluid motion even when GPU acceleration is
     // disabled by the machine or by remote desktop / headless Windows CI.
-    const ctx=canvas.getContext('2d',{alpha:true});
-    if(!ctx){sphere.dataset.fx='disabled';return;}
-    let mode=initialMode,energy=initialEnergy,raf=0,last=0,started=performance.now(),rendered=false;
+    // If Canvas2D itself is unavailable or fails mid-draw, the original CSS
+    // sphere remains visible and the native IPC/chat remain independent.
+    function staticCss(reason){
+      sphere.dataset.fx='disabled';
+      window.noxVisual={setMode(){},setEnergy(){},refresh(){}};
+      console.warn('NOX Canvas2D static CSS fallback:',reason);
+    }
+    let ctx;
+    try{ctx=canvas.getContext('2d',{alpha:true});}
+    catch(e){staticCss('CONTEXT_FAILED_'+String(e?.message||e));return;}
+    if(!ctx){staticCss('CONTEXT_UNAVAILABLE');return;}
+    let mode=initialMode,energy=initialEnergy,raf=0,last=0,started=performance.now(),rendered=false,failed=false;
     const reduce=()=>document.body.classList.contains('reduced') ||
       window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     function frame(now){
-      if(document.hidden){raf=0;return;}
+      if(failed||document.hidden){raf=0;return;}
       const fps=reduce()?0:mode==='MAX'?30:mode==='ECO'?8:18;
       if(rendered&&(!fps||now-last<1000/fps)){raf=fps?requestAnimationFrame(frame):0;return;}
       last=now;rendered=true;
+      try{
       const r=canvas.getBoundingClientRect(),max=mode==='ECO'?280:mode==='MAX'?650:480;
       const scale=Math.min(1.5,Math.max(1,window.devicePixelRatio||1));
       const w=Math.min(max,Math.max(80,Math.ceil(r.width*scale)));
@@ -192,9 +204,14 @@ body.reduced .helion-fx{filter:none}body.reduced .core.active{animation:none}
       ctx.save();ctx.translate(cx,cy);ctx.rotate(-.4+t*.025);ctx.scale(1,.31);
       ctx.beginPath();ctx.arc(0,0,disk*1.25,0,Math.PI*2);
       ctx.strokeStyle='#a6824e30';ctx.lineWidth=S/450;ctx.stroke();ctx.restore();
+      }catch(e){
+        failed=true;raf=0;
+        staticCss('DRAW_FAILED_'+String(e?.message||e));
+        return;
+      }
       raf=fps?requestAnimationFrame(frame):0;
     }
-    function redraw(){if(raf)cancelAnimationFrame(raf);rendered=false;raf=requestAnimationFrame(frame);}
+    function redraw(){if(failed)return;if(raf)cancelAnimationFrame(raf);rendered=false;raf=requestAnimationFrame(frame);}
     sphere.dataset.fx='canvas2d';
     window.noxVisual={setMode(v){mode=['MAX','BALANCED','ECO'].includes(v)?v:'BALANCED';redraw();},
       setEnergy(v){energy=v?1:0;redraw();},refresh:redraw};
