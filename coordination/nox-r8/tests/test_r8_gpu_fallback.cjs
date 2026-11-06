@@ -8,7 +8,7 @@ check(!!match,'GPU script');
 check(html.includes('window.chrome.webview.postMessage({type,...data})'),'existing native IPC unchanged');
 const render=new Function('document','window','performance','requestAnimationFrame','cancelAnimationFrame','console',match[1]);
 function exercise(kind){
-  let gpuFrames=0,cpuFrames=0,prevented=false,ticks=0,seq=0,userReduced=false;
+  let gpuFrames=0,cpuFrames=0,prevented=false,ticks=0,seq=0,userReduced=false,maxBlur=0;
   const queue=new Map(),docEvents={},sphere={dataset:{}};
   const gl={
     VERTEX_SHADER:1,FRAGMENT_SHADER:2,COMPILE_STATUS:3,LINK_STATUS:4,
@@ -19,22 +19,22 @@ function exercise(kind){
     createProgram(){return {};},attachShader(){},linkProgram(){},
     getProgramParameter(){return true;},getProgramInfoLog(){return '';},
     deleteShader(){},getUniformLocation(){return {};},
-    createBuffer(){return {};},bindBuffer(){},bufferData(){},
+    createBuffer(){if(kind==='setupFail')throw Error('GPU_BUFFER_ALLOC_FAILED');return {};},bindBuffer(){},bufferData(){},
     getAttribLocation(){return 0;},enableVertexAttribArray(){},vertexAttribPointer(){},
-    viewport(){},useProgram(){},uniform2f(){},uniform1f(){},
+    viewport(){if(kind==='viewportFail')throw Error('GPU_VIEWPORT_DEVICE_LOST');},useProgram(){},uniform2f(){},uniform1f(){if(kind==='uniformFail')throw Error('GPU_UNIFORM_DEVICE_LOST');},
     clearColor(){},clear(){},drawArrays(){if(kind==='drawFail')throw Error('GPU_DEVICE_LOST');gpuFrames++;},
     isContextLost(){return false;}
   };
   function makeCanvas(){
     const events={};
     const canvas={width:0,height:0,parentElement:sphere,
-      getBoundingClientRect(){return {width:260,height:260};},
+      getBoundingClientRect(){return {width:900,height:900};},
       getContext(type){
         if(type==='webgl2'){if(kind==='throwContext')throw Error('WEBGL_BLOCKED');return kind==='noGpu'||kind==='reducedCpu'?null:gl;}
         if(type==='2d')return new Proxy({
           createRadialGradient(){return {addColorStop(){}};},
           clearRect(){cpuFrames++;}
-        },{get(target,key){return key in target?target[key]:()=>{};},set(target,key,value){target[key]=value;return true;}});
+        },{get(target,key){return key in target?target[key]:()=>{};},set(target,key,value){target[key]=value;if(key==='shadowBlur')maxBlur=Math.max(maxBlur,Number(value));return true;}});
         return null;
       },
       addEventListener(key,callback){events[key]=callback;},
@@ -72,8 +72,9 @@ function exercise(kind){
     check(queue.size===0,kind+' OS reduce stops RAF');
     return;
   }
-  if(kind==='ok'||kind==='contextLost'||kind==='drawFail'){
+  if(['ok','contextLost','drawFail','viewportFail','uniformFail'].includes(kind)){
     check(sphere.dataset.fx==='active','GPU path initialized');
+    if(kind!=='ok'){window.noxVisual.setMode('MAX');window.noxVisual.setEnergy(true);}
     tick();
     if(kind==='ok'){check(gpuFrames>0,'GPU path drew');window.noxVisual.setMode('ECO');tick();check(gpuFrames>1,'ECO GPU mode');return;}
     if(kind==='contextLost')original.fire('webglcontextlost',{preventDefault(){prevented=true;}});
@@ -81,14 +82,18 @@ function exercise(kind){
   check(sphere.dataset.fx==='canvas2d',kind+' switched to live 2D');
   check(typeof window.noxVisual.setMode==='function',kind+' mode retained');
   if(kind==='contextLost')check(prevented,'context loss default prevented');
-  if(kind==='contextLost'||kind==='compileFail'||kind==='drawFail')check(currentCanvas!==original,'GPU canvas replaced');
+  if(['contextLost','compileFail','drawFail','setupFail','viewportFail','uniformFail'].includes(kind))check(currentCanvas!==original,'GPU canvas replaced');
   tick();check(cpuFrames>0,kind+' 2D frame drawn');
+  if(['contextLost','drawFail','viewportFail','uniformFail'].includes(kind)){
+    check(currentCanvas.width===650,kind+' MAX render resolution survived fallback');
+    check(maxBlur>50,kind+' active generation energy survived fallback');
+  }
   window.noxVisual.setMode('ECO');tick();
   document.hidden=true;document.fire('visibilitychange');
   check(queue.size===0,kind+' background frames paused');
   document.hidden=false;document.fire('visibilitychange');tick();
   check(cpuFrames>=3,kind+' visible redraw');
 }
-for(const kind of ['noGpu','throwContext','compileFail','ok','contextLost','drawFail','reducedGpu','reducedCpu'])exercise(kind);
+for(const kind of ['noGpu','throwContext','compileFail','setupFail','ok','contextLost','drawFail','viewportFail','uniformFail','reducedGpu','reducedCpu'])exercise(kind);
 check(html.includes("case 'complete':busy=false;activeChatId=null;$('generation').classList.remove('on');window.noxVisual?.setEnergy(false);"),'native completion clears renderer energy');
-console.log('D04 R8 GPU WebGL2/Canvas2D failover SOURCE_ONLY: 8 scenarios PASS; Windows owner GPU NOT_TESTED');
+console.log('D04 R8 GPU failover SOURCE_ONLY: 11 scenarios PASS (GL setup, viewport, uniform, draw, context loss, MAX/energy retention, reduced motion); owner GPU NOT_TESTED');
