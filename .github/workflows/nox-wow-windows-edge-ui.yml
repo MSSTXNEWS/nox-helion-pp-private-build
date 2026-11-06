@@ -20,7 +20,7 @@ jobs:
       - name: Windows Microsoft Edge real UI smoke and diagnostics
         shell: pwsh
         run: |
-          $p=Start-Process -FilePath python -ArgumentList @('-m','http.server','8765','--bind','127.0.0.1') -PassThru -NoNewWindow
+          $p=Start-Process -FilePath node -ArgumentList @('coordination/e07/nox_wow_static_server.cjs') -PassThru -NoNewWindow
           try {
             Start-Sleep -Seconds 3
             $env:NOX_BROWSER_CHANNEL='msedge'
