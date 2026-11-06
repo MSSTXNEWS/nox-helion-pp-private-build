@@ -33,7 +33,7 @@ required_html = (
     # D01's native post can fail: owner ID is committed only on dispatch success.
     "const requestId=nextChatId();if(post('chat',{text,requestId})===false)",
     'busy=true;activeChatId=requestId;',
-    "post('chat',{text,requestId:activeChatId})",
+    # Native D01 owner dispatch now sends fresh requestId, before it is assigned to activeChatId.
     "post('stop',{requestId:activeChatId})",
     "v.requestId!==activeChatId",
     "case 'token':lastAnswer+=v.text",
@@ -48,6 +48,8 @@ for fragment in required_html:
 # A failed native bridge must not claim the active chat owner or lose a draft.
 chat_handler = html.split("$('send').onclick=()=>", 1)[1].split("\n$('stop').onclick=", 1)[0]
 assert chat_handler.index("if(post('chat',{text,requestId})===false)") < chat_handler.index("busy=true;activeChatId=requestId;"), "B02_PREMATURE_NATIVE_OWNER_HOLD"
+assert chat_handler.count("post('chat',{text,requestId})") == 1, "B02_DUPLICATE_OWNER_DISPATCH_HOLD"
+assert "post('chat',{text,requestId:activeChatId})" not in chat_handler, "B02_PREMATURE_ACTIVE_ID_DISPATCH_HOLD"
 # Ensure the previous unowned chat path cannot accidentally remain.
 assert 'case "chat": await Generate(Text("text"));' not in cs
 assert "case 'error':$('status').textContent='ERROR';entry($('messages'),String(v)" not in html
