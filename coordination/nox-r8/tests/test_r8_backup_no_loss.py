@@ -41,4 +41,28 @@ assert backup.rindex('ValidateBackupParent(parent);') < backup.index('File.Move(
 assert source.count('private static void ValidateBackupParent(string parent)') == 1
 assert 'private const string Api = "http://127.0.0.1:11436";' in source
 assert 'private const string DefaultModel = "nox-qwen-clean:latest";' in source
-print('B03 R8 SOURCE_ONLY backup no-overwrite/WAL-SHM-journal name guard/reparse-parent guard/quick_check/SHA contracts PASS; Windows physical NOT_TESTED')
+
+# B03: the automatic pre-migration checkpoint is a real data-loss boundary too.
+checkpoint = source[source.index('private string CheckpointSqlite('):source.index('private static bool HasPersonaColumn(')]
+for required_checkpoint in (
+    'ValidateBackupParent(Path.GetDirectoryName(dir)!)',
+    'ValidateBackupParent(dir)',
+    'FileMode.CreateNew',
+    'DataSource = file, Mode = SqliteOpenMode.ReadWriteCreate, Pooling = false',
+    'DataSource = file, Mode = SqliteOpenMode.ReadOnly, Pooling = false',
+    'source.BackupDatabase(dest)',
+    'PRAGMA quick_check',
+    'SHA256.HashData(snapshot)',
+    'Guid.NewGuid().ToString("N") + ".partial"',
+    'output.Flush(flushToDisk: true)',
+    'File.Move(stagedManifest, manifest, overwrite: false)',
+    'NOX_SQLITE_BACKUP_MANIFEST_READBACK_HOLD',
+    'NOX_SQLITE_BACKUP_SHA_READBACK_HOLD',
+):
+    assert required_checkpoint in checkpoint, 'B03_R8_CHECKPOINT_NO_LOSS_HOLD: ' + required_checkpoint
+for unsafe_checkpoint in ('File.WriteAllText(file + ".sha256.tmp"', 'File.Copy(', 'File.Delete(', 'File.Move(stagedManifest, manifest, true)'):
+    assert unsafe_checkpoint not in checkpoint, 'B03_R8_CHECKPOINT_OVERWRITE_HOLD: ' + unsafe_checkpoint
+assert checkpoint.count('ValidateBackupParent(dir);') == 2
+assert checkpoint.index('NOX_SQLITE_BACKUP_INTEGRITY_HOLD') < checkpoint.index('File.Move(stagedManifest, manifest, overwrite: false)')
+assert checkpoint.index('FileMode.CreateNew') < checkpoint.index('source.BackupDatabase(dest)')
+print('B03 R8 SOURCE_ONLY export and pre-migration checkpoint CreateNew/no-overwrite/SQLite quick_check/manifest SHA readback contracts PASS; Windows physical NOT_TESTED')

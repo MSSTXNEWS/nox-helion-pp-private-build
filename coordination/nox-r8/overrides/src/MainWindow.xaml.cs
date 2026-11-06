@@ -551,18 +551,24 @@ public partial class MainWindow : Window
     private string CheckpointSqlite(SqliteConnection source, string purpose)
     {
         string dir = Path.Combine(Path.GetDirectoryName(dbPath)!, "backups");
+        // Even the internal pre-migration backup must never traverse a redirected
+        // or foreign user folder. Reject junctions before and after creation.
+        ValidateBackupParent(Path.GetDirectoryName(dir)!);
         Directory.CreateDirectory(dir);
+        ValidateBackupParent(dir);
         string file = Path.Combine(dir, "NOX_" + purpose + "_" +
             DateTimeOffset.UtcNow.ToString("yyyyMMdd_HHmmss_fff") + "_" +
             Guid.NewGuid().ToString("N") + ".sqlite3");
+        // Claim this exact new entry. Never reopen or overwrite an existing file.
+        using (var reservation = new FileStream(file, FileMode.CreateNew, FileAccess.Write, FileShare.None)) { }
         using (var dest = new SqliteConnection(new SqliteConnectionStringBuilder {
-            DataSource = file, Mode = SqliteOpenMode.ReadWriteCreate }.ToString()))
+            DataSource = file, Mode = SqliteOpenMode.ReadWriteCreate, Pooling = false }.ToString()))
         {
             dest.Open();
             source.BackupDatabase(dest);
         }
         using (var check = new SqliteConnection(new SqliteConnectionStringBuilder {
-            DataSource = file, Mode = SqliteOpenMode.ReadOnly }.ToString()))
+            DataSource = file, Mode = SqliteOpenMode.ReadOnly, Pooling = false }.ToString()))
         {
             check.Open();
             using var integrity = check.CreateCommand();
@@ -570,9 +576,27 @@ public partial class MainWindow : Window
             if (!string.Equals(integrity.ExecuteScalar() as string, "ok", StringComparison.OrdinalIgnoreCase))
                 throw new InvalidOperationException("NOX_SQLITE_BACKUP_INTEGRITY_HOLD");
         }
-        string sha = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(file)));
-        File.WriteAllText(file + ".sha256.tmp", sha + "  " + Path.GetFileName(file), Encoding.UTF8);
-        File.Move(file + ".sha256.tmp", file + ".sha256");
+        string sha;
+        using (var snapshot = File.OpenRead(file))
+            sha = Convert.ToHexString(SHA256.HashData(snapshot));
+        // A fixed .sha256.tmp filename with WriteAllText can overwrite an
+        // unrelated file. Reserve a random new manifest entry instead.
+        string manifest = file + ".sha256";
+        string stagedManifest = manifest + "." + Guid.NewGuid().ToString("N") + ".partial";
+        string record = sha + "  " + Path.GetFileName(file) + "\n";
+        using (var output = new FileStream(stagedManifest, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+        {
+            byte[] data = Encoding.UTF8.GetBytes(record);
+            output.Write(data, 0, data.Length);
+            output.Flush(flushToDisk: true);
+        }
+        ValidateBackupParent(dir);
+        File.Move(stagedManifest, manifest, overwrite: false);
+        if (!string.Equals(File.ReadAllText(manifest, Encoding.UTF8), record, StringComparison.Ordinal))
+            throw new InvalidOperationException("NOX_SQLITE_BACKUP_MANIFEST_READBACK_HOLD");
+        using (var snapshot = File.OpenRead(file))
+            if (!string.Equals(Convert.ToHexString(SHA256.HashData(snapshot)), sha, StringComparison.Ordinal))
+                throw new InvalidOperationException("NOX_SQLITE_BACKUP_SHA_READBACK_HOLD");
         return file;
     }
 
