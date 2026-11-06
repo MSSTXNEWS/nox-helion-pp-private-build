@@ -67,7 +67,7 @@
   }
   function frame(ms){
    raf=0;if(!active())return;
-   if(ms-last>=body.dataset.fx==='MAX'?32:66){last=ms;draw(ms);}
+   if(ms-last >= (body.dataset.fx==='MAX'?32:66)){last=ms;draw(ms);}
    raf=w.requestAnimationFrame(frame);
   }
   function sync(){
