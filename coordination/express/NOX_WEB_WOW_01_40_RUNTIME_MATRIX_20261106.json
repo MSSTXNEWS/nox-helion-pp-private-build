@@ -8,7 +8,8 @@
     "Use GPU budget: one Three WebGL instance with shared HELIODON geometry; local HALO 2D; CHROMA existing independent WebGL under ECO guard",
     "Do not introduce a second AI chat or native backend",
     "React-specific packages and licensing-restricted donors require separate compatibility gate before mounting",
-    "All native actions and real telemetry must remain truthful"
+    "All native actions and real telemetry must remain truthful",
+    "Tabler demo (#11) intentionally shares upstream with #10; loading twice would be a duplicate. No fake page."
   ],
   "entries": [
     {
@@ -75,7 +76,10 @@
       "id": 8,
       "name": "FORMWORK ZODIAC",
       "source_verified": true,
-      "runtime_status": "source_only_not_connected"
+      "runtime_status": "implemented_selective",
+      "component": "ui/menu-pages/formwork-zodiac-cores.js",
+      "scope": "Constellation wiring of original 8 CoreID buttons",
+      "proof": "Browser QA run pending"
     },
     {
       "id": 9,
@@ -90,13 +94,19 @@
       "id": 10,
       "name": "Tabler",
       "source_verified": true,
-      "runtime_status": "source_only_not_connected"
+      "runtime_status": "implemented_selective",
+      "component": "ui/menu-pages/tabler-card-integration.css",
+      "scope": "Scoped Tabler cards on existing route navigation",
+      "proof": "Browser QA run pending"
     },
     {
       "id": 11,
       "name": "Tabler Demo",
       "source_verified": true,
-      "runtime_status": "source_only_not_connected"
+      "runtime_status": "same_upstream_source_not_second_runtime",
+      "component": "ui/menu-pages/tabler-card-integration.css",
+      "scope": "Same real source as Tabler, demo pages included in upstream; no redundant runtime",
+      "proof": "Browser QA run pending"
     },
     {
       "id": 12,
