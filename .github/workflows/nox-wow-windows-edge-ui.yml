@@ -17,7 +17,7 @@ jobs:
       - name: Install test-only Playwright client
         shell: pwsh
         run: npm install --no-save --ignore-scripts playwright@1.58.2
-      - name: Windows Microsoft Edge real UI smoke
+      - name: Windows Microsoft Edge real UI smoke and diagnostics
         shell: pwsh
         run: |
           $p=Start-Process -FilePath python -ArgumentList @('-m','http.server','8765','--bind','127.0.0.1') -PassThru -NoNewWindow
