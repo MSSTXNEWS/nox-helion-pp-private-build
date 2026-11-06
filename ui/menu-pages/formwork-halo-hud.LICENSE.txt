@@ -1,0 +1,5 @@
+FORMWORK HALO original project: https://github.com/shellcat-com/formwork-halo
+Original source license: MIT (copyright retained by upstream authors).
+NOX adapts only the radar/orbit visual algorithms to the existing menu. No
+synthetic telemetry or simulated system status. Reference to the upstream
+LICENSE file should be retained in downstream release notices.
