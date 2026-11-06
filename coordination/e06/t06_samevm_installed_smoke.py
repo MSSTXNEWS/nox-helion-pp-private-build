@@ -227,6 +227,35 @@ def original_no_loss_inode_preserved(
         return False
 
 
+def original_no_loss_anyexit_slot_snapshot(
+        marker: Path, marker_bytes: bytes, marker_identity: tuple[int, int],
+        unmanaged_name: str, unmanaged_bytes: bytes,
+        unmanaged_identity: tuple[int, int], local_base: Path,
+        slots: tuple[tuple[str, Path], ...]) -> dict:
+    """Read-only owner-data identity on EACH native update/rollback exit.
+
+    A same-byte replacement, hardlink, reparse path, missing or ambiguous
+    location never counts as NO-LOSS. This is NOT original NSIS success or E07.
+    """
+    persistent_safe=(original_no_loss_file_preserved(marker,marker_bytes,local_base) and
+                     original_no_loss_inode_preserved(marker,marker_identity,local_base))
+    occupied=[]
+    preserved=[]
+    for label,root in slots:
+        candidate=root/unmanaged_name
+        if (candidate.exists() or candidate.is_symlink() or
+                getattr(candidate,'is_junction',lambda:False)()):
+            occupied.append(label)
+            if (original_no_loss_file_preserved(candidate,unmanaged_bytes,local_base) and
+                    original_no_loss_inode_preserved(candidate,unmanaged_identity,local_base)):
+                preserved.append(label)
+    unmanaged_safe=(len(occupied)==1 and len(preserved)==1)
+    return {"persistent_user_data":"PRESERVED" if persistent_safe else "HOLD",
+            "unmanaged_install_data":"PRESERVED" if unmanaged_safe else "HOLD",
+            "unmanaged_slots_present":occupied,
+            "original_unmanaged_slot":preserved[0] if unmanaged_safe else None,
+            "read_only":True,"independent_e07":"NOT_RUN","release_accepted":False}
+
 def run(args:list[str],timeout:int)->dict:
     start=time.monotonic()
     try:
@@ -1220,8 +1249,22 @@ def main()->int:
         require(regular(unmanaged) and unmanaged.read_bytes()==unmanaged_bytes,
                 "T06_NOLOSS_UNMANAGED_PROBE_SEED_HOLD")
         unmanaged_identity=original_no_loss_seed_identity(unmanaged,unmanaged_bytes,local_base)
+        # D03: snapshot the FOUR original NSIS slots on every native exit.
+        # Original NSIS controls the exit. This observation never retries it.
+        no_loss_slots=(("installed",install),
+                       ("previous",Path(str(install)+".__p01_previous")),
+                       ("rollback_saved",Path(str(install)+".__p01_rollback_saved")),
+                       ("stage",Path(str(install)+".__p01_stage")))
         update=run([str(SETUP),"/S"],250)
         report["installer_lifecycle"]["update"]=update
+        # D03: even UPDATE EXIT=1/timeouts must not bypass user-data identity.
+        update_anyexit=original_no_loss_anyexit_slot_snapshot(
+            marker,signature,marker_identity,unmanaged.name,unmanaged_bytes,
+            unmanaged_identity,local_base,no_loss_slots)
+        report["installer_lifecycle"]["update_any_exit_no_loss"]=update_anyexit
+        require(update_anyexit["persistent_user_data"]=="PRESERVED" and
+                update_anyexit["unmanaged_install_data"]=="PRESERVED",
+                "T06_UPDATE_ANYEXIT_NOLOSS_HOLD")
         backup=Path(str(install)+".__p01_previous")
         require(update["code"]==0 and backup.is_dir() and
                 plain_parents(backup,local_base),
@@ -1256,6 +1299,13 @@ def main()->int:
         report["installer_lifecycle"]["backup_payload_verify"]=backup_check
         rollback=run([str(SETUP),"/S","/ROLLBACK"],250)
         report["installer_lifecycle"]["rollback"]=rollback
+        rollback_anyexit=original_no_loss_anyexit_slot_snapshot(
+            marker,signature,marker_identity,unmanaged.name,unmanaged_bytes,
+            unmanaged_identity,local_base,no_loss_slots)
+        report["installer_lifecycle"]["rollback_any_exit_no_loss"]=rollback_anyexit
+        require(rollback_anyexit["persistent_user_data"]=="PRESERVED" and
+                rollback_anyexit["unmanaged_install_data"]=="PRESERVED",
+                "T06_ROLLBACK_ANYEXIT_NOLOSS_HOLD")
         require(rollback["code"]==0 and sha(wpf)==evidence["wpf_sha256"] and
                 original_no_loss_file_preserved(marker,signature,local_base) and
                 original_no_loss_inode_preserved(marker,marker_identity,local_base),
