@@ -30,3 +30,6 @@ body[data-fx="ECO"] .wow-v3-crust{opacity:.43}
 @media(max-width:800px){.wow-v3-accretion{inset:18% 3%}.wow-v3-field{opacity:.54}}
 @media(max-width:520px){.wow-v3-accretion{display:none}.wow-v3-field{opacity:.18}.universe[data-wow-v3="1"] .planet{box-shadow:inset -11px -13px 20px #000b,0 4px 15px #0007}}
 @media(prefers-reduced-motion:reduce){.wow-v3-accretion,.wow-v3-accretion::before{animation:none!important}.wow-v3-field{opacity:.20!important;mix-blend-mode:normal}.wow-v3-crust{transition:none!important}}
+
+/* WOW tablet: avoid rotated accretion overflow; original orbits remain. */
+@media(min-width:521px) and (max-width:800px){.universe[data-wow-v3="1"] .wow-v3-accretion{display:none}}
