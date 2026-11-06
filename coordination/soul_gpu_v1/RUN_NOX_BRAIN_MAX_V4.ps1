@@ -234,12 +234,13 @@ for($stage=1;$stage -le 99;$stage++){
     Say "NO NEW APPROVED DATA for stage $stage — finish without hallucinating training"
     break
   }
-  Say "QLoRA stage $stage, max_steps=1000 GPU fraction=0.75"
+  Say "QLoRA stage $stage, max_steps=1000 GPU memory fraction <=0.70; <=70% average training duty cycle, adaptive cooling"
   $out=Join-Path $Brain ("logs\train_stage_"+$stage+"_stdout.log")
   $err=Join-Path $Brain ("logs\train_stage_"+$stage+"_stderr.log")
   $argsTrain=@($srcTrainer,'--stage',"$stage",'--root',$Soul,'--max-steps','1000','--max-length','512',
-               '--gpu-fraction','0.75')
+               '--gpu-fraction','0.70')
   $process=Start-Process -FilePath $python -ArgumentList $argsTrain -PassThru -RedirectStandardOutput $out -RedirectStandardError $err
+  try { $process.PriorityClass=[Diagnostics.ProcessPriorityClass]::BelowNormal } catch { Say 'CPU priority could not be lowered; thread budget remains active' }
   while(-not $process.HasExited){
     Start-Sleep -Seconds 3
     $process.Refresh()
