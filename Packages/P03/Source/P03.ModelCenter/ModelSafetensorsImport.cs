@@ -27,6 +27,17 @@ internal static class ModelSafetensorsImport
     internal static async Task<IReadOnlyList<ImportedModelFile>> ValidateAsync(
         P04MergedImportApproval approval,CancellationToken ct)
     {
+        ArgumentNullException.ThrowIfNull(approval);
+        // Native P04-reviewed directory and training receipt identities must not
+        // be reinterpreted through a mutable process working directory when a
+        // historical queue job or direct original Ollama adapter calls us.
+        // EnqueueVerifiedMergedAsync checks these paths too; this is the
+        // shared execution-time fence before any filesystem operation.
+        if (string.IsNullOrWhiteSpace(approval.Directory) ||
+            string.IsNullOrWhiteSpace(approval.TrainingReceiptPath) ||
+            !System.IO.Path.IsPathFullyQualified(approval.Directory) ||
+            !System.IO.Path.IsPathFullyQualified(approval.TrainingReceiptPath))
+            throw new InvalidDataException("P03_P04_MERGE_OWNER_ABSOLUTE_PATH_HOLD");
         if (!approval.NativeRightsVerified || string.IsNullOrWhiteSpace(approval.NativeApprovalId) ||
             approval.NativeApprovalId.Length>200 || string.IsNullOrWhiteSpace(approval.RightsAttestationId) ||
             !new[]{approval.MergedPayloadSha256,approval.MergeReceiptSha256,

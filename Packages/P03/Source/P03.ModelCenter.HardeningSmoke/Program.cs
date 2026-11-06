@@ -909,6 +909,25 @@ try
         { held = true; }
         Assert(held && (await mergedQueue.ReadAsync()).Count == originalCount,
             "B04 P04 native owner refuses relative merge/training receipt paths without queue mutation");
+        // Test the ORIGINAL public adapter, which reuses the common validation
+        // gate even for legacy persisted jobs and direct adapter entry.
+        // No network or weights are used: validation must fail before Ollama I/O.
+        using var b04Client = new HttpClient { BaseAddress = new Uri("http://127.0.0.1:11434/") };
+        var b04Adapter = new OllamaModelAdapter(b04Client, b04MergedRoot);
+        var b04Id = Guid.NewGuid();
+        var b04Job = new ModelJob(b04Id, ModelJobKind.SafetensorsImport,
+            "nox-forge-" + bad.MergedPayloadSha256[..12] + ":" + b04Id.ToString("N"),
+            bad.Directory, true, bad.LicenseSource, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow,
+            ExpectedLocalSha256: bad.MergedPayloadSha256, MergedImport: bad);
+        var directHeld = false;
+        try
+        {
+            await b04Adapter.ImportMergedSafetensorsAsync(b04Job,
+                (update, token) => ValueTask.CompletedTask, CancellationToken.None);
+        }
+        catch (InvalidDataException ex) when (ex.Message == "P03_P04_MERGE_OWNER_ABSOLUTE_PATH_HOLD")
+        { directHeld = true; }
+        Assert(directHeld, "B04 P04 original adapter refuses CWD-dependent owner paths");
     }
 }
 finally { if (Directory.Exists(b04MergedRoot)) Directory.Delete(b04MergedRoot, recursive: true); }
