@@ -90,8 +90,8 @@ for action, table in (("Task", "tasks"), ("Note", "memory_notes")):
     assert "ValidWriteRequestId(requestId)" in segment, "D05_OWNER_REQUEST_HOLD"
     assert "using var verifyDb = OpenDatabase();" in segment, "D05_READBACK_HOLD"
     assert f"FROM {table} WHERE id=$id" in segment, "D05_SQLITE_ROW_HOLD"
-    assert segment.index("using var verifyDb") < segment.index(f'Send("{table}.add.receipt"'), "D05_PREMATURE_ACK_HOLD"
-    assert f'Send("{table}.add.denied"' in segment, "D05_DENIAL_HOLD"
+    assert segment.index("using var verifyDb") < segment.index(f'Send("{action.lower()}s.add.receipt"'), "D05_PREMATURE_ACK_HOLD"
+    assert f'Send("{action.lower()}s.add.denied"' in segment, "D05_DENIAL_HOLD"
 for part in (
     "pendingTask={requestId,text}",
     "pendingNote={requestId,title,content}",
