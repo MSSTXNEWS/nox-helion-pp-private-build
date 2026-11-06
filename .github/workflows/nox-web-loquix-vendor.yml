@@ -3,7 +3,7 @@ on:
   push:
     branches: [integration/nox-v16-unified-candidate-20261028-r01]
     paths: [.github/workflows/nox-web-loquix-vendor.yml]
-permissions: {contents: read}
+permissions: {contents: write}
 jobs:
   bundle:
     runs-on: ubuntu-24.04
@@ -27,6 +27,17 @@ jobs:
           cp node_modules/@loquix/core/LICENSE LICENSE-LOQUIX.txt
           mkdir -p "$GITHUB_WORKSPACE/loquix-artifact"
           cp original-loquix-typing.mjs versions.json LICENSE-LOQUIX.txt "$GITHUB_WORKSPACE/loquix-artifact/"
+          mkdir -p "$GITHUB_WORKSPACE/ui/menu-pages/vendor"
+          cp original-loquix-typing.mjs "$GITHUB_WORKSPACE/ui/menu-pages/vendor/loquix-typing.mjs"
+          cp LICENSE-LOQUIX.txt "$GITHUB_WORKSPACE/ui/menu-pages/vendor/loquix.LICENSE.txt"
+      - name: Commit pinned original component to the existing PR branch
+        run: |
+          set -euo pipefail
+          git config user.name "nox-ui-bot"
+          git config user.email "nox-ui-bot@users.noreply.github.com"
+          git add ui/menu-pages/vendor/loquix-typing.mjs ui/menu-pages/vendor/loquix.LICENSE.txt
+          git commit -m "WOW: vendor pinned original Loquix 0.6.0 typing component"
+          git push origin HEAD:integration/nox-v16-unified-candidate-20261028-r01
       - uses: actions/upload-artifact@v4
         with:
           name: NOX-LOQUIX-ORIGINAL-LOCAL-BUNDLE
