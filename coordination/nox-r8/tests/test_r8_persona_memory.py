@@ -109,3 +109,56 @@ with tempfile.TemporaryDirectory() as temp:
         assert len([1 for p,a in search if "проект нокс" in (p+" "+a).casefold()]) == 5
         assert db.execute("SELECT COUNT(*) FROM memory_notes WHERE persona=?", ("KV",)).fetchone()[0] == 1
 print("D03 R8 SOURCE_ONLY: Unicode recall, older same-Persona RAG and NO-LOSS PASS")
+
+
+# D03 owner-consented note deletion is a real native WPF path, not JS-only.
+# Only a WAL-safe verified checkpoint permits one exact-Persona DELETE;
+# a foreign row, cancellation, failed backup or concurrent edit stays intact.
+delete_native = cs.split('private void DeleteNote(long id)', 1)[1].split('private void SaveFeedback(', 1)[0]
+for guard in (
+    'SELECT title,content,created_at FROM memory_notes WHERE id=$id AND persona=$persona',
+    'NOX_NOTE_OWNER_HOLD', 'MessageBox.Show(this,',
+    'MessageBoxButton.YesNo', 'MessageBoxResult.No',
+    'if (consent != MessageBoxResult.Yes)', 'CheckpointSqlite(db, "PRE_NOTE_DELETE")',
+    'DELETE FROM memory_notes', 'AND title=$title AND content=$content AND created_at=$created',
+    'NOX_NOTE_CHANGED_OR_FOREIGN_HOLD',
+    'NOX_NOTE_DELETE_READBACK_HOLD', 'notes.delete.receipt',
+):
+    assert guard in delete_native, guard
+assert delete_native.index('if (consent != MessageBoxResult.Yes)') < delete_native.index('CheckpointSqlite(db, "PRE_NOTE_DELETE")')
+assert delete_native.index('CheckpointSqlite(db, "PRE_NOTE_DELETE")') < delete_native.index('DELETE FROM memory_notes')
+assert delete_native.index('DELETE FROM memory_notes') < delete_native.index('NOX_NOTE_DELETE_READBACK_HOLD')
+assert 'if (!row.Read()) throw new InvalidOperationException("NOX_NOTE_OWNER_HOLD")' in delete_native
+
+with tempfile.TemporaryDirectory() as temp:
+    db_path = Path(temp) / 'chat.sqlite3'
+    backup_path = Path(temp) / 'PRE_NOTE_DELETE.sqlite3'
+    with closing(sqlite3.connect(db_path)) as db:
+        db.execute('PRAGMA journal_mode=WAL')
+        db.execute('CREATE TABLE memory_notes(id INTEGER PRIMARY KEY, created_at TEXT NOT NULL, title TEXT NOT NULL, content TEXT NOT NULL, persona TEXT NOT NULL)')
+        db.executemany('INSERT INTO memory_notes VALUES(?,?,?,?,?)', [
+            (1, 'now', 'owned', 'keep backup copy', 'KV'),
+            (2, 'now', 'private', 'AM-only secret', 'AM'),
+        ])
+        db.commit()
+        # Simulates the native pre-delete BackupDatabase before any mutation.
+        with closing(sqlite3.connect(backup_path)) as snapshot:
+            db.backup(snapshot)
+        with closing(sqlite3.connect(backup_path)) as snapshot:
+            assert snapshot.execute('PRAGMA quick_check').fetchone()[0] == 'ok'
+        assert db.execute('DELETE FROM memory_notes WHERE id=? AND persona=? AND title=? AND content=? AND created_at=?',
+                          (2, 'KV', 'private', 'AM-only secret', 'now')).rowcount == 0
+        assert db.execute('DELETE FROM memory_notes WHERE id=? AND persona=? AND title=? AND content=? AND created_at=?',
+                          (1, 'KV', 'changed', 'keep backup copy', 'now')).rowcount == 0
+        assert db.execute('SELECT COUNT(*) FROM memory_notes').fetchone()[0] == 2
+        # Exact owner consent is required in native C# before this mutation.
+        with db:
+            assert db.execute('DELETE FROM memory_notes WHERE id=? AND persona=? AND title=? AND content=? AND created_at=?',
+                              (1, 'KV', 'owned', 'keep backup copy', 'now')).rowcount == 1
+    with closing(sqlite3.connect(db_path)) as check:
+        assert check.execute('SELECT COUNT(*) FROM memory_notes WHERE id=1 AND persona=?', ('KV',)).fetchone()[0] == 0
+        assert check.execute('SELECT content FROM memory_notes WHERE persona=?', ('AM',)).fetchone()[0] == 'AM-only secret'
+    with closing(sqlite3.connect(backup_path)) as snapshot:
+        assert snapshot.execute('SELECT content FROM memory_notes WHERE id=1').fetchone()[0] == 'keep backup copy'
+        assert snapshot.execute('SELECT content FROM memory_notes WHERE id=2').fetchone()[0] == 'AM-only secret'
+print('D03 R8 SOURCE_ONLY: owner consent, backup-first, foreign/changed denials and SQLite NO-LOSS PASS')

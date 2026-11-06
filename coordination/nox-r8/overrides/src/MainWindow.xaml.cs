@@ -61,6 +61,7 @@ public partial class MainWindow : Window
     private const string DefaultModel = "nox-qwen-clean:latest";
     private const string Api = "http://127.0.0.1:11436";
     private string CurrentModel => ReadPreferencesDictionary().GetValueOrDefault("model", DefaultModel);
+    private string? legacyImportHold;
     private readonly KnowledgeStore knowledge = new(DatabasePath);
     private readonly string dbPath = DatabasePath;
 
@@ -125,6 +126,7 @@ public partial class MainWindow : Window
                 Send("settings", ReadPreferences());
                 Send("tasks", ReadTasks());
                 Send("notes", ReadNotes());
+                if (legacyImportHold != null) Send("notice", legacyImportHold);
                 Send("system", GetSystemState());
                 // Runtime evidence belongs to the process that actually loaded WebView2,
                 // not to a source-only build or a previously launched EXE.
@@ -877,43 +879,76 @@ public partial class MainWindow : Window
     // existing SQLite rows. Only locally-owned chat data is imported.
     private void ImportLegacyJsonlIfNeeded(SqliteConnection db)
     {
+        const string sourceId = "NOX_NEW_CHAT_JSONL_V1";
+        const string shaPrefix = "NOX_NEW_CHAT_JSONL_V1_SHA256:";
         string legacy = Path.Combine(Path.GetDirectoryName(dbPath)!, "chat.jsonl");
         if (!File.Exists(legacy)) return;
-        using var tx = db.BeginTransaction();
-        using var check = db.CreateCommand(); check.Transaction = tx;
-        check.CommandText = "SELECT COUNT(*) FROM imported_sources WHERE source=$s";
-        check.Parameters.AddWithValue("$s", "NOX_NEW_CHAT_JSONL_V1");
-        if (Convert.ToInt64(check.ExecuteScalar()) > 0) { tx.Commit(); return; }
-        int imported = 0;
-        foreach (var line in File.ReadLines(legacy))
-        {
-            try
-            {
-                using var item = JsonDocument.Parse(line);
-                var j = item.RootElement;
-                if (j.ValueKind != JsonValueKind.Object ||
-                    !j.TryGetProperty("prompt", out var qp) || qp.ValueKind != JsonValueKind.String ||
-                    !j.TryGetProperty("answer", out var ap) || ap.ValueKind != JsonValueKind.String) continue;
-                var q = qp.GetString();
-                var a = ap.GetString();
-                if (string.IsNullOrWhiteSpace(q) || string.IsNullOrWhiteSpace(a)) continue;
-                var time = j.TryGetProperty("time", out var t) ? t.ToString() : DateTimeOffset.UtcNow.ToString("O");
-                using var insert = db.CreateCommand(); insert.Transaction = tx;
-                insert.CommandText = "INSERT INTO chat_history(timestamp,prompt,answer) VALUES($t,$p,$a)";
-                insert.Parameters.AddWithValue("$t", time);
-                insert.Parameters.AddWithValue("$p", q);
-                insert.Parameters.AddWithValue("$a", a);
-                insert.ExecuteNonQuery(); imported++;
-            }
-            catch (JsonException) { /* Preserve malformed lines in the source, don't crash startup. */ }
-            catch (KeyNotFoundException) { /* Older unrelated JSONL record. */ }
+        if ((File.GetAttributes(legacy) & FileAttributes.ReparsePoint) != 0) {
+            legacyImportHold = "NOX_LEGACY_JSONL_REPARSE_HOLD";
+            return;
         }
-        using var receipt = db.CreateCommand(); receipt.Transaction = tx;
-        receipt.CommandText = "INSERT INTO imported_sources(source,imported_at,rows) VALUES($s,$t,$n)";
-        receipt.Parameters.AddWithValue("$s", "NOX_NEW_CHAT_JSONL_V1");
-        receipt.Parameters.AddWithValue("$t", DateTimeOffset.UtcNow.ToString("O"));
-        receipt.Parameters.AddWithValue("$n", imported);
-        receipt.ExecuteNonQuery(); tx.Commit();
+        using (var check = db.CreateCommand()) {
+            check.CommandText = "SELECT COUNT(*) FROM imported_sources WHERE source=$s";
+            check.Parameters.AddWithValue("$s", sourceId);
+            if (Convert.ToInt64(check.ExecuteScalar()) != 0) {
+                using var origin = db.CreateCommand();
+                origin.CommandText = "SELECT source FROM imported_sources WHERE source LIKE $s LIMIT 1";
+                origin.Parameters.AddWithValue("$s", shaPrefix + "%");
+                var priorSha = origin.ExecuteScalar() as string;
+                if (priorSha != null &&
+                    !string.Equals(priorSha, shaPrefix + Sha256File(legacy), StringComparison.Ordinal))
+                    legacyImportHold = "NOX_LEGACY_JSONL_CHANGED_AFTER_IMPORT_HOLD";
+                return; // Older receipts are never reimported by guesswork.
+            }
+        }
+        string sourceSha = Sha256File(legacy);
+        CheckpointSqlite(db, "PRE_LEGACY_IMPORT"); // WAL-consistent, verified owner backup.
+        using var tx = db.BeginTransaction();
+        try {
+            int rows = 0, skipped = 0;
+            foreach (var line in File.ReadLines(legacy)) {
+                if (string.IsNullOrWhiteSpace(line)) continue;
+                try {
+                    using var json = JsonDocument.Parse(line);
+                    var j = json.RootElement;
+                    if (j.ValueKind != JsonValueKind.Object ||
+                        !j.TryGetProperty("prompt", out var p) || p.ValueKind != JsonValueKind.String ||
+                        !j.TryGetProperty("answer", out var a) || a.ValueKind != JsonValueKind.String ||
+                        string.IsNullOrWhiteSpace(p.GetString()) || string.IsNullOrWhiteSpace(a.GetString())) {
+                        skipped++;
+                        continue;
+                    }
+                    using var insert = db.CreateCommand(); insert.Transaction = tx;
+                    insert.CommandText = "INSERT INTO chat_history(timestamp,prompt,answer) VALUES($t,$p,$a)";
+                    insert.Parameters.AddWithValue("$t", j.TryGetProperty("time", out var t)
+                        ? t.ToString() : DateTimeOffset.UtcNow.ToString("O"));
+                    insert.Parameters.AddWithValue("$p", p.GetString()!);
+                    insert.Parameters.AddWithValue("$a", a.GetString()!);
+                    if (insert.ExecuteNonQuery() != 1)
+                        throw new InvalidOperationException("NOX_LEGACY_JSONL_INSERT_HOLD");
+                    rows++;
+                } catch (JsonException) { skipped++; }
+            }
+            if (skipped != 0 || !string.Equals(sourceSha, Sha256File(legacy), StringComparison.Ordinal)) {
+                tx.Rollback();
+                legacyImportHold = skipped != 0 ? "NOX_LEGACY_JSONL_INCOMPLETE_HOLD"
+                    : "NOX_LEGACY_JSONL_CHANGED_DURING_IMPORT_HOLD";
+                return;
+            }
+            foreach (var receiptId in new[] { sourceId, shaPrefix + sourceSha }) {
+                using var receipt = db.CreateCommand(); receipt.Transaction = tx;
+                receipt.CommandText = "INSERT INTO imported_sources(source,imported_at,rows) VALUES($s,$t,$n)";
+                receipt.Parameters.AddWithValue("$s", receiptId);
+                receipt.Parameters.AddWithValue("$t", DateTimeOffset.UtcNow.ToString("O"));
+                receipt.Parameters.AddWithValue("$n", rows);
+                if (receipt.ExecuteNonQuery() != 1)
+                    throw new InvalidOperationException("NOX_LEGACY_JSONL_RECEIPT_HOLD");
+            }
+            tx.Commit();
+        } catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) {
+            tx.Rollback();
+            legacyImportHold = "NOX_LEGACY_JSONL_READ_HOLD";
+        }
     }
 
     private async void OnMessage(object? sender, CoreWebView2WebMessageReceivedEventArgs e)
@@ -1630,10 +1665,65 @@ public partial class MainWindow : Window
     private void DeleteNote(long id)
     {
         if (id <= 0) throw new ArgumentException("Invalid note ID");
-        using var db = OpenDatabase(); using var cmd = db.CreateCommand();
-        cmd.CommandText = "DELETE FROM memory_notes WHERE id=$id AND persona=$persona";
-        cmd.Parameters.AddWithValue("$persona", ActivePersona());
-        cmd.Parameters.AddWithValue("$id",id);cmd.ExecuteNonQuery();
+        string persona = ActivePersona();
+        using var db = OpenDatabase();
+        string title, content, createdAt;
+        using (var lookup = db.CreateCommand())
+        {
+            lookup.CommandText = "SELECT title,content,created_at FROM memory_notes WHERE id=$id AND persona=$persona";
+            lookup.Parameters.AddWithValue("$id", id);
+            lookup.Parameters.AddWithValue("$persona", persona);
+            using var row = lookup.ExecuteReader();
+            if (!row.Read()) throw new InvalidOperationException("NOX_NOTE_OWNER_HOLD");
+            title = row.GetString(0);
+            content = row.GetString(1);
+            createdAt = row.GetString(2);
+        }
+        // A UI script cannot authorize deletion by itself. A missing, foreign,
+        // or changed note never becomes a successful deletion receipt.
+        string titlePreview = title.Length > 80 ? title[..80] + "…" : title;
+        var consent = MessageBox.Show(this,
+            "Удалить заметку «" + titlePreview + "» из Persona " + persona +
+            "?\\nПеред удалением NOX сохранит проверенную SQLite-копию для восстановления.",
+            "NOX — удаление локальной памяти", MessageBoxButton.YesNo,
+            MessageBoxImage.Warning, MessageBoxResult.No);
+        if (consent != MessageBoxResult.Yes) {
+            Send("notes.delete.denied", new { id, reason = "OWNER_DECLINED" });
+            return;
+        }
+
+        // Fail closed: a backup/quick_check/SHA failure must prevent DELETE.
+        CheckpointSqlite(db, "PRE_NOTE_DELETE");
+        using (var tx = db.BeginTransaction())
+        {
+            using var command = db.CreateCommand();
+            command.Transaction = tx;
+            command.CommandText = """
+                DELETE FROM memory_notes
+                WHERE id=$id AND persona=$persona
+                  AND title=$title AND content=$content AND created_at=$created
+                """;
+            command.Parameters.AddWithValue("$id", id);
+            command.Parameters.AddWithValue("$persona", persona);
+            command.Parameters.AddWithValue("$title", title);
+            command.Parameters.AddWithValue("$content", content);
+            command.Parameters.AddWithValue("$created", createdAt);
+            if (command.ExecuteNonQuery() != 1)
+                throw new InvalidOperationException("NOX_NOTE_CHANGED_OR_FOREIGN_HOLD");
+            tx.Commit();
+        }
+        // Confirm the exact row is absent on a new connection, not just that
+        // SQLite accepted a command. The pre-delete snapshot is retained.
+        using (var verifyDb = OpenDatabase())
+        using (var verify = verifyDb.CreateCommand())
+        {
+            verify.CommandText = "SELECT COUNT(*) FROM memory_notes WHERE id=$id AND persona=$persona";
+            verify.Parameters.AddWithValue("$id", id);
+            verify.Parameters.AddWithValue("$persona", persona);
+            if (Convert.ToInt64(verify.ExecuteScalar()) != 0)
+                throw new InvalidOperationException("NOX_NOTE_DELETE_READBACK_HOLD");
+        }
+        Send("notes.delete.receipt", new { id, persona, deleted = true, backupVerified = true });
     }
     private void SaveFeedback(int rating,string answer)
     {

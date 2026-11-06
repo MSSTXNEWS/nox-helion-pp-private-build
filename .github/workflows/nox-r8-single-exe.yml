@@ -32,6 +32,10 @@ jobs:
           Copy-Item './coordination/nox-r8/tests/test_r8_persona_memory.py' './r8/test_r8_persona_memory.py'
           python './r8/test_r8_persona_memory.py'
           if ($LASTEXITCODE -ne 0) { throw 'D03_PERSONA_MEMORY_SOURCE_HOLD' }
+          # D03 staged: actual legacy JSONL admission must snapshot first and fail closed.
+          Copy-Item './coordination/nox-r8/tests/test_r8_d03_legacy_import_no_loss.py' './r8/test_r8_d03_legacy_import_no_loss.py'
+          python './r8/test_r8_d03_legacy_import_no_loss.py'
+          if ($LASTEXITCODE -ne 0) { throw 'D03_LEGACY_JSONL_NO_LOSS_SOURCE_HOLD' }
           Copy-Item './coordination/nox-r8/tests/test_r8_gpu_fallback.cjs' './r8/test_r8_gpu_fallback.cjs'
           node './r8/test_r8_gpu_fallback.cjs'
           if ($LASTEXITCODE -ne 0) { throw 'D04_GPU_FALLBACK_SOURCE_HOLD' }
