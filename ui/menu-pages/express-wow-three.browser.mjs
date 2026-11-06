@@ -46,6 +46,21 @@ try{
   await page.locator('#actions button[data-action="CHAT"]').click();
   assert.equal(await page.locator('.nox-chat-log').count(),1,'Original native CHAT remains reachable');
   assert.equal(await page.locator('.nox-loquix-typing').count(),0,'No fake streaming indicator before native request');
+  const gaugeTruth=await page.evaluate(()=>{
+    const lib=window.NOXNativeGauge;
+    if(typeof window.Gauge!=='function'||!lib)return {loaded:false};
+    const section=document.createElement('section');document.body.append(section);
+    const accepted=lib.mount(section,'gpu_usage_percent',42);
+    const rejectedA=lib.mount(section,'gpu_usage_percent',-1);
+    const rejectedB=lib.mount(section,'memory_gb',42);
+    const rejectedC=lib.mount(section,'cpu_utilization',null);
+    const realSVG=section.querySelector('svg')!==null;
+    const count=section.querySelectorAll('.nox-native-svg-gauge').length;
+    section.remove();
+    return {loaded:true,accepted,rejectedA,rejectedB,rejectedC,realSVG,count};
+  });
+  assert.deepEqual(gaugeTruth,{loaded:true,accepted:true,rejectedA:false,rejectedB:false,rejectedC:false,realSVG:true,count:1});
+  assert.equal(await page.locator('.nox-native-svg-gauge').count(),0,'Never display telemetry without authenticated native receipt');
   await page.waitForFunction(()=>document.querySelector('.core-section')?.dataset.noxZodiac==='active');
   assert.equal(await page.locator('.nox-zodiac-lines circle').count(),8,'ZODIAC must connect exactly eight original CoreID nodes');
   assert.equal(await page.locator('#cores button.core').count(),8,'ZODIAC cannot duplicate native CoreID buttons');
@@ -62,5 +77,5 @@ try{
  assert.equal(await reduced.locator('canvas.nox-wow-three').isVisible(),false);
  assert.equal(await reduced.locator('canvas.nox-halo-radar').count(),1,'HALO static fallback must exist under reduced motion');
  await reduced.close();
- console.log('PASS: real Chromium HALO + HELIODON + AETHER + WebGL MAX/ECO, 390/800/1920 widths, nav, Reduced Motion');
+ console.log('PASS: real Chromium HALO + HELIODON + AETHER + SVG Gauge + WebGL MAX/ECO, 390/800/1920 widths, nav, Reduced Motion');
 } finally {await browser.close();}
