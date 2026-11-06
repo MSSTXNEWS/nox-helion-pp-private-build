@@ -8,8 +8,11 @@ const read = path => readFileSync(path, "utf8");
 const blob = s => {
  const bytes=Buffer.from(s,"utf8");
  return createHash("sha1").update(Buffer.concat([
-  Buffer.from("blob "+bytes.length+"\\0"),bytes])).digest("hex");
+  Buffer.from("blob "+bytes.length+"\0"),bytes])).digest("hex");
 };
+test("B02 Git blob helper uses canonical Git NUL byte header",()=>{
+ assert.equal(blob("test content\n"),"d670460b4b4aece5915caf5c68d12f560a9fe3e4");
+});
 test("B02 original chatModels fail-closed owner receipt; dependent staging pins",()=>{
  const main=read("coordination/e06/MainWindow.NativeP02.cs");
  const start=main.indexOf('if (action == "chatModels") {');
