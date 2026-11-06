@@ -9,7 +9,8 @@
     "Do not introduce a second AI chat or native backend",
     "React-specific packages and licensing-restricted donors require separate compatibility gate before mounting",
     "All native actions and real telemetry must remain truthful",
-    "Tabler demo (#11) intentionally shares upstream with #10; loading twice would be a duplicate. No fake page."
+    "Tabler demo (#11) intentionally shares upstream with #10; loading twice would be a duplicate. No fake page.",
+    "SVG Gauge (#15) selectively integrated, never displays synthetic metrics; gauge only rendered after nativeCompleted and routeId check."
   ],
   "entries": [
     {
@@ -135,7 +136,10 @@
       "id": 15,
       "name": "SVG Gauge",
       "source_verified": true,
-      "runtime_status": "source_only_not_connected"
+      "runtime_status": "implemented_selective",
+      "component": "ui/menu-pages/vendor/svg-gauge.min.js",
+      "scope": "only percentages 0..100 from confirmed native gpu.preflight and training receipts",
+      "proof": "Chromium 42151215045 SUCCESS"
     },
     {
       "id": 16,
@@ -295,20 +299,22 @@
     }
   ],
   "latest_acceptance": {
-    "run_id": 42146259278,
+    "run_id": 42151215045,
     "status": "SUCCESS",
-    "scope": "Chromium source-level UI integration, not Windows WebView2 acceptance",
-    "commit_tested": "9da4ad964dd42703e58ca29ae4f4e120eb94c99a",
+    "scope": "real headless Chromium + source-level gauge truth tests; Windows Edge separate",
     "checks": [
-      "Tabler navigable card",
-      "Zodiac 8 actual CoreIDs",
-      "Loquix defined element",
-      "HALO canvas MAX/ECO",
-      "HELIODON geometry shared renderer",
-      "AETHER glass MAX/ECO",
-      "Three.js WebGL",
+      "SVG Gauge runtime and rejection of nonpercent untrusted metrics",
+      "HALO",
+      "HELIODON",
+      "Three",
+      "AETHER",
+      "Loquix",
+      "Tabler",
+      "ZODIAC",
+      "390/800/1920",
       "Reduced Motion",
-      "390 800 1920"
-    ]
+      "ECO"
+    ],
+    "windows_webview2": "NOT_CONFIRMED"
   }
 }
