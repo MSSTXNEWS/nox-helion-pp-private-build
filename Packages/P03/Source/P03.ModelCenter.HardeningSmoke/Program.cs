@@ -893,6 +893,35 @@ try
     Assert(sameChild is not null && sameChildAgain?.Id == sameChild.Id &&
         (await sameRetryQueue.ReadAsync()).Count == 2,
         "F09M original exact-rights retry stays idempotent across instances");
+    // D04: a preexisting GGUF retry must retain identical approved native rights
+    // and expected real weight SHA before returning the same retry jobId.
+    var ggufRetryRoot = Path.Combine(atomicRoot, "retry-gguf-native-identity");
+    var ggufRetryQueue = new ModelDownloadQueueStore(ggufRetryRoot);
+    var ggufParent = await ggufRetryQueue.EnqueueVerifiedGgufAsync("tinyllama:gguf-retry-pin",
+        d04File, d04Bytes.Length, d04Digest, "rights-fixture",
+        approved.LicenseEvidenceUri!.ToString());
+    await ggufRetryQueue.UpdateAsync(ggufParent.Id, j => j with { State = ModelJobState.Failed });
+    var ggufChild = await ggufRetryQueue.RetryAsync(ggufParent.Id);
+    Assert(ggufChild is not null && ggufChild.RetryOfJobId == ggufParent.Id,
+        "D04 genuine reviewed GGUF retry remains idempotent");
+    await ggufRetryQueue.UpdateAsync(ggufChild!.Id, j => j with { RightsReceiptId = "rights-swapped" });
+    var ggufQueueFile = Path.Combine(ggufRetryRoot, "p03-model-download-queue.json");
+    var ggufBeforeRights = await File.ReadAllBytesAsync(ggufQueueFile);
+    var ggufRightsHeld = false;
+    try { await ggufRetryQueue.RetryAsync(ggufParent.Id); }
+    catch (InvalidOperationException ex) when (ex.Message ==
+        "P03_RETRY_ACTIVE_ARTIFACT_REVIEW_CHANGED_HOLD") { ggufRightsHeld = true; }
+    Assert(ggufRightsHeld && ggufBeforeRights.SequenceEqual(await File.ReadAllBytesAsync(ggufQueueFile)),
+        "D04 modified GGUF retry rights cannot ACK or alter queue");
+    await ggufRetryQueue.UpdateAsync(ggufChild.Id, j => j with {
+        RightsReceiptId = "rights-fixture", ExpectedLocalSha256 = new string('c', 64) });
+    var ggufBeforeSha = await File.ReadAllBytesAsync(ggufQueueFile);
+    var ggufShaHeld = false;
+    try { await ggufRetryQueue.RetryAsync(ggufParent.Id); }
+    catch (InvalidOperationException ex) when (ex.Message ==
+        "P03_RETRY_ACTIVE_ARTIFACT_REVIEW_CHANGED_HOLD") { ggufShaHeld = true; }
+    Assert(ggufShaHeld && ggufBeforeSha.SequenceEqual(await File.ReadAllBytesAsync(ggufQueueFile)),
+        "D04 modified GGUF weight SHA cannot ACK or alter queue");
     Console.WriteLine("P03_RETRY_AUTHORITY_REGRESSION_PASS 4/4");
     // Legacy records remain readable but floating revisions cannot become
     // new native transfers or manufacture retry rights.

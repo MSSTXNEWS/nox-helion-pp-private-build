@@ -569,6 +569,28 @@ public sealed class ModelDownloadQueueStore
                 string.Equals(job.RightsReceiptId, failed.RightsReceiptId, StringComparison.Ordinal) &&
                 string.Equals(job.LicenseSource, failed.LicenseSource, StringComparison.Ordinal) &&
                 job.LicenseAcknowledged == failed.LicenseAcknowledged;
+            // Prevent returning an existing retry as a native owner ACK when
+            // rights, weight SHA, or P04 merged approval have changed in durable
+            // history. A merged child has a new tag, bypassing parent-tag scans.
+            bool SameReviewedArtifact(ModelJob candidate) =>
+                candidate.Kind == failed.Kind &&
+                candidate.LicenseAcknowledged == failed.LicenseAcknowledged &&
+                string.Equals(candidate.LicenseSource, failed.LicenseSource, StringComparison.Ordinal) &&
+                string.Equals(candidate.RightsReceiptId, failed.RightsReceiptId, StringComparison.Ordinal) &&
+                string.Equals(candidate.LocalPath, failed.LocalPath, StringComparison.Ordinal) &&
+                candidate.ExpectedLocalBytes == failed.ExpectedLocalBytes &&
+                string.Equals(candidate.ExpectedLocalSha256, failed.ExpectedLocalSha256,
+                    StringComparison.OrdinalIgnoreCase) &&
+                (failed.Kind == ModelJobKind.GgufImport
+                    ? string.Equals(candidate.ModelTag, failed.ModelTag, StringComparison.Ordinal) &&
+                      HasReviewedGgufJobAuthority(candidate)
+                    : failed.Kind == ModelJobKind.SafetensorsImport &&
+                      candidate.MergedImport == failed.MergedImport &&
+                      HasReviewedMergedJobAuthority(candidate));
+            bool SameRetryAuthority(ModelJob candidate) =>
+                failed.Kind == ModelJobKind.OllamaPull
+                    ? SameApprovedPull(candidate) && HasReviewedPullAuthority(candidate)
+                    : SameReviewedArtifact(candidate);
             var activeTagJobs = jobs.Where(j => HasActiveTag(j, failed.ModelTag)).ToArray();
             // Durable STOP cannot be reused as approval for a new retry.
             if (activeTagJobs.Any(j => j.State == ModelJobState.Cancelling))
@@ -577,10 +599,10 @@ public sealed class ModelDownloadQueueStore
                 (activeTagJobs.Length != 1 ||
                  activeTagJobs[0].Kind != failed.Kind ||
                  activeTagJobs[0].RetryOfJobId != failed.Id ||
-                 (failed.Kind == ModelJobKind.OllamaPull && !SameApprovedPull(activeTagJobs[0]))))
+                 !SameRetryAuthority(activeTagJobs[0])))
                 throw new InvalidOperationException(failed.Kind == ModelJobKind.OllamaPull
                     ? "P03_RETRY_ACTIVE_PULL_REVIEW_CHANGED_HOLD"
-                    : "P03_RETRY_ACTIVE_TAG_CONFLICT_HOLD");
+                    : "P03_RETRY_ACTIVE_ARTIFACT_REVIEW_CHANGED_HOLD");
             var existingRetry = jobs.FirstOrDefault(j => j.RetryOfJobId == failed.Id &&
                 (j.State is ModelJobState.Queued or ModelJobState.Running or ModelJobState.Cancelling or ModelJobState.Completed));
             if (existingRetry is not null)
@@ -589,8 +611,10 @@ public sealed class ModelDownloadQueueStore
                 // above cannot observe its pending STOP; guard the retry itself.
                 if (existingRetry.State == ModelJobState.Cancelling)
                     throw new InvalidOperationException("P03_RETRY_ACTIVE_STOP_PENDING_HOLD");
-                if (failed.Kind == ModelJobKind.OllamaPull && !SameApprovedPull(existingRetry))
-                    throw new InvalidOperationException("P03_RETRY_ACTIVE_PULL_REVIEW_CHANGED_HOLD");
+                if (!SameRetryAuthority(existingRetry))
+                    throw new InvalidOperationException(failed.Kind == ModelJobKind.OllamaPull
+                        ? "P03_RETRY_ACTIVE_PULL_REVIEW_CHANGED_HOLD"
+                        : "P03_RETRY_ACTIVE_ARTIFACT_REVIEW_CHANGED_HOLD");
                 return existingRetry;
             }
             var now = DateTimeOffset.UtcNow;
