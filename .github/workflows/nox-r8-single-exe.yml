@@ -23,6 +23,54 @@ jobs:
           dotnet publish './r8/src/NOX.HELION.csproj' -c Release -r win-x64 --self-contained true -o './out' -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:PublishTrimmed=false
           if ($LASTEXITCODE -ne 0) { throw 'BUILD_FAILED' }
           Get-FileHash './out/NOX.HELION.exe' -Algorithm SHA256
+      - name: Native WPF WebView2 eight-route smoke, isolated SQLite
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $exe=(Resolve-Path './out/NOX.HELION.exe').Path
+          $runId='NOX-R8-'+$env:GITHUB_RUN_ID
+          $started=[DateTime]::UtcNow
+          $p=Start-Process -FilePath $exe -WorkingDirectory (Split-Path $exe) -ArgumentList @('--nox-ui-smoke',"--nox-runid=$runId") -PassThru
+          try {
+            Wait-Process -Id $p.Id -Timeout 95 -ErrorAction Stop
+            $p.Refresh()
+            $file=Join-Path $env:LOCALAPPDATA "NOX_HELION/ui_selftest_$($p.Id).json"
+            if (!(Test-Path -LiteralPath $file)) { throw 'NOX_R8_UI_RECEIPT_MISSING' }
+            $n=Get-Content $file -Raw | ConvertFrom-Json
+            $sha=(Get-FileHash $exe -Algorithm SHA256).Hash
+            $stamp=[DateTimeOffset]::Parse([string]$n.checkedAt).UtcDateTime
+            if ($p.ExitCode -ne 0 -or $n.schema -ne 'NOX_WPF_UI_SMOKE_R7_V1' -or
+                $n.runId -cne $runId -or $n.pid -ne $p.Id -or
+                $stamp -lt $started -or !$n.wpfWebView2Accepted -or
+                $n.checks.real_webview2_eight_routes -ne 'PASS' -or
+                $n.checks.isolated_sqlite_path -ne 'PASS' -or
+                $n.checks.native_wpf_webview2_renderer -ne 'PASS' -or
+                ![string]::Equals($n.exeSha256,$sha,[StringComparison]::OrdinalIgnoreCase)) {
+              throw "NOX_R8_WINDOWS_UI_HOLD: $($n.error)"
+            }
+            Copy-Item $file './out/UI_SMOKE_RECEIPT.json' -Force
+            Write-Host "NOX_R8_WINDOWS_UI_NATIVE_PASS SHA256=$sha (local Qwen E2E not checked)"
+          } finally {
+            $p.Refresh()
+            if (!$p.HasExited) { Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue }
+          }
+      - name: Package launch helper and verified EXE
+        shell: pwsh
+        run: |
+          Copy-Item './r8/START_NOX.ps1' './out/START_NOX.ps1'
+          $script='@echo off'+[Environment]::NewLine+
+            'powershell.exe -NoProfile -File "%~dp0START_NOX.ps1"'+[Environment]::NewLine
+          [IO.File]::WriteAllText((Join-Path (Resolve-Path './out').Path 'START_NOX.cmd'),$script,[Text.Encoding]::ASCII)
+          Get-ChildItem './out' -File -Include '*.xml','*.pdb' | Remove-Item -Force -ErrorAction SilentlyContinue
+          $exe=(Resolve-Path './out/NOX.HELION.exe').Path
+          @{
+            schema='NOX_R8_NATIVE_SINGLE_EXE_V1';
+            source_sha256='a1ed386b4b9356c21a007c9c54dc2f98f27a25ede42bad91dafada99ddd70325';
+            exe_sha256=(Get-FileHash $exe -Algorithm SHA256).Hash.ToLowerInvariant();
+            compiled_and_native_ui='PASS'; local_qwen_e2e='NOT_TESTED';
+            canonical_full_d02='NOT_ACCEPTED'; full_v16='NOT_IMPLEMENTED';
+            accepted_full_release=$false
+          } | ConvertTo-Json | Set-Content './out/BUILD_RECEIPT.json' -Encoding UTF8
       - uses: actions/upload-artifact@v4
         with:
           name: NOX-R8-WIN64
