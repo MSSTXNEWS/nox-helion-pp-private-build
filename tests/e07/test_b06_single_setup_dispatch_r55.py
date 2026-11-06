@@ -56,15 +56,9 @@ class B06SingleSetupDispatch(unittest.TestCase):
         gate = source.split(
             "      - name: B06 exclusive immutable SetupSHA and previous-run admission\n", 1
         )[1].split("      - name: Fast source regression gate before heavy artifacts\n", 1)[0]
-        self.assertIn("$env:E07_SETUP_SHA -cnotmatch '^[0-9a-f]{64}
-    unittest.main()
-", gate)
-        self.assertIn("$env:E07_SOURCE_SHA -cnotmatch '^[0-9a-f]{40}
-    unittest.main()
-", gate)
-        self.assertIn("$env:E07_PRODUCER_RUN_ID -cnotmatch '^[1-9][0-9]{0,17}
-    unittest.main()
-", gate)
+        self.assertIn("$env:E07_SETUP_SHA -cnotmatch '^[0-9a-f]{64}$'", gate)
+        self.assertIn("$env:E07_SOURCE_SHA -cnotmatch '^[0-9a-f]{40}$'", gate)
+        self.assertIn("$env:E07_PRODUCER_RUN_ID -cnotmatch '^[1-9][0-9]{0,17}$'", gate)
         self.assertIn("E07_SAME_SETUP_PREVIOUS_RUN_HOLD", gate)
         self.assertIn("E07_DUPLICATE_HISTORY_INCOMPLETE_HOLD", gate)
         self.assertNotIn("\n        shell: pwsh\n", gate)
