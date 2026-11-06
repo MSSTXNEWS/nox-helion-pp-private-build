@@ -583,12 +583,17 @@ public partial class MainWindow
                 legacyReceipt.ValueKind != JsonValueKind.Object)
                 throw new NativePipeHold("NATIVE_MODEL_INVENTORY_OBJECT_HOLD");
             if (action == "chatModels") {
-                var models = legacyReceipt.TryGetProperty("models",out var list) &&
-                    list.ValueKind == JsonValueKind.Array
-                    ? list.Clone() : JsonSerializer.SerializeToElement(Array.Empty<string>());
-                var modelState = legacyReceipt.TryGetProperty("provider_state",out var ps) &&
-                    ps.ValueKind == JsonValueKind.String
-                    ? ps.GetString() : "HOLD";
+                // Native inventory is authoritative. A transport ACK with a
+                // missing/malformed catalog or provider state is not a valid
+                // chatModels reply. Preserve genuine OFFLINE as diagnostic.
+                if (!legacyReceipt.TryGetProperty("models",out var list) ||
+                    list.ValueKind != JsonValueKind.Array ||
+                    !legacyReceipt.TryGetProperty("provider_state",out var ps) ||
+                    ps.ValueKind != JsonValueKind.String ||
+                    string.IsNullOrWhiteSpace(ps.GetString()))
+                    throw new NativePipeHold("NATIVE_MODEL_INVENTORY_RECEIPT_HOLD");
+                var models = list.Clone();
+                var modelState = ps.GetString();
                 PostMessage(new {kind="chatModels",state=modelState,chatId,models,
                     history=Array.Empty<object>(),historyState="SELECT_NATIVE_PERSONA_SCOPE",
                     message="Модели из единого локального P02; история доступна в выбранной Persona."});
