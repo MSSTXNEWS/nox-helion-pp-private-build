@@ -4,7 +4,7 @@
  */
 export function mountNoxWow(canvas, THREE, host=window) {
   if (!canvas || !THREE?.WebGLRenderer) return null;
-  let renderer, scene, camera, points, geometry, material, observer, raf=0, ended=false;
+  let renderer, scene, camera, points, geometry, material, metalGeometry, metalMaterial, metalGroup, observer, raf=0, ended=false;
   const doc=canvas.ownerDocument, stage=canvas.parentElement;
   const reduce=host.matchMedia?.('(prefers-reduced-motion: reduce)');
   const allowed=()=>!ended && !reduce?.matches && doc.visibilityState!=='hidden' &&
@@ -30,9 +30,24 @@ export function mountNoxWow(canvas, THREE, host=window) {
     material=new THREE.PointsMaterial({color:0xb8eaff,size:.045,transparent:true,opacity:.74,depthWrite:false});
     points=new THREE.Points(geometry,material);
     scene.add(points);
+    // FORMWORK HELIODON (MIT): studio-lit metal geometry, integrated into the
+    // existing renderer, no second WebGL context or separate demo application.
+    metalGeometry=new THREE.TorusKnotGeometry(.24,.08,72,10,2,3);
+    metalMaterial=new THREE.MeshStandardMaterial({
+      color:0xc4c9d7,metalness:.8,roughness:.29,transparent:true,opacity:.83
+    });
+    metalGroup=new THREE.Group();
+    for(const side of [-1,1]){
+      const knot=new THREE.Mesh(metalGeometry,metalMaterial);
+      knot.position.set(side*3.2,side*.6,-.3);
+      metalGroup.add(knot);
+    }
+    const key=new THREE.DirectionalLight(0xffdabb,1.8);key.position.set(4,5,6);
+    const rim=new THREE.DirectionalLight(0x98d5ff,2.0);rim.position.set(-5,-1,4);
+    metalGroup.add(key,rim);scene.add(metalGroup);
   } catch {
     try{renderer?.dispose();renderer?.forceContextLoss?.();}catch{}
-    geometry?.dispose();material?.dispose();
+    geometry?.dispose();material?.dispose();metalGeometry?.dispose();metalMaterial?.dispose();
     return null;
   }
   let previous=0;
@@ -51,6 +66,8 @@ export function mountNoxWow(canvas, THREE, host=window) {
       previous=now;
       points.rotation.z=now*.000013;
       points.rotation.y=Math.sin(now*.00012)*.12;
+      metalGroup.rotation.y=now*.00011;
+      metalGroup.rotation.z=Math.sin(now*.00026)*.14;
       renderer.render(scene,camera);
     }
     raf=host.requestAnimationFrame(tick);
@@ -73,7 +90,7 @@ export function mountNoxWow(canvas, THREE, host=window) {
     host.removeEventListener('resize',sync);
     host.removeEventListener('pagehide',dispose);
     reduce?.removeEventListener?.('change',sync);
-    geometry.dispose();material.dispose();
+    geometry.dispose();material.dispose();metalGeometry?.dispose();metalMaterial?.dispose();
     renderer.dispose();
     try{renderer.forceContextLoss();}catch{}
   }
@@ -90,5 +107,5 @@ export function mountNoxWow(canvas, THREE, host=window) {
   host.addEventListener('pagehide',dispose);
   reduce?.addEventListener?.('change',sync);
   sync();
-  return {dispose,sync};
+  return {dispose,sync,metalCount:2};
 }
