@@ -239,21 +239,32 @@ public partial class MainWindow : Window
                         StringComparison.OrdinalIgnoreCase))
                     throw new InvalidOperationException("NOX_SETTINGS_RESTART_OWNER_DB_HOLD");
                 checks["isolated_sqlite_path"] = "PASS";
-                if (ReadPreferencesDictionary().GetValueOrDefault("performance") != "ECO")
+                var restoredPreferences = ReadPreferencesDictionary();
+                if (restoredPreferences.GetValueOrDefault("performance") != "ECO")
                     throw new InvalidOperationException("NOX_SETTINGS_RESTART_SQLITE_HOLD");
+                if (restoredPreferences.GetValueOrDefault("motion") != "off")
+                    throw new InvalidOperationException("NOX_SETTINGS_RESTART_MOTION_SQLITE_HOLD");
 
-                // NavigationCompleted sends settings.get through the real WPF
-                // WebView2 owner bridge. Require the embedded UI to display ECO.
+                // The second real WPF/WebView2 process must restore both the
+                // model mode and reduced-motion state from the same SQLite DB.
+                // A saved value without actual DOM behavior is not acceptance.
                 bool uiRestored = false;
                 for (int attempt = 0; attempt < 35; attempt++)
                 {
-                    var domMode = await Browser.CoreWebView2.ExecuteScriptAsync(
-                        "document.getElementById('performance')?.value");
-                    if (domMode == "\"ECO\"") { uiRestored = true; break; }
+                    var domSettings = await Browser.CoreWebView2.ExecuteScriptAsync("""
+                        (() => {
+                          const mode = document.getElementById('performance');
+                          const motion = document.getElementById('reduceMotion');
+                          return mode?.value === 'ECO' && motion?.checked === true &&
+                            document.body.classList.contains('reduced') &&
+                            !!motion.closest('label') && !motion.disabled;
+                        })()
+                        """);
+                    if (domSettings == "true") { uiRestored = true; break; }
                     await Task.Delay(100);
                 }
                 if (!uiRestored)
-                    throw new InvalidOperationException("NOX_SETTINGS_RESTART_WEBVIEW2_HOLD");
+                    throw new InvalidOperationException("NOX_SETTINGS_RESTART_MOTION_WEBVIEW2_HOLD");
                 checks["settings_wpf_owner_restart_readback"] = "PASS";
                 return;
             }
@@ -342,6 +353,69 @@ public partial class MainWindow : Window
                     throw new InvalidOperationException("Settings SQLite independent readback failed");
             }
             checks["settings_wpf_owner_sqlite_readback"] = "PASS";
+
+            // D06: use the real WebView2 checkbox/button and WPF settings.put
+            // owner route; never synthesize a SQLite row as a substitute.
+            var motionClick = await Browser.CoreWebView2.ExecuteScriptAsync("""
+                (() => {
+                  const motion = document.getElementById('reduceMotion');
+                  const save = document.getElementById('saveMotion');
+                  if (!motion || !save || !motion.closest('label')) return false;
+                  motion.checked = true;
+                  save.click();
+                  return true;
+                })()
+                """);
+            if (motionClick != "true")
+                throw new InvalidOperationException("NOX_SETTINGS_MOTION_BUTTON_HOLD");
+            bool motionPersisted = false;
+            for (int attempt = 0; attempt < 35; attempt++)
+            {
+                if (ReadPreferencesDictionary().GetValueOrDefault("motion") == "off")
+                { motionPersisted = true; break; }
+                await Task.Delay(100);
+            }
+            if (!motionPersisted)
+                throw new InvalidOperationException("NOX_SETTINGS_MOTION_OWNER_HOLD");
+            using (var independentConnection = OpenDatabase())
+            using (var readMotion = independentConnection.CreateCommand())
+            {
+                readMotion.CommandText = "SELECT value FROM preferences WHERE key='motion'";
+                if (!string.Equals(readMotion.ExecuteScalar() as string, "off", StringComparison.Ordinal))
+                    throw new InvalidOperationException("NOX_SETTINGS_MOTION_SQLITE_HOLD");
+            }
+            checks["settings_wpf_motion_sqlite_readback"] = "PASS";
+
+            // D06: reject a foreign key through the real native owner route.
+            // Check both the bounded denial displayed in WebView2 and no
+            // foreign preference row after SQLite COMMIT.
+            var denialPost = await Browser.CoreWebView2.ExecuteScriptAsync("""
+                (() => {
+                  if (!window.chrome?.webview) return false;
+                  window.chrome.webview.postMessage({type:'settings.put',key:'foreign',value:'on'});
+                  return true;
+                })()
+                """);
+            if (denialPost != "true")
+                throw new InvalidOperationException("NOX_SETTINGS_DENIAL_ROUTE_HOLD");
+            bool refusalVisible = false;
+            for (int attempt = 0; attempt < 35; attempt++)
+            {
+                var text = await Browser.CoreWebView2.ExecuteScriptAsync(
+                    "document.getElementById('personaStatus')?.textContent.includes('NOX_SETTINGS_REJECTED')");
+                if (text == "true") { refusalVisible = true; break; }
+                await Task.Delay(100);
+            }
+            if (!refusalVisible)
+                throw new InvalidOperationException("NOX_SETTINGS_DENIAL_UI_HOLD");
+            using (var verifyForeign = OpenDatabase())
+            using (var cmdForeign = verifyForeign.CreateCommand())
+            {
+                cmdForeign.CommandText = "SELECT COUNT(*) FROM preferences WHERE key='foreign'";
+                if (Convert.ToInt64(cmdForeign.ExecuteScalar()) != 0)
+                    throw new InvalidOperationException("NOX_SETTINGS_FOREIGN_KEY_WRITTEN_HOLD");
+            }
+            checks["settings_foreign_key_denial"] = "PASS";
             checks["native_wpf_webview2_renderer"] = Browser.CoreWebView2 != null ? "PASS" : "FAIL";
             if (Browser.CoreWebView2 == null) throw new InvalidOperationException("WebView2 unavailable");
         }
@@ -356,6 +430,7 @@ public partial class MainWindow : Window
                 ? new[] { "isolated_sqlite_path", "settings_wpf_owner_restart_readback" }
                 : new[] { "real_webview2_eight_routes", "real_webview2_keyboard_routes",
                           "isolated_sqlite_path", "settings_wpf_owner_sqlite_readback",
+                          "settings_wpf_motion_sqlite_readback", "settings_foreign_key_denial",
                           "native_wpf_webview2_renderer" };
             bool accepted = error == null && checks.Count == requiredChecks.Length &&
                 requiredChecks.All(k => checks.TryGetValue(k, out var result) && result == "PASS")
