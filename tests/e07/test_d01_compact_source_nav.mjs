@@ -106,3 +106,59 @@ test('D01 MODELS and LEARN preserve original owner and HOLD on synchronous owner
   assert.match(state.textContent,/HOLD/,'no optimistic ACK after owner failure');
  }
 });
+
+
+test('D01 original SETTINGS/CHAT WebView2 teardown is HOLD and never repeated',()=>{
+ const begin=source.indexOf("nav.addEventListener('click',event=>{");
+ const end=source.indexOf("\n// Read-only original A1",begin);
+ assert.ok(begin>=0&&end>begin);
+ const handler=source.slice(begin,end);
+ function run(name,fault){
+  let callback,menuActive=false,detailActive=false,chatActive=false,prevented=false;
+  const counts={menu:0,tile:0,back:0,chat:0},state={textContent:''};
+  const primary={closest(){return primary},getClientRects:()=>[1],
+   getAttribute:k=>k==='data-nox-primary'?name:null};
+  const nav={contains:()=>true,addEventListener:(_kind,fn)=>callback=fn};
+  const menu={tagName:'BUTTON',isConnected:true,disabled:false,click(){
+   counts.menu++;if(fault==='menu')throw Error('menu gone');menuActive=true}};
+  const tile={tagName:'BUTTON',isConnected:true,disabled:false,getClientRects:()=>[1],
+   focus(){if(fault==='tileFocus')throw Error('tile focus gone');document.activeElement=tile},
+   click(){counts.tile++;if(fault==='tile')throw Error('tile owner gone');detailActive=true}};
+  const back={tagName:'BUTTON',isConnected:true,disabled:false,getClientRects:()=>[1],
+   getAttribute:k=>k==='aria-label'?'← Назад в меню':null,
+   focus(){counts.back++;if(fault==='backFocus')throw Error('back focus gone');document.activeElement=back}};
+  const chat={tagName:'BUTTON',isConnected:true,disabled:false,click(){
+   counts.chat++;if(fault==='chat')throw Error('chat gone');chatActive=true}};
+  const document={activeElement:null,querySelectorAll:s=>s==='.nav button[data-screen="menu"]'?[menu]:
+   s==='button.tile[data-menu-index="7"]'?[tile]:s==='#menu-detail button'?[back]:[],
+   getElementById:id=>id==='menu'?{classList:{contains:k=>k==='active'&&menuActive}}:
+    id==='menu-detail'?{classList:{contains:k=>k==='active'&&detailActive}}:
+    id==='chat'?{classList:{contains:k=>k==='active'&&chatActive}}:null};
+  Function('nav','state','document','originalPrimaryButtons','verifiedOriginalPrimaryDock',
+   'originalInstallTransportPresent','originalNavigationAllowed','visibleOriginalOwnerTarget',
+   'findOriginalControl','findOriginalScreen',handler)(
+   nav,state,document,[primary],()=>true,()=>true,()=>true,()=>true,
+   n=>n==='CHAT'?chat:null,()=>null);
+  let error=null;
+  try{callback({target:primary,isTrusted:true,preventDefault(){prevented=true}})}
+  catch(err){error=err}
+  return {error,counts,state:state.textContent,prevented,menuActive,detailActive,chatActive,focused:document.activeElement===back};
+ }
+ for(const fault of ['menu','tileFocus','tile','backFocus']){
+  const result=run('SETTINGS',fault);
+  assert.equal(result.error,null,'no uncaught original R11 navigation '+fault);
+  assert.equal(result.prevented,true);
+  assert.match(result.state,/HOLD/);
+  assert.ok(result.counts.menu<=1&&result.counts.tile<=1&&result.counts.back<=1);
+ }
+ const ok=run('SETTINGS','');
+ assert.equal(ok.error,null);assert.equal(ok.focused,true);
+ assert.equal(ok.menuActive,true);assert.equal(ok.detailActive,true);
+ assert.equal(ok.counts.menu,1);assert.equal(ok.counts.tile,1);assert.equal(ok.counts.back,1);
+ const chatBad=run('CHAT','chat');
+ assert.equal(chatBad.error,null);assert.equal(chatBad.counts.chat,1);
+ assert.equal(chatBad.prevented,true);assert.match(chatBad.state,/HOLD/);
+ const chatOk=run('CHAT','');
+ assert.equal(chatOk.error,null);assert.equal(chatOk.counts.chat,1);
+ assert.equal(chatOk.chatActive,true);assert.doesNotMatch(chatOk.state,/HOLD/);
+});

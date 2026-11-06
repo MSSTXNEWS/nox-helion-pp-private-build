@@ -376,20 +376,23 @@ nav.addEventListener('click',event=>{
       !originalNavigationAllowed(systemTiles[0])){
      state.textContent='SETTINGS: исходное направление недоступно · HOLD';return;
    }
-   menuEntries[0].click();
+   try{menuEntries[0].click();}
+   catch{state.textContent='SETTINGS: исходное MENU завершилось исключением · HOLD';return;}
    const tile=systemTiles[0];
    if(!document.getElementById('menu')?.classList.contains('active')||
       tile.getClientRects().length===0){
      state.textContent='SETTINGS: исходное MENU не открылось · HOLD';return;
    }
-   tile.focus({preventScroll:false});
+   try{tile.focus({preventScroll:false});}
+   catch{state.textContent='SETTINGS: фокус исходной СИСТЕМЫ завершился исключением · HOLD';return;}
    if(document.activeElement!==tile){
      state.textContent='SETTINGS: системная кнопка не получила фокус · HOLD';return;
    }
    if(!visibleOriginalOwnerTarget(tile)){
      state.textContent='SETTINGS: исходная системная кнопка перекрыта · HOLD';return;
    }
-   tile.click();
+   try{tile.click();}
+   catch{state.textContent='SETTINGS: исходная СИСТЕМА завершилась исключением · HOLD';return;}
    if(!document.getElementById('menu-detail')?.classList.contains('active')){
      state.textContent='SETTINGS: исходная СИСТЕМА не открылась · HOLD';return;
    }
@@ -404,7 +407,8 @@ nav.addEventListener('click',event=>{
    if(backButtons.length!==1||backButtons[0].getClientRects().length===0){
      state.textContent='SETTINGS: исходная обратная кнопка не уникальна/скрыта · HOLD';return;
    }
-   backButtons[0].focus({preventScroll:false});
+   try{backButtons[0].focus({preventScroll:false});}
+   catch{state.textContent='SETTINGS: фокус обратной кнопки завершился исключением · HOLD';return;}
    if(document.activeElement!==backButtons[0]||
       !visibleOriginalOwnerTarget(backButtons[0]))
      state.textContent='SETTINGS: исходная обратная кнопка без фокуса · HOLD';
@@ -417,7 +421,8 @@ nav.addEventListener('click',event=>{
  if(original.tagName==='BUTTON'&&!originalNavigationAllowed(original)){
    state.textContent=name+': исходная навигация отключена · HOLD';return;
  }
- original.click();
+ try{original.click();}
+ catch{state.textContent=name+': исходный переход завершился исключением · HOLD';return;}
  if(name==='CHAT'&&!document.getElementById('chat')?.classList.contains('active'))
    state.textContent='CHAT: исходный экран не открылся · HOLD';
 });
