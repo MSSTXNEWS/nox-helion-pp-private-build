@@ -1,0 +1,29 @@
+name: NOX R8 Windows desktop compilation
+on:
+  push:
+    branches: [feature/nox-r8-liquid-one-exe-20261106]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Compile from exact source
+        shell: pwsh
+        run: |
+          $zip='coordination/nox-r8/NOX_R8_SOURCE.zip'
+          $hash=(Get-FileHash $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($hash -ne 'a1ed386b4b9356c21a007c9c54dc2f98f27a25ede42bad91dafada99ddd70325') { throw 'SOURCE_HASH_MISMATCH' }
+          Expand-Archive $zip -DestinationPath './r8' -Force
+          dotnet publish './r8/src/NOX.HELION.csproj' -c Release -r win-x64 --self-contained true -o './out' -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:PublishTrimmed=false
+          if ($LASTEXITCODE -ne 0) { throw 'BUILD_FAILED' }
+          Get-FileHash './out/NOX.HELION.exe' -Algorithm SHA256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NOX-R8-WIN64
+          path: out/
