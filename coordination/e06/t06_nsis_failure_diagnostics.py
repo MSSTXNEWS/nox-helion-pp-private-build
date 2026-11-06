@@ -42,6 +42,55 @@ def verify_failed_setup_identity(owner, failure: dict, evidence: dict) -> None:
                       'T06_NSIS_DIAGNOSTICS_SETUP_IDENTITY_HOLD')
 
 
+def readonly_rollback_backup_verifier(owner, backup: Path) -> dict:
+    """CI-only independent read-only probe following a FAILED original rollback.
+
+    Never runs Setup, restores, deletes, or accepts an independent E07 case.
+    Identifies whether the exact staged PowerShell 5.1 backup verifier itself
+    accepts the backup after native NSIS returned nonzero.
+    """
+    result = {'status': 'NOT_VERIFIED', 'release_accepted': False,
+              'independent_e07': 'NOT_RUN', 'original_rollback_exit_unchanged': True}
+    script = owner.ROOT / 'work/e06/staged/R11/Installer/Verify-Payload.ps1'
+    manifest = backup / 'payload.sha256.json'
+    if not (owner.regular(script) and owner.regular(manifest) and
+            owner.plain_parents(script, owner.ROOT) and
+            owner.plain_parents(manifest, Path(backup.anchor))):
+        result['status'] = 'SOURCE_OR_BACKUP_UNAVAILABLE_HOLD'
+        return result
+    try:
+        raw = script.read_bytes()
+    except OSError:
+        result['status'] = 'STAGED_VERIFIER_READ_HOLD'
+        return result
+    guards = (b'Get-P01VerifiedSha256', b'Assert-P01UniqueManifestMembers',
+              b'Assert-NoReparseAncestors', b'AllowInstalledUserFiles',
+              b'AllowInstalledMetadata', b'P01_PAYLOAD_VERIFY_FAILED')
+    if not (2048 <= len(raw) <= 131072 and all(raw.count(g) >= 1 for g in guards)):
+        result['status'] = 'STAGED_VERIFIER_CONTRACT_HOLD'
+        return result
+    result['staged_verifier_sha256'] = hashlib.sha256(raw).hexdigest()
+    # Exact original CI-owned staging only. This verifier never writes a file.
+    observed = owner.run([
+        'powershell.exe', '-NoProfile', '-NonInteractive',
+        '-ExecutionPolicy', 'Bypass', '-File', str(script),
+        '-Root', str(backup), '-Manifest', str(manifest),
+        '-AllowInstalledMetadata', '-AllowInstalledUserFiles'], 130)
+    code = observed.get('code')
+    result['verifier_exit_code'] = code if type(code) is int else None
+    # Keep raw stderr/paths out of persistent receipts.
+    tail = str(observed.get('stdout_tail', '')) + '\n' + str(observed.get('stderr_tail', ''))
+    if code == 0 and 'P01_PAYLOAD_SHA256_PASS' in tail:
+        result['status'] = 'READ_ONLY_BACKUP_VERIFIER_PASS_NOT_ROLLBACK'
+    elif 'ParameterBinding' in tail or 'parameter cannot be found' in tail:
+        result['status'] = 'BACKUP_VERIFIER_PARAMETER_BINDING_HOLD'
+    elif 'P01_PAYLOAD_VERIFY_FAILED' in tail:
+        result['status'] = 'BACKUP_VERIFIER_PAYLOAD_ADMISSION_HOLD'
+    else:
+        result['status'] = 'BACKUP_VERIFIER_EXECUTION_HOLD'
+    return result
+
+
 def collect(owner, *, platform_name=None, env=None):
     env = os.environ if env is None else env
     platform_name = sys.platform if platform_name is None else platform_name
@@ -160,6 +209,7 @@ def collect(owner, *, platform_name=None, env=None):
                 else:
                     snapshot['first_failure'] = 'USER_PROBE_INODE_UNSAFE'
 
+        report['rollback_diagnostic']['attested_backup_verifier'] = readonly_rollback_backup_verifier(owner, Path(str(install) + '.__p01_previous'))
     # Do not run either a failed app or an arbitrary residual script. Admit the
     # existing reviewer's verifier only if it matches its committed Git bytes.
     verifier_rel = 'stage/proposals/P01/C09/Installer/Verify-Payload.ps1'
