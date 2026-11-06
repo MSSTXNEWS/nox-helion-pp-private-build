@@ -25,11 +25,11 @@ jobs:
           $env:PYTHONUTF8='1'
           $zip='coordination/nox-tech-r9/NOX_TECH_R9_SOURCE.zip'
           $actual=(Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
-          if ($actual -cne '07c74b8513a675c878ed7abdbd7e379fab3b7878e66fe69c0df59a8cb3e2b32b') { throw 'TECH_R9_SOURCE_ARCHIVE_SHA_MISMATCH' }
+          if ($actual -cne '87807f3ef6bfb455f75b16341cd35beda6074a885874b5a170fa8377fa31e758') { throw 'TECH_R9_SOURCE_ARCHIVE_SHA_MISMATCH' }
           Expand-Archive -LiteralPath $zip -DestinationPath './tech-r9' -Force
           & python -m pip install --disable-pip-version-check 'Pygments==2.18.0'
           if ($LASTEXITCODE -ne 0) { throw 'QA_LEXER_INSTALL_FAILED' }
-          foreach ($test in @('verify_package.py','test_engine_lifecycle.py','test_knowledge_schema.py','test_r7_ui_smoke.py','test_r8_fx_contract.py','test_r5_acceptance.py','validate_source.py')) {
+          foreach ($test in @('verify_package.py','test_engine_lifecycle.py','test_persona_migration.py','test_knowledge_schema.py','test_r7_ui_smoke.py','test_r8_fx_contract.py','test_r5_acceptance.py','validate_source.py')) {
             & python "./tech-r9/$test"
             if ($LASTEXITCODE -ne 0) { throw "NOX_R9_TEST_FAILED_$test" }
           }
@@ -44,7 +44,7 @@ jobs:
           Copy-Item './tech-r9/START_NOX.ps1' './NOX_TECH_R9_WIN64/START_NOX.ps1'
           @{
             product='NOX HELION TECH R9'
-            source_sha256='07c74b8513a675c878ed7abdbd7e379fab3b7878e66fe69c0df59a8cb3e2b32b'
+            source_sha256='87807f3ef6bfb455f75b16341cd35beda6074a885874b5a170fa8377fa31e758'
             exe_sha256=$hash
             windows_compile='PASS'
             native_webview2='NOT_TESTED'
