@@ -17,7 +17,7 @@ $env:TMP=$env:TEMP
 foreach($d in @($env:HF_HOME,$env:PIP_CACHE_DIR,$env:TEMP)){New-Item -ItemType Directory -Force $d|Out-Null}
 $py=Get-Command py -ErrorAction SilentlyContinue
 if($py){$P=$py.Source;$Prefix=@('-3')}else{$a=Get-Command python -ErrorAction SilentlyContinue;if(!$a){throw 'Python 3 missing'};$P=$a.Source;$Prefix=@()}
-foreach($file in @('genesis_v9_audit.py','genesis_segment1.py','identity_behavior.py','soul_gpu.py','genesis_live_cycle.py','forge_genesis_server_v8.py','forge_focus_v4_canonical_live.html')){
+foreach($file in @('genesis_v9_audit.py','genesis_segment1.py','identity_behavior.py','soul_gpu.py','genesis_live_cycle.py','forge_genesis_server_v8.py','forge_focus_v4_canonical_live.html','nox_thermal_sensors_v1.py')){
  if(!(Test-Path (Join-Path $Source $file))){throw "Missing source: $file"}
 }
 # Reconcile old adapters and training first; no duplicate training.
