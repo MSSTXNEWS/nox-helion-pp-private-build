@@ -299,7 +299,7 @@ RequireStreamDuplicateControlHold("{\"completed\":1,\"completed\":2,\"total\":3}
     "B04 duplicate completed cannot forge progress");
 RequireStreamDuplicateControlHold("{\"completed\":7,\"total\":5,\"total\":10}",
     "B04 duplicate total cannot hide impossible progress");
-RequireStreamDuplicateControlHold("{\"\\\\u0073tatus\":\"error\",\"status\":\"success\"}",
+RequireStreamDuplicateControlHold("{\"\\u0073tatus\":\"error\",\"status\":\"success\"}",
     "B04 escaped duplicate status is not unique owner evidence");
 Assert(ModelLocalAttestation.ParseVerifiedEvent("{\"status\":\"downloading\",\"note\":1,\"note\":2}").Status == "downloading",
     "B04 non-control metadata leaves standard stream status valid");
