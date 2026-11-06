@@ -52,3 +52,28 @@ assert.equal(a.nodes.prompt.value, '');
 assert.equal(a.context.busy, true);
 assert.equal(a.context.activeChatId, 'r8d01_owner_1234');
 console.log('D01 R8 SOURCE_ONLY PASS: offline draft, 32000 guard, empty, busy, native dispatch');
+
+/* D01 compact/IME source regression: execute the production keyboard handler.
+   Scrollable compact panel must keep native SEND/STOP/routes accessible. */
+assert.match(html, /\.side\{height:auto;overflow-x:hidden;overflow-y:auto\}/,
+  'D01_COMPACT_SIDE_SCROLL_HOLD');
+assert.doesNotMatch(html, /\.side\{height:auto;overflow:hidden\}/);
+const keyboardLine = html.split('\n').find(line => line.includes("$('prompt').onkeydown="));
+assert.ok(keyboardLine, 'D01_CHAT_KEYBOARD_HANDLER_MISSING');
+const keyboardCode = keyboardLine.slice(keyboardLine.indexOf("$('prompt').onkeydown="));
+let presses = 0;
+const keyboardNodes = {prompt: {}, send: {click(){presses++;}}};
+vm.runInNewContext(keyboardCode, {$:id=>keyboardNodes[id]}, {timeout: 1500});
+function keypress(key, shiftKey=false, isComposing=false, keyCode=13){
+  const e = {key,shiftKey,isComposing,keyCode,preventDefault(){this.prevented=true}};
+  keyboardNodes.prompt.onkeydown(e);
+  return !!e.prevented;
+}
+assert.equal(keypress('Enter',false,true),false,'D01_IME_ENTER_SENT_PREMATURELY');
+assert.equal(keypress('Enter',false,false,229),false,'D01_IME_LEGACY_ENTER_SENT');
+assert.equal(keypress('Enter',true),false,'D01_SHIFT_ENTER_BLOCKED');
+assert.equal(keypress('a'),false,'D01_TYPING_BLOCKED');
+assert.equal(presses,0,'D01_COMPOSITION_MUST_NOT_SEND');
+assert.equal(keypress('Enter'),true,'D01_NORMAL_ENTER_MUST_SEND');
+assert.equal(presses,1,'D01_CHAT_SEND_ONCE');
+console.log('D01 R8 SOURCE_ONLY PASS: compact panel scroll, IME-safe Enter, Shift+Enter, single send');
