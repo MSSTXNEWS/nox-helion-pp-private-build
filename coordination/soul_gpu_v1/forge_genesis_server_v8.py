@@ -17,6 +17,7 @@ from datetime import datetime,timezone
 from http.server import BaseHTTPRequestHandler,ThreadingHTTPServer
 from urllib.request import urlopen
 from nox_thermal_sensors_v1 import temperature as nox_temperature
+from forge_actual_telemetry_v1 import observation as actual_training_observation
 
 SCHEMA="NOX-GENESIS-FORGE-V8"
 CODE=Path(__file__).resolve().parent
@@ -125,6 +126,7 @@ def forge_focus_live(root):
     and CPU/GPU thermal values missing from sensors are explicitly unknown.
     """
     d=get_state(root)
+    observed=actual_training_observation(root)
     training=d["training"]
     timestamp=training.get("receipt_age_seconds")
     # Receipt can be historical. A live step requires a recently updated
@@ -149,28 +151,37 @@ def forge_focus_live(root):
     if not isinstance(loss,dict):loss={}
     return {
         "schema":"NOX-FORGE-FOCUS-LIVE-v1",
-        "phase":phase,"step":step,"target_steps":target,
-        "cycle":training.get("stage") if live else None,
-        "loss":loss.get("loss") if live else None,
-        "loss_points":[],"checkpoints":None,
-        "last_checkpoint":None,"last_sha":None,
-        "gpu_temp":d["gpu_temperature_c"],
+        "phase":observed["phase"],
+        "step":observed["step"],
+        "target_steps":observed["target_steps"],
+        "cycle":training.get("stage") if observed["verified_live"] else None,
+        "loss":observed["loss"],
+        "loss_points":observed["loss_points"],
+        "checkpoints":None,"last_checkpoint":None,"last_sha":None,
+        "gpu_temp":observed["gpu_temp"],
         "cpu_temp":d["cpu_temperature_c"],
-        "gpu_sensor_source":d["gpu_temperature_source"],
-        "gpu_sensor_name":d["gpu_sensor_name"],
+        "gpu_sensor_source":observed["sensor_source"],
+        "gpu_core_temp":observed["gpu_core_temp"],
         "disk_free_gib":round(d["disk_free_bytes"]/(1024**3),3)
                         if d["disk_free_bytes"] is not None else None,
-        "models":model_record,"knowledge_count":own_mem,
-        "quality_verified":None,"speed_steps_s":None,
+        "models":model_record,
+        "knowledge_count":own_mem,
+        "quality_verified":None,
+        "speed_steps_s":None,
         "stop_allowed":False,
         "worm_statuses":{"Источники":"HOLD","Проверка":"HOLD"},
-        "training":"Активное обучение не подтверждено" if not live
-                    else "Проверенное недавнее обновление телеметрии",
+        "training":"Активное обучение подтверждено" if observed["verified_live"]
+                    else "Нет подтверждённого активного процесса. Последние шаги исторические.",
+        "process_id":observed["pid"],
+        "pid_active":observed["pid_active"],
+        "receipt_age_seconds":observed["receipt_age_seconds"],
+        "run_log":observed["run_log"],
+        "pause_safety_verified":False,
         "native_s03_verified":False,
         "native_exe_rebuilt":False,
         "battery":d["battery"],
-        "warnings":["FORGE read-only; STOP not connected to original OneHost",
-                    "Thermal safety on AMD requires an approved real sensor"],
+        "warnings":["Read-only FORGE: original OneHost STOP is not connected",
+                    "Previous PAUSE=True did not stop GPU gradients: automatic cooling is NOT verified"],
     }
 
 
