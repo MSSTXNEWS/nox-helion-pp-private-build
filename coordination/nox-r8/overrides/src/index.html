@@ -322,7 +322,7 @@ body.reduced .helion-fx{filter:none}body.reduced .core.active{animation:none}
 </script>
 <script>
 'use strict';
-const $=id=>document.getElementById(id);const post=(type,data={})=>{if(!window.chrome?.webview){$('status').textContent='NATIVE BRIDGE OFFLINE';return false}window.chrome.webview.postMessage({type,...data});return true};
+const $=id=>document.getElementById(id);const post=(type,data={})=>{const bridge=window.chrome?.webview;if(typeof bridge?.postMessage!=='function'){$('status').textContent='NATIVE BRIDGE OFFLINE';return false}try{bridge.postMessage({type,...data});return true}catch{$('status').textContent='NATIVE BRIDGE DISPATCH FAILED';return false}};
 let responseBox=null,lastAnswer='',busy=false,settingsDenial='',activeChatId=null,requestSequence=0,pendingTask=null,pendingNote=null,pendingTaskToggle=null;
 const nextChatId=()=>typeof crypto!=='undefined'&&typeof crypto.randomUUID==='function'
   ? crypto.randomUUID()
