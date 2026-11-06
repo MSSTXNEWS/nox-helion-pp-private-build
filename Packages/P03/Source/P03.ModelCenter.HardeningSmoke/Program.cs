@@ -388,6 +388,18 @@ RequireStreamDuplicateControlHold("{\"completed\":7,\"total\":5,\"total\":10}",
     "B04 duplicate total cannot hide impossible progress");
 RequireStreamDuplicateControlHold("{\"\\u0073tatus\":\"error\",\"status\":\"success\"}",
     "B04 escaped duplicate status is not unique owner evidence");
+// B04 R5: duplicate case-alias controls can forge an installed-model success
+// or mask an Ollama offline error; deny them before parsing the final event.
+RequireStreamDuplicateControlHold("{\"status\":\"success\",\"Status\":\"error\"}",
+    "B04 case-aliased status cannot forge completed pull");
+RequireStreamDuplicateControlHold("{\"status\":\"downloading\",\"error\":\"\",\"Error\":\"network down\"}",
+    "B04 case-aliased error cannot hide offline provider");
+RequireStreamDuplicateControlHold("{\"digest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"Digest\":\"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\"}",
+    "B04 case-aliased layer digest must fail closed");
+RequireStreamDuplicateControlHold("{\"status\":\"downloading\",\"completed\":1,\"Completed\":2,\"total\":3}",
+    "B04 case-aliased completed count must fail closed");
+RequireStreamDuplicateControlHold("{\"completed\":2,\"total\":3,\"Total\":4}",
+    "B04 case-aliased total count must fail closed");
 Assert(ModelLocalAttestation.ParseVerifiedEvent("{\"status\":\"downloading\",\"note\":1,\"note\":2}").Status == "downloading",
     "B04 non-control metadata leaves standard stream status valid");
 // 02. Oversized first line without a terminator fails before unbounded allocation.

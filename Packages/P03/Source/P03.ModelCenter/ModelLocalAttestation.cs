@@ -200,12 +200,16 @@ public static class ModelLocalAttestation
                 throw new InvalidDataException("OLLAMA_STREAM_NONOBJECT_EVENT");
             // Reject ambiguous Ollama NDJSON control fields before reading last-wins JSON.
             // A duplicated error/status/digest/progress value is not owner evidence.
-            var seenControls = new HashSet<string>(StringComparer.Ordinal);
+            var seenControls = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var property in root.EnumerateObject())
             {
-                if ((property.NameEquals("status") || property.NameEquals("error") ||
-                     property.NameEquals("digest") || property.NameEquals("completed") ||
-                     property.NameEquals("total")) && !seenControls.Add(property.Name))
+                // Case-aliased Ollama controls cannot authorize a false success.
+                if ((property.Name.Equals("status", StringComparison.OrdinalIgnoreCase) ||
+                     property.Name.Equals("error", StringComparison.OrdinalIgnoreCase) ||
+                     property.Name.Equals("digest", StringComparison.OrdinalIgnoreCase) ||
+                     property.Name.Equals("completed", StringComparison.OrdinalIgnoreCase) ||
+                     property.Name.Equals("total", StringComparison.OrdinalIgnoreCase)) &&
+                    !seenControls.Add(property.Name))
                     throw new InvalidDataException("OLLAMA_STREAM_DUPLICATE_CONTROL_FIELD_HOLD");
             }
             var status = ReadString(root, "status", 512) ?? "unknown";
