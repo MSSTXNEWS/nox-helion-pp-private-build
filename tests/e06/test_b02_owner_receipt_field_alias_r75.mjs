@@ -8,6 +8,7 @@ const read = path => readFileSync(new URL(path,root),"utf8");
 const bridge = read("coordination/e06/OneHostP02WebView2Bridge.cs");
 const legacy = read("coordination/e06/MainWindow.NativeP02.cs");
 const p03 = read("Packages/P03/Source/python-host/p03_onehost_port.py");
+const ingress = read("Packages/P02/worker-python/p02_native_ingress.py");
 const builder = read("coordination/e06/build_onehost_installer.ps1");
 const compiler = read("coordination/e06/t06_compile_original_wpf_p02.py");
 const stager = read("coordination/e06/stage_native_p02.py");
@@ -19,6 +20,12 @@ assert.match(web,/field.Name is "ok" or "ack" or "accepted" or "success"/);
 assert.match(old,/p.Name is "ok" or "ack" or "accepted" or "success"/);
 assert.match(web,/field.Name is "result" or "receipt" or "ownerReceipt" or "nativeResult"/);
 assert.match(old,/p.Name is "result" or "receipt" or "ownerReceipt" or "nativeResult"/);
+// The original Python owner uses snake_case aliases. An explicit denial in any
+// of these nested receipts must block a positive transport ACK in BOTH WPF paths.
+assert.match(web,/"ownerResult" or "owner_receipt" or "owner_result" or "native_result" &&/);
+assert.match(old,/"ownerResult" or "owner_receipt" or "owner_result" or "native_result" &&/);
+assert.match(ingress,/"owner_receipt", "ownerReceipt"/);
+assert.match(ingress,/"owner_result", "ownerResult"/);
 assert.match(web,/field.Value.ValueKind != JsonValueKind.True/);
 assert.match(old,/p.Value.ValueKind!=JsonValueKind.True/);
 assert.match(web,/NativeResultExplicitlyDenied\(field.Value, depth \+ 1\)/);

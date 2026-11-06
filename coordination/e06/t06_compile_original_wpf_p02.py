@@ -21,8 +21,8 @@ SRC=ROOT  # EXACT canonical GitHub owner sources; never the stale imported GitLa
 WEBVIEW2_E06_REGISTRY_BLOCK_SHA256="e9d91ac3ed0bf5437ff38f07d2179a9e7a130835c4d0d1be49fa2c563f0e8bd1"
 P01_PREFLIGHT_ANCESTOR_GIT_BLOB="e683e30b4e6fc32c31652061c569d6ce77c2cb2e"
 EXPECTED={
-"coordination/e06/MainWindow.NativeP02.cs":"2995b16ad7e3fc0974ce7acfc4713b3a38d9f0c7",
-"coordination/e06/OneHostP02WebView2Bridge.cs":"44ec64461b7eb4dcd6c7fa2bc84a3733915f40e9",
+"coordination/e06/MainWindow.NativeP02.cs":"6327e68e69a96b4faa7dd6101a3229767e4e0d1f",
+"coordination/e06/OneHostP02WebView2Bridge.cs":"429f147a1ec3a908a8ec9213b77bdd2b0e7f8a3f",
 "coordination/e06/stage_native_p02.py":"8f38cf2081dc1c7d7ec18b183d597b2f6179fa5d",
 "Packages/P02/worker-chat/NativePythonPipe.cs":"e8e4f95106f4d40c29c68d81378c7938e6a7c0f5"
 }

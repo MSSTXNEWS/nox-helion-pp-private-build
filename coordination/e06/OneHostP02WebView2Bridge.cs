@@ -472,7 +472,7 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
                     NativeOwnerStatusDenied(field.Value.GetString()))
                     return true;
             }
-            if (field.Name is "result" or "receipt" or "ownerReceipt" or "nativeResult" or "owner" or "ownerResult" &&
+            if (field.Name is "result" or "receipt" or "ownerReceipt" or "nativeResult" or "owner" or "ownerResult" or "owner_receipt" or "owner_result" or "native_result" &&
                 NativeResultExplicitlyDenied(field.Value, depth + 1))
                 return true;
         }

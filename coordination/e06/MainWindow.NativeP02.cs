@@ -547,7 +547,7 @@ public partial class MainWindow
                 var state=p.Value.GetString();
                 if (LegacyOwnerStatusDenied(state)) return true;
             }
-            if (p.Name is "result" or "receipt" or "ownerReceipt" or "nativeResult" or "owner" or "ownerResult" &&
+            if (p.Name is "result" or "receipt" or "ownerReceipt" or "nativeResult" or "owner" or "ownerResult" or "owner_receipt" or "owner_result" or "native_result" &&
                 LegacyOwnerDenial(p.Value,depth+1)) return true;
         }
         return false;
