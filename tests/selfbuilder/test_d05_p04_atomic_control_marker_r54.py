@@ -168,5 +168,35 @@ class NativeP04AtomicMarkerTests(unittest.TestCase):
 
 
 
+    def test_repeated_stop_hardlink_alias_cannot_inherit_owner_ack(self):
+        # The inode remains identical, but a second pathname can mutate it.
+        self.assertEqual(self.owner.request_stop()["status"], "STOP_REQUESTED")
+        marker = self.owner._active[0]
+        alias = self.root / "stop-alias.marker"
+        try:
+            os.link(marker, alias)
+        except (OSError, NotImplementedError):
+            self.skipTest("Hardlinks unavailable on this filesystem")
+        with self.assertRaisesRegex(ForgeHold, "TRAINER_CONTROL_MARKER_REPLACED_HOLD"):
+            self.owner.request_stop()
+        self.assertEqual(alias.read_bytes(), b"")
+        self.assertEqual(self.owner._requested, "STOP")
+
+    def test_paused_hardlink_alias_cannot_be_retired_as_single_owner_file(self):
+        self.assertEqual(self.owner.request_pause()["status"], "PAUSE_REQUESTED")
+        marker = self.owner._active[1]
+        alias = self.root / "pause-alias.marker"
+        try:
+            os.link(marker, alias)
+        except (OSError, NotImplementedError):
+            self.skipTest("Hardlinks unavailable on this filesystem")
+        with self.assertRaisesRegex(ForgeHold, "TRAINER_PAUSE_MARKER_REPLACED_HOLD"):
+            with self.owner._control_lock:
+                self.owner._clear_owned_paused_marker_locked(marker)
+        self.assertTrue(marker.is_file())
+        self.assertEqual(alias.read_bytes(), b"")
+        self.assertEqual(self.owner._requested, "PAUSE")
+
+
 if __name__ == "__main__":
     unittest.main()

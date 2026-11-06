@@ -304,6 +304,7 @@ class ExistingP04Background:
                 expected = getattr(self, "_owned_marker_identity", {}).get(requested)
                 observed = os.stat(marker, follow_symlinks=False)
                 if (expected is None or observed.st_ino == 0
+                        or observed.st_nlink != 1
                         or expected != (observed.st_dev, observed.st_ino)):
                     raise ForgeHold("TRAINER_CONTROL_MARKER_REPLACED_HOLD")
             else:
@@ -314,10 +315,12 @@ class ExistingP04Background:
                 # Bind the ACK to the just-created native file identity.
                 # Regular-file replacement, ambiguous inode or reparse is HOLD.
                 self.trainer.reject_reparse_ancestors(marker)
-                if not marker.is_file() or marker.is_symlink() or created.st_ino == 0:
+                if (not marker.is_file() or marker.is_symlink() or created.st_ino == 0
+                        or created.st_nlink != 1):
                     raise ForgeHold("TRAINER_CONTROL_MARKER_IDENTITY_HOLD")
                 observed = os.stat(marker, follow_symlinks=False)
-                if (created.st_dev, created.st_ino) != (observed.st_dev, observed.st_ino):
+                if (observed.st_nlink != 1 or
+                        (created.st_dev, created.st_ino) != (observed.st_dev, observed.st_ino)):
                     raise ForgeHold("TRAINER_CONTROL_MARKER_REPLACED_HOLD")
                 if not hasattr(self, "_owned_marker_identity"):
                     self._owned_marker_identity = {}
@@ -339,6 +342,7 @@ class ExistingP04Background:
         expected = getattr(self, "_owned_marker_identity", {}).get("PAUSE")
         observed = os.stat(pause_marker, follow_symlinks=False)
         if (expected is None or observed.st_ino == 0
+                or observed.st_nlink != 1
                 or expected != (observed.st_dev, observed.st_ino)):
             raise ForgeHold("TRAINER_PAUSE_MARKER_REPLACED_HOLD")
         pause_marker.unlink()
