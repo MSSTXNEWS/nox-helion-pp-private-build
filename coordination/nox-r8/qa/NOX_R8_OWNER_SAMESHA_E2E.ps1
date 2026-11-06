@@ -1,0 +1,128 @@
+# B06 R8: owner-Windows one-SHA real Qwen+STOP+isolated SQLite gate, NOT a full release.
+# This script never installs, downloads weights or alters owner's live SQLite.
+[CmdletBinding()]
+param(
+  [string]$ExePath='C:\NOX_HELION\NOX_NEW\release\NOX.HELION.exe',
+  [Parameter(Mandatory=$true)][ValidatePattern('^[0-9a-fA-F]{64}$')][string]$ExpectedSha256,
+  [ValidateRange(30,900)][int]$TimeoutSeconds=360
+)
+Set-StrictMode -Version Latest
+$ErrorActionPreference='Stop'
+function Snapshot([string]$folder) {
+  $r=[ordered]@{}
+  foreach($name in @('chat.sqlite3','chat.sqlite3-wal','chat.sqlite3-shm')) {
+    $p=Join-Path $folder $name
+    $r[$name]=if(Test-Path -LiteralPath $p -PathType Leaf) {
+      (Get-FileHash -LiteralPath $p -Algorithm SHA256).Hash.ToLowerInvariant()
+    } else { 'ABSENT' }
+  }
+  return $r
+}
+$id='B06-'+[guid]::NewGuid().ToString('N')
+$started=[DateTimeOffset]::UtcNow
+$dataDir=Join-Path $env:LOCALAPPDATA 'NOX_HELION'
+$r=[ordered]@{
+  schema='NOX_R8_B06_OWNER_SAMESHA_E2E_V1'; runId=$id; startedAt=$started.ToString('O')
+  expectedSha256=$ExpectedSha256.ToLowerInvariant(); exe=$ExePath
+  exeShaBefore=$null; exeShaAfter=$null; sourceGitSha='NOT_VERIFIED'
+  provider='http://127.0.0.1:11436'; model='nox-qwen-clean:latest'
+  providerVerified=$false; nativePid=$null; nativeExit=$null
+  nativeReceiptVerified=$false; nativeChecks=@{}; ownerSqliteUnchanged=$false
+  physicalScopeAccepted=$false; releaseAccepted=$false; fullV16Accepted=$false
+  canonicalD02='NOT_TESTED'; installerNoLoss='NOT_TESTED'
+  ownerHistoryRestart='NOT_TESTED'; nativeTokenChunkCount='NOT_OBSERVED'
+  status='HOLD'; error=$null
+}
+$baseline=$null; $p=$null
+try {
+  $exe=[IO.Path]::GetFullPath($ExePath)
+  $r.exe=$exe
+  if(!(Test-Path -LiteralPath $exe -PathType Leaf)){throw 'EXE_NOT_FOUND_HOLD'}
+  $hash=(Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash.ToLowerInvariant()
+  $r.exeShaBefore=$hash
+  if($hash -cne $r.expectedSha256){throw 'IMMUTABLE_EXE_SHA_MISMATCH_HOLD'}
+  $buildPath=Join-Path (Split-Path -Parent $exe) 'BUILD_RECEIPT.json'
+  if(Test-Path -LiteralPath $buildPath -PathType Leaf) {
+    $build=Get-Content -LiteralPath $buildPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    if(![string]::Equals([string]$build.exe_sha256,$hash,[StringComparison]::OrdinalIgnoreCase)){
+      throw 'BUILD_RECEIPT_EXE_SHA_MISMATCH_HOLD'
+    }
+    $r.sourceGitSha=[string]$build.source_git_sha
+  }
+  $baseline=Snapshot $dataDir
+  $tags=Invoke-RestMethod -Uri 'http://127.0.0.1:11436/api/tags' -TimeoutSec 8 -Method Get
+  if(@($tags.models | ForEach-Object {$_.name}) -cnotcontains 'nox-qwen-clean:latest'){
+    throw 'REAL_LOCAL_QWEN_MODEL_NOT_VISIBLE_HOLD'
+  }
+  $r.providerVerified=$true
+  # Only a new native --nox-selftest child, never any preexisting app process.
+  $p=Start-Process -FilePath $exe -WorkingDirectory (Split-Path -Parent $exe) -ArgumentList @('--nox-selftest',"--nox-runid=$id") -PassThru
+  $r.nativePid=$p.Id
+  if(!$p.WaitForExit($TimeoutSeconds*1000)){throw 'NATIVE_REAL_QWEN_TIMEOUT_HOLD'}
+  $p.Refresh();$r.nativeExit=$p.ExitCode
+  $nativePath=Join-Path $dataDir ("native_selftest_{0}.json" -f $p.Id)
+  if(!(Test-Path -LiteralPath $nativePath -PathType Leaf)){throw 'NATIVE_RECEIPT_MISSING_HOLD'}
+  $n=Get-Content -LiteralPath $nativePath -Raw -Encoding UTF8 | ConvertFrom-Json
+  if($p.ExitCode -ne 0 -or $n.schema -cne 'NOX_WPF_E2E_NATIVE_R5_V1' -or
+      [int]$n.pid -ne $p.Id -or [string]$n.runId -cne $id -or
+      !$n.nativeCoreAccepted -or $n.fullV16Accepted -or
+      ![string]::Equals([string]$n.exeSha256,$hash,[StringComparison]::OrdinalIgnoreCase) -or
+      ![string]::Equals([IO.Path]::GetFullPath([string]$n.exe),$exe,[StringComparison]::OrdinalIgnoreCase)){
+    throw 'NATIVE_RECEIPT_IDENTITY_OR_SHA_HOLD'
+  }
+  $when=[DateTimeOffset]::Parse([string]$n.checkedAt)
+  if($when -lt $started -or $when -gt [DateTimeOffset]::UtcNow.AddMinutes(2)){
+    throw 'NATIVE_RECEIPT_TIME_HOLD'
+  }
+  foreach($name in @('webview2_real_ui_route','sqlite_transaction_readback',
+      'real_ollama_model_registered','real_chat_from_webview_to_qwen_to_sqlite',
+      'real_webview_stop_cancel_no_partial_persistence')){
+    $value=[string]$n.checks.$name
+    $r.nativeChecks[$name]=$value
+    if($value -cne 'PASS'){throw "NATIVE_CHECK_$($name)_HOLD"}
+  }
+  $r.nativeReceiptVerified=$true
+} catch {
+  $r.error=$_.Exception.Message
+} finally {
+  if($null -ne $p) {
+    try {
+      $p.Refresh()
+      if(!$p.HasExited){
+        $p.Kill()  # Only acceptance-owned PID, never another NOX or Ollama.
+        $p.WaitForExit(10000) | Out-Null
+      }
+      if($null -eq $r.nativeExit -and $p.HasExited){$r.nativeExit=$p.ExitCode}
+    } catch {$r.error=([string]$r.error+' CHILD_CLEANUP_HOLD: '+$_.Exception.Message).Trim()}
+  }
+  try {
+    if(Test-Path -LiteralPath $r.exe -PathType Leaf){
+      $r.exeShaAfter=(Get-FileHash -LiteralPath $r.exe -Algorithm SHA256).Hash.ToLowerInvariant()
+    }
+    if($null -ne $baseline) {
+      $after=Snapshot $dataDir
+      $r.ownerSqliteUnchanged=(ConvertTo-Json -InputObject $baseline -Compress) -ceq
+                              (ConvertTo-Json -InputObject $after -Compress)
+    }
+    if($r.exeShaBefore -cne $r.expectedSha256 -or $r.exeShaAfter -cne $r.expectedSha256){
+      throw 'SAME_SHA_PRE_POST_HOLD'
+    }
+    if(!$r.ownerSqliteUnchanged){throw 'OWNER_SQLITE_CHANGED_DURING_ACCEPTANCE_HOLD'}
+    if($r.nativeReceiptVerified -and $r.providerVerified -and !$r.error){
+      $r.physicalScopeAccepted=$true
+      $r.status='NATIVE_E2E_SCOPE_PASS_RELEASE_HOLD'
+    }
+  } catch {$r.error=([string]$r.error+' '+$_.Exception.Message).Trim()}
+  $r['finishedAt']=[DateTimeOffset]::UtcNow.ToString('O')
+  # No D02/full-V16/owner restart/installer confirmation in this scoped gate.
+  $r.releaseAccepted=$false
+  $dest=Join-Path $dataDir 'acceptance'
+  New-Item -ItemType Directory -Path $dest -Force | Out-Null
+  $out=Join-Path $dest ("B06_E2E_{0}.json" -f $id)
+  $tmp=$out+'.tmp'
+  [IO.File]::WriteAllText($tmp,(ConvertTo-Json -InputObject $r -Depth 8),[Text.UTF8Encoding]::new($false))
+  Move-Item -LiteralPath $tmp -Destination $out
+  Write-Output ("B06_STATUS={0} RELEASE=HOLD RECEIPT={1}" -f $r.status,$out)
+}
+if(!$r.physicalScopeAccepted){exit 2}
+exit 0
