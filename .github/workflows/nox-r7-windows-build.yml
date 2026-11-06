@@ -20,7 +20,7 @@ jobs:
         run: |
           $ErrorActionPreference='Stop'
           $archive='coordination/nox-local-r7/NOX_R7_SOURCE.zip'
-          $expected='679a714e6febdb8d076effeaf35a3df28c504cce16f9073d57ead3438717d288'
+          $expected='148516e89851dbfab18a4325a19f20b7256edd98645b7708becbe2a8e2b34851'
           $actual=(Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLowerInvariant()
           if ($actual -cne $expected) { throw "SOURCE_SNAPSHOT_HASH_MISMATCH" }
           Expand-Archive -LiteralPath $archive -DestinationPath './nox-r7-build' -Force
@@ -32,7 +32,7 @@ jobs:
           Write-Host "WIN64_BUILD_PASS SHA256=$sha"
       - name: Native WebView2 UI smoke (non-interactive runner may HOLD)
         shell: pwsh
-        continue-on-error: true
+        continue-on-error: false
         run: |
           $ErrorActionPreference='Stop'
           $exe=(Resolve-Path './NOX_R7_WIN64/NOX.HELION.exe').Path
@@ -58,6 +58,15 @@ jobs:
           } finally {
             $p.Refresh()
             if (!$p.HasExited) { Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue }
+          }
+      - name: Preserve Windows UI startup stage
+        shell: pwsh
+        if: always()
+        run: |
+          $root=Join-Path $env:LOCALAPPDATA 'NOX_HELION'
+          Get-ChildItem $root -File -Filter 'ui_startup_stage_*.json' -ErrorAction SilentlyContinue | ForEach-Object {
+            Write-Host ('UI_STAGE '+(Get-Content $_.FullName -Raw))
+            Copy-Item $_.FullName -Destination './NOX_R7_WIN64/' -Force
           }
       - uses: actions/upload-artifact@v4
         if: always()
