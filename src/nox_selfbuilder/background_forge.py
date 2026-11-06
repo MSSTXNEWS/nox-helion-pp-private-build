@@ -451,7 +451,6 @@ class ExistingP04Background:
             conflict = self._requested_result_conflict(self._requested, receipt["status"])
         if conflict is not None:
             return self._hold(conflict)
-        self.relay_events(job)
         result = {"status": "ADAPTER_CANDIDATE_PENDING_E07" if receipt["status"] == "COMPLETED" else receipt["status"],
                   "run_id": job.run_id, "receipt_sha256": self.trainer.sha256_file(out / "training-receipt.json"),
                   "checkpoint": receipt["checkpoint"], "weights_updated": False, "activation_allowed": False}
@@ -462,7 +461,10 @@ class ExistingP04Background:
             if conflict is not None:
                 return self._hold(conflict)
             self._active = None
-            return result
+        # Only post a verified terminal event after the native STOP race gate
+        # has committed admission. No terminal event can precede S03 evidence.
+        self.relay_events(job)
+        return result
 
     def merge_candidate(self, job, *, output_dir, owner_approve, max_seconds=36000):
         """Native-only merge via original P04; never switches the active model.
@@ -602,6 +604,14 @@ class ExistingP04Background:
                         or not isinstance(event.get("message"), str) or len(event["message"]) > 240
                         or not re.fullmatch(r"[0-9a-f]{32}", str(event.get("event_id", "")))):
                     raise ForgeHold("P04_EVENT_PROVENANCE_HOLD")
+                # Live streaming is provisional: the original trainer may
+                # write task.completed before receipt SHA/checkpoint/owner
+                # consent and the final native STOP linearization are checked.
+                # Keep progress live, defer any COMPLETED assertion to the
+                # verified non-live read after final native admission.
+                if live and (event["event_type"] == "task.completed"
+                             or event["state"] == "COMPLETED"):
+                    continue
                 identity = (job.run_id, event["event_id"])
                 if identity not in self._relayed:
                     if self.event_sink(event) is False:
