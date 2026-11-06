@@ -83,6 +83,22 @@ using var d04DuplicateDigest = JsonDocument.Parse("{\"models\":[{\"name\":\"m:1\
 MustReject(() => ModelLocalAttestation.ParseUnambiguousModelDigest(d04DuplicateDigest.RootElement, "m:1"),
     "D04 duplicate local digest SHA HOLD");
 
+ // B04 R5: case-folded aliases must never turn /api/tags into false
+ // verified absence or a competing owner's installed-model digest.
+using var b04TagsRootAlias = JsonDocument.Parse("{\"models\":[{\"name\":\"m:1\",\"digest\":\"" +
+    new string('a',64) + "\"}],\"Models\":[]}");
+MustReject(() => ModelLocalAttestation.ParseUnambiguousModelDigest(b04TagsRootAlias.RootElement, "m:1"),
+    "B04 case-aliased models array cannot attest local model");
+using var b04TagsNameAlias = JsonDocument.Parse("{\"models\":[{\"name\":\"m:1\",\"Name\":\"decoy:1\",\"digest\":\"" +
+    new string('a',64) + "\"}]}");
+MustReject(() => ModelLocalAttestation.ParseUnambiguousModelDigest(b04TagsNameAlias.RootElement, "m:1"),
+    "B04 case-aliased model name cannot attest owner identity");
+using var b04TagsDigestAlias = JsonDocument.Parse("{\"models\":[{\"name\":\"m:1\",\"digest\":\"" +
+    new string('a',64) + "\",\"Digest\":\"" + new string('b',64) + "\"}]}");
+MustReject(() => ModelLocalAttestation.ParseUnambiguousModelDigest(b04TagsDigestAlias.RootElement, "m:1"),
+    "B04 case-aliased digest cannot attest installed weights");
+
+
 
  // B04: /api/tags case variants are NOT evidence of absence. The native queue
  // serializes the same installation tag using OrdinalIgnoreCase.

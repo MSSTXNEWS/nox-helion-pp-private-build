@@ -98,7 +98,7 @@ public static class ModelLocalAttestation
             !root.TryGetProperty("models", out var items) || items.ValueKind != JsonValueKind.Array)
             throw new InvalidDataException("OLLAMA_TAGS_INVALID_SCHEMA");
         // /api/tags is untrusted; System.Text.Json uses last-wins on duplicate keys.
-        if (root.EnumerateObject().Count(p => p.NameEquals("models")) != 1)
+        if (root.EnumerateObject().Count(p => string.Equals(p.Name, "models", StringComparison.OrdinalIgnoreCase)) != 1)
             throw new InvalidDataException("OLLAMA_TAGS_DUPLICATE_MODELS_HOLD");
         string? digest = null;
         foreach (var item in items.EnumerateArray())
@@ -110,8 +110,8 @@ public static class ModelLocalAttestation
             var digests = 0;
             foreach (var property in item.EnumerateObject())
             {
-                if (property.NameEquals("name")) names++;
-                if (property.NameEquals("digest")) digests++;
+                if (string.Equals(property.Name, "name", StringComparison.OrdinalIgnoreCase)) names++;
+                if (string.Equals(property.Name, "digest", StringComparison.OrdinalIgnoreCase)) digests++;
             }
             if (names != 1 || digests > 1)
                 throw new InvalidDataException("OLLAMA_TAGS_DUPLICATE_MODEL_FIELDS_HOLD");
