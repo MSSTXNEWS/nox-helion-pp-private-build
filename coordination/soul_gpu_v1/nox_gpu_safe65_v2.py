@@ -136,9 +136,27 @@ def worker(a):
             target=a.out/("step-%06d"%step)
             pending=a.out/(".pending-%06d"%step)
             if target.exists() or pending.exists():raise RuntimeError("Checkpoint collision")
-            model.save_pretrained(pending,safe_serialization=True)
-            if not (pending/"adapter_model.safetensors").is_file():
-                raise RuntimeError("Checkpoint write not verified")
+            # DirectML uses OpaqueTensorImpl storage; PEFT's default
+            # save_pretrained -> safetensors cannot access that GPU storage.
+            # Explicitly copy *only LoRA adapter tensors* to CPU before writing.
+            # Do not change module/optimizer device in the middle of training.
+            from peft import get_peft_model_state_dict
+            from safetensors.torch import save_file,load_file
+            pending.mkdir(parents=True)
+            peft_state=get_peft_model_state_dict(model,adapter_name="default")
+            cpu_state={k:v.detach().to("cpu").contiguous()
+                       for k,v in peft_state.items()}
+            if not cpu_state or not all(v.device.type=="cpu" for v in cpu_state.values()):
+                raise RuntimeError("Adapter CPU snapshot failed")
+            model.peft_config["default"].save_pretrained(pending)
+            weight_file=pending/"adapter_model.safetensors"
+            save_file(cpu_state,str(weight_file),metadata={"format":"pt"})
+            loaded=load_file(str(weight_file),device="cpu")
+            if set(loaded)!=set(cpu_state) or any(
+                loaded[k].shape!=cpu_state[k].shape for k in cpu_state
+            ):
+                raise RuntimeError("Adapter checkpoint roundtrip mismatch")
+            del cpu_state,peft_state,loaded
             pending.rename(target)
             print(json.dumps({"checkpoint":str(target),"step":step}),flush=True)
 
@@ -227,7 +245,8 @@ def single_cycle():
         print("NOX 20 additional LoRA steps saved; evaluation still required.",flush=True)
     print("NOX OUTPUT:",outdir,flush=True)
     if reason:
-        # A killed worker must be gone before any possible restart.
+        # The original PID exiting is not proof a descendant GPU worker stopped.
+        # Fail closed on a failed taskkill instead of treating receipt as proof.
         if child.poll() is None:
             raise RuntimeError("GPU_WORKER_STILL_ALIVE: no restart")
         return reason
