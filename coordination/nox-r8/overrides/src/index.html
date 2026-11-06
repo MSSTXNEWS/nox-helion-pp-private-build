@@ -323,7 +323,7 @@ body.reduced .helion-fx{filter:none}body.reduced .core.active{animation:none}
 <script>
 'use strict';
 const $=id=>document.getElementById(id);const post=(type,data={})=>{const bridge=window.chrome?.webview;if(typeof bridge?.postMessage!=='function'){$('status').textContent='NATIVE BRIDGE OFFLINE';return false}try{bridge.postMessage({type,...data});return true}catch{$('status').textContent='NATIVE BRIDGE DISPATCH FAILED';return false}};
-let responseBox=null,lastAnswer='',busy=false,settingsDenial='',activeChatId=null,requestSequence=0,pendingTask=null,pendingNote=null,pendingTaskToggle=null,pendingModel=null;
+let responseBox=null,lastAnswer='',busy=false,settingsDenial='',activeChatId=null,requestSequence=0,pendingTask=null,pendingNote=null,pendingTaskToggle=null,pendingModel=null,pendingLearnRequest=null,pendingLearnStop=null;
 const nextChatId=()=>typeof crypto!=='undefined'&&typeof crypto.randomUUID==='function'
   ? crypto.randomUUID()
   : 'r'+Date.now().toString(36)+'_'+(++requestSequence).toString(36)+'_'+Math.random().toString(36).slice(2);const headings={consciousness:'CONSCIOUSNESS',atlas:'ATLAS / TASKS',reflection:'REFLECTION / HISTORY',nexus:'NEXUS / MODELS',forge:'FORGE / TRAINING',core:'CORE / LIVE CHAT',voice:'VOICE',persona:'PERSONA'};
@@ -334,7 +334,23 @@ function element(tag,text,cls){let n=document.createElement(tag);if(text!==undef
 function entry(container,text,title,cls){const d=element('div',undefined,'entry '+(cls||''));if(title)d.append(element('small',title));d.append(element('div',text));container.prepend(d);return d}
 $('send').onclick=()=>{const text=$('prompt').value.trim();if(!text||busy)return;if(text.length>32000){$('streamHint').textContent='Слишком длинное сообщение: максимум 32 000 символов';return;}const requestId=nextChatId();if(post('chat',{text,requestId})===false){$('streamHint').textContent='Нативный чат недоступен. Черновик сохранён.';return;}busy=true;activeChatId=requestId;lastAnswer='';entry($('messages'),text,'YOU','user');responseBox=entry($('messages'),'','NOX QWEN');$('prompt').value='';};
 $('stop').onclick=()=>{if(busy&&activeChatId)post('stop',{requestId:activeChatId})};$('prompt').onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing&&e.keyCode!==229){e.preventDefault();$('send').click()}};
-$('overviewHealth').onclick=()=>post('health');$('startEngine').onclick=()=>post('engine.start');$('refreshSensors').onclick=()=>post('system.status');$('healthButton').onclick=()=>post('health');$('trainingButton').onclick=()=>post('training');$('learnRequest').onclick=()=>post('learn.request');$('learnCancel').onclick=()=>post('learn.cancel');$('reloadHistory').onclick=()=>post('history');$('taskAdd').onclick=()=>{const text=$('taskInput').value.trim();if(!text||pendingTask)return;const requestId=nextChatId();pendingTask={requestId,text};$('taskAdd').disabled=true;if(post('tasks.add',{text,requestId})===false){pendingTask=null;$('taskAdd').disabled=false}};
+$('overviewHealth').onclick=()=>post('health');$('startEngine').onclick=()=>post('engine.start');$('refreshSensors').onclick=()=>post('system.status');$('healthButton').onclick=()=>post('health');$('trainingButton').onclick=()=>post('training');$('learnRequest').onclick=()=>{
+  if(pendingLearnRequest||pendingLearnStop)return;
+  const requestId=nextChatId();pendingLearnRequest=requestId;$('learnRequest').disabled=true;
+  $('learnReceipt').textContent='LEARN · ожидается согласие владельца Windows; GPU не запущен';
+  if(post('learn.request',{requestId})===false){
+    pendingLearnRequest=null;$('learnRequest').disabled=false;
+    $('learnReceipt').textContent='LEARN IPC HOLD · запрос не подтверждён';
+  }
+};
+$('learnCancel').onclick=()=>{
+  if(pendingLearnStop)return;
+  const requestId=nextChatId();pendingLearnStop=requestId;$('learnCancel').disabled=true;
+  if(post('learn.cancel',{requestId})===false){
+    pendingLearnStop=null;$('learnCancel').disabled=false;
+    $('learnReceipt').textContent='LEARN STOP IPC HOLD · проверьте очередь';
+  }
+};$('reloadHistory').onclick=()=>post('history');$('taskAdd').onclick=()=>{const text=$('taskInput').value.trim();if(!text||pendingTask)return;const requestId=nextChatId();pendingTask={requestId,text};$('taskAdd').disabled=true;if(post('tasks.add',{text,requestId})===false){pendingTask=null;$('taskAdd').disabled=false}};
 $('savePersona').onclick=()=>post('settings.put',{key:'persona',value:$('persona').value});$('saveMotion').onclick=()=>post('settings.put',{key:'motion',value:$('reduceMotion').checked?'off':'on'});
 $('savePerformance').onclick=()=>post('settings.put',{key:'performance',value:$('performance').value});$('saveContext').onclick=()=>post('settings.put',{key:'context',value:$('useContext').checked?'on':'off'});$('backup').onclick=()=>post('backup');$('knowledgeImport').onclick=()=>post('knowledge.import');$('knowledgeSearch').onclick=()=>post('knowledge.search',{query:$('knowledgeQuery').value.trim()});$('knowledgeQuery').onkeydown=e=>{if(e.key==='Enter')$('knowledgeSearch').click()};$('memorySearch').onclick=()=>post('memory.search',{query:$('memoryQuery').value.trim()});$('memoryQuery').onkeydown=e=>{if(e.key==='Enter')$('memorySearch').click()};
 $('maxMode').onclick=()=>{route('persona');$('performance').value='MAX';$('personaStatus').textContent='MAX: ожидается подтверждение SQLite';post('settings.put',{key:'performance',value:'MAX'});};
@@ -362,7 +378,27 @@ case 'tasks.add.denied':if(pendingTask&&v?.requestId===pendingTask.requestId){pe
 case 'model.select.receipt':if(pendingModel&&v?.requestId===pendingModel.requestId&&v?.model===pendingModel.model&&v?.saved===true){pendingModel=null;$('saveModel').disabled=false;$('modelSelectStatus').textContent='Модель сохранена в SQLite: '+String(v.model);$('status').textContent='MODEL SAVED · SQLITE';}break;
 case 'model.select.denied':if(pendingModel&&v?.requestId===pendingModel.requestId&&v?.model===pendingModel.model){pendingModel=null;$('saveModel').disabled=false;$('modelSelectStatus').textContent=String(v.reason||'MODEL SELECT HOLD');post('health');}break;
 case 'download':{$('downloadStatus').textContent=`${v.model||''}: ${v.status||''}`+(typeof v.percent==='number'?' · '+v.percent+'%':'');if(typeof v.percent==='number')$('downloadBar').style.width=Math.max(0,Math.min(100,v.percent))+'%';break;}
-case 'learn.receipt':{const state=String(v?.state||'HOLD'),id=Number.isSafeInteger(v?.id)?'#'+v.id:'';$('learnReceipt').textContent='LEARN '+id+' · '+state+(v?.reason?' · '+String(v.reason):'')+' · GPU не запущен; SHA checkpoint не подтверждён';break;}
+case 'learn.receipt':{
+  const requestAck=!!pendingLearnRequest&&v?.requestId===pendingLearnRequest;
+  const stopAck=!!pendingLearnStop&&v?.requestId===pendingLearnStop;
+  if(!requestAck&&!stopAck)break;
+  if(requestAck){pendingLearnRequest=null;$('learnRequest').disabled=false;}
+  if(stopAck){pendingLearnStop=null;$('learnCancel').disabled=false;}
+  const state=String(v?.state||'HOLD'),id=Number.isSafeInteger(v?.id)?'#'+v.id:'';
+  $('learnReceipt').textContent='LEARN '+id+' · '+state+(v?.reason?' · '+String(v.reason):'')+
+    ' · GPU не запущен; SHA checkpoint не подтверждён';
+  break;
+}
+case 'learn.denied':{
+  const requestAck=!!pendingLearnRequest&&v?.requestId===pendingLearnRequest;
+  const stopAck=!!pendingLearnStop&&v?.requestId===pendingLearnStop;
+  if(!requestAck&&!stopAck)break;
+  if(requestAck){pendingLearnRequest=null;$('learnRequest').disabled=false;}
+  if(stopAck){pendingLearnStop=null;$('learnCancel').disabled=false;}
+  $('learnReceipt').textContent=String(v?.reason||'NOX_LEARN_DENIED_HOLD')+' · GPU не запущен';
+  post('learn.queue');
+  break;
+}
  case 'learn.queue':{const rows=Array.isArray(v)?v:[];$('learnQueue').textContent=rows.length?rows.map(x=>'Запрос #'+x.id+' · '+String(x.model)+' · '+String(x.state)+' · обучение не запущено').join('\n'):'Нет записанных запросов LEARN';break;}
  case 'training':{const run=v?.measuredTrainingRuns?.find(r=>r.progressVerified===true&&r.checkpointVerified===true&&typeof r.progressPercent==='number');const pct=run?Math.max(0,Math.min(100,run.progressPercent)):0;$('trainingBar').style.width=pct+'%';$('trainingMeasured').textContent=run?`Подтверждённые шаги: ${run.globalStep}/${run.maxSteps} · ${pct}%`:'Обучение GPU не подтверждено · 0%';const count=Array.isArray(v?.observedExternalRuns)?v.observedExternalRuns.length:0;$('training').textContent=count?`Найдено внешних журналов: ${count}. Их шаги и loss не связаны с подтверждённым NOX checkpoint.`:'Нет подтверждённых результатов GPU/QLoRA';break;}
 case 'settings':$('persona').value=v?.persona||'KV';$('performance').value=v?.performance||'BALANCED';$('useContext').checked=v?.context!=='off';$('reduceMotion').checked=v?.motion==='off';document.body.classList.toggle('reduced',$('reduceMotion').checked);window.noxVisual?.setMode(v?.performance||'BALANCED');$('personaStatus').textContent=settingsDenial||'Настройки прочитаны из SQLite';break;

@@ -56,3 +56,18 @@ assert 'observedExternalRuns = states' in training
 assert "case 'training':" in html and 'r.checkpointVerified===true' in html
 assert "case 'learn.queue':" in html and "case 'learn.receipt':" in html
 print('D05 TECH-FIRST SOURCE_ONLY consent/STOP SQLite readback + untrusted progress HOLD PASS')
+
+# Correlated native LEARN/STOP receipt; no GPU training and no fabricated checkpoint.
+for token in ('HandleLearnRequest(Text("requestId"))', 'HandleLearnCancel(Text("requestId"))',
+              'NOX_LEARN_REQUEST_ID_HOLD', 'NOX_LEARN_STOP_REQUEST_ID_HOLD',
+              'NOX_LEARN_EXISTING_SQLITE_READBACK_HOLD'):
+ assert token in cs, token
+assert 'private void RequestLearn(string requestId)' in cs
+assert 'private void CancelLearnRequest(string requestId)' in cs
+assert 'Send("learn.denied", new { requestId' in cs
+assert cs.index('NOX_LEARN_EXISTING_SQLITE_READBACK_HOLD') > cs.index('tx.Commit();', cs.index('var oldId = check.ExecuteScalar();'))
+for token in ("post('learn.request',{requestId})", "post('learn.cancel',{requestId})",
+              "case 'learn.denied':", 'v?.requestId===pendingLearnRequest',
+              'v?.requestId===pendingLearnStop'):
+ assert token in html, token
+print('D05 LEARN SOURCE_ONLY correlated request/STOP + fail-closed ACK contract PASS')

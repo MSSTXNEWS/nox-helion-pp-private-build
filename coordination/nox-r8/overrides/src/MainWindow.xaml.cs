@@ -952,8 +952,8 @@ public partial class MainWindow : Window
                 case "engine.start": await StartLocalEngine(); break;
                 case "training": Send("training", GetTrainingState()); Send("learn.queue", ReadLearnQueue()); break;
                 case "learn.queue": Send("learn.queue", ReadLearnQueue()); break;
-                case "learn.request": RequestLearn(); break;
-                case "learn.cancel": CancelLearnRequest(); break;
+                case "learn.request": HandleLearnRequest(Text("requestId")); break;
+                case "learn.cancel": HandleLearnCancel(Text("requestId")); break;
                 case "memory.search": Send("memory", SearchMemory(Text("query"))); break;
                 case "knowledge.search": Send("knowledge.results", knowledge.Search(Text("query"))); break;
                 case "knowledge.stats": Send("knowledge.stats", knowledge.Stats()); break;
@@ -1841,11 +1841,36 @@ public partial class MainWindow : Window
         return result.ToArray();
     }
 
-    private void RequestLearn()
+    // D05: independent owner-acknowledged LEARN and STOP controls.
+    // No GPU work starts here; errors cannot become completed training.
+    private void HandleLearnRequest(string requestId)
+    {
+        if (!ValidWriteRequestId(requestId)) {
+            Send("learn.denied", new { requestId, reason = "NOX_LEARN_REQUEST_ID_HOLD" });
+            return;
+        }
+        try { RequestLearn(requestId); }
+        catch (Exception) {
+            Send("learn.denied", new { requestId, reason = "NOX_LEARN_REQUEST_HOLD" });
+        }
+    }
+    private void HandleLearnCancel(string requestId)
+    {
+        if (!ValidWriteRequestId(requestId)) {
+            Send("learn.denied", new { requestId, reason = "NOX_LEARN_STOP_REQUEST_ID_HOLD" });
+            return;
+        }
+        try { CancelLearnRequest(requestId); }
+        catch (Exception) {
+            Send("learn.denied", new { requestId, reason = "NOX_LEARN_STOP_SQLITE_HOLD" });
+        }
+    }
+
+    private void RequestLearn(string requestId)
     {
         // Only the real desktop owner can give consent; automated smoke cannot.
         if (selfTestRequested) {
-            Send("learn.receipt", new { state="HOLD", reason="SELFTEST_NO_OWNER_CONSENT" });
+            Send("learn.receipt", new { requestId, state="HOLD", reason="SELFTEST_NO_OWNER_CONSENT" });
             return;
         }
         string sid = OwnerSid(), model = CurrentModel;
@@ -1857,7 +1882,7 @@ public partial class MainWindow : Window
             "NOX LEARN · Owner consent", MessageBoxButton.YesNo,
             MessageBoxImage.Warning, MessageBoxResult.No);
         if (decision != MessageBoxResult.Yes) {
-            Send("learn.receipt", new { state = "DECLINED", trainingStarted = false });
+            Send("learn.receipt", new { requestId, state = "DECLINED", trainingStarted = false });
             return;
         }
         long id;
@@ -1872,8 +1897,21 @@ public partial class MainWindow : Window
                 if (oldId != null && oldId != DBNull.Value) {
                     id = Convert.ToInt64(oldId);
                     tx.Commit();
-                    Send("learn.receipt", new { id, state="ALREADY_PENDING", trainingStarted=false });
-                    Send("learn.queue", ReadLearnQueue());
+                    // A pending row is not a receipt until a fresh SQLite connection
+                    // verifies the exact SID, state and absence of a checkpoint.
+                    using (var existingDb = OpenDatabase())
+                    using (var existing = existingDb.CreateCommand()) {
+                        existing.CommandText = "SELECT model,consent_at,checkpoint_sha256 FROM learn_requests WHERE id=$id AND owner_sid=$sid AND state='AWAITING_VERIFIED_WORKER'";
+                        existing.Parameters.AddWithValue("$id", id);
+                        existing.Parameters.AddWithValue("$sid", sid);
+                        using var row = existing.ExecuteReader();
+                        if (!row.Read() || string.IsNullOrWhiteSpace(row.GetString(0)) ||
+                            !DateTimeOffset.TryParse(row.GetString(1), out _) || !row.IsDBNull(2))
+                            throw new InvalidOperationException("NOX_LEARN_EXISTING_SQLITE_READBACK_HOLD");
+                    }
+                    var existingQueue = ReadLearnQueue();
+                    Send("learn.queue", existingQueue);
+                    Send("learn.receipt", new { requestId, id, state="ALREADY_PENDING", trainingStarted=false });
                     return;
                 }
             }
@@ -1912,12 +1950,13 @@ public partial class MainWindow : Window
                 !persisted.IsDBNull(3))
                 throw new InvalidOperationException("NOX_LEARN_CONSENT_SQLITE_READBACK_HOLD");
         }
-        Send("learn.receipt", new { id, model, state="AWAITING_VERIFIED_WORKER",
+        var verifiedQueue = ReadLearnQueue();
+        Send("learn.queue", verifiedQueue);
+        Send("learn.receipt", new { requestId, id, model, state="AWAITING_VERIFIED_WORKER",
             reason="NO_ATTESTED_GPU_WORKER", trainingStarted=false, checkpointSha256=(string?)null });
-        Send("learn.queue", ReadLearnQueue());
     }
 
-    private void CancelLearnRequest()
+    private void CancelLearnRequest(string requestId)
     {
         string sid = OwnerSid();
         int affected;
@@ -1940,9 +1979,10 @@ public partial class MainWindow : Window
             if (Convert.ToInt64(verify.ExecuteScalar()) != 0)
                 throw new InvalidOperationException("NOX_LEARN_STOP_SQLITE_READBACK_HOLD");
         }
-        Send("learn.receipt", new { state=affected>0?"CANCELLED_BY_OWNER":"NO_PENDING_JOB",
+        var verifiedQueue = ReadLearnQueue();
+        Send("learn.queue", verifiedQueue);
+        Send("learn.receipt", new { requestId, state=affected>0?"CANCELLED_BY_OWNER":"NO_PENDING_JOB",
             affected, trainingStarted=false, checkpointSha256=(string?)null });
-        Send("learn.queue", ReadLearnQueue());
     }
 
     private object GetTrainingState()
