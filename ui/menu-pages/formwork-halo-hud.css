@@ -1,0 +1,6 @@
+/* FORMWORK HALO (MIT) polar HUD adapted to HELION existing universe. */
+.universe>.nox-halo-radar{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0;opacity:.75;mix-blend-mode:screen}
+.universe>.nox-halo-radar[hidden]{display:none!important}
+body[data-fx="ECO"] .nox-halo-radar{display:none!important}
+@media(max-width:520px){.universe>.nox-halo-radar{opacity:.28}}
+@media(prefers-reduced-motion:reduce){.universe>.nox-halo-radar{opacity:.32;mix-blend-mode:normal}}
