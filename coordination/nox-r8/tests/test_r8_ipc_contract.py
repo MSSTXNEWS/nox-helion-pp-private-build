@@ -30,7 +30,9 @@ required_cs = (
     'OLLAMA_TIMEOUT:',
 )
 required_html = (
-    'activeChatId=nextChatId()',
+    # D01's native post can fail: owner ID is committed only on dispatch success.
+    "const requestId=nextChatId();if(post('chat',{text,requestId})===false)",
+    'busy=true;activeChatId=requestId;',
     "post('chat',{text,requestId:activeChatId})",
     "post('stop',{requestId:activeChatId})",
     "v.requestId!==activeChatId",
@@ -43,6 +45,9 @@ for fragment in required_cs:
     assert fragment in cs, 'B02_NATIVE_IPC_SOURCE_HOLD: ' + fragment
 for fragment in required_html:
     assert fragment in html, 'B02_WEBVIEW2_SOURCE_HOLD: ' + fragment
+# A failed native bridge must not claim the active chat owner or lose a draft.
+chat_handler = html.split("$('send').onclick=()=>", 1)[1].split("\n$('stop').onclick=", 1)[0]
+assert chat_handler.index("if(post('chat',{text,requestId})===false)") < chat_handler.index("busy=true;activeChatId=requestId;"), "B02_PREMATURE_NATIVE_OWNER_HOLD"
 # Ensure the previous unowned chat path cannot accidentally remain.
 assert 'case "chat": await Generate(Text("text"));' not in cs
 assert "case 'error':$('status').textContent='ERROR';entry($('messages'),String(v)" not in html
