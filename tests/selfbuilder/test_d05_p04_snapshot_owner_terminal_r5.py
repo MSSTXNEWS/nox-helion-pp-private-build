@@ -62,5 +62,21 @@ class D05SnapshotOwnerResultGate(unittest.TestCase):
         with self.assertRaisesRegex(ForgeHold, "P04_SNAPSHOT_PROVENANCE_HOLD"):
             self.owner.event_snapshot(self.job)
 
+
+    def test_snapshot_rejects_unknown_event_kinds_and_states(self):
+        # A GPU worker event can be native-run-shaped yet use an invented
+        # terminal status/type. The read-only UI snapshot must HOLD, not relay.
+        for changed in ({"event_type": "task.approved"},
+                        {"state": "ACTIVATED"}):
+            with self.subTest(changed=changed):
+                self.put(json.dumps({**self.row(1), **changed}))
+                with self.assertRaisesRegex(ForgeHold, "P04_SNAPSHOT_PROVENANCE_HOLD"):
+                    self.owner.event_snapshot(self.job)
+
+    def test_snapshot_keeps_valid_provisional_gpu_progress(self):
+        self.put(json.dumps(self.row(1, state="RUNNING", kind="training.step")))
+        self.assertEqual([row["event_sequence"] for row in
+                          self.owner.event_snapshot(self.job)], [1])
+
 if __name__ == "__main__":
     unittest.main()

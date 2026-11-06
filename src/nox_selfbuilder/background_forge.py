@@ -665,7 +665,13 @@ class ExistingP04Background:
                         or not isinstance(event.get("message"), str)
                         or len(event["message"]) > 240
                         or not re.fullmatch(r"[0-9a-f]{32}", str(event.get("event_id", "")))
-                        or type(event.get("event_sequence")) is not int):
+                        or type(event.get("event_sequence")) is not int
+                        or event.get("event_type") not in {
+                            "task.started", "task.progress", "task.failed", "task.completed",
+                            "training.step", "checkpoint.saved", "model.stopped", "gpu.sample"}
+                        or event.get("state") not in {
+                            "QUEUED", "RUNNING", "PAUSED", "COMPLETED", "ERROR",
+                            "STOPPED", "OFFLINE", "HOLD", "READY", "N_D"}):
                     raise ForgeHold("P04_SNAPSHOT_PROVENANCE_HOLD")
                 if event.get("event_type") == "task.completed" or event.get("state") == "COMPLETED":
                     continue  # Only a verified owner S03 result may report completion.
