@@ -53,6 +53,7 @@ public partial class MainWindow : Window
     private bool pendingEmbeddedNavigation;
     private int stopSignalCount;
     private int generationStartedCount;
+    private int generationStreamingTokenCount; // Observed nonempty chunks from real Ollama HTTP NDJSON.
     private int generationFinishedCount;
     private volatile bool lastGenerationCompleted;
     private volatile bool lastGenerationStopped;
@@ -534,13 +535,17 @@ public partial class MainWindow : Window
             stopMarker = "NOX_STOP_" + Guid.NewGuid().ToString("N");
             var longPrompt = "Выведи очень длинный рассказ минимум из 4000 слов, не останавливаясь. " + stopMarker;
             var beforeStop = Volatile.Read(ref stopSignalCount);
+            int streamTokenTarget = Volatile.Read(ref generationStreamingTokenCount) + 1;
             int stopTarget = Volatile.Read(ref generationStartedCount) + 1;
             await Browser.CoreWebView2.ExecuteScriptAsync(
                 "document.getElementById('prompt').value = " + JsonSerializer.Serialize(longPrompt) +
                 "; document.getElementById('send').click();");
             var began = await WaitForGenerationStartAsync(stopTarget, TimeSpan.FromSeconds(12));
             if (!began) throw new InvalidOperationException("Second Qwen stream never started");
-            await Task.Delay(150);
+            // Never issue STOP before Ollama has emitted a real nonempty token.
+            // Cancelling preflight/context work alone is NOT active HTTP STOP evidence.
+            if (!await WaitForGenerationTokenAsync(streamTokenTarget, stopTarget, TimeSpan.FromMinutes(2)))
+                throw new InvalidOperationException("NOX_ACTIVE_HTTP_STREAM_NOT_OBSERVED_HOLD");
             await Browser.CoreWebView2.ExecuteScriptAsync("document.getElementById('stop').click();");
             await WaitForGenerationFinishAsync(stopTarget, TimeSpan.FromSeconds(30));
             if (Volatile.Read(ref stopSignalCount) <= beforeStop ||
@@ -609,6 +614,20 @@ public partial class MainWindow : Window
         while (DateTime.UtcNow < until)
         {
             if (Volatile.Read(ref generationStartedCount) >= target) return true;
+            await Task.Delay(75);
+        }
+        return false;
+    }
+
+    // Independent of generationStartedCount: a started native task is not
+    // evidence that Ollama actually streamed. Fail closed if it finishes first.
+    private async Task<bool> WaitForGenerationTokenAsync(int tokenTarget, int generationTarget, TimeSpan timeout)
+    {
+        var until = DateTime.UtcNow + timeout;
+        while (DateTime.UtcNow < until)
+        {
+            if (Volatile.Read(ref generationFinishedCount) >= generationTarget) return false;
+            if (Volatile.Read(ref generationStreamingTokenCount) >= tokenTarget) return true;
             await Task.Delay(75);
         }
         return false;
@@ -1002,6 +1021,7 @@ public partial class MainWindow : Window
                     var value = token.GetString() ?? "";
                     answer.Append(value);
                     cancellation.Token.ThrowIfCancellationRequested();
+                    if (value.Length > 0) Interlocked.Increment(ref generationStreamingTokenCount);
                     Emit("token", new { requestId, text = value });
                 }
                 if (item.TryGetProperty("error", out var serverError))

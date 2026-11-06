@@ -113,3 +113,18 @@ for part in (
 assert "post('tasks.add',{text});$('taskInput').value=''" not in html
 assert "post('notes.add',{title,content});$('noteTitle').value=''" not in html
 print("D05 R8 SOURCE_ONLY: native task/note owner receipts after SQLite readback and draft NO-LOSS PASS")
+
+# B04 live HTTP STOP acceptance regression: a task/HTTP POST beginning is not
+# evidence of a real streaming response. The self-test must wait for an actual
+# nonempty Ollama NDJSON token before pressing WebView2 STOP.
+selftest = cs.split('private async Task RunNativeSelfTestAsync()', 1)[1].split('private bool HasSavedPrompt(', 1)[0]
+token_wait = cs.split('private async Task<bool> WaitForGenerationTokenAsync(', 1)[1].split('private async Task WaitForGenerationFinishAsync(', 1)[0]
+generation = cs.split('private async Task Generate(', 1)[1].split('private void PersistChat(', 1)[0]
+assert 'int streamTokenTarget = Volatile.Read(ref generationStreamingTokenCount) + 1;' in selftest
+assert selftest.index('WaitForGenerationTokenAsync(streamTokenTarget, stopTarget, TimeSpan.FromMinutes(2))') < selftest.index('document.getElementById(\'stop\').click()')
+assert 'NOX_ACTIVE_HTTP_STREAM_NOT_OBSERVED_HOLD' in selftest
+assert 'Volatile.Read(ref generationFinishedCount) >= generationTarget' in token_wait
+assert 'Volatile.Read(ref generationStreamingTokenCount) >= tokenTarget' in token_wait
+assert 'if (value.Length > 0) Interlocked.Increment(ref generationStreamingTokenCount);' in generation
+assert generation.index('await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellation.Token)') < generation.index('Interlocked.Increment(ref generationStreamingTokenCount)')
+print('B04 R8 SOURCE_ONLY: physical STOP oracle waits for live Ollama NDJSON token, not only native dispatch PASS')
