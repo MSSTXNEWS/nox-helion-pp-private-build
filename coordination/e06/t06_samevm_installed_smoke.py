@@ -255,21 +255,59 @@ def original_no_loss_anyexit_slot_snapshot(
     preserved=[]
     unreadable=[]
     for label,root in slots:
-        # Even when a Windows slot is unreadable after a nonzero NSIS EXIT,
-        # preserve the native exit and produce a fail-closed NO-LOSS snapshot.
-        # Never interpret an inaccessible slot as proof that it is absent.
+        # D03: admission is by lstat of the ORIGINAL NSIS slot, not
+        # Path.exists() of its child. An empty redirected junction/symlink,
+        # non-directory slot or unreadable root is NEVER proof of absence.
+        # Path.exists()/is_* may suppress access errors on some Python versions.
         try:
-            candidate=root/unmanaged_name
-            present=(candidate.exists() or candidate.is_symlink() or
-                     getattr(candidate,'is_junction',lambda:False)())
+            root_before=root.lstat()
+            if (not stat.S_ISDIR(root_before.st_mode) or
+                    root.is_symlink() or getattr(root,'is_junction',lambda:False)()):
+                unreadable.append(label)
+                continue
+        except FileNotFoundError:
+            # Genuine absent backup/stage directory is normal after NSIS.
+            continue
         except (OSError, ValueError):
             unreadable.append(label)
             continue
-        if present:
-            occupied.append(label)
-            if (original_no_loss_file_preserved(candidate,unmanaged_bytes,local_base) and
-                    original_no_loss_inode_preserved(candidate,unmanaged_identity,local_base)):
-                preserved.append(label)
+        try:
+            candidate=root/unmanaged_name
+            candidate.lstat()
+        except FileNotFoundError:
+            # Missing child is safe to call absent only while its actual
+            # parent directory retains the same original filesystem identity.
+            try:
+                root_after=root.lstat()
+                same_root=(stat.S_ISDIR(root_after.st_mode) and
+                           (root_after.st_dev,root_after.st_ino,root_after.st_mode) ==
+                           (root_before.st_dev,root_before.st_ino,root_before.st_mode) and
+                           not root.is_symlink() and
+                           not getattr(root,'is_junction',lambda:False)())
+            except (OSError,ValueError):
+                same_root=False
+            if not same_root:
+                unreadable.append(label)
+            continue
+        except (OSError, ValueError):
+            unreadable.append(label)
+            continue
+        occupied.append(label)
+        if (original_no_loss_file_preserved(candidate,unmanaged_bytes,local_base) and
+                original_no_loss_inode_preserved(candidate,unmanaged_identity,local_base)):
+            preserved.append(label)
+        # Do not silently admit a swapped/reparsed slot after reading its file.
+        try:
+            root_after=root.lstat()
+            same_root=(stat.S_ISDIR(root_after.st_mode) and
+                       (root_after.st_dev,root_after.st_ino,root_after.st_mode) ==
+                       (root_before.st_dev,root_before.st_ino,root_before.st_mode) and
+                       not root.is_symlink() and
+                       not getattr(root,'is_junction',lambda:False)())
+        except (OSError,ValueError):
+            same_root=False
+        if not same_root:
+            unreadable.append(label)
     unmanaged_safe=(len(occupied)==1 and len(preserved)==1 and not unreadable)
     return {"persistent_user_data":"PRESERVED" if persistent_safe else "HOLD",
             "unmanaged_install_data":"PRESERVED" if unmanaged_safe else "HOLD",

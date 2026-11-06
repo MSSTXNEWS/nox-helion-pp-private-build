@@ -88,6 +88,29 @@ class D03AnyExitNoLoss(unittest.TestCase):
         except (OSError,NotImplementedError):self.skipTest("symlink not permitted")
         self.assertEqual(self.proof()["unmanaged_install_data"],"HOLD")
 
+    def test_empty_reparse_slot_is_not_absent(self):
+        # A redirected but empty NSIS side slot used to count as ABSENT and
+        # allow false PRESERVED from the legitimate installed user file.
+        self.stage.rmdir()
+        try:
+            self.stage.symlink_to(self.root,target_is_directory=True)
+        except (OSError,NotImplementedError):
+            self.skipTest("directory symlink unsupported on this runner")
+        snapshot=self.proof()
+        self.assertEqual(snapshot["persistent_user_data"],"PRESERVED")
+        self.assertEqual(snapshot["unmanaged_install_data"],"HOLD")
+        self.assertEqual(snapshot["unmanaged_slots_unreadable"],["stage"])
+        self.assertIsNone(snapshot["original_unmanaged_slot"])
+
+    def test_non_directory_stage_slot_is_not_absent(self):
+        # No elevated Windows privileges needed: an unexpected native
+        # lifecycle side-slot FILE is just as untrusted as a reparse root.
+        self.stage.rmdir()
+        self.stage.write_bytes(b"foreign-slot")
+        snapshot=self.proof()
+        self.assertEqual(snapshot["unmanaged_install_data"],"HOLD")
+        self.assertEqual(snapshot["unmanaged_slots_unreadable"],["stage"])
+
     def test_both_native_exit_gates_are_strict(self):
         s=(Path(__file__).resolve().parents[2]/
            "coordination/e06/t06_samevm_installed_smoke.py").read_text("utf-8")
