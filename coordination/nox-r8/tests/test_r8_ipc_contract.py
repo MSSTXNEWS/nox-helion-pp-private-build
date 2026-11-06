@@ -25,6 +25,9 @@ required_cs = (
     'TimeSpan.FromSeconds(3)',
     'PROVIDER_UNREACHABLE:',
     'OLLAMA_HTTP_ERROR:',
+    'catch (OperationCanceledException) when (cancellation.IsCancellationRequested)',
+    'catch (OperationCanceledException) {',
+    'OLLAMA_TIMEOUT:',
 )
 required_html = (
     'activeChatId=nextChatId()',

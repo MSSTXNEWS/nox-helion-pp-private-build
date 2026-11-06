@@ -870,10 +870,19 @@ public partial class MainWindow : Window
                 measured = evalCount > 0 && evalDuration > 0 });
             Emit("complete", new { requestId, ok = answer.Length > 0, tokens = evalCount, stopped = false });
         }
-        catch (OperationCanceledException) {
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested) {
+            // Only the active HTTP request's explicit owner STOP/navigation cancellation
+            // is allowed to report stopped=true. HttpClient's own timeout is not STOP.
             lastGenerationStopped = true;
             Emit("status", new { requestId, state = "STOPPED" });
             Emit("complete", new { requestId, ok = false, stopped = true });
+        }
+        catch (OperationCanceledException) {
+            // HttpClient.Timeout can cancel an Ollama stream without owner intent.
+            // Preserve SQLite (no partial save) and release the UI with an ERROR ACK.
+            Emit("error", new { requestId, message = "OLLAMA_TIMEOUT: ожидание ответа модели истекло" });
+            Emit("status", new { requestId, state = "ERROR" });
+            Emit("complete", new { requestId, ok = false, stopped = false });
         }
         catch (HttpRequestException ex) {
             // Distinguish transport-offline from HTTP model/server rejection.
