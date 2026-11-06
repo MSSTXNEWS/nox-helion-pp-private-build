@@ -201,6 +201,56 @@ class PostmortemGuards(unittest.TestCase):
         self.assertEqual((installed / 'nox-p01-owned.txt').read_bytes(), before)
         self.assertEqual(self.calls, [])
 
+    def test_failed_native_rollback_attests_readonly_backup_verifier_without_acceptance(self):
+        """A PASS in a read-only backup probe never erases native rollback EXIT=1."""
+        self.failure['reason'] = 'T06_ORIGINAL_NSIS_ROLLBACK_NOLOSS_HOLD'
+        self.failure['installer_lifecycle'] = {'rollback': {'code': 1}}
+        (self.stage / 'payload.sha256.json').unlink()
+        previous = self.local / 'Programs/NOX HELION.__p01_previous'
+        previous.mkdir()
+        (previous / 'payload.sha256.json').write_text('{}')
+        staged = self.root / 'work/e06/staged/R11/Installer/Verify-Payload.ps1'
+        staged.parent.mkdir(parents=True)
+        guards = (b'Get-P01VerifiedSha256', b'Assert-P01UniqueManifestMembers',
+                  b'Assert-NoReparseAncestors', b'AllowInstalledUserFiles',
+                  b'AllowInstalledMetadata', b'P01_PAYLOAD_VERIFY_FAILED')
+        staged.write_bytes(b'# staged fixture (not executed)\n' +
+                           b' '.join(guards) + b'\n' + b'#' * 2400)
+        original = (previous / 'payload.sha256.json').read_bytes()
+        for exit_code, message, status in (
+            (0, 'P01_PAYLOAD_SHA256_PASS',
+             'READ_ONLY_BACKUP_VERIFIER_PASS_NOT_ROLLBACK'),
+            (1, 'P01_PAYLOAD_VERIFY_FAILED: original backup mismatch',
+             'BACKUP_VERIFIER_PAYLOAD_ADMISSION_HOLD'),
+        ):
+            self.calls.clear()
+            def readonly_runner(args, timeout):
+                self.calls.append((args, timeout))
+                return {'code': exit_code, 'stdout_tail': message, 'stderr_tail': ''}
+            self.owner.run = readonly_runner
+            report = self.collect()
+            witness = report['rollback_diagnostic']
+            backup = witness['attested_backup_verifier']
+            self.assertEqual(witness['original_exit_code'], 1)
+            self.assertEqual(backup['status'], status)
+            self.assertEqual(backup['verifier_exit_code'], exit_code)
+            self.assertFalse(report['release_accepted'])
+            self.assertFalse(witness['release_accepted'])
+            self.assertFalse(backup['release_accepted'])
+            self.assertEqual(backup['independent_e07'], 'NOT_RUN')
+            self.assertTrue(backup['original_rollback_exit_unchanged'])
+            self.assertEqual(len(self.calls), 1)
+            argv, timeout = self.calls[0]
+            self.assertEqual(argv[0], 'powershell.exe')
+            self.assertEqual(argv[argv.index('-Root') + 1], str(previous))
+            self.assertIn('-AllowInstalledMetadata', argv)
+            self.assertIn('-AllowInstalledUserFiles', argv)
+            self.assertNotIn('/S', argv)
+            self.assertNotIn('/ROLLBACK', argv)
+            self.assertEqual(timeout, 130)
+            self.assertEqual((previous / 'payload.sha256.json').read_bytes(),
+                             original)
+
     def test_rollback_missing_original_receipt_never_invents_exit_or_evidence(self):
         self.failure['reason'] = 'T06_ORIGINAL_NSIS_ROLLBACK_NOLOSS_HOLD'
         (self.stage / 'payload.sha256.json').unlink()

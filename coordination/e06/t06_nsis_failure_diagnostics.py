@@ -163,6 +163,13 @@ def collect(owner, *, platform_name=None, env=None):
                 if installed_slot['directory'] else False),
             'user_data_no_loss_accepted': False,
             'release_accepted': False}
+    # B03 G4: after a failed ORIGINAL NSIS rollback, inspect only the exact
+    # existing previous-slot backup. A successful read-only verifier is NOT
+    # a successful rollback; preserve the genuine native exit/HOLD unchanged.
+    report['rollback_diagnostic']['attested_backup_verifier'] = (
+        readonly_rollback_backup_verifier(
+            owner, Path(str(install) + '.__p01_previous')))
+
     # Real E06 #42119061209/#42120828250 reached an UPDATE backup HOLD.
     # A missing stage was previously undiagnosable here. Inspect only the
     # existing CI-owned backup and the EXACT original read-only reviewer. Do
