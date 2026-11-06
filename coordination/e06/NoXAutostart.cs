@@ -58,7 +58,17 @@ internal static class NoXAutostart
         // Owner consent and path verification precede a read-only no-op.
         // A foreign entry is rejected by ReadOwnedState, not overwritten.
         // A mutation is checked again below under the writable handle.
-        if (ReadOwnedState(executable) == enabled) return enabled;
+        var observed = ReadOwnedState(executable);
+        if (observed == enabled)
+        {
+            // A single no-op observation is not a durable SETTINGS receipt:
+            // another process may replace this Run value before we respond.
+            // Re-read using the same strict owner-only HKCU reader. A foreign
+            // value throws HOLD; changed ON/OFF must never be reported saved.
+            if (ReadOwnedState(executable) != enabled)
+                throw new IOException("NOX_AUTOSTART_NOOP_READBACK_CHANGED_HOLD");
+            return enabled;
+        }
         // Disabling a missing Run entry must not create HKCU keys as a side effect.
         // The owner still validates consent, the original executable and path.
         using var key = enabled
