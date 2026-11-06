@@ -121,5 +121,32 @@ class B03SingleSetupSHA(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError,"T06_G4_UNINSTALLER_ORIGIN_IDENTITY_HOLD"):
             owner.original_nsis_uninstaller_attestation(original,base)
 
+
+    def test_g4_missing_slot_under_regular_file_ancestor_is_hold(self):
+        # A file named like a parent folder must not make its missing child
+        # appear to be a cleanly absent NSIS stage or rollback directory.
+        file_parent=self.root/"foreign-ordinary-file"
+        file_parent.write_bytes(b"NOT_AN_NSIS_DIRECTORY")
+        self.assertFalse(owner.plain_parents(file_parent/"missing-stage",self.root))
+        self.assertFalse(owner.plain_parents(
+            file_parent/"missing-stage"/"Uninstall.exe",self.root))
+
+    def test_g4_clean_future_stage_and_existing_leaf_remain_admitted(self):
+        # Preserve original pre-install semantics: genuinely missing stage
+        # descendants are allowed, and existing normal file leaves are safe
+        # for read-only attestation after separate original owner checks.
+        self.assertTrue(owner.plain_parents(
+            self.root/"future-stage"/"payload.sha256.json",self.root))
+        self.assertTrue(owner.plain_parents(self.setup,self.root))
+
+    def test_g4_linked_slot_parent_is_hold_even_if_child_is_missing(self):
+        redirected=self.root/"linked-slot"
+        try:
+            redirected.symlink_to(self.root,target_is_directory=True)
+        except (OSError,NotImplementedError):
+            self.skipTest("Creating symlinks is not permitted in this environment")
+        self.assertFalse(owner.plain_parents(
+            redirected/"absent-rollback"/"Uninstall.exe",self.root))
+
 if __name__=="__main__":
     unittest.main()

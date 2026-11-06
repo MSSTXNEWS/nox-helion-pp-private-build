@@ -151,19 +151,40 @@ def strict_receipt(path: Path, code: str) -> dict:
     return strict_json_object(payload, code, max_bytes=4 * 1024 * 1024)
 
 def plain_parents(path:Path,base:Path)->bool:
+    """Reject an untrusted existing ancestor even when the NSIS slot is absent.
+
+    Before install, future stage/backup descendants may legitimately be
+    missing. Every *existing* ancestor must be a real directory, not a regular
+    file, symlink, junction, other NTFS reparse point or unreadable object.
+    The final existing leaf may be a regular file (Setup/manifest/user data).
+    This check is read-only and never establishes ownership or release PASS.
+    """
+    if not isinstance(path,Path) or not isinstance(base,Path):
+        return False
     try:
         cursor=path
-        while cursor!=base:
-            # A dangling Windows junction can report exists() == False.
-            # Check the reparse identity before trusting any ancestor.
-            if cursor.is_symlink() or getattr(cursor,"is_junction",lambda:False)():
-                return False
+        while True:
+            try:
+                info=cursor.lstat()
+            except FileNotFoundError:
+                info=None
+            if info is not None:
+                if (stat.S_ISLNK(info.st_mode) or
+                        getattr(info,"st_file_attributes",0) &
+                        getattr(stat,"FILE_ATTRIBUTE_REPARSE_POINT",0x400) or
+                        cursor.is_symlink() or
+                        getattr(cursor,"is_junction",lambda:False)()):
+                    return False
+                if (cursor==base or cursor!=path) and not stat.S_ISDIR(info.st_mode):
+                    return False
+            if cursor==base:
+                return info is not None and stat.S_ISDIR(info.st_mode)
             parent=cursor.parent
-            if parent==cursor: return False
+            if parent==cursor:
+                return False
             cursor=parent
-        return (base.is_dir() and not base.is_symlink() and
-                not getattr(base,"is_junction",lambda:False)())
-    except (OSError,ValueError):return False
+    except (OSError,ValueError,TypeError):
+        return False
 
 def original_no_loss_file_preserved(path: Path, expected: bytes, local_base: Path) -> bool:
     """READ-ONLY NO-LOSS check on EVERY native NSIS exit, including failures.
