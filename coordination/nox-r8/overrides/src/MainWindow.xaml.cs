@@ -214,6 +214,33 @@ public partial class MainWindow : Window
             checks["real_webview2_eight_routes"] = js == "true" ? "PASS" : "FAIL";
             if (js != "true") throw new InvalidOperationException("Embedded WebView2 routes did not switch");
 
+            // Real embedded WebView2 DOM keyboard/ARIA contract; no fake native actions.
+            // This tests event handling inside the running WPF WebView2, not OS SendInput.
+            var keyboard = await Browser.CoreWebView2.ExecuteScriptAsync("""
+                (() => {
+                  const nodes = [...document.querySelectorAll('button.core[data-route]')];
+                  if (nodes.length !== 8) return false;
+                  const selected = id => {
+                    const current = [...document.querySelectorAll('button.core[aria-current="page"]')];
+                    return current.length === 1 && current[0].dataset.route === id &&
+                      document.querySelector(`.panel[data-panel="${id}"]`)?.classList.contains('active');
+                  };
+                  nodes[0].click();
+                  if (!selected('consciousness')) return false;
+                  nodes[0].focus();
+                  nodes[0].dispatchEvent(new KeyboardEvent('keydown', {key:'ArrowRight', bubbles:true}));
+                  if (document.activeElement !== nodes[1] || !selected('atlas')) return false;
+                  nodes[1].dispatchEvent(new KeyboardEvent('keydown', {key:'End', bubbles:true}));
+                  if (document.activeElement !== nodes[7] || !selected('persona')) return false;
+                  nodes[7].dispatchEvent(new KeyboardEvent('keydown', {key:'Home', bubbles:true}));
+                  if (document.activeElement !== nodes[0] || !selected('consciousness')) return false;
+                  nodes[0].dispatchEvent(new KeyboardEvent('keydown', {key:'ArrowLeft', bubbles:true}));
+                  return document.activeElement === nodes[7] && selected('persona');
+                })()
+                """);
+            checks["real_webview2_keyboard_routes"] = keyboard == "true" ? "PASS" : "FAIL";
+            if (keyboard != "true") throw new InvalidOperationException("WebView2 keyboard route/ARIA verification failed");
+
             // Check native SQLite isolation: no use of an existing live chat database.
             var realPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                 "NOX_HELION", "chat.sqlite3");
@@ -262,7 +289,7 @@ public partial class MainWindow : Window
             string sha = "";
             try { if (File.Exists(executable)) sha = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(executable))); }
             catch (Exception ex) { error = (error ?? "") + " binary_hash:" + ex.Message; }
-            bool accepted = error == null && checks.Count == 3 && checks.Values.All(c => c == "PASS") && sha.Length == 64;
+            bool accepted = error == null && checks.Count == 5 && new[] { "real_webview2_eight_routes", "real_webview2_keyboard_routes", "isolated_sqlite_path", "settings_wpf_owner_sqlite_readback", "native_wpf_webview2_renderer" }.All(k => checks.TryGetValue(k, out var result) && result == "PASS") && sha.Length == 64;
             var receipt = new {
                 schema = "NOX_WPF_UI_SMOKE_R7_V1", pid = Environment.ProcessId,
                 runId = Environment.GetCommandLineArgs().FirstOrDefault(x => x.StartsWith("--nox-runid=", StringComparison.OrdinalIgnoreCase))?.Substring(12) ?? "",
@@ -569,7 +596,7 @@ public partial class MainWindow : Window
             string Text(string name) => request.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String ? (value.GetString() ?? "") : "";
             switch (kind)
             {
-                case "stop": Interlocked.Increment(ref stopSignalCount); active?.Cancel(); CancelLearnRequest(); break;
+                case "stop": Interlocked.Increment(ref stopSignalCount); active?.Cancel(); break; // Chat STOP never revokes a separate owner-approved LEARN request.
                 case "chat": await Generate(Text("text")); break;
                 case "history": Send("history", ReadHistory()); break;
                 case "notes.list": Send("notes", ReadNotes()); break;
