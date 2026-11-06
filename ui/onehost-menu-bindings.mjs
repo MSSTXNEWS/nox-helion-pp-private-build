@@ -295,6 +295,22 @@ export function settingsAutostartOwnerAdmission(button,issued,event){
   }catch(_){return false;}
 }
 
+// Native error detail is an owner-only secret; the renderer receives only
+// a bounded, reviewed code from the existing Windows owner/bridge.
+const AUTOSTART_SAFE_NATIVE_DENIALS=new Set([
+  'NATIVE_CONSENT_DENIED','NATIVE_PERMISSION_DENIED',
+  'NOX_AUTOSTART_NATIVE_OWNER_REQUIRED','NOX_AUTOSTART_NATIVE_HOLD',
+  'NOX_AUTOSTART_OWNER_EXE_NOT_FOUND','NOX_AUTOSTART_FOREIGN_ENTRY_HOLD',
+  'NOX_AUTOSTART_OWNER_CONSENT_REQUIRED','NOX_AUTOSTART_REPARSE_DENIED',
+  'NOX_AUTOSTART_NOOP_READBACK_CHANGED_HOLD','NOX_AUTOSTART_HKCU_UNAVAILABLE',
+  'NOX_AUTOSTART_PERSISTENCE_UNVERIFIED'
+]);
+export function nativeAutostartDenialCode(reply){
+  return reply?.routeId==='system.autostart' && reply?.state==='HOLD' &&
+    typeof reply.errorCode==='string' &&
+    AUTOSTART_SAFE_NATIVE_DENIALS.has(reply.errorCode) ? reply.errorCode : null;
+}
+
 /** SETTINGS owner requests are single-flight: a second ON/OFF/read cannot race
  * an unconfirmed native HKCU write and misreport persisted state.
  * WPF still owns all SID/ACL/consent and Windows Registry decisions. */
@@ -317,18 +333,18 @@ export function createAutostartOwnerFlow(nativeRequest){
           // A native read must independently attest HKCU state. Never return
           // a transport/progress or write-shaped receipt as verified SETTINGS.
           if(!nativeAutostartPersistenceAck(reply,null))
-            throw Error('NOX_AUTOSTART_READ_UNVERIFIED');
+            throw Error(nativeAutostartDenialCode(reply)||'NOX_AUTOSTART_READ_UNVERIFIED');
           return reply;
         }
         // Transport COMPLETED is not an independent Windows Registry readback.
         // Keep the existing WPF owner's SETTINGS lock through a fresh read-only
         // native route invocation; denied, stale, or mismatched results fail closed.
         if(!nativeAutostartPersistenceAck(reply,payload.enabled))
-          throw Error('NOX_AUTOSTART_WRITE_UNVERIFIED');
+          throw Error(nativeAutostartDenialCode(reply)||'NOX_AUTOSTART_WRITE_UNVERIFIED');
         const readback=await nativeRequest('system.autostart',{});
         if(!nativeAutostartPersistenceAck(readback,null) ||
           readback.result.enabled!==payload.enabled)
-          throw Error('NOX_AUTOSTART_READBACK_HOLD');
+          throw Error(nativeAutostartDenialCode(readback)||'NOX_AUTOSTART_READBACK_HOLD');
         return reply;
       }
       finally{inFlight=false;}

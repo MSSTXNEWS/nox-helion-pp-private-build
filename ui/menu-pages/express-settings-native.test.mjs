@@ -10,7 +10,7 @@ test('original SETTINGS routes to owner-verified HKCU, never direct registry acc
  assert.match(src,/b\.dataset\.nativeRoute='system\.autostart'/);
  assert.doesNotMatch(src,/reg\s+add|window\.localStorage\.setItem\(['"]autostart/);
 });
-import {settingsAutostartOwnerAdmission,AUTOSTART_UIA_IDS} from '../onehost-menu-bindings.mjs';
+import {settingsAutostartOwnerAdmission,AUTOSTART_UIA_IDS,createAutostartOwnerFlow,nativeAutostartDenialCode} from '../onehost-menu-bindings.mjs';
 function d06Fixture({kind='on',ariaHidden=null,ariaDisabled=null,type='button',
   role=null,trusted=true,occluded=false,duplicate=false,disabled=false}={}){
   const [key,value]={read:['',''],on:['enabled','true'],off:['enabled','false']}[kind];
@@ -33,4 +33,29 @@ test('D06 native SETTINGS UIA owner rejects ARIA aliases and form side effects',
     {ariaDisabled:' true '},{type:'submit'},{type:'reset'},
     {role:'link'},{trusted:false},{occluded:true},{duplicate:true},{disabled:true}
   ])assert.equal(d06Fixture(variant),false,JSON.stringify(variant));
+});
+
+test('D06 native SETTINGS owner refusal: reviewed codes only, no paths or false readback',async()=>{
+ const routeId='system.autostart';
+ const hold=errorCode=>({routeId,state:'HOLD',errorCode,result:null});
+ const refusal=hold('NOX_AUTOSTART_FOREIGN_ENTRY_HOLD');
+ assert.equal(nativeAutostartDenialCode(refusal),'NOX_AUTOSTART_FOREIGN_ENTRY_HOLD');
+ await assert.rejects(createAutostartOwnerFlow(async()=>refusal).request({enabled:true}),
+   {message:'NOX_AUTOSTART_FOREIGN_ENTRY_HOLD'});
+ await assert.rejects(createAutostartOwnerFlow(async()=>hold('NATIVE_CONSENT_DENIED')).request({}),
+   {message:'NATIVE_CONSENT_DENIED'});
+ await assert.rejects(createAutostartOwnerFlow(async()=>hold('SECRET_PATH_NOT_FOR_RENDERER')).request({enabled:false}),
+   {message:'NOX_AUTOSTART_WRITE_UNVERIFIED'});
+ await assert.rejects(createAutostartOwnerFlow(async()=>({...refusal,routeId:'models.catalog'})).request({}),
+   {message:'NOX_AUTOSTART_READ_UNVERIFIED'});
+ await assert.rejects(createAutostartOwnerFlow(async()=>({...refusal,state:'COMPLETED'})).request({enabled:true}),
+   {message:'NOX_AUTOSTART_WRITE_UNVERIFIED'});
+ const written={routeId,state:'COMPLETED',errorCode:null,result:{enabled:true,readOnly:false}};
+ await assert.rejects(createAutostartOwnerFlow(async(_,payload)=>
+   Object.keys(payload).length?written:hold('NOX_AUTOSTART_HKCU_UNAVAILABLE')).request({enabled:true}),
+   {message:'NOX_AUTOSTART_HKCU_UNAVAILABLE'});
+ const readback={routeId,state:'COMPLETED',errorCode:null,result:{enabled:true,readOnly:true}};
+ const request=async(_,payload)=>Object.keys(payload).length?written:readback;
+ assert.equal((await createAutostartOwnerFlow(request).request({enabled:true})).result.enabled,true);
+ assert.equal((await createAutostartOwnerFlow(request).request({})).result.readOnly,true);
 });
