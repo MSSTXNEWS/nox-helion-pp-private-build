@@ -6,6 +6,8 @@ Bind ONLY to 127.0.0.1; never executes web-origin commands.
 """
 from __future__ import annotations
 import argparse
+import hashlib
+import re
 import ctypes
 import json
 import os
@@ -119,6 +121,34 @@ def get_state(root):
     return status
 
 
+def latest_adapter(root):
+    """Only complete checkpoint directories, no synthetic LoRA counts."""
+    base=root/"brain"/"intelligence"/"adapters"
+    if not base.is_dir(): return None
+    best=None
+    for run in base.iterdir():
+        if not run.is_dir() or run.is_symlink() or not run.name.startswith(
+            ("SAFE65_","NOX_GPU_","GPU_","NOX_RESUME_")
+        ): continue
+        for stepdir in run.glob("step-*"):
+            if not stepdir.is_dir() or stepdir.is_symlink(): continue
+            match=re.fullmatch(r"step-(\\d+)",stepdir.name)
+            if not match: continue
+            weights=stepdir/"adapter_model.safetensors"
+            config=stepdir/"adapter_config.json"
+            if not weights.is_file() or not config.is_file():continue
+            if weights.stat().st_size<1000:continue
+            key=(int(match.group(1)),weights.stat().st_mtime)
+            if best is None or key>best[0]:best=(key,stepdir,weights)
+    if best is None:return None
+    _,stepdir,weights=best
+    try:
+        sha=hashlib.file_digest(weights.open("rb"),"sha256").hexdigest()
+    except (OSError,ValueError):
+        sha=None
+    return {"step":int(stepdir.name.split("-")[1]),
+            "path":str(stepdir),"sha256":sha}
+
 def forge_focus_live(root):
     """Translate verified local receipts into the original FORGE FOCUS V4 schema.
 
@@ -128,6 +158,7 @@ def forge_focus_live(root):
     d=get_state(root)
     observed=actual_training_observation(root)
     training=d["training"]
+    adapter=latest_adapter(root)
     timestamp=training.get("receipt_age_seconds")
     # Receipt can be historical. A live step requires a recently updated
     # training receipt; no stale SFTTrainer output is treated as running.
@@ -157,7 +188,9 @@ def forge_focus_live(root):
         "cycle":training.get("stage") if observed["verified_live"] else None,
         "loss":observed["loss"],
         "loss_points":observed["loss_points"],
-        "checkpoints":None,"last_checkpoint":None,"last_sha":None,
+        "checkpoints":1 if adapter else 0,
+        "last_checkpoint":adapter["path"] if adapter else None,
+        "last_sha":adapter["sha256"] if adapter else None,
         "gpu_temp":observed["gpu_temp"],
         "cpu_temp":d["cpu_temperature_c"],
         "gpu_sensor_source":observed["sensor_source"],
@@ -165,6 +198,8 @@ def forge_focus_live(root):
         "disk_free_gib":round(d["disk_free_bytes"]/(1024**3),3)
                         if d["disk_free_bytes"] is not None else None,
         "models":model_record,
+        "model_names":[x["name"] for x in models],
+        "saved_step":adapter["step"] if adapter else None,
         "knowledge_count":own_mem,
         "quality_verified":None,
         "speed_steps_s":None,
@@ -186,7 +221,8 @@ def forge_focus_live(root):
 
 
 def server(root,port):
-    html=(CODE/"forge_focus_v4_canonical_live.html").read_bytes()
+    html=(CODE/"forge_live_control_v5.html").read_bytes()
+    visual=(CODE/"forge_focus_v4_canonical_live.html").read_bytes()
     class H(BaseHTTPRequestHandler):
         def respond(self,body,kind="application/json; charset=utf-8",code=200):
             self.send_response(code)
@@ -200,8 +236,10 @@ def server(root,port):
         def do_GET(self):
             if self.path in ("/","/index.html"):
                 return self.respond(html,"text/html; charset=utf-8")
+            if self.path=="/visual":
+                return self.respond(visual,"text/html; charset=utf-8")
             if self.path=="/api/health":
-                return self.respond(json.dumps({"schema":"NOX-FORGE-FOCUS-LIVE-v1","status":"READY","template":"original-FORGE-FOCUS-V4"}).encode())
+                return self.respond(json.dumps({"schema":"NOX-FORGE-FOCUS-LIVE-v1","status":"READY","template":"FORGE-LIVE-CONTROL-V5+original-FORGE-FOCUS-V4"}).encode())
             if self.path=="/api/status":
                 return self.respond(json.dumps(forge_focus_live(root),ensure_ascii=False).encode())
             return self.respond(b'{"error":"not found"}',code=404)
