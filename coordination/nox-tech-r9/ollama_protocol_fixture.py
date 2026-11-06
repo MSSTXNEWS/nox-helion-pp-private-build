@@ -29,7 +29,7 @@ class Handler(BaseHTTPRequestHandler):
    def token(obj):
     b=(json.dumps(obj,ensure_ascii=False)+"\n").encode()
     self.wfile.write(("%x\r\n"%len(b)).encode()+b+b"\r\n");self.wfile.flush()
-   if normal:
+   if normal and not stop:
     token({"response":"4","done":False})
     token({"response":"","done":True,"eval_count":1,"eval_duration":100000000,"prompt_eval_count":18})
     self.wfile.write(b"0\r\n\r\n");self.wfile.flush();return
