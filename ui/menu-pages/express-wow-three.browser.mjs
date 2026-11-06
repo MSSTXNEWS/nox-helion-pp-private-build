@@ -23,6 +23,9 @@ try{
   await page.locator('#directions button').first().click();
   const aetherCard=page.locator('.details .nox-catalog-card').first();
   assert.equal(await aetherCard.isVisible(),true,'AETHER must style real navigation cards');
+  assert.equal(await aetherCard.evaluate(el=>el.classList.contains('nox-tabler-card')),true,'Tabler original card pattern must mount in real route');
+  const tablerBorder=await aetherCard.evaluate(el=>getComputedStyle(el).borderTopStyle);
+  assert.equal(tablerBorder,'solid','Tabler bounded card style must be active');
   const glass=await aetherCard.evaluate(el=>getComputedStyle(el).backdropFilter);
   if(width>520) assert.match(glass,/blur/,'AETHER glass should be active in MAX');
   await page.screenshot({path:`wow-three-${width}.png`,fullPage:true});
