@@ -81,6 +81,10 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        // Expose the existing WPF WebView2 host to the Windows UI Automation tree.
+        // DOM controls inside the host retain their own HTML label/ARIA semantics.
+        System.Windows.Automation.AutomationProperties.SetAutomationId(Browser, "NOX_HELION_WEBVIEW2");
+        System.Windows.Automation.AutomationProperties.SetName(Browser, "NOX HELION embedded interface");
         Loaded += async (_, _) => await Initialize();
         Closing += (_, _) => { active?.Cancel(); activeModelPull?.Cancel(); http.Dispose(); };
         if (UiSmokeRequested) _ = UiSmokeWatchdogAsync();
@@ -316,6 +320,52 @@ public partial class MainWindow : Window
             checks["real_webview2_keyboard_routes"] = keyboard == "true" ? "PASS" : "FAIL";
             if (keyboard != "true") throw new InvalidOperationException("WebView2 keyboard route/ARIA verification failed");
 
+            // D06: test the real Windows UI Automation provider, not just DOM
+            // attributes. Query off the WPF UI thread to avoid cross-thread UIA
+            // deadlocks, using the live Window HWND of this smoke process.
+            var uiaHandle = new WindowInteropHelper(this).Handle;
+            var accessibleHost = await Task.Run(() =>
+            {
+                var root = System.Windows.Automation.AutomationElement.FromHandle(uiaHandle);
+                var browser = root?.FindFirst(
+                    System.Windows.Automation.TreeScope.Descendants,
+                    new System.Windows.Automation.PropertyCondition(
+                        System.Windows.Automation.AutomationElement.AutomationIdProperty,
+                        "NOX_HELION_WEBVIEW2"));
+                return browser != null &&
+                    browser.Current.Name == "NOX HELION embedded interface";
+            });
+            if (!accessibleHost)
+                throw new InvalidOperationException("NOX_SETTINGS_WINDOWS_UIA_HOST_HOLD");
+            checks["settings_windows_uia_host"] = "PASS";
+
+            // DOM accessibility must also survive in real WebView2:
+            // visible labels, enabled buttons, live receipt region and focus.
+            var accessibleSettings = await Browser.CoreWebView2.ExecuteScriptAsync("""
+                (() => {
+                  document.querySelector('button.core[data-route="persona"]')?.click();
+                  const persona = document.getElementById('persona');
+                  const mode = document.getElementById('performance');
+                  const motion = document.getElementById('reduceMotion');
+                  const status = document.getElementById('personaStatus');
+                  const label = document.querySelector('label[for="persona"]');
+                  const modeLabel = document.querySelector('label[for="performance"]');
+                  const save = document.getElementById('savePerformance');
+                  if (!persona || !mode || !motion || !status || !label ||
+                      !modeLabel || !save || !motion.closest('label')) return false;
+                  if (!label.textContent.trim() || !modeLabel.textContent.trim() ||
+                      status.getAttribute('role') !== 'status' ||
+                      status.getAttribute('aria-live') !== 'polite' ||
+                      mode.disabled || persona.disabled || save.disabled) return false;
+                  mode.focus();
+                  return document.activeElement === mode &&
+                    [...mode.options].map(x => x.value).join(',') === 'MAX,BALANCED,ECO';
+                })()
+                """);
+            if (accessibleSettings != "true")
+                throw new InvalidOperationException("NOX_SETTINGS_WEBVIEW2_ACCESSIBILITY_HOLD");
+            checks["settings_webview2_accessible_controls"] = "PASS";
+
             // Check native SQLite isolation: no use of an existing live chat database.
             var realPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                 "NOX_HELION", "chat.sqlite3");
@@ -430,6 +480,7 @@ public partial class MainWindow : Window
             var requiredChecks = UiSmokeSettingsRestartRequested
                 ? new[] { "isolated_sqlite_path", "settings_wpf_owner_restart_readback" }
                 : new[] { "real_webview2_eight_routes", "real_webview2_keyboard_routes",
+                          "settings_windows_uia_host", "settings_webview2_accessible_controls",
                           "isolated_sqlite_path", "settings_wpf_owner_sqlite_readback",
                           "settings_wpf_motion_sqlite_readback", "settings_foreign_key_denial",
                           "native_wpf_webview2_renderer" };
