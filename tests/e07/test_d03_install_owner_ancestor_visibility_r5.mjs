@@ -4,9 +4,11 @@ import {readFileSync} from 'node:fs';
 import {strict as assert} from 'node:assert';
 import {test} from 'node:test';
 const source=readFileSync(new URL('../../coordination/express/stage_original_five_primary.py',import.meta.url),'utf8');
-const begin=source.indexOf('function visibleOriginalOwnerTarget(button){');
-const end=source.indexOf("\n\nnav.addEventListener('click',",begin);
-assert.ok(begin>0&&end>begin,'original production owner gate required');
+const begin=source.indexOf('function ariaSuppressed(el){');
+const ownerGate=source.indexOf('function visibleOriginalOwnerTarget(button){',begin);
+const end=source.indexOf("\n\nnav.addEventListener('click',",ownerGate);
+assert.ok(begin>0&&ownerGate>begin&&end>ownerGate,
+  'original ARIA and owner admission gates required');
 const real=new Function('window','document',source.slice(begin,end)+'; return visibleOriginalOwnerTarget;');
 const good={display:'block',visibility:'visible',pointerEvents:'auto',opacity:'1'};
 function ownerAllowed(ancestorOverrides=[],hitAllowed=true,buttonOverrides={}){
