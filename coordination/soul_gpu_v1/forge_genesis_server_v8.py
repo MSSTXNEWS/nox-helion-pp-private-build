@@ -72,7 +72,12 @@ def get_state(root):
     brain=root/"brain"; telemetry=brain/"telemetry"
     genesis=read_json(telemetry/"genesis_status.json") or {}
     cycle=read_json(telemetry/"genesis_live.json") or {}
-    training=read_json(telemetry/"training.json") or {}
+    training_path=telemetry/"training.json"
+    training=read_json(training_path) or {}
+    try:
+        receipt_age_seconds=max(0,datetime.now(timezone.utc).timestamp()-training_path.stat().st_mtime)
+    except OSError:
+        receipt_age_seconds=None
     receipt=read_json(brain/"RUN_RECEIPT.json") or {}
     catalog=read_json(brain/"MODEL_CATALOG.json") or {}
     worms=read_json(telemetry/"worms.json") or {}
@@ -86,14 +91,14 @@ def get_state(root):
     status={
         "schema":SCHEMA, "updated_utc":datetime.now(timezone.utc).isoformat(),
         "models":m,"disk_free_bytes":free,"battery":battery(),
-        "gpu_temperature_c":temperature(),
-        "gpu_temperature_source":"NVIDIA_SMI" if temperature() is not None else "UNAVAILABLE",
+        "gpu_temperature_c":(gpu_temp:=temperature()),
+        "gpu_temperature_source":"NVIDIA_SMI" if gpu_temp is not None else "UNAVAILABLE",
         "training":{"status":training.get("status","NO_ACTIVE_TRAINING_RECEIPT"),
                     "step":steps,"requested_steps":total,"progress_percent":percent,
                     "loss_metrics":training.get("loss_metrics"),"stage":training.get("stage"),
                     "gpu_temperature_c":training.get("gpu_temperature_c"),
                     "cooldown_seconds":training.get("cooldown_seconds"),
-                    "source":"brain/telemetry/training.json"},
+                    "source":"brain/telemetry/training.json","receipt_age_seconds":receipt_age_seconds},
         "genesis":genesis,"cycle":cycle,
         "worms":{"planned":worms.get("planned",0),
                  "executed":cycle.get("worm_tasks_run",0),
@@ -109,8 +114,63 @@ def get_state(root):
     }
     return status
 
+
+def forge_focus_live(root):
+    """Translate verified local receipts into the original FORGE FOCUS V4 schema.
+
+    Never synthesize active training steps. Historical logs remain historical,
+    and CPU/GPU thermal values missing from sensors are explicitly unknown.
+    """
+    d=get_state(root)
+    training=d["training"]
+    timestamp=training.get("receipt_age_seconds")
+    # Receipt can be historical. A live step requires a recently updated
+    # training receipt; no stale SFTTrainer output is treated as running.
+    live=(
+        isinstance(timestamp,(float,int)) and timestamp<20 and
+        training.get("status") in ("training","running","RUNNING")
+    )
+    phase="RUNNING" if live else "STALE"
+    if d["last_runner"] in ("cuda-hold","training-stage-hold","rights-hold","datasets-required"):
+        phase="HOLD"
+    models=d["models"]
+    total=sum(x["size"] for x in models
+              if isinstance(x.get("size"),(int,float)) and x["size"]>=0)
+    model_record={"count":len(models),"weights_gib":round(total/(1024**3),3),
+                  "weights_source":"Ollama /api/tags"}
+    db=d["memory"]
+    own_mem=db.get("memories") if db.get("available") else None
+    step=training.get("step") if live else None
+    target=training.get("requested_steps") if live else None
+    loss=training.get("loss_metrics")
+    if not isinstance(loss,dict):loss={}
+    return {
+        "schema":"NOX-FORGE-FOCUS-LIVE-v1",
+        "phase":phase,"step":step,"target_steps":target,
+        "cycle":training.get("stage") if live else None,
+        "loss":loss.get("loss") if live else None,
+        "loss_points":[],"checkpoints":None,
+        "last_checkpoint":None,"last_sha":None,
+        "gpu_temp":d["gpu_temperature_c"],
+        "cpu_temp":None,
+        "disk_free_gib":round(d["disk_free_bytes"]/(1024**3),3)
+                        if d["disk_free_bytes"] is not None else None,
+        "models":model_record,"knowledge_count":own_mem,
+        "quality_verified":None,"speed_steps_s":None,
+        "stop_allowed":False,
+        "worm_statuses":{"Источники":"HOLD","Проверка":"HOLD"},
+        "training":"Активное обучение не подтверждено" if not live
+                    else "Проверенное недавнее обновление телеметрии",
+        "native_s03_verified":False,
+        "native_exe_rebuilt":False,
+        "battery":d["battery"],
+        "warnings":["FORGE read-only; STOP not connected to original OneHost",
+                    "Thermal safety on AMD requires an approved real sensor"],
+    }
+
+
 def server(root,port):
-    html=(CODE/"forge_genesis_v8.html").read_bytes()
+    html=(CODE/"forge_focus_v4_canonical_live.html").read_bytes()
     class H(BaseHTTPRequestHandler):
         def respond(self,body,kind="application/json; charset=utf-8",code=200):
             self.send_response(code)
@@ -127,7 +187,7 @@ def server(root,port):
             if self.path=="/api/health":
                 return self.respond(json.dumps({"schema":SCHEMA,"status":"READY"}).encode())
             if self.path=="/api/status":
-                return self.respond(json.dumps(get_state(root),ensure_ascii=False).encode())
+                return self.respond(json.dumps(forge_focus_live(root),ensure_ascii=False).encode())
             return self.respond(b'{"error":"not found"}',code=404)
         def do_POST(self):
             self.respond(b'{"error":"Read-only dashboard; native STOP unavailable"}',code=403)
