@@ -691,6 +691,14 @@ public partial class MainWindow : Window
 
     // Owner-only SQLite, including WAL: backup and verify a snapshot before any
     // schema mutation or VUNEO import. No parallel database or source deletion.
+    // Hash backups with bounded memory. Reading whole SQLite into a byte[] can
+    // fail for long-lived databases and must never be a prerequisite for NO-LOSS.
+    private static string Sha256File(string file)
+    {
+        using var stream = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.Read);
+        return Convert.ToHexString(SHA256.HashData(stream));
+    }
+
     private string CheckpointSqlite(SqliteConnection source, string purpose)
     {
         string dir = Path.Combine(Path.GetDirectoryName(dbPath)!, "backups");
@@ -713,7 +721,7 @@ public partial class MainWindow : Window
             if (!string.Equals(integrity.ExecuteScalar() as string, "ok", StringComparison.OrdinalIgnoreCase))
                 throw new InvalidOperationException("NOX_SQLITE_BACKUP_INTEGRITY_HOLD");
         }
-        string sha = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(file)));
+        string sha = Sha256File(file);
         File.WriteAllText(file + ".sha256.tmp", sha + "  " + Path.GetFileName(file), Encoding.UTF8);
         File.Move(file + ".sha256.tmp", file + ".sha256");
         return file;
@@ -1585,19 +1593,42 @@ public partial class MainWindow : Window
             Filter = "SQLite database (*.sqlite3)|*.sqlite3",
             FileName = "NOX_HELION_backup_" + DateTime.Now.ToString("yyyyMMdd_HHmmss") + ".sqlite3",
             AddExtension = true,
-            OverwritePrompt = true,
+            OverwritePrompt = false, // NO-LOSS: an existing user file is never an export target.
             Title = "Сохранить резервную копию памяти NOX"
         };
         if (dialog.ShowDialog(this) != true) return;
-        if (string.Equals(Path.GetFullPath(dialog.FileName), Path.GetFullPath(dbPath), StringComparison.OrdinalIgnoreCase))
-            throw new InvalidOperationException("Нельзя заменить работающую базу данных её же копией");
+        var target = Path.GetFullPath(dialog.FileName);
+        if (string.Equals(target, Path.GetFullPath(dbPath), StringComparison.OrdinalIgnoreCase) ||
+            File.Exists(target) || Directory.Exists(target))
+            throw new InvalidOperationException("NOX_BACKUP_DESTINATION_EXISTS_HOLD");
+        var outputDirectory = Path.GetDirectoryName(target)!;
+        if ((File.GetAttributes(outputDirectory) & FileAttributes.ReparsePoint) != 0)
+            throw new InvalidOperationException("NOX_BACKUP_DESTINATION_REPARSE_HOLD");
+
+        // SQLite WAL-safe online backup + quick_check + SHA receipt are performed
+        // before creating an owner-selected export; no live SQLite is overwritten.
         using var source = OpenDatabase();
-        using var copy = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = dialog.FileName }.ToString());
-        copy.Open(); source.BackupDatabase(copy);
-        Send("notice", "Резервная копия SQLite сохранена: " + dialog.FileName);
+        var snapshot = CheckpointSqlite(source, "OWNER_EXPORT");
+        var stage = Path.Combine(outputDirectory, "." + Path.GetFileName(target) +
+            "." + Guid.NewGuid().ToString("N") + ".pending");
+        // Stage beside the destination, so the final rename is on one volume.
+        // On error the verified app-local snapshot survives; never delete a
+        // possibly valuable preexisting owner file or silently claim success.
+        using (var input = new FileStream(snapshot, FileMode.Open, FileAccess.Read, FileShare.Read))
+        using (var output = new FileStream(stage, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+        {
+            input.CopyTo(output);
+            output.Flush(flushToDisk: true);
+        }
+        var originalSha = Sha256File(snapshot);
+        if (!string.Equals(originalSha, Sha256File(stage), StringComparison.Ordinal))
+            throw new InvalidOperationException("NOX_BACKUP_EXPORT_CHECKSUM_HOLD");
+        File.Move(stage, target); // No overwrite; if another file appeared, hold.
+        if (!string.Equals(originalSha, Sha256File(target), StringComparison.Ordinal))
+            throw new InvalidOperationException("NOX_BACKUP_EXPORT_READBACK_HOLD");
+        Send("notice", "Резервная копия SQLite сохранена: " + target);
     }
 
-    
     // An explicit native consent gate for a persistent PREPARATION queue.
     // No GPU worker, weight update or successful SHA checkpoint is claimed.
     private static string OwnerSid()

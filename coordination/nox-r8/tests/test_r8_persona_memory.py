@@ -13,6 +13,15 @@ for guard in (
     'CheckpointSqlite(db, "PRE_PERSONA_MIGRATION")',
     'CheckpointSqlite(db, "PRE_VUNEO_IMPORT")',
     'source.BackupDatabase(dest)', 'PRAGMA quick_check',
+    'private static string Sha256File(string file)',
+    'SHA256.HashData(stream)',
+    'string sha = Sha256File(file);',
+    'NOX_BACKUP_DESTINATION_EXISTS_HOLD',
+    'NOX_BACKUP_DESTINATION_REPARSE_HOLD',
+    'FileMode.CreateNew',
+    'File.Move(stage, target);',
+    'NOX_BACKUP_EXPORT_CHECKSUM_HOLD',
+    'NOX_BACKUP_EXPORT_READBACK_HOLD',
     'NOX_PERSONA_GENERATION_ACTIVE_HOLD',
     'PersistChat(prompt, answer.ToString(), persona)',
     'BuildLocalContext(prompt, persona)',
@@ -33,6 +42,19 @@ for guard in (
 ):
     assert guard in cs, guard
 assert "case 'persona.changed':" in web
+
+# D03 owner export safety: staging and SHA readback must precede a
+# no-overwrite final rename. Existing backups must never be truncated.
+export = cs.split('private void BackupLocalDatabase()', 1)[1].split('// An explicit native consent gate', 1)[0]
+assert export.index('CheckpointSqlite(source, "OWNER_EXPORT")') < export.index('FileMode.CreateNew')
+assert export.index('FileMode.CreateNew') < export.index('NOX_BACKUP_EXPORT_CHECKSUM_HOLD')
+assert export.index('NOX_BACKUP_EXPORT_CHECKSUM_HOLD') < export.index('File.Move(stage, target);')
+assert export.index('File.Move(stage, target);') < export.index('NOX_BACKUP_EXPORT_READBACK_HOLD')
+assert 'OverwritePrompt = false' in export
+assert 'DataSource = dialog.FileName' not in export
+checkpoint = cs.split('private string CheckpointSqlite(', 1)[1].split('private static bool HasPersonaColumn(', 1)[0]
+assert checkpoint.index('PRAGMA quick_check') < checkpoint.index('string sha = Sha256File(file);')
+assert 'File.ReadAllBytes(file)' not in checkpoint
 
 ddls = re.findall(r'cmd.CommandText = "(ALTER TABLE (?:chat_history|memory_notes) ADD COLUMN persona [^"]+)";', cs)
 assert len(ddls) == 2, ddls
