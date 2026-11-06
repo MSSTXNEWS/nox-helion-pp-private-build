@@ -251,6 +251,15 @@ function visibleOriginalOwnerTarget(button){
     button.getAttribute?.('aria-disabled')==='true'||
     button.closest('[hidden],[inert],[aria-hidden="true"],[aria-disabled="true"]')||
     button.getClientRects().length===0)return false;
+ // D03: a privileged INSTALL click must reach the original active R11
+ // CONTROL screen's OWN button, not a same-id detached/reparented element.
+ // WPF SID/ACL/consent and the original native handler remain authoritative.
+ if(button.getAttribute?.('id')==='pc-install'){
+   const owners=document.querySelectorAll('[id="control"]');
+   if(owners.length!==1||owners[0]!==document.getElementById('control')||
+      owners[0].classList?.contains('active')!==true||
+      !owners[0].contains(button))return false;
+ }
  const width=document.documentElement?.clientWidth;
  const height=document.documentElement?.clientHeight;
  const rect=button.getBoundingClientRect();
