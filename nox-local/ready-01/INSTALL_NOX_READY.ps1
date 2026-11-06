@@ -20,7 +20,7 @@ if(Test-Path $dest){throw 'NOX_READY_01 already exists; refusing to overwrite'}
 New-Item -ItemType Directory -Force -Path $root|Out-Null
 Copy-Item -LiteralPath $src -Destination $dest -Recurse -ErrorAction Stop
 $base='https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build'
-$uiCommit='c6d88280a3bc3e12dbe937a5d3f81aed5266cc1b'
+$uiCommit='8dc78f5c9086f590c6a7c6fdb9f7350999751530'
 $functionsCommit='e001f9c5f3d8fc785175482cd4c1d679593b880f'
 $hudCommit='785287af0bb08f77ef981ad0582b6bd9815ac67e'
 function Receive-Source([string]$url,[string]$target,[int]$minimum){
@@ -76,6 +76,12 @@ $echarts=Join-Path $dest 'vendor\fx\echarts.min.js'
 $old=Get-ChildItem -LiteralPath $root -Filter 'echarts.min.js' -File -Recurse -ErrorAction SilentlyContinue | Where-Object {$_.Length -gt 400000} | Select-Object -First 1
 if($old){New-Item -ItemType Directory -Force -Path (Split-Path -Parent $echarts)|Out-Null;Copy-Item -LiteralPath $old.FullName -Destination $echarts}
 else {Receive-Source 'https://cdn.jsdelivr.net/npm/echarts@5.6.0/dist/echarts.min.js' $echarts 400000}
+# Reuse real existing Python tests; browser acceptance remains a separate Windows gate.
+$testDir=Join-Path $dest 'tests'
+New-Item -ItemType Directory -Force -Path $testDir|Out-Null
+foreach($name in @('test_services.py','test_routes.py','test_browser.py')){
+ Receive-Source "$base/$uiCommit/nox-local/ready-01/tests/$name" (Join-Path $testDir $name) 300
+}
 # Export source ledger and never touch model/S03/training files.
 $manifest=[ordered]@{version='NOX_READY_01';source=$src;destination=$dest;source_licenses=@('MIT Black Hole','MIT Three.js','Apache-2.0 ECharts');real_trainer='HOLD until contract verified';s03='READ_ONLY until schema verified';web_push='Available after local opt-in and VAPID';models_changed=$false;sqlite_changed=$false;time=(Get-Date).ToString('o');items=@()}
 foreach($f in Get-ChildItem $dest -File -Recurse){$manifest.items+=@([ordered]@{path=$f.FullName.Substring($dest.Length+1);sha256=(Get-FileHash -LiteralPath $f.FullName -Algorithm SHA256).Hash})}
@@ -84,6 +90,9 @@ $python=Get-Command python.exe -ErrorAction SilentlyContinue
 if(!$python){throw 'Python 3 not installed; source ready but not started'}
 & $python.Source -m py_compile (Join-Path $dest 'server_mega.py') (Join-Path $dest 'nox_services.py') (Join-Path $dest 'nox_push.py') (Join-Path $dest 'pc_metrics.py')
 if($LASTEXITCODE -ne 0){throw 'Python validation failed; original unchanged'}
+# Confirm ready server/STOP/permissions contracts before optional keys are installed.
+& $python.Source -m unittest discover -s (Join-Path $dest 'tests') -p 'test_*.py'
+if($LASTEXITCODE -ne 0){throw 'NOX READY contract tests failed; originals untouched'}
 # Automatic installation of optional WebPush dependencies is isolated in NOX; no account keys leave this machine.
 $target=Join-Path $dest 'PUSH_PACKAGES'
 New-Item -ItemType Directory -Force -Path $target|Out-Null
