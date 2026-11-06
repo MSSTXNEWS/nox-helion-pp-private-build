@@ -87,6 +87,13 @@ try{
      maxButtonWidth:Math.max(...actions.map(x=>x.getBoundingClientRect().width),0),
      allVisible:[...actions,...cores].every(x=>{const r=x.getBoundingClientRect();return r.width>=20&&r.height>=20;})};
   });
+  if(geometry.scrollWidth>geometry.viewport+2){
+   const leaking=await page.evaluate(()=>[...document.querySelectorAll('body *')].map(el=>{
+    const r=el.getBoundingClientRect();
+    return {tag:el.tagName.toLowerCase(),id:el.id,className:typeof el.className==='string'?el.className.slice(0,90):'',left:Math.round(r.left),right:Math.round(r.right),width:Math.round(r.width)};
+   }).filter(r=>r.right>innerWidth+2||r.left< -2).sort((a,b)=>b.right-a.right).slice(0,20));
+   console.error('NOX_WOW_OVERFLOW_ELEMENTS',width,JSON.stringify(leaking));
+  }
   assert.equal(geometry.scrollWidth<=geometry.viewport+2,true,`Horizontal overflow at ${width}x${height}: ${JSON.stringify(geometry)}`);
   assert.equal(geometry.actions,5,'Five source-defined main actions remain');
   assert.equal(geometry.cores,8,'Eight CoreID buttons remain');
