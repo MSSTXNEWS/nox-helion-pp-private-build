@@ -2,8 +2,9 @@ import { chromium } from 'playwright';
 import assert from 'node:assert/strict';
 const browser=await chromium.launch({headless:true,channel:process.env.NOX_BROWSER_CHANNEL||undefined,executablePath:process.env.NOX_CHROME_PATH||undefined,args:['--use-gl=angle','--use-angle=swiftshader','--enable-webgl','--ignore-gpu-blocklist']});
 try{
- for(const width of [390,800,1920]){
-  const page=await browser.newPage({viewport:{width,height:900},reducedMotion:'no-preference'});
+ const viewports=[[320,700],[390,844],[800,480],[1024,768],[1280,720],[1920,1080],[3840,2160]];
+ for(const [width,height] of viewports){
+  const page=await browser.newPage({viewport:{width,height},reducedMotion:'no-preference'});
   const pageErrors=[];page.on('pageerror',error=>pageErrors.push(String(error)));
   const errors=[];
   page.on('console',message=>{if(message.type()==='error')errors.push(message.text());});
@@ -39,7 +40,7 @@ try{
   assert.equal(tablerBorder,'solid','Tabler bounded card style must be active');
   const glass=await aetherCard.evaluate(el=>getComputedStyle(el).backdropFilter);
   if(width>520) assert.match(glass,/blur/,'AETHER glass should be active in MAX');
-  await page.screenshot({path:`wow-three-${width}.png`,fullPage:true});
+  if([390,800,1920].includes(width))await page.screenshot({path:`wow-three-${width}.png`,fullPage:true});
   await page.locator('#fx').click();
   await page.waitForFunction(()=>document.body.dataset.fx==='ECO');
   assert.equal(await page.locator('canvas.nox-wow-three').isVisible(),false);
@@ -78,6 +79,18 @@ try{
   const buttons=await page.locator('#directions button').count();
   assert.equal(buttons,8,'All eight original navigation directions remain');
 
+  const geometry=await page.evaluate(()=>{
+   const actions=[...document.querySelectorAll('#actions button')];
+   const cores=[...document.querySelectorAll('#cores button')];
+   return {viewport:innerWidth,scrollWidth:document.documentElement.scrollWidth,
+     actions:actions.length,cores:cores.length,
+     maxButtonWidth:Math.max(...actions.map(x=>x.getBoundingClientRect().width),0),
+     allVisible:[...actions,...cores].every(x=>{const r=x.getBoundingClientRect();return r.width>=20&&r.height>=20;})};
+  });
+  assert.equal(geometry.scrollWidth<=geometry.viewport+2,true,`Horizontal overflow at ${width}x${height}: ${JSON.stringify(geometry)}`);
+  assert.equal(geometry.actions,5,'Five source-defined main actions remain');
+  assert.equal(geometry.cores,8,'Eight CoreID buttons remain');
+  assert.equal(geometry.allVisible,true,'Original action/CoreID controls retain usable hitboxes');
   assert.equal(pageErrors.length,0,pageErrors.join('; '));
   await page.close();
  }
@@ -88,5 +101,5 @@ try{
  assert.equal(await reduced.locator('canvas.nox-wow-three').isVisible(),false);
  assert.equal(await reduced.locator('canvas.nox-halo-radar').count(),1,'HALO static fallback must exist under reduced motion');
  await reduced.close();
- console.log('PASS: real Chromium HALO + HELIODON + AETHER + SVG Gauge + WebGL MAX/ECO, 390/800/1920 widths, nav, Reduced Motion');
+ console.log('PASS: real Chromium HALO + HELIODON + AETHER + SVG Gauge + WebGL MAX/ECO, seven viewports including 320/390/800x480/4K, nav, Reduced Motion');
 } finally {await browser.close();}
