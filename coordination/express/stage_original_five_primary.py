@@ -142,11 +142,24 @@ function findOriginalControl(name){
 // This is the immutable source-locked five-action HOME dock, not a name-based clone.
 // Stable HTML ids aid WebView2 UIA; reordering, replacing or duplicating a node HOLDS.
 const originalPrimaryButtons=Array.from(nav.querySelectorAll(':scope > button[data-nox-primary]'));
+// ARIA boolean true is case-insensitive. A CSS-visible button in an
+// accessibility-hidden/disabled original shell must never dispatch its owner.
+function ariaSuppressed(el){
+ let depth=0;
+ for(;el;el=el.parentElement){
+  if(++depth>64)return true;
+  const hidden=el.getAttribute?.('aria-hidden');
+  const disabled=el.getAttribute?.('aria-disabled');
+  if((typeof hidden==='string'&&hidden.trim().toLowerCase()==='true')||
+     (typeof disabled==='string'&&disabled.trim().toLowerCase()==='true'))return true;
+ }
+ return false;
+}
 function verifiedOriginalPrimaryDock(){
  const names=['CHAT','INSTALL','MODELS','LEARN','SETTINGS'];
  // UIA and keyboard admission must cover the ENTIRE original five-button dock:
  // one hidden/ARIA-suppressed sibling must not count as 5/5 real actions.
- if(!nav.isConnected||nav.closest('[hidden],[inert],[aria-hidden="true"],[aria-disabled="true"]')||
+ if(!nav.isConnected||ariaSuppressed(nav)||nav.closest('[hidden],[inert],[aria-hidden="true"],[aria-disabled="true"]')||
     nav.getClientRects().length===0)return false;
  const dockStyle=window.getComputedStyle(nav);
  if(!dockStyle||dockStyle.display==='none'||dockStyle.visibility!=='visible'||
@@ -184,7 +197,7 @@ function verifiedOriginalPrimaryDock(){
      button.getAttribute('type')!=='button'||
      (button.hasAttribute('role')&&button.getAttribute('role')!=='button')||
      document.querySelectorAll('[id="'+id+'"]').length!==1||
-     !button.isConnected||button.disabled||button.hidden||button.matches?.(':disabled')===true||button.tabIndex!==0||
+     !button.isConnected||button.disabled||button.hidden||ariaSuppressed(button)||button.matches?.(':disabled')===true||button.tabIndex!==0||
      button.closest('[hidden],[inert],[aria-hidden="true"],[aria-disabled="true"]')||
      button.getClientRects().length===0)return false;
   const rect=button.getBoundingClientRect();
@@ -220,7 +233,7 @@ function verifiedOriginalPrimaryDock(){
 // still require physical visibility, focus and an unobstructed hit target.
 function originalNavigationAllowed(button){
  return !!button&&button.tagName==='BUTTON'&&button.isConnected&&
-   !button.disabled&&button.matches?.(':disabled')!==true&&
+   !button.disabled&&!ariaSuppressed(button)&&button.matches?.(':disabled')!==true&&
    button.getAttribute('aria-disabled')!=='true'&&
    !button.closest('[hidden],[inert],[aria-hidden="true"],[aria-disabled="true"]');
 }
@@ -228,6 +241,7 @@ function visibleOriginalOwnerTarget(button){
  // Never trigger privileged original R11 handlers through offscreen,
  // occluded or accessibility-disabled controls. Keep their design untouched.
  if(!button||button.tagName!=='BUTTON'||!button.isConnected||button.disabled||
+    ariaSuppressed(button)||
     button.matches?.(':disabled')===true||
     button.getAttribute?.('aria-disabled')==='true'||
     button.closest('[hidden],[inert],[aria-hidden="true"],[aria-disabled="true"]')||

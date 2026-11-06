@@ -11,7 +11,11 @@ const source=readFileSync(resolve(root,'coordination/express/stage_original_five
 const builder=readFileSync(resolve(root,'coordination/e06/build_onehost_installer.ps1'),'utf8');
 const matches=source.match(/function originalNavigationAllowed\(button\)\{[\s\S]*?\n\}/);
 assert.ok(matches,'original navigation helper is part of the immutable stage source');
-const originalNavigationAllowed=Function(matches[0]+';return originalNavigationAllowed;')();
+const first=source.indexOf('function ariaSuppressed(el){');
+const last=source.indexOf('function verifiedOriginalPrimaryDock(){',first);
+assert.ok(first>=0&&last>first);
+const guard=source.slice(first,last);
+const originalNavigationAllowed=Function(guard+matches[0]+';return originalNavigationAllowed;')();
 const candidate=(changes={})=>({tagName:'BUTTON',isConnected:true,disabled:false,
  matches:()=>false,getAttribute:()=>null,closest:()=>null,
  getClientRects:()=>[],...changes});
@@ -161,4 +165,10 @@ test('D01 original SETTINGS/CHAT WebView2 teardown is HOLD and never repeated',(
  const chatOk=run('CHAT','');
  assert.equal(chatOk.error,null);assert.equal(chatOk.counts.chat,1);
  assert.equal(chatOk.chatActive,true);assert.doesNotMatch(chatOk.state,/HOLD/);
+});
+
+test('D01 original navigation rejects case-insensitive ARIA ownership blocks',()=>{
+ assert.equal(originalNavigationAllowed(candidate({getAttribute:k=>k==='aria-disabled'?'TRUE':null})),false);
+ const shell={parentElement:null,getAttribute:k=>k==='aria-hidden'?'TRUE':null};
+ assert.equal(originalNavigationAllowed(candidate({parentElement:shell})),false);
 });

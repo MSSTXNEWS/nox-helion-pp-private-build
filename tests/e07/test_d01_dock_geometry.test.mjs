@@ -8,6 +8,10 @@ const a=src.indexOf('function verifiedOriginalPrimaryDock(){');
 const b=src.indexOf("\nnav.addEventListener('click'",a);
 assert.ok(a>=0&&b>a,'original live UIA handler exists');
 const fn=src.slice(a,b);
+const guardStart=src.indexOf('function ariaSuppressed(el){');
+assert.ok(guardStart>=0&&guardStart<a,'case-insensitive original ARIA safety gate exists');
+const guard=src.slice(guardStart,a);
+
 const names=['CHAT','INSTALL','MODELS','LEARN','SETTINGS'];
 function evaluate(width,change={}){
  const rects=names.map((_,i)=>{const cell=(width-40)/5,left=20+i*cell;return {left,top:370,right:left+cell-5,bottom:426,width:cell-5,height:56};});
@@ -17,10 +21,10 @@ function evaluate(width,change={}){
  const buttons=names.map((n,i)=>({tagName:'BUTTON',isConnected:true,disabled:false,hidden:false,tabIndex:0,rect:rects[i],
  getClientRects(){return [this.rect]},getBoundingClientRect(){return this.rect},
  closest(sel){return change.ariaDisabledButton&&i===2&&sel.includes('aria-disabled')?this:null;},contains(o){return o===this},
- getAttribute(k){return ({id:'nox-express-primary-'+n.toLowerCase(),'data-nox-primary':n,'aria-label':n,
+ getAttribute(k){if(change.ariaUpperButton&&i===2&&k==='aria-disabled')return 'TRUE';return ({id:'nox-express-primary-'+n.toLowerCase(),'data-nox-primary':n,'aria-label':n,
  type:change.badTypeIndex===i?change.badTypeValue:'button'})[k]??null;},hasAttribute(){return false;}}));
  const originalShell={parentElement:null,hidden:change.outerHidden===true,inert:change.outerInert===true,
- getAttribute(k){return change.outerAriaDisabled&&k==='aria-disabled'?'true':null;}};
+ getAttribute(k){if(change.outerAriaHiddenUpper&&k==='aria-hidden')return 'TRUE';return change.outerAriaDisabled&&k==='aria-disabled'?'true':null;}};
  const nav={isConnected:true,parentElement:change.outerShell?originalShell:null,
  closest(sel){return change.ariaDisabledAncestor&&sel.includes('aria-disabled')?this:null;},getClientRects(){return [1]},querySelectorAll(){return buttons;}};
  const document={documentElement:{clientWidth:width,clientHeight:change.noheight?0:480},querySelectorAll(){return [buttons[0]];},
@@ -32,7 +36,7 @@ function evaluate(width,change={}){
  pointerEvents:outer&&change.outerPointerBlocked?'none':'auto',
  opacity:outer&&change.outerOpacityZero?'0':outer&&change.outerOpacityInvalid?'unavailable':'1'};
  }};
- return new Function('nav','window','document','originalPrimaryButtons',fn+';return verifiedOriginalPrimaryDock();')(nav,window,document,buttons);
+ return new Function('nav','window','document','originalPrimaryButtons',guard+fn+';return verifiedOriginalPrimaryDock();')(nav,window,document,buttons);
 }
 test('D02 original five UIA controls remain inside compact/desktop viewports',()=>{
  for(const width of [320,390,551,800,1044])assert.equal(evaluate(width),true,width);
@@ -61,7 +65,7 @@ function ownerTarget(change={}){
  const d={documentElement:{clientWidth:320,clientHeight:480},elementFromPoint(){return change.overlay?{}:b}};
  const w={getComputedStyle(){return {display:'block',visibility:'visible',
  pointerEvents:change.pointerBlocked?'none':'auto',opacity:change.transparent?'0':'1'}}};
- return new Function('button','document','window',ownerFn+';return visibleOriginalOwnerTarget(button)')(b,d,w);
+ return new Function('button','document','window',guard+ownerFn+';return visibleOriginalOwnerTarget(button)')(b,d,w);
 }
 test('D01 native original handler only receives physically pressable source control',()=>{
  assert.equal(ownerTarget(),true);
@@ -83,4 +87,10 @@ test('D01 rejects mutated submit, reset and absent button type without changing 
  for(const badTypeValue of ['submit','reset',null])
    assert.equal(evaluate(390,{badTypeIndex:2,badTypeValue}),false,String(badTypeValue));
  assert.ok(src.includes('event.preventDefault();'),'trusted primary gesture suppresses form defaults');
+});
+
+test('D01 uppercase ARIA owner/dock denial cannot bypass five-button UIA',()=>{
+ assert.equal(evaluate(390,{ariaUpperButton:true}),false);
+ assert.equal(evaluate(390,{outerShell:true,outerAriaHiddenUpper:true}),false);
+ assert.equal(evaluate(390),true);
 });
