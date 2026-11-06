@@ -20,7 +20,7 @@ if(Test-Path $dest){throw 'NOX_READY_01 already exists; refusing to overwrite'}
 New-Item -ItemType Directory -Force -Path $root|Out-Null
 Copy-Item -LiteralPath $src -Destination $dest -Recurse -ErrorAction Stop
 $base='https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build'
-$uiCommit='cd56719ec64617d01e24e29bcc8c62859b1b92fe'
+$uiCommit='c6d88280a3bc3e12dbe937a5d3f81aed5266cc1b'
 $functionsCommit='e001f9c5f3d8fc785175482cd4c1d679593b880f'
 $hudCommit='785287af0bb08f77ef981ad0582b6bd9815ac67e'
 function Receive-Source([string]$url,[string]$target,[int]$minimum){
@@ -34,11 +34,11 @@ function Receive-Source([string]$url,[string]$target,[int]$minimum){
   } finally { if(Test-Path $part){Remove-Item -LiteralPath $part -Force} }
 }
 # Reuse original V7 assets; only tested integration glue and original vendor files are added.
-$ui=@('index.html','chat.html','training.html','nox.css','mega.css','cinema-hud.css','server_mega.py','START_NOX_READY.ps1','PROVENANCE_READY.md')
+$ui=@('index.html','chat.html','training.html','nox.css','mega.css','cinema-hud.css','server_mega.py','START_NOX_READY.ps1','PROVENANCE_READY.md','mega-ui.js')
 foreach($name in $ui){
   Receive-Source "$base/$uiCommit/nox-local/ready-01/$name" (Join-Path $dest $name) 400
 }
-$fn=@('nox_services.py','nox_push.py','mega-ui.js','sw.js','setup_vapid.py','nox_connections.example.json','chat-patched.js')
+$fn=@('nox_services.py','nox_push.py','sw.js','setup_vapid.py','nox_connections.example.json','chat-patched.js')
 foreach($name in $fn){
  Receive-Source "$base/$functionsCommit/nox-local/functions-mega/$name" (Join-Path $dest $name) 140
 }
