@@ -114,7 +114,15 @@ test('changing CoreID or Persona invalidates model ACK; stale owner replies cann
  await pending;
  assert.equal(send.disabled,true,'stale ACK after Persona switch must not authorize SEND');
  assert.equal(models().filter(b=>b.attrs['aria-pressed']==='true').length,0);
+ // After a scope change, the hidden AUTO CORE picker must obtain its own
+ // native ACK; a stale inventory selectedModel is not new-scope authority.
+ await Promise.resolve();await Promise.resolve();
+ assert.equal(waits.length,1,'AUTO CORE must request a new exact native model ACK');
+ waits.shift()({state:'COMPLETED',result:{selectedModel:'mistral:7b'}});
+ await Promise.resolve();await Promise.resolve();
+ assert.equal(send.disabled,true,'a mismatched AUTO CORE model ACK cannot authorize SEND');
  const confirmed=models()[1].onclick();
+ assert.equal(waits.length,1,'manual recovery remains serialized after failed AUTO CORE');
  waits.shift()({state:'COMPLETED',result:{selectedModel:'mistral:7b'}});
  await confirmed;
  assert.equal(send.disabled,false,'fresh explicit model ACK restores CHAT');

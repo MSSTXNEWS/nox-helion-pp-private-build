@@ -10,6 +10,8 @@ on:
       - 'coordination/e06/**'
       # F01: original EXPRESS native UI receipts must never evade changed-SHA Windows E06.
       # Push only: do NOT duplicate the branch build through pull_request.
+      - 'ui/menu-pages/menu.js'
+      - 'tests/ui/test_u06_chat_model_selection_ack.mjs'
       - 'ui/nox-r11-wow.mjs'
       - 'ui/firstboot-truth.mjs'
       - 'integrations/wow200/stage_wow200.py'

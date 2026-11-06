@@ -24,6 +24,7 @@ test('no invented provider status or duplicate backend',()=>{
 test('AUTO CORE reselects a native model after a changed CoreID or Persona',()=>{
  assert.match(menu,/const invalidateModelScope=[\s\S]{0,750}void loadModels\(\);void refreshNativePanels\(\);/);
  assert.match(menu,/if\(!modelsRow\.isConnected\|\|inventoryEpoch!==scopeEpoch\)return;/);
+ assert.match(menu,/inventoryEpoch===scopeEpoch&&scopeEpoch===0&&names\.includes\(reply\.result\.selectedModel\)/);
  assert.match(menu,/if\(inventoryEpoch===scopeEpoch\)\{modelSelectionPending=false;redraw\(\);\}/);
 });
 test('S03 history and GPU preflight ignore stale native scope receipts',()=>{

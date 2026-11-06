@@ -371,7 +371,7 @@ function liveChat(label){
    if(!nativeCompleted(reply)||!Array.isArray(reply.result?.models)){throw Error('NO_MODELS');}
    const names=[...new Set(reply.result.models.filter(v=>typeof v==='string'&&v.length&&v.length<=160))].slice(0,32);
    // An inventory reply which began in a previous scope cannot authorize SEND.
-   model=inventoryEpoch===scopeEpoch&&names.includes(reply.result.selectedModel)?reply.result.selectedModel:'';
+   model=inventoryEpoch===scopeEpoch&&scopeEpoch===0&&names.includes(reply.result.selectedModel)?reply.result.selectedModel:'';
    const render=()=>{
     modelsRow.replaceChildren();
     if(!names.length)modelsRow.append(el('span','nox-chat-empty','Модели не установлены · откройте MODELS'));
