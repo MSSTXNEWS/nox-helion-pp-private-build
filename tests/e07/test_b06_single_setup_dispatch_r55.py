@@ -100,6 +100,25 @@ class B06SingleSetupDispatch(unittest.TestCase):
         first = source.index("Fast source regression gate before heavy artifacts")
         self.assertLess(first, source.index("Download immutable candidate from DIFFERENT Windows CI run"))
 
+    def test_provider_offline_never_runs_installed_e07(self):
+        """A failed verified model provider cannot consume an installed E07 run."""
+        source = WORKFLOW.read_text(encoding="utf-8")
+        provider = source.index("      - name: Start verified local Ollama")
+        witness = source.index("      - name: B06 record verified provider prerequisite failure")
+        physical = source.index("      - name: Independent installed E07 candidate lifecycle")
+        upload = source.index("      - name: Save independent evidence even on HOLD")
+        self.assertLess(provider, witness)
+        self.assertLess(witness, physical)
+        self.assertLess(physical, upload)
+        self.assertIn("        if: steps.provider.outcome != 'success'\\n", source[witness:physical])
+        self.assertIn("        if: steps.provider.outcome == 'success'\\n", source[physical:upload])
+        self.assertIn("physical_e07='NOT_RUN'", source[witness:physical])
+        self.assertIn("release_accepted=$false", source[witness:physical])
+        self.assertIn("status='PROVIDER_OFFLINE_HOLD'", source[witness:physical])
+        self.assertIn("E07_CANDIDATE_RECEIPT.json", source[witness:physical])
+        self.assertIn("if: always()", source[upload:])
+        self.assertIn("steps.provider.outcome", source[upload:])
+
     def test_b06_immutable_download_action_pin(self):
         """The sole E07 cannot use an auto-moving artifact downloader tag."""
         source = WORKFLOW.read_text(encoding="utf-8")

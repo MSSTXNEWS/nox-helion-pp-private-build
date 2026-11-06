@@ -284,7 +284,30 @@ jobs:
             throw 'E07_QWEN_APPROVED_FULL_DIGEST_HOLD'
           }
           Write-Host 'E07_APPROVED_LOCAL_QWEN_PROVIDER_READY_NOT_YET_CHAT_PROOF'
+      - name: B06 record verified provider prerequisite failure without running installed E07
+        if: steps.provider.outcome != 'success'
+        shell: pwsh
+        env:
+          E07_SOURCE_SHA: ${{ inputs.source_sha }}
+          E07_SETUP_SHA: ${{ inputs.setup_sha256 }}
+        run: |
+          $ErrorActionPreference='Stop'
+          New-Item -ItemType Directory -Force -Path work/e07-independent | Out-Null
+          # This is a real provider-step failure witness, NEVER an independent E07 receipt.
+          $hold=[ordered]@{
+            schema='NOX-E07-PROVIDER-PREREQUISITE-HOLD-v1'
+            status='PROVIDER_OFFLINE_HOLD'
+            release_accepted=$false
+            independent_e07_cases_accepted=0
+            physical_e07='NOT_RUN'
+            source_sha=$env:E07_SOURCE_SHA
+            setup_sha256=$env:E07_SETUP_SHA
+            run_id=$env:GITHUB_RUN_ID
+            provider_outcome='${{ steps.provider.outcome }}'
+          }
+          $hold | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath 'work/e07-independent/E07_CANDIDATE_RECEIPT.json' -Encoding utf8
       - name: Independent installed E07 candidate lifecycle, final receipts required
+        if: steps.provider.outcome == 'success'
         id: test
         continue-on-error: true
         shell: pwsh
