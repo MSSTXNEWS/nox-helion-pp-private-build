@@ -19,6 +19,9 @@ on:
       - 'integrations/wow200/tests/fake_d02_dom.mjs'
       - 'integrations/wow200/runtime/home-scene.lifecycle.r17.test.mjs'
       - 'tests/e06/**'
+      # D05 original GPU/QLoRA control must be covered by changed-source E06.
+      - 'src/nox_selfbuilder/background_forge.py'
+      - 'tests/selfbuilder/test_d05_p04_*.py'
       - 'tests/test_c04_p03_ack_scalar_rejection.py'
       - 'tests/p03/test_p03_cancel_retry_jobid_bind_u06.py'
       - 'Packages/P02/worker-python/p02_runtime.py'
@@ -93,6 +96,8 @@ jobs:
           node --test tests/ci/test_e06_watch_native_source_f01.mjs
           python -m unittest discover -s tests/selfbuilder -p 'test_activator_worm.py' -v
           python -m unittest discover -s tests/selfbuilder -p 'test_selfbuilder.py' -v
+          # Owner consent, STOP/PAUSE, GPU quarantine, checkpoint/S03 and event provenance: SOURCE_ONLY.
+          python -m unittest discover -s tests/selfbuilder -p 'test_d05_p04_*.py' -v
           python -m unittest discover -s tests/selfbuilder -p 'test_r4_complete.py' -v
           python -m unittest discover -s tests/e06 -p 'test_fastlane2_accelerator.py' -v
           # Real original P01 source tests, not a fake browser/installed E07 receipt.
