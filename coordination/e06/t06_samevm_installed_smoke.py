@@ -166,34 +166,46 @@ def plain_parents(path:Path,base:Path)->bool:
     except (OSError,ValueError):return False
 
 def original_no_loss_file_preserved(path: Path, expected: bytes, local_base: Path) -> bool:
-    """READ-ONLY NO-LOSS check even when ORIGINAL NSIS exits nonzero.
+    """READ-ONLY NO-LOSS check on EVERY native NSIS exit, including failures.
 
-    Fail closed for redirected paths, non-files, unreadable or altered bytes.
-    This cannot approve an uninstall, delete data or replace the native exit.
+    Keep the original inode, bytes, link count and same-API metadata stable
+    across the read. Windows path and handle timestamps can differ in
+    representation: compare path-to-path and handle-to-handle, never across APIs.
+    This is diagnostic evidence, NOT an NSIS success or independent E07.
     """
     if (not isinstance(path, Path) or type(expected) is not bytes or
             not expected or not plain_parents(path, local_base) or
             not regular(path)):
         return False
-    # Bound reads to the *original* test-owned marker length. Re-attest the
-    # opened file identity before reading and the path after reading: a
-    # replaced/oversized file cannot consume unbounded memory or count PASS.
     try:
         before=path.lstat()
-        if (not stat.S_ISREG(before.st_mode) or
-                before.st_size!=len(expected)):
+        if (not stat.S_ISREG(before.st_mode) or before.st_nlink != 1 or
+                before.st_ino == 0 or before.st_size != len(expected)):
             return False
         with path.open("rb") as stream:
             opened=os.fstat(stream.fileno())
-            if (not stat.S_ISREG(opened.st_mode) or
+            if (not stat.S_ISREG(opened.st_mode) or opened.st_nlink != 1 or
+                    opened.st_ino == 0 or
                     (opened.st_dev,opened.st_ino)!=(before.st_dev,before.st_ino) or
-                    opened.st_size!=len(expected) or
-                    stream.read(len(expected)+1)!=expected):
+                    opened.st_size != len(expected) or
+                    stream.read(len(expected)+1) != expected):
+                return False
+            # The handle could have been modified in place after the bytes
+            # were consumed while its NTFS file ID and length stayed the same.
+            finished=os.fstat(stream.fileno())
+            if (finished.st_dev,finished.st_ino,finished.st_size,
+                    finished.st_nlink,finished.st_mtime_ns,
+                    finished.st_ctime_ns) != (
+                    opened.st_dev,opened.st_ino,opened.st_size,
+                    opened.st_nlink,opened.st_mtime_ns,
+                    opened.st_ctime_ns):
                 return False
         after=path.lstat()
         return (stat.S_ISREG(after.st_mode) and
-                (after.st_dev,after.st_ino)==(before.st_dev,before.st_ino) and
-                after.st_size==len(expected) and
+                (after.st_dev,after.st_ino,after.st_size,after.st_nlink,
+                 after.st_mtime_ns,after.st_ctime_ns) ==
+                (before.st_dev,before.st_ino,before.st_size,before.st_nlink,
+                 before.st_mtime_ns,before.st_ctime_ns) and
                 plain_parents(path,local_base) and regular(path))
     except (OSError, ValueError):
         return False
