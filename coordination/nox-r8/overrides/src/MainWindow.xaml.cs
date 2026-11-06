@@ -1300,6 +1300,11 @@ public partial class MainWindow : Window
         string live = Path.GetFullPath(dbPath);
         if (string.Equals(destination, live, StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException("NOX_BACKUP_LIVE_DATABASE_HOLD");
+        // SQLite can recreate WAL/SHM/rollback-journal files at any time, even
+        // when File.Exists is false. An export must not occupy those names.
+        foreach (var sidecar in new[] { "-wal", "-shm", "-journal" })
+            if (string.Equals(destination, live + sidecar, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("NOX_BACKUP_LIVE_SQLITE_SIDECAR_HOLD");
         // File.Exists alone misses some dangling links, so File.Move below is the
         // final atomic no-overwrite authority even if an attacker changes the path.
         if (File.Exists(destination) || Directory.Exists(destination))
@@ -1308,6 +1313,7 @@ public partial class MainWindow : Window
             throw new InvalidOperationException("NOX_BACKUP_INVALID_PARENT_HOLD");
         if (!Directory.Exists(parent))
             throw new InvalidOperationException("NOX_BACKUP_PARENT_MISSING_HOLD");
+        ValidateBackupParent(parent); // fail closed on a redirected/junction path
 
         // Disable SQLite connection pooling on temporary snapshots: Windows must
         // release its actual file handles before atomic rename.
@@ -1336,6 +1342,9 @@ public partial class MainWindow : Window
         string expected;
         using (var input = File.OpenRead(staged))
             expected = Convert.ToHexString(SHA256.HashData(input));
+        // Re-check parents after snapshot generation, before final publication.
+        // Atomic no-overwrite still protects the destination entry against races.
+        ValidateBackupParent(parent);
         // File.Move with overwrite:false fails if *any* destination entry exists.
         // No File.Copy overwrite, no delete of user files, no live SQLite replacement.
         File.Move(staged, destination, overwrite: false);
@@ -1346,6 +1355,19 @@ public partial class MainWindow : Window
             throw new InvalidOperationException("NOX_BACKUP_SHA_READBACK_HOLD");
         Send("notice", "Новая резервная копия SQLite проверена: " + destination +
             " SHA256=" + actual);
+    }
+
+    private static void ValidateBackupParent(string parent)
+    {
+        // Reject NTFS links/junctions anywhere in the chosen parent chain.
+        // Access errors must propagate as HOLD, not silently weaken NO-LOSS.
+        for (DirectoryInfo? current = new DirectoryInfo(parent); current != null; current = current.Parent)
+        {
+            var attributes = current.Attributes;
+            if ((attributes & FileAttributes.ReparsePoint) != 0 ||
+                (attributes & FileAttributes.Directory) == 0)
+                throw new InvalidOperationException("NOX_BACKUP_PARENT_REPARSE_HOLD");
+        }
     }
 
     

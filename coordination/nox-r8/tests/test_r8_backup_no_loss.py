@@ -10,6 +10,11 @@ required = (
     'dialog.ShowDialog(this) != true',
     'Path.GetFullPath(dialog.FileName)',
     'NOX_BACKUP_LIVE_DATABASE_HOLD',
+    'NOX_BACKUP_LIVE_SQLITE_SIDECAR_HOLD',
+    'new[] { "-wal", "-shm", "-journal" }',
+    'ValidateBackupParent(parent)',
+    'FileAttributes.ReparsePoint',
+    'NOX_BACKUP_PARENT_REPARSE_HOLD',
     'NOX_BACKUP_DEST_EXISTS_HOLD',
     'FileMode.CreateNew',
     'FileShare.None',
@@ -29,6 +34,11 @@ for phrase in required:
 for forbidden in ('OverwritePrompt = true', 'File.Copy(', 'File.Delete(', 'File.Move(staged, destination, true)'):
     assert forbidden not in backup, 'B03_R8_NO_LOSS_HOLD: ' + forbidden
 assert source.count('private void BackupLocalDatabase()') == 1
+assert source.count('ValidateBackupParent(parent);') == 2
+assert backup.index('NOX_BACKUP_LIVE_SQLITE_SIDECAR_HOLD') < backup.index('new FileStream(staged,')
+assert backup.index('ValidateBackupParent(parent);') < backup.index('new FileStream(staged,')
+assert backup.rindex('ValidateBackupParent(parent);') < backup.index('File.Move(staged, destination, overwrite: false)')
+assert source.count('private static void ValidateBackupParent(string parent)') == 1
 assert 'private const string Api = "http://127.0.0.1:11436";' in source
 assert 'private const string DefaultModel = "nox-qwen-clean:latest";' in source
-print('B03 R8 SOURCE_ONLY backup no-overwrite/staged SQLite quick_check/SHA readback contracts PASS; Windows physical NOT_TESTED')
+print('B03 R8 SOURCE_ONLY backup no-overwrite/WAL-SHM-journal name guard/reparse-parent guard/quick_check/SHA contracts PASS; Windows physical NOT_TESTED')
