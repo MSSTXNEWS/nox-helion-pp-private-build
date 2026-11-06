@@ -69,4 +69,23 @@ if(Test-Path (Join-Path $env:NOX_SOUL_ROOT "service.token")){
 }else{
  Say "SOUL startup unverified; inspect $stderr. No trained-weights or native integration claim."
 }
+# GENESIS live cycle: bounded proposals only; no unattended EXE replacement.
+$liveCycle=Join-Path $source 'genesis_live_cycle.py'
+if(Test-Path -LiteralPath $liveCycle){
+  $existing=@(Get-CimInstance Win32_Process -ErrorAction SilentlyContinue | Where-Object {
+    $_.CommandLine -and $_.CommandLine.Contains('genesis_live_cycle.py') -and
+    $_.CommandLine.Contains($root)
+  })
+  if($existing.Count -eq 0){
+    $nativeProcess=Get-Process -Name 'NOX.HELION' -ErrorAction SilentlyContinue
+    if($nativeProcess){
+      $argsLive=@($argsPrefix)+@($liveCycle,'--root',$root,'--interval','1800','--cycles','0')
+      try{
+        $p=Start-Process -FilePath $python -ArgumentList $argsLive -PassThru -WindowStyle Hidden -RedirectStandardOutput (Join-Path $logs 'genesis_live_stdout.log') -RedirectStandardError (Join-Path $logs 'genesis_live_stderr.log')
+        Say ('Started bounded NOX GENESIS live cycle PID='+$p.Id+'; candidate patches REVIEW ONLY')
+      }catch { Say ('GENESIS live cycle HOLD: '+$_.Exception.Message) }
+    } else { Say 'GENESIS live cycle HOLD: native NOX process absent' }
+  } else { Say 'GENESIS live cycle already running; no duplicate spawned' }
+} else { Say 'GENESIS live cycle SOURCE MISSING' }
+
 Say "END: native NOX open if installed; NOX local brain service started if prerequisites passed."
