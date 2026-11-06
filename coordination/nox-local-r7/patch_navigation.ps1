@@ -4,15 +4,13 @@ $s=[IO.File]::ReadAllText($Source)
 $pre='    private bool uiSmokeFinished;'
 if (!$s.Contains($pre) -or $s.Contains('pendingEmbeddedNavigation')) { throw 'NOX_NAV_PATCH_PREIMAGE_MISMATCH' }
 $s=$s.Replace($pre,$pre + [Environment]::NewLine + '    private bool pendingEmbeddedNavigation;')
-$old=@'
-            Browser.CoreWebView2.NavigationStarting += (_, args) =>
-            {
-                if (!string.Equals(args.Uri, "about:blank", StringComparison.OrdinalIgnoreCase))
-                    args.Cancel = true;
-            };
-            TraceUiSmokeStage("NAVIGATE_TO_STRING_PENDING");
-            Browser.NavigateToString(await reader.ReadToEndAsync());
-'@
+$start = $s.IndexOf('            Browser.CoreWebView2.NavigationStarting += (_, args) =>', [StringComparison]::Ordinal)
+$tail = '            Browser.NavigateToString(await reader.ReadToEndAsync());'
+$end = $s.IndexOf($tail, $start, [StringComparison]::Ordinal)
+if ($start -lt 0 -or $end -le $start -or
+    $s.LastIndexOf('            Browser.CoreWebView2.NavigationStarting += (_, args) =>', [StringComparison]::Ordinal) -ne $start) {
+  throw 'NOX_NAV_PATCH_ANCHOR_NOT_FOUND'
+}
 $new=@'
             Browser.CoreWebView2.NavigationStarting += (_, args) =>
             {
@@ -33,8 +31,7 @@ $new=@'
             TraceUiSmokeStage("NAVIGATE_TO_STRING_PENDING");
             Browser.NavigateToString(await reader.ReadToEndAsync());
 '@
-if (!$s.Contains($old)) { throw 'NOX_NAV_PATCH_ANCHOR_NOT_FOUND' }
-$s=$s.Replace($old,$new)
+$s=$s.Substring(0,$start)+$new+$s.Substring($end+$tail.Length)
 $from='TraceUiSmokeStage(args.IsSuccess ? "NAVIGATION_COMPLETED" : "NAVIGATION_FAILED");'
 $to='TraceUiSmokeStage(args.IsSuccess ? "NAVIGATION_COMPLETED" : "NAVIGATION_FAILED_" + args.WebErrorStatus);'
 if (!$s.Contains($from)) { throw 'NOX_NAV_STATUS_ANCHOR_MISSING' }
