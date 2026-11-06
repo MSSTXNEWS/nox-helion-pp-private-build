@@ -79,7 +79,7 @@
       "runtime_status": "implemented_selective",
       "component": "ui/menu-pages/formwork-zodiac-cores.js",
       "scope": "Constellation wiring of original 8 CoreID buttons",
-      "proof": "Browser QA run pending"
+      "proof": "Chromium 42146259278 SUCCESS 390/800/1920, ECO and Reduced Motion"
     },
     {
       "id": 9,
@@ -97,7 +97,7 @@
       "runtime_status": "implemented_selective",
       "component": "ui/menu-pages/tabler-card-integration.css",
       "scope": "Scoped Tabler cards on existing route navigation",
-      "proof": "Browser QA run pending"
+      "proof": "Chromium 42146259278 SUCCESS 390/800/1920, ECO and Reduced Motion"
     },
     {
       "id": 11,
@@ -106,7 +106,7 @@
       "runtime_status": "same_upstream_source_not_second_runtime",
       "component": "ui/menu-pages/tabler-card-integration.css",
       "scope": "Same real source as Tabler, demo pages included in upstream; no redundant runtime",
-      "proof": "Browser QA run pending"
+      "proof": "Tabler demo source deduplicated; no second runtime needed"
     },
     {
       "id": 12,
@@ -293,5 +293,22 @@
       "source_verified": true,
       "runtime_status": "source_only_not_connected"
     }
-  ]
+  ],
+  "latest_acceptance": {
+    "run_id": 42146259278,
+    "status": "SUCCESS",
+    "scope": "Chromium source-level UI integration, not Windows WebView2 acceptance",
+    "commit_tested": "9da4ad964dd42703e58ca29ae4f4e120eb94c99a",
+    "checks": [
+      "Tabler navigable card",
+      "Zodiac 8 actual CoreIDs",
+      "Loquix defined element",
+      "HALO canvas MAX/ECO",
+      "HELIODON geometry shared renderer",
+      "AETHER glass MAX/ECO",
+      "Three.js WebGL",
+      "Reduced Motion",
+      "390 800 1920"
+    ]
+  }
 }
