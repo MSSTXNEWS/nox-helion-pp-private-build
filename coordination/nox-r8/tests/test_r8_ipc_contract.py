@@ -174,3 +174,21 @@ with sqlite3.connect(':memory:') as db:
     assert db.execute('SELECT complete FROM tasks WHERE id=42').fetchone()[0]==0
     assert db.execute(statement,(404,)).rowcount==0
 print('D05 R8 SOURCE_ONLY: owner-correlated task toggle, SQLite COMMIT/readback and denied rollback PASS')
+
+# D05 MODEL SELECT: native owner-correlated choice requires independent SQLite
+# readback before success ACK. A failed bridge keeps a retryable button.
+assert 'case "model.select": await HandleModelSelect(Text("model"), Text("requestId")); break;' in cs, "D05_MODEL_NATIVE_ROUTE_HOLD"
+model_handler = cs.split('private async Task HandleModelSelect(',1)[1].split('private async Task SelectModel(',1)[0]
+model_select = cs.split('private async Task SelectModel(',1)[1].split('private async Task PullExistingProviderModel(',1)[0]
+assert model_handler.index('ValidWriteRequestId(requestId)') < model_handler.index('await SelectModel(model);'), "D05_MODEL_OWNER_REQUEST_HOLD"
+assert model_handler.index('await SelectModel(model);') < model_handler.index('Send("model.select.receipt"'), "D05_MODEL_PREMATURE_ACK_HOLD"
+assert 'Send("model.select.denied"' in model_handler, "D05_MODEL_DENIAL_HOLD"
+assert model_select.index('cmd.ExecuteNonQuery() != 1') < model_select.index('using (var verifyDb = OpenDatabase())') < model_select.index('Send("settings",ReadPreferences())'), "D05_MODEL_SQLITE_ACK_ORDER_HOLD"
+assert "SELECT value FROM preferences WHERE key='model'" in model_select and 'NOX_MODEL_SELECT_SQLITE_READBACK_HOLD' in model_select, "D05_MODEL_SELECT_READBACK_HOLD"
+for fragment in ("pendingModel={requestId,model}", "if(post('model.select',{model,requestId})===false)",
+                 "v?.requestId===pendingModel.requestId&&v?.model===pendingModel.model",
+                 "case 'model.select.receipt':", "case 'model.select.denied':",
+                 "pendingModel=null;$('saveModel').disabled=false"):
+    assert fragment in html, "D05_MODEL_WEBVIEW_OWNER_ACK_HOLD " + fragment
+assert "post('model.select',{model});" not in html, "D05_MODEL_UNOWNED_DISPATCH_HOLD"
+print('D05 R8 MODEL SELECT SOURCE_ONLY: native owner request/SQLite readback/ack/denial PASS; owner Windows NOT_TESTED')

@@ -940,7 +940,7 @@ public partial class MainWindow : Window
                 case "notes.delete": DeleteNote(request.GetProperty("id").GetInt64()); Send("notes", ReadNotes()); break;
                 case "feedback": SaveFeedback(request.GetProperty("rating").GetInt32(), Text("answer")); Send("notice", "Оценка сохранена локально; это не обучение весов."); break;
                 case "backup": BackupLocalDatabase(); break;
-                case "model.select": await SelectModel(Text("model")); break;
+                case "model.select": await HandleModelSelect(Text("model"), Text("requestId")); break;
                 case "model.pull": await PullExistingProviderModel(Text("model")); break;
                 case "model.cancel": activeModelPull?.Cancel(); break;
                 case "tasks.list": Send("tasks", ReadTasks()); break;
@@ -1647,6 +1647,24 @@ public partial class MainWindow : Window
         cmd.ExecuteNonQuery();
     }
 
+    // D05: owner-correlated native model selection; no success without SQLite readback.
+    private async Task HandleModelSelect(string model, string requestId)
+    {
+        if (!ValidWriteRequestId(requestId)) {
+            Send("model.select.denied", new { requestId, model, reason = "NOX_MODEL_SELECT_REQUEST_HOLD" });
+            return;
+        }
+        try {
+            await SelectModel(model);
+            Send("model.select.receipt", new { requestId, model, saved = true });
+        }
+        catch (Exception ex) {
+            var reason = ex is InvalidOperationException && ex.Message == "NOX_MODEL_SELECT_SQLITE_READBACK_HOLD"
+                ? "NOX_MODEL_SELECT_SQLITE_READBACK_HOLD" : "NOX_MODEL_SELECT_PROVIDER_OR_SQLITE_HOLD";
+            Send("model.select.denied", new { requestId, model, reason });
+        }
+    }
+
     private async Task SelectModel(string model)
     {
         if (string.IsNullOrWhiteSpace(model) || model.Length > 120) throw new ArgumentException("Invalid model name");
@@ -1657,7 +1675,15 @@ public partial class MainWindow : Window
         if (!exists) throw new InvalidOperationException("Model is not registered on the local server");
         using var db = OpenDatabase(); using var cmd = db.CreateCommand();
         cmd.CommandText = "INSERT INTO preferences(key,value) VALUES('model',$m) ON CONFLICT(key) DO UPDATE SET value=excluded.value";
-        cmd.Parameters.AddWithValue("$m",model);cmd.ExecuteNonQuery();
+        cmd.Parameters.AddWithValue("$m",model);
+        if (cmd.ExecuteNonQuery() != 1)
+            throw new InvalidOperationException("NOX_MODEL_SELECT_SQLITE_WRITE_HOLD");
+        using (var verifyDb = OpenDatabase())
+        using (var verify = verifyDb.CreateCommand()) {
+            verify.CommandText = "SELECT value FROM preferences WHERE key='model'";
+            if (!string.Equals(verify.ExecuteScalar() as string, model, StringComparison.Ordinal))
+                throw new InvalidOperationException("NOX_MODEL_SELECT_SQLITE_READBACK_HOLD");
+        }
         Send("settings",ReadPreferences());
         await CheckProvider();
     }
