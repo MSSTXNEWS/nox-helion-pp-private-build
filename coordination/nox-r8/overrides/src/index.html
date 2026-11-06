@@ -361,6 +361,6 @@ case 'notes':{const box=$('notes');box.replaceChildren();(v||[]).forEach(n=>{con
 case 'system':$('systemInfo').textContent=JSON.stringify(v,null,2);$('hudMemory').textContent='SQLITE';break;
 case 'notice':$('personaStatus').textContent=String(v);break;
 }});
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&busy){e.preventDefault();post('stop')}if(e.ctrlKey&&e.key.toLowerCase()==='k'){e.preventDefault();route('core');$('prompt').focus()}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&busy&&activeChatId){e.preventDefault();$('stop').click()}if(e.ctrlKey&&e.key.toLowerCase()==='k'){e.preventDefault();route('core');$('prompt').focus()}});
 route('consciousness');
 </script></body></html>

@@ -37,6 +37,7 @@ required_html = (
     "case 'token':lastAnswer+=v.text",
     "case 'complete':busy=false;activeChatId=null",
     "Only the matching native complete may unlock a busy chat.",
+    "if(e.key==='Escape'&&busy&&activeChatId){e.preventDefault();$('stop').click()}",
 )
 for fragment in required_cs:
     assert fragment in cs, 'B02_NATIVE_IPC_SOURCE_HOLD: ' + fragment
