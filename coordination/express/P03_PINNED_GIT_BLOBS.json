@@ -590,33 +590,6 @@
     {
       "path": "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueStore.cs",
       "owner": 3,
-      "run_id": "D04_R5_NATIVE_RETRY_RIGHTS_WEIGHT_IDENTITY_20261106",
-      "pre_git_blob_sha1": "309274d4c874a93fac51b9dd9c1085d00f8b8532",
-      "post_git_blob_sha1": "a36650c7ee6467e4afafefb0e939970e6281cfe5",
-      "post_bytes": 47090,
-      "acceptance": "SOURCE_ONLY_13_OF_13_DOTNET_WINDOWS_E07_NOT_RUN",
-      "change_scope": "RETRY_ACK_NATIVE_RIGHTS_WEIGHT_SHA_P04_APPROVAL_CHECK",
-      "source_head_observed": "d29ea0126f585b1d8c0971f64d237d55eda9e8eb",
-      "release_accepted": false
-    },
-    {
-      "path": "Packages/P03/Source/P03.ModelCenter.HardeningSmoke/Program.cs",
-      "owner": 3,
-      "run_id": "B04_R5_OLLAMA_NDJSON_CASE_ALIAS_CONTROL_20261106",
-      "pre_git_blob_sha1": "3640047674444d18a8c6c8240b6fc0855c3b00b3",
-      "post_git_blob_sha1": "9d52ee2923bc23fbcc140b6fa587b0b8c30dab4f",
-      "post_bytes": 96192,
-      "acceptance": "SOURCE_ONLY_V8_8_OF_8_DOTNET_WINDOWS_E07_NOT_RUN",
-      "change_scope": "OLLAMA_NDJSON_CASE_ALIAS_FAIL_CLOSED_AND_RECONCILE_SINGLE_ACTIVE_OWNER_PIN",
-      "source_head_observed": "471867ceb25225b2c5fae31caddec75780ba8362",
-      "release_accepted": false,
-      "prior_active_run_id": "D04_R5_NATIVE_RETRY_RIGHTS_WEIGHT_IDENTITY_20261106",
-      "prior_active_post_git_blob_sha1": "3640047674444d18a8c6c8240b6fc0855c3b00b3",
-      "prior_active_post_bytes": 95156
-    },
-    {
-      "path": "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueStore.cs",
-      "owner": 3,
       "run_id": "D04_R5_OPEN_HANDLE_QUEUE_EXECUTION_LEASE_HARDLINK_20261106",
       "pre_git_blob_sha1": "a36650c7ee6467e4afafefb0e939970e6281cfe5",
       "post_git_blob_sha1": "fe0fc1eeabd0f1b242debcb93596f2dea0b4c85f",
@@ -1979,6 +1952,37 @@
       "release_accepted": false,
       "prior_active_post_git_blob_sha1": "9d52ee2923bc23fbcc140b6fa587b0b8c30dab4f",
       "source_check": "SOURCE_ONLY_NOT_WINDOWS_E07"
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueStore.cs",
+      "owner": 3,
+      "run_id": "D04_R5_NATIVE_RETRY_RIGHTS_WEIGHT_IDENTITY_20261106",
+      "pre_git_blob_sha1": "309274d4c874a93fac51b9dd9c1085d00f8b8532",
+      "post_git_blob_sha1": "a36650c7ee6467e4afafefb0e939970e6281cfe5",
+      "post_bytes": 47090,
+      "acceptance": "SOURCE_ONLY_13_OF_13_DOTNET_WINDOWS_E07_NOT_RUN",
+      "change_scope": "RETRY_ACK_NATIVE_RIGHTS_WEIGHT_SHA_P04_APPROVAL_CHECK",
+      "source_head_observed": "d29ea0126f585b1d8c0971f64d237d55eda9e8eb",
+      "release_accepted": false,
+      "retired_from_active_set": "D04_R5_ACTIVE_PIN_ALIAS_FIRSTFAIL_20261106",
+      "source_check": "HISTORICAL_SOURCE_ONLY_NOT_WINDOWS_E07"
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter.HardeningSmoke/Program.cs",
+      "owner": 3,
+      "run_id": "B04_R5_OLLAMA_NDJSON_CASE_ALIAS_CONTROL_20261106",
+      "pre_git_blob_sha1": "3640047674444d18a8c6c8240b6fc0855c3b00b3",
+      "post_git_blob_sha1": "9d52ee2923bc23fbcc140b6fa587b0b8c30dab4f",
+      "post_bytes": 96192,
+      "acceptance": "SOURCE_ONLY_V8_8_OF_8_DOTNET_WINDOWS_E07_NOT_RUN",
+      "change_scope": "OLLAMA_NDJSON_CASE_ALIAS_FAIL_CLOSED_AND_RECONCILE_SINGLE_ACTIVE_OWNER_PIN",
+      "source_head_observed": "471867ceb25225b2c5fae31caddec75780ba8362",
+      "release_accepted": false,
+      "prior_active_run_id": "D04_R5_NATIVE_RETRY_RIGHTS_WEIGHT_IDENTITY_20261106",
+      "prior_active_post_git_blob_sha1": "3640047674444d18a8c6c8240b6fc0855c3b00b3",
+      "prior_active_post_bytes": 95156,
+      "retired_from_active_set": "D04_R5_ACTIVE_PIN_ALIAS_FIRSTFAIL_20261106",
+      "source_check": "HISTORICAL_SOURCE_ONLY_NOT_WINDOWS_E07"
     }
   ],
   "source_expansion": {
