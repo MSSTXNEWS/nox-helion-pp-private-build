@@ -56,7 +56,7 @@ function catalogBreadcrumb(items){
  return nav;
 }
 function catalogCard(title,description,count,click,kind='section'){
- const b=button('', 'nox-catalog-card nox-catalog-'+kind,click);
+ const b=button('', 'nox-catalog-card nox-tabler-card nox-catalog-'+kind,click);
  const copy=el('span','nox-card-copy');
  copy.append(el('strong','nox-card-title',title),el('small','nox-card-desc',description));
  const foot=el('span','nox-card-foot');
