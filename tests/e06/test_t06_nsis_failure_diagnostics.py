@@ -171,6 +171,43 @@ class PostmortemGuards(unittest.TestCase):
         self.assertFalse(proof['release_accepted'])
         self.assertEqual(self.calls, [])
 
+    def test_rollback_original_failure_is_readonly_never_release(self):
+        self.failure['reason'] = 'T06_ORIGINAL_NSIS_ROLLBACK_NOLOSS_HOLD'
+        self.failure['installer_lifecycle'] = {'rollback': {'code': 1}}
+        (self.stage / 'payload.sha256.json').unlink()
+        installed = self.local / 'Programs/NOX HELION'
+        saved = self.local / 'Programs/NOX HELION.__p01_rollback_saved'
+        installed.mkdir()
+        saved.mkdir()
+        (installed / 'nox-p01-owned.txt').write_text('NOXHELION.P01 V16')
+        before = (installed / 'nox-p01-owned.txt').read_bytes()
+        result = self.collect()
+        self.assertEqual(result['original_failure'], self.failure['reason'])
+        self.assertFalse(result['release_accepted'])
+        self.assertEqual(result['phase'], 'DIAGNOSTIC_ONLY')
+        diag = result['rollback_diagnostic']
+        self.assertEqual(diag['original_exit_code'], 1)
+        self.assertTrue(diag['restored_slot_present'])
+        self.assertTrue(diag['saved_slot_present'])
+        self.assertFalse(diag['previous_slot_present'])
+        self.assertTrue(diag['restored_owner_marker_present'])
+        self.assertFalse(diag['user_data_no_loss_accepted'])
+        self.assertFalse(diag['release_accepted'])
+        self.assertEqual((installed / 'nox-p01-owned.txt').read_bytes(), before)
+        self.assertEqual(self.calls, [])
+
+    def test_rollback_missing_original_receipt_never_invents_exit_or_evidence(self):
+        self.failure['reason'] = 'T06_ORIGINAL_NSIS_ROLLBACK_NOLOSS_HOLD'
+        (self.stage / 'payload.sha256.json').unlink()
+        result = self.collect()
+        diag = result['rollback_diagnostic']
+        self.assertIsNone(diag['original_exit_code'])
+        self.assertFalse(diag['restored_slot_present'])
+        self.assertFalse(diag['saved_slot_present'])
+        self.assertFalse(diag['restored_owner_marker_present'])
+        self.assertFalse(diag['user_data_no_loss_accepted'])
+        self.assertEqual(self.calls, [])
+
     def test_workflow_keeps_original_failure_and_collects_evidence(self):
         workflow = (ROOT / '.github/workflows/nox-v16-e06-d02-onehost.yml').read_text()
         start = workflow.index('      - name: Read-only NSIS failure evidence')

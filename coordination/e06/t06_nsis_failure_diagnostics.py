@@ -56,11 +56,12 @@ def collect(owner, *, platform_name=None, env=None):
     failure = owner.strict_receipt(failure_path, 'T06_NSIS_DIAGNOSTIC_RECEIPT_HOLD')
     # This postmortem is also needed when the original NSIS update or its
     # fail-closed installed-backup verifier failed on a real Windows runner.
-    # Admit ONLY these three original first-fail codes, never general failure.
+    # Admit only observed original installer first-fails, never unrelated failures.
     owner.require(failure.get('reason') in (
                   'T06_NSIS_SILENT_INSTALL_FAILED',
                   'T06_ORIGINAL_NSIS_UPDATE_BACKUP_HOLD',
-                  'T06_UPDATE_BACKUP_MANIFEST_VERIFY_HOLD') and
+                  'T06_UPDATE_BACKUP_MANIFEST_VERIFY_HOLD',
+                  'T06_ORIGINAL_NSIS_ROLLBACK_NOLOSS_HOLD') and
                   failure.get('phase') == 'HOLD' and
                   failure.get('release_accepted') is False,
                   'T06_NSIS_DIAGNOSTICS_NO_MATCHING_FAILURE')
@@ -80,7 +81,8 @@ def collect(owner, *, platform_name=None, env=None):
         report['build_id'] = evidence['build_id']
     for label, slot in (('stage', Path(str(install) + '.__p01_stage')),
                         ('installed', install),
-                        ('previous', Path(str(install) + '.__p01_previous'))):
+                        ('previous', Path(str(install) + '.__p01_previous')),
+                        ('rollback_saved', Path(str(install) + '.__p01_rollback_saved'))):
         safe = owner.plain_parents(slot, Path(local.anchor))
         owner.require(safe and not slot.is_symlink() and
                       not getattr(slot, 'is_junction', lambda: False)(),
@@ -92,6 +94,26 @@ def collect(owner, *, platform_name=None, env=None):
                 report['slots'][label][name] = {
                     'regular': owner.regular(target),
                     'bytes': target.stat().st_size if owner.regular(target) else None}
+    # Real E06 #42132227949: original rollback returned HOLD, but the
+    # postmortem's three-code filter rejected it before any physical snapshot.
+    # Observe only pre-existing owned slot metadata and the original return
+    # code; never claim user-data preservation or rerun Setup.
+    if failure['reason'] == 'T06_ORIGINAL_NSIS_ROLLBACK_NOLOSS_HOLD':
+        lifecycle = failure.get('installer_lifecycle')
+        rollback = lifecycle.get('rollback') if type(lifecycle) is dict else None
+        original_code = rollback.get('code') if type(rollback) is dict else None
+        installed_slot = report['slots']['installed']
+        report['rollback_diagnostic'] = {
+            'status': 'DIAGNOSTIC_ONLY_NOT_ACCEPTED',
+            'original_exit_code': original_code if type(original_code) is int else None,
+            'restored_slot_present': installed_slot['directory'],
+            'previous_slot_present': report['slots']['previous']['directory'],
+            'saved_slot_present': report['slots']['rollback_saved']['directory'],
+            'restored_owner_marker_present': (
+                installed_slot['nox-p01-owned.txt']['regular']
+                if installed_slot['directory'] else False),
+            'user_data_no_loss_accepted': False,
+            'release_accepted': False}
     # Real E06 #42119061209/#42120828250 reached an UPDATE backup HOLD.
     # A missing stage was previously undiagnosable here. Inspect only the
     # existing CI-owned backup and the EXACT original read-only reviewer. Do
