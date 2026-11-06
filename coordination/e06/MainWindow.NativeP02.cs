@@ -265,7 +265,13 @@ public partial class MainWindow
             if (!ownerResult.Accepted || !string.IsNullOrEmpty(ownerResult.ErrorCode) ||
                 LegacyOwnerDenial(ownerResult.Result) ||
                 ownerResult.Result is not JsonElement nativeResult ||
-                nativeResult.ValueKind is JsonValueKind.Undefined or JsonValueKind.Null)
+                // A scalar ACK or empty object cannot prove the native MENU
+                // action. A model binding must carry a real catalog array.
+                nativeResult.ValueKind != JsonValueKind.Object ||
+                !nativeResult.EnumerateObject().Any() ||
+                (name == "model" &&
+                 (!nativeResult.TryGetProperty("models", out var nativeCatalog) ||
+                  nativeCatalog.ValueKind != JsonValueKind.Array)))
                 return new NativePipeResult("", false, null,
                     ownerResult.ErrorCode ?? "MENU_OWNER_OPERATION_HOLD");
             if (cancel.IsCancellationRequested || !NativeP02Acl(ownerSid, ownerRoute) ||
