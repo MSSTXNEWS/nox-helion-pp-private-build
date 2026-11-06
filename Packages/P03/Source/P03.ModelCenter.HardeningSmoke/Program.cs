@@ -10,6 +10,39 @@ void MustReject(Action fn, string name) {
     catch (InvalidDataException) { Console.WriteLine("PASS " + name); pass++; return; }
     throw new Exception("FAIL " + name);
 }
+// D04: run the original native header parser against real temporary files.
+// This is a C# regression fixture, not installed-model proof.
+var safetensorsHeaderMethod = typeof(OllamaModelAdapter).Assembly
+    .GetType("Nox.P03.ModelSafetensorsImport", throwOnError: true)!
+    .GetMethod("CheckSafetensorsAsync",
+        System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!;
+async Task<bool> AdmitHeaderD04Async(string json, int payloadBytes)
+{
+    var target = Path.Combine(Path.GetTempPath(),
+        "nox-p03-header-" + Guid.NewGuid().ToString("N") + ".safetensors");
+    var header = Encoding.UTF8.GetBytes(json);
+    var content = new byte[checked(8 + header.Length + payloadBytes)];
+    System.Buffers.Binary.BinaryPrimitives.WriteUInt64LittleEndian(content.AsSpan(0,8),(ulong)header.Length);
+    header.CopyTo(content.AsSpan(8));
+    await File.WriteAllBytesAsync(target,content);
+    try
+    {
+        await using var file = new FileStream(target,FileMode.Open,FileAccess.Read,FileShare.Read);
+        var check = (Task)safetensorsHeaderMethod.Invoke(null,new object[]{file,CancellationToken.None})!;
+        try { await check; return true; }
+        catch (InvalidDataException) { return false; }
+    }
+    finally { File.Delete(target); }
+}
+Assert(await AdmitHeaderD04Async("{\"a\":{\"dtype\":\"F32\",\"data_offsets\":[0,4]},\"b\":{\"dtype\":\"F32\",\"data_offsets\":[4,8]}}",8),
+    "D04 two separate tensor ranges admitted");
+Assert(!await AdmitHeaderD04Async("{\"a\":{\"data_offsets\":[0,4]},\"a\":{\"data_offsets\":[4,8]}}",8),
+    "D04 duplicate tensor field rejected");
+Assert(!await AdmitHeaderD04Async("{\"a\":{\"data_offsets\":[0,4],\"data_offsets\":[4,8]}}",8),
+    "D04 duplicate nested offsets rejected");
+Assert(!await AdmitHeaderD04Async("{\"a\":{\"data_offsets\":[0,4]},\"b\":{\"data_offsets\":[2,6]}}",8),
+    "D04 overlapping tensor ranges rejected");
+
 // R99: a non-default HTTPS port is a different official-source origin.
 // This is a focused reviewed-registry source test, not installed-model proof.
 var reviewedOrigin = new ModelArtifactReviewCandidate(

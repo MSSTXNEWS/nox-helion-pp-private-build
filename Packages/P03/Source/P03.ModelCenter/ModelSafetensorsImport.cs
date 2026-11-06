@@ -126,6 +126,24 @@ internal static class ModelSafetensorsImport
         return JsonDocument.Parse(bytes,new JsonDocumentOptions { MaxDepth=32 });
     }
 
+    // An owner-approved SHA cannot make duplicate JSON keys or overlapping
+    // tensor byte ranges safe to load through different Safetensors readers.
+    private static void RequireUniqueHeaderFields(JsonElement node)
+    {
+        if (node.ValueKind == JsonValueKind.Array)
+            foreach (var element in node.EnumerateArray()) RequireUniqueHeaderFields(element);
+        else if (node.ValueKind == JsonValueKind.Object)
+        {
+            var names = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var property in node.EnumerateObject())
+            {
+                if (!names.Add(property.Name))
+                    throw new InvalidDataException("P03_SAFETENSORS_DUPLICATE_JSON_FIELD_HOLD");
+                RequireUniqueHeaderFields(property.Value);
+            }
+        }
+    }
+
     private static async Task CheckSafetensorsAsync(FileStream file,CancellationToken ct)
     {
         var header=new byte[8];await file.ReadExactlyAsync(header,ct);
@@ -134,18 +152,27 @@ internal static class ModelSafetensorsImport
             throw new InvalidDataException("P03_SAFETENSORS_HEADER_INVALID");
         var bytes=new byte[checked((int)size)];await file.ReadExactlyAsync(bytes,ct);
         using var doc=JsonDocument.Parse(bytes,new JsonDocumentOptions {MaxDepth=16});
-        if(doc.RootElement.ValueKind!=JsonValueKind.Object)throw new InvalidDataException("P03_SAFETENSORS_HEADER_INVALID");
+        if(doc.RootElement.ValueKind!=JsonValueKind.Object)
+            throw new InvalidDataException("P03_SAFETENSORS_HEADER_INVALID");
+        RequireUniqueHeaderFields(doc.RootElement);
         var tensors=0;
+        var ranges=new List<(long Start,long End)>();
         foreach(var tensor in doc.RootElement.EnumerateObject())
         {
             if(tensor.Name=="__metadata__")continue;
-            var offsets=tensor.Value.GetProperty("data_offsets");
-            if(offsets.ValueKind!=JsonValueKind.Array || offsets.GetArrayLength()!=2 ||
+            if(tensor.Value.ValueKind!=JsonValueKind.Object ||
+                !tensor.Value.TryGetProperty("data_offsets",out var offsets) ||
+                offsets.ValueKind!=JsonValueKind.Array || offsets.GetArrayLength()!=2 ||
                 !offsets[0].TryGetInt64(out var start) || !offsets[1].TryGetInt64(out var end) ||
                 start<0 || end<start || end>file.Length-8-(long)size)
                 throw new InvalidDataException("P03_SAFETENSORS_OFFSETS_INVALID");
+            if(start<end)ranges.Add((start,end)); // Empty tensors are allowed.
             tensors++;
         }
         if(tensors==0)throw new InvalidDataException("P03_SAFETENSORS_NO_TENSORS");
+        ranges.Sort((a,b)=>a.Start.CompareTo(b.Start));
+        for(var i=1;i<ranges.Count;i++)
+            if(ranges[i].Start<ranges[i-1].End)
+                throw new InvalidDataException("P03_SAFETENSORS_OVERLAPPING_TENSORS_HOLD");
     }
 }
