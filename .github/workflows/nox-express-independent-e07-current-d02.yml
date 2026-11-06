@@ -67,6 +67,11 @@ jobs:
           E07_PRODUCER_RUN_ID: ${{ inputs.producer_run_id }}
         run: |
           $ErrorActionPreference='Stop'
+          # GitHub re-runs reuse RUN_ID; RUN_ATTEMPT increases on retry.
+          # Never repeat physical E07 on the same immutable SetupSHA.
+          if ($env:GITHUB_RUN_ATTEMPT -cne '1') {
+            throw 'E07_SAME_RUN_RERUN_HOLD'
+          }
           if ($env:GITHUB_EVENT_NAME -cne 'workflow_dispatch' -or
               $env:E07_SETUP_SHA -cnotmatch '^[0-9a-f]{64}$' -or
               $env:E07_SOURCE_SHA -cnotmatch '^[0-9a-f]{40}$' -or

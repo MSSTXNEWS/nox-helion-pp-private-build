@@ -67,6 +67,19 @@ class B06SingleSetupDispatch(unittest.TestCase):
 
 
 
+    def test_rerun_reuses_run_id_and_must_hard_hold(self):
+        """Re-running a GitHub job preserves RUN_ID; attempts > 1 must HOLD."""
+        source = WORKFLOW.read_text(encoding="utf-8")
+        preflight = source.split(
+            "      - name: B06 exclusive immutable SetupSHA and previous-run admission\n", 1
+        )[1].split("      - name: Fast source regression gate before heavy artifacts\n", 1)[0]
+        self.assertIn("$env:GITHUB_RUN_ATTEMPT -cne '1'", preflight)
+        self.assertIn("throw 'E07_SAME_RUN_RERUN_HOLD'", preflight)
+        self.assertLess(preflight.index("E07_SAME_RUN_RERUN_HOLD"),
+                        preflight.index("E07_DUPLICATE_RUN_LOOKUP_HOLD"))
+        self.assertLess(preflight.index("E07_SAME_RUN_RERUN_HOLD"),
+                        preflight.index("E07_EXPLICIT_SINGLE_SETUP_DISPATCH_ADMITTED_NOT_PHYSICAL_PASS"))
+
     def test_each_b06_preflight_suite_has_immediate_native_exit_guard(self):
         """A later successful unittest must never erase an earlier failure."""
         source = WORKFLOW.read_text(encoding="utf-8")
