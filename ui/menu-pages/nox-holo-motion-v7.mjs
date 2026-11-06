@@ -1,5 +1,5 @@
 /** NOX HUD V7 adapter: decorates original native-owner page, does not own actions or telemetry. */
-import {mountNoxHoloMotion} from '../nox-holo-motion-v7.mjs';
+import {mountNoxHoloMotion} from './nox-holo-runtime-v7.mjs';
 (function(){
   'use strict';
   const doc=document,root=doc.querySelector('.shell');
