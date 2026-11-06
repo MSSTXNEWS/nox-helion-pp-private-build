@@ -64,7 +64,12 @@ for source in script_parts:
 # Windows SQLite open-file first-fail #42276488855: Microsoft.Data.Sqlite
 # pooled backup handles must be closed before checksum reads of the checkpoint.
 # This is a SOURCE_ONLY guard; Windows smoke validates the real file handles.
-snapshot = cs.split('private string CheckpointSqlite(', 1)[1].split('private static bool HasPersonaColumn(', 1)[0]
+# Scope this assertion to CheckpointSqlite only. VerifyIsolatedSqliteBackup
+# has a third, separate non-pooled verification connection by design.
+snapshot = cs.split('private string CheckpointSqlite(', 1)[1].split('private void VerifyIsolatedSqliteBackup(', 1)[0]
+smoke_verify = cs.split('private void VerifyIsolatedSqliteBackup(', 1)[1].split('private static void ValidateBackupParent(', 1)[0]
+assert smoke_verify.count('Pooling = false') == 1, 'B03_ISOLATED_SQLITE_VERIFY_POOLING_HOLD'
+assert re.search(r'DataSource\\s*=\\s*snapshot,\\s*Mode\\s*=\\s*SqliteOpenMode\\.ReadOnly,\\s*Pooling\\s*=\\s*false', smoke_verify), 'B03_ISOLATED_SQLITE_VERIFY_HANDLE_HOLD'
 assert snapshot.count('Pooling = false') == 2, 'B02_SQLITE_BACKUP_POOLING_HOLD'
 assert re.search(r'DataSource\s*=\s*file,\s*Mode\s*=\s*SqliteOpenMode\.ReadWriteCreate,\s*Pooling\s*=\s*false', snapshot)
 assert re.search(r'DataSource\s*=\s*file,\s*Mode\s*=\s*SqliteOpenMode\.ReadOnly,\s*Pooling\s*=\s*false', snapshot)
