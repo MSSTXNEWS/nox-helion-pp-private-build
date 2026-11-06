@@ -234,7 +234,7 @@ for($stage=1;$stage -le 99;$stage++){
     Say "NO NEW APPROVED DATA for stage $stage — finish without hallucinating training"
     break
   }
-  Say "QLoRA stage $stage, max_steps=1000 GPU memory fraction <=0.70; <=70% average training duty cycle, adaptive cooling"
+  Say "QLoRA stage $stage, 70% CUDA VRAM allocation; GPU temp >=65C => pause >=180s; resume below 65C; CPU threads limited"
   $out=Join-Path $Brain ("logs\train_stage_"+$stage+"_stdout.log")
   $err=Join-Path $Brain ("logs\train_stage_"+$stage+"_stderr.log")
   $argsTrain=@($srcTrainer,'--stage',"$stage",'--root',$Soul,'--max-steps','1000','--max-length','512',
