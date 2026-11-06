@@ -72,3 +72,37 @@ test('D01 MODELS guards original native owner after WebView2 disappears during n
   assert.match(state.textContent,/HOLD/,action+': unsupported PASS on dead bridge');
  }
 });
+
+test('D01 MODELS and LEARN preserve original owner and HOLD on synchronous owner exception',()=>{
+ const start=source.indexOf("nav.addEventListener('click',event=>{");
+ const end=source.indexOf("\n// Read-only original A1",start);
+ assert.ok(start>=0&&end>start);
+ const handler=source.slice(start,end);
+ for(const name of ['MODELS','LEARN']){
+  let callback,invoked=0,active=false,prevented=false;
+  const state={textContent:''};
+  const button={tagName:'BUTTON',isConnected:true,disabled:false,
+   getClientRects(){return [1]},focus(){doc.activeElement=button},
+   click(){invoked++;throw Error('original owner transport failed')}};
+  const primary={getClientRects(){return [1]},closest(){return primary},
+   getAttribute(k){return k==='data-nox-primary'?name:null}};
+  const screen={classList:{contains:key=>key==='active'&&active}};
+  const navigation={click(){active=true}};
+  const selector=name==='MODELS'?'button#model-center':'button#training-diagnostic';
+  const doc={activeElement:null,querySelectorAll(s){
+   if(s==='.nav button[data-screen="control"]')return [navigation];
+   if(s===selector)return [button];return [];
+  },getElementById(id){return id==='control'?screen:null}};
+  const nav={contains(){return true},addEventListener(kind,fn){
+   assert.equal(kind,'click');callback=fn}};
+  Function('nav','state','document','originalPrimaryButtons','verifiedOriginalPrimaryDock',
+   'originalInstallTransportPresent','originalNavigationAllowed','visibleOriginalOwnerTarget',
+   'findOriginalControl','findOriginalScreen',handler)(
+   nav,state,doc,[primary],()=>true,()=>true,()=>true,()=>true,()=>null,()=>null);
+  assert.doesNotThrow(()=>callback({target:primary,isTrusted:true,
+   preventDefault(){prevented=true}}),'original '+name+' throw must not escape D02 HOME');
+  assert.equal(invoked,1,'must not retry original owner after failure');
+  assert.equal(prevented,true);
+  assert.match(state.textContent,/HOLD/,'no optimistic ACK after owner failure');
+ }
+});

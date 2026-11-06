@@ -355,8 +355,11 @@ nav.addEventListener('click',event=>{
      catch{state.textContent='INSTALL: исходный обработчик завершился исключением · HOLD';}
      return;
    }
-   invokeMatches[0].click();
-   state.textContent=name+': запрос передан исходному обработчику · результат ожидается';
+   // An existing MODELS/LEARN owner callback may fail during WebView2 teardown.
+   // Keep exactly one original owner click and never issue an optimistic ACK.
+   state.textContent=name+': передача исходному обработчику · результат не подтверждён';
+   try{invokeMatches[0].click();}
+   catch{state.textContent=name+': исходный обработчик завершился исключением · HOLD';}
    return;
  }
  // SETTINGS enters the original MENU first, then uses its ORIGINAL system tile.

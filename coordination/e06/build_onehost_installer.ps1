@@ -379,7 +379,7 @@ if ($wantsCreative) {
   $primaryOwner=Join-Path $repoRoot 'coordination/express/stage_original_five_primary.py'
   $primaryStage=Join-Path $repoRoot 'coordination/express/publish_original_d02_primary_u12.py'
   foreach ($pinned in @(
-    @{path=$primaryOwner;sha='60793d78da4b3a92a19ff4d7657cd1f8bc2003eb'},
+    @{path=$primaryOwner;sha='d4d47cab0cd75205aa718b0854b5e89ccf8901d6'},
     @{path=$primaryStage;sha='931ecac66e89fcde15c55c1e26a6b2e137c3b6ea'})) {
     Assert-E06PlainPathAncestors -Candidate $pinned.path -Scope 'D02_PRIMARY_SCRIPT'
     if (!(Test-Path -LiteralPath $pinned.path -PathType Leaf) -or
