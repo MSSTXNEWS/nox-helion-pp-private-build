@@ -59,3 +59,30 @@ test('D06 native SETTINGS owner refusal: reviewed codes only, no paths or false 
  assert.equal((await createAutostartOwnerFlow(request).request({enabled:true})).result.enabled,true);
  assert.equal((await createAutostartOwnerFlow(request).request({})).result.readOnly,true);
 });
+
+test('D06 separate SETTINGS surfaces serialize one native owner HKCU consent/readback chain',async()=>{
+ let release;const gate=new Promise(resolve=>{release=resolve;});
+ let writes=0,saved=false;
+ const nativeRequest=async(route,payload)=>{
+   assert.equal(route,'system.autostart');
+   if(Object.keys(payload).length===0)return {routeId:route,state:'COMPLETED',errorCode:null,
+     result:{enabled:saved,readOnly:true}};
+   writes+=1;
+   await gate;
+   saved=payload.enabled;
+   return {routeId:route,state:'COMPLETED',errorCode:null,
+     result:{enabled:saved,readOnly:false}};
+ };
+ const first=createAutostartOwnerFlow(nativeRequest);
+ const second=createAutostartOwnerFlow(nativeRequest);
+ const current=first.request({enabled:true});
+ const competing=second.request({enabled:false}).then(()=>null,e=>e.message);
+ assert.equal(await competing,'NOX_AUTOSTART_OWNER_IN_FLIGHT');
+ assert.equal(writes,1,'foreign surface must never dispatch second HKCU action');
+ release();
+ const result=await current;
+ assert.equal(result.result.enabled,true);
+ const after=await second.request({enabled:false});
+ assert.equal(after.result.enabled,false,'lock must release after verified readback');
+ assert.equal(writes,2);
+});

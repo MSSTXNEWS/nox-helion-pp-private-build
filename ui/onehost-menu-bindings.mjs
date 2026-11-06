@@ -314,13 +314,18 @@ export function nativeAutostartDenialCode(reply){
 /** SETTINGS owner requests are single-flight: a second ON/OFF/read cannot race
  * an unconfirmed native HKCU write and misreport persisted state.
  * WPF still owns all SID/ACL/consent and Windows Registry decisions. */
+// One renderer module may serve multiple SETTINGS surfaces; the owner
+// HKCU consent/readback chain must not overlap across flow instances.
+// This is only a renderer-side admission fence, not a Windows mutex:
+// the original WPF owner remains authoritative for SID/ACL/consent.
+let sharedAutostartOwnerInFlight=false;
 export function createAutostartOwnerFlow(nativeRequest){
   if(typeof nativeRequest!=='function')throw Error('NOX_AUTOSTART_NATIVE_OWNER_REQUIRED');
   let inFlight=false;
   return Object.freeze({
     async request(payload){
-      if(inFlight)throw Error('NOX_AUTOSTART_OWNER_IN_FLIGHT');
-      inFlight=true;
+      if(inFlight||sharedAutostartOwnerInFlight)throw Error('NOX_AUTOSTART_OWNER_IN_FLIGHT');
+      inFlight=true;sharedAutostartOwnerInFlight=true;
       try{
         const keys=payload&&typeof payload==='object'&&!Array.isArray(payload)?
           Object.keys(payload):[];
@@ -347,7 +352,7 @@ export function createAutostartOwnerFlow(nativeRequest){
           throw Error(nativeAutostartDenialCode(readback)||'NOX_AUTOSTART_READBACK_HOLD');
         return reply;
       }
-      finally{inFlight=false;}
+      finally{inFlight=false;sharedAutostartOwnerInFlight=false;}
     }
   });
 }
