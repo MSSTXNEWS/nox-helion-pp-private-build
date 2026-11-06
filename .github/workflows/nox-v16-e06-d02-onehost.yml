@@ -105,7 +105,7 @@ jobs:
           # Real original P01 source tests, not a fake browser/installed E07 receipt.
           node --test proposals/P01/WOW-MAX10/route-dispatch.test.mjs proposals/P01/WOW-MAX10/menu-route-pending.test.mjs
           # Original T06 source/provenance guards: CI source evidence, never E07.
-          for test in test_t06_nsis_failure_diagnostics.py test_checkout_source_bytes.py test_t06_compile_source_head.py test_t06_source_receipt_guard.py test_i2_local_bridge_receipt_gate.py test_t06_gitlab_runner_authorization.py test_t06_e06_workflow_source_gate.py test_e06_direct_branch_trigger.py test_a1_native_gate_auth_race.py; do
+          for test in test_b03_g4_nsis_metadata_r11.py test_t06_nsis_failure_diagnostics.py test_checkout_source_bytes.py test_t06_compile_source_head.py test_t06_source_receipt_guard.py test_i2_local_bridge_receipt_gate.py test_t06_gitlab_runner_authorization.py test_t06_e06_workflow_source_gate.py test_e06_direct_branch_trigger.py test_a1_native_gate_auth_race.py; do
             python -m unittest discover -s tests/e06 -p "$test" -v
           done
   visual-source-stage:

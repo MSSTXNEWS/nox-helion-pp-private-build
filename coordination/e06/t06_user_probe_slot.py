@@ -82,6 +82,42 @@ def read_frozen_manifest_bytes(path: Path) -> tuple[bytes, os.stat_result]:
     return raw, before
 
 
+
+def verify_locked_nsis_metadata(path: Path, safe, *, marker: bool) -> bool:
+    """Read owned R11 metadata from its actual single-link file handle.
+
+    A safe(path) preflight is not a lease: bind the bytes to the lstat'ed
+    object and reject path swaps or in-place edits before diagnostic PASS.
+    This does not license a release or alter any real NSIS operation.
+    """
+    expected = b"NOXHELION.P01 V16\r\n"
+    try:
+        if not safe(path):
+            return False
+        before = path.lstat()
+        if not stat.S_ISREG(before.st_mode) or before.st_nlink != 1 or before.st_ino == 0:
+            return False
+        if marker:
+            if before.st_size != len(expected):
+                return False
+        elif not 1024 <= before.st_size <= 104857600:
+            return False
+        with path.open("rb") as stream:
+            opened = os.fstat(stream.fileno())
+            if not owned_file_handle_matches_path(before, opened):
+                return False
+            if marker:
+                if stream.read(len(expected) + 1) != expected:
+                    return False
+            elif stream.read(2) != b"MZ":
+                return False
+            if not unchanged_probe_snapshot(opened, os.fstat(stream.fileno())):
+                return False
+        return safe(path) and unchanged_probe_snapshot(before, path.lstat())
+    except (OSError, ValueError):
+        return False
+
+
 def verify_exact_probe_slot(root: Path, probe_name: str, probe_bytes: bytes,
                             frozen_inode: tuple[int, int], base: Path) -> dict:
     def hold(reason: str) -> None:
@@ -231,12 +267,11 @@ def verify_exact_probe_slot(root: Path, probe_name: str, probe_bytes: bytes,
         hold("BINARIES")
     owner = root / "nox-p01-owned.txt"
     uninstaller = root / "Uninstall.exe"
-    if (not safe(owner) or owner.read_bytes() != b"NOXHELION.P01 V16\r\n" or
-            not safe(uninstaller) or not 1024 <= uninstaller.stat().st_size <= 104857600):
+    # G4: only the same file handle we attested may supply the owner marker
+    # and native NSIS uninstaller metadata. A safe(path) preflight alone can race.
+    if not (verify_locked_nsis_metadata(owner, safe, marker=True) and
+            verify_locked_nsis_metadata(uninstaller, safe, marker=False)):
         hold("NSIS_METADATA")
-    with uninstaller.open("rb") as binary:
-        if binary.read(2) != b"MZ":
-            hold("NSIS_METADATA")
     observed = set()
     for folder, dirs, files in os.walk(root, topdown=True, followlinks=False):
         for name in dirs:
