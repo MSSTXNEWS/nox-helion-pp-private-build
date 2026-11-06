@@ -209,7 +209,7 @@ def collect(owner, *, platform_name=None, env=None):
                 else:
                     snapshot['first_failure'] = 'USER_PROBE_INODE_UNSAFE'
 
-        report['rollback_diagnostic']['attested_backup_verifier'] = readonly_rollback_backup_verifier(owner, Path(str(install) + '.__p01_previous'))
+        snapshot['attested_backup_verifier'] = readonly_rollback_backup_verifier(owner, previous)
     # Do not run either a failed app or an arbitrary residual script. Admit the
     # existing reviewer's verifier only if it matches its committed Git bytes.
     verifier_rel = 'stage/proposals/P01/C09/Installer/Verify-Payload.ps1'

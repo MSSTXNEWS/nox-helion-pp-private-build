@@ -137,6 +137,11 @@ class PostmortemGuards(unittest.TestCase):
         report = self.collect()
         check = report['update_backup_diagnostic']
         self.assertEqual(check['first_failure'], 'NONE_IN_CURRENT_SNAPSHOT')
+        # UPDATE diagnostics must not depend on the rollback-only receipt.
+        self.assertNotIn('rollback_diagnostic', report)
+        self.assertEqual(check['attested_backup_verifier']['status'],
+                         'SOURCE_OR_BACKUP_UNAVAILABLE_HOLD')
+        self.assertFalse(check['attested_backup_verifier']['release_accepted'])
         self.assertFalse(check['pre_update_user_inode_verified'])
         self.assertFalse(check['release_accepted'])
         self.assertEqual(report['original_failure'], self.failure['reason'])
