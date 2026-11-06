@@ -18,8 +18,16 @@ public static class ModelArtifactReviewRegistry
 {
     private static readonly Regex TagPattern = new(@"^[a-zA-Z0-9][a-zA-Z0-9._-]*(/[a-zA-Z0-9][a-zA-Z0-9._-]*)?:[a-zA-Z0-9][a-zA-Z0-9._-]*$", RegexOptions.Compiled);
     private static bool Sha(string? x) => x is { Length: 64 } && x.All(Uri.IsHexDigit);
+    // Evidence links are not a native rights receipt. Do not promote loopback,
+    // local-only or nonstandard-origin URLs into the approved model catalog.
+    // Match the existing HasReviewedGgufAuthority external-evidence boundary.
     private static bool Https(string? x, out Uri? uri) =>
         Uri.TryCreate(x, UriKind.Absolute, out uri) && uri.Scheme == Uri.UriSchemeHttps &&
+        uri.IsDefaultPort && !uri.IsLoopback && !string.IsNullOrWhiteSpace(uri.Host) &&
+        !uri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase) &&
+        !uri.Host.EndsWith(".localhost", StringComparison.OrdinalIgnoreCase) &&
+        !uri.Host.EndsWith(".local", StringComparison.OrdinalIgnoreCase) &&
+        !uri.Host.EndsWith(".internal", StringComparison.OrdinalIgnoreCase) &&
         string.IsNullOrEmpty(uri.UserInfo) && string.IsNullOrEmpty(uri.Fragment);
     private static bool Official(string source, string family) => Https(source, out var uri) &&
         uri!.Host.Equals("ollama.com", StringComparison.OrdinalIgnoreCase) &&

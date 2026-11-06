@@ -42,6 +42,29 @@ Assert(!ModelArtifactReviewRegistry.TryPromote(
     reviewedOrigin with { ReviewerReceiptId = "owner\nspoofed" }, true, out _),
     "D04 native owner reviewer control-character receipt rejected");
 
+// D04 R5: untrusted reviewed-registry evidence URLs are not native rights proof.
+// TryPromote must reject every local, altered-origin or privileged endpoint.
+Assert(!ModelArtifactReviewRegistry.TryPromote(
+    reviewedOrigin with { LicenseEvidenceUrl = "https://127.0.0.1/license" }, true, out _),
+    "D04 reviewed-license loopback IP denied");
+Assert(!ModelArtifactReviewRegistry.TryPromote(
+    reviewedOrigin with { CompatibilityEvidenceUrl = "https://[::1]/compat" }, true, out _),
+    "D04 compatibility IPv6 loopback denied");
+Assert(!ModelArtifactReviewRegistry.TryPromote(
+    reviewedOrigin with { LicenseEvidenceUrl = "https://models.local/license" }, true, out _),
+    "D04 reviewed-license mDNS local denied");
+Assert(!ModelArtifactReviewRegistry.TryPromote(
+    reviewedOrigin with { CompatibilityEvidenceUrl = "https://rights.internal/compat" }, true, out _),
+    "D04 private compatibility domain denied");
+Assert(!ModelArtifactReviewRegistry.TryPromote(
+    reviewedOrigin with { LicenseEvidenceUrl = "https://localhost/license" }, true, out _),
+    "D04 localhost rights evidence denied");
+Assert(!ModelArtifactReviewRegistry.TryPromote(
+    reviewedOrigin with { LicenseEvidenceUrl = "https://ollama.com:444/license" }, true, out _),
+    "D04 nonstandard port rights evidence denied");
+Assert(ModelArtifactReviewRegistry.TryPromote(reviewedOrigin, true, out _),
+    "D04 legitimate owner-reviewed public HTTPS evidence preserved");
+
 using var correct = JsonDocument.Parse("{\"models\":[{\"name\":\"m:1\",\"digest\":\"sha256:" + new string('a',64) + "\"}]}");
 Assert(ModelLocalAttestation.ParseUnambiguousModelDigest(correct.RootElement, "m:1") == "sha256:" + new string('a',64), "T01 pinned local digest");
 
