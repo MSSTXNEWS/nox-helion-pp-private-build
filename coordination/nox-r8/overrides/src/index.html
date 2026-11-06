@@ -272,7 +272,7 @@ body.reduced .helion-fx{filter:none}body.reduced .core.active{animation:none}
     gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]),gl.STATIC_DRAW);
     const attr=gl.getAttribLocation(program,'aPosition');gl.enableVertexAttribArray(attr);gl.vertexAttribPointer(attr,2,gl.FLOAT,false,0,0);
   }catch(e){console.warn('NOX WebGL initialization fallback:',e.message);const replacement=canvas.cloneNode(false);canvas.replaceWith(replacement);startCanvas2d(replacement);return;}
-  let raf=0,mode='BALANCED',energy=0,rendered=false,last=0,started=performance.now();
+  let raf=0,mode='BALANCED',energy=0,rendered=false,last=0,started=performance.now(),gpuFrames=0;
   const reduce=()=>document.body.classList.contains('reduced') ||
     window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   let gpuActive=true;
@@ -298,7 +298,14 @@ body.reduced .helion-fx{filter:none}body.reduced .core.active{animation:none}
     try{resize();gl.useProgram(program);gl.uniform2f(res,canvas.width,canvas.height);
       gl.uniform1f(time,reduce()?0:(now-started)*.001);gl.uniform1f(ene,energy);
       gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT);gl.drawArrays(gl.TRIANGLES,0,6);
-      if(gl.isContextLost&&gl.isContextLost()){switchToCanvas2d('CONTEXT_LOST');return;}}
+      if(gl.isContextLost&&gl.isContextLost()){switchToCanvas2d('CONTEXT_LOST');return;}
+      // Drivers can report draw/VRAM errors without throwing or losing context.
+      // Sample the genuine GPU error state on the first frame and every 30th
+      // frame to avoid a readback stall every animation frame.
+      if(typeof gl.getError==='function' && (++gpuFrames===1 || gpuFrames%30===0)){
+        const gpuError=gl.getError();
+        if(gpuError!==gl.NO_ERROR)throw new Error('GL_RUNTIME_ERROR_'+gpuError);
+      }}
     catch(e){switchToCanvas2d(e.message);return;}
     raf=fps?requestAnimationFrame(frame):0;
   }
