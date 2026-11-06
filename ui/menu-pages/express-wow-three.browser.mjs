@@ -93,6 +93,10 @@ try{
     return {tag:el.tagName.toLowerCase(),id:el.id,className:typeof el.className==='string'?el.className.slice(0,90):'',left:Math.round(r.left),right:Math.round(r.right),width:Math.round(r.width)};
    }).filter(r=>r.right>innerWidth+2||r.left< -2).sort((a,b)=>b.right-a.right).slice(0,20));
    console.error('NOX_WOW_OVERFLOW_ELEMENTS',width,JSON.stringify(leaking));
+   const containers=await page.evaluate(()=>[...document.querySelectorAll('html,body,body *')].filter(el=>el.scrollWidth>el.clientWidth+3).map(el=>{
+    const b=el.getBoundingClientRect();return {tag:el.tagName,id:el.id,className:typeof el.className==='string'?el.className.slice(0,70):'',scrollWidth:el.scrollWidth,clientWidth:el.clientWidth,right:Math.round(b.right)};
+   }).slice(0,30));
+   console.error('NOX_WOW_OVERFLOW_CONTAINERS',width,JSON.stringify(containers));
   }
   assert.equal(geometry.scrollWidth<=geometry.viewport+2,true,`Horizontal overflow at ${width}x${height}: ${JSON.stringify(geometry)}`);
   assert.equal(geometry.actions,5,'Five source-defined main actions remain');
