@@ -25,6 +25,8 @@ jobs:
           sleep 2
           node --check ui/menu-pages/formwork-halo-hud.js
           node --check ui/menu-pages/formwork-zodiac-cores.js
+          node --check ui/menu-pages/native-gauge-adapter.js
+          node --check ui/menu-pages/vendor/svg-gauge.min.js
           test -f ui/menu-pages/formwork-zodiac.LICENSE.txt
           node --check ui/menu-pages/vendor/loquix-typing.mjs
           node --check ui/menu-pages/menu.js
