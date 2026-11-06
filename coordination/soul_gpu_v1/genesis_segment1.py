@@ -43,7 +43,7 @@ def init(root):
 
 def plan(root):
     from src.nox_selfbuilder.worms import plan_day
-    tasks=plan_day(date.today().isoformat())
+    tasks=plan_day(datetime.now(timezone.utc))
     data={"schema":"NOX-GENESIS-WORMS-v1","status":"PLANNED_NOT_RUNNING",
           "planned":len(tasks),"fetched":0,
           "native_owner_binding":False,
