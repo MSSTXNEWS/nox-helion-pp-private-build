@@ -7,8 +7,19 @@ if (!(Test-Path -LiteralPath $index -PathType Leaf) -or !(Test-Path -LiteralPath
 $original = [IO.File]::ReadAllText($menu)
 if (!$original.Contains('let client=null') -or !$original.Contains('const say=message=>') -or !$original.Contains('window.chrome?.webview')) { throw 'NOX WEB menu.js differs; original files not changed' }
 $tags = Invoke-RestMethod 'http://127.0.0.1:11434/api/tags' -TimeoutSec 8
-if (!($tags.models -is [array]) -or @($tags.models).Count -eq 0) { throw 'Local Ollama reports no installed models' }
-Write-Host ('OLLAMA ONLINE | Models: ' + @($tags.models).Count) -ForegroundColor Green
+# PowerShell can unwrap a JSON array to one PSCustomObject; verify actual tags, not its CLR array type.
+$availableModels = @($tags.models | Where-Object { $_ -and ($_.name -is [string]) -and ![string]::IsNullOrWhiteSpace($_.name) })
+if ($availableModels.Count -eq 0) {
+  Write-Warning 'Ollama responds on 127.0.0.1:11434 but /api/tags has no named models.'
+  $ollamaCommand = Get-Command ollama.exe -ErrorAction SilentlyContinue
+  if ($ollamaCommand) {
+    Write-Host 'Installed models seen by ollama list:' -ForegroundColor Yellow
+    & $ollamaCommand.Source list
+  }
+  Write-Host ('OLLAMA_MODELS=' + [string]$env:OLLAMA_MODELS) -ForegroundColor Yellow
+  throw 'OLLAMA_NO_LOCAL_MODEL_VISIBLE: check the active Ollama model directory; nothing was changed or downloaded.'
+}
+Write-Host ('OLLAMA ONLINE | Models: ' + $availableModels.Count) -ForegroundColor Green
 $payload = @'
 H4sIAJ4m7WoC/71bjXObSLL/V4irXgbOGMlONreHQ1yyrSTaVSSfLGc3Z7kojEYWCQItIFt+sv73190zgwDhj7y6O6USJGamv6a7
 59cNWe2kPLnlyY69M6I/vf6f2h/tY+04jP0f2r6t8fmUz3jihRrc8cJpnGZamnlZ4Gu7Wj8MvZmnXSfB+IabWhRrXpjxJPIyrrU6
