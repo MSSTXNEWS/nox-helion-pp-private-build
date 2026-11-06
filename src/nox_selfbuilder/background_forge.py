@@ -461,9 +461,10 @@ class ExistingP04Background:
             if conflict is not None:
                 return self._hold(conflict)
             self._active = None
-        # Only post a verified terminal event after the native STOP race gate
-        # has committed admission. No terminal event can precede S03 evidence.
-        self.relay_events(job)
+        # S03 commits the owner-scoped RESULT only after run_one returns.
+        # Relaying a COMPLETED event here would advertise success before the
+        # original SQLite commit; provisional progress remains available.
+        self.relay_events(job, live=True)
         return result
 
     def merge_candidate(self, job, *, output_dir, owner_approve, max_seconds=36000):
@@ -576,7 +577,7 @@ class ExistingP04Background:
         with path.open(encoding='utf-8') as stream:
             return [json.loads(line) for line in deque(stream, maxlen=64)]
 
-    def relay_events(self, job, *, live=False):
+    def relay_events(self, job, *, live=False, durable_s03=False):
         """Forward real canonical events to the injected existing host bus only."""
         if self.event_sink is None:
             return 0
@@ -604,13 +605,12 @@ class ExistingP04Background:
                         or not isinstance(event.get("message"), str) or len(event["message"]) > 240
                         or not re.fullmatch(r"[0-9a-f]{32}", str(event.get("event_id", "")))):
                     raise ForgeHold("P04_EVENT_PROVENANCE_HOLD")
-                # Live streaming is provisional: the original trainer may
-                # write task.completed before receipt SHA/checkpoint/owner
-                # consent and the final native STOP linearization are checked.
-                # Keep progress live, defer any COMPLETED assertion to the
-                # verified non-live read after final native admission.
-                if live and (event["event_type"] == "task.completed"
-                             or event["state"] == "COMPLETED"):
+                # A trainer-supplied completion is only a provisional claim.
+                # The original owner-scoped S03 RESULT must commit before the
+                # native bridge can explicitly release terminal events.
+                if (live or durable_s03 is not True) and (
+                        event["event_type"] == "task.completed"
+                        or event["state"] == "COMPLETED"):
                     continue
                 identity = (job.run_id, event["event_id"])
                 if identity not in self._relayed:

@@ -116,6 +116,10 @@ class ExistingP04NativePorts:
                 or self.background.trainer.sha256_file(
                     job.output_dir / 'training-receipt.json') != sha):
             raise ForgeHold('NATIVE_FORGE_S03_RESULT_PROOF_HOLD')
+        # Run completion is a durable native claim, not a worker log event:
+        # unlock terminal bus events only AFTER exact owner S03 RESULT proof.
+        self.background.relay_events(
+            job, durable_s03=(receipt['status'] == 'COMPLETED'))
         return row
 
     def start(self, scope, args):
