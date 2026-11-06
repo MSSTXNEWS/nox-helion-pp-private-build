@@ -606,21 +606,67 @@ class ExistingP04Background:
                 self._gate.release()
 
     def event_snapshot(self, job):
-        """Bounded real events for existing training.checkpoints polling.
+        """Unverified GPU progress only; completion requires native S03 RESULT.
 
-        Background jobs do not borrow a completed request's framed nonce.
-        These payloads keep original EventID and evidence_verified=False.
+        training.checkpoints polls this BEFORE the native result attestation.
+        It must not show worker-authored terminal success inside a HOLD result.
         """
-        path = self._control(job) / 'events.jsonl'
+        path = self._control(job) / "events.jsonl"
+        self.trainer.reject_reparse_ancestors(path)
         if not path.exists():
             return []
-        if path.stat().st_size > 64*1024*1024:
-            raise ForgeHold('EVENT_LOG_REVIEW_SIZE_LIMIT')
-        # Same original full-history parser as resume, not a synthetic sensor.
+        if path.is_symlink() or not path.is_file() or path.stat().st_size > 64*1024*1024:
+            raise ForgeHold("P04_SNAPSHOT_LOG_UNSAFE_HOLD")
+        # Original trainer validates full append-only sequence and run identity.
         self.trainer.EventWriter(path, job.run_id, job.task_id)
         from collections import deque
-        with path.open(encoding='utf-8') as stream:
-            return [json.loads(line) for line in deque(stream, maxlen=64)]
+
+        def unique_pairs(pairs):
+            value, seen = {}, set()
+            for key, item in pairs:
+                folded = unicodedata.normalize("NFC", key).casefold()
+                if folded in seen:
+                    raise ForgeHold("P04_SNAPSHOT_AMBIGUOUS_JSON_HOLD")
+                seen.add(folded)
+                value[key] = item
+            return value
+
+        def finite_float(token):
+            value = float(token)
+            if not math.isfinite(value):
+                raise ForgeHold("P04_SNAPSHOT_NONFINITE_HOLD")
+            return value
+
+        def reject_constant(_token):
+            raise ForgeHold("P04_SNAPSHOT_NONFINITE_HOLD")
+
+        events = []
+        with path.open(encoding="utf-8") as stream:
+            for line in deque(stream, maxlen=64):
+                if not line.endswith("\n") or len(line) > 4096:
+                    raise ForgeHold("P04_SNAPSHOT_RECORD_BOUND_HOLD")
+                try:
+                    event = json.loads(line, object_pairs_hook=unique_pairs,
+                                       parse_float=finite_float, parse_constant=reject_constant)
+                except ForgeHold:
+                    raise
+                except (ValueError, UnicodeDecodeError, RecursionError, TypeError) as exc:
+                    raise ForgeHold("P04_SNAPSHOT_JSON_HOLD") from exc
+                if (type(event) is not dict
+                        or event.get("schema") != "NOX-INSTALLER-EVENT-v3"
+                        or event.get("run_id") != job.run_id or event.get("task_id") != job.task_id
+                        or event.get("package_id") != "P04"
+                        or event.get("source") != "P04.QLoRA"
+                        or event.get("evidence_verified") is not False
+                        or not isinstance(event.get("message"), str)
+                        or len(event["message"]) > 240
+                        or not re.fullmatch(r"[0-9a-f]{32}", str(event.get("event_id", "")))
+                        or type(event.get("event_sequence")) is not int):
+                    raise ForgeHold("P04_SNAPSHOT_PROVENANCE_HOLD")
+                if event.get("event_type") == "task.completed" or event.get("state") == "COMPLETED":
+                    continue  # Only a verified owner S03 result may report completion.
+                events.append(event)
+        return events
 
     def relay_events(self, job, *, live=False, durable_s03=False):
         """Forward real canonical events to the injected existing host bus only."""
