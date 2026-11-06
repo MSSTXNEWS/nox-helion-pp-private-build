@@ -130,6 +130,43 @@ class NativeP04AtomicMarkerTests(unittest.TestCase):
         self.assertEqual(self.owner.request_stop()["status"], "STOP_REQUESTED")
         self.assertIs(self.owner._merge_stop, True)
 
+    def test_verified_paused_receipt_clears_only_native_marker(self):
+        self.assertEqual(self.owner.request_pause()["status"], "PAUSE_REQUESTED")
+        marker = self.owner._active[1]
+        with self.owner._control_lock:
+            self.owner._clear_owned_paused_marker_locked(marker)
+        self.assertFalse(marker.exists())
+        self.assertNotIn("PAUSE", self.owner._owned_marker_identity)
+
+    def test_verified_paused_receipt_never_unlinks_replaced_regular_file(self):
+        self.assertEqual(self.owner.request_pause()["status"], "PAUSE_REQUESTED")
+        marker = self.owner._active[1]
+        replacement = self.root / "foreign-paused.marker"
+        replacement.write_bytes(b"FOREIGN PRESERVE")
+        os.replace(replacement, marker)
+        with self.assertRaisesRegex(ForgeHold, "TRAINER_PAUSE_MARKER_REPLACED_HOLD"):
+            with self.owner._control_lock:
+                self.owner._clear_owned_paused_marker_locked(marker)
+        self.assertEqual(marker.read_bytes(), b"FOREIGN PRESERVE")
+
+    def test_stop_does_not_remove_prior_pause_marker(self):
+        self.assertEqual(self.owner.request_pause()["status"], "PAUSE_REQUESTED")
+        marker = self.owner._active[1]
+        self.assertEqual(self.owner.request_stop()["status"], "STOP_REQUESTED")
+        with self.assertRaisesRegex(ForgeHold, "TRAINER_PAUSE_MARKER_UNOWNED_HOLD"):
+            with self.owner._control_lock:
+                self.owner._clear_owned_paused_marker_locked(marker)
+        self.assertTrue(marker.is_file())
+
+    def test_missing_pause_marker_is_not_accepted_as_owner_receipt(self):
+        self.assertEqual(self.owner.request_pause()["status"], "PAUSE_REQUESTED")
+        marker = self.owner._active[1]
+        marker.unlink()
+        with self.assertRaisesRegex(ForgeHold, "TRAINER_PAUSE_MARKER_NOT_REGULAR_HOLD"):
+            with self.owner._control_lock:
+                self.owner._clear_owned_paused_marker_locked(marker)
+
+
 
 if __name__ == "__main__":
     unittest.main()

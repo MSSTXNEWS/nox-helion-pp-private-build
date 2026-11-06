@@ -299,6 +299,24 @@ class ExistingP04Background:
             self._requested = requested
             return {"status": requested + "_REQUESTED", "weights_updated": False}
 
+    def _clear_owned_paused_marker_locked(self, pause_marker):
+        """Only the live PAUSE owner marker may be retired after a verified receipt.
+
+        Caller holds _control_lock and has checked STOP/PAUSE result conflict.
+        """
+        if self._requested != "PAUSE":
+            raise ForgeHold("TRAINER_PAUSE_MARKER_UNOWNED_HOLD")
+        self.trainer.reject_reparse_ancestors(pause_marker)
+        if not pause_marker.is_file() or pause_marker.is_symlink():
+            raise ForgeHold("TRAINER_PAUSE_MARKER_NOT_REGULAR_HOLD")
+        expected = getattr(self, "_owned_marker_identity", {}).get("PAUSE")
+        observed = os.stat(pause_marker, follow_symlinks=False)
+        if (expected is None or observed.st_ino == 0
+                or expected != (observed.st_dev, observed.st_ino)):
+            raise ForgeHold("TRAINER_PAUSE_MARKER_REPLACED_HOLD")
+        pause_marker.unlink()
+        self._owned_marker_identity.pop("PAUSE", None)
+
     def verified_receipt(self, job):
         out = self._output(job.output_dir, resume=True)
         path = out / "training-receipt.json"
@@ -439,10 +457,6 @@ class ExistingP04Background:
         receipt = self.verified_receipt(job)
         if prior_receipt_sha == self.trainer.sha256_file(out / "training-receipt.json"):
             return self._hold("RESUME_RECEIPT_NOT_UPDATED")
-        if receipt["status"] == "PAUSED" and pause_marker.exists():
-            # Only remove this run's request after verifying all checkpoint bytes.
-            self.trainer.reject_reparse_ancestors(pause_marker)
-            pause_marker.unlink()
         if not self._owner_training_grant(require_idle=require_idle):
             return self._hold("OWNER_REVOKED_BEFORE_TRAINING_RECEIPT")
         # A native STOP/PAUSE may race the trainer's zero exit and its
@@ -460,6 +474,10 @@ class ExistingP04Background:
             conflict = self._requested_result_conflict(self._requested, receipt["status"])
             if conflict is not None:
                 return self._hold(conflict)
+            # Retire only the exact native PAUSE file under the same STOP
+            # admission lock. A foreign/replaced or missing marker is a HOLD.
+            if receipt["status"] == "PAUSED":
+                self._clear_owned_paused_marker_locked(pause_marker)
             self._active = None
         # S03 commits the owner-scoped RESULT only after run_one returns.
         # Relaying a COMPLETED event here would advertise success before the
