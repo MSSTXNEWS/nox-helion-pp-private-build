@@ -42,8 +42,10 @@ internal static class ModelSafetensorsImport
             approval.NativeApprovalId.Length>200 || string.IsNullOrWhiteSpace(approval.RightsAttestationId) ||
             !new[]{approval.MergedPayloadSha256,approval.MergeReceiptSha256,
                 approval.TrainingReceiptSha256,approval.RightsAttestationSha256}.All(x=>Sha.IsMatch(x??"")) ||
-            !Uri.TryCreate(approval.LicenseSource,UriKind.Absolute,out var license) ||
-            license.Scheme!=Uri.UriSchemeHttps || !string.IsNullOrEmpty(license.UserInfo))
+            // Historical approved P04 jobs must obey the same external
+            // evidence boundary at execution time, not only at enqueue.
+            !ModelDownloadQueueStore.HasReviewedGgufAuthority(
+                approval.RightsAttestationId, approval.LicenseSource))
             throw new InvalidDataException("P03_P04_NATIVE_RIGHTS_APPROVAL_REQUIRED");
         ModelLocalAttestation.RequireNoExistingReparsePoint(approval.Directory);
         if (!System.IO.Directory.Exists(approval.Directory))

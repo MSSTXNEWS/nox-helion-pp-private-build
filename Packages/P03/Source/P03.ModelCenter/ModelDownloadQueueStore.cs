@@ -358,8 +358,9 @@ public sealed class ModelDownloadQueueStore
             !string.Equals(job.ModelTag,
                 "nox-forge-" + approval.MergedPayloadSha256[..12] + ":" + job.Id.ToString("N"),
                 StringComparison.Ordinal) ||
-            !Uri.TryCreate(approval.LicenseSource, UriKind.Absolute, out var license) ||
-            license.Scheme != Uri.UriSchemeHttps || !string.IsNullOrEmpty(license.UserInfo))
+            // Require externally reviewed HTTPS evidence even for native
+            // P04 merges; reuse the original GGUF/pull owner source boundary.
+            !HasReviewedGgufAuthority(approval.RightsAttestationId, approval.LicenseSource))
             return false;
         return true;
     }

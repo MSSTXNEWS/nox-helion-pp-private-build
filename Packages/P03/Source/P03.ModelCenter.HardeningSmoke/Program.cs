@@ -1063,6 +1063,49 @@ try
         Assert(directHeld, "B04 P04 original adapter refuses CWD-dependent owner paths");
     }
 
+    // D04 R5: require public HTTPS merged rights evidence before any local
+    // state mutation or Ollama I/O. No model weights are downloaded here.
+    var d04Public = approvedMerge with {
+        Directory = Path.Combine(b04MergedRoot, "d04-new-nonexistent-merged"),
+        TrainingReceiptPath = Path.Combine(b04MergedRoot, "d04-new-nonexistent-training.json")
+    };
+    foreach (var badEvidence in new[] {
+        "https://localhost/license", "https://127.0.0.1/license",
+        "https://[::1]/license", "https://private.local/license",
+        "https://private.internal/license", "https://sub.localhost/license",
+        "https://example.com:444/license", "https://example.com/license#fake"
+    })
+    {
+        var unreviewed = d04Public with { LicenseSource = badEvidence };
+        var before = (await mergedQueue.ReadAsync()).Count;
+        var enqueueDenied = false;
+        try { await mergedQueue.EnqueueVerifiedMergedAsync(unreviewed, nativeConsent: true); }
+        catch (InvalidDataException ex) when (ex.Message == "P03_P04_NATIVE_RIGHTS_APPROVAL_REQUIRED")
+        { enqueueDenied = true; }
+        Assert(enqueueDenied && (await mergedQueue.ReadAsync()).Count == before,
+            "D04 P04 queue denies local/private license without mutation: " + badEvidence);
+        var candidateId = Guid.NewGuid();
+        var candidate = new ModelJob(candidateId, ModelJobKind.SafetensorsImport,
+            "nox-forge-" + unreviewed.MergedPayloadSha256[..12] + ":" + candidateId.ToString("N"),
+            unreviewed.Directory, true, unreviewed.LicenseSource,
+            DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, ExpectedLocalBytes: 123,
+            ExpectedLocalSha256: unreviewed.MergedPayloadSha256,
+            RightsReceiptId: unreviewed.RightsAttestationId, MergedImport: unreviewed);
+        using var localHttp = new HttpClient { BaseAddress = new Uri("http://127.0.0.1:11434/") };
+        var native = new OllamaModelAdapter(localHttp, b04MergedRoot);
+        var directDenied = false;
+        try { await native.ImportMergedSafetensorsAsync(candidate,
+            (evt, token) => ValueTask.CompletedTask, CancellationToken.None); }
+        catch (SafetensorsImportHold ex) when (ex.Code == "P03_MERGED_REVIEW_REQUIRED")
+        { directDenied = true; }
+        Assert(directDenied, "D04 direct adapter denies private P04 evidence before HTTP: " + badEvidence);
+    }
+    var publicToReceipt = false;
+    try { await mergedQueue.EnqueueVerifiedMergedAsync(d04Public, nativeConsent: true); }
+    catch (InvalidDataException ex) when (ex.Message == "P03_MERGED_DIRECTORY_MISSING")
+    { publicToReceipt = true; }
+    Assert(publicToReceipt, "D04 public HTTPS passes only to original P04 receipt/filesystem gate");
+
     // D04 R5: a legacy P04 job can have syntactically valid weight SHA and
     // NativeRightsVerified=true while its training-receipt path remains relative.
     // Preserve the old snapshot, refuse atomic Running/retry/direct native I/O,
