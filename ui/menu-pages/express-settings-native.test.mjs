@@ -10,7 +10,7 @@ test('original SETTINGS routes to owner-verified HKCU, never direct registry acc
  assert.match(src,/b\.dataset\.nativeRoute='system\.autostart'/);
  assert.doesNotMatch(src,/reg\s+add|window\.localStorage\.setItem\(['"]autostart/);
 });
-import {settingsAutostartOwnerAdmission,AUTOSTART_UIA_IDS,createAutostartOwnerFlow,nativeAutostartDenialCode} from '../onehost-menu-bindings.mjs';
+import {settingsAutostartOwnerAdmission,AUTOSTART_UIA_IDS,createAutostartOwnerFlow,nativeAutostartDenialCode,nativeAutostartUiDenialCode} from '../onehost-menu-bindings.mjs';
 function d06Fixture({kind='on',ariaHidden=null,ariaDisabled=null,type='button',
   role=null,trusted=true,occluded=false,duplicate=false,disabled=false}={}){
   const [key,value]={read:['',''],on:['enabled','true'],off:['enabled','false']}[kind];
@@ -85,4 +85,16 @@ test('D06 separate SETTINGS surfaces serialize one native owner HKCU consent/rea
  const after=await second.request({enabled:false});
  assert.equal(after.result.enabled,false,'lock must release after verified readback');
  assert.equal(writes,2);
+});
+
+test('D06 refusal receipts stay visible only for exact reviewed owner codes',()=>{
+ const safe=['NOX_AUTOSTART_FOREIGN_ENTRY_HOLD','NOX_AUTOSTART_OWNER_CONSENT_REQUIRED',
+   'NOX_AUTOSTART_HKCU_UNAVAILABLE','NOX_AUTOSTART_OWNER_IN_FLIGHT',
+   'NOX_AUTOSTART_READBACK_HOLD','NATIVE_PERMISSION_DENIED'];
+ for(const code of safe) assert.equal(nativeAutostartUiDenialCode(new Error(code)),code);
+ for(const error of [new Error('C:\\Users\\secret\\NOX.exe'),new Error('unexpected: HKCU'),
+   {message:'NOX_AUTOSTART_FOREIGN_ENTRY_HOLD\\nprivate path'},null])
+   assert.equal(nativeAutostartUiDenialCode(error),'NOX_AUTOSTART_NATIVE_HOLD');
+ const renderer=readFileSync(new URL('../onehost-menu-bindings.mjs',import.meta.url),'utf8');
+ assert.match(renderer,/route==='system\\.autostart'\\?'HOLD · '\\+nativeAutostartUiDenialCode\\(error\\)/);
 });

@@ -311,6 +311,19 @@ export function nativeAutostartDenialCode(reply){
     AUTOSTART_SAFE_NATIVE_DENIALS.has(reply.errorCode) ? reply.errorCode : null;
 }
 
+// Only reviewed native/renderer SETTINGS rejection codes may enter visible UI.
+// Exception messages and Windows registry paths must never leave the WPF owner.
+const AUTOSTART_SAFE_UI_DENIALS=new Set([
+  ...AUTOSTART_SAFE_NATIVE_DENIALS,
+  'NOX_AUTOSTART_OWNER_IN_FLIGHT','NOX_AUTOSTART_READBACK_HOLD',
+  'NOX_AUTOSTART_READ_UNVERIFIED','NOX_AUTOSTART_WRITE_UNVERIFIED',
+  'NOX_AUTOSTART_BOOLEAN_REQUIRED'
+]);
+export function nativeAutostartUiDenialCode(error){
+  const code=typeof error?.message==='string'?error.message:'';
+  return AUTOSTART_SAFE_UI_DENIALS.has(code) ? code : 'NOX_AUTOSTART_NATIVE_HOLD';
+}
+
 /** SETTINGS owner requests are single-flight: a second ON/OFF/read cannot race
  * an unconfirmed native HKCU write and misreport persisted state.
  * WPF still owns all SID/ACL/consent and Windows Registry decisions. */
@@ -886,7 +899,9 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
         display(reply,route,route==='system.autostart'?nativeAutostartExpectedReadback(payload):null);
     }catch(error){
       if(!disposed&&button.isConnected&&doc.getElementById('detail-title')?.textContent===visibleSection)
-        status.textContent=(error.message==='TIMEOUT'?'TIMEOUT':'HOLD')+' · запрос не подтверждён';
+        status.textContent=error?.message==='TIMEOUT'?'TIMEOUT · запрос не подтверждён':
+          route==='system.autostart'?'HOLD · '+nativeAutostartUiDenialCode(error):
+          'HOLD · запрос не подтверждён';
     }
     finally{if(button.id==='chat-stop')stopRequestPending=false;if(!disposed)button.disabled=false;}
   }
