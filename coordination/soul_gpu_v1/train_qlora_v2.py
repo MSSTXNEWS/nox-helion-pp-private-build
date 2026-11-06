@@ -93,8 +93,15 @@ def train(stage: int, root: Path, max_steps: int, max_length: int, gpu_fraction:
     prep=preflight(stage,root)
     # Keep HF weights strictly inside the managed NOX directory. External env overrides
     # would make the 270 GB accounting unverifiable.
-    os.environ["HF_HOME"] = str(root / "hf_cache")
-    os.environ["HF_HUB_CACHE"] = str(root / "hf_cache" / "hub")
+    # One canonical HF base model cache in the 70 GB intelligence allocation.
+    intelligence = root.parent / "brain" / "intelligence"
+    intelligence.mkdir(parents=True, exist_ok=True)
+    current = sum(p.stat().st_size for p in intelligence.rglob("*") if p.is_file() and not p.is_symlink())
+    if current + 9 * GB > 70 * GB:
+        raise ValueError("Intelligence 70GB quota cannot accommodate the training base cache")
+    hf_cache = intelligence / "hf_cache"
+    os.environ["HF_HOME"] = str(hf_cache)
+    os.environ["HF_HUB_CACHE"] = str(hf_cache / "hub")
     if not 0.4<=gpu_fraction<=0.85 or not 1<=max_steps<=20000 or not 128<=max_length<=2048:
         raise ValueError("Unsafe resource parameters")
     try:
