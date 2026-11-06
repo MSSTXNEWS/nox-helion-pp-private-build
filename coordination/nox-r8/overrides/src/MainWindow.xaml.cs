@@ -749,7 +749,7 @@ public partial class MainWindow : Window
                 case "chat": await Generate(Text("text"), Text("requestId")); break;
                 case "history": Send("history", ReadHistory()); break;
                 case "notes.list": Send("notes", ReadNotes()); break;
-                case "notes.add": AddNote(Text("title"), Text("content")); Send("notes", ReadNotes()); break;
+                case "notes.add": HandleNoteAdd(Text("title"), Text("content"), Text("requestId")); break;
                 case "notes.delete": DeleteNote(request.GetProperty("id").GetInt64()); Send("notes", ReadNotes()); break;
                 case "feedback": SaveFeedback(request.GetProperty("rating").GetInt32(), Text("answer")); Send("notice", "Оценка сохранена локально; это не обучение весов."); break;
                 case "backup": BackupLocalDatabase(); break;
@@ -757,7 +757,7 @@ public partial class MainWindow : Window
                 case "model.pull": await PullExistingProviderModel(Text("model")); break;
                 case "model.cancel": activeModelPull?.Cancel(); break;
                 case "tasks.list": Send("tasks", ReadTasks()); break;
-                case "tasks.add": AddTask(Text("text")); Send("tasks", ReadTasks()); break;
+                case "tasks.add": HandleTaskAdd(Text("text"), Text("requestId")); break;
                 case "tasks.toggle": ToggleTask(request.GetProperty("id").GetInt64()); Send("tasks", ReadTasks()); break;
                 case "settings.get": Send("settings", ReadPreferences()); break;
                 case "settings.put": HandleSettingsPut(request); break;
@@ -1065,14 +1065,19 @@ public partial class MainWindow : Window
         return result;
     }
 
-    private void AddTask(string title)
+    private long AddTask(string title)
     {
         if (string.IsNullOrWhiteSpace(title) || title.Length > 500) throw new ArgumentException("Task must contain 1–500 characters");
         using var db = OpenDatabase(); using var cmd = db.CreateCommand();
         cmd.CommandText = "INSERT INTO tasks(created_at,title) VALUES($t,$n)";
         cmd.Parameters.AddWithValue("$t", DateTimeOffset.UtcNow.ToString("O"));
         cmd.Parameters.AddWithValue("$n", title);
-        cmd.ExecuteNonQuery();
+        if (cmd.ExecuteNonQuery() != 1) throw new InvalidOperationException("NOX_TASK_WRITE_HOLD");
+        using var idQuery = db.CreateCommand();
+        idQuery.CommandText = "SELECT last_insert_rowid()";
+        long id = Convert.ToInt64(idQuery.ExecuteScalar());
+        if (id <= 0) throw new InvalidOperationException("NOX_TASK_ROWID_HOLD");
+        return id;
     }
 
     private void ToggleTask(long id)
@@ -1083,6 +1088,62 @@ public partial class MainWindow : Window
         cmd.ExecuteNonQuery();
     }
 
+
+
+    // D05: do not make the owner lose unsaved task/note text on a failed SQLite write.
+    // Native receipt is correlated to the document request and sent only after a
+    // separate SQLite connection has read the exact committed row back.
+    private static bool ValidWriteRequestId(string requestId) =>
+        requestId.Length >= 8 && requestId.Length <= 128 &&
+        requestId.All(c => char.IsLetterOrDigit(c) || c == '-' || c == '_');
+
+    private void HandleTaskAdd(string title, string requestId)
+    {
+        if (!ValidWriteRequestId(requestId)) {
+            Send("tasks.add.denied", new { requestId, reason = "NOX_TASK_REQUEST_ID_HOLD" });
+            return;
+        }
+        try {
+            long id = AddTask(title);
+            using var verifyDb = OpenDatabase();
+            using var verify = verifyDb.CreateCommand();
+            verify.CommandText = "SELECT title FROM tasks WHERE id=$id";
+            verify.Parameters.AddWithValue("$id", id);
+            if (!string.Equals(verify.ExecuteScalar() as string, title, StringComparison.Ordinal))
+                throw new InvalidOperationException("NOX_TASK_SQLITE_READBACK_HOLD");
+            Send("tasks", ReadTasks());
+            Send("tasks.add.receipt", new { requestId, id, saved = true });
+        }
+        catch (ArgumentException) { Send("tasks.add.denied", new { requestId, reason = "NOX_TASK_VALIDATION_HOLD" }); }
+        catch (SqliteException) { Send("tasks.add.denied", new { requestId, reason = "NOX_TASK_SQLITE_HOLD" }); }
+        catch (Exception) { Send("tasks.add.denied", new { requestId, reason = "NOX_TASK_READBACK_HOLD" }); }
+    }
+
+    private void HandleNoteAdd(string title, string body, string requestId)
+    {
+        if (!ValidWriteRequestId(requestId)) {
+            Send("notes.add.denied", new { requestId, reason = "NOX_NOTE_REQUEST_ID_HOLD" });
+            return;
+        }
+        try {
+            string persona = ActivePersona();
+            long id = AddNote(title, body);
+            using var verifyDb = OpenDatabase();
+            using var verify = verifyDb.CreateCommand();
+            verify.CommandText = "SELECT title,content,persona FROM memory_notes WHERE id=$id";
+            verify.Parameters.AddWithValue("$id", id);
+            using var row = verify.ExecuteReader();
+            if (!row.Read() || !string.Equals(row.GetString(0), title, StringComparison.Ordinal) ||
+                !string.Equals(row.GetString(1), body, StringComparison.Ordinal) ||
+                !string.Equals(row.GetString(2), persona, StringComparison.Ordinal))
+                throw new InvalidOperationException("NOX_NOTE_SQLITE_READBACK_HOLD");
+            Send("notes", ReadNotes());
+            Send("notes.add.receipt", new { requestId, id, saved = true });
+        }
+        catch (ArgumentException) { Send("notes.add.denied", new { requestId, reason = "NOX_NOTE_VALIDATION_HOLD" }); }
+        catch (SqliteException) { Send("notes.add.denied", new { requestId, reason = "NOX_NOTE_SQLITE_HOLD" }); }
+        catch (Exception) { Send("notes.add.denied", new { requestId, reason = "NOX_NOTE_READBACK_HOLD" }); }
+    }
 
     // Existing WPF owner route: whitelist the exact shape, write only this app's
     // preferences table, verify COMMIT via a new SQLite connection, then ACK.
@@ -1309,7 +1370,7 @@ public partial class MainWindow : Window
         return notes;
     }
 
-    private void AddNote(string title, string body)
+    private long AddNote(string title, string body)
     {
         if (string.IsNullOrWhiteSpace(title) || title.Length > 120 || string.IsNullOrWhiteSpace(body) || body.Length > 8000)
             throw new ArgumentException("Название 1–120 символов, текст 1–8000 символов");
@@ -1319,7 +1380,12 @@ public partial class MainWindow : Window
         cmd.Parameters.AddWithValue("$t",DateTimeOffset.UtcNow.ToString("O"));
         cmd.Parameters.AddWithValue("$n",title);
         cmd.Parameters.AddWithValue("$c",body);
-        cmd.ExecuteNonQuery();
+        if (cmd.ExecuteNonQuery() != 1) throw new InvalidOperationException("NOX_NOTE_WRITE_HOLD");
+        using var idQuery = db.CreateCommand();
+        idQuery.CommandText = "SELECT last_insert_rowid()";
+        long id = Convert.ToInt64(idQuery.ExecuteScalar());
+        if (id <= 0) throw new InvalidOperationException("NOX_NOTE_ROWID_HOLD");
+        return id;
     }
     private void DeleteNote(long id)
     {

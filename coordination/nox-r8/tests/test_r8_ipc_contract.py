@@ -80,3 +80,29 @@ assert 'using var verifyDb = OpenDatabase();' in persist
 assert 'FROM chat_history WHERE id=$id' in persist
 assert 'NOX_CHAT_SQLITE_READBACK_HOLD' in persist
 print('B04 R8 SOURCE_ONLY: timeout vs owner STOP, committed-row readback PASS; owner Windows Qwen NOT_TESTED')
+
+
+# D05 SOURCE_ONLY regression: native write receipts must follow independent
+# SQLite readback. WebView2 drafts must survive denial / offline bridge; only
+# the matching owner request receipt may clear the matching draft.
+for action, table in (("Task", "tasks"), ("Note", "memory_notes")):
+    segment = cs.split(f"private void Handle{action}Add(", 1)[1].split("\n    private ", 1)[0]
+    assert "ValidWriteRequestId(requestId)" in segment, "D05_OWNER_REQUEST_HOLD"
+    assert "using var verifyDb = OpenDatabase();" in segment, "D05_READBACK_HOLD"
+    assert f"FROM {table} WHERE id=$id" in segment, "D05_SQLITE_ROW_HOLD"
+    assert segment.index("using var verifyDb") < segment.index(f'Send("{table}.add.receipt"'), "D05_PREMATURE_ACK_HOLD"
+    assert f'Send("{table}.add.denied"' in segment, "D05_DENIAL_HOLD"
+for part in (
+    "pendingTask={requestId,text}",
+    "pendingNote={requestId,title,content}",
+    "if(post('tasks.add',{text,requestId})===false)",
+    "if(post('notes.add',{title,content,requestId})===false)",
+    "v?.requestId===pendingTask.requestId&&v.saved===true",
+    "v?.requestId===pendingNote.requestId&&v.saved===true",
+    "case 'tasks.add.denied':",
+    "case 'notes.add.denied':",
+):
+    assert part in html, "D05_DRAFT_NOLOSS_HOLD " + part
+assert "post('tasks.add',{text});$('taskInput').value=''" not in html
+assert "post('notes.add',{title,content});$('noteTitle').value=''" not in html
+print("D05 R8 SOURCE_ONLY: native task/note owner receipts after SQLite readback and draft NO-LOSS PASS")
