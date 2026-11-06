@@ -45,6 +45,22 @@ Assert(!ModelArtifactReviewRegistry.TryPromote(
 using var correct = JsonDocument.Parse("{\"models\":[{\"name\":\"m:1\",\"digest\":\"sha256:" + new string('a',64) + "\"}]}");
 Assert(ModelLocalAttestation.ParseUnambiguousModelDigest(correct.RootElement, "m:1") == "sha256:" + new string('a',64), "T01 pinned local digest");
 
+// D04 R5: a last-wins /api/tags JSON property is not unique model evidence.
+using var d04DuplicateRoot = JsonDocument.Parse("{\"models\":[{\"name\":\"m:1\",\"digest\":\"" +
+    new string('b',64) + "\"}],\"models\":[{\"name\":\"m:1\",\"digest\":\"" +
+    new string('a',64) + "\"}]}");
+MustReject(() => ModelLocalAttestation.ParseUnambiguousModelDigest(d04DuplicateRoot.RootElement, "m:1"),
+    "D04 duplicate top-level models arrays HOLD");
+using var d04DuplicateName = JsonDocument.Parse("{\"models\":[{\"name\":\"decoy:1\",\"name\":\"m:1\",\"digest\":\"" +
+    new string('a',64) + "\"}]}");
+MustReject(() => ModelLocalAttestation.ParseUnambiguousModelDigest(d04DuplicateName.RootElement, "m:1"),
+    "D04 duplicate model identity HOLD");
+using var d04DuplicateDigest = JsonDocument.Parse("{\"models\":[{\"name\":\"m:1\",\"digest\":\"" +
+    new string('b',64) + "\",\"digest\":\"" + new string('a',64) + "\"}]}");
+MustReject(() => ModelLocalAttestation.ParseUnambiguousModelDigest(d04DuplicateDigest.RootElement, "m:1"),
+    "D04 duplicate local digest SHA HOLD");
+
+
  // B04: /api/tags case variants are NOT evidence of absence. The native queue
  // serializes the same installation tag using OrdinalIgnoreCase.
 using var b04CaseAlias = JsonDocument.Parse("{\"models\":[{\"name\":\"M:1\",\"digest\":\"" + new string('a',64) + "\"}]}");

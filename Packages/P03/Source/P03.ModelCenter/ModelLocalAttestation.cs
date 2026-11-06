@@ -97,12 +97,24 @@ public static class ModelLocalAttestation
         if (string.IsNullOrWhiteSpace(model) || root.ValueKind != JsonValueKind.Object ||
             !root.TryGetProperty("models", out var items) || items.ValueKind != JsonValueKind.Array)
             throw new InvalidDataException("OLLAMA_TAGS_INVALID_SCHEMA");
+        // /api/tags is untrusted; System.Text.Json uses last-wins on duplicate keys.
+        if (root.EnumerateObject().Count(p => p.NameEquals("models")) != 1)
+            throw new InvalidDataException("OLLAMA_TAGS_DUPLICATE_MODELS_HOLD");
         string? digest = null;
         foreach (var item in items.EnumerateArray())
         {
             if (item.ValueKind != JsonValueKind.Object ||
                 !item.TryGetProperty("name", out var name) || name.ValueKind != JsonValueKind.String)
                 throw new InvalidDataException("OLLAMA_TAGS_MALFORMED_MODEL");
+            var names = 0;
+            var digests = 0;
+            foreach (var property in item.EnumerateObject())
+            {
+                if (property.NameEquals("name")) names++;
+                if (property.NameEquals("digest")) digests++;
+            }
+            if (names != 1 || digests > 1)
+                throw new InvalidDataException("OLLAMA_TAGS_DUPLICATE_MODEL_FIELDS_HOLD");
             // Ollama installed tags share a mutable identity with the case-insensitive
             // native queue. A different-case installed tag must NOT be read as absent:
             // that could authorize overwriting the existing owner's local model.

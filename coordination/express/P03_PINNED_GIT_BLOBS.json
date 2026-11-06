@@ -437,14 +437,16 @@
     {
       "path": "Packages/P03/Source/P03.ModelCenter/ModelLocalAttestation.cs",
       "owner": 3,
-      "run_id": "B04_20261105_CASE_ALIAS_INSTALLED_TAG_NOLOSS",
-      "pre_git_blob_sha1": "166347ebd3975bdc724ea88031e2b4c77669b0fc",
-      "post_git_blob_sha1": "c25da7d77b39292ebe7dce1a771fcff32b4f7c6e",
-      "post_bytes": 15640,
-      "acceptance": "SOURCE_ONLY_EXACT_OWNER_TAG_MATCH_NOT_CSHARP_OR_WINDOWS_E07",
-      "source_head_observed": "c2dea33ce370436bb8ad171a122a5f419246062f",
-      "prior_active_post_git_blob_sha1": "166347ebd3975bdc724ea88031e2b4c77669b0fc",
-      "prior_active_post_bytes": 15293
+      "run_id": "D04_R5_20261106_OLLAMA_TAGS_DUPLICATE_KEYS",
+      "pre_git_blob_sha1": "c25da7d77b39292ebe7dce1a771fcff32b4f7c6e",
+      "post_git_blob_sha1": "2294667016b0cfc3151c4c84cf34234e6ef07a8f",
+      "post_bytes": 16282,
+      "acceptance": "SOURCE_ONLY_CHECK_7_OF_7_CSHARP_NOT_RUN_WINDOWS_NOT_VERIFIED",
+      "change_scope": "OLLAMA_TAGS_DUPLICATE_CRITICAL_JSON_KEYS_FAIL_CLOSED",
+      "prior_active_run_id": "B04_20261105_CASE_ALIAS_INSTALLED_TAG_NOLOSS",
+      "prior_active_post_git_blob_sha1": "c25da7d77b39292ebe7dce1a771fcff32b4f7c6e",
+      "prior_active_post_bytes": 15640,
+      "source_head_observed": "965272df5e9815a7321da610252d111218557357"
     },
     {
       "path": "Packages/P03/Source/P03.ModelCenter/ModelWowBridgeContract.cs",
@@ -571,14 +573,16 @@
     {
       "path": "Packages/P03/Source/P03.ModelCenter.HardeningSmoke/Program.cs",
       "owner": 3,
-      "run_id": "D04_NATIVE_EXTERNAL_LICENSE_EVIDENCE_R5_20261106",
-      "pre_git_blob_sha1": "c07e0d166b3235ecb5b24d9bffe7742b83bc024b",
-      "post_git_blob_sha1": "e8252eaa1f378b658424131e0ff5840e65037f76",
-      "post_bytes": 81081,
-      "acceptance": "SOURCE_ONLY_15_OF_15_DOTNET_NATIVE_WINDOWS_E07_NOT_RUN",
-      "prior_active_run_id": "D04_P03_MERGED_REENTRY_AUTHORITY_R5_20261106",
-      "prior_active_post_git_blob_sha1": "c07e0d166b3235ecb5b24d9bffe7742b83bc024b",
-      "source_head_observed": "408b81c292c85751fed6a9de46b0f302259eb178"
+      "run_id": "D04_R5_20261106_OLLAMA_TAGS_DUPLICATE_KEYS",
+      "pre_git_blob_sha1": "e8252eaa1f378b658424131e0ff5840e65037f76",
+      "post_git_blob_sha1": "8b125cd8987eebbe755f712dfec499b2bdccda78",
+      "post_bytes": 82153,
+      "acceptance": "SOURCE_ONLY_CHECK_7_OF_7_CSHARP_NOT_RUN_WINDOWS_NOT_VERIFIED",
+      "change_scope": "OLLAMA_TAGS_DUPLICATE_CRITICAL_JSON_KEYS_FAIL_CLOSED",
+      "prior_active_run_id": "D04_NATIVE_EXTERNAL_LICENSE_EVIDENCE_R5_20261106",
+      "prior_active_post_git_blob_sha1": "e8252eaa1f378b658424131e0ff5840e65037f76",
+      "prior_active_post_bytes": 81081,
+      "source_head_observed": "965272df5e9815a7321da610252d111218557357"
     },
     {
       "path": "Packages/P03/Source/python-host/p03_onehost_port.py",
@@ -1514,6 +1518,36 @@
       "historical_approved_override": true,
       "retired_from_active_set": "B04_R5_CANCEL_QUEUED_BOOLEAN_OWNER_RECEIPT_20261106",
       "source_check": "HISTORICAL_SOURCE_ONLY_NOT_RUNTIME_PROOF"
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter/ModelLocalAttestation.cs",
+      "owner": 3,
+      "run_id": "B04_20261105_CASE_ALIAS_INSTALLED_TAG_NOLOSS",
+      "pre_git_blob_sha1": "166347ebd3975bdc724ea88031e2b4c77669b0fc",
+      "post_git_blob_sha1": "c25da7d77b39292ebe7dce1a771fcff32b4f7c6e",
+      "post_bytes": 15640,
+      "acceptance": "SOURCE_ONLY_EXACT_OWNER_TAG_MATCH_NOT_CSHARP_OR_WINDOWS_E07",
+      "source_head_observed": "c2dea33ce370436bb8ad171a122a5f419246062f",
+      "prior_active_post_git_blob_sha1": "166347ebd3975bdc724ea88031e2b4c77669b0fc",
+      "prior_active_post_bytes": 15293,
+      "historical_approved_override": true,
+      "retired_from_active_set": "D04_R5_20261106_OLLAMA_TAGS_DUPLICATE_KEYS",
+      "source_check": "HISTORIC_NOT_RELEASE_PASS"
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter.HardeningSmoke/Program.cs",
+      "owner": 3,
+      "run_id": "D04_NATIVE_EXTERNAL_LICENSE_EVIDENCE_R5_20261106",
+      "pre_git_blob_sha1": "c07e0d166b3235ecb5b24d9bffe7742b83bc024b",
+      "post_git_blob_sha1": "e8252eaa1f378b658424131e0ff5840e65037f76",
+      "post_bytes": 81081,
+      "acceptance": "SOURCE_ONLY_15_OF_15_DOTNET_NATIVE_WINDOWS_E07_NOT_RUN",
+      "prior_active_run_id": "D04_P03_MERGED_REENTRY_AUTHORITY_R5_20261106",
+      "prior_active_post_git_blob_sha1": "c07e0d166b3235ecb5b24d9bffe7742b83bc024b",
+      "source_head_observed": "408b81c292c85751fed6a9de46b0f302259eb178",
+      "historical_approved_override": true,
+      "retired_from_active_set": "D04_R5_20261106_OLLAMA_TAGS_DUPLICATE_KEYS",
+      "source_check": "HISTORIC_NOT_RELEASE_PASS"
     }
   ],
   "source_expansion": {
