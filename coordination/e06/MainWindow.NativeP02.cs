@@ -232,10 +232,18 @@ public partial class MainWindow
                     "chat.stop", JsonSerializer.SerializeToElement(new { }), cancel);
                 if (!nativeStop.Accepted || !string.IsNullOrEmpty(nativeStop.ErrorCode) ||
                     nativeStop.Result is not JsonElement stopReceipt ||
-                    stopReceipt.ValueKind is JsonValueKind.Undefined or JsonValueKind.Null ||
+                    stopReceipt.ValueKind != JsonValueKind.Object ||
+                    !stopReceipt.TryGetProperty("stopRequested", out var nativeStopRequested) ||
+                    nativeStopRequested.ValueKind != JsonValueKind.True ||
                     LegacyOwnerDenial(nativeStop.Result))
                     return new NativePipeResult("", false, null,
                         nativeStop.ErrorCode ?? "MENU_STOP_NATIVE_HOLD");
+                // A stale document, revoked SID or external navigation may
+                // not receive the native STOP acknowledgement after await.
+                if (cancel.IsCancellationRequested || !NativeP02Acl(stopSid, "chat.stop") ||
+                    !ReferenceEquals(_nativeP02Core, core) ||
+                    !ReferenceEquals(_nativeP02Bridge, bridge) || bridge.BrowserExternalActive)
+                    return new NativePipeResult("", false, null, "MENU_STOP_REVOKED_HOLD");
                 return new NativePipeResult("", true,
                     JsonSerializer.SerializeToElement(new { status = "MENU_STOP_REQUESTED", action = name }), null);
             }
