@@ -41,8 +41,8 @@
    side.vram.textContent=vm!==null?(vm.toFixed(1)+'/'+(vmt!==null?vmt.toFixed(1):'?')+' GB'):'Н/Д';
    side.gpuSource.textContent=raw.gpu_source||'Н/Д';side.gpuSource.title=raw.gpu_source||'Sensor unavailable';
    if(chartObj){chartObj.setOption({series:[gauge('CPU',c===null?null:val(c),'17%','#d0a16a'),gauge('GPU',g===null?null:val(g),'50%','#8fc0cb'),gauge('RAM',r===null?null:val(r),'83%','#ad99d9')]})}
-   const isDanger=t!==null&&t>=85;
-   if(isDanger&&!lastDanger)log('ВНИМАНИЕ: CPU '+t.toFixed(1)+' °C. Снизьте вычислительную нагрузку.',true);
+   const isDanger=(t!==null&&t>=65)||(gt!==null&&gt>=65);
+   if(isDanger&&!lastDanger)log('ТЕМПЕРАТУРА 65°C ИЛИ ВЫШЕ: проверьте нагрузку и остановите обучение через тренер. HUD не управляет тренером.',true);
    lastDanger=isDanger;
    if(!isDanger)message.textContent='Реальные показатели Windows · '+new Date().toLocaleTimeString('ru-RU');
    hud.classList.toggle('ch-thermal-alert',isDanger);
