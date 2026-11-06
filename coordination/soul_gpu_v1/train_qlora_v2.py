@@ -179,18 +179,16 @@ def train(stage: int, root: Path, max_steps: int, max_length: int, gpu_fraction:
         os.replace(temporary,telemetry)
     from transformers import TrainerCallback
     class NOXProgress(TrainerCallback):
-        """Mean training duty cycle <=70%; CUDA VRAM allocator <=70%.
+        """Thermal-triggered cooling, without unnecessary pauses under 65 C.
 
-        Pauses *between* steps; instantaneous CUDA utilization may still reach 100%.
-        GPU thermal queries must work or training stops. Not a hardware power limiter.
+        At GPU temperature >=65 C, cool for at least 180 seconds and
+        resume only when GPU temperature is <65 C. At >=80 C fail closed.
+        VRAM cap 70% is NOT a hardware GPU compute/power utilization cap.
         """
         def __init__(self):
             self.actual=0
             self.safety_hold=None
-            self.active_since=_time.monotonic()
-            self.last_cooldown=_time.monotonic()
             self.last_temperature=None
-            self.total_active=0.0
             self.total_paused=0.0
             self.cpu_threads=cpu_threads
 
@@ -213,8 +211,8 @@ def train(stage: int, root: Path, max_steps: int, max_length: int, gpu_fraction:
                      "fraction":min(1,self.actual/max_steps), "gpu":props.name,
                      "gpu_temperature_c":self.last_temperature,
                      "gpu_memory_fraction_limit":gpu_fraction,
-                     "training_duty_cycle_target":0.70,
-                     "active_seconds":round(self.total_active,1),
+                     "cooldown_trigger_c":65, "resume_below_c":65,
+                     "cooldown_min_seconds":180,
                      "cooldown_seconds":round(self.total_paused,1),
                      "cpu_thread_limit":self.cpu_threads,
                      **fields})
@@ -235,8 +233,9 @@ def train(stage: int, root: Path, max_steps: int, max_length: int, gpu_fraction:
         def on_step_end(self,args,state,control,**kwargs):
             self.actual=state.global_step
             if control.should_training_stop:return
-            # nvidia-smi check every step to reduce overshoot risk.
+            # The sample is taken after each step; a single step can still exceed the threshold.
             try:
+                torch.cuda.synchronize(0)
                 self.last_temperature=self.gpu_temp()
             except RuntimeError:
                 self.stop(control,"temperature-sensor-unavailable")
@@ -247,48 +246,41 @@ def train(stage: int, root: Path, max_steps: int, max_length: int, gpu_fraction:
             if shutil.disk_usage(root).free<RESERVE_GB*GB:
                 self.stop(control,"disk-reserve")
                 return
-            if state.global_step%10!=0:
+            if self.last_temperature<65:
+                # No periodic pauses while the measured GPU core temperature is safe.
                 self.report("training")
                 return
-            # Finish queued GPU work before counting active/cooling durations.
-            torch.cuda.synchronize(0)
-            now=_time.monotonic()
-            active=now-self.active_since
-            self.total_active+=active
-            # 70% average duty across each ten-step window, with minimum 3s cooling.
-            seconds=max(3.0,active*(1.0/0.70-1.0))
-            if self.last_temperature>=75:
-                seconds=max(seconds,20.0)
-            self.report("cooling",pause_seconds=round(seconds,1))
-            _time.sleep(seconds)
-            self.total_paused+=seconds
-            # Thermal hysteresis: hold if temperature fails to return <=70C.
-            timeout=_time.monotonic()+300
+
+            self.report("cooling",reason="gpu-reached-65c",pause_seconds=180)
+            _time.sleep(180)
+            self.total_paused+=180
+            # Wait longer only if GPU has not cooled below 65 C.
+            cutoff=_time.monotonic()+600
             while True:
-                try:self.last_temperature=self.gpu_temp()
+                try:
+                    self.last_temperature=self.gpu_temp()
                 except RuntimeError:
                     self.stop(control,"temperature-sensor-unavailable")
                     return
-                if self.last_temperature<=70:
+                if self.last_temperature<65:
                     break
-                if _time.monotonic()>=timeout:
+                if _time.monotonic()>=cutoff:
                     self.stop(control,"cooldown-timeout")
                     return
                 if self.last_temperature>=80:
                     self.stop(control,"gpu-hot-80c")
                     return
-                self.report("cooling",reason="temperature-above-70c")
-                _time.sleep(10)
-                self.total_paused+=10
-            self.active_since=_time.monotonic()
+                self.report("cooling",reason="gpu-still-65c-or-above")
+                _time.sleep(15)
+                self.total_paused+=15
             self.report("training-resumed")
     progress=NOXProgress()
     trainer.add_callback(progress)
     progress.report("starting")
     # This requires a readable GPU temperature sensor; do not run blind.
     progress.last_temperature=progress.gpu_temp()
-    if progress.last_temperature>=75:
-        raise RuntimeError("GPU >=75C before training; cool down first")
+    if progress.last_temperature>=65:
+        raise RuntimeError("GPU >=65C before training; cool down before starting")
 
     before=trainer.evaluate()["eval_loss"]
     trainer.train()
@@ -302,7 +294,7 @@ def train(stage: int, root: Path, max_steps: int, max_length: int, gpu_fraction:
               "base":MODEL,"train_sources":prep["train_sources"],"holdout_sources":prep["holdout_sources"],
               "train_count":len(train_data),"holdout_count":len(eval_data),"holdout_loss_before":before,
               "holdout_loss_after":after,"training_steps":progress.actual,"requested_steps":max_steps,"safety_hold":progress.safety_hold,"gpu":props.name,"vram_gb":vram_gb,
-              "gpu_fraction":gpu_fraction,"training_duty_cycle_target":0.70,"active_seconds":progress.total_active,"cooldown_seconds":progress.total_paused,"cpu_threads":cpu_threads,"files":{p.name:file_sha(p) for p in work.glob("*.safetensors")}}
+              "gpu_fraction":gpu_fraction,"cooldown_trigger_c":65,"cooldown_min_seconds":180,"cooldown_seconds":progress.total_paused,"cpu_threads":cpu_threads,"files":{p.name:file_sha(p) for p in work.glob("*.safetensors")}}
     (work/"TRAINING_EVIDENCE.json").write_text(json.dumps(evidence,indent=2),encoding="utf-8")
     _report({"status":"holdout-passed" if passed else "holdout-or-safety-hold","actual_steps":progress.actual,
              "holdout_loss_before":before,"holdout_loss_after":after})
