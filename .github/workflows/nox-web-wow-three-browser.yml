@@ -19,7 +19,7 @@ jobs:
           npm install --prefix /tmp/nox-wow-browser --no-save playwright@1.58.2
           test -x /usr/bin/google-chrome || command -v google-chrome
           ln -s /tmp/nox-wow-browser/node_modules node_modules
-      - name: Seven viewport and corrected planet halo acceptance
+      - name: Seven viewport tablet rings and planet halo acceptance
         run: |
           python3 -m http.server 8765 --bind 127.0.0.1 >/tmp/nox-web.log 2>&1 &
           sleep 2
