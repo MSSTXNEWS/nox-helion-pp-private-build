@@ -45,7 +45,7 @@ jobs:
           Native controls correctly report HOLD without the original trusted OneHost.
           Original selected libraries retain licenses under ui/.
           EOF
-          (cd dist/nox-web-wow && find . -type f -print0 | sort -z | xargs -0 sha256sum > MANIFEST_SHA256.txt)
+          (cd dist/nox-web-wow && find . -type f ! -name MANIFEST_SHA256.txt -print0 | sort -z | xargs -0 sha256sum > MANIFEST_SHA256.txt)
           (cd dist && zip -q -r -0 NOX_WEB_WOW_VERIFIED_SOURCE.zip nox-web-wow)
           (cd dist && sha256sum NOX_WEB_WOW_VERIFIED_SOURCE.zip > ARCHIVE_SHA256.txt)
           unzip -tqq dist/NOX_WEB_WOW_VERIFIED_SOURCE.zip
