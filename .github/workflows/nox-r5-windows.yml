@@ -80,6 +80,45 @@ jobs:
           Set-Content -LiteralPath (Join-Path $out 'WINDOWS_BUILD_RECEIPT.json') -Value $receipt -Encoding utf8
           Write-Host "COMPILED WINDOWS EXE SHA256=$sha"
 
+      - name: Native Windows WebView2 and SQLite startup smoke
+        shell: pwsh
+        run: |
+          $out = Join-Path $env:GITHUB_WORKSPACE 'nox_local_r5/windows_x64'
+          $exe = Join-Path $out 'NOX.HELION.exe'
+          $runtime = Join-Path $env:LOCALAPPDATA 'NOX_HELION/runtime_ready.json'
+          $db = Join-Path $env:LOCALAPPDATA 'NOX_HELION/chat.sqlite3'
+          $receiptFile = Join-Path $out 'WINDOWS_BUILD_RECEIPT.json'
+          $before = [DateTime]::UtcNow
+          $uiPass = $false
+          $p = Start-Process -FilePath $exe -WorkingDirectory $out -PassThru
+          try {
+            for ($i=0; $i -lt 90; $i++) {
+              Start-Sleep -Milliseconds 500
+              $p.Refresh()
+              if ($p.HasExited) { break }
+              if (!(Test-Path $runtime -PathType Leaf) -or !(Test-Path $db -PathType Leaf)) { continue }
+              try {
+                $r = Get-Content $runtime -Raw | ConvertFrom-Json
+                $ts = [DateTimeOffset]::Parse([string]$r.utc).UtcDateTime
+                if ($r.schema -eq 'NOX_WPF_WEBVIEW2_RUNTIME_V1' -and
+                    $r.webview2Ready -eq $true -and
+                    [int]$r.pid -eq $p.Id -and
+                    $ts -ge $before -and
+                    [string]::Equals([string]$r.assemblyPath,[string]$exe,[StringComparison]::OrdinalIgnoreCase)) {
+                  $uiPass = $true
+                  break
+                }
+              } catch {}
+            }
+          } finally {
+            if (!$p.HasExited) { Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue }
+          }
+          $receipt = Get-Content $receiptFile -Raw | ConvertFrom-Json
+          $receipt.wpf_webview2_runtime = $(if ($uiPass) {'PASS'} else {'HOLD'})
+          $receipt | ConvertTo-Json -Depth 6 | Set-Content $receiptFile -Encoding utf8
+          if ($uiPass) { Write-Host 'REAL WINDOWS WPF WEBVIEW2 + SQLITE STARTUP: PASS' -ForegroundColor Green }
+          else { Write-Warning 'UI STARTUP NOT CONFIRMED ON HOSTED RUNNER; EXE IS STILL COMPILED' }
+
       - name: Upload real Windows executable and dependencies
         uses: actions/upload-artifact@v4
         with:
