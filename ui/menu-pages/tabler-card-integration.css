@@ -1,0 +1,37 @@
+/* NOX · Tabler card/badge integration, adapted from tabler/tabler core/scss/ui
+ * _cards.scss & _badges.scss (MIT). Bounded selectors prevent Bootstrap/global
+ * Tabler styles from replacing HELION layout or OneHost controls. */
+:root{
+ --nox-tabler-card-border:rgba(139,198,220,.34);
+ --nox-tabler-card-shadow:0 11px 28px rgba(0,0,0,.42);
+ --nox-tabler-header-bg:rgba(12,23,35,.86);
+}
+.details .nox-catalog-card.nox-tabler-card{
+ position:relative;overflow:hidden;
+ box-shadow:var(--nox-tabler-card-shadow),inset 0 1px rgba(236,249,255,.12);
+ border:1px solid var(--nox-tabler-card-border);
+ transition:box-shadow .18s ease,border-color .18s ease,transform .18s ease;
+}
+.details .nox-catalog-card.nox-tabler-card::before{
+ content:"";position:absolute;inset-inline:12%;top:0;height:1px;
+ background:linear-gradient(90deg,transparent,rgba(143,222,244,.55),transparent);
+ pointer-events:none;
+}
+.details .nox-catalog-card.nox-tabler-card:focus-visible{
+ outline:2px solid #b5e9ff;outline-offset:3px;
+}
+.nox-tabler-badge{
+ display:inline-flex;align-items:center;justify-content:center;
+ padding:3px 8px;border:1px solid rgba(150,198,215,.32);
+ border-radius:999px;font-size:10px;line-height:1.2;font-weight:650;
+ color:#b8e6f3;background:rgba(25,49,67,.45);white-space:normal;
+}
+.details .nox-catalog-card.nox-tabler-card .nox-card-count{
+ padding:4px 7px;border-radius:999px;color:#caeaf4;
+ background:rgba(37,84,102,.38);font-variant-numeric:tabular-nums;
+}
+body[data-fx="ECO"] .details .nox-catalog-card.nox-tabler-card{
+ box-shadow:none;transition:none;
+}
+@media(max-width:520px){.details .nox-catalog-card.nox-tabler-card{box-shadow:none}}
+@media(prefers-reduced-motion:reduce){.details .nox-catalog-card.nox-tabler-card{transition:none!important}}
