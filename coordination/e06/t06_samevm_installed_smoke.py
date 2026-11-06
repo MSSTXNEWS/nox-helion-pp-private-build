@@ -368,6 +368,43 @@ def run_exact_pinned_nsis_setup(phase: str, flags: tuple[str, ...], timeout: int
     return result
 
 
+
+def original_nsis_uninstaller_attestation(path: Path, local_base: Path) -> tuple[str, tuple[int, int]]:
+    """Freeze the actual generated Uninstall.exe SHA and NTFS file ID.
+
+    A valid PE header alone cannot bind a backup/restored uninstaller to the
+    exact original Setup. Re-hash this same single-link file by its open handle
+    after install, in the previous slot, after rollback and before execution.
+    This provides same-VM diagnostic evidence only, not independent E07.
+    """
+    code="T06_G4_UNINSTALLER_ORIGIN_IDENTITY_HOLD"
+    require(isinstance(path,Path) and isinstance(local_base,Path) and
+            plain_parents(path,local_base) and regular(path),code)
+    try:
+        before=path.lstat()
+        require(stat.S_ISREG(before.st_mode) and before.st_nlink==1 and
+                before.st_ino!=0 and 1024<=before.st_size<=104857600,code)
+        with path.open("rb") as stream:
+            opened=os.fstat(stream.fileno())
+            require(stat.S_ISREG(opened.st_mode) and opened.st_nlink==1 and
+                    (opened.st_dev,opened.st_ino,opened.st_size)==
+                    (before.st_dev,before.st_ino,before.st_size),code)
+            magic=stream.read(2)
+            require(magic==b"MZ",code)
+            digest=hashlib.sha256()
+            digest.update(magic)
+            for chunk in iter(lambda:stream.read(1024*1024),b""):
+                digest.update(chunk)
+            finished=os.fstat(stream.fileno())
+            fields=("st_dev","st_ino","st_size","st_nlink","st_mtime_ns","st_ctime_ns")
+            require(all(getattr(opened,k)==getattr(finished,k) for k in fields),code)
+        require(plain_parents(path,local_base) and regular(path),code)
+        after=path.lstat()
+        require(all(getattr(before,k)==getattr(after,k) for k in fields),code)
+        return digest.hexdigest(),(before.st_dev,before.st_ino)
+    except (OSError,ValueError) as exc:
+        raise RuntimeError(code) from exc
+
 def framed(binary:Path,data_dir:Path,receipt:dict)->dict:
     # The bridge's verified frozen route is models.installed. Its chat.model
     # can correctly return provider HOLD on an empty disposable CI machine.
@@ -1299,6 +1336,11 @@ def main()->int:
                       "-AllowInstalledMetadata"],130)
         report["installer_lifecycle"]["verify"]=verify_result
         require(verify_result["code"]==0,"T06_INSTALLED_OWNER_MANIFEST_VERIFY_FAILED")
+        # Freeze the actual uninstaller emitted by this same SHA-pinned Setup;
+        # an arbitrary MZ file in an NSIS backup can never substitute for it.
+        original_uninstaller_frozen=original_nsis_uninstaller_attestation(
+            install/"Uninstall.exe",local_base)
+        report["installer_lifecycle"]["uninstaller_original_sha256"]=original_uninstaller_frozen[0]
         report["installer_lifecycle"]["native_ipc"]=framed(
             backend,OUTPUT/"native-ipc-data",report)
         # All approved HOME pixels remain frozen before the native GUI probe.
@@ -1375,6 +1417,9 @@ def main()->int:
                 original_no_loss_inode_preserved(unmanaged_backup,unmanaged_identity,local_base),
                 "T06_UPDATE_UNMANAGED_USER_DATA_LOSS")
         report["installer_lifecycle"]["update_unmanaged_user_data"]="PRESERVED_IN_BACKUP"
+        require(original_nsis_uninstaller_attestation(
+                    backup/"Uninstall.exe",local_base)==original_uninstaller_frozen,
+                "T06_G4_UPDATE_BACKUP_UNINSTALLER_ORIGIN_HOLD")
         require(sha(wpf)==evidence["wpf_sha256"] and
                 original_no_loss_file_preserved(marker,signature,local_base) and
                 original_no_loss_inode_preserved(marker,marker_identity,local_base),
@@ -1413,6 +1458,9 @@ def main()->int:
                 original_no_loss_inode_preserved(unmanaged,unmanaged_identity,local_base),
                 "T06_ROLLBACK_UNMANAGED_USER_DATA_LOSS")
         report["installer_lifecycle"]["rollback_unmanaged_user_data"]="PRESERVED_IN_RESTORED_INSTALL"
+        require(original_nsis_uninstaller_attestation(
+                    install/"Uninstall.exe",local_base)==original_uninstaller_frozen,
+                "T06_G4_ROLLBACK_UNINSTALLER_ORIGIN_HOLD")
         saved=Path(str(install)+".__p01_rollback_saved")
         report["installer_lifecycle"]["rollback_slots"]=rollback_slot_layout(
             install,backup,saved,local_base)
@@ -1445,6 +1493,9 @@ def main()->int:
                                   "T06_UNINSTALL_INSTALLED_INVENTORY_JSON_HOLD"))
         uninstall=install/"Uninstall.exe"
         require(regular(uninstall),"T06_ORIGINAL_UNINSTALLER_MISSING")
+        require(original_nsis_uninstaller_attestation(
+                    uninstall,local_base)==original_uninstaller_frozen,
+                "T06_G4_PREUNINSTALL_ORIGIN_HOLD")
         uninstalled=run([str(uninstall),"/S"],220)
         report["installer_lifecycle"]["uninstall"]=uninstalled
         # A NONZERO original uninstaller previously short-circuited before its

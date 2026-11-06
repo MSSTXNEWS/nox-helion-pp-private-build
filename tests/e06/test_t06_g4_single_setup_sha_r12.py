@@ -66,5 +66,60 @@ class B03SingleSetupSHA(unittest.TestCase):
                                                   250,self.digest,self.report)
         self.assertEqual(self.calls,[])
 
+
+    def test_original_uninstaller_stays_same_physical_file_on_backup_rollback(self):
+        # Actual on-disk file + directory moves, no simulated Windows exit.
+        import os
+        import tempfile
+        base=Path(tempfile.mkdtemp())
+        self.addCleanup(lambda:__import__("shutil").rmtree(base,ignore_errors=True))
+        installed=base/"install"
+        installed.mkdir()
+        original=installed/"Uninstall.exe"
+        original.write_bytes(b"MZ"+b"original nsis uninstaller"*(200))
+        frozen=owner.original_nsis_uninstaller_attestation(original,base)
+        backup=base/"install.__p01_previous"
+        installed.rename(backup)
+        self.assertEqual(
+            owner.original_nsis_uninstaller_attestation(backup/"Uninstall.exe",base),
+            frozen)
+        backup.rename(installed)
+        self.assertEqual(owner.original_nsis_uninstaller_attestation(original,base),frozen)
+
+    def test_byte_identical_foreign_uninstaller_is_not_frozen_identity(self):
+        import tempfile
+        base=Path(tempfile.mkdtemp())
+        self.addCleanup(lambda:__import__("shutil").rmtree(base,ignore_errors=True))
+        genuine=base/"Uninstall.exe"
+        content=b"MZ"+b"verified original"*(300)
+        genuine.write_bytes(content)
+        frozen=owner.original_nsis_uninstaller_attestation(genuine,base)
+        genuine.rename(base/"retired-exe")
+        genuine.write_bytes(content)
+        self.assertNotEqual(owner.original_nsis_uninstaller_attestation(genuine,base),frozen)
+
+    def test_same_inode_inplace_uninstaller_mutation_changes_sha(self):
+        import tempfile
+        base=Path(tempfile.mkdtemp())
+        self.addCleanup(lambda:__import__("shutil").rmtree(base,ignore_errors=True))
+        original=base/"Uninstall.exe"
+        original.write_bytes(b"MZ"+b"original"*(300))
+        frozen=owner.original_nsis_uninstaller_attestation(original,base)
+        original.write_bytes(b"MZ"+b"modified"*(300))
+        changed=owner.original_nsis_uninstaller_attestation(original,base)
+        self.assertEqual(frozen[1],changed[1])
+        self.assertNotEqual(frozen[0],changed[0])
+
+    def test_hardlinked_foreign_exe_is_never_original(self):
+        import os
+        import tempfile
+        base=Path(tempfile.mkdtemp())
+        self.addCleanup(lambda:__import__("shutil").rmtree(base,ignore_errors=True))
+        original=base/"Uninstall.exe"
+        original.write_bytes(b"MZ"+b"original"*(300))
+        os.link(original,base/"foreign-linked-exe")
+        with self.assertRaisesRegex(RuntimeError,"T06_G4_UNINSTALLER_ORIGIN_IDENTITY_HOLD"):
+            owner.original_nsis_uninstaller_attestation(original,base)
+
 if __name__=="__main__":
     unittest.main()
