@@ -1,0 +1,33 @@
+name: NOX WEB WOW live Chromium
+on:
+  push:
+    branches: [integration/nox-v16-unified-candidate-20261028-r01]
+    paths: [.github/workflows/nox-web-wow-three-browser.yml]
+  workflow_dispatch:
+permissions: {contents: read}
+jobs:
+  visual:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install isolated Chromium dependencies
+        run: |
+          npm install --prefix /tmp/nox-wow-browser --no-save playwright@1.58.2
+          npx --prefix /tmp/nox-wow-browser playwright install --with-deps chromium
+          ln -s /tmp/nox-wow-browser/node_modules node_modules
+      - name: Real browser verification
+        run: |
+          python3 -m http.server 8765 --bind 127.0.0.1 >/tmp/nox-web.log 2>&1 &
+          sleep 2
+          node ui/menu-pages/express-wow-three.browser.mjs
+      - name: Collect screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX-WOW-THREE-LIVE-CHROMIUM
+          path: wow-three-*.png
+          if-no-files-found: ignore
