@@ -53,4 +53,14 @@ if shutil.which('node') is None:
 for source in script_parts:
     result = subprocess.run(['node','--check','-'],input=source.encode('utf-8'),stdout=subprocess.PIPE,stderr=subprocess.PIPE)
     assert result.returncode==0,result.stderr.decode('utf-8',errors='replace')
+
+# Windows SQLite open-file first-fail #42276488855: Microsoft.Data.Sqlite
+# pooled backup handles must be closed before checksum reads of the checkpoint.
+# This is a SOURCE_ONLY guard; Windows smoke validates the real file handles.
+snapshot = cs.split('private string CheckpointSqlite(', 1)[1].split('private static bool HasPersonaColumn(', 1)[0]
+assert snapshot.count('Pooling = false') == 2, 'B02_SQLITE_BACKUP_POOLING_HOLD'
+assert re.search(r'DataSource\s*=\s*file,\s*Mode\s*=\s*SqliteOpenMode\.ReadWriteCreate,\s*Pooling\s*=\s*false', snapshot)
+assert re.search(r'DataSource\s*=\s*file,\s*Mode\s*=\s*SqliteOpenMode\.ReadOnly,\s*Pooling\s*=\s*false', snapshot)
+assert snapshot.index('PRAGMA quick_check') < snapshot.index('File.ReadAllBytes(file)'), 'B02_SQLITE_BACKUP_INTEGRITY_ORDER_HOLD'
+
 print('B02 R8 IPC SOURCE_ONLY: owner-correlated stream/STOP, offline probe, JS parse PASS; real Windows Ollama NOT_TESTED')

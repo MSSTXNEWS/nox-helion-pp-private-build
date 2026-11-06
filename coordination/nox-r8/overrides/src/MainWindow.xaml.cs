@@ -624,13 +624,13 @@ public partial class MainWindow : Window
             DateTimeOffset.UtcNow.ToString("yyyyMMdd_HHmmss_fff") + "_" +
             Guid.NewGuid().ToString("N") + ".sqlite3");
         using (var dest = new SqliteConnection(new SqliteConnectionStringBuilder {
-            DataSource = file, Mode = SqliteOpenMode.ReadWriteCreate }.ToString()))
+            DataSource = file, Mode = SqliteOpenMode.ReadWriteCreate, Pooling = false }.ToString()))
         {
             dest.Open();
             source.BackupDatabase(dest);
         }
         using (var check = new SqliteConnection(new SqliteConnectionStringBuilder {
-            DataSource = file, Mode = SqliteOpenMode.ReadOnly }.ToString()))
+            DataSource = file, Mode = SqliteOpenMode.ReadOnly, Pooling = false }.ToString()))
         {
             check.Open();
             using var integrity = check.CreateCommand();
