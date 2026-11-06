@@ -24,6 +24,10 @@ body.chat-v5 .cinema-hud{position:relative!important;z-index:1!important;max-wid
 @media(max-width:1040px){body.chat-v5 .cinema-hud{display:block!important}}
 
 /* The single ECharts cockpit sits inline, not over the chat or action cards */
-#nox-cinema-hud{position:relative!important;inset:auto!important;transform:none!important;z-index:auto!important;max-width:100%;}
+#nox-cinema-hud{max-width:100%;}
+body.nox-home #nox-cinema-hud{position:fixed!important;right:12px!important;top:78px!important;width:min(295px,27vw);z-index:30!important;}
+body.chat-v5 #nox-cinema-hud{position:relative!important;inset:auto!important;transform:none!important;z-index:auto!important;}
 body.chat-v5 .details #nox-cinema-hud{margin:0 0 8px}
 @media(max-width:920px){.ch-mainchart{max-height:145px}}
+
+@media(max-width:950px){body.nox-home #nox-cinema-hud{position:relative!important;right:auto!important;top:auto!important;width:calc(100% - 20px);max-width:430px;margin:10px auto;}}
