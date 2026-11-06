@@ -92,12 +92,12 @@ if(-not $running){
 }
 if(-not $running){Receipt 'OLLAMA_API_HOLD' @{url=$Url};throw 'Ollama unavailable'}
 $known=@('qwen3:4b-instruct','qwen3:8b','qwen3-embedding:0.6b','qwen2.5-coder:7b')
-foreach($x in Tags){if($x.name -in $known -and -not (Manifest $x.name)){
+foreach($x in (Tags)){if($x.name -in $known -and -not (Manifest $x.name)){
   Receipt 'MODEL_STORAGE_MISMATCH' @{model=$x.name}
   throw ('Model present in Ollama but canonical NOX storage differs: '+$x.name)
 }}
 function SaveCatalog{
-  $d=[ordered]@{created_utc=[DateTime]::UtcNow.ToString('o');source='local-ollama-api';canonical_path=$Models;downloads_used=$false;training_claimed=$false;models=@(Tags|Select-Object name,model,size,digest)}
+  $d=[ordered]@{created_utc=[DateTime]::UtcNow.ToString('o');source='local-ollama-api';canonical_path=$Models;downloads_used=$false;training_claimed=$false;models=@((Tags)|Select-Object name,model,size,digest)}
   $d|ConvertTo-Json -Depth 8|Set-Content -LiteralPath (Join-Path $Brain 'MODEL_CATALOG.json') -Encoding UTF8
 }
 SaveCatalog
@@ -109,7 +109,7 @@ $queue=@(
 )
 foreach($item in $queue){
   $tag=$item.tag
-  if(@(Tags|Where-Object{$_.name -eq $tag}).Count -gt 0){Say ('REUSE '+$tag);continue}
+  if(@((Tags)|Where-Object{$_.name -eq $tag}).Count -gt 0){Say ('REUSE '+$tag);continue}
   $free=[IO.DriveInfo]::new('C:\').AvailableFreeSpace
   if($free -lt (60000000000L+[long]$item.bytes+3000000000L)){Say ('DISK RESERVE HOLD '+$tag);continue}
   if((FolderBytes (Join-Path $Brain 'intelligence'))+[long]$item.bytes+3000000000L -gt 70000000000L){Say ('QUOTA HOLD '+$tag);continue}
@@ -147,6 +147,6 @@ $training='CUDA_NO_COMPATIBLE_GPU_OR_SENSOR'
 if(Get-Command nvidia-smi -ErrorAction SilentlyContinue){$training='TRAINING_PREFLIGHT_OR_APPROVED_DATA_REQUIRED'}
 if(!(Test-Path $train) -or !(Test-Path $hold) -or !(Test-Path $permit)){$training='APPROVED_DATA_OR_HOLDOUT_MISSING'}
 # No blind training on AMD or with unknown thermals. Old broken V4 runner never invoked.
-Receipt 'GENESIS_READY_WITH_HOLDS' @{url=$Url;training=$training;models=(Tags|Measure-Object).Count;native_s03='NOT_VERIFIED';native_exe_rebuild='NOT_VERIFIED';worms='PLANNED_AND_REVIEW_CYCLE_ONLY';thermal='65C / 180s, verified sensor mandatory'}
+Receipt 'GENESIS_READY_WITH_HOLDS' @{url=$Url;training=$training;models=@((Tags)).Count;native_s03='NOT_VERIFIED';native_exe_rebuild='NOT_VERIFIED';worms='PLANNED_AND_REVIEW_CYCLE_ONLY';thermal='65C / 180s, verified sensor mandatory'}
 Say ('FORGE LIVE '+$Url+' · training '+$training)
 Start-Process $Url
