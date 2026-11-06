@@ -24,11 +24,13 @@ jobs:
           $actual=(Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLowerInvariant()
           if ($actual -cne $expected) { throw "SOURCE_SNAPSHOT_HASH_MISMATCH" }
           Expand-Archive -LiteralPath $archive -DestinationPath './nox-r7-build' -Force
+          & './coordination/nox-local-r7/patch_navigation.ps1' './nox-r7-build/src/MainWindow.xaml.cs'
+          if ($LASTEXITCODE -and $LASTEXITCODE -ne 0) { throw 'NOX_NAV_PATCH_FAILED' }
           & dotnet publish './nox-r7-build/src/NOX.HELION.csproj' -c Release -r win-x64 --self-contained false -p:EnableWindowsTargeting=true -o './NOX_R7_WIN64'
           if ($LASTEXITCODE -ne 0) { throw "DOTNET_PUBLISH_FAILED: $LASTEXITCODE" }
           $exe=(Resolve-Path './NOX_R7_WIN64/NOX.HELION.exe').Path
           $sha=(Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash.ToLowerInvariant()
-          @{product='NOX HELION R7'; source_sha256=$expected; exe_sha256=$sha; build='PASS'; wpf_webview2_runtime='NOT_TESTED'; local_qwen_e2e='NOT_TESTED'; full_v16='NOT_IMPLEMENTED'; accepted_full_release=$false} | ConvertTo-Json | Set-Content './NOX_R7_WIN64/CLOUD_BUILD_RECEIPT.json' -Encoding UTF8
+          @{product='NOX HELION R7'; source_sha256=$expected; exe_sha256=$sha; build='PASS'; navigation_patch='coordination/nox-local-r7/patch_navigation.ps1'; wpf_webview2_runtime='NOT_TESTED'; local_qwen_e2e='NOT_TESTED'; full_v16='NOT_IMPLEMENTED'; accepted_full_release=$false} | ConvertTo-Json | Set-Content './NOX_R7_WIN64/CLOUD_BUILD_RECEIPT.json' -Encoding UTF8
           Write-Host "WIN64_BUILD_PASS SHA256=$sha"
       - name: Native WebView2 UI smoke (non-interactive runner may HOLD)
         shell: pwsh
