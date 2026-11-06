@@ -41,19 +41,24 @@ class D03AnyExitNoLoss(unittest.TestCase):
     def test_inaccessible_nsis_slot_readback_is_hard_hold(self):
         # Original update/rollback exits stay unchanged; an unreadable side
         # slot must not be mistaken for ABSENT, even if installed data survives.
-        original_exists=Path.exists
-        denied=self.stage/self.unmanaged.name
-        def denied_slot(path,*args,**kwargs):
-            if path==denied:
-                raise PermissionError("simulated Windows slot access denied")
-            return original_exists(path,*args,**kwargs)
-        with patch.object(Path,"exists",autospec=True,side_effect=denied_slot):
-            snapshot=self.proof()
-        self.assertEqual(snapshot["persistent_user_data"],"PRESERVED")
-        self.assertEqual(snapshot["unmanaged_install_data"],"HOLD")
-        self.assertEqual(snapshot["unmanaged_slots_present"],["installed"])
-        self.assertEqual(snapshot["unmanaged_slots_unreadable"],["stage"])
-        self.assertIsNone(snapshot["original_unmanaged_slot"])
+        # D03 original owner reads the slot root and child via Path.lstat(),
+        # not Path.exists(). A mock on exists() no longer injects any denial,
+        # yielding a false regression failure despite the stricter product.
+        # Exercise BOTH actual read boundaries; denial must remain HOLD.
+        original_lstat=Path.lstat
+        for denied in (self.stage, self.stage/self.unmanaged.name):
+            with self.subTest(denied=denied.name):
+                def denied_slot(path,*args,**kwargs):
+                    if path==denied:
+                        raise PermissionError("simulated Windows slot access denied")
+                    return original_lstat(path,*args,**kwargs)
+                with patch.object(Path,"lstat",autospec=True,side_effect=denied_slot):
+                    snapshot=self.proof()
+                self.assertEqual(snapshot["persistent_user_data"],"PRESERVED")
+                self.assertEqual(snapshot["unmanaged_install_data"],"HOLD")
+                self.assertEqual(snapshot["unmanaged_slots_present"],["installed"])
+                self.assertEqual(snapshot["unmanaged_slots_unreadable"],["stage"])
+                self.assertIsNone(snapshot["original_unmanaged_slot"])
 
     def test_real_update_rename_and_rollback_restore(self):
         self.assertEqual(self.proof()["original_unmanaged_slot"],"installed")
