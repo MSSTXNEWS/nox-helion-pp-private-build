@@ -16,6 +16,7 @@ import subprocess
 from datetime import datetime,timezone
 from http.server import BaseHTTPRequestHandler,ThreadingHTTPServer
 from urllib.request import urlopen
+from nox_thermal_sensors_v1 import temperature as nox_temperature
 
 SCHEMA="NOX-GENESIS-FORGE-V8"
 CODE=Path(__file__).resolve().parent
@@ -91,8 +92,10 @@ def get_state(root):
     status={
         "schema":SCHEMA, "updated_utc":datetime.now(timezone.utc).isoformat(),
         "models":m,"disk_free_bytes":free,"battery":battery(),
-        "gpu_temperature_c":(gpu_temp:=temperature()),
-        "gpu_temperature_source":"NVIDIA_SMI" if gpu_temp is not None else "UNAVAILABLE",
+        "gpu_temperature_c":(sensor:=nox_temperature())["gpu_c"],
+        "cpu_temperature_c":sensor["cpu_c"],
+        "gpu_temperature_source":sensor["source"],
+        "gpu_sensor_name":sensor["gpu_sensor"],
         "training":{"status":training.get("status","NO_ACTIVE_TRAINING_RECEIPT"),
                     "step":steps,"requested_steps":total,"progress_percent":percent,
                     "loss_metrics":training.get("loss_metrics"),"stage":training.get("stage"),
@@ -152,7 +155,9 @@ def forge_focus_live(root):
         "loss_points":[],"checkpoints":None,
         "last_checkpoint":None,"last_sha":None,
         "gpu_temp":d["gpu_temperature_c"],
-        "cpu_temp":None,
+        "cpu_temp":d["cpu_temperature_c"],
+        "gpu_sensor_source":d["gpu_temperature_source"],
+        "gpu_sensor_name":d["gpu_sensor_name"],
         "disk_free_gib":round(d["disk_free_bytes"]/(1024**3),3)
                         if d["disk_free_bytes"] is not None else None,
         "models":model_record,"knowledge_count":own_mem,
