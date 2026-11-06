@@ -11,7 +11,8 @@
     "All native actions and real telemetry must remain truthful",
     "Tabler demo (#11) intentionally shares upstream with #10; loading twice would be a duplicate. No fake page.",
     "SVG Gauge (#15) selectively integrated, never displays synthetic metrics; gauge only rendered after nativeCompleted and routeId check.",
-    "Production decision: don’t load all 40 simultaneously; unrelated React, scroll and rendering engines remain source-only to prevent duplicate runtimes and GPU contention."
+    "Production decision: don’t load all 40 simultaneously; unrelated React, scroll and rendering engines remain source-only to prevent duplicate runtimes and GPU contention.",
+    "2026-11-06: seven viewport Chromium and Windows Edge PASS. Resolved rotated decorative orbit/planet halos at 320, 800x480, 1024. Installed WebView2 remains a separate release check."
   ],
   "entries": [
     {
@@ -301,35 +302,48 @@
   ],
   "latest_acceptance": {
     "linux_chromium": {
-      "run_id": 42151215045,
-      "result": "SUCCESS",
-      "scope": "WOW 01-40 selective real UI and native-receipt-only gauge"
+      "run_id": 42154106473,
+      "status": "SUCCESS"
     },
     "windows_edge": {
-      "run_id": 42151969627,
-      "result": "SUCCESS",
-      "scope": "Physical Windows Microsoft Edge render of existing NOX UI (not native WebView2)",
-      "screen_widths": [
-        390,
-        800,
-        1920
-      ],
-      "motion": "MAX ECO reduced-motion"
+      "run_id": 42154334219,
+      "status": "SUCCESS"
     },
-    "native_windows_webview2": "NOT_CONFIRMED",
-    "verified_effects": [
-      "FORMWORK HALO",
-      "FORMWORK HELIODON",
-      "FORMWORK AETHER",
-      "FORMWORK ZODIAC",
-      "FORMWORK CHROMA source integration",
-      "FORMWORK AURUM source integration",
-      "FORMWORK MERIDIAN source integration",
-      "Three.js",
-      "Tabler",
-      "Loquix",
-      "SVG Gauge"
+    "viewport_sizes": [
+      [
+        320,
+        700
+      ],
+      [
+        390,
+        844
+      ],
+      [
+        800,
+        480
+      ],
+      [
+        1024,
+        768
+      ],
+      [
+        1280,
+        720
+      ],
+      [
+        1920,
+        1080
+      ],
+      [
+        3840,
+        2160
+      ]
     ],
-    "no_fake_GPU_sensors": true
+    "verified": "Real browser WOW UI; no horizontal overflow; five main actions; eight CoreID; MAX/ECO; Reduced Motion; truthful gauges",
+    "scope": "Browser WEB graphics acceptance; not installed WPF/WebView2 UIA or E07",
+    "native_webview2": "HOLD — Windows G4/E07",
+    "all_40_sources_verified": true,
+    "all_40_runtime_mounted": false,
+    "disposition": "Selective compatible donors only; no duplicate runtimes or false PASS"
   }
 }
