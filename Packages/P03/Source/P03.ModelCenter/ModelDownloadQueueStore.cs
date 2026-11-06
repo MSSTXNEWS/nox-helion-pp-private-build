@@ -293,8 +293,15 @@ public sealed class ModelDownloadQueueStore
             rightsReceiptId.Any(char.IsControl) || string.IsNullOrWhiteSpace(licenseSource) ||
             !Uri.TryCreate(licenseSource, UriKind.Absolute, out var uri))
             return false;
+        // External HTTPS evidence only. URL shape is not proof of licensed
+        // rights: the existing native owner attestation remains mandatory.
         return uri.Scheme == Uri.UriSchemeHttps && uri.IsDefaultPort &&
-            !string.IsNullOrWhiteSpace(uri.Host) && string.IsNullOrEmpty(uri.UserInfo);
+            !uri.IsLoopback && !string.IsNullOrWhiteSpace(uri.Host) &&
+            string.IsNullOrEmpty(uri.UserInfo) && string.IsNullOrEmpty(uri.Fragment) &&
+            !uri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase) &&
+            !uri.Host.EndsWith(".localhost", StringComparison.OrdinalIgnoreCase) &&
+            !uri.Host.EndsWith(".local", StringComparison.OrdinalIgnoreCase) &&
+            !uri.Host.EndsWith(".internal", StringComparison.OrdinalIgnoreCase);
     }
 
 

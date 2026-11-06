@@ -592,6 +592,30 @@
       "prior_active_post_git_blob_sha1": "80a391198f9f61f9aeb3ac605b0d30f31a10ad5e",
       "prior_active_post_bytes": 75680,
       "source_head_observed": "763ae6cfc5e1908ad97460ac286f86da9ec59343"
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueStore.cs",
+      "owner": 3,
+      "run_id": "D04_NATIVE_EXTERNAL_LICENSE_EVIDENCE_R5_20261106",
+      "pre_git_blob_sha1": "856557cbe29e5a285165733efadbb800993e6a65",
+      "post_git_blob_sha1": "1c0f5fae1770b37ecad76a5e15b4a90b1469887a",
+      "post_bytes": 43800,
+      "acceptance": "SOURCE_ONLY_15_OF_15_DOTNET_NATIVE_WINDOWS_E07_NOT_RUN",
+      "prior_active_run_id": "D04_P03_MERGED_REENTRY_AUTHORITY_R5_20261106",
+      "prior_active_post_git_blob_sha1": "856557cbe29e5a285165733efadbb800993e6a65",
+      "source_head_observed": "408b81c292c85751fed6a9de46b0f302259eb178"
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter.HardeningSmoke/Program.cs",
+      "owner": 3,
+      "run_id": "D04_NATIVE_EXTERNAL_LICENSE_EVIDENCE_R5_20261106",
+      "pre_git_blob_sha1": "c07e0d166b3235ecb5b24d9bffe7742b83bc024b",
+      "post_git_blob_sha1": "e8252eaa1f378b658424131e0ff5840e65037f76",
+      "post_bytes": 81081,
+      "acceptance": "SOURCE_ONLY_15_OF_15_DOTNET_NATIVE_WINDOWS_E07_NOT_RUN",
+      "prior_active_run_id": "D04_P03_MERGED_REENTRY_AUTHORITY_R5_20261106",
+      "prior_active_post_git_blob_sha1": "c07e0d166b3235ecb5b24d9bffe7742b83bc024b",
+      "source_head_observed": "408b81c292c85751fed6a9de46b0f302259eb178"
     }
   ],
   "override_chain": [

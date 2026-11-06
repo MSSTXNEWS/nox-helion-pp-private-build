@@ -454,6 +454,21 @@ try
         "D04 GGUF credential-bearing license source never queued");
     await RejectUnreviewedGguf("reviewed", "https://ollama.com:444/library/tinyllama",
         "D04 GGUF nondefault HTTPS port never queued");
+    // Native owner URL evidence cannot be loopback, local or fragment-backed.
+    await RejectUnreviewedGguf("reviewed", "https://localhost/license",
+        "D04 R5 native localhost license denied without queue mutation");
+    await RejectUnreviewedGguf("reviewed", "https://127.0.0.1/license",
+        "D04 R5 IPv4 loopback license denied without queue mutation");
+    await RejectUnreviewedGguf("reviewed", "https://[::1]/license",
+        "D04 R5 IPv6 loopback license denied without queue mutation");
+    await RejectUnreviewedGguf("reviewed", "https://rights.local/license",
+        "D04 R5 .local origin license denied without queue mutation");
+    await RejectUnreviewedGguf("reviewed", "https://rights.internal/license",
+        "D04 R5 .internal origin license denied without queue mutation");
+    await RejectUnreviewedGguf("reviewed", "https://preview.localhost/license",
+        "D04 R5 .localhost origin license denied without queue mutation");
+    await RejectUnreviewedGguf("reviewed", "https://ollama.com/library/tinyllama#forged",
+        "D04 R5 fragment evidence license denied without queue mutation");
     // Legacy records are not erased. An invalid pre-existing GGUF job must
     // fail before either atomic Running claim or explicit retry.
     var unsafeLegacyDir = Path.Combine(multiRoot, "legacy-unsafe-gguf");
@@ -504,7 +519,15 @@ try
             RightsReceiptId = "native-reviewed-rights" }),
         ("wrong-extension", unsafeLegacyJob with {
             ModelTag = "local:legacy-extension", LocalPath = Path.Combine(multiRoot, "not-gguf.bin"),
-            RightsReceiptId = "native-reviewed-rights" })
+            RightsReceiptId = "native-reviewed-rights" }),
+        ("loopback-license", unsafeLegacyJob with {
+            ModelTag = "local:legacy-loopback", LocalPath = file,
+            RightsReceiptId = "native-reviewed-rights",
+            LicenseSource = "https://127.0.0.1/license" }),
+        ("internal-license", unsafeLegacyJob with {
+            ModelTag = "local:legacy-internal", LocalPath = file,
+            RightsReceiptId = "native-reviewed-rights",
+            LicenseSource = "https://rights.internal/license" })
     };
     foreach (var (label, shape) in unsafeGgufShapes)
     {
@@ -1027,6 +1050,10 @@ try
         "B04 GGUF direct adapter rejects mutable latest before Ollama");
     await MustHoldUnreviewed(job with { LocalPath = "relative.gguf" }, false,
         "B04 GGUF direct adapter rejects relative file before Ollama");
+    await MustHoldUnreviewed(job with { LicenseSource = "https://127.0.0.1/license" }, false,
+        "D04 R5 direct adapter blocks loopback license");
+    await MustHoldUnreviewed(job with { LicenseSource = "https://rights.internal/license" }, false,
+        "D04 R5 direct adapter blocks internal license");
     var pullWithoutConsent = job with { Kind = ModelJobKind.OllamaPull,
         ExpectedOllamaDigest = new string('d', 64), ImmutableRevision = "sha256:" + new string('d', 64),
         LicenseAcknowledged = false };
