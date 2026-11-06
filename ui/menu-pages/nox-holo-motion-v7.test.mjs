@@ -3,10 +3,10 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 const html=readFileSync(new URL('./index.html',import.meta.url),'utf8');
 const adapter=readFileSync(new URL('./nox-holo-motion-v7.mjs',import.meta.url),'utf8');
-const css=readFileSync(new URL('../nox-holo-motion-v7.css',import.meta.url),'utf8');
+const css=readFileSync(new URL('./nox-holo-runtime-v7.css',import.meta.url),'utf8');
 test('Original OneHost actions remain owned by the existing menu',()=>{
  assert.match(html,/src="menu.js"/);assert.match(html,/src="nox-holo-motion-v7.mjs"/);
- assert.match(html,/href="\.\.\/nox-holo-motion-v7.css"/);
+ assert.match(html,/href="nox-holo-runtime-v7.css"/);
  assert.doesNotMatch(adapter,/fetch\(|XMLHttpRequest|postMessage|invoke\(|send\(/);
 });
 test('D02 isolated: HUD mounted only in original MENU shell',()=>{
