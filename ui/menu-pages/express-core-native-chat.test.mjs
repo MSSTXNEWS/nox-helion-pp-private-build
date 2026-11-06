@@ -20,3 +20,14 @@ test('no invented provider status or duplicate backend',()=>{
  assert.doesNotMatch(menu,/fakeResponse|mockCompletion|setTimeout\([^)]*PASS/);
  assert.match(menu,/!isNativeChatTerminal\(reply\)/);
 });
+
+test('AUTO CORE reselects a native model after a changed CoreID or Persona',()=>{
+ assert.match(menu,/const invalidateModelScope=[\s\S]{0,750}void loadModels\(\);void refreshNativePanels\(\);/);
+ assert.match(menu,/if\(!modelsRow\.isConnected\|\|inventoryEpoch!==scopeEpoch\)return;/);
+ assert.match(menu,/if\(inventoryEpoch===scopeEpoch\)\{modelSelectionPending=false;redraw\(\);\}/);
+});
+test('S03 history and GPU preflight ignore stale native scope receipts',()=>{
+ assert.match(menu,/const epoch=\+\+panelEpoch,context=scopeEpoch,requestedCore=core,requestedPersona=persona;/);
+ assert.match(menu,/safe\('chat\.history',\{core_id:requestedCore,persona_id:requestedPersona,limit:10\}\)/);
+ assert.match(menu,/epoch!==panelEpoch\|\|context!==scopeEpoch\|\|requestedCore!==core\|\|requestedPersona!==persona/);
+});

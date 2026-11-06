@@ -270,12 +270,12 @@ function liveChat(label){
 
  let historyVersion=0,panelEpoch=0;
  async function refreshNativePanels(){
-  const epoch=++panelEpoch;
+  const epoch=++panelEpoch,context=scopeEpoch,requestedCore=core,requestedPersona=persona;
   leftFacts.textContent='Получаю историю OneHost…';rightFacts.textContent='Получаю GPU preflight…';
   if(!client){leftFacts.textContent='HOLD · OneHost недоступен';rightFacts.textContent='HOLD · OneHost недоступен';return;}
   const safe=async(route,payload)=>{try{return await client.request(route,payload);}catch{return null;}};
-  const [h,g,l]=await Promise.all([safe('chat.history',{core_id:core,persona_id:persona,limit:10}),safe('gpu.preflight',{}),safe('chat.commands',{action:'selfbuilder.learning.proofs'})]);
-  if(epoch!==panelEpoch||!three.isConnected)return;
+  const [h,g,l]=await Promise.all([safe('chat.history',{core_id:requestedCore,persona_id:requestedPersona,limit:10}),safe('gpu.preflight',{}),safe('chat.commands',{action:'selfbuilder.learning.proofs'})]);
+  if(epoch!==panelEpoch||context!==scopeEpoch||requestedCore!==core||requestedPersona!==persona||!three.isConnected)return;
   leftFacts.replaceChildren();rightFacts.replaceChildren();
   const fact=(parent,k,v)=>{
    const row=el('div','nox-native-fact');
@@ -344,8 +344,11 @@ function liveChat(label){
  const cores=CORE_IDS.map(id=>['core.'+id.toLowerCase(),id]);
  const personas=PERSONAS.map((id,i)=>[['persona.kairen_voss','persona.adrian_marrow','persona.leon_ardis','persona.elina_veil','persona.kassien_veir'][i],id]);
  const invalidateModelScope=()=>{
-  ++scopeEpoch;++historyVersion;history.hidden=true;historyButton.setAttribute('aria-expanded','false');
-  model='';renderModels();redraw();
+  ++scopeEpoch;++historyVersion;++panelEpoch;history.hidden=true;historyButton.setAttribute('aria-expanded','false');
+  model='';modelSelectionPending=false;renderModels();redraw();
+  leftFacts.textContent='Обновляю память выбранного контекста…';
+  rightFacts.textContent='Обновляю GPU preflight…';
+  void loadModels();void refreshNativePanels();
   if(info.isConnected)info.textContent='HOLD · контекст изменился; подтвердите модель через OneHost';
  };
  const chooseCore=v=>{
@@ -361,10 +364,10 @@ function liveChat(label){
  const row=(who,content)=>{const item=el('p','nox-chat-bubble nox-chat-'+who,content);log.append(item);log.scrollTop=log.scrollHeight;return item;};
  async function loadModels(){
   const inventoryEpoch=scopeEpoch;
-  if(!client){modelsRow.append(el('span','nox-chat-empty','Локальное ядро не подключено'));redraw();return;}
+  if(!client){modelsRow.replaceChildren(el('span','nox-chat-empty','Локальное ядро не подключено'));redraw();return;}
   try{
    const reply=await client.request('chat.model',{});
-   if(!modelsRow.isConnected)return;
+   if(!modelsRow.isConnected||inventoryEpoch!==scopeEpoch)return;
    if(!nativeCompleted(reply)||!Array.isArray(reply.result?.models)){throw Error('NO_MODELS');}
    const names=[...new Set(reply.result.models.filter(v=>typeof v==='string'&&v.length&&v.length<=160))].slice(0,32);
    // An inventory reply which began in a previous scope cannot authorize SEND.
@@ -386,9 +389,9 @@ function liveChat(label){
        if(requestedScopeEpoch===scopeEpoch&&modelsRow.isConnected&&
           nativeCompleted(a)&&a.result?.selectedModel===name){
         model=name;info.textContent='Модель подтверждена: '+name;
-       }else info.textContent='HOLD · нет актуального native ACK выбранной модели и контекста';
-      }catch{info.textContent='HOLD · нет подтверждения выбора модели';}
-      finally{modelSelectionPending=false;render();redraw();}
+       }else if(requestedScopeEpoch===scopeEpoch)info.textContent='HOLD · нет актуального native ACK выбранной модели и контекста';
+      }catch{if(requestedScopeEpoch===scopeEpoch)info.textContent='HOLD · нет подтверждения выбора модели';}
+      finally{if(requestedScopeEpoch===scopeEpoch){modelSelectionPending=false;render();redraw();}}
      });
      b.setAttribute('aria-pressed',String(name===model));b.disabled=chatInFlight||modelSelectionPending;modelsRow.append(b);
     }
@@ -398,10 +401,10 @@ function liveChat(label){
     const candidate=names.find(x=>/qwen/i.test(x))||names[0];modelSelectionPending=true;redraw();
     try{const ack=await client.request('chat.model',{model:candidate});
       if(inventoryEpoch===scopeEpoch&&nativeCompleted(ack)&&ack.result?.selectedModel===candidate)model=candidate;
-    }catch{model='';}finally{modelSelectionPending=false;redraw();}
+    }catch{if(inventoryEpoch===scopeEpoch)model='';}finally{if(inventoryEpoch===scopeEpoch){modelSelectionPending=false;redraw();}}
    }
-   info.textContent=model?'AUTO CORE · native подтверждён: '+model:'HOLD · модель не подтверждена OneHost';
-  }catch{modelsRow.replaceChildren(el('span','nox-chat-empty','Не удалось получить локальные модели'));info.textContent='HOLD · каталог моделей недоступен';redraw();}
+   if(inventoryEpoch===scopeEpoch)info.textContent=model?'AUTO CORE · native подтверждён: '+model:'HOLD · модель не подтверждена OneHost';
+  }catch{if(inventoryEpoch!==scopeEpoch||!modelsRow.isConnected)return;modelsRow.replaceChildren(el('span','nox-chat-empty','Не удалось получить локальные модели'));info.textContent='HOLD · каталог моделей недоступен';redraw();}
  }
  async function submit(ev){
   ev?.preventDefault?.();
