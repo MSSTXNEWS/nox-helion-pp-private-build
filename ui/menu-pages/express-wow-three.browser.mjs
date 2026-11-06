@@ -5,9 +5,20 @@ try{
  for(const width of [390,800,1920]){
   const page=await browser.newPage({viewport:{width,height:900},reducedMotion:'no-preference'});
   const pageErrors=[];page.on('pageerror',error=>pageErrors.push(String(error)));
+  const errors=[];
+  page.on('console',message=>{if(message.type()==='error')errors.push(message.text());});
+  page.on('response',response=>{if(response.status()>=400)errors.push(response.status()+' '+response.url());});
   await page.goto('http://127.0.0.1:8765/ui/menu-pages/index.html',{waitUntil:'load'});
-  await page.locator('#fx').click();
-  await page.waitForFunction(()=>document.body.dataset.fx==='MAX');
+  try{
+   await page.waitForFunction(()=>document.querySelectorAll('#directions button').length===8,null,{timeout:15000});
+   await page.locator('#fx').click();
+   await page.waitForFunction(()=>document.body.dataset.fx==='MAX',null,{timeout:15000});
+  }catch(error){
+   const diagnostic=await page.evaluate(()=>({url:location.href,fx:document.body.dataset.fx,ready:document.readyState,buttons:document.querySelectorAll('#directions button').length,status:document.querySelector('#status')?.textContent}));
+   console.error('WINDOWS_EDGE_DIAGNOSTIC',JSON.stringify({width,diagnostic,errors,pageErrors}));
+   await page.screenshot({path:`wow-three-windows-diagnostic-${width}.png`,fullPage:true});
+   throw error;
+  }
   await page.waitForFunction(()=>document.querySelector('.universe')?.dataset.noxHaloHud==='1');
   const halo=page.locator('canvas.nox-halo-radar');
   assert.equal(await halo.count(),1,'HALO should mount into original universe');
