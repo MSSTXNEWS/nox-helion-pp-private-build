@@ -163,6 +163,8 @@ public sealed class OllamaModelAdapter(HttpClient http, string receiptDirectory)
     public async Task<string> ImportMergedSafetensorsAsync(ModelJob job,
         Func<OllamaStreamUpdate,CancellationToken,ValueTask> progress,CancellationToken ct)
     {
+        if (!ModelDownloadQueueStore.HasReviewedMergedJobAuthority(job))
+            throw new SafetensorsImportHold("P03_MERGED_REVIEW_REQUIRED");
         EnsureLocalOllama();
         if(job.Kind!=ModelJobKind.SafetensorsImport || job.MergedImport is not { } approval ||
             job.LocalPath!=approval.Directory || job.ExpectedLocalSha256!=approval.MergedPayloadSha256 ||

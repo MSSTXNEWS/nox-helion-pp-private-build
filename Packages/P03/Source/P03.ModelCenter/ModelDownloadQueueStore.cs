@@ -319,6 +319,44 @@ public sealed class ModelDownloadQueueStore
             HasReviewedGgufAuthority(job.RightsReceiptId, job.LicenseSource);
     }
 
+
+    // Persisted P04 approvals must still bind to this EXACT native job on
+    // recovery, worker claim, explicit retry and direct adapter entry.
+    // This is a structural authority gate; ValidateAsync additionally checks
+    // the real files, pinned receipt SHA-256 and rights evidence before I/O.
+    internal static bool HasReviewedMergedJobAuthority(ModelJob job)
+    {
+        var approval = job.MergedImport;
+        if (job.Kind != ModelJobKind.SafetensorsImport || approval is null ||
+            job.Id == Guid.Empty || !job.LicenseAcknowledged ||
+            job.ExpectedLocalBytes is not > 4 || !approval.NativeRightsVerified ||
+            approval.MergedPayloadSha256 is not { Length: 64 } ||
+            !ShaPattern.IsMatch(approval.MergedPayloadSha256) ||
+            !ShaPattern.IsMatch(approval.MergeReceiptSha256 ?? "") ||
+            !ShaPattern.IsMatch(approval.TrainingReceiptSha256 ?? "") ||
+            !ShaPattern.IsMatch(approval.RightsAttestationSha256 ?? "") ||
+            string.IsNullOrWhiteSpace(approval.RightsAttestationId) ||
+            approval.RightsAttestationId.Length > 128 ||
+            approval.RightsAttestationId.Any(char.IsControl) ||
+            string.IsNullOrWhiteSpace(approval.NativeApprovalId) ||
+            approval.NativeApprovalId.Length > 200 ||
+            string.IsNullOrWhiteSpace(approval.Directory) ||
+            string.IsNullOrWhiteSpace(approval.TrainingReceiptPath) ||
+            !Path.IsPathFullyQualified(approval.Directory) ||
+            !Path.IsPathFullyQualified(approval.TrainingReceiptPath) ||
+            !string.Equals(job.LocalPath, approval.Directory, StringComparison.Ordinal) ||
+            !string.Equals(job.ExpectedLocalSha256, approval.MergedPayloadSha256, StringComparison.Ordinal) ||
+            !string.Equals(job.RightsReceiptId, approval.RightsAttestationId, StringComparison.Ordinal) ||
+            !string.Equals(job.LicenseSource, approval.LicenseSource, StringComparison.Ordinal) ||
+            !string.Equals(job.ModelTag,
+                "nox-forge-" + approval.MergedPayloadSha256[..12] + ":" + job.Id.ToString("N"),
+                StringComparison.Ordinal) ||
+            !Uri.TryCreate(approval.LicenseSource, UriKind.Absolute, out var license) ||
+            license.Scheme != Uri.UriSchemeHttps || !string.IsNullOrEmpty(license.UserInfo))
+            return false;
+        return true;
+    }
+
     private static void ValidateTag(string? tag)
     {
         if (tag is null || tag.Length > 160 || !TagPattern.IsMatch(tag) ||
@@ -346,6 +384,9 @@ public sealed class ModelDownloadQueueStore
             if (old.Kind == ModelJobKind.GgufImport &&
                 !HasReviewedGgufJobAuthority(old))
                 throw new InvalidOperationException("REVIEW_REQUIRED: unreviewed GGUF cannot start.");
+            if (old.Kind == ModelJobKind.SafetensorsImport &&
+                !HasReviewedMergedJobAuthority(old))
+                throw new InvalidOperationException("REVIEW_REQUIRED: unreviewed merged import cannot start.");
             var claimed = old with { State = ModelJobState.Running,
                 Attempts = checked(old.Attempts + 1), Status = "Starting",
                 UpdatedAtUtc = DateTimeOffset.UtcNow };
@@ -509,6 +550,9 @@ public sealed class ModelDownloadQueueStore
             if (failed.Kind == ModelJobKind.GgufImport &&
                 !HasReviewedGgufJobAuthority(failed))
                 throw new InvalidOperationException("REVIEW_REQUIRED: unreviewed GGUF cannot be retried.");
+            if (failed.Kind == ModelJobKind.SafetensorsImport &&
+                !HasReviewedMergedJobAuthority(failed))
+                throw new InvalidOperationException("REVIEW_REQUIRED: unreviewed merged import cannot be retried.");
             bool SameApprovedPull(ModelJob job) =>
                 string.Equals(job.ModelTag, failed.ModelTag, StringComparison.Ordinal) &&
                 string.Equals(job.ExpectedOllamaDigest, failed.ExpectedOllamaDigest,

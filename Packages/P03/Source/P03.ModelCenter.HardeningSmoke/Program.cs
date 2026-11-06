@@ -929,6 +929,63 @@ try
         { directHeld = true; }
         Assert(directHeld, "B04 P04 original adapter refuses CWD-dependent owner paths");
     }
+
+    // D04 R5: a legacy P04 job can have syntactically valid weight SHA and
+    // NativeRightsVerified=true while its training-receipt path remains relative.
+    // Preserve the old snapshot, refuse atomic Running/retry/direct native I/O,
+    // and let the original FIFO worker fail only that unreviewed item.
+    var legacyMergeApproval = approvedMerge with {
+        Directory = mergeAbsoluteDir, TrainingReceiptPath = "relative-training.json"
+    };
+    var legacyMergeId = Guid.NewGuid();
+    var legacyMergeAt = DateTimeOffset.UtcNow;
+    var legacyMergeJob = new ModelJob(legacyMergeId, ModelJobKind.SafetensorsImport,
+        "nox-forge-" + legacyMergeApproval.MergedPayloadSha256[..12] + ":" + legacyMergeId.ToString("N"),
+        legacyMergeApproval.Directory, true, legacyMergeApproval.LicenseSource,
+        legacyMergeAt, legacyMergeAt, ExpectedLocalBytes: 123,
+        ExpectedLocalSha256: legacyMergeApproval.MergedPayloadSha256,
+        RightsReceiptId: legacyMergeApproval.RightsAttestationId,
+        MergedImport: legacyMergeApproval);
+    var legacyMergeSnapshot = Path.Combine(b04MergedRoot, "p03-model-download-queue.json");
+    await File.WriteAllTextAsync(legacyMergeSnapshot,
+        JsonSerializer.Serialize(new[] { legacyMergeJob },
+            new JsonSerializerOptions(JsonSerializerDefaults.Web)));
+    var legacyMergeBytes = await File.ReadAllBytesAsync(legacyMergeSnapshot);
+    var legacyClaimDenied = false;
+    try { await mergedQueue.TryStartQueuedAsync(legacyMergeId); }
+    catch (InvalidOperationException ex) when
+        (ex.Message == "REVIEW_REQUIRED: unreviewed merged import cannot start.")
+    { legacyClaimDenied = true; }
+    Assert(legacyClaimDenied &&
+        (await File.ReadAllBytesAsync(legacyMergeSnapshot)).SequenceEqual(legacyMergeBytes),
+        "D04 R5 legacy merged owner path rejected before Running without snapshot mutation");
+    using (var mergedHttp = new HttpClient(new StalledOllamaHandler()) {
+        BaseAddress = new Uri("http://127.0.0.1:11434/")
+    })
+    {
+        var mergedAdapter = new OllamaModelAdapter(mergedHttp, b04MergedRoot);
+        var directDenied = false;
+        try { await mergedAdapter.ImportMergedSafetensorsAsync(legacyMergeJob,
+            (evt, token) => ValueTask.CompletedTask, default); }
+        catch (SafetensorsImportHold ex) when (ex.Code == "P03_MERGED_REVIEW_REQUIRED")
+        { directDenied = true; }
+        Assert(directDenied, "D04 R5 direct merged adapter refuses stale P04 authority before HTTP");
+        var mergedWorker = new ModelDownloadQueueWorker(mergedQueue, mergedAdapter,
+            new ModelLifecyclePublisher(new SilentP03Sink()));
+        await mergedWorker.RunNextAsync(requestedJobId: legacyMergeId);
+    }
+    var legacyRejected = (await mergedQueue.ReadAsync()).Single();
+    Assert(legacyRejected.State == ModelJobState.Failed &&
+        legacyRejected.Error == "MERGED_RIGHTS_REVIEW_REQUIRED" &&
+        legacyRejected.MergedImport == legacyMergeApproval,
+        "D04 R5 worker preserves rejected merged job and native provenance");
+    var legacyMergeRetryDenied = false;
+    try { await mergedQueue.RetryAsync(legacyMergeId); }
+    catch (InvalidOperationException ex) when
+        (ex.Message == "REVIEW_REQUIRED: unreviewed merged import cannot be retried.")
+    { legacyMergeRetryDenied = true; }
+    Assert(legacyMergeRetryDenied && (await mergedQueue.ReadAsync()).Count == 1,
+        "D04 R5 merged retry cannot reuse invalid P04 owner approval");
 }
 finally { if (Directory.Exists(b04MergedRoot)) Directory.Delete(b04MergedRoot, recursive: true); }
 

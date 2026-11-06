@@ -29,13 +29,16 @@ public sealed class ModelDownloadQueueWorker(
                     !ModelDownloadQueueStore.HasReviewedPullAuthority(candidate);
                 var unreviewedGguf = candidate.Kind == ModelJobKind.GgufImport &&
                     !ModelDownloadQueueStore.HasReviewedGgufJobAuthority(candidate);
-                if (unreviewedPull || unreviewedGguf)
+                var unreviewedMerged = candidate.Kind == ModelJobKind.SafetensorsImport &&
+                    !ModelDownloadQueueStore.HasReviewedMergedJobAuthority(candidate);
+                if (unreviewedPull || unreviewedGguf || unreviewedMerged)
                 {
                     // Atomic update ensures concurrent STOP remains terminal.
                     await store.UpdateAsync(candidate.Id, j => j.State == ModelJobState.Queued
                         ? j with { State = ModelJobState.Failed,
                             Status = "REVIEW_REQUIRED",
-                            Error = unreviewedGguf ? "GGUF_RIGHTS_REVIEW_REQUIRED" : "UNPINNED_ARTIFACT" }
+                            Error = unreviewedMerged ? "MERGED_RIGHTS_REVIEW_REQUIRED" :
+                                unreviewedGguf ? "GGUF_RIGHTS_REVIEW_REQUIRED" : "UNPINNED_ARTIFACT" }
                         : j, ct);
                     continue;
                 }

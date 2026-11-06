@@ -515,14 +515,14 @@
     {
       "path": "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueWorker.cs",
       "owner": 3,
-      "run_id": "B04_GGUF_COMPLETE_JOB_REENTRY_20261106",
-      "pre_git_blob_sha1": "f7372675615b0d17ed8130b061e8925a57941e1a",
-      "post_git_blob_sha1": "f2f73de74cd41e32564baa4973eb9786f554ec44",
-      "post_bytes": 16146,
-      "acceptance": "SOURCE_ONLY_CONTRACT_15_OF_15_DOTNET_AND_WINDOWS_NOT_RUN",
-      "prior_active_post_git_blob_sha1": "f7372675615b0d17ed8130b061e8925a57941e1a",
-      "prior_active_post_bytes": 16209,
-      "source_head_observed": "ae83817878646eca40f1e2744a83c9ecaab00495"
+      "run_id": "D04_P03_MERGED_REENTRY_AUTHORITY_R5_20261106",
+      "pre_git_blob_sha1": "f2f73de74cd41e32564baa4973eb9786f554ec44",
+      "post_git_blob_sha1": "4c38a9b7e068b55d5fbbd025d3b3b06680f64f15",
+      "post_bytes": 16429,
+      "acceptance": "SOURCE_ONLY_TARGET_16_OF_16_C_SHARP_REGRESSION_AND_WINDOWS_NOT_RUN",
+      "prior_active_post_git_blob_sha1": "f2f73de74cd41e32564baa4973eb9786f554ec44",
+      "prior_active_post_bytes": 16146,
+      "source_head_observed": "763ae6cfc5e1908ad97460ac286f86da9ec59343"
     },
     {
       "path": "Packages/P03/Source/P03.ModelCenter/ModelCenterNativeRoutes.cs",
@@ -536,26 +536,26 @@
     {
       "path": "Packages/P03/Source/P03.ModelCenter/OllamaModelAdapter.cs",
       "owner": 3,
-      "run_id": "B04_GGUF_COMPLETE_JOB_REENTRY_20261106",
-      "pre_git_blob_sha1": "120be6fc6b8f4d5772039410ac0a716a0081c6c1",
-      "post_git_blob_sha1": "fa7a726df43bca3190051330a636f057dda7760e",
-      "post_bytes": 18278,
-      "acceptance": "SOURCE_ONLY_CONTRACT_15_OF_15_DOTNET_AND_WINDOWS_NOT_RUN",
-      "prior_active_post_git_blob_sha1": "120be6fc6b8f4d5772039410ac0a716a0081c6c1",
-      "prior_active_post_bytes": 18080,
-      "source_head_observed": "ae83817878646eca40f1e2744a83c9ecaab00495"
+      "run_id": "D04_P03_MERGED_REENTRY_AUTHORITY_R5_20261106",
+      "pre_git_blob_sha1": "fa7a726df43bca3190051330a636f057dda7760e",
+      "post_git_blob_sha1": "5734dfb2904d12267c4105e82ad6c4b1fc137f1f",
+      "post_bytes": 18426,
+      "acceptance": "SOURCE_ONLY_TARGET_16_OF_16_C_SHARP_REGRESSION_AND_WINDOWS_NOT_RUN",
+      "prior_active_post_git_blob_sha1": "fa7a726df43bca3190051330a636f057dda7760e",
+      "prior_active_post_bytes": 18278,
+      "source_head_observed": "763ae6cfc5e1908ad97460ac286f86da9ec59343"
     },
     {
       "path": "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueStore.cs",
       "owner": 3,
-      "run_id": "B04_P03_MERGED_OWNER_ABSOLUTE_PATH_R5_20261106",
-      "pre_git_blob_sha1": "763787bf9a41572f9b6e017adeac50aa74e44ddc",
-      "post_git_blob_sha1": "65a0377bb7bdaccfa5d6d87201c55dfa3940efa9",
-      "post_bytes": 40386,
-      "acceptance": "SOURCE_ONLY_V8_CONTRACT_DOTNET_WINDOWS_PHYSICAL_NOT_RUN",
-      "prior_active_post_git_blob_sha1": "763787bf9a41572f9b6e017adeac50aa74e44ddc",
-      "prior_active_post_bytes": 39747,
-      "source_head_observed": "117c90021309a94b443529b72eba07c4810597c6"
+      "run_id": "D04_P03_MERGED_REENTRY_AUTHORITY_R5_20261106",
+      "pre_git_blob_sha1": "65a0377bb7bdaccfa5d6d87201c55dfa3940efa9",
+      "post_git_blob_sha1": "856557cbe29e5a285165733efadbb800993e6a65",
+      "post_bytes": 43251,
+      "acceptance": "SOURCE_ONLY_TARGET_16_OF_16_C_SHARP_REGRESSION_AND_WINDOWS_NOT_RUN",
+      "prior_active_post_git_blob_sha1": "65a0377bb7bdaccfa5d6d87201c55dfa3940efa9",
+      "prior_active_post_bytes": 40386,
+      "source_head_observed": "763ae6cfc5e1908ad97460ac286f86da9ec59343"
     },
     {
       "path": "Packages/P03/Source/python-host/p03_onehost_port.py",
@@ -583,15 +583,15 @@
     {
       "path": "Packages/P03/Source/P03.ModelCenter.HardeningSmoke/Program.cs",
       "owner": 3,
-      "run_id": "B04_P03_P04_COMMON_EXECUTION_OWNER_PATH_R5_20261106",
-      "pre_git_blob_sha1": "7a3de8fab0de61dab011ffe6db912f1619a72686",
-      "post_git_blob_sha1": "80a391198f9f61f9aeb3ac605b0d30f31a10ad5e",
-      "post_bytes": 75680,
-      "acceptance": "SOURCE_ONLY_TARGET_16_OF_16_DOTNET_WINDOWS_PHYSICAL_NOT_RUN",
+      "run_id": "D04_P03_MERGED_REENTRY_AUTHORITY_R5_20261106",
+      "pre_git_blob_sha1": "80a391198f9f61f9aeb3ac605b0d30f31a10ad5e",
+      "post_git_blob_sha1": "c07e0d166b3235ecb5b24d9bffe7742b83bc024b",
+      "post_bytes": 79172,
+      "acceptance": "SOURCE_ONLY_TARGET_16_OF_16_C_SHARP_REGRESSION_AND_WINDOWS_NOT_RUN",
       "prior_active_run_id": "B04_P03_MERGED_OWNER_ABSOLUTE_PATH_R5_20261106",
-      "prior_active_post_git_blob_sha1": "7a3de8fab0de61dab011ffe6db912f1619a72686",
-      "prior_active_post_bytes": 74461,
-      "source_head_observed": "a7dd8964b9c121f2b35d808ba72830595f728805"
+      "prior_active_post_git_blob_sha1": "80a391198f9f61f9aeb3ac605b0d30f31a10ad5e",
+      "prior_active_post_bytes": 75680,
+      "source_head_observed": "763ae6cfc5e1908ad97460ac286f86da9ec59343"
     }
   ],
   "override_chain": [
@@ -1392,6 +1392,63 @@
       "source_head_observed": "117c90021309a94b443529b72eba07c4810597c6",
       "historical_approved_override": true,
       "retired_from_active_set": "B04_P03_P04_COMMON_EXECUTION_OWNER_PATH_R5_20261106"
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueStore.cs",
+      "owner": 3,
+      "run_id": "B04_P03_MERGED_OWNER_ABSOLUTE_PATH_R5_20261106",
+      "pre_git_blob_sha1": "763787bf9a41572f9b6e017adeac50aa74e44ddc",
+      "post_git_blob_sha1": "65a0377bb7bdaccfa5d6d87201c55dfa3940efa9",
+      "post_bytes": 40386,
+      "acceptance": "SOURCE_ONLY_V8_CONTRACT_DOTNET_WINDOWS_PHYSICAL_NOT_RUN",
+      "prior_active_post_git_blob_sha1": "763787bf9a41572f9b6e017adeac50aa74e44ddc",
+      "prior_active_post_bytes": 39747,
+      "source_head_observed": "117c90021309a94b443529b72eba07c4810597c6",
+      "historical_approved_override": true,
+      "retired_from_active_set": "D04_P03_MERGED_REENTRY_AUTHORITY_R5_20261106"
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueWorker.cs",
+      "owner": 3,
+      "run_id": "B04_GGUF_COMPLETE_JOB_REENTRY_20261106",
+      "pre_git_blob_sha1": "f7372675615b0d17ed8130b061e8925a57941e1a",
+      "post_git_blob_sha1": "f2f73de74cd41e32564baa4973eb9786f554ec44",
+      "post_bytes": 16146,
+      "acceptance": "SOURCE_ONLY_CONTRACT_15_OF_15_DOTNET_AND_WINDOWS_NOT_RUN",
+      "prior_active_post_git_blob_sha1": "f7372675615b0d17ed8130b061e8925a57941e1a",
+      "prior_active_post_bytes": 16209,
+      "source_head_observed": "ae83817878646eca40f1e2744a83c9ecaab00495",
+      "historical_approved_override": true,
+      "retired_from_active_set": "D04_P03_MERGED_REENTRY_AUTHORITY_R5_20261106"
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter/OllamaModelAdapter.cs",
+      "owner": 3,
+      "run_id": "B04_GGUF_COMPLETE_JOB_REENTRY_20261106",
+      "pre_git_blob_sha1": "120be6fc6b8f4d5772039410ac0a716a0081c6c1",
+      "post_git_blob_sha1": "fa7a726df43bca3190051330a636f057dda7760e",
+      "post_bytes": 18278,
+      "acceptance": "SOURCE_ONLY_CONTRACT_15_OF_15_DOTNET_AND_WINDOWS_NOT_RUN",
+      "prior_active_post_git_blob_sha1": "120be6fc6b8f4d5772039410ac0a716a0081c6c1",
+      "prior_active_post_bytes": 18080,
+      "source_head_observed": "ae83817878646eca40f1e2744a83c9ecaab00495",
+      "historical_approved_override": true,
+      "retired_from_active_set": "D04_P03_MERGED_REENTRY_AUTHORITY_R5_20261106"
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter.HardeningSmoke/Program.cs",
+      "owner": 3,
+      "run_id": "B04_P03_P04_COMMON_EXECUTION_OWNER_PATH_R5_20261106",
+      "pre_git_blob_sha1": "7a3de8fab0de61dab011ffe6db912f1619a72686",
+      "post_git_blob_sha1": "80a391198f9f61f9aeb3ac605b0d30f31a10ad5e",
+      "post_bytes": 75680,
+      "acceptance": "SOURCE_ONLY_TARGET_16_OF_16_DOTNET_WINDOWS_PHYSICAL_NOT_RUN",
+      "prior_active_run_id": "B04_P03_MERGED_OWNER_ABSOLUTE_PATH_R5_20261106",
+      "prior_active_post_git_blob_sha1": "7a3de8fab0de61dab011ffe6db912f1619a72686",
+      "prior_active_post_bytes": 74461,
+      "source_head_observed": "a7dd8964b9c121f2b35d808ba72830595f728805",
+      "historical_approved_override": true,
+      "retired_from_active_set": "D04_P03_MERGED_REENTRY_AUTHORITY_R5_20261106"
     }
   ],
   "source_expansion": {
