@@ -30,6 +30,10 @@ const refusedCases=[
  ...['INVALID','STALE','TIMED_OUT','NOT_INSTALLED','RIGHTS_MISSING','ACTION_DISALLOWED'].map(status=>[
   'ownerReceipt '+status,x=>({...receipt,requestId:x.posted.requestId,result:{...result,ownerReceipt:{status}}})
  ]),
+ ['owner_receipt snake_case refusal',x=>({...receipt,requestId:x.posted.requestId,result:{...result,owner_receipt:{accepted:false}}})],
+ ['owner_result snake_case nested denial',x=>({...receipt,requestId:x.posted.requestId,result:{...result,owner_result:{receipt:{status:'SID_MISMATCH'}}}})],
+ ['native_result snake_case provider refusal',x=>({...receipt,requestId:x.posted.requestId,result:{...result,native_result:{error_code:'PROVIDER_OFFLINE_HOLD'}}})],
+ ['owner_receipt snake_case malformed',x=>({...receipt,requestId:x.posted.requestId,result:{...result,owner_receipt:'OK'}})],
  ['ownerReceipt scalar malformed',x=>({...receipt,requestId:x.posted.requestId,result:{...result,ownerReceipt:42}})],
  ['cyclic ownerReceipt',x=>{const loop={};loop.ownerReceipt=loop;return {...receipt,requestId:x.posted.requestId,result:{...result,ownerReceipt:loop}};}]
 ];

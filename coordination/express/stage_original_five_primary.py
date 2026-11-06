@@ -513,7 +513,7 @@ a1Button?.addEventListener('click',event=>{
    if(typeof envelope[key]==='string'&&
       /(?:HOLD|DENIED|REJECT|FAIL|ERROR|OFFLINE|CONSENT|UNAUTHORIZED|FORBIDDEN|PERMISSION_REQUIRED|AUTH_REQUIRED|AUTHORIZATION_REQUIRED|AUTHENTICATION_REQUIRED|NEEDS_AUTH|NOT_AUTHORIZED|NOT_AUTHENTICATED|SID_MISMATCH|ACL_MISMATCH|OWNER_MISMATCH|NOT_READY|PROVIDER_UNAVAILABLE|INVALID|STALE|TIMED_OUT|NOT_INSTALLED|RIGHTS_MISSING|ACTION_DISALLOWED|CANCELLED|ABORTED|REVOKED|EXPIRED)/i.test(envelope[key]))return true;
   }
-  for(const key of ['result','receipt','ownerReceipt','nativeResult','owner','ownerResult']){
+  for(const key of ['result','receipt','ownerReceipt','owner_receipt','nativeResult','native_result','owner','ownerResult','owner_result']){
    if(!has(key)||envelope[key]===null||envelope[key]===undefined)continue;
    if(a1ReceiptDenied(envelope[key],depth+1,trail))return true;
   }
