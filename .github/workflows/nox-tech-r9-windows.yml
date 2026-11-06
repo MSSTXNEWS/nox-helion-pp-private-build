@@ -27,6 +27,8 @@ jobs:
           $actual=(Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
           if ($actual -cne '07c74b8513a675c878ed7abdbd7e379fab3b7878e66fe69c0df59a8cb3e2b32b') { throw 'TECH_R9_SOURCE_ARCHIVE_SHA_MISMATCH' }
           Expand-Archive -LiteralPath $zip -DestinationPath './tech-r9' -Force
+          & python -m pip install --disable-pip-version-check 'Pygments==2.18.0'
+          if ($LASTEXITCODE -ne 0) { throw 'QA_LEXER_INSTALL_FAILED' }
           foreach ($test in @('verify_package.py','test_engine_lifecycle.py','test_knowledge_schema.py','test_r7_ui_smoke.py','test_r8_fx_contract.py','test_r5_acceptance.py','validate_source.py')) {
             & python "./tech-r9/$test"
             if ($LASTEXITCODE -ne 0) { throw "NOX_R9_TEST_FAILED_$test" }
