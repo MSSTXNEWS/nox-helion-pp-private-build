@@ -204,6 +204,9 @@ function verifiedOriginalPrimaryDock(){
   const rect=button.getBoundingClientRect();
   if(!rect||![rect.left,rect.top,rect.right,rect.bottom,rect.width,rect.height]
      .every(Number.isFinite)||rect.width<=0||rect.height<=0||
+      // A centre hit alone cannot certify an unusably small real UIA target.
+      // Approved five-column D02 remains >=44 CSS px at 320/390/800.
+      rect.width<44||rect.height<44||
      rect.left<-.5||rect.top<-.5||
      rect.right>viewportWidth+.5||rect.bottom>viewportHeight+.5)return false;
   // Sub-pixel tolerance avoids a false HOLD from WebView2 fractional zoom.

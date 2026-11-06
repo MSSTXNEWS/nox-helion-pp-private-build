@@ -18,6 +18,8 @@ function evaluate(width,change={}){
  if(change.offscreen){const r=rects[4];r.right=width+12;r.width=r.right-r.left;}
  if(change.overlap){rects[1]={...rects[0],left:rects[0].left+4,right:rects[0].right+4};}
  if(change.fractional){const r=rects[4];r.right=width+.25;r.width=r.right-r.left;}
+ if(change.tinyWidth){const r=rects[2];r.right=r.left+12;r.width=12;}
+ if(change.tinyHeight){const r=rects[2];r.bottom=r.top+12;r.height=12;}
  const buttons=names.map((n,i)=>({tagName:'BUTTON',isConnected:true,disabled:false,hidden:false,tabIndex:0,rect:rects[i],
  getClientRects(){return [this.rect]},getBoundingClientRect(){return this.rect},
  closest(sel){return change.ariaDisabledButton&&i===2&&sel.includes('aria-disabled')?this:null;},contains(o){return o===this},
@@ -49,6 +51,15 @@ test('D02 UIA rejects clipped, overlapping and covered primary controls',()=>{
  for(const change of [{offscreen:true},{overlap:true},{overlay:true},{noheight:true}])
    assert.equal(evaluate(390,change),false,JSON.stringify(change));
 });
+// A 12px centre-clickable DOM node is not a usable original UIA action.
+test('D01 compact five-button UIA refuses tiny interactive hit targets',()=>{
+ for(const width of [320,390,551,800]){
+  assert.equal(evaluate(width),true,'approved geometry '+width);
+  assert.equal(evaluate(width,{tinyWidth:true}),false,'tiny width '+width);
+  assert.equal(evaluate(width,{tinyHeight:true}),false,'tiny height '+width);
+ }
+});
+
 test('D02 fractional zoom tolerance does not alter approved design',()=>{
  assert.equal(evaluate(320,{fractional:true}),true);
 });
