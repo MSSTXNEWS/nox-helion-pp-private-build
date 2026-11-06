@@ -22,6 +22,7 @@ for token in (
     "case 'settings.denied':",
     'id="personaStatus" class="mono" role="status" aria-live="polite"',
     "window.noxVisual?.setMode(v?.performance||'BALANCED')",
+    '<body class="reduced">',  # Safe static frame until native SQLite motion preference arrives.
     'prefers-reduced-motion: reduce',
 ):
     assert token in web, token
@@ -39,6 +40,7 @@ with tempfile.TemporaryDirectory() as temp:
 scripts = re.findall(r'<script[^>]*>(.*?)</script>', web, re.S)
 assert len(scripts) == 2
 for script in scripts:
-    check = subprocess.run(['node','--check'], input=script, text=True, capture_output=True)
-    assert check.returncode == 0, check.stderr
+    # Explicit UTF-8 stdin is required: Windows GitHub runners default to cp1252.
+    check = subprocess.run(['node','--check'], input=script.encode('utf-8'), capture_output=True)
+    assert check.returncode == 0, check.stderr.decode('utf-8', errors='replace')
 print('D06 R8 SETTINGS SOURCE_ONLY: validation/readback/ARIA/JS PASS; Windows owner-PC not tested')
