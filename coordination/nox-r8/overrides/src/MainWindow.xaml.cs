@@ -24,6 +24,7 @@ public partial class MainWindow : Window
     private readonly HttpClient http = new() { Timeout = TimeSpan.FromMinutes(10) };
     private readonly SemaphoreSlim generationLock = new(1, 1);
     private CancellationTokenSource? active;
+    private string? activeRequestId; // Owned by the current WebView2 document and chat request.
     private CancellationTokenSource? activeModelPull;
     private static readonly bool NativeSelfTestRequested = Environment.GetCommandLineArgs().Any(
         arg => arg.Equals("--nox-selftest", StringComparison.OrdinalIgnoreCase));
@@ -88,6 +89,7 @@ public partial class MainWindow : Window
             Browser.CoreWebView2.NewWindowRequested += (_, args) => args.Handled = true;
             Browser.CoreWebView2.PermissionRequested += (_, args) => args.State = CoreWebView2PermissionState.Deny;
             Browser.CoreWebView2.WebMessageReceived += OnMessage;
+            Browser.CoreWebView2.NavigationStarting += (_, _) => { active?.Cancel(); activeRequestId = null; };
             using var stream = typeof(MainWindow).Assembly.GetManifestResourceStream("NOX.HELION.index.html")
                 ?? throw new InvalidOperationException("Embedded D02 interface resource is missing");
             using var reader = new StreamReader(stream);
@@ -596,8 +598,14 @@ public partial class MainWindow : Window
             string Text(string name) => request.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String ? (value.GetString() ?? "") : "";
             switch (kind)
             {
-                case "stop": Interlocked.Increment(ref stopSignalCount); active?.Cancel(); break; // Chat STOP never revokes a separate owner-approved LEARN request.
-                case "chat": await Generate(Text("text")); break;
+                case "stop":
+                    // STOP is bound to the exact active chat owner; never cancel LEARN/model pulls.
+                    if (active != null && string.Equals(activeRequestId, Text("requestId"), StringComparison.Ordinal)) {
+                        Interlocked.Increment(ref stopSignalCount);
+                        active.Cancel();
+                    }
+                    break;
+                case "chat": await Generate(Text("text"), Text("requestId")); break;
                 case "history": Send("history", ReadHistory()); break;
                 case "notes.list": Send("notes", ReadNotes()); break;
                 case "notes.add": AddNote(Text("title"), Text("content")); Send("notes", ReadNotes()); break;
@@ -642,7 +650,8 @@ public partial class MainWindow : Window
         // Do not download models and do not follow arbitrary network endpoints.
         try
         {
-            using var existingCheck = await http.GetAsync(Api + "/api/tags", CancellationToken.None);
+            using var probe = new CancellationTokenSource(TimeSpan.FromSeconds(4));
+            using var existingCheck = await http.GetAsync(Api + "/api/tags", probe.Token);
             if (existingCheck.IsSuccessStatusCode) { await CheckProvider(); return; }
         }
         catch (HttpRequestException) { /* Local engine may be stopped. */ }
@@ -670,9 +679,10 @@ public partial class MainWindow : Window
         for (int i = 0; i < 30; ++i) {
             await Task.Delay(1000);
             try {
-                using var r = await http.GetAsync(Api + "/api/tags");
+                using var probe = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+                using var r = await http.GetAsync(Api + "/api/tags", probe.Token);
                 if (r.IsSuccessStatusCode) { await CheckProvider(); return; }
-            } catch (HttpRequestException) { }
+            } catch (HttpRequestException) { } catch (TaskCanceledException) { }
         }
         throw new InvalidOperationException("Ollama не готов после запуска; существующие данные не изменены");
     }
@@ -681,7 +691,8 @@ public partial class MainWindow : Window
     {
         try
         {
-            using var response = await http.GetAsync(Api + "/api/tags", CancellationToken.None);
+            using var probe = new CancellationTokenSource(TimeSpan.FromSeconds(4));
+            using var response = await http.GetAsync(Api + "/api/tags", probe.Token);
             response.EnsureSuccessStatusCode();
             using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
             var names = json.RootElement.GetProperty("models").EnumerateArray()
@@ -692,20 +703,37 @@ public partial class MainWindow : Window
         catch (Exception ex) { Send("health", new { online = false, endpoint = Api, model = CurrentModel, error = ex.Message }); }
     }
 
-    private async Task Generate(string prompt)
+    private async Task Generate(string prompt, string requestId)
     {
         if (string.IsNullOrWhiteSpace(prompt)) return;
-        if (prompt.Length > 32000) { Send("error", "Prompt exceeds 32,000 characters"); return; }
-        if (!await generationLock.WaitAsync(0)) { Send("error", "Generation already running. Use STOP."); return; }
+        // Only an explicit bounded owner ID may dispatch a native inference.
+        if (requestId.Length < 8 || requestId.Length > 128 ||
+            requestId.Any(c => !(char.IsLetterOrDigit(c) || c == '-' || c == '_'))) {
+            Send("error", new { requestId, message = "CHAT_REQUEST_ID_DENIED" });
+            return;
+        }
+        if (prompt.Length > 32000) {
+            Send("error", new { requestId, message = "Prompt exceeds 32,000 characters" });
+            return;
+        }
+        if (!await generationLock.WaitAsync(0)) {
+            Send("error", new { requestId, message = "Generation already running. Use STOP." });
+            return;
+        }
         using var cancellation = new CancellationTokenSource();
         lastGenerationCompleted = false;
         lastGenerationStopped = false;
         active = cancellation;
+        activeRequestId = requestId;
+        // A cancelled/replaced document cannot receive a late stream or terminal ACK.
+        void Emit(string type, object value) {
+            if (string.Equals(activeRequestId, requestId, StringComparison.Ordinal)) Send(type, value);
+        }
         Interlocked.Increment(ref generationStartedCount);
         var answer = new StringBuilder();
         try
         {
-            Send("status", "GENERATING");
+            Emit("status", new { requestId, state = "GENERATING" });
             var preferences = ReadPreferencesDictionary();
             var mode = preferences.TryGetValue("performance", out var selectedMode) ? selectedMode : "BALANCED";
             var maxTokens = mode == "MAX" ? 1600 : mode == "ECO" ? 384 : 1024;
@@ -744,7 +772,8 @@ public partial class MainWindow : Window
                 {
                     var value = token.GetString() ?? "";
                     answer.Append(value);
-                    Send("token", value);
+                    cancellation.Token.ThrowIfCancellationRequested();
+                    Emit("token", new { requestId, text = value });
                 }
                 if (item.TryGetProperty("error", out var serverError))
                     throw new InvalidOperationException("Ollama: " + serverError.ToString());
@@ -761,15 +790,37 @@ public partial class MainWindow : Window
             if (answer.Length > 0) PersistChat(prompt, answer.ToString());
             // Completion is true only after SQLite commits successfully.
             lastGenerationCompleted = true;
-            Send("status", "READY");
-            Send("metrics", new { outputTokens = evalCount, promptTokens = promptCount,
+            Emit("status", new { requestId, state = "READY" });
+            Emit("metrics", new { requestId, outputTokens = evalCount, promptTokens = promptCount,
                 tokensPerSecond = evalDuration > 0 ? Math.Round(evalCount * 1000000000.0 / evalDuration, 1) : 0,
                 measured = evalCount > 0 && evalDuration > 0 });
-            Send("complete", new { ok = answer.Length > 0, tokens = evalCount, stopped = false });
+            Emit("complete", new { requestId, ok = answer.Length > 0, tokens = evalCount, stopped = false });
         }
-        catch (OperationCanceledException) { lastGenerationStopped = true; Send("status", "STOPPED"); Send("complete", new { ok = false, stopped = true }); }
-        catch (Exception ex) { Send("error", ex.Message); Send("status", "ERROR"); Send("complete", new { ok = false, stopped = false }); }
-        finally { active = null; Interlocked.Increment(ref generationFinishedCount); generationLock.Release(); }
+        catch (OperationCanceledException) {
+            lastGenerationStopped = true;
+            Emit("status", new { requestId, state = "STOPPED" });
+            Emit("complete", new { requestId, ok = false, stopped = true });
+        }
+        catch (HttpRequestException ex) {
+            // Distinguish transport-offline from HTTP model/server rejection.
+            await CheckProvider();
+            Emit("error", new { requestId, message = ex.StatusCode == null
+                ? "PROVIDER_UNREACHABLE: локальный Ollama не отвечает"
+                : "OLLAMA_HTTP_ERROR: " + (int)ex.StatusCode });
+            Emit("status", new { requestId, state = "ERROR" });
+            Emit("complete", new { requestId, ok = false, stopped = false });
+        }
+        catch (Exception ex) {
+            Emit("error", new { requestId, message = ex.Message });
+            Emit("status", new { requestId, state = "ERROR" });
+            Emit("complete", new { requestId, ok = false, stopped = false });
+        }
+        finally {
+            active = null;
+            activeRequestId = null;
+            Interlocked.Increment(ref generationFinishedCount);
+            generationLock.Release();
+        }
     }
 
     private void PersistChat(string prompt, string answer)
