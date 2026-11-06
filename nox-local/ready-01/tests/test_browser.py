@@ -7,6 +7,11 @@ class BrowserSmoke(unittest.TestCase):
   try:from playwright.sync_api import sync_playwright
   except ImportError:self.skipTest('Playwright not installed')
   url=os.environ.get('NOX_TEST_URL','http://127.0.0.1:18774/')
+  import urllib.request
+  try:
+   with urllib.request.urlopen(url+'api/mega/health',timeout=2) as resp:
+    if resp.status!=200:self.skipTest('NOX server not running')
+  except Exception:self.skipTest('Browser QA requires launched NOX; run this test after START_NOX_READY.ps1')
   with sync_playwright() as p:
    try:browser=p.chromium.launch(headless=True,executable_path=os.environ.get('CHROMIUM_PATH') or None,args=['--no-sandbox'])
    except Exception as e:self.skipTest('Chromium unavailable: '+str(e)[:180])
