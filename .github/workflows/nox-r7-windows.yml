@@ -1,0 +1,142 @@
+name: NOX HELION R7 Windows native build
+
+on:
+  push:
+    branches: [nox-local-r7-windows-20261106]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nox-r7-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 35
+    env:
+      PYTHONUTF8: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Verify immutable source archive and unpack
+        shell: pwsh
+        run: |
+          $archive = Join-Path $env:GITHUB_WORKSPACE 'nox_local_r7/NOX_HELION_R7_SOURCE.zip'
+          if (!(Test-Path -LiteralPath $archive -PathType Leaf)) { throw 'NOX_R7_ARCHIVE_MISSING' }
+          $h = (Get-FileHash $archive -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($h -cne 'c4f0f99611a1b2b29ef046be25682b11fb2b2a627246cc0ba08a720704480f78') { throw 'NOX_R7_SOURCE_SHA_MISMATCH' }
+          $src = Join-Path $env:RUNNER_TEMP 'nox-r7-source'
+          New-Item -ItemType Directory -Force -Path $src | Out-Null
+          Expand-Archive -LiteralPath $archive -DestinationPath $src
+          "NOX_R7_SRC=$src" >> $env:GITHUB_ENV
+
+      - name: Verify exact source, SQLite RAG, UI and native contract
+        shell: pwsh
+        run: |
+          python -m pip install --disable-pip-version-check pygments
+          foreach ($test in @('verify_package.py','test_knowledge_schema.py','test_r7_ui_smoke.py','test_r5_acceptance.py','test_webview_protocol.py','validate_source.py')) {
+            python (Join-Path $env:NOX_R7_SRC $test)
+            if ($LASTEXITCODE -ne 0) { throw "NOX_R7_TEST_FAILED: $test" }
+          }
+
+      - name: Compile WPF/WebView2 for Windows x64
+        shell: pwsh
+        run: |
+          $output = Join-Path $env:GITHUB_WORKSPACE 'nox_local_r7/windows_x64'
+          dotnet publish (Join-Path $env:NOX_R7_SRC 'src/NOX.HELION.csproj') -c Release -r win-x64 --self-contained false -o $output -p:ContinuousIntegrationBuild=true
+          if ($LASTEXITCODE -ne 0) { throw 'NOX_R7_WINDOWS_BUILD_FAILED' }
+          $exe = Join-Path $output 'NOX.HELION.exe'
+          if (!(Test-Path -LiteralPath $exe -PathType Leaf)) { throw 'NOX_R7_EXE_MISSING' }
+          Copy-Item (Join-Path $env:NOX_R7_SRC 'START_NOX.ps1') -Destination $output
+          $sha = (Get-FileHash $exe -Algorithm SHA256).Hash.ToLowerInvariant()
+          @{
+            schema='NOX_R7_WINDOWS_BUILD_V1'; source_commit='${{ github.sha }}';
+            source_archive_sha256='c4f0f99611a1b2b29ef046be25682b11fb2b2a627246cc0ba08a720704480f78';
+            exe_sha256=$sha; exe_bytes=(Get-Item $exe).Length;
+            windows_compile='PASS'; webview2_ui='NOT_TESTED';
+            qwen_chat_stop_sqlite='NOT_TESTED'; full_v16_accepted=$false
+          } | ConvertTo-Json -Depth 5 | Set-Content (Join-Path $output 'WINDOWS_BUILD_RECEIPT.json') -Encoding utf8
+          Write-Host "R7 WINDOWS EXE SHA256=$sha"
+
+      - name: Check hosted Windows WebView2 runtime
+        shell: pwsh
+        run: |
+          $reg = 'HKLM:\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F1...}'
+          foreach ($p in @('HKLM:\SOFTWARE\Microsoft\EdgeUpdate\Clients','HKLM:\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients')) {
+            Get-ChildItem -Path $p -ErrorAction SilentlyContinue |
+              ForEach-Object {
+                $x = Get-ItemProperty -LiteralPath $_.PSPath -ErrorAction SilentlyContinue
+                if ($x.name -match 'WebView2') { Write-Host "EDGE_WEBVIEW2_REGISTRY Name=$($x.name) Version=$($x.pv)" }
+              }
+          }
+          $edge = Get-ChildItem 'C:\Program Files (x86)\Microsoft\EdgeWebView\Application' -Directory -ErrorAction SilentlyContinue
+          Write-Host "EDGE_WEBVIEW2_INSTALLATIONS=$(@($edge).Count)"
+
+      - name: Native Windows UI render and SQLite isolation
+        shell: pwsh
+        run: |
+          $out = Join-Path $env:GITHUB_WORKSPACE 'nox_local_r7/windows_x64'
+          $exe = Join-Path $out 'NOX.HELION.exe'
+          $buildReceipt = Join-Path $out 'WINDOWS_BUILD_RECEIPT.json'
+          $stamp = [DateTime]::UtcNow
+          $runId = 'NOX-R7-WIN-' + $env:GITHUB_RUN_ID
+          $p = Start-Process -FilePath $exe -WorkingDirectory $out -PassThru -ArgumentList @('--nox-ui-smoke',"--nox-runid=$runId")
+          $dir = Join-Path $env:LOCALAPPDATA 'NOX_HELION'
+          $receiptPath = Join-Path $dir "ui_selftest_$($p.Id).json"
+          $startupError = Join-Path $dir "startup_failure_$($p.Id).json"
+          $pass = $false
+          try {
+            for ($i=0; $i -lt 120; $i++) {
+              Start-Sleep -Milliseconds 500
+              if (Test-Path $receiptPath -PathType Leaf) {
+                $n = Get-Content $receiptPath -Raw | ConvertFrom-Json
+                $sha = (Get-FileHash $exe -Algorithm SHA256).Hash
+                $checked = [DateTimeOffset]::Parse([string]$n.checkedAt).UtcDateTime
+                $pass = ($n.schema -ceq 'NOX_WPF_UI_SMOKE_R7_V1' -and
+                  $n.runId -ceq $runId -and $n.wpfWebView2Accepted -eq $true -and
+                  [int]$n.pid -eq $p.Id -and $n.qwenE2ETested -eq $false -and
+                  $checked -ge $stamp -and
+                  $n.checks.real_webview2_eight_routes -eq 'PASS' -and
+                  $n.checks.isolated_sqlite_path -eq 'PASS' -and
+                  $n.checks.native_wpf_webview2_renderer -eq 'PASS' -and
+                  [string]::Equals([string]$n.exeSha256, [string]$sha, [StringComparison]::OrdinalIgnoreCase))
+                Write-Host "R7 NATIVE UI RECEIPT=$($n.wpfWebView2Accepted) ERROR=$($n.error)"
+                break
+              }
+              if (Test-Path $startupError -PathType Leaf) {
+                $f = Get-Content $startupError -Raw | ConvertFrom-Json
+                Write-Host "R7 STARTUP FAILURE: $($f.errorType): $($f.message)"
+                break
+              }
+              $p.Refresh()
+              if ($p.HasExited) { Write-Host "R7 UI EXITED BEFORE RECEIPT: $($p.ExitCode)"; break }
+            }
+            try { Wait-Process -Id $p.Id -Timeout 8 -ErrorAction Stop } catch {}
+            $p.Refresh()
+            if (!$p.HasExited -or $p.ExitCode -ne 0) { $pass = $false }
+            Write-Host "R7 PROCESS EXITED=$($p.HasExited) CODE=$(if($p.HasExited){$p.ExitCode}else{'RUNNING'}) WINDOW=$($p.MainWindowHandle)"
+          } finally {
+            $p.Refresh()
+            if (!$p.HasExited) { Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue }
+          }
+          $b = Get-Content $buildReceipt -Raw | ConvertFrom-Json
+          $b.webview2_ui = $(if ($pass) {'PASS'} else {'HOLD'})
+          $b | ConvertTo-Json -Depth 5 | Set-Content $buildReceipt -Encoding utf8
+          if ($pass) { Write-Host 'NOX R7 PHYSICAL WEBVIEW2 UI + SQLite ISOLATION PASS' }
+          else { Write-Warning 'NOX R7 UI HOLD on noninteractive hosted Windows runner' }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NOX-HELION-R7-WINDOWS-${{ github.sha }}
+          path: nox_local_r7/windows_x64/
+          retention-days: 14
+          if-no-files-found: error
