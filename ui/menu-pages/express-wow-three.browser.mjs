@@ -8,6 +8,11 @@ try{
   await page.goto('http://127.0.0.1:8765/ui/menu-pages/index.html',{waitUntil:'load'});
   await page.locator('#fx').click();
   await page.waitForFunction(()=>document.body.dataset.fx==='MAX');
+  await page.waitForFunction(()=>document.querySelector('.universe')?.dataset.noxHaloHud==='1');
+  const halo=page.locator('canvas.nox-halo-radar');
+  assert.equal(await halo.count(),1,'HALO should mount into original universe');
+  assert.equal(await halo.isVisible(),true,'HALO should show in MAX');
+  assert.ok(await halo.evaluate(el=>el.width>0&&el.height>0),'HALO must render real pixels');
   const state=await page.waitForFunction(()=>{
    const stage=document.querySelector('.universe');
    return ['active','fallback'].includes(stage?.dataset.wowThreeState);
@@ -18,6 +23,7 @@ try{
   await page.locator('#fx').click();
   await page.waitForFunction(()=>document.body.dataset.fx==='ECO');
   assert.equal(await page.locator('canvas.nox-wow-three').isVisible(),false);
+  assert.equal(await halo.isVisible(),false,'HALO must be hidden in ECO');
   const buttons=await page.locator('#directions button').count();
   assert.equal(buttons,8,'All eight original navigation directions remain');
   assert.equal(pageErrors.length,0,pageErrors.join('; '));
@@ -28,6 +34,7 @@ try{
  await reduced.locator('#fx').click();
  await reduced.waitForTimeout(400);
  assert.equal(await reduced.locator('canvas.nox-wow-three').isVisible(),false);
+ assert.equal(await reduced.locator('canvas.nox-halo-radar').count(),1,'HALO static fallback must exist under reduced motion');
  await reduced.close();
- console.log('PASS: real Chromium WebGL MAX/ECO, 390/800/1920 widths, nav, Reduced Motion');
+ console.log('PASS: real Chromium HALO HUD + WebGL MAX/ECO, 390/800/1920 widths, nav, Reduced Motion');
 } finally {await browser.close();}
