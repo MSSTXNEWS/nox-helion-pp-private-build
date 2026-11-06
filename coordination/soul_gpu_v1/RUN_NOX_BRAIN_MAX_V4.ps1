@@ -172,12 +172,25 @@ if(-not (Test-Path -LiteralPath $srcTrainer)){
 }
 # Use project-local Python venv; don't modify system Python or Downloads.
 $py=Get-Command py -ErrorAction SilentlyContinue
-if(-not $py){throw 'Python launcher py not found'}
+$has311=$false
+if($py){
+  & py -3.11 -c 'import sys; assert sys.version_info[:2] == (3,11)' 2>$null
+  $has311=($LASTEXITCODE -eq 0)
+}
+if(-not $has311){
+  $winget=Get-Command winget -ErrorAction SilentlyContinue
+  if(-not $winget){throw 'Python 3.11 missing; winget unavailable for installation'}
+  Say 'Installing Python 3.11 to support real QLoRA'
+  & winget install -e --id Python.Python.3.11 --accept-source-agreements --accept-package-agreements
+  if($LASTEXITCODE -ne 0){throw 'Python 3.11 install failed'}
+  $py=Get-Command py -ErrorAction SilentlyContinue
+  if(-not $py){throw 'Python launcher unavailable after installation; reopen PowerShell'}
+}
 $venv=Join-Path $Brain 'skills\venv_gpu'
 $python=Join-Path $venv 'Scripts\python.exe'
 if(-not (Test-Path $python)){
   & py -3.11 -m venv $venv
-  if($LASTEXITCODE -ne 0){throw 'Python 3.11 is required for NVIDIA QLoRA'}
+  if($LASTEXITCODE -ne 0){throw 'Python 3.11 venv creation failed'}
 }
 & $python -m pip install --disable-pip-version-check --upgrade pip
 if($LASTEXITCODE -ne 0){throw 'pip update failed'}
