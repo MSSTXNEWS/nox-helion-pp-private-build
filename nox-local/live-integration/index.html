@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="ru" data-bs-theme="dark"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#060809"><title>NOX HELION · Original Live Sources V7 Fixed</title>
+<link rel="stylesheet" href="./vendor/tabler/tabler.min.css"><link rel="stylesheet" href="./nox.css">
+<script type="importmap">{"imports":{"three":"./vendor/three/three.module.js","three/addons/":"./vendor/three/addons/"}}</script>
+<link rel="stylesheet" href="./nox-route-menu.css"></head>
+<body class="nox-home">
+<div class="grain" aria-hidden="true"></div>
+<div id="app">
+  <header class="topbar">
+    <a href="./index.html" class="brand" aria-label="NOX HELION главная"><span class="brand-mark" aria-hidden="true"></span><span><strong>NOX HELION</strong><small>LOCAL INTELLIGENCE</small></span></a>
+    <div class="top-metadata" aria-label="Показатели NOX">
+      <div class="mini-reading"><span>GPU</span><b id="gpuTop">Н/Д</b></div>
+      <div class="mini-reading"><span>VRAM</span><b id="vramTop">Н/Д</b></div>
+      <div class="mini-reading"><span>FPS</span><b id="fpsTop">Н/Д</b></div>
+      <div class="clock"><b id="clock">--:--</b><span id="date">—</span></div>
+      <button id="fxMode" type="button" class="icon-btn" title="Режим эффектов: MAX / BALANCED / ECO" aria-label="Переключить качество эффектов">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M12 2v3m0 14v3M2 12h3m14 0h3M5 5l2 2m10 10 2 2M19 5l-2 2M7 17l-2 2"/><circle cx="12" cy="12" r="4"/></svg>
+      </button>
+    </div>
+  </header>
+  <main class="stage" id="stage">
+    <div id="spaceBackdrop" aria-hidden="true"></div><div id="glstage" aria-hidden="true"><iframe title="Original MIT Black Hole WebGL animation" src="./vendor/blackhole/sceneblackhole.html" loading="eager" tabindex="-1"></iframe></div>
+    <div class="fallback-orb" id="fallbackOrb" aria-hidden="true"></div>
+    <div class="hero-ui">
+      
+      <h1>NOX HELION</h1><p class="hero-sub">LOCAL AI</p>
+      <a href="./chat.html" class="core-chat" id="openCoreChat" aria-label="Открыть отдельную страницу чата с ядром NOX">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 11.5a7.7 7.7 0 0 1-8 7.5 8.3 8.3 0 0 1-3.1-.6L4 20l1.5-4.4A7.2 7.2 0 0 1 4 11.5 7.7 7.7 0 0 1 12 4a7.7 7.7 0 0 1 8 7.5Z"/><path stroke-linecap="round" d="M8.7 11.6h.01m3.3 0h.01m3.3 0h.01"/></svg>
+        <span>ЧАТ С ЯДРОМ</span><span class="arrow">↗</span>
+      </a>
+    </div>
+    <div class="orb-annotation top-note" aria-hidden="true">HELION / ACTIVE CORE</div>
+    <div class="orb-annotation side-note" aria-hidden="true">THREE.JS · ORIGINAL LAVA SOURCE</div>
+    <div class="ambient-floor" aria-hidden="true"></div>
+  </main>
+  <section class="control-deck" aria-label="Основные функции">
+    <div class="sensor-block sensor-gpu" aria-label="Датчик GPU">
+      <div class="gauge" id="gpuGauge" style="--gauge:0deg"><span class="gauge-value" id="gpuGaugeVal">Н/Д</span><small>GPU</small></div>
+      <div class="sensor-numbers"><span><b id="tempVal">—</b><small>°C</small></span><span><b id="powerVal">—</b><small>W</small></span></div>
+      <svg class="sparkline" id="gpuSpark" viewBox="0 0 102 31" aria-label="График истории GPU"><path d="" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
+    </div>
+    <div class="main-actions">
+      <a class="metal-card action-learning" href="./training.html"><span class="action-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="m12 2 9 5-9 5-9-5 9-5Zm-9 9 9 5 9-5M3 16l9 5 9-5"/></svg>
+      </span><span class="action-text"><strong>ОБУЧЕНИЕ ВЕСОВ</strong><small>LoRA · QLoRA · GPU</small></span><span class="action-end">↗</span></a>
+      <button class="metal-card action-models" id="modelBtn" type="button"><span class="action-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="m12 2 9 5v10l-9 5-9-5V7l9-5Zm0 10 9-5M12 12 3 7m9 5v10"/></svg>
+      </span><span class="action-text"><strong>МОДЕЛИ</strong><small id="modelStatus">Проверка Ollama…</small></span><span class="action-end">↗</span></button>
+      <button class="metal-card action-memory" id="memoryBtn" type="button"><span class="action-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M7 10c3-2 7-2 10 0m-10 4c3 2 7 2 10 0"/></svg>
+      </span><span class="action-text"><strong>ПАМЯТЬ S03</strong><small>Знания · История · Опыт</small></span><span class="action-end">↗</span></button>
+    </div>
+    <div class="sensor-block sensor-vram" aria-label="Датчик видеопамяти"><div class="vram-pulse" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div><div class="gauge vram" id="vramGauge" style="--gauge:0deg"><span class="gauge-value" id="vramGaugeVal">Н/Д</span><small>VRAM</small></div></div>
+  </section>
+  <footer class="system-line"><div><span class="live-dot" id="ollamaDot"></span><strong>OLLAMA</strong> <span id="connectionLabel">проверка подключения</span></div><span class="footer-mid">NOX · LOCAL MODE · <span id="qualityLabel">MAX</span></span><span>THREE.JS / ORIGINAL LIVE SHADERS</span></footer>
+</div>
+<dialog id="infoDialog" class="nox-dialog"><form method="dialog"><button class="dialog-close" aria-label="Закрыть">×</button><h2 id="dialogTitle"></h2><div id="dialogContent"></div><button type="submit" class="dialog-confirm">ЗАКРЫТЬ</button></form></dialog>
+<script type="module" src="./main-v7.mjs"></script>
+<link rel="stylesheet" href="./cinema-hud.css"><link rel="stylesheet" href="./mega.css"><script src="./vendor/fx/echarts.min.js" defer></script><script src="./cinema-hud.js" defer></script><script src="./nox-home-nav.js" defer></script><script src="./nox-notices.js" defer></script><script src="./nox-nav-ext.js" defer></script></body></html>
