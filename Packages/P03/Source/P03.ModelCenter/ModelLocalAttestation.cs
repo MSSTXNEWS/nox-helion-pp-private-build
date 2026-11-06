@@ -198,6 +198,16 @@ public static class ModelLocalAttestation
             var root = doc.RootElement;
             if (root.ValueKind != JsonValueKind.Object)
                 throw new InvalidDataException("OLLAMA_STREAM_NONOBJECT_EVENT");
+            // Reject ambiguous Ollama NDJSON control fields before reading last-wins JSON.
+            // A duplicated error/status/digest/progress value is not owner evidence.
+            var seenControls = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var property in root.EnumerateObject())
+            {
+                if ((property.NameEquals("status") || property.NameEquals("error") ||
+                     property.NameEquals("digest") || property.NameEquals("completed") ||
+                     property.NameEquals("total")) && !seenControls.Add(property.Name))
+                    throw new InvalidDataException("OLLAMA_STREAM_DUPLICATE_CONTROL_FIELD_HOLD");
+            }
             var status = ReadString(root, "status", 512) ?? "unknown";
             var error = ReadString(root, "error", 2048);
             var digest = ReadString(root, "digest", 71);

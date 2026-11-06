@@ -280,6 +280,29 @@ using (var reader = new StringReader(goodLine + "\r\n{\"status\":\"success\"}"))
     await foreach (var evt in ModelLocalAttestation.ReadValidatedStreamAsync(reader)) updates.Add(evt);
     T13(updates.Count == 2 && updates[0].Completed == 1 && updates[1].Status == "success", "T13-01 bounded valid CRLF stream");
 }
+// B04 R5: duplicate Ollama NDJSON control properties must never use last-wins.
+// These are original ModelLocalAttestation methods, not a fake provider.
+void RequireStreamDuplicateControlHold(string json, string name)
+{
+    try { ModelLocalAttestation.ParseVerifiedEvent(json); }
+    catch (InvalidDataException ex) when (ex.Message == "OLLAMA_STREAM_DUPLICATE_CONTROL_FIELD_HOLD")
+    { Assert(true, name); return; }
+    throw new Exception("FAIL " + name);
+}
+RequireStreamDuplicateControlHold("{\"status\":\"error\",\"status\":\"success\"}",
+    "B04 duplicate status cannot forge success");
+RequireStreamDuplicateControlHold("{\"status\":\"downloading\",\"error\":\"disk error\",\"error\":\"\"}",
+    "B04 duplicate error cannot hide provider failure");
+RequireStreamDuplicateControlHold("{\"digest\":\"sha256:" + new string('a', 64) + "\",\"digest\":\"sha256:" + new string('b', 64) + "\"}",
+    "B04 duplicate digest cannot disguise installed layer");
+RequireStreamDuplicateControlHold("{\"completed\":1,\"completed\":2,\"total\":3}",
+    "B04 duplicate completed cannot forge progress");
+RequireStreamDuplicateControlHold("{\"completed\":7,\"total\":5,\"total\":10}",
+    "B04 duplicate total cannot hide impossible progress");
+RequireStreamDuplicateControlHold("{\"\\\\u0073tatus\":\"error\",\"status\":\"success\"}",
+    "B04 escaped duplicate status is not unique owner evidence");
+Assert(ModelLocalAttestation.ParseVerifiedEvent("{\"status\":\"downloading\",\"note\":1,\"note\":2}").Status == "downloading",
+    "B04 non-control metadata leaves standard stream status valid");
 // 02. Oversized first line without a terminator fails before unbounded allocation.
 await RejectAsync(() => Drain(new string('x', ModelLocalAttestation.MaxEventCharacters + 1)),
     "T13-02 oversized no-newline line denied");
