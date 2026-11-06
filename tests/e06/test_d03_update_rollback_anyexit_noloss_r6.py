@@ -116,6 +116,43 @@ class D03AnyExitNoLoss(unittest.TestCase):
         self.assertEqual(snapshot["unmanaged_install_data"],"HOLD")
         self.assertEqual(snapshot["unmanaged_slots_unreadable"],["stage"])
 
+    def proof_with_single_side_slot(self, side: Path) -> dict:
+        return original_no_loss_anyexit_slot_snapshot(
+            self.marker, b"persisted-data", self.mid,
+            self.unmanaged.name, b"user-owned-bytes", self.uid, self.root,
+            (("installed", self.inst), ("stage", side)))
+
+    def test_missing_foreign_side_slot_cannot_count_as_absent(self):
+        # Old code treated any outside-the-owner-base ENOENT as a safe
+        # missing side slot, so unchanged installed user data gave false PASS.
+        foreign = tempfile.TemporaryDirectory()
+        self.addCleanup(foreign.cleanup)
+        side = Path(foreign.name) / "nonexistent-native-side-slot"
+        self.assertFalse(side.exists())
+        snapshot = self.proof_with_single_side_slot(side)
+        self.assertEqual(snapshot["persistent_user_data"], "PRESERVED")
+        self.assertEqual(snapshot["unmanaged_install_data"], "HOLD")
+        self.assertEqual(snapshot["unmanaged_slots_present"], ["installed"])
+        self.assertEqual(snapshot["unmanaged_slots_unreadable"], ["stage"])
+        self.assertIsNone(snapshot["original_unmanaged_slot"])
+
+    def test_missing_side_slot_under_redirected_parent_is_hold(self):
+        # No side-slot directory exists: it is the *ancestor* junction or
+        # symlink that invalidates a purported empty rollback location.
+        real = self.root / "other"
+        real.mkdir()
+        redirected = self.root / "redirected"
+        try:
+            redirected.symlink_to(real, target_is_directory=True)
+        except (OSError, NotImplementedError):
+            self.skipTest("directory symlink not permitted on this runner")
+        side = redirected / "missing-stage"
+        snapshot = self.proof_with_single_side_slot(side)
+        self.assertEqual(snapshot["persistent_user_data"], "PRESERVED")
+        self.assertEqual(snapshot["unmanaged_install_data"], "HOLD")
+        self.assertEqual(snapshot["unmanaged_slots_present"], ["installed"])
+        self.assertEqual(snapshot["unmanaged_slots_unreadable"], ["stage"])
+
     def test_both_native_exit_gates_are_strict(self):
         s=(Path(__file__).resolve().parents[2]/
            "coordination/e06/t06_samevm_installed_smoke.py").read_text("utf-8")

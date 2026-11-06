@@ -255,6 +255,13 @@ def original_no_loss_anyexit_slot_snapshot(
     preserved=[]
     unreadable=[]
     for label,root in slots:
+        # An absent side slot is safe to classify as absent only if every
+        # ancestor remains inside the original CI-owned local base. A foreign
+        # path or redirected parent must remain unreadable/HOLD even when the
+        # final directory does not exist (lstat would otherwise return ENOENT).
+        if not isinstance(root, Path) or not plain_parents(root, local_base):
+            unreadable.append(label)
+            continue
         # D03: admission is by lstat of the ORIGINAL NSIS slot, not
         # Path.exists() of its child. An empty redirected junction/symlink,
         # non-directory slot or unreadable root is NEVER proof of absence.
@@ -266,6 +273,9 @@ def original_no_loss_anyexit_slot_snapshot(
                 unreadable.append(label)
                 continue
         except FileNotFoundError:
+            # A disappearing path is not evidence that its ancestors are safe.
+            if not plain_parents(root, local_base):
+                unreadable.append(label)
             # Genuine absent backup/stage directory is normal after NSIS.
             continue
         except (OSError, ValueError):
@@ -279,7 +289,8 @@ def original_no_loss_anyexit_slot_snapshot(
             # parent directory retains the same original filesystem identity.
             try:
                 root_after=root.lstat()
-                same_root=(stat.S_ISDIR(root_after.st_mode) and
+                same_root=(plain_parents(root, local_base) and
+                           stat.S_ISDIR(root_after.st_mode) and
                            (root_after.st_dev,root_after.st_ino,root_after.st_mode) ==
                            (root_before.st_dev,root_before.st_ino,root_before.st_mode) and
                            not root.is_symlink() and
@@ -299,7 +310,8 @@ def original_no_loss_anyexit_slot_snapshot(
         # Do not silently admit a swapped/reparsed slot after reading its file.
         try:
             root_after=root.lstat()
-            same_root=(stat.S_ISDIR(root_after.st_mode) and
+            same_root=(plain_parents(root, local_base) and
+                           stat.S_ISDIR(root_after.st_mode) and
                        (root_after.st_dev,root_after.st_ino,root_after.st_mode) ==
                        (root_before.st_dev,root_before.st_ino,root_before.st_mode) and
                        not root.is_symlink() and
