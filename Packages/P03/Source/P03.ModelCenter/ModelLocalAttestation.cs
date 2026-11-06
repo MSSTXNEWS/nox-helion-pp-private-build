@@ -292,6 +292,26 @@ public static class ModelLocalAttestation
         return ParseUnambiguousModelDigest(doc.RootElement, model);
     }
 
+    // Web JSON deserialization ignores case; reject exact, case-aliased and
+    // escaped duplicate property identities at every depth before comparing.
+    private static void RequireUnambiguousReceipt(JsonElement value)
+    {
+        if (value.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in value.EnumerateArray()) RequireUnambiguousReceipt(item);
+        }
+        else if (value.ValueKind == JsonValueKind.Object)
+        {
+            var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var property in value.EnumerateObject())
+            {
+                if (!names.Add(property.Name))
+                    throw new InvalidDataException("INSTALL_RECEIPT_DUPLICATE_FIELD_HOLD");
+                RequireUnambiguousReceipt(property.Value);
+            }
+        }
+    }
+
     public static async Task VerifyReceiptAsync(string path, ModelInstallReceipt expected, CancellationToken ct)
     {
         RequireRegularUnlinkedFile(path);
@@ -300,8 +320,19 @@ public static class ModelLocalAttestation
         RequireSingleLinkFileHandle(file.SafeFileHandle);
         if (file.Length < 2 || file.Length > MaxReceiptBytes)
             throw new InvalidDataException("INSTALL_RECEIPT_SIZE_INVALID");
-        var stored = await JsonSerializer.DeserializeAsync<ModelInstallReceipt>(file,
-            new JsonSerializerOptions(JsonSerializerDefaults.Web), ct);
+        // Installed-model receipts are untrusted durable bytes, not a license
+        // to accept last-wins aliases of job, rights, model or manifest identity.
+        // Parse the SAME single-link file handle before matching the owner receipt.
+        using var doc = await JsonDocument.ParseAsync(file, new JsonDocumentOptions
+        {
+            MaxDepth = 64, AllowTrailingCommas = false,
+            CommentHandling = JsonCommentHandling.Disallow
+        }, ct);
+        if (doc.RootElement.ValueKind != JsonValueKind.Object)
+            throw new InvalidDataException("INSTALL_RECEIPT_JSON_ROOT_HOLD");
+        RequireUnambiguousReceipt(doc.RootElement);
+        var stored = doc.RootElement.Deserialize<ModelInstallReceipt>(
+            new JsonSerializerOptions(JsonSerializerDefaults.Web));
         if (stored is null || stored.Schema != "NOX_P03_INSTALL_RECEIPT_V1" ||
             stored.JobId != expected.JobId || stored.ModelTag != expected.ModelTag ||
             stored.Operation != expected.Operation ||

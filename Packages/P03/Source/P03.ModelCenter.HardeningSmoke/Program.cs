@@ -1239,6 +1239,24 @@ try
     {
         Assert(true, "D04 owner rights cannot be substituted during receipt readback");
     }
+    // B04 R5: an attacker-edited installed receipt with two case-aliased
+    // digest keys must never pass last-wins Web JSON deserialization.
+    var originalReceiptJson = await File.ReadAllTextAsync(receiptPath);
+    const string digestKey = "\"ollamaDigest\":";
+    Assert(originalReceiptJson.Contains(digestKey, StringComparison.Ordinal),
+        "B04 original GGUF receipt has a manifest digest field");
+    var forgedDuplicateReceipt = originalReceiptJson.Replace(digestKey,
+        "\"OllamaDigest\":\"sha256:" + new string('f', 64) + "\"," + digestKey,
+        StringComparison.Ordinal);
+    await File.WriteAllTextAsync(receiptPath, forgedDuplicateReceipt);
+    var ambiguousReceiptHeld = false;
+    try { await ModelLocalAttestation.VerifyReceiptAsync(receiptPath, saved!, default); }
+    catch (InvalidDataException ex) when (ex.Message == "INSTALL_RECEIPT_DUPLICATE_FIELD_HOLD")
+    { ambiguousReceiptHeld = true; }
+    Assert(ambiguousReceiptHeld, "B04 duplicate installed Ollama manifest identity denied");
+    await File.WriteAllTextAsync(receiptPath, originalReceiptJson);
+    await ModelLocalAttestation.VerifyReceiptAsync(receiptPath, saved!, default);
+    Assert(true, "B04 original immutable receipt still verifies after negative fixture");
 }
 finally { Directory.Delete(d04RightsDir, recursive: true); }
 
