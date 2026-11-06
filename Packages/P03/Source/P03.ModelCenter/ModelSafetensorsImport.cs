@@ -205,9 +205,19 @@ internal static class ModelSafetensorsImport
             tensors++;
         }
         if(tensors==0)throw new InvalidDataException("P03_SAFETENSORS_NO_TENSORS");
+        // Safetensors forbids gaps anywhere in tensor data: prevent polyglot payloads.
+        // Verify SAME pinned, open file handle before recording native import.
         ranges.Sort((a,b)=>a.Start.CompareTo(b.Start));
-        for(var i=1;i<ranges.Count;i++)
-            if(ranges[i].Start<ranges[i-1].End)
+        long covered=0;
+        foreach(var span in ranges)
+        {
+            if(span.Start<covered)
                 throw new InvalidDataException("P03_SAFETENSORS_OVERLAPPING_TENSORS_HOLD");
+            if(span.Start>covered)
+                throw new InvalidDataException("P03_SAFETENSORS_UNINDEXED_BYTES_HOLD");
+            covered=span.End;
+        }
+        if(covered!=file.Length-8-(long)size)
+            throw new InvalidDataException("P03_SAFETENSORS_UNINDEXED_BYTES_HOLD");
     }
 }

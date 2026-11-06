@@ -61,6 +61,18 @@ Assert(!await AdmitHeaderD04Async("{\"a\":{\"dtype\":\"F32\",\"shape\":[1],\"dat
 Assert(!await AdmitHeaderD04Async("{\"a\":{\"dtype\":\"F32\",\"shape\":[1],\"data_offsets\":[0,4]},\"b\":{\"dtype\":\"F32\",\"shape\":[1],\"data_offsets\":[2,6]}}",8),
     "D04 overlapping tensor ranges rejected");
 
+// D04: real temporary-file fixtures for the native C# Safetensors parser.
+Assert(await AdmitHeaderD04Async("{\"z\":{\"dtype\":\"F32\",\"shape\":[1],\"data_offsets\":[4,8]},\"a\":{\"dtype\":\"F32\",\"shape\":[1],\"data_offsets\":[0,4]}}",8),
+    "D04 reverse-order contiguous ranges accepted");
+Assert(!await AdmitHeaderD04Async("{\"a\":{\"dtype\":\"F32\",\"shape\":[1],\"data_offsets\":[4,8]}}",8),
+    "D04 hidden prefix bytes rejected");
+Assert(!await AdmitHeaderD04Async("{\"a\":{\"dtype\":\"F32\",\"shape\":[1],\"data_offsets\":[0,4]},\"b\":{\"dtype\":\"F32\",\"shape\":[1],\"data_offsets\":[8,12]}}",12),
+    "D04 hidden middle bytes rejected");
+Assert(!await AdmitHeaderD04Async("{\"a\":{\"dtype\":\"F32\",\"shape\":[1],\"data_offsets\":[0,4]}}",8),
+    "D04 hidden trailing bytes rejected");
+Assert(!await AdmitHeaderD04Async("{\"empty\":{\"dtype\":\"F32\",\"shape\":[0,3],\"data_offsets\":[0,0]}}",4),
+    "D04 empty tensor extra payload rejected");
+
 // R99: a non-default HTTPS port is a different official-source origin.
 // This is a focused reviewed-registry source test, not installed-model proof.
 var reviewedOrigin = new ModelArtifactReviewCandidate(
