@@ -209,6 +209,12 @@ export function nativeAutostartPersistenceAck(reply,requested){
   // Only the original WPF {enabled,readOnly} receipt proves an HKCU result.
   // Nested progress/status, even under transport COMPLETED, is not persisted
   // Windows state and must never be displayed as SETTINGS success.
+  // Mirror the original native WPF two-field receipt contract exactly:
+  // any extra owner/status/permission claim is unverified, even on COMPLETED.
+  const receiptKeys=Object.keys(reply.result);
+  if(receiptKeys.length!==2 ||
+     !Object.prototype.hasOwnProperty.call(reply.result,'enabled') ||
+     !Object.prototype.hasOwnProperty.call(reply.result,'readOnly'))return false;
   if(Object.prototype.hasOwnProperty.call(reply.result,'status') ||
      Object.prototype.hasOwnProperty.call(reply.result,'state'))return false;
   // A new process can inspect HKCU via the original owner without mutating it.

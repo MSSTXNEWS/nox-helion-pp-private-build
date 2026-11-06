@@ -346,3 +346,17 @@ test('B05 LEARN/SETTINGS original native receipt arrays must fail closed; traini
     {enabled:false,readOnly:true}),null),true);
   assert.equal(nativeOwnerReceiptHolds([{ack:true}]),true,'top-level array denied');
 });
+
+test('SETTINGS rejects unknown owner receipt fields before any UIA persistence claim',()=>{
+ const envelope=(result)=>({routeId:'system.autostart',state:'COMPLETED',result});
+ for(const enabled of [true,false]){
+  assert.equal(nativeAutostartPersistenceAck(envelope({enabled,readOnly:false}),enabled),true);
+  assert.equal(nativeAutostartPersistenceAck(envelope({enabled,readOnly:true}),null),true);
+  for(const extra of [{ownerReceipt:{status:'APPROVED'}},{permission:'GRANTED'},{ack:true},{status:'COMPLETED'},{state:'COMPLETED'}]){
+   assert.equal(nativeAutostartPersistenceAck(envelope({enabled,readOnly:false,...extra}),enabled),false);
+   assert.equal(nativeAutostartPersistenceAck(envelope({enabled,readOnly:true,...extra}),null),false);
+  }
+ }
+ assert.equal(nativeAutostartPersistenceAck(envelope({enabled:1,readOnly:false}),true),false);
+ assert.equal(nativeAutostartPersistenceAck(envelope({enabled:true}),true),false);
+});
