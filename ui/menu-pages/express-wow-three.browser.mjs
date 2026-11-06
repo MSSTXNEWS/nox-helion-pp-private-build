@@ -1,6 +1,6 @@
 import { chromium } from 'playwright';
 import assert from 'node:assert/strict';
-const browser=await chromium.launch({headless:true,args:['--use-gl=angle','--use-angle=swiftshader','--enable-webgl','--ignore-gpu-blocklist']});
+const browser=await chromium.launch({headless:true,executablePath:process.env.NOX_CHROME_PATH||undefined,args:['--use-gl=angle','--use-angle=swiftshader','--enable-webgl','--ignore-gpu-blocklist']});
 try{
  for(const width of [390,800,1920]){
   const page=await browser.newPage({viewport:{width,height:900},reducedMotion:'no-preference'});
