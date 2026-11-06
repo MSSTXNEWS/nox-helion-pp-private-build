@@ -14,6 +14,10 @@ for token in (
     'tx.Commit();',
     'ReadPreferencesDictionary(); // independent read after SQLite COMMIT',
     'settings_wpf_owner_sqlite_readback',
+    'settings_wpf_owner_restart_readback',
+    'UiSmokeSettingsRestartRequested',
+    'selftest_r8_',
+    'NOX_SETTINGS_RESTART_WEBVIEW2_HOLD',
     'case "stop":',
 ):
     assert token in native, token

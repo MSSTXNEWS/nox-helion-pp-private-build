@@ -30,11 +30,24 @@ public partial class MainWindow : Window
         arg => arg.Equals("--nox-selftest", StringComparison.OrdinalIgnoreCase));
     private static readonly bool UiSmokeRequested = Environment.GetCommandLineArgs().Any(
         arg => arg.Equals("--nox-ui-smoke", StringComparison.OrdinalIgnoreCase));
+    private static readonly bool UiSmokeSettingsRestartRequested =
+        UiSmokeRequested && Environment.GetCommandLineArgs().Any(
+            arg => arg.Equals("--nox-settings-restart-readback", StringComparison.OrdinalIgnoreCase));
+    private static readonly string SmokeRunId = Environment.GetCommandLineArgs().FirstOrDefault(
+        arg => arg.StartsWith("--nox-runid=", StringComparison.OrdinalIgnoreCase))?
+        .Substring("--nox-runid=".Length) ?? "";
+    // A cryptographically named, per-run isolated SQLite file is reused only by
+    // the two CI smoke processes. Ordinary user sessions always use chat.sqlite3.
+    private static readonly string SmokeDatabaseName = "selftest_r8_" +
+        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(
+            string.IsNullOrWhiteSpace(SmokeRunId) ? "pid:" + Environment.ProcessId : SmokeRunId)))
+            .Substring(0, 32) + ".sqlite3";
     private readonly bool selfTestRequested = NativeSelfTestRequested || UiSmokeRequested;
     // Acceptance runs must never mutate or import into the owner's live memory.
     private static readonly string DatabasePath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "NOX_HELION", (NativeSelfTestRequested || UiSmokeRequested) ? "selftest_r7_" + Environment.ProcessId + ".sqlite3" : "chat.sqlite3");
+        "NOX_HELION", UiSmokeRequested ? SmokeDatabaseName
+          : NativeSelfTestRequested ? "selftest_r7_" + Environment.ProcessId + ".sqlite3" : "chat.sqlite3");
     private bool selfTestStarted;
     private bool uiSmokeFinished;
     private bool pendingEmbeddedNavigation;
@@ -197,6 +210,37 @@ public partial class MainWindow : Window
         string? error = null;
         try
         {
+            if (UiSmokeSettingsRestartRequested)
+            {
+                // A second actual Windows process must reopen exactly the
+                // isolated SQLite database written by the first native UI.
+                // No setting is changed during the verification process.
+                var ownerMemory = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "NOX_HELION", "chat.sqlite3");
+                if (string.Equals(Path.GetFullPath(dbPath), Path.GetFullPath(ownerMemory),
+                        StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidOperationException("NOX_SETTINGS_RESTART_OWNER_DB_HOLD");
+                checks["isolated_sqlite_path"] = "PASS";
+                if (ReadPreferencesDictionary().GetValueOrDefault("performance") != "ECO")
+                    throw new InvalidOperationException("NOX_SETTINGS_RESTART_SQLITE_HOLD");
+
+                // NavigationCompleted sends settings.get through the real WPF
+                // WebView2 owner bridge. Require the embedded UI to display ECO.
+                bool uiRestored = false;
+                for (int attempt = 0; attempt < 35; attempt++)
+                {
+                    var domMode = await Browser.CoreWebView2.ExecuteScriptAsync(
+                        "document.getElementById('performance')?.value");
+                    if (domMode == "\"ECO\"") { uiRestored = true; break; }
+                    await Task.Delay(100);
+                }
+                if (!uiRestored)
+                    throw new InvalidOperationException("NOX_SETTINGS_RESTART_WEBVIEW2_HOLD");
+                checks["settings_wpf_owner_restart_readback"] = "PASS";
+                return;
+            }
+
             var js = await Browser.CoreWebView2.ExecuteScriptAsync("""
                 (() => {
                   const required = ['consciousness','atlas','reflection','nexus','forge','core','voice','persona'];
@@ -291,7 +335,14 @@ public partial class MainWindow : Window
             string sha = "";
             try { if (File.Exists(executable)) sha = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(executable))); }
             catch (Exception ex) { error = (error ?? "") + " binary_hash:" + ex.Message; }
-            bool accepted = error == null && checks.Count == 5 && new[] { "real_webview2_eight_routes", "real_webview2_keyboard_routes", "isolated_sqlite_path", "settings_wpf_owner_sqlite_readback", "native_wpf_webview2_renderer" }.All(k => checks.TryGetValue(k, out var result) && result == "PASS") && sha.Length == 64;
+            var requiredChecks = UiSmokeSettingsRestartRequested
+                ? new[] { "isolated_sqlite_path", "settings_wpf_owner_restart_readback" }
+                : new[] { "real_webview2_eight_routes", "real_webview2_keyboard_routes",
+                          "isolated_sqlite_path", "settings_wpf_owner_sqlite_readback",
+                          "native_wpf_webview2_renderer" };
+            bool accepted = error == null && checks.Count == requiredChecks.Length &&
+                requiredChecks.All(k => checks.TryGetValue(k, out var result) && result == "PASS")
+                && sha.Length == 64;
             var receipt = new {
                 schema = "NOX_WPF_UI_SMOKE_R7_V1", pid = Environment.ProcessId,
                 runId = Environment.GetCommandLineArgs().FirstOrDefault(x => x.StartsWith("--nox-runid=", StringComparison.OrdinalIgnoreCase))?.Substring(12) ?? "",

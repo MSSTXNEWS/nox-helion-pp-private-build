@@ -74,6 +74,32 @@ jobs:
             $p.Refresh()
             if (!$p.HasExited) { Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue }
           }
+          # D06: a real second WPF/WebView2 process must recover ECO from the
+          # exact isolated SQLite DB, without writing to owner chat.sqlite3.
+          $restartStarted=[DateTime]::UtcNow
+          $restart=Start-Process -FilePath $exe -WorkingDirectory (Split-Path $exe) -ArgumentList @('--nox-ui-smoke','--nox-settings-restart-readback',"--nox-runid=$runId") -PassThru
+          try {
+            Wait-Process -Id $restart.Id -Timeout 95 -ErrorAction Stop
+            $restart.Refresh()
+            $restartFile=Join-Path $env:LOCALAPPDATA "NOX_HELION/ui_selftest_$($restart.Id).json"
+            if (!(Test-Path -LiteralPath $restartFile)) { throw 'NOX_R8_SETTINGS_RESTART_RECEIPT_MISSING' }
+            $r=Get-Content $restartFile -Raw | ConvertFrom-Json
+            $sha=(Get-FileHash $exe -Algorithm SHA256).Hash
+            $stamp=[DateTimeOffset]::Parse([string]$r.checkedAt).UtcDateTime
+            if ($restart.ExitCode -ne 0 -or $r.schema -ne 'NOX_WPF_UI_SMOKE_R7_V1' -or
+                $r.runId -cne $runId -or $r.pid -ne $restart.Id -or
+                $stamp -lt $restartStarted -or !$r.wpfWebView2Accepted -or
+                $r.checks.isolated_sqlite_path -ne 'PASS' -or
+                $r.checks.settings_wpf_owner_restart_readback -ne 'PASS' -or
+                ![string]::Equals($r.exeSha256,$sha,[StringComparison]::OrdinalIgnoreCase)) {
+              throw "NOX_R8_SETTINGS_RESTART_HOLD: $($r.error)"
+            }
+            Copy-Item $restartFile './out/SETTINGS_RESTART_RECEIPT.json' -Force
+            Write-Host "NOX_R8_SETTINGS_RESTART_NATIVE_PASS SHA256=$sha (owner-PC restart not tested)"
+          } finally {
+            $restart.Refresh()
+            if (!$restart.HasExited) { Stop-Process -Id $restart.Id -Force -ErrorAction SilentlyContinue }
+          }
       - name: Package launch helper and verified EXE
         shell: pwsh
         run: |
