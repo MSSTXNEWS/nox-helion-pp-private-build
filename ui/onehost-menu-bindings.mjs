@@ -203,6 +203,17 @@ export function nativeReadVerified(reply,route){
 
 // Native owner HKCU readback must match the requested SETTINGS Boolean.
 // COMPLETED is never evidence of persisted configuration by itself.
+// A real HKCU status-only read uses null intent, never undefined; otherwise
+// the UI would show HOLD even after the original WPF owner returned readOnly.
+export function nativeAutostartExpectedReadback(payload){
+  if(!payload || typeof payload!=='object' || Array.isArray(payload))return undefined;
+  const keys=Object.keys(payload);
+  if(keys.length===0)return null;
+  if(keys.length===1 && keys[0]==='enabled' &&
+     typeof payload.enabled==='boolean')return payload.enabled;
+  return undefined;
+}
+
 export function nativeAutostartPersistenceAck(reply,requested){
   if(!nativeReadVerified(reply,'system.autostart') ||
      typeof reply.result.enabled!=='boolean')return false;
@@ -845,7 +856,7 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
       const reply=route==='system.autostart'
         ? await autostartFlow.request(payload) : await client.request(route,payload);
       if(!disposed&&button.isConnected&&doc.getElementById('detail-title')?.textContent===visibleSection)
-        display(reply,route,route==='system.autostart'?payload.enabled:null);
+        display(reply,route,route==='system.autostart'?nativeAutostartExpectedReadback(payload):null);
     }catch(error){
       if(!disposed&&button.isConnected&&doc.getElementById('detail-title')?.textContent===visibleSection)
         status.textContent=(error.message==='TIMEOUT'?'TIMEOUT':'HOLD')+' · запрос не подтверждён';

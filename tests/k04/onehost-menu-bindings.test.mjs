@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createNativeMenuClient,mountOneHostMenu,canonicalChatContext,nativeAutostartPersistenceAck,createAutostartOwnerFlow,AUTOSTART_UIA_IDS,settingsAutostartOwnerAdmission,nativeOwnerReceiptHolds,nativeOwnerActionReceipt} from '../../ui/onehost-menu-bindings.mjs';
+import {createNativeMenuClient,mountOneHostMenu,canonicalChatContext,nativeAutostartPersistenceAck,nativeAutostartExpectedReadback,createAutostartOwnerFlow,AUTOSTART_UIA_IDS,settingsAutostartOwnerAdmission,nativeOwnerReceiptHolds,nativeOwnerActionReceipt} from '../../ui/onehost-menu-bindings.mjs';
 import {SELFBUILDER_MENU,MENU_V2_SECTIONS} from '../../ui/selfbuilder-menu-v2.mjs';
 function fixture(){let listener;const sent=[];let next=1;const webview={postMessage:x=>sent.push(x),addEventListener:(n,f)=>listener=f,removeEventListener:()=>{listener=null;}};const client=createNativeMenuClient({webview,cryptoRef:{getRandomValues:b=>{b.fill(next++);return b;}},timeoutMs:10});return {client,sent,webview,reply:x=>listener?.({data:x,source:webview,isTrusted:true}),emit:(x,source,trusted=false)=>listener?.({data:x,source,isTrusted:trusted})};}
 test('native result must correlate route and nonce; stream only that request',async()=>{
@@ -359,4 +359,27 @@ test('SETTINGS rejects unknown owner receipt fields before any UIA persistence c
  }
  assert.equal(nativeAutostartPersistenceAck(envelope({enabled:1,readOnly:false}),true),false);
  assert.equal(nativeAutostartPersistenceAck(envelope({enabled:true}),true),false);
+});
+
+test('D06 SETTINGS read-only native HKCU UI state renders after restart and foreign refusals HOLD',()=>{
+ const receipt=(enabled,readOnly,extra={})=>({
+   routeId:'system.autostart',state:'COMPLETED',result:{enabled,readOnly,...extra}
+ });
+ assert.equal(nativeAutostartExpectedReadback({}),null);
+ for(const enabled of [true,false]){
+   assert.equal(nativeAutostartPersistenceAck(receipt(enabled,true),
+     nativeAutostartExpectedReadback({})),true,'valid native read-only receipt');
+   assert.equal(nativeAutostartPersistenceAck(receipt(enabled,false),
+     nativeAutostartExpectedReadback({})),false,'write receipt not a read');
+   assert.equal(nativeAutostartPersistenceAck(receipt(enabled,false),
+     nativeAutostartExpectedReadback({enabled})),true,'native write receipt');
+   assert.equal(nativeAutostartPersistenceAck(receipt(enabled,true),
+     nativeAutostartExpectedReadback({enabled})),false,'read not a write');
+   assert.equal(nativeAutostartPersistenceAck(receipt(enabled,true,
+     {errorCode:'NOX_AUTOSTART_FOREIGN_ENTRY_HOLD'}),
+     nativeAutostartExpectedReadback({})),false,'foreign owner denial survives');
+ }
+ for(const bad of [{enabled:'true'},{enabled:1},{enabled:true,nativeConsent:true},
+                   {permissionGranted:true},[],null])
+   assert.equal(nativeAutostartExpectedReadback(bad),undefined);
 });
