@@ -16,6 +16,8 @@ class D05NativeOwnerGrantTests(unittest.TestCase):
         p.permit=lambda: permit
         p.busy=lambda: busy
         p._gate=threading.Lock()
+        p._control_lock=threading.Lock()
+        p._unreaped_worker=None
         return p
 
     def test_exact_native_owner_grants(self):

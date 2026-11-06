@@ -25,6 +25,7 @@ class D05TerminalEventGate(unittest.TestCase):
         self.owner.event_sink = lambda event: self.events.append(event) or True
         self.owner.trainer = SimpleNamespace(
             EventWriter=lambda *a, **kw: None,
+            reject_reparse_ancestors=lambda path: None,
             sha256_file=lambda path: "a" * 64)
         self.job = ForgeJob("r1", "t1", root / "model", root / "model.lock",
                             "a" * 40, root / "manifest", root / "rights",
@@ -39,6 +40,7 @@ class D05TerminalEventGate(unittest.TestCase):
                 "task_id": "t1", "package_id": "P04",
                 "evidence_verified": False, "source": "P04.QLoRA",
                 "event_type": kind, "state": state,
+                "event_sequence": index,
                 "message": "native provisional GPU event",
                 "event_id": format(index, "032x")
             })

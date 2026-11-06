@@ -27,6 +27,7 @@ class D05StopResultRaceTests(unittest.TestCase):
             owner._unreaped_worker = None  # match original P04 constructor quarantine state
             owner._active = None
             owner._requested = None
+            owner.p04 = root  # original _run uses the trainer cwd; the process is mocked
             owner.stop = lambda: False
             owner.permit = lambda: True
             owner.busy = lambda: False
