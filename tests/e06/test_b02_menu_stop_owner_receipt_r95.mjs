@@ -40,4 +40,17 @@ for(const guard of [
 assert.ok(stage.includes(blob(main)),"MainWindow addon Git blob pin");
 assert.ok(compiler.includes(blob(main)) && builder.includes(blob(main)),"direct builder addon pins");
 assert.ok(compiler.includes(blob(stage))&&builder.includes(blob(stage)),"stager pin");
+
+// B02 R5 same CoreWebView2 object survives native consent / STOP during reload.
+const binding=main.slice(main.indexOf('if (route == "menu.binding")'),main.indexOf('if (route == "menu.dispatch")'));
+assert.ok(binding.includes('var bindingEpoch = Interlocked.Read(ref _nativeDocumentEpoch);'),
+  "original native MENU must bind async owner operations to the live document");
+assert.equal((binding.match(/Interlocked.Read\(ref _nativeDocumentEpoch\) != bindingEpoch/g)||[]).length,3,
+  "STOP postawait and model/selfbuilder postconsent/postdispatch must fence epoch");
+assert.ok(route.includes('Interlocked.Read(ref _nativeDocumentEpoch) != bindingEpoch'),
+  "STOP ACK must be rejected after a WebView2 navigation or reload");
+const modelBinding=binding.slice(binding.indexOf('var ownerRoute ='));
+assert.equal((modelBinding.match(/Interlocked.Read\(ref _nativeDocumentEpoch\) != bindingEpoch/g)||[]).length,2,
+  "owner model/command operation must fence epoch before and after dispatch");
+
 console.log("B02_MENU_STOP_OWNER_RECEIPT_SOURCE_ONLY_PASS; PHYSICAL/E07 NOT_RUN");

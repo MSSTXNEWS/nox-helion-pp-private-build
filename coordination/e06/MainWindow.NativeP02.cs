@@ -220,6 +220,9 @@ public partial class MainWindow
             };
             if (!allowed.Contains(name))
                 return new NativePipeResult("", false, null, "MENU_BINDING_DENIED");
+            // Bind awaited owner operations to the current document generation.
+            // CoreWebView2 / bridge object identity alone survives navigation.
+            var bindingEpoch = Interlocked.Read(ref _nativeDocumentEpoch);
             if (name == "stop") {
                 // Exact MENU STOP must reach the existing OneHost STOP path.
                 // Never return an ACK when the native Python worker rejected it.
@@ -241,6 +244,7 @@ public partial class MainWindow
                 // A stale document, revoked SID or external navigation may
                 // not receive the native STOP acknowledgement after await.
                 if (cancel.IsCancellationRequested || !NativeP02Acl(stopSid, "chat.stop") ||
+                    Interlocked.Read(ref _nativeDocumentEpoch) != bindingEpoch ||
                     !ReferenceEquals(_nativeP02Core, core) ||
                     !ReferenceEquals(_nativeP02Bridge, bridge) || bridge.BrowserExternalActive)
                     return new NativePipeResult("", false, null, "MENU_STOP_REVOKED_HOLD");
@@ -266,6 +270,7 @@ public partial class MainWindow
                 !await ConfirmP02NativeAsync(ownerRoute, ownerPayload, cancel))
                 return new NativePipeResult("", false, null, "MENU_OWNER_ACTION_CONSENT_HOLD");
             if (cancel.IsCancellationRequested || !NativeP02Acl(ownerSid, ownerRoute) ||
+                Interlocked.Read(ref _nativeDocumentEpoch) != bindingEpoch ||
                 !ReferenceEquals(_nativeP02Bridge, bridge) || bridge.BrowserExternalActive ||
                 !ReferenceEquals(_nativeP02Core, core))
                 return new NativePipeResult("", false, null, "MENU_OWNER_REVOKED_HOLD");
@@ -283,6 +288,7 @@ public partial class MainWindow
                 return new NativePipeResult("", false, null,
                     ownerResult.ErrorCode ?? "MENU_OWNER_OPERATION_HOLD");
             if (cancel.IsCancellationRequested || !NativeP02Acl(ownerSid, ownerRoute) ||
+                Interlocked.Read(ref _nativeDocumentEpoch) != bindingEpoch ||
                 !ReferenceEquals(_nativeP02Bridge, bridge) || bridge.BrowserExternalActive ||
                 !ReferenceEquals(_nativeP02Core, core))
                 return new NativePipeResult("", false, null, "MENU_OWNER_REVOKED_HOLD");
