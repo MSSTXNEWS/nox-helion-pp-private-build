@@ -144,3 +144,10 @@ body[data-fx="ECO"] .planet,body[data-fx="ECO"] .nebula:after,body[data-fx="ECO"
  .universe .orbit-b{width:min(78%,560px);height:310px}
  .universe .planet::after{inset:0;transform:none}
 }
+
+/* WOW medium desktop: keep tilted orbits inside the narrow main column. */
+@media(min-width:801px) and (max-width:1100px){
+ .universe .orbit-a{width:64%;height:53%}
+ .universe .orbit-b{width:78%;height:60%}
+ .universe .planet::after{inset:0;transform:none}
+}
