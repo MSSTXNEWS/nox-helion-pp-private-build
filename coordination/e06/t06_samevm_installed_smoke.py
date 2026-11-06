@@ -329,6 +329,33 @@ def run(args:list[str],timeout:int)->dict:
         return {"code":124,"elapsed":round(time.monotonic()-start,2),
                 "stdout_tail":"","stderr_tail":"TIMEOUT"}
 
+def run_exact_pinned_nsis_setup(phase: str, flags: tuple[str, ...], timeout: int,
+                                expected_sha: str, lifecycle: dict) -> dict:
+    """Bind all three actual NSIS phases to ONE rehashed physical Setup SHA.
+
+    Preflight-only SHA is insufficient. Require exact original bytes before
+    and after each native process. Preserve the actual exit even if SHA drifts.
+    This is same-VM G4 evidence, NEVER independent E07 or release acceptance.
+    """
+    allowed={"install":("/S",), "update":("/S",), "rollback":("/S","/ROLLBACK")}
+    require(type(phase) is str and phase in allowed and
+            type(flags) is tuple and flags==allowed[phase] and
+            type(timeout) is int and 1 <= timeout <= 300 and
+            type(expected_sha) is str and
+            re.fullmatch(r"[0-9a-f]{64}",expected_sha) is not None and
+            type(lifecycle) is dict,
+            "T06_G4_NSIS_PINNED_PHASE_INPUT_HOLD")
+    require(regular(SETUP) and plain_parents(SETUP,ROOT) and
+            sha(SETUP)==expected_sha,
+            "T06_G4_NSIS_SETUP_PRE_SHA_HOLD:"+phase)
+    result=run([str(SETUP),*flags],timeout)
+    lifecycle[phase]=result
+    require(regular(SETUP) and plain_parents(SETUP,ROOT) and
+            sha(SETUP)==expected_sha,
+            "T06_G4_NSIS_SETUP_POST_SHA_HOLD:"+phase)
+    return result
+
+
 def framed(binary:Path,data_dir:Path,receipt:dict)->dict:
     # The bridge's verified frozen route is models.installed. Its chat.model
     # can correctly return provider HOLD on an empty disposable CI machine.
@@ -1240,8 +1267,8 @@ def main()->int:
                     not getattr(p,"is_junction",lambda:False)()
                     for p in relatives),
                 "T06_CI_INSTALL_PATH_CHANGED_AFTER_PREFLIGHT_HOLD")
-        installed=run([str(SETUP),"/S"],260)
-        report["installer_lifecycle"]["install"]=installed
+        installed=run_exact_pinned_nsis_setup("install",("/S",),260,
+            evidence["setup_sha256"],report["installer_lifecycle"])
         require(installed["code"]==0 and install.is_dir(),"T06_NSIS_SILENT_INSTALL_FAILED")
         mark=install/"nox-p01-owned.txt"
         wpf=install/"NOX.P01.Shell.exe"
@@ -1315,8 +1342,8 @@ def main()->int:
                        ("previous",Path(str(install)+".__p01_previous")),
                        ("rollback_saved",Path(str(install)+".__p01_rollback_saved")),
                        ("stage",Path(str(install)+".__p01_stage")))
-        update=run([str(SETUP),"/S"],250)
-        report["installer_lifecycle"]["update"]=update
+        update=run_exact_pinned_nsis_setup("update",("/S",),250,
+            evidence["setup_sha256"],report["installer_lifecycle"])
         # D03: even UPDATE EXIT=1/timeouts must not bypass user-data identity.
         update_anyexit=original_no_loss_anyexit_slot_snapshot(
             marker,signature,marker_identity,unmanaged.name,unmanaged_bytes,
@@ -1357,8 +1384,8 @@ def main()->int:
             print("T06_UPDATE_BACKUP_PROOF_FIRST_FAILURE",failure_code,flush=True)
             raise RuntimeError("T06_UPDATE_BACKUP_MANIFEST_VERIFY_HOLD") from exc
         report["installer_lifecycle"]["backup_payload_verify"]=backup_check
-        rollback=run([str(SETUP),"/S","/ROLLBACK"],250)
-        report["installer_lifecycle"]["rollback"]=rollback
+        rollback=run_exact_pinned_nsis_setup("rollback",("/S","/ROLLBACK"),250,
+            evidence["setup_sha256"],report["installer_lifecycle"])
         rollback_anyexit=original_no_loss_anyexit_slot_snapshot(
             marker,signature,marker_identity,unmanaged.name,unmanaged_bytes,
             unmanaged_identity,local_base,no_loss_slots)
