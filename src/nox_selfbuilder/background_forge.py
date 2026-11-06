@@ -11,6 +11,7 @@ from pathlib import Path
 import importlib.util
 import json
 import math
+import unicodedata
 import os
 import re
 import subprocess
@@ -600,29 +601,63 @@ class ExistingP04Background:
         if self.event_sink is None:
             return 0
         path = self._control(job) / "events.jsonl"
+        self.trainer.reject_reparse_ancestors(path)
         if not path.exists():
             return 0
+        if path.is_symlink() or not path.is_file() or path.stat().st_size > 64 * 1024 * 1024:
+            raise ForgeHold("P04_EVENT_LOG_UNSAFE_HOLD")
         # Existing validator checks complete sequence/identity, duplicate IDs,
         # bounds and ambiguous JSON before any event is forwarded.
         if not live:
             self.trainer.EventWriter(path, job.run_id, job.task_id)
-        count = 0
+        def unique_pairs(pairs):
+            value, seen = {}, set()
+            for key, item in pairs:
+                folded = unicodedata.normalize("NFC", key).casefold()
+                if folded in seen:
+                    raise ForgeHold("P04_EVENT_AMBIGUOUS_JSON_HOLD")
+                seen.add(folded)
+                value[key] = item
+            return value
+
+        def reject_constant(_token):
+            raise ForgeHold("P04_EVENT_NONFINITE_HOLD")
+
+        def finite_float(token):
+            value = float(token)
+            if not math.isfinite(value):
+                raise ForgeHold("P04_EVENT_NONFINITE_HOLD")
+            return value
+
+        count, expected_sequence, seen_ids = 0, 1, set()
         with path.open(encoding="utf-8") as stream:
             for line in stream:
                 if not line.endswith("\n"):
                     break  # worker may be writing its last bounded NDJSON row
                 if len(line) > 4096:
                     raise ForgeHold("P04_EVENT_SIZE_HOLD")
-                event = json.loads(line)
-                if (event.get("schema") != "NOX-INSTALLER-EVENT-v3"
+                try:
+                    event = json.loads(line, object_pairs_hook=unique_pairs,
+                                       parse_constant=reject_constant, parse_float=finite_float)
+                except (json.JSONDecodeError, UnicodeDecodeError, ValueError,
+                        RecursionError) as exc:
+                    raise ForgeHold("P04_EVENT_INVALID_JSON_HOLD") from exc
+                if (type(event) is not dict or event.get("schema") != "NOX-INSTALLER-EVENT-v3"
                         or event.get("run_id") != job.run_id or event.get("task_id") != job.task_id
+                        or type(event.get("event_sequence")) is not int
+                        or event["event_sequence"] != expected_sequence
                         or event.get("package_id") != "P04" or event.get("evidence_verified") is not False
                         or event.get("source") != "P04.QLoRA"
                         or event.get("event_type") not in {"task.started", "task.progress", "task.failed", "task.completed", "training.step", "checkpoint.saved", "model.stopped", "gpu.sample"}
                         or event.get("state") not in {"QUEUED", "RUNNING", "PAUSED", "COMPLETED", "ERROR", "STOPPED", "OFFLINE", "HOLD", "READY", "N_D"}
                         or not isinstance(event.get("message"), str) or len(event["message"]) > 240
-                        or not re.fullmatch(r"[0-9a-f]{32}", str(event.get("event_id", "")))):
+                        or not re.fullmatch(r"[0-9a-f]{32}", str(event.get("event_id", "")))
+                        or event["event_id"] in seen_ids):
                     raise ForgeHold("P04_EVENT_PROVENANCE_HOLD")
+                seen_ids.add(event["event_id"])
+                expected_sequence += 1
+                if expected_sequence > 100001:
+                    raise ForgeHold("P04_EVENT_COUNT_LIMIT")
                 # A trainer-supplied completion is only a provisional claim.
                 # The original owner-scoped S03 RESULT must commit before the
                 # native bridge can explicitly release terminal events.
