@@ -293,11 +293,22 @@ function liveChat(label){
   }else fact(leftFacts,'HOLD','Нет подтверждения истории');
   if(g?.routeId==='gpu.preflight'&&nativeCompleted(g)&&g.result&&typeof g.result==='object'){
    fact(rightFacts,'GPU','OneHost preflight');
-   for(const [k,v] of Object.entries(g.result).slice(0,10))if(['string','number','boolean'].includes(typeof v))fact(rightFacts,k,v);
+   for(const [k,v] of Object.entries(g.result).slice(0,10)){
+    if(['string','number','boolean'].includes(typeof v)){
+     fact(rightFacts,k,v);
+     // Render only actual bounded percentages in a verified OneHost receipt.
+     if(typeof v==='number')window.NOXNativeGauge?.mount(rightFacts,k,v);
+    }
+   }
   }else fact(rightFacts,'GPU','Н/Д · preflight не подтверждён');
   if(l?.routeId==='chat.commands'&&nativeCompleted(l)&&l.result&&typeof l.result==='object'){
    fact(rightFacts,'LEARN','Native квитанция');
-   for(const [k,v] of Object.entries(l.result).slice(0,6))if(['string','number','boolean'].includes(typeof v))fact(rightFacts,k,v);
+   for(const [k,v] of Object.entries(l.result).slice(0,6)){
+    if(['string','number','boolean'].includes(typeof v)){
+     fact(rightFacts,k,v);
+     if(typeof v==='number')window.NOXNativeGauge?.mount(rightFacts,k,v);
+    }
+   }
   }else fact(rightFacts,'LEARN','Н/Д · квитанция не подтверждена');
  }
  async function toggleHistory(){
