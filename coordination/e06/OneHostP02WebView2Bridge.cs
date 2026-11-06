@@ -51,6 +51,8 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
     private long _epoch;
     private int _activeChat;
     private int _stopPending;
+    // Native owner, not just the renderer, serializes SETTINGS consent and HKCU receipts.
+    private int _autostartPending;
     private int _disposed;
     private long _streamEpoch;
     private bool _rendererAwaitingTrustedContent;
@@ -528,6 +530,7 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
         var epoch = Interlocked.Read(ref _epoch);
         var cancel = _document.Token;
         string id = "", route = "";
+        bool autostartOwnerAcquired = false;
         // Successful native STOP revokes pending consent and late transport errors.
         long chatErrorEpoch = -1;
         try
@@ -582,6 +585,19 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
             {
                 Reply(source, epoch, id, route, "HOLD", "NOX_AUTOSTART_BOOLEAN_REQUIRED");
                 return;
+            }
+            // The renderer's shared single-flight lock is not Windows authority:
+            // direct WebView2 IPC may bypass it. Keep native SETTINGS exclusive
+            // through consent, HKCU mutation, owner receipt and response.
+            // Other routes (especially native STOP) must never be blocked.
+            if (route == "system.autostart")
+            {
+                if (Interlocked.CompareExchange(ref _autostartPending, 1, 0) != 0)
+                {
+                    Reply(source, epoch, id, route, "HOLD", "NOX_AUTOSTART_OWNER_IN_FLIGHT");
+                    return;
+                }
+                autostartOwnerAcquired = true;
             }
             // A previously authorized queued-model STOP must overtake
             // transfers just like chat.stop. SID/ACL and bounded jobId remain
@@ -781,6 +797,13 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
             if (id.Length == 32 && RequestId.IsMatch(id) &&
                 (chatErrorEpoch < 0 || Interlocked.Read(ref _streamEpoch) == chatErrorEpoch))
                 Reply(source, epoch, id, route, "HOLD", "NATIVE_TRANSPORT_HOLD");
+        }
+        finally
+        {
+            // Never strand a revoked, cancelled or failed consent operation.
+            // Only the request that acquired the native fence can release it.
+            if (autostartOwnerAcquired)
+                Interlocked.Exchange(ref _autostartPending, 0);
         }
     }
 

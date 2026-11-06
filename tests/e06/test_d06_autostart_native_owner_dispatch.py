@@ -49,6 +49,31 @@ class TestAutostartNativeOwnerGuard(unittest.TestCase):
                       body[checked:consent])
         self.assertIn("return;", body[checked:consent])
 
+    def test_native_owner_serializes_direct_webview_settings_before_consent(self):
+        # SOURCE_ONLY: direct p02.native messages bypass renderer admission.
+        source = BRIDGE.read_text(encoding="utf-8")
+        body = source.split("private async void OnWebMessageReceived(", 1)[1]
+        self.assertIn("private int _autostartPending;", source)
+        self.assertIn("bool autostartOwnerAcquired = false;", body)
+        acl = body.index("if (!NativeSidMatches() || !_nativeAcl")
+        valid = body.index('if (route == "system.autostart" && !NativeAutostartRequestValid(payload))')
+        acquire = body.index("Interlocked.CompareExchange(ref _autostartPending, 1, 0)")
+        consent = body.index("!await _nativeConsent(route, payload.Clone(), cancel)")
+        owner = body.index("var ownerResult = await _nativeOwnerAction(route, payload.Clone(), cancel);")
+        release = body.index("if (autostartOwnerAcquired)")
+        self.assertLess(acl, valid)
+        self.assertLess(valid, acquire)
+        self.assertLess(acquire, consent)
+        self.assertLess(consent, owner)
+        self.assertLess(owner, release)
+        self.assertIn('Reply(source, epoch, id, route, "HOLD", "NOX_AUTOSTART_OWNER_IN_FLIGHT");',
+                      body[acquire:consent])
+        self.assertIn("autostartOwnerAcquired = true;", body[acquire:consent])
+        self.assertIn("finally\\n        {", body[owner:release])
+        self.assertIn("Interlocked.Exchange(ref _autostartPending, 0);", body[release:])
+        self.assertEqual(body.count("Interlocked.CompareExchange(ref _autostartPending, 1, 0)"), 1)
+        self.assertEqual(body.count("Interlocked.Exchange(ref _autostartPending, 0)"), 1)
+
     def test_exact_builder_and_compiler_git_pins(self):
         source = BRIDGE.read_bytes()
         blob = hashlib.sha1(b"blob " + str(len(source)).encode() + bytes([0]) + source).hexdigest()
