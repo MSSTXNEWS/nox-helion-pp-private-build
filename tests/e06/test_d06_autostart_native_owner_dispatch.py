@@ -25,6 +25,30 @@ class TestAutostartNativeOwnerGuard(unittest.TestCase):
         self.assertLess(i, source.index('_existingPipe.RequestAsync(', i))
         self.assertIn('return;', source[i:source.index('}', i)])
         self.assertIn('route=="system.autostart"', source[source.index('if (_nativeOwnerAction is not null'):])
+    def test_malformed_hkcu_payload_rejected_before_owner_consent(self):
+        # SOURCE_ONLY. WPF is still responsible for SID/ACL and real consent.
+        source = BRIDGE.read_text(encoding="utf-8")
+        method = source.split("private static bool NativeAutostartRequestValid(", 1)[1].split(
+            "private static bool NativeAutostartReceiptMatches(", 1)[0]
+        self.assertIn("payload.ValueKind != JsonValueKind.Object", method)
+        self.assertIn("payload.EnumerateObject().ToArray()", method)
+        self.assertIn("requested.Length == 0", method)
+        self.assertIn("requested.Length == 1", method)
+        self.assertIn('requested[0].Name == "enabled"', method)
+        self.assertIn("requested[0].Value.ValueKind == JsonValueKind.True", method)
+        self.assertIn("requested[0].Value.ValueKind == JsonValueKind.False", method)
+        body = source.split("private async void OnWebMessageReceived(", 1)[1]
+        acl = body.index("if (!NativeSidMatches() || !_nativeAcl")
+        owner = body.index('if (route == "system.autostart" && _nativeOwnerAction is null)')
+        checked = body.index('if (route == "system.autostart" && !NativeAutostartRequestValid(payload))')
+        consent = body.index("!await _nativeConsent(route, payload.Clone(), cancel)")
+        self.assertLess(acl, owner)
+        self.assertLess(owner, checked)
+        self.assertLess(checked, consent)
+        self.assertIn('Reply(source, epoch, id, route, "HOLD", "NOX_AUTOSTART_BOOLEAN_REQUIRED");',
+                      body[checked:consent])
+        self.assertIn("return;", body[checked:consent])
+
     def test_exact_builder_and_compiler_git_pins(self):
         source = BRIDGE.read_bytes()
         blob = hashlib.sha1(b"blob " + str(len(source)).encode() + bytes([0]) + source).hexdigest()

@@ -479,6 +479,19 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
         return false;
     }
 
+    // Validate the untrusted WebView2 SETTINGS request before opening a WPF
+    // owner-consent prompt. The renderer-side Boolean gate is not authority.
+    // An empty object is a read; writes require exactly one Boolean field.
+    private static bool NativeAutostartRequestValid(JsonElement payload)
+    {
+        if (payload.ValueKind != JsonValueKind.Object) return false;
+        var requested = payload.EnumerateObject().ToArray();
+        return requested.Length == 0 ||
+            (requested.Length == 1 && requested[0].Name == "enabled" &&
+             (requested[0].Value.ValueKind == JsonValueKind.True ||
+              requested[0].Value.ValueKind == JsonValueKind.False));
+    }
+
     // SETTINGS is an owner-only HKCU operation: the receipt must prove the
     // requested read/write mode and (for writes) the persisted requested bit.
     // A generic transport Accepted=true or an empty object is not proof.
@@ -560,6 +573,14 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
             if (route == "system.autostart" && _nativeOwnerAction is null)
             {
                 Reply(source, epoch, id, route, "HOLD", "NOX_AUTOSTART_NATIVE_OWNER_REQUIRED");
+                return;
+            }
+            // Do not prompt for native consent when an untrusted page sent a
+            // malformed SETTINGS request (extra fields, duplicate enabled,
+            // non-Boolean value). No HKCU read or write is attempted.
+            if (route == "system.autostart" && !NativeAutostartRequestValid(payload))
+            {
+                Reply(source, epoch, id, route, "HOLD", "NOX_AUTOSTART_BOOLEAN_REQUIRED");
                 return;
             }
             // A previously authorized queued-model STOP must overtake
