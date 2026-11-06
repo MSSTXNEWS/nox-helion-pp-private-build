@@ -66,5 +66,26 @@ class B06SingleSetupDispatch(unittest.TestCase):
         self.assertEqual(source.count("E07_EXPLICIT_IMMUTABLE_DISPATCH_HOLD"), 1)
 
 
+
+    def test_each_b06_preflight_suite_has_immediate_native_exit_guard(self):
+        """A later successful unittest must never erase an earlier failure."""
+        source = WORKFLOW.read_text(encoding="utf-8")
+        gates = (
+            ("test_b06_current_head_r5.py", "E07_VERIFIER_CURRENT_HEAD_REGRESSION_HOLD"),
+            ("test_b06_single_setup_dispatch_r55.py", "E07_SINGLE_SETUP_DISPATCH_REGRESSION_HOLD"),
+            ("test_b06_receipt_descriptor_r5.py", "E07_E06_RECEIPT_DESCRIPTOR_REGRESSION_HOLD"),
+            ("test_b06_manifest_identity_r6.py", "E07_MANIFEST_IDENTITY_REGRESSION_HOLD"),
+        )
+        for suite, expected_hold in gates:
+            with self.subTest(suite=suite):
+                command = "python -B -m unittest discover -s tests/e07 -p " + suite + " -v"
+                immediate_guard = (
+                    "          " + command + "\n"
+                    "          if ($LASTEXITCODE -ne 0) { throw '" + expected_hold + "' }"
+                )
+                self.assertIn(immediate_guard, source)
+        first = source.index("Fast source regression gate before heavy artifacts")
+        self.assertLess(first, source.index("Download immutable candidate from DIFFERENT Windows CI run"))
+
 if __name__ == "__main__":
     unittest.main()
