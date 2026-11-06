@@ -32,6 +32,9 @@ jobs:
           Copy-Item './coordination/nox-r8/tests/test_r8_persona_memory.py' './r8/test_r8_persona_memory.py'
           python './r8/test_r8_persona_memory.py'
           if ($LASTEXITCODE -ne 0) { throw 'D03_PERSONA_MEMORY_SOURCE_HOLD' }
+          Copy-Item './coordination/nox-r8/tests/test_r8_gpu_fallback.cjs' './r8/test_r8_gpu_fallback.cjs'
+          node './r8/test_r8_gpu_fallback.cjs'
+          if ($LASTEXITCODE -ne 0) { throw 'D04_GPU_FALLBACK_SOURCE_HOLD' }
           Copy-Item './coordination/nox-r8/tests/test_r8_ipc_contract.py' './r8/test_r8_ipc_contract.py'
           python './r8/test_r8_ipc_contract.py'
           if ($LASTEXITCODE -ne 0) { throw 'B02_NATIVE_IPC_SOURCE_HOLD' }

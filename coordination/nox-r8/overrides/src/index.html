@@ -149,9 +149,8 @@ body.reduced .helion-fx{filter:none}body.reduced .core.active{animation:none}
   const canvas=document.getElementById('helionFx');
   if(!canvas)return;
   const sphere=canvas.parentElement;
-  const gl=canvas.getContext('webgl2',{alpha:true,antialias:false,depth:false,stencil:false,
-    premultipliedAlpha:false,preserveDrawingBuffer:false,powerPreference:'high-performance'});
-  if(!gl){
+  function startCanvas2d(fallbackCanvas){
+    const canvas=fallbackCanvas;
     // 2D fallback retains visible fluid motion even when GPU acceleration is
     // disabled by the machine or by remote desktop / headless Windows CI.
     const ctx=canvas.getContext('2d',{alpha:true});
@@ -196,14 +195,20 @@ body.reduced .helion-fx{filter:none}body.reduced .core.active{animation:none}
       raf=fps?requestAnimationFrame(frame):0;
     }
     function redraw(){if(raf)cancelAnimationFrame(raf);rendered=false;raf=requestAnimationFrame(frame);}
-    sphere.dataset.fx='active';
+    sphere.dataset.fx='canvas2d';
     window.noxVisual={setMode(v){mode=['MAX','BALANCED','ECO'].includes(v)?v:'BALANCED';redraw();},
       setEnergy(v){energy=v?1:0;redraw();},refresh:redraw};
-    document.addEventListener('visibilitychange',redraw);
+    document.addEventListener('visibilitychange',()=>{if(document.hidden){if(raf)cancelAnimationFrame(raf);raf=0;}else redraw();});
     window.addEventListener('resize',redraw,{passive:true});
     window.matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change',redraw);
-    redraw();return;
+    redraw();
   }
+
+  let gl=null;
+  try{gl=canvas.getContext('webgl2',{alpha:true,antialias:false,depth:false,stencil:false,
+    premultipliedAlpha:false,preserveDrawingBuffer:false,powerPreference:'high-performance'});}
+  catch(e){console.warn('NOX WebGL2 unavailable:',e.message);}
+  if(!gl){startCanvas2d(canvas);return;}
 
   const vert=`#version 300 es
   in vec2 aPosition;
@@ -260,7 +265,7 @@ body.reduced .helion-fx{filter:none}body.reduced .core.active{animation:none}
     gl.attachShader(program,v);gl.attachShader(program,f);gl.linkProgram(program);
     if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw new Error(gl.getProgramInfoLog(program)||'GL link failed');
     gl.deleteShader(v);gl.deleteShader(f);}
-  catch(e){sphere.dataset.fx='disabled';console.warn('NOX WebGL shader fallback:',e.message);return;}
+  catch(e){console.warn('NOX WebGL shader fallback:',e.message);const replacement=canvas.cloneNode(false);canvas.replaceWith(replacement);startCanvas2d(replacement);return;}
   let raf=0,mode='BALANCED',energy=0,rendered=false,last=0,started=performance.now();
   const time=gl.getUniformLocation(program,'uTime'),res=gl.getUniformLocation(program,'uResolution'),ene=gl.getUniformLocation(program,'uEnergy');
   const buf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buf);
@@ -268,27 +273,40 @@ body.reduced .helion-fx{filter:none}body.reduced .core.active{animation:none}
   const attr=gl.getAttribLocation(program,'aPosition');gl.enableVertexAttribArray(attr);gl.vertexAttribPointer(attr,2,gl.FLOAT,false,0,0);
   const reduce=()=>document.body.classList.contains('reduced') ||
     window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let gpuActive=true;
+  function switchToCanvas2d(reason){
+    if(!gpuActive)return;
+    gpuActive=false;
+    if(raf)cancelAnimationFrame(raf);
+    raf=0;
+    const replacement=canvas.cloneNode(false);
+    canvas.replaceWith(replacement);
+    console.warn('NOX WebGL2 switching to Canvas2D:',reason);
+    startCanvas2d(replacement);
+  }
   function resize(){const rect=canvas.getBoundingClientRect();let max=mode==='ECO'?320:mode==='MAX'?768:512;
     let scale=Math.min(1.5,Math.max(1,window.devicePixelRatio||1));
     const w=Math.min(max,Math.max(64,Math.floor(rect.width*scale)));
     const h=Math.min(max,Math.max(64,Math.floor(rect.height*scale)));
     if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;gl.viewport(0,0,w,h);rendered=false;}}
-  function frame(now){if(document.hidden){raf=0;return;}
+  function frame(now){if(!gpuActive||document.hidden){raf=0;return;}
     const fps=reduce()?0:mode==='MAX'?60:mode==='ECO'?15:30;
     if(rendered && (!fps || now-last<1000/fps)){raf=fps?requestAnimationFrame(frame):0;return;}
     last=now;rendered=true;resize();gl.useProgram(program);gl.uniform2f(res,canvas.width,canvas.height);
     gl.uniform1f(time,reduce()?0:(now-started)*.001);gl.uniform1f(ene,energy);
-    gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT);gl.drawArrays(gl.TRIANGLES,0,6);
+    try{gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT);gl.drawArrays(gl.TRIANGLES,0,6);
+      if(gl.isContextLost&&gl.isContextLost()){switchToCanvas2d('CONTEXT_LOST');return;}}
+    catch(e){switchToCanvas2d(e.message);return;}
     raf=fps?requestAnimationFrame(frame):0;
   }
-  function redraw(){if(raf)cancelAnimationFrame(raf);raf=requestAnimationFrame(frame);}
+  function redraw(){if(!gpuActive)return;if(raf)cancelAnimationFrame(raf);raf=requestAnimationFrame(frame);}
   sphere.dataset.fx='active';
   window.noxVisual={setMode(value){mode=['MAX','BALANCED','ECO'].includes(value)?value:'BALANCED';rendered=false;redraw();},
     setEnergy(isGenerating){energy=isGenerating?1:0;rendered=false;redraw();},refresh:()=>{rendered=false;redraw()}};
-  document.addEventListener('visibilitychange',()=>{if(!document.hidden)redraw();else if(raf){cancelAnimationFrame(raf);raf=0;}});
+  document.addEventListener('visibilitychange',()=>{if(!gpuActive)return;if(!document.hidden)redraw();else if(raf){cancelAnimationFrame(raf);raf=0;}});
   window.addEventListener('resize',redraw,{passive:true});
   window.matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change',redraw);
-  canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();sphere.dataset.fx='disabled';if(raf)cancelAnimationFrame(raf);});
+  canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();switchToCanvas2d('CONTEXT_LOST');});
   redraw();
 })();
 </script>
