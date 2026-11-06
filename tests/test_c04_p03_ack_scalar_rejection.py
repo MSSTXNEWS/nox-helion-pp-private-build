@@ -116,12 +116,26 @@ class P03RealAckBranchTest(unittest.TestCase):
         self.assertEqual(
             self.respond(queued_only, route='models.retry', job_id='requested'),
             queued_only)
-        # Legacy status-bound cancellation remains valid for the exact job.
-        stop_requested = {'jobId': 'requested', 'status': 'CANCEL_REQUESTED',
-                          'queued': True}
+        # A transfer-queue acknowledgement cannot attest active STOP even
+        # when the status says CANCEL_REQUESTED (original owner fail-closed).
+        queued_stop = {'jobId': 'requested', 'status': 'CANCEL_REQUESTED',
+                       'queued': True}
+        with self.assertRaises(P03PortHold):
+            self.respond(queued_stop, route='models.cancel',
+                         job_id='requested')
+        # The existing positive STOP status without contradictory queue
+        # evidence still passes for the exact consented owner job.
+        stop_requested = {'jobId': 'requested', 'status': 'CANCEL_REQUESTED'}
         self.assertEqual(
             self.respond(stop_requested, route='models.cancel',
                          job_id='requested'), stop_requested)
+        # A nested owner receipt cannot hide queued transfer as active STOP.
+        nested_queued = {'jobId': 'requested', 'status': 'CANCEL_REQUESTED',
+                         'ownerReceipt': {'status': 'CANCEL_REQUESTED',
+                                          'queued': True}}
+        with self.assertRaises(P03PortHold):
+            self.respond(nested_queued, route='models.cancel',
+                         job_id='requested')
 
     def test_cancel_retry_ack_identity_on_actual_source_branch(self):
         for route, status in (('models.cancel', 'CANCEL_REQUESTED'),
