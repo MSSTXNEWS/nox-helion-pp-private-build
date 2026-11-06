@@ -6,8 +6,8 @@
   $root = 'C:\NOX_HELION\APP\NOX_WEB'
   $source = Join-Path $root 'NOX_READY_01'
   $target = Join-Path $root 'NOX_LIVE'
-  $payloadCommit = '2b1a5206de62a9e7f7ccda508fc0fd3a985cd5b7'
-  $payloadSha = 'A971EB4F70201F7EF3BF9C2F23182DE9027965387693AF14BC5F09C593AEF177'
+  $payloadCommit = '06aba53128f286ddada19933c733ac42844b8692'
+  $payloadSha = '1401155AF09B48520EBE8614E8105136A8AA32DD0A43A45C12183B41AF52BE47'
   $payloadUrl = "https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/$payloadCommit/nox-local/live/NOX_LIVE_PAYLOAD.json"
   if (!(Test-Path (Join-Path $source 'server.py'))) { throw 'Existing source NOX_READY_01/server.py not found. Original NOX untouched.' }
   if (!(Test-Path (Join-Path $source 'vendor\tabler\tabler.min.css'))) { throw 'Original Tabler source missing. Original NOX untouched.' }
