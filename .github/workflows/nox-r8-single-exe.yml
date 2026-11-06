@@ -20,6 +20,12 @@ jobs:
           $hash=(Get-FileHash $zip -Algorithm SHA256).Hash.ToLowerInvariant()
           if ($hash -ne 'a1ed386b4b9356c21a007c9c54dc2f98f27a25ede42bad91dafada99ddd70325') { throw 'SOURCE_HASH_MISMATCH' }
           Expand-Archive $zip -DestinationPath './r8' -Force
+          # D05 native source from same R8 branch; base archive remains SHA-pinned.
+          Copy-Item './coordination/nox-r8/overrides/src/MainWindow.xaml.cs' './r8/src/MainWindow.xaml.cs' -Force
+          Copy-Item './coordination/nox-r8/overrides/src/index.html' './r8/src/index.html' -Force
+          Copy-Item './coordination/nox-r8/tests/test_r8_learn_owner_queue.py' './r8/test_r8_learn_owner_queue.py'
+          python './r8/test_r8_learn_owner_queue.py'
+          if ($LASTEXITCODE -ne 0) { throw 'D05_LEARN_SOURCE_HOLD' }
           dotnet publish './r8/src/NOX.HELION.csproj' -c Release -r win-x64 --self-contained true -o './out' -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:PublishTrimmed=false
           if ($LASTEXITCODE -ne 0) { throw 'BUILD_FAILED' }
           Get-FileHash './out/NOX.HELION.exe' -Algorithm SHA256
@@ -66,6 +72,10 @@ jobs:
           @{
             schema='NOX_R8_NATIVE_SINGLE_EXE_V1';
             source_sha256='a1ed386b4b9356c21a007c9c54dc2f98f27a25ede42bad91dafada99ddd70325';
+            source_git_sha=$env:GITHUB_SHA;
+            native_cs_sha256=(Get-FileHash './r8/src/MainWindow.xaml.cs' -Algorithm SHA256).Hash.ToLowerInvariant();
+            embedded_html_sha256=(Get-FileHash './r8/src/index.html' -Algorithm SHA256).Hash.ToLowerInvariant();
+            training='NOT_STARTED';
             exe_sha256=(Get-FileHash $exe -Algorithm SHA256).Hash.ToLowerInvariant();
             compiled_and_native_ui='PASS'; local_qwen_e2e='NOT_TESTED';
             canonical_full_d02='NOT_ACCEPTED'; full_v16='NOT_IMPLEMENTED';
