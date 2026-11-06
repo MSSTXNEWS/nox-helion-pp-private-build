@@ -1647,18 +1647,46 @@ public partial class MainWindow : Window
         cmd.ExecuteNonQuery();
     }
 
+    // B04: switch only when the native chat owner is idle, and acknowledge
+    // a model change only after a separate SQLite connection verifies COMMIT.
+    // The picker can choose only an exact locally registered Ollama tag.
     private async Task SelectModel(string model)
     {
-        if (string.IsNullOrWhiteSpace(model) || model.Length > 120) throw new ArgumentException("Invalid model name");
-        using var response = await http.GetAsync(Api + "/api/tags");
+        if (string.IsNullOrWhiteSpace(model) || model.Length > 120)
+            throw new ArgumentException("Invalid model name");
+        if (active != null)
+            throw new InvalidOperationException("NOX_MODEL_SWITCH_GENERATION_ACTIVE_HOLD");
+        using var probe = new CancellationTokenSource(TimeSpan.FromSeconds(4));
+        using var response = await http.GetAsync(Api + "/api/tags", probe.Token);
         response.EnsureSuccessStatusCode();
         using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        bool exists = json.RootElement.GetProperty("models").EnumerateArray().Any(x => x.GetProperty("name").GetString() == model);
-        if (!exists) throw new InvalidOperationException("Model is not registered on the local server");
-        using var db = OpenDatabase(); using var cmd = db.CreateCommand();
-        cmd.CommandText = "INSERT INTO preferences(key,value) VALUES('model',$m) ON CONFLICT(key) DO UPDATE SET value=excluded.value";
-        cmd.Parameters.AddWithValue("$m",model);cmd.ExecuteNonQuery();
-        Send("settings",ReadPreferences());
+        bool exists = json.RootElement.GetProperty("models").EnumerateArray()
+            .Any(x => x.GetProperty("name").GetString() == model);
+        if (!exists)
+            throw new InvalidOperationException("NOX_MODEL_TAG_NOT_REGISTERED_HOLD");
+        // Yielding at GET lets an inference start; recheck before the sync write.
+        if (active != null)
+            throw new InvalidOperationException("NOX_MODEL_SWITCH_GENERATION_ACTIVE_HOLD");
+        using (var db = OpenDatabase())
+        using (var tx = db.BeginTransaction())
+        {
+            using var cmd = db.CreateCommand();
+            cmd.Transaction = tx;
+            cmd.CommandText = "INSERT INTO preferences(key,value) VALUES('model',$m) ON CONFLICT(key) DO UPDATE SET value=excluded.value";
+            cmd.Parameters.AddWithValue("$m", model);
+            if (cmd.ExecuteNonQuery() != 1)
+                throw new InvalidOperationException("NOX_MODEL_SELECT_SQLITE_WRITE_HOLD");
+            tx.Commit();
+        }
+        using (var verifyDb = OpenDatabase())
+        using (var verify = verifyDb.CreateCommand())
+        {
+            verify.CommandText = "SELECT value FROM preferences WHERE key='model'";
+            if (!string.Equals(verify.ExecuteScalar() as string, model, StringComparison.Ordinal))
+                throw new InvalidOperationException("NOX_MODEL_SELECT_SQLITE_READBACK_HOLD");
+        }
+        Send("settings", ReadPreferences());
+        Send("model.select.receipt", new { model, saved = true });
         await CheckProvider();
     }
 
