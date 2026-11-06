@@ -253,18 +253,28 @@ def original_no_loss_anyexit_slot_snapshot(
                      original_no_loss_inode_preserved(marker,marker_identity,local_base))
     occupied=[]
     preserved=[]
+    unreadable=[]
     for label,root in slots:
-        candidate=root/unmanaged_name
-        if (candidate.exists() or candidate.is_symlink() or
-                getattr(candidate,'is_junction',lambda:False)()):
+        # Even when a Windows slot is unreadable after a nonzero NSIS EXIT,
+        # preserve the native exit and produce a fail-closed NO-LOSS snapshot.
+        # Never interpret an inaccessible slot as proof that it is absent.
+        try:
+            candidate=root/unmanaged_name
+            present=(candidate.exists() or candidate.is_symlink() or
+                     getattr(candidate,'is_junction',lambda:False)())
+        except (OSError, ValueError):
+            unreadable.append(label)
+            continue
+        if present:
             occupied.append(label)
             if (original_no_loss_file_preserved(candidate,unmanaged_bytes,local_base) and
                     original_no_loss_inode_preserved(candidate,unmanaged_identity,local_base)):
                 preserved.append(label)
-    unmanaged_safe=(len(occupied)==1 and len(preserved)==1)
+    unmanaged_safe=(len(occupied)==1 and len(preserved)==1 and not unreadable)
     return {"persistent_user_data":"PRESERVED" if persistent_safe else "HOLD",
             "unmanaged_install_data":"PRESERVED" if unmanaged_safe else "HOLD",
             "unmanaged_slots_present":occupied,
+            "unmanaged_slots_unreadable":unreadable,
             "original_unmanaged_slot":preserved[0] if unmanaged_safe else None,
             "read_only":True,"independent_e07":"NOT_RUN","release_accepted":False}
 
