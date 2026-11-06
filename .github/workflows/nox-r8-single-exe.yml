@@ -53,7 +53,27 @@ jobs:
             Wait-Process -Id $p.Id -Timeout 95 -ErrorAction Stop
             $p.Refresh()
             $file=Join-Path $env:LOCALAPPDATA "NOX_HELION/ui_selftest_$($p.Id).json"
-            if (!(Test-Path -LiteralPath $file)) { throw 'NOX_R8_UI_RECEIPT_MISSING' }
+            if (!(Test-Path -LiteralPath $file)) {
+              # Report an actual process-bound startup failure if present;
+              # a missing UI receipt must still be a hard HOLD.
+              $startupFile=Join-Path $env:LOCALAPPDATA "NOX_HELION/startup_failure_$($p.Id).json"
+              $diagnostic='NO_STARTUP_RECEIPT'
+              if (Test-Path -LiteralPath $startupFile) {
+                try {
+                  $startup=Get-Content -LiteralPath $startupFile -Raw | ConvertFrom-Json -ErrorAction Stop
+                  $startupAt=[DateTimeOffset]::Parse([string]$startup.utc).UtcDateTime
+                  if ($startup.schema -ceq 'NOX_WPF_STARTUP_FAILURE_R7_V1' -and
+                      $startup.pid -eq $p.Id -and $startupAt -ge $started) {
+                    $diagnostic="STARTUP_FAILURE: $($startup.errorType): $($startup.message)"
+                  } else {
+                    $diagnostic='STARTUP_FAILURE_IDENTITY_HOLD'
+                  }
+                } catch {
+                  $diagnostic='STARTUP_FAILURE_RECEIPT_INVALID_HOLD'
+                }
+              }
+              throw "NOX_R8_UI_RECEIPT_MISSING exit=$($p.ExitCode) diagnostic=$diagnostic"
+            }
             $n=Get-Content $file -Raw | ConvertFrom-Json
             $sha=(Get-FileHash $exe -Algorithm SHA256).Hash
             $stamp=[DateTimeOffset]::Parse([string]$n.checkedAt).UtcDateTime
