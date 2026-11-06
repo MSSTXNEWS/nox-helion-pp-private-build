@@ -5,7 +5,7 @@ $Brain=Join-Path $Root 'brain'
 $Source=Split-Path -Parent $MyInvocation.MyCommand.Path
 $Log=Join-Path $Brain 'logs'
 $Models=Join-Path $Brain 'intelligence\ollama_models'
-$URL='http://127.0.0.1:18872/'
+$URL='http://127.0.0.1:18873/'
 foreach($d in @($Root,$Brain,$Log,(Join-Path $Brain 'telemetry'),$Models,(Join-Path $Brain 'memory'),(Join-Path $Brain 'skills'))){New-Item -ItemType Directory -Force $d|Out-Null}
 $env:NOX_ROOT=$Root
 $env:NOX_SOUL_ROOT=Join-Path $Root 'soul_gpu'
@@ -17,7 +17,7 @@ $env:TMP=$env:TEMP
 foreach($d in @($env:HF_HOME,$env:PIP_CACHE_DIR,$env:TEMP)){New-Item -ItemType Directory -Force $d|Out-Null}
 $py=Get-Command py -ErrorAction SilentlyContinue
 if($py){$P=$py.Source;$Prefix=@('-3')}else{$a=Get-Command python -ErrorAction SilentlyContinue;if(!$a){throw 'Python 3 missing'};$P=$a.Source;$Prefix=@()}
-foreach($file in @('genesis_v9_audit.py','genesis_segment1.py','identity_behavior.py','soul_gpu.py','genesis_live_cycle.py','forge_genesis_server_v8.py','forge_genesis_v8.html')){
+foreach($file in @('genesis_v9_audit.py','genesis_segment1.py','identity_behavior.py','soul_gpu.py','genesis_live_cycle.py','forge_genesis_server_v8.py','forge_focus_v4_canonical_live.html')){
  if(!(Test-Path (Join-Path $Source $file))){throw "Missing source: $file"}
 }
 # Reconcile old adapters and training first; no duplicate training.
@@ -25,13 +25,13 @@ foreach($file in @('genesis_v9_audit.py','genesis_segment1.py','identity_behavio
 if($LASTEXITCODE -ne 0){throw 'Training history audit failed'}
 $h=$null
 try{$h=Invoke-RestMethod ($URL+'api/health') -TimeoutSec 2}catch{}
-if($h -and $h.schema -ne 'NOX-GENESIS-FORGE-V8'){throw 'Dashboard port already occupied'}
+if($h -and $h.schema -ne 'NOX-FORGE-FOCUS-LIVE-v1'){throw 'Dashboard port already occupied'}
 if(!$h){
- $argsDash=@($Prefix)+@((Join-Path $Source 'forge_genesis_server_v8.py'),'--root',$Root,'--port','18872')
- Start-Process -FilePath $P -ArgumentList $argsDash -WindowStyle Hidden -RedirectStandardOutput (Join-Path $Log 'forge_v9.out') -RedirectStandardError (Join-Path $Log 'forge_v9.err')|Out-Null
- for($i=0;$i -lt 20;$i++){Start-Sleep -Milliseconds 500;try{$h=Invoke-RestMethod ($URL+'api/health') -TimeoutSec 2}catch{};if($h -and $h.schema -eq 'NOX-GENESIS-FORGE-V8'){break}}
+ $argsDash=@($Prefix)+@((Join-Path $Source 'forge_genesis_server_v8.py'),'--root',$Root,'--port','18873')
+ Start-Process -FilePath $P -ArgumentList $argsDash -WindowStyle Hidden -RedirectStandardOutput (Join-Path $Log 'forge_focus_v4.out') -RedirectStandardError (Join-Path $Log 'forge_focus_v4.err')|Out-Null
+ for($i=0;$i -lt 20;$i++){Start-Sleep -Milliseconds 500;try{$h=Invoke-RestMethod ($URL+'api/health') -TimeoutSec 2}catch{};if($h -and $h.schema -eq 'NOX-FORGE-FOCUS-LIVE-v1'){break}}
 }
-if(!$h -or $h.schema -ne 'NOX-GENESIS-FORGE-V8'){throw 'FORGE live server failed'}
+if(!$h -or $h.schema -ne 'NOX-FORGE-FOCUS-LIVE-v1'){throw 'FORGE live server failed'}
 Start-Process $URL
 $cmd=Get-Command ollama -ErrorAction SilentlyContinue
 if($cmd){$O=$cmd.Source}else{$O=@("$env:LOCALAPPDATA\Programs\Ollama\ollama.exe","$env:ProgramFiles\Ollama\ollama.exe")|Where-Object{Test-Path $_}|Select-Object -First 1}
