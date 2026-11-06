@@ -42,5 +42,27 @@ class TestOriginalOwnedPathHandleIdentity(unittest.TestCase):
     def test_inode_zero_refused(self):
         self.assertFalse(OWNER.owned_file_handle_matches_path(self.witness(), self.witness(st_ino=0)))
 
+    def test_probe_same_api_snapshot_stable(self):
+        self.assertTrue(OWNER.unchanged_probe_snapshot(self.witness(), self.witness()))
+
+    def test_probe_path_and_handle_api_timestamps_checked_separately(self):
+        # A path snapshot can have API-specific timestamps; within each API
+        # its own before/after readback must nevertheless remain unchanged.
+        path = self.witness(st_mtime_ns=101, st_ctime_ns=102)
+        handle = self.witness(st_mtime_ns=201, st_ctime_ns=202)
+        self.assertTrue(OWNER.unchanged_probe_snapshot(path, path))
+        self.assertTrue(OWNER.unchanged_probe_snapshot(handle, handle))
+
+    def test_probe_in_place_write_timestamp_change_holds(self):
+        self.assertFalse(OWNER.unchanged_probe_snapshot(
+            self.witness(), self.witness(st_mtime_ns=13)))
+
+    def test_probe_final_metadata_and_identity_change_holds(self):
+        for delta in (dict(st_ctime_ns=15), dict(st_ino=92), dict(st_dev=8),
+                      dict(st_nlink=2), dict(st_size=4097)):
+            with self.subTest(delta=delta):
+                self.assertFalse(OWNER.unchanged_probe_snapshot(
+                    self.witness(), self.witness(**delta)))
+
 if __name__ == "__main__":
     unittest.main()

@@ -28,6 +28,19 @@ def owned_file_handle_matches_path(path_stat, fd_stat):
             (fd_stat.st_dev, fd_stat.st_ino, fd_stat.st_size))
 
 
+def unchanged_probe_snapshot(before, after):
+    """Within the SAME stat API, require stable identity, size, links and timestamps.
+
+    Never compare pathname and file-handle timestamps to each other: Windows
+    exposes different timestamp presentations across those APIs.
+    """
+    return ((before.st_dev, before.st_ino, before.st_size, before.st_nlink,
+             before.st_mtime_ns, before.st_ctime_ns) ==
+            (after.st_dev, after.st_ino, after.st_size, after.st_nlink,
+             after.st_mtime_ns, after.st_ctime_ns) and
+            before.st_ino != 0 and before.st_nlink == 1)
+
+
 def verify_exact_probe_slot(root: Path, probe_name: str, probe_bytes: bytes,
                             frozen_inode: tuple[int, int], base: Path) -> dict:
     def hold(reason: str) -> None:
@@ -69,9 +82,14 @@ def verify_exact_probe_slot(root: Path, probe_name: str, probe_bytes: bytes,
     with marker.open("rb") as fp:
         opened = os.fstat(fp.fileno())
         if ((opened.st_dev, opened.st_ino) != frozen_inode or
+                opened.st_nlink != 1 or opened.st_size != len(probe_bytes) or
                 fp.read(len(probe_bytes) + 1) != probe_bytes):
             hold("PROBE_BYTES")
-    if not safe(marker) or (marker.lstat().st_dev, marker.lstat().st_ino) != frozen_inode:
+        # A concurrent in-place edit can retain the same NTFS file ID.
+        # Check the open handle itself before accepting the preserved bytes.
+        if not unchanged_probe_snapshot(opened, os.fstat(fp.fileno())):
+            hold("PROBE_RACE")
+    if not safe(marker) or not unchanged_probe_snapshot(before, marker.lstat()):
         hold("PROBE_RACE")
     manifest = root / "payload.sha256.json"
     if not safe(manifest) or not 2 <= manifest.stat().st_size <= 4 * 1024 * 1024:
@@ -187,7 +205,7 @@ def verify_exact_probe_slot(root: Path, probe_name: str, probe_bytes: bytes,
             observed.add(rel)
     if observed != expected:
         hold("MISSING_OR_DUPLICATE")
-    if not safe(marker) or (marker.lstat().st_dev, marker.lstat().st_ino) != frozen_inode:
+    if not safe(marker) or not unchanged_probe_snapshot(before, marker.lstat()):
         hold("PROBE_FINAL_IDENTITY")
     return {"status": "PASS_DIAGNOSTIC_ONLY", "manifest_files_checked": len(data["files"]),
             "unmanaged_probe_preserved": True, "release_accepted": False}
