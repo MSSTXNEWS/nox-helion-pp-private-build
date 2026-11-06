@@ -35,7 +35,7 @@ jobs:
           $archive = Join-Path $env:GITHUB_WORKSPACE 'nox_local_r5/NOX_HELION_R5_NATIVE_ACCEPTANCE.zip'
           if (!(Test-Path $archive)) { throw 'R5_SOURCE_ARCHIVE_NOT_FOUND' }
           $actual = (Get-FileHash -Algorithm SHA256 $archive).Hash.ToLowerInvariant()
-          if ($actual -cne 'd1fc72748697dcef6d2a9e0d98a4504e780f38603fdc9b8b78e61bf6984beefd') { throw 'R5_SOURCE_SHA256_MISMATCH' }
+          if ($actual -cne 'd67f381087fa37c58358dddb72dd2d3da0d4ea16d85fea85f5ee99de385334ae') { throw 'R5_SOURCE_SHA256_MISMATCH' }
           $src = Join-Path $env:RUNNER_TEMP 'nox_r5_src'
           New-Item -ItemType Directory -Force -Path $src | Out-Null
           Expand-Archive -LiteralPath $archive -DestinationPath $src
@@ -67,7 +67,7 @@ jobs:
           $receipt = @{
             schema = 'NOX_R5_WINDOWS_BUILD_V1'
             git_source_commit = '${{ github.sha }}'
-            pinned_source_zip_sha256 = 'd1fc72748697dcef6d2a9e0d98a4504e780f38603fdc9b8b78e61bf6984beefd'
+            pinned_source_zip_sha256 = 'd67f381087fa37c58358dddb72dd2d3da0d4ea16d85fea85f5ee99de385334ae'
             exe_sha256 = $sha
             exe_bytes = (Get-Item $exe).Length
             windows_dotnet_publish = 'PASS'
@@ -85,54 +85,57 @@ jobs:
         run: |
           $out = Join-Path $env:GITHUB_WORKSPACE 'nox_local_r5/windows_x64'
           $exe = Join-Path $out 'NOX.HELION.exe'
-          $runtime = Join-Path $env:LOCALAPPDATA 'NOX_HELION/runtime_ready.json'
-          $db = Join-Path $env:LOCALAPPDATA 'NOX_HELION/chat.sqlite3'
           $receiptFile = Join-Path $out 'WINDOWS_BUILD_RECEIPT.json'
+          $releaseReceipt = Get-Content $receiptFile -Raw | ConvertFrom-Json
+          $runId = 'R5-NATIVE-UI-' + $env:GITHUB_RUN_ID
           $before = [DateTime]::UtcNow
           $uiPass = $false
-          $p = Start-Process -FilePath $exe -WorkingDirectory $out -PassThru
+          $p = Start-Process -FilePath $exe -WorkingDirectory $out -PassThru -ArgumentList @('--nox-ui-selftest',"--nox-runid=$runId")
+          $dataDir = Join-Path $env:LOCALAPPDATA 'NOX_HELION'
+          $nativeReceipt = Join-Path $dataDir ("native_selftest_$($p.Id).json")
+          $startupFailure = Join-Path $dataDir ("startup_failure_$($p.Id).json")
           try {
-            for ($i=0; $i -lt 90; $i++) {
+            for ($i=0; $i -lt 120; $i++) {
               Start-Sleep -Milliseconds 500
+              if (Test-Path $nativeReceipt -PathType Leaf) {
+                try {
+                  $n = Get-Content $nativeReceipt -Raw | ConvertFrom-Json
+                  $ts = [DateTimeOffset]::Parse([string]$n.checkedAt).UtcDateTime
+                  $uiPass = ($n.schema -eq 'NOX_WPF_E2E_NATIVE_R5_V1' -and
+                             $n.runId -ceq $runId -and
+                             $n.nativeUiAccepted -eq $true -and
+                             $n.nativeCoreAccepted -eq $false -and
+                             [int]$n.pid -eq $p.Id -and
+                             $ts -ge $before -and
+                             $n.checks.webview2_real_ui_route -eq 'PASS' -and
+                             $n.checks.sqlite_transaction_readback -eq 'PASS' -and
+                             [string]::Equals([string]$n.exe,[string]$exe,[StringComparison]::OrdinalIgnoreCase) -and
+                             [string]::Equals([string]$n.exeSha256,[string]$releaseReceipt.exe_sha256,[StringComparison]::OrdinalIgnoreCase))
+                  break
+                } catch { Write-Host "NATIVE_RECEIPT_ERROR: $($_.Exception.Message)" }
+              }
+              if (Test-Path $startupFailure -PathType Leaf) {
+                $err = Get-Content $startupFailure -Raw | ConvertFrom-Json
+                Write-Host "STARTUP_FAILURE_TYPE=$($err.errorType) MESSAGE=$($err.message)"
+                break
+              }
               $p.Refresh()
               if ($p.HasExited) { break }
-              if (!(Test-Path $runtime -PathType Leaf) -or !(Test-Path $db -PathType Leaf)) { continue }
-              try {
-                $r = Get-Content $runtime -Raw | ConvertFrom-Json
-                $ts = [DateTimeOffset]::Parse([string]$r.utc).UtcDateTime
-                if ($r.schema -eq 'NOX_WPF_WEBVIEW2_RUNTIME_V1' -and
-                    $r.webview2Ready -eq $true -and
-                    [int]$r.pid -eq $p.Id -and
-                    $ts -ge $before -and
-                    [string]::Equals([string]$r.assemblyPath,[string]$exe,[StringComparison]::OrdinalIgnoreCase)) {
-                  $uiPass = $true
-                  break
-                }
-              } catch {}
             }
-          } finally {
+            if (!$p.HasExited) {
+              try { Wait-Process -Id $p.Id -Timeout 12 -ErrorAction Stop } catch {}
+            }
             $p.Refresh()
-            Write-Host "UI_RUNTIME_DIAG PID=$($p.Id) EXITED=$($p.HasExited) WINDOW=$($p.MainWindowHandle)"
-            if ($p.HasExited) { Write-Host "UI_RUNTIME_DIAG EXIT_CODE=$($p.ExitCode)" }
-            if (Test-Path $env:LOCALAPPDATA/NOX_HELION) {
-              Get-ChildItem $env:LOCALAPPDATA/NOX_HELION -File -ErrorAction SilentlyContinue |
-                Select-Object Name,Length,LastWriteTimeUtc | Format-Table | Out-String | Write-Host
-            }
-            if (!$uiPass) {
-              try {
-                Get-WinEvent -FilterHashtable @{LogName='Application'; StartTime=$before} -ErrorAction Stop |
-                  Where-Object { $_.ProviderName -in @('.NET Runtime','Application Error','Windows Error Reporting') } |
-                  Select-Object -First 6 TimeCreated,ProviderName,Id,Message |
-                  Format-List | Out-String -Width 180 | Write-Host
-              } catch {}
-            }
+            if (!$p.HasExited -or $p.ExitCode -ne 0) { $uiPass = $false }
+            Write-Host "UI_PROCESS PID=$($p.Id) EXITED=$($p.HasExited) EXIT_CODE=$(if($p.HasExited){$p.ExitCode}else{'RUNNING'})"
+          } finally {
             if (!$p.HasExited) { Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue }
           }
           $receipt = Get-Content $receiptFile -Raw | ConvertFrom-Json
           $receipt.wpf_webview2_runtime = $(if ($uiPass) {'PASS'} else {'HOLD'})
           $receipt | ConvertTo-Json -Depth 6 | Set-Content $receiptFile -Encoding utf8
-          if ($uiPass) { Write-Host 'REAL WINDOWS WPF WEBVIEW2 + SQLITE STARTUP: PASS' -ForegroundColor Green }
-          else { Write-Warning 'UI STARTUP NOT CONFIRMED ON HOSTED RUNNER; EXE IS STILL COMPILED' }
+          if ($uiPass) { Write-Host 'REAL WINDOWS WPF WEBVIEW2 + SQLITE: NATIVE_UI_PASS' -ForegroundColor Green }
+          else { Write-Warning 'NATIVE_UI_HOLD; compiled EXE remains valid, no Qwen proof claimed.' }
 
       - name: Upload real Windows executable and dependencies
         uses: actions/upload-artifact@v4
