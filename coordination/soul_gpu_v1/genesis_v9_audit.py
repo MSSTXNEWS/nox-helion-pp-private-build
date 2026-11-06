@@ -51,8 +51,12 @@ def model_catalog():
     except (OSError,ValueError,KeyError,TypeError):return []
 
 def files_to_audit(root:Path):
-    for rel in LOCATIONS:
-        p=root.joinpath(*rel.split("/"))
+    # Include the *known* previous trainer output without scanning arbitrary user files.
+    # Inspection is read-only: no move/copy/delete of previously learned adapters.
+    roots=[root.joinpath(*rel.split("/")) for rel in LOCATIONS]
+    if os.name=="nt" and os.environ.get("USERPROFILE"):
+        roots.append(Path(os.environ["USERPROFILE"])/"nox_lora_weights")
+    for p in roots:
         if p.is_symlink() or not p.is_dir():continue
         count=0
         for folder, dirs, names in os.walk(p,followlinks=False):
@@ -69,13 +73,18 @@ def adapter_audit(root:Path):
     by_hash={}
     for f in files_to_audit(root):
         digest=sha256(f)
-        rel=f.relative_to(root).as_posix()
+        try:
+            rel=f.relative_to(root).as_posix()
+        except ValueError:
+            rel=str(f.resolve())
         files.append({"path":rel,"bytes":f.stat().st_size,"sha256":digest})
         by_hash.setdefault(digest,[]).append(rel)
     duplicates=[{"sha256":key,"paths":paths} for key,paths in by_hash.items() if len(paths)>1]
     candidates=[]
     for row in files:
-        p=root/row["path"]
+        p=Path(row["path"])
+        if not p.is_absolute():
+            p=root/p
         if p.suffix.lower()!=".safetensors":continue
         parent=p.parent
         config=read_json(parent/"adapter_config.json")
