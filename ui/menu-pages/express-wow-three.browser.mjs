@@ -20,18 +20,20 @@ try{
   assert.equal(state,'active',`Three WebGL MAX not active at ${width}px: ${state}`);
   assert.equal(await page.locator('.universe').getAttribute('data-wow-heliodon'),'active','HELIODON metal scene should be mounted within same Three renderer');
   assert.equal(await page.locator('canvas.nox-wow-three').isVisible(),true);
+  await page.locator('#directions button').first().click();
+  const aetherCard=page.locator('.details .nox-catalog-card').first();
+  assert.equal(await aetherCard.isVisible(),true,'AETHER must style real navigation cards');
+  const glass=await aetherCard.evaluate(el=>getComputedStyle(el).backdropFilter);
+  if(width>520) assert.match(glass,/blur/,'AETHER glass should be active in MAX');
   await page.screenshot({path:`wow-three-${width}.png`,fullPage:true});
   await page.locator('#fx').click();
   await page.waitForFunction(()=>document.body.dataset.fx==='ECO');
   assert.equal(await page.locator('canvas.nox-wow-three').isVisible(),false);
   assert.equal(await halo.isVisible(),false,'HALO must be hidden in ECO');
+  assert.equal(await aetherCard.evaluate(el=>getComputedStyle(el).backdropFilter),'none','AETHER blur must be disabled in ECO');
   const buttons=await page.locator('#directions button').count();
   assert.equal(buttons,8,'All eight original navigation directions remain');
-  await page.locator('#directions button').first().click();
-  const aetherCard=page.locator('.details .nox-catalog-card').first();
-  assert.equal(await aetherCard.isVisible(),true,'AETHER must style real navigation cards');
-  const glass=await aetherCard.evaluate(el=>getComputedStyle(el).backdropFilter);
-  if(width>520) assert.match(glass,/blur/,'AETHER bento glass should be active on wider screens');
+
   assert.equal(pageErrors.length,0,pageErrors.join('; '));
   await page.close();
  }
