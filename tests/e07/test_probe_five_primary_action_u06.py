@@ -123,6 +123,27 @@ class FiveButtonGate(unittest.TestCase):
         self.assertNotIn('gui_hwnd(install / "NOX.P01.Shell.exe", local, safe_nav=True)', probe)
         self.assertIn('"NOT_RUN_OWNER_SCOPE_HOLD"', probe)
 
+    def test_d01_verified_producer_sha_survives_four_action_hold(self):
+        # Failed UIA actions cannot erase checked Source/Setup provenance or promote PASS.
+        probe = PATH.read_text(encoding="utf-8")
+        verified = probe.index('identity = checked_source_setup(')
+        bound = probe.index('receipt["source_setup"] = identity')
+        gui = probe.index('witness = gui_hwnd(')
+        counted = probe.index('receipt["installed_files_sha_verified"] = len(post_gui_owner[0])')
+        strict = probe.index('"five_primary": evaluate(witness)')
+        self.assertLess(verified, bound)
+        self.assertLess(bound, gui)
+        self.assertLess(gui, counted)
+        self.assertLess(counted, strict)
+        self.assertIn('safe_nav=False', probe)
+        self.assertIn('"release_accepted": False', probe)
+        r = witness()
+        r["ui_safe_primary_navigation"] = {
+            "status": "HOLD", "navigation_verified": "NOT_TESTED",
+            "actions_invoked": 0, "per_action": {}}
+        with self.assertRaises(module.Hold):
+            module.evaluate(r)
+
     def test_d01_chat_only_never_promotes_unverified_four_to_five_pass(self):
         result = witness()
         result["ui_safe_primary_navigation"] = {

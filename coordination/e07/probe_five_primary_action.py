@@ -181,6 +181,9 @@ def main() -> int:
                 os.environ.get("GITHUB_REPOSITORY") == "MSSTXNEWS/nox-helion-pp-private-build",
                 "E07_PRIMARY_UNAUTHORIZED_RUNNER_HOLD")
         identity = checked_source_setup(args.artifact_dir, args.source_sha, args.setup_sha)
+        # Bind verified producer SourceSHA/SetupSHA before any physical UIA gate.
+        # Never report unverified CLI arguments as a physical receipt.
+        receipt["source_setup"] = identity
         local = Path(os.environ["LOCALAPPDATA"])
         install = local / "Programs" / "NOX HELION"
         require(clean_dir(install) and not install.is_symlink() and
@@ -221,9 +224,9 @@ def main() -> int:
                 for name, item in action_results.items()
                 if name in PRIMARY[1:] and type(item) is dict
             }
-        receipt.update({"source_setup": identity,
-                        "installed_files_sha_verified": len(post_gui_owner[0]),
-                        "five_primary": evaluate(witness), "status": "PASS", "error": None})
+        receipt["installed_files_sha_verified"] = len(post_gui_owner[0])
+        receipt.update({"five_primary": evaluate(witness),
+                        "status": "PASS", "error": None})
     except (Hold, OSError, KeyError, ValueError) as exc:
         receipt["error"] = str(exc) if isinstance(exc, Hold) else "E07_PRIMARY_RUNTIME_HOLD"
     finally:
