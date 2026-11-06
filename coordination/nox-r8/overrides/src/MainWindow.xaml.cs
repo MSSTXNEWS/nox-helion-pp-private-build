@@ -769,13 +769,18 @@ public partial class MainWindow : Window
         return Convert.ToHexString(SHA256.HashData(stream));
     }
 
+    // Snapshot the existing owner's SQLite before schema mutation or import.
+    // Both the database and manifest are new entries: never replace owner files.
     private string CheckpointSqlite(SqliteConnection source, string purpose)
     {
         string dir = Path.Combine(Path.GetDirectoryName(dbPath)!, "backups");
+        ValidateBackupParent(Path.GetDirectoryName(dir)!);
         Directory.CreateDirectory(dir);
+        ValidateBackupParent(dir);
         string file = Path.Combine(dir, "NOX_" + purpose + "_" +
             DateTimeOffset.UtcNow.ToString("yyyyMMdd_HHmmss_fff") + "_" +
             Guid.NewGuid().ToString("N") + ".sqlite3");
+        using (var reservation = new FileStream(file, FileMode.CreateNew, FileAccess.Write, FileShare.None)) { }
         using (var dest = new SqliteConnection(new SqliteConnectionStringBuilder {
             DataSource = file, Mode = SqliteOpenMode.ReadWriteCreate, Pooling = false }.ToString()))
         {
@@ -792,9 +797,38 @@ public partial class MainWindow : Window
                 throw new InvalidOperationException("NOX_SQLITE_BACKUP_INTEGRITY_HOLD");
         }
         string sha = Sha256File(file);
-        File.WriteAllText(file + ".sha256.tmp", sha + "  " + Path.GetFileName(file), Encoding.UTF8);
-        File.Move(file + ".sha256.tmp", file + ".sha256");
+        string manifest = file + ".sha256";
+        string stagedManifest = manifest + "." + Guid.NewGuid().ToString("N") + ".partial";
+        string record = sha + "  " + Path.GetFileName(file) + "\n";
+        using (var output = new FileStream(stagedManifest, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+        {
+            byte[] data = Encoding.UTF8.GetBytes(record);
+            output.Write(data, 0, data.Length);
+            output.Flush(flushToDisk: true);
+        }
+        ValidateBackupParent(dir);
+        File.Move(stagedManifest, manifest, overwrite: false);
+        if (!string.Equals(File.ReadAllText(manifest, Encoding.UTF8), record, StringComparison.Ordinal))
+            throw new InvalidOperationException("NOX_SQLITE_BACKUP_MANIFEST_READBACK_HOLD");
+        if (!string.Equals(Sha256File(file), sha, StringComparison.Ordinal))
+            throw new InvalidOperationException("NOX_SQLITE_BACKUP_SHA_READBACK_HOLD");
         return file;
+    }
+
+    // Fail closed if any existing parent is a Windows junction / symlink,
+    // ordinary file, missing folder, or inaccessible entry. No deletes.
+    private static void ValidateBackupParent(string directory)
+    {
+        for (DirectoryInfo? current = new DirectoryInfo(Path.GetFullPath(directory));
+             current != null; current = current.Parent)
+        {
+            if (!current.Exists)
+                throw new InvalidOperationException("NOX_BACKUP_PARENT_MISSING_HOLD");
+            var attrs = current.Attributes;
+            if ((attrs & FileAttributes.ReparsePoint) != 0 ||
+                (attrs & FileAttributes.Directory) == 0)
+                throw new InvalidOperationException("NOX_BACKUP_PARENT_REPARSE_HOLD");
+        }
     }
 
     private static bool HasPersonaColumn(SqliteConnection db, string table)
@@ -1725,8 +1759,12 @@ public partial class MainWindow : Window
             File.Exists(target) || Directory.Exists(target))
             throw new InvalidOperationException("NOX_BACKUP_DESTINATION_EXISTS_HOLD");
         var outputDirectory = Path.GetDirectoryName(target)!;
+        foreach (var suffix in new[] { "-wal", "-shm", "-journal" })
+            if (string.Equals(target, Path.GetFullPath(dbPath) + suffix, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("NOX_BACKUP_LIVE_SIDECAR_HOLD");
         if ((File.GetAttributes(outputDirectory) & FileAttributes.ReparsePoint) != 0)
             throw new InvalidOperationException("NOX_BACKUP_DESTINATION_REPARSE_HOLD");
+        ValidateBackupParent(outputDirectory);
 
         // SQLite WAL-safe online backup + quick_check + SHA receipt are performed
         // before creating an owner-selected export; no live SQLite is overwritten.
@@ -1746,6 +1784,7 @@ public partial class MainWindow : Window
         var originalSha = Sha256File(snapshot);
         if (!string.Equals(originalSha, Sha256File(stage), StringComparison.Ordinal))
             throw new InvalidOperationException("NOX_BACKUP_EXPORT_CHECKSUM_HOLD");
+        ValidateBackupParent(outputDirectory);
         File.Move(stage, target); // No overwrite; if another file appeared, hold.
         if (!string.Equals(originalSha, Sha256File(target), StringComparison.Ordinal))
             throw new InvalidOperationException("NOX_BACKUP_EXPORT_READBACK_HOLD");
