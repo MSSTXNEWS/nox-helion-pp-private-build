@@ -98,3 +98,9 @@ test('D06 refusal receipts stay visible only for exact reviewed owner codes',()=
  const renderer=readFileSync(new URL('../onehost-menu-bindings.mjs',import.meta.url),'utf8');
  assert.match(renderer,/route==='system\.autostart'\?'HOLD · '\+nativeAutostartUiDenialCode\(error\)/);
 });
+
+test('D06 SETTINGS DOM renders only reviewed native denial receipts',()=>{
+ assert.match(src,/AUTOSTART_UIA_IDS,nativeAutostartUiDenialCode} from '\.\.\/onehost-menu-bindings\.mjs'/);
+ assert.match(src,/if\(message\.isConnected\)message\.textContent='HOLD · '\+nativeAutostartUiDenialCode\(e\);/);
+ assert.doesNotMatch(src,/String\(e\?\.message\|\|'нет подтверждения Windows'\)/);
+});

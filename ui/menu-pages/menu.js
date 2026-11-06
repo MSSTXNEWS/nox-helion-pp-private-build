@@ -1,6 +1,6 @@
 import {createNoxLucideIcon} from '../nox-lucide-icons.mjs';
 import {DIRECTIONS,WORLDS,CORE_IDS,PERSONAS,PRIMARY,ROUTE_COUNT,getWorld,getRoute,worldGroups} from './express-layout.mjs';
-import {createNativeMenuClient,isNativeChatTerminal,canonicalChatContext,nativeOwnerReceiptHolds,nativeOwnerActionReceipt,createAutostartOwnerFlow,settingsAutostartOwnerAdmission,AUTOSTART_UIA_IDS} from '../onehost-menu-bindings.mjs';
+import {createNativeMenuClient,isNativeChatTerminal,canonicalChatContext,nativeOwnerReceiptHolds,nativeOwnerActionReceipt,createAutostartOwnerFlow,settingsAutostartOwnerAdmission,AUTOSTART_UIA_IDS,nativeAutostartUiDenialCode} from '../onehost-menu-bindings.mjs';
 import {firstBootTruth} from '../firstboot-truth.mjs';
 const doc=document,$=id=>doc.getElementById(id);
 const el=(tag,cls,label)=>{const x=doc.createElement(tag);if(cls)x.className=cls;if(label!==undefined)x.textContent=label;return x;};
@@ -526,7 +526,7 @@ function nativeSettings(label){
    message.textContent='WINDOWS HKCU · '+v+
      (Object.keys(payload).length?' · запись и независимое чтение подтверждены':' · чтение подтверждено');
   }catch(e){
-   if(message.isConnected)message.textContent='HOLD · '+String(e?.message||'нет подтверждения Windows').slice(0,150);
+   if(message.isConnected)message.textContent='HOLD · '+nativeAutostartUiDenialCode(e);
   }finally{busy=false;buttons.forEach(b=>b.disabled=!client);}
  }
  const defs=[
