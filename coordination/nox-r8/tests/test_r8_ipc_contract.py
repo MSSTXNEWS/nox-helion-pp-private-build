@@ -128,3 +128,20 @@ assert 'Volatile.Read(ref generationStreamingTokenCount) >= tokenTarget' in toke
 assert 'if (value.Length > 0) Interlocked.Increment(ref generationStreamingTokenCount);' in generation
 assert generation.index('await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellation.Token)') < generation.index('Interlocked.Increment(ref generationStreamingTokenCount)')
 print('B04 R8 SOURCE_ONLY: physical STOP oracle waits for live Ollama NDJSON token, not only native dispatch PASS')
+
+# B02 R8: local provider can restart after window startup. Retry the existing
+# native /api/tags only, guard document epoch, avoid touching active chat/STOP.
+reconnect = cs.split('private async Task CheckProvider()', 1)[1].split('private async Task Generate(', 1)[0]
+assert 'Interval = TimeSpan.FromSeconds(25)' in cs, 'B02_RECONNECT_INTERVAL_HOLD'
+assert 'providerReconnectTimer.Tick += (_, _) => { if (active == null) _ = CheckProvider(); };' in cs, 'B02_RECONNECT_TICK_HOLD'
+assert 'if (!selfTestRequested && !providerReconnectTimer.IsEnabled)' in cs, 'B02_SELFTEST_PROBE_ISOLATION_HOLD'
+assert 'providerReconnectTimer.Stop();' in cs, 'B02_SHUTDOWN_CANCEL_HOLD'
+assert cs.count('Interlocked.Increment(ref providerProbeEpoch)') >= 3, 'B02_PROBE_EPOCH_HOLD'
+assert reconnect.count('probeEpoch == Volatile.Read(ref providerProbeEpoch)') == 2, 'B02_STALE_PROBE_HOLD'
+assert reconnect.count('active == null') == 2, 'B02_STREAM_STATUS_PROTECTION_HOLD'
+assert 'Send("health", new { online = true' in reconnect, 'B02_RECONNECT_ONLINE_HOLD'
+assert 'Send("health", new { online = false' in reconnect, 'B02_PROVIDER_OFFLINE_HOLD'
+assert 'http.GetAsync(Api + "/api/tags", probe.Token)' in reconnect, 'B02_NATIVE_LOOPBACK_PROBE_HOLD'
+assert 'Process.Start(' not in reconnect and 'model.pull' not in reconnect, 'B02_NO_NEW_BACKEND_HOLD'
+assert 'case "engine.start": await StartLocalEngine();' in cs, 'B02_OWNER_ENGINE_START_HOLD'
+print('B02 R8 SOURCE_ONLY: provider reconnect, non-stale health, live STOP guard PASS; owner Windows NOT_TESTED')

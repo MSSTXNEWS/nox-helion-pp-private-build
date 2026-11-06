@@ -23,6 +23,12 @@ public partial class MainWindow : Window
 {
     private readonly HttpClient http = new() { Timeout = TimeSpan.FromMinutes(10) };
     private readonly SemaphoreSlim generationLock = new(1, 1);
+    // B02 R8: reattach the existing loopback provider after its process restarts.
+    // Probe only; never start a service, download models, or change consent.
+    private readonly System.Windows.Threading.DispatcherTimer providerReconnectTimer = new()
+        { Interval = TimeSpan.FromSeconds(25) };
+    private int providerProbeEpoch;
+    private volatile bool providerProbeStopped;
     private CancellationTokenSource? active;
     private string? activeRequestId; // Owned by the current WebView2 document and chat request.
     private CancellationTokenSource? activeModelPull;
@@ -82,7 +88,13 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         Loaded += async (_, _) => await Initialize();
-        Closing += (_, _) => { active?.Cancel(); activeModelPull?.Cancel(); http.Dispose(); };
+        providerReconnectTimer.Tick += (_, _) => { if (active == null) _ = CheckProvider(); };
+        Closing += (_, _) => {
+            providerProbeStopped = true;
+            providerReconnectTimer.Stop();
+            Interlocked.Increment(ref providerProbeEpoch);
+            active?.Cancel(); activeModelPull?.Cancel(); http.Dispose();
+        };
         if (UiSmokeRequested) _ = UiSmokeWatchdogAsync();
     }
 
@@ -103,7 +115,12 @@ public partial class MainWindow : Window
             Browser.CoreWebView2.NewWindowRequested += (_, args) => args.Handled = true;
             Browser.CoreWebView2.PermissionRequested += (_, args) => args.State = CoreWebView2PermissionState.Deny;
             Browser.CoreWebView2.WebMessageReceived += OnMessage;
-            Browser.CoreWebView2.NavigationStarting += (_, _) => { active?.Cancel(); activeRequestId = null; };
+            Browser.CoreWebView2.NavigationStarting += (_, _) => {
+                active?.Cancel();
+                activeRequestId = null;
+                // No stale provider status may reach a replaced WebView2 document.
+                Interlocked.Increment(ref providerProbeEpoch);
+            };
             using var stream = typeof(MainWindow).Assembly.GetManifestResourceStream("NOX.HELION.index.html")
                 ?? throw new InvalidOperationException("Embedded D02 interface resource is missing");
             using var reader = new StreamReader(stream);
@@ -126,6 +143,8 @@ public partial class MainWindow : Window
                 // not to a source-only build or a previously launched EXE.
                 if (!selfTestRequested) WriteRuntimeReadyReceipt();
                 if (!UiSmokeRequested) _ = CheckProvider();
+                if (!selfTestRequested && !providerReconnectTimer.IsEnabled)
+                    providerReconnectTimer.Start();
                 if (selfTestRequested && !selfTestStarted)
                 {
                     selfTestStarted = true;
@@ -932,18 +951,28 @@ public partial class MainWindow : Window
 
     private async Task CheckProvider()
     {
+        // Startup, routes and reconnect ticks can finish out of order. The
+        // newest request wins; a failed OLD probe cannot hide a live provider.
+        int probeEpoch = Interlocked.Increment(ref providerProbeEpoch);
+        string selected = DefaultModel;
         try
         {
+            selected = CurrentModel;
             using var probe = new CancellationTokenSource(TimeSpan.FromSeconds(4));
             using var response = await http.GetAsync(Api + "/api/tags", probe.Token);
             response.EnsureSuccessStatusCode();
             using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
             var names = json.RootElement.GetProperty("models").EnumerateArray()
                 .Select(x => x.GetProperty("name").GetString() ?? "").ToArray();
-            var selected = CurrentModel;
-            Send("health", new { online = true, endpoint = Api, model = selected, modelVisible = names.Contains(selected), models = names });
+            if (!providerProbeStopped && active == null && probeEpoch == Volatile.Read(ref providerProbeEpoch))
+                Send("health", new { online = true, endpoint = Api, model = selected,
+                    modelVisible = names.Contains(selected), models = names });
         }
-        catch (Exception ex) { Send("health", new { online = false, endpoint = Api, model = CurrentModel, error = ex.Message }); }
+        catch (Exception ex)
+        {
+            if (!providerProbeStopped && active == null && probeEpoch == Volatile.Read(ref providerProbeEpoch))
+                Send("health", new { online = false, endpoint = Api, model = selected, error = ex.Message });
+        }
     }
 
     private async Task Generate(string prompt, string requestId)
