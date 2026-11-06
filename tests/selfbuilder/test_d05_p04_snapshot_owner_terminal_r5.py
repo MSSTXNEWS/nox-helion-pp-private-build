@@ -78,5 +78,30 @@ class D05SnapshotOwnerResultGate(unittest.TestCase):
         self.assertEqual([row["event_sequence"] for row in
                           self.owner.event_snapshot(self.job)], [1])
 
+    def test_relay_late_invalid_provenance_has_no_partial_ui_delivery(self):
+        # Earlier valid GPU telemetry must not escape into WebView2 when a
+        # later complete row fails native provenance checks.
+        forwarded = []
+        self.owner.event_sink = lambda event: (forwarded.append(event), True)[1]
+        self.owner._relayed = set()
+        self.put(json.dumps(self.row(1)),
+                 json.dumps({**self.row(2), "source": "FOREIGN.QLoRA"}))
+        with self.assertRaisesRegex(ForgeHold, "P04_EVENT_PROVENANCE_HOLD"):
+            self.owner.relay_events(self.job, live=True)
+        self.assertEqual(forwarded, [])
+        self.assertEqual(self.owner._relayed, set())
+
+    def test_relay_valid_progress_is_once_only_and_terminal_is_withheld(self):
+        forwarded = []
+        self.owner.event_sink = lambda event: (forwarded.append(event), True)[1]
+        self.owner._relayed = set()
+        self.put(json.dumps(self.row(1)),
+                 json.dumps(self.row(2, state="COMPLETED", kind="task.completed")),
+                 json.dumps(self.row(3, state="RUNNING", kind="gpu.sample")))
+        self.assertEqual(self.owner.relay_events(self.job, live=True), 2)
+        self.assertEqual(self.owner.relay_events(self.job, live=True), 0)
+        self.assertEqual([event["event_sequence"] for event in forwarded], [1, 3])
+
+
 if __name__ == "__main__":
     unittest.main()

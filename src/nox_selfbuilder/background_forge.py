@@ -712,6 +712,9 @@ class ExistingP04Background:
             return value
 
         count, expected_sequence, seen_ids = 0, 1, set()
+        # Validate the entire committed record prefix before any host side effect.
+        # A later forged/ambiguous row must not leak earlier progress to the UI.
+        pending_events = []
         with path.open(encoding="utf-8") as stream:
             for line in stream:
                 if not line.endswith("\n"):
@@ -749,8 +752,14 @@ class ExistingP04Background:
                     continue
                 identity = (job.run_id, event["event_id"])
                 if identity not in self._relayed:
-                    if self.event_sink(event) is False:
-                        raise ForgeHold("P04_HOST_EVENT_REJECTED")
-                    self._relayed.add(identity)
-                    count += 1
+                    pending_events.append((identity, event))
+        # End of validated stream snapshot: no callbacks until every complete
+        # record has passed native run/task, sequence, JSON and type guards.
+        for identity, event in pending_events:
+            if identity in self._relayed:
+                continue
+            if self.event_sink(event) is False:
+                raise ForgeHold("P04_HOST_EVENT_REJECTED")
+            self._relayed.add(identity)
+            count += 1
         return count
