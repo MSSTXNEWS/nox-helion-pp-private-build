@@ -496,14 +496,27 @@ public sealed class ModelDownloadQueueStore
         if (jobId == Guid.Empty) throw new ArgumentException("Valid job identity required.", nameof(jobId));
         var path = _path + ".running." + jobId.ToString("N") + ".lock";
         ModelLocalAttestation.RequireNoExistingReparsePoint(path);
+        FileStream lease;
         try
         {
-            return new FileStream(path, FileMode.OpenOrCreate, FileAccess.ReadWrite,
+            lease = new FileStream(path, FileMode.OpenOrCreate, FileAccess.ReadWrite,
                 FileShare.None, 1, FileOptions.None);
         }
         catch (IOException)
         {
             return null; // Contention or inaccessible lock: fail closed.
+        }
+        try
+        {
+            // Preflight cannot detect a foreign NTFS hardlink swapped into the
+            // lease path. Attest the exact open execution lease before use.
+            RequireSingleLinkQueueSnapshot(lease.SafeFileHandle);
+            return lease;
+        }
+        catch
+        {
+            lease.Dispose(); // A denied owner lease must never remain held.
+            throw;
         }
     }
 
@@ -697,18 +710,32 @@ public sealed class ModelDownloadQueueStore
         {
             ct.ThrowIfCancellationRequested();
             ModelLocalAttestation.RequireNoExistingReparsePoint(_leasePath);
+            FileStream lease;
             try
             {
-                return new FileStream(_leasePath, FileMode.OpenOrCreate, FileAccess.ReadWrite,
+                lease = new FileStream(_leasePath, FileMode.OpenOrCreate, FileAccess.ReadWrite,
                     FileShare.None, 1, FileOptions.None);
             }
             catch (IOException) when (elapsed.Elapsed < TimeSpan.FromSeconds(10))
             {
                 await Task.Delay(40, ct);
+                continue;
             }
             catch (IOException ex)
             {
                 throw new IOException("P03_QUEUE_LEASE_UNAVAILABLE: concurrent queue writer", ex);
+            }
+            try
+            {
+                // Hold the owner's original single-link lock inode, not an
+                // attacker-supplied alias that passed a reparse-only preflight.
+                RequireSingleLinkQueueSnapshot(lease.SafeFileHandle);
+                return lease;
+            }
+            catch
+            {
+                lease.Dispose();
+                throw;
             }
         }
     }

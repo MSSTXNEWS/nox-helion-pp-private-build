@@ -554,6 +554,59 @@ try
             "F02E no foreign snapshot copied and no data altered");
         File.Delete(liveQueue); // only the disposable alias, not foreign bytes
         File.Move(foreignQueue, liveQueue);
+
+        // D04 R5: both durable lock namespaces carry native queue authority.
+        // An existing NTFS hardlink must not be accepted as an owned lease.
+        var executionForeign = Path.Combine(multiRoot, "d04-foreign-execution-lock.dat");
+        const string executionSentinel = "P03_FOREIGN_EXECUTION_LEASE_UNTOUCHED";
+        await File.WriteAllTextAsync(executionForeign, executionSentinel);
+        var executionAlias = Path.Combine(linkRoot,
+            "p03-model-download-queue.json.running." + originalJob.Id.ToString("N") + ".lock");
+        if (!P03HardlinkFixture.CreateHardLink(executionAlias, executionForeign, IntPtr.Zero))
+            throw new Exception("FAIL D04F foreign execution lock fixture unavailable");
+        try
+        {
+            using var deniedLease = protectedQueue.TryAcquireExecutionLease(originalJob.Id);
+            throw new Exception("FAIL D04F foreign execution hardlink lease admitted");
+        }
+        catch (InvalidDataException ex) when (ex.Message == "P03_QUEUE_HARDLINK_SNAPSHOT_HOLD")
+        {
+            Assert(true, "D04F foreign execution hardlink denied on opened handle");
+        }
+        finally { File.Delete(executionAlias); } // Disposable alias, not foreign bytes.
+        Assert(await File.ReadAllTextAsync(executionForeign) == executionSentinel,
+            "D04G execution lease failure preserved unrelated owner bytes");
+        using (var nativeLease = protectedQueue.TryAcquireExecutionLease(originalJob.Id))
+            Assert(nativeLease is not null, "D04H ordinary single-link execution lease works");
+
+        var globalLeaseFile = Path.Combine(linkRoot, "p03-model-download-queue.json.lock");
+        var savedGlobalLease = Path.Combine(linkRoot, "d04-owner-queue-lock.saved");
+        var queueForeign = Path.Combine(multiRoot, "d04-foreign-queue-lock.dat");
+        const string queueSentinel = "P03_FOREIGN_QUEUE_LEASE_UNTOUCHED";
+        await File.WriteAllTextAsync(queueForeign, queueSentinel);
+        File.Move(globalLeaseFile, savedGlobalLease);
+        try
+        {
+            if (!P03HardlinkFixture.CreateHardLink(globalLeaseFile, queueForeign, IntPtr.Zero))
+                throw new Exception("FAIL D04I foreign queue lock fixture unavailable");
+            try
+            {
+                _ = await protectedQueue.ReadAsync();
+                throw new Exception("FAIL D04I foreign queue hardlink lease admitted");
+            }
+            catch (InvalidDataException ex) when (ex.Message == "P03_QUEUE_HARDLINK_SNAPSHOT_HOLD")
+            {
+                Assert(true, "D04I foreign queue hardlink denied before queue read");
+            }
+        }
+        finally
+        {
+            if (File.Exists(globalLeaseFile)) File.Delete(globalLeaseFile);
+            File.Move(savedGlobalLease, globalLeaseFile); // Restore original inode.
+        }
+        Assert(await File.ReadAllTextAsync(queueForeign) == queueSentinel &&
+            (await protectedQueue.ReadAsync()).Single().Id == originalJob.Id,
+            "D04J foreign queue lock untouched; legitimate queue remains readable");
     }
     var file = Path.Combine(multiRoot, "sample.gguf");
     await File.WriteAllBytesAsync(file, Encoding.ASCII.GetBytes("GGUFsynthetic-byteproof"));
