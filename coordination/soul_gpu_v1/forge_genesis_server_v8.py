@@ -132,7 +132,7 @@ def latest_adapter(root):
         ): continue
         for stepdir in run.glob("step-*"):
             if not stepdir.is_dir() or stepdir.is_symlink(): continue
-            match=re.fullmatch(r"step-(\\d+)",stepdir.name)
+            match=re.fullmatch(r"step-(\d+)",stepdir.name)
             if not match: continue
             weights=stepdir/"adapter_model.safetensors"
             config=stepdir/"adapter_config.json"
@@ -143,7 +143,8 @@ def latest_adapter(root):
     if best is None:return None
     _,stepdir,weights=best
     try:
-        sha=hashlib.file_digest(weights.open("rb"),"sha256").hexdigest()
+        with weights.open("rb") as stream:
+            sha=hashlib.file_digest(stream,"sha256").hexdigest()
     except (OSError,ValueError):
         sha=None
     return {"step":int(stepdir.name.split("-")[1]),
