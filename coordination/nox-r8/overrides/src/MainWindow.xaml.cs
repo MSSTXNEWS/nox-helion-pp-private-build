@@ -467,6 +467,8 @@ public partial class MainWindow : Window
                     throw new InvalidOperationException("NOX_SETTINGS_FOREIGN_KEY_WRITTEN_HOLD");
             }
             checks["settings_foreign_key_denial"] = "PASS";
+            VerifyIsolatedSqliteBackup();
+            checks["sqlite_native_backup_no_loss"] = "PASS";
             checks["native_wpf_webview2_renderer"] = Browser.CoreWebView2 != null ? "PASS" : "FAIL";
             if (Browser.CoreWebView2 == null) throw new InvalidOperationException("WebView2 unavailable");
         }
@@ -483,7 +485,7 @@ public partial class MainWindow : Window
                           "settings_windows_uia_host", "settings_webview2_accessible_controls",
                           "isolated_sqlite_path", "settings_wpf_owner_sqlite_readback",
                           "settings_wpf_motion_sqlite_readback", "settings_foreign_key_denial",
-                          "native_wpf_webview2_renderer" };
+                          "sqlite_native_backup_no_loss", "native_wpf_webview2_renderer" };
             bool accepted = error == null && checks.Count == requiredChecks.Length &&
                 requiredChecks.All(k => checks.TryGetValue(k, out var result) && result == "PASS")
                 && sha.Length == 64;
@@ -813,6 +815,52 @@ public partial class MainWindow : Window
         if (!string.Equals(Sha256File(file), sha, StringComparison.Ordinal))
             throw new InvalidOperationException("NOX_SQLITE_BACKUP_SHA_READBACK_HOLD");
         return file;
+    }
+
+    // B03: actual native SQLite BackupDatabase + manifest verification against
+    // the isolated UI smoke database. No live owner database, foreign file,
+    // model or trainer is opened or modified by this acceptance probe.
+    private void VerifyIsolatedSqliteBackup()
+    {
+        if (!UiSmokeRequested ||
+            !Path.GetFileName(dbPath).StartsWith("selftest_r8_", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("NOX_B03_SMOKE_NOT_ISOLATED_HOLD");
+
+        using var live = OpenDatabase();
+        using (var mode = live.CreateCommand())
+        {
+            mode.CommandText = "SELECT value FROM preferences WHERE key='performance'";
+            if (!string.Equals(mode.ExecuteScalar() as string, "ECO", StringComparison.Ordinal))
+                throw new InvalidOperationException("NOX_B03_SMOKE_PREIMAGE_HOLD");
+        }
+
+        string snapshot = CheckpointSqlite(live, "SMOKE_ISOLATED");
+        string sha = Sha256File(snapshot);
+        string expectedManifest = sha + "  " + Path.GetFileName(snapshot) + "\n";
+        if (!string.Equals(File.ReadAllText(snapshot + ".sha256", Encoding.UTF8),
+                           expectedManifest, StringComparison.Ordinal))
+            throw new InvalidOperationException("NOX_B03_SMOKE_MANIFEST_HOLD");
+
+        using (var copy = new SqliteConnection(new SqliteConnectionStringBuilder {
+            DataSource = snapshot, Mode = SqliteOpenMode.ReadOnly, Pooling = false }.ToString()))
+        {
+            copy.Open();
+            using var verify = copy.CreateCommand();
+            verify.CommandText = "PRAGMA quick_check";
+            if (!string.Equals(verify.ExecuteScalar() as string, "ok", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("NOX_B03_SMOKE_INTEGRITY_HOLD");
+            verify.CommandText = "SELECT value FROM preferences WHERE key='performance'";
+            if (!string.Equals(verify.ExecuteScalar() as string, "ECO", StringComparison.Ordinal))
+                throw new InvalidOperationException("NOX_B03_SMOKE_SNAPSHOT_ROWS_HOLD");
+        }
+        using (var unchanged = live.CreateCommand())
+        {
+            unchanged.CommandText = "SELECT value FROM preferences WHERE key='performance'";
+            if (!string.Equals(unchanged.ExecuteScalar() as string, "ECO", StringComparison.Ordinal))
+                throw new InvalidOperationException("NOX_B03_SMOKE_SOURCE_CHANGED_HOLD");
+        }
+        if (!string.Equals(Sha256File(snapshot), sha, StringComparison.Ordinal))
+            throw new InvalidOperationException("NOX_B03_SMOKE_SHA_READBACK_HOLD");
     }
 
     // Fail closed if any existing parent is a Windows junction / symlink,

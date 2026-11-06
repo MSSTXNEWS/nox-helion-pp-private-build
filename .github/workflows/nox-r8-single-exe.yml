@@ -81,6 +81,7 @@ jobs:
                 $n.checks.settings_wpf_owner_sqlite_readback -ne 'PASS' -or
                 $n.checks.settings_wpf_motion_sqlite_readback -ne 'PASS' -or
                 $n.checks.settings_foreign_key_denial -ne 'PASS' -or
+                $n.checks.sqlite_native_backup_no_loss -ne 'PASS' -or
                 $n.checks.isolated_sqlite_path -ne 'PASS' -or
                 $n.checks.native_wpf_webview2_renderer -ne 'PASS' -or
                 ![string]::Equals($n.exeSha256,$sha,[StringComparison]::OrdinalIgnoreCase)) {
