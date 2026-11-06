@@ -96,6 +96,8 @@ try
     var imported = await importAdapter.ImportGgufAsync(importJob,
         (e, token) => ValueTask.CompletedTask, default);
     if (imported.Bytes != smallBytes || imported.Sha256 != ggufSha ||
+        imported.OllamaDigest != "sha256:" + new string('a', 64) ||
+        string.Equals(imported.OllamaDigest, "sha256:" + imported.Sha256, StringComparison.OrdinalIgnoreCase) ||
         !File.Exists(importAdapter.ReceiptPathFor(importJob.Id))) throw new Exception("GGUF import receipt failed");
     Console.WriteLine("P03_SMOKE_PASS: queue/provenance/restore/bridge/Pull/GGUF digest");
 }

@@ -388,12 +388,15 @@
     {
       "path": "Packages/P03/Source/P03.ModelCenter.Smoke/Program.cs",
       "owner": 3,
-      "run_id": "NOX-E03-PR162-PIN-RECONCILE-20261101",
-      "pre_git_blob_sha1": "159afe6e068827361345273e6539d27450ed06dd",
-      "post_git_blob_sha1": "08de8d3ed1571e599d55a64fe4cf22f0fcdda111",
-      "post_bytes": 8695,
-      "source_commit": "3ec73f893961a8dce0dc3bdbc202afd4a54773a0",
-      "acceptance": "SOURCE_INTEGRITY_ONLY_NOT_MODEL_RIGHTS_WINDOWS_E07"
+      "run_id": "B04_R5_GGUF_ACTUAL_INSTALLED_MANIFEST_EVENT_20261106",
+      "pre_git_blob_sha1": "08de8d3ed1571e599d55a64fe4cf22f0fcdda111",
+      "post_git_blob_sha1": "af2b7f660dfa0992499b201c855f4cf38b3349ad",
+      "post_bytes": 8876,
+      "acceptance": "SOURCE_ONLY_TARGET_16_OF_16_CSHARP_WINDOWS_NOT_RUN",
+      "prior_active_post_git_blob_sha1": "08de8d3ed1571e599d55a64fe4cf22f0fcdda111",
+      "prior_active_post_bytes": 8695,
+      "source_head_observed": "0d939cc9694418521e8a216b8405f8f8d40d475f",
+      "change_scope": "GGUF_ACTUAL_INSTALLED_MODEL_DIGEST_SEPARATE_FROM_SOURCE_GGUF_SHA"
     },
     {
       "path": "Packages/P03/Source/P03.ModelCenter.Wow/BRIDGE_SCHEMA.json",
@@ -521,14 +524,15 @@
     {
       "path": "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueWorker.cs",
       "owner": 3,
-      "run_id": "D04_P03_MERGED_REENTRY_AUTHORITY_R5_20261106",
-      "pre_git_blob_sha1": "f2f73de74cd41e32564baa4973eb9786f554ec44",
-      "post_git_blob_sha1": "4c38a9b7e068b55d5fbbd025d3b3b06680f64f15",
-      "post_bytes": 16429,
-      "acceptance": "SOURCE_ONLY_TARGET_16_OF_16_C_SHARP_REGRESSION_AND_WINDOWS_NOT_RUN",
-      "prior_active_post_git_blob_sha1": "f2f73de74cd41e32564baa4973eb9786f554ec44",
-      "prior_active_post_bytes": 16146,
-      "source_head_observed": "763ae6cfc5e1908ad97460ac286f86da9ec59343"
+      "run_id": "B04_R5_GGUF_ACTUAL_INSTALLED_MANIFEST_EVENT_20261106",
+      "pre_git_blob_sha1": "4c38a9b7e068b55d5fbbd025d3b3b06680f64f15",
+      "post_git_blob_sha1": "44d5069371fd8af623950b82e708a80218357811",
+      "post_bytes": 16423,
+      "acceptance": "SOURCE_ONLY_TARGET_16_OF_16_CSHARP_WINDOWS_NOT_RUN",
+      "prior_active_post_git_blob_sha1": "4c38a9b7e068b55d5fbbd025d3b3b06680f64f15",
+      "prior_active_post_bytes": 16429,
+      "source_head_observed": "0d939cc9694418521e8a216b8405f8f8d40d475f",
+      "change_scope": "GGUF_ACTUAL_INSTALLED_MODEL_DIGEST_SEPARATE_FROM_SOURCE_GGUF_SHA"
     },
     {
       "path": "Packages/P03/Source/P03.ModelCenter/ModelCenterNativeRoutes.cs",
@@ -542,14 +546,15 @@
     {
       "path": "Packages/P03/Source/P03.ModelCenter/OllamaModelAdapter.cs",
       "owner": 3,
-      "run_id": "D04_P03_MERGED_REENTRY_AUTHORITY_R5_20261106",
-      "pre_git_blob_sha1": "fa7a726df43bca3190051330a636f057dda7760e",
-      "post_git_blob_sha1": "5734dfb2904d12267c4105e82ad6c4b1fc137f1f",
-      "post_bytes": 18426,
-      "acceptance": "SOURCE_ONLY_TARGET_16_OF_16_C_SHARP_REGRESSION_AND_WINDOWS_NOT_RUN",
-      "prior_active_post_git_blob_sha1": "fa7a726df43bca3190051330a636f057dda7760e",
-      "prior_active_post_bytes": 18278,
-      "source_head_observed": "763ae6cfc5e1908ad97460ac286f86da9ec59343"
+      "run_id": "B04_R5_GGUF_ACTUAL_INSTALLED_MANIFEST_EVENT_20261106",
+      "pre_git_blob_sha1": "5734dfb2904d12267c4105e82ad6c4b1fc137f1f",
+      "post_git_blob_sha1": "cd1c5b1908d5ca1e1815f6dff90cbdd49510fde1",
+      "post_bytes": 18461,
+      "acceptance": "SOURCE_ONLY_TARGET_16_OF_16_CSHARP_WINDOWS_NOT_RUN",
+      "prior_active_post_git_blob_sha1": "5734dfb2904d12267c4105e82ad6c4b1fc137f1f",
+      "prior_active_post_bytes": 18426,
+      "source_head_observed": "0d939cc9694418521e8a216b8405f8f8d40d475f",
+      "change_scope": "GGUF_ACTUAL_INSTALLED_MODEL_DIGEST_SEPARATE_FROM_SOURCE_GGUF_SHA"
     },
     {
       "path": "Packages/P03/Source/P03.ModelCenter/ModelSafetensorsImport.cs",
@@ -1638,6 +1643,46 @@
       "historical_approved_override": true,
       "retired_from_active_set": "D04_R5_20261106_REGISTRY_EVIDENCE_ORIGIN_GATE",
       "source_check": "HISTORICAL_SOURCE_ONLY_NOT_WINDOWS_E07"
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter/OllamaModelAdapter.cs",
+      "owner": 3,
+      "run_id": "D04_P03_MERGED_REENTRY_AUTHORITY_R5_20261106",
+      "pre_git_blob_sha1": "fa7a726df43bca3190051330a636f057dda7760e",
+      "post_git_blob_sha1": "5734dfb2904d12267c4105e82ad6c4b1fc137f1f",
+      "post_bytes": 18426,
+      "acceptance": "SOURCE_ONLY_TARGET_16_OF_16_C_SHARP_REGRESSION_AND_WINDOWS_NOT_RUN",
+      "prior_active_post_git_blob_sha1": "fa7a726df43bca3190051330a636f057dda7760e",
+      "prior_active_post_bytes": 18278,
+      "source_head_observed": "763ae6cfc5e1908ad97460ac286f86da9ec59343",
+      "historical_approved_override": true,
+      "retired_from_active_set": "B04_R5_GGUF_ACTUAL_INSTALLED_MANIFEST_EVENT_20261106"
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueWorker.cs",
+      "owner": 3,
+      "run_id": "D04_P03_MERGED_REENTRY_AUTHORITY_R5_20261106",
+      "pre_git_blob_sha1": "f2f73de74cd41e32564baa4973eb9786f554ec44",
+      "post_git_blob_sha1": "4c38a9b7e068b55d5fbbd025d3b3b06680f64f15",
+      "post_bytes": 16429,
+      "acceptance": "SOURCE_ONLY_TARGET_16_OF_16_C_SHARP_REGRESSION_AND_WINDOWS_NOT_RUN",
+      "prior_active_post_git_blob_sha1": "f2f73de74cd41e32564baa4973eb9786f554ec44",
+      "prior_active_post_bytes": 16146,
+      "source_head_observed": "763ae6cfc5e1908ad97460ac286f86da9ec59343",
+      "historical_approved_override": true,
+      "retired_from_active_set": "B04_R5_GGUF_ACTUAL_INSTALLED_MANIFEST_EVENT_20261106"
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter.Smoke/Program.cs",
+      "owner": 3,
+      "run_id": "NOX-E03-PR162-PIN-RECONCILE-20261101",
+      "pre_git_blob_sha1": "159afe6e068827361345273e6539d27450ed06dd",
+      "post_git_blob_sha1": "08de8d3ed1571e599d55a64fe4cf22f0fcdda111",
+      "post_bytes": 8695,
+      "source_commit": "3ec73f893961a8dce0dc3bdbc202afd4a54773a0",
+      "acceptance": "SOURCE_INTEGRITY_ONLY_NOT_MODEL_RIGHTS_WINDOWS_E07",
+      "historical_approved_override": true,
+      "retired_from_active_set": "B04_R5_GGUF_ACTUAL_INSTALLED_MANIFEST_EVENT_20261106"
     }
   ],
   "source_expansion": {

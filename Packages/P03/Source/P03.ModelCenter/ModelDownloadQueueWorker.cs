@@ -100,7 +100,7 @@ public sealed class ModelDownloadQueueWorker(
                 else
                 {
                     var imported = await ollama.ImportGgufAsync(current, OnProgress, linked.Token);
-                    digest = "sha256:" + imported.Sha256;
+                    digest = imported.OllamaDigest;
                     await store.UpdateAsync(job.Id, j => j with { ComputedSha256 = imported.Sha256 }, ct);
                 }
                 // Ollama may finish while a native STOP is in flight; do not

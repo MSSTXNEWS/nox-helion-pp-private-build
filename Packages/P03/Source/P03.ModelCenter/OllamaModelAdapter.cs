@@ -79,7 +79,7 @@ public sealed class OllamaModelAdapter(HttpClient http, string receiptDirectory)
         return local;
     }
 
-    public async Task<(long Bytes, string Sha256)> ImportGgufAsync(ModelJob job,
+    public async Task<(long Bytes, string Sha256, string OllamaDigest)> ImportGgufAsync(ModelJob job,
         Func<OllamaStreamUpdate, CancellationToken, ValueTask> progress, CancellationToken ct)
     {
         if (!ModelDownloadQueueStore.HasReviewedGgufJobAuthority(job))
@@ -155,7 +155,7 @@ public sealed class OllamaModelAdapter(HttpClient http, string receiptDirectory)
             job.ModelTag, "gguf-import", DateTimeOffset.UtcNow, bytes, sha, ollamaDigest,
             job.LicenseSource, http.BaseAddress?.ToString() ?? "http://localhost:11434/",
             RightsAttestationId: job.RightsReceiptId), ct);
-        return (bytes, sha);
+        return (bytes, sha, ollamaDigest);
     }
 
     /// <summary>Import only P04's attested MERGED Safetensors snapshot through
