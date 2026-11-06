@@ -268,6 +268,11 @@ function originalInstallTransportPresent(){
  try{return typeof window.chrome?.webview?.postMessage==='function';}
  catch{return false;}
 }
+// A shortcut click can start the ORIGINAL native installer asynchronously.
+// Without its actual owner exit/files receipt, never repeat this dock dispatch:
+// duplicate native actions could race update/rollback on the same slot.
+// The ORIGINAL in-panel INSTALL action and its consent/ACL remain unchanged.
+let originalInstallDelegated=false;
 
 
 nav.addEventListener('click',event=>{
@@ -286,6 +291,9 @@ nav.addEventListener('click',event=>{
    state.textContent='EXPRESS: исходная кнопка недоступна · HOLD';return;
  }
  const name=target.getAttribute('data-nox-primary');
+ if(name==='INSTALL'&&originalInstallDelegated){
+   state.textContent='INSTALL: повторная передача без owner exit/file readback · HOLD';return;
+ }
  state.textContent='';
  if(name==='INSTALL'&&!originalInstallTransportPresent()){
    state.textContent='INSTALL: исходный нативный WebView2 недоступен · HOLD';return;
@@ -354,6 +362,9 @@ nav.addEventListener('click',event=>{
    // D03 R5: do not overwrite a synchronous native owner rejection or
    // imply a physical exit/file result. One trusted click, no retry on throw.
    if(name==='INSTALL'){
+     // The native command can have been issued even if its handler throws.
+     // Fence before original click; never silently retry an unverified action.
+     originalInstallDelegated=true;
      state.textContent='INSTALL: передача исходному владельцу · результат не подтверждён';
      try{invokeMatches[0].click();}
      catch{state.textContent='INSTALL: исходный обработчик завершился исключением · HOLD';}
