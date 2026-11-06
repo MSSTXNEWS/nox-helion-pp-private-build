@@ -20,6 +20,7 @@ import subprocess
 import sys
 import time
 from datetime import datetime, timezone
+from nox_thermal_sensors_v1 import temperature as nox_temperature
 
 HERE=Path(__file__).resolve().parent
 ROOT=Path(r"C:\NOX_HELION\NOX_NEW") if os.name=="nt" else Path.cwd()
@@ -61,15 +62,9 @@ def battery():
     return {"ac":ac,"percent":pct}
 
 def gpu_temperature():
-    """Read NVIDIA sensor if available; never assume AMD = NVIDIA."""
-    try:
-        r=subprocess.run(["nvidia-smi","--query-gpu=temperature.gpu",
-                         "--format=csv,noheader,nounits"],capture_output=True,
-                         text=True,timeout=6,check=True)
-        val=int(r.stdout.splitlines()[0].strip())
-        return val if 0<=val<120 else None
-    except (OSError,ValueError,IndexError,subprocess.SubprocessError):
-        return None
+    """Read AMD/NVIDIA sensor from the live, identified monitoring provider."""
+    return nox_temperature().get("gpu_c")
+
 
 def run_action(root,action):
     cmd=[sys.executable,str(HERE/"genesis_segment1.py"),action,"--root",str(root)]
