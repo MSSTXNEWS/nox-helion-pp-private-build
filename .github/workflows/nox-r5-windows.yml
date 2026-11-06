@@ -111,6 +111,21 @@ jobs:
               } catch {}
             }
           } finally {
+            $p.Refresh()
+            Write-Host "UI_RUNTIME_DIAG PID=$($p.Id) EXITED=$($p.HasExited) WINDOW=$($p.MainWindowHandle)"
+            if ($p.HasExited) { Write-Host "UI_RUNTIME_DIAG EXIT_CODE=$($p.ExitCode)" }
+            if (Test-Path $env:LOCALAPPDATA/NOX_HELION) {
+              Get-ChildItem $env:LOCALAPPDATA/NOX_HELION -File -ErrorAction SilentlyContinue |
+                Select-Object Name,Length,LastWriteTimeUtc | Format-Table | Out-String | Write-Host
+            }
+            if (!$uiPass) {
+              try {
+                Get-WinEvent -FilterHashtable @{LogName='Application'; StartTime=$before} -ErrorAction Stop |
+                  Where-Object { $_.ProviderName -in @('.NET Runtime','Application Error','Windows Error Reporting') } |
+                  Select-Object -First 6 TimeCreated,ProviderName,Id,Message |
+                  Format-List | Out-String -Width 180 | Write-Host
+              } catch {}
+            }
             if (!$p.HasExited) { Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue }
           }
           $receipt = Get-Content $receiptFile -Raw | ConvertFrom-Json
