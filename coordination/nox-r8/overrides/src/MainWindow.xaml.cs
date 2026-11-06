@@ -1065,6 +1065,9 @@ public partial class MainWindow : Window
         }
         Interlocked.Increment(ref generationStartedCount);
         var answer = new StringBuilder();
+        // Provider health must refresh only after the native chat owner is released.
+        // An active-stream health probe is intentionally suppressed.
+        bool refreshProviderAfterError = false;
         try
         {
             Emit("status", new { requestId, state = "GENERATING" });
@@ -1144,6 +1147,7 @@ public partial class MainWindow : Window
             Emit("complete", new { requestId, ok = false, stopped = true });
         }
         catch (OperationCanceledException) {
+            refreshProviderAfterError = true;
             // HttpClient.Timeout can cancel an Ollama stream without owner intent.
             // Preserve SQLite (no partial save) and release the UI with an ERROR ACK.
             Emit("error", new { requestId, message = "OLLAMA_TIMEOUT: ожидание ответа модели истекло" });
@@ -1151,8 +1155,8 @@ public partial class MainWindow : Window
             Emit("complete", new { requestId, ok = false, stopped = false });
         }
         catch (HttpRequestException ex) {
-            // Distinguish transport-offline from HTTP model/server rejection.
-            await CheckProvider();
+            // Send the terminal chat ACK promptly, before probing provider health.
+            refreshProviderAfterError = true;
             Emit("error", new { requestId, message = ex.StatusCode == null
                 ? "PROVIDER_UNREACHABLE: локальный Ollama не отвечает"
                 : "OLLAMA_HTTP_ERROR: " + (int)ex.StatusCode });
@@ -1170,6 +1174,9 @@ public partial class MainWindow : Window
             Interlocked.Increment(ref generationFinishedCount);
             generationLock.Release();
         }
+        // New chat/navigation wins; CheckProvider guards active owner, probe epoch and shutdown.
+        if (refreshProviderAfterError && !providerProbeStopped)
+            await CheckProvider();
     }
 
     private void PersistChat(string prompt, string answer, string persona)

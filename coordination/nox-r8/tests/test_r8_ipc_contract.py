@@ -9,7 +9,7 @@ cs = (root / "src" / "MainWindow.xaml.cs").read_text(encoding="utf-8")
 html = (root / "src" / "index.html").read_text(encoding="utf-8")
 required_cs = (
     'private string? activeRequestId;',
-    'NavigationStarting += (_, _) => { active?.Cancel(); activeRequestId = null; };',
+    'Browser.CoreWebView2.NavigationStarting += (_, _) => {',
     'string.Equals(activeRequestId, Text("requestId"), StringComparison.Ordinal)',
     'case "chat": await Generate(Text("text"), Text("requestId"));',
     'private async Task Generate(string prompt, string requestId)',
@@ -50,6 +50,12 @@ chat_handler = html.split("$('send').onclick=()=>", 1)[1].split("\n$('stop').onc
 assert chat_handler.index("if(post('chat',{text,requestId})===false)") < chat_handler.index("busy=true;activeChatId=requestId;"), "B02_PREMATURE_NATIVE_OWNER_HOLD"
 assert chat_handler.count("post('chat',{text,requestId})") == 1, "B02_DUPLICATE_OWNER_DISPATCH_HOLD"
 assert "post('chat',{text,requestId:activeChatId})" not in chat_handler, "B02_PREMATURE_ACTIVE_ID_DISPATCH_HOLD"
+# Verify the stronger real navigation handler instead of the obsolete one-liner.
+nav = cs.split('Browser.CoreWebView2.NavigationStarting += (_, _) => {', 1)[1].split('};', 1)[0]
+for fragment in ('active?.Cancel();', 'activeRequestId = null;', 'Interlocked.Increment(ref providerProbeEpoch);'):
+    assert fragment in nav, 'B02_NAVIGATION_OWNER_PROBE_EPOCH_HOLD: ' + fragment
+assert nav.index('active?.Cancel();') < nav.index('activeRequestId = null;') < nav.index('Interlocked.Increment(ref providerProbeEpoch);')
+
 # Ensure the previous unowned chat path cannot accidentally remain.
 assert 'case "chat": await Generate(Text("text"));' not in cs
 assert "case 'error':$('status').textContent='ERROR';entry($('messages'),String(v)" not in html
@@ -174,6 +180,18 @@ with sqlite3.connect(':memory:') as db:
     assert db.execute('SELECT complete FROM tasks WHERE id=42').fetchone()[0]==0
     assert db.execute(statement,(404,)).rowcount==0
 print('D05 R8 SOURCE_ONLY: owner-correlated task toggle, SQLite COMMIT/readback and denied rollback PASS')
+
+# Failure recovery must not probe while the original generation still owns IPC.
+# Terminal complete/ERROR goes out before health refresh; owner STOP is unchanged.
+chat = cs.split('private async Task Generate(', 1)[1].split('private void PersistChat(', 1)[0]
+timeout = chat.split('catch (OperationCanceledException) {', 1)[1].split('catch (HttpRequestException ex) {', 1)[0]
+http_failure = chat.split('catch (HttpRequestException ex) {', 1)[1].split('catch (Exception ex) {', 1)[0]
+assert 'bool refreshProviderAfterError = false;' in chat, 'B02_FAILURE_PROBE_FLAG_HOLD'
+assert 'refreshProviderAfterError = true;' in timeout, 'B02_TIMEOUT_PROVIDER_HEALTH_HOLD'
+assert 'refreshProviderAfterError = true;' in http_failure, 'B02_HTTP_PROVIDER_HEALTH_HOLD'
+assert 'await CheckProvider();' not in http_failure, 'B02_PREMATURE_ACTIVE_PROBE_HOLD'
+assert chat.index('generationLock.Release();') < chat.index('if (refreshProviderAfterError && !providerProbeStopped)') < chat.index('await CheckProvider();'), 'B02_PROBE_AFTER_OWNER_RELEASE_HOLD'
+print('B02 R8 SOURCE_ONLY: terminal failure ACK before provider re-probe, no active-owner status race')
 
 # B02 R8: local provider can restart after window startup. Retry the existing
 # native /api/tags only, guard document epoch, avoid touching active chat/STOP.
