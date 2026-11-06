@@ -22,6 +22,7 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
+          $env:PYTHONUTF8='1'
           $zip='coordination/nox-tech-r9/NOX_TECH_R9_SOURCE.zip'
           $actual=(Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
           if ($actual -cne '07c74b8513a675c878ed7abdbd7e379fab3b7878e66fe69c0df59a8cb3e2b32b') { throw 'TECH_R9_SOURCE_ARCHIVE_SHA_MISMATCH' }
