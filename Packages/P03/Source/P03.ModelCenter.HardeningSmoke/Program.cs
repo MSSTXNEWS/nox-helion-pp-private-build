@@ -277,6 +277,54 @@ try
     await D04WriteAsync(d04First, d04CrossKind with { State = ModelJobState.Completed });
     Assert((await d04Store.ReadAsync()).Count == 2,
         "D04F completed GGUF same-tag history remains readable");
+    // Durable queue/backup JSON uses case-insensitive Web deserialization;
+    // ambiguous last-wins keys must fail closed without replacing any bytes.
+    var d04CanonicalJson = JsonSerializer.Serialize(d04First,
+        new JsonSerializerOptions(JsonSerializerDefaults.Web));
+    const string d04TagKey = "\"modelTag\":";
+    const string d04RightsKey = "\"rightsReceiptId\":";
+    if (!d04CanonicalJson.Contains(d04TagKey, StringComparison.Ordinal) ||
+        !d04CanonicalJson.Contains(d04RightsKey, StringComparison.Ordinal))
+        throw new Exception("D04 queue JSON regression fixture drift");
+    var d04Duplicate = d04CanonicalJson.Replace(d04TagKey,
+        "\"modelTag\":\"decoy:tag\",\"modelTag\":", StringComparison.Ordinal);
+    await File.WriteAllTextAsync(d04File, "[" + d04Duplicate + "]");
+    var d04DuplicateDenied = false;
+    try { _ = await d04Store.ReadAsync(); }
+    catch (InvalidDataException ex) when (ex.Message == "P03_QUEUE_DUPLICATE_JSON_FIELD_HOLD")
+    { d04DuplicateDenied = true; }
+    Assert(d04DuplicateDenied, "D04I duplicate modelTag from saved queue denied");
+
+    var d04CaseAlias = d04CanonicalJson.Replace(d04RightsKey,
+        "\"RightsReceiptId\":\"revoked\",\"rightsReceiptId\":", StringComparison.Ordinal);
+    await File.WriteAllTextAsync(d04File, "[" + d04CaseAlias + "]");
+    var d04CaseAliasDenied = false;
+    try { _ = await d04Store.ReadAsync(); }
+    catch (InvalidDataException ex) when (ex.Message == "P03_QUEUE_DUPLICATE_JSON_FIELD_HOLD")
+    { d04CaseAliasDenied = true; }
+    Assert(d04CaseAliasDenied, "D04J case-insensitive rights receipt alias denied");
+
+    var d04NestedAlias = d04CanonicalJson.Replace(d04TagKey,
+        "\"untrustedMetadata\":{\"digest\":\"a\",\"digest\":\"b\"},\"modelTag\":",
+        StringComparison.Ordinal);
+    await File.WriteAllTextAsync(d04File, "[" + d04NestedAlias + "]");
+    var d04NestedDenied = false;
+    try { _ = await d04Store.ReadAsync(); }
+    catch (InvalidDataException ex) when (ex.Message == "P03_QUEUE_DUPLICATE_JSON_FIELD_HOLD")
+    { d04NestedDenied = true; }
+    Assert(d04NestedDenied, "D04K nested ambiguous metadata denied");
+
+    await D04WriteAsync(d04First);
+    var d04OriginalBytes = await File.ReadAllBytesAsync(d04File);
+    await File.WriteAllTextAsync(d04File + ".bak", "[" + d04Duplicate + "]");
+    var d04BackupDenied = false;
+    try { await d04Store.RestoreBackupAsync(true); }
+    catch (InvalidDataException ex) when (ex.Message == "P03_QUEUE_DUPLICATE_JSON_FIELD_HOLD")
+    { d04BackupDenied = true; }
+    Assert(d04BackupDenied &&
+        (await File.ReadAllBytesAsync(d04File)).SequenceEqual(d04OriginalBytes),
+        "D04L invalid backup denied with live queue NO-LOSS");
+
 }
 finally { Directory.Delete(d04Root, recursive: true); }
 Console.WriteLine($"P03_HARDENING_SMOKE_PASS {pass} verified assertions");

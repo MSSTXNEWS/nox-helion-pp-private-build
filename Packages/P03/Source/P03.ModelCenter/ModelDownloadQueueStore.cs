@@ -641,9 +641,7 @@ public sealed class ModelDownloadQueueStore
                 bytes = new byte[checked((int)backupInput.Length)];
                 await backupInput.ReadExactlyAsync(bytes, ct);
             }
-            var snapshot = JsonSerializer.Deserialize<List<ModelJob>>(bytes, JsonOptions)
-                ?? throw new InvalidDataException("Backup queue is null.");
-            ValidateJobs(snapshot);
+            var snapshot = DeserializeStrictSnapshot(bytes);
             // A historical backup is not a live transfer lease or owner STOP grant.
             // Restoring RUNNING/CANCELLING would resurrect stale activity without
             // a worker, and could misrepresent an acknowledged native STOP.
@@ -690,6 +688,45 @@ public sealed class ModelDownloadQueueStore
         }
     }
 
+
+    // The Web JSON serializer resolves property names case-insensitively.
+    // Never trust a durable job or backup if JSON fields have conflicting
+    // spellings, escaped aliases or nested duplicates (last-wins ambiguity).
+    // Preserve original bytes; caller holds the native cross-process lease.
+    private static void RequireUnambiguousJson(JsonElement element)
+    {
+        if (element.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in element.EnumerateArray()) RequireUnambiguousJson(item);
+        }
+        else if (element.ValueKind == JsonValueKind.Object)
+        {
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var property in element.EnumerateObject())
+            {
+                if (!seen.Add(property.Name))
+                    throw new InvalidDataException("P03_QUEUE_DUPLICATE_JSON_FIELD_HOLD");
+                RequireUnambiguousJson(property.Value);
+            }
+        }
+    }
+
+    private static List<ModelJob> DeserializeStrictSnapshot(ReadOnlyMemory<byte> bytes)
+    {
+        using var document = JsonDocument.Parse(bytes, new JsonDocumentOptions
+        {
+            MaxDepth = 64, AllowTrailingCommas = false,
+            CommentHandling = JsonCommentHandling.Disallow
+        });
+        if (document.RootElement.ValueKind != JsonValueKind.Array)
+            throw new InvalidDataException("P03_QUEUE_JSON_ROOT_HOLD");
+        RequireUnambiguousJson(document.RootElement);
+        var jobs = JsonSerializer.Deserialize<List<ModelJob>>(bytes.Span, JsonOptions)
+            ?? throw new InvalidDataException("Null queue is not a valid snapshot.");
+        ValidateJobs(jobs);
+        return jobs;
+    }
+
     private async Task<IReadOnlyList<ModelJob>> ReadCoreAsync(CancellationToken ct)
     {
         ModelLocalAttestation.RequireNoExistingReparsePoint(_path);
@@ -700,10 +737,9 @@ public sealed class ModelDownloadQueueStore
             throw new InvalidDataException("Queue is empty or exceeds its safety limit; original bytes preserved.");
         try
         {
-            var jobs = await JsonSerializer.DeserializeAsync<List<ModelJob>>(input, JsonOptions, ct)
-                ?? throw new InvalidDataException("Null queue is not a valid snapshot.");
-            ValidateJobs(jobs);
-            return jobs;
+            var bytes = new byte[checked((int)input.Length)];
+            await input.ReadExactlyAsync(bytes, ct);
+            return DeserializeStrictSnapshot(bytes);
         }
         catch (JsonException ex)
         {
