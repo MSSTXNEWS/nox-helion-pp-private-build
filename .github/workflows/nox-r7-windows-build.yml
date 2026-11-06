@@ -44,6 +44,8 @@ jobs:
             $receipt=Join-Path $env:LOCALAPPDATA "NOX_HELION/ui_selftest_$($p.Id).json"
             if (!(Test-Path -LiteralPath $receipt)) { throw 'UI_RECEIPT_NOT_FOUND' }
             $json=Get-Content -LiteralPath $receipt -Raw | ConvertFrom-Json
+            Copy-Item -LiteralPath $receipt -Destination './NOX_R7_WIN64/UI_SMOKE_RECEIPT.json' -Force
+            Write-Host ('UI_SMOKE_RECEIPT_DETAILS '+($json | ConvertTo-Json -Depth 6 -Compress))
             $sha=(Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash
             if ($p.ExitCode -ne 0 -or
                 $json.schema -ne 'NOX_WPF_UI_SMOKE_R7_V1' -or
