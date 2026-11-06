@@ -36,5 +36,20 @@ $from='TraceUiSmokeStage(args.IsSuccess ? "NAVIGATION_COMPLETED" : "NAVIGATION_F
 $to='TraceUiSmokeStage(args.IsSuccess ? "NAVIGATION_COMPLETED" : "NAVIGATION_FAILED_" + args.WebErrorStatus);'
 if (!$s.Contains($from)) { throw 'NOX_NAV_STATUS_ANCHOR_MISSING' }
 $s=$s.Replace($from,$to)
+
+$complete = '            lastGenerationCompleted = true;'
+$persist = '            if (answer.Length > 0) PersistChat(prompt, answer.ToString());'
+$begin = $s.IndexOf($complete, [StringComparison]::Ordinal)
+$saveAt = $s.IndexOf($persist, $begin, [StringComparison]::Ordinal)
+if ($begin -lt 0 -or $saveAt -le $begin -or $saveAt-$begin -gt 100) { throw 'NOX_STOP_COMMIT_ORDER_PREIMAGE_HOLD' }
+$fix = @'
+            // STOP received with the final token still prevents persistence.
+            cancellation.Token.ThrowIfCancellationRequested();
+            if (answer.Length > 0) PersistChat(prompt, answer.ToString());
+            // Completion becomes true only after SQLite commit.
+            lastGenerationCompleted = true;
+'@
+$s=$s.Substring(0,$begin)+$fix+$s.Substring($saveAt+$persist.Length)
+
 [IO.File]::WriteAllText($Source,$s,[Text.UTF8Encoding]::new($false))
 Write-Host "NOX_NAV_PATCH_APPLIED"
