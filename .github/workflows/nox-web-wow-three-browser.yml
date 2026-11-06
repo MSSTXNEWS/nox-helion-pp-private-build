@@ -29,6 +29,8 @@ jobs:
           test -f ui/menu-pages/formwork-aether-bento.css
           test -f ui/menu-pages/formwork-heliodon.LICENSE.txt
           test -f ui/menu-pages/formwork-aether.LICENSE.txt
+          test -f ui/menu-pages/tabler-card-integration.css
+          test -f ui/menu-pages/tabler-card.LICENSE.txt
           NOX_CHROME_PATH=$(command -v google-chrome) node ui/menu-pages/express-wow-three.browser.mjs
       - name: Collect screenshots
         if: always()
