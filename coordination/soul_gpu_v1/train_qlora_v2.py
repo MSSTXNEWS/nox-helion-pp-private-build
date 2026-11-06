@@ -280,7 +280,22 @@ def train(stage: int, root: Path, max_steps: int, max_length: int, gpu_fraction:
     # This requires a readable GPU temperature sensor; do not run blind.
     progress.last_temperature=progress.gpu_temp()
     if progress.last_temperature>=65:
-        raise RuntimeError("GPU >=65C before training; cool down before starting")
+        progress.report("cooling",reason="gpu-already-65c-before-training",pause_seconds=180)
+        _time.sleep(180)
+        progress.total_paused+=180
+        startup_deadline=_time.monotonic()+600
+        while True:
+            progress.last_temperature=progress.gpu_temp()
+            if progress.last_temperature<65:
+                break
+            if progress.last_temperature>=80:
+                raise RuntimeError("GPU >=80C after pretraining cooling; training stopped")
+            if _time.monotonic()>=startup_deadline:
+                raise RuntimeError("GPU did not cool below 65C; training stopped")
+            progress.report("cooling",reason="gpu-still-65c-before-training")
+            _time.sleep(15)
+            progress.total_paused+=15
+        progress.report("training-resumed",reason="startup-cooling-complete")
 
     before=trainer.evaluate()["eval_loss"]
     trainer.train()
