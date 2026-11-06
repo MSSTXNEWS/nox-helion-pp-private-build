@@ -412,12 +412,20 @@ function liveChat(label){
   chatInFlight=true;chatStopPending=false;const epoch=++chatEpoch;redraw();
   chips(coreRow,cores,core,chooseCore);chips(personaRow,personas,persona,choosePersona);
   input.value='';row('user',text);
-  const replyRow=row('assistant','');info.textContent='REQUESTED · запрос в OneHost';
+  const replyRow=row('assistant','');
+  // Original Loquix (MIT) visual indicator; native OneHost remains the only
+  // source of answer/STOP truth. The indicator never simulates model output.
+  const typing=doc.createElement('loquix-typing-indicator');
+  typing.className='nox-loquix-typing';
+  typing.setAttribute('aria-label','Ожидание ответа локальной модели');
+  log.append(typing);
+  info.textContent='REQUESTED · запрос в OneHost';
   function terminal(reply){
    // A late native terminal must not release a newer stream or its STOP lock.
    if(epoch!==chatEpoch)return;
    if(!isNativeChatTerminal(reply))return;
    chatInFlight=false;chatStopPending=false;
+   typing.remove();
    if(!info.isConnected)return;
    // A native terminal envelope is not proof of generated text. Accept only
    // actual nonempty native answer or already received native stream bytes.
@@ -432,6 +440,7 @@ function liveChat(label){
   try{
    const result=await client.request('helion.chat',{text,model,core_id:core,persona_id:persona},ev=>{
     if(epoch!==chatEpoch||!replyRow.isConnected||typeof ev.delta!=='string')return;
+    if(ev.delta.length)typing.remove();
     if(replyRow.textContent.length<100000)replyRow.textContent=(replyRow.textContent+ev.delta).slice(0,100000);
     info.textContent='STREAMING · локальный OneHost';log.scrollTop=log.scrollHeight;
    },terminal);
@@ -439,6 +448,7 @@ function liveChat(label){
    if(!isNativeChatTerminal(result)&&info.isConnected)info.textContent='HOLD · нет терминального подтверждения; STOP доступен';
   }catch(err){
    if(epoch!==chatEpoch)return;
+   typing.remove();
    if(err.message!=='TIMEOUT'){chatInFlight=false;chatStopPending=false;redraw();}
    if(info.isConnected)info.textContent=err.message==='TIMEOUT'?'HOLD · истекло ожидание, STOP доступен':'HOLD · native ответ не получен';
   }
