@@ -1,0 +1,13 @@
+/* Compact glass, not fullscreen dashboard overlays */
+.nox-addons{box-sizing:border-box;color:#ced5db;font:12px/1.3 'Segoe UI',sans-serif;border:1px solid rgba(172,174,180,.13);border-radius:13px;background:linear-gradient(145deg,rgba(47,52,62,.25),rgba(9,14,18,.32));backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);padding:9px;max-width:100%;box-shadow:0 10px 32px #0003}
+.nox-addons *{box-sizing:border-box}.nox-addons header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 8px!important}.nox-addons button{background:rgba(35,40,45,.65);color:#e0e4e7;border:1px solid #ffffff22;border-radius:7px;min-height:30px;padding:4px 8px;cursor:pointer}.nox-addons button:hover{border-color:#d3aa6b88}.nox-small{color:#89959c;font-size:10px}.nox-dials{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}.nox-dial{height:95px;min-width:0}.nox-hud-values{display:flex;gap:8px;justify-content:space-between;margin-top:6px;color:#c5b8ad;font-size:10px;flex-wrap:wrap}.nox-events{max-height:100px;overflow:auto;margin-top:7px;border-top:1px solid #ffffff19}.nox-events p{padding:5px 0;margin:0;border-bottom:1px solid #ffffff0c}.nox-notify{display:flex;gap:6px;align-items:center}.nox-stat-warning{color:#f5b66a}.nox-inline-warn{color:#dcb575;font-size:11px;margin:6px 0}
+/* Never cover chat text or message input */
+body .nox-addons{position:static!important;inset:auto!important;transform:none!important;z-index:auto!important}
+body .details .nox-addons{margin-top:8px}
+body .chat-sidebar .nox-addons{margin-top:8px}
+@media(max-width:860px){.nox-dials{grid-template-columns:repeat(3,minmax(0,1fr))}.nox-dial{height:73px}}
+@media(prefers-reduced-motion:reduce){.nox-addons *, .nox-addons *::before,.nox-addons *::after{transition:none!important;animation:none!important}}
+
+.nox-addons .nox-dials,.nox-addons .nox-hud-values{display:none!important}
+.nox-addons{width:auto;min-width:0;border-color:rgba(175,188,193,.12)}
+body.nox-home .nox-addons{max-width:355px;margin:8px auto 12px}
