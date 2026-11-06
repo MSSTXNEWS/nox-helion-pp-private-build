@@ -20,7 +20,7 @@ jobs:
         run: |
           $ErrorActionPreference='Stop'
           $archive='coordination/nox-local-r7/NOX_R7_SOURCE.zip'
-          $expected='b2d1fdf69f191ad209527395f0b4116380669fa87bdc992a6b8e06de11fe35e8'
+          $expected='679a714e6febdb8d076effeaf35a3df28c504cce16f9073d57ead3438717d288'
           $actual=(Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLowerInvariant()
           if ($actual -cne $expected) { throw "SOURCE_SNAPSHOT_HASH_MISMATCH" }
           Expand-Archive -LiteralPath $archive -DestinationPath './nox-r7-build' -Force
@@ -39,7 +39,7 @@ jobs:
           $runId='NOX-R7-GITHUB-'+$env:GITHUB_RUN_ID
           $p=Start-Process -FilePath $exe -WorkingDirectory (Split-Path $exe) -ArgumentList @('--nox-ui-smoke',"--nox-runid=$runId") -PassThru
           try {
-            Wait-Process -Id $p.Id -Timeout 120 -ErrorAction Stop
+            Wait-Process -Id $p.Id -Timeout 80 -ErrorAction Stop
             $p.Refresh()
             $receipt=Join-Path $env:LOCALAPPDATA "NOX_HELION/ui_selftest_$($p.Id).json"
             if (!(Test-Path -LiteralPath $receipt)) { throw 'UI_RECEIPT_NOT_FOUND' }
