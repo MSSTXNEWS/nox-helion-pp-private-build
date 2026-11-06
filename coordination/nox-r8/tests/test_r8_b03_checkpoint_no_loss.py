@@ -4,6 +4,7 @@ SOURCE_ONLY: not native C# execution, Windows lifecycle or owner-PC acceptance.
 import hashlib
 import sqlite3
 import tempfile
+from contextlib import closing
 from pathlib import Path
 
 src = (Path(__file__).resolve().parent / "src" / "MainWindow.xaml.cs").read_text(encoding="utf-8")
@@ -52,16 +53,16 @@ with tempfile.TemporaryDirectory(prefix="nox_b03_") as folder:
     foreign = root / "foreign.sqlite3"
     foreign.write_bytes(b"OWNER_BYTES_NEVER_OVERWRITE")
     foreign_before = hashlib.sha256(foreign.read_bytes()).hexdigest()
-    with sqlite3.connect(live) as srcdb:
+    with closing(sqlite3.connect(live)) as srcdb:
         srcdb.execute("PRAGMA journal_mode=WAL")
         srcdb.execute("CREATE TABLE notes(value TEXT NOT NULL)")
         srcdb.execute("INSERT INTO notes(value) VALUES('original')")
         srcdb.commit()
         with snapshot.open("xb"):
             pass
-        with sqlite3.connect(snapshot) as dstdb:
+        with closing(sqlite3.connect(snapshot)) as dstdb:
             srcdb.backup(dstdb)
-        with sqlite3.connect(snapshot) as verify:
+        with closing(sqlite3.connect(snapshot)) as verify:
             assert verify.execute("PRAGMA quick_check").fetchone()[0] == "ok"
             assert verify.execute("SELECT value FROM notes").fetchone()[0] == "original"
         sha = hashlib.sha256(snapshot.read_bytes()).hexdigest()
