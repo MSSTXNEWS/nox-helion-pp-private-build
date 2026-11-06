@@ -1282,22 +1282,68 @@ public partial class MainWindow : Window
         Send("knowledge.stats", knowledge.Stats());
     }
 
+    // Export only by explicit owner choice. A backup must NEVER replace any existing
+    // file, including an older SQLite snapshot, an NTFS link, or the live WAL database.
+    // SQLite's backup API copies a consistent committed snapshot while the app runs.
     private void BackupLocalDatabase()
     {
         var dialog = new SaveFileDialog {
             Filter = "SQLite database (*.sqlite3)|*.sqlite3",
             FileName = "NOX_HELION_backup_" + DateTime.Now.ToString("yyyyMMdd_HHmmss") + ".sqlite3",
             AddExtension = true,
-            OverwritePrompt = true,
-            Title = "Сохранить резервную копию памяти NOX"
+            OverwritePrompt = false,
+            Title = "Сохранить новую резервную копию памяти NOX (без замены файлов)"
         };
         if (dialog.ShowDialog(this) != true) return;
-        if (string.Equals(Path.GetFullPath(dialog.FileName), Path.GetFullPath(dbPath), StringComparison.OrdinalIgnoreCase))
-            throw new InvalidOperationException("Нельзя заменить работающую базу данных её же копией");
-        using var source = OpenDatabase();
-        using var copy = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = dialog.FileName }.ToString());
-        copy.Open(); source.BackupDatabase(copy);
-        Send("notice", "Резервная копия SQLite сохранена: " + dialog.FileName);
+
+        string destination = Path.GetFullPath(dialog.FileName);
+        string live = Path.GetFullPath(dbPath);
+        if (string.Equals(destination, live, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("NOX_BACKUP_LIVE_DATABASE_HOLD");
+        // File.Exists alone misses some dangling links, so File.Move below is the
+        // final atomic no-overwrite authority even if an attacker changes the path.
+        if (File.Exists(destination) || Directory.Exists(destination))
+            throw new InvalidOperationException("NOX_BACKUP_DEST_EXISTS_HOLD");
+        string parent = Path.GetDirectoryName(destination) ??
+            throw new InvalidOperationException("NOX_BACKUP_INVALID_PARENT_HOLD");
+        if (!Directory.Exists(parent))
+            throw new InvalidOperationException("NOX_BACKUP_PARENT_MISSING_HOLD");
+
+        // Keep staging on the same volume for a rename, never modify the chosen
+        // destination until SQLite integrity and the staged SHA have been checked.
+        // A crash may leave a uniquely named .partial; never erase unrelated files.
+        string staged = Path.Combine(parent, "." + Path.GetFileName(destination) +
+            "." + Guid.NewGuid().ToString("N") + ".partial");
+        using (var reservation = new FileStream(staged, FileMode.CreateNew, FileAccess.Write, FileShare.None)) { }
+        using (var source = OpenDatabase())
+        using (var backup = new SqliteConnection(new SqliteConnectionStringBuilder {
+            DataSource = staged, Mode = SqliteOpenMode.ReadWriteCreate }.ToString()))
+        {
+            backup.Open();
+            source.BackupDatabase(backup);
+        }
+        using (var check = new SqliteConnection(new SqliteConnectionStringBuilder {
+            DataSource = staged, Mode = SqliteOpenMode.ReadOnly }.ToString()))
+        {
+            check.Open();
+            using var integrity = check.CreateCommand();
+            integrity.CommandText = "PRAGMA quick_check";
+            if (!string.Equals(integrity.ExecuteScalar() as string, "ok", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("NOX_BACKUP_INTEGRITY_HOLD");
+        }
+        string expected;
+        using (var input = File.OpenRead(staged))
+            expected = Convert.ToHexString(SHA256.HashData(input));
+        // File.Move with overwrite:false fails if *any* destination entry exists.
+        // No File.Copy overwrite, no delete of user files, no live SQLite replacement.
+        File.Move(staged, destination, overwrite: false);
+        string actual;
+        using (var output = File.OpenRead(destination))
+            actual = Convert.ToHexString(SHA256.HashData(output));
+        if (!string.Equals(expected, actual, StringComparison.Ordinal))
+            throw new InvalidOperationException("NOX_BACKUP_SHA_READBACK_HOLD");
+        Send("notice", "Новая резервная копия SQLite проверена: " + destination +
+            " SHA256=" + actual);
     }
 
     
