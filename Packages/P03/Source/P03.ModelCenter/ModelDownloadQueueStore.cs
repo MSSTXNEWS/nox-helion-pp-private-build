@@ -686,6 +686,16 @@ public sealed class ModelDownloadQueueStore
             // Refuse before snapshot/publication; preserve both queue and backup.
             if (snapshot.Any(j => j.State is ModelJobState.Running or ModelJobState.Cancelling))
                 throw new InvalidDataException("P03_QUEUE_BACKUP_ACTIVE_RESTORE_HOLD");
+            // Owner-confirmed backup restore cannot erase completed model proof,
+            // recorded failure or a durable job-specific STOP from a newer queue.
+            // Refuse before writing a pre-restore snapshot or replacing live bytes.
+            var restoredById = snapshot.ToDictionary(j => j.Id);
+            foreach (var terminal in liveJobs.Where(j => j.State is
+                ModelJobState.Cancelled or ModelJobState.Completed or ModelJobState.Failed))
+            {
+                if (!restoredById.TryGetValue(terminal.Id, out var saved) || saved != terminal)
+                    throw new InvalidDataException("P03_QUEUE_BACKUP_TERMINAL_NO_LOSS_HOLD");
+            }
             var preserved = _path + ".pre_restore." + Guid.NewGuid().ToString("N");
             if (File.Exists(_path)) await SnapshotOwnedQueueAsync(_path, preserved, ct);
             var temp = _path + ".restore." + Guid.NewGuid().ToString("N") + ".tmp";

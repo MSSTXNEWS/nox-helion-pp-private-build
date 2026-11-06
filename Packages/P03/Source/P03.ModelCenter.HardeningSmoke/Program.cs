@@ -1520,6 +1520,36 @@ try
     Assert(Directory.GetFiles(b04RestoreRoot,
             "p03-model-download-queue.json.pre_restore.*").Length == 1,
         "B04 original queue snapshot preserved for NO-LOSS rollback");
+
+    // R5 owner/STOP regression: a stale backup cannot rewrite terminal proof.
+    var terminalBytes = await File.ReadAllBytesAsync(b04Path);
+    var existingRestoreSnapshots = Directory.GetFiles(b04RestoreRoot,
+        "p03-model-download-queue.json.pre_restore.*").Length;
+    async Task B04RejectTerminalRollbackAsync(ModelJob[] backupJobs, string label)
+    {
+        await File.WriteAllTextAsync(b04Backup, JsonSerializer.Serialize(backupJobs, b04Json));
+        var denied = false;
+        try { await b04Store.RestoreBackupAsync(true); }
+        catch (InvalidDataException ex) when (ex.Message == "P03_QUEUE_BACKUP_TERMINAL_NO_LOSS_HOLD")
+        { denied = true; }
+        Assert(denied &&
+            (await File.ReadAllBytesAsync(b04Path)).SequenceEqual(terminalBytes) &&
+            Directory.GetFiles(b04RestoreRoot,
+                "p03-model-download-queue.json.pre_restore.*").Length == existingRestoreSnapshots,
+            label);
+    }
+    await B04RejectTerminalRollbackAsync(
+        new[] { b04Terminal with { State = ModelJobState.Queued } },
+        "B04 R5 terminal JobID cannot be resurrected by stale backup");
+    await B04RejectTerminalRollbackAsync(Array.Empty<ModelJob>(),
+        "B04 R5 missing terminal JobID cannot erase STOP and install history");
+    await B04RejectTerminalRollbackAsync(
+        new[] { b04Terminal with { Status = "unverified replacement" } },
+        "B04 R5 terminal owner record cannot be overwritten");
+    await File.WriteAllTextAsync(b04Backup, JsonSerializer.Serialize(new[] { b04Terminal }, b04Json));
+    await b04Store.RestoreBackupAsync(true);
+    Assert((await b04Store.ReadAsync()).Single() == b04Terminal,
+        "B04 R5 unchanged terminal backup remains owner-restorable");
 }
 finally { Directory.Delete(b04RestoreRoot, recursive: true); }
 
