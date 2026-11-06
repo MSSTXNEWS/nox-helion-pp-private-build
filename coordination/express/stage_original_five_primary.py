@@ -341,11 +341,11 @@ nav.addEventListener('click',event=>{
        !visibleOriginalOwnerTarget(invokeMatches[0]))){
      state.textContent=name+': исходная функция недоступна · HOLD';return;
    }
-   // D03: focus/navigation may tear down the native WebView2 bridge after
-   // the first admission. Never dispatch a privileged original INSTALL
-   // handler after that owner transport has disappeared.
-   if(name==='INSTALL'&&!originalInstallTransportPresent()){
-     state.textContent='INSTALL: связь с нативным владельцем прервана · HOLD';return;
+   // Focus/navigation may tear down the native WebView2 bridge after
+   // first admission. Both original WPF owners must recheck after focus.
+   // No owner action or fabricated ACK when the transport disappears.
+   if((name==='INSTALL'||name==='MODELS')&&!originalInstallTransportPresent()){
+     state.textContent=name+': связь с нативным владельцем прервана · HOLD';return;
    }
    invokeMatches[0].click();
    state.textContent=name+': запрос передан исходному обработчику · результат ожидается';
