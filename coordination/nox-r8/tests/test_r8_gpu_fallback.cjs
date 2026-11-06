@@ -8,7 +8,7 @@ check(!!match,'GPU script');
 check(html.includes('window.chrome.webview.postMessage({type,...data})'),'existing native IPC unchanged');
 const render=new Function('document','window','performance','requestAnimationFrame','cancelAnimationFrame','console',match[1]);
 function exercise(kind){
-  let gpuFrames=0,cpuFrames=0,prevented=false,ticks=0,seq=0;
+  let gpuFrames=0,cpuFrames=0,prevented=false,ticks=0,seq=0,userReduced=false;
   const queue=new Map(),docEvents={},sphere={dataset:{}};
   const gl={
     VERTEX_SHADER:1,FRAGMENT_SHADER:2,COMPILE_STATUS:3,LINK_STATUS:4,
@@ -30,7 +30,7 @@ function exercise(kind){
     const canvas={width:0,height:0,parentElement:sphere,
       getBoundingClientRect(){return {width:260,height:260};},
       getContext(type){
-        if(type==='webgl2'){if(kind==='throwContext')throw Error('WEBGL_BLOCKED');return kind==='noGpu'?null:gl;}
+        if(type==='webgl2'){if(kind==='throwContext')throw Error('WEBGL_BLOCKED');return kind==='noGpu'||kind==='reducedCpu'?null:gl;}
         if(type==='2d')return new Proxy({
           createRadialGradient(){return {addColorStop(){}};},
           clearRect(){cpuFrames++;}
@@ -48,17 +48,30 @@ function exercise(kind){
   let currentCanvas=original;
   const document={
     hidden:false,
-    body:{classList:{contains(){return false;}}},
+    body:{classList:{contains(name){return name==='reduced'&&userReduced;}}},
     getElementById(id){return id==='helionFx'?currentCanvas:null;},
     addEventListener(name,fn){(docEvents[name]??=[]).push(fn);},
     fire(name){(docEvents[name]||[]).forEach(fn=>fn());}
   };
-  const media={matches:false,addEventListener(){}};
+  const media={matches:kind==='reducedGpu'||kind==='reducedCpu',handlers:[],addEventListener(name,fn){if(name==='change')this.handlers.push(fn);},fire(){this.handlers.forEach(fn=>fn({matches:this.matches}));}};
   const window={devicePixelRatio:1,matchMedia(){return media;},addEventListener(){}};
   const requestAnimationFrame=fn=>{const id=++seq;queue.set(id,fn);return id;};
   const cancelAnimationFrame=id=>queue.delete(id);
   render(document,window,{now(){return 0;}},requestAnimationFrame,cancelAnimationFrame,{warn(){}});
   function tick(){check(queue.size>0,kind+' scheduled frame');const [id,fn]=queue.entries().next().value;queue.delete(id);fn(100+(++ticks)*140);}
+  if(kind==='reducedGpu'||kind==='reducedCpu'){
+    tick();check(queue.size===0,kind+' first static frame stopped');
+    check((kind==='reducedGpu'?gpuFrames:cpuFrames)===1,kind+' first static frame rendered');
+    media.matches=false;media.fire();tick();check(queue.size===1,kind+' OS reduce off resumes');
+    userReduced=true;window.noxVisual.refresh();tick();check(queue.size===0,kind+' user reduce overrides OS');
+    userReduced=false;window.noxVisual.refresh();tick();check(queue.size===1,kind+' user reduce off resumes');
+    media.matches=true;
+    const before=kind==='reducedGpu'?gpuFrames:cpuFrames;
+    media.fire();tick();
+    check((kind==='reducedGpu'?gpuFrames:cpuFrames)===before+1,kind+' OS reduce redraws static pose');
+    check(queue.size===0,kind+' OS reduce stops RAF');
+    return;
+  }
   if(kind==='ok'||kind==='contextLost'||kind==='drawFail'){
     check(sphere.dataset.fx==='active','GPU path initialized');
     tick();
@@ -76,5 +89,6 @@ function exercise(kind){
   document.hidden=false;document.fire('visibilitychange');tick();
   check(cpuFrames>=3,kind+' visible redraw');
 }
-for(const kind of ['noGpu','throwContext','compileFail','ok','contextLost','drawFail'])exercise(kind);
-console.log('D04 R8 GPU WebGL2/Canvas2D failover SOURCE_ONLY: 6 scenarios PASS; Windows owner GPU NOT_TESTED');
+for(const kind of ['noGpu','throwContext','compileFail','ok','contextLost','drawFail','reducedGpu','reducedCpu'])exercise(kind);
+check(html.includes("case 'complete':busy=false;activeChatId=null;$('generation').classList.remove('on');window.noxVisual?.setEnergy(false);"),'native completion clears renderer energy');
+console.log('D04 R8 GPU WebGL2/Canvas2D failover SOURCE_ONLY: 8 scenarios PASS; Windows owner GPU NOT_TESTED');

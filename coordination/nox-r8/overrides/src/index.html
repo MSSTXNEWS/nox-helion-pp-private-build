@@ -299,7 +299,7 @@ body.reduced .helion-fx{filter:none}body.reduced .core.active{animation:none}
     catch(e){switchToCanvas2d(e.message);return;}
     raf=fps?requestAnimationFrame(frame):0;
   }
-  function redraw(){if(!gpuActive)return;if(raf)cancelAnimationFrame(raf);raf=requestAnimationFrame(frame);}
+  function redraw(){if(!gpuActive)return;if(raf)cancelAnimationFrame(raf);rendered=false;raf=requestAnimationFrame(frame);}
   sphere.dataset.fx='active';
   window.noxVisual={setMode(value){mode=['MAX','BALANCED','ECO'].includes(value)?value:'BALANCED';rendered=false;redraw();},
     setEnergy(isGenerating){energy=isGenerating?1:0;rendered=false;redraw();},refresh:()=>{rendered=false;redraw()}};
@@ -340,7 +340,7 @@ switch(m.type){
 case 'status':$('status').textContent=v.state;$('generation').classList.toggle('on',v.state==='GENERATING');window.noxVisual?.setEnergy(v.state==='GENERATING');break;
 case 'token':lastAnswer+=v.text;if(responseBox)responseBox.lastChild.textContent+=v.text;break;
 case 'metrics':$('inferenceMetrics').textContent=v?.measured?`QWEN · ${v.outputTokens} токенов · ${v.tokensPerSecond} ток/с · prompt ${v.promptTokens}`:'Модель не сообщила достоверные метрики';break;
-case 'complete':busy=false;activeChatId=null;$('generation').classList.remove('on');if(v?.stopped){lastAnswer='';$('streamHint').textContent='Поток остановлен. Частичный ответ не сохранён.';}else if(v?.ok)$('streamHint').textContent='Ответ завершён и сохранён в SQLite.';else lastAnswer='';break;
+case 'complete':busy=false;activeChatId=null;$('generation').classList.remove('on');window.noxVisual?.setEnergy(false);if(v?.stopped){lastAnswer='';$('streamHint').textContent='Поток остановлен. Частичный ответ не сохранён.';}else if(v?.ok)$('streamHint').textContent='Ответ завершён и сохранён в SQLite.';else lastAnswer='';break;
 case 'error':$('status').textContent='ERROR';entry($('messages'),v&&typeof v==='object'?String(v.message||'NATIVE_ERROR'):String(v),'ERROR');/* Only the matching native complete may unlock a busy chat. */break;
 case 'health':{const s=v.online?(v.modelVisible?'QWEN ONLINE':'SERVER ONLINE / MODEL ABSENT'):'PROVIDER OFFLINE';$('status').textContent=s;$('hudModel').textContent=(v.model||'QWEN').split(':')[0].toUpperCase().slice(0,13);$('hudEngine').textContent=v.modelVisible?'ONLINE':v.online?'NO MODEL':'OFFLINE';$('visualLive').textContent=v.modelVisible?'LOCAL AI ONLINE':'AI NOT READY';$('visualLiveDot').classList.toggle('on',!!v.modelVisible);const out=JSON.stringify(v,null,2);$('health').textContent=out;$('overview').textContent=out;const picker=$('modelPicker');picker.replaceChildren();(v.models||[]).forEach(name=>{let op=document.createElement('option');op.value=name;op.textContent=name;picker.append(op)});if(v.model)picker.value=v.model;if(!v.models?.length){let op=document.createElement('option');op.textContent='Нет доступных моделей';picker.append(op)}break}
 case 'history':{const box=$('history');box.replaceChildren();(v||[]).forEach(x=>entry(box,x.prompt+'\n\n'+x.answer,x.timestamp));if(!v?.length)box.textContent='Нет сохранённых диалогов';break}
