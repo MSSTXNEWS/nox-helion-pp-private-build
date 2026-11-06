@@ -98,6 +98,28 @@ jobs:
               $livePr.head.sha -cne $env:GITHUB_SHA) {
             throw 'E07_VERIFIER_STALE_HEAD_HOLD'
           }
+          # B06: bind dispatch inputs to the ACTUAL upstream E06 run, not
+          # only SHA strings copied into the artifact. The real E06 may end
+          # FAILURE for provider-OFFLINE while its same-VM NSIS receipts are
+          # separately eligible; never promote that workflow status to PASS.
+          # Producer completion + origin are prerequisites, not E07 evidence.
+          try {
+            $producer=Invoke-RestMethod -Uri ('https://api.github.com/repos/'+$env:GITHUB_REPOSITORY+
+              '/actions/runs/'+$env:E07_PRODUCER_RUN_ID) -Headers $headers -TimeoutSec 20 -ErrorAction Stop
+          } catch { throw 'E07_PRODUCER_RUN_LOOKUP_HOLD' }
+          if ($null -eq $producer -or
+              [string]$producer.id -cne $env:E07_PRODUCER_RUN_ID -or
+              $producer.head_sha -cne $env:E07_SOURCE_SHA -or
+              $producer.head_branch -cne $expectedBranch -or
+              $producer.path -cne '.github/workflows/nox-v16-e06-d02-onehost.yml' -or
+              $null -eq $producer.repository -or
+              $producer.repository.full_name -cne $env:GITHUB_REPOSITORY -or
+              $null -eq $producer.head_repository -or
+              $producer.head_repository.full_name -cne $env:GITHUB_REPOSITORY -or
+              $producer.status -cne 'completed' -or
+              $producer.conclusion -notin @('success','failure')) {
+            throw 'E07_PRODUCER_RUN_SOURCE_IDENTITY_HOLD'
+          }
           $complete=$false
           for ($page=1; $page -le 10; $page++) {
             $uri='https://api.github.com/repos/'+$env:GITHUB_REPOSITORY+

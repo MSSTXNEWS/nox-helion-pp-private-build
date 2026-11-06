@@ -36,6 +36,33 @@ class B06VerifierHeadAdmission(unittest.TestCase):
         self.assertLess(self.admission.index("'E07_VERIFIER_STALE_HEAD_HOLD'"), self.admission.index("$complete=$false"))
         self.assertLess(self.source.index("E07_VERIFIER_STALE_HEAD_HOLD"), self.source.index("Download immutable candidate from DIFFERENT"))
 
+    def test_exact_producer_run_origin_before_same_setup_attempt(self):
+        # These are strict fail-closed source contracts, never runtime E07.
+        for value in (
+            "E07_PRODUCER_RUN_LOOKUP_HOLD",
+            "E07_PRODUCER_RUN_SOURCE_IDENTITY_HOLD",
+            "/actions/runs/",
+            "[string]$producer.id -cne $env:E07_PRODUCER_RUN_ID",
+            "$producer.head_sha -cne $env:E07_SOURCE_SHA",
+            "$producer.head_branch -cne $expectedBranch",
+            "$producer.path -cne '.github/workflows/nox-v16-e06-d02-onehost.yml'",
+            "$producer.repository.full_name -cne $env:GITHUB_REPOSITORY",
+            "$producer.head_repository.full_name -cne $env:GITHUB_REPOSITORY",
+            "$producer.status -cne 'completed'",
+            "$producer.conclusion -notin @('success','failure')",
+        ):
+            with self.subTest(value=value):
+                self.assertIn(value, self.admission)
+        # An old, cancelled or unrelated run must fail before same-SHA
+        # admission can consume the sole physical attempt.
+        self.assertLess(
+            self.admission.index("E07_PRODUCER_RUN_SOURCE_IDENTITY_HOLD"),
+            self.admission.index("$complete=$false"))
+        self.assertLess(
+            self.source.index("E07_PRODUCER_RUN_SOURCE_IDENTITY_HOLD"),
+            self.source.index("Download immutable candidate from DIFFERENT"))
+        self.assertNotIn("continue-on-error: true", self.admission)
+
     def test_same_sha_and_real_provider_still_required(self):
         self.assertIn("$history=Invoke-RestMethod", self.admission)
         self.assertIn("if (-not $complete)", self.admission)
