@@ -546,30 +546,6 @@
       "source_head_observed": "763ae6cfc5e1908ad97460ac286f86da9ec59343"
     },
     {
-      "path": "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueStore.cs",
-      "owner": 3,
-      "run_id": "D04_P03_MERGED_REENTRY_AUTHORITY_R5_20261106",
-      "pre_git_blob_sha1": "65a0377bb7bdaccfa5d6d87201c55dfa3940efa9",
-      "post_git_blob_sha1": "856557cbe29e5a285165733efadbb800993e6a65",
-      "post_bytes": 43251,
-      "acceptance": "SOURCE_ONLY_TARGET_16_OF_16_C_SHARP_REGRESSION_AND_WINDOWS_NOT_RUN",
-      "prior_active_post_git_blob_sha1": "65a0377bb7bdaccfa5d6d87201c55dfa3940efa9",
-      "prior_active_post_bytes": 40386,
-      "source_head_observed": "763ae6cfc5e1908ad97460ac286f86da9ec59343"
-    },
-    {
-      "path": "Packages/P03/Source/python-host/p03_onehost_port.py",
-      "owner": 3,
-      "run_id": "B04_NESTED_JOB_IDENTITY_FENCE_R14_20261106",
-      "pre_git_blob_sha1": "bc42f88d1a567aa3573ee3a727087e190e84545c",
-      "post_git_blob_sha1": "e485657d99a673243585e4270e4fd6040ee40ed8",
-      "post_bytes": 31026,
-      "acceptance": "SOURCE_ONLY_V8_CONTRACT_PYTHON_AST_REGRESSION_AUTHORED_NOT_RUN_WINDOWS_QWEN_E07_HOLD",
-      "change_scope": "NESTED_CANCEL_RETRY_JOB_IDENTITY_MISMATCH_CANNOT_CONFIRM_OWNER_ACTION",
-      "source_head_observed": "6fb5df301cc5ea45b6b2a41dcf1983beeaab2b0d",
-      "prior_active_run_id": "B04_OWNER_DEEP_NESTED_ACK_FENCE_R13_20261105"
-    },
-    {
       "path": "Packages/P03/Source/P03.ModelCenter/ModelSafetensorsImport.cs",
       "owner": 3,
       "run_id": "B04_P03_P04_COMMON_EXECUTION_OWNER_PATH_R5_20261106",
@@ -579,19 +555,6 @@
       "acceptance": "SOURCE_ONLY_TARGET_16_OF_16_DOTNET_WINDOWS_PHYSICAL_NOT_RUN",
       "source_pinned_baseline": true,
       "source_head_observed": "a7dd8964b9c121f2b35d808ba72830595f728805"
-    },
-    {
-      "path": "Packages/P03/Source/P03.ModelCenter.HardeningSmoke/Program.cs",
-      "owner": 3,
-      "run_id": "D04_P03_MERGED_REENTRY_AUTHORITY_R5_20261106",
-      "pre_git_blob_sha1": "80a391198f9f61f9aeb3ac605b0d30f31a10ad5e",
-      "post_git_blob_sha1": "c07e0d166b3235ecb5b24d9bffe7742b83bc024b",
-      "post_bytes": 79172,
-      "acceptance": "SOURCE_ONLY_TARGET_16_OF_16_C_SHARP_REGRESSION_AND_WINDOWS_NOT_RUN",
-      "prior_active_run_id": "B04_P03_MERGED_OWNER_ABSOLUTE_PATH_R5_20261106",
-      "prior_active_post_git_blob_sha1": "80a391198f9f61f9aeb3ac605b0d30f31a10ad5e",
-      "prior_active_post_bytes": 75680,
-      "source_head_observed": "763ae6cfc5e1908ad97460ac286f86da9ec59343"
     },
     {
       "path": "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueStore.cs",
@@ -616,6 +579,20 @@
       "prior_active_run_id": "D04_P03_MERGED_REENTRY_AUTHORITY_R5_20261106",
       "prior_active_post_git_blob_sha1": "c07e0d166b3235ecb5b24d9bffe7742b83bc024b",
       "source_head_observed": "408b81c292c85751fed6a9de46b0f302259eb178"
+    },
+    {
+      "path": "Packages/P03/Source/python-host/p03_onehost_port.py",
+      "owner": 3,
+      "run_id": "B04_R5_EXACT_BLOB_RECONCILIATION_20261106",
+      "pre_git_blob_sha1": "e485657d99a673243585e4270e4fd6040ee40ed8",
+      "post_git_blob_sha1": "ecde4663a9778be4187eb003fb3dde6f1365b45c",
+      "post_bytes": 31772,
+      "acceptance": "SOURCE_ONLY_EXACT_REPO_BLOB_NO_MODEL_OR_RUNTIME_APPROVAL",
+      "prior_active_run_id": "B04_NESTED_JOB_IDENTITY_FENCE_R14_20261106",
+      "prior_active_post_git_blob_sha1": "e485657d99a673243585e4270e4fd6040ee40ed8",
+      "prior_active_post_bytes": 31026,
+      "source_head_observed": "dc0469194026c4dcec558360abb5878ffd2992fb",
+      "change_scope": "STAGE_PIN_RECONCILIATION_WITHOUT_RIGHTS_GRANT"
     }
   ],
   "override_chain": [
@@ -1473,6 +1450,52 @@
       "source_head_observed": "a7dd8964b9c121f2b35d808ba72830595f728805",
       "historical_approved_override": true,
       "retired_from_active_set": "D04_P03_MERGED_REENTRY_AUTHORITY_R5_20261106"
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueStore.cs",
+      "owner": 3,
+      "run_id": "D04_P03_MERGED_REENTRY_AUTHORITY_R5_20261106",
+      "pre_git_blob_sha1": "65a0377bb7bdaccfa5d6d87201c55dfa3940efa9",
+      "post_git_blob_sha1": "856557cbe29e5a285165733efadbb800993e6a65",
+      "post_bytes": 43251,
+      "acceptance": "SOURCE_ONLY_TARGET_16_OF_16_C_SHARP_REGRESSION_AND_WINDOWS_NOT_RUN",
+      "prior_active_post_git_blob_sha1": "65a0377bb7bdaccfa5d6d87201c55dfa3940efa9",
+      "prior_active_post_bytes": 40386,
+      "source_head_observed": "763ae6cfc5e1908ad97460ac286f86da9ec59343",
+      "historical_approved_override": true,
+      "retired_from_active_set": "B04_R5_EXACT_BLOB_RECONCILIATION_20261106",
+      "source_check": "HISTORICAL_NOT_RELEASE_PROOF"
+    },
+    {
+      "path": "Packages/P03/Source/python-host/p03_onehost_port.py",
+      "owner": 3,
+      "run_id": "B04_NESTED_JOB_IDENTITY_FENCE_R14_20261106",
+      "pre_git_blob_sha1": "bc42f88d1a567aa3573ee3a727087e190e84545c",
+      "post_git_blob_sha1": "e485657d99a673243585e4270e4fd6040ee40ed8",
+      "post_bytes": 31026,
+      "acceptance": "SOURCE_ONLY_V8_CONTRACT_PYTHON_AST_REGRESSION_AUTHORED_NOT_RUN_WINDOWS_QWEN_E07_HOLD",
+      "change_scope": "NESTED_CANCEL_RETRY_JOB_IDENTITY_MISMATCH_CANNOT_CONFIRM_OWNER_ACTION",
+      "source_head_observed": "6fb5df301cc5ea45b6b2a41dcf1983beeaab2b0d",
+      "prior_active_run_id": "B04_OWNER_DEEP_NESTED_ACK_FENCE_R13_20261105",
+      "historical_approved_override": true,
+      "retired_from_active_set": "B04_R5_EXACT_BLOB_RECONCILIATION_20261106",
+      "source_check": "HISTORICAL_NOT_RELEASE_PROOF"
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter.HardeningSmoke/Program.cs",
+      "owner": 3,
+      "run_id": "D04_P03_MERGED_REENTRY_AUTHORITY_R5_20261106",
+      "pre_git_blob_sha1": "80a391198f9f61f9aeb3ac605b0d30f31a10ad5e",
+      "post_git_blob_sha1": "c07e0d166b3235ecb5b24d9bffe7742b83bc024b",
+      "post_bytes": 79172,
+      "acceptance": "SOURCE_ONLY_TARGET_16_OF_16_C_SHARP_REGRESSION_AND_WINDOWS_NOT_RUN",
+      "prior_active_run_id": "B04_P03_MERGED_OWNER_ABSOLUTE_PATH_R5_20261106",
+      "prior_active_post_git_blob_sha1": "80a391198f9f61f9aeb3ac605b0d30f31a10ad5e",
+      "prior_active_post_bytes": 75680,
+      "source_head_observed": "763ae6cfc5e1908ad97460ac286f86da9ec59343",
+      "historical_approved_override": true,
+      "retired_from_active_set": "B04_R5_EXACT_BLOB_RECONCILIATION_20261106",
+      "source_check": "HISTORICAL_NOT_RELEASE_PROOF"
     }
   ],
   "source_expansion": {
