@@ -1,6 +1,6 @@
-"""NOX AMD SAFE65 V2. Continues LoRA adapter tensors; not optimizer state.
+"""NOX AMD SAFE70 V2. Continues LoRA adapter tensors; not optimizer state.
 Only local existing Qwen2.5-0.5B, owner-approved dataset, saved checkpoints.
-20-step bounded cycle, checkpoint every 5; fail closed at 65C/hotspot,
+20-step bounded cycle, checkpoint every 5; fail closed at 70C/hotspot,
 battery <=20%, 60GB reserve, sensor loss. NEVER NtSuspendProcess.
 """
 from __future__ import annotations
@@ -11,7 +11,7 @@ from urllib.request import urlopen
 
 ROOT=Path(r"C:\NOX_HELION\NOX_NEW")
 SENSOR="http://127.0.0.1:8085/data.json"
-LIMIT=65
+LIMIT=70
 COOL=180
 
 def receipt(path,payload):
@@ -171,7 +171,7 @@ def supervise():
              TMP=str(ROOT/"brain"/"skills"/"tmp"),
              TEMP=str(ROOT/"brain"/"skills"/"tmp"))
     for k in ("HF_HOME","TMP"):Path(env[k]).mkdir(parents=True,exist_ok=True)
-    print("NOX AMD SAFE65 | LoRA weight continuation",checkpoint,
+    print("NOX AMD SAFE70 | LoRA weight continuation",checkpoint,
           "| HotSpot",hot,"C | battery",charge,"%",flush=True)
     with log.open("w",encoding="utf-8") as o,errs.open("w",encoding="utf-8") as e:
         child=subprocess.Popen(args,stdout=o,stderr=e,env=env,
@@ -181,7 +181,7 @@ def supervise():
         while child.poll() is None:
             try:
                 hot=temperature();ac,charge=battery()
-                if hot>=LIMIT:reason="HOTSPOT>=65C"
+                if hot>=LIMIT:reason="HOTSPOT>=70C"
                 elif not ac and charge<=20:reason="BATTERY<=20%"
                 elif shutil.disk_usage(ROOT).free<60_000_000_000:reason="DISK_RESERVE"
             except Exception as ex:
