@@ -1,0 +1,28 @@
+/* NOX HELION · HOLO MOTION V7 · opt-in enhancement for real HUD. */
+.nox-holo-v7{--nox-ice:#74eafa;--nox-gold:#e9c180;--nox-violet:#977dff;--nox-motion:1;isolation:isolate}
+.nox-holo-v7 .nox-holo-instrument{position:relative;isolation:isolate;overflow:hidden;transform:translateZ(0);border:1px solid rgba(116,234,250,.19);background:radial-gradient(ellipse at 50% 0%,rgba(116,234,250,.085),transparent 68%),rgba(3,9,20,.42);box-shadow:inset 0 1px rgba(255,255,255,.13),inset 0 -1px rgba(116,234,250,.06),0 0 30px rgba(56,170,250,.06);backdrop-filter:blur(16px)}
+.nox-holo-v7 .nox-holo-instrument::before,.nox-holo-v7 .nox-holo-instrument::after{content:"";position:absolute;inset:0;pointer-events:none}
+.nox-holo-v7 .nox-holo-instrument::before{background:conic-gradient(from 25deg at 50% 50%,transparent 0deg,rgba(116,234,250,.12) 42deg,transparent 75deg,rgba(233,193,128,.075) 180deg,transparent 235deg,rgba(151,125,255,.09) 290deg,transparent 340deg);mix-blend-mode:screen;animation:nox-holo-aurora 22s linear infinite;z-index:-1}
+.nox-holo-v7 .nox-holo-instrument::after{background:linear-gradient(110deg,transparent 30%,rgba(116,234,250,.1) 50%,transparent 66%);background-size:240% 100%;animation:nox-holo-sheen 13s ease-in-out infinite;opacity:.6}
+.nox-holo-v7 .nox-holo-core{transform-origin:center;animation:nox-holo-breathe 6.8s ease-in-out infinite;filter:drop-shadow(0 0 12px rgba(116,234,250,.23))}
+.nox-holo-v7 .nox-holo-rim{transform-origin:center;animation:nox-holo-orbit 48s linear infinite;filter:drop-shadow(0 0 7px rgba(116,234,250,.18))}
+.nox-holo-v7 .nox-holo-rim[data-counter-rotate]{animation-direction:reverse;animation-duration:66s}
+.nox-holo-v7 .nox-holo-node{transform-origin:center;animation:nox-holo-node 4.3s ease-in-out infinite;animation-delay:var(--nox-delay,0s)}
+.nox-holo-v7 .nox-holo-link{stroke-dasharray:3 9;animation:nox-holo-flow 9s linear infinite;opacity:.65}
+.nox-holo-v7 [data-nox-holo-state="busy"] .nox-holo-link{animation-duration:3.6s}
+.nox-holo-v7 .nox-holo-readout{font-variant-numeric:tabular-nums;text-shadow:0 0 12px rgba(116,234,250,.22)}
+.nox-holo-v7 .nox-holo-live[data-live="false"]{opacity:.5;filter:grayscale(.8)}
+.nox-holo-v7 .nox-holo-live[data-live="false"]::after{content:" · OFFLINE";font-size:.72em;letter-spacing:.09em}
+.nox-holo-v7 .nox-holo-beacon{width:6px;height:6px;display:inline-block;border-radius:50%;background:var(--nox-ice);box-shadow:0 0 9px var(--nox-ice);animation:nox-holo-node 3s ease-in-out infinite}
+@keyframes nox-holo-aurora{to{transform:rotate(360deg)}}
+@keyframes nox-holo-sheen{0%,20%{background-position:120% 0}75%,100%{background-position:-120% 0}}
+@keyframes nox-holo-breathe{0%,100%{transform:scale(.982);opacity:.83}50%{transform:scale(1.019);opacity:1}}
+@keyframes nox-holo-orbit{to{transform:rotate(360deg)}}
+@keyframes nox-holo-node{0%,100%{opacity:.52;filter:brightness(.8)}50%{opacity:1;filter:brightness(1.4)}}
+@keyframes nox-holo-flow{to{stroke-dashoffset:-96}}
+.nox-holo-v7[data-nox-motion="off"] *, .nox-holo-v7[data-nox-motion="off"] *::before,.nox-holo-v7[data-nox-motion="off"] *::after{animation:none!important;transition:none!important}
+@media(prefers-reduced-motion:reduce){.nox-holo-v7 *, .nox-holo-v7 *::before,.nox-holo-v7 *::after{animation:none!important;transition:none!important}}
+@media(max-width:520px){.nox-holo-v7 .nox-holo-instrument{backdrop-filter:blur(8px)}.nox-holo-v7 .nox-holo-instrument::after{opacity:.25}}
+
+/* On original MENU: FX ECO is explicitly static. */
+body[data-fx="ECO"] .nox-holo-v7 *,body[data-fx="ECO"] .nox-holo-v7 *::before,body[data-fx="ECO"] .nox-holo-v7 *::after{animation:none!important;transition:none!important}
