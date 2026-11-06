@@ -27,6 +27,11 @@ try{
   assert.equal(await halo.isVisible(),false,'HALO must be hidden in ECO');
   const buttons=await page.locator('#directions button').count();
   assert.equal(buttons,8,'All eight original navigation directions remain');
+  await page.locator('#directions button').first().click();
+  const aetherCard=page.locator('.details .nox-catalog-card').first();
+  assert.equal(await aetherCard.isVisible(),true,'AETHER must style real navigation cards');
+  const glass=await aetherCard.evaluate(el=>getComputedStyle(el).backdropFilter);
+  if(width>520) assert.match(glass,/blur/,'AETHER bento glass should be active on wider screens');
   assert.equal(pageErrors.length,0,pageErrors.join('; '));
   await page.close();
  }
@@ -37,5 +42,5 @@ try{
  assert.equal(await reduced.locator('canvas.nox-wow-three').isVisible(),false);
  assert.equal(await reduced.locator('canvas.nox-halo-radar').count(),1,'HALO static fallback must exist under reduced motion');
  await reduced.close();
- console.log('PASS: real Chromium HALO HUD + WebGL MAX/ECO, 390/800/1920 widths, nav, Reduced Motion');
+ console.log('PASS: real Chromium HALO + HELIODON + AETHER + WebGL MAX/ECO, 390/800/1920 widths, nav, Reduced Motion');
 } finally {await browser.close();}
