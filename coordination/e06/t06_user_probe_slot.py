@@ -41,6 +41,31 @@ def unchanged_probe_snapshot(before, after):
             before.st_ino != 0 and before.st_nlink == 1)
 
 
+def read_stable_manifest_bytes(path: Path) -> bytes:
+    """Read one physical manifest without pathname/handle replacement races.
+
+    A manifest can be modified after a safe(path) check, even if the decoded
+    JSON looks valid. Require same NTFS identity across lstat/open and stable
+    within-API metadata before, during and after the bounded read. The caller
+    still enforces no-reparse ancestors before and after.
+    """
+    before = path.lstat()
+    if (not stat.S_ISREG(before.st_mode) or before.st_nlink != 1 or
+            before.st_ino == 0 or not 2 <= before.st_size <= 4 * 1024 * 1024):
+        raise RuntimeError("T06_EXACT_PROBE_SLOT_MANIFEST_IDENTITY_HOLD")
+    with path.open("rb") as stream:
+        opened = os.fstat(stream.fileno())
+        if not owned_file_handle_matches_path(before, opened):
+            raise RuntimeError("T06_EXACT_PROBE_SLOT_MANIFEST_IDENTITY_HOLD")
+        raw = stream.read(4 * 1024 * 1024 + 1)
+        if (len(raw) != before.st_size or
+                not unchanged_probe_snapshot(opened, os.fstat(stream.fileno()))):
+            raise RuntimeError("T06_EXACT_PROBE_SLOT_MANIFEST_RACE_HOLD")
+    if not unchanged_probe_snapshot(before, path.lstat()):
+        raise RuntimeError("T06_EXACT_PROBE_SLOT_MANIFEST_RACE_HOLD")
+    return raw
+
+
 def verify_exact_probe_slot(root: Path, probe_name: str, probe_bytes: bytes,
                             frozen_inode: tuple[int, int], base: Path) -> dict:
     def hold(reason: str) -> None:
@@ -92,8 +117,18 @@ def verify_exact_probe_slot(root: Path, probe_name: str, probe_bytes: bytes,
     if not safe(marker) or not unchanged_probe_snapshot(before, marker.lstat()):
         hold("PROBE_RACE")
     manifest = root / "payload.sha256.json"
-    if not safe(manifest) or not 2 <= manifest.stat().st_size <= 4 * 1024 * 1024:
+    if not safe(manifest):
         hold("MANIFEST")
+    # Freeze the original backing file, not just its pathname. A concurrent
+    # same-length writer must never turn an unchecked manifest into a PASS.
+    try:
+        manifest_bytes = read_stable_manifest_bytes(manifest)
+    except (RuntimeError, OSError, ValueError) as exc:
+        hold("MANIFEST_IDENTITY" if not isinstance(exc, RuntimeError) else
+             ("MANIFEST_RACE" if "MANIFEST_RACE" in str(exc) else "MANIFEST_IDENTITY"))
+    if not safe(manifest):
+        hold("MANIFEST_RACE")
+    frozen_manifest = manifest.lstat()
     def unique_pairs(pairs):
         output = {}
         for k, v in pairs:
@@ -102,7 +137,7 @@ def verify_exact_probe_slot(root: Path, probe_name: str, probe_bytes: bytes,
             output[k] = v
         return output
     try:
-        data = json.loads(manifest.read_bytes().decode("utf-8-sig"), object_pairs_hook=unique_pairs,
+        data = json.loads(manifest_bytes.decode("utf-8-sig"), object_pairs_hook=unique_pairs,
                           parse_constant=lambda _: (_ for _ in ()).throw(ValueError("NaN")))
     except (UnicodeError, ValueError):
         hold("MANIFEST_JSON")
@@ -205,6 +240,8 @@ def verify_exact_probe_slot(root: Path, probe_name: str, probe_bytes: bytes,
             observed.add(rel)
     if observed != expected:
         hold("MISSING_OR_DUPLICATE")
+    if not safe(manifest) or not unchanged_probe_snapshot(frozen_manifest, manifest.lstat()):
+        hold("MANIFEST_FINAL_IDENTITY")
     if not safe(marker) or not unchanged_probe_snapshot(before, marker.lstat()):
         hold("PROBE_FINAL_IDENTITY")
     return {"status": "PASS_DIAGNOSTIC_ONLY", "manifest_files_checked": len(data["files"]),
