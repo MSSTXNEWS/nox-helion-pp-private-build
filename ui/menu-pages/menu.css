@@ -132,3 +132,8 @@ body[data-fx="ECO"] .planet,body[data-fx="ECO"] .nebula:after,body[data-fx="ECO"
   .universe .orbit-a{width:min(65vw,235px);height:140px}
   .universe .orbit-b{width:min(76vw,265px);height:170px}
 }
+
+/* Mobile planet halo must not enlarge document scroll width. */
+@media(max-width:520px){
+  .universe .planet::after{inset:0;transform:none}
+}
