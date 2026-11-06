@@ -24,6 +24,8 @@ jobs:
           python3 -m http.server 8765 --bind 127.0.0.1 >/tmp/nox-web.log 2>&1 &
           sleep 2
           node --check ui/menu-pages/formwork-halo-hud.js
+          node --check ui/menu-pages/vendor/loquix-typing.mjs
+          node --check ui/menu-pages/menu.js
           test -f ui/menu-pages/formwork-aether-bento.css
           test -f ui/menu-pages/formwork-heliodon.LICENSE.txt
           test -f ui/menu-pages/formwork-aether.LICENSE.txt
