@@ -125,3 +125,10 @@ body[data-fx="ECO"] .planet,body[data-fx="ECO"] .nebula:after,body[data-fx="ECO"
  .nox-breadcrumb,.nox-catalog-card,.nox-more{background:Canvas;color:CanvasText;border:1px solid CanvasText;box-shadow:none}
  .nox-card-title,.nox-card-desc,.nox-card-count,.nox-card-arrow{color:CanvasText}
 }
+
+
+/* NOX WOW 320px orbit bounds: original orbit geometry remains visible. */
+@media(max-width:520px){
+  .universe .orbit-a{width:min(65vw,235px);height:140px}
+  .universe .orbit-b{width:min(76vw,265px);height:170px}
+}
