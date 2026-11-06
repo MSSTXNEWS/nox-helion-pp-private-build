@@ -22,3 +22,10 @@ body:not(.nox-home):not(.chat-v5) .cinema-hud{position:fixed;right:16px;top:90px
 @media(prefers-reduced-motion:reduce){.cinema-hud:before{animation:none!important}}
 body.chat-v5 .cinema-hud{position:relative!important;z-index:1!important;max-width:100%;overflow:hidden}
 @media(max-width:1040px){body.chat-v5 .cinema-hud{display:block!important}}
+/* Bright ECharts gauge strokes, shadowed real-value arcs (not simulated fill) */
+#nox-cinema-hud .ch-mainchart{filter:drop-shadow(0 0 10px rgba(224,180,110,.33));min-height:115px}
+#nox-cinema-hud .ch-value strong{color:#f9e1c1;text-shadow:0 0 10px rgba(239,170,80,.48)}
+#nox-cinema-hud .ch-head{border-bottom-color:rgba(237,177,92,.28)}
+#nox-cinema-hud .ch-kicker{color:#eed8b6}
+#nox-cinema-hud .ch-bell{border-color:rgba(245,187,107,.50);color:#fbd39a;box-shadow:0 0 13px rgba(227,163,67,.17)}
+@media(prefers-reduced-motion:reduce){#nox-cinema-hud .ch-mainchart{filter:none}}
