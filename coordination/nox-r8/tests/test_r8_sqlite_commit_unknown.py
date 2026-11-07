@@ -23,4 +23,12 @@ assert gen.index("sqliteWriteAttempted = true;") < gen.index("PersistChat(prompt
 assert "else if(v?.sqliteUnknown===true)" in html
 assert "Проверьте историю перед повторной отправкой." in html
 assert "lastAnswer='';" in html
+
+# B04 integration adapter: uncertain chat COMMIT must preserve per-Persona draft and require explicit replay confirmation.
+assert "const uncertainChatKeys=new Set()" in html, "B04_UNKNOWN_COMMIT_REPLAY_GUARD_HOLD"
+assert "uncertainChatKeys.has(uncertainKey)&&!window.confirm(" in html, "B04_UNKNOWN_COMMIT_REPLAY_GUARD_HOLD"
+assert "uncertainChatKeys.delete(uncertainKey);busy=true;" in html, "B04_UNKNOWN_COMMIT_REPLAY_GUARD_HOLD"
+assert "uncertainChatKeys.add(uncertainChatKey(retry.persona,retry.raw))" in html, "B04_UNKNOWN_COMMIT_REPLAY_GUARD_HOLD"
+assert "let restored=false;if(!v?.ok&&retry){" in html, "B04_UNKNOWN_COMMIT_REPLAY_GUARD_HOLD"
+assert "route('reflection');return;" in html, "B04_UNKNOWN_COMMIT_REPLAY_GUARD_HOLD"
 print("NOX_B04_COMMIT_UNKNOWN_SOURCE_ONLY_PASS")

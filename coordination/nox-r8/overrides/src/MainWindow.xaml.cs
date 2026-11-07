@@ -1817,6 +1817,9 @@ public partial class MainWindow : Window
             response.EnsureSuccessStatusCode();
             using var stream = await response.Content.ReadAsStreamAsync(cancellation.Token);
             using var reader = new StreamReader(stream);
+            // B02: bounded total NDJSON lifetime; STOP remains owner-only.
+            using var streamBudget = CancellationTokenSource.CreateLinkedTokenSource(cancellation.Token);
+            streamBudget.CancelAfter(TimeSpan.FromMinutes(15));
             // B04: headers can arrive before an indefinitely stalled Ollama NDJSON body.
             // Each line has a bounded wait; only the owner's token means STOP.
             bool completed = false;
@@ -1824,7 +1827,7 @@ public partial class MainWindow : Window
             while (true)
             {
                 cancellation.Token.ThrowIfCancellationRequested();
-                using var readWindow = CancellationTokenSource.CreateLinkedTokenSource(cancellation.Token);
+                using var readWindow = CancellationTokenSource.CreateLinkedTokenSource(streamBudget.Token);
                 readWindow.CancelAfter(TimeSpan.FromMinutes(3));
                 var line = await reader.ReadLineAsync(readWindow.Token);
                 if (line == null) break;

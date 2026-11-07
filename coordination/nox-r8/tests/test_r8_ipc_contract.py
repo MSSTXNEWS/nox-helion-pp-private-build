@@ -403,3 +403,12 @@ assert generate.index('await StartLocalEngine(cancellation.Token);') < generate.
 assert 'providerRecoveryPending || (providerStreamRequested &&' in generate, 'B02_R8_PROVIDER_START_HEALTH_REFRESH_HOLD'
 assert 'catch (OperationCanceledException) when (stopToken.IsCancellationRequested)' in startup, 'B02_R8_STOP_NOT_SWALLOWED_HOLD'
 print('B02 R8 SOURCE_ONLY: canonical startup + per-chat recovery, single-owner launch, cancellable STOP, registered model guard PASS; Windows NOT_TESTED')
+# B06: source-only stream lifetime regression, not Windows E2E.
+_budget = cs.split('private async Task Generate(',1)[1].split('private void PersistChat(',1)[0]
+assert _budget.count('using var streamBudget = CancellationTokenSource.CreateLinkedTokenSource(cancellation.Token);') == 1, 'B06_LINKED_STREAM_BUDGET_HOLD'
+assert _budget.count('streamBudget.CancelAfter(TimeSpan.FromMinutes(15));') == 1, 'B06_ABSOLUTE_STREAM_BUDGET_HOLD'
+assert _budget.index('streamBudget.CancelAfter(TimeSpan.FromMinutes(15));') < _budget.index('while (true)'), 'B06_STREAM_BUDGET_BEFORE_READ_HOLD'
+assert 'CancellationTokenSource.CreateLinkedTokenSource(streamBudget.Token)' in _budget, 'B06_PER_LINE_FROM_STREAM_BUDGET_HOLD'
+assert 'readWindow.CancelAfter(TimeSpan.FromMinutes(3));' in _budget, 'B06_IDLE_GUARD_NO_LOSS_HOLD'
+assert 'catch (OperationCanceledException) when (cancellation.IsCancellationRequested)' in _budget and 'OLLAMA_TIMEOUT:' in _budget, 'B06_OWNER_STOP_VS_TIMEOUT_HOLD'
+print('B06 SOURCE_ONLY: total 15m stream + 3m idle, STOP distinct; real Qwen not tested')

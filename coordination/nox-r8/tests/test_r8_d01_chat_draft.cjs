@@ -554,3 +554,21 @@ console.log('D01 SOURCE_ONLY PASS: Qwen failed/STOP retry with original input, S
   assert.equal(m.state().busy,false,'D01_SQLITE_UNKNOWN_BUSY_LOCK_NOT_RELEASED');
   console.log('D01 SOURCE_ONLY PASS: uncertain SQLite commit never auto-restores prompt for duplicate replay');
 }
+// B06: execute the real PersonaID notification handler, not an invented UI.
+{
+ const personaLine=html.split('\n').find(x=>x.startsWith("case 'persona.changed':"));
+ assert.ok(personaLine,'B06_PERSONA_HANDLER_MISSING');
+ let clears=0,cancels=0,active='KV';
+ const nodes=Object.fromEntries(['messages','history','notes','memoryResults','knowledgeResults'].map(k=>[k,{replaceChildren(){clears++}}]));
+ const speechSynthesis={cancel(){cancels++}};
+ const m=vm.runInNewContext(`(function(v){switch('persona.changed'){${personaLine}}})`,{
+   $:id=>nodes[id],window:{speechSynthesis},speechSynthesis,
+   switchPersonaDrafts(next){if(!['KV','AM','LA','EV','KW'].includes(next))return false;active=next;return true;},
+   get visibleDraftPersona(){return active},set visibleDraftPersona(v){active=v},
+   lastAnswer:'saved answer',responseBox:{}
+ },{timeout:1500});
+ m({persona:'KV'});assert.equal(clears,0,'B06_SAME_PERSONA_CLEARED_CHAT');assert.equal(cancels,0,'B06_SAME_PERSONA_CANCELLED_SPEECH');
+ m({persona:'BAD'});assert.equal(clears,0,'B06_INVALID_PERSONA_CLEARED_CHAT');
+ m({persona:'AM'});assert.equal(clears,5,'B06_CROSS_PERSONA_PRIVACY_NOT_CLEARED');assert.equal(cancels,1,'B06_CROSS_PERSONA_SPEECH_NOT_STOPPED');
+ console.log('B06 SOURCE_ONLY: same PersonaID protects chat, cross-PersonaID clears');
+}
