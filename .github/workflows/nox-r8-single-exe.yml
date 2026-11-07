@@ -1,7 +1,7 @@
 name: NOX R8 Windows desktop compilation
 on:
   push:
-    branches: [feature/nox-r8-liquid-one-exe-20261106]
+    branches: [feature/nox-r8-liquid-one-exe-20261106, work/b01-r8-parity-ancestor-reparse-20261108]
   workflow_dispatch:
 permissions:
   contents: read
@@ -13,6 +13,12 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 8.0.x
+      # B01 personal staging-only regression. Do not transfer branch trigger to R8.
+      - name: B01 read-only exact source-name parity regression
+        shell: pwsh
+        run: |
+          python -B './coordination/nox-r8/tests/test_r8_b01_local_parity.py'
+          if ($LASTEXITCODE -ne 0) { throw 'B01_OWNER_SOURCE_FILENAME_PARITY_HOLD' }
       - name: Compile from exact source
         shell: pwsh
         run: |
