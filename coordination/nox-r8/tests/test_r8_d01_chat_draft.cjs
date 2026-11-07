@@ -19,7 +19,7 @@ function scenario(draft, bridge, locked = false) {
     post: (type, payload) => {sent.push({type, payload}); return bridge;},
     entry: (_container, value, label) => {shown.push({value, label}); return {lastChild: {textContent: ''}};},
     nextChatId: () => 'r8d01_owner_1234',
-    busy: locked, activeChatId: null, responseBox: null, lastAnswer: 'old'
+    busy: locked, activeChatId: null, responseBox: null, lastAnswer: 'old', visibleDraftPersona:'KV'
   };
   vm.runInNewContext(code, context, {timeout: 1500});
   nodes.send.onclick();
@@ -64,14 +64,18 @@ const keyboardCode = keyboardLine.slice(keyboardLine.indexOf("$('prompt').onkeyd
 let presses = 0;
 const keyboardNodes = {prompt: {}, send: {click(){presses++;}}};
 vm.runInNewContext(keyboardCode, {$:id=>keyboardNodes[id]}, {timeout: 1500});
-function keypress(key, shiftKey=false, isComposing=false, keyCode=13){
-  const e = {key,shiftKey,isComposing,keyCode,preventDefault(){this.prevented=true}};
+function keypress(key, shiftKey=false, isComposing=false, keyCode=13, extra={}){
+  const e = {key,shiftKey,isComposing,keyCode,preventDefault(){this.prevented=true},...extra};
   keyboardNodes.prompt.onkeydown(e);
   return !!e.prevented;
 }
 assert.equal(keypress('Enter',false,true),false,'D01_IME_ENTER_SENT_PREMATURELY');
 assert.equal(keypress('Enter',false,false,229),false,'D01_IME_LEGACY_ENTER_SENT');
 assert.equal(keypress('Enter',true),false,'D01_SHIFT_ENTER_BLOCKED');
+for (const modifier of ['ctrlKey','altKey','metaKey']) {
+  assert.equal(keypress('Enter',false,false,13,{[modifier]:true}),false,
+    'D01_MODIFIED_ENTER_MUST_NOT_SEND_'+modifier);
+}
 assert.equal(keypress('a'),false,'D01_TYPING_BLOCKED');
 assert.equal(presses,0,'D01_COMPOSITION_MUST_NOT_SEND');
 assert.equal(keypress('Enter'),true,'D01_NORMAL_ENTER_MUST_SEND');
@@ -145,3 +149,408 @@ function routeAtWidth(compact) {
 assert.equal(routeAtWidth(true),0,'D01_COMPACT_ROUTE_MUST_REVEAL_NAVIGATION');
 assert.equal(routeAtWidth(false),0,'D01_DESKTOP_ROUTE_MUST_REVEAL_NEW_PANEL');
 console.log('D01 R8 SOURCE_ONLY PASS: compact and desktop route resets panel scroll to top');
+
+/* D01_HIDDEN_PANEL_FOCUS: real route() handler contract; WebView2 UIA separately gated. */
+const navLine=html.split('\n').find(s=>s.startsWith('function route(id){'));
+assert.ok(navLine,'D01_REAL_ROUTE_MISSING');
+const navIds=[...html.matchAll(/<button class="core[^"]*" data-route="([^"]+)"/g)].map(m=>m[1]);
+assert.equal(navIds.length,8,'D01_COREID_NO_LOSS');
+const navDoc={activeElement:null},title={textContent:''};
+function node(data){
+ const cls=new Set();
+ return {dataset:data,classList:{toggle(k,on){on?cls.add(k):cls.delete(k)},contains:k=>cls.has(k)},
+  setAttribute(k,v){this[k]=v},removeAttribute(k){delete this[k]},
+  focus(){navDoc.activeElement=this},closest(){return this.parentPanel||null}};
+}
+const buttons=navIds.map(route=>node({route})),panels=navIds.map(panel=>node({panel}));
+navDoc.querySelectorAll=s=>s==='.core[data-route]'?buttons:panels;
+navDoc.querySelector=s=>buttons.find(b=>s==='button.core[data-route="'+b.dataset.route+'"]')||null;
+const scope={document:navDoc,headings:Object.fromEntries(navIds.map(id=>[id,id.toUpperCase()])),
+  $:()=>title,post:()=>true};
+vm.runInNewContext(navLine,scope,{timeout:1500});
+const child=node({});child.parentPanel=panels.find(p=>p.dataset.panel==='consciousness');
+navDoc.activeElement=child;assert.equal(scope.route('core'),true);
+assert.equal(navDoc.activeElement,buttons.find(b=>b.dataset.route==='core'),'D01_FOCUS_HIDDEN_PANEL');
+assert.equal(buttons.find(b=>b.dataset.route==='core')['aria-current'],'page');
+child.parentPanel=panels.find(p=>p.dataset.panel==='core');navDoc.activeElement=child;
+scope.route('core');assert.equal(navDoc.activeElement,child,'D01_SAME_ROUTE_FOCUS_CHANGED');
+navDoc.activeElement=buttons[0];scope.route('atlas');
+assert.equal(navDoc.activeElement,buttons[0],'D01_NAV_FOCUS_CHANGED');
+assert.equal(scope.route('unknown'),false,'D01_UNKNOWN_ROUTE_ALLOWED');
+for(const id of navIds){assert.equal(scope.route(id),true);assert.equal(
+ panels.find(p=>p.dataset.panel===id).classList.contains('active'),true);
+ assert.equal(buttons.find(b=>b.dataset.route===id)['aria-current'],'page');}
+console.log('D01 R8 SOURCE_ONLY PASS: hidden panel focus, eight routes, ARIA, keyboard preservation');
+
+
+/* D01 compact quick-action accessibility: this SOURCE_ONLY contract is
+   separate from WebView2's real computed-rectangle Windows receipt. */
+const quickPanel = html.match(/<div class="quick">([\s\S]*?)<\/div>/)?.[1];
+assert.ok(quickPanel, 'D01_ORIGINAL_QUICK_ACTIONS_MISSING');
+assert.equal((quickPanel.match(/<button\b/g) || []).length, 5, 'D01_FIVE_QUICK_ACTIONS_NO_LOSS');
+for (const label of ['CHAT','MODELS','LEARN','SETTINGS','✦ MAX'])
+  assert.ok(quickPanel.includes(label), 'D01_QUICK_LABEL_LOST_' + label);
+assert.match(html, /@media\(max-width:1000px\)\{\.quick \.action\{min-height:44px;min-width:44px\}\}/,
+  'D01_COMPACT_TOUCH_TARGET_44_SOURCE_HOLD');
+const nativePaths = [
+  path.resolve(__dirname, 'src/MainWindow.xaml.cs'),
+  path.resolve(__dirname, '../overrides/src/MainWindow.xaml.cs')
+];
+const nativePath = nativePaths.find(candidate => fs.existsSync(candidate));
+assert.ok(nativePath, 'D01_NATIVE_SOURCE_MISSING');
+const nativeSource = fs.readFileSync(nativePath, 'utf8');
+assert.match(nativeSource, /rect\.width >= 44 && rect\.height >= 44/,
+  'D01_COMPACT_TOUCH_TARGET_44_NATIVE_GATE_HOLD');
+assert.match(nativeSource, /new\[\] \{ 320, 390, 800 \}/,
+  'D01_COMPACT_PHYSICAL_VIEWPORT_GATE_MISSING');
+console.log('D01 SOURCE_ONLY PASS: five original buttons, compact 44px hit targets, native physical gate');
+
+/* D01_NONCHAT_SEARCH_IME_GUARD: execute the original R8 keyboard handlers, not a rewrite.
+   SOURCE_ONLY: native WebView2/UIA remains a separate physical gate. */
+for (const [field,action] of [['knowledgeQuery','knowledgeSearch'],['memoryQuery','memorySearch']]) {
+  const line=html.split('\n').find(s=>s.includes("$('"+field+"').onkeydown="));
+  assert.ok(line,'D01_SEARCH_KEYBOARD_SOURCE_MISSING_'+field);
+  const start=line.indexOf("$('"+field+"').onkeydown=");
+  const end=line.indexOf('};',start);
+  assert.ok(end>start,'D01_SEARCH_KEYBOARD_HANDLER_INVALID_'+field);
+  const handlerSrc=line.slice(start,end+2);
+  const nodes={[field]:{},[action]:{calls:0,click(){this.calls++}}};
+  vm.runInNewContext(handlerSrc,{$:id=>nodes[id]},{timeout:1500});
+  function press(extra={}) {
+    let prevented=0;
+    nodes[field].onkeydown({key:'Enter',keyCode:13,isComposing:false,shiftKey:false,repeat:false,
+      preventDefault(){prevented++},...extra});
+    return prevented;
+  }
+  assert.equal(press({isComposing:true}),0,'D01_COMPOSITION_HANDLED_'+field);
+  assert.equal(press({keyCode:229}),0,'D01_IME_229_HANDLED_'+field);
+  assert.equal(press({shiftKey:true}),0,'D01_SHIFT_ENTER_HANDLED_'+field);
+  for (const modifier of ['ctrlKey','altKey','metaKey'])
+    assert.equal(press({[modifier]:true}),0,'D01_SEARCH_MODIFIED_ENTER_'+field+'_'+modifier);
+  assert.equal(press({defaultPrevented:true}),0,'D01_SEARCH_HANDLED_ENTER_'+field);
+  assert.equal(press({repeat:true}),1,'D01_REPEAT_PREVENT_DEFAULT_'+field);
+  assert.equal(nodes[action].calls,0,'D01_PREMATURE_SEARCH_'+field);
+  assert.equal(press(),1,'D01_REAL_ENTER_DEFAULT_'+field);
+  press({key:'Escape'});
+  assert.equal(nodes[action].calls,1,'D01_EXACTLY_ONE_SEARCH_'+field);
+}
+console.log('D01 SOURCE_ONLY PASS: knowledge/memory keyboard IME, repeat, Enter');
+
+/* D01: real route + persona.changed handlers, scoped SQLite memory UI.
+   This executes production JavaScript; actual owner Windows UIA remains HOLD. */
+{
+  const routeLine = html.split('\n').find(x => x.startsWith('function route(id){'));
+  assert.ok(routeLine, 'D01_PERSONA_ROUTE_MISSING');
+  const sent = [], title = {textContent:''};
+  const navDoc = {activeElement:null,querySelectorAll:()=>[],querySelector:()=>null};
+  const routeContext = {document:navDoc,window:{matchMedia:()=>({matches:false})},
+    $:()=>title,post:type=>sent.push(type),headings:{reflection:'REFLECTION / HISTORY'}};
+  vm.runInNewContext(routeLine + "\nroute('reflection');",routeContext,{timeout:1500});
+  assert.deepEqual(sent,['history','notes.list','knowledge.stats'],
+    'D01_REFLECTION_NOTES_REFRESH_MISSING');
+  const changedLine = html.split('\n').find(x=>x.trim().startsWith("case 'persona.changed':"));
+  assert.ok(changedLine,'D01_PERSONA_CHANGE_HANDLER_MISSING');
+  const ids = ['messages','history','notes','memoryResults','knowledgeResults'];
+  const draftIds=['noteTitle','noteText','memoryQuery','knowledgeQuery','prompt','taskInput'];
+  const oldDraft={
+    noteTitle:'KV unsaved title',noteText:'KV unsaved note',
+    memoryQuery:'KV memory query',knowledgeQuery:'KV knowledge query',
+    prompt:'KV unsent chat prompt',taskInput:'KV unsent atlas task'
+  };
+  const elements = Object.fromEntries(ids.map(id=>[id,{clears:0,
+    replaceChildren(){this.clears++;}}]));
+  for(const id of draftIds)elements[id]={value:oldDraft[id]};
+  const eventContext = {$:id=>elements[id],window:{},
+    v:{persona:'AM'},committedSettings:{persona:'KV'},visibleDraftPersona:'KV',personaDrafts:new Map()};
+  const draftStart=html.indexOf('function switchPersonaDrafts(next){');
+  const draftEnd=html.indexOf('\nfunction route(id){',draftStart);
+  assert.ok(draftStart>0&&draftEnd>draftStart,'D01_ORIGINAL_PERSONA_DRAFT_HANDLER_MISSING');
+  vm.runInNewContext(html.slice(draftStart,draftEnd),eventContext,{timeout:1500});
+  const outcome=vm.runInNewContext(
+    "let lastAnswer='previous persona secret';let responseBox={};"+
+    "switch('persona.changed'){"+changedLine+"}"+
+    "({lastAnswer,responseBox})",eventContext,{timeout:1500});
+  for(const id of ids)
+    assert.equal(elements[id].clears,1,'D01_PERSONA_STALE_PRIVATE_VIEW_'+id);
+  assert.equal(outcome.lastAnswer,'','D01_PERSONA_OLD_REPLY_NOT_RESET');
+  assert.equal(outcome.responseBox,null,'D01_PERSONA_OLD_STREAM_NOT_RESET');
+  for(const id of draftIds){
+    assert.equal(elements[id].value,'','D01_FOREIGN_PERSONA_DRAFT_VISIBLE_'+id);
+    assert.equal(eventContext.personaDrafts.get('KV')[id],oldDraft[id],
+      'D01_UNSAVED_DRAFT_LOST_'+id);
+  }
+  eventContext.committedSettings.persona='AM';
+  eventContext.v={persona:'KV'};
+  for(const id of draftIds)elements[id].value='AM private '+id;
+  vm.runInNewContext("switch('persona.changed'){"+changedLine+"}",eventContext,{timeout:1500});
+  for(const id of draftIds){
+    assert.equal(elements[id].value,oldDraft[id],'D01_KV_DRAFT_RESTORE_'+id);
+    assert.equal(eventContext.personaDrafts.get('AM')[id],'AM private '+id,
+      'D01_AM_DRAFT_KEEP_'+id);
+  }
+  eventContext.committedSettings.persona='KV';
+  eventContext.v={persona:'KV'};
+  elements.noteTitle.value='KV revised unsaved';
+  vm.runInNewContext("switch('persona.changed'){"+changedLine+"}",eventContext,{timeout:1500});
+  assert.equal(elements.noteTitle.value,'KV revised unsaved','D01_SAME_PERSONA_DRAFT_NO_LOSS');
+}
+console.log('D01 SOURCE_ONLY PASS: reflection notes refresh and PersonaID memory view isolation');
+
+/* D01_GLOBAL_IME_SHORTCUT_GUARD: original document handler under the actual
+   R8 WebView2 source. SOURCE_ONLY; not Windows UIA/physical STOP evidence. */
+{
+  const sourceStart=html.indexOf("document.addEventListener('keydown',e=>");
+  const sourceEnd=html.indexOf("\nroute('consciousness');",sourceStart);
+  assert.ok(sourceStart>0 && sourceEnd>sourceStart,'D01_GLOBAL_KEY_HANDLER_MISSING');
+  let keyHandler, stops=0, routes=0, focuses=0;
+  const elements={
+    stop:{click(){stops++}},
+    prompt:{focus(){focuses++}}
+  };
+  const keyboardDocument={addEventListener(type,handler){
+    if(type==='keydown')keyHandler=handler;
+  }};
+  vm.runInNewContext(html.slice(sourceStart,sourceEnd),{
+    document:keyboardDocument,$:id=>elements[id],route:()=>{routes++},
+    busy:true,activeChatId:'d01_exact_active_request'
+  },{timeout:1500});
+  assert.equal(typeof keyHandler,'function','D01_GLOBAL_LISTENER_NOT_REGISTERED');
+  function press(key,extra={}){
+    let handled=0;
+    keyHandler({key,keyCode:0,ctrlKey:false,altKey:false,metaKey:false,
+      shiftKey:false,isComposing:false,repeat:false,defaultPrevented:false,
+      preventDefault(){handled++},...extra});
+    return handled;
+  }
+  assert.equal(press('Escape',{isComposing:true}),0,'D01_IME_ESCAPE_INTERCEPTED');
+  assert.equal(press('Escape',{keyCode:229}),0,'D01_LEGACY_IME_ESCAPE_INTERCEPTED');
+  assert.equal(press('Escape',{repeat:true}),0,'D01_REPEAT_ESCAPE_INTERCEPTED');
+  assert.equal(press('Escape',{defaultPrevented:true}),0,'D01_HANDLED_ESCAPE_INTERCEPTED');
+  assert.equal(press('k',{ctrlKey:true,isComposing:true}),0,'D01_IME_CTRL_K_INTERCEPTED');
+  assert.equal(press('k',{ctrlKey:true,altKey:true}),0,'D01_ALT_CTRL_K_INTERCEPTED');
+  assert.equal(press('k',{ctrlKey:true,shiftKey:true}),0,'D01_SHIFT_CTRL_K_INTERCEPTED');
+  assert.equal(press('k',{ctrlKey:true,repeat:true}),0,'D01_REPEAT_CTRL_K_INTERCEPTED');
+  assert.deepEqual([stops,routes,focuses],[0,0,0],'D01_IME_MUST_NOT_DISPATCH');
+  assert.equal(press('Escape'),1,'D01_REAL_ESCAPE_MUST_STOP');
+  assert.equal(press('k',{ctrlKey:true}),1,'D01_REAL_CTRL_K_MUST_ROUTE');
+  assert.deepEqual([stops,routes,focuses],[1,1,1],'D01_EXACTLY_ONE_NATIVE_STOP_AND_ROUTE');
+}
+console.log('D01 SOURCE_ONLY PASS: global IME-safe Escape/STOP and Ctrl+K');
+
+/* D01_COREID_KEYBOARD_IME_MODIFIERS: actual production handler.
+   Prevent IME, assistive/modified shortcuts, and repeats from initiating
+   native route/SQLite refreshes; preserve eight normal keyboard routes.
+   SOURCE_ONLY; Windows UIA remains a separate physical acceptance gate. */
+{
+  const navIds=[...html.matchAll(/<button class="core[^"]*" data-route="([^"]+)"/g)].map(m=>m[1]);
+  assert.equal(navIds.length,8,'D01_COREID_KEYBOARD_EIGHT_REQUIRED');
+  const navLine=html.split('\n').find(x=>x.startsWith('const coreRouteButtons='));
+  assert.ok(navLine,'D01_COREID_NATIVE_HANDLER_MISSING');
+  const moved=[],called=[];
+  const buttons=navIds.map(route=>({
+    dataset:{route},addEventListener(event,fn){if(event==='keydown')this.fn=fn;},
+    focus(){moved.push(route)}
+  }));
+  vm.runInNewContext(navLine,{
+    document:{querySelectorAll:()=>buttons},route:id=>called.push(id)
+  },{timeout:1500});
+  function key(index,name,extra={}){
+    let consumed=0;
+    buttons[index].fn({key:name,repeat:false,isComposing:false,keyCode:0,
+      ctrlKey:false,altKey:false,metaKey:false,shiftKey:false,
+      defaultPrevented:false,preventDefault(){consumed++},...extra});
+    return consumed;
+  }
+  for(const extra of [{ctrlKey:true},{altKey:true},{shiftKey:true},{metaKey:true},
+      {isComposing:true},{keyCode:229},{repeat:true},{defaultPrevented:true}]){
+    assert.equal(key(0,'ArrowRight',extra),0,'D01_NAV_STOLEN_COMPOSITION_OR_SHORTCUT');
+  }
+  assert.deepEqual(called,[],'D01_UNEXPECTED_NATIVE_REFRESH');
+  assert.deepEqual(moved,[],'D01_UNEXPECTED_KEYBOARD_FOCUS');
+  assert.equal(key(0,'ArrowRight'),1);
+  assert.equal(key(0,'ArrowLeft'),1);
+  assert.equal(key(4,'Home'),1);
+  assert.equal(key(4,'End'),1);
+  assert.deepEqual(called,[navIds[1],navIds[7],navIds[0],navIds[7]],
+    'D01_EIGHT_COREID_KEYBOARD_NO_LOSS');
+  assert.deepEqual(moved,called,'D01_COREID_FOCUS_NOT_FOLLOWING_ROUTE');
+}
+console.log('D01 SOURCE_ONLY PASS: 8 CoreID focus, IME/modified/repeat navigation guard');
+
+
+/* D01_CHAT_FAIL_RECOVERY: production WebView2 SEND/complete handlers.
+   A failed or owner-stopped Ollama turn cannot silently discard the unsaved
+   prompt; a new draft typed during streaming must not be overwritten.
+   SOURCE_ONLY evidence, not local Qwen or WPF runtime acceptance. */
+{
+  const start=html.indexOf("$('send').onclick=()=>");
+  const finish=html.indexOf("\n$('stop').onclick=",start);
+  const completeStart=html.indexOf("case 'complete':");
+  const completeEnd=html.indexOf("\ncase 'error':",completeStart);
+  assert.ok(start>0&&finish>start&&completeStart>0&&completeEnd>completeStart,
+    'D01_ORIGINAL_CHAT_RECOVERY_HANDLERS_MISSING');
+  const sendHandler=html.slice(start,finish);
+  const completeHandler=html.slice(completeStart,completeEnd);
+  function scenario(result,newDraft=''){
+    const raw="  Сохранить вопрос после STOP  \n";
+    const nodes={send:{},prompt:{value:raw},streamHint:{textContent:''},
+      messages:{},generation:{classList:{remove(){}}}};
+    const machine=vm.runInNewContext(
+      "let responseBox=null,lastAnswer='',busy=false,activeChatId=null,pendingChatDraft=null,visibleDraftPersona='KV';const personaDrafts=new Map();"+
+      sendHandler+
+      "\nfunction finishTurn(v){switch('complete'){"+completeHandler+"}}\n"+
+      "({send:()=>$('send').onclick(),finishTurn,state:()=>({busy,pendingChatDraft})})",
+      {$:id=>nodes[id],post:()=>true,nextChatId:()=> 'd01_real_request',
+        entry:()=>({lastChild:{textContent:''}}),
+        window:{noxVisual:{setEnergy(){}}}},
+      {timeout:1500});
+    machine.send();
+    assert.equal(nodes.prompt.value,'','D01_ORIGINAL_SEND_MUST_CLEAR_ACTIVE_COMPOSER');
+    nodes.prompt.value=newDraft;
+    machine.finishTurn({requestId:'d01_real_request',...result});
+    assert.equal(machine.state().busy,false,'D01_CHAT_BUSY_AFTER_COMPLETION');
+    assert.equal(machine.state().pendingChatDraft,null,'D01_RETRY_BUFFER_NOT_RELEASED');
+    return {value:nodes.prompt.value,hint:nodes.streamHint.textContent,raw};
+  }
+  const failure=scenario({ok:false,stopped:false});
+  assert.equal(failure.value,failure.raw,'D01_OLLAMA_FAILURE_DISCARDED_UNSAVED_PROMPT');
+  assert.match(failure.hint,/восстановлен/,'D01_RECOVERY_NO_USER_MESSAGE');
+  const stopped=scenario({ok:false,stopped:true});
+  assert.equal(stopped.value,stopped.raw,'D01_OWNER_STOP_DISCARDED_UNSAVED_PROMPT');
+  assert.match(stopped.hint,/остановлен/,'D01_STOP_HINT_LOST');
+  assert.equal(scenario({ok:true,stopped:false}).value,'',
+    'D01_SQLITE_SUCCESS_MUST_NOT_RESTORE_SENT_PROMPT');
+  assert.equal(scenario({ok:false,stopped:false},'Новый несохранённый текст').value,
+    'Новый несохранённый текст','D01_FAILURE_OVERWROTE_NEW_COMPOSER');
+}
+console.log('D01 SOURCE_ONLY PASS: Qwen failed/STOP retry with original input, SQLite ACK, and concurrent draft');
+
+/* D01 2026-11-07: production receipt source must not erase another PersonaID's
+   identical unsent task/note draft. Also cover SQLite startup persona hydration.
+   SOURCE_ONLY: actual owner Windows/SQLite E2E requires frozen EXE SHA. */
+{
+  const swStart=html.indexOf('function switchPersonaDrafts(next){');
+  const swEnd=html.indexOf('\nfunction route(id){',swStart);
+  const apStart=html.indexOf('function applyCommittedSettings(v){');
+  const apEnd=html.indexOf('\nfunction saveSetting',apStart);
+  const taskAck=html.split('\n').find(line=>line.startsWith("case 'tasks.add.receipt':"));
+  const noteAck=html.split('\n').find(line=>line.startsWith("case 'notes.add.receipt':"));
+  assert.ok(swStart>0 && swEnd>swStart && apStart>0 && apEnd>apStart && taskAck && noteAck,
+    'D01_PERSONA_RECEIPT_ORIGINAL_SOURCE_MISSING');
+  const realSource = `
+    const nodes=Object.fromEntries(['noteTitle','noteText','memoryQuery','knowledgeQuery',
+      'prompt','taskInput','persona','performance'].map(id=>[id,{value:''}]));
+    for(const id of ['taskAdd','noteAdd'])nodes[id]={disabled:true};
+    nodes.status={textContent:''};nodes.personaStatus={textContent:''};
+    nodes.useContext={checked:true};nodes.reduceMotion={checked:false};
+    const $=id=>{if(!nodes[id])throw Error('MISSING_'+id);return nodes[id]};
+    const window={noxVisual:{setMode(){}}};
+    const document={body:{classList:{toggle(){}}}};
+    let committedSettings={persona:'KV'},visibleDraftPersona='KV';
+    let pendingTask={requestId:'task-kv',text:'SAME',persona:'KV'};
+    let pendingNote={requestId:'note-kv',title:'SAME',content:'SAME',persona:'KV'};
+    const personaDrafts=new Map();
+    ${html.slice(swStart,swEnd)}
+    ${html.slice(apStart,apEnd)}
+    nodes.noteTitle.value='KV-TITLE';nodes.noteText.value='KV-TEXT';
+    switchPersonaDrafts('AM');
+    if(nodes.noteTitle.value!=='')throw Error('D01_FOREIGN_DRAFT_VISIBLE');
+    nodes.taskInput.value='SAME';nodes.noteTitle.value='SAME';nodes.noteText.value='SAME';
+    let v={requestId:'task-kv',saved:true};
+    switch('tasks.add.receipt'){${taskAck}}
+    v={requestId:'note-kv',saved:true};
+    switch('notes.add.receipt'){${noteAck}}
+    if([nodes.taskInput.value,nodes.noteTitle.value,nodes.noteText.value]
+      .some(x=>x!=='SAME'))throw Error('D01_FOREIGN_RECEIPT_ERASED_UNSENT_DRAFT');
+    if(pendingTask||pendingNote||nodes.taskAdd.disabled||nodes.noteAdd.disabled)
+      throw Error('D01_PENDING_NOT_RELEASED');
+    pendingTask={requestId:'task-am',text:'SAME',persona:'AM'};
+    pendingNote={requestId:'note-am',title:'SAME',content:'SAME',persona:'AM'};
+    nodes.taskAdd.disabled=true;nodes.noteAdd.disabled=true;
+    v={requestId:'task-am',saved:true};switch('tasks.add.receipt'){${taskAck}}
+    v={requestId:'note-am',saved:true};switch('notes.add.receipt'){${noteAck}}
+    if([nodes.taskInput.value,nodes.noteTitle.value,nodes.noteText.value]
+      .some(x=>x!==''))throw Error('D01_OWN_RECEIPT_NOT_CLEARED');
+    nodes.prompt.value='AM private chat';
+    applyCommittedSettings({persona:'LA',performance:'BALANCED',context:'on',motion:'on'});
+    if(visibleDraftPersona!=='LA'||nodes.prompt.value!==''||
+      personaDrafts.get('AM').prompt!=='AM private chat')
+      throw Error('D01_SETTINGS_PERSONA_HYDRATION_FAILED');
+    'PASS';
+  `;
+  assert.equal(vm.runInNewContext(realSource,{}, {timeout:1500}),'PASS',
+    'D01_PERSONA_PENDING_RECEIPT_NO_LOSS_SOURCE_HOLD');
+  console.log('D01 SOURCE_ONLY PASS: foreign PersonaID ACK isolation, own ACK clear, startup SQLite persona');
+}
+
+// D01_PERSONA_CHAT_FAILURE_NO_LOSS: original production SEND, persona draft
+// switch and native requestId-matched completion, under the real source.
+// SOURCE_ONLY; owner Windows Qwen/SQLite acceptance remains a separate gate.
+{
+  const swStart=html.indexOf('function switchPersonaDrafts(next){');
+  const swEnd=html.indexOf('\nfunction route(id){',swStart);
+  const sendStart=html.indexOf("$('send').onclick=()=>");
+  const sendEnd=html.indexOf("\n$('stop').onclick=",sendStart);
+  const completeStart=html.indexOf("case 'complete':");
+  const completeEnd=html.indexOf("\ncase 'error':",completeStart);
+  assert.ok(swStart>0 && swEnd>swStart && sendStart>0 && sendEnd>sendStart
+    && completeStart>0 && completeEnd>completeStart,'D01_PERSONA_CHAT_PRODUCTION_SOURCE_MISSING');
+  const production = "let responseBox=null,lastAnswer='',busy=false,activeChatId=null,"+
+    "pendingChatDraft=null,visibleDraftPersona='KV';const personaDrafts=new Map();"+
+    html.slice(swStart,swEnd)+"\n"+html.slice(sendStart,sendEnd)+
+    "\nfunction complete(v){switch('complete'){"+
+    html.slice(completeStart,completeEnd)+
+    "}}\n({click:()=>$('send').onclick(),change:switchPersonaDrafts,"+
+    "complete,state:()=>({persona:visibleDraftPersona,drafts:personaDrafts})})";
+  function runCase(amDraft,stopped){
+    const ids=['noteTitle','noteText','memoryQuery','knowledgeQuery','prompt','taskInput'];
+    const nodes=Object.fromEntries(ids.map(id=>[id,{value:''}]));
+    nodes.send={};nodes.messages={};nodes.streamHint={textContent:''};
+    nodes.generation={classList:{remove(){}}};
+    const machine=vm.runInNewContext(production,{
+      $:id=>nodes[id],post:()=>true,nextChatId:()=> 'd01_owner_kv',
+      entry:()=>({lastChild:{textContent:''}}),
+      window:{noxVisual:{setEnergy(){}}}
+    },{timeout:1500});
+    const exact='  KV private prompt before STOP  ';
+    nodes.prompt.value=exact;
+    machine.click();
+    assert.equal(nodes.prompt.value,'','D01_SEND_MUST_CLEAR_ONLY_CURRENT_COMPOSER');
+    machine.change('AM');
+    nodes.prompt.value=amDraft;
+    machine.complete({requestId:'d01_owner_kv',ok:false,stopped});
+    assert.equal(nodes.prompt.value,amDraft,
+      'D01_FAILED_KV_CHAT_INJECTED_INTO_AM_PERSONA');
+    assert.match(nodes.streamHint.textContent,/исходной PersonaID/,
+      'D01_HIDDEN_PERSONA_RECOVERY_HINT_MISSING');
+    machine.change('KV');
+    assert.equal(nodes.prompt.value,exact,'D01_KV_FAILURE_PROMPT_LOST_AFTER_SWITCH');
+    machine.change('AM');
+    assert.equal(nodes.prompt.value,amDraft,'D01_AM_UNSENT_DRAFT_LOST');
+  }
+  runCase('',true);
+  runCase('AM unsent draft',false);
+  console.log('D01 SOURCE_ONLY PASS: stopped/failed Qwen restores original PersonaID draft, never foreign draft');
+}
+
+// D01_SQLITE_UNKNOWN_NEVER_AUTO_REPLAY: native insert may have committed while readback failed.
+// Execute the original production complete handler; this is SOURCE_ONLY, not Windows Qwen E2E.
+{
+  const start=html.indexOf("case 'complete':");
+  const end=html.indexOf("\ncase 'error':",start);
+  assert.ok(start>0&&end>start,'D01_SQLITE_UNKNOWN_PRODUCTION_HANDLER_MISSING');
+  const nodes={prompt:{value:''},streamHint:{textContent:''},generation:{classList:{remove(){}}}};
+  const code="let pendingChatDraft={requestId:'unknown_1',raw:'KV private unsent',persona:'KV'},"+
+    "visibleDraftPersona='KV',busy=true,activeChatId='unknown_1',lastAnswer='partial';"+
+    "const personaDrafts=new Map();function complete(v){switch('complete'){"+
+    html.slice(start,end)+"}};({complete,state:()=>({busy,pendingChatDraft})})";
+  const m=vm.runInNewContext(code,{
+    $:id=>nodes[id],window:{noxVisual:{setEnergy(){}}}
+  },{timeout:1500});
+  m.complete({requestId:'unknown_1',ok:false,stopped:false,sqliteUnknown:true});
+  assert.equal(nodes.prompt.value,'','D01_SQLITE_COMMIT_UNKNOWN_UNSAFE_AUTO_REPLAY');
+  assert.match(nodes.streamHint.textContent,/SQLite мог сохранить.*Проверьте историю/,
+    'D01_SQLITE_COMMIT_UNKNOWN_HOLD_HINT_MISSING');
+  assert.equal(m.state().busy,false,'D01_SQLITE_UNKNOWN_BUSY_LOCK_NOT_RELEASED');
+  console.log('D01 SOURCE_ONLY PASS: uncertain SQLite commit never auto-restores prompt for duplicate replay');
+}

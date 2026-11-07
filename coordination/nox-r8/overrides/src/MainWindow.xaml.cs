@@ -488,7 +488,7 @@ public partial class MainWindow : Window
                               return false;
                           return quick.every(button => {
                             const rect = button.getBoundingClientRect();
-                            return !button.disabled && rect.width >= 44 && rect.height >= 28 &&
+                            return !button.disabled && rect.width >= 44 && rect.height >= 44 &&
                               rect.left >= -1 && rect.right <= viewport + 1 &&
                               getComputedStyle(button).visibility !== 'hidden';
                           });
