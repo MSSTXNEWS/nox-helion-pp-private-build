@@ -403,7 +403,8 @@ case 'settings.denied':{
   if(pendingSettings && v?.requestId!==pendingSettings.requestId)break;
   if(pendingSettings){pendingSettings=null;setSettingsBusy(false);applyCommittedSettings(committedSettings);}
   const allowed=['NOX_SETTINGS_INVALID_REQUEST','NOX_SETTINGS_REJECTED',
-    'NOX_SETTINGS_SQLITE_HOLD','NOX_SETTINGS_NATIVE_HOLD','NOX_PERSONA_GENERATION_ACTIVE_HOLD'];
+    'NOX_SETTINGS_SQLITE_HOLD','NOX_SETTINGS_NATIVE_HOLD',
+    'NOX_SETTINGS_COMMIT_UNKNOWN_HOLD','NOX_PERSONA_GENERATION_ACTIVE_HOLD'];
   const reason=typeof v?.reason==='string'?v.reason:'NOX_SETTINGS_NATIVE_HOLD';
   settingsDenial=allowed.includes(reason)?reason:'NOX_SETTINGS_NATIVE_HOLD';
   $('personaStatus').textContent=settingsDenial;post('settings.get');break;
