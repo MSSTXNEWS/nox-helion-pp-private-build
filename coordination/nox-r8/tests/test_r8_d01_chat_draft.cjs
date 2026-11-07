@@ -143,5 +143,5 @@ function routeAtWidth(compact) {
   return scroll.scrollTop;
 }
 assert.equal(routeAtWidth(true),0,'D01_COMPACT_ROUTE_MUST_REVEAL_NAVIGATION');
-assert.equal(routeAtWidth(false),460,'D01_DESKTOP_ROUTE_MUST_PRESERVE_SCROLL');
-console.log('D01 R8 SOURCE_ONLY PASS: compact route restores visible navigation; desktop unchanged');
+assert.equal(routeAtWidth(false),0,'D01_DESKTOP_ROUTE_MUST_REVEAL_NEW_PANEL');
+console.log('D01 R8 SOURCE_ONLY PASS: compact and desktop route resets panel scroll to top');
