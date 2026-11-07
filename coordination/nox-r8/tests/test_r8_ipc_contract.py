@@ -379,8 +379,9 @@ assert 'refreshProviderAfterError = true;' in broken_eof and 'throw new InvalidO
 generic_error = provider_recovery.split('catch (Exception ex) {', 1)[1].split('finally {', 1)[0]
 assert 'providerStreamRequested && (ex is IOException || ex is JsonException)' in generic_error, 'B02_STREAM_TRANSPORT_ERRORS_HOLD'
 assert 'refreshProviderAfterError = true;' in generic_error, 'B02_STREAM_TRANSPORT_RECHECK_HOLD'
-assert generic_error.index('refreshProviderAfterError = true;') < generic_error.index('Emit("complete", new { requestId, ok = false, stopped = false });'), 'B02_STREAM_COMPLETE_ORDER_HOLD'
-assert provider_recovery.index('Emit("complete", new { requestId, ok = false, stopped = false });',provider_recovery.index('catch (Exception ex) {')) < provider_recovery.index('generationLock.Release();') < provider_recovery.rindex('await CheckProvider();'), 'B02_STREAM_TERMINAL_BEFORE_HEALTH_HOLD'
+assert generic_error.index('refreshProviderAfterError = true;') < generic_error.index('Emit("complete", new { requestId, ok = sqliteVerified, stopped = false, sqliteUnknown });'), 'B02_STREAM_COMPLETE_ORDER_HOLD'
+assert 'bool sqliteUnknown = sqliteWriteAttempted && !sqliteVerified;' in generic_error, 'B02_SQLITE_UNKNOWN_OUTCOME_HOLD'
+assert provider_recovery.index('Emit("complete", new { requestId, ok = sqliteVerified, stopped = false, sqliteUnknown });',provider_recovery.index('catch (Exception ex) {')) < provider_recovery.index('generationLock.Release();') < provider_recovery.rindex('await CheckProvider();'), 'B02_STREAM_TERMINAL_BEFORE_HEALTH_HOLD'
 assert 'providerStreamRequested && (ex is IOException || ex is JsonException)' not in provider_recovery.split('catch (OperationCanceledException) when (cancellation.IsCancellationRequested)', 1)[1].split('catch (OperationCanceledException) {',1)[0], 'B02_STREAM_STOP_ISOLATION_HOLD'
 print('B02 R8 SOURCE_ONLY: truncated/invalid Ollama NDJSON triggers real health re-probe after terminal ACK; owner STOP and SQLite preserved')
 
