@@ -37,10 +37,21 @@ try{
  $held=[IO.File]::Open((Join-Path $dir 'NOX.HELION.exe'),[IO.FileMode]::Open,[IO.FileAccess]::Read,[IO.FileShare]::Read)
  try { Check 'PreUninstall' $false } finally { $held.Dispose() }
  Check 'PreUninstall' $true
+ # A held receipt must stop uninstall BEFORE NSIS deletes the EXE.
+ $receipt=Join-Path $dir 'BUILD_RECEIPT.json'
+ $heldReceipt=[IO.File]::Open($receipt,[IO.FileMode]::Open,[IO.FileAccess]::Read,[IO.FileShare]::Read)
+ try { Check 'PreUninstall' $false } finally { $heldReceipt.Dispose() }
+ Check 'PreUninstall' $true
+ # A read-only owned file could also cause a partial NSIS delete.
+ try {
+   [IO.File]::SetAttributes($receipt,[IO.FileAttributes]::ReadOnly)
+   Check 'PreUninstall' $false
+ } finally { [IO.File]::SetAttributes($receipt,[IO.FileAttributes]::Normal) }
+ Check 'PreUninstall' $true
  [IO.File]::WriteAllText((Join-Path $dir 'owner.sqlite3'),'FOREIGN_OWNER_DATA')
  Check 'PreUninstall' $false
  if(-not (Test-Path -LiteralPath (Join-Path $dir 'owner.sqlite3'))){ throw 'B05_TEST_LOST_FOREIGN_FILE' }
- Write-Host 'B05_GUARD_9_CHECKS_PASS_FIXTURE_ONLY_RELEASE_HOLD'
+ Write-Host 'B05_GUARD_13_CHECKS_PASS_FIXTURE_ONLY_RELEASE_HOLD'
 }finally{
  $env:LOCALAPPDATA=$original
  if(Test-Path -LiteralPath $scratch){ Remove-Item -LiteralPath $scratch -Force -Recurse }

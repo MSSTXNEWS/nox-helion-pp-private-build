@@ -69,14 +69,21 @@ $receipt=Get-Content -LiteralPath $receiptPath -Encoding UTF8 -Raw | ConvertFrom
 if(-not (EqualsCI ([string]$receipt.source_git_sha) $ExpectedSourceSha)){ Hold 'RECEIPT_WRONG_SOURCE' }
 if(-not (EqualsCI ([string]$receipt.exe_sha256) $ExpectedExeSha)){ Hold 'RECEIPT_WRONG_EXE' }
 if([string]$receipt.schema -cne 'NOX_R8_NATIVE_SINGLE_EXE_V1'){ Hold 'RECEIPT_WRONG_SCHEMA' }
-# Pre-uninstall: a running/held EXE could make NSIS delete only part of the
-# installation. Refuse before any deletion when a shared open handle exists.
-# This is a preflight guard, not a race-free Windows process-ownership proof.
+# Pre-uninstall must check all three named files before NSIS deletes the first.
+# In particular, a held SQLite-like receipt must not cause a partial uninstall
+# after the EXE has already been deleted. The executing uninstaller cannot be
+# opened exclusively; reject its ReadOnly bit and never delete unknown files.
+# This is still preflight, not a race-free filesystem transaction.
 if($Mode -eq 'PreUninstall') {
- $exclusive=$null
- try {
-   $exclusive=[IO.File]::Open($exe,[IO.FileMode]::Open,[IO.FileAccess]::Read,[IO.FileShare]::None)
- } catch { Hold 'EXE_BUSY_OR_UNREADABLE' }
- finally { if($null -ne $exclusive){ $exclusive.Dispose() } }
+ foreach($item in $items) {
+   if(($item.Attributes -band [IO.FileAttributes]::ReadOnly) -ne 0){ Hold 'READONLY_INSTALL_FILE' }
+ }
+ foreach($owned in @(@($exe,'EXE_BUSY_OR_UNREADABLE'),@($receiptPath,'RECEIPT_BUSY_OR_UNREADABLE'))) {
+   $exclusive=$null
+   try {
+     $exclusive=[IO.File]::Open([string]$owned[0],[IO.FileMode]::Open,[IO.FileAccess]::Read,[IO.FileShare]::None)
+   } catch { Hold ([string]$owned[1]) }
+   finally { if($null -ne $exclusive){ $exclusive.Dispose() } }
+ }
 }
 Write-Output ("B05_NOLOSS_{0}_PASS_RELEASE_HOLD" -f $Mode.ToUpperInvariant())
