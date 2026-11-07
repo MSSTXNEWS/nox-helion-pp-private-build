@@ -1718,6 +1718,11 @@ public partial class MainWindow : Window
             Send("error", new { requestId, message = reason });
             Send("complete", new { requestId, ok = false, stopped = false });
         }
+        // B02: malformed replay from the same active requestId must not
+        // synthesize a terminal ACK and unlock the real streaming owner.
+        // Preflight rejection is only for non-active owners.
+        if (active != null && string.Equals(activeRequestId, requestId, StringComparison.Ordinal))
+            return;
         if (string.IsNullOrWhiteSpace(prompt)) {
             RejectChat("CHAT_EMPTY_PROMPT_DENIED");
             return;

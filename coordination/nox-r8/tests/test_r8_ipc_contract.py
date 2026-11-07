@@ -326,6 +326,12 @@ assert re.search(r'if \(string\.Equals\(activeRequestId, requestId, StringCompar
 assert duplicate_busy.index('return;') < duplicate_busy.index('RejectChat("CHAT_ALREADY_RUNNING_HOLD");'), 'B02_DUPLICATE_CHAT_EARLY_RETURN_HOLD'
 assert duplicate_busy.count('RejectChat("CHAT_ALREADY_RUNNING_HOLD");') == 1, 'B02_DISTINCT_CHAT_REJECT_HOLD'
 
+# B02 active-owner replay before all preflight RejectChat, including empty/huge inputs.
+pre_validation = generate.split('if (string.IsNullOrWhiteSpace(prompt))', 1)[0]
+assert re.search(r'if \(active != null && string\.Equals\(activeRequestId, requestId, StringComparison\.Ordinal\)\)\s*return;', pre_validation), 'B02_SAME_OWNER_REPLAY_BEFORE_VALIDATION_HOLD'
+assert pre_validation.index('if (active != null && string.Equals(activeRequestId, requestId, StringComparison.Ordinal))') > pre_validation.index('void RejectChat(string reason)'), 'B02_ACTIVE_OWNER_REPLAY_POSITION_HOLD'
+assert generate.index('if (active != null && string.Equals(activeRequestId, requestId, StringComparison.Ordinal))') < generate.index('CHAT_EMPTY_PROMPT_DENIED') < generate.index('CHAT_REQUEST_ID_DENIED') < generate.index('CHAT_PROMPT_TOO_LONG_DENIED'), 'B02_SAME_OWNER_NO_PREMATURE_ACK_HOLD'
+
 # B02: Once a native chat request finishes (success/STOP/offline), a delayed
 # replay with the same requestId must not start another Qwen request / SQLite row.
 # The process-local bounded cache is a SOURCE_ONLY guard, not runtime evidence.
