@@ -8,6 +8,7 @@ import argparse,ctypes,json,os,re,shutil,subprocess,sys,time
 from pathlib import Path
 from datetime import datetime,timezone
 from urllib.request import urlopen
+from nox_safe70_thermal_guard_v1 import ThermalGuard
 
 ROOT=Path(r"C:\NOX_HELION\NOX_NEW")
 SENSOR="http://127.0.0.1:8085/data.json"
@@ -238,13 +239,23 @@ def single_cycle():
         child=subprocess.Popen(args,stdout=o,stderr=e,env=env,
               cwd=str(outdir),creationflags=getattr(subprocess,"CREATE_NEW_PROCESS_GROUP",0))
     last_step=step;last_loss=None;reason=None
+    thermal_guard=ThermalGuard()
     try:
         while child.poll() is None:
             try:
                 hot=temperature();ac,charge=battery()
-                if hot>=LIMIT:reason="HOTSPOT>=70C"
-                elif not ac and charge<=20:reason="BATTERY<=20%"
-                elif shutil.disk_usage(ROOT).free<60_000_000_000:reason="DISK_RESERVE"
+                thermal_reason,hot_streak=thermal_guard.sample(hot)
+                if thermal_reason=="SENSOR_INVALID":
+                    reason="SENSOR/BATTERY_LOST INVALID_HOTSPOT"
+                elif thermal_reason:
+                    reason=thermal_reason
+                elif not ac and charge<=20:
+                    reason="BATTERY<=20%"
+                elif shutil.disk_usage(ROOT).free<60_000_000_000:
+                    reason="DISK_RESERVE"
+                if not reason and hot_streak:
+                    print("NOX SAFE70 WARN: Hot Spot",hot,"C | consecutive",
+                          hot_streak,"/3 | stop at 3, immediate at 75C",flush=True)
             except Exception as ex:
                 hot=None;reason="SENSOR/BATTERY_LOST "+str(ex)
             try:
@@ -264,6 +275,8 @@ def single_cycle():
                 "loss_metrics":{"loss":last_loss} if last_loss is not None else {},
                 "process_id":child.pid,"gpu_temperature_c":hot,"gpu_hotspot_c":hot,
                 "battery_percent":charge,"timestamp":datetime.now(timezone.utc).isoformat(),
+                "thermal_hot_streak":thermal_guard.streak,
+                "thermal_soft_limit_c":70,"thermal_hard_limit_c":75,
                 "output_directory":str(outdir)})
             if reason:break
             print("NOX GPU",hot,"C | step",last_step,"| battery",charge,"% | pid",child.pid,flush=True)
