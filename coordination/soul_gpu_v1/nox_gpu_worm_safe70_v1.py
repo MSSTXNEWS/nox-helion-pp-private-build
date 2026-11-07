@@ -153,7 +153,18 @@ def supervised():
         # Wait on safe conditions, capped to avoid hanging forever on broken sensor.
         checks=0
         while True:
-            ok,why,hot,pct=safe_to_start()
+            try:
+                ok,why,hot,pct=safe_to_start()
+            except (RuntimeError,OSError,TimeoutError,ValueError) as exc:
+                sensor_recoveries+=1
+                if sensor_recoveries>MAX_SENSOR_RECOVERIES:
+                    raise RuntimeError("Startup sensor/power unavailable too many times") from exc
+                note("SENSOR_UNAVAILABLE_BEFORE_START",saved_step=last_step,
+                     reason=str(exc)[:200],recoveries=sensor_recoveries)
+                wait_for_sensor_recovery(last_step)
+                # The recovery routine validated 3 consecutive RX6650M hotspot
+                # samples below 65C and verified no worker is already running.
+                continue
             if ok:break
             note("WAIT",reason=why,hotspot_c=hot,battery_pct=pct,saved_step=last_step)
             checks+=1
