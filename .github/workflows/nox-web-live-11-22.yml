@@ -32,8 +32,38 @@ jobs:
           cp nox-local/live/finish/INSTALL_NOX_WEB_FROM_KIT.ps1 dist/
           cp nox-local/live/finish/START_NOX_WEB.ps1 dist/
           cp nox-local/live/finish/VERIFY_NOX_WEB.py dist/
+          python -m py_compile dist/VERIFY_NOX_WEB.py
       - uses: actions/upload-artifact@v4
         with:
           name: NOX-WEB-11-22-SOURCE-SHELL
           path: dist/
           retention-days: 30
+
+  windows-shell-parse:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - name: Parse actual Windows PowerShell installer and launcher
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          foreach($name in @('INSTALL_NOX_WEB_FROM_KIT.ps1','START_NOX_WEB.ps1')){
+            $path=Join-Path 'nox-local/live/finish' $name
+            $tokens=$null; $errors=$null
+            [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path $path).Path,[ref]$tokens,[ref]$errors) | Out-Null
+            if(@($errors).Count -gt 0){ throw "WEB_POWERSHELL_PARSE_HOLD: $name $($errors[0])" }
+            Write-Host "WEB_SHELL_PARSE_PASS: $name"
+          }
+      - name: Prove original source is required; no unverified install
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $root=Join-Path $env:RUNNER_TEMP 'NOX_WEB_EXPECTED_EMPTY'
+          $kit=Join-Path $root 'no-package.zip'
+          try {
+            & ./nox-local/live/finish/INSTALL_NOX_WEB_FROM_KIT.ps1 -Root $root -Kit $kit -NoBrowser
+            throw 'FAIL_OPEN_INSTALL_REJECTED'
+          } catch {
+            if($_.Exception.Message -notmatch 'WEB_KIT_NOT_FOUND_HOLD'){throw}
+            Write-Host 'WEB_NO_KIT_FAIL_CLOSED_PASS'
+          }
