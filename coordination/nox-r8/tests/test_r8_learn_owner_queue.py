@@ -8,8 +8,8 @@ for token in ('WindowsIdentity.GetCurrent()', 'MessageBoxButton.YesNo', 'SELFTES
               'AWAITING_VERIFIED_WORKER', 'CANCELLED_BY_OWNER','trainingStarted=false',
               'NO_ATTESTED_GPU_WORKER','temperature.gpu','temp >= 65','ReadLearnQueue()'):
  assert token in cs, token
-for token in ('id="learnRequest"','id="learnCancel"', "post('learn.request')",
-              "post('learn.cancel')","case 'learn.receipt'","case 'learn.queue'"):
+for token in ('id="learnRequest"','id="learnCancel"', "post('learn.request',{requestId})",
+              "post('learn.cancel',{requestId})","case 'learn.receipt'","case 'learn.queue'"):
  assert token in html,token
 assert 'case "learn.start"' not in cs
 m=re.search(r'CREATE TABLE IF NOT EXISTS learn_requests \(.*?\);', cs, re.S)
@@ -40,8 +40,8 @@ print('D05 SOURCE_ONLY SQLITE/OWNER QUEUE CONTRACT PASS; GPU NOT RUN')
 
 # D05 TECH-FIRST: preparation consent + STOP require independent SQLite
 # readback; foreign trainer_state files never become authenticated GPU progress.
-learn = cs.split('private void RequestLearn()', 1)[1].split('private void CancelLearnRequest()', 1)[0]
-cancel = cs.split('private void CancelLearnRequest()', 1)[1].split('private object GetTrainingState()', 1)[0]
+learn = cs.split('private void RequestLearn(string requestId)', 1)[1].split('private void CancelLearnRequest(string requestId)', 1)[0]
+cancel = cs.split('private void CancelLearnRequest(string requestId)', 1)[1].split('private object GetTrainingState()', 1)[0]
 training = cs.split('private object GetTrainingState()', 1)[1]
 assert 'NOX_LEARN_CONSENT_SQLITE_READBACK_HOLD' in learn
 assert learn.index('tx.Commit();') < learn.index('NOX_LEARN_CONSENT_SQLITE_READBACK_HOLD')
@@ -73,7 +73,7 @@ for token in ("post('learn.request',{requestId})", "post('learn.cancel',{request
 print('D05 LEARN SOURCE_ONLY correlated request/STOP + fail-closed ACK contract PASS')
 
 # Model-specific owner consent must not reuse a pending row for a different model.
-old = cs.split('if (oldId != null && oldId != DBNull.Value)', 1)[1].split('var existingQueue = ReadLearnQueue();', 1)[0]
+old = cs.split('if (oldId != null && oldId != DBNull.Value)', 1)[1].split('// Committed consent and owner-readback are authoritative.', 1)[0]
 assert 'string.Equals(row.GetString(0), model, StringComparison.Ordinal)' in old
 assert old.index('NOX_LEARN_EXISTING_SQLITE_READBACK_HOLD') < old.index('NOX_LEARN_EXISTING_MODEL_MISMATCH_HOLD')
 assert 'catch (InvalidOperationException ex) when (ex.Message == "NOX_LEARN_EXISTING_MODEL_MISMATCH_HOLD")' in cs

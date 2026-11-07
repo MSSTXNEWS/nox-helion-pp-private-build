@@ -233,3 +233,18 @@ assert "v?.requestId!==pendingDownload.requestId||v?.model!==pendingDownload.mod
 assert "if(v.terminal===true)" in html and "const done=v.status==='DONE'" in html
 assert "post('model.pull',{model})" not in html and "post('model.cancel');" not in html
 print('D05 MODEL PULL SOURCE_ONLY: owner STOP, timeout, installed-tag readback and terminal GUI receipts PASS')
+
+# D05: post-COMMIT SQLite receipts must visibly refresh the existing ATLAS
+# and REFLECTION routes. UI dispatch alone must not imply data was saved.
+route = html.split('function route(id){',1)[1].split("document.querySelectorAll('[data-route]')",1)[0]
+assert "if(id==='reflection'){post('history');post('notes.list');post('knowledge.stats');}" in route, 'D05_REFLECTION_NOTES_ROUTE_HOLD'
+task_ack = html.split("case 'tasks.add.receipt':",1)[1].split("case 'tasks.add.denied':",1)[0]
+note_ack = html.split("case 'notes.add.receipt':",1)[1].split("case 'notes.add.denied':",1)[0]
+delete_ack = html.split("case 'notes.delete.receipt':",1)[1].split("case 'notes.delete.denied':",1)[0]
+for block,name,token in ((task_ack,'TASK',"post('tasks.list')"),(note_ack,'NOTE',"post('notes.list')"),(delete_ack,'DELETE',"post('notes.list')")):
+    assert 'v?.requestId===' in block and 'v.saved===true' in block, 'D05_UNOWNED_'+name+'_ACK_HOLD'
+    assert block.index('v.saved===true') < block.index(token), 'D05_PREMATURE_'+name+'_REFRESH_HOLD'
+    assert 'LIST REFRESH HOLD' in block, 'D05_SAVED_BUT_REFRESH_HOLD_'+name
+assert 'v.backupVerified===true' in delete_ack, 'D05_DELETE_BACKUP_HOLD'
+assert "pendingNoteDelete.button.closest('.note-card')?.remove()" in delete_ack, 'D05_DELETED_CARD_NOT_REMOVED_HOLD'
+assert delete_ack.index('v.backupVerified===true') < delete_ack.index(".closest('.note-card')?.remove()"), 'D05_PREMATURE_DELETE_DOM_HOLD'
