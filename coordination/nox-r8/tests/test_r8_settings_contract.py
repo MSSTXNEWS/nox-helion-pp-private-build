@@ -83,4 +83,33 @@ for script in scripts:
     # Explicit UTF-8 stdin is required: Windows GitHub runners default to cp1252.
     check = subprocess.run(['node','--check'], input=script.encode('utf-8'), capture_output=True)
     assert check.returncode == 0, check.stderr.decode('utf-8', errors='replace')
+# D06_RECONCILE_BROADCAST_RUNTIME: execute the exact extracted original JS
+# settings notification handler in Node, not a manually reimplemented mock.
+# A generic settings broadcast may be stale while a correlated owner
+# COMMIT_UNKNOWN readback is in progress; it must not replace the UI state.
+settings_case = re.search(r"case 'settings':(.*?)break;", web, re.S)
+assert settings_case, 'D06 settings handler missing'
+runtime = r"""
+'use strict';
+const handler = new Function('pendingSettings', 'settingsReconcile',
+  'v', 'applyCommittedSettings', ' validation/readback/ARIA/JS PASS; Windows owner-PC not tested')
+, 'settingsDenial', HANDLER_CODE);
+function verify(pending, reconcile, expectedApply) {
+  let applied = 0;
+  const status = {textContent: 'NOX_SETTINGS_COMMIT_UNKNOWN_HOLD'};
+  handler(pending, reconcile, {performance:'BALANCED'}, () => applied++,
+    () => status, 'NOX_SETTINGS_COMMIT_UNKNOWN_HOLD');
+  if (applied !== expectedApply)
+    throw new Error('D06_STALE_SETTINGS_BROADCAST_HOLD applied='+applied+
+      ' expected='+expectedApply);
+  if (status.textContent !== 'NOX_SETTINGS_COMMIT_UNKNOWN_HOLD')
+    throw new Error('D06_OWNER_RECEIPT_STATUS_HOLD');
+}
+verify(null, {requestId:'r-confirm',key:'performance',value:'ECO'}, 0);
+verify({requestId:'r-pending',key:'performance',value:'ECO'}, null, 0);
+verify(null, null, 1);
+""".replace('HANDLER_CODE', __import__('json').dumps(settings_case.group(1)))
+runtime_check = subprocess.run(['node','-e',runtime], capture_output=True,
+                                encoding='utf-8')
+assert runtime_check.returncode == 0, runtime_check.stderr
 print('D06 R8 SETTINGS SOURCE_ONLY: validation/readback/ARIA/JS PASS; Windows owner-PC not tested')
