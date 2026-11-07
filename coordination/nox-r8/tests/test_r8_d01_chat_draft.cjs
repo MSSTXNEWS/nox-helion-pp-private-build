@@ -200,3 +200,31 @@ assert.match(nativeSource, /rect\.width >= 44 && rect\.height >= 44/,
 assert.match(nativeSource, /new\[\] \{ 320, 390, 800 \}/,
   'D01_COMPACT_PHYSICAL_VIEWPORT_GATE_MISSING');
 console.log('D01 SOURCE_ONLY PASS: five original buttons, compact 44px hit targets, native physical gate');
+
+/* D01_NONCHAT_SEARCH_IME_GUARD: execute the original R8 keyboard handlers, not a rewrite.
+   SOURCE_ONLY: native WebView2/UIA remains a separate physical gate. */
+for (const [field,action] of [['knowledgeQuery','knowledgeSearch'],['memoryQuery','memorySearch']]) {
+  const line=html.split('\n').find(s=>s.includes("$('"+field+"').onkeydown="));
+  assert.ok(line,'D01_SEARCH_KEYBOARD_SOURCE_MISSING_'+field);
+  const start=line.indexOf("$('"+field+"').onkeydown=");
+  const end=line.indexOf('};',start);
+  assert.ok(end>start,'D01_SEARCH_KEYBOARD_HANDLER_INVALID_'+field);
+  const handlerSrc=line.slice(start,end+2);
+  const nodes={[field]:{},[action]:{calls:0,click(){this.calls++}}};
+  vm.runInNewContext(handlerSrc,{$:id=>nodes[id]},{timeout:1500});
+  function press(extra={}) {
+    let prevented=0;
+    nodes[field].onkeydown({key:'Enter',keyCode:13,isComposing:false,shiftKey:false,repeat:false,
+      preventDefault(){prevented++},...extra});
+    return prevented;
+  }
+  assert.equal(press({isComposing:true}),0,'D01_COMPOSITION_HANDLED_'+field);
+  assert.equal(press({keyCode:229}),0,'D01_IME_229_HANDLED_'+field);
+  assert.equal(press({shiftKey:true}),0,'D01_SHIFT_ENTER_HANDLED_'+field);
+  assert.equal(press({repeat:true}),1,'D01_REPEAT_PREVENT_DEFAULT_'+field);
+  assert.equal(nodes[action].calls,0,'D01_PREMATURE_SEARCH_'+field);
+  assert.equal(press(),1,'D01_REAL_ENTER_DEFAULT_'+field);
+  press({key:'Escape'});
+  assert.equal(nodes[action].calls,1,'D01_EXACTLY_ONE_SEARCH_'+field);
+}
+console.log('D01 SOURCE_ONLY PASS: knowledge/memory keyboard IME, repeat, Enter');
