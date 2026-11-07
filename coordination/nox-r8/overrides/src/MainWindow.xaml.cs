@@ -23,6 +23,7 @@ public partial class MainWindow : Window
 {
     private readonly HttpClient http = new() { Timeout = TimeSpan.FromMinutes(10) };
     private readonly SemaphoreSlim generationLock = new(1, 1);
+    private readonly SemaphoreSlim engineStartLock = new(1, 1);
     private CancellationTokenSource? active;
     private string? activeRequestId; // Owned by the current WebView2 document and chat request.
     private CancellationTokenSource? activeModelPull;
@@ -129,7 +130,8 @@ public partial class MainWindow : Window
                 // Runtime evidence belongs to the process that actually loaded WebView2,
                 // not to a source-only build or a previously launched EXE.
                 if (!selfTestRequested) WriteRuntimeReadyReceipt();
-                if (!UiSmokeRequested) _ = CheckProvider();
+                if (!selfTestRequested) _ = RecoverLocalEngineAtStartupAsync();
+                else if (!UiSmokeRequested) _ = CheckProvider();
                 if (selfTestRequested && !selfTestStarted)
                 {
                     selfTestStarted = true;
@@ -1197,19 +1199,39 @@ public partial class MainWindow : Window
         Dispatcher.Invoke(() => Browser.CoreWebView2?.PostWebMessageAsJson(data));
     }
 
-    private async Task StartLocalEngine()
+    // One local engine owner and one launcher at a time, for UI click, startup or chat.
+    private async Task StartLocalEngine(CancellationToken stopToken = default)
     {
-        // Explicit owner-triggered recovery. Never stop or restart any existing process.
+        await engineStartLock.WaitAsync(stopToken);
+        try { await StartLocalEngineCore(stopToken); }
+        finally { engineStartLock.Release(); }
+    }
+
+    private async Task RecoverLocalEngineAtStartupAsync()
+    {
+        // Ordinary launch only. Never auto-start during isolated smoke acceptance.
+        try { await StartLocalEngine(); }
+        catch (Exception ex) {
+            Send("health", new { online = false, endpoint = Api, model = CurrentModel,
+                error = "NOX_PROVIDER_RECOVERY_HOLD: " + ex.Message });
+        }
+    }
+
+    private async Task StartLocalEngineCore(CancellationToken stopToken)
+    {
+        // Recover only the known local Ollama. Never stop or restart another process.
         // Do not download models and do not follow arbitrary network endpoints.
         try
         {
-            using var probe = new CancellationTokenSource(TimeSpan.FromSeconds(4));
+            using var probe = CancellationTokenSource.CreateLinkedTokenSource(stopToken);
+            probe.CancelAfter(TimeSpan.FromSeconds(4));
             using var existingCheck = await http.GetAsync(Api + "/api/tags", probe.Token);
             if (existingCheck.IsSuccessStatusCode) { await CheckProvider(); return; }
         }
         catch (HttpRequestException) { /* Local engine may be stopped. */ }
         catch (TaskCanceledException) { /* Retry start after a failed health request. */ }
 
+        stopToken.ThrowIfCancellationRequested();
         if (System.Net.NetworkInformation.IPGlobalProperties.GetIPGlobalProperties()
             .GetActiveTcpListeners().Any(x => x.Port == 11436))
             throw new InvalidOperationException("Порт 11436 занят другим процессом; он не будет остановлен.");
@@ -1230,9 +1252,10 @@ public partial class MainWindow : Window
         var launched = Process.Start(ps);
         if (launched == null) throw new InvalidOperationException("Не удалось запустить локальный Ollama");
         for (int i = 0; i < 30; ++i) {
-            await Task.Delay(1000);
+            await Task.Delay(1000, stopToken);
             try {
-                using var probe = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+                using var probe = CancellationTokenSource.CreateLinkedTokenSource(stopToken);
+                probe.CancelAfter(TimeSpan.FromSeconds(3));
                 using var r = await http.GetAsync(Api + "/api/tags", probe.Token);
                 if (r.IsSuccessStatusCode) { await CheckProvider(); return; }
             } catch (HttpRequestException) { } catch (TaskCanceledException) { }
@@ -1303,6 +1326,22 @@ public partial class MainWindow : Window
             var maxTokens = mode == "MAX" ? 1600 : mode == "ECO" ? 384 : 1024;
             var contextSize = mode == "MAX" ? 8192 : mode == "ECO" ? 2048 : 4096;
             var model = CurrentModel;
+            // Model recovery belongs to the active request. STOP cancels this
+            // wait too; no duplicate server or model download is permitted.
+            await StartLocalEngine(cancellation.Token);
+            cancellation.Token.ThrowIfCancellationRequested();
+            using (var probe = CancellationTokenSource.CreateLinkedTokenSource(cancellation.Token))
+            {
+                probe.CancelAfter(TimeSpan.FromSeconds(5));
+                using var tagsReply = await http.GetAsync(Api + "/api/tags", probe.Token);
+                tagsReply.EnsureSuccessStatusCode();
+                using var tags = JsonDocument.Parse(await tagsReply.Content.ReadAsStringAsync(probe.Token));
+                bool modelRegistered = tags.RootElement.GetProperty("models").EnumerateArray()
+                    .Any(m => string.Equals(m.GetProperty("name").GetString(), model, StringComparison.Ordinal));
+                if (!modelRegistered)
+                    throw new InvalidOperationException("NOX_MODEL_NOT_REGISTERED: " + model +
+                        ". Существующие веса не удалены; выбери установленную модель.");
+            }
             var persona = ActivePersona(); // Capture at start of turn, before streaming.
             var context = preferences.GetValueOrDefault("context", "on") == "on"
                 ? BuildLocalContext(prompt, persona) + knowledge.ContextFor(prompt) : "";
