@@ -13,8 +13,10 @@ function source(name) {
   return fs.readFileSync(file, "utf8");
 }
 const html = source("index.html"), native = source("MainWindow.xaml.cs");
-assert.match(native, /case "notes\.list": Send\("notes", ReadNotes\(\)\);/,
+assert.match(native, /case "notes\.list": SendPersonaNotes\(\);/,
   "F03_NOTES_REFRESH_NATIVE_OWNER_ROUTE_MISSING");
+assert.match(native, /Send\("notes", new \{ persona, rows = ReadNotes\(persona\) \}\);/,
+  "F03_NOTES_REFRESH_PERSONA_ENVELOPE_MISSING");
 const ids = [...html.matchAll(/<button class="core [^"]*" data-route="([^"]+)"/g)]
   .map(match => match[1]);
 assert.deepEqual(ids, ["consciousness","atlas","reflection","nexus",
