@@ -230,6 +230,15 @@ def serve(root, port):
                 except Exception as exc:
                     return self.get(json.dumps({'error':type(exc).__name__}).encode(),
                                     'application/json',503)
+            if self.path == '/api/nox/soul/status':
+                try:
+                    from nox_prime_affect_runtime_v1 import status as soul_status
+                    payload=soul_status(root)
+                    return self.get(json.dumps(payload,ensure_ascii=False).encode('utf-8'),
+                                    'application/json; charset=utf-8')
+                except Exception as exc:
+                    return self.get(json.dumps({'error':type(exc).__name__}).encode(),
+                                    'application/json',503)
             if self.path == '/api/nox/cognition/status':
                 # Stats only, no transcript excerpts or unauthorized Persona data.
                 try:
@@ -269,8 +278,11 @@ def serve(root, port):
             if self.path == '/api/health':
                 return self.get(json.dumps({'status': 'READY', 'schema': SCHEMA,
                                             'template': 'NOX-FORGE-WOW-LIVE-V6',
-                                            'unified_router':'NOX-UNIFIED-BRAIN-V5',
-                                            'read_only': True}).encode(), 'application/json')
+                                            'unified_router':'NOX-UNIFIED-BRAIN-V6',
+                                            'read_only_native_s03': True,
+                                            'local_chat_journal': True,
+                                            'soul_runtime':'EN_HOLDOUT_ONLY',
+                                            'semantic_retrieval':'ON_DEMAND_LOCAL'}).encode(), 'application/json')
             if self.path == '/api/status':
                 try:
                     payload = live_status(root)
