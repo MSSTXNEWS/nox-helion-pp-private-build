@@ -94,14 +94,16 @@ $receiptPath=[IO.Path]::Combine($actual,'BUILD_RECEIPT.json')
 Check-BundledPayload $actual
 # Pre-uninstall must check all three named files before NSIS deletes the first.
 # In particular, a held SQLite-like receipt must not cause a partial uninstall
-# after the EXE has already been deleted. The executing uninstaller cannot be
-# opened exclusively; reject its ReadOnly bit and never delete unknown files.
+# after the EXE has already been deleted. NSIS runs its uninstaller from a temporary self-copy, so the
+# original Uninstall.exe should be exclusively readable before first deletion.
+# Reject a held uninstaller handle as well as a held EXE/receipt. ReadOnly
+# and foreign-entry checks remain mandatory. This preflight is not race-free.
 # This is still preflight, not a race-free filesystem transaction.
 if($Mode -eq 'PreUninstall') {
  foreach($item in $items) {
    if(($item.Attributes -band [IO.FileAttributes]::ReadOnly) -ne 0){ Hold 'READONLY_INSTALL_FILE' }
  }
- foreach($owned in @(@($exe,'EXE_BUSY_OR_UNREADABLE'),@($receiptPath,'RECEIPT_BUSY_OR_UNREADABLE'))) {
+ foreach($owned in @(@($exe,'EXE_BUSY_OR_UNREADABLE'),@($receiptPath,'RECEIPT_BUSY_OR_UNREADABLE'),@([IO.Path]::Combine($actual,'Uninstall.exe'),'UNINSTALLER_BUSY_OR_UNREADABLE'))) {
    $exclusive=$null
    try {
      $exclusive=[IO.File]::Open([string]$owned[0],[IO.FileMode]::Open,[IO.FileAccess]::Read,[IO.FileShare]::None)

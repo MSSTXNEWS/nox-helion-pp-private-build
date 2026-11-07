@@ -82,6 +82,12 @@ try{
  $heldReceipt=[IO.File]::Open($receipt,[IO.FileMode]::Open,[IO.FileAccess]::Read,[IO.FileShare]::Read)
  try { Check 'PreUninstall' $false } finally { $heldReceipt.Dispose() }
  Check 'PreUninstall' $true
+ # NSIS executes a TEMP self-copy; a second reader of the installed
+ # uninstaller must fail closed before any owned file is deleted.
+ $uninstaller=Join-Path $dir 'Uninstall.exe'
+ $heldUninstaller=[IO.File]::Open($uninstaller,[IO.FileMode]::Open,[IO.FileAccess]::Read,[IO.FileShare]::Read)
+ try { Check 'PreUninstall' $false } finally { $heldUninstaller.Dispose() }
+ Check 'PreUninstall' $true
  # A read-only owned file could also cause a partial NSIS delete.
  try {
    [IO.File]::SetAttributes($receipt,[IO.FileAttributes]::ReadOnly)
@@ -91,7 +97,7 @@ try{
  [IO.File]::WriteAllText((Join-Path $dir 'owner.sqlite3'),'FOREIGN_OWNER_DATA')
  Check 'PreUninstall' $false
  if(-not (Test-Path -LiteralPath (Join-Path $dir 'owner.sqlite3'))){ throw 'B05_TEST_LOST_FOREIGN_FILE' }
- Write-Host 'B05_GUARD_18_CHECKS_PASS_FIXTURE_ONLY_RELEASE_HOLD'
+ Write-Host 'B05_GUARD_UNINSTALLER_LOCK_FIXTURE_PASS_RELEASE_HOLD'
 }finally{
  $env:LOCALAPPDATA=$original
  if(Test-Path -LiteralPath $scratch){ Remove-Item -LiteralPath $scratch -Force -Recurse }
