@@ -159,7 +159,16 @@ body.reduced .helion-fx{filter:none}body.reduced .core.active{animation:none}
   // reject the OS motion observer. Neither must disable graphics or native IPC.
   let motionQuery=null,motionUnreadable=false;
   try{
-    if(typeof window.matchMedia==='function')motionQuery=window.matchMedia('(prefers-reduced-motion: reduce)');
+    if(typeof window.matchMedia==='function'){
+      motionQuery=window.matchMedia('(prefers-reduced-motion: reduce)');
+      // A present but broken WebView2 media API gives no trustworthy OS preference.
+      if(!motionQuery){motionUnreadable=true;console.warn('NOX reduced-motion query returned empty state');}
+    }else{
+      // Missing matchMedia is also unknown OS state, not permission to animate.
+      // WebView2/native IPC still works; retain one accessible static frame.
+      motionUnreadable=true;
+      console.warn('NOX reduced-motion query API unavailable; freezing animation');
+    }
   }catch(e){motionUnreadable=true;console.warn('NOX reduced-motion query unavailable:',String(e?.message||e));}
   // A failing Windows MediaQueryList.matches getter must never escape an
   // animation frame. Unknown OS preference errs on the accessible static pose.
@@ -167,8 +176,15 @@ body.reduced .helion-fx{filter:none}body.reduced .core.active{animation:none}
   const reduce=()=>{
     if(document.body.classList.contains('reduced')||motionUnreadable)return true;
     if(!motionQuery)return false;
-    try{return Boolean(motionQuery.matches);}
-    catch(e){
+    try{
+      const matches=motionQuery.matches;
+      if(typeof matches!=='boolean'){
+        motionUnreadable=true;
+        console.warn('NOX reduced-motion state unavailable: expected boolean');
+        return true;
+      }
+      return matches;
+    }catch(e){
       motionUnreadable=true;
       console.warn('NOX reduced-motion state inaccessible:',String(e?.message||e));
       return true;
@@ -184,8 +200,14 @@ body.reduced .helion-fx{filter:none}body.reduced .core.active{animation:none}
       }
     }catch(e){console.warn('NOX modern reduced-motion observer unavailable:',String(e?.message||e));}
     try{
-      if(typeof motionQuery.addListener==='function')motionQuery.addListener(redraw);
+      if(typeof motionQuery.addListener==='function'){
+        motionQuery.addListener(redraw);return;
+      }
     }catch(e){console.warn('NOX legacy reduced-motion observer unavailable:',String(e?.message||e));}
+    // If BOTH WebView2 change observers are missing/rejected, later OS changes
+    // cannot be detected. Never leave a perpetual RAF under unknown motion policy.
+    motionUnreadable=true;
+    console.warn('NOX reduced-motion observer unavailable; freezing animation');
   }
   // Dynamic WebView2/DPI layout changes do not always fire window.resize.
   // Observe the existing element so Reduced Motion still gets one accurate
