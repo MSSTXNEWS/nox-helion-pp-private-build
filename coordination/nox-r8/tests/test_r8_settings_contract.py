@@ -92,7 +92,7 @@ assert settings_case, 'D06 settings handler missing'
 runtime = r"""
 'use strict';
 const handler = new Function('pendingSettings', 'settingsReconcile',
-  'v', 'applyCommittedSettings', '
+  'v', 'applyCommittedSettings', String.fromCharCode(36), 'settingsDenial', HANDLER_CODE);
 function verify(pending, reconcile, expectedApply) {
   let applied = 0;
   const status = {textContent: 'NOX_SETTINGS_COMMIT_UNKNOWN_HOLD'};
