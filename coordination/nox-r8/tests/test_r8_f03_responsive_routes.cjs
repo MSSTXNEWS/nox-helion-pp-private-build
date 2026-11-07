@@ -37,7 +37,7 @@ const expected = {
   voice: [],
   persona: ["settings.get"]
 };
-function makeButton(id) {
+function makeButton(id,onFocus=()=>{}) {
   const classes = new Set(), attrs = {}, handlers = {};
   return {
     dataset: {route:id}, attrs, handlers, focused:false,
@@ -48,7 +48,8 @@ function makeButton(id) {
     setAttribute(name, value) { attrs[name] = value; },
     removeAttribute(name) { delete attrs[name]; },
     addEventListener(type, handler) { handlers[type] = handler; },
-    focus() { this.focused = true; }
+    focus() { this.focused = true; onFocus(this); },
+    closest() { return null; }
   };
 }
 function makePanel(id) {
@@ -59,9 +60,11 @@ function makePanel(id) {
   }};
 }
 function run(compact) {
-  const buttons = ids.map(makeButton), panels = ids.map(makePanel);
+  let activeElement=null;
+  const buttons = ids.map(id=>makeButton(id,element=>{activeElement=element;})), panels = ids.map(makePanel);
   const side = {scrollTop:160}, title = {textContent:""}, requests = [];
   const document = {
+    get activeElement(){return activeElement;},
     querySelectorAll(selector) {
       if (selector === ".core[data-route]" || selector === "button.core[data-route]")
         return buttons;
@@ -69,8 +72,10 @@ function run(compact) {
       throw new Error("F03_UNEXPECTED_SELECTOR_" + selector);
     },
     querySelector(selector) {
-      assert.equal(selector, "aside.side");
-      return side;
+      if(selector==="aside.side")return side;
+      const match=selector.match(/^button\.core\[data-route="([^"]+)"\]$/);
+      if(match)return buttons.find(button=>button.dataset.route===match[1])||null;
+      throw new Error("F03_UNEXPECTED_QUERY_"+selector);
     }
   };
   const context = { document, window:{matchMedia:() => ({matches:compact})},
@@ -96,13 +101,30 @@ function run(compact) {
       .map(b=>b.dataset.route), [id], "F03_ARIA_ROUTE_MISMATCH_"+id);
     assert.equal(side.scrollTop, 0, "F03_ROUTE_SCROLL_RESET_HOLD_"+id);
   }
+  // B06 focus recovery: a route that hides a focused panel must hand focus
+  // to its real CoreID button, not leave keyboard focus inside a hidden panel.
+  activeElement={closest(selector){
+    assert.equal(selector, ".panel[data-panel]");
+    return panels.find(panel=>panel.dataset.panel==="forge");
+  }};
+  buttons[2].focused=false;
+  assert.equal(context.route("reflection"),true);
+  assert.equal(activeElement,buttons[2],"F03_HIDDEN_PANEL_KEYBOARD_FOCUS_HOLD");
+  const outside={closest(){return null;}};
+  activeElement=outside;
+  assert.equal(context.route("atlas"),true);
+  assert.equal(activeElement,outside,"F03_OUTSIDE_PANEL_FOCUS_HIJACK_HOLD");
+  const within={closest(){return panels.find(panel=>panel.dataset.panel==="atlas");}};
+  activeElement=within;
+  assert.equal(context.route("atlas"),true);
+  assert.equal(activeElement,within,"F03_SAME_PANEL_FOCUS_HIJACK_HOLD");
   requests.length=0;
   const titleBefore=title.textContent;
   assert.equal(context.route("__proto__"),false,"F03_UNTRUSTED_ROUTE_ACCEPTED");
   assert.deepEqual(requests, [],"F03_UNTRUSTED_ROUTE_SENT_IPC");
   assert.equal(title.textContent,titleBefore);
-  function press(index, key) {
-    const event={key, prevented:false,preventDefault(){this.prevented=true;}};
+  function press(index, key, extra={}) {
+    const event={key, prevented:false,preventDefault(){this.prevented=true;},...extra};
     buttons[index].handlers.keydown(event);
     return event;
   }
@@ -118,6 +140,15 @@ function run(compact) {
   const titleAfter=title.textContent;
   assert.equal(press(0,"Tab").prevented,false,"F03_KEYBOARD_TAB_INTERCEPT_HOLD");
   assert.equal(title.textContent,titleAfter);
+  // Native keyboard traversal must respect IME, accessibility and OS chords.
+  for(const guard of [{ctrlKey:true},{altKey:true},{metaKey:true},{shiftKey:true},
+      {isComposing:true},{keyCode:229},{repeat:true},{defaultPrevented:true}]){
+    const oldFocus=activeElement, oldTitle=title.textContent, oldCount=requests.length;
+    assert.equal(press(0,"ArrowRight",guard).prevented,false,"F03_NATIVE_KEY_GUARD_INTERCEPT_HOLD");
+    assert.equal(activeElement,oldFocus,"F03_NATIVE_KEY_GUARD_FOCUS_HOLD");
+    assert.equal(title.textContent,oldTitle,"F03_NATIVE_KEY_GUARD_ROUTE_HOLD");
+    assert.equal(requests.length,oldCount,"F03_NATIVE_KEY_GUARD_IPC_HOLD");
+  }
 }
 run(false); // desktop scroll remains functional after long history or notes
 run(true);  // compact 320/390/800 scroll and all eight routes
