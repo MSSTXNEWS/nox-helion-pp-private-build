@@ -135,7 +135,7 @@ function exercise(kind){
     check(sphere.dataset.fx==='active','GPU path initialized');
     if(!healthyGpu.includes(kind)){window.noxVisual.setMode('MAX');window.noxVisual.setEnergy(true);}
     tick();
-    if(healthyGpu.includes(kind)){check(gpuFrames>0,kind+' GPU path drew');window.noxVisual.setMode('ECO');tick();check(gpuFrames>1,kind+' ECO GPU mode');return;}
+    if(healthyGpu.includes(kind)){check(gpuFrames>0,kind+' GPU path drew');window.noxVisual.setMode('ECO');tick();check(gpuFrames>1,kind+' ECO GPU mode');document.hidden=true;document.fire('visibilitychange');window.noxVisual.setMode('MAX');window.noxVisual.setEnergy(true);window.noxVisual.refresh();check(queue.size===0,kind+' hidden GPU settings and energy must not re-arm RAF');document.hidden=false;document.fire('visibilitychange');tick();check(gpuFrames>2,kind+' GPU resumes with latest state');return;}
     if(kind==='contextLost')original.fire('webglcontextlost',{preventDefault(){prevented=true;}});
     if(kind==='lateGlError'){
       check(sphere.dataset.fx==='active','late GL error not prematurely triggered');
@@ -155,6 +155,8 @@ function exercise(kind){
   window.noxVisual.setMode('ECO');tick();
   document.hidden=true;document.fire('visibilitychange');
   check(queue.size===0,kind+' background frames paused');
+  window.noxVisual.setMode('MAX');window.noxVisual.setEnergy(true);window.noxVisual.refresh();
+  check(queue.size===0,kind+' hidden Canvas2D settings and energy must not re-arm RAF');
   document.hidden=false;document.fire('visibilitychange');tick();
   check(cpuFrames>=3,kind+' visible redraw');
 }
