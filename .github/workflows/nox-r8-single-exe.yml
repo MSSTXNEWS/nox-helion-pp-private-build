@@ -1,7 +1,7 @@
 name: NOX R8 Windows desktop compilation
 on:
   push:
-    branches: [feature/nox-r8-liquid-one-exe-20261106]
+    branches: [feature/nox-r8-liquid-one-exe-20261106, work/f01-r8-chat-stop-owner-runtime-20261108]
   workflow_dispatch:
 permissions:
   contents: read
@@ -77,6 +77,9 @@ jobs:
           Copy-Item './coordination/nox-r8/tests/test_r8_f01_native_backup_lock.py' './r8/test_r8_f01_native_backup_lock.py'
           python './r8/test_r8_f01_native_backup_lock.py'
           if ($LASTEXITCODE -ne 0) { throw 'F01_BACKUP_LOCK_AND_NATIVE_QWEN_GATE_SOURCE_HOLD' }
+          # F01 staging-only: original WebView2 owner lifecycle in V8, independent of static guards.
+          node './coordination/nox-r8/tests/test_r8_f01_chat_stop_owner_live_handler.cjs'
+          if ($LASTEXITCODE -ne 0) { throw 'F01_CHAT_STOP_OWNER_HANDLER_HOLD' }
           # F03 executes original navigation/ARIA/keyboard handlers on Windows runner.
           Copy-Item './coordination/nox-r8/tests/test_r8_f03_responsive_routes.cjs' './r8/test_r8_f03_responsive_routes.cjs'
           node './r8/test_r8_f03_responsive_routes.cjs'
