@@ -152,14 +152,13 @@ body.reduced .helion-fx{filter:none}body.reduced .core.active{animation:none}
   const sphere=canvas.parentElement;
   // WebView2 runtime versions can expose legacy MediaQueryList listeners or
   // reject the OS motion observer. Neither must disable graphics or native IPC.
-  let motionQuery=null;
+  let motionQuery=null,motionUnreadable=false;
   try{
     if(typeof window.matchMedia==='function')motionQuery=window.matchMedia('(prefers-reduced-motion: reduce)');
-  }catch(e){console.warn('NOX reduced-motion query unavailable:',String(e?.message||e));}
+  }catch(e){motionUnreadable=true;console.warn('NOX reduced-motion query unavailable:',String(e?.message||e));}
   // A failing Windows MediaQueryList.matches getter must never escape an
   // animation frame. Unknown OS preference errs on the accessible static pose.
   // Latch once to avoid repeated GPU-frame exceptions or console flooding.
-  let motionUnreadable=false;
   const reduce=()=>{
     if(document.body.classList.contains('reduced')||motionUnreadable)return true;
     if(!motionQuery)return false;

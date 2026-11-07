@@ -108,16 +108,17 @@ function exercise(kind){
   const warnings=[];
   render(document,window,{now(){return 0;}},requestAnimationFrame,cancelAnimationFrame,{warn:(...args)=>warnings.push(args.map(String).join(' '))});
   function tick(){check(queue.size>0,kind+' scheduled frame');const [id,fn]=queue.entries().next().value;queue.delete(id);fn(100+(++ticks)*140);}
-  if(kind==='matchesGetterGpu'||kind==='matchesGetterCpu'){
-    const gpu=kind==='matchesGetterGpu';
+  if(['matchesGetterGpu','matchesGetterCpu','queryThrowsGpu','queryThrowsCpu'].includes(kind)){
+    const gpu=kind.endsWith('Gpu');
+    const warnName=kind.startsWith('queryThrows')?'reduced-motion query unavailable':'reduced-motion state inaccessible';
     check(sphere.dataset.fx===(gpu?'active':'canvas2d'),kind+' renderer initialized');
     tick();
     check(queue.size===0,kind+' unknown OS motion uses static accessible pose');
-    check(warnings.filter(x=>x.includes('reduced-motion state inaccessible')).length===1,kind+' only one warning');
+    check(warnings.filter(x=>x.includes(warnName)).length===1,kind+' only one warning');
     window.noxVisual.setMode('MAX');tick();
     window.noxVisual.setEnergy(true);tick();
     check(queue.size===0,kind+' no hot RAF loop after setting changes');
-    check(warnings.filter(x=>x.includes('reduced-motion state inaccessible')).length===1,kind+' warning not repeated');
+    check(warnings.filter(x=>x.includes(warnName)).length===1,kind+' warning not repeated');
     check((gpu?gpuFrames:cpuFrames)===3,kind+' static render remains functional');
     return;
   }
@@ -194,7 +195,7 @@ function exercise(kind){
     check(queue.size===0,kind+' element redraw honors Reduced Motion');
     return;
   }
-  const healthyGpu=['ok','noMediaApiGpu','queryThrowsGpu','observerThrowsGpu'];
+  const healthyGpu=['ok','noMediaApiGpu','observerThrowsGpu'];
   if([...healthyGpu,'contextLost','drawFail','viewportFail','uniformFail','glError','lateGlError'].includes(kind)){
     check(sphere.dataset.fx==='active','GPU path initialized');
     if(!healthyGpu.includes(kind)){window.noxVisual.setMode('MAX');window.noxVisual.setEnergy(true);}
