@@ -336,6 +336,13 @@ def supervise():
             if hot<LIMIT and (ac or charge>30):
                 continue
             outcome="HOTSPOT_COOLDOWN" if hot>=LIMIT else "BATTERY_HOLD"
+        if isinstance(outcome,str) and outcome.startswith("SENSOR/BATTERY_LOST"):
+            # The DirectML worker was already hard-stopped by single_cycle().
+            # Never train with an unknown Hot Spot. The outer worm will watch
+            # LibreHardwareMonitor and require stable, repeated valid readings.
+            print("NOX SENSOR RECOVERY REQUIRED; GPU worker stopped; checkpoint intact.",
+                  flush=True)
+            raise RuntimeError("SENSOR_RECOVERY_REQUIRED")
         if outcome not in ("HOTSPOT>=70C","HOTSPOT_COOLDOWN"):
             print("NOX stopped, NO automatic restart:",outcome,flush=True)
             raise RuntimeError("STOP_BEFORE_TARGET: "+str(outcome))
