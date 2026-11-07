@@ -30,9 +30,22 @@ def note(event,**kw):
     root=ROOT/"brain"/"telemetry"
     root.mkdir(parents=True,exist_ok=True)
     p=root/"worm_status.json"
-    tmp=p.with_suffix(".tmp")
+    tmp=p.with_name("." + p.name + "." + str(os.getpid()) + ".tmp")
     tmp.write_text(json.dumps(data,ensure_ascii=False,indent=2),encoding="utf-8")
-    os.replace(tmp,p)
+    try:
+        for _ in range(12):
+            try:
+                os.replace(tmp,p)
+                return
+            except PermissionError:
+                time.sleep(.2)
+        # This log is informational; protecting the trainer does not depend on
+        # a successful update to a UI JSON status file.
+        os.replace(tmp,p.with_name("worm_status_safe70.json"))
+        print("NOX WORM TELEMETRY: status file locked; sidecar saved",flush=True)
+    finally:
+        with suppress(OSError):
+            tmp.unlink(missing_ok=True)
 
 def assert_idle():
     if os.name!="nt":raise RuntimeError("Windows only")
