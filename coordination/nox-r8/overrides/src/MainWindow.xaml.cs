@@ -2259,6 +2259,9 @@ public partial class MainWindow : Window
         // KnowledgeStore can fail after a partial SQLite write; only an independent
         // acceptance check may claim all imported rows or assert no mutation.
         bool importAttempted = false;
+        // A journal INSERT can commit before its independent readback fails.
+        // Never imply that SQLite still lacks a receipt after attempting it.
+        bool journalWriteAttempted = false;
         try {
             var consent = MessageBox.Show(this,
                 "Перенести сохранённые текстовые записи памяти и решений VUNEO из резервной SQLite в локальный индекс NOX? Оригинальные файлы не изменяются; чувствительные записи будут пропущены.",
@@ -2270,6 +2273,7 @@ public partial class MainWindow : Window
             using (var db = OpenDatabase()) CheckpointSqlite(db, "PRE_VUNEO_IMPORT");
             // Persist a crash-recovery HOLD in the EXISTING SQLite, never in a
             // parallel memory store. Failure to arm means no importer call.
+            journalWriteAttempted = true;
             ArmVuneoImportReceipt();
             importAttempted = true;
             var result = knowledge.ImportVuneoStaging();
@@ -2289,10 +2293,11 @@ public partial class MainWindow : Window
             // Never report "denied/no import" without verifying that outcome.
             if (!importCompleted) {
                 try {
-                    if (importAttempted)
+                    if (journalWriteAttempted)
                         Send("knowledge.vuneo.unknown", new {
                             requestId, backupVerified = true,
-                            reason = "NOX_VUNEO_COMMIT_UNKNOWN_HOLD" });
+                            reason = importAttempted ? "NOX_VUNEO_COMMIT_UNKNOWN_HOLD"
+                                                     : "NOX_VUNEO_JOURNAL_STATE_UNKNOWN_HOLD" });
                     else
                         Send("knowledge.vuneo.denied", new {
                             requestId, reason = "NOX_VUNEO_IMPORT_HOLD" });
