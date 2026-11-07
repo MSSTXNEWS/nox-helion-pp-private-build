@@ -987,9 +987,19 @@ public partial class MainWindow : Window
 
     // Snapshot the existing owner's SQLite before schema mutation or import.
     // Both the database and manifest are new entries: never replace owner files.
+    // Native smoke processes never share the owner's backup directory.
+    // The live database and its backups remain in the original owner-owned path.
+    private string BackupDirectoryPath()
+    {
+        string home = Path.GetDirectoryName(dbPath)!;
+        return Path.Combine(home, selfTestRequested
+            ? "backups-selftest-" + Path.GetFileNameWithoutExtension(dbPath)
+            : "backups");
+    }
+
     private string CheckpointSqlite(SqliteConnection source, string purpose)
     {
-        string dir = Path.Combine(Path.GetDirectoryName(dbPath)!, "backups");
+        string dir = BackupDirectoryPath();
         ValidateBackupParent(Path.GetDirectoryName(dir)!);
         Directory.CreateDirectory(dir);
         ValidateBackupParent(dir);
@@ -1079,7 +1089,13 @@ public partial class MainWindow : Window
         // B03: force a partial Persona migration on the already-isolated native
         // UI-smoke database, then prove that the *real C# migration* recreates the
         // index and checkpoints the pre-repair state. Never touch owner SQLite.
-        string backupDir = Path.Combine(Path.GetDirectoryName(dbPath)!, "backups");
+        string backupDir = BackupDirectoryPath();
+        // Explicit fail-closed path ownership check in the native UI smoke.
+        // A test must never enumerate or create entries in owner "backups".
+        if (!string.Equals(Path.GetFileName(backupDir),
+                "backups-selftest-" + Path.GetFileNameWithoutExtension(dbPath),
+                StringComparison.Ordinal))
+            throw new InvalidOperationException("NOX_B03_SMOKE_BACKUP_ISOLATION_HOLD");
         var beforeRepair = Directory.GetFiles(
             backupDir, "NOX_PRE_PERSONA_MIGRATION_*.sqlite3").ToHashSet(StringComparer.OrdinalIgnoreCase);
         using (var drop = live.CreateCommand())
