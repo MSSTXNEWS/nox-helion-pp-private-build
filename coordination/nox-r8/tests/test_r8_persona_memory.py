@@ -9,7 +9,8 @@ src = Path(__file__).resolve().parent / "src"
 cs = (src / "MainWindow.xaml.cs").read_text(encoding="utf-8")
 web = (src / "index.html").read_text(encoding="utf-8")
 for guard in (
-    'MigratePersonaStorage(db);',
+    'MigratePersonaStorage(db, existingTables);',
+    'MigratePersonaStorage(live, hadExistingTablesBeforeBootstrap: true);',
     'CheckpointSqlite(db, "PRE_PERSONA_MIGRATION")',
     'CheckpointSqlite(db, "PRE_VUNEO_IMPORT")',
     'source.BackupDatabase(dest)', 'PRAGMA quick_check',
@@ -29,7 +30,6 @@ for guard in (
     'FROM chat_history WHERE persona=$persona ORDER BY id DESC LIMIT 3',
     'FROM memory_notes WHERE persona=$persona ORDER BY id DESC LIMIT 6',
     'FROM memory_notes WHERE persona=$persona ORDER BY id DESC LIMIT 150',
-    'DELETE FROM memory_notes WHERE id=$id AND persona=$persona',
     'SELECT timestamp,prompt,answer FROM chat_history',
     'SELECT created_at,title,content FROM memory_notes',
     'NOX_MEMORY_QUERY_LIMIT_HOLD',
@@ -41,6 +41,7 @@ for guard in (
     'if (consent != MessageBoxResult.Yes) return',
 ):
     assert guard in cs, guard
+assert re.search(r'DELETE FROM memory_notes\s+WHERE id=\$id AND persona=\$persona\s+AND title=\$title AND content=\$content AND created_at=\$created', cs), 'D03_PERSONA_NOTE_DELETE_OPTIMISTIC_GUARD_HOLD'
 assert "case 'persona.changed':" in web
 
 # D03 owner export safety: staging and SHA readback must precede a
