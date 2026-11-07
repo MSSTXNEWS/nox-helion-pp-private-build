@@ -40,7 +40,7 @@ try{
  [IO.File]::WriteAllText((Join-Path $dir 'owner.sqlite3'),'FOREIGN_OWNER_DATA')
  Check 'PreUninstall' $false
  if(-not (Test-Path -LiteralPath (Join-Path $dir 'owner.sqlite3'))){ throw 'B05_TEST_LOST_FOREIGN_FILE' }
- Write-Host 'B05_GUARD_7_CASES_PASS_SOURCE_ONLY_RELEASE_HOLD'
+ Write-Host 'B05_GUARD_9_CHECKS_PASS_FIXTURE_ONLY_RELEASE_HOLD'
 }finally{
  $env:LOCALAPPDATA=$original
  if(Test-Path -LiteralPath $scratch){ Remove-Item -LiteralPath $scratch -Force -Recurse }
