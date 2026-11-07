@@ -5,12 +5,32 @@ const html=fs.readFileSync(path.resolve(__dirname,'src','index.html'),'utf8');
 const match=html.match(/<script id="nox-liquid-core">([\s\S]*?)<\/script>/);
 function check(condition,label){if(!condition)throw Error('D04_GPU_FALLBACK_HOLD '+label);}
 check(!!match,'GPU script');
-check(html.includes('window.chrome.webview.postMessage({type,...data})'),'existing native IPC unchanged');
+// Execute the actual native WebView2 bridge wrapper. Its fail-closed dispatch
+// was hardened independently by D01, so asserting a stale literal would
+// wrongly block Windows compilation despite preserving native message routing.
+const bridgeMatch=html.match(/const post=\(type,data=\{\}\)=>(\{[\s\S]*?\});\s*let responseBox=/);
+check(!!bridgeMatch,'original native IPC wrapper present');
+const makePost=new Function('window','$','return (type,data={})=>'+bridgeMatch[1]);
+const nativeProbe=bridge=>{
+  const status={textContent:''};
+  const window=bridge===null?{}:{chrome:{webview:bridge}};
+  return {post:makePost(window,id=>{check(id==='status','IPC status target');return status;}),status};
+};
+const sent=[];
+const live=nativeProbe({postMessage:event=>sent.push(event)});
+check(live.post('chat',{text:'D04 bridge probe',requestId:'req-d04'})===true,'native chat dispatch accepted');
+check(sent.length===1&&sent[0].type==='chat'&&sent[0].requestId==='req-d04'&&sent[0].text==='D04 bridge probe','native chat payload preserved');
+check(live.post('stop',{requestId:'req-d04'})===true&&sent.length===2&&sent[1].type==='stop'&&sent[1].requestId==='req-d04','native STOP ownership preserved');
+const missing=nativeProbe(null);
+check(missing.post('chat',{text:'offline'})===false&&missing.status.textContent==='NATIVE BRIDGE OFFLINE','missing native IPC must fail closed');
+const broken=nativeProbe({postMessage(){throw Error('DISPATCH_REJECTED')}});
+check(broken.post('chat',{text:'offline'})===false&&broken.status.textContent==='NATIVE BRIDGE DISPATCH FAILED','native dispatch exceptions must fail closed');
 const render=new Function('document','window','performance','requestAnimationFrame','cancelAnimationFrame','console',match[1]);
 function exercise(kind){
-  let gpuFrames=0,cpuFrames=0,prevented=false,ticks=0,seq=0,userReduced=false,maxBlur=0;
+  let gpuFrames=0,cpuFrames=0,prevented=false,ticks=0,seq=0,userReduced=false,maxBlur=0,errorSamples=0;
   const queue=new Map(),docEvents={},sphere={dataset:{}};
   const gl={
+    NO_ERROR:0,OUT_OF_MEMORY:1285,
     VERTEX_SHADER:1,FRAGMENT_SHADER:2,COMPILE_STATUS:3,LINK_STATUS:4,
     ARRAY_BUFFER:5,STATIC_DRAW:6,FLOAT:7,COLOR_BUFFER_BIT:8,TRIANGLES:9,
     createShader(){return {};},shaderSource(){},compileShader(){},
@@ -23,7 +43,8 @@ function exercise(kind){
     getAttribLocation(){return 0;},enableVertexAttribArray(){},vertexAttribPointer(){},
     viewport(){if(kind==='viewportFail')throw Error('GPU_VIEWPORT_DEVICE_LOST');},useProgram(){},uniform2f(){},uniform1f(){if(kind==='uniformFail')throw Error('GPU_UNIFORM_DEVICE_LOST');},
     clearColor(){},clear(){},drawArrays(){if(kind==='drawFail')throw Error('GPU_DEVICE_LOST');gpuFrames++;},
-    isContextLost(){return false;}
+    isContextLost(){return false;},
+    getError(){errorSamples++;return kind==='glError'||(kind==='lateGlError'&&errorSamples===2)?this.OUT_OF_MEMORY:this.NO_ERROR;}
   };
   function makeCanvas(){
     const events={};
@@ -72,19 +93,24 @@ function exercise(kind){
     check(queue.size===0,kind+' OS reduce stops RAF');
     return;
   }
-  if(['ok','contextLost','drawFail','viewportFail','uniformFail'].includes(kind)){
+  if(['ok','contextLost','drawFail','viewportFail','uniformFail','glError','lateGlError'].includes(kind)){
     check(sphere.dataset.fx==='active','GPU path initialized');
     if(kind!=='ok'){window.noxVisual.setMode('MAX');window.noxVisual.setEnergy(true);}
     tick();
     if(kind==='ok'){check(gpuFrames>0,'GPU path drew');window.noxVisual.setMode('ECO');tick();check(gpuFrames>1,'ECO GPU mode');return;}
     if(kind==='contextLost')original.fire('webglcontextlost',{preventDefault(){prevented=true;}});
+    if(kind==='lateGlError'){
+      check(sphere.dataset.fx==='active','late GL error not prematurely triggered');
+      for(let i=1;i<30;i++)tick();
+      check(errorSamples===2,'GPU errors sampled on frames 1 and 30, not every draw');
+    }
   }
   check(sphere.dataset.fx==='canvas2d',kind+' switched to live 2D');
   check(typeof window.noxVisual.setMode==='function',kind+' mode retained');
   if(kind==='contextLost')check(prevented,'context loss default prevented');
-  if(['contextLost','compileFail','drawFail','setupFail','viewportFail','uniformFail'].includes(kind))check(currentCanvas!==original,'GPU canvas replaced');
+  if(['contextLost','compileFail','drawFail','setupFail','viewportFail','uniformFail','glError','lateGlError'].includes(kind))check(currentCanvas!==original,'GPU canvas replaced');
   tick();check(cpuFrames>0,kind+' 2D frame drawn');
-  if(['contextLost','drawFail','viewportFail','uniformFail'].includes(kind)){
+  if(['contextLost','drawFail','viewportFail','uniformFail','glError','lateGlError'].includes(kind)){
     check(currentCanvas.width===650,kind+' MAX render resolution survived fallback');
     check(maxBlur>50,kind+' active generation energy survived fallback');
   }
@@ -94,6 +120,6 @@ function exercise(kind){
   document.hidden=false;document.fire('visibilitychange');tick();
   check(cpuFrames>=3,kind+' visible redraw');
 }
-for(const kind of ['noGpu','throwContext','compileFail','setupFail','ok','contextLost','drawFail','viewportFail','uniformFail','reducedGpu','reducedCpu'])exercise(kind);
+for(const kind of ['noGpu','throwContext','compileFail','setupFail','ok','contextLost','drawFail','viewportFail','uniformFail','glError','lateGlError','reducedGpu','reducedCpu'])exercise(kind);
 check(html.includes("case 'complete':busy=false;activeChatId=null;$('generation').classList.remove('on');window.noxVisual?.setEnergy(false);"),'native completion clears renderer energy');
-console.log('D04 R8 GPU failover SOURCE_ONLY: 11 scenarios PASS (GL setup, viewport, uniform, draw, context loss, MAX/energy retention, reduced motion); owner GPU NOT_TESTED');
+console.log('D04 R8 GPU failover SOURCE_ONLY: 13 scenarios PASS (GL setup, viewport, uniform, draw, context loss, MAX/energy retention, reduced motion); owner GPU NOT_TESTED');

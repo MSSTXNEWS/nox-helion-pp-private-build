@@ -16,6 +16,14 @@ jobs:
       - name: Compile from exact source
         shell: pwsh
         run: |
+          # B01: GITHUB_SHA in a receipt is not proof of exact checkout.
+          # Refuse an unexpected or dirty tracked tree before staging/build.
+          $eventCommit=([string]$env:GITHUB_SHA).Trim().ToLowerInvariant()
+          $checkoutCommit=([string](git rev-parse HEAD)).Trim().ToLowerInvariant()
+          if ($LASTEXITCODE -ne 0 -or $eventCommit -cnotmatch '^[0-9a-f]{40}$' -or
+              $checkoutCommit -cne $eventCommit) { throw 'R8_CHECKOUT_EXACT_GITHUB_SHA_HOLD' }
+          $trackedChanges=@(git status --porcelain --untracked-files=no)
+          if ($LASTEXITCODE -ne 0 -or $trackedChanges.Count -gt 0) { throw 'R8_TRACKED_SOURCE_DIRTY_HOLD' }
           $zip='coordination/nox-r8/NOX_R8_SOURCE.zip'
           $hash=(Get-FileHash $zip -Algorithm SHA256).Hash.ToLowerInvariant()
           if ($hash -ne 'a1ed386b4b9356c21a007c9c54dc2f98f27a25ede42bad91dafada99ddd70325') { throw 'SOURCE_HASH_MISMATCH' }
@@ -38,6 +46,24 @@ jobs:
           Copy-Item './coordination/nox-r8/tests/test_r8_ipc_contract.py' './r8/test_r8_ipc_contract.py'
           python './r8/test_r8_ipc_contract.py'
           if ($LASTEXITCODE -ne 0) { throw 'B02_NATIVE_IPC_SOURCE_HOLD' }
+          Copy-Item './coordination/nox-r8/tests/test_r8_provider_recovery.py' './r8/test_r8_provider_recovery.py'
+          python './r8/test_r8_provider_recovery.py'
+          if ($LASTEXITCODE -ne 0) { throw 'TECHFIRST_PROVIDER_AUTOSTART_SOURCE_HOLD' }
+          Copy-Item './coordination/nox-r8/tests/test_r8_sqlite_commit_unknown.py' './r8/test_r8_sqlite_commit_unknown.py'
+          python './r8/test_r8_sqlite_commit_unknown.py'
+          if ($LASTEXITCODE -ne 0) { throw 'NOX_B04_SQLITE_COMMIT_UNKNOWN_HOLD' }
+          # B04: run original Model Center request-owner and durable receipt regression.
+          # The test reads ../overrides/src relative to its original tests/ folder.
+          node './coordination/nox-r8/tests/test_r8_b04_model_selection.cjs'
+          if ($LASTEXITCODE -ne 0) { throw 'B04_MODEL_OWNER_RECEIPT_SOURCE_HOLD' }
+          # B03: fail-closed native checkpoint contract with isolated WAL/foreign-file fixture.
+          Copy-Item './coordination/nox-r8/tests/test_r8_b03_checkpoint_no_loss.py' './r8/test_r8_b03_checkpoint_no_loss.py'
+          python './r8/test_r8_b03_checkpoint_no_loss.py'
+          if ($LASTEXITCODE -ne 0) { throw 'B03_CHECKPOINT_NOLOSS_SOURCE_HOLD' }
+          # D01: execute actual embedded chat click handler with offline/overlength/valid drafts.
+          Copy-Item './coordination/nox-r8/tests/test_r8_d01_chat_draft.cjs' './r8/test_r8_d01_chat_draft.cjs'
+          node './r8/test_r8_d01_chat_draft.cjs'
+          if ($LASTEXITCODE -ne 0) { throw 'D01_CHAT_OWNER_DRAFT_HOLD' }
           dotnet publish './r8/src/NOX.HELION.csproj' -c Release -r win-x64 --self-contained true -o './out' -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:PublishTrimmed=false
           if ($LASTEXITCODE -ne 0) { throw 'BUILD_FAILED' }
           Get-FileHash './out/NOX.HELION.exe' -Algorithm SHA256
@@ -68,9 +94,15 @@ jobs:
                 $stamp -lt $started -or !$n.wpfWebView2Accepted -or
                 $n.checks.real_webview2_eight_routes -ne 'PASS' -or
                 $n.checks.real_webview2_keyboard_routes -ne 'PASS' -or
+                $n.checks.d01_five_quick_native_routes -ne 'PASS' -or
+                $n.checks.d01_five_quick_windows_uia -ne 'PASS' -or
+                $n.checks.d01_five_quick_compact_320_390_800 -ne 'PASS' -or
+                $n.checks.settings_windows_uia_host -ne 'PASS' -or
+                $n.checks.settings_webview2_accessible_controls -ne 'PASS' -or
                 $n.checks.settings_wpf_owner_sqlite_readback -ne 'PASS' -or
                 $n.checks.settings_wpf_motion_sqlite_readback -ne 'PASS' -or
                 $n.checks.settings_foreign_key_denial -ne 'PASS' -or
+                $n.checks.sqlite_native_backup_no_loss -ne 'PASS' -or
                 $n.checks.isolated_sqlite_path -ne 'PASS' -or
                 $n.checks.native_wpf_webview2_renderer -ne 'PASS' -or
                 ![string]::Equals($n.exeSha256,$sha,[StringComparison]::OrdinalIgnoreCase)) {

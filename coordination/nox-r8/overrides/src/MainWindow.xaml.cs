@@ -23,8 +23,19 @@ public partial class MainWindow : Window
 {
     private readonly HttpClient http = new() { Timeout = TimeSpan.FromMinutes(10) };
     private readonly SemaphoreSlim generationLock = new(1, 1);
+    // Single-flight: only the explicit WebView2 owner request may spawn Ollama.
+    private readonly SemaphoreSlim engineStartLock = new(1, 1);
+    // Reattach by polling the existing loopback service; never create another backend.
+    private readonly System.Windows.Threading.DispatcherTimer providerReconnectTimer = new()
+        { Interval = TimeSpan.FromSeconds(25) };
+    private int providerProbeEpoch;
+    private volatile bool providerProbeStopped;
     private CancellationTokenSource? active;
     private string? activeRequestId; // Owned by the current WebView2 document and chat request.
+    // A delayed replay after terminal ACK must not start a second Qwen inference
+    // or insert a duplicate SQLite conversation. Bounded to this WPF process.
+    private readonly HashSet<string> recentlyHandledChatIdSet = new(StringComparer.Ordinal);
+    private readonly Queue<string> recentlyHandledChatIds = new();
     private CancellationTokenSource? activeModelPull;
     private static readonly bool NativeSelfTestRequested = Environment.GetCommandLineArgs().Any(
         arg => arg.Equals("--nox-selftest", StringComparison.OrdinalIgnoreCase));
@@ -53,6 +64,7 @@ public partial class MainWindow : Window
     private bool pendingEmbeddedNavigation;
     private int stopSignalCount;
     private int generationStartedCount;
+    private int generationStreamingTokenCount; // Observed nonempty chunks from real Ollama HTTP NDJSON.
     private int generationFinishedCount;
     private volatile bool lastGenerationCompleted;
     private volatile bool lastGenerationStopped;
@@ -80,8 +92,18 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        // Expose the existing WPF WebView2 host to the Windows UI Automation tree.
+        // DOM controls inside the host retain their own HTML label/ARIA semantics.
+        System.Windows.Automation.AutomationProperties.SetAutomationId(Browser, "NOX_HELION_WEBVIEW2");
+        System.Windows.Automation.AutomationProperties.SetName(Browser, "NOX HELION embedded interface");
         Loaded += async (_, _) => await Initialize();
-        Closing += (_, _) => { active?.Cancel(); activeModelPull?.Cancel(); http.Dispose(); };
+        providerReconnectTimer.Tick += (_, _) => { if (active == null) _ = CheckProvider(); };
+        Closing += (_, _) => {
+            providerProbeStopped = true;
+            providerReconnectTimer.Stop();
+            Interlocked.Increment(ref providerProbeEpoch);
+            active?.Cancel(); activeModelPull?.Cancel(); http.Dispose();
+        };
         if (UiSmokeRequested) _ = UiSmokeWatchdogAsync();
     }
 
@@ -102,7 +124,6 @@ public partial class MainWindow : Window
             Browser.CoreWebView2.NewWindowRequested += (_, args) => args.Handled = true;
             Browser.CoreWebView2.PermissionRequested += (_, args) => args.State = CoreWebView2PermissionState.Deny;
             Browser.CoreWebView2.WebMessageReceived += OnMessage;
-            Browser.CoreWebView2.NavigationStarting += (_, _) => { active?.Cancel(); activeRequestId = null; };
             using var stream = typeof(MainWindow).Assembly.GetManifestResourceStream("NOX.HELION.index.html")
                 ?? throw new InvalidOperationException("Embedded D02 interface resource is missing");
             using var reader = new StreamReader(stream);
@@ -124,7 +145,10 @@ public partial class MainWindow : Window
                 // Runtime evidence belongs to the process that actually loaded WebView2,
                 // not to a source-only build or a previously launched EXE.
                 if (!selfTestRequested) WriteRuntimeReadyReceipt();
-                if (!UiSmokeRequested) _ = CheckProvider();
+                if (!selfTestRequested) _ = RecoverLocalEngineAtStartupAsync();
+                else if (!UiSmokeRequested) _ = CheckProvider();
+                if (!selfTestRequested && !providerReconnectTimer.IsEnabled)
+                    providerReconnectTimer.Start();
                 if (selfTestRequested && !selfTestStarted)
                 {
                     selfTestStarted = true;
@@ -144,15 +168,21 @@ public partial class MainWindow : Window
             };
             Browser.CoreWebView2.NavigationStarting += (_, args) =>
             {
-                // Trust one application-initiated embedded navigation only.
-                // Block all later external navigation to preserve the local-only boundary.
+                // Only the one startup NavigateToString belongs to this native IPC
+                // owner. A cancelled navigation (including a later about:blank)
+                // must not revoke the current chat/STOP or invalidate health.
                 if (pendingEmbeddedNavigation)
                 {
                     pendingEmbeddedNavigation = false;
+                    active?.Cancel();
+                    activeRequestId = null;
+                    Interlocked.Increment(ref providerProbeEpoch);
                     return;
                 }
-                if (!string.Equals(args.Uri, "about:blank", StringComparison.OrdinalIgnoreCase))
-                    args.Cancel = true;
+                // Fail closed for EVERY later top-level navigation. The old
+                // about:blank exception could replace the embedded document
+                // while still retaining WebMessageReceived native privileges.
+                args.Cancel = true;
             };
             pendingEmbeddedNavigation = true;
             Browser.NavigateToString(await reader.ReadToEndAsync());
@@ -315,6 +345,205 @@ public partial class MainWindow : Window
             checks["real_webview2_keyboard_routes"] = keyboard == "true" ? "PASS" : "FAIL";
             if (keyboard != "true") throw new InvalidOperationException("WebView2 keyboard route/ARIA verification failed");
 
+
+            // D01: physically execute all five original quick buttons in the
+            // running Windows WebView2. Navigation is real; no model download,
+            // training start, or user SQLite is touched in this isolated smoke.
+            var quickRoutes = await Browser.CoreWebView2.ExecuteScriptAsync("""
+                (() => {
+                  const buttons = [...document.querySelectorAll('.quick button')];
+                  const wanted = [['core','CHAT'],['nexus','MODELS'],
+                                  ['forge','LEARN'],['persona','SETTINGS']];
+                  if (buttons.length !== 5) return false;
+                  for (let i = 0; i < wanted.length; i++) {
+                    const button = buttons[i], [routeId,label] = wanted[i];
+                    if (button?.dataset.open !== routeId ||
+                        button.textContent.trim() !== label || button.disabled) return false;
+                    button.focus();
+                    if (document.activeElement !== button) return false;
+                    button.click();
+                    const current = [...document.querySelectorAll('button.core[aria-current="page"]')];
+                    if (current.length !== 1 || current[0].dataset.route !== routeId ||
+                        !document.querySelector(`.panel.active[data-panel="${routeId}"]`)) return false;
+                  }
+                  const max = buttons[4];
+                  if (max?.id !== 'maxMode' || !max.textContent.includes('MAX') || max.disabled)
+                    return false;
+                  max.focus();
+                  if (document.activeElement !== max) return false;
+                  max.click();
+                  return document.querySelector('.panel.active[data-panel="persona"]') !== null &&
+                    document.getElementById('performance')?.value === 'MAX';
+                })()
+                """);
+            if (quickRoutes != "true")
+                throw new InvalidOperationException("NOX_D01_FIVE_QUICK_NATIVE_ROUTES_HOLD");
+            checks["d01_five_quick_native_routes"] = "PASS";
+
+            // D06: test the real Windows UI Automation provider, not just DOM
+            // attributes. Query off the WPF UI thread to avoid cross-thread UIA
+            // deadlocks, using the live Window HWND of this smoke process.
+            var uiaHandle = new WindowInteropHelper(this).Handle;
+            var accessibleHost = await Task.Run(() =>
+            {
+                var root = System.Windows.Automation.AutomationElement.FromHandle(uiaHandle);
+                var browser = root?.FindFirst(
+                    System.Windows.Automation.TreeScope.Descendants,
+                    new System.Windows.Automation.PropertyCondition(
+                        System.Windows.Automation.AutomationElement.AutomationIdProperty,
+                        "NOX_HELION_WEBVIEW2"));
+                return browser != null &&
+                    browser.Current.Name == "NOX HELION embedded interface";
+            });
+            if (!accessibleHost)
+                throw new InvalidOperationException("NOX_SETTINGS_WINDOWS_UIA_HOST_HOLD");
+            checks["settings_windows_uia_host"] = "PASS";
+
+            // D01: use the actual Windows UI Automation provider. Chromium can
+            // expose its accessible renderer buttons under the top-level window
+            // rather than under the WPF WebView2 host's managed UIA subtree.
+            // Keep the host identity gate above; require all five physically
+            // exposed, enabled, onscreen UIA buttons. DOM alone is not a PASS.
+            string fiveQuickUiaDetail = "NOT_SCANNED";
+            bool fiveQuickUia = false;
+            for (int attempt = 0; attempt < 6 && !fiveQuickUia; attempt++)
+            {
+                var probe = await Task.Run(() =>
+                {
+                    var root = System.Windows.Automation.AutomationElement.FromHandle(uiaHandle);
+                    var host = root?.FindFirst(
+                        System.Windows.Automation.TreeScope.Descendants,
+                        new System.Windows.Automation.PropertyCondition(
+                            System.Windows.Automation.AutomationElement.AutomationIdProperty,
+                            "NOX_HELION_WEBVIEW2"));
+                    if (root == null || host == null)
+                        return (accepted: false, detail: "UIA_HOST_MISSING");
+                    var buttonCondition = new System.Windows.Automation.PropertyCondition(
+                        System.Windows.Automation.AutomationElement.ControlTypeProperty,
+                        System.Windows.Automation.ControlType.Button);
+                    var hostButtons = host.FindAll(
+                        System.Windows.Automation.TreeScope.Descendants, buttonCondition);
+                    var windowButtons = root.FindAll(
+                        System.Windows.Automation.TreeScope.Descendants, buttonCondition);
+                    var labels = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    // UIA rendering can be hosted by a child Chromium HWND that
+                    // is a sibling to the WPF WebView2 accessibility wrapper.
+                    // Both queries are constrained to this process's real HWND.
+                    foreach (System.Windows.Automation.AutomationElement button in hostButtons)
+                    {
+                        var current = button.Current;
+                        var bounds = current.BoundingRectangle;
+                        if (current.IsEnabled && !current.IsOffscreen &&
+                            !bounds.IsEmpty && bounds.Width >= 16 && bounds.Height >= 16)
+                            labels.Add(current.Name?.Trim() ?? "");
+                    }
+                    foreach (System.Windows.Automation.AutomationElement button in windowButtons)
+                    {
+                        var current = button.Current;
+                        var bounds = current.BoundingRectangle;
+                        if (current.IsEnabled && !current.IsOffscreen &&
+                            !bounds.IsEmpty && bounds.Width >= 16 && bounds.Height >= 16)
+                            labels.Add(current.Name?.Trim() ?? "");
+                    }
+                    var required = new[] { "CHAT", "MODELS", "LEARN", "SETTINGS" };
+                    var missing = string.Join(",", required.Where(name => !labels.Contains(name)));
+                    bool maxPresent = labels.Any(name =>
+                        name.Contains("MAX", StringComparison.OrdinalIgnoreCase));
+                    // Diagnostics carry counts and missing expected labels, never
+                    // arbitrary UI text, chat content or model/user data.
+                    var detail = $"HOST_BUTTONS={hostButtons.Count};WINDOW_BUTTONS={windowButtons.Count};" +
+                        $"VISIBLE_UNIQUE={labels.Count};MISSING={missing};MAX={maxPresent}";
+                    return (accepted: missing.Length == 0 && maxPresent, detail);
+                });
+                fiveQuickUia = probe.accepted;
+                fiveQuickUiaDetail = probe.detail;
+                if (!fiveQuickUia && attempt < 5)
+                    await Task.Delay(250); // bounded Chromium UIA materialization
+            }
+            if (!fiveQuickUia)
+                throw new InvalidOperationException(
+                    "NOX_D01_FIVE_QUICK_WINDOWS_UIA_HOLD: " + fiveQuickUiaDetail);
+            checks["d01_five_quick_windows_uia"] = "PASS";
+
+            // D01: resize the real embedded browser to 320/390/800 CSS-pixel
+            // widths. Verify five enabled, visible targets without modifying
+            // canonical D02 styling or inventing a simulated DOM screenshot.
+            var priorBrowserWidth = Browser.Width;
+            try
+            {
+                foreach (var viewportWidth in new[] { 320, 390, 800 })
+                {
+                    Browser.Width = viewportWidth;
+                    Browser.UpdateLayout();
+                    var compactProbe = """
+                        (() => {
+                          const expected = __WIDTH__;
+                          const viewport = window.innerWidth;
+                          const side = document.querySelector('aside.side');
+                          const quick = [...document.querySelectorAll('.quick button')];
+                          if (Math.abs(viewport-expected) > 4 || !side ||
+                              quick.length !== 5 ||
+                              getComputedStyle(side).overflowY === 'hidden') return false;
+                          if (document.querySelectorAll('button.core[data-route]').length !== 8)
+                              return false;
+                          return quick.every(button => {
+                            const rect = button.getBoundingClientRect();
+                            return !button.disabled && rect.width >= 44 && rect.height >= 28 &&
+                              rect.left >= -1 && rect.right <= viewport + 1 &&
+                              getComputedStyle(button).visibility !== 'hidden';
+                          });
+                        })()
+                        """.Replace("__WIDTH__", viewportWidth.ToString(
+                            System.Globalization.CultureInfo.InvariantCulture));
+                    bool viewportAccepted = false;
+                    for (int attempt = 0; attempt < 15; attempt++)
+                    {
+                        await Task.Delay(120);
+                        if (await Browser.CoreWebView2.ExecuteScriptAsync(compactProbe) == "true")
+                        {
+                            viewportAccepted = true;
+                            break;
+                        }
+                    }
+                    if (!viewportAccepted)
+                        throw new InvalidOperationException(
+                            "NOX_D01_COMPACT_WEBVIEW2_VIEWPORT_HOLD_" + viewportWidth);
+                }
+            }
+            finally
+            {
+                Browser.Width = priorBrowserWidth;
+                Browser.UpdateLayout();
+            }
+            checks["d01_five_quick_compact_320_390_800"] = "PASS";
+
+            // DOM accessibility must also survive in real WebView2:
+            // visible labels, enabled buttons, live receipt region and focus.
+            var accessibleSettings = await Browser.CoreWebView2.ExecuteScriptAsync("""
+                (() => {
+                  document.querySelector('button.core[data-route="persona"]')?.click();
+                  const persona = document.getElementById('persona');
+                  const mode = document.getElementById('performance');
+                  const motion = document.getElementById('reduceMotion');
+                  const status = document.getElementById('personaStatus');
+                  const label = document.querySelector('label[for="persona"]');
+                  const modeLabel = document.querySelector('label[for="performance"]');
+                  const save = document.getElementById('savePerformance');
+                  if (!persona || !mode || !motion || !status || !label ||
+                      !modeLabel || !save || !motion.closest('label')) return false;
+                  if (!label.textContent.trim() || !modeLabel.textContent.trim() ||
+                      status.getAttribute('role') !== 'status' ||
+                      status.getAttribute('aria-live') !== 'polite' ||
+                      mode.disabled || persona.disabled || save.disabled) return false;
+                  mode.focus();
+                  return document.activeElement === mode &&
+                    [...mode.options].map(x => x.value).join(',') === 'MAX,BALANCED,ECO';
+                })()
+                """);
+            if (accessibleSettings != "true")
+                throw new InvalidOperationException("NOX_SETTINGS_WEBVIEW2_ACCESSIBILITY_HOLD");
+            checks["settings_webview2_accessible_controls"] = "PASS";
+
             // Check native SQLite isolation: no use of an existing live chat database.
             var realPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                 "NOX_HELION", "chat.sqlite3");
@@ -352,6 +581,18 @@ public partial class MainWindow : Window
                 if (!string.Equals(read.ExecuteScalar() as string, "ECO", StringComparison.Ordinal))
                     throw new InvalidOperationException("Settings SQLite independent readback failed");
             }
+            // SQL alone is not enough: the live WebView2 must render the
+            // owner-correlated receipt after the independently verified COMMIT.
+            bool modeReceiptVisible = false;
+            for (int attempt = 0; attempt < 35; attempt++)
+            {
+                var receiptDom = await Browser.CoreWebView2.ExecuteScriptAsync(
+                    "document.getElementById('personaStatus')?.textContent.includes('SQLite подтверждена: performance = ECO')");
+                if (receiptDom == "true") { modeReceiptVisible = true; break; }
+                await Task.Delay(100);
+            }
+            if (!modeReceiptVisible)
+                throw new InvalidOperationException("NOX_SETTINGS_OWNER_RECEIPT_HOLD");
             checks["settings_wpf_owner_sqlite_readback"] = "PASS";
 
             // D06: use the real WebView2 checkbox/button and WPF settings.put
@@ -384,6 +625,16 @@ public partial class MainWindow : Window
                 if (!string.Equals(readMotion.ExecuteScalar() as string, "off", StringComparison.Ordinal))
                     throw new InvalidOperationException("NOX_SETTINGS_MOTION_SQLITE_HOLD");
             }
+            bool motionReceiptVisible = false;
+            for (int attempt = 0; attempt < 35; attempt++)
+            {
+                var receiptDom = await Browser.CoreWebView2.ExecuteScriptAsync(
+                    "document.getElementById('personaStatus')?.textContent.includes('SQLite подтверждена: motion = off')");
+                if (receiptDom == "true") { motionReceiptVisible = true; break; }
+                await Task.Delay(100);
+            }
+            if (!motionReceiptVisible)
+                throw new InvalidOperationException("NOX_SETTINGS_MOTION_RECEIPT_HOLD");
             checks["settings_wpf_motion_sqlite_readback"] = "PASS";
 
             // D06: reject a foreign key through the real native owner route.
@@ -392,7 +643,7 @@ public partial class MainWindow : Window
             var denialPost = await Browser.CoreWebView2.ExecuteScriptAsync("""
                 (() => {
                   if (!window.chrome?.webview) return false;
-                  window.chrome.webview.postMessage({type:'settings.put',key:'foreign',value:'on'});
+                  window.chrome.webview.postMessage({type:'settings.put',key:'foreign',value:'on',requestId:'smoke_foreign_0001'});
                   return true;
                 })()
                 """);
@@ -416,6 +667,8 @@ public partial class MainWindow : Window
                     throw new InvalidOperationException("NOX_SETTINGS_FOREIGN_KEY_WRITTEN_HOLD");
             }
             checks["settings_foreign_key_denial"] = "PASS";
+            VerifyIsolatedSqliteBackup();
+            checks["sqlite_native_backup_no_loss"] = "PASS";
             checks["native_wpf_webview2_renderer"] = Browser.CoreWebView2 != null ? "PASS" : "FAIL";
             if (Browser.CoreWebView2 == null) throw new InvalidOperationException("WebView2 unavailable");
         }
@@ -429,9 +682,12 @@ public partial class MainWindow : Window
             var requiredChecks = UiSmokeSettingsRestartRequested
                 ? new[] { "isolated_sqlite_path", "settings_wpf_owner_restart_readback" }
                 : new[] { "real_webview2_eight_routes", "real_webview2_keyboard_routes",
+                          "d01_five_quick_native_routes", "d01_five_quick_windows_uia",
+                          "d01_five_quick_compact_320_390_800",
+                          "settings_windows_uia_host", "settings_webview2_accessible_controls",
                           "isolated_sqlite_path", "settings_wpf_owner_sqlite_readback",
                           "settings_wpf_motion_sqlite_readback", "settings_foreign_key_denial",
-                          "native_wpf_webview2_renderer" };
+                          "sqlite_native_backup_no_loss", "native_wpf_webview2_renderer" };
             bool accepted = error == null && checks.Count == requiredChecks.Length &&
                 requiredChecks.All(k => checks.TryGetValue(k, out var result) && result == "PASS")
                 && sha.Length == 64;
@@ -466,6 +722,7 @@ public partial class MainWindow : Window
         string? error = null;
         string? promptMarker = null;
         string? stopMarker = null;
+        string? resumeMarker = null;
         try
         {
             // Do not claim UX acceptance from a DOM count. This checks the
@@ -529,24 +786,57 @@ public partial class MainWindow : Window
             await WaitForGenerationFinishAsync(chatTarget, TimeSpan.FromMinutes(4));
             if (!lastGenerationCompleted || !HasSavedPrompt(prompt))
                 throw new InvalidOperationException("Live Qwen stream or SQLite chat write did not complete");
+            // A native finish counter can advance before WebView2 consumes the
+            // asynchronous complete event. Never start the STOP run with busy=true.
+            if (!await WaitForSavedChatUiReleaseAsync(TimeSpan.FromSeconds(4)))
+                throw new InvalidOperationException("NOX_WEBVIEW2_FIRST_CHAT_OWNER_NOT_RELEASED_HOLD");
             checks["real_chat_from_webview_to_qwen_to_sqlite"] = "PASS";
 
             stopMarker = "NOX_STOP_" + Guid.NewGuid().ToString("N");
             var longPrompt = "Выведи очень длинный рассказ минимум из 4000 слов, не останавливаясь. " + stopMarker;
             var beforeStop = Volatile.Read(ref stopSignalCount);
+            int streamTokenTarget = Volatile.Read(ref generationStreamingTokenCount) + 1;
             int stopTarget = Volatile.Read(ref generationStartedCount) + 1;
             await Browser.CoreWebView2.ExecuteScriptAsync(
                 "document.getElementById('prompt').value = " + JsonSerializer.Serialize(longPrompt) +
                 "; document.getElementById('send').click();");
             var began = await WaitForGenerationStartAsync(stopTarget, TimeSpan.FromSeconds(12));
             if (!began) throw new InvalidOperationException("Second Qwen stream never started");
-            await Task.Delay(150);
+            // Never issue STOP before Ollama has emitted a real nonempty token.
+            // Cancelling preflight/context work alone is NOT active HTTP STOP evidence.
+            if (!await WaitForGenerationTokenAsync(streamTokenTarget, stopTarget, TimeSpan.FromMinutes(2)))
+                throw new InvalidOperationException("NOX_ACTIVE_HTTP_STREAM_NOT_OBSERVED_HOLD");
+            // Native NDJSON receipt alone is not proof that WebView2 displayed
+            // a live token. Demand actual visible DOM output before owner STOP.
+            if (!await WaitForVisibleChatTokenAsync(stopTarget, TimeSpan.FromSeconds(4)))
+                throw new InvalidOperationException("NOX_WEBVIEW2_STREAM_TOKEN_NOT_VISIBLE_HOLD");
             await Browser.CoreWebView2.ExecuteScriptAsync("document.getElementById('stop').click();");
             await WaitForGenerationFinishAsync(stopTarget, TimeSpan.FromSeconds(30));
             if (Volatile.Read(ref stopSignalCount) <= beforeStop ||
                 !lastGenerationStopped || HasSavedPrompt(longPrompt))
                 throw new InvalidOperationException("Native STOP was not confirmed");
+            // Confirm the SAME WebView2 owner is released after HTTP cancellation,
+            // not merely that native counters moved. No fake provider is used.
+            if (!await WaitForStopUiReleaseAsync(TimeSpan.FromSeconds(4)))
+                throw new InvalidOperationException("NOX_WEBVIEW2_STOP_OWNER_NOT_RELEASED_HOLD");
             checks["real_webview_stop_cancel_no_partial_persistence"] = "PASS";
+            // Native/JS STOP may appear complete while the request lock or
+            // UI composer remains unusable. Prove fresh owner acquisition,
+            // another genuine Qwen answer, and durable SQLite readback.
+            resumeMarker = "NOX_RESUME_" + Guid.NewGuid().ToString("N");
+            var resumePrompt = "Ответь одним коротким словом на русском: какое число после 4? " + resumeMarker;
+            int resumeTarget = Volatile.Read(ref generationStartedCount) + 1;
+            await Browser.CoreWebView2.ExecuteScriptAsync(
+                "document.getElementById('prompt').value = " + JsonSerializer.Serialize(resumePrompt) +
+                "; document.getElementById('send').click();");
+            if (!await WaitForGenerationStartAsync(resumeTarget, TimeSpan.FromSeconds(12)))
+                throw new InvalidOperationException("NOX_CHAT_AFTER_STOP_START_HOLD");
+            await WaitForGenerationFinishAsync(resumeTarget, TimeSpan.FromMinutes(4));
+            if (!lastGenerationCompleted || lastGenerationStopped || !HasSavedPrompt(resumePrompt))
+                throw new InvalidOperationException("NOX_CHAT_AFTER_STOP_SQLITE_HOLD");
+            if (!await WaitForSavedChatUiReleaseAsync(TimeSpan.FromSeconds(4)))
+                throw new InvalidOperationException("NOX_WEBVIEW2_RESUMED_CHAT_OWNER_NOT_RELEASED_HOLD");
+            checks["real_chat_after_http_stop_sqlite"] = "PASS";
         }
         catch (Exception ex)
         {
@@ -558,9 +848,10 @@ public partial class MainWindow : Window
             try
             {
                 if (promptMarker != null) DeleteSyntheticChats(promptMarker, stopMarker);
+                if (resumeMarker != null) DeleteSyntheticChats(resumeMarker, null);
             }
             catch (Exception e) { error = (error ?? "") + " cleanup:" + e.Message; }
-            var accepted = error == null && checks.Count == 5 && checks.Values.All(v => v == "PASS");
+            var accepted = error == null && checks.Count == 6 && checks.Values.All(v => v == "PASS");
             var exePath = Environment.ProcessPath ?? "";
             var sha = "";
             try { if (File.Exists(exePath)) sha = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(exePath))); }
@@ -609,6 +900,88 @@ public partial class MainWindow : Window
         while (DateTime.UtcNow < until)
         {
             if (Volatile.Read(ref generationStartedCount) >= target) return true;
+            await Task.Delay(75);
+        }
+        return false;
+    }
+
+    // Independent of generationStartedCount: a started native task is not
+    // evidence that Ollama actually streamed. Fail closed if it finishes first.
+    private async Task<bool> WaitForGenerationTokenAsync(int tokenTarget, int generationTarget, TimeSpan timeout)
+    {
+        var until = DateTime.UtcNow + timeout;
+        while (DateTime.UtcNow < until)
+        {
+            if (Volatile.Read(ref generationFinishedCount) >= generationTarget) return false;
+            if (Volatile.Read(ref generationStreamingTokenCount) >= tokenTarget) return true;
+            await Task.Delay(75);
+        }
+        return false;
+    }
+
+    private async Task<bool> WaitForVisibleChatTokenAsync(int generationTarget, TimeSpan timeout)
+    {
+        var until = DateTime.UtcNow + timeout;
+        while (DateTime.UtcNow < until)
+        {
+            if (Volatile.Read(ref generationFinishedCount) >= generationTarget) return false;
+            var visible = await Browser.CoreWebView2.ExecuteScriptAsync("""
+                (() => {
+                  const row = document.getElementById('messages')?.firstElementChild;
+                  const label = row?.querySelector('small');
+                  const body = row?.lastElementChild;
+                  return label?.textContent === 'NOX QWEN' &&
+                    !!body?.textContent &&
+                    body.textContent === lastAnswer &&
+                    busy === true && activeChatId !== null &&
+                    document.getElementById('generation')?.classList.contains('on') === true;
+                })()
+                """);
+            if (visible == "true" && Volatile.Read(ref generationFinishedCount) < generationTarget)
+                return true;
+            await Task.Delay(75);
+        }
+        return false;
+    }
+
+    private async Task<bool> WaitForStopUiReleaseAsync(TimeSpan timeout)
+    {
+        var until = DateTime.UtcNow + timeout;
+        while (DateTime.UtcNow < until)
+        {
+            var released = await Browser.CoreWebView2.ExecuteScriptAsync("""
+                (() => {
+                  const busyIndicator = document.getElementById('generation');
+                  const hint = document.getElementById('streamHint');
+                  return busy === false && activeChatId === null &&
+                    busyIndicator?.classList.contains('on') === false &&
+                    hint?.textContent?.includes('Частичный ответ не сохранён') === true;
+                })()
+                """);
+            if (released == "true") return true;
+            await Task.Delay(75);
+        }
+        return false;
+    }
+
+    // A native generation may finish before WebView2 receives its terminal ACK.
+    // Verify the real composer is unlocked and displays *this* saved outcome.
+    // Used only by opt-in native acceptance, never production chat dispatch.
+    private async Task<bool> WaitForSavedChatUiReleaseAsync(TimeSpan timeout)
+    {
+        var until = DateTime.UtcNow + timeout;
+        while (DateTime.UtcNow < until)
+        {
+            var released = await Browser.CoreWebView2.ExecuteScriptAsync("""
+                (() => {
+                  const hint = document.getElementById('streamHint');
+                  const indicator = document.getElementById('generation');
+                  return busy === false && activeChatId === null &&
+                    indicator?.classList.contains('on') === false &&
+                    hint?.textContent === 'Ответ завершён и сохранён в SQLite.';
+                })()
+                """);
+            if (released == "true") return true;
             await Task.Delay(75);
         }
         return false;
@@ -691,13 +1064,26 @@ public partial class MainWindow : Window
 
     // Owner-only SQLite, including WAL: backup and verify a snapshot before any
     // schema mutation or VUNEO import. No parallel database or source deletion.
+    // Hash backups with bounded memory. Reading whole SQLite into a byte[] can
+    // fail for long-lived databases and must never be a prerequisite for NO-LOSS.
+    private static string Sha256File(string file)
+    {
+        using var stream = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.Read);
+        return Convert.ToHexString(SHA256.HashData(stream));
+    }
+
+    // Snapshot the existing owner's SQLite before schema mutation or import.
+    // Both the database and manifest are new entries: never replace owner files.
     private string CheckpointSqlite(SqliteConnection source, string purpose)
     {
         string dir = Path.Combine(Path.GetDirectoryName(dbPath)!, "backups");
+        ValidateBackupParent(Path.GetDirectoryName(dir)!);
         Directory.CreateDirectory(dir);
+        ValidateBackupParent(dir);
         string file = Path.Combine(dir, "NOX_" + purpose + "_" +
             DateTimeOffset.UtcNow.ToString("yyyyMMdd_HHmmss_fff") + "_" +
             Guid.NewGuid().ToString("N") + ".sqlite3");
+        using (var reservation = new FileStream(file, FileMode.CreateNew, FileAccess.Write, FileShare.None)) { }
         using (var dest = new SqliteConnection(new SqliteConnectionStringBuilder {
             DataSource = file, Mode = SqliteOpenMode.ReadWriteCreate, Pooling = false }.ToString()))
         {
@@ -713,10 +1099,85 @@ public partial class MainWindow : Window
             if (!string.Equals(integrity.ExecuteScalar() as string, "ok", StringComparison.OrdinalIgnoreCase))
                 throw new InvalidOperationException("NOX_SQLITE_BACKUP_INTEGRITY_HOLD");
         }
-        string sha = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(file)));
-        File.WriteAllText(file + ".sha256.tmp", sha + "  " + Path.GetFileName(file), Encoding.UTF8);
-        File.Move(file + ".sha256.tmp", file + ".sha256");
+        string sha = Sha256File(file);
+        string manifest = file + ".sha256";
+        string stagedManifest = manifest + "." + Guid.NewGuid().ToString("N") + ".partial";
+        string record = sha + "  " + Path.GetFileName(file) + "\n";
+        using (var output = new FileStream(stagedManifest, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+        {
+            byte[] data = Encoding.UTF8.GetBytes(record);
+            output.Write(data, 0, data.Length);
+            output.Flush(flushToDisk: true);
+        }
+        ValidateBackupParent(dir);
+        File.Move(stagedManifest, manifest, overwrite: false);
+        if (!string.Equals(File.ReadAllText(manifest, Encoding.UTF8), record, StringComparison.Ordinal))
+            throw new InvalidOperationException("NOX_SQLITE_BACKUP_MANIFEST_READBACK_HOLD");
+        if (!string.Equals(Sha256File(file), sha, StringComparison.Ordinal))
+            throw new InvalidOperationException("NOX_SQLITE_BACKUP_SHA_READBACK_HOLD");
         return file;
+    }
+
+    // B03: actual native SQLite BackupDatabase + manifest verification against
+    // the isolated UI smoke database. No live owner database, foreign file,
+    // model or trainer is opened or modified by this acceptance probe.
+    private void VerifyIsolatedSqliteBackup()
+    {
+        if (!UiSmokeRequested ||
+            !Path.GetFileName(dbPath).StartsWith("selftest_r8_", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("NOX_B03_SMOKE_NOT_ISOLATED_HOLD");
+
+        using var live = OpenDatabase();
+        using (var mode = live.CreateCommand())
+        {
+            mode.CommandText = "SELECT value FROM preferences WHERE key='performance'";
+            if (!string.Equals(mode.ExecuteScalar() as string, "ECO", StringComparison.Ordinal))
+                throw new InvalidOperationException("NOX_B03_SMOKE_PREIMAGE_HOLD");
+        }
+
+        string snapshot = CheckpointSqlite(live, "SMOKE_ISOLATED");
+        string sha = Sha256File(snapshot);
+        string expectedManifest = sha + "  " + Path.GetFileName(snapshot) + "\n";
+        if (!string.Equals(File.ReadAllText(snapshot + ".sha256", Encoding.UTF8),
+                           expectedManifest, StringComparison.Ordinal))
+            throw new InvalidOperationException("NOX_B03_SMOKE_MANIFEST_HOLD");
+
+        using (var copy = new SqliteConnection(new SqliteConnectionStringBuilder {
+            DataSource = snapshot, Mode = SqliteOpenMode.ReadOnly, Pooling = false }.ToString()))
+        {
+            copy.Open();
+            using var verify = copy.CreateCommand();
+            verify.CommandText = "PRAGMA quick_check";
+            if (!string.Equals(verify.ExecuteScalar() as string, "ok", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("NOX_B03_SMOKE_INTEGRITY_HOLD");
+            verify.CommandText = "SELECT value FROM preferences WHERE key='performance'";
+            if (!string.Equals(verify.ExecuteScalar() as string, "ECO", StringComparison.Ordinal))
+                throw new InvalidOperationException("NOX_B03_SMOKE_SNAPSHOT_ROWS_HOLD");
+        }
+        using (var unchanged = live.CreateCommand())
+        {
+            unchanged.CommandText = "SELECT value FROM preferences WHERE key='performance'";
+            if (!string.Equals(unchanged.ExecuteScalar() as string, "ECO", StringComparison.Ordinal))
+                throw new InvalidOperationException("NOX_B03_SMOKE_SOURCE_CHANGED_HOLD");
+        }
+        if (!string.Equals(Sha256File(snapshot), sha, StringComparison.Ordinal))
+            throw new InvalidOperationException("NOX_B03_SMOKE_SHA_READBACK_HOLD");
+    }
+
+    // Fail closed if any existing parent is a Windows junction / symlink,
+    // ordinary file, missing folder, or inaccessible entry. No deletes.
+    private static void ValidateBackupParent(string directory)
+    {
+        for (DirectoryInfo? current = new DirectoryInfo(Path.GetFullPath(directory));
+             current != null; current = current.Parent)
+        {
+            if (!current.Exists)
+                throw new InvalidOperationException("NOX_BACKUP_PARENT_MISSING_HOLD");
+            var attrs = current.Attributes;
+            if ((attrs & FileAttributes.ReparsePoint) != 0 ||
+                (attrs & FileAttributes.Directory) == 0)
+                throw new InvalidOperationException("NOX_BACKUP_PARENT_REPARSE_HOLD");
+        }
     }
 
     private static bool HasPersonaColumn(SqliteConnection db, string table)
@@ -804,12 +1265,45 @@ public partial class MainWindow : Window
         receipt.ExecuteNonQuery(); tx.Commit();
     }
 
+    // JsonDocument.GetProperty selects the last duplicate property. Native IPC
+    // must not interpret ambiguous JSON (including nested settings payloads).
+    // System.Text.Json already bounds nesting to its parser maximum depth.
+    private static bool HasDuplicateJsonProperties(JsonElement element)
+    {
+        if (element.ValueKind == JsonValueKind.Object)
+        {
+            var names = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var property in element.EnumerateObject())
+                if (!names.Add(property.Name) || HasDuplicateJsonProperties(property.Value))
+                    return true;
+        }
+        else if (element.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in element.EnumerateArray())
+                if (HasDuplicateJsonProperties(item)) return true;
+        }
+        return false;
+    }
+
     private async void OnMessage(object? sender, CoreWebView2WebMessageReceivedEventArgs e)
     {
         try
         {
-            using var document = JsonDocument.Parse(e.WebMessageAsJson);
+            // Reject oversized or structurally ambiguous WebView2 messages
+            // before parsing a native action, consent or owner requestId.
+            var rawMessage = e.WebMessageAsJson;
+            if (rawMessage.Length > 512 * 1024)
+            {
+                Send("error", "NOX_IPC_MESSAGE_TOO_LARGE_DENIED");
+                return;
+            }
+            using var document = JsonDocument.Parse(rawMessage);
             var request = document.RootElement;
+            if (request.ValueKind != JsonValueKind.Object || HasDuplicateJsonProperties(request))
+            {
+                Send("error", "NOX_IPC_AMBIGUOUS_JSON_DENIED");
+                return;
+            }
             var kind = request.GetProperty("type").GetString() ?? "";
             string Text(string name) => request.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String ? (value.GetString() ?? "") : "";
             switch (kind)
@@ -828,12 +1322,12 @@ public partial class MainWindow : Window
                 case "notes.delete": DeleteNote(request.GetProperty("id").GetInt64()); Send("notes", ReadNotes()); break;
                 case "feedback": SaveFeedback(request.GetProperty("rating").GetInt32(), Text("answer")); Send("notice", "Оценка сохранена локально; это не обучение весов."); break;
                 case "backup": BackupLocalDatabase(); break;
-                case "model.select": await SelectModel(Text("model")); break;
+                case "model.select": await SelectModel(Text("model"), Text("requestId")); break;
                 case "model.pull": await PullExistingProviderModel(Text("model")); break;
                 case "model.cancel": activeModelPull?.Cancel(); break;
                 case "tasks.list": Send("tasks", ReadTasks()); break;
                 case "tasks.add": HandleTaskAdd(Text("text"), Text("requestId")); break;
-                case "tasks.toggle": ToggleTask(request.GetProperty("id").GetInt64()); Send("tasks", ReadTasks()); break;
+                case "tasks.toggle": HandleTaskToggle(request.GetProperty("id").GetInt64(), Text("requestId")); break;
                 case "settings.get": Send("settings", ReadPreferences()); break;
                 case "settings.put": HandleSettingsPut(request); break;
                 case "health": await CheckProvider(); break;
@@ -856,23 +1350,99 @@ public partial class MainWindow : Window
 
     private void Send(string type, object value)
     {
+        // Late Ollama stream callbacks may outlive the WebView2 document.
+        // Never dispatch into a WPF dispatcher that is closing or disposed.
+        if (providerProbeStopped || Dispatcher.HasShutdownStarted || Dispatcher.HasShutdownFinished)
+            return;
         var data = JsonSerializer.Serialize(new { type, value });
-        Dispatcher.Invoke(() => Browser.CoreWebView2?.PostWebMessageAsJson(data));
+        void PostIfAlive()
+        {
+            // Recheck on the UI thread: shutdown may begin during Invoke dispatch.
+            if (providerProbeStopped || Dispatcher.HasShutdownStarted || Dispatcher.HasShutdownFinished)
+                return;
+            Browser.CoreWebView2?.PostWebMessageAsJson(data);
+        }
+        try
+        {
+            if (Dispatcher.CheckAccess()) PostIfAlive();
+            else Dispatcher.Invoke((Action)PostIfAlive);
+        }
+        // Suppress transport errors only while actually closing; normal errors
+        // still propagate to the existing native IPC owner.
+        catch (ObjectDisposedException) when (providerProbeStopped) { }
+        catch (OperationCanceledException) when (providerProbeStopped || Dispatcher.HasShutdownStarted) { }
+        catch (InvalidOperationException) when (providerProbeStopped || Dispatcher.HasShutdownStarted) { }
     }
 
-    private async Task StartLocalEngine()
+    // One local engine owner and one launcher at a time, for UI click, startup or chat.
+    private async Task StartLocalEngine(CancellationToken stopToken = default)
     {
-        // Explicit owner-triggered recovery. Never stop or restart any existing process.
+        // Owner/startup clicks never queue another launcher. An active chat may
+        // wait for the same owner lock, but STOP cancels that wait immediately.
+        if (!stopToken.CanBeCanceled)
+        {
+            if (!engineStartLock.Wait(0))
+            {
+                if (!providerProbeStopped) Send("notice", "Запуск локального Ollama уже выполняется.");
+                return;
+            }
+        }
+        else await engineStartLock.WaitAsync(stopToken);
+        try
+        {
+            if (providerProbeStopped) return;
+            stopToken.ThrowIfCancellationRequested();
+            await StartLocalEngineCore(stopToken);
+        }
+        catch (OperationCanceledException) when (stopToken.IsCancellationRequested)
+        {
+            // A chat-owned STOP must stay STOP, never turn into an engine failure.
+            throw;
+        }
+        catch (ObjectDisposedException) when (providerProbeStopped) { }
+        catch (Exception ex) when (!providerProbeStopped &&
+            (ex is InvalidOperationException ||
+             ex is System.ComponentModel.Win32Exception ||
+             ex is UnauthorizedAccessException ||
+             ex is IOException ||
+             ex is HttpRequestException ||
+             ex is OperationCanceledException))
+        {
+            if (stopToken.CanBeCanceled) throw; // Native chat emits its own correlated error.
+            Send("notice", "LOCAL_PROVIDER_START_FAILED: " + ex.Message);
+            await CheckProvider(); // Actual /api/tags, never invented ONLINE.
+        }
+        finally {
+            engineStartLock.Release();
+        }
+    }
+
+    private async Task RecoverLocalEngineAtStartupAsync()
+    {
+        // Ordinary launch only. Never auto-start during isolated smoke acceptance.
+        try { await StartLocalEngine(); }
+        catch (Exception ex) {
+            Send("health", new { online = false, endpoint = Api, model = CurrentModel,
+                error = "NOX_PROVIDER_RECOVERY_HOLD: " + ex.Message });
+        }
+    }
+
+    private async Task StartLocalEngineCore(CancellationToken stopToken)
+    {
+        if (providerProbeStopped) return;
+        // Recover only the known local Ollama. Never stop or restart another process.
         // Do not download models and do not follow arbitrary network endpoints.
         try
         {
-            using var probe = new CancellationTokenSource(TimeSpan.FromSeconds(4));
+            using var probe = CancellationTokenSource.CreateLinkedTokenSource(stopToken);
+            probe.CancelAfter(TimeSpan.FromSeconds(4));
             using var existingCheck = await http.GetAsync(Api + "/api/tags", probe.Token);
             if (existingCheck.IsSuccessStatusCode) { await CheckProvider(); return; }
         }
         catch (HttpRequestException) { /* Local engine may be stopped. */ }
-        catch (TaskCanceledException) { /* Retry start after a failed health request. */ }
+        catch (TaskCanceledException) when (!stopToken.IsCancellationRequested) { /* Retry start after a failed health request. */ }
 
+        stopToken.ThrowIfCancellationRequested();
         if (System.Net.NetworkInformation.IPGlobalProperties.GetIPGlobalProperties()
             .GetActiveTcpListeners().Any(x => x.Port == 11436))
             throw new InvalidOperationException("Порт 11436 занят другим процессом; он не будет остановлен.");
@@ -890,50 +1460,86 @@ public partial class MainWindow : Window
         ps.Environment["OLLAMA_HOST"] = "127.0.0.1:11436";
         ps.Environment["OLLAMA_MODELS"] = modelDir;
         Send("notice", "Запускаю существующий локальный Ollama. Модели не загружаются.");
+        if (providerProbeStopped) return;
+        stopToken.ThrowIfCancellationRequested();
         var launched = Process.Start(ps);
         if (launched == null) throw new InvalidOperationException("Не удалось запустить локальный Ollama");
         for (int i = 0; i < 30; ++i) {
-            await Task.Delay(1000);
+            await Task.Delay(1000, stopToken);
+            if (providerProbeStopped) return;
             try {
-                using var probe = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+                using var probe = CancellationTokenSource.CreateLinkedTokenSource(stopToken);
+                probe.CancelAfter(TimeSpan.FromSeconds(3));
                 using var r = await http.GetAsync(Api + "/api/tags", probe.Token);
                 if (r.IsSuccessStatusCode) { await CheckProvider(); return; }
-            } catch (HttpRequestException) { } catch (TaskCanceledException) { }
+            } catch (HttpRequestException) { } catch (TaskCanceledException) when (!stopToken.IsCancellationRequested) { }
         }
         throw new InvalidOperationException("Ollama не готов после запуска; существующие данные не изменены");
     }
 
     private async Task CheckProvider()
     {
+        // Startup, routes and reconnect ticks can finish out of order. The
+        // newest request wins; a failed OLD probe cannot hide a live provider.
+        int probeEpoch = Interlocked.Increment(ref providerProbeEpoch);
+        string selected = DefaultModel;
         try
         {
+            selected = CurrentModel;
             using var probe = new CancellationTokenSource(TimeSpan.FromSeconds(4));
             using var response = await http.GetAsync(Api + "/api/tags", probe.Token);
             response.EnsureSuccessStatusCode();
             using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
             var names = json.RootElement.GetProperty("models").EnumerateArray()
                 .Select(x => x.GetProperty("name").GetString() ?? "").ToArray();
-            var selected = CurrentModel;
-            Send("health", new { online = true, endpoint = Api, model = selected, modelVisible = names.Contains(selected), models = names });
+            if (!providerProbeStopped && active == null && probeEpoch == Volatile.Read(ref providerProbeEpoch))
+                Send("health", new { online = true, endpoint = Api, model = selected,
+                    modelVisible = names.Contains(selected), models = names });
         }
-        catch (Exception ex) { Send("health", new { online = false, endpoint = Api, model = CurrentModel, error = ex.Message }); }
+        catch (Exception ex)
+        {
+            if (!providerProbeStopped && active == null && probeEpoch == Volatile.Read(ref providerProbeEpoch))
+                Send("health", new { online = false, endpoint = Api, model = selected, error = ex.Message });
+        }
     }
 
     private async Task Generate(string prompt, string requestId)
     {
-        if (string.IsNullOrWhiteSpace(prompt)) return;
+        // A successful WebView2 post is not proof that the native owner can start.
+        // Rejected requests need a matching terminal ACK, not error-only,
+        // or the chat composer remains locked until the process restarts.
+        void RejectChat(string reason)
+        {
+            Send("error", new { requestId, message = reason });
+            Send("complete", new { requestId, ok = false, stopped = false });
+        }
+        if (string.IsNullOrWhiteSpace(prompt)) {
+            RejectChat("CHAT_EMPTY_PROMPT_DENIED");
+            return;
+        }
         // Only an explicit bounded owner ID may dispatch a native inference.
         if (requestId.Length < 8 || requestId.Length > 128 ||
             requestId.Any(c => !(char.IsLetterOrDigit(c) || c == '-' || c == '_'))) {
-            Send("error", new { requestId, message = "CHAT_REQUEST_ID_DENIED" });
+            RejectChat("CHAT_REQUEST_ID_DENIED");
             return;
         }
         if (prompt.Length > 32000) {
-            Send("error", new { requestId, message = "Prompt exceeds 32,000 characters" });
+            RejectChat("CHAT_PROMPT_TOO_LONG_DENIED");
+            return;
+        }
+        // The same requestId may arrive again after the original terminal ACK.
+        // The busy-owner guard below covers only overlapping requests.
+        if (recentlyHandledChatIdSet.Contains(requestId)) {
+            RejectChat("CHAT_REPLAY_AFTER_TERMINAL_DENIED");
             return;
         }
         if (!await generationLock.WaitAsync(0)) {
-            Send("error", new { requestId, message = "Generation already running. Use STOP." });
+            // A replay of the active WebView2 chat ID must not synthesize a
+            // terminal completion while the real owner is still streaming.
+            // Only the original owner may complete its requestId.
+            if (string.Equals(activeRequestId, requestId, StringComparison.Ordinal))
+                return;
+            RejectChat("CHAT_ALREADY_RUNNING_HOLD");
             return;
         }
         using var cancellation = new CancellationTokenSource();
@@ -947,6 +1553,12 @@ public partial class MainWindow : Window
         }
         Interlocked.Increment(ref generationStartedCount);
         var answer = new StringBuilder();
+        // An INSERT can commit before SQLite readback fails; do not claim rollback.
+        bool sqliteWriteAttempted = false, sqliteVerified = false;
+        bool refreshProviderAfterError = false;
+        // Only stream transport failures (not SQLite/ownership failures) re-probe Ollama.
+        bool providerStreamRequested = false;
+        bool providerRecoveryPending = false;
         try
         {
             Emit("status", new { requestId, state = "GENERATING" });
@@ -955,6 +1567,24 @@ public partial class MainWindow : Window
             var maxTokens = mode == "MAX" ? 1600 : mode == "ECO" ? 384 : 1024;
             var contextSize = mode == "MAX" ? 8192 : mode == "ECO" ? 2048 : 4096;
             var model = CurrentModel;
+            // Preserve canonical R8 startup + per-turn model admission.
+            // Reuse the existing Ollama, never download weights or spawn a backend.
+            providerRecoveryPending = true;
+            await StartLocalEngine(cancellation.Token);
+            cancellation.Token.ThrowIfCancellationRequested();
+            using (var probe = CancellationTokenSource.CreateLinkedTokenSource(cancellation.Token))
+            {
+                probe.CancelAfter(TimeSpan.FromSeconds(5));
+                using var tagsReply = await http.GetAsync(Api + "/api/tags", probe.Token);
+                tagsReply.EnsureSuccessStatusCode();
+                using var tags = JsonDocument.Parse(await tagsReply.Content.ReadAsStringAsync(probe.Token));
+                bool modelRegistered = tags.RootElement.GetProperty("models").EnumerateArray()
+                    .Any(m => string.Equals(m.GetProperty("name").GetString(), model, StringComparison.Ordinal));
+                if (!modelRegistered)
+                    throw new InvalidOperationException("NOX_MODEL_NOT_REGISTERED: " + model +
+                        ". Существующие веса не удалены; выбери установленную модель.");
+            }
+            providerRecoveryPending = false;
             var persona = ActivePersona(); // Capture at start of turn, before streaming.
             var context = preferences.GetValueOrDefault("context", "on") == "on"
                 ? BuildLocalContext(prompt, persona) + knowledge.ContextFor(prompt) : "";
@@ -965,12 +1595,14 @@ public partial class MainWindow : Window
                 model,
                 prompt = systemInstruction + context + "\nПользователь: " + prompt + "\nАссистент:",
                 stream = true,
+                think = false,
                 keep_alive = "30m",
                 options = new { num_predict = maxTokens, num_ctx = contextSize }
             });
             using var request = new HttpRequestMessage(HttpMethod.Post, Api + "/api/generate") {
                 Content = new StringContent(options, Encoding.UTF8, "application/json")
             };
+            providerStreamRequested = true;
             using var response = await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellation.Token);
             response.EnsureSuccessStatusCode();
             using var stream = await response.Content.ReadAsStreamAsync(cancellation.Token);
@@ -994,6 +1626,7 @@ public partial class MainWindow : Window
                     var value = token.GetString() ?? "";
                     answer.Append(value);
                     cancellation.Token.ThrowIfCancellationRequested();
+                    if (value.Length > 0) Interlocked.Increment(ref generationStreamingTokenCount);
                     Emit("token", new { requestId, text = value });
                 }
                 if (item.TryGetProperty("error", out var serverError))
@@ -1005,10 +1638,18 @@ public partial class MainWindow : Window
                     completed = true; break;
                 }
             }
-            if (!completed) throw new InvalidOperationException("Соединение с моделью прервалось до завершения ответа. Частичный ответ не сохранён.");
+            if (!completed) {
+                // A clean EOF without Ollama done=true is still a broken stream.
+                refreshProviderAfterError = true;
+                throw new InvalidOperationException("Соединение с моделью прервалось до завершения ответа. Частичный ответ не сохранён.");
+            }
             // A STOP received with the final token still prevents persistence.
             cancellation.Token.ThrowIfCancellationRequested();
-            if (answer.Length > 0) PersistChat(prompt, answer.ToString(), persona);
+            if (answer.Length > 0) {
+                sqliteWriteAttempted = true;
+                PersistChat(prompt, answer.ToString(), persona);
+                sqliteVerified = true;
+            }
             // Completion is true only after SQLite commits successfully.
             lastGenerationCompleted = true;
             Emit("status", new { requestId, state = "READY" });
@@ -1025,6 +1666,7 @@ public partial class MainWindow : Window
             Emit("complete", new { requestId, ok = false, stopped = true });
         }
         catch (OperationCanceledException) {
+            refreshProviderAfterError = true;
             // HttpClient.Timeout can cancel an Ollama stream without owner intent.
             // Preserve SQLite (no partial save) and release the UI with an ERROR ACK.
             Emit("error", new { requestId, message = "OLLAMA_TIMEOUT: ожидание ответа модели истекло" });
@@ -1032,8 +1674,8 @@ public partial class MainWindow : Window
             Emit("complete", new { requestId, ok = false, stopped = false });
         }
         catch (HttpRequestException ex) {
-            // Distinguish transport-offline from HTTP model/server rejection.
-            await CheckProvider();
+            // Terminal ACK first; the provider probe must not mask the chat owner.
+            refreshProviderAfterError = true;
             Emit("error", new { requestId, message = ex.StatusCode == null
                 ? "PROVIDER_UNREACHABLE: локальный Ollama не отвечает"
                 : "OLLAMA_HTTP_ERROR: " + (int)ex.StatusCode });
@@ -1041,16 +1683,32 @@ public partial class MainWindow : Window
             Emit("complete", new { requestId, ok = false, stopped = false });
         }
         catch (Exception ex) {
-            Emit("error", new { requestId, message = ex.Message });
-            Emit("status", new { requestId, state = "ERROR" });
-            Emit("complete", new { requestId, ok = false, stopped = false });
+            // Provider restart can truncate NDJSON or raise IOException/JsonException
+            // after HTTP headers. Re-check real health only after terminal IPC.
+            if (providerRecoveryPending || (providerStreamRequested && (ex is IOException || ex is JsonException)))
+                refreshProviderAfterError = true;
+            bool sqliteUnknown = sqliteWriteAttempted && !sqliteVerified;
+            Emit("error", new { requestId, message = sqliteUnknown
+                ? "NOX_CHAT_SQLITE_COMMIT_UNKNOWN_HOLD: " + ex.Message : ex.Message });
+            Emit("status", new { requestId, state = sqliteUnknown ? "SQLITE_UNKNOWN" : "ERROR" });
+            Emit("complete", new { requestId, ok = sqliteVerified, stopped = false, sqliteUnknown });
         }
         finally {
+            // Remember completed owner IDs even after provider errors and STOP:
+            // a delayed WebView2 message cannot restart the same native turn.
+            if (recentlyHandledChatIdSet.Add(requestId)) {
+                recentlyHandledChatIds.Enqueue(requestId);
+                if (recentlyHandledChatIds.Count > 128)
+                    recentlyHandledChatIdSet.Remove(recentlyHandledChatIds.Dequeue());
+            }
             active = null;
             activeRequestId = null;
             Interlocked.Increment(ref generationFinishedCount);
             generationLock.Release();
         }
+        // Never refresh health while the cancelled HTTP stream still owns IPC.
+        if (refreshProviderAfterError && !providerProbeStopped)
+            await CheckProvider();
     }
 
     private void PersistChat(string prompt, string answer, string persona)
@@ -1155,12 +1813,53 @@ public partial class MainWindow : Window
         return id;
     }
 
-    private void ToggleTask(long id)
+    // A checkbox click is not a persisted result. Match the native request
+    // to its owner receipt and independently read back the committed SQLite row.
+    private void HandleTaskToggle(long id, string requestId)
     {
-        using var db = OpenDatabase(); using var cmd = db.CreateCommand();
-        cmd.CommandText = "UPDATE tasks SET complete=1-complete WHERE id=$id";
-        cmd.Parameters.AddWithValue("$id", id);
-        cmd.ExecuteNonQuery();
+        if (!ValidWriteRequestId(requestId) || id <= 0) {
+            Send("tasks.toggle.denied", new { requestId, id, reason = "NOX_TASK_TOGGLE_REQUEST_HOLD" });
+            return;
+        }
+        try {
+            int complete;
+            using (var db = OpenDatabase())
+            using (var tx = db.BeginTransaction()) {
+                using (var cmd = db.CreateCommand()) {
+                    cmd.Transaction = tx;
+                    cmd.CommandText = "UPDATE tasks SET complete=CASE WHEN complete=0 THEN 1 ELSE 0 END WHERE id=$id";
+                    cmd.Parameters.AddWithValue("$id", id);
+                    if (cmd.ExecuteNonQuery() != 1)
+                        throw new InvalidOperationException("NOX_TASK_TOGGLE_MISSING_ROW_HOLD");
+                }
+                using (var read = db.CreateCommand()) {
+                    read.Transaction = tx;
+                    read.CommandText = "SELECT complete FROM tasks WHERE id=$id";
+                    read.Parameters.AddWithValue("$id", id);
+                    complete = Convert.ToInt32(read.ExecuteScalar() ??
+                        throw new InvalidOperationException("NOX_TASK_TOGGLE_READ_HOLD"));
+                    if (complete is not (0 or 1))
+                        throw new InvalidOperationException("NOX_TASK_TOGGLE_STATE_HOLD");
+                }
+                tx.Commit();
+            }
+            using (var verifyDb = OpenDatabase())
+            using (var verify = verifyDb.CreateCommand()) {
+                verify.CommandText = "SELECT complete FROM tasks WHERE id=$id";
+                verify.Parameters.AddWithValue("$id", id);
+                if (verify.ExecuteScalar() is not object persisted ||
+                    Convert.ToInt32(persisted) != complete)
+                    throw new InvalidOperationException("NOX_TASK_TOGGLE_SQLITE_READBACK_HOLD");
+            }
+            Send("tasks", ReadTasks());
+            Send("tasks.toggle.receipt", new { requestId, id, complete = complete != 0, saved = true });
+        }
+        catch (SqliteException) {
+            Send("tasks.toggle.denied", new { requestId, id, reason = "NOX_TASK_TOGGLE_SQLITE_HOLD" });
+        }
+        catch (Exception) {
+            Send("tasks.toggle.denied", new { requestId, id, reason = "NOX_TASK_TOGGLE_READBACK_HOLD" });
+        }
     }
 
 
@@ -1225,15 +1924,24 @@ public partial class MainWindow : Window
     // Denials are bounded codes, never native exception text or private paths.
     private void HandleSettingsPut(JsonElement request)
     {
+        // Native owner validation applies before any SQLite write or UI ACK.
+        // A requestId binds each response to exactly one WebView2 sender.
         var fields = request.EnumerateObject().ToArray();
-        if (fields.Length != 3 ||
+        string requestId = request.TryGetProperty("requestId", out var idField) &&
+            idField.ValueKind == JsonValueKind.String ? idField.GetString() ?? "" : "";
+        bool validId = ValidWriteRequestId(requestId);
+        if (fields.Length != 4 ||
             fields.Count(x => x.Name == "type") != 1 ||
             fields.Count(x => x.Name == "key") != 1 ||
             fields.Count(x => x.Name == "value") != 1 ||
+            fields.Count(x => x.Name == "requestId") != 1 ||
+            !validId ||
             !request.TryGetProperty("key", out var keyField) || keyField.ValueKind != JsonValueKind.String ||
             !request.TryGetProperty("value", out var valueField) || valueField.ValueKind != JsonValueKind.String)
         {
-            Send("settings.denied", "NOX_SETTINGS_INVALID_REQUEST");
+            Send("settings.denied", new {
+                requestId = validId ? requestId : "", reason = "NOX_SETTINGS_INVALID_REQUEST"
+            });
             return;
         }
         string key = keyField.GetString() ?? "";
@@ -1241,7 +1949,7 @@ public partial class MainWindow : Window
         try
         {
             if (key == "persona" && active != null) {
-                Send("settings.denied", "NOX_PERSONA_GENERATION_ACTIVE_HOLD");
+                Send("settings.denied", new { requestId, reason = "NOX_PERSONA_GENERATION_ACTIVE_HOLD" });
                 return;
             }
             SavePreference(key, value);
@@ -1254,11 +1962,11 @@ public partial class MainWindow : Window
                 Send("notes", ReadNotes());
             }
             Send("settings", verified);
-            Send("settings.receipt", new { key, value, saved = true });
+            Send("settings.receipt", new { requestId, key, value, saved = true });
         }
-        catch (ArgumentException) { Send("settings.denied", "NOX_SETTINGS_REJECTED"); }
-        catch (SqliteException) { Send("settings.denied", "NOX_SETTINGS_SQLITE_HOLD"); }
-        catch (Exception) { Send("settings.denied", "NOX_SETTINGS_NATIVE_HOLD"); }
+        catch (ArgumentException) { Send("settings.denied", new { requestId, reason = "NOX_SETTINGS_REJECTED" }); }
+        catch (SqliteException) { Send("settings.denied", new { requestId, reason = "NOX_SETTINGS_SQLITE_HOLD" }); }
+        catch (Exception) { Send("settings.denied", new { requestId, reason = "NOX_SETTINGS_NATIVE_HOLD" }); }
     }
 
     private void SavePreference(string key, string value)
@@ -1482,19 +2190,65 @@ public partial class MainWindow : Window
         cmd.ExecuteNonQuery();
     }
 
-    private async Task SelectModel(string model)
+    // B04: switch only when the native chat owner is idle, and acknowledge
+    // a model change only after a separate SQLite connection verifies COMMIT.
+    // The picker can choose only an exact locally registered Ollama tag.
+    // The selection request owns its ACK. The displayed model is not committed
+    // until /api/tags, SQLite COMMIT and independent readback all succeed.
+    private async Task SelectModel(string model, string requestId)
     {
-        if (string.IsNullOrWhiteSpace(model) || model.Length > 120) throw new ArgumentException("Invalid model name");
-        using var response = await http.GetAsync(Api + "/api/tags");
-        response.EnsureSuccessStatusCode();
-        using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        bool exists = json.RootElement.GetProperty("models").EnumerateArray().Any(x => x.GetProperty("name").GetString() == model);
-        if (!exists) throw new InvalidOperationException("Model is not registered on the local server");
-        using var db = OpenDatabase(); using var cmd = db.CreateCommand();
-        cmd.CommandText = "INSERT INTO preferences(key,value) VALUES('model',$m) ON CONFLICT(key) DO UPDATE SET value=excluded.value";
-        cmd.Parameters.AddWithValue("$m",model);cmd.ExecuteNonQuery();
-        Send("settings",ReadPreferences());
-        await CheckProvider();
+        if (!ValidWriteRequestId(requestId)) {
+            Send("model.select.denied", new { requestId, reason = "NOX_MODEL_REQUEST_ID_HOLD" });
+            return;
+        }
+        try
+        {
+            if (string.IsNullOrWhiteSpace(model) || model.Length > 120)
+                throw new InvalidOperationException("NOX_MODEL_INVALID_TAG_HOLD");
+            if (active != null)
+                throw new InvalidOperationException("NOX_MODEL_SWITCH_GENERATION_ACTIVE_HOLD");
+            using var probe = new CancellationTokenSource(TimeSpan.FromSeconds(4));
+            using var response = await http.GetAsync(Api + "/api/tags", probe.Token);
+            response.EnsureSuccessStatusCode();
+            using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(probe.Token));
+            bool exists = json.RootElement.GetProperty("models").EnumerateArray()
+                .Any(x => string.Equals(x.GetProperty("name").GetString(), model, StringComparison.Ordinal));
+            if (!exists)
+                throw new InvalidOperationException("NOX_MODEL_TAG_NOT_REGISTERED_HOLD");
+            // Async probe can yield to a new generation; never mutate during it.
+            if (active != null)
+                throw new InvalidOperationException("NOX_MODEL_SWITCH_GENERATION_ACTIVE_HOLD");
+            using (var db = OpenDatabase())
+            using (var tx = db.BeginTransaction())
+            {
+                using var cmd = db.CreateCommand();
+                cmd.Transaction = tx;
+                cmd.CommandText = "INSERT INTO preferences(key,value) VALUES('model',$m) ON CONFLICT(key) DO UPDATE SET value=excluded.value";
+                cmd.Parameters.AddWithValue("$m", model);
+                if (cmd.ExecuteNonQuery() != 1)
+                    throw new InvalidOperationException("NOX_MODEL_SELECT_SQLITE_WRITE_HOLD");
+                tx.Commit();
+            }
+            using (var verifyDb = OpenDatabase())
+            using (var verify = verifyDb.CreateCommand())
+            {
+                verify.CommandText = "SELECT value FROM preferences WHERE key='model'";
+                if (!string.Equals(verify.ExecuteScalar() as string, model, StringComparison.Ordinal))
+                    throw new InvalidOperationException("NOX_MODEL_SELECT_SQLITE_READBACK_HOLD");
+            }
+            Send("model.select.receipt", new { requestId, model, saved = true });
+            Send("settings", ReadPreferences());
+            await CheckProvider();
+        }
+        catch (Exception ex)
+        {
+            // Never claim the selection succeeded if the provider, SQLite or
+            // post-COMMIT readback failed; the UI can restore its last proven tag.
+            string reason = ex is InvalidOperationException &&
+                ex.Message.StartsWith("NOX_", StringComparison.Ordinal)
+                ? ex.Message : "NOX_MODEL_SELECT_FAILED_HOLD";
+            Send("model.select.denied", new { requestId, reason });
+        }
     }
 
     private async Task PullExistingProviderModel(string modelName)
@@ -1540,11 +2294,29 @@ public partial class MainWindow : Window
                 if (label.Equals("success", StringComparison.OrdinalIgnoreCase)) { done = true; break; }
             }
             if (!done) throw new InvalidOperationException("Загрузка оборвалась до подтверждённого завершения Ollama");
+            // Provider progress "success" is not proof of an installed exact model tag.
+            cts.Token.ThrowIfCancellationRequested();
+            using (var verify = CancellationTokenSource.CreateLinkedTokenSource(cts.Token))
+            {
+                verify.CancelAfter(TimeSpan.FromSeconds(10));
+                using var tagsResponse = await transferClient.GetAsync(Api + "/api/tags", verify.Token);
+                tagsResponse.EnsureSuccessStatusCode();
+                using var tagsJson = JsonDocument.Parse(await tagsResponse.Content.ReadAsStringAsync(verify.Token));
+                bool tagPresent = tagsJson.RootElement.GetProperty("models").EnumerateArray()
+                    .Any(x => string.Equals(x.GetProperty("name").GetString(), modelName, StringComparison.Ordinal));
+                if (!tagPresent) throw new InvalidOperationException("NOX_MODEL_PULL_TAG_READBACK_HOLD");
+            }
+            cts.Token.ThrowIfCancellationRequested();
             Send("download", new { status = "DONE", model = modelName, percent = (double?)100 });
             await CheckProvider();
         }
-        catch (OperationCanceledException) {
+        catch (OperationCanceledException) when (cts.IsCancellationRequested) {
             Send("download", new { status = "STOPPED", model = modelName, percent = (double?)null });
+        }
+        catch (Exception) {
+            // Provider and transport failure are neither owner STOP nor install success.
+            Send("download", new { status = "ERROR", model = modelName, percent = (double?)null });
+            throw;
         }
         finally { activeModelPull = null; }
     }
@@ -1585,19 +2357,47 @@ public partial class MainWindow : Window
             Filter = "SQLite database (*.sqlite3)|*.sqlite3",
             FileName = "NOX_HELION_backup_" + DateTime.Now.ToString("yyyyMMdd_HHmmss") + ".sqlite3",
             AddExtension = true,
-            OverwritePrompt = true,
+            OverwritePrompt = false, // NO-LOSS: an existing user file is never an export target.
             Title = "Сохранить резервную копию памяти NOX"
         };
         if (dialog.ShowDialog(this) != true) return;
-        if (string.Equals(Path.GetFullPath(dialog.FileName), Path.GetFullPath(dbPath), StringComparison.OrdinalIgnoreCase))
-            throw new InvalidOperationException("Нельзя заменить работающую базу данных её же копией");
+        var target = Path.GetFullPath(dialog.FileName);
+        if (string.Equals(target, Path.GetFullPath(dbPath), StringComparison.OrdinalIgnoreCase) ||
+            File.Exists(target) || Directory.Exists(target))
+            throw new InvalidOperationException("NOX_BACKUP_DESTINATION_EXISTS_HOLD");
+        var outputDirectory = Path.GetDirectoryName(target)!;
+        foreach (var suffix in new[] { "-wal", "-shm", "-journal" })
+            if (string.Equals(target, Path.GetFullPath(dbPath) + suffix, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("NOX_BACKUP_LIVE_SIDECAR_HOLD");
+        if ((File.GetAttributes(outputDirectory) & FileAttributes.ReparsePoint) != 0)
+            throw new InvalidOperationException("NOX_BACKUP_DESTINATION_REPARSE_HOLD");
+        ValidateBackupParent(outputDirectory);
+
+        // SQLite WAL-safe online backup + quick_check + SHA receipt are performed
+        // before creating an owner-selected export; no live SQLite is overwritten.
         using var source = OpenDatabase();
-        using var copy = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = dialog.FileName }.ToString());
-        copy.Open(); source.BackupDatabase(copy);
-        Send("notice", "Резервная копия SQLite сохранена: " + dialog.FileName);
+        var snapshot = CheckpointSqlite(source, "OWNER_EXPORT");
+        var stage = Path.Combine(outputDirectory, "." + Path.GetFileName(target) +
+            "." + Guid.NewGuid().ToString("N") + ".pending");
+        // Stage beside the destination, so the final rename is on one volume.
+        // On error the verified app-local snapshot survives; never delete a
+        // possibly valuable preexisting owner file or silently claim success.
+        using (var input = new FileStream(snapshot, FileMode.Open, FileAccess.Read, FileShare.Read))
+        using (var output = new FileStream(stage, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+        {
+            input.CopyTo(output);
+            output.Flush(flushToDisk: true);
+        }
+        var originalSha = Sha256File(snapshot);
+        if (!string.Equals(originalSha, Sha256File(stage), StringComparison.Ordinal))
+            throw new InvalidOperationException("NOX_BACKUP_EXPORT_CHECKSUM_HOLD");
+        ValidateBackupParent(outputDirectory);
+        File.Move(stage, target); // No overwrite; if another file appeared, hold.
+        if (!string.Equals(originalSha, Sha256File(target), StringComparison.Ordinal))
+            throw new InvalidOperationException("NOX_BACKUP_EXPORT_READBACK_HOLD");
+        Send("notice", "Резервная копия SQLite сохранена: " + target);
     }
 
-    
     // An explicit native consent gate for a persistent PREPARATION queue.
     // No GPU worker, weight update or successful SHA checkpoint is claimed.
     private static string OwnerSid()
@@ -1677,6 +2477,22 @@ public partial class MainWindow : Window
             }
             tx.Commit();
         }
+        // A queued request is not an ACK until a separate SQLite connection
+        // observes the exact consent-bearing owner row after COMMIT.
+        using (var readbackDb = OpenDatabase())
+        using (var readback = readbackDb.CreateCommand())
+        {
+            readback.CommandText = "SELECT model,state,consent_at,checkpoint_sha256 FROM learn_requests WHERE id=$id AND owner_sid=$sid";
+            readback.Parameters.AddWithValue("$id", id);
+            readback.Parameters.AddWithValue("$sid", sid);
+            using var persisted = readback.ExecuteReader();
+            if (!persisted.Read() ||
+                !string.Equals(persisted.GetString(0), model, StringComparison.Ordinal) ||
+                !string.Equals(persisted.GetString(1), "AWAITING_VERIFIED_WORKER", StringComparison.Ordinal) ||
+                !DateTimeOffset.TryParse(persisted.GetString(2), out _) ||
+                !persisted.IsDBNull(3))
+                throw new InvalidOperationException("NOX_LEARN_CONSENT_SQLITE_READBACK_HOLD");
+        }
         Send("learn.receipt", new { id, model, state="AWAITING_VERIFIED_WORKER",
             reason="NO_ATTESTED_GPU_WORKER", trainingStarted=false, checkpointSha256=(string?)null });
         Send("learn.queue", ReadLearnQueue());
@@ -1684,6 +2500,7 @@ public partial class MainWindow : Window
 
     private void CancelLearnRequest()
     {
+        string sid = OwnerSid();
         int affected;
         using (var db = OpenDatabase())
         using (var tx = db.BeginTransaction())
@@ -1691,9 +2508,18 @@ public partial class MainWindow : Window
         {
             cmd.Transaction = tx;
             cmd.CommandText = "UPDATE learn_requests SET state='CANCELLED_BY_OWNER' WHERE owner_sid=$sid AND state='AWAITING_VERIFIED_WORKER'";
-            cmd.Parameters.AddWithValue("$sid", OwnerSid());
+            cmd.Parameters.AddWithValue("$sid", sid);
             affected = cmd.ExecuteNonQuery();
             tx.Commit();
+        }
+        // STOP must be persisted, not merely an UPDATE dispatched to SQLite.
+        using (var verifyDb = OpenDatabase())
+        using (var verify = verifyDb.CreateCommand())
+        {
+            verify.CommandText = "SELECT COUNT(*) FROM learn_requests WHERE owner_sid=$sid AND state='AWAITING_VERIFIED_WORKER'";
+            verify.Parameters.AddWithValue("$sid", sid);
+            if (Convert.ToInt64(verify.ExecuteScalar()) != 0)
+                throw new InvalidOperationException("NOX_LEARN_STOP_SQLITE_READBACK_HOLD");
         }
         Send("learn.receipt", new { state=affected>0?"CANCELLED_BY_OWNER":"NO_PENDING_JOB",
             affected, trainingStarted=false, checkpointSha256=(string?)null });
@@ -1733,8 +2559,13 @@ public partial class MainWindow : Window
                     maxSteps = max,
                     progressPercent = max > 0 ? Math.Round(100.0 * step / max, 1) : (double?)null,
                     latestLoss = loss,
-                    progressVerified = max > 0,
-                    note = "Файловые метрики обучения; не доказательство улучшения качества модели"
+                    // External trainer_state.json has no owner-consent, worker
+                    // attestation, model-rights or SHA checkpoint provenance.
+                    // Even valid-looking step counts are NOT verified NOX training.
+                    progressVerified = false,
+                    checkpointVerified = false,
+                    trainingStartedByNox = false,
+                    note = "UNVERIFIED_EXTERNAL_TRAINER_STATE_NO_OWNER_WORKER_OR_SHA_RECEIPT"
                 });
             }
             catch (IOException) { /* Training may be writing this file now. */ }
@@ -1742,7 +2573,10 @@ public partial class MainWindow : Window
             catch (UnauthorizedAccessException) { }
         }
         return new { available = true, directory = path, recentFiles = files,
-            measuredTrainingRuns = states,
-            note = "Only observed checkpoint steps and loss; quality and model acceptance are NOT inferred" };
+            observedExternalRuns = states,
+            measuredTrainingRuns = Array.Empty<object>(),
+            queueOnly = true,
+            checkpointVerified = false,
+            note = "External trainer files are read-only diagnostics, not authenticated QLoRA results" };
     }
 }
