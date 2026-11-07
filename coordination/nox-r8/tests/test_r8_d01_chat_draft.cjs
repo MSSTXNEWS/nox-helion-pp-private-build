@@ -600,24 +600,32 @@ console.log('D01 SOURCE_ONLY PASS: Qwen failed/STOP retry with original input, S
 
 // D01_SETTINGS_HYDRATION_PERSONA_ISOLATION: exact production handler in V8.
 // A native settings snapshot can be the only PersonaID transition receipt.
+// First-fail: user STOP + SQLite persona hydration must dispatch exactly one
+// native STOP for the same requestId (SOURCE_ONLY, not owner-PC acceptance).
 {
   const start=html.indexOf('function applyCommittedSettings(v){');
   const end=html.indexOf('\nfunction saveSetting(key,value){',start);
   assert.ok(start>=0&&end>start,'D01_SQLITE_HYDRATION_SOURCE_MISSING');
   const src=html.slice(start,end);
+  const stopStart=html.indexOf("$('stop').onclick=()=>{");
+  const stopEnd=html.indexOf(";$('prompt').onkeydown=",stopStart);
+  assert.ok(stopStart>=0&&stopEnd>stopStart,'D01_REAL_STOP_DISPATCH_NOT_FOUND');
+  const stopSource=html.slice(stopStart,stopEnd)+';';
   const run=(target,owner)=>vm.runInNewContext(`
     let visibleDraftPersona=owner,lastAnswer='KV_PRIVATE',responseBox={live:true},
-        committedSettings={},busy=true,activeChatId='kv_request';
+        committedSettings={},busy=true,activeChatId='kv_request',pendingStopId=null;
     const cleared=[],sent=[],canceled=[],nodes={};
     const $=id=>nodes[id]??(nodes[id]={value:'',checked:false,
-      replaceChildren(){cleared.push(id)},classList:{remove(){}}});
+      replaceChildren(){cleared.push(id)},classList:{remove(){}},click(){this.onclick?.();}});
     const window={noxVisual:{setMode(){},setEnergy(){}},speechSynthesis:true};
     const speechSynthesis={cancel(){canceled.push(true)}};
     const document={body:{classList:{toggle(){}}}};
     function post(type,data){sent.push({type,data});}
     function switchPersonaDrafts(next){if(!['KV','AM','LA','EV','KW'].includes(next))return false;
       visibleDraftPersona=next;return true;}
+    ${stopSource}
     ${src}
+    if(target!==owner)$('stop').click(); // User STOP before a delayed SQLite settings snapshot.
     applyCommittedSettings({persona:target,performance:'BALANCED',motion:'on',context:'on'});
     ({visibleDraftPersona,cleared,sent,canceled,lastAnswer,hasResponse:!!responseBox});
   `,{target,owner},{timeout:1500});

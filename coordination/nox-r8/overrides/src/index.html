@@ -471,7 +471,7 @@ function applyCommittedSettings(v){
     for(const id of ['messages','history','notes','memoryResults','knowledgeResults'])$(id).replaceChildren();
     lastAnswer='';responseBox=null;
     if('speechSynthesis' in window)speechSynthesis.cancel();
-    if(busy&&activeChatId)post('stop',{requestId:activeChatId});
+    if(busy&&activeChatId)$('stop').click();
     $('generation').classList.remove('on');window.noxVisual?.setEnergy(false);
     // Initial native history/notes may have arrived before the SQLite settings.
     post('history');post('notes.list');post('knowledge.stats');
