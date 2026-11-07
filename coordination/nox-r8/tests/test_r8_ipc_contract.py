@@ -9,7 +9,7 @@ cs = (root / "src" / "MainWindow.xaml.cs").read_text(encoding="utf-8")
 html = (root / "src" / "index.html").read_text(encoding="utf-8")
 required_cs = (
     'private string? activeRequestId;',
-    'Browser.CoreWebView2.NavigationStarting += (_, _) => {',
+    'NavigationStarting += (_, _) => { active?.Cancel(); activeRequestId = null; };',
     'string.Equals(activeRequestId, Text("requestId"), StringComparison.Ordinal)',
     'case "chat": await Generate(Text("text"), Text("requestId"));',
     'private async Task Generate(string prompt, string requestId)',
@@ -50,12 +50,6 @@ chat_handler = html.split("$('send').onclick=()=>", 1)[1].split("\n$('stop').onc
 assert chat_handler.index("if(post('chat',{text,requestId})===false)") < chat_handler.index("busy=true;activeChatId=requestId;"), "B02_PREMATURE_NATIVE_OWNER_HOLD"
 assert chat_handler.count("post('chat',{text,requestId})") == 1, "B02_DUPLICATE_OWNER_DISPATCH_HOLD"
 assert "post('chat',{text,requestId:activeChatId})" not in chat_handler, "B02_PREMATURE_ACTIVE_ID_DISPATCH_HOLD"
-# Verify the stronger real navigation handler instead of the obsolete one-liner.
-nav = cs.split('Browser.CoreWebView2.NavigationStarting += (_, _) => {', 1)[1].split('};', 1)[0]
-for fragment in ('active?.Cancel();', 'activeRequestId = null;', 'Interlocked.Increment(ref providerProbeEpoch);'):
-    assert fragment in nav, 'B02_NAVIGATION_OWNER_PROBE_EPOCH_HOLD: ' + fragment
-assert nav.index('active?.Cancel();') < nav.index('activeRequestId = null;') < nav.index('Interlocked.Increment(ref providerProbeEpoch);')
-
 # Ensure the previous unowned chat path cannot accidentally remain.
 assert 'case "chat": await Generate(Text("text"));' not in cs
 assert "case 'error':$('status').textContent='ERROR';entry($('messages'),String(v)" not in html
@@ -70,8 +64,13 @@ for source in script_parts:
 # Windows SQLite open-file first-fail #42276488855: Microsoft.Data.Sqlite
 # pooled backup handles must be closed before checksum reads of the checkpoint.
 # This is a SOURCE_ONLY guard; Windows smoke validates the real file handles.
-snapshot = cs.split('private string CheckpointSqlite(', 1)[1].split('private static bool HasPersonaColumn(', 1)[0]
+snapshot = cs.split('private string CheckpointSqlite(', 1)[1].split('private void VerifyIsolatedSqliteBackup(', 1)[0]
 assert snapshot.count('Pooling = false') == 2, 'B02_SQLITE_BACKUP_POOLING_HOLD'
+# B03 introduced a distinct third pooled-handle safeguard in its own smoke
+# method. Do not count it as part of CheckpointSqlite or weaken its guard.
+smoke_backup = cs.split('private void VerifyIsolatedSqliteBackup(', 1)[1].split('private static bool HasPersonaColumn(', 1)[0]
+assert smoke_backup.count('Pooling = false') == 1, 'B03_SMOKE_BACKUP_POOLING_HOLD'
+assert 'PRAGMA quick_check' in smoke_backup and 'NOX_B03_SMOKE_INTEGRITY_HOLD' in smoke_backup, 'B03_SMOKE_BACKUP_INTEGRITY_HOLD'
 assert re.search(r'DataSource\s*=\s*file,\s*Mode\s*=\s*SqliteOpenMode\.ReadWriteCreate,\s*Pooling\s*=\s*false', snapshot)
 assert re.search(r'DataSource\s*=\s*file,\s*Mode\s*=\s*SqliteOpenMode\.ReadOnly,\s*Pooling\s*=\s*false', snapshot)
 assert snapshot.index('PRAGMA quick_check') < snapshot.index('string sha = Sha256File(file)'), 'B02_SQLITE_BACKUP_INTEGRITY_ORDER_HOLD'
@@ -181,45 +180,28 @@ with sqlite3.connect(':memory:') as db:
     assert db.execute(statement,(404,)).rowcount==0
 print('D05 R8 SOURCE_ONLY: owner-correlated task toggle, SQLite COMMIT/readback and denied rollback PASS')
 
-# Failure recovery must not probe while the original generation still owns IPC.
-# Terminal complete/ERROR goes out before health refresh; owner STOP is unchanged.
+# B02 R8 same-source provider restart integration: SOURCE_ONLY (not owner-PC E2E).
+# A stream failure must terminate its exact request before bounded health refresh;
+# only an explicit owner command may start the already-installed service.
+startup = cs.split('private async Task StartLocalEngine()', 1)[1].split('private async Task CheckProvider()', 1)[0]
+probe = cs.split('private async Task CheckProvider()', 1)[1].split('private async Task Generate(', 1)[0]
 chat = cs.split('private async Task Generate(', 1)[1].split('private void PersistChat(', 1)[0]
-timeout = chat.split('catch (OperationCanceledException) {', 1)[1].split('catch (HttpRequestException ex) {', 1)[0]
-http_failure = chat.split('catch (HttpRequestException ex) {', 1)[1].split('catch (Exception ex) {', 1)[0]
-assert 'bool refreshProviderAfterError = false;' in chat, 'B02_FAILURE_PROBE_FLAG_HOLD'
-assert 'refreshProviderAfterError = true;' in timeout, 'B02_TIMEOUT_PROVIDER_HEALTH_HOLD'
-assert 'refreshProviderAfterError = true;' in http_failure, 'B02_HTTP_PROVIDER_HEALTH_HOLD'
-assert 'await CheckProvider();' not in http_failure, 'B02_PREMATURE_ACTIVE_PROBE_HOLD'
-assert chat.index('generationLock.Release();') < chat.index('if (refreshProviderAfterError && !providerProbeStopped)') < chat.index('await CheckProvider();'), 'B02_PROBE_AFTER_OWNER_RELEASE_HOLD'
-print('B02 R8 SOURCE_ONLY: terminal failure ACK before provider re-probe, no active-owner status race')
-
-# B02 R8: local provider can restart after window startup. Retry the existing
-# native /api/tags only, guard document epoch, avoid touching active chat/STOP.
-reconnect = cs.split('private async Task CheckProvider()', 1)[1].split('private async Task Generate(', 1)[0]
-assert 'Interval = TimeSpan.FromSeconds(25)' in cs, 'B02_RECONNECT_INTERVAL_HOLD'
-assert 'providerReconnectTimer.Tick += (_, _) => { if (active == null) _ = CheckProvider(); };' in cs, 'B02_RECONNECT_TICK_HOLD'
-assert 'if (!selfTestRequested && !providerReconnectTimer.IsEnabled)' in cs, 'B02_SELFTEST_PROBE_ISOLATION_HOLD'
-assert 'providerReconnectTimer.Stop();' in cs, 'B02_SHUTDOWN_CANCEL_HOLD'
-assert cs.count('Interlocked.Increment(ref providerProbeEpoch)') >= 3, 'B02_PROBE_EPOCH_HOLD'
-assert reconnect.count('probeEpoch == Volatile.Read(ref providerProbeEpoch)') == 2, 'B02_STALE_PROBE_HOLD'
-assert reconnect.count('active == null') == 2, 'B02_STREAM_STATUS_PROTECTION_HOLD'
-assert 'Send("health", new { online = true' in reconnect, 'B02_RECONNECT_ONLINE_HOLD'
-assert 'Send("health", new { online = false' in reconnect, 'B02_PROVIDER_OFFLINE_HOLD'
-assert 'http.GetAsync(Api + "/api/tags", probe.Token)' in reconnect, 'B02_NATIVE_LOOPBACK_PROBE_HOLD'
-assert 'Process.Start(' not in reconnect and 'model.pull' not in reconnect, 'B02_NO_NEW_BACKEND_HOLD'
-assert 'case "engine.start": await StartLocalEngine();' in cs, 'B02_OWNER_ENGINE_START_HOLD'
-print('B02 R8 SOURCE_ONLY: provider reconnect, non-stale health, live STOP guard PASS; owner Windows NOT_TESTED')
-
-# B02: explicit recovery of the ORIGINAL local Ollama is single-flight.
-# Verify owner denies duplicate launches and forbids spawning after WPF shutdown.
-engine = cs.split('private async Task StartLocalEngine()', 1)[1].split('private async Task CheckProvider()', 1)[0]
-assert 'private readonly SemaphoreSlim engineStartLock = new(1, 1);' in cs, 'B02_ENGINE_START_OWNER_LOCK_HOLD'
-assert 'if (!engineStartLock.Wait(0))' in engine, 'B02_ENGINE_CONCURRENT_START_HOLD'
-assert 'finally {\n            engineStartLock.Release();' in engine, 'B02_ENGINE_LOCK_RELEASE_HOLD'
-assert engine.count('var launched = Process.Start(ps);') == 1, 'B02_DUPLICATE_PROVIDER_SPAWN_HOLD'
-assert engine.index('engineStartLock.Wait(0)') < engine.index('GetActiveTcpListeners()') < engine.index('Process.Start(ps)'), 'B02_START_OWNER_CHECK_ORDER_HOLD'
-assert engine.index('if (providerProbeStopped) return;', engine.index('ps.Environment["OLLAMA_MODELS"]')) < engine.index('Process.Start(ps)'), 'B02_NO_START_AFTER_CLOSE_HOLD'
-assert engine.index('await Task.Delay(1000);') < engine.index('if (providerProbeStopped) return;', engine.index('await Task.Delay(1000);')), 'B02_CLOSE_DURING_RECOVERY_HOLD'
-assert 'ps.Environment["OLLAMA_HOST"] = "127.0.0.1:11436";' in engine, 'B02_ORIGINAL_LOOPBACK_HOLD'
-assert 'Process.Kill(' not in engine and 'model.pull' not in engine, 'B02_NOLOSS_EXISTING_ENGINE_HOLD'
-print('B02 R8 SOURCE_ONLY: existing provider start single-flight and closing guard PASS; Windows NOT_TESTED')
+assert 'private readonly SemaphoreSlim engineStartLock = new(1, 1);' in cs, 'B02_OWNER_LOCK_MISSING_HOLD'
+assert 'if (!engineStartLock.Wait(0))' in startup, 'B02_DUPLICATE_LAUNCH_HOLD'
+assert startup.count('Process.Start(ps)') == 1, 'B02_MULTIPLE_SPAWNS_HOLD'
+assert startup.index('engineStartLock.Wait(0)') < startup.index('GetActiveTcpListeners()') < startup.index('Process.Start(ps)'), 'B02_START_LOCK_ORDER_HOLD'
+assert 'finally {\n            engineStartLock.Release();' in startup, 'B02_OWNER_LOCK_RELEASE_HOLD'
+assert 'ps.Environment["OLLAMA_HOST"] = "127.0.0.1:11436";' in startup, 'B02_PROVIDER_ENDPOINT_HOLD'
+assert 'ps.Environment["OLLAMA_MODELS"] = modelDir;' in startup, 'B02_EXISTING_MODELS_HOLD'
+assert 'TimeSpan.FromSeconds(25)' in cs, 'B02_REATTACH_INTERVAL_HOLD'
+assert 'if (!selfTestRequested && !providerReconnectTimer.IsEnabled)' in cs, 'B02_REATTACH_SELFTEST_HOLD'
+assert 'providerReconnectTimer.Stop();' in cs, 'B02_REATTACH_SHUTDOWN_HOLD'
+assert 'Interlocked.Increment(ref providerProbeEpoch);' in cs, 'B02_STALE_WEBVIEW_PROBE_HOLD'
+assert probe.count('probeEpoch == Volatile.Read(ref providerProbeEpoch)') == 2, 'B02_REATTACH_EPOCH_HOLD'
+assert probe.count('active == null') == 2, 'B02_HEALTH_OWNERSHIP_HOLD'
+assert 'http.GetAsync(Api + "/api/tags", probe.Token)' in probe, 'B02_PROVIDER_LOOPBACK_HOLD'
+assert 'Process.Start(' not in probe, 'B02_HEALTH_MUST_NOT_SPAWN_HOLD'
+assert 'bool refreshProviderAfterError = false;' in chat, 'B02_ERROR_REFRESH_FLAG_HOLD'
+assert 'await CheckProvider();' not in chat.split('catch (HttpRequestException ex) {',1)[1].split('catch (Exception ex) {',1)[0], 'B02_PREMATURE_HEALTH_HOLD'
+assert chat.index('Emit("complete", new { requestId, ok = false, stopped = false });', chat.index('catch (HttpRequestException ex)')) < chat.index('generationLock.Release();') < chat.rindex('await CheckProvider();'), 'B02_TERMINAL_BEFORE_HEALTH_HOLD'
+print('B02 R8 SOURCE_ONLY PASS: single-flight owner startup, bounded reattach, terminal IPC and STOP isolation (Windows/owner E2E NOT_TESTED)')
