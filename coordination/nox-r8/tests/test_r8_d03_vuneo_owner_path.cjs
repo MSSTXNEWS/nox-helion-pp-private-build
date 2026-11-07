@@ -154,3 +154,37 @@ assert.ok(guardedOwner.indexOf('CheckpointSqlite(db, "PRE_VUNEO_IMPORT")') <
 assert.ok(!receiptHelpers.includes('DELETE FROM imported_sources') &&
   !receiptHelpers.includes('File.Delete('), 'never silently erase pending recovery receipt');
 console.log('D03 R8 SOURCE_ONLY: SQLite import journal survives process restart; unknown cannot silently retry PASS');
+
+
+// D03: actual WebView2 event-handler regression after WPF restart. The native
+// owner preserves a VUNEO receipt in existing SQLite; a fresh renderer must
+// show the exact persistent HOLD and must not issue a second import request.
+function checkFreshVuneoOwner(reason, locked){
+  const nodes2={vuneoImport:{disabled:false},vuneoImportStatus:{textContent:''}};
+  const out=[];let seq=0;
+  const app=new Function('$','post','nextChatId',
+    'let pendingVuneo=null;let vuneoImportUncertain=false;'+dispatcher+
+    "function receive(type,v){switch(type){"+cases+"}};"+
+    "return {click:()=> $('vuneoImport').onclick(),receive,pending:()=>pendingVuneo};"
+  )(id=>nodes2[id],(type,data)=>{out.push({type,...data});return true},()=>('req-restart-'+(++seq)));
+  assert.equal(app.click(),true);
+  const requestId=out[0].requestId;
+  app.receive('knowledge.vuneo.denied',{requestId:'stale-owner',reason});
+  assert.ok(app.pending(),'unrelated native receipt must be ignored');
+  app.receive('knowledge.vuneo.denied',{requestId,reason});
+  assert.equal(app.pending(),null);
+  assert.equal(nodes2.vuneoImport.disabled,locked,
+    reason+' must preserve its original native replay policy');
+  assert.equal(nodes2.vuneoImportStatus.textContent,
+    reason==='OWNER_DECLINED'?'Импорт отменён владельцем.':reason);
+  assert.equal(app.click(),!locked,'no invalid native retries after durable SQLite receipt');
+  assert.equal(out.length,locked?1:2,'unexpected number of native VUNEO dispatches');
+}
+for(const reason of ['NOX_VUNEO_ALREADY_IMPORTED_HOLD',
+  'NOX_VUNEO_PREVIOUS_OUTCOME_REVIEW_HOLD','NOX_VUNEO_REQUEST_LIMIT_HOLD'])
+    checkFreshVuneoOwner(reason,true);
+for(const reason of ['OWNER_DECLINED','NOX_VUNEO_JOURNAL_READ_HOLD'])
+    checkFreshVuneoOwner(reason,false);
+assert.ok(!html.includes('повтор заблокирован до перезапуска.'),
+  'restarting the WPF host does not remove a persistent SQLite journal');
+console.log('D03 R8 SOURCE_ONLY: real WebView2 durable VUNEO HOLD/owner-declined replay policy PASS');

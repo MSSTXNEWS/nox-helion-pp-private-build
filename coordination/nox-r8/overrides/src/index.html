@@ -458,13 +458,22 @@ case 'knowledge.vuneo.unknown':{
      v?.reason!=='NOX_VUNEO_COMMIT_UNKNOWN_HOLD'||v?.backupVerified!==true)break;
   // Partial import may already exist: no automatic retry in this process.
   pendingVuneo=null;vuneoImportUncertain=true;$('vuneoImport').disabled=true;
-  $('vuneoImportStatus').textContent='NOX_VUNEO_COMMIT_UNKNOWN_HOLD: результат импорта неопределён; повтор заблокирован до перезапуска. Проверьте локальную SQLite и статистику.';
+  $('vuneoImportStatus').textContent='NOX_VUNEO_COMMIT_UNKNOWN_HOLD: результат импорта неопределён; повтор заблокирован до сверки локальной SQLite и статистики.';
   break;
 }
 case 'knowledge.vuneo.denied':{
   if(!pendingVuneo||v?.requestId!==pendingVuneo.requestId)break;
-  pendingVuneo=null;$('vuneoImport').disabled=false;
-  const reason=['OWNER_DECLINED','NOX_VUNEO_IMPORT_HOLD','NOX_VUNEO_REQUEST_ID_HOLD'].includes(v?.reason)?v.reason:'NOX_VUNEO_IMPORT_HOLD';
+  pendingVuneo=null;
+  // Read the durable native SQLite admission result, not a generic retryable denial.
+  // A journaled attempt or completed import cannot be retried after restart.
+  const allowed=['OWNER_DECLINED','NOX_VUNEO_IMPORT_HOLD','NOX_VUNEO_REQUEST_ID_HOLD',
+    'NOX_VUNEO_ALREADY_IMPORTED_HOLD','NOX_VUNEO_PREVIOUS_OUTCOME_REVIEW_HOLD',
+    'NOX_VUNEO_JOURNAL_READ_HOLD','NOX_VUNEO_REQUEST_LIMIT_HOLD','NOX_VUNEO_REPLAY_HOLD'];
+  const reason=allowed.includes(v?.reason)?v.reason:'NOX_VUNEO_IMPORT_HOLD';
+  const locked=['NOX_VUNEO_ALREADY_IMPORTED_HOLD','NOX_VUNEO_PREVIOUS_OUTCOME_REVIEW_HOLD',
+    'NOX_VUNEO_REQUEST_LIMIT_HOLD'].includes(reason);
+  if(locked)vuneoImportUncertain=true;
+  $('vuneoImport').disabled=vuneoImportUncertain;
   $('vuneoImportStatus').textContent=reason==='OWNER_DECLINED'?'Импорт отменён владельцем.':reason;
   break;
 }
