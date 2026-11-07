@@ -95,8 +95,17 @@ def _log_metrics(file):
             "log_path":str(file)}
 
 def observation(root):
-    paths=[root/"brain"/"telemetry"/"training.json",
-           root/"brain"/"telemetry"/"training_safe70.json"]
+    telemetry=root/"brain"/"telemetry"
+    paths=[telemetry/"training.json",telemetry/"training_safe70.json"]
+    # Immutable fallback receipts are used only when Windows locks BOTH
+    # fixed JSON names. Limit scans to 100 entries to bound disk work.
+    receipt_dir=telemetry/"safe70_receipts"
+    if receipt_dir.is_dir() and not receipt_dir.is_symlink():
+        try:
+            paths.extend(sorted(receipt_dir.glob("training_*.json"),
+                                key=lambda f:f.stat().st_mtime,reverse=True)[:20])
+        except OSError:
+            pass
     # Use the freshest complete actual receipt, never merge conflicting PIDs.
     received=[]
     for candidate in paths:
