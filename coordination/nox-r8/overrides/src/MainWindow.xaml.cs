@@ -1806,7 +1806,10 @@ public partial class MainWindow : Window
             await SelectModel(model);
             // The committed owner model has been independently read back.
             // Auxiliary health refresh must not misreport a persisted save as denied.
-            Send("model.select.receipt", new { requestId, model, saved = true });
+            // Once SQLite has committed and readback succeeded, an IPC transport
+            // error must NOT be reported as an unsuccessful model selection.
+            try { Send("model.select.receipt", new { requestId, model, saved = true }); }
+            catch (Exception) { /* Persisted model remains authoritative; owner may refresh. */ }
             try {
                 Send("settings", ReadPreferences());
                 await CheckProvider();
@@ -1828,7 +1831,10 @@ public partial class MainWindow : Window
     private async Task SelectModel(string model)
     {
         if (string.IsNullOrWhiteSpace(model) || model.Length > 120) throw new ArgumentException("Invalid model name");
-        using var response = await http.GetAsync(Api + "/api/tags");
+        // Match the bounded local HEALTH probe: unavailable Ollama must release
+        // owner MODEL SAVE promptly, not hold the UI for HttpClient's 10-minute timeout.
+        using var probe = new CancellationTokenSource(TimeSpan.FromSeconds(4));
+        using var response = await http.GetAsync(Api + "/api/tags", probe.Token);
         response.EnsureSuccessStatusCode();
         using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         bool exists = json.RootElement.GetProperty("models").EnumerateArray().Any(x => x.GetProperty("name").GetString() == model);
