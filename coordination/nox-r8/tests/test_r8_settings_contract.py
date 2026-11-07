@@ -112,23 +112,3 @@ runtime_check = subprocess.run(['node','-e',runtime], capture_output=True,
                                 encoding='utf-8')
 assert runtime_check.returncode == 0, runtime_check.stderr
 print('D06 R8 SETTINGS SOURCE_ONLY: validation/readback/ARIA/JS PASS; Windows owner-PC not tested')
-, 'settingsDenial', HANDLER_CODE);
-function verify(pending, reconcile, expectedApply) {
-  let applied = 0;
-  const status = {textContent: 'NOX_SETTINGS_COMMIT_UNKNOWN_HOLD'};
-  handler(pending, reconcile, {performance:'BALANCED'}, () => applied++,
-    () => status, 'NOX_SETTINGS_COMMIT_UNKNOWN_HOLD');
-  if (applied !== expectedApply)
-    throw new Error('D06_STALE_SETTINGS_BROADCAST_HOLD applied='+applied+
-      ' expected='+expectedApply);
-  if (status.textContent !== 'NOX_SETTINGS_COMMIT_UNKNOWN_HOLD')
-    throw new Error('D06_OWNER_RECEIPT_STATUS_HOLD');
-}
-verify(null, {requestId:'r-confirm',key:'performance',value:'ECO'}, 0);
-verify({requestId:'r-pending',key:'performance',value:'ECO'}, null, 0);
-verify(null, null, 1);
-""".replace('HANDLER_CODE', __import__('json').dumps(settings_case.group(1)))
-runtime_check = subprocess.run(['node','-e',runtime], capture_output=True,
-                                encoding='utf-8')
-assert runtime_check.returncode == 0, runtime_check.stderr
-print('D06 R8 SETTINGS SOURCE_ONLY: validation/readback/ARIA/JS PASS; Windows owner-PC not tested')
