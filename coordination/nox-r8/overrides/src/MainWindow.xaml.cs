@@ -65,7 +65,6 @@ public partial class MainWindow : Window
     private readonly string dbPath = DatabasePath;
     private string? legacyImportHold; // Owner-visible, non-destructive legacy import admission HOLD.
     private readonly HashSet<string> consumedVuneoRequestIds = new(StringComparer.Ordinal);
-    private readonly Queue<string> consumedVuneoRequestOrder = new();
 
 
     [DllImport("dwmapi.dll", PreserveSig = true)]
@@ -2148,13 +2147,18 @@ public partial class MainWindow : Window
             Send("knowledge.vuneo.denied", new { requestId, reason = "NOX_VUNEO_REQUEST_ID_HOLD" });
             return;
         }
+        // Never evict a previously consumed consent nonce: doing so lets an old
+        // WebView2 request reopen the owner modal after enough newer requests.
+        // Fail closed at the bounded cap rather than allowing an old replay.
+        if (consumedVuneoRequestIds.Count >= 512 &&
+            !consumedVuneoRequestIds.Contains(requestId)) {
+            Send("knowledge.vuneo.denied", new { requestId, reason = "NOX_VUNEO_REQUEST_LIMIT_HOLD" });
+            return;
+        }
         if (!consumedVuneoRequestIds.Add(requestId)) {
             Send("knowledge.vuneo.denied", new { requestId, reason = "NOX_VUNEO_REPLAY_HOLD" });
             return;
         }
-        consumedVuneoRequestOrder.Enqueue(requestId);
-        if (consumedVuneoRequestOrder.Count > 512)
-            consumedVuneoRequestIds.Remove(consumedVuneoRequestOrder.Dequeue());
 
         bool importCompleted = false;
         try {

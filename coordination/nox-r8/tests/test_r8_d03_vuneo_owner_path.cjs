@@ -67,12 +67,20 @@ const vuneoMethod=native.slice(
   native.indexOf('private void ImportKnowledgeByDialog')
 );
 assert.ok(native.includes('private readonly HashSet<string> consumedVuneoRequestIds = new(StringComparer.Ordinal);'));
-assert.ok(native.includes('private readonly Queue<string> consumedVuneoRequestOrder = new();'));
+assert.ok(!native.includes('consumedVuneoRequestOrder'), 'never evict consumed owner requests');
 const replayAt=vuneoMethod.indexOf('!consumedVuneoRequestIds.Add(requestId)');
 const consentAt=vuneoMethod.indexOf('MessageBox.Show(this');
 assert.ok(replayAt>0&&replayAt<consentAt,'reject duplicate requestId before owner modal');
 assert.ok(vuneoMethod.includes('NOX_VUNEO_REPLAY_HOLD'),'explicit replay denial');
-assert.ok(vuneoMethod.includes('Count > 512'),'bounded per-process replay state');
+const capAt=vuneoMethod.indexOf('consumedVuneoRequestIds.Count >= 512');
+assert.ok(capAt>0&&capAt<replayAt&&replayAt<consentAt,
+  'exhausted nonce budget must reject new work before consent');
+assert.ok(vuneoMethod.includes('!consumedVuneoRequestIds.Contains(requestId)'),
+  'old request IDs must still be recognized after the budget is exhausted');
+assert.ok(vuneoMethod.includes('NOX_VUNEO_REQUEST_LIMIT_HOLD'),
+  'exhaustion must have an explicit fail-closed native receipt');
+assert.ok(!vuneoMethod.includes('consumedVuneoRequestIds.Remove('),
+  'eviction reopens previously consumed owner consent');
 const preimageAt=vuneoMethod.indexOf('CheckpointSqlite(db, "PRE_VUNEO_IMPORT")');
 const importAt=vuneoMethod.indexOf('knowledge.ImportVuneoStaging()');
 const committedAt=vuneoMethod.indexOf('importCompleted = true;');
