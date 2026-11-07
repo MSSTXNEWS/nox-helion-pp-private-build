@@ -221,6 +221,16 @@ assert startup.index('engineStartLock.Wait(0)') < startup.index('GetActiveTcpLis
 assert 'finally {\n            engineStartLock.Release();' in startup, 'B02_OWNER_LOCK_RELEASE_HOLD'
 assert 'ps.Environment["OLLAMA_HOST"] = "127.0.0.1:11436";' in startup, 'B02_PROVIDER_ENDPOINT_HOLD'
 assert 'ps.Environment["OLLAMA_MODELS"] = modelDir;' in startup, 'B02_EXISTING_MODELS_HOLD'
+# Owner-triggered provider recovery must surface failure in the existing
+# engine notice, not as an unrelated chat error, and refresh actual health.
+# Do not catch arbitrary internal failures or claim recovery without a probe.
+assert 'LOCAL_PROVIDER_START_FAILED:' in startup, 'B02_ENGINE_FAILURE_NOTICE_HOLD'
+assert 'Send("notice", "LOCAL_PROVIDER_START_FAILED: " + ex.Message);' in startup, 'B02_ENGINE_FAILURE_WRONG_CHANNEL_HOLD'
+assert 'catch (Exception ex) when (!providerProbeStopped &&' in startup, 'B02_ENGINE_FAILURE_SHUTDOWN_GUARD_HOLD'
+assert all(exc in startup for exc in ('ex is InvalidOperationException', 'ex is System.ComponentModel.Win32Exception', 'ex is UnauthorizedAccessException', 'ex is IOException', 'ex is HttpRequestException', 'ex is OperationCanceledException')), 'B02_ENGINE_FAILURE_EXPECTED_ERRORS_HOLD'
+assert startup.index('Send("notice", "LOCAL_PROVIDER_START_FAILED: "') < startup.rindex('await CheckProvider();') < startup.index('engineStartLock.Release();'), 'B02_ENGINE_FAILURE_HEALTH_ORDER_HOLD'
+assert startup.count('Process.Start(ps)') == 1, 'B02_ENGINE_FAILURE_NO_DUPLICATE_SPAWN_HOLD'
+
 assert 'TimeSpan.FromSeconds(25)' in cs, 'B02_REATTACH_INTERVAL_HOLD'
 assert 'if (!selfTestRequested && !providerReconnectTimer.IsEnabled)' in cs, 'B02_REATTACH_SELFTEST_HOLD'
 assert 'providerReconnectTimer.Stop();' in cs, 'B02_REATTACH_SHUTDOWN_HOLD'

@@ -1330,6 +1330,19 @@ public partial class MainWindow : Window
         catch (ObjectDisposedException) when (providerProbeStopped) {
             // WebView2 owner is closing: avoid status updates and process spawn.
         }
+        catch (Exception ex) when (!providerProbeStopped &&
+            (ex is InvalidOperationException ||
+             ex is System.ComponentModel.Win32Exception ||
+             ex is UnauthorizedAccessException ||
+             ex is IOException ||
+             ex is HttpRequestException ||
+             ex is OperationCanceledException)) {
+            // An explicit owner-start failure is not a chat failure. Report it
+            // through the existing service notice and probe the real endpoint.
+            // Neither a failed spawn nor a live foreign port can claim ONLINE.
+            Send("notice", "LOCAL_PROVIDER_START_FAILED: " + ex.Message);
+            await CheckProvider();
+        }
         finally {
             engineStartLock.Release();
         }
