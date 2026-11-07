@@ -1778,6 +1778,11 @@ public partial class MainWindow : Window
             try { Send("feedback.receipt", new { requestId, id, rating, answer, saved = true }); }
             catch (Exception) { /* Committed feedback must never be falsely denied. */ }
         }
+        catch (FeedbackPersistenceUnknownException ex) {
+            // COMMIT may already have persisted this owner rating; never invite replay.
+            try { Send("feedback.uncertain", new { requestId, reason = ex.Message }); }
+            catch (Exception) { /* Owner needs SQLite inspection before retry. */ }
+        }
         catch (SqliteException) {
             Send("feedback.denied", new { requestId, reason = "NOX_FEEDBACK_SQLITE_HOLD" });
         }
@@ -1786,29 +1791,66 @@ public partial class MainWindow : Window
         }
     }
 
+    // Never report a failure after a possibly committed feedback write.
+    private sealed class FeedbackPersistenceUnknownException : Exception
+    {
+        public FeedbackPersistenceUnknownException(string reason, Exception inner) : base(reason, inner) { }
+    }
+
     private long SaveFeedback(int rating, string answer)
     {
-        using var db = OpenDatabase();
-        using (var cmd = db.CreateCommand()) {
-            cmd.CommandText = "INSERT INTO feedback(created_at,rating,answer) VALUES($t,$r,$a)";
-            cmd.Parameters.AddWithValue("$t",DateTimeOffset.UtcNow.ToString("O"));
-            cmd.Parameters.AddWithValue("$r",rating);
-            cmd.Parameters.AddWithValue("$a",answer);
-            if (cmd.ExecuteNonQuery() != 1)
-                throw new InvalidOperationException("NOX_FEEDBACK_SQLITE_WRITE_HOLD");
+        long id;
+        bool commitAttempted = false;
+        try
+        {
+            using (var db = OpenDatabase())
+            using (var tx = db.BeginTransaction())
+            {
+                using (var cmd = db.CreateCommand())
+                {
+                    cmd.Transaction = tx;
+                    cmd.CommandText = "INSERT INTO feedback(created_at,rating,answer) VALUES($t,$r,$a)";
+                    cmd.Parameters.AddWithValue("$t", DateTimeOffset.UtcNow.ToString("O"));
+                    cmd.Parameters.AddWithValue("$r", rating);
+                    cmd.Parameters.AddWithValue("$a", answer);
+                    if (cmd.ExecuteNonQuery() != 1)
+                        throw new InvalidOperationException("NOX_FEEDBACK_SQLITE_WRITE_HOLD");
+                }
+                using (var rowId = db.CreateCommand())
+                {
+                    rowId.Transaction = tx;
+                    rowId.CommandText = "SELECT last_insert_rowid()";
+                    id = Convert.ToInt64(rowId.ExecuteScalar());
+                    if (id <= 0)
+                        throw new InvalidOperationException("NOX_FEEDBACK_ROWID_HOLD");
+                }
+                commitAttempted = true;
+                tx.Commit();
+            }
         }
-        using var rowId = db.CreateCommand();
-        rowId.CommandText = "SELECT last_insert_rowid()";
-        long id = Convert.ToInt64(rowId.ExecuteScalar());
-        if (id <= 0) throw new InvalidOperationException("NOX_FEEDBACK_ROWID_HOLD");
-        using var verifyDb = OpenDatabase();
-        using var verify = verifyDb.CreateCommand();
-        verify.CommandText = "SELECT rating,answer FROM feedback WHERE id=$id";
-        verify.Parameters.AddWithValue("$id", id);
-        using var row = verify.ExecuteReader();
-        if (!row.Read() || row.GetInt32(0) != rating ||
-            !string.Equals(row.GetString(1), answer, StringComparison.Ordinal))
-            throw new InvalidOperationException("NOX_FEEDBACK_SQLITE_READBACK_HOLD");
+        catch (Exception ex)
+        {
+            if (commitAttempted)
+                throw new FeedbackPersistenceUnknownException("NOX_FEEDBACK_COMMIT_UNKNOWN_HOLD", ex);
+            throw;
+        }
+
+        try
+        {
+            // A separate SQLite connection verifies the committed row.
+            using var verifyDb = OpenDatabase();
+            using var verify = verifyDb.CreateCommand();
+            verify.CommandText = "SELECT rating,answer FROM feedback WHERE id=$id";
+            verify.Parameters.AddWithValue("$id", id);
+            using var row = verify.ExecuteReader();
+            if (!row.Read() || row.GetInt32(0) != rating ||
+                !string.Equals(row.GetString(1), answer, StringComparison.Ordinal))
+                throw new InvalidOperationException("NOX_FEEDBACK_SQLITE_READBACK_HOLD");
+        }
+        catch (Exception ex)
+        {
+            throw new FeedbackPersistenceUnknownException("NOX_FEEDBACK_READBACK_UNKNOWN_HOLD", ex);
+        }
         return id;
     }
 

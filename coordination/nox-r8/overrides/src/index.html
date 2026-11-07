@@ -409,6 +409,11 @@ case 'feedback.receipt':{
  pendingFeedback=null;feedbackReady=false;setFeedbackEnabled(false);
  $('streamHint').textContent='Оценка подтверждена SQLite · это не обучение весов';break;
 }
+case 'feedback.uncertain':{
+ if(!pendingFeedback||v?.requestId!==pendingFeedback.requestId)break;
+ pendingFeedback=null;feedbackReady=false;setFeedbackEnabled(false);
+ $('streamHint').textContent=String(v?.reason||'NOX_FEEDBACK_PERSISTENCE_UNKNOWN_HOLD')+' · проверьте сохранённую оценку перед повтором';break;
+}
 case 'feedback.denied':{
  if(!pendingFeedback||v?.requestId!==pendingFeedback.requestId)break;
  const stillCurrent=pendingFeedback.answer===lastAnswer;
