@@ -197,6 +197,8 @@ body.reduced .helion-fx{filter:none}body.reduced .core.active{animation:none}
     }
     return ()=>{try{observer.disconnect();}catch(_){}};
   }
+  // Coalesce repeated WebView2 resize/mode/energy invalidations into one RAF;
+  // cancel only when hidden or context lost, never starve a frame during DPI drags.
   function startCanvas2d(fallbackCanvas, initialMode='BALANCED', initialEnergy=0){
     const canvas=fallbackCanvas;
     // 2D fallback retains visible fluid motion even when GPU acceleration is
@@ -257,7 +259,7 @@ body.reduced .helion-fx{filter:none}body.reduced .core.active{animation:none}
       }
       raf=fps?requestAnimationFrame(frame):0;
     }
-    function redraw(){if(failed||contextLost)return;if(raf)cancelAnimationFrame(raf);rendered=false;if(document.hidden){raf=0;return;}raf=requestAnimationFrame(frame);}
+    function redraw(){if(failed||contextLost)return;rendered=false;if(document.hidden){if(raf)cancelAnimationFrame(raf);raf=0;return;}if(!raf)raf=requestAnimationFrame(frame);}
     sphere.dataset.fx='canvas2d';
     window.noxVisual={setMode(v){mode=['MAX','BALANCED','ECO'].includes(v)?v:'BALANCED';redraw();},
       setEnergy(v){energy=v?1:0;redraw();},refresh:redraw};
@@ -392,7 +394,7 @@ body.reduced .helion-fx{filter:none}body.reduced .core.active{animation:none}
     catch(e){switchToCanvas2d(e.message);return;}
     raf=fps?requestAnimationFrame(frame):0;
   }
-  function redraw(){if(!gpuActive)return;if(raf)cancelAnimationFrame(raf);rendered=false;if(document.hidden){raf=0;return;}raf=requestAnimationFrame(frame);}
+  function redraw(){if(!gpuActive)return;rendered=false;if(document.hidden){if(raf)cancelAnimationFrame(raf);raf=0;return;}if(!raf)raf=requestAnimationFrame(frame);}
   sphere.dataset.fx='active';
   window.noxVisual={setMode(value){mode=['MAX','BALANCED','ECO'].includes(value)?value:'BALANCED';rendered=false;redraw();},
     setEnergy(isGenerating){energy=isGenerating?1:0;rendered=false;redraw();},refresh:()=>{rendered=false;redraw()}};
