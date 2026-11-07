@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""NOX R8 installed WebView2 CDP visual witness (source + physical GUI, fail closed).
+r"""NOX R8 installed WebView2 CDP visual witness (source + physical GUI, fail closed).
 
 Does not install or start NOX, download browsers, change SQLite or claim release.
 Requires the *real installed WebView2* with a localhost-only CDP endpoint already
