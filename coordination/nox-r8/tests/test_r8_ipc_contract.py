@@ -295,3 +295,21 @@ assert 'request.ValueKind != JsonValueKind.Object || HasDuplicateJsonProperties(
 assert 'NOX_IPC_AMBIGUOUS_JSON_DENIED' in message, 'B02_IPC_AMBIGUOUS_DENIED_HOLD'
 assert message.index('rawMessage.Length > 512 * 1024') < message.index('JsonDocument.Parse(rawMessage)') < message.index('HasDuplicateJsonProperties(request)') < message.index('var kind = request.GetProperty("type")') < message.index('switch (kind)'), 'B02_IPC_FAIL_CLOSED_ORDER_HOLD'
 print('B02 R8 SOURCE_ONLY: bounded duplicate-free native IPC before command dispatch; Windows Qwen NOT_TESTED')
+
+
+# B02 native Ollama provider-restart corner case: a valid HTTP response can
+# fail during NDJSON consumption with IOException/JsonException or EOF before
+# done=true. Never mislabel SQLite failures or owner STOP as provider loss.
+# Re-probe actual /api/tags only after request-correlated terminal ACK and lock release.
+provider_recovery = cs.split('private async Task Generate(', 1)[1].split('private void PersistChat(', 1)[0]
+assert 'bool providerStreamRequested = false;' in provider_recovery, 'B02_STREAM_REQUEST_TRACK_HOLD'
+assert provider_recovery.index('providerStreamRequested = true;') < provider_recovery.index('await http.SendAsync('), 'B02_STREAM_REQUEST_BEFORE_HTTP_HOLD'
+broken_eof = provider_recovery.split('if (!completed) {', 1)[1].split('// A STOP received with the final token', 1)[0]
+assert 'refreshProviderAfterError = true;' in broken_eof and 'throw new InvalidOperationException(' in broken_eof, 'B02_STREAM_EOF_HEALTH_REFRESH_HOLD'
+generic_error = provider_recovery.split('catch (Exception ex) {', 1)[1].split('finally {', 1)[0]
+assert 'providerStreamRequested && (ex is IOException || ex is JsonException)' in generic_error, 'B02_STREAM_TRANSPORT_ERRORS_HOLD'
+assert 'refreshProviderAfterError = true;' in generic_error, 'B02_STREAM_TRANSPORT_RECHECK_HOLD'
+assert generic_error.index('refreshProviderAfterError = true;') < generic_error.index('Emit("complete", new { requestId, ok = false, stopped = false });'), 'B02_STREAM_COMPLETE_ORDER_HOLD'
+assert provider_recovery.index('Emit("complete", new { requestId, ok = false, stopped = false });',provider_recovery.index('catch (Exception ex) {')) < provider_recovery.index('generationLock.Release();') < provider_recovery.rindex('await CheckProvider();'), 'B02_STREAM_TERMINAL_BEFORE_HEALTH_HOLD'
+assert 'providerStreamRequested && (ex is IOException || ex is JsonException)' not in provider_recovery.split('catch (OperationCanceledException) when (cancellation.IsCancellationRequested)', 1)[1].split('catch (OperationCanceledException) {',1)[0], 'B02_STREAM_STOP_ISOLATION_HOLD'
+print('B02 R8 SOURCE_ONLY: truncated/invalid Ollama NDJSON triggers real health re-probe after terminal ACK; owner STOP and SQLite preserved')

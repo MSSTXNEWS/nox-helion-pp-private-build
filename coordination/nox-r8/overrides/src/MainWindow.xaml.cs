@@ -1425,6 +1425,8 @@ public partial class MainWindow : Window
         Interlocked.Increment(ref generationStartedCount);
         var answer = new StringBuilder();
         bool refreshProviderAfterError = false;
+        // Only stream transport failures (not SQLite/ownership failures) re-probe Ollama.
+        bool providerStreamRequested = false;
         try
         {
             Emit("status", new { requestId, state = "GENERATING" });
@@ -1450,6 +1452,7 @@ public partial class MainWindow : Window
             using var request = new HttpRequestMessage(HttpMethod.Post, Api + "/api/generate") {
                 Content = new StringContent(options, Encoding.UTF8, "application/json")
             };
+            providerStreamRequested = true;
             using var response = await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellation.Token);
             response.EnsureSuccessStatusCode();
             using var stream = await response.Content.ReadAsStreamAsync(cancellation.Token);
@@ -1485,7 +1488,11 @@ public partial class MainWindow : Window
                     completed = true; break;
                 }
             }
-            if (!completed) throw new InvalidOperationException("Соединение с моделью прервалось до завершения ответа. Частичный ответ не сохранён.");
+            if (!completed) {
+                // A clean EOF without Ollama done=true is still a broken stream.
+                refreshProviderAfterError = true;
+                throw new InvalidOperationException("Соединение с моделью прервалось до завершения ответа. Частичный ответ не сохранён.");
+            }
             // A STOP received with the final token still prevents persistence.
             cancellation.Token.ThrowIfCancellationRequested();
             if (answer.Length > 0) PersistChat(prompt, answer.ToString(), persona);
@@ -1522,6 +1529,10 @@ public partial class MainWindow : Window
             Emit("complete", new { requestId, ok = false, stopped = false });
         }
         catch (Exception ex) {
+            // Provider restart can truncate NDJSON or raise IOException/JsonException
+            // after HTTP headers. Re-check real health only after terminal IPC.
+            if (providerStreamRequested && (ex is IOException || ex is JsonException))
+                refreshProviderAfterError = true;
             Emit("error", new { requestId, message = ex.Message });
             Emit("status", new { requestId, state = "ERROR" });
             Emit("complete", new { requestId, ok = false, stopped = false });
