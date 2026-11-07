@@ -248,7 +248,13 @@ function exercise(kind){
   check(cpuFrames>=3,kind+' visible redraw');
 }
 for(const kind of ['noGpu','noGpu2dLoss','drawFail2dLoss','resizeStormGpu','resizeStormCpu','throwContext','compileFail','setupFail','programNull','shaderNull','uniformNull','bufferNull','attributeMissing','ok','contextLost','drawFail','viewportFail','uniformFail','glError','lateGlError','reducedGpu','reducedCpu','legacyReducedGpu','legacyReducedCpu','noMediaApiGpu','noMediaApiCpu','queryThrowsGpu','queryThrowsCpu','emptyMediaGpu','emptyMediaCpu','invalidStateGpu','invalidStateCpu','observerThrowsGpu','observerThrowsCpu','observerThrowsLegacyGpu','observerThrowsLegacyCpu','no2d','throw2d','draw2dFail','matchesGetterGpu','matchesGetterCpu','motionObserverMissingGpu','motionObserverMissingCpu','motionObserverRejectsGpu','motionObserverRejectsCpu'])exercise(kind);
-check(html.includes("case 'complete':busy=false;activeChatId=null;$('generation').classList.remove('on');window.noxVisual?.setEnergy(false);"),'native completion clears renderer energy');
+// Scope the completion assertion to its handler, not obsolete exact legacy bytes.
+// B06/D01 preserves draft and STOP ownership inside a modern guarded case block.
+const nativeComplete=html.match(/case 'complete':[\s\S]*?(?=case 'error':)/)?.[0]||'';
+check(nativeComplete.includes('busy=false;activeChatId=null;') &&
+      nativeComplete.includes("$('generation').classList.remove('on');") &&
+      nativeComplete.includes('window.noxVisual?.setEnergy(false);'),
+  'native completion clears generation state and renderer energy across B06/D01 handlers');
 
 /* A real CSS fallback must reveal the preserved original sphere, not a 14%-opacity ghost.
    This checks the production stylesheet alongside the existing GPU/2D runtime scenarios. */
