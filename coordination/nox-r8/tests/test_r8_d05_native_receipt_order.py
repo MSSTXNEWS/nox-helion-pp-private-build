@@ -9,9 +9,9 @@ import re
 SOURCE = (Path(__file__).resolve().parents[1] / "overrides/src/MainWindow.xaml.cs").read_text(encoding="utf-8")
 
 def method(name):
-    match = re.search(r"\\bprivate void " + re.escape(name) + r"\\([^)]*\\)\\s*\\{", SOURCE)
+    match = re.search(r"\bprivate void " + re.escape(name) + r"\([^)]*\)\s*\{", SOURCE)
     assert match is not None, "MISSING_METHOD:" + name
-    body = SOURCE[match.end():].split("\\n    private ", 1)[0]
+    body = SOURCE[match.end():].split("\n    private ", 1)[0]
     return body
 
 for method_name, receipt, refresh, inline in (
