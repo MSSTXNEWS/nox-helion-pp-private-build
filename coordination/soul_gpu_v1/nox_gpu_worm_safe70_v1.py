@@ -64,7 +64,8 @@ def assert_idle():
         "$self="+str(os.getpid())+";"
         "$a=Get-CimInstance Win32_Process | Where-Object {"
         "$_.Name -match '^python(?:w)?[.]exe$' -and "
-        "$_.CommandLine -match 'train_directml_lora[.]py|nox_gpu_(?:safe65_v2|10000|target_11120)[.]py' "
+        "$_.ProcessId -ne $self -and "
+        "$_.CommandLine -match 'train_directml_lora[.]py|nox_gpu_(?:safe65_v2|10000|target_11120|worm_safe70_v1)[.]py' "
         "}; $a | Select-Object -ExpandProperty ProcessId"
     )
     r=subprocess.run(["powershell.exe","-NoProfile","-NonInteractive","-Command",script],
