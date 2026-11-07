@@ -203,7 +203,7 @@ body.reduced .helion-fx{filter:none}body.reduced .core.active{animation:none}
   }
   // Coalesce repeated WebView2 resize/mode/energy invalidations into one RAF;
   // cancel only when hidden or context lost, never starve a frame during DPI drags.
-  function startCanvas2d(fallbackCanvas, initialMode='BALANCED', initialEnergy=0){
+  function startCanvas2d(fallbackCanvas, initialMode='BALANCED', initialEnergy=0, initialThermalHold=false){
     const canvas=fallbackCanvas;
     // 2D fallback retains visible fluid motion even when GPU acceleration is
     // disabled by the machine or by remote desktop / headless Windows CI.
@@ -213,21 +213,22 @@ body.reduced .helion-fx{filter:none}body.reduced .core.active{animation:none}
     function staticCss(reason){
       stopSizeWatch();
       sphere.dataset.fx='disabled';
-      window.noxVisual={setMode(){},setEnergy(){},refresh(){}};
+      window.noxVisual={setMode(){},setEnergy(){},setThermalHold(){},refresh(){}};
       console.warn('NOX Canvas2D static CSS fallback:',reason);
     }
     let ctx;
     try{ctx=canvas.getContext('2d',{alpha:true});}
     catch(e){staticCss('CONTEXT_FAILED_'+String(e?.message||e));return;}
     if(!ctx){staticCss('CONTEXT_UNAVAILABLE');return;}
-    let mode=initialMode,energy=initialEnergy,raf=0,last=0,started=performance.now(),rendered=false,failed=false,contextLost=false;
+    let mode=initialMode,energy=initialEnergy,thermalHold=initialThermalHold,raf=0,last=0,started=performance.now(),rendered=false,failed=false,contextLost=false;
     function frame(now){
       if(failed||contextLost||document.hidden){raf=0;return;}
-      const fps=reduce()?0:mode==='MAX'?30:mode==='ECO'?8:18;
+      const effectiveMode=thermalHold?'ECO':mode;
+      const fps=reduce()?0:effectiveMode==='MAX'?30:effectiveMode==='ECO'?8:18;
       if(rendered&&(!fps||now-last<1000/fps)){raf=fps?requestAnimationFrame(frame):0;return;}
       last=now;rendered=true;
       try{
-      const r=canvas.getBoundingClientRect(),max=mode==='ECO'?280:mode==='MAX'?650:480;
+      const r=canvas.getBoundingClientRect(),max=effectiveMode==='ECO'?280:effectiveMode==='MAX'?650:480;
       const scale=Math.min(1.5,Math.max(1,window.devicePixelRatio||1));
       const w=Math.min(max,Math.max(80,Math.ceil(r.width*scale)));
       const h=Math.min(max,Math.max(80,Math.ceil(r.height*scale)));
@@ -266,7 +267,8 @@ body.reduced .helion-fx{filter:none}body.reduced .core.active{animation:none}
     function redraw(){if(failed||contextLost)return;rendered=false;if(document.hidden){if(raf)cancelAnimationFrame(raf);raf=0;return;}if(!raf)raf=requestAnimationFrame(frame);}
     sphere.dataset.fx='canvas2d';
     window.noxVisual={setMode(v){mode=['MAX','BALANCED','ECO'].includes(v)?v:'BALANCED';redraw();},
-      setEnergy(v){energy=v?1:0;redraw();},refresh:redraw};
+      setEnergy(v){energy=v?1:0;redraw();},
+      setThermalHold(value){thermalHold=value===true;redraw();},refresh:redraw};
     // Some WebView2/Chromium drivers lose the 2D surface without throwing.
     // Stop the RAF loop and reveal the original CSS sphere until the actual
     // canvas context restores; preserve mode, energy, chat, and native IPC.
@@ -361,7 +363,7 @@ body.reduced .helion-fx{filter:none}body.reduced .core.active{animation:none}
     if(!Number.isInteger(attr)||attr<0)throw new Error('GL_REQUIRED_ATTRIBUTE_MISSING');
     gl.enableVertexAttribArray(attr);gl.vertexAttribPointer(attr,2,gl.FLOAT,false,0,0);
   }catch(e){console.warn('NOX WebGL initialization fallback:',e.message);const replacement=canvas.cloneNode(false);canvas.replaceWith(replacement);startCanvas2d(replacement);return;}
-  let raf=0,mode='BALANCED',energy=0,rendered=false,last=0,started=performance.now(),gpuFrames=0;
+  let raf=0,mode='BALANCED',energy=0,thermalHold=false,rendered=false,last=0,started=performance.now(),gpuFrames=0;
   let gpuActive=true;
   let stopSizeWatch=()=>{};
   function switchToCanvas2d(reason){
@@ -373,15 +375,17 @@ body.reduced .helion-fx{filter:none}body.reduced .core.active{animation:none}
     const replacement=canvas.cloneNode(false);
     canvas.replaceWith(replacement);
     console.warn('NOX WebGL2 switching to Canvas2D:',reason);
-    startCanvas2d(replacement,mode,energy);
+    startCanvas2d(replacement,mode,energy,thermalHold);
   }
-  function resize(){const rect=canvas.getBoundingClientRect();let max=mode==='ECO'?320:mode==='MAX'?768:512;
+  function resize(){const rect=canvas.getBoundingClientRect();const effectiveMode=thermalHold?'ECO':mode;
+    let max=effectiveMode==='ECO'?320:effectiveMode==='MAX'?768:512;
     let scale=Math.min(1.5,Math.max(1,window.devicePixelRatio||1));
     const w=Math.min(max,Math.max(64,Math.floor(rect.width*scale)));
     const h=Math.min(max,Math.max(64,Math.floor(rect.height*scale)));
     if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;gl.viewport(0,0,w,h);rendered=false;}}
   function frame(now){if(!gpuActive||document.hidden){raf=0;return;}
-    const fps=reduce()?0:mode==='MAX'?60:mode==='ECO'?15:30;
+    const effectiveMode=thermalHold?'ECO':mode;
+    const fps=reduce()?0:effectiveMode==='MAX'?60:effectiveMode==='ECO'?15:30;
     if(rendered && (!fps || now-last<1000/fps)){raf=fps?requestAnimationFrame(frame):0;return;}
     last=now;rendered=true;
     try{resize();gl.useProgram(program);gl.uniform2f(res,canvas.width,canvas.height);
@@ -401,7 +405,8 @@ body.reduced .helion-fx{filter:none}body.reduced .core.active{animation:none}
   function redraw(){if(!gpuActive)return;rendered=false;if(document.hidden){if(raf)cancelAnimationFrame(raf);raf=0;return;}if(!raf)raf=requestAnimationFrame(frame);}
   sphere.dataset.fx='active';
   window.noxVisual={setMode(value){mode=['MAX','BALANCED','ECO'].includes(value)?value:'BALANCED';rendered=false;redraw();},
-    setEnergy(isGenerating){energy=isGenerating?1:0;rendered=false;redraw();},refresh:()=>{rendered=false;redraw()}};
+    setEnergy(isGenerating){energy=isGenerating?1:0;rendered=false;redraw();},
+    setThermalHold(value){thermalHold=value===true;rendered=false;redraw();},refresh:()=>{rendered=false;redraw()}};
   document.addEventListener('visibilitychange',()=>{if(!gpuActive)return;if(!document.hidden)redraw();else if(raf){cancelAnimationFrame(raf);raf=0;}});
   window.addEventListener('resize',redraw,{passive:true});
   watchMotion(redraw);
@@ -690,7 +695,14 @@ case 'notes.delete.denied':if(pendingNoteDelete&&v?.requestId===pendingNoteDelet
 case 'notes.add.receipt':if(pendingNote&&v?.requestId===pendingNote.requestId&&v.saved===true){if(visibleDraftPersona===pendingNote.persona&&$('noteTitle').value.trim()===pendingNote.title)$('noteTitle').value='';if(visibleDraftPersona===pendingNote.persona&&$('noteText').value.trim()===pendingNote.content)$('noteText').value='';pendingNote=null;$('noteAdd').disabled=false;$('status').textContent='NOTE SAVED · SQLITE';}break;
 case 'notes.add.denied':if(pendingNote&&v?.requestId===pendingNote.requestId){pendingNote=null;$('noteAdd').disabled=false;$('status').textContent=String(v.reason||'NOTE SAVE HOLD');}break;
 case 'notes.add.unknown':if(pendingNote&&v?.requestId===pendingNote.requestId&&v?.reason==='NOX_NOTE_ADD_COMMIT_UNKNOWN_HOLD'){pendingNote=null;noteAddUncertain=true;$('noteAdd').disabled=true;$('status').textContent='NOX_NOTE_ADD_COMMIT_UNKNOWN_HOLD · Проверьте записи в памяти перед повторением.';post('notes.list');}break;
-case 'system':$('systemInfo').textContent=JSON.stringify(v,null,2);$('hudMemory').textContent='SQLITE';break;
+case 'system':{
+  // Prefer a conservative ECO rendering cap until the native sensor proves safe.
+  // Never mutate the persisted mode or interrupt Qwen STREAM/STOP.
+  const sensorUnknown=v?.gpu?.available!==true;
+  const thermalHold=sensorUnknown||v.gpu.thermalHold===true;
+  window.noxVisual?.setThermalHold?.(thermalHold);
+  $('systemInfo').textContent=JSON.stringify(v,null,2)+(thermalHold?'\nVISUAL SAFETY: ECO (GPU HOT / SENSOR UNVERIFIED)':'');
+  $('hudMemory').textContent='SQLITE';break;}
 case 'notice':$('personaStatus').textContent=String(v);break;
 }});
 document.addEventListener('keydown',e=>{
