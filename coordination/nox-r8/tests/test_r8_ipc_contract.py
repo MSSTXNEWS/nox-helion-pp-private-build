@@ -273,3 +273,17 @@ after_done = pull.split('status = "DONE"', 1)[1].split('catch (OperationCanceled
 assert 'try { await CheckProvider(); }' in after_done and 'catch (Exception) { /* Owner may retry HEALTH; installation receipt remains DONE. */ }' in after_done, 'D05_PULL_POST_DONE_FALSE_FAIL_HOLD'
 assert pull.count('status = "DONE"') == 1 and pull.count('status = "FAILED_HOLD"') == 1, 'D05_PULL_TERMINAL_DUPLICATE_HOLD'
 print('D05 MODEL PULL SOURCE_ONLY: verified DONE is not revoked by optional health refresh PASS; Windows NOT RUN')
+
+# D05: SETTINGS saves and quick MAX must be linked to their exact owner IPC request.
+settings_native = cs.split('private void HandleSettingsPut(', 1)[1].split('private void SavePreference(', 1)[0]
+assert 'fields.Length != 4' in settings_native and 'fields.Count(x => x.Name == "requestId") != 1' in settings_native, 'D05_SETTINGS_OWNER_ENVELOPE_HOLD'
+assert 'ValidWriteRequestId(requestId)' in settings_native, 'D05_SETTINGS_REQUEST_VALIDATION_HOLD'
+assert 'Send("settings.receipt", new { requestId, key, value, saved = true })' in settings_native, 'D05_SETTINGS_OWNER_RECEIPT_HOLD'
+assert settings_native.count('Send("settings.denied", new { requestId, reason') == 5, 'D05_SETTINGS_OWNER_DENIAL_HOLD'
+assert 'pendingSettings={requestId,key,value}' in html and "post('settings.put',{key,value,requestId})" in html, 'D05_SETTINGS_OWNER_DISPATCH_HOLD'
+settings_ack = html.split("case 'settings.receipt':",1)[1].split("case 'settings.denied':",1)[0]
+settings_deny = html.split("case 'settings.denied':",1)[1].split("case 'knowledge.stats':",1)[0]
+assert 'v?.requestId!==pendingSettings.requestId' in settings_ack and 'v?.saved!==true' in settings_ack, 'D05_SETTINGS_STALE_RECEIPT_HOLD'
+assert 'v?.requestId!==pendingSettings.requestId' in settings_deny, 'D05_SETTINGS_STALE_DENIAL_HOLD'
+assert "persistSetting('performance','MAX')" in html, 'D05_MAX_QUICK_SETTING_OWNER_HOLD'
+print('D05 SETTINGS SOURCE_ONLY requestId receipts/denials guarded; Windows NOT RUN')

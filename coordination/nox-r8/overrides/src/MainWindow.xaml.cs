@@ -1409,15 +1409,20 @@ public partial class MainWindow : Window
     // Denials are bounded codes, never native exception text or private paths.
     private void HandleSettingsPut(JsonElement request)
     {
+        // Native preferences write requires an owner-correlated IPC envelope.
+        string requestId = request.TryGetProperty("requestId", out var idField) &&
+            idField.ValueKind == JsonValueKind.String ? idField.GetString() ?? "" : "";
         var fields = request.EnumerateObject().ToArray();
-        if (fields.Length != 3 ||
+        if (fields.Length != 4 ||
             fields.Count(x => x.Name == "type") != 1 ||
             fields.Count(x => x.Name == "key") != 1 ||
             fields.Count(x => x.Name == "value") != 1 ||
+            fields.Count(x => x.Name == "requestId") != 1 ||
+            !ValidWriteRequestId(requestId) ||
             !request.TryGetProperty("key", out var keyField) || keyField.ValueKind != JsonValueKind.String ||
             !request.TryGetProperty("value", out var valueField) || valueField.ValueKind != JsonValueKind.String)
         {
-            Send("settings.denied", "NOX_SETTINGS_INVALID_REQUEST");
+            Send("settings.denied", new { requestId, reason = "NOX_SETTINGS_INVALID_REQUEST" });
             return;
         }
         string key = keyField.GetString() ?? "";
@@ -1425,7 +1430,7 @@ public partial class MainWindow : Window
         try
         {
             if (key == "persona" && active != null) {
-                Send("settings.denied", "NOX_PERSONA_GENERATION_ACTIVE_HOLD");
+                Send("settings.denied", new { requestId, reason = "NOX_PERSONA_GENERATION_ACTIVE_HOLD" });
                 return;
             }
             SavePreference(key, value);
@@ -1452,11 +1457,12 @@ public partial class MainWindow : Window
             try { Send("settings", verified); }
             catch (Exception) { /* Reopen SETTINGS to retry the optional refresh. */ }
             // Only a verified owner save receives the authoritative receipt.
-            Send("settings.receipt", new { key, value, saved = true });
+            try { Send("settings.receipt", new { requestId, key, value, saved = true }); }
+            catch (Exception) { /* Keep confirmed SQLite commit; owner can refresh on IPC recovery. */ }
         }
-        catch (ArgumentException) { Send("settings.denied", "NOX_SETTINGS_REJECTED"); }
-        catch (SqliteException) { Send("settings.denied", "NOX_SETTINGS_SQLITE_HOLD"); }
-        catch (Exception) { Send("settings.denied", "NOX_SETTINGS_NATIVE_HOLD"); }
+        catch (ArgumentException) { Send("settings.denied", new { requestId, reason = "NOX_SETTINGS_REJECTED" }); }
+        catch (SqliteException) { Send("settings.denied", new { requestId, reason = "NOX_SETTINGS_SQLITE_HOLD" }); }
+        catch (Exception) { Send("settings.denied", new { requestId, reason = "NOX_SETTINGS_NATIVE_HOLD" }); }
     }
 
     private void SavePreference(string key, string value)
