@@ -2077,13 +2077,16 @@ public partial class MainWindow : Window
         }
         string key = keyField.GetString() ?? "";
         string value = valueField.GetString() ?? "";
+        // Once a SQLite COMMIT is attempted, a subsequent readback/IPC failure
+        // cannot truthfully be reported as a definitely rejected owner write.
+        bool commitAttempted = false;
         try
         {
             if (key == "persona" && active != null) {
                 Send("settings.denied", new { requestId, reason = "NOX_PERSONA_GENERATION_ACTIVE_HOLD" });
                 return;
             }
-            SavePreference(key, value);
+            SavePreference(key, value, ref commitAttempted);
             var verified = ReadPreferencesDictionary(); // independent read after SQLite COMMIT
             if (!verified.TryGetValue(key, out var saved) || !string.Equals(saved, value, StringComparison.Ordinal))
                 throw new InvalidOperationException("NOX_SETTINGS_READBACK_HOLD");
@@ -2095,12 +2098,12 @@ public partial class MainWindow : Window
             Send("settings", verified);
             Send("settings.receipt", new { requestId, key, value, saved = true });
         }
-        catch (ArgumentException) { Send("settings.denied", new { requestId, reason = "NOX_SETTINGS_REJECTED" }); }
-        catch (SqliteException) { Send("settings.denied", new { requestId, reason = "NOX_SETTINGS_SQLITE_HOLD" }); }
-        catch (Exception) { Send("settings.denied", new { requestId, reason = "NOX_SETTINGS_NATIVE_HOLD" }); }
+        catch (ArgumentException) { Send("settings.denied", new { requestId, reason = commitAttempted ? "NOX_SETTINGS_COMMIT_UNKNOWN_HOLD" : "NOX_SETTINGS_REJECTED" }); }
+        catch (SqliteException) { Send("settings.denied", new { requestId, reason = commitAttempted ? "NOX_SETTINGS_COMMIT_UNKNOWN_HOLD" : "NOX_SETTINGS_SQLITE_HOLD" }); }
+        catch (Exception) { Send("settings.denied", new { requestId, reason = commitAttempted ? "NOX_SETTINGS_COMMIT_UNKNOWN_HOLD" : "NOX_SETTINGS_NATIVE_HOLD" }); }
     }
 
-    private void SavePreference(string key, string value)
+    private void SavePreference(string key, string value, ref bool commitAttempted)
     {
         if (key != "persona" && key != "motion" && key != "performance" && key != "context") throw new ArgumentException("Unsupported preference");
         if (key == "persona" && !new[] { "KV", "AM", "LA", "EV", "KW" }.Contains(value)) throw new ArgumentException("Unknown persona ID");
@@ -2125,6 +2128,9 @@ public partial class MainWindow : Window
             if (read.ExecuteScalar() is not string stored || !string.Equals(stored, value, StringComparison.Ordinal))
                 throw new InvalidOperationException("NOX_SETTINGS_READBACK_HOLD");
         }
+        // A failure during COMMIT can have an indeterminate durable outcome.
+        // Mark first and let the client request authoritative SQLite readback.
+        commitAttempted = true;
         tx.Commit();
     }
 

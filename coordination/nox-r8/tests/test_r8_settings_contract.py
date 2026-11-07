@@ -12,6 +12,10 @@ for token in (
     '!validId',
     'Send("settings.receipt", new { requestId, key, value, saved = true });',
     'NOX_SETTINGS_OWNER_RECEIPT_HOLD',
+    'NOX_SETTINGS_COMMIT_UNKNOWN_HOLD',
+    'SavePreference(key, value, ref commitAttempted);',
+    'commitAttempted = true;',
+    'commitAttempted ? "NOX_SETTINGS_COMMIT_UNKNOWN_HOLD" : "NOX_SETTINGS_SQLITE_HOLD"',
     'NOX_SETTINGS_MOTION_RECEIPT_HOLD',
     "requestId:'smoke_foreign_0001'",
     'NOX_SETTINGS_INVALID_REQUEST',
@@ -44,6 +48,7 @@ for token in (
     "v?.requestId!==pendingSettings.requestId",
     "applyCommittedSettings(committedSettings)",
     "NOX_SETTINGS_OWNER_IN_FLIGHT",
+    "'NOX_SETTINGS_COMMIT_UNKNOWN_HOLD'",
     'id="personaStatus" class="mono" role="status" aria-live="polite"',
     "window.noxVisual?.setMode(v?.performance||'BALANCED')",
     '<body class="reduced">',  # Safe static frame until native SQLite motion preference arrives.
