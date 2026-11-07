@@ -164,7 +164,11 @@ for action, table in (("Task", "tasks"), ("Note", "memory_notes")):
     segment = cs.split(f"private void Handle{action}Add(", 1)[1].split("\n    private ", 1)[0]
     assert "ValidWriteRequestId(requestId)" in segment, "D05_OWNER_REQUEST_HOLD"
     assert "using var verifyDb = OpenDatabase();" in segment, "D05_READBACK_HOLD"
-    assert f"FROM {table} WHERE id=$id" in segment, "D05_SQLITE_ROW_HOLD"
+    if action == "Task":
+        assert "FROM tasks t JOIN task_add_receipts r ON r.task_id=t.id" in segment, "D05_DURABLE_TASK_RECEIPT_JOIN_HOLD"
+        assert "r.owner_sid=$sid AND r.request_id=$rid" in segment, "D05_DURABLE_OWNER_REQUEST_HOLD"
+    else:
+        assert f"FROM {table} WHERE id=$id" in segment, "D05_SQLITE_ROW_HOLD"
     assert segment.index("using var verifyDb") < segment.index(f'Send("{action.lower()}s.add.receipt"'), "D05_PREMATURE_ACK_HOLD"
     assert f'Send("{action.lower()}s.add.denied"' in segment, "D05_DENIAL_HOLD"
 for part in (
