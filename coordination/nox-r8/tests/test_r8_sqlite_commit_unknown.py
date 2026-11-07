@@ -32,3 +32,23 @@ assert "uncertainChatKeys.add(uncertainChatKey(retry.persona,retry.raw))" in htm
 assert "let restored=false;if(!v?.ok&&retry){" in html, "B04_UNKNOWN_COMMIT_REPLAY_GUARD_HOLD"
 assert "route('reflection');return;" in html, "B04_UNKNOWN_COMMIT_REPLAY_GUARD_HOLD"
 print("NOX_B04_COMMIT_UNKNOWN_SOURCE_ONLY_PASS")
+
+# F02 isolated WAL test; no owner database, model, or user file is touched.
+from tempfile import TemporaryDirectory
+from contextlib import closing
+import sqlite3
+
+with TemporaryDirectory(prefix="nox-f02-r8-sqlite-") as scratch:
+    dbpath = Path(scratch) / "disposable.sqlite3"
+    with closing(sqlite3.connect(dbpath)) as writer:
+        assert writer.execute("PRAGMA journal_mode=WAL").fetchone()[0].lower() == "wal", "F02_SQLITE_WAL_HOLD"
+        writer.execute("CREATE TABLE chat_history(id INTEGER PRIMARY KEY, persona TEXT NOT NULL, prompt TEXT NOT NULL, answer TEXT NOT NULL)")
+        writer.execute("INSERT INTO chat_history(persona,prompt,answer) VALUES (?,?,?)", ("KV", "one", "committed"))
+        writer.commit()
+        # Verify with a separate handle while the WAL writer remains open.
+        with closing(sqlite3.connect(dbpath)) as reader:
+            assert reader.execute("SELECT persona,prompt,answer FROM chat_history").fetchall() == [("KV","one","committed")], "F02_SQLITE_INDEPENDENT_READBACK_HOLD"
+            assert reader.execute("PRAGMA quick_check").fetchone()[0] == "ok", "F02_SQLITE_QUICK_CHECK_HOLD"
+    with closing(sqlite3.connect(dbpath)) as restarted:
+        assert restarted.execute("SELECT COUNT(*) FROM chat_history WHERE persona=?", ("KV",)).fetchone()[0] == 1, "F02_SQLITE_NO_DUPLICATE_AFTER_REOPEN_HOLD"
+print("F02 disposable SQLite WAL commit/independent readback/reopen: PASS; owner-PC NOT_TESTED")

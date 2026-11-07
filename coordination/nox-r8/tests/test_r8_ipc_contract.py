@@ -68,6 +68,23 @@ for fragment in required_cs:
     assert fragment in cs, 'B02_NATIVE_IPC_SOURCE_HOLD: ' + fragment
 for fragment in required_html:
     assert fragment in html, 'B02_WEBVIEW2_SOURCE_HOLD: ' + fragment
+# F02: assert original receiving handler guards owner ID before the switch.
+# A literal token/STOP substring elsewhere is NOT sufficient proof.
+receiver = html.split("window.chrome?.webview?.addEventListener('message',e=>{", 1)[1].split("\n});", 1)[0]
+owner_filter = "if(['status','token','metrics','complete'].includes(m.type) && (!v || v.requestId!==activeChatId))return;"
+assert receiver.count(owner_filter) == 1, 'F02_NATIVE_OWNER_FILTER_HOLD'
+assert receiver.index(owner_filter) < receiver.index('switch(m.type){') < receiver.index("case 'token':"), 'F02_OWNER_FILTER_ORDER_HOLD'
+token = receiver.split("case 'token':", 1)[1].split("case 'metrics':", 1)[0]
+assert 'if(pendingChatDraft?.persona!==visibleDraftPersona)break;' in token, 'F02_CROSS_PERSONA_TOKEN_HOLD'
+assert token.index('if(pendingChatDraft?.persona!==visibleDraftPersona)break;') < token.index('lastAnswer+=v.text'), 'F02_TOKEN_VISIBILITY_ORDER_HOLD'
+# Keyboard path must actually call the already owner-bound STOP button.
+keyboard = html.rsplit("document.addEventListener('keydown',e=>{", 1)[1].split("\n});", 1)[0]
+key_guard = 'if(e.defaultPrevented||e.isComposing||e.keyCode===229||e.repeat)return;'
+esc_stop = "if(e.key==='Escape'&&busy&&activeChatId){e.preventDefault();$('stop').click();return;}"
+assert keyboard.count(key_guard) == 1 and keyboard.count(esc_stop) == 1, 'F02_ESCAPE_STOP_GUARD_HOLD'
+assert keyboard.index(key_guard) < keyboard.index(esc_stop), 'F02_IME_STOP_ORDER_HOLD'
+assert "post('stop',{requestId:activeChatId})" in html, 'F02_STOP_REQUEST_OWNER_HOLD'
+
 # A failed native bridge must not claim the active chat owner or lose a draft.
 chat_handler = html.split("$('send').onclick=()=>", 1)[1].split("\n$('stop').onclick=", 1)[0]
 assert chat_handler.index("if(post('chat',{text,requestId})===false)") < chat_handler.index("busy=true;activeChatId=requestId;"), "B02_PREMATURE_NATIVE_OWNER_HOLD"
@@ -445,3 +462,16 @@ assert _output_guard.index('if (value.Length > MaxAnswerChars - answer.Length)')
 assert 'Emit("complete", new { requestId, ok = sqliteVerified, stopped = false, sqliteUnknown });' in _output_guard, 'B02_OUTPUT_TERMINAL_ACK_HOLD'
 assert 'catch (OperationCanceledException) when (cancellation.IsCancellationRequested)' in _output_guard, 'B02_OUTPUT_STOP_PRESERVED_HOLD'
 print('B02 SOURCE_ONLY: cumulative response cap rejects before append/IPC/SQLite; terminal ERROR/complete and owner STOP paths preserved; Windows NOT_TESTED')
+
+# B02 single-record NDJSON cap: verified source contract, not runtime Ollama acceptance.
+line_guard = cs.split('private static async Task<string?> ReadBoundedOllamaLineAsync(', 1)[1].split('private void PersistChat(', 1)[0]
+generate_budget = cs.split('private async Task Generate(', 1)[1].split('private static async Task<string?> ReadBoundedOllamaLineAsync(', 1)[0]
+assert 'ReadBoundedOllamaLineAsync(reader, readWindow.Token)' in generate_budget, 'B02_NDJSON_OWNER_CANCEL_HOLD'
+assert generate_budget.index('ReadBoundedOllamaLineAsync(reader, readWindow.Token)') < generate_budget.index('JsonDocument.Parse(line)'), 'B02_NDJSON_PREPARSE_HOLD'
+assert 'const int MaxNdjsonLineChars = 2 * 1024 * 1024;' in line_guard, 'B02_NDJSON_CAP_HOLD'
+assert 'await reader.ReadAsync(one.AsMemory(0, 1), token)' in line_guard, 'B02_NDJSON_CANCELABLE_READ_HOLD'
+assert "if (one[0] == '\\n')" in line_guard, 'B02_NDJSON_NEXT_LINE_HOLD'
+assert 'if (read == 0) return builder.Length == 0 ? null : builder.ToString();' in line_guard, 'B02_NDJSON_EOF_HOLD'
+assert line_guard.index('if (builder.Length >= MaxNdjsonLineChars)') < line_guard.index('builder.Append(one[0]);'), 'B02_NDJSON_CAP_PREAPPEND_HOLD'
+assert 'OLLAMA_NDJSON_LINE_LIMIT_HOLD' in line_guard and 'ReadLineAsync(readWindow.Token)' not in generate_budget, 'B02_NDJSON_UNBOUNDED_HOLD'
+print('B02 R8 SOURCE_ONLY: NDJSON record bound/owner timeout/EOF guards present; Windows Ollama NOT_TESTED')
