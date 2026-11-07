@@ -248,3 +248,18 @@ for block,name,token in ((task_ack,'TASK',"post('tasks.list')"),(note_ack,'NOTE'
 assert 'v.backupVerified===true' in delete_ack, 'D05_DELETE_BACKUP_HOLD'
 assert "pendingNoteDelete.button.closest('.note-card')?.remove()" in delete_ack, 'D05_DELETED_CARD_NOT_REMOVED_HOLD'
 assert delete_ack.index('v.backupVerified===true') < delete_ack.index(".closest('.note-card')?.remove()"), 'D05_PREMATURE_DELETE_DOM_HOLD'
+
+
+# D05: a persisted/read-back preference must not be falsely denied because
+# optional WebView2 persona/history/notes/settings refresh fails afterwards.
+# Cross-Persona content may only follow successful reset notification.
+settings = cs.split('private void HandleSettingsPut(', 1)[1].split('private void SavePreference(', 1)[0]
+assert settings.index('SavePreference(key, value);') < settings.index('var verified = ReadPreferencesDictionary()') < settings.index('Send("settings.receipt"'), 'D05_SETTINGS_COMMIT_ORDER_HOLD'
+assert 'NOX_SETTINGS_READBACK_HOLD' in settings, 'D05_SETTINGS_READBACK_HOLD'
+assert 'bool personaResetSent = false;' in settings and 'if (personaResetSent)' in settings, 'D05_PERSONA_REFRESH_ISOLATION_HOLD'
+for fragment in ('Send("history", ReadHistory());','Send("notes", ReadNotes());','Send("settings", verified);'):
+    assert 'try { ' + fragment + ' }' in settings, 'D05_SETTINGS_OPTIONAL_REFRESH_HOLD: ' + fragment
+assert settings.index('if (personaResetSent)') < settings.index('Send("history", ReadHistory());'), 'D05_PERSONA_DATA_BOUNDARY_HOLD'
+assert settings.index('Send("settings.receipt"') > settings.index('Send("settings", verified);'), 'D05_SETTINGS_RECEIPT_LAST_HOLD'
+assert settings.count('Send("settings.denied"') == 5, 'D05_SETTINGS_DENIAL_REGRESSION_HOLD'
+print('D05 SOURCE_ONLY SETTINGS independent readback and refresh isolation PASS; Windows NOT RUN')

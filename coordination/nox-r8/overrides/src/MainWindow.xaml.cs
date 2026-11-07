@@ -1432,12 +1432,26 @@ public partial class MainWindow : Window
             var verified = ReadPreferencesDictionary(); // independent read after SQLite COMMIT
             if (!verified.TryGetValue(key, out var saved) || !string.Equals(saved, value, StringComparison.Ordinal))
                 throw new InvalidOperationException("NOX_SETTINGS_READBACK_HOLD");
+            // The SQLite commit and independent readback are authoritative.
+            // Optional WebView2 refresh failures must not convert a saved preference
+            // into a false DENIED and encourage repeated owner mutations.
             if (key == "persona") {
-                Send("persona.changed", new { persona = value });
-                Send("history", ReadHistory());
-                Send("notes", ReadNotes());
+                bool personaResetSent = false;
+                try {
+                    Send("persona.changed", new { persona = value });
+                    personaResetSent = true;
+                }
+                catch (Exception) { /* Never reveal another Persona's data without resetting the visible panel. */ }
+                if (personaResetSent) {
+                    try { Send("history", ReadHistory()); }
+                    catch (Exception) { /* Reopen REFLECTION to retry the optional refresh. */ }
+                    try { Send("notes", ReadNotes()); }
+                    catch (Exception) { /* Reopen REFLECTION to retry the optional refresh. */ }
+                }
             }
-            Send("settings", verified);
+            try { Send("settings", verified); }
+            catch (Exception) { /* Reopen SETTINGS to retry the optional refresh. */ }
+            // Only a verified owner save receives the authoritative receipt.
             Send("settings.receipt", new { key, value, saved = true });
         }
         catch (ArgumentException) { Send("settings.denied", "NOX_SETTINGS_REJECTED"); }
