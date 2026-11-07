@@ -201,7 +201,9 @@ def live_status(root):
 
 
 def serve(root, port):
+    import nox_unified_brain_v1 as unified
     page = (HERE / 'forge_wow_live_v6.html').read_bytes()
+    unified_page = (HERE / 'nox_unified_chat_v1.html').read_bytes()
     visual = HERE / 'forge_focus_v4_canonical_live.html'
     class Handler(BaseHTTPRequestHandler):
         def get(self, payload, content_type, code=200):
@@ -216,6 +218,16 @@ def serve(root, port):
         def do_GET(self):
             if self.path in ('/', '/index.html'):
                 return self.get(page, 'text/html; charset=utf-8')
+            if self.path == '/nox/chat':
+                return self.get(unified_page, 'text/html; charset=utf-8')
+            if self.path == '/api/nox/status':
+                try:
+                    result=unified.status(root)
+                    return self.get(json.dumps(result,ensure_ascii=False).encode('utf-8'),
+                                    'application/json; charset=utf-8')
+                except Exception as ex:
+                    return self.get(json.dumps({'error':type(ex).__name__}).encode(),
+                                    'application/json',503)
             if self.path == '/visual' and visual.is_file():
                 return self.get(visual.read_bytes(), 'text/html; charset=utf-8')
             if self.path == '/api/health':
@@ -230,7 +242,31 @@ def serve(root, port):
                     return self.get(json.dumps({'error': type(exc).__name__, 'detail': str(exc)[:220]}).encode(), 'application/json', 503)
             return self.get(b'{"error":"not found"}', 'application/json', 404)
         def do_POST(self):
-            return self.get(b'{"error":"read-only; no GPU command bridge"}', 'application/json', 403)
+            if self.path != '/api/nox/chat':
+                return self.get(b'{"error":"read-only; no GPU command bridge"}',
+                                'application/json',403)
+            # Never accept arbitrary cross-site requests into local Ollama.
+            host=self.headers.get("Host","")
+            origin=self.headers.get("Origin","")
+            permitted=("127.0.0.1:"+str(port),"localhost:"+str(port))
+            if host not in permitted or (origin and origin not in (
+                "http://127.0.0.1:"+str(port),"http://localhost:"+str(port))):
+                return self.get(b'{"error":"ORIGIN_DENIED"}','application/json',403)
+            if self.headers.get("Content-Type","").split(";")[0].strip().lower()!="application/json":
+                return self.get(b'{"error":"JSON_REQUIRED"}','application/json',415)
+            try:
+                length=int(self.headers.get("Content-Length","0"))
+                if not 0<length<=240000:raise ValueError("REQUEST_SIZE")
+                payload=json.loads(self.rfile.read(length))
+                result=unified.chat(root,payload)
+                return self.get(json.dumps(result,ensure_ascii=False).encode('utf-8'),
+                                'application/json; charset=utf-8')
+            except (ValueError,TypeError) as ex:
+                return self.get(json.dumps({'error':str(ex)[:160]}).encode('utf-8'),
+                                'application/json',400)
+            except Exception as ex:
+                return self.get(json.dumps({'error':type(ex).__name__+': '+str(ex)[:160]}).encode('utf-8'),
+                                'application/json',503)
         def log_message(self, *_):
             pass
     ThreadingHTTPServer(('127.0.0.1', port), Handler).serve_forever()
