@@ -26,6 +26,7 @@ public partial class MainWindow : Window
     private CancellationTokenSource? active;
     private string? activeRequestId; // Owned by the current WebView2 document and chat request.
     private CancellationTokenSource? activeModelPull;
+    private string? activeModelPullRequestId;
     private static readonly bool NativeSelfTestRequested = Environment.GetCommandLineArgs().Any(
         arg => arg.Equals("--nox-selftest", StringComparison.OrdinalIgnoreCase));
     private static readonly bool UiSmokeRequested = Environment.GetCommandLineArgs().Any(
@@ -941,8 +942,11 @@ public partial class MainWindow : Window
                 case "feedback": SaveFeedback(request.GetProperty("rating").GetInt32(), Text("answer")); Send("notice", "Оценка сохранена локально; это не обучение весов."); break;
                 case "backup": BackupLocalDatabase(); break;
                 case "model.select": await HandleModelSelect(Text("model"), Text("requestId")); break;
-                case "model.pull": await PullExistingProviderModel(Text("model")); break;
-                case "model.cancel": activeModelPull?.Cancel(); break;
+                case "model.pull": await PullExistingProviderModel(Text("model"), Text("requestId")); break;
+                case "model.cancel":
+                    if (ValidWriteRequestId(Text("requestId")) && string.Equals(activeModelPullRequestId, Text("requestId"), StringComparison.Ordinal))
+                        activeModelPull?.Cancel();
+                    break;
                 case "tasks.list": Send("tasks", ReadTasks()); break;
                 case "tasks.add": HandleTaskAdd(Text("text"), Text("requestId")); break;
                 case "tasks.toggle": HandleTaskToggle(request.GetProperty("id").GetInt64(), Text("requestId")); break;
@@ -1754,16 +1758,20 @@ public partial class MainWindow : Window
         }
     }
 
-    private async Task PullExistingProviderModel(string modelName)
+    private async Task PullExistingProviderModel(string modelName, string requestId)
     {
+        // Owner request-ID follows transfer and STOP; no unowned cancellation.
+        void Deny(string reason) => Send("download", new { requestId, model = modelName, status = "DENIED", reason, terminal = true, percent = (double?)null });
+        if (!ValidWriteRequestId(requestId)) { Deny("NOX_PULL_REQUEST_ID_HOLD"); return; }
         // Models are downloaded ONLY after a human clicks Install in the UI.
         // The user-facing label and the native regex defend against URLs/paths/commands.
         if (string.IsNullOrWhiteSpace(modelName) || modelName.Length > 100 ||
             !System.Text.RegularExpressions.Regex.IsMatch(modelName, @"\A[a-zA-Z0-9][a-zA-Z0-9._/-]*:[a-zA-Z0-9._-]+\z"))
-            throw new ArgumentException("Укажи точный тег Ollama, например qwen2.5-coder:7b");
-        if (activeModelPull != null) throw new InvalidOperationException("Загрузка модели уже идёт");
+            { Deny("NOX_PULL_INVALID_MODEL_TAG_HOLD"); return; }
+        if (activeModelPull != null) { Deny("NOX_PULL_ALREADY_ACTIVE_HOLD"); return; }
         using var cts = new CancellationTokenSource();
         activeModelPull = cts;
+        activeModelPullRequestId = requestId;
         try
         {
             // Another independent timeout: large model downloads can exceed 10 minutes.
@@ -1772,8 +1780,10 @@ public partial class MainWindow : Window
             using var request = new HttpRequestMessage(HttpMethod.Post, Api + "/api/pull") {
                 Content = new StringContent(payload, Encoding.UTF8, "application/json")
             };
-            Send("download", new { status = "REQUESTED", model = modelName, percent = (double?)null });
-            using var response = await transferClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cts.Token);
+            Send("download", new { requestId, status = "REQUESTED", model = modelName, percent = (double?)null });
+            using var connectTimeout = CancellationTokenSource.CreateLinkedTokenSource(cts.Token);
+            connectTimeout.CancelAfter(TimeSpan.FromMinutes(3));
+            using var response = await transferClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, connectTimeout.Token);
             response.EnsureSuccessStatusCode();
             using var stream = await response.Content.ReadAsStreamAsync(cts.Token);
             using var reader = new StreamReader(stream);
@@ -1781,7 +1791,9 @@ public partial class MainWindow : Window
             while (true)
             {
                 cts.Token.ThrowIfCancellationRequested();
-                var line = await reader.ReadLineAsync(cts.Token);
+                using var idleTimeout = CancellationTokenSource.CreateLinkedTokenSource(cts.Token);
+                idleTimeout.CancelAfter(TimeSpan.FromMinutes(3));
+                var line = await reader.ReadLineAsync(idleTimeout.Token);
                 if (line == null) break;
                 if (string.IsNullOrWhiteSpace(line)) continue;
                 using var message = JsonDocument.Parse(line);
@@ -1793,17 +1805,35 @@ public partial class MainWindow : Window
                 var hasTotal = root.TryGetProperty("total", out var total) && total.TryGetInt64(out totalBytes) && totalBytes > 0;
                 var hasCompleted = root.TryGetProperty("completed", out var bytes) && bytes.TryGetInt64(out completedBytes) && completedBytes >= 0;
                 double? percent = hasTotal && hasCompleted ? Math.Round(100.0 * completedBytes / totalBytes, 1) : null;
-                Send("download", new { status = label, model = modelName, percent });
+                Send("download", new { requestId, status = label, model = modelName, percent });
                 if (label.Equals("success", StringComparison.OrdinalIgnoreCase)) { done = true; break; }
             }
-            if (!done) throw new InvalidOperationException("Загрузка оборвалась до подтверждённого завершения Ollama");
-            Send("download", new { status = "DONE", model = modelName, percent = (double?)100 });
+            if (!done) throw new InvalidOperationException("NOX_PULL_INCOMPLETE_HOLD");
+            // Provider success string is not yet proof of the installed model.
+            cts.Token.ThrowIfCancellationRequested();
+            using var checkTimeout = CancellationTokenSource.CreateLinkedTokenSource(cts.Token);
+            checkTimeout.CancelAfter(TimeSpan.FromSeconds(15));
+            using var verify = await http.GetAsync(Api + "/api/tags", checkTimeout.Token);
+            verify.EnsureSuccessStatusCode();
+            using var tags = JsonDocument.Parse(await verify.Content.ReadAsStringAsync(checkTimeout.Token));
+            bool installed = tags.RootElement.GetProperty("models").EnumerateArray().Any(x => x.GetProperty("name").GetString() == modelName);
+            if (!installed) throw new InvalidOperationException("NOX_PULL_INSTALL_READBACK_HOLD");
+            cts.Token.ThrowIfCancellationRequested();
+            Send("download", new { requestId, status = "DONE", model = modelName, percent = (double?)100, terminal = true });
             await CheckProvider();
         }
-        catch (OperationCanceledException) {
-            Send("download", new { status = "STOPPED", model = modelName, percent = (double?)null });
+        catch (OperationCanceledException) when (cts.IsCancellationRequested) {
+            Send("download", new { requestId, status = "STOPPED", model = modelName, percent = (double?)null, terminal = true });
         }
-        finally { activeModelPull = null; }
+        catch (OperationCanceledException) {
+            Send("download", new { requestId, status = "TIMEOUT_HOLD", model = modelName, percent = (double?)null, terminal = true });
+        }
+        catch (Exception) {
+            Send("download", new { requestId, status = "FAILED_HOLD", model = modelName, percent = (double?)null, terminal = true });
+        }
+        finally {
+            if (ReferenceEquals(activeModelPull, cts)) { activeModelPull = null; activeModelPullRequestId = null; }
+        }
     }
 
     private void ImportVuneoByConsent()

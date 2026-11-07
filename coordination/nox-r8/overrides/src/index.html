@@ -323,7 +323,7 @@ body.reduced .helion-fx{filter:none}body.reduced .core.active{animation:none}
 <script>
 'use strict';
 const $=id=>document.getElementById(id);const post=(type,data={})=>{const bridge=window.chrome?.webview;if(typeof bridge?.postMessage!=='function'){$('status').textContent='NATIVE BRIDGE OFFLINE';return false}try{bridge.postMessage({type,...data});return true}catch{$('status').textContent='NATIVE BRIDGE DISPATCH FAILED';return false}};
-let responseBox=null,lastAnswer='',busy=false,settingsDenial='',activeChatId=null,requestSequence=0,pendingTask=null,pendingNote=null,pendingTaskToggle=null,pendingModel=null,pendingLearnRequest=null,pendingLearnStop=null,pendingNoteDelete=null;
+let responseBox=null,lastAnswer='',busy=false,settingsDenial='',activeChatId=null,requestSequence=0,pendingTask=null,pendingNote=null,pendingTaskToggle=null,pendingModel=null,pendingLearnRequest=null,pendingLearnStop=null,pendingNoteDelete=null,pendingDownload=null;
 const nextChatId=()=>typeof crypto!=='undefined'&&typeof crypto.randomUUID==='function'
   ? crypto.randomUUID()
   : 'r'+Date.now().toString(36)+'_'+(++requestSequence).toString(36)+'_'+Math.random().toString(36).slice(2);const headings={consciousness:'CONSCIOUSNESS',atlas:'ATLAS / TASKS',reflection:'REFLECTION / HISTORY',nexus:'NEXUS / MODELS',forge:'FORGE / TRAINING',core:'CORE / LIVE CHAT',voice:'VOICE',persona:'PERSONA'};
@@ -354,7 +354,16 @@ $('learnCancel').onclick=()=>{
 $('savePersona').onclick=()=>post('settings.put',{key:'persona',value:$('persona').value});$('saveMotion').onclick=()=>post('settings.put',{key:'motion',value:$('reduceMotion').checked?'off':'on'});
 $('savePerformance').onclick=()=>post('settings.put',{key:'performance',value:$('performance').value});$('saveContext').onclick=()=>post('settings.put',{key:'context',value:$('useContext').checked?'on':'off'});$('backup').onclick=()=>post('backup');$('knowledgeImport').onclick=()=>post('knowledge.import');$('knowledgeSearch').onclick=()=>post('knowledge.search',{query:$('knowledgeQuery').value.trim()});$('knowledgeQuery').onkeydown=e=>{if(e.key==='Enter')$('knowledgeSearch').click()};$('memorySearch').onclick=()=>post('memory.search',{query:$('memoryQuery').value.trim()});$('memoryQuery').onkeydown=e=>{if(e.key==='Enter')$('memorySearch').click()};
 $('maxMode').onclick=()=>{route('persona');$('performance').value='MAX';$('personaStatus').textContent='MAX: ожидается подтверждение SQLite';post('settings.put',{key:'performance',value:'MAX'});};
-$('saveModel').onclick=()=>{const model=$('modelPicker').value;if(!model||pendingModel)return;const requestId=nextChatId();pendingModel={requestId,model};$('saveModel').disabled=true;$('modelSelectStatus').textContent='Ожидается подтверждение модели из SQLite';if(post('model.select',{model,requestId})===false){pendingModel=null;$('saveModel').disabled=false;$('modelSelectStatus').textContent='NATIVE IPC HOLD: модель не изменена'}};$('pullModel').onclick=()=>{const model=$('modelToDownload').value.trim();if(!/^[a-zA-Z0-9][a-zA-Z0-9._/-]*:[a-zA-Z0-9._-]+$/.test(model)){$('downloadStatus').textContent='Укажи корректный тег модели';return}if(window.confirm('Загрузить модель '+model+'? Это использует диск и интернет.'))post('model.pull',{model})};$('cancelPull').onclick=()=>post('model.cancel');
+$('saveModel').onclick=()=>{const model=$('modelPicker').value;if(!model||pendingModel)return;const requestId=nextChatId();pendingModel={requestId,model};$('saveModel').disabled=true;$('modelSelectStatus').textContent='Ожидается подтверждение модели из SQLite';if(post('model.select',{model,requestId})===false){pendingModel=null;$('saveModel').disabled=false;$('modelSelectStatus').textContent='NATIVE IPC HOLD: модель не изменена'}};$('pullModel').onclick=()=>{
+ if(pendingDownload)return;
+ const model=$('modelToDownload').value.trim();
+ if(!/^[a-zA-Z0-9][a-zA-Z0-9._/-]*:[a-zA-Z0-9._-]+$/.test(model)){$('downloadStatus').textContent='Укажи корректный тег модели';return;}
+ if(!window.confirm('Загрузить модель '+model+'? Это использует диск и интернет.'))return;
+ const requestId=nextChatId();pendingDownload={requestId,model};$('pullModel').disabled=true;$('cancelPull').disabled=false;
+ if(post('model.pull',{model,requestId})===false){pendingDownload=null;$('pullModel').disabled=false;$('cancelPull').disabled=true;$('downloadStatus').textContent='MODEL PULL IPC HOLD';}
+};
+$('cancelPull').disabled=true;
+$('cancelPull').onclick=()=>{if(pendingDownload)post('model.cancel',{requestId:pendingDownload.requestId})};
 $('noteAdd').onclick=()=>{const title=$('noteTitle').value.trim(),content=$('noteText').value.trim();if(!title||!content||pendingNote)return;const requestId=nextChatId();pendingNote={requestId,title,content};$('noteAdd').disabled=true;if(post('notes.add',{title,content,requestId})===false){pendingNote=null;$('noteAdd').disabled=false}};
 $('feedbackUp').onclick=()=>{if(lastAnswer)post('feedback',{rating:1,answer:lastAnswer})};$('feedbackDown').onclick=()=>{if(lastAnswer)post('feedback',{rating:-1,answer:lastAnswer})};
 $('speak').onclick=()=>{if(!('speechSynthesis' in window)||!('SpeechSynthesisUtterance' in window)){$('voiceStatus').textContent='Speech engine unavailable';return}if(!lastAnswer){$('voiceStatus').textContent='Сначала получите ответ модели';return}speechSynthesis.cancel();let u=new SpeechSynthesisUtterance(lastAnswer);u.lang='ru-RU';speechSynthesis.speak(u);$('voiceStatus').textContent='Озвучивание запрошено'};
@@ -377,7 +386,13 @@ case 'tasks.add.receipt':if(pendingTask&&v?.requestId===pendingTask.requestId&&v
 case 'tasks.add.denied':if(pendingTask&&v?.requestId===pendingTask.requestId){pendingTask=null;$('taskAdd').disabled=false;$('status').textContent=String(v.reason||'TASK SAVE HOLD');}break;
 case 'model.select.receipt':if(pendingModel&&v?.requestId===pendingModel.requestId&&v?.model===pendingModel.model&&v?.saved===true){pendingModel=null;$('saveModel').disabled=false;$('modelSelectStatus').textContent='Модель сохранена в SQLite: '+String(v.model);$('status').textContent='MODEL SAVED · SQLITE';}break;
 case 'model.select.denied':if(pendingModel&&v?.requestId===pendingModel.requestId&&v?.model===pendingModel.model){pendingModel=null;$('saveModel').disabled=false;$('modelSelectStatus').textContent=String(v.reason||'MODEL SELECT HOLD');post('health');}break;
-case 'download':{$('downloadStatus').textContent=`${v.model||''}: ${v.status||''}`+(typeof v.percent==='number'?' · '+v.percent+'%':'');if(typeof v.percent==='number')$('downloadBar').style.width=Math.max(0,Math.min(100,v.percent))+'%';break;}
+case 'download':{
+ if(!pendingDownload||v?.requestId!==pendingDownload.requestId||v?.model!==pendingDownload.model)break;
+ $('downloadStatus').textContent=String(v.model)+': '+String(v.status||'UNKNOWN')+(typeof v.percent==='number'?' · '+v.percent+'%':'');
+ if(typeof v.percent==='number')$('downloadBar').style.width=Math.max(0,Math.min(100,v.percent))+'%';
+ if(v.terminal===true){const done=v.status==='DONE';pendingDownload=null;$('pullModel').disabled=false;$('cancelPull').disabled=true;if(!done)$('downloadBar').style.width='0%';else post('health');}
+ break;
+}
 case 'learn.receipt':{
   const requestAck=!!pendingLearnRequest&&v?.requestId===pendingLearnRequest;
   const stopAck=!!pendingLearnStop&&v?.requestId===pendingLearnStop;

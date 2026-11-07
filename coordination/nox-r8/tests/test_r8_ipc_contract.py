@@ -218,3 +218,18 @@ with sqlite3.connect(':memory:') as conn:
     assert conn.execute('DELETE FROM memory_notes WHERE id=$id AND persona=$persona', {'id':10,'persona':'KV'}).rowcount == 1
     assert conn.execute('SELECT id FROM memory_notes').fetchall()==[(20,)]
 print('D05 NOTE DELETE SOURCE_ONLY: consent, backup, owner Persona, commit/readback, request-ID receipt PASS')
+
+# D05 MODEL PULL bounded STOP + exact-owner terminal receipts, SOURCE_ONLY.
+pull = cs.split('private async Task PullExistingProviderModel(', 1)[1].split('private void ImportVuneoByConsent(', 1)[0]
+assert 'case "model.pull": await PullExistingProviderModel(Text("model"), Text("requestId")); break;' in cs
+assert 'string.Equals(activeModelPullRequestId, Text("requestId"), StringComparison.Ordinal)' in cs
+assert pull.index('ValidWriteRequestId(requestId)') < pull.index('activeModelPull = cts;')
+assert 'CancelAfter(TimeSpan.FromMinutes(3))' in pull and 'ReadLineAsync(idleTimeout.Token)' in pull
+assert pull.index('if (!done)') < pull.index('GetAsync(Api + "/api/tags"') < pull.index('if (!installed)') < pull.index('status = "DONE"')
+assert 'status = "STOPPED"' in pull and 'status = "TIMEOUT_HOLD"' in pull and 'status = "FAILED_HOLD"' in pull
+assert 'ReferenceEquals(activeModelPull, cts)' in pull and 'activeModelPullRequestId = null;' in pull
+assert "post('model.pull',{model,requestId})" in html and "post('model.cancel',{requestId:pendingDownload.requestId})" in html
+assert "v?.requestId!==pendingDownload.requestId||v?.model!==pendingDownload.model" in html
+assert "if(v.terminal===true)" in html and "const done=v.status==='DONE'" in html
+assert "post('model.pull',{model})" not in html and "post('model.cancel');" not in html
+print('D05 MODEL PULL SOURCE_ONLY: owner STOP, timeout, installed-tag readback and terminal GUI receipts PASS')
