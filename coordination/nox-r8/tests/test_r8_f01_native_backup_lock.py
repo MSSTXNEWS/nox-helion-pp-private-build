@@ -39,6 +39,21 @@ assert "File.Delete(" not in guard and "File.WriteAllBytes(" not in guard
 assert "new FileStream(dbPath" not in guard and "new FileStream(live" not in guard
 assert 'checks["sqlite_native_backup_no_loss"] = "PASS";' in src
 assert "VerifyIsolatedSqliteBackup();" in src
+# Verify an actual Windows locked snapshot is rejected (negative control),
+# then released; an exclusively readable manifest is part of the backup set.
+negative = native.split("NOX_F01_BACKUP_LOCKED_HANDLE_HOLD", 1)[1]
+for marker in ("blockedWhileHeld = false",
+               "new FileStream(snapshot, FileMode.Open, FileAccess.Read, FileShare.Read)",
+               "new FileStream(snapshot, FileMode.Open, FileAccess.Read, FileShare.None)",
+               "catch (IOException) { blockedWhileHeld = true; }",
+               "NOX_F01_LOCKED_SNAPSHOT_ACCEPTED_HOLD",
+               "using var reopened = new FileStream(snapshot, FileMode.Open, FileAccess.Read, FileShare.None)",
+               'new FileStream(snapshot + ".sha256", FileMode.Open, FileAccess.Read, FileShare.None)',
+               "NOX_F01_BACKUP_OR_MANIFEST_LOCKED_HOLD"):
+    assert marker in negative, "NOX_F01_LOCK_NEGATIVE_CONTROL_MISSING_HOLD:" + marker
+assert negative.index("blockedWhileHeld = false") < negative.index("if (!blockedWhileHeld)")
+assert negative.index("if (!blockedWhileHeld)") < negative.index("using var reopened")
+print("NOX_F01_LOCK_NEGATIVE_CONTROL_SOURCE_ONLY_PASS: Windows execution required")
 
 # Stream and native STOP must remain a real owner request, never a fixture.
 for exact in ("ResponseHeadersRead", "/api/generate",
