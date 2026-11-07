@@ -14,4 +14,4 @@ jobs:
         shell: pwsh
         run: |
           & ./coordination/nox-r8/installer/Test-NoLossGuard.ps1
-          if ($LASTEXITCODE -ne 0) { throw 'B05_GUARD_FAILED' }
+          if (-not $?) { throw 'B05_GUARD_FAILED' }
