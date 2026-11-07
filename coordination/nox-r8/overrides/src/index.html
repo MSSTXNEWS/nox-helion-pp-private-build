@@ -197,9 +197,9 @@ body.reduced .helion-fx{filter:none}body.reduced .core.active{animation:none}
     try{ctx=canvas.getContext('2d',{alpha:true});}
     catch(e){staticCss('CONTEXT_FAILED_'+String(e?.message||e));return;}
     if(!ctx){staticCss('CONTEXT_UNAVAILABLE');return;}
-    let mode=initialMode,energy=initialEnergy,raf=0,last=0,started=performance.now(),rendered=false,failed=false;
+    let mode=initialMode,energy=initialEnergy,raf=0,last=0,started=performance.now(),rendered=false,failed=false,contextLost=false;
     function frame(now){
-      if(failed||document.hidden){raf=0;return;}
+      if(failed||contextLost||document.hidden){raf=0;return;}
       const fps=reduce()?0:mode==='MAX'?30:mode==='ECO'?8:18;
       if(rendered&&(!fps||now-last<1000/fps)){raf=fps?requestAnimationFrame(frame):0;return;}
       last=now;rendered=true;
@@ -240,10 +240,25 @@ body.reduced .helion-fx{filter:none}body.reduced .core.active{animation:none}
       }
       raf=fps?requestAnimationFrame(frame):0;
     }
-    function redraw(){if(failed)return;if(raf)cancelAnimationFrame(raf);rendered=false;if(document.hidden){raf=0;return;}raf=requestAnimationFrame(frame);}
+    function redraw(){if(failed||contextLost)return;if(raf)cancelAnimationFrame(raf);rendered=false;if(document.hidden){raf=0;return;}raf=requestAnimationFrame(frame);}
     sphere.dataset.fx='canvas2d';
     window.noxVisual={setMode(v){mode=['MAX','BALANCED','ECO'].includes(v)?v:'BALANCED';redraw();},
       setEnergy(v){energy=v?1:0;redraw();},refresh:redraw};
+    // Some WebView2/Chromium drivers lose the 2D surface without throwing.
+    // Stop the RAF loop and reveal the original CSS sphere until the actual
+    // canvas context restores; preserve mode, energy, chat, and native IPC.
+    canvas.addEventListener('contextlost',()=>{
+      if(failed||contextLost)return;
+      contextLost=true;
+      if(raf)cancelAnimationFrame(raf);
+      raf=0;rendered=false;sphere.dataset.fx='disabled';
+      console.warn('NOX Canvas2D context lost; static CSS fallback active');
+    });
+    canvas.addEventListener('contextrestored',()=>{
+      if(failed||!contextLost)return;
+      contextLost=false;rendered=false;sphere.dataset.fx='canvas2d';
+      redraw();
+    });
     document.addEventListener('visibilitychange',()=>{if(document.hidden){if(raf)cancelAnimationFrame(raf);raf=0;}else redraw();});
     window.addEventListener('resize',redraw,{passive:true});
     watchMotion(redraw);
