@@ -1414,6 +1414,11 @@ public partial class MainWindow : Window
             Send("error", new { requestId, message = reason });
             Send("complete", new { requestId, ok = false, stopped = false });
         }
+        // An active owner replay can carry a different/invalid prompt. Never send
+        // its terminal rejection ACK: that would unlock the original live stream.
+        // Do this BEFORE empty/oversized prompt and requestId validation.
+        if (active != null && string.Equals(activeRequestId, requestId, StringComparison.Ordinal))
+            return;
         if (string.IsNullOrWhiteSpace(prompt)) {
             RejectChat("CHAT_EMPTY_PROMPT_DENIED");
             return;
