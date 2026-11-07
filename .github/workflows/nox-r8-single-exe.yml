@@ -1,7 +1,7 @@
 name: NOX R8 Windows desktop compilation
 on:
   push:
-    branches: [feature/nox-r8-liquid-one-exe-20261106]
+    branches: [feature/nox-r8-liquid-one-exe-20261106, work/b01-r8-exact-checkout-provenance-20261107]
   workflow_dispatch:
 permissions:
   contents: read
