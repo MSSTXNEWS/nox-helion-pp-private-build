@@ -27,6 +27,7 @@ $modules = @(
  "nox_prime_semantic_retriever_v1.py",
  "nox_prime_memory_continuum_v1.py",
  "nox_prime_experience_v1.py",
+ "nox_prime_core_matrix_v1.py",
  "nox_prime_affect_runtime_v1.py",
  "nox_prime_self_edit_lab_v1.py",
  "nox_prime_soul_stage1_train.py"
@@ -46,6 +47,7 @@ try {
       "test_nox_prime_semantic_retriever_v1",
       "test_nox_prime_memory_continuum_v1",
       "test_nox_prime_experience_v1",
+      "test_nox_prime_core_matrix_v1",
       "test_nox_prime_affect_runtime_v1",
       "test_nox_prime_self_edit_lab_v1",
       "test_nox_prime_live_pipeline_v1"
@@ -97,8 +99,9 @@ $history = Invoke-RestMethod ($selected+"api/nox/history") -TimeoutSec 15
 $soul = Invoke-RestMethod ($selected+"api/nox/soul/status") -TimeoutSec 15
 $cognition = Invoke-RestMethod ($selected+"api/nox/cognition/status") -TimeoutSec 15
 $experience = Invoke-RestMethod ($selected+"api/nox/experience") -TimeoutSec 15
+$cores = Invoke-RestMethod ($selected+"api/nox/cores") -TimeoutSec 15
 if (!$core.primary_model) { throw "No installed Ollama primary model; source is ready, inference HOLD" }
-if (!$cognition.layers -or $null -eq $experience.count) {
+if (!$cognition.layers -or $null -eq $experience.count -or @($cores.core_ids).Count -ne 8) {
     throw "Cognitive memory endpoints not ready"
 }
 Write-Host ("NOX CORE: "+$core.primary_model) -ForegroundColor Green
