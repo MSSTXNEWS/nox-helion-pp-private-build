@@ -16,6 +16,14 @@ jobs:
       - name: Compile from exact source
         shell: pwsh
         run: |
+          # B01: GITHUB_SHA in a receipt is not proof of exact checkout.
+          # Refuse an unexpected or dirty tracked tree before staging/build.
+          $eventCommit=([string]$env:GITHUB_SHA).Trim().ToLowerInvariant()
+          $checkoutCommit=([string](git rev-parse HEAD)).Trim().ToLowerInvariant()
+          if ($LASTEXITCODE -ne 0 -or $eventCommit -cnotmatch '^[0-9a-f]{40}$' -or
+              $checkoutCommit -cne $eventCommit) { throw 'R8_CHECKOUT_EXACT_GITHUB_SHA_HOLD' }
+          $trackedChanges=@(git status --porcelain --untracked-files=no)
+          if ($LASTEXITCODE -ne 0 -or $trackedChanges.Count -gt 0) { throw 'R8_TRACKED_SOURCE_DIRTY_HOLD' }
           $zip='coordination/nox-r8/NOX_R8_SOURCE.zip'
           $hash=(Get-FileHash $zip -Algorithm SHA256).Hash.ToLowerInvariant()
           if ($hash -ne 'a1ed386b4b9356c21a007c9c54dc2f98f27a25ede42bad91dafada99ddd70325') { throw 'SOURCE_HASH_MISMATCH' }
