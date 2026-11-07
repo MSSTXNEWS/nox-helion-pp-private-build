@@ -77,13 +77,15 @@ assert '"sqlite_native_backup_no_loss", "native_wpf_webview2_renderer"' in src
 # before CREATE TABLE / CREATE INDEX / journal-mode changes, not merely before
 # the later Persona migration. Avoid an unbounded backup on every healthy launch.
 init = src.split("private void InitializeDatabase()", 1)[1].split("// Owner-only SQLite", 1)[0]
-for guard in ("SELECT type,name FROM sqlite_master", "existingTables && !selfTestRequested",
+for guard in ("SELECT type,name FROM sqlite_master", "preexistingOwnerBytes",
               "PRAGMA journal_mode", 'CheckpointSqlite(db, "PRE_SCHEMA_BOOTSTRAP")',
               '"idx_learn_pending_owner", "idx_chat_history_time"'):
     assert guard in init, "NOX_B03_PRE_SCHEMA_SNAPSHOT_HOLD:" + guard
 assert init.index('CheckpointSqlite(db, "PRE_SCHEMA_BOOTSTRAP")') < init.index('command.CommandText = """')
 assert init.index('SELECT type,name FROM sqlite_master') < init.index('CheckpointSqlite(db, "PRE_SCHEMA_BOOTSTRAP")')
-assert 'if (existingTables && !selfTestRequested)' in init
+assert 'bool preexistingOwnerBytes = File.Exists(dbPath) && new FileInfo(dbPath).Length > 0;' in init
+assert init.index("preexistingOwnerBytes = File.Exists(dbPath)") < init.index("using var db = OpenDatabase();")
+assert 'if ((existingTables || preexistingOwnerBytes) && !selfTestRequested)' in init
 assert 'needed.Any(name => !knownObjects.Contains(name))' in init
 
 
@@ -187,4 +189,24 @@ with tempfile.TemporaryDirectory(prefix="nox_b03_") as folder:
             raise AssertionError("NOX_B03_FOREIGN_CREATE_NEW_MUST_HOLD")
         assert hashlib.sha256(foreign.read_bytes()).hexdigest() == foreign_before
         assert srcdb.execute("SELECT value FROM notes").fetchone()[0] == "original"
-print("B03_R8_SOURCE_ONLY_PASS: native guards checked, real isolated WAL/quick_check/SHA, foreign bytes unchanged")
+# Existing schema-free SQLite still owns non-table metadata (e.g. user_version).
+# Reproduces the old existingTables=False miss on a real isolated database.
+with tempfile.TemporaryDirectory(prefix="nox_b03_metadata_") as folder:
+    owner = Path(folder) / "metadata_only.sqlite3"
+    copy = Path(folder) / "metadata_snapshot.sqlite3"
+    with closing(sqlite3.connect(owner)) as db:
+        db.execute("PRAGMA user_version=77")
+        db.commit()
+    assert owner.stat().st_size > 0, "NOX_B03_METADATA_FIXTURE_EMPTY_HOLD"
+    with closing(sqlite3.connect(owner)) as db:
+        tables = db.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
+        assert not tables, "NOX_B03_METADATA_FIXTURE_HAS_TABLES_HOLD"
+        assert db.execute("PRAGMA user_version").fetchone()[0] == 77
+        with closing(sqlite3.connect(copy)) as dest:
+            db.backup(dest)
+    with closing(sqlite3.connect(copy)) as verify:
+        assert verify.execute("PRAGMA quick_check").fetchone()[0] == "ok"
+        assert verify.execute("PRAGMA user_version").fetchone()[0] == 77, "NOX_B03_METADATA_PREIMAGE_LOST_HOLD"
+    assert owner.exists() and hashlib.sha256(owner.read_bytes()).hexdigest()
+
+print("B03_R8_SOURCE_ONLY_PASS: guards, WAL, metadata-only owner preimage, quick_check/SHA; native Windows pending")

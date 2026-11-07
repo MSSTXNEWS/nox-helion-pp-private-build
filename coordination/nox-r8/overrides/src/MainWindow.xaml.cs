@@ -913,6 +913,10 @@ public partial class MainWindow : Window
 
     private void InitializeDatabase()
     {
+        // Pre-existing SQLite may hold only PRAGMA user_version, views, or
+        // other owner metadata, with zero user tables. Preserve those bytes
+        // before bootstrap mutates the file; a virgin DB never needs a copy.
+        bool preexistingOwnerBytes = File.Exists(dbPath) && new FileInfo(dbPath).Length > 0;
         using var db = OpenDatabase();
 
         // B03 NO-LOSS: the bootstrap DDL and PRAGMA journal_mode below can mutate
@@ -932,7 +936,7 @@ public partial class MainWindow : Window
                 knownObjects.Add(objects.GetString(1));
             }
         }
-        if (existingTables && !selfTestRequested)
+        if ((existingTables || preexistingOwnerBytes) && !selfTestRequested)
         {
             string[] needed = {
                 "chat_history", "tasks", "preferences", "imported_sources",
