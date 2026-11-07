@@ -1193,7 +1193,7 @@ public partial class MainWindow : Window
         {
             string[] needed = {
                 "chat_history", "tasks", "preferences", "imported_sources",
-                "memory_notes", "feedback", "learn_requests",
+                "memory_notes", "feedback", "learn_requests", "chat_request_receipts",
                 "idx_learn_pending_owner", "idx_chat_history_time",
                 "idx_chat_persona", "idx_notes_persona"
             };
@@ -1208,6 +1208,7 @@ public partial class MainWindow : Window
         command.CommandText = """
           PRAGMA journal_mode=WAL;
           CREATE TABLE IF NOT EXISTS chat_history(id INTEGER PRIMARY KEY AUTOINCREMENT, timestamp TEXT NOT NULL, prompt TEXT NOT NULL, answer TEXT NOT NULL);
+          CREATE TABLE IF NOT EXISTS chat_request_receipts(request_id TEXT PRIMARY KEY, chat_id INTEGER NOT NULL, persona TEXT NOT NULL);
           CREATE TABLE IF NOT EXISTS tasks(id INTEGER PRIMARY KEY AUTOINCREMENT, created_at TEXT NOT NULL, title TEXT NOT NULL, complete INTEGER NOT NULL DEFAULT 0);
           CREATE TABLE IF NOT EXISTS preferences(key TEXT PRIMARY KEY, value TEXT NOT NULL);
           CREATE TABLE IF NOT EXISTS imported_sources(source TEXT PRIMARY KEY, imported_at TEXT NOT NULL, rows INTEGER NOT NULL);
@@ -1985,6 +1986,11 @@ public partial class MainWindow : Window
         try
         {
             Emit("status", new { requestId, state = "GENERATING" });
+            // Replayed committed requestIds must never regenerate after process
+            // restart. Query SQLite before invoking the existing Ollama provider;
+            // SQLite read failures fail closed through the regular ERROR ACK.
+            if (HasCommittedChatRequest(requestId))
+                throw new InvalidOperationException("NOX_CHAT_DURABLE_REPLAY_DENIED");
             var preferences = ReadPreferencesDictionary();
             var mode = preferences.TryGetValue("performance", out var selectedMode) ? selectedMode : "BALANCED";
             var maxTokens = mode == "MAX" ? 1600 : mode == "ECO" ? 384 : 1024;
@@ -2075,7 +2081,7 @@ public partial class MainWindow : Window
             cancellation.Token.ThrowIfCancellationRequested();
             if (answer.Length > 0) {
                 sqliteWriteAttempted = true;
-                PersistChat(prompt, answer.ToString(), persona);
+                PersistChat(prompt, answer.ToString(), persona, requestId);
                 sqliteVerified = true;
             }
             // Completion is true only after SQLite commits successfully.
@@ -2172,32 +2178,67 @@ public partial class MainWindow : Window
         }
     }
 
-    private void PersistChat(string prompt, string answer, string persona)
+    // Read-only durable admission; a failed receipt read blocks inference.
+    private bool HasCommittedChatRequest(string requestId)
     {
         using var db = OpenDatabase();
-        using var cmd = db.CreateCommand();
-        cmd.CommandText = "INSERT INTO chat_history(timestamp,prompt,answer,persona) VALUES($t,$p,$a,$persona)";
-        cmd.Parameters.AddWithValue("$persona", persona);
-        cmd.Parameters.AddWithValue("$t", DateTimeOffset.UtcNow.ToString("O"));
-        cmd.Parameters.AddWithValue("$p", prompt);
-        cmd.Parameters.AddWithValue("$a", answer);
-        if (cmd.ExecuteNonQuery() != 1)
-            throw new InvalidOperationException("NOX_CHAT_SQLITE_INSERT_HOLD");
-        // A separate SQLite connection must see the exact committed row before
-        // the WebView2 "saved" ACK. Never replace or delete owner data.
-        using var rowIdQuery = db.CreateCommand();
-        rowIdQuery.CommandText = "SELECT last_insert_rowid()";
-        long id = Convert.ToInt64(rowIdQuery.ExecuteScalar());
-        if (id <= 0) throw new InvalidOperationException("NOX_CHAT_SQLITE_ROWID_HOLD");
+        using var check = db.CreateCommand();
+        check.CommandText = "SELECT COUNT(*) FROM chat_request_receipts WHERE request_id=$requestId";
+        check.Parameters.AddWithValue("$requestId", requestId);
+        return Convert.ToInt64(check.ExecuteScalar()) != 0;
+    }
+
+    private void PersistChat(string prompt, string answer, string persona, string requestId)
+    {
+        long id;
+        using (var db = OpenDatabase())
+        using (var tx = db.BeginTransaction())
+        {
+            using var cmd = db.CreateCommand();
+            cmd.Transaction = tx;
+            cmd.CommandText = "INSERT INTO chat_history(timestamp,prompt,answer,persona) VALUES($t,$p,$a,$persona)";
+            cmd.Parameters.AddWithValue("$persona", persona);
+            cmd.Parameters.AddWithValue("$t", DateTimeOffset.UtcNow.ToString("O"));
+            cmd.Parameters.AddWithValue("$p", prompt);
+            cmd.Parameters.AddWithValue("$a", answer);
+            if (cmd.ExecuteNonQuery() != 1)
+                throw new InvalidOperationException("NOX_CHAT_SQLITE_INSERT_HOLD");
+            using var rowIdQuery = db.CreateCommand();
+            rowIdQuery.Transaction = tx;
+            rowIdQuery.CommandText = "SELECT last_insert_rowid()";
+            id = Convert.ToInt64(rowIdQuery.ExecuteScalar());
+            if (id <= 0) throw new InvalidOperationException("NOX_CHAT_SQLITE_ROWID_HOLD");
+            // The unique receipt and history insert share the same SQLite COMMIT.
+            // Duplicate ID => rollback, never a second committed chat row.
+            using var receipt = db.CreateCommand();
+            receipt.Transaction = tx;
+            receipt.CommandText = "INSERT INTO chat_request_receipts(request_id,chat_id,persona) VALUES($r,$id,$persona)";
+            receipt.Parameters.AddWithValue("$r", requestId);
+            receipt.Parameters.AddWithValue("$id", id);
+            receipt.Parameters.AddWithValue("$persona", persona);
+            if (receipt.ExecuteNonQuery() != 1)
+                throw new InvalidOperationException("NOX_CHAT_RECEIPT_INSERT_HOLD");
+            tx.Commit();
+        }
+        // Only a second connection's committed owner+row readback can produce OK.
+        // Exceptions after attempted COMMIT remain UNKNOWN, never silent retry.
         using var verifyDb = OpenDatabase();
         using var verify = verifyDb.CreateCommand();
-        verify.CommandText = "SELECT prompt,answer,persona FROM chat_history WHERE id=$id";
+        verify.CommandText = """
+            SELECT h.prompt,h.answer,h.persona,r.persona
+            FROM chat_request_receipts AS r
+            JOIN chat_history AS h ON h.id=r.chat_id
+            WHERE r.request_id=$r AND r.chat_id=$id
+            """;
+        verify.Parameters.AddWithValue("$r", requestId);
         verify.Parameters.AddWithValue("$id", id);
         using var row = verify.ExecuteReader();
         if (!row.Read() ||
             !string.Equals(row.GetString(0), prompt, StringComparison.Ordinal) ||
             !string.Equals(row.GetString(1), answer, StringComparison.Ordinal) ||
-            !string.Equals(row.GetString(2), persona, StringComparison.Ordinal))
+            !string.Equals(row.GetString(2), persona, StringComparison.Ordinal) ||
+            !string.Equals(row.GetString(3), persona, StringComparison.Ordinal) ||
+            row.Read())
             throw new InvalidOperationException("NOX_CHAT_SQLITE_READBACK_HOLD");
     }
 
