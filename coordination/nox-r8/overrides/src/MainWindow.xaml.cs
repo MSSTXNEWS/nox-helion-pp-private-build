@@ -2106,6 +2106,13 @@ public partial class MainWindow : Window
 
     // D05: independent owner-acknowledged LEARN and STOP controls.
     // No GPU work starts here; errors cannot become completed training.
+    // A consent row can be durably committed even if its final SQLite readback
+    // or WebView2 ACK fails. Never invite the owner to create a duplicate.
+    private sealed class LearnRequestPersistenceUnknownException : Exception
+    {
+        public LearnRequestPersistenceUnknownException(string reason, Exception inner) : base(reason, inner) { }
+    }
+
     private void HandleLearnRequest(string requestId)
     {
         if (!ValidWriteRequestId(requestId)) {
@@ -2113,6 +2120,14 @@ public partial class MainWindow : Window
             return;
         }
         try { RequestLearn(requestId); }
+        catch (LearnRequestPersistenceUnknownException ex) {
+            try {
+                Send("learn.receipt", new { requestId, state = "PERSISTENCE_UNKNOWN_HOLD",
+                    reason = ex.Message, trainingStarted = false, checkpointSha256 = (string?)null });
+            }
+            catch (Exception) { /* Durable owner consent must never become a false denial. */ }
+            RefreshLearnQueueBestEffort();
+        }
         catch (InvalidOperationException ex) when (ex.Message == "NOX_LEARN_EXISTING_MODEL_MISMATCH_HOLD") {
             Send("learn.denied", new { requestId, reason = ex.Message });
         }
@@ -2152,6 +2167,9 @@ public partial class MainWindow : Window
             return;
         }
         long id;
+        bool commitAttempted = false;
+        try
+        {
         using (var db = OpenDatabase())
         using (var tx = db.BeginTransaction())
         {
@@ -2162,6 +2180,7 @@ public partial class MainWindow : Window
                 var oldId = check.ExecuteScalar();
                 if (oldId != null && oldId != DBNull.Value) {
                     id = Convert.ToInt64(oldId);
+                    commitAttempted = true;
                     tx.Commit();
                     // A pending row is not a receipt until a fresh SQLite connection
                     // verifies the exact SID, state and absence of a checkpoint.
@@ -2203,6 +2222,7 @@ public partial class MainWindow : Window
                 id = Convert.ToInt64(verify.ExecuteScalar() ??
                     throw new InvalidOperationException("LEARN SQLite readback failed"));
             }
+            commitAttempted = true;
             tx.Commit();
         }
         // A queued request is not an ACK until a separate SQLite connection
@@ -2224,6 +2244,17 @@ public partial class MainWindow : Window
         Send("learn.receipt", new { requestId, id, model, state="AWAITING_VERIFIED_WORKER",
             reason="NO_ATTESTED_GPU_WORKER", trainingStarted=false, checkpointSha256=(string?)null });
         RefreshLearnQueueBestEffort();
+        }
+        catch (Exception ex)
+        {
+            // A model mismatch is an established negative outcome; everything
+            // else after the first COMMIT attempt has an unknown durable result.
+            if (commitAttempted && !(ex is InvalidOperationException &&
+                ex.Message == "NOX_LEARN_EXISTING_MODEL_MISMATCH_HOLD"))
+                throw new LearnRequestPersistenceUnknownException(
+                    "NOX_LEARN_REQUEST_COMMIT_OR_READBACK_UNKNOWN_HOLD", ex);
+            throw;
+        }
     }
 
     // D05 owner STOP: a failed COMMIT may already have changed SQLite.
