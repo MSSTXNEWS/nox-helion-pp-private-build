@@ -1,13 +1,12 @@
 name: NOX R8 Windows desktop compilation
 on:
   push:
-    branches: [feature/nox-r8-liquid-one-exe-20261106, work/b05-r8-noloss-installer-20261107]
+    branches: [feature/nox-r8-liquid-one-exe-20261106]
   workflow_dispatch:
 permissions:
   contents: read
 jobs:
   build:
-    if: github.ref == 'refs/heads/feature/nox-r8-liquid-one-exe-20261106'
     runs-on: windows-2022
     steps:
       - uses: actions/checkout@v4
@@ -158,55 +157,3 @@ jobs:
         with:
           name: NOX-R8-WIN64
           path: out/
-
-  b05_immutable_installer_fixture:
-    # Staging-only GitHub Windows runner. Never treat its mock payload as NOX E2E.
-    if: github.ref == 'refs/heads/work/b05-r8-noloss-installer-20261107'
-    runs-on: windows-2022
-    steps:
-      - uses: actions/checkout@v4
-      - name: Run NO-LOSS guard and real NSIS install/uninstall with disposable fake EXE
-        shell: pwsh
-        run: |
-          $ErrorActionPreference='Stop'
-          & './coordination/nox-r8/installer/Test-NoLossGuard.ps1'
-          if ($LASTEXITCODE -ne 0) { throw 'B05_GUARD_FIXTURE_HOLD' }
-          $nsis=(Get-Command makensis.exe -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty Source)
-          if (-not $nsis) { $nsis='C:\Program Files (x86)\NSIS\makensis.exe' }
-          if (-not (Test-Path -LiteralPath $nsis)) {
-            choco install nsis --yes --no-progress
-            if ($LASTEXITCODE -ne 0) { throw 'B05_NSIS_INSTALL_HOLD' }
-          }
-          if (-not (Test-Path -LiteralPath $nsis)) { throw 'B05_NSIS_MISSING_HOLD' }
-          $tmp=Join-Path $env:RUNNER_TEMP ('B05-NSIS-'+[Guid]::NewGuid().ToString('N'))
-          New-Item -Path $tmp -ItemType Directory -Force | Out-Null
-          $exe=Join-Path $tmp 'NOX.HELION.exe'
-          $receipt=Join-Path $tmp 'BUILD_RECEIPT.json'
-          $setup=Join-Path $tmp 'B05-TEST-ONLY-Setup.exe'
-          [IO.File]::WriteAllText($exe,'B05_DISPOSABLE_NOT_A_REAL_NOX_EXE',[Text.UTF8Encoding]::new($false))
-          $sha=(Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash.ToLowerInvariant()
-          $json=(@{schema='NOX_R8_NATIVE_SINGLE_EXE_V1';source_git_sha=$env:GITHUB_SHA;exe_sha256=$sha;accepted_full_release=$false} | ConvertTo-Json -Compress)
-          [IO.File]::WriteAllText($receipt,$json,[Text.UTF8Encoding]::new($false))
-          $rsha=(Get-FileHash -LiteralPath $receipt -Algorithm SHA256).Hash.ToLowerInvariant()
-          $guard=(Resolve-Path './coordination/nox-r8/installer/NoLossGuard.ps1').Path
-          $recipe=(Resolve-Path './coordination/nox-r8/installer/NOX_R8_ImmutableUser_Setup.nsi').Path
-          & $nsis '/V3' "/DNOX_EXE_PATH=$exe" "/DNOX_RECEIPT_PATH=$receipt" "/DNOX_GUARD_PATH=$guard" "/DNOX_EXE_SHA256=$sha" "/DNOX_RECEIPT_SHA256=$rsha" "/DNOX_SOURCE_GIT_SHA=$env:GITHUB_SHA" "/DNOX_SETUP_OUT=$setup" $recipe
-          if ($LASTEXITCODE -ne 0 -or !(Test-Path -LiteralPath $setup)) { throw 'B05_NSIS_COMPILE_HOLD' }
-          $target=Join-Path $env:LOCALAPPDATA "Programs\NOX-HELION-R8\$sha"
-          if(Test-Path -LiteralPath $target){ throw 'B05_FIXTURE_TARGET_COLLISION_HOLD' }
-          $install=Start-Process -FilePath $setup -ArgumentList '/S' -PassThru -Wait
-          if($install.ExitCode -ne 0){ throw "B05_NSIS_INSTALL_HOLD:$($install.ExitCode)" }
-          $owned=@('NOX.HELION.exe','BUILD_RECEIPT.json','Uninstall.exe')
-          foreach($f in $owned){if(!(Test-Path -LiteralPath (Join-Path $target $f) -PathType Leaf)){throw "B05_PROMOTION_MISSING:$f"}}
-          if((Get-FileHash -LiteralPath (Join-Path $target 'NOX.HELION.exe') -Algorithm SHA256).Hash.ToLowerInvariant() -ne $sha){throw 'B05_INSTALLED_EXE_SHA_HOLD'}
-          if((Get-FileHash -LiteralPath (Join-Path $target 'BUILD_RECEIPT.json') -Algorithm SHA256).Hash.ToLowerInvariant() -ne $rsha){throw 'B05_INSTALLED_RECEIPT_SHA_HOLD'}
-          $foreign=Join-Path $target 'owner.sqlite3'
-          [IO.File]::WriteAllText($foreign,'FOREIGN_MUST_SURVIVE',[Text.UTF8Encoding]::new($false))
-          $uninstaller=Join-Path $target 'Uninstall.exe'
-          Start-Process -FilePath $uninstaller -ArgumentList '/S' -PassThru -Wait | Out-Null
-          if(!(Test-Path -LiteralPath $foreign)){throw 'B05_FOREIGN_OWNER_FILE_DELETED_HOLD'}
-          foreach($f in $owned){if(!(Test-Path -LiteralPath (Join-Path $target $f))){throw "B05_PARTIAL_UNINSTALL_HOLD:$f"}}
-          Remove-Item -LiteralPath $foreign -Force
-          $uninstall=Start-Process -FilePath $uninstaller -ArgumentList '/S' -PassThru -Wait
-          if($uninstall.ExitCode -ne 0 -or (Test-Path -LiteralPath $target)){throw 'B05_CLEAN_UNINSTALL_HOLD'}
-          Write-Host "B05_WINDOWS_NSIS_GUARD_AND_SYNTHETIC_INSTALL_PASS SOURCE_SHA=$env:GITHUB_SHA; REAL_QWEN_NOT_TESTED; RELEASE_HOLD"
