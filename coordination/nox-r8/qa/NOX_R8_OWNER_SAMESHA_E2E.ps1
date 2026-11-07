@@ -26,7 +26,7 @@ $r=[ordered]@{
   expectedSha256=$ExpectedSha256.ToLowerInvariant(); exe=$ExePath
   exeShaBefore=$null; exeShaAfter=$null; sourceGitSha='NOT_VERIFIED'
   provider='http://127.0.0.1:11436'; model='nox-qwen-clean:latest'
-  providerVerified=$false; nativePid=$null; nativeExit=$null
+  providerVerified=$false; modelDigest=$null; providerRuntimeVerified=$false; nativePid=$null; nativeExit=$null
   nativeReceiptVerified=$false; nativeChecks=@{}; ownerSqliteUnchanged=$false
   uiSmokeAccepted=$false; uiSmokePid=$null; uiSmokeChecks=@{}
   uiSettingsRestartVerified=$false; uiRestartPid=$null; uiRestartChecks=@{}
@@ -53,9 +53,12 @@ try {
   }
   $baseline=Snapshot $dataDir
   $tags=Invoke-RestMethod -Uri 'http://127.0.0.1:11436/api/tags' -TimeoutSec 8 -Method Get
-  if(@($tags.models | ForEach-Object {$_.name}) -cnotcontains 'nox-qwen-clean:latest'){
-    throw 'REAL_LOCAL_QWEN_MODEL_NOT_VISIBLE_HOLD'
-  }
+  # Verify installed model identity, not just tag presence. No model download.
+  $registered=@($tags.models | Where-Object { [string]$_.name -ceq $r.model })
+  if($registered.Count -ne 1){throw 'REAL_LOCAL_QWEN_MODEL_NOT_VISIBLE_HOLD'}
+  $registeredDigest=[string]$registered[0].digest
+  if($registeredDigest -cnotmatch '^[0-9a-fA-F]{64}$'){throw 'MODEL_DIGEST_MISSING_HOLD'}
+  $r.modelDigest=$registeredDigest.ToLowerInvariant()
   $r.providerVerified=$true
   # Only a new native --nox-selftest child, never any preexisting app process.
   $p=Start-Process -FilePath $exe -WorkingDirectory (Split-Path -Parent $exe) -ArgumentList @('--nox-selftest',"--nox-runid=$id") -PassThru
@@ -84,6 +87,18 @@ try {
     if($value -cne 'PASS'){throw "NATIVE_CHECK_$($name)_HOLD"}
   }
   $r.nativeReceiptVerified=$true
+
+  # /api/ps reports loaded models; /api/tags reports only installed models.
+  # After the native Qwen chat, require the same digest to be resident.
+  $running=Invoke-RestMethod -Uri 'http://127.0.0.1:11436/api/ps' -TimeoutSec 8 -Method Get
+  $activeModels=@($running.models | Where-Object { [string]$_.name -ceq $r.model })
+  if($activeModels.Count -ne 1){throw 'REAL_QWEN_NOT_RUNNING_AFTER_CHAT_HOLD'}
+  $runtimeDigest=[string]$activeModels[0].digest
+  if($runtimeDigest -cnotmatch '^[0-9a-fA-F]{64}$' -or
+      ![string]::Equals($runtimeDigest,$r.modelDigest,[StringComparison]::OrdinalIgnoreCase)){
+    throw 'REAL_QWEN_LOADED_DIGEST_MISMATCH_HOLD'
+  }
+  $r.providerRuntimeVerified=$true
 
   # Second real Windows WPF/WebView2 process: native eight-route, accessibility
   # and isolated SQLite/settings validation. It never touches chat.sqlite3.
@@ -173,7 +188,7 @@ try {
       throw 'SAME_SHA_PRE_POST_HOLD'
     }
     if(!$r.ownerSqliteUnchanged){throw 'OWNER_SQLITE_CHANGED_DURING_ACCEPTANCE_HOLD'}
-    if($r.nativeReceiptVerified -and $r.providerVerified -and $r.uiSmokeAccepted -and $r.uiSettingsRestartVerified -and !$r.error){
+    if($r.nativeReceiptVerified -and $r.providerVerified -and $r.providerRuntimeVerified -and $r.uiSmokeAccepted -and $r.uiSettingsRestartVerified -and !$r.error){
       $r.physicalScopeAccepted=$true
       $r.status='NATIVE_QWEN_STOP_UI_SETTINGS_SCOPE_PASS_RELEASE_HOLD'
     }
