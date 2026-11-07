@@ -57,6 +57,9 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'AMD_HOTSPOT_SOURCE_HOLD' }
           python './coordination/nox-r8/tests/test_r8_helper11_21_integrations.py'
           if ($LASTEXITCODE -ne 0) { throw 'R8_HELPER_11_21_CONTRACT_HOLD' }
+          # QA runner syntax only; actual CDP screenshots require owner WebView2.
+          python -m py_compile './coordination/nox-r8/qa/r8_real_webview2_visual.py'
+          if ($LASTEXITCODE -ne 0) { throw 'WEBVIEW2_VISUAL_RUNNER_SYNTAX_HOLD' }
           # Native six-check gate must NOT be mistaken for owner-PC Qwen E2E.
           python './coordination/nox-r8/tests/test_b06_six_check_contract.py'
           if ($LASTEXITCODE -ne 0) { throw 'R8_SIX_CHECK_SOURCE_HOLD' }
