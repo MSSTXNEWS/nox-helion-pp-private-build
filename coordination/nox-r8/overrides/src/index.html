@@ -304,19 +304,23 @@ body.reduced .helion-fx{filter:none}body.reduced .core.active{animation:none}
     float alpha=clamp(disk+glow*1.8+orbit+orbit2+dust,0.,1.);
     color=vec4(result,alpha);
   }`;
-  function shader(type,src){const sh=gl.createShader(type);gl.shaderSource(sh,src);gl.compileShader(sh);
+  function shader(type,src){const sh=gl.createShader(type);if(!sh)throw new Error('GL_SHADER_ALLOC_FAILED');gl.shaderSource(sh,src);gl.compileShader(sh);
     if(!gl.getShaderParameter(sh,gl.COMPILE_STATUS))throw new Error(gl.getShaderInfoLog(sh)||'GLSL compile failed');return sh;}
   let program,time,res,ene;
   // GPU setup can fail after shader link (lost device, uniform/buffer failure).
   // Keep the complete GL initialization inside the same fail-closed boundary.
-  try{program=gl.createProgram();let v=shader(gl.VERTEX_SHADER,vert),f=shader(gl.FRAGMENT_SHADER,frag);
+  try{program=gl.createProgram();if(!program)throw new Error('GL_PROGRAM_ALLOC_FAILED');let v=shader(gl.VERTEX_SHADER,vert),f=shader(gl.FRAGMENT_SHADER,frag);
     gl.attachShader(program,v);gl.attachShader(program,f);gl.linkProgram(program);
     if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw new Error(gl.getProgramInfoLog(program)||'GL link failed');
     gl.deleteShader(v);gl.deleteShader(f);
     time=gl.getUniformLocation(program,'uTime');res=gl.getUniformLocation(program,'uResolution');ene=gl.getUniformLocation(program,'uEnergy');
-    const buf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buf);
+    // Missing uniforms can silently paint an empty sphere without GL errors.
+    if(time===null||res===null||ene===null)throw new Error('GL_REQUIRED_UNIFORM_MISSING');
+    const buf=gl.createBuffer();if(!buf)throw new Error('GL_BUFFER_ALLOC_FAILED');gl.bindBuffer(gl.ARRAY_BUFFER,buf);
     gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]),gl.STATIC_DRAW);
-    const attr=gl.getAttribLocation(program,'aPosition');gl.enableVertexAttribArray(attr);gl.vertexAttribPointer(attr,2,gl.FLOAT,false,0,0);
+    const attr=gl.getAttribLocation(program,'aPosition');
+    if(!Number.isInteger(attr)||attr<0)throw new Error('GL_REQUIRED_ATTRIBUTE_MISSING');
+    gl.enableVertexAttribArray(attr);gl.vertexAttribPointer(attr,2,gl.FLOAT,false,0,0);
   }catch(e){console.warn('NOX WebGL initialization fallback:',e.message);const replacement=canvas.cloneNode(false);canvas.replaceWith(replacement);startCanvas2d(replacement);return;}
   let raf=0,mode='BALANCED',energy=0,rendered=false,last=0,started=performance.now(),gpuFrames=0;
   let gpuActive=true;

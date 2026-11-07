@@ -33,14 +33,14 @@ function exercise(kind){
     NO_ERROR:0,OUT_OF_MEMORY:1285,
     VERTEX_SHADER:1,FRAGMENT_SHADER:2,COMPILE_STATUS:3,LINK_STATUS:4,
     ARRAY_BUFFER:5,STATIC_DRAW:6,FLOAT:7,COLOR_BUFFER_BIT:8,TRIANGLES:9,
-    createShader(){return {};},shaderSource(){},compileShader(){},
+    createShader(){return kind==='shaderNull'?null:{};},shaderSource(){},compileShader(){},
     getShaderParameter(){return kind!=='compileFail';},
     getShaderInfoLog(){return 'FAKE_SHADER_COMPILE_ERROR';},
-    createProgram(){return {};},attachShader(){},linkProgram(){},
+    createProgram(){return kind==='programNull'?null:{};},attachShader(){},linkProgram(){},
     getProgramParameter(){return true;},getProgramInfoLog(){return '';},
-    deleteShader(){},getUniformLocation(){return {};},
-    createBuffer(){if(kind==='setupFail')throw Error('GPU_BUFFER_ALLOC_FAILED');return {};},bindBuffer(){},bufferData(){},
-    getAttribLocation(){return 0;},enableVertexAttribArray(){},vertexAttribPointer(){},
+    deleteShader(){},getUniformLocation(){return kind==='uniformNull'?null:{};},
+    createBuffer(){if(kind==='setupFail')throw Error('GPU_BUFFER_ALLOC_FAILED');return kind==='bufferNull'?null:{};},bindBuffer(){},bufferData(){},
+    getAttribLocation(){return kind==='attributeMissing'?-1:0;},enableVertexAttribArray(){},vertexAttribPointer(){},
     viewport(){if(kind==='viewportFail')throw Error('GPU_VIEWPORT_DEVICE_LOST');},useProgram(){},uniform2f(){},uniform1f(){if(kind==='uniformFail')throw Error('GPU_UNIFORM_DEVICE_LOST');},
     clearColor(){},clear(){},drawArrays(){if(kind==='drawFail')throw Error('GPU_DEVICE_LOST');gpuFrames++;},
     isContextLost(){return false;},
@@ -146,7 +146,7 @@ function exercise(kind){
   check(sphere.dataset.fx==='canvas2d',kind+' switched to live 2D');
   check(typeof window.noxVisual.setMode==='function',kind+' mode retained');
   if(kind==='contextLost')check(prevented,'context loss default prevented');
-  if(['contextLost','compileFail','drawFail','setupFail','viewportFail','uniformFail','glError','lateGlError'].includes(kind))check(currentCanvas!==original,'GPU canvas replaced');
+  if(['contextLost','compileFail','drawFail','setupFail','viewportFail','uniformFail','glError','lateGlError','programNull','shaderNull','uniformNull','bufferNull','attributeMissing'].includes(kind))check(currentCanvas!==original,'GPU canvas replaced');
   tick();check(cpuFrames>0,kind+' 2D frame drawn');
   if(['contextLost','drawFail','viewportFail','uniformFail','glError','lateGlError'].includes(kind)){
     check(currentCanvas.width===650,kind+' MAX render resolution survived fallback');
@@ -158,6 +158,6 @@ function exercise(kind){
   document.hidden=false;document.fire('visibilitychange');tick();
   check(cpuFrames>=3,kind+' visible redraw');
 }
-for(const kind of ['noGpu','throwContext','compileFail','setupFail','ok','contextLost','drawFail','viewportFail','uniformFail','glError','lateGlError','reducedGpu','reducedCpu','legacyReducedGpu','legacyReducedCpu','noMediaApiGpu','noMediaApiCpu','queryThrowsGpu','queryThrowsCpu','observerThrowsGpu','observerThrowsCpu','observerThrowsLegacyGpu','observerThrowsLegacyCpu','no2d','throw2d','draw2dFail','matchesGetterGpu','matchesGetterCpu'])exercise(kind);
+for(const kind of ['noGpu','throwContext','compileFail','setupFail','programNull','shaderNull','uniformNull','bufferNull','attributeMissing','ok','contextLost','drawFail','viewportFail','uniformFail','glError','lateGlError','reducedGpu','reducedCpu','legacyReducedGpu','legacyReducedCpu','noMediaApiGpu','noMediaApiCpu','queryThrowsGpu','queryThrowsCpu','observerThrowsGpu','observerThrowsCpu','observerThrowsLegacyGpu','observerThrowsLegacyCpu','no2d','throw2d','draw2dFail','matchesGetterGpu','matchesGetterCpu'])exercise(kind);
 check(html.includes("case 'complete':busy=false;activeChatId=null;$('generation').classList.remove('on');window.noxVisual?.setEnergy(false);"),'native completion clears renderer energy');
-console.log('D04 R8 GPU failover SOURCE_ONLY: 28 scenarios PASS (WebGL2, Canvas2D, CSS fallback, throwing media.matches getter, legacy/missing/rejected motion APIs, native IPC); owner GPU NOT_TESTED');
+console.log('D04 R8 GPU failover SOURCE_ONLY: 33 scenarios PASS (WebGL2, Canvas2D, CSS fallback, throwing media.matches getter, legacy/missing/rejected motion APIs, native IPC); owner GPU NOT_TESTED');
