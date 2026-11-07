@@ -3,7 +3,7 @@
 $ErrorActionPreference = "Stop"
 $root = "C:\NOX_HELION\NOX_NEW"
 $repo = "$root\brain\source\repo"
-$ref = "ec84b17b834d9300a68950db43eb55b108d3d6ca"
+$ref = "f878cdd111c76cd2a619b771ea5048e553006253"
 $base = "coordination/soul_gpu_v1"
 $dest = "$root\brain\skills\NOX_UNIFIED_49fca983"
 $python = "$env:USERPROFILE\NOX_EXPRESS_AI\NOX_TRAINING\train-venv\Scripts\python.exe"
@@ -24,12 +24,14 @@ $files = @(
  "nox_thermal_sensors_v1.py","forge_focus_v4_canonical_live.html",
  "nox_unified_brain_v1.py","nox_unified_chat_v1.html",
  "nox_prime_cognitive_memory_v1.py",
+ "nox_prime_memory_continuum_v1.py","nox_prime_self_edit_lab_v1.py",
  "nox_prime_resource_advisor_v1.py",
  "nox_gpu_target_11120.py","nox_gpu_worm_safe70_v1.py",
  "nox_safe70_thermal_guard_v1.py",
  "test_nox_unified_brain_v1.py","test_nox_prime_resource_advisor_v1.py",
  "test_nox_safe70_thermal_guard_v1.py",
- "test_nox_prime_cognitive_memory_v1.py"
+ "test_nox_prime_cognitive_memory_v1.py",
+ "test_nox_prime_memory_continuum_v1.py","test_nox_prime_self_edit_lab_v1.py"
 )
 foreach ($name in $files) {
     $objectPath = "$base/$name"
@@ -64,11 +66,21 @@ foreach ($name in $files) {
         Remove-Item $tmp -Force -ErrorAction SilentlyContinue
     }
 }
-& $python -m py_compile "$dest\forge_live_server_v6.py" "$dest\nox_unified_brain_v1.py" $dest\nox_prime_resource_advisor_v1.py" "$dest\nox_prime_cognitive_memory_v1.py" "$dest\nox_gpu_target_11120.py" "$dest\nox_gpu_worm_safe70_v1.py"
+$pythonModules = @(
+    "$dest\forge_live_server_v6.py",
+    "$dest\nox_unified_brain_v1.py",
+    "$dest\nox_prime_resource_advisor_v1.py",
+    "$dest\nox_prime_cognitive_memory_v1.py",
+    "$dest\nox_prime_memory_continuum_v1.py",
+    "$dest\nox_prime_self_edit_lab_v1.py",
+    "$dest\nox_gpu_target_11120.py",
+    "$dest\nox_gpu_worm_safe70_v1.py"
+)
+& $python -m py_compile @pythonModules
 if ($LASTEXITCODE -ne 0) { throw "Python syntax validation failed" }
 Push-Location $dest
 try {
-    & $python -m unittest -q test_nox_unified_brain_v1 test_nox_prime_resource_advisor_v1 test_nox_safe70_thermal_guard_v1 test_nox_prime_cognitive_memory_v1
+    & $python -m unittest -q test_nox_unified_brain_v1 test_nox_prime_resource_advisor_v1 test_nox_safe70_thermal_guard_v1 test_nox_prime_cognitive_memory_v1 test_nox_prime_memory_continuum_v1 test_nox_prime_self_edit_lab_v1
     if ($LASTEXITCODE -ne 0) { throw "Unified brain contract tests failed" }
 } finally { Pop-Location }
 
@@ -78,7 +90,7 @@ foreach ($port in 18880..18888) {
     $url = "http://127.0.0.1:$port/"
     $health = $null
     try { $health = Invoke-RestMethod ($url+"api/health") -TimeoutSec 2 } catch {}
-    if ($health -and $health.unified_router -eq "NOX-UNIFIED-BRAIN-V4") {
+    if ($health -and $health.unified_router -eq "NOX-UNIFIED-BRAIN-V5") {
         $selected = $url
         break
     }
@@ -90,7 +102,7 @@ foreach ($port in 18880..18888) {
         Start-Sleep -Milliseconds 500
         try {
             $health = Invoke-RestMethod ($url+"api/health") -TimeoutSec 2
-            if ($health.unified_router -eq "NOX-UNIFIED-BRAIN-V4") {
+            if ($health.unified_router -eq "NOX-UNIFIED-BRAIN-V5") {
                 $selected = $url
                 break
             }
