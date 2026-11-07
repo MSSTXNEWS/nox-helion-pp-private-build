@@ -1785,7 +1785,7 @@ public partial class MainWindow : Window
             }
             var line = p.StandardOutput.ReadLine();
             if (p.ExitCode != 0 || string.IsNullOrWhiteSpace(line))
-                return new { available = false, reason = "nvidia_smi_unavailable" };
+                return GetAmdGpuTelemetryOrHold();
             var cells = line.Split(',').Select(c => c.Trim()).ToArray();
             if (cells.Length < 5 ||
                 !double.TryParse(cells[4], System.Globalization.NumberStyles.Float,
@@ -1812,7 +1812,7 @@ public partial class MainWindow : Window
     {
         const string script = @"$ErrorActionPreference='Stop'; " +
             @"$s=Get-CimInstance -Namespace 'root/LibreHardwareMonitor' -ClassName Sensor -ErrorAction Stop | " +
-            @"Where-Object { $_.SensorType -eq 'Temperature' -and $_.Identifier -match '/gpu-amd/' -and $_.Name -match '(?i)hot\\s*spot|junction' } | Select-Object -First 1; " +
+            @"Where-Object { $_.SensorType -eq 'Temperature' -and $_.Identifier -match '/gpu-amd/' -and $_.Name -match '(?i)hot\s*spot|junction' } | Select-Object -First 1; " +
             @"if ($null -eq $s -or $null -eq $s.Value) { exit 3 }; " +
             @"[Console]::Out.WriteLine(([double]$s.Value).ToString('R',[Globalization.CultureInfo]::InvariantCulture))";
         try
