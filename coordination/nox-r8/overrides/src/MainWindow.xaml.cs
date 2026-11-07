@@ -1321,8 +1321,8 @@ public partial class MainWindow : Window
                     Convert.ToInt32(persisted) != complete)
                     throw new InvalidOperationException("NOX_TASK_TOGGLE_SQLITE_READBACK_HOLD");
             }
-            Send("tasks", ReadTasks());
             Send("tasks.toggle.receipt", new { requestId, id, complete = complete != 0, saved = true });
+            RefreshTasksBestEffort();
         }
         catch (SqliteException) {
             Send("tasks.toggle.denied", new { requestId, id, reason = "NOX_TASK_TOGGLE_SQLITE_HOLD" });
@@ -1333,6 +1333,21 @@ public partial class MainWindow : Window
     }
 
 
+
+    // A committed and independently read-back SQLite mutation is authoritative.
+    // List redraw is optional: an I/O or WebView2 refresh failure must never
+    // turn a saved task/note into a false denial or encourage a duplicate retry.
+    private void RefreshTasksBestEffort()
+    {
+        try { Send("tasks", ReadTasks()); }
+        catch (Exception) { /* Owner can refresh ATLAS; COMMIT receipt remains valid. */ }
+    }
+
+    private void RefreshNotesBestEffort()
+    {
+        try { Send("notes", ReadNotes()); }
+        catch (Exception) { /* Owner can refresh REFLECTION; COMMIT receipt remains valid. */ }
+    }
 
     // D05: do not make the owner lose unsaved task/note text on a failed SQLite write.
     // Native receipt is correlated to the document request and sent only after a
@@ -1355,8 +1370,8 @@ public partial class MainWindow : Window
             verify.Parameters.AddWithValue("$id", id);
             if (!string.Equals(verify.ExecuteScalar() as string, title, StringComparison.Ordinal))
                 throw new InvalidOperationException("NOX_TASK_SQLITE_READBACK_HOLD");
-            Send("tasks", ReadTasks());
             Send("tasks.add.receipt", new { requestId, id, saved = true });
+            RefreshTasksBestEffort();
         }
         catch (ArgumentException) { Send("tasks.add.denied", new { requestId, reason = "NOX_TASK_VALIDATION_HOLD" }); }
         catch (SqliteException) { Send("tasks.add.denied", new { requestId, reason = "NOX_TASK_SQLITE_HOLD" }); }
@@ -1381,8 +1396,8 @@ public partial class MainWindow : Window
                 !string.Equals(row.GetString(1), body, StringComparison.Ordinal) ||
                 !string.Equals(row.GetString(2), persona, StringComparison.Ordinal))
                 throw new InvalidOperationException("NOX_NOTE_SQLITE_READBACK_HOLD");
-            Send("notes", ReadNotes());
             Send("notes.add.receipt", new { requestId, id, saved = true });
+            RefreshNotesBestEffort();
         }
         catch (ArgumentException) { Send("notes.add.denied", new { requestId, reason = "NOX_NOTE_VALIDATION_HOLD" }); }
         catch (SqliteException) { Send("notes.add.denied", new { requestId, reason = "NOX_NOTE_SQLITE_HOLD" }); }
@@ -1677,8 +1692,8 @@ public partial class MainWindow : Window
                 if (Convert.ToInt64(check.ExecuteScalar()) != 0)
                     throw new InvalidOperationException("NOX_NOTE_DELETE_READBACK_HOLD");
             }
-            Send("notes", ReadNotes());
             Send("notes.delete.receipt", new { requestId, id, saved = true, backupVerified = true });
+            RefreshNotesBestEffort();
         }
         catch (Exception) {
             Send("notes.delete.denied", new { requestId, id, reason = "NOX_NOTE_DELETE_BACKUP_OR_SQLITE_HOLD" });
