@@ -229,10 +229,12 @@ def chat(root,payload):
         response=json.loads(r.read(3_000_000))
     msg=response.get("message") or {}
     answer=msg.get("content")
-    if not isinstance(answer,str):raise RuntimeError("OLLAMA_NO_REPLY")
+    if not isinstance(answer,str) or not answer.strip():
+        raise RuntimeError("OLLAMA_NO_REPLY")
+    save_turn(root,payload["message"].strip(),answer)
     return {"identity":"NOX HELION","model":model,
             "answer":answer,"task":task,
-            "history_persisted":False,"s03_integrated":False}
+            "history_persisted":True,"s03_integrated":False}
 
 
 def stream_chat(root,payload):
