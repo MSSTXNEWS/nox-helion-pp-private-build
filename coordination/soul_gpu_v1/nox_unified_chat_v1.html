@@ -40,6 +40,8 @@ select,button{background:#142735;border:1px solid #507184;color:white;border-rad
 <h3 class="sub">Восемь CoreID</h3><p id="cores" class="sub">—</p>
 <p class="sub" id="error" aria-live="polite"></p><p class="sub" id="resource" aria-live="polite">Проверка GPU...</p>
 <button type="button" id="refresh">↻ Проверить ядро</button>
+<button type="button" id="experienceBtn">✦ Воспоминания NOX</button>
+<div id="experience" class="sub" aria-live="polite"></div>
 </aside></div>
 </main><script>
 "use strict";
@@ -187,6 +189,34 @@ $("clear").addEventListener("click",()=>{
   add("assistant","Новый контекст диалога. Предыдущая история на диске сохранена.");
   $("historyStatus").textContent="Новый контекст (без удаления архива)";
 });
+async function experience(){
+  const target=$("experience");
+  target.textContent="Загружаю подтверждённые источником эпизоды...";
+  try{
+    const query=$("message").value.trim();
+    const r=await fetch("/api/nox/experience?q="+encodeURIComponent(query),{cache:"no-store"});
+    if(!r.ok)throw Error("Memory API "+r.status);
+    const d=await r.json();
+    target.replaceChildren();
+    const intro=document.createElement("p");
+    intro.textContent="Найдено событий в журнале: "+(d.count??0)+
+      ". Это записи беседы, не автоматически проверенные факты.";
+    target.appendChild(intro);
+    for(const e of d.episodes||[]){
+      const p=document.createElement("p");
+      p.textContent=(e.observed_at||"Дата неизвестна")+" · "+
+        (e.user_excerpt||"").slice(0,230)+" — "+
+        (e.assistant_excerpt||"").slice(0,280);
+      target.appendChild(p);
+    }
+    if(!d.episodes?.length){
+      const p=document.createElement("p");
+      p.textContent="По этому запросу в локальном журнале пока нет подходящих эпизодов.";
+      target.appendChild(p);
+    }
+  }catch(ex){target.textContent="Память недоступна: "+ex.message;}
+}
+$("experienceBtn").addEventListener("click",experience);
 $("refresh").addEventListener("click",()=>{status();awareness();});
 restore();
 status();
