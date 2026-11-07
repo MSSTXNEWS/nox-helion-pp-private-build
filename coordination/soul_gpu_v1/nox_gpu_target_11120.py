@@ -19,10 +19,34 @@ MAX_THERMAL_RESTARTS=24
 TARGET_TOTAL_STEPS=11120
 
 def receipt(path,payload):
+    """Windows-safe telemetry: unique staging, bounded retries, sidecar fallback.
+
+    A dashboard/antivirus/another NOX service can temporarily hold training.json
+    open without FILE_SHARE_DELETE, causing os.replace -> WinError 5. A telemetry
+    collision must never kill a healthy, thermally supervised LoRA worker.
+    The independent SAFE70 receipt is a real event record, never fake progress.
+    """
     path.parent.mkdir(parents=True,exist_ok=True)
-    part=path.with_suffix(".tmp")
-    part.write_text(json.dumps(payload,ensure_ascii=False,indent=2),encoding="utf-8")
-    os.replace(part,path)
+    raw=json.dumps(payload,ensure_ascii=False,indent=2)
+    part=path.parent/("." + path.name + "." + str(os.getpid()) + ".tmp")
+    part.write_text(raw,encoding="utf-8")
+    try:
+        for attempt in range(12):
+            try:
+                os.replace(part,path)
+                return
+            except PermissionError:
+                time.sleep(min(.12*(attempt+1),.45))
+        # Fallback own file: no contention with training.json readers/writers.
+        sidecar=path.with_name("training_safe70.json")
+        os.replace(part,sidecar)
+        print("NOX TELEMETRY HOLD: training.json locked; saved independent training_safe70.json",
+              flush=True)
+    finally:
+        try:
+            part.unlink(missing_ok=True)
+        except OSError:
+            pass
 
 def temperature():
     with urlopen(SENSOR,timeout=4) as r: data=json.loads(r.read(3_000_000))
