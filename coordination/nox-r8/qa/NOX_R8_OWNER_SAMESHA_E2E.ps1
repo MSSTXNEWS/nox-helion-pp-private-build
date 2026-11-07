@@ -4,6 +4,7 @@
 param(
   [string]$ExePath='C:\NOX_HELION\NOX_NEW\release\NOX.HELION.exe',
   [Parameter(Mandatory=$true)][ValidatePattern('^[0-9a-fA-F]{64}$')][string]$ExpectedSha256,
+  [Parameter(Mandatory=$true)][ValidatePattern('^[0-9a-fA-F]{40}$')][string]$ExpectedSourceGitSha,
   [ValidateRange(30,900)][int]$TimeoutSeconds=360
 )
 Set-StrictMode -Version Latest
@@ -23,7 +24,7 @@ $started=[DateTimeOffset]::UtcNow
 $dataDir=Join-Path $env:LOCALAPPDATA 'NOX_HELION'
 $r=[ordered]@{
   schema='NOX_R8_B06_OWNER_SAMESHA_E2E_V1'; runId=$id; startedAt=$started.ToString('O')
-  expectedSha256=$ExpectedSha256.ToLowerInvariant(); exe=$ExePath
+  expectedSha256=$ExpectedSha256.ToLowerInvariant(); expectedSourceGitSha=$ExpectedSourceGitSha.ToLowerInvariant(); exe=$ExePath
   exeShaBefore=$null; exeShaAfter=$null; sourceGitSha='NOT_VERIFIED'
   provider='http://127.0.0.1:11436'; model='nox-qwen-clean:latest'
   providerVerified=$false; modelDigest=$null; providerRuntimeVerified=$false; nativePid=$null; nativeExit=$null
@@ -60,6 +61,11 @@ try {
     throw 'R8_BUILD_SOURCE_GIT_SHA_INVALID_HOLD'
   }
   $r.sourceGitSha=([string]$build.source_git_sha).ToLowerInvariant()
+  # Fail closed when the binary manifest refers to a different source commit.
+  # EXE SHA alone is not proof that the expected R8 source was integrated.
+  if($r.sourceGitSha -cne $r.expectedSourceGitSha){
+    throw 'R8_BUILD_SOURCE_GIT_SHA_MISMATCH_HOLD'
+  }
   $baseline=Snapshot $dataDir
   $tags=Invoke-RestMethod -Uri 'http://127.0.0.1:11436/api/tags' -TimeoutSec 8 -Method Get
   # Verify installed model identity, not just tag presence. No model download.
