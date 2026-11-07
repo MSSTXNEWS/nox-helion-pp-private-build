@@ -356,14 +356,14 @@ def supervise():
             print("NOX SENSOR RECOVERY REQUIRED; GPU worker stopped; checkpoint intact.",
                   flush=True)
             raise RuntimeError("SENSOR_RECOVERY_REQUIRED")
-        if outcome not in ("HOTSPOT>=70C","HOTSPOT_COOLDOWN"):
+        if outcome not in ("HOTSPOT>=70C","HOTSPOT>=75C","HOTSPOT_COOLDOWN"):
             print("NOX stopped, NO automatic restart:",outcome,flush=True)
             raise RuntimeError("STOP_BEFORE_TARGET: "+str(outcome))
         thermal_restarts+=1
         if thermal_restarts>MAX_THERMAL_RESTARTS:
             print("NOX thermal restart limit reached; checkpoint safe.",flush=True)
             raise RuntimeError("EXCESSIVE_THERMAL_STOPS")
-        # Always cool at least 180 seconds after any HOTSPOT>=70C stop.
+        # Always cool at least 180 seconds after a confirmed or emergency thermal stop.
         print("NOX cooling for >=180s; next cycle requires Hot Spot <65C.",flush=True)
         time.sleep(COOL)
         while True:
