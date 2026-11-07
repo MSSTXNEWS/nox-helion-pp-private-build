@@ -11,6 +11,8 @@ const start = html.indexOf("$('send').onclick=()=>");
 const end = html.indexOf("\n$('stop').onclick=", start);
 assert.ok(start > 0 && end > start, 'D01 ORIGINAL_CHAT_HANDLER_MISSING');
 const code = html.slice(start, end);
+const guardLine = html.split('\n').find(line => line.startsWith('const uncertainChatKeys=new Set();'));
+assert.ok(guardLine && guardLine.includes('const uncertainChatKey='), 'D01_ORIGINAL_UNCERTAIN_CHAT_GUARD_MISSING');
 function scenario(draft, bridge, locked = false) {
   const nodes = {send: {}, prompt: {value: draft}, streamHint: {textContent: ''}, messages: {}};
   const sent = [], shown = [];
@@ -21,7 +23,7 @@ function scenario(draft, bridge, locked = false) {
     nextChatId: () => 'r8d01_owner_1234',
     busy: locked, activeChatId: null, responseBox: null, lastAnswer: 'old', visibleDraftPersona:'KV'
   };
-  vm.runInNewContext(code, context, {timeout: 1500});
+  vm.runInNewContext(guardLine + '\n' + code, context, {timeout: 1500});
   nodes.send.onclick();
   return {nodes, sent, shown, context};
 }
@@ -94,9 +96,9 @@ function nativeBridgeCase(webview, draft = 'Невыгруженный черн�
     document:{getElementById:id=>nodes[id]},
     entry:()=>{throw new Error('DRAFT_MUST_NOT_RENDER_IF_BRIDGE_FAILED')},
     nextChatId:()=> 'd01_native_bridge_failure_01',
-    busy:false, activeChatId:null, responseBox:null, lastAnswer:'retained'
+    busy:false, activeChatId:null, responseBox:null, lastAnswer:'retained', visibleDraftPersona:'KV'
   };
-  vm.runInNewContext(nativeBridgeLine + '\n' + code + '\n$("send").onclick();', scope, {timeout:1500});
+  vm.runInNewContext(nativeBridgeLine + '\n' + guardLine + '\n' + code + '\n$("send").onclick();', scope, {timeout:1500});
   return {nodes,scope,emitted};
 }
 let disconnected = nativeBridgeCase(null);
