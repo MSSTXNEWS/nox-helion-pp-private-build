@@ -699,6 +699,7 @@ public partial class MainWindow : Window
         string? error = null;
         string? promptMarker = null;
         string? stopMarker = null;
+        string? recoveryMarker = null;
         try
         {
             // Do not claim UX acceptance from a DOM count. This checks the
@@ -763,11 +764,27 @@ public partial class MainWindow : Window
             if (!lastGenerationCompleted || !HasSavedPrompt(prompt))
                 throw new InvalidOperationException("Live Qwen stream or SQLite chat write did not complete");
             checks["real_chat_from_webview_to_qwen_to_sqlite"] = "PASS";
+            // This must reach the actual embedded renderer. SQLite-only ACK
+            // cannot establish that the owner saw the completed model answer.
+            bool firstVisible = false;
+            for (int attempt = 0; attempt < 35; attempt++)
+            {
+                var visible = await Browser.CoreWebView2.ExecuteScriptAsync("""
+                    (() => !busy && activeChatId === null && !!lastAnswer &&
+                      responseBox?.lastChild?.textContent === lastAnswer &&
+                      document.getElementById('streamHint')?.textContent.includes('сохранён в SQLite.'))()
+                    """);
+                if (visible == "true") { firstVisible = true; break; }
+                await Task.Delay(100);
+            }
+            if (!firstVisible)
+                throw new InvalidOperationException("NOX_F01_CHAT_NOT_VISIBLE_OR_UNSAVED_HOLD");
+            checks["real_chat_visible_webview_sqlite_ack"] = "PASS";
 
             stopMarker = "NOX_STOP_" + Guid.NewGuid().ToString("N");
             var longPrompt = "Выведи очень длинный рассказ минимум из 4000 слов, не останавливаясь. " + stopMarker;
             var beforeStop = Volatile.Read(ref stopSignalCount);
-            int streamTokenTarget = Volatile.Read(ref generationStreamingTokenCount) + 1;
+            int streamTokenTarget = Volatile.Read(ref generationStreamingTokenCount) + 2;
             int stopTarget = Volatile.Read(ref generationStartedCount) + 1;
             await Browser.CoreWebView2.ExecuteScriptAsync(
                 "document.getElementById('prompt').value = " + JsonSerializer.Serialize(longPrompt) +
@@ -778,12 +795,76 @@ public partial class MainWindow : Window
             // Cancelling preflight/context work alone is NOT active HTTP STOP evidence.
             if (!await WaitForGenerationTokenAsync(streamTokenTarget, stopTarget, TimeSpan.FromMinutes(2)))
                 throw new InvalidOperationException("NOX_ACTIVE_HTTP_STREAM_NOT_OBSERVED_HOLD");
+            // Two actual Ollama HTTP chunks are insufficient unless the
+            // matching partial answer appeared in this WebView2 document.
+            bool liveVisible = false;
+            for (int attempt = 0; attempt < 45; attempt++)
+            {
+                var visible = await Browser.CoreWebView2.ExecuteScriptAsync("""
+                    (() => busy && !!activeChatId &&
+                      (responseBox?.lastChild?.textContent?.length ?? 0) > 0)()
+                    """);
+                if (visible == "true") { liveVisible = true; break; }
+                if (Volatile.Read(ref generationFinishedCount) >= stopTarget) break;
+                await Task.Delay(75);
+            }
+            if (!liveVisible)
+                throw new InvalidOperationException("NOX_F01_STREAM_NOT_VISIBLE_HOLD");
             await Browser.CoreWebView2.ExecuteScriptAsync("document.getElementById('stop').click();");
             await WaitForGenerationFinishAsync(stopTarget, TimeSpan.FromSeconds(30));
             if (Volatile.Read(ref stopSignalCount) <= beforeStop ||
                 !lastGenerationStopped || HasSavedPrompt(longPrompt))
                 throw new InvalidOperationException("Native STOP was not confirmed");
             checks["real_webview_stop_cancel_no_partial_persistence"] = "PASS";
+            bool stoppedVisible = false;
+            for (int attempt = 0; attempt < 35; attempt++)
+            {
+                var stoppedUi = await Browser.CoreWebView2.ExecuteScriptAsync("""
+                    (() => !busy && activeChatId === null &&
+                      document.getElementById('streamHint')?.textContent.includes('Частичный ответ не сохранён.'))()
+                    """);
+                if (stoppedUi == "true") { stoppedVisible = true; break; }
+                await Task.Delay(100);
+            }
+            if (!stoppedVisible)
+                throw new InvalidOperationException("NOX_F01_STOP_ACK_NOT_VISIBLE_HOLD");
+            var stoppedText = await Browser.CoreWebView2.ExecuteScriptAsync(
+                "JSON.stringify(responseBox?.lastChild?.textContent ?? '')");
+            await Task.Delay(400);
+            var lateText = await Browser.CoreWebView2.ExecuteScriptAsync(
+                "JSON.stringify(responseBox?.lastChild?.textContent ?? '')");
+            if (!string.Equals(stoppedText, lateText, StringComparison.Ordinal) ||
+                HasSavedPrompt(longPrompt))
+                throw new InvalidOperationException("NOX_F01_LATE_TOKEN_OR_PARTIAL_SQLITE_HOLD");
+
+            // Recover by sending a new genuine model request through the same
+            // WPF host and then verifying its SQLite row and rendered answer.
+            recoveryMarker = "NOX_RECOVER_" + Guid.NewGuid().ToString("N");
+            var recoveryPrompt = "Ответь одним коротким словом: сколько будет 2 плюс 2? " + recoveryMarker;
+            int recoveryTarget = Volatile.Read(ref generationStartedCount) + 1;
+            await Browser.CoreWebView2.ExecuteScriptAsync(
+                "document.getElementById('prompt').value = " + JsonSerializer.Serialize(recoveryPrompt) +
+                "; document.getElementById('send').click();");
+            if (!await WaitForGenerationStartAsync(recoveryTarget, TimeSpan.FromSeconds(12)))
+                throw new InvalidOperationException("NOX_F01_STOP_RECOVERY_NOT_STARTED_HOLD");
+            await WaitForGenerationFinishAsync(recoveryTarget, TimeSpan.FromMinutes(4));
+            if (!lastGenerationCompleted || !HasSavedPrompt(recoveryPrompt) ||
+                HasSavedPrompt(longPrompt))
+                throw new InvalidOperationException("NOX_F01_STOP_RECOVERY_SQLITE_HOLD");
+            bool recoveredVisible = false;
+            for (int attempt = 0; attempt < 35; attempt++)
+            {
+                var visible = await Browser.CoreWebView2.ExecuteScriptAsync("""
+                    (() => !busy && activeChatId === null && !!lastAnswer &&
+                      responseBox?.lastChild?.textContent === lastAnswer &&
+                      document.getElementById('streamHint')?.textContent.includes('сохранён в SQLite.'))()
+                    """);
+                if (visible == "true") { recoveredVisible = true; break; }
+                await Task.Delay(100);
+            }
+            if (!recoveredVisible)
+                throw new InvalidOperationException("NOX_F01_STOP_RECOVERY_NOT_VISIBLE_HOLD");
+            checks["real_chat_after_stop_recovery_sqlite"] = "PASS";
         }
         catch (Exception ex)
         {
@@ -795,9 +876,10 @@ public partial class MainWindow : Window
             try
             {
                 if (promptMarker != null) DeleteSyntheticChats(promptMarker, stopMarker);
+                if (recoveryMarker != null) DeleteSyntheticChats(recoveryMarker, null);
             }
             catch (Exception e) { error = (error ?? "") + " cleanup:" + e.Message; }
-            var accepted = error == null && checks.Count == 5 && checks.Values.All(v => v == "PASS");
+            var accepted = error == null && checks.Count == 7 && checks.Values.All(v => v == "PASS");
             var exePath = Environment.ProcessPath ?? "";
             var sha = "";
             try { if (File.Exists(exePath)) sha = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(exePath))); }

@@ -54,3 +54,20 @@ assert chat.index("cancellation.Token.ThrowIfCancellationRequested();\n         
 assert chat.index("PersistChat(prompt, answer.ToString(), persona)") < chat.index(
     "Emit(\"complete\", new { requestId, ok = answer.Length > 0")
 print("NOX_F01_SOURCE_ONLY_PASS: native Windows backup lock guard, unpooled SQLite, STOP-before-commit source retained")
+
+# The optional real-Qwen owner-PC selftest is stricter than the CI smoke:
+# at least two genuine Ollama HTTP chunks must become visible before STOP,
+# STOP cannot save partial data, and a subsequent turn must recover.
+selftest = src.split("private async Task RunNativeSelfTestAsync()", 1)[1].split(
+    "private bool HasSavedPrompt(", 1)[0]
+assert "generationStreamingTokenCount) + 2" in selftest, "NOX_F01_TWO_REAL_CHUNKS_HOLD"
+assert "NOX_F01_STREAM_NOT_VISIBLE_HOLD" in selftest
+assert "NOX_F01_STOP_ACK_NOT_VISIBLE_HOLD" in selftest
+assert "NOX_F01_LATE_TOKEN_OR_PARTIAL_SQLITE_HOLD" in selftest
+assert "NOX_F01_STOP_RECOVERY_SQLITE_HOLD" in selftest
+assert "NOX_F01_STOP_RECOVERY_NOT_VISIBLE_HOLD" in selftest
+assert 'checks["real_chat_visible_webview_sqlite_ack"] = "PASS"' in selftest
+assert 'checks["real_chat_after_stop_recovery_sqlite"] = "PASS"' in selftest
+assert 'checks.Count == 7' in selftest
+assert "DeleteSyntheticChats(recoveryMarker, null)" in selftest
+print("NOX_F01_REAL_QWEN_E2E_ORACLE_SOURCE_ONLY_PASS: owner-PC model still NOT_RUN")
