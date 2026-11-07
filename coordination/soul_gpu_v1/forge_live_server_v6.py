@@ -234,6 +234,19 @@ def serve(root, port):
                 except Exception as exc:
                     return self.get(json.dumps({'error':type(exc).__name__}).encode(),
                                     'application/json',503)
+            if self.path == '/api/nox/cores':
+                try:
+                    from nox_prime_core_matrix_v1 import matrix
+                    from nox_prime_experience_v1 import project
+                    status=unified.status(root)
+                    count=project(root,max_examples=1)['count']
+                    result=matrix(root,status.get('installed_models',[]),
+                                  count,status.get('soul_affect',{}).get('available') is True)
+                    return self.get(json.dumps(result,ensure_ascii=False).encode('utf-8'),
+                                    'application/json; charset=utf-8')
+                except Exception as ex:
+                    return self.get(json.dumps({'error':type(ex).__name__}).encode(),
+                                    'application/json',503)
             if urlsplit(self.path).path == '/api/nox/experience':
                 try:
                     from nox_prime_experience_v1 import project
