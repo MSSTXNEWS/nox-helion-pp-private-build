@@ -1396,6 +1396,8 @@ public partial class MainWindow : Window
         }
         Interlocked.Increment(ref generationStartedCount);
         var answer = new StringBuilder();
+        // A failed SQLite readback cannot prove a preceding INSERT did not commit.
+        bool sqliteWriteAttempted = false, sqliteVerified = false;
         try
         {
             Emit("status", new { requestId, state = "GENERATING" });
@@ -1459,7 +1461,11 @@ public partial class MainWindow : Window
             if (!completed) throw new InvalidOperationException("Соединение с моделью прервалось до завершения ответа. Частичный ответ не сохранён.");
             // A STOP received with the final token still prevents persistence.
             cancellation.Token.ThrowIfCancellationRequested();
-            if (answer.Length > 0) PersistChat(prompt, answer.ToString(), persona);
+            if (answer.Length > 0) {
+                sqliteWriteAttempted = true;
+                PersistChat(prompt, answer.ToString(), persona);
+                sqliteVerified = true;
+            }
             // Completion is true only after SQLite commits successfully.
             lastGenerationCompleted = true;
             Emit("status", new { requestId, state = "READY" });
@@ -1492,9 +1498,14 @@ public partial class MainWindow : Window
             Emit("complete", new { requestId, ok = false, stopped = false });
         }
         catch (Exception ex) {
-            Emit("error", new { requestId, message = ex.Message });
-            Emit("status", new { requestId, state = "ERROR" });
-            Emit("complete", new { requestId, ok = false, stopped = false });
+            // SQLite INSERT autocommits before the independent readback. If that
+            // readback fails, a false "not saved" ACK invites duplicate replay.
+            bool sqliteUnknown = sqliteWriteAttempted && !sqliteVerified;
+            Emit("error", new { requestId, message = sqliteUnknown
+                ? "NOX_CHAT_SQLITE_COMMIT_UNKNOWN_HOLD: " + ex.Message : ex.Message });
+            Emit("status", new { requestId, state = sqliteUnknown ? "SQLITE_UNKNOWN" : "ERROR" });
+            // ok=true is allowed only after independent SQLite row verification.
+            Emit("complete", new { requestId, ok = sqliteVerified, stopped = false, sqliteUnknown });
         }
         finally {
             active = null;

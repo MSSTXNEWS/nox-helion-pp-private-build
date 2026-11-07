@@ -93,6 +93,18 @@ assert 'FROM chat_history WHERE id=$id' in persist
 assert 'NOX_CHAT_SQLITE_READBACK_HOLD' in persist
 print('B04 R8 SOURCE_ONLY: timeout vs owner STOP, committed-row readback PASS; owner Windows Qwen NOT_TESTED')
 
+# B04 regression: a failed independent verification after an attempted SQLite
+# INSERT cannot prove that the chat was not committed. Avoid false-denial replay.
+assert 'bool sqliteWriteAttempted = false, sqliteVerified = false;' in generate, 'B04_SQLITE_COMMIT_STATE_HOLD'
+assert generate.index('sqliteWriteAttempted = true;') < generate.index('PersistChat(prompt, answer.ToString(), persona);') < generate.index('sqliteVerified = true;'), 'B04_SQLITE_COMMIT_ORDER_HOLD'
+assert 'bool sqliteUnknown = sqliteWriteAttempted && !sqliteVerified;' in generate, 'B04_SQLITE_UNKNOWN_BRANCH_HOLD'
+assert 'NOX_CHAT_SQLITE_COMMIT_UNKNOWN_HOLD' in generate, 'B04_SQLITE_UNKNOWN_CODE_HOLD'
+assert 'Emit("complete", new { requestId, ok = sqliteVerified, stopped = false, sqliteUnknown });' in generate, 'B04_SQLITE_COMMIT_ACK_HOLD'
+assert "else if(v?.sqliteUnknown===true)" in html, 'B04_SQLITE_UNKNOWN_UI_HOLD'
+assert 'Проверьте историю перед повторной отправкой.' in html, 'B04_SQLITE_DUPLICATE_GUARD_HOLD'
+print('B04 R8 SOURCE_ONLY: ambiguous SQLite post-INSERT readback cannot falsely deny saved chat PASS')
+
+
 
 # D05 SOURCE_ONLY regression: native write receipts must follow independent
 # SQLite readback. WebView2 drafts must survive denial / offline bridge; only
