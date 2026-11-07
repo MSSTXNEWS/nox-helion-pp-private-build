@@ -145,7 +145,8 @@ public partial class MainWindow : Window
                 // Runtime evidence belongs to the process that actually loaded WebView2,
                 // not to a source-only build or a previously launched EXE.
                 if (!selfTestRequested) WriteRuntimeReadyReceipt();
-                if (!UiSmokeRequested) _ = CheckProvider();
+                if (!selfTestRequested) _ = RecoverLocalEngineAtStartupAsync();
+                else if (!UiSmokeRequested) _ = CheckProvider();
                 if (!selfTestRequested && !providerReconnectTimer.IsEnabled)
                     providerReconnectTimer.Start();
                 if (selfTestRequested && !selfTestStarted)
@@ -1274,78 +1275,107 @@ public partial class MainWindow : Window
         catch (InvalidOperationException) when (providerProbeStopped || Dispatcher.HasShutdownStarted) { }
     }
 
-    private async Task StartLocalEngine()
+    // One local engine owner and one launcher at a time, for UI click, startup or chat.
+    private async Task StartLocalEngine(CancellationToken stopToken = default)
     {
-        // Owner-triggered only: repeated clicks cannot race the port ownership
-        // check or spawn a second Ollama process before the first becomes ready.
-        if (!engineStartLock.Wait(0)) {
-            if (!providerProbeStopped) Send("notice", "Запуск локального Ollama уже выполняется.");
-            return;
-        }
-        try {
-            if (providerProbeStopped) return;
-            // Explicit owner-triggered recovery. Never stop or restart any existing process.
-            // Do not download models and do not follow arbitrary network endpoints.
-            try
+        // Owner/startup clicks never queue another launcher. An active chat may
+        // wait for the same owner lock, but STOP cancels that wait immediately.
+        if (!stopToken.CanBeCanceled)
+        {
+            if (!engineStartLock.Wait(0))
             {
-                using var probe = new CancellationTokenSource(TimeSpan.FromSeconds(4));
-                using var existingCheck = await http.GetAsync(Api + "/api/tags", probe.Token);
-                if (existingCheck.IsSuccessStatusCode) { await CheckProvider(); return; }
+                if (!providerProbeStopped) Send("notice", "Запуск локального Ollama уже выполняется.");
+                return;
             }
-            catch (HttpRequestException) { /* Local engine may be stopped. */ }
-            catch (TaskCanceledException) { /* Retry start after a failed health request. */ }
-
-            if (providerProbeStopped) return;
-            if (System.Net.NetworkInformation.IPGlobalProperties.GetIPGlobalProperties()
-                .GetActiveTcpListeners().Any(x => x.Port == 11436))
-                throw new InvalidOperationException("Порт 11436 занят другим процессом; он не будет остановлен.");
-            const string modelDir = @"C:\NOX_OLLAMA_CLEAN\models";
-            var executable = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "Programs", "Ollama", "ollama.exe");
-            if (!Directory.Exists(modelDir) || !File.Exists(executable))
-                throw new InvalidOperationException("Ollama или зарегистрированные модели не найдены. Файлы не изменены.");
-            // Port ownership check before starting a local server: never replace another owner.
-            var ps = new ProcessStartInfo(executable, "serve") {
-                UseShellExecute = false,
-                CreateNoWindow = true,
-                WorkingDirectory = Path.GetDirectoryName(executable)!
-            };
-            ps.Environment["OLLAMA_HOST"] = "127.0.0.1:11436";
-            ps.Environment["OLLAMA_MODELS"] = modelDir;
-            Send("notice", "Запускаю существующий локальный Ollama. Модели не загружаются.");
-            if (providerProbeStopped) return;
-            var launched = Process.Start(ps);
-            if (launched == null) throw new InvalidOperationException("Не удалось запустить локальный Ollama");
-            for (int i = 0; i < 30; ++i) {
-                await Task.Delay(1000);
-                if (providerProbeStopped) return;
-                try {
-                    using var probe = new CancellationTokenSource(TimeSpan.FromSeconds(3));
-                    using var r = await http.GetAsync(Api + "/api/tags", probe.Token);
-                    if (r.IsSuccessStatusCode) { await CheckProvider(); return; }
-                } catch (HttpRequestException) { } catch (TaskCanceledException) { }
-            }
-            throw new InvalidOperationException("Ollama не готов после запуска; существующие данные не изменены");
         }
-        catch (ObjectDisposedException) when (providerProbeStopped) {
-            // WebView2 owner is closing: avoid status updates and process spawn.
+        else await engineStartLock.WaitAsync(stopToken);
+        try
+        {
+            if (providerProbeStopped) return;
+            stopToken.ThrowIfCancellationRequested();
+            await StartLocalEngineCore(stopToken);
         }
+        catch (OperationCanceledException) when (stopToken.IsCancellationRequested)
+        {
+            // A chat-owned STOP must stay STOP, never turn into an engine failure.
+            throw;
+        }
+        catch (ObjectDisposedException) when (providerProbeStopped) { }
         catch (Exception ex) when (!providerProbeStopped &&
             (ex is InvalidOperationException ||
              ex is System.ComponentModel.Win32Exception ||
              ex is UnauthorizedAccessException ||
              ex is IOException ||
              ex is HttpRequestException ||
-             ex is OperationCanceledException)) {
-            // An explicit owner-start failure is not a chat failure. Report it
-            // through the existing service notice and probe the real endpoint.
-            // Neither a failed spawn nor a live foreign port can claim ONLINE.
+             ex is OperationCanceledException))
+        {
+            if (stopToken.CanBeCanceled) throw; // Native chat emits its own correlated error.
             Send("notice", "LOCAL_PROVIDER_START_FAILED: " + ex.Message);
-            await CheckProvider();
+            await CheckProvider(); // Actual /api/tags, never invented ONLINE.
         }
         finally {
             engineStartLock.Release();
         }
+    }
+
+    private async Task RecoverLocalEngineAtStartupAsync()
+    {
+        // Ordinary launch only. Never auto-start during isolated smoke acceptance.
+        try { await StartLocalEngine(); }
+        catch (Exception ex) {
+            Send("health", new { online = false, endpoint = Api, model = CurrentModel,
+                error = "NOX_PROVIDER_RECOVERY_HOLD: " + ex.Message });
+        }
+    }
+
+    private async Task StartLocalEngineCore(CancellationToken stopToken)
+    {
+        if (providerProbeStopped) return;
+        // Recover only the known local Ollama. Never stop or restart another process.
+        // Do not download models and do not follow arbitrary network endpoints.
+        try
+        {
+            using var probe = CancellationTokenSource.CreateLinkedTokenSource(stopToken);
+            probe.CancelAfter(TimeSpan.FromSeconds(4));
+            using var existingCheck = await http.GetAsync(Api + "/api/tags", probe.Token);
+            if (existingCheck.IsSuccessStatusCode) { await CheckProvider(); return; }
+        }
+        catch (HttpRequestException) { /* Local engine may be stopped. */ }
+        catch (TaskCanceledException) when (!stopToken.IsCancellationRequested) { /* Retry start after a failed health request. */ }
+
+        stopToken.ThrowIfCancellationRequested();
+        if (System.Net.NetworkInformation.IPGlobalProperties.GetIPGlobalProperties()
+            .GetActiveTcpListeners().Any(x => x.Port == 11436))
+            throw new InvalidOperationException("Порт 11436 занят другим процессом; он не будет остановлен.");
+        const string modelDir = @"C:\NOX_OLLAMA_CLEAN\models";
+        var executable = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "Programs", "Ollama", "ollama.exe");
+        if (!Directory.Exists(modelDir) || !File.Exists(executable))
+            throw new InvalidOperationException("Ollama или зарегистрированные модели не найдены. Файлы не изменены.");
+        // Port ownership check before starting a local server: never replace another owner.
+        var ps = new ProcessStartInfo(executable, "serve") {
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            WorkingDirectory = Path.GetDirectoryName(executable)!
+        };
+        ps.Environment["OLLAMA_HOST"] = "127.0.0.1:11436";
+        ps.Environment["OLLAMA_MODELS"] = modelDir;
+        Send("notice", "Запускаю существующий локальный Ollama. Модели не загружаются.");
+        if (providerProbeStopped) return;
+        stopToken.ThrowIfCancellationRequested();
+        var launched = Process.Start(ps);
+        if (launched == null) throw new InvalidOperationException("Не удалось запустить локальный Ollama");
+        for (int i = 0; i < 30; ++i) {
+            await Task.Delay(1000, stopToken);
+            if (providerProbeStopped) return;
+            try {
+                using var probe = CancellationTokenSource.CreateLinkedTokenSource(stopToken);
+                probe.CancelAfter(TimeSpan.FromSeconds(3));
+                using var r = await http.GetAsync(Api + "/api/tags", probe.Token);
+                if (r.IsSuccessStatusCode) { await CheckProvider(); return; }
+            } catch (HttpRequestException) { } catch (TaskCanceledException) when (!stopToken.IsCancellationRequested) { }
+        }
+        throw new InvalidOperationException("Ollama не готов после запуска; существующие данные не изменены");
     }
 
     private async Task CheckProvider()
@@ -1427,6 +1457,7 @@ public partial class MainWindow : Window
         bool refreshProviderAfterError = false;
         // Only stream transport failures (not SQLite/ownership failures) re-probe Ollama.
         bool providerStreamRequested = false;
+        bool providerRecoveryPending = false;
         try
         {
             Emit("status", new { requestId, state = "GENERATING" });
@@ -1435,6 +1466,24 @@ public partial class MainWindow : Window
             var maxTokens = mode == "MAX" ? 1600 : mode == "ECO" ? 384 : 1024;
             var contextSize = mode == "MAX" ? 8192 : mode == "ECO" ? 2048 : 4096;
             var model = CurrentModel;
+            // Preserve canonical R8 startup + per-turn model admission.
+            // Reuse the existing Ollama, never download weights or spawn a backend.
+            providerRecoveryPending = true;
+            await StartLocalEngine(cancellation.Token);
+            cancellation.Token.ThrowIfCancellationRequested();
+            using (var probe = CancellationTokenSource.CreateLinkedTokenSource(cancellation.Token))
+            {
+                probe.CancelAfter(TimeSpan.FromSeconds(5));
+                using var tagsReply = await http.GetAsync(Api + "/api/tags", probe.Token);
+                tagsReply.EnsureSuccessStatusCode();
+                using var tags = JsonDocument.Parse(await tagsReply.Content.ReadAsStringAsync(probe.Token));
+                bool modelRegistered = tags.RootElement.GetProperty("models").EnumerateArray()
+                    .Any(m => string.Equals(m.GetProperty("name").GetString(), model, StringComparison.Ordinal));
+                if (!modelRegistered)
+                    throw new InvalidOperationException("NOX_MODEL_NOT_REGISTERED: " + model +
+                        ". Существующие веса не удалены; выбери установленную модель.");
+            }
+            providerRecoveryPending = false;
             var persona = ActivePersona(); // Capture at start of turn, before streaming.
             var context = preferences.GetValueOrDefault("context", "on") == "on"
                 ? BuildLocalContext(prompt, persona) + knowledge.ContextFor(prompt) : "";
@@ -1531,7 +1580,7 @@ public partial class MainWindow : Window
         catch (Exception ex) {
             // Provider restart can truncate NDJSON or raise IOException/JsonException
             // after HTTP headers. Re-check real health only after terminal IPC.
-            if (providerStreamRequested && (ex is IOException || ex is JsonException))
+            if (providerRecoveryPending || (providerStreamRequested && (ex is IOException || ex is JsonException)))
                 refreshProviderAfterError = true;
             Emit("error", new { requestId, message = ex.Message });
             Emit("status", new { requestId, state = "ERROR" });

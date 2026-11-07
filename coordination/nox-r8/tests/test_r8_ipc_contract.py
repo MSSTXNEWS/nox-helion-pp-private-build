@@ -205,7 +205,7 @@ print('D05 R8 SOURCE_ONLY: owner-correlated task toggle, SQLite COMMIT/readback 
 
 # B02 WPF lifecycle: an in-flight native chat/health callback must never
 # dispatch into WebView2 after owner window shutdown. Live failures stay visible.
-send = cs.split('private void Send(string type, object value)', 1)[1].split('private async Task StartLocalEngine()', 1)[0]
+send = cs.split('private void Send(string type, object value)', 1)[1].split('private async Task StartLocalEngine(CancellationToken stopToken = default)', 1)[0]
 assert send.count('providerProbeStopped || Dispatcher.HasShutdownStarted || Dispatcher.HasShutdownFinished') == 2, 'B02_SEND_SHUTDOWN_EPOCH_HOLD'
 assert send.index('providerProbeStopped || Dispatcher.HasShutdownStarted') < send.index('JsonSerializer.Serialize'), 'B02_SEND_PRE_SERIALIZE_HOLD'
 assert 'if (Dispatcher.CheckAccess()) PostIfAlive();' in send, 'B02_SEND_UI_OWNER_HOLD'
@@ -220,7 +220,7 @@ print('B02 R8 SOURCE_ONLY: shutdown-only WebView2 dispatch suppression, live fai
 # B02 R8 same-source provider restart integration: SOURCE_ONLY (not owner-PC E2E).
 # A stream failure must terminate its exact request before bounded health refresh;
 # only an explicit owner command may start the already-installed service.
-startup = cs.split('private async Task StartLocalEngine()', 1)[1].split('private async Task CheckProvider()', 1)[0]
+startup = cs.split('private async Task StartLocalEngine(CancellationToken stopToken = default)', 1)[1].split('private async Task CheckProvider()', 1)[0]
 probe = cs.split('private async Task CheckProvider()', 1)[1].split('private async Task Generate(', 1)[0]
 chat = cs.split('private async Task Generate(', 1)[1].split('private void PersistChat(', 1)[0]
 assert 'private readonly SemaphoreSlim engineStartLock = new(1, 1);' in cs, 'B02_OWNER_LOCK_MISSING_HOLD'
@@ -313,3 +313,23 @@ assert generic_error.index('refreshProviderAfterError = true;') < generic_error.
 assert provider_recovery.index('Emit("complete", new { requestId, ok = false, stopped = false });',provider_recovery.index('catch (Exception ex) {')) < provider_recovery.index('generationLock.Release();') < provider_recovery.rindex('await CheckProvider();'), 'B02_STREAM_TERMINAL_BEFORE_HEALTH_HOLD'
 assert 'providerStreamRequested && (ex is IOException || ex is JsonException)' not in provider_recovery.split('catch (OperationCanceledException) when (cancellation.IsCancellationRequested)', 1)[1].split('catch (OperationCanceledException) {',1)[0], 'B02_STREAM_STOP_ISOLATION_HOLD'
 print('B02 R8 SOURCE_ONLY: truncated/invalid Ollama NDJSON triggers real health re-probe after terminal ACK; owner STOP and SQLite preserved')
+
+
+# B02 reconciliation with canonical R8 recovery source (2026-11-07).
+# SOURCE_ONLY, not evidence of compiled Windows EXE or local Ollama inference.
+startup = cs.split('private async Task StartLocalEngine(CancellationToken stopToken = default)', 1)[1].split('private async Task CheckProvider()', 1)[0]
+generate = cs.split('private async Task Generate(', 1)[1].split('private void PersistChat(', 1)[0]
+navigate = cs.split('Browser.CoreWebView2.NavigationCompleted +=', 1)[1].split('Browser.CoreWebView2.NavigationStarting +=', 1)[0]
+assert 'if (!selfTestRequested) _ = RecoverLocalEngineAtStartupAsync();' in navigate, 'B02_R8_AUTO_STARTUP_RECOVERY_HOLD'
+assert 'private async Task StartLocalEngineCore(CancellationToken stopToken)' in startup, 'B02_R8_SINGLE_PROVIDER_CORE_HOLD'
+assert 'await engineStartLock.WaitAsync(stopToken);' in startup and 'if (!engineStartLock.Wait(0))' in startup, 'B02_R8_SINGLE_FLIGHT_OWNER_LOCK_HOLD'
+assert 'await Task.Delay(1000, stopToken);' in startup, 'B02_R8_STOP_PROVIDER_START_WAIT_HOLD'
+assert startup.index('stopToken.ThrowIfCancellationRequested();\n        var launched = Process.Start(ps);') < startup.index('await Task.Delay(1000, stopToken);'), 'B02_R8_STOP_BEFORE_SPAWN_HOLD'
+assert 'if (stopToken.CanBeCanceled) throw;' in startup, 'B02_R8_GENERATION_TERMINAL_ERROR_HOLD'
+assert 'LOCAL_PROVIDER_START_FAILED:' in startup and 'await CheckProvider();' in startup, 'B02_R8_OWNER_NOTICE_AFTER_START_ERROR_HOLD'
+assert 'await StartLocalEngine(cancellation.Token);' in generate, 'B02_R8_CHAT_RECOVERY_HOLD'
+assert 'probe.CancelAfter(TimeSpan.FromSeconds(5));' in generate and 'NOX_MODEL_NOT_REGISTERED:' in generate, 'B02_R8_MODEL_TAG_ADMISSION_HOLD'
+assert generate.index('await StartLocalEngine(cancellation.Token);') < generate.index('NOX_MODEL_NOT_REGISTERED:') < generate.index('var persona = ActivePersona();') < generate.index('await http.SendAsync('), 'B02_R8_MODEL_PREHTTP_HOLD'
+assert 'providerRecoveryPending || (providerStreamRequested &&' in generate, 'B02_R8_PROVIDER_START_HEALTH_REFRESH_HOLD'
+assert 'catch (OperationCanceledException) when (stopToken.IsCancellationRequested)' in startup, 'B02_R8_STOP_NOT_SWALLOWED_HOLD'
+print('B02 R8 SOURCE_ONLY: canonical startup + per-chat recovery, single-owner launch, cancellable STOP, registered model guard PASS; Windows NOT_TESTED')
