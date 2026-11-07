@@ -323,7 +323,7 @@ body.reduced .helion-fx{filter:none}body.reduced .core.active{animation:none}
 <script>
 'use strict';
 const $=id=>document.getElementById(id);const post=(type,data={})=>{const bridge=window.chrome?.webview;if(typeof bridge?.postMessage!=='function'){$('status').textContent='NATIVE BRIDGE OFFLINE';return false}try{bridge.postMessage({type,...data});return true}catch{$('status').textContent='NATIVE BRIDGE DISPATCH FAILED';return false}};
-let responseBox=null,lastAnswer='',busy=false,settingsDenial='',activeChatId=null,requestSequence=0,pendingTask=null,pendingNote=null,pendingTaskToggle=null,pendingModel=null,committedModel="",pendingSettings=null,committedSettings={};
+let responseBox=null,lastAnswer='',busy=false,settingsDenial='',activeChatId=null,requestSequence=0,pendingTask=null,pendingNote=null,pendingTaskToggle=null,pendingModel=null,committedModel="",pendingSettings=null,committedSettings={},settingsReconcile=null;
 const nextChatId=()=>typeof crypto!=='undefined'&&typeof crypto.randomUUID==='function'
   ? crypto.randomUUID()
   : 'r'+Date.now().toString(36)+'_'+(++requestSequence).toString(36)+'_'+Math.random().toString(36).slice(2);const headings={consciousness:'CONSCIOUSNESS',atlas:'ATLAS / TASKS',reflection:'REFLECTION / HISTORY',nexus:'NEXUS / MODELS',forge:'FORGE / TRAINING',core:'CORE / LIVE CHAT',voice:'VOICE',persona:'PERSONA'};
@@ -346,7 +346,7 @@ function applyCommittedSettings(v){
   window.noxVisual?.setMode(v?.performance||'BALANCED');
 }
 function saveSetting(key,value){
-  if(pendingSettings){$('personaStatus').textContent='NOX_SETTINGS_OWNER_IN_FLIGHT';return false;}
+  if(pendingSettings||settingsReconcile){$('personaStatus').textContent='NOX_SETTINGS_OWNER_IN_FLIGHT';return false;}
   const requestId=nextChatId();
   pendingSettings={requestId,key,value};
   setSettingsBusy(true);
@@ -401,13 +401,52 @@ case 'settings.receipt':{
 }
 case 'settings.denied':{
   if(pendingSettings && v?.requestId!==pendingSettings.requestId)break;
-  if(pendingSettings){pendingSettings=null;setSettingsBusy(false);applyCommittedSettings(committedSettings);}
+  const deniedWrite=pendingSettings;
+  if(deniedWrite){pendingSettings=null;setSettingsBusy(false);applyCommittedSettings(committedSettings);}
   const allowed=['NOX_SETTINGS_INVALID_REQUEST','NOX_SETTINGS_REJECTED',
     'NOX_SETTINGS_SQLITE_HOLD','NOX_SETTINGS_NATIVE_HOLD',
     'NOX_SETTINGS_COMMIT_UNKNOWN_HOLD','NOX_PERSONA_GENERATION_ACTIVE_HOLD'];
   const reason=typeof v?.reason==='string'?v.reason:'NOX_SETTINGS_NATIVE_HOLD';
   settingsDenial=allowed.includes(reason)?reason:'NOX_SETTINGS_NATIVE_HOLD';
-  $('personaStatus').textContent=settingsDenial;post('settings.get');break;
+  $('personaStatus').textContent=settingsDenial;
+  if(deniedWrite && settingsDenial==='NOX_SETTINGS_COMMIT_UNKNOWN_HOLD'){
+    // No speculative retry/ACK: native DB readback must carry the exact owner requestId.
+    const reconcile={requestId:deniedWrite.requestId,key:deniedWrite.key,value:deniedWrite.value};
+    settingsReconcile=reconcile;setSettingsBusy(true);
+    reconcile.timer=setTimeout(()=>{
+      if(settingsReconcile!==reconcile)return;
+      settingsReconcile=null;setSettingsBusy(false);
+      $('personaStatus').textContent='NOX_SETTINGS_READBACK_TIMEOUT_HOLD';
+      post('settings.get'); // best-effort refresh, NEVER a success receipt
+    },8000);
+    if(post('settings.get',{requestId:reconcile.requestId})===false){
+      clearTimeout(reconcile.timer);settingsReconcile=null;setSettingsBusy(false);
+      $('personaStatus').textContent='NOX_SETTINGS_READBACK_IPC_HOLD';
+    }
+  }else post('settings.get');
+  break;
+}
+case 'settings.readback':{
+  const r=settingsReconcile;
+  if(!r||v?.requestId!==r.requestId)break;
+  clearTimeout(r.timer);settingsReconcile=null;setSettingsBusy(false);
+  if(!v.values||typeof v.values!=='object'||Array.isArray(v.values)){
+    $('personaStatus').textContent='NOX_SETTINGS_READBACK_INVALID_HOLD';break;
+  }
+  const matches=v.values[r.key]===r.value;
+  applyCommittedSettings(v.values);
+  settingsDenial='';
+  $('personaStatus').textContent=matches
+    ? 'SQLite повторно прочитана: '+r.key+' = '+r.value
+    : 'NOX_SETTINGS_COMMIT_UNKNOWN_HOLD · состояние SQLite восстановлено';
+  break;
+}
+case 'settings.readback.denied':{
+  const r=settingsReconcile;
+  if(!r||v?.requestId!==r.requestId)break;
+  clearTimeout(r.timer);settingsReconcile=null;setSettingsBusy(false);
+  $('personaStatus').textContent='NOX_SETTINGS_READBACK_SQLITE_HOLD';
+  break;
 }
 case 'knowledge.stats':$('knowledgeStats').textContent=`В SQLite: ${v?.documents??0} документов · ${v?.chunks??0} фрагментов`;break;
 case 'knowledge.imported':$('knowledgeStats').textContent=`Импортировано: ${v?.documents??0}; дублей: ${v?.skipped??0}; фрагментов: ${v?.chunks??0}`;post('knowledge.stats');break;

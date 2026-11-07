@@ -1171,7 +1171,7 @@ public partial class MainWindow : Window
                 case "tasks.list": Send("tasks", ReadTasks()); break;
                 case "tasks.add": HandleTaskAdd(Text("text"), Text("requestId")); break;
                 case "tasks.toggle": HandleTaskToggle(request.GetProperty("id").GetInt64(), Text("requestId")); break;
-                case "settings.get": Send("settings", ReadPreferences()); break;
+                case "settings.get": HandleSettingsGet(request); break;
                 case "settings.put": HandleSettingsPut(request); break;
                 case "health": await CheckProvider(); break;
                 case "engine.start": await StartLocalEngine(); break;
@@ -1609,6 +1609,43 @@ public partial class MainWindow : Window
         catch (ArgumentException) { Send("notes.add.denied", new { requestId, reason = "NOX_NOTE_VALIDATION_HOLD" }); }
         catch (SqliteException) { Send("notes.add.denied", new { requestId, reason = "NOX_NOTE_SQLITE_HOLD" }); }
         catch (Exception) { Send("notes.add.denied", new { requestId, reason = "NOX_NOTE_READBACK_HOLD" }); }
+    }
+
+    // D06: an uncertain post-COMMIT result must be reconciled with a distinct,
+    // request-correlated native SQLite readback; never mistake a stale settings
+    // broadcast for the confirmation of a particular owner write.
+    private void HandleSettingsGet(JsonElement request)
+    {
+        if (!request.TryGetProperty("requestId", out var idField))
+        {
+            Send("settings", ReadPreferences());
+            return;
+        }
+        string requestId = idField.ValueKind == JsonValueKind.String
+            ? idField.GetString() ?? "" : "";
+        bool validId = ValidWriteRequestId(requestId);
+        var fields = request.EnumerateObject().ToArray();
+        if (!validId || fields.Length != 2 ||
+            fields.Count(x => x.Name == "type") != 1 ||
+            fields.Count(x => x.Name == "requestId") != 1)
+        {
+            Send("settings.readback.denied", new {
+                requestId = validId ? requestId : "",
+                reason = "NOX_SETTINGS_READBACK_INVALID_HOLD"
+            });
+            return;
+        }
+        try
+        {
+            var values = ReadPreferencesDictionary();
+            Send("settings.readback", new { requestId, values });
+        }
+        catch (Exception)
+        {
+            Send("settings.readback.denied", new {
+                requestId, reason = "NOX_SETTINGS_READBACK_SQLITE_HOLD"
+            });
+        }
     }
 
     // Existing WPF owner route: whitelist the exact shape, write only this app's
