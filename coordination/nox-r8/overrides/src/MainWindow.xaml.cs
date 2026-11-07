@@ -1532,7 +1532,16 @@ public partial class MainWindow : Window
                 case "model.cancel": activeModelPull?.Cancel(); break;
                 case "tasks.list": Send("tasks", ReadTasks()); break;
                 case "tasks.add": HandleTaskAdd(Text("text"), Text("requestId")); break;
-                case "tasks.toggle": HandleTaskToggle(request.GetProperty("id").GetInt64(), Text("requestId")); break;
+                case "tasks.toggle": {
+                    long taskId = request.TryGetProperty("id", out var taskField) &&
+                        taskField.ValueKind == JsonValueKind.Number && taskField.TryGetInt64(out var parsedTaskId) ? parsedTaskId : 0;
+                    bool? desiredComplete = request.TryGetProperty("complete", out var completeField)
+                        ? completeField.ValueKind == JsonValueKind.True ? true
+                          : completeField.ValueKind == JsonValueKind.False ? false : null
+                        : null;
+                    HandleTaskToggle(taskId, desiredComplete, Text("requestId"));
+                    break;
+                }
                 case "settings.get": HandleSettingsGet(request); break;
                 case "settings.put": HandleSettingsPut(request); break;
                 case "health": await CheckProvider(); break;
@@ -2056,51 +2065,62 @@ public partial class MainWindow : Window
 
     // A checkbox click is not a persisted result. Match the native request
     // to its owner receipt and independently read back the committed SQLite row.
-    private void HandleTaskToggle(long id, string requestId)
+    private void HandleTaskToggle(long id, bool? desiredComplete, string requestId)
     {
-        if (!ValidWriteRequestId(requestId) || id <= 0) {
+        // A second delivery of the same owner intent must not reverse a completed task.
+        // An explicit target state makes retries idempotent; requestId links the ACK.
+        if (!ValidWriteRequestId(requestId) || id <= 0 || desiredComplete is null) {
             Send("tasks.toggle.denied", new { requestId, id, reason = "NOX_TASK_TOGGLE_REQUEST_HOLD" });
             return;
         }
+        int complete = desiredComplete.Value ? 1 : 0;
+        bool commitAttempted = false;
         try {
-            int complete;
             using (var db = OpenDatabase())
             using (var tx = db.BeginTransaction()) {
                 using (var cmd = db.CreateCommand()) {
                     cmd.Transaction = tx;
-                    cmd.CommandText = "UPDATE tasks SET complete=CASE WHEN complete=0 THEN 1 ELSE 0 END WHERE id=$id";
+                    cmd.CommandText = "UPDATE tasks SET complete=$complete WHERE id=$id";
                     cmd.Parameters.AddWithValue("$id", id);
+                    cmd.Parameters.AddWithValue("$complete", complete);
                     if (cmd.ExecuteNonQuery() != 1)
                         throw new InvalidOperationException("NOX_TASK_TOGGLE_MISSING_ROW_HOLD");
                 }
-                using (var read = db.CreateCommand()) {
-                    read.Transaction = tx;
-                    read.CommandText = "SELECT complete FROM tasks WHERE id=$id";
-                    read.Parameters.AddWithValue("$id", id);
-                    complete = Convert.ToInt32(read.ExecuteScalar() ??
-                        throw new InvalidOperationException("NOX_TASK_TOGGLE_READ_HOLD"));
-                    if (complete is not (0 or 1))
-                        throw new InvalidOperationException("NOX_TASK_TOGGLE_STATE_HOLD");
-                }
+                // Once COMMIT is attempted, even an exception is ambiguous:
+                // never claim a confirmed denial or silently replay a toggle.
+                commitAttempted = true;
                 tx.Commit();
             }
-            using (var verifyDb = OpenDatabase())
-            using (var verify = verifyDb.CreateCommand()) {
-                verify.CommandText = "SELECT complete FROM tasks WHERE id=$id";
-                verify.Parameters.AddWithValue("$id", id);
-                if (verify.ExecuteScalar() is not object persisted ||
-                    Convert.ToInt32(persisted) != complete)
-                    throw new InvalidOperationException("NOX_TASK_TOGGLE_SQLITE_READBACK_HOLD");
-            }
-            Send("tasks", ReadTasks());
-            Send("tasks.toggle.receipt", new { requestId, id, complete = complete != 0, saved = true });
-        }
-        catch (SqliteException) {
-            Send("tasks.toggle.denied", new { requestId, id, reason = "NOX_TASK_TOGGLE_SQLITE_HOLD" });
         }
         catch (Exception) {
-            Send("tasks.toggle.denied", new { requestId, id, reason = "NOX_TASK_TOGGLE_READBACK_HOLD" });
+            if (commitAttempted) {
+                Send("tasks.toggle.uncertain", new { requestId, id, reason = "NOX_TASK_TOGGLE_COMMIT_UNKNOWN_HOLD" });
+                RefreshTasksBestEffort();
+            } else {
+                Send("tasks.toggle.denied", new { requestId, id, reason = "NOX_TASK_TOGGLE_SQLITE_HOLD" });
+            }
+            return;
         }
+        try {
+            // An independent connection must observe the exact desired value.
+            using var verifyDb = OpenDatabase();
+            using var verify = verifyDb.CreateCommand();
+            verify.CommandText = "SELECT complete FROM tasks WHERE id=$id";
+            verify.Parameters.AddWithValue("$id", id);
+            if (verify.ExecuteScalar() is not object persisted ||
+                Convert.ToInt32(persisted) != complete)
+                throw new InvalidOperationException("NOX_TASK_TOGGLE_SQLITE_READBACK_HOLD");
+        }
+        catch (Exception) {
+            Send("tasks.toggle.uncertain", new { requestId, id, reason = "NOX_TASK_TOGGLE_READBACK_UNKNOWN_HOLD" });
+            RefreshTasksBestEffort();
+            return;
+        }
+        // Neither receipt transport nor the optional list refresh may turn a
+        // confirmed SQLite COMMIT/readback into a false DENIED.
+        try { Send("tasks.toggle.receipt", new { requestId, id, complete = desiredComplete.Value, saved = true }); }
+        catch (Exception) { /* Owner can recover state via tasks.list. */ }
+        RefreshTasksBestEffort();
     }
 
 
