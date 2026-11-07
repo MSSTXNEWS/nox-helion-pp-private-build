@@ -416,6 +416,7 @@ const $=id=>document.getElementById(id);const post=(type,data={})=>{const bridge
 let responseBox=null,lastAnswer='',busy=false,settingsDenial='',activeChatId=null,requestSequence=0,pendingChatDraft=null,pendingTask=null,pendingNote=null,pendingNoteDelete=null,pendingTaskToggle=null,pendingModel=null,committedModel="",pendingSettings=null,committedSettings={},settingsReconcile=null,visibleDraftPersona='KV',pendingVuneo=null;
 let vuneoImportUncertain=false;
 let noteAddUncertain=false; // Possible SQLite INSERT: preserve draft, block silent duplicate.
+let pendingLearnRequest=null,pendingLearnStop=null; // Native owner-correlated consent and cancellation.
 // B04: in-session ambiguous SQLite COMMIT guard; prompts remain volatile RAM only.
 const uncertainChatKeys=new Set();const uncertainChatKey=(persona,prompt)=>persona+'\u0000'+prompt.trim();
 const nextChatId=()=>typeof crypto!=='undefined'&&typeof crypto.randomUUID==='function'
@@ -439,7 +440,23 @@ function element(tag,text,cls){let n=document.createElement(tag);if(text!==undef
 function entry(container,text,title,cls){const d=element('div',undefined,'entry '+(cls||''));if(title)d.append(element('small',title));d.append(element('div',text));container.prepend(d);return d}
 $('send').onclick=()=>{const text=$('prompt').value.trim();if(!text||busy)return;if(text.length>32000){$('streamHint').textContent='Слишком длинное сообщение: максимум 32 000 символов';return;}const uncertainKey=uncertainChatKey(visibleDraftPersona,text);if(uncertainChatKeys.has(uncertainKey)&&!window.confirm('SQLite мог сохранить этот запрос. Откройте REFLECTION и проверьте историю. Повторить с риском дубля?')){$('streamHint').textContent='Повтор заблокирован до проверки истории.';route('reflection');return;}const requestId=nextChatId();if(post('chat',{text,requestId})===false){$('streamHint').textContent='Нативный чат недоступен. Черновик сохранён.';return;}uncertainChatKeys.delete(uncertainKey);busy=true;activeChatId=requestId;pendingChatDraft={requestId,raw:$('prompt').value,persona:visibleDraftPersona};lastAnswer='';$('streamHint').textContent='Генерация ответа · не сохранено';entry($('messages'),text,'YOU','user');responseBox=entry($('messages'),'','NOX QWEN');$('prompt').value='';};
 $('stop').onclick=()=>{if(busy&&activeChatId)post('stop',{requestId:activeChatId})};$('prompt').onkeydown=e=>{if(e.key==='Enter'&&!e.defaultPrevented&&!e.repeat&&!e.shiftKey&&!e.ctrlKey&&!e.altKey&&!e.metaKey&&!e.isComposing&&e.keyCode!==229){e.preventDefault();$('send').click()}};
-$('overviewHealth').onclick=()=>post('health');$('startEngine').onclick=()=>post('engine.start');$('refreshSensors').onclick=()=>post('system.status');$('healthButton').onclick=()=>post('health');$('trainingButton').onclick=()=>post('training');$('learnRequest').onclick=()=>post('learn.request');$('learnCancel').onclick=()=>post('learn.cancel');$('reloadHistory').onclick=()=>post('history');$('taskAdd').onclick=()=>{const text=$('taskInput').value.trim();if(!text||pendingTask)return;const requestId=nextChatId();pendingTask={requestId,text,persona:visibleDraftPersona};$('taskAdd').disabled=true;if(post('tasks.add',{text,requestId})===false){pendingTask=null;$('taskAdd').disabled=false}};
+$('overviewHealth').onclick=()=>post('health');$('startEngine').onclick=()=>post('engine.start');$('refreshSensors').onclick=()=>post('system.status');$('healthButton').onclick=()=>post('health');$('trainingButton').onclick=()=>post('training');$('learnRequest').onclick=()=>{
+  if(pendingLearnRequest||pendingLearnStop)return;
+  const requestId=nextChatId();pendingLearnRequest=requestId;$('learnRequest').disabled=true;
+  $('learnReceipt').textContent='LEARN · ожидается согласие владельца Windows; GPU не запущен';
+  if(post('learn.request',{requestId})===false){
+    pendingLearnRequest=null;$('learnRequest').disabled=false;
+    $('learnReceipt').textContent='LEARN IPC HOLD · запрос не подтверждён';
+  }
+};
+$('learnCancel').onclick=()=>{
+  if(pendingLearnStop)return;
+  const requestId=nextChatId();pendingLearnStop=requestId;$('learnCancel').disabled=true;
+  if(post('learn.cancel',{requestId})===false){
+    pendingLearnStop=null;$('learnCancel').disabled=false;
+    $('learnReceipt').textContent='LEARN STOP IPC HOLD · проверьте очередь';
+  }
+};$('reloadHistory').onclick=()=>post('history');$('taskAdd').onclick=()=>{const text=$('taskInput').value.trim();if(!text||pendingTask)return;const requestId=nextChatId();pendingTask={requestId,text,persona:visibleDraftPersona};$('taskAdd').disabled=true;if(post('tasks.add',{text,requestId})===false){pendingTask=null;$('taskAdd').disabled=false}};
 // One outstanding SETTINGS write. UI buttons cannot imply successful SQLite
 // persistence until an independent native COMMIT readback and matching ACK.
 function setSettingsBusy(value){for(const id of ['savePersona','saveMotion','savePerformance','saveContext','maxMode'])$(id).disabled=value;}
@@ -505,7 +522,27 @@ case 'tasks.add.denied':if(pendingTask&&v?.requestId===pendingTask.requestId){pe
 case 'model.select.receipt':if(pendingModel&&v?.requestId===pendingModel.requestId&&v.model===pendingModel.model&&v.saved===true){committedModel=v.model;pendingModel=null;$('saveModel').disabled=false;$('modelSelectStatus').textContent='SQLite подтверждена · '+v.model;}break;
 case 'model.select.denied':if(pendingModel&&v?.requestId===pendingModel.requestId){const previous=pendingModel.previous;pendingModel=null;$('saveModel').disabled=false;if(previous)$('modelPicker').value=previous;$('modelSelectStatus').textContent=String(v.reason||'NOX_MODEL_SELECT_HOLD');post('health');}break;
 case 'download':{$('downloadStatus').textContent=`${v.model||''}: ${v.status||''}`+(typeof v.percent==='number'?' · '+v.percent+'%':'');if(typeof v.percent==='number')$('downloadBar').style.width=Math.max(0,Math.min(100,v.percent))+'%';break;}
-case 'learn.receipt':{const state=String(v?.state||'HOLD'),id=Number.isSafeInteger(v?.id)?'#'+v.id:'';$('learnReceipt').textContent='LEARN '+id+' · '+state+(v?.reason?' · '+String(v.reason):'')+' · GPU не запущен; SHA checkpoint не подтверждён';break;}
+case 'learn.receipt':{
+  const requestAck=!!pendingLearnRequest&&v?.requestId===pendingLearnRequest;
+  const stopAck=!!pendingLearnStop&&v?.requestId===pendingLearnStop;
+  if(!requestAck&&!stopAck)break;
+  if(requestAck){pendingLearnRequest=null;$('learnRequest').disabled=false;}
+  if(stopAck){pendingLearnStop=null;$('learnCancel').disabled=false;}
+  const state=String(v?.state||'HOLD'),id=Number.isSafeInteger(v?.id)?'#'+v.id:'';
+  $('learnReceipt').textContent='LEARN '+id+' · '+state+(v?.reason?' · '+String(v.reason):'')+
+    ' · GPU не запущен; SHA checkpoint не подтверждён';
+  break;
+}
+case 'learn.denied':{
+  const requestAck=!!pendingLearnRequest&&v?.requestId===pendingLearnRequest;
+  const stopAck=!!pendingLearnStop&&v?.requestId===pendingLearnStop;
+  if(!requestAck&&!stopAck)break;
+  if(requestAck){pendingLearnRequest=null;$('learnRequest').disabled=false;}
+  if(stopAck){pendingLearnStop=null;$('learnCancel').disabled=false;}
+  $('learnReceipt').textContent=String(v?.reason||'NOX_LEARN_DENIED_HOLD')+' · GPU не запущен';
+  post('learn.queue');
+  break;
+}
  case 'learn.queue':{const rows=Array.isArray(v)?v:[];$('learnQueue').textContent=rows.length?rows.map(x=>'Запрос #'+x.id+' · '+String(x.model)+' · '+String(x.state)+' · обучение не запущено').join('\n'):'Нет записанных запросов LEARN';break;}
  case 'training':{const run=v?.measuredTrainingRuns?.find(r=>r.progressVerified===true&&r.checkpointVerified===true&&typeof r.progressPercent==='number');const pct=run?Math.max(0,Math.min(100,run.progressPercent)):0;$('trainingBar').style.width=pct+'%';$('trainingMeasured').textContent=run?`Подтверждённые шаги: ${run.globalStep}/${run.maxSteps} · ${pct}%`:'Обучение GPU не подтверждено · 0%';const count=Array.isArray(v?.observedExternalRuns)?v.observedExternalRuns.length:0;$('training').textContent=count?`Найдено внешних журналов: ${count}. Их шаги и loss не связаны с подтверждённым NOX checkpoint.`:'Нет подтверждённых результатов GPU/QLoRA';break;}
 case 'settings':if(!pendingSettings&&!settingsReconcile){applyCommittedSettings(v||{});$('personaStatus').textContent=settingsDenial||'Настройки прочитаны из SQLite';}break;

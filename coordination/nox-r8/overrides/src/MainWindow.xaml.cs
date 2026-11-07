@@ -1548,8 +1548,8 @@ public partial class MainWindow : Window
                 case "engine.start": await StartLocalEngine(); break;
                 case "training": Send("training", GetTrainingState()); Send("learn.queue", ReadLearnQueue()); break;
                 case "learn.queue": Send("learn.queue", ReadLearnQueue()); break;
-                case "learn.request": RequestLearn(); break;
-                case "learn.cancel": CancelLearnRequest(); break;
+                case "learn.request": HandleLearnRequest(Text("requestId")); break;
+                case "learn.cancel": HandleLearnCancel(Text("requestId")); break;
                 case "memory.search": Send("memory", SearchMemory(Text("query"))); break;
                 case "knowledge.search": Send("knowledge.results", knowledge.Search(Text("query"))); break;
                 case "knowledge.stats": Send("knowledge.stats", knowledge.Stats()); break;
@@ -2961,11 +2961,50 @@ public partial class MainWindow : Window
         return result.ToArray();
     }
 
-    private void RequestLearn()
+    private sealed class LearnRequestPersistenceUnknownException : Exception
+    {
+        public LearnRequestPersistenceUnknownException(string reason, Exception inner) : base(reason, inner) { }
+    }
+
+    private void HandleLearnRequest(string requestId)
+    {
+        if (!ValidWriteRequestId(requestId)) {
+            Send("learn.denied", new { requestId, reason = "NOX_LEARN_REQUEST_ID_HOLD" });
+            return;
+        }
+        try { RequestLearn(requestId); }
+        catch (LearnRequestPersistenceUnknownException ex) {
+            try {
+                Send("learn.receipt", new { requestId, state = "PERSISTENCE_UNKNOWN_HOLD",
+                    reason = ex.Message, trainingStarted = false, checkpointSha256 = (string?)null });
+            }
+            catch (Exception) { /* Durable owner consent must never become a false denial. */ }
+            RefreshLearnQueueBestEffort();
+        }
+        catch (InvalidOperationException ex) when (ex.Message == "NOX_LEARN_EXISTING_MODEL_MISMATCH_HOLD") {
+            Send("learn.denied", new { requestId, reason = ex.Message });
+        }
+        catch (Exception) {
+            Send("learn.denied", new { requestId, reason = "NOX_LEARN_REQUEST_HOLD" });
+        }
+    }
+    private void HandleLearnCancel(string requestId)
+    {
+        if (!ValidWriteRequestId(requestId)) {
+            Send("learn.denied", new { requestId, reason = "NOX_LEARN_STOP_REQUEST_ID_HOLD" });
+            return;
+        }
+        try { CancelLearnRequest(requestId); }
+        catch (Exception) {
+            Send("learn.denied", new { requestId, reason = "NOX_LEARN_STOP_SQLITE_HOLD" });
+        }
+    }
+
+    private void RequestLearn(string requestId)
     {
         // Only the real desktop owner can give consent; automated smoke cannot.
         if (selfTestRequested) {
-            Send("learn.receipt", new { state="HOLD", reason="SELFTEST_NO_OWNER_CONSENT" });
+            Send("learn.receipt", new { requestId, state="HOLD", reason="SELFTEST_NO_OWNER_CONSENT" });
             return;
         }
         string sid = OwnerSid(), model = CurrentModel;
@@ -2977,10 +3016,13 @@ public partial class MainWindow : Window
             "NOX LEARN · Owner consent", MessageBoxButton.YesNo,
             MessageBoxImage.Warning, MessageBoxResult.No);
         if (decision != MessageBoxResult.Yes) {
-            Send("learn.receipt", new { state = "DECLINED", trainingStarted = false });
+            Send("learn.receipt", new { requestId, state = "DECLINED", trainingStarted = false });
             return;
         }
         long id;
+        bool commitAttempted = false;
+        try
+        {
         using (var db = OpenDatabase())
         using (var tx = db.BeginTransaction())
         {
@@ -2991,9 +3033,28 @@ public partial class MainWindow : Window
                 var oldId = check.ExecuteScalar();
                 if (oldId != null && oldId != DBNull.Value) {
                     id = Convert.ToInt64(oldId);
+                    commitAttempted = true;
                     tx.Commit();
-                    Send("learn.receipt", new { id, state="ALREADY_PENDING", trainingStarted=false });
-                    Send("learn.queue", ReadLearnQueue());
+                    // A pending row is not a receipt until a fresh SQLite connection
+                    // verifies the exact SID, state and absence of a checkpoint.
+                    using (var existingDb = OpenDatabase())
+                    using (var existing = existingDb.CreateCommand()) {
+                        existing.CommandText = "SELECT model,consent_at,checkpoint_sha256 FROM learn_requests WHERE id=$id AND owner_sid=$sid AND state='AWAITING_VERIFIED_WORKER'";
+                        existing.Parameters.AddWithValue("$id", id);
+                        existing.Parameters.AddWithValue("$sid", sid);
+                        using var row = existing.ExecuteReader();
+                        if (!row.Read() || string.IsNullOrWhiteSpace(row.GetString(0)) ||
+                            !DateTimeOffset.TryParse(row.GetString(1), out _) || !row.IsDBNull(2))
+                            throw new InvalidOperationException("NOX_LEARN_EXISTING_SQLITE_READBACK_HOLD");
+                        // Model-specific consent: old pending model != current owner model.
+                        // A previous request must never be acknowledged as new consent.
+                        if (!string.Equals(row.GetString(0), model, StringComparison.Ordinal))
+                            throw new InvalidOperationException("NOX_LEARN_EXISTING_MODEL_MISMATCH_HOLD");
+                    }
+                    // Committed consent and owner-readback are authoritative.
+                    // A failed optional queue redraw must not emit a false denial.
+                    Send("learn.receipt", new { requestId, id, state="ALREADY_PENDING", trainingStarted=false });
+                    RefreshLearnQueueBestEffort();
                     return;
                 }
             }
@@ -3014,6 +3075,7 @@ public partial class MainWindow : Window
                 id = Convert.ToInt64(verify.ExecuteScalar() ??
                     throw new InvalidOperationException("LEARN SQLite readback failed"));
             }
+            commitAttempted = true;
             tx.Commit();
         }
         // A queued request is not an ACK until a separate SQLite connection
@@ -3032,37 +3094,95 @@ public partial class MainWindow : Window
                 !persisted.IsDBNull(3))
                 throw new InvalidOperationException("NOX_LEARN_CONSENT_SQLITE_READBACK_HOLD");
         }
-        Send("learn.receipt", new { id, model, state="AWAITING_VERIFIED_WORKER",
+        Send("learn.receipt", new { requestId, id, model, state="AWAITING_VERIFIED_WORKER",
             reason="NO_ATTESTED_GPU_WORKER", trainingStarted=false, checkpointSha256=(string?)null });
-        Send("learn.queue", ReadLearnQueue());
+        RefreshLearnQueueBestEffort();
+        }
+        catch (Exception ex)
+        {
+            // A model mismatch is an established negative outcome; everything
+            // else after the first COMMIT attempt has an unknown durable result.
+            if (commitAttempted && !(ex is InvalidOperationException &&
+                ex.Message == "NOX_LEARN_EXISTING_MODEL_MISMATCH_HOLD"))
+                throw new LearnRequestPersistenceUnknownException(
+                    "NOX_LEARN_REQUEST_COMMIT_OR_READBACK_UNKNOWN_HOLD", ex);
+            throw;
+        }
     }
 
-    private void CancelLearnRequest()
+    // D05 owner STOP: a failed COMMIT may already have changed SQLite.
+    // Do not report an unverified failure as a denial that invites replay.
+    private void CancelLearnRequest(string requestId)
     {
         string sid = OwnerSid();
-        int affected;
-        using (var db = OpenDatabase())
-        using (var tx = db.BeginTransaction())
-        using (var cmd = db.CreateCommand())
+        int affected = 0;
+        bool commitAttempted = false;
+        try
         {
-            cmd.Transaction = tx;
-            cmd.CommandText = "UPDATE learn_requests SET state='CANCELLED_BY_OWNER' WHERE owner_sid=$sid AND state='AWAITING_VERIFIED_WORKER'";
-            cmd.Parameters.AddWithValue("$sid", sid);
-            affected = cmd.ExecuteNonQuery();
-            tx.Commit();
+            using (var db = OpenDatabase())
+            using (var tx = db.BeginTransaction())
+            using (var cmd = db.CreateCommand())
+            {
+                cmd.Transaction = tx;
+                cmd.CommandText = "UPDATE learn_requests SET state='CANCELLED_BY_OWNER' WHERE owner_sid=$sid AND state='AWAITING_VERIFIED_WORKER'";
+                cmd.Parameters.AddWithValue("$sid", sid);
+                affected = cmd.ExecuteNonQuery();
+                commitAttempted = true;
+                tx.Commit();
+            }
         }
-        // STOP must be persisted, not merely an UPDATE dispatched to SQLite.
-        using (var verifyDb = OpenDatabase())
-        using (var verify = verifyDb.CreateCommand())
+        catch (Exception)
         {
+            if (commitAttempted)
+                SendLearnStopUnknown(requestId, "NOX_LEARN_STOP_COMMIT_UNKNOWN_HOLD");
+            else
+                Send("learn.denied", new { requestId, reason = "NOX_LEARN_STOP_PRECOMMIT_HOLD" });
+            return;
+        }
+        try
+        {
+            // An independent connection proves the exact Windows owner has
+            // no preparation pending. It is not a GPU training STOP claim.
+            using var verifyDb = OpenDatabase();
+            using var verify = verifyDb.CreateCommand();
             verify.CommandText = "SELECT COUNT(*) FROM learn_requests WHERE owner_sid=$sid AND state='AWAITING_VERIFIED_WORKER'";
             verify.Parameters.AddWithValue("$sid", sid);
             if (Convert.ToInt64(verify.ExecuteScalar()) != 0)
                 throw new InvalidOperationException("NOX_LEARN_STOP_SQLITE_READBACK_HOLD");
         }
-        Send("learn.receipt", new { state=affected>0?"CANCELLED_BY_OWNER":"NO_PENDING_JOB",
-            affected, trainingStarted=false, checkpointSha256=(string?)null });
-        Send("learn.queue", ReadLearnQueue());
+        catch (Exception)
+        {
+            SendLearnStopUnknown(requestId, "NOX_LEARN_STOP_READBACK_UNKNOWN_HOLD");
+            return;
+        }
+        // A verified commit is authoritative even if the WebView2 bridge or
+        // optional redraw fails after the write.
+        try
+        {
+            Send("learn.receipt", new { requestId, state = affected > 0 ? "CANCELLED_BY_OWNER" : "NO_PENDING_JOB",
+                affected, trainingStarted = false, checkpointSha256 = (string?)null });
+        }
+        catch (Exception) { /* A committed STOP cannot become a false DENIED. */ }
+        RefreshLearnQueueBestEffort();
+    }
+
+    private void SendLearnStopUnknown(string requestId, string reason)
+    {
+        try
+        {
+            Send("learn.receipt", new { requestId, state = "PERSISTENCE_UNKNOWN_HOLD",
+                reason, trainingStarted = false, checkpointSha256 = (string?)null });
+        }
+        catch (Exception) { /* The owner can read the queue on FORGE. */ }
+        RefreshLearnQueueBestEffort();
+    }
+
+    // The SQLite commit and independent owner readback precede this refresh.
+    // An optional post-commit queue failure must not falsify LEARN consent/STOP.
+    private void RefreshLearnQueueBestEffort()
+    {
+        try { Send("learn.queue", ReadLearnQueue()); }
+        catch (Exception) { /* Refresh is non-authoritative; retry on FORGE route. */ }
     }
 
     private object GetTrainingState()
