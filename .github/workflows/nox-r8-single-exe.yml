@@ -115,7 +115,7 @@ jobs:
                 $n.checks.isolated_sqlite_path -ne 'PASS' -or
                 $n.checks.native_wpf_webview2_renderer -ne 'PASS' -or
                 ![string]::Equals($n.exeSha256,$sha,[StringComparison]::OrdinalIgnoreCase)) {
-              throw "NOX_R8_WINDOWS_UI_HOLD: $($n.error)"
+              throw "NOX_R8_WINDOWS_UI_HOLD: $($n.error) checks=$($n.checks | ConvertTo-Json -Compress -Depth 4) exit=$($p.ExitCode) webview=$($n.wpfWebView2Accepted) sourceExeMatch=$([string]::Equals($n.exeSha256,$sha,[StringComparison]::OrdinalIgnoreCase))"
             }
             Copy-Item $file './out/UI_SMOKE_RECEIPT.json' -Force
             Write-Host "NOX_R8_WINDOWS_UI_NATIVE_PASS SHA256=$sha (local Qwen E2E not checked)"
