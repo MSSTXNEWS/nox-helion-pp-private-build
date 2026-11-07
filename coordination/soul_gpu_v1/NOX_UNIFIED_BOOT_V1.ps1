@@ -3,7 +3,7 @@
 $ErrorActionPreference = "Stop"
 $root = "C:\NOX_HELION\NOX_NEW"
 $repo = "$root\brain\source\repo"
-$ref = "f878cdd111c76cd2a619b771ea5048e553006253"
+$ref = "ca46bda3ab77af3afff79b0bfde17a28ac2b8c9d"
 $base = "coordination/soul_gpu_v1"
 $dest = "$root\brain\skills\NOX_UNIFIED_49fca983"
 $python = "$env:USERPROFILE\NOX_EXPRESS_AI\NOX_TRAINING\train-venv\Scripts\python.exe"
