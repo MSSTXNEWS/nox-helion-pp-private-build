@@ -69,6 +69,26 @@ for guard in (
     'NOX_B03_SMOKE_SHA_READBACK_HOLD'
 ):
     assert guard in native, "NOX_B03_NATIVE_SNAPSHOT_CONTRACT_HOLD:" + guard
+# Verify that the original WPF UI-smoke now physically tests the partial
+# Persona-index recovery and the pre-repair SQLite snapshot (isolated DB only).
+for guard in (
+    '"DROP INDEX IF EXISTS idx_notes_persona"',
+    'MigratePersonaStorage(live, hadExistingTablesBeforeBootstrap: true)',
+    'NOX_B03_SMOKE_PARTIAL_INDEX_FIXTURE_HOLD',
+    'NOX_B03_SMOKE_INDEX_RECOVERY_HOLD',
+    'NOX_B03_SMOKE_INDEX_INTEGRITY_HOLD',
+    'NOX_B03_SMOKE_INDEX_OWNER_ROWS_HOLD',
+    'NOX_B03_SMOKE_INDEX_PREIMAGE_MANIFEST_HOLD',
+    'NOX_B03_SMOKE_INDEX_PREIMAGE_MISSING_HOLD',
+    'NOX_B03_SMOKE_INDEX_PREIMAGE_ROWS_HOLD',
+):
+    assert guard in native, "NOX_B03_NATIVE_INDEX_RECOVERY_HOLD:" + guard
+assert native.index('DROP INDEX IF EXISTS idx_notes_persona') < native.index(
+    'MigratePersonaStorage(live, hadExistingTablesBeforeBootstrap: true)'
+)
+assert native.index('MigratePersonaStorage(live, hadExistingTablesBeforeBootstrap: true)') < native.index(
+    'NOX_B03_SMOKE_INDEX_RECOVERY_HOLD'
+)
 assert 'VerifyIsolatedSqliteBackup();' in src
 assert 'checks["sqlite_native_backup_no_loss"] = "PASS";' in src
 assert '"sqlite_native_backup_no_loss", "native_wpf_webview2_renderer"' in src

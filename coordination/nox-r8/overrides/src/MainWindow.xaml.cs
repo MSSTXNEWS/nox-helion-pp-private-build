@@ -1075,6 +1075,57 @@ public partial class MainWindow : Window
         }
         if (!string.Equals(Sha256File(snapshot), sha, StringComparison.Ordinal))
             throw new InvalidOperationException("NOX_B03_SMOKE_SHA_READBACK_HOLD");
+
+        // B03: force a partial Persona migration on the already-isolated native
+        // UI-smoke database, then prove that the *real C# migration* recreates the
+        // index and checkpoints the pre-repair state. Never touch owner SQLite.
+        string backupDir = Path.Combine(Path.GetDirectoryName(dbPath)!, "backups");
+        var beforeRepair = Directory.GetFiles(
+            backupDir, "NOX_PRE_PERSONA_MIGRATION_*.sqlite3").ToHashSet(StringComparer.OrdinalIgnoreCase);
+        using (var drop = live.CreateCommand())
+        {
+            drop.CommandText = "DROP INDEX IF EXISTS idx_notes_persona";
+            drop.ExecuteNonQuery();
+        }
+        using (var absent = live.CreateCommand())
+        {
+            absent.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type='index' AND name='idx_notes_persona'";
+            if (Convert.ToInt64(absent.ExecuteScalar()) != 0)
+                throw new InvalidOperationException("NOX_B03_SMOKE_PARTIAL_INDEX_FIXTURE_HOLD");
+        }
+        MigratePersonaStorage(live, hadExistingTablesBeforeBootstrap: true);
+        using (var repaired = live.CreateCommand())
+        {
+            repaired.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type='index' AND name IN ('idx_chat_persona','idx_notes_persona')";
+            if (Convert.ToInt64(repaired.ExecuteScalar()) != 2)
+                throw new InvalidOperationException("NOX_B03_SMOKE_INDEX_RECOVERY_HOLD");
+            repaired.CommandText = "PRAGMA quick_check";
+            if (!string.Equals(repaired.ExecuteScalar() as string, "ok", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("NOX_B03_SMOKE_INDEX_INTEGRITY_HOLD");
+            repaired.CommandText = "SELECT value FROM preferences WHERE key='performance'";
+            if (!string.Equals(repaired.ExecuteScalar() as string, "ECO", StringComparison.Ordinal))
+                throw new InvalidOperationException("NOX_B03_SMOKE_INDEX_OWNER_ROWS_HOLD");
+        }
+        var newSnapshots = Directory.GetFiles(backupDir, "NOX_PRE_PERSONA_MIGRATION_*.sqlite3")
+            .Where(path => !beforeRepair.Contains(path)).ToArray();
+        if (newSnapshots.Length != 1 ||
+            !File.Exists(newSnapshots[0] + ".sha256") ||
+            !string.Equals(File.ReadAllText(newSnapshots[0] + ".sha256", Encoding.UTF8),
+                Sha256File(newSnapshots[0]) + "  " + Path.GetFileName(newSnapshots[0]) + "\n",
+                StringComparison.Ordinal))
+            throw new InvalidOperationException("NOX_B03_SMOKE_INDEX_PREIMAGE_MANIFEST_HOLD");
+        using (var before = new SqliteConnection(new SqliteConnectionStringBuilder {
+            DataSource = newSnapshots[0], Mode = SqliteOpenMode.ReadOnly, Pooling = false }.ToString()))
+        {
+            before.Open();
+            using var check = before.CreateCommand();
+            check.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type='index' AND name='idx_notes_persona'";
+            if (Convert.ToInt64(check.ExecuteScalar()) != 0)
+                throw new InvalidOperationException("NOX_B03_SMOKE_INDEX_PREIMAGE_MISSING_HOLD");
+            check.CommandText = "SELECT value FROM preferences WHERE key='performance'";
+            if (!string.Equals(check.ExecuteScalar() as string, "ECO", StringComparison.Ordinal))
+                throw new InvalidOperationException("NOX_B03_SMOKE_INDEX_PREIMAGE_ROWS_HOLD");
+        }
     }
 
     // Fail closed if any existing parent is a Windows junction / symlink,
