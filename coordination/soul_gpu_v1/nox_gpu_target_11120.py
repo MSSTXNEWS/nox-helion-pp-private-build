@@ -39,9 +39,21 @@ def receipt(path,payload):
                 time.sleep(min(.12*(attempt+1),.45))
         # Fallback own file: no contention with training.json readers/writers.
         sidecar=path.with_name("training_safe70.json")
-        os.replace(part,sidecar)
-        print("NOX TELEMETRY HOLD: training.json locked; saved independent training_safe70.json",
-              flush=True)
+        try:
+            os.replace(part,sidecar)
+            print("NOX TELEMETRY HOLD: training.json locked; wrote training_safe70.json",
+                  flush=True)
+            return
+        except PermissionError:
+            # Never reuse a fixed filename when multiple local readers hold
+            # Windows handles open without delete sharing. Preserve the real
+            # receipt under a new immutable name.
+            folder=path.parent/"safe70_receipts"
+            folder.mkdir(exist_ok=True)
+            unique=folder/("training_%d_%d.json"%(os.getpid(),time.time_ns()))
+            os.replace(part,unique)
+            print("NOX TELEMETRY HOLD: fixed JSON locked; saved",unique,flush=True)
+            return
     finally:
         try:
             part.unlink(missing_ok=True)
@@ -265,7 +277,11 @@ def single_cycle():
         stop_tree(child.pid)
         raise
     finally:
-        child.wait(timeout=25)
+        try:
+            child.wait(timeout=25)
+        except subprocess.TimeoutExpired:
+            stop_tree(child.pid)
+            child.wait(timeout=25)
         receipt(tele,{"status":"SAFETY_HOLD" if reason else
                      ("DONE" if child.returncode==0 else "TRAINING_FAILED"),
                      "actual_steps":last_step,"requested_steps":TARGET_TOTAL_STEPS,
