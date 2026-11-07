@@ -143,37 +143,49 @@ assert 'if (value.Length > 0) Interlocked.Increment(ref generationStreamingToken
 assert generation.index('await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellation.Token)') < generation.index('Interlocked.Increment(ref generationStreamingTokenCount)')
 print('B04 R8 SOURCE_ONLY: physical STOP oracle waits for live Ollama NDJSON token, not only native dispatch PASS')
 
-# D05 native task toggle: a checkbox is not proof of persistence.
-# Request-ID bound receipt only after COMMIT and independent SQLite readback.
-toggle = cs.split('private void HandleTaskToggle(', 1)[1].split('private static bool ValidWriteRequestId(', 1)[0]
+# D05 owner task completion: explicit desired state, so a duplicate native delivery
+# or owner retry cannot silently invert a previously committed task.
+toggle = cs.split('private void HandleTaskToggle(', 1)[1].split('private void RefreshTasksBestEffort(', 1)[0]
+assert 'bool? desiredComplete' in toggle
 assert 'ValidWriteRequestId(requestId)' in toggle
-assert 'cmd.ExecuteNonQuery() != 1' in toggle
+assert 'complete=$complete WHERE id=$id' in toggle
+assert 'complete=CASE WHEN' not in toggle
 assert 'NOX_TASK_TOGGLE_MISSING_ROW_HOLD' in toggle
 assert 'NOX_TASK_TOGGLE_SQLITE_READBACK_HOLD' in toggle
-assert toggle.index('tx.Commit();') < toggle.index('using (var verifyDb = OpenDatabase())') < toggle.index('Send("tasks.toggle.receipt"')
-assert 'Send("tasks.toggle.denied"' in toggle
-assert 'case "tasks.toggle": HandleTaskToggle(request.GetProperty("id").GetInt64(), Text("requestId"));' in cs
+assert 'NOX_TASK_TOGGLE_COMMIT_UNKNOWN_HOLD' in toggle
+assert 'Send("tasks.toggle.uncertain"' in toggle
+assert toggle.index('commitAttempted = true') < toggle.index('tx.Commit();') < toggle.index('using var verifyDb = OpenDatabase()') < toggle.index('Send("tasks.toggle.receipt"')
+assert toggle.index('catch (Exception) { /* Owner can recover state via tasks.list. */ }') < toggle.rindex('RefreshTasksBestEffort();')
+assert 'case "tasks.toggle": {' in cs
+assert 'taskField.TryGetInt64(out var parsedTaskId)' in cs
+assert 'completeField.ValueKind == JsonValueKind.True' in cs
+assert 'completeField.ValueKind == JsonValueKind.False' in cs
+assert 'HandleTaskToggle(taskId, desiredComplete, Text("requestId"));' in cs
 for fragment in (
-    "pendingTaskToggle={requestId,id:x.id,previous:x.complete}",
-    "post('tasks.toggle',{id:x.id,requestId})",
+    "pendingTaskToggle={requestId,id:x.id,previous:x.complete,target:cb.checked}",
+    "post('tasks.toggle',{id:x.id,complete:cb.checked,requestId})",
     "case 'tasks.toggle.receipt':",
+    "v?.complete===pendingTaskToggle.target",
     "case 'tasks.toggle.denied':",
+    "case 'tasks.toggle.uncertain':",
     "v?.requestId===pendingTaskToggle.requestId&&v?.id===pendingTaskToggle.id",
     "post('tasks.list')",
 ):
-    assert fragment in html, 'D05_TOGGLE_OWNER_ACK_HOLD: '+fragment
-# The SQL applies an actual toggle to precisely one row and refuses a missing row.
+    assert fragment in html, 'D05_TASK_OWNER_ACK_HOLD: '+fragment
+# Execute the exact new SQLite UPDATE statement against an isolated in-memory DB.
 import sqlite3
 with sqlite3.connect(':memory:') as db:
     db.execute('CREATE TABLE tasks(id INTEGER PRIMARY KEY, complete INTEGER NOT NULL DEFAULT 0)')
     db.execute('INSERT INTO tasks(id, complete) VALUES(42,0)')
-    statement = "UPDATE tasks SET complete=CASE WHEN complete=0 THEN 1 ELSE 0 END WHERE id=?"
-    assert db.execute(statement,(42,)).rowcount==1
+    statement = "UPDATE tasks SET complete=? WHERE id=?"
+    assert db.execute(statement,(1,42)).rowcount==1
     assert db.execute('SELECT complete FROM tasks WHERE id=42').fetchone()[0]==1
-    assert db.execute(statement,(42,)).rowcount==1
+    assert db.execute(statement,(1,42)).rowcount==1  # duplicate same intent
+    assert db.execute('SELECT complete FROM tasks WHERE id=42').fetchone()[0]==1
+    assert db.execute(statement,(0,42)).rowcount==1
     assert db.execute('SELECT complete FROM tasks WHERE id=42').fetchone()[0]==0
-    assert db.execute(statement,(404,)).rowcount==0
-print('D05 R8 SOURCE_ONLY: owner-correlated task toggle, SQLite COMMIT/readback and denied rollback PASS')
+    assert db.execute(statement,(1,404)).rowcount==0  # missing row
+print('D05 TASK TARGET SOURCE_ONLY: desired state idempotent in SQLite; native Windows NOT TESTED')
 
 # D05 MODEL SELECT: native owner-correlated choice requires independent SQLite
 # readback before success ACK. A failed bridge keeps a retryable button.
