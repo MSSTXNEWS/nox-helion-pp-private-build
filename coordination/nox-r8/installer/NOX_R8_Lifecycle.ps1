@@ -161,6 +161,25 @@ try {
             if ((HashFile $old) -ne $receipt.previous_sha256) {
                 throw 'NOX_INSTALL_ROLLBACK_HASH_HOLD'
             }
+            if ($receipt.state -eq 'uninstalled') {
+                # A reversible uninstall retains the last trusted payload.
+                # Reinstate only the SHA-pinned previous_file under this user root.
+                if ([IO.File]::Exists($target)) { throw 'NOX_INSTALL_UNMANAGED_OWNER_BINARY_HOLD' }
+                [IO.File]::Move($old,$target)
+                try {
+                    if ((HashFile $target) -ne $receipt.previous_sha256) {
+                        throw 'NOX_INSTALL_ROLLBACK_READBACK_HOLD'
+                    }
+                    SaveReceipt 'installed' $receipt.previous_sha256 '' ''
+                } catch {
+                    if ([IO.File]::Exists($target) -and
+                        -not [IO.File]::Exists($old) -and
+                        (HashFile $target) -eq $receipt.previous_sha256) {
+                        [IO.File]::Move($target,$old)
+                    }
+                    throw
+                }
+            } else {
             $displaced = Join-Path $root ('NOX.HELION.previous.'+$receipt.current_sha256.ToUpperInvariant()+'.'+[guid]::NewGuid().ToString('N')+'.exe')
             [IO.File]::Move($target,$displaced)
             try {
@@ -184,12 +203,34 @@ try {
                 }
                 throw
             }
+            }
             Write-Output ('NOX_INSTALL_ROLLBACK_SHA256='+$receipt.previous_sha256)
         } else {
-            # Explicit NSIS uninstall: ONLY verified managed EXE; retain memory,
-            # user %LOCALAPPDATA%\NOX_HELION, rollback files and audit receipts.
-            if ([IO.File]::Exists($target)) { [IO.File]::Delete($target) }
-            SaveReceipt 'uninstalled' '' $receipt.previous_file $receipt.previous_sha256
+            # NO-LOSS uninstall: never destroy the only managed EXE before
+            # the new receipt commits. Keep displaced payload SHA-addressed.
+            # This does NOT touch user data, models or any foreign files.
+            $retired = ''; $retiredSha = ''
+            if ([IO.File]::Exists($target)) {
+                $retiredSha = HashFile $target
+                $retired = Join-Path $root ('NOX.HELION.previous.'+$retiredSha+'.'+[guid]::NewGuid().ToString('N')+'.exe')
+                [IO.File]::Move($target,$retired)
+            }
+            try {
+                if ($retired) {
+                    SaveReceipt 'uninstalled' '' ([IO.Path]::GetFileName($retired)) $retiredSha
+                } else {
+                    SaveReceipt 'uninstalled' '' $receipt.previous_file $receipt.previous_sha256
+                }
+            } catch {
+                # A failed receipt write must not strand an uninstalled state.
+                # Only restore the exact file moved in this invocation.
+                if ($retired -and -not [IO.File]::Exists($target) -and
+                    [IO.File]::Exists($retired) -and
+                    (HashFile $retired) -eq $retiredSha) {
+                    [IO.File]::Move($retired,$target)
+                }
+                throw
+            }
             Write-Output 'NOX_INSTALL_OWNER_DATA_PRESERVED'
         }
     }

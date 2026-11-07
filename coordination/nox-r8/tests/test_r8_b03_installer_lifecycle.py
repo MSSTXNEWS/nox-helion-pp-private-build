@@ -46,4 +46,17 @@ assert ps.index("HashFile $incoming") < ps.index("[IO.File]::Move($target,$oldPa
 assert ps.index("GuardManaged $receipt") < ps.index("[IO.File]::Delete($target)")
 for bad in ("Remove-Item -Recurse","RMDir /r","rmdir /s","NOX_R8_INSTALL_NATIVE_PASS"):
     assert bad not in ps+ns
-print("B03_R8_NSIS_SOURCE_ONLY_PASS; native makensis/install/rollback pending")
+# NO-LOSS uninstall regression: previous implementation destroyed the
+# verified EXE BEFORE committing its receipt. A failed receipt update thus
+# lost the only managed binary; retirement + readback + restore is required.
+assert "[IO.File]::Delete($target)" not in ps
+assert "[IO.File]::Move($target,$retired)" in ps
+assert "SaveReceipt 'uninstalled' '' ([IO.Path]::GetFileName($retired)) $retiredSha" in ps
+assert "[IO.File]::Move($retired,$target)" in ps
+assert ps.index("[IO.File]::Move($target,$retired)") < ps.index("SaveReceipt 'uninstalled' '' ([IO.Path]::GetFileName($retired)) $retiredSha")
+assert "if ($receipt.state -eq 'uninstalled')" in ps
+assert "[IO.File]::Move($old,$target)" in ps
+assert "SaveReceipt 'installed' $receipt.previous_sha256 '' ''" in ps
+assert ps.index("if ($receipt.state -eq 'uninstalled')") < ps.index("[IO.File]::Move($target,$displaced)")
+
+print("B03_R8_NSIS_SOURCE_ONLY_PASS; Windows uninstall/rollback runtime pending")
