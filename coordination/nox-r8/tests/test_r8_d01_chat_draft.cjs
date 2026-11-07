@@ -562,3 +562,42 @@ console.log('D01 SOURCE_ONLY PASS: Qwen failed/STOP retry with original input, S
   assert.equal(m.state().busy,false,'D01_SQLITE_UNKNOWN_BUSY_LOCK_NOT_RELEASED');
   console.log('D01 SOURCE_ONLY PASS: uncertain SQLite commit never auto-restores prompt for duplicate replay');
 }
+
+// D01_IDENTICAL_PERSONA_RECEIPT_NO_LOSS: native SettingsPut emits persona.changed
+// even when the SQLite PersonaID is unchanged. An identical receipt must NOT
+// erase live CHAT, lastAnswer, or accessibility speech state.
+{
+  const start=html.indexOf("case 'persona.changed':");
+  const end=html.indexOf("\ncase 'settings.receipt':",start);
+  assert.ok(start>0&&end>start,'D01_PERSONA_CHANGED_SOURCE_HANDLER_MISSING');
+  const source=html.slice(start,end);
+  function receipt(next){
+    const code=`let visibleDraftPersona='KV',lastAnswer='KV verified answer',responseBox={live:true};
+      let cleared=[],canceled=0;
+      const $=id=>({replaceChildren(){cleared.push(id)}});
+      function switchPersonaDrafts(persona){if(!['KV','AM','LA','EV','KW'].includes(persona))return false;
+        visibleDraftPersona=persona;return true;}
+      const window={speechSynthesis:true},speechSynthesis={cancel(){canceled++}};
+      const v={persona:next};
+      switch('persona.changed'){${source}}
+      ({persona:visibleDraftPersona,lastAnswer,hasResponseBox:!!responseBox,
+        cleared,canceled});`;
+    return vm.runInNewContext(code,{next},{timeout:1500});
+  }
+  const same=receipt('KV');
+  assert.equal(same.persona,'KV');
+  assert.equal(same.lastAnswer,'KV verified answer','D01_IDENTICAL_PERSONA_RECEIPT_NO_LOSS');
+  assert.equal(same.hasResponseBox,true,'D01_IDENTICAL_PERSONA_RESPONSE_BOX_LOST');
+  assert.equal(same.cleared.length,0,'D01_IDENTICAL_PERSONA_CLEARED_LIVE_CHAT');
+  assert.equal(same.canceled,0,'D01_IDENTICAL_PERSONA_CANCELED_SPEECH');
+  const changed=receipt('AM');
+  assert.equal(changed.persona,'AM');
+  assert.equal(changed.lastAnswer,'');
+  assert.equal(changed.hasResponseBox,false);
+  assert.deepEqual(Array.from(changed.cleared),['messages','history','notes','memoryResults','knowledgeResults']);
+  assert.equal(changed.canceled,1);
+  const invalid=receipt('INVALID');
+  assert.equal(invalid.persona,'KV');
+  assert.equal(invalid.cleared.length,0);
+  console.log('D01 SOURCE_ONLY PASS: identical persona receipt retains chat; actual switch clears private content');
+}
