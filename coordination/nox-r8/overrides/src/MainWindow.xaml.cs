@@ -374,32 +374,70 @@ public partial class MainWindow : Window
                 throw new InvalidOperationException("NOX_SETTINGS_WINDOWS_UIA_HOST_HOLD");
             checks["settings_windows_uia_host"] = "PASS";
 
-            // D01: read the actual Windows UI Automation subtree for WebView2.
-            // DOM labels alone cannot count as native UIA acceptance.
-            var fiveQuickUia = await Task.Run(() =>
+            // D01: use the actual Windows UI Automation provider. Chromium can
+            // expose its accessible renderer buttons under the top-level window
+            // rather than under the WPF WebView2 host's managed UIA subtree.
+            // Keep the host identity gate above; require all five physically
+            // exposed, enabled, onscreen UIA buttons. DOM alone is not a PASS.
+            string fiveQuickUiaDetail = "NOT_SCANNED";
+            bool fiveQuickUia = false;
+            for (int attempt = 0; attempt < 6 && !fiveQuickUia; attempt++)
             {
-                var root = System.Windows.Automation.AutomationElement.FromHandle(uiaHandle);
-                var host = root?.FindFirst(
-                    System.Windows.Automation.TreeScope.Descendants,
-                    new System.Windows.Automation.PropertyCondition(
-                        System.Windows.Automation.AutomationElement.AutomationIdProperty,
-                        "NOX_HELION_WEBVIEW2"));
-                if (host == null) return false;
-                var buttons = host.FindAll(
-                    System.Windows.Automation.TreeScope.Descendants,
-                    new System.Windows.Automation.PropertyCondition(
+                var probe = await Task.Run(() =>
+                {
+                    var root = System.Windows.Automation.AutomationElement.FromHandle(uiaHandle);
+                    var host = root?.FindFirst(
+                        System.Windows.Automation.TreeScope.Descendants,
+                        new System.Windows.Automation.PropertyCondition(
+                            System.Windows.Automation.AutomationElement.AutomationIdProperty,
+                            "NOX_HELION_WEBVIEW2"));
+                    if (root == null || host == null)
+                        return (accepted: false, detail: "UIA_HOST_MISSING");
+                    var buttonCondition = new System.Windows.Automation.PropertyCondition(
                         System.Windows.Automation.AutomationElement.ControlTypeProperty,
-                        System.Windows.Automation.ControlType.Button));
-                var labels = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                foreach (System.Windows.Automation.AutomationElement button in buttons)
-                    if (button.Current.IsEnabled)
-                        labels.Add(button.Current.Name?.Trim() ?? "");
-                return new[] { "CHAT", "MODELS", "LEARN", "SETTINGS" }
-                    .All(labels.Contains) &&
-                    labels.Any(name => name.Contains("MAX", StringComparison.OrdinalIgnoreCase));
-            });
+                        System.Windows.Automation.ControlType.Button);
+                    var hostButtons = host.FindAll(
+                        System.Windows.Automation.TreeScope.Descendants, buttonCondition);
+                    var windowButtons = root.FindAll(
+                        System.Windows.Automation.TreeScope.Descendants, buttonCondition);
+                    var labels = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    // UIA rendering can be hosted by a child Chromium HWND that
+                    // is a sibling to the WPF WebView2 accessibility wrapper.
+                    // Both queries are constrained to this process's real HWND.
+                    foreach (System.Windows.Automation.AutomationElement button in hostButtons)
+                    {
+                        var current = button.Current;
+                        var bounds = current.BoundingRectangle;
+                        if (current.IsEnabled && !current.IsOffscreen &&
+                            !bounds.IsEmpty && bounds.Width >= 16 && bounds.Height >= 16)
+                            labels.Add(current.Name?.Trim() ?? "");
+                    }
+                    foreach (System.Windows.Automation.AutomationElement button in windowButtons)
+                    {
+                        var current = button.Current;
+                        var bounds = current.BoundingRectangle;
+                        if (current.IsEnabled && !current.IsOffscreen &&
+                            !bounds.IsEmpty && bounds.Width >= 16 && bounds.Height >= 16)
+                            labels.Add(current.Name?.Trim() ?? "");
+                    }
+                    var required = new[] { "CHAT", "MODELS", "LEARN", "SETTINGS" };
+                    var missing = string.Join(",", required.Where(name => !labels.Contains(name)));
+                    bool maxPresent = labels.Any(name =>
+                        name.Contains("MAX", StringComparison.OrdinalIgnoreCase));
+                    // Diagnostics carry counts and missing expected labels, never
+                    // arbitrary UI text, chat content or model/user data.
+                    var detail = $"HOST_BUTTONS={hostButtons.Count};WINDOW_BUTTONS={windowButtons.Count};" +
+                        $"VISIBLE_UNIQUE={labels.Count};MISSING={missing};MAX={maxPresent}";
+                    return (accepted: missing.Length == 0 && maxPresent, detail);
+                });
+                fiveQuickUia = probe.accepted;
+                fiveQuickUiaDetail = probe.detail;
+                if (!fiveQuickUia && attempt < 5)
+                    await Task.Delay(250); // bounded Chromium UIA materialization
+            }
             if (!fiveQuickUia)
-                throw new InvalidOperationException("NOX_D01_FIVE_QUICK_WINDOWS_UIA_HOLD");
+                throw new InvalidOperationException(
+                    "NOX_D01_FIVE_QUICK_WINDOWS_UIA_HOLD: " + fiveQuickUiaDetail);
             checks["d01_five_quick_windows_uia"] = "PASS";
 
             // D01: resize the real embedded browser to 320/390/800 CSS-pixel
