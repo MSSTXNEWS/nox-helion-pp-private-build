@@ -158,6 +158,11 @@ body.reduced .helion-fx{filter:none}body.reduced .core.active{animation:none}
       motionQuery=window.matchMedia('(prefers-reduced-motion: reduce)');
       // A present but broken WebView2 media API gives no trustworthy OS preference.
       if(!motionQuery){motionUnreadable=true;console.warn('NOX reduced-motion query returned empty state');}
+    }else{
+      // Missing matchMedia is also unknown OS state, not permission to animate.
+      // WebView2/native IPC still works; retain one accessible static frame.
+      motionUnreadable=true;
+      console.warn('NOX reduced-motion query API unavailable; freezing animation');
     }
   }catch(e){motionUnreadable=true;console.warn('NOX reduced-motion query unavailable:',String(e?.message||e));}
   // A failing Windows MediaQueryList.matches getter must never escape an

@@ -114,9 +114,9 @@ function exercise(kind){
   const warnings=[];
   render(document,window,{now(){return 0;}},requestAnimationFrame,cancelAnimationFrame,{warn:(...args)=>warnings.push(args.map(String).join(' '))});
   function tick(){check(queue.size>0,kind+' scheduled frame');const [id,fn]=queue.entries().next().value;queue.delete(id);fn(100+(++ticks)*140);}
-  if(['matchesGetterGpu','matchesGetterCpu','queryThrowsGpu','queryThrowsCpu','emptyMediaGpu','emptyMediaCpu','invalidStateGpu','invalidStateCpu'].includes(kind)){
+  if(['matchesGetterGpu','matchesGetterCpu','queryThrowsGpu','queryThrowsCpu','emptyMediaGpu','emptyMediaCpu','invalidStateGpu','invalidStateCpu','noMediaApiGpu','noMediaApiCpu'].includes(kind)){
     const gpu=kind.endsWith('Gpu');
-    const warnName=kind.startsWith('queryThrows')?'reduced-motion query unavailable':kind.startsWith('emptyMedia')?'reduced-motion query returned empty state':kind.startsWith('invalidState')?'reduced-motion state unavailable':'reduced-motion state inaccessible';
+    const warnName=kind.startsWith('noMediaApi')?'reduced-motion query API unavailable':kind.startsWith('queryThrows')?'reduced-motion query unavailable':kind.startsWith('emptyMedia')?'reduced-motion query returned empty state':kind.startsWith('invalidState')?'reduced-motion state unavailable':'reduced-motion state inaccessible';
     check(sphere.dataset.fx===(gpu?'active':'canvas2d'),kind+' renderer initialized');
     tick();
     check(queue.size===0,kind+' unknown OS motion uses static accessible pose');
@@ -213,7 +213,7 @@ function exercise(kind){
     check(queue.size===0,kind+' element redraw honors Reduced Motion');
     return;
   }
-  const healthyGpu=['ok','noMediaApiGpu','observerThrowsGpu'];
+  const healthyGpu=['ok','observerThrowsGpu'];
   if([...healthyGpu,'contextLost','drawFail','viewportFail','uniformFail','glError','lateGlError'].includes(kind)){
     check(sphere.dataset.fx==='active','GPU path initialized');
     if(!healthyGpu.includes(kind)){window.noxVisual.setMode('MAX');window.noxVisual.setEnergy(true);}
