@@ -16,6 +16,13 @@ for k in ("RequestExecutionLevel user",'InstallDir "$LOCALAPPDATA\\Programs\\NOX
           "!ifndef NOX_EXE_PATH","!ifndef NOX_EXE_SHA256","-Mode Install",
           "-Mode Uninstall",'StrCmp $0 "0" accepted','StrCmp $0 "0" accepted_uninstall'):
     assert k in ns, "NOX_B03_NSIS_WRAPPER_MISSING:"+k
+# Regression for NSIS-hosted Windows PowerShell: do not depend on
+# optional cmdlet autoload; hash the exact opened file via .NET.
+assert "Get-FileHash -LiteralPath" not in ps
+assert "$hasher.ComputeHash($stream)" in ps
+assert "$hasher.Dispose()" in ps and "$stream.Dispose()" in ps
+assert "[IO.FileShare]::Read" in ps
+assert ps.index("GuardPath $p") < ps.index("$hasher.ComputeHash($stream)")
 assert ps.index("HashFile $incoming") < ps.index("[IO.File]::Move($target,$oldPath)")
 assert ps.index("GuardManaged $receipt") < ps.index("[IO.File]::Delete($target)")
 for bad in ("Remove-Item -Recurse","RMDir /r","rmdir /s","NOX_R8_INSTALL_NATIVE_PASS"):

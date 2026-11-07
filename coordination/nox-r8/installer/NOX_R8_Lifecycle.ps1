@@ -24,7 +24,14 @@ function GuardPath([string]$p) {
 function HashFile([string]$p) {
     GuardPath $p
     if (-not [IO.File]::Exists($p)) { throw 'NOX_INSTALL_FILE_MISSING_HOLD' }
-    return (Get-FileHash -LiteralPath $p -Algorithm SHA256).Hash.ToUpperInvariant()
+    # Windows PowerShell launched from NSIS can lack Get-FileHash autoload.
+    # Use in-box .NET SHA256; dispose both file handle and hasher on all paths.
+    $stream = [IO.File]::Open($p,[IO.FileMode]::Open,[IO.FileAccess]::Read,[IO.FileShare]::Read)
+    try {
+        $hasher = [Security.Cryptography.SHA256]::Create()
+        try { return [BitConverter]::ToString($hasher.ComputeHash($stream)).Replace('-','') }
+        finally { $hasher.Dispose() }
+    } finally { $stream.Dispose() }
 }
 function ReadReceipt {
     $p = Join-Path $root 'NOX_INSTALL_RECEIPT.json'
