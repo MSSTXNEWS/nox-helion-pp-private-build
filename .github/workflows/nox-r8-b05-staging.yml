@@ -60,6 +60,12 @@ jobs:
           $installedExe=Join-Path $target 'NOX.HELION.exe'
           if (-not (Test-Path -LiteralPath $installedExe)) { throw 'B05_INSTALLED_EXE_NOT_FOUND' }
           if (-not [string]::Equals((Get-FileHash $installedExe -Algorithm SHA256).Hash,$sha,[StringComparison]::OrdinalIgnoreCase)) { throw 'B05_INSTALLED_EXE_SHA_MISMATCH' }
+          # Pinned inputs must be promoted together, without staging residue.
+          $installedNames=@(Get-ChildItem -LiteralPath $target -Force | ForEach-Object Name)
+          $expectedNames=@('NOX.HELION.exe','BUILD_RECEIPT.json','Uninstall.exe')
+          if ($installedNames.Count -ne 3 -or @($installedNames | Where-Object { $_ -notin $expectedNames }).Count -ne 0) { throw 'B05_NONATOMIC_OR_FOREIGN_INSTALLED_ENTRY' }
+          $installedReceipt=Join-Path $target 'BUILD_RECEIPT.json'
+          if (-not [string]::Equals((Get-FileHash $installedReceipt -Algorithm SHA256).Hash,(Get-FileHash (Join-Path $fixture 'BUILD_RECEIPT.json') -Algorithm SHA256).Hash,[StringComparison]::OrdinalIgnoreCase)) { throw 'B05_RECEIPT_PROMOTION_SHA_MISMATCH' }
           $uninstaller=Join-Path $target 'Uninstall.exe'
           if (-not (Test-Path -LiteralPath $uninstaller)) { throw 'B05_UNINSTALLER_MISSING' }
           $foreign=Join-Path $target 'owner_data.txt'

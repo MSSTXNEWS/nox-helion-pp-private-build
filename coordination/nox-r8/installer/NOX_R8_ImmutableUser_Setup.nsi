@@ -33,7 +33,7 @@ ShowInstDetails show
 ShowUninstDetails show
 
 !macro CheckMode MODE
- nsExec::ExecToStack '"$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$PLUGINSDIR\NoLossGuard.ps1" -Mode ${MODE} -InstallDir "$INSTDIR" -ExpectedExeSha "${NOX_EXE_SHA256}" -ExpectedReceiptSha "${NOX_RECEIPT_SHA256}" -ExpectedSourceSha "${NOX_SOURCE_GIT_SHA}" -PayloadDir "$PLUGINSDIR"'
+ nsExec::ExecToStack '"$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$PLUGINSDIR\NoLossGuard.ps1" -Mode ${MODE} -InstallDir "$INSTDIR" -ExpectedExeSha "${NOX_EXE_SHA256}" -ExpectedReceiptSha "${NOX_RECEIPT_SHA256}" -ExpectedSourceSha "${NOX_SOURCE_GIT_SHA}" -PayloadDir "$PLUGINSDIR\payload"
  Pop $0
  Pop $1
  ${If} $0 != "0"
@@ -51,25 +51,23 @@ ShowUninstDetails show
 Function .onInit
  StrCpy $INSTDIR "$LOCALAPPDATA\Programs\NOX-HELION-R8\${NOX_EXE_SHA256}"
  InitPluginsDir
+ CreateDirectory "$PLUGINSDIR\payload"
  File "/oname=$PLUGINSDIR\NoLossGuard.ps1" "${NOX_GUARD_PATH}"
  ; Validate bundled EXE and receipt before creating the per-user target.
- File "/oname=$PLUGINSDIR\NOX.HELION.exe" "${NOX_EXE_PATH}"
- File "/oname=$PLUGINSDIR\BUILD_RECEIPT.json" "${NOX_RECEIPT_PATH}"
+ File "/oname=$PLUGINSDIR\payload\NOX.HELION.exe" "${NOX_EXE_PATH}"
+ File "/oname=$PLUGINSDIR\payload\BUILD_RECEIPT.json" "${NOX_RECEIPT_PATH}"
  !insertmacro CheckMode PreInstall
 FunctionEnd
 
 Section "Install immutable NOX R8"
- SetOutPath "$INSTDIR"
- ; Rename staged validated inputs: no in-place overwrite of owner data.
+ ; Only create the dedicated parent; do not create the immutable target here.
+ SetOutPath "$LOCALAPPDATA\Programs\NOX-HELION-R8"
+ ; One same-volume directory rename promotes BOTH prevalidated files together.
+ ; A cross-volume or denied rename must fail CLOSED without a partial target.
  ClearErrors
- Rename "$PLUGINSDIR\NOX.HELION.exe" "$INSTDIR\NOX.HELION.exe"
+ Rename "$PLUGINSDIR\payload" "$INSTDIR"
  IfErrors 0 +3
-   DetailPrint "B05_NOLOSS_HOLD:STAGED_EXE_RENAME_FAILED"
-   Abort
- ClearErrors
- Rename "$PLUGINSDIR\BUILD_RECEIPT.json" "$INSTDIR\BUILD_RECEIPT.json"
- IfErrors 0 +3
-   DetailPrint "B05_NOLOSS_HOLD:STAGED_RECEIPT_RENAME_FAILED"
+   DetailPrint "B05_NOLOSS_HOLD:ATOMIC_PAYLOAD_PROMOTION_FAILED"
    Abort
  !insertmacro CheckMode PostInstall
  WriteUninstaller "$INSTDIR\Uninstall.exe"
