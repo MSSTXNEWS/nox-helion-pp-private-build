@@ -222,3 +222,16 @@ assert "else if(v?.ok)$('streamHint').textContent='Ответ завершён �
 assert "else{$('streamHint').textContent='Ответ не сохранён в SQLite.';lastAnswer='';}" in complete_section, 'B04_STALE_SQLITE_SUCCESS_ON_ERROR_HOLD'
 assert "if(v?.stopped){lastAnswer='';$('streamHint').textContent='Поток остановлен. Частичный ответ не сохранён.';}" in complete_section
 print("B04 R8 SOURCE_ONLY: no stale SQLite saved banner during in-flight/error/STOP chat (Windows E2E NOT RUN)")
+
+# B04 acceptance race: native generationFinishedCount may be published before
+# WebView2 has processed complete. The next SEND must await the DOM owner ACK.
+# Existing UI/transport production code is intentionally untouched.
+native_test = cs.split('private async Task RunNativeSelfTestAsync()', 1)[1].split('private bool HasSavedPrompt(', 1)[0]
+saved_ack = cs.split('private async Task<bool> WaitForSavedChatUiReleaseAsync(', 1)[1].split('private async Task WaitForGenerationFinishAsync(', 1)[0]
+assert native_test.count('WaitForSavedChatUiReleaseAsync(TimeSpan.FromSeconds(4))') == 2, 'B04_CHAT_UI_RELEASE_ACK_COUNT_HOLD'
+assert native_test.index('NOX_WEBVIEW2_FIRST_CHAT_OWNER_NOT_RELEASED_HOLD') < native_test.index('int streamTokenTarget'), 'B04_FIRST_CHAT_UI_OWNER_RACE_HOLD'
+assert native_test.index('NOX_WEBVIEW2_RESUMED_CHAT_OWNER_NOT_RELEASED_HOLD') < native_test.index('checks["real_chat_after_http_stop_sqlite"] = "PASS"'), 'B04_RESUMED_CHAT_UI_OWNER_HOLD'
+for fragment in ('busy === false', 'activeChatId === null', "indicator?.classList.contains('on') === false", "hint?.textContent === 'Ответ завершён и сохранён в SQLite.'"):
+    assert fragment in saved_ack, 'B04_CHAT_UI_RELEASE_ACK_INCOMPLETE_HOLD: '+fragment
+assert 'if (released == "true") return true;' in saved_ack and 'return false;' in saved_ack
+print('B04 R8 SOURCE_ONLY: WebView2 terminal ACK gate before next SEND and after resumed Qwen chat; Windows E2E NOT_RUN')

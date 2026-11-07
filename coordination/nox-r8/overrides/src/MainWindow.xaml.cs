@@ -761,6 +761,10 @@ public partial class MainWindow : Window
             await WaitForGenerationFinishAsync(chatTarget, TimeSpan.FromMinutes(4));
             if (!lastGenerationCompleted || !HasSavedPrompt(prompt))
                 throw new InvalidOperationException("Live Qwen stream or SQLite chat write did not complete");
+            // A native finish counter can advance before WebView2 consumes the
+            // asynchronous complete event. Never start the STOP run with busy=true.
+            if (!await WaitForSavedChatUiReleaseAsync(TimeSpan.FromSeconds(4)))
+                throw new InvalidOperationException("NOX_WEBVIEW2_FIRST_CHAT_OWNER_NOT_RELEASED_HOLD");
             checks["real_chat_from_webview_to_qwen_to_sqlite"] = "PASS";
 
             stopMarker = "NOX_STOP_" + Guid.NewGuid().ToString("N");
@@ -805,6 +809,8 @@ public partial class MainWindow : Window
             await WaitForGenerationFinishAsync(resumeTarget, TimeSpan.FromMinutes(4));
             if (!lastGenerationCompleted || lastGenerationStopped || !HasSavedPrompt(resumePrompt))
                 throw new InvalidOperationException("NOX_CHAT_AFTER_STOP_SQLITE_HOLD");
+            if (!await WaitForSavedChatUiReleaseAsync(TimeSpan.FromSeconds(4)))
+                throw new InvalidOperationException("NOX_WEBVIEW2_RESUMED_CHAT_OWNER_NOT_RELEASED_HOLD");
             checks["real_chat_after_http_stop_sqlite"] = "PASS";
         }
         catch (Exception ex)
@@ -927,6 +933,29 @@ public partial class MainWindow : Window
                   return busy === false && activeChatId === null &&
                     busyIndicator?.classList.contains('on') === false &&
                     hint?.textContent?.includes('Частичный ответ не сохранён') === true;
+                })()
+                """);
+            if (released == "true") return true;
+            await Task.Delay(75);
+        }
+        return false;
+    }
+
+    // A native generation may finish before WebView2 receives its terminal ACK.
+    // Verify the real composer is unlocked and displays *this* saved outcome.
+    // Used only by opt-in native acceptance, never production chat dispatch.
+    private async Task<bool> WaitForSavedChatUiReleaseAsync(TimeSpan timeout)
+    {
+        var until = DateTime.UtcNow + timeout;
+        while (DateTime.UtcNow < until)
+        {
+            var released = await Browser.CoreWebView2.ExecuteScriptAsync("""
+                (() => {
+                  const hint = document.getElementById('streamHint');
+                  const indicator = document.getElementById('generation');
+                  return busy === false && activeChatId === null &&
+                    indicator?.classList.contains('on') === false &&
+                    hint?.textContent === 'Ответ завершён и сохранён в SQLite.';
                 })()
                 """);
             if (released == "true") return true;
