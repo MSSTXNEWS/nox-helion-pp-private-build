@@ -147,8 +147,8 @@ for action, table in (("Task", "tasks"), ("Note", "memory_notes")):
     assert segment.index("using var verifyDb") < segment.index(f'Send("{action.lower()}s.add.receipt"'), "D05_PREMATURE_ACK_HOLD"
     assert f'Send("{action.lower()}s.add.denied"' in segment, "D05_DENIAL_HOLD"
 for part in (
-    "pendingTask={requestId,text}",
-    "pendingNote={requestId,title,content}",
+    "pendingTask={requestId,text,persona:visibleDraftPersona}",
+    "pendingNote={requestId,title,content,persona:visibleDraftPersona}",
     "if(post('tasks.add',{text,requestId})===false)",
     "if(post('notes.add',{title,content,requestId})===false)",
     "v?.requestId===pendingTask.requestId&&v.saved===true",
@@ -157,6 +157,11 @@ for part in (
     "case 'notes.add.denied':",
 ):
     assert part in html, "D05_DRAFT_NOLOSS_HOLD " + part
+# B06's real source owns drafts by PersonaID to prevent an asynchronous
+# native ACK from clearing the draft displayed for another persona.
+assert "visibleDraftPersona===pendingTask.persona&&$('taskInput').value.trim()===pendingTask.text" in html, 'D05_TASK_CROSS_PERSONA_DRAFT_HOLD'
+assert "visibleDraftPersona===pendingNote.persona&&$('noteTitle').value.trim()===pendingNote.title" in html, 'D05_NOTE_TITLE_CROSS_PERSONA_DRAFT_HOLD'
+assert "visibleDraftPersona===pendingNote.persona&&$('noteText').value.trim()===pendingNote.content" in html, 'D05_NOTE_BODY_CROSS_PERSONA_DRAFT_HOLD'
 assert "post('tasks.add',{text});$('taskInput').value=''" not in html
 assert "post('notes.add',{title,content});$('noteTitle').value=''" not in html
 print("D05 R8 SOURCE_ONLY: native task/note owner receipts after SQLite readback and draft NO-LOSS PASS")
