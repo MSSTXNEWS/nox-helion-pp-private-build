@@ -1,7 +1,7 @@
 name: NOX R8 Windows desktop compilation
 on:
   push:
-    branches: [feature/nox-r8-liquid-one-exe-20261106]
+    branches: [feature/nox-r8-liquid-one-exe-20261106, work/f03-r8-responsive-functional-routes-20261107]
   workflow_dispatch:
 permissions:
   contents: read
@@ -35,6 +35,10 @@ jobs:
           Copy-Item './coordination/nox-r8/tests/test_r8_gpu_fallback.cjs' './r8/test_r8_gpu_fallback.cjs'
           node './r8/test_r8_gpu_fallback.cjs'
           if ($LASTEXITCODE -ne 0) { throw 'D04_GPU_FALLBACK_SOURCE_HOLD' }
+          # F03: run original production route/keyboard/ARIA handlers against both layouts.
+          Copy-Item './coordination/nox-r8/tests/test_r8_f03_responsive_routes.cjs' './r8/test_r8_f03_responsive_routes.cjs'
+          node './r8/test_r8_f03_responsive_routes.cjs'
+          if ($LASTEXITCODE -ne 0) { throw 'F03_RESPONSIVE_NATIVE_ROUTES_HOLD' }
           Copy-Item './coordination/nox-r8/tests/test_r8_ipc_contract.py' './r8/test_r8_ipc_contract.py'
           python './r8/test_r8_ipc_contract.py'
           if ($LASTEXITCODE -ne 0) { throw 'B02_NATIVE_IPC_SOURCE_HOLD' }
