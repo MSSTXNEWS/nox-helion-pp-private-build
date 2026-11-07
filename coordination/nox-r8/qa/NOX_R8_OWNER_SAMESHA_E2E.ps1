@@ -25,7 +25,7 @@ $dataDir=Join-Path $env:LOCALAPPDATA 'NOX_HELION'
 $r=[ordered]@{
   schema='NOX_R8_B06_OWNER_SAMESHA_E2E_V1'; runId=$id; startedAt=$started.ToString('O')
   expectedSha256=$ExpectedSha256.ToLowerInvariant(); expectedSourceGitSha=$ExpectedSourceGitSha.ToLowerInvariant(); exe=$ExePath
-  exeShaBefore=$null; exeShaAfter=$null; sourceGitSha='NOT_VERIFIED'
+  exeShaBefore=$null; exeShaAfter=$null; buildReceiptShaBefore=$null; buildReceiptShaAfter=$null; sourceGitSha='NOT_VERIFIED'
   provider='http://127.0.0.1:11436'; model='nox-qwen-clean:latest'
   providerVerified=$false; modelDigest=$null; providerRuntimeVerified=$false; nativePid=$null; nativeExit=$null
   nativeReceiptVerified=$false; nativeChecks=@{}; ownerSqliteUnchanged=$false
@@ -36,7 +36,7 @@ $r=[ordered]@{
   ownerHistoryRestart='NOT_TESTED'; nativeTokenChunkCount='NOT_OBSERVED'
   status='HOLD'; error=$null
 }
-$baseline=$null; $p=$null
+$baseline=$null; $p=$null; $buildPath=$null
 try {
   $exe=[IO.Path]::GetFullPath($ExePath)
   $r.exe=$exe
@@ -50,6 +50,7 @@ try {
   if(!(Test-Path -LiteralPath $buildPath -PathType Leaf)){
     throw 'R8_BUILD_RECEIPT_MISSING_HOLD'
   }
+  $r.buildReceiptShaBefore=(Get-FileHash -LiteralPath $buildPath -Algorithm SHA256).Hash.ToLowerInvariant()
   $build=Get-Content -LiteralPath $buildPath -Raw -Encoding UTF8 | ConvertFrom-Json
   if([string]$build.schema -cne 'NOX_R8_NATIVE_SINGLE_EXE_V1'){
     throw 'R8_BUILD_RECEIPT_SCHEMA_HOLD'
@@ -198,6 +199,9 @@ try {
     if(Test-Path -LiteralPath $r.exe -PathType Leaf){
       $r.exeShaAfter=(Get-FileHash -LiteralPath $r.exe -Algorithm SHA256).Hash.ToLowerInvariant()
     }
+    if($null -ne $buildPath -and (Test-Path -LiteralPath $buildPath -PathType Leaf)) {
+      $r.buildReceiptShaAfter=(Get-FileHash -LiteralPath $buildPath -Algorithm SHA256).Hash.ToLowerInvariant()
+    }
     if($null -ne $baseline) {
       $after=Snapshot $dataDir
       $r.ownerSqliteUnchanged=(ConvertTo-Json -InputObject $baseline -Compress) -ceq
@@ -207,7 +211,11 @@ try {
       throw 'SAME_SHA_PRE_POST_HOLD'
     }
     if(!$r.ownerSqliteUnchanged){throw 'OWNER_SQLITE_CHANGED_DURING_ACCEPTANCE_HOLD'}
-    if($r.nativeReceiptVerified -and $r.providerVerified -and $r.providerRuntimeVerified -and $r.uiSmokeAccepted -and $r.uiSettingsRestartVerified -and !$r.error){
+    if($null -ne $r.buildReceiptShaBefore -and $r.buildReceiptShaBefore -cne $r.buildReceiptShaAfter){
+      throw 'BUILD_RECEIPT_CHANGED_DURING_ACCEPTANCE_HOLD'
+    }
+    if($r.nativeReceiptVerified -and $r.providerVerified -and $r.providerRuntimeVerified -and $r.uiSmokeAccepted -and $r.uiSettingsRestartVerified -and
+        $null -ne $r.buildReceiptShaBefore -and $r.buildReceiptShaBefore -ceq $r.buildReceiptShaAfter -and !$r.error){
       $r.physicalScopeAccepted=$true
       $r.status='NATIVE_QWEN_STOP_UI_SETTINGS_SCOPE_PASS_RELEASE_HOLD'
     }
