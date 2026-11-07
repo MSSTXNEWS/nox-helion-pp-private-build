@@ -1,6 +1,6 @@
 """R8 real local provider autostart + user STOP admission (SOURCE_ONLY)."""
 from pathlib import Path
-src = Path(__file__).resolve().parents[1] / "src" / "MainWindow.xaml.cs"
+src = Path(__file__).resolve().parent / "src" / "MainWindow.xaml.cs"
 s = src.read_text(encoding="utf-8")
 checks = [
     "private readonly SemaphoreSlim engineStartLock = new(1, 1);",
