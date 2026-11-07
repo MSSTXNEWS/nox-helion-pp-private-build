@@ -268,6 +268,8 @@ console.log('D01 SOURCE_ONLY PASS: knowledge/memory keyboard IME, repeat, Enter'
   const elements = Object.fromEntries(ids.map(id=>[id,{clears:0,
     replaceChildren(){this.clears++;}}]));
   for(const id of draftIds)elements[id]={value:oldDraft[id]};
+  // Production switchPersonaDrafts updates this hint on PersonaID changes.
+  elements.streamHint={textContent:''};
   const eventContext = {$:id=>elements[id],window:{},
     v:{persona:'AM'},committedSettings:{persona:'KV'},visibleDraftPersona:'KV',personaDrafts:new Map()};
   const draftStart=html.indexOf('function switchPersonaDrafts(next){');
