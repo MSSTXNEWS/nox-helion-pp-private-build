@@ -24,7 +24,7 @@ select,button{background:#142735;border:1px solid #507184;color:white;border-rad
 <div class="chatlog" id="log" role="log" aria-live="polite"><div class="msg assistant"><i>NOX</i>Единый интерфейс подключается к локальному Ollama. Расскажи, чем помочь.</div></div>
 <form id="form"><div class="inputrow"><textarea id="message" maxlength="8000" placeholder="Напиши NOX..." required></textarea></div>
 <div class="controls"><label class="sub">Назначение <select id="task"><option value="general">Общий интеллект</option><option value="code">Программирование</option></select></label>
-<div><button id="clear" type="button">Начать новый контекст</button> <button id="send" type="submit">Отправить NOX</button></div></div></form>
+<div><button id="clear" type="button">Начать новый контекст</button> <button id="send" type="submit">Отправить NOX</button> <button id="stop" type="button" disabled>STOP</button></div></div></form>
 <div class="warning">Общий маршрутизатор работает с уже установленными локальными моделями. История диалога сохраняется в локальном журнале NOX между перезагрузками. Запись в каноническую S03 и применение LoRA к рабочей модели пока не подключены и не имитируются.</div>
 <p id="historyStatus" class="sub" aria-live="polite">Восстанавливаю историю...</p></section><aside class="panel"><h2 style="font-size:16px;font-weight:500;color:var(--gold)">Самомодель и компоненты</h2>
 <div class="row"><span class="k">Идентичность</span><strong>NOX HELION</strong></div>
@@ -35,6 +35,7 @@ select,button{background:#142735;border:1px solid #507184;color:white;border-rad
 <div class="row"><span class="k">Память S03</span><strong id="memory">Не проверена</strong></div>
 <div class="row"><span class="k">Запись памяти из чата</span><strong>Не подключена</strong></div>
 <div class="row"><span class="k">Применение LoRA</span><strong>Не подключено</strong></div>
+<div class="row"><span class="k">SOUL · обученные веса</span><strong id="soul">Проверка...</strong></div>
 <div class="row"><span class="k">Сознание</span><strong>Не доказано</strong></div>
 <h3 class="sub">Восемь CoreID</h3><p id="cores" class="sub">—</p>
 <p class="sub" id="error" aria-live="polite"></p><p class="sub" id="resource" aria-live="polite">Проверка GPU...</p>
@@ -45,6 +46,7 @@ select,button{background:#142735;border:1px solid #507184;color:white;border-rad
 const $=id=>document.getElementById(id);
 const hist=[];
 let pending=false;
+let activeController=null;
 function add(role,content){
   const div=document.createElement("div");
   div.className="msg "+role;
@@ -71,6 +73,7 @@ async function status(){
     $("memory").textContent=s.native_memory?.some(m=>m.reachable)?"Найдена · только чтение":"Не подключена";
     $("cores").textContent=(s.core_ids||[]).join(" · ");
     $("error").textContent=s.error||"";
+    $("soul").textContent=s.soul_affect?.available ? "EN · F1 "+s.soul_affect.holdout_micro_f1.toFixed(3)+" · CPU" : "Не подключена";
   }catch(e){state("НЕ ПОДКЛЮЧЁН");$("error").textContent=e.message;}
 }
 async function restore(){
@@ -111,6 +114,8 @@ async function sendMessage(message){
   if(pending)return;
   pending=true;
   $("send").disabled=true;
+  $("stop").disabled=false;
+  activeController=new AbortController();
   state("NOX отвечает...");
   const history=hist.slice(-24);
   const bodyNode=add("assistant","");
@@ -118,7 +123,8 @@ async function sendMessage(message){
   const t0=performance.now();
   try{
     const r=await fetch("/api/nox/chat/stream",{
-      method:"POST",headers:{"Content-Type":"application/json"},
+      method:"POST",signal:activeController.signal,
+      headers:{"Content-Type":"application/json"},
       body:JSON.stringify({message,task:$("task").value,history})
     });
     if(!r.ok){
@@ -132,6 +138,7 @@ async function sendMessage(message){
     const consume=line=>{
       if(!line.trim())return;
       const evt=JSON.parse(line);
+      if(evt.type==="preparing")state(evt.message||"NOX подготавливает контекст...");
       if(evt.type==="start"){model=evt.model||model;state("NOX генерирует · "+model);}
       if(evt.type==="delta"){answer+=evt.text||"";bodyNode.textContent=answer;$("log").scrollTop=$("log").scrollHeight;}
       if(evt.type==="error")throw Error(evt.error||"Ошибка генерации");
@@ -158,11 +165,12 @@ async function sendMessage(message){
     hist.push({role:"user",content:message},{role:"assistant",content:answer});
     $("historyStatus").textContent="Новый ответ сохранён локально";
   }catch(ex){
-    bodyNode.textContent=(answer?answer+"\n\n":"")+"Ошибка: "+ex.message;
+    const interrupted=ex.name==="AbortError";
+    bodyNode.textContent=(answer?answer+"\n\n":"")+(interrupted?"Ответ остановлен · не сохранён":"Ошибка: "+ex.message);
     if(!$("message").value)$("message").value=message;
-    state("ОШИБКА");
+    state(interrupted?"STOP":"ОШИБКА");
     $("historyStatus").textContent="Ответ не подтверждён как сохранённый";
-  }finally{pending=false;$("send").disabled=false;}
+  }finally{pending=false;activeController=null;$("send").disabled=false;$("stop").disabled=true;}
 }
 $("form").addEventListener("submit",e=>{
   e.preventDefault();
@@ -172,6 +180,7 @@ $("form").addEventListener("submit",e=>{
   add("user",text);
   sendMessage(text);
 });
+$("stop").addEventListener("click",()=>{if(activeController)activeController.abort();});
 $("clear").addEventListener("click",()=>{
   hist.length=0;
   $("log").replaceChildren();
