@@ -37,7 +37,33 @@ try{
   }
  }
 }finally{$z.Dispose()}
-Copy-Item -LiteralPath $source -Destination $stage -Recurse -ErrorAction Stop
+# Copy only application source code and static vendor libraries from original.
+# Never duplicate S03 SQLite, weights, checkpoints, logs, user data or VAPID secrets.
+$sourceInfo=Get-Item -LiteralPath $source -Force
+if(($sourceInfo.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0){
+ throw 'ORIGINAL_SOURCE_REPARSE_POINT_HOLD'
+}
+New-Item -ItemType Directory -Path $stage -ErrorAction Stop|Out-Null
+$allowExt=@('.py','.js','.mjs','.css','.html','.svg','.webmanifest')
+foreach($f in @(Get-ChildItem -LiteralPath $source -File -Force)){
+ if($allowExt -notcontains $f.Extension.ToLowerInvariant()){continue}
+ if(($f.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0){throw "SOURCE_FILE_REPARSE_POINT_HOLD: $($f.Name)"}
+ Copy-Item -LiteralPath $f.FullName -Destination (Join-Path $stage $f.Name) -ErrorAction Stop
+}
+foreach($folder in @('vendor','PUSH_PACKAGES','tests')){
+ $p=Join-Path $source $folder
+ if(!(Test-Path -LiteralPath $p -PathType Container)){continue}
+ $item=Get-Item -LiteralPath $p -Force
+ if(($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0){throw "SOURCE_FOLDER_REPARSE_POINT_HOLD: $folder"}
+ foreach($f in @(Get-ChildItem -LiteralPath $p -Recurse -File -Force -ErrorAction Stop)){
+  if(($f.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0){throw "SOURCE_VENDOR_REPARSE_POINT_HOLD: $($f.FullName)"}
+  $relative=$f.FullName.Substring($source.Length).TrimStart([char]'\')
+  $output=Join-Path $stage $relative
+  New-Item -ItemType Directory -Path (Split-Path -Parent $output) -Force|Out-Null
+  Copy-Item -LiteralPath $f.FullName -Destination $output -ErrorAction Stop
+ }
+}
+if(!(Test-Path -LiteralPath (Join-Path $stage 'server.py'))){throw 'ORIGINAL_WEB_SERVER_NOT_COPIED_HOLD'}
 $overlay=Join-Path $stage '_WEB_SOURCE_OVERLAY'
 New-Item -ItemType Directory -Path $overlay -Force|Out-Null
 [IO.Compression.ZipFile]::ExtractToDirectory((Resolve-Path -LiteralPath $Kit).Path,$overlay)
