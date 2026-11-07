@@ -143,7 +143,10 @@ async def capture(args):
                             "sha256": sha256_file(out_path), "bytes": out_path.stat().st_size
                         })
         finally:
-            await browser.close()
+            # CDP is attached to an existing WPF host. Closing its browser could
+            # kill the owner's WebView2 process; the Playwright context manager
+            # only disconnects our client when the witness ends.
+            pass
 
     if len(screenshots) != 64:
         raise RuntimeError("EXPECTED_EXACTLY_64_REAL_SCREENSHOTS_HOLD")
