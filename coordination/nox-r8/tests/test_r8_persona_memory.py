@@ -9,7 +9,8 @@ src = Path(__file__).resolve().parent / "src"
 cs = (src / "MainWindow.xaml.cs").read_text(encoding="utf-8")
 web = (src / "index.html").read_text(encoding="utf-8")
 for guard in (
-    'MigratePersonaStorage(db);',
+    'MigratePersonaStorage(db, existingTables);',
+    'MigratePersonaStorage(live, hadExistingTablesBeforeBootstrap: true);',
     'CheckpointSqlite(db, "PRE_PERSONA_MIGRATION")',
     'CheckpointSqlite(db, "PRE_VUNEO_IMPORT")',
     'source.BackupDatabase(dest)', 'PRAGMA quick_check',
@@ -29,7 +30,7 @@ for guard in (
     'FROM chat_history WHERE persona=$persona ORDER BY id DESC LIMIT 3',
     'FROM memory_notes WHERE persona=$persona ORDER BY id DESC LIMIT 6',
     'FROM memory_notes WHERE persona=$persona ORDER BY id DESC LIMIT 150',
-    'DELETE FROM memory_notes WHERE id=$id AND persona=$persona',
+    'NOX_NOTE_CHANGED_OR_FOREIGN_HOLD',
     'SELECT timestamp,prompt,answer FROM chat_history',
     'SELECT created_at,title,content FROM memory_notes',
     'NOX_MEMORY_QUERY_LIMIT_HOLD',
@@ -42,6 +43,18 @@ for guard in (
 ):
     assert guard in cs, guard
 assert "case 'persona.changed':" in web
+# B06 owner note deletion strengthens the original persona-scoped DELETE
+# with optimistic title/content/created_at checks, avoiding foreign/changed
+# record removal. A stale single-line SQL literal is no longer authoritative.
+delete_sql = re.search(
+    r"DELETE FROM memory_notes\s+WHERE id=\$id AND persona=\$persona"
+    r"\s+AND title=\$title AND content=\$content AND created_at=\$created",
+    cs,
+)
+assert delete_sql, "D03_PERSONA_SCOPED_COMPARE_AND_DELETE_HOLD"
+note_method = cs.split("private void DeleteNote(long id, string requestId)",1)[1]
+assert note_method.index('CheckpointSqlite(db, "PRE_NOTE_DELETE")') < note_method.index("DELETE FROM memory_notes")
+assert "NOX_NOTE_CHANGED_OR_FOREIGN_HOLD" in note_method
 
 # D03 owner export safety: staging and SHA readback must precede a
 # no-overwrite final rename. Existing backups must never be truncated.
