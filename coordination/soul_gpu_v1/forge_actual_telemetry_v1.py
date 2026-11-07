@@ -95,11 +95,21 @@ def _log_metrics(file):
             "log_path":str(file)}
 
 def observation(root):
-    path=root/"brain"/"telemetry"/"training.json"
-    t=_json(path) or {}
+    paths=[root/"brain"/"telemetry"/"training.json",
+           root/"brain"/"telemetry"/"training_safe70.json"]
+    # Use the freshest complete actual receipt, never merge conflicting PIDs.
+    received=[]
+    for candidate in paths:
+        value=_json(candidate)
+        if isinstance(value,dict):
+            try:received.append((candidate.stat().st_mtime,candidate,value))
+            except OSError:pass
+    if received:
+        modified,path,t=max(received,key=lambda item:item[0])
+    else:
+        modified,path,t=None,paths[0],{}
     now=datetime.now(timezone.utc).timestamp()
-    try:age=max(0,now-path.stat().st_mtime)
-    except OSError:age=None
+    age=max(0,now-modified) if modified is not None else None
     pid=t.get("process_id")
     active=_process_active(pid)
     recent=age is not None and age<=20
