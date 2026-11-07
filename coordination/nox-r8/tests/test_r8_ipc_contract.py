@@ -193,7 +193,7 @@ assert "SELECT value FROM preferences WHERE key='model'" in model_select and 'NO
 for fragment in ("pendingModel={requestId,model}", "if(post('model.select',{model,requestId})===false)",
                  "v?.requestId===pendingModel.requestId&&v?.model===pendingModel.model",
                  "case 'model.select.receipt':", "case 'model.select.denied':",
-                 "pendingModel=null;$('saveModel').disabled=false"):
+                 "pendingModel=null;$('saveModel').disabled=false;$('modelPicker').disabled=false"):
     assert fragment in html, "D05_MODEL_WEBVIEW_OWNER_ACK_HOLD " + fragment
 assert "post('model.select',{model});" not in html, "D05_MODEL_UNOWNED_DISPATCH_HOLD"
 print('D05 R8 MODEL SELECT SOURCE_ONLY: native owner request/SQLite readback/ack/denial PASS; owner Windows NOT_TESTED')
@@ -287,3 +287,17 @@ assert 'v?.requestId!==pendingSettings.requestId' in settings_ack and 'v?.saved!
 assert 'v?.requestId!==pendingSettings.requestId' in settings_deny, 'D05_SETTINGS_STALE_DENIAL_HOLD'
 assert "persistSetting('performance','MAX')" in html, 'D05_MAX_QUICK_SETTING_OWNER_HOLD'
 print('D05 SETTINGS SOURCE_ONLY requestId receipts/denials guarded; Windows NOT RUN')
+
+# D05 MODEL UI: a provider HEALTH response may precede the committed
+# model.select receipt. Keep the pending owner's exact choice visible/locked,
+# rather than silently switching the picker to the previous SQLite model.
+model_health = html.split("case 'health':", 1)[1].split("case 'history':", 1)[0]
+model_success = html.split("case 'model.select.receipt':", 1)[1].split("case 'model.select.denied':", 1)[0]
+model_denial = html.split("case 'model.select.denied':", 1)[1].split("case 'download':", 1)[0]
+assert "$('modelPicker').disabled=true" in html.split("post('model.select',{model,requestId})", 1)[0][-600:], 'D05_MODEL_PENDING_PICKER_LOCK_HOLD'
+assert "const ownerModel=pendingModel?.model;" in model_health and "picker.value=ownerModel;else if(v.model)picker.value=v.model;" in model_health, 'D05_MODEL_STALE_PROVIDER_HEALTH_HOLD'
+for block in (model_success, model_denial):
+    assert "$('modelPicker').disabled=false" in block, 'D05_MODEL_PICKER_RELEASE_HOLD'
+assert "$('modelPicker').value=String(v.model)" in model_success, 'D05_MODEL_OWNER_RECEIPT_DISPLAY_HOLD'
+assert "$('modelPicker').disabled=false" in html.split("if(post('model.select',{model,requestId})===false)", 1)[1].split(";$('pullModel').onclick", 1)[0], 'D05_MODEL_IPC_REJECT_RELEASE_HOLD'
+print('D05 MODEL HEALTH SOURCE_ONLY: picker remains bound to pending owner choice, unlocks on native receipt/denial')
