@@ -59,7 +59,7 @@ Write-Host ""
 Write-Host "NOX: starting NEW SOUL neural weights training on CPU" -ForegroundColor Cyan
 Write-Host "Dataset: official Google GoEmotions, pinned train/dev/test."
 Write-Host "Old Qwen2.5 LoRA checkpoints and canonical S03 are read-only to this script." -ForegroundColor Yellow
-Write-Host "New model: hashed feature EmbeddingBag + MLP6, English emotions research-only."
+Write-Host "New model: hashed features + neural MLP6, English emotions research-only."
 & $python -u (Join-Path $here "nox_prime_soul_stage1_train.py") --root $root --epochs 2
 $trainRC=$LASTEXITCODE
 if ($trainRC -ne 0) {
@@ -84,7 +84,7 @@ if (!$SkipVoice) {
             }
             & $voicePython -m pip install --disable-pip-version-check "huggingface_hub==0.36.0"
             if ($LASTEXITCODE -ne 0) { throw "Voice dependency install failed" }
-            & $voicePython -u $voicePy --group starter --mode models --execute
+            & $voicePython -u $voicePy --group starter --mode models --only qwen3_06_customvoice --execute
             if ($LASTEXITCODE -ne 0) { throw "Voice starter download incomplete" }
         }
         catch {
