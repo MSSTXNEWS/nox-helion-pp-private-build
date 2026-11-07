@@ -44,6 +44,9 @@ ShowUninstDetails show
    !endif
    DetailPrint "B05_NOLOSS_HOLD ${MODE} $1"
    MessageBox MB_OK|MB_ICONSTOP "NOX install boundary refused. Existing owner data untouched." /SD IDOK
+   ; NSIS Abort alone can return process exit 0 on refused uninstall.
+   ; Nonzero exit is required so the owner/launcher never mistakes HOLD for removal.
+   SetErrorLevel 20
    Abort
  ${EndIf}
 !macroend
