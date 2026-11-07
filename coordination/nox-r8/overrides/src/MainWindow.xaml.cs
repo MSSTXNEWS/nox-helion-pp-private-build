@@ -941,7 +941,8 @@ public partial class MainWindow : Window
             string[] needed = {
                 "chat_history", "tasks", "preferences", "imported_sources",
                 "memory_notes", "feedback", "learn_requests",
-                "idx_learn_pending_owner", "idx_chat_history_time"
+                "idx_learn_pending_owner", "idx_chat_history_time",
+                "idx_chat_persona", "idx_notes_persona"
             };
             using var journal = db.CreateCommand();
             journal.CommandText = "PRAGMA journal_mode";
@@ -1105,7 +1106,19 @@ public partial class MainWindow : Window
     {
         bool chatReady = HasPersonaColumn(db, "chat_history");
         bool notesReady = HasPersonaColumn(db, "memory_notes");
-        if (chatReady && notesReady) return;
+        // An interrupted/partial migration can have both Persona columns but
+        // lack either required index. Do not silently declare it complete.
+        var foundIndexes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        using (var indexInventory = db.CreateCommand())
+        {
+            indexInventory.CommandText =
+                "SELECT name FROM sqlite_master WHERE type='index' AND name IN ('idx_chat_persona','idx_notes_persona')";
+            using var indexRows = indexInventory.ExecuteReader();
+            while (indexRows.Read()) foundIndexes.Add(indexRows.GetString(0));
+        }
+        bool missingIndexes = !foundIndexes.Contains("idx_chat_persona") ||
+                              !foundIndexes.Contains("idx_notes_persona");
+        if (chatReady && notesReady && !missingIndexes) return;
         // A brand-new DB has no owner rows to lose: avoid a redundant empty backup.
         // For any existing table set, retain the verified pre-migration snapshot.
         if (hadExistingTablesBeforeBootstrap)

@@ -95,9 +95,13 @@ assert "MigratePersonaStorage(db, existingTables);" in init
 migration = src.split(
     "private void MigratePersonaStorage(SqliteConnection db, bool hadExistingTablesBeforeBootstrap)", 1
 )[1].split("private string ActivePersona()", 1)[0]
-assert migration.index("if (chatReady && notesReady) return;") < migration.index(
+assert migration.index("if (chatReady && notesReady && !missingIndexes) return;") < migration.index(
     "if (hadExistingTablesBeforeBootstrap)"
 )
+assert "'idx_chat_persona','idx_notes_persona'" in migration
+assert "using var indexRows = indexInventory.ExecuteReader();" in migration
+assert "foundIndexes.Contains" in migration
+assert '"idx_chat_persona", "idx_notes_persona"' in init
 assert migration.index("if (hadExistingTablesBeforeBootstrap)") < migration.index(
     'CheckpointSqlite(db, "PRE_PERSONA_MIGRATION")'
 ) < migration.index("using var tx = db.BeginTransaction();")
@@ -208,5 +212,35 @@ with tempfile.TemporaryDirectory(prefix="nox_b03_metadata_") as folder:
         assert verify.execute("PRAGMA quick_check").fetchone()[0] == "ok"
         assert verify.execute("PRAGMA user_version").fetchone()[0] == 77, "NOX_B03_METADATA_PREIMAGE_LOST_HOLD"
     assert owner.exists() and hashlib.sha256(owner.read_bytes()).hexdigest()
+
+# A partially completed Persona migration may have both columns but no
+# persona indexes. The old early return silently treated it as healthy. Exercise
+# the real SQLite DDL/online-backup semantics on an isolated owner-data fixture;
+# this is not evidence that original WPF C# has executed.
+with tempfile.TemporaryDirectory(prefix="nox_b03_persona_index_") as folder:
+    original = Path(folder) / "owner.sqlite3"
+    preimage = Path(folder) / "before_index_repair.sqlite3"
+    with closing(sqlite3.connect(original)) as db:
+        db.execute("CREATE TABLE chat_history (id INTEGER PRIMARY KEY, timestamp TEXT, prompt TEXT, answer TEXT, persona TEXT NOT NULL DEFAULT 'KV')")
+        db.execute("CREATE TABLE memory_notes (id INTEGER PRIMARY KEY, created_at TEXT, title TEXT, content TEXT, persona TEXT NOT NULL DEFAULT 'KV')")
+        db.execute("INSERT INTO chat_history VALUES(1,'now','question','answer','KV')")
+        db.execute("INSERT INTO memory_notes VALUES(1,'now','title','note','KV')")
+        db.commit()
+        initial = {r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type='index'")}
+        assert "idx_chat_persona" not in initial and "idx_notes_persona" not in initial
+        with closing(sqlite3.connect(preimage)) as dest:
+            db.backup(dest)
+        db.execute("CREATE INDEX IF NOT EXISTS idx_chat_persona ON chat_history(persona,id)")
+        db.execute("CREATE INDEX IF NOT EXISTS idx_notes_persona ON memory_notes(persona,id)")
+        db.commit()
+        repaired = {r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type='index'")}
+        assert {"idx_chat_persona", "idx_notes_persona"} <= repaired
+        assert db.execute("SELECT prompt,answer,persona FROM chat_history").fetchone() == ("question","answer","KV")
+        assert db.execute("SELECT content,persona FROM memory_notes").fetchone() == ("note","KV")
+        assert db.execute("PRAGMA quick_check").fetchone()[0] == "ok"
+    with closing(sqlite3.connect(preimage)) as copy:
+        assert copy.execute("SELECT content,persona FROM memory_notes").fetchone() == ("note","KV")
+        assert "idx_notes_persona" not in {r[0] for r in copy.execute("SELECT name FROM sqlite_master WHERE type='index'")}
+        assert copy.execute("PRAGMA quick_check").fetchone()[0] == "ok"
 
 print("B03_R8_SOURCE_ONLY_PASS: guards, WAL, metadata-only owner preimage, quick_check/SHA; native Windows pending")
