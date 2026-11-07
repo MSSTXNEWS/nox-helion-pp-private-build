@@ -92,7 +92,11 @@ assert snapshot.count('Pooling = false') == 2, 'B02_SQLITE_BACKUP_POOLING_HOLD'
 # B03 introduced a distinct third pooled-handle safeguard in its own smoke
 # method. Do not count it as part of CheckpointSqlite or weaken its guard.
 smoke_backup = cs.split('private void VerifyIsolatedSqliteBackup(', 1)[1].split('private static bool HasPersonaColumn(', 1)[0]
-assert smoke_backup.count('Pooling = false') == 2, 'B03_SMOKE_BACKUP_POOLING_HOLD'
+# F01's real WAL writer negative control adds its own separately-unpooled
+# readback. Keep the original two no-pooling handles mandatory and account
+# for the extra isolated reader only when the native fixture is present.
+expected_unpooled = 3 if "NOX_F01_WAL_UNCOMMITTED_VISIBLE_HOLD" in smoke_backup else 2
+assert smoke_backup.count('Pooling = false') == expected_unpooled, 'B03_SMOKE_BACKUP_POOLING_HOLD'
 assert 'PRAGMA quick_check' in smoke_backup and 'NOX_B03_SMOKE_INTEGRITY_HOLD' in smoke_backup, 'B03_SMOKE_BACKUP_INTEGRITY_HOLD'
 assert re.search(r'DataSource\s*=\s*file,\s*Mode\s*=\s*SqliteOpenMode\.ReadWriteCreate,\s*Pooling\s*=\s*false', snapshot)
 assert re.search(r'DataSource\s*=\s*file,\s*Mode\s*=\s*SqliteOpenMode\.ReadOnly,\s*Pooling\s*=\s*false', snapshot)
