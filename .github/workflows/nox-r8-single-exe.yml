@@ -1,7 +1,7 @@
 name: NOX R8 Windows desktop compilation
 on:
   push:
-    branches: [feature/nox-r8-liquid-one-exe-20261106]
+    branches: [feature/nox-r8-liquid-one-exe-20261106, work/f01-r8-backup-lock-e2e-20261107]
   workflow_dispatch:
 permissions:
   contents: read
@@ -52,6 +52,10 @@ jobs:
           Copy-Item './coordination/nox-r8/tests/test_r8_b03_checkpoint_no_loss.py' './r8/test_r8_b03_checkpoint_no_loss.py'
           python './r8/test_r8_b03_checkpoint_no_loss.py'
           if ($LASTEXITCODE -ne 0) { throw 'B03_CHECKPOINT_NOLOSS_SOURCE_HOLD' }
+          # F01: source contract + real isolated native Windows exclusive snapshot handle in the UI smoke below.
+          Copy-Item './coordination/nox-r8/tests/test_r8_f01_native_backup_lock.py' './r8/test_r8_f01_native_backup_lock.py'
+          python './r8/test_r8_f01_native_backup_lock.py'
+          if ($LASTEXITCODE -ne 0) { throw 'F01_NATIVE_BACKUP_LOCK_SOURCE_HOLD' }
           # D01: execute actual embedded chat click handler with offline/overlength/valid drafts.
           Copy-Item './coordination/nox-r8/tests/test_r8_d01_chat_draft.cjs' './r8/test_r8_d01_chat_draft.cjs'
           node './r8/test_r8_d01_chat_draft.cjs'
