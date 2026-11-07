@@ -126,7 +126,7 @@ generate = cs.split('private async Task Generate(', 1)[1].split('private void Pe
 persist = cs.split('private void PersistChat(', 1)[1].split('private object ReadHistory(', 1)[0]
 assert 'CancellationTokenSource.CreateLinkedTokenSource(cancellation.Token)' in generate
 assert 'readWindow.CancelAfter(TimeSpan.FromMinutes(3))' in generate
-assert 'await reader.ReadLineAsync(readWindow.Token)' in generate
+assert 'await ReadBoundedOllamaLineAsync(reader, readWindow.Token)' in generate, 'B04_BOUNDED_OWNER_CANCEL_HOLD'
 assert 'catch (OperationCanceledException) when (cancellation.IsCancellationRequested)' in generate
 assert 'catch (OperationCanceledException) {' in generate and 'OLLAMA_TIMEOUT:' in generate
 assert (generate.index('cancellation.Token.ThrowIfCancellationRequested();', generate.index('if (!completed)')) <
