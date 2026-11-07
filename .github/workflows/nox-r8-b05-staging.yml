@@ -40,3 +40,32 @@ jobs:
           & $compiler /V2 "/DNOX_EXE_PATH=$exe" "/DNOX_RECEIPT_PATH=$receipt" "/DNOX_GUARD_PATH=$guard" "/DNOX_EXE_SHA256=$exeSha" "/DNOX_RECEIPT_SHA256=$receiptSha" "/DNOX_SOURCE_GIT_SHA=$src" "/DNOX_SETUP_OUT=$setup" $script
           if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $setup)) { throw 'B05_NSIS_COMPILE_FAILED' }
           Write-Host 'B05_NSIS_TEMPLATE_COMPILE_PASS_FIXTURE_ONLY_RELEASE_HOLD'
+
+      - name: Real NSIS install and foreign-file-safe uninstall on disposable Windows runner
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $fixture=Join-Path $env:RUNNER_TEMP 'b05-nsis-source-only'
+          $setup=Join-Path $fixture 'NOX_B05_NSIS_COMPILER_ONLY.exe'
+          $exe=Join-Path $fixture 'fixture.exe'
+          $sha=(Get-FileHash $exe -Algorithm SHA256).Hash.ToLowerInvariant()
+          $target=Join-Path $env:LOCALAPPDATA "Programs\\NOX-HELION-R8\\$sha"
+          if (Test-Path -LiteralPath $target) { throw 'B05_FIXTURE_TARGET_PREEXISTS' }
+          $p=Start-Process -FilePath $setup -ArgumentList '/S' -PassThru -Wait
+          if ($p.ExitCode -ne 0) { throw "B05_NSIS_INSTALL_FAILED:$($p.ExitCode)" }
+          $installedExe=Join-Path $target 'NOX.HELION.exe'
+          if (-not (Test-Path -LiteralPath $installedExe)) { throw 'B05_INSTALLED_EXE_NOT_FOUND' }
+          if (-not [string]::Equals((Get-FileHash $installedExe -Algorithm SHA256).Hash,$sha,[StringComparison]::OrdinalIgnoreCase)) { throw 'B05_INSTALLED_EXE_SHA_MISMATCH' }
+          $uninstaller=Join-Path $target 'Uninstall.exe'
+          if (-not (Test-Path -LiteralPath $uninstaller)) { throw 'B05_UNINSTALLER_MISSING' }
+          $foreign=Join-Path $target 'owner_data.txt'
+          [IO.File]::WriteAllText($foreign,'OWNER_FIXTURE_MUST_SURVIVE')
+          $blocked=Start-Process -FilePath $uninstaller -ArgumentList '/S' -PassThru -Wait
+          if (-not (Test-Path -LiteralPath $foreign)) { throw 'B05_FOREIGN_OWNER_DATA_DELETED' }
+          if (-not (Test-Path -LiteralPath $installedExe)) { throw 'B05_UNINSTALL_DID_NOT_FAIL_CLOSED' }
+          if ([IO.File]::ReadAllText($foreign) -cne 'OWNER_FIXTURE_MUST_SURVIVE') { throw 'B05_FOREIGN_OWNER_DATA_MODIFIED' }
+          Remove-Item -LiteralPath $foreign -Force
+          $finish=Start-Process -FilePath $uninstaller -ArgumentList '/S' -PassThru -Wait
+          if ($finish.ExitCode -ne 0) { throw "B05_NSIS_UNINSTALL_FAILED:$($finish.ExitCode)" }
+          if (Test-Path -LiteralPath $target) { throw 'B05_UNINSTALL_LEFT_UNEXPECTED_FILES' }
+          Write-Host 'B05_REAL_WINDOWS_NSIS_FIXTURE_INSTALL_UNINSTALL_NOLOSS_PASS_RELEASE_HOLD'

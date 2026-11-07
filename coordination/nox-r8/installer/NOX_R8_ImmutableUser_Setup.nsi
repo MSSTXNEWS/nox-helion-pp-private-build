@@ -38,7 +38,7 @@ ShowUninstDetails show
  Pop $1
  ${If} $0 != "0"
    DetailPrint "B05_NOLOSS_HOLD ${MODE} $1"
-   MessageBox MB_OK|MB_ICONSTOP "NOX install boundary refused. Existing owner data untouched."
+   MessageBox MB_OK|MB_ICONSTOP "NOX install boundary refused. Existing owner data untouched." /SD IDOK
    Abort
  ${EndIf}
 !macroend
