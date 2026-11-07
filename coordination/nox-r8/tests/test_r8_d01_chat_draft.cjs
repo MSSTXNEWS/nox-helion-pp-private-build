@@ -369,3 +369,51 @@ console.log('D01 SOURCE_ONLY PASS: global IME-safe Escape/STOP and Ctrl+K');
   assert.deepEqual(moved,called,'D01_COREID_FOCUS_NOT_FOLLOWING_ROUTE');
 }
 console.log('D01 SOURCE_ONLY PASS: 8 CoreID focus, IME/modified/repeat navigation guard');
+
+
+/* D01_CHAT_FAIL_RECOVERY: production WebView2 SEND/complete handlers.
+   A failed or owner-stopped Ollama turn cannot silently discard the unsaved
+   prompt; a new draft typed during streaming must not be overwritten.
+   SOURCE_ONLY evidence, not local Qwen or WPF runtime acceptance. */
+{
+  const start=html.indexOf("$('send').onclick=()=>");
+  const finish=html.indexOf("\n$('stop').onclick=",start);
+  const completeStart=html.indexOf("case 'complete':");
+  const completeEnd=html.indexOf("\ncase 'error':",completeStart);
+  assert.ok(start>0&&finish>start&&completeStart>0&&completeEnd>completeStart,
+    'D01_ORIGINAL_CHAT_RECOVERY_HANDLERS_MISSING');
+  const sendHandler=html.slice(start,finish);
+  const completeHandler=html.slice(completeStart,completeEnd);
+  function scenario(result,newDraft=''){
+    const raw="  Сохранить вопрос после STOP  \n";
+    const nodes={send:{},prompt:{value:raw},streamHint:{textContent:''},
+      messages:{},generation:{classList:{remove(){}}}};
+    const machine=vm.runInNewContext(
+      "let responseBox=null,lastAnswer='',busy=false,activeChatId=null,pendingChatDraft=null;"+
+      sendHandler+
+      "\nfunction finishTurn(v){switch('complete'){"+completeHandler+"}}\n"+
+      "({send:()=>$('send').onclick(),finishTurn,state:()=>({busy,pendingChatDraft})})",
+      {$:id=>nodes[id],post:()=>true,nextChatId:()=> 'd01_real_request',
+        entry:()=>({lastChild:{textContent:''}}),
+        window:{noxVisual:{setEnergy(){}}}},
+      {timeout:1500});
+    machine.send();
+    assert.equal(nodes.prompt.value,'','D01_ORIGINAL_SEND_MUST_CLEAR_ACTIVE_COMPOSER');
+    nodes.prompt.value=newDraft;
+    machine.finishTurn({requestId:'d01_real_request',...result});
+    assert.equal(machine.state().busy,false,'D01_CHAT_BUSY_AFTER_COMPLETION');
+    assert.equal(machine.state().pendingChatDraft,null,'D01_RETRY_BUFFER_NOT_RELEASED');
+    return {value:nodes.prompt.value,hint:nodes.streamHint.textContent,raw};
+  }
+  const failure=scenario({ok:false,stopped:false});
+  assert.equal(failure.value,failure.raw,'D01_OLLAMA_FAILURE_DISCARDED_UNSAVED_PROMPT');
+  assert.match(failure.hint,/восстановлен/,'D01_RECOVERY_NO_USER_MESSAGE');
+  const stopped=scenario({ok:false,stopped:true});
+  assert.equal(stopped.value,stopped.raw,'D01_OWNER_STOP_DISCARDED_UNSAVED_PROMPT');
+  assert.match(stopped.hint,/остановлен/,'D01_STOP_HINT_LOST');
+  assert.equal(scenario({ok:true,stopped:false}).value,'',
+    'D01_SQLITE_SUCCESS_MUST_NOT_RESTORE_SENT_PROMPT');
+  assert.equal(scenario({ok:false,stopped:false},'Новый несохранённый текст').value,
+    'Новый несохранённый текст','D01_FAILURE_OVERWROTE_NEW_COMPOSER');
+}
+console.log('D01 SOURCE_ONLY PASS: Qwen failed/STOP retry with original input, SQLite ACK, and concurrent draft');
