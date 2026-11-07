@@ -27,7 +27,15 @@ function Check-NoReparse([string]$path) {
 function Check-Hash([string]$path,[string]$sha) {
  if(-not (Test-Path -LiteralPath $path -PathType Leaf)){ Hold 'FILE_MISSING' }
  Check-NoReparse $path
- if(-not (EqualsCI (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash $sha)){ Hold 'CONTENT_SHA_MISMATCH' }
+ # NSIS launches Windows PowerShell, whose cmdlet autoload can differ from pwsh.
+ # Hash with the built-in .NET provider, not Get-FileHash/module discovery.
+ $stream=[IO.File]::Open($path,[IO.FileMode]::Open,[IO.FileAccess]::Read,[IO.FileShare]::Read)
+ try {
+   $hasher=[Security.Cryptography.SHA256]::Create()
+   try { $actual=[BitConverter]::ToString($hasher.ComputeHash($stream)).Replace('-','') }
+   finally { $hasher.Dispose() }
+ } finally { $stream.Dispose() }
+ if(-not (EqualsCI $actual $sha)){ Hold 'CONTENT_SHA_MISMATCH' }
 }
 if($ExpectedExeSha -cnotmatch '^[a-fA-F0-9]{64}$'){ Hold 'EXE_SHA_FORMAT' }
 if($ExpectedReceiptSha -cnotmatch '^[a-fA-F0-9]{64}$'){ Hold 'RECEIPT_SHA_FORMAT' }
