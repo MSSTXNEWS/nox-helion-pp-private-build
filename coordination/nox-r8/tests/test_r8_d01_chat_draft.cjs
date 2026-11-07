@@ -530,7 +530,7 @@ console.log('D01 SOURCE_ONLY PASS: Qwen failed/STOP retry with original input, S
 // Execute the original production complete handler; this is SOURCE_ONLY, not Windows Qwen E2E.
 {
   const start=html.indexOf("case 'complete':");
-  const end=html.indexOf("\\ncase 'error':",start);
+  const end=html.indexOf("\ncase 'error':",start);
   assert.ok(start>0&&end>start,'D01_SQLITE_UNKNOWN_PRODUCTION_HANDLER_MISSING');
   const nodes={prompt:{value:''},streamHint:{textContent:''},generation:{classList:{remove(){}}}};
   const code="let pendingChatDraft={requestId:'unknown_1',raw:'KV private unsent',persona:'KV'},"+
