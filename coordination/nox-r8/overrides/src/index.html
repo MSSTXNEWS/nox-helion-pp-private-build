@@ -187,9 +187,14 @@ body.reduced .helion-fx{filter:none}body.reduced .core.active{animation:none}
   // Observe the existing element so Reduced Motion still gets one accurate
   // static frame, without starting a continuous animation.
   function watchSize(target,redraw){
-    if(typeof window.ResizeObserver!=='function')return ()=>{};
+    // Some WebView2 hosts expose a throwing ResizeObserver property getter.
+    // An unavailable size observer must not abort GPU/Canvas2D initialization.
+    let ResizeObserverType;
+    try{ResizeObserverType=window.ResizeObserver;}
+    catch(e){console.warn('NOX element resize observer unavailable:',String(e?.message||e));return ()=>{};}
+    if(typeof ResizeObserverType!=='function')return ()=>{};
     let observer=null;
-    try{observer=new window.ResizeObserver(redraw);observer.observe(target);}
+    try{observer=new ResizeObserverType(redraw);observer.observe(target);}
     catch(e){
       try{observer?.disconnect();}catch(_){}
       console.warn('NOX element resize observer unavailable:',String(e?.message||e));
