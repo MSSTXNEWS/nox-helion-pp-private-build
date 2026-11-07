@@ -329,3 +329,43 @@ console.log('D01 SOURCE_ONLY PASS: reflection notes refresh and PersonaID memory
   assert.deepEqual([stops,routes,focuses],[1,1,1],'D01_EXACTLY_ONE_NATIVE_STOP_AND_ROUTE');
 }
 console.log('D01 SOURCE_ONLY PASS: global IME-safe Escape/STOP and Ctrl+K');
+
+/* D01_COREID_KEYBOARD_IME_MODIFIERS: actual production handler.
+   Prevent IME, assistive/modified shortcuts, and repeats from initiating
+   native route/SQLite refreshes; preserve eight normal keyboard routes.
+   SOURCE_ONLY; Windows UIA remains a separate physical acceptance gate. */
+{
+  const navIds=[...html.matchAll(/<button class="core[^"]*" data-route="([^"]+)"/g)].map(m=>m[1]);
+  assert.equal(navIds.length,8,'D01_COREID_KEYBOARD_EIGHT_REQUIRED');
+  const navLine=html.split('\n').find(x=>x.startsWith('const coreRouteButtons='));
+  assert.ok(navLine,'D01_COREID_NATIVE_HANDLER_MISSING');
+  const moved=[],called=[];
+  const buttons=navIds.map(route=>({
+    dataset:{route},addEventListener(event,fn){if(event==='keydown')this.fn=fn;},
+    focus(){moved.push(route)}
+  }));
+  vm.runInNewContext(navLine,{
+    document:{querySelectorAll:()=>buttons},route:id=>called.push(id)
+  },{timeout:1500});
+  function key(index,name,extra={}){
+    let consumed=0;
+    buttons[index].fn({key:name,repeat:false,isComposing:false,keyCode:0,
+      ctrlKey:false,altKey:false,metaKey:false,shiftKey:false,
+      defaultPrevented:false,preventDefault(){consumed++},...extra});
+    return consumed;
+  }
+  for(const extra of [{ctrlKey:true},{altKey:true},{shiftKey:true},{metaKey:true},
+      {isComposing:true},{keyCode:229},{repeat:true},{defaultPrevented:true}]){
+    assert.equal(key(0,'ArrowRight',extra),0,'D01_NAV_STOLEN_COMPOSITION_OR_SHORTCUT');
+  }
+  assert.deepEqual(called,[],'D01_UNEXPECTED_NATIVE_REFRESH');
+  assert.deepEqual(moved,[],'D01_UNEXPECTED_KEYBOARD_FOCUS');
+  assert.equal(key(0,'ArrowRight'),1);
+  assert.equal(key(0,'ArrowLeft'),1);
+  assert.equal(key(4,'Home'),1);
+  assert.equal(key(4,'End'),1);
+  assert.deepEqual(called,[navIds[1],navIds[7],navIds[0],navIds[7]],
+    'D01_EIGHT_COREID_KEYBOARD_NO_LOSS');
+  assert.deepEqual(moved,called,'D01_COREID_FOCUS_NOT_FOLLOWING_ROUTE');
+}
+console.log('D01 SOURCE_ONLY PASS: 8 CoreID focus, IME/modified/repeat navigation guard');
