@@ -517,7 +517,7 @@ $('speak').onclick=()=>{if(!('speechSynthesis' in window)||!('SpeechSynthesisUtt
 $('silence').onclick=()=>{if('speechSynthesis'in window)speechSynthesis.cancel();$('voiceStatus').textContent='Речь остановлена'};
 window.chrome?.webview?.addEventListener('message',e=>{const m=e.data,v=m.value;
 if(['status','token','metrics','complete'].includes(m.type) && (!v || v.requestId!==activeChatId))return;
-if(m.type==='error' && v && typeof v==='object' && v.requestId && v.requestId!==activeChatId)return;
+if(m.type==='error' && v && typeof v==='object' && v.requestId && (v.requestId!==activeChatId || pendingChatDraft?.persona!==visibleDraftPersona))return;
 switch(m.type){
 case 'status':if(pendingChatDraft?.persona!==visibleDraftPersona)break;$('status').textContent=v.state;$('generation').classList.toggle('on',v.state==='GENERATING');window.noxVisual?.setEnergy(v.state==='GENERATING');break;
 case 'token':if(pendingChatDraft?.persona!==visibleDraftPersona)break;lastAnswer+=v.text;if(responseBox)responseBox.lastChild.textContent+=v.text;break;
