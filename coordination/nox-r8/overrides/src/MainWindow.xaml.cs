@@ -2042,7 +2042,7 @@ public partial class MainWindow : Window
                 cancellation.Token.ThrowIfCancellationRequested();
                 using var readWindow = CancellationTokenSource.CreateLinkedTokenSource(streamBudget.Token);
                 readWindow.CancelAfter(TimeSpan.FromMinutes(3));
-                var line = await reader.ReadLineAsync(readWindow.Token);
+                var line = await ReadBoundedOllamaLineAsync(reader, readWindow.Token);
                 if (line == null) break;
                 if (string.IsNullOrWhiteSpace(line)) continue;
                 using var json = JsonDocument.Parse(line);
@@ -2146,6 +2146,30 @@ public partial class MainWindow : Window
         // Never refresh health while the cancelled HTTP stream still owns IPC.
         if (refreshProviderAfterError && !providerProbeStopped)
             await CheckProvider();
+    }
+
+    // B02: StreamReader.ReadLineAsync allocates without a per-record bound.
+    // Limit one provider NDJSON line before parsing or emitting to WebView2.
+    // This buffered one-character reader preserves the following record and
+    // retains the owner's STOP, line-idle and absolute stream cancellation.
+    private static async Task<string?> ReadBoundedOllamaLineAsync(StreamReader reader, CancellationToken token)
+    {
+        const int MaxNdjsonLineChars = 2 * 1024 * 1024;
+        var builder = new StringBuilder();
+        var one = new char[1];
+        while (true)
+        {
+            int read = await reader.ReadAsync(one.AsMemory(0, 1), token);
+            if (read == 0) return builder.Length == 0 ? null : builder.ToString();
+            if (one[0] == '\n')
+            {
+                if (builder.Length > 0 && builder[builder.Length - 1] == '\r') builder.Length--;
+                return builder.ToString();
+            }
+            if (builder.Length >= MaxNdjsonLineChars)
+                throw new InvalidOperationException("OLLAMA_NDJSON_LINE_LIMIT_HOLD: provider record exceeded 2 Mi UTF-16 characters; partial SQLite save denied.");
+            builder.Append(one[0]);
+        }
     }
 
     private void PersistChat(string prompt, string answer, string persona)

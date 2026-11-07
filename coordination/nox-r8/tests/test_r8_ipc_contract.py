@@ -445,3 +445,16 @@ assert _output_guard.index('if (value.Length > MaxAnswerChars - answer.Length)')
 assert 'Emit("complete", new { requestId, ok = sqliteVerified, stopped = false, sqliteUnknown });' in _output_guard, 'B02_OUTPUT_TERMINAL_ACK_HOLD'
 assert 'catch (OperationCanceledException) when (cancellation.IsCancellationRequested)' in _output_guard, 'B02_OUTPUT_STOP_PRESERVED_HOLD'
 print('B02 SOURCE_ONLY: cumulative response cap rejects before append/IPC/SQLite; terminal ERROR/complete and owner STOP paths preserved; Windows NOT_TESTED')
+
+# B02 single-record NDJSON cap: verified source contract, not runtime Ollama acceptance.
+line_guard = cs.split('private static async Task<string?> ReadBoundedOllamaLineAsync(', 1)[1].split('private void PersistChat(', 1)[0]
+generate_budget = cs.split('private async Task Generate(', 1)[1].split('private static async Task<string?> ReadBoundedOllamaLineAsync(', 1)[0]
+assert 'ReadBoundedOllamaLineAsync(reader, readWindow.Token)' in generate_budget, 'B02_NDJSON_OWNER_CANCEL_HOLD'
+assert generate_budget.index('ReadBoundedOllamaLineAsync(reader, readWindow.Token)') < generate_budget.index('JsonDocument.Parse(line)'), 'B02_NDJSON_PREPARSE_HOLD'
+assert 'const int MaxNdjsonLineChars = 2 * 1024 * 1024;' in line_guard, 'B02_NDJSON_CAP_HOLD'
+assert 'await reader.ReadAsync(one.AsMemory(0, 1), token)' in line_guard, 'B02_NDJSON_CANCELABLE_READ_HOLD'
+assert "if (one[0] == '\\n')" in line_guard, 'B02_NDJSON_NEXT_LINE_HOLD'
+assert 'if (read == 0) return builder.Length == 0 ? null : builder.ToString();' in line_guard, 'B02_NDJSON_EOF_HOLD'
+assert line_guard.index('if (builder.Length >= MaxNdjsonLineChars)') < line_guard.index('builder.Append(one[0]);'), 'B02_NDJSON_CAP_PREAPPEND_HOLD'
+assert 'OLLAMA_NDJSON_LINE_LIMIT_HOLD' in line_guard and 'ReadLineAsync(readWindow.Token)' not in generate_budget, 'B02_NDJSON_UNBOUNDED_HOLD'
+print('B02 R8 SOURCE_ONLY: NDJSON record bound/owner timeout/EOF guards present; Windows Ollama NOT_TESTED')
