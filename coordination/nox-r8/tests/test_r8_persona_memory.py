@@ -109,3 +109,39 @@ with tempfile.TemporaryDirectory() as temp:
         assert len([1 for p,a in search if "проект нокс" in (p+" "+a).casefold()]) == 5
         assert db.execute("SELECT COUNT(*) FROM memory_notes WHERE persona=?", ("KV",)).fetchone()[0] == 1
 print("D03 R8 SOURCE_ONLY: Unicode recall, older same-Persona RAG and NO-LOSS PASS")
+
+# D03 NO-LOSS owner routes consolidated onto current R8 native-Qwen base.
+# This test is SOURCE_ONLY; native UI consent and actual Windows disks need physical QA.
+delete_native = cs.split('private void DeleteNote(long id)', 1)[1].split('private void SaveFeedback(', 1)[0]
+assert delete_native.index('MessageBox.Show(this') < delete_native.index('CheckpointSqlite(db, "PRE_NOTE_DELETE")')
+assert delete_native.index('if (consent != MessageBoxResult.Yes)') < delete_native.index('CheckpointSqlite(db, "PRE_NOTE_DELETE")')
+assert delete_native.index('CheckpointSqlite(db, "PRE_NOTE_DELETE")') < delete_native.index('db.BeginTransaction()')
+assert 'id=$id AND persona=$persona' in delete_native
+assert 'AND title=$title AND content=$content AND created_at=$created' in delete_native
+assert 'NOX_NOTE_CHANGED_OR_FOREIGN_HOLD' in delete_native
+assert delete_native.index('tx.Commit()') < delete_native.index('NOX_NOTE_DELETE_READBACK_HOLD')
+assert 'notes.delete.receipt' in delete_native
+doc_import = cs.split('private void ImportKnowledgeByDialog()', 1)[1].split('private void BackupLocalDatabase()', 1)[0]
+assert doc_import.index('if (consent != MessageBoxResult.Yes) return;') < doc_import.index('CheckpointSqlite(db, "PRE_KNOWLEDGE_IMPORT")')
+assert doc_import.index('CheckpointSqlite(db, "PRE_KNOWLEDGE_IMPORT")') < doc_import.index('knowledge.ImportFiles(files)')
+assert 'File.Delete(' not in doc_import and 'File.Move(' not in doc_import
+# Isolated SQLite oracle: denied consent/no backup failure may delete a note.
+with tempfile.TemporaryDirectory() as temp:
+    with closing(sqlite3.connect(Path(temp) / "owner_test.sqlite3")) as db:
+        db.execute("CREATE TABLE memory_notes(id INTEGER PRIMARY KEY,created_at TEXT,title TEXT,content TEXT,persona TEXT)")
+        db.execute("INSERT INTO memory_notes VALUES(1,'now','keep','original','KV')")
+        db.execute("INSERT INTO memory_notes VALUES(2,'now','secret','private','AM')")
+        db.commit()
+        # A foreign Persona must never match the exact owner predicate.
+        foreign = db.execute("""DELETE FROM memory_notes WHERE id=? AND persona=?
+            AND title=? AND content=? AND created_at=?""", (2,"KV","secret","private","now"))
+        assert foreign.rowcount == 0
+        assert db.execute("SELECT COUNT(*) FROM memory_notes").fetchone()[0] == 2
+        # A changed note must not be deleted using a stale pre-consent readback.
+        db.execute("UPDATE memory_notes SET content='newer' WHERE id=1")
+        db.commit()
+        stale = db.execute("""DELETE FROM memory_notes WHERE id=? AND persona=?
+            AND title=? AND content=? AND created_at=?""", (1,"KV","keep","original","now"))
+        assert stale.rowcount == 0
+        assert db.execute("SELECT content FROM memory_notes WHERE id=1").fetchone()[0] == "newer"
+print("D03 R8 SOURCE_ONLY: native owner consent, preimage, exact-row delete, isolated SQLite preservation PASS")

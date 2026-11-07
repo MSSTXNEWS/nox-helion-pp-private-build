@@ -1915,10 +1915,65 @@ public partial class MainWindow : Window
     private void DeleteNote(long id)
     {
         if (id <= 0) throw new ArgumentException("Invalid note ID");
-        using var db = OpenDatabase(); using var cmd = db.CreateCommand();
-        cmd.CommandText = "DELETE FROM memory_notes WHERE id=$id AND persona=$persona";
-        cmd.Parameters.AddWithValue("$persona", ActivePersona());
-        cmd.Parameters.AddWithValue("$id",id);cmd.ExecuteNonQuery();
+        string persona = ActivePersona();
+        using var db = OpenDatabase();
+        string title, content, createdAt;
+        using (var lookup = db.CreateCommand())
+        {
+            lookup.CommandText = "SELECT title,content,created_at FROM memory_notes WHERE id=$id AND persona=$persona";
+            lookup.Parameters.AddWithValue("$id", id);
+            lookup.Parameters.AddWithValue("$persona", persona);
+            using var row = lookup.ExecuteReader();
+            if (!row.Read()) throw new InvalidOperationException("NOX_NOTE_OWNER_HOLD");
+            title = row.GetString(0);
+            content = row.GetString(1);
+            createdAt = row.GetString(2);
+        }
+        // A UI script cannot authorize deletion by itself. A missing, foreign,
+        // or changed note never becomes a successful deletion receipt.
+        string titlePreview = title.Length > 80 ? title[..80] + "…" : title;
+        var consent = MessageBox.Show(this,
+            "Удалить заметку «" + titlePreview + "» из Persona " + persona +
+            "?\\nПеред удалением NOX сохранит проверенную SQLite-копию для восстановления.",
+            "NOX — удаление локальной памяти", MessageBoxButton.YesNo,
+            MessageBoxImage.Warning, MessageBoxResult.No);
+        if (consent != MessageBoxResult.Yes) {
+            Send("notes.delete.denied", new { id, reason = "OWNER_DECLINED" });
+            return;
+        }
+
+        // Fail closed: a backup/quick_check/SHA failure must prevent DELETE.
+        CheckpointSqlite(db, "PRE_NOTE_DELETE");
+        using (var tx = db.BeginTransaction())
+        {
+            using var command = db.CreateCommand();
+            command.Transaction = tx;
+            command.CommandText = """
+                DELETE FROM memory_notes
+                WHERE id=$id AND persona=$persona
+                  AND title=$title AND content=$content AND created_at=$created
+                """;
+            command.Parameters.AddWithValue("$id", id);
+            command.Parameters.AddWithValue("$persona", persona);
+            command.Parameters.AddWithValue("$title", title);
+            command.Parameters.AddWithValue("$content", content);
+            command.Parameters.AddWithValue("$created", createdAt);
+            if (command.ExecuteNonQuery() != 1)
+                throw new InvalidOperationException("NOX_NOTE_CHANGED_OR_FOREIGN_HOLD");
+            tx.Commit();
+        }
+        // Confirm the exact row is absent on a new connection, not just that
+        // SQLite accepted a command. The pre-delete snapshot is retained.
+        using (var verifyDb = OpenDatabase())
+        using (var verify = verifyDb.CreateCommand())
+        {
+            verify.CommandText = "SELECT COUNT(*) FROM memory_notes WHERE id=$id AND persona=$persona";
+            verify.Parameters.AddWithValue("$id", id);
+            verify.Parameters.AddWithValue("$persona", persona);
+            if (Convert.ToInt64(verify.ExecuteScalar()) != 0)
+                throw new InvalidOperationException("NOX_NOTE_DELETE_READBACK_HOLD");
+        }
+        Send("notes.delete.receipt", new { id, persona, deleted = true, backupVerified = true });
     }
     private void SaveFeedback(int rating,string answer)
     {
@@ -2089,6 +2144,10 @@ public partial class MainWindow : Window
             $"Добавить {files.Length} выбранных файлов в локальную базу NOX? Тексты будут индексированы на этом компьютере. Оригиналы не изменятся.",
             "NOX — подтверждение импорта", MessageBoxButton.YesNo, MessageBoxImage.Question);
         if (consent != MessageBoxResult.Yes) return;
+        // The knowledge index shares DatabasePath with chat and Persona memory.
+        // A WAL-consistent, verified preimage must survive a partial/erroring import.
+        // A denied owner prompt performs no database mutation or backup.
+        using (var db = OpenDatabase()) CheckpointSqlite(db, "PRE_KNOWLEDGE_IMPORT");
         Send("knowledge.imported", knowledge.ImportFiles(files));
         Send("knowledge.stats", knowledge.Stats());
     }
