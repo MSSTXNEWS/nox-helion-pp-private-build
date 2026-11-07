@@ -177,3 +177,26 @@ for(const id of navIds){assert.equal(scope.route(id),true);assert.equal(
  panels.find(p=>p.dataset.panel===id).classList.contains('active'),true);
  assert.equal(buttons.find(b=>b.dataset.route===id)['aria-current'],'page');}
 console.log('D01 R8 SOURCE_ONLY PASS: hidden panel focus, eight routes, ARIA, keyboard preservation');
+
+
+/* D01 compact quick-action accessibility: this SOURCE_ONLY contract is
+   separate from WebView2's real computed-rectangle Windows receipt. */
+const quickPanel = html.match(/<div class="quick">([\s\S]*?)<\/div>/)?.[1];
+assert.ok(quickPanel, 'D01_ORIGINAL_QUICK_ACTIONS_MISSING');
+assert.equal((quickPanel.match(/<button\b/g) || []).length, 5, 'D01_FIVE_QUICK_ACTIONS_NO_LOSS');
+for (const label of ['CHAT','MODELS','LEARN','SETTINGS','✦ MAX'])
+  assert.ok(quickPanel.includes(label), 'D01_QUICK_LABEL_LOST_' + label);
+assert.match(html, /@media\(max-width:1000px\)\{\.quick \.action\{min-height:44px;min-width:44px\}\}/,
+  'D01_COMPACT_TOUCH_TARGET_44_SOURCE_HOLD');
+const nativePaths = [
+  path.resolve(__dirname, 'src/MainWindow.xaml.cs'),
+  path.resolve(__dirname, '../overrides/src/MainWindow.xaml.cs')
+];
+const nativePath = nativePaths.find(candidate => fs.existsSync(candidate));
+assert.ok(nativePath, 'D01_NATIVE_SOURCE_MISSING');
+const nativeSource = fs.readFileSync(nativePath, 'utf8');
+assert.match(nativeSource, /rect\.width >= 44 && rect\.height >= 44/,
+  'D01_COMPACT_TOUCH_TARGET_44_NATIVE_GATE_HOLD');
+assert.match(nativeSource, /new\[\] \{ 320, 390, 800 \}/,
+  'D01_COMPACT_PHYSICAL_VIEWPORT_GATE_MISSING');
+console.log('D01 SOURCE_ONLY PASS: five original buttons, compact 44px hit targets, native physical gate');
