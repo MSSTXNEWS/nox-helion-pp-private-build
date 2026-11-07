@@ -4,9 +4,19 @@ import subprocess
 import shutil
 import re
 
-root = Path(__file__).resolve().parent  # CI stages this test beside src/ inside r8/
-cs = (root / "src" / "MainWindow.xaml.cs").read_text(encoding="utf-8")
-html = (root / "src" / "index.html").read_text(encoding="utf-8")
+# Run the repository test against the original override, and the Windows CI
+# copy against the exact pinned-overlaid r8/src. Do not fall back to a stale tree.
+here = Path(__file__).resolve().parent
+if here.name == "tests" and here.parent.name == "nox-r8":
+    src = here.parent / "overrides" / "src"
+elif here.name == "r8":
+    src = here / "src"
+else:
+    raise AssertionError("F02_IPC_SQLITE_TEST_ORIGIN_HOLD")
+for name in ("MainWindow.xaml.cs", "index.html"):
+    assert (src / name).is_file(), "F02_IPC_SQLITE_SOURCE_MISSING_HOLD: " + str(src / name)
+cs = (src / "MainWindow.xaml.cs").read_text(encoding="utf-8")
+html = (src / "index.html").read_text(encoding="utf-8")
 required_cs = (
     'private string? activeRequestId;',
     'NavigationStarting += (_, _) => { active?.Cancel(); activeRequestId = null; };',
