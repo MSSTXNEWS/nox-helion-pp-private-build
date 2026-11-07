@@ -724,3 +724,48 @@ console.log('D01 SOURCE_ONLY PASS: Qwen failed/STOP retry with original input, S
    'D01_TERMINAL_STOP_LEASE_NOT_CLEARED');
  console.log('D01 SOURCE_ONLY PASS: STOP owner lease/dedup/retry');
 }
+
+
+/* D01_PREVIOUS_PERSONA_COMPLETE: execute the real production native receipt branch.
+   SOURCE_ONLY; proves cross-PersonaID completion cannot alter current CHAT status.
+   Native Windows Qwen STREAM/STOP/SQLite E2E remains an independent release gate. */
+{
+  const s=html.indexOf("case 'complete':{");
+  const e=html.indexOf("\ncase 'error'",s);
+  assert.ok(s>0&&e>s,'D01_REAL_COMPLETE_RECEIPT_NOT_FOUND');
+  const originalComplete=html.slice(s,e);
+  const executeComplete=new Function('state','v',"with(state){switch('complete'){"+originalComplete+"}}");
+  function receiveComplete({persona='AM',ok=true,stopped=false,sqliteUnknown=false}={}) {
+    const elements={
+      streamHint:{textContent:persona==='AM'?'AM current chat view':'KV waiting'},
+      prompt:{value:persona==='AM'?'AM current draft':''},
+      generation:{classList:{remove(){}}}
+    };
+    const state={
+      pendingChatDraft:{requestId:'KV_REQUEST_1',persona:'KV',raw:'KV private question'},
+      visibleDraftPersona:persona,busy:true,activeChatId:'KV_REQUEST_1',
+      pendingStopId:'KV_REQUEST_1',lastAnswer:'',personaDrafts:new Map([['KV',{}],['AM',{}]]),
+      uncertainChatKeys:new Set(),uncertainChatKey:(p,raw)=>p+'\\u0000'+raw.trim(),
+      window:{noxVisual:{setEnergy(){}}},$:id=>elements[id]
+    };
+    executeComplete(state,{requestId:'KV_REQUEST_1',ok,stopped,sqliteUnknown});
+    return {state,elements};
+  }
+  for(const outcome of [{ok:true},{ok:false,stopped:true},{ok:false,sqliteUnknown:true}]) {
+    const {state,elements}=receiveComplete(outcome);
+    assert.equal(elements.streamHint.textContent,'AM current chat view',
+      'D01_OLD_PERSONA_COMPLETE_MUTATED_CURRENT_CHAT');
+    assert.equal(elements.prompt.value,'AM current draft','D01_OTHER_PERSONA_DRAFT_LOST');
+    assert.equal(state.busy,false,'D01_OLD_OWNER_BUSY_NOT_RELEASED');
+    assert.equal(state.activeChatId,null,'D01_OLD_OWNER_ACTIVE_ID_NOT_RELEASED');
+    assert.equal(state.pendingStopId,null,'D01_OLD_OWNER_STOP_LEASE_NOT_RELEASED');
+    if(!outcome.ok)
+      assert.equal(state.personaDrafts.get('KV').prompt,'KV private question',
+        'D01_FAILED_OLD_OWNER_DRAFT_NOT_RESTORED');
+    if(outcome.sqliteUnknown)
+      assert.equal(state.uncertainChatKeys.size,1,'D01_SQLITE_UNKNOWN_OWNER_GUARD_LOST');
+  }
+  assert.match(receiveComplete({persona:'KV',ok:true}).elements.streamHint.textContent,
+    /Ответ завершён и сохранён в SQLite/,'D01_CURRENT_OWNER_COMPLETE_STATUS_LOST');
+  console.log('D01 SOURCE_ONLY PASS: old PersonaID completion UI quarantine, draft/STOP/SQLite guards');
+}
