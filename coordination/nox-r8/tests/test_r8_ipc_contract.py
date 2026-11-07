@@ -301,3 +301,20 @@ for block in (model_success, model_denial):
 assert "$('modelPicker').value=String(v.model)" in model_success, 'D05_MODEL_OWNER_RECEIPT_DISPLAY_HOLD'
 assert "$('modelPicker').disabled=false" in html.split("if(post('model.select',{model,requestId})===false)", 1)[1].split(";$('pullModel').onclick", 1)[0], 'D05_MODEL_IPC_REJECT_RELEASE_HOLD'
 print('D05 MODEL HEALTH SOURCE_ONLY: picker remains bound to pending owner choice, unlocks on native receipt/denial')
+
+# D05 feedback: saved Persona chat only, owner requestId, native SQLite readback.
+feedback_native = cs.split('private void HandleFeedback(', 1)[1].split('private async Task HandleModelSelect(', 1)[0]
+feedback_web = html.split('function sendFeedback(', 1)[1].split("console_void_never", 1)[0]
+feedback_receipt = html.split("case 'feedback.receipt':", 1)[1].split("case 'feedback.denied':", 1)[0]
+assert 'case "feedback": HandleFeedback(request);' in cs, 'D05_FEEDBACK_UNVERIFIED_IPC_HOLD'
+assert 'fields.Length != 4' in feedback_native and 'ValidWriteRequestId(requestId)' in feedback_native, 'D05_FEEDBACK_REQUEST_ENVELOPE_HOLD'
+assert 'SELECT 1 FROM chat_history WHERE persona=$persona AND answer=$answer LIMIT 1' in feedback_native, 'D05_FEEDBACK_PERSONA_HISTORY_HOLD'
+assert 'NOX_FEEDBACK_NO_SAVED_PERSONA_CHAT_HOLD' in feedback_native, 'D05_FEEDBACK_PARTIAL_HOLD'
+assert 'SELECT rating,answer FROM feedback WHERE id=$id' in feedback_native, 'D05_FEEDBACK_SQLITE_READBACK_HOLD'
+assert feedback_native.index('long id = SaveFeedback(rating, answer)') < feedback_native.index('Send("feedback.receipt"'), 'D05_FEEDBACK_EARLY_ACK_HOLD'
+assert feedback_native.index('SELECT rating,answer FROM feedback WHERE id=$id') < feedback_native.index('return id;'), 'D05_FEEDBACK_READBACK_BEFORE_RETURN_HOLD'
+assert "if(busy||!feedbackReady||pendingFeedback||!lastAnswer)return false" in feedback_web, 'D05_FEEDBACK_PARTIAL_STREAM_HOLD'
+assert "post('feedback',{rating,answer,requestId})" in feedback_web, 'D05_FEEDBACK_OWNER_ID_HOLD'
+assert 'v?.requestId!==pendingFeedback.requestId' in feedback_receipt and 'v?.saved!==true' in feedback_receipt, 'D05_FEEDBACK_STALE_ACK_HOLD'
+assert 'feedbackReady=false;pendingFeedback=null;setFeedbackEnabled(false);' in html.split("case 'persona.changed':", 1)[1].split('break;', 1)[0], 'D05_FEEDBACK_PERSONA_RESET_HOLD'
+print('D05 FEEDBACK SOURCE_ONLY: owner-correlated persisted SQLite/Persona ACK guarded; Windows NOT RUN')

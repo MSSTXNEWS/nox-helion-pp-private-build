@@ -939,7 +939,7 @@ public partial class MainWindow : Window
                 case "notes.list": Send("notes", ReadNotes()); break;
                 case "notes.add": HandleNoteAdd(Text("title"), Text("content"), Text("requestId")); break;
                 case "notes.delete": HandleNoteDelete(request.TryGetProperty("id", out var idField) && idField.ValueKind == JsonValueKind.Number && idField.TryGetInt64(out var noteId) ? noteId : 0, Text("requestId")); break;
-                case "feedback": SaveFeedback(request.GetProperty("rating").GetInt32(), Text("answer")); Send("notice", "Оценка сохранена локально; это не обучение весов."); break;
+                case "feedback": HandleFeedback(request); break;
                 case "backup": BackupLocalDatabase(); break;
                 case "model.select": await HandleModelSelect(Text("model"), Text("requestId")); break;
                 case "model.pull": await PullExistingProviderModel(Text("model"), Text("requestId")); break;
@@ -1719,16 +1719,80 @@ public partial class MainWindow : Window
             Send("notes.delete.denied", new { requestId, id, reason = "NOX_NOTE_DELETE_BACKUP_OR_SQLITE_HOLD" });
         }
     }
-    private void SaveFeedback(int rating,string answer)
+    // D05: only completed, SQLite-persisted chat in the current Persona
+    // may receive feedback; a streaming fragment or another Persona cannot.
+    private void HandleFeedback(JsonElement request)
     {
-        if (rating is not (1 or -1) || string.IsNullOrWhiteSpace(answer) || answer.Length>12000)
-            throw new ArgumentException("Invalid feedback");
-        using var db = OpenDatabase(); using var cmd = db.CreateCommand();
-        cmd.CommandText = "INSERT INTO feedback(created_at,rating,answer) VALUES($t,$r,$a)";
-        cmd.Parameters.AddWithValue("$t",DateTimeOffset.UtcNow.ToString("O"));
-        cmd.Parameters.AddWithValue("$r",rating);
-        cmd.Parameters.AddWithValue("$a",answer);
-        cmd.ExecuteNonQuery();
+        string requestId = request.TryGetProperty("requestId", out var idField) &&
+            idField.ValueKind == JsonValueKind.String ? idField.GetString() ?? "" : "";
+        string answer = request.TryGetProperty("answer", out var answerField) &&
+            answerField.ValueKind == JsonValueKind.String ? answerField.GetString() ?? "" : "";
+        int rating = 0;
+        var fields = request.EnumerateObject().ToArray();
+        if (fields.Length != 4 ||
+            fields.Count(x => x.Name == "type") != 1 ||
+            fields.Count(x => x.Name == "requestId") != 1 ||
+            fields.Count(x => x.Name == "rating") != 1 ||
+            fields.Count(x => x.Name == "answer") != 1 ||
+            !ValidWriteRequestId(requestId) ||
+            !request.TryGetProperty("rating", out var ratingField) ||
+            ratingField.ValueKind != JsonValueKind.Number || !ratingField.TryGetInt32(out rating) ||
+            rating is not (1 or -1) || string.IsNullOrWhiteSpace(answer) || answer.Length > 12000)
+        {
+            Send("feedback.denied", new { requestId, reason = "NOX_FEEDBACK_INVALID_REQUEST_HOLD" });
+            return;
+        }
+        try
+        {
+            using (var db = OpenDatabase())
+            using (var verifiedHistory = db.CreateCommand())
+            {
+                verifiedHistory.CommandText =
+                    "SELECT 1 FROM chat_history WHERE persona=$persona AND answer=$answer LIMIT 1";
+                verifiedHistory.Parameters.AddWithValue("$persona", ActivePersona());
+                verifiedHistory.Parameters.AddWithValue("$answer", answer);
+                if (verifiedHistory.ExecuteScalar() == null) {
+                    Send("feedback.denied", new { requestId, reason = "NOX_FEEDBACK_NO_SAVED_PERSONA_CHAT_HOLD" });
+                    return;
+                }
+            }
+            long id = SaveFeedback(rating, answer);
+            // Receipt is authoritative only after an independent SQLite readback.
+            try { Send("feedback.receipt", new { requestId, id, rating, answer, saved = true }); }
+            catch (Exception) { /* Committed feedback must never be falsely denied. */ }
+        }
+        catch (SqliteException) {
+            Send("feedback.denied", new { requestId, reason = "NOX_FEEDBACK_SQLITE_HOLD" });
+        }
+        catch (Exception) {
+            Send("feedback.denied", new { requestId, reason = "NOX_FEEDBACK_READBACK_HOLD" });
+        }
+    }
+
+    private long SaveFeedback(int rating, string answer)
+    {
+        using var db = OpenDatabase();
+        using (var cmd = db.CreateCommand()) {
+            cmd.CommandText = "INSERT INTO feedback(created_at,rating,answer) VALUES($t,$r,$a)";
+            cmd.Parameters.AddWithValue("$t",DateTimeOffset.UtcNow.ToString("O"));
+            cmd.Parameters.AddWithValue("$r",rating);
+            cmd.Parameters.AddWithValue("$a",answer);
+            if (cmd.ExecuteNonQuery() != 1)
+                throw new InvalidOperationException("NOX_FEEDBACK_SQLITE_WRITE_HOLD");
+        }
+        using var rowId = db.CreateCommand();
+        rowId.CommandText = "SELECT last_insert_rowid()";
+        long id = Convert.ToInt64(rowId.ExecuteScalar());
+        if (id <= 0) throw new InvalidOperationException("NOX_FEEDBACK_ROWID_HOLD");
+        using var verifyDb = OpenDatabase();
+        using var verify = verifyDb.CreateCommand();
+        verify.CommandText = "SELECT rating,answer FROM feedback WHERE id=$id";
+        verify.Parameters.AddWithValue("$id", id);
+        using var row = verify.ExecuteReader();
+        if (!row.Read() || row.GetInt32(0) != rating ||
+            !string.Equals(row.GetString(1), answer, StringComparison.Ordinal))
+            throw new InvalidOperationException("NOX_FEEDBACK_SQLITE_READBACK_HOLD");
+        return id;
     }
 
     // D05: owner-correlated native model selection; no success without SQLite readback.
