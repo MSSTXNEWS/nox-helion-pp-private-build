@@ -1,0 +1,182 @@
+{
+  "schema": "NOX-VOICE-MAX-V1",
+  "instructions_version": "0.0.6",
+  "created_on": "2026-11-07",
+  "status": "DOWNLOAD_CANDIDATES_NOT_INSTALLED",
+  "voice_extra_budget_gb": 50,
+  "main_four_block_budget_gb": 200,
+  "minimum_free_disk_gb": 60,
+  "root_windows": "C:\\NOX_HELION\\NOX_NEW\\brain\\voice",
+  "privacy": "No real-person voice cloning without explicit consent; reference audio is private",
+  "models": [
+    {
+      "id": "piper_ru_irina",
+      "group": "starter",
+      "hf": "rhasspy/piper-voices",
+      "patterns": [
+        "ru/ru_RU/irina/medium/ru_RU-irina-medium.onnx",
+        "ru/ru_RU/irina/medium/ru_RU-irina-medium.onnx.json"
+      ],
+      "estimated_gb": 0.064,
+      "license": "per-voice card; repo MIT",
+      "purpose": "CPU fallback Russian",
+      "source": "https://huggingface.co/rhasspy/piper-voices",
+      "requires_gpu": false
+    },
+    {
+      "id": "piper_es_davefx",
+      "group": "starter",
+      "hf": "rhasspy/piper-voices",
+      "patterns": [
+        "es/es_ES/davefx/medium/es_ES-davefx-medium.onnx",
+        "es/es_ES/davefx/medium/es_ES-davefx-medium.onnx.json"
+      ],
+      "estimated_gb": 0.064,
+      "license": "per-voice card; repo MIT",
+      "purpose": "CPU fallback Spanish Spain",
+      "source": "https://huggingface.co/rhasspy/piper-voices",
+      "requires_gpu": false
+    },
+    {
+      "id": "qwen3_06_customvoice",
+      "group": "starter",
+      "hf": "Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice",
+      "patterns": null,
+      "estimated_gb": 2.5,
+      "license": "Apache-2.0",
+      "purpose": "high quality RU ES TTS 9 preset timbres",
+      "source": "https://huggingface.co/Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice",
+      "requires_gpu": "probe"
+    },
+    {
+      "id": "qwen3_06_base",
+      "group": "starter_optional",
+      "hf": "Qwen/Qwen3-TTS-12Hz-0.6B-Base",
+      "patterns": null,
+      "estimated_gb": 2.52,
+      "license": "Apache-2.0",
+      "purpose": "consented short-reference cloning RU ES",
+      "source": "https://huggingface.co/Qwen/Qwen3-TTS-12Hz-0.6B-Base",
+      "requires_gpu": "probe"
+    },
+    {
+      "id": "qwen3_17_voicedesign",
+      "group": "expressive",
+      "hf": "Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign",
+      "patterns": null,
+      "estimated_gb": 4.52,
+      "license": "Apache-2.0",
+      "purpose": "original non-human PRIME voice design",
+      "source": "https://huggingface.co/Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign",
+      "requires_gpu": "probe"
+    },
+    {
+      "id": "qwen3_17_customvoice",
+      "group": "expressive_optional",
+      "hf": "Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice",
+      "patterns": null,
+      "estimated_gb": 4.52,
+      "license": "Apache-2.0",
+      "purpose": "high quality preset and style-controlled RU ES",
+      "source": "https://huggingface.co/Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice",
+      "requires_gpu": "probe"
+    },
+    {
+      "id": "chatterbox_multilingual_v3",
+      "group": "expressive",
+      "hf": "ResembleAI/chatterbox",
+      "patterns": [
+        "t3_mtl23ls_v3.safetensors",
+        "s3gen_v3.safetensors",
+        "ve.pt",
+        "conds.pt",
+        "mtl_tokenizer.json",
+        "grapheme_mtl_merged_expanded_v1.json",
+        "README.md"
+      ],
+      "estimated_gb": 3.8,
+      "license": "MIT; repository archived/unsupported",
+      "purpose": "RU ES expressive V3 voice with watermark",
+      "source": "https://huggingface.co/ResembleAI/chatterbox",
+      "requires_gpu": "CUDA documented; AMD test needed"
+    },
+    {
+      "id": "chatterbox_spanish_spain",
+      "group": "expressive_optional",
+      "hf": "ResembleAI/Chatterbox-Multilingual-es-es",
+      "patterns": [
+        "t3_es_es.safetensors",
+        "s3gen_v3.safetensors",
+        "ve.pt",
+        "conds.pt",
+        "mtl_tokenizer.json",
+        "grapheme_mtl_merged_expanded_v1.json",
+        "README.md"
+      ],
+      "estimated_gb": 3.6,
+      "license": "MIT model card verify",
+      "purpose": "specialized Spanish Spain voice",
+      "source": "https://huggingface.co/ResembleAI/Chatterbox-Multilingual-es-es",
+      "requires_gpu": "probe"
+    },
+    {
+      "id": "cosyvoice3_05",
+      "group": "expressive_optional",
+      "hf": "FunAudioLLM/Fun-CosyVoice3-0.5B-2512",
+      "patterns": null,
+      "estimated_gb": 9.75,
+      "license": "Apache-2.0",
+      "purpose": "RU ES streaming emotion and clone",
+      "source": "https://huggingface.co/FunAudioLLM/Fun-CosyVoice3-0.5B-2512",
+      "requires_gpu": "probe"
+    }
+  ],
+  "sources": [
+    {
+      "id": "qwen3_tts_engine",
+      "group": "starter",
+      "git": "https://github.com/QwenLM/Qwen3-TTS.git",
+      "license": "Apache-2.0"
+    },
+    {
+      "id": "piper_engine",
+      "group": "starter",
+      "git": "https://github.com/rhasspy/piper.git",
+      "license": "MIT runtime / voice-specific licensing"
+    },
+    {
+      "id": "chatterbox_engine",
+      "group": "expressive",
+      "git": "https://github.com/resemble-ai/chatterbox.git",
+      "license": "MIT, archived after Aug 2026"
+    },
+    {
+      "id": "cosyvoice_engine",
+      "group": "expressive_optional",
+      "git": "https://github.com/QwenAudio/CosyVoice.git",
+      "license": "Apache-2.0"
+    }
+  ],
+  "excluded_by_default": [
+    {
+      "product": "Coqui XTTS-v2",
+      "reason": "Coqui Public Model License requires separate usage review",
+      "url": "https://huggingface.co/coqui/XTTS-v2"
+    },
+    {
+      "product": "Fish Speech S2-Pro",
+      "reason": "separate Fish audio model license and GPU requirements",
+      "url": "https://github.com/fishaudio/fish-speech"
+    },
+    {
+      "product": "F5-TTS RU/ES",
+      "reason": "regional checkpoint rights vary; RU community weights often non-commercial",
+      "url": "https://github.com/SWivid/F5-TTS"
+    },
+    {
+      "product": "Kokoro base",
+      "reason": "official Spanish supported, Russian requires a separate finetune",
+      "url": "https://huggingface.co/hexgrad/Kokoro-82M"
+    }
+  ]
+}
