@@ -15,7 +15,7 @@ def build(payload: Path, voice: Path, output: Path):
     source = (vendor / "SOURCE-eclipse-glow.html").read_bytes()
     license_text = (vendor / "LICENSE").read_bytes()
     def git_blob(data):
-        return hashlib.sha1(b"blob "+str(len(data)).encode()+b"\\0"+data).hexdigest()
+        return hashlib.sha1(b"blob "+str(len(data)).encode()+b"\0"+data).hexdigest()
     if git_blob(source) != "ef61254ca3b19830d8be6bf960e957ed613f69b0":
         raise RuntimeError("PINNED_ORIGINAL_SHADER_HOLD")
     if git_blob(license_text) != "3e54c0daeb1d1a0c462019e6fd3e96cc82651daf":
