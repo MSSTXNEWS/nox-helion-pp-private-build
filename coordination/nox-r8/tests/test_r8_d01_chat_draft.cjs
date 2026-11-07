@@ -228,3 +228,32 @@ for (const [field,action] of [['knowledgeQuery','knowledgeSearch'],['memoryQuery
   assert.equal(nodes[action].calls,1,'D01_EXACTLY_ONE_SEARCH_'+field);
 }
 console.log('D01 SOURCE_ONLY PASS: knowledge/memory keyboard IME, repeat, Enter');
+
+/* D01: real route + persona.changed handlers, scoped SQLite memory UI.
+   This executes production JavaScript; actual owner Windows UIA remains HOLD. */
+{
+  const routeLine = html.split('\n').find(x => x.startsWith('function route(id){'));
+  assert.ok(routeLine, 'D01_PERSONA_ROUTE_MISSING');
+  const sent = [], title = {textContent:''};
+  const navDoc = {activeElement:null,querySelectorAll:()=>[],querySelector:()=>null};
+  const routeContext = {document:navDoc,window:{matchMedia:()=>({matches:false})},
+    $:()=>title,post:type=>sent.push(type),headings:{reflection:'REFLECTION / HISTORY'}};
+  vm.runInNewContext(routeLine + "\nroute('reflection');",routeContext,{timeout:1500});
+  assert.deepEqual(sent,['history','notes.list','knowledge.stats'],
+    'D01_REFLECTION_NOTES_REFRESH_MISSING');
+  const changedLine = html.split('\n').find(x=>x.trim().startsWith("case 'persona.changed':"));
+  assert.ok(changedLine,'D01_PERSONA_CHANGE_HANDLER_MISSING');
+  const ids = ['messages','history','notes','memoryResults','knowledgeResults'];
+  const elements = Object.fromEntries(ids.map(id=>[id,{clears:0,
+    replaceChildren(){this.clears++;}}]));
+  const eventContext = {$:id=>elements[id],window:{}};
+  const outcome=vm.runInNewContext(
+    "let lastAnswer='previous persona secret';let responseBox={};"+
+    "switch('persona.changed'){"+changedLine+"}"+
+    "({lastAnswer,responseBox})",eventContext,{timeout:1500});
+  for(const id of ids)
+    assert.equal(elements[id].clears,1,'D01_PERSONA_STALE_PRIVATE_VIEW_'+id);
+  assert.equal(outcome.lastAnswer,'','D01_PERSONA_OLD_REPLY_NOT_RESET');
+  assert.equal(outcome.responseBox,null,'D01_PERSONA_OLD_STREAM_NOT_RESET');
+}
+console.log('D01 SOURCE_ONLY PASS: reflection notes refresh and PersonaID memory view isolation');
