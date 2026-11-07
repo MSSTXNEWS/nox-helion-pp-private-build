@@ -81,7 +81,7 @@ if($Mode -eq 'PreInstall') {
 }
 if(-not (Test-Path -LiteralPath $actual -PathType Container)){ Hold 'TARGET_DIRECTORY_MISSING' }
 $allowed=@('NOX.HELION.exe','BUILD_RECEIPT.json')
-if($Mode -eq 'PreUninstall'){ $allowed+= 'Uninstall.exe' }
+if($Mode -eq 'PostInstall' -or $Mode -eq 'PreUninstall'){ $allowed+= 'Uninstall.exe' }
 $items=@(Get-ChildItem -LiteralPath $actual -Force)
 if($items.Count -ne $allowed.Count){ Hold 'FOREIGN_OR_MISSING_ENTRY' }
 foreach($item in $items){

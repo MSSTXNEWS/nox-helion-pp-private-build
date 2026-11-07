@@ -61,6 +61,9 @@ try{
  New-Item -ItemType Directory -Force -Path $dir | Out-Null
  [IO.File]::WriteAllBytes((Join-Path $dir 'NOX.HELION.exe'),$bytes)
  [IO.File]::WriteAllBytes((Join-Path $dir 'BUILD_RECEIPT.json'),$rbytes)
+ # No promoted install may PASS before an uninstaller has been staged.
+ Check 'PostInstall' $false
+ [IO.File]::WriteAllText((Join-Path $dir 'Uninstall.exe'),'TEST_FIXTURE')
  Check 'PostInstall' $true
  Check 'PreInstall' $false
  [IO.File]::WriteAllText((Join-Path $dir 'foreign.txt'),'FOREIGN')
@@ -69,7 +72,6 @@ try{
  [IO.File]::AppendAllText((Join-Path $dir 'NOX.HELION.exe'),'TAMPER')
  Check 'PostInstall' $false
  [IO.File]::WriteAllBytes((Join-Path $dir 'NOX.HELION.exe'),$bytes)
- [IO.File]::WriteAllText((Join-Path $dir 'Uninstall.exe'),'TEST_FIXTURE')
  Check 'PreUninstall' $true
  # An EXE with an active shared-read handle must HOLD before any uninstall deletion.
  $held=[IO.File]::Open((Join-Path $dir 'NOX.HELION.exe'),[IO.FileMode]::Open,[IO.FileAccess]::Read,[IO.FileShare]::Read)

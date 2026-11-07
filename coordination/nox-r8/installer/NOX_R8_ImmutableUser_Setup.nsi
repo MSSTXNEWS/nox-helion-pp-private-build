@@ -65,13 +65,24 @@ Section "Install immutable NOX R8"
  SetOutPath "$LOCALAPPDATA\Programs\NOX-HELION-R8"
  ; One same-volume directory rename promotes BOTH prevalidated files together.
  ; A cross-volume or denied rename must fail CLOSED without a partial target.
+ ; First stage the REAL NSIS uninstaller in the same private payload directory.
+ ; Otherwise WriteUninstaller can fail AFTER the directory has been promoted,
+ ; leaving an immutable target without recovery/uninstall.
+ ClearErrors
+ WriteUninstaller "$PLUGINSDIR\payload\Uninstall.exe"
+ IfErrors 0 +3
+   DetailPrint "B05_NOLOSS_HOLD:UNINSTALLER_STAGING_FAILED"
+   Abort
+ IfFileExists "$PLUGINSDIR\payload\Uninstall.exe" +3 0
+   DetailPrint "B05_NOLOSS_HOLD:UNINSTALLER_STAGING_MISSING"
+   Abort
+ ; Promote the complete three-file payload in one same-volume operation.
  ClearErrors
  Rename "$PLUGINSDIR\payload" "$INSTDIR"
  IfErrors 0 +3
    DetailPrint "B05_NOLOSS_HOLD:ATOMIC_PAYLOAD_PROMOTION_FAILED"
    Abort
  !insertmacro CheckMode PostInstall
- WriteUninstaller "$INSTDIR\Uninstall.exe"
  ; Do NOT launch or modify existing local models, settings, SQLite or Ollama.
 SectionEnd
 
