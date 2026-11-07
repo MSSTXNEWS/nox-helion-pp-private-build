@@ -1037,7 +1037,44 @@ public partial class MainWindow : Window
 
     private void InitializeDatabase()
     {
+        // Pre-existing SQLite may hold only PRAGMA user_version, views, or
+        // other owner metadata, with zero user tables. Preserve those bytes
+        // before bootstrap mutates the file; a virgin DB never needs a copy.
+        bool preexistingOwnerBytes = File.Exists(dbPath) && new FileInfo(dbPath).Length > 0;
         using var db = OpenDatabase();
+
+        // B03 NO-LOSS: the bootstrap DDL and PRAGMA journal_mode below can mutate
+        // an existing legacy SQLite file *before* MigratePersonaStorage takes its
+        // separate backup. Guard those mutations with a verified WAL-safe snapshot.
+        // Never create a snapshot for a fresh empty database or on each unchanged launch.
+        var knownObjects = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        bool existingTables = false;
+        using (var inventory = db.CreateCommand())
+        {
+            inventory.CommandText =
+                "SELECT type,name FROM sqlite_master WHERE type IN ('table','index') AND name NOT LIKE 'sqlite_%'";
+            using var objects = inventory.ExecuteReader();
+            while (objects.Read())
+            {
+                if (objects.GetString(0) == "table") existingTables = true;
+                knownObjects.Add(objects.GetString(1));
+            }
+        }
+        if ((existingTables || preexistingOwnerBytes) && !selfTestRequested)
+        {
+            string[] needed = {
+                "chat_history", "tasks", "preferences", "imported_sources",
+                "memory_notes", "feedback", "learn_requests",
+                "idx_learn_pending_owner", "idx_chat_history_time",
+                "idx_chat_persona", "idx_notes_persona"
+            };
+            using var journal = db.CreateCommand();
+            journal.CommandText = "PRAGMA journal_mode";
+            string previousJournalMode = journal.ExecuteScalar()?.ToString() ?? "";
+            if (needed.Any(name => !knownObjects.Contains(name)) ||
+                !string.Equals(previousJournalMode, "wal", StringComparison.OrdinalIgnoreCase))
+                CheckpointSqlite(db, "PRE_SCHEMA_BOOTSTRAP");
+        }
         using var command = db.CreateCommand();
         command.CommandText = """
           PRAGMA journal_mode=WAL;
@@ -1057,7 +1094,7 @@ public partial class MainWindow : Window
           CREATE INDEX IF NOT EXISTS idx_chat_history_time ON chat_history(timestamp);
           """;
         command.ExecuteNonQuery();
-        MigratePersonaStorage(db);
+        MigratePersonaStorage(db, existingTables);
         if (!selfTestRequested) ImportLegacyJsonlIfNeeded(db);
     }
 
@@ -1074,9 +1111,19 @@ public partial class MainWindow : Window
 
     // Snapshot the existing owner's SQLite before schema mutation or import.
     // Both the database and manifest are new entries: never replace owner files.
+    // Native smoke processes never share the owner's backup directory.
+    // The live database and its backups remain in the original owner-owned path.
+    private string BackupDirectoryPath()
+    {
+        string home = Path.GetDirectoryName(dbPath)!;
+        return Path.Combine(home, selfTestRequested
+            ? "backups-selftest-" + Path.GetFileNameWithoutExtension(dbPath)
+            : "backups");
+    }
+
     private string CheckpointSqlite(SqliteConnection source, string purpose)
     {
-        string dir = Path.Combine(Path.GetDirectoryName(dbPath)!, "backups");
+        string dir = BackupDirectoryPath();
         ValidateBackupParent(Path.GetDirectoryName(dir)!);
         Directory.CreateDirectory(dir);
         ValidateBackupParent(dir);
@@ -1162,6 +1209,63 @@ public partial class MainWindow : Window
         }
         if (!string.Equals(Sha256File(snapshot), sha, StringComparison.Ordinal))
             throw new InvalidOperationException("NOX_B03_SMOKE_SHA_READBACK_HOLD");
+
+        // B03: force a partial Persona migration on the already-isolated native
+        // UI-smoke database, then prove that the *real C# migration* recreates the
+        // index and checkpoints the pre-repair state. Never touch owner SQLite.
+        string backupDir = BackupDirectoryPath();
+        // Explicit fail-closed path ownership check in the native UI smoke.
+        // A test must never enumerate or create entries in owner "backups".
+        if (!string.Equals(Path.GetFileName(backupDir),
+                "backups-selftest-" + Path.GetFileNameWithoutExtension(dbPath),
+                StringComparison.Ordinal))
+            throw new InvalidOperationException("NOX_B03_SMOKE_BACKUP_ISOLATION_HOLD");
+        var beforeRepair = Directory.GetFiles(
+            backupDir, "NOX_PRE_PERSONA_MIGRATION_*.sqlite3").ToHashSet(StringComparer.OrdinalIgnoreCase);
+        using (var drop = live.CreateCommand())
+        {
+            drop.CommandText = "DROP INDEX IF EXISTS idx_notes_persona";
+            drop.ExecuteNonQuery();
+        }
+        using (var absent = live.CreateCommand())
+        {
+            absent.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type='index' AND name='idx_notes_persona'";
+            if (Convert.ToInt64(absent.ExecuteScalar()) != 0)
+                throw new InvalidOperationException("NOX_B03_SMOKE_PARTIAL_INDEX_FIXTURE_HOLD");
+        }
+        MigratePersonaStorage(live, hadExistingTablesBeforeBootstrap: true);
+        using (var repaired = live.CreateCommand())
+        {
+            repaired.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type='index' AND name IN ('idx_chat_persona','idx_notes_persona')";
+            if (Convert.ToInt64(repaired.ExecuteScalar()) != 2)
+                throw new InvalidOperationException("NOX_B03_SMOKE_INDEX_RECOVERY_HOLD");
+            repaired.CommandText = "PRAGMA quick_check";
+            if (!string.Equals(repaired.ExecuteScalar() as string, "ok", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("NOX_B03_SMOKE_INDEX_INTEGRITY_HOLD");
+            repaired.CommandText = "SELECT value FROM preferences WHERE key='performance'";
+            if (!string.Equals(repaired.ExecuteScalar() as string, "ECO", StringComparison.Ordinal))
+                throw new InvalidOperationException("NOX_B03_SMOKE_INDEX_OWNER_ROWS_HOLD");
+        }
+        var newSnapshots = Directory.GetFiles(backupDir, "NOX_PRE_PERSONA_MIGRATION_*.sqlite3")
+            .Where(path => !beforeRepair.Contains(path)).ToArray();
+        if (newSnapshots.Length != 1 ||
+            !File.Exists(newSnapshots[0] + ".sha256") ||
+            !string.Equals(File.ReadAllText(newSnapshots[0] + ".sha256", Encoding.UTF8),
+                Sha256File(newSnapshots[0]) + "  " + Path.GetFileName(newSnapshots[0]) + "\n",
+                StringComparison.Ordinal))
+            throw new InvalidOperationException("NOX_B03_SMOKE_INDEX_PREIMAGE_MANIFEST_HOLD");
+        using (var before = new SqliteConnection(new SqliteConnectionStringBuilder {
+            DataSource = newSnapshots[0], Mode = SqliteOpenMode.ReadOnly, Pooling = false }.ToString()))
+        {
+            before.Open();
+            using var check = before.CreateCommand();
+            check.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type='index' AND name='idx_notes_persona'";
+            if (Convert.ToInt64(check.ExecuteScalar()) != 0)
+                throw new InvalidOperationException("NOX_B03_SMOKE_INDEX_PREIMAGE_MISSING_HOLD");
+            check.CommandText = "SELECT value FROM preferences WHERE key='performance'";
+            if (!string.Equals(check.ExecuteScalar() as string, "ECO", StringComparison.Ordinal))
+                throw new InvalidOperationException("NOX_B03_SMOKE_INDEX_PREIMAGE_ROWS_HOLD");
+        }
     }
 
     // Fail closed if any existing parent is a Windows junction / symlink,
@@ -1189,12 +1293,27 @@ public partial class MainWindow : Window
         return false;
     }
 
-    private void MigratePersonaStorage(SqliteConnection db)
+    private void MigratePersonaStorage(SqliteConnection db, bool hadExistingTablesBeforeBootstrap)
     {
         bool chatReady = HasPersonaColumn(db, "chat_history");
         bool notesReady = HasPersonaColumn(db, "memory_notes");
-        if (chatReady && notesReady) return;
-        CheckpointSqlite(db, "PRE_PERSONA_MIGRATION"); // Fail closed, keep all old KV bytes.
+        // An interrupted/partial migration can have both Persona columns but
+        // lack either required index. Do not silently declare it complete.
+        var foundIndexes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        using (var indexInventory = db.CreateCommand())
+        {
+            indexInventory.CommandText =
+                "SELECT name FROM sqlite_master WHERE type='index' AND name IN ('idx_chat_persona','idx_notes_persona')";
+            using var indexRows = indexInventory.ExecuteReader();
+            while (indexRows.Read()) foundIndexes.Add(indexRows.GetString(0));
+        }
+        bool missingIndexes = !foundIndexes.Contains("idx_chat_persona") ||
+                              !foundIndexes.Contains("idx_notes_persona");
+        if (chatReady && notesReady && !missingIndexes) return;
+        // A brand-new DB has no owner rows to lose: avoid a redundant empty backup.
+        // For any existing table set, retain the verified pre-migration snapshot.
+        if (hadExistingTablesBeforeBootstrap)
+            CheckpointSqlite(db, "PRE_PERSONA_MIGRATION");
         using var tx = db.BeginTransaction();
         using var cmd = db.CreateCommand();
         cmd.Transaction = tx;
@@ -1228,6 +1347,18 @@ public partial class MainWindow : Window
     {
         string legacy = Path.Combine(Path.GetDirectoryName(dbPath)!, "chat.jsonl");
         if (!File.Exists(legacy)) return;
+
+        // B03 NO-LOSS: an existing legacy JSONL import is an irreversible
+        // owner-history mutation. Snapshot the pre-import database before
+        // opening the write transaction (SQLite online backup needs no tx).
+        // An already-imported file must never create another backup.
+        using (var prior = db.CreateCommand())
+        {
+            prior.CommandText = "SELECT COUNT(*) FROM imported_sources WHERE source=$s";
+            prior.Parameters.AddWithValue("$s", "NOX_NEW_CHAT_JSONL_V1");
+            if (Convert.ToInt64(prior.ExecuteScalar()) > 0) return;
+        }
+        CheckpointSqlite(db, "PRE_LEGACY_JSONL_IMPORT");
         using var tx = db.BeginTransaction();
         using var check = db.CreateCommand(); check.Transaction = tx;
         check.CommandText = "SELECT COUNT(*) FROM imported_sources WHERE source=$s";

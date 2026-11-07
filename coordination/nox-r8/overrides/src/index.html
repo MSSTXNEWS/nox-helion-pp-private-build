@@ -90,6 +90,7 @@ body.reduced *,body.reduced *:before,body.reduced *:after{animation:none!importa
 .helion-core{z-index:1;opacity:.14;pointer-events:none}
 .helion[data-fx="active"]{background:radial-gradient(circle at 50% 50%,#000 13%,#010307 64%,#2b1c19 75%,transparent 82%)}
 .helion[data-fx="disabled"] .helion-fx{display:none}
+.helion[data-fx="disabled"] .helion-core{opacity:1}
 .core{transform:translateZ(0)}.core:after{content:"";position:absolute;inset:8px;border:1px solid #d69b5638;border-radius:50%;box-shadow:inset -6px -7px 13px #0009;pointer-events:none}
 .core.active{animation:orb-active 5s ease-in-out infinite;}
 @keyframes orb-active{0%,100%{box-shadow:0 0 14px #c67c4240,inset 0 0 21px #000}50%{box-shadow:0 0 34px #eab27280,inset 0 0 18px #000}}
@@ -149,20 +150,78 @@ body.reduced .helion-fx{filter:none}body.reduced .core.active{animation:none}
   const canvas=document.getElementById('helionFx');
   if(!canvas)return;
   const sphere=canvas.parentElement;
+  // WebView2 runtime versions can expose legacy MediaQueryList listeners or
+  // reject the OS motion observer. Neither must disable graphics or native IPC.
+  let motionQuery=null,motionUnreadable=false;
+  try{
+    if(typeof window.matchMedia==='function')motionQuery=window.matchMedia('(prefers-reduced-motion: reduce)');
+  }catch(e){motionUnreadable=true;console.warn('NOX reduced-motion query unavailable:',String(e?.message||e));}
+  // A failing Windows MediaQueryList.matches getter must never escape an
+  // animation frame. Unknown OS preference errs on the accessible static pose.
+  // Latch once to avoid repeated GPU-frame exceptions or console flooding.
+  const reduce=()=>{
+    if(document.body.classList.contains('reduced')||motionUnreadable)return true;
+    if(!motionQuery)return false;
+    try{return Boolean(motionQuery.matches);}
+    catch(e){
+      motionUnreadable=true;
+      console.warn('NOX reduced-motion state inaccessible:',String(e?.message||e));
+      return true;
+    }
+  };
+  function watchMotion(redraw){
+    if(!motionQuery)return;
+    // An older WebView2 MediaQueryList can expose addEventListener but reject it.
+    // Fall back to addListener before giving up on OS motion change events.
+    try{
+      if(typeof motionQuery.addEventListener==='function'){
+        motionQuery.addEventListener('change',redraw);return;
+      }
+    }catch(e){console.warn('NOX modern reduced-motion observer unavailable:',String(e?.message||e));}
+    try{
+      if(typeof motionQuery.addListener==='function')motionQuery.addListener(redraw);
+    }catch(e){console.warn('NOX legacy reduced-motion observer unavailable:',String(e?.message||e));}
+  }
+  // Dynamic WebView2/DPI layout changes do not always fire window.resize.
+  // Observe the existing element so Reduced Motion still gets one accurate
+  // static frame, without starting a continuous animation.
+  function watchSize(target,redraw){
+    if(typeof window.ResizeObserver!=='function')return ()=>{};
+    let observer=null;
+    try{observer=new window.ResizeObserver(redraw);observer.observe(target);}
+    catch(e){
+      try{observer?.disconnect();}catch(_){}
+      console.warn('NOX element resize observer unavailable:',String(e?.message||e));
+      return ()=>{};
+    }
+    return ()=>{try{observer.disconnect();}catch(_){}};
+  }
+  // Coalesce repeated WebView2 resize/mode/energy invalidations into one RAF;
+  // cancel only when hidden or context lost, never starve a frame during DPI drags.
   function startCanvas2d(fallbackCanvas, initialMode='BALANCED', initialEnergy=0){
     const canvas=fallbackCanvas;
     // 2D fallback retains visible fluid motion even when GPU acceleration is
     // disabled by the machine or by remote desktop / headless Windows CI.
-    const ctx=canvas.getContext('2d',{alpha:true});
-    if(!ctx){sphere.dataset.fx='disabled';return;}
-    let mode=initialMode,energy=initialEnergy,raf=0,last=0,started=performance.now(),rendered=false;
-    const reduce=()=>document.body.classList.contains('reduced') ||
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    // If Canvas2D itself is unavailable or fails mid-draw, the original CSS
+    // sphere remains visible and the native IPC/chat remain independent.
+    let stopSizeWatch=()=>{};
+    function staticCss(reason){
+      stopSizeWatch();
+      sphere.dataset.fx='disabled';
+      window.noxVisual={setMode(){},setEnergy(){},refresh(){}};
+      console.warn('NOX Canvas2D static CSS fallback:',reason);
+    }
+    let ctx;
+    try{ctx=canvas.getContext('2d',{alpha:true});}
+    catch(e){staticCss('CONTEXT_FAILED_'+String(e?.message||e));return;}
+    if(!ctx){staticCss('CONTEXT_UNAVAILABLE');return;}
+    let mode=initialMode,energy=initialEnergy,raf=0,last=0,started=performance.now(),rendered=false,failed=false,contextLost=false;
     function frame(now){
-      if(document.hidden){raf=0;return;}
+      if(failed||contextLost||document.hidden){raf=0;return;}
       const fps=reduce()?0:mode==='MAX'?30:mode==='ECO'?8:18;
       if(rendered&&(!fps||now-last<1000/fps)){raf=fps?requestAnimationFrame(frame):0;return;}
       last=now;rendered=true;
+      try{
       const r=canvas.getBoundingClientRect(),max=mode==='ECO'?280:mode==='MAX'?650:480;
       const scale=Math.min(1.5,Math.max(1,window.devicePixelRatio||1));
       const w=Math.min(max,Math.max(80,Math.ceil(r.width*scale)));
@@ -192,15 +251,36 @@ body.reduced .helion-fx{filter:none}body.reduced .core.active{animation:none}
       ctx.save();ctx.translate(cx,cy);ctx.rotate(-.4+t*.025);ctx.scale(1,.31);
       ctx.beginPath();ctx.arc(0,0,disk*1.25,0,Math.PI*2);
       ctx.strokeStyle='#a6824e30';ctx.lineWidth=S/450;ctx.stroke();ctx.restore();
+      }catch(e){
+        failed=true;raf=0;
+        staticCss('DRAW_FAILED_'+String(e?.message||e));
+        return;
+      }
       raf=fps?requestAnimationFrame(frame):0;
     }
-    function redraw(){if(raf)cancelAnimationFrame(raf);rendered=false;raf=requestAnimationFrame(frame);}
+    function redraw(){if(failed||contextLost)return;rendered=false;if(document.hidden){if(raf)cancelAnimationFrame(raf);raf=0;return;}if(!raf)raf=requestAnimationFrame(frame);}
     sphere.dataset.fx='canvas2d';
     window.noxVisual={setMode(v){mode=['MAX','BALANCED','ECO'].includes(v)?v:'BALANCED';redraw();},
       setEnergy(v){energy=v?1:0;redraw();},refresh:redraw};
+    // Some WebView2/Chromium drivers lose the 2D surface without throwing.
+    // Stop the RAF loop and reveal the original CSS sphere until the actual
+    // canvas context restores; preserve mode, energy, chat, and native IPC.
+    canvas.addEventListener('contextlost',()=>{
+      if(failed||contextLost)return;
+      contextLost=true;
+      if(raf)cancelAnimationFrame(raf);
+      raf=0;rendered=false;sphere.dataset.fx='disabled';
+      console.warn('NOX Canvas2D context lost; static CSS fallback active');
+    });
+    canvas.addEventListener('contextrestored',()=>{
+      if(failed||!contextLost)return;
+      contextLost=false;rendered=false;sphere.dataset.fx='canvas2d';
+      redraw();
+    });
     document.addEventListener('visibilitychange',()=>{if(document.hidden){if(raf)cancelAnimationFrame(raf);raf=0;}else redraw();});
     window.addEventListener('resize',redraw,{passive:true});
-    window.matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change',redraw);
+    watchMotion(redraw);
+    stopSizeWatch=watchSize(canvas,redraw);
     redraw();
   }
 
@@ -258,27 +338,31 @@ body.reduced .helion-fx{filter:none}body.reduced .core.active{animation:none}
     float alpha=clamp(disk+glow*1.8+orbit+orbit2+dust,0.,1.);
     color=vec4(result,alpha);
   }`;
-  function shader(type,src){const sh=gl.createShader(type);gl.shaderSource(sh,src);gl.compileShader(sh);
+  function shader(type,src){const sh=gl.createShader(type);if(!sh)throw new Error('GL_SHADER_ALLOC_FAILED');gl.shaderSource(sh,src);gl.compileShader(sh);
     if(!gl.getShaderParameter(sh,gl.COMPILE_STATUS))throw new Error(gl.getShaderInfoLog(sh)||'GLSL compile failed');return sh;}
   let program,time,res,ene;
   // GPU setup can fail after shader link (lost device, uniform/buffer failure).
   // Keep the complete GL initialization inside the same fail-closed boundary.
-  try{program=gl.createProgram();let v=shader(gl.VERTEX_SHADER,vert),f=shader(gl.FRAGMENT_SHADER,frag);
+  try{program=gl.createProgram();if(!program)throw new Error('GL_PROGRAM_ALLOC_FAILED');let v=shader(gl.VERTEX_SHADER,vert),f=shader(gl.FRAGMENT_SHADER,frag);
     gl.attachShader(program,v);gl.attachShader(program,f);gl.linkProgram(program);
     if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw new Error(gl.getProgramInfoLog(program)||'GL link failed');
     gl.deleteShader(v);gl.deleteShader(f);
     time=gl.getUniformLocation(program,'uTime');res=gl.getUniformLocation(program,'uResolution');ene=gl.getUniformLocation(program,'uEnergy');
-    const buf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buf);
+    // Missing uniforms can silently paint an empty sphere without GL errors.
+    if(time===null||res===null||ene===null)throw new Error('GL_REQUIRED_UNIFORM_MISSING');
+    const buf=gl.createBuffer();if(!buf)throw new Error('GL_BUFFER_ALLOC_FAILED');gl.bindBuffer(gl.ARRAY_BUFFER,buf);
     gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]),gl.STATIC_DRAW);
-    const attr=gl.getAttribLocation(program,'aPosition');gl.enableVertexAttribArray(attr);gl.vertexAttribPointer(attr,2,gl.FLOAT,false,0,0);
+    const attr=gl.getAttribLocation(program,'aPosition');
+    if(!Number.isInteger(attr)||attr<0)throw new Error('GL_REQUIRED_ATTRIBUTE_MISSING');
+    gl.enableVertexAttribArray(attr);gl.vertexAttribPointer(attr,2,gl.FLOAT,false,0,0);
   }catch(e){console.warn('NOX WebGL initialization fallback:',e.message);const replacement=canvas.cloneNode(false);canvas.replaceWith(replacement);startCanvas2d(replacement);return;}
   let raf=0,mode='BALANCED',energy=0,rendered=false,last=0,started=performance.now(),gpuFrames=0;
-  const reduce=()=>document.body.classList.contains('reduced') ||
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   let gpuActive=true;
+  let stopSizeWatch=()=>{};
   function switchToCanvas2d(reason){
     if(!gpuActive)return;
     gpuActive=false;
+    stopSizeWatch();
     if(raf)cancelAnimationFrame(raf);
     raf=0;
     const replacement=canvas.cloneNode(false);
@@ -309,13 +393,14 @@ body.reduced .helion-fx{filter:none}body.reduced .core.active{animation:none}
     catch(e){switchToCanvas2d(e.message);return;}
     raf=fps?requestAnimationFrame(frame):0;
   }
-  function redraw(){if(!gpuActive)return;if(raf)cancelAnimationFrame(raf);rendered=false;raf=requestAnimationFrame(frame);}
+  function redraw(){if(!gpuActive)return;rendered=false;if(document.hidden){if(raf)cancelAnimationFrame(raf);raf=0;return;}if(!raf)raf=requestAnimationFrame(frame);}
   sphere.dataset.fx='active';
   window.noxVisual={setMode(value){mode=['MAX','BALANCED','ECO'].includes(value)?value:'BALANCED';rendered=false;redraw();},
     setEnergy(isGenerating){energy=isGenerating?1:0;rendered=false;redraw();},refresh:()=>{rendered=false;redraw()}};
   document.addEventListener('visibilitychange',()=>{if(!gpuActive)return;if(!document.hidden)redraw();else if(raf){cancelAnimationFrame(raf);raf=0;}});
   window.addEventListener('resize',redraw,{passive:true});
-  window.matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change',redraw);
+  watchMotion(redraw);
+  stopSizeWatch=watchSize(canvas,redraw);
   canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();switchToCanvas2d('CONTEXT_LOST');});
   redraw();
 })();
