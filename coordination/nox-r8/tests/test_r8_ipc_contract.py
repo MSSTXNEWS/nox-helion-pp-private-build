@@ -217,7 +217,7 @@ assert 'ValidWriteRequestId(requestId)' in toggle
 assert 'cmd.ExecuteNonQuery() != 1' in toggle
 assert 'NOX_TASK_TOGGLE_MISSING_ROW_HOLD' in toggle
 assert 'NOX_TASK_TOGGLE_SQLITE_READBACK_HOLD' in toggle
-assert toggle.index('tx.Commit();') < toggle.index('using (var verifyDb = OpenDatabase())') < toggle.index('Send("tasks.toggle.receipt"')
+assert toggle.index('tx.Commit();') < toggle.index('using var verifyDb = OpenDatabase();') < toggle.index('Send("tasks.toggle.receipt"')
 assert 'Send("tasks.toggle.denied"' in toggle
 assert 'case "tasks.toggle": {' in cs and 'HandleTaskToggle(taskId, desiredComplete, Text("requestId"));' in cs
 for fragment in (
