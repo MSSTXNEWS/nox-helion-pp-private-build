@@ -54,7 +54,7 @@ required_html = (
     "post('stop',{requestId:stopOwner})",
     "pendingStopId===activeChatId",
     "v.requestId!==activeChatId",
-    "case 'token':if(pendingChatDraft?.persona!==visibleDraftPersona)break;lastAnswer+=v.text",
+    "case 'token':if(pendingChatDraft?.persona!==visibleDraftPersona||pendingStopId===activeChatId)break;lastAnswer+=v.text",
     "case 'complete':{const retry=pendingChatDraft?.requestId===v?.requestId",
     "Only the matching native complete may unlock a busy chat.",
     "if(e.key==='Escape'&&busy&&activeChatId){e.preventDefault();$('stop').click();return;}",
@@ -84,8 +84,8 @@ owner_filter = "if(['status','token','metrics','complete'].includes(m.type) && (
 assert receiver.count(owner_filter) == 1, 'F02_NATIVE_OWNER_FILTER_HOLD'
 assert receiver.index(owner_filter) < receiver.index('switch(m.type){') < receiver.index("case 'token':"), 'F02_OWNER_FILTER_ORDER_HOLD'
 token = receiver.split("case 'token':", 1)[1].split("case 'metrics':", 1)[0]
-assert 'if(pendingChatDraft?.persona!==visibleDraftPersona)break;' in token, 'F02_CROSS_PERSONA_TOKEN_HOLD'
-assert token.index('if(pendingChatDraft?.persona!==visibleDraftPersona)break;') < token.index('lastAnswer+=v.text'), 'F02_TOKEN_VISIBILITY_ORDER_HOLD'
+assert 'if(pendingChatDraft?.persona!==visibleDraftPersona||pendingStopId===activeChatId)break;' in token, 'F02_CROSS_PERSONA_AND_STOP_FENCE_HOLD'
+assert token.index('if(pendingChatDraft?.persona!==visibleDraftPersona||pendingStopId===activeChatId)break;') < token.index('lastAnswer+=v.text'), 'F02_STOP_FENCE_BEFORE_TOKEN_VISIBILITY_HOLD'
 # Keyboard path must actually call the already owner-bound STOP button.
 keyboard = html.rsplit("document.addEventListener('keydown',e=>{", 1)[1].split("\n});", 1)[0]
 key_guard = 'if(e.defaultPrevented||e.isComposing||e.keyCode===229||e.repeat)return;'
