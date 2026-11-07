@@ -413,3 +413,18 @@ assert 'CancellationTokenSource.CreateLinkedTokenSource(streamBudget.Token)' in 
 assert 'readWindow.CancelAfter(TimeSpan.FromMinutes(3));' in _budget, 'B06_IDLE_GUARD_NO_LOSS_HOLD'
 assert 'catch (OperationCanceledException) when (cancellation.IsCancellationRequested)' in _budget and 'OLLAMA_TIMEOUT:' in _budget, 'B06_OWNER_STOP_VS_TIMEOUT_HOLD'
 print('B06 SOURCE_ONLY: total 15m stream + 3m idle, STOP distinct; real Qwen not tested')
+
+# B02: cap cumulative streamed answer before emitting any oversized chunk.
+# The original Qwen num_predict is not an enforced provider-side byte budget;
+# a nonterminal stream that emits data indefinitely must not exhaust WebView2.
+# This is SOURCE_ONLY, not a real Windows/Ollama stream acceptance.
+_output_guard = cs.split('private async Task Generate(', 1)[1].split('private void PersistChat(', 1)[0]
+_token_block = _output_guard.split('if (item.TryGetProperty("response", out var token))', 1)[1].split('if (item.TryGetProperty("error", out var serverError))', 1)[0]
+assert _output_guard.count('const int MaxAnswerChars = 256 * 1024;') == 1, 'B02_OUTPUT_MAX_MISSING_HOLD'
+assert 'if (value.Length > MaxAnswerChars - answer.Length)' in _token_block, 'B02_OUTPUT_CUMULATIVE_BUDGET_HOLD'
+assert 'OLLAMA_RESPONSE_LIMIT_HOLD:' in _token_block, 'B02_OUTPUT_EXCEEDED_REASON_HOLD'
+assert _token_block.index('if (value.Length > MaxAnswerChars - answer.Length)') < _token_block.index('answer.Append(value);') < _token_block.index('Emit("token", new { requestId, text = value });'), 'B02_OUTPUT_REJECT_BEFORE_APPEND_AND_IPC_HOLD'
+assert _output_guard.index('if (value.Length > MaxAnswerChars - answer.Length)') < _output_guard.index('sqliteWriteAttempted = true;'), 'B02_OUTPUT_PRE_SQLITE_HOLD'
+assert 'Emit("complete", new { requestId, ok = sqliteVerified, stopped = false, sqliteUnknown });' in _output_guard, 'B02_OUTPUT_TERMINAL_ACK_HOLD'
+assert 'catch (OperationCanceledException) when (cancellation.IsCancellationRequested)' in _output_guard, 'B02_OUTPUT_STOP_PRESERVED_HOLD'
+print('B02 SOURCE_ONLY: cumulative response cap rejects before append/IPC/SQLite; terminal ERROR/complete and owner STOP paths preserved; Windows NOT_TESTED')

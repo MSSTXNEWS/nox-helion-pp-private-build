@@ -1816,6 +1816,9 @@ public partial class MainWindow : Window
         }
         Interlocked.Increment(ref generationStartedCount);
         var answer = new StringBuilder();
+        // Bound cumulative trusted-local Ollama output even if it ignores num_predict.
+        // A limit failure emits terminal ERROR/complete and does not save partial SQLite.
+        const int MaxAnswerChars = 256 * 1024;
         // An INSERT can commit before SQLite readback fails; do not claim rollback.
         bool sqliteWriteAttempted = false, sqliteVerified = false;
         bool refreshProviderAfterError = false;
@@ -1890,6 +1893,8 @@ public partial class MainWindow : Window
                 if (item.TryGetProperty("response", out var token))
                 {
                     var value = token.GetString() ?? "";
+                    if (value.Length > MaxAnswerChars - answer.Length)
+                        throw new InvalidOperationException("OLLAMA_RESPONSE_LIMIT_HOLD: output exceeded 256 Ki UTF-16 characters; partial answer not saved.");
                     answer.Append(value);
                     cancellation.Token.ThrowIfCancellationRequested();
                     if (value.Length > 0) Interlocked.Increment(ref generationStreamingTokenCount);
