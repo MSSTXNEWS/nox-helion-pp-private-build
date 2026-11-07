@@ -122,3 +122,35 @@ assert.equal(nodes.vuneoImport.disabled,true,'unknown SQLite outcome prevents an
 assert.match(nodes.vuneoImportStatus.textContent,/NOX_VUNEO_COMMIT_UNKNOWN_HOLD/);
 assert.equal(owner.click(),false,'programmatic handler cannot bypass disabled button');
 console.log('D03 R8 SOURCE_ONLY: unknown partial import fail-closed / requestId / verified SQLite preimage PASS');
+
+
+// D03 restart-safety: the earlier in-process uncertain HOLD was not durable.
+// The production WPF owner must write the attempt journal after consent and
+// a verified SQLite preimage, BEFORE importer work, and independently read it
+// from the same database before allowing any later request (incl. restart).
+const receiptHelpers=native.slice(native.indexOf('private const string VuneoImportReceipt'),
+  native.indexOf('private void ImportVuneoByConsent(string requestId)'));
+const guardedOwner=native.slice(native.indexOf('private void ImportVuneoByConsent(string requestId)'),
+  native.indexOf('private void ImportKnowledgeByDialog'));
+for(const token of ['NOX_VUNEO_OWNER_MIGRATION_V1','SELECT rows FROM imported_sources',
+    'INSERT INTO imported_sources(source,imported_at,rows) VALUES($source,$time,0)',
+    'UPDATE imported_sources SET rows=1 WHERE source=$source AND rows=0',
+    'NOX_VUNEO_ARM_READBACK_HOLD','NOX_VUNEO_COMPLETE_READBACK_HOLD'])
+  assert.ok(receiptHelpers.includes(token), 'SQLite import receipt missing: '+token);
+assert.ok(guardedOwner.indexOf('priorImport = ReadVuneoImportReceipt()') <
+  guardedOwner.indexOf('MessageBox.Show(this'), 'reject journaled restarts before modal');
+assert.ok(guardedOwner.includes('priorImport != -1') &&
+  guardedOwner.includes('NOX_VUNEO_PREVIOUS_OUTCOME_REVIEW_HOLD') &&
+  guardedOwner.includes('NOX_VUNEO_ALREADY_IMPORTED_HOLD'), 'prior attempts are fail-closed');
+assert.ok(guardedOwner.indexOf('CheckpointSqlite(db, "PRE_VUNEO_IMPORT")') <
+  guardedOwner.indexOf('ArmVuneoImportReceipt()') &&
+  guardedOwner.indexOf('ArmVuneoImportReceipt()') <
+  guardedOwner.indexOf('knowledge.ImportVuneoStaging()') &&
+  guardedOwner.indexOf('knowledge.ImportVuneoStaging()') <
+  guardedOwner.indexOf('CompleteVuneoImportReceipt()') &&
+  guardedOwner.indexOf('CompleteVuneoImportReceipt()') <
+  guardedOwner.indexOf('Send("knowledge.vuneo.result"'),
+  'backup -> durable pending -> import -> completed readback -> owner success');
+assert.ok(!receiptHelpers.includes('DELETE FROM imported_sources') &&
+  !receiptHelpers.includes('File.Delete('), 'never silently erase pending recovery receipt');
+console.log('D03 R8 SOURCE_ONLY: SQLite import journal survives process restart; unknown cannot silently retry PASS');

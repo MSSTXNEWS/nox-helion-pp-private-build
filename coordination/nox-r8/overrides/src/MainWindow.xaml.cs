@@ -2152,6 +2152,52 @@ public partial class MainWindow : Window
         finally { activeModelPull = null; }
     }
 
+    // D03: one-shot migration receipts use the ORIGINAL owner SQLite database.
+    // 0 = attempt armed (outcome requires review after crash/throw);
+    // 1 = import returned and the completion receipt independently verified.
+    // Absence alone permits a new owner-consented migration. Never delete a
+    // pending receipt automatically on restart or infer rollback from an error.
+    private const string VuneoImportReceipt = "NOX_VUNEO_OWNER_MIGRATION_V1";
+    private int ReadVuneoImportReceipt()
+    {
+        using var db = OpenDatabase();
+        using var cmd = db.CreateCommand();
+        cmd.CommandText = "SELECT rows FROM imported_sources WHERE source=$source";
+        cmd.Parameters.AddWithValue("$source", VuneoImportReceipt);
+        object? value = cmd.ExecuteScalar();
+        return value == null || value == DBNull.Value ? -1 : Convert.ToInt32(value);
+    }
+
+    private void ArmVuneoImportReceipt()
+    {
+        using (var db = OpenDatabase())
+        using (var cmd = db.CreateCommand())
+        {
+            cmd.CommandText = "INSERT INTO imported_sources(source,imported_at,rows) VALUES($source,$time,0)";
+            cmd.Parameters.AddWithValue("$source", VuneoImportReceipt);
+            cmd.Parameters.AddWithValue("$time", DateTimeOffset.UtcNow.ToString("O"));
+            if (cmd.ExecuteNonQuery() != 1)
+                throw new InvalidOperationException("NOX_VUNEO_ARM_WRITE_HOLD");
+        }
+        // Separate SQLite connection: a committed marker must survive restart.
+        if (ReadVuneoImportReceipt() != 0)
+            throw new InvalidOperationException("NOX_VUNEO_ARM_READBACK_HOLD");
+    }
+
+    private void CompleteVuneoImportReceipt()
+    {
+        using (var db = OpenDatabase())
+        using (var cmd = db.CreateCommand())
+        {
+            cmd.CommandText = "UPDATE imported_sources SET rows=1 WHERE source=$source AND rows=0";
+            cmd.Parameters.AddWithValue("$source", VuneoImportReceipt);
+            if (cmd.ExecuteNonQuery() != 1)
+                throw new InvalidOperationException("NOX_VUNEO_COMPLETE_WRITE_HOLD");
+        }
+        if (ReadVuneoImportReceipt() != 1)
+            throw new InvalidOperationException("NOX_VUNEO_COMPLETE_READBACK_HOLD");
+    }
+
     // The original WPF owner alone grants VUNEO consent. No replayed
     // document request may display a second modal or import twice in this
     // WPF process. Bounded ids live only in memory, not in owner SQLite.
@@ -2176,6 +2222,21 @@ public partial class MainWindow : Window
             return;
         }
 
+        // A previous process may have died after a partial SQLite COMMIT.
+        // This check precedes owner consent and any new importer invocation.
+        int priorImport;
+        try { priorImport = ReadVuneoImportReceipt(); }
+        catch (Exception) {
+            Send("knowledge.vuneo.denied", new { requestId, reason = "NOX_VUNEO_JOURNAL_READ_HOLD" });
+            return;
+        }
+        if (priorImport != -1) {
+            Send("knowledge.vuneo.denied", new { requestId,
+                reason = priorImport == 1 ? "NOX_VUNEO_ALREADY_IMPORTED_HOLD"
+                                          : "NOX_VUNEO_PREVIOUS_OUTCOME_REVIEW_HOLD" });
+            return;
+        }
+
         bool importCompleted = false;
         // KnowledgeStore can fail after a partial SQLite write; only an independent
         // acceptance check may claim all imported rows or assert no mutation.
@@ -2189,8 +2250,12 @@ public partial class MainWindow : Window
                 return;
             }
             using (var db = OpenDatabase()) CheckpointSqlite(db, "PRE_VUNEO_IMPORT");
+            // Persist a crash-recovery HOLD in the EXISTING SQLite, never in a
+            // parallel memory store. Failure to arm means no importer call.
+            ArmVuneoImportReceipt();
             importAttempted = true;
             var result = knowledge.ImportVuneoStaging();
+            CompleteVuneoImportReceipt();
             importCompleted = true;
             Send("knowledge.vuneo.result", new { requestId, backupVerified = true, result });
             try {
