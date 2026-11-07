@@ -41,8 +41,15 @@ def note(event,**kw):
                 time.sleep(.2)
         # This log is informational; protecting the trainer does not depend on
         # a successful update to a UI JSON status file.
-        os.replace(tmp,p.with_name("worm_status_safe70.json"))
-        print("NOX WORM TELEMETRY: status file locked; sidecar saved",flush=True)
+        try:
+            os.replace(tmp,p.with_name("worm_status_safe70.json"))
+            print("NOX WORM TELEMETRY: status sidecar saved",flush=True)
+        except PermissionError:
+            folder=root/"safe70_receipts"
+            folder.mkdir(exist_ok=True)
+            unique=folder/("worm_%d_%d.json"%(os.getpid(),time.time_ns()))
+            os.replace(tmp,unique)
+            print("NOX WORM TELEMETRY: immutable status saved",unique,flush=True)
     finally:
         with suppress(OSError):
             tmp.unlink(missing_ok=True)
