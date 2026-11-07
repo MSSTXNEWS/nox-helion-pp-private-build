@@ -10,6 +10,22 @@ from patch_live import read_original, patch_source, sha256
 
 def build(payload: Path, voice: Path, output: Path):
     files = patch_source(read_original(payload), voice)
+    # Bundle the exact third-party MIT original to eliminate installer-time downloads.
+    vendor = Path(__file__).resolve().parent / "vendor" / "radiant"
+    source = (vendor / "SOURCE-eclipse-glow.html").read_bytes()
+    license_text = (vendor / "LICENSE").read_bytes()
+    def git_blob(data):
+        return hashlib.sha1(b"blob "+str(len(data)).encode()+b"\\0"+data).hexdigest()
+    if git_blob(source) != "ef61254ca3b19830d8be6bf960e957ed613f69b0":
+        raise RuntimeError("PINNED_ORIGINAL_SHADER_HOLD")
+    if git_blob(license_text) != "3e54c0daeb1d1a0c462019e6fd3e96cc82651daf":
+        raise RuntimeError("PINNED_SHADER_LICENSE_HOLD")
+    old_label = b'<div class="label">Eclipse Glow</div>'
+    if source.count(old_label)!=1 or not license_text.startswith(b"MIT License"):
+        raise RuntimeError("ORIGINAL_SHADER_ID_OR_LICENSE_HOLD")
+    files["vendor/radiant/SOURCE-eclipse-glow.html"] = source
+    files["vendor/radiant/LICENSE"] = license_text
+    files["vendor/radiant/eclipse-glow.html"] = source.replace(old_label,b"")
     manifest = {
         "schema":"NOX_WEB_11_22_STAGED_V1",
         "instructions_version":"0.0.6",
