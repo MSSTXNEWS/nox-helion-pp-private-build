@@ -1040,6 +1040,20 @@ public partial class MainWindow : Window
         }
         if (!string.Equals(Sha256File(snapshot), sha, StringComparison.Ordinal))
             throw new InvalidOperationException("NOX_B03_SMOKE_SHA_READBACK_HOLD");
+        // F01: Windows-native verification that both temporary SQLite backup
+        // connections have really released the isolated snapshot. A lingering
+        // pooled SQLite handle must fail this acceptance; never test or lock
+        // the live owner database. No snapshot bytes are modified.
+        try
+        {
+            using var exclusive = new FileStream(snapshot, FileMode.Open, FileAccess.Read, FileShare.None);
+            if (exclusive.Length <= 0)
+                throw new InvalidOperationException("NOX_F01_SNAPSHOT_EMPTY_HOLD");
+        }
+        catch (IOException ex)
+        {
+            throw new InvalidOperationException("NOX_F01_BACKUP_LOCKED_HANDLE_HOLD", ex);
+        }
     }
 
     // Fail closed if any existing parent is a Windows junction / symlink,
