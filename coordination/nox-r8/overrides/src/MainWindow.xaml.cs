@@ -1150,6 +1150,20 @@ public partial class MainWindow : Window
         }
         if (!blockedWhileHeld)
             throw new InvalidOperationException("NOX_F01_LOCKED_SNAPSHOT_ACCEPTED_HOLD");
+        // Independent negative control for the companion SHA manifest.
+        // Merely reopening an unlocked manifest does not prove its lock gate
+        // fails closed when another Windows handle is still sharing reads.
+        bool manifestBlockedWhileHeld = false;
+        using (var heldManifest = new FileStream(snapshot + ".sha256", FileMode.Open, FileAccess.Read, FileShare.Read))
+        {
+            try
+            {
+                using var mustFailManifest = new FileStream(snapshot + ".sha256", FileMode.Open, FileAccess.Read, FileShare.None);
+            }
+            catch (IOException) { manifestBlockedWhileHeld = true; }
+        }
+        if (!manifestBlockedWhileHeld)
+            throw new InvalidOperationException("NOX_F01_LOCKED_MANIFEST_ACCEPTED_HOLD");
         // The fixture must release its own lock. Keep the owner/live DB untouched.
         try
         {
