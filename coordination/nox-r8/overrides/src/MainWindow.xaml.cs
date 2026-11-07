@@ -557,6 +557,71 @@ public partial class MainWindow : Window
             checks["d01_five_quick_compact_320_390_800"] = "PASS";
             checks["f03_compact_native_coreid_focus_320_390_800"] = "PASS";
 
+            // F03: real Edge WebView2 DOM/renderer handlers, fault-injected
+            // GPU events. This is NOT proof of a physical RX6650M GPU reset.
+            var fallback = await Browser.CoreWebView2.ExecuteScriptAsync("""
+                (() => {
+                  const sphere = document.querySelector('.helion');
+                  const canvas = document.getElementById('helionFx');
+                  const cssVisible = () => {
+                    const core = document.querySelector('.helion-core');
+                    return !!core && getComputedStyle(core).opacity === '1';
+                  };
+                  const api = () => typeof window.noxVisual?.setMode === 'function' &&
+                    typeof window.noxVisual?.setEnergy === 'function';
+                  if (!sphere || !canvas || !api()) return false;
+                  const initial = sphere.dataset.fx;
+                  if (initial === 'active') {
+                    const lost = new Event('webglcontextlost', {cancelable:true});
+                    canvas.dispatchEvent(lost);
+                    const replacement = document.getElementById('helionFx');
+                    if (!lost.defaultPrevented || replacement === canvas || !api()) return false;
+                    return sphere.dataset.fx === 'canvas2d' ||
+                      (sphere.dataset.fx === 'disabled' && cssVisible());
+                  }
+                  if (initial === 'canvas2d') {
+                    canvas.dispatchEvent(new Event('contextlost'));
+                    if (sphere.dataset.fx !== 'disabled' || !cssVisible()) return false;
+                    canvas.dispatchEvent(new Event('contextrestored'));
+                    return sphere.dataset.fx === 'canvas2d' && api();
+                  }
+                  return initial === 'disabled' && cssVisible();
+                })()
+                """);
+            if (fallback != "true")
+                throw new InvalidOperationException("NOX_F03_WEBVIEW2_INJECTED_GPU_FALLBACK_HOLD");
+            checks["f03_webview2_injected_gpu_context_fallback"] = "PASS";
+
+            // Chromium's real media-query engine, using a synthetic DevTools
+            // preference override: not the owner's physical Windows OS state.
+            bool reducedMediaAccepted = false;
+            try
+            {
+                await Browser.CoreWebView2.CallDevToolsProtocolMethodAsync(
+                    "Emulation.setEmulatedMedia",
+                    """{"features":[{"name":"prefers-reduced-motion","value":"reduce"}]}""");
+                var media = await Browser.CoreWebView2.ExecuteScriptAsync("""
+                    (() => {
+                      const query = window.matchMedia('(prefers-reduced-motion: reduce)');
+                      const sphere = document.querySelector('.helion');
+                      return query.matches && !!sphere &&
+                        getComputedStyle(sphere).animationName === 'none' &&
+                        typeof window.noxVisual?.refresh === 'function' &&
+                        !!document.querySelector('button.core[data-route="consciousness"]');
+                    })()
+                    """);
+                reducedMediaAccepted = media == "true";
+            }
+            finally
+            {
+                // Empty override restores the runner's original OS media state.
+                await Browser.CoreWebView2.CallDevToolsProtocolMethodAsync(
+                    "Emulation.setEmulatedMedia", """{"features":[]}""");
+            }
+            if (!reducedMediaAccepted)
+                throw new InvalidOperationException("NOX_F03_WEBVIEW2_REDUCED_MEDIA_HOLD");
+            checks["f03_webview2_emulated_reduced_motion"] = "PASS";
+
             // DOM accessibility must also survive in real WebView2:
             // visible labels, enabled buttons, live receipt region and focus.
             var accessibleSettings = await Browser.CoreWebView2.ExecuteScriptAsync("""
@@ -725,6 +790,8 @@ public partial class MainWindow : Window
                           "d01_five_quick_native_routes", "d01_five_quick_windows_uia",
                           "d01_five_quick_compact_320_390_800",
                           "f03_compact_native_coreid_focus_320_390_800",
+                          "f03_webview2_injected_gpu_context_fallback",
+                          "f03_webview2_emulated_reduced_motion",
                           "settings_windows_uia_host", "settings_webview2_accessible_controls",
                           "isolated_sqlite_path", "settings_wpf_owner_sqlite_readback",
                           "settings_wpf_motion_sqlite_readback", "settings_foreign_key_denial",

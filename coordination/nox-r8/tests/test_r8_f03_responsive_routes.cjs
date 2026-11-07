@@ -161,4 +161,10 @@ assert.match(native, /const expectedRoutes = \['consciousness','atlas','reflecti
   "F03_NATIVE_COMPACT_EIGHT_ROUTE_WALK_MISSING");
 assert.match(native, /const focusRecovered = document\.activeElement === reflection;/,
   "F03_NATIVE_COMPACT_HIDDEN_FOCUS_RECOVERY_MISSING");
+assert.match(native, /f03_webview2_injected_gpu_context_fallback"\] = "PASS"/,
+  "F03_REAL_WEBVIEW2_GPU_EVENT_RECEIPT_MISSING");
+assert.match(native, /f03_webview2_emulated_reduced_motion"\] = "PASS"/,
+  "F03_REAL_WEBVIEW2_EMULATED_REDUCED_MEDIA_RECEIPT_MISSING");
+assert.match(native, /CallDevToolsProtocolMethodAsync\(/,
+  "F03_EDGE_WEBVIEW2_REDUCED_MEDIA_NOT_EMULATED");
 console.log("F03 R8 SOURCE_ONLY PASS: 8 routes × 2 layouts, native IPC mapping, notes refresh, keyboard, ARIA, scroll");

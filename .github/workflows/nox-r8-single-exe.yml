@@ -106,6 +106,8 @@ jobs:
                 $n.checks.d01_five_quick_windows_uia -ne 'PASS' -or
                 $n.checks.d01_five_quick_compact_320_390_800 -ne 'PASS' -or
                 $n.checks.f03_compact_native_coreid_focus_320_390_800 -ne 'PASS' -or
+                $n.checks.f03_webview2_injected_gpu_context_fallback -ne 'PASS' -or
+                $n.checks.f03_webview2_emulated_reduced_motion -ne 'PASS' -or
                 $n.checks.settings_windows_uia_host -ne 'PASS' -or
                 $n.checks.settings_webview2_accessible_controls -ne 'PASS' -or
                 $n.checks.settings_wpf_owner_sqlite_readback -ne 'PASS' -or
