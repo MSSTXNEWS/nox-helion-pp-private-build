@@ -1165,12 +1165,45 @@ public partial class MainWindow : Window
         receipt.ExecuteNonQuery(); tx.Commit();
     }
 
+    // JsonDocument.GetProperty selects the last duplicate property. Native IPC
+    // must not interpret ambiguous JSON (including nested settings payloads).
+    // System.Text.Json already bounds nesting to its parser maximum depth.
+    private static bool HasDuplicateJsonProperties(JsonElement element)
+    {
+        if (element.ValueKind == JsonValueKind.Object)
+        {
+            var names = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var property in element.EnumerateObject())
+                if (!names.Add(property.Name) || HasDuplicateJsonProperties(property.Value))
+                    return true;
+        }
+        else if (element.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in element.EnumerateArray())
+                if (HasDuplicateJsonProperties(item)) return true;
+        }
+        return false;
+    }
+
     private async void OnMessage(object? sender, CoreWebView2WebMessageReceivedEventArgs e)
     {
         try
         {
-            using var document = JsonDocument.Parse(e.WebMessageAsJson);
+            // Reject oversized or structurally ambiguous WebView2 messages
+            // before parsing a native action, consent or owner requestId.
+            var rawMessage = e.WebMessageAsJson;
+            if (rawMessage.Length > 512 * 1024)
+            {
+                Send("error", "NOX_IPC_MESSAGE_TOO_LARGE_DENIED");
+                return;
+            }
+            using var document = JsonDocument.Parse(rawMessage);
             var request = document.RootElement;
+            if (request.ValueKind != JsonValueKind.Object || HasDuplicateJsonProperties(request))
+            {
+                Send("error", "NOX_IPC_AMBIGUOUS_JSON_DENIED");
+                return;
+            }
             var kind = request.GetProperty("type").GetString() ?? "";
             string Text(string name) => request.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String ? (value.GetString() ?? "") : "";
             switch (kind)

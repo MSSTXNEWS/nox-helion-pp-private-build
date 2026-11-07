@@ -257,3 +257,22 @@ assert 'recentlyHandledChatIdSet.Add(requestId)' in terminal, 'B02_REMEMBER_TERM
 assert 'recentlyHandledChatIds.Count > 128' in terminal, 'B02_REPLAY_MEMORY_BOUND_HOLD'
 assert terminal.index('recentlyHandledChatIdSet.Add(requestId)') < terminal.index('activeRequestId = null;'), 'B02_TERMINAL_CACHE_BEFORE_OWNER_RELEASE_HOLD'
 print('B02 R8 SOURCE_ONLY: delayed terminal owner replay blocked, bounded to 128 process IDs; Windows E2E NOT_TESTED')
+
+
+# B02 native IPC JSON ambiguity: JsonDocument.GetProperty otherwise returns
+# the last duplicate field, potentially changing type/requestId after dispatch.
+# Reject duplicate names at any object depth and bound message size before
+# native actions, while preserving all existing routes and owner-correlated STOP.
+ipc_guard = cs.split('private static bool HasDuplicateJsonProperties(JsonElement element)', 1)[1].split('private async void OnMessage(', 1)[0]
+message = cs.split('private async void OnMessage(', 1)[1].split('private void Send(', 1)[0]
+assert 'new HashSet<string>(StringComparer.Ordinal)' in ipc_guard, 'B02_DUPLICATE_ORDINAL_DENY_HOLD'
+assert 'element.ValueKind == JsonValueKind.Object' in ipc_guard, 'B02_DUPLICATE_OBJECT_WALK_HOLD'
+assert '!names.Add(property.Name) || HasDuplicateJsonProperties(property.Value)' in ipc_guard, 'B02_DUPLICATE_NESTED_WALK_HOLD'
+assert 'element.ValueKind == JsonValueKind.Array' in ipc_guard, 'B02_DUPLICATE_ARRAY_WALK_HOLD'
+assert 'HasDuplicateJsonProperties(item)' in ipc_guard, 'B02_DUPLICATE_ARRAY_RECURSE_HOLD'
+assert 'rawMessage.Length > 512 * 1024' in message, 'B02_WEBMESSAGE_SIZE_BOUND_HOLD'
+assert 'NOX_IPC_MESSAGE_TOO_LARGE_DENIED' in message, 'B02_MESSAGE_BOUND_DENIED_HOLD'
+assert 'request.ValueKind != JsonValueKind.Object || HasDuplicateJsonProperties(request)' in message, 'B02_IPC_ROOT_DUPLICATE_DENIED_HOLD'
+assert 'NOX_IPC_AMBIGUOUS_JSON_DENIED' in message, 'B02_IPC_AMBIGUOUS_DENIED_HOLD'
+assert message.index('rawMessage.Length > 512 * 1024') < message.index('JsonDocument.Parse(rawMessage)') < message.index('HasDuplicateJsonProperties(request)') < message.index('var kind = request.GetProperty("type")') < message.index('switch (kind)'), 'B02_IPC_FAIL_CLOSED_ORDER_HOLD'
+print('B02 R8 SOURCE_ONLY: bounded duplicate-free native IPC before command dispatch; Windows Qwen NOT_TESTED')
