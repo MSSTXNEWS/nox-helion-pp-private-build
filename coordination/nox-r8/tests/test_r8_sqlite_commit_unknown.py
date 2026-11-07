@@ -1,6 +1,7 @@
 """B04: SQLite ambiguous-commit must not trigger duplicate retries (SOURCE_ONLY)."""
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from contextlib import closing
 import sqlite3
 # Run the repository test against the original override, and the Windows CI
 # copy against the exact pinned-overlaid r8/src. Do not fall back to a stale tree.
@@ -39,16 +40,16 @@ assert "NOX_CHAT_SQLITE_READBACK_HOLD" in persist, "F02_SQLITE_ACK_BEFORE_READBA
 # not the owner's data, not real Qwen or release acceptance.
 with TemporaryDirectory(prefix="nox-r8-f02-isolated-") as tmp:
     dbpath = Path(tmp) / "chat.sqlite3"
-    with sqlite3.connect(dbpath) as db:
+    with closing(sqlite3.connect(dbpath)) as db:
         db.execute("PRAGMA journal_mode=WAL")
         db.execute("CREATE TABLE chat_history(id INTEGER PRIMARY KEY, prompt TEXT, answer TEXT, persona TEXT)")
         db.execute("INSERT INTO chat_history(prompt,answer,persona) VALUES(?,?,?)", ("first","persisted","KV"))
         db.commit()
-    with sqlite3.connect(dbpath) as reader:
+    with closing(sqlite3.connect(dbpath)) as reader:
         assert reader.execute(
             "SELECT prompt,answer FROM chat_history WHERE persona=?", ("KV",)
         ).fetchall() == [("first", "persisted")], "F02_SQLITE_WAL_READBACK_HOLD"
-    with sqlite3.connect(dbpath) as reopened:
+    with closing(sqlite3.connect(dbpath)) as reopened:
         assert reopened.execute(
             "SELECT COUNT(*) FROM chat_history WHERE persona=?", ("KV",)
         ).fetchone()[0] == 1, "F02_SQLITE_UNKNOWN_NO_DUPLICATE_HOLD"
