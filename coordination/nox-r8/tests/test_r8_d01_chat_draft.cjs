@@ -288,3 +288,44 @@ console.log('D01 SOURCE_ONLY PASS: knowledge/memory keyboard IME, repeat, Enter'
   assert.equal(elements.noteTitle.value,'KV revised unsaved','D01_SAME_PERSONA_DRAFT_NO_LOSS');
 }
 console.log('D01 SOURCE_ONLY PASS: reflection notes refresh and PersonaID memory view isolation');
+
+/* D01_GLOBAL_IME_SHORTCUT_GUARD: original document handler under the actual
+   R8 WebView2 source. SOURCE_ONLY; not Windows UIA/physical STOP evidence. */
+{
+  const sourceStart=html.indexOf("document.addEventListener('keydown',e=>");
+  const sourceEnd=html.indexOf("\nroute('consciousness');",sourceStart);
+  assert.ok(sourceStart>0 && sourceEnd>sourceStart,'D01_GLOBAL_KEY_HANDLER_MISSING');
+  let keyHandler, stops=0, routes=0, focuses=0;
+  const elements={
+    stop:{click(){stops++}},
+    prompt:{focus(){focuses++}}
+  };
+  const keyboardDocument={addEventListener(type,handler){
+    if(type==='keydown')keyHandler=handler;
+  }};
+  vm.runInNewContext(html.slice(sourceStart,sourceEnd),{
+    document:keyboardDocument,$:id=>elements[id],route:()=>{routes++},
+    busy:true,activeChatId:'d01_exact_active_request'
+  },{timeout:1500});
+  assert.equal(typeof keyHandler,'function','D01_GLOBAL_LISTENER_NOT_REGISTERED');
+  function press(key,extra={}){
+    let handled=0;
+    keyHandler({key,keyCode:0,ctrlKey:false,altKey:false,metaKey:false,
+      shiftKey:false,isComposing:false,repeat:false,defaultPrevented:false,
+      preventDefault(){handled++},...extra});
+    return handled;
+  }
+  assert.equal(press('Escape',{isComposing:true}),0,'D01_IME_ESCAPE_INTERCEPTED');
+  assert.equal(press('Escape',{keyCode:229}),0,'D01_LEGACY_IME_ESCAPE_INTERCEPTED');
+  assert.equal(press('Escape',{repeat:true}),0,'D01_REPEAT_ESCAPE_INTERCEPTED');
+  assert.equal(press('Escape',{defaultPrevented:true}),0,'D01_HANDLED_ESCAPE_INTERCEPTED');
+  assert.equal(press('k',{ctrlKey:true,isComposing:true}),0,'D01_IME_CTRL_K_INTERCEPTED');
+  assert.equal(press('k',{ctrlKey:true,altKey:true}),0,'D01_ALT_CTRL_K_INTERCEPTED');
+  assert.equal(press('k',{ctrlKey:true,shiftKey:true}),0,'D01_SHIFT_CTRL_K_INTERCEPTED');
+  assert.equal(press('k',{ctrlKey:true,repeat:true}),0,'D01_REPEAT_CTRL_K_INTERCEPTED');
+  assert.deepEqual([stops,routes,focuses],[0,0,0],'D01_IME_MUST_NOT_DISPATCH');
+  assert.equal(press('Escape'),1,'D01_REAL_ESCAPE_MUST_STOP');
+  assert.equal(press('k',{ctrlKey:true}),1,'D01_REAL_CTRL_K_MUST_ROUTE');
+  assert.deepEqual([stops,routes,focuses],[1,1,1],'D01_EXACTLY_ONE_NATIVE_STOP_AND_ROUTE');
+}
+console.log('D01 SOURCE_ONLY PASS: global IME-safe Escape/STOP and Ctrl+K');

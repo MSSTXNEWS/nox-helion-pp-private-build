@@ -432,6 +432,14 @@ case 'notes.add.denied':if(pendingNote&&v?.requestId===pendingNote.requestId){pe
 case 'system':$('systemInfo').textContent=JSON.stringify(v,null,2);$('hudMemory').textContent='SQLITE';break;
 case 'notice':$('personaStatus').textContent=String(v);break;
 }});
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&busy&&activeChatId){e.preventDefault();$('stop').click()}if(e.ctrlKey&&e.key.toLowerCase()==='k'){e.preventDefault();route('core');$('prompt').focus()}});
+document.addEventListener('keydown',e=>{
+  // Escape belongs to IME until composition ends; repeated/handled keys must
+  // not send duplicate native STOP or steal accessibility shortcuts.
+  if(e.defaultPrevented||e.isComposing||e.keyCode===229||e.repeat)return;
+  if(e.key==='Escape'&&busy&&activeChatId){e.preventDefault();$('stop').click();return;}
+  if(e.ctrlKey&&!e.altKey&&!e.metaKey&&!e.shiftKey&&e.key.toLowerCase()==='k'){
+    e.preventDefault();route('core');$('prompt').focus();
+  }
+});
 route('consciousness');
 </script></body></html>
