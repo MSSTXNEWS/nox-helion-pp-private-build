@@ -74,6 +74,8 @@ public partial class MainWindow : Window
     private string CurrentModel => ReadPreferencesDictionary().GetValueOrDefault("model", DefaultModel);
     private readonly KnowledgeStore knowledge = new(DatabasePath);
     private readonly string dbPath = DatabasePath;
+    private string? legacyImportHold;
+    private readonly HashSet<string> consumedVuneoRequestIds = new(StringComparer.Ordinal);
 
     [DllImport("dwmapi.dll", PreserveSig = true)]
     private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attribute, ref int value, int size);
@@ -142,6 +144,7 @@ public partial class MainWindow : Window
                 Send("tasks", ReadTasks());
                 Send("notes", ReadNotes());
                 Send("system", GetSystemState());
+                if (legacyImportHold != null) Send("notice", legacyImportHold);
                 // Runtime evidence belongs to the process that actually loaded WebView2,
                 // not to a source-only build or a previously launched EXE.
                 if (!selfTestRequested) WriteRuntimeReadyReceipt();
@@ -1376,55 +1379,95 @@ public partial class MainWindow : Window
     // existing SQLite rows. Only locally-owned chat data is imported.
     private void ImportLegacyJsonlIfNeeded(SqliteConnection db)
     {
+        const string sourceId = "NOX_NEW_CHAT_JSONL_V1";
+        const string shaPrefix = "NOX_NEW_CHAT_JSONL_V1_SHA256:";
         string legacy = Path.Combine(Path.GetDirectoryName(dbPath)!, "chat.jsonl");
+        try
+        {
         if (!File.Exists(legacy)) return;
-
-        // B03 NO-LOSS: an existing legacy JSONL import is an irreversible
-        // owner-history mutation. Snapshot the pre-import database before
-        // opening the write transaction (SQLite online backup needs no tx).
-        // An already-imported file must never create another backup.
-        using (var prior = db.CreateCommand())
-        {
-            prior.CommandText = "SELECT COUNT(*) FROM imported_sources WHERE source=$s";
-            prior.Parameters.AddWithValue("$s", "NOX_NEW_CHAT_JSONL_V1");
-            if (Convert.ToInt64(prior.ExecuteScalar()) > 0) return;
+        if ((File.GetAttributes(legacy) & FileAttributes.ReparsePoint) != 0) {
+            legacyImportHold = "NOX_LEGACY_JSONL_REPARSE_HOLD";
+            return;
         }
-        CheckpointSqlite(db, "PRE_LEGACY_JSONL_IMPORT");
-        using var tx = db.BeginTransaction();
-        using var check = db.CreateCommand(); check.Transaction = tx;
-        check.CommandText = "SELECT COUNT(*) FROM imported_sources WHERE source=$s";
-        check.Parameters.AddWithValue("$s", "NOX_NEW_CHAT_JSONL_V1");
-        if (Convert.ToInt64(check.ExecuteScalar()) > 0) { tx.Commit(); return; }
-        int imported = 0;
-        foreach (var line in File.ReadLines(legacy))
-        {
-            try
-            {
-                using var item = JsonDocument.Parse(line);
-                var j = item.RootElement;
-                if (j.ValueKind != JsonValueKind.Object ||
-                    !j.TryGetProperty("prompt", out var qp) || qp.ValueKind != JsonValueKind.String ||
-                    !j.TryGetProperty("answer", out var ap) || ap.ValueKind != JsonValueKind.String) continue;
-                var q = qp.GetString();
-                var a = ap.GetString();
-                if (string.IsNullOrWhiteSpace(q) || string.IsNullOrWhiteSpace(a)) continue;
-                var time = j.TryGetProperty("time", out var t) ? t.ToString() : DateTimeOffset.UtcNow.ToString("O");
-                using var insert = db.CreateCommand(); insert.Transaction = tx;
-                insert.CommandText = "INSERT INTO chat_history(timestamp,prompt,answer) VALUES($t,$p,$a)";
-                insert.Parameters.AddWithValue("$t", time);
-                insert.Parameters.AddWithValue("$p", q);
-                insert.Parameters.AddWithValue("$a", a);
-                insert.ExecuteNonQuery(); imported++;
+        using (var check = db.CreateCommand()) {
+            check.CommandText = "SELECT COUNT(*) FROM imported_sources WHERE source=$s";
+            check.Parameters.AddWithValue("$s", sourceId);
+            if (Convert.ToInt64(check.ExecuteScalar()) != 0) {
+                using var origin = db.CreateCommand();
+                origin.CommandText = "SELECT source FROM imported_sources WHERE source LIKE $s LIMIT 1";
+                origin.Parameters.AddWithValue("$s", shaPrefix + "%");
+                var priorSha = origin.ExecuteScalar() as string;
+                if (priorSha == null)
+                    legacyImportHold = "NOX_LEGACY_JSONL_UNVERIFIED_PRIOR_RECEIPT_HOLD";
+                else if (!string.Equals(priorSha, shaPrefix + Sha256File(legacy), StringComparison.Ordinal))
+                    legacyImportHold = "NOX_LEGACY_JSONL_CHANGED_AFTER_IMPORT_HOLD";
+                return; // Older receipts are never reimported by guesswork.
             }
-            catch (JsonException) { /* Preserve malformed lines in the source, don't crash startup. */ }
-            catch (KeyNotFoundException) { /* Older unrelated JSONL record. */ }
         }
-        using var receipt = db.CreateCommand(); receipt.Transaction = tx;
-        receipt.CommandText = "INSERT INTO imported_sources(source,imported_at,rows) VALUES($s,$t,$n)";
-        receipt.Parameters.AddWithValue("$s", "NOX_NEW_CHAT_JSONL_V1");
-        receipt.Parameters.AddWithValue("$t", DateTimeOffset.UtcNow.ToString("O"));
-        receipt.Parameters.AddWithValue("$n", imported);
-        receipt.ExecuteNonQuery(); tx.Commit();
+        string sourceSha = Sha256File(legacy);
+        CheckpointSqlite(db, "PRE_LEGACY_IMPORT"); // WAL-consistent, verified owner backup.
+        using var tx = db.BeginTransaction();
+        try {
+            int rows = 0, skipped = 0;
+            foreach (var line in File.ReadLines(legacy, new UTF8Encoding(false, true))) {
+                if (string.IsNullOrWhiteSpace(line)) continue;
+                try {
+                    using var json = JsonDocument.Parse(line);
+                    var j = json.RootElement;
+                    if (j.ValueKind != JsonValueKind.Object ||
+                        !j.TryGetProperty("prompt", out var p) || p.ValueKind != JsonValueKind.String ||
+                        !j.TryGetProperty("answer", out var a) || a.ValueKind != JsonValueKind.String ||
+                        string.IsNullOrWhiteSpace(p.GetString()) || string.IsNullOrWhiteSpace(a.GetString())) {
+                        skipped++;
+                        continue;
+                    }
+                    using var insert = db.CreateCommand(); insert.Transaction = tx;
+                    insert.CommandText = "INSERT INTO chat_history(timestamp,prompt,answer) VALUES($t,$p,$a)";
+                    insert.Parameters.AddWithValue("$t", j.TryGetProperty("time", out var t)
+                        ? t.ToString() : DateTimeOffset.UtcNow.ToString("O"));
+                    insert.Parameters.AddWithValue("$p", p.GetString()!);
+                    insert.Parameters.AddWithValue("$a", a.GetString()!);
+                    if (insert.ExecuteNonQuery() != 1)
+                        throw new InvalidOperationException("NOX_LEGACY_JSONL_INSERT_HOLD");
+                    rows++;
+                } catch (JsonException) { skipped++; }
+            }
+            if (rows == 0 && skipped == 0) {
+                tx.Rollback();
+                legacyImportHold = "NOX_LEGACY_JSONL_EMPTY_HOLD";
+                return;
+            }
+            if (skipped != 0 || !string.Equals(sourceSha, Sha256File(legacy), StringComparison.Ordinal)) {
+                tx.Rollback();
+                legacyImportHold = skipped != 0 ? "NOX_LEGACY_JSONL_INCOMPLETE_HOLD"
+                    : "NOX_LEGACY_JSONL_CHANGED_DURING_IMPORT_HOLD";
+                return;
+            }
+            foreach (var receiptId in new[] { sourceId, shaPrefix + sourceSha }) {
+                using var receipt = db.CreateCommand(); receipt.Transaction = tx;
+                receipt.CommandText = "INSERT INTO imported_sources(source,imported_at,rows) VALUES($s,$t,$n)";
+                receipt.Parameters.AddWithValue("$s", receiptId);
+                receipt.Parameters.AddWithValue("$t", DateTimeOffset.UtcNow.ToString("O"));
+                receipt.Parameters.AddWithValue("$n", rows);
+                if (receipt.ExecuteNonQuery() != 1)
+                    throw new InvalidOperationException("NOX_LEGACY_JSONL_RECEIPT_HOLD");
+            }
+            tx.Commit();
+        } catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or DecoderFallbackException) {
+            tx.Rollback();
+            legacyImportHold = ex is DecoderFallbackException
+                ? "NOX_LEGACY_JSONL_ENCODING_HOLD" : "NOX_LEGACY_JSONL_READ_HOLD";
+        }
+        }
+        catch (IOException) {
+            legacyImportHold = "NOX_LEGACY_JSONL_READ_HOLD";
+        }
+        catch (UnauthorizedAccessException) {
+            legacyImportHold = "NOX_LEGACY_JSONL_READ_HOLD";
+        }
+        catch (DecoderFallbackException) {
+            legacyImportHold = "NOX_LEGACY_JSONL_ENCODING_HOLD";
+        }
     }
 
     // JsonDocument.GetProperty selects the last duplicate property. Native IPC
@@ -1481,7 +1524,7 @@ public partial class MainWindow : Window
                 case "history": Send("history", ReadHistory()); break;
                 case "notes.list": Send("notes", ReadNotes()); break;
                 case "notes.add": HandleNoteAdd(Text("title"), Text("content"), Text("requestId")); break;
-                case "notes.delete": DeleteNote(request.GetProperty("id").GetInt64()); Send("notes", ReadNotes()); break;
+                case "notes.delete": DeleteNote(request.GetProperty("id").GetInt64(), Text("requestId")); break;
                 case "feedback": SaveFeedback(request.GetProperty("rating").GetInt32(), Text("answer")); Send("notice", "Оценка сохранена локально; это не обучение весов."); break;
                 case "backup": BackupLocalDatabase(); break;
                 case "model.select": await SelectModel(Text("model"), Text("requestId")); break;
@@ -1502,7 +1545,7 @@ public partial class MainWindow : Window
                 case "knowledge.search": Send("knowledge.results", knowledge.Search(Text("query"))); break;
                 case "knowledge.stats": Send("knowledge.stats", knowledge.Stats()); break;
                 case "knowledge.import": ImportKnowledgeByDialog(); break;
-                case "knowledge.vuneo": ImportVuneoByConsent(); break;
+                case "knowledge.vuneo": ImportVuneoByConsent(Text("requestId")); break;
                 case "system.status": Send("system", GetSystemState()); break;
                 default: Send("error", "Unknown operation: " + kind); break;
             }
@@ -2338,13 +2381,93 @@ public partial class MainWindow : Window
         if (id <= 0) throw new InvalidOperationException("NOX_NOTE_ROWID_HOLD");
         return id;
     }
-    private void DeleteNote(long id)
+    private void DeleteNote(long id, string requestId)
     {
-        if (id <= 0) throw new ArgumentException("Invalid note ID");
-        using var db = OpenDatabase(); using var cmd = db.CreateCommand();
-        cmd.CommandText = "DELETE FROM memory_notes WHERE id=$id AND persona=$persona";
-        cmd.Parameters.AddWithValue("$persona", ActivePersona());
-        cmd.Parameters.AddWithValue("$id",id);cmd.ExecuteNonQuery();
+        if (!ValidWriteRequestId(requestId) || id <= 0) {
+            Send("notes.delete.denied", new { requestId, id, reason = "NOX_NOTE_DELETE_REQUEST_HOLD" });
+            return;
+        }
+        // An attempted SQLite commit can be durable even if its readback or
+        // WebView2 response fails. Never misreport a committed delete as denied.
+        bool commitAttempted = false;
+        string persona = "";
+        try
+        {
+            persona = ActivePersona();
+            using var db = OpenDatabase();
+            string title, content, createdAt;
+            using (var lookup = db.CreateCommand())
+            {
+                lookup.CommandText = "SELECT title,content,created_at FROM memory_notes WHERE id=$id AND persona=$persona";
+                lookup.Parameters.AddWithValue("$id", id);
+                lookup.Parameters.AddWithValue("$persona", persona);
+                using var row = lookup.ExecuteReader();
+                if (!row.Read()) throw new InvalidOperationException("NOX_NOTE_OWNER_HOLD");
+                title = row.GetString(0);
+                content = row.GetString(1);
+                createdAt = row.GetString(2);
+            }
+            string titlePreview = title.Length > 80 ? title[..80] + "…" : title;
+            var consent = MessageBox.Show(this,
+                "Удалить заметку «" + titlePreview + "» из Persona " + persona +
+                "?\nПеред удалением NOX сохранит проверенную SQLite-копию для восстановления.",
+                "NOX — удаление локальной памяти", MessageBoxButton.YesNo,
+                MessageBoxImage.Warning, MessageBoxResult.No);
+            if (consent != MessageBoxResult.Yes) {
+                Send("notes.delete.denied", new { requestId, id, reason = "OWNER_DECLINED" });
+                return;
+            }
+
+            // Fail closed before any DELETE. The verified snapshot includes WAL.
+            CheckpointSqlite(db, "PRE_NOTE_DELETE");
+            using (var tx = db.BeginTransaction())
+            {
+                using var command = db.CreateCommand();
+                command.Transaction = tx;
+                command.CommandText = """
+                    DELETE FROM memory_notes
+                    WHERE id=$id AND persona=$persona
+                      AND title=$title AND content=$content AND created_at=$created
+                    """;
+                command.Parameters.AddWithValue("$id", id);
+                command.Parameters.AddWithValue("$persona", persona);
+                command.Parameters.AddWithValue("$title", title);
+                command.Parameters.AddWithValue("$content", content);
+                command.Parameters.AddWithValue("$created", createdAt);
+                if (command.ExecuteNonQuery() != 1)
+                    throw new InvalidOperationException("NOX_NOTE_CHANGED_OR_FOREIGN_HOLD");
+                commitAttempted = true;
+                tx.Commit();
+            }
+            using (var verifyDb = OpenDatabase())
+            using (var verify = verifyDb.CreateCommand())
+            {
+                verify.CommandText = "SELECT COUNT(*) FROM memory_notes WHERE id=$id AND persona=$persona";
+                verify.Parameters.AddWithValue("$id", id);
+                verify.Parameters.AddWithValue("$persona", persona);
+                if (Convert.ToInt64(verify.ExecuteScalar()) != 0)
+                    throw new InvalidOperationException("NOX_NOTE_DELETE_READBACK_HOLD");
+            }
+        }
+        catch (Exception) {
+            if (commitAttempted) {
+                // An attempted COMMIT may have succeeded. Leave the UI pending
+                // until an independent refresh; do not forge owner denial.
+                try { Send("notice", "NOX_NOTE_DELETE_COMMIT_UNKNOWN_HOLD"); }
+                catch (Exception) { /* WebView2 document may already be gone. */ }
+            } else {
+                try { Send("notes.delete.denied", new { requestId, id, reason = "NOX_NOTE_DELETE_NATIVE_HOLD" }); }
+                catch (Exception) { /* No commit attempted; IPC may be gone. */ }
+            }
+            return;
+        }
+        // Independent SQLite readback completed, and the delete is durable.
+        // WebView2 delivery/refresh failures do not reverse this into "denied".
+        try {
+            Send("notes.delete.receipt", new { requestId, id, persona, deleted = true, backupVerified = true });
+        } catch (Exception) { return; }
+        try { Send("notes", ReadNotes()); }
+        catch (Exception) { /* Committed receipt remains authoritative. */ }
     }
     private void SaveFeedback(int rating,string answer)
     {
@@ -2489,15 +2612,130 @@ public partial class MainWindow : Window
         finally { activeModelPull = null; }
     }
 
-    private void ImportVuneoByConsent()
+    private const string VuneoImportReceipt = "NOX_VUNEO_OWNER_MIGRATION_V1";
+    private int ReadVuneoImportReceipt()
     {
-        var consent = MessageBox.Show(this,
-            "Перенести сохранённые текстовые записи памяти и решений VUNEO из резервной SQLite в локальный индекс NOX? Оригинальные файлы не изменяются; чувствительные записи будут пропущены.",
-            "NOX — импорт VUNEO", MessageBoxButton.YesNo, MessageBoxImage.Question);
-        if (consent != MessageBoxResult.Yes) return;
-        using (var db = OpenDatabase()) CheckpointSqlite(db, "PRE_VUNEO_IMPORT");
-        Send("knowledge.vuneo.result", knowledge.ImportVuneoStaging());
-        Send("knowledge.stats", knowledge.Stats());
+        using var db = OpenDatabase();
+        using var cmd = db.CreateCommand();
+        cmd.CommandText = "SELECT rows FROM imported_sources WHERE source=$source";
+        cmd.Parameters.AddWithValue("$source", VuneoImportReceipt);
+        object? value = cmd.ExecuteScalar();
+        return value == null || value == DBNull.Value ? -1 : Convert.ToInt32(value);
+    }
+
+    private void ArmVuneoImportReceipt()
+    {
+        using (var db = OpenDatabase())
+        using (var cmd = db.CreateCommand())
+        {
+            cmd.CommandText = "INSERT INTO imported_sources(source,imported_at,rows) VALUES($source,$time,0)";
+            cmd.Parameters.AddWithValue("$source", VuneoImportReceipt);
+            cmd.Parameters.AddWithValue("$time", DateTimeOffset.UtcNow.ToString("O"));
+            if (cmd.ExecuteNonQuery() != 1)
+                throw new InvalidOperationException("NOX_VUNEO_ARM_WRITE_HOLD");
+        }
+        // Separate SQLite connection: a committed marker must survive restart.
+        if (ReadVuneoImportReceipt() != 0)
+            throw new InvalidOperationException("NOX_VUNEO_ARM_READBACK_HOLD");
+    }
+
+    private void CompleteVuneoImportReceipt()
+    {
+        using (var db = OpenDatabase())
+        using (var cmd = db.CreateCommand())
+        {
+            cmd.CommandText = "UPDATE imported_sources SET rows=1 WHERE source=$source AND rows=0";
+            cmd.Parameters.AddWithValue("$source", VuneoImportReceipt);
+            if (cmd.ExecuteNonQuery() != 1)
+                throw new InvalidOperationException("NOX_VUNEO_COMPLETE_WRITE_HOLD");
+        }
+        if (ReadVuneoImportReceipt() != 1)
+            throw new InvalidOperationException("NOX_VUNEO_COMPLETE_READBACK_HOLD");
+    }
+
+    // The original WPF owner alone grants VUNEO consent. No replayed
+    // document request may display a second modal or import twice in this
+    // WPF process. Bounded ids live only in memory, not in owner SQLite.
+    // The result receipt is authoritative after completed import; a later
+    // optional statistics refresh is not an import failure.
+    private void ImportVuneoByConsent(string requestId)
+    {
+        if (!ValidWriteRequestId(requestId)) {
+            Send("knowledge.vuneo.denied", new { requestId, reason = "NOX_VUNEO_REQUEST_ID_HOLD" });
+            return;
+        }
+        // Never evict a previously consumed consent nonce: doing so lets an old
+        // WebView2 request reopen the owner modal after enough newer requests.
+        // Fail closed at the bounded cap rather than allowing an old replay.
+        if (consumedVuneoRequestIds.Count >= 512 &&
+            !consumedVuneoRequestIds.Contains(requestId)) {
+            Send("knowledge.vuneo.denied", new { requestId, reason = "NOX_VUNEO_REQUEST_LIMIT_HOLD" });
+            return;
+        }
+        if (!consumedVuneoRequestIds.Add(requestId)) {
+            Send("knowledge.vuneo.denied", new { requestId, reason = "NOX_VUNEO_REPLAY_HOLD" });
+            return;
+        }
+
+        // A previous process may have died after a partial SQLite COMMIT.
+        // This check precedes owner consent and any new importer invocation.
+        int priorImport;
+        try { priorImport = ReadVuneoImportReceipt(); }
+        catch (Exception) {
+            Send("knowledge.vuneo.denied", new { requestId, reason = "NOX_VUNEO_JOURNAL_READ_HOLD" });
+            return;
+        }
+        if (priorImport != -1) {
+            Send("knowledge.vuneo.denied", new { requestId,
+                reason = priorImport == 1 ? "NOX_VUNEO_ALREADY_IMPORTED_HOLD"
+                                          : "NOX_VUNEO_PREVIOUS_OUTCOME_REVIEW_HOLD" });
+            return;
+        }
+
+        bool importCompleted = false;
+        // KnowledgeStore can fail after a partial SQLite write; only an independent
+        // acceptance check may claim all imported rows or assert no mutation.
+        bool importAttempted = false;
+        try {
+            var consent = MessageBox.Show(this,
+                "Перенести сохранённые текстовые записи памяти и решений VUNEO из резервной SQLite в локальный индекс NOX? Оригинальные файлы не изменяются; чувствительные записи будут пропущены.",
+                "NOX — импорт VUNEO", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No);
+            if (consent != MessageBoxResult.Yes) {
+                Send("knowledge.vuneo.denied", new { requestId, reason = "OWNER_DECLINED" });
+                return;
+            }
+            using (var db = OpenDatabase()) CheckpointSqlite(db, "PRE_VUNEO_IMPORT");
+            // Persist a crash-recovery HOLD in the EXISTING SQLite, never in a
+            // parallel memory store. Failure to arm means no importer call.
+            ArmVuneoImportReceipt();
+            importAttempted = true;
+            var result = knowledge.ImportVuneoStaging();
+            CompleteVuneoImportReceipt();
+            importCompleted = true;
+            Send("knowledge.vuneo.result", new { requestId, backupVerified = true, result });
+            try {
+                Send("knowledge.stats", knowledge.Stats());
+            }
+            catch (Exception) {
+                // A post-import stats read/IPC refresh cannot reverse an
+                // already committed owner import or issue a false denial.
+            }
+        }
+        catch (Exception) {
+            // Once the importer was entered it might have COMMITted some rows.
+            // Never report "denied/no import" without verifying that outcome.
+            if (!importCompleted) {
+                try {
+                    if (importAttempted)
+                        Send("knowledge.vuneo.unknown", new {
+                            requestId, backupVerified = true,
+                            reason = "NOX_VUNEO_COMMIT_UNKNOWN_HOLD" });
+                    else
+                        Send("knowledge.vuneo.denied", new {
+                            requestId, reason = "NOX_VUNEO_IMPORT_HOLD" });
+                } catch (Exception) { /* WebView2 could already be closed. */ }
+            }
+        }
     }
 
     private void ImportKnowledgeByDialog()
@@ -2515,6 +2753,10 @@ public partial class MainWindow : Window
             $"Добавить {files.Length} выбранных файлов в локальную базу NOX? Тексты будут индексированы на этом компьютере. Оригиналы не изменятся.",
             "NOX — подтверждение импорта", MessageBoxButton.YesNo, MessageBoxImage.Question);
         if (consent != MessageBoxResult.Yes) return;
+        // The knowledge index shares DatabasePath with chat and Persona memory.
+        // A WAL-consistent, verified preimage must survive a partial/erroring import.
+        // A denied owner prompt performs no database mutation or backup.
+        using (var db = OpenDatabase()) CheckpointSqlite(db, "PRE_KNOWLEDGE_IMPORT");
         Send("knowledge.imported", knowledge.ImportFiles(files));
         Send("knowledge.stats", knowledge.Stats());
     }

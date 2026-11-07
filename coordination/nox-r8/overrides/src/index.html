@@ -131,6 +131,8 @@ body.reduced .helion-fx{filter:none}body.reduced .core.active{animation:none}
 <hr><div class="rowtitle">ЛОКАЛЬНЫЕ ДОКУМЕНТЫ · RAG / FTS5</div>
 <p class="hint">Только файлы, которые ты выбрал. NOX индексирует тексты локально и использует выдержки как контекст Qwen; веса модели не переобучаются. До 20 файлов, 1 МБ на файл.</p>
 <button class="action" id="knowledgeImport">Добавить документы в память…</button>
+<button class="action" id="vuneoImport">Импорт VUNEO (только с согласием владельца)…</button>
+<p class="hint" id="vuneoImportStatus" role="status" aria-live="polite">Импорт из резервной SQLite только после подтверждения владельца в Windows.</p>
 <div class="mono" id="knowledgeStats">Документы не проверены</div>
 <div class="controls"><input id="knowledgeQuery" maxlength="160" placeholder="Поиск по добавленным документам" aria-label="Поиск в документах"><button class="action" id="knowledgeSearch">Найти</button></div>
 <div class="scroll" id="knowledgeResults"></div>
@@ -411,7 +413,8 @@ body.reduced .helion-fx{filter:none}body.reduced .core.active{animation:none}
 <script>
 'use strict';
 const $=id=>document.getElementById(id);const post=(type,data={})=>{const bridge=window.chrome?.webview;if(typeof bridge?.postMessage!=='function'){$('status').textContent='NATIVE BRIDGE OFFLINE';return false}try{bridge.postMessage({type,...data});return true}catch{$('status').textContent='NATIVE BRIDGE DISPATCH FAILED';return false}};
-let responseBox=null,lastAnswer='',busy=false,settingsDenial='',activeChatId=null,requestSequence=0,pendingChatDraft=null,pendingTask=null,pendingNote=null,pendingTaskToggle=null,pendingModel=null,committedModel="",pendingSettings=null,committedSettings={},visibleDraftPersona='KV';
+let responseBox=null,lastAnswer='',busy=false,settingsDenial='',activeChatId=null,requestSequence=0,pendingChatDraft=null,pendingTask=null,pendingNote=null,pendingNoteDelete=null,pendingTaskToggle=null,pendingModel=null,committedModel="",pendingSettings=null,committedSettings={},visibleDraftPersona='KV',pendingVuneo=null;
+let vuneoImportUncertain=false;
 const nextChatId=()=>typeof crypto!=='undefined'&&typeof crypto.randomUUID==='function'
   ? crypto.randomUUID()
   : 'r'+Date.now().toString(36)+'_'+(++requestSequence).toString(36)+'_'+Math.random().toString(36).slice(2);const headings={consciousness:'CONSCIOUSNESS',atlas:'ATLAS / TASKS',reflection:'REFLECTION / HISTORY',nexus:'NEXUS / MODELS',forge:'FORGE / TRAINING',core:'CORE / LIVE CHAT',voice:'VOICE',persona:'PERSONA'};
@@ -457,10 +460,21 @@ function saveSetting(key,value){
   }
   return true;
 }
-$('savePersona').onclick=()=>saveSetting('persona',$('persona').value);
+$('savePersona').onclick=()=>{if(pendingNote||pendingNoteDelete){$('personaStatus').textContent='NOX_PERSONA_NOTE_WRITE_IN_FLIGHT_HOLD';return false;}return saveSetting('persona',$('persona').value);};
 $('saveMotion').onclick=()=>saveSetting('motion',$('reduceMotion').checked?'off':'on');
 $('savePerformance').onclick=()=>saveSetting('performance',$('performance').value);
-$('saveContext').onclick=()=>saveSetting('context',$('useContext').checked?'on':'off');$('backup').onclick=()=>post('backup');$('knowledgeImport').onclick=()=>post('knowledge.import');$('knowledgeSearch').onclick=()=>post('knowledge.search',{query:$('knowledgeQuery').value.trim()});$('knowledgeQuery').onkeydown=e=>{if(e.key==='Enter'&&!e.defaultPrevented&&!e.ctrlKey&&!e.altKey&&!e.metaKey&&!e.isComposing&&e.keyCode!==229&&!e.shiftKey){e.preventDefault();if(!e.repeat)$('knowledgeSearch').click()}};$('memorySearch').onclick=()=>post('memory.search',{query:$('memoryQuery').value.trim()});$('memoryQuery').onkeydown=e=>{if(e.key==='Enter'&&!e.defaultPrevented&&!e.ctrlKey&&!e.altKey&&!e.metaKey&&!e.isComposing&&e.keyCode!==229&&!e.shiftKey){e.preventDefault();if(!e.repeat)$('memorySearch').click()}};
+$('saveContext').onclick=()=>saveSetting('context',$('useContext').checked?'on':'off');$('backup').onclick=()=>post('backup');$('knowledgeImport').onclick=()=>post('knowledge.import');
+$('vuneoImport').onclick=()=>{
+  if(pendingVuneo||vuneoImportUncertain)return false;
+  const requestId=nextChatId();pendingVuneo={requestId};
+  $('vuneoImport').disabled=true;
+  $('vuneoImportStatus').textContent='Ожидание нативного подтверждения владельца; импорт не завершён';
+  if(post('knowledge.vuneo',{requestId})===false){
+    pendingVuneo=null;$('vuneoImport').disabled=false;
+    $('vuneoImportStatus').textContent='NOX_VUNEO_NATIVE_DISPATCH_HOLD';return false;
+  }
+  return true;
+};$('knowledgeSearch').onclick=()=>post('knowledge.search',{query:$('knowledgeQuery').value.trim()});$('knowledgeQuery').onkeydown=e=>{if(e.key==='Enter'&&!e.defaultPrevented&&!e.ctrlKey&&!e.altKey&&!e.metaKey&&!e.isComposing&&e.keyCode!==229&&!e.shiftKey){e.preventDefault();if(!e.repeat)$('knowledgeSearch').click()}};$('memorySearch').onclick=()=>post('memory.search',{query:$('memoryQuery').value.trim()});$('memoryQuery').onkeydown=e=>{if(e.key==='Enter'&&!e.defaultPrevented&&!e.ctrlKey&&!e.altKey&&!e.metaKey&&!e.isComposing&&e.keyCode!==229&&!e.shiftKey){e.preventDefault();if(!e.repeat)$('memorySearch').click()}};
 $('maxMode').onclick=()=>{route('persona');if(pendingSettings)return;$('performance').value='MAX';saveSetting('performance','MAX');};
 $('saveModel').onclick=()=>{const model=$('modelPicker').value;if(!model||pendingModel)return;const requestId=nextChatId();pendingModel={requestId,model,previous:committedModel};$('saveModel').disabled=true;$('modelSelectStatus').textContent='Проверка локального тега и SQLite…';if(post('model.select',{model,requestId})===false){const previous=pendingModel.previous;pendingModel=null;$('saveModel').disabled=false;if(previous)$('modelPicker').value=previous;$('modelSelectStatus').textContent='Нет нативного соединения. Предыдущая модель сохранена.';}};$('pullModel').onclick=()=>{const model=$('modelToDownload').value.trim();if(!/^[a-zA-Z0-9][a-zA-Z0-9._/-]*:[a-zA-Z0-9._-]+$/.test(model)){$('downloadStatus').textContent='Укажи корректный тег модели';return}if(window.confirm('Загрузить модель '+model+'? Это использует диск и интернет.'))post('model.pull',{model})};$('cancelPull').onclick=()=>post('model.cancel');
 $('noteAdd').onclick=()=>{const title=$('noteTitle').value.trim(),content=$('noteText').value.trim();if(!title||!content||pendingNote)return;const requestId=nextChatId();pendingNote={requestId,title,content,persona:visibleDraftPersona};$('noteAdd').disabled=true;if(post('notes.add',{title,content,requestId})===false){pendingNote=null;$('noteAdd').disabled=false}};
@@ -509,11 +523,34 @@ case 'settings.denied':{
   settingsDenial=allowed.includes(reason)?reason:'NOX_SETTINGS_NATIVE_HOLD';
   $('personaStatus').textContent=settingsDenial;post('settings.get');break;
 }
+case 'knowledge.vuneo.result':{
+  if(!pendingVuneo||v?.requestId!==pendingVuneo.requestId||v?.backupVerified!==true)break;
+  pendingVuneo=null;$('vuneoImport').disabled=false;
+  $('vuneoImportStatus').textContent='Нативный ответ получен; резервная копия SQLite проверена. Состояние индекса — в статистике.';
+  break;
+}
+case 'knowledge.vuneo.unknown':{
+  if(!pendingVuneo||v?.requestId!==pendingVuneo.requestId||
+     v?.reason!=='NOX_VUNEO_COMMIT_UNKNOWN_HOLD'||v?.backupVerified!==true)break;
+  // Partial import may already exist: no automatic retry in this process.
+  pendingVuneo=null;vuneoImportUncertain=true;$('vuneoImport').disabled=true;
+  $('vuneoImportStatus').textContent='NOX_VUNEO_COMMIT_UNKNOWN_HOLD: результат импорта неопределён; повтор заблокирован до перезапуска. Проверьте локальную SQLite и статистику.';
+  break;
+}
+case 'knowledge.vuneo.denied':{
+  if(!pendingVuneo||v?.requestId!==pendingVuneo.requestId)break;
+  pendingVuneo=null;$('vuneoImport').disabled=false;
+  const reason=['OWNER_DECLINED','NOX_VUNEO_IMPORT_HOLD','NOX_VUNEO_REQUEST_ID_HOLD'].includes(v?.reason)?v.reason:'NOX_VUNEO_IMPORT_HOLD';
+  $('vuneoImportStatus').textContent=reason==='OWNER_DECLINED'?'Импорт отменён владельцем.':reason;
+  break;
+}
 case 'knowledge.stats':$('knowledgeStats').textContent=`В SQLite: ${v?.documents??0} документов · ${v?.chunks??0} фрагментов`;break;
 case 'knowledge.imported':$('knowledgeStats').textContent=`Импортировано: ${v?.documents??0}; дублей: ${v?.skipped??0}; фрагментов: ${v?.chunks??0}`;post('knowledge.stats');break;
 case 'knowledge.results':{const box=$('knowledgeResults');box.replaceChildren();(v||[]).forEach(x=>entry(box,x.excerpt,x.title+' · '+x.source));if(!v?.length)box.textContent='Совпадений не найдено';break;}
 case 'memory':{const box=$('memoryResults');box.replaceChildren();(v||[]).forEach(x=>entry(box,x.prompt+'\n\n'+x.answer,x.timestamp));if(!v?.length)box.textContent='Совпадений нет';break}
-case 'notes':{const box=$('notes');box.replaceChildren();(v||[]).forEach(n=>{const card=element('div',undefined,'note-card');card.append(element('div',n.title,'note-title'),element('div',n.timestamp,'meta'),element('p',n.content));const b=element('button','Удалить заметку','action');b.onclick=()=>{if(window.confirm('Удалить эту локальную заметку?'))post('notes.delete',{id:n.id})};card.append(b);box.append(card)});if(!v?.length)box.textContent='Пока нет сохранённых заметок';break}
+case 'notes':{if(pendingNoteDelete)break;const box=$('notes');box.replaceChildren();(v||[]).forEach(n=>{const card=element('div',undefined,'note-card');card.append(element('div',n.title,'note-title'),element('div',n.timestamp,'meta'),element('p',n.content));const b=element('button','Удалить заметку','action');b.onclick=()=>{if(pendingNoteDelete)return;const requestId=nextChatId();pendingNoteDelete={requestId,id:n.id};document.querySelectorAll('#notes .note-card button').forEach(button=>button.disabled=true);if(post('notes.delete',{id:n.id,requestId})===false){pendingNoteDelete=null;document.querySelectorAll('#notes .note-card button').forEach(button=>button.disabled=false)}};card.append(b);box.append(card)});if(!v?.length)box.textContent='Пока нет сохранённых заметок';break}
+case 'notes.delete.receipt':if(pendingNoteDelete&&v?.requestId===pendingNoteDelete.requestId&&v?.id===pendingNoteDelete.id&&v.deleted===true&&v.backupVerified===true){pendingNoteDelete=null;$('status').textContent='NOTE DELETED · VERIFIED SQLITE BACKUP';}break;
+case 'notes.delete.denied':if(pendingNoteDelete&&v?.requestId===pendingNoteDelete.requestId&&v?.id===pendingNoteDelete.id){pendingNoteDelete=null;document.querySelectorAll('#notes .note-card button').forEach(button=>button.disabled=false);$('status').textContent=String(v.reason||'NOX_NOTE_DELETE_HOLD');post('notes.list');}break;
 case 'notes.add.receipt':if(pendingNote&&v?.requestId===pendingNote.requestId&&v.saved===true){if(visibleDraftPersona===pendingNote.persona&&$('noteTitle').value.trim()===pendingNote.title)$('noteTitle').value='';if(visibleDraftPersona===pendingNote.persona&&$('noteText').value.trim()===pendingNote.content)$('noteText').value='';pendingNote=null;$('noteAdd').disabled=false;$('status').textContent='NOTE SAVED · SQLITE';}break;
 case 'notes.add.denied':if(pendingNote&&v?.requestId===pendingNote.requestId){pendingNote=null;$('noteAdd').disabled=false;$('status').textContent=String(v.reason||'NOTE SAVE HOLD');}break;
 case 'system':$('systemInfo').textContent=JSON.stringify(v,null,2);$('hudMemory').textContent='SQLITE';break;
