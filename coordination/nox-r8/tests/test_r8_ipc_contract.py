@@ -235,3 +235,18 @@ assert 'if (string.Equals(activeRequestId, requestId, StringComparison.Ordinal))
 assert re.search(r'if \(string\.Equals\(activeRequestId, requestId, StringComparison\.Ordinal\)\)\s*return;', duplicate_busy), 'B02_DUPLICATE_CHAT_MUST_NOT_COMPLETE_HOLD'
 assert duplicate_busy.index('return;') < duplicate_busy.index('RejectChat("CHAT_ALREADY_RUNNING_HOLD");'), 'B02_DUPLICATE_CHAT_EARLY_RETURN_HOLD'
 assert duplicate_busy.count('RejectChat("CHAT_ALREADY_RUNNING_HOLD");') == 1, 'B02_DISTINCT_CHAT_REJECT_HOLD'
+
+# B02: Once a native chat request finishes (success/STOP/offline), a delayed
+# replay with the same requestId must not start another Qwen request / SQLite row.
+# The process-local bounded cache is a SOURCE_ONLY guard, not runtime evidence.
+replay = generate.split('if (!await generationLock.WaitAsync(0)) {', 1)[0]
+assert 'recentlyHandledChatIdSet.Contains(requestId)' in replay, 'B02_TERMINAL_CHAT_REPLAY_HOLD'
+assert replay.index('recentlyHandledChatIdSet.Contains(requestId)') < replay.index('if (!await generationLock.WaitAsync(0)) {') if 'if (!await generationLock.WaitAsync(0)) {' in replay else True
+assert 'RejectChat("CHAT_REPLAY_AFTER_TERMINAL_DENIED");' in replay, 'B02_REPLAY_TERMINAL_DENIAL_HOLD'
+assert 'private readonly HashSet<string> recentlyHandledChatIdSet = new(StringComparer.Ordinal);' in cs, 'B02_REPLAY_OWNER_SET_HOLD'
+assert 'private readonly Queue<string> recentlyHandledChatIds = new();' in cs, 'B02_REPLAY_QUEUE_HOLD'
+terminal = generate.split('finally {', 1)[1].split('generationLock.Release();', 1)[0]
+assert 'recentlyHandledChatIdSet.Add(requestId)' in terminal, 'B02_REMEMBER_TERMINAL_ID_HOLD'
+assert 'recentlyHandledChatIds.Count > 128' in terminal, 'B02_REPLAY_MEMORY_BOUND_HOLD'
+assert terminal.index('recentlyHandledChatIdSet.Add(requestId)') < terminal.index('activeRequestId = null;'), 'B02_TERMINAL_CACHE_BEFORE_OWNER_RELEASE_HOLD'
+print('B02 R8 SOURCE_ONLY: delayed terminal owner replay blocked, bounded to 128 process IDs; Windows E2E NOT_TESTED')

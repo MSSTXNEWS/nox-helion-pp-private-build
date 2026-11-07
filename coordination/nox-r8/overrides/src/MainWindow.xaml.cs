@@ -32,6 +32,10 @@ public partial class MainWindow : Window
     private volatile bool providerProbeStopped;
     private CancellationTokenSource? active;
     private string? activeRequestId; // Owned by the current WebView2 document and chat request.
+    // A delayed replay after terminal ACK must not start a second Qwen inference
+    // or insert a duplicate SQLite conversation. Bounded to this WPF process.
+    private readonly HashSet<string> recentlyHandledChatIdSet = new(StringComparer.Ordinal);
+    private readonly Queue<string> recentlyHandledChatIds = new();
     private CancellationTokenSource? activeModelPull;
     private static readonly bool NativeSelfTestRequested = Environment.GetCommandLineArgs().Any(
         arg => arg.Equals("--nox-selftest", StringComparison.OrdinalIgnoreCase));
@@ -1346,6 +1350,12 @@ public partial class MainWindow : Window
             RejectChat("CHAT_PROMPT_TOO_LONG_DENIED");
             return;
         }
+        // The same requestId may arrive again after the original terminal ACK.
+        // The busy-owner guard below covers only overlapping requests.
+        if (recentlyHandledChatIdSet.Contains(requestId)) {
+            RejectChat("CHAT_REPLAY_AFTER_TERMINAL_DENIED");
+            return;
+        }
         if (!await generationLock.WaitAsync(0)) {
             // A replay of the active WebView2 chat ID must not synthesize a
             // terminal completion while the real owner is still streaming.
@@ -1469,6 +1479,13 @@ public partial class MainWindow : Window
             Emit("complete", new { requestId, ok = false, stopped = false });
         }
         finally {
+            // Remember completed owner IDs even after provider errors and STOP:
+            // a delayed WebView2 message cannot restart the same native turn.
+            if (recentlyHandledChatIdSet.Add(requestId)) {
+                recentlyHandledChatIds.Enqueue(requestId);
+                if (recentlyHandledChatIds.Count > 128)
+                    recentlyHandledChatIdSet.Remove(recentlyHandledChatIds.Dequeue());
+            }
             active = null;
             activeRequestId = null;
             Interlocked.Increment(ref generationFinishedCount);
