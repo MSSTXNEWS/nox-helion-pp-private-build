@@ -21,18 +21,23 @@ console.log('B04_MODEL_SELECTION_SOURCE_ONLY_PASS');
 
 
 // B04 SOURCE_ONLY: verified installed-tag receipt, owner STOP vs provider ERROR.
-const pull = source.split('    private async Task PullExistingProviderModel(string modelName)',2)[1].split('    private void ImportVuneoByConsent()',2)[0];
-const tagProbe = pull.indexOf('transferClient.GetAsync(Api + "/api/tags", verify.Token)');
-const gate = pull.indexOf('NOX_MODEL_PULL_TAG_READBACK_HOLD');
-const doneReceipt = pull.indexOf('Send("download", new { status = "DONE"');
-assert.ok(tagProbe>=0 && gate>tagProbe && doneReceipt>gate, 'DONE only after exact registered Ollama model');
-assert.match(pull, /string.Equals\(x.GetProperty\("name"\).GetString\(\), modelName, StringComparison.Ordinal\)/);
-assert.match(pull, /cts.Token.ThrowIfCancellationRequested\(\);\s*Send\("download", new \{ status = "DONE"/);
-assert.match(pull, /catch \(OperationCanceledException\) when \(cts.IsCancellationRequested\)/);
-assert.match(pull, /catch \(Exception\) \{[\s\S]*status = "ERROR"[\s\S]*throw;/);
-assert.match(pull, /if \(activeModelPull != null\)/);
-assert.match(pull, /finally \{ activeModelPull = null; \}/);
-console.log('B04_MODEL_PULL_VERIFIED_RECEIPT_SOURCE_ONLY_PASS');
+const pullStart = source.indexOf('    private async Task PullExistingProviderModel(string modelName, string requestId)');
+const pullEnd = source.indexOf('    private const string VuneoImportReceipt',pullStart);
+assert.ok(pullStart>=0 && pullEnd>pullStart,'original native model pull owner method exists');
+const pull = source.slice(pullStart,pullEnd);
+assert.ok(pull.indexOf('NOX_MODEL_PULL_TAG_READBACK_HOLD')>pull.indexOf('transferClient.GetAsync(Api + "/api/tags", verify.Token)'),'DONE needs exact provider tag');
+assert.ok(pull.indexOf('Send("download", new { requestId, status = "DONE"')>pull.indexOf('NOX_MODEL_PULL_TAG_READBACK_HOLD'),'DONE after provider tag check');
+assert.match(pull,/string.Equals\(x.GetProperty\("name"\).GetString\(\), modelName, StringComparison.Ordinal\)/);
+assert.match(pull,/ValidWriteRequestId\(requestId\)/,'native validates the pull owner');
+assert.match(pull,/MessageBox.Show\(this,/,'native explicit owner confirmation required');
+assert.match(pull,/if \(permission != MessageBoxResult.Yes\)/,'refusal is non-destructive');
+assert.match(pull,/cts.Token.ThrowIfCancellationRequested\(\);[\s\S]*Send\("download", new \{ requestId, status = "DONE"/);
+assert.match(pull,/catch \(OperationCanceledException\) when \(cts.IsCancellationRequested\)/,'only owner STOP reports STOPPED');
+assert.match(pull,/catch \(Exception\) \{[\s\S]*status = "ERROR"/,'non-STOP failures report error');
+assert.match(pull,/if \(activeModelPull != null\)/,'one model transfer at a time');
+assert.match(pull,/finally \{\s*if \(ReferenceEquals\(activeModelPull, cts\)\) \{\s*activeModelPull = null;[\s\S]*activeModelPullName = null;/,'clear only current owner lease');
+assert.match(source,/case "model.cancel": \{[\s\S]*activeModelPullRequestId, pullId[\s\S]*activeModelPullName, pullModel[\s\S]*activeModelPull.Cancel\(\);/,'foreign pull STOP cannot cancel current owner');
+console.log('B04_MODEL_PULL_VERIFIED_OWNER_RECEIPT_SOURCE_ONLY_PASS');
 
 const html = fs.readFileSync(path.resolve(__dirname,'../overrides/src/index.html'),'utf8');
 assert.match(source,/case "model.select": await SelectModel\(Text\("model"\), Text\("requestId"\)\)/);
