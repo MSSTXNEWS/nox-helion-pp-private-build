@@ -70,8 +70,15 @@ jobs:
           if (-not (Test-Path -LiteralPath $uninstaller)) { throw 'B05_UNINSTALLER_MISSING' }
           $foreign=Join-Path $target 'owner_data.txt'
           [IO.File]::WriteAllText($foreign,'OWNER_FIXTURE_MUST_SURVIVE')
-          $blocked=Start-Process -FilePath $uninstaller -ArgumentList '/S' -PassThru -Wait
-          if ($blocked.ExitCode -eq 0) { throw 'B05_FOREIGN_UNINSTALL_FALSE_SUCCESS_EXITCODE' }
+          # NSIS's installed uninstaller launches a TEMP self-copy; the parent
+          # always reports 0 even when the child fails. To test the true
+          # rejection exit code, run a TEST-ONLY copied binary with _?= so it
+          # skips NSIS self-copy. Never use _?= on the installed original.
+          $probe=Join-Path $fixture 'uninstall-guard-probe.exe'
+          Copy-Item -LiteralPath $uninstaller -Destination $probe
+          $blocked=Start-Process -FilePath $probe -ArgumentList @('/S', "_?=$target") -PassThru -Wait
+          if ($blocked.ExitCode -ne 20) { throw "B05_FOREIGN_UNINSTALL_BAD_CHILD_EXITCODE:$($blocked.ExitCode)" }
+          Write-Host 'B05_NOLOSS_DIRECT_CHILD_HOLD_EXIT_20_PASS_RELEASE_HOLD'
           if (-not (Test-Path -LiteralPath $foreign)) { throw 'B05_FOREIGN_OWNER_DATA_DELETED' }
           if (-not (Test-Path -LiteralPath $installedExe)) { throw 'B05_UNINSTALL_DID_NOT_FAIL_CLOSED' }
           if ([IO.File]::ReadAllText($foreign) -cne 'OWNER_FIXTURE_MUST_SURVIVE') { throw 'B05_FOREIGN_OWNER_DATA_MODIFIED' }
