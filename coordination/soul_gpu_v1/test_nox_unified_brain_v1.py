@@ -1,4 +1,5 @@
 """Contract tests for a single NOX identity/router (no GPU, no network)."""
+from contextlib import closing
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
@@ -42,8 +43,11 @@ class UnifiedTests(unittest.TestCase):
         with TemporaryDirectory() as tmp:
             root=Path(tmp)
             db=root/"soul_gpu"/"soul.sqlite3";db.parent.mkdir()
-            with sqlite3.connect(db) as con:
-                con.execute("CREATE TABLE demo (x INTEGER)")
+            # sqlite3.Connection.__exit__ commits/rolls back but does NOT close.
+            # Explicit closing is required before TemporaryDirectory cleanup on Windows.
+            with closing(sqlite3.connect(db)) as con:
+                with con:
+                    con.execute("CREATE TABLE demo (x INTEGER)")
             before=db.stat().st_size
             result=u.native_memory_status(root)
             self.assertTrue(result[0]["reachable"])
