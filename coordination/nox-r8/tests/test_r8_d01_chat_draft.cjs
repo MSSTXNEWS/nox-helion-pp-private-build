@@ -532,8 +532,8 @@ console.log('D01 SOURCE_ONLY PASS: Qwen failed/STOP retry with original input, S
     machine.complete({requestId:'d01_owner_kv',ok:false,stopped});
     assert.equal(nodes.prompt.value,amDraft,
       'D01_FAILED_KV_CHAT_INJECTED_INTO_AM_PERSONA');
-    assert.match(nodes.streamHint.textContent,/исходной PersonaID/,
-      'D01_HIDDEN_PERSONA_RECOVERY_HINT_MISSING');
+    assert.equal(nodes.streamHint.textContent,'',
+      'D01_FOREIGN_PERSONA_COMPLETE_LEAKED_CHAT_STATUS');
     machine.change('KV');
     assert.equal(nodes.prompt.value,exact,'D01_KV_FAILURE_PROMPT_LOST_AFTER_SWITCH');
     machine.change('AM');
