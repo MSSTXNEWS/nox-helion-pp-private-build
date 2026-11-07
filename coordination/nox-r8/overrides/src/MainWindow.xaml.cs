@@ -32,6 +32,8 @@ public partial class MainWindow : Window
     private volatile bool providerProbeStopped;
     private CancellationTokenSource? active;
     private string? activeRequestId; // Owned by the current WebView2 document and chat request.
+    private readonly HashSet<string> seenFeedbackIds = new(StringComparer.Ordinal);
+    private readonly Queue<string> seenFeedbackOrder = new();
     // A delayed replay after terminal ACK must not start a second Qwen inference
     // or insert a duplicate SQLite conversation. Bounded to this WPF process.
     private readonly HashSet<string> recentlyHandledChatIdSet = new(StringComparer.Ordinal);
@@ -1712,7 +1714,7 @@ public partial class MainWindow : Window
                 case "notes.list": Send("notes", ReadNotes()); break;
                 case "notes.add": HandleNoteAdd(Text("title"), Text("content"), Text("requestId")); break;
                 case "notes.delete": DeleteNote(request.GetProperty("id").GetInt64(), Text("requestId")); break;
-                case "feedback": SaveFeedback(request.GetProperty("rating").GetInt32(), Text("answer")); Send("notice", "Оценка сохранена локально; это не обучение весов."); break;
+                case "feedback": HandleFeedback(request); break;
                 case "backup": BackupLocalDatabase(); break;
                 case "model.select": await SelectModel(Text("model"), Text("requestId")); break;
                 case "model.pull": await PullExistingProviderModel(Text("model"), Text("requestId")); break;
@@ -1978,6 +1980,7 @@ public partial class MainWindow : Window
         const int MaxAnswerChars = 256 * 1024;
         // An INSERT can commit before SQLite readback fails; do not claim rollback.
         bool sqliteWriteAttempted = false, sqliteVerified = false;
+        long savedChatId = 0;
         bool refreshProviderAfterError = false;
         // Only stream transport failures (not SQLite/ownership failures) re-probe Ollama.
         bool providerStreamRequested = false;
@@ -2075,7 +2078,7 @@ public partial class MainWindow : Window
             cancellation.Token.ThrowIfCancellationRequested();
             if (answer.Length > 0) {
                 sqliteWriteAttempted = true;
-                PersistChat(prompt, answer.ToString(), persona);
+                savedChatId = PersistChat(prompt, answer.ToString(), persona);
                 sqliteVerified = true;
             }
             // Completion is true only after SQLite commits successfully.
@@ -2084,7 +2087,7 @@ public partial class MainWindow : Window
             Emit("metrics", new { requestId, outputTokens = evalCount, promptTokens = promptCount,
                 tokensPerSecond = evalDuration > 0 ? Math.Round(evalCount * 1000000000.0 / evalDuration, 1) : 0,
                 measured = evalCount > 0 && evalDuration > 0 });
-            Emit("complete", new { requestId, ok = answer.Length > 0, tokens = evalCount, stopped = false });
+            Emit("complete", new { requestId, ok = savedChatId > 0, chatId = savedChatId, persona, tokens = evalCount, stopped = false });
         }
         catch (OperationCanceledException) when (cancellation.IsCancellationRequested) {
             // Only the active HTTP request's explicit owner STOP/navigation cancellation
@@ -2148,7 +2151,7 @@ public partial class MainWindow : Window
             await CheckProvider();
     }
 
-    private void PersistChat(string prompt, string answer, string persona)
+    private long PersistChat(string prompt, string answer, string persona)
     {
         using var db = OpenDatabase();
         using var cmd = db.CreateCommand();
@@ -2175,6 +2178,7 @@ public partial class MainWindow : Window
             !string.Equals(row.GetString(1), answer, StringComparison.Ordinal) ||
             !string.Equals(row.GetString(2), persona, StringComparison.Ordinal))
             throw new InvalidOperationException("NOX_CHAT_SQLITE_READBACK_HOLD");
+        return id;
     }
 
     private object ReadHistory()
@@ -2813,16 +2817,103 @@ public partial class MainWindow : Window
         try { Send("notes", ReadNotes()); }
         catch (Exception) { /* Committed receipt remains authoritative. */ }
     }
-    private void SaveFeedback(int rating,string answer)
+    // D05: feedback belongs to a committed chat row, not untrusted streaming text.
+    // The native selected Persona and owner requestId must match before SQLite INSERT.
+    private void HandleFeedback(JsonElement request)
     {
-        if (rating is not (1 or -1) || string.IsNullOrWhiteSpace(answer) || answer.Length>12000)
-            throw new ArgumentException("Invalid feedback");
-        using var db = OpenDatabase(); using var cmd = db.CreateCommand();
-        cmd.CommandText = "INSERT INTO feedback(created_at,rating,answer) VALUES($t,$r,$a)";
-        cmd.Parameters.AddWithValue("$t",DateTimeOffset.UtcNow.ToString("O"));
-        cmd.Parameters.AddWithValue("$r",rating);
-        cmd.Parameters.AddWithValue("$a",answer);
-        cmd.ExecuteNonQuery();
+        string requestId = request.TryGetProperty("requestId", out var idField) &&
+            idField.ValueKind == JsonValueKind.String ? idField.GetString() ?? "" : "";
+        var fields = request.EnumerateObject().ToArray();
+        bool valid = fields.Length == 5 &&
+            fields.Count(x => x.Name == "type") == 1 &&
+            fields.Count(x => x.Name == "requestId") == 1 &&
+            fields.Count(x => x.Name == "chatId") == 1 &&
+            fields.Count(x => x.Name == "persona") == 1 &&
+            fields.Count(x => x.Name == "rating") == 1 &&
+            ValidWriteRequestId(requestId) &&
+            request.TryGetProperty("chatId", out var cid) && cid.ValueKind == JsonValueKind.Number &&
+            cid.TryGetInt64(out _) &&
+            request.TryGetProperty("rating", out var rv) && rv.ValueKind == JsonValueKind.Number &&
+            rv.TryGetInt32(out _) &&
+            request.TryGetProperty("persona", out var pv) && pv.ValueKind == JsonValueKind.String;
+        if (!valid) {
+            Send("feedback.denied", new { requestId, reason = "NOX_FEEDBACK_INVALID_REQUEST_HOLD" });
+            return;
+        }
+        long chatId = request.GetProperty("chatId").GetInt64();
+        int rating = request.GetProperty("rating").GetInt32();
+        string persona = request.GetProperty("persona").GetString() ?? "";
+        if (chatId <= 0 || rating is not (1 or -1) ||
+            persona is not ("KV" or "AM" or "LA" or "EV" or "KW") || active != null) {
+            Send("feedback.denied", new { requestId, chatId, reason = "NOX_FEEDBACK_OWNER_BUSY_OR_INVALID_HOLD" });
+            return;
+        }
+        if (!seenFeedbackIds.Add(requestId)) {
+            Send("feedback.uncertain", new { requestId, chatId, reason = "NOX_FEEDBACK_REPLAY_HOLD" });
+            return;
+        }
+        seenFeedbackOrder.Enqueue(requestId);
+        if (seenFeedbackOrder.Count > 128) seenFeedbackIds.Remove(seenFeedbackOrder.Dequeue());
+        bool commitAttempted = false;
+        try {
+            if (!string.Equals(ActivePersona(), persona, StringComparison.Ordinal)) {
+                Send("feedback.denied", new { requestId, chatId, reason = "NOX_FEEDBACK_PERSONA_CHANGED_HOLD" });
+                return;
+            }
+            long feedbackId;
+            string answer;
+            using (var db = OpenDatabase())
+            using (var tx = db.BeginTransaction()) {
+                using (var chat = db.CreateCommand()) {
+                    chat.Transaction = tx;
+                    chat.CommandText = "SELECT answer FROM chat_history WHERE id=$id AND persona=$persona";
+                    chat.Parameters.AddWithValue("$id", chatId);
+                    chat.Parameters.AddWithValue("$persona", persona);
+                    answer = chat.ExecuteScalar() as string ?? "";
+                }
+                if (string.IsNullOrWhiteSpace(answer) || answer.Length > 12000) {
+                    Send("feedback.denied", new { requestId, chatId, reason = "NOX_FEEDBACK_NO_SAVED_CHAT_HOLD" });
+                    return;
+                }
+                using (var cmd = db.CreateCommand()) {
+                    cmd.Transaction = tx;
+                    cmd.CommandText = "INSERT INTO feedback(created_at,rating,answer) VALUES($t,$r,$a)";
+                    cmd.Parameters.AddWithValue("$t", DateTimeOffset.UtcNow.ToString("O"));
+                    cmd.Parameters.AddWithValue("$r", rating);
+                    cmd.Parameters.AddWithValue("$a", answer);
+                    if (cmd.ExecuteNonQuery() != 1) throw new InvalidOperationException("NOX_FEEDBACK_WRITE_HOLD");
+                }
+                using (var id = db.CreateCommand()) {
+                    id.Transaction = tx;
+                    id.CommandText = "SELECT last_insert_rowid()";
+                    feedbackId = Convert.ToInt64(id.ExecuteScalar());
+                }
+                if (feedbackId <= 0) throw new InvalidOperationException("NOX_FEEDBACK_ROWID_HOLD");
+                commitAttempted = true;
+                tx.Commit();
+            }
+            using (var verifyDb = OpenDatabase())
+            using (var verify = verifyDb.CreateCommand()) {
+                verify.CommandText = "SELECT rating,answer FROM feedback WHERE id=$id";
+                verify.Parameters.AddWithValue("$id", feedbackId);
+                using var row = verify.ExecuteReader();
+                if (!row.Read() || row.GetInt64(0) != rating ||
+                    !string.Equals(row.GetString(1), answer, StringComparison.Ordinal))
+                    throw new InvalidOperationException("NOX_FEEDBACK_READBACK_HOLD");
+            }
+            // Verified independent readback is the only success ACK.
+            try { Send("feedback.receipt", new { requestId, chatId, persona, rating, saved = true }); }
+            catch (Exception) { /* A lost IPC cannot negate the saved feedback. */ }
+        }
+        catch (Exception) {
+            try {
+                if (commitAttempted)
+                    Send("feedback.uncertain", new { requestId, chatId, reason = "NOX_FEEDBACK_COMMIT_UNKNOWN_HOLD" });
+                else
+                    Send("feedback.denied", new { requestId, chatId, reason = "NOX_FEEDBACK_PRECOMMIT_HOLD" });
+            }
+            catch (Exception) { /* fail closed; do not retry automatically */ }
+        }
     }
 
     // B04: switch only when the native chat owner is idle, and acknowledge
