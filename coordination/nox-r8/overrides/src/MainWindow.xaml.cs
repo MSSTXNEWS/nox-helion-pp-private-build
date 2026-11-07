@@ -2662,9 +2662,12 @@ public partial class MainWindow : Window
     private async Task SelectModel(string model, string requestId)
     {
         if (!ValidWriteRequestId(requestId)) {
-            Send("model.select.denied", new { requestId, reason = "NOX_MODEL_REQUEST_ID_HOLD" });
+            Send("model.select.denied", new { requestId, model, reason = "NOX_MODEL_REQUEST_ID_HOLD" });
             return;
         }
+        // A failed COMMIT or independent readback is not proof that the previous
+        // model stayed selected. Never convert a possible owner write into DENIED.
+        bool commitAttempted = false;
         try
         {
             if (string.IsNullOrWhiteSpace(model) || model.Length > 120)
@@ -2691,6 +2694,8 @@ public partial class MainWindow : Window
                 cmd.Parameters.AddWithValue("$m", model);
                 if (cmd.ExecuteNonQuery() != 1)
                     throw new InvalidOperationException("NOX_MODEL_SELECT_SQLITE_WRITE_HOLD");
+                // After the COMMIT attempt an exception cannot prove rollback.
+                commitAttempted = true;
                 tx.Commit();
             }
             using (var verifyDb = OpenDatabase())
@@ -2700,19 +2705,32 @@ public partial class MainWindow : Window
                 if (!string.Equals(verify.ExecuteScalar() as string, model, StringComparison.Ordinal))
                     throw new InvalidOperationException("NOX_MODEL_SELECT_SQLITE_READBACK_HOLD");
             }
-            Send("model.select.receipt", new { requestId, model, saved = true });
-            Send("settings", ReadPreferences());
-            await CheckProvider();
         }
         catch (Exception ex)
         {
-            // Never claim the selection succeeded if the provider, SQLite or
-            // post-COMMIT readback failed; the UI can restore its last proven tag.
-            string reason = ex is InvalidOperationException &&
-                ex.Message.StartsWith("NOX_", StringComparison.Ordinal)
-                ? ex.Message : "NOX_MODEL_SELECT_FAILED_HOLD";
-            Send("model.select.denied", new { requestId, reason });
+            if (commitAttempted)
+            {
+                // Preserve the owner request while SQLite state needs inspection;
+                // never suggest silently replaying model selection.
+                try { Send("model.select.uncertain", new { requestId, model, reason = "NOX_MODEL_SELECT_PERSISTENCE_UNKNOWN_HOLD" }); }
+                catch (Exception) { /* The owner remains guarded until a fresh restart/readback. */ }
+            }
+            else
+            {
+                string reason = ex is InvalidOperationException &&
+                    ex.Message.StartsWith("NOX_", StringComparison.Ordinal)
+                    ? ex.Message : "NOX_MODEL_SELECT_PRECOMMIT_HOLD";
+                try { Send("model.select.denied", new { requestId, model, reason }); }
+                catch (Exception) { /* Pre-COMMIT owner request not saved. */ }
+            }
+            return;
         }
+        // A COMMIT plus an independent SQLite readback is authoritative.
+        // Optional IPC/health refresh must never emit a contradictory DENIED.
+        try { Send("model.select.receipt", new { requestId, model, saved = true }); }
+        catch (Exception) { /* The owner can reconcile from SQLite on restart. */ }
+        try { Send("settings", ReadPreferences()); await CheckProvider(); }
+        catch (Exception) { /* Local model selection remains committed. */ }
     }
 
     private async Task PullExistingProviderModel(string modelName)
