@@ -134,9 +134,12 @@ def attest(manifest_path, receipt_path, local_src, local_exe,
     extras = set(current) - set(expected)
     mismatch = 0
     for key in set(expected) & set(current):
-        _, size, sha = expected[key]
-        _, path = current[key]
-        if path.stat().st_size != size or digest(path) != sha:
+        expected_rel, size, sha = expected[key]
+        actual_rel, path = current[key]
+        # Case-folding is for detecting aliases, NOT a license to accept a
+        # different source filename with matching bytes on NTFS or POSIX.
+        if (actual_rel != expected_rel or path.stat().st_size != size
+                or digest(path) != sha):
             mismatch += 1
     require_direct_ancestry(local_exe)
     if is_link(local_exe) or not local_exe.is_file():

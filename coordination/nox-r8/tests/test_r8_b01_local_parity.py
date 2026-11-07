@@ -96,6 +96,20 @@ class Parity(unittest.TestCase):
         code, r = self.call()
         self.assertEqual((code, r["result"]), (3, "PROVENANCE_UNVERIFIED_HOLD"))
 
+    def test_case_changed_source_name_fails_parity(self):
+        # A case-only rename keeps file SHA/size and its casefold key, but
+        # is not the exact manifest path and MUST not attest as byte-identical.
+        original = self.src / "index.html"
+        intermediate = self.src / "rename_stage.txt"
+        original.rename(intermediate)
+        intermediate.rename(self.src / "INDEX.HTML")
+        if not any(p.name == "INDEX.HTML" for p in self.src.iterdir()):
+            self.skipTest("File system does not preserve requested rename casing")
+        code, result = self.call()
+        self.assertEqual((code, result["source_match"], result["changed_files"],
+                          result["result"], result["release"]),
+                         (2, False, 1, "SOURCE_PARITY_HOLD", "HOLD"))
+
     def test_source_symlink_denied(self):
         target = self.src / "index.html"
         target.unlink()
