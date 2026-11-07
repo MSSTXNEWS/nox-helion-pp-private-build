@@ -547,13 +547,14 @@ console.log('D01 SOURCE_ONLY PASS: Qwen failed/STOP retry with original input, S
   const nodes={prompt:{value:''},streamHint:{textContent:''},generation:{classList:{remove(){}}}};
   const code="let pendingChatDraft={requestId:'unknown_1',raw:'KV private unsent',persona:'KV'},"+
     "visibleDraftPersona='KV',busy=true,activeChatId='unknown_1',lastAnswer='partial';"+
-    "const personaDrafts=new Map();function complete(v){switch('complete'){"+
-    html.slice(start,end)+"}};({complete,state:()=>({busy,pendingChatDraft})})";
+    "const personaDrafts=new Map();"+guardLine+"\nfunction complete(v){switch('complete'){"+
+    html.slice(start,end)+"}};({complete,state:()=>({busy,pendingChatDraft,blocked:uncertainChatKeys.has(uncertainChatKey('KV','KV private unsent'))})})";
   const m=vm.runInNewContext(code,{
     $:id=>nodes[id],window:{noxVisual:{setEnergy(){}}}
   },{timeout:1500});
   m.complete({requestId:'unknown_1',ok:false,stopped:false,sqliteUnknown:true});
-  assert.equal(nodes.prompt.value,'','D01_SQLITE_COMMIT_UNKNOWN_UNSAFE_AUTO_REPLAY');
+  assert.equal(nodes.prompt.value,'KV private unsent','D01_SQLITE_COMMIT_UNKNOWN_DRAFT_MUST_SURVIVE');
+   assert.equal(m.state().blocked,true,'D01_SQLITE_COMMIT_UNKNOWN_SAME_PROMPT_REPLAY_NOT_GUARDED');
   assert.match(nodes.streamHint.textContent,/SQLite мог сохранить.*Проверьте историю/,
     'D01_SQLITE_COMMIT_UNKNOWN_HOLD_HINT_MISSING');
   assert.equal(m.state().busy,false,'D01_SQLITE_UNKNOWN_BUSY_LOCK_NOT_RELEASED');
