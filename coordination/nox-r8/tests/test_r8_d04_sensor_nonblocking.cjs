@@ -23,4 +23,18 @@ check(source.includes('case "stop":')&&source.includes('case "chat":'),'original
 check(source.includes('private object GetSystemState(object gpuSnapshot)'),'sensor status requires precollected off-UI GPU snapshot');
 check(!source.includes('gpu = gpuSnapshot ?? GetGpuStatus(),'),'sensor status cannot fall through to synchronous nvidia-smi');
 check((source.match(/\bGetGpuStatus\b/g)||[]).length===2,'only background call and GPU sensor method remain');
-console.log('D04 sensor nonblocking SOURCE_ONLY contract PASS; .NET/Windows/owner-GPU NOT_TESTED');
+// Read the actual C# owner method: every GPU must influence the thermal HOLD.
+// This is a SOURCE_ONLY contract, not a simulated NVIDIA device or Windows test.
+const gpuMethod=source.match(/private object GetGpuStatus\(\)[\s\S]*?\n    private string BuildLocalContext\(/);
+check(!!gpuMethod,'existing native GPU probe');
+const gpuSrc=gpuMethod[0];
+check(gpuSrc.includes('StandardOutput.ReadToEndAsync()'),'drain entire CSV before waiting for process');
+check(gpuSrc.includes('outputTask.GetAwaiter().GetResult()'),'consume complete real nvidia-smi output');
+check(!gpuSrc.includes('StandardOutput.ReadLine()'),'first-GPU-only status cannot hide hot adapters');
+check(gpuSrc.includes("csv.Split(new[] { '\\r', '\\n' }"),'parse each reported adapter row');
+check(gpuSrc.includes('foreach (var row in rows)')&&gpuSrc.includes('names.Add(name)'),'inspect all real NVIDIA adapters');
+check(gpuSrc.includes('hottest = Math.Max(hottest, temp)'),'hottest measured adapter wins');
+check(gpuSrc.includes('thermalHold = hottest >= 65')&&gpuSrc.includes('coolingPauseSeconds = hottest >= 65 ? 180 : 0'),'do not show false thermal clearance');
+check(gpuSrc.includes('return new { available = false, reason = "unexpected_format" }'),'unknown or malformed sensor data must not claim safe');
+check(gpuSrc.includes('gpuCount = names.Count'),'explicit physical NVIDIA adapter count');
+console.log('D04 sensor nonblocking / multi-GPU SOURCE_ONLY contract PASS; .NET/Windows/owner-GPU NOT_TESTED');
