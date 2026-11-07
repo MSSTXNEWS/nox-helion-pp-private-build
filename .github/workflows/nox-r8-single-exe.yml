@@ -36,13 +36,13 @@ jobs:
           $srcRoot=(Resolve-Path './r8/src').Path
           $sourceFiles=@(Get-ChildItem -LiteralPath $srcRoot -File -Recurse |
             Where-Object {
-              $rel=[IO.Path]::GetRelativePath($srcRoot,$_.FullName).Replace('\\','/')
+              $rel=[IO.Path]::GetRelativePath($srcRoot,$_.FullName).Replace([IO.Path]::DirectorySeparatorChar,'/')
               $rel -notmatch '(^|/)(bin|obj)(/|$)'
             } | Sort-Object FullName)
           if ($sourceFiles.Count -lt 3) { throw 'R8_PROVENANCE_EMPTY_SOURCE_HOLD' }
           $sourceRows=@($sourceFiles | ForEach-Object {
             [ordered]@{
-              path=[IO.Path]::GetRelativePath($srcRoot,$_.FullName).Replace('\\','/')
+              path=[IO.Path]::GetRelativePath($srcRoot,$_.FullName).Replace([IO.Path]::DirectorySeparatorChar,'/')
               bytes=[long]$_.Length
               sha256=(Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
             }
@@ -186,7 +186,7 @@ jobs:
           }
           $nowFiles=@(Get-ChildItem -LiteralPath $srcRoot -File -Recurse |
             Where-Object {
-              $rel=[IO.Path]::GetRelativePath($srcRoot,$_.FullName).Replace('\\','/')
+              $rel=[IO.Path]::GetRelativePath($srcRoot,$_.FullName).Replace([IO.Path]::DirectorySeparatorChar,'/')
               $rel -notmatch '(^|/)(bin|obj)(/|$)'
             } | Sort-Object FullName)
           $expectedFiles=@($proof.files)
