@@ -6,6 +6,7 @@ installed Ollama models; no network downloads or direct PC-control tools.
 """
 from __future__ import annotations
 import json
+from contextlib import closing
 from pathlib import Path
 import sqlite3
 from urllib.error import URLError,HTTPError
@@ -44,7 +45,7 @@ def native_memory_status(root):
         info={"path":str(p),"read_only":True,"reachable":False,"tables":[]}
         try:
             uri="file:"+p.as_posix()+"?mode=ro&immutable=1"
-            with sqlite3.connect(uri,uri=True,timeout=2) as cx:
+            with closing(sqlite3.connect(uri,uri=True,timeout=2)) as cx:
                 info["tables"]=[x[0] for x in cx.execute(
                   "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name LIMIT 40")]
                 info["reachable"]=True
