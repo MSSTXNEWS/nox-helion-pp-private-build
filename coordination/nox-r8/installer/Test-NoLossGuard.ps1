@@ -33,6 +33,10 @@ try{
  [IO.File]::WriteAllBytes((Join-Path $dir 'NOX.HELION.exe'),$bytes)
  [IO.File]::WriteAllText((Join-Path $dir 'Uninstall.exe'),'TEST_FIXTURE')
  Check 'PreUninstall' $true
+ # An EXE with an active shared-read handle must HOLD before any uninstall deletion.
+ $held=[IO.File]::Open((Join-Path $dir 'NOX.HELION.exe'),[IO.FileMode]::Open,[IO.FileAccess]::Read,[IO.FileShare]::Read)
+ try { Check 'PreUninstall' $false } finally { $held.Dispose() }
+ Check 'PreUninstall' $true
  [IO.File]::WriteAllText((Join-Path $dir 'owner.sqlite3'),'FOREIGN_OWNER_DATA')
  Check 'PreUninstall' $false
  if(-not (Test-Path -LiteralPath (Join-Path $dir 'owner.sqlite3'))){ throw 'B05_TEST_LOST_FOREIGN_FILE' }
