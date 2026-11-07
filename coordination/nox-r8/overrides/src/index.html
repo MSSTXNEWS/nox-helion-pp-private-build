@@ -139,7 +139,7 @@ body.reduced .helion-fx{filter:none}body.reduced .core.active{animation:none}
 <p class="hint">Запрос сохраняется в SQLite, но GPU-обучение не запускается без проверенного worker и прав на веса. Температура не выше 65°C; при достижении лимита пауза 180 секунд. Чекпойнт SHA: NOT VERIFIED.</p>
 <div id="learnReceipt" class="mono" role="status">Нет подтверждённого результата.</div>
 <div id="learnQueue" class="mono" aria-live="polite">Очередь не читалась.</div><div class="meter" aria-label="Физический прогресс обучения"><span id="trainingBar"></span></div><div id="trainingMeasured" class="meterLabel">Метрика не измерена</div><div id="training" class="mono"></div></section>
-<section class="panel" data-panel="voice"><p class="intro">Озвучивание уже полученного ответа через установленный речевой движок Windows/WebView2. Это не голосовой ассистент и не запись микрофона.</p><button class="action" id="speak">Озвучить последний ответ</button><button class="action danger" id="silence">Остановить речь</button><div id="voiceStatus" class="mono">Проверка доступности речи по кнопке.</div></section>
+<section class="panel" data-panel="voice"><p class="intro">Голос RU / ES. Запись разрешена только после нажатия кнопки и при доступном локальном распознавании Windows/WebView2. Облачная диктовка запрещена; при отсутствии локального движка — HOLD.</p><div class="controls"><button class="action" id="voiceRu" aria-pressed="true">РУССКИЙ</button><button class="action" id="voiceEs" aria-pressed="false">ESPAÑOL</button></div><div class="controls"><button class="action" id="voiceListen">Микрофон · локально</button><button class="action danger" id="voiceStop">STOP · микрофон</button></div><div class="controls"><button class="action" id="speak">Озвучить последний ответ</button><button class="action danger" id="silence">Остановить речь</button></div><div id="voiceStatus" class="mono" role="status" aria-live="polite">Микрофон выключен. Локальная речь не проверена.</div><p class="hint">Распознанный текст переносится в черновик чата, но не отправляется автоматически. Нажми SEND для передачи Qwen.</p></section>
 <section class="panel" data-panel="persona"><p class="intro">Локальные настройки SQLite. PersonaID сохраняется, но не подменяет автоматически личность модели.</p><label for="persona">PersonaID</label><select id="persona"><option value="KV">KV</option><option value="AM">AM</option><option value="LA">LA</option><option value="EV">EV</option><option value="KW">KW</option></select><button class="action" id="savePersona">Сохранить PersonaID</button><label><input type="checkbox" id="reduceMotion"> Отключить анимацию</label><button class="action" id="saveMotion">Сохранить движение</button><label><input type="checkbox" id="useContext" checked> Добавлять локальную память и последние диалоги в запрос</label><button class="action" id="saveContext">Сохранить использование памяти</button><label for="performance">Режим локального ИИ</label><select id="performance"><option>MAX</option><option selected>BALANCED</option><option>ECO</option></select><button class="action" id="savePerformance">Сохранить режим</button><button class="action" id="backup">Резервная копия SQLite…</button><div id="personaStatus" class="mono" role="status" aria-live="polite"></div><p class="hint">Смена PersonaID не означает наличие обученного адаптера личности. Экспорт памяти выполняется только по твоей команде.</p></section>
 </aside></main>
 <script id="nox-liquid-core">
@@ -365,8 +365,106 @@ $('maxMode').onclick=()=>{route('persona');if(pendingSettings)return;$('performa
 $('saveModel').onclick=()=>{const model=$('modelPicker').value;if(!model||pendingModel)return;const requestId=nextChatId();pendingModel={requestId,model,previous:committedModel};$('saveModel').disabled=true;$('modelPicker').disabled=true;$('modelSelectStatus').textContent='Проверка локального тега и SQLite…';if(post('model.select',{model,requestId})===false){const previous=pendingModel.previous;pendingModel=null;$('saveModel').disabled=false;$('modelPicker').disabled=false;if(previous)$('modelPicker').value=previous;$('modelSelectStatus').textContent='Нет нативного соединения. Предыдущая модель сохранена.';}};$('pullModel').onclick=()=>{const model=$('modelToDownload').value.trim();if(!/^[a-zA-Z0-9][a-zA-Z0-9._/-]*:[a-zA-Z0-9._-]+$/.test(model)){$('downloadStatus').textContent='Укажи корректный тег модели';return}if(window.confirm('Загрузить модель '+model+'? Это использует диск и интернет.'))post('model.pull',{model})};$('cancelPull').onclick=()=>post('model.cancel');
 $('noteAdd').onclick=()=>{const title=$('noteTitle').value.trim(),content=$('noteText').value.trim();if(!title||!content||pendingNote)return;const requestId=nextChatId();pendingNote={requestId,title,content};$('noteAdd').disabled=true;if(post('notes.add',{title,content,requestId})===false){pendingNote=null;$('noteAdd').disabled=false}};
 $('feedbackUp').onclick=()=>{if(lastAnswer)post('feedback',{rating:1,answer:lastAnswer})};$('feedbackDown').onclick=()=>{if(lastAnswer)post('feedback',{rating:-1,answer:lastAnswer})};
-$('speak').onclick=()=>{if(!('speechSynthesis' in window)||!('SpeechSynthesisUtterance' in window)){$('voiceStatus').textContent='Speech engine unavailable';return}if(!lastAnswer){$('voiceStatus').textContent='Сначала получите ответ модели';return}speechSynthesis.cancel();let u=new SpeechSynthesisUtterance(lastAnswer);u.lang='ru-RU';speechSynthesis.speak(u);$('voiceStatus').textContent='Озвучивание запрошено'};
-$('silence').onclick=()=>{if('speechSynthesis'in window)speechSynthesis.cancel();$('voiceStatus').textContent='Речь остановлена'};
+let voiceLocale='ru-RU',voiceRecognizer=null,voiceSession=0;
+function setVoiceLocale(lang){
+  if(lang!=='ru-RU'&&lang!=='es-ES')return;
+  // Explicit STOP: language never changes under an active microphone session.
+  stopVoiceRecognition();
+  voiceLocale=lang;
+  $('voiceRu').setAttribute('aria-pressed',String(lang==='ru-RU'));
+  $('voiceEs').setAttribute('aria-pressed',String(lang==='es-ES'));
+  $('voiceStatus').textContent='Язык '+lang+' · микрофон выключен';
+}
+function stopVoiceRecognition(){
+  voiceSession++;
+  const current=voiceRecognizer;voiceRecognizer=null;
+  if(current){try{current.abort();}catch{}}
+  $('voiceListen').disabled=false;
+}
+$('voiceRu').onclick=()=>setVoiceLocale('ru-RU');
+$('voiceEs').onclick=()=>setVoiceLocale('es-ES');
+$('voiceStop').onclick=()=>{stopVoiceRecognition();$('voiceStatus').textContent='Микрофон остановлен. Ничего не отправлено.'};
+$('voiceListen').onclick=async()=>{
+  if(voiceRecognizer)return;
+  const Recognition=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!window.isSecureContext||!Recognition||
+     typeof Recognition.available!=='function'){
+    $('voiceStatus').textContent='NOX_VOICE_LOCAL_ENGINE_UNAVAILABLE_HOLD · облачный STT запрещён';
+    return;
+  }
+  const session=++voiceSession, lang=voiceLocale;
+  $('voiceListen').disabled=true;
+  $('voiceStatus').textContent='Проверка установленного локального распознавания '+lang;
+  try{
+    const status=await Recognition.available({langs:[lang],processLocally:true});
+    if(session!==voiceSession)return;
+    if(status!=='available'){
+      $('voiceStatus').textContent='NOX_VOICE_LOCAL_LANGUAGE_NOT_INSTALLED_HOLD · '+String(status);
+      return;
+    }
+    const recognition=new Recognition();
+    if(!('processLocally' in recognition)){
+      $('voiceStatus').textContent='NOX_VOICE_ON_DEVICE_ONLY_HOLD';
+      return;
+    }
+    recognition.processLocally=true;
+    recognition.lang=lang;
+    recognition.continuous=false;
+    recognition.interimResults=false;
+    recognition.maxAlternatives=1;
+    recognition.onresult=event=>{
+      if(session!==voiceSession)return;
+      const transcript=String(event.results?.[0]?.[0]?.transcript||'').trim();
+      if(!transcript||transcript.length>32000){
+        $('voiceStatus').textContent='NOX_VOICE_EMPTY_OR_OVERSIZE_HOLD';return;
+      }
+      const previous=$('prompt').value;
+      if(previous.length+transcript.length+1>32000){
+        $('voiceStatus').textContent='NOX_VOICE_PROMPT_LIMIT_HOLD';return;
+      }
+      $('prompt').value=previous+(previous&&!/\\s$/.test(previous)?' ':'')+transcript;
+      $('voiceStatus').textContent='Локальный текст в черновике · не отправлен: '+lang;
+      route('core');$('prompt').focus();
+    };
+    recognition.onerror=event=>{
+      if(session===voiceSession)$('voiceStatus').textContent=
+        'NOX_VOICE_LOCAL_STT_HOLD: '+String(event?.error||'unknown');
+    };
+    recognition.onend=()=>{
+      if(session===voiceSession){
+        voiceRecognizer=null;$('voiceListen').disabled=false;
+      }
+    };
+    voiceRecognizer=recognition;
+    recognition.start(); // Direct user action; browser still prompts OS microphone permission.
+    $('voiceStatus').textContent='Микрофон включён · только локально · '+lang;
+  }catch(error){
+    if(session===voiceSession)$('voiceStatus').textContent=
+      'NOX_VOICE_LOCAL_STT_HOLD: '+String(error?.name||'unavailable');
+  }finally{
+    if(session===voiceSession&&!voiceRecognizer)$('voiceListen').disabled=false;
+  }
+};
+$('speak').onclick=()=>{
+  if(!('speechSynthesis'in window)||!('SpeechSynthesisUtterance'in window)){
+    $('voiceStatus').textContent='NOX_TTS_NOT_AVAILABLE_HOLD';return;
+  }
+  if(!lastAnswer){$('voiceStatus').textContent='Сначала нужен ответ Qwen';return;}
+  const voices=speechSynthesis.getVoices();
+  const chosen=voices.find(v=>v.lang.toLowerCase()===voiceLocale.toLowerCase()&&v.localService===true);
+  if(!chosen){$('voiceStatus').textContent='NOX_TTS_LOCAL_VOICE_MISSING_HOLD · '+voiceLocale;return;}
+  speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance(lastAnswer);
+  u.lang=voiceLocale;u.voice=chosen;
+  u.onerror=()=>{$('voiceStatus').textContent='NOX_TTS_ENGINE_ERROR_HOLD'};
+  u.onend=()=>{$('voiceStatus').textContent='Озвучивание завершено'};
+  speechSynthesis.speak(u);
+  $('voiceStatus').textContent='Локальное озвучивание '+voiceLocale;
+};
+$('silence').onclick=()=>{
+  if('speechSynthesis'in window)speechSynthesis.cancel();
+  $('voiceStatus').textContent='Озвучивание остановлено';
+};
 window.chrome?.webview?.addEventListener('message',e=>{const m=e.data,v=m.value;
 if(['status','token','metrics','complete'].includes(m.type) && (!v || v.requestId!==activeChatId))return;
 if(m.type==='error' && v && typeof v==='object' && v.requestId && v.requestId!==activeChatId)return;
@@ -391,7 +489,7 @@ case 'learn.receipt':{const state=String(v?.state||'HOLD'),id=Number.isSafeInteg
  case 'learn.queue':{const rows=Array.isArray(v)?v:[];$('learnQueue').textContent=rows.length?rows.map(x=>'Запрос #'+x.id+' · '+String(x.model)+' · '+String(x.state)+' · обучение не запущено').join('\n'):'Нет записанных запросов LEARN';break;}
  case 'training':{const run=v?.measuredTrainingRuns?.find(r=>r.progressVerified===true&&r.checkpointVerified===true&&typeof r.progressPercent==='number');const pct=run?Math.max(0,Math.min(100,run.progressPercent)):0;$('trainingBar').style.width=pct+'%';$('trainingMeasured').textContent=run?`Подтверждённые шаги: ${run.globalStep}/${run.maxSteps} · ${pct}%`:'Обучение GPU не подтверждено · 0%';const count=Array.isArray(v?.observedExternalRuns)?v.observedExternalRuns.length:0;$('training').textContent=count?`Найдено внешних журналов: ${count}. Их шаги и loss не связаны с подтверждённым NOX checkpoint.`:'Нет подтверждённых результатов GPU/QLoRA';break;}
 case 'settings':if(!pendingSettings){applyCommittedSettings(v||{});$('personaStatus').textContent=settingsDenial||'Настройки прочитаны из SQLite';}break;
-case 'persona.changed':$('messages').replaceChildren();$('memoryResults').replaceChildren();$('knowledgeResults').replaceChildren();lastAnswer='';responseBox=null;if('speechSynthesis' in window)speechSynthesis.cancel();break;
+case 'persona.changed':$('messages').replaceChildren();$('memoryResults').replaceChildren();$('knowledgeResults').replaceChildren();lastAnswer='';responseBox=null;if('speechSynthesis' in window)speechSynthesis.cancel();stopVoiceRecognition();break;
 case 'settings.receipt':{
   if(!pendingSettings || v?.requestId!==pendingSettings.requestId ||
       v?.key!==pendingSettings.key || v?.value!==pendingSettings.value || v?.saved!==true)break;
