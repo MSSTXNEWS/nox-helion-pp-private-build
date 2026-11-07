@@ -112,9 +112,12 @@ try {
         @('isolated_sqlite_path','settings_wpf_owner_restart_readback')
       } else {
         @('real_webview2_eight_routes','real_webview2_keyboard_routes',
+          'd01_five_quick_native_routes','d01_five_quick_windows_uia',
+          'd01_five_quick_compact_320_390_800',
           'settings_windows_uia_host','settings_webview2_accessible_controls',
           'settings_wpf_owner_sqlite_readback','settings_wpf_motion_sqlite_readback',
-          'settings_foreign_key_denial','isolated_sqlite_path','native_wpf_webview2_renderer')
+          'settings_foreign_key_denial','sqlite_native_backup_no_loss',
+          'isolated_sqlite_path','native_wpf_webview2_renderer')
       }
       $observed=[ordered]@{}
       foreach($key in $mustPass) {
