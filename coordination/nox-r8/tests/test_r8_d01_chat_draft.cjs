@@ -525,3 +525,25 @@ console.log('D01 SOURCE_ONLY PASS: Qwen failed/STOP retry with original input, S
   runCase('AM unsent draft',false);
   console.log('D01 SOURCE_ONLY PASS: stopped/failed Qwen restores original PersonaID draft, never foreign draft');
 }
+
+// D01_SQLITE_UNKNOWN_NEVER_AUTO_REPLAY: native insert may have committed while readback failed.
+// Execute the original production complete handler; this is SOURCE_ONLY, not Windows Qwen E2E.
+{
+  const start=html.indexOf("case 'complete':");
+  const end=html.indexOf("\\ncase 'error':",start);
+  assert.ok(start>0&&end>start,'D01_SQLITE_UNKNOWN_PRODUCTION_HANDLER_MISSING');
+  const nodes={prompt:{value:''},streamHint:{textContent:''},generation:{classList:{remove(){}}}};
+  const code="let pendingChatDraft={requestId:'unknown_1',raw:'KV private unsent',persona:'KV'},"+
+    "visibleDraftPersona='KV',busy=true,activeChatId='unknown_1',lastAnswer='partial';"+
+    "const personaDrafts=new Map();function complete(v){switch('complete'){"+
+    html.slice(start,end)+"}};({complete,state:()=>({busy,pendingChatDraft})})";
+  const m=vm.runInNewContext(code,{
+    $:id=>nodes[id],window:{noxVisual:{setEnergy(){}}}
+  },{timeout:1500});
+  m.complete({requestId:'unknown_1',ok:false,stopped:false,sqliteUnknown:true});
+  assert.equal(nodes.prompt.value,'','D01_SQLITE_COMMIT_UNKNOWN_UNSAFE_AUTO_REPLAY');
+  assert.match(nodes.streamHint.textContent,/SQLite мог сохранить.*Проверьте историю/,
+    'D01_SQLITE_COMMIT_UNKNOWN_HOLD_HINT_MISSING');
+  assert.equal(m.state().busy,false,'D01_SQLITE_UNKNOWN_BUSY_LOCK_NOT_RELEASED');
+  console.log('D01 SOURCE_ONLY PASS: uncertain SQLite commit never auto-restores prompt for duplicate replay');
+}
