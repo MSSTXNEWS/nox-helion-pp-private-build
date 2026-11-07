@@ -1211,8 +1211,28 @@ public partial class MainWindow : Window
 
     private void Send(string type, object value)
     {
+        // Late Ollama stream callbacks may outlive the WebView2 document.
+        // Never dispatch into a WPF dispatcher that is closing or disposed.
+        if (providerProbeStopped || Dispatcher.HasShutdownStarted || Dispatcher.HasShutdownFinished)
+            return;
         var data = JsonSerializer.Serialize(new { type, value });
-        Dispatcher.Invoke(() => Browser.CoreWebView2?.PostWebMessageAsJson(data));
+        void PostIfAlive()
+        {
+            // Recheck on the UI thread: shutdown may begin during Invoke dispatch.
+            if (providerProbeStopped || Dispatcher.HasShutdownStarted || Dispatcher.HasShutdownFinished)
+                return;
+            Browser.CoreWebView2?.PostWebMessageAsJson(data);
+        }
+        try
+        {
+            if (Dispatcher.CheckAccess()) PostIfAlive();
+            else Dispatcher.Invoke((Action)PostIfAlive);
+        }
+        // Suppress transport errors only while actually closing; normal errors
+        // still propagate to the existing native IPC owner.
+        catch (ObjectDisposedException) when (providerProbeStopped) { }
+        catch (OperationCanceledException) when (providerProbeStopped || Dispatcher.HasShutdownStarted) { }
+        catch (InvalidOperationException) when (providerProbeStopped || Dispatcher.HasShutdownStarted) { }
     }
 
     private async Task StartLocalEngine()

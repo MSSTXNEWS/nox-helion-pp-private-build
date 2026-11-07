@@ -187,6 +187,20 @@ with sqlite3.connect(':memory:') as db:
     assert db.execute(statement,(404,)).rowcount==0
 print('D05 R8 SOURCE_ONLY: owner-correlated task toggle, SQLite COMMIT/readback and denied rollback PASS')
 
+# B02 WPF lifecycle: an in-flight native chat/health callback must never
+# dispatch into WebView2 after owner window shutdown. Live failures stay visible.
+send = cs.split('private void Send(string type, object value)', 1)[1].split('private async Task StartLocalEngine()', 1)[0]
+assert send.count('providerProbeStopped || Dispatcher.HasShutdownStarted || Dispatcher.HasShutdownFinished') == 2, 'B02_SEND_SHUTDOWN_EPOCH_HOLD'
+assert send.index('providerProbeStopped || Dispatcher.HasShutdownStarted') < send.index('JsonSerializer.Serialize'), 'B02_SEND_PRE_SERIALIZE_HOLD'
+assert 'if (Dispatcher.CheckAccess()) PostIfAlive();' in send, 'B02_SEND_UI_OWNER_HOLD'
+assert 'else Dispatcher.Invoke((Action)PostIfAlive);' in send, 'B02_SEND_DISPATCH_HOLD'
+assert 'Browser.CoreWebView2?.PostWebMessageAsJson(data);' in send, 'B02_SEND_WEBVIEW_HOLD'
+assert 'catch (ObjectDisposedException) when (providerProbeStopped)' in send, 'B02_SEND_DISPOSED_HOLD'
+assert 'catch (OperationCanceledException) when (providerProbeStopped || Dispatcher.HasShutdownStarted)' in send, 'B02_SEND_CANCEL_SCOPE_HOLD'
+assert 'catch (InvalidOperationException) when (providerProbeStopped || Dispatcher.HasShutdownStarted)' in send, 'B02_SEND_FAILURE_SCOPE_HOLD'
+assert 'active?.Cancel(); activeModelPull?.Cancel(); http.Dispose();' in cs, 'B02_STOP_SHUTDOWN_HOLD'
+print('B02 R8 SOURCE_ONLY: shutdown-only WebView2 dispatch suppression, live failures preserved')
+
 # B02 R8 same-source provider restart integration: SOURCE_ONLY (not owner-PC E2E).
 # A stream failure must terminate its exact request before bounded health refresh;
 # only an explicit owner command may start the already-installed service.
