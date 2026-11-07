@@ -263,3 +263,13 @@ assert settings.index('if (personaResetSent)') < settings.index('Send("history",
 assert settings.index('Send("settings.receipt"') > settings.index('Send("settings", verified);'), 'D05_SETTINGS_RECEIPT_LAST_HOLD'
 assert settings.count('Send("settings.denied"') == 5, 'D05_SETTINGS_DENIAL_REGRESSION_HOLD'
 print('D05 SOURCE_ONLY SETTINGS independent readback and refresh isolation PASS; Windows NOT RUN')
+
+# D05: exact Ollama /api/tags readback is the terminal installation decision.
+# An optional later HEALTH/WebView refresh cannot contradict verified DONE.
+pull = cs.split('private async Task PullExistingProviderModel(', 1)[1].split('private void ImportVuneoByConsent(', 1)[0]
+assert pull.index('if (!installed) throw new InvalidOperationException("NOX_PULL_INSTALL_READBACK_HOLD")') < pull.index('status = "DONE"'), 'D05_PULL_UNVERIFIED_DONE_HOLD'
+assert 'cts.Token.ThrowIfCancellationRequested();' in pull.split('if (!installed)', 1)[1].split('status = "DONE"', 1)[0], 'D05_PULL_STOP_BEFORE_DONE_HOLD'
+after_done = pull.split('status = "DONE"', 1)[1].split('catch (OperationCanceledException)', 1)[0]
+assert 'try { await CheckProvider(); }' in after_done and 'catch (Exception) { /* Owner may retry HEALTH; installation receipt remains DONE. */ }' in after_done, 'D05_PULL_POST_DONE_FALSE_FAIL_HOLD'
+assert pull.count('status = "DONE"') == 1 and pull.count('status = "FAILED_HOLD"') == 1, 'D05_PULL_TERMINAL_DUPLICATE_HOLD'
+print('D05 MODEL PULL SOURCE_ONLY: verified DONE is not revoked by optional health refresh PASS; Windows NOT RUN')

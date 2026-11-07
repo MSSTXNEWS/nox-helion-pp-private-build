@@ -1849,7 +1849,10 @@ public partial class MainWindow : Window
             if (!installed) throw new InvalidOperationException("NOX_PULL_INSTALL_READBACK_HOLD");
             cts.Token.ThrowIfCancellationRequested();
             Send("download", new { requestId, status = "DONE", model = modelName, percent = (double?)100, terminal = true });
-            await CheckProvider();
+            // Tag readback is authoritative. An optional health/IPC refresh after DONE
+            // cannot turn a verified installation into a second FAILED_HOLD receipt.
+            try { await CheckProvider(); }
+            catch (Exception) { /* Owner may retry HEALTH; installation receipt remains DONE. */ }
         }
         catch (OperationCanceledException) when (cts.IsCancellationRequested) {
             Send("download", new { requestId, status = "STOPPED", model = modelName, percent = (double?)null, terminal = true });
