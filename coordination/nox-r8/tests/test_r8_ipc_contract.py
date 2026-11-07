@@ -10,6 +10,14 @@ if root.name == "tests" and root.parent.name == "nox-r8":
     source_dir = root.parent / "overrides" / "src"
 elif root.name == "r8":
     source_dir = root / "src"
+    # Fail closed if the Windows runner executes an old test copy or old copied WPF/WebView2 sources.
+    # The checkout at this immutable commit must contain the exact canonical originals.
+    canonical = root.parent / "coordination" / "nox-r8"
+    expected_test = canonical / "tests" / Path(__file__).name
+    assert expected_test.is_file() and Path(__file__).read_bytes() == expected_test.read_bytes(), "F02_IPC_STALE_TEST_COPY_HOLD"
+    for name in ("MainWindow.xaml.cs", "index.html"):
+        expected = canonical / "overrides" / "src" / name
+        assert expected.is_file() and (source_dir / name).is_file() and (source_dir / name).read_bytes() == expected.read_bytes(), "F02_IPC_STAGED_SOURCE_DRIFT_HOLD: " + name
 else:
     raise AssertionError("F02_IPC_SQLITE_TEST_ORIGIN_HOLD")
 for name in ("MainWindow.xaml.cs", "index.html"):

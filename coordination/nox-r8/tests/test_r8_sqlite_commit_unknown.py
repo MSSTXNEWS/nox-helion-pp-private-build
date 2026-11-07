@@ -5,6 +5,13 @@ if here.name == "tests" and here.parent.name == "nox-r8":
     root = here.parent / "overrides" / "src"
 elif here.name == "r8":
     root = here / "src"
+    # Windows copy must be byte-identical to the original test and pinned original sources.
+    canonical = here.parent / "coordination" / "nox-r8"
+    expected_test = canonical / "tests" / Path(__file__).name
+    assert expected_test.is_file() and Path(__file__).read_bytes() == expected_test.read_bytes(), "F02_SQLITE_STALE_TEST_COPY_HOLD"
+    for name in ("MainWindow.xaml.cs", "index.html"):
+        expected = canonical / "overrides" / "src" / name
+        assert expected.is_file() and (root / name).is_file() and (root / name).read_bytes() == expected.read_bytes(), "F02_SQLITE_STAGED_SOURCE_DRIFT_HOLD: " + name
 else:
     raise AssertionError("F02_SQLITE_TEST_ORIGIN_HOLD")
 for name in ("MainWindow.xaml.cs", "index.html"):
@@ -49,6 +56,12 @@ with TemporaryDirectory(prefix="nox-f02-r8-sqlite-") as scratch:
         with closing(sqlite3.connect(dbpath)) as reader:
             assert reader.execute("SELECT persona,prompt,answer FROM chat_history").fetchall() == [("KV","one","committed")], "F02_SQLITE_INDEPENDENT_READBACK_HOLD"
             assert reader.execute("PRAGMA quick_check").fetchone()[0] == "ok", "F02_SQLITE_QUICK_CHECK_HOLD"
+            # Negative control: an uncommitted AM row must be invisible to another WAL reader.
+            writer.execute("INSERT INTO chat_history(persona,prompt,answer) VALUES (?,?,?)", ("AM", "private", "uncommitted"))
+            assert reader.execute("SELECT COUNT(*) FROM chat_history WHERE persona=?", ("AM",)).fetchone()[0] == 0, "F02_WAL_UNCOMMITTED_VISIBLE_HOLD"
+            writer.rollback()
+            assert reader.execute("SELECT persona,prompt,answer FROM chat_history").fetchall() == [("KV","one","committed")], "F02_WAL_ROLLBACK_NO_LOSS_HOLD"
     with closing(sqlite3.connect(dbpath)) as restarted:
         assert restarted.execute("SELECT COUNT(*) FROM chat_history WHERE persona=?", ("KV",)).fetchone()[0] == 1, "F02_SQLITE_NO_DUPLICATE_AFTER_REOPEN_HOLD"
+        assert restarted.execute("SELECT COUNT(*) FROM chat_history WHERE persona=?", ("AM",)).fetchone()[0] == 0, "F02_WAL_REOPEN_PERSONA_NO_LOSS_HOLD"
 print("F02 disposable SQLite WAL commit/independent readback/reopen: PASS; owner-PC NOT_TESTED")
