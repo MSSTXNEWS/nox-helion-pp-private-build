@@ -244,10 +244,11 @@ console.log('D01 SOURCE_ONLY PASS: knowledge/memory keyboard IME, repeat, Enter'
   const changedLine = html.split('\n').find(x=>x.trim().startsWith("case 'persona.changed':"));
   assert.ok(changedLine,'D01_PERSONA_CHANGE_HANDLER_MISSING');
   const ids = ['messages','history','notes','memoryResults','knowledgeResults'];
-  const draftIds=['noteTitle','noteText','memoryQuery','knowledgeQuery'];
+  const draftIds=['noteTitle','noteText','memoryQuery','knowledgeQuery','prompt','taskInput'];
   const oldDraft={
     noteTitle:'KV unsaved title',noteText:'KV unsaved note',
-    memoryQuery:'KV memory query',knowledgeQuery:'KV knowledge query'
+    memoryQuery:'KV memory query',knowledgeQuery:'KV knowledge query',
+    prompt:'KV unsent chat prompt',taskInput:'KV unsent atlas task'
   };
   const elements = Object.fromEntries(ids.map(id=>[id,{clears:0,
     replaceChildren(){this.clears++;}}]));

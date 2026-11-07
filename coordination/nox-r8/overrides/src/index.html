@@ -335,7 +335,7 @@ function switchPersonaDrafts(next){
   if(!['KV','AM','LA','EV','KW'].includes(next))return false;
   const previous=committedSettings.persona||'KV';
   if(next===previous)return true;
-  const fields=['noteTitle','noteText','memoryQuery','knowledgeQuery'];
+  const fields=['noteTitle','noteText','memoryQuery','knowledgeQuery','prompt','taskInput'];
   personaDrafts.set(previous,Object.fromEntries(fields.map(id=>[id,$(id).value])));
   const restored=personaDrafts.get(next)||{};
   fields.forEach(id=>{$(id).value=restored[id]||''});
