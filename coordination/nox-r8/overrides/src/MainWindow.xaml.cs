@@ -699,6 +699,7 @@ public partial class MainWindow : Window
         string? error = null;
         string? promptMarker = null;
         string? stopMarker = null;
+        string? resumeMarker = null;
         try
         {
             // Do not claim UX acceptance from a DOM count. This checks the
@@ -762,6 +763,10 @@ public partial class MainWindow : Window
             await WaitForGenerationFinishAsync(chatTarget, TimeSpan.FromMinutes(4));
             if (!lastGenerationCompleted || !HasSavedPrompt(prompt))
                 throw new InvalidOperationException("Live Qwen stream or SQLite chat write did not complete");
+            // A native finish counter can advance before WebView2 consumes the
+            // asynchronous complete event. Never start the STOP run with busy=true.
+            if (!await WaitForSavedChatUiReleaseAsync(TimeSpan.FromSeconds(4)))
+                throw new InvalidOperationException("NOX_WEBVIEW2_FIRST_CHAT_OWNER_NOT_RELEASED_HOLD");
             checks["real_chat_from_webview_to_qwen_to_sqlite"] = "PASS";
 
             stopMarker = "NOX_STOP_" + Guid.NewGuid().ToString("N");
@@ -778,12 +783,37 @@ public partial class MainWindow : Window
             // Cancelling preflight/context work alone is NOT active HTTP STOP evidence.
             if (!await WaitForGenerationTokenAsync(streamTokenTarget, stopTarget, TimeSpan.FromMinutes(2)))
                 throw new InvalidOperationException("NOX_ACTIVE_HTTP_STREAM_NOT_OBSERVED_HOLD");
+            // Native NDJSON receipt alone is not proof that WebView2 displayed
+            // a live token. Demand actual visible DOM output before owner STOP.
+            if (!await WaitForVisibleChatTokenAsync(stopTarget, TimeSpan.FromSeconds(4)))
+                throw new InvalidOperationException("NOX_WEBVIEW2_STREAM_TOKEN_NOT_VISIBLE_HOLD");
             await Browser.CoreWebView2.ExecuteScriptAsync("document.getElementById('stop').click();");
             await WaitForGenerationFinishAsync(stopTarget, TimeSpan.FromSeconds(30));
             if (Volatile.Read(ref stopSignalCount) <= beforeStop ||
                 !lastGenerationStopped || HasSavedPrompt(longPrompt))
                 throw new InvalidOperationException("Native STOP was not confirmed");
+            // Confirm the SAME WebView2 owner is released after HTTP cancellation,
+            // not merely that native counters moved. No fake provider is used.
+            if (!await WaitForStopUiReleaseAsync(TimeSpan.FromSeconds(4)))
+                throw new InvalidOperationException("NOX_WEBVIEW2_STOP_OWNER_NOT_RELEASED_HOLD");
             checks["real_webview_stop_cancel_no_partial_persistence"] = "PASS";
+            // Native/JS STOP may appear complete while the request lock or
+            // UI composer remains unusable. Prove fresh owner acquisition,
+            // another genuine Qwen answer, and durable SQLite readback.
+            resumeMarker = "NOX_RESUME_" + Guid.NewGuid().ToString("N");
+            var resumePrompt = "Ответь одним коротким словом на русском: какое число после 4? " + resumeMarker;
+            int resumeTarget = Volatile.Read(ref generationStartedCount) + 1;
+            await Browser.CoreWebView2.ExecuteScriptAsync(
+                "document.getElementById('prompt').value = " + JsonSerializer.Serialize(resumePrompt) +
+                "; document.getElementById('send').click();");
+            if (!await WaitForGenerationStartAsync(resumeTarget, TimeSpan.FromSeconds(12)))
+                throw new InvalidOperationException("NOX_CHAT_AFTER_STOP_START_HOLD");
+            await WaitForGenerationFinishAsync(resumeTarget, TimeSpan.FromMinutes(4));
+            if (!lastGenerationCompleted || lastGenerationStopped || !HasSavedPrompt(resumePrompt))
+                throw new InvalidOperationException("NOX_CHAT_AFTER_STOP_SQLITE_HOLD");
+            if (!await WaitForSavedChatUiReleaseAsync(TimeSpan.FromSeconds(4)))
+                throw new InvalidOperationException("NOX_WEBVIEW2_RESUMED_CHAT_OWNER_NOT_RELEASED_HOLD");
+            checks["real_chat_after_http_stop_sqlite"] = "PASS";
         }
         catch (Exception ex)
         {
@@ -795,9 +825,10 @@ public partial class MainWindow : Window
             try
             {
                 if (promptMarker != null) DeleteSyntheticChats(promptMarker, stopMarker);
+                if (resumeMarker != null) DeleteSyntheticChats(resumeMarker, null);
             }
             catch (Exception e) { error = (error ?? "") + " cleanup:" + e.Message; }
-            var accepted = error == null && checks.Count == 5 && checks.Values.All(v => v == "PASS");
+            var accepted = error == null && checks.Count == 6 && checks.Values.All(v => v == "PASS");
             var exePath = Environment.ProcessPath ?? "";
             var sha = "";
             try { if (File.Exists(exePath)) sha = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(exePath))); }
@@ -821,6 +852,74 @@ public partial class MainWindow : Window
             catch { /* A missing receipt is HOLD, never PASS. */ }
             Application.Current.Shutdown(accepted ? 0 : 2);
         }
+    }
+
+    private async Task<bool> WaitForVisibleChatTokenAsync(int generationTarget, TimeSpan timeout)
+    {
+        var until = DateTime.UtcNow + timeout;
+        while (DateTime.UtcNow < until)
+        {
+            if (Volatile.Read(ref generationFinishedCount) >= generationTarget) return false;
+            var visible = await Browser.CoreWebView2.ExecuteScriptAsync("""
+                (() => {
+                  const row = document.getElementById('messages')?.firstElementChild;
+                  const label = row?.querySelector('small');
+                  const body = row?.lastElementChild;
+                  return label?.textContent === 'NOX QWEN' &&
+                    !!body?.textContent &&
+                    body.textContent === lastAnswer &&
+                    busy === true && activeChatId !== null &&
+                    document.getElementById('generation')?.classList.contains('on') === true;
+                })()
+                """);
+            if (visible == "true" && Volatile.Read(ref generationFinishedCount) < generationTarget)
+                return true;
+            await Task.Delay(75);
+        }
+        return false;
+    }
+
+    private async Task<bool> WaitForStopUiReleaseAsync(TimeSpan timeout)
+    {
+        var until = DateTime.UtcNow + timeout;
+        while (DateTime.UtcNow < until)
+        {
+            var released = await Browser.CoreWebView2.ExecuteScriptAsync("""
+                (() => {
+                  const busyIndicator = document.getElementById('generation');
+                  const hint = document.getElementById('streamHint');
+                  return busy === false && activeChatId === null &&
+                    busyIndicator?.classList.contains('on') === false &&
+                    hint?.textContent?.includes('Частичный ответ не сохранён') === true;
+                })()
+                """);
+            if (released == "true") return true;
+            await Task.Delay(75);
+        }
+        return false;
+    }
+
+    // A native generation may finish before WebView2 receives its terminal ACK.
+    // Verify the real composer is unlocked and displays *this* saved outcome.
+    // Used only by opt-in native acceptance, never production chat dispatch.
+    private async Task<bool> WaitForSavedChatUiReleaseAsync(TimeSpan timeout)
+    {
+        var until = DateTime.UtcNow + timeout;
+        while (DateTime.UtcNow < until)
+        {
+            var released = await Browser.CoreWebView2.ExecuteScriptAsync("""
+                (() => {
+                  const hint = document.getElementById('streamHint');
+                  const indicator = document.getElementById('generation');
+                  return busy === false && activeChatId === null &&
+                    indicator?.classList.contains('on') === false &&
+                    hint?.textContent === 'Ответ завершён и сохранён в SQLite.';
+                })()
+                """);
+            if (released == "true") return true;
+            await Task.Delay(75);
+        }
+        return false;
     }
 
     private bool HasSavedPrompt(string prompt)
@@ -1172,7 +1271,16 @@ public partial class MainWindow : Window
                 case "model.cancel": activeModelPull?.Cancel(); break;
                 case "tasks.list": Send("tasks", ReadTasks()); break;
                 case "tasks.add": HandleTaskAdd(Text("text"), Text("requestId")); break;
-                case "tasks.toggle": HandleTaskToggle(request.GetProperty("id").GetInt64(), Text("requestId")); break;
+                case "tasks.toggle": {
+                    long taskId = request.TryGetProperty("id", out var taskField) &&
+                        taskField.ValueKind == JsonValueKind.Number && taskField.TryGetInt64(out var parsedTaskId) ? parsedTaskId : 0;
+                    bool? desiredComplete = request.TryGetProperty("complete", out var completeField)
+                        ? completeField.ValueKind == JsonValueKind.True ? true
+                          : completeField.ValueKind == JsonValueKind.False ? false : null
+                        : null;
+                    HandleTaskToggle(taskId, desiredComplete, Text("requestId"));
+                    break;
+                }
                 case "settings.get": Send("settings", ReadPreferences()); break;
                 case "settings.put": HandleSettingsPut(request); break;
                 case "health": await CheckProvider(); break;
@@ -1556,54 +1664,77 @@ public partial class MainWindow : Window
 
     // A checkbox click is not a persisted result. Match the native request
     // to its owner receipt and independently read back the committed SQLite row.
-    private void HandleTaskToggle(long id, string requestId)
+    private void HandleTaskToggle(long id, bool? desiredComplete, string requestId)
     {
-        if (!ValidWriteRequestId(requestId) || id <= 0) {
+        // A second delivery of the same owner intent must not reverse a completed task.
+        // An explicit target state makes retries idempotent; requestId links the ACK.
+        if (!ValidWriteRequestId(requestId) || id <= 0 || desiredComplete is null) {
             Send("tasks.toggle.denied", new { requestId, id, reason = "NOX_TASK_TOGGLE_REQUEST_HOLD" });
             return;
         }
+        int complete = desiredComplete.Value ? 1 : 0;
+        bool commitAttempted = false;
         try {
-            int complete;
             using (var db = OpenDatabase())
             using (var tx = db.BeginTransaction()) {
                 using (var cmd = db.CreateCommand()) {
                     cmd.Transaction = tx;
-                    cmd.CommandText = "UPDATE tasks SET complete=CASE WHEN complete=0 THEN 1 ELSE 0 END WHERE id=$id";
+                    cmd.CommandText = "UPDATE tasks SET complete=$complete WHERE id=$id";
                     cmd.Parameters.AddWithValue("$id", id);
+                    cmd.Parameters.AddWithValue("$complete", complete);
                     if (cmd.ExecuteNonQuery() != 1)
                         throw new InvalidOperationException("NOX_TASK_TOGGLE_MISSING_ROW_HOLD");
                 }
-                using (var read = db.CreateCommand()) {
-                    read.Transaction = tx;
-                    read.CommandText = "SELECT complete FROM tasks WHERE id=$id";
-                    read.Parameters.AddWithValue("$id", id);
-                    complete = Convert.ToInt32(read.ExecuteScalar() ??
-                        throw new InvalidOperationException("NOX_TASK_TOGGLE_READ_HOLD"));
-                    if (complete is not (0 or 1))
-                        throw new InvalidOperationException("NOX_TASK_TOGGLE_STATE_HOLD");
-                }
+                // Once COMMIT is attempted, even an exception is ambiguous:
+                // never claim a confirmed denial or silently replay a toggle.
+                commitAttempted = true;
                 tx.Commit();
             }
-            using (var verifyDb = OpenDatabase())
-            using (var verify = verifyDb.CreateCommand()) {
-                verify.CommandText = "SELECT complete FROM tasks WHERE id=$id";
-                verify.Parameters.AddWithValue("$id", id);
-                if (verify.ExecuteScalar() is not object persisted ||
-                    Convert.ToInt32(persisted) != complete)
-                    throw new InvalidOperationException("NOX_TASK_TOGGLE_SQLITE_READBACK_HOLD");
-            }
-            Send("tasks", ReadTasks());
-            Send("tasks.toggle.receipt", new { requestId, id, complete = complete != 0, saved = true });
-        }
-        catch (SqliteException) {
-            Send("tasks.toggle.denied", new { requestId, id, reason = "NOX_TASK_TOGGLE_SQLITE_HOLD" });
         }
         catch (Exception) {
-            Send("tasks.toggle.denied", new { requestId, id, reason = "NOX_TASK_TOGGLE_READBACK_HOLD" });
+            if (commitAttempted) {
+                Send("tasks.toggle.uncertain", new { requestId, id, reason = "NOX_TASK_TOGGLE_COMMIT_UNKNOWN_HOLD" });
+                RefreshTasksBestEffort();
+            } else {
+                Send("tasks.toggle.denied", new { requestId, id, reason = "NOX_TASK_TOGGLE_SQLITE_HOLD" });
+            }
+            return;
         }
+        try {
+            // An independent connection must observe the exact desired value.
+            using var verifyDb = OpenDatabase();
+            using var verify = verifyDb.CreateCommand();
+            verify.CommandText = "SELECT complete FROM tasks WHERE id=$id";
+            verify.Parameters.AddWithValue("$id", id);
+            if (verify.ExecuteScalar() is not object persisted ||
+                Convert.ToInt32(persisted) != complete)
+                throw new InvalidOperationException("NOX_TASK_TOGGLE_SQLITE_READBACK_HOLD");
+        }
+        catch (Exception) {
+            Send("tasks.toggle.uncertain", new { requestId, id, reason = "NOX_TASK_TOGGLE_READBACK_UNKNOWN_HOLD" });
+            RefreshTasksBestEffort();
+            return;
+        }
+        // Neither receipt transport nor the optional list refresh may turn a
+        // confirmed SQLite COMMIT/readback into a false DENIED.
+        try { Send("tasks.toggle.receipt", new { requestId, id, complete = desiredComplete.Value, saved = true }); }
+        catch (Exception) { /* Owner can recover state via tasks.list. */ }
+        RefreshTasksBestEffort();
     }
 
 
+
+    private void RefreshTasksBestEffort()
+    {
+        try { Send("tasks", ReadTasks()); }
+        catch (Exception) { /* Owner can refresh ATLAS; COMMIT receipt remains valid. */ }
+    }
+
+    private void RefreshNotesBestEffort()
+    {
+        try { Send("notes", ReadNotes()); }
+        catch (Exception) { /* Owner can refresh REFLECTION; COMMIT receipt remains valid. */ }
+    }
 
     // D05: do not make the owner lose unsaved task/note text on a failed SQLite write.
     // Native receipt is correlated to the document request and sent only after a
@@ -1785,7 +1916,7 @@ public partial class MainWindow : Window
             }
             var line = p.StandardOutput.ReadLine();
             if (p.ExitCode != 0 || string.IsNullOrWhiteSpace(line))
-                return new { available = false, reason = "nvidia_smi_unavailable" };
+                return GetAmdGpuTelemetryOrHold();
             var cells = line.Split(',').Select(c => c.Trim()).ToArray();
             if (cells.Length < 5 ||
                 !double.TryParse(cells[4], System.Globalization.NumberStyles.Float,
@@ -1801,8 +1932,60 @@ public partial class MainWindow : Window
                 vramUsedMiB = used, utilizationPercent = Math.Clamp(usage, 0, 100), temperatureC = temp,
                 thermalHold = temp >= 65, coolingPauseSeconds = temp >= 65 ? 180 : 0 };
         }
-        catch (System.ComponentModel.Win32Exception) { return new { available = false, reason = "nvidia_smi_not_installed" }; }
+        catch (System.ComponentModel.Win32Exception) { return GetAmdGpuTelemetryOrHold(); }
         catch (Exception ex) { return new { available = false, reason = ex.GetType().Name }; }
+    }
+
+    // NOX R8: AMD hot-spot readings must come from an actual Windows hardware
+    // sensor provider, never GPU driver identity, elapsed time or a zero value.
+    // This is OBSERVABILITY ONLY: it never starts learning or bypasses SAFE70.
+    private object GetAmdGpuTelemetryOrHold()
+    {
+        const string script = @"$ErrorActionPreference='Stop'; " +
+            @"$s=Get-CimInstance -Namespace 'root/LibreHardwareMonitor' -ClassName Sensor -ErrorAction Stop | " +
+            @"Where-Object { $_.SensorType -eq 'Temperature' -and $_.Identifier -match '(?i)/(?:gpu-amd|amdgpu|atigpu)/' -and $_.Name -match '(?i)hot\s*spot|junction' } | Select-Object -First 1; " +
+            @"if ($null -eq $s -or $null -eq $s.Value) { exit 3 }; " +
+            @"[Console]::Out.WriteLine(([double]$s.Value).ToString('R',[Globalization.CultureInfo]::InvariantCulture))";
+        try
+        {
+            var psi = new ProcessStartInfo("powershell.exe")
+            {
+                UseShellExecute = false, CreateNoWindow = true,
+                RedirectStandardOutput = true, RedirectStandardError = false
+            };
+            psi.ArgumentList.Add("-NoProfile");
+            psi.ArgumentList.Add("-NonInteractive");
+            psi.ArgumentList.Add("-Command");
+            psi.ArgumentList.Add(script);
+            using var p = Process.Start(psi);
+            if (p == null)
+                return new { available = false, reason = "AMD_SENSOR_PROVIDER_NOT_STARTED_HOLD", thermalHold = true };
+            if (!p.WaitForExit(3000))
+            {
+                try { p.Kill(entireProcessTree: true); } catch { }
+                return new { available = false, reason = "AMD_SENSOR_TIMEOUT_HOLD", thermalHold = true };
+            }
+            string reading = p.StandardOutput.ReadToEnd().Trim();
+            if (p.ExitCode != 0 ||
+                !double.TryParse(reading, System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out var hotSpot) ||
+                !double.IsFinite(hotSpot) || hotSpot <= 0 || hotSpot > 125)
+                return new { available = false, reason = "AMD_HOTSPOT_MISSING_OR_INVALID_HOLD", thermalHold = true };
+            // VRAM/utilisation are deliberately unknown until independent sensors
+            // are verified. This is a measured partial telemetry record, not a
+            // permission to run the GPU training worker.
+            return new { available = true, source = "LibreHardwareMonitor.WMI",
+                vendor = "AMD", sensor = "GPU Hot Spot", temperatureC = hotSpot,
+                telemetryPartial = true, vramTotalMiB = (double?)null,
+                vramUsedMiB = (double?)null, utilizationPercent = (int?)null,
+                thermalHold = hotSpot >= 65, coolingPauseSeconds = hotSpot >= 65 ? 180 : 0,
+                trainingSafe = false };
+        }
+        catch (Exception ex)
+        {
+            return new { available = false, reason = "AMD_SENSOR_PROVIDER_HOLD:" + ex.GetType().Name,
+                thermalHold = true };
+        }
     }
 
     private string BuildLocalContext(string query, string persona)
