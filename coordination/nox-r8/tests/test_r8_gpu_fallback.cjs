@@ -1,7 +1,13 @@
 'use strict';
 /* D04: R8 WebGL2 -> Canvas2D -> static CSS fail-closed lifecycle. SOURCE_ONLY, no owner GPU claim. */
 const fs=require('node:fs'),path=require('node:path');
-const html=fs.readFileSync(path.resolve(__dirname,'src','index.html'),'utf8');
+// Both original repository checkout and Windows CI copied-out build tree
+// must run the same production WebGL2/Reduced Motion test. The build-tree
+// src/index.html stays authoritative when present; no stale-source fallback.
+const stagedHtml=path.resolve(__dirname,'src','index.html');
+const repoHtml=path.resolve(__dirname,'..','overrides','src','index.html');
+const sourceHtml=fs.existsSync(stagedHtml)?stagedHtml:repoHtml;
+const html=fs.readFileSync(sourceHtml,'utf8');
 const match=html.match(/<script id="nox-liquid-core">([\s\S]*?)<\/script>/);
 function check(condition,label){if(!condition)throw Error('D04_GPU_FALLBACK_HOLD '+label);}
 check(!!match,'GPU script');
