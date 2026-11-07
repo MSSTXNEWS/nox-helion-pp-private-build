@@ -5,7 +5,15 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
-const html = fs.readFileSync(path.join(__dirname, 'src', 'index.html'), 'utf8');
+// Resolve the checked-in R8 WPF/WebView2 source as well as the Windows smoke copy.
+// A repo checkout has tests/ and overrides/src/ as siblings (not tests/src/).
+const htmlCandidates = [
+  path.resolve(__dirname, 'src', 'index.html'),
+  path.resolve(__dirname, '..', 'overrides', 'src', 'index.html')
+];
+const htmlPath = htmlCandidates.find(candidate => fs.existsSync(candidate));
+assert.ok(htmlPath, 'D01_PRODUCTION_WEBVIEW2_SOURCE_MISSING');
+const html = fs.readFileSync(htmlPath, 'utf8');
 assert.match(html, /<textarea[^>]*id="prompt"[^>]*maxlength="32000"/);
 const start = html.indexOf("$('send').onclick=()=>");
 const end = html.indexOf("\n$('stop').onclick=", start);
