@@ -61,9 +61,9 @@ public partial class MainWindow : Window
     private const string DefaultModel = "nox-qwen-clean:latest";
     private const string Api = "http://127.0.0.1:11436";
     private string CurrentModel => ReadPreferencesDictionary().GetValueOrDefault("model", DefaultModel);
-    private string? legacyImportHold;
     private readonly KnowledgeStore knowledge = new(DatabasePath);
     private readonly string dbPath = DatabasePath;
+    private string? legacyImportHold; // Owner-visible, non-destructive legacy import admission HOLD.
 
     [DllImport("dwmapi.dll", PreserveSig = true)]
     private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attribute, ref int value, int size);
@@ -126,8 +126,8 @@ public partial class MainWindow : Window
                 Send("settings", ReadPreferences());
                 Send("tasks", ReadTasks());
                 Send("notes", ReadNotes());
-                if (legacyImportHold != null) Send("notice", legacyImportHold);
                 Send("system", GetSystemState());
+                if (legacyImportHold != null) Send("notice", legacyImportHold);
                 // Runtime evidence belongs to the process that actually loaded WebView2,
                 // not to a source-only build or a previously launched EXE.
                 if (!selfTestRequested) WriteRuntimeReadyReceipt();
@@ -322,6 +322,41 @@ public partial class MainWindow : Window
             checks["real_webview2_keyboard_routes"] = keyboard == "true" ? "PASS" : "FAIL";
             if (keyboard != "true") throw new InvalidOperationException("WebView2 keyboard route/ARIA verification failed");
 
+
+            // D01: physically execute all five original quick buttons in the
+            // running Windows WebView2. Navigation is real; no model download,
+            // training start, or user SQLite is touched in this isolated smoke.
+            var quickRoutes = await Browser.CoreWebView2.ExecuteScriptAsync("""
+                (() => {
+                  const buttons = [...document.querySelectorAll('.quick button')];
+                  const wanted = [['core','CHAT'],['nexus','MODELS'],
+                                  ['forge','LEARN'],['persona','SETTINGS']];
+                  if (buttons.length !== 5) return false;
+                  for (let i = 0; i < wanted.length; i++) {
+                    const button = buttons[i], [routeId,label] = wanted[i];
+                    if (button?.dataset.open !== routeId ||
+                        button.textContent.trim() !== label || button.disabled) return false;
+                    button.focus();
+                    if (document.activeElement !== button) return false;
+                    button.click();
+                    const current = [...document.querySelectorAll('button.core[aria-current="page"]')];
+                    if (current.length !== 1 || current[0].dataset.route !== routeId ||
+                        !document.querySelector(`.panel.active[data-panel="${routeId}"]`)) return false;
+                  }
+                  const max = buttons[4];
+                  if (max?.id !== 'maxMode' || !max.textContent.includes('MAX') || max.disabled)
+                    return false;
+                  max.focus();
+                  if (document.activeElement !== max) return false;
+                  max.click();
+                  return document.querySelector('.panel.active[data-panel="persona"]') !== null &&
+                    document.getElementById('performance')?.value === 'MAX';
+                })()
+                """);
+            if (quickRoutes != "true")
+                throw new InvalidOperationException("NOX_D01_FIVE_QUICK_NATIVE_ROUTES_HOLD");
+            checks["d01_five_quick_native_routes"] = "PASS";
+
             // D06: test the real Windows UI Automation provider, not just DOM
             // attributes. Query off the WPF UI thread to avoid cross-thread UIA
             // deadlocks, using the live Window HWND of this smoke process.
@@ -340,6 +375,124 @@ public partial class MainWindow : Window
             if (!accessibleHost)
                 throw new InvalidOperationException("NOX_SETTINGS_WINDOWS_UIA_HOST_HOLD");
             checks["settings_windows_uia_host"] = "PASS";
+
+            // D01: use the actual Windows UI Automation provider. Chromium can
+            // expose its accessible renderer buttons under the top-level window
+            // rather than under the WPF WebView2 host's managed UIA subtree.
+            // Keep the host identity gate above; require all five physically
+            // exposed, enabled, onscreen UIA buttons. DOM alone is not a PASS.
+            string fiveQuickUiaDetail = "NOT_SCANNED";
+            bool fiveQuickUia = false;
+            for (int attempt = 0; attempt < 6 && !fiveQuickUia; attempt++)
+            {
+                var probe = await Task.Run(() =>
+                {
+                    var root = System.Windows.Automation.AutomationElement.FromHandle(uiaHandle);
+                    var host = root?.FindFirst(
+                        System.Windows.Automation.TreeScope.Descendants,
+                        new System.Windows.Automation.PropertyCondition(
+                            System.Windows.Automation.AutomationElement.AutomationIdProperty,
+                            "NOX_HELION_WEBVIEW2"));
+                    if (root == null || host == null)
+                        return (accepted: false, detail: "UIA_HOST_MISSING");
+                    var buttonCondition = new System.Windows.Automation.PropertyCondition(
+                        System.Windows.Automation.AutomationElement.ControlTypeProperty,
+                        System.Windows.Automation.ControlType.Button);
+                    var hostButtons = host.FindAll(
+                        System.Windows.Automation.TreeScope.Descendants, buttonCondition);
+                    var windowButtons = root.FindAll(
+                        System.Windows.Automation.TreeScope.Descendants, buttonCondition);
+                    var labels = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    // UIA rendering can be hosted by a child Chromium HWND that
+                    // is a sibling to the WPF WebView2 accessibility wrapper.
+                    // Both queries are constrained to this process's real HWND.
+                    foreach (System.Windows.Automation.AutomationElement button in hostButtons)
+                    {
+                        var current = button.Current;
+                        var bounds = current.BoundingRectangle;
+                        if (current.IsEnabled && !current.IsOffscreen &&
+                            !bounds.IsEmpty && bounds.Width >= 16 && bounds.Height >= 16)
+                            labels.Add(current.Name?.Trim() ?? "");
+                    }
+                    foreach (System.Windows.Automation.AutomationElement button in windowButtons)
+                    {
+                        var current = button.Current;
+                        var bounds = current.BoundingRectangle;
+                        if (current.IsEnabled && !current.IsOffscreen &&
+                            !bounds.IsEmpty && bounds.Width >= 16 && bounds.Height >= 16)
+                            labels.Add(current.Name?.Trim() ?? "");
+                    }
+                    var required = new[] { "CHAT", "MODELS", "LEARN", "SETTINGS" };
+                    var missing = string.Join(",", required.Where(name => !labels.Contains(name)));
+                    bool maxPresent = labels.Any(name =>
+                        name.Contains("MAX", StringComparison.OrdinalIgnoreCase));
+                    // Diagnostics carry counts and missing expected labels, never
+                    // arbitrary UI text, chat content or model/user data.
+                    var detail = $"HOST_BUTTONS={hostButtons.Count};WINDOW_BUTTONS={windowButtons.Count};" +
+                        $"VISIBLE_UNIQUE={labels.Count};MISSING={missing};MAX={maxPresent}";
+                    return (accepted: missing.Length == 0 && maxPresent, detail);
+                });
+                fiveQuickUia = probe.accepted;
+                fiveQuickUiaDetail = probe.detail;
+                if (!fiveQuickUia && attempt < 5)
+                    await Task.Delay(250); // bounded Chromium UIA materialization
+            }
+            if (!fiveQuickUia)
+                throw new InvalidOperationException(
+                    "NOX_D01_FIVE_QUICK_WINDOWS_UIA_HOLD: " + fiveQuickUiaDetail);
+            checks["d01_five_quick_windows_uia"] = "PASS";
+
+            // D01: resize the real embedded browser to 320/390/800 CSS-pixel
+            // widths. Verify five enabled, visible targets without modifying
+            // canonical D02 styling or inventing a simulated DOM screenshot.
+            var priorBrowserWidth = Browser.Width;
+            try
+            {
+                foreach (var viewportWidth in new[] { 320, 390, 800 })
+                {
+                    Browser.Width = viewportWidth;
+                    Browser.UpdateLayout();
+                    var compactProbe = """
+                        (() => {
+                          const expected = __WIDTH__;
+                          const viewport = window.innerWidth;
+                          const side = document.querySelector('aside.side');
+                          const quick = [...document.querySelectorAll('.quick button')];
+                          if (Math.abs(viewport-expected) > 4 || !side ||
+                              quick.length !== 5 ||
+                              getComputedStyle(side).overflowY === 'hidden') return false;
+                          if (document.querySelectorAll('button.core[data-route]').length !== 8)
+                              return false;
+                          return quick.every(button => {
+                            const rect = button.getBoundingClientRect();
+                            return !button.disabled && rect.width >= 44 && rect.height >= 28 &&
+                              rect.left >= -1 && rect.right <= viewport + 1 &&
+                              getComputedStyle(button).visibility !== 'hidden';
+                          });
+                        })()
+                        """.Replace("__WIDTH__", viewportWidth.ToString(
+                            System.Globalization.CultureInfo.InvariantCulture));
+                    bool viewportAccepted = false;
+                    for (int attempt = 0; attempt < 15; attempt++)
+                    {
+                        await Task.Delay(120);
+                        if (await Browser.CoreWebView2.ExecuteScriptAsync(compactProbe) == "true")
+                        {
+                            viewportAccepted = true;
+                            break;
+                        }
+                    }
+                    if (!viewportAccepted)
+                        throw new InvalidOperationException(
+                            "NOX_D01_COMPACT_WEBVIEW2_VIEWPORT_HOLD_" + viewportWidth);
+                }
+            }
+            finally
+            {
+                Browser.Width = priorBrowserWidth;
+                Browser.UpdateLayout();
+            }
+            checks["d01_five_quick_compact_320_390_800"] = "PASS";
 
             // DOM accessibility must also survive in real WebView2:
             // visible labels, enabled buttons, live receipt region and focus.
@@ -405,6 +558,18 @@ public partial class MainWindow : Window
                 if (!string.Equals(read.ExecuteScalar() as string, "ECO", StringComparison.Ordinal))
                     throw new InvalidOperationException("Settings SQLite independent readback failed");
             }
+            // SQL alone is not enough: the live WebView2 must render the
+            // owner-correlated receipt after the independently verified COMMIT.
+            bool modeReceiptVisible = false;
+            for (int attempt = 0; attempt < 35; attempt++)
+            {
+                var receiptDom = await Browser.CoreWebView2.ExecuteScriptAsync(
+                    "document.getElementById('personaStatus')?.textContent.includes('SQLite подтверждена: performance = ECO')");
+                if (receiptDom == "true") { modeReceiptVisible = true; break; }
+                await Task.Delay(100);
+            }
+            if (!modeReceiptVisible)
+                throw new InvalidOperationException("NOX_SETTINGS_OWNER_RECEIPT_HOLD");
             checks["settings_wpf_owner_sqlite_readback"] = "PASS";
 
             // D06: use the real WebView2 checkbox/button and WPF settings.put
@@ -437,6 +602,16 @@ public partial class MainWindow : Window
                 if (!string.Equals(readMotion.ExecuteScalar() as string, "off", StringComparison.Ordinal))
                     throw new InvalidOperationException("NOX_SETTINGS_MOTION_SQLITE_HOLD");
             }
+            bool motionReceiptVisible = false;
+            for (int attempt = 0; attempt < 35; attempt++)
+            {
+                var receiptDom = await Browser.CoreWebView2.ExecuteScriptAsync(
+                    "document.getElementById('personaStatus')?.textContent.includes('SQLite подтверждена: motion = off')");
+                if (receiptDom == "true") { motionReceiptVisible = true; break; }
+                await Task.Delay(100);
+            }
+            if (!motionReceiptVisible)
+                throw new InvalidOperationException("NOX_SETTINGS_MOTION_RECEIPT_HOLD");
             checks["settings_wpf_motion_sqlite_readback"] = "PASS";
 
             // D06: reject a foreign key through the real native owner route.
@@ -445,7 +620,7 @@ public partial class MainWindow : Window
             var denialPost = await Browser.CoreWebView2.ExecuteScriptAsync("""
                 (() => {
                   if (!window.chrome?.webview) return false;
-                  window.chrome.webview.postMessage({type:'settings.put',key:'foreign',value:'on'});
+                  window.chrome.webview.postMessage({type:'settings.put',key:'foreign',value:'on',requestId:'smoke_foreign_0001'});
                   return true;
                 })()
                 """);
@@ -469,6 +644,8 @@ public partial class MainWindow : Window
                     throw new InvalidOperationException("NOX_SETTINGS_FOREIGN_KEY_WRITTEN_HOLD");
             }
             checks["settings_foreign_key_denial"] = "PASS";
+            VerifyIsolatedSqliteBackup();
+            checks["sqlite_native_backup_no_loss"] = "PASS";
             checks["native_wpf_webview2_renderer"] = Browser.CoreWebView2 != null ? "PASS" : "FAIL";
             if (Browser.CoreWebView2 == null) throw new InvalidOperationException("WebView2 unavailable");
         }
@@ -482,10 +659,12 @@ public partial class MainWindow : Window
             var requiredChecks = UiSmokeSettingsRestartRequested
                 ? new[] { "isolated_sqlite_path", "settings_wpf_owner_restart_readback" }
                 : new[] { "real_webview2_eight_routes", "real_webview2_keyboard_routes",
+                          "d01_five_quick_native_routes", "d01_five_quick_windows_uia",
+                          "d01_five_quick_compact_320_390_800",
                           "settings_windows_uia_host", "settings_webview2_accessible_controls",
                           "isolated_sqlite_path", "settings_wpf_owner_sqlite_readback",
                           "settings_wpf_motion_sqlite_readback", "settings_foreign_key_denial",
-                          "native_wpf_webview2_renderer" };
+                          "sqlite_native_backup_no_loss", "native_wpf_webview2_renderer" };
             bool accepted = error == null && checks.Count == requiredChecks.Length &&
                 requiredChecks.All(k => checks.TryGetValue(k, out var result) && result == "PASS")
                 && sha.Length == 64;
@@ -817,6 +996,52 @@ public partial class MainWindow : Window
         return file;
     }
 
+    // B03: actual native SQLite BackupDatabase + manifest verification against
+    // the isolated UI smoke database. No live owner database, foreign file,
+    // model or trainer is opened or modified by this acceptance probe.
+    private void VerifyIsolatedSqliteBackup()
+    {
+        if (!UiSmokeRequested ||
+            !Path.GetFileName(dbPath).StartsWith("selftest_r8_", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("NOX_B03_SMOKE_NOT_ISOLATED_HOLD");
+
+        using var live = OpenDatabase();
+        using (var mode = live.CreateCommand())
+        {
+            mode.CommandText = "SELECT value FROM preferences WHERE key='performance'";
+            if (!string.Equals(mode.ExecuteScalar() as string, "ECO", StringComparison.Ordinal))
+                throw new InvalidOperationException("NOX_B03_SMOKE_PREIMAGE_HOLD");
+        }
+
+        string snapshot = CheckpointSqlite(live, "SMOKE_ISOLATED");
+        string sha = Sha256File(snapshot);
+        string expectedManifest = sha + "  " + Path.GetFileName(snapshot) + "\n";
+        if (!string.Equals(File.ReadAllText(snapshot + ".sha256", Encoding.UTF8),
+                           expectedManifest, StringComparison.Ordinal))
+            throw new InvalidOperationException("NOX_B03_SMOKE_MANIFEST_HOLD");
+
+        using (var copy = new SqliteConnection(new SqliteConnectionStringBuilder {
+            DataSource = snapshot, Mode = SqliteOpenMode.ReadOnly, Pooling = false }.ToString()))
+        {
+            copy.Open();
+            using var verify = copy.CreateCommand();
+            verify.CommandText = "PRAGMA quick_check";
+            if (!string.Equals(verify.ExecuteScalar() as string, "ok", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("NOX_B03_SMOKE_INTEGRITY_HOLD");
+            verify.CommandText = "SELECT value FROM preferences WHERE key='performance'";
+            if (!string.Equals(verify.ExecuteScalar() as string, "ECO", StringComparison.Ordinal))
+                throw new InvalidOperationException("NOX_B03_SMOKE_SNAPSHOT_ROWS_HOLD");
+        }
+        using (var unchanged = live.CreateCommand())
+        {
+            unchanged.CommandText = "SELECT value FROM preferences WHERE key='performance'";
+            if (!string.Equals(unchanged.ExecuteScalar() as string, "ECO", StringComparison.Ordinal))
+                throw new InvalidOperationException("NOX_B03_SMOKE_SOURCE_CHANGED_HOLD");
+        }
+        if (!string.Equals(Sha256File(snapshot), sha, StringComparison.Ordinal))
+            throw new InvalidOperationException("NOX_B03_SMOKE_SHA_READBACK_HOLD");
+    }
+
     // Fail closed if any existing parent is a Windows junction / symlink,
     // ordinary file, missing folder, or inaccessible entry. No deletes.
     private static void ValidateBackupParent(string directory)
@@ -877,13 +1102,13 @@ public partial class MainWindow : Window
     // An idempotent, transactional import of the JSONL conversation history created
     // by the first NOX_NEW release. This never overwrites either source file or
     // existing SQLite rows. Only locally-owned chat data is imported.
-    // NO-LOSS: legacy JSONL must never be partially imported with a success receipt.
-    // Keep owner source intact, even when invalid or changed during import.
     private void ImportLegacyJsonlIfNeeded(SqliteConnection db)
     {
         const string sourceId = "NOX_NEW_CHAT_JSONL_V1";
         const string shaPrefix = "NOX_NEW_CHAT_JSONL_V1_SHA256:";
         string legacy = Path.Combine(Path.GetDirectoryName(dbPath)!, "chat.jsonl");
+        try
+        {
         if (!File.Exists(legacy)) return;
         if ((File.GetAttributes(legacy) & FileAttributes.ReparsePoint) != 0) {
             legacyImportHold = "NOX_LEGACY_JSONL_REPARSE_HOLD";
@@ -897,8 +1122,9 @@ public partial class MainWindow : Window
                 origin.CommandText = "SELECT source FROM imported_sources WHERE source LIKE $s LIMIT 1";
                 origin.Parameters.AddWithValue("$s", shaPrefix + "%");
                 var priorSha = origin.ExecuteScalar() as string;
-                if (priorSha != null &&
-                    !string.Equals(priorSha, shaPrefix + Sha256File(legacy), StringComparison.Ordinal))
+                if (priorSha == null)
+                    legacyImportHold = "NOX_LEGACY_JSONL_UNVERIFIED_PRIOR_RECEIPT_HOLD";
+                else if (!string.Equals(priorSha, shaPrefix + Sha256File(legacy), StringComparison.Ordinal))
                     legacyImportHold = "NOX_LEGACY_JSONL_CHANGED_AFTER_IMPORT_HOLD";
                 return; // Older receipts are never reimported by guesswork.
             }
@@ -931,6 +1157,11 @@ public partial class MainWindow : Window
                     rows++;
                 } catch (JsonException) { skipped++; }
             }
+            if (rows == 0 && skipped == 0) {
+                tx.Rollback();
+                legacyImportHold = "NOX_LEGACY_JSONL_EMPTY_HOLD";
+                return;
+            }
             if (skipped != 0 || !string.Equals(sourceSha, Sha256File(legacy), StringComparison.Ordinal)) {
                 tx.Rollback();
                 legacyImportHold = skipped != 0 ? "NOX_LEGACY_JSONL_INCOMPLETE_HOLD"
@@ -949,6 +1180,13 @@ public partial class MainWindow : Window
             tx.Commit();
         } catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) {
             tx.Rollback();
+            legacyImportHold = "NOX_LEGACY_JSONL_READ_HOLD";
+        }
+        }
+        catch (IOException) {
+            legacyImportHold = "NOX_LEGACY_JSONL_READ_HOLD";
+        }
+        catch (UnauthorizedAccessException) {
             legacyImportHold = "NOX_LEGACY_JSONL_READ_HOLD";
         }
     }
@@ -977,7 +1215,7 @@ public partial class MainWindow : Window
                 case "notes.delete": DeleteNote(request.GetProperty("id").GetInt64()); Send("notes", ReadNotes()); break;
                 case "feedback": SaveFeedback(request.GetProperty("rating").GetInt32(), Text("answer")); Send("notice", "Оценка сохранена локально; это не обучение весов."); break;
                 case "backup": BackupLocalDatabase(); break;
-                case "model.select": await SelectModel(Text("model")); break;
+                case "model.select": await SelectModel(Text("model"), Text("requestId")); break;
                 case "model.pull": await PullExistingProviderModel(Text("model")); break;
                 case "model.cancel": activeModelPull?.Cancel(); break;
                 case "tasks.list": Send("tasks", ReadTasks()); break;
@@ -1125,6 +1363,7 @@ public partial class MainWindow : Window
                 model,
                 prompt = systemInstruction + context + "\nПользователь: " + prompt + "\nАссистент:",
                 stream = true,
+                think = false,
                 keep_alive = "30m",
                 options = new { num_predict = maxTokens, num_ctx = contextSize }
             });
@@ -1427,15 +1666,24 @@ public partial class MainWindow : Window
     // Denials are bounded codes, never native exception text or private paths.
     private void HandleSettingsPut(JsonElement request)
     {
+        // Native owner validation applies before any SQLite write or UI ACK.
+        // A requestId binds each response to exactly one WebView2 sender.
         var fields = request.EnumerateObject().ToArray();
-        if (fields.Length != 3 ||
+        string requestId = request.TryGetProperty("requestId", out var idField) &&
+            idField.ValueKind == JsonValueKind.String ? idField.GetString() ?? "" : "";
+        bool validId = ValidWriteRequestId(requestId);
+        if (fields.Length != 4 ||
             fields.Count(x => x.Name == "type") != 1 ||
             fields.Count(x => x.Name == "key") != 1 ||
             fields.Count(x => x.Name == "value") != 1 ||
+            fields.Count(x => x.Name == "requestId") != 1 ||
+            !validId ||
             !request.TryGetProperty("key", out var keyField) || keyField.ValueKind != JsonValueKind.String ||
             !request.TryGetProperty("value", out var valueField) || valueField.ValueKind != JsonValueKind.String)
         {
-            Send("settings.denied", "NOX_SETTINGS_INVALID_REQUEST");
+            Send("settings.denied", new {
+                requestId = validId ? requestId : "", reason = "NOX_SETTINGS_INVALID_REQUEST"
+            });
             return;
         }
         string key = keyField.GetString() ?? "";
@@ -1443,7 +1691,7 @@ public partial class MainWindow : Window
         try
         {
             if (key == "persona" && active != null) {
-                Send("settings.denied", "NOX_PERSONA_GENERATION_ACTIVE_HOLD");
+                Send("settings.denied", new { requestId, reason = "NOX_PERSONA_GENERATION_ACTIVE_HOLD" });
                 return;
             }
             SavePreference(key, value);
@@ -1456,11 +1704,11 @@ public partial class MainWindow : Window
                 Send("notes", ReadNotes());
             }
             Send("settings", verified);
-            Send("settings.receipt", new { key, value, saved = true });
+            Send("settings.receipt", new { requestId, key, value, saved = true });
         }
-        catch (ArgumentException) { Send("settings.denied", "NOX_SETTINGS_REJECTED"); }
-        catch (SqliteException) { Send("settings.denied", "NOX_SETTINGS_SQLITE_HOLD"); }
-        catch (Exception) { Send("settings.denied", "NOX_SETTINGS_NATIVE_HOLD"); }
+        catch (ArgumentException) { Send("settings.denied", new { requestId, reason = "NOX_SETTINGS_REJECTED" }); }
+        catch (SqliteException) { Send("settings.denied", new { requestId, reason = "NOX_SETTINGS_SQLITE_HOLD" }); }
+        catch (Exception) { Send("settings.denied", new { requestId, reason = "NOX_SETTINGS_NATIVE_HOLD" }); }
     }
 
     private void SavePreference(string key, string value)
@@ -1684,19 +1932,65 @@ public partial class MainWindow : Window
         cmd.ExecuteNonQuery();
     }
 
-    private async Task SelectModel(string model)
+    // B04: switch only when the native chat owner is idle, and acknowledge
+    // a model change only after a separate SQLite connection verifies COMMIT.
+    // The picker can choose only an exact locally registered Ollama tag.
+    // The selection request owns its ACK. The displayed model is not committed
+    // until /api/tags, SQLite COMMIT and independent readback all succeed.
+    private async Task SelectModel(string model, string requestId)
     {
-        if (string.IsNullOrWhiteSpace(model) || model.Length > 120) throw new ArgumentException("Invalid model name");
-        using var response = await http.GetAsync(Api + "/api/tags");
-        response.EnsureSuccessStatusCode();
-        using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        bool exists = json.RootElement.GetProperty("models").EnumerateArray().Any(x => x.GetProperty("name").GetString() == model);
-        if (!exists) throw new InvalidOperationException("Model is not registered on the local server");
-        using var db = OpenDatabase(); using var cmd = db.CreateCommand();
-        cmd.CommandText = "INSERT INTO preferences(key,value) VALUES('model',$m) ON CONFLICT(key) DO UPDATE SET value=excluded.value";
-        cmd.Parameters.AddWithValue("$m",model);cmd.ExecuteNonQuery();
-        Send("settings",ReadPreferences());
-        await CheckProvider();
+        if (!ValidWriteRequestId(requestId)) {
+            Send("model.select.denied", new { requestId, reason = "NOX_MODEL_REQUEST_ID_HOLD" });
+            return;
+        }
+        try
+        {
+            if (string.IsNullOrWhiteSpace(model) || model.Length > 120)
+                throw new InvalidOperationException("NOX_MODEL_INVALID_TAG_HOLD");
+            if (active != null)
+                throw new InvalidOperationException("NOX_MODEL_SWITCH_GENERATION_ACTIVE_HOLD");
+            using var probe = new CancellationTokenSource(TimeSpan.FromSeconds(4));
+            using var response = await http.GetAsync(Api + "/api/tags", probe.Token);
+            response.EnsureSuccessStatusCode();
+            using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(probe.Token));
+            bool exists = json.RootElement.GetProperty("models").EnumerateArray()
+                .Any(x => string.Equals(x.GetProperty("name").GetString(), model, StringComparison.Ordinal));
+            if (!exists)
+                throw new InvalidOperationException("NOX_MODEL_TAG_NOT_REGISTERED_HOLD");
+            // Async probe can yield to a new generation; never mutate during it.
+            if (active != null)
+                throw new InvalidOperationException("NOX_MODEL_SWITCH_GENERATION_ACTIVE_HOLD");
+            using (var db = OpenDatabase())
+            using (var tx = db.BeginTransaction())
+            {
+                using var cmd = db.CreateCommand();
+                cmd.Transaction = tx;
+                cmd.CommandText = "INSERT INTO preferences(key,value) VALUES('model',$m) ON CONFLICT(key) DO UPDATE SET value=excluded.value";
+                cmd.Parameters.AddWithValue("$m", model);
+                if (cmd.ExecuteNonQuery() != 1)
+                    throw new InvalidOperationException("NOX_MODEL_SELECT_SQLITE_WRITE_HOLD");
+                tx.Commit();
+            }
+            using (var verifyDb = OpenDatabase())
+            using (var verify = verifyDb.CreateCommand())
+            {
+                verify.CommandText = "SELECT value FROM preferences WHERE key='model'";
+                if (!string.Equals(verify.ExecuteScalar() as string, model, StringComparison.Ordinal))
+                    throw new InvalidOperationException("NOX_MODEL_SELECT_SQLITE_READBACK_HOLD");
+            }
+            Send("model.select.receipt", new { requestId, model, saved = true });
+            Send("settings", ReadPreferences());
+            await CheckProvider();
+        }
+        catch (Exception ex)
+        {
+            // Never claim the selection succeeded if the provider, SQLite or
+            // post-COMMIT readback failed; the UI can restore its last proven tag.
+            string reason = ex is InvalidOperationException &&
+                ex.Message.StartsWith("NOX_", StringComparison.Ordinal)
+                ? ex.Message : "NOX_MODEL_SELECT_FAILED_HOLD";
+            Send("model.select.denied", new { requestId, reason });
+        }
     }
 
     private async Task PullExistingProviderModel(string modelName)
@@ -1742,11 +2036,29 @@ public partial class MainWindow : Window
                 if (label.Equals("success", StringComparison.OrdinalIgnoreCase)) { done = true; break; }
             }
             if (!done) throw new InvalidOperationException("Загрузка оборвалась до подтверждённого завершения Ollama");
+            // Provider progress "success" is not proof of an installed exact model tag.
+            cts.Token.ThrowIfCancellationRequested();
+            using (var verify = CancellationTokenSource.CreateLinkedTokenSource(cts.Token))
+            {
+                verify.CancelAfter(TimeSpan.FromSeconds(10));
+                using var tagsResponse = await transferClient.GetAsync(Api + "/api/tags", verify.Token);
+                tagsResponse.EnsureSuccessStatusCode();
+                using var tagsJson = JsonDocument.Parse(await tagsResponse.Content.ReadAsStringAsync(verify.Token));
+                bool tagPresent = tagsJson.RootElement.GetProperty("models").EnumerateArray()
+                    .Any(x => string.Equals(x.GetProperty("name").GetString(), modelName, StringComparison.Ordinal));
+                if (!tagPresent) throw new InvalidOperationException("NOX_MODEL_PULL_TAG_READBACK_HOLD");
+            }
+            cts.Token.ThrowIfCancellationRequested();
             Send("download", new { status = "DONE", model = modelName, percent = (double?)100 });
             await CheckProvider();
         }
-        catch (OperationCanceledException) {
+        catch (OperationCanceledException) when (cts.IsCancellationRequested) {
             Send("download", new { status = "STOPPED", model = modelName, percent = (double?)null });
+        }
+        catch (Exception) {
+            // Provider and transport failure are neither owner STOP nor install success.
+            Send("download", new { status = "ERROR", model = modelName, percent = (double?)null });
+            throw;
         }
         finally { activeModelPull = null; }
     }

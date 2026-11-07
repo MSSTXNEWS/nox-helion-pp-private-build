@@ -7,7 +7,13 @@ native = (root/'src/MainWindow.xaml.cs').read_text(encoding='utf8')
 web = (root/'src/index.html').read_text(encoding='utf8')
 for token in (
     'case "settings.put": HandleSettingsPut(request); break;',
-    'fields.Length != 3',
+    'fields.Length != 4',
+    'fields.Count(x => x.Name == "requestId") != 1',
+    '!validId',
+    'Send("settings.receipt", new { requestId, key, value, saved = true });',
+    'NOX_SETTINGS_OWNER_RECEIPT_HOLD',
+    'NOX_SETTINGS_MOTION_RECEIPT_HOLD',
+    "requestId:'smoke_foreign_0001'",
     'NOX_SETTINGS_INVALID_REQUEST',
     'NOX_SETTINGS_REJECTED',
     'db.BeginTransaction()',
@@ -33,6 +39,11 @@ for token in (
 for token in (
     "case 'settings.receipt':",
     "case 'settings.denied':",
+    'pendingSettings={requestId,key,value}',
+    "post('settings.put',{key,value,requestId})",
+    "v?.requestId!==pendingSettings.requestId",
+    "applyCommittedSettings(committedSettings)",
+    "NOX_SETTINGS_OWNER_IN_FLIGHT",
     'id="personaStatus" class="mono" role="status" aria-live="polite"',
     "window.noxVisual?.setMode(v?.performance||'BALANCED')",
     '<body class="reduced">',  # Safe static frame until native SQLite motion preference arrives.

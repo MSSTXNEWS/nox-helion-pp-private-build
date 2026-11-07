@@ -8,6 +8,18 @@ assert m.index('if (skipped != 0') < m.index('receipt.CommandText') < m.index('t
 for x in ['FileAttributes.ReparsePoint','shaPrefix + sourceSha','NOX_LEGACY_JSONL_INCOMPLETE_HOLD','NOX_LEGACY_JSONL_CHANGED_AFTER_IMPORT_HOLD','NOX_LEGACY_JSONL_CHANGED_DURING_IMPORT_HOLD','tx.Rollback();','File.ReadLines(legacy)','INSERT INTO imported_sources(source,imported_at,rows)']:
     assert x in m,x
 assert 'if (legacyImportHold != null) Send("notice", legacyImportHold);' in cs
+# Previous releases may already have a partial import receipt without a SHA.
+# Never silently accept it as evidence all old rows were copied.
+assert 'if (priorSha == null)' in m
+assert 'NOX_LEGACY_JSONL_UNVERIFIED_PRIOR_RECEIPT_HOLD' in m
+assert 'NOX_LEGACY_JSONL_CHANGED_AFTER_IMPORT_HOLD' in m
+assert m.index('if (rows == 0 && skipped == 0)') < m.index('receipt.CommandText')
+assert 'NOX_LEGACY_JSONL_EMPTY_HOLD' in m
+assert 'catch (UnauthorizedAccessException)' in m and 'catch (IOException)' in m
+assert 'if (!selfTestRequested) ImportLegacyJsonlIfNeeded(db);' in cs
+# No user file is deleted during migration; malformed input must roll back.
+assert 'File.Delete(legacy)' not in m and 'File.Move(legacy' not in m
+
 with tempfile.TemporaryDirectory() as folder:
     db=sqlite3.connect(Path(folder)/'memory.sqlite3')
     db.execute('CREATE TABLE chat_history(prompt TEXT,answer TEXT)')

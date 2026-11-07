@@ -64,8 +64,13 @@ for source in script_parts:
 # Windows SQLite open-file first-fail #42276488855: Microsoft.Data.Sqlite
 # pooled backup handles must be closed before checksum reads of the checkpoint.
 # This is a SOURCE_ONLY guard; Windows smoke validates the real file handles.
-snapshot = cs.split('private string CheckpointSqlite(', 1)[1].split('private static bool HasPersonaColumn(', 1)[0]
+snapshot = cs.split('private string CheckpointSqlite(', 1)[1].split('private void VerifyIsolatedSqliteBackup(', 1)[0]
 assert snapshot.count('Pooling = false') == 2, 'B02_SQLITE_BACKUP_POOLING_HOLD'
+# B03 introduced a distinct third pooled-handle safeguard in its own smoke
+# method. Do not count it as part of CheckpointSqlite or weaken its guard.
+smoke_backup = cs.split('private void VerifyIsolatedSqliteBackup(', 1)[1].split('private static bool HasPersonaColumn(', 1)[0]
+assert smoke_backup.count('Pooling = false') == 1, 'B03_SMOKE_BACKUP_POOLING_HOLD'
+assert 'PRAGMA quick_check' in smoke_backup and 'NOX_B03_SMOKE_INTEGRITY_HOLD' in smoke_backup, 'B03_SMOKE_BACKUP_INTEGRITY_HOLD'
 assert re.search(r'DataSource\s*=\s*file,\s*Mode\s*=\s*SqliteOpenMode\.ReadWriteCreate,\s*Pooling\s*=\s*false', snapshot)
 assert re.search(r'DataSource\s*=\s*file,\s*Mode\s*=\s*SqliteOpenMode\.ReadOnly,\s*Pooling\s*=\s*false', snapshot)
 assert snapshot.index('PRAGMA quick_check') < snapshot.index('string sha = Sha256File(file)'), 'B02_SQLITE_BACKUP_INTEGRITY_ORDER_HOLD'

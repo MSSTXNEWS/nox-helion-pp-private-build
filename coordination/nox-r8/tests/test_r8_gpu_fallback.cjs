@@ -5,7 +5,26 @@ const html=fs.readFileSync(path.resolve(__dirname,'src','index.html'),'utf8');
 const match=html.match(/<script id="nox-liquid-core">([\s\S]*?)<\/script>/);
 function check(condition,label){if(!condition)throw Error('D04_GPU_FALLBACK_HOLD '+label);}
 check(!!match,'GPU script');
-check(html.includes('window.chrome.webview.postMessage({type,...data})'),'existing native IPC unchanged');
+// Execute the actual native WebView2 bridge wrapper. Its fail-closed dispatch
+// was hardened independently by D01, so asserting a stale literal would
+// wrongly block Windows compilation despite preserving native message routing.
+const bridgeMatch=html.match(/const post=\(type,data=\{\}\)=>(\{[\s\S]*?\});\s*let responseBox=/);
+check(!!bridgeMatch,'original native IPC wrapper present');
+const makePost=new Function('window','$','return (type,data={})=>'+bridgeMatch[1]);
+const nativeProbe=bridge=>{
+  const status={textContent:''};
+  const window=bridge===null?{}:{chrome:{webview:bridge}};
+  return {post:makePost(window,id=>{check(id==='status','IPC status target');return status;}),status};
+};
+const sent=[];
+const live=nativeProbe({postMessage:event=>sent.push(event)});
+check(live.post('chat',{text:'D04 bridge probe',requestId:'req-d04'})===true,'native chat dispatch accepted');
+check(sent.length===1&&sent[0].type==='chat'&&sent[0].requestId==='req-d04'&&sent[0].text==='D04 bridge probe','native chat payload preserved');
+check(live.post('stop',{requestId:'req-d04'})===true&&sent.length===2&&sent[1].type==='stop'&&sent[1].requestId==='req-d04','native STOP ownership preserved');
+const missing=nativeProbe(null);
+check(missing.post('chat',{text:'offline'})===false&&missing.status.textContent==='NATIVE BRIDGE OFFLINE','missing native IPC must fail closed');
+const broken=nativeProbe({postMessage(){throw Error('DISPATCH_REJECTED')}});
+check(broken.post('chat',{text:'offline'})===false&&broken.status.textContent==='NATIVE BRIDGE DISPATCH FAILED','native dispatch exceptions must fail closed');
 const render=new Function('document','window','performance','requestAnimationFrame','cancelAnimationFrame','console',match[1]);
 function exercise(kind){
   let gpuFrames=0,cpuFrames=0,prevented=false,ticks=0,seq=0,userReduced=false,maxBlur=0,errorSamples=0;
