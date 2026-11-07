@@ -25,7 +25,9 @@ assert "[IO.FileShare]::Read" in ps
 assert ps.index("GuardPath $p") < ps.index("$hasher.ComputeHash($stream)")
 # Successful rollback must retain the displaced trusted version as a
 # receipt-addressed candidate for another reversible rollback; never orphan it.
-assert "SaveReceipt 'installed' $receipt.previous_sha256 '' ''" not in ps
+# A reversible uninstall retains an authenticated rollback candidate; on
+# reinstall from 'uninstalled', the receipt intentionally has no prior EXE.
+assert "SaveReceipt 'installed' $receipt.previous_sha256 '' ''" in ps
 assert "SaveReceipt 'installed' $receipt.previous_sha256 ([IO.Path]::GetFileName($displaced)) $receipt.current_sha256" in ps
 # Rollback backup name must satisfy the existing strict previous_file
 # whitelist, allowing a second validated rollback in the other direction.
@@ -43,7 +45,9 @@ assert "[IO.File]::Move($target,$old)" in ps
 assert "[IO.File]::Move($displaced,$target)" in ps
 assert ps.index("HashFile $old") < ps.index("[IO.File]::Move($target,$displaced)") < ps.index("SaveReceipt 'installed' $receipt.previous_sha256")
 assert ps.index("HashFile $incoming") < ps.index("[IO.File]::Move($target,$oldPath)")
-assert ps.index("GuardManaged $receipt") < ps.index("[IO.File]::Delete($target)")
+# Preflight ownership check must precede retiring the managed EXE.
+# Deletion is forbidden; the old index check itself was stale and crashed.
+assert ps.index("GuardManaged $receipt") < ps.index("[IO.File]::Move($target,$retired)")
 for bad in ("Remove-Item -Recurse","RMDir /r","rmdir /s","NOX_R8_INSTALL_NATIVE_PASS"):
     assert bad not in ps+ns
 # NO-LOSS uninstall regression: previous implementation destroyed the
