@@ -1,0 +1,39 @@
+name: NOX LIVE WEB 11-22 source pack (no Windows EXE)
+on:
+  push:
+    branches: [work/nox-web-live-11-22-finish-20261107]
+  pull_request:
+    branches: [feature/nox-local-live-integrate-20261107]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  live-web-source:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Check exact original payload, real HTTP loopback contracts and local-only voice
+        run: |
+          python -m unittest discover -s nox-local/live/finish -p test_finish.py -v
+      - name: Prepare original-web overlay and parse actual HTML/JS
+        run: |
+          python nox-local/live/finish/patch_live.py --payload nox-local/live/NOX_LIVE_PAYLOAD.json --voice nox-local/live/finish/voice-live.js --out ./staged
+          python -m py_compile staged/server_live.py
+          node --check staged/chat-live.js
+          node --check staged/voice-live.js
+          node --check staged/main-live.mjs
+          node --check staged/live-pages.js
+      - name: Build exact-source offline browser/Shell kit
+        run: |
+          python nox-local/live/finish/build_web_kit.py --payload nox-local/live/NOX_LIVE_PAYLOAD.json --voice nox-local/live/finish/voice-live.js --out dist
+          cp nox-local/live/finish/INSTALL_NOX_WEB_FROM_KIT.ps1 dist/
+          cp nox-local/live/finish/START_NOX_WEB.ps1 dist/
+          cp nox-local/live/finish/VERIFY_NOX_WEB.py dist/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NOX-WEB-11-22-SOURCE-SHELL
+          path: dist/
+          retention-days: 30
