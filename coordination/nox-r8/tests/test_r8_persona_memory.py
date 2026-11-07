@@ -147,7 +147,7 @@ print("D03 R8 SOURCE_ONLY: native owner consent, preimage, exact-row delete, iso
 
 # D03: original WPF owner receipt cannot be forged by an uncorrelated DOM event.
 assert 'case "notes.delete": DeleteNote(request.GetProperty("id").GetInt64(), Text("requestId")); break;' in cs
-assert re.search(r'DELETE FROM memory_notes\\s+WHERE id=\\$id AND persona=\\$persona', delete_native)
+assert re.search(r'DELETE FROM memory_notes\s+WHERE id=\$id AND persona=\$persona', delete_native)
 assert delete_native.index('ValidWriteRequestId(requestId)') < delete_native.index('MessageBox.Show(this')
 assert delete_native.index('MessageBox.Show(this') < delete_native.index('CheckpointSqlite(db, "PRE_NOTE_DELETE")')
 assert delete_native.index('CheckpointSqlite(db, "PRE_NOTE_DELETE")') < delete_native.index('db.BeginTransaction()')
