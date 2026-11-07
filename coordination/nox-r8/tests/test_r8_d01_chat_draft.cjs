@@ -443,12 +443,15 @@ console.log('D01 SOURCE_ONLY PASS: Qwen failed/STOP retry with original input, S
     const nodes=Object.fromEntries(['noteTitle','noteText','memoryQuery','knowledgeQuery',
       'prompt','taskInput','persona','performance'].map(id=>[id,{value:''}]));
     for(const id of ['taskAdd','noteAdd'])nodes[id]={disabled:true};
+    for(const id of ['messages','history','notes','memoryResults','knowledgeResults'])nodes[id]={replaceChildren(){}};
+    nodes.generation={classList:{remove(){}}};
     nodes.status={textContent:''};nodes.personaStatus={textContent:''};
     nodes.useContext={checked:true};nodes.reduceMotion={checked:false};
     const $=id=>{if(!nodes[id])throw Error('MISSING_'+id);return nodes[id]};
-    const window={noxVisual:{setMode(){}}};
+    const window={noxVisual:{setMode(){},setEnergy(){}}};
+    const postCalls=[];function post(type){postCalls.push(type);}
     const document={body:{classList:{toggle(){}}}};
-    let committedSettings={persona:'KV'},visibleDraftPersona='KV';
+    let committedSettings={persona:'KV'},visibleDraftPersona='KV',busy=false,activeChatId=null,lastAnswer='',responseBox=null;
     let pendingTask={requestId:'task-kv',text:'SAME',persona:'KV'};
     let pendingNote={requestId:'note-kv',title:'SAME',content:'SAME',persona:'KV'};
     const personaDrafts=new Map();
