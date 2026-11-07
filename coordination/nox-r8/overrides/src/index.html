@@ -431,6 +431,8 @@ function switchPersonaDrafts(next){
   const restored=personaDrafts.get(next)||{};
   fields.forEach(id=>{$(id).value=restored[id]||''});
   visibleDraftPersona=next;
+  const hint=$('streamHint');
+  if(hint)hint.textContent='PersonaID переключена · предыдущий поток не относится к текущему чату';
   return true;
 }
 function route(id){if(!Object.prototype.hasOwnProperty.call(headings,id))return false;const originPanel=document.activeElement?.closest('.panel[data-panel]');const movedFromPanel=originPanel&&originPanel.dataset.panel!==id;document.querySelectorAll('.core[data-route]').forEach(x=>{const selected=x.dataset.route===id;x.classList.toggle('active',selected);if(selected)x.setAttribute('aria-current','page');else x.removeAttribute('aria-current')});document.querySelectorAll('.panel[data-panel]').forEach(x=>x.classList.toggle('active',x.dataset.panel===id));$('routeTitle').textContent=headings[id];const activeSide=document.querySelector?.('aside.side');if(activeSide)activeSide.scrollTop=0;if(movedFromPanel)document.querySelector('button.core[data-route="'+id+'"]')?.focus();if(id==='consciousness'||id==='nexus')post('health');if(id==='atlas')post('tasks.list');if(id==='reflection'){post('history');post('notes.list');post('knowledge.stats');}if(id==='forge'){post('training');post('learn.queue');}if(id==='persona')post('settings.get');return true}
