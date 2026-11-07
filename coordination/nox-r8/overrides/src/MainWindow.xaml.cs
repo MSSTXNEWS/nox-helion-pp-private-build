@@ -1136,6 +1136,18 @@ public partial class MainWindow : Window
     {
         string legacy = Path.Combine(Path.GetDirectoryName(dbPath)!, "chat.jsonl");
         if (!File.Exists(legacy)) return;
+
+        // B03 NO-LOSS: an existing legacy JSONL import is an irreversible
+        // owner-history mutation. Snapshot the pre-import database before
+        // opening the write transaction (SQLite online backup needs no tx).
+        // An already-imported file must never create another backup.
+        using (var prior = db.CreateCommand())
+        {
+            prior.CommandText = "SELECT COUNT(*) FROM imported_sources WHERE source=$s";
+            prior.Parameters.AddWithValue("$s", "NOX_NEW_CHAT_JSONL_V1");
+            if (Convert.ToInt64(prior.ExecuteScalar()) > 0) return;
+        }
+        CheckpointSqlite(db, "PRE_LEGACY_JSONL_IMPORT");
         using var tx = db.BeginTransaction();
         using var check = db.CreateCommand(); check.Transaction = tx;
         check.CommandText = "SELECT COUNT(*) FROM imported_sources WHERE source=$s";

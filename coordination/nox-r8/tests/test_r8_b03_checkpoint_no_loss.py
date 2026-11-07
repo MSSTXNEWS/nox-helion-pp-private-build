@@ -75,6 +75,27 @@ assert init.index('SELECT type,name FROM sqlite_master') < init.index('Checkpoin
 assert 'if (existingTables && !selfTestRequested)' in init
 assert 'needed.Any(name => !knownObjects.Contains(name))' in init
 
+
+# Importing the first local JSONL history must create exactly one verified
+# preimage before BEGIN; repeated startup must not create repeated backups.
+legacy = src.split("private void ImportLegacyJsonlIfNeeded(", 1)[1].split("\n    private ", 1)[0]
+for guard in (
+    "if (!File.Exists(legacy)) return;",
+    "using (var prior = db.CreateCommand())",
+    "if (Convert.ToInt64(prior.ExecuteScalar()) > 0) return;",
+    'CheckpointSqlite(db, "PRE_LEGACY_JSONL_IMPORT")',
+    "using var tx = db.BeginTransaction();",
+    "if (Convert.ToInt64(check.ExecuteScalar()) > 0) { tx.Commit(); return; }",
+    "INSERT INTO chat_history(timestamp,prompt,answer)",
+    "INSERT INTO imported_sources(source,imported_at,rows)",
+):
+    assert guard in legacy, "NOX_B03_LEGACY_IMPORT_CONTRACT_HOLD:" + guard
+assert legacy.index('CheckpointSqlite(db, "PRE_LEGACY_JSONL_IMPORT")') > legacy.index(
+    "if (Convert.ToInt64(prior.ExecuteScalar()) > 0) return;")
+assert legacy.index('CheckpointSqlite(db, "PRE_LEGACY_JSONL_IMPORT")') < legacy.index(
+    "using var tx = db.BeginTransaction();")
+assert "File.Delete(" not in legacy and "File.Move(" not in legacy
+
 # Run actual WAL + backup + integrity + SHA + immutable foreign file fixtures
 # on an isolated temporary SQLite database; no production files are touched.
 with tempfile.TemporaryDirectory(prefix="nox_b03_") as folder:
