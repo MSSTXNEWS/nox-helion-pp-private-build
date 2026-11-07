@@ -1212,7 +1212,7 @@ public partial class MainWindow : Window
                 case "history": Send("history", ReadHistory()); break;
                 case "notes.list": Send("notes", ReadNotes()); break;
                 case "notes.add": HandleNoteAdd(Text("title"), Text("content"), Text("requestId")); break;
-                case "notes.delete": DeleteNote(request.GetProperty("id").GetInt64()); Send("notes", ReadNotes()); break;
+                case "notes.delete": DeleteNote(request.GetProperty("id").GetInt64(), Text("requestId")); break;
                 case "feedback": SaveFeedback(request.GetProperty("rating").GetInt32(), Text("answer")); Send("notice", "Оценка сохранена локально; это не обучение весов."); break;
                 case "backup": BackupLocalDatabase(); break;
                 case "model.select": await SelectModel(Text("model"), Text("requestId")); break;
@@ -1912,68 +1912,80 @@ public partial class MainWindow : Window
         if (id <= 0) throw new InvalidOperationException("NOX_NOTE_ROWID_HOLD");
         return id;
     }
-    private void DeleteNote(long id)
+    // Owner-mediated deletion: native Yes/No is the only consent authority.
+    // A per-click requestId ties a true SQLite readback to the initiating DOM.
+    // Never clear notes in the renderer merely because an IPC message was sent.
+    private void DeleteNote(long id, string requestId)
     {
-        if (id <= 0) throw new ArgumentException("Invalid note ID");
-        string persona = ActivePersona();
-        using var db = OpenDatabase();
-        string title, content, createdAt;
-        using (var lookup = db.CreateCommand())
-        {
-            lookup.CommandText = "SELECT title,content,created_at FROM memory_notes WHERE id=$id AND persona=$persona";
-            lookup.Parameters.AddWithValue("$id", id);
-            lookup.Parameters.AddWithValue("$persona", persona);
-            using var row = lookup.ExecuteReader();
-            if (!row.Read()) throw new InvalidOperationException("NOX_NOTE_OWNER_HOLD");
-            title = row.GetString(0);
-            content = row.GetString(1);
-            createdAt = row.GetString(2);
-        }
-        // A UI script cannot authorize deletion by itself. A missing, foreign,
-        // or changed note never becomes a successful deletion receipt.
-        string titlePreview = title.Length > 80 ? title[..80] + "…" : title;
-        var consent = MessageBox.Show(this,
-            "Удалить заметку «" + titlePreview + "» из Persona " + persona +
-            "?\\nПеред удалением NOX сохранит проверенную SQLite-копию для восстановления.",
-            "NOX — удаление локальной памяти", MessageBoxButton.YesNo,
-            MessageBoxImage.Warning, MessageBoxResult.No);
-        if (consent != MessageBoxResult.Yes) {
-            Send("notes.delete.denied", new { id, reason = "OWNER_DECLINED" });
+        if (!ValidWriteRequestId(requestId) || id <= 0) {
+            Send("notes.delete.denied", new { requestId, id, reason = "NOX_NOTE_DELETE_REQUEST_HOLD" });
             return;
         }
+        try
+        {
+            string persona = ActivePersona();
+            using var db = OpenDatabase();
+            string title, content, createdAt;
+            using (var lookup = db.CreateCommand())
+            {
+                lookup.CommandText = "SELECT title,content,created_at FROM memory_notes WHERE id=$id AND persona=$persona";
+                lookup.Parameters.AddWithValue("$id", id);
+                lookup.Parameters.AddWithValue("$persona", persona);
+                using var row = lookup.ExecuteReader();
+                if (!row.Read()) throw new InvalidOperationException("NOX_NOTE_OWNER_HOLD");
+                title = row.GetString(0);
+                content = row.GetString(1);
+                createdAt = row.GetString(2);
+            }
+            string titlePreview = title.Length > 80 ? title[..80] + "…" : title;
+            var consent = MessageBox.Show(this,
+                "Удалить заметку «" + titlePreview + "» из Persona " + persona +
+                "?\nПеред удалением NOX сохранит проверенную SQLite-копию для восстановления.",
+                "NOX — удаление локальной памяти", MessageBoxButton.YesNo,
+                MessageBoxImage.Warning, MessageBoxResult.No);
+            if (consent != MessageBoxResult.Yes) {
+                Send("notes.delete.denied", new { requestId, id, reason = "OWNER_DECLINED" });
+                return;
+            }
 
-        // Fail closed: a backup/quick_check/SHA failure must prevent DELETE.
-        CheckpointSqlite(db, "PRE_NOTE_DELETE");
-        using (var tx = db.BeginTransaction())
-        {
-            using var command = db.CreateCommand();
-            command.Transaction = tx;
-            command.CommandText = """
-                DELETE FROM memory_notes
-                WHERE id=$id AND persona=$persona
-                  AND title=$title AND content=$content AND created_at=$created
-                """;
-            command.Parameters.AddWithValue("$id", id);
-            command.Parameters.AddWithValue("$persona", persona);
-            command.Parameters.AddWithValue("$title", title);
-            command.Parameters.AddWithValue("$content", content);
-            command.Parameters.AddWithValue("$created", createdAt);
-            if (command.ExecuteNonQuery() != 1)
-                throw new InvalidOperationException("NOX_NOTE_CHANGED_OR_FOREIGN_HOLD");
-            tx.Commit();
+            // Fail closed before any DELETE. The verified snapshot includes WAL.
+            CheckpointSqlite(db, "PRE_NOTE_DELETE");
+            using (var tx = db.BeginTransaction())
+            {
+                using var command = db.CreateCommand();
+                command.Transaction = tx;
+                command.CommandText = """
+                    DELETE FROM memory_notes
+                    WHERE id=$id AND persona=$persona
+                      AND title=$title AND content=$content AND created_at=$created
+                    """;
+                command.Parameters.AddWithValue("$id", id);
+                command.Parameters.AddWithValue("$persona", persona);
+                command.Parameters.AddWithValue("$title", title);
+                command.Parameters.AddWithValue("$content", content);
+                command.Parameters.AddWithValue("$created", createdAt);
+                if (command.ExecuteNonQuery() != 1)
+                    throw new InvalidOperationException("NOX_NOTE_CHANGED_OR_FOREIGN_HOLD");
+                tx.Commit();
+            }
+            using (var verifyDb = OpenDatabase())
+            using (var verify = verifyDb.CreateCommand())
+            {
+                verify.CommandText = "SELECT COUNT(*) FROM memory_notes WHERE id=$id AND persona=$persona";
+                verify.Parameters.AddWithValue("$id", id);
+                verify.Parameters.AddWithValue("$persona", persona);
+                if (Convert.ToInt64(verify.ExecuteScalar()) != 0)
+                    throw new InvalidOperationException("NOX_NOTE_DELETE_READBACK_HOLD");
+            }
+            Send("notes.delete.receipt", new { requestId, id, persona, deleted = true, backupVerified = true });
         }
-        // Confirm the exact row is absent on a new connection, not just that
-        // SQLite accepted a command. The pre-delete snapshot is retained.
-        using (var verifyDb = OpenDatabase())
-        using (var verify = verifyDb.CreateCommand())
-        {
-            verify.CommandText = "SELECT COUNT(*) FROM memory_notes WHERE id=$id AND persona=$persona";
-            verify.Parameters.AddWithValue("$id", id);
-            verify.Parameters.AddWithValue("$persona", persona);
-            if (Convert.ToInt64(verify.ExecuteScalar()) != 0)
-                throw new InvalidOperationException("NOX_NOTE_DELETE_READBACK_HOLD");
+        catch (Exception) {
+            // An error is never a success ACK; do not leak disk paths or SQL to WebView2.
+            Send("notes.delete.denied", new { requestId, id, reason = "NOX_NOTE_DELETE_NATIVE_HOLD" });
+            return;
         }
-        Send("notes.delete.receipt", new { id, persona, deleted = true, backupVerified = true });
+        // The renderer refreshes only after receipt; on denial it keeps all cards.
+        Send("notes", ReadNotes());
     }
     private void SaveFeedback(int rating,string answer)
     {

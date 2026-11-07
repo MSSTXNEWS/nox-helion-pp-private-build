@@ -29,7 +29,6 @@ for guard in (
     'FROM chat_history WHERE persona=$persona ORDER BY id DESC LIMIT 3',
     'FROM memory_notes WHERE persona=$persona ORDER BY id DESC LIMIT 6',
     'FROM memory_notes WHERE persona=$persona ORDER BY id DESC LIMIT 150',
-    'DELETE FROM memory_notes WHERE id=$id AND persona=$persona',
     'SELECT timestamp,prompt,answer FROM chat_history',
     'SELECT created_at,title,content FROM memory_notes',
     'NOX_MEMORY_QUERY_LIMIT_HOLD',
@@ -112,7 +111,7 @@ print("D03 R8 SOURCE_ONLY: Unicode recall, older same-Persona RAG and NO-LOSS PA
 
 # D03 NO-LOSS owner routes consolidated onto current R8 native-Qwen base.
 # This test is SOURCE_ONLY; native UI consent and actual Windows disks need physical QA.
-delete_native = cs.split('private void DeleteNote(long id)', 1)[1].split('private void SaveFeedback(', 1)[0]
+delete_native = cs.split('private void DeleteNote(long id, string requestId)', 1)[1].split('private void SaveFeedback(', 1)[0]
 assert delete_native.index('MessageBox.Show(this') < delete_native.index('CheckpointSqlite(db, "PRE_NOTE_DELETE")')
 assert delete_native.index('if (consent != MessageBoxResult.Yes)') < delete_native.index('CheckpointSqlite(db, "PRE_NOTE_DELETE")')
 assert delete_native.index('CheckpointSqlite(db, "PRE_NOTE_DELETE")') < delete_native.index('db.BeginTransaction()')
@@ -145,3 +144,19 @@ with tempfile.TemporaryDirectory() as temp:
         assert stale.rowcount == 0
         assert db.execute("SELECT content FROM memory_notes WHERE id=1").fetchone()[0] == "newer"
 print("D03 R8 SOURCE_ONLY: native owner consent, preimage, exact-row delete, isolated SQLite preservation PASS")
+
+# D03: original WPF owner receipt cannot be forged by an uncorrelated DOM event.
+assert 'case "notes.delete": DeleteNote(request.GetProperty("id").GetInt64(), Text("requestId")); break;' in cs
+assert re.search(r'DELETE FROM memory_notes\\s+WHERE id=\\$id AND persona=\\$persona', delete_native)
+assert delete_native.index('ValidWriteRequestId(requestId)') < delete_native.index('MessageBox.Show(this')
+assert delete_native.index('MessageBox.Show(this') < delete_native.index('CheckpointSqlite(db, "PRE_NOTE_DELETE")')
+assert delete_native.index('CheckpointSqlite(db, "PRE_NOTE_DELETE")') < delete_native.index('db.BeginTransaction()')
+assert delete_native.index('NOX_NOTE_DELETE_READBACK_HOLD') < delete_native.index('notes.delete.receipt')
+assert 'new { requestId, id, persona, deleted = true, backupVerified = true }' in delete_native
+assert 'notes.delete.denied' in delete_native and 'OWNER_DECLINED' in delete_native
+assert "pendingNoteDelete={requestId,id:n.id}" in web
+assert "post('notes.delete',{id:n.id,requestId})" in web
+assert "case 'notes.delete.receipt':if(pendingNoteDelete&&v?.requestId===pendingNoteDelete.requestId" in web
+assert "case 'notes.delete.denied':if(pendingNoteDelete&&v?.requestId===pendingNoteDelete.requestId" in web
+assert "window.confirm('Удалить эту локальную заметку?')" not in web
+print("D03 R8 SOURCE_ONLY: requestId owner consent, preimage, exact-row readback and UI correlation PASS")
