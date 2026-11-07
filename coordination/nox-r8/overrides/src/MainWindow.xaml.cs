@@ -1656,11 +1656,23 @@ public partial class MainWindow : Window
         }
         try {
             await SelectModel(model);
+            // The committed owner model has been independently read back.
+            // Auxiliary health refresh must not misreport a persisted save as denied.
             Send("model.select.receipt", new { requestId, model, saved = true });
+            try {
+                Send("settings", ReadPreferences());
+                await CheckProvider();
+            }
+            catch {
+                // Refresh is optional; owner can retry Health without re-saving
+                // or losing the already-verified SQLite selection.
+            }
         }
         catch (Exception ex) {
-            var reason = ex is InvalidOperationException && ex.Message == "NOX_MODEL_SELECT_SQLITE_READBACK_HOLD"
-                ? "NOX_MODEL_SELECT_SQLITE_READBACK_HOLD" : "NOX_MODEL_SELECT_PROVIDER_OR_SQLITE_HOLD";
+            var reason = ex is InvalidOperationException &&
+                (ex.Message == "NOX_MODEL_SELECT_SQLITE_READBACK_HOLD" ||
+                 ex.Message == "NOX_MODEL_SELECT_LEARN_CONSENT_HOLD")
+                ? ex.Message : "NOX_MODEL_SELECT_PROVIDER_OR_SQLITE_HOLD";
             Send("model.select.denied", new { requestId, model, reason });
         }
     }
@@ -1673,6 +1685,17 @@ public partial class MainWindow : Window
         using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         bool exists = json.RootElement.GetProperty("models").EnumerateArray().Any(x => x.GetProperty("name").GetString() == model);
         if (!exists) throw new InvalidOperationException("Model is not registered on the local server");
+        // PREPARATION consent is bound to one exact model and Windows SID.
+        // Do not show model B while a consented request for A stays pending.
+        // Owner can STOP the pending request and then select another model.
+        using (var consentDb = OpenDatabase())
+        using (var pending = consentDb.CreateCommand()) {
+            pending.CommandText = "SELECT model FROM learn_requests WHERE owner_sid=$sid AND state='AWAITING_VERIFIED_WORKER' LIMIT 1";
+            pending.Parameters.AddWithValue("$sid", OwnerSid());
+            if (pending.ExecuteScalar() is string consentedModel &&
+                !string.Equals(consentedModel, model, StringComparison.Ordinal))
+                throw new InvalidOperationException("NOX_MODEL_SELECT_LEARN_CONSENT_HOLD");
+        }
         using var db = OpenDatabase(); using var cmd = db.CreateCommand();
         cmd.CommandText = "INSERT INTO preferences(key,value) VALUES('model',$m) ON CONFLICT(key) DO UPDATE SET value=excluded.value";
         cmd.Parameters.AddWithValue("$m",model);
@@ -1684,8 +1707,6 @@ public partial class MainWindow : Window
             if (!string.Equals(verify.ExecuteScalar() as string, model, StringComparison.Ordinal))
                 throw new InvalidOperationException("NOX_MODEL_SELECT_SQLITE_READBACK_HOLD");
         }
-        Send("settings",ReadPreferences());
-        await CheckProvider();
     }
 
     private async Task PullExistingProviderModel(string modelName)

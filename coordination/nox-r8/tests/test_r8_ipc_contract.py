@@ -183,7 +183,12 @@ model_select = cs.split('private async Task SelectModel(',1)[1].split('private a
 assert model_handler.index('ValidWriteRequestId(requestId)') < model_handler.index('await SelectModel(model);'), "D05_MODEL_OWNER_REQUEST_HOLD"
 assert model_handler.index('await SelectModel(model);') < model_handler.index('Send("model.select.receipt"'), "D05_MODEL_PREMATURE_ACK_HOLD"
 assert 'Send("model.select.denied"' in model_handler, "D05_MODEL_DENIAL_HOLD"
-assert model_select.index('cmd.ExecuteNonQuery() != 1') < model_select.index('using (var verifyDb = OpenDatabase())') < model_select.index('Send("settings",ReadPreferences())'), "D05_MODEL_SQLITE_ACK_ORDER_HOLD"
+assert model_select.index('cmd.ExecuteNonQuery() != 1') < model_select.index('using (var verifyDb = OpenDatabase())'), "D05_MODEL_SQLITE_ACK_ORDER_HOLD"
+assert 'Send("settings",ReadPreferences())' not in model_select, "D05_MODEL_REFRESH_BEFORE_ACK_HOLD"
+assert model_handler.index('Send("model.select.receipt"') < model_handler.index('await CheckProvider();'), "D05_MODEL_ACK_REFRESH_ORDER_HOLD"
+assert model_select.index("SELECT model FROM learn_requests WHERE owner_sid=$sid") < model_select.index("INSERT INTO preferences(key,value)"), "D05_MODEL_PENDING_CONSENT_ORDER_HOLD"
+assert 'pending.Parameters.AddWithValue("$sid", OwnerSid());' in model_select, "D05_MODEL_SID_GUARD_HOLD"
+assert 'NOX_MODEL_SELECT_LEARN_CONSENT_HOLD' in model_select and 'ex.Message == "NOX_MODEL_SELECT_LEARN_CONSENT_HOLD"' in model_handler, "D05_MODEL_CONSENT_DENIAL_HOLD"
 assert "SELECT value FROM preferences WHERE key='model'" in model_select and 'NOX_MODEL_SELECT_SQLITE_READBACK_HOLD' in model_select, "D05_MODEL_SELECT_READBACK_HOLD"
 for fragment in ("pendingModel={requestId,model}", "if(post('model.select',{model,requestId})===false)",
                  "v?.requestId===pendingModel.requestId&&v?.model===pendingModel.model",
