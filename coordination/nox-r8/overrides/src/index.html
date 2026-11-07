@@ -422,7 +422,7 @@ $('voiceListen').onclick=async()=>{
       if(previous.length+transcript.length+1>32000){
         $('voiceStatus').textContent='NOX_VOICE_PROMPT_LIMIT_HOLD';return;
       }
-      $('prompt').value=previous+(previous&&!/\\s$/.test(previous)?' ':'')+transcript;
+      $('prompt').value=previous+(previous&&!/\s$/.test(previous)?' ':'')+transcript;
       $('voiceStatus').textContent='Локальный текст в черновике · не отправлен: '+lang;
       route('core');$('prompt').focus();
     };
