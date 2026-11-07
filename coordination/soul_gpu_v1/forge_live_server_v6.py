@@ -7,6 +7,7 @@ No writes to training/database/models and no Web STOP endpoint.
 """
 from __future__ import annotations
 import argparse
+import hashlib
 import ctypes
 import json
 import re
@@ -18,6 +19,7 @@ from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.request import urlopen
+from urllib.parse import urlsplit, parse_qs
 
 try:
     import psutil
@@ -201,6 +203,8 @@ def live_status(root):
 
 
 def serve(root, port):
+    # Running-code fingerprint: local boot must not attach to stale V6 instances.
+    running_source_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
     import nox_unified_brain_v1 as unified
     page = (HERE / 'forge_wow_live_v6.html').read_bytes()
     unified_page = (HERE / 'nox_unified_chat_v1.html').read_bytes()
@@ -226,6 +230,17 @@ def serve(root, port):
                     observed=resource.snapshot()
                     recommendation=resource.advise('general',observed)
                     return self.get(json.dumps(recommendation,ensure_ascii=False).encode('utf-8'),
+                                    'application/json; charset=utf-8')
+                except Exception as exc:
+                    return self.get(json.dumps({'error':type(exc).__name__}).encode(),
+                                    'application/json',503)
+            if urlsplit(self.path).path == '/api/nox/experience':
+                try:
+                    from nox_prime_experience_v1 import project
+                    parts=parse_qs(urlsplit(self.path).query)
+                    query=(parts.get('q') or [''])[0][:300]
+                    result=project(root,query=query,max_examples=5)
+                    return self.get(json.dumps(result,ensure_ascii=False).encode('utf-8'),
                                     'application/json; charset=utf-8')
                 except Exception as exc:
                     return self.get(json.dumps({'error':type(exc).__name__}).encode(),
@@ -282,7 +297,8 @@ def serve(root, port):
                                             'read_only_native_s03': True,
                                             'local_chat_journal': True,
                                             'soul_runtime':'EN_HOLDOUT_ONLY',
-                                            'semantic_retrieval':'ON_DEMAND_LOCAL'}).encode(), 'application/json')
+                                            'semantic_retrieval':'ON_DEMAND_LOCAL',
+                                            'source_sha256':running_source_sha256}).encode(), 'application/json')
             if self.path == '/api/status':
                 try:
                     payload = live_status(root)
