@@ -33,6 +33,7 @@ jobs:
           cp nox-local/live/finish/START_NOX_WEB.ps1 dist/
           cp nox-local/live/finish/VERIFY_NOX_WEB.py dist/
           python -m py_compile dist/VERIFY_NOX_WEB.py
+          rm -rf dist/__pycache__
       - uses: actions/upload-artifact@v4
         with:
           name: NOX-WEB-11-22-SOURCE-SHELL
