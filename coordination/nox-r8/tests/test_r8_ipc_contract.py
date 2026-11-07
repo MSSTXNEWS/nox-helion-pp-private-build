@@ -413,3 +413,16 @@ assert 'CancellationTokenSource.CreateLinkedTokenSource(streamBudget.Token)' in 
 assert 'readWindow.CancelAfter(TimeSpan.FromMinutes(3));' in _budget, 'B06_IDLE_GUARD_NO_LOSS_HOLD'
 assert 'catch (OperationCanceledException) when (cancellation.IsCancellationRequested)' in _budget and 'OLLAMA_TIMEOUT:' in _budget, 'B06_OWNER_STOP_VS_TIMEOUT_HOLD'
 print('B06 SOURCE_ONLY: total 15m stream + 3m idle, STOP distinct; real Qwen not tested')
+
+# B04: real HTTP cancellation may surface as IOException, HttpRequestException or
+# ObjectDisposedException, not just OperationCanceledException. This source-only
+# oracle requires STOP after stream abort, but never masks an attempted COMMIT.
+transport_guard = 'catch (Exception ex) when (cancellation.IsCancellationRequested && !sqliteWriteAttempted &&'
+assert transport_guard in generate, 'B04_STOP_HTTP_IO_OWNER_HOLD'
+transport_stop = generate.split(transport_guard, 1)[1].split('catch (HttpRequestException ex)', 1)[0]
+for kind in ('HttpRequestException', 'IOException', 'ObjectDisposedException'):
+    assert 'ex is ' + kind in transport_stop, 'B04_STOP_HTTP_' + kind + '_HOLD'
+assert 'lastGenerationStopped = true;' in transport_stop, 'B04_STOP_IO_STATE_HOLD'
+assert 'state = "STOPPED"' in transport_stop and 'stopped = true' in transport_stop, 'B04_STOP_IO_RECEIPT_HOLD'
+assert generate.index(transport_guard) < generate.index('catch (HttpRequestException ex)'), 'B04_STOP_IO_CATCH_ORDER_HOLD'
+print('B04 R8 STOP transport source oracle PASS; real owner Ollama NOT_TESTED')
