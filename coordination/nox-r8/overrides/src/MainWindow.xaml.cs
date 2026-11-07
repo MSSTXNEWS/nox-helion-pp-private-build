@@ -37,6 +37,8 @@ public partial class MainWindow : Window
     private readonly HashSet<string> recentlyHandledChatIdSet = new(StringComparer.Ordinal);
     private readonly Queue<string> recentlyHandledChatIds = new();
     private CancellationTokenSource? activeModelPull;
+    private string? activeModelPullRequestId;
+    private string? activeModelPullName;
     private static readonly bool NativeSelfTestRequested = Environment.GetCommandLineArgs().Any(
         arg => arg.Equals("--nox-selftest", StringComparison.OrdinalIgnoreCase));
     private static readonly bool UiSmokeRequested = Environment.GetCommandLineArgs().Any(
@@ -1572,8 +1574,22 @@ public partial class MainWindow : Window
                 case "feedback": SaveFeedback(request.GetProperty("rating").GetInt32(), Text("answer")); Send("notice", "Оценка сохранена локально; это не обучение весов."); break;
                 case "backup": BackupLocalDatabase(); break;
                 case "model.select": await SelectModel(Text("model"), Text("requestId")); break;
-                case "model.pull": await PullExistingProviderModel(Text("model")); break;
-                case "model.cancel": activeModelPull?.Cancel(); break;
+                case "model.pull": await PullExistingProviderModel(Text("model"), Text("requestId")); break;
+                case "model.cancel": {
+                    string pullId = Text("requestId"), pullModel = Text("model");
+                    if (!ValidWriteRequestId(pullId) || activeModelPull == null ||
+                        !string.Equals(activeModelPullRequestId, pullId, StringComparison.Ordinal) ||
+                        !string.Equals(activeModelPullName, pullModel, StringComparison.Ordinal)) {
+                        Send("download", new { requestId = pullId, model = pullModel, status = "CANCEL_DENIED",
+                            reason = "NOX_MODEL_PULL_NOT_OWNER_HOLD", percent = (double?)null });
+                        break;
+                    }
+                    // STOP only the matching download owner. This never cancels CHAT or LEARN.
+                    activeModelPull.Cancel();
+                    Send("download", new { requestId = pullId, model = pullModel, status = "STOP_REQUESTED",
+                        percent = (double?)null });
+                    break;
+                }
                 case "tasks.list": Send("tasks", ReadTasks()); break;
                 case "tasks.add": HandleTaskAdd(Text("text"), Text("requestId")); break;
                 case "tasks.toggle": {
@@ -2715,25 +2731,52 @@ public partial class MainWindow : Window
         }
     }
 
-    private async Task PullExistingProviderModel(string modelName)
+    private async Task PullExistingProviderModel(string modelName, string requestId)
     {
-        // Models are downloaded ONLY after a human clicks Install in the UI.
-        // The user-facing label and the native regex defend against URLs/paths/commands.
-        if (string.IsNullOrWhiteSpace(modelName) || modelName.Length > 100 ||
-            !System.Text.RegularExpressions.Regex.IsMatch(modelName, @"\A[a-zA-Z0-9][a-zA-Z0-9._/-]*:[a-zA-Z0-9._-]+\z"))
-            throw new ArgumentException("Укажи точный тег Ollama, например qwen2.5-coder:7b");
-        if (activeModelPull != null) throw new InvalidOperationException("Загрузка модели уже идёт");
+        // Native owner approval is required: a WebView2 confirmation alone is
+        // not authority to download models or consume the owner's disk/network.
+        if (!ValidWriteRequestId(requestId) || string.IsNullOrWhiteSpace(modelName) ||
+            modelName.Length > 100 ||
+            !System.Text.RegularExpressions.Regex.IsMatch(modelName,
+                @"\A[a-zA-Z0-9][a-zA-Z0-9._/-]*:[a-zA-Z0-9._-]+\z")) {
+            Send("download", new { requestId, model = modelName, status = "DENIED",
+                reason = "NOX_MODEL_PULL_INVALID_REQUEST_HOLD", percent = (double?)null });
+            return;
+        }
+        if (activeModelPull != null) {
+            Send("download", new { requestId, model = modelName, status = "DENIED",
+                reason = "NOX_MODEL_PULL_IN_FLIGHT_HOLD", percent = (double?)null });
+            return;
+        }
+        MessageBoxResult permission;
+        try {
+            permission = MessageBox.Show(this,
+                "Разрешить загрузку модели " + modelName + "? Это использует интернет и место на диске.",
+                "NOX HELION · подтверждение владельца",
+                MessageBoxButton.YesNo, MessageBoxImage.Question);
+        }
+        catch (Exception) {
+            Send("download", new { requestId, model = modelName, status = "DENIED",
+                reason = "NOX_MODEL_PULL_OWNER_DIALOG_HOLD", percent = (double?)null });
+            return;
+        }
+        if (permission != MessageBoxResult.Yes) {
+            Send("download", new { requestId, model = modelName, status = "DENIED",
+                reason = "NOX_MODEL_PULL_OWNER_DECLINED", percent = (double?)null });
+            return;
+        }
         using var cts = new CancellationTokenSource();
         activeModelPull = cts;
+        activeModelPullRequestId = requestId;
+        activeModelPullName = modelName;
         try
         {
-            // Another independent timeout: large model downloads can exceed 10 minutes.
             using var transferClient = new HttpClient { Timeout = Timeout.InfiniteTimeSpan };
             var payload = JsonSerializer.Serialize(new { model = modelName, stream = true });
             using var request = new HttpRequestMessage(HttpMethod.Post, Api + "/api/pull") {
                 Content = new StringContent(payload, Encoding.UTF8, "application/json")
             };
-            Send("download", new { status = "REQUESTED", model = modelName, percent = (double?)null });
+            Send("download", new { requestId, model = modelName, status = "REQUESTED", percent = (double?)null });
             using var response = await transferClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cts.Token);
             response.EnsureSuccessStatusCode();
             using var stream = await response.Content.ReadAsStreamAsync(cts.Token);
@@ -2754,11 +2797,11 @@ public partial class MainWindow : Window
                 var hasTotal = root.TryGetProperty("total", out var total) && total.TryGetInt64(out totalBytes) && totalBytes > 0;
                 var hasCompleted = root.TryGetProperty("completed", out var bytes) && bytes.TryGetInt64(out completedBytes) && completedBytes >= 0;
                 double? percent = hasTotal && hasCompleted ? Math.Round(100.0 * completedBytes / totalBytes, 1) : null;
-                Send("download", new { status = label, model = modelName, percent });
+                Send("download", new { requestId, status = label, model = modelName, percent });
                 if (label.Equals("success", StringComparison.OrdinalIgnoreCase)) { done = true; break; }
             }
-            if (!done) throw new InvalidOperationException("Загрузка оборвалась до подтверждённого завершения Ollama");
-            // Provider progress "success" is not proof of an installed exact model tag.
+            if (!done) throw new InvalidOperationException("NOX_MODEL_PULL_INCOMPLETE_HOLD");
+            // Provider progress "success" cannot substitute for /api/tags readback.
             cts.Token.ThrowIfCancellationRequested();
             using (var verify = CancellationTokenSource.CreateLinkedTokenSource(cts.Token))
             {
@@ -2771,18 +2814,28 @@ public partial class MainWindow : Window
                 if (!tagPresent) throw new InvalidOperationException("NOX_MODEL_PULL_TAG_READBACK_HOLD");
             }
             cts.Token.ThrowIfCancellationRequested();
-            Send("download", new { status = "DONE", model = modelName, percent = (double?)100 });
-            await CheckProvider();
+            // /api/tags proves the exact tag; optional HEALTH must not revoke DONE
+            // nor extend the cancellable owner lease after a terminal receipt.
+            try { Send("download", new { requestId, status = "DONE", model = modelName, percent = (double?)100 }); }
+            catch (Exception) { /* The exact tag exists; IPC delivery may have failed. */ }
         }
         catch (OperationCanceledException) when (cts.IsCancellationRequested) {
-            Send("download", new { status = "STOPPED", model = modelName, percent = (double?)null });
+            // STOP is only cancellation of this transfer, not an uninstall receipt.
+            try { Send("download", new { requestId, status = "STOPPED", model = modelName, percent = (double?)null }); }
+            catch (Exception) { }
         }
         catch (Exception) {
-            // Provider and transport failure are neither owner STOP nor install success.
-            Send("download", new { status = "ERROR", model = modelName, percent = (double?)null });
-            throw;
+            try { Send("download", new { requestId, status = "ERROR", model = modelName,
+                reason = "NOX_MODEL_PULL_PROVIDER_HOLD", percent = (double?)null }); }
+            catch (Exception) { }
         }
-        finally { activeModelPull = null; }
+        finally {
+            if (ReferenceEquals(activeModelPull, cts)) {
+                activeModelPull = null;
+                activeModelPullRequestId = null;
+                activeModelPullName = null;
+            }
+        }
     }
 
     private const string VuneoImportReceipt = "NOX_VUNEO_OWNER_MIGRATION_V1";

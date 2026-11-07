@@ -413,7 +413,7 @@ body.reduced .helion-fx{filter:none}body.reduced .core.active{animation:none}
 <script>
 'use strict';
 const $=id=>document.getElementById(id);const post=(type,data={})=>{const bridge=window.chrome?.webview;if(typeof bridge?.postMessage!=='function'){$('status').textContent='NATIVE BRIDGE OFFLINE';return false}try{bridge.postMessage({type,...data});return true}catch{$('status').textContent='NATIVE BRIDGE DISPATCH FAILED';return false}};
-let responseBox=null,lastAnswer='',busy=false,settingsDenial='',activeChatId=null,requestSequence=0,pendingChatDraft=null,pendingTask=null,pendingNote=null,pendingNoteDelete=null,pendingTaskToggle=null,pendingModel=null,committedModel="",pendingSettings=null,committedSettings={},settingsReconcile=null,visibleDraftPersona='KV',pendingVuneo=null;
+let responseBox=null,lastAnswer='',busy=false,settingsDenial='',activeChatId=null,requestSequence=0,pendingChatDraft=null,pendingTask=null,pendingNote=null,pendingNoteDelete=null,pendingTaskToggle=null,pendingModel=null,pendingModelPull=null,committedModel="",pendingSettings=null,committedSettings={},settingsReconcile=null,visibleDraftPersona='KV',pendingVuneo=null;
 let vuneoImportUncertain=false;
 let noteAddUncertain=false; // Possible SQLite INSERT: preserve draft, block silent duplicate.
 let pendingLearnRequest=null,pendingLearnStop=null; // Native owner-correlated consent and cancellation.
@@ -510,7 +510,27 @@ $('vuneoImport').onclick=()=>{
   return true;
 };$('knowledgeSearch').onclick=()=>post('knowledge.search',{query:$('knowledgeQuery').value.trim()});$('knowledgeQuery').onkeydown=e=>{if(e.key==='Enter'&&!e.defaultPrevented&&!e.ctrlKey&&!e.altKey&&!e.metaKey&&!e.isComposing&&e.keyCode!==229&&!e.shiftKey){e.preventDefault();if(!e.repeat)$('knowledgeSearch').click()}};$('memorySearch').onclick=()=>post('memory.search',{query:$('memoryQuery').value.trim()});$('memoryQuery').onkeydown=e=>{if(e.key==='Enter'&&!e.defaultPrevented&&!e.ctrlKey&&!e.altKey&&!e.metaKey&&!e.isComposing&&e.keyCode!==229&&!e.shiftKey){e.preventDefault();if(!e.repeat)$('memorySearch').click()}};
 $('maxMode').onclick=()=>{route('persona');if(pendingSettings)return;$('performance').value='MAX';saveSetting('performance','MAX');};
-$('saveModel').onclick=()=>{const model=$('modelPicker').value;if(!model||pendingModel)return;const requestId=nextChatId();pendingModel={requestId,model,previous:committedModel};$('saveModel').disabled=true;$('modelSelectStatus').textContent='Проверка локального тега и SQLite…';if(post('model.select',{model,requestId})===false){const previous=pendingModel.previous;pendingModel=null;$('saveModel').disabled=false;if(previous)$('modelPicker').value=previous;$('modelSelectStatus').textContent='Нет нативного соединения. Предыдущая модель сохранена.';}};$('pullModel').onclick=()=>{const model=$('modelToDownload').value.trim();if(!/^[a-zA-Z0-9][a-zA-Z0-9._/-]*:[a-zA-Z0-9._-]+$/.test(model)){$('downloadStatus').textContent='Укажи корректный тег модели';return}if(window.confirm('Загрузить модель '+model+'? Это использует диск и интернет.'))post('model.pull',{model})};$('cancelPull').onclick=()=>post('model.cancel');
+$('saveModel').onclick=()=>{const model=$('modelPicker').value;if(!model||pendingModel)return;const requestId=nextChatId();pendingModel={requestId,model,previous:committedModel};$('saveModel').disabled=true;$('modelSelectStatus').textContent='Проверка локального тега и SQLite…';if(post('model.select',{model,requestId})===false){const previous=pendingModel.previous;pendingModel=null;$('saveModel').disabled=false;if(previous)$('modelPicker').value=previous;$('modelSelectStatus').textContent='Нет нативного соединения. Предыдущая модель сохранена.';}};$('pullModel').onclick=()=>{
+  if(pendingModelPull)return;
+  const model=$('modelToDownload').value.trim();
+  if(!/^[a-zA-Z0-9][a-zA-Z0-9._/-]*:[a-zA-Z0-9._-]+$/.test(model)||model.length>100){
+    $('downloadStatus').textContent='Укажи корректный локальный тег модели';return;
+  }
+  const requestId=nextChatId();pendingModelPull={requestId,model};
+  $('pullModel').disabled=true;$('cancelPull').disabled=false;
+  $('downloadStatus').textContent=model+' · ожидается разрешение владельца Windows';
+  if(post('model.pull',{model,requestId})===false){
+    pendingModelPull=null;$('pullModel').disabled=false;$('cancelPull').disabled=true;
+    $('downloadStatus').textContent='NOX_MODEL_PULL_IPC_HOLD · загрузка не подтверждена';
+  }
+};
+$('cancelPull').disabled=true;
+$('cancelPull').onclick=()=>{
+  if(!pendingModelPull)return;
+  const {requestId,model}=pendingModelPull;
+  if(post('model.cancel',{requestId,model})===false)
+    $('downloadStatus').textContent='NOX_MODEL_STOP_IPC_HOLD · проверьте статус загрузки';
+};
 $('noteAdd').onclick=()=>{const title=$('noteTitle').value.trim(),content=$('noteText').value.trim();if(!title||!content||pendingNote||noteAddUncertain)return;const requestId=nextChatId();pendingNote={requestId,title,content,persona:visibleDraftPersona};$('noteAdd').disabled=true;if(post('notes.add',{title,content,requestId})===false){pendingNote=null;$('noteAdd').disabled=false}};
 $('feedbackUp').onclick=()=>{if(lastAnswer)post('feedback',{rating:1,answer:lastAnswer})};$('feedbackDown').onclick=()=>{if(lastAnswer)post('feedback',{rating:-1,answer:lastAnswer})};
 $('speak').onclick=()=>{if(!('speechSynthesis' in window)||!('SpeechSynthesisUtterance' in window)){$('voiceStatus').textContent='Speech engine unavailable';return}if(!lastAnswer){$('voiceStatus').textContent='Сначала получите ответ модели';return}speechSynthesis.cancel();let u=new SpeechSynthesisUtterance(lastAnswer);u.lang='ru-RU';speechSynthesis.speak(u);$('voiceStatus').textContent='Озвучивание запрошено'};
@@ -535,7 +555,19 @@ case 'tasks.add.uncertain':if(pendingTask&&v?.requestId===pendingTask.requestId)
 case 'tasks.add.denied':if(pendingTask&&v?.requestId===pendingTask.requestId){pendingTask=null;$('taskAdd').disabled=false;$('status').textContent=String(v.reason||'TASK SAVE HOLD');}break;
 case 'model.select.receipt':if(pendingModel&&v?.requestId===pendingModel.requestId&&v.model===pendingModel.model&&v.saved===true){committedModel=v.model;pendingModel=null;$('saveModel').disabled=false;$('modelSelectStatus').textContent='SQLite подтверждена · '+v.model;}break;
 case 'model.select.denied':if(pendingModel&&v?.requestId===pendingModel.requestId){const previous=pendingModel.previous;pendingModel=null;$('saveModel').disabled=false;if(previous)$('modelPicker').value=previous;$('modelSelectStatus').textContent=String(v.reason||'NOX_MODEL_SELECT_HOLD');post('health');}break;
-case 'download':{$('downloadStatus').textContent=`${v.model||''}: ${v.status||''}`+(typeof v.percent==='number'?' · '+v.percent+'%':'');if(typeof v.percent==='number')$('downloadBar').style.width=Math.max(0,Math.min(100,v.percent))+'%';break;}
+case 'download':{
+  // Never accept a progress/STOP/DONE event from a previous owner request.
+  if(!pendingModelPull||v?.requestId!==pendingModelPull.requestId||v?.model!==pendingModelPull.model)break;
+  const state=String(v.status||'');
+  $('downloadStatus').textContent=v.model+' · '+state+(typeof v.percent==='number'?' · '+v.percent+'%':'')+
+    (v.reason?' · '+String(v.reason):'');
+  if(typeof v.percent==='number')$('downloadBar').style.width=Math.max(0,Math.min(100,v.percent))+'%';
+  if(['DONE','STOPPED','ERROR','DENIED'].includes(state)){
+    pendingModelPull=null;$('pullModel').disabled=false;$('cancelPull').disabled=true;
+    if(state==='DONE')post('health'); // Read-only refresh after verified Ollama tag.
+  }
+  break;
+}
 case 'learn.receipt':{
   const requestAck=!!pendingLearnRequest&&v?.requestId===pendingLearnRequest;
   const stopAck=!!pendingLearnStop&&v?.requestId===pendingLearnStop;
