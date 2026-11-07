@@ -1204,7 +1204,43 @@ public partial class MainWindow : Window
                 throw new InvalidOperationException("NOX_B03_SMOKE_PREIMAGE_HOLD");
         }
 
-        string snapshot = CheckpointSqlite(live, "SMOKE_ISOLATED");
+        // F01: an active uncommitted writer on the isolated WAL database
+        // must never leak pending rows into a successful SQLite backup.
+        // All fixture writes are rolled back; no owner DB is opened.
+        string pendingMarker = "NOX_F01_PENDING_WAL_" + Guid.NewGuid().ToString("N");
+        string snapshot;
+        using (var writer = OpenDatabase())
+        using (var uncommitted = writer.BeginTransaction())
+        {
+            using (var put = writer.CreateCommand())
+            {
+                put.Transaction = uncommitted;
+                put.CommandText = "INSERT INTO tasks(created_at,title) VALUES($t,$v)";
+                put.Parameters.AddWithValue("$t", DateTimeOffset.UtcNow.ToString("O"));
+                put.Parameters.AddWithValue("$v", pendingMarker);
+                if (put.ExecuteNonQuery() != 1)
+                    throw new InvalidOperationException("NOX_F01_WAL_WRITER_FIXTURE_HOLD");
+            }
+            snapshot = CheckpointSqlite(live, "SMOKE_ISOLATED");
+            using (var witness = new SqliteConnection(new SqliteConnectionStringBuilder {
+                DataSource = snapshot, Mode = SqliteOpenMode.ReadOnly, Pooling = false }.ToString()))
+            {
+                witness.Open();
+                using var pendingRow = witness.CreateCommand();
+                pendingRow.CommandText = "SELECT COUNT(*) FROM tasks WHERE title=$marker";
+                pendingRow.Parameters.AddWithValue("$marker", pendingMarker);
+                if (Convert.ToInt64(pendingRow.ExecuteScalar()) != 0)
+                    throw new InvalidOperationException("NOX_F01_WAL_UNCOMMITTED_VISIBLE_HOLD");
+            }
+            uncommitted.Rollback();
+        }
+        using (var sourceWitness = live.CreateCommand())
+        {
+            sourceWitness.CommandText = "SELECT COUNT(*) FROM tasks WHERE title=$marker";
+            sourceWitness.Parameters.AddWithValue("$marker", pendingMarker);
+            if (Convert.ToInt64(sourceWitness.ExecuteScalar()) != 0)
+                throw new InvalidOperationException("NOX_F01_WAL_ROLLBACK_FAILED_HOLD");
+        }
         string sha = Sha256File(snapshot);
         string expectedManifest = sha + "  " + Path.GetFileName(snapshot) + "\n";
         if (!string.Equals(File.ReadAllText(snapshot + ".sha256", Encoding.UTF8),
