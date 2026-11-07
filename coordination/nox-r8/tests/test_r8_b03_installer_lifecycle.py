@@ -27,6 +27,16 @@ assert ps.index("GuardPath $p") < ps.index("$hasher.ComputeHash($stream)")
 # receipt-addressed candidate for another reversible rollback; never orphan it.
 assert "SaveReceipt 'installed' $receipt.previous_sha256 '' ''" not in ps
 assert "SaveReceipt 'installed' $receipt.previous_sha256 ([IO.Path]::GetFileName($displaced)) $receipt.current_sha256" in ps
+# Rollback backup name must satisfy the existing strict previous_file
+# whitelist, allowing a second validated rollback in the other direction.
+assert "('NOX.HELION.previous.'+$receipt.current_sha256.ToUpperInvariant()+'.'" in ps
+assert "NOX.HELION.displaced.'+[guid]" not in ps
+# If receipt write/readback fails after atomic replace, restore the old
+# receipt before recovering the exact original managed binary.
+assert "$receiptReplaced = $true" in ps
+assert "[IO.File]::Replace($receiptBackup,$p,$rejected,$true)" in ps
+assert ps.index("[IO.File]::Replace($receiptBackup,$p,$rejected,$true)") < ps.index("function GuardManaged")
+
 assert "if ([IO.File]::Exists($target) -and" in ps
 assert "-not [IO.File]::Exists($old) -and" in ps
 assert "[IO.File]::Move($target,$old)" in ps

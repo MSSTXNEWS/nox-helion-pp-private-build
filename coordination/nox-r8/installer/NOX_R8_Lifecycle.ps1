@@ -54,14 +54,29 @@ function SaveReceipt([string]$state,[string]$sha,[string]$previous,[string]$prev
     }
     [IO.File]::WriteAllText($temp,($record|ConvertTo-Json),[Text.UTF8Encoding]::new($false))
     GuardPath $root
-    if ([IO.File]::Exists($p)) {
-        GuardPath $p
-        $old = Join-Path $root ('NOX_INSTALL_RECEIPT.previous.'+[guid]::NewGuid().ToString('N')+'.json')
-        [IO.File]::Replace($temp,$p,$old,$true)
-    } else { [IO.File]::Move($temp,$p) }
-    $check = ReadReceipt
-    if ($check.current_sha256 -ne $sha -or $check.state -ne $state) {
-        throw 'NOX_INSTALL_RECEIPT_READBACK_HOLD'
+    $receiptBackup = ''
+    $receiptReplaced = $false
+    try {
+        if ([IO.File]::Exists($p)) {
+            GuardPath $p
+            $receiptBackup = Join-Path $root ('NOX_INSTALL_RECEIPT.previous.'+[guid]::NewGuid().ToString('N')+'.json')
+            [IO.File]::Replace($temp,$p,$receiptBackup,$true)
+            $receiptReplaced = $true
+        } else { [IO.File]::Move($temp,$p) }
+        $check = ReadReceipt
+        if ($check.current_sha256 -ne $sha -or $check.state -ne $state) {
+            throw 'NOX_INSTALL_RECEIPT_READBACK_HOLD'
+        }
+    } catch {
+        # Restore the previously committed receipt before callers restore the
+        # former EXE. Preserve rejected bytes in an audit file, never erase.
+        if ($receiptReplaced -and [IO.File]::Exists($receiptBackup)) {
+            GuardPath $receiptBackup
+            GuardPath $p
+            $rejected = Join-Path $root ('NOX_INSTALL_RECEIPT.rejected.'+[guid]::NewGuid().ToString('N')+'.json')
+            [IO.File]::Replace($receiptBackup,$p,$rejected,$true)
+        }
+        throw
     }
 }
 function GuardManaged($receipt) {
@@ -146,7 +161,7 @@ try {
             if ((HashFile $old) -ne $receipt.previous_sha256) {
                 throw 'NOX_INSTALL_ROLLBACK_HASH_HOLD'
             }
-            $displaced = Join-Path $root ('NOX.HELION.displaced.'+[guid]::NewGuid().ToString('N')+'.exe')
+            $displaced = Join-Path $root ('NOX.HELION.previous.'+$receipt.current_sha256.ToUpperInvariant()+'.'+[guid]::NewGuid().ToString('N')+'.exe')
             [IO.File]::Move($target,$displaced)
             try {
                 [IO.File]::Move($old,$target)
