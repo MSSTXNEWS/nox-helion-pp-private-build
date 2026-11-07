@@ -62,10 +62,13 @@ def main():
         staged = checkout / "r8"
         staged_src = staged / "src"
         canonical_tests = checkout / "coordination" / "nox-r8" / "tests"
+        canonical_src = checkout / "coordination" / "nox-r8" / "overrides" / "src"
         staged_src.mkdir(parents=True)
         canonical_tests.mkdir(parents=True)
+        canonical_src.mkdir(parents=True)
         for name in ("MainWindow.xaml.cs", "index.html"):
             shutil.copyfile(OVERRIDES / name, staged_src / name)
+            shutil.copyfile(OVERRIDES / name, canonical_src / name)
 
         for name, stale_test_marker, stale_src_marker in CASES:
             canonical_test = canonical_tests / name
