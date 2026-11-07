@@ -1,0 +1,17 @@
+name: NOX R8 B05 NO-LOSS guard (staging only)
+on:
+  push:
+    branches: [work/b05-r8-noloss-installer-20261107]
+permissions:
+  contents: read
+jobs:
+  guard:
+    runs-on: windows-2022
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Exercise read-only installer guard with disposable fixtures
+        shell: pwsh
+        run: |
+          & ./coordination/nox-r8/installer/Test-NoLossGuard.ps1
+          if ($LASTEXITCODE -ne 0) { throw 'B05_GUARD_FAILED' }
