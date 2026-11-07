@@ -28,7 +28,7 @@ Add-Type -AssemblyName System.IO.Compression.FileSystem
 $z=[IO.Compression.ZipFile]::OpenRead((Resolve-Path -LiteralPath $Kit).Path)
 try{
  $names=@($z.Entries|ForEach-Object{$_.FullName})
- if($names.Count -ne 28 -or ($names|Sort-Object -Unique).Count -ne 28){
+ if($names.Count -ne 31 -or ($names|Sort-Object -Unique).Count -ne 31){
   throw 'WEB_ZIP_FILE_COUNT_OR_DUPLICATE_HOLD'
  }
  foreach($name in $names){
@@ -44,7 +44,7 @@ New-Item -ItemType Directory -Path $overlay -Force|Out-Null
 $mf=Join-Path $overlay 'NOX_WEB_STAGED_MANIFEST.json'
 if(!(Test-Path -LiteralPath $mf)){throw 'WEB_MANIFEST_MISSING_HOLD'}
 $manifest=Get-Content -LiteralPath $mf -Raw -Encoding UTF8|ConvertFrom-Json
-if($manifest.schema -ne 'NOX_WEB_11_22_STAGED_V1' -or @($manifest.files).Count -ne 27){
+if($manifest.schema -ne 'NOX_WEB_11_22_STAGED_V1' -or @($manifest.files).Count -ne 30){
  throw 'WEB_MANIFEST_SCHEMA_OR_FILE_COUNT_HOLD'
 }
 foreach($f in $manifest.files){
@@ -61,8 +61,18 @@ foreach($f in $manifest.files){
  Copy-Item -LiteralPath $src -Destination $dest -Force
  if((Get-FileHash -LiteralPath $dest -Algorithm SHA256).Hash -ne $actual){throw "WEB_PATCH_READBACK_HOLD: $name"}
 }
-# Original scene must be real pinned MIT shader, never substituted by a static dummy.
+# The original MIT shader and license are bundled with exact blob provenance.
+# No network downloads or static substitutions are necessary.
 $shader=Join-Path $stage 'vendor\radiant\eclipse-glow.html'
+$sourceShader=Join-Path $stage 'vendor\radiant\SOURCE-eclipse-glow.html'
+$license=Join-Path $stage 'vendor\radiant\LICENSE'
+foreach($p in @($shader,$sourceShader,$license)){
+ if(!(Test-Path -LiteralPath $p -PathType Leaf)){throw "WEB_PINNED_SHADER_FILE_MISSING_HOLD: $p"}
+}
+if(-not ([IO.File]::ReadAllText($license)).StartsWith('MIT License')){throw 'SHADER_LICENSE_HOLD'}
+if(-not ([IO.File]::ReadAllText($sourceShader)).Contains('<div class="label">Eclipse Glow</div>')){
+ throw 'SHADER_ORIGINAL_SOURCE_ID_HOLD'
+}
 if(!(Test-Path -LiteralPath $shader -PathType Leaf)){
  $shaderDir=Split-Path -Parent $shader
  New-Item -ItemType Directory -Path $shaderDir -Force|Out-Null
