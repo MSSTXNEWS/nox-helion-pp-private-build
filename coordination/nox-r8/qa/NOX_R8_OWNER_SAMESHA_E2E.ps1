@@ -151,6 +151,13 @@ try {
         @('real_webview2_eight_routes','real_webview2_keyboard_routes',
           'd01_five_quick_native_routes','d01_five_quick_windows_uia',
           'd01_five_quick_compact_320_390_800',
+          # F03: owner same-EXE acceptance must verify real WebView2 routes,
+          # Chromium keyboard input, injected GPU-loss fallback and emulated OS motion.
+          # These are native UI receipts; SOURCE_ONLY Node assertions cannot pass them.
+          'f03_compact_native_coreid_focus_320_390_800',
+          'f03_webview2_chromium_input_keyboard',
+          'f03_webview2_injected_gpu_context_fallback',
+          'f03_webview2_emulated_reduced_motion',
           'settings_windows_uia_host','settings_webview2_accessible_controls',
           'settings_wpf_owner_sqlite_readback','settings_wpf_motion_sqlite_readback',
           'settings_foreign_key_denial','sqlite_native_backup_no_loss',
