@@ -33,7 +33,7 @@ ShowInstDetails show
 ShowUninstDetails show
 
 !macro CheckMode MODE
- nsExec::ExecToStack '"$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$PLUGINSDIR\NoLossGuard.ps1" -Mode ${MODE} -InstallDir "$INSTDIR" -ExpectedExeSha "${NOX_EXE_SHA256}" -ExpectedReceiptSha "${NOX_RECEIPT_SHA256}" -ExpectedSourceSha "${NOX_SOURCE_GIT_SHA}" -PayloadDir "$PLUGINSDIR\payload"
+ nsExec::ExecToStack '"$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$PLUGINSDIR\NoLossGuard.ps1" -Mode ${MODE} -InstallDir "$INSTDIR" -ExpectedExeSha "${NOX_EXE_SHA256}" -ExpectedReceiptSha "${NOX_RECEIPT_SHA256}" -ExpectedSourceSha "${NOX_SOURCE_GIT_SHA}" -PayloadDir "$8"
  Pop $0
  Pop $1
  ${If} $0 != "0"
@@ -51,7 +51,8 @@ ShowUninstDetails show
 Function .onInit
  StrCpy $INSTDIR "$LOCALAPPDATA\Programs\NOX-HELION-R8\${NOX_EXE_SHA256}"
  InitPluginsDir
- CreateDirectory "$PLUGINSDIR\payload"
+ StrCpy $8 "$PLUGINSDIR\payload"
+ CreateDirectory "$8"
  File "/oname=$PLUGINSDIR\NoLossGuard.ps1" "${NOX_GUARD_PATH}"
  ; Validate bundled EXE and receipt before creating the per-user target.
  File "/oname=$PLUGINSDIR\payload\NOX.HELION.exe" "${NOX_EXE_PATH}"
@@ -76,6 +77,7 @@ SectionEnd
 
 Function un.onInit
  InitPluginsDir
+ StrCpy $8 "$PLUGINSDIR\payload"
  File "/oname=$PLUGINSDIR\NoLossGuard.ps1" "${NOX_GUARD_PATH}"
  !insertmacro CheckMode PreUninstall
 FunctionEnd
