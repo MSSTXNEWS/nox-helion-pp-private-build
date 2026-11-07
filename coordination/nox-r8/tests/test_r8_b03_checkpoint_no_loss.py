@@ -44,6 +44,24 @@ for guard in ("OverwritePrompt = false", "NOX_BACKUP_DESTINATION_EXISTS_HOLD",
 assert export.index("ValidateBackupParent(outputDirectory)") < export.index("FileMode.CreateNew")
 assert export.rindex("ValidateBackupParent(outputDirectory)") < export.index("File.Move(stage, target);")
 
+# The isolated *native Windows process* must exercise the real C# backup,
+# not only the Python sqlite3 fixture or a diagnostic claim.
+native = src.split("private void VerifyIsolatedSqliteBackup()", 1)[1].split(
+    "// Fail closed if any existing parent", 1)[0]
+for guard in (
+    "UiSmokeRequested", 'StartsWith("selftest_r8_"',
+    'CheckpointSqlite(live, "SMOKE_ISOLATED")',
+    'File.ReadAllText(snapshot + ".sha256", Encoding.UTF8)',
+    'Mode = SqliteOpenMode.ReadOnly, Pooling = false',
+    'NOX_B03_SMOKE_SNAPSHOT_ROWS_HOLD',
+    'NOX_B03_SMOKE_SOURCE_CHANGED_HOLD',
+    'NOX_B03_SMOKE_SHA_READBACK_HOLD'
+):
+    assert guard in native, "NOX_B03_NATIVE_SNAPSHOT_CONTRACT_HOLD:" + guard
+assert 'VerifyIsolatedSqliteBackup();' in src
+assert 'checks["sqlite_native_backup_no_loss"] = "PASS";' in src
+assert '"sqlite_native_backup_no_loss", "native_wpf_webview2_renderer"' in src
+
 # Run actual WAL + backup + integrity + SHA + immutable foreign file fixtures
 # on an isolated temporary SQLite database; no production files are touched.
 with tempfile.TemporaryDirectory(prefix="nox_b03_") as folder:
