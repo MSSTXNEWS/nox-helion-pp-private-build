@@ -19,7 +19,7 @@ const sent=[];let offline=false,n=0;
 const post=(type,data)=>{if(offline)return false;sent.push({type,...data});return true};
 const nextChatId=()=>('req-owner-'+(++n));
 const owner=new Function('$','post','nextChatId',
-  'let pendingVuneo=null;'+dispatcher+
+  'let pendingVuneo=null;let vuneoImportUncertain=false;'+dispatcher+
   "function receive(type,v){switch(type){"+cases+"}};"+
   "return {click:()=> $('vuneoImport').onclick(),receive,pending:()=>pendingVuneo};"
 )($,post,nextChatId);
@@ -91,3 +91,34 @@ assert.ok(consentAt<preimageAt&&preimageAt<importAt&&importAt<committedAt&&commi
 assert.ok(vuneoMethod.includes('if (!importCompleted)') &&
           vuneoMethod.indexOf('if (!importCompleted)')>refreshAt,
   'post-import notification faults must not emit false import-denied');
+
+
+// D03 R8: an importer exception after entering KnowledgeStore does NOT prove a
+// rollback. The renderer must keep unknown state distinct from owner refusal,
+// hold an uncertain import instead of inviting a potentially duplicating retry,
+// and accept only the matching native requestId with verified backup.
+assert.ok(vuneoMethod.includes('bool importAttempted = false;'));
+assert.ok(vuneoMethod.indexOf('CheckpointSqlite(db, "PRE_VUNEO_IMPORT")') <
+          vuneoMethod.indexOf('importAttempted = true;'));
+assert.ok(vuneoMethod.indexOf('importAttempted = true;') <
+          vuneoMethod.indexOf('knowledge.ImportVuneoStaging()'));
+assert.ok(vuneoMethod.includes('if (importAttempted)') &&
+          vuneoMethod.includes('Send("knowledge.vuneo.unknown"'));
+assert.ok(vuneoMethod.includes('NOX_VUNEO_COMMIT_UNKNOWN_HOLD'));
+assert.ok(vuneoMethod.includes('else\n                        Send("knowledge.vuneo.denied"'));
+const unknownScript=html.slice(html.indexOf("case 'knowledge.vuneo.unknown':"),html.indexOf("case 'knowledge.vuneo.denied':"));
+assert.ok(unknownScript.includes('vuneoImportUncertain=true'));
+assert.ok(unknownScript.includes("v?.requestId!==pendingVuneo.requestId"));
+offline=false;
+assert.equal(owner.click(),true,'owner action after failed WebView2 transport');
+const uncertainId=sent.at(-1).requestId;
+owner.receive('knowledge.vuneo.unknown',{requestId:'stale',reason:'NOX_VUNEO_COMMIT_UNKNOWN_HOLD',backupVerified:true});
+assert.ok(owner.pending(),'foreign/late receipt cannot settle owner import');
+owner.receive('knowledge.vuneo.unknown',{requestId:uncertainId,reason:'NOX_VUNEO_COMMIT_UNKNOWN_HOLD',backupVerified:false});
+assert.ok(owner.pending(),'unverified backup may not admit unknown receipt');
+owner.receive('knowledge.vuneo.unknown',{requestId:uncertainId,reason:'NOX_VUNEO_COMMIT_UNKNOWN_HOLD',backupVerified:true});
+assert.equal(owner.pending(),null);
+assert.equal(nodes.vuneoImport.disabled,true,'unknown SQLite outcome prevents an immediate replay');
+assert.match(nodes.vuneoImportStatus.textContent,/NOX_VUNEO_COMMIT_UNKNOWN_HOLD/);
+assert.equal(owner.click(),false,'programmatic handler cannot bypass disabled button');
+console.log('D03 R8 SOURCE_ONLY: unknown partial import fail-closed / requestId / verified SQLite preimage PASS');

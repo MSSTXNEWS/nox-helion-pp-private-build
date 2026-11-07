@@ -326,6 +326,7 @@ body.reduced .helion-fx{filter:none}body.reduced .core.active{animation:none}
 'use strict';
 const $=id=>document.getElementById(id);const post=(type,data={})=>{const bridge=window.chrome?.webview;if(typeof bridge?.postMessage!=='function'){$('status').textContent='NATIVE BRIDGE OFFLINE';return false}try{bridge.postMessage({type,...data});return true}catch{$('status').textContent='NATIVE BRIDGE DISPATCH FAILED';return false}};
 let responseBox=null,lastAnswer='',busy=false,settingsDenial='',activeChatId=null,requestSequence=0,pendingTask=null,pendingNote=null,pendingNoteDelete=null,pendingTaskToggle=null,pendingModel=null,committedModel="",pendingSettings=null,committedSettings={},pendingVuneo=null;
+let vuneoImportUncertain=false; // Fail closed after unknown SQLite import outcome.
 // A persona switch must not expose previous chat/notes, or save an unsent
 // note under a different Persona. Drafts stay local to this WebView2 session.
 let visiblePersona=null;const noteDrafts=new Map();
@@ -372,7 +373,7 @@ $('saveMotion').onclick=()=>saveSetting('motion',$('reduceMotion').checked?'off'
 $('savePerformance').onclick=()=>saveSetting('performance',$('performance').value);
 $('saveContext').onclick=()=>saveSetting('context',$('useContext').checked?'on':'off');$('backup').onclick=()=>post('backup');$('knowledgeImport').onclick=()=>post('knowledge.import');
 $('vuneoImport').onclick=()=>{
-  if(pendingVuneo)return false;
+  if(pendingVuneo||vuneoImportUncertain)return false;
   const requestId=nextChatId();pendingVuneo={requestId};
   $('vuneoImport').disabled=true;
   $('vuneoImportStatus').textContent='Ожидание нативного подтверждения владельца; импорт не завершён';
@@ -450,6 +451,14 @@ case 'knowledge.vuneo.result':{
   if(!pendingVuneo||v?.requestId!==pendingVuneo.requestId||v?.backupVerified!==true)break;
   pendingVuneo=null;$('vuneoImport').disabled=false;
   $('vuneoImportStatus').textContent='Нативный ответ получен; резервная копия SQLite проверена. Состояние индекса — в статистике.';
+  break;
+}
+case 'knowledge.vuneo.unknown':{
+  if(!pendingVuneo||v?.requestId!==pendingVuneo.requestId||
+     v?.reason!=='NOX_VUNEO_COMMIT_UNKNOWN_HOLD'||v?.backupVerified!==true)break;
+  // Partial import may already exist: no automatic retry in this process.
+  pendingVuneo=null;vuneoImportUncertain=true;$('vuneoImport').disabled=true;
+  $('vuneoImportStatus').textContent='NOX_VUNEO_COMMIT_UNKNOWN_HOLD: результат импорта неопределён; повтор заблокирован до перезапуска. Проверьте локальную SQLite и статистику.';
   break;
 }
 case 'knowledge.vuneo.denied':{

@@ -2177,6 +2177,9 @@ public partial class MainWindow : Window
         }
 
         bool importCompleted = false;
+        // KnowledgeStore can fail after a partial SQLite write; only an independent
+        // acceptance check may claim all imported rows or assert no mutation.
+        bool importAttempted = false;
         try {
             var consent = MessageBox.Show(this,
                 "Перенести сохранённые текстовые записи памяти и решений VUNEO из резервной SQLite в локальный индекс NOX? Оригинальные файлы не изменяются; чувствительные записи будут пропущены.",
@@ -2186,6 +2189,7 @@ public partial class MainWindow : Window
                 return;
             }
             using (var db = OpenDatabase()) CheckpointSqlite(db, "PRE_VUNEO_IMPORT");
+            importAttempted = true;
             var result = knowledge.ImportVuneoStaging();
             importCompleted = true;
             Send("knowledge.vuneo.result", new { requestId, backupVerified = true, result });
@@ -2198,10 +2202,19 @@ public partial class MainWindow : Window
             }
         }
         catch (Exception) {
-            // A completed import is never described as denied merely because
-            // a WebView2 receipt could not be delivered during shutdown.
-            if (!importCompleted)
-                Send("knowledge.vuneo.denied", new { requestId, reason = "NOX_VUNEO_IMPORT_HOLD" });
+            // Once the importer was entered it might have COMMITted some rows.
+            // Never report "denied/no import" without verifying that outcome.
+            if (!importCompleted) {
+                try {
+                    if (importAttempted)
+                        Send("knowledge.vuneo.unknown", new {
+                            requestId, backupVerified = true,
+                            reason = "NOX_VUNEO_COMMIT_UNKNOWN_HOLD" });
+                    else
+                        Send("knowledge.vuneo.denied", new {
+                            requestId, reason = "NOX_VUNEO_IMPORT_HOLD" });
+                } catch (Exception) { /* WebView2 could already be closed. */ }
+            }
         }
     }
 
