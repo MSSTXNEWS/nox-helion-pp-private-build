@@ -444,9 +444,12 @@ console.log('D01 SOURCE_ONLY PASS: Qwen failed/STOP retry with original input, S
       'prompt','taskInput','persona','performance'].map(id=>[id,{value:''}]));
     for(const id of ['taskAdd','noteAdd'])nodes[id]={disabled:true};
     nodes.status={textContent:''};nodes.personaStatus={textContent:''};
+     for(const id of ['messages','history','notes','memoryResults','knowledgeResults'])nodes[id]={replaceChildren(){}};
+     nodes.generation={classList:{remove(){}}};
     nodes.useContext={checked:true};nodes.reduceMotion={checked:false};
     const $=id=>{if(!nodes[id])throw Error('MISSING_'+id);return nodes[id]};
-    const window={noxVisual:{setMode(){}}};
+    const window={noxVisual:{setMode(){},setEnergy(){}}};
+     const post=()=>true;let lastAnswer='',responseBox=null,busy=false,activeChatId=null;
     const document={body:{classList:{toggle(){}}}};
     let committedSettings={persona:'KV'},visibleDraftPersona='KV';
     let pendingTask={requestId:'task-kv',text:'SAME',persona:'KV'};
@@ -498,7 +501,7 @@ console.log('D01 SOURCE_ONLY PASS: Qwen failed/STOP retry with original input, S
   assert.ok(swStart>0 && swEnd>swStart && sendStart>0 && sendEnd>sendStart
     && completeStart>0 && completeEnd>completeStart,'D01_PERSONA_CHAT_PRODUCTION_SOURCE_MISSING');
   const production = "let responseBox=null,lastAnswer='',busy=false,activeChatId=null,"+
-    "pendingChatDraft=null,visibleDraftPersona='KV';const personaDrafts=new Map();"+
+    "pendingChatDraft=null,visibleDraftPersona='KV';const personaDrafts=new Map();"+guardLine+
     html.slice(swStart,swEnd)+"\n"+html.slice(sendStart,sendEnd)+
     "\nfunction complete(v){switch('complete'){"+
     html.slice(completeStart,completeEnd)+
