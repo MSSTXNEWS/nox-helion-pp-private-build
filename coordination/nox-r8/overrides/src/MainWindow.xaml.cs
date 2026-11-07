@@ -1233,7 +1233,7 @@ public partial class MainWindow : Window
                 case "knowledge.search": Send("knowledge.results", knowledge.Search(Text("query"))); break;
                 case "knowledge.stats": Send("knowledge.stats", knowledge.Stats()); break;
                 case "knowledge.import": ImportKnowledgeByDialog(); break;
-                case "knowledge.vuneo": ImportVuneoByConsent(); break;
+                case "knowledge.vuneo": ImportVuneoByConsent(Text("requestId")); break;
                 case "system.status": Send("system", GetSystemState()); break;
                 default: Send("error", "Unknown operation: " + kind); break;
             }
@@ -2130,15 +2130,33 @@ public partial class MainWindow : Window
         finally { activeModelPull = null; }
     }
 
-    private void ImportVuneoByConsent()
+    // The original WPF owner alone grants VUNEO consent. A correlated result
+    // requires a verified WAL-aware preimage, completed import and stats read.
+    // Dispatch is not success; cancellation never mutates the knowledge index.
+    private void ImportVuneoByConsent(string requestId)
     {
-        var consent = MessageBox.Show(this,
-            "Перенести сохранённые текстовые записи памяти и решений VUNEO из резервной SQLite в локальный индекс NOX? Оригинальные файлы не изменяются; чувствительные записи будут пропущены.",
-            "NOX — импорт VUNEO", MessageBoxButton.YesNo, MessageBoxImage.Question);
-        if (consent != MessageBoxResult.Yes) return;
-        using (var db = OpenDatabase()) CheckpointSqlite(db, "PRE_VUNEO_IMPORT");
-        Send("knowledge.vuneo.result", knowledge.ImportVuneoStaging());
-        Send("knowledge.stats", knowledge.Stats());
+        if (!ValidWriteRequestId(requestId)) {
+            Send("knowledge.vuneo.denied", new { requestId, reason = "NOX_VUNEO_REQUEST_ID_HOLD" });
+            return;
+        }
+        try {
+            var consent = MessageBox.Show(this,
+                "Перенести сохранённые текстовые записи памяти и решений VUNEO из резервной SQLite в локальный индекс NOX? Оригинальные файлы не изменяются; чувствительные записи будут пропущены.",
+                "NOX — импорт VUNEO", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No);
+            if (consent != MessageBoxResult.Yes) {
+                Send("knowledge.vuneo.denied", new { requestId, reason = "OWNER_DECLINED" });
+                return;
+            }
+            using (var db = OpenDatabase()) CheckpointSqlite(db, "PRE_VUNEO_IMPORT");
+            var result = knowledge.ImportVuneoStaging();
+            var stats = knowledge.Stats();
+            Send("knowledge.stats", stats);
+            Send("knowledge.vuneo.result", new { requestId, backupVerified = true, result });
+        }
+        catch (Exception) {
+            // Never expose private source paths or claim success on failure.
+            Send("knowledge.vuneo.denied", new { requestId, reason = "NOX_VUNEO_IMPORT_HOLD" });
+        }
     }
 
     private void ImportKnowledgeByDialog()

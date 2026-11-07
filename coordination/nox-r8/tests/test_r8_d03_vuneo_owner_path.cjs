@@ -1,0 +1,60 @@
+'use strict';
+// D03: real original R8 WebView2 handler + original WPF owner source checks.
+// SOURCE_ONLY: this does not compile C# or verify a local Windows EXE.
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
+const root=path.join(__dirname,'..','overrides','src');
+const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
+const native=fs.readFileSync(path.join(root,'MainWindow.xaml.cs'),'utf8');
+assert.equal((html.match(/id="vuneoImport"/g)||[]).length,1,'one native-VUNEO control');
+const start=html.indexOf("$('vuneoImport').onclick=()=>{"),end=html.indexOf("\n};",start);
+assert.ok(start>0&&end>start,'original VUNEO onclick missing');
+const dispatcher=html.slice(start,end+3);
+const first=html.indexOf("case 'knowledge.vuneo.result':");
+const last=html.indexOf("case 'knowledge.stats':",first);
+assert.ok(first>0&&last>first,'correlated owner receipts missing');
+const cases=html.slice(first,last);
+const nodes={vuneoImport:{disabled:false},vuneoImportStatus:{textContent:''}};
+const $=id=>nodes[id];
+const sent=[];let offline=false,n=0;
+const post=(type,data)=>{if(offline)return false;sent.push({type,...data});return true};
+const nextChatId=()=>('req-owner-'+(++n));
+const owner=new Function('$','post','nextChatId',
+  'let pendingVuneo=null;'+dispatcher+
+  "function receive(type,v){switch(type){"+cases+"}};"+
+  "return {click:()=> $('vuneoImport').onclick(),receive,pending:()=>pendingVuneo};"
+)($,post,nextChatId);
+assert.equal(owner.click(),true,'user action must reach original native owner');
+assert.equal(sent.length,1);
+assert.equal(sent[0].type,'knowledge.vuneo');
+const requestId=sent[0].requestId;
+assert.equal(nodes.vuneoImport.disabled,true,'prevent duplicate owner actions');
+assert.equal(owner.click(),false);assert.equal(sent.length,1,'duplicate dispatch');
+owner.receive('knowledge.vuneo.result',{requestId:'stale',backupVerified:true});
+assert.ok(owner.pending(),'stale native result must not settle pending');
+owner.receive('knowledge.vuneo.result',{requestId,backupVerified:false});
+assert.ok(owner.pending(),'unverified backup cannot be success');
+owner.receive('knowledge.vuneo.denied',{requestId,reason:'OWNER_DECLINED'});
+assert.equal(nodes.vuneoImport.disabled,false);
+assert.equal(nodes.vuneoImportStatus.textContent,'Импорт отменён владельцем.');
+assert.equal(owner.click(),true);
+owner.receive('knowledge.vuneo.result',{requestId:sent[1].requestId,backupVerified:true});
+assert.equal(nodes.vuneoImport.disabled,false);
+assert.match(nodes.vuneoImportStatus.textContent,/резервная копия SQLite проверена/);
+offline=true;
+assert.equal(owner.click(),false,'broken WebView2 must fail closed');
+assert.equal(nodes.vuneoImportStatus.textContent,'NOX_VUNEO_NATIVE_DISPATCH_HOLD');
+assert.equal(owner.pending(),null);
+const route=native.indexOf('case "knowledge.vuneo": ImportVuneoByConsent(Text("requestId"));');
+const method=native.indexOf('private void ImportVuneoByConsent(string requestId)');
+assert.ok(route>=0&&method>route,'original WPF owner route');
+const block=native.slice(method,native.indexOf('private void ImportKnowledgeByDialog',method));
+for(const expected of ['ValidWriteRequestId(requestId)','MessageBox.Show(this',
+  'if (consent != MessageBoxResult.Yes)','CheckpointSqlite(db, "PRE_VUNEO_IMPORT")',
+  'knowledge.ImportVuneoStaging()','knowledge.Stats()',
+  'Send("knowledge.vuneo.result"','Send("knowledge.vuneo.denied"'])
+  assert.ok(block.includes(expected),expected+' missing');
+assert.ok(block.indexOf('CheckpointSqlite(db, "PRE_VUNEO_IMPORT")')<
+  block.indexOf('knowledge.ImportVuneoStaging()'),'preimage must precede mutation');
+assert.ok(block.indexOf('knowledge.ImportVuneoStaging()')<
+  block.indexOf('Send("knowledge.vuneo.result"'),'success requires completed owner work');
+console.log('D03 R8 SOURCE_ONLY original VUNEO owner consent/backup/receipt PASS');
