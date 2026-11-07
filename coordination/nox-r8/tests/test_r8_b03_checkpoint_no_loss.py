@@ -8,7 +8,17 @@ import tempfile
 from contextlib import closing
 from pathlib import Path
 
-src = (Path(__file__).resolve().parent / "src" / "MainWindow.xaml.cs").read_text(encoding="utf-8")
+# Accept both the checked-in repository layout and the CI source-staging layout.
+# Prefer the authentic R8 WPF override if both layouts happen to exist; never
+# silently accept a missing or unrelated source file as a passing regression.
+test_dir = Path(__file__).resolve().parent
+candidates = (
+    test_dir.parent / "overrides" / "src" / "MainWindow.xaml.cs",
+    test_dir / "src" / "MainWindow.xaml.cs",
+)
+source_file = next((p for p in candidates if p.is_file()), None)
+assert source_file is not None, "NOX_B03_SOURCE_PATH_HOLD"
+src = source_file.read_text(encoding="utf-8")
 checkpoint = src.split("private string CheckpointSqlite(", 1)[1].split("private static bool HasPersonaColumn(", 1)[0]
 export = src.split("private void BackupLocalDatabase()", 1)[1].split("// An explicit native consent gate", 1)[0]
 for phrase in (
