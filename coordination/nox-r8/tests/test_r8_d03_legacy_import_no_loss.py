@@ -1,7 +1,16 @@
 """D03 R8 native SQLite legacy import: structural source guard + isolated SQLite rollback oracle."""
 from pathlib import Path
 import sqlite3, tempfile, json
-cs=(Path(__file__).resolve().parents[1]/'overrides'/'src'/'MainWindow.xaml.cs').read_text(encoding='utf8')
+# The repository tests/ layout and CI's copied r8/ layout must both use
+# the real native WPF source. Fail closed on missing or ambiguous sources.
+here = Path(__file__).resolve().parent
+sources = [
+    here / 'src' / 'MainWindow.xaml.cs',  # Windows CI: tests copied into r8/
+    here.parent / 'overrides' / 'src' / 'MainWindow.xaml.cs',  # repository tree
+]
+present = [path for path in sources if path.is_file()]
+assert len(present) == 1, 'NOX_D03_NATIVE_SOURCE_LAYOUT_HOLD'
+cs = present[0].read_text(encoding='utf8')
 m=cs.split('private void ImportLegacyJsonlIfNeeded(',1)[1].split('private async void OnMessage(',1)[0]
 assert m.index('CheckpointSqlite(db, "PRE_LEGACY_IMPORT")') < m.index('db.BeginTransaction()')
 assert m.index('if (skipped != 0') < m.index('receipt.CommandText') < m.index('tx.Commit()')
