@@ -914,6 +914,38 @@ public partial class MainWindow : Window
     private void InitializeDatabase()
     {
         using var db = OpenDatabase();
+
+        // B03 NO-LOSS: the bootstrap DDL and PRAGMA journal_mode below can mutate
+        // an existing legacy SQLite file *before* MigratePersonaStorage takes its
+        // separate backup. Guard those mutations with a verified WAL-safe snapshot.
+        // Never create a snapshot for a fresh empty database or on each unchanged launch.
+        var knownObjects = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        bool existingTables = false;
+        using (var inventory = db.CreateCommand())
+        {
+            inventory.CommandText =
+                "SELECT type,name FROM sqlite_master WHERE type IN ('table','index') AND name NOT LIKE 'sqlite_%'";
+            using var objects = inventory.ExecuteReader();
+            while (objects.Read())
+            {
+                if (objects.GetString(0) == "table") existingTables = true;
+                knownObjects.Add(objects.GetString(1));
+            }
+        }
+        if (existingTables && !selfTestRequested)
+        {
+            string[] needed = {
+                "chat_history", "tasks", "preferences", "imported_sources",
+                "memory_notes", "feedback", "learn_requests",
+                "idx_learn_pending_owner", "idx_chat_history_time"
+            };
+            using var journal = db.CreateCommand();
+            journal.CommandText = "PRAGMA journal_mode";
+            string previousJournalMode = journal.ExecuteScalar()?.ToString() ?? "";
+            if (needed.Any(name => !knownObjects.Contains(name)) ||
+                !string.Equals(previousJournalMode, "wal", StringComparison.OrdinalIgnoreCase))
+                CheckpointSqlite(db, "PRE_SCHEMA_BOOTSTRAP");
+        }
         using var command = db.CreateCommand();
         command.CommandText = """
           PRAGMA journal_mode=WAL;

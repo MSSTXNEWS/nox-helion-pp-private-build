@@ -62,6 +62,19 @@ assert 'VerifyIsolatedSqliteBackup();' in src
 assert 'checks["sqlite_native_backup_no_loss"] = "PASS";' in src
 assert '"sqlite_native_backup_no_loss", "native_wpf_webview2_renderer"' in src
 
+# The first bootstrap must protect a partially populated *existing* database
+# before CREATE TABLE / CREATE INDEX / journal-mode changes, not merely before
+# the later Persona migration. Avoid an unbounded backup on every healthy launch.
+init = src.split("private void InitializeDatabase()", 1)[1].split("// Owner-only SQLite", 1)[0]
+for guard in ("SELECT type,name FROM sqlite_master", "existingTables && !selfTestRequested",
+              "PRAGMA journal_mode", 'CheckpointSqlite(db, "PRE_SCHEMA_BOOTSTRAP")',
+              '"idx_learn_pending_owner", "idx_chat_history_time"'):
+    assert guard in init, "NOX_B03_PRE_SCHEMA_SNAPSHOT_HOLD:" + guard
+assert init.index('CheckpointSqlite(db, "PRE_SCHEMA_BOOTSTRAP")') < init.index('command.CommandText = """')
+assert init.index('SELECT type,name FROM sqlite_master') < init.index('CheckpointSqlite(db, "PRE_SCHEMA_BOOTSTRAP")')
+assert 'if (existingTables && !selfTestRequested)' in init
+assert 'needed.Any(name => !knownObjects.Contains(name))' in init
+
 # Run actual WAL + backup + integrity + SHA + immutable foreign file fixtures
 # on an isolated temporary SQLite database; no production files are touched.
 with tempfile.TemporaryDirectory(prefix="nox_b03_") as folder:
