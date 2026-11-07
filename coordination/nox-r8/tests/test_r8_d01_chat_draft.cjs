@@ -112,3 +112,36 @@ assert.equal(rejected.scope.activeChatId,null);
 assert.match(rejected.nodes.status.textContent,/DISPATCH FAILED/);
 assert.match(rejected.nodes.streamHint.textContent,/Черновик сохранён/);
 console.log('D01 R8 SOURCE_ONLY PASS: native post missing/throw fail closed, no draft loss, no retry');
+
+
+/* D01: execute the production route function with a compact/desktop scroll
+   fixture. This checks user-visible navigation behavior, not native UIA. */
+const routeStart = html.indexOf('function route(id){');
+const routeEnd = html.indexOf("\ndocument.querySelectorAll('[data-route]')", routeStart);
+assert.ok(routeStart > 0 && routeEnd > routeStart, 'D01_ORIGINAL_ROUTE_MISSING');
+const actualRoute = html.slice(routeStart, routeEnd);
+function routeAtWidth(compact) {
+  const scroll = {scrollTop: 460}, title={textContent:''};
+  const node = {
+    dataset:{route:'core',panel:'core'},
+    classList:{toggle(){}},
+    setAttribute(){},removeAttribute(){}
+  };
+  const document = {
+    querySelectorAll(sel) {
+      if(sel === '.core[data-route]' || sel === '.panel[data-panel]') return [node];
+      return [];
+    },
+    querySelector(sel){return sel === 'aside.side' ? scroll : null;}
+  };
+  const window = {matchMedia: () => ({matches:compact})};
+  const post = () => {throw new Error('CORE_ROUTE_SHOULD_NOT_START_NATIVE_ACTION');};
+  const run = new Function('document','window','$','post','headings',
+    actualRoute + "\nreturn route('core');");
+  assert.equal(run(document,window,()=>title,post,{core:'CORE / LIVE CHAT'}),true);
+  assert.equal(title.textContent,'CORE / LIVE CHAT');
+  return scroll.scrollTop;
+}
+assert.equal(routeAtWidth(true),0,'D01_COMPACT_ROUTE_MUST_REVEAL_NAVIGATION');
+assert.equal(routeAtWidth(false),460,'D01_DESKTOP_ROUTE_MUST_PRESERVE_SCROLL');
+console.log('D01 R8 SOURCE_ONLY PASS: compact route restores visible navigation; desktop unchanged');

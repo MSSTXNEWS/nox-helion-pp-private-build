@@ -32,7 +32,7 @@ jobs:
           Copy-Item './coordination/nox-r8/tests/test_r8_persona_memory.py' './r8/test_r8_persona_memory.py'
           python './r8/test_r8_persona_memory.py'
           if ($LASTEXITCODE -ne 0) { throw 'D03_PERSONA_MEMORY_SOURCE_HOLD' }
-          # D03 staged: actual legacy JSONL admission must snapshot first and fail closed.
+          # D03: legacy JSONL acceptance needs an atomic SQLite rollback oracle.
           Copy-Item './coordination/nox-r8/tests/test_r8_d03_legacy_import_no_loss.py' './r8/test_r8_d03_legacy_import_no_loss.py'
           python './r8/test_r8_d03_legacy_import_no_loss.py'
           if ($LASTEXITCODE -ne 0) { throw 'D03_LEGACY_JSONL_NO_LOSS_SOURCE_HOLD' }
@@ -80,11 +80,15 @@ jobs:
                 $stamp -lt $started -or !$n.wpfWebView2Accepted -or
                 $n.checks.real_webview2_eight_routes -ne 'PASS' -or
                 $n.checks.real_webview2_keyboard_routes -ne 'PASS' -or
+                $n.checks.d01_five_quick_native_routes -ne 'PASS' -or
+                $n.checks.d01_five_quick_windows_uia -ne 'PASS' -or
+                $n.checks.d01_five_quick_compact_320_390_800 -ne 'PASS' -or
                 $n.checks.settings_windows_uia_host -ne 'PASS' -or
                 $n.checks.settings_webview2_accessible_controls -ne 'PASS' -or
                 $n.checks.settings_wpf_owner_sqlite_readback -ne 'PASS' -or
                 $n.checks.settings_wpf_motion_sqlite_readback -ne 'PASS' -or
                 $n.checks.settings_foreign_key_denial -ne 'PASS' -or
+                $n.checks.sqlite_native_backup_no_loss -ne 'PASS' -or
                 $n.checks.isolated_sqlite_path -ne 'PASS' -or
                 $n.checks.native_wpf_webview2_renderer -ne 'PASS' -or
                 ![string]::Equals($n.exeSha256,$sha,[StringComparison]::OrdinalIgnoreCase)) {
