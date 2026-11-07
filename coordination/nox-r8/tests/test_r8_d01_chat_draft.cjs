@@ -417,3 +417,61 @@ console.log('D01 SOURCE_ONLY PASS: 8 CoreID focus, IME/modified/repeat navigatio
     'Новый несохранённый текст','D01_FAILURE_OVERWROTE_NEW_COMPOSER');
 }
 console.log('D01 SOURCE_ONLY PASS: Qwen failed/STOP retry with original input, SQLite ACK, and concurrent draft');
+
+/* D01 2026-11-07: production receipt source must not erase another PersonaID's
+   identical unsent task/note draft. Also cover SQLite startup persona hydration.
+   SOURCE_ONLY: actual owner Windows/SQLite E2E requires frozen EXE SHA. */
+{
+  const swStart=html.indexOf('function switchPersonaDrafts(next){');
+  const swEnd=html.indexOf('\nfunction route(id){',swStart);
+  const apStart=html.indexOf('function applyCommittedSettings(v){');
+  const apEnd=html.indexOf('\nfunction saveSetting',apStart);
+  const taskAck=html.split('\n').find(line=>line.startsWith("case 'tasks.add.receipt':"));
+  const noteAck=html.split('\n').find(line=>line.startsWith("case 'notes.add.receipt':"));
+  assert.ok(swStart>0 && swEnd>swStart && apStart>0 && apEnd>apStart && taskAck && noteAck,
+    'D01_PERSONA_RECEIPT_ORIGINAL_SOURCE_MISSING');
+  const realSource = `
+    const nodes=Object.fromEntries(['noteTitle','noteText','memoryQuery','knowledgeQuery',
+      'prompt','taskInput','persona','performance'].map(id=>[id,{value:''}]));
+    for(const id of ['taskAdd','noteAdd'])nodes[id]={disabled:true};
+    nodes.status={textContent:''};nodes.personaStatus={textContent:''};
+    nodes.useContext={checked:true};nodes.reduceMotion={checked:false};
+    const $=id=>{if(!nodes[id])throw Error('MISSING_'+id);return nodes[id]};
+    const window={noxVisual:{setMode(){}}};
+    const document={body:{classList:{toggle(){}}}};
+    let committedSettings={persona:'KV'},visibleDraftPersona='KV';
+    let pendingTask={requestId:'task-kv',text:'SAME',persona:'KV'};
+    let pendingNote={requestId:'note-kv',title:'SAME',content:'SAME',persona:'KV'};
+    const personaDrafts=new Map();
+    ${html.slice(swStart,swEnd)}
+    ${html.slice(apStart,apEnd)}
+    nodes.noteTitle.value='KV-TITLE';nodes.noteText.value='KV-TEXT';
+    switchPersonaDrafts('AM');
+    if(nodes.noteTitle.value!=='')throw Error('D01_FOREIGN_DRAFT_VISIBLE');
+    nodes.taskInput.value='SAME';nodes.noteTitle.value='SAME';nodes.noteText.value='SAME';
+    let v={requestId:'task-kv',saved:true};
+    switch('tasks.add.receipt'){${taskAck}}
+    v={requestId:'note-kv',saved:true};
+    switch('notes.add.receipt'){${noteAck}}
+    if([nodes.taskInput.value,nodes.noteTitle.value,nodes.noteText.value]
+      .some(x=>x!=='SAME'))throw Error('D01_FOREIGN_RECEIPT_ERASED_UNSENT_DRAFT');
+    if(pendingTask||pendingNote||nodes.taskAdd.disabled||nodes.noteAdd.disabled)
+      throw Error('D01_PENDING_NOT_RELEASED');
+    pendingTask={requestId:'task-am',text:'SAME',persona:'AM'};
+    pendingNote={requestId:'note-am',title:'SAME',content:'SAME',persona:'AM'};
+    nodes.taskAdd.disabled=true;nodes.noteAdd.disabled=true;
+    v={requestId:'task-am',saved:true};switch('tasks.add.receipt'){${taskAck}}
+    v={requestId:'note-am',saved:true};switch('notes.add.receipt'){${noteAck}}
+    if([nodes.taskInput.value,nodes.noteTitle.value,nodes.noteText.value]
+      .some(x=>x!==''))throw Error('D01_OWN_RECEIPT_NOT_CLEARED');
+    nodes.prompt.value='AM private chat';
+    applyCommittedSettings({persona:'LA',performance:'BALANCED',context:'on',motion:'on'});
+    if(visibleDraftPersona!=='LA'||nodes.prompt.value!==''||
+      personaDrafts.get('AM').prompt!=='AM private chat')
+      throw Error('D01_SETTINGS_PERSONA_HYDRATION_FAILED');
+    return 'PASS';
+  `;
+  assert.equal(vm.runInNewContext(realSource,{}, {timeout:1500}),'PASS',
+    'D01_PERSONA_PENDING_RECEIPT_NO_LOSS_SOURCE_HOLD');
+  console.log('D01 SOURCE_ONLY PASS: foreign PersonaID ACK isolation, own ACK clear, startup SQLite persona');
+}
