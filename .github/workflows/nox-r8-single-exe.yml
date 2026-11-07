@@ -1,7 +1,7 @@
 name: NOX R8 Windows desktop compilation
 on:
   push:
-    branches: [feature/nox-r8-liquid-one-exe-20261106]
+    branches: [feature/nox-r8-liquid-one-exe-20261106, work/b01-r8-source-manifest-20261107]
   workflow_dispatch:
 permissions:
   contents: read
@@ -31,6 +31,30 @@ jobs:
           # D05 native source from same R8 branch; base archive remains SHA-pinned.
           Copy-Item './coordination/nox-r8/overrides/src/MainWindow.xaml.cs' './r8/src/MainWindow.xaml.cs' -Force
           Copy-Item './coordination/nox-r8/overrides/src/index.html' './r8/src/index.html' -Force
+          # B01: authoritative immutable inventory of actual expanded + Git-overlaid WPF sources.
+          # This is cloud-build provenance, NOT an owner NOX_NEW source-parity claim.
+          $srcRoot=(Resolve-Path './r8/src').Path
+          $sourceFiles=@(Get-ChildItem -LiteralPath $srcRoot -File -Recurse |
+            Where-Object {
+              $rel=[IO.Path]::GetRelativePath($srcRoot,$_.FullName).Replace('\\','/')
+              $rel -notmatch '(^|/)(bin|obj)(/|$)'
+            } | Sort-Object FullName)
+          if ($sourceFiles.Count -lt 3) { throw 'R8_PROVENANCE_EMPTY_SOURCE_HOLD' }
+          $sourceRows=@($sourceFiles | ForEach-Object {
+            [ordered]@{
+              path=[IO.Path]::GetRelativePath($srcRoot,$_.FullName).Replace('\\','/')
+              bytes=[long]$_.Length
+              sha256=(Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+            }
+          })
+          $sourceRecord=[ordered]@{
+            schema='NOX_R8_BUILD_SRC_PROVENANCE_V1'
+            source_git_sha=$checkoutCommit
+            source_zip_sha256=$hash
+            scope='ACTUAL_STAGED_R8_SRC_PRE_DOTNET_NOT_OWNER_PC'
+            files=$sourceRows
+          }
+          $sourceRecord | ConvertTo-Json -Depth 6 | Set-Content './r8/R8_SOURCE_PROVENANCE.json' -Encoding utf8
           Copy-Item './coordination/nox-r8/tests/test_r8_learn_owner_queue.py' './r8/test_r8_learn_owner_queue.py'
           python './r8/test_r8_learn_owner_queue.py'
           if ($LASTEXITCODE -ne 0) { throw 'D05_LEARN_SOURCE_HOLD' }
@@ -151,6 +175,33 @@ jobs:
       - name: Package launch helper and verified EXE
         shell: pwsh
         run: |
+          # B01: reject any changed/deleted/added staged source after publish.
+          # A matching Git SHA alone never establishes which bytes were compiled.
+          $srcRoot=(Resolve-Path './r8/src').Path
+          $proof=Get-Content './r8/R8_SOURCE_PROVENANCE.json' -Raw -Encoding utf8 | ConvertFrom-Json
+          if ($proof.schema -cne 'NOX_R8_BUILD_SRC_PROVENANCE_V1' -or
+              $proof.source_git_sha -cne $env:GITHUB_SHA.ToLowerInvariant() -or
+              $proof.source_zip_sha256 -cne 'a1ed386b4b9356c21a007c9c54dc2f98f27a25ede42bad91dafada99ddd70325') {
+            throw 'R8_PROVENANCE_PREIMAGE_MISMATCH_HOLD'
+          }
+          $nowFiles=@(Get-ChildItem -LiteralPath $srcRoot -File -Recurse |
+            Where-Object {
+              $rel=[IO.Path]::GetRelativePath($srcRoot,$_.FullName).Replace('\\','/')
+              $rel -notmatch '(^|/)(bin|obj)(/|$)'
+            } | Sort-Object FullName)
+          $expectedFiles=@($proof.files)
+          if ($nowFiles.Count -ne $expectedFiles.Count) { throw 'R8_PROVENANCE_FILESET_CHANGED_HOLD' }
+          foreach ($f in $expectedFiles) {
+            $relative=([string]$f.path).Replace('/',[IO.Path]::DirectorySeparatorChar)
+            $candidate=Join-Path -Path $srcRoot -ChildPath $relative
+            if (!(Test-Path -LiteralPath $candidate -PathType Leaf)) { throw 'R8_PROVENANCE_MISSING_FILE_HOLD' }
+            $got=(Get-FileHash -LiteralPath $candidate -Algorithm SHA256).Hash.ToLowerInvariant()
+            $gotSize=(Get-Item -LiteralPath $candidate).Length
+            if ($got -cne [string]$f.sha256 -or $gotSize -ne [long]$f.bytes) {
+              throw "R8_PROVENANCE_STAGED_SOURCE_CHANGED_HOLD $($f.path)"
+            }
+          }
+          Copy-Item './r8/R8_SOURCE_PROVENANCE.json' './out/SOURCE_PROVENANCE.json'
           Copy-Item './r8/START_NOX.ps1' './out/START_NOX.ps1'
           $script='@echo off'+[Environment]::NewLine+
             'powershell.exe -NoProfile -File "%~dp0START_NOX.ps1"'+[Environment]::NewLine
@@ -161,6 +212,9 @@ jobs:
             schema='NOX_R8_NATIVE_SINGLE_EXE_V1';
             source_sha256='a1ed386b4b9356c21a007c9c54dc2f98f27a25ede42bad91dafada99ddd70325';
             source_git_sha=$env:GITHUB_SHA;
+            staged_source_manifest_sha256=(Get-FileHash './out/SOURCE_PROVENANCE.json' -Algorithm SHA256).Hash.ToLowerInvariant();
+            staged_source_file_count=@($proof.files).Count;
+            owner_source_parity='NOT_VERIFIED';
             native_cs_sha256=(Get-FileHash './r8/src/MainWindow.xaml.cs' -Algorithm SHA256).Hash.ToLowerInvariant();
             embedded_html_sha256=(Get-FileHash './r8/src/index.html' -Algorithm SHA256).Hash.ToLowerInvariant();
             training='NOT_STARTED';
