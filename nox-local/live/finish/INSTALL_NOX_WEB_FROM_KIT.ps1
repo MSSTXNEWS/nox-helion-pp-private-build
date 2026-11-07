@@ -154,4 +154,4 @@ $receipt|ConvertTo-Json|Set-Content -LiteralPath (Join-Path $stage 'NOX_WEB_11_2
 if(Test-Path -LiteralPath $target){throw 'CONCURRENT_NOX_LIVE_INSTALL_HOLD'}
 Move-Item -LiteralPath $stage -Destination $target
 Write-Host "NOX WEB files prepared in $target (original preserved)" -ForegroundColor Green
-& powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'START_NOX_WEB.ps1') -Root $Root -NoBrowser:$NoBrowser
+& (Join-Path $PSScriptRoot 'START_NOX_WEB.ps1') -Root $Root -NoBrowser:$NoBrowser
