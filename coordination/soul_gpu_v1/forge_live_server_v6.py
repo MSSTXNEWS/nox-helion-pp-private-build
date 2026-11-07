@@ -230,6 +230,24 @@ def serve(root, port):
                 except Exception as exc:
                     return self.get(json.dumps({'error':type(exc).__name__}).encode(),
                                     'application/json',503)
+            if self.path == '/api/nox/cognition/status':
+                # Stats only, no transcript excerpts or unauthorized Persona data.
+                try:
+                    import nox_prime_memory_continuum_v1 as cognitive
+                    d=cognitive.snapshot(root)
+                    return self.get(json.dumps({
+                        'schema':'NOX-COGNITIVE-CANDIDATE-V1',
+                        'layers':d['layers'],
+                        'm0_events_total':d['m0_events_total'],
+                        'fast_events':len(d['fast_session']),
+                        'medium_events':len(d['medium_episodes']),
+                        's03_written':False,
+                        'skills_promoted':False
+                    },ensure_ascii=False).encode('utf-8'),
+                    'application/json; charset=utf-8')
+                except Exception as ex:
+                    return self.get(json.dumps({'error':type(ex).__name__}).encode(),
+                                    'application/json',503)
             if self.path == '/api/nox/history':
                 try:
                     return self.get(json.dumps({'messages':unified.read_history(root)},
@@ -251,7 +269,7 @@ def serve(root, port):
             if self.path == '/api/health':
                 return self.get(json.dumps({'status': 'READY', 'schema': SCHEMA,
                                             'template': 'NOX-FORGE-WOW-LIVE-V6',
-                                            'unified_router':'NOX-UNIFIED-BRAIN-V4',
+                                            'unified_router':'NOX-UNIFIED-BRAIN-V5',
                                             'read_only': True}).encode(), 'application/json')
             if self.path == '/api/status':
                 try:
