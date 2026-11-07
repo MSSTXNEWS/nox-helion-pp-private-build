@@ -124,10 +124,6 @@ public partial class MainWindow : Window
             Browser.CoreWebView2.NewWindowRequested += (_, args) => args.Handled = true;
             Browser.CoreWebView2.PermissionRequested += (_, args) => args.State = CoreWebView2PermissionState.Deny;
             Browser.CoreWebView2.WebMessageReceived += OnMessage;
-            Browser.CoreWebView2.NavigationStarting += (_, _) => {
-                active?.Cancel(); activeRequestId = null;
-                Interlocked.Increment(ref providerProbeEpoch);
-            };
             using var stream = typeof(MainWindow).Assembly.GetManifestResourceStream("NOX.HELION.index.html")
                 ?? throw new InvalidOperationException("Embedded D02 interface resource is missing");
             using var reader = new StreamReader(stream);
@@ -171,15 +167,21 @@ public partial class MainWindow : Window
             };
             Browser.CoreWebView2.NavigationStarting += (_, args) =>
             {
-                // Trust one application-initiated embedded navigation only.
-                // Block all later external navigation to preserve the local-only boundary.
+                // Only the one startup NavigateToString belongs to this native IPC
+                // owner. A cancelled navigation (including a later about:blank)
+                // must not revoke the current chat/STOP or invalidate health.
                 if (pendingEmbeddedNavigation)
                 {
                     pendingEmbeddedNavigation = false;
+                    active?.Cancel();
+                    activeRequestId = null;
+                    Interlocked.Increment(ref providerProbeEpoch);
                     return;
                 }
-                if (!string.Equals(args.Uri, "about:blank", StringComparison.OrdinalIgnoreCase))
-                    args.Cancel = true;
+                // Fail closed for EVERY later top-level navigation. The old
+                // about:blank exception could replace the embedded document
+                // while still retaining WebMessageReceived native privileges.
+                args.Cancel = true;
             };
             pendingEmbeddedNavigation = true;
             Browser.NavigateToString(await reader.ReadToEndAsync());

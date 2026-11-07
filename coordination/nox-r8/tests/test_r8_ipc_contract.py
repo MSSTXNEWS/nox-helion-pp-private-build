@@ -9,7 +9,7 @@ cs = (root / "src" / "MainWindow.xaml.cs").read_text(encoding="utf-8")
 html = (root / "src" / "index.html").read_text(encoding="utf-8")
 required_cs = (
     'private string? activeRequestId;',
-    'Browser.CoreWebView2.NavigationStarting += (_, _) => {',
+    'Browser.CoreWebView2.NavigationStarting += (_, args) =>',
     'string.Equals(activeRequestId, Text("requestId"), StringComparison.Ordinal)',
     'case "chat": await Generate(Text("text"), Text("requestId"));',
     'private async Task Generate(string prompt, string requestId)',
@@ -44,10 +44,17 @@ required_html = (
 # Navigation must revoke the active WebView2 chat owner and invalidate
 # every asynchronous provider-health callback from the previous document.
 # Do not regress the native code to the obsolete one-line source contract.
-nav = cs.split('Browser.CoreWebView2.NavigationStarting += (_, _) => {', 1)[1].split('\n            };', 1)[0]
-assert 'active?.Cancel(); activeRequestId = null;' in nav, 'B02_NAV_REVOKE_OWNER_HOLD'
+# One trusted startup navigation, never a second untrusted document.
+# Denied attempts (including about:blank) must not cancel native STOP/chat.
+assert cs.count('Browser.CoreWebView2.NavigationStarting +=') == 1, 'B02_NAV_SINGLE_OWNER_HOLD'
+nav = cs.split('Browser.CoreWebView2.NavigationStarting += (_, args) =>', 1)[1].split('\n            };', 1)[0]
+assert 'if (pendingEmbeddedNavigation)' in nav, 'B02_NAV_STARTUP_GATE_HOLD'
+assert 'pendingEmbeddedNavigation = false;' in nav, 'B02_NAV_ONE_SHOT_HOLD'
+assert 'active?.Cancel();' in nav and 'activeRequestId = null;' in nav, 'B02_NAV_REVOKE_OWNER_HOLD'
 assert 'Interlocked.Increment(ref providerProbeEpoch);' in nav, 'B02_NAV_REVOKE_PROBE_HOLD'
-assert nav.index('active?.Cancel();') < nav.index('activeRequestId = null;') < nav.index('Interlocked.Increment(ref providerProbeEpoch);'), 'B02_NAV_OWNER_ORDER_HOLD'
+assert nav.index('if (pendingEmbeddedNavigation)') < nav.index('active?.Cancel();') < nav.index('activeRequestId = null;') < nav.index('Interlocked.Increment(ref providerProbeEpoch);') < nav.index('return;') < nav.index('args.Cancel = true;'), 'B02_NAV_TRUST_AND_OWNER_ORDER_HOLD'
+assert 'if (!string.Equals(args.Uri, "about:blank"' not in nav, 'B02_NAV_ABOUT_BLANK_BYPASS_HOLD'
+assert 'args.Cancel = true;' in nav, 'B02_NAV_DENY_ALL_FUTURE_HOLD'
 for fragment in required_cs:
     assert fragment in cs, 'B02_NATIVE_IPC_SOURCE_HOLD: ' + fragment
 for fragment in required_html:
