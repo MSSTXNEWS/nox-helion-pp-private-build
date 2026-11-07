@@ -2161,8 +2161,15 @@ public partial class MainWindow : Window
             Send("notes.add.denied", new { requestId, reason = "NOX_NOTE_REQUEST_ID_HOLD" });
             return;
         }
+        // Validate before arming. Once SQLite INSERT is entered, neither
+        // a readback error nor a lost IPC ACK proves no note was committed.
+        bool writeAttempted = false;
         try {
+            if (string.IsNullOrWhiteSpace(title) || title.Length > 120 ||
+                string.IsNullOrWhiteSpace(body) || body.Length > 8000)
+                throw new ArgumentException("NOX_NOTE_VALIDATION_HOLD");
             string persona = ActivePersona();
+            writeAttempted = true;
             long id = AddNote(title, body);
             using var verifyDb = OpenDatabase();
             using var verify = verifyDb.CreateCommand();
@@ -2173,12 +2180,23 @@ public partial class MainWindow : Window
                 !string.Equals(row.GetString(1), body, StringComparison.Ordinal) ||
                 !string.Equals(row.GetString(2), persona, StringComparison.Ordinal))
                 throw new InvalidOperationException("NOX_NOTE_SQLITE_READBACK_HOLD");
-            Send("notes", ReadNotes());
+            // A refresh fault must not turn a verified commit into a denial.
             Send("notes.add.receipt", new { requestId, id, saved = true });
+            try { Send("notes", ReadNotes()); }
+            catch (Exception) { /* Already committed; receipt stays authoritative. */ }
         }
-        catch (ArgumentException) { Send("notes.add.denied", new { requestId, reason = "NOX_NOTE_VALIDATION_HOLD" }); }
-        catch (SqliteException) { Send("notes.add.denied", new { requestId, reason = "NOX_NOTE_SQLITE_HOLD" }); }
-        catch (Exception) { Send("notes.add.denied", new { requestId, reason = "NOX_NOTE_READBACK_HOLD" }); }
+        catch (Exception ex) {
+            if (writeAttempted) {
+                // SQLite may contain this note. Never invite a silent retry.
+                Send("notes.add.unknown", new { requestId,
+                    reason = "NOX_NOTE_ADD_COMMIT_UNKNOWN_HOLD" });
+            } else {
+                Send("notes.add.denied", new { requestId, reason =
+                    ex is ArgumentException ? "NOX_NOTE_VALIDATION_HOLD" :
+                    ex is SqliteException ? "NOX_NOTE_SQLITE_HOLD" :
+                    "NOX_NOTE_NATIVE_HOLD" });
+            }
+        }
     }
 
     private void HandleSettingsGet(JsonElement request)
