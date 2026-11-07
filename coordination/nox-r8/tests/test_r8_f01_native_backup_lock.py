@@ -33,4 +33,18 @@ assert native.index('WaitForVisibleChatTokenAsync') < native.index("document.get
 assert native.index('NOX_F01_LATE_TOKEN_OR_PARTIAL_SQLITE_HOLD') < native.index('real_chat_after_http_stop_sqlite')
 for token in ("NOX_F01_LOCKED_SNAPSHOT_ACCEPTED_HOLD", "NOX_F01_LOCKED_MANIFEST_ACCEPTED_HOLD", "NOX_F01_BACKUP_OR_MANIFEST_LOCKED_HOLD"):
     assert token in backup, "F01_NEGATIVE_LOCK_MISSING_HOLD:" + token
+# Windows native smoke must snapshot an isolated WAL DB while an actual
+# SQLite writer holds an uncommitted row, then rollback and prove both views
+# exclude that row. This Python guard does not execute the Windows test.
+for x in ("NOX_F01_WAL_WRITER_FIXTURE_HOLD",
+          "NOX_F01_WAL_UNCOMMITTED_VISIBLE_HOLD",
+          "NOX_F01_WAL_ROLLBACK_FAILED_HOLD",
+          "uncommitted.Rollback();",
+          'CheckpointSqlite(live, "SMOKE_ISOLATED")'):
+    assert x in backup, "F01_WAL_NEGATIVE_CONTROL_MISSING_HOLD:" + x
+assert backup.index("NOX_F01_WAL_WRITER_FIXTURE_HOLD") < backup.index(
+    'CheckpointSqlite(live, "SMOKE_ISOLATED")') < backup.index(
+    "NOX_F01_WAL_UNCOMMITTED_VISIBLE_HOLD") < backup.index(
+    "uncommitted.Rollback();") < backup.index(
+    "NOX_F01_WAL_ROLLBACK_FAILED_HOLD")
 print("F01_B06_NATIVE_BACKUP_AND_REAL_QWEN_STOP_ORACLE_SOURCE_ONLY_PASS_OWNER_NOT_TESTED")

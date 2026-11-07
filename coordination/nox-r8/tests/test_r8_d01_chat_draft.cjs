@@ -5,7 +5,13 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
-const html = fs.readFileSync(path.join(__dirname, 'src', 'index.html'), 'utf8');
+const htmlCandidates = [
+  path.resolve(__dirname, 'src', 'index.html'),
+  path.resolve(__dirname, '..', 'overrides', 'src', 'index.html')
+];
+const htmlPath = htmlCandidates.find(candidate => fs.existsSync(candidate));
+assert.ok(htmlPath, 'D01_PRODUCTION_WEBVIEW2_SOURCE_MISSING');
+const html = fs.readFileSync(htmlPath, 'utf8');
 assert.match(html, /<textarea[^>]*id="prompt"[^>]*maxlength="32000"/);
 const start = html.indexOf("$('send').onclick=()=>");
 const end = html.indexOf("\n$('stop').onclick=", start);
@@ -644,4 +650,36 @@ console.log('D01 SOURCE_ONLY PASS: Qwen failed/STOP retry with original input, S
     html.includes("case '"+type+"':if(pendingChatDraft?.persona!==visibleDraftPersona)break;"),
     'D01_STALE_PERSONA_'+type.toUpperCase()+'_GUARD_MISSING');
   console.log('D01 SOURCE_ONLY PASS: SQLite hydration isolates PersonaID, quarantines stale stream, same PersonaID no-loss');
+}
+
+// D01_STALE_PERSONA_CHAT_ERROR: actual WebView2 receipt guard, not fake UI.
+{
+  const nativeStart=html.indexOf("window.chrome?.webview?.addEventListener('message',e=>");
+  const nativeEnd=html.indexOf("\ncase 'health':",nativeStart);
+  assert.ok(nativeStart>=0&&nativeEnd>nativeStart,'D01_ORIGINAL_NATIVE_ERROR_RECEIPT_MISSING');
+  const originalNativeHandler=html.slice(nativeStart,nativeEnd);
+  function receivedError(owner,receipt) {
+    const context={shown:[],status:{textContent:'READY'}};
+    vm.runInNewContext(`
+      let activeChatId='kv-request',visibleDraftPersona=owner,
+          pendingChatDraft={persona:'KV',requestId:'kv-request'};
+      const window={chrome:{webview:{addEventListener(_name,cb){handler=cb}}}};
+      const $=id=>id==='status'?status:{};
+      function entry(_container,value,label){shown.push({value,label})}
+      ${originalNativeHandler}
+      }});
+      handler({data:receipt});
+    `,{...context,owner,receipt},{timeout:1500});
+    return context;
+  }
+  const stale=receivedError('AM',{type:'error',value:{requestId:'kv-request',message:'KV_PRIVATE_FAILURE'}});
+  assert.equal(stale.shown.length,0,'D01_PREVIOUS_PERSONA_ERROR_EXPOSED');
+  assert.equal(stale.status.textContent,'READY','D01_PREVIOUS_PERSONA_STATUS_CHANGED');
+  const current=receivedError('KV',{type:'error',value:{requestId:'kv-request',message:'OWN_FAILURE'}});
+  assert.equal(current.shown.length,1,'D01_CURRENT_OWNER_ERROR_LOST');
+  const generic=receivedError('AM',{type:'error',value:'NATIVE_IPC_DENIED'});
+  assert.equal(generic.shown.length,1,'D01_GENERIC_NATIVE_ERROR_SUPPRESSED');
+  const foreign=receivedError('KV',{type:'error',value:{requestId:'foreign',message:'FOREIGN_FAILURE'}});
+  assert.equal(foreign.shown.length,0,'D01_FOREIGN_CHAT_RECEIPT_EXPOSED');
+  console.log('D01 SOURCE_ONLY PASS: previous PersonaID Qwen error quarantined; current/native errors visible');
 }

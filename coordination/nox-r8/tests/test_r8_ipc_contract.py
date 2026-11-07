@@ -92,7 +92,11 @@ assert snapshot.count('Pooling = false') == 2, 'B02_SQLITE_BACKUP_POOLING_HOLD'
 # B03 introduced a distinct third pooled-handle safeguard in its own smoke
 # method. Do not count it as part of CheckpointSqlite or weaken its guard.
 smoke_backup = cs.split('private void VerifyIsolatedSqliteBackup(', 1)[1].split('private static bool HasPersonaColumn(', 1)[0]
-assert smoke_backup.count('Pooling = false') == 2, 'B03_SMOKE_BACKUP_POOLING_HOLD'
+# F01's real WAL writer negative control adds its own separately-unpooled
+# readback. Keep the original two no-pooling handles mandatory and account
+# for the extra isolated reader only when the native fixture is present.
+expected_unpooled = 3 if "NOX_F01_WAL_UNCOMMITTED_VISIBLE_HOLD" in smoke_backup else 2
+assert smoke_backup.count('Pooling = false') == expected_unpooled, 'B03_SMOKE_BACKUP_POOLING_HOLD'
 assert 'PRAGMA quick_check' in smoke_backup and 'NOX_B03_SMOKE_INTEGRITY_HOLD' in smoke_backup, 'B03_SMOKE_BACKUP_INTEGRITY_HOLD'
 assert re.search(r'DataSource\s*=\s*file,\s*Mode\s*=\s*SqliteOpenMode\.ReadWriteCreate,\s*Pooling\s*=\s*false', snapshot)
 assert re.search(r'DataSource\s*=\s*file,\s*Mode\s*=\s*SqliteOpenMode\.ReadOnly,\s*Pooling\s*=\s*false', snapshot)
@@ -413,3 +417,31 @@ assert 'CancellationTokenSource.CreateLinkedTokenSource(streamBudget.Token)' in 
 assert 'readWindow.CancelAfter(TimeSpan.FromMinutes(3));' in _budget, 'B06_IDLE_GUARD_NO_LOSS_HOLD'
 assert 'catch (OperationCanceledException) when (cancellation.IsCancellationRequested)' in _budget and 'OLLAMA_TIMEOUT:' in _budget, 'B06_OWNER_STOP_VS_TIMEOUT_HOLD'
 print('B06 SOURCE_ONLY: total 15m stream + 3m idle, STOP distinct; real Qwen not tested')
+
+# B04: real HTTP cancellation may surface as IOException, HttpRequestException or
+# ObjectDisposedException, not just OperationCanceledException. This source-only
+# oracle requires STOP after stream abort, but never masks an attempted COMMIT.
+transport_guard = 'catch (Exception ex) when (cancellation.IsCancellationRequested && !sqliteWriteAttempted &&'
+assert transport_guard in generate, 'B04_STOP_HTTP_IO_OWNER_HOLD'
+transport_stop = generate.split(transport_guard, 1)[1].split('catch (HttpRequestException ex)', 1)[0]
+for kind in ('HttpRequestException', 'IOException', 'ObjectDisposedException'):
+    assert 'ex is ' + kind in transport_stop, 'B04_STOP_HTTP_' + kind + '_HOLD'
+assert 'lastGenerationStopped = true;' in transport_stop, 'B04_STOP_IO_STATE_HOLD'
+assert 'state = "STOPPED"' in transport_stop and 'stopped = true' in transport_stop, 'B04_STOP_IO_RECEIPT_HOLD'
+assert generate.index(transport_guard) < generate.index('catch (HttpRequestException ex)'), 'B04_STOP_IO_CATCH_ORDER_HOLD'
+print('B04 R8 STOP transport source oracle PASS; real owner Ollama NOT_TESTED')
+
+# B02: cap cumulative streamed answer before emitting any oversized chunk.
+# The original Qwen num_predict is not an enforced provider-side byte budget;
+# a nonterminal stream that emits data indefinitely must not exhaust WebView2.
+# This is SOURCE_ONLY, not a real Windows/Ollama stream acceptance.
+_output_guard = cs.split('private async Task Generate(', 1)[1].split('private void PersistChat(', 1)[0]
+_token_block = _output_guard.split('if (item.TryGetProperty("response", out var token))', 1)[1].split('if (item.TryGetProperty("error", out var serverError))', 1)[0]
+assert _output_guard.count('const int MaxAnswerChars = 256 * 1024;') == 1, 'B02_OUTPUT_MAX_MISSING_HOLD'
+assert 'if (value.Length > MaxAnswerChars - answer.Length)' in _token_block, 'B02_OUTPUT_CUMULATIVE_BUDGET_HOLD'
+assert 'OLLAMA_RESPONSE_LIMIT_HOLD:' in _token_block, 'B02_OUTPUT_EXCEEDED_REASON_HOLD'
+assert _token_block.index('if (value.Length > MaxAnswerChars - answer.Length)') < _token_block.index('answer.Append(value);') < _token_block.index('Emit("token", new { requestId, text = value });'), 'B02_OUTPUT_REJECT_BEFORE_APPEND_AND_IPC_HOLD'
+assert _output_guard.index('if (value.Length > MaxAnswerChars - answer.Length)') < _output_guard.index('sqliteWriteAttempted = true;'), 'B02_OUTPUT_PRE_SQLITE_HOLD'
+assert 'Emit("complete", new { requestId, ok = sqliteVerified, stopped = false, sqliteUnknown });' in _output_guard, 'B02_OUTPUT_TERMINAL_ACK_HOLD'
+assert 'catch (OperationCanceledException) when (cancellation.IsCancellationRequested)' in _output_guard, 'B02_OUTPUT_STOP_PRESERVED_HOLD'
+print('B02 SOURCE_ONLY: cumulative response cap rejects before append/IPC/SQLite; terminal ERROR/complete and owner STOP paths preserved; Windows NOT_TESTED')
