@@ -77,6 +77,21 @@ assert 'if (existingTables && !selfTestRequested)' in init
 assert 'needed.Any(name => !knownObjects.Contains(name))' in init
 
 
+# First-ever startup should not create an empty PRE_PERSONA_MIGRATION copy,
+# but an existing legacy database must still checkpoint before ALTER TABLE.
+assert "MigratePersonaStorage(db, existingTables);" in init
+migration = src.split(
+    "private void MigratePersonaStorage(SqliteConnection db, bool hadExistingTablesBeforeBootstrap)", 1
+)[1].split("private string ActivePersona()", 1)[0]
+assert migration.index("if (chatReady && notesReady) return;") < migration.index(
+    "if (hadExistingTablesBeforeBootstrap)"
+)
+assert migration.index("if (hadExistingTablesBeforeBootstrap)") < migration.index(
+    'CheckpointSqlite(db, "PRE_PERSONA_MIGRATION")'
+) < migration.index("using var tx = db.BeginTransaction();")
+assert "ALTER TABLE chat_history ADD COLUMN persona" in migration
+assert "ALTER TABLE memory_notes ADD COLUMN persona" in migration
+
 # Both B03 and D03 implement a verified preimport SQLite snapshot.
 # The final source must keep exactly one snapshot before the write transaction.
 legacy = src.split("private void ImportLegacyJsonlIfNeeded(", 1)[1].split("\n    private ", 1)[0]

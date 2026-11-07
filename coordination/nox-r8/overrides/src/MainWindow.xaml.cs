@@ -965,7 +965,7 @@ public partial class MainWindow : Window
           CREATE INDEX IF NOT EXISTS idx_chat_history_time ON chat_history(timestamp);
           """;
         command.ExecuteNonQuery();
-        MigratePersonaStorage(db);
+        MigratePersonaStorage(db, existingTables);
         if (!selfTestRequested) ImportLegacyJsonlIfNeeded(db);
     }
 
@@ -1097,12 +1097,15 @@ public partial class MainWindow : Window
         return false;
     }
 
-    private void MigratePersonaStorage(SqliteConnection db)
+    private void MigratePersonaStorage(SqliteConnection db, bool hadExistingTablesBeforeBootstrap)
     {
         bool chatReady = HasPersonaColumn(db, "chat_history");
         bool notesReady = HasPersonaColumn(db, "memory_notes");
         if (chatReady && notesReady) return;
-        CheckpointSqlite(db, "PRE_PERSONA_MIGRATION"); // Fail closed, keep all old KV bytes.
+        // A brand-new DB has no owner rows to lose: avoid a redundant empty backup.
+        // For any existing table set, retain the verified pre-migration snapshot.
+        if (hadExistingTablesBeforeBootstrap)
+            CheckpointSqlite(db, "PRE_PERSONA_MIGRATION");
         using var tx = db.BeginTransaction();
         using var cmd = db.CreateCommand();
         cmd.Transaction = tx;
