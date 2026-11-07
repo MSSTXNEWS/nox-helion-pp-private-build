@@ -651,6 +651,56 @@ public partial class MainWindow : Window
                 throw new InvalidOperationException("NOX_SETTINGS_WEBVIEW2_ACCESSIBILITY_HOLD");
             checks["settings_webview2_accessible_controls"] = "PASS";
 
+            // D06: a DOM label and WPF host alone cannot certify Chromium UIA
+            // SETTINGS controls. Inspect the real renderer on a background thread.
+            bool nativeSettingsUia = false;
+            string nativeSettingsUiaDetail = "NOT_SCANNED";
+            for (int attempt = 0; attempt < 6 && !nativeSettingsUia; attempt++)
+            {
+                var probe = await Task.Run(() =>
+                {
+                    var root = System.Windows.Automation.AutomationElement.FromHandle(uiaHandle);
+                    if (root == null) return (accepted: false, detail: "UIA_WINDOW_MISSING");
+                    var scope = System.Windows.Automation.TreeScope.Descendants;
+                    System.Windows.Automation.AutomationElementCollection Find(
+                        System.Windows.Automation.ControlType type) =>
+                        root.FindAll(scope, new System.Windows.Automation.PropertyCondition(
+                            System.Windows.Automation.AutomationElement.ControlTypeProperty, type));
+                    bool Visible(System.Windows.Automation.AutomationElement node)
+                    {
+                        var current = node.Current;
+                        var bounds = current.BoundingRectangle;
+                        return current.IsEnabled && !current.IsOffscreen &&
+                               !bounds.IsEmpty && bounds.Width >= 12 && bounds.Height >= 12;
+                    }
+                    var combos = Find(System.Windows.Automation.ControlType.ComboBox);
+                    var checksUia = Find(System.Windows.Automation.ControlType.CheckBox);
+                    var buttons = Find(System.Windows.Automation.ControlType.Button);
+                    bool mode = combos.Cast<System.Windows.Automation.AutomationElement>()
+                        .Any(node => Visible(node) &&
+                            (node.Current.Name ?? "").Contains("Режим локального ИИ", StringComparison.Ordinal));
+                    bool motion = checksUia.Cast<System.Windows.Automation.AutomationElement>()
+                        .Any(node => Visible(node) &&
+                            (node.Current.Name ?? "").Contains("Отключить анимацию", StringComparison.Ordinal));
+                    var names = new HashSet<string>(StringComparer.Ordinal);
+                    foreach (System.Windows.Automation.AutomationElement button in buttons)
+                        if (Visible(button)) names.Add(button.Current.Name?.Trim() ?? "");
+                    bool modeSave = names.Contains("Сохранить режим");
+                    bool motionSave = names.Contains("Сохранить движение");
+                    // Bounded diagnostic: no user text, model contents or paths.
+                    var detail = $"COMBO={combos.Count};CHECKBOX={checksUia.Count};BUTTON={buttons.Count};" +
+                        $"MODE={mode};MOTION={motion};MODE_SAVE={modeSave};MOTION_SAVE={motionSave}";
+                    return (accepted: mode && motion && modeSave && motionSave, detail);
+                });
+                nativeSettingsUia = probe.accepted;
+                nativeSettingsUiaDetail = probe.detail;
+                if (!nativeSettingsUia && attempt < 5) await Task.Delay(250);
+            }
+            if (!nativeSettingsUia)
+                throw new InvalidOperationException(
+                    "NOX_SETTINGS_WINDOWS_UIA_CONTROLS_HOLD " + nativeSettingsUiaDetail);
+            checks["settings_windows_uia_controls"] = "PASS";
+
             // Check native SQLite isolation: no use of an existing live chat database.
             var realPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                 "NOX_HELION", "chat.sqlite3");
@@ -795,6 +845,7 @@ public partial class MainWindow : Window
                           "f03_webview2_injected_gpu_context_fallback",
                           "f03_webview2_emulated_reduced_motion",
                           "settings_windows_uia_host", "settings_webview2_accessible_controls",
+                          "settings_windows_uia_controls",
                           "isolated_sqlite_path", "settings_wpf_owner_sqlite_readback",
                           "settings_wpf_motion_sqlite_readback", "settings_foreign_key_denial",
                           "sqlite_native_backup_no_loss", "native_wpf_webview2_renderer" };

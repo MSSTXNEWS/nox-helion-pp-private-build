@@ -41,6 +41,8 @@ for token in (
     'AutomationElement.FromHandle(uiaHandle)',
     'settings_windows_uia_host',
     'settings_webview2_accessible_controls',
+    'settings_windows_uia_controls',
+    'NOX_SETTINGS_WINDOWS_UIA_CONTROLS_HOLD',
     'NOX_SETTINGS_WINDOWS_UIA_HOST_HOLD',
 ):
     assert token in native, token
