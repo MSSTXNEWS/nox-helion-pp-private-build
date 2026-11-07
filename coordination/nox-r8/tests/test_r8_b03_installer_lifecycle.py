@@ -9,7 +9,7 @@ for k in ("NOX_INSTALL_REPARSE_HOLD","NOX_INSTALL_UNMANAGED_OWNER_BINARY_HOLD",
           "NOX_INSTALL_ACTIVATED_HASH_HOLD","NOX_INSTALL_ROLLBACK_HASH_HOLD",
           "NOX_INSTALL_ROLLBACK_READBACK_HOLD","NOX_INSTALL_RECEIPT_READBACK_HOLD",
           "owner_data_preserved=$true","real_qwen_e2e='NOT_TESTED_BY_INSTALLER'",
-          "[IO.File]::Replace($temp,$p,$old,$true)","[IO.File]::Move($target,$oldPath)",
+          "[IO.File]::Replace($temp,$p,$receiptBackup,$true)","[IO.File]::Move($target,$oldPath)",
           "[IO.File]::Move($incoming,$target)"):
     assert k in ps, "NOX_B03_NSIS_GUARD_MISSING:"+k
 for k in ("RequestExecutionLevel user",'InstallDir "$LOCALAPPDATA\\Programs\\NOX_HELION"',
