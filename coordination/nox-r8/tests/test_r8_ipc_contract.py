@@ -45,7 +45,7 @@ required_html = (
     # Native D01 owner dispatch now sends fresh requestId, before it is assigned to activeChatId.
     "post('stop',{requestId:activeChatId})",
     "v.requestId!==activeChatId",
-    "case 'token':lastAnswer+=v.text",
+    "case 'token':if(pendingChatDraft?.persona!==visibleDraftPersona)break;lastAnswer+=v.text",
     "case 'complete':{const retry=pendingChatDraft?.requestId===v?.requestId",
     "Only the matching native complete may unlock a busy chat.",
     "if(e.key==='Escape'&&busy&&activeChatId){e.preventDefault();$('stop').click()}",
@@ -169,7 +169,7 @@ print('B04 R8 SOURCE_ONLY: native preflight rejection now releases the matching 
 selftest = cs.split('private async Task RunNativeSelfTestAsync()', 1)[1].split('private bool HasSavedPrompt(', 1)[0]
 token_wait = cs.split('private async Task<bool> WaitForGenerationTokenAsync(', 1)[1].split('private async Task WaitForGenerationFinishAsync(', 1)[0]
 generation = cs.split('private async Task Generate(', 1)[1].split('private void PersistChat(', 1)[0]
-assert 'int streamTokenTarget = Volatile.Read(ref generationStreamingTokenCount) + 1;' in selftest
+assert 'int streamTokenTarget = Volatile.Read(ref generationStreamingTokenCount) + 2;' in selftest
 assert selftest.index('WaitForGenerationTokenAsync(streamTokenTarget, stopTarget, TimeSpan.FromMinutes(2))') < selftest.index('document.getElementById(\'stop\').click()')
 assert 'NOX_ACTIVE_HTTP_STREAM_NOT_OBSERVED_HOLD' in selftest
 assert 'Volatile.Read(ref generationFinishedCount) >= generationTarget' in token_wait
@@ -204,7 +204,7 @@ assert 'NOX_CHAT_AFTER_STOP_START_HOLD' in selftest
 assert 'NOX_CHAT_AFTER_STOP_SQLITE_HOLD' in selftest
 assert 'checks["real_chat_after_http_stop_sqlite"] = "PASS";' in selftest
 assert selftest.index('WaitForStopUiReleaseAsync(TimeSpan.FromSeconds(4))') < selftest.index('NOX_CHAT_AFTER_STOP_START_HOLD') < selftest.index('real_chat_after_http_stop_sqlite')
-assert 'checks.Count == 6 && checks.Values.All(v => v == "PASS")' in selftest
+assert 'checks.Count == 7 && checks.Values.All(v => v == "PASS")' in selftest
 assert 'if (resumeMarker != null) DeleteSyntheticChats(resumeMarker, null);' in selftest
 print('B04 R8 SOURCE_ONLY: fresh chat after STOP and isolated SQLite cleanup gated (physical E2E NOT RUN)')
 
