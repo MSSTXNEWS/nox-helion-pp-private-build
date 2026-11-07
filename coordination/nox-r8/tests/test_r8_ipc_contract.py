@@ -19,7 +19,6 @@ cs = (src / "MainWindow.xaml.cs").read_text(encoding="utf-8")
 html = (src / "index.html").read_text(encoding="utf-8")
 required_cs = (
     'private string? activeRequestId;',
-    'NavigationStarting += (_, _) => { active?.Cancel(); activeRequestId = null; };',
     'string.Equals(activeRequestId, Text("requestId"), StringComparison.Ordinal)',
     'case "chat": await Generate(Text("text"), Text("requestId"));',
     'private async Task Generate(string prompt, string requestId)',
@@ -47,14 +46,39 @@ required_html = (
     "post('stop',{requestId:activeChatId})",
     "v.requestId!==activeChatId",
     "case 'token':lastAnswer+=v.text",
-    "case 'complete':busy=false;activeChatId=null",
     "Only the matching native complete may unlock a busy chat.",
-    "if(e.key==='Escape'&&busy&&activeChatId){e.preventDefault();$('stop').click()}",
 )
 for fragment in required_cs:
     assert fragment in cs, 'B02_NATIVE_IPC_SOURCE_HOLD: ' + fragment
 for fragment in required_html:
     assert fragment in html, 'B02_WEBVIEW2_SOURCE_HOLD: ' + fragment
+# F02: B06 strengthens navigation, Escape keyboard safety and chat-draft
+# recovery. The older exact text was a test-staleness false fail. Accept the
+# original guarded form OR the more restrictive new form, never any unguarded
+# or unowned handler. Keep the above independent STOP/requestId guards.
+legacy_navigation = 'NavigationStarting += (_, _) => { active?.Cancel(); activeRequestId = null; };' in cs
+strict_navigation = all(part in cs for part in (
+    'NavigationStarting += (_, args) =>',
+    'if (pendingEmbeddedNavigation)',
+    'pendingEmbeddedNavigation = false;',
+    'active?.Cancel();',
+    'activeRequestId = null;',
+    'args.Cancel = true;',
+))
+assert legacy_navigation or strict_navigation, 'F02_NAVIGATION_OWNER_GUARD_HOLD'
+legacy_complete = "case 'complete':busy=false;activeChatId=null" in html
+strict_complete = all(part in html for part in (
+    "case 'complete':{",
+    'pendingChatDraft?.requestId===v?.requestId',
+    'busy=false;activeChatId=null',
+))
+assert legacy_complete or strict_complete, 'F02_MATCHED_CHAT_TERMINAL_HOLD'
+legacy_escape = "if(e.key==='Escape'&&busy&&activeChatId){e.preventDefault();$('stop').click()}" in html
+strict_escape = all(part in html for part in (
+    'if(e.defaultPrevented||e.isComposing||e.keyCode===229||e.repeat)return;',
+    "if(e.key==='Escape'&&busy&&activeChatId){e.preventDefault();$('stop').click();return;}",
+))
+assert legacy_escape or strict_escape, 'F02_KEYBOARD_STOP_OWNER_HOLD'
 # A failed native bridge must not claim the active chat owner or lose a draft.
 chat_handler = html.split("$('send').onclick=()=>", 1)[1].split("\n$('stop').onclick=", 1)[0]
 assert chat_handler.index("if(post('chat',{text,requestId})===false)") < chat_handler.index("busy=true;activeChatId=requestId;"), "B02_PREMATURE_NATIVE_OWNER_HOLD"
