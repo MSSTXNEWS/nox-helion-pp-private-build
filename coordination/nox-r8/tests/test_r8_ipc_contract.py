@@ -131,7 +131,7 @@ assert 'catch (OperationCanceledException) when (cancellation.IsCancellationRequ
 assert 'catch (OperationCanceledException) {' in generate and 'OLLAMA_TIMEOUT:' in generate
 assert (generate.index('cancellation.Token.ThrowIfCancellationRequested();', generate.index('if (!completed)')) <
         generate.index('sqliteWriteAttempted = true;') <
-        generate.index('PersistChat(prompt, answer.ToString(), persona);') <
+        generate.index('PersistChat(prompt, answer.ToString(), persona, requestId);') <
         generate.index('sqliteVerified = true;') <
         generate.index('Emit("complete", new { requestId, ok = answer.Length > 0')), 'B04_STOP_BEFORE_SQLITE_COMMIT_ORDER_HOLD'
 assert 'bool sqliteUnknown = sqliteWriteAttempted && !sqliteVerified;' in generate
@@ -140,7 +140,10 @@ assert 'stopped = false, sqliteUnknown' in generate
 assert 'cmd.ExecuteNonQuery() != 1' in persist
 assert 'last_insert_rowid()' in persist
 assert 'using var verifyDb = OpenDatabase();' in persist
-assert 'FROM chat_history WHERE id=$id' in persist
+assert 'JOIN chat_history AS h ON h.id=r.chat_id' in persist
+assert 'tx.Commit();' in persist and 'INSERT INTO chat_request_receipts' in persist
+assert 'NOX_CHAT_DURABLE_REPLAY_DENIED' in generate and 'HasCommittedChatRequest(requestId)' in generate
+assert 'CREATE TABLE IF NOT EXISTS chat_request_receipts' in cs
 assert 'NOX_CHAT_SQLITE_READBACK_HOLD' in persist
 print('B04 R8 SOURCE_ONLY: timeout vs owner STOP, committed-row readback PASS; owner Windows Qwen NOT_TESTED')
 
