@@ -51,7 +51,8 @@ required_html = (
     "const requestId=nextChatId();if(post('chat',{text,requestId})===false)",
     'busy=true;activeChatId=requestId;',
     # Native D01 owner dispatch now sends fresh requestId, before it is assigned to activeChatId.
-    "post('stop',{requestId:activeChatId})",
+    "post('stop',{requestId:stopOwner})",
+    "pendingStopId===activeChatId",
     "v.requestId!==activeChatId",
     "case 'token':if(pendingChatDraft?.persona!==visibleDraftPersona)break;lastAnswer+=v.text",
     "case 'complete':{const retry=pendingChatDraft?.requestId===v?.requestId",
@@ -91,7 +92,7 @@ key_guard = 'if(e.defaultPrevented||e.isComposing||e.keyCode===229||e.repeat)ret
 esc_stop = "if(e.key==='Escape'&&busy&&activeChatId){e.preventDefault();$('stop').click();return;}"
 assert keyboard.count(key_guard) == 1 and keyboard.count(esc_stop) == 1, 'F02_ESCAPE_STOP_GUARD_HOLD'
 assert keyboard.index(key_guard) < keyboard.index(esc_stop), 'F02_IME_STOP_ORDER_HOLD'
-assert "post('stop',{requestId:activeChatId})" in html, 'F02_STOP_REQUEST_OWNER_HOLD'
+assert "post('stop',{requestId:stopOwner})" in html, 'F02_STOP_REQUEST_OWNER_HOLD'
 
 # A failed native bridge must not claim the active chat owner or lose a draft.
 chat_handler = html.split("$('send').onclick=()=>", 1)[1].split("\n$('stop').onclick=", 1)[0]
