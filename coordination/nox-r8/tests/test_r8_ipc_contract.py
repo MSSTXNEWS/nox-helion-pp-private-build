@@ -10,6 +10,14 @@ if root.name == "tests" and root.parent.name == "nox-r8":
     source_dir = root.parent / "overrides" / "src"
 elif root.name == "r8":
     source_dir = root / "src"
+    # Fail closed if the Windows runner executes an old test copy or old copied WPF/WebView2 sources.
+    # The checkout at this immutable commit must contain the exact canonical originals.
+    canonical = root.parent / "coordination" / "nox-r8"
+    expected_test = canonical / "tests" / Path(__file__).name
+    assert expected_test.is_file() and Path(__file__).read_bytes() == expected_test.read_bytes(), "F02_IPC_STALE_TEST_COPY_HOLD"
+    for name in ("MainWindow.xaml.cs", "index.html"):
+        expected = canonical / "overrides" / "src" / name
+        assert expected.is_file() and (source_dir / name).is_file() and (source_dir / name).read_bytes() == expected.read_bytes(), "F02_IPC_STAGED_SOURCE_DRIFT_HOLD: " + name
 else:
     raise AssertionError("F02_IPC_SQLITE_TEST_ORIGIN_HOLD")
 for name in ("MainWindow.xaml.cs", "index.html"):
@@ -131,7 +139,7 @@ assert 'catch (OperationCanceledException) when (cancellation.IsCancellationRequ
 assert 'catch (OperationCanceledException) {' in generate and 'OLLAMA_TIMEOUT:' in generate
 assert (generate.index('cancellation.Token.ThrowIfCancellationRequested();', generate.index('if (!completed)')) <
         generate.index('sqliteWriteAttempted = true;') <
-        generate.index('PersistChat(prompt, answer.ToString(), persona);') <
+        generate.index('PersistChat(prompt, answer.ToString(), persona, requestId);') <
         generate.index('sqliteVerified = true;') <
         generate.index('Emit("complete", new { requestId, ok = answer.Length > 0')), 'B04_STOP_BEFORE_SQLITE_COMMIT_ORDER_HOLD'
 assert 'bool sqliteUnknown = sqliteWriteAttempted && !sqliteVerified;' in generate
@@ -140,7 +148,10 @@ assert 'stopped = false, sqliteUnknown' in generate
 assert 'cmd.ExecuteNonQuery() != 1' in persist
 assert 'last_insert_rowid()' in persist
 assert 'using var verifyDb = OpenDatabase();' in persist
-assert 'FROM chat_history WHERE id=$id' in persist
+assert 'JOIN chat_history AS h ON h.id=r.chat_id' in persist
+assert 'tx.Commit();' in persist and 'INSERT INTO chat_request_receipts' in persist
+assert 'NOX_CHAT_DURABLE_REPLAY_DENIED' in generate and 'HasCommittedChatRequest(requestId)' in generate
+assert 'CREATE TABLE IF NOT EXISTS chat_request_receipts' in cs
 assert 'NOX_CHAT_SQLITE_READBACK_HOLD' in persist
 print('B04 R8 SOURCE_ONLY: timeout vs owner STOP, committed-row readback PASS; owner Windows Qwen NOT_TESTED')
 
@@ -475,3 +486,14 @@ assert 'if (read == 0) return builder.Length == 0 ? null : builder.ToString();' 
 assert line_guard.index('if (builder.Length >= MaxNdjsonLineChars)') < line_guard.index('builder.Append(one[0]);'), 'B02_NDJSON_CAP_PREAPPEND_HOLD'
 assert 'OLLAMA_NDJSON_LINE_LIMIT_HOLD' in line_guard and 'ReadLineAsync(readWindow.Token)' not in generate_budget, 'B02_NDJSON_UNBOUNDED_HOLD'
 print('B02 R8 SOURCE_ONLY: NDJSON record bound/owner timeout/EOF guards present; Windows Ollama NOT_TESTED')
+
+# B02: buffered NDJSON reads can complete synchronously on the native WPF
+# dispatcher. Periodically yield while honoring owner STOP and the hard cap.
+# Contract assertion only, not Windows/Ollama runtime acceptance.
+_ndjson_yield = cs.split('private static async Task<string?> ReadBoundedOllamaLineAsync(', 1)[1].split('private void PersistChat(', 1)[0]
+assert _ndjson_yield.count('await Task.Yield();') == 1, 'B02_NDJSON_UI_YIELD_MISSING_HOLD'
+assert 'if ((builder.Length & 4095) == 0)' in _ndjson_yield, 'B02_NDJSON_UI_YIELD_BUDGET_HOLD'
+assert _ndjson_yield.index('builder.Append(one[0]);') < _ndjson_yield.index('if ((builder.Length & 4095) == 0)') < _ndjson_yield.index('await Task.Yield();'), 'B02_NDJSON_UI_YIELD_ORDER_HOLD'
+assert _ndjson_yield.index('token.ThrowIfCancellationRequested();') < _ndjson_yield.index('await Task.Yield();'), 'B02_NDJSON_UI_YIELD_STOP_HOLD'
+assert _ndjson_yield.index('if (builder.Length >= MaxNdjsonLineChars)') < _ndjson_yield.index('builder.Append(one[0]);'), 'B02_NDJSON_BOUND_PRESERVED_HOLD'
+print('B02 SOURCE_ONLY: 4096-character periodic WPF UI yield, owner STOP and 2Mi NDJSON cap retained; Windows NOT_TESTED')

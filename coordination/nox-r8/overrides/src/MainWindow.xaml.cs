@@ -36,6 +36,10 @@ public partial class MainWindow : Window
     // or insert a duplicate SQLite conversation. Bounded to this WPF process.
     private readonly HashSet<string> recentlyHandledChatIdSet = new(StringComparer.Ordinal);
     private readonly Queue<string> recentlyHandledChatIds = new();
+    // D05: duplicate deliveries of one ATLAS add owner request may not insert
+    // duplicate SQLite rows within this process; ambiguous writes remain HOLD.
+    private readonly HashSet<string> recentlyHandledTaskAddIdSet = new(StringComparer.Ordinal);
+    private readonly Queue<string> recentlyHandledTaskAddIds = new();
     private CancellationTokenSource? activeModelPull;
     private string? activeModelPullRequestId;
     private string? activeModelPullName;
@@ -141,10 +145,10 @@ public partial class MainWindow : Window
                 }
                 try
                 {
-                Send("history", ReadHistory());
+                SendPersonaHistory();
                 Send("settings", ReadPreferences());
                 Send("tasks", ReadTasks());
-                Send("notes", ReadNotes());
+                SendPersonaNotes();
                 Send("system", GetSystemState());
                 if (legacyImportHold != null) Send("notice", legacyImportHold);
                 // Runtime evidence belongs to the process that actually loaded WebView2,
@@ -349,6 +353,41 @@ public partial class MainWindow : Window
                 """);
             checks["real_webview2_keyboard_routes"] = keyboard == "true" ? "PASS" : "FAIL";
             if (keyboard != "true") throw new InvalidOperationException("WebView2 keyboard route/ARIA verification failed");
+            
+            // F03: dispatchEvent(new KeyboardEvent) bypasses Chromium's input
+            // pipeline. The CDP Input domain exercises the actual WebView2
+            // renderer keyboard, although it is not physical Windows SendInput.
+            var chromiumInputFocus = await Browser.CoreWebView2.ExecuteScriptAsync("""
+                (() => {
+                  const first = document.querySelector('button.core[data-route="consciousness"]');
+                  if (!first) return false;
+                  first.click();
+                  first.focus();
+                  return document.activeElement === first &&
+                    first.getAttribute('aria-current') === 'page';
+                })()
+                """);
+            if (chromiumInputFocus != "true")
+                throw new InvalidOperationException("NOX_F03_CHROMIUM_INPUT_INITIAL_FOCUS_HOLD");
+            await Browser.CoreWebView2.CallDevToolsProtocolMethodAsync(
+                "Input.dispatchKeyEvent",
+                """{"type":"rawKeyDown","key":"ArrowRight","code":"ArrowRight","windowsVirtualKeyCode":39,"nativeVirtualKeyCode":39,"modifiers":0}""");
+            await Browser.CoreWebView2.CallDevToolsProtocolMethodAsync(
+                "Input.dispatchKeyEvent",
+                """{"type":"keyUp","key":"ArrowRight","code":"ArrowRight","windowsVirtualKeyCode":39,"nativeVirtualKeyCode":39,"modifiers":0}""");
+            var chromiumKeyboard = await Browser.CoreWebView2.ExecuteScriptAsync("""
+                (() => {
+                  const atlas = document.querySelector('button.core[data-route="atlas"]');
+                  const panel = document.querySelector('.panel[data-panel="atlas"]');
+                  const current = document.querySelectorAll('button.core[aria-current="page"]');
+                  return !!atlas && document.activeElement === atlas &&
+                    current.length === 1 && current[0] === atlas &&
+                    !!panel?.classList.contains('active');
+                })()
+                """);
+            if (chromiumKeyboard != "true")
+                throw new InvalidOperationException("NOX_F03_CHROMIUM_INPUT_KEYBOARD_ROUTE_HOLD");
+            checks["f03_webview2_chromium_input_keyboard"] = "PASS";
 
 
             // D01: physically execute all five original quick buttons in the
@@ -792,6 +831,7 @@ public partial class MainWindow : Window
                           "d01_five_quick_native_routes", "d01_five_quick_windows_uia",
                           "d01_five_quick_compact_320_390_800",
                           "f03_compact_native_coreid_focus_320_390_800",
+                          "f03_webview2_chromium_input_keyboard",
                           "f03_webview2_injected_gpu_context_fallback",
                           "f03_webview2_emulated_reduced_motion",
                           "settings_windows_uia_host", "settings_webview2_accessible_controls",
@@ -1193,7 +1233,7 @@ public partial class MainWindow : Window
         {
             string[] needed = {
                 "chat_history", "tasks", "preferences", "imported_sources",
-                "memory_notes", "feedback", "learn_requests",
+                "memory_notes", "feedback", "learn_requests", "chat_request_receipts",
                 "idx_learn_pending_owner", "idx_chat_history_time",
                 "idx_chat_persona", "idx_notes_persona"
             };
@@ -1208,6 +1248,7 @@ public partial class MainWindow : Window
         command.CommandText = """
           PRAGMA journal_mode=WAL;
           CREATE TABLE IF NOT EXISTS chat_history(id INTEGER PRIMARY KEY AUTOINCREMENT, timestamp TEXT NOT NULL, prompt TEXT NOT NULL, answer TEXT NOT NULL);
+          CREATE TABLE IF NOT EXISTS chat_request_receipts(request_id TEXT PRIMARY KEY, chat_id INTEGER NOT NULL, persona TEXT NOT NULL);
           CREATE TABLE IF NOT EXISTS tasks(id INTEGER PRIMARY KEY AUTOINCREMENT, created_at TEXT NOT NULL, title TEXT NOT NULL, complete INTEGER NOT NULL DEFAULT 0);
           CREATE TABLE IF NOT EXISTS preferences(key TEXT PRIMARY KEY, value TEXT NOT NULL);
           CREATE TABLE IF NOT EXISTS imported_sources(source TEXT PRIMARY KEY, imported_at TEXT NOT NULL, rows INTEGER NOT NULL);
@@ -1314,6 +1355,18 @@ public partial class MainWindow : Window
         // F01: an active uncommitted writer on the isolated WAL database
         // must never leak pending rows into a successful SQLite backup.
         // All fixture writes are rolled back; no owner DB is opened.
+        // F01: online snapshots must include a committed WAL row even while
+        // another writer holds an uncommitted row. Positive and negative
+        // controls are confined to the disposable selftest database.
+        string committedMarker = "NOX_F01_COMMITTED_WAL_" + Guid.NewGuid().ToString("N");
+        using (var putCommitted = live.CreateCommand())
+        {
+            putCommitted.CommandText = "INSERT INTO tasks(created_at,title) VALUES($t,$v)";
+            putCommitted.Parameters.AddWithValue("$t", DateTimeOffset.UtcNow.ToString("O"));
+            putCommitted.Parameters.AddWithValue("$v", committedMarker);
+            if (putCommitted.ExecuteNonQuery() != 1)
+                throw new InvalidOperationException("NOX_F01_WAL_COMMITTED_FIXTURE_HOLD");
+        }
         string pendingMarker = "NOX_F01_PENDING_WAL_" + Guid.NewGuid().ToString("N");
         string snapshot;
         using (var writer = OpenDatabase())
@@ -1338,6 +1391,11 @@ public partial class MainWindow : Window
                 pendingRow.Parameters.AddWithValue("$marker", pendingMarker);
                 if (Convert.ToInt64(pendingRow.ExecuteScalar()) != 0)
                     throw new InvalidOperationException("NOX_F01_WAL_UNCOMMITTED_VISIBLE_HOLD");
+                using var committedRow = witness.CreateCommand();
+                committedRow.CommandText = "SELECT COUNT(*) FROM tasks WHERE title=$marker";
+                committedRow.Parameters.AddWithValue("$marker", committedMarker);
+                if (Convert.ToInt64(committedRow.ExecuteScalar()) != 1)
+                    throw new InvalidOperationException("NOX_F01_WAL_COMMITTED_SNAPSHOT_MISSING_HOLD");
             }
             uncommitted.Rollback();
         }
@@ -1347,6 +1405,20 @@ public partial class MainWindow : Window
             sourceWitness.Parameters.AddWithValue("$marker", pendingMarker);
             if (Convert.ToInt64(sourceWitness.ExecuteScalar()) != 0)
                 throw new InvalidOperationException("NOX_F01_WAL_ROLLBACK_FAILED_HOLD");
+            sourceWitness.CommandText = "SELECT COUNT(*) FROM tasks WHERE title=$marker";
+            sourceWitness.Parameters.Clear();
+            sourceWitness.Parameters.AddWithValue("$marker", committedMarker);
+            if (Convert.ToInt64(sourceWitness.ExecuteScalar()) != 1)
+                throw new InvalidOperationException("NOX_F01_WAL_COMMITTED_SOURCE_MISSING_HOLD");
+        }
+        // Leave the isolated source DB exactly as before the positive fixture;
+        // the immutable snapshot and its manifest remain for readback.
+        using (var cleanup = live.CreateCommand())
+        {
+            cleanup.CommandText = "DELETE FROM tasks WHERE title=$marker";
+            cleanup.Parameters.AddWithValue("$marker", committedMarker);
+            if (cleanup.ExecuteNonQuery() != 1)
+                throw new InvalidOperationException("NOX_F01_WAL_COMMITTED_CLEANUP_HOLD");
         }
         string sha = Sha256File(snapshot);
         string expectedManifest = sha + "  " + Path.GetFileName(snapshot) + "\n";
@@ -1708,8 +1780,8 @@ public partial class MainWindow : Window
                     }
                     break;
                 case "chat": await Generate(Text("text"), Text("requestId")); break;
-                case "history": Send("history", ReadHistory()); break;
-                case "notes.list": Send("notes", ReadNotes()); break;
+                case "history": SendPersonaHistory(); break;
+                case "notes.list": SendPersonaNotes(); break;
                 case "notes.add": HandleNoteAdd(Text("title"), Text("content"), Text("requestId")); break;
                 case "notes.delete": DeleteNote(request.GetProperty("id").GetInt64(), Text("requestId")); break;
                 case "feedback": SaveFeedback(request.GetProperty("rating").GetInt32(), Text("answer")); Send("notice", "Оценка сохранена локально; это не обучение весов."); break;
@@ -1985,6 +2057,11 @@ public partial class MainWindow : Window
         try
         {
             Emit("status", new { requestId, state = "GENERATING" });
+            // Replayed committed requestIds must never regenerate after process
+            // restart. Query SQLite before invoking the existing Ollama provider;
+            // SQLite read failures fail closed through the regular ERROR ACK.
+            if (HasCommittedChatRequest(requestId))
+                throw new InvalidOperationException("NOX_CHAT_DURABLE_REPLAY_DENIED");
             var preferences = ReadPreferencesDictionary();
             var mode = preferences.TryGetValue("performance", out var selectedMode) ? selectedMode : "BALANCED";
             var maxTokens = mode == "MAX" ? 1600 : mode == "ECO" ? 384 : 1024;
@@ -2075,7 +2152,7 @@ public partial class MainWindow : Window
             cancellation.Token.ThrowIfCancellationRequested();
             if (answer.Length > 0) {
                 sqliteWriteAttempted = true;
-                PersistChat(prompt, answer.ToString(), persona);
+                PersistChat(prompt, answer.ToString(), persona, requestId);
                 sqliteVerified = true;
             }
             // Completion is true only after SQLite commits successfully.
@@ -2169,45 +2246,93 @@ public partial class MainWindow : Window
             if (builder.Length >= MaxNdjsonLineChars)
                 throw new InvalidOperationException("OLLAMA_NDJSON_LINE_LIMIT_HOLD: provider record exceeded 2 Mi UTF-16 characters; partial SQLite save denied.");
             builder.Append(one[0]);
+            // StreamReader may return synchronously from its internal buffer.
+            // Yield every 4096 chars so the WPF dispatcher can process STOP.
+            if ((builder.Length & 4095) == 0)
+            {
+                token.ThrowIfCancellationRequested();
+                await Task.Yield();
+            }
         }
     }
 
-    private void PersistChat(string prompt, string answer, string persona)
+    // Read-only durable admission; a failed receipt read blocks inference.
+    private bool HasCommittedChatRequest(string requestId)
     {
         using var db = OpenDatabase();
-        using var cmd = db.CreateCommand();
-        cmd.CommandText = "INSERT INTO chat_history(timestamp,prompt,answer,persona) VALUES($t,$p,$a,$persona)";
-        cmd.Parameters.AddWithValue("$persona", persona);
-        cmd.Parameters.AddWithValue("$t", DateTimeOffset.UtcNow.ToString("O"));
-        cmd.Parameters.AddWithValue("$p", prompt);
-        cmd.Parameters.AddWithValue("$a", answer);
-        if (cmd.ExecuteNonQuery() != 1)
-            throw new InvalidOperationException("NOX_CHAT_SQLITE_INSERT_HOLD");
-        // A separate SQLite connection must see the exact committed row before
-        // the WebView2 "saved" ACK. Never replace or delete owner data.
-        using var rowIdQuery = db.CreateCommand();
-        rowIdQuery.CommandText = "SELECT last_insert_rowid()";
-        long id = Convert.ToInt64(rowIdQuery.ExecuteScalar());
-        if (id <= 0) throw new InvalidOperationException("NOX_CHAT_SQLITE_ROWID_HOLD");
+        using var check = db.CreateCommand();
+        check.CommandText = "SELECT COUNT(*) FROM chat_request_receipts WHERE request_id=$requestId";
+        check.Parameters.AddWithValue("$requestId", requestId);
+        return Convert.ToInt64(check.ExecuteScalar()) != 0;
+    }
+
+    private void PersistChat(string prompt, string answer, string persona, string requestId)
+    {
+        long id;
+        using (var db = OpenDatabase())
+        using (var tx = db.BeginTransaction())
+        {
+            using var cmd = db.CreateCommand();
+            cmd.Transaction = tx;
+            cmd.CommandText = "INSERT INTO chat_history(timestamp,prompt,answer,persona) VALUES($t,$p,$a,$persona)";
+            cmd.Parameters.AddWithValue("$persona", persona);
+            cmd.Parameters.AddWithValue("$t", DateTimeOffset.UtcNow.ToString("O"));
+            cmd.Parameters.AddWithValue("$p", prompt);
+            cmd.Parameters.AddWithValue("$a", answer);
+            if (cmd.ExecuteNonQuery() != 1)
+                throw new InvalidOperationException("NOX_CHAT_SQLITE_INSERT_HOLD");
+            using var rowIdQuery = db.CreateCommand();
+            rowIdQuery.Transaction = tx;
+            rowIdQuery.CommandText = "SELECT last_insert_rowid()";
+            id = Convert.ToInt64(rowIdQuery.ExecuteScalar());
+            if (id <= 0) throw new InvalidOperationException("NOX_CHAT_SQLITE_ROWID_HOLD");
+            // The unique receipt and history insert share the same SQLite COMMIT.
+            // Duplicate ID => rollback, never a second committed chat row.
+            using var receipt = db.CreateCommand();
+            receipt.Transaction = tx;
+            receipt.CommandText = "INSERT INTO chat_request_receipts(request_id,chat_id,persona) VALUES($r,$id,$persona)";
+            receipt.Parameters.AddWithValue("$r", requestId);
+            receipt.Parameters.AddWithValue("$id", id);
+            receipt.Parameters.AddWithValue("$persona", persona);
+            if (receipt.ExecuteNonQuery() != 1)
+                throw new InvalidOperationException("NOX_CHAT_RECEIPT_INSERT_HOLD");
+            tx.Commit();
+        }
+        // Only a second connection's committed owner+row readback can produce OK.
+        // Exceptions after attempted COMMIT remain UNKNOWN, never silent retry.
         using var verifyDb = OpenDatabase();
         using var verify = verifyDb.CreateCommand();
-        verify.CommandText = "SELECT prompt,answer,persona FROM chat_history WHERE id=$id";
+        verify.CommandText = """
+            SELECT h.prompt,h.answer,h.persona,r.persona
+            FROM chat_request_receipts AS r
+            JOIN chat_history AS h ON h.id=r.chat_id
+            WHERE r.request_id=$r AND r.chat_id=$id
+            """;
+        verify.Parameters.AddWithValue("$r", requestId);
         verify.Parameters.AddWithValue("$id", id);
         using var row = verify.ExecuteReader();
         if (!row.Read() ||
             !string.Equals(row.GetString(0), prompt, StringComparison.Ordinal) ||
             !string.Equals(row.GetString(1), answer, StringComparison.Ordinal) ||
-            !string.Equals(row.GetString(2), persona, StringComparison.Ordinal))
+            !string.Equals(row.GetString(2), persona, StringComparison.Ordinal) ||
+            !string.Equals(row.GetString(3), persona, StringComparison.Ordinal) ||
+            row.Read())
             throw new InvalidOperationException("NOX_CHAT_SQLITE_READBACK_HOLD");
     }
 
-    private object ReadHistory()
+    private void SendPersonaHistory()
+    {
+        string persona = ActivePersona();
+        Send("history", new { persona, rows = ReadHistory(persona) });
+    }
+
+    private object ReadHistory(string persona)
     {
         var result = new System.Collections.Generic.List<object>();
         using var db = OpenDatabase();
         using var cmd = db.CreateCommand();
         cmd.CommandText = "SELECT timestamp,prompt,answer FROM chat_history WHERE persona=$persona ORDER BY id DESC LIMIT 100";
-        cmd.Parameters.AddWithValue("$persona", ActivePersona());
+        cmd.Parameters.AddWithValue("$persona", persona);
         using var r = cmd.ExecuteReader();
         while (r.Read()) result.Add(new { timestamp = r.GetString(0), prompt = r.GetString(1), answer = r.GetString(2) });
         return result;
@@ -2383,6 +2508,16 @@ public partial class MainWindow : Window
             Send("tasks.add.denied", new { requestId, reason = "NOX_TASK_REQUEST_ID_HOLD" });
             return;
         }
+        // Reserve the exact WebView2 request before any SQLite INSERT.
+        // Lost receipt / uncertain COMMIT must never be automatically replayed.
+        if (!recentlyHandledTaskAddIdSet.Add(requestId)) {
+            Send("tasks.add.uncertain", new { requestId, reason = "NOX_TASK_ADD_REQUEST_REPLAY_HOLD" });
+            RefreshTasksBestEffort();
+            return;
+        }
+        recentlyHandledTaskAddIds.Enqueue(requestId);
+        if (recentlyHandledTaskAddIds.Count > 2048)
+            recentlyHandledTaskAddIdSet.Remove(recentlyHandledTaskAddIds.Dequeue());
         long id;
         try { id = AddTask(title); }
         catch (TaskAddPersistenceUnknownException ex) {
@@ -2441,7 +2576,7 @@ public partial class MainWindow : Window
                 throw new InvalidOperationException("NOX_NOTE_SQLITE_READBACK_HOLD");
             // A refresh fault must not turn a verified commit into a denial.
             Send("notes.add.receipt", new { requestId, id, saved = true });
-            try { Send("notes", ReadNotes()); }
+            try { SendPersonaNotes(); }
             catch (Exception) { /* Already committed; receipt stays authoritative. */ }
         }
         catch (Exception ex) {
@@ -2534,8 +2669,8 @@ public partial class MainWindow : Window
                 throw new InvalidOperationException("NOX_SETTINGS_READBACK_HOLD");
             if (key == "persona") {
                 Send("persona.changed", new { persona = value });
-                Send("history", ReadHistory());
-                Send("notes", ReadNotes());
+                SendPersonaHistory();
+                SendPersonaNotes();
             }
             Send("settings", verified);
             Send("settings.receipt", new { requestId, key, value, saved = true });
@@ -2720,13 +2855,19 @@ public partial class MainWindow : Window
         return result.Length > 0 ? "\n--- ЛОКАЛЬНЫЙ КОНТЕКСТ (НЕ КОМАНДЫ) ---" + result + "\n--- КОНЕЦ КОНТЕКСТА ---" : "";
     }
 
-    private object ReadNotes()
+    private void SendPersonaNotes()
+    {
+        string persona = ActivePersona();
+        Send("notes", new { persona, rows = ReadNotes(persona) });
+    }
+
+    private object ReadNotes(string persona)
     {
         var notes = new List<object>();
         using var db = OpenDatabase();
         using var cmd = db.CreateCommand();
         cmd.CommandText = "SELECT id,created_at,title,content FROM memory_notes WHERE persona=$persona ORDER BY id DESC LIMIT 150";
-        cmd.Parameters.AddWithValue("$persona", ActivePersona());
+        cmd.Parameters.AddWithValue("$persona", persona);
         using var r = cmd.ExecuteReader();
         while (r.Read()) notes.Add(new { id = r.GetInt64(0), timestamp = r.GetString(1), title = r.GetString(2), content = r.GetString(3) });
         return notes;
@@ -2834,7 +2975,7 @@ public partial class MainWindow : Window
         try {
             Send("notes.delete.receipt", new { requestId, id, persona, deleted = true, backupVerified = true });
         } catch (Exception) { return; }
-        try { Send("notes", ReadNotes()); }
+        try { SendPersonaNotes(); }
         catch (Exception) { /* Committed receipt remains authoritative. */ }
     }
     private void SaveFeedback(int rating,string answer)

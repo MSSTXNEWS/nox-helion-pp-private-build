@@ -47,4 +47,17 @@ assert backup.index("NOX_F01_WAL_WRITER_FIXTURE_HOLD") < backup.index(
     "NOX_F01_WAL_UNCOMMITTED_VISIBLE_HOLD") < backup.index(
     "uncommitted.Rollback();") < backup.index(
     "NOX_F01_WAL_ROLLBACK_FAILED_HOLD")
+# A positive committed marker and simultaneous uncommitted writer distinguish
+# a faithful online snapshot from a copy that merely excludes pending data.
+for token in ("NOX_F01_WAL_COMMITTED_FIXTURE_HOLD",
+              "NOX_F01_WAL_COMMITTED_SNAPSHOT_MISSING_HOLD",
+              "NOX_F01_WAL_COMMITTED_SOURCE_MISSING_HOLD",
+              "NOX_F01_WAL_COMMITTED_CLEANUP_HOLD"):
+    assert token in backup, "F01_COMMITTED_WAL_PROOF_MISSING_HOLD:" + token
+assert backup.index("NOX_F01_WAL_COMMITTED_FIXTURE_HOLD") < backup.index(
+    "NOX_F01_WAL_WRITER_FIXTURE_HOLD") < backup.index(
+    'CheckpointSqlite(live, "SMOKE_ISOLATED")') < backup.index(
+    "NOX_F01_WAL_COMMITTED_SNAPSHOT_MISSING_HOLD") < backup.index(
+    "uncommitted.Rollback();") < backup.index(
+    "NOX_F01_WAL_COMMITTED_CLEANUP_HOLD")
 print("F01_B06_NATIVE_BACKUP_AND_REAL_QWEN_STOP_ORACLE_SOURCE_ONLY_PASS_OWNER_NOT_TESTED")
