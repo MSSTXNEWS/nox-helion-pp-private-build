@@ -18,6 +18,10 @@ ROOT=Path(r"C:\NOX_HELION\NOX_NEW")
 TARGET=11120
 MAX_SESSIONS=6
 MAX_THERMAL_EXHAUSTIONS=3
+MAX_SENSOR_RECOVERIES=4
+SENSOR_REST_SECONDS=180
+SENSOR_MAX_CHECKS=180
+SENSOR_HEALTHY_POLLS=3
 RECHECK_SECONDS=20
 THERMAL_REST_SECONDS=900
 
@@ -94,6 +98,44 @@ def safe_to_start():
     if not ac and pct<=30:return False,"BATTERY_WAIT",hot,pct
     return True,"SAFE",hot,pct
 
+def wait_for_sensor_recovery(saved_step):
+    """Restart only after worker exit + 180s + 3 genuine cool sensor polls.
+
+    No substitutes for the Radeon RX 6650M Hot Spot; missing/zero is not zero C.
+    No uncontrolled retry loop: at most 60 minutes to restore the monitor.
+    """
+    note("SENSOR_COOLDOWN",saved_step=saved_step,seconds=SENSOR_REST_SECONDS)
+    time.sleep(SENSOR_REST_SECONDS)
+    healthy=0
+    for tick in range(SENSOR_MAX_CHECKS):
+        # Any still-live trainer is a hard safety stop, not something to reuse.
+        assert_idle()
+        try:
+            ready,reason,hot,pct=safe_to_start()
+            if ready and hot<65:
+                healthy+=1
+                note("SENSOR_HEALTHY_POLL",count=healthy,required=SENSOR_HEALTHY_POLLS,
+                     hotspot_c=hot,battery_pct=pct)
+                if healthy>=SENSOR_HEALTHY_POLLS:
+                    return
+            else:
+                healthy=0
+                if tick%6==0:
+                    note("SENSOR_WAIT",reason=reason,hotspot_c=hot,battery_pct=pct)
+        except RuntimeError as exc:
+            # assert_idle() failures can indicate orphan GPU work: never retry.
+            if "Another GPU" in str(exc) or "Unable to inspect GPU" in str(exc):
+                raise
+            healthy=0
+            if tick%6==0:
+                note("SENSOR_WAIT",reason=str(exc)[:150])
+        except Exception as exc:
+            healthy=0
+            if tick%6==0:
+                note("SENSOR_WAIT",reason=str(exc)[:150])
+        time.sleep(RECHECK_SECONDS)
+    raise RuntimeError("SENSOR_RECOVERY_TIMEOUT; monitor still unavailable")
+
 def supervised():
     assert_idle()
     controller=HERE/"nox_gpu_target_11120.py"
@@ -105,6 +147,7 @@ def supervised():
         return 0
     sessions=0
     exhaustions=0
+    sensor_recoveries=0
     last_step=step
     while sessions<MAX_SESSIONS:
         # Wait on safe conditions, capped to avoid hanging forever on broken sensor.
@@ -150,6 +193,19 @@ def supervised():
         if rc==0:
             # The program must not report success before reaching target.
             raise RuntimeError("Controller exited 0 before target; no restart")
+        if "SENSOR_RECOVERY_REQUIRED" in output:
+            sensor_recoveries+=1
+            if sensor_recoveries>MAX_SENSOR_RECOVERIES:
+                raise RuntimeError("Too many RX6650M sensor outages; checkpoint intact")
+            # Child has exited. Check that no GPU trainer is still alive.
+            assert_idle()
+            note("SENSOR_LOST_SAFE_HOLD",count=sensor_recoveries,saved_step=step,
+                 last_checkpoint=str(cp))
+            wait_for_sensor_recovery(step)
+            # Only a complete checkpoint may be selected on the next session.
+            check_checkpoint()
+            last_step=step
+            continue
         if "EXCESSIVE_THERMAL_STOPS" not in output:
             raise RuntimeError("Nonthermal trainer failure. No restart. Last lines:\n"+output[-1600:])
         if step<=last_step:raise RuntimeError("Repeated thermal stop without saved progress; no restart")
