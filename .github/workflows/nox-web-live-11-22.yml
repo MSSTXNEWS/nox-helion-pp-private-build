@@ -40,9 +40,17 @@ jobs:
           retention-days: 30
 
   windows-shell-parse:
+    needs: live-web-source
     runs-on: windows-2022
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          name: NOX-WEB-11-22-SOURCE-SHELL
+          path: kit
       - name: Parse actual Windows PowerShell installer and launcher
         shell: pwsh
         run: |
@@ -67,3 +75,7 @@ jobs:
             if($_.Exception.Message -notmatch 'WEB_KIT_NOT_FOUND_HOLD'){throw}
             Write-Host 'WEB_NO_KIT_FAIL_CLOSED_PASS'
           }
+      - name: Disposable Windows source fixture - real offline install and localhost launch
+        shell: pwsh
+        run: |
+          & ./nox-local/live/finish/test_windows_installer.ps1
