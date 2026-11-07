@@ -171,7 +171,7 @@ assert 'Send("complete", new { requestId, ok = false, stopped = false });' in re
 for marker in ('CHAT_EMPTY_PROMPT_DENIED', 'CHAT_REQUEST_ID_DENIED',
                'CHAT_PROMPT_TOO_LONG_DENIED', 'CHAT_ALREADY_RUNNING_HOLD'):
     assert preflight.count('RejectChat("' + marker + '");') == 1, 'B04_CHAT_REJECT_PATH_HOLD ' + marker
-assert "case 'complete':busy=false;activeChatId=null" in html, 'B04_WEBVIEW_CHAT_UNLOCK_HOLD'
+assert legacy_complete or strict_complete, 'B04_WEBVIEW_CHAT_UNLOCK_HOLD'
 print('B04 R8 SOURCE_ONLY: native preflight rejection now releases the matching WebView2 owner')
 
 # B04 live HTTP STOP acceptance regression: a task/HTTP POST beginning is not
