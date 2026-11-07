@@ -23,11 +23,13 @@ $files = @(
  "forge_genesis_server_v8.py","forge_actual_telemetry_v1.py",
  "nox_thermal_sensors_v1.py","forge_focus_v4_canonical_live.html",
  "nox_unified_brain_v1.py","nox_unified_chat_v1.html",
+ "nox_prime_cognitive_memory_v1.py",
  "nox_prime_resource_advisor_v1.py",
  "nox_gpu_target_11120.py","nox_gpu_worm_safe70_v1.py",
  "nox_safe70_thermal_guard_v1.py",
  "test_nox_unified_brain_v1.py","test_nox_prime_resource_advisor_v1.py",
- "test_nox_safe70_thermal_guard_v1.py"
+ "test_nox_safe70_thermal_guard_v1.py",
+ "test_nox_prime_cognitive_memory_v1.py"
 )
 foreach ($name in $files) {
     $objectPath = "$base/$name"
@@ -62,11 +64,11 @@ foreach ($name in $files) {
         Remove-Item $tmp -Force -ErrorAction SilentlyContinue
     }
 }
-& $python -m py_compile "$dest\forge_live_server_v6.py" $dest\nox_unified_brain_v1.py" "$dest\nox_prime_resource_advisor_v1.py" "$dest\nox_gpu_target_11120.py" "$dest\nox_gpu_worm_safe70_v1.py"
+& $python -m py_compile "$dest\forge_live_server_v6.py" "$dest\nox_unified_brain_v1.py" $dest\nox_prime_resource_advisor_v1.py" "$dest\nox_prime_cognitive_memory_v1.py" "$dest\nox_gpu_target_11120.py" "$dest\nox_gpu_worm_safe70_v1.py"
 if ($LASTEXITCODE -ne 0) { throw "Python syntax validation failed" }
 Push-Location $dest
 try {
-    & $python -m unittest -q test_nox_unified_brain_v1 test_nox_prime_resource_advisor_v1 test_nox_safe70_thermal_guard_v1
+    & $python -m unittest -q test_nox_unified_brain_v1 test_nox_prime_resource_advisor_v1 test_nox_safe70_thermal_guard_v1 test_nox_prime_cognitive_memory_v1
     if ($LASTEXITCODE -ne 0) { throw "Unified brain contract tests failed" }
 } finally { Pop-Location }
 
@@ -88,7 +90,7 @@ foreach ($port in 18880..18888) {
         Start-Sleep -Milliseconds 500
         try {
             $health = Invoke-RestMethod ($url+"api/health") -TimeoutSec 2
-            if ($health.unified_router -eq "NOX-UNIFIED-BRAIN-V2") {
+            if ($health.unified_router -eq "NOX-UNIFIED-BRAIN-V4") {
                 $selected = $url
                 break
             }
