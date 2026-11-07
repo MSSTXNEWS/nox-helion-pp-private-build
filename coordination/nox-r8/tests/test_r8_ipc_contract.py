@@ -146,7 +146,9 @@ print('B04 R8 SOURCE_ONLY: native preflight rejection now releases the matching 
 selftest = cs.split('private async Task RunNativeSelfTestAsync()', 1)[1].split('private bool HasSavedPrompt(', 1)[0]
 token_wait = cs.split('private async Task<bool> WaitForGenerationTokenAsync(', 1)[1].split('private async Task WaitForGenerationFinishAsync(', 1)[0]
 generation = cs.split('private async Task Generate(', 1)[1].split('private void PersistChat(', 1)[0]
-assert 'int streamTokenTarget = Volatile.Read(ref generationStreamingTokenCount) + 1;' in selftest
+# F01 requires two *real* nonempty Ollama NDJSON chunks before STOP.
+# Pin the stricter threshold rather than expecting the obsolete one-chunk probe.
+assert 'int streamTokenTarget = Volatile.Read(ref generationStreamingTokenCount) + 2;' in selftest, 'B02_F01_TWO_LIVE_HTTP_CHUNKS_HOLD'
 assert selftest.index('WaitForGenerationTokenAsync(streamTokenTarget, stopTarget, TimeSpan.FromMinutes(2))') < selftest.index('document.getElementById(\'stop\').click()')
 assert 'NOX_ACTIVE_HTTP_STREAM_NOT_OBSERVED_HOLD' in selftest
 assert 'Volatile.Read(ref generationFinishedCount) >= generationTarget' in token_wait
