@@ -41,6 +41,9 @@ jobs:
           Copy-Item './coordination/nox-r8/tests/test_r8_provider_recovery.py' './r8/test_r8_provider_recovery.py'
           python './r8/test_r8_provider_recovery.py'
           if ($LASTEXITCODE -ne 0) { throw 'TECHFIRST_PROVIDER_AUTOSTART_SOURCE_HOLD' }
+          Copy-Item './coordination/nox-r8/tests/test_r8_sqlite_commit_unknown.py' './r8/test_r8_sqlite_commit_unknown.py'
+          python './r8/test_r8_sqlite_commit_unknown.py'
+          if ($LASTEXITCODE -ne 0) { throw 'NOX_B04_SQLITE_COMMIT_UNKNOWN_HOLD' }
           # B04: run original Model Center request-owner and durable receipt regression.
           # The test reads ../overrides/src relative to its original tests/ folder.
           node './coordination/nox-r8/tests/test_r8_b04_model_selection.cjs'
