@@ -413,7 +413,7 @@ body.reduced .helion-fx{filter:none}body.reduced .core.active{animation:none}
 <script>
 'use strict';
 const $=id=>document.getElementById(id);const post=(type,data={})=>{const bridge=window.chrome?.webview;if(typeof bridge?.postMessage!=='function'){$('status').textContent='NATIVE BRIDGE OFFLINE';return false}try{bridge.postMessage({type,...data});return true}catch{$('status').textContent='NATIVE BRIDGE DISPATCH FAILED';return false}};
-let responseBox=null,lastAnswer='',busy=false,settingsDenial='',activeChatId=null,pendingStopId=null,requestSequence=0,pendingChatDraft=null,pendingTask=null,pendingNote=null,pendingNoteDelete=null,pendingTaskToggle=null,pendingModel=null,pendingModelPull=null,committedModel="",pendingSettings=null,committedSettings={},settingsReconcile=null,visibleDraftPersona='KV',pendingVuneo=null;
+let responseBox=null,lastAnswer='',busy=false,settingsDenial='',activeChatId=null,pendingStopId=null,requestSequence=0,pendingChatDraft=null,pendingTask=null,pendingNote=null,pendingNoteDelete=null,pendingTaskToggle=null,pendingModel=null,pendingModelPull=null,committedModel="",pendingSettings=null,committedSettings={},settingsReconcile=null,visibleDraftPersona='KV',pendingVuneo=null,pendingMemorySearch=null;
 let vuneoImportUncertain=false;
 let noteAddUncertain=false; // Possible SQLite INSERT: preserve draft, block silent duplicate.
 let pendingLearnRequest=null,pendingLearnStop=null; // Native owner-correlated consent and cancellation.
@@ -508,7 +508,19 @@ $('vuneoImport').onclick=()=>{
     $('vuneoImportStatus').textContent='NOX_VUNEO_NATIVE_DISPATCH_HOLD';return false;
   }
   return true;
-};$('knowledgeSearch').onclick=()=>post('knowledge.search',{query:$('knowledgeQuery').value.trim()});$('knowledgeQuery').onkeydown=e=>{if(e.key==='Enter'&&!e.defaultPrevented&&!e.ctrlKey&&!e.altKey&&!e.metaKey&&!e.isComposing&&e.keyCode!==229&&!e.shiftKey){e.preventDefault();if(!e.repeat)$('knowledgeSearch').click()}};$('memorySearch').onclick=()=>post('memory.search',{query:$('memoryQuery').value.trim()});$('memoryQuery').onkeydown=e=>{if(e.key==='Enter'&&!e.defaultPrevented&&!e.ctrlKey&&!e.altKey&&!e.metaKey&&!e.isComposing&&e.keyCode!==229&&!e.shiftKey){e.preventDefault();if(!e.repeat)$('memorySearch').click()}};
+};$('knowledgeSearch').onclick=()=>post('knowledge.search',{query:$('knowledgeQuery').value.trim()});$('knowledgeQuery').onkeydown=e=>{if(e.key==='Enter'&&!e.defaultPrevented&&!e.ctrlKey&&!e.altKey&&!e.metaKey&&!e.isComposing&&e.keyCode!==229&&!e.shiftKey){e.preventDefault();if(!e.repeat)$('knowledgeSearch').click()}};$('memorySearch').onclick=()=>{
+  if(!['KV','AM','LA','EV','KW'].includes(visibleDraftPersona)){
+    $('memoryResults').textContent='NOX_MEMORY_PERSONA_NOT_READY_HOLD';return false;
+  }
+  const requestId=nextChatId();
+  pendingMemorySearch={requestId,persona:visibleDraftPersona};
+  $('memoryResults').replaceChildren();
+  if(post('memory.search',{query:$('memoryQuery').value.trim(),requestId})===false){
+    pendingMemorySearch=null;$('memoryResults').textContent='NOX_MEMORY_NATIVE_DISPATCH_HOLD';
+    return false;
+  }
+  return true;
+};$('memoryQuery').onkeydown=e=>{if(e.key==='Enter'&&!e.defaultPrevented&&!e.ctrlKey&&!e.altKey&&!e.metaKey&&!e.isComposing&&e.keyCode!==229&&!e.shiftKey){e.preventDefault();if(!e.repeat)$('memorySearch').click()}};
 $('maxMode').onclick=()=>{route('persona');if(pendingSettings)return;$('performance').value='MAX';saveSetting('performance','MAX');};
 $('saveModel').onclick=()=>{const model=$('modelPicker').value;if(!model||pendingModel)return;const requestId=nextChatId();pendingModel={requestId,model,previous:committedModel};$('saveModel').disabled=true;$('modelSelectStatus').textContent='Проверка локального тега и SQLite…';if(post('model.select',{model,requestId})===false){const previous=pendingModel.previous;pendingModel=null;$('saveModel').disabled=false;if(previous)$('modelPicker').value=previous;$('modelSelectStatus').textContent='Нет нативного соединения. Предыдущая модель сохранена.';}};$('pullModel').onclick=()=>{
   if(pendingModelPull)return;
@@ -542,7 +554,7 @@ switch(m.type){
 case 'status':if(pendingChatDraft?.persona!==visibleDraftPersona)break;$('status').textContent=v.state;$('generation').classList.toggle('on',v.state==='GENERATING');window.noxVisual?.setEnergy(v.state==='GENERATING');break;
 case 'token':if(pendingChatDraft?.persona!==visibleDraftPersona)break;lastAnswer+=v.text;if(responseBox)responseBox.lastChild.textContent+=v.text;break;
 case 'metrics':if(pendingChatDraft?.persona!==visibleDraftPersona)break;$('inferenceMetrics').textContent=v?.measured?`QWEN · ${v.outputTokens} токенов · ${v.tokensPerSecond} ток/с · prompt ${v.promptTokens}`:'Модель не сообщила достоверные метрики';break;
-case 'complete':{const retry=pendingChatDraft?.requestId===v?.requestId?pendingChatDraft:null;pendingChatDraft=null;busy=false;activeChatId=null;pendingStopId=null;$('generation').classList.remove('on');window.noxVisual?.setEnergy(false);let restored=false;if(!v?.ok&&retry){if(retry.persona===visibleDraftPersona){if($('prompt').value===''){$('prompt').value=retry.raw;restored=true;}}else if(['KV','AM','LA','EV','KW'].includes(retry.persona)){const saved=personaDrafts.get(retry.persona)||{};if(!saved.prompt){personaDrafts.set(retry.persona,{...saved,prompt:retry.raw});restored=true;}}}if(v?.stopped){lastAnswer='';$('streamHint').textContent='Поток остановлен. Частичный ответ не сохранён.'+(restored?(retry.persona===visibleDraftPersona?' Запрос восстановлен.':' Запрос сохранён в исходной PersonaID.'):'');}else if(v?.sqliteUnknown===true){if(retry)uncertainChatKeys.add(uncertainChatKey(retry.persona,retry.raw));lastAnswer='';$('streamHint').textContent='SQLite мог сохранить ответ. Проверьте историю перед повторной отправкой.'+(restored?' Черновик восстановлен.':'');}else if(v?.ok)$('streamHint').textContent='Ответ завершён и сохранён в SQLite.';else{lastAnswer='';$('streamHint').textContent='Ответ не сохранён.'+(restored?(retry.persona===visibleDraftPersona?' Исходный запрос восстановлен.':' Исходный запрос сохранён в исходной PersonaID.'):' Новый черновик не изменён.');}break;}
+case 'complete':{const retry=pendingChatDraft?.requestId===v?.requestId?pendingChatDraft:null;pendingChatDraft=null;busy=false;activeChatId=null;pendingStopId=null;$('generation').classList.remove('on');window.noxVisual?.setEnergy(false);let restored=false;if(!v?.ok&&retry){if(retry.persona===visibleDraftPersona){if($('prompt').value===''){$('prompt').value=retry.raw;restored=true;}}else if(['KV','AM','LA','EV','KW'].includes(retry.persona)){const saved=personaDrafts.get(retry.persona)||{};if(!saved.prompt){personaDrafts.set(retry.persona,{...saved,prompt:retry.raw});restored=true;}}}if(retry?.persona!==visibleDraftPersona){if(v?.sqliteUnknown===true&&retry)uncertainChatKeys.add(uncertainChatKey(retry.persona,retry.raw));lastAnswer='';break;}if(v?.stopped){lastAnswer='';$('streamHint').textContent='Поток остановлен. Частичный ответ не сохранён.'+(restored?(retry.persona===visibleDraftPersona?' Запрос восстановлен.':' Запрос сохранён в исходной PersonaID.'):'');}else if(v?.sqliteUnknown===true){if(retry)uncertainChatKeys.add(uncertainChatKey(retry.persona,retry.raw));lastAnswer='';$('streamHint').textContent='SQLite мог сохранить ответ. Проверьте историю перед повторной отправкой.'+(restored?' Черновик восстановлен.':'');}else if(v?.ok)$('streamHint').textContent='Ответ завершён и сохранён в SQLite.';else{lastAnswer='';$('streamHint').textContent='Ответ не сохранён.'+(restored?(retry.persona===visibleDraftPersona?' Исходный запрос восстановлен.':' Исходный запрос сохранён в исходной PersonaID.'):' Новый черновик не изменён.');}break;}
 case 'error':$('status').textContent='ERROR';entry($('messages'),v&&typeof v==='object'?String(v.message||'NATIVE_ERROR'):String(v),'ERROR');/* Only the matching native complete may unlock a busy chat. */break;
 case 'health':{const s=v.online?(v.modelVisible?'QWEN ONLINE':'SERVER ONLINE / MODEL ABSENT'):'PROVIDER OFFLINE';$('status').textContent=s;$('hudModel').textContent=(v.model||'QWEN').split(':')[0].toUpperCase().slice(0,13);$('hudEngine').textContent=v.modelVisible?'ONLINE':v.online?'NO MODEL':'OFFLINE';$('visualLive').textContent=v.modelVisible?'LOCAL AI ONLINE':'AI NOT READY';$('visualLiveDot').classList.toggle('on',!!v.modelVisible);const out=JSON.stringify(v,null,2);$('health').textContent=out;$('overview').textContent=out;const picker=$('modelPicker');picker.replaceChildren();(v.models||[]).forEach(name=>{let op=document.createElement('option');op.value=name;op.textContent=name;picker.append(op)});if(v.model&&!pendingModel){committedModel=v.model;picker.value=v.model;}if(!v.models?.length){let op=document.createElement('option');op.textContent='Нет доступных моделей';picker.append(op)}break}
 case 'history':{if(!v||v.persona!==visibleDraftPersona||!Array.isArray(v.rows))break;const rows=v.rows,box=$('history');box.replaceChildren();rows.forEach(x=>entry(box,x.prompt+'\n\n'+x.answer,x.timestamp));if(!rows.length)box.textContent='Нет сохранённых диалогов';break}
@@ -592,7 +604,7 @@ case 'learn.denied':{
  case 'learn.queue':{const rows=Array.isArray(v)?v:[];$('learnQueue').textContent=rows.length?rows.map(x=>'Запрос #'+x.id+' · '+String(x.model)+' · '+String(x.state)+' · обучение не запущено').join('\n'):'Нет записанных запросов LEARN';break;}
  case 'training':{const run=v?.measuredTrainingRuns?.find(r=>r.progressVerified===true&&r.checkpointVerified===true&&typeof r.progressPercent==='number');const pct=run?Math.max(0,Math.min(100,run.progressPercent)):0;$('trainingBar').style.width=pct+'%';$('trainingMeasured').textContent=run?`Подтверждённые шаги: ${run.globalStep}/${run.maxSteps} · ${pct}%`:'Обучение GPU не подтверждено · 0%';const count=Array.isArray(v?.observedExternalRuns)?v.observedExternalRuns.length:0;$('training').textContent=count?`Найдено внешних журналов: ${count}. Их шаги и loss не связаны с подтверждённым NOX checkpoint.`:'Нет подтверждённых результатов GPU/QLoRA';break;}
 case 'settings':if(!pendingSettings&&!settingsReconcile){applyCommittedSettings(v||{});$('personaStatus').textContent=settingsDenial||'Настройки прочитаны из SQLite';}break;
-case 'persona.changed':if(v?.persona===visibleDraftPersona)break;if(!switchPersonaDrafts(v?.persona))break;$('messages').replaceChildren();$('history').replaceChildren();$('notes').replaceChildren();$('memoryResults').replaceChildren();$('knowledgeResults').replaceChildren();lastAnswer='';responseBox=null;if('speechSynthesis' in window)speechSynthesis.cancel();break;
+case 'persona.changed':if(v?.persona===visibleDraftPersona)break;if(!switchPersonaDrafts(v?.persona))break;pendingMemorySearch=null;$('messages').replaceChildren();$('history').replaceChildren();$('notes').replaceChildren();$('memoryResults').replaceChildren();$('knowledgeResults').replaceChildren();lastAnswer='';responseBox=null;if('speechSynthesis' in window)speechSynthesis.cancel();break;
 case 'settings.receipt':{
   if(!pendingSettings || v?.requestId!==pendingSettings.requestId ||
       v?.key!==pendingSettings.key || v?.value!==pendingSettings.value || v?.saved!==true)break;
@@ -683,7 +695,22 @@ case 'knowledge.vuneo.denied':{
 case 'knowledge.stats':$('knowledgeStats').textContent=`В SQLite: ${v?.documents??0} документов · ${v?.chunks??0} фрагментов`;break;
 case 'knowledge.imported':$('knowledgeStats').textContent=`Импортировано: ${v?.documents??0}; дублей: ${v?.skipped??0}; фрагментов: ${v?.chunks??0}`;post('knowledge.stats');break;
 case 'knowledge.results':{const box=$('knowledgeResults');box.replaceChildren();(v||[]).forEach(x=>entry(box,x.excerpt,x.title+' · '+x.source));if(!v?.length)box.textContent='Совпадений не найдено';break;}
-case 'memory':{const box=$('memoryResults');box.replaceChildren();(v||[]).forEach(x=>entry(box,x.prompt+'\n\n'+x.answer,x.timestamp));if(!v?.length)box.textContent='Совпадений нет';break}
+case 'memory':{
+  if(!pendingMemorySearch||!v||v.persona!==visibleDraftPersona||
+     v.persona!==pendingMemorySearch.persona||
+     v.requestId!==pendingMemorySearch.requestId||!Array.isArray(v.rows))break;
+  pendingMemorySearch=null;
+  const box=$('memoryResults');box.replaceChildren();
+  v.rows.forEach(x=>entry(box,x.prompt+'\n\n'+x.answer,x.timestamp));
+  if(!v.rows.length)box.textContent='Совпадений нет';
+  break;
+}
+case 'memory.denied':
+  if(pendingMemorySearch&&v?.requestId===pendingMemorySearch.requestId){
+    pendingMemorySearch=null;
+    $('memoryResults').textContent=String(v.reason||'NOX_MEMORY_READ_HOLD');
+  }
+  break;
 case 'notes':{if(pendingNoteDelete||!v||v.persona!==visibleDraftPersona||!Array.isArray(v.rows))break;const rows=v.rows;const box=$('notes');box.replaceChildren();rows.forEach(n=>{const card=element('div',undefined,'note-card');card.append(element('div',n.title,'note-title'),element('div',n.timestamp,'meta'),element('p',n.content));const b=element('button','Удалить заметку','action');b.onclick=()=>{if(pendingNoteDelete)return;const requestId=nextChatId();pendingNoteDelete={requestId,id:n.id};document.querySelectorAll('#notes .note-card button').forEach(button=>button.disabled=true);if(post('notes.delete',{id:n.id,requestId})===false){pendingNoteDelete=null;document.querySelectorAll('#notes .note-card button').forEach(button=>button.disabled=false)}};card.append(b);box.append(card)});if(!rows.length)box.textContent='Пока нет сохранённых заметок';break}
 case 'notes.delete.receipt':if(pendingNoteDelete&&v?.requestId===pendingNoteDelete.requestId&&v?.id===pendingNoteDelete.id&&v.deleted===true&&v.backupVerified===true){pendingNoteDelete=null;$('status').textContent='NOTE DELETED · VERIFIED SQLITE BACKUP';}break;
 case 'notes.delete.denied':if(pendingNoteDelete&&v?.requestId===pendingNoteDelete.requestId&&v?.id===pendingNoteDelete.id){pendingNoteDelete=null;document.querySelectorAll('#notes .note-card button').forEach(button=>button.disabled=false);$('status').textContent=String(v.reason||'NOX_NOTE_DELETE_HOLD');post('notes.list');}break;

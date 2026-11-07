@@ -17,7 +17,7 @@ class AtlasAddReplayGuard(unittest.TestCase):
     def test_native_owner_request_reserved_before_insert(self):
         self.assertIn("recentlyHandledTaskAddIdSet.Add(requestId)", HANDLER)
         self.assertLess(HANDLER.index("recentlyHandledTaskAddIdSet.Add(requestId)"),
-                        HANDLER.index("id = AddTask(title);"))
+                        HANDLER.index("id = AddTask(title, requestId);"))
         self.assertLess(HANDLER.index("ValidWriteRequestId(requestId)"),
                         HANDLER.index("recentlyHandledTaskAddIdSet.Add(requestId)"))
 

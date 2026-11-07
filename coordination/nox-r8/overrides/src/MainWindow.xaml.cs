@@ -1232,7 +1232,7 @@ public partial class MainWindow : Window
         if ((existingTables || preexistingOwnerBytes) && !selfTestRequested)
         {
             string[] needed = {
-                "chat_history", "tasks", "preferences", "imported_sources",
+                "chat_history", "tasks", "task_add_receipts", "preferences", "imported_sources",
                 "memory_notes", "feedback", "learn_requests", "chat_request_receipts",
                 "idx_learn_pending_owner", "idx_chat_history_time",
                 "idx_chat_persona", "idx_notes_persona"
@@ -1250,6 +1250,7 @@ public partial class MainWindow : Window
           CREATE TABLE IF NOT EXISTS chat_history(id INTEGER PRIMARY KEY AUTOINCREMENT, timestamp TEXT NOT NULL, prompt TEXT NOT NULL, answer TEXT NOT NULL);
           CREATE TABLE IF NOT EXISTS chat_request_receipts(request_id TEXT PRIMARY KEY, chat_id INTEGER NOT NULL, persona TEXT NOT NULL);
           CREATE TABLE IF NOT EXISTS tasks(id INTEGER PRIMARY KEY AUTOINCREMENT, created_at TEXT NOT NULL, title TEXT NOT NULL, complete INTEGER NOT NULL DEFAULT 0);
+          CREATE TABLE IF NOT EXISTS task_add_receipts(owner_sid TEXT NOT NULL, request_id TEXT NOT NULL, task_id INTEGER NOT NULL, title TEXT NOT NULL, PRIMARY KEY(owner_sid,request_id));
           CREATE TABLE IF NOT EXISTS preferences(key TEXT PRIMARY KEY, value TEXT NOT NULL);
           CREATE TABLE IF NOT EXISTS imported_sources(source TEXT PRIMARY KEY, imported_at TEXT NOT NULL, rows INTEGER NOT NULL);
           CREATE TABLE IF NOT EXISTS memory_notes(id INTEGER PRIMARY KEY AUTOINCREMENT, created_at TEXT NOT NULL, title TEXT NOT NULL, content TEXT NOT NULL);
@@ -1823,7 +1824,20 @@ public partial class MainWindow : Window
                 case "learn.queue": Send("learn.queue", ReadLearnQueue()); break;
                 case "learn.request": HandleLearnRequest(Text("requestId")); break;
                 case "learn.cancel": HandleLearnCancel(Text("requestId")); break;
-                case "memory.search": Send("memory", SearchMemory(Text("query"))); break;
+                case "memory.search": {
+                    string requestId = Text("requestId");
+                    if (!ValidWriteRequestId(requestId)) {
+                        Send("memory.denied", new { requestId, reason = "NOX_MEMORY_REQUEST_ID_HOLD" });
+                        break;
+                    }
+                    try {
+                        string persona = ActivePersona();
+                        Send("memory", new { persona, requestId, rows = SearchMemory(Text("query"), persona) });
+                    } catch (Exception) {
+                        Send("memory.denied", new { requestId, reason = "NOX_MEMORY_READ_HOLD" });
+                    }
+                    break;
+                }
                 case "knowledge.search": Send("knowledge.results", knowledge.Search(Text("query"))); break;
                 case "knowledge.stats": Send("knowledge.stats", knowledge.Stats()); break;
                 case "knowledge.import": ImportKnowledgeByDialog(); break;
@@ -2113,6 +2127,9 @@ public partial class MainWindow : Window
             // B04: headers can arrive before an indefinitely stalled Ollama NDJSON body.
             // Each line has a bounded wait; only the owner's token means STOP.
             bool completed = false;
+            // Many short buffered NDJSON records can complete synchronously.
+            // Co-operatively return to WPF every 32 records to service native STOP.
+            int bufferedRecordsSinceYield = 0;
             long evalCount = 0, evalDuration = 0, promptCount = 0;
             while (true)
             {
@@ -2121,6 +2138,14 @@ public partial class MainWindow : Window
                 readWindow.CancelAfter(TimeSpan.FromMinutes(3));
                 var line = await ReadBoundedOllamaLineAsync(reader, readWindow.Token);
                 if (line == null) break;
+                // A stream of short lines never reaches the per-line 4096-char yield.
+                // Bound dispatcher ownership even when StreamReader has data buffered.
+                if (++bufferedRecordsSinceYield >= 32)
+                {
+                    bufferedRecordsSinceYield = 0;
+                    cancellation.Token.ThrowIfCancellationRequested();
+                    await Task.Yield();
+                }
                 if (string.IsNullOrWhiteSpace(line)) continue;
                 using var json = JsonDocument.Parse(line);
                 var item = json.RootElement;
@@ -2341,7 +2366,7 @@ public partial class MainWindow : Window
     // R8 D03: SQLite lower() is ASCII-only; owner memory search must also
     // match Russian text case-insensitively, without merging Persona histories.
     // Bound SQLite reads to keep large local histories responsive.
-    private object SearchMemory(string query)
+    private object SearchMemory(string query, string persona)
     {
         var result = new List<object>();
         if (string.IsNullOrWhiteSpace(query)) return result;
@@ -2361,7 +2386,7 @@ public partial class MainWindow : Window
                 )
             ) ORDER BY timestamp DESC LIMIT 3000;
             """;
-        cmd.Parameters.AddWithValue("$persona", ActivePersona());
+        cmd.Parameters.AddWithValue("$persona", persona);
         using var r = cmd.ExecuteReader();
         while (r.Read()) {
             string prompt = r.GetString(1), answer = r.GetString(2);
@@ -2389,9 +2414,17 @@ public partial class MainWindow : Window
         public TaskAddPersistenceUnknownException(string reason, Exception inner) : base(reason, inner) { }
     }
 
-    private long AddTask(string title)
+    private sealed class TaskAddReplayException : Exception
+    {
+        public TaskAddReplayException() : base("NOX_TASK_ADD_DURABLE_REPLAY_HOLD") { }
+    }
+
+    private long AddTask(string title, string requestId)
     {
         if (string.IsNullOrWhiteSpace(title) || title.Length > 500) throw new ArgumentException("Task must contain 1–500 characters");
+        // The OS owner and request ID are durably associated with the task.
+        // A WebView2 replay after EXE restart must not create a second row.
+        string ownerSid = OwnerSid();
         long id;
         bool commitAttempted = false;
         try
@@ -2399,6 +2432,15 @@ public partial class MainWindow : Window
             using (var db = OpenDatabase())
             using (var tx = db.BeginTransaction())
             {
+                using (var replay = db.CreateCommand())
+                {
+                    replay.Transaction = tx;
+                    replay.CommandText = "SELECT task_id FROM task_add_receipts WHERE owner_sid=$sid AND request_id=$rid";
+                    replay.Parameters.AddWithValue("$sid", ownerSid);
+                    replay.Parameters.AddWithValue("$rid", requestId);
+                    if (replay.ExecuteScalar() is not null)
+                        throw new TaskAddReplayException();
+                }
                 using (var cmd = db.CreateCommand())
                 {
                     cmd.Transaction = tx;
@@ -2413,6 +2455,19 @@ public partial class MainWindow : Window
                     idQuery.CommandText = "SELECT last_insert_rowid()";
                     id = Convert.ToInt64(idQuery.ExecuteScalar());
                     if (id <= 0) throw new InvalidOperationException("NOX_TASK_ROWID_HOLD");
+                }
+                // Task and request receipt are one SQLite transaction.
+                // A failed receipt INSERT rolls the task back, not an orphaned row.
+                using (var receipt = db.CreateCommand())
+                {
+                    receipt.Transaction = tx;
+                    receipt.CommandText = "INSERT INTO task_add_receipts(owner_sid,request_id,task_id,title) VALUES($sid,$rid,$id,$title)";
+                    receipt.Parameters.AddWithValue("$sid", ownerSid);
+                    receipt.Parameters.AddWithValue("$rid", requestId);
+                    receipt.Parameters.AddWithValue("$id", id);
+                    receipt.Parameters.AddWithValue("$title", title);
+                    if (receipt.ExecuteNonQuery() != 1)
+                        throw new InvalidOperationException("NOX_TASK_RECEIPT_WRITE_HOLD");
                 }
                 commitAttempted = true;
                 tx.Commit();
@@ -2519,7 +2574,14 @@ public partial class MainWindow : Window
         if (recentlyHandledTaskAddIds.Count > 2048)
             recentlyHandledTaskAddIdSet.Remove(recentlyHandledTaskAddIds.Dequeue());
         long id;
-        try { id = AddTask(title); }
+        try { id = AddTask(title, requestId); }
+        catch (TaskAddReplayException ex) {
+            // Durable replay, including across EXE restarts: no second INSERT
+            // and no forged new saved ACK. The owner can inspect ATLAS.
+            Send("tasks.add.uncertain", new { requestId, reason = ex.Message });
+            RefreshTasksBestEffort();
+            return;
+        }
         catch (TaskAddPersistenceUnknownException ex) {
             try { Send("tasks.add.uncertain", new { requestId, reason = ex.Message }); }
             catch (Exception) { /* Owner must inspect the task list before retry. */ }
@@ -2533,8 +2595,11 @@ public partial class MainWindow : Window
             // A second SQLite connection must see this exact row before a saved ACK.
             using var verifyDb = OpenDatabase();
             using var verify = verifyDb.CreateCommand();
-            verify.CommandText = "SELECT title FROM tasks WHERE id=$id";
+            verify.CommandText = "SELECT t.title FROM tasks t JOIN task_add_receipts r ON r.task_id=t.id WHERE t.id=$id AND r.owner_sid=$sid AND r.request_id=$rid AND r.title=$title";
             verify.Parameters.AddWithValue("$id", id);
+            verify.Parameters.AddWithValue("$sid", OwnerSid());
+            verify.Parameters.AddWithValue("$rid", requestId);
+            verify.Parameters.AddWithValue("$title", title);
             if (!string.Equals(verify.ExecuteScalar() as string, title, StringComparison.Ordinal))
                 throw new InvalidOperationException("NOX_TASK_SQLITE_READBACK_HOLD");
         }

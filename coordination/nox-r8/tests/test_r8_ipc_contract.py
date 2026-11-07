@@ -498,3 +498,17 @@ assert _ndjson_yield.index('builder.Append(one[0]);') < _ndjson_yield.index('if 
 assert _ndjson_yield.index('token.ThrowIfCancellationRequested();') < _ndjson_yield.index('await Task.Yield();'), 'B02_NDJSON_UI_YIELD_STOP_HOLD'
 assert _ndjson_yield.index('if (builder.Length >= MaxNdjsonLineChars)') < _ndjson_yield.index('builder.Append(one[0]);'), 'B02_NDJSON_BOUND_PRESERVED_HOLD'
 print('B02 SOURCE_ONLY: 4096-character periodic WPF UI yield, owner STOP and 2Mi NDJSON cap retained; Windows NOT_TESTED')
+
+# B02: small, already-buffered NDJSON records must yield periodically too.
+# The per-line 4096-character yield alone does not help 32+ tiny records.
+# SOURCE_ONLY contract, no Windows/Qwen acceptance is implied.
+_short_record = cs.split('private async Task Generate(', 1)[1].split('private static async Task<string?> ReadBoundedOllamaLineAsync(', 1)[0]
+assert 'int bufferedRecordsSinceYield = 0;' in _short_record, 'B02_SHORT_NDJSON_FAIRNESS_COUNTER_HOLD'
+assert 'if (++bufferedRecordsSinceYield >= 32)' in _short_record, 'B02_SHORT_NDJSON_YIELD_INTERVAL_HOLD'
+_short_block = _short_record.split('if (++bufferedRecordsSinceYield >= 32)', 1)[1].split('if (string.IsNullOrWhiteSpace(line)) continue;', 1)[0]
+assert 'bufferedRecordsSinceYield = 0;' in _short_block, 'B02_SHORT_NDJSON_COUNTER_RESET_HOLD'
+assert _short_block.index('cancellation.Token.ThrowIfCancellationRequested();') < _short_block.index('await Task.Yield();'), 'B02_SHORT_NDJSON_STOP_BEFORE_YIELD_HOLD'
+assert _short_record.index('if (line == null) break;') < _short_record.index('if (++bufferedRecordsSinceYield >= 32)') < _short_record.index('JsonDocument.Parse(line)'), 'B02_SHORT_NDJSON_PREPARSE_YIELD_HOLD'
+assert 'streamBudget.CancelAfter(TimeSpan.FromMinutes(15));' in _short_record and 'readWindow.CancelAfter(TimeSpan.FromMinutes(3));' in _short_record, 'B02_SHORT_NDJSON_TIMEOUTS_PRESERVED_HOLD'
+assert 'Emit("complete", new { requestId, ok = false, stopped = true });' in _short_record and 'generationLock.Release();' in _short_record, 'B02_SHORT_NDJSON_STOP_TERMINAL_HOLD'
+print('B02 SOURCE_ONLY: periodic 32-record WPF yield preserves STOP/ACK/budgets; real native test NOT_RUN')

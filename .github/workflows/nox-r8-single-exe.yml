@@ -96,6 +96,18 @@ jobs:
           Copy-Item './coordination/nox-r8/tests/test_r8_d01_chat_draft.cjs' './r8/test_r8_d01_chat_draft.cjs'
           node './r8/test_r8_d01_chat_draft.cjs'
           if ($LASTEXITCODE -ne 0) { throw 'D01_CHAT_OWNER_DRAFT_HOLD' }
+          # B06 original-source regression D05_TASK_ADD_DURABLE; no owner Qwen E2E claim.
+          python './coordination/nox-r8/tests/test_r8_d05_task_add_durable_replay.py'
+          if ($LASTEXITCODE -ne 0) { throw 'B06_D05_TASK_ADD_DURABLE_HOLD' }
+          # B06 original-source regression F02_PROVENANCE_NEGATIVE; no owner Qwen E2E claim.
+          python './coordination/nox-r8/tests/test_r8_f02_provenance_negative.py'
+          if ($LASTEXITCODE -ne 0) { throw 'B06_F02_PROVENANCE_NEGATIVE_HOLD' }
+          # B06 original-source regression D03_PERSONA_MEMORY_SEARCH; no owner Qwen E2E claim.
+          node './coordination/nox-r8/tests/test_r8_d03_memory_search_persona.cjs'
+          if ($LASTEXITCODE -ne 0) { throw 'B06_D03_PERSONA_MEMORY_SEARCH_HOLD' }
+          # B06 original-source regression F01_REAL_CHAT_STOP_HANDLER; no owner Qwen E2E claim.
+          node './coordination/nox-r8/tests/test_r8_f01_chat_stop_owner_live_handler.cjs'
+          if ($LASTEXITCODE -ne 0) { throw 'B06_F01_REAL_CHAT_STOP_HANDLER_HOLD' }
           dotnet publish './r8/src/NOX.HELION.csproj' -c Release -r win-x64 --self-contained true -o './out' -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:PublishTrimmed=false
           if ($LASTEXITCODE -ne 0) { throw 'BUILD_FAILED' }
           Get-FileHash './out/NOX.HELION.exe' -Algorithm SHA256
