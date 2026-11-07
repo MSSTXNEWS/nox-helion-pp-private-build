@@ -155,6 +155,38 @@ assert 'if (value.Length > 0) Interlocked.Increment(ref generationStreamingToken
 assert generation.index('await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellation.Token)') < generation.index('Interlocked.Increment(ref generationStreamingTokenCount)')
 print('B04 R8 SOURCE_ONLY: physical STOP oracle waits for live Ollama NDJSON token, not only native dispatch PASS')
 
+# An HTTP NDJSON token is insufficient: the same live WebView2 document must
+# render it before STOP, then visibly unlock after native HTTP cancellation.
+visible = cs.split('private async Task<bool> WaitForVisibleChatTokenAsync(', 1)[1].split('private async Task<bool> WaitForStopUiReleaseAsync(', 1)[0]
+released = cs.split('private async Task<bool> WaitForStopUiReleaseAsync(', 1)[1].split('private async Task WaitForGenerationFinishAsync(', 1)[0]
+assert "document.getElementById('messages')?.firstElementChild" in visible
+assert "label?.textContent === 'NOX QWEN'" in visible
+assert "body.textContent === lastAnswer" in visible
+assert "busy === true && activeChatId !== null" in visible
+assert "document.getElementById('generation')?.classList.contains('on')" in visible
+assert 'Volatile.Read(ref generationFinishedCount) >= generationTarget' in visible
+assert 'NOX_WEBVIEW2_STREAM_TOKEN_NOT_VISIBLE_HOLD' in selftest
+assert selftest.index('WaitForGenerationTokenAsync(streamTokenTarget, stopTarget, TimeSpan.FromMinutes(2))') < selftest.index('WaitForVisibleChatTokenAsync(stopTarget, TimeSpan.FromSeconds(4))') < selftest.index("document.getElementById('stop').click()")
+assert "document.getElementById('streamHint')" in released
+assert "busy === false && activeChatId === null" in released
+assert "Частичный ответ не сохранён" in released
+assert 'NOX_WEBVIEW2_STOP_OWNER_NOT_RELEASED_HOLD' in selftest
+assert selftest.index('Native STOP was not confirmed') < selftest.index('WaitForStopUiReleaseAsync(TimeSpan.FromSeconds(4))') < selftest.index('checks["real_webview_stop_cancel_no_partial_persistence"] = "PASS"')
+print('B04 R8 SOURCE_ONLY: live WebView2 token and STOP unlock acceptance oracle present (physical E2E NOT RUN)')
+
+# B04 recovery: successful STOP is insufficient unless the same executable
+# can accept the next real Qwen request and commit a new SQLite chat row.
+assert 'int resumeTarget = Volatile.Read(ref generationStartedCount) + 1;' in selftest
+assert 'NOX_CHAT_AFTER_STOP_START_HOLD' in selftest
+assert 'NOX_CHAT_AFTER_STOP_SQLITE_HOLD' in selftest
+assert 'checks["real_chat_after_http_stop_sqlite"] = "PASS";' in selftest
+assert selftest.index('WaitForStopUiReleaseAsync(TimeSpan.FromSeconds(4))') < selftest.index('NOX_CHAT_AFTER_STOP_START_HOLD') < selftest.index('real_chat_after_http_stop_sqlite')
+assert 'checks.Count == 6 && checks.Values.All(v => v == "PASS")' in selftest
+assert 'if (resumeMarker != null) DeleteSyntheticChats(resumeMarker, null);' in selftest
+print('B04 R8 SOURCE_ONLY: fresh chat after STOP and isolated SQLite cleanup gated (physical E2E NOT RUN)')
+
+
+
 # D05 native task toggle: a checkbox is not proof of persistence.
 # Request-ID bound receipt only after COMMIT and independent SQLite readback.
 toggle = cs.split('private void HandleTaskToggle(', 1)[1].split('private static bool ValidWriteRequestId(', 1)[0]
@@ -186,3 +218,27 @@ with sqlite3.connect(':memory:') as db:
     assert db.execute('SELECT complete FROM tasks WHERE id=42').fetchone()[0]==0
     assert db.execute(statement,(404,)).rowcount==0
 print('D05 R8 SOURCE_ONLY: owner-correlated task toggle, SQLite COMMIT/readback and denied rollback PASS')
+
+# B04: a previous successful chat must not leave a stale "saved" banner
+# while a new prompt is generating or when that prompt terminates with error.
+# This is an actual UI contract check; it is NOT physical owner-PC E2E.
+send_section = html.split("$('send').onclick=()=>", 1)[1].split("\n$('stop').onclick=", 1)[0]
+assert "busy=true;activeChatId=requestId;lastAnswer='';$('streamHint').textContent='Генерация ответа · не сохранено';" in send_section, 'B04_STALE_SQLITE_SUCCESS_DURING_GENERATION_HOLD'
+complete_section = html.split("case 'complete':", 1)[1].split("break;", 1)[0]
+assert "else if(v?.ok)$('streamHint').textContent='Ответ завершён и сохранён в SQLite.'" in complete_section
+assert "else{$('streamHint').textContent='Ответ не сохранён в SQLite.';lastAnswer='';}" in complete_section, 'B04_STALE_SQLITE_SUCCESS_ON_ERROR_HOLD'
+assert "if(v?.stopped){lastAnswer='';$('streamHint').textContent='Поток остановлен. Частичный ответ не сохранён.';}" in complete_section
+print("B04 R8 SOURCE_ONLY: no stale SQLite saved banner during in-flight/error/STOP chat (Windows E2E NOT RUN)")
+
+# B04 acceptance race: native generationFinishedCount may be published before
+# WebView2 has processed complete. The next SEND must await the DOM owner ACK.
+# Existing UI/transport production code is intentionally untouched.
+native_test = cs.split('private async Task RunNativeSelfTestAsync()', 1)[1].split('private bool HasSavedPrompt(', 1)[0]
+saved_ack = cs.split('private async Task<bool> WaitForSavedChatUiReleaseAsync(', 1)[1].split('private async Task WaitForGenerationFinishAsync(', 1)[0]
+assert native_test.count('WaitForSavedChatUiReleaseAsync(TimeSpan.FromSeconds(4))') == 2, 'B04_CHAT_UI_RELEASE_ACK_COUNT_HOLD'
+assert native_test.index('NOX_WEBVIEW2_FIRST_CHAT_OWNER_NOT_RELEASED_HOLD') < native_test.index('int streamTokenTarget'), 'B04_FIRST_CHAT_UI_OWNER_RACE_HOLD'
+assert native_test.index('NOX_WEBVIEW2_RESUMED_CHAT_OWNER_NOT_RELEASED_HOLD') < native_test.index('checks["real_chat_after_http_stop_sqlite"] = "PASS"'), 'B04_RESUMED_CHAT_UI_OWNER_HOLD'
+for fragment in ('busy === false', 'activeChatId === null', "indicator?.classList.contains('on') === false", "hint?.textContent === 'Ответ завершён и сохранён в SQLite.'"):
+    assert fragment in saved_ack, 'B04_CHAT_UI_RELEASE_ACK_INCOMPLETE_HOLD: '+fragment
+assert 'if (released == "true") return true;' in saved_ack and 'return false;' in saved_ack
+print('B04 R8 SOURCE_ONLY: WebView2 terminal ACK gate before next SEND and after resumed Qwen chat; Windows E2E NOT_RUN')
