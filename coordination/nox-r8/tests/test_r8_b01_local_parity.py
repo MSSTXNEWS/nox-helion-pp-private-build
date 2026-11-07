@@ -127,5 +127,34 @@ class Parity(unittest.TestCase):
         self.assertEqual((code, result["result"]), (3, "PROVENANCE_UNVERIFIED_HOLD"))
 
 
+    def test_source_ancestor_symlink_denied(self):
+        # A symlink in the parent can redirect the source despite a regular src leaf.
+        alias = self.base / "source-alias"
+        try:
+            alias.symlink_to(self.base, target_is_directory=True)
+        except OSError:
+            self.skipTest("Symlink privilege unavailable on this runner")
+        self.src = alias / "src"
+        code, result = self.call()
+        self.assertEqual((code, result["result"], result["release"]),
+                         (3, "PROVENANCE_UNVERIFIED_HOLD", "HOLD"))
+
+    def test_exe_ancestor_symlink_denied(self):
+        # EXE itself is ordinary; only an ancestor aliases the authorized directory.
+        alias = self.base / "exe-alias"
+        try:
+            alias.symlink_to(self.base, target_is_directory=True)
+        except OSError:
+            self.skipTest("Symlink privilege unavailable on this runner")
+        self.exe = alias / "NOX.HELION.exe"
+        code, result = self.call()
+        self.assertEqual((code, result["result"]), (3, "PROVENANCE_UNVERIFIED_HOLD"))
+
+    def test_owner_source_dotdot_path_denied(self):
+        self.src = self.base / "src" / ".." / "src"
+        code, result = self.call()
+        self.assertEqual((code, result["result"]), (3, "PROVENANCE_UNVERIFIED_HOLD"))
+
+
 if __name__ == "__main__":
     unittest.main()
