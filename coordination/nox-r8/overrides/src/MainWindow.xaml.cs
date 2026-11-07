@@ -1448,6 +1448,8 @@ public partial class MainWindow : Window
         lastGenerationStopped = false;
         active = cancellation;
         activeRequestId = requestId;
+        // A pending /api/tags result from before this turn must not outlive its owner.
+        Interlocked.Increment(ref providerProbeEpoch);
         // A cancelled/replaced document cannot receive a late stream or terminal ACK.
         void Emit(string type, object value) {
             if (string.Equals(activeRequestId, requestId, StringComparison.Ordinal)) Send(type, value);
@@ -1602,6 +1604,9 @@ public partial class MainWindow : Window
                 if (recentlyHandledChatIds.Count > 128)
                     recentlyHandledChatIdSet.Remove(recentlyHandledChatIds.Dequeue());
             }
+            // Invalidate probes started during the turn before its owner is released.
+            // A late stale OFFLINE/ONLINE result must not overwrite READY/STOPPED.
+            Interlocked.Increment(ref providerProbeEpoch);
             active = null;
             activeRequestId = null;
             Interlocked.Increment(ref generationFinishedCount);

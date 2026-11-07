@@ -254,6 +254,12 @@ assert 'providerReconnectTimer.Stop();' in cs, 'B02_REATTACH_SHUTDOWN_HOLD'
 assert 'Interlocked.Increment(ref providerProbeEpoch);' in cs, 'B02_STALE_WEBVIEW_PROBE_HOLD'
 assert probe.count('probeEpoch == Volatile.Read(ref providerProbeEpoch)') == 2, 'B02_REATTACH_EPOCH_HOLD'
 assert probe.count('active == null') == 2, 'B02_HEALTH_OWNERSHIP_HOLD'
+# Reject pre-chat and mid-chat health replies after generation ownership changes.
+owner_admission = chat.split('activeRequestId = requestId;', 1)[1].split('Interlocked.Increment(ref generationStartedCount);', 1)[0]
+owner_cleanup = chat.split('finally {', 1)[1].split('generationLock.Release();', 1)[0]
+assert 'Interlocked.Increment(ref providerProbeEpoch);' in owner_admission, 'B02_PROVIDER_PROBE_PRE_CHAT_STALE_HOLD'
+assert 'Interlocked.Increment(ref providerProbeEpoch);' in owner_cleanup, 'B02_PROVIDER_PROBE_POST_CHAT_STALE_HOLD'
+assert owner_cleanup.index('Interlocked.Increment(ref providerProbeEpoch);') < owner_cleanup.index('active = null;'), 'B02_PROVIDER_EPOCH_RELEASE_ORDER_HOLD'
 assert 'http.GetAsync(Api + "/api/tags", probe.Token)' in probe, 'B02_PROVIDER_LOOPBACK_HOLD'
 assert 'Process.Start(' not in probe, 'B02_HEALTH_MUST_NOT_SPAWN_HOLD'
 assert 'bool refreshProviderAfterError = false;' in chat, 'B02_ERROR_REFRESH_FLAG_HOLD'
@@ -317,8 +323,10 @@ assert 'refreshProviderAfterError = true;' in broken_eof and 'throw new InvalidO
 generic_error = provider_recovery.split('catch (Exception ex) {', 1)[1].split('finally {', 1)[0]
 assert 'providerStreamRequested && (ex is IOException || ex is JsonException)' in generic_error, 'B02_STREAM_TRANSPORT_ERRORS_HOLD'
 assert 'refreshProviderAfterError = true;' in generic_error, 'B02_STREAM_TRANSPORT_RECHECK_HOLD'
-assert generic_error.index('refreshProviderAfterError = true;') < generic_error.index('Emit("complete", new { requestId, ok = false, stopped = false });'), 'B02_STREAM_COMPLETE_ORDER_HOLD'
-assert provider_recovery.index('Emit("complete", new { requestId, ok = false, stopped = false });',provider_recovery.index('catch (Exception ex) {')) < provider_recovery.index('generationLock.Release();') < provider_recovery.rindex('await CheckProvider();'), 'B02_STREAM_TERMINAL_BEFORE_HEALTH_HOLD'
+assert 'bool sqliteUnknown = sqliteWriteAttempted && !sqliteVerified;' in generic_error, 'B02_STREAM_SQLITE_UNKNOWN_GUARD_HOLD'
+assert 'NOX_CHAT_SQLITE_COMMIT_UNKNOWN_HOLD' in generic_error, 'B02_STREAM_SQLITE_AMBIGUOUS_HOLD'
+assert generic_error.index('refreshProviderAfterError = true;') < generic_error.index('Emit("complete", new { requestId, ok = sqliteVerified, stopped = false, sqliteUnknown });'), 'B02_STREAM_COMPLETE_ORDER_HOLD'
+assert provider_recovery.index('Emit("complete", new { requestId, ok = sqliteVerified, stopped = false, sqliteUnknown });',provider_recovery.index('catch (Exception ex) {')) < provider_recovery.index('generationLock.Release();') < provider_recovery.rindex('await CheckProvider();'), 'B02_STREAM_TERMINAL_BEFORE_HEALTH_HOLD'
 assert 'providerStreamRequested && (ex is IOException || ex is JsonException)' not in provider_recovery.split('catch (OperationCanceledException) when (cancellation.IsCancellationRequested)', 1)[1].split('catch (OperationCanceledException) {',1)[0], 'B02_STREAM_STOP_ISOLATION_HOLD'
 print('B02 R8 SOURCE_ONLY: truncated/invalid Ollama NDJSON triggers real health re-probe after terminal ACK; owner STOP and SQLite preserved')
 
