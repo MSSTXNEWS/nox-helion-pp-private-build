@@ -1347,6 +1347,11 @@ public partial class MainWindow : Window
             return;
         }
         if (!await generationLock.WaitAsync(0)) {
+            // A replay of the active WebView2 chat ID must not synthesize a
+            // terminal completion while the real owner is still streaming.
+            // Only the original owner may complete its requestId.
+            if (string.Equals(activeRequestId, requestId, StringComparison.Ordinal))
+                return;
             RejectChat("CHAT_ALREADY_RUNNING_HOLD");
             return;
         }

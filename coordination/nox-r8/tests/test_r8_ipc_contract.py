@@ -226,3 +226,12 @@ assert 'bool refreshProviderAfterError = false;' in chat, 'B02_ERROR_REFRESH_FLA
 assert 'await CheckProvider();' not in chat.split('catch (HttpRequestException ex) {',1)[1].split('catch (Exception ex) {',1)[0], 'B02_PREMATURE_HEALTH_HOLD'
 assert chat.index('Emit("complete", new { requestId, ok = false, stopped = false });', chat.index('catch (HttpRequestException ex)')) < chat.index('generationLock.Release();') < chat.rindex('await CheckProvider();'), 'B02_TERMINAL_BEFORE_HEALTH_HOLD'
 print('B02 R8 SOURCE_ONLY PASS: single-flight owner startup, bounded reattach, terminal IPC and STOP isolation (Windows/owner E2E NOT_TESTED)')
+
+# A replayed chat requestId must NOT issue a premature terminal ACK:
+# it would unlock the current WebView2 chat while the real owner still streams.
+# New distinct busy requestIds retain their request-correlated rejection ACK.
+duplicate_busy = generate.split('if (!await generationLock.WaitAsync(0)) {', 1)[1].split('using var cancellation = new CancellationTokenSource();', 1)[0]
+assert 'if (string.Equals(activeRequestId, requestId, StringComparison.Ordinal))' in duplicate_busy, 'B02_DUPLICATE_CHAT_OWNER_GUARD_HOLD'
+assert re.search(r'if \(string\.Equals\(activeRequestId, requestId, StringComparison\.Ordinal\)\)\s*return;', duplicate_busy), 'B02_DUPLICATE_CHAT_MUST_NOT_COMPLETE_HOLD'
+assert duplicate_busy.index('return;') < duplicate_busy.index('RejectChat("CHAT_ALREADY_RUNNING_HOLD");'), 'B02_DUPLICATE_CHAT_EARLY_RETURN_HOLD'
+assert duplicate_busy.count('RejectChat("CHAT_ALREADY_RUNNING_HOLD");') == 1, 'B02_DISTINCT_CHAT_REJECT_HOLD'
