@@ -258,6 +258,12 @@ def single_cycle():
             time.sleep(2)
     except KeyboardInterrupt:
         reason="MANUAL_STOP";stop_tree(child.pid)
+    except BaseException:
+        # Unexpected dashboard/file IO must never orphan a live DirectML worker.
+        # Only the supervision process may own or restart the GPU child.
+        reason="CONTROLLER_ERROR"
+        stop_tree(child.pid)
+        raise
     finally:
         child.wait(timeout=25)
         receipt(tele,{"status":"SAFETY_HOLD" if reason else
