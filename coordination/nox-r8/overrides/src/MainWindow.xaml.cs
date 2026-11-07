@@ -23,6 +23,8 @@ public partial class MainWindow : Window
 {
     private readonly HttpClient http = new() { Timeout = TimeSpan.FromMinutes(10) };
     private readonly SemaphoreSlim generationLock = new(1, 1);
+    // One explicit owner request may start the existing provider at a time.
+    private readonly SemaphoreSlim engineStartLock = new(1, 1);
     // B02 R8: reattach the existing loopback provider after its process restarts.
     // Probe only; never start a service, download models, or change consent.
     private readonly System.Windows.Threading.DispatcherTimer providerReconnectTimer = new()
@@ -959,45 +961,63 @@ public partial class MainWindow : Window
 
     private async Task StartLocalEngine()
     {
-        // Explicit owner-triggered recovery. Never stop or restart any existing process.
-        // Do not download models and do not follow arbitrary network endpoints.
-        try
-        {
-            using var probe = new CancellationTokenSource(TimeSpan.FromSeconds(4));
-            using var existingCheck = await http.GetAsync(Api + "/api/tags", probe.Token);
-            if (existingCheck.IsSuccessStatusCode) { await CheckProvider(); return; }
+        // Owner-triggered only: repeated clicks cannot race the port ownership
+        // check or spawn a second Ollama process before the first becomes ready.
+        if (!engineStartLock.Wait(0)) {
+            if (!providerProbeStopped) Send("notice", "Запуск локального Ollama уже выполняется.");
+            return;
         }
-        catch (HttpRequestException) { /* Local engine may be stopped. */ }
-        catch (TaskCanceledException) { /* Retry start after a failed health request. */ }
+        try {
+            if (providerProbeStopped) return;
+            // Explicit owner-triggered recovery. Never stop or restart any existing process.
+            // Do not download models and do not follow arbitrary network endpoints.
+            try
+            {
+                using var probe = new CancellationTokenSource(TimeSpan.FromSeconds(4));
+                using var existingCheck = await http.GetAsync(Api + "/api/tags", probe.Token);
+                if (existingCheck.IsSuccessStatusCode) { await CheckProvider(); return; }
+            }
+            catch (HttpRequestException) { /* Local engine may be stopped. */ }
+            catch (TaskCanceledException) { /* Retry start after a failed health request. */ }
 
-        if (System.Net.NetworkInformation.IPGlobalProperties.GetIPGlobalProperties()
-            .GetActiveTcpListeners().Any(x => x.Port == 11436))
-            throw new InvalidOperationException("Порт 11436 занят другим процессом; он не будет остановлен.");
-        const string modelDir = @"C:\NOX_OLLAMA_CLEAN\models";
-        var executable = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "Programs", "Ollama", "ollama.exe");
-        if (!Directory.Exists(modelDir) || !File.Exists(executable))
-            throw new InvalidOperationException("Ollama или зарегистрированные модели не найдены. Файлы не изменены.");
-        // Port ownership check before starting a local server: never replace another owner.
-        var ps = new ProcessStartInfo(executable, "serve") {
-            UseShellExecute = false,
-            CreateNoWindow = true,
-            WorkingDirectory = Path.GetDirectoryName(executable)!
-        };
-        ps.Environment["OLLAMA_HOST"] = "127.0.0.1:11436";
-        ps.Environment["OLLAMA_MODELS"] = modelDir;
-        Send("notice", "Запускаю существующий локальный Ollama. Модели не загружаются.");
-        var launched = Process.Start(ps);
-        if (launched == null) throw new InvalidOperationException("Не удалось запустить локальный Ollama");
-        for (int i = 0; i < 30; ++i) {
-            await Task.Delay(1000);
-            try {
-                using var probe = new CancellationTokenSource(TimeSpan.FromSeconds(3));
-                using var r = await http.GetAsync(Api + "/api/tags", probe.Token);
-                if (r.IsSuccessStatusCode) { await CheckProvider(); return; }
-            } catch (HttpRequestException) { } catch (TaskCanceledException) { }
+            if (providerProbeStopped) return;
+            if (System.Net.NetworkInformation.IPGlobalProperties.GetIPGlobalProperties()
+                .GetActiveTcpListeners().Any(x => x.Port == 11436))
+                throw new InvalidOperationException("Порт 11436 занят другим процессом; он не будет остановлен.");
+            const string modelDir = @"C:\NOX_OLLAMA_CLEAN\models";
+            var executable = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "Programs", "Ollama", "ollama.exe");
+            if (!Directory.Exists(modelDir) || !File.Exists(executable))
+                throw new InvalidOperationException("Ollama или зарегистрированные модели не найдены. Файлы не изменены.");
+            // Port ownership check before starting a local server: never replace another owner.
+            var ps = new ProcessStartInfo(executable, "serve") {
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                WorkingDirectory = Path.GetDirectoryName(executable)!
+            };
+            ps.Environment["OLLAMA_HOST"] = "127.0.0.1:11436";
+            ps.Environment["OLLAMA_MODELS"] = modelDir;
+            Send("notice", "Запускаю существующий локальный Ollama. Модели не загружаются.");
+            if (providerProbeStopped) return;
+            var launched = Process.Start(ps);
+            if (launched == null) throw new InvalidOperationException("Не удалось запустить локальный Ollama");
+            for (int i = 0; i < 30; ++i) {
+                await Task.Delay(1000);
+                if (providerProbeStopped) return;
+                try {
+                    using var probe = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+                    using var r = await http.GetAsync(Api + "/api/tags", probe.Token);
+                    if (r.IsSuccessStatusCode) { await CheckProvider(); return; }
+                } catch (HttpRequestException) { } catch (TaskCanceledException) { }
+            }
+            throw new InvalidOperationException("Ollama не готов после запуска; существующие данные не изменены");
         }
-        throw new InvalidOperationException("Ollama не готов после запуска; существующие данные не изменены");
+        catch (ObjectDisposedException) when (providerProbeStopped) {
+            // WebView2 owner is closing: avoid status updates and process spawn.
+        }
+        finally {
+            engineStartLock.Release();
+        }
     }
 
     private async Task CheckProvider()

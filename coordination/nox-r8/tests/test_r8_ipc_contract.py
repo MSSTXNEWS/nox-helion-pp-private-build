@@ -209,3 +209,17 @@ assert 'http.GetAsync(Api + "/api/tags", probe.Token)' in reconnect, 'B02_NATIVE
 assert 'Process.Start(' not in reconnect and 'model.pull' not in reconnect, 'B02_NO_NEW_BACKEND_HOLD'
 assert 'case "engine.start": await StartLocalEngine();' in cs, 'B02_OWNER_ENGINE_START_HOLD'
 print('B02 R8 SOURCE_ONLY: provider reconnect, non-stale health, live STOP guard PASS; owner Windows NOT_TESTED')
+
+# B02: explicit recovery of the ORIGINAL local Ollama is single-flight.
+# Verify owner denies duplicate launches and forbids spawning after WPF shutdown.
+engine = cs.split('private async Task StartLocalEngine()', 1)[1].split('private async Task CheckProvider()', 1)[0]
+assert 'private readonly SemaphoreSlim engineStartLock = new(1, 1);' in cs, 'B02_ENGINE_START_OWNER_LOCK_HOLD'
+assert 'if (!engineStartLock.Wait(0))' in engine, 'B02_ENGINE_CONCURRENT_START_HOLD'
+assert 'finally {\n            engineStartLock.Release();' in engine, 'B02_ENGINE_LOCK_RELEASE_HOLD'
+assert engine.count('var launched = Process.Start(ps);') == 1, 'B02_DUPLICATE_PROVIDER_SPAWN_HOLD'
+assert engine.index('engineStartLock.Wait(0)') < engine.index('GetActiveTcpListeners()') < engine.index('Process.Start(ps)'), 'B02_START_OWNER_CHECK_ORDER_HOLD'
+assert engine.index('if (providerProbeStopped) return;', engine.index('ps.Environment["OLLAMA_MODELS"]')) < engine.index('Process.Start(ps)'), 'B02_NO_START_AFTER_CLOSE_HOLD'
+assert engine.index('await Task.Delay(1000);') < engine.index('if (providerProbeStopped) return;', engine.index('await Task.Delay(1000);')), 'B02_CLOSE_DURING_RECOVERY_HOLD'
+assert 'ps.Environment["OLLAMA_HOST"] = "127.0.0.1:11436";' in engine, 'B02_ORIGINAL_LOOPBACK_HOLD'
+assert 'Process.Kill(' not in engine and 'model.pull' not in engine, 'B02_NOLOSS_EXISTING_ENGINE_HOLD'
+print('B02 R8 SOURCE_ONLY: existing provider start single-flight and closing guard PASS; Windows NOT_TESTED')
