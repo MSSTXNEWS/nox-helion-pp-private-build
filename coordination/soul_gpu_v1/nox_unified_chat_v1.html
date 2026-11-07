@@ -6,7 +6,7 @@
 h1{color:var(--gold);font-size:19px;letter-spacing:.3em;font-weight:400;margin:0}.sub{color:#9bb3be;font-size:12px;line-height:1.5}a{color:var(--cyan);text-decoration:none}
 .grid{display:grid;grid-template-columns:minmax(300px,1.8fr) minmax(230px,1fr);gap:18px;margin-top:18px}
 .panel{background:#081622e8;border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:0 16px 50px #0006}
-.chatlog{min-height:350px;max-height:58vh;overflow-y:auto;display:flex;flex-direction:column;gap:14px;padding:9px}
+ #cores{white-space:pre-line} .chatlog{min-height:350px;max-height:58vh;overflow-y:auto;display:flex;flex-direction:column;gap:14px;padding:9px}
 .msg{max-width:87%;border:1px solid #335469;background:#112534;padding:13px;border-radius:13px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere;font-size:14px}
 .msg.user{align-self:end;border-color:#8b7651;background:#29241f}.msg.assistant{align-self:start}
 .msg i{display:block;font-size:10px;color:var(--gold);font-style:normal;letter-spacing:.12em;margin-bottom:7px}
@@ -189,6 +189,18 @@ $("clear").addEventListener("click",()=>{
   add("assistant","Новый контекст диалога. Предыдущая история на диске сохранена.");
   $("historyStatus").textContent="Новый контекст (без удаления архива)";
 });
+async function coreStatus(){
+  try{
+    const r=await fetch("/api/nox/cores",{cache:"no-store"});
+    if(!r.ok)throw Error("API "+r.status);
+    const data=await r.json();
+    const caps=data.capabilities||{};
+    $("cores").textContent=(data.core_ids||[]).map(name=>{
+       const c=caps[name]||{};
+       return name+" · "+(c.status||"UNKNOWN")+(c.historical_episodes!==undefined?" · "+c.historical_episodes+" эп.":"");
+    }).join("\n");
+  }catch(ex){$("cores").textContent="8 CoreID: диагностика недоступна · "+ex.message;}
+}
 async function experience(){
   const target=$("experience");
   target.textContent="Загружаю подтверждённые источником эпизоды...";
@@ -217,9 +229,10 @@ async function experience(){
   }catch(ex){target.textContent="Память недоступна: "+ex.message;}
 }
 $("experienceBtn").addEventListener("click",experience);
-$("refresh").addEventListener("click",()=>{status();awareness();});
+$("refresh").addEventListener("click",()=>{status();awareness();coreStatus();});
 restore();
 status();
+coreStatus();
 awareness();
 setInterval(awareness,30000);
 </script></body></html>
