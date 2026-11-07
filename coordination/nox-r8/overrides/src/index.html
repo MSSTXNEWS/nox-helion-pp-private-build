@@ -183,13 +183,29 @@ body.reduced .helion-fx{filter:none}body.reduced .core.active{animation:none}
       if(typeof motionQuery.addListener==='function')motionQuery.addListener(redraw);
     }catch(e){console.warn('NOX legacy reduced-motion observer unavailable:',String(e?.message||e));}
   }
+  // Dynamic WebView2/DPI layout changes do not always fire window.resize.
+  // Observe the existing element so Reduced Motion still gets one accurate
+  // static frame, without starting a continuous animation.
+  function watchSize(target,redraw){
+    if(typeof window.ResizeObserver!=='function')return ()=>{};
+    let observer=null;
+    try{observer=new window.ResizeObserver(redraw);observer.observe(target);}
+    catch(e){
+      try{observer?.disconnect();}catch(_){}
+      console.warn('NOX element resize observer unavailable:',String(e?.message||e));
+      return ()=>{};
+    }
+    return ()=>{try{observer.disconnect();}catch(_){}};
+  }
   function startCanvas2d(fallbackCanvas, initialMode='BALANCED', initialEnergy=0){
     const canvas=fallbackCanvas;
     // 2D fallback retains visible fluid motion even when GPU acceleration is
     // disabled by the machine or by remote desktop / headless Windows CI.
     // If Canvas2D itself is unavailable or fails mid-draw, the original CSS
     // sphere remains visible and the native IPC/chat remain independent.
+    let stopSizeWatch=()=>{};
     function staticCss(reason){
+      stopSizeWatch();
       sphere.dataset.fx='disabled';
       window.noxVisual={setMode(){},setEnergy(){},refresh(){}};
       console.warn('NOX Canvas2D static CSS fallback:',reason);
@@ -263,6 +279,7 @@ body.reduced .helion-fx{filter:none}body.reduced .core.active{animation:none}
     document.addEventListener('visibilitychange',()=>{if(document.hidden){if(raf)cancelAnimationFrame(raf);raf=0;}else redraw();});
     window.addEventListener('resize',redraw,{passive:true});
     watchMotion(redraw);
+    stopSizeWatch=watchSize(canvas,redraw);
     redraw();
   }
 
@@ -340,9 +357,11 @@ body.reduced .helion-fx{filter:none}body.reduced .core.active{animation:none}
   }catch(e){console.warn('NOX WebGL initialization fallback:',e.message);const replacement=canvas.cloneNode(false);canvas.replaceWith(replacement);startCanvas2d(replacement);return;}
   let raf=0,mode='BALANCED',energy=0,rendered=false,last=0,started=performance.now(),gpuFrames=0;
   let gpuActive=true;
+  let stopSizeWatch=()=>{};
   function switchToCanvas2d(reason){
     if(!gpuActive)return;
     gpuActive=false;
+    stopSizeWatch();
     if(raf)cancelAnimationFrame(raf);
     raf=0;
     const replacement=canvas.cloneNode(false);
@@ -380,6 +399,7 @@ body.reduced .helion-fx{filter:none}body.reduced .core.active{animation:none}
   document.addEventListener('visibilitychange',()=>{if(!gpuActive)return;if(!document.hidden)redraw();else if(raf){cancelAnimationFrame(raf);raf=0;}});
   window.addEventListener('resize',redraw,{passive:true});
   watchMotion(redraw);
+  stopSizeWatch=watchSize(canvas,redraw);
   canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();switchToCanvas2d('CONTEXT_LOST');});
   redraw();
 })();

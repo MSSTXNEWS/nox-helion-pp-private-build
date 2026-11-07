@@ -27,7 +27,8 @@ const broken=nativeProbe({postMessage(){throw Error('DISPATCH_REJECTED')}});
 check(broken.post('chat',{text:'offline'})===false&&broken.status.textContent==='NATIVE BRIDGE DISPATCH FAILED','native dispatch exceptions must fail closed');
 const render=new Function('document','window','performance','requestAnimationFrame','cancelAnimationFrame','console',match[1]);
 function exercise(kind){
-  let gpuFrames=0,cpuFrames=0,prevented=false,ticks=0,seq=0,userReduced=false,maxBlur=0,errorSamples=0;
+  let gpuFrames=0,cpuFrames=0,prevented=false,ticks=0,seq=0,userReduced=false,maxBlur=0,errorSamples=0,cssSize=900;
+  const sizeObservers=[];
   const queue=new Map(),docEvents={},sphere={dataset:{}};
   const gl={
     NO_ERROR:0,OUT_OF_MEMORY:1285,
@@ -49,7 +50,7 @@ function exercise(kind){
   function makeCanvas(){
     const events={};
     const canvas={width:0,height:0,parentElement:sphere,
-      getBoundingClientRect(){return {width:900,height:900};},
+      getBoundingClientRect(){return {width:cssSize,height:cssSize};},
       getContext(type){
         if(type==='webgl2'){if(kind==='throwContext')throw Error('WEBGL_BLOCKED');return ['noGpu','noGpu2dLoss','reducedCpu','legacyReducedCpu','noMediaApiCpu','queryThrowsCpu','observerThrowsCpu','observerThrowsLegacyCpu','no2d','throw2d','draw2dFail','matchesGetterCpu'].includes(kind)?null:gl;}
         if(type==='2d'){
@@ -88,7 +89,13 @@ function exercise(kind){
   if(kind==='matchesGetterGpu'||kind==='matchesGetterCpu'){
     Object.defineProperty(media,'matches',{get(){throw Error('MQL_MATCHES_BLOCKED');}});
   }
-  const window={devicePixelRatio:1,matchMedia(){if(kind.startsWith('queryThrows'))throw Error('MQL_QUERY_BLOCKED');return media;},addEventListener(){}};
+  const window={devicePixelRatio:1,matchMedia(){if(kind.startsWith('queryThrows'))throw Error('MQL_QUERY_BLOCKED');return media;},addEventListener(){},
+    ResizeObserver:class{
+      constructor(fn){this.fn=fn;this.disconnected=false;sizeObservers.push(this);}
+      observe(target){if(kind==='observerThrowsGpu'||kind==='observerThrowsCpu')throw Error('SIZE_OBSERVER_BLOCKED');this.target=target;}
+      disconnect(){this.disconnected=true;}
+    }};
+  if(kind==='noMediaApiGpu'||kind==='noMediaApiCpu')window.ResizeObserver=undefined;
   if(kind.startsWith('noMediaApi'))window.matchMedia=undefined;
   const requestAnimationFrame=fn=>{const id=++seq;queue.set(id,fn);return id;};
   const cancelAnimationFrame=id=>queue.delete(id);
@@ -148,6 +155,16 @@ function exercise(kind){
     media.fire();tick();
     check((kind.endsWith('Gpu')?gpuFrames:cpuFrames)===before+1,kind+' OS reduce redraws static pose');
     check(queue.size===0,kind+' OS reduce stops RAF');
+    // In Reduced Motion a WebView2 element can change size on DPI/side layout
+    // changes without a window.resize; the surface must repaint once only.
+    cssSize=120;
+    const active=sizeObservers.filter(o=>!o.disconnected&&o.target===currentCanvas);
+    check(active.length===1,kind+' one live element resize observer');
+    active[0].fn([]);
+    check(queue.size===1,kind+' element reflow queues one static frame');
+    tick();
+    check(currentCanvas.width===120,kind+' surface matches element reflow');
+    check(queue.size===0,kind+' element redraw honors Reduced Motion');
     return;
   }
   const healthyGpu=['ok','noMediaApiGpu','queryThrowsGpu','observerThrowsGpu'];
@@ -165,6 +182,10 @@ function exercise(kind){
   }
   check(sphere.dataset.fx==='canvas2d',kind+' switched to live 2D');
   check(typeof window.noxVisual.setMode==='function',kind+' mode retained');
+  if(['contextLost','drawFail','viewportFail','uniformFail','glError','lateGlError'].includes(kind)){
+    const active=sizeObservers.filter(o=>!o.disconnected);
+    check(active.length===1&&active[0].target===currentCanvas,kind+' old GPU resize observer disconnected on Canvas2D failover');
+  }
   if(kind==='contextLost')check(prevented,'context loss default prevented');
   if(['contextLost','compileFail','drawFail','setupFail','viewportFail','uniformFail','glError','lateGlError','programNull','shaderNull','uniformNull','bufferNull','attributeMissing'].includes(kind))check(currentCanvas!==original,'GPU canvas replaced');
   tick();check(cpuFrames>0,kind+' 2D frame drawn');
