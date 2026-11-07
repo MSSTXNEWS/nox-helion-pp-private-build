@@ -219,7 +219,7 @@ print('B02 R8 SOURCE_ONLY: shutdown-only WebView2 dispatch suppression, live fai
 
 # B02 R8 same-source provider restart integration: SOURCE_ONLY (not owner-PC E2E).
 # A stream failure must terminate its exact request before bounded health refresh;
-# only an explicit owner command may start the already-installed service.
+# startup/owner/chat may reuse the single already-installed local engine.
 startup = cs.split('private async Task StartLocalEngine(CancellationToken stopToken = default)', 1)[1].split('private async Task CheckProvider()', 1)[0]
 probe = cs.split('private async Task CheckProvider()', 1)[1].split('private async Task Generate(', 1)[0]
 chat = cs.split('private async Task Generate(', 1)[1].split('private void PersistChat(', 1)[0]
@@ -237,7 +237,8 @@ assert 'LOCAL_PROVIDER_START_FAILED:' in startup, 'B02_ENGINE_FAILURE_NOTICE_HOL
 assert 'Send("notice", "LOCAL_PROVIDER_START_FAILED: " + ex.Message);' in startup, 'B02_ENGINE_FAILURE_WRONG_CHANNEL_HOLD'
 assert 'catch (Exception ex) when (!providerProbeStopped &&' in startup, 'B02_ENGINE_FAILURE_SHUTDOWN_GUARD_HOLD'
 assert all(exc in startup for exc in ('ex is InvalidOperationException', 'ex is System.ComponentModel.Win32Exception', 'ex is UnauthorizedAccessException', 'ex is IOException', 'ex is HttpRequestException', 'ex is OperationCanceledException')), 'B02_ENGINE_FAILURE_EXPECTED_ERRORS_HOLD'
-assert startup.index('Send("notice", "LOCAL_PROVIDER_START_FAILED: "') < startup.rindex('await CheckProvider();') < startup.index('engineStartLock.Release();'), 'B02_ENGINE_FAILURE_HEALTH_ORDER_HOLD'
+owner_start = startup.split('private async Task RecoverLocalEngineAtStartupAsync()', 1)[0]
+assert owner_start.index('Send("notice", "LOCAL_PROVIDER_START_FAILED: "') < owner_start.index('await CheckProvider();') < owner_start.index('engineStartLock.Release();'), 'B02_ENGINE_FAILURE_HEALTH_ORDER_HOLD'
 assert startup.count('Process.Start(ps)') == 1, 'B02_ENGINE_FAILURE_NO_DUPLICATE_SPAWN_HOLD'
 
 assert 'TimeSpan.FromSeconds(25)' in cs, 'B02_REATTACH_INTERVAL_HOLD'
@@ -324,7 +325,7 @@ assert 'if (!selfTestRequested) _ = RecoverLocalEngineAtStartupAsync();' in navi
 assert 'private async Task StartLocalEngineCore(CancellationToken stopToken)' in startup, 'B02_R8_SINGLE_PROVIDER_CORE_HOLD'
 assert 'await engineStartLock.WaitAsync(stopToken);' in startup and 'if (!engineStartLock.Wait(0))' in startup, 'B02_R8_SINGLE_FLIGHT_OWNER_LOCK_HOLD'
 assert 'await Task.Delay(1000, stopToken);' in startup, 'B02_R8_STOP_PROVIDER_START_WAIT_HOLD'
-assert startup.index('stopToken.ThrowIfCancellationRequested();\n        var launched = Process.Start(ps);') < startup.index('await Task.Delay(1000, stopToken);'), 'B02_R8_STOP_BEFORE_SPAWN_HOLD'
+assert startup.index('stopToken.ThrowIfCancellationRequested();\n        var launched = Process.Start(ps);') < startup.index('await Task.Delay(1000, stopToken);') if 'stopToken.ThrowIfCancellationRequested();\n        var launched = Process.Start(ps);' in startup else startup.index('stopToken.ThrowIfCancellationRequested();', startup.index('ps.Environment["OLLAMA_MODELS"] = modelDir;')) < startup.index('var launched = Process.Start(ps);') < startup.index('await Task.Delay(1000, stopToken);'), 'B02_R8_STOP_BEFORE_SPAWN_HOLD'
 assert 'if (stopToken.CanBeCanceled) throw;' in startup, 'B02_R8_GENERATION_TERMINAL_ERROR_HOLD'
 assert 'LOCAL_PROVIDER_START_FAILED:' in startup and 'await CheckProvider();' in startup, 'B02_R8_OWNER_NOTICE_AFTER_START_ERROR_HOLD'
 assert 'await StartLocalEngine(cancellation.Token);' in generate, 'B02_R8_CHAT_RECOVERY_HOLD'
