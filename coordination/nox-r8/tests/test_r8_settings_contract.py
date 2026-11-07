@@ -82,4 +82,44 @@ for script in scripts:
     # Explicit UTF-8 stdin is required: Windows GitHub runners default to cp1252.
     check = subprocess.run(['node','--check'], input=script.encode('utf-8'), capture_output=True)
     assert check.returncode == 0, check.stderr.decode('utf-8', errors='replace')
+# D06: execute original late SETTINGS denial handler with correlated owner request IDs.
+denied_case = re.search(r"(case 'settings.denied':\{.*?\n\})\s*case 'settings.readback':", web, re.S)
+assert denied_case, 'D06 SETTINGS denied handler missing'
+denied_js = r"""
+const code = "let pendingSettings=e.pending,settingsReconcile=e.reconcile,settingsDenial='',committedSettings={};"+
+  "let status={textContent:e.status},posts=[];"+
+  "const $=()=>status,setSettingsBusy=()=>{},applyCommittedSettings=()=>{},"+
+  "post=(...args)=>{posts.push(args);return true;},"+
+  "setTimeout=()=>42,clearTimeout=()=>{};"+
+  "const v=e.response;switch('settings.denied'){" + CASE_CODE +
+  "}return {status:status.textContent,posts};";
+const fn = new Function('e', code);
+function check(name, e, status, posts) {
+  const result=fn(e);
+  if(result.status!==status||result.posts.length!==posts)
+    throw Error('D06_SETTINGS_DENIAL_OWNER_HOLD '+name+': '+JSON.stringify(result));
+  return result;
+}
+check('late_reconcile',
+ {pending:null,reconcile:{requestId:'r-new',key:'motion',value:'off'},status:'NOX_SETTINGS_COMMIT_UNKNOWN_HOLD',
+  response:{requestId:'r-old',reason:'NOX_SETTINGS_REJECTED'}},'NOX_SETTINGS_COMMIT_UNKNOWN_HOLD',0);
+check('unsolicited_idle',
+ {pending:null,reconcile:null,status:'SQLite confirmed',response:{requestId:'r-old',reason:'NOX_SETTINGS_REJECTED'}},
+ 'SQLite confirmed',0);
+check('wrong_owner_pending',
+ {pending:{requestId:'r-new',key:'motion',value:'off'},reconcile:null,status:'pending',
+  response:{requestId:'r-old',reason:'NOX_SETTINGS_REJECTED'}},'pending',0);
+check('correct_owner_denied',
+ {pending:{requestId:'r-new',key:'motion',value:'off'},reconcile:null,status:'pending',
+  response:{requestId:'r-new',reason:'NOX_SETTINGS_REJECTED'}},'NOX_SETTINGS_REJECTED',1);
+const confirm=check('correct_owner_commit_unknown',
+ {pending:{requestId:'r-new',key:'motion',value:'off'},reconcile:null,status:'pending',
+  response:{requestId:'r-new',reason:'NOX_SETTINGS_COMMIT_UNKNOWN_HOLD'}},
+ 'NOX_SETTINGS_COMMIT_UNKNOWN_HOLD',1);
+if(confirm.posts[0][0]!=='settings.get'||confirm.posts[0][1]?.requestId!=='r-new')
+  throw Error('D06_SETTINGS_READBACK_REQUEST_ID_HOLD');
+""".replace('CASE_CODE', __import__('json').dumps(denied_case.group(1)))
+denied_check = subprocess.run(['node','-e',denied_js], capture_output=True, encoding='utf-8')
+assert denied_check.returncode == 0, denied_check.stderr
+
 print('D06 R8 SETTINGS SOURCE_ONLY: validation/readback/ARIA/JS PASS; Windows owner-PC not tested')

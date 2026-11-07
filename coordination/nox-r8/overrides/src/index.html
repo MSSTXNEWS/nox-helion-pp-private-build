@@ -570,7 +570,7 @@ case 'settings.receipt':{
   break;
 }
 case 'settings.denied':{
-  if(pendingSettings && v?.requestId!==pendingSettings.requestId)break;
+  if(settingsReconcile || !pendingSettings || v?.requestId!==pendingSettings.requestId)break;
   const deniedWrite=pendingSettings;
   if(deniedWrite){pendingSettings=null;setSettingsBusy(false);applyCommittedSettings(committedSettings);}
   const allowed=['NOX_SETTINGS_INVALID_REQUEST','NOX_SETTINGS_REJECTED',
