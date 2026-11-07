@@ -699,6 +699,7 @@ public partial class MainWindow : Window
         string? error = null;
         string? promptMarker = null;
         string? stopMarker = null;
+        string? resumeMarker = null;
         try
         {
             // Do not claim UX acceptance from a DOM count. This checks the
@@ -762,6 +763,10 @@ public partial class MainWindow : Window
             await WaitForGenerationFinishAsync(chatTarget, TimeSpan.FromMinutes(4));
             if (!lastGenerationCompleted || !HasSavedPrompt(prompt))
                 throw new InvalidOperationException("Live Qwen stream or SQLite chat write did not complete");
+            // A native finish counter can advance before WebView2 consumes the
+            // asynchronous complete event. Never start the STOP run with busy=true.
+            if (!await WaitForSavedChatUiReleaseAsync(TimeSpan.FromSeconds(4)))
+                throw new InvalidOperationException("NOX_WEBVIEW2_FIRST_CHAT_OWNER_NOT_RELEASED_HOLD");
             checks["real_chat_from_webview_to_qwen_to_sqlite"] = "PASS";
 
             stopMarker = "NOX_STOP_" + Guid.NewGuid().ToString("N");
@@ -778,12 +783,37 @@ public partial class MainWindow : Window
             // Cancelling preflight/context work alone is NOT active HTTP STOP evidence.
             if (!await WaitForGenerationTokenAsync(streamTokenTarget, stopTarget, TimeSpan.FromMinutes(2)))
                 throw new InvalidOperationException("NOX_ACTIVE_HTTP_STREAM_NOT_OBSERVED_HOLD");
+            // Native NDJSON receipt alone is not proof that WebView2 displayed
+            // a live token. Demand actual visible DOM output before owner STOP.
+            if (!await WaitForVisibleChatTokenAsync(stopTarget, TimeSpan.FromSeconds(4)))
+                throw new InvalidOperationException("NOX_WEBVIEW2_STREAM_TOKEN_NOT_VISIBLE_HOLD");
             await Browser.CoreWebView2.ExecuteScriptAsync("document.getElementById('stop').click();");
             await WaitForGenerationFinishAsync(stopTarget, TimeSpan.FromSeconds(30));
             if (Volatile.Read(ref stopSignalCount) <= beforeStop ||
                 !lastGenerationStopped || HasSavedPrompt(longPrompt))
                 throw new InvalidOperationException("Native STOP was not confirmed");
+            // Confirm the SAME WebView2 owner is released after HTTP cancellation,
+            // not merely that native counters moved. No fake provider is used.
+            if (!await WaitForStopUiReleaseAsync(TimeSpan.FromSeconds(4)))
+                throw new InvalidOperationException("NOX_WEBVIEW2_STOP_OWNER_NOT_RELEASED_HOLD");
             checks["real_webview_stop_cancel_no_partial_persistence"] = "PASS";
+            // Native/JS STOP may appear complete while the request lock or
+            // UI composer remains unusable. Prove fresh owner acquisition,
+            // another genuine Qwen answer, and durable SQLite readback.
+            resumeMarker = "NOX_RESUME_" + Guid.NewGuid().ToString("N");
+            var resumePrompt = "Ответь одним коротким словом на русском: какое число после 4? " + resumeMarker;
+            int resumeTarget = Volatile.Read(ref generationStartedCount) + 1;
+            await Browser.CoreWebView2.ExecuteScriptAsync(
+                "document.getElementById('prompt').value = " + JsonSerializer.Serialize(resumePrompt) +
+                "; document.getElementById('send').click();");
+            if (!await WaitForGenerationStartAsync(resumeTarget, TimeSpan.FromSeconds(12)))
+                throw new InvalidOperationException("NOX_CHAT_AFTER_STOP_START_HOLD");
+            await WaitForGenerationFinishAsync(resumeTarget, TimeSpan.FromMinutes(4));
+            if (!lastGenerationCompleted || lastGenerationStopped || !HasSavedPrompt(resumePrompt))
+                throw new InvalidOperationException("NOX_CHAT_AFTER_STOP_SQLITE_HOLD");
+            if (!await WaitForSavedChatUiReleaseAsync(TimeSpan.FromSeconds(4)))
+                throw new InvalidOperationException("NOX_WEBVIEW2_RESUMED_CHAT_OWNER_NOT_RELEASED_HOLD");
+            checks["real_chat_after_http_stop_sqlite"] = "PASS";
         }
         catch (Exception ex)
         {
@@ -795,9 +825,10 @@ public partial class MainWindow : Window
             try
             {
                 if (promptMarker != null) DeleteSyntheticChats(promptMarker, stopMarker);
+                if (resumeMarker != null) DeleteSyntheticChats(resumeMarker, null);
             }
             catch (Exception e) { error = (error ?? "") + " cleanup:" + e.Message; }
-            var accepted = error == null && checks.Count == 5 && checks.Values.All(v => v == "PASS");
+            var accepted = error == null && checks.Count == 6 && checks.Values.All(v => v == "PASS");
             var exePath = Environment.ProcessPath ?? "";
             var sha = "";
             try { if (File.Exists(exePath)) sha = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(exePath))); }
@@ -821,6 +852,74 @@ public partial class MainWindow : Window
             catch { /* A missing receipt is HOLD, never PASS. */ }
             Application.Current.Shutdown(accepted ? 0 : 2);
         }
+    }
+
+    private async Task<bool> WaitForVisibleChatTokenAsync(int generationTarget, TimeSpan timeout)
+    {
+        var until = DateTime.UtcNow + timeout;
+        while (DateTime.UtcNow < until)
+        {
+            if (Volatile.Read(ref generationFinishedCount) >= generationTarget) return false;
+            var visible = await Browser.CoreWebView2.ExecuteScriptAsync("""
+                (() => {
+                  const row = document.getElementById('messages')?.firstElementChild;
+                  const label = row?.querySelector('small');
+                  const body = row?.lastElementChild;
+                  return label?.textContent === 'NOX QWEN' &&
+                    !!body?.textContent &&
+                    body.textContent === lastAnswer &&
+                    busy === true && activeChatId !== null &&
+                    document.getElementById('generation')?.classList.contains('on') === true;
+                })()
+                """);
+            if (visible == "true" && Volatile.Read(ref generationFinishedCount) < generationTarget)
+                return true;
+            await Task.Delay(75);
+        }
+        return false;
+    }
+
+    private async Task<bool> WaitForStopUiReleaseAsync(TimeSpan timeout)
+    {
+        var until = DateTime.UtcNow + timeout;
+        while (DateTime.UtcNow < until)
+        {
+            var released = await Browser.CoreWebView2.ExecuteScriptAsync("""
+                (() => {
+                  const busyIndicator = document.getElementById('generation');
+                  const hint = document.getElementById('streamHint');
+                  return busy === false && activeChatId === null &&
+                    busyIndicator?.classList.contains('on') === false &&
+                    hint?.textContent?.includes('Частичный ответ не сохранён') === true;
+                })()
+                """);
+            if (released == "true") return true;
+            await Task.Delay(75);
+        }
+        return false;
+    }
+
+    // A native generation may finish before WebView2 receives its terminal ACK.
+    // Verify the real composer is unlocked and displays *this* saved outcome.
+    // Used only by opt-in native acceptance, never production chat dispatch.
+    private async Task<bool> WaitForSavedChatUiReleaseAsync(TimeSpan timeout)
+    {
+        var until = DateTime.UtcNow + timeout;
+        while (DateTime.UtcNow < until)
+        {
+            var released = await Browser.CoreWebView2.ExecuteScriptAsync("""
+                (() => {
+                  const hint = document.getElementById('streamHint');
+                  const indicator = document.getElementById('generation');
+                  return busy === false && activeChatId === null &&
+                    indicator?.classList.contains('on') === false &&
+                    hint?.textContent === 'Ответ завершён и сохранён в SQLite.';
+                })()
+                """);
+            if (released == "true") return true;
+            await Task.Delay(75);
+        }
+        return false;
     }
 
     private bool HasSavedPrompt(string prompt)
