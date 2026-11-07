@@ -211,3 +211,14 @@ with sqlite3.connect(':memory:') as db:
     assert db.execute('SELECT complete FROM tasks WHERE id=42').fetchone()[0]==0
     assert db.execute(statement,(404,)).rowcount==0
 print('D05 R8 SOURCE_ONLY: owner-correlated task toggle, SQLite COMMIT/readback and denied rollback PASS')
+
+# B04: a previous successful chat must not leave a stale "saved" banner
+# while a new prompt is generating or when that prompt terminates with error.
+# This is an actual UI contract check; it is NOT physical owner-PC E2E.
+send_section = html.split("$('send').onclick=()=>", 1)[1].split("\n$('stop').onclick=", 1)[0]
+assert "busy=true;activeChatId=requestId;lastAnswer='';$('streamHint').textContent='Генерация ответа · не сохранено';" in send_section, 'B04_STALE_SQLITE_SUCCESS_DURING_GENERATION_HOLD'
+complete_section = html.split("case 'complete':", 1)[1].split("break;", 1)[0]
+assert "else if(v?.ok)$('streamHint').textContent='Ответ завершён и сохранён в SQLite.'" in complete_section
+assert "else{$('streamHint').textContent='Ответ не сохранён в SQLite.';lastAnswer='';}" in complete_section, 'B04_STALE_SQLITE_SUCCESS_ON_ERROR_HOLD'
+assert "if(v?.stopped){lastAnswer='';$('streamHint').textContent='Поток остановлен. Частичный ответ не сохранён.';}" in complete_section
+print("B04 R8 SOURCE_ONLY: no stale SQLite saved banner during in-flight/error/STOP chat (Windows E2E NOT RUN)")
