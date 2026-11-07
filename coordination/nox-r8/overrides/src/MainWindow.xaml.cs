@@ -1850,6 +1850,9 @@ public partial class MainWindow : Window
             return;
         }
         try { RequestLearn(requestId); }
+        catch (InvalidOperationException ex) when (ex.Message == "NOX_LEARN_EXISTING_MODEL_MISMATCH_HOLD") {
+            Send("learn.denied", new { requestId, reason = ex.Message });
+        }
         catch (Exception) {
             Send("learn.denied", new { requestId, reason = "NOX_LEARN_REQUEST_HOLD" });
         }
@@ -1908,6 +1911,10 @@ public partial class MainWindow : Window
                         if (!row.Read() || string.IsNullOrWhiteSpace(row.GetString(0)) ||
                             !DateTimeOffset.TryParse(row.GetString(1), out _) || !row.IsDBNull(2))
                             throw new InvalidOperationException("NOX_LEARN_EXISTING_SQLITE_READBACK_HOLD");
+                        // Model-specific consent: old pending model != current owner model.
+                        // A previous request must never be acknowledged as new consent.
+                        if (!string.Equals(row.GetString(0), model, StringComparison.Ordinal))
+                            throw new InvalidOperationException("NOX_LEARN_EXISTING_MODEL_MISMATCH_HOLD");
                     }
                     var existingQueue = ReadLearnQueue();
                     Send("learn.queue", existingQueue);

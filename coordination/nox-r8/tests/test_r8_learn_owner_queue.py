@@ -71,3 +71,12 @@ for token in ("post('learn.request',{requestId})", "post('learn.cancel',{request
               'v?.requestId===pendingLearnStop'):
  assert token in html, token
 print('D05 LEARN SOURCE_ONLY correlated request/STOP + fail-closed ACK contract PASS')
+
+# Model-specific owner consent must not reuse a pending row for a different model.
+old = cs.split('if (oldId != null && oldId != DBNull.Value)', 1)[1].split('var existingQueue = ReadLearnQueue();', 1)[0]
+assert 'string.Equals(row.GetString(0), model, StringComparison.Ordinal)' in old
+assert old.index('NOX_LEARN_EXISTING_SQLITE_READBACK_HOLD') < old.index('NOX_LEARN_EXISTING_MODEL_MISMATCH_HOLD')
+assert 'catch (InvalidOperationException ex) when (ex.Message == "NOX_LEARN_EXISTING_MODEL_MISMATCH_HOLD")' in cs
+assert 'Send("learn.denied", new { requestId, reason = ex.Message });' in cs
+assert "case 'learn.denied':" in html and "post('learn.queue');" in html
+print('D05 MODEL-SPECIFIC OWNER CONSENT SOURCE_ONLY PASS; GPU NOT RUN')
