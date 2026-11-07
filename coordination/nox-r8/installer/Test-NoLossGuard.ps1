@@ -42,6 +42,22 @@ try{
    if(Test-Path -LiteralPath $dir){ throw 'B05_BAD_PAYLOAD_CREATED_TARGET' }
  } finally { [IO.File]::WriteAllBytes((Join-Path $payload 'NOX.HELION.exe'),$bytes) }
  Check 'PreInstall' $true
+ # Pre-install must reject an extra owner file BEFORE moving the payload.
+ $foreignPayload=Join-Path $payload 'owner.sqlite3'
+ try {
+   [IO.File]::WriteAllText($foreignPayload,'FOREIGN_MUST_NOT_MOVE')
+   Check 'PreInstall' $false
+   if(Test-Path -LiteralPath $dir){ throw 'B05_FOREIGN_PAYLOAD_CREATED_TARGET' }
+   if([IO.File]::ReadAllText($foreignPayload) -cne 'FOREIGN_MUST_NOT_MOVE'){ throw 'B05_FOREIGN_PAYLOAD_MODIFIED' }
+ } finally { Remove-Item -LiteralPath $foreignPayload -Force -ErrorAction SilentlyContinue }
+ # A directory can also hide unrelated files under an otherwise valid pair.
+ $foreignDir=Join-Path $payload 'extra-subdir'
+ try {
+   New-Item -ItemType Directory -Path $foreignDir | Out-Null
+   Check 'PreInstall' $false
+   if(Test-Path -LiteralPath $dir){ throw 'B05_FOREIGN_SUBDIR_CREATED_TARGET' }
+ } finally { Remove-Item -LiteralPath $foreignDir -Force -Recurse -ErrorAction SilentlyContinue }
+ Check 'PreInstall' $true
  New-Item -ItemType Directory -Force -Path $dir | Out-Null
  [IO.File]::WriteAllBytes((Join-Path $dir 'NOX.HELION.exe'),$bytes)
  [IO.File]::WriteAllBytes((Join-Path $dir 'BUILD_RECEIPT.json'),$rbytes)
@@ -73,7 +89,7 @@ try{
  [IO.File]::WriteAllText((Join-Path $dir 'owner.sqlite3'),'FOREIGN_OWNER_DATA')
  Check 'PreUninstall' $false
  if(-not (Test-Path -LiteralPath (Join-Path $dir 'owner.sqlite3'))){ throw 'B05_TEST_LOST_FOREIGN_FILE' }
- Write-Host 'B05_GUARD_16_CHECKS_PASS_FIXTURE_ONLY_RELEASE_HOLD'
+ Write-Host 'B05_GUARD_18_CHECKS_PASS_FIXTURE_ONLY_RELEASE_HOLD'
 }finally{
  $env:LOCALAPPDATA=$original
  if(Test-Path -LiteralPath $scratch){ Remove-Item -LiteralPath $scratch -Force -Recurse }

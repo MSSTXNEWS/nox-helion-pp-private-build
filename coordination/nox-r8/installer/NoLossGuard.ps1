@@ -65,6 +65,16 @@ if($Mode -eq 'PreInstall') {
  $staged=[IO.Path]::GetFullPath($PayloadDir)
  Check-NoReparse $staged
  if(-not (Test-Path -LiteralPath $staged -PathType Container)){ Hold 'PAYLOAD_DIR_MISSING' }
+ # Exact staged inventory is checked BEFORE the atomic directory promotion.
+ # A valid EXE/receipt pair must never drag an unrelated file, directory,
+ # hidden file or reparse point into the immutable install target.
+ $stagedItems=@(Get-ChildItem -LiteralPath $staged -Force)
+ if($stagedItems.Count -ne 2){ Hold 'STAGED_FOREIGN_OR_MISSING_ENTRY' }
+ foreach($stagedItem in $stagedItems) {
+   if(@('NOX.HELION.exe','BUILD_RECEIPT.json') -cnotcontains $stagedItem.Name){ Hold 'STAGED_FOREIGN_ENTRY' }
+   if($stagedItem.PSIsContainer){ Hold 'STAGED_UNEXPECTED_DIRECTORY' }
+   Check-NoReparse $stagedItem.FullName
+ }
  Check-BundledPayload $staged
  Write-Output 'B05_NOLOSS_PREINSTALL_PASS_RELEASE_HOLD'
  return
