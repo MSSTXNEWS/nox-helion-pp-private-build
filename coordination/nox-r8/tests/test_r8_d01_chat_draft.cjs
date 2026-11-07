@@ -64,14 +64,18 @@ const keyboardCode = keyboardLine.slice(keyboardLine.indexOf("$('prompt').onkeyd
 let presses = 0;
 const keyboardNodes = {prompt: {}, send: {click(){presses++;}}};
 vm.runInNewContext(keyboardCode, {$:id=>keyboardNodes[id]}, {timeout: 1500});
-function keypress(key, shiftKey=false, isComposing=false, keyCode=13){
-  const e = {key,shiftKey,isComposing,keyCode,preventDefault(){this.prevented=true}};
+function keypress(key, shiftKey=false, isComposing=false, keyCode=13, extra={}){
+  const e = {key,shiftKey,isComposing,keyCode,preventDefault(){this.prevented=true},...extra};
   keyboardNodes.prompt.onkeydown(e);
   return !!e.prevented;
 }
 assert.equal(keypress('Enter',false,true),false,'D01_IME_ENTER_SENT_PREMATURELY');
 assert.equal(keypress('Enter',false,false,229),false,'D01_IME_LEGACY_ENTER_SENT');
 assert.equal(keypress('Enter',true),false,'D01_SHIFT_ENTER_BLOCKED');
+for (const modifier of ['ctrlKey','altKey','metaKey']) {
+  assert.equal(keypress('Enter',false,false,13,{[modifier]:true}),false,
+    'D01_MODIFIED_ENTER_MUST_NOT_SEND_'+modifier);
+}
 assert.equal(keypress('a'),false,'D01_TYPING_BLOCKED');
 assert.equal(presses,0,'D01_COMPOSITION_MUST_NOT_SEND');
 assert.equal(keypress('Enter'),true,'D01_NORMAL_ENTER_MUST_SEND');
@@ -221,6 +225,9 @@ for (const [field,action] of [['knowledgeQuery','knowledgeSearch'],['memoryQuery
   assert.equal(press({isComposing:true}),0,'D01_COMPOSITION_HANDLED_'+field);
   assert.equal(press({keyCode:229}),0,'D01_IME_229_HANDLED_'+field);
   assert.equal(press({shiftKey:true}),0,'D01_SHIFT_ENTER_HANDLED_'+field);
+  for (const modifier of ['ctrlKey','altKey','metaKey'])
+    assert.equal(press({[modifier]:true}),0,'D01_SEARCH_MODIFIED_ENTER_'+field+'_'+modifier);
+  assert.equal(press({defaultPrevented:true}),0,'D01_SEARCH_HANDLED_ENTER_'+field);
   assert.equal(press({repeat:true}),1,'D01_REPEAT_PREVENT_DEFAULT_'+field);
   assert.equal(nodes[action].calls,0,'D01_PREMATURE_SEARCH_'+field);
   assert.equal(press(),1,'D01_REAL_ENTER_DEFAULT_'+field);
