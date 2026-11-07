@@ -19,7 +19,7 @@ function scenario(draft, bridge, locked = false) {
     post: (type, payload) => {sent.push({type, payload}); return bridge;},
     entry: (_container, value, label) => {shown.push({value, label}); return {lastChild: {textContent: ''}};},
     nextChatId: () => 'r8d01_owner_1234',
-    busy: locked, activeChatId: null, responseBox: null, lastAnswer: 'old'
+    busy: locked, activeChatId: null, responseBox: null, lastAnswer: 'old', visibleDraftPersona:'KV'
   };
   vm.runInNewContext(code, context, {timeout: 1500});
   nodes.send.onclick();
@@ -254,7 +254,7 @@ console.log('D01 SOURCE_ONLY PASS: knowledge/memory keyboard IME, repeat, Enter'
     replaceChildren(){this.clears++;}}]));
   for(const id of draftIds)elements[id]={value:oldDraft[id]};
   const eventContext = {$:id=>elements[id],window:{},
-    v:{persona:'AM'},committedSettings:{persona:'KV'},personaDrafts:new Map()};
+    v:{persona:'AM'},committedSettings:{persona:'KV'},visibleDraftPersona:'KV',personaDrafts:new Map()};
   const draftStart=html.indexOf('function switchPersonaDrafts(next){');
   const draftEnd=html.indexOf('\nfunction route(id){',draftStart);
   assert.ok(draftStart>0&&draftEnd>draftStart,'D01_ORIGINAL_PERSONA_DRAFT_HANDLER_MISSING');
@@ -389,7 +389,7 @@ console.log('D01 SOURCE_ONLY PASS: 8 CoreID focus, IME/modified/repeat navigatio
     const nodes={send:{},prompt:{value:raw},streamHint:{textContent:''},
       messages:{},generation:{classList:{remove(){}}}};
     const machine=vm.runInNewContext(
-      "let responseBox=null,lastAnswer='',busy=false,activeChatId=null,pendingChatDraft=null;"+
+      "let responseBox=null,lastAnswer='',busy=false,activeChatId=null,pendingChatDraft=null,visibleDraftPersona='KV';const personaDrafts=new Map();"+
       sendHandler+
       "\nfunction finishTurn(v){switch('complete'){"+completeHandler+"}}\n"+
       "({send:()=>$('send').onclick(),finishTurn,state:()=>({busy,pendingChatDraft})})",
@@ -469,7 +469,7 @@ console.log('D01 SOURCE_ONLY PASS: Qwen failed/STOP retry with original input, S
     if(visibleDraftPersona!=='LA'||nodes.prompt.value!==''||
       personaDrafts.get('AM').prompt!=='AM private chat')
       throw Error('D01_SETTINGS_PERSONA_HYDRATION_FAILED');
-    return 'PASS';
+    'PASS';
   `;
   assert.equal(vm.runInNewContext(realSource,{}, {timeout:1500}),'PASS',
     'D01_PERSONA_PENDING_RECEIPT_NO_LOSS_SOURCE_HOLD');
