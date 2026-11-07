@@ -5,15 +5,15 @@ import shutil
 import re
 
 root = Path(__file__).resolve().parent
-# Run directly from the checked-in repository or from the final CI staging
-# directory. A missing source tree must fail closed, not silently skip checks.
-source_dir = next((candidate for candidate in (
-    root.parent / "overrides" / "src",
-    root / "src",
-) if (candidate / "MainWindow.xaml.cs").is_file()
-   and (candidate / "index.html").is_file()), None)
-if source_dir is None:
-    raise SystemExit("B02_R8_SOURCE_PATH_HOLD")
+# F02: one layout per trusted source origin, never an automatic stale fallback.
+if root.name == "tests" and root.parent.name == "nox-r8":
+    source_dir = root.parent / "overrides" / "src"
+elif root.name == "r8":
+    source_dir = root / "src"
+else:
+    raise AssertionError("F02_IPC_SQLITE_TEST_ORIGIN_HOLD")
+for name in ("MainWindow.xaml.cs", "index.html"):
+    assert (source_dir / name).is_file(), "F02_IPC_SQLITE_SOURCE_MISSING_HOLD: " + str(source_dir / name)
 cs = (source_dir / "MainWindow.xaml.cs").read_text(encoding="utf-8")
 html = (source_dir / "index.html").read_text(encoding="utf-8")
 required_cs = (

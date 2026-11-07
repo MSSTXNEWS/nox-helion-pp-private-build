@@ -1,6 +1,14 @@
 """B04: SQLite ambiguous-commit must not trigger duplicate retries (SOURCE_ONLY)."""
 from pathlib import Path
-root = Path(__file__).resolve().parent / "src"
+here = Path(__file__).resolve().parent
+if here.name == "tests" and here.parent.name == "nox-r8":
+    root = here.parent / "overrides" / "src"
+elif here.name == "r8":
+    root = here / "src"
+else:
+    raise AssertionError("F02_SQLITE_TEST_ORIGIN_HOLD")
+for name in ("MainWindow.xaml.cs", "index.html"):
+    assert (root/name).is_file(), "F02_SQLITE_SOURCE_MISSING_HOLD: " + str(root/name)
 cs = (root/"MainWindow.xaml.cs").read_text(encoding="utf-8")
 html = (root/"index.html").read_text(encoding="utf-8")
 gen = cs.split("private async Task Generate(", 1)[1].split("private void PersistChat(", 1)[0]

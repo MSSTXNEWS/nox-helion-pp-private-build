@@ -790,12 +790,18 @@ public partial class MainWindow : Window
             // asynchronous complete event. Never start the STOP run with busy=true.
             if (!await WaitForSavedChatUiReleaseAsync(TimeSpan.FromSeconds(4)))
                 throw new InvalidOperationException("NOX_WEBVIEW2_FIRST_CHAT_OWNER_NOT_RELEASED_HOLD");
+            // Independent visible-text readback: native SQLite ACK alone is not a UI result.
+            var firstRendered = await Browser.CoreWebView2.ExecuteScriptAsync(
+                "(() => !!lastAnswer && responseBox?.lastChild?.textContent === lastAnswer)()");
+            if (firstRendered != "true")
+                throw new InvalidOperationException("NOX_F01_FIRST_CHAT_NOT_VISIBLE_HOLD");
             checks["real_chat_from_webview_to_qwen_to_sqlite"] = "PASS";
+            checks["real_chat_visible_webview_sqlite_ack"] = "PASS";
 
             stopMarker = "NOX_STOP_" + Guid.NewGuid().ToString("N");
             var longPrompt = "Выведи очень длинный рассказ минимум из 4000 слов, не останавливаясь. " + stopMarker;
             var beforeStop = Volatile.Read(ref stopSignalCount);
-            int streamTokenTarget = Volatile.Read(ref generationStreamingTokenCount) + 1;
+            int streamTokenTarget = Volatile.Read(ref generationStreamingTokenCount) + 2;
             int stopTarget = Volatile.Read(ref generationStartedCount) + 1;
             await Browser.CoreWebView2.ExecuteScriptAsync(
                 "document.getElementById('prompt').value = " + JsonSerializer.Serialize(longPrompt) +
@@ -819,6 +825,15 @@ public partial class MainWindow : Window
             // not merely that native counters moved. No fake provider is used.
             if (!await WaitForStopUiReleaseAsync(TimeSpan.FromSeconds(4)))
                 throw new InvalidOperationException("NOX_WEBVIEW2_STOP_OWNER_NOT_RELEASED_HOLD");
+            // A STOP ACK is not enough if a late WebView2 token mutates the answer.
+            var stoppedText = await Browser.CoreWebView2.ExecuteScriptAsync(
+                "JSON.stringify(responseBox?.lastChild?.textContent ?? '')");
+            await Task.Delay(400);
+            var lateText = await Browser.CoreWebView2.ExecuteScriptAsync(
+                "JSON.stringify(responseBox?.lastChild?.textContent ?? '')");
+            if (!string.Equals(stoppedText, lateText, StringComparison.Ordinal) ||
+                HasSavedPrompt(longPrompt))
+                throw new InvalidOperationException("NOX_F01_LATE_TOKEN_OR_PARTIAL_SQLITE_HOLD");
             checks["real_webview_stop_cancel_no_partial_persistence"] = "PASS";
             // Native/JS STOP may appear complete while the request lock or
             // UI composer remains unusable. Prove fresh owner acquisition,
@@ -836,6 +851,10 @@ public partial class MainWindow : Window
                 throw new InvalidOperationException("NOX_CHAT_AFTER_STOP_SQLITE_HOLD");
             if (!await WaitForSavedChatUiReleaseAsync(TimeSpan.FromSeconds(4)))
                 throw new InvalidOperationException("NOX_WEBVIEW2_RESUMED_CHAT_OWNER_NOT_RELEASED_HOLD");
+            var recoveredRendered = await Browser.CoreWebView2.ExecuteScriptAsync(
+                "(() => !!lastAnswer && responseBox?.lastChild?.textContent === lastAnswer)()");
+            if (recoveredRendered != "true")
+                throw new InvalidOperationException("NOX_F01_STOP_RECOVERY_NOT_VISIBLE_HOLD");
             checks["real_chat_after_http_stop_sqlite"] = "PASS";
         }
         catch (Exception ex)
@@ -851,7 +870,7 @@ public partial class MainWindow : Window
                 if (resumeMarker != null) DeleteSyntheticChats(resumeMarker, null);
             }
             catch (Exception e) { error = (error ?? "") + " cleanup:" + e.Message; }
-            var accepted = error == null && checks.Count == 6 && checks.Values.All(v => v == "PASS");
+            var accepted = error == null && checks.Count == 7 && checks.Values.All(v => v == "PASS");
             var exePath = Environment.ProcessPath ?? "";
             var sha = "";
             try { if (File.Exists(exePath)) sha = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(exePath))); }
@@ -1209,6 +1228,18 @@ public partial class MainWindow : Window
         }
         if (!string.Equals(Sha256File(snapshot), sha, StringComparison.Ordinal))
             throw new InvalidOperationException("NOX_B03_SMOKE_SHA_READBACK_HOLD");
+        // Windows-native NO-LOSS gate: snapshot handles must be released.
+        // Only the isolated selftest snapshot is examined; owner SQLite is untouched.
+        try
+        {
+            using var exclusive = new FileStream(snapshot, FileMode.Open, FileAccess.Read, FileShare.None);
+            if (exclusive.Length <= 0)
+                throw new InvalidOperationException("NOX_F01_SNAPSHOT_EMPTY_HOLD");
+        }
+        catch (IOException ex)
+        {
+            throw new InvalidOperationException("NOX_F01_BACKUP_LOCKED_HANDLE_HOLD", ex);
+        }
 
         // B03: force a partial Persona migration on the already-isolated native
         // UI-smoke database, then prove that the *real C# migration* recreates the
