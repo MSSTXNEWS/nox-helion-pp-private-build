@@ -57,8 +57,9 @@ for fragment in required_html:
 # original guarded form OR the more restrictive new form, never any unguarded
 # or unowned handler. Keep the above independent STOP/requestId guards.
 legacy_navigation = 'NavigationStarting += (_, _) => { active?.Cancel(); activeRequestId = null; };' in cs
-strict_navigation = all(part in cs for part in (
-    'NavigationStarting += (_, args) =>',
+# Bind proof to the original navigation handler, not incidental text elsewhere.
+nav_handler = cs.split('NavigationStarting += (_, args) =>', 1)[1].split('Browser.NavigateToString(', 1)[0] if 'NavigationStarting += (_, args) =>' in cs else ''
+strict_navigation = all(part in nav_handler for part in (
     'if (pendingEmbeddedNavigation)',
     'pendingEmbeddedNavigation = false;',
     'active?.Cancel();',
@@ -67,8 +68,9 @@ strict_navigation = all(part in cs for part in (
 ))
 assert legacy_navigation or strict_navigation, 'F02_NAVIGATION_OWNER_GUARD_HOLD'
 legacy_complete = "case 'complete':busy=false;activeChatId=null" in html
-strict_complete = all(part in html for part in (
-    "case 'complete':{",
+# Require the matched ACK and owner release inside one terminal case only.
+complete_handler = html.split("case 'complete':{", 1)[1].split("case 'error':", 1)[0] if "case 'complete':{" in html else ''
+strict_complete = all(part in complete_handler for part in (
     'pendingChatDraft?.requestId===v?.requestId',
     'busy=false;activeChatId=null',
 ))
