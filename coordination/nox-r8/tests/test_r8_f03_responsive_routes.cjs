@@ -167,4 +167,26 @@ assert.match(native, /f03_webview2_emulated_reduced_motion"\] = "PASS"/,
   "F03_REAL_WEBVIEW2_EMULATED_REDUCED_MEDIA_RECEIPT_MISSING");
 assert.match(native, /CallDevToolsProtocolMethodAsync\(/,
   "F03_EDGE_WEBVIEW2_REDUCED_MEDIA_NOT_EMULATED");
+// F03 owner same-EXE QA must fail closed if a native accessibility/GPU/OS
+// receipt was missing or came from a source-only mock.  The owner script is
+// original; CI copied CJS lives at r8/, so resolve both honest source layouts.
+const ownerQaCandidates = [
+  path.join(__dirname, "..", "qa", "NOX_R8_OWNER_SAMESHA_E2E.ps1"),
+  path.join(__dirname, "..", "coordination", "nox-r8", "qa", "NOX_R8_OWNER_SAMESHA_E2E.ps1")
+];
+const ownerQaPath=ownerQaCandidates.find(fs.existsSync);
+assert.ok(ownerQaPath, "F03_OWNER_SAMESHA_QA_SCRIPT_MISSING");
+const ownerQa=fs.readFileSync(ownerQaPath,"utf8");
+const requiredOwnerUi=ownerQa.match(/\$mustPass=if\(\$Restart\)\s*\{[\s\S]*?\}\s*else\s*\{([\s\S]*?)\n\s*\}/);
+assert.ok(requiredOwnerUi, "F03_OWNER_NATIVE_UI_MUSTPASS_BLOCK_MISSING");
+for(const key of [
+  "f03_compact_native_coreid_focus_320_390_800",
+  "f03_webview2_chromium_input_keyboard",
+  "f03_webview2_injected_gpu_context_fallback",
+  "f03_webview2_emulated_reduced_motion"
+]){
+  assert.ok(requiredOwnerUi[1].includes("'"+key+"'"),"F03_OWNER_NATIVE_UI_RECEIPT_NOT_REQUIRED_"+key);
+}
+assert.match(ownerQa, /if\(\$value -cne 'PASS'\)\s*\{\s*throw "NATIVE_UI_CHECK_\$\(\$key\)_HOLD"\s*\}/,
+  "F03_OWNER_NATIVE_UI_GATE_NOT_FAIL_CLOSED");
 console.log("F03 R8 SOURCE_ONLY PASS: 8 routes × 2 layouts, native IPC mapping, notes refresh, keyboard, ARIA, scroll");
