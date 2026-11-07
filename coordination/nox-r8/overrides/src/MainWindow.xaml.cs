@@ -1939,6 +1939,15 @@ public partial class MainWindow : Window
             Emit("status", new { requestId, state = "ERROR" });
             Emit("complete", new { requestId, ok = false, stopped = false });
         }
+        catch (Exception ex) when (cancellation.IsCancellationRequested && !sqliteWriteAttempted &&
+            (ex is HttpRequestException || ex is IOException || ex is ObjectDisposedException)) {
+            // HTTP abort after native STOP may surface as a transport reset rather
+            // than OperationCanceledException. Do not misreport owner STOP as an
+            // Ollama outage; never override an attempted SQLite commit.
+            lastGenerationStopped = true;
+            Emit("status", new { requestId, state = "STOPPED" });
+            Emit("complete", new { requestId, ok = false, stopped = true });
+        }
         catch (HttpRequestException ex) {
             // Terminal ACK first; the provider probe must not mask the chat owner.
             refreshProviderAfterError = true;
