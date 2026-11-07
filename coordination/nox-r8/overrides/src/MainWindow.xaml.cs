@@ -1217,7 +1217,7 @@ public partial class MainWindow : Window
                 case "chat": await Generate(Text("text"), Text("requestId")); break;
                 case "history": Send("history", ReadHistory()); break;
                 case "notes.list": Send("notes", ReadNotes()); break;
-                case "notes.add": HandleNoteAdd(Text("title"), Text("content"), Text("requestId")); break;
+                case "notes.add": HandleNoteAdd(Text("title"), Text("content"), Text("requestId"), Text("persona")); break;
                 case "notes.delete": DeleteNote(request.GetProperty("id").GetInt64(), Text("requestId")); break;
                 case "feedback": SaveFeedback(request.GetProperty("rating").GetInt32(), Text("answer")); Send("notice", "Оценка сохранена локально; это не обучение весов."); break;
                 case "backup": BackupLocalDatabase(); break;
@@ -1641,7 +1641,7 @@ public partial class MainWindow : Window
         catch (Exception) { Send("tasks.add.denied", new { requestId, reason = "NOX_TASK_READBACK_HOLD" }); }
     }
 
-    private void HandleNoteAdd(string title, string body, string requestId)
+    private void HandleNoteAdd(string title, string body, string requestId, string requestedPersona)
     {
         if (!ValidWriteRequestId(requestId)) {
             Send("notes.add.denied", new { requestId, reason = "NOX_NOTE_REQUEST_ID_HOLD" });
@@ -1655,6 +1655,12 @@ public partial class MainWindow : Window
                 string.IsNullOrWhiteSpace(body) || body.Length > 8000)
                 throw new ArgumentException("NOX_NOTE_VALIDATION_HOLD");
             string persona = ActivePersona();
+            // Never attribute a stale WebView2 note draft to a different Persona.
+            // The rejection happens before any SQLite INSERT is attempted.
+            if (!string.Equals(requestedPersona, persona, StringComparison.Ordinal)) {
+                Send("notes.add.denied", new { requestId, reason = "NOX_NOTE_PERSONA_CHANGED_HOLD" });
+                return;
+            }
             writeAttempted = true;
             long id = AddNote(title, body);
             using var verifyDb = OpenDatabase();
