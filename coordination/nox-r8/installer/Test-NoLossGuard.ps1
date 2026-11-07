@@ -13,12 +13,34 @@ try{
  $json=(@{schema='NOX_R8_NATIVE_SINGLE_EXE_V1';source_git_sha=$source;exe_sha256=$sha;accepted_full_release=$false} | ConvertTo-Json -Compress)
  $rbytes=[Text.Encoding]::UTF8.GetBytes($json)
  $rsha=[Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($rbytes)).ToLowerInvariant()
- $invokeParams=@{InstallDir=$dir;ExpectedExeSha=$sha;ExpectedReceiptSha=$rsha;ExpectedSourceSha=$source}
+ $payload=Join-Path $scratch 'staged-payload'
+ New-Item -ItemType Directory -Force -Path $payload | Out-Null
+ [IO.File]::WriteAllBytes((Join-Path $payload 'NOX.HELION.exe'),$bytes)
+ [IO.File]::WriteAllBytes((Join-Path $payload 'BUILD_RECEIPT.json'),$rbytes)
+ $invokeParams=@{InstallDir=$dir;ExpectedExeSha=$sha;ExpectedReceiptSha=$rsha;ExpectedSourceSha=$source;PayloadDir=$payload}
  function Check([string]$mode,[bool]$pass){
    $failed=$false
    try{ & $guard -Mode $mode @invokeParams 2>&1 | Out-Null }catch{ $failed=$true; Write-Host "B05_EXPECTED_OR_UNEXPECTED_HOLD mode=$mode reason=$($_.Exception.Message)" }
    if($pass -eq $failed){ throw "B05_TEST_UNEXPECTED_RESULT:$mode expected=$pass" }
  }
+ Check 'PreInstall' $true
+ # Valid checksum, invalid receipt schema: reject before creating target.
+ $badJson=[Text.Encoding]::UTF8.GetBytes('{ "schema": "NOT_NOX_R8", "source_git_sha": "'+$source+'", "exe_sha256": "'+$sha+'" }')
+ $badSha=[Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($badJson)).ToLowerInvariant()
+ try {
+   [IO.File]::WriteAllBytes((Join-Path $payload 'BUILD_RECEIPT.json'),$badJson)
+   $invokeParams.ExpectedReceiptSha=$badSha
+   Check 'PreInstall' $false
+   if(Test-Path -LiteralPath $dir){ throw 'B05_INVALID_RECEIPT_CREATED_TARGET' }
+ } finally {
+   $invokeParams.ExpectedReceiptSha=$rsha
+   [IO.File]::WriteAllBytes((Join-Path $payload 'BUILD_RECEIPT.json'),$rbytes)
+ }
+ try {
+   [IO.File]::WriteAllText((Join-Path $payload 'NOX.HELION.exe'),'TAMPERED_STAGED_PAYLOAD')
+   Check 'PreInstall' $false
+   if(Test-Path -LiteralPath $dir){ throw 'B05_BAD_PAYLOAD_CREATED_TARGET' }
+ } finally { [IO.File]::WriteAllBytes((Join-Path $payload 'NOX.HELION.exe'),$bytes) }
  Check 'PreInstall' $true
  New-Item -ItemType Directory -Force -Path $dir | Out-Null
  [IO.File]::WriteAllBytes((Join-Path $dir 'NOX.HELION.exe'),$bytes)
@@ -51,7 +73,7 @@ try{
  [IO.File]::WriteAllText((Join-Path $dir 'owner.sqlite3'),'FOREIGN_OWNER_DATA')
  Check 'PreUninstall' $false
  if(-not (Test-Path -LiteralPath (Join-Path $dir 'owner.sqlite3'))){ throw 'B05_TEST_LOST_FOREIGN_FILE' }
- Write-Host 'B05_GUARD_13_CHECKS_PASS_FIXTURE_ONLY_RELEASE_HOLD'
+ Write-Host 'B05_GUARD_16_CHECKS_PASS_FIXTURE_ONLY_RELEASE_HOLD'
 }finally{
  $env:LOCALAPPDATA=$original
  if(Test-Path -LiteralPath $scratch){ Remove-Item -LiteralPath $scratch -Force -Recurse }
