@@ -16,7 +16,7 @@ try{
  $params=@('-InstallDir',$dir,'-ExpectedExeSha',$sha,'-ExpectedReceiptSha',$rsha,'-ExpectedSourceSha',$source)
  function Check([string]$mode,[bool]$pass){
    $failed=$false
-   try{ & $guard -Mode $mode @params 2>&1 | Out-Null }catch{ $failed=$true }
+   try{ & $guard -Mode $mode @params 2>&1 | Out-Null }catch{ $failed=$true; Write-Host "B05_EXPECTED_OR_UNEXPECTED_HOLD mode=$mode reason=$($_.Exception.Message)" }
    if($pass -eq $failed){ throw "B05_TEST_UNEXPECTED_RESULT:$mode expected=$pass" }
  }
  Check 'PreInstall' $true
