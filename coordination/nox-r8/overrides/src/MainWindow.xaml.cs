@@ -1927,9 +1927,13 @@ public partial class MainWindow : Window
             Send("notes.delete.denied", new { requestId, id, reason = "NOX_NOTE_DELETE_REQUEST_HOLD" });
             return;
         }
+        // An attempted SQLite commit can be durable even if its readback or
+        // WebView2 response fails. Never misreport a committed delete as denied.
+        bool commitAttempted = false;
+        string persona = "";
         try
         {
-            string persona = ActivePersona();
+            persona = ActivePersona();
             using var db = OpenDatabase();
             string title, content, createdAt;
             using (var lookup = db.CreateCommand())
@@ -1972,6 +1976,7 @@ public partial class MainWindow : Window
                 command.Parameters.AddWithValue("$created", createdAt);
                 if (command.ExecuteNonQuery() != 1)
                     throw new InvalidOperationException("NOX_NOTE_CHANGED_OR_FOREIGN_HOLD");
+                commitAttempted = true;
                 tx.Commit();
             }
             using (var verifyDb = OpenDatabase())
@@ -1983,15 +1988,26 @@ public partial class MainWindow : Window
                 if (Convert.ToInt64(verify.ExecuteScalar()) != 0)
                     throw new InvalidOperationException("NOX_NOTE_DELETE_READBACK_HOLD");
             }
-            Send("notes.delete.receipt", new { requestId, id, persona, deleted = true, backupVerified = true });
         }
         catch (Exception) {
-            // An error is never a success ACK; do not leak disk paths or SQL to WebView2.
-            Send("notes.delete.denied", new { requestId, id, reason = "NOX_NOTE_DELETE_NATIVE_HOLD" });
+            if (commitAttempted) {
+                // An attempted COMMIT may have succeeded. Leave the UI pending
+                // until an independent refresh; do not forge owner denial.
+                try { Send("notice", "NOX_NOTE_DELETE_COMMIT_UNKNOWN_HOLD"); }
+                catch (Exception) { /* WebView2 document may already be gone. */ }
+            } else {
+                try { Send("notes.delete.denied", new { requestId, id, reason = "NOX_NOTE_DELETE_NATIVE_HOLD" }); }
+                catch (Exception) { /* No commit attempted; IPC may be gone. */ }
+            }
             return;
         }
-        // The renderer refreshes only after receipt; on denial it keeps all cards.
-        Send("notes", ReadNotes());
+        // Independent SQLite readback completed, and the delete is durable.
+        // WebView2 delivery/refresh failures do not reverse this into "denied".
+        try {
+            Send("notes.delete.receipt", new { requestId, id, persona, deleted = true, backupVerified = true });
+        } catch (Exception) { return; }
+        try { Send("notes", ReadNotes()); }
+        catch (Exception) { /* Committed receipt remains authoritative. */ }
     }
     private void SaveFeedback(int rating,string answer)
     {
