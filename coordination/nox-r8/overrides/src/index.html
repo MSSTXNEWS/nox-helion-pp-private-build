@@ -151,6 +151,20 @@ body.reduced .helion-fx{filter:none}body.reduced .core.active{animation:none}
   const canvas=document.getElementById('helionFx');
   if(!canvas)return;
   const sphere=canvas.parentElement;
+  // WebView2 runtime versions can expose legacy MediaQueryList listeners or
+  // reject the OS motion observer. Neither must disable graphics or native IPC.
+  let motionQuery=null;
+  try{
+    if(typeof window.matchMedia==='function')motionQuery=window.matchMedia('(prefers-reduced-motion: reduce)');
+  }catch(e){console.warn('NOX reduced-motion query unavailable:',String(e?.message||e));}
+  const reduce=()=>document.body.classList.contains('reduced')||Boolean(motionQuery?.matches);
+  function watchMotion(redraw){
+    if(!motionQuery)return;
+    try{
+      if(typeof motionQuery.addEventListener==='function')motionQuery.addEventListener('change',redraw);
+      else if(typeof motionQuery.addListener==='function')motionQuery.addListener(redraw);
+    }catch(e){console.warn('NOX reduced-motion observer unavailable:',String(e?.message||e));}
+  }
   function startCanvas2d(fallbackCanvas, initialMode='BALANCED', initialEnergy=0){
     const canvas=fallbackCanvas;
     // 2D fallback retains visible fluid motion even when GPU acceleration is
@@ -167,8 +181,6 @@ body.reduced .helion-fx{filter:none}body.reduced .core.active{animation:none}
     catch(e){staticCss('CONTEXT_FAILED_'+String(e?.message||e));return;}
     if(!ctx){staticCss('CONTEXT_UNAVAILABLE');return;}
     let mode=initialMode,energy=initialEnergy,raf=0,last=0,started=performance.now(),rendered=false,failed=false;
-    const reduce=()=>document.body.classList.contains('reduced') ||
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     function frame(now){
       if(failed||document.hidden){raf=0;return;}
       const fps=reduce()?0:mode==='MAX'?30:mode==='ECO'?8:18;
@@ -217,7 +229,7 @@ body.reduced .helion-fx{filter:none}body.reduced .core.active{animation:none}
       setEnergy(v){energy=v?1:0;redraw();},refresh:redraw};
     document.addEventListener('visibilitychange',()=>{if(document.hidden){if(raf)cancelAnimationFrame(raf);raf=0;}else redraw();});
     window.addEventListener('resize',redraw,{passive:true});
-    window.matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change',redraw);
+    watchMotion(redraw);
     redraw();
   }
 
@@ -290,8 +302,6 @@ body.reduced .helion-fx{filter:none}body.reduced .core.active{animation:none}
     const attr=gl.getAttribLocation(program,'aPosition');gl.enableVertexAttribArray(attr);gl.vertexAttribPointer(attr,2,gl.FLOAT,false,0,0);
   }catch(e){console.warn('NOX WebGL initialization fallback:',e.message);const replacement=canvas.cloneNode(false);canvas.replaceWith(replacement);startCanvas2d(replacement);return;}
   let raf=0,mode='BALANCED',energy=0,rendered=false,last=0,started=performance.now(),gpuFrames=0;
-  const reduce=()=>document.body.classList.contains('reduced') ||
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   let gpuActive=true;
   function switchToCanvas2d(reason){
     if(!gpuActive)return;
@@ -332,7 +342,7 @@ body.reduced .helion-fx{filter:none}body.reduced .core.active{animation:none}
     setEnergy(isGenerating){energy=isGenerating?1:0;rendered=false;redraw();},refresh:()=>{rendered=false;redraw()}};
   document.addEventListener('visibilitychange',()=>{if(!gpuActive)return;if(!document.hidden)redraw();else if(raf){cancelAnimationFrame(raf);raf=0;}});
   window.addEventListener('resize',redraw,{passive:true});
-  window.matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change',redraw);
+  watchMotion(redraw);
   canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();switchToCanvas2d('CONTEXT_LOST');});
   redraw();
 })();

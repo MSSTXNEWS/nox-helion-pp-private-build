@@ -51,7 +51,7 @@ function exercise(kind){
     const canvas={width:0,height:0,parentElement:sphere,
       getBoundingClientRect(){return {width:900,height:900};},
       getContext(type){
-        if(type==='webgl2'){if(kind==='throwContext')throw Error('WEBGL_BLOCKED');return ['noGpu','reducedCpu','no2d','throw2d','draw2dFail'].includes(kind)?null:gl;}
+        if(type==='webgl2'){if(kind==='throwContext')throw Error('WEBGL_BLOCKED');return ['noGpu','reducedCpu','legacyReducedCpu','noMediaApiCpu','queryThrowsCpu','observerThrowsCpu','no2d','throw2d','draw2dFail'].includes(kind)?null:gl;}
         if(type==='2d'){
           if(kind==='throw2d')throw Error('CANVAS_2D_CONTEXT_BLOCKED');
           if(kind==='no2d')return null;
@@ -77,8 +77,16 @@ function exercise(kind){
     addEventListener(name,fn){(docEvents[name]??=[]).push(fn);},
     fire(name){(docEvents[name]||[]).forEach(fn=>fn());}
   };
-  const media={matches:kind==='reducedGpu'||kind==='reducedCpu',handlers:[],addEventListener(name,fn){if(name==='change')this.handlers.push(fn);},fire(){this.handlers.forEach(fn=>fn({matches:this.matches}));}};
-  const window={devicePixelRatio:1,matchMedia(){return media;},addEventListener(){}};
+  const media={
+    matches:['reducedGpu','reducedCpu','legacyReducedGpu','legacyReducedCpu'].includes(kind),
+    handlers:[],
+    addEventListener(name,fn){if(kind.startsWith('observerThrows'))throw Error('MQL_LISTENER_BLOCKED');if(name==='change')this.handlers.push(fn);},
+    addListener(fn){this.handlers.push(fn);},
+    fire(){this.handlers.forEach(fn=>fn({matches:this.matches}));}
+  };
+  if(kind.startsWith('legacyReduced'))media.addEventListener=undefined;
+  const window={devicePixelRatio:1,matchMedia(){if(kind.startsWith('queryThrows'))throw Error('MQL_QUERY_BLOCKED');return media;},addEventListener(){}};
+  if(kind.startsWith('noMediaApi'))window.matchMedia=undefined;
   const requestAnimationFrame=fn=>{const id=++seq;queue.set(id,fn);return id;};
   const cancelAnimationFrame=id=>queue.delete(id);
   render(document,window,{now(){return 0;}},requestAnimationFrame,cancelAnimationFrame,{warn(){}});
@@ -92,24 +100,25 @@ function exercise(kind){
     check(currentCanvas===original,kind+' preserves existing DOM and native IPC');
     return;
   }
-  if(kind==='reducedGpu'||kind==='reducedCpu'){
+  if(['reducedGpu','reducedCpu','legacyReducedGpu','legacyReducedCpu'].includes(kind)){
     tick();check(queue.size===0,kind+' first static frame stopped');
-    check((kind==='reducedGpu'?gpuFrames:cpuFrames)===1,kind+' first static frame rendered');
+    check((kind.endsWith('Gpu')?gpuFrames:cpuFrames)===1,kind+' first static frame rendered');
     media.matches=false;media.fire();tick();check(queue.size===1,kind+' OS reduce off resumes');
     userReduced=true;window.noxVisual.refresh();tick();check(queue.size===0,kind+' user reduce overrides OS');
     userReduced=false;window.noxVisual.refresh();tick();check(queue.size===1,kind+' user reduce off resumes');
     media.matches=true;
-    const before=kind==='reducedGpu'?gpuFrames:cpuFrames;
+    const before=kind.endsWith('Gpu')?gpuFrames:cpuFrames;
     media.fire();tick();
-    check((kind==='reducedGpu'?gpuFrames:cpuFrames)===before+1,kind+' OS reduce redraws static pose');
+    check((kind.endsWith('Gpu')?gpuFrames:cpuFrames)===before+1,kind+' OS reduce redraws static pose');
     check(queue.size===0,kind+' OS reduce stops RAF');
     return;
   }
-  if(['ok','contextLost','drawFail','viewportFail','uniformFail','glError','lateGlError'].includes(kind)){
+  const healthyGpu=['ok','noMediaApiGpu','queryThrowsGpu','observerThrowsGpu'];
+  if([...healthyGpu,'contextLost','drawFail','viewportFail','uniformFail','glError','lateGlError'].includes(kind)){
     check(sphere.dataset.fx==='active','GPU path initialized');
-    if(kind!=='ok'){window.noxVisual.setMode('MAX');window.noxVisual.setEnergy(true);}
+    if(!healthyGpu.includes(kind)){window.noxVisual.setMode('MAX');window.noxVisual.setEnergy(true);}
     tick();
-    if(kind==='ok'){check(gpuFrames>0,'GPU path drew');window.noxVisual.setMode('ECO');tick();check(gpuFrames>1,'ECO GPU mode');return;}
+    if(healthyGpu.includes(kind)){check(gpuFrames>0,kind+' GPU path drew');window.noxVisual.setMode('ECO');tick();check(gpuFrames>1,kind+' ECO GPU mode');return;}
     if(kind==='contextLost')original.fire('webglcontextlost',{preventDefault(){prevented=true;}});
     if(kind==='lateGlError'){
       check(sphere.dataset.fx==='active','late GL error not prematurely triggered');
@@ -132,6 +141,6 @@ function exercise(kind){
   document.hidden=false;document.fire('visibilitychange');tick();
   check(cpuFrames>=3,kind+' visible redraw');
 }
-for(const kind of ['noGpu','throwContext','compileFail','setupFail','ok','contextLost','drawFail','viewportFail','uniformFail','glError','lateGlError','reducedGpu','reducedCpu','no2d','throw2d','draw2dFail'])exercise(kind);
+for(const kind of ['noGpu','throwContext','compileFail','setupFail','ok','contextLost','drawFail','viewportFail','uniformFail','glError','lateGlError','reducedGpu','reducedCpu','legacyReducedGpu','legacyReducedCpu','noMediaApiGpu','noMediaApiCpu','queryThrowsGpu','queryThrowsCpu','observerThrowsGpu','observerThrowsCpu','no2d','throw2d','draw2dFail'])exercise(kind);
 check(html.includes("case 'complete':busy=false;activeChatId=null;$('generation').classList.remove('on');window.noxVisual?.setEnergy(false);"),'native completion clears renderer energy');
-console.log('D04 R8 GPU failover SOURCE_ONLY: 16 scenarios PASS (WebGL2, Canvas2D context/draw errors, static CSS, IPC, reduced motion); owner GPU NOT_TESTED');
+console.log('D04 R8 GPU failover SOURCE_ONLY: 24 scenarios PASS (WebGL2, Canvas2D, CSS fallback, legacy/missing/rejected motion APIs, native IPC); owner GPU NOT_TESTED');
