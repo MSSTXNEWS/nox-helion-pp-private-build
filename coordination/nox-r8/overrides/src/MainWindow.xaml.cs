@@ -1801,8 +1801,60 @@ public partial class MainWindow : Window
                 vramUsedMiB = used, utilizationPercent = Math.Clamp(usage, 0, 100), temperatureC = temp,
                 thermalHold = temp >= 65, coolingPauseSeconds = temp >= 65 ? 180 : 0 };
         }
-        catch (System.ComponentModel.Win32Exception) { return new { available = false, reason = "nvidia_smi_not_installed" }; }
+        catch (System.ComponentModel.Win32Exception) { return GetAmdGpuTelemetryOrHold(); }
         catch (Exception ex) { return new { available = false, reason = ex.GetType().Name }; }
+    }
+
+    // NOX R8: AMD hot-spot readings must come from an actual Windows hardware
+    // sensor provider, never GPU driver identity, elapsed time or a zero value.
+    // This is OBSERVABILITY ONLY: it never starts learning or bypasses SAFE70.
+    private object GetAmdGpuTelemetryOrHold()
+    {
+        const string script = @"$ErrorActionPreference='Stop'; " +
+            @"$s=Get-CimInstance -Namespace 'root/LibreHardwareMonitor' -ClassName Sensor -ErrorAction Stop | " +
+            @"Where-Object { $_.SensorType -eq 'Temperature' -and $_.Identifier -match '/gpu-amd/' -and $_.Name -match '(?i)hot\\s*spot|junction' } | Select-Object -First 1; " +
+            @"if ($null -eq $s -or $null -eq $s.Value) { exit 3 }; " +
+            @"[Console]::Out.WriteLine(([double]$s.Value).ToString('R',[Globalization.CultureInfo]::InvariantCulture))";
+        try
+        {
+            var psi = new ProcessStartInfo("powershell.exe")
+            {
+                UseShellExecute = false, CreateNoWindow = true,
+                RedirectStandardOutput = true, RedirectStandardError = false
+            };
+            psi.ArgumentList.Add("-NoProfile");
+            psi.ArgumentList.Add("-NonInteractive");
+            psi.ArgumentList.Add("-Command");
+            psi.ArgumentList.Add(script);
+            using var p = Process.Start(psi);
+            if (p == null)
+                return new { available = false, reason = "AMD_SENSOR_PROVIDER_NOT_STARTED_HOLD", thermalHold = true };
+            if (!p.WaitForExit(3000))
+            {
+                try { p.Kill(entireProcessTree: true); } catch { }
+                return new { available = false, reason = "AMD_SENSOR_TIMEOUT_HOLD", thermalHold = true };
+            }
+            string reading = p.StandardOutput.ReadToEnd().Trim();
+            if (p.ExitCode != 0 ||
+                !double.TryParse(reading, System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out var hotSpot) ||
+                !double.IsFinite(hotSpot) || hotSpot <= 0 || hotSpot > 125)
+                return new { available = false, reason = "AMD_HOTSPOT_MISSING_OR_INVALID_HOLD", thermalHold = true };
+            // VRAM/utilisation are deliberately unknown until independent sensors
+            // are verified. This is a measured partial telemetry record, not a
+            // permission to run the GPU training worker.
+            return new { available = true, source = "LibreHardwareMonitor.WMI",
+                vendor = "AMD", sensor = "GPU Hot Spot", temperatureC = hotSpot,
+                telemetryPartial = true, vramTotalMiB = (double?)null,
+                vramUsedMiB = (double?)null, utilizationPercent = (int?)null,
+                thermalHold = hotSpot >= 65, coolingPauseSeconds = hotSpot >= 65 ? 180 : 0,
+                trainingSafe = false };
+        }
+        catch (Exception ex)
+        {
+            return new { available = false, reason = "AMD_SENSOR_PROVIDER_HOLD:" + ex.GetType().Name,
+                thermalHold = true };
+        }
     }
 
     private string BuildLocalContext(string query, string persona)
