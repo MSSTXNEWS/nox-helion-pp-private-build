@@ -1313,6 +1313,7 @@ public partial class MainWindow : Window
                 model,
                 prompt = systemInstruction + context + "\nПользователь: " + prompt + "\nАссистент:",
                 stream = true,
+                think = false,
                 keep_alive = "30m",
                 options = new { num_predict = maxTokens, num_ctx = contextSize }
             });
