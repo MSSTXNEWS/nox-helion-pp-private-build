@@ -475,3 +475,53 @@ console.log('D01 SOURCE_ONLY PASS: Qwen failed/STOP retry with original input, S
     'D01_PERSONA_PENDING_RECEIPT_NO_LOSS_SOURCE_HOLD');
   console.log('D01 SOURCE_ONLY PASS: foreign PersonaID ACK isolation, own ACK clear, startup SQLite persona');
 }
+
+// D01_PERSONA_CHAT_FAILURE_NO_LOSS: original production SEND, persona draft
+// switch and native requestId-matched completion, under the real source.
+// SOURCE_ONLY; owner Windows Qwen/SQLite acceptance remains a separate gate.
+{
+  const swStart=html.indexOf('function switchPersonaDrafts(next){');
+  const swEnd=html.indexOf('\nfunction route(id){',swStart);
+  const sendStart=html.indexOf("$('send').onclick=()=>");
+  const sendEnd=html.indexOf("\n$('stop').onclick=",sendStart);
+  const completeStart=html.indexOf("case 'complete':");
+  const completeEnd=html.indexOf("\ncase 'error':",completeStart);
+  assert.ok(swStart>0 && swEnd>swStart && sendStart>0 && sendEnd>sendStart
+    && completeStart>0 && completeEnd>completeStart,'D01_PERSONA_CHAT_PRODUCTION_SOURCE_MISSING');
+  const production = "let responseBox=null,lastAnswer='',busy=false,activeChatId=null,"+
+    "pendingChatDraft=null,visibleDraftPersona='KV';const personaDrafts=new Map();"+
+    html.slice(swStart,swEnd)+"\n"+html.slice(sendStart,sendEnd)+
+    "\nfunction complete(v){switch('complete'){"+
+    html.slice(completeStart,completeEnd)+
+    "}}\n({click:()=>$('send').onclick(),change:switchPersonaDrafts,"+
+    "complete,state:()=>({persona:visibleDraftPersona,drafts:personaDrafts})})";
+  function runCase(amDraft,stopped){
+    const ids=['noteTitle','noteText','memoryQuery','knowledgeQuery','prompt','taskInput'];
+    const nodes=Object.fromEntries(ids.map(id=>[id,{value:''}]));
+    nodes.send={};nodes.messages={};nodes.streamHint={textContent:''};
+    nodes.generation={classList:{remove(){}}};
+    const machine=vm.runInNewContext(production,{
+      $:id=>nodes[id],post:()=>true,nextChatId:()=> 'd01_owner_kv',
+      entry:()=>({lastChild:{textContent:''}}),
+      window:{noxVisual:{setEnergy(){}}}
+    },{timeout:1500});
+    const exact='  KV private prompt before STOP  ';
+    nodes.prompt.value=exact;
+    machine.click();
+    assert.equal(nodes.prompt.value,'','D01_SEND_MUST_CLEAR_ONLY_CURRENT_COMPOSER');
+    machine.change('AM');
+    nodes.prompt.value=amDraft;
+    machine.complete({requestId:'d01_owner_kv',ok:false,stopped});
+    assert.equal(nodes.prompt.value,amDraft,
+      'D01_FAILED_KV_CHAT_INJECTED_INTO_AM_PERSONA');
+    assert.match(nodes.streamHint.textContent,/исходной PersonaID/,
+      'D01_HIDDEN_PERSONA_RECOVERY_HINT_MISSING');
+    machine.change('KV');
+    assert.equal(nodes.prompt.value,exact,'D01_KV_FAILURE_PROMPT_LOST_AFTER_SWITCH');
+    machine.change('AM');
+    assert.equal(nodes.prompt.value,amDraft,'D01_AM_UNSENT_DRAFT_LOST');
+  }
+  runCase('',true);
+  runCase('AM unsent draft',false);
+  console.log('D01 SOURCE_ONLY PASS: stopped/failed Qwen restores original PersonaID draft, never foreign draft');
+}
