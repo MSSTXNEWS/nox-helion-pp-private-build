@@ -30,6 +30,8 @@ check(!!gpuMethod,'existing native GPU probe');
 const gpuSrc=gpuMethod[0];
 check(gpuSrc.includes('StandardOutput.ReadToEndAsync()'),'drain entire CSV before waiting for process');
 check(gpuSrc.includes('outputTask.GetAwaiter().GetResult()'),'consume complete real nvidia-smi output');
+check(gpuSrc.includes('if (!outputTask.Wait(400))')&&gpuSrc.includes('reason = "stdout_timeout"'),'post-exit stdout pipe cannot hang telemetry worker indefinitely');
+check(gpuSrc.indexOf('outputTask.Wait(400)')<gpuSrc.indexOf('outputTask.GetAwaiter().GetResult()'),'bounded pipe wait is enforced before blocking readback');
 check(!gpuSrc.includes('StandardOutput.ReadLine()'),'first-GPU-only status cannot hide hot adapters');
 check(gpuSrc.includes("csv.Split(new[] { '\\r', '\\n' }"),'parse each reported adapter row');
 check(gpuSrc.includes('foreach (var row in rows)')&&gpuSrc.includes('names.Add(name)'),'inspect all real NVIDIA adapters');

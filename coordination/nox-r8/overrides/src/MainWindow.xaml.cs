@@ -1805,6 +1805,11 @@ public partial class MainWindow : Window
                 try { p.Kill(entireProcessTree: true); } catch { }
                 return new { available = false, reason = "timeout" };
             }
+            // The parent can exit while a spawned child still holds the inherited
+            // stdout handle; ReadToEndAsync then never finishes. Keep sensor
+            // collection bounded even after WaitForExit succeeds.
+            if (!outputTask.Wait(400))
+                return new { available = false, reason = "stdout_timeout" };
             var csv = outputTask.GetAwaiter().GetResult();
             if (p.ExitCode != 0 || string.IsNullOrWhiteSpace(csv))
                 return new { available = false, reason = "nvidia_smi_unavailable" };
