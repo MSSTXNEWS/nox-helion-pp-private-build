@@ -46,9 +46,9 @@ required_html = (
     "post('stop',{requestId:activeChatId})",
     "v.requestId!==activeChatId",
     "case 'token':lastAnswer+=v.text",
-    "case 'complete':busy=false;activeChatId=null",
+    "busy=false;activeChatId=null",
     "Only the matching native complete may unlock a busy chat.",
-    "if(e.key==='Escape'&&busy&&activeChatId){e.preventDefault();$('stop').click()}",
+    "if(e.key==='Escape'&&busy&&activeChatId){e.preventDefault();$('stop').click();return;}",
 )
 # Navigation must revoke the active WebView2 chat owner and invalidate
 # every asynchronous provider-health callback from the previous document.
@@ -68,6 +68,14 @@ for fragment in required_cs:
     assert fragment in cs, 'B02_NATIVE_IPC_SOURCE_HOLD: ' + fragment
 for fragment in required_html:
     assert fragment in html, 'B02_WEBVIEW2_SOURCE_HOLD: ' + fragment
+# F02-owned regression compatibility: B06's owner-correlated terminal and
+# IME-safe Escape are stricter than obsolete one-line literal assertions.
+# These must be in the actual terminal / keydown handlers, not random text.
+completion = html.split("case 'complete':{", 1)[1].split("case 'error':", 1)[0] if "case 'complete':{" in html else ""
+assert "pendingChatDraft?.requestId===v?.requestId" in completion and "busy=false;activeChatId=null" in completion, 'F02_MATCHED_CHAT_TERMINAL_HOLD'
+assert "if(['status','token','metrics','complete'].includes(m.type) && (!v || v.requestId!==activeChatId))return;" in html, 'F02_OWNER_CORRELATION_HOLD'
+keys = html.split("document.addEventListener('keydown',e=>{", 1)[1].split("\n});", 1)[0] if "document.addEventListener('keydown',e=>{" in html else ""
+assert "if(e.defaultPrevented||e.isComposing||e.keyCode===229||e.repeat)return;" in keys and "if(e.key==='Escape'&&busy&&activeChatId){e.preventDefault();$('stop').click();return;}" in keys, 'F02_KEYBOARD_STOP_OWNER_HOLD'
 # A failed native bridge must not claim the active chat owner or lose a draft.
 chat_handler = html.split("$('send').onclick=()=>", 1)[1].split("\n$('stop').onclick=", 1)[0]
 assert chat_handler.index("if(post('chat',{text,requestId})===false)") < chat_handler.index("busy=true;activeChatId=requestId;"), "B02_PREMATURE_NATIVE_OWNER_HOLD"
@@ -160,7 +168,7 @@ assert 'Send("complete", new { requestId, ok = false, stopped = false });' in re
 for marker in ('CHAT_EMPTY_PROMPT_DENIED', 'CHAT_REQUEST_ID_DENIED',
                'CHAT_PROMPT_TOO_LONG_DENIED', 'CHAT_ALREADY_RUNNING_HOLD'):
     assert preflight.count('RejectChat("' + marker + '");') == 1, 'B04_CHAT_REJECT_PATH_HOLD ' + marker
-assert "case 'complete':busy=false;activeChatId=null" in html, 'B04_WEBVIEW_CHAT_UNLOCK_HOLD'
+assert "case 'complete':{" in html and "busy=false;activeChatId=null" in html, 'B04_WEBVIEW_CHAT_UNLOCK_HOLD'
 print('B04 R8 SOURCE_ONLY: native preflight rejection now releases the matching WebView2 owner')
 
 # B04 live HTTP STOP acceptance regression: a task/HTTP POST beginning is not
