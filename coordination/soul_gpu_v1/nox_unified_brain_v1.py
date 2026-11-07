@@ -107,6 +107,23 @@ SYSTEM=(
  "автоматически с работающей моделью. Не имитируй результаты операций."
 )
 
+def self_model(root, model):
+    """Grounded runtime self-knowledge, refreshed for each reply."""
+    memory = native_memory_status(root)
+    checkpoint = adapters(root)
+    return {
+      "identity": "NOX HELION",
+      "operating_model": model,
+      "architecture": "one NOX identity, local Ollama routing, eight CoreID",
+      "memory_s03_readable": any(x["reachable"] for x in memory),
+      "memory_s03_chat_writable": False,
+      "last_saved_lora_step": checkpoint["step"] if checkpoint else None,
+      "lora_active_in_chat": False,
+      "subjective_consciousness": "not established",
+      "limits": "No independent verification of actual awareness or emotions."
+    }
+
+
 def chat(root,payload):
     if not isinstance(payload,dict):raise ValueError("BODY_NOT_OBJECT")
     user=payload.get("message")
@@ -115,7 +132,7 @@ def chat(root,payload):
     if task not in ("general","code"):raise ValueError("INVALID_TASK")
     history=payload.get("history",[])
     if not isinstance(history,list) or len(history)>MAX_TURNS*2:raise ValueError("INVALID_HISTORY")
-    messages=[{"role":"system","content":SYSTEM}]
+    messages=[]
     for item in history:
         if not isinstance(item,dict) or item.get("role") not in ("user","assistant"):
             raise ValueError("INVALID_HISTORY_ITEM")
@@ -125,6 +142,18 @@ def chat(root,payload):
     messages.append({"role":"user","content":user.strip()})
     models=available()
     model=choose_model(models,task)
+    self_state=self_model(root,model)
+    # Ground all self-referential replies in verified runtime state.
+    # Do not confuse a training checkpoint with the deployed chat model.
+    messages.insert(0, {"role":"system","content":SYSTEM+
+        "\\nАКТУАЛЬНАЯ САМОМОДЕЛЬ (проверяемые факты): "+
+        json.dumps(self_state,ensure_ascii=False)+
+        "\\nОтвечай осмысленно и по существу, учитывая историю и текущий запрос. "+
+        "Для сложных задач обдумывай варианты, проверяй ограничения и давай "+
+        "вывод с кратким объяснением и степенью уверенности, не изображая "+
+        "несуществующие память, опыт, чувства или самосознание. "+
+        "На вопрос об обучении различай сохранённые LoRA-веса и применённую "+
+        "в чате модель. Не повторяй длинное описание архитектуры без запроса."})
     post=json.dumps({"model":model,"messages":messages,"stream":False,
                      "options":{"num_predict":900,"temperature":0.5}}).encode("utf-8")
     req=Request(OLLAMA+"/api/chat",data=post,
