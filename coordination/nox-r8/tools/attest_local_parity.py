@@ -34,6 +34,22 @@ def is_link(path):
     return path.is_symlink() or bool(getattr(s, "st_file_attributes", 0) & REPARSE)
 
 
+def require_direct_ancestry(path):
+    """Reject reparse links in lexical parents of owner source/EXE paths.
+
+    Checking only the last path component misses C:\\parent-junction\\src.
+    Do not call resolve(): it would erase the untrusted reparse witness.
+    """
+    candidate = Path(path)
+    if ".." in candidate.parts:
+        raise ValueError("OWNER_PATH_DOTDOT_HOLD")
+    if not candidate.is_absolute():
+        candidate = Path.cwd() / candidate
+    for node in (candidate, *candidate.parents):
+        if is_link(node):
+            raise ValueError("OWNER_PATH_ANCESTOR_REPARSE_HOLD")
+
+
 def valid_rel(name):
     if not isinstance(name, str) or not name or "\\" in name or ":" in name:
         return False
@@ -43,6 +59,7 @@ def valid_rel(name):
 
 
 def inventory(root):
+    require_direct_ancestry(root)
     if is_link(root) or not root.is_dir():
         raise ValueError("LOCAL_SRC_UNSAFE_OR_MISSING")
     result = {}
@@ -121,6 +138,7 @@ def attest(manifest_path, receipt_path, local_src, local_exe,
         _, path = current[key]
         if path.stat().st_size != size or digest(path) != sha:
             mismatch += 1
+    require_direct_ancestry(local_exe)
     if is_link(local_exe) or not local_exe.is_file():
         raise ValueError("OWNER_EXE_MISSING_OR_REPARSE_HOLD")
     exe_match = digest(local_exe) == receipt["exe_sha256"]
