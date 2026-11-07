@@ -155,7 +155,20 @@ body.reduced .helion-fx{filter:none}body.reduced .core.active{animation:none}
   try{
     if(typeof window.matchMedia==='function')motionQuery=window.matchMedia('(prefers-reduced-motion: reduce)');
   }catch(e){console.warn('NOX reduced-motion query unavailable:',String(e?.message||e));}
-  const reduce=()=>document.body.classList.contains('reduced')||Boolean(motionQuery?.matches);
+  // A failing Windows MediaQueryList.matches getter must never escape an
+  // animation frame. Unknown OS preference errs on the accessible static pose.
+  // Latch once to avoid repeated GPU-frame exceptions or console flooding.
+  let motionUnreadable=false;
+  const reduce=()=>{
+    if(document.body.classList.contains('reduced')||motionUnreadable)return true;
+    if(!motionQuery)return false;
+    try{return Boolean(motionQuery.matches);}
+    catch(e){
+      motionUnreadable=true;
+      console.warn('NOX reduced-motion state inaccessible:',String(e?.message||e));
+      return true;
+    }
+  };
   function watchMotion(redraw){
     if(!motionQuery)return;
     // An older WebView2 MediaQueryList can expose addEventListener but reject it.
