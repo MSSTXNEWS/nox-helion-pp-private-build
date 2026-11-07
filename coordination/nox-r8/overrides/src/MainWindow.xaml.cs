@@ -2041,6 +2041,10 @@ public partial class MainWindow : Window
             $"Добавить {files.Length} выбранных файлов в локальную базу NOX? Тексты будут индексированы на этом компьютере. Оригиналы не изменятся.",
             "NOX — подтверждение импорта", MessageBoxButton.YesNo, MessageBoxImage.Question);
         if (consent != MessageBoxResult.Yes) return;
+        // The knowledge index shares DatabasePath with chat and Persona memory.
+        // A WAL-consistent, verified preimage must survive a partial/erroring import.
+        // A denied owner prompt performs no database mutation or backup.
+        using (var db = OpenDatabase()) CheckpointSqlite(db, "PRE_KNOWLEDGE_IMPORT");
         Send("knowledge.imported", knowledge.ImportFiles(files));
         Send("knowledge.stats", knowledge.Stats());
     }

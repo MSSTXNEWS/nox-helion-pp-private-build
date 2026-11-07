@@ -162,3 +162,14 @@ with tempfile.TemporaryDirectory() as temp:
         assert snapshot.execute('SELECT content FROM memory_notes WHERE id=1').fetchone()[0] == 'keep backup copy'
         assert snapshot.execute('SELECT content FROM memory_notes WHERE id=2').fetchone()[0] == 'AM-only secret'
 print('D03 R8 SOURCE_ONLY: owner consent, backup-first, foreign/changed denials and SQLite NO-LOSS PASS')
+
+
+# D03: operator-owned knowledge document import shares SQLite with Persona chat.
+import_native = cs.split("private void ImportKnowledgeByDialog()", 1)[1].split("private void BackupLocalDatabase()", 1)[0]
+assert "MessageBoxButton.YesNo" in import_native
+assert "if (consent != MessageBoxResult.Yes) return;" in import_native
+assert 'CheckpointSqlite(db, "PRE_KNOWLEDGE_IMPORT")' in import_native
+assert import_native.index("if (consent != MessageBoxResult.Yes) return;") < import_native.index('CheckpointSqlite(db, "PRE_KNOWLEDGE_IMPORT")')
+assert import_native.index('CheckpointSqlite(db, "PRE_KNOWLEDGE_IMPORT")') < import_native.index("knowledge.ImportFiles(files)")
+assert "File.Delete(" not in import_native and "File.Move(" not in import_native
+print("D03 R8 SOURCE_ONLY: native owner consent precedes verified pre-import SQLite snapshot; no source deletion")
