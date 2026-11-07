@@ -886,6 +886,8 @@ public partial class MainWindow : Window
                   const body = row?.lastElementChild;
                   return label?.textContent === 'NOX QWEN' &&
                     !!body?.textContent &&
+                    body.textContent === lastAnswer &&
+                    busy === true && activeChatId !== null &&
                     document.getElementById('generation')?.classList.contains('on') === true;
                 })()
                 """);
@@ -905,7 +907,8 @@ public partial class MainWindow : Window
                 (() => {
                   const busyIndicator = document.getElementById('generation');
                   const hint = document.getElementById('streamHint');
-                  return busyIndicator?.classList.contains('on') === false &&
+                  return busy === false && activeChatId === null &&
+                    busyIndicator?.classList.contains('on') === false &&
                     hint?.textContent?.includes('Частичный ответ не сохранён') === true;
                 })()
                 """);

@@ -154,11 +154,14 @@ visible = cs.split('private async Task<bool> WaitForVisibleChatTokenAsync(', 1)[
 released = cs.split('private async Task<bool> WaitForStopUiReleaseAsync(', 1)[1].split('private async Task WaitForGenerationFinishAsync(', 1)[0]
 assert "document.getElementById('messages')?.firstElementChild" in visible
 assert "label?.textContent === 'NOX QWEN'" in visible
+assert "body.textContent === lastAnswer" in visible
+assert "busy === true && activeChatId !== null" in visible
 assert "document.getElementById('generation')?.classList.contains('on')" in visible
 assert 'Volatile.Read(ref generationFinishedCount) >= generationTarget' in visible
 assert 'NOX_WEBVIEW2_STREAM_TOKEN_NOT_VISIBLE_HOLD' in selftest
 assert selftest.index('WaitForGenerationTokenAsync(streamTokenTarget, stopTarget, TimeSpan.FromMinutes(2))') < selftest.index('WaitForVisibleChatTokenAsync(stopTarget, TimeSpan.FromSeconds(4))') < selftest.index("document.getElementById('stop').click()")
 assert "document.getElementById('streamHint')" in released
+assert "busy === false && activeChatId === null" in released
 assert "Частичный ответ не сохранён" in released
 assert 'NOX_WEBVIEW2_STOP_OWNER_NOT_RELEASED_HOLD' in selftest
 assert selftest.index('Native STOP was not confirmed') < selftest.index('WaitForStopUiReleaseAsync(TimeSpan.FromSeconds(4))') < selftest.index('checks["real_webview_stop_cancel_no_partial_persistence"] = "PASS"')
