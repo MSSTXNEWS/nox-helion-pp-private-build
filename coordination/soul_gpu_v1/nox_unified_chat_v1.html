@@ -24,9 +24,9 @@ select,button{background:#142735;border:1px solid #507184;color:white;border-rad
 <div class="chatlog" id="log" role="log" aria-live="polite"><div class="msg assistant"><i>NOX</i>Единый интерфейс подключается к локальному Ollama. Расскажи, чем помочь.</div></div>
 <form id="form"><div class="inputrow"><textarea id="message" maxlength="8000" placeholder="Напиши NOX..." required></textarea></div>
 <div class="controls"><label class="sub">Назначение <select id="task"><option value="general">Общий интеллект</option><option value="code">Программирование</option></select></label>
-<div><button id="clear" type="button">Очистить текущий диалог</button> <button id="send" type="submit">Отправить NOX</button></div></div></form>
-<div class="warning">Общий маршрутизатор работает с уже установленными локальными моделями. Память этой беседы хранится только в текущей вкладке. Запись в каноническую S03 и применение LoRA к рабочей модели пока не подключены и не имитируются.</div>
-</section><aside class="panel"><h2 style="font-size:16px;font-weight:500;color:var(--gold)">Самомодель и компоненты</h2>
+<div><button id="clear" type="button">Начать новый контекст</button> <button id="send" type="submit">Отправить NOX</button></div></div></form>
+<div class="warning">Общий маршрутизатор работает с уже установленными локальными моделями. История диалога сохраняется в локальном журнале NOX между перезагрузками. Запись в каноническую S03 и применение LoRA к рабочей модели пока не подключены и не имитируются.</div>
+<p id="historyStatus" class="sub" aria-live="polite">Восстанавливаю историю...</p></section><aside class="panel"><h2 style="font-size:16px;font-weight:500;color:var(--gold)">Самомодель и компоненты</h2>
 <div class="row"><span class="k">Идентичность</span><strong>NOX HELION</strong></div>
 <div class="row"><span class="k">Основная модель</span><strong id="main">—</strong></div>
 <div class="row"><span class="k">Модель кода</span><strong id="coding">—</strong></div>
@@ -37,16 +37,150 @@ select,button{background:#142735;border:1px solid #507184;color:white;border-rad
 <div class="row"><span class="k">Применение LoRA</span><strong>Не подключено</strong></div>
 <div class="row"><span class="k">Сознание</span><strong>Не доказано</strong></div>
 <h3 class="sub">Восемь CoreID</h3><p id="cores" class="sub">—</p>
-<p class="sub" id="error" aria-live="polite"></p>
+<p class="sub" id="error" aria-live="polite"></p><p class="sub" id="resource" aria-live="polite">Проверка GPU...</p>
 <button type="button" id="refresh">↻ Проверить ядро</button>
 </aside></div>
 </main><script>
 "use strict";
-const $=id=>document.getElementById(id),hist=[];
-function add(role,content){const div=document.createElement("div");div.className="msg "+role;const cap=document.createElement("i");cap.textContent=role==="user"?"ТЫ":"NOX HELION";div.append(cap,document.createTextNode(content));$("log").appendChild(div);$("log").scrollTop=$("log").scrollHeight}
-async function status(){try{const r=await fetch("/api/nox/status",{cache:"no-store"});if(!r.ok)throw Error("API "+r.status);const s=await r.json();$("state").textContent=s.primary_model?"Единый маршрутизатор готов":"Ollama недоступна";$("main").textContent=s.primary_model||"Н/Д";$("coding").textContent=s.code_model||"Н/Д";$("count").textContent=s.installed_models?.length??"—";$("checkpoint").textContent=s.last_lora_checkpoint?.step??"—";$("memory").textContent=s.native_memory?.some(m=>m.reachable)?"Найдена · только чтение":"Не подключена";$("cores").textContent=s.core_ids.join(" · ");$("error").textContent=s.error||""}catch(e){$("state").textContent="НЕ ПОДКЛЮЧЁН";$("error").textContent=e.message}}
-$("form").addEventListener("submit",async e=>{e.preventDefault();const message=$("message").value.trim();if(!message)return;$("message").value="";add("user",message);$("send").disabled=true;$("state").textContent="NOX думает...";
-try{const r=await fetch("/api/nox/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message,task:$("task").value,history:hist.slice(-24)})});const data=await r.json();if(!r.ok)throw Error(data.error||"HTTP "+r.status);add("assistant",data.answer);hist.push({role:"user",content:message},{role:"assistant",content:data.answer});$("state").textContent="МОДЕЛЬ "+data.model}catch(ex){add("assistant","Ошибка соединения: "+ex.message);$("state").textContent="ОШИБКА"}finally{$("send").disabled=false}});
-$("clear").addEventListener("click",()=>{hist.length=0;$("log").replaceChildren();add("assistant","Текущая история вкладки очищена.")});
-$("refresh").addEventListener("click",status);status();
+const $=id=>document.getElementById(id);
+const hist=[];
+let pending=false;
+function add(role,content){
+  const div=document.createElement("div");
+  div.className="msg "+role;
+  const cap=document.createElement("i");
+  cap.textContent=role==="user"?"ТЫ":"NOX HELION";
+  const body=document.createElement("span");
+  body.textContent=content;
+  div.append(cap,body);
+  $("log").appendChild(div);
+  $("log").scrollTop=$("log").scrollHeight;
+  return body;
+}
+function state(s){$("state").textContent=s;}
+async function status(){
+  try{
+    const r=await fetch("/api/nox/status",{cache:"no-store"});
+    if(!r.ok)throw Error("API "+r.status);
+    const s=await r.json();
+    state(s.primary_model?"Единое ядро готово":"Ollama недоступна");
+    $("main").textContent=s.primary_model||"Н/Д";
+    $("coding").textContent=s.code_model||"Н/Д";
+    $("count").textContent=s.installed_models?.length??"—";
+    $("checkpoint").textContent=s.last_lora_checkpoint?.step??"—";
+    $("memory").textContent=s.native_memory?.some(m=>m.reachable)?"Найдена · только чтение":"Не подключена";
+    $("cores").textContent=(s.core_ids||[]).join(" · ");
+    $("error").textContent=s.error||"";
+  }catch(e){state("НЕ ПОДКЛЮЧЁН");$("error").textContent=e.message;}
+}
+async function restore(){
+  $("send").disabled=true;
+  try{
+    const r=await fetch("/api/nox/history",{cache:"no-store"});
+    if(!r.ok)throw Error("История API "+r.status);
+    const j=await r.json();
+    if(!Array.isArray(j.messages))throw Error("Неверный ответ истории");
+    $("log").replaceChildren();
+    for(const msg of j.messages){
+      if(["user","assistant"].includes(msg.role)&&typeof msg.content==="string"){
+        hist.push({role:msg.role,content:msg.content});
+        add(msg.role,msg.content);
+      }
+    }
+    if(!j.messages.length)add("assistant","NOX PRIME на связи. История будет сохраняться в локальном журнале.");
+    $("historyStatus").textContent="История восстановлена: "+j.messages.length+" сообщений";
+  }catch(ex){
+    $("historyStatus").textContent="Не удалось восстановить историю: "+ex.message;
+  }finally{$("send").disabled=false;}
+}
+async function awareness(){
+  try{
+    const r=await fetch("/api/nox/resource-advice",{cache:"no-store"});
+    if(!r.ok)return;
+    const d=await r.json();
+    if(d.training_active===true){
+      $("resource").textContent=d.message;
+    }else if(d.free_vram_gib!==null && d.free_vram_gib!==undefined){
+      $("resource").textContent="GPU: примерно "+d.free_vram_gib+" ГиБ доступно · по датчику";
+    }else{
+      $("resource").textContent="GPU: точные показания VRAM недоступны";
+    }
+  }catch(ex){$("resource").textContent="GPU: диагностика недоступна";}
+}
+async function sendMessage(message){
+  if(pending)return;
+  pending=true;
+  $("send").disabled=true;
+  state("NOX отвечает...");
+  const history=hist.slice(-24);
+  const bodyNode=add("assistant","");
+  let answer="",model="",done=false;
+  const t0=performance.now();
+  try{
+    const r=await fetch("/api/nox/chat/stream",{
+      method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({message,task:$("task").value,history})
+    });
+    if(!r.ok){
+      let detail="HTTP "+r.status;
+      try{const err=await r.json();detail=err.error||detail;}catch{}
+      throw Error(detail);
+    }
+    if(!r.body)throw Error("Потоковый ответ не поддерживается браузером");
+    const reader=r.body.getReader(),decoder=new TextDecoder();
+    let buffer="";
+    const consume=line=>{
+      if(!line.trim())return;
+      const evt=JSON.parse(line);
+      if(evt.type==="start"){model=evt.model||model;state("NOX генерирует · "+model);}
+      if(evt.type==="delta"){answer+=evt.text||"";bodyNode.textContent=answer;$("log").scrollTop=$("log").scrollHeight;}
+      if(evt.type==="error")throw Error(evt.error||"Ошибка генерации");
+      if(evt.type==="done"){
+        done=true;model=evt.model||model;
+        const elapsed=((performance.now()-t0)/1000).toFixed(1);
+        state("NOX · "+model+" · "+elapsed+" с");
+      }
+    };
+    while(true){
+      const {value,done:streamEnd}=await reader.read();
+      if(streamEnd)break;
+      buffer+=decoder.decode(value,{stream:true});
+      let n;
+      while((n=buffer.indexOf("\n"))>=0){
+        const line=buffer.slice(0,n).trim();
+        buffer=buffer.slice(n+1);
+        consume(line);
+      }
+    }
+    buffer+=decoder.decode();
+    if(buffer.trim())consume(buffer.trim());
+    if(!done)throw Error("Ответ был прерван до подтверждённого сохранения");
+    hist.push({role:"user",content:message},{role:"assistant",content:answer});
+    $("historyStatus").textContent="Новый ответ сохранён локально";
+  }catch(ex){
+    bodyNode.textContent=(answer?answer+"\n\n":"")+"Ошибка: "+ex.message;
+    if(!$("message").value)$("message").value=message;
+    state("ОШИБКА");
+    $("historyStatus").textContent="Ответ не подтверждён как сохранённый";
+  }finally{pending=false;$("send").disabled=false;}
+}
+$("form").addEventListener("submit",e=>{
+  e.preventDefault();
+  const text=$("message").value.trim();
+  if(!text||pending)return;
+  $("message").value="";
+  add("user",text);
+  sendMessage(text);
+});
+$("clear").addEventListener("click",()=>{
+  hist.length=0;
+  $("log").replaceChildren();
+  add("assistant","Новый контекст диалога. Предыдущая история на диске сохранена.");
+  $("historyStatus").textContent="Новый контекст (без удаления архива)";
+});
+$("refresh").addEventListener("click",()=>{status();awareness();});
+restore();
+status();
+awareness();
+setInterval(awareness,30000);
 </script></body></html>
