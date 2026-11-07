@@ -487,8 +487,44 @@ public partial class MainWindow : Window
                           if (Math.abs(viewport-expected) > 4 || !side ||
                               quick.length !== 5 ||
                               getComputedStyle(side).overflowY === 'hidden') return false;
-                          if (document.querySelectorAll('button.core[data-route]').length !== 8)
+                          const core = [...document.querySelectorAll('button.core[data-route]')];
+                          const expectedRoutes = ['consciousness','atlas','reflection','nexus',
+                                                  'forge','core','voice','persona'];
+                          if (core.length !== 8 ||
+                              core.some((button,index) => button.dataset.route !== expectedRoutes[index]))
                               return false;
+                          // Functional accessibility, not just a count of off-screen CoreID nodes.
+                          if (!core.every(button => {
+                            const rect = button.getBoundingClientRect();
+                            return !button.disabled && rect.width >= 44 && rect.height >= 44 &&
+                              rect.left >= -1 && rect.right <= viewport + 1 &&
+                              getComputedStyle(button).visibility !== 'hidden';
+                          })) return false;
+                          for (const button of core) {
+                            const id = button.dataset.route;
+                            side.scrollTop = 120;
+                            button.click(); // Existing read-only route IPC; no model or training start.
+                            const current = [...document.querySelectorAll('button.core[aria-current="page"]')];
+                            const panel = document.querySelector('.panel[data-panel="' + id + '"]');
+                            if (current.length !== 1 || current[0] !== button ||
+                                !panel?.classList.contains('active') || side.scrollTop !== 0)
+                              return false;
+                          }
+                          // A hidden panel must never retain keyboard focus after navigation.
+                          const forgePanel = document.querySelector('.panel[data-panel="forge"]');
+                          const forge = core.find(button => button.dataset.route === 'forge');
+                          const reflection = core.find(button => button.dataset.route === 'reflection');
+                          if (!forgePanel || !forge || !reflection) return false;
+                          const priorTabindex = forgePanel.getAttribute('tabindex');
+                          forge.click();
+                          forgePanel.setAttribute('tabindex', '-1');
+                          forgePanel.focus();
+                          const focusedInPanel = document.activeElement === forgePanel;
+                          reflection.click();
+                          const focusRecovered = document.activeElement === reflection;
+                          if (priorTabindex === null) forgePanel.removeAttribute('tabindex');
+                          else forgePanel.setAttribute('tabindex', priorTabindex);
+                          if (!focusedInPanel || !focusRecovered) return false;
                           return quick.every(button => {
                             const rect = button.getBoundingClientRect();
                             return !button.disabled && rect.width >= 44 && rect.height >= 44 &&
@@ -519,6 +555,7 @@ public partial class MainWindow : Window
                 Browser.UpdateLayout();
             }
             checks["d01_five_quick_compact_320_390_800"] = "PASS";
+            checks["f03_compact_native_coreid_focus_320_390_800"] = "PASS";
 
             // DOM accessibility must also survive in real WebView2:
             // visible labels, enabled buttons, live receipt region and focus.
@@ -687,6 +724,7 @@ public partial class MainWindow : Window
                 : new[] { "real_webview2_eight_routes", "real_webview2_keyboard_routes",
                           "d01_five_quick_native_routes", "d01_five_quick_windows_uia",
                           "d01_five_quick_compact_320_390_800",
+                          "f03_compact_native_coreid_focus_320_390_800",
                           "settings_windows_uia_host", "settings_webview2_accessible_controls",
                           "isolated_sqlite_path", "settings_wpf_owner_sqlite_readback",
                           "settings_wpf_motion_sqlite_readback", "settings_foreign_key_denial",
