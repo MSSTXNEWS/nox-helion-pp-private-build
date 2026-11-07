@@ -1134,7 +1134,7 @@ public partial class MainWindow : Window
         using var tx = db.BeginTransaction();
         try {
             int rows = 0, skipped = 0;
-            foreach (var line in File.ReadLines(legacy)) {
+            foreach (var line in File.ReadLines(legacy, new UTF8Encoding(false, true))) {
                 if (string.IsNullOrWhiteSpace(line)) continue;
                 try {
                     using var json = JsonDocument.Parse(line);
@@ -1178,9 +1178,10 @@ public partial class MainWindow : Window
                     throw new InvalidOperationException("NOX_LEGACY_JSONL_RECEIPT_HOLD");
             }
             tx.Commit();
-        } catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) {
+        } catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or DecoderFallbackException) {
             tx.Rollback();
-            legacyImportHold = "NOX_LEGACY_JSONL_READ_HOLD";
+            legacyImportHold = ex is DecoderFallbackException
+                ? "NOX_LEGACY_JSONL_ENCODING_HOLD" : "NOX_LEGACY_JSONL_READ_HOLD";
         }
         }
         catch (IOException) {
@@ -1188,6 +1189,9 @@ public partial class MainWindow : Window
         }
         catch (UnauthorizedAccessException) {
             legacyImportHold = "NOX_LEGACY_JSONL_READ_HOLD";
+        }
+        catch (DecoderFallbackException) {
+            legacyImportHold = "NOX_LEGACY_JSONL_ENCODING_HOLD";
         }
     }
 

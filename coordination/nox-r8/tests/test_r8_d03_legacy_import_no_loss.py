@@ -20,6 +20,23 @@ assert 'if (!selfTestRequested) ImportLegacyJsonlIfNeeded(db);' in cs
 # No user file is deleted during migration; malformed input must roll back.
 assert 'File.Delete(legacy)' not in m and 'File.Move(legacy' not in m
 
+# D03: strict UTF-8 must fail closed instead of silently replacing invalid legacy bytes.
+# This is a SOURCE_ONLY contract, not a native Windows migration acceptance.
+assert 'File.ReadLines(legacy, new UTF8Encoding(false, true))' in m
+assert 'ex is DecoderFallbackException' in m
+assert 'NOX_LEGACY_JSONL_ENCODING_HOLD' in m
+assert m.index('tx.Rollback();') < m.index('NOX_LEGACY_JSONL_ENCODING_HOLD')
+with tempfile.TemporaryDirectory() as bad_dir:
+    bad = Path(bad_dir) / 'corrupted.jsonl'
+    bad.write_bytes(b'{"prompt":"broken-\\xff","answer":"answer"}\n'.replace(b'\\xff', bytes([0xff])))
+    assert '\ufffd' in bad.read_text(encoding='utf-8', errors='replace')
+    try:
+        bad.read_text(encoding='utf-8', errors='strict')
+    except UnicodeDecodeError:
+        pass
+    else:
+        raise AssertionError('malformed UTF-8 was accepted')
+
 with tempfile.TemporaryDirectory() as folder:
     db=sqlite3.connect(Path(folder)/'memory.sqlite3')
     db.execute('CREATE TABLE chat_history(prompt TEXT,answer TEXT)')
