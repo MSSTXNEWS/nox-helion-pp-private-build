@@ -108,7 +108,14 @@ assert 'readWindow.CancelAfter(TimeSpan.FromMinutes(3))' in generate
 assert 'await reader.ReadLineAsync(readWindow.Token)' in generate
 assert 'catch (OperationCanceledException) when (cancellation.IsCancellationRequested)' in generate
 assert 'catch (OperationCanceledException) {' in generate and 'OLLAMA_TIMEOUT:' in generate
-assert generate.index('cancellation.Token.ThrowIfCancellationRequested();\n            if (answer.Length > 0) PersistChat') < generate.index('Emit("complete", new { requestId, ok = answer.Length > 0')
+assert (generate.index('cancellation.Token.ThrowIfCancellationRequested();', generate.index('if (!completed)')) <
+        generate.index('sqliteWriteAttempted = true;') <
+        generate.index('PersistChat(prompt, answer.ToString(), persona);') <
+        generate.index('sqliteVerified = true;') <
+        generate.index('Emit("complete", new { requestId, ok = answer.Length > 0')), 'B04_STOP_BEFORE_SQLITE_COMMIT_ORDER_HOLD'
+assert 'bool sqliteUnknown = sqliteWriteAttempted && !sqliteVerified;' in generate
+assert 'NOX_CHAT_SQLITE_COMMIT_UNKNOWN_HOLD' in generate
+assert 'stopped = false, sqliteUnknown' in generate
 assert 'cmd.ExecuteNonQuery() != 1' in persist
 assert 'last_insert_rowid()' in persist
 assert 'using var verifyDb = OpenDatabase();' in persist

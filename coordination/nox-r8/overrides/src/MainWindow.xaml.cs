@@ -1454,6 +1454,8 @@ public partial class MainWindow : Window
         }
         Interlocked.Increment(ref generationStartedCount);
         var answer = new StringBuilder();
+        // An INSERT can commit before SQLite readback fails; do not claim rollback.
+        bool sqliteWriteAttempted = false, sqliteVerified = false;
         bool refreshProviderAfterError = false;
         // Only stream transport failures (not SQLite/ownership failures) re-probe Ollama.
         bool providerStreamRequested = false;
@@ -1544,7 +1546,11 @@ public partial class MainWindow : Window
             }
             // A STOP received with the final token still prevents persistence.
             cancellation.Token.ThrowIfCancellationRequested();
-            if (answer.Length > 0) PersistChat(prompt, answer.ToString(), persona);
+            if (answer.Length > 0) {
+                sqliteWriteAttempted = true;
+                PersistChat(prompt, answer.ToString(), persona);
+                sqliteVerified = true;
+            }
             // Completion is true only after SQLite commits successfully.
             lastGenerationCompleted = true;
             Emit("status", new { requestId, state = "READY" });
@@ -1582,9 +1588,11 @@ public partial class MainWindow : Window
             // after HTTP headers. Re-check real health only after terminal IPC.
             if (providerRecoveryPending || (providerStreamRequested && (ex is IOException || ex is JsonException)))
                 refreshProviderAfterError = true;
-            Emit("error", new { requestId, message = ex.Message });
-            Emit("status", new { requestId, state = "ERROR" });
-            Emit("complete", new { requestId, ok = false, stopped = false });
+            bool sqliteUnknown = sqliteWriteAttempted && !sqliteVerified;
+            Emit("error", new { requestId, message = sqliteUnknown
+                ? "NOX_CHAT_SQLITE_COMMIT_UNKNOWN_HOLD: " + ex.Message : ex.Message });
+            Emit("status", new { requestId, state = sqliteUnknown ? "SQLITE_UNKNOWN" : "ERROR" });
+            Emit("complete", new { requestId, ok = sqliteVerified, stopped = false, sqliteUnknown });
         }
         finally {
             // Remember completed owner IDs even after provider errors and STOP:
