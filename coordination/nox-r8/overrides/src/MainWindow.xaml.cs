@@ -697,6 +697,7 @@ public partial class MainWindow : Window
         string? error = null;
         string? promptMarker = null;
         string? stopMarker = null;
+        string? resumeMarker = null;
         try
         {
             // Do not claim UX acceptance from a DOM count. This checks the
@@ -790,6 +791,21 @@ public partial class MainWindow : Window
             if (!await WaitForStopUiReleaseAsync(TimeSpan.FromSeconds(4)))
                 throw new InvalidOperationException("NOX_WEBVIEW2_STOP_OWNER_NOT_RELEASED_HOLD");
             checks["real_webview_stop_cancel_no_partial_persistence"] = "PASS";
+            // Native/JS STOP may appear complete while the request lock or
+            // UI composer remains unusable. Prove fresh owner acquisition,
+            // another genuine Qwen answer, and durable SQLite readback.
+            resumeMarker = "NOX_RESUME_" + Guid.NewGuid().ToString("N");
+            var resumePrompt = "Ответь одним коротким словом на русском: какое число после 4? " + resumeMarker;
+            int resumeTarget = Volatile.Read(ref generationStartedCount) + 1;
+            await Browser.CoreWebView2.ExecuteScriptAsync(
+                "document.getElementById('prompt').value = " + JsonSerializer.Serialize(resumePrompt) +
+                "; document.getElementById('send').click();");
+            if (!await WaitForGenerationStartAsync(resumeTarget, TimeSpan.FromSeconds(12)))
+                throw new InvalidOperationException("NOX_CHAT_AFTER_STOP_START_HOLD");
+            await WaitForGenerationFinishAsync(resumeTarget, TimeSpan.FromMinutes(4));
+            if (!lastGenerationCompleted || lastGenerationStopped || !HasSavedPrompt(resumePrompt))
+                throw new InvalidOperationException("NOX_CHAT_AFTER_STOP_SQLITE_HOLD");
+            checks["real_chat_after_http_stop_sqlite"] = "PASS";
         }
         catch (Exception ex)
         {
@@ -801,9 +817,10 @@ public partial class MainWindow : Window
             try
             {
                 if (promptMarker != null) DeleteSyntheticChats(promptMarker, stopMarker);
+                if (resumeMarker != null) DeleteSyntheticChats(resumeMarker, null);
             }
             catch (Exception e) { error = (error ?? "") + " cleanup:" + e.Message; }
-            var accepted = error == null && checks.Count == 5 && checks.Values.All(v => v == "PASS");
+            var accepted = error == null && checks.Count == 6 && checks.Values.All(v => v == "PASS");
             var exePath = Environment.ProcessPath ?? "";
             var sha = "";
             try { if (File.Exists(exePath)) sha = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(exePath))); }

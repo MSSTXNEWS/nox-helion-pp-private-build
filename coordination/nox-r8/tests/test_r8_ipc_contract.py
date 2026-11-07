@@ -167,6 +167,18 @@ assert 'NOX_WEBVIEW2_STOP_OWNER_NOT_RELEASED_HOLD' in selftest
 assert selftest.index('Native STOP was not confirmed') < selftest.index('WaitForStopUiReleaseAsync(TimeSpan.FromSeconds(4))') < selftest.index('checks["real_webview_stop_cancel_no_partial_persistence"] = "PASS"')
 print('B04 R8 SOURCE_ONLY: live WebView2 token and STOP unlock acceptance oracle present (physical E2E NOT RUN)')
 
+# B04 recovery: successful STOP is insufficient unless the same executable
+# can accept the next real Qwen request and commit a new SQLite chat row.
+assert 'int resumeTarget = Volatile.Read(ref generationStartedCount) + 1;' in selftest
+assert 'NOX_CHAT_AFTER_STOP_START_HOLD' in selftest
+assert 'NOX_CHAT_AFTER_STOP_SQLITE_HOLD' in selftest
+assert 'checks["real_chat_after_http_stop_sqlite"] = "PASS";' in selftest
+assert selftest.index('WaitForStopUiReleaseAsync(TimeSpan.FromSeconds(4))') < selftest.index('NOX_CHAT_AFTER_STOP_START_HOLD') < selftest.index('real_chat_after_http_stop_sqlite')
+assert 'checks.Count == 6 && checks.Values.All(v => v == "PASS")' in selftest
+assert 'if (resumeMarker != null) DeleteSyntheticChats(resumeMarker, null);' in selftest
+print('B04 R8 SOURCE_ONLY: fresh chat after STOP and isolated SQLite cleanup gated (physical E2E NOT RUN)')
+
+
 
 # D05 native task toggle: a checkbox is not proof of persistence.
 # Request-ID bound receipt only after COMMIT and independent SQLite readback.
