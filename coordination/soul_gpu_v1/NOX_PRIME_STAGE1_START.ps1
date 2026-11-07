@@ -44,7 +44,12 @@ if (!$SkipEmbedding) {
     else {
         $models=@(& ollama list)
         if ($LASTEXITCODE -ne 0) { throw "Ollama list failed" }
-        if ($models -notmatch 'qwen3-embedding:0[.]6b(?:\s|$)') {
+        $hasEmbedding = @($models | Where-Object { $_ -match '^qwen3-embedding:0[.]6b\s' }).Count -gt 0
+        if (-not $hasEmbedding) {
+            $drive=[IO.DriveInfo]::new([IO.Path]::GetPathRoot($root))
+            if ($drive.AvailableFreeSpace -lt 63GB) {
+                throw "NOX DISK RESERVE HOLD: need at least 63GB free before embedding download, preserving 60GB reserve"
+            }
             Write-Host "NOX downloading official qwen3-embedding:0.6b" -ForegroundColor Cyan
             & ollama pull qwen3-embedding:0.6b
             if ($LASTEXITCODE -ne 0) {
@@ -65,7 +70,14 @@ $trainRC=$LASTEXITCODE
 if ($trainRC -ne 0) {
     throw "New SOUL training HOLD rc=$trainRC, see error above; old weights untouched"
 }
-Write-Host "NOX new training finished; see real holdout results and model weights." -ForegroundColor Green
+$verifiedPointer=Join-Path $root "brain\intelligence\soul_stage1\CURRENT_VERIFIED.json"
+if (Test-Path $verifiedPointer) {
+    $verified=Get-Content $verifiedPointer -Raw | ConvertFrom-Json
+    Write-Host ("NOX SOUL HOLDOUT VERIFIED. F1: " + $verified.test_micro_f1 + " weights: " + $verified.model_path) -ForegroundColor Green
+}
+else {
+    Write-Warning "NOX SOUL trained research candidate but holdout promotion not confirmed; previous weights untouched."
+}
 
 if (!$SkipVoice) {
     # Download only; does NOT install/execute neural TTS on RX6650M.
