@@ -155,34 +155,41 @@ assert 'if (value.Length > 0) Interlocked.Increment(ref generationStreamingToken
 assert generation.index('await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellation.Token)') < generation.index('Interlocked.Increment(ref generationStreamingTokenCount)')
 print('B04 R8 SOURCE_ONLY: physical STOP oracle waits for live Ollama NDJSON token, not only native dispatch PASS')
 
-# D05 native task toggle: a checkbox is not proof of persistence.
-# Request-ID bound receipt only after COMMIT and independent SQLite readback.
+# D05 tasks: owner-correlated explicit TARGET, not a flip replayed on duplicate IPC.
 toggle = cs.split('private void HandleTaskToggle(', 1)[1].split('private static bool ValidWriteRequestId(', 1)[0]
-assert 'ValidWriteRequestId(requestId)' in toggle
-assert 'cmd.ExecuteNonQuery() != 1' in toggle
-assert 'NOX_TASK_TOGGLE_MISSING_ROW_HOLD' in toggle
-assert 'NOX_TASK_TOGGLE_SQLITE_READBACK_HOLD' in toggle
-assert toggle.index('tx.Commit();') < toggle.index('using (var verifyDb = OpenDatabase())') < toggle.index('Send("tasks.toggle.receipt"')
-assert 'Send("tasks.toggle.denied"' in toggle
-assert 'case "tasks.toggle": HandleTaskToggle(request.GetProperty("id").GetInt64(), Text("requestId"));' in cs
 for fragment in (
-    "pendingTaskToggle={requestId,id:x.id,previous:x.complete}",
-    "post('tasks.toggle',{id:x.id,requestId})",
+    'ValidWriteRequestId(requestId)', 'desiredComplete is null',
+    'UPDATE tasks SET complete=$complete WHERE id=$id',
+    'NOX_TASK_TOGGLE_MISSING_ROW_HOLD',
+    'NOX_TASK_TOGGLE_SQLITE_READBACK_HOLD',
+    'NOX_TASK_TOGGLE_COMMIT_UNKNOWN_HOLD',
+    'NOX_TASK_TOGGLE_READBACK_UNKNOWN_HOLD',
+    'Send("tasks.toggle.uncertain"',
+    'Send("tasks.toggle.receipt"',
+):
+    assert fragment in toggle, 'D05_TARGET_NATIVE_CONTRACT_HOLD: ' + fragment
+assert toggle.index('tx.Commit();') < toggle.index('using var verifyDb = OpenDatabase()') < toggle.index('Send("tasks.toggle.receipt"')
+assert 'UPDATE tasks SET complete=CASE WHEN complete=0 THEN 1 ELSE 0 END' not in toggle
+assert 'case "tasks.toggle": {' in cs
+assert 'HandleTaskToggle(taskId, desiredComplete, Text("requestId"))' in cs
+for fragment in (
+    "pendingTaskToggle={requestId,id:x.id,previous:x.complete,target:cb.checked}",
+    "post('tasks.toggle',{id:x.id,complete:cb.checked,requestId})",
     "case 'tasks.toggle.receipt':",
     "case 'tasks.toggle.denied':",
-    "v?.requestId===pendingTaskToggle.requestId&&v?.id===pendingTaskToggle.id",
+    "case 'tasks.toggle.uncertain':",
+    "v?.complete===pendingTaskToggle.target",
     "post('tasks.list')",
 ):
-    assert fragment in html, 'D05_TOGGLE_OWNER_ACK_HOLD: '+fragment
-# The SQL applies an actual toggle to precisely one row and refuses a missing row.
+    assert fragment in html, 'D05_TOGGLE_OWNER_ACK_HOLD: ' + fragment
+# SQLite repeated delivery with the SAME requested state is idempotent.
 import sqlite3
 with sqlite3.connect(':memory:') as db:
     db.execute('CREATE TABLE tasks(id INTEGER PRIMARY KEY, complete INTEGER NOT NULL DEFAULT 0)')
     db.execute('INSERT INTO tasks(id, complete) VALUES(42,0)')
-    statement = "UPDATE tasks SET complete=CASE WHEN complete=0 THEN 1 ELSE 0 END WHERE id=?"
-    assert db.execute(statement,(42,)).rowcount==1
-    assert db.execute('SELECT complete FROM tasks WHERE id=42').fetchone()[0]==1
-    assert db.execute(statement,(42,)).rowcount==1
-    assert db.execute('SELECT complete FROM tasks WHERE id=42').fetchone()[0]==0
-    assert db.execute(statement,(404,)).rowcount==0
+    stmt = "UPDATE tasks SET complete=? WHERE id=?"
+    for desired in (1, 1, 0, 0, 1):
+        assert db.execute(stmt,(desired,42)).rowcount==1
+        assert db.execute('SELECT complete FROM tasks WHERE id=42').fetchone()[0]==desired
+    assert db.execute(stmt,(0,404)).rowcount==0
 print('D05 R8 SOURCE_ONLY: owner-correlated task toggle, SQLite COMMIT/readback and denied rollback PASS')
