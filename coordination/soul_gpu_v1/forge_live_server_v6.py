@@ -233,6 +233,7 @@ def serve(root, port):
             if self.path == '/api/health':
                 return self.get(json.dumps({'status': 'READY', 'schema': SCHEMA,
                                             'template': 'NOX-FORGE-WOW-LIVE-V6',
+                                            'unified_router':'NOX-UNIFIED-BRAIN-V1',
                                             'read_only': True}).encode(), 'application/json')
             if self.path == '/api/status':
                 try:
