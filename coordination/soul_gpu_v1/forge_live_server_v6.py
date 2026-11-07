@@ -241,7 +241,7 @@ def serve(root, port):
             if self.path == '/api/health':
                 return self.get(json.dumps({'status': 'READY', 'schema': SCHEMA,
                                             'template': 'NOX-FORGE-WOW-LIVE-V6',
-                                            'unified_router':'NOX-UNIFIED-BRAIN-V3',
+                                            'unified_router':'NOX-UNIFIED-BRAIN-V4',
                                             'read_only': True}).encode(), 'application/json')
             if self.path == '/api/status':
                 try:
@@ -278,17 +278,17 @@ def serve(root, port):
                     self.end_headers()
                     try:
                         for evt in (first, *()):
-                            self.wfile.write((json.dumps(evt,ensure_ascii=False)+'\\n').encode('utf-8'))
+                            self.wfile.write((json.dumps(evt,ensure_ascii=False)+'\n').encode('utf-8'))
                             self.wfile.flush()
                         for evt in gen:
-                            self.wfile.write((json.dumps(evt,ensure_ascii=False)+'\\n').encode('utf-8'))
+                            self.wfile.write((json.dumps(evt,ensure_ascii=False)+'\n').encode('utf-8'))
                             self.wfile.flush()
                     except (BrokenPipeError,ConnectionResetError):
                         pass
                     except Exception as ex:
                         try:
                             self.wfile.write((json.dumps({'type':'error','error':str(ex)[:200]},
-                                                         ensure_ascii=False)+'\\n').encode('utf-8'))
+                                                         ensure_ascii=False)+'\n').encode('utf-8'))
                             self.wfile.flush()
                         except OSError:
                             pass
