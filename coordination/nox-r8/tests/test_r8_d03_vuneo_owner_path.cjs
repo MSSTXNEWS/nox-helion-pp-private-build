@@ -58,3 +58,28 @@ assert.ok(block.indexOf('CheckpointSqlite(db, "PRE_VUNEO_IMPORT")')<
 assert.ok(block.indexOf('knowledge.ImportVuneoStaging()')<
   block.indexOf('Send("knowledge.vuneo.result"'),'success requires completed owner work');
 console.log('D03 R8 SOURCE_ONLY original VUNEO owner consent/backup/receipt PASS');
+
+/* D03 native consent replay / post-import receipt regression.
+ * SOURCE_ONLY: C# compilation and owner Windows VUNEO import are NOT verified.
+ */
+const vuneoMethod=native.slice(
+  native.indexOf('private void ImportVuneoByConsent(string requestId)'),
+  native.indexOf('private void ImportKnowledgeByDialog')
+);
+assert.ok(native.includes('private readonly HashSet<string> consumedVuneoRequestIds = new(StringComparer.Ordinal);'));
+assert.ok(native.includes('private readonly Queue<string> consumedVuneoRequestOrder = new();'));
+const replayAt=vuneoMethod.indexOf('!consumedVuneoRequestIds.Add(requestId)');
+const consentAt=vuneoMethod.indexOf('MessageBox.Show(this');
+assert.ok(replayAt>0&&replayAt<consentAt,'reject duplicate requestId before owner modal');
+assert.ok(vuneoMethod.includes('NOX_VUNEO_REPLAY_HOLD'),'explicit replay denial');
+assert.ok(vuneoMethod.includes('Count > 512'),'bounded per-process replay state');
+const preimageAt=vuneoMethod.indexOf('CheckpointSqlite(db, "PRE_VUNEO_IMPORT")');
+const importAt=vuneoMethod.indexOf('knowledge.ImportVuneoStaging()');
+const committedAt=vuneoMethod.indexOf('importCompleted = true;');
+const ackAt=vuneoMethod.indexOf('Send("knowledge.vuneo.result"');
+const refreshAt=vuneoMethod.indexOf('knowledge.Stats()');
+assert.ok(consentAt<preimageAt&&preimageAt<importAt&&importAt<committedAt&&committedAt<ackAt&&ackAt<refreshAt,
+  'native owner consent -> verified preimage -> import -> correlated receipt -> optional stats');
+assert.ok(vuneoMethod.includes('if (!importCompleted)') &&
+          vuneoMethod.indexOf('if (!importCompleted)')>refreshAt,
+  'post-import notification faults must not emit false import-denied');

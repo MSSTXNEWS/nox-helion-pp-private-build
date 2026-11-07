@@ -64,6 +64,9 @@ public partial class MainWindow : Window
     private readonly KnowledgeStore knowledge = new(DatabasePath);
     private readonly string dbPath = DatabasePath;
     private string? legacyImportHold; // Owner-visible, non-destructive legacy import admission HOLD.
+    private readonly HashSet<string> consumedVuneoRequestIds = new(StringComparer.Ordinal);
+    private readonly Queue<string> consumedVuneoRequestOrder = new();
+
 
     [DllImport("dwmapi.dll", PreserveSig = true)]
     private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attribute, ref int value, int size);
@@ -2134,15 +2137,26 @@ public partial class MainWindow : Window
         finally { activeModelPull = null; }
     }
 
-    // The original WPF owner alone grants VUNEO consent. A correlated result
-    // requires a verified WAL-aware preimage, completed import and stats read.
-    // Dispatch is not success; cancellation never mutates the knowledge index.
+    // The original WPF owner alone grants VUNEO consent. No replayed
+    // document request may display a second modal or import twice in this
+    // WPF process. Bounded ids live only in memory, not in owner SQLite.
+    // The result receipt is authoritative after completed import; a later
+    // optional statistics refresh is not an import failure.
     private void ImportVuneoByConsent(string requestId)
     {
         if (!ValidWriteRequestId(requestId)) {
             Send("knowledge.vuneo.denied", new { requestId, reason = "NOX_VUNEO_REQUEST_ID_HOLD" });
             return;
         }
+        if (!consumedVuneoRequestIds.Add(requestId)) {
+            Send("knowledge.vuneo.denied", new { requestId, reason = "NOX_VUNEO_REPLAY_HOLD" });
+            return;
+        }
+        consumedVuneoRequestOrder.Enqueue(requestId);
+        if (consumedVuneoRequestOrder.Count > 512)
+            consumedVuneoRequestIds.Remove(consumedVuneoRequestOrder.Dequeue());
+
+        bool importCompleted = false;
         try {
             var consent = MessageBox.Show(this,
                 "Перенести сохранённые текстовые записи памяти и решений VUNEO из резервной SQLite в локальный индекс NOX? Оригинальные файлы не изменяются; чувствительные записи будут пропущены.",
@@ -2153,13 +2167,21 @@ public partial class MainWindow : Window
             }
             using (var db = OpenDatabase()) CheckpointSqlite(db, "PRE_VUNEO_IMPORT");
             var result = knowledge.ImportVuneoStaging();
-            var stats = knowledge.Stats();
-            Send("knowledge.stats", stats);
+            importCompleted = true;
             Send("knowledge.vuneo.result", new { requestId, backupVerified = true, result });
+            try {
+                Send("knowledge.stats", knowledge.Stats());
+            }
+            catch (Exception) {
+                // A post-import stats read/IPC refresh cannot reverse an
+                // already committed owner import or issue a false denial.
+            }
         }
         catch (Exception) {
-            // Never expose private source paths or claim success on failure.
-            Send("knowledge.vuneo.denied", new { requestId, reason = "NOX_VUNEO_IMPORT_HOLD" });
+            // A completed import is never described as denied merely because
+            // a WebView2 receipt could not be delivered during shutdown.
+            if (!importCompleted)
+                Send("knowledge.vuneo.denied", new { requestId, reason = "NOX_VUNEO_IMPORT_HOLD" });
         }
     }
 
