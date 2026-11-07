@@ -38,7 +38,7 @@ class SourceContract(unittest.TestCase):
         s=self.files["voice-live.js"].decode()
         for term in ("processLocally:true","r.processLocally=true",
                      "NOX_VOICE_LOCAL_STT_UNAVAILABLE_HOLD",
-                     "lastRecognized=words", "prompt.value=", "r.abort", "localService===true"):
+                     "lastRecognized=words", "prompt.value=", "old?.abort()", "localService===true"):
             self.assertIn(term,s)
         self.assertNotIn("fetch('https://",s)
         self.assertNotIn("requestSubmit()",s)
@@ -48,9 +48,9 @@ class StreamProtocol(unittest.TestCase):
     def test_local_real_http_stream_completes(self):
         # Set up an actual HTTP loopback to fake the model *only in tests*.
         model_events=[
-          json.dumps({"message":{"content":"Привет"},"done":False}).encode()+b"\\n",
-          json.dumps({"message":{"content":" NOX"},"done":False}).encode()+b"\\n",
-          json.dumps({"done":True}).encode()+b"\\n"
+          json.dumps({"message":{"content":"Привет"},"done":False}).encode()+b"\n",
+          json.dumps({"message":{"content":" NOX"},"done":False}).encode()+b"\n",
+          json.dumps({"done":True}).encode()+b"\n"
         ]
         class Upstream(BaseHTTPRequestHandler):
             def do_POST(self):
