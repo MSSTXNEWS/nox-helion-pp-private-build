@@ -94,9 +94,13 @@ try {
   if($when -lt $started -or $when -gt [DateTimeOffset]::UtcNow.AddMinutes(2)){
     throw 'NATIVE_RECEIPT_TIME_HOLD'
   }
+  # A five-key receipt is insufficient: the sixth B04 native check proves
+  # a fresh real Qwen chat and SQLite write AFTER active HTTP STOP release.
+  # This also gates the visible WebView2 token in the B04 native test path.
   foreach($name in @('webview2_real_ui_route','sqlite_transaction_readback',
       'real_ollama_model_registered','real_chat_from_webview_to_qwen_to_sqlite',
-      'real_webview_stop_cancel_no_partial_persistence')){
+      'real_webview_stop_cancel_no_partial_persistence',
+      'real_chat_after_http_stop_sqlite')){
     $value=[string]$n.checks.$name
     $r.nativeChecks[$name]=$value
     if($value -cne 'PASS'){throw "NATIVE_CHECK_$($name)_HOLD"}
