@@ -44,6 +44,8 @@ ShowUninstDetails show
    !endif
    DetailPrint "B05_NOLOSS_HOLD ${MODE} $1"
    MessageBox MB_OK|MB_ICONSTOP "NOX install boundary refused. Existing owner data untouched." /SD IDOK
+   ; Explicit refusal code: aborted uninstall must not be reported as success.
+   SetErrorLevel 20
    Abort
  ${EndIf}
 !macroend
