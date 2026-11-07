@@ -6,6 +6,7 @@ No .NET, Windows, WebView2, owner SQLite or EXE acceptance is implied.
 from pathlib import Path
 import re
 import sqlite3
+from contextlib import closing
 import tempfile
 import unittest
 
@@ -51,7 +52,7 @@ class DurableAtlasAddReceipt(unittest.TestCase):
         create_receipt = match.group(0)
         with tempfile.TemporaryDirectory() as tmp:
             path = str(Path(tmp) / "owner.sqlite3")
-            with sqlite3.connect(path) as db:
+            with closing(sqlite3.connect(path)) as db:
                 db.execute("CREATE TABLE tasks(id INTEGER PRIMARY KEY AUTOINCREMENT, created_at TEXT NOT NULL, title TEXT NOT NULL, complete INTEGER NOT NULL DEFAULT 0)")
                 db.execute(create_receipt)
                 with db:
@@ -64,7 +65,7 @@ class DurableAtlasAddReceipt(unittest.TestCase):
                                    {"id": task_id, "sid": "S-1-5-21-local-owner",
                                     "rid": "stableRequest_A1", "title": "sample owner task"}).fetchone()
                 self.assertEqual(saved, ("sample owner task",))
-            with sqlite3.connect(path) as restarted:
+            with closing(sqlite3.connect(path)) as restarted:
                 existing = restarted.execute(
                     "SELECT task_id FROM task_add_receipts WHERE owner_sid=$sid AND request_id=$rid",
                     {"sid": "S-1-5-21-local-owner", "rid": "stableRequest_A1"}).fetchone()
