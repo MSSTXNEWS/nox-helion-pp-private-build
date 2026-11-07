@@ -38,11 +38,18 @@ class Parity(unittest.TestCase):
              "staged_source_file_count": 3, "exe_sha256": hashlib.sha256(self.exe.read_bytes()).hexdigest(),
              "owner_source_parity": "NOT_VERIFIED", "accepted_full_release": False}
         self.receipt.write_text(json.dumps(r), encoding="utf-8")
+        self.trusted_manifest_sha = hashlib.sha256(self.man.read_bytes()).hexdigest()
+        self.trusted_receipt_sha = hashlib.sha256(self.receipt.read_bytes()).hexdigest()
+        self.trusted_git_sha = SHA40
 
     def call(self):
         p = subprocess.run([sys.executable, "-B", str(SCRIPT), "--manifest", str(self.man),
                             "--receipt", str(self.receipt), "--local-src", str(self.src),
-                            "--local-exe", str(self.exe)], text=True, capture_output=True)
+                            "--local-exe", str(self.exe),
+                            "--trusted-manifest-sha256", self.trusted_manifest_sha,
+                            "--trusted-receipt-sha256", self.trusted_receipt_sha,
+                            "--trusted-git-sha", self.trusted_git_sha],
+                           text=True, capture_output=True)
         return p.returncode, json.loads(p.stdout)
 
     def test_identical_bytes_not_release(self):
@@ -78,6 +85,9 @@ class Parity(unittest.TestCase):
         r = json.loads(self.receipt.read_text())
         r["staged_source_manifest_sha256"] = hashlib.sha256(self.man.read_bytes()).hexdigest()
         self.receipt.write_text(json.dumps(r))
+        # Test path validation with newly fixed independent anchors as well.
+        self.trusted_manifest_sha = hashlib.sha256(self.man.read_bytes()).hexdigest()
+        self.trusted_receipt_sha = hashlib.sha256(self.receipt.read_bytes()).hexdigest()
         code, result = self.call()
         self.assertEqual((code, result["result"]), (3, "PROVENANCE_UNVERIFIED_HOLD"))
 
@@ -95,6 +105,26 @@ class Parity(unittest.TestCase):
             self.skipTest("Windows test process lacks symlink privilege")
         code, r = self.call()
         self.assertEqual((code, r["result"]), (3, "PROVENANCE_UNVERIFIED_HOLD"))
+
+    def test_jointly_forged_manifest_receipt_fail_external_anchors(self):
+        self.exe.write_bytes(b"forged exe")
+        file = self.src / "MainWindow.xaml.cs"
+        file.write_bytes(b"forged source")
+        m = json.loads(self.man.read_text())
+        m["files"][0]["bytes"] = file.stat().st_size
+        m["files"][0]["sha256"] = hashlib.sha256(file.read_bytes()).hexdigest()
+        self.man.write_text(json.dumps(m))
+        r = json.loads(self.receipt.read_text())
+        r["staged_source_manifest_sha256"] = hashlib.sha256(self.man.read_bytes()).hexdigest()
+        r["exe_sha256"] = hashlib.sha256(self.exe.read_bytes()).hexdigest()
+        self.receipt.write_text(json.dumps(r))
+        code, result = self.call()
+        self.assertEqual((code, result["result"]), (3, "PROVENANCE_UNVERIFIED_HOLD"))
+
+    def test_wrong_trusted_git_sha_fail(self):
+        self.trusted_git_sha = "c" * 40
+        code, result = self.call()
+        self.assertEqual((code, result["result"]), (3, "PROVENANCE_UNVERIFIED_HOLD"))
 
 
 if __name__ == "__main__":

@@ -3,6 +3,8 @@
 
 It never writes to NOX_NEW, changes ACLs, starts services or claims E2E/release.
 Only run on an owner-authorized Windows source tree with matching build receipts.
+Trust anchors MUST be independently read from the exact GitHub Windows artifact,
+not copied from the same local folder as the manifest and receipt.
 """
 import argparse
 import hashlib
@@ -66,19 +68,30 @@ def inventory(root):
     return result
 
 
-def attest(manifest_path, receipt_path, local_src, local_exe):
-    # Do not trust self-reported source hashes unless a build receipt binds
-    # precisely those serialized manifest bytes and the pinned ZIP/Git IDs.
-    manifest = json.loads(manifest_path.read_text(encoding="utf-8-sig"))
-    receipt = json.loads(receipt_path.read_text(encoding="utf-8-sig"))
+def attest(manifest_path, receipt_path, local_src, local_exe,
+           trusted_manifest_sha256, trusted_receipt_sha256, trusted_git_sha):
+    # Independent anchors prevent jointly forged manifest+receipt pairs from
+    # declaring a different source and EXE to be a byte-identical owner build.
+    if not (HEX64.fullmatch(trusted_manifest_sha256)
+            and HEX64.fullmatch(trusted_receipt_sha256)
+            and HEX40.fullmatch(trusted_git_sha)):
+        raise ValueError("EXTERNAL_PROOF_ANCHORS_REQUIRED_HOLD")
+    manifest_bytes = manifest_path.read_bytes()
+    receipt_bytes = receipt_path.read_bytes()
+    if (hashlib.sha256(manifest_bytes).hexdigest() != trusted_manifest_sha256
+            or hashlib.sha256(receipt_bytes).hexdigest() != trusted_receipt_sha256):
+        raise ValueError("EXTERNAL_PROOF_ANCHOR_MISMATCH_HOLD")
+    manifest = json.loads(manifest_bytes.decode("utf-8-sig"))
+    receipt = json.loads(receipt_bytes.decode("utf-8-sig"))
     if (manifest.get("schema") != "NOX_R8_BUILD_SRC_PROVENANCE_V1"
             or receipt.get("schema") != "NOX_R8_NATIVE_SINGLE_EXE_V1"
             or not HEX40.fullmatch(str(manifest.get("source_git_sha", "")))
+            or manifest.get("source_git_sha") != trusted_git_sha
             or not HEX64.fullmatch(str(manifest.get("source_zip_sha256", "")))
             or not HEX64.fullmatch(str(receipt.get("exe_sha256", "")))
             or manifest.get("source_git_sha") != receipt.get("source_git_sha")
             or manifest.get("source_zip_sha256") != receipt.get("source_sha256")
-            or digest(manifest_path) != receipt.get("staged_source_manifest_sha256")
+            or hashlib.sha256(manifest_bytes).hexdigest() != receipt.get("staged_source_manifest_sha256")
             or receipt.get("owner_source_parity") != "NOT_VERIFIED"
             or receipt.get("accepted_full_release") is not False):
         raise ValueError("CLOUD_PROOF_BINDING_HOLD")
@@ -132,11 +145,18 @@ def main(argv=None):
     p.add_argument("--receipt", required=True, type=Path)
     p.add_argument("--local-src", required=True, type=Path)
     p.add_argument("--local-exe", required=True, type=Path)
+    p.add_argument("--trusted-manifest-sha256", required=True,
+                   help="Independent SHA256 of GitHub-runner SOURCE_PROVENANCE.json")
+    p.add_argument("--trusted-receipt-sha256", required=True,
+                   help="Independent SHA256 of same-run BUILD_RECEIPT.json")
+    p.add_argument("--trusted-git-sha", required=True,
+                   help="40-hex exact Git commit of the independently verified runner build")
     args = p.parse_args(argv)
     try:
-        result = attest(args.manifest, args.receipt, args.local_src, args.local_exe)
-    except (OSError, ValueError, KeyError, json.JSONDecodeError) as exc:
-        # No owner paths/file contents disclosed, never guess parity on errors.
+        result = attest(args.manifest, args.receipt, args.local_src, args.local_exe,
+                        args.trusted_manifest_sha256, args.trusted_receipt_sha256,
+                        args.trusted_git_sha)
+    except (OSError, ValueError, KeyError, json.JSONDecodeError, UnicodeError) as exc:
         result = {"schema": "NOX_R8_OWNER_BYTE_PARITY_V1", "result": "PROVENANCE_UNVERIFIED_HOLD",
                   "reason": str(exc) if isinstance(exc, ValueError) else "SOURCE_UNREADABLE_HOLD",
                   "owner_qwen_stream_stop_sqlite": "NOT_TESTED", "release": "HOLD"}
