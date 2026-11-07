@@ -69,4 +69,14 @@ $receipt=Get-Content -LiteralPath $receiptPath -Encoding UTF8 -Raw | ConvertFrom
 if(-not (EqualsCI ([string]$receipt.source_git_sha) $ExpectedSourceSha)){ Hold 'RECEIPT_WRONG_SOURCE' }
 if(-not (EqualsCI ([string]$receipt.exe_sha256) $ExpectedExeSha)){ Hold 'RECEIPT_WRONG_EXE' }
 if([string]$receipt.schema -cne 'NOX_R8_NATIVE_SINGLE_EXE_V1'){ Hold 'RECEIPT_WRONG_SCHEMA' }
+# Pre-uninstall: a running/held EXE could make NSIS delete only part of the
+# installation. Refuse before any deletion when a shared open handle exists.
+# This is a preflight guard, not a race-free Windows process-ownership proof.
+if($Mode -eq 'PreUninstall') {
+ $exclusive=$null
+ try {
+   $exclusive=[IO.File]::Open($exe,[IO.FileMode]::Open,[IO.FileAccess]::Read,[IO.FileShare]::None)
+ } catch { Hold 'EXE_BUSY_OR_UNREADABLE' }
+ finally { if($null -ne $exclusive){ $exclusive.Dispose() } }
+}
 Write-Output ("B05_NOLOSS_{0}_PASS_RELEASE_HOLD" -f $Mode.ToUpperInvariant())
