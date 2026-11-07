@@ -2011,18 +2011,46 @@ public partial class MainWindow : Window
         return result;
     }
 
+    private sealed class TaskAddPersistenceUnknownException : Exception
+    {
+        public TaskAddPersistenceUnknownException(string reason, Exception inner) : base(reason, inner) { }
+    }
+
     private long AddTask(string title)
     {
         if (string.IsNullOrWhiteSpace(title) || title.Length > 500) throw new ArgumentException("Task must contain 1–500 characters");
-        using var db = OpenDatabase(); using var cmd = db.CreateCommand();
-        cmd.CommandText = "INSERT INTO tasks(created_at,title) VALUES($t,$n)";
-        cmd.Parameters.AddWithValue("$t", DateTimeOffset.UtcNow.ToString("O"));
-        cmd.Parameters.AddWithValue("$n", title);
-        if (cmd.ExecuteNonQuery() != 1) throw new InvalidOperationException("NOX_TASK_WRITE_HOLD");
-        using var idQuery = db.CreateCommand();
-        idQuery.CommandText = "SELECT last_insert_rowid()";
-        long id = Convert.ToInt64(idQuery.ExecuteScalar());
-        if (id <= 0) throw new InvalidOperationException("NOX_TASK_ROWID_HOLD");
+        long id;
+        bool commitAttempted = false;
+        try
+        {
+            using (var db = OpenDatabase())
+            using (var tx = db.BeginTransaction())
+            {
+                using (var cmd = db.CreateCommand())
+                {
+                    cmd.Transaction = tx;
+                    cmd.CommandText = "INSERT INTO tasks(created_at,title) VALUES($t,$n)";
+                    cmd.Parameters.AddWithValue("$t", DateTimeOffset.UtcNow.ToString("O"));
+                    cmd.Parameters.AddWithValue("$n", title);
+                    if (cmd.ExecuteNonQuery() != 1) throw new InvalidOperationException("NOX_TASK_WRITE_HOLD");
+                }
+                using (var idQuery = db.CreateCommand())
+                {
+                    idQuery.Transaction = tx;
+                    idQuery.CommandText = "SELECT last_insert_rowid()";
+                    id = Convert.ToInt64(idQuery.ExecuteScalar());
+                    if (id <= 0) throw new InvalidOperationException("NOX_TASK_ROWID_HOLD");
+                }
+                commitAttempted = true;
+                tx.Commit();
+            }
+        }
+        catch (Exception ex)
+        {
+            if (commitAttempted)
+                throw new TaskAddPersistenceUnknownException("NOX_TASK_ADD_COMMIT_UNKNOWN_HOLD", ex);
+            throw;
+        }
         return id;
     }
 
@@ -2077,6 +2105,12 @@ public partial class MainWindow : Window
 
 
 
+    private void RefreshTasksBestEffort()
+    {
+        try { Send("tasks", ReadTasks()); }
+        catch (Exception) { /* Owner can refresh ATLAS; COMMIT receipt remains valid. */ }
+    }
+
     // D05: do not make the owner lose unsaved task/note text on a failed SQLite write.
     // Native receipt is correlated to the document request and sent only after a
     // separate SQLite connection has read the exact committed row back.
@@ -2090,20 +2124,35 @@ public partial class MainWindow : Window
             Send("tasks.add.denied", new { requestId, reason = "NOX_TASK_REQUEST_ID_HOLD" });
             return;
         }
+        long id;
+        try { id = AddTask(title); }
+        catch (TaskAddPersistenceUnknownException ex) {
+            try { Send("tasks.add.uncertain", new { requestId, reason = ex.Message }); }
+            catch (Exception) { /* Owner must inspect the task list before retry. */ }
+            RefreshTasksBestEffort();
+            return;
+        }
+        catch (ArgumentException) { Send("tasks.add.denied", new { requestId, reason = "NOX_TASK_VALIDATION_HOLD" }); return; }
+        catch (SqliteException) { Send("tasks.add.denied", new { requestId, reason = "NOX_TASK_SQLITE_HOLD" }); return; }
+        catch (Exception) { Send("tasks.add.denied", new { requestId, reason = "NOX_TASK_PRECOMMIT_HOLD" }); return; }
         try {
-            long id = AddTask(title);
+            // A second SQLite connection must see this exact row before a saved ACK.
             using var verifyDb = OpenDatabase();
             using var verify = verifyDb.CreateCommand();
             verify.CommandText = "SELECT title FROM tasks WHERE id=$id";
             verify.Parameters.AddWithValue("$id", id);
             if (!string.Equals(verify.ExecuteScalar() as string, title, StringComparison.Ordinal))
                 throw new InvalidOperationException("NOX_TASK_SQLITE_READBACK_HOLD");
-            Send("tasks", ReadTasks());
-            Send("tasks.add.receipt", new { requestId, id, saved = true });
         }
-        catch (ArgumentException) { Send("tasks.add.denied", new { requestId, reason = "NOX_TASK_VALIDATION_HOLD" }); }
-        catch (SqliteException) { Send("tasks.add.denied", new { requestId, reason = "NOX_TASK_SQLITE_HOLD" }); }
-        catch (Exception) { Send("tasks.add.denied", new { requestId, reason = "NOX_TASK_READBACK_HOLD" }); }
+        catch (Exception) {
+            try { Send("tasks.add.uncertain", new { requestId, id, reason = "NOX_TASK_ADD_READBACK_UNKNOWN_HOLD" }); }
+            catch (Exception) { /* Never turn a possible commit into a denial. */ }
+            RefreshTasksBestEffort();
+            return;
+        }
+        try { Send("tasks.add.receipt", new { requestId, id, saved = true }); }
+        catch (Exception) { /* The committed row can be inspected in ATLAS. */ }
+        RefreshTasksBestEffort();
     }
 
     private void HandleNoteAdd(string title, string body, string requestId)
