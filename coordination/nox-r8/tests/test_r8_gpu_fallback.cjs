@@ -230,7 +230,13 @@ function exercise(kind){
   check(cpuFrames>=3,kind+' visible redraw');
 }
 for(const kind of ['noGpu','noGpu2dLoss','drawFail2dLoss','resizeStormGpu','resizeStormCpu','throwContext','compileFail','setupFail','programNull','shaderNull','uniformNull','bufferNull','attributeMissing','ok','contextLost','drawFail','viewportFail','uniformFail','glError','lateGlError','reducedGpu','reducedCpu','legacyReducedGpu','legacyReducedCpu','noMediaApiGpu','noMediaApiCpu','queryThrowsGpu','queryThrowsCpu','observerThrowsGpu','observerThrowsCpu','observerThrowsLegacyGpu','observerThrowsLegacyCpu','no2d','throw2d','draw2dFail','matchesGetterGpu','matchesGetterCpu'])exercise(kind);
-check(html.includes("case 'complete':busy=false;activeChatId=null;$('generation').classList.remove('on');window.noxVisual?.setEnergy(false);"),'native completion clears renderer energy');
+// B06 wraps the owner-correlated terminal case to preserve failed-chat drafts.
+// Require both the genuine completion branch and the request-id gate; do not
+// mistake unrelated energy-off statements for valid native terminal handling.
+const terminalLine=html.split(/\r?\n/).find(line=>line.trimStart().startsWith("case 'complete':"));
+check(!!terminalLine && terminalLine.includes("busy=false;activeChatId=null;$('generation').classList.remove('on');window.noxVisual?.setEnergy(false);") &&
+  html.includes("if(['status','token','metrics','complete'].includes(m.type) && (!v || v.requestId!==activeChatId))return;"),
+  'owner-correlated native completion clears renderer energy');
 
 /* A real CSS fallback must reveal the preserved original sphere, not a 14%-opacity ghost.
    This checks the production stylesheet alongside the existing GPU/2D runtime scenarios. */
