@@ -46,7 +46,7 @@ required_html = (
     "post('stop',{requestId:activeChatId})",
     "v.requestId!==activeChatId",
     "case 'token':lastAnswer+=v.text",
-    "case 'complete':busy=false;activeChatId=null",
+    "case 'complete':{const retry=pendingChatDraft?.requestId===v?.requestId",
     "Only the matching native complete may unlock a busy chat.",
     "if(e.key==='Escape'&&busy&&activeChatId){e.preventDefault();$('stop').click()}",
 )
@@ -135,8 +135,8 @@ for action, table in (("Task", "tasks"), ("Note", "memory_notes")):
     assert segment.index("using var verifyDb") < segment.index(f'Send("{action.lower()}s.add.receipt"'), "D05_PREMATURE_ACK_HOLD"
     assert f'Send("{action.lower()}s.add.denied"' in segment, "D05_DENIAL_HOLD"
 for part in (
-    "pendingTask={requestId,text}",
-    "pendingNote={requestId,title,content}",
+    "pendingTask={requestId,text,persona:visibleDraftPersona}",
+    "pendingNote={requestId,title,content,persona:visibleDraftPersona}",
     "if(post('tasks.add',{text,requestId})===false)",
     "if(post('notes.add',{title,content,requestId})===false)",
     "v?.requestId===pendingTask.requestId&&v.saved===true",
@@ -160,7 +160,7 @@ assert 'Send("complete", new { requestId, ok = false, stopped = false });' in re
 for marker in ('CHAT_EMPTY_PROMPT_DENIED', 'CHAT_REQUEST_ID_DENIED',
                'CHAT_PROMPT_TOO_LONG_DENIED', 'CHAT_ALREADY_RUNNING_HOLD'):
     assert preflight.count('RejectChat("' + marker + '");') == 1, 'B04_CHAT_REJECT_PATH_HOLD ' + marker
-assert "case 'complete':busy=false;activeChatId=null" in html, 'B04_WEBVIEW_CHAT_UNLOCK_HOLD'
+assert "case 'complete':{const retry=pendingChatDraft?.requestId===v?.requestId" in html and "busy=false;activeChatId=null;" in html, 'B04_WEBVIEW_CHAT_UNLOCK_HOLD'
 print('B04 R8 SOURCE_ONLY: native preflight rejection now releases the matching WebView2 owner')
 
 # B04 live HTTP STOP acceptance regression: a task/HTTP POST beginning is not
@@ -219,10 +219,10 @@ assert 'NOX_TASK_TOGGLE_MISSING_ROW_HOLD' in toggle
 assert 'NOX_TASK_TOGGLE_SQLITE_READBACK_HOLD' in toggle
 assert toggle.index('tx.Commit();') < toggle.index('using (var verifyDb = OpenDatabase())') < toggle.index('Send("tasks.toggle.receipt"')
 assert 'Send("tasks.toggle.denied"' in toggle
-assert 'case "tasks.toggle": HandleTaskToggle(request.GetProperty("id").GetInt64(), Text("requestId"));' in cs
+assert 'case "tasks.toggle": {' in cs and 'HandleTaskToggle(taskId, desiredComplete, Text("requestId"));' in cs
 for fragment in (
-    "pendingTaskToggle={requestId,id:x.id,previous:x.complete}",
-    "post('tasks.toggle',{id:x.id,requestId})",
+    "pendingTaskToggle={requestId,id:x.id,previous:x.complete,target:cb.checked}",
+    "post('tasks.toggle',{id:x.id,complete:cb.checked,requestId})",
     "case 'tasks.toggle.receipt':",
     "case 'tasks.toggle.denied':",
     "v?.requestId===pendingTaskToggle.requestId&&v?.id===pendingTaskToggle.id",
@@ -234,23 +234,23 @@ import sqlite3
 with sqlite3.connect(':memory:') as db:
     db.execute('CREATE TABLE tasks(id INTEGER PRIMARY KEY, complete INTEGER NOT NULL DEFAULT 0)')
     db.execute('INSERT INTO tasks(id, complete) VALUES(42,0)')
-    statement = "UPDATE tasks SET complete=CASE WHEN complete=0 THEN 1 ELSE 0 END WHERE id=?"
-    assert db.execute(statement,(42,)).rowcount==1
+    statement = "UPDATE tasks SET complete=? WHERE id=?"
+    assert db.execute(statement,(1,42)).rowcount==1
     assert db.execute('SELECT complete FROM tasks WHERE id=42').fetchone()[0]==1
-    assert db.execute(statement,(42,)).rowcount==1
-    assert db.execute('SELECT complete FROM tasks WHERE id=42').fetchone()[0]==0
-    assert db.execute(statement,(404,)).rowcount==0
+    assert db.execute(statement,(1,42)).rowcount==1
+    assert db.execute('SELECT complete FROM tasks WHERE id=42').fetchone()[0]==1
+    assert db.execute(statement,(1,404)).rowcount==0
 print('D05 R8 SOURCE_ONLY: owner-correlated task toggle, SQLite COMMIT/readback and denied rollback PASS')
 
 # B04: a previous successful chat must not leave a stale "saved" banner
 # while a new prompt is generating or when that prompt terminates with error.
 # This is an actual UI contract check; it is NOT physical owner-PC E2E.
 send_section = html.split("$('send').onclick=()=>", 1)[1].split("\n$('stop').onclick=", 1)[0]
-assert "busy=true;activeChatId=requestId;lastAnswer='';$('streamHint').textContent='Генерация ответа · не сохранено';" in send_section, 'B04_STALE_SQLITE_SUCCESS_DURING_GENERATION_HOLD'
+assert "busy=true;activeChatId=requestId;pendingChatDraft={requestId,raw:$('prompt').value,persona:visibleDraftPersona};lastAnswer='';$('streamHint').textContent='Генерация ответа · не сохранено';" in send_section, 'B04_STALE_SQLITE_SUCCESS_DURING_GENERATION_HOLD'
 complete_section = html.split("case 'complete':", 1)[1].split("break;", 1)[0]
 assert "else if(v?.ok)$('streamHint').textContent='Ответ завершён и сохранён в SQLite.'" in complete_section
-assert "else{$('streamHint').textContent='Ответ не сохранён в SQLite.';lastAnswer='';}" in complete_section, 'B04_STALE_SQLITE_SUCCESS_ON_ERROR_HOLD'
-assert "if(v?.stopped){lastAnswer='';$('streamHint').textContent='Поток остановлен. Частичный ответ не сохранён.';}" in complete_section
+assert "else{lastAnswer='';$('streamHint').textContent='Ответ не сохранён.'" in complete_section, 'B04_STALE_SQLITE_SUCCESS_ON_ERROR_HOLD'
+assert "if(v?.stopped){lastAnswer='';$('streamHint').textContent='Поток остановлен. Частичный ответ не сохранён.'" in complete_section
 print("B04 R8 SOURCE_ONLY: no stale SQLite saved banner during in-flight/error/STOP chat (Windows E2E NOT RUN)")
 
 # B04 acceptance race: native generationFinishedCount may be published before

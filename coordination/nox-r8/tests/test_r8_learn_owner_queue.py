@@ -8,8 +8,8 @@ for token in ('WindowsIdentity.GetCurrent()', 'MessageBoxButton.YesNo', 'SELFTES
               'AWAITING_VERIFIED_WORKER', 'CANCELLED_BY_OWNER','trainingStarted=false',
               'NO_ATTESTED_GPU_WORKER','temperature.gpu','temp >= 65','ReadLearnQueue()'):
  assert token in cs, token
-for token in ('id="learnRequest"','id="learnCancel"', "post('learn.request')",
-              "post('learn.cancel')","case 'learn.receipt'","case 'learn.queue'"):
+for token in ('id="learnRequest"','id="learnCancel"', "post('learn.request',{requestId})",
+              "post('learn.cancel',{requestId})","case 'learn.receipt'","case 'learn.queue'"):
  assert token in html,token
 assert 'case "learn.start"' not in cs
 m=re.search(r'CREATE TABLE IF NOT EXISTS learn_requests \(.*?\);', cs, re.S)
@@ -40,8 +40,8 @@ print('D05 SOURCE_ONLY SQLITE/OWNER QUEUE CONTRACT PASS; GPU NOT RUN')
 
 # D05 TECH-FIRST: preparation consent + STOP require independent SQLite
 # readback; foreign trainer_state files never become authenticated GPU progress.
-learn = cs.split('private void RequestLearn()', 1)[1].split('private void CancelLearnRequest()', 1)[0]
-cancel = cs.split('private void CancelLearnRequest()', 1)[1].split('private object GetTrainingState()', 1)[0]
+learn = cs.split('private void RequestLearn(string requestId)', 1)[1].split('private void CancelLearnRequest(string requestId)', 1)[0]
+cancel = cs.split('private void CancelLearnRequest(string requestId)', 1)[1].split('private object GetTrainingState()', 1)[0]
 training = cs.split('private object GetTrainingState()', 1)[1]
 assert 'NOX_LEARN_CONSENT_SQLITE_READBACK_HOLD' in learn
 assert learn.index('tx.Commit();') < learn.index('NOX_LEARN_CONSENT_SQLITE_READBACK_HOLD')
@@ -56,3 +56,12 @@ assert 'observedExternalRuns = states' in training
 assert "case 'training':" in html and 'r.checkpointVerified===true' in html
 assert "case 'learn.queue':" in html and "case 'learn.receipt':" in html
 print('D05 TECH-FIRST SOURCE_ONLY consent/STOP SQLite readback + untrusted progress HOLD PASS')
+
+# 2026-11-07 B06: tests track stricter real owner-correlated Qwen/LEARN IPC.
+# Not an owner-PC or Windows integration proof.
+assert 'case "learn.request": HandleLearnRequest(Text("requestId")); break;' in cs
+assert 'case "learn.cancel": HandleLearnCancel(Text("requestId")); break;' in cs
+assert "case 'learn.denied':" in html
+assert "pendingLearnRequest=requestId" in html and "pendingLearnStop=requestId" in html
+assert "PERSISTENCE_UNKNOWN_HOLD" in cs
+print("B06 SOURCE_ONLY: LEARN UI requestId + owner uncertainty assertions")
