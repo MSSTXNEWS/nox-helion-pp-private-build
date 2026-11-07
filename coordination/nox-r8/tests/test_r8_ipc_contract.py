@@ -319,6 +319,20 @@ assert message.index('rawMessage.Length > 512 * 1024') < message.index('JsonDocu
 print('B02 R8 SOURCE_ONLY: bounded duplicate-free native IPC before command dispatch; Windows Qwen NOT_TESTED')
 
 
+# B02: HttpCompletionOption.ResponseHeadersRead only bounds headers.
+# Endless empty/nonterminal NDJSON lines formerly reset the 3-minute idle
+# timeout indefinitely. The full stream must have its own fixed deadline.
+stream_budget_section = cs.split('private async Task Generate(', 1)[1].split('private void PersistChat(', 1)[0].split('using var reader = new StreamReader(stream);', 1)[1].split('if (!completed) {', 1)[0]
+assert 'using var streamBudget = CancellationTokenSource.CreateLinkedTokenSource(cancellation.Token);' in stream_budget_section, 'B02_STREAM_OWNER_LINK_HOLD'
+assert 'streamBudget.CancelAfter(TimeSpan.FromMinutes(15));' in stream_budget_section, 'B02_STREAM_TOTAL_DEADLINE_HOLD'
+assert stream_budget_section.index('streamBudget.CancelAfter(TimeSpan.FromMinutes(15));') < stream_budget_section.index('while (true)'), 'B02_STREAM_DEADLINE_BEFORE_READ_HOLD'
+assert 'CancellationTokenSource.CreateLinkedTokenSource(streamBudget.Token)' in stream_budget_section, 'B02_STREAM_LINE_LINK_HOLD'
+assert 'readWindow.CancelAfter(TimeSpan.FromMinutes(3));' in stream_budget_section, 'B02_STREAM_LINE_IDLE_TIMEOUT_HOLD'
+assert 'await reader.ReadLineAsync(readWindow.Token)' in stream_budget_section, 'B02_STREAM_READ_CANCELLABLE_HOLD'
+assert 'catch (OperationCanceledException) when (cancellation.IsCancellationRequested)' in cs and 'OLLAMA_TIMEOUT:' in cs, 'B02_STREAM_OWNER_STOP_VS_TIMEOUT_HOLD'
+print('B02 R8 SOURCE_ONLY: total 15m stream budget plus 3m idle budget and distinct owner STOP')
+
+
 # B02 native Ollama provider-restart corner case: a valid HTTP response can
 # fail during NDJSON consumption with IOException/JsonException or EOF before
 # done=true. Never mislabel SQLite failures or owner STOP as provider loss.

@@ -1515,14 +1515,19 @@ public partial class MainWindow : Window
             response.EnsureSuccessStatusCode();
             using var stream = await response.Content.ReadAsStreamAsync(cancellation.Token);
             using var reader = new StreamReader(stream);
+            // ResponseHeadersRead only times out request headers. Bound the entire
+            // NDJSON body so keepalive/blank lines cannot lock the chat forever.
+            // Owner STOP stays independent through the linked cancellation token.
+            using var streamBudget = CancellationTokenSource.CreateLinkedTokenSource(cancellation.Token);
+            streamBudget.CancelAfter(TimeSpan.FromMinutes(15));
             // B04: headers can arrive before an indefinitely stalled Ollama NDJSON body.
-            // Each line has a bounded wait; only the owner's token means STOP.
+            // Bound each line AND the stream; only owner cancellation means STOP.
             bool completed = false;
             long evalCount = 0, evalDuration = 0, promptCount = 0;
             while (true)
             {
                 cancellation.Token.ThrowIfCancellationRequested();
-                using var readWindow = CancellationTokenSource.CreateLinkedTokenSource(cancellation.Token);
+                using var readWindow = CancellationTokenSource.CreateLinkedTokenSource(streamBudget.Token);
                 readWindow.CancelAfter(TimeSpan.FromMinutes(3));
                 var line = await reader.ReadLineAsync(readWindow.Token);
                 if (line == null) break;
