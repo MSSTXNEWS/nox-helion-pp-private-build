@@ -349,6 +349,41 @@ public partial class MainWindow : Window
                 """);
             checks["real_webview2_keyboard_routes"] = keyboard == "true" ? "PASS" : "FAIL";
             if (keyboard != "true") throw new InvalidOperationException("WebView2 keyboard route/ARIA verification failed");
+            
+            // F03: dispatchEvent(new KeyboardEvent) bypasses Chromium's input
+            // pipeline. The CDP Input domain exercises the actual WebView2
+            // renderer keyboard, although it is not physical Windows SendInput.
+            var chromiumInputFocus = await Browser.CoreWebView2.ExecuteScriptAsync("""
+                (() => {
+                  const first = document.querySelector('button.core[data-route="consciousness"]');
+                  if (!first) return false;
+                  first.click();
+                  first.focus();
+                  return document.activeElement === first &&
+                    first.getAttribute('aria-current') === 'page';
+                })()
+                """);
+            if (chromiumInputFocus != "true")
+                throw new InvalidOperationException("NOX_F03_CHROMIUM_INPUT_INITIAL_FOCUS_HOLD");
+            await Browser.CoreWebView2.CallDevToolsProtocolMethodAsync(
+                "Input.dispatchKeyEvent",
+                """{"type":"rawKeyDown","key":"ArrowRight","code":"ArrowRight","windowsVirtualKeyCode":39,"nativeVirtualKeyCode":39,"modifiers":0}""");
+            await Browser.CoreWebView2.CallDevToolsProtocolMethodAsync(
+                "Input.dispatchKeyEvent",
+                """{"type":"keyUp","key":"ArrowRight","code":"ArrowRight","windowsVirtualKeyCode":39,"nativeVirtualKeyCode":39,"modifiers":0}""");
+            var chromiumKeyboard = await Browser.CoreWebView2.ExecuteScriptAsync("""
+                (() => {
+                  const atlas = document.querySelector('button.core[data-route="atlas"]');
+                  const panel = document.querySelector('.panel[data-panel="atlas"]');
+                  const current = document.querySelectorAll('button.core[aria-current="page"]');
+                  return !!atlas && document.activeElement === atlas &&
+                    current.length === 1 && current[0] === atlas &&
+                    !!panel?.classList.contains('active');
+                })()
+                """);
+            if (chromiumKeyboard != "true")
+                throw new InvalidOperationException("NOX_F03_CHROMIUM_INPUT_KEYBOARD_ROUTE_HOLD");
+            checks["f03_webview2_chromium_input_keyboard"] = "PASS";
 
 
             // D01: physically execute all five original quick buttons in the
@@ -792,6 +827,7 @@ public partial class MainWindow : Window
                           "d01_five_quick_native_routes", "d01_five_quick_windows_uia",
                           "d01_five_quick_compact_320_390_800",
                           "f03_compact_native_coreid_focus_320_390_800",
+                          "f03_webview2_chromium_input_keyboard",
                           "f03_webview2_injected_gpu_context_fallback",
                           "f03_webview2_emulated_reduced_motion",
                           "settings_windows_uia_host", "settings_webview2_accessible_controls",

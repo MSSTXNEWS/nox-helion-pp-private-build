@@ -167,4 +167,10 @@ assert.match(native, /f03_webview2_emulated_reduced_motion"\] = "PASS"/,
   "F03_REAL_WEBVIEW2_EMULATED_REDUCED_MEDIA_RECEIPT_MISSING");
 assert.match(native, /CallDevToolsProtocolMethodAsync\(/,
   "F03_EDGE_WEBVIEW2_REDUCED_MEDIA_NOT_EMULATED");
+assert.match(native, /"Input\.dispatchKeyEvent"/,
+  "F03_CHROMIUM_INPUT_DISPATCH_NOT_PRESENT");
+assert.match(native, /checks\["f03_webview2_chromium_input_keyboard"\] = "PASS";/,
+  "F03_CHROMIUM_INPUT_CHECKPOINT_MISSING");
+assert.match(native, /"f03_webview2_chromium_input_keyboard",/,
+  "F03_CHROMIUM_INPUT_REQUIRED_GATE_MISSING");
 console.log("F03 R8 SOURCE_ONLY PASS: 8 routes × 2 layouts, native IPC mapping, notes refresh, keyboard, ARIA, scroll");
