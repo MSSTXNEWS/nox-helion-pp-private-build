@@ -937,7 +937,7 @@ public partial class MainWindow : Window
                 case "history": Send("history", ReadHistory()); break;
                 case "notes.list": Send("notes", ReadNotes()); break;
                 case "notes.add": HandleNoteAdd(Text("title"), Text("content"), Text("requestId")); break;
-                case "notes.delete": DeleteNote(request.GetProperty("id").GetInt64()); Send("notes", ReadNotes()); break;
+                case "notes.delete": HandleNoteDelete(request.TryGetProperty("id", out var idField) && idField.ValueKind == JsonValueKind.Number && idField.TryGetInt64(out var noteId) ? noteId : 0, Text("requestId")); break;
                 case "feedback": SaveFeedback(request.GetProperty("rating").GetInt32(), Text("answer")); Send("notice", "Оценка сохранена локально; это не обучение весов."); break;
                 case "backup": BackupLocalDatabase(); break;
                 case "model.select": await HandleModelSelect(Text("model"), Text("requestId")); break;
@@ -1627,13 +1627,58 @@ public partial class MainWindow : Window
         if (id <= 0) throw new InvalidOperationException("NOX_NOTE_ROWID_HOLD");
         return id;
     }
-    private void DeleteNote(long id)
+    // D05: no memory deletion without native owner approval and verified SQLite backup.
+    private void HandleNoteDelete(long id, string requestId)
     {
-        if (id <= 0) throw new ArgumentException("Invalid note ID");
-        using var db = OpenDatabase(); using var cmd = db.CreateCommand();
-        cmd.CommandText = "DELETE FROM memory_notes WHERE id=$id AND persona=$persona";
-        cmd.Parameters.AddWithValue("$persona", ActivePersona());
-        cmd.Parameters.AddWithValue("$id",id);cmd.ExecuteNonQuery();
+        if (!ValidWriteRequestId(requestId) || id <= 0 || selfTestRequested) {
+            Send("notes.delete.denied", new { requestId, id, reason = "NOX_NOTE_DELETE_OWNER_HOLD" });
+            return;
+        }
+        string persona = ActivePersona();
+        try {
+            using var db = OpenDatabase();
+            using (var exists = db.CreateCommand()) {
+                exists.CommandText = "SELECT COUNT(*) FROM memory_notes WHERE id=$id AND persona=$persona";
+                exists.Parameters.AddWithValue("$id", id);
+                exists.Parameters.AddWithValue("$persona", persona);
+                if (Convert.ToInt64(exists.ExecuteScalar()) != 1) {
+                    Send("notes.delete.denied", new { requestId, id, reason = "NOX_NOTE_DELETE_NOT_OWNED_HOLD" });
+                    return;
+                }
+            }
+            var consent = MessageBox.Show(this,
+                "Удалить локальную заметку после резервной копии SQLite с SHA-256?",
+                "NOX · owner consent", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No);
+            if (consent != MessageBoxResult.Yes) {
+                Send("notes.delete.denied", new { requestId, id, reason = "NOX_NOTE_DELETE_DECLINED" });
+                return;
+            }
+            if (!string.Equals(persona, ActivePersona(), StringComparison.Ordinal))
+                throw new InvalidOperationException("NOX_NOTE_DELETE_PERSONA_CHANGED_HOLD");
+            CheckpointSqlite(db, "PRE_NOTE_DELETE");
+            using (var tx = db.BeginTransaction()) {
+                using var cmd = db.CreateCommand();
+                cmd.Transaction = tx;
+                cmd.CommandText = "DELETE FROM memory_notes WHERE id=$id AND persona=$persona";
+                cmd.Parameters.AddWithValue("$id", id);
+                cmd.Parameters.AddWithValue("$persona", persona);
+                if (cmd.ExecuteNonQuery() != 1) throw new InvalidOperationException("NOX_NOTE_DELETE_WRITE_HOLD");
+                tx.Commit();
+            }
+            using (var readDb = OpenDatabase())
+            using (var check = readDb.CreateCommand()) {
+                check.CommandText = "SELECT COUNT(*) FROM memory_notes WHERE id=$id AND persona=$persona";
+                check.Parameters.AddWithValue("$id", id);
+                check.Parameters.AddWithValue("$persona", persona);
+                if (Convert.ToInt64(check.ExecuteScalar()) != 0)
+                    throw new InvalidOperationException("NOX_NOTE_DELETE_READBACK_HOLD");
+            }
+            Send("notes", ReadNotes());
+            Send("notes.delete.receipt", new { requestId, id, saved = true, backupVerified = true });
+        }
+        catch (Exception) {
+            Send("notes.delete.denied", new { requestId, id, reason = "NOX_NOTE_DELETE_BACKUP_OR_SQLITE_HOLD" });
+        }
     }
     private void SaveFeedback(int rating,string answer)
     {

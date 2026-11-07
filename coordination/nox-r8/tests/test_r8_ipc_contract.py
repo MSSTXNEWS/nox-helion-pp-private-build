@@ -197,3 +197,24 @@ for fragment in ("pendingModel={requestId,model}", "if(post('model.select',{mode
     assert fragment in html, "D05_MODEL_WEBVIEW_OWNER_ACK_HOLD " + fragment
 assert "post('model.select',{model});" not in html, "D05_MODEL_UNOWNED_DISPATCH_HOLD"
 print('D05 R8 MODEL SELECT SOURCE_ONLY: native owner request/SQLite readback/ack/denial PASS; owner Windows NOT_TESTED')
+
+# D05 NOTE DELETE NO-LOSS: independent SQLite readback after an actual owner
+# confirmation and verified SHA snapshot, with exact WebView2 request ID.
+note_delete = cs.split('private void HandleNoteDelete(',1)[1].split('private void SaveFeedback(',1)[0]
+for marker in ('ValidWriteRequestId(requestId)', 'selfTestRequested', 'MessageBoxButton.YesNo',
+               'MessageBoxResult.No', 'CheckpointSqlite(db, "PRE_NOTE_DELETE")',
+               'DELETE FROM memory_notes WHERE id=$id AND persona=$persona',
+               'Send("notes.delete.receipt"', 'Send("notes.delete.denied"'):
+    assert marker in note_delete, 'D05_NOTE_DELETE_SAFETY_HOLD: '+marker
+assert note_delete.index('MessageBox.Show') < note_delete.index('CheckpointSqlite(db, "PRE_NOTE_DELETE")') < note_delete.index('cmd.ExecuteNonQuery()') < note_delete.index('tx.Commit();') < note_delete.index('using (var readDb = OpenDatabase())') < note_delete.index('Send("notes.delete.receipt"'), 'D05_NOTE_DELETE_ACK_ORDER_HOLD'
+assert 'case "notes.delete": HandleNoteDelete(' in cs
+for marker in ("pendingNoteDelete={requestId,id:n.id,button:b}", "post('notes.delete',{id:n.id,requestId})", "case 'notes.delete.receipt':", "case 'notes.delete.denied':", "v?.requestId===pendingNoteDelete.requestId&&v?.id===pendingNoteDelete.id"):
+    assert marker in html, 'D05_NOTE_DELETE_OWNER_UI_HOLD: '+marker
+import sqlite3
+with sqlite3.connect(':memory:') as conn:
+    conn.execute('CREATE TABLE memory_notes(id INTEGER PRIMARY KEY, persona TEXT NOT NULL)')
+    conn.executemany('INSERT INTO memory_notes(id,persona) VALUES(?,?)',[(10,'KV'),(20,'LA')])
+    assert conn.execute('DELETE FROM memory_notes WHERE id=$id AND persona=$persona', {'id':20,'persona':'KV'}).rowcount == 0
+    assert conn.execute('DELETE FROM memory_notes WHERE id=$id AND persona=$persona', {'id':10,'persona':'KV'}).rowcount == 1
+    assert conn.execute('SELECT id FROM memory_notes').fetchall()==[(20,)]
+print('D05 NOTE DELETE SOURCE_ONLY: consent, backup, owner Persona, commit/readback, request-ID receipt PASS')
