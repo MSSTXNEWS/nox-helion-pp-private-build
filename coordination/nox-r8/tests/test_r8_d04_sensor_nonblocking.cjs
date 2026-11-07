@@ -18,6 +18,9 @@ check(method[0].includes('Task.Run(GetGpuStatus)'),'nvidia-smi runs off UI dispa
 check(method[0].includes('Send("system", GetSystemState(gpu))'),'real sensor snapshot published through native IPC');
 check(method[0].includes('sensorReadLock.Release()'),'polling lock released on all paths');
 check(method[0].includes('Dispatcher.HasShutdownStarted'),'closing WebView2 never receives queued telemetry');
-check(source.includes('gpu = gpuSnapshot ?? GetGpuStatus(),'),'real GPU sensor retained without synthetic telemetry');
+check(source.includes('gpu = gpuSnapshot,')&&source.includes('private object GetGpuStatus()'),'real GPU sensor retained without synchronous fallback');
 check(source.includes('case "stop":')&&source.includes('case "chat":'),'original STOP/chat routes preserved');
+check(source.includes('private object GetSystemState(object gpuSnapshot)'),'sensor status requires precollected off-UI GPU snapshot');
+check(!source.includes('gpu = gpuSnapshot ?? GetGpuStatus(),'),'sensor status cannot fall through to synchronous nvidia-smi');
+check((source.match(/\bGetGpuStatus\b/g)||[]).length===2,'only background call and GPU sensor method remain');
 console.log('D04 sensor nonblocking SOURCE_ONLY contract PASS; .NET/Windows/owner-GPU NOT_TESTED');

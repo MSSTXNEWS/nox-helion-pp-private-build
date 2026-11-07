@@ -1770,7 +1770,7 @@ public partial class MainWindow : Window
         finally { sensorReadLock.Release(); }
     }
 
-    private object GetSystemState(object? gpuSnapshot = null)
+    private object GetSystemState(object gpuSnapshot)
     {
         using var proc = Process.GetCurrentProcess();
         return new {
@@ -1778,7 +1778,7 @@ public partial class MainWindow : Window
             model = CurrentModel,
             endpoint = Api,
             processMemoryMb = Math.Round(proc.WorkingSet64 / 1048576.0, 1),
-            gpu = gpuSnapshot ?? GetGpuStatus(),
+            gpu = gpuSnapshot,
             release = "NOX_HELION_R5_FUNCTIONAL_BUILD",
             knowledge = knowledge.Stats(),
             runtime = Environment.Version.ToString(),
