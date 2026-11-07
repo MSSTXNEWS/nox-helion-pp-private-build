@@ -1,0 +1,52 @@
+<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>NOX HELION · Единое ядро</title>
+<style>
+:root{color-scheme:dark;--cyan:#81d6e0;--gold:#f3c98b;--text:#e7ecf3;--line:#2d5162}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 50% 20%,#203b48 0%,#071420 30%,#020810 75%);color:var(--text);font-family:Segoe UI,Arial,sans-serif;min-height:100vh}
+.wrap{max-width:1180px;margin:auto;padding:20px}.top{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:18px;gap:14px}
+h1{color:var(--gold);font-size:19px;letter-spacing:.3em;font-weight:400;margin:0}.sub{color:#9bb3be;font-size:12px;line-height:1.5}a{color:var(--cyan);text-decoration:none}
+.grid{display:grid;grid-template-columns:minmax(300px,1.8fr) minmax(230px,1fr);gap:18px;margin-top:18px}
+.panel{background:#081622e8;border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:0 16px 50px #0006}
+.chatlog{min-height:350px;max-height:58vh;overflow-y:auto;display:flex;flex-direction:column;gap:14px;padding:9px}
+.msg{max-width:87%;border:1px solid #335469;background:#112534;padding:13px;border-radius:13px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere;font-size:14px}
+.msg.user{align-self:end;border-color:#8b7651;background:#29241f}.msg.assistant{align-self:start}
+.msg i{display:block;font-size:10px;color:var(--gold);font-style:normal;letter-spacing:.12em;margin-bottom:7px}
+.inputrow{display:flex;gap:9px;margin-top:14px}textarea{flex:1;resize:vertical;min-height:64px;background:#030b13;color:white;border:1px solid #466172;border-radius:9px;padding:11px;font:inherit}
+select,button{background:#142735;border:1px solid #507184;color:white;border-radius:8px;padding:11px;font:inherit;cursor:pointer}button:hover{border-color:var(--gold)}button:disabled{opacity:.45;cursor:not-allowed}
+.controls{display:flex;gap:9px;flex-wrap:wrap;justify-content:space-between;align-items:center;margin-top:12px}.k{color:#87a6b4}.row{display:flex;align-items:flex-start;justify-content:space-between;gap:15px;border-bottom:1px solid #37556666;padding:12px 0;font-size:12px}
+.row strong{text-align:right;overflow-wrap:anywhere;max-width:63%}.badge{display:inline-block;border:1px solid #7ad4c260;color:#8fdec8;border-radius:20px;padding:7px 11px;font-size:10px;letter-spacing:.1em}
+.warning{border-left:3px solid var(--gold);background:#1f1c18;padding:12px;margin-top:15px;color:#dec8ac;font-size:12px;line-height:1.55}
+@media(max-width:760px){.grid{grid-template-columns:1fr}.wrap{padding:12px}.msg{max-width:100%}}
+</style></head><body><main class="wrap">
+<header class="top"><div><h1>✦ NOX HELION</h1><div class="sub">ONE IDENTITY · LOCAL MULTI-MODEL ROUTER · UNIFIED CHAT</div></div><div><a href="/">← FORGE</a> <span class="badge" id="state">ОЖИДАНИЕ</span></div></header>
+<div class="grid"><section class="panel">
+<h2 style="font-size:16px;font-weight:500;color:var(--gold)">Единый чат NOX</h2>
+<p class="sub">Обращение к локальным моделям через одно имя и один интерфейс. Модель выбирается автоматически по типу задачи.</p>
+<div class="chatlog" id="log" role="log" aria-live="polite"><div class="msg assistant"><i>NOX</i>Единый интерфейс подключается к локальному Ollama. Расскажи, чем помочь.</div></div>
+<form id="form"><div class="inputrow"><textarea id="message" maxlength="8000" placeholder="Напиши NOX..." required></textarea></div>
+<div class="controls"><label class="sub">Назначение <select id="task"><option value="general">Общий интеллект</option><option value="code">Программирование</option></select></label>
+<div><button id="clear" type="button">Очистить текущий диалог</button> <button id="send" type="submit">Отправить NOX</button></div></div></form>
+<div class="warning">Общий маршрутизатор работает с уже установленными локальными моделями. Память этой беседы хранится только в текущей вкладке. Запись в каноническую S03 и применение LoRA к рабочей модели пока не подключены и не имитируются.</div>
+</section><aside class="panel"><h2 style="font-size:16px;font-weight:500;color:var(--gold)">Самомодель и компоненты</h2>
+<div class="row"><span class="k">Идентичность</span><strong>NOX HELION</strong></div>
+<div class="row"><span class="k">Основная модель</span><strong id="main">—</strong></div>
+<div class="row"><span class="k">Модель кода</span><strong id="coding">—</strong></div>
+<div class="row"><span class="k">Моделей в Ollama</span><strong id="count">—</strong></div>
+<div class="row"><span class="k">Последний LoRA шаг</span><strong id="checkpoint">—</strong></div>
+<div class="row"><span class="k">Память S03</span><strong id="memory">Не проверена</strong></div>
+<div class="row"><span class="k">Запись памяти из чата</span><strong>Не подключена</strong></div>
+<div class="row"><span class="k">Применение LoRA</span><strong>Не подключено</strong></div>
+<div class="row"><span class="k">Сознание</span><strong>Не доказано</strong></div>
+<h3 class="sub">Восемь CoreID</h3><p id="cores" class="sub">—</p>
+<p class="sub" id="error" aria-live="polite"></p>
+<button type="button" id="refresh">↻ Проверить ядро</button>
+</aside></div>
+</main><script>
+"use strict";
+const $=id=>document.getElementById(id),hist=[];
+function add(role,content){const div=document.createElement("div");div.className="msg "+role;const cap=document.createElement("i");cap.textContent=role==="user"?"ТЫ":"NOX HELION";div.append(cap,document.createTextNode(content));$("log").appendChild(div);$("log").scrollTop=$("log").scrollHeight}
+async function status(){try{const r=await fetch("/api/nox/status",{cache:"no-store"});if(!r.ok)throw Error("API "+r.status);const s=await r.json();$("state").textContent=s.primary_model?"Единый маршрутизатор готов":"Ollama недоступна";$("main").textContent=s.primary_model||"Н/Д";$("coding").textContent=s.code_model||"Н/Д";$("count").textContent=s.installed_models?.length??"—";$("checkpoint").textContent=s.last_lora_checkpoint?.step??"—";$("memory").textContent=s.native_memory?.some(m=>m.reachable)?"Найдена · только чтение":"Не подключена";$("cores").textContent=s.core_ids.join(" · ");$("error").textContent=s.error||""}catch(e){$("state").textContent="НЕ ПОДКЛЮЧЁН";$("error").textContent=e.message}}
+$("form").addEventListener("submit",async e=>{e.preventDefault();const message=$("message").value.trim();if(!message)return;$("message").value="";add("user",message);$("send").disabled=true;$("state").textContent="NOX думает...";
+try{const r=await fetch("/api/nox/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message,task:$("task").value,history:hist.slice(-24)})});const data=await r.json();if(!r.ok)throw Error(data.error||"HTTP "+r.status);add("assistant",data.answer);hist.push({role:"user",content:message},{role:"assistant",content:data.answer});$("state").textContent="МОДЕЛЬ "+data.model}catch(ex){add("assistant","Ошибка соединения: "+ex.message);$("state").textContent="ОШИБКА"}finally{$("send").disabled=false}});
+$("clear").addEventListener("click",()=>{hist.length=0;$("log").replaceChildren();add("assistant","Текущая история вкладки очищена.")});
+$("refresh").addEventListener("click",status);status();
+</script></body></html>
