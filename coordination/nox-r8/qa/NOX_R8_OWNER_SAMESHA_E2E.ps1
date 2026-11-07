@@ -105,7 +105,8 @@ try {
           [int]$u.pid -ne $uiProcess.Id -or [string]$u.runId -cne $id -or
           !$u.wpfWebView2Accepted -or
           $uiStamp -lt $uiStarted -or $uiStamp -gt [DateTimeOffset]::UtcNow.AddMinutes(2) -or
-          ![string]::Equals([string]$u.exeSha256,$hash,[StringComparison]::OrdinalIgnoreCase)) {
+          ![string]::Equals([string]$u.exeSha256,$hash,[StringComparison]::OrdinalIgnoreCase) -or
+          ![string]::Equals([IO.Path]::GetFullPath([string]$u.exe),$exe,[StringComparison]::OrdinalIgnoreCase)) {
         throw 'NATIVE_UI_IDENTITY_TIMESTAMP_OR_SHA_HOLD'
       }
       $mustPass=if($Restart) {
