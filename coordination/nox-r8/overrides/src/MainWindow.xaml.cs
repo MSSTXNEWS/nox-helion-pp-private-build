@@ -36,6 +36,10 @@ public partial class MainWindow : Window
     // or insert a duplicate SQLite conversation. Bounded to this WPF process.
     private readonly HashSet<string> recentlyHandledChatIdSet = new(StringComparer.Ordinal);
     private readonly Queue<string> recentlyHandledChatIds = new();
+    // D05: duplicate deliveries of one ATLAS add owner request may not insert
+    // duplicate SQLite rows within this process; ambiguous writes remain HOLD.
+    private readonly HashSet<string> recentlyHandledTaskAddIdSet = new(StringComparer.Ordinal);
+    private readonly Queue<string> recentlyHandledTaskAddIds = new();
     private CancellationTokenSource? activeModelPull;
     private string? activeModelPullRequestId;
     private string? activeModelPullName;
@@ -2383,6 +2387,16 @@ public partial class MainWindow : Window
             Send("tasks.add.denied", new { requestId, reason = "NOX_TASK_REQUEST_ID_HOLD" });
             return;
         }
+        // Reserve the exact WebView2 request before any SQLite INSERT.
+        // Lost receipt / uncertain COMMIT must never be automatically replayed.
+        if (!recentlyHandledTaskAddIdSet.Add(requestId)) {
+            Send("tasks.add.uncertain", new { requestId, reason = "NOX_TASK_ADD_REQUEST_REPLAY_HOLD" });
+            RefreshTasksBestEffort();
+            return;
+        }
+        recentlyHandledTaskAddIds.Enqueue(requestId);
+        if (recentlyHandledTaskAddIds.Count > 2048)
+            recentlyHandledTaskAddIdSet.Remove(recentlyHandledTaskAddIds.Dequeue());
         long id;
         try { id = AddTask(title); }
         catch (TaskAddPersistenceUnknownException ex) {
