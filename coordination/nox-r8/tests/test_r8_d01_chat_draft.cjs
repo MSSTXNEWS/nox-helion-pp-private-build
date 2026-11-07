@@ -683,3 +683,36 @@ console.log('D01 SOURCE_ONLY PASS: Qwen failed/STOP retry with original input, S
   assert.equal(foreign.shown.length,0,'D01_FOREIGN_CHAT_RECEIPT_EXPOSED');
   console.log('D01 SOURCE_ONLY PASS: previous PersonaID Qwen error quarantined; current/native errors visible');
 }
+
+
+/* D01_STOP_ONCE_PER_OWNER: original production WebView2 STOP callback, not a mock app.
+   SOURCE_ONLY: verifies one STOP per requestId, native dispatch retry, next owner,
+   idle no-op and terminal reset. Windows Qwen STREAM/STOP E2E remains open. */
+{
+ const start=html.indexOf("$('stop').onclick=()=>{");
+ const end=html.indexOf(";$('prompt').onkeydown=",start);
+ assert.ok(start>=0&&end>start,'D01_REAL_WEBVIEW2_STOP_HANDLER_MISSING');
+ const source=html.slice(start,end)+";";
+ const run=vm.runInNewContext(`(function(){
+   let busy=true,activeChatId='owner_12345678',pendingStopId=null;
+   const button={},$=id=>id==='stop'?button:null;const calls=[];let fail=false;
+   const post=(type,v)=>{if(fail)return false;calls.push([type,v.requestId]);return true;};
+   ${source}
+   button.onclick();button.onclick();const first=calls.length;
+   activeChatId='owner_87654321';button.onclick();const next=calls.length;
+   activeChatId='fail_owner';fail=true;button.onclick();const failedPending=pendingStopId;
+   fail=false;button.onclick();const retried=calls.length;
+   busy=false;button.onclick();return {first,next,failedPending,retried,idle:calls.length,calls};
+ })()`, {}, {timeout:1500});
+ assert.equal(run.first,1,'D01_DUPLICATE_STOP_FOR_SAME_OWNER');
+ assert.equal(run.next,2,'D01_NEXT_CHAT_OWNER_STOP_LOST');
+ assert.equal(run.failedPending,null,'D01_STOP_DISPATCH_FAILURE_NOT_RETRYABLE');
+ assert.equal(run.retried,3,'D01_STOP_RETRY_LOST');
+ assert.equal(run.idle,3,'D01_STOP_SENT_WHILE_IDLE');
+ assert.deepEqual(Array.from(run.calls,x=>[x.type,x.requestId]),[
+   ['stop','owner_12345678'],['stop','owner_87654321'],['stop','fail_owner']
+ ]);
+ assert.ok(html.includes('pendingChatDraft=null;busy=false;activeChatId=null;pendingStopId=null;'),
+   'D01_TERMINAL_STOP_LEASE_NOT_CLEARED');
+ console.log('D01 SOURCE_ONLY PASS: STOP owner lease/dedup/retry');
+}
