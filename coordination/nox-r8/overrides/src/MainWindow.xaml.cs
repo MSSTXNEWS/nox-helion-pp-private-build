@@ -1244,6 +1244,50 @@ public partial class MainWindow : Window
             throw new InvalidOperationException("NOX_F01_BACKUP_LOCKED_HANDLE_HOLD", ex);
         }
 
+        // Negative Windows lock control: a held shared-read snapshot MUST
+        // reject an exclusive open. A normal unlocked snapshot alone cannot
+        // prove our locked-file guard would reject a genuinely busy file.
+        bool blockedWhileHeld = false;
+        using (var held = new FileStream(snapshot, FileMode.Open, FileAccess.Read, FileShare.Read))
+        {
+            try
+            {
+                using var shouldFail = new FileStream(snapshot, FileMode.Open, FileAccess.Read, FileShare.None);
+            }
+            catch (IOException) { blockedWhileHeld = true; }
+        }
+        if (!blockedWhileHeld)
+            throw new InvalidOperationException("NOX_F01_LOCKED_SNAPSHOT_ACCEPTED_HOLD");
+        // Independent negative control for the companion SHA manifest.
+        // Merely reopening an unlocked manifest does not prove its lock gate
+        // fails closed when another Windows handle is still sharing reads.
+        bool manifestBlockedWhileHeld = false;
+        using (var heldManifest = new FileStream(snapshot + ".sha256", FileMode.Open, FileAccess.Read, FileShare.Read))
+        {
+            try
+            {
+                using var mustFailManifest = new FileStream(snapshot + ".sha256", FileMode.Open, FileAccess.Read, FileShare.None);
+            }
+            catch (IOException) { manifestBlockedWhileHeld = true; }
+        }
+        if (!manifestBlockedWhileHeld)
+            throw new InvalidOperationException("NOX_F01_LOCKED_MANIFEST_ACCEPTED_HOLD");
+        // The fixture must release its own lock. Keep the owner/live DB untouched.
+        try
+        {
+            using var reopened = new FileStream(snapshot, FileMode.Open, FileAccess.Read, FileShare.None);
+            if (reopened.Length <= 0) throw new InvalidOperationException("NOX_F01_REOPEN_EMPTY_HOLD");
+            // The SHA manifest belongs to the same no-loss backup set. A
+            // lingering manifest writer must also fail Windows acceptance.
+            using var manifestExclusive = new FileStream(snapshot + ".sha256", FileMode.Open, FileAccess.Read, FileShare.None);
+            if (manifestExclusive.Length <= 0)
+                throw new InvalidOperationException("NOX_F01_MANIFEST_EMPTY_HOLD");
+        }
+        catch (IOException ex)
+        {
+            throw new InvalidOperationException("NOX_F01_BACKUP_OR_MANIFEST_LOCKED_HOLD", ex);
+        }
+
         // B03: force a partial Persona migration on the already-isolated native
         // UI-smoke database, then prove that the *real C# migration* recreates the
         // index and checkpoints the pre-repair state. Never touch owner SQLite.

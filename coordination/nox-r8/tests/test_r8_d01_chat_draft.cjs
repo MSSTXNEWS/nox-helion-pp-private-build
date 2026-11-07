@@ -572,3 +572,58 @@ console.log('D01 SOURCE_ONLY PASS: Qwen failed/STOP retry with original input, S
  m({persona:'AM'});assert.equal(clears,5,'B06_CROSS_PERSONA_PRIVACY_NOT_CLEARED');assert.equal(cancels,1,'B06_CROSS_PERSONA_SPEECH_NOT_STOPPED');
  console.log('B06 SOURCE_ONLY: same PersonaID protects chat, cross-PersonaID clears');
 }
+
+
+// D01_SETTINGS_HYDRATION_PERSONA_ISOLATION: exact production handler in V8.
+// A native settings snapshot can be the only PersonaID transition receipt.
+{
+  const start=html.indexOf('function applyCommittedSettings(v){');
+  const end=html.indexOf('\nfunction saveSetting(key,value){',start);
+  assert.ok(start>=0&&end>start,'D01_SQLITE_HYDRATION_SOURCE_MISSING');
+  const src=html.slice(start,end);
+  const run=(target,owner)=>vm.runInNewContext(`
+    let visibleDraftPersona=owner,lastAnswer='KV_PRIVATE',responseBox={live:true},
+        committedSettings={},busy=true,activeChatId='kv_request';
+    const cleared=[],sent=[],canceled=[],nodes={};
+    const $=id=>nodes[id]??(nodes[id]={value:'',checked:false,
+      replaceChildren(){cleared.push(id)},classList:{remove(){}}});
+    const window={noxVisual:{setMode(){},setEnergy(){}},speechSynthesis:true};
+    const speechSynthesis={cancel(){canceled.push(true)}};
+    const document={body:{classList:{toggle(){}}}};
+    function post(type,data){sent.push({type,data});}
+    function switchPersonaDrafts(next){if(!['KV','AM','LA','EV','KW'].includes(next))return false;
+      visibleDraftPersona=next;return true;}
+    ${src}
+    applyCommittedSettings({persona:target,performance:'BALANCED',motion:'on',context:'on'});
+    ({visibleDraftPersona,cleared,sent,canceled,lastAnswer,hasResponse:!!responseBox});
+  `,{target,owner},{timeout:1500});
+  const changed=run('AM','KV');
+  assert.equal(changed.visibleDraftPersona,'AM');
+  assert.deepEqual(Array.from(changed.cleared),
+    ['messages','history','notes','memoryResults','knowledgeResults'],
+    'D01_SQLITE_HYDRATION_PREVIOUS_PERSONA_PRIVATE_DATA');
+  assert.equal(changed.lastAnswer,'');
+  assert.equal(changed.hasResponse,false);
+  assert.equal(changed.canceled.length,1);
+  assert.deepEqual(Array.from(changed.sent.map(x=>x.type)),
+    ['stop','history','notes.list','knowledge.stats']);
+  const same=run('KV','KV');
+  assert.equal(same.lastAnswer,'KV_PRIVATE');
+  assert.equal(same.cleared.length,0);
+  assert.equal(same.sent.length,0);
+  const startToken=html.indexOf("case 'token':");
+  const endToken=html.indexOf("\ncase 'metrics':",startToken);
+  assert.ok(startToken>=0&&endToken>startToken);
+  const tokenHandler=html.slice(startToken,endToken);
+  const token=vm.runInNewContext(`
+    let pendingChatDraft={persona:'KV'},visibleDraftPersona='AM',lastAnswer='AM_PRIVATE',
+        responseBox=null,v={text:'KV_LEAK'};
+    switch('token'){${tokenHandler}}
+    lastAnswer;
+  `,{},{timeout:1500});
+  assert.equal(token,'AM_PRIVATE','D01_STALE_PERSONA_QWEN_TOKEN_LEAK');
+  for(const type of ['status','metrics'])assert.ok(
+    html.includes("case '"+type+"':if(pendingChatDraft?.persona!==visibleDraftPersona)break;"),
+    'D01_STALE_PERSONA_'+type.toUpperCase()+'_GUARD_MISSING');
+  console.log('D01 SOURCE_ONLY PASS: SQLite hydration isolates PersonaID, quarantines stale stream, same PersonaID no-loss');
+}

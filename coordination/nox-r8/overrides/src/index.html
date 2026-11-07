@@ -461,7 +461,21 @@ $('learnCancel').onclick=()=>{
 // persistence until an independent native COMMIT readback and matching ACK.
 function setSettingsBusy(value){for(const id of ['savePersona','saveMotion','savePerformance','saveContext','maxMode'])$(id).disabled=value;}
 function applyCommittedSettings(v){
-  switchPersonaDrafts(v?.persona||'KV');
+  // Reconcile SQLite persona on initial hydration and native event readback.
+  // Draft ownership is tracked separately from settings receipt timing.
+  const nextPersona=v?.persona||'KV';
+  if(nextPersona!==visibleDraftPersona){
+    if(!switchPersonaDrafts(nextPersona))return;
+    // SQLite hydration can change the visible PersonaID without a separate
+    // persona.changed receipt. Do not retain the previous owner's CHAT/ATLAS.
+    for(const id of ['messages','history','notes','memoryResults','knowledgeResults'])$(id).replaceChildren();
+    lastAnswer='';responseBox=null;
+    if('speechSynthesis' in window)speechSynthesis.cancel();
+    if(busy&&activeChatId)post('stop',{requestId:activeChatId});
+    $('generation').classList.remove('on');window.noxVisual?.setEnergy(false);
+    // Initial native history/notes may have arrived before the SQLite settings.
+    post('history');post('notes.list');post('knowledge.stats');
+  }
   committedSettings={...v};
   $('persona').value=v?.persona||'KV';$('performance').value=v?.performance||'BALANCED';
   $('useContext').checked=v?.context!=='off';$('reduceMotion').checked=v?.motion==='off';
@@ -505,9 +519,9 @@ window.chrome?.webview?.addEventListener('message',e=>{const m=e.data,v=m.value;
 if(['status','token','metrics','complete'].includes(m.type) && (!v || v.requestId!==activeChatId))return;
 if(m.type==='error' && v && typeof v==='object' && v.requestId && v.requestId!==activeChatId)return;
 switch(m.type){
-case 'status':$('status').textContent=v.state;$('generation').classList.toggle('on',v.state==='GENERATING');window.noxVisual?.setEnergy(v.state==='GENERATING');break;
-case 'token':lastAnswer+=v.text;if(responseBox)responseBox.lastChild.textContent+=v.text;break;
-case 'metrics':$('inferenceMetrics').textContent=v?.measured?`QWEN · ${v.outputTokens} токенов · ${v.tokensPerSecond} ток/с · prompt ${v.promptTokens}`:'Модель не сообщила достоверные метрики';break;
+case 'status':if(pendingChatDraft?.persona!==visibleDraftPersona)break;$('status').textContent=v.state;$('generation').classList.toggle('on',v.state==='GENERATING');window.noxVisual?.setEnergy(v.state==='GENERATING');break;
+case 'token':if(pendingChatDraft?.persona!==visibleDraftPersona)break;lastAnswer+=v.text;if(responseBox)responseBox.lastChild.textContent+=v.text;break;
+case 'metrics':if(pendingChatDraft?.persona!==visibleDraftPersona)break;$('inferenceMetrics').textContent=v?.measured?`QWEN · ${v.outputTokens} токенов · ${v.tokensPerSecond} ток/с · prompt ${v.promptTokens}`:'Модель не сообщила достоверные метрики';break;
 case 'complete':{const retry=pendingChatDraft?.requestId===v?.requestId?pendingChatDraft:null;pendingChatDraft=null;busy=false;activeChatId=null;$('generation').classList.remove('on');window.noxVisual?.setEnergy(false);let restored=false;if(!v?.ok&&retry){if(retry.persona===visibleDraftPersona){if($('prompt').value===''){$('prompt').value=retry.raw;restored=true;}}else if(['KV','AM','LA','EV','KW'].includes(retry.persona)){const saved=personaDrafts.get(retry.persona)||{};if(!saved.prompt){personaDrafts.set(retry.persona,{...saved,prompt:retry.raw});restored=true;}}}if(v?.stopped){lastAnswer='';$('streamHint').textContent='Поток остановлен. Частичный ответ не сохранён.'+(restored?(retry.persona===visibleDraftPersona?' Запрос восстановлен.':' Запрос сохранён в исходной PersonaID.'):'');}else if(v?.sqliteUnknown===true){if(retry)uncertainChatKeys.add(uncertainChatKey(retry.persona,retry.raw));lastAnswer='';$('streamHint').textContent='SQLite мог сохранить ответ. Проверьте историю перед повторной отправкой.'+(restored?' Черновик восстановлен.':'');}else if(v?.ok)$('streamHint').textContent='Ответ завершён и сохранён в SQLite.';else{lastAnswer='';$('streamHint').textContent='Ответ не сохранён.'+(restored?(retry.persona===visibleDraftPersona?' Исходный запрос восстановлен.':' Исходный запрос сохранён в исходной PersonaID.'):' Новый черновик не изменён.');}break;}
 case 'error':$('status').textContent='ERROR';entry($('messages'),v&&typeof v==='object'?String(v.message||'NATIVE_ERROR'):String(v),'ERROR');/* Only the matching native complete may unlock a busy chat. */break;
 case 'health':{const s=v.online?(v.modelVisible?'QWEN ONLINE':'SERVER ONLINE / MODEL ABSENT'):'PROVIDER OFFLINE';$('status').textContent=s;$('hudModel').textContent=(v.model||'QWEN').split(':')[0].toUpperCase().slice(0,13);$('hudEngine').textContent=v.modelVisible?'ONLINE':v.online?'NO MODEL':'OFFLINE';$('visualLive').textContent=v.modelVisible?'LOCAL AI ONLINE':'AI NOT READY';$('visualLiveDot').classList.toggle('on',!!v.modelVisible);const out=JSON.stringify(v,null,2);$('health').textContent=out;$('overview').textContent=out;const picker=$('modelPicker');picker.replaceChildren();(v.models||[]).forEach(name=>{let op=document.createElement('option');op.value=name;op.textContent=name;picker.append(op)});if(v.model&&!pendingModel){committedModel=v.model;picker.value=v.model;}if(!v.models?.length){let op=document.createElement('option');op.textContent='Нет доступных моделей';picker.append(op)}break}
@@ -615,13 +629,22 @@ case 'knowledge.vuneo.unknown':{
      v?.reason!=='NOX_VUNEO_COMMIT_UNKNOWN_HOLD'||v?.backupVerified!==true)break;
   // Partial import may already exist: no automatic retry in this process.
   pendingVuneo=null;vuneoImportUncertain=true;$('vuneoImport').disabled=true;
-  $('vuneoImportStatus').textContent='NOX_VUNEO_COMMIT_UNKNOWN_HOLD: результат импорта неопределён; повтор заблокирован до перезапуска. Проверьте локальную SQLite и статистику.';
+  $('vuneoImportStatus').textContent='NOX_VUNEO_COMMIT_UNKNOWN_HOLD: результат импорта неопределён; повтор заблокирован до сверки SQLite. Проверьте локальную SQLite и статистику.';
   break;
 }
 case 'knowledge.vuneo.denied':{
   if(!pendingVuneo||v?.requestId!==pendingVuneo.requestId)break;
-  pendingVuneo=null;$('vuneoImport').disabled=false;
-  const reason=['OWNER_DECLINED','NOX_VUNEO_IMPORT_HOLD','NOX_VUNEO_REQUEST_ID_HOLD'].includes(v?.reason)?v.reason:'NOX_VUNEO_IMPORT_HOLD';
+  pendingVuneo=null;
+  // Read the durable native SQLite admission result, not a generic retryable denial.
+  // A journaled attempt or completed import cannot be retried after restart.
+  const allowed=['OWNER_DECLINED','NOX_VUNEO_IMPORT_HOLD','NOX_VUNEO_REQUEST_ID_HOLD',
+    'NOX_VUNEO_ALREADY_IMPORTED_HOLD','NOX_VUNEO_PREVIOUS_OUTCOME_REVIEW_HOLD',
+    'NOX_VUNEO_JOURNAL_READ_HOLD','NOX_VUNEO_REQUEST_LIMIT_HOLD','NOX_VUNEO_REPLAY_HOLD'];
+  const reason=allowed.includes(v?.reason)?v.reason:'NOX_VUNEO_IMPORT_HOLD';
+  const locked=['NOX_VUNEO_ALREADY_IMPORTED_HOLD','NOX_VUNEO_PREVIOUS_OUTCOME_REVIEW_HOLD',
+    'NOX_VUNEO_REQUEST_LIMIT_HOLD'].includes(reason);
+  if(locked)vuneoImportUncertain=true;
+  $('vuneoImport').disabled=vuneoImportUncertain;
   $('vuneoImportStatus').textContent=reason==='OWNER_DECLINED'?'Импорт отменён владельцем.':reason;
   break;
 }

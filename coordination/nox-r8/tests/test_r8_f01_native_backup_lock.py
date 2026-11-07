@@ -31,4 +31,6 @@ for x in (
     assert x in native, "F01_REAL_NATIVE_E2E_SOURCE_HOLD: "+x
 assert native.index('WaitForVisibleChatTokenAsync') < native.index("document.getElementById('stop').click()")
 assert native.index('NOX_F01_LATE_TOKEN_OR_PARTIAL_SQLITE_HOLD') < native.index('real_chat_after_http_stop_sqlite')
+for token in ("NOX_F01_LOCKED_SNAPSHOT_ACCEPTED_HOLD", "NOX_F01_LOCKED_MANIFEST_ACCEPTED_HOLD", "NOX_F01_BACKUP_OR_MANIFEST_LOCKED_HOLD"):
+    assert token in backup, "F01_NEGATIVE_LOCK_MISSING_HOLD:" + token
 print("F01_B06_NATIVE_BACKUP_AND_REAL_QWEN_STOP_ORACLE_SOURCE_ONLY_PASS_OWNER_NOT_TESTED")
