@@ -325,7 +325,7 @@ body.reduced .helion-fx{filter:none}body.reduced .core.active{animation:none}
 <script>
 'use strict';
 const $=id=>document.getElementById(id);const post=(type,data={})=>{const bridge=window.chrome?.webview;if(typeof bridge?.postMessage!=='function'){$('status').textContent='NATIVE BRIDGE OFFLINE';return false}try{bridge.postMessage({type,...data});return true}catch{$('status').textContent='NATIVE BRIDGE DISPATCH FAILED';return false}};
-let responseBox=null,lastAnswer='',busy=false,settingsDenial='',activeChatId=null,requestSequence=0,pendingTask=null,pendingNote=null,pendingNoteDelete=null,pendingTaskToggle=null,pendingModel=null,committedModel="",pendingSettings=null,committedSettings={},pendingVuneo=null;
+let responseBox=null,lastAnswer='',busy=false,settingsDenial='',activeChatId=null,requestSequence=0,pendingTask=null,pendingNote=null,pendingNoteDelete=null,pendingTaskToggle=null,pendingModel=null,committedModel="",pendingSettings=null,committedSettings={},pendingVuneo=null,pendingMemorySearch=null;
 let vuneoImportUncertain=false; // Fail closed after unknown SQLite import outcome.
 let noteAddUncertain=false; // A possibly committed INSERT requires manual review.
 let noteDeleteUncertain=false; // Do not retry an uncertain SQLite DELETE in this session.
@@ -389,7 +389,19 @@ $('vuneoImport').onclick=()=>{
     $('vuneoImportStatus').textContent='NOX_VUNEO_NATIVE_DISPATCH_HOLD';return false;
   }
   return true;
-};$('knowledgeSearch').onclick=()=>post('knowledge.search',{query:$('knowledgeQuery').value.trim()});$('knowledgeQuery').onkeydown=e=>{if(e.key==='Enter')$('knowledgeSearch').click()};$('memorySearch').onclick=()=>post('memory.search',{query:$('memoryQuery').value.trim()});$('memoryQuery').onkeydown=e=>{if(e.key==='Enter')$('memorySearch').click()};
+};$('knowledgeSearch').onclick=()=>post('knowledge.search',{query:$('knowledgeQuery').value.trim()});$('knowledgeQuery').onkeydown=e=>{if(e.key==='Enter')$('knowledgeSearch').click()};$('memorySearch').onclick=()=>{
+  if(!['KV','AM','LA','EV','KW'].includes(visiblePersona)){
+    $('memoryResults').textContent='NOX_MEMORY_PERSONA_NOT_READY_HOLD';return false;
+  }
+  const requestId=nextChatId();
+  pendingMemorySearch={requestId,persona:visiblePersona};
+  $('memoryResults').replaceChildren();
+  if(post('memory.search',{query:$('memoryQuery').value.trim(),requestId})===false){
+    pendingMemorySearch=null;$('memoryResults').textContent='NOX_MEMORY_NATIVE_DISPATCH_HOLD';
+    return false;
+  }
+  return true;
+};$('memoryQuery').onkeydown=e=>{if(e.key==='Enter')$('memorySearch').click()};
 $('maxMode').onclick=()=>{route('persona');if(pendingSettings)return;$('performance').value='MAX';saveSetting('performance','MAX');};
 $('saveModel').onclick=()=>{const model=$('modelPicker').value;if(!model||pendingModel)return;const requestId=nextChatId();pendingModel={requestId,model,previous:committedModel};$('saveModel').disabled=true;$('modelSelectStatus').textContent='Проверка локального тега и SQLite…';if(post('model.select',{model,requestId})===false){const previous=pendingModel.previous;pendingModel=null;$('saveModel').disabled=false;if(previous)$('modelPicker').value=previous;$('modelSelectStatus').textContent='Нет нативного соединения. Предыдущая модель сохранена.';}};$('pullModel').onclick=()=>{const model=$('modelToDownload').value.trim();if(!/^[a-zA-Z0-9][a-zA-Z0-9._/-]*:[a-zA-Z0-9._-]+$/.test(model)){$('downloadStatus').textContent='Укажи корректный тег модели';return}if(window.confirm('Загрузить модель '+model+'? Это использует диск и интернет.'))post('model.pull',{model})};$('cancelPull').onclick=()=>post('model.cancel');
 $('noteAdd').onclick=()=>{const title=$('noteTitle').value.trim(),content=$('noteText').value.trim();if(!title||!content||pendingNote||noteAddUncertain)return;const persona=visiblePersona;if(!['KV','AM','LA','EV','KW'].includes(persona)){$('status').textContent='NOX_NOTE_PERSONA_NOT_READY_HOLD';return;}const requestId=nextChatId();pendingNote={requestId,title,content,persona};$('noteAdd').disabled=true;if(post('notes.add',{title,content,persona,requestId})===false){pendingNote=null;$('noteAdd').disabled=false}};
@@ -430,6 +442,7 @@ case 'persona.changed':{
     $('noteText').value=draft?.text||'';
   }
   visiblePersona=nextPersona;
+  pendingMemorySearch=null; // Invalidate previous Persona search responses.
   // Fail closed immediately; a fresh WPF/SQLite history+notes read follows.
   $('messages').replaceChildren();$('history').replaceChildren();$('notes').replaceChildren();
   $('memoryResults').replaceChildren();$('knowledgeResults').replaceChildren();
@@ -490,7 +503,22 @@ case 'knowledge.vuneo.denied':{
 case 'knowledge.stats':$('knowledgeStats').textContent=`В SQLite: ${v?.documents??0} документов · ${v?.chunks??0} фрагментов`;break;
 case 'knowledge.imported':$('knowledgeStats').textContent=`Импортировано: ${v?.documents??0}; дублей: ${v?.skipped??0}; фрагментов: ${v?.chunks??0}`;post('knowledge.stats');break;
 case 'knowledge.results':{const box=$('knowledgeResults');box.replaceChildren();(v||[]).forEach(x=>entry(box,x.excerpt,x.title+' · '+x.source));if(!v?.length)box.textContent='Совпадений не найдено';break;}
-case 'memory':{const box=$('memoryResults');box.replaceChildren();(v||[]).forEach(x=>entry(box,x.prompt+'\n\n'+x.answer,x.timestamp));if(!v?.length)box.textContent='Совпадений нет';break}
+case 'memory':{
+  if(!pendingMemorySearch||!v||v.persona!==visiblePersona||
+     v.persona!==pendingMemorySearch.persona||
+     v.requestId!==pendingMemorySearch.requestId||!Array.isArray(v.rows))break;
+  pendingMemorySearch=null;
+  const box=$('memoryResults');box.replaceChildren();
+  v.rows.forEach(x=>entry(box,x.prompt+'\n\n'+x.answer,x.timestamp));
+  if(!v.rows.length)box.textContent='Совпадений нет';
+  break;
+}
+case 'memory.denied':
+  if(pendingMemorySearch&&v?.requestId===pendingMemorySearch.requestId){
+    pendingMemorySearch=null;
+    $('memoryResults').textContent=String(v.reason||'NOX_MEMORY_READ_HOLD');
+  }
+  break;
 case 'notes':{if(pendingNoteDelete||!v||v.persona!==visiblePersona||!Array.isArray(v.rows))break;const rows=v.rows,box=$('notes');box.replaceChildren();rows.forEach(n=>{const card=element('div',undefined,'note-card');card.append(element('div',n.title,'note-title'),element('div',n.timestamp,'meta'),element('p',n.content));const b=element('button','Удалить заметку','action');b.disabled=noteDeleteUncertain;b.onclick=()=>{if(pendingNoteDelete||noteDeleteUncertain)return;const requestId=nextChatId();pendingNoteDelete={requestId,id:n.id};document.querySelectorAll('#notes .note-card button').forEach(button=>button.disabled=true);if(post('notes.delete',{id:n.id,requestId})===false){pendingNoteDelete=null;document.querySelectorAll('#notes .note-card button').forEach(button=>button.disabled=false)}};card.append(b);box.append(card)});if(!rows.length)box.textContent='Пока нет сохранённых заметок';break}
 case 'notes.delete.receipt':if(pendingNoteDelete&&v?.requestId===pendingNoteDelete.requestId&&v?.id===pendingNoteDelete.id&&v.deleted===true&&v.backupVerified===true){pendingNoteDelete=null;$('status').textContent='NOTE DELETED · VERIFIED SQLITE BACKUP';}break;
 case 'notes.delete.denied':if(pendingNoteDelete&&v?.requestId===pendingNoteDelete.requestId&&v?.id===pendingNoteDelete.id){pendingNoteDelete=null;document.querySelectorAll('#notes .note-card button').forEach(button=>button.disabled=false);$('status').textContent=String(v.reason||'NOX_NOTE_DELETE_HOLD');post('notes.list');}break;

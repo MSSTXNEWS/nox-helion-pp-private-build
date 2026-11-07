@@ -1235,7 +1235,21 @@ public partial class MainWindow : Window
                 case "learn.queue": Send("learn.queue", ReadLearnQueue()); break;
                 case "learn.request": RequestLearn(); break;
                 case "learn.cancel": CancelLearnRequest(); break;
-                case "memory.search": Send("memory", SearchMemory(Text("query"))); break;
+                case "memory.search": {
+                    // Capture the SQLite owner before the read; never send an untagged result.
+                    string requestId = Text("requestId");
+                    if (!ValidWriteRequestId(requestId)) {
+                        Send("memory.denied", new { requestId, reason = "NOX_MEMORY_REQUEST_ID_HOLD" });
+                        break;
+                    }
+                    try {
+                        string persona = ActivePersona();
+                        Send("memory", new { persona, requestId, rows = SearchMemory(Text("query"), persona) });
+                    } catch (Exception) {
+                        Send("memory.denied", new { requestId, reason = "NOX_MEMORY_READ_HOLD" });
+                    }
+                    break;
+                }
                 case "knowledge.search": Send("knowledge.results", knowledge.Search(Text("query"))); break;
                 case "knowledge.stats": Send("knowledge.stats", knowledge.Stats()); break;
                 case "knowledge.import": ImportKnowledgeByDialog(); break;
@@ -1509,7 +1523,7 @@ public partial class MainWindow : Window
     // R8 D03: SQLite lower() is ASCII-only; owner memory search must also
     // match Russian text case-insensitively, without merging Persona histories.
     // Bound SQLite reads to keep large local histories responsive.
-    private object SearchMemory(string query)
+    private object SearchMemory(string query, string persona)
     {
         var result = new List<object>();
         if (string.IsNullOrWhiteSpace(query)) return result;
@@ -1529,7 +1543,7 @@ public partial class MainWindow : Window
                 )
             ) ORDER BY timestamp DESC LIMIT 3000;
             """;
-        cmd.Parameters.AddWithValue("$persona", ActivePersona());
+        cmd.Parameters.AddWithValue("$persona", persona);
         using var r = cmd.ExecuteReader();
         while (r.Read()) {
             string prompt = r.GetString(1), answer = r.GetString(2);
