@@ -2113,6 +2113,9 @@ public partial class MainWindow : Window
             // B04: headers can arrive before an indefinitely stalled Ollama NDJSON body.
             // Each line has a bounded wait; only the owner's token means STOP.
             bool completed = false;
+            // Many short buffered NDJSON records can complete synchronously.
+            // Co-operatively return to WPF every 32 records to service native STOP.
+            int bufferedRecordsSinceYield = 0;
             long evalCount = 0, evalDuration = 0, promptCount = 0;
             while (true)
             {
@@ -2121,6 +2124,14 @@ public partial class MainWindow : Window
                 readWindow.CancelAfter(TimeSpan.FromMinutes(3));
                 var line = await ReadBoundedOllamaLineAsync(reader, readWindow.Token);
                 if (line == null) break;
+                // A stream of short lines never reaches the per-line 4096-char yield.
+                // Bound dispatcher ownership even when StreamReader has data buffered.
+                if (++bufferedRecordsSinceYield >= 32)
+                {
+                    bufferedRecordsSinceYield = 0;
+                    cancellation.Token.ThrowIfCancellationRequested();
+                    await Task.Yield();
+                }
                 if (string.IsNullOrWhiteSpace(line)) continue;
                 using var json = JsonDocument.Parse(line);
                 var item = json.RootElement;
