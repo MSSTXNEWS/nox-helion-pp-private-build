@@ -11,6 +11,8 @@ const start = html.indexOf("$('send').onclick=()=>");
 const end = html.indexOf("\n$('stop').onclick=", start);
 assert.ok(start > 0 && end > start, 'D01 ORIGINAL_CHAT_HANDLER_MISSING');
 const code = html.slice(start, end);
+const uncertainLine=html.split('\n').find(x=>x.startsWith('const uncertainChatKeys=new Set();'));
+assert.ok(uncertainLine?.includes('const uncertainChatKey='),'D01_REAL_UNKNOWN_COMMIT_GUARD_MISSING');
 function scenario(draft, bridge, locked = false) {
   const nodes = {send: {}, prompt: {value: draft}, streamHint: {textContent: ''}, messages: {}};
   const sent = [], shown = [];
@@ -21,7 +23,7 @@ function scenario(draft, bridge, locked = false) {
     nextChatId: () => 'r8d01_owner_1234',
     busy: locked, activeChatId: null, responseBox: null, lastAnswer: 'old', visibleDraftPersona:'KV'
   };
-  vm.runInNewContext(code, context, {timeout: 1500});
+  vm.runInNewContext(uncertainLine+'\n'+code, context, {timeout: 1500});
   nodes.send.onclick();
   return {nodes, sent, shown, context};
 }
@@ -94,9 +96,9 @@ function nativeBridgeCase(webview, draft = 'Невыгруженный черн�
     document:{getElementById:id=>nodes[id]},
     entry:()=>{throw new Error('DRAFT_MUST_NOT_RENDER_IF_BRIDGE_FAILED')},
     nextChatId:()=> 'd01_native_bridge_failure_01',
-    busy:false, activeChatId:null, responseBox:null, lastAnswer:'retained'
+    busy:false, activeChatId:null, responseBox:null, lastAnswer:'retained',visibleDraftPersona:'KV'
   };
-  vm.runInNewContext(nativeBridgeLine + '\n' + code + '\n$("send").onclick();', scope, {timeout:1500});
+  vm.runInNewContext(nativeBridgeLine + '\n' + uncertainLine + '\n' + code + '\n$("send").onclick();', scope, {timeout:1500});
   return {nodes,scope,emitted};
 }
 let disconnected = nativeBridgeCase(null);
@@ -397,7 +399,7 @@ console.log('D01 SOURCE_ONLY PASS: 8 CoreID focus, IME/modified/repeat navigatio
       messages:{},generation:{classList:{remove(){}}}};
     const machine=vm.runInNewContext(
       "let responseBox=null,lastAnswer='',busy=false,activeChatId=null,pendingChatDraft=null,visibleDraftPersona='KV';const personaDrafts=new Map();"+
-      sendHandler+
+      uncertainLine+'\n'+sendHandler+
       "\nfunction finishTurn(v){switch('complete'){"+completeHandler+"}}\n"+
       "({send:()=>$('send').onclick(),finishTurn,state:()=>({busy,pendingChatDraft})})",
       {$:id=>nodes[id],post:()=>true,nextChatId:()=> 'd01_real_request',
@@ -497,7 +499,7 @@ console.log('D01 SOURCE_ONLY PASS: Qwen failed/STOP retry with original input, S
     && completeStart>0 && completeEnd>completeStart,'D01_PERSONA_CHAT_PRODUCTION_SOURCE_MISSING');
   const production = "let responseBox=null,lastAnswer='',busy=false,activeChatId=null,"+
     "pendingChatDraft=null,visibleDraftPersona='KV';const personaDrafts=new Map();"+
-    html.slice(swStart,swEnd)+"\n"+html.slice(sendStart,sendEnd)+
+    html.slice(swStart,swEnd)+"\n"+uncertainLine+"\n"+html.slice(sendStart,sendEnd)+
     "\nfunction complete(v){switch('complete'){"+
     html.slice(completeStart,completeEnd)+
     "}}\n({click:()=>$('send').onclick(),change:switchPersonaDrafts,"+
@@ -539,20 +541,33 @@ console.log('D01 SOURCE_ONLY PASS: Qwen failed/STOP retry with original input, S
   const start=html.indexOf("case 'complete':");
   const end=html.indexOf("\ncase 'error':",start);
   assert.ok(start>0&&end>start,'D01_SQLITE_UNKNOWN_PRODUCTION_HANDLER_MISSING');
-  const nodes={prompt:{value:''},streamHint:{textContent:''},generation:{classList:{remove(){}}}};
+  const nodes={prompt:{value:''},send:{},messages:{},streamHint:{textContent:''},generation:{classList:{remove(){}}}};
+  const sendStart=html.indexOf("$('send').onclick=()=>");
+  const sendEnd=html.indexOf("\n$('stop').onclick=",sendStart);
+  assert.ok(sendStart>0&&sendEnd>sendStart,'D01_SQLITE_UNKNOWN_SEND_HANDLER_MISSING');
+  let posts=0,historyRoute='';
   const code="let pendingChatDraft={requestId:'unknown_1',raw:'KV private unsent',persona:'KV'},"+
-    "visibleDraftPersona='KV',busy=true,activeChatId='unknown_1',lastAnswer='partial';"+
-    "const personaDrafts=new Map();function complete(v){switch('complete'){"+
-    html.slice(start,end)+"}};({complete,state:()=>({busy,pendingChatDraft})})";
+    "visibleDraftPersona='KV',busy=true,activeChatId='unknown_1',lastAnswer='partial',responseBox=null;"+
+    "const personaDrafts=new Map();"+uncertainLine+"\n"+
+    "function complete(v){switch('complete'){"+html.slice(start,end)+"}}\n"+
+    html.slice(sendStart,sendEnd)+
+    "\n({complete,send:()=>$('send').onclick(),state:()=>({busy,pendingChatDraft,unknown:uncertainChatKeys.has(uncertainChatKey('KV','KV private unsent'))})})";
   const m=vm.runInNewContext(code,{
-    $:id=>nodes[id],window:{noxVisual:{setEnergy(){}}}
+    $:id=>nodes[id],window:{noxVisual:{setEnergy(){}},confirm(){return false;}},
+    post(){posts++;return true;},route(id){historyRoute=id;},
+    nextChatId(){throw Error('NO_EXPLICIT_CONFIRM');}
   },{timeout:1500});
   m.complete({requestId:'unknown_1',ok:false,stopped:false,sqliteUnknown:true});
-  assert.equal(nodes.prompt.value,'','D01_SQLITE_COMMIT_UNKNOWN_UNSAFE_AUTO_REPLAY');
+  assert.equal(nodes.prompt.value,'KV private unsent','D01_SQLITE_UNKNOWN_DRAFT_LOST');
+  assert.equal(m.state().unknown,true,'D01_SQLITE_UNKNOWN_OWNER_GUARD_MISSING');
   assert.match(nodes.streamHint.textContent,/SQLite мог сохранить.*Проверьте историю/,
     'D01_SQLITE_COMMIT_UNKNOWN_HOLD_HINT_MISSING');
   assert.equal(m.state().busy,false,'D01_SQLITE_UNKNOWN_BUSY_LOCK_NOT_RELEASED');
-  console.log('D01 SOURCE_ONLY PASS: uncertain SQLite commit never auto-restores prompt for duplicate replay');
+  m.send();
+  assert.equal(posts,0,'D01_SQLITE_UNKNOWN_SILENT_DUPLICATE_POST');
+  assert.equal(historyRoute,'reflection','D01_SQLITE_UNKNOWN_MUST_OFFER_HISTORY');
+  assert.equal(nodes.prompt.value,'KV private unsent','D01_SQLITE_UNKNOWN_BLOCKED_DRAFT_LOST');
+  console.log('D01 SOURCE_ONLY PASS: uncertain SQLite commit preserves draft and blocks unconfirmed rePOST');
 }
 // B06: execute the real PersonaID notification handler, not an invented UI.
 {
