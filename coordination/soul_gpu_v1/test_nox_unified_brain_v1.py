@@ -34,10 +34,14 @@ class UnifiedTests(unittest.TestCase):
             self.assertEqual(request["model"],"qwen3:8b")
             self.assertEqual(request["messages"][0]["role"],"system")
             return Response(json.dumps({"message":{"content":"NOX на связи"}}).encode())
-        with patch.object(u,"urlopen",side_effect=mocked):
-            result=u.chat(Path("."),{"message":"Привет","task":"general"})
-        self.assertEqual(result["answer"],"NOX на связи")
-        self.assertFalse(result["history_persisted"])
+        with TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            with patch.object(u,"urlopen",side_effect=mocked):
+                result=u.chat(root,{"message":"Привет","task":"general"})
+            self.assertEqual(result["answer"],"NOX на связи")
+            self.assertTrue(result["history_persisted"])
+            self.assertEqual([v["role"] for v in u.read_history(root)],
+                             ["user","assistant"])
         self.assertFalse(result["s03_integrated"])
     def test_read_only_native_db(self):
         with TemporaryDirectory() as tmp:
