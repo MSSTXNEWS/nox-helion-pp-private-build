@@ -244,9 +244,20 @@ console.log('D01 SOURCE_ONLY PASS: knowledge/memory keyboard IME, repeat, Enter'
   const changedLine = html.split('\n').find(x=>x.trim().startsWith("case 'persona.changed':"));
   assert.ok(changedLine,'D01_PERSONA_CHANGE_HANDLER_MISSING');
   const ids = ['messages','history','notes','memoryResults','knowledgeResults'];
+  const draftIds=['noteTitle','noteText','memoryQuery','knowledgeQuery'];
+  const oldDraft={
+    noteTitle:'KV unsaved title',noteText:'KV unsaved note',
+    memoryQuery:'KV memory query',knowledgeQuery:'KV knowledge query'
+  };
   const elements = Object.fromEntries(ids.map(id=>[id,{clears:0,
     replaceChildren(){this.clears++;}}]));
-  const eventContext = {$:id=>elements[id],window:{}};
+  for(const id of draftIds)elements[id]={value:oldDraft[id]};
+  const eventContext = {$:id=>elements[id],window:{},
+    v:{persona:'AM'},committedSettings:{persona:'KV'},personaDrafts:new Map()};
+  const draftStart=html.indexOf('function switchPersonaDrafts(next){');
+  const draftEnd=html.indexOf('\nfunction route(id){',draftStart);
+  assert.ok(draftStart>0&&draftEnd>draftStart,'D01_ORIGINAL_PERSONA_DRAFT_HANDLER_MISSING');
+  vm.runInNewContext(html.slice(draftStart,draftEnd),eventContext,{timeout:1500});
   const outcome=vm.runInNewContext(
     "let lastAnswer='previous persona secret';let responseBox={};"+
     "switch('persona.changed'){"+changedLine+"}"+
@@ -255,5 +266,24 @@ console.log('D01 SOURCE_ONLY PASS: knowledge/memory keyboard IME, repeat, Enter'
     assert.equal(elements[id].clears,1,'D01_PERSONA_STALE_PRIVATE_VIEW_'+id);
   assert.equal(outcome.lastAnswer,'','D01_PERSONA_OLD_REPLY_NOT_RESET');
   assert.equal(outcome.responseBox,null,'D01_PERSONA_OLD_STREAM_NOT_RESET');
+  for(const id of draftIds){
+    assert.equal(elements[id].value,'','D01_FOREIGN_PERSONA_DRAFT_VISIBLE_'+id);
+    assert.equal(eventContext.personaDrafts.get('KV')[id],oldDraft[id],
+      'D01_UNSAVED_DRAFT_LOST_'+id);
+  }
+  eventContext.committedSettings.persona='AM';
+  eventContext.v={persona:'KV'};
+  for(const id of draftIds)elements[id].value='AM private '+id;
+  vm.runInNewContext("switch('persona.changed'){"+changedLine+"}",eventContext,{timeout:1500});
+  for(const id of draftIds){
+    assert.equal(elements[id].value,oldDraft[id],'D01_KV_DRAFT_RESTORE_'+id);
+    assert.equal(eventContext.personaDrafts.get('AM')[id],'AM private '+id,
+      'D01_AM_DRAFT_KEEP_'+id);
+  }
+  eventContext.committedSettings.persona='KV';
+  eventContext.v={persona:'KV'};
+  elements.noteTitle.value='KV revised unsaved';
+  vm.runInNewContext("switch('persona.changed'){"+changedLine+"}",eventContext,{timeout:1500});
+  assert.equal(elements.noteTitle.value,'KV revised unsaved','D01_SAME_PERSONA_DRAFT_NO_LOSS');
 }
 console.log('D01 SOURCE_ONLY PASS: reflection notes refresh and PersonaID memory view isolation');
