@@ -11,6 +11,9 @@ from pathlib import Path
 import sqlite3
 from urllib.error import URLError,HTTPError
 from urllib.request import Request,urlopen
+import os
+import threading
+from datetime import datetime, timezone
 
 OLLAMA="http://127.0.0.1:11434"
 CORE_IDS=("CONSCIOUSNESS","PERSONA","ATLAS","VOICE","REFLECTION","CORE","NEXUS","FORGE")
@@ -124,7 +127,7 @@ def self_model(root, model):
     }
 
 
-def chat(root,payload):
+def prepare_chat(root,payload):
     if not isinstance(payload,dict):raise ValueError("BODY_NOT_OBJECT")
     user=payload.get("message")
     if not isinstance(user,str) or not 1<=len(user.strip())<=8000:raise ValueError("INVALID_MESSAGE")
@@ -154,8 +157,13 @@ def chat(root,payload):
         "несуществующие память, опыт, чувства или самосознание. "+
         "На вопрос об обучении различай сохранённые LoRA-веса и применённую "+
         "в чате модель. Не повторяй длинное описание архитектуры без запроса."})
+    return model,messages,task
+
+def chat(root,payload):
+    model,messages,task=prepare_chat(root,payload)
     post=json.dumps({"model":model,"messages":messages,"stream":False,
-                     "options":{"num_predict":900,"temperature":0.5}}).encode("utf-8")
+                     "think":False,"keep_alive":"15m",
+                     "options":{"num_predict":320,"num_ctx":4096,"temperature":0.5}}).encode("utf-8")
     req=Request(OLLAMA+"/api/chat",data=post,
                 headers={"Content-Type":"application/json"},method="POST")
     with urlopen(req,timeout=240) as r:
@@ -166,3 +174,72 @@ def chat(root,payload):
     return {"identity":"NOX HELION","model":model,
             "answer":answer,"task":task,
             "history_persisted":False,"s03_integrated":False}
+
+
+def stream_chat(root,payload):
+    """Yield NDJSON events as Ollama produces visible tokens."""
+    model,messages,task=prepare_chat(root,payload)
+    post=json.dumps({"model":model,"messages":messages,"stream":True,
+                     "think":False,"keep_alive":"15m",
+                     "options":{"num_predict":400,"num_ctx":4096,
+                                "temperature":0.5}},ensure_ascii=False).encode("utf-8")
+    req=Request(OLLAMA+"/api/chat",data=post,
+                headers={"Content-Type":"application/json"},method="POST")
+    answer=[]
+    with urlopen(req,timeout=240) as response:
+        yield {"type":"start","model":model}
+        for line in response:
+            if not line.strip():continue
+            obj=json.loads(line)
+            if obj.get("error"):raise RuntimeError(str(obj["error"])[:300])
+            part=(obj.get("message") or {}).get("content") or ""
+            if part:
+                answer.append(part)
+                yield {"type":"delta","text":part}
+            if obj.get("done"):
+                result="".join(answer)
+                if not result.strip():raise RuntimeError("OLLAMA_EMPTY_RESPONSE")
+                save_turn(root,payload["message"].strip(),result)
+                yield {"type":"done","model":model,"saved":True,
+                       "eval_count":obj.get("eval_count"),
+                       "eval_duration":obj.get("eval_duration")}
+                return
+    raise RuntimeError("OLLAMA_STREAM_INCOMPLETE")
+
+
+_history_lock=threading.Lock()
+def _history_path(root):
+    return Path(root)/"brain"/"history"/"unified_chat_v1.jsonl"
+
+
+def read_history(root,limit=100):
+    p=_history_path(root)
+    if not p.is_file():return []
+    # Latest 5MB is a limit on the UI read, never a truncation of saved data.
+    with p.open("rb") as fh:
+        fh.seek(0,os.SEEK_END)
+        size=fh.tell()
+        fh.seek(max(0,size-5_000_000))
+        if size>5_000_000:fh.readline()
+        raw=fh.read()
+    out=[]
+    for line in raw.splitlines():
+        try:
+            item=json.loads(line)
+            if item.get("role") in ("user","assistant") and isinstance(item.get("content"),str):
+                out.append({"role":item["role"],"content":item["content"]})
+        except (ValueError,TypeError):pass
+    return out[-limit:]
+
+
+def save_turn(root,user,answer):
+    path=_history_path(root)
+    path.parent.mkdir(parents=True,exist_ok=True)
+    now=datetime.now(timezone.utc).isoformat()
+    with _history_lock:
+        with path.open("a",encoding="utf-8",newline="\n") as f:
+            for role,content in (("user",user),("assistant",answer)):
+                f.write(json.dumps({"role":role,"content":content,"time":now},
+                                   ensure_ascii=False)+"\n")
+            f.flush()
+            os.fsync(f.fileno())
