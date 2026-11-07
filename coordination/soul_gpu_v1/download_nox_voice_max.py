@@ -191,6 +191,8 @@ def main(argv=None):
     p.add_argument("--group",choices=["starter","starter_optional","expressive",
                                       "expressive_optional"],default="starter")
     p.add_argument("--mode",choices=["models","engines","both"],default="both")
+    p.add_argument("--only",action="append",default=[],
+                   help="Filter by exact model/source id; use repeatedly")
     p.add_argument("--execute",action="store_true",
                    help="Download vetted model/source candidates into NOX root")
     args=p.parse_args(argv)
@@ -200,13 +202,13 @@ def main(argv=None):
           "VOICE allowance +%s GB" % manifest["voice_extra_budget_gb"])
     if args.mode in ("models","both"):
         for item in manifest["models"]:
-            if item["group"]==args.group:
+            if item["group"]==args.group and (not args.only or item["id"] in args.only):
                 model_download(item,root,not args.execute,
                                manifest["voice_extra_budget_gb"],
                                manifest["minimum_free_disk_gb"])
     if args.mode in ("engines","both"):
         for item in manifest["sources"]:
-            if item["group"]==args.group:
+            if item["group"]==args.group and (not args.only or item["id"] in args.only):
                 engine_download(item,root,not args.execute,
                                 manifest["minimum_free_disk_gb"])
     print("NOX VOICE MAX stage complete. Source/model download != TTS install or GPU acceptance.")
