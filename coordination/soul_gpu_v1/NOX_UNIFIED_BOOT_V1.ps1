@@ -3,7 +3,7 @@
 $ErrorActionPreference = "Stop"
 $root = "C:\NOX_HELION\NOX_NEW"
 $repo = "$root\brain\source\repo"
-$ref = "1b0960a45b58423506bc5121c315add4962d7eab"
+$ref = "ec84b17b834d9300a68950db43eb55b108d3d6ca"
 $base = "coordination/soul_gpu_v1"
 $dest = "$root\brain\skills\NOX_UNIFIED_49fca983"
 $python = "$env:USERPROFILE\NOX_EXPRESS_AI\NOX_TRAINING\train-venv\Scripts\python.exe"
@@ -25,7 +25,9 @@ $files = @(
  "nox_unified_brain_v1.py","nox_unified_chat_v1.html",
  "nox_prime_resource_advisor_v1.py",
  "nox_gpu_target_11120.py","nox_gpu_worm_safe70_v1.py",
- "test_nox_unified_brain_v1.py","test_nox_prime_resource_advisor_v1.py"
+ "nox_safe70_thermal_guard_v1.py",
+ "test_nox_unified_brain_v1.py","test_nox_prime_resource_advisor_v1.py",
+ "test_nox_safe70_thermal_guard_v1.py"
 )
 foreach ($name in $files) {
     $objectPath = "$base/$name"
@@ -64,7 +66,7 @@ foreach ($name in $files) {
 if ($LASTEXITCODE -ne 0) { throw "Python syntax validation failed" }
 Push-Location $dest
 try {
-    & $python -m unittest -q test_nox_unified_brain_v1 test_nox_prime_resource_advisor_v1
+    & $python -m unittest -q test_nox_unified_brain_v1 test_nox_prime_resource_advisor_v1 test_nox_safe70_thermal_guard_v1
     if ($LASTEXITCODE -ne 0) { throw "Unified brain contract tests failed" }
 } finally { Pop-Location }
 
@@ -111,7 +113,7 @@ if ($busy.Count -gt 0) {
     return
 }
 Write-Host "NOX SAFE70 WORM: resume latest valid LoRA checkpoint to goal 11120" -ForegroundColor Cyan
-Write-Host "Hot Spot STOP>=70C; restart below65C; preserve old LoRA weights" -ForegroundColor Yellow
+Write-Host "Hot Spot >=70C x3 consecutive polls (2s); >=75C immediate STOP; missing sensor STOP; resume below65C" -ForegroundColor Yellow
 & $python -u "$dest\nox_gpu_worm_safe70_v1.py"
 if ($LASTEXITCODE -ne 0) { throw "NOX WORM halted early. See HALT above. Saved weights intact." }
 Write-Host "NOX SAFE70 GOAL COMPLETED" -ForegroundColor Green
