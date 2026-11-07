@@ -90,6 +90,12 @@ assert.equal(run.outbound.filter(x => x.type === "stop").length, 1,
   "F01_DUPLICATE_STOP_NATIVE_POST_HOLD");
 assert.equal(run.outbound.find(x => x.type === "stop").payload.requestId, owner,
   "F01_STOP_WRONG_REQUEST_LEASE_HOLD");
+// F01 STOP in-flight race: an already-queued token from the SAME request may
+// arrive after native STOP dispatch and before its matching complete receipt.
+// It must not remain visible as a purported saved answer.
+run.deliver("token", {requestId: owner, text: "TOKEN_AFTER_STOP_DISPATCH"});
+assert.equal(run.state.lastAnswer, "", "F01_INFLIGHT_STOP_TOKEN_VISIBLE_HOLD");
+assert.equal(run.state.responseBox.lastChild.textContent, "", "F01_INFLIGHT_STOP_DOM_VISIBLE_HOLD");
 run.deliver("token", {requestId: "foreign_owner", text: "LATE"});
 run.deliver("complete", {requestId: "foreign_owner", ok: true});
 assert.ok(run.state.busy && run.state.activeChatId === owner,
