@@ -37,7 +37,7 @@ jobs:
           $setup=Join-Path $fixture 'NOX_B05_NSIS_COMPILER_ONLY.exe'
           $script=Join-Path $env:GITHUB_WORKSPACE 'coordination/nox-r8/installer/NOX_R8_ImmutableUser_Setup.nsi'
           $guard=Join-Path $env:GITHUB_WORKSPACE 'coordination/nox-r8/installer/NoLossGuard.ps1'
-          & $compiler /V2 "/DNOX_EXE_PATH=$exe" "/DNOX_RECEIPT_PATH=$receipt" "/DNOX_GUARD_PATH=$guard" "/DNOX_EXE_SHA256=$exeSha" "/DNOX_RECEIPT_SHA256=$receiptSha" "/DNOX_SOURCE_GIT_SHA=$src" "/DNOX_SETUP_OUT=$setup" $script
+          & $compiler /V2 "/DNOX_EXE_PATH=$exe" "/DNOX_RECEIPT_PATH=$receipt" "/DNOX_GUARD_PATH=$guard" "/DNOX_EXE_SHA256=$exeSha" "/DNOX_RECEIPT_SHA256=$receiptSha" "/DNOX_SOURCE_GIT_SHA=$src" "/DNOX_SETUP_OUT=$setup" /DNOX_B05_FIXTURE_TRACE=1 $script
           if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $setup)) { throw 'B05_NSIS_COMPILE_FAILED' }
           Write-Host 'B05_NSIS_TEMPLATE_COMPILE_PASS_FIXTURE_ONLY_RELEASE_HOLD'
 
@@ -52,7 +52,11 @@ jobs:
           $target=Join-Path $env:LOCALAPPDATA "Programs\\NOX-HELION-R8\\$sha"
           if (Test-Path -LiteralPath $target) { throw 'B05_FIXTURE_TARGET_PREEXISTS' }
           $p=Start-Process -FilePath $setup -ArgumentList '/S' -PassThru -Wait
-          if ($p.ExitCode -ne 0) { throw "B05_NSIS_INSTALL_FAILED:$($p.ExitCode)" }
+          if ($p.ExitCode -ne 0) {
+            $trace=Join-Path $env:TEMP 'NOX_B05_NSIS_FIXTURE_TRACE.txt'
+            if (Test-Path -LiteralPath $trace) { Write-Host 'B05_NSI_FAIL_CLOSED_TRACE:'; Get-Content -LiteralPath $trace }
+            throw "B05_NSIS_INSTALL_FAILED:$($p.ExitCode)"
+          }
           $installedExe=Join-Path $target 'NOX.HELION.exe'
           if (-not (Test-Path -LiteralPath $installedExe)) { throw 'B05_INSTALLED_EXE_NOT_FOUND' }
           if (-not [string]::Equals((Get-FileHash $installedExe -Algorithm SHA256).Hash,$sha,[StringComparison]::OrdinalIgnoreCase)) { throw 'B05_INSTALLED_EXE_SHA_MISMATCH' }

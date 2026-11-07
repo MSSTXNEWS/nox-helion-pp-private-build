@@ -37,6 +37,11 @@ ShowUninstDetails show
  Pop $0
  Pop $1
  ${If} $0 != "0"
+   !ifdef NOX_B05_FIXTURE_TRACE
+    FileOpen $9 "$TEMP\NOX_B05_NSIS_FIXTURE_TRACE.txt" w
+    FileWrite $9 "MODE=${MODE}; EXIT=$0; OUTPUT=$1; INSTDIR=$INSTDIR; PLUGINSDIR=$PLUGINSDIR"
+    FileClose $9
+   !endif
    DetailPrint "B05_NOLOSS_HOLD ${MODE} $1"
    MessageBox MB_OK|MB_ICONSTOP "NOX install boundary refused. Existing owner data untouched." /SD IDOK
    Abort
