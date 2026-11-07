@@ -323,7 +323,7 @@ body.reduced .helion-fx{filter:none}body.reduced .core.active{animation:none}
 <script>
 'use strict';
 const $=id=>document.getElementById(id);const post=(type,data={})=>{const bridge=window.chrome?.webview;if(typeof bridge?.postMessage!=='function'){$('status').textContent='NATIVE BRIDGE OFFLINE';return false}try{bridge.postMessage({type,...data});return true}catch{$('status').textContent='NATIVE BRIDGE DISPATCH FAILED';return false}};
-let responseBox=null,lastAnswer='',busy=false,settingsDenial='',activeChatId=null,requestSequence=0,pendingTask=null,pendingNote=null,pendingTaskToggle=null,pendingModel=null,committedModel="";
+let responseBox=null,lastAnswer='',busy=false,settingsDenial='',activeChatId=null,requestSequence=0,pendingTask=null,pendingNote=null,pendingTaskToggle=null,pendingModel=null,committedModel="",pendingSettings=null,committedSettings={};
 const nextChatId=()=>typeof crypto!=='undefined'&&typeof crypto.randomUUID==='function'
   ? crypto.randomUUID()
   : 'r'+Date.now().toString(36)+'_'+(++requestSequence).toString(36)+'_'+Math.random().toString(36).slice(2);const headings={consciousness:'CONSCIOUSNESS',atlas:'ATLAS / TASKS',reflection:'REFLECTION / HISTORY',nexus:'NEXUS / MODELS',forge:'FORGE / TRAINING',core:'CORE / LIVE CHAT',voice:'VOICE',persona:'PERSONA'};
@@ -335,9 +335,33 @@ function entry(container,text,title,cls){const d=element('div',undefined,'entry 
 $('send').onclick=()=>{const text=$('prompt').value.trim();if(!text||busy)return;if(text.length>32000){$('streamHint').textContent='Слишком длинное сообщение: максимум 32 000 символов';return;}const requestId=nextChatId();if(post('chat',{text,requestId})===false){$('streamHint').textContent='Нативный чат недоступен. Черновик сохранён.';return;}busy=true;activeChatId=requestId;lastAnswer='';entry($('messages'),text,'YOU','user');responseBox=entry($('messages'),'','NOX QWEN');$('prompt').value='';};
 $('stop').onclick=()=>{if(busy&&activeChatId)post('stop',{requestId:activeChatId})};$('prompt').onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing&&e.keyCode!==229){e.preventDefault();$('send').click()}};
 $('overviewHealth').onclick=()=>post('health');$('startEngine').onclick=()=>post('engine.start');$('refreshSensors').onclick=()=>post('system.status');$('healthButton').onclick=()=>post('health');$('trainingButton').onclick=()=>post('training');$('learnRequest').onclick=()=>post('learn.request');$('learnCancel').onclick=()=>post('learn.cancel');$('reloadHistory').onclick=()=>post('history');$('taskAdd').onclick=()=>{const text=$('taskInput').value.trim();if(!text||pendingTask)return;const requestId=nextChatId();pendingTask={requestId,text};$('taskAdd').disabled=true;if(post('tasks.add',{text,requestId})===false){pendingTask=null;$('taskAdd').disabled=false}};
-$('savePersona').onclick=()=>post('settings.put',{key:'persona',value:$('persona').value});$('saveMotion').onclick=()=>post('settings.put',{key:'motion',value:$('reduceMotion').checked?'off':'on'});
-$('savePerformance').onclick=()=>post('settings.put',{key:'performance',value:$('performance').value});$('saveContext').onclick=()=>post('settings.put',{key:'context',value:$('useContext').checked?'on':'off'});$('backup').onclick=()=>post('backup');$('knowledgeImport').onclick=()=>post('knowledge.import');$('knowledgeSearch').onclick=()=>post('knowledge.search',{query:$('knowledgeQuery').value.trim()});$('knowledgeQuery').onkeydown=e=>{if(e.key==='Enter')$('knowledgeSearch').click()};$('memorySearch').onclick=()=>post('memory.search',{query:$('memoryQuery').value.trim()});$('memoryQuery').onkeydown=e=>{if(e.key==='Enter')$('memorySearch').click()};
-$('maxMode').onclick=()=>{route('persona');$('performance').value='MAX';$('personaStatus').textContent='MAX: ожидается подтверждение SQLite';post('settings.put',{key:'performance',value:'MAX'});};
+// One outstanding SETTINGS write. UI buttons cannot imply successful SQLite
+// persistence until an independent native COMMIT readback and matching ACK.
+function setSettingsBusy(value){for(const id of ['savePersona','saveMotion','savePerformance','saveContext','maxMode'])$(id).disabled=value;}
+function applyCommittedSettings(v){
+  committedSettings={...v};
+  $('persona').value=v?.persona||'KV';$('performance').value=v?.performance||'BALANCED';
+  $('useContext').checked=v?.context!=='off';$('reduceMotion').checked=v?.motion==='off';
+  document.body.classList.toggle('reduced',$('reduceMotion').checked);
+  window.noxVisual?.setMode(v?.performance||'BALANCED');
+}
+function saveSetting(key,value){
+  if(pendingSettings){$('personaStatus').textContent='NOX_SETTINGS_OWNER_IN_FLIGHT';return false;}
+  const requestId=nextChatId();
+  pendingSettings={requestId,key,value};
+  setSettingsBusy(true);
+  $('personaStatus').textContent='Запрос отправлен · SQLite ещё не подтверждена';
+  if(post('settings.put',{key,value,requestId})===false){
+    pendingSettings=null;setSettingsBusy(false);applyCommittedSettings(committedSettings);
+    $('personaStatus').textContent='NOX_SETTINGS_NATIVE_DISPATCH_HOLD';return false;
+  }
+  return true;
+}
+$('savePersona').onclick=()=>saveSetting('persona',$('persona').value);
+$('saveMotion').onclick=()=>saveSetting('motion',$('reduceMotion').checked?'off':'on');
+$('savePerformance').onclick=()=>saveSetting('performance',$('performance').value);
+$('saveContext').onclick=()=>saveSetting('context',$('useContext').checked?'on':'off');$('backup').onclick=()=>post('backup');$('knowledgeImport').onclick=()=>post('knowledge.import');$('knowledgeSearch').onclick=()=>post('knowledge.search',{query:$('knowledgeQuery').value.trim()});$('knowledgeQuery').onkeydown=e=>{if(e.key==='Enter')$('knowledgeSearch').click()};$('memorySearch').onclick=()=>post('memory.search',{query:$('memoryQuery').value.trim()});$('memoryQuery').onkeydown=e=>{if(e.key==='Enter')$('memorySearch').click()};
+$('maxMode').onclick=()=>{route('persona');if(pendingSettings)return;$('performance').value='MAX';saveSetting('performance','MAX');};
 $('saveModel').onclick=()=>{const model=$('modelPicker').value;if(!model||pendingModel)return;const requestId=nextChatId();pendingModel={requestId,model,previous:committedModel};$('saveModel').disabled=true;$('modelSelectStatus').textContent='Проверка локального тега и SQLite…';if(post('model.select',{model,requestId})===false){const previous=pendingModel.previous;pendingModel=null;$('saveModel').disabled=false;if(previous)$('modelPicker').value=previous;$('modelSelectStatus').textContent='Нет нативного соединения. Предыдущая модель сохранена.';}};$('pullModel').onclick=()=>{const model=$('modelToDownload').value.trim();if(!/^[a-zA-Z0-9][a-zA-Z0-9._/-]*:[a-zA-Z0-9._-]+$/.test(model)){$('downloadStatus').textContent='Укажи корректный тег модели';return}if(window.confirm('Загрузить модель '+model+'? Это использует диск и интернет.'))post('model.pull',{model})};$('cancelPull').onclick=()=>post('model.cancel');
 $('noteAdd').onclick=()=>{const title=$('noteTitle').value.trim(),content=$('noteText').value.trim();if(!title||!content||pendingNote)return;const requestId=nextChatId();pendingNote={requestId,title,content};$('noteAdd').disabled=true;if(post('notes.add',{title,content,requestId})===false){pendingNote=null;$('noteAdd').disabled=false}};
 $('feedbackUp').onclick=()=>{if(lastAnswer)post('feedback',{rating:1,answer:lastAnswer})};$('feedbackDown').onclick=()=>{if(lastAnswer)post('feedback',{rating:-1,answer:lastAnswer})};
@@ -365,10 +389,25 @@ case 'download':{$('downloadStatus').textContent=`${v.model||''}: ${v.status||''
 case 'learn.receipt':{const state=String(v?.state||'HOLD'),id=Number.isSafeInteger(v?.id)?'#'+v.id:'';$('learnReceipt').textContent='LEARN '+id+' · '+state+(v?.reason?' · '+String(v.reason):'')+' · GPU не запущен; SHA checkpoint не подтверждён';break;}
  case 'learn.queue':{const rows=Array.isArray(v)?v:[];$('learnQueue').textContent=rows.length?rows.map(x=>'Запрос #'+x.id+' · '+String(x.model)+' · '+String(x.state)+' · обучение не запущено').join('\n'):'Нет записанных запросов LEARN';break;}
  case 'training':{const run=v?.measuredTrainingRuns?.find(r=>r.progressVerified===true&&r.checkpointVerified===true&&typeof r.progressPercent==='number');const pct=run?Math.max(0,Math.min(100,run.progressPercent)):0;$('trainingBar').style.width=pct+'%';$('trainingMeasured').textContent=run?`Подтверждённые шаги: ${run.globalStep}/${run.maxSteps} · ${pct}%`:'Обучение GPU не подтверждено · 0%';const count=Array.isArray(v?.observedExternalRuns)?v.observedExternalRuns.length:0;$('training').textContent=count?`Найдено внешних журналов: ${count}. Их шаги и loss не связаны с подтверждённым NOX checkpoint.`:'Нет подтверждённых результатов GPU/QLoRA';break;}
-case 'settings':$('persona').value=v?.persona||'KV';$('performance').value=v?.performance||'BALANCED';$('useContext').checked=v?.context!=='off';$('reduceMotion').checked=v?.motion==='off';document.body.classList.toggle('reduced',$('reduceMotion').checked);window.noxVisual?.setMode(v?.performance||'BALANCED');$('personaStatus').textContent=settingsDenial||'Настройки прочитаны из SQLite';break;
+case 'settings':if(!pendingSettings){applyCommittedSettings(v||{});$('personaStatus').textContent=settingsDenial||'Настройки прочитаны из SQLite';}break;
 case 'persona.changed':$('messages').replaceChildren();$('memoryResults').replaceChildren();$('knowledgeResults').replaceChildren();lastAnswer='';responseBox=null;if('speechSynthesis' in window)speechSynthesis.cancel();break;
-case 'settings.receipt':settingsDenial='';$('personaStatus').textContent='SQLite подтверждена: '+String(v?.key||'')+' = '+String(v?.value||'');break;
-case 'settings.denied':settingsDenial=String(v||'NOX_SETTINGS_HOLD');$('personaStatus').textContent=settingsDenial;post('settings.get');break;
+case 'settings.receipt':{
+  if(!pendingSettings || v?.requestId!==pendingSettings.requestId ||
+      v?.key!==pendingSettings.key || v?.value!==pendingSettings.value || v?.saved!==true)break;
+  const {key,value}=pendingSettings;pendingSettings=null;setSettingsBusy(false);
+  settingsDenial='';applyCommittedSettings({...committedSettings,[key]:value});
+  $('personaStatus').textContent='SQLite подтверждена: '+key+' = '+value;
+  break;
+}
+case 'settings.denied':{
+  if(pendingSettings && v?.requestId!==pendingSettings.requestId)break;
+  if(pendingSettings){pendingSettings=null;setSettingsBusy(false);applyCommittedSettings(committedSettings);}
+  const allowed=['NOX_SETTINGS_INVALID_REQUEST','NOX_SETTINGS_REJECTED',
+    'NOX_SETTINGS_SQLITE_HOLD','NOX_SETTINGS_NATIVE_HOLD','NOX_PERSONA_GENERATION_ACTIVE_HOLD'];
+  const reason=typeof v?.reason==='string'?v.reason:'NOX_SETTINGS_NATIVE_HOLD';
+  settingsDenial=allowed.includes(reason)?reason:'NOX_SETTINGS_NATIVE_HOLD';
+  $('personaStatus').textContent=settingsDenial;post('settings.get');break;
+}
 case 'knowledge.stats':$('knowledgeStats').textContent=`В SQLite: ${v?.documents??0} документов · ${v?.chunks??0} фрагментов`;break;
 case 'knowledge.imported':$('knowledgeStats').textContent=`Импортировано: ${v?.documents??0}; дублей: ${v?.skipped??0}; фрагментов: ${v?.chunks??0}`;post('knowledge.stats');break;
 case 'knowledge.results':{const box=$('knowledgeResults');box.replaceChildren();(v||[]).forEach(x=>entry(box,x.excerpt,x.title+' · '+x.source));if(!v?.length)box.textContent='Совпадений не найдено';break;}

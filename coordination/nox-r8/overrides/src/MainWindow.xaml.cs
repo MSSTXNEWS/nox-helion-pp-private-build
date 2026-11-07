@@ -518,6 +518,18 @@ public partial class MainWindow : Window
                 if (!string.Equals(read.ExecuteScalar() as string, "ECO", StringComparison.Ordinal))
                     throw new InvalidOperationException("Settings SQLite independent readback failed");
             }
+            // SQL alone is not enough: the live WebView2 must render the
+            // owner-correlated receipt after the independently verified COMMIT.
+            bool modeReceiptVisible = false;
+            for (int attempt = 0; attempt < 35; attempt++)
+            {
+                var receiptDom = await Browser.CoreWebView2.ExecuteScriptAsync(
+                    "document.getElementById('personaStatus')?.textContent.includes('SQLite подтверждена: performance = ECO')");
+                if (receiptDom == "true") { modeReceiptVisible = true; break; }
+                await Task.Delay(100);
+            }
+            if (!modeReceiptVisible)
+                throw new InvalidOperationException("NOX_SETTINGS_OWNER_RECEIPT_HOLD");
             checks["settings_wpf_owner_sqlite_readback"] = "PASS";
 
             // D06: use the real WebView2 checkbox/button and WPF settings.put
@@ -550,6 +562,16 @@ public partial class MainWindow : Window
                 if (!string.Equals(readMotion.ExecuteScalar() as string, "off", StringComparison.Ordinal))
                     throw new InvalidOperationException("NOX_SETTINGS_MOTION_SQLITE_HOLD");
             }
+            bool motionReceiptVisible = false;
+            for (int attempt = 0; attempt < 35; attempt++)
+            {
+                var receiptDom = await Browser.CoreWebView2.ExecuteScriptAsync(
+                    "document.getElementById('personaStatus')?.textContent.includes('SQLite подтверждена: motion = off')");
+                if (receiptDom == "true") { motionReceiptVisible = true; break; }
+                await Task.Delay(100);
+            }
+            if (!motionReceiptVisible)
+                throw new InvalidOperationException("NOX_SETTINGS_MOTION_RECEIPT_HOLD");
             checks["settings_wpf_motion_sqlite_readback"] = "PASS";
 
             // D06: reject a foreign key through the real native owner route.
@@ -558,7 +580,7 @@ public partial class MainWindow : Window
             var denialPost = await Browser.CoreWebView2.ExecuteScriptAsync("""
                 (() => {
                   if (!window.chrome?.webview) return false;
-                  window.chrome.webview.postMessage({type:'settings.put',key:'foreign',value:'on'});
+                  window.chrome.webview.postMessage({type:'settings.put',key:'foreign',value:'on',requestId:'smoke_foreign_0001'});
                   return true;
                 })()
                 """);
@@ -1555,15 +1577,24 @@ public partial class MainWindow : Window
     // Denials are bounded codes, never native exception text or private paths.
     private void HandleSettingsPut(JsonElement request)
     {
+        // Native owner validation applies before any SQLite write or UI ACK.
+        // A requestId binds each response to exactly one WebView2 sender.
         var fields = request.EnumerateObject().ToArray();
-        if (fields.Length != 3 ||
+        string requestId = request.TryGetProperty("requestId", out var idField) &&
+            idField.ValueKind == JsonValueKind.String ? idField.GetString() ?? "" : "";
+        bool validId = ValidWriteRequestId(requestId);
+        if (fields.Length != 4 ||
             fields.Count(x => x.Name == "type") != 1 ||
             fields.Count(x => x.Name == "key") != 1 ||
             fields.Count(x => x.Name == "value") != 1 ||
+            fields.Count(x => x.Name == "requestId") != 1 ||
+            !validId ||
             !request.TryGetProperty("key", out var keyField) || keyField.ValueKind != JsonValueKind.String ||
             !request.TryGetProperty("value", out var valueField) || valueField.ValueKind != JsonValueKind.String)
         {
-            Send("settings.denied", "NOX_SETTINGS_INVALID_REQUEST");
+            Send("settings.denied", new {
+                requestId = validId ? requestId : "", reason = "NOX_SETTINGS_INVALID_REQUEST"
+            });
             return;
         }
         string key = keyField.GetString() ?? "";
@@ -1571,7 +1602,7 @@ public partial class MainWindow : Window
         try
         {
             if (key == "persona" && active != null) {
-                Send("settings.denied", "NOX_PERSONA_GENERATION_ACTIVE_HOLD");
+                Send("settings.denied", new { requestId, reason = "NOX_PERSONA_GENERATION_ACTIVE_HOLD" });
                 return;
             }
             SavePreference(key, value);
@@ -1584,11 +1615,11 @@ public partial class MainWindow : Window
                 Send("notes", ReadNotes());
             }
             Send("settings", verified);
-            Send("settings.receipt", new { key, value, saved = true });
+            Send("settings.receipt", new { requestId, key, value, saved = true });
         }
-        catch (ArgumentException) { Send("settings.denied", "NOX_SETTINGS_REJECTED"); }
-        catch (SqliteException) { Send("settings.denied", "NOX_SETTINGS_SQLITE_HOLD"); }
-        catch (Exception) { Send("settings.denied", "NOX_SETTINGS_NATIVE_HOLD"); }
+        catch (ArgumentException) { Send("settings.denied", new { requestId, reason = "NOX_SETTINGS_REJECTED" }); }
+        catch (SqliteException) { Send("settings.denied", new { requestId, reason = "NOX_SETTINGS_SQLITE_HOLD" }); }
+        catch (Exception) { Send("settings.denied", new { requestId, reason = "NOX_SETTINGS_NATIVE_HOLD" }); }
     }
 
     private void SavePreference(string key, string value)
