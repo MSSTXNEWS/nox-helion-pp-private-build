@@ -9,7 +9,7 @@ cs = (root / "src" / "MainWindow.xaml.cs").read_text(encoding="utf-8")
 html = (root / "src" / "index.html").read_text(encoding="utf-8")
 required_cs = (
     'private string? activeRequestId;',
-    'NavigationStarting += (_, _) => { active?.Cancel(); activeRequestId = null; };',
+    'Browser.CoreWebView2.NavigationStarting += (_, _) => {',
     'string.Equals(activeRequestId, Text("requestId"), StringComparison.Ordinal)',
     'case "chat": await Generate(Text("text"), Text("requestId"));',
     'private async Task Generate(string prompt, string requestId)',
@@ -41,6 +41,13 @@ required_html = (
     "Only the matching native complete may unlock a busy chat.",
     "if(e.key==='Escape'&&busy&&activeChatId){e.preventDefault();$('stop').click()}",
 )
+# Navigation must revoke the active WebView2 chat owner and invalidate
+# every asynchronous provider-health callback from the previous document.
+# Do not regress the native code to the obsolete one-line source contract.
+nav = cs.split('Browser.CoreWebView2.NavigationStarting += (_, _) => {', 1)[1].split('\n            };', 1)[0]
+assert 'active?.Cancel(); activeRequestId = null;' in nav, 'B02_NAV_REVOKE_OWNER_HOLD'
+assert 'Interlocked.Increment(ref providerProbeEpoch);' in nav, 'B02_NAV_REVOKE_PROBE_HOLD'
+assert nav.index('active?.Cancel();') < nav.index('activeRequestId = null;') < nav.index('Interlocked.Increment(ref providerProbeEpoch);'), 'B02_NAV_OWNER_ORDER_HOLD'
 for fragment in required_cs:
     assert fragment in cs, 'B02_NATIVE_IPC_SOURCE_HOLD: ' + fragment
 for fragment in required_html:
