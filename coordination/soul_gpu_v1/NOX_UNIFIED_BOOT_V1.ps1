@@ -3,7 +3,7 @@
 $ErrorActionPreference = "Stop"
 $root = "C:\NOX_HELION\NOX_NEW"
 $repo = "$root\brain\source\repo"
-$ref = "74d7505382cba5e18c23ceac15c99d2d14b3e22d"
+$ref = "1b0960a45b58423506bc5121c315add4962d7eab"
 $base = "coordination/soul_gpu_v1"
 $dest = "$root\brain\skills\NOX_UNIFIED_49fca983"
 $python = "$env:USERPROFILE\NOX_EXPRESS_AI\NOX_TRAINING\train-venv\Scripts\python.exe"
@@ -23,8 +23,9 @@ $files = @(
  "forge_genesis_server_v8.py","forge_actual_telemetry_v1.py",
  "nox_thermal_sensors_v1.py","forge_focus_v4_canonical_live.html",
  "nox_unified_brain_v1.py","nox_unified_chat_v1.html",
+ "nox_prime_resource_advisor_v1.py",
  "nox_gpu_target_11120.py","nox_gpu_worm_safe70_v1.py",
- "test_nox_unified_brain_v1.py"
+ "test_nox_unified_brain_v1.py","test_nox_prime_resource_advisor_v1.py"
 )
 foreach ($name in $files) {
     $objectPath = "$base/$name"
@@ -59,11 +60,11 @@ foreach ($name in $files) {
         Remove-Item $tmp -Force -ErrorAction SilentlyContinue
     }
 }
-& $python -m py_compile "$dest\forge_live_server_v6.py" "$dest\nox_unified_brain_v1.py" "$dest\nox_gpu_target_11120.py" "$dest\nox_gpu_worm_safe70_v1.py"
+& $python -m py_compile "$dest\forge_live_server_v6.py" $dest\nox_unified_brain_v1.py" "$dest\nox_prime_resource_advisor_v1.py" "$dest\nox_gpu_target_11120.py" "$dest\nox_gpu_worm_safe70_v1.py"
 if ($LASTEXITCODE -ne 0) { throw "Python syntax validation failed" }
 Push-Location $dest
 try {
-    & $python -m unittest -q test_nox_unified_brain_v1
+    & $python -m unittest -q test_nox_unified_brain_v1 test_nox_prime_resource_advisor_v1
     if ($LASTEXITCODE -ne 0) { throw "Unified brain contract tests failed" }
 } finally { Pop-Location }
 
@@ -73,7 +74,7 @@ foreach ($port in 18880..18888) {
     $url = "http://127.0.0.1:$port/"
     $health = $null
     try { $health = Invoke-RestMethod ($url+"api/health") -TimeoutSec 2 } catch {}
-    if ($health -and $health.unified_router -eq "NOX-UNIFIED-BRAIN-V2") {
+    if ($health -and $health.unified_router -eq "NOX-UNIFIED-BRAIN-V4") {
         $selected = $url
         break
     }
