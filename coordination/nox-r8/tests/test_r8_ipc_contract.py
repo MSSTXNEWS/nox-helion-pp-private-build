@@ -284,7 +284,8 @@ print('D05 R8 SOURCE_ONLY: owner-correlated task toggle, SQLite COMMIT/readback 
 # This is an actual UI contract check; it is NOT physical owner-PC E2E.
 send_section = html.split("$('send').onclick=()=>", 1)[1].split("\n$('stop').onclick=", 1)[0]
 assert "busy=true;activeChatId=requestId;pendingStopId=null;pendingChatDraft={requestId,raw:$('prompt').value,persona:visibleDraftPersona};lastAnswer='';$('streamHint').textContent='Генерация ответа · не сохранено';" in send_section, 'B04_STALE_SQLITE_SUCCESS_DURING_GENERATION_HOLD'
-complete_section = html.split("case 'complete':", 1)[1].split("break;", 1)[0]
+complete_section = html.split("case 'complete':", 1)[1].split("\ncase 'error':", 1)[0]
+assert "if(retry?.persona!==visibleDraftPersona)" in complete_section, 'D01_PREVIOUS_PERSONA_TERMINAL_QUARANTINE_HOLD'
 assert "else if(v?.ok)$('streamHint').textContent='Ответ завершён и сохранён в SQLite.'" in complete_section
 assert "else{lastAnswer='';$('streamHint').textContent='Ответ не сохранён.'" in complete_section, 'B04_STALE_SQLITE_SUCCESS_ON_ERROR_HOLD'
 assert "if(v?.stopped){lastAnswer='';$('streamHint').textContent='Поток остановлен. Частичный ответ не сохранён.'" in complete_section
