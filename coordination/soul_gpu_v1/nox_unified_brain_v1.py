@@ -92,6 +92,8 @@ def status(root):
       "lora_applied_to_ollama":False,
       "native_s03_chat_writes_connected":False,
       "shared_identity_and_router":True,
+      "memory_continuum":"M0/M1 read-only, M4/M6 proposals, S03 native admission HOLD",
+      "self_edit_lab":"candidate-only, no automatic patch application",
       "subjective_consciousness_verified":False,
       "error":error,
     }
@@ -171,6 +173,9 @@ def prepare_chat(root,payload):
         "гигабайты VRAM называй только по подтверждённым данным. "+
         "Не выдавай предположения за измерения и не переключай модель без разрешения. "+
         "\\nОтвечай осмысленно и по существу, учитывая историю и текущий запрос. "+
+        "Для простых вопросов отвечай коротко, естественно и по существу. "+
+        "Не повторяй стандартные отказы вроде «я просто чат», если "+
+        "пользователь спрашивает о помощи, а не о философии сознания. "+
         "Для сложных задач обдумывай варианты, проверяй ограничения и давай "+
         "вывод с кратким объяснением и степенью уверенности, не изображая "+
         "несуществующие память, опыт, чувства или самосознание. "+
