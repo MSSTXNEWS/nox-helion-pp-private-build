@@ -148,6 +148,23 @@ assert 'if (value.Length > 0) Interlocked.Increment(ref generationStreamingToken
 assert generation.index('await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellation.Token)') < generation.index('Interlocked.Increment(ref generationStreamingTokenCount)')
 print('B04 R8 SOURCE_ONLY: physical STOP oracle waits for live Ollama NDJSON token, not only native dispatch PASS')
 
+# An HTTP NDJSON token is insufficient: the same live WebView2 document must
+# render it before STOP, then visibly unlock after native HTTP cancellation.
+visible = cs.split('private async Task<bool> WaitForVisibleChatTokenAsync(', 1)[1].split('private async Task<bool> WaitForStopUiReleaseAsync(', 1)[0]
+released = cs.split('private async Task<bool> WaitForStopUiReleaseAsync(', 1)[1].split('private async Task WaitForGenerationFinishAsync(', 1)[0]
+assert "document.getElementById('messages')?.firstElementChild" in visible
+assert "label?.textContent === 'NOX QWEN'" in visible
+assert "document.getElementById('generation')?.classList.contains('on')" in visible
+assert 'Volatile.Read(ref generationFinishedCount) >= generationTarget' in visible
+assert 'NOX_WEBVIEW2_STREAM_TOKEN_NOT_VISIBLE_HOLD' in selftest
+assert selftest.index('WaitForGenerationTokenAsync(streamTokenTarget, stopTarget, TimeSpan.FromMinutes(2))') < selftest.index('WaitForVisibleChatTokenAsync(stopTarget, TimeSpan.FromSeconds(4))') < selftest.index("document.getElementById('stop').click()")
+assert "document.getElementById('streamHint')" in released
+assert "Частичный ответ не сохранён" in released
+assert 'NOX_WEBVIEW2_STOP_OWNER_NOT_RELEASED_HOLD' in selftest
+assert selftest.index('Native STOP was not confirmed') < selftest.index('WaitForStopUiReleaseAsync(TimeSpan.FromSeconds(4))') < selftest.index('checks["real_webview_stop_cancel_no_partial_persistence"] = "PASS"')
+print('B04 R8 SOURCE_ONLY: live WebView2 token and STOP unlock acceptance oracle present (physical E2E NOT RUN)')
+
+
 # D05 native task toggle: a checkbox is not proof of persistence.
 # Request-ID bound receipt only after COMMIT and independent SQLite readback.
 toggle = cs.split('private void HandleTaskToggle(', 1)[1].split('private static bool ValidWriteRequestId(', 1)[0]

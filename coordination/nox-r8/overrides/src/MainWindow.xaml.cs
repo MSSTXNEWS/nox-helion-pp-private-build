@@ -776,11 +776,19 @@ public partial class MainWindow : Window
             // Cancelling preflight/context work alone is NOT active HTTP STOP evidence.
             if (!await WaitForGenerationTokenAsync(streamTokenTarget, stopTarget, TimeSpan.FromMinutes(2)))
                 throw new InvalidOperationException("NOX_ACTIVE_HTTP_STREAM_NOT_OBSERVED_HOLD");
+            // Native NDJSON receipt alone is not proof that WebView2 displayed
+            // a live token. Demand actual visible DOM output before owner STOP.
+            if (!await WaitForVisibleChatTokenAsync(stopTarget, TimeSpan.FromSeconds(4)))
+                throw new InvalidOperationException("NOX_WEBVIEW2_STREAM_TOKEN_NOT_VISIBLE_HOLD");
             await Browser.CoreWebView2.ExecuteScriptAsync("document.getElementById('stop').click();");
             await WaitForGenerationFinishAsync(stopTarget, TimeSpan.FromSeconds(30));
             if (Volatile.Read(ref stopSignalCount) <= beforeStop ||
                 !lastGenerationStopped || HasSavedPrompt(longPrompt))
                 throw new InvalidOperationException("Native STOP was not confirmed");
+            // Confirm the SAME WebView2 owner is released after HTTP cancellation,
+            // not merely that native counters moved. No fake provider is used.
+            if (!await WaitForStopUiReleaseAsync(TimeSpan.FromSeconds(4)))
+                throw new InvalidOperationException("NOX_WEBVIEW2_STOP_OWNER_NOT_RELEASED_HOLD");
             checks["real_webview_stop_cancel_no_partial_persistence"] = "PASS";
         }
         catch (Exception ex)
@@ -858,6 +866,50 @@ public partial class MainWindow : Window
         {
             if (Volatile.Read(ref generationFinishedCount) >= generationTarget) return false;
             if (Volatile.Read(ref generationStreamingTokenCount) >= tokenTarget) return true;
+            await Task.Delay(75);
+        }
+        return false;
+    }
+
+    // E2E-only: the native HTTP reader may see a token even if the WebView2
+    // renderer never shows it. Observe the real embedded document while active.
+    private async Task<bool> WaitForVisibleChatTokenAsync(int generationTarget, TimeSpan timeout)
+    {
+        var until = DateTime.UtcNow + timeout;
+        while (DateTime.UtcNow < until)
+        {
+            if (Volatile.Read(ref generationFinishedCount) >= generationTarget) return false;
+            var visible = await Browser.CoreWebView2.ExecuteScriptAsync("""
+                (() => {
+                  const row = document.getElementById('messages')?.firstElementChild;
+                  const label = row?.querySelector('small');
+                  const body = row?.lastElementChild;
+                  return label?.textContent === 'NOX QWEN' &&
+                    !!body?.textContent &&
+                    document.getElementById('generation')?.classList.contains('on') === true;
+                })()
+                """);
+            if (visible == "true" && Volatile.Read(ref generationFinishedCount) < generationTarget)
+                return true;
+            await Task.Delay(75);
+        }
+        return false;
+    }
+
+    private async Task<bool> WaitForStopUiReleaseAsync(TimeSpan timeout)
+    {
+        var until = DateTime.UtcNow + timeout;
+        while (DateTime.UtcNow < until)
+        {
+            var released = await Browser.CoreWebView2.ExecuteScriptAsync("""
+                (() => {
+                  const busyIndicator = document.getElementById('generation');
+                  const hint = document.getElementById('streamHint');
+                  return busyIndicator?.classList.contains('on') === false &&
+                    hint?.textContent?.includes('Частичный ответ не сохранён') === true;
+                })()
+                """);
+            if (released == "true") return true;
             await Task.Delay(75);
         }
         return false;
