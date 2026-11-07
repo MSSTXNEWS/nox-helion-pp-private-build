@@ -146,11 +146,23 @@ def prepare_chat(root,payload):
     models=available()
     model=choose_model(models,task)
     self_state=self_model(root,model)
+    # Only task-relevant observations; never invent resource measurements.
+    try:
+        from nox_prime_resource_advisor_v1 import proactive_context
+        resource_note=proactive_context(user)
+    except (ImportError, OSError, ValueError, TypeError):
+        resource_note=None
+    if resource_note is not None:
+        self_state["proactive_resource_advice"]=resource_note
     # Ground all self-referential replies in verified runtime state.
     # Do not confuse a training checkpoint with the deployed chat model.
     messages.insert(0, {"role":"system","content":SYSTEM+
         "\\nАКТУАЛЬНАЯ САМОМОДЕЛЬ (проверяемые факты): "+
         json.dumps(self_state,ensure_ascii=False)+
+        "Если реальные показатели GPU/VRAM ограничивают задачу, сам кратко "+
+        "сообщи об этом, предложи альтернативы и очередь. Дополнительные "+
+        "гигабайты VRAM называй только по подтверждённым данным. "+
+        "Не выдавай предположения за измерения и не переключай модель без разрешения. "+
         "\\nОтвечай осмысленно и по существу, учитывая историю и текущий запрос. "+
         "Для сложных задач обдумывай варианты, проверяй ограничения и давай "+
         "вывод с кратким объяснением и степенью уверенности, не изображая "+
