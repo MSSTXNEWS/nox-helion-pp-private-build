@@ -2,6 +2,7 @@
 SOURCE_ONLY: not native C# execution, Windows lifecycle or owner-PC acceptance.
 """
 import hashlib
+import re
 import sqlite3
 import tempfile
 from contextlib import closing
@@ -76,25 +77,52 @@ assert 'if (existingTables && !selfTestRequested)' in init
 assert 'needed.Any(name => !knownObjects.Contains(name))' in init
 
 
-# Importing the first local JSONL history must create exactly one verified
-# preimage before BEGIN; repeated startup must not create repeated backups.
+# Both B03 and D03 implement a verified preimport SQLite snapshot.
+# The final source must keep exactly one snapshot before the write transaction.
 legacy = src.split("private void ImportLegacyJsonlIfNeeded(", 1)[1].split("\n    private ", 1)[0]
+snapshots = re.findall(
+    r'CheckpointSqlite\(\s*db,\s*"(PRE_LEGACY_JSONL_IMPORT|PRE_LEGACY_IMPORT)"\s*\)', legacy
+)
+assert len(snapshots) == 1 and legacy.count("CheckpointSqlite(") == 1, (
+    "NOX_B03_LEGACY_SNAPSHOT_MISSING_OR_DUPLICATED_HOLD"
+)
 for guard in (
     "if (!File.Exists(legacy)) return;",
-    "using (var prior = db.CreateCommand())",
-    "if (Convert.ToInt64(prior.ExecuteScalar()) > 0) return;",
-    'CheckpointSqlite(db, "PRE_LEGACY_JSONL_IMPORT")',
+    "SELECT COUNT(*) FROM imported_sources",
     "using var tx = db.BeginTransaction();",
-    "if (Convert.ToInt64(check.ExecuteScalar()) > 0) { tx.Commit(); return; }",
     "INSERT INTO chat_history(timestamp,prompt,answer)",
     "INSERT INTO imported_sources(source,imported_at,rows)",
+    "tx.Commit()",
 ):
     assert guard in legacy, "NOX_B03_LEGACY_IMPORT_CONTRACT_HOLD:" + guard
-assert legacy.index('CheckpointSqlite(db, "PRE_LEGACY_JSONL_IMPORT")') > legacy.index(
-    "if (Convert.ToInt64(prior.ExecuteScalar()) > 0) return;")
-assert legacy.index('CheckpointSqlite(db, "PRE_LEGACY_JSONL_IMPORT")') < legacy.index(
-    "using var tx = db.BeginTransaction();")
+snapshot_pos = legacy.index("CheckpointSqlite(")
+assert legacy.index("SELECT COUNT(*) FROM imported_sources") < snapshot_pos
+assert snapshot_pos < legacy.index("using var tx = db.BeginTransaction();")
 assert "File.Delete(" not in legacy and "File.Move(" not in legacy
+
+if snapshots[0] == "PRE_LEGACY_JSONL_IMPORT":
+    # Original B03 semantics: no redundant backup after import is complete.
+    for guard in (
+        "using (var prior = db.CreateCommand())",
+        "if (Convert.ToInt64(prior.ExecuteScalar()) > 0) return;",
+        "if (Convert.ToInt64(check.ExecuteScalar()) > 0) { tx.Commit(); return; }",
+    ):
+        assert guard in legacy, "NOX_B03_ORIGINAL_IMPORT_CONTRACT_HOLD:" + guard
+    assert legacy.index("prior.ExecuteScalar()") < snapshot_pos
+else:
+    # D03's stronger SHA/rollback importer supersedes B03's import hunk.
+    for guard in (
+        "FileAttributes.ReparsePoint",
+        "NOX_LEGACY_JSONL_REPARSE_HOLD",
+        "NOX_LEGACY_JSONL_INCOMPLETE_HOLD",
+        "NOX_LEGACY_JSONL_CHANGED_DURING_IMPORT_HOLD",
+        "shaPrefix + sourceSha",
+        "tx.Rollback()",
+        "Sha256File(legacy)",
+    ):
+        assert guard in legacy, "NOX_D03_IMPORT_NOLOSS_CONTRACT_HOLD:" + guard
+    assert legacy.count("Sha256File(legacy)") >= 2
+    assert legacy.index("Sha256File(legacy)") < snapshot_pos
 
 # Run actual WAL + backup + integrity + SHA + immutable foreign file fixtures
 # on an isolated temporary SQLite database; no production files are touched.
