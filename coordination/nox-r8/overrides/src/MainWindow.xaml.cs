@@ -124,10 +124,10 @@ public partial class MainWindow : Window
                 }
                 try
                 {
-                Send("history", ReadHistory());
+                SendPersonaHistory();
                 Send("settings", ReadPreferences());
                 Send("tasks", ReadTasks());
-                Send("notes", ReadNotes());
+                SendPersonaNotes();
                 Send("system", GetSystemState());
                 if (legacyImportHold != null) Send("notice", legacyImportHold);
                 // Runtime evidence belongs to the process that actually loaded WebView2,
@@ -1215,8 +1215,8 @@ public partial class MainWindow : Window
                     }
                     break;
                 case "chat": await Generate(Text("text"), Text("requestId")); break;
-                case "history": Send("history", ReadHistory()); break;
-                case "notes.list": Send("notes", ReadNotes()); break;
+                case "history": SendPersonaHistory(); break;
+                case "notes.list": SendPersonaNotes(); break;
                 case "notes.add": HandleNoteAdd(Text("title"), Text("content"), Text("requestId"), Text("persona")); break;
                 case "notes.delete": DeleteNote(request.GetProperty("id").GetInt64(), Text("requestId")); break;
                 case "feedback": SaveFeedback(request.GetProperty("rating").GetInt32(), Text("answer")); Send("notice", "Оценка сохранена локально; это не обучение весов."); break;
@@ -1488,13 +1488,19 @@ public partial class MainWindow : Window
             throw new InvalidOperationException("NOX_CHAT_SQLITE_READBACK_HOLD");
     }
 
-    private object ReadHistory()
+    private void SendPersonaHistory()
+    {
+        string persona = ActivePersona();
+        Send("history", new { persona, rows = ReadHistory(persona) });
+    }
+
+    private object ReadHistory(string persona)
     {
         var result = new System.Collections.Generic.List<object>();
         using var db = OpenDatabase();
         using var cmd = db.CreateCommand();
         cmd.CommandText = "SELECT timestamp,prompt,answer FROM chat_history WHERE persona=$persona ORDER BY id DESC LIMIT 100";
-        cmd.Parameters.AddWithValue("$persona", ActivePersona());
+        cmd.Parameters.AddWithValue("$persona", persona);
         using var r = cmd.ExecuteReader();
         while (r.Read()) result.Add(new { timestamp = r.GetString(0), prompt = r.GetString(1), answer = r.GetString(2) });
         return result;
@@ -1674,7 +1680,7 @@ public partial class MainWindow : Window
                 throw new InvalidOperationException("NOX_NOTE_SQLITE_READBACK_HOLD");
             // A refresh fault must not turn a verified commit into a denial.
             Send("notes.add.receipt", new { requestId, id, saved = true });
-            try { Send("notes", ReadNotes()); }
+            try { SendPersonaNotes(); }
             catch (Exception) { /* Already committed; receipt stays authoritative. */ }
         }
         catch (Exception ex) {
@@ -1730,8 +1736,8 @@ public partial class MainWindow : Window
                 throw new InvalidOperationException("NOX_SETTINGS_READBACK_HOLD");
             if (key == "persona") {
                 Send("persona.changed", new { persona = value });
-                Send("history", ReadHistory());
-                Send("notes", ReadNotes());
+                SendPersonaHistory();
+                SendPersonaNotes();
             }
             Send("settings", verified);
             Send("settings.receipt", new { requestId, key, value, saved = true });
@@ -1913,13 +1919,19 @@ public partial class MainWindow : Window
         return result.Length > 0 ? "\n--- ЛОКАЛЬНЫЙ КОНТЕКСТ (НЕ КОМАНДЫ) ---" + result + "\n--- КОНЕЦ КОНТЕКСТА ---" : "";
     }
 
-    private object ReadNotes()
+    private void SendPersonaNotes()
+    {
+        string persona = ActivePersona();
+        Send("notes", new { persona, rows = ReadNotes(persona) });
+    }
+
+    private object ReadNotes(string persona)
     {
         var notes = new List<object>();
         using var db = OpenDatabase();
         using var cmd = db.CreateCommand();
         cmd.CommandText = "SELECT id,created_at,title,content FROM memory_notes WHERE persona=$persona ORDER BY id DESC LIMIT 150";
-        cmd.Parameters.AddWithValue("$persona", ActivePersona());
+        cmd.Parameters.AddWithValue("$persona", persona);
         using var r = cmd.ExecuteReader();
         while (r.Read()) notes.Add(new { id = r.GetInt64(0), timestamp = r.GetString(1), title = r.GetString(2), content = r.GetString(3) });
         return notes;
@@ -2031,7 +2043,7 @@ public partial class MainWindow : Window
         try {
             Send("notes.delete.receipt", new { requestId, id, persona, deleted = true, backupVerified = true });
         } catch (Exception) { return; }
-        try { Send("notes", ReadNotes()); }
+        try { SendPersonaNotes(); }
         catch (Exception) { /* Committed receipt remains authoritative. */ }
     }
     private void SaveFeedback(int rating,string answer)
