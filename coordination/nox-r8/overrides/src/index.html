@@ -154,7 +154,11 @@ body.reduced .helion-fx{filter:none}body.reduced .core.active{animation:none}
   // reject the OS motion observer. Neither must disable graphics or native IPC.
   let motionQuery=null,motionUnreadable=false;
   try{
-    if(typeof window.matchMedia==='function')motionQuery=window.matchMedia('(prefers-reduced-motion: reduce)');
+    if(typeof window.matchMedia==='function'){
+      motionQuery=window.matchMedia('(prefers-reduced-motion: reduce)');
+      // A present but broken WebView2 media API gives no trustworthy OS preference.
+      if(!motionQuery){motionUnreadable=true;console.warn('NOX reduced-motion query returned empty state');}
+    }
   }catch(e){motionUnreadable=true;console.warn('NOX reduced-motion query unavailable:',String(e?.message||e));}
   // A failing Windows MediaQueryList.matches getter must never escape an
   // animation frame. Unknown OS preference errs on the accessible static pose.
@@ -162,8 +166,15 @@ body.reduced .helion-fx{filter:none}body.reduced .core.active{animation:none}
   const reduce=()=>{
     if(document.body.classList.contains('reduced')||motionUnreadable)return true;
     if(!motionQuery)return false;
-    try{return Boolean(motionQuery.matches);}
-    catch(e){
+    try{
+      const matches=motionQuery.matches;
+      if(typeof matches!=='boolean'){
+        motionUnreadable=true;
+        console.warn('NOX reduced-motion state unavailable: expected boolean');
+        return true;
+      }
+      return matches;
+    }catch(e){
       motionUnreadable=true;
       console.warn('NOX reduced-motion state inaccessible:',String(e?.message||e));
       return true;
