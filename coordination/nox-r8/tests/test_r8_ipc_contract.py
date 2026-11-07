@@ -475,3 +475,14 @@ assert 'if (read == 0) return builder.Length == 0 ? null : builder.ToString();' 
 assert line_guard.index('if (builder.Length >= MaxNdjsonLineChars)') < line_guard.index('builder.Append(one[0]);'), 'B02_NDJSON_CAP_PREAPPEND_HOLD'
 assert 'OLLAMA_NDJSON_LINE_LIMIT_HOLD' in line_guard and 'ReadLineAsync(readWindow.Token)' not in generate_budget, 'B02_NDJSON_UNBOUNDED_HOLD'
 print('B02 R8 SOURCE_ONLY: NDJSON record bound/owner timeout/EOF guards present; Windows Ollama NOT_TESTED')
+
+# B02: buffered NDJSON reads can complete synchronously on the native WPF
+# dispatcher. Periodically yield while honoring owner STOP and the hard cap.
+# Contract assertion only, not Windows/Ollama runtime acceptance.
+_ndjson_yield = cs.split('private static async Task<string?> ReadBoundedOllamaLineAsync(', 1)[1].split('private void PersistChat(', 1)[0]
+assert _ndjson_yield.count('await Task.Yield();') == 1, 'B02_NDJSON_UI_YIELD_MISSING_HOLD'
+assert 'if ((builder.Length & 4095) == 0)' in _ndjson_yield, 'B02_NDJSON_UI_YIELD_BUDGET_HOLD'
+assert _ndjson_yield.index('builder.Append(one[0]);') < _ndjson_yield.index('if ((builder.Length & 4095) == 0)') < _ndjson_yield.index('await Task.Yield();'), 'B02_NDJSON_UI_YIELD_ORDER_HOLD'
+assert _ndjson_yield.index('token.ThrowIfCancellationRequested();') < _ndjson_yield.index('await Task.Yield();'), 'B02_NDJSON_UI_YIELD_STOP_HOLD'
+assert _ndjson_yield.index('if (builder.Length >= MaxNdjsonLineChars)') < _ndjson_yield.index('builder.Append(one[0]);'), 'B02_NDJSON_BOUND_PRESERVED_HOLD'
+print('B02 SOURCE_ONLY: 4096-character periodic WPF UI yield, owner STOP and 2Mi NDJSON cap retained; Windows NOT_TESTED')

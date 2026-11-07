@@ -2169,6 +2169,13 @@ public partial class MainWindow : Window
             if (builder.Length >= MaxNdjsonLineChars)
                 throw new InvalidOperationException("OLLAMA_NDJSON_LINE_LIMIT_HOLD: provider record exceeded 2 Mi UTF-16 characters; partial SQLite save denied.");
             builder.Append(one[0]);
+            // StreamReader may return synchronously from its internal buffer.
+            // Yield every 4096 chars so the WPF dispatcher can process STOP.
+            if ((builder.Length & 4095) == 0)
+            {
+                token.ThrowIfCancellationRequested();
+                await Task.Yield();
+            }
         }
     }
 
