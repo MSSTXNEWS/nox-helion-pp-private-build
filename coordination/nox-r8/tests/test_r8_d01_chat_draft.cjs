@@ -398,7 +398,7 @@ console.log('D01 SOURCE_ONLY PASS: 8 CoreID focus, IME/modified/repeat navigatio
     const nodes={send:{},prompt:{value:raw},streamHint:{textContent:''},
       messages:{},generation:{classList:{remove(){}}}};
     const machine=vm.runInNewContext(
-      "let responseBox=null,lastAnswer='',busy=false,activeChatId=null,pendingChatDraft=null,visibleDraftPersona='KV';const personaDrafts=new Map();"+
+      "let responseBox=null,lastAnswer='',busy=false,activeChatId=null,pendingChatDraft=null,visibleDraftPersona='KV';const personaDrafts=new Map();"+guardLine+
       sendHandler+
       "\nfunction finishTurn(v){switch('complete'){"+completeHandler+"}}\n"+
       "({send:()=>$('send').onclick(),finishTurn,state:()=>({busy,pendingChatDraft})})",
