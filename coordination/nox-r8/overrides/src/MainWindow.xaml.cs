@@ -24,6 +24,7 @@ public partial class MainWindow : Window
     private readonly HttpClient http = new() { Timeout = TimeSpan.FromMinutes(10) };
     private readonly SemaphoreSlim generationLock = new(1, 1);
     private readonly SemaphoreSlim engineStartLock = new(1, 1);
+    private readonly SemaphoreSlim sensorReadLock = new(1, 1);
     private CancellationTokenSource? active;
     private string? activeRequestId; // Owned by the current WebView2 document and chat request.
     private CancellationTokenSource? activeModelPull;
@@ -126,7 +127,7 @@ public partial class MainWindow : Window
                 Send("settings", ReadPreferences());
                 Send("tasks", ReadTasks());
                 Send("notes", ReadNotes());
-                Send("system", GetSystemState());
+                _ = SendSystemStateAsync();
                 // Runtime evidence belongs to the process that actually loaded WebView2,
                 // not to a source-only build or a previously launched EXE.
                 if (!selfTestRequested) WriteRuntimeReadyReceipt();
@@ -1186,7 +1187,7 @@ public partial class MainWindow : Window
                 case "knowledge.stats": Send("knowledge.stats", knowledge.Stats()); break;
                 case "knowledge.import": ImportKnowledgeByDialog(); break;
                 case "knowledge.vuneo": ImportVuneoByConsent(); break;
-                case "system.status": Send("system", GetSystemState()); break;
+                case "system.status": _ = SendSystemStateAsync(); break;
                 default: Send("error", "Unknown operation: " + kind); break;
             }
         }
@@ -1750,7 +1751,26 @@ public partial class MainWindow : Window
         return prefs;
     }
 
-    private object GetSystemState()
+    // nvidia-smi may take 2500ms; never block WebView2 IPC or the STOP dispatcher.
+    // Coalesce duplicate refresh requests to avoid competing GPU queries.
+    private async Task SendSystemStateAsync()
+    {
+        if (!await sensorReadLock.WaitAsync(0)) return;
+        try
+        {
+            var gpu = await Task.Run(GetGpuStatus);
+            if (!Dispatcher.HasShutdownStarted && !Dispatcher.HasShutdownFinished)
+                Send("system", GetSystemState(gpu));
+        }
+        catch (Exception ex)
+        {
+            if (!Dispatcher.HasShutdownStarted && !Dispatcher.HasShutdownFinished)
+                Send("error", "NOX_SENSOR_STATUS_HOLD: " + ex.GetType().Name);
+        }
+        finally { sensorReadLock.Release(); }
+    }
+
+    private object GetSystemState(object? gpuSnapshot = null)
     {
         using var proc = Process.GetCurrentProcess();
         return new {
@@ -1758,7 +1778,7 @@ public partial class MainWindow : Window
             model = CurrentModel,
             endpoint = Api,
             processMemoryMb = Math.Round(proc.WorkingSet64 / 1048576.0, 1),
-            gpu = GetGpuStatus(),
+            gpu = gpuSnapshot ?? GetGpuStatus(),
             release = "NOX_HELION_R5_FUNCTIONAL_BUILD",
             knowledge = knowledge.Stats(),
             runtime = Environment.Version.ToString(),
