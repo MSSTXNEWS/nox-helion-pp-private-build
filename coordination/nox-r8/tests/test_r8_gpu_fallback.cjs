@@ -230,7 +230,7 @@ function exercise(kind){
   check(cpuFrames>=3,kind+' visible redraw');
 }
 for(const kind of ['noGpu','noGpu2dLoss','drawFail2dLoss','resizeStormGpu','resizeStormCpu','throwContext','compileFail','setupFail','programNull','shaderNull','uniformNull','bufferNull','attributeMissing','ok','contextLost','drawFail','viewportFail','uniformFail','glError','lateGlError','reducedGpu','reducedCpu','legacyReducedGpu','legacyReducedCpu','noMediaApiGpu','noMediaApiCpu','queryThrowsGpu','queryThrowsCpu','observerThrowsGpu','observerThrowsCpu','observerThrowsLegacyGpu','observerThrowsLegacyCpu','no2d','throw2d','draw2dFail','matchesGetterGpu','matchesGetterCpu'])exercise(kind);
-check(html.includes("case 'complete':busy=false;activeChatId=null;$('generation').classList.remove('on');window.noxVisual?.setEnergy(false);"),'native completion clears renderer energy');
+check(html.includes("case 'complete':{const retry=pendingChatDraft?.requestId===v?.requestId") && html.includes("busy=false;activeChatId=null;$('generation').classList.remove('on');window.noxVisual?.setEnergy(false);"),'native completion clears renderer energy without losing draft recovery');
 
 /* A real CSS fallback must reveal the preserved original sphere, not a 14%-opacity ghost.
    This checks the production stylesheet alongside the existing GPU/2D runtime scenarios. */
