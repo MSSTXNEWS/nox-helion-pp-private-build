@@ -90,6 +90,7 @@ body.reduced *,body.reduced *:before,body.reduced *:after{animation:none!importa
 .helion-core{z-index:1;opacity:.14;pointer-events:none}
 .helion[data-fx="active"]{background:radial-gradient(circle at 50% 50%,#000 13%,#010307 64%,#2b1c19 75%,transparent 82%)}
 .helion[data-fx="disabled"] .helion-fx{display:none}
+.helion[data-fx="disabled"] .helion-core{opacity:1}
 .core{transform:translateZ(0)}.core:after{content:"";position:absolute;inset:8px;border:1px solid #d69b5638;border-radius:50%;box-shadow:inset -6px -7px 13px #0009;pointer-events:none}
 .core.active{animation:orb-active 5s ease-in-out infinite;}
 @keyframes orb-active{0%,100%{box-shadow:0 0 14px #c67c4240,inset 0 0 21px #000}50%{box-shadow:0 0 34px #eab27280,inset 0 0 18px #000}}
