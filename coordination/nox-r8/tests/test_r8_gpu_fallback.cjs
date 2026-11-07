@@ -58,7 +58,7 @@ function exercise(kind){
     const canvas={width:0,height:0,parentElement:sphere,
       getBoundingClientRect(){return {width:cssSize,height:cssSize};},
       getContext(type){
-        if(type==='webgl2'){if(kind==='throwContext')throw Error('WEBGL_BLOCKED');return ['noGpu','noGpu2dLoss','resizeStormCpu','reducedCpu','legacyReducedCpu','noMediaApiCpu','queryThrowsCpu','observerThrowsCpu','observerThrowsLegacyCpu','no2d','throw2d','draw2dFail','matchesGetterCpu','emptyMediaCpu','invalidStateCpu'].includes(kind)?null:gl;}
+        if(type==='webgl2'){if(kind==='throwContext')throw Error('WEBGL_BLOCKED');return ['noGpu','noGpu2dLoss','resizeStormCpu','reducedCpu','legacyReducedCpu','noMediaApiCpu','queryThrowsCpu','observerThrowsCpu','observerThrowsLegacyCpu','no2d','throw2d','draw2dFail','matchesGetterCpu','emptyMediaCpu','invalidStateCpu','motionObserverMissingCpu','motionObserverRejectsCpu'].includes(kind)?null:gl;}
         if(type==='2d'){
           if(kind==='throw2d')throw Error('CANVAS_2D_CONTEXT_BLOCKED');
           if(kind==='no2d')return null;
@@ -93,6 +93,11 @@ function exercise(kind){
   };
   if(kind.startsWith('legacyReduced'))media.addEventListener=undefined;
   if(kind.startsWith('invalidState'))media.matches=undefined;
+  if(kind.startsWith('motionObserverMissing')){media.addEventListener=undefined;media.addListener=undefined;}
+  if(kind.startsWith('motionObserverRejects')){
+    media.addEventListener=()=>{throw Error('MODERN_MQL_REJECTED');};
+    media.addListener=()=>{throw Error('LEGACY_MQL_REJECTED');};
+  }
   if(kind==='matchesGetterGpu'||kind==='matchesGetterCpu'){
     Object.defineProperty(media,'matches',{get(){throw Error('MQL_MATCHES_BLOCKED');}});
   }
@@ -121,6 +126,18 @@ function exercise(kind){
     check(queue.size===0,kind+' no hot RAF loop after setting changes');
     check(warnings.filter(x=>x.includes(warnName)).length===1,kind+' warning not repeated');
     check((gpu?gpuFrames:cpuFrames)===3,kind+' static render remains functional');
+    return;
+  }
+  if(kind.startsWith('motionObserver')){
+    const gpu=kind.endsWith('Gpu');
+    check(sphere.dataset.fx===(gpu?'active':'canvas2d'),kind+' original renderer initialized');
+    tick();
+    check(queue.size===0,kind+' unavailable OS change observer must freeze RAF');
+    check(warnings.filter(x=>x.includes('reduced-motion observer unavailable; freezing animation')).length===1,kind+' exactly one fail-closed warning');
+    window.noxVisual.setEnergy(true);tick();
+    window.noxVisual.setMode('ECO');tick();
+    check(queue.size===0,kind+' energy/mode changes keep motion safely static');
+    check((gpu?gpuFrames:cpuFrames)===3,kind+' real static frames still draw');
     return;
   }
   if(kind==='no2d'||kind==='throw2d'||kind==='draw2dFail'){
@@ -230,10 +247,10 @@ function exercise(kind){
   document.hidden=false;document.fire('visibilitychange');tick();
   check(cpuFrames>=3,kind+' visible redraw');
 }
-for(const kind of ['noGpu','noGpu2dLoss','drawFail2dLoss','resizeStormGpu','resizeStormCpu','throwContext','compileFail','setupFail','programNull','shaderNull','uniformNull','bufferNull','attributeMissing','ok','contextLost','drawFail','viewportFail','uniformFail','glError','lateGlError','reducedGpu','reducedCpu','legacyReducedGpu','legacyReducedCpu','noMediaApiGpu','noMediaApiCpu','queryThrowsGpu','queryThrowsCpu','emptyMediaGpu','emptyMediaCpu','invalidStateGpu','invalidStateCpu','observerThrowsGpu','observerThrowsCpu','observerThrowsLegacyGpu','observerThrowsLegacyCpu','no2d','throw2d','draw2dFail','matchesGetterGpu','matchesGetterCpu'])exercise(kind);
+for(const kind of ['noGpu','noGpu2dLoss','drawFail2dLoss','resizeStormGpu','resizeStormCpu','throwContext','compileFail','setupFail','programNull','shaderNull','uniformNull','bufferNull','attributeMissing','ok','contextLost','drawFail','viewportFail','uniformFail','glError','lateGlError','reducedGpu','reducedCpu','legacyReducedGpu','legacyReducedCpu','noMediaApiGpu','noMediaApiCpu','queryThrowsGpu','queryThrowsCpu','emptyMediaGpu','emptyMediaCpu','invalidStateGpu','invalidStateCpu','observerThrowsGpu','observerThrowsCpu','observerThrowsLegacyGpu','observerThrowsLegacyCpu','no2d','throw2d','draw2dFail','matchesGetterGpu','matchesGetterCpu','motionObserverMissingGpu','motionObserverMissingCpu','motionObserverRejectsGpu','motionObserverRejectsCpu'])exercise(kind);
 check(html.includes("case 'complete':busy=false;activeChatId=null;$('generation').classList.remove('on');window.noxVisual?.setEnergy(false);"),'native completion clears renderer energy');
 
 /* A real CSS fallback must reveal the preserved original sphere, not a 14%-opacity ghost.
    This checks the production stylesheet alongside the existing GPU/2D runtime scenarios. */
 check(/\.helion\[data-fx="disabled"\]\s+\.helion-core\s*\{\s*opacity\s*:\s*1\s*;?\s*\}/.test(html),'Canvas2D unavailable/lost must reveal opaque original CSS sphere');
-console.log('D04 R8 GPU failover SOURCE_ONLY: 41 scenarios PASS (WebGL2, Canvas2D, CSS fallback, throwing media.matches getter, legacy/missing/rejected motion APIs, native IPC); owner GPU NOT_TESTED');
+console.log('D04 R8 GPU failover SOURCE_ONLY: 45 scenarios PASS (WebGL2, Canvas2D, CSS fallback, throwing media.matches getter, legacy/missing/rejected motion APIs, native IPC); owner GPU NOT_TESTED');

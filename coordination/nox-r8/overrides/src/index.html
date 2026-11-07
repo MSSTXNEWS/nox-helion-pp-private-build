@@ -190,8 +190,14 @@ body.reduced .helion-fx{filter:none}body.reduced .core.active{animation:none}
       }
     }catch(e){console.warn('NOX modern reduced-motion observer unavailable:',String(e?.message||e));}
     try{
-      if(typeof motionQuery.addListener==='function')motionQuery.addListener(redraw);
+      if(typeof motionQuery.addListener==='function'){
+        motionQuery.addListener(redraw);return;
+      }
     }catch(e){console.warn('NOX legacy reduced-motion observer unavailable:',String(e?.message||e));}
+    // If BOTH WebView2 change observers are missing/rejected, later OS changes
+    // cannot be detected. Never leave a perpetual RAF under unknown motion policy.
+    motionUnreadable=true;
+    console.warn('NOX reduced-motion observer unavailable; freezing animation');
   }
   // Dynamic WebView2/DPI layout changes do not always fire window.resize.
   // Observe the existing element so Reduced Motion still gets one accurate
