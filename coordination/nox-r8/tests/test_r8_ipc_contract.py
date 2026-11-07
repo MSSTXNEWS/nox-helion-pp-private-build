@@ -4,9 +4,18 @@ import subprocess
 import shutil
 import re
 
-root = Path(__file__).resolve().parent  # CI stages this test beside src/ inside r8/
-cs = (root / "src" / "MainWindow.xaml.cs").read_text(encoding="utf-8")
-html = (root / "src" / "index.html").read_text(encoding="utf-8")
+root = Path(__file__).resolve().parent
+# Run directly from the checked-in repository or from the final CI staging
+# directory. A missing source tree must fail closed, not silently skip checks.
+source_dir = next((candidate for candidate in (
+    root.parent / "overrides" / "src",
+    root / "src",
+) if (candidate / "MainWindow.xaml.cs").is_file()
+   and (candidate / "index.html").is_file()), None)
+if source_dir is None:
+    raise SystemExit("B02_R8_SOURCE_PATH_HOLD")
+cs = (source_dir / "MainWindow.xaml.cs").read_text(encoding="utf-8")
+html = (source_dir / "index.html").read_text(encoding="utf-8")
 required_cs = (
     'private string? activeRequestId;',
     'Browser.CoreWebView2.NavigationStarting += (_, args) =>',
