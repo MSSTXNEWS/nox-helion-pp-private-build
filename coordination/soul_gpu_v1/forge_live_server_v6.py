@@ -220,6 +220,14 @@ def serve(root, port):
                 return self.get(page, 'text/html; charset=utf-8')
             if self.path == '/nox/chat':
                 return self.get(unified_page, 'text/html; charset=utf-8')
+            if self.path == '/api/nox/history':
+                try:
+                    return self.get(json.dumps({'messages':unified.read_history(root)},
+                                               ensure_ascii=False).encode('utf-8'),
+                                    'application/json; charset=utf-8')
+                except Exception as ex:
+                    return self.get(json.dumps({'error':type(ex).__name__}).encode(),
+                                    'application/json',503)
             if self.path == '/api/nox/status':
                 try:
                     result=unified.status(root)
@@ -233,7 +241,7 @@ def serve(root, port):
             if self.path == '/api/health':
                 return self.get(json.dumps({'status': 'READY', 'schema': SCHEMA,
                                             'template': 'NOX-FORGE-WOW-LIVE-V6',
-                                            'unified_router':'NOX-UNIFIED-BRAIN-V2',
+                                            'unified_router':'NOX-UNIFIED-BRAIN-V3',
                                             'read_only': True}).encode(), 'application/json')
             if self.path == '/api/status':
                 try:
@@ -243,7 +251,7 @@ def serve(root, port):
                     return self.get(json.dumps({'error': type(exc).__name__, 'detail': str(exc)[:220]}).encode(), 'application/json', 503)
             return self.get(b'{"error":"not found"}', 'application/json', 404)
         def do_POST(self):
-            if self.path != '/api/nox/chat':
+            if self.path not in ('/api/nox/chat','/api/nox/chat/stream'):
                 return self.get(b'{"error":"read-only; no GPU command bridge"}',
                                 'application/json',403)
             # Never accept arbitrary cross-site requests into local Ollama.
@@ -259,6 +267,34 @@ def serve(root, port):
                 length=int(self.headers.get("Content-Length","0"))
                 if not 0<length<=240000:raise ValueError("REQUEST_SIZE")
                 payload=json.loads(self.rfile.read(length))
+                if self.path == '/api/nox/chat/stream':
+                    # Validate payload and upstream connection before streaming headers.
+                    gen=unified.stream_chat(root,payload)
+                    first=next(gen)
+                    self.send_response(200)
+                    self.send_header('Content-Type','application/x-ndjson; charset=utf-8')
+                    self.send_header('Cache-Control','no-store, no-transform')
+                    self.send_header('X-Content-Type-Options','nosniff')
+                    self.end_headers()
+                    try:
+                        for evt in (first, *()):
+                            self.wfile.write((json.dumps(evt,ensure_ascii=False)+'\\n').encode('utf-8'))
+                            self.wfile.flush()
+                        for evt in gen:
+                            self.wfile.write((json.dumps(evt,ensure_ascii=False)+'\\n').encode('utf-8'))
+                            self.wfile.flush()
+                    except (BrokenPipeError,ConnectionResetError):
+                        pass
+                    except Exception as ex:
+                        try:
+                            self.wfile.write((json.dumps({'type':'error','error':str(ex)[:200]},
+                                                         ensure_ascii=False)+'\\n').encode('utf-8'))
+                            self.wfile.flush()
+                        except OSError:
+                            pass
+                    finally:
+                        gen.close()
+                    return
                 result=unified.chat(root,payload)
                 return self.get(json.dumps(result,ensure_ascii=False).encode('utf-8'),
                                 'application/json; charset=utf-8')
