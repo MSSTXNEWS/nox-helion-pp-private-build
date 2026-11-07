@@ -691,3 +691,47 @@ console.log('D01 SOURCE_ONLY PASS: Qwen failed/STOP retry with original input, S
   assert.equal(foreign.shown.length,0,'D01_FOREIGN_CHAT_RECEIPT_EXPOSED');
   console.log('D01 SOURCE_ONLY PASS: previous PersonaID Qwen error quarantined; current/native errors visible');
 }
+
+/* D01: production persona.changed must refresh read-only SQLite snapshots for
+   the new owner; no duplicate refresh on same PersonaID or invalid receipt.
+   SOURCE_ONLY; owner Windows/WebView2 E2E remains separately gated. */
+{
+  const personaCase=html.split('\n').find(line=>line.startsWith("case 'persona.changed':"));
+  assert.ok(personaCase,'D01_NATIVE_PERSONA_CHANGED_HANDLER_MISSING');
+  function personaNavigationReceipt(target){
+    const source=`
+      const v={persona:${JSON.stringify(target)}};
+      let visibleDraftPersona='KV', pendingMemorySearch={requestId:'old'},
+          lastAnswer='KV answer',responseBox={};
+      const posts=[],cleared=[];let stoppedSpeech=0;
+      const $=id=>({replaceChildren(){cleared.push(id)}});
+      const window={speechSynthesis:{}};
+      const speechSynthesis={cancel(){stoppedSpeech++}};
+      function post(type){posts.push(type);return true;}
+      function switchPersonaDrafts(next){
+        if(!['KV','AM','LA','EV','KW'].includes(next))return false;
+        visibleDraftPersona=next;return true;
+      }
+      switch('persona.changed'){${personaCase}}
+      ({posts,cleared,visibleDraftPersona,stoppedSpeech,lastAnswer,pendingMemorySearch});
+    `;
+    return vm.runInNewContext(source,{}, {timeout:1500});
+  }
+  const switched=personaNavigationReceipt('AM');
+  assert.equal(switched.visibleDraftPersona,'AM');
+  assert.deepEqual(Array.from(switched.cleared),
+    ['messages','history','notes','memoryResults','knowledgeResults']);
+  assert.deepEqual(Array.from(switched.posts),
+    ['history','notes.list','knowledge.stats'],
+    'D01_NEW_PERSONA_SQLITE_SNAPSHOTS_NOT_REQUESTED');
+  assert.equal(switched.stoppedSpeech,1);
+  assert.equal(switched.lastAnswer,'');
+  assert.equal(switched.pendingMemorySearch,null);
+  const unchanged=personaNavigationReceipt('KV');
+  assert.deepEqual(Array.from(unchanged.posts),[]);
+  assert.deepEqual(Array.from(unchanged.cleared),[]);
+  const invalid=personaNavigationReceipt('INVALID');
+  assert.equal(invalid.visibleDraftPersona,'KV');
+  assert.deepEqual(Array.from(invalid.posts),[]);
+  console.log('D01 SOURCE_ONLY PASS: changed PersonaID refreshes three real native snapshots only once');
+}
