@@ -93,6 +93,17 @@ assert 'VerifyIsolatedSqliteBackup();' in src
 assert 'checks["sqlite_native_backup_no_loss"] = "PASS";' in src
 assert '"sqlite_native_backup_no_loss", "native_wpf_webview2_renderer"' in src
 
+# The native owner path and isolated UI-smoke snapshot directories must be
+# disjoint. The smoke must inspect only its dedicated directory and fail
+# if it could enumerate or mutate any owner backup before migration.
+assert '"backups-selftest-" + Path.GetFileNameWithoutExtension(dbPath)' in src
+for guard in (
+    'string backupDir = BackupDirectoryPath();',
+    'NOX_B03_SMOKE_BACKUP_ISOLATION_HOLD',
+    'Directory.GetFiles(backupDir, "NOX_PRE_PERSONA_MIGRATION_*.sqlite3")',
+):
+    assert guard in native, 'NOX_B03_BACKUP_SMOKE_ISOLATION_HOLD:' + guard
+
 # The first bootstrap must protect a partially populated *existing* database
 # before CREATE TABLE / CREATE INDEX / journal-mode changes, not merely before
 # the later Persona migration. Avoid an unbounded backup on every healthy launch.
