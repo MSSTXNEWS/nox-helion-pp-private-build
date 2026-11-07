@@ -84,4 +84,16 @@ for script in scripts:
     # Explicit UTF-8 stdin is required: Windows GitHub runners default to cp1252.
     check = subprocess.run(['node','--check'], input=script.encode('utf-8'), capture_output=True)
     assert check.returncode == 0, check.stderr.decode('utf-8', errors='replace')
+
+# D06: source safeguard requiring a physical Windows SID/DACL gate, not a fake PASS.
+workflow = (root.parent/'.github/workflows/nox-r8-single-exe.yml').read_text(encoding='utf8')
+acl_guard = (root.parent/'coordination/nox-r8/tests/Assert-R8-IsolatedSettingsAcl.ps1').read_text(encoding='utf8')
+assert "Assert-R8-IsolatedSettingsAcl.ps1' -RunId $runId -ExePath $exe" in workflow
+for token in ('NOX_D06_NTFS_OWNER_SID_MISMATCH_HOLD',
+              'NOX_D06_NTFS_BROAD_WRITE_ALLOW_HOLD',
+              "owner_pc_acl='NOT_TESTED'",
+              "cross_user_access_denial='NOT_TESTED'",
+              'NOX_R8_SETTINGS_ISOLATED_SID_ACL_CI_PASS'):
+    assert token in acl_guard, token
+
 print('D06 R8 SETTINGS SOURCE_ONLY: validation/readback/ARIA/JS PASS; Windows owner-PC not tested')

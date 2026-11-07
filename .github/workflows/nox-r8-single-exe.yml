@@ -176,6 +176,8 @@ jobs:
             $restart.Refresh()
             if (!$restart.HasExited) { Stop-Process -Id $restart.Id -Force -ErrorAction SilentlyContinue }
           }
+          # D06: Windows NTFS SID/DACL on the real isolated two-process SQLite.
+          & './coordination/nox-r8/tests/Assert-R8-IsolatedSettingsAcl.ps1' -RunId $runId -ExePath $exe
       - name: Package launch helper and verified EXE
         shell: pwsh
         run: |
