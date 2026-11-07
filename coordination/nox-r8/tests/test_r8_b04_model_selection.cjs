@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const source = fs.readFileSync(path.resolve(__dirname,'../overrides/src/MainWindow.xaml.cs'),'utf8');
-const start = source.indexOf('    private async Task SelectModel(string model)');
+const start = source.indexOf('    private async Task SelectModel(string model, string requestId)');
 const end = source.indexOf('    private async Task PullExistingProviderModel(',start);
 assert.ok(start >= 0 && end > start,'original native model picker exists');
 const s = source.slice(start,end);
@@ -33,3 +33,17 @@ assert.match(pull, /catch \(Exception\) \{[\s\S]*status = "ERROR"[\s\S]*throw;/)
 assert.match(pull, /if \(activeModelPull != null\)/);
 assert.match(pull, /finally \{ activeModelPull = null; \}/);
 console.log('B04_MODEL_PULL_VERIFIED_RECEIPT_SOURCE_ONLY_PASS');
+
+const html = fs.readFileSync(path.resolve(__dirname,'../overrides/src/index.html'),'utf8');
+assert.match(source,/case "model.select": await SelectModel\(Text\("model"\), Text\("requestId"\)\)/);
+assert.match(s,/if \(!ValidWriteRequestId\(requestId\)\)/,'reject missing owner request ID');
+assert.match(s,/Send\("model.select.denied", new \{ requestId, reason = "NOX_MODEL_REQUEST_ID_HOLD" \}\)/);
+assert.match(s,/Send\("model.select.receipt", new \{ requestId, model, saved = true \}\)/);
+assert.ok(s.indexOf('NOX_MODEL_SELECT_SQLITE_READBACK_HOLD') < s.indexOf('Send("model.select.receipt"'),'ACK follows independent readback');
+assert.match(s,/catch \(Exception ex\)[\s\S]*Send\("model.select.denied", new \{ requestId, reason \}\)/);
+assert.match(html, /pendingModel=\{requestId,model,previous:committedModel\}/);
+assert.match(html, /post\('model.select',\{model,requestId\}\)===false/);
+assert.match(html, /case 'model.select.receipt':if\(pendingModel&&v\?\.requestId===pendingModel.requestId&&v.model===pendingModel.model&&v.saved===true\)/);
+assert.match(html, /case 'model.select.denied':if\(pendingModel&&v\?\.requestId===pendingModel.requestId\)/);
+assert.match(html, /if\(previous\)\$\('modelPicker'\)\.value=previous/);
+console.log('B04_MODEL_OWNER_RECEIPT_SOURCE_ONLY_PASS');

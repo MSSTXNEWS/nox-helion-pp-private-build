@@ -1105,7 +1105,7 @@ public partial class MainWindow : Window
                 case "notes.delete": DeleteNote(request.GetProperty("id").GetInt64()); Send("notes", ReadNotes()); break;
                 case "feedback": SaveFeedback(request.GetProperty("rating").GetInt32(), Text("answer")); Send("notice", "Оценка сохранена локально; это не обучение весов."); break;
                 case "backup": BackupLocalDatabase(); break;
-                case "model.select": await SelectModel(Text("model")); break;
+                case "model.select": await SelectModel(Text("model"), Text("requestId")); break;
                 case "model.pull": await PullExistingProviderModel(Text("model")); break;
                 case "model.cancel": activeModelPull?.Cancel(); break;
                 case "tasks.list": Send("tasks", ReadTasks()); break;
@@ -1815,44 +1815,62 @@ public partial class MainWindow : Window
     // B04: switch only when the native chat owner is idle, and acknowledge
     // a model change only after a separate SQLite connection verifies COMMIT.
     // The picker can choose only an exact locally registered Ollama tag.
-    private async Task SelectModel(string model)
+    // The selection request owns its ACK. The displayed model is not committed
+    // until /api/tags, SQLite COMMIT and independent readback all succeed.
+    private async Task SelectModel(string model, string requestId)
     {
-        if (string.IsNullOrWhiteSpace(model) || model.Length > 120)
-            throw new ArgumentException("Invalid model name");
-        if (active != null)
-            throw new InvalidOperationException("NOX_MODEL_SWITCH_GENERATION_ACTIVE_HOLD");
-        using var probe = new CancellationTokenSource(TimeSpan.FromSeconds(4));
-        using var response = await http.GetAsync(Api + "/api/tags", probe.Token);
-        response.EnsureSuccessStatusCode();
-        using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        bool exists = json.RootElement.GetProperty("models").EnumerateArray()
-            .Any(x => x.GetProperty("name").GetString() == model);
-        if (!exists)
-            throw new InvalidOperationException("NOX_MODEL_TAG_NOT_REGISTERED_HOLD");
-        // Yielding at GET lets an inference start; recheck before the sync write.
-        if (active != null)
-            throw new InvalidOperationException("NOX_MODEL_SWITCH_GENERATION_ACTIVE_HOLD");
-        using (var db = OpenDatabase())
-        using (var tx = db.BeginTransaction())
-        {
-            using var cmd = db.CreateCommand();
-            cmd.Transaction = tx;
-            cmd.CommandText = "INSERT INTO preferences(key,value) VALUES('model',$m) ON CONFLICT(key) DO UPDATE SET value=excluded.value";
-            cmd.Parameters.AddWithValue("$m", model);
-            if (cmd.ExecuteNonQuery() != 1)
-                throw new InvalidOperationException("NOX_MODEL_SELECT_SQLITE_WRITE_HOLD");
-            tx.Commit();
+        if (!ValidWriteRequestId(requestId)) {
+            Send("model.select.denied", new { requestId, reason = "NOX_MODEL_REQUEST_ID_HOLD" });
+            return;
         }
-        using (var verifyDb = OpenDatabase())
-        using (var verify = verifyDb.CreateCommand())
+        try
         {
-            verify.CommandText = "SELECT value FROM preferences WHERE key='model'";
-            if (!string.Equals(verify.ExecuteScalar() as string, model, StringComparison.Ordinal))
-                throw new InvalidOperationException("NOX_MODEL_SELECT_SQLITE_READBACK_HOLD");
+            if (string.IsNullOrWhiteSpace(model) || model.Length > 120)
+                throw new InvalidOperationException("NOX_MODEL_INVALID_TAG_HOLD");
+            if (active != null)
+                throw new InvalidOperationException("NOX_MODEL_SWITCH_GENERATION_ACTIVE_HOLD");
+            using var probe = new CancellationTokenSource(TimeSpan.FromSeconds(4));
+            using var response = await http.GetAsync(Api + "/api/tags", probe.Token);
+            response.EnsureSuccessStatusCode();
+            using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(probe.Token));
+            bool exists = json.RootElement.GetProperty("models").EnumerateArray()
+                .Any(x => string.Equals(x.GetProperty("name").GetString(), model, StringComparison.Ordinal));
+            if (!exists)
+                throw new InvalidOperationException("NOX_MODEL_TAG_NOT_REGISTERED_HOLD");
+            // Async probe can yield to a new generation; never mutate during it.
+            if (active != null)
+                throw new InvalidOperationException("NOX_MODEL_SWITCH_GENERATION_ACTIVE_HOLD");
+            using (var db = OpenDatabase())
+            using (var tx = db.BeginTransaction())
+            {
+                using var cmd = db.CreateCommand();
+                cmd.Transaction = tx;
+                cmd.CommandText = "INSERT INTO preferences(key,value) VALUES('model',$m) ON CONFLICT(key) DO UPDATE SET value=excluded.value";
+                cmd.Parameters.AddWithValue("$m", model);
+                if (cmd.ExecuteNonQuery() != 1)
+                    throw new InvalidOperationException("NOX_MODEL_SELECT_SQLITE_WRITE_HOLD");
+                tx.Commit();
+            }
+            using (var verifyDb = OpenDatabase())
+            using (var verify = verifyDb.CreateCommand())
+            {
+                verify.CommandText = "SELECT value FROM preferences WHERE key='model'";
+                if (!string.Equals(verify.ExecuteScalar() as string, model, StringComparison.Ordinal))
+                    throw new InvalidOperationException("NOX_MODEL_SELECT_SQLITE_READBACK_HOLD");
+            }
+            Send("model.select.receipt", new { requestId, model, saved = true });
+            Send("settings", ReadPreferences());
+            await CheckProvider();
         }
-        Send("settings", ReadPreferences());
-        Send("model.select.receipt", new { model, saved = true });
-        await CheckProvider();
+        catch (Exception ex)
+        {
+            // Never claim the selection succeeded if the provider, SQLite or
+            // post-COMMIT readback failed; the UI can restore its last proven tag.
+            string reason = ex is InvalidOperationException &&
+                ex.Message.StartsWith("NOX_", StringComparison.Ordinal)
+                ? ex.Message : "NOX_MODEL_SELECT_FAILED_HOLD";
+            Send("model.select.denied", new { requestId, reason });
+        }
     }
 
     private async Task PullExistingProviderModel(string modelName)

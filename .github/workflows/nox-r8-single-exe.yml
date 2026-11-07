@@ -38,6 +38,10 @@ jobs:
           Copy-Item './coordination/nox-r8/tests/test_r8_ipc_contract.py' './r8/test_r8_ipc_contract.py'
           python './r8/test_r8_ipc_contract.py'
           if ($LASTEXITCODE -ne 0) { throw 'B02_NATIVE_IPC_SOURCE_HOLD' }
+          # B04: run original Model Center request-owner and durable receipt regression.
+          Copy-Item './coordination/nox-r8/tests/test_r8_b04_model_selection.cjs' './r8/test_r8_b04_model_selection.cjs'
+          node './r8/test_r8_b04_model_selection.cjs'
+          if ($LASTEXITCODE -ne 0) { throw 'B04_MODEL_OWNER_RECEIPT_SOURCE_HOLD' }
           # B03: fail-closed native checkpoint contract with isolated WAL/foreign-file fixture.
           Copy-Item './coordination/nox-r8/tests/test_r8_b03_checkpoint_no_loss.py' './r8/test_r8_b03_checkpoint_no_loss.py'
           python './r8/test_r8_b03_checkpoint_no_loss.py'
