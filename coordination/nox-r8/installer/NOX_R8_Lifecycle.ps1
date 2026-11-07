@@ -153,9 +153,20 @@ try {
                 if ((HashFile $target) -ne $receipt.previous_sha256) {
                     throw 'NOX_INSTALL_ROLLBACK_READBACK_HOLD'
                 }
-                SaveReceipt 'installed' $receipt.previous_sha256 '' ''
+                SaveReceipt 'installed' $receipt.previous_sha256 ([IO.Path]::GetFileName($displaced)) $receipt.current_sha256
             } catch {
-                if (-not [IO.File]::Exists($target)) { [IO.File]::Move($displaced,$target) }
+                # If receipt update or payload readback fails, recover the
+                # exact previous state without overwriting an unknown EXE.
+                # Keep both binaries; a failed rollback must not consume the
+                # validated rollback candidate.
+                if ([IO.File]::Exists($target) -and
+                    -not [IO.File]::Exists($old) -and
+                    (HashFile $target) -eq $receipt.previous_sha256) {
+                    [IO.File]::Move($target,$old)
+                }
+                if (-not [IO.File]::Exists($target) -and [IO.File]::Exists($displaced)) {
+                    [IO.File]::Move($displaced,$target)
+                }
                 throw
             }
             Write-Output ('NOX_INSTALL_ROLLBACK_SHA256='+$receipt.previous_sha256)
