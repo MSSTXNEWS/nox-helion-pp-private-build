@@ -186,7 +186,7 @@ print('B04 R8 SOURCE_ONLY: native preflight rejection now releases the matching 
 selftest = cs.split('private async Task RunNativeSelfTestAsync()', 1)[1].split('private bool HasSavedPrompt(', 1)[0]
 token_wait = cs.split('private async Task<bool> WaitForGenerationTokenAsync(', 1)[1].split('private async Task WaitForGenerationFinishAsync(', 1)[0]
 generation = cs.split('private async Task Generate(', 1)[1].split('private void PersistChat(', 1)[0]
-assert 'int streamTokenTarget = Volatile.Read(ref generationStreamingTokenCount) + 1;' in selftest
+assert 'int streamTokenTarget = Volatile.Read(ref generationStreamingTokenCount) + 2;' in selftest
 assert selftest.index('WaitForGenerationTokenAsync(streamTokenTarget, stopTarget, TimeSpan.FromMinutes(2))') < selftest.index('document.getElementById(\'stop\').click()')
 assert 'NOX_ACTIVE_HTTP_STREAM_NOT_OBSERVED_HOLD' in selftest
 assert 'Volatile.Read(ref generationFinishedCount) >= generationTarget' in token_wait
@@ -221,7 +221,8 @@ assert 'NOX_CHAT_AFTER_STOP_START_HOLD' in selftest
 assert 'NOX_CHAT_AFTER_STOP_SQLITE_HOLD' in selftest
 assert 'checks["real_chat_after_http_stop_sqlite"] = "PASS";' in selftest
 assert selftest.index('WaitForStopUiReleaseAsync(TimeSpan.FromSeconds(4))') < selftest.index('NOX_CHAT_AFTER_STOP_START_HOLD') < selftest.index('real_chat_after_http_stop_sqlite')
-assert 'checks.Count == 6 && checks.Values.All(v => v == "PASS")' in selftest
+assert 'checks.Count == 7 && checks.Values.All(v => v == "PASS")' in selftest
+assert 'checks["real_chat_visible_webview_sqlite_ack"] = "PASS";' in selftest, 'B04_VISIBLE_QWEN_SQLITE_ACK_HOLD'
 assert 'if (resumeMarker != null) DeleteSyntheticChats(resumeMarker, null);' in selftest
 print('B04 R8 SOURCE_ONLY: fresh chat after STOP and isolated SQLite cleanup gated (physical E2E NOT RUN)')
 
@@ -263,11 +264,12 @@ print('D05 R8 SOURCE_ONLY: owner-correlated task toggle, SQLite COMMIT/readback 
 # while a new prompt is generating or when that prompt terminates with error.
 # This is an actual UI contract check; it is NOT physical owner-PC E2E.
 send_section = html.split("$('send').onclick=()=>", 1)[1].split("\n$('stop').onclick=", 1)[0]
-assert "busy=true;activeChatId=requestId;lastAnswer='';$('streamHint').textContent='Генерация ответа · не сохранено';" in send_section, 'B04_STALE_SQLITE_SUCCESS_DURING_GENERATION_HOLD'
+assert "busy=true;activeChatId=requestId;pendingChatDraft={requestId,raw:$('prompt').value,persona:visibleDraftPersona};lastAnswer='';$('streamHint').textContent='Генерация ответа · не сохранено';" in send_section, 'B04_STALE_SQLITE_SUCCESS_DURING_GENERATION_HOLD'
 complete_section = html.split("case 'complete':", 1)[1].split("break;", 1)[0]
 assert "else if(v?.ok)$('streamHint').textContent='Ответ завершён и сохранён в SQLite.'" in complete_section
-assert "else{$('streamHint').textContent='Ответ не сохранён в SQLite.';lastAnswer='';}" in complete_section, 'B04_STALE_SQLITE_SUCCESS_ON_ERROR_HOLD'
-assert "if(v?.stopped){lastAnswer='';$('streamHint').textContent='Поток остановлен. Частичный ответ не сохранён.';}" in complete_section
+assert "else{lastAnswer='';$('streamHint').textContent='Ответ не сохранён.'" in complete_section, 'B04_STALE_SQLITE_SUCCESS_ON_ERROR_HOLD'
+assert "else if(v?.sqliteUnknown===true){lastAnswer='';$('streamHint').textContent='SQLite мог сохранить ответ." in complete_section, 'B04_SQLITE_COMMIT_UNKNOWN_UNSAFE_RETRY_HOLD'
+assert "if(v?.stopped){lastAnswer='';$('streamHint').textContent='Поток остановлен. Частичный ответ не сохранён.'+" in complete_section
 print("B04 R8 SOURCE_ONLY: no stale SQLite saved banner during in-flight/error/STOP chat (Windows E2E NOT RUN)")
 
 # B04 acceptance race: native generationFinishedCount may be published before
