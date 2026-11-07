@@ -26,7 +26,8 @@ const scenarios = [
     () => Object.defineProperty({}, 'matches', {get(){throw Error('OS_MQL_GETTER_FAILED');}}), false],
   ['compact', () => ({matches:true}), true],
   ['wide', () => ({matches:false}), false],
-  ['no_matchMedia', null, false]
+  ['no_matchMedia', null, false],
+  ['os_matchMedia_property_getter_throws', () => ({}), false]
 ];
 const actions = {consciousness:['health'], atlas:['tasks.list'],
   reflection:['history','knowledge.stats'], nexus:['health'],
@@ -45,6 +46,8 @@ for (const [scenario, matchMedia, shouldScroll] of scenarios) {
     querySelector(selector) {return selector === 'aside.side' ? side : null;}
   };
   const window = matchMedia ? {matchMedia} : {};
+  if (scenario === 'os_matchMedia_property_getter_throws')
+    Object.defineProperty(window, 'matchMedia', {get(){throw Error('OS_MEDIA_PROPERTY_GETTER_FAILED');}});
   const route = Function('headings','document','window','post','$',
     routeSource + '\nreturn route;')(
       headings, document, window, (...parts) => posts.push(parts[0]),
@@ -59,4 +62,4 @@ for (const [scenario, matchMedia, shouldScroll] of scenarios) {
     scenario + ': compact scroll not incorrectly applied');
   assert.equal(route('not_a_core'), false, scenario + ': unknown route denied');
 }
-console.log('D04 WebView2 route media-query 6x8 SOURCE_ONLY PASS; owner Windows E2E NOT_TESTED');
+console.log('D04 WebView2 route media-query 7x8 SOURCE_ONLY PASS; owner Windows E2E NOT_TESTED');
