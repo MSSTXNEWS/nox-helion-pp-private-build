@@ -1314,6 +1314,18 @@ public partial class MainWindow : Window
         // F01: an active uncommitted writer on the isolated WAL database
         // must never leak pending rows into a successful SQLite backup.
         // All fixture writes are rolled back; no owner DB is opened.
+        // F01: online snapshots must include a committed WAL row even while
+        // another writer holds an uncommitted row. Positive and negative
+        // controls are confined to the disposable selftest database.
+        string committedMarker = "NOX_F01_COMMITTED_WAL_" + Guid.NewGuid().ToString("N");
+        using (var putCommitted = live.CreateCommand())
+        {
+            putCommitted.CommandText = "INSERT INTO tasks(created_at,title) VALUES($t,$v)";
+            putCommitted.Parameters.AddWithValue("$t", DateTimeOffset.UtcNow.ToString("O"));
+            putCommitted.Parameters.AddWithValue("$v", committedMarker);
+            if (putCommitted.ExecuteNonQuery() != 1)
+                throw new InvalidOperationException("NOX_F01_WAL_COMMITTED_FIXTURE_HOLD");
+        }
         string pendingMarker = "NOX_F01_PENDING_WAL_" + Guid.NewGuid().ToString("N");
         string snapshot;
         using (var writer = OpenDatabase())
@@ -1338,6 +1350,11 @@ public partial class MainWindow : Window
                 pendingRow.Parameters.AddWithValue("$marker", pendingMarker);
                 if (Convert.ToInt64(pendingRow.ExecuteScalar()) != 0)
                     throw new InvalidOperationException("NOX_F01_WAL_UNCOMMITTED_VISIBLE_HOLD");
+                using var committedRow = witness.CreateCommand();
+                committedRow.CommandText = "SELECT COUNT(*) FROM tasks WHERE title=$marker";
+                committedRow.Parameters.AddWithValue("$marker", committedMarker);
+                if (Convert.ToInt64(committedRow.ExecuteScalar()) != 1)
+                    throw new InvalidOperationException("NOX_F01_WAL_COMMITTED_SNAPSHOT_MISSING_HOLD");
             }
             uncommitted.Rollback();
         }
@@ -1347,6 +1364,20 @@ public partial class MainWindow : Window
             sourceWitness.Parameters.AddWithValue("$marker", pendingMarker);
             if (Convert.ToInt64(sourceWitness.ExecuteScalar()) != 0)
                 throw new InvalidOperationException("NOX_F01_WAL_ROLLBACK_FAILED_HOLD");
+            sourceWitness.CommandText = "SELECT COUNT(*) FROM tasks WHERE title=$marker";
+            sourceWitness.Parameters.Clear();
+            sourceWitness.Parameters.AddWithValue("$marker", committedMarker);
+            if (Convert.ToInt64(sourceWitness.ExecuteScalar()) != 1)
+                throw new InvalidOperationException("NOX_F01_WAL_COMMITTED_SOURCE_MISSING_HOLD");
+        }
+        // Leave the isolated source DB exactly as before the positive fixture;
+        // the immutable snapshot and its manifest remain for readback.
+        using (var cleanup = live.CreateCommand())
+        {
+            cleanup.CommandText = "DELETE FROM tasks WHERE title=$marker";
+            cleanup.Parameters.AddWithValue("$marker", committedMarker);
+            if (cleanup.ExecuteNonQuery() != 1)
+                throw new InvalidOperationException("NOX_F01_WAL_COMMITTED_CLEANUP_HOLD");
         }
         string sha = Sha256File(snapshot);
         string expectedManifest = sha + "  " + Path.GetFileName(snapshot) + "\n";
