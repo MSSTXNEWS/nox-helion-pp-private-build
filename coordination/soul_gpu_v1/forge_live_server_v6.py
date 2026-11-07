@@ -220,6 +220,16 @@ def serve(root, port):
                 return self.get(page, 'text/html; charset=utf-8')
             if self.path == '/nox/chat':
                 return self.get(unified_page, 'text/html; charset=utf-8')
+            if self.path == '/api/nox/resource-advice':
+                try:
+                    import nox_prime_resource_advisor_v1 as resource
+                    observed=resource.snapshot()
+                    recommendation=resource.advise('general',observed)
+                    return self.get(json.dumps(recommendation,ensure_ascii=False).encode('utf-8'),
+                                    'application/json; charset=utf-8')
+                except Exception as exc:
+                    return self.get(json.dumps({'error':type(exc).__name__}).encode(),
+                                    'application/json',503)
             if self.path == '/api/nox/history':
                 try:
                     return self.get(json.dumps({'messages':unified.read_history(root)},
