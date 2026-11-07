@@ -3,7 +3,7 @@
 $ErrorActionPreference = "Stop"
 $root = "C:\NOX_HELION\NOX_NEW"
 $repo = "$root\brain\source\repo"
-$ref = "71de053f398fef9517b15b5631996c117c0835a5"
+$ref = "74d7505382cba5e18c23ceac15c99d2d14b3e22d"
 $base = "coordination/soul_gpu_v1"
 $dest = "$root\brain\skills\NOX_UNIFIED_49fca983"
 $python = "$env:USERPROFILE\NOX_EXPRESS_AI\NOX_TRAINING\train-venv\Scripts\python.exe"
@@ -73,7 +73,7 @@ foreach ($port in 18880..18888) {
     $url = "http://127.0.0.1:$port/"
     $health = $null
     try { $health = Invoke-RestMethod ($url+"api/health") -TimeoutSec 2 } catch {}
-    if ($health -and $health.unified_router -eq "NOX-UNIFIED-BRAIN-V1") {
+    if ($health -and $health.unified_router -eq "NOX-UNIFIED-BRAIN-V2") {
         $selected = $url
         break
     }
@@ -85,7 +85,7 @@ foreach ($port in 18880..18888) {
         Start-Sleep -Milliseconds 500
         try {
             $health = Invoke-RestMethod ($url+"api/health") -TimeoutSec 2
-            if ($health.unified_router -eq "NOX-UNIFIED-BRAIN-V1") {
+            if ($health.unified_router -eq "NOX-UNIFIED-BRAIN-V2") {
                 $selected = $url
                 break
             }
