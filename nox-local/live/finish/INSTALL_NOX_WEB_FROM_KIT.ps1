@@ -56,6 +56,7 @@ foreach($folder in @('vendor','PUSH_PACKAGES','tests')){
  $item=Get-Item -LiteralPath $p -Force
  if(($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0){throw "SOURCE_FOLDER_REPARSE_POINT_HOLD: $folder"}
  foreach($f in @(Get-ChildItem -LiteralPath $p -Recurse -File -Force -ErrorAction Stop)){
+  if(@('.py','.js','.mjs','.css','.html','.svg','.png','.jpg','.jpeg','.webp','.wasm','.woff','.woff2','.txt') -notcontains $f.Extension.ToLowerInvariant()){continue}
   if(($f.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0){throw "SOURCE_VENDOR_REPARSE_POINT_HOLD: $($f.FullName)"}
   $relative=$f.FullName.Substring($source.Length).TrimStart([char]'\')
   $output=Join-Path $stage $relative
