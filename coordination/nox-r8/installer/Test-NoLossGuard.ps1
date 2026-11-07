@@ -13,10 +13,10 @@ try{
  $json=(@{schema='NOX_R8_NATIVE_SINGLE_EXE_V1';source_git_sha=$source;exe_sha256=$sha;accepted_full_release=$false} | ConvertTo-Json -Compress)
  $rbytes=[Text.Encoding]::UTF8.GetBytes($json)
  $rsha=[Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($rbytes)).ToLowerInvariant()
- $params=@('-InstallDir',$dir,'-ExpectedExeSha',$sha,'-ExpectedReceiptSha',$rsha,'-ExpectedSourceSha',$source)
+ $invokeParams=@{InstallDir=$dir;ExpectedExeSha=$sha;ExpectedReceiptSha=$rsha;ExpectedSourceSha=$source}
  function Check([string]$mode,[bool]$pass){
    $failed=$false
-   try{ & $guard -Mode $mode @params 2>&1 | Out-Null }catch{ $failed=$true; Write-Host "B05_EXPECTED_OR_UNEXPECTED_HOLD mode=$mode reason=$($_.Exception.Message)" }
+   try{ & $guard -Mode $mode @invokeParams 2>&1 | Out-Null }catch{ $failed=$true; Write-Host "B05_EXPECTED_OR_UNEXPECTED_HOLD mode=$mode reason=$($_.Exception.Message)" }
    if($pass -eq $failed){ throw "B05_TEST_UNEXPECTED_RESULT:$mode expected=$pass" }
  }
  Check 'PreInstall' $true
