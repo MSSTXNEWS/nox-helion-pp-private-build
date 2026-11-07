@@ -2012,9 +2012,10 @@ public partial class MainWindow : Window
                         if (!string.Equals(row.GetString(0), model, StringComparison.Ordinal))
                             throw new InvalidOperationException("NOX_LEARN_EXISTING_MODEL_MISMATCH_HOLD");
                     }
-                    var existingQueue = ReadLearnQueue();
-                    Send("learn.queue", existingQueue);
+                    // Committed consent and owner-readback are authoritative.
+                    // A failed optional queue redraw must not emit a false denial.
                     Send("learn.receipt", new { requestId, id, state="ALREADY_PENDING", trainingStarted=false });
+                    RefreshLearnQueueBestEffort();
                     return;
                 }
             }
@@ -2053,10 +2054,9 @@ public partial class MainWindow : Window
                 !persisted.IsDBNull(3))
                 throw new InvalidOperationException("NOX_LEARN_CONSENT_SQLITE_READBACK_HOLD");
         }
-        var verifiedQueue = ReadLearnQueue();
-        Send("learn.queue", verifiedQueue);
         Send("learn.receipt", new { requestId, id, model, state="AWAITING_VERIFIED_WORKER",
             reason="NO_ATTESTED_GPU_WORKER", trainingStarted=false, checkpointSha256=(string?)null });
+        RefreshLearnQueueBestEffort();
     }
 
     private void CancelLearnRequest(string requestId)
@@ -2082,10 +2082,17 @@ public partial class MainWindow : Window
             if (Convert.ToInt64(verify.ExecuteScalar()) != 0)
                 throw new InvalidOperationException("NOX_LEARN_STOP_SQLITE_READBACK_HOLD");
         }
-        var verifiedQueue = ReadLearnQueue();
-        Send("learn.queue", verifiedQueue);
         Send("learn.receipt", new { requestId, state=affected>0?"CANCELLED_BY_OWNER":"NO_PENDING_JOB",
             affected, trainingStarted=false, checkpointSha256=(string?)null });
+        RefreshLearnQueueBestEffort();
+    }
+
+    // The SQLite commit and independent owner readback precede this refresh.
+    // An optional post-commit queue failure must not falsify LEARN consent/STOP.
+    private void RefreshLearnQueueBestEffort()
+    {
+        try { Send("learn.queue", ReadLearnQueue()); }
+        catch (Exception) { /* Refresh is non-authoritative; retry on FORGE route. */ }
     }
 
     private object GetTrainingState()

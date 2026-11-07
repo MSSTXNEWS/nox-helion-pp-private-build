@@ -80,3 +80,19 @@ assert 'catch (InvalidOperationException ex) when (ex.Message == "NOX_LEARN_EXIS
 assert 'Send("learn.denied", new { requestId, reason = ex.Message });' in cs
 assert "case 'learn.denied':" in html and "post('learn.queue');" in html
 print('D05 MODEL-SPECIFIC OWNER CONSENT SOURCE_ONLY PASS; GPU NOT RUN')
+
+# D05: once independent SQLite readback proves consent/STOP, queue refresh
+# errors cannot turn a persisted result into a false denial.
+request = cs.split('private void RequestLearn(string requestId)',1)[1].split('private void CancelLearnRequest(string requestId)',1)[0]
+cancel = cs.split('private void CancelLearnRequest(string requestId)',1)[1].split('private void RefreshLearnQueueBestEffort()',1)[0]
+assert request.count('RefreshLearnQueueBestEffort();') == 2
+assert cancel.count('RefreshLearnQueueBestEffort();') == 1
+assert request.index('NOX_LEARN_EXISTING_SQLITE_READBACK_HOLD') < request.index('state="ALREADY_PENDING"') < request.index('RefreshLearnQueueBestEffort();')
+assert request.index('NOX_LEARN_CONSENT_SQLITE_READBACK_HOLD') < request.index('reason="NO_ATTESTED_GPU_WORKER"') < request.rindex('RefreshLearnQueueBestEffort();')
+assert cancel.index('NOX_LEARN_STOP_SQLITE_READBACK_HOLD') < cancel.index('state=affected>0?') < cancel.index('RefreshLearnQueueBestEffort();')
+refresh = cs.split('private void RefreshLearnQueueBestEffort()',1)[1].split('private object GetTrainingState()',1)[0]
+assert 'try { Send("learn.queue", ReadLearnQueue()); }' in refresh
+assert 'catch (Exception)' in refresh
+assert 'learn.denied' not in refresh
+assert "case 'learn.receipt':" in html and "case 'learn.queue':" in html
+print('D05 SOURCE_ONLY LEARN POST-COMMIT RECEIPT CONTRACT PASS; Windows NOT RUN')
