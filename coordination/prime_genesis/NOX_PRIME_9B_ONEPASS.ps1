@@ -8,8 +8,8 @@ $src = Join-Path $prime 'coordination'
 $commit = '37b5fa4c1b141adb0754a5bc768f4b5b72bca138'
 $base = "https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/$commit/coordination/prime_genesis"
 $files = @(
-    @{ Name='NOX_PRIME_9B_GENESIS.ps1'; Sha='be3f7df711586a0534d561a40e3844b1d56a8165ff85f5cf85ddaf9c0c1e17b9' },
-    @{ Name='NOX_CONTINUITY_POLICY.py'; Sha='6f8c1e89cbec3a1c2b7bb1a03c6092b2c44a82977f37c591f85219384a28382a' }
+    @{ Name='NOX_PRIME_9B_GENESIS.ps1'; Sha='ffa2fcb22c1401e8aebfbf03b2603bbf406c89400bd4ce749a2440f433a1d891' },
+    @{ Name='NOX_CONTINUITY_POLICY.py'; Sha='5824590dbea4c0f3774021127c5b0e35dd436bf4c21089867292bffe5fe0e159' }
 )
 New-Item -ItemType Directory -Force $src | Out-Null
 foreach ($spec in $files) {
