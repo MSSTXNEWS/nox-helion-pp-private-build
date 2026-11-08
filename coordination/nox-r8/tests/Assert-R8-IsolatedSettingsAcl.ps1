@@ -41,7 +41,8 @@ $writeBits=([int][System.Security.AccessControl.FileSystemRights]::WriteData) -b
 foreach ($path in @($noxDataRoot,$db)) {
   $acl=Get-Acl -LiteralPath $path -ErrorAction Stop
   if ($acl.GetOwner([System.Security.Principal.SecurityIdentifier]).Value -cne $ownerSid) {
-    throw 'NOX_D06_NTFS_OWNER_SID_MISMATCH_HOLD'
+    $scope=if ([string]::Equals($path,$db,[StringComparison]::OrdinalIgnoreCase)) { 'SQLITE_FILE' } else { 'APP_DATA_DIRECTORY' }
+    throw "NOX_D06_NTFS_OWNER_SID_MISMATCH_HOLD scope=$scope"
   }
   if (@($acl.Access).Count -eq 0) { throw 'NOX_D06_NTFS_DACL_EMPTY_HOLD' }
   foreach ($ace in @($acl.Access)) {
