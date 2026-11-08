@@ -40,6 +40,20 @@ class RegistryTests(unittest.TestCase):
                               ("qwen3-tts","audio"),("llava:7b","vision")):
             self.assertEqual(reg._classify(name,{})[0],expected)
 
+    def test_finds_real_existing_lora_weight_without_touching_it(self):
+        with TemporaryDirectory() as d:
+            root=Path(d); weights=root/"brain"/"intelligence"/"adapters"/"NOX_RESUME_test"/"step-003560"/"adapter_model.safetensors"
+            weights.parent.mkdir(parents=True,exist_ok=True)
+            weights.write_bytes(b"VALIDATED_DUMMY_WEIGHTS")
+            before=weights.read_bytes()
+            state=reg.inventory(root,[])
+            self.assertEqual(state["local_artifacts_count"],1)
+            artifact=state["local_artifacts"][0]
+            self.assertEqual(artifact["sha256"],hashlib.sha256(before).hexdigest())
+            self.assertFalse(artifact["absorption_completed"])
+            self.assertTrue(artifact["original_retained"])
+            self.assertEqual(weights.read_bytes(),before)
+
     def test_no_blind_model_without_digest(self):
         with TemporaryDirectory() as tmp:
             state=reg.inventory(tmp,[{"name":"unknown:latest","size":700,"details":{}}])
