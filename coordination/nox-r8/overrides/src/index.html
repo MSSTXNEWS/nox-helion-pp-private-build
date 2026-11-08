@@ -466,7 +466,7 @@ body[data-nox-theme]:not([data-nox-theme="obsidian"]) .ring{border-color:var(--e
 <p class="hint">Запрос сохраняется в SQLite, но GPU-обучение не запускается без проверенного worker и прав на веса. Температура не выше 65°C; при достижении лимита пауза 180 секунд. Чекпойнт SHA: NOT VERIFIED.</p>
 <div id="learnReceipt" class="mono" role="status">Нет подтверждённого результата.</div>
 <div id="learnQueue" class="mono" aria-live="polite">Очередь не читалась.</div><div class="meter" aria-label="Физический прогресс обучения"><span id="trainingBar"></span></div><div id="trainingMeasured" class="meterLabel">Метрика не измерена</div><div id="training" class="mono"></div></section>
-<section class="panel" data-panel="voice"><p class="intro">Локальный RU↔ES переводчик и преподаватель испанского используют действующий Qwen CHAT, общий STOP и SQLite. Микрофон/ASR не подключён.</p><label for="voiceTask">Режим</label><select id="voiceTask"><option value="ru-es">Перевод RU → ES</option><option value="es-ru">Перевод ES → RU</option><option value="maestro">MAESTRO · преподаватель испанского</option></select><label for="voiceLevel">Уровень испанского</label><select id="voiceLevel"><option>A1</option><option>A2</option><option>B1</option><option>B2</option><option>C1</option><option>C2</option></select><label for="voiceText">Текст</label><textarea id="voiceText" maxlength="4000" rows="3" placeholder="Введите текст на русском или испанском"></textarea><button class="action" id="voiceChatSend">Отправить в локальный Qwen CHAT</button><div id="voiceTaskStatus" class="mono" role="status" aria-live="polite">Ожидание текста</div><hr><label for="voiceSpeechLocale">Язык озвучивания установленным голосом</label><select id="voiceSpeechLocale"><option value="ru-RU">Русский · RU</option><option value="es-ES">Español · ES</option></select><button class="action" id="voiceListRefresh">Проверить голоса RU/ES</button><div id="voiceAvailable" class="mono" role="status" aria-live="polite">Голоса устройства не проверялись</div><button class="action" id="speak">Озвучить последний ответ</button><button class="action danger" id="silence">Остановить речь</button><div id="voiceStatus" class="mono" role="status" aria-live="polite">Озвучивание только по нажатию.</div></section>
+<section class="panel" data-panel="voice"><p class="intro">Локальный RU↔ES переводчик и преподаватель испанского используют действующий Qwen CHAT, общий STOP и SQLite. Микрофон/ASR не подключён.</p><label for="voiceTask">Режим</label><select id="voiceTask"><option value="ru-es">Перевод RU → ES</option><option value="es-ru">Перевод ES → RU</option><option value="maestro">MAESTRO · преподаватель испанского</option></select><label for="voiceLevel">Уровень испанского</label><select id="voiceLevel"><option>A1</option><option>A2</option><option>B1</option><option>B2</option><option>C1</option><option>C2</option></select><label for="voiceText">Текст</label><textarea id="voiceText" maxlength="4000" rows="3" placeholder="Введите текст на русском или испанском"></textarea><div class="controls"><label for="asrLocale">Локальный микрофон</label><select id="asrLocale"><option value="ru-RU">Русский · RU</option><option value="es-ES">Español · ES</option></select></div><div class="controls"><button class="action" id="asrInventory">Проверить распознаватели Windows</button><button class="action" id="asrStart">Микрофон · 20 секунд</button><button class="action danger" id="asrStop" disabled>STOP микрофона</button></div><div id="asrState" class="mono" role="status" aria-live="polite">Микрофон выключен. Запуск только после согласия Windows.</div><p class="hint">Только локальный Windows SAPI. Текст добавляется в поле VOICE, не отправляется автоматически в Qwen. При отсутствии RU/ES распознавателя — HOLD.</p><button class="action" id="voiceChatSend">Отправить в локальный Qwen CHAT</button><div id="voiceTaskStatus" class="mono" role="status" aria-live="polite">Ожидание текста</div><hr><label for="voiceSpeechLocale">Язык озвучивания установленным голосом</label><select id="voiceSpeechLocale"><option value="ru-RU">Русский · RU</option><option value="es-ES">Español · ES</option></select><button class="action" id="voiceListRefresh">Проверить голоса RU/ES</button><div id="voiceAvailable" class="mono" role="status" aria-live="polite">Голоса устройства не проверялись</div><button class="action" id="speak">Озвучить последний ответ</button><button class="action danger" id="silence">Остановить речь</button><div id="voiceStatus" class="mono" role="status" aria-live="polite">Озвучивание только по нажатию.</div></section>
 <section class="panel" data-panel="persona"><p class="intro">Локальные настройки SQLite. PersonaID сохраняется, но не подменяет автоматически личность модели.</p><label for="persona">PersonaID</label><select id="persona"><option value="KV">KV</option><option value="AM">AM</option><option value="LA">LA</option><option value="EV">EV</option><option value="KW">KW</option></select><button class="action" id="savePersona">Сохранить PersonaID</button><label><input type="checkbox" id="reduceMotion"> Отключить анимацию</label><button class="action" id="saveMotion">Сохранить движение</button><label><input type="checkbox" id="useContext" checked> Добавлять локальную память и последние диалоги в запрос</label><button class="action" id="saveContext">Сохранить использование памяти</button><label for="performance">Режим локального ИИ</label><select id="performance"><option>MAX</option><option selected>BALANCED</option><option>ECO</option></select><button class="action" id="savePerformance">Сохранить режим</button><button class="action" id="backup">Резервная копия SQLite…</button><div id="personaStatus" class="mono" role="status" aria-live="polite"></div><p class="hint">Смена PersonaID не означает наличие обученного адаптера личности. Экспорт памяти выполняется только по твоей команде.</p></section>
 </aside></main>
 <script id="nox-liquid-core">
@@ -1151,6 +1151,42 @@ case 'notes.delete.unknown':if(pendingNoteDelete&&v?.requestId===pendingNoteDele
 case 'notes.add.receipt':if(pendingNote&&v?.requestId===pendingNote.requestId&&v.saved===true){if(visibleDraftPersona===pendingNote.persona&&$('noteTitle').value.trim()===pendingNote.title)$('noteTitle').value='';if(visibleDraftPersona===pendingNote.persona&&$('noteText').value.trim()===pendingNote.content)$('noteText').value='';pendingNote=null;$('noteAdd').disabled=false;$('status').textContent='NOTE SAVED · SQLITE';}break;
 case 'notes.add.denied':if(pendingNote&&v?.requestId===pendingNote.requestId){pendingNote=null;$('noteAdd').disabled=false;$('status').textContent=String(v.reason||'NOTE SAVE HOLD');}break;
 case 'notes.add.unknown':if(pendingNote&&v?.requestId===pendingNote.requestId&&v?.reason==='NOX_NOTE_ADD_COMMIT_UNKNOWN_HOLD'){pendingNote=null;noteAddUncertain=true;$('noteAdd').disabled=true;$('status').textContent='NOX_NOTE_ADD_COMMIT_UNKNOWN_HOLD · Проверьте записи в памяти перед повторением.';post('notes.list');}break;
+case 'asr.installed':{
+  if(v?.source!=='WINDOWS_SAPI_LOCAL')break;
+  const langs=Array.isArray(v.languages)?v.languages:[];
+  $('asrState').textContent='Распознаватели Windows: '+(['ru-RU','es-ES'].map(l=>
+    l+' '+(langs.includes(l)?'есть':'не установлен')).join(' | '));
+  $('asrState').dataset.inventoryReadback='DONE';
+  break;
+}
+case 'asr.started':{
+  if(v?.source!=='WINDOWS_SAPI_LOCAL'||v.requestId!==activeAsrRequestId)break;
+  $('asrStart').disabled=true;
+  $('asrStop').disabled=false;
+  $('asrState').textContent='Микрофон Windows активен · '+String(v.locale).slice(0,12)+' · максимум 20 секунд';
+  break;
+}
+case 'asr.denied':{
+  if(v?.requestId!==activeAsrRequestId)break;
+  activeAsrRequestId=null;
+  $('asrStart').disabled=false;$('asrStop').disabled=true;
+  $('asrState').textContent='ASR HOLD · '+String(v.reason||'UNAVAILABLE').slice(0,100);
+  break;
+}
+case 'asr.complete':{
+  if(v?.requestId!==activeAsrRequestId)break;
+  activeAsrRequestId=null;
+  $('asrStart').disabled=false;$('asrStop').disabled=true;
+  if(v?.ok===true && typeof v.text==='string' && v.text.length<=4000){
+    const existing=$('voiceText').value;
+    const combined=existing ? existing+'\\n'+v.text : v.text;
+    if(combined.length<=4000){
+      $('voiceText').value=combined;
+      $('asrState').textContent='Локальное распознавание завершено · текст добавлен, не отправлен';
+    }else $('asrState').textContent='Распознанный текст превышает лимит поля · HOLD';
+  }else $('asrState').textContent='ASR · '+String(v?.status||'NO_TRANSCRIPT').slice(0,100);
+  break;
+}
 case 'qlora.prepare.receipt':{
   const box=$('qloraPreflightState');
   box.dataset.prepareReadback='DONE';
@@ -1271,6 +1307,27 @@ if(noxThemeToggle) noxThemeToggle.addEventListener('click',()=>{
 });
 // VOICE: zero new providers. User action routes prepared text through the
 // original CHAT click handler (same Qwen, STOP, PersonaID and SQLite).
+let activeAsrRequestId=null;
+$('asrInventory').onclick=()=>post('asr.installed');
+$('asrStart').onclick=()=>{
+  if(activeAsrRequestId)return;
+  const locale=$('asrLocale').value;
+  if(locale!=='ru-RU'&&locale!=='es-ES')return;
+  const requestId=nextChatId();
+  activeAsrRequestId=requestId;
+  $('asrStart').disabled=true;
+  $('asrState').textContent='Ожидается разрешение владельца Windows…';
+  if(post('asr.start',{locale,requestId})===false){
+    activeAsrRequestId=null;
+    $('asrStart').disabled=false;
+    $('asrState').textContent='Локальный микрофон недоступен · HOLD';
+  }
+};
+$('asrStop').onclick=()=>{
+  if(!activeAsrRequestId)return;
+  post('asr.stop',{requestId:activeAsrRequestId});
+  $('asrStop').disabled=true;
+};
 const voiceChatButton=$('voiceChatSend');
 if(voiceChatButton)voiceChatButton.onclick=()=>{
   const raw=String($('voiceText').value||'').trim();
