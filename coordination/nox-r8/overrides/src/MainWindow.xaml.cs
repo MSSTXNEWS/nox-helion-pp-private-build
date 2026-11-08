@@ -418,6 +418,28 @@ public partial class MainWindow : Window
             if (!ragReadback)
                 throw new InvalidOperationException("NOX_P04_RAG_NATIVE_WEBVIEW2_READBACK_HOLD");
 
+            // Native E07-grade runtime check of the ORIGINAL nine D02 elements
+            // decorated by V16 CINEMA FX in the same WPF/WebView2 process.
+            // No synthetic DOM, no alternate preview or stubbed renderer.
+            var cinemaInstalled = await Browser.CoreWebView2.ExecuteScriptAsync("""
+                (() => {
+                  const root=document.querySelector('.constellation.nox-cinema-scope');
+                  const sphere=root?.querySelector('.helion.nox-cinema-orb');
+                  const cores=[...root?.querySelectorAll('button.core.nox-cinema-orb[data-route]')||[]];
+                  const fx=window.noxCinemaFX;
+                  const state=typeof fx?.snapshot==='function'?fx.snapshot():null;
+                  const all=[sphere,...cores];
+                  return !!sphere && cores.length===8 &&
+                    all.every(e=>e?.querySelector('.nox-cinema-orb__layers svg.nox-cinema-orb__ejecta')) &&
+                    state?.coreCount===8 && state?.telemetry==='HOST_ONLY' &&
+                    ['MAX','BALANCED','ECO','REDUCED'].includes(state.profile);
+                })()
+                """);
+            checks["p01_native_webview2_v16_cinema_nine_orbs"] =
+                cinemaInstalled == "true" ? "PASS" : "FAIL";
+            if (cinemaInstalled != "true")
+                throw new InvalidOperationException("NOX_V16_CINEMA_NINE_ORBS_NATIVE_HOLD");
+
             // Real embedded WebView2 DOM keyboard/ARIA contract; no fake native actions.
             // This tests event handling inside the running WPF WebView2, not OS SendInput.
             var keyboard = await Browser.CoreWebView2.ExecuteScriptAsync("""
