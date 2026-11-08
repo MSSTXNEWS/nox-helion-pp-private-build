@@ -13,6 +13,12 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 8.0.x
+      - name: B05 real NO-LOSS guard disposable Windows regression
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          & './coordination/nox-r8/installer/Test-NoLossGuard.ps1'
+          if (-not $?) { throw 'B05_NOLOSS_GUARD_FIXTURE_HOLD' }
       - name: Compile from exact source
         shell: pwsh
         run: |
@@ -252,6 +258,48 @@ jobs:
             canonical_full_d02='NOT_ACCEPTED'; full_v16='NOT_IMPLEMENTED';
             accepted_full_release=$false
           } | ConvertTo-Json | Set-Content './out/BUILD_RECEIPT.json' -Encoding UTF8
+      - name: B05 compile SHA-pinned immutable NOX Setup from same EXE and source receipt
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $exe=(Resolve-Path './out/NOX.HELION.exe').Path
+          $receipt=(Resolve-Path './out/BUILD_RECEIPT.json').Path
+          $receiptObj=Get-Content -LiteralPath $receipt -Encoding utf8 -Raw | ConvertFrom-Json
+          $exeSha=(Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash.ToLowerInvariant()
+          $receiptSha=(Get-FileHash -LiteralPath $receipt -Algorithm SHA256).Hash.ToLowerInvariant()
+          $sourceSha=$env:GITHUB_SHA.ToLowerInvariant()
+          if ($receiptObj.schema -cne 'NOX_R8_NATIVE_SINGLE_EXE_V1' -or
+              $receiptObj.source_git_sha -cne $sourceSha -or
+              $receiptObj.exe_sha256 -cne $exeSha -or
+              $receiptObj.accepted_full_release -ne $false) {
+            throw 'B05_EXACT_SOURCE_RECEIPT_HOLD'
+          }
+          $compiler='C:\Program Files (x86)\NSIS\makensis.exe'
+          if (-not (Test-Path -LiteralPath $compiler -PathType Leaf)) {
+            choco install nsis -y --no-progress
+            if ($LASTEXITCODE -ne 0) { throw 'B05_NSIS_COMPILER_UNAVAILABLE_HOLD' }
+          }
+          if (-not (Test-Path -LiteralPath $compiler -PathType Leaf)) { throw 'B05_NSIS_MAKENSIS_MISSING_HOLD' }
+          $setup=Join-Path (Resolve-Path './out').Path 'NOX_R8_ImmutableUser_Setup.exe'
+          $script=(Resolve-Path './coordination/nox-r8/installer/NOX_R8_ImmutableUser_Setup.nsi').Path
+          $guard=(Resolve-Path './coordination/nox-r8/installer/NoLossGuard.ps1').Path
+          & $compiler /V2 "/DNOX_EXE_PATH=$exe" "/DNOX_RECEIPT_PATH=$receipt" "/DNOX_GUARD_PATH=$guard" "/DNOX_EXE_SHA256=$exeSha" "/DNOX_RECEIPT_SHA256=$receiptSha" "/DNOX_SOURCE_GIT_SHA=$sourceSha" "/DNOX_SETUP_OUT=$setup" $script
+          if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $setup -PathType Leaf)) {
+            throw 'B05_EXACT_SHA_NSIS_COMPILE_HOLD'
+          }
+          $setupSha=(Get-FileHash -LiteralPath $setup -Algorithm SHA256).Hash.ToLowerInvariant()
+          [ordered]@{
+            schema='NOX_R8_SHA_PINNED_INSTALLER_CI_V1';
+            source_git_sha=$sourceSha;
+            source_exe_sha256=$exeSha;
+            source_receipt_sha256=$receiptSha;
+            installer_sha256=$setupSha;
+            installer_bytes=(Get-Item -LiteralPath $setup).Length;
+            original_owner_pc='NOT_TESTED';
+            qwen_gpu_stream_stop_sqlite='NOT_TESTED';
+            accepted_full_release=$false
+          } | ConvertTo-Json -Depth 4 | Set-Content './out/INSTALLER_RECEIPT.json' -Encoding utf8
+          Write-Host "B05_REAL_SHA_PINNED_NSIS_COMPILE_PASS SHA256=$setupSha (owner PC NOT_TESTED)"
       - uses: actions/upload-artifact@v4
         with:
           name: NOX-R8-WIN64
