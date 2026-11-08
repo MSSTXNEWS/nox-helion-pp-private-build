@@ -37,29 +37,16 @@ jobs:
           # D05 native source from same R8 branch; base archive remains SHA-pinned.
           Copy-Item './coordination/nox-r8/overrides/src/MainWindow.xaml.cs' './r8/src/MainWindow.xaml.cs' -Force
           Copy-Item './coordination/nox-r8/overrides/src/index.html' './r8/src/index.html' -Force
-          # V16 P01 original R11 cinematic styling runs INSIDE current R8 WebView2.
-          # Preserve the existing navigation buttons, handlers, reduced-motion default,
-          # the source renderer and the single WPF host. Do not install an alternate UI.
+          # V16 P01 cinema original donor is embedded in the canonical R8
+          # overrides/src/index.html before staging (never patch only r8/src).
           $cinema='./coordination/nox-r8/integrations/v16/proposals/P01/WOW-MAX10/p01-cinematic-menu.css'
           $cinemaBlob=([string](git hash-object $cinema)).Trim().ToLowerInvariant()
           if ($LASTEXITCODE -ne 0 -or $cinemaBlob -cne '7205f4b747ed6b95856e0207a9b52cce29f9d118') { throw 'P01_CINEMA_ORIGINAL_BLOB_HOLD' }
-          $htmlPath='./r8/src/index.html'
-          $html=[IO.File]::ReadAllText((Resolve-Path $htmlPath).Path)
-          if (($html.Split('</style></head>').Length - 1) -ne 1 -or
-              ($html.Split('<body class="reduced">').Length - 1) -ne 1 -or
-              ($html.Split('<button class="core ').Length - 1) -ne 8) {
-            throw 'P01_R8_CINEMA_DOM_PREIMAGE_HOLD'
-          }
-          $cinemaCss=[IO.File]::ReadAllText((Resolve-Path $cinema).Path)
-          # Adapt selectors to the EXISTING R8 root/buttons; do not mutate any
-          # original DOM tokens because owner source guards rely on exact preimages.
-          $cinemaCss=$cinemaCss.Replace('.nox-r11-cinematic-root','body').Replace('.nox-r11-cinematic-tile','.core')
-          $html=$html.Replace('</style></head>', ([Environment]::NewLine + $cinemaCss + [Environment]::NewLine + '</style></head>'))
-          if (-not $html.Contains('body .core::before') -or
-              -not $html.Contains('prefers-reduced-motion:reduce') -or
-              -not $html.Contains('<body class="reduced">')) { throw 'P01_R8_CINEMA_INJECTION_HOLD' }
-          [IO.File]::WriteAllText((Resolve-Path $htmlPath).Path,$html,[Text.Encoding]::UTF8)
-          # R8 HTML is embedded into same desktop EXE by existing build.
+          $html=[IO.File]::ReadAllText((Resolve-Path './r8/src/index.html').Path)
+          if (-not $html.Contains('NOX V16 CINEMA CSS') -or
+              -not $html.Contains('body .core::before') -or
+              -not $html.Contains('<body class="reduced">')) { throw 'P01_R8_CINEMA_SOURCE_HOLD' }
+          # Stage HTML must stay byte-identical with the Git-tracked override.
           # P03 exact original donor Git blob; compile the catalog into the SAME WPF/EXE host.
           $p03Catalog='./coordination/nox-r8/integrations/v16/P03/Source/P03.ModelCenter/ModelCatalog.cs'
           $p03Blob=([string](git hash-object $p03Catalog)).Trim().ToLowerInvariant()
