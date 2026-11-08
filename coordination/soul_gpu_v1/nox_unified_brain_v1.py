@@ -219,6 +219,17 @@ def prepare_chat(root,payload):
     return model,messages,task
 
 def chat(root,payload):
+    # The nonstream API must observe the same GPU admission rule.
+    try:
+        from nox_prime_resource_advisor_v1 import trainer_active
+        training=trainer_active()
+    except (ImportError,OSError,RuntimeError,TypeError):
+        training=None
+    if training is True:
+        return {"identity":"NOX PRIME","model":"NOX_PRIME_RESOURCE_STATUS",
+            "answer":"Сейчас GPU занят SAFE70-обучением. Для сложного ответа нужно освободить GPU или завершить текущий цикл. Прогресс и checkpoint видны в FORGE.",
+            "task":payload.get("task","general"),"history_persisted":False,
+            "s03_integrated":False,"training_busy":True}
     model,messages,task=prepare_chat(root,payload)
     post=json.dumps({"model":model,"messages":messages,"stream":False,
                      "think":False,"keep_alive":"15m",
@@ -238,8 +249,30 @@ def chat(root,payload):
 
 
 def stream_chat(root,payload):
-    """Yield NDJSON events as Ollama produces visible tokens."""
+    """Yield visible NOX status first; never compete with a SAFE70 GPU trainer."""
     yield {"type":"preparing","message":"Сверяю контекст и доступные модели"}
+    try:
+        from nox_prime_resource_advisor_v1 import trainer_active
+        training=trainer_active()
+    except (ImportError,OSError,RuntimeError,TypeError):
+        training=None
+    if training is True:
+        user=payload.get("message")
+        if not isinstance(user,str) or not 1<=len(user.strip())<=8000:
+            raise ValueError("INVALID_MESSAGE")
+        answer=("Сейчас мои GPU-ресурсы заняты обучением совместимого адаптера. "
+                "Основное ядро NOX и история остаются доступны, но сложные "
+                "нейросетевые ответы временно ограничены. Я не буду запускать "
+                "конкурирующую модель: это может нарушить безопасность SAFE70. "
+                "Прогресс каждого реального шага виден в FORGE-дашборде. "
+                "После сохранения checkpoint и завершения обучения можно "
+                "повторить запрос; дополнительных ресурсов без проверки не обещаю.")
+        yield {"type":"start","model":"NOX_PRIME_RESOURCE_STATUS"}
+        yield {"type":"delta","text":answer}
+        save_turn(root,user.strip(),answer)
+        yield {"type":"done","model":"NOX_PRIME_RESOURCE_STATUS",
+               "saved":True,"training_busy":True}
+        return
     model,messages,task=prepare_chat(root,payload)
     post=json.dumps({"model":model,"messages":messages,"stream":True,
                      "think":False,"keep_alive":"15m",
