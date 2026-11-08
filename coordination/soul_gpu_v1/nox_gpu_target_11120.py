@@ -128,6 +128,22 @@ def inputs():
                 if p.is_dir()),None)
     dataset=next((p for base in b for p in (base/"datasets"/"knowledge_candidates.jsonl",)
                   if p.is_file()),None)
+    if os.environ.get("NOX_USE_TEACHER_DISTILL_V1")=="1":
+        # Explicitly selected local distilled dataset. Never silently replace
+        # the owner's existing approved knowledge_candidates.jsonl.
+        teacher_dir=ROOT/"brain"/"intelligence"/"distillation"
+        candidate=teacher_dir/"teacher_candidates.jsonl"
+        manifest=teacher_dir/"teacher_candidates.manifest.json"
+        if not candidate.is_file() or not manifest.is_file() or candidate.is_symlink():
+            raise RuntimeError("DISTILL_DATASET_NOT_READY")
+        from hashlib import sha256
+        meta=json.loads(manifest.read_text(encoding="utf-8"))
+        h=sha256(candidate.read_bytes()).hexdigest()
+        if meta.get("sha256")!=h or meta.get("status")!="DATASET_CANDIDATE_NOT_TRAINED":
+            raise RuntimeError("DISTILL_DATASET_HASH_OR_STATUS_MISMATCH")
+        if meta.get("student_base")!="Qwen2.5-0.5B-Instruct" or meta.get("examples",0)<8:
+            raise RuntimeError("DISTILL_STUDENT_INCOMPATIBLE_OR_TOO_FEW_EXAMPLES")
+        dataset=candidate
     if not model or not dataset:raise RuntimeError("Local base model or approved NOX dataset missing")
     return step,cp,model,dataset
 
@@ -146,6 +162,13 @@ def worker(a):
     if not trainable:raise RuntimeError("No trainable LoRA parameters")
     opt=torch.optim.AdamW(trainable,lr=1e-5,foreach=False)
     data=[]
+    if os.environ.get("NOX_USE_TEACHER_DISTILL_V1")=="1":
+        # Child inherits opt-in mode; re-check immutable teacher bytes.
+        from hashlib import sha256
+        manifest=ROOT/"brain"/"intelligence"/"distillation"/"teacher_candidates.manifest.json"
+        m=json.loads(manifest.read_text(encoding="utf-8"))
+        if sha256(a.dataset.read_bytes()).hexdigest()!=m.get("sha256"):
+            raise RuntimeError("DISTILL_DATASET_CHANGED_AFTER_PREFLIGHT")
     for line in a.dataset.read_text(encoding="utf-8-sig").splitlines():
         if not line.strip():continue
         item=json.loads(line)
@@ -169,7 +192,9 @@ def worker(a):
         loss.backward();opt.step()
         step=a.start+n
         print(json.dumps({"step":step,"loss":round(float(loss.detach().cpu().item()),6),
-                          "device":"DirectML","pid":os.getpid()}),flush=True)
+                          "device":"DirectML","pid":os.getpid(),
+                          "data_source":"LOCAL_TEACHER_DISTILL" if os.environ.get("NOX_USE_TEACHER_DISTILL_V1")=="1"
+                                      else "EXISTING_APPROVED_KNOWLEDGE"}),flush=True)
         if n%5==0 or n==a.steps:
             target=a.out/("step-%06d"%step)
             pending=a.out/(".pending-%06d"%step)
@@ -233,6 +258,8 @@ def single_cycle():
              TMP=str(ROOT/"brain"/"skills"/"tmp"),
              TEMP=str(ROOT/"brain"/"skills"/"tmp"))
     for k in ("HF_HOME","TMP"):Path(env[k]).mkdir(parents=True,exist_ok=True)
+    print("NOX DATASET SOURCE:",dataset,"mode:",os.environ.get("NOX_USE_TEACHER_DISTILL_V1","existing"),
+          flush=True)
     print("NOX AMD SAFE70 | LoRA weight continuation",checkpoint,
           "| HotSpot",hot,"C | battery",charge,"%",flush=True)
     with log.open("w",encoding="utf-8") as o,errs.open("w",encoding="utf-8") as e:
