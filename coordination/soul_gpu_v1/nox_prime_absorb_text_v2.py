@@ -81,6 +81,10 @@ def run(root,questions_per_model=3,max_models=40):
     excluded=[{"name":m["name"],"model_type":m["model_type"],"gate":m["gate"],
                "reason":"requires modality-specific student or hardware budget"}
                for m in state["models"] if m not in eligible]
+    # Stage-1 fast lane: prioritize measured prime/coder teachers first.
+    # Other installed models stay cataloged for later competence-specific runs.
+    priority={"qwen3:8b":0,"qwen2.5-coder:7b":1}
+    eligible.sort(key=lambda row:(priority.get(row["name"],2),row["name"]))
     eligible=eligible[:max_models]
     if not eligible:raise RuntimeError("NO_ELIGIBLE_LOCAL_TEXT_TEACHERS")
     # Distill different examples from a stable curriculum across donor types.
