@@ -27,7 +27,7 @@ jobs:
         working-directory: coordination/soul_gpu_v1
         run: |
           python -m compileall -q .
-          python -m unittest -q test_nox_unified_brain_v1 test_nox_prime_resource_advisor_v1 test_nox_prime_cognitive_memory_v1 test_nox_prime_semantic_retriever_v1 test_nox_prime_memory_continuum_v1 test_nox_prime_experience_v1 test_nox_prime_core_matrix_v1 test_nox_prime_dream_v1 test_nox_prime_affect_runtime_v1 test_nox_prime_self_edit_lab_v1 test_nox_prime_live_pipeline_v1 test_nox_prime_soul_stage1_train
+          python -m unittest -q test_nox_unified_brain_v1 test_nox_prime_resource_advisor_v1 test_nox_prime_cognitive_memory_v1 test_nox_prime_semantic_retriever_v1 test_nox_prime_memory_continuum_v1 test_nox_prime_experience_v1 test_nox_prime_core_matrix_v1 test_nox_prime_dream_v1 test_nox_prime_affect_runtime_v1 test_nox_prime_self_edit_lab_v1 test_nox_prime_live_pipeline_v1 test_nox_prime_soul_stage1_train test_nox_prime_absorption_v2 test_nox_prime_progress_v1
   powershell-parser:
     runs-on: windows-latest
     timeout-minutes: 10
@@ -39,6 +39,7 @@ jobs:
           $paths = @(
             "coordination/soul_gpu_v1/NOX_PRIME_LIVE_V6_BOOT.ps1",
             "coordination/soul_gpu_v1/NOX_PRIME_STAGE1_START.ps1",
+            "coordination/soul_gpu_v1/NOX_PRIME_DISTILL_RUN_V7.ps1",
             "coordination/soul_gpu_v1/NOX_UNIFIED_BOOT_V1.ps1"
           )
           foreach ($path in $paths) {
