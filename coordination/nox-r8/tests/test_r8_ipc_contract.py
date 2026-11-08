@@ -173,9 +173,9 @@ for action, table in (("Task", "tasks"), ("Note", "memory_notes")):
     assert f'Send("{action.lower()}s.add.denied"' in segment, "D05_DENIAL_HOLD"
 for part in (
     "pendingTask={requestId,text,persona:visibleDraftPersona}",
-    "pendingNote={requestId,title,content,persona:visibleDraftPersona}",
+    "pendingNote={requestId,title,content,persona}",
     "if(post('tasks.add',{text,requestId})===false)",
-    "if(post('notes.add',{title,content,requestId})===false)",
+    "if(post('notes.add',{title,content,persona,requestId})===false)",
     "v?.requestId===pendingTask.requestId&&v.saved===true",
     "v?.requestId===pendingNote.requestId&&v.saved===true",
     "case 'tasks.add.denied':",
@@ -184,6 +184,8 @@ for part in (
     assert part in html, "D05_DRAFT_NOLOSS_HOLD " + part
 assert "post('tasks.add',{text});$('taskInput').value=''" not in html
 assert "post('notes.add',{title,content});$('noteTitle').value=''" not in html
+assert "const persona=visibleDraftPersona;" in html, "D03_NOTE_PERSONA_CAPTURE_HOLD"
+assert 'NOX_NOTE_PERSONA_CHANGED_HOLD' in cs, "D03_NOTE_OWNER_PREWRITE_HOLD"
 print("D05 R8 SOURCE_ONLY: native task/note owner receipts after SQLite readback and draft NO-LOSS PASS")
 
 # B04 native chat preflight denial must terminate the WebView2 owner.
