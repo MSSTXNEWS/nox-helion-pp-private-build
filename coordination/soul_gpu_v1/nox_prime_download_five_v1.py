@@ -49,11 +49,11 @@ def matches(name):
         return False
     return any(fnmatch(str(p),pat) or fnmatch(p.name,pat) for pat in PATTERNS)
 
-def event(root, status, detail, index):
+def event(root, status, detail, index, total=None):
     try:
         from nox_prime_progress_v1 import log_event
         log_event(root, "DOWNLOAD", status, detail, actual=index,
-                  total=len(MODELS))
+                  total=total or len(MODELS))
     except (ImportError, OSError, ValueError, TypeError) as e:
         print("DASHBOARD_EVENT_HOLD",type(e).__name__,flush=True)
 
@@ -118,7 +118,7 @@ def download(root,max_new_gb=50,only=None):
     api=HfApi()
     new_budget=0
     results=[]
-    event(root,"START","Discover official model revisions and reuse existing files",0)
+    event(root,"START","Discover official model revisions and reuse existing files",0,len(selected))
     for i,(label,model_id,expected_max,role) in enumerate(selected,1):
         print(f"\nNOX [{i}/{len(MODELS)}] {model_id} -> {role}",flush=True)
         revision,remote=official_metadata(api,model_id)
@@ -126,7 +126,7 @@ def download(root,max_new_gb=50,only=None):
         receipt=dest/"NOX_WEIGHTS_SHA256.json"
         if check_existing(dest,receipt,remote,revision):
             print("SKIP VERIFIED",model_id,revision,flush=True)
-            event(root,"SAVED","Reusing verified "+label,i)
+            event(root,"SAVED","Reusing verified "+label,i,len(selected))
             results.append({"model":model_id,"state":"REUSED_SHA256",
                             "revision":revision,"path":str(dest)})
             continue
@@ -135,14 +135,14 @@ def download(root,max_new_gb=50,only=None):
         known_remote_bytes=sum(v for v in remote.values() if type(v)==int)
         estimate=max(known_remote_bytes,expected_max)
         if new_budget+estimate>min(MAX_NEW_BYTES,int(max_new_gb*1e9)):
-            event(root,"HOLD","Model download would exceed 50GB package allowance",i-1)
+            event(root,"HOLD","Model download would exceed 50GB package allowance",i-1,len(selected))
             raise RuntimeError("MODEL_DOWNLOAD_BUDGET_HOLD")
         free=shutil.disk_usage(root).free
         if free < FREE_RESERVE+int(estimate*1.1):
-            event(root,"HOLD","Not enough free disk while preserving 60GB reserve",i-1)
+            event(root,"HOLD","Not enough free disk while preserving 60GB reserve",i-1,len(selected))
             raise RuntimeError(f"DISK_RESERVE_HOLD free={free/1e9:.1f}GB required={(FREE_RESERVE+int(estimate*1.1))/1e9:.1f}GB")
         dest.mkdir(parents=True,exist_ok=True)
-        event(root,"RUNNING","Fetching SHA-pinned "+label,i-1)
+        event(root,"RUNNING","Fetching SHA-pinned "+label,i-1,len(selected))
         print("OFFICIAL SOURCE",model_id,"REV",revision,"license=apache-2.0",
               "budget_estimate_gb",round(estimate/1e9,2),flush=True)
         snapshot_download(repo_id=model_id,revision=revision,
@@ -177,11 +177,11 @@ def download(root,max_new_gb=50,only=None):
         with receipt.open("x",encoding="utf-8") as f:
             json.dump(document,f,ensure_ascii=False,indent=2)
         new_budget+=size_bytes
-        event(root,"SAVED","Verified "+label+" official weights and local SHA256",i)
+        event(root,"SAVED","Verified "+label+" official weights and local SHA256",i,len(selected))
         print("SHA256 VERIFIED",model_id,"bytes",size_bytes,flush=True)
         results.append({"model":model_id,"state":"SHA256_CHECKED",
                         "revision":revision,"path":str(dest)})
-    event(root,"DONE","NOX selected trainable bases downloaded or verified",len(selected))
+    event(root,"DONE","NOX selected trainable bases downloaded or verified",len(selected),len(selected))
     return {"completed":len(results),"new_bytes":new_budget,
             "root":str(output),"models":results,
             "important":"Downloads only; all five remain separate until compatible student training and evaluation."}
