@@ -466,7 +466,7 @@ body[data-nox-theme]:not([data-nox-theme="obsidian"]) .ring{border-color:var(--e
 <p class="hint">Запрос сохраняется в SQLite, но GPU-обучение не запускается без проверенного worker и прав на веса. Температура не выше 65°C; при достижении лимита пауза 180 секунд. Чекпойнт SHA: NOT VERIFIED.</p>
 <div id="learnReceipt" class="mono" role="status">Нет подтверждённого результата.</div>
 <div id="learnQueue" class="mono" aria-live="polite">Очередь не читалась.</div><div class="meter" aria-label="Физический прогресс обучения"><span id="trainingBar"></span></div><div id="trainingMeasured" class="meterLabel">Метрика не измерена</div><div id="training" class="mono"></div></section>
-<section class="panel" data-panel="voice"><p class="intro">Локальный RU↔ES переводчик и преподаватель испанского используют действующий Qwen CHAT, общий STOP и SQLite. Микрофон/ASR не подключён.</p><label for="voiceTask">Режим</label><select id="voiceTask"><option value="ru-es">Перевод RU → ES</option><option value="es-ru">Перевод ES → RU</option><option value="maestro">MAESTRO · преподаватель испанского</option></select><label for="voiceLevel">Уровень испанского</label><select id="voiceLevel"><option>A1</option><option>A2</option><option>B1</option><option>B2</option><option>C1</option><option>C2</option></select><label for="voiceText">Текст</label><textarea id="voiceText" maxlength="4000" rows="3" placeholder="Введите текст на русском или испанском"></textarea><button class="action" id="voiceChatSend">Отправить в локальный Qwen CHAT</button><div id="voiceTaskStatus" class="mono" role="status" aria-live="polite">Ожидание текста</div><hr><button class="action" id="speak">Озвучить последний ответ</button><button class="action danger" id="silence">Остановить речь</button><div id="voiceStatus" class="mono">Проверка доступности речи по кнопке.</div></section>
+<section class="panel" data-panel="voice"><p class="intro">Локальный RU↔ES переводчик и преподаватель испанского используют действующий Qwen CHAT, общий STOP и SQLite. Микрофон/ASR не подключён.</p><label for="voiceTask">Режим</label><select id="voiceTask"><option value="ru-es">Перевод RU → ES</option><option value="es-ru">Перевод ES → RU</option><option value="maestro">MAESTRO · преподаватель испанского</option></select><label for="voiceLevel">Уровень испанского</label><select id="voiceLevel"><option>A1</option><option>A2</option><option>B1</option><option>B2</option><option>C1</option><option>C2</option></select><label for="voiceText">Текст</label><textarea id="voiceText" maxlength="4000" rows="3" placeholder="Введите текст на русском или испанском"></textarea><button class="action" id="voiceChatSend">Отправить в локальный Qwen CHAT</button><div id="voiceTaskStatus" class="mono" role="status" aria-live="polite">Ожидание текста</div><hr><label for="voiceSpeechLocale">Язык озвучивания установленным голосом</label><select id="voiceSpeechLocale"><option value="ru-RU">Русский · RU</option><option value="es-ES">Español · ES</option></select><button class="action" id="voiceListRefresh">Проверить голоса RU/ES</button><div id="voiceAvailable" class="mono" role="status" aria-live="polite">Голоса устройства не проверялись</div><button class="action" id="speak">Озвучить последний ответ</button><button class="action danger" id="silence">Остановить речь</button><div id="voiceStatus" class="mono" role="status" aria-live="polite">Озвучивание только по нажатию.</div></section>
 <section class="panel" data-panel="persona"><p class="intro">Локальные настройки SQLite. PersonaID сохраняется, но не подменяет автоматически личность модели.</p><label for="persona">PersonaID</label><select id="persona"><option value="KV">KV</option><option value="AM">AM</option><option value="LA">LA</option><option value="EV">EV</option><option value="KW">KW</option></select><button class="action" id="savePersona">Сохранить PersonaID</button><label><input type="checkbox" id="reduceMotion"> Отключить анимацию</label><button class="action" id="saveMotion">Сохранить движение</button><label><input type="checkbox" id="useContext" checked> Добавлять локальную память и последние диалоги в запрос</label><button class="action" id="saveContext">Сохранить использование памяти</button><label for="performance">Режим локального ИИ</label><select id="performance"><option>MAX</option><option selected>BALANCED</option><option>ECO</option></select><button class="action" id="savePerformance">Сохранить режим</button><button class="action" id="backup">Резервная копия SQLite…</button><div id="personaStatus" class="mono" role="status" aria-live="polite"></div><p class="hint">Смена PersonaID не означает наличие обученного адаптера личности. Экспорт памяти выполняется только по твоей команде.</p></section>
 </aside></main>
 <script id="nox-liquid-core">
@@ -930,7 +930,43 @@ $('ragQuery').onkeydown=e=>{if(e.key==='Enter'&&!e.defaultPrevented&&!e.isCompos
 
 $('noteAdd').onclick=()=>{const title=$('noteTitle').value.trim(),content=$('noteText').value.trim();if(!title||!content||pendingNote||noteAddUncertain)return;const persona=visibleDraftPersona;if(!['KV','AM','LA','EV','KW'].includes(persona)){$('status').textContent='NOX_NOTE_PERSONA_NOT_READY_HOLD';return;}const requestId=nextChatId();pendingNote={requestId,title,content,persona};$('noteAdd').disabled=true;if(post('notes.add',{title,content,persona,requestId})===false){pendingNote=null;$('noteAdd').disabled=false}};
 $('feedbackUp').onclick=()=>{if(lastAnswer)post('feedback',{rating:1,answer:lastAnswer})};$('feedbackDown').onclick=()=>{if(lastAnswer)post('feedback',{rating:-1,answer:lastAnswer})};
-$('speak').onclick=()=>{if(!('speechSynthesis' in window)||!('SpeechSynthesisUtterance' in window)){$('voiceStatus').textContent='Speech engine unavailable';return}if(!lastAnswer){$('voiceStatus').textContent='Сначала получите ответ модели';return}speechSynthesis.cancel();let u=new SpeechSynthesisUtterance(lastAnswer);u.lang='ru-RU';speechSynthesis.speak(u);$('voiceStatus').textContent='Озвучивание запрошено'};
+// Voice output is local WebView2 TTS only, not microphone/ASR. Exact locale
+// voice must actually be installed; never claim a Spanish/Russian voice by guess.
+function installedSpeechVoice(locale){
+  if(!('speechSynthesis' in window))return null;
+  const voices=window.speechSynthesis.getVoices();
+  return voices.find(v=>v?.lang?.toLowerCase()===locale.toLowerCase())||null;
+}
+function updateSpeechVoiceInventory(){
+  const label=$('voiceAvailable');
+  if(!('speechSynthesis' in window)||!('SpeechSynthesisUtterance' in window)){
+    label.textContent='Движок озвучивания Windows/WebView2 недоступен · HOLD';return;
+  }
+  label.textContent=['ru-RU','es-ES'].map(lang=>lang+': '+
+    (installedSpeechVoice(lang)?'голос установлен':'голос не обнаружен')).join(' | ');
+}
+$('voiceListRefresh').onclick=updateSpeechVoiceInventory;
+if('speechSynthesis' in window&&typeof window.speechSynthesis.addEventListener==='function')
+  window.speechSynthesis.addEventListener('voiceschanged',updateSpeechVoiceInventory);
+$('speak').onclick=()=>{
+  const status=$('voiceStatus');
+  const locale=$('voiceSpeechLocale').value;
+  if(!['ru-RU','es-ES'].includes(locale)){status.textContent='Язык не подтверждён · HOLD';return;}
+  if(!('speechSynthesis' in window)||!('SpeechSynthesisUtterance' in window)){
+    status.textContent='Движок озвучивания недоступен · HOLD';return;
+  }
+  if(!lastAnswer){status.textContent='Сначала получите завершённый ответ модели';return;}
+  const installed=installedSpeechVoice(locale);
+  if(!installed){status.textContent=locale+': голос не установлен · HOLD';return;}
+  window.speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance(lastAnswer);
+  u.lang=locale;u.voice=installed;
+  u.onstart=()=>{status.textContent=locale+' · воспроизведение началось';};
+  u.onend=()=>{status.textContent=locale+' · воспроизведение завершено';};
+  u.onerror=()=>{status.textContent=locale+' · ошибка движка озвучивания · HOLD';};
+  window.speechSynthesis.speak(u);
+  status.textContent=locale+' · отправлено в локальный речевой движок';
+};
 $('silence').onclick=()=>{if('speechSynthesis'in window)speechSynthesis.cancel();$('voiceStatus').textContent='Речь остановлена'};
 window.chrome?.webview?.addEventListener('message',e=>{const m=e.data,v=m.value;
 if(['status','token','metrics','complete'].includes(m.type) && (!v || v.requestId!==activeChatId))return;
