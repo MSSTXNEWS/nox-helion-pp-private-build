@@ -6,7 +6,7 @@ inventoried/candidate-only until source and license rights are reviewed.
 The holdout is separate and NEVER fed to the trainer. No S03/user data.
 """
 from __future__ import annotations
-import argparse,hashlib,json,re
+import argparse,hashlib,json,os,re
 from pathlib import Path
 from datetime import datetime,timezone
 from nox_prime_progress_v1 import log_event
@@ -49,9 +49,20 @@ def build(root):
     m,source,manifest=_latest(root)
     output=root/"brain"/"intelligence"/"distillation"
     output.mkdir(parents=True,exist_ok=True)
-    destination=output/"multi_teacher_student_v1.jsonl"
-    holdout=output/"multi_teacher_holdout_v1.jsonl"
-    report=output/"multi_teacher_student_v1.manifest.json"
+    source_sha=_sha(source)
+    tag=source_sha[:16]
+    destination=output/("multi_teacher_student_"+tag+".jsonl")
+    holdout=output/("multi_teacher_holdout_"+tag+".jsonl")
+    report=output/("multi_teacher_student_"+tag+".manifest.json")
+    current=output/"MULTI_TEACHER_CURRENT.json"
+    def activate():
+        # Atomic pointer update; prior versions of weights and datasets remain.
+        data={"schema":"NOX_MULTI_TEACHER_CURRENT_V1","train":destination.name,
+              "heldout":holdout.name,"manifest":report.name,
+              "source_sha256":source_sha}
+        tmp=output/("."+current.name+"."+tag+".tmp")
+        tmp.write_text(json.dumps(data,ensure_ascii=False,indent=2),encoding="utf-8")
+        os.replace(tmp,current)
     if any(x.exists() for x in (destination,holdout,report)):
         if not (destination.is_file() and holdout.is_file() and report.is_file()):
             raise RuntimeError("STUDENT_DATASET_PARTIAL_EXISTS")
@@ -60,6 +71,7 @@ def build(root):
             _sha(holdout)!=obj.get("heldout_sha256") or
             obj.get("source_sha256")!=_sha(source)):
             raise RuntimeError("STUDENT_DATASET_INTEGRITY_HOLD")
+        activate()
         return {"status":"REUSED_VERIFIED_DATASET","train_examples":obj["train_examples"],
                 "heldout_examples":obj["heldout_examples"],"path":str(destination)}
     records={}
@@ -121,6 +133,7 @@ def build(root):
          "no_private_S03_data":True,"originals_deleted":False}
     with report.open("x",encoding="utf-8") as f:
         json.dump(obj,f,ensure_ascii=False,indent=2)
+    activate()
     log_event(root,"DATASET_PREP","SAVED",
         "Real Qwen teacher student/holdout split saved; other donor weights kept",
         actual=len(train)+len(eval_rows),total=len(train)+len(eval_rows))
