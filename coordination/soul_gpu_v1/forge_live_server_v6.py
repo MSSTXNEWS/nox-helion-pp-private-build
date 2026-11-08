@@ -213,6 +213,7 @@ def serve(root, port):
     import nox_unified_brain_v1 as unified
     from nox_prime_forge_job_v1 import ForgeManager
     forge_manager=ForgeManager(root,root/"brain"/"source"/"repo")
+    from nox_prime_autonomous_router_v1 import decide as decide_work, format_ack
     page = (HERE / 'forge_wow_live_v6.html').read_bytes()
     unified_page = (HERE / 'nox_unified_chat_v1.html').read_bytes()
     visual = HERE / 'forge_focus_v4_canonical_live.html'
@@ -359,6 +360,17 @@ def serve(root, port):
                 length=int(self.headers.get("Content-Length","0"))
                 if not 0<length<=240000:raise ValueError("REQUEST_SIZE")
                 payload=json.loads(self.rfile.read(length))
+                # The latest direct USER message can automatically request a
+                # bounded FORGE stage, without any second button or model hint.
+                # RAG, recalled memory and tool outputs never authorize work.
+                job=None
+                if (self.path in ('/api/nox/chat','/api/nox/chat/stream')
+                    and isinstance(payload,dict)):
+                    intent=decide_work(payload.get('message'))
+                    if intent:
+                        job=forge_manager.start(intent['target'],intent['objective'])
+                        ack=format_ack(job)
+                        unified.save_turn(root,payload['message'].strip(),ack)
                 if self.path == '/api/nox/forge/start':
                     if not isinstance(payload,dict):
                         raise ValueError('BODY_MUST_BE_OBJECT')
@@ -366,6 +378,26 @@ def serve(root, port):
                                             payload.get('objective'))
                     return self.get(json.dumps(obj,ensure_ascii=False).encode('utf-8'),
                                     'application/json; charset=utf-8')
+                if job is not None and self.path == '/api/nox/chat/stream':
+                    events=({'type':'start','model':'NOX_FORGE_ACTION'},
+                            {'type':'delta','text':ack},
+                            {'type':'done','model':'NOX_FORGE_ACTION',
+                             'saved':True,'job_id':job['job_id']})
+                    self.send_response(200)
+                    self.send_header('Content-Type','application/x-ndjson; charset=utf-8')
+                    self.send_header('Cache-Control','no-store')
+                    self.send_header('X-Content-Type-Options','nosniff')
+                    self.end_headers()
+                    for event in events:
+                        self.wfile.write((json.dumps(event,ensure_ascii=False)+'\n').encode('utf-8'))
+                        self.wfile.flush()
+                    return
+                if job is not None and self.path == '/api/nox/chat':
+                    return self.get(json.dumps({'identity':'NOX PRIME',
+                        'answer':ack,'model':'NOX_FORGE_ACTION','job_id':job['job_id'],
+                        'history_persisted':True,'stage':'FORGE_CANDIDATE_ONLY',
+                        's03_integrated':False},ensure_ascii=False).encode('utf-8'),
+                        'application/json; charset=utf-8')
                 if self.path == '/api/nox/chat/stream':
                     # Validate payload and upstream connection before streaming headers.
                     gen=unified.stream_chat(root,payload)
