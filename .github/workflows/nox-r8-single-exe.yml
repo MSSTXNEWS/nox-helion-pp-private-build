@@ -96,6 +96,9 @@ jobs:
           Copy-Item './coordination/nox-r8/tests/test_r8_d01_chat_draft.cjs' './r8/test_r8_d01_chat_draft.cjs'
           node './r8/test_r8_d01_chat_draft.cjs'
           if ($LASTEXITCODE -ne 0) { throw 'D01_CHAT_OWNER_DRAFT_HOLD' }
+          # D03: production WebView2 note PersonaID and native SQLite prewrite guard.
+          node './coordination/nox-r8/tests/test_r8_d03_note_persona_guard.cjs'
+          if ($LASTEXITCODE -ne 0) { throw 'D03_NOTE_PERSONA_OWNER_SOURCE_HOLD' }
           # B06 original-source regression D05_TASK_ADD_DURABLE; no owner Qwen E2E claim.
           python './coordination/nox-r8/tests/test_r8_d05_task_add_durable_replay.py'
           if ($LASTEXITCODE -ne 0) { throw 'B06_D05_TASK_ADD_DURABLE_HOLD' }
