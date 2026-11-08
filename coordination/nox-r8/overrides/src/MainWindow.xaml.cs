@@ -2023,6 +2023,7 @@ public partial class MainWindow : Window
                 case "gpu.guardian": _ = SendP04GpuGuardianAsync(); break;
                 case "qlora.preflight": _ = SendP04QloraPreflightAsync(); break;
                 case "qlora.gpu-probe": _ = RunLocalP04GpuProbeAsync(Text("requestId")); break;
+                case "qlora.snapshot-probe": _ = RunLocalP04ModelSnapshotProbeAsync(Text("revision"), Text("requestId")); break;
                 case "asr.installed": ReportInstalledLocalAsr(); break;
                 case "asr.start": BeginLocalAsr(Text("locale"), Text("requestId")); break;
                 case "asr.stop": StopLocalAsr(Text("requestId")); break;
@@ -3362,6 +3363,140 @@ public partial class MainWindow : Window
         if (notify && requestId != null)
             Send("asr.complete", new { requestId, text = (string?)null, ok = false,
                 status = reason });
+    }
+
+
+    // Validate a user-selected LOCAL safetensors/HF snapshot before even
+    // considering a QLoRA base. A GGUF/Ollama download is not a HF snapshot.
+    // The original P04 Python checker reads/hashes existing files only.
+    private readonly SemaphoreSlim p04SnapshotProbeLock = new(1, 1);
+    private async Task RunLocalP04ModelSnapshotProbeAsync(string revision, string requestId)
+    {
+        if (providerProbeStopped || selfTestRequested || !ValidWriteRequestId(requestId) ||
+            revision.Length != 40 || revision.Any(c => !Uri.IsHexDigit(c))) {
+            Send("qlora.snapshot-probe", new { requestId, status = "HOLD_OWNER_OR_IMMUTABLE_REVISION_REQUIRED",
+                checkedFiles = 0, ran = false, trainingStarted = false }); return;
+        }
+        if (!await p04SnapshotProbeLock.WaitAsync(0)) {
+            Send("qlora.snapshot-probe", new { requestId, status = "HOLD_PROBE_IN_PROGRESS",
+                checkedFiles = 0, ran = false, trainingStarted = false }); return;
+        }
+        try
+        {
+            var workerRoot = P04WorkerRoot();
+            var script = Path.Combine(workerRoot, "model_snapshot_probe.py");
+            if (!File.Exists(script) || !EmbeddedP04WorkerAvailable()) {
+                Send("qlora.snapshot-probe", new { requestId, status = "HOLD_PREPARE_P04_WORKER_FIRST",
+                    checkedFiles = 0, ran = false, trainingStarted = false }); return;
+            }
+            // Identical attested script or fail closed, no alternate Python code.
+            using (var source = typeof(MainWindow).Assembly.GetManifestResourceStream(
+                "NOX.HELION.P04.model_snapshot_probe.py")
+                    ?? throw new InvalidOperationException("P04_SNAPSHOT_EMBEDDED_RESOURCE_MISSING_HOLD"))
+            {
+                using var data = new MemoryStream();
+                source.CopyTo(data);
+                if (!SHA256.HashData(data.ToArray()).SequenceEqual(
+                    SHA256.HashData(File.ReadAllBytes(script))))
+                    throw new InvalidOperationException("P04_SNAPSHOT_SCRIPT_CHANGED_HOLD");
+            }
+            var python = new[] {
+                Path.Combine(workerRoot, ".venv", "Scripts", "python.exe"),
+                Path.Combine(workerRoot, "venv", "Scripts", "python.exe")
+            }.FirstOrDefault(File.Exists);
+            if (python is null) {
+                Send("qlora.snapshot-probe", new { requestId, status = "HOLD_LOCAL_PYTHON_MISSING",
+                    checkedFiles = 0, ran = false, trainingStarted = false }); return;
+            }
+            var picker = new Microsoft.Win32.OpenFolderDialog {
+                Title = "NOX P04 · выбери локальную папку HF safetensors (не GGUF)",
+                Multiselect = false
+            };
+            if (picker.ShowDialog(this) != true) {
+                Send("qlora.snapshot-probe", new { requestId, status = "OWNER_CANCELLED",
+                    checkedFiles = 0, ran = false, trainingStarted = false }); return;
+            }
+            var folder = Path.GetFullPath(picker.FolderName);
+            // The original inspector also checks reparse ancestors and shards.
+            if (!Directory.Exists(folder) || !File.Exists(Path.Combine(folder, "config.json"))) {
+                Send("qlora.snapshot-probe", new { requestId, status = "HOLD_HF_CONFIG_MISSING",
+                    checkedFiles = 0, ran = false, trainingStarted = false }); return;
+            }
+            var decision = MessageBox.Show(this,
+                "Проверить локальную модель только на чтение, включая SHA-256 всех safetensors?\n" +
+                "Это может занять время. Модель, веса и память не изменяются; обучение не запускается.",
+                "NOX P04 · модель и контрольные суммы", MessageBoxButton.YesNo,
+                MessageBoxImage.Warning, MessageBoxResult.No);
+            if (decision != MessageBoxResult.Yes) {
+                Send("qlora.snapshot-probe", new { requestId, status = "DECLINED",
+                    checkedFiles = 0, ran = false, trainingStarted = false }); return;
+            }
+            using var budget = new CancellationTokenSource(TimeSpan.FromMinutes(3));
+            var psi = new ProcessStartInfo(python) {
+                UseShellExecute = false, CreateNoWindow = true,
+                RedirectStandardOutput = true, RedirectStandardError = true,
+                WorkingDirectory = workerRoot
+            };
+            foreach (var argument in new[] { "-B", script, "--root", folder,
+                                            "--expected-revision", revision.ToLowerInvariant() })
+                psi.ArgumentList.Add(argument);
+            using var process = Process.Start(psi)
+                ?? throw new InvalidOperationException("P04_SNAPSHOT_PYTHON_START_HOLD");
+            string output, errors;
+            try {
+                var stdout = process.StandardOutput.ReadToEndAsync(budget.Token);
+                var stderr = process.StandardError.ReadToEndAsync(budget.Token);
+                await process.WaitForExitAsync(budget.Token);
+                output = await stdout;
+                errors = await stderr;
+            }
+            catch (OperationCanceledException) {
+                try { process.Kill(entireProcessTree: true); } catch (Exception) {}
+                Send("qlora.snapshot-probe", new { requestId, status = "HOLD_SNAPSHOT_PROBE_TIMEOUT",
+                    checkedFiles = 0, ran = true, trainingStarted = false }); return;
+            }
+            if (output.Length > 131072 || errors.Length > 4096)
+                throw new InvalidOperationException("P04_SNAPSHOT_OUTPUT_BOUNDS_HOLD");
+            var probeStatus = "HOLD_INVALID_SNAPSHOT_PROBE_RECEIPT";
+            var count = 0;
+            string? manifestSha = null;
+            try {
+                using var json = JsonDocument.Parse(output);
+                var record = json.RootElement;
+                if (record.TryGetProperty("schema", out var schema) &&
+                    schema.GetString() == "NOX-P04-MODEL-SNAPSHOT-PROBE-v1" &&
+                    record.TryGetProperty("status", out var status))
+                {
+                    var value = status.GetString();
+                    if (value is "LOCAL_FILES_PRESENT_ONLY" or "HOLD") probeStatus = value;
+                    if (record.TryGetProperty("weight_files", out var files) &&
+                        files.ValueKind == JsonValueKind.Array) count = files.GetArrayLength();
+                    if (record.TryGetProperty("snapshot_manifest_sha256", out var hash) &&
+                        hash.ValueKind == JsonValueKind.String) {
+                        var candidate = hash.GetString();
+                        if (candidate?.Length == 64 && candidate.All(Uri.IsHexDigit))
+                            manifestSha = candidate;
+                    }
+                }
+            }
+            catch (JsonException) { /* malformed receipts never pass */ }
+            Send("qlora.snapshot-probe", new {
+                source = "P04_HF_SAFETENSORS_LOCAL_PROBE",
+                requestId, status = probeStatus, checkedFiles = count,
+                snapshotManifestSha256 = manifestSha,
+                localFilesPresentOnly = process.ExitCode == 0 &&
+                    probeStatus == "LOCAL_FILES_PRESENT_ONLY",
+                revisionAttested = false, licenseVerified = false,
+                trainingStarted = false, checkpointVerified = false,
+                modelMergeVerified = false, ran = true
+            });
+        }
+        catch (Exception ex) {
+            Send("qlora.snapshot-probe", new { requestId,
+                status = "HOLD_" + ex.GetType().Name,
+                checkedFiles = 0, ran = false, trainingStarted = false });
+        }
+        finally { p04SnapshotProbeLock.Release(); }
     }
 
     // Runs ONLY the original P04 read-only preflight_local_gpu.py from
