@@ -35,6 +35,8 @@
  <div class="rowline"><span class="label">Физические шаги GPU</span><span class="value" id="prime-gpu-step">—</span></div>
  <div class="thinprogress"><div id="prime-phase-bar"></div></div>
  <div class="hint" id="prime-phase-hint">Процент показывается только при наличии реальных счётчиков текущего этапа.</div>
+ <div class="hint" style="margin-top:8px">Каждый фактически обработанный GPU-шаг: step, loss, device</div>
+ <div id="prime-gpu-history" class="compact-list" style="max-height:155px;overflow:auto" aria-label="Фактические GPU-шаги"></div>
  <div id="prime-journal" class="compact-list" aria-live="polite"><div class="hint">Нет фактических событий нового конвейера. Историческое GPU-обучение показано выше.</div></div>
  </div></div>
 <div class="panel"><div class="hd">02 / ОЦЕНКА ИНТЕЛЛЕКТА ЯДРА</div><div class="pad intelligence"><div id="intelligence-score" class="pending">НЕ ОЦЕНЕНО</div><div class="thinprogress"><div id="intelligencebar"></div></div><p id="evaldesc">Сложность интеллекта нельзя честно измерить по количеству шагов. Здесь появится оценка только после реального benchmark.</p><div class="rowline"><span class="label">Память</span><span class="value" id="memory">—</span></div><div class="rowline"><span class="label">Динамика знаний</span><span class="value">Нужны тесты</span></div></div></div>
@@ -74,6 +76,21 @@ function updatePrimeProgress(p){
   const percent=hasCounts?100*current.actual/current.total:null;
   progress('prime-phase-bar',percent);
   set('prime-phase-hint',hasCounts?(fmt(current.actual)+' / '+fmt(current.total)+' · '+pct(percent)):'Фактический процент пока не подтверждён');
+  const gpuRows=$('prime-gpu-history');
+  gpuRows.replaceChildren();
+  for(const item of steps.slice(-25).reverse()){
+    const line=document.createElement('div');line.className='rowline';
+    const n=document.createElement('span');n.className='label';
+    n.textContent='STEP '+fmt(item.step);
+    const val=document.createElement('span');val.className='value';
+    val.textContent='LOSS '+fmt(item.loss,6)+' · '+(item.device||'UNKNOWN');
+    line.append(n,val);gpuRows.appendChild(line);
+  }
+  if(!steps.length){
+    const none=document.createElement('div');none.className='hint';
+    none.textContent='Нет подтверждённых новых обучающих шагов.';
+    gpuRows.appendChild(none);
+  }
   const list=$('prime-journal');
   list.replaceChildren();
   const events=safeArr(p?.events).slice(-9).reverse();
