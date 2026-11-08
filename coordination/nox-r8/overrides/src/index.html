@@ -1283,6 +1283,27 @@ case 'system':{
   $('hudMemory').textContent='SQLITE';break;}
 case 'notice':$('personaStatus').textContent=String(v);break;
 }});
+let activeAsrRequestId=null;
+$('asrInventory').onclick=()=>post('asr.installed');
+$('asrStart').onclick=()=>{
+  if(activeAsrRequestId)return;
+  const locale=$('asrLocale').value;
+  if(locale!=='ru-RU'&&locale!=='es-ES')return;
+  const requestId=nextChatId();
+  activeAsrRequestId=requestId;
+  $('asrStart').disabled=true;
+  $('asrState').textContent='Ожидается разрешение владельца Windows…';
+  if(post('asr.start',{locale,requestId})===false){
+    activeAsrRequestId=null;
+    $('asrStart').disabled=false;
+    $('asrState').textContent='Локальный микрофон недоступен · HOLD';
+  }
+};
+$('asrStop').onclick=()=>{
+  if(!activeAsrRequestId)return;
+  post('asr.stop',{requestId:activeAsrRequestId});
+  $('asrStop').disabled=true;
+};
 document.addEventListener('keydown',e=>{
   // Escape belongs to IME until composition ends; repeated/handled keys must
   // not send duplicate native STOP or steal accessibility shortcuts.
@@ -1307,27 +1328,6 @@ if(noxThemeToggle) noxThemeToggle.addEventListener('click',()=>{
 });
 // VOICE: zero new providers. User action routes prepared text through the
 // original CHAT click handler (same Qwen, STOP, PersonaID and SQLite).
-let activeAsrRequestId=null;
-$('asrInventory').onclick=()=>post('asr.installed');
-$('asrStart').onclick=()=>{
-  if(activeAsrRequestId)return;
-  const locale=$('asrLocale').value;
-  if(locale!=='ru-RU'&&locale!=='es-ES')return;
-  const requestId=nextChatId();
-  activeAsrRequestId=requestId;
-  $('asrStart').disabled=true;
-  $('asrState').textContent='Ожидается разрешение владельца Windows…';
-  if(post('asr.start',{locale,requestId})===false){
-    activeAsrRequestId=null;
-    $('asrStart').disabled=false;
-    $('asrState').textContent='Локальный микрофон недоступен · HOLD';
-  }
-};
-$('asrStop').onclick=()=>{
-  if(!activeAsrRequestId)return;
-  post('asr.stop',{requestId:activeAsrRequestId});
-  $('asrStop').disabled=true;
-};
 const voiceChatButton=$('voiceChatSend');
 if(voiceChatButton)voiceChatButton.onclick=()=>{
   const raw=String($('voiceText').value||'').trim();
