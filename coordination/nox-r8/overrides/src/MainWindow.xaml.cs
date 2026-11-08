@@ -1783,7 +1783,7 @@ public partial class MainWindow : Window
                 case "chat": await Generate(Text("text"), Text("requestId")); break;
                 case "history": SendPersonaHistory(); break;
                 case "notes.list": SendPersonaNotes(); break;
-                case "notes.add": HandleNoteAdd(Text("title"), Text("content"), Text("requestId")); break;
+                case "notes.add": HandleNoteAdd(Text("title"), Text("content"), Text("requestId"), Text("persona")); break;
                 case "notes.delete": DeleteNote(request.GetProperty("id").GetInt64(), Text("requestId")); break;
                 case "feedback": SaveFeedback(request.GetProperty("rating").GetInt32(), Text("answer")); Send("notice", "Оценка сохранена локально; это не обучение весов."); break;
                 case "backup": BackupLocalDatabase(); break;
@@ -2614,7 +2614,7 @@ public partial class MainWindow : Window
         RefreshTasksBestEffort();
     }
 
-    private void HandleNoteAdd(string title, string body, string requestId)
+    private void HandleNoteAdd(string title, string body, string requestId, string requestedPersona)
     {
         if (!ValidWriteRequestId(requestId)) {
             Send("notes.add.denied", new { requestId, reason = "NOX_NOTE_REQUEST_ID_HOLD" });
@@ -2628,8 +2628,13 @@ public partial class MainWindow : Window
                 string.IsNullOrWhiteSpace(body) || body.Length > 8000)
                 throw new ArgumentException("NOX_NOTE_VALIDATION_HOLD");
             string persona = ActivePersona();
+            // D03: deny stale/missing PersonaID before any SQLite write.
+            if (!string.Equals(requestedPersona, persona, StringComparison.Ordinal)) {
+                Send("notes.add.denied", new { requestId, reason = "NOX_NOTE_PERSONA_CHANGED_HOLD" });
+                return;
+            }
             writeAttempted = true;
-            long id = AddNote(title, body);
+            long id = AddNote(title, body, persona);
             using var verifyDb = OpenDatabase();
             using var verify = verifyDb.CreateCommand();
             verify.CommandText = "SELECT title,content,persona FROM memory_notes WHERE id=$id";
@@ -2938,13 +2943,13 @@ public partial class MainWindow : Window
         return notes;
     }
 
-    private long AddNote(string title, string body)
+    private long AddNote(string title, string body, string persona)
     {
         if (string.IsNullOrWhiteSpace(title) || title.Length > 120 || string.IsNullOrWhiteSpace(body) || body.Length > 8000)
             throw new ArgumentException("Название 1–120 символов, текст 1–8000 символов");
         using var db = OpenDatabase(); using var cmd = db.CreateCommand();
         cmd.CommandText = "INSERT INTO memory_notes(created_at,title,content,persona) VALUES($t,$n,$c,$persona)";
-        cmd.Parameters.AddWithValue("$persona", ActivePersona());
+        cmd.Parameters.AddWithValue("$persona", persona);
         cmd.Parameters.AddWithValue("$t",DateTimeOffset.UtcNow.ToString("O"));
         cmd.Parameters.AddWithValue("$n",title);
         cmd.Parameters.AddWithValue("$c",body);
