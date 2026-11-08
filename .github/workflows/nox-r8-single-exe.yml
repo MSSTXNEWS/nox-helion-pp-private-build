@@ -63,8 +63,8 @@ jobs:
           )
           foreach($entry in $ragDonors){
             $donor=Join-Path './coordination/nox-r8/integrations/v16/P04/Rag' $entry[0]
-            $hash=([string](git hash-object $donor)).Trim().ToLowerInvariant()
-            if ($LASTEXITCODE -ne 0 -or $hash -cne $entry[1]) { throw "P04_RAG_ORIGINAL_BLOB_HOLD_$($entry[0])" }
+            $donorHash=([string](git hash-object $donor)).Trim().ToLowerInvariant()
+            if ($LASTEXITCODE -ne 0 -or $donorHash -cne $entry[1]) { throw "P04_RAG_ORIGINAL_BLOB_HOLD_$($entry[0])" }
             Copy-Item $donor (Join-Path './r8/src' $entry[0]) -Force
           }
           # The standalone original P04 csproj has ImplicitUsings enabled;
