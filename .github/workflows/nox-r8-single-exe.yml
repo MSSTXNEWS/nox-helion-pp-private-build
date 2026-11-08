@@ -278,6 +278,7 @@ jobs:
                 $n.runId -cne $runId -or $n.pid -ne $p.Id -or
                 $stamp -lt $started -or !$n.wpfWebView2Accepted -or
                 $n.checks.real_webview2_eight_routes -ne 'PASS' -or
+                $n.checks.p04_native_model_snapshot_picker_no_read -ne 'PASS' -or
                 $n.checks.p02_native_ru_es_asr_installed_inventory_no_microphone -ne 'PASS' -or
                 $n.checks.p04_native_embedded_qlora_five_sources -ne 'PASS' -or
                 $n.checks.p01_native_webview2_v16_cinema_nine_orbs -ne 'PASS' -or
