@@ -122,6 +122,16 @@ jobs:
           $project=$project.Replace('</Project>',($resourceGroup+'</Project>'))
           [IO.File]::WriteAllText((Resolve-Path $projectPath).Path,$project,[Text.Encoding]::UTF8)
           if (-not $project.Contains('NOX.HELION.P04.%(Filename)%(Extension)')) { throw 'P04_QLORA_PROJECT_RESOURCE_HOLD' }
+          # Local Windows Speech API for explicitly consented RU/ES native ASR;
+          # pinned NuGet package, no background service, browser microphone denied.
+          $speechProject='./r8/src/NOX.HELION.csproj'
+          $speechXml=[IO.File]::ReadAllText((Resolve-Path $speechProject).Path)
+          if ($speechXml.Contains('System.Speech') -or
+              ($speechXml.Split('</Project>').Length - 1) -ne 1) {
+            throw 'NOX_SPEECH_PROJECT_PREIMAGE_HOLD'
+          }
+          $speechXml=$speechXml.Replace('</Project>',('<ItemGroup><PackageReference Include="System.Speech" Version="10.0.14" /></ItemGroup>'+[Environment]::NewLine+'</Project>'))
+          [IO.File]::WriteAllText((Resolve-Path $speechProject).Path,$speechXml,[Text.Encoding]::UTF8)
           # B01: authoritative immutable inventory of actual expanded + Git-overlaid WPF sources.
           # This is cloud-build provenance, NOT an owner NOX_NEW source-parity claim.
           $srcRoot=(Resolve-Path './r8/src').Path
