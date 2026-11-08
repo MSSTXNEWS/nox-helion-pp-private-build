@@ -31,6 +31,9 @@ $modules = @(
  "nox_prime_dream_v1.py",
  "nox_prime_affect_runtime_v1.py",
  "nox_prime_self_edit_lab_v1.py",
+ "nox_prime_forge_job_v1.py",
+ "nox_prime_autonomous_router_v1.py",
+ "nox_prime_weight_audit_v1.py",
  "nox_prime_unified_self_v51.py",
  "nox_prime_absorption_registry_v1.py",
  "nox_prime_absorb_text_v2.py",
@@ -58,6 +61,7 @@ try {
       "test_nox_prime_dream_v1",
       "test_nox_prime_affect_runtime_v1",
       "test_nox_prime_self_edit_lab_v1",
+      "test_nox_prime_autonomous_router_v1",
       "test_nox_prime_unified_self_v51",
       "test_nox_prime_absorption_v2",
       "test_nox_prime_student_dataset_v1",
@@ -86,7 +90,7 @@ foreach ($port in 18880..18896) {
     if ($occupied.Count -gt 0) { continue }
     $outlog = Join-Path $source ("server_"+$port+".out")
     $errlog = Join-Path $source ("server_"+$port+".err")
-    $args = @("-u",$server,"--root",$root,"--port",[string]$port)
+    $args = @("-u",$server,"--root",$root,"--port",[string]$port,"--source-sha",$SourceSha)
     Start-Process -FilePath $python -ArgumentList $args -WorkingDirectory $source -WindowStyle Hidden -RedirectStandardOutput $outlog -RedirectStandardError $errlog | Out-Null
     for ($n=0; $n -lt 35; $n++) {
         Start-Sleep -Milliseconds 450
