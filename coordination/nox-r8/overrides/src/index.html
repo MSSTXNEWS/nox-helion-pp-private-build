@@ -202,7 +202,7 @@ body[data-nox-theme]:not([data-nox-theme="obsidian"]) .ring{border-color:var(--e
 <p class="hint">Запрос сохраняется в SQLite, но GPU-обучение не запускается без проверенного worker и прав на веса. Температура не выше 65°C; при достижении лимита пауза 180 секунд. Чекпойнт SHA: NOT VERIFIED.</p>
 <div id="learnReceipt" class="mono" role="status">Нет подтверждённого результата.</div>
 <div id="learnQueue" class="mono" aria-live="polite">Очередь не читалась.</div><div class="meter" aria-label="Физический прогресс обучения"><span id="trainingBar"></span></div><div id="trainingMeasured" class="meterLabel">Метрика не измерена</div><div id="training" class="mono"></div></section>
-<section class="panel" data-panel="voice"><p class="intro">Озвучивание уже полученного ответа через установленный речевой движок Windows/WebView2. Это не голосовой ассистент и не запись микрофона.</p><button class="action" id="speak">Озвучить последний ответ</button><button class="action danger" id="silence">Остановить речь</button><div id="voiceStatus" class="mono">Проверка доступности речи по кнопке.</div></section>
+<section class="panel" data-panel="voice"><p class="intro">Локальный RU↔ES переводчик и преподаватель испанского используют действующий Qwen CHAT, общий STOP и SQLite. Микрофон/ASR не подключён.</p><label for="voiceTask">Режим</label><select id="voiceTask"><option value="ru-es">Перевод RU → ES</option><option value="es-ru">Перевод ES → RU</option><option value="maestro">MAESTRO · преподаватель испанского</option></select><label for="voiceLevel">Уровень испанского</label><select id="voiceLevel"><option>A1</option><option>A2</option><option>B1</option><option>B2</option><option>C1</option><option>C2</option></select><label for="voiceText">Текст</label><textarea id="voiceText" maxlength="4000" rows="3" placeholder="Введите текст на русском или испанском"></textarea><button class="action" id="voiceChatSend">Отправить в локальный Qwen CHAT</button><div id="voiceTaskStatus" class="mono" role="status" aria-live="polite">Ожидание текста</div><hr><button class="action" id="speak">Озвучить последний ответ</button><button class="action danger" id="silence">Остановить речь</button><div id="voiceStatus" class="mono">Проверка доступности речи по кнопке.</div></section>
 <section class="panel" data-panel="persona"><p class="intro">Локальные настройки SQLite. PersonaID сохраняется, но не подменяет автоматически личность модели.</p><label for="persona">PersonaID</label><select id="persona"><option value="KV">KV</option><option value="AM">AM</option><option value="LA">LA</option><option value="EV">EV</option><option value="KW">KW</option></select><button class="action" id="savePersona">Сохранить PersonaID</button><label><input type="checkbox" id="reduceMotion"> Отключить анимацию</label><button class="action" id="saveMotion">Сохранить движение</button><label><input type="checkbox" id="useContext" checked> Добавлять локальную память и последние диалоги в запрос</label><button class="action" id="saveContext">Сохранить использование памяти</button><label for="performance">Режим локального ИИ</label><select id="performance"><option>MAX</option><option selected>BALANCED</option><option>ECO</option></select><button class="action" id="savePerformance">Сохранить режим</button><button class="action" id="backup">Резервная копия SQLite…</button><div id="personaStatus" class="mono" role="status" aria-live="polite"></div><p class="hint">Смена PersonaID не означает наличие обученного адаптера личности. Экспорт памяти выполняется только по твоей команде.</p></section>
 </aside></main>
 <script id="nox-liquid-core">
@@ -939,5 +939,28 @@ if(noxThemeToggle) noxThemeToggle.addEventListener('click',()=>{
   noxThemeToggle.setAttribute('aria-label','Сменить оформление NOX: '+name);
   noxThemeToggle.title=name+' · выбрать следующий фон';
 });
+// VOICE: zero new providers. User action routes prepared text through the
+// original CHAT click handler (same Qwen, STOP, PersonaID and SQLite).
+const voiceChatButton=$('voiceChatSend');
+if(voiceChatButton)voiceChatButton.onclick=()=>{
+  const raw=String($('voiceText').value||'').trim();
+  if(!raw){$('voiceTaskStatus').textContent='Введите текст';return;}
+  if(busy){$('voiceTaskStatus').textContent='Дождитесь ответа или нажмите STOP в CHAT';return;}
+  const mode=$('voiceTask').value;
+  const level=$('voiceLevel').value;
+  const prefix=mode==='ru-es'
+    ?'Переведи следующий текст с русского на испанский. Выведи только точный перевод без комментариев:'
+    :mode==='es-ru'
+    ?'Переведи следующий текст с испанского на русский. Выведи только точный перевод без комментариев:'
+    :'Ты преподаватель испанского языка уровня '+level+'. Отвечай на запрос по-русски с корректными испанскими примерами и короткими пояснениями:';
+  const message=prefix+'\\n'+raw;
+  if(message.length>32000){$('voiceTaskStatus').textContent='Слишком длинный текст';return;}
+  const prior=$('prompt').value;
+  if(prior.trim()){ $('voiceTaskStatus').textContent='CHAT содержит несохранённый черновик — сначала сохраните или очистите его';return; }
+  $('prompt').value=message;
+  route('core');
+  $('send').click();
+  $('voiceTaskStatus').textContent=busy?'Передано в действующий Qwen CHAT':'Не отправлено: проверьте состояние локального движка; текст остаётся в CHAT';
+};
 route('consciousness');
 </script></body></html>
