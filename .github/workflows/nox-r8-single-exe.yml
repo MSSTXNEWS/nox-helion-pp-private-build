@@ -144,6 +144,8 @@ jobs:
           Copy-Item './coordination/nox-r8/tests/test_r8_f03_responsive_routes.cjs' './r8/test_r8_f03_responsive_routes.cjs'
           node './r8/test_r8_f03_responsive_routes.cjs'
           if ($LASTEXITCODE -ne 0) { throw 'F03_RESPONSIVE_NATIVE_ROUTES_HOLD' }
+          node './coordination/nox-r8/tests/test_r8_theme_modes.cjs'
+          if ($LASTEXITCODE -ne 0) { throw 'R8_FIVE_THEME_SOURCE_HOLD' }
           node './coordination/nox-r8/tests/test_r8_p03_catalog_runtime.cjs'
           if ($LASTEXITCODE -ne 0) { throw 'P03_CATALOG_ORIGINAL_RUNTIME_HOLD' }
           node './coordination/nox-r8/tests/test_r8_p04_gpu_guardian_live.cjs'
