@@ -211,6 +211,8 @@ def serve(root, port):
     # Running-code fingerprint: local boot must not attach to stale V6 instances.
     running_source_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
     import nox_unified_brain_v1 as unified
+    from nox_prime_forge_job_v1 import ForgeManager
+    forge_manager=ForgeManager(root,root/"brain"/"source"/"repo")
     page = (HERE / 'forge_wow_live_v6.html').read_bytes()
     unified_page = (HERE / 'nox_unified_chat_v1.html').read_bytes()
     visual = HERE / 'forge_focus_v4_canonical_live.html'
@@ -235,6 +237,13 @@ def serve(root, port):
                     observed=resource.snapshot()
                     recommendation=resource.advise('general',observed)
                     return self.get(json.dumps(recommendation,ensure_ascii=False).encode('utf-8'),
+                                    'application/json; charset=utf-8')
+                except Exception as exc:
+                    return self.get(json.dumps({'error':type(exc).__name__}).encode(),
+                                    'application/json',503)
+            if self.path == '/api/nox/forge/status':
+                try:
+                    return self.get(json.dumps(forge_manager.status(),ensure_ascii=False).encode('utf-8'),
                                     'application/json; charset=utf-8')
                 except Exception as exc:
                     return self.get(json.dumps({'error':type(exc).__name__}).encode(),
@@ -334,7 +343,7 @@ def serve(root, port):
                     return self.get(json.dumps({'error': type(exc).__name__, 'detail': str(exc)[:220]}).encode(), 'application/json', 503)
             return self.get(b'{"error":"not found"}', 'application/json', 404)
         def do_POST(self):
-            if self.path not in ('/api/nox/chat','/api/nox/chat/stream'):
+            if self.path not in ('/api/nox/chat','/api/nox/chat/stream','/api/nox/forge/start'):
                 return self.get(b'{"error":"read-only; no GPU command bridge"}',
                                 'application/json',403)
             # Never accept arbitrary cross-site requests into local Ollama.
@@ -350,6 +359,13 @@ def serve(root, port):
                 length=int(self.headers.get("Content-Length","0"))
                 if not 0<length<=240000:raise ValueError("REQUEST_SIZE")
                 payload=json.loads(self.rfile.read(length))
+                if self.path == '/api/nox/forge/start':
+                    if not isinstance(payload,dict):
+                        raise ValueError('BODY_MUST_BE_OBJECT')
+                    obj=forge_manager.start(payload.get('target','chat'),
+                                            payload.get('objective'))
+                    return self.get(json.dumps(obj,ensure_ascii=False).encode('utf-8'),
+                                    'application/json; charset=utf-8')
                 if self.path == '/api/nox/chat/stream':
                     # Validate payload and upstream connection before streaming headers.
                     gen=unified.stream_chat(root,payload)
