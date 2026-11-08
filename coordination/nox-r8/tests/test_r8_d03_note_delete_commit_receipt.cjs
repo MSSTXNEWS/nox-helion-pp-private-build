@@ -21,7 +21,7 @@ let last=-1;
 for(const guard of guards){let at=m.indexOf(guard);assert.ok(at>last,'unexpected delete commit/ACK ordering: '+guard);last=at;}
 assert.ok(m.includes('Send("notes.delete.unknown", new { requestId, id, persona,'));
 assert.ok(!m.includes('Send("notice", "NOX_NOTE_DELETE_COMMIT_UNKNOWN_HOLD")'));
-assert.ok(m.includes('} else {\n                try { Send("notes.delete.denied"'));
+assert.match(m,/}\s*else\s*\{\s*try\s*\{\s*Send\("notes\.delete\.denied"/,'D03_PRECOMMIT_DENIAL_MISSING');
 assert.ok(!m.slice(m.indexOf('// Independent SQLite readback completed')).includes('Send("notes.delete.denied"'));
 assert.ok(m.indexOf('if (consent != MessageBoxResult.Yes)')<m.indexOf('CheckpointSqlite(db, "PRE_NOTE_DELETE")'));
 assert.ok(m.includes('id=$id AND persona=$persona')&&m.includes('AND title=$title AND content=$content AND created_at=$created'));
