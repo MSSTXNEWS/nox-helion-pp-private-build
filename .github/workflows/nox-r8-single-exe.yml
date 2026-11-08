@@ -91,6 +91,37 @@ jobs:
           [IO.File]::WriteAllText((Resolve-Path $ragStaged).Path,
             (($ragImports -join [Environment]::NewLine)+[Environment]::NewLine+$ragOriginal),
             [Text.Encoding]::UTF8)
+          # P04 exact donor QLoRA sources are embedded as data resources
+          # in the SINGLE native EXE, not installed as a second application.
+          # NO training/python process runs during CI or app startup.
+          $workerDonors=@(
+            @('train_qlora.py','3375967b8beec14fcc88e09d2a1563af36462950'),
+            @('preflight_local_gpu.py','50756c056cd298152d2d3da5a9de2ec877f6cb86'),
+            @('merge_qlora_adapter.py','51a27181e94cf5e766e2faf943f8aa17ec6418c7'),
+            @('model_snapshot_probe.py','c370a18e058b879681a0b1da63cef3214f03b12a'),
+            @('requirements-qlora.txt','e98b757ffc52505f563348471209bba985851f0d')
+          )
+          New-Item -ItemType Directory -Force './r8/src/P04Worker' | Out-Null
+          foreach($entry in $workerDonors){
+            $donor=Join-Path './coordination/nox-r8/integrations/v16/P04' $entry[0]
+            $sha=([string](git hash-object $donor)).Trim().ToLowerInvariant()
+            if ($LASTEXITCODE -ne 0 -or $sha -cne $entry[1]) { throw "P04_QLORA_DONOR_SOURCE_DRIFT_HOLD_$($entry[0])" }
+            Copy-Item -LiteralPath $donor -Destination (Join-Path './r8/src/P04Worker' $entry[0]) -Force
+          }
+          $projectPath='./r8/src/NOX.HELION.csproj'
+          $project=[IO.File]::ReadAllText((Resolve-Path $projectPath).Path)
+          if (($project.Split('</Project>').Length - 1) -ne 1 -or
+              $project.Contains('P04Worker')) { throw 'P04_QLORA_PROJECT_PREIMAGE_HOLD' }
+          $resourceGroup=@'
+          <ItemGroup>
+            <EmbeddedResource Include="P04Worker\\*.*">
+              <LogicalName>NOX.HELION.P04.%(Filename)%(Extension)</LogicalName>
+            </EmbeddedResource>
+          </ItemGroup>
+          '@
+          $project=$project.Replace('</Project>',($resourceGroup+'</Project>'))
+          [IO.File]::WriteAllText((Resolve-Path $projectPath).Path,$project,[Text.Encoding]::UTF8)
+          if (-not $project.Contains('NOX.HELION.P04.%(Filename)%(Extension)')) { throw 'P04_QLORA_PROJECT_RESOURCE_HOLD' }
           # B01: authoritative immutable inventory of actual expanded + Git-overlaid WPF sources.
           # This is cloud-build provenance, NOT an owner NOX_NEW source-parity claim.
           $srcRoot=(Resolve-Path './r8/src').Path
