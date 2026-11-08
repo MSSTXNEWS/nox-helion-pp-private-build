@@ -188,3 +188,35 @@ for(const reason of ['OWNER_DECLINED','NOX_VUNEO_JOURNAL_READ_HOLD'])
 assert.ok(!html.includes('повтор заблокирован до перезапуска.'),
   'restarting the WPF host does not remove a persistent SQLite journal');
 console.log('D03 R8 SOURCE_ONLY: real WebView2 durable VUNEO HOLD/owner-declined replay policy PASS');
+
+// D03: a SQLite INSERT into imported_sources may commit and only its independent
+// readback may throw. The old native code falsely reported a retryable denial;
+// the new path must preserve a journal-uncertain HOLD, without pretending that
+// KnowledgeStore.ImportVuneoStaging was ever called.
+const armAttempt=guardedOwner.indexOf('journalWriteAttempted = true;');
+const armStart=guardedOwner.indexOf('ArmVuneoImportReceipt();');
+const importerEntered=guardedOwner.indexOf('importAttempted = true;');
+assert.ok(armAttempt>0&&armStart>armAttempt&&importerEntered>armStart);
+assert.ok(guardedOwner.includes('if (journalWriteAttempted)'));
+assert.ok(guardedOwner.includes('NOX_VUNEO_JOURNAL_STATE_UNKNOWN_HOLD'));
+assert.ok(guardedOwner.includes('reason = importAttempted ? "NOX_VUNEO_COMMIT_UNKNOWN_HOLD"'));
+function assertArmUnknownNativeAck(){
+  const fields={vuneoImport:{disabled:false},vuneoImportStatus:{textContent:''}};
+  const msgs=[];
+  const bridge=new Function('$','post','nextChatId',
+    'let pendingVuneo=null;let vuneoImportUncertain=false;'+dispatcher+
+    "function receive(type,v){switch(type){"+cases+"}};"+
+    "return {click:()=> $('vuneoImport').onclick(),receive,pending:()=>pendingVuneo};"
+  )(id=>fields[id],(type,payload)=>{msgs.push({type,...payload});return true;},()=>('owner-arm-'+(msgs.length+1)));
+  assert.equal(bridge.click(),true);
+  bridge.receive('knowledge.vuneo.unknown',{
+    requestId:msgs[0].requestId,backupVerified:true,
+    reason:'NOX_VUNEO_JOURNAL_STATE_UNKNOWN_HOLD'});
+  assert.equal(bridge.pending(),null,'unconfirmed journal must clear pending IPC');
+  assert.equal(fields.vuneoImport.disabled,true,'unknown journal must lock replay');
+  assert.match(fields.vuneoImportStatus.textContent,/NOX_VUNEO_JOURNAL_STATE_UNKNOWN_HOLD/);
+  assert.equal(bridge.click(),false);
+  assert.equal(msgs.length,1,'never send a second owner VUNEO request after ambiguous ARM');
+}
+assertArmUnknownNativeAck();
+console.log('D03 SOURCE_ONLY VUNEO SQLite journal write/readback ambiguity PASS');
