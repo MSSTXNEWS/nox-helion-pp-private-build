@@ -464,9 +464,9 @@ function switchPersonaDrafts(next){
   const previous=visibleDraftPersona;
   if(next===previous)return true;
   const fields=['noteTitle','noteText','memoryQuery','knowledgeQuery','ragQuery','prompt','taskInput'];
-  personaDrafts.set(previous,Object.fromEntries(fields.map(id=>[id,$(id).value])));
+  personaDrafts.set(previous,Object.fromEntries(fields.map(id=>[id,$(id)?.value||''])));
   const restored=personaDrafts.get(next)||{};
-  fields.forEach(id=>{$(id).value=restored[id]||''});
+  fields.forEach(id=>{const field=$(id);if(field)field.value=restored[id]||''});
   visibleDraftPersona=next;
   const hint=$('streamHint');
   if(hint)hint.textContent='PersonaID переключена · предыдущий поток не относится к текущему чату';
