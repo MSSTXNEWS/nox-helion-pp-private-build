@@ -83,7 +83,7 @@ def main():
     if len(a.git_sha)!=40 or any(c not in "0123456789abcdef" for c in a.git_sha):
         raise ValueError("NOX_GIT_SHA_HOLD")
     raw=subprocess.check_output(["git","ls-files","-z"],cwd=root)
-    paths=sorted(p.decode("utf-8") for p in raw.split(b"\\0") if p)
+    paths=sorted(p.decode("utf-8") for p in raw.split(b"\0") if p)
     if len(paths)<300:
         raise ValueError("NOX_SOURCE_FILESET_INCOMPLETE_HOLD")
     rows=[];seen_case=set();objects={}
@@ -128,11 +128,11 @@ def main():
         with zipfile.ZipFile(tmp,"w",compression=zipfile.ZIP_DEFLATED,compresslevel=6,allowZip64=True) as z:
             for h,obj in sorted(objects.items()):
                 z.write(obj["src"],arcname="objects/"+h[:2]+"/"+h)
-            z.writestr("NOX_SOURCE_INDEX.json",json.dumps(manifest,ensure_ascii=False,sort_keys=True,indent=2)+"\\n")
+            z.writestr("NOX_SOURCE_INDEX.json",json.dumps(manifest,ensure_ascii=False,sort_keys=True,indent=2)+"\n")
             z.writestr("RESTORE_SOURCE.py",RESTORE)
             z.writestr("START_HERE.txt",
               "NOX HELION ONE SOURCE - SOURCE ONLY / NO EXE\\n"
-              "Git SHA: "+a.git_sha+"\\n"
+              "Git SHA: "+a.git_sha+"\n"
               "All Git-tracked files are SHA256-attested and deduplicated in objects/.\\n"
               "Restore: python RESTORE_SOURCE.py NOX_HELION_ONE_SOURCE.zip <empty-directory>\\n"
               "The original Git repository and Drive legacy archive are retained.\\n"
