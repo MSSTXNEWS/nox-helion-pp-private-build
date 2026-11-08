@@ -67,6 +67,18 @@ jobs:
             if ($LASTEXITCODE -ne 0 -or $hash -cne $entry[1]) { throw "P04_RAG_ORIGINAL_BLOB_HOLD_$($entry[0])" }
             Copy-Item $donor (Join-Path './r8/src' $entry[0]) -Force
           }
+          # The standalone original P04 csproj has ImplicitUsings enabled;
+          # R8 single-EXE source does not. Add imports only to staged copy,
+          # after original Git blob exact-SHA attestation and before inventory.
+          $ragStaged='./r8/src/RagService.cs'
+          $ragOriginal=[IO.File]::ReadAllText((Resolve-Path $ragStaged).Path)
+          if (-not $ragOriginal.Contains('class RagService')) { throw 'P04_RAG_EXPECTED_SOURCE_HOLD' }
+          $ragImports=@('using System;','using System.IO;','using System.Net.Http;',
+                        'using System.Collections.Generic;','using System.Threading;',
+                        'using System.Threading.Tasks;','using System.Linq;')
+          [IO.File]::WriteAllText((Resolve-Path $ragStaged).Path,
+            (($ragImports -join [Environment]::NewLine)+[Environment]::NewLine+$ragOriginal),
+            [Text.Encoding]::UTF8)
           # B01: authoritative immutable inventory of actual expanded + Git-overlaid WPF sources.
           # This is cloud-build provenance, NOT an owner NOX_NEW source-parity claim.
           $srcRoot=(Resolve-Path './r8/src').Path
