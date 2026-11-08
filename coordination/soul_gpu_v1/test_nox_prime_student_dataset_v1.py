@@ -43,7 +43,7 @@ class MultiTeacherStudentTests(unittest.TestCase):
             self.assertGreaterEqual(r["heldout_examples"],2)
             self.assertEqual(before,donor.read_bytes())
             train=Path(r["path"])
-            held=train.with_name("multi_teacher_holdout_v1.jsonl")
+            held=train.with_name(train.name.replace("multi_teacher_student_","multi_teacher_holdout_",1))
             a=[json.loads(x) for x in train.read_text().splitlines()]
             b=[json.loads(x) for x in held.read_text().splitlines()]
             self.assertTrue(all(row["teacher_model"]=="qwen3:8b" for row in a+b))
@@ -51,6 +51,10 @@ class MultiTeacherStudentTests(unittest.TestCase):
                              {x["teacher_prompt_sha256"] for x in b})
             self.assertTrue(all(row["unverified_teacher_content"] for row in a))
             self.assertEqual(build(root)["status"],"REUSED_VERIFIED_DATASET")
+            # A stable pointer always resolves to this source-hashed version.
+            pointer=json.loads((train.parent/"MULTI_TEACHER_CURRENT.json").read_text(encoding="utf-8"))
+            self.assertEqual(pointer["train"],train.name)
+            self.assertTrue(pointer["manifest"].endswith(".manifest.json"))
 
     def test_insufficient_data_is_not_called_training(self):
         with TemporaryDirectory() as root:
