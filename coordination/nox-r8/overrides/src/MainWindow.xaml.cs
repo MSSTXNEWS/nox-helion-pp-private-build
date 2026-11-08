@@ -1968,6 +1968,7 @@ public partial class MainWindow : Window
                 case "knowledge.vuneo": ImportVuneoByConsent(Text("requestId")); break;
                 case "system.status": _ = SendSystemStateAsync(); break;
                 case "gpu.guardian": _ = SendP04GpuGuardianAsync(); break;
+                case "qlora.preflight": _ = SendP04QloraPreflightAsync(); break;
                 default: Send("error", "Unknown operation: " + kind); break;
             }
         }
@@ -3032,6 +3033,53 @@ public partial class MainWindow : Window
         {
             Send("rag.denied", new { action = "import", requestId, persona,
                 reason = "NOX_RAG_IMPORT_" + ex.GetType().Name + "_HOLD" });
+        }
+    }
+
+    // Read-only native P04 QLoRA prerequisite inventory; no model, GPU training or
+    // Python process is launched. The worker remains HOLD until exact approved
+    // weights/dataset/rights verifier and live GPU E2E have been attested.
+    private async Task SendP04QloraPreflightAsync()
+    {
+        const string trainingRoot = @"C:\NOX_HELION\APP\NOX_TRAINING";
+        try
+        {
+            // Never recurse or hash owner datasets from a diagnostics click.
+            var scripts = new[] { "train_qlora.py", "preflight_local_gpu.py",
+                "merge_qlora_adapter.py", "requirements-qlora.txt" };
+            var present = scripts.Select(name => new {
+                name, available = File.Exists(Path.Combine(trainingRoot, name))
+            }).ToArray();
+            var ownerScriptsComplete = present.All(p => p.available);
+            var python = new[] { Path.Combine(trainingRoot, ".venv", "Scripts", "python.exe"),
+                Path.Combine(trainingRoot, "venv", "Scripts", "python.exe") };
+            var localPython = python.FirstOrDefault(File.Exists);
+            var guardian = new NoxP04.GpuGuardian.GpuGuardian();
+            var samples = await guardian.ReadNvidiaAsync("NOX_R8_QLORA_PREFLIGHT_READONLY");
+            bool gpu = samples.Count > 0 && samples.All(sample => sample.State == "READY");
+            bool thermal = gpu && samples.All(sample =>
+                NoxP04.GpuGuardian.GpuGuardian.ThermalHoldReason(sample, 65.0) is null);
+            Send("qlora.preflight", new {
+                source = "P04_QLORA_PREFLIGHT_READONLY",
+                root = trainingRoot, scripts = present,
+                ownerScriptsComplete,
+                localPython = localPython is not null,
+                gpuTelemetryAvailable = gpu,
+                thermalGuardPassed = thermal,
+                // A sensor alone cannot attest Windows CUDA, library lock, model
+                // rights, data approval, checkpoint, or readiness for fusion.
+                ready = false, trainingStarted = false,
+                checkpointVerified = false, modelMergeVerified = false,
+                status = "HOLD_OWNER_CUDA_MODEL_DATA_RIGHTS_AND_CHECKPOINT_ATTESTATION"
+            });
+        }
+        catch (Exception) {
+            Send("qlora.preflight", new {
+                source = "P04_QLORA_PREFLIGHT_READONLY",
+                ready = false, trainingStarted = false,
+                checkpointVerified = false, modelMergeVerified = false,
+                status = "HOLD_PREFLIGHT_UNAVAILABLE"
+            });
         }
     }
 
