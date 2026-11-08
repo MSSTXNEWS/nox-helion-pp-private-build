@@ -459,7 +459,7 @@ body[data-nox-theme]:not([data-nox-theme="obsidian"]) .ring{border-color:var(--e
 <section class="panel" data-panel="nexus"><p class="intro">Реальный список моделей, прочитанный из локального Ollama API.</p><button class="action" id="healthButton">Обновить состояние</button><div id="health" class="mono"></div><div class="rowtitle">31 СЕМЕЙСТВО МОДЕЛЕЙ · КАТАЛОГ, НЕ УСТАНОВКА</div><div id="modelCatalog" class="mono scroll" role="status" aria-live="polite">Каталог моделей ещё не прочитан.</div><label class="rowtitle" for="modelPicker">ДОСТУПНЫЕ ЛОКАЛЬНЫЕ МОДЕЛИ</label><select id="modelPicker" aria-label="Модель Ollama"><option>Ожидает Ollama</option></select><button class="action" id="saveModel">Использовать выбранную модель</button><p class="hint" id="modelSelectStatus" role="status" aria-live="polite">Выбор не подтверждён SQLite.</p><p class="hint">Список моделей считывается с localhost:11436. Загрузка новых весов только по явному нажатию с подтверждением.</p><label class="rowtitle" for="modelToDownload">УСТАНОВКА МОДЕЛИ ПО ТОЧНОМУ ТЕГУ</label><div class="controls"><input id="modelToDownload" placeholder="qwen2.5-coder:7b" maxlength="100" aria-label="Точный тег Ollama"><button class="action" id="pullModel">INSTALL</button><button class="action danger" id="cancelPull">STOP</button></div><div class="meter"><span id="downloadBar"></span></div><div class="meterLabel" id="downloadStatus">Загрузка не запущена</div></section>
 <section class="panel" data-panel="forge"><p class="intro">Состояние файлов обучения NOX. Наличие файлов не означает успешность обучения.</p><button class="action" id="trainingButton">Прочитать состояние</button>
 <button class="action" id="gpuGuardianRefresh">Проверить датчик P04 GPU Guardian</button>
-<button class="action" id="qloraPrepare">Подготовить встроенные P04 QLoRA файлы…</button><button class="action" id="qloraPreflight">Проверить готовность P04 QLoRA на этом ПК</button><button class="action" id="qloraGpuProbe">Запустить реальную локальную GPU/CUDA проверку (без обучения)</button><div id="qloraGpuProbeState" class="mono" role="status" aria-live="polite">P04 GPU preflight: не выполнялась.</div><div id="qloraPreflightState" class="mono" role="status" aria-live="polite">Worker, CUDA, веса и права ещё не проверены.</div>
+<button class="action" id="qloraPrepare">Подготовить встроенные P04 QLoRA файлы…</button><button class="action" id="qloraPreflight">Проверить готовность P04 QLoRA на этом ПК</button><button class="action" id="qloraGpuProbe">Запустить реальную локальную GPU/CUDA проверку (без обучения)</button><label for="qloraModelRevision">Неизменяемая ревизия модели · 40 hex</label><input id="qloraModelRevision" maxlength="40" placeholder="Git commit ревизии исходных весов"><button class="action" id="qloraSnapshotProbe">Проверить локальные исходные веса HF/safetensors</button><div id="qloraSnapshotState" class="mono" role="status" aria-live="polite">Исходные веса не проверены; Ollama GGUF не подходит для QLoRA.</div><div id="qloraGpuProbeState" class="mono" role="status" aria-live="polite">P04 GPU preflight: не выполнялась.</div><div id="qloraPreflightState" class="mono" role="status" aria-live="polite">Worker, CUDA, веса и права ещё не проверены.</div>
 <div id="gpuGuardianState" class="mono" role="status" aria-live="polite">Датчики NVIDIA ещё не проверены. Обучение HOLD.</div>
 <button class="action" id="learnRequest">Подготовка QLoRA · согласие Windows</button>
 <button class="action danger" id="learnCancel">STOP · отозвать запрос</button>
@@ -800,6 +800,23 @@ function entry(container,text,title,cls){const d=element('div',undefined,'entry 
 $('send').onclick=()=>{const text=$('prompt').value.trim();if(!text||busy)return;if(text.length>32000){$('streamHint').textContent='Слишком длинное сообщение: максимум 32 000 символов';return;}const uncertainKey=uncertainChatKey(visibleDraftPersona,text);if(uncertainChatKeys.has(uncertainKey)&&!window.confirm('SQLite мог сохранить этот запрос. Откройте REFLECTION и проверьте историю. Повторить с риском дубля?')){$('streamHint').textContent='Повтор заблокирован до проверки истории.';route('reflection');return;}const requestId=nextChatId();if(post('chat',{text,requestId})===false){$('streamHint').textContent='Нативный чат недоступен. Черновик сохранён.';return;}uncertainChatKeys.delete(uncertainKey);busy=true;activeChatId=requestId;pendingStopId=null;pendingChatDraft={requestId,raw:$('prompt').value,persona:visibleDraftPersona};lastAnswer='';$('streamHint').textContent='Генерация ответа · не сохранено';entry($('messages'),text,'YOU','user');responseBox=entry($('messages'),'','NOX QWEN');$('prompt').value='';};
 $('stop').onclick=()=>{if(!busy||!activeChatId||pendingStopId===activeChatId)return;const stopOwner=activeChatId;pendingStopId=stopOwner;if(post('stop',{requestId:stopOwner})===false)pendingStopId=null};$('prompt').onkeydown=e=>{if(e.key==='Enter'&&!e.defaultPrevented&&!e.repeat&&!e.shiftKey&&!e.ctrlKey&&!e.altKey&&!e.metaKey&&!e.isComposing&&e.keyCode!==229){e.preventDefault();$('send').click()}};
 $('overviewHealth').onclick=()=>post('health');$('startEngine').onclick=()=>post('engine.start');$('refreshSensors').onclick=()=>post('system.status');$('healthButton').onclick=()=>{post('health');post('model.catalog')};$('trainingButton').onclick=()=>post('training');$('qloraPrepare').onclick=()=>{$('qloraPreflightState').textContent='P04 · ожидается подтверждение подготовки файлов';if(post('qlora.prepare')===false)$('qloraPreflightState').textContent='P04 · нативный host недоступен · HOLD';};
+let pendingSnapshotProbe=null;
+$('qloraSnapshotProbe').onclick=()=>{
+  if(pendingSnapshotProbe)return;
+  const revision=$('qloraModelRevision').value.trim();
+  if(!/^[a-f0-9]{40}$/i.test(revision)){
+    $('qloraSnapshotState').textContent='Требуется неизменяемая ревизия модели: 40 hex символов';return;
+  }
+  const requestId=nextChatId();
+  pendingSnapshotProbe=requestId;
+  $('qloraSnapshotProbe').disabled=true;
+  $('qloraSnapshotState').textContent='Ожидается выбор папки и подтверждение владельца Windows…';
+  if(post('qlora.snapshot-probe',{revision,requestId})===false){
+    pendingSnapshotProbe=null;
+    $('qloraSnapshotProbe').disabled=false;
+    $('qloraSnapshotState').textContent='Локальный host недоступен · HOLD';
+  }
+};
 let pendingGpuProbe=null;
 $('qloraGpuProbe').onclick=()=>{
   if(pendingGpuProbe)return;
@@ -1206,6 +1223,17 @@ case 'qlora.prepare.receipt':{
   box.textContent=v?.saved===true&&v?.trainingStarted===false
     ?'P04 · исходники подготовлены локально: '+String(v.files||0)+' файлов; обучение НЕ запущено'
     :'P04 · подготовка HOLD: '+String(v?.status||'UNKNOWN').slice(0,90);
+  break;
+}
+case 'qlora.snapshot-probe':{
+  if(!pendingSnapshotProbe||v?.requestId!==pendingSnapshotProbe)break;
+  pendingSnapshotProbe=null;
+  $('qloraSnapshotProbe').disabled=false;
+  const sha=typeof v?.snapshotManifestSha256==='string' && /^[a-f0-9]{64}$/i.test(v.snapshotManifestSha256)
+    ? v.snapshotManifestSha256.slice(0,16):'N/D';
+  $('qloraSnapshotState').textContent='P04 модель · '+String(v?.status||'HOLD').slice(0,80)+
+    ' · файлов весов '+String(Number.isInteger(v?.checkedFiles)?v.checkedFiles:0)+
+    ' · manifest SHA '+sha+' · лицензия/обучение/merge НЕ подтверждены';
   break;
 }
 case 'qlora.gpu-probe':{
