@@ -51,12 +51,13 @@ jobs:
             throw 'P01_R8_CINEMA_DOM_PREIMAGE_HOLD'
           }
           $cinemaCss=[IO.File]::ReadAllText((Resolve-Path $cinema).Path)
+          # Adapt selectors to the EXISTING R8 root/buttons; do not mutate any
+          # original DOM tokens because owner source guards rely on exact preimages.
+          $cinemaCss=$cinemaCss.Replace('.nox-r11-cinematic-root','body').Replace('.nox-r11-cinematic-tile','.core')
           $html=$html.Replace('</style></head>', ([Environment]::NewLine + $cinemaCss + [Environment]::NewLine + '</style></head>'))
-          $html=$html.Replace('<body class="reduced">','<body class="reduced nox-r11-cinematic-root" data-nox-r11-cinematic-mode="REDUCED">')
-          $html=$html.Replace('<button class="core ','<button class="core nox-r11-cinematic-tile ')
-          if (($html.Split('nox-r11-cinematic-tile').Length - 1) -lt 8 -or
+          if (-not $html.Contains('body .core::before') -or
               -not $html.Contains('prefers-reduced-motion:reduce') -or
-              -not $html.Contains('nox-r11-cinematic-root')) { throw 'P01_R8_CINEMA_INJECTION_HOLD' }
+              -not $html.Contains('<body class="reduced">')) { throw 'P01_R8_CINEMA_INJECTION_HOLD' }
           [IO.File]::WriteAllText((Resolve-Path $htmlPath).Path,$html,[Text.Encoding]::UTF8)
           # R8 HTML is embedded into same desktop EXE by existing build.
           # P03 exact original donor Git blob; compile the catalog into the SAME WPF/EXE host.
