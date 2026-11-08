@@ -194,6 +194,11 @@ def live_status(root):
     d['overall_progress_pct'] = round(100 * max(0, min(d['saved_step'], TARGET_STEPS)) / TARGET_STEPS, 2) if isinstance(d.get('saved_step'), int) else None
     d['saved_checkpoints'] = checkpoint_count(root)
     d['intelligence_evaluation'] = evaluation(root)
+    try:
+        from nox_prime_progress_v1 import read_progress
+        d['prime_pipeline']=read_progress(root)
+    except (OSError,ValueError,TypeError,ImportError):
+        d['prime_pipeline']=None
     d['read_only'] = True
     d['thermal_cutoff_c'] = 70
     d['thermal_resume_below_c'] = 65
@@ -230,6 +235,15 @@ def serve(root, port):
                     observed=resource.snapshot()
                     recommendation=resource.advise('general',observed)
                     return self.get(json.dumps(recommendation,ensure_ascii=False).encode('utf-8'),
+                                    'application/json; charset=utf-8')
+                except Exception as exc:
+                    return self.get(json.dumps({'error':type(exc).__name__}).encode(),
+                                    'application/json',503)
+            if self.path == '/api/nox/pipeline':
+                try:
+                    from nox_prime_progress_v1 import read_progress
+                    data=read_progress(root)
+                    return self.get(json.dumps(data,ensure_ascii=False).encode('utf-8'),
                                     'application/json; charset=utf-8')
                 except Exception as exc:
                     return self.get(json.dumps({'error':type(exc).__name__}).encode(),
