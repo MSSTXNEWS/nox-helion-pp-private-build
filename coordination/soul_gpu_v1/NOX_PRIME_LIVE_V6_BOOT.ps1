@@ -31,6 +31,11 @@ $modules = @(
  "nox_prime_dream_v1.py",
  "nox_prime_affect_runtime_v1.py",
  "nox_prime_self_edit_lab_v1.py",
+ "nox_prime_unified_self_v51.py",
+ "nox_prime_absorption_registry_v1.py",
+ "nox_prime_absorb_text_v2.py",
+ "nox_prime_progress_v1.py",
+ "nox_prime_distill_v1.py",
  "nox_prime_soul_stage1_train.py"
 )
 foreach ($name in $modules) {
@@ -52,6 +57,9 @@ try {
       "test_nox_prime_dream_v1",
       "test_nox_prime_affect_runtime_v1",
       "test_nox_prime_self_edit_lab_v1",
+      "test_nox_prime_unified_self_v51",
+      "test_nox_prime_absorption_v2",
+      "test_nox_prime_progress_v1",
       "test_nox_prime_live_pipeline_v1"
     )
     & $python -m unittest -q @tests
