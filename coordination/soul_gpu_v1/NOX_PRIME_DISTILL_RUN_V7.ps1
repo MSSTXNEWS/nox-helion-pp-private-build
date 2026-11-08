@@ -89,7 +89,7 @@ if($LASTEXITCODE -ne 0){
     throw 'NOX_DONOR_REGISTRY_HOLD'
 }
 NoxEvent 'TEACHER_DISTILL' 'START' 'Sequentially sampling all compatible local text and coding teachers'
-& $py -u (Join-Path $source 'nox_prime_absorb_text_v2.py') --root $root --questions-per-model 12 --max-models 40
+& $py -u (Join-Path $source 'nox_prime_absorb_text_v2.py') --root $root --questions-per-model 12 --max-models 2
 if($LASTEXITCODE -ne 0){
     NoxEvent 'TEACHER_DISTILL' 'HOLD' 'Some donor models cannot yet be sampled; no weights deleted'
     throw 'NOX_ALL_TEACHERS_PILOT_HOLD'
