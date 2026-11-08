@@ -136,6 +136,12 @@ body.reduced .helion-fx{filter:none}body.reduced .core.active{animation:none}
 <div class="mono" id="knowledgeStats">Документы не проверены</div>
 <div class="controls"><input id="knowledgeQuery" maxlength="160" placeholder="Поиск по добавленным документам" aria-label="Поиск в документах"><button class="action" id="knowledgeSearch">Найти</button></div>
 <div class="scroll" id="knowledgeResults"></div>
+<hr><div class="rowtitle">P04 · СЕМАНТИЧЕСКАЯ ПАМЯТЬ (OLLAMA EMBEDDINGS)</div>
+<p class="hint">Оригинальный P04 RAG: отдельный индекс в AppData, локальный qwen3-embedding:0.6b; без автоматических загрузок. Только файл TXT/MD, выбранный владельцем. Память SQLite не перезаписывается.</p>
+<button class="action" id="ragImport">Добавить локальный TXT/MD в P04 RAG…</button>
+<div class="controls"><input id="ragQuery" maxlength="160" aria-label="Семантический поиск" placeholder="Семантический поиск по документам"><button class="action" id="ragSearch">Найти по смыслу</button></div>
+<div id="ragImportStatus" class="mono" role="status" aria-live="polite">Импорт не выполнялся.</div>
+<div id="ragResults" class="mono scroll" role="status" aria-live="polite">P04 RAG ещё не проверен.</div>
 <hr><div class="rowtitle">ПОИСК ПО ДИАЛОГАМ</div><div class="scroll" id="memoryResults"></div>
 <hr><div class="rowtitle">ПОСЛЕДНИЕ ДИАЛОГИ</div><div class="scroll" id="history"></div></section>
 <section class="panel" data-panel="nexus"><p class="intro">Реальный список моделей, прочитанный из локального Ollama API.</p><button class="action" id="healthButton">Обновить состояние</button><div id="health" class="mono"></div><div class="rowtitle">31 СЕМЕЙСТВО МОДЕЛЕЙ · КАТАЛОГ, НЕ УСТАНОВКА</div><div id="modelCatalog" class="mono scroll" role="status" aria-live="polite">Каталог моделей ещё не прочитан.</div><label class="rowtitle" for="modelPicker">ДОСТУПНЫЕ ЛОКАЛЬНЫЕ МОДЕЛИ</label><select id="modelPicker" aria-label="Модель Ollama"><option>Ожидает Ollama</option></select><button class="action" id="saveModel">Использовать выбранную модель</button><p class="hint" id="modelSelectStatus" role="status" aria-live="polite">Выбор не подтверждён SQLite.</p><p class="hint">Список моделей считывается с localhost:11436. Загрузка новых весов только по явному нажатию с подтверждением.</p><label class="rowtitle" for="modelToDownload">УСТАНОВКА МОДЕЛИ ПО ТОЧНОМУ ТЕГУ</label><div class="controls"><input id="modelToDownload" placeholder="qwen2.5-coder:7b" maxlength="100" aria-label="Точный тег Ollama"><button class="action" id="pullModel">INSTALL</button><button class="action danger" id="cancelPull">STOP</button></div><div class="meter"><span id="downloadBar"></span></div><div class="meterLabel" id="downloadStatus">Загрузка не запущена</div></section>
@@ -447,6 +453,7 @@ let vuneoImportUncertain=false;
 let noteAddUncertain=false; // Possible SQLite INSERT: preserve draft, block silent duplicate.
 let noteDeleteUncertain=false; // Unknown COMMIT: do not auto-replay an irreversible DELETE.
 let pendingLearnRequest=null,pendingLearnStop=null; // Native owner-correlated consent and cancellation.
+let pendingRagSearch=null,pendingRagImport=null; // P04 original RAG scope/owner correlated.
 // B04: in-session ambiguous SQLite COMMIT guard; prompts remain volatile RAM only.
 const uncertainChatKeys=new Set();const uncertainChatKey=(persona,prompt)=>persona+'\u0000'+prompt.trim();
 const nextChatId=()=>typeof crypto!=='undefined'&&typeof crypto.randomUUID==='function'
@@ -456,7 +463,7 @@ function switchPersonaDrafts(next){
   if(!['KV','AM','LA','EV','KW'].includes(next))return false;
   const previous=visibleDraftPersona;
   if(next===previous)return true;
-  const fields=['noteTitle','noteText','memoryQuery','knowledgeQuery','prompt','taskInput'];
+  const fields=['noteTitle','noteText','memoryQuery','knowledgeQuery','ragQuery','prompt','taskInput'];
   personaDrafts.set(previous,Object.fromEntries(fields.map(id=>[id,$(id).value])));
   const restored=personaDrafts.get(next)||{};
   fields.forEach(id=>{$(id).value=restored[id]||''});
@@ -575,6 +582,31 @@ $('cancelPull').onclick=()=>{
   if(post('model.cancel',{requestId,model})===false)
     $('downloadStatus').textContent='NOX_MODEL_STOP_IPC_HOLD · проверьте статус загрузки';
 };
+
+$('ragSearch').onclick=()=>{
+  if(pendingRagSearch)return;
+  const query=$('ragQuery').value.trim(),requestId=nextChatId(),persona=visibleDraftPersona;
+  if(!query||query.length>160)return;
+  pendingRagSearch={requestId,persona};$('ragSearch').disabled=true;
+  $('ragResults').dataset.readback='PENDING';$('ragResults').dataset.source='';
+  $('ragResults').textContent='Поиск P04 RAG в локальном индексе…';
+  if(post('rag.search',{query,requestId})===false){
+    pendingRagSearch=null;$('ragSearch').disabled=false;
+    $('ragResults').textContent='NOX_RAG_NATIVE_BRIDGE_HOLD';
+  }
+};
+$('ragImport').onclick=()=>{
+  if(pendingRagImport)return;
+  const requestId=nextChatId(),persona=visibleDraftPersona;
+  pendingRagImport={requestId,persona};$('ragImport').disabled=true;
+  $('ragImportStatus').textContent='Выберите файл TXT или Markdown в окне Windows…';
+  if(post('rag.import',{requestId})===false){
+    pendingRagImport=null;$('ragImport').disabled=false;
+    $('ragImportStatus').textContent='NOX_RAG_IMPORT_BRIDGE_HOLD';
+  }
+};
+$('ragQuery').onkeydown=e=>{if(e.key==='Enter'&&!e.defaultPrevented&&!e.isComposing&&!e.repeat&&!e.shiftKey&&!e.ctrlKey&&!e.altKey&&!e.metaKey){e.preventDefault();$('ragSearch').click();}};
+
 $('noteAdd').onclick=()=>{const title=$('noteTitle').value.trim(),content=$('noteText').value.trim();if(!title||!content||pendingNote||noteAddUncertain)return;const persona=visibleDraftPersona;if(!['KV','AM','LA','EV','KW'].includes(persona)){$('status').textContent='NOX_NOTE_PERSONA_NOT_READY_HOLD';return;}const requestId=nextChatId();pendingNote={requestId,title,content,persona};$('noteAdd').disabled=true;if(post('notes.add',{title,content,persona,requestId})===false){pendingNote=null;$('noteAdd').disabled=false}};
 $('feedbackUp').onclick=()=>{if(lastAnswer)post('feedback',{rating:1,answer:lastAnswer})};$('feedbackDown').onclick=()=>{if(lastAnswer)post('feedback',{rating:-1,answer:lastAnswer})};
 $('speak').onclick=()=>{if(!('speechSynthesis' in window)||!('SpeechSynthesisUtterance' in window)){$('voiceStatus').textContent='Speech engine unavailable';return}if(!lastAnswer){$('voiceStatus').textContent='Сначала получите ответ модели';return}speechSynthesis.cancel();let u=new SpeechSynthesisUtterance(lastAnswer);u.lang='ru-RU';speechSynthesis.speak(u);$('voiceStatus').textContent='Озвучивание запрошено'};
@@ -782,6 +814,43 @@ case 'gpu.guardian':{
   if(v.thermalHold===true)window.noxVisual?.setThermalHold?.(true);
   break;
 }
+
+case 'rag.search.results':{
+  if(!pendingRagSearch||v?.requestId!==pendingRagSearch.requestId||
+     v?.persona!==pendingRagSearch.persona||v.persona!==visibleDraftPersona)break;
+  pendingRagSearch=null;$('ragSearch').disabled=false;
+  const box=$('ragResults'),rows=Array.isArray(v.rows)?v.rows.slice(0,5):[];
+  box.dataset.source=v.source==='P04_SEMANTIC_RAG'?'P04_SEMANTIC_RAG':'INVALID';
+  box.dataset.readback='DONE';
+  box.textContent=rows.length?rows.map(s=>'['+String(s.fileName||'').slice(0,120)+' #'+
+    String(s.chunkIndex+1)+'] SHA '+String(s.sha256||'').slice(0,12)+
+    ' · '+String(s.text||'').slice(0,600)).join('\n\n'):'0 совпадений в P04 RAG — импортируйте локальный TXT/MD';
+  break;
+}
+case 'rag.import.receipt':{
+  if(!pendingRagImport||v?.requestId!==pendingRagImport.requestId||
+     v?.persona!==pendingRagImport.persona||v.persona!==visibleDraftPersona)break;
+  pendingRagImport=null;$('ragImport').disabled=false;
+  $('ragImportStatus').textContent=v?.saved===true?
+    'P04 RAG: индексировано '+String(v.chunks)+' фрагментов · '+String(v.fileName||'').slice(0,120):
+    'P04 RAG: импорт не подтверждён';
+  break;
+}
+case 'rag.denied':{
+  const isSearch=v?.action==='search'&&pendingRagSearch?.requestId===v?.requestId;
+  const isImport=v?.action==='import'&&pendingRagImport?.requestId===v?.requestId;
+  if(v?.persona!==visibleDraftPersona||(!isSearch&&!isImport))break;
+  const reason=String(v.reason||'NOX_RAG_NATIVE_HOLD').slice(0,100);
+  if(isSearch){
+    pendingRagSearch=null;$('ragSearch').disabled=false;
+    $('ragResults').textContent=reason+' · локальный P04 RAG недоступен';
+  }else{
+    pendingRagImport=null;$('ragImport').disabled=false;
+    $('ragImportStatus').textContent=reason;
+  }
+  break;
+}
+
 case 'system':{
   // Prefer a conservative ECO rendering cap until the native sensor proves safe.
   // Never mutate the persisted mode or interrupt Qwen STREAM/STOP.

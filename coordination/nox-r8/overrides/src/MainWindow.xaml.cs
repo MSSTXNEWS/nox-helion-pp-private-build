@@ -386,6 +386,38 @@ public partial class MainWindow : Window
             if (!p04Readback)
                 throw new InvalidOperationException("NOX_P04_NATIVE_GPU_GUARDIAN_READBACK_HOLD");
 
+            // P04 RAG live no-index acceptance: authentic SID + isolated RAG
+            // index + native IPC into the same WebView2, no synthetic embeddings.
+            var ragClick = await Browser.CoreWebView2.ExecuteScriptAsync("""
+                (() => {
+                  const input=document.getElementById('ragQuery');
+                  const button=document.getElementById('ragSearch');
+                  const result=document.getElementById('ragResults');
+                  if (!input || !button || !result || button.disabled) return false;
+                  input.value='NOX_SOURCE_ONLY_EMPTY_RAG_SMOKE';
+                  button.click();
+                  return true;
+                })()
+                """);
+            if (ragClick != "true") throw new InvalidOperationException("NOX_P04_RAG_BUTTON_HOLD");
+            bool ragReadback = false;
+            for (int attempt=0; attempt<55; attempt++)
+            {
+                var result = await Browser.CoreWebView2.ExecuteScriptAsync("""
+                    (() => {
+                      const box=document.getElementById('ragResults');
+                      return !!box && box.dataset.source==='P04_SEMANTIC_RAG' &&
+                        box.dataset.readback==='DONE' &&
+                        box.textContent.includes('совпадений');
+                    })()
+                    """);
+                if (result == "true") { ragReadback=true; break; }
+                await Task.Delay(100);
+            }
+            checks["p04_native_webview2_rag_noindex_readback"] = ragReadback ? "PASS" : "FAIL";
+            if (!ragReadback)
+                throw new InvalidOperationException("NOX_P04_RAG_NATIVE_WEBVIEW2_READBACK_HOLD");
+
             // Real embedded WebView2 DOM keyboard/ARIA contract; no fake native actions.
             // This tests event handling inside the running WPF WebView2, not OS SendInput.
             var keyboard = await Browser.CoreWebView2.ExecuteScriptAsync("""
@@ -886,7 +918,7 @@ public partial class MainWindow : Window
             catch (Exception ex) { error = (error ?? "") + " binary_hash:" + ex.Message; }
             var requiredChecks = UiSmokeSettingsRestartRequested
                 ? new[] { "isolated_sqlite_path", "settings_wpf_owner_restart_readback" }
-                : new[] { "real_webview2_eight_routes", "p03_native_webview2_catalog_31_families", "p04_native_webview2_gpu_guardian_readonly", "real_webview2_keyboard_routes",
+                : new[] { "real_webview2_eight_routes", "p03_native_webview2_catalog_31_families", "p04_native_webview2_gpu_guardian_readonly", "p04_native_webview2_rag_noindex_readback", "real_webview2_keyboard_routes",
                           "d01_five_quick_native_routes", "d01_five_quick_windows_uia",
                           "d01_five_quick_compact_320_390_800",
                           "f03_compact_native_coreid_focus_320_390_800",
@@ -1907,6 +1939,8 @@ public partial class MainWindow : Window
                     break;
                 }
                 case "knowledge.search": Send("knowledge.results", knowledge.Search(Text("query"))); break;
+                case "rag.search": await HandleP04RagSearchAsync(Text("query"), Text("requestId")); break;
+                case "rag.import": await HandleP04RagImportAsync(Text("requestId")); break;
                 case "knowledge.stats": Send("knowledge.stats", knowledge.Stats()); break;
                 case "knowledge.import": ImportKnowledgeByDialog(); break;
                 case "knowledge.vuneo": ImportVuneoByConsent(Text("requestId")); break;
@@ -2866,6 +2900,88 @@ public partial class MainWindow : Window
     // Coalesce duplicate refresh requests to avoid competing GPU queries.
     // Original V16 P04 GpuGuardian: local vendor sensor only, no model/training action.
     // Async + coalesced with existing sensor access; never blocks chat STOP or the WPF dispatcher.
+
+    // Original P04 semantic RAG is opt-in: it never replaces the existing SQLite/FTS5
+    // memory, never downloads a model, and never reads a file without Windows picker.
+    // SID is Windows-authenticated; chat scope is the committed PersonaID.
+    private static string P04RagIndexPath => Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "NOX_HELION", selfTestRequestedStatic ? "rag_selftest.json" : "rag_index_v1.json");
+    private const string P04EmbeddingModel = "qwen3-embedding:0.6b";
+    private static readonly bool selfTestRequestedStatic = NativeSelfTestRequested || UiSmokeRequested;
+    private static string P04OwnerSid() => WindowsIdentity.GetCurrent().User?.Value
+        ?? throw new InvalidOperationException("NOX_RAG_WINDOWS_SID_UNAVAILABLE");
+    private static string P04PersonaScope(string persona) => "NOX_R8_PERSONA_" + persona;
+
+    private async Task HandleP04RagSearchAsync(string query, string requestId)
+    {
+        string persona = ActivePersona();
+        if (!ValidWriteRequestId(requestId) || query.Length is < 1 or > 160) {
+            Send("rag.denied", new { action = "search", persona, requestId,
+                reason = "NOX_RAG_INVALID_QUERY_OR_REQUEST_ID_HOLD" }); return;
+        }
+        try
+        {
+            using var rag = new NoxP04.Rag.RagService(
+                new Uri(Api + "/"), P04EmbeddingModel, P04RagIndexPath);
+            var service = new NoxP04.Rag.RagIngestionService(rag);
+            var result = await service.BuildContextAsync(
+                P04OwnerSid(), P04PersonaScope(persona), query, topK:5);
+            Send("rag.search.results", new {
+                source = "P04_SEMANTIC_RAG", requestId, persona,
+                count = result.Sources.Count,
+                rows = result.Sources.Select(s => new {
+                    fileName = s.FileName, chunkIndex = s.ChunkIndex,
+                    score = Math.Round(s.Score, 3),
+                    sha256 = s.ChunkSha256,
+                    text = s.Text.Length <= 600 ? s.Text : s.Text[..600]
+                }).ToArray()
+            });
+        }
+        catch (Exception ex)
+        {
+            Send("rag.denied", new { action = "search", persona, requestId,
+                reason = "NOX_RAG_SEARCH_" + ex.GetType().Name + "_HOLD" });
+        }
+    }
+
+    private async Task HandleP04RagImportAsync(string requestId)
+    {
+        string persona = ActivePersona();
+        if (!ValidWriteRequestId(requestId) || selfTestRequested) {
+            Send("rag.denied", new { action = "import", requestId, persona,
+                reason = "NOX_RAG_OWNER_CONSENT_OR_REQUEST_HOLD" }); return;
+        }
+        try
+        {
+            var picker = new Microsoft.Win32.OpenFileDialog {
+                Title = "NOX P04 RAG — выберите локальный TXT/Markdown",
+                Filter = "Text and Markdown (*.txt;*.md)|*.txt;*.md",
+                Multiselect = false, CheckFileExists = true
+            };
+            if (picker.ShowDialog(this) != true) {
+                Send("rag.denied", new { action = "import", requestId, persona,
+                    reason = "NOX_RAG_OWNER_CANCELLED" }); return;
+            }
+            using var rag = new NoxP04.Rag.RagService(
+                new Uri(Api + "/"), P04EmbeddingModel, P04RagIndexPath);
+            var service = new NoxP04.Rag.RagIngestionService(rag);
+            var receipt = await service.IngestFileAsync(
+                P04OwnerSid(), P04PersonaScope(persona), picker.FileName);
+            Send("rag.import.receipt", new {
+                source = "P04_SEMANTIC_RAG", requestId, persona,
+                fileName = receipt.FileName, chunks = receipt.IndexedChunks,
+                sha256 = receipt.SourceIdentitySha256,
+                saved = receipt.IndexedChunks > 0
+            });
+        }
+        catch (Exception ex)
+        {
+            Send("rag.denied", new { action = "import", requestId, persona,
+                reason = "NOX_RAG_IMPORT_" + ex.GetType().Name + "_HOLD" });
+        }
+    }
+
     private async Task SendP04GpuGuardianAsync()
     {
         if (!await sensorReadLock.WaitAsync(0)) {

@@ -55,6 +55,18 @@ jobs:
           if (-not $p04Original.Contains('StreamReader')) { throw 'P04_GPU_GUARDIAN_EXPECTED_IO_SOURCE_HOLD' }
           [IO.File]::WriteAllText((Resolve-Path $p04Staged).Path,
             ('using System.IO;' + [Environment]::NewLine + $p04Original), [Text.Encoding]::UTF8)
+          # P04 original semantic RAG (3 donor files), compiled into SAME R8 WPF EXE.
+          $ragDonors=@(
+            @('RagService.cs','a98cf03da0ffeabe959faa9d7aa11608fdd04a21'),
+            @('RagIngestionService.cs','d68b09de46b07f98f40f8254a399d5679e6e862a'),
+            @('RagChatContextProvider.cs','079f0f280d254a93ba79a74c5b9b107d54c4fd83')
+          )
+          foreach($entry in $ragDonors){
+            $donor=Join-Path './coordination/nox-r8/integrations/v16/P04/Rag' $entry[0]
+            $hash=([string](git hash-object $donor)).Trim().ToLowerInvariant()
+            if ($LASTEXITCODE -ne 0 -or $hash -cne $entry[1]) { throw "P04_RAG_ORIGINAL_BLOB_HOLD_$($entry[0])" }
+            Copy-Item $donor (Join-Path './r8/src' $entry[0]) -Force
+          }
           # B01: authoritative immutable inventory of actual expanded + Git-overlaid WPF sources.
           # This is cloud-build provenance, NOT an owner NOX_NEW source-parity claim.
           $srcRoot=(Resolve-Path './r8/src').Path
@@ -112,6 +124,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'P03_CATALOG_ORIGINAL_RUNTIME_HOLD' }
           node './coordination/nox-r8/tests/test_r8_p04_gpu_guardian_live.cjs'
           if ($LASTEXITCODE -ne 0) { throw 'P04_GPU_GUARDIAN_ORIGINAL_RUNTIME_HOLD' }
+          node './coordination/nox-r8/tests/test_r8_p04_live_rag.cjs'
+          if ($LASTEXITCODE -ne 0) { throw 'P04_RAG_ORIGINAL_RUNTIME_HOLD' }
           Copy-Item './coordination/nox-r8/tests/test_r8_sqlite_commit_unknown.py' './r8/test_r8_sqlite_commit_unknown.py'
           python './r8/test_r8_sqlite_commit_unknown.py'
           if ($LASTEXITCODE -ne 0) { throw 'NOX_B04_SQLITE_COMMIT_UNKNOWN_HOLD' }
@@ -179,6 +193,7 @@ jobs:
                 $n.checks.real_webview2_eight_routes -ne 'PASS' -or
                 $n.checks.p03_native_webview2_catalog_31_families -ne 'PASS' -or
                 $n.checks.p04_native_webview2_gpu_guardian_readonly -ne 'PASS' -or
+                $n.checks.p04_native_webview2_rag_noindex_readback -ne 'PASS' -or
                 $n.checks.real_webview2_keyboard_routes -ne 'PASS' -or
                 $n.checks.d01_five_quick_native_routes -ne 'PASS' -or
                 $n.checks.d01_five_quick_windows_uia -ne 'PASS' -or
