@@ -418,6 +418,13 @@ public partial class MainWindow : Window
             if (!ragReadback)
                 throw new InvalidOperationException("NOX_P04_RAG_NATIVE_WEBVIEW2_READBACK_HOLD");
 
+            // Real native resource attestation: five P04 QLoRA workers must
+            // exist INSIDE the one built EXE, no Python process is started.
+            bool p04WorkerEmbedded = EmbeddedP04WorkerAvailable();
+            checks["p04_native_embedded_qlora_five_sources"] = p04WorkerEmbedded ? "PASS" : "FAIL";
+            if (!p04WorkerEmbedded)
+                throw new InvalidOperationException("P04_NATIVE_EMBEDDED_QLORA_WORKER_MISSING_HOLD");
+
             // Native E07-grade runtime check of the ORIGINAL nine D02 elements
             // decorated by V16 CINEMA FX in the same WPF/WebView2 process.
             // No synthetic DOM, no alternate preview or stubbed renderer.
@@ -940,7 +947,7 @@ public partial class MainWindow : Window
             catch (Exception ex) { error = (error ?? "") + " binary_hash:" + ex.Message; }
             var requiredChecks = UiSmokeSettingsRestartRequested
                 ? new[] { "isolated_sqlite_path", "settings_wpf_owner_restart_readback" }
-                : new[] { "real_webview2_eight_routes", "p01_native_webview2_v16_cinema_nine_orbs", "p03_native_webview2_catalog_31_families", "p04_native_webview2_gpu_guardian_readonly", "p04_native_webview2_rag_noindex_readback", "real_webview2_keyboard_routes",
+                : new[] { "real_webview2_eight_routes", "p04_native_embedded_qlora_five_sources", "p01_native_webview2_v16_cinema_nine_orbs", "p03_native_webview2_catalog_31_families", "p04_native_webview2_gpu_guardian_readonly", "p04_native_webview2_rag_noindex_readback", "real_webview2_keyboard_routes",
                           "d01_five_quick_native_routes", "d01_five_quick_windows_uia",
                           "d01_five_quick_compact_320_390_800",
                           "f03_compact_native_coreid_focus_320_390_800",
