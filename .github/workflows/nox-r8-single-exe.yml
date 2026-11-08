@@ -19,6 +19,8 @@ jobs:
           $ErrorActionPreference='Stop'
           & './coordination/nox-r8/installer/Test-NoLossGuard.ps1'
           if (-not $?) { throw 'B05_NOLOSS_GUARD_FIXTURE_HOLD' }
+          & './coordination/nox-r8/installer/Test-NoxExactDuplicateCleanup.ps1'
+          if (-not $?) { throw 'NOX_EXACT_DUPLICATE_CLEANUP_HOLD' }
       - name: Compile from exact source
         shell: pwsh
         run: |
