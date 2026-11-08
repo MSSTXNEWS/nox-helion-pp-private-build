@@ -207,12 +207,12 @@ def live_status(root):
     return d
 
 
-def serve(root, port):
+def serve(root, port, source_sha=None):
     # Running-code fingerprint: local boot must not attach to stale V6 instances.
     running_source_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
     import nox_unified_brain_v1 as unified
     from nox_prime_forge_job_v1 import ForgeManager
-    forge_manager=ForgeManager(root,root/"brain"/"source"/"repo")
+    forge_manager=ForgeManager(root,root/"brain"/"source"/"repo",source_sha=source_sha)
     from nox_prime_autonomous_router_v1 import decide as decide_work, format_ack
     page = (HERE / 'forge_wow_live_v6.html').read_bytes()
     unified_page = (HERE / 'nox_unified_chat_v1.html').read_bytes()
@@ -443,5 +443,6 @@ if __name__ == '__main__':
     p = argparse.ArgumentParser()
     p.add_argument('--root', type=Path, default=ROOT)
     p.add_argument('--port', type=int, default=18877)
+    p.add_argument('--source-sha',type=str,default=None)
     args = p.parse_args()
-    serve(args.root.resolve(), args.port)
+    serve(args.root.resolve(), args.port, args.source_sha)
