@@ -154,6 +154,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'P04_QLORA_READINESS_SOURCE_HOLD' }
           node './coordination/nox-r8/tests/test_r8_rag_chat_native.cjs'
           if ($LASTEXITCODE -ne 0) { throw 'R8_RAG_CHAT_SCOPE_SOURCE_HOLD' }
+          node './coordination/nox-r8/tests/test_r8_voice_tts_ru_es.cjs'
+          if ($LASTEXITCODE -ne 0) { throw 'R8_RU_ES_LOCAL_TTS_SOURCE_HOLD' }
           node './coordination/nox-r8/tests/test_r8_voice_qwen_bridge.cjs'
           if ($LASTEXITCODE -ne 0) { throw 'R8_VOICE_SHARED_QWEN_SOURCE_HOLD' }
           node './coordination/nox-r8/tests/test_r8_theme_modes.cjs'
