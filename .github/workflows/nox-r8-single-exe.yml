@@ -144,6 +144,12 @@ jobs:
           Copy-Item './coordination/nox-r8/tests/test_r8_f03_responsive_routes.cjs' './r8/test_r8_f03_responsive_routes.cjs'
           node './r8/test_r8_f03_responsive_routes.cjs'
           if ($LASTEXITCODE -ne 0) { throw 'F03_RESPONSIVE_NATIVE_ROUTES_HOLD' }
+          $fxJsBlob=([string](git hash-object './coordination/nox-r8/integrations/v16/proposals/NOX-CINEMA-FX/nox-cinema.mjs')).Trim().ToLowerInvariant()
+          $fxCssBlob=([string](git hash-object './coordination/nox-r8/integrations/v16/proposals/NOX-CINEMA-FX/nox-cinema.css')).Trim().ToLowerInvariant()
+          if ($LASTEXITCODE -ne 0 -or $fxJsBlob -cne '7847ade31047b2534f929487ada9df02b14fb413' -or
+              $fxCssBlob -cne 'e5203f5720dc14147870ca898247fabae0e03522') { throw 'NOX_V16_CINEMA_DONOR_DRIFT_HOLD' }
+          node './coordination/nox-r8/tests/test_r8_cinema_v16_integrated.cjs'
+          if ($LASTEXITCODE -ne 0) { throw 'NOX_V16_CINEMA_NINE_ORBS_SOURCE_HOLD' }
           node './coordination/nox-r8/tests/test_r8_rag_chat_native.cjs'
           if ($LASTEXITCODE -ne 0) { throw 'R8_RAG_CHAT_SCOPE_SOURCE_HOLD' }
           node './coordination/nox-r8/tests/test_r8_voice_qwen_bridge.cjs'
