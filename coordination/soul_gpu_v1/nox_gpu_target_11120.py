@@ -149,9 +149,21 @@ def inputs():
         # untrained held-out set. Never silently mix S03 or personal chat data.
         from hashlib import sha256
         base=ROOT/"brain"/"intelligence"/"distillation"
-        selected=base/"multi_teacher_student_v1.jsonl"
-        held=base/"multi_teacher_holdout_v1.jsonl"
-        report=base/"multi_teacher_student_v1.manifest.json"
+        current=base/"MULTI_TEACHER_CURRENT.json"
+        if not current.is_file() or current.is_symlink():
+            raise RuntimeError("MULTI_TEACHER_CURRENT_POINTER_MISSING")
+        pointer=json.loads(current.read_text(encoding="utf-8"))
+        if pointer.get("schema")!="NOX_MULTI_TEACHER_CURRENT_V1":
+            raise RuntimeError("INVALID_STUDENT_CURRENT_POINTER")
+        def permitted(name):
+            return (isinstance(name,str) and
+                    re.fullmatch(r"multi_teacher_[a-z0-9_]{1,80}(?:[.]jsonl|[.]manifest[.]json)",name)
+                    and ".." not in name)
+        if not all(permitted(pointer.get(k)) for k in ("train","heldout","manifest")):
+            raise RuntimeError("UNSAFE_STUDENT_CURRENT_PATH")
+        selected=base/pointer["train"]
+        held=base/pointer["heldout"]
+        report=base/pointer["manifest"]
         if not all(p.is_file() and not p.is_symlink() for p in (selected,held,report)):
             raise RuntimeError("MULTI_TEACHER_STUDENT_DATASET_NOT_READY")
         info=json.loads(report.read_text(encoding="utf-8"))
@@ -191,9 +203,13 @@ def worker(a):
             raise RuntimeError("DISTILL_DATASET_CHANGED_AFTER_PREFLIGHT")
     if os.environ.get("NOX_USE_MULTI_TEACHER_V2")=="1":
         from hashlib import sha256
-        check=ROOT/"brain"/"intelligence"/"distillation"/"multi_teacher_student_v1.manifest.json"
+        pointer_path=ROOT/"brain"/"intelligence"/"distillation"/"MULTI_TEACHER_CURRENT.json"
+        pointer=json.loads(pointer_path.read_text(encoding="utf-8"))
+        check=pointer_path.parent/pointer["manifest"]
         proof=json.loads(check.read_text(encoding="utf-8"))
-        if sha256(a.dataset.read_bytes()).hexdigest()!=proof.get("train_sha256"):
+        if (proof.get("schema")!="NOX_PRIME_STUDENT_TRAIN_V1"
+            or a.dataset.resolve()!=(pointer_path.parent/pointer["train"]).resolve()
+            or sha256(a.dataset.read_bytes()).hexdigest()!=proof.get("train_sha256")):
             raise RuntimeError("MULTI_TEACHER_TRAIN_DATASET_CHANGED")
     for line in a.dataset.read_text(encoding="utf-8-sig").splitlines():
         if not line.strip():continue
