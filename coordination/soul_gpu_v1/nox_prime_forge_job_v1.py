@@ -30,9 +30,14 @@ def _now():
     return datetime.now(timezone.utc).isoformat()
 
 class ForgeManager:
-    def __init__(self,root,repo):
+    def __init__(self,root,repo,source_sha=None):
         self.root=Path(root).resolve()
         self.repo=Path(repo).resolve()
+        self.source_sha=source_sha
+        if source_sha is not None and (
+            not isinstance(source_sha,str) or len(source_sha)!=40 or
+            any(c not in "0123456789abcdef" for c in source_sha)):
+            raise ValueError("FORGE_INVALID_PINNED_SOURCE")
         self._lock=threading.Lock()
         self._current={"state":"IDLE","job_id":None}
         self._worker=None
@@ -77,7 +82,7 @@ class ForgeManager:
             log_event(self.root,"INTEGRATE","START",
                       "FORGE generates a source patch for "+Path(source_path).name)
             self._update(job_id,state="GENERATING",phase="LOCAL_CODER_INFERENCE")
-            generated=propose(self.repo,self.root,source_path,objective)
+            generated=propose(self.repo,self.root,source_path,objective,source_sha=self.source_sha)
             record=json.loads(Path(generated["candidate_path"]).read_text(encoding="utf-8"))
             if generated["git_apply_check"]!="PASS":
                 self._update(job_id,state="HOLD",phase="GIT_APPLY_CHECK",
