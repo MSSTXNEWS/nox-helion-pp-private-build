@@ -1,10 +1,10 @@
-"""NOX PRIME Stage-1 complete download coordinator.
+"""NOX PRIME Stage-1 focused download coordinator.
 
-ONE no-GPU-download pipeline: 5 open-weight NOX candidates (ordered 0.6B
-first), Ollama multilingual embeddings, optional reranker, multilingual
-Whisper, Qwen voice design, Piper voices, and pinned sources for hidden engines.
-No user-UI for engines, no model execution, no S03/LoRA writes, no deletion.
-Does not silently start or overwrite GPU training.
+Downloads ONE compatible trainable core Qwen3-0.6B, reuses existing Qwen3:8B
+Ollama/LoRA/S03, retrieves only missing semantic embedding, official GoEmotions
+data, RU/ES speech/voice and hidden engine sources. Optional reranker stays
+an internal specialist; NO extra 1.7B/4B/coder/vision FOUNDATION downloads.
+No GPU training, no OneHost/S03 writes, model execution or deletion.
 """
 from __future__ import annotations
 import argparse
@@ -17,6 +17,7 @@ import subprocess
 import sys
 from datetime import datetime,timezone
 from nox_prime_download_five_v1 import download as download_five, digest
+from nox_prime_soul_stage1_train import load_data as emotion_dataset
 from nox_prime_progress_v1 import log_event
 
 ROOT_DEFAULT=Path(r"C:\NOX_HELION\NOX_NEW")
@@ -34,10 +35,10 @@ SOURCES=(
 VOICE_IDS=("piper_ru_irina","piper_es_davefx","qwen3_06_customvoice")
 VOICE_OPTIONAL=("qwen3_17_voicedesign",)
 EMBED_TAG="qwen3-embedding:0.6b"
-STAGES=("PRIMARY_WEIGHTS","SEMANTIC_EMBEDDINGS","RE_RANKER","SPEECH_RECOGNITION",
-        "VOICE_RU_ES","ENGINE_SOURCES")
+STAGES=("NOX_CORE_WEIGHTS","SEMANTIC_EMBEDDINGS","EMOTIONAL_DATA",
+        "SPEECH_RECOGNITION","VOICE_RU_ES","HIDDEN_ENGINE_SOURCES","OPTIONAL_RERANKER")
 
-def event(root,status,detail,n=0,total=6):
+def event(root,status,detail,n=0,total=len(STAGES)):
     # The existing FORGE dashboard already reads this event log.
     log_event(root,"DOWNLOAD",status,detail,actual=n,total=total)
 
@@ -73,6 +74,14 @@ def whisper(root,hf_hub_download):
     (target/"whisper_small_sha256.json").write_text(json.dumps(evidence,indent=2),
                                                      encoding="utf-8")
     return {"status":"SHA256_CHECKED","bytes":path.stat().st_size,"path":str(path)}
+
+def affect_dataset(root):
+    folder,manifest=emotion_dataset(root)
+    return {"status":"SOURCE_VERIFIED_FOR_RESEARCH_ONLY",
+            "folder":str(folder),
+            "source_commit":manifest["revision"],
+            "neural_weights_trained":False,
+            "license_note":"Reddit-origin GoEmotions: verify terms before reuse"}
 
 def semantic(root):
     p=subprocess.run(["ollama","list"],capture_output=True,text=True,timeout=30)
@@ -177,7 +186,7 @@ def run(root,source,run_optional=True):
     import huggingface_hub
     results={}
     failures=[]
-    event(root,"START","Stage1 six download groups, originals kept",0)
+    event(root,"START","Stage1 seven groups: one compatible neural base, memory, emotion and voice",0)
     def group(i,name,work):
         event(root,"RUNNING",name+" starts",i-1)
         try:
@@ -188,21 +197,25 @@ def run(root,source,run_optional=True):
             message=type(exc).__name__+": "+str(exc)[:170]
             failures.append({"stage":name,"reason":message})
             event(root,"HOLD",name+" "+message[:110],i-1)
-    group(1,STAGES[0],lambda:download_five(root))
+    group(1,STAGES[0],lambda:download_five(root,only=("Qwen3-0.6B",)))
     group(2,STAGES[1],lambda:semantic(root))
-    group(3,STAGES[2],lambda:_custom_reranker(root,
-             huggingface_hub.snapshot_download,huggingface_hub.HfApi) if run_optional
-          else {"status":"OPTIONAL_SKIPPED"})
+    group(3,STAGES[2],lambda:affect_dataset(root))
     group(4,STAGES[3],lambda:whisper(root,huggingface_hub.hf_hub_download))
     group(5,STAGES[4],lambda:voices(root,source,huggingface_hub.HfApi,
                                    huggingface_hub.snapshot_download))
     group(6,STAGES[5],lambda:engine_sources(root))
+    group(7,STAGES[6],lambda:_custom_reranker(root,
+             huggingface_hub.snapshot_download,huggingface_hub.HfApi) if run_optional
+          else {"status":"OPTIONAL_SKIPPED"})
     report={"schema":"NOX_PRIME_STAGE1_DOWNLOADS_V1",
             "timestamp_utc":datetime.now(timezone.utc).isoformat(),
             "completed_groups":len(results),"failed_groups":len(failures),
             "results":results,"holds":failures,
             "weights_trained":False,"s03_changed":False,
             "engines_installed":False,"deleted_originals":False,
+            "core_weights_to_download":["Qwen/Qwen3-0.6B"],
+            "existing_qwen3_8b_teacher_preserved":True,
+            "new_gpu_training_launched":False,
             "next":"GPU student training only under compatible SAFE70 policy"}
     evidence=root/"brain"/"telemetry"/"stage1_download_summary.json"
     evidence.parent.mkdir(parents=True,exist_ok=True)
@@ -211,7 +224,7 @@ def run(root,source,run_optional=True):
     os.replace(tmp,evidence)
     event(root,"DONE" if not failures else "HOLD",
           ("All Stage1 download groups accepted" if not failures else
-           str(len(failures))+" download group(s) blocked; no deletion"),6)
+           str(len(failures))+" download group(s) blocked; no deletion"),len(STAGES))
     print(json.dumps(report,ensure_ascii=False,indent=2))
     return 0 if not failures else 2
 
