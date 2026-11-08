@@ -97,6 +97,8 @@ def status(root):
       "lora_applied_to_ollama":False,
       "native_s03_chat_writes_connected":False,
       "shared_identity_and_router":True,
+      "unified_prime_schema":"NOX_PRIME_UNIFIED_SELF_V51",
+      "multi_teacher_absorption":"DATASET_CANDIDATE_ONLY_WHEN_SOURCED",
       "memory_continuum":"M0/M1 read-only, M4/M6 proposals, S03 native admission HOLD",
       "soul_affect":soul,
       "semantic_embedding_installed":"qwen3-embedding:0.6b" in installed,
@@ -156,6 +158,17 @@ def prepare_chat(root,payload):
     models=available()
     model=choose_model(models,task)
     self_state=self_model(root,model)
+    # Unified self-model: ONE NOX principal across eight actual capability
+    # probes, five separately scoped PersonaID, and source-grounded events.
+    try:
+        from nox_prime_unified_self_v51 import compose
+        from nox_prime_cognitive_memory_v1 import episodes
+        from nox_prime_affect_runtime_v1 import status as affect_status
+        affect_ready=affect_status(root).get("available") is True
+        self_state["unified_prime"]=compose(
+            root,models,self_state,len(episodes(root)),affect_ready)
+    except (ImportError,OSError,ValueError,TypeError,PermissionError):
+        self_state["unified_prime"]={"status":"UNAVAILABLE_NOT_SIMULATED"}
     # Only task-relevant observations; never invent resource measurements.
     try:
         from nox_prime_resource_advisor_v1 import proactive_context
