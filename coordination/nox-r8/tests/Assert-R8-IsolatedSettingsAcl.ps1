@@ -38,11 +38,23 @@ $writeBits=([int][System.Security.AccessControl.FileSystemRights]::WriteData) -b
   ([int][System.Security.AccessControl.FileSystemRights]::Delete) -bor
   ([int][System.Security.AccessControl.FileSystemRights]::ChangePermissions) -bor
   ([int][System.Security.AccessControl.FileSystemRights]::TakeOwnership)
+# NTFS directories on GitHub Windows runners may be owned by SYSTEM or
+# BUILTIN\\Administrators. Accept only those OS-privileged parent owners,
+# still fail on broad WRITE ACEs. SQLite FILE itself must be owned by the
+# current Windows identity; neither condition validates the owner's PC.
+$parentOwnerPolicy='SAME_USER'
 foreach ($path in @($noxDataRoot,$db)) {
   $acl=Get-Acl -LiteralPath $path -ErrorAction Stop
-  if ($acl.GetOwner([System.Security.Principal.SecurityIdentifier]).Value -cne $ownerSid) {
-    $scope=if ([string]::Equals($path,$db,[StringComparison]::OrdinalIgnoreCase)) { 'SQLITE_FILE' } else { 'APP_DATA_DIRECTORY' }
-    throw "NOX_D06_NTFS_OWNER_SID_MISMATCH_HOLD scope=$scope"
+  $actualSid=$acl.GetOwner([System.Security.Principal.SecurityIdentifier]).Value
+  $isDb=[string]::Equals($path,$db,[StringComparison]::OrdinalIgnoreCase)
+  if ($actualSid -cne $ownerSid) {
+    if (!$isDb -and @('S-1-5-18','S-1-5-32-544') -ccontains $actualSid) {
+      $parentOwnerPolicy='PRIVILEGED_OS_OWNER'
+    } else {
+      $scope=if ($isDb) { 'SQLITE_FILE' } else { 'APP_DATA_DIRECTORY' }
+      $category=if ($actualSid -eq 'S-1-5-18') { 'SYSTEM' } elseif ($actualSid -eq 'S-1-5-32-544') { 'ADMINISTRATORS' } else { 'OTHER' }
+      throw "NOX_D06_NTFS_OWNER_SID_MISMATCH_HOLD scope=$scope category=$category"
+    }
   }
   if (@($acl.Access).Count -eq 0) { throw 'NOX_D06_NTFS_DACL_EMPTY_HOLD' }
   foreach ($ace in @($acl.Access)) {
@@ -64,7 +76,7 @@ $receipt=[ordered]@{
   exe_sha256=$exeSha
   checked_at=[DateTimeOffset]::UtcNow.ToString('O')
   sqlite_owner_sid='PASS'
-  sqlite_parent_owner_sid='PASS'
+  sqlite_parent_owner_sid=$parentOwnerPolicy
   no_broad_mutating_ace='PASS'
   owner_pc_acl='NOT_TESTED'
   cross_user_access_denial='NOT_TESTED'
