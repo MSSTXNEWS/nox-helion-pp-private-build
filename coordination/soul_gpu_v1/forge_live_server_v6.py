@@ -245,6 +245,24 @@ def serve(root, port, source_sha=None):
                 except Exception as exc:
                     return self.get(json.dumps({'error':type(exc).__name__}).encode(),
                                     'application/json',503)
+            if self.path == '/api/nox/capability-plan':
+                try:
+                    from nox_prime_capability_consolidation_v1 import plan
+                    from nox_prime_weight_audit_v1 import model_catalog
+                    catalog=model_catalog(root)
+                    evidence=plan(catalog)
+                    return self.get(json.dumps({
+                        'schema':'NOX_PRIME_CAPABILITY_PLAN_V1',
+                        'installed_models':len(catalog),
+                        'functional_overlap_groups':evidence['potential_functional_overlaps'],
+                        'proposed_roles':evidence['models'],
+                        'models_deleted':0,
+                        'notes':'Overlaps inferred by model role; not proof of equivalent skills'
+                    },ensure_ascii=False).encode('utf-8'),
+                    'application/json; charset=utf-8')
+                except Exception as exc:
+                    return self.get(json.dumps({'error':type(exc).__name__}).encode(),
+                                    'application/json',503)
             if self.path == '/api/nox/forge/status':
                 try:
                     return self.get(json.dumps(forge_manager.status(),ensure_ascii=False).encode('utf-8'),
