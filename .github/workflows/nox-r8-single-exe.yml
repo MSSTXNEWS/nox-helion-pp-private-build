@@ -102,6 +102,9 @@ jobs:
           # D03: detect uncertain DELETE/COMMIT and prohibit automatic note replay.
           node './coordination/nox-r8/tests/test_r8_d03_note_delete_commit_receipt.cjs'
           if ($LASTEXITCODE -ne 0) { throw 'D03_NOTE_DELETE_COMMIT_SOURCE_HOLD' }
+          # D03: SQLite protective journal uncertain-state receipt and no VUNEO replay.
+          node './coordination/nox-r8/tests/test_r8_d03_vuneo_owner_path.cjs'
+          if ($LASTEXITCODE -ne 0) { throw 'D03_VUNEO_JOURNAL_STATE_SOURCE_HOLD' }
           # B06 original-source regression D05_TASK_ADD_DURABLE; no owner Qwen E2E claim.
           python './coordination/nox-r8/tests/test_r8_d05_task_add_durable_replay.py'
           if ($LASTEXITCODE -ne 0) { throw 'B06_D05_TASK_ADD_DURABLE_HOLD' }
