@@ -16,6 +16,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using Microsoft.Data.Sqlite;
 using Microsoft.Web.WebView2.Core;
+using System.Speech.Recognition;
 
 namespace Nox;
 
@@ -26,6 +27,14 @@ public partial class MainWindow : Window
     // Single-flight: only the explicit WebView2 owner request may spawn Ollama.
     private readonly SemaphoreSlim engineStartLock = new(1, 1);
     private readonly SemaphoreSlim sensorReadLock = new(1, 1);
+    // Native Windows Speech API microphone; never WebView2/browser microphone.
+    // One explicit owner-consented, finite ASR session at a time.
+    private SpeechRecognitionEngine? localAsrEngine;
+    private string? localAsrRequestId;
+    private string? localAsrTranscript;
+    private readonly System.Windows.Threading.DispatcherTimer localAsrTimeout = new()
+        { Interval = TimeSpan.FromSeconds(20) };
+
     // Reattach by polling the existing loopback service; never create another backend.
     private readonly System.Windows.Threading.DispatcherTimer providerReconnectTimer = new()
         { Interval = TimeSpan.FromSeconds(25) };
@@ -110,9 +119,11 @@ public partial class MainWindow : Window
         Closing += (_, _) => {
             providerProbeStopped = true;
             providerReconnectTimer.Stop();
+            StopLocalAsrInternal("WINDOW_CLOSING", notify: false);
             Interlocked.Increment(ref providerProbeEpoch);
             active?.Cancel(); activeModelPull?.Cancel(); http.Dispose();
         };
+        localAsrTimeout.Tick += (_, _) => StopLocalAsrInternal("ASR_TIMEOUT", notify: true);
         if (UiSmokeRequested) _ = UiSmokeWatchdogAsync();
     }
 
@@ -1976,6 +1987,9 @@ public partial class MainWindow : Window
                 case "system.status": _ = SendSystemStateAsync(); break;
                 case "gpu.guardian": _ = SendP04GpuGuardianAsync(); break;
                 case "qlora.preflight": _ = SendP04QloraPreflightAsync(); break;
+                case "asr.installed": ReportInstalledLocalAsr(); break;
+                case "asr.start": BeginLocalAsr(Text("locale"), Text("requestId")); break;
+                case "asr.stop": StopLocalAsr(Text("requestId")); break;
                 case "qlora.prepare": PrepareP04WorkerOnOwnerConsent(); break;
                 default: Send("error", "Unknown operation: " + kind); break;
             }
@@ -3144,6 +3158,174 @@ public partial class MainWindow : Window
                 status = "P04_PREPARE_" + ex.GetType().Name + "_HOLD"
             });
         }
+    }
+
+
+    // Only installed Windows SAPI recognizers. No cloud endpoint, browser mic,
+    // recording file, audio upload, automatic Qwen prompt or background listener.
+    private void ReportInstalledLocalAsr()
+    {
+        try
+        {
+            var cultures = SpeechRecognitionEngine.InstalledRecognizers()
+                .Select(r => r.Culture.Name).Distinct(StringComparer.OrdinalIgnoreCase)
+                .Where(s => s is "ru-RU" or "es-ES").ToArray();
+            Send("asr.installed", new { source = "WINDOWS_SAPI_LOCAL", languages = cultures,
+                available = cultures.Length > 0, microphoneStarted = false });
+        }
+        catch (Exception ex)
+        {
+            Send("asr.installed", new { source = "WINDOWS_SAPI_LOCAL",
+                languages = Array.Empty<string>(), available = false,
+                microphoneStarted = false,
+                reason = "SAPI_" + ex.GetType().Name + "_HOLD" });
+        }
+    }
+
+    private void BeginLocalAsr(string locale, string requestId)
+    {
+        if (selfTestRequested || providerProbeStopped || !ValidWriteRequestId(requestId) ||
+            (locale != "ru-RU" && locale != "es-ES"))
+        {
+            Send("asr.denied", new { requestId, reason = "ASR_OWNER_OR_LOCALE_HOLD" });
+            return;
+        }
+        if (localAsrEngine != null)
+        {
+            Send("asr.denied", new { requestId, reason = "ASR_ALREADY_RUNNING_HOLD" });
+            return;
+        }
+        RecognizerInfo? recognizerInfo;
+        try
+        {
+            recognizerInfo = SpeechRecognitionEngine.InstalledRecognizers()
+                .FirstOrDefault(r => string.Equals(r.Culture.Name, locale, StringComparison.OrdinalIgnoreCase));
+        }
+        catch (Exception ex)
+        {
+            Send("asr.denied", new { requestId, reason = "ASR_SAPI_" + ex.GetType().Name + "_HOLD" });
+            return;
+        }
+        if (recognizerInfo is null)
+        {
+            Send("asr.denied", new { requestId, reason = "ASR_LOCALE_NOT_INSTALLED_HOLD" });
+            return;
+        }
+        var choice = MessageBox.Show(this,
+            "Включить локальный микрофон Windows на срок до 20 секунд?\\n" +
+            "Язык: " + locale + ". Распознанный текст будет добавлен в поле VOICE,\\n" +
+            "без автоматической отправки в Qwen или сохранения аудиофайла.",
+            "NOX · Локальный микрофон RU/ES", MessageBoxButton.YesNo,
+            MessageBoxImage.Warning, MessageBoxResult.No);
+        if (choice != MessageBoxResult.Yes)
+        {
+            Send("asr.denied", new { requestId, reason = "ASR_OWNER_DECLINED" });
+            return;
+        }
+
+        SpeechRecognitionEngine? engine = null;
+        try
+        {
+            engine = new SpeechRecognitionEngine(recognizerInfo);
+            engine.LoadGrammar(new DictationGrammar());
+            engine.InitialSilenceTimeout = TimeSpan.FromSeconds(8);
+            engine.BabbleTimeout = TimeSpan.FromSeconds(8);
+            engine.EndSilenceTimeout = TimeSpan.FromSeconds(2);
+            engine.SetInputToDefaultAudioDevice();
+            var session = engine;
+            localAsrTranscript = null;
+            engine.SpeechRecognized += (_, e) =>
+            {
+                // Speech events may arrive off the WPF dispatcher; never accept
+                // low-confidence, oversized or foreign-session transcripts.
+                var result = e.Result;
+                if (result is null || result.Confidence < 0.55 ||
+                    result.Text.Length is < 1 or > 4000) return;
+                try
+                {
+                    Dispatcher.BeginInvoke((Action)(() =>
+                    {
+                        if (ReferenceEquals(localAsrEngine, session) &&
+                            string.Equals(localAsrRequestId, requestId, StringComparison.Ordinal))
+                            localAsrTranscript = result.Text;
+                    }));
+                }
+                catch (Exception) { /* process may be closing */ }
+            };
+            engine.RecognizeCompleted += (_, e) =>
+            {
+                try
+                {
+                    Dispatcher.BeginInvoke((Action)(() =>
+                    {
+                        var current = ReferenceEquals(localAsrEngine, session) &&
+                            string.Equals(localAsrRequestId, requestId, StringComparison.Ordinal);
+                        var transcript = current ? localAsrTranscript : null;
+                        if (current)
+                        {
+                            localAsrTimeout.Stop();
+                            localAsrEngine = null;
+                            localAsrRequestId = null;
+                            localAsrTranscript = null;
+                        }
+                        try { session.Dispose(); } catch (Exception) { }
+                        if (current)
+                            Send("asr.complete", new { requestId, locale,
+                                text = transcript, ok = !string.IsNullOrWhiteSpace(transcript) &&
+                                    e.Error is null && !e.Cancelled,
+                                status = e.Error is not null ? "ASR_DEVICE_OR_ENGINE_HOLD" :
+                                    e.Cancelled ? "ASR_STOPPED" :
+                                    string.IsNullOrWhiteSpace(transcript) ? "ASR_NO_CONFIDENT_TEXT_HOLD" : "RECOGNIZED" });
+                    }));
+                }
+                catch (Exception) { try { session.Dispose(); } catch (Exception) { } }
+            };
+            localAsrEngine = session;
+            localAsrRequestId = requestId;
+            engine.RecognizeAsync(RecognizeMode.Single);
+            localAsrTimeout.Start();
+            Send("asr.started", new { source = "WINDOWS_SAPI_LOCAL", locale, requestId,
+                limitSeconds = 20, automaticSend = false, audioStored = false });
+        }
+        catch (Exception ex)
+        {
+            localAsrTimeout.Stop();
+            localAsrEngine = null;
+            localAsrRequestId = null;
+            localAsrTranscript = null;
+            try { engine?.Dispose(); } catch (Exception) { }
+            Send("asr.denied", new { requestId, reason = "ASR_START_" + ex.GetType().Name + "_HOLD" });
+        }
+    }
+
+    private void StopLocalAsr(string requestId)
+    {
+        if (!ValidWriteRequestId(requestId) ||
+            !string.Equals(localAsrRequestId, requestId, StringComparison.Ordinal))
+        {
+            Send("asr.denied", new { requestId, reason = "ASR_STOP_OWNER_MISMATCH_HOLD" });
+            return;
+        }
+        StopLocalAsrInternal("ASR_STOPPED_BY_OWNER", notify: true);
+    }
+
+    private void StopLocalAsrInternal(string reason, bool notify)
+    {
+        var engine = localAsrEngine;
+        var requestId = localAsrRequestId;
+        localAsrEngine = null;
+        localAsrRequestId = null;
+        localAsrTranscript = null;
+        localAsrTimeout.Stop();
+        if (engine != null)
+        {
+            // The recognition-complete handler disposes its own engine later.
+            try { engine.RecognizeAsyncCancel(); }
+            catch (Exception) { try { engine.Dispose(); } catch (Exception) { } }
+        }
+        if (notify && requestId != null)
+            Send("asr.complete", new { requestId, text = (string?)null, ok = false,
+                status = reason });
     }
 
     private async Task SendP04QloraPreflightAsync()
