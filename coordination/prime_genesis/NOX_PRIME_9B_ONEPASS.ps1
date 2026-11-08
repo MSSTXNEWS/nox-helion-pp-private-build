@@ -5,11 +5,11 @@ $ErrorActionPreference = 'Stop'
 $brain = 'C:\NOX_HELION\NOX_NEW\brain'
 $prime = Join-Path $brain 'prime'
 $src = Join-Path $prime 'coordination'
-$commit = 'de7c2807b398954413f3c801c8654049c9ce0489'
+$commit = '37b5fa4c1b141adb0754a5bc768f4b5b72bca138'
 $base = "https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/$commit/coordination/prime_genesis"
 $files = @(
     @{ Name='NOX_PRIME_9B_GENESIS.ps1'; Sha='be3f7df711586a0534d561a40e3844b1d56a8165ff85f5cf85ddaf9c0c1e17b9' },
-    @{ Name='NOX_CONTINUITY_POLICY.py'; Sha='345bc9175d0c4e5e661352da8e609064daf28a94ed3a2f77de5a0559580ef13f' }
+    @{ Name='NOX_CONTINUITY_POLICY.py'; Sha='6f8c1e89cbec3a1c2b7bb1a03c6092b2c44a82977f37c591f85219384a28382a' }
 )
 New-Item -ItemType Directory -Force $src | Out-Null
 foreach ($spec in $files) {
