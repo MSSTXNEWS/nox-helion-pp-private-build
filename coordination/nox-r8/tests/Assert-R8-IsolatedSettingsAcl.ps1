@@ -11,13 +11,13 @@ $exeSha=(Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash.ToLowerInvariant
 $identity=[System.Security.Principal.WindowsIdentity]::GetCurrent()
 if ($null -eq $identity.User) { throw 'NOX_D06_OWNER_SID_UNAVAILABLE_HOLD' }
 $ownerSid=$identity.User.Value
-$home=Join-Path $env:LOCALAPPDATA 'NOX_HELION'
+$noxDataRoot=Join-Path $env:LOCALAPPDATA 'NOX_HELION'
 $hex=[Convert]::ToHexString([System.Security.Cryptography.SHA256]::HashData(
   [System.Text.Encoding]::UTF8.GetBytes($RunId)))
-$db=Join-Path $home ('selftest_r8_'+$hex.Substring(0,32)+'.sqlite3')
-$root=[IO.Path]::GetFullPath($home)
+$db=Join-Path $noxDataRoot ('selftest_r8_'+$hex.Substring(0,32)+'.sqlite3')
+$root=[IO.Path]::GetFullPath($noxDataRoot)
 $dbFull=[IO.Path]::GetFullPath($db)
-$ownerDb=[IO.Path]::GetFullPath((Join-Path $home 'chat.sqlite3'))
+$ownerDb=[IO.Path]::GetFullPath((Join-Path $noxDataRoot 'chat.sqlite3'))
 if (-not $dbFull.StartsWith($root+[IO.Path]::DirectorySeparatorChar,
     [StringComparison]::OrdinalIgnoreCase) -or
     [string]::Equals($dbFull,$ownerDb,[StringComparison]::OrdinalIgnoreCase)) {
@@ -38,7 +38,7 @@ $writeBits=([int][System.Security.AccessControl.FileSystemRights]::WriteData) -b
   ([int][System.Security.AccessControl.FileSystemRights]::Delete) -bor
   ([int][System.Security.AccessControl.FileSystemRights]::ChangePermissions) -bor
   ([int][System.Security.AccessControl.FileSystemRights]::TakeOwnership)
-foreach ($path in @($home,$db)) {
+foreach ($path in @($noxDataRoot,$db)) {
   $acl=Get-Acl -LiteralPath $path -ErrorAction Stop
   if ($acl.GetOwner([System.Security.Principal.SecurityIdentifier]).Value -cne $ownerSid) {
     throw 'NOX_D06_NTFS_OWNER_SID_MISMATCH_HOLD'
