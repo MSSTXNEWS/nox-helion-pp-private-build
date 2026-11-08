@@ -162,6 +162,7 @@ jobs:
                 $n.runId -cne $runId -or $n.pid -ne $p.Id -or
                 $stamp -lt $started -or !$n.wpfWebView2Accepted -or
                 $n.checks.real_webview2_eight_routes -ne 'PASS' -or
+                $n.checks.p03_native_webview2_catalog_31_families -ne 'PASS' -or
                 $n.checks.real_webview2_keyboard_routes -ne 'PASS' -or
                 $n.checks.d01_five_quick_native_routes -ne 'PASS' -or
                 $n.checks.d01_five_quick_windows_uia -ne 'PASS' -or

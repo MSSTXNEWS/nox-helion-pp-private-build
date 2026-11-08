@@ -328,6 +328,30 @@ public partial class MainWindow : Window
             checks["real_webview2_eight_routes"] = js == "true" ? "PASS" : "FAIL";
             if (js != "true") throw new InvalidOperationException("Embedded WebView2 routes did not switch");
 
+            // P03 LIVE: prove the original donor ModelCatalog actually returns
+            // through native IPC into this same running WebView2. A source-only
+            // assertion or model-picker placeholder is not acceptance.
+            bool p03CatalogRendered = false;
+            for (int attempt = 0; attempt < 35; attempt++)
+            {
+                var catalogVisible = await Browser.CoreWebView2.ExecuteScriptAsync("""
+                    (() => {
+                      const node = document.getElementById('modelCatalog');
+                      const lines = String(node?.textContent || '')
+                        .split(String.fromCharCode(10)).filter(Boolean);
+                      return lines.length === 31 &&
+                        lines.some(line => line.includes('(deepseek-r1)')) &&
+                        lines.some(line => line.includes('(qwen3-embedding)')) &&
+                        lines.every(line => line.includes('только каталог; установку проверяет Ollama'));
+                    })()
+                    """);
+                if (catalogVisible == "true") { p03CatalogRendered = true; break; }
+                await Task.Delay(100);
+            }
+            checks["p03_native_webview2_catalog_31_families"] = p03CatalogRendered ? "PASS" : "FAIL";
+            if (!p03CatalogRendered)
+                throw new InvalidOperationException("NOX_P03_NATIVE_WEBVIEW2_REAL_CATALOG_HOLD");
+
             // Real embedded WebView2 DOM keyboard/ARIA contract; no fake native actions.
             // This tests event handling inside the running WPF WebView2, not OS SendInput.
             var keyboard = await Browser.CoreWebView2.ExecuteScriptAsync("""
