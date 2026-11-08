@@ -436,6 +436,41 @@ public partial class MainWindow : Window
             if (!p04WorkerEmbedded)
                 throw new InvalidOperationException("P04_NATIVE_EMBEDDED_QLORA_WORKER_MISSING_HOLD");
 
+            // Read-only native installed-ASR inventory through current IPC.
+            // CI NEVER activates a microphone; absence of RU/ES engines is HOLD,
+            // not false recognition. A real owner must explicitly authorize ASR.
+            var asrClick = await Browser.CoreWebView2.ExecuteScriptAsync("""
+                (() => {
+                  const b=document.getElementById('asrInventory');
+                  const start=document.getElementById('asrStart');
+                  const stop=document.getElementById('asrStop');
+                  if (!b || !start || !stop || stop.disabled!==true) return false;
+                  b.click();
+                  return true;
+                })()
+                """);
+            if (asrClick != "true")
+                throw new InvalidOperationException("NOX_ASR_NATIVE_CONTROLS_MISSING_HOLD");
+            bool asrReadback = false;
+            for (int attempt=0; attempt<40; attempt++)
+            {
+                var val = await Browser.CoreWebView2.ExecuteScriptAsync("""
+                    (() => {
+                      const b=document.getElementById('asrState');
+                      const stop=document.getElementById('asrStop');
+                      return !!b && b.dataset.inventoryReadback==='DONE' &&
+                        b.textContent.includes('Распознаватели Windows') &&
+                        stop?.disabled===true;
+                    })()
+                    """);
+                if (val=="true") { asrReadback=true; break; }
+                await Task.Delay(100);
+            }
+            checks["p02_native_ru_es_asr_installed_inventory_no_microphone"] =
+                asrReadback ? "PASS" : "FAIL";
+            if (!asrReadback)
+                throw new InvalidOperationException("NOX_NATIVE_RU_ES_ASR_INVENTORY_HOLD");
+
             // Native E07-grade runtime check of the ORIGINAL nine D02 elements
             // decorated by V16 CINEMA FX in the same WPF/WebView2 process.
             // No synthetic DOM, no alternate preview or stubbed renderer.
@@ -958,7 +993,7 @@ public partial class MainWindow : Window
             catch (Exception ex) { error = (error ?? "") + " binary_hash:" + ex.Message; }
             var requiredChecks = UiSmokeSettingsRestartRequested
                 ? new[] { "isolated_sqlite_path", "settings_wpf_owner_restart_readback" }
-                : new[] { "real_webview2_eight_routes", "p04_native_embedded_qlora_five_sources", "p01_native_webview2_v16_cinema_nine_orbs", "p03_native_webview2_catalog_31_families", "p04_native_webview2_gpu_guardian_readonly", "p04_native_webview2_rag_noindex_readback", "real_webview2_keyboard_routes",
+                : new[] { "real_webview2_eight_routes", "p02_native_ru_es_asr_installed_inventory_no_microphone", "p04_native_embedded_qlora_five_sources", "p01_native_webview2_v16_cinema_nine_orbs", "p03_native_webview2_catalog_31_families", "p04_native_webview2_gpu_guardian_readonly", "p04_native_webview2_rag_noindex_readback", "real_webview2_keyboard_routes",
                           "d01_five_quick_native_routes", "d01_five_quick_windows_uia",
                           "d01_five_quick_compact_320_390_800",
                           "f03_compact_native_coreid_focus_320_390_800",
