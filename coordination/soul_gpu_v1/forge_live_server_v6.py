@@ -216,6 +216,7 @@ def serve(root, port, source_sha=None):
     from nox_prime_autonomous_router_v1 import decide as decide_work, format_ack
     page = (HERE / 'forge_wow_live_v6.html').read_bytes()
     unified_page = (HERE / 'nox_unified_chat_v1.html').read_bytes()
+    chat_ui_sha256=hashlib.sha256(unified_page).hexdigest()
     visual = HERE / 'forge_focus_v4_canonical_live.html'
     class Handler(BaseHTTPRequestHandler):
         def get(self, payload, content_type, code=200):
@@ -228,10 +229,12 @@ def serve(root, port, source_sha=None):
             self.end_headers()
             self.wfile.write(payload)
         def do_GET(self):
-            if self.path in ('/', '/index.html'):
-                return self.get(page, 'text/html; charset=utf-8')
-            if self.path == '/nox/chat':
+            if urlsplit(self.path).path in ('/', '/index.html', '/nox/chat'):
+                # ONE NOX: root and old bookmark both serve the new V9 HOME.
                 return self.get(unified_page, 'text/html; charset=utf-8')
+            if urlsplit(self.path).path == '/forge/control':
+                # The pre-existing FORGE dashboard remains an internal panel.
+                return self.get(page, 'text/html; charset=utf-8')
             if self.path == '/api/nox/resource-advice':
                 try:
                     import nox_prime_resource_advisor_v1 as resource
@@ -335,7 +338,12 @@ def serve(root, port, source_sha=None):
                                             'local_chat_journal': True,
                                             'soul_runtime':'EN_HOLDOUT_ONLY',
                                             'semantic_retrieval':'ON_DEMAND_LOCAL',
-                                            'source_sha256':running_source_sha256}).encode(), 'application/json')
+                                            'source_sha256':running_source_sha256,
+                                            'chat_ui_sha256':chat_ui_sha256,
+                                            'page_schema':'NOX-PRIME-HOME-V9',
+                                            'root_route':'NOX_PRIME_UNIFIED_HOME',
+                                            's03_writable':False,
+                                            'main_lora_active':False}).encode(), 'application/json')
             if self.path == '/api/status':
                 try:
                     payload = live_status(root)
