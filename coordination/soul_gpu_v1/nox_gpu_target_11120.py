@@ -200,20 +200,51 @@ def worker(a):
         item=json.loads(line)
         if not isinstance(item,dict):continue
         msgs=item.get("messages")
-        if isinstance(msgs,list):
-            text="\n".join(str(x.get("content","")) for x in msgs if isinstance(x,dict))
+        if os.environ.get("NOX_USE_MULTI_TEACHER_V2")=="1":
+            if not isinstance(msgs,list) or len(msgs)!=2 or any(not isinstance(x,dict) for x in msgs):
+                raise RuntimeError("MULTI_TEACHER_UNSUPPORTED_TRAIN_EXAMPLE")
+            if (msgs[0].get("role"),msgs[1].get("role"))!=("user","assistant"):
+                raise RuntimeError("MULTI_TEACHER_INCORRECT_ROLE_PAIR")
+            question=msgs[0].get("content")
+            answer=msgs[1].get("content")
+            if not isinstance(question,str) or not isinstance(answer,str) or len(answer)<60:
+                raise RuntimeError("MULTI_TEACHER_INVALID_TEXT")
+            data.append((question,answer))
         else:
-            text=(item.get("text") or item.get("content") or
-                  "\n".join(str(item.get(k,"")) for k in ("prompt","response","instruction","output")))
-        if isinstance(text,str) and len(text.strip())>20:data.append(text)
+            if isinstance(msgs,list):
+                text="\n".join(str(x.get("content","")) for x in msgs if isinstance(x,dict))
+            else:
+                text=(item.get("text") or item.get("content") or
+                      "\n".join(str(item.get(k,"")) for k in ("prompt","response","instruction","output")))
+            if isinstance(text,str) and len(text.strip())>20:data.append(text)
     if not data:raise RuntimeError("Dataset has no supported approved text rows")
     for n in range(1,a.steps+1):
-        tokens=tokenizer(data[(a.start+n-1)%len(data)],max_length=128,
-                         truncation=True,return_tensors="pt")
-        ids=tokens["input_ids"].to(device)
+        sample=data[(a.start+n-1)%len(data)]
+        if isinstance(sample,tuple):
+            # Genuine conditional distillation: ONLY the teacher answer gets
+            # loss; the owner's prompt is conditioning input, not a target.
+            prompt=tokenizer.apply_chat_template(
+                [{"role":"user","content":sample[0]}],
+                tokenize=False,add_generation_prompt=True)
+            response=sample[1]+(tokenizer.eos_token or "")
+            tokens=tokenizer(prompt+response,max_length=128,add_special_tokens=False,
+                             truncation=True,return_tensors="pt")
+            prompt_tokens=tokenizer(prompt,add_special_tokens=False,
+                                   truncation=True,max_length=128,return_tensors="pt")
+            ids=tokens["input_ids"].to(device)
+            prefix_len=prompt_tokens["input_ids"].shape[1]
+            labels=ids.clone()
+            labels[:,:prefix_len]=-100
+            if int((labels!=-100).sum().item())<2:
+                raise RuntimeError("MULTI_TEACHER_NO_SUPERVISED_ANSWER_TOKENS")
+        else:
+            tokens=tokenizer(sample,max_length=128,
+                             truncation=True,return_tensors="pt")
+            ids=tokens["input_ids"].to(device)
+            labels=ids
         if ids.size(1)<3:raise RuntimeError("Selected training sample too short")
         opt.zero_grad(set_to_none=True)
-        loss=model(input_ids=ids,labels=ids).loss
+        loss=model(input_ids=ids,labels=labels).loss
         if not bool(torch.isfinite(loss).item()):raise RuntimeError("Nonfinite loss")
         loss.backward();opt.step()
         step=a.start+n
