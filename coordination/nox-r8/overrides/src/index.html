@@ -126,7 +126,29 @@ body[data-nox-r11-cinematic-mode="BALANCED"] .nox-r11-cinematic-dust{animation:n
 body[data-nox-r11-cinematic-mode="REDUCED"] .core,body[data-nox-r11-cinematic-mode="REDUCED"] .core::before,body[data-nox-r11-cinematic-mode="REDUCED"] .core::after,body[data-nox-r11-cinematic-mode="REDUCED"] .nox-r11-cinematic-subworld,body[data-nox-r11-cinematic-mode="REDUCED"] .nox-r11-cinematic-atmosphere,body[data-nox-r11-cinematic-mode="REDUCED"] .nox-r11-cinematic-atmosphere *{animation:none!important;transition:none!important;transform:none!important}
 @media(forced-colors:active){body .core::before{border-color:CanvasText}body .core:hover:not(:disabled){filter:none}}
 
-</style></head><body class="reduced">
+
+/* NOX FIVE THEMES: additive to one canonical WebView2 HOME, all routes.
+   Visual-only. Does not change native IPC, sensors, models, navigation or SQLite. */
+.nox-theme-toggle{position:fixed;left:10px;top:74px;z-index:50;width:36px;height:36px;border:1px solid var(--gold);border-radius:9px;color:var(--gold);background:rgba(6,11,21,.88);box-shadow:0 0 17px rgba(220,165,107,.2);cursor:pointer;font-size:20px;line-height:1}
+.nox-theme-toggle:focus-visible{outline:3px solid var(--blue);outline-offset:3px}
+.nox-theme-toggle:hover{filter:brightness(1.18)}
+body[data-nox-theme="aurora"]{--gold:#80dcce;--blue:#b2a6ff;--edge:#45606a}
+body[data-nox-theme="aurora"]::before{background:radial-gradient(ellipse at 34% 42%,#193854 0%,#0d1d35 47%,#040711 88%)}
+body[data-nox-theme="aurora"] .helion,body[data-nox-theme="aurora"] .core{filter:hue-rotate(100deg) saturate(1.15)}
+body[data-nox-theme="copper"]{--gold:#ff9b64;--blue:#e5c18c;--edge:#664035}
+body[data-nox-theme="copper"]::before{background:radial-gradient(ellipse at 35% 44%,#3c231c 0%,#1d1115 50%,#080609 89%)}
+body[data-nox-theme="copper"] .helion,body[data-nox-theme="copper"] .core{filter:hue-rotate(-25deg) saturate(1.3)}
+body[data-nox-theme="nebula"]{--gold:#cb99ed;--blue:#72bee6;--edge:#48365e}
+body[data-nox-theme="nebula"]::before{background:radial-gradient(ellipse at 60% 38%,#32254b 0%,#121a36 49%,#050610 87%)}
+body[data-nox-theme="nebula"] .helion,body[data-nox-theme="nebula"] .core{filter:hue-rotate(185deg) saturate(1.2)}
+body[data-nox-theme="frost"]{--gold:#b5dbe9;--blue:#68d6ed;--edge:#355766}
+body[data-nox-theme="frost"]::before{background:radial-gradient(ellipse at 45% 38%,#1b3949 0%,#0d202c 48%,#050e16 87%)}
+body[data-nox-theme="frost"] .helion,body[data-nox-theme="frost"] .core{filter:hue-rotate(150deg) saturate(.7)}
+body[data-nox-theme]:not([data-nox-theme="obsidian"]) .ring{border-color:var(--edge);box-shadow:0 0 50px color-mix(in srgb,var(--blue) 24%,transparent)}
+@media(max-width:600px){.nox-theme-toggle{left:5px;top:58px;width:31px;height:31px;font-size:17px}}
+@media(prefers-reduced-motion:reduce){.nox-theme-toggle{transition:none}}
+
+</style></head><body class="reduced" data-nox-theme="obsidian"><button type="button" id="noxThemeToggle" class="nox-theme-toggle" aria-label="Сменить оформление NOX: Обсидиан" title="Обсидиан · выбрать следующий фон">◧</button>
 <main>
 <section class="visual" aria-label="Навигация NOX HELION">
 <header class="topline"><div><div class="brand">NOX HELION</div><div class="eyebrow">D02 · LIQUID SUN · LOCAL FIRST</div></div><span class="security"><span class="live-dot" id="visualLiveDot"></span><span id="visualLive">ПРОВЕРКА ИИ</span></span></header>
@@ -903,6 +925,19 @@ document.addEventListener('keydown',e=>{
   if(e.ctrlKey&&!e.altKey&&!e.metaKey&&!e.shiftKey&&e.key.toLowerCase()==='k'){
     e.preventDefault();route('core');$('prompt').focus();
   }
+});
+
+// One visual appearance state shared by all existing route panels.
+// Nothing is sent to the native privileged bridge.
+const noxThemes=[['obsidian','Обсидиан'],['aurora','Аврора'],['copper','Медь'],['nebula','Туманность'],['frost','Лёд']];
+let noxThemeIndex=0;
+const noxThemeToggle=document.getElementById('noxThemeToggle');
+noxThemeToggle.addEventListener('click',()=>{
+  noxThemeIndex=(noxThemeIndex+1)%noxThemes.length;
+  const [id,name]=noxThemes[noxThemeIndex];
+  document.body.dataset.noxTheme=id;
+  noxThemeToggle.setAttribute('aria-label','Сменить оформление NOX: '+name);
+  noxThemeToggle.title=name+' · выбрать следующий фон';
 });
 route('consciousness');
 </script></body></html>
