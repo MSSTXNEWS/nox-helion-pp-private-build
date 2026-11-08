@@ -9,7 +9,9 @@ $py=Join-Path $env:USERPROFILE 'NOX_EXPRESS_AI\NOX_TRAINING\train-venv\Scripts\p
 if (!(Test-Path "$repo\.git") -or !(Test-Path "$root\brain") -or !(Test-Path $py)) {
     throw 'NOX EXISTING SOURCE, BRAIN, OR PYTHON NOT FOUND'
 }
-$required=@('NOX_PRIME_LIVE_V6_BOOT.ps1','nox_prime_progress_v1.py','nox_prime_distill_v1.py','nox_gpu_worm_safe70_v1.py','nox_gpu_target_11120.py','nox_safe70_thermal_guard_v1.py','forge_live_server_v6.py')
+$required=@('NOX_PRIME_LIVE_V6_BOOT.ps1','nox_prime_progress_v1.py',
+'nox_prime_distill_v1.py','nox_prime_absorption_registry_v1.py','nox_prime_absorb_text_v2.py',
+'nox_gpu_worm_safe70_v1.py','nox_gpu_target_11120.py','nox_safe70_thermal_guard_v1.py','forge_live_server_v6.py')
 foreach ($f in $required) {
     if (!(Test-Path (Join-Path $source $f))) { throw "MISSING_NOX_COMPONENT: $f" }
 }
@@ -66,7 +68,23 @@ if(@($catalog | Where-Object {$_ -match '^qwen3:8b\s'}).Count -eq 0){
     throw 'NOX_PRIMARY_MODEL_NOT_INSTALLED'
 }
 AssertNoTraining
-NoxEvent 'DATASET_PREP' 'START' 'Preparing synthetic non-private public technical tasks'
+# Inventory ALL installed models; pilot transfer of actual LANGUAGE/CODE skills.
+# Media, audio, embeddings, incompatible architectures stay in their own tracks.
+NoxEvent 'DISCOVER' 'RUNNING' 'Inventorying all installed donor weights with exact model digests'
+& $py -u (Join-Path $source 'nox_prime_absorption_registry_v1.py') --root $root
+if($LASTEXITCODE -ne 0){
+    NoxEvent 'DISCOVER' 'HOLD' 'Installed donor model inventory incomplete'
+    throw 'NOX_DONOR_REGISTRY_HOLD'
+}
+NoxEvent 'TEACHER_DISTILL' 'START' 'Sequentially sampling all compatible local text and coding teachers'
+& $py -u (Join-Path $source 'nox_prime_absorb_text_v2.py') --root $root --questions-per-model 3 --max-models 40
+if($LASTEXITCODE -ne 0){
+    NoxEvent 'TEACHER_DISTILL' 'HOLD' 'Some donor models cannot yet be sampled; no weights deleted'
+    throw 'NOX_ALL_TEACHERS_PILOT_HOLD'
+}
+NoxEvent 'TEACHER_DISTILL' 'SAVED' 'Model-specific donor candidate datasets captured; media/voice kept as specialists'
+AssertNoTraining
+NoxEvent 'DATASET_PREP' 'START' 'Preparing verified Qwen student curriculum for real DirectML learning'
 & $py -u (Join-Path $source 'nox_prime_distill_v1.py') --root $root --max-tasks 24
 if($LASTEXITCODE -ne 0){
     NoxEvent 'DATASET_PREP' 'HOLD' 'Local teacher distillation dataset was not completed'
