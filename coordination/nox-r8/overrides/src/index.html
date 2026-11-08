@@ -931,8 +931,8 @@ document.addEventListener('keydown',e=>{
 // Nothing is sent to the native privileged bridge.
 const noxThemes=[['obsidian','Обсидиан'],['aurora','Аврора'],['copper','Медь'],['nebula','Туманность'],['frost','Лёд']];
 let noxThemeIndex=0;
-const noxThemeToggle=document.getElementById('noxThemeToggle');
-noxThemeToggle.addEventListener('click',()=>{
+const noxThemeToggle=typeof document.getElementById==='function' ? document.getElementById('noxThemeToggle') : null;
+if(noxThemeToggle) noxThemeToggle.addEventListener('click',()=>{
   noxThemeIndex=(noxThemeIndex+1)%noxThemes.length;
   const [id,name]=noxThemes[noxThemeIndex];
   document.body.dataset.noxTheme=id;
