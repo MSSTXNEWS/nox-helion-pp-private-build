@@ -2022,6 +2022,7 @@ public partial class MainWindow : Window
                 case "system.status": _ = SendSystemStateAsync(); break;
                 case "gpu.guardian": _ = SendP04GpuGuardianAsync(); break;
                 case "qlora.preflight": _ = SendP04QloraPreflightAsync(); break;
+                case "qlora.gpu-probe": _ = RunLocalP04GpuProbeAsync(Text("requestId")); break;
                 case "asr.installed": ReportInstalledLocalAsr(); break;
                 case "asr.start": BeginLocalAsr(Text("locale"), Text("requestId")); break;
                 case "asr.stop": StopLocalAsr(Text("requestId")); break;
@@ -3361,6 +3362,140 @@ public partial class MainWindow : Window
         if (notify && requestId != null)
             Send("asr.complete", new { requestId, text = (string?)null, ok = false,
                 status = reason });
+    }
+
+    // Runs ONLY the original P04 read-only preflight_local_gpu.py from
+    // the SHA-attested AppData worker, never train_qlora.py or model merge.
+    // No shell, downloads, extra backend, persistent GPU load or scheduler.
+    private readonly SemaphoreSlim p04GpuProbeLock = new(1, 1);
+    private async Task RunLocalP04GpuProbeAsync(string requestId)
+    {
+        if (providerProbeStopped || selfTestRequested || !ValidWriteRequestId(requestId)) {
+            Send("qlora.gpu-probe", new { requestId, status = "HOLD_NO_OWNER_OR_REQUEST",
+                ran = false, trainingStarted = false }); return;
+        }
+        if (!await p04GpuProbeLock.WaitAsync(0)) {
+            Send("qlora.gpu-probe", new { requestId, status = "HOLD_PROBE_ALREADY_RUNNING",
+                ran = false, trainingStarted = false }); return;
+        }
+        try
+        {
+            var workerRoot = P04WorkerRoot();
+            var script = Path.Combine(workerRoot, "preflight_local_gpu.py");
+            var trainer = Path.Combine(workerRoot, "train_qlora.py");
+            if (!File.Exists(script) || !File.Exists(trainer) ||
+                !EmbeddedP04WorkerAvailable()) {
+                Send("qlora.gpu-probe", new { requestId,
+                    status = "HOLD_PREPARE_EMBEDDED_WORKER_FIRST", ran = false,
+                    trainingStarted = false }); return;
+            }
+            // Prohibit changed scripts: no running arbitrary content that happens
+            // to occupy the same AppData path.
+            var asm = typeof(MainWindow).Assembly;
+            foreach (var name in new[] { "preflight_local_gpu.py", "train_qlora.py" })
+            {
+                var file = Path.Combine(workerRoot, name);
+                using var source = asm.GetManifestResourceStream("NOX.HELION.P04." + name)
+                    ?? throw new InvalidOperationException("P04_WORKER_MISSING_RESOURCE_HOLD");
+                using var memory = new MemoryStream();
+                source.CopyTo(memory);
+                if (!SHA256.HashData(memory.ToArray())
+                    .SequenceEqual(SHA256.HashData(File.ReadAllBytes(file))))
+                    throw new InvalidOperationException("P04_WORKER_CONTENT_DRIFT_HOLD");
+            }
+            var py = new[] { Path.Combine(workerRoot, ".venv", "Scripts", "python.exe"),
+                Path.Combine(workerRoot, "venv", "Scripts", "python.exe") }
+                .FirstOrDefault(File.Exists);
+            if (py is null) {
+                Send("qlora.gpu-probe", new { requestId,
+                    status = "HOLD_LOCAL_PYTHON_VENV_MISSING", ran = false,
+                    trainingStarted = false }); return;
+            }
+            // Never spawn a subprocess without the owner's fresh consent.
+            var decision = MessageBox.Show(this,
+                "Запустить только проверку CUDA/библиотек/GPU локальным P04 скриптом?\\n" +
+                "Обучение, merge, установка пакетов и изменение весов НЕ выполняются.\\n" +
+                "Автоматическая остановка проверки через 45 секунд.",
+                "NOX P04 · Read-only GPU preflight", MessageBoxButton.YesNo,
+                MessageBoxImage.Warning, MessageBoxResult.No);
+            if (decision != MessageBoxResult.Yes) {
+                Send("qlora.gpu-probe", new { requestId, status = "DECLINED",
+                    ran = false, trainingStarted = false }); return;
+            }
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(45));
+            var psi = new ProcessStartInfo(py) {
+                UseShellExecute = false, CreateNoWindow = true,
+                RedirectStandardOutput = true, RedirectStandardError = true,
+                WorkingDirectory = workerRoot
+            };
+            psi.ArgumentList.Add("-B");
+            psi.ArgumentList.Add(script);
+            psi.ArgumentList.Add("--profile");
+            psi.ArgumentList.Add("ECO");
+            psi.ArgumentList.Add("--gpu-index");
+            psi.ArgumentList.Add("0");
+            // No network or scripts downloaded; this is the trusted embedded
+            // preflight and uses subprocess isolation inside the Python module.
+            using var process = Process.Start(psi)
+                ?? throw new InvalidOperationException("P04_PYTHON_SPAWN_HOLD");
+            string output = "";
+            string errors = "";
+            try
+            {
+                var stdout = process.StandardOutput.ReadToEndAsync(timeout.Token);
+                var stderr = process.StandardError.ReadToEndAsync(timeout.Token);
+                await process.WaitForExitAsync(timeout.Token);
+                output = await stdout;
+                errors = await stderr;
+            }
+            catch (OperationCanceledException)
+            {
+                try { process.Kill(entireProcessTree: true); } catch (Exception) { }
+                Send("qlora.gpu-probe", new { requestId,
+                    status = "HOLD_PREFLIGHT_TIMEOUT", ran = true,
+                    trainingStarted = false }); return;
+            }
+            if (output.Length > 16_384 || errors.Length > 4096)
+                throw new InvalidOperationException("P04_PROBE_OUTPUT_OVERSIZE_HOLD");
+            string resultStatus = "HOLD_INVALID_PREFLIGHT_RECEIPT";
+            int missing = -1;
+            try
+            {
+                using var json = JsonDocument.Parse(output);
+                var doc = json.RootElement;
+                if (doc.TryGetProperty("schema", out var schema) &&
+                    schema.GetString() == "NOX-P04-LOCAL-GPU-PREFLIGHT-v1" &&
+                    doc.TryGetProperty("status", out var status))
+                {
+                    var statusText = status.GetString();
+                    if (statusText is "HOLD" or "HARDWARE_READY_ONLY")
+                        resultStatus = statusText;
+                    if (doc.TryGetProperty("packages", out var packages) &&
+                        packages.ValueKind == JsonValueKind.Object)
+                    {
+                        missing = packages.EnumerateObject().Count(
+                            x => x.Value.TryGetProperty("state", out var v) &&
+                                 v.GetString() == "MISSING");
+                    }
+                }
+            }
+            catch (JsonException) { /* malformed worker output is always HOLD */ }
+            Send("qlora.gpu-probe", new { requestId,
+                source = "P04_LOCAL_GPU_PREFLIGHT_ORIGINAL",
+                status = resultStatus, exitCode = process.ExitCode,
+                missingPackages = missing, ran = true,
+                hardwareReadyOnly = process.ExitCode == 0 &&
+                    resultStatus == "HARDWARE_READY_ONLY",
+                trainingStarted = false, checkpointVerified = false,
+                modelMergeVerified = false });
+        }
+        catch (Exception ex)
+        {
+            Send("qlora.gpu-probe", new { requestId,
+                status = "HOLD_" + ex.GetType().Name,
+                ran = false, trainingStarted = false });
+        }
+        finally { p04GpuProbeLock.Release(); }
     }
 
     private async Task SendP04QloraPreflightAsync()
