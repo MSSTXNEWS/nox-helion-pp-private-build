@@ -11,6 +11,7 @@ if (!(Test-Path "$repo\.git") -or !(Test-Path "$root\brain") -or !(Test-Path $py
 }
 $required=@('NOX_PRIME_LIVE_V6_BOOT.ps1','nox_prime_progress_v1.py',
 'nox_prime_distill_v1.py','nox_prime_absorption_registry_v1.py','nox_prime_absorb_text_v2.py',
+'nox_prime_student_dataset_v1.py',
 'nox_gpu_worm_safe70_v1.py','nox_gpu_target_11120.py','nox_safe70_thermal_guard_v1.py','forge_live_server_v6.py')
 foreach ($f in $required) {
     if (!(Test-Path (Join-Path $source $f))) { throw "MISSING_NOX_COMPONENT: $f" }
@@ -77,20 +78,20 @@ if($LASTEXITCODE -ne 0){
     throw 'NOX_DONOR_REGISTRY_HOLD'
 }
 NoxEvent 'TEACHER_DISTILL' 'START' 'Sequentially sampling all compatible local text and coding teachers'
-& $py -u (Join-Path $source 'nox_prime_absorb_text_v2.py') --root $root --questions-per-model 3 --max-models 40
+& $py -u (Join-Path $source 'nox_prime_absorb_text_v2.py') --root $root --questions-per-model 12 --max-models 40
 if($LASTEXITCODE -ne 0){
     NoxEvent 'TEACHER_DISTILL' 'HOLD' 'Some donor models cannot yet be sampled; no weights deleted'
     throw 'NOX_ALL_TEACHERS_PILOT_HOLD'
 }
 NoxEvent 'TEACHER_DISTILL' 'SAVED' 'Model-specific donor candidate datasets captured; media/voice kept as specialists'
 AssertNoTraining
-NoxEvent 'DATASET_PREP' 'START' 'Preparing verified Qwen student curriculum for real DirectML learning'
-& $py -u (Join-Path $source 'nox_prime_distill_v1.py') --root $root --max-tasks 24
+NoxEvent 'DATASET_PREP' 'START' 'Converting actual compatible donor outputs into isolated train/heldout corpus'
+& $py -u (Join-Path $source 'nox_prime_student_dataset_v1.py') --root $root
 if($LASTEXITCODE -ne 0){
-    NoxEvent 'DATASET_PREP' 'HOLD' 'Local teacher distillation dataset was not completed'
-    throw 'NOX_TEACHER_DISTILL_HOLD'
+    NoxEvent 'DATASET_PREP' 'HOLD' 'Qwen donor corpus too small, unverified, or non-compatible'
+    throw 'NOX_STUDENT_TRAIN_DATASET_HOLD'
 }
-NoxEvent 'DATASET_PREP' 'SAVED' 'Local teacher training dataset saved and SHA-256 verified'
+NoxEvent 'DATASET_PREP' 'SAVED' 'Actual multi-Qwen train/holdout dataset accepted by SHA, original teachers preserved'
 AssertNoTraining
 # Release teacher VRAM; the light local NOX server stays online and reports
 # the temporary GPU limit rather than loading a competing heavy model.
@@ -111,8 +112,8 @@ try {
     NoxEvent 'GPU_TRAIN' 'HOLD' 'Cannot verify GPU model residency before SAFE70'
     throw
 }
-$env:NOX_USE_TEACHER_DISTILL_V1='1'
-NoxEvent 'GPU_TRAIN' 'START' 'Actual SAFE70 DirectML LoRA training on distilled local teacher data'
+$env:NOX_USE_MULTI_TEACHER_V2='1'
+NoxEvent 'GPU_TRAIN' 'START' 'Real DirectML LoRA trains 0.5B NOX student using multiple source-proven Qwen teachers'
 try {
     & $py -u (Join-Path $source 'nox_gpu_worm_safe70_v1.py')
     $rc=$LASTEXITCODE
@@ -122,7 +123,7 @@ try {
     }
     NoxEvent 'GPU_TRAIN' 'SAVED' 'Compatible student step goal reached; held-out evaluation still pending'
 }finally{
-    Remove-Item Env:NOX_USE_TEACHER_DISTILL_V1 -ErrorAction SilentlyContinue
+    Remove-Item Env:NOX_USE_MULTI_TEACHER_V2 -ErrorAction SilentlyContinue
 }
 NoxEvent 'EVALUATE' 'HOLD' 'Distilled student remains unpromoted until independent benchmark'
 Write-Host 'NOX CORE LIVE. Existing D02 dashboard shows actual teacher/model/GPU-step progress.' -ForegroundColor Green
