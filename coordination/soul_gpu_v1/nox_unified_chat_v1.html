@@ -39,6 +39,16 @@ select,button{background:#142735;border:1px solid #507184;color:white;border-rad
 <div class="row"><span class="k">Сознание</span><strong>Не доказано</strong></div>
 <h3 class="sub">Восемь CoreID</h3><p id="cores" class="sub">—</p>
 <p class="sub" id="error" aria-live="polite"></p><p class="sub" id="resource" aria-live="polite">Проверка GPU...</p>
+<div class="warning" style="margin-top:16px">
+<strong>✦ FORGE · NOX улучшает себя</strong>
+<div class="sub" style="margin:8px 0">NOX создаёт реальное исправление в отдельном рабочем каталоге; рабочее приложение и S03 не меняются без проверки.</div>
+<label class="sub">Область <select id="forgeTarget">
+<option value="chat">Интерфейс и меню</option>
+<option value="brain">Интеллект и поведение</option>
+</select></label>
+<button type="button" id="forgeImprove">✦ Подготовить улучшение</button>
+<div class="sub" id="forgeStatus" aria-live="polite">FORGE: ожидает задачу</div>
+</div>
 <button type="button" id="refresh">↻ Проверить ядро</button>
 <button type="button" id="experienceBtn">✦ Воспоминания NOX</button>
 <div id="experience" class="sub" aria-live="polite"></div>
@@ -229,8 +239,44 @@ async function experience(){
   }catch(ex){target.textContent="Память недоступна: "+ex.message;}
 }
 $("experienceBtn").addEventListener("click",experience);
+let forgeTimer=null;
+async function forgePoll(){
+  try{
+    const r=await fetch("/api/nox/forge/status",{cache:"no-store"});
+    if(!r.ok)throw Error("HTTP "+r.status);
+    const v=await r.json();
+    $("forgeStatus").textContent=
+      "FORGE · "+(v.state||"UNKNOWN")+" · "+(v.phase||"")+
+      (v.static_qa?" · "+v.static_qa:"")+
+      (v.reason?" · "+v.reason:"")+
+      (v.state==="CANDIDATE_READY"?" · Патч готов для отдельной проверки и подтверждения":"");
+    $("forgeImprove").disabled=["PREPARING","GENERATING","STAGING","STATIC_QA"].includes(v.state);
+    if(!$("forgeImprove").disabled&&forgeTimer){clearInterval(forgeTimer);forgeTimer=null;}
+  }catch(e){$("forgeStatus").textContent="FORGE HOLD: "+e.message;}
+}
+$("forgeImprove").addEventListener("click",async()=>{
+  $("forgeImprove").disabled=true;
+  $("forgeStatus").textContent="NOX FORGE: запускаю создание исправления...";
+  try{
+    const target=$("forgeTarget").value;
+    const objective=target==="chat"?
+      "Улучши реальный NOX интерфейс по D02, меню и визуальные кнопки, сохрани историю, потоковый чат, STOP и все функции без удаления":
+      "Улучши функциональную единую самодель NOX PRIME, логику памяти и качество диалога, не изменяя безопасность и S03";
+    const r=await fetch("/api/nox/forge/start",{
+      method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({target,objective})});
+    const v=await r.json();
+    if(!r.ok)throw Error(v.error||"HTTP "+r.status);
+    await forgePoll();
+    if(!forgeTimer)forgeTimer=setInterval(forgePoll,4000);
+  }catch(ex){
+    $("forgeStatus").textContent="FORGE HOLD: "+ex.message;
+    $("forgeImprove").disabled=false;
+  }
+});
 $("refresh").addEventListener("click",()=>{status();awareness();coreStatus();});
 restore();
+forgePoll();
 status();
 coreStatus();
 awareness();
