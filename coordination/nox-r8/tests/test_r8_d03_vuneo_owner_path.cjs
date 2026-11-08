@@ -102,10 +102,10 @@ assert.ok(vuneoMethod.indexOf('CheckpointSqlite(db, "PRE_VUNEO_IMPORT")') <
           vuneoMethod.indexOf('importAttempted = true;'));
 assert.ok(vuneoMethod.indexOf('importAttempted = true;') <
           vuneoMethod.indexOf('knowledge.ImportVuneoStaging()'));
-assert.ok(vuneoMethod.includes('if (importAttempted)') &&
+assert.ok(vuneoMethod.includes('if (journalWriteAttempted)') &&
           vuneoMethod.includes('Send("knowledge.vuneo.unknown"'));
 assert.ok(vuneoMethod.includes('NOX_VUNEO_COMMIT_UNKNOWN_HOLD'));
-assert.ok(vuneoMethod.includes('else\n                        Send("knowledge.vuneo.denied"'));
+assert.match(vuneoMethod,/else\s+Send\("knowledge\.vuneo\.denied"/);
 const unknownScript=html.slice(html.indexOf("case 'knowledge.vuneo.unknown':"),html.indexOf("case 'knowledge.vuneo.denied':"));
 assert.ok(unknownScript.includes('vuneoImportUncertain=true'));
 assert.ok(unknownScript.includes("v?.requestId!==pendingVuneo.requestId"));
