@@ -51,6 +51,7 @@ if ($LASTEXITCODE -ne 0) { throw "Python source syntax check failed" }
 Push-Location $source
 try {
     $tests = @(
+      "test_nox_prime_home_v9",
       "test_nox_unified_brain_v1",
       "test_nox_prime_resource_advisor_v1",
       "test_nox_prime_cognitive_memory_v1",
