@@ -29,6 +29,14 @@
 <section class="columns">
 <div class="stack leftcol">
 <div class="panel progress-panel"><div class="hd">01 / ПОДРОБНОЕ ОБУЧЕНИЕ</div><div class="pad"><div class="summary"><span class="num" id="progress-large">—</span><span id="trainactive" class="good" style="font-size:11px">ПРОВЕРКА</span></div><div class="thinprogress"><div id="progressbar"></div></div><div class="hint" id="progressdetail">Шаги и цели поступают из локального NOX</div><div class="rowline"><span class="label">Шаг обучения</span><span class="value" id="step">—</span></div><div class="rowline"><span class="label">Последний сохранённый шаг</span><span class="value" id="saved">—</span></div><div class="rowline"><span class="label">PID тренера</span><span class="value" id="pid">—</span></div><div class="rowline"><span class="label">Состояние</span><span class="value" id="state">—</span></div><div class="rowline"><span class="label">Свежесть записи</span><span class="value" id="age">—</span></div></div></div>
+<div class="panel"><div class="hd">NOX PRIME · ЖИВОЙ ЖУРНАЛ ПОШАГОВОГО РАЗВИТИЯ</div><div class="pad">
+ <div class="rowline"><span class="label">Этап прямо сейчас</span><span class="value" id="prime-phase">Нет запущенного этапа</span></div>
+ <div class="rowline"><span class="label">Последнее подтверждённое действие</span><span class="value" id="prime-detail">Ожидание фактических событий</span></div>
+ <div class="rowline"><span class="label">Физические шаги GPU</span><span class="value" id="prime-gpu-step">—</span></div>
+ <div class="thinprogress"><div id="prime-phase-bar"></div></div>
+ <div class="hint" id="prime-phase-hint">Процент показывается только при наличии реальных счётчиков текущего этапа.</div>
+ <div id="prime-journal" class="compact-list" aria-live="polite"><div class="hint">Нет фактических событий нового конвейера. Историческое GPU-обучение показано выше.</div></div>
+ </div></div>
 <div class="panel"><div class="hd">02 / ОЦЕНКА ИНТЕЛЛЕКТА ЯДРА</div><div class="pad intelligence"><div id="intelligence-score" class="pending">НЕ ОЦЕНЕНО</div><div class="thinprogress"><div id="intelligencebar"></div></div><p id="evaldesc">Сложность интеллекта нельзя честно измерить по количеству шагов. Здесь появится оценка только после реального benchmark.</p><div class="rowline"><span class="label">Память</span><span class="value" id="memory">—</span></div><div class="rowline"><span class="label">Динамика знаний</span><span class="value">Нужны тесты</span></div></div></div>
 <div class="panel"><div class="hd">03 / LOSS · МЕТРИКИ</div><div class="pad"><div class="loss-meta"><div><div class="sub">LOSS (train)</div><strong id="loss">—</strong></div><div><div class="sub">Качество (val)</div><strong>—</strong></div><div><div class="sub">Чекпойнты</div><strong id="checkpoints">—</strong></div></div><canvas class="spark" id="loss-chart" width="540" height="150" aria-label="Реальная история loss"></canvas><div class="legend"><span><i class="g"></i>LOSS · записи тренера</span></div></div></div>
 </div>
@@ -55,8 +63,37 @@
 const $=id=>document.getElementById(id);const isnum=x=>typeof x==='number'&&Number.isFinite(x);const fmt=(v,d=0)=>isnum(v)?v.toLocaleString('ru-RU',{maximumFractionDigits:d}):'—';const set=(id,v)=>{const el=$(id);if(el)el.textContent=v};const progress=(id,n)=>{$(id).style.width=isnum(n)?Math.max(0,Math.min(100,n))+'%':'0%'};const pct=n=>isnum(n)?fmt(n,1)+' %':'—';const celsius=n=>isnum(n)?fmt(n,1)+' °C':'—';const safeArr=a=>Array.isArray(a)?a:[];
 let last=null;const histories={cpu:[],gpu:[],temp:[]};const MAX=90;
 function draw(canvas, series, colors, limits){const ctx=canvas.getContext('2d');const w=canvas.width,h=canvas.height;ctx.clearRect(0,0,w,h);ctx.lineWidth=1;for(let j=0;j<5;j++){ctx.strokeStyle='#477b8f3e';ctx.beginPath();ctx.moveTo(0,10+j*(h-20)/4);ctx.lineTo(w,10+j*(h-20)/4);ctx.stroke()}let any=false;series.forEach((values,index)=>{const vals=safeArr(values).slice(-MAX);const known=vals.filter(isnum);if(known.length<2)return;any=true;const lo=limits?.[index]?.[0]??Math.min(...known),hi=limits?.[index]?.[1]??Math.max(...known);const span=Math.max(.001,hi-lo);ctx.beginPath();let prev=false;vals.forEach((v,i)=>{if(!isnum(v)){prev=false;return}const x=6+i*(w-12)/Math.max(vals.length-1,1),y=10+(hi-v)/span*(h-20);if(prev)ctx.lineTo(x,y);else ctx.moveTo(x,y);prev=true});ctx.strokeStyle=colors[index];ctx.lineWidth=2;ctx.shadowColor=colors[index];ctx.shadowBlur=7;ctx.stroke();ctx.shadowBlur=0});if(!any){ctx.font='12px Segoe UI';ctx.fillStyle='#91a6ae';ctx.fillText('Недостаточно реальных измерений',12,h/2)}}
+function updatePrimeProgress(p){
+  const current=p?.current||null;
+  set('prime-phase',current?current.phase+' / '+current.status:'НОВЫЙ КОНВЕЙЕР НЕ ЗАПУЩЕН');
+  set('prime-detail',current?current.detail:'Нет подтверждённого события');
+  const steps=safeArr(p?.actual_gpu_steps);
+  const last=steps.length?steps[steps.length-1]:null;
+  set('prime-gpu-step',last?'STEP '+fmt(last.step)+' · LOSS '+fmt(last.loss,5):'Нет свежих GPU-шагов');
+  const hasCounts=current&&isnum(current.actual)&&isnum(current.total)&&current.total>0;
+  const percent=hasCounts?100*current.actual/current.total:null;
+  progress('prime-phase-bar',percent);
+  set('prime-phase-hint',hasCounts?(fmt(current.actual)+' / '+fmt(current.total)+' · '+pct(percent)):'Фактический процент пока не подтверждён');
+  const list=$('prime-journal');
+  list.replaceChildren();
+  const events=safeArr(p?.events).slice(-9).reverse();
+  for(const e of events){
+    const line=document.createElement('div');
+    line.className='rowline';
+    const left=document.createElement('span');left.className='label';
+    left.textContent=(e.at_utc?e.at_utc.slice(11,19)+' · ':'')+e.phase;
+    const right=document.createElement('span');right.className='value';
+    right.textContent=e.status+' · '+(e.detail||'');
+    line.append(left,right);list.appendChild(line);
+  }
+  if(!events.length){
+    const v=document.createElement('div');v.className='hint';
+    v.textContent='Новый конвейер ещё не зафиксировал событий — не имитируем прогресс.';
+    list.appendChild(v);
+  }
+}
 function appendHistory(key,value){histories[key].push(isnum(value)?value:null);if(histories[key].length>MAX)histories[key].shift()}
-function update(d){last=d;const live=d.phase==='RUNNING'&&d.pid_active===true;set('live',live?'● GPU TRAINING LIVE':'● '+(d.phase==='STALE'?'ОЖИДАНИЕ':d.phase||'LOCAL'));$('live').className='chip '+(live?'online':'offline');set('sync','SYNC '+new Date().toLocaleTimeString('ru-RU'));set('footerclock',new Date().toLocaleString('ru-RU'));set('footerstate',live?'● РЕАЛЬНЫЙ ТРЕНЕР АКТИВЕН':'● NOX В РЕЖИМЕ НАБЛЮДЕНИЯ');
+function update(d){last=d;updatePrimeProgress(d.prime_pipeline);const live=d.phase==='RUNNING'&&d.pid_active===true;set('live',live?'● GPU TRAINING LIVE':'● '+(d.phase==='STALE'?'ОЖИДАНИЕ':d.phase||'LOCAL'));$('live').className='chip '+(live?'online':'offline');set('sync','SYNC '+new Date().toLocaleTimeString('ru-RU'));set('footerclock',new Date().toLocaleString('ru-RU'));set('footerstate',live?'● РЕАЛЬНЫЙ ТРЕНЕР АКТИВЕН':'● NOX В РЕЖИМЕ НАБЛЮДЕНИЯ');
 const goal=d.goal_steps??null;const saved=d.saved_step??null;const overall=d.overall_progress_pct;set('overall',pct(overall));set('progress-large',pct(overall));set('targetlabel',goal?'цель '+fmt(goal):'цель —');set('progressdetail',isnum(saved)&&isnum(goal)?fmt(saved)+' / '+fmt(goal)+' сохранённых шагов':'Нет подтверждённого сохранения');set('shortprogress',isnum(saved)?fmt(saved)+' / '+fmt(goal):'—');progress('overallbar',overall);progress('progressbar',overall);set('step',fmt(d.step));set('saved',fmt(saved));set('pid',live?d.process_id:'—');set('state',live?'РАБОТАЕТ':'НЕТ АКТИВНОГО PID');set('age',isnum(d.receipt_age_seconds)?fmt(d.receipt_age_seconds,0)+' сек':'—');set('trainactive',live?'● ACTIVE':'● HISTORICAL');set('corestatus',live?'● REAL GPU TRAINING':'● HELION / STANDBY');set('trainmode',live?'ACTIVE':'STANDBY');
 set('temp',celsius(d.gpu_temp));set('hotright',celsius(d.gpu_temp));set('gpu-core',celsius(d.gpu_core_temp));set('cpu-temp',celsius(d.load?.cpu_temp_c??d.cpu_temp));set('tempstate',isnum(d.gpu_temp)?'SENSOR LIVE':'НЕТ ДАТЧИКА');if(isnum(d.gpu_temp)){$('tempstate').className=d.gpu_temp>=70?'bad':d.gpu_temp>=65?'warn':'good'}
 set('gpu-load',pct(d.load?.gpu_load_pct));set('gpupct',isnum(d.load?.gpu_load_pct)?fmt(d.load.gpu_load_pct)+'%':'—');$('gpudial').style.setProperty('--val',isnum(d.load?.gpu_load_pct)?d.load.gpu_load_pct:0);set('cpu-load',pct(d.system?.cpu_usage_pct));set('cpupct',isnum(d.system?.cpu_usage_pct)?fmt(d.system.cpu_usage_pct)+'%':'—');$('cpudial').style.setProperty('--val',isnum(d.system?.cpu_usage_pct)?d.system.cpu_usage_pct:0);set('ram',pct(d.system?.ram_usage_pct));set('ramfoot',isnum(d.system?.ram_used_gib)?fmt(d.system.ram_used_gib,1)+'/'+fmt(d.system.ram_total_gib,1)+' GiB':'—');progress('rambar',d.system?.ram_usage_pct);set('ram-used',isnum(d.system?.ram_used_gib)?fmt(d.system.ram_used_gib,1)+' / '+fmt(d.system.ram_total_gib,1)+' GiB':'—');set('vram-used',isnum(d.load?.gpu_memory_used_gib)?fmt(d.load.gpu_memory_used_gib,1)+(isnum(d.load.gpu_memory_total_gib)?' / '+fmt(d.load.gpu_memory_total_gib,1):'')+' GiB':'—');
