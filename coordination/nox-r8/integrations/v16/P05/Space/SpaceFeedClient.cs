@@ -1,0 +1,231 @@
+// NOX V16 / E05 candidate: isolated contract, NOT wired into MainWindow or host.
+// BCL-only. Providers/endpoints are injected by host after license/security review.
+using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.IO;
+using System.Net.Http;
+using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
+
+namespace NoxHelion.Space.E05;
+
+public sealed record FeedSnapshot(
+    string FeedId, string Source, DateTimeOffset? SourceTimestamp,
+    DateTimeOffset FetchedAt, JsonElement? Data, string Status,
+    string? ErrorCode, bool IsStale);
+// No simulated metrics. Unsupported sensors and progress MUST be null.
+public sealed record SensorReading(string Id, double? Value, string Unit,
+    string Provider, DateTimeOffset? ObservedAt, string Status);
+public sealed record ProgressEvidence(string TaskId, decimal Weight,
+    decimal? ConfirmedPercent, string? ReceiptId, string State);
+public static class EvidenceProgress
+{
+    public static decimal? WeightedProduct(IReadOnlyList<ProgressEvidence> lanes)
+    {
+        // Exactly five product blocks; E06/E07 are gates, not weights.
+        decimal[] weights = { .20m, .25m, .20m, .25m, .10m };
+        if (lanes is null || lanes.Count != 5) return null;
+        // Count distinct TaskIDs only. Caller must independently verify
+        // signed evidence: an arbitrary ReceiptId string proves nothing.
+        var seenTaskIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        decimal result = 0;
+        for (int i = 0; i < 5; i++)
+        {
+            var lane = lanes[i];
+            if (lane is null || string.IsNullOrWhiteSpace(lane.TaskId) ||
+                !seenTaskIds.Add(lane.TaskId.Trim()) ||
+                lane.Weight != weights[i] || lane.ConfirmedPercent is null ||
+                lane.ConfirmedPercent < 0 || lane.ConfirmedPercent > 100 ||
+                string.IsNullOrWhiteSpace(lane.ReceiptId) ||
+                lane.State != "ACCEPTED") return null;
+            result += lane.ConfirmedPercent.Value * weights[i];
+        }
+        return result;
+    }
+}
+public sealed class SpaceFeedClient
+{
+    // Limit BOTH announced and streamed provider bytes before JSON materialization.
+    // ResponseHeadersRead and request timeout alone do not bound response size.
+    private const int MaximumFeedResponseBytes = 8 * 1024 * 1024;
+    private sealed class FeedResponseTooLargeException : Exception { }
+    private readonly HttpClient _http;
+    // A cache entry is bound to the exact provider AND approved HTTPS endpoint.
+    // FeedId alone is not an authorization or provenance identity.
+    private readonly record struct CacheIdentity(string FeedId, string Provider, string Endpoint);
+    private readonly ConcurrentDictionary<CacheIdentity, FeedSnapshot> _cache = new();
+    private readonly TimeSpan _ttl;
+    private readonly TimeSpan _timeout;
+    private readonly TimeSpan _maxSourceAge;
+    // Same existing E05 freshness policy, without a second feed client/bus.
+    // Existing 3-argument callers retain their signature and a conservative
+    // 24-hour default; approved providers may require a shorter age.
+    public SpaceFeedClient(HttpClient http, TimeSpan ttl, TimeSpan timeout,
+        TimeSpan? maxSourceAge = null)
+    {
+        _http = http ?? throw new ArgumentNullException(nameof(http));
+        if (ttl <= TimeSpan.Zero || timeout <= TimeSpan.Zero) throw new ArgumentOutOfRangeException();
+        _maxSourceAge = maxSourceAge ?? TimeSpan.FromHours(24);
+        if (_maxSourceAge <= TimeSpan.Zero || _maxSourceAge > TimeSpan.FromDays(365))
+            throw new ArgumentOutOfRangeException(nameof(maxSourceAge));
+        _ttl = ttl; _timeout = timeout;
+    }
+
+    private static void ValidateUniqueJsonProperties(JsonElement root, CancellationToken stop)
+    {
+        var pending = new Stack<JsonElement>();
+        pending.Push(root);
+        while (pending.Count > 0)
+        {
+            // STOP and timeout must win over a huge provider-supplied JSON tree.
+            stop.ThrowIfCancellationRequested();
+            var node = pending.Pop();
+            if (node.ValueKind == JsonValueKind.Object)
+            {
+                var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                foreach (var property in node.EnumerateObject())
+                {
+                    // Normalize canonical Unicode equivalents without altering the original payload.
+                    if (!names.Add(property.Name.Normalize(System.Text.NormalizationForm.FormC)))
+                        throw new InvalidDataException("DUPLICATE_PROVIDER_JSON_KEY");
+                    pending.Push(property.Value);
+                }
+            }
+            else if (node.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var element in node.EnumerateArray())
+                    pending.Push(element);
+            }
+        }
+    }
+
+    // ID examples: weather, nox-news, eur-usd, eur-rub, bitcoin, brent, finance-news.
+    // Exact source and timestamp must be provided by the trusted adapter; never guessed.
+    public async Task<FeedSnapshot> FetchAsync(
+        string id, Uri endpoint, string provider, Func<JsonElement, DateTimeOffset?> extractSourceTime,
+        CancellationToken stop = default)
+    {
+        if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(provider) ||
+            endpoint is null || !endpoint.IsAbsoluteUri ||
+            endpoint.Scheme != Uri.UriSchemeHttps ||
+            !string.IsNullOrWhiteSpace(endpoint.UserInfo))
+            throw new ArgumentException("Provider must use an authenticated, approved HTTPS endpoint.");
+        // STOP and source provenance rules also apply when a TTL cache entry exists.
+        stop.ThrowIfCancellationRequested();
+        ArgumentNullException.ThrowIfNull(extractSourceTime);
+        var key = new CacheIdentity(id, provider, endpoint.AbsoluteUri);
+        var now = DateTimeOffset.UtcNow;
+        // Never reuse an earlier provider's bytes, even during its TTL or
+        // during an offline fallback from a different approved endpoint.
+        if (_cache.TryGetValue(key, out var old) &&
+            now >= old.FetchedAt && now - old.FetchedAt < _ttl)
+            {
+                stop.ThrowIfCancellationRequested();
+                // Cache TTL only controls transport reuse; a formerly LIVE
+                // observation can become stale without another HTTP request.
+                if (old.Status is "LIVE" or "CACHE")
+                {
+                    if (old.SourceTimestamp is not { } sourceTime ||
+                        now - sourceTime > _maxSourceAge ||
+                        sourceTime > now.AddMinutes(5))
+                        return old with {
+                            Status = "STALE_SOURCE", ErrorCode = "SOURCE_STALE", IsStale = true
+                        };
+                    return old with { Status = "CACHE" };
+                }
+                return old;
+            }
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(stop);
+        timeout.CancelAfter(_timeout);
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, endpoint);
+            using var response = await _http.SendAsync(request,
+                HttpCompletionOption.ResponseHeadersRead, timeout.Token).ConfigureAwait(false);
+            // The transport may follow a redirect; only approved endpoint bytes
+            // may enter the SPACE cache, regardless of the initial request URL.
+            var observedEndpoint = response.RequestMessage?.RequestUri;
+            if (observedEndpoint is null ||
+                Uri.Compare(endpoint, observedEndpoint, UriComponents.AbsoluteUri,
+                    UriFormat.SafeUnescaped, StringComparison.Ordinal) != 0)
+                throw new HttpRequestException("PROVIDER_ENDPOINT_CHANGED");
+            response.EnsureSuccessStatusCode();
+            // Content-Length is only an early rejection: chunked streams may omit
+            // it, and an untrusted server may understate it. Always count bytes.
+            if (response.Content.Headers.ContentLength is long announced &&
+                announced > MaximumFeedResponseBytes)
+                throw new FeedResponseTooLargeException();
+            await using var stream = await response.Content.ReadAsStreamAsync(timeout.Token).ConfigureAwait(false);
+            using var bounded = new MemoryStream();
+            var chunk = new byte[16 * 1024];
+            int bytesRead;
+            while ((bytesRead = await stream.ReadAsync(chunk.AsMemory(), timeout.Token)
+                .ConfigureAwait(false)) != 0)
+            {
+                // Check BEFORE allocation/copy, even for a missing or forged length.
+                if (bytesRead > MaximumFeedResponseBytes - bounded.Length)
+                    throw new FeedResponseTooLargeException();
+                await bounded.WriteAsync(chunk.AsMemory(0, bytesRead), timeout.Token)
+                    .ConfigureAwait(false);
+            }
+            bounded.Position = 0;
+            using var json = await JsonDocument.ParseAsync(bounded,
+                cancellationToken: timeout.Token).ConfigureAwait(false);
+            var cloned = json.RootElement.Clone();
+            // Untrusted provider JSON must not use ambiguous duplicate keys.
+            // Check nested objects before any source-time adapter or cache write.
+            ValidateUniqueJsonProperties(cloned, timeout.Token);
+            DateTimeOffset? observed;
+            try
+            {
+                observed = extractSourceTime(cloned);
+            }
+            catch (Exception ex) when (ex is FormatException or InvalidOperationException
+                                       or KeyNotFoundException or ArgumentException or OverflowException)
+            {
+                // Provider-controlled malformed or missing timestamps may
+                // never abort SPACE or leak raw parser details to the UI.
+                throw new InvalidDataException("INVALID_PROVIDER_SOURCE_TIMESTAMP", ex);
+            }
+            var checkedAt = DateTimeOffset.UtcNow;
+            // Provider timestamps are evidence, not authority. A timestamp
+            // far in the future must never be reported as LIVE or CACHE.
+            var futureTime = observed is not null && observed.Value > checkedAt.AddMinutes(5);
+            var staleTime = observed is not null && checkedAt - observed.Value > _maxSourceAge;
+            var sourceStatus = observed is null ? "UNVERIFIED_TIMESTAMP" :
+                futureTime ? "INVALID_SOURCE_TIME" :
+                staleTime ? "STALE_SOURCE" : "LIVE";
+            var snapshot = new FeedSnapshot(id, provider, observed,
+                checkedAt, cloned, sourceStatus,
+                observed is null ? "SOURCE_TIME_MISSING" :
+                futureTime ? "FUTURE_SOURCE_TIME" :
+                staleTime ? "SOURCE_STALE" : null,
+                futureTime || staleTime || observed is null);
+            // STOP can arrive from the host during the source-time callback.
+            stop.ThrowIfCancellationRequested();
+            _cache[key] = snapshot;
+            return snapshot;
+        }
+        catch (OperationCanceledException) when (stop.IsCancellationRequested) { throw; }
+        catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException or
+            JsonException or InvalidDataException or FeedResponseTooLargeException)
+        {
+            stop.ThrowIfCancellationRequested();
+            string error = ex is FeedResponseTooLargeException ? "RESPONSE_TOO_LARGE" :
+                ex is OperationCanceledException ? "TIMEOUT" :
+                ex is JsonException ? "INVALID_JSON" :
+                ex is InvalidDataException && ex.Message == "DUPLICATE_PROVIDER_JSON_KEY"
+                    ? "INVALID_JSON" :
+                ex is InvalidDataException && ex.Message == "INVALID_PROVIDER_SOURCE_TIMESTAMP"
+                    ? "INVALID_SOURCE_TIME" :
+                ex is HttpRequestException && ex.Message == "PROVIDER_ENDPOINT_CHANGED"
+                    ? "PROVIDER_ENDPOINT_CHANGED" : "NETWORK_ERROR";
+            if (old is not null)
+                return old with { Status = "OFFLINE_CACHE", ErrorCode = error, IsStale = true };
+            return new FeedSnapshot(id, provider, null, DateTimeOffset.UtcNow,
+                null, "OFFLINE", error, true);
+        }
+    }
+}

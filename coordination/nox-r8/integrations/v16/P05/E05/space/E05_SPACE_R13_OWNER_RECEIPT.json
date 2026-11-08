@@ -1,0 +1,37 @@
+{
+  "run_id": "NOX-V16-W4-02-20261028T180939MSK-R13",
+  "owner": "E05/P05",
+  "task_id": "W4-02-R13-LICENSED_FEED_PRIORITY",
+  "parent_head": "95aade71f955d4c6f21db32c7c76174e19b48805",
+  "historical_baseline": "0b3a7d435be735148d64171deb9027093a89646e",
+  "historical_tree": "f108d604c444f718b32aaecfd07b90b8f91b9a6f",
+  "files": [
+    {
+      "path": "Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs",
+      "pre_sha256": "1ea3c95d15cfae4790d3b085d26f39e5282a8bda52e5fd9bf8ef2788b8a82d6e",
+      "post_sha256": "87b7c0486b99b97289001c40dade73801b86c8cc15e0a178fb99ecf7a90c5340",
+      "pre_git_blob": "965b836cece41d5dc8ddad1eaa10d16dafdf3e68",
+      "post_git_blob": "fbb7793ebd642d1bbdbfe1fd9f267d8803ca177e"
+    },
+    {
+      "path": "Packages/P05/E05/space/E05SpaceLicensedPriorityR13.test.mjs",
+      "pre_sha256": "ABSENT",
+      "post_sha256": "9239dfa4c9953527591640613be9954e2085fe57b8b6735aa3e4b5ab0a50820a",
+      "pre_git_blob": "ABSENT",
+      "post_git_blob": "ba1b99b98689d5088f44c2fb887d054995c7fc01"
+    }
+  ],
+  "test_outcomes": {
+    "before": "2/4 FAIL",
+    "after": "4/4 PASS",
+    "legacy": "125/125 PASS",
+    "r12": "3/3 PASS",
+    "syntax": "2/2 PASS"
+  },
+  "windows": "NOT_RUN",
+  "azure": "NOT_RUN",
+  "E07": "0/10",
+  "source_lock_729": "HOLD",
+  "NO_LOSS": "D02/WOW/events.v3/native host/main untouched",
+  "lesson": "LICENSE_GATE_BEFORE_TILE_CAP"
+}
