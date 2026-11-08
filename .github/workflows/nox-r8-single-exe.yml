@@ -47,6 +47,14 @@ jobs:
           $p04Blob=([string](git hash-object $p04Guardian)).Trim().ToLowerInvariant()
           if ($LASTEXITCODE -ne 0 -or $p04Blob -cne '507065c7995827a3f2a98d8fd56273770266203a') { throw 'P04_GPU_GUARDIAN_ORIGINAL_BLOB_HOLD' }
           Copy-Item $p04Guardian './r8/src/GpuGuardian.cs' -Force
+          # Original P04 is unchanged (exact blob attested above). Its standalone
+          # project supplies System.IO import; R8 compatibility is injected only
+          # into the ephemeral staged copy before source SHA inventory/publish.
+          $p04Staged='./r8/src/GpuGuardian.cs'
+          $p04Original=[IO.File]::ReadAllText((Resolve-Path $p04Staged).Path)
+          if (-not $p04Original.Contains('StreamReader')) { throw 'P04_GPU_GUARDIAN_EXPECTED_IO_SOURCE_HOLD' }
+          [IO.File]::WriteAllText((Resolve-Path $p04Staged).Path,
+            ('using System.IO;' + [Environment]::NewLine + $p04Original), [Text.Encoding]::UTF8)
           # B01: authoritative immutable inventory of actual expanded + Git-overlaid WPF sources.
           # This is cloud-build provenance, NOT an owner NOX_NEW source-parity claim.
           $srcRoot=(Resolve-Path './r8/src').Path
