@@ -42,6 +42,11 @@ jobs:
           $p03Blob=([string](git hash-object $p03Catalog)).Trim().ToLowerInvariant()
           if ($LASTEXITCODE -ne 0 -or $p03Blob -cne '73664042ab4e616e8f0c1e46abb9108780ebd7b3') { throw 'P03_MODELCATALOG_ORIGINAL_BLOB_HOLD' }
           Copy-Item $p03Catalog './r8/src/ModelCatalog.cs' -Force
+          # P04 original vendor GPU telemetry reader: compile into same NOX EXE.
+          $p04Guardian='./coordination/nox-r8/integrations/v16/P04/GpuGuardian/GpuGuardian.cs'
+          $p04Blob=([string](git hash-object $p04Guardian)).Trim().ToLowerInvariant()
+          if ($LASTEXITCODE -ne 0 -or $p04Blob -cne '507065c7995827a3f2a98d8fd56273770266203a') { throw 'P04_GPU_GUARDIAN_ORIGINAL_BLOB_HOLD' }
+          Copy-Item $p04Guardian './r8/src/GpuGuardian.cs' -Force
           # B01: authoritative immutable inventory of actual expanded + Git-overlaid WPF sources.
           # This is cloud-build provenance, NOT an owner NOX_NEW source-parity claim.
           $srcRoot=(Resolve-Path './r8/src').Path
@@ -97,6 +102,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'F03_RESPONSIVE_NATIVE_ROUTES_HOLD' }
           node './coordination/nox-r8/tests/test_r8_p03_catalog_runtime.cjs'
           if ($LASTEXITCODE -ne 0) { throw 'P03_CATALOG_ORIGINAL_RUNTIME_HOLD' }
+          node './coordination/nox-r8/tests/test_r8_p04_gpu_guardian_live.cjs'
+          if ($LASTEXITCODE -ne 0) { throw 'P04_GPU_GUARDIAN_ORIGINAL_RUNTIME_HOLD' }
           Copy-Item './coordination/nox-r8/tests/test_r8_sqlite_commit_unknown.py' './r8/test_r8_sqlite_commit_unknown.py'
           python './r8/test_r8_sqlite_commit_unknown.py'
           if ($LASTEXITCODE -ne 0) { throw 'NOX_B04_SQLITE_COMMIT_UNKNOWN_HOLD' }
@@ -163,6 +170,7 @@ jobs:
                 $stamp -lt $started -or !$n.wpfWebView2Accepted -or
                 $n.checks.real_webview2_eight_routes -ne 'PASS' -or
                 $n.checks.p03_native_webview2_catalog_31_families -ne 'PASS' -or
+                $n.checks.p04_native_webview2_gpu_guardian_readonly -ne 'PASS' -or
                 $n.checks.real_webview2_keyboard_routes -ne 'PASS' -or
                 $n.checks.d01_five_quick_native_routes -ne 'PASS' -or
                 $n.checks.d01_five_quick_windows_uia -ne 'PASS' -or

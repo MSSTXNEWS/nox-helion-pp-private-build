@@ -352,6 +352,40 @@ public partial class MainWindow : Window
             if (!p03CatalogRendered)
                 throw new InvalidOperationException("NOX_P03_NATIVE_WEBVIEW2_REAL_CATALOG_HOLD");
 
+            // P04 LIVE: original GpuGuardian must respond through the same native
+            // WebView2 bridge. No NVIDIA GPU on this runner is an expected HOLD,
+            // not invented temperature, VRAM, or a false PASS for training.
+            var p04Button = await Browser.CoreWebView2.ExecuteScriptAsync("""
+                (() => {
+                  const btn = document.getElementById('gpuGuardianRefresh');
+                  const status = document.getElementById('gpuGuardianState');
+                  if (!btn || !status || btn.disabled) return false;
+                  btn.click();
+                  return true;
+                })()
+                """);
+            if (p04Button != "true")
+                throw new InvalidOperationException("NOX_P04_NATIVE_GPU_GUARDIAN_BUTTON_MISSING");
+            bool p04Readback = false;
+            for (int attempt = 0; attempt < 85; attempt++)
+            {
+                var readback = await Browser.CoreWebView2.ExecuteScriptAsync("""
+                    (() => {
+                      const status = document.getElementById('gpuGuardianState');
+                      return !!status && status.dataset.source === 'P04_GPU_GUARDIAN' &&
+                        status.dataset.readback === 'DONE' &&
+                        (status.textContent.includes('Датчики NVIDIA') ||
+                         status.textContent.includes('GPU Guardian')) &&
+                        status.textContent.length < 2048;
+                    })()
+                    """);
+                if (readback == "true") { p04Readback = true; break; }
+                await Task.Delay(100);
+            }
+            checks["p04_native_webview2_gpu_guardian_readonly"] = p04Readback ? "PASS" : "FAIL";
+            if (!p04Readback)
+                throw new InvalidOperationException("NOX_P04_NATIVE_GPU_GUARDIAN_READBACK_HOLD");
+
             // Real embedded WebView2 DOM keyboard/ARIA contract; no fake native actions.
             // This tests event handling inside the running WPF WebView2, not OS SendInput.
             var keyboard = await Browser.CoreWebView2.ExecuteScriptAsync("""
@@ -852,7 +886,7 @@ public partial class MainWindow : Window
             catch (Exception ex) { error = (error ?? "") + " binary_hash:" + ex.Message; }
             var requiredChecks = UiSmokeSettingsRestartRequested
                 ? new[] { "isolated_sqlite_path", "settings_wpf_owner_restart_readback" }
-                : new[] { "real_webview2_eight_routes", "p03_native_webview2_catalog_31_families", "real_webview2_keyboard_routes",
+                : new[] { "real_webview2_eight_routes", "p03_native_webview2_catalog_31_families", "p04_native_webview2_gpu_guardian_readonly", "real_webview2_keyboard_routes",
                           "d01_five_quick_native_routes", "d01_five_quick_windows_uia",
                           "d01_five_quick_compact_320_390_800",
                           "f03_compact_native_coreid_focus_320_390_800",
@@ -1877,6 +1911,7 @@ public partial class MainWindow : Window
                 case "knowledge.import": ImportKnowledgeByDialog(); break;
                 case "knowledge.vuneo": ImportVuneoByConsent(Text("requestId")); break;
                 case "system.status": _ = SendSystemStateAsync(); break;
+                case "gpu.guardian": _ = SendP04GpuGuardianAsync(); break;
                 default: Send("error", "Unknown operation: " + kind); break;
             }
         }
@@ -2829,6 +2864,45 @@ public partial class MainWindow : Window
 
     // nvidia-smi may take 2500ms; never block WebView2 IPC or the STOP dispatcher.
     // Coalesce duplicate refresh requests to avoid competing GPU queries.
+    // Original V16 P04 GpuGuardian: local vendor sensor only, no model/training action.
+    // Async + coalesced with existing sensor access; never blocks chat STOP or the WPF dispatcher.
+    private async Task SendP04GpuGuardianAsync()
+    {
+        if (!await sensorReadLock.WaitAsync(0)) {
+            Send("gpu.guardian", new { source = "P04_GPU_GUARDIAN", available = false,
+                thermalHold = true, reason = "GPU_SENSOR_BUSY_HOLD", samples = Array.Empty<object>() });
+            return;
+        }
+        try
+        {
+            var guardian = new NoxP04.GpuGuardian.GpuGuardian();
+            var samples = await guardian.ReadNvidiaAsync("NOX_R8_READONLY_GPU_GUARDIAN");
+            bool available = samples.Count > 0 && samples.All(s => s.State == "READY");
+            bool thermalHold = !available || samples.Any(s =>
+                NoxP04.GpuGuardian.GpuGuardian.ThermalHoldReason(s, 65.0) is not null);
+            Send("gpu.guardian", new {
+                source = "P04_GPU_GUARDIAN",
+                available, thermalHold,
+                reason = available ? (thermalHold ? "GPU_TEMPERATURE_LIMIT_EXCEEDED" : "GPU_SENSOR_VERIFIED")
+                    : (samples.FirstOrDefault()?.ErrorCode ?? "NVIDIA_TELEMETRY_UNAVAILABLE"),
+                samples = samples.Select(s => new {
+                    state = s.State, index = s.Index, name = s.Name,
+                    utilizationPercent = s.UtilizationPercent,
+                    memoryUsedMiB = s.MemoryUsedMiB, memoryTotalMiB = s.MemoryTotalMiB,
+                    temperatureC = s.TemperatureC, source = s.Source,
+                    errorCode = s.ErrorCode
+                }).ToArray()
+            });
+        }
+        catch (Exception ex)
+        {
+            Send("gpu.guardian", new { source = "P04_GPU_GUARDIAN", available = false,
+                thermalHold = true, reason = "GPU_GUARDIAN_" + ex.GetType().Name,
+                samples = Array.Empty<object>() });
+        }
+        finally { sensorReadLock.Release(); }
+    }
+
     private async Task SendSystemStateAsync()
     {
         if (!await sensorReadLock.WaitAsync(0)) return;
