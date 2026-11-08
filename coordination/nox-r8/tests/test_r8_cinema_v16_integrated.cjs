@@ -11,6 +11,6 @@ assert(html.includes('.constellation button.core.nox-cinema-orb{position:absolut
 assert((html.match(/<button class="core /g)||[]).length===8,'CORE_COUNT_CHANGED');
 assert(html.includes('<body class="reduced">'),'BODY_PREIMAGE_CHANGED');
 const blocks=[...html.matchAll(/<script>([\s\S]*?)<\/script>/g)];
-assert(blocks.length===2,'SCRIPT_COUNT_CHANGED');
+assert(blocks.length===1,'SCRIPT_COUNT_CHANGED');
 for(const [i,b] of blocks.entries())new vm.Script(b[1],{filename:'NOX-script-'+i+'.js'});
 console.log('R8 V16 CINEMA NINE ORBS DOM + SYNTAX SOURCE PASS');
