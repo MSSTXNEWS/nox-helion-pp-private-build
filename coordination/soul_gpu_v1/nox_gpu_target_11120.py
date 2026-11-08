@@ -144,6 +144,26 @@ def inputs():
         if meta.get("student_base")!="Qwen2.5-0.5B-Instruct" or meta.get("examples",0)<8:
             raise RuntimeError("DISTILL_STUDENT_INCOMPATIBLE_OR_TOO_FEW_EXAMPLES")
         dataset=candidate
+    if os.environ.get("NOX_USE_MULTI_TEACHER_V2")=="1":
+        # Explicitly opted into a real multi-teacher curriculum with separate
+        # untrained held-out set. Never silently mix S03 or personal chat data.
+        from hashlib import sha256
+        base=ROOT/"brain"/"intelligence"/"distillation"
+        selected=base/"multi_teacher_student_v1.jsonl"
+        held=base/"multi_teacher_holdout_v1.jsonl"
+        report=base/"multi_teacher_student_v1.manifest.json"
+        if not all(p.is_file() and not p.is_symlink() for p in (selected,held,report)):
+            raise RuntimeError("MULTI_TEACHER_STUDENT_DATASET_NOT_READY")
+        info=json.loads(report.read_text(encoding="utf-8"))
+        if (info.get("schema")!="NOX_PRIME_STUDENT_TRAIN_V1"
+            or info.get("student_base")!="Qwen2.5-0.5B-Instruct"
+            or info.get("status")!="TRAINING_READY_RESEARCH_STUDENT_NOT_ACCEPTED"):
+            raise RuntimeError("MULTI_TEACHER_STUDENT_BASE_OR_STATE_HOLD")
+        if (sha256(selected.read_bytes()).hexdigest()!=info.get("train_sha256")
+            or sha256(held.read_bytes()).hexdigest()!=info.get("heldout_sha256")
+            or info.get("train_examples",0)<8 or info.get("heldout_examples",0)<2):
+            raise RuntimeError("MULTI_TEACHER_DATASET_INTEGRITY_OR_SPLIT_HOLD")
+        dataset=selected
     if not model or not dataset:raise RuntimeError("Local base model or approved NOX dataset missing")
     return step,cp,model,dataset
 
@@ -169,6 +189,12 @@ def worker(a):
         m=json.loads(manifest.read_text(encoding="utf-8"))
         if sha256(a.dataset.read_bytes()).hexdigest()!=m.get("sha256"):
             raise RuntimeError("DISTILL_DATASET_CHANGED_AFTER_PREFLIGHT")
+    if os.environ.get("NOX_USE_MULTI_TEACHER_V2")=="1":
+        from hashlib import sha256
+        check=ROOT/"brain"/"intelligence"/"distillation"/"multi_teacher_student_v1.manifest.json"
+        proof=json.loads(check.read_text(encoding="utf-8"))
+        if sha256(a.dataset.read_bytes()).hexdigest()!=proof.get("train_sha256"):
+            raise RuntimeError("MULTI_TEACHER_TRAIN_DATASET_CHANGED")
     for line in a.dataset.read_text(encoding="utf-8-sig").splitlines():
         if not line.strip():continue
         item=json.loads(line)
@@ -193,7 +219,8 @@ def worker(a):
         step=a.start+n
         print(json.dumps({"step":step,"loss":round(float(loss.detach().cpu().item()),6),
                           "device":"DirectML","pid":os.getpid(),
-                          "data_source":"LOCAL_TEACHER_DISTILL" if os.environ.get("NOX_USE_TEACHER_DISTILL_V1")=="1"
+                          "data_source":"LOCAL_MULTI_TEACHER_V2" if os.environ.get("NOX_USE_MULTI_TEACHER_V2")=="1"
+                                      else "LOCAL_TEACHER_DISTILL" if os.environ.get("NOX_USE_TEACHER_DISTILL_V1")=="1"
                                       else "EXISTING_APPROVED_KNOWLEDGE"}),flush=True)
         if n%5==0 or n==a.steps:
             target=a.out/("step-%06d"%step)
@@ -258,7 +285,9 @@ def single_cycle():
              TMP=str(ROOT/"brain"/"skills"/"tmp"),
              TEMP=str(ROOT/"brain"/"skills"/"tmp"))
     for k in ("HF_HOME","TMP"):Path(env[k]).mkdir(parents=True,exist_ok=True)
-    print("NOX DATASET SOURCE:",dataset,"mode:",os.environ.get("NOX_USE_TEACHER_DISTILL_V1","existing"),
+    print("NOX DATASET SOURCE:",dataset,"mode:",
+          "MULTI_TEACHER_V2" if os.environ.get("NOX_USE_MULTI_TEACHER_V2")=="1"
+          else os.environ.get("NOX_USE_TEACHER_DISTILL_V1","existing"),
           flush=True)
     print("NOX AMD SAFE70 | LoRA weight continuation",checkpoint,
           "| HotSpot",hot,"C | battery",charge,"%",flush=True)
