@@ -150,6 +150,8 @@ jobs:
               $fxCssBlob -cne 'e5203f5720dc14147870ca898247fabae0e03522') { throw 'NOX_V16_CINEMA_DONOR_DRIFT_HOLD' }
           node './coordination/nox-r8/tests/test_r8_cinema_v16_integrated.cjs'
           if ($LASTEXITCODE -ne 0) { throw 'NOX_V16_CINEMA_NINE_ORBS_SOURCE_HOLD' }
+          node './coordination/nox-r8/tests/test_r8_qlora_preflight.cjs'
+          if ($LASTEXITCODE -ne 0) { throw 'P04_QLORA_READINESS_SOURCE_HOLD' }
           node './coordination/nox-r8/tests/test_r8_rag_chat_native.cjs'
           if ($LASTEXITCODE -ne 0) { throw 'R8_RAG_CHAT_SCOPE_SOURCE_HOLD' }
           node './coordination/nox-r8/tests/test_r8_voice_qwen_bridge.cjs'
