@@ -695,10 +695,13 @@ case 'knowledge.vuneo.result':{
 }
 case 'knowledge.vuneo.unknown':{
   if(!pendingVuneo||v?.requestId!==pendingVuneo.requestId||
-     v?.reason!=='NOX_VUNEO_COMMIT_UNKNOWN_HOLD'||v?.backupVerified!==true)break;
-  // Partial import may already exist: no automatic retry in this process.
+     !['NOX_VUNEO_COMMIT_UNKNOWN_HOLD','NOX_VUNEO_JOURNAL_STATE_UNKNOWN_HOLD'].includes(v?.reason)||
+     v?.backupVerified!==true)break;
+  // Neither journal COMMIT nor import outcome is known: disallow replay.
   pendingVuneo=null;vuneoImportUncertain=true;$('vuneoImport').disabled=true;
-  $('vuneoImportStatus').textContent='NOX_VUNEO_COMMIT_UNKNOWN_HOLD: результат импорта неопределён; повтор заблокирован до сверки SQLite. Проверьте локальную SQLite и статистику.';
+  $('vuneoImportStatus').textContent=v.reason+(v.reason==='NOX_VUNEO_JOURNAL_STATE_UNKNOWN_HOLD'
+    ? ': запись защитного журнала SQLite не подтверждена; повтор заблокирован до проверки.'
+    : ': результат импорта неопределён; повтор заблокирован до сверки SQLite и статистики.');
   break;
 }
 case 'knowledge.vuneo.denied':{
