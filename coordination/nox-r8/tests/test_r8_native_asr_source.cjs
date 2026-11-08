@@ -8,7 +8,7 @@ for(const s of ['using System.Speech.Recognition;','SpeechRecognitionEngine.Inst
 'case "asr.start": BeginLocalAsr(Text("locale"), Text("requestId"));',
 'case "asr.stop": StopLocalAsr(Text("requestId"));',
 'StopLocalAsrInternal("WINDOW_CLOSING", notify: false)',
-'localAsrEngine.RecognizeAsyncCancel()'])
+'engine.RecognizeAsyncCancel()'])
  assert(cs.includes(s),'NATIVE_ASR_GUARD_MISSING '+s);
 for(const s of ['id="asrInventory"','id="asrStart"','id="asrStop"','id="asrLocale"',
 "post('asr.start',{locale,requestId})","post('asr.stop',{requestId:activeAsrRequestId})",
