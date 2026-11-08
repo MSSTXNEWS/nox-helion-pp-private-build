@@ -31,6 +31,12 @@ function AssertNoTraining {
         throw 'OLD_GPU_TRAINER_RUNNING'
     }
 }
+# Required for truthful single-trainer detection. No bypass if installation fails.
+& $py -c "import psutil"
+if($LASTEXITCODE -ne 0){
+    & $py -m pip install --disable-pip-version-check --only-binary=:all: psutil==6.1.0
+    if($LASTEXITCODE -ne 0){throw 'NOX_PSUTIL_INSTALL_HOLD'}
+}
 NoxEvent 'DISCOVER' 'START' 'NOX PRIME v7 loaded from exact source archive'
 AssertNoTraining
 if ([IO.DriveInfo]::new([IO.Path]::GetPathRoot($root)).AvailableFreeSpace -lt 60GB) {
