@@ -19,7 +19,7 @@ class Response(io.BytesIO):
 class UnifiedTests(unittest.TestCase):
     def test_identity(self):
         self.assertEqual(len(u.CORE_IDS),8)
-        self.assertIn("NOX HELION",u.SYSTEM)
+        self.assertIn("NOX PRIME",u.SYSTEM)
         self.assertIn("сознани",u.SYSTEM)
     def test_route(self):
         models=["qwen3:8b","qwen2.5-coder:7b"]
