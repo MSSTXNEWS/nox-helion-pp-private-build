@@ -1,4 +1,4 @@
-# NOX PRIME V6 chat/experience/SOUL boot - does NOT launch GPU training.
+# NOX PRIME V9 single HOME / chat / experience / SOUL boot - no GPU training.
 # Windows PowerShell 5.1, ASCII-only. Use after git archive of exact SourceSha.
 param([Parameter(Mandatory=$true)][ValidatePattern('^[a-f0-9]{40}$')][string]$SourceSha)
 $ErrorActionPreference = "Stop"
@@ -74,14 +74,19 @@ try {
 finally { Pop-Location }
 
 $server = Join-Path $source "forge_live_server_v6.py"
+$ui = Join-Path $source "nox_unified_chat_v1.html"
+if (!(Test-Path $ui)) { throw "NOX PRIME V9 HOME UI MISSING" }
 $expected = (Get-FileHash -Algorithm SHA256 $server).Hash.ToLowerInvariant()
+$expectedUI = (Get-FileHash -Algorithm SHA256 $ui).Hash.ToLowerInvariant()
 $selected = $null
 foreach ($port in 18880..18896) {
     $url = "http://127.0.0.1:$port/"
     $health = $null
     try { $health = Invoke-RestMethod ($url+"api/health") -TimeoutSec 2 } catch {}
     if ($health -and $health.unified_router -eq "NOX-UNIFIED-BRAIN-V6" -and
-        $health.source_sha256 -eq $expected) {
+        $health.source_sha256 -eq $expected -and
+        $health.chat_ui_sha256 -eq $expectedUI -and
+        $health.page_schema -eq "NOX-PRIME-HOME-V9") {
         $selected = $url
         Write-Host "Reusing exact-source NOX PRIME server on $port"
         break
@@ -97,7 +102,9 @@ foreach ($port in 18880..18896) {
         try {
             $health = Invoke-RestMethod ($url+"api/health") -TimeoutSec 2
             if ($health.unified_router -eq "NOX-UNIFIED-BRAIN-V6" -and
-                $health.source_sha256 -eq $expected) {
+                $health.source_sha256 -eq $expected -and
+        $health.chat_ui_sha256 -eq $expectedUI -and
+        $health.page_schema -eq "NOX-PRIME-HOME-V9") {
                 $selected = $url
                 break
             }
@@ -125,5 +132,7 @@ Write-Host ("SOUL candidate accepted: "+$soul.available+" | scope "+$soul.scope)
 Write-Host ("Persisted chat messages restored: "+@($history.messages).Count)
 Write-Host ("Autobiography transcript episodes: "+$experience.count)
 Write-Host "S03 authority: native only; chat writes remain HOLD until OneHost approval"
-Write-Host ("NOX PRIME CHAT: "+$selected+"nox/chat") -ForegroundColor Green
-Start-Process ($selected+"nox/chat")
+Write-Host ("NOX PRIME V9 HOME: "+$selected) -ForegroundColor Green
+Write-Host ("Source SHA: "+$SourceSha+" | Server hash: "+$expected.Substring(0,12)+" | UI hash: "+$expectedUI.Substring(0,12))
+Write-Host "Previous browser tabs can still show old NOX. Use this exact new URL." -ForegroundColor Yellow
+Start-Process ($selected+"?nox=v9&ui="+$expectedUI.Substring(0,12))
