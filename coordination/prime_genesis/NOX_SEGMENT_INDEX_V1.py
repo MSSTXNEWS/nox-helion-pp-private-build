@@ -15,7 +15,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT_DEFAULT = Path(r'C:\NOX_HELION\NOX_NEW\brain\prime')
-LAYER = re.compile(r'(?:^|\.)layers\.(\d+)\.')
+LAYER = re.compile(r'(?:^|\.)(?:language_model|text_model|model)\.layers\.(\d+)\.')
 EXPECTED_LAYERS = 32
 STAGE_COUNT = 8
 
