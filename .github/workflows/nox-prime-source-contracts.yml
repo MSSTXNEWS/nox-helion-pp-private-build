@@ -27,7 +27,7 @@ jobs:
         working-directory: coordination/soul_gpu_v1
         run: |
           python -m compileall -q .
-          python -m unittest -q test_nox_prime_home_v9 test_nox_unified_brain_v1 test_nox_prime_resource_advisor_v1 test_nox_prime_cognitive_memory_v1 test_nox_prime_semantic_retriever_v1 test_nox_prime_memory_continuum_v1 test_nox_prime_experience_v1 test_nox_prime_core_matrix_v1 test_nox_prime_dream_v1 test_nox_prime_affect_runtime_v1 test_nox_prime_self_edit_lab_v1 test_nox_prime_live_pipeline_v1 test_nox_prime_soul_stage1_train test_nox_prime_absorption_v2 test_nox_prime_student_dataset_v1 test_nox_prime_progress_v1 test_nox_cleanup_exact_duplicates_v1 test_nox_prime_download_five_v1
+          python -m unittest -q test_nox_prime_home_v9 test_nox_unified_brain_v1 test_nox_prime_resource_advisor_v1 test_nox_prime_cognitive_memory_v1 test_nox_prime_semantic_retriever_v1 test_nox_prime_memory_continuum_v1 test_nox_prime_experience_v1 test_nox_prime_core_matrix_v1 test_nox_prime_dream_v1 test_nox_prime_affect_runtime_v1 test_nox_prime_self_edit_lab_v1 test_nox_prime_live_pipeline_v1 test_nox_prime_soul_stage1_train test_nox_prime_absorption_v2 test_nox_prime_student_dataset_v1 test_nox_prime_progress_v1 test_nox_prime_capability_consolidation_v1 test_nox_cleanup_exact_duplicates_v1 test_nox_prime_download_five_v1
       - name: Check shipped NOX V9 Home JavaScript syntax
         working-directory: coordination/soul_gpu_v1
         run: |
