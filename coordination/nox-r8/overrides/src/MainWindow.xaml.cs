@@ -1790,6 +1790,15 @@ public partial class MainWindow : Window
                 case "backup": BackupLocalDatabase(); break;
                 case "model.select": await SelectModel(Text("model"), Text("requestId")); break;
                 case "model.pull": await PullExistingProviderModel(Text("model"), Text("requestId")); break;
+                // P03: discovery-only official families; never represent a family as installed weights.
+                case "model.catalog":
+                    Send("model.catalog", Nox.P03.ModelCatalog.OfficialFamilies.Select(item => new {
+                        id = item.Id, name = item.Name,
+                        officialUrl = item.OfficialLibraryPage.AbsoluteUri,
+                        evidenceStatus = item.EvidenceStatus.ToString(),
+                        oneClickVerified = item.CanOfferOneClickPull
+                    }).ToArray());
+                    break;
                 case "model.cancel": {
                     string pullId = Text("requestId"), pullModel = Text("model");
                     if (!ValidWriteRequestId(pullId) || activeModelPull == null ||

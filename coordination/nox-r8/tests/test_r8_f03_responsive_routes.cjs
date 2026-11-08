@@ -33,7 +33,7 @@ const expected = {
   consciousness: ["health"],
   atlas: ["tasks.list"],
   reflection: ["history","notes.list","knowledge.stats"],
-  nexus: ["health"],
+  nexus: ["health","model.catalog"],
   forge: ["training","learn.queue"],
   core: [],
   voice: [],

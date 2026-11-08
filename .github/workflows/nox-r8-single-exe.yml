@@ -37,6 +37,11 @@ jobs:
           # D05 native source from same R8 branch; base archive remains SHA-pinned.
           Copy-Item './coordination/nox-r8/overrides/src/MainWindow.xaml.cs' './r8/src/MainWindow.xaml.cs' -Force
           Copy-Item './coordination/nox-r8/overrides/src/index.html' './r8/src/index.html' -Force
+          # P03 exact original donor Git blob; compile the catalog into the SAME WPF/EXE host.
+          $p03Catalog='./coordination/nox-r8/integrations/v16/P03/Source/P03.ModelCenter/ModelCatalog.cs'
+          $p03Blob=([string](git hash-object $p03Catalog)).Trim().ToLowerInvariant()
+          if ($LASTEXITCODE -ne 0 -or $p03Blob -cne '73664042ab4e616e8f0c1e46abb9108780ebd7b3') { throw 'P03_MODELCATALOG_ORIGINAL_BLOB_HOLD' }
+          Copy-Item $p03Catalog './r8/src/ModelCatalog.cs' -Force
           # B01: authoritative immutable inventory of actual expanded + Git-overlaid WPF sources.
           # This is cloud-build provenance, NOT an owner NOX_NEW source-parity claim.
           $srcRoot=(Resolve-Path './r8/src').Path
@@ -90,6 +95,8 @@ jobs:
           Copy-Item './coordination/nox-r8/tests/test_r8_f03_responsive_routes.cjs' './r8/test_r8_f03_responsive_routes.cjs'
           node './r8/test_r8_f03_responsive_routes.cjs'
           if ($LASTEXITCODE -ne 0) { throw 'F03_RESPONSIVE_NATIVE_ROUTES_HOLD' }
+          node './coordination/nox-r8/tests/test_r8_p03_catalog_runtime.cjs'
+          if ($LASTEXITCODE -ne 0) { throw 'P03_CATALOG_ORIGINAL_RUNTIME_HOLD' }
           Copy-Item './coordination/nox-r8/tests/test_r8_sqlite_commit_unknown.py' './r8/test_r8_sqlite_commit_unknown.py'
           python './r8/test_r8_sqlite_commit_unknown.py'
           if ($LASTEXITCODE -ne 0) { throw 'NOX_B04_SQLITE_COMMIT_UNKNOWN_HOLD' }
