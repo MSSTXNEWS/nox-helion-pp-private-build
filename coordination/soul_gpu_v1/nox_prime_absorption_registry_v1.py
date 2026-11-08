@@ -30,6 +30,56 @@ def _classify(name,details):
         return "text_llm","TEACHER_GENERAL_TO_NOX_COMPATIBLE_STUDENT","ELIGIBLE_FOR_SAFE_PROBE"
     return "unknown","PROFILE_FIRST_NO_BLIND_DISTILL","HOLD_UNKNOWN_MODEL_TYPE"
 
+def scan_local_weight_artifacts(root,max_files=2500):
+    """Discover existing own SOUL/LoRA/specialist weights without loading them.
+
+    Only files under NOX's existing canonical brain roots are considered.
+    Small files get full SHA-256. Large artifacts need an explicit offline
+    manifest/checksum job, not a fabricated VERIFIED status.
+    """
+    roots=("brain/intelligence/adapters","brain/intelligence/soul_stage1",
+           "brain/models","brain/weights","brain/voice/weights",
+           "brain/library","brain/skills")
+    root=Path(root).resolve()
+    out=[]
+    count=0
+    for relative in roots:
+        base=root/relative
+        if not base.is_dir() or base.is_symlink():continue
+        for folder,dirs,files in os.walk(base,followlinks=False):
+            dirs[:]=[d for d in dirs if not (Path(folder)/d).is_symlink() and
+                     d.lower() not in (".git",".cache","node_modules","__pycache__")]
+            for name in files:
+                if count>=max_files:return out
+                p=Path(folder)/name
+                if p.is_symlink() or p.suffix.lower() not in (
+                    ".safetensors",".gguf",".onnx",".pt",".pth",".bin"):
+                    continue
+                try:
+                    size=p.stat().st_size
+                    path=p.resolve()
+                    if root not in path.parents:continue
+                    digest=None
+                    # Hash actual model fragments that do not cause excessive
+                    # latency or disk traffic on an already busy system.
+                    if size<=134_217_728:
+                        with p.open("rb") as f:
+                            h=hashlib.sha256()
+                            for chunk in iter(lambda:f.read(4_194_304),b""):
+                                h.update(chunk)
+                            digest=h.hexdigest()
+                    out.append({
+                        "relative_path":str(path.relative_to(root)).replace("\\","/"),
+                        "size_bytes":size,"sha256":digest,
+                        "sha_status":"CHECKED" if digest else "PENDING_LARGE_FILE_CHECK",
+                        "original_retained":True,"absorption_completed":False,
+                        "training_compatibility":"UNKNOWN_NEEDS_MODEL_BASE_AUDIT"
+                    })
+                    count+=1
+                except (OSError,PermissionError):
+                    continue
+    return out
+
 def inventory(root, tags=None):
     """Build reproducible state, explicitly distinguish inventory from absorption."""
     root=Path(root)
@@ -60,11 +110,15 @@ def inventory(root, tags=None):
             "reason":"installed model != assimilated neural skill; keep original until scored student and verified backup",
         })
     result.sort(key=lambda v:v["name"].casefold())
+    artifacts=scan_local_weight_artifacts(root)
     return {"schema":SCHEMA,
       "created_utc":datetime.now(timezone.utc).isoformat(),
       "observed_source":"LOCAL_OLLAMA_TAGS",
       "nox_architecture":"NOX_PRIME_BASE + M0-M7_MEMORY + SOUL_AFFECT + DISTINCT_MODALITY_EXPERTS",
       "models":result,"installed_total":len(result),
+      "local_artifacts":artifacts,
+      "local_artifacts_count":len(artifacts),
+      "local_artifact_bytes":sum(a["size_bytes"] for a in artifacts),
       "eligible_text_teachers":sum(x["gate"]=="ELIGIBLE_FOR_SAFE_PROBE" for x in result),
       "retired_models":0,"s03_modified":False,"weights_merged":False,
       "notes":["Transfer means tested distillation and student training, NOT tensor concatenation.",
