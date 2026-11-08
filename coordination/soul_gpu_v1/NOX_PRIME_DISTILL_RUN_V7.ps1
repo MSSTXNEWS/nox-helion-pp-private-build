@@ -74,6 +74,25 @@ if($LASTEXITCODE -ne 0){
 }
 NoxEvent 'DATASET_PREP' 'SAVED' 'Local teacher training dataset saved and SHA-256 verified'
 AssertNoTraining
+# Release teacher VRAM; the light local NOX server stays online and reports
+# the temporary GPU limit rather than loading a competing heavy model.
+NoxEvent 'GPU_TRAIN' 'RUNNING' 'Releasing teacher GPU model for single SAFE70 learner'
+& ollama stop qwen3:8b 2>$null | Out-Null
+if (@($catalog | Where-Object {$_ -match '^qwen2[.]5-coder:7b\s'}).Count -gt 0) {
+    & ollama stop qwen2.5-coder:7b 2>$null | Out-Null
+}
+Start-Sleep -Seconds 2
+try {
+    $loaded = Invoke-RestMethod 'http://127.0.0.1:11434/api/ps' -TimeoutSec 8
+    $inGpu = @($loaded.models | Where-Object { $_.size_vram -gt 0 })
+    if ($inGpu.Count -gt 0) {
+        NoxEvent 'GPU_TRAIN' 'HOLD' 'Another Ollama GPU model still resident; leave it untouched'
+        throw 'GPU_VRAM_LEASE_HOLD'
+    }
+}catch [System.Net.WebException] {
+    NoxEvent 'GPU_TRAIN' 'HOLD' 'Cannot verify GPU model residency before SAFE70'
+    throw
+}
 $env:NOX_USE_TEACHER_DISTILL_V1='1'
 NoxEvent 'GPU_TRAIN' 'START' 'Actual SAFE70 DirectML LoRA training on distilled local teacher data'
 try {
