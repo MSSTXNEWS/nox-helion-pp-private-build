@@ -31,7 +31,54 @@ def atomic_json(path, data):
         temp.write(content)
         name = temp.name
     os.replace(name, path)
+    if path.name == 'NOX_9B_SEGMENT_PLAN.json':
+        render_progress(path.with_name('NOX_9B_SEGMENT_PROGRESS.html'), data)
 
+
+def render_progress(path, plan):
+    """Render an offline report from real, serialized state only."""
+    from html import escape
+    cells = []
+    for s in plan['stages']:
+        cells.append(
+            '<article><div class="num">' + escape(s['segment_id']) + '</div>'
+            '<div class="layers">Layers %s–%s</div>' % (s['layers'][0] + 1, s['layers'][-1] + 1)
+            + '<div class="status">' + escape(s['status']) + '</div>'
+            + '<div class="count">Tensor index entries: ' + str(s['tensor_count']) + '</div></article>'
+        )
+    template = '''<!doctype html><html lang="ru"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="refresh" content="30">
+<title>NOX PRIME · сегментный контроль</title><style>
+:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 60% -30%,#3e3119,#111211 60%,#080909);color:#eee8df;font:15px system-ui,Arial}
+main{max-width:1040px;margin:auto;padding:35px 22px 70px}.eyebrow{color:#d7b073;font-size:12px;letter-spacing:.24em}
+h1{font-weight:500;letter-spacing:.1em;font-size:28px}.statusbar{border:1px solid #504332;border-radius:12px;padding:13px;color:#dfc290;overflow-wrap:anywhere}.total{font-size:52px;color:#e8be75;margin-top:24px}.hint{color:#b5ab9e;font-size:12px}
+.grid{margin-top:23px;display:grid;grid-template-columns:repeat(4,1fr);gap:12px}article{min-height:147px;padding:18px;background:linear-gradient(140deg,#29241b,#111515);border:1px solid #48402e;border-radius:14px}
+.num{font-size:22px;color:#e3ba70}.layers{margin-top:6px;color:#c5b8a2;font-size:13px}.status{color:#e2a763;font-size:12px;margin-top:21px}.count{font-size:11px;color:#969390;margin-top:6px}
+footer{border-top:1px solid #54442e;margin-top:36px;padding-top:22px;color:#aaa298;font-size:13px;line-height:1.8;overflow-wrap:anywhere}@media(max-width:720px){.grid{grid-template-columns:repeat(2,1fr)}}
+</style></head><body><main><div class="eyebrow">NOX HELION · FORGE</div>
+<h1>СЕГМЕНТЫ 9B / NO-LOSS</h1><div class="statusbar">Состояние: {status}</div>
+<div class="total">{done} / 8</div><div class="hint">Физически проверенных обученных сегментов. Не «процент интеллекта».</div>
+<div class="grid">{cells}</div><footer>Полный набор 9B-весов: {inherited}. Исходные веса сохраняются без изменения.<br>
+Реальный GPU-тренер: {backend}.<br>Ревизия источника: {revision}.<br>
+SAFE70: Hot Spot 70°C × 3, 75°C немедленно; потеря датчика = HOLD.<br>
+Страница обновляется каждые 30 секунд. Для обновления данных запустите проверку сегментов повторно; без новых проверенных чекпоинтов значение 0/8 не меняется.
+</footer></main></body></html>'''
+    substitutions = {
+        'status': escape(plan['status']),
+        'done': str(plan['completed_training_segments']),
+        'cells': ''.join(cells),
+        'inherited': 'Проверен' if plan['verified_inheritance'] else 'Ожидается',
+        'backend': escape(plan['segment_training_backend']),
+        'revision': escape(str(plan.get('source_revision', 'PENDING'))),
+    }
+    html = template
+    for key, value in substitutions.items():
+        html = html.replace('{' + key + '}', value)
+    with tempfile.NamedTemporaryFile('w', encoding='utf-8', dir=path.parent, suffix='.tmp', delete=False) as fp:
+        fp.write(html)
+        temp_name = fp.name
+    os.replace(temp_name, path)
 
 def sha256_file(path, chunk=8*1024*1024):
     h = hashlib.sha256()
