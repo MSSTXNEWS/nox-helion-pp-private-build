@@ -3032,7 +3032,8 @@ public partial class MainWindow : Window
             if (commitAttempted) {
                 // An attempted COMMIT may have succeeded. Leave the UI pending
                 // until an independent refresh; do not forge owner denial.
-                try { Send("notice", "NOX_NOTE_DELETE_COMMIT_UNKNOWN_HOLD"); }
+                try { Send("notes.delete.unknown", new { requestId, id, persona,
+                        reason = "NOX_NOTE_DELETE_COMMIT_UNKNOWN_HOLD" }); }
                 catch (Exception) { /* WebView2 document may already be gone. */ }
             } else {
                 try { Send("notes.delete.denied", new { requestId, id, reason = "NOX_NOTE_DELETE_NATIVE_HOLD" }); }
