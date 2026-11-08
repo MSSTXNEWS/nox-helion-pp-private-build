@@ -102,7 +102,7 @@ def check_existing(folder,receipt_path,remote,revision):
             raise RuntimeError("LOCAL_WEIGHT_HASH_MISMATCH "+str(path))
     return True
 
-def download(root,max_new_gb=50):
+def download(root,max_new_gb=50,only=None):
     from huggingface_hub import HfApi,snapshot_download
     root=Path(root).resolve()
     if not (root/"brain").is_dir():
@@ -111,11 +111,15 @@ def download(root,max_new_gb=50):
     if output.exists() and output.is_symlink():
         raise RuntimeError("MODEL_ROOT_SYMLINK_DENIED")
     output.mkdir(parents=True,exist_ok=True)
+    selected=tuple(x for x in MODELS if not only or x[0] in set(only))
+    if not selected:raise ValueError("NO_MODELS_SELECTED")
+    if only and len(selected)!=len(set(only)):
+        raise ValueError("UNKNOWN_MODEL_SELECTION")
     api=HfApi()
     new_budget=0
     results=[]
     event(root,"START","Discover official model revisions and reuse existing files",0)
-    for i,(label,model_id,expected_max,role) in enumerate(MODELS,1):
+    for i,(label,model_id,expected_max,role) in enumerate(selected,1):
         print(f"\nNOX [{i}/{len(MODELS)}] {model_id} -> {role}",flush=True)
         revision,remote=official_metadata(api,model_id)
         dest=output/label/("revision_"+revision[:12])
@@ -177,7 +181,7 @@ def download(root,max_new_gb=50):
         print("SHA256 VERIFIED",model_id,"bytes",size_bytes,flush=True)
         results.append({"model":model_id,"state":"SHA256_CHECKED",
                         "revision":revision,"path":str(dest)})
-    event(root,"DONE","All five official NOX base/experts downloaded or verified",5)
+    event(root,"DONE","NOX selected trainable bases downloaded or verified",len(selected))
     return {"completed":len(results),"new_bytes":new_budget,
             "root":str(output),"models":results,
             "important":"Downloads only; all five remain separate until compatible student training and evaluation."}
@@ -186,9 +190,11 @@ if __name__=="__main__":
     p=argparse.ArgumentParser()
     p.add_argument("--root",type=Path,default=Path(r"C:\NOX_HELION\NOX_NEW"))
     p.add_argument("--budget-gb",type=float,default=50)
+    p.add_argument("--only",action="append",default=[],
+                   help="Download ONLY selected official model IDs; e.g. Qwen3-0.6B")
     args=p.parse_args()
     try:
-        result=download(args.root,args.budget_gb)
+        result=download(args.root,args.budget_gb,args.only)
         print(json.dumps(result,ensure_ascii=False,indent=2),flush=True)
     except Exception as ex:
         event(args.root,"HOLD",type(ex).__name__+" "+str(ex)[:110],0)
