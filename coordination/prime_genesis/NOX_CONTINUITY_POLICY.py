@@ -280,7 +280,13 @@ def install(brain):
     report = progdir / "NOX_CONTINUITY_READBACK.json"
     memory_status = persist_memory(brain, progress)
     patch_status = block_host_teacher(brain / "NOX_EMBRYO_GENESIS_V1")
+    # Fail closed: do not claim VM-only policy if an unknown local script
+    # could still send teacher prompts directly to host Ollama.
+    if patch_status.startswith("HOST_TEACHER_PATCH_HOLD") or patch_status == "EMBRYO_NOX_PY_MISSING":
+        raise RuntimeError("VM_ONLY_NOT_ENFORCED: " + patch_status)
     web_status = attach_research_fallback(brain / "NOX_EMBRYO_GENESIS_V1")
+    if web_status.startswith("ASK_PATCH_HOLD"):
+        raise RuntimeError("WEB_RETRIEVAL_NOT_CONNECTED: " + web_status)
     vmfile = vm_policy(brain)
     progress.update({"memory_status": memory_status,
                      "old_teacher_route_status": patch_status,
