@@ -1969,6 +1969,7 @@ public partial class MainWindow : Window
                 case "system.status": _ = SendSystemStateAsync(); break;
                 case "gpu.guardian": _ = SendP04GpuGuardianAsync(); break;
                 case "qlora.preflight": _ = SendP04QloraPreflightAsync(); break;
+                case "qlora.prepare": PrepareP04WorkerOnOwnerConsent(); break;
                 default: Send("error", "Unknown operation: " + kind); break;
             }
         }
@@ -3039,9 +3040,108 @@ public partial class MainWindow : Window
     // Read-only native P04 QLoRA prerequisite inventory; no model, GPU training or
     // Python process is launched. The worker remains HOLD until exact approved
     // weights/dataset/rights verifier and live GPU E2E have been attested.
+    // Source-bound QLoRA worker carried INSIDE this immutable EXE. Preparing is
+    // a native owner-acknowledged local extraction, never training or a second app.
+    private static readonly string[] P04WorkerNames = {
+        "train_qlora.py", "preflight_local_gpu.py", "merge_qlora_adapter.py",
+        "model_snapshot_probe.py", "requirements-qlora.txt"
+    };
+    private static string P04WorkerRoot() => Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "NOX_HELION", "P04", "worker-v1");
+
+    private static bool EmbeddedP04WorkerAvailable()
+    {
+        var assembly = typeof(MainWindow).Assembly;
+        return P04WorkerNames.All(name =>
+            assembly.GetManifestResourceInfo("NOX.HELION.P04." + name) is not null);
+    }
+
+    private void PrepareP04WorkerOnOwnerConsent()
+    {
+        if (selfTestRequested || providerProbeStopped) {
+            Send("qlora.prepare.receipt", new {
+                saved = false, trainingStarted = false, status = "HOLD_NO_OWNER_CONSENT"
+            }); return;
+        }
+        var decision = MessageBox.Show(this,
+            "Подготовить в AppData оригинальные P04 QLoRA скрипты, встроенные в этот NOX?\n" +
+            "Это НЕ запускает Python, не скачивает веса и не начинает обучение.\n" +
+            "Существующие отличающиеся файлы будут сохранены, операция остановится.",
+            "NOX · P04 WORKER", MessageBoxButton.YesNo,
+            MessageBoxImage.Warning, MessageBoxResult.No);
+        if (decision != MessageBoxResult.Yes) {
+            Send("qlora.prepare.receipt", new {
+                saved = false, trainingStarted = false, status = "DECLINED"
+            }); return;
+        }
+        try
+        {
+            var assembly = typeof(MainWindow).Assembly;
+            var workerRoot = P04WorkerRoot();
+            // Compare every existing file before the first write.
+            var bundled = new List<(string Name, byte[] Bytes, string Sha)>();
+            foreach (var name in P04WorkerNames)
+            {
+                using var embedded = assembly.GetManifestResourceStream("NOX.HELION.P04." + name)
+                    ?? throw new InvalidOperationException("P04_EMBEDDED_WORKER_SOURCE_MISSING_HOLD");
+                using var buffer = new MemoryStream();
+                embedded.CopyTo(buffer);
+                var bytes = buffer.ToArray();
+                if (bytes.Length < 1 || bytes.Length > 2_000_000)
+                    throw new InvalidOperationException("P04_EMBEDDED_WORKER_SIZE_HOLD");
+                var sha = Convert.ToHexString(SHA256.HashData(bytes));
+                var existing = Path.Combine(workerRoot, name);
+                if (File.Exists(existing) &&
+                    !string.Equals(Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(existing))),
+                        sha, StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidOperationException("P04_EXISTING_WORKER_DIFFERS_NOLOSS_HOLD");
+                bundled.Add((name, bytes, sha));
+            }
+            Directory.CreateDirectory(workerRoot);
+            foreach (var item in bundled)
+            {
+                var destination = Path.Combine(workerRoot, item.Name);
+                if (File.Exists(destination)) continue;
+                var temp = Path.Combine(workerRoot, "." + Guid.NewGuid().ToString("N") + ".tmp");
+                try
+                {
+                    File.WriteAllBytes(temp, item.Bytes);
+                    if (!string.Equals(Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(temp))),
+                        item.Sha, StringComparison.OrdinalIgnoreCase))
+                        throw new InvalidOperationException("P04_WORKER_TEMP_HASH_HOLD");
+                    // Atomic, create-only: never overwrite an existing owner file.
+                    File.Move(temp, destination, overwrite: false);
+                }
+                finally { if (File.Exists(temp)) File.Delete(temp); }
+            }
+            foreach (var item in bundled)
+            {
+                var file = Path.Combine(workerRoot, item.Name);
+                if (!File.Exists(file) ||
+                    !string.Equals(Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(file))),
+                        item.Sha, StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidOperationException("P04_WORKER_READBACK_HASH_HOLD");
+            }
+            Send("qlora.prepare.receipt", new {
+                saved = true, source = "P04_QLORA_EXACT_EMBEDDED_WORKER",
+                root = workerRoot, files = bundled.Count,
+                trainingStarted = false, checkpointVerified = false, modelMergeVerified = false,
+                status = "PREPARED_SOURCE_ONLY_TRAINING_HOLD"
+            });
+        }
+        catch (Exception ex)
+        {
+            Send("qlora.prepare.receipt", new {
+                saved = false, trainingStarted = false, checkpointVerified = false,
+                status = "P04_PREPARE_" + ex.GetType().Name + "_HOLD"
+            });
+        }
+    }
+
     private async Task SendP04QloraPreflightAsync()
     {
-        const string trainingRoot = @"C:\NOX_HELION\APP\NOX_TRAINING";
+        var trainingRoot = P04WorkerRoot();
         try
         {
             // Never recurse or hash owner datasets from a diagnostics click.
