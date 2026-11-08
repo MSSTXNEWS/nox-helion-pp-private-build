@@ -25,6 +25,7 @@ public partial class MainWindow : Window
     private readonly SemaphoreSlim generationLock = new(1, 1);
     // Single-flight: only the explicit WebView2 owner request may spawn Ollama.
     private readonly SemaphoreSlim engineStartLock = new(1, 1);
+    private readonly SemaphoreSlim sensorReadLock = new(1, 1);
     // Reattach by polling the existing loopback service; never create another backend.
     private readonly System.Windows.Threading.DispatcherTimer providerReconnectTimer = new()
         { Interval = TimeSpan.FromSeconds(25) };
@@ -149,7 +150,7 @@ public partial class MainWindow : Window
                 Send("settings", ReadPreferences());
                 Send("tasks", ReadTasks());
                 SendPersonaNotes();
-                Send("system", GetSystemState());
+                _ = SendSystemStateAsync();
                 if (legacyImportHold != null) Send("notice", legacyImportHold);
                 // Runtime evidence belongs to the process that actually loaded WebView2,
                 // not to a source-only build or a previously launched EXE.
@@ -1842,7 +1843,7 @@ public partial class MainWindow : Window
                 case "knowledge.stats": Send("knowledge.stats", knowledge.Stats()); break;
                 case "knowledge.import": ImportKnowledgeByDialog(); break;
                 case "knowledge.vuneo": ImportVuneoByConsent(Text("requestId")); break;
-                case "system.status": Send("system", GetSystemState()); break;
+                case "system.status": _ = SendSystemStateAsync(); break;
                 default: Send("error", "Unknown operation: " + kind); break;
             }
         }
@@ -2793,7 +2794,26 @@ public partial class MainWindow : Window
         return prefs;
     }
 
-    private object GetSystemState()
+    // nvidia-smi may take 2500ms; never block WebView2 IPC or the STOP dispatcher.
+    // Coalesce duplicate refresh requests to avoid competing GPU queries.
+    private async Task SendSystemStateAsync()
+    {
+        if (!await sensorReadLock.WaitAsync(0)) return;
+        try
+        {
+            var gpu = await Task.Run(GetGpuStatus);
+            if (!Dispatcher.HasShutdownStarted && !Dispatcher.HasShutdownFinished)
+                Send("system", GetSystemState(gpu));
+        }
+        catch (Exception ex)
+        {
+            if (!Dispatcher.HasShutdownStarted && !Dispatcher.HasShutdownFinished)
+                Send("error", "NOX_SENSOR_STATUS_HOLD: " + ex.GetType().Name);
+        }
+        finally { sensorReadLock.Release(); }
+    }
+
+    private object GetSystemState(object gpuSnapshot)
     {
         using var proc = Process.GetCurrentProcess();
         return new {
@@ -2801,7 +2821,7 @@ public partial class MainWindow : Window
             model = CurrentModel,
             endpoint = Api,
             processMemoryMb = Math.Round(proc.WorkingSet64 / 1048576.0, 1),
-            gpu = GetGpuStatus(),
+            gpu = gpuSnapshot,
             release = "NOX_HELION_R5_FUNCTIONAL_BUILD",
             knowledge = knowledge.Stats(),
             runtime = Environment.Version.ToString(),
@@ -2822,27 +2842,57 @@ public partial class MainWindow : Window
             };
             using var p = Process.Start(psi);
             if (p == null) return new { available = false, reason = "not_started" };
+            // Drain redirected CSV while waiting: large multi-adapter output must not fill a pipe.
+            var outputTask = p.StandardOutput.ReadToEndAsync();
             if (!p.WaitForExit(2500)) {
                 try { p.Kill(entireProcessTree: true); } catch { }
                 return new { available = false, reason = "timeout" };
             }
-            var line = p.StandardOutput.ReadLine();
-            if (p.ExitCode != 0 || string.IsNullOrWhiteSpace(line))
+            // The parent can exit while a spawned child still holds the inherited
+            // stdout handle; ReadToEndAsync then never finishes. Keep sensor
+            // collection bounded even after WaitForExit succeeds.
+            if (!outputTask.Wait(400))
+                return new { available = false, reason = "stdout_timeout" };
+            var csv = outputTask.GetAwaiter().GetResult();
+            if (p.ExitCode != 0 || string.IsNullOrWhiteSpace(csv))
                 return new { available = false, reason = "nvidia_smi_unavailable" };
-            var cells = line.Split(',').Select(c => c.Trim()).ToArray();
-            if (cells.Length < 5 ||
-                !double.TryParse(cells[4], System.Globalization.NumberStyles.Float,
-                  System.Globalization.CultureInfo.InvariantCulture, out var temp) ||
-                !double.IsFinite(temp) ||
-                !double.TryParse(cells[1], System.Globalization.NumberStyles.Float,
-                    System.Globalization.CultureInfo.InvariantCulture, out var total) ||
-                !double.TryParse(cells[2], System.Globalization.NumberStyles.Float,
-                    System.Globalization.CultureInfo.InvariantCulture, out var used) ||
-                !int.TryParse(cells[3], out var usage))
+            // nvidia-smi emits one CSV row per installed NVIDIA adapter.
+            // A cool GPU #0 must never conceal an overheating GPU #1.
+            var rows = csv.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+            var names = new List<string>();
+            double hottest = double.NegativeInfinity, totalMiB = 0, usedMiB = 0;
+            int peakUsage = 0;
+            foreach (var row in rows)
+            {
+                var cells = row.Split(',').Select(c => c.Trim()).ToArray();
+                // Join leading fields back in case a quoted adapter name contains commas.
+                var name = string.Join(",", cells.Take(Math.Max(0, cells.Length - 4))).Trim().Trim('"');
+                if (cells.Length < 5 || string.IsNullOrWhiteSpace(name) ||
+                    !double.TryParse(cells[^1], System.Globalization.NumberStyles.Float,
+                      System.Globalization.CultureInfo.InvariantCulture, out var temp) ||
+                    !double.IsFinite(temp) || temp < 0 || temp > 150 ||
+                    !double.TryParse(cells[^4], System.Globalization.NumberStyles.Float,
+                      System.Globalization.CultureInfo.InvariantCulture, out var capacity) ||
+                    !double.TryParse(cells[^3], System.Globalization.NumberStyles.Float,
+                      System.Globalization.CultureInfo.InvariantCulture, out var allocated) ||
+                    !double.IsFinite(capacity) || !double.IsFinite(allocated) ||
+                    capacity < 0 || allocated < 0 || allocated > capacity ||
+                    !int.TryParse(cells[^2], out var utilization) ||
+                    utilization < 0 || utilization > 100)
+                    return new { available = false, reason = "unexpected_format" };
+                names.Add(name);
+                hottest = Math.Max(hottest, temp);
+                totalMiB += capacity;
+                usedMiB += allocated;
+                peakUsage = Math.Max(peakUsage, utilization);
+            }
+            if (names.Count == 0 || !double.IsFinite(totalMiB) || !double.IsFinite(usedMiB))
                 return new { available = false, reason = "unexpected_format" };
-            return new { available = true, name = cells[0], vramTotalMiB = total,
-                vramUsedMiB = used, utilizationPercent = Math.Clamp(usage, 0, 100), temperatureC = temp,
-                thermalHold = temp >= 65, coolingPauseSeconds = temp >= 65 ? 180 : 0 };
+            return new { available = true,
+                name = names.Count == 1 ? names[0] : "NVIDIA GPUs (" + names.Count + ")",
+                gpuCount = names.Count, vramTotalMiB = totalMiB, vramUsedMiB = usedMiB,
+                utilizationPercent = peakUsage, temperatureC = hottest,
+                thermalHold = hottest >= 65, coolingPauseSeconds = hottest >= 65 ? 180 : 0 };
         }
         catch (System.ComponentModel.Win32Exception) { return new { available = false, reason = "nvidia_smi_not_installed" }; }
         catch (Exception ex) { return new { available = false, reason = ex.GetType().Name }; }
