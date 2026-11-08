@@ -6,8 +6,10 @@ cs=(root/'src/MainWindow.xaml.cs').read_text(encoding='utf-8')
 html=(root/'src/index.html').read_text(encoding='utf-8')
 for token in ('WindowsIdentity.GetCurrent()', 'MessageBoxButton.YesNo', 'SELFTEST_NO_OWNER_CONSENT',
               'AWAITING_VERIFIED_WORKER', 'CANCELLED_BY_OWNER','trainingStarted=false',
-              'NO_ATTESTED_GPU_WORKER','temperature.gpu','temp >= 65','ReadLearnQueue()'):
+              'NO_ATTESTED_GPU_WORKER','temperature.gpu','hottest >= 65','ReadLearnQueue()'):
  assert token in cs, token
+assert 'gpuCount = names.Count' in cs, 'D05_MULTIGPU_TELEMETRY_HOLD'
+assert 'sensorReadLock.WaitAsync(0)' in cs, 'D05_STOP_NOT_BLOCKED_BY_SENSORS_HOLD'
 for token in ('id="learnRequest"','id="learnCancel"', "post('learn.request',{requestId})",
               "post('learn.cancel',{requestId})","case 'learn.receipt'","case 'learn.queue'"):
  assert token in html,token
