@@ -8,6 +8,7 @@ from __future__ import annotations
 import hashlib
 import json
 from pathlib import Path, PurePosixPath
+from tempfile import TemporaryDirectory
 import re
 import subprocess
 import time
@@ -76,7 +77,7 @@ def _generate(model,prompt):
         data=json.loads(r.read(500_000))
     return json.loads((data.get("message") or {}).get("content") or "{}")
 
-def propose(repo,root,source_path,objective,model=None):
+def propose(repo,root,source_path,objective,model=None,source_sha=None):
     """Read source, request model diff, git apply --check, stage immutable candidate."""
     repo=Path(repo).resolve()
     root=Path(root).resolve()
@@ -84,8 +85,9 @@ def propose(repo,root,source_path,objective,model=None):
     if not allowable_path(source_path):raise ValueError("SOURCE_NOT_ALLOWLISTED")
     if not isinstance(objective,str) or not 10<=len(objective)<=1000:
         raise ValueError("INVALID_OBJECTIVE")
-    head=_git(repo,"rev-parse","HEAD").strip()
-    if not re.fullmatch(r"[a-f0-9]{40}",head):
+    head=(source_sha if source_sha is not None else
+          _git(repo,"rev-parse","HEAD").strip())
+    if not isinstance(head,str) or not re.fullmatch(r"[a-f0-9]{40}",head):
         raise RuntimeError("INVALID_SOURCE_SHA")
     source=_git(repo,"show",head+":"+source_path)
     if len(source)>35_000:raise RuntimeError("SOURCE_TOO_BIG_FOR_SAFE_PROPOSAL")
@@ -98,10 +100,15 @@ def propose(repo,root,source_path,objective,model=None):
     if not isinstance(candidate,dict):raise ValueError("MODEL_JSON_NOT_OBJECT")
     diff=candidate.get("diff")
     validate_diff(diff,source_path)
-    # git apply --check is verification ONLY. It never applies the diff.
-    check=subprocess.run(["git","-C",str(repo),"apply","--check","-"],
-        input=diff,text=True,capture_output=True,timeout=20)
-    check_ok=check.returncode==0
+    # Check against a temporary copy of EXACT pinned source, never a
+    # potentially stale owner's working-tree HEAD. This is non-executing.
+    with TemporaryDirectory(prefix="nox_forge_validate_") as temp:
+        expected=Path(temp)/source_path
+        expected.parent.mkdir(parents=True,exist_ok=True)
+        expected.write_text(source,encoding="utf-8")
+        check=subprocess.run(["git","-C",temp,"apply","--check","-"],
+            input=diff,text=True,capture_output=True,timeout=20)
+        check_ok=check.returncode==0
     digest=hashlib.sha256(diff.encode("utf-8")).hexdigest()
     path=(root/"brain"/"experiments"/"self_edits"/"pending"/
           (str(int(time.time()))+"_"+digest[:16]+".json"))
