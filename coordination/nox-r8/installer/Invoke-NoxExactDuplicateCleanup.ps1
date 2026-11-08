@@ -28,18 +28,18 @@ if (!$canonical.StartsWith($rootsafe,[StringComparison]::OrdinalIgnoreCase)) {
   throw 'NOX_CANONICAL_OUTSIDE_ROOT'
 }
 $protected = '(?i)(^|[\\/])(models|weights|memory|sqlite|checkpoints|datasets|training|\.git|90_АРХИВ_ПРОЕКТА)([\\/]|$)'
-$matches = [System.Collections.Generic.List[string]]::new()
+$duplicates = [System.Collections.Generic.List[string]]::new()
 $skipped = 0
 foreach($f in Get-ChildItem -LiteralPath $base -File -Recurse -Force -ErrorAction Stop) {
   if ($f.FullName -eq $canonical) { continue }
   if ($f.FullName -match $protected -or $f.Attributes.HasFlag([IO.FileAttributes]::ReparsePoint)) { $skipped++; continue }
   if ($f.Extension.ToLowerInvariant() -ne $extension -or $f.Length -ne $canonicalInfo.Length) { continue }
   $hash=(Get-FileHash -LiteralPath $f.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
-  if ($hash -ceq $actual) { $matches.Add($f.FullName) }
+  if ($hash -ceq $actual) { $duplicates.Add($f.FullName) }
 }
 $deleted = 0
 if ($Apply) {
-  foreach($file in $matches) {
+  foreach($file in $duplicates) {
     # Revalidate BOTH files just before deletion; no "old but different" purges.
     if ((Get-FileHash -LiteralPath $canonical -Algorithm SHA256).Hash.ToLowerInvariant() -cne $actual) { throw 'NOX_CANONICAL_CHANGED_HOLD' }
     if ((Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash.ToLowerInvariant() -cne $actual) { throw 'NOX_DUPLICATE_CHANGED_HOLD' }
@@ -54,10 +54,10 @@ if ($Apply) {
   canonical_sha256 = $actual
   root = $base
   mode = $(if ($Apply) {'APPLY'} else {'DRY_RUN'})
-  matched_exact_duplicates = $matches.Count
+  matched_exact_duplicates = $duplicates.Count
   deleted = $deleted
   protected_skipped = $skipped
-  duplicate_paths = @($matches.ToArray())
+  duplicate_paths = @($duplicates.ToArray())
   unique_versions_removed = 0
   conclusion = 'EXACT_BYTES_ONLY'
 } | ConvertTo-Json -Depth 5
