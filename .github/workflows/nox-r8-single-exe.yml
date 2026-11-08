@@ -195,6 +195,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'P04_QLORA_READINESS_SOURCE_HOLD' }
           node './coordination/nox-r8/tests/test_r8_rag_chat_native.cjs'
           if ($LASTEXITCODE -ne 0) { throw 'R8_RAG_CHAT_SCOPE_SOURCE_HOLD' }
+          node './coordination/nox-r8/tests/test_r8_native_asr_source.cjs'
+          if ($LASTEXITCODE -ne 0) { throw 'NOX_NATIVE_RU_ES_ASR_SOURCE_HOLD' }
           node './coordination/nox-r8/tests/test_r8_voice_tts_ru_es.cjs'
           if ($LASTEXITCODE -ne 0) { throw 'R8_RU_ES_LOCAL_TTS_SOURCE_HOLD' }
           node './coordination/nox-r8/tests/test_r8_voice_qwen_bridge.cjs'
@@ -272,6 +274,7 @@ jobs:
                 $n.runId -cne $runId -or $n.pid -ne $p.Id -or
                 $stamp -lt $started -or !$n.wpfWebView2Accepted -or
                 $n.checks.real_webview2_eight_routes -ne 'PASS' -or
+                $n.checks.p02_native_ru_es_asr_installed_inventory_no_microphone -ne 'PASS' -or
                 $n.checks.p04_native_embedded_qlora_five_sources -ne 'PASS' -or
                 $n.checks.p01_native_webview2_v16_cinema_nine_orbs -ne 'PASS' -or
                 $n.checks.p03_native_webview2_catalog_31_families -ne 'PASS' -or
