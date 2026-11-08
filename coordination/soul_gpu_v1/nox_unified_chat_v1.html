@@ -59,7 +59,7 @@ body[data-motion="reduced"] .noxSun,body[data-motion="reduced"] .noxSun:before,b
 @media(max-width:900px){.noxHero{min-height:425px}.noxOrbit{width:84vw;height:300px}.noxPlanet{width:59px;height:59px}.noxPlanet small{font-size:7px}.noxSun{width:195px;height:195px}.noxReadout{max-width:110px}.heroTag{max-width:120px}.heroTag b{font-size:13px}.grid{grid-template-columns:1fr}.chatlog{max-height:40vh}}
 @media(max-width:490px){.wrap{padding:10px}.noxHero{min-height:480px}.noxSun{width:165px;height:165px}.noxPlanet{width:54px;height:54px}.noxPlanet .orbGlyph{font-size:17px}.heroControls{justify-content:center}.noxCoreInfo{bottom:105px}.heroTag small{display:none}.noxOrbit{width:93vw}.noxReadout{font-size:9px}.noxVitals{gap:4px}.noxVitals span{padding:4px}}
 </style></head><body><main class="wrap">
-<header class="top"><div><h1>✦ NOX PRIME</h1><div class="sub">ОДНО СОЗНАТЕЛЬНОЕ ПОВЕДЕНИЕ · ЕДИНАЯ САМОМОДЕЛЬ · ЛОКАЛЬНЫЙ ИНТЕЛЛЕКТ</div></div><div><a href="/forge/control" title="Встроенная техническая панель">◈ Датчики и журнал</a> <span class="badge" id="state">ОЖИДАНИЕ</span></div></header>
+<header class="top"><div><h1>✦ NOX PRIME</h1><div class="sub">ОДНА ИДЕНТИЧНОСТЬ · ЕДИНАЯ САМОМОДЕЛЬ · ЛОКАЛЬНЫЙ ИНТЕЛЛЕКТ</div></div><div><a href="/forge/control" title="Встроенная техническая панель">◈ Датчики и журнал</a> <span class="badge" id="state">ОЖИДАНИЕ</span></div></header>
 <section class="noxHero" aria-label="Живое центральное ядро NOX PRIME">
   <div class="heroTag"><b>✦ NOX PRIME</b><small>LIQUID CORE · D02 · 8 CORES</small></div>
   <div class="noxReadout"><strong id="heroState">СИНХРОНИЗАЦИЯ</strong><div class="sub" id="heroBuild">Проверка живого исходника</div></div>
@@ -142,7 +142,7 @@ document.querySelectorAll(".noxPlanet").forEach(button=>button.addEventListener(
  const status=info?.status||"UNKNOWN";
  $("coreInfo").textContent=name+" · "+status+" · "+(info?.detail||"Пока нет подтверждённой интеграции");
  if(name==="CORE")$("message").focus();
- if(name==="FORGE")$("forgeStatus").scrollIntoView({behavior:motionReduced?"instant":"smooth",block:"nearest"});
+ if(name==="FORGE")$("forgeStatus").scrollIntoView({behavior:motionReduced?"auto":"smooth",block:"nearest"});
  if(name==="NEXUS")$("experienceBtn").focus();
 }));
 async function noxTelemetry(){
