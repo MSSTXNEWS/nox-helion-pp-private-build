@@ -187,6 +187,63 @@ def process_commands():
             raise RuntimeError("PROCESS_INSPECTION_INCOMPLETE")
     return cmds
 
+def obsolete_boot_copies(root,cmdlines):
+    """Old byte-identical Git source exports, never active or modified files."""
+    brain=Path(root).resolve()/"brain"
+    base=brain/"skills"
+    repo=brain/"source"/"repo"
+    if not base.is_dir() or not (repo/".git").is_dir():return []
+    found=defaultdict(list)
+    for folder in base.iterdir():
+        if not folder.is_dir() or folder.is_symlink():continue
+        match=re.fullmatch(r"(PRIME_(?:LIVE|V8|STEP1))_([a-f0-9]{12})",folder.name)
+        if not match:continue
+        if any(str(folder).casefold() in command.casefold() for command in cmdlines):
+            continue
+        try:
+            commit=subprocess.run(
+                ["git","-C",str(repo),"rev-parse","--verify",match[2]+"^{commit}"],
+                text=True,capture_output=True,check=True,timeout=15).stdout.strip()
+            if not re.fullmatch(r"[a-f0-9]{40}",commit):continue
+            files=list(folder.rglob("*"))
+            if not files or len(files)>500:continue
+            valid=True
+            count=0
+            for file in files:
+                if file.is_symlink():
+                    valid=False
+                    break
+                if not file.is_file():continue
+                rel=file.relative_to(folder).as_posix()
+                if not rel.startswith("coordination/soul_gpu_v1/"):
+                    valid=False
+                    break
+                original=subprocess.run(
+                    ["git","-C",str(repo),"rev-parse",commit+":"+rel],
+                    capture_output=True,text=True,timeout=10)
+                current=subprocess.run(
+                    ["git","hash-object",str(file)],
+                    capture_output=True,text=True,timeout=10)
+                if (original.returncode!=0 or current.returncode!=0
+                    or original.stdout.strip()!=current.stdout.strip()):
+                    valid=False
+                    break
+                count+=1
+            if not valid or count==0:continue
+            found[match[1]].append((folder,commit,folder.stat().st_mtime))
+        except (OSError,subprocess.SubprocessError,PermissionError):
+            continue
+    planned=[]
+    # Keep one most recent, fully verified source copy for each purpose.
+    for family,items in found.items():
+        items.sort(key=lambda x:x[2],reverse=True)
+        for folder,commit,_ in items[1:]:
+            planned.append({"type":"GIT_VERIFIED_OBSOLETE_BOOT_COPY",
+                            "path":str(folder),"git_commit":commit,
+                            "kept":str(items[0][0]),
+                            "restorable":True})
+    return planned
+
 def write_report(folder,data):
     folder.mkdir(parents=True,exist_ok=True)
     path=folder/("cleanup_"+datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")+
@@ -205,9 +262,10 @@ def cleanup(root,execute=False,client=ollama_api,run=None):
     alias_jobs=aliases(catalog,active,refs)
     commands=process_commands()
     snapshot_jobs=old_snapshots(root,commands)
+    boot_jobs=obsolete_boot_copies(root,commands)
     report={"schema":"NOX_SAFE_EXACT_DUPLICATES_V1","mode":"EXECUTE" if execute else "PLAN",
             "at_utc":datetime.now(timezone.utc).isoformat(),
-            "aliases":alias_jobs,"snapshots":snapshot_jobs,
+            "aliases":alias_jobs,"snapshots":snapshot_jobs,"obsolete_boot_copies":boot_jobs,
             "removed":[],"holds":[],"protected":{"loaded":sorted(active),
             "hardcoded":sorted(PROTECTED),"referenced":sorted(refs)},
             "not_touched":["S03","own trained LoRA","SOUL","unique model digests",
@@ -247,10 +305,22 @@ def cleanup(root,execute=False,client=ollama_api,run=None):
                 report["removed"].append(job)
             except (OSError,PermissionError,RuntimeError) as ex:
                 report["holds"].append({"item":job["path"],"reason":type(ex).__name__})
+        for job in boot_jobs:
+            try:
+                current=obsolete_boot_copies(root,process_commands())
+                if not any(row["path"]==job["path"] and
+                           row["git_commit"]==job["git_commit"] for row in current):
+                    raise RuntimeError("BOOT_COPY_CHANGED_OR_RUNNING")
+                shutil.rmtree(job["path"])
+                report["removed"].append(job)
+            except (OSError,PermissionError,RuntimeError) as exc:
+                report["holds"].append({"item":job["path"],
+                                        "reason":type(exc).__name__})
     report["bytes_reclaimed_measured"]=max(0,shutil.disk_usage(root).free-free_before)
     final_path=write_report(root/"brain"/"telemetry"/"cleanup",report)
     return {"plan":str(report_path),"result":str(final_path),
             "candidate_aliases":len(alias_jobs),"candidate_old_snapshots":len(snapshot_jobs),
+            "candidate_old_boot_copies":len(boot_jobs),
             "actually_removed":len(report["removed"]),
             "actual_reclaimed_bytes":report["bytes_reclaimed_measured"],
             "holds":report["holds"],"unique_trained_weights_removed":0}
