@@ -104,6 +104,7 @@ def run(root,questions_per_model=3,max_models=40):
     completed=0
     failures=[]
     teachers=[]
+    current_teacher=None
     log_event(root,"TEACHER_DISTILL","START",
          "Sequential local text/coder teacher distillation started",actual=0,total=len(jobs))
     try:
@@ -112,6 +113,9 @@ def run(root,questions_per_model=3,max_models=40):
                 model=donor["name"]
                 if trainer_active() is not False:
                     raise RuntimeError("GPU_TRAINER_APPEARED_DURING_TEACHER_RUN")
+                if current_teacher!=model:
+                    if current_teacher:_unload(current_teacher)
+                    current_teacher=model
                 try:
                     answer,usage=_teacher_text(model,prompt)
                     record={"messages":[{"role":"user","content":prompt},
@@ -137,8 +141,9 @@ def run(root,questions_per_model=3,max_models=40):
                     log_event(root,"TEACHER_DISTILL","HOLD",
                         "Teacher "+model+" failed "+type(ex).__name__,
                         actual=completed,total=len(jobs))
-                finally:
-                    _unload(model)
+        if current_teacher:
+            _unload(current_teacher)
+            current_teacher=None
         if completed<1:raise RuntimeError("NO_TEACHER_EXAMPLES_CAPTURED")
         # Preserve partial if all jobs failed; otherwise materialize one immutable corpus.
         os.replace(temp,destination)
@@ -167,6 +172,8 @@ def run(root,questions_per_model=3,max_models=40):
                 "skipped":len(excluded),"failed":len(failures),
                 "state":report["status"]}
     except BaseException as exc:
+        if current_teacher:
+            _unload(current_teacher)
         log_event(root,"TEACHER_DISTILL","HOLD",
                   "Multi-teacher candidate preparation HOLD: "+type(exc).__name__,
                   actual=completed,total=len(jobs))
