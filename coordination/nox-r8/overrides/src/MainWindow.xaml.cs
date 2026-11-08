@@ -471,6 +471,24 @@ public partial class MainWindow : Window
             if (!asrReadback)
                 throw new InvalidOperationException("NOX_NATIVE_RU_ES_ASR_INVENTORY_HOLD");
 
+            // Native E2E DOM proof of the source-probe control. We NEVER click
+            // the owner-only picker or run model hash reads in CI.
+            var snapshotProbeUi = await Browser.CoreWebView2.ExecuteScriptAsync("""
+                (() => {
+                  const revision=document.getElementById('qloraModelRevision');
+                  const probe=document.getElementById('qloraSnapshotProbe');
+                  const result=document.getElementById('qloraSnapshotState');
+                  return !!revision && revision.maxLength===40 &&
+                         !!probe && probe.tagName==='BUTTON' &&
+                         !!result && result.getAttribute('role')==='status' &&
+                         result.textContent.includes('не проверены');
+                })()
+                """);
+            checks["p04_native_model_snapshot_picker_no_read"] =
+                snapshotProbeUi=="true" ? "PASS" : "FAIL";
+            if (snapshotProbeUi!="true")
+                throw new InvalidOperationException("NOX_P04_NATIVE_MODEL_PROBE_UI_HOLD");
+
             // Native E07-grade runtime check of the ORIGINAL nine D02 elements
             // decorated by V16 CINEMA FX in the same WPF/WebView2 process.
             // No synthetic DOM, no alternate preview or stubbed renderer.
@@ -993,7 +1011,7 @@ public partial class MainWindow : Window
             catch (Exception ex) { error = (error ?? "") + " binary_hash:" + ex.Message; }
             var requiredChecks = UiSmokeSettingsRestartRequested
                 ? new[] { "isolated_sqlite_path", "settings_wpf_owner_restart_readback" }
-                : new[] { "real_webview2_eight_routes", "p02_native_ru_es_asr_installed_inventory_no_microphone", "p04_native_embedded_qlora_five_sources", "p01_native_webview2_v16_cinema_nine_orbs", "p03_native_webview2_catalog_31_families", "p04_native_webview2_gpu_guardian_readonly", "p04_native_webview2_rag_noindex_readback", "real_webview2_keyboard_routes",
+                : new[] { "real_webview2_eight_routes", "p04_native_model_snapshot_picker_no_read", "p02_native_ru_es_asr_installed_inventory_no_microphone", "p04_native_embedded_qlora_five_sources", "p01_native_webview2_v16_cinema_nine_orbs", "p03_native_webview2_catalog_31_families", "p04_native_webview2_gpu_guardian_readonly", "p04_native_webview2_rag_noindex_readback", "real_webview2_keyboard_routes",
                           "d01_five_quick_native_routes", "d01_five_quick_windows_uia",
                           "d01_five_quick_compact_320_390_800",
                           "f03_compact_native_coreid_focus_320_390_800",
