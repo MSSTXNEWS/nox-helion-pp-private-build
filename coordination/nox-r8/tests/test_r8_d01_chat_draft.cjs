@@ -270,7 +270,9 @@ console.log('D01 SOURCE_ONLY PASS: knowledge/memory keyboard IME, repeat, Enter'
   for(const id of draftIds)elements[id]={value:oldDraft[id]};
   // Production switchPersonaDrafts updates this hint on PersonaID changes.
   elements.streamHint={textContent:''};
+  const personaRefresh=[];
   const eventContext = {$:id=>elements[id],window:{},
+    post:type=>personaRefresh.push(type),
     v:{persona:'AM'},committedSettings:{persona:'KV'},visibleDraftPersona:'KV',personaDrafts:new Map()};
   const draftStart=html.indexOf('function switchPersonaDrafts(next){');
   const draftEnd=html.indexOf('\nfunction route(id){',draftStart);
@@ -284,6 +286,8 @@ console.log('D01 SOURCE_ONLY PASS: knowledge/memory keyboard IME, repeat, Enter'
     assert.equal(elements[id].clears,1,'D01_PERSONA_STALE_PRIVATE_VIEW_'+id);
   assert.equal(outcome.lastAnswer,'','D01_PERSONA_OLD_REPLY_NOT_RESET');
   assert.equal(outcome.responseBox,null,'D01_PERSONA_OLD_STREAM_NOT_RESET');
+  assert.deepEqual(personaRefresh,['history','notes.list','knowledge.stats'],
+    'D01_PERSONA_CHANGE_REFRESH_MISSING');
   for(const id of draftIds){
     assert.equal(elements[id].value,'','D01_FOREIGN_PERSONA_DRAFT_VISIBLE_'+id);
     assert.equal(eventContext.personaDrafts.get('KV')[id],oldDraft[id],
@@ -303,6 +307,9 @@ console.log('D01 SOURCE_ONLY PASS: knowledge/memory keyboard IME, repeat, Enter'
   elements.noteTitle.value='KV revised unsaved';
   vm.runInNewContext("switch('persona.changed'){"+changedLine+"}",eventContext,{timeout:1500});
   assert.equal(elements.noteTitle.value,'KV revised unsaved','D01_SAME_PERSONA_DRAFT_NO_LOSS');
+  assert.deepEqual(personaRefresh,
+    ['history','notes.list','knowledge.stats','history','notes.list','knowledge.stats'],
+    'D01_SAME_PERSONA_MUST_NOT_DUPLICATE_REFRESH');
 }
 console.log('D01 SOURCE_ONLY PASS: reflection notes refresh and PersonaID memory view isolation');
 
