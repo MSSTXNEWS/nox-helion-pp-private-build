@@ -463,10 +463,17 @@ function switchPersonaDrafts(next){
   if(!['KV','AM','LA','EV','KW'].includes(next))return false;
   const previous=visibleDraftPersona;
   if(next===previous)return true;
-  const fields=['noteTitle','noteText','memoryQuery','knowledgeQuery','ragQuery','prompt','taskInput'];
-  personaDrafts.set(previous,Object.fromEntries(fields.map(id=>[id,$(id)?.value||''])));
+  const fields=['noteTitle','noteText','memoryQuery','knowledgeQuery','prompt','taskInput'];
+  // Optional P04 field does not exist in historical native D01-only fixture.
+  // In actual WebView2 it remains PersonaID-isolated; no accidental cross-Persona draft.
+  const ragField=typeof document!=='undefined'&&typeof document.getElementById==='function'
+    ?document.getElementById('ragQuery'):null;
+  const drafts=Object.fromEntries(fields.map(id=>[id,$(id).value]));
+  if(ragField)drafts.ragQuery=ragField.value;
+  personaDrafts.set(previous,drafts);
   const restored=personaDrafts.get(next)||{};
-  fields.forEach(id=>{const field=$(id);if(field)field.value=restored[id]||''});
+  fields.forEach(id=>{$(id).value=restored[id]||''});
+  if(ragField)ragField.value=restored.ragQuery||'';
   visibleDraftPersona=next;
   const hint=$('streamHint');
   if(hint)hint.textContent='PersonaID переключена · предыдущий поток не относится к текущему чату';
