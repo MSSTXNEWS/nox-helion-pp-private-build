@@ -191,6 +191,8 @@ jobs:
               $fxCssBlob -cne 'e5203f5720dc14147870ca898247fabae0e03522') { throw 'NOX_V16_CINEMA_DONOR_DRIFT_HOLD' }
           node './coordination/nox-r8/tests/test_r8_cinema_v16_integrated.cjs'
           if ($LASTEXITCODE -ne 0) { throw 'NOX_V16_CINEMA_NINE_ORBS_SOURCE_HOLD' }
+          node './coordination/nox-r8/tests/test_r8_model_snapshot_live.cjs'
+          if ($LASTEXITCODE -ne 0) { throw 'R8_MODEL_SNAPSHOT_READONLY_SOURCE_HOLD' }
           node './coordination/nox-r8/tests/test_r8_real_p04_gpu_probe.cjs'
           if ($LASTEXITCODE -ne 0) { throw 'R8_P04_REAL_GPU_PROBE_SOURCE_HOLD' }
           node './coordination/nox-r8/tests/test_r8_qlora_preflight.cjs'
