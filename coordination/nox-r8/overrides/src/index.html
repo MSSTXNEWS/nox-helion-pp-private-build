@@ -171,7 +171,7 @@ body[data-nox-theme]:not([data-nox-theme="obsidian"]) .ring{border-color:var(--e
 <div class="quick"><button class="action" data-open="core">CHAT</button><button class="action" data-open="nexus">MODELS</button><button class="action" data-open="forge">LEARN</button><button class="action" data-open="persona">SETTINGS</button><button class="action" id="maxMode">✦ MAX</button></div>
 <div class="routeHead"><h2 id="routeTitle">CONSCIOUSNESS</h2><span class="status" id="status">CONNECTING</span></div><div class="generation" id="generation"></div>
 <section class="panel active" data-panel="consciousness"><p class="intro">Живая локальная система. Показывает проверенный статус движка, а не имитацию работы.</p><button class="action" id="overviewHealth">Проверить Qwen</button><button class="action" id="startEngine">Запустить локальный Qwen</button><button class="action" id="refreshSensors">Обновить датчики CPU/GPU</button><div id="overview" class="mono">Ожидает проверки…</div><div class="rowtitle">ПРИБОРНАЯ ПАНЕЛЬ</div><div class="inspector" id="systemInfo">Локальная информация при загрузке.</div><button class="action" data-open="core">Открыть живой чат</button></section>
-<section class="panel" data-panel="core"><div class="intro">Настоящий потоковый ответ Qwen. STOP отменяет запрос. Завершённые диалоги сохраняются в SQLite.</div><div id="messages" class="feed" aria-live="polite"></div><div class="controls"><textarea id="prompt" placeholder="Напиши NOX…" aria-label="Сообщение" maxlength="32000"></textarea><button class="action" id="send">SEND</button><button class="action danger" id="stop">STOP</button></div><div class="hint" id="streamHint">STOP отменяет потоковую генерацию через HTTP; частичный ответ не сохраняется как завершённый.</div><div class="hint" id="inferenceMetrics" role="status">Метрики генерации ожидаются.</div><div class="controls"><button class="action" id="feedbackUp">👍 Полезно</button><button class="action" id="feedbackDown">👎 Исправить</button></div></section>
+<section class="panel" data-panel="core"><div class="intro">Настоящий потоковый ответ Qwen. STOP отменяет запрос. Завершённые диалоги сохраняются в SQLite.</div><div id="messages" class="feed" aria-live="polite"></div><div class="controls"><textarea id="prompt" placeholder="Напиши NOX…" aria-label="Сообщение" maxlength="32000"></textarea><button class="action" id="send">SEND</button><button class="action danger" id="stop">STOP</button></div><div class="hint" id="streamHint">STOP отменяет потоковую генерацию через HTTP; частичный ответ не сохраняется как завершённый. Для поиска по импортированным документам: /rag ваш вопрос (до 160 символов). Без подтверждённых источников ответ не генерируется.</div><div class="hint" id="chatRagSources" role="status" aria-live="polite">RAG-источники не подключены к текущему ответу.</div><div class="hint" id="inferenceMetrics" role="status">Метрики генерации ожидаются.</div><div class="controls"><button class="action" id="feedbackUp">👍 Полезно</button><button class="action" id="feedbackDown">👎 Исправить</button></div></section>
 <section class="panel" data-panel="atlas"><p class="intro">Локальные задачи в SQLite. Добавление и отметка выполнения — реальные операции.</p><div class="controls"><input id="taskInput" placeholder="Новая задача" maxlength="500"><button class="action" id="taskAdd">Добавить</button></div><div class="scroll" id="tasks"></div></section>
 <section class="panel" data-panel="reflection"><p class="intro">Сохранённые разговоры и поиск по локальной SQLite-памяти без подключения к сети.</p><div class="controls"><input id="memoryQuery" placeholder="Поиск в истории" aria-label="Поиск в памяти"><button class="action" id="memorySearch">Найти</button></div><button class="action" id="reloadHistory">Обновить историю</button><div class="rowtitle">ЗАМЕТКИ · ЛОКАЛЬНАЯ ПАМЯТЬ</div>
 <input id="noteTitle" maxlength="120" placeholder="Название знания" aria-label="Название заметки">
@@ -871,6 +871,15 @@ case 'gpu.guardian':{
   break;
 }
 
+case 'rag.chat.sources':{
+  if(v?.requestId!==activeChatId||v?.persona!==visibleDraftPersona)break;
+  const rows=Array.isArray(v.citations)?v.citations.slice(0,5):[];
+  $('chatRagSources').textContent=rows.length?
+    'P04 RAG: '+rows.map(x=>'['+String(x.fileName||'').slice(0,100)+' #'+
+      String(Number(x.chunkIndex)+1)+'] SHA '+String(x.sha256||'').slice(0,12)).join(' | '):
+    'P04 RAG: нет подтверждённых источников';
+  break;
+}
 case 'rag.search.results':{
   if(!pendingRagSearch||v?.requestId!==pendingRagSearch.requestId||
      v?.persona!==pendingRagSearch.persona||v.persona!==visibleDraftPersona)break;
