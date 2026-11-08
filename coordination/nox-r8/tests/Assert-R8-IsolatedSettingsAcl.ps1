@@ -42,17 +42,27 @@ $writeBits=([int][System.Security.AccessControl.FileSystemRights]::WriteData) -b
 # BUILTIN\\Administrators. Accept only those OS-privileged parent owners,
 # still fail on broad WRITE ACEs. SQLite FILE itself must be owned by the
 # current Windows identity; neither condition validates the owner's PC.
+# Elevated Windows runners can create both the directory and SQLite file
+# owned by the Administrators group. Only accept that group when the running
+# Windows identity is actually a member; ordinary foreign owners still HOLD.
+# Broad mutating ACEs remain disallowed even for privileged-owned files.
+$adminSid='S-1-5-32-544'
+$adminMember=@($identity.Groups | ForEach-Object { $_.Value }) -contains $adminSid
 $parentOwnerPolicy='SAME_USER'
+$sqliteOwnerPolicy='SAME_USER'
 foreach ($path in @($noxDataRoot,$db)) {
   $acl=Get-Acl -LiteralPath $path -ErrorAction Stop
   $actualSid=$acl.GetOwner([System.Security.Principal.SecurityIdentifier]).Value
   $isDb=[string]::Equals($path,$db,[StringComparison]::OrdinalIgnoreCase)
   if ($actualSid -cne $ownerSid) {
-    if (!$isDb -and @('S-1-5-18','S-1-5-32-544') -ccontains $actualSid) {
-      $parentOwnerPolicy='PRIVILEGED_OS_OWNER'
+    $trustedAdminOwner=$actualSid -ceq $adminSid -and $adminMember
+    $trustedSystemParent=(!$isDb -and $actualSid -ceq 'S-1-5-18')
+    if ($trustedAdminOwner -or $trustedSystemParent) {
+      if ($isDb) { $sqliteOwnerPolicy='ADMIN_GROUP_MEMBER' }
+      else { $parentOwnerPolicy='PRIVILEGED_OS_OWNER' }
     } else {
       $scope=if ($isDb) { 'SQLITE_FILE' } else { 'APP_DATA_DIRECTORY' }
-      $category=if ($actualSid -eq 'S-1-5-18') { 'SYSTEM' } elseif ($actualSid -eq 'S-1-5-32-544') { 'ADMINISTRATORS' } else { 'OTHER' }
+      $category=if ($actualSid -eq 'S-1-5-18') { 'SYSTEM' } elseif ($actualSid -eq $adminSid) { 'ADMINISTRATORS_NOT_MEMBER' } else { 'OTHER' }
       throw "NOX_D06_NTFS_OWNER_SID_MISMATCH_HOLD scope=$scope category=$category"
     }
   }
@@ -75,7 +85,7 @@ $receipt=[ordered]@{
   run_id=$RunId
   exe_sha256=$exeSha
   checked_at=[DateTimeOffset]::UtcNow.ToString('O')
-  sqlite_owner_sid='PASS'
+  sqlite_owner_sid=$sqliteOwnerPolicy
   sqlite_parent_owner_sid=$parentOwnerPolicy
   no_broad_mutating_ace='PASS'
   owner_pc_acl='NOT_TESTED'
