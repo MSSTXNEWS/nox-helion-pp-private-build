@@ -16,17 +16,84 @@ select,button{background:#142735;border:1px solid #507184;color:white;border-rad
 .row strong{text-align:right;overflow-wrap:anywhere;max-width:63%}.badge{display:inline-block;border:1px solid #7ad4c260;color:#8fdec8;border-radius:20px;padding:7px 11px;font-size:10px;letter-spacing:.1em}
 .warning{border-left:3px solid var(--gold);background:#1f1c18;padding:12px;margin-top:15px;color:#dec8ac;font-size:12px;line-height:1.55}
 @media(max-width:760px){.grid{grid-template-columns:1fr}.wrap{padding:12px}.msg{max-width:100%}}
+
+/* NOX PRIME HOME V9: ONE NOX UI; graphics engines never expose windows. */
+:root{--energy:#72dcd9;--halo:rgba(73,209,218,.42);--warm:#f3c98b;--deep:#020812}
+body[data-theme="aurora"]{--energy:#65f2db;--halo:rgba(54,220,183,.5);--warm:#b8ffd9;--deep:#041316}
+body[data-theme="ember"]{--energy:#f2a56d;--halo:rgba(255,129,52,.43);--warm:#ffc886;--deep:#140704}
+body[data-theme="nebula"]{--energy:#be9cff;--halo:rgba(168,104,250,.45);--warm:#dcc4ff;--deep:#10071d}
+body[data-theme="ice"]{--energy:#99d4ff;--halo:rgba(100,170,255,.4);--warm:#d2efff;--deep:#04101f}
+body{background:radial-gradient(ellipse 88% 65% at 51% 20%,#092734b9 0%,var(--deep) 70%) fixed;color:var(--text)}
+.wrap{max-width:1720px;padding:12px 22px 50px}.top{border-bottom-color:#73dde13e}.top h1{font-size:21px}
+.grid{grid-template-columns:minmax(370px,2.2fr) minmax(285px,1fr);gap:16px;margin-top:12px}
+.panel{background:rgba(6,17,28,.87);border-color:#5894a252;backdrop-filter:blur(15px)}
+.chatlog{min-height:300px;max-height:49vh}.msg{background:#0d2232b8}
+.noxHero{position:relative;isolation:isolate;overflow:hidden;min-height:405px;margin:12px 0 0;border:1px solid #67bfd037;border-radius:20px;background:radial-gradient(ellipse at 50% 49%,#0e334661 0%,#030914b8 57%,#01060e 100%);box-shadow:inset 0 0 100px #000a,0 19px 65px #0007}
+.noxHero:before{content:"";position:absolute;inset:0;z-index:-1;opacity:.38;background:radial-gradient(circle at 20% 28%,#b1e8fb63 1px,transparent 2px),radial-gradient(circle at 82% 66%,#b2d4ed7d 1px,transparent 2px),radial-gradient(circle at 70% 13%,#ffffff4a 1px,transparent 2px);background-size:77px 101px,105px 95px,167px 173px}
+.heroTag{position:absolute;left:24px;top:22px;z-index:5}
+.heroTag b{display:block;letter-spacing:.32em;font-size:17px;color:var(--warm);font-weight:500}
+.heroTag small{display:block;letter-spacing:.13em;color:#8fbdc7;margin-top:7px;font-size:10px}
+.noxSun{position:absolute;left:50%;top:50%;width:230px;height:230px;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle at 42% 39%,#151b24 0,#070a0e 32%,#010306 53%,#05080e 61%,#4eacb38a 70%,#060e19 73%,#030509 81%);border:1px solid #56c7cc6e;box-shadow:0 0 22px var(--halo),0 0 70px #00d2dd4a,0 0 125px #0083a544,inset -28px -29px 47px #000,inset 10px 8px 40px #1b536279;animation:noxBreath 5.8s ease-in-out infinite;z-index:2}
+.noxSun:before{content:"";position:absolute;inset:-12px;border-radius:50%;background:conic-gradient(from 50deg,transparent 0 18%,var(--halo) 26%,transparent 36% 61%,var(--halo) 74%,transparent 88%);filter:blur(13px);animation:noxRotate 22s linear infinite}
+.noxSun:after{content:"✦";position:absolute;inset:0;display:grid;place-items:center;font-size:44px;color:#c8ffffad;text-shadow:0 0 24px var(--energy)}
+.noxOrbit{position:absolute;left:50%;top:50%;width:610px;height:304px;border:1px solid #66d0db29;border-radius:50%;transform:translate(-50%,-50%) rotate(-10deg);box-shadow:inset 0 0 32px #1e95ae13;pointer-events:none}
+.noxPlanet{position:absolute;left:var(--x);top:var(--y);transform:translate(-50%,-50%);z-index:4;width:74px;height:74px;border-radius:50%;border:1px solid #87e3ef7d;color:#d5f8ff;background:radial-gradient(circle at 35% 26%,#4fc4d7ba,#0e3547 43%,#020911 77%);box-shadow:0 0 17px var(--halo),inset -11px -13px 20px #000a;cursor:pointer;animation:noxOrb 4.8s ease-in-out infinite;animation-delay:var(--delay,0s);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:5px}
+.noxPlanet small{font-size:8px;letter-spacing:.05em;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.noxPlanet .orbGlyph{font-size:22px;line-height:1}
+.noxPlanet:hover,.noxPlanet:focus-visible{border-color:var(--warm);box-shadow:0 0 25px var(--halo),0 0 44px #9bf5fc45;outline-offset:4px}
+.noxReadout{position:absolute;right:20px;top:19px;text-align:right;z-index:4;font-size:11px;max-width:260px}
+.noxReadout strong{color:var(--warm);font-size:12px}.noxReadout .sub{margin-top:5px}
+.heroControls{position:absolute;bottom:16px;left:22px;right:22px;z-index:4;display:flex;align-items:center;justify-content:space-between;gap:9px;flex-wrap:wrap}
+.heroControls label{font-size:10px;color:#a8d5da}.heroControls select,.heroControls button{font-size:11px;padding:7px 10px;background:#051722dd;border:1px solid #6ab5c27a}
+.noxVitals{display:flex;gap:12px;flex-wrap:wrap;color:#b9e4ef;font-variant-numeric:tabular-nums}
+.noxVitals span{background:#05202b9c;padding:6px 9px;border-radius:5px;border:1px solid #3b7d893f}
+.noxVitalValue{color:var(--energy);font-weight:700}
+.noxCoreInfo{position:absolute;bottom:60px;left:50%;transform:translateX(-50%);font-size:11px;color:#cde5e9;max-width:min(420px,80%);text-align:center;background:#04111fba;padding:8px 11px;border-radius:11px;z-index:4}
+@keyframes noxBreath{0%,100%{filter:brightness(.9);scale:1}50%{filter:brightness(1.24);scale:1.045}}
+@keyframes noxRotate{to{transform:rotate(360deg)}}
+@keyframes noxOrb{0%,100%{margin-top:0}50%{margin-top:-7px}}
+body[data-graphics="eco"] .noxSun,body[data-graphics="eco"] .noxPlanet{box-shadow:0 0 8px var(--halo)}
+body[data-graphics="max"] .noxSun{box-shadow:0 0 35px var(--halo),0 0 110px #00d2dd63,0 0 190px #0083a54f,inset -28px -29px 47px #000}
+body[data-motion="reduced"] .noxSun,body[data-motion="reduced"] .noxSun:before,body[data-motion="reduced"] .noxPlanet{animation:none!important}
+@media(prefers-reduced-motion:reduce){.noxSun,.noxSun:before,.noxPlanet{animation:none!important}}
+@media(max-width:900px){.noxHero{min-height:425px}.noxOrbit{width:84vw;height:300px}.noxPlanet{width:59px;height:59px}.noxPlanet small{font-size:7px}.noxSun{width:195px;height:195px}.noxReadout{max-width:110px}.heroTag{max-width:120px}.heroTag b{font-size:13px}.grid{grid-template-columns:1fr}.chatlog{max-height:40vh}}
+@media(max-width:490px){.wrap{padding:10px}.noxHero{min-height:480px}.noxSun{width:165px;height:165px}.noxPlanet{width:54px;height:54px}.noxPlanet .orbGlyph{font-size:17px}.heroControls{justify-content:center}.noxCoreInfo{bottom:105px}.heroTag small{display:none}.noxOrbit{width:93vw}.noxReadout{font-size:9px}.noxVitals{gap:4px}.noxVitals span{padding:4px}}
 </style></head><body><main class="wrap">
-<header class="top"><div><h1>✦ NOX HELION</h1><div class="sub">ONE IDENTITY · LOCAL MULTI-MODEL ROUTER · UNIFIED CHAT</div></div><div><a href="/">← FORGE</a> <span class="badge" id="state">ОЖИДАНИЕ</span></div></header>
+<header class="top"><div><h1>✦ NOX PRIME</h1><div class="sub">ОДНО СОЗНАТЕЛЬНОЕ ПОВЕДЕНИЕ · ЕДИНАЯ САМОМОДЕЛЬ · ЛОКАЛЬНЫЙ ИНТЕЛЛЕКТ</div></div><div><a href="/forge/control" title="Встроенная техническая панель">◈ Датчики и журнал</a> <span class="badge" id="state">ОЖИДАНИЕ</span></div></header>
+<section class="noxHero" aria-label="Живое центральное ядро NOX PRIME">
+  <div class="heroTag"><b>✦ NOX PRIME</b><small>LIQUID CORE · D02 · 8 CORES</small></div>
+  <div class="noxReadout"><strong id="heroState">СИНХРОНИЗАЦИЯ</strong><div class="sub" id="heroBuild">Проверка живого исходника</div></div>
+  <div class="noxOrbit" aria-hidden="true"></div><div class="noxSun" id="noxSun" role="img" aria-label="Чёрное жидкое солнце — центральное ядро NOX"></div>
+  <button class="noxPlanet" data-core="CONSCIOUSNESS" style="--x:17%;--y:28%;--delay:0s"><span class="orbGlyph">◉</span><small>SELF</small></button>
+  <button class="noxPlanet" data-core="PERSONA" style="--x:32%;--y:17%;--delay:-1s"><span class="orbGlyph">✧</span><small>PERSONA</small></button>
+  <button class="noxPlanet" data-core="ATLAS" style="--x:68%;--y:17%;--delay:-2s"><span class="orbGlyph">⌘</span><small>ATLAS</small></button>
+  <button class="noxPlanet" data-core="VOICE" style="--x:83%;--y:28%;--delay:-3s"><span class="orbGlyph">♫</span><small>VOICE</small></button>
+  <button class="noxPlanet" data-core="REFLECTION" style="--x:83%;--y:64%;--delay:-.5s"><span class="orbGlyph">◇</span><small>REFLECT</small></button>
+  <button class="noxPlanet" data-core="CORE" style="--x:68%;--y:76%;--delay:-1.5s"><span class="orbGlyph">✦</span><small>CORE</small></button>
+  <button class="noxPlanet" data-core="NEXUS" style="--x:32%;--y:76%;--delay:-2.5s"><span class="orbGlyph">⌁</span><small>NEXUS</small></button>
+  <button class="noxPlanet" data-core="FORGE" style="--x:17%;--y:64%;--delay:-3.5s"><span class="orbGlyph">⚒</span><small>FORGE</small></button>
+  <div class="noxCoreInfo" id="coreInfo">Выбери сферу, чтобы увидеть её реальное состояние.</div>
+  <div class="heroControls">
+    <div><label for="noxTheme">Вселенная</label> <select id="noxTheme">
+     <option value="eclipse">Затмение</option><option value="aurora">Резонанс</option>
+     <option value="ember">Янтарное ядро</option><option value="nebula">Небула</option><option value="ice">Ледяная звезда</option>
+    </select>
+    <label for="noxGraphics">Графика</label> <select id="noxGraphics">
+     <option value="balanced">BALANCED</option><option value="eco">ECO</option><option value="max">MAX</option>
+    </select>
+    <button id="noxMotion" type="button" aria-pressed="false">Снизить движение</button></div>
+    <div class="noxVitals"><span>GPU <b id="noxGpu" class="noxVitalValue">—</b></span><span>CPU <b id="noxCpu" class="noxVitalValue">—</b></span><span>RAM <b id="noxRam" class="noxVitalValue">—</b></span></div>
+  </div>
+</section>
 <div class="grid"><section class="panel">
-<h2 style="font-size:16px;font-weight:500;color:var(--gold)">Единый чат NOX</h2>
-<p class="sub">Обращение к локальным моделям через одно имя и один интерфейс. Модель выбирается автоматически по типу задачи.</p>
+<h2 style="font-size:16px;font-weight:500;color:var(--gold)">◈ NOX · разговор и действия</h2>
+<p class="sub">Поговори со мной или поручай работу обычными словами. Инструменты, модели и FORGE работают внутри NOX.</p>
 <div class="chatlog" id="log" role="log" aria-live="polite"><div class="msg assistant"><i>NOX</i>Единый интерфейс подключается к локальному Ollama. Расскажи, чем помочь.</div></div>
 <form id="form"><div class="inputrow"><textarea id="message" maxlength="8000" placeholder="Напиши NOX..." required></textarea></div>
 <div class="controls"><label class="sub">Назначение <select id="task"><option value="general">Общий интеллект</option><option value="code">Программирование</option></select></label>
 <div><button id="clear" type="button">Начать новый контекст</button> <button id="send" type="submit">Отправить NOX</button> <button id="stop" type="button" disabled>STOP</button></div></div></form>
-<div class="warning">Общий маршрутизатор работает с уже установленными локальными моделями. История диалога сохраняется в локальном журнале NOX между перезагрузками. Запись в каноническую S03 и применение LoRA к рабочей модели пока не подключены и не имитируются.</div>
-<p id="historyStatus" class="sub" aria-live="polite">Восстанавливаю историю...</p></section><aside class="panel"><h2 style="font-size:16px;font-weight:500;color:var(--gold)">Самомодель и компоненты</h2>
+<div class="warning">История локального чата сохраняется. Каноническая S03 и применение новых LoRA к основной модели пока не подтверждены; эта оболочка не имитирует готовность этих функций.</div>
+<p id="historyStatus" class="sub" aria-live="polite">Восстанавливаю историю...</p></section><aside class="panel"><h2 style="font-size:16px;font-weight:500;color:var(--gold)">◈ Состояние и возможности</h2>
 <div class="row"><span class="k">Идентичность</span><strong>NOX HELION</strong></div>
 <div class="row"><span class="k">Основная модель</span><strong id="main">—</strong></div>
 <div class="row"><span class="k">Модель кода</span><strong id="coding">—</strong></div>
@@ -52,6 +119,59 @@ select,button{background:#142735;border:1px solid #507184;color:white;border-rad
 </main><script>
 "use strict";
 const $=id=>document.getElementById(id);
+const coreCache={};
+let motionReduced=window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches||false;
+document.body.dataset.theme="eclipse";
+document.body.dataset.graphics="balanced";
+document.body.dataset.motion=motionReduced?"reduced":"normal";
+function noxAppearance(){
+  document.body.dataset.theme=$("noxTheme").value;
+  document.body.dataset.graphics=$("noxGraphics").value;
+}
+$("noxTheme").addEventListener("change",noxAppearance);
+$("noxGraphics").addEventListener("change",noxAppearance);
+$("noxMotion").addEventListener("click",()=>{
+  motionReduced=!motionReduced;
+  document.body.dataset.motion=motionReduced?"reduced":"normal";
+  $("noxMotion").textContent=motionReduced?"Включить движение":"Снизить движение";
+  $("noxMotion").setAttribute("aria-pressed",String(motionReduced));
+});
+if(motionReduced){$("noxMotion").textContent="Включить движение";$("noxMotion").setAttribute("aria-pressed","true");}
+document.querySelectorAll(".noxPlanet").forEach(button=>button.addEventListener("click",()=>{
+ const name=button.dataset.core,info=coreCache[name];
+ const status=info?.status||"UNKNOWN";
+ $("coreInfo").textContent=name+" · "+status+" · "+(info?.detail||"Пока нет подтверждённой интеграции");
+ if(name==="CORE")$("message").focus();
+ if(name==="FORGE")$("forgeStatus").scrollIntoView({behavior:motionReduced?"instant":"smooth",block:"nearest"});
+ if(name==="NEXUS")$("experienceBtn").focus();
+}));
+async function noxTelemetry(){
+ try{
+  const r=await fetch("/api/status",{cache:"no-store"});
+  if(!r.ok)throw Error("HTTP "+r.status);
+  const a=await r.json();
+  const v=(x)=>typeof x==="number"&&Number.isFinite(x)?x.toFixed(0)+"%":"—";
+  $("noxCpu").textContent=v(a.system?.cpu_usage_pct);
+  $("noxRam").textContent=v(a.system?.ram_usage_pct);
+  $("noxGpu").textContent=v(a.load?.gpu_load_pct);
+ }catch{
+  $("noxCpu").textContent="—";$("noxRam").textContent="—";$("noxGpu").textContent="—";
+ }
+}
+async function noxBuild(){
+ try{
+  const r=await fetch("/api/health",{cache:"no-store"});
+  const d=await r.json();
+  if(!r.ok||d.page_schema!=="NOX-PRIME-HOME-V9")throw Error("WRONG_RUNTIME");
+  $("heroBuild").textContent="V9 · "+String(d.source_sha256||"").slice(0,12)+" · SOURCE SHA";
+  $("heroState").textContent="NOX · ЖИВОЙ ПРОЦЕСС";
+ }catch(e){
+  $("heroBuild").textContent="Неподтверждённая версия · "+e.message;
+  $("heroState").textContent="ВЕРСИЯ HOLD";
+ }
+}
+noxBuild();noxTelemetry();setInterval(noxTelemetry,7500);
+
 const hist=[];
 let pending=false;
 let activeController=null;
@@ -201,6 +321,7 @@ async function coreStatus(){
     if(!r.ok)throw Error("API "+r.status);
     const data=await r.json();
     const caps=data.capabilities||{};
+    Object.assign(coreCache,caps);
     $("cores").textContent=(data.core_ids||[]).map(name=>{
        const c=caps[name]||{};
        return name+" · "+(c.status||"UNKNOWN")+(c.historical_episodes!==undefined?" · "+c.historical_episodes+" эп.":"");
