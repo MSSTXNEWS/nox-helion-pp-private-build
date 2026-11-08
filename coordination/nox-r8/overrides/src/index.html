@@ -103,10 +103,10 @@ body.reduced .helion-fx{filter:none}body.reduced .core.active{animation:none}
 /* NOX V16 CINEMA CSS, original donor 7205f4b747ed6b95856e0207a9b52cce29f9d118; selectors map to current R8 DOM */
 /* NOX R11 — original eight MENU tiles, theatrical light. Never hide/replace source art. */
 body{isolation:isolate;--nox-r11-amber:rgba(242,181,109,.74);--nox-r11-blue:rgba(128,209,235,.25)}
-body .core{position:relative;isolation:isolate;overflow:visible;will-change:auto;transition:filter .23s ease,box-shadow .23s ease,transform .23s ease;outline-offset:4px}
+body .core{isolation:isolate;overflow:visible;will-change:auto;transition:filter .23s ease,box-shadow .23s ease;outline-offset:4px}
 body .core::before{content:"";position:absolute;pointer-events:none;inset:-2px;border:1px solid rgba(247,187,119,.22);border-radius:inherit;opacity:.72;box-shadow:inset 0 1px rgba(254,213,161,.16),0 0 25px rgba(214,126,56,.08);transition:opacity .25s,border-color .25s,box-shadow .25s}
 body .core::after{content:"";position:absolute;pointer-events:none;inset:-5px;border-radius:inherit;background:radial-gradient(ellipse at 50% 103%,rgba(255,180,96,.17),transparent 63%);filter:blur(9px);opacity:0;transition:opacity .25s}
-body .core:hover:not(:disabled),body .core:focus-visible{filter:brightness(1.13) saturate(1.11);box-shadow:0 0 30px rgba(237,154,90,.15),0 10px 27px rgba(0,0,0,.18);transform:translate(var(--nox-r11-px,0px),calc(var(--nox-r11-py,0px) - 2px))}
+body .core:hover:not(:disabled),body .core:focus-visible{filter:brightness(1.13) saturate(1.11);box-shadow:0 0 30px rgba(237,154,90,.15),0 10px 27px rgba(0,0,0,.18)}
 body .core:hover:not(:disabled)::before,body .core:focus-visible::before{border-color:rgba(255,208,143,.8);opacity:1;box-shadow:inset 0 0 12px rgba(246,180,115,.18),0 0 27px rgba(238,172,107,.33)}
 body .core:hover:not(:disabled)::after,body .core:focus-visible::after{opacity:1}
 body .core:focus-visible{outline:2px solid #f7c895}
