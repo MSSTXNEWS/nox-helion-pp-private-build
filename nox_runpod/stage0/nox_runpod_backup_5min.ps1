@@ -19,12 +19,15 @@ try {
     Write-Host $s
   }
   function Remote([string]$cmd){
-    $output=& $Ssh -o BatchMode=yes -o ConnectTimeout=12 -i $Identity -p $Port ("root@"+$HostName) $cmd 2>&1
+    $previousPreference=$ErrorActionPreference
+    $ErrorActionPreference='Continue'
+    try { $output=& $Ssh -o BatchMode=yes -o ConnectTimeout=12 -i $Identity -p $Port ("root@"+$HostName) $cmd 2>&1 }
+    finally { $ErrorActionPreference=$previousPreference }
     if($LASTEXITCODE -ne 0){throw ("SSH_FAIL "+(($output|Out-String).Trim()))}
     return ($output|Out-String).Trim()
   }
   $remoteAgent='/workspace/nox/tools/nox_backup_agent.py'
-  $agentUrl='https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/4421c4f3adfaa9fb0babbf43affe2f6e729436f8/nox_runpod/stage0/nox_backup_agent.py'
+  $agentUrl='https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/01038cc2f3e2407754a012baa1cb9d647f804579/nox_runpod/stage0/nox_backup_agent.py'
   Log 'NOX_BACKUP_SESSION_START'
   Remote ("mkdir -p /workspace/nox/tools; curl -fLsS --retry 3 '"+$agentUrl+"' -o "+$remoteAgent+".new && python3 -m py_compile "+$remoteAgent+".new && mv -f "+$remoteAgent+".new "+$remoteAgent) | Out-Null
   if(-not $SkipSetup){
