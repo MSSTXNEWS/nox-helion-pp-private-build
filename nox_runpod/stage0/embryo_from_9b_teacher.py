@@ -68,12 +68,28 @@ def main():
                     "Reply as one plain question followed by its factual answer in "+lang+".\nSOURCE:\n"+chunk)
                 msgs=[{"role":"system","content":"You are a technical teacher producing truthful, source-grounded knowledge for NOX. No private data."},
                       {"role":"user","content":prompt}]
-                try:inputs=tokenizer.apply_chat_template(msgs,add_generation_prompt=True,enable_thinking=False,return_tensors="pt").to(model.device)
-                except TypeError:inputs=tokenizer.apply_chat_template(msgs,add_generation_prompt=True,return_tensors="pt").to(model.device)
+                try:
+                    inputs=tokenizer.apply_chat_template(
+                        msgs,add_generation_prompt=True,enable_thinking=False,
+                        return_tensors="pt",return_dict=True)
+                except TypeError:
+                    inputs=tokenizer.apply_chat_template(
+                        msgs,add_generation_prompt=True,return_tensors="pt")
+                # Transformers 5.x may return BatchEncoding rather than a tensor.
+                if isinstance(inputs,torch.Tensor):
+                    model_inputs={"input_ids":inputs.to(model.device)}
+                else:
+                    model_inputs={k:v.to(model.device) for k,v in inputs.items()
+                                  if isinstance(v,torch.Tensor)}
+                if "input_ids" not in model_inputs:
+                    raise RuntimeError("Tokenizer did not return input_ids")
                 with torch.inference_mode():
-                    ids=model.generate(inputs,do_sample=True,temperature=0.6,top_p=0.85,
+                    ids=model.generate(**model_inputs,do_sample=True,
+                        temperature=0.6,top_p=0.85,
                         max_new_tokens=350,pad_token_id=tokenizer.eos_token_id)
-                answer=tokenizer.decode(ids[0][inputs.shape[-1]:],skip_special_tokens=True).strip()
+                answer=tokenizer.decode(
+                    ids[0][model_inputs["input_ids"].shape[-1]:],
+                    skip_special_tokens=True).strip()
                 if len(answer)<80:continue
                 row={"id":ident,"source":url,"source_sha256":hashlib.sha256(source.encode()).hexdigest(),
                      "language":lang,"teacher":"LOCAL_QWEN3.5_9B","text":answer,
