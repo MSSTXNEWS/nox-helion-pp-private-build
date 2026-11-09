@@ -10,8 +10,9 @@ from pathlib import Path
 
 EXCLUDED = {"site-packages", ".git", "node_modules", "models", "weights", "tokenizers", "datasets", "cache", "venv", "prime9b-venv"}
 TEXT_SUFFIXES = {".log", ".json", ".jsonl", ".txt"}
+SKIP_DATA_DIRS = {"THREE_TEACHERS", "datasets", "examples", "samples"}
 STEP_PATTERNS = [
-    re.compile(r'(?i)\b(?:global_step|optimizer_step|train_step|training_step|step)\s*["\':= ]+\s*(\d{1,9})\s*(?:/|of)\s*(\d{1,9})'),
+    re.compile(r'(?i)\b(?:global_step|optimizer_step|train_step|training_step)\s*["\':= ]+\s*(\d{1,9})\s*(?:/|of)\s*(\d{1,9})'),
     re.compile(r'(?i)\b(?:global_step|optimizer_step|train_step|training_step|step)\s*["\':= ]+\s*(\d{1,9})')
 ]
 TOTAL_PATTERNS = [
@@ -19,7 +20,7 @@ TOTAL_PATTERNS = [
 ]
 LOSS_PATTERN = re.compile(r'(?i)\b(?:train_loss|training_loss|loss)\s*["\':= ]+\s*(-?\d+(?:\.\d+)?(?:e[-+]?\d+)?)')
 ERROR_PATTERN = re.compile(r'(?i)(CUDA out of memory|OutOfMemoryError|Traceback \(most recent call last\)|RuntimeError:|training failed)')
-STEP_KEYS = ("global_step", "optimizer_step", "train_step", "training_step", "step")
+STEP_KEYS = ("global_step", "optimizer_step", "train_step", "training_step")
 TOTAL_KEYS = ("max_steps", "total_steps", "planned_steps", "target_steps", "num_training_steps")
 
 def integer(value):
@@ -33,9 +34,11 @@ def latest_text_files(root):
     found = []
     if not root.is_dir(): return found
     for dirpath, dirs, names in os.walk(root):
-        dirs[:] = [d for d in dirs if d not in EXCLUDED and not d.endswith("-venv") and not d.startswith(".")]
+        dirs[:] = [d for d in dirs if d not in EXCLUDED and d not in SKIP_DATA_DIRS and not d.endswith("-venv") and not d.startswith(".")]
         for name in names:
             p = Path(dirpath) / name
+            # Training examples, teachers and corpora are data, not optimizer telemetry.
+            if name.endswith(".jsonl") or name == "train.json" or name.endswith("_teacher.json") or name.startswith("knowledge_"): continue
             if p.suffix.lower() not in TEXT_SUFFIXES: continue
             try:
                 st = p.stat()
@@ -43,6 +46,7 @@ def latest_text_files(root):
             if st.st_size > 25_000_000 or st.st_size == 0: continue
             path_lower = str(p).lower()
             if not any(word in path_lower for word in ("train", "distill", "progress", "checkpoint", "/logs/", "supervisor")): continue
+            if p.suffix == ".json" and p.name not in {"trainer_state.json", "training_progress.json", "progress.json", "train_metrics.json", "training_state.json", "checkpoint_state.json"}: continue
             found.append((st.st_mtime, p))
     return [p for _, p in sorted(found, reverse=True)[:70]]
 
@@ -126,7 +130,7 @@ def inspect(root, goal):
     ckpts=ckpts[-15:]
     return {
         "protocol":"NOX_TRAINING_PROGRESS_V1", "checked_at":dt.datetime.now(dt.timezone.utc).isoformat(),
-        "root":str(root), "observed_files":len(files),
+        "root":str(root), "observed_files":len(files), "data_examples_are_not_steps":True,
         "last_step":step, "total_steps":total, "remaining_steps":remaining, "percent_of_planned_steps":pct,
         "step_source":current[1] if current else None, "last_loss":current[4] if current else None,
         "eta_seconds":None, "eta_reason":"Timestamped successive optimizer steps not verified",
