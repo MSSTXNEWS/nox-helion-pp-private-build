@@ -91,9 +91,11 @@ def main():
     ap.add_argument("--resume",default=None,help="Prior verified NOX Embryo safetensors checkpoint")
     ap.add_argument("--out",default=str(OUT))
     ap.add_argument("--lr",type=float,default=8e-5)
+    ap.add_argument("--checkpoint-every",type=int,default=10)
     args=ap.parse_args()
     if not 1<=args.steps<=5000:raise RuntimeError("Invalid optimizer steps")
     if not 16<=args.context<=256:raise RuntimeError("Invalid sequence length")
+    if not 1<=args.checkpoint_every<=args.steps:raise RuntimeError("Invalid checkpoint interval")
     if not torch.cuda.is_available():raise RuntimeError("No NVIDIA GPU")
     device=torch.device("cuda:0")
     if not (0 < args.lr <= 0.001):raise RuntimeError("Unsafe LR")
@@ -142,8 +144,24 @@ def main():
                       "holdout_loss_before":before}),flush=True)
     checkpoint=output/"embryo_stage0_trained.safetensors"
     log=output/"training_steps.jsonl"
-    best=float("inf");steps=0
-    for step in range(1,args.steps+1):
+    resume_weights=output/"in_progress.safetensors"
+    resume_state=output/"in_progress.pt"
+    start_step=0
+    if resume_weights.is_file() and resume_state.is_file() and not checkpoint.is_file():
+        saved=torch.load(str(resume_state),map_location="cpu",weights_only=True)
+        meta={"source_sha256":digest(src),"dataset_sha256":digest(SOURCE),
+              "steps_target":args.steps,"context":args.context,"learning_rate":args.lr}
+        if any(saved.get(k)!=v for k,v in meta.items()):
+            raise RuntimeError("Existing training state belongs to different source/dataset/config")
+        if digest(resume_weights)!=saved.get("weights_sha256"):
+            raise RuntimeError("Checkpoint/resume state checksum mismatch")
+        model.load_state_dict(load_file(str(resume_weights),device="cpu"),strict=True)
+        opt.load_state_dict(saved["optimizer"])
+        start_step=int(saved["completed_steps"])
+        if not 0<=start_step<args.steps:raise RuntimeError("Invalid saved step")
+        print(json.dumps({"event":"AUTO_RESUME","step":start_step}),flush=True)
+    best=float("inf");steps=start_step
+    for step in range(start_step+1,args.steps+1):
         seq=train[(step-1)%len(train)]
         opt.zero_grad(set_to_none=True)
         loss=loss_for([seq])
@@ -153,6 +171,20 @@ def main():
         if not torch.isfinite(norm):raise RuntimeError("Non-finite gradient norm")
         opt.step()
         steps=step
+        if step % args.checkpoint_every == 0 and step < args.steps:
+            intermediate={k:v.detach().cpu().contiguous() for k,v in model.state_dict().items()
+                          if torch.is_tensor(v)}
+            tmp=output/"in_progress.tmp.safetensors"
+            save_file(intermediate,str(tmp))
+            os.replace(tmp,resume_weights)
+            meta={"source_sha256":digest(src),"dataset_sha256":digest(SOURCE),
+                  "steps_target":args.steps,"context":args.context,"learning_rate":args.lr,
+                  "completed_steps":step,"weights_sha256":digest(resume_weights),
+                  "optimizer":opt.state_dict()}
+            stmp=output/"in_progress.tmp.pt"
+            torch.save(meta,str(stmp))
+            os.replace(stmp,resume_state)
+            print(json.dumps({"event":"STEP_CHECKPOINT","step":step,"sha256":meta["weights_sha256"]}),flush=True)
         if step%10==0 or step==1 or step==args.steps:
             value=evaluate()
             event={"step":step,"train_loss":float(loss.item()),"holdout_loss":value}
@@ -169,6 +201,8 @@ def main():
     check=load_file(str(temp),device="cpu")
     if set(check)!=set(weights):raise RuntimeError("Checkpoint readback mismatch")
     os.replace(temp,checkpoint)
+    if resume_state.exists(): resume_state.unlink()
+    if resume_weights.exists(): resume_weights.unlink()
     receipt={"status":"TRAINED_NOT_INDEPENDENTLY_VALIDATED","utc":__import__("datetime").datetime.now(__import__("datetime").timezone.utc).isoformat(),
          "teacher":"LOCAL_QWEN3.5_9B","original_embryo_checkpoint":str(src),"original_sha256":digest(src),
          "checkpoint":str(checkpoint),"checkpoint_sha256":digest(checkpoint),
