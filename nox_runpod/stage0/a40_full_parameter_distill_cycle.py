@@ -187,6 +187,13 @@ def main():
  except Exception:
   print("NOX_FULL_STAGE_PRESERVED_ON_ERROR",stage,flush=True)
   raise
+ if after>baseline*1.05:
+  report("HOLD","FULL_WEIGHTS_SAVED_BUT_REJECTED_BY_HOLDOUT",
+         steps=a.steps,target=a.steps,loss=lastloss,holdout=after,
+         reason="HOLDOUT_REGRESSION_MORE_THAN_5_PERCENT",
+         extra={"output_candidate_not_promoted":str(output),"baseline_holdout_loss":baseline,
+                "checkpoint_shards":hashes,"requires_review":True})
+  return
  report("COMPLETE_VERIFIED","FULL_WEIGHTS_SAVED_AND_HOLDOUT_EVALUATED",
         steps=a.steps,target=a.steps,loss=lastloss,holdout=after,
         extra={"output":str(output),"checkpoint_shards":hashes,
