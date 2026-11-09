@@ -4,7 +4,7 @@ Imports all 3 teacher corpora. Trains an ISOLATED NOX 9B LoRA only after
 a meaningful held-out set and GPU headroom, then publishes a verified adapter.
 Never overwrites A5000's active checkpoints or mislabels an adapter as merged weights.
 """
-import datetime,fcntl,hashlib,importlib.util,json,os,pathlib,sqlite3,sys,time,traceback,subprocess
+import argparse,datetime,fcntl,hashlib,importlib.util,json,os,pathlib,sqlite3,sys,time,traceback,subprocess
 ROOT=pathlib.Path("/workspace/nox")
 DIR=ROOT/"memory/THREE_TEACHERS"
 CUR=ROOT/"distillation"
@@ -116,22 +116,31 @@ def train_isolated(train,holdout):
        "three_teacher_provenance":counts})
  return "NEURAL_ADAPTER_SAVED"
 def main():
- with (STATE/"memory_integrator.lock").open("a+") as lock:
+ p=argparse.ArgumentParser()
+ p.add_argument("--role",choices=("memory","integrator"),required=True)
+ a=p.parse_args()
+ with (STATE/(a.role+".lock")).open("a+") as lock:
   try:fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
-  except BlockingIOError:print("NOX_INTEGRATOR_ALREADY_RUNNING");return
-  c=dbconn();t=0
+  except BlockingIOError:
+   print("NOX_"+a.role.upper()+"_ALREADY_RUNNING",flush=True);return
+  c=dbconn()
   while not (STATE/"STOP").exists():
    try:
-    counts=scan(c);train,holdout=exports(c,counts)
-    result=train_isolated(train,holdout)
-    state={"utc":now(),"event":"NOX_MEMORY_NEURAL_INTEGRATOR","counts":counts,
-      "train":len(train),"holdout":len(holdout),"neural_status":result}
-    atom(STATE/"integrator_status.json",state)
+    if a.role=="memory":
+     counts=scan(c);train,holdout=exports(c,counts)
+     state={"utc":now(),"event":"NOX_THREE_TEACHER_S03_MEMORY","counts":counts,"train":len(train),"holdout":len(holdout)}
+    else:
+     trainpath=DIR/"train.jsonl";testpath=DIR/"holdout.jsonl"
+     train=[json.loads(x) for x in trainpath.read_text(encoding="utf-8").splitlines()] if trainpath.exists() else []
+     holdout=[json.loads(x) for x in testpath.read_text(encoding="utf-8").splitlines()] if testpath.exists() else []
+     outcome=train_isolated(train,holdout)
+     state={"utc":now(),"event":"NOX_NEURAL_INTEGRATOR","train":len(train),"holdout":len(holdout),"neural_status":outcome}
+    atom(STATE/(a.role+"_status.json"),state)
     print(json.dumps(state,ensure_ascii=False),flush=True)
    except Exception as e:
-    print(json.dumps({"event":"NOX_INTEGRATOR_EXCEPTION","reason":str(e)[:300],
+    print(json.dumps({"event":"NOX_"+a.role.upper()+"_EXCEPTION","reason":str(e)[:300],
       "trace":traceback.format_exc()[-700:]}),flush=True)
-   c.execute("PRAGMA wal_checkpoint(PASSIVE)")
+   if a.role=="memory":c.execute("PRAGMA wal_checkpoint(PASSIVE)")
    for _ in range(60):
     if (STATE/"STOP").exists():break
     time.sleep(1)
