@@ -36,7 +36,7 @@ while [ ! -e "$C/STOP_$NODE" ];do
 done
 SUP
 chmod 700 "$RUN"
-nohup setsid bash "$RUN" </dev/null >>"$R/logs/NOX_PROGRESS_$NODE_SUPERVISOR.log" 2>&1 &
+nohup setsid bash "$RUN" </dev/null >>"$R/logs/NOX_PROGRESS_$NODE"_SUPERVISOR.log 2>&1 &
 p=$!;echo "$p" >"$PID"
 sleep 2
 kill -0 "$p" 2>/dev/null || { echo HOLD_SUPERVISOR_FAILED;exit 5; }
