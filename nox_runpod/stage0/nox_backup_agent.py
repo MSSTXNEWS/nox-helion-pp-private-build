@@ -96,7 +96,8 @@ def main():
  ap.add_argument("--path")
  ap.add_argument("--sha256")
  a=ap.parse_args()
- if a.action=="inventory":inventory()\n elif a.action=="cleanup-cache":cleanup_cache()
+ if a.action=="inventory":inventory()
+ elif a.action=="cleanup-cache":cleanup_cache()
  elif a.action=="hash":hashfile(a.path)
  else:
   if not re.fullmatch("[a-f0-9]{64}",a.sha256 or ""):raise RuntimeError("Bad checksum")
