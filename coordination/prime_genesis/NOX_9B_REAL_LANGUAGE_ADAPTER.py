@@ -70,7 +70,7 @@ def power():
 def manifest():
     mfile=ROOT/'NOX_PRIME_9B_MANIFEST.json'
     if not mfile.is_file():raise RuntimeError('No inherited 9B manifest')
-    m=json.loads(mfile.read_text(encoding='utf8-sig'))
+    m=json.loads(mfile.read_text(encoding='utf-8-sig'))
     if m.get('status')!='INHERITED_UNTRAINED' or m.get('source_repository')!='Qwen/Qwen3.5-9B':
         raise RuntimeError('Source 9B lineage mismatch')
     if Path(m.get('model_root','')).resolve()!=MODEL.resolve():
@@ -88,7 +88,7 @@ def source_data():
     for path in paths:
         if not path.is_file():continue
         rows=[];seen=set()
-        for line in path.read_text(encoding='utf8-sig').splitlines():
+        for line in path.read_text(encoding='utf-8-sig').splitlines():
             if not line.strip():continue
             d=json.loads(line)
             p=str(d.get('prompt','')).strip();a=str(d.get('answer','')).strip()
@@ -124,7 +124,7 @@ def feature_worker():
     head_name=None
     for name,mod in model.named_modules():
         if mod is head:head_name=name+'.weight';break
-    index=json.loads((MODEL/'model.safetensors.index.json').read_text(encoding='utf8-sig'))['weight_map']
+    index=json.loads((MODEL/'model.safetensors.index.json').read_text(encoding='utf-8-sig'))['weight_map']
     if head_name not in index:
         # Tied head: input embedding matrix is the same tensor.
         inp_emb=model.get_input_embeddings();name_in=None
