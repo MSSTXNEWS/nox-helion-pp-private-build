@@ -21,6 +21,12 @@ nohup setsid bash "$RUN" </dev/null >>"$LOG" 2>&1 &
 echo $! > "$PID"
 sleep 3
 if ! kill -0 "$(cat "$PID")" 2>/dev/null; then echo "LAUNCH_FAILED"; tail -n 25 "$LOG"; exit 16; fi
+# Independent deadline guard: stop compute no later than 4h even if learner is stuck.
+WATCH="$ROOT/logs/nox_embryo_watchdog.pid"
+if [ ! -f "$WATCH" ] || ! kill -0 "$(cat "$WATCH")" 2>/dev/null; then
+  nohup setsid bash -c 'sleep 14460; runpodctl pod stop rsjmb616w0tqio' </dev/null >>"$ROOT/logs/nox_embryo_watchdog.log" 2>&1 &
+  echo $! > "$WATCH"
+fi
 echo "DETACHED_TRAINING_PROCESS_STARTED pid=$(cat "$PID")"
 echo "LOG=$LOG"
 echo "IMPORTANT: Detached process may fail later. Only receipt proves training. If stop API fails, manually stop pod."
