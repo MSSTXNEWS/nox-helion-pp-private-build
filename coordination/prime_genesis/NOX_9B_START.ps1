@@ -35,7 +35,7 @@ if ($LASTEXITCODE -ne 0) {
 if ($LASTEXITCODE -ne 0) {throw 'HOLD: Qwen3.5 CPU Transformers class not available'}
 # This URL and checksum are versioned at a single immutable GitHub commit.
 $commit='e5bb02eb46f5bcfeae8d0431bfcd2166cf7b56c3'
-$expected='211a6b1ecb53dcf5682e7617e4c1b57d3ae4477d34478a0da3c6f868ba994663'
+$expected='a14a9f6c0fbae712fae9ba20d4197056fc8968ba02c9404577082eba866437cb'
 $url="https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/$commit/coordination/prime_genesis/NOX_9B_REAL_LANGUAGE_ADAPTER.py"
 $temp="$script.download"
 Invoke-WebRequest -Uri $url -OutFile $temp -TimeoutSec 120 -UseBasicParsing
