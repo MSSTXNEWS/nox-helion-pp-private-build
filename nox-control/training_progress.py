@@ -4,8 +4,8 @@ import argparse
 import datetime as dt
 import json
 import re
-import subprocess
 import time
+import os
 from pathlib import Path
 
 EXCLUDED = {"site-packages", ".git", "node_modules", "models", "weights", "tokenizers", "datasets", "cache", "venv", "prime9b-venv"}
@@ -32,16 +32,18 @@ def integer(value):
 def latest_text_files(root):
     found = []
     if not root.is_dir(): return found
-    for p in root.rglob("*"):
-        if any(k in EXCLUDED or k.endswith("-venv") for k in p.parts): continue
-        if not p.is_file() or p.suffix.lower() not in TEXT_SUFFIXES: continue
-        try:
-            s = p.stat()
-        except OSError: continue
-        if s.st_size > 25_000_000 or s.st_size == 0: continue
-        name = str(p).lower()
-        if not any(word in name for word in ("train", "distill", "progress", "checkpoint", "/logs/", "supervisor")): continue
-        found.append((s.st_mtime, p))
+    for dirpath, dirs, names in os.walk(root):
+        dirs[:] = [d for d in dirs if d not in EXCLUDED and not d.endswith("-venv") and not d.startswith(".")]
+        for name in names:
+            p = Path(dirpath) / name
+            if p.suffix.lower() not in TEXT_SUFFIXES: continue
+            try:
+                st = p.stat()
+            except OSError: continue
+            if st.st_size > 25_000_000 or st.st_size == 0: continue
+            path_lower = str(p).lower()
+            if not any(word in path_lower for word in ("train", "distill", "progress", "checkpoint", "/logs/", "supervisor")): continue
+            found.append((st.st_mtime, p))
     return [p for _, p in sorted(found, reverse=True)[:70]]
 
 def read_tail(p, n=2_000_000):
@@ -140,7 +142,28 @@ def main():
     p=argparse.ArgumentParser()
     p.add_argument("--root",default="/workspace/nox")
     p.add_argument("--total-steps",type=int,default=0,help="Only use an independently verified target")
+    p.add_argument("--watch",action="store_true",help="Repeat every 180s to measure actual speed and ETA")
     args=p.parse_args()
-    print(json.dumps(inspect(Path(args.root),args.total_steps or None),ensure_ascii=False,indent=2))
+    previous=None
+    previous_time=None
+    while True:
+        report=inspect(Path(args.root),args.total_steps or None)
+        now_clock=time.monotonic()
+        if previous is not None and report["step_source"] == previous["step_source"]:
+            old_step=previous["last_step"]
+            new_step=report["last_step"]
+            if isinstance(old_step,int) and isinstance(new_step,int) and new_step>old_step:
+                speed=(new_step-old_step)/((now_clock-previous_time)/3600)
+                report["steps_per_hour"]=round(speed,2)
+                if report["remaining_steps"] is not None and speed>0:
+                    report["eta_seconds"]=round(report["remaining_steps"]/speed*3600)
+                    report["eta_reason"]="Estimated from two live polls of same step source"
+            elif isinstance(old_step,int) and isinstance(new_step,int) and new_step<=old_step:
+                report["steps_per_hour"]=0
+                report["eta_reason"]="No increasing steps between two polls"
+        print("NOX_TRAINING_PROGRESS "+json.dumps(report,ensure_ascii=False),flush=True)
+        if not args.watch: break
+        previous,previous_time=report,now_clock
+        time.sleep(180)
 
 if __name__=="__main__": main()
