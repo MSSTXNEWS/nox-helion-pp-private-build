@@ -5,7 +5,7 @@ POD_ID=rsjmb616w0tqio
 TOOLS="$ROOT/tools"
 LOG="$ROOT/logs"
 STAGE="$ROOT/checkpoints/nox_genesis_stage0"
-TRAIN_URL="https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/2c5350e1b96ffe14dcb36779893ae033f580a66f/nox_runpod/stage0/train_original_embryo.py"
+TRAIN_URL="https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/04404bc076485a6ae75106b15fc7e12d390dadf6/nox_runpod/stage0/train_original_embryo.py"
 mkdir -p "$TOOLS" "$LOG" "$STAGE"
 on_exit() {
   local code=$?
@@ -36,7 +36,35 @@ mv -f "$TOOLS/train_original_embryo.py.new" "$TOOLS/train_original_embryo.py"
 P1="$STAGE/pass1"; P2="$STAGE/pass2"
 mkdir -p "$P1" "$P2"
 echo "NOX_GENESIS_2PASS_BEGIN"
-timeout --signal=INT --kill-after=60s 6600s "$PY" -u "$TOOLS/train_original_embryo.py" --steps 120 --context 128 --out "$P1" --lr 0.00008
+train_pass() {
+  local dir="$1" rate="$2" resume_path="${3:-}"
+  local attempt=1 rc=0
+  if [ -s "$dir/stage0_receipt.json" ] && [ -s "$dir/embryo_stage0_trained.safetensors" ]; then
+    echo "PASS_ALREADY_SAVED $dir"
+    return 0
+  fi
+  while [ "$attempt" -le 3 ]; do
+    echo "NOX_PASS_ATTEMPT dir=$dir attempt=$attempt"
+    local args=(--steps 120 --context 128 --out "$dir" --lr "$rate" --checkpoint-every 10)
+    if [ -n "$resume_path" ]; then args+=(--resume "$resume_path"); fi
+    set +e
+    timeout --signal=INT --kill-after=60s 6600s "$PY" -u "$TOOLS/train_original_embryo.py" "${args[@]}"
+    rc=$?
+    set -e
+    if [ "$rc" -eq 0 ]; then return 0; fi
+    echo "NOX_TRAIN_FAILED pass=$dir code=$rc attempt=$attempt"
+    # Only retry if a valid intermediate state exists. Do not replay model incompatibilities.
+    if [ ! -s "$dir/in_progress.pt" ] || [ ! -s "$dir/in_progress.safetensors" ]; then
+      echo "NO_RESUMABLE_STATE: stopping rather than repeating unsupported training."
+      return "$rc"
+    fi
+    attempt=$((attempt+1))
+    [ "$attempt" -le 3 ] || break
+    sleep $((attempt*10))
+  done
+  return "$rc"
+}
+train_pass "$P1" 0.00008
 test -s "$P1/embryo_stage0_trained.safetensors" && test -s "$P1/stage0_receipt.json" || { echo "PASS1_MISSING_OUTPUT"; exit 18; }
 "$PY" - "$P1/stage0_receipt.json" <<'PYCHK'
 import json,sys
@@ -46,7 +74,7 @@ assert r["holdout_loss_after"]<r["holdout_loss_before"],"No holdout improvement;
 print("PASS1_VALIDATED_FOR_CONTINUATION",flush=True)
 PYCHK
 echo "NOX_GENESIS_PASS2_BEGIN"
-timeout --signal=INT --kill-after=60s 6600s "$PY" -u "$TOOLS/train_original_embryo.py" --resume "$P1/embryo_stage0_trained.safetensors" --steps 120 --context 128 --out "$P2" --lr 0.00003
+train_pass "$P2" 0.00003 "$P1/embryo_stage0_trained.safetensors"
 test -s "$P2/embryo_stage0_trained.safetensors" && test -s "$P2/stage0_receipt.json" || { echo "PASS2_MISSING_OUTPUT"; exit 19; }
 "$PY" - "$P1/stage0_receipt.json" "$P2/stage0_receipt.json" "$STAGE" <<'PYCHK'
 import json,sys,pathlib,hashlib,datetime
