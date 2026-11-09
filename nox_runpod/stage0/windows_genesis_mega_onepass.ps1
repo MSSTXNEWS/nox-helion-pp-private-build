@@ -1,12 +1,12 @@
 $ErrorActionPreference='Stop'
 $key=Join-Path $env:USERPROFILE '.ssh\nox_runpod_ed25519'
 if(!(Test-Path -LiteralPath $key -PathType Leaf)){throw 'NOX SSH key missing'}
-$url='https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/ccba2e8bcd015be1cac3ff7156e9d4916ca2c150/nox_runpod/stage0/start_detached_embryo.sh'
-$file=Join-Path $env:TEMP 'NOX_Genesis_Mega_Stage0.sh'
-Invoke-WebRequest -Uri $url -OutFile $file -ErrorAction Stop
-if(!(Test-Path -LiteralPath $file -PathType Leaf)){throw 'Launcher download failed'}
-$body=[IO.File]::ReadAllText($file).Replace([string][char]13+[string][char]10,[string][char]10)
-Write-Host 'NOX GENESIS Stage 0: detached teacher-to-Embryo training on RTX A5000' -ForegroundColor Cyan
-$body | & ssh -i $key -p 22189 -o BatchMode=yes -o ConnectTimeout=20 -o StrictHostKeyChecking=accept-new root@69.30.85.251 'bash -s'
-if($LASTEXITCODE -ne 0){throw 'NOX Genesis launch failed; RTX A5000 may still be billing. Check RunPod Pods.'}
-Write-Host 'Three-pass NOX Embryo training launch requested. Windows can disconnect. Only checkpoints and validation receipts prove actual learning.' -ForegroundColor Green
+$scriptUrl='https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/ccba2e8bcd015be1cac3ff7156e9d4916ca2c150/nox_runpod/stage0/start_detached_embryo.sh'
+Write-Host 'NOX GENESIS: launch/resume detached three-pass trainer on A5000; no Windows shell piping' -ForegroundColor Cyan
+# Server downloads and executes the script on Linux itself. Prevents PowerShell CRLF injection.
+$cmd="curl -fsSL --retry 3 --connect-timeout 15 '$scriptUrl' | bash"
+& ssh -i $key -p 22189 -o BatchMode=yes -o ConnectTimeout=20 -o StrictHostKeyChecking=accept-new root@69.30.85.251 $cmd
+if($LASTEXITCODE -ne 0){throw 'NOX Genesis launcher failed; RunPod may still be billing.'}
+Write-Host 'Remote detached process requested. Checking most recent training log...' -ForegroundColor Cyan
+& ssh -i $key -p 22189 -o BatchMode=yes -o ConnectTimeout=20 root@69.30.85.251 'tail -n 30 /workspace/nox/logs/nox_embryo_unattended.log 2>/dev/null || true'
+Write-Host 'Only step logs and saved checkpoint confirm training; Windows may disconnect once process remains alive.' -ForegroundColor Green
