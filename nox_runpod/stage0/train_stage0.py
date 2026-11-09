@@ -22,6 +22,7 @@ def main():
     ap.add_argument("--max-steps", type=int, default=10)
     ap.add_argument("--save-steps", type=int, default=5)
     ap.add_argument("--seq-len", type=int, default=256)
+    ap.add_argument("--epochs", type=int, default=3)
     args = ap.parse_args()
     modeldir = pathlib.Path(args.model)
     if not modeldir.is_dir() or not (modeldir / "config.json").exists():
@@ -32,7 +33,7 @@ def main():
     shards = sorted(modeldir.glob("*.safetensors"))
     if len(shards) != 4 or sum(p.stat().st_size for p in shards) < 15_000_000_000:
         ap.error("Expected four full safetensors shards (>15 GB); incomplete transfer")
-    if not (1 <= args.max_steps <= 200) or not (1 <= args.save_steps <= args.max_steps):
+    if not (1 <= args.max_steps <= 1000000) or not (1 <= args.save_steps <= args.max_steps) or not (1<=args.epochs<=10):
         ap.error("invalid steps for pilot")
     data_path = pathlib.Path(args.data)
     if not data_path.is_file():
