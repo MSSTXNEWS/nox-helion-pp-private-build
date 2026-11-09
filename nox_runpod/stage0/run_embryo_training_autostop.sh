@@ -5,18 +5,13 @@ POD_ID=rsjmb616w0tqio
 TOOLS="$ROOT/tools"
 LOG="$ROOT/logs"
 STAGE="$ROOT/checkpoints/nox_genesis_stage0"
-TRAIN_URL="https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/2c9dccb8279d98a3b61e5cf5cedc381e2e3a52bd/nox_runpod/stage0/train_original_embryo.py"
+TRAIN_URL="https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/f1cbf3a8ecb8d913150c62056626274a7b3af9dd/nox_runpod/stage0/train_original_embryo.py"
 mkdir -p "$TOOLS" "$LOG" "$STAGE"
 on_exit() {
   local code=$?
   trap - EXIT
-  echo "NOX_CYCLE_EXIT code=$code; attempting Pod compute stop" | tee -a "$LOG/nox_genesis_autostop.log"
+  echo "NOX_CYCLE_EXIT code=$code; supervisor decides retry or shutdown" | tee -a "$LOG/nox_genesis_autostop.log"
   sync
-  if command -v runpodctl >/dev/null 2>&1; then
-    runpodctl pod stop "$POD_ID" >>"$LOG/nox_genesis_autostop.log" 2>&1 || echo "AUTOSTOP_FAILED - manual stop required" >>"$LOG/nox_genesis_autostop.log"
-  else
-    echo "AUTOSTOP_FAILED - runpodctl unavailable" >>"$LOG/nox_genesis_autostop.log"
-  fi
   exit "$code"
 }
 trap on_exit EXIT
@@ -52,7 +47,7 @@ train_pass() {
   fi
   while [ "$attempt" -le 3 ]; do
     echo "NOX_PASS_ATTEMPT dir=$dir attempt=$attempt"
-    local args=(--steps 1000000 --max-epochs 8 --context 128 --out "$dir" --lr "$rate" --checkpoint-every 10)
+    local args=(--steps 1000000 --max-epochs 8 --context 128 --batch-size 16 --out "$dir" --lr "$rate" --checkpoint-every 10)
     if [ -n "$resume_path" ]; then args+=(--resume "$resume_path"); fi
     set +e
     timeout --signal=INT --kill-after=60s 3900s "$PY" -u "$TOOLS/train_original_embryo.py" "${args[@]}"
