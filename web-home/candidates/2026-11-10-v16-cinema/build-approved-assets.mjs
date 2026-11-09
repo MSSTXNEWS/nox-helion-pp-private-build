@@ -10,7 +10,7 @@ import {execFileSync} from 'node:child_process';
 
 const root=process.cwd(), out=path.join(root,'dist');
 fs.rmSync(out,{recursive:true,force:true});
-fs.cpSync(root,out,{recursive:true,filter:s=>!s.startsWith(out)&&!s.includes('/node_modules/')&&!s.includes('/.git/')});
+for(const name of fs.readdirSync(root)){if(['dist','node_modules','.git'].includes(name))continue;fs.cpSync(path.join(root,name),path.join(out,name),{recursive:true});}
 const target=path.join(out,'assets/nox-approved');
 fs.mkdirSync(path.join(target,'planets'),{recursive:true});
 fs.mkdirSync(path.join(target,'hdr'),{recursive:true});
