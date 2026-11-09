@@ -154,6 +154,10 @@ def prepare_chat(root,payload):
     task=payload.get("task","general")
     if task not in ("general","code"):raise ValueError("INVALID_TASK")
     history=payload.get("history",[])
+    if history == []:
+        # Resume already-persisted NOX dialogue when the UI passes no history.
+        # This is local conversational continuity, not proof of S03 ingestion.
+        history=read_history(root,limit=MAX_TURNS*2)
     if not isinstance(history,list) or len(history)>MAX_TURNS*2:raise ValueError("INVALID_HISTORY")
     messages=[]
     for item in history:
