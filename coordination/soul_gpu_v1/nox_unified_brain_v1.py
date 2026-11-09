@@ -166,6 +166,15 @@ def prepare_chat(root,payload):
     models=available()
     model=choose_model(models,task)
     self_state=self_model(root,model)
+    # Every response gets fresh biographical evidence from the actual local files.
+    # No static autobiography or simulated achievements are injected.
+    try:
+        from nox_autobiography_v1 import prompt_fragments
+        biography_guidance, biography_data = prompt_fragments(root)
+        self_state["autobiography_evidence"] = biography_data
+    except (ImportError, OSError, ValueError, TypeError) as ex:
+        biography_guidance = ""
+        self_state["autobiography_evidence"] = {"status": "UNAVAILABLE", "reason": type(ex).__name__}
     # Unified self-model: ONE NOX principal across eight actual capability
     # probes, five separately scoped PersonaID, and source-grounded events.
     try:
@@ -201,7 +210,7 @@ def prepare_chat(root,payload):
         memory_method="UNAVAILABLE"
     # Ground all self-referential replies in verified runtime state.
     # Do not confuse a training checkpoint with the deployed chat model.
-    messages.insert(0, {"role":"system","content":SYSTEM+
+    messages.insert(0, {"role":"system","content":SYSTEM+"\n"+biography_guidance+
         "\\nАКТУАЛЬНАЯ САМОМОДЕЛЬ (проверяемые факты): "+
         json.dumps(self_state,ensure_ascii=False)+
         "Если реальные показатели GPU/VRAM ограничивают задачу, сам кратко "+
