@@ -53,6 +53,23 @@ for(const file of fs.readdirSync(path.dirname(zip))){
 for(const name of ['Color','NormalGL','Metalness','Roughness']){
  if(!records.some(x=>x.path==='metal/Metal012_1K-JPG_'+name+'.jpg'))throw new Error('Missing metal map '+name);
 }
+// Verify every downloaded byte against the already accepted V17 hashes.
+const pinned=JSON.parse(fs.readFileSync(path.join(root,'nox-approved-pin.json'),'utf8'));
+for(const item of records){
+ const expected=pinned.files.find(x=>x.path===item.path);
+ if(!expected||expected.sha256!==item.sha256||expected.bytes!==item.bytes)throw Error('NOX_PINNED_ASSET_MISMATCH:'+item.path);
+}
+if(records.length!==pinned.files.length)throw Error('NOX_PINNED_ASSET_COUNT_MISMATCH');
+for(const file of ['nox-home.mjs','nox-home-recovery.js','nox-resonance-cinema-v13.js','nox-engines/physical-worlds-v7.mjs','nox-cinematic-health.js','industrial-assets.mjs','industrial-effects.mjs','nox-orbit-original.js']){
+ execFileSync('node',['--check',path.join(out,file)],{stdio:'pipe'});
+}
+for(const name of ['index.html','chat.html','models.html','memory.html','training.html','system.html','projects.html','cinema.html','settings.html','install.html']){
+ if(!fs.existsSync(path.join(out,name)))throw Error('NOX_MISSING_PAGE:'+name);
+}
+const moduleSource=fs.readFileSync(path.join(out,'industrial-assets.mjs'),'utf8');
+for(const item of ['metal/Metal012_1K-JPG_Color.jpg','metal/Metal012_1K-JPG_NormalGL.jpg','metal/Metal012_1K-JPG_Metalness.jpg','metal/Metal012_1K-JPG_Roughness.jpg','hdr/machine_shop_01_1k.hdr']){
+ if(!moduleSource.includes('assets/nox-approved/'+item))throw Error('NOX_CORE_MATERIAL_DISCONNECTED:'+item);
+}
 records.sort((a,b)=>a.path.localeCompare(b.path));
 fs.writeFileSync(path.join(target,'MANIFEST.json'),JSON.stringify({version:'2026-11-10',licenses:{planets:'Solar System Scope CC BY 4.0 — https://www.solarsystemscope.com/textures/',hdr:'Poly Haven Machine Shop 01 CC0',metal:'ambientCG Metal012 CC0'},files:records},null,2));
 fs.writeFileSync(path.join(target,'ATTRIBUTION.txt'),'Planet textures © Solar System Scope, licensed under CC BY 4.0. https://www.solarsystemscope.com/textures/\nHDRI Machine Shop 01 © Poly Haven, CC0.\nMetal012 PBR © ambientCG, CC0.\n');
