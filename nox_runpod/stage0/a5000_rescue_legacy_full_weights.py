@@ -95,6 +95,7 @@ def convert(name,base,weights,number):
 def main():
  import fcntl
  if "A5000" not in __import__("subprocess").check_output(["nvidia-smi","--query-gpu=name","--format=csv,noheader"],text=True):raise RuntimeError("WRONG_POD_NOT_A5000")
+ OUT.mkdir(parents=True,exist_ok=True)
  if OUT.stat().st_dev==R.stat().st_dev:raise RuntimeError("OUTPUT_NOT_ON_SEPARATE_CONTAINER_DISK")
  lock=(WORK/"rescue.lock").open("a+")
  try:fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
