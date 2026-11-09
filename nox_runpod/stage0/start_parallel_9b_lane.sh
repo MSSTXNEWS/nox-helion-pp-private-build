@@ -23,12 +23,12 @@ test "$(df -P /workspace | tail -1 | awk '{print $6}')" = /workspace || { echo "
 PY="$ROOT/prime9b-venv/bin/python"
 test -x "$PY" || { echo "HOLD_ENV_NOT_READY";exit 24; }
 test -s "$TOOLS/nox_prime_9b.py" || { echo "HOLD_MAIN_TRAINER_NOT_READY";exit 25; }
-if [ -s "$ROOT/checkpoints/NOX_9B_PARALLEL_TECH/pass1/SUCCESS.json" ]; then
- echo "NOX_PARALLEL_ALREADY_SAVED";exit 0
-fi
-URL="https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/e525520b589e5c477972bbe553b264294d6de492/nox_runpod/stage0/nox_parallel_9b_lane.py"
+URL="https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/ddc5392c19437bfab116650e3ece6c5812bfeb90/nox_runpod/stage0/nox_parallel_9b_lane.py"
+BASE_URL="https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/81dc1d6dfe17b6965879829b412d00f18b52b6eb/nox_runpod/stage0/prime_9b_genesis_full.py"
 curl -fLsS --retry 3 "$URL" -o "$SCRIPT.new"
-"$PY" -m py_compile "$SCRIPT.new"
+curl -fLsS --retry 3 "$BASE_URL" -o "$TOOLS/nox_prime_9b_parallel_base.py.new"
+"$PY" -m py_compile "$SCRIPT.new" "$TOOLS/nox_prime_9b_parallel_base.py.new"
+mv -f "$TOOLS/nox_prime_9b_parallel_base.py.new" "$TOOLS/nox_prime_9b_parallel_base.py"
 mv -f "$SCRIPT.new" "$SCRIPT"
 # Explicitly separate session; allow Windows shutdown.
 nohup setsid bash -c 'exec 8>/workspace/nox/logs/nox_parallel_9b_exec.lock; flock -n 8 || exit 0; exec /workspace/nox/prime9b-venv/bin/python -u /workspace/nox/tools/nox_parallel_9b_lane.py' </dev/null >>"$LOG/NOX_9B_PARALLEL.log" 2>&1 &
