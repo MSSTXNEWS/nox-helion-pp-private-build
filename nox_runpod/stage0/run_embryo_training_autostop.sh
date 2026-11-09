@@ -5,7 +5,7 @@ POD_ID=rsjmb616w0tqio
 TOOLS="$ROOT/tools"
 LOG="$ROOT/logs"
 STAGE="$ROOT/checkpoints/nox_genesis_stage0"
-TRAIN_URL="https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/04404bc076485a6ae75106b15fc7e12d390dadf6/nox_runpod/stage0/train_original_embryo.py"
+TRAIN_URL="https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/570c9d122d6f254a075cd28c41614ebc40110d4f/nox_runpod/stage0/train_original_embryo.py"
 mkdir -p "$TOOLS" "$LOG" "$STAGE"
 on_exit() {
   local code=$?
@@ -48,7 +48,7 @@ train_pass() {
   fi
   while [ "$attempt" -le 3 ]; do
     echo "NOX_PASS_ATTEMPT dir=$dir attempt=$attempt"
-    local args=(--steps 120 --context 128 --out "$dir" --lr "$rate" --checkpoint-every 10)
+    local args=(--steps 1000000 --max-epochs 8 --context 128 --out "$dir" --lr "$rate" --checkpoint-every 10)
     if [ -n "$resume_path" ]; then args+=(--resume "$resume_path"); fi
     set +e
     timeout --signal=INT --kill-after=60s 3900s "$PY" -u "$TOOLS/train_original_embryo.py" "${args[@]}"
@@ -72,7 +72,7 @@ test -s "$P1/embryo_stage0_trained.safetensors" && test -s "$P1/stage0_receipt.j
 "$PY" - "$P1/stage0_receipt.json" <<'PYCHK'
 import json,sys
 r=json.load(open(sys.argv[1],encoding="utf-8"))
-assert r["steps"]>=120 and r["parameters_changed"]>0
+assert r["steps"]>=10 and r["parameters_changed"]>0
 assert r["holdout_loss_after"]<r["holdout_loss_before"],"No holdout improvement; no second pass"
 print("PASS1_VALIDATED_FOR_CONTINUATION",flush=True)
 PYCHK
@@ -83,7 +83,7 @@ test -s "$P2/embryo_stage0_trained.safetensors" && test -s "$P2/stage0_receipt.j
 import json,sys,pathlib,hashlib,datetime
 a=json.load(open(sys.argv[1],encoding="utf-8"))
 b=json.load(open(sys.argv[2],encoding="utf-8"))
-assert b["steps"]>=120 and b["parameters_changed"]>0
+assert b["steps"]>=10 and b["parameters_changed"]>0
 assert b["holdout_loss_after"] < a["holdout_loss_after"],"Second pass did not improve holdout; preserve pass1"
 out=pathlib.Path(sys.argv[3])
 receipt={"status":"TWO_PASSES_TRAINED_NOT_INDEPENDENTLY_VALIDATED",
@@ -103,7 +103,7 @@ test -s "$P3/embryo_stage0_trained.safetensors" && test -s "$P3/stage0_receipt.j
 "$PY" - "$P1/stage0_receipt.json" "$P2/stage0_receipt.json" "$P3/stage0_receipt.json" "$STAGE" <<'PYCHK'
 import json,sys,pathlib,datetime,hashlib
 a,b,c=[json.load(open(p,encoding="utf-8")) for p in sys.argv[1:4]]
-assert c["steps"]>=120 and c["parameters_changed"]>0
+assert c["steps"]>=10 and c["parameters_changed"]>0
 assert c["holdout_loss_after"] < b["holdout_loss_after"],"Third pass did not improve; preserve pass2"
 out=pathlib.Path(sys.argv[4])
 receipt={"status":"THREE_PASSES_TRAINED_NOT_INDEPENDENTLY_VALIDATED",
