@@ -5,9 +5,9 @@ Controlled by local Windows backup watcher; RunPod never requires the PC to stay
 """
 import argparse,datetime,hashlib,json,os,pathlib,re,sys,time
 ROOT=pathlib.Path("/workspace/nox").resolve()
-INCLUDE=("checkpoints","distillation","memory","logs","embryo","dispatcher")
+INCLUDE=("checkpoints","distillation","memory","logs","embryo","dispatcher","models")
 SKIP_DIRS={".git","__pycache__",".venv","venv","node_modules","site-packages",".cache",".locks"}
-BACKUP_MAX_BYTES=10*1024**3
+BACKUP_MAX_BYTES=12*1024**3
 def checksum(p):
  h=hashlib.sha256()
  with p.open("rb") as f:
@@ -48,6 +48,33 @@ def hashfile(arg):
   raise RuntimeError("File changed during hash")
  print(json.dumps({"path":p.relative_to(ROOT).as_posix(),"bytes":after.st_size,
   "mtime_ns":after.st_mtime_ns,"sha256":h},separators=(",",":")))
+def cleanup_cache():
+ """Safe cache-only cleanup. Never touches model/checkpoint files or active downloads."""
+ import shutil,subprocess
+ candidates=[
+   ROOT/"cache/pip",ROOT/"cache/torch_extensions",
+   ROOT/"tmp/old",ROOT/".cache/pip",
+   pathlib.Path("/root/.cache/pip"),
+ ]
+ summary=[]
+ for candidate in candidates:
+  if not candidate.is_dir() or candidate.is_symlink():continue
+  # Cache may be actively written; remove only individual old regular files
+  # and skip any file with an open descriptor.
+  for path in candidate.rglob("*"):
+   if not path.is_file() or path.is_symlink():continue
+   try:
+    st=path.stat()
+    if time.time()-st.st_mtime<86400:continue
+    if subprocess.run(["fuser","-s",str(path)],stderr=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL,timeout=2).returncode==0:continue
+    bytes_=st.st_size
+    path.unlink()
+    summary.append({"path":str(path),"bytes":bytes_})
+   except (OSError,subprocess.TimeoutExpired):continue
+ print(json.dumps({"event":"SAFE_CACHE_CLEAN","count":len(summary),
+   "freed_bytes":sum(x["bytes"] for x in summary),
+   "scope":"old disposable cache files only","no_model_or_checkpoint_deletion":True}))
 def prune(arg,expected):
  p=safe_path(arg)
  relative=p.relative_to(ROOT).as_posix()
@@ -65,11 +92,11 @@ def prune(arg,expected):
  print(json.dumps({"deleted":relative,"bytes":before.st_size}))
 def main():
  ap=argparse.ArgumentParser()
- ap.add_argument("action",choices=("inventory","hash","prune"))
+ ap.add_argument("action",choices=("inventory","hash","prune","cleanup-cache"))
  ap.add_argument("--path")
  ap.add_argument("--sha256")
  a=ap.parse_args()
- if a.action=="inventory":inventory()
+ if a.action=="inventory":inventory()\n elif a.action=="cleanup-cache":cleanup_cache()
  elif a.action=="hash":hashfile(a.path)
  else:
   if not re.fullmatch("[a-f0-9]{64}",a.sha256 or ""):raise RuntimeError("Bad checksum")
