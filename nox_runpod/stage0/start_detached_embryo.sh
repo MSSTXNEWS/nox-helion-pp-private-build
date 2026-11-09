@@ -16,7 +16,7 @@ fi
 test -s "$ROOT/distillation/embryo_v1/9b_teacher_corpus.jsonl" || { echo 'HOLD: teacher corpus missing'; exit 14; }
 test -s "$ROOT/embryo/NOX_EMBRYO_TRANSFER_STAGE/embryo_manifest.json" || { echo 'HOLD: original Embryo missing'; exit 15; }
 if [ -f "$PID" ] && kill -0 "$(cat "$PID")" 2>/dev/null; then echo "ALREADY_RUNNING_PID $(cat "$PID")"; exit 0; fi
-curl -fsSL --retry 3 --connect-timeout 15 'https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/7425171f480ffea3a828c7eae45973e091a4eb7b/nox_runpod/stage0/run_embryo_training_autostop.sh' -o "$RUN.new"
+curl -fsSL --retry 3 --connect-timeout 15 'https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/40d7926419e3e48a0490b195aa064d5237856f4b/nox_runpod/stage0/run_embryo_training_autostop.sh' -o "$RUN.new"
 bash -n "$RUN.new"
 mv -f "$RUN.new" "$RUN"
 chmod 700 "$RUN"
