@@ -35,6 +35,14 @@ except sqlite3.Error:
 finally:c.close()
 print("NOX_FULL_TRAIN_DATASET_EXAMPLES",n,flush=True)
 if n<48:print("HOLD_S03_NEEDS_48_EXAMPLES",flush=True);sys.exit(21)
+import torch
+if not torch.cuda.is_available() or not hasattr(torch.optim,"Adafactor"):
+ print("HOLD_TRUE_FULL_PARAMETER_OPTIMIZER_UNAVAILABLE",flush=True);sys.exit(23)
+cpu_available=0
+for line in Path("/proc/meminfo").read_text().splitlines():
+ if line.startswith("MemAvailable:"):cpu_available=int(line.split()[1])//1048576
+print("NOX_FULL_TRAIN_AVAILABLE_CPU_RAM_GIB",cpu_available,flush=True)
+if cpu_available<24:print("HOLD_CPU_RAM_LT_24_GIB",flush=True);sys.exit(24)
 free=shutil.disk_usage('/opt').free//1024**3
 print("NOX_A40_EPHEMERAL_SPACE_GIB",free,flush=True)
 if free<23:print("HOLD_EPHEMERAL_DISK_LT_23_GIB",flush=True);sys.exit(22)
