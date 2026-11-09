@@ -24,6 +24,11 @@ def inventory():
 def backup(dst):
  if not R.is_dir() or not pathlib.Path("/workspace").is_mount():raise RuntimeError("SOURCE_SHARED_DISK_NOT_MOUNTED")
  dst=dst.resolve()
+ if not dst.exists():
+  parent=dst.parent
+  if not parent.is_mount() or parent.stat().st_dev==R.stat().st_dev:
+   raise RuntimeError("BACKUP_PARENT_NOT_A_SEPARATE_MOUNT")
+  dst.mkdir(parents=False,exist_ok=False)
  if not dst.is_dir():raise RuntimeError("BACKUP_MOUNT_MISSING")
  if dst.stat().st_dev==R.stat().st_dev:raise RuntimeError("BACKUP_MUST_BE_SEPARATE_DISK")
  if dst.is_relative_to(R) or R.is_relative_to(dst):raise RuntimeError("BACKUP_PATH_OVERLAP")
