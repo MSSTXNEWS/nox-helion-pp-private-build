@@ -15,7 +15,7 @@ $drive=Get-PSDrive -Name C
 if ($drive.Free -lt 25GB) {throw ('HOLD: CPU/DISK offload needs 25GB free SSD. Available: {0:N1} GB' -f ($drive.Free/1GB))}
 New-Item -ItemType Directory -Force $dir | Out-Null
 $probeGPU=Join-Path $dir 'NOX_GPU_PROBE.py'
-@'
+$gpuProbeCode = @'
 import torch
 import torch_directml
 import numpy
@@ -25,7 +25,8 @@ x = torch.tensor([2.0], device=d, requires_grad=True)
 (x*x).sum().backward()
 assert x.grad is not None and float(x.grad.detach().cpu()[0]) == 4.0
 print('NOX RX6650M DIRECTML: AVAILABLE')
-'@ | Set-Content -LiteralPath $probeGPU -Encoding UTF8
+'@
+Set-Content -LiteralPath $probeGPU -Value $gpuProbeCode -Encoding UTF8
 & $gpu -u $probeGPU
 if ($LASTEXITCODE -ne 0) {throw 'HOLD: existing DirectML GPU backend unavailable'}
 New-Item -ItemType Directory -Force $dir | Out-Null
@@ -37,13 +38,14 @@ if (!(Test-Path $cpu)) {
   if ($LASTEXITCODE -ne 0) {throw 'HOLD: CPU Python environment creation failed'}
 }
 $probeCPU=Join-Path $dir 'NOX_CPU_PROBE.py'
-@'
+$cpuProbeCode = @'
 import torch, transformers, accelerate, safetensors, numpy
 from transformers import Qwen3_5ForConditionalGeneration
 from packaging.version import Version
 assert Version(torch.__version__.split('+')[0]) >= Version('2.6')
 print('NOX CPU QWEN3.5 RUNTIME: AVAILABLE')
-'@ | Set-Content -LiteralPath $probeCPU -Encoding UTF8
+'@
+Set-Content -LiteralPath $probeCPU -Value $cpuProbeCode -Encoding UTF8
 & $cpu -u $probeCPU
 if ($LASTEXITCODE -ne 0) {
   Write-Host 'NOX: installing CPU-only Qwen3.5 runtime (old GPU environment untouched)' -ForegroundColor Cyan
