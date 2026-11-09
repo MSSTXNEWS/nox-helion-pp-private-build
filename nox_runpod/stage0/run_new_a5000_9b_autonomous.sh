@@ -26,7 +26,7 @@ PY="$ROOT/prime9b-venv/bin/python"
 if [ ! -x "$PY" ]; then python3 -m venv --system-site-packages "$ROOT/prime9b-venv"; fi
 "$PY" -m pip install --disable-pip-version-check -q 'transformers>=5.19,<6' 'accelerate>=1.10,<2' 'bitsandbytes>=0.48,<1' 'peft>=0.17,<1' 'safetensors>=0.4' 'sentencepiece>=0.2'
 BASE_URL="https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/"
-curl -fLsS --retry 3 "${BASE_URL}3d6a2f0f766f60bc9293e7ee02f3f5c5ca96c0d2/nox_runpod/stage0/prime_9b_genesis_full.py" -o "$TOOLS/nox_prime_9b.py.new"
+curl -fLsS --retry 3 "${BASE_URL}81dc1d6dfe17b6965879829b412d00f18b52b6eb/nox_runpod/stage0/prime_9b_genesis_full.py" -o "$TOOLS/nox_prime_9b.py.new"
 curl -fLsS --retry 3 "${BASE_URL}31b101189bc6a7cd54814a4767a1d4262d7c68d2/nox_runpod/stage0/merge_nox_9b_full.py" -o "$TOOLS/nox_9b_merge.py.new"
 "$PY" -m py_compile "$TOOLS/nox_prime_9b.py.new" "$TOOLS/nox_9b_merge.py.new"
 mv "$TOOLS/nox_prime_9b.py.new" "$TOOLS/nox_prime_9b.py"
@@ -36,7 +36,7 @@ attempt=1
 while [ "$attempt" -le 3 ]; do
   echo "NOX_9B_TRAIN_ATTEMPT=$attempt"
   rc=0
-  "$PY" -u "$TOOLS/nox_prime_9b.py" --teacher-exercises-per-topic 12 --passes 3 --context 512 --grad-accum 4 --lora-rank 32 || rc="$?"
+  "$PY" -u "$TOOLS/nox_prime_9b.py" --teacher-exercises-per-topic 12 --passes 3 --context 1024 --grad-accum 4 --lora-rank 32 --batch-size 2 || rc="$?"
   if [ "$rc" -eq 0 ]; then break; fi
   if [ "$attempt" -ge 3 ]; then exit "$rc"; fi
   if ! find "$ROOT/checkpoints/NOX_PRIME_9B_GENESIS" -name SUCCESS.json -print -quit 2>/dev/null | grep -q .; then
