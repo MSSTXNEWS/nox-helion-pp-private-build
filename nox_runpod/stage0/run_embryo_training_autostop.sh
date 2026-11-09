@@ -1,46 +1,69 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 ROOT=/workspace/nox
+POD_ID=rsjmb616w0tqio
 TOOLS="$ROOT/tools"
 LOG="$ROOT/logs"
-STATE="$ROOT/checkpoints/nox_genesis_stage0"
-mkdir -p "$TOOLS" "$LOG" "$STATE"
-POD_ID=rsjmb616w0tqio
-TEACHER_DATA="$ROOT/distillation/embryo_v1/9b_teacher_corpus.jsonl"
-EMBRYO="$ROOT/embryo/NOX_EMBRYO_TRANSFER_STAGE"
-MODEL="$ROOT/models/NOX_PRIME_9B_INHERITED"
-TRAIN_URL="https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/b4e921dc969bdb82af6cab9fcf230d643309e0b6/nox_runpod/stage0/train_original_embryo.py"
-status=1
-stop_compute() {
-  echo "NOX_STOP_REQUEST: training ended with status=$status, stopping GPU compute."
+STAGE="$ROOT/checkpoints/nox_genesis_stage0"
+TRAIN_URL="https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/2c5350e1b96ffe14dcb36779893ae033f580a66f/nox_runpod/stage0/train_original_embryo.py"
+mkdir -p "$TOOLS" "$LOG" "$STAGE"
+on_exit() {
+  local code=$?
+  trap - EXIT
+  echo "NOX_CYCLE_EXIT code=$code; attempting Pod compute stop" | tee -a "$LOG/nox_genesis_autostop.log"
   sync
   if command -v runpodctl >/dev/null 2>&1; then
-    runpodctl pod stop "$POD_ID" && return 0
+    runpodctl pod stop "$POD_ID" >>"$LOG/nox_genesis_autostop.log" 2>&1 || echo "AUTOSTOP_FAILED - manual stop required" >>"$LOG/nox_genesis_autostop.log"
+  else
+    echo "AUTOSTOP_FAILED - runpodctl unavailable" >>"$LOG/nox_genesis_autostop.log"
   fi
-  echo "RUNPOD_AUTOSTOP_FAILED: please stop pod manually. Output remains on /workspace."
+  exit "$code"
 }
-trap 'status=$?; stop_compute' EXIT
-trap 'echo "NOX_INTERRUPTED"; exit 130' INT TERM
-test -f "$EMBRYO/embryo_manifest.json" || { echo "HOLD: original Embryo absent"; exit 11; }
-test -f "$MODEL/transfer_manifest.json" || { echo "HOLD: original 9B manifest absent"; exit 12; }
-test -s "$TEACHER_DATA" || { echo "HOLD: teacher corpus empty"; exit 13; }
-command -v runpodctl >/dev/null 2>&1 || { echo "HOLD: runpodctl unavailable, no reliable GPU autostop"; exit 18; }
-runpodctl pod get "$POD_ID" >/dev/null 2>&1 || { echo "HOLD: runpodctl not authenticated; no unattended training"; exit 19; }
-test "$(df -P /workspace | tail -1 | awk '{print $6}')" = /workspace || { echo "HOLD: /workspace not persistent mount"; exit 14; }
-PYTHON="$ROOT/genesis-venv/bin/python"
-test -x "$PYTHON" || { echo "HOLD: existing genesis Python environment missing"; exit 15; }
-curl --fail --location --silent --show-error --retry 3 "$TRAIN_URL" -o "$TOOLS/train_original_embryo.py.new"
-"$PYTHON" -m py_compile "$TOOLS/train_original_embryo.py.new"
-mv "$TOOLS/train_original_embryo.py.new" "$TOOLS/train_original_embryo.py"
-echo "NOX_EMBRYO_TRAINING_BEGIN: original model, Qwen3.5-9B teacher corpus, 120 optimizer steps"
-# Hard time ceiling to avoid an endless bill if CUDA kernels hang. This is not an automatic retry.
-timeout --signal=INT --kill-after=90s 14400s "$PYTHON" -u "$TOOLS/train_original_embryo.py" --steps 120 --context 128
-status=$?
-if [ "$status" -eq 0 ]; then
-  test -s "$STATE/embryo_stage0_trained.safetensors" || { echo "FAILED: checkpoint absent"; exit 16; }
-  test -s "$STATE/stage0_receipt.json" || { echo "FAILED: receipt absent"; exit 17; }
-  echo "NOX_EMBRYO_WEIGHTS_UPDATED_UNVALIDATED"
-else
-  echo "NOX_EMBRYO_TRAIN_FAILED exit=$status"
-fi
-exit "$status"
+trap on_exit EXIT
+trap 'exit 130' INT TERM
+test "$(df -P /workspace | tail -n 1 | awk '{print $6}')" = /workspace || { echo "HOLD: persistent /workspace missing"; exit 11; }
+test -s "$ROOT/embryo/NOX_EMBRYO_TRANSFER_STAGE/embryo_manifest.json" || { echo "HOLD: original NOX Embryo missing"; exit 12; }
+test -s "$ROOT/models/NOX_PRIME_9B_INHERITED/transfer_manifest.json" || { echo "HOLD: 9B source missing"; exit 13; }
+DATA="$ROOT/distillation/embryo_v1/9b_teacher_corpus.jsonl"
+test -s "$DATA" || { echo "HOLD: 9B teacher corpus missing"; exit 14; }
+command -v runpodctl >/dev/null || { echo "HOLD: no RunPod CLI for autostop"; exit 15; }
+runpodctl pod get "$POD_ID" >/dev/null 2>&1 || { echo "HOLD: no authenticated RunPod CLI"; exit 16; }
+PY="$ROOT/genesis-venv/bin/python"
+test -x "$PY" || { echo "HOLD: existing training environment missing"; exit 17; }
+curl -fLsS --retry 3 "$TRAIN_URL" -o "$TOOLS/train_original_embryo.py.new"
+"$PY" -m py_compile "$TOOLS/train_original_embryo.py.new"
+mv -f "$TOOLS/train_original_embryo.py.new" "$TOOLS/train_original_embryo.py"
+P1="$STAGE/pass1"; P2="$STAGE/pass2"
+mkdir -p "$P1" "$P2"
+echo "NOX_GENESIS_2PASS_BEGIN"
+timeout --signal=INT --kill-after=60s 6600s "$PY" -u "$TOOLS/train_original_embryo.py" --steps 120 --context 128 --out "$P1" --lr 0.00008
+test -s "$P1/embryo_stage0_trained.safetensors" && test -s "$P1/stage0_receipt.json" || { echo "PASS1_MISSING_OUTPUT"; exit 18; }
+"$PY" - "$P1/stage0_receipt.json" <<'PYCHK'
+import json,sys
+r=json.load(open(sys.argv[1],encoding="utf-8"))
+assert r["steps"]>=120 and r["parameters_changed"]>0
+assert r["holdout_loss_after"]<r["holdout_loss_before"],"No holdout improvement; no second pass"
+print("PASS1_VALIDATED_FOR_CONTINUATION",flush=True)
+PYCHK
+echo "NOX_GENESIS_PASS2_BEGIN"
+timeout --signal=INT --kill-after=60s 6600s "$PY" -u "$TOOLS/train_original_embryo.py" --resume "$P1/embryo_stage0_trained.safetensors" --steps 120 --context 128 --out "$P2" --lr 0.00003
+test -s "$P2/embryo_stage0_trained.safetensors" && test -s "$P2/stage0_receipt.json" || { echo "PASS2_MISSING_OUTPUT"; exit 19; }
+"$PY" - "$P1/stage0_receipt.json" "$P2/stage0_receipt.json" "$STAGE" <<'PYCHK'
+import json,sys,pathlib,hashlib,datetime
+a=json.load(open(sys.argv[1],encoding="utf-8"))
+b=json.load(open(sys.argv[2],encoding="utf-8"))
+assert b["steps"]>=120 and b["parameters_changed"]>0
+assert b["holdout_loss_after"] < a["holdout_loss_after"],"Second pass did not improve holdout; preserve pass1"
+out=pathlib.Path(sys.argv[3])
+receipt={"status":"TWO_PASSES_TRAINED_NOT_INDEPENDENTLY_VALIDATED",
+ "source":"Original NOX Embryo V1 checkpoint",
+ "teacher":"Local Qwen3.5-9B",
+ "pass1_sha256":a["checkpoint_sha256"],"pass2_sha256":b["checkpoint_sha256"],
+ "holdout_before":a["holdout_loss_before"],"after_pass1":a["holdout_loss_after"],
+ "after_pass2":b["holdout_loss_after"],
+ "date_utc":datetime.datetime.now(datetime.timezone.utc).isoformat(),
+ "birth_recorded":False}
+(out/"two_pass_result.json").write_text(json.dumps(receipt,indent=2,ensure_ascii=False),encoding="utf-8")
+print("NOX_TWO_PASSES_TRAINED_NOT_INDEPENDENTLY_VALIDATED",flush=True)
+PYCHK
+echo "NOX_STAGE0_TWO_PASSES_COMPLETE_AND_SAVED"
