@@ -31,6 +31,8 @@ def files():
      st=p.stat()
      if st.st_size>BACKUP_MAX_BYTES:continue
      yield p,st
+    except OSError:
+     continue
 def inventory():
  result=[]
  for p,st in files():
