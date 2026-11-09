@@ -180,7 +180,7 @@ def main():
     if resume_weights.is_file() and resume_state.is_file() and not checkpoint.is_file():
         saved=torch.load(str(resume_state),map_location="cpu",weights_only=True)
         meta={"source_sha256":digest(src),"dataset_sha256":digest(SOURCE),
-              "steps_target":effective_steps,"context":args.context,"learning_rate":args.lr
+              "steps_target":effective_steps,"context":args.context,"learning_rate":args.lr}
         if any(saved.get(k)!=v for k,v in meta.items()):
             raise RuntimeError("Existing training state belongs to different source/dataset/config")
         if digest(resume_weights)!=saved.get("weights_sha256"):
