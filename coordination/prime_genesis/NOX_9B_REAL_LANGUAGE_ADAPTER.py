@@ -187,37 +187,56 @@ def gpu_worker():
         head_cpu=f.get_tensor(provenance['head_key'])
     hidden=int(X.shape[1]);vocab=int(head_cpu.shape[0])
     if head_cpu.shape[1]!=hidden or vocab<100000:raise RuntimeError('Original full LM head dimensions unexpected')
-    # Head stays frozen. Casting source bf16 to fp16 is for DirectML kernels only.
-    head=head_cpu.to(dtype=torch.float16).to(device)
+    # The full 248K-class genuine LM head stays on CPU (~4GiB float32).
+    # CPU computes exact cross-entropy and dLoss/dHidden. Only the two low-rank
+    # matrices and their optimizer are on AMD DirectML. This avoids a fake
+    # 8GB-VRAM full-model training claim and unsupported huge DML softmax.
+    torch.set_num_threads(4)
+    head=head_cpu.float().contiguous()
     del head_cpu
     rank=4;scale=2.0
     A=torch.nn.Parameter(torch.randn(rank,hidden,device=device,dtype=torch.float32)*0.003)
     B=torch.nn.Parameter(torch.zeros(hidden,rank,device=device,dtype=torch.float32))
     opt=torch.optim.AdamW([A,B],lr=0.0005,weight_decay=0.0)
-    def loss_at(indices,backward=False):
-        xi=X[indices].to(device); yi=Y[indices].to(device)
-        h=xi+((xi@A.T)@B.T)*scale
-        logits=h.to(torch.float16)@head.T
-        value=torch.nn.functional.cross_entropy(logits.float(),yi)
-        if not bool(torch.isfinite(value).detach().cpu().item()):raise RuntimeError('Nonfinite Qwen3.5 language loss')
-        return value
     def evaluate(indices):
         with torch.no_grad():
             vals=[]
             for i in range(0,len(indices),2):
-                vals.append(float(loss_at(indices[i:i+2]).detach().cpu()))
+                chosen=indices[i:i+2]
+                xi=X[chosen].to(device)
+                delta=((xi@A.T)@B.T)*scale
+                hidden_cpu=X[chosen]+delta.detach().cpu()
+                logits=hidden_cpu @ head.T
+                val=torch.nn.functional.cross_entropy(logits,Y[chosen])
+                vals.append(float(val.detach().cpu()))
             return sum(vals)/len(vals)
     torch.manual_seed(764)
     before=evaluate(val_idx)
     init_a=A.detach().cpu().clone();init_b=B.detach().cpu().clone()
     best_val=before;best=None;best_step=0
-    print('NOX 9B ADAPTER training: frozen real model head',vocab,'classes; DirectML',device,'val_before',before,flush=True)
+    print('NOX 9B language learning: real frozen LM head',vocab,'classes on CPU, DirectML',device,'validation_before',before,flush=True)
     for step in range(32):
-        sel=train_idx[(step*2)%len(train_idx):(step*2)%len(train_idx)+2]
+        chosen=train_idx[(step*2)%len(train_idx):(step*2)%len(train_idx)+2]
+        xi=X[chosen].to(device)
+        delta=((xi@A.T)@B.T)*scale
+        # Exact genuine language loss on tokens, not a fabricated matrix target.
+        hidden_cpu=(X[chosen]+delta.detach().cpu()).requires_grad_(True)
+        logits=hidden_cpu @ head.T
+        loss=torch.nn.functional.cross_entropy(logits,Y[chosen])
+        if not bool(torch.isfinite(loss.detach())):raise RuntimeError('Non-finite CPU language loss')
+        loss.backward()
+        grad_hidden=hidden_cpu.grad
+        if grad_hidden is None or not bool(torch.isfinite(grad_hidden).all()):
+            raise RuntimeError('Missing genuine 9B language-loss gradient')
+        # ∂Loss/∂LoRA = ∂LoRA/∂hidden · ∂Loss/∂hidden; exact chain rule.
         opt.zero_grad(set_to_none=True)
-        loss=loss_at(sel);loss.backward()
+        surrogate=(delta*grad_hidden.detach().to(device)).sum()
+        surrogate.backward()
         grad=B.grad
-        if grad is None or not bool(torch.isfinite(grad).all().cpu().item()):raise RuntimeError('DirectML backward invalid')
+        if grad is None or not bool(torch.isfinite(grad).all().cpu().item()):
+            raise RuntimeError('DirectML LoRA backward invalid')
+        if float(grad.detach().float().cpu().norm())<=0:
+            raise RuntimeError('DirectML LoRA gradient is zero')
         torch.nn.utils.clip_grad_norm_([A,B],1.0)
         opt.step()
         if (step+1)%4==0:
