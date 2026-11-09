@@ -1,7 +1,7 @@
 $ErrorActionPreference='Stop'
 $key=Join-Path $env:USERPROFILE '.ssh\nox_runpod_ed25519'
 if(!(Test-Path -LiteralPath $key -PathType Leaf)){throw 'NOX SSH key missing'}
-$url='https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/7dd16d2b158da9d13ba0a3b083f8b1065038d21c/nox_runpod/stage0/start_detached_embryo.sh'
+$url='https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/ccba2e8bcd015be1cac3ff7156e9d4916ca2c150/nox_runpod/stage0/start_detached_embryo.sh'
 $file=Join-Path $env:TEMP 'NOX_Genesis_Mega_Stage0.sh'
 Invoke-WebRequest -Uri $url -OutFile $file -ErrorAction Stop
 if(!(Test-Path -LiteralPath $file -PathType Leaf)){throw 'Launcher download failed'}
