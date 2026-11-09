@@ -15,7 +15,7 @@ test -s "$MODEL/NOX_UNIFIED_RECEIPT.json" || { echo HOLD_NO_VERIFIED_NOX_9B_BASE
 test -s "$MEMORY" || { echo HOLD_S03_MEMORY_NOT_READY;exit 14; }
 exec 9>"$S/launch.lock"
 flock -n 9 || { echo NOX_A40_TRAINING_SETUP_ALREADY_RUNNING;exit 0; }
-URL='https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/2e59063d13d186a796b416efdac9abff77b6cedd/nox_runpod/stage0/a40_full_parameter_distill_cycle.py'
+URL='https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/8c89a014ea21dd9bb38b76ef33874af5bc1c1ede/nox_runpod/stage0/a40_full_parameter_distill_cycle.py'
 curl -fLsS --retry 4 "$URL" -o "$R/tools/a40_full_parameter_distill_cycle.py.new"
 "$PY" -m py_compile "$R/tools/a40_full_parameter_distill_cycle.py.new"
 mv -f "$R/tools/a40_full_parameter_distill_cycle.py.new" "$R/tools/a40_full_parameter_distill_cycle.py"
