@@ -46,6 +46,15 @@ function Backup([object]$Node,[string]$Scope,[string]$Subdir) {
  $remoteRoot=if($Scope -eq 'shared'){'/workspace/nox'}else{'/opt'}
  $raw=Remote $Node "python3 $agent inventory --scope $Scope"
  $verified=0;$errors=0;$unsupported=0;$copied=0
+ $indexPath=Join-Path $Base ("NOX_VERIFIED_BACKUP_INDEX_"+$Subdir+".json")
+ $index=@{}
+ if(Test-Path -LiteralPath $indexPath){
+  try{
+   $prev=Get-Content -LiteralPath $indexPath -Raw | ConvertFrom-Json
+   foreach($property in $prev.PSObject.Properties){$index[$property.Name]=$property.Value}
+  }catch{Log "BACKUP_INDEX_REBUILD $Subdir"}
+ }
+ $changed=$false
  foreach($line in ($raw -split '[\r\n]+')){
   if(!$line.Trim()){continue}
   try{$entry=$line | ConvertFrom-Json}catch{$errors++;continue}
@@ -56,6 +65,50 @@ function Backup([object]$Node,[string]$Scope,[string]$Subdir) {
   $dst=Join-Path (Join-Path $Base $Subdir) ($rel.Replace('/','\'))
   New-Item -ItemType Directory -Force -Path (Split-Path $dst)|Out-Null
   try{
+   # Cached verified unchanged files: skip expensive SHA256 of 19GB shards.
+   $cached=$index[$rel]
+   if($null -ne $cached -and (Test-Path -LiteralPath $dst)){
+     $localFile=Get-Item -LiteralPath $dst
+     if([long]$cached.size -eq [long]$entry.size -and
+        [string]$cached.mtime_ns -eq [string]$entry.mtime_ns -and
+        $localFile.Length -eq [long]$entry.size -and
+        [string]$cached.sha256 -match '^[a-f0-9]{64}
+   $expected=[string]$meta.sha256
+   $valid=$false
+   if((Test-Path -LiteralPath $dst) -and (Get-Item -LiteralPath $dst).Length -eq [long]$meta.size){
+    $valid=((Get-FileHash -LiteralPath $dst -Algorithm SHA256).Hash.ToLowerInvariant() -eq $expected)
+   }
+   if(!$valid){
+    $part=$dst+'.noxpart'
+    $src=("root@"+$Node.Host+":"+$remoteRoot+"/"+$rel)
+    CopySCP $Node $src $part
+    if((Get-FileHash -LiteralPath $part -Algorithm SHA256).Hash.ToLowerInvariant() -ne $expected){throw 'LOCAL_SHA256_MISMATCH'}
+    Move-Item -LiteralPath $part -Destination $dst -Force
+    $copied++
+   }
+   $after=(Remote $Node "python3 $agent hash --scope $Scope --file '$rel'")|ConvertFrom-Json
+   if($after.sha256 -ne $expected -or [long]$after.size -ne [long]$meta.size){throw 'REMOTE_CHANGED_DURING_COPY'}
+   $verified++
+   $index[$rel]=[pscustomobject]@{size=[long]$entry.size;mtime_ns=[string]$entry.mtime_ns;sha256=$expected}
+   $changed=$true
+   if($copied -gt 0 -and ($copied % 20 -eq 0)){Log "BACKUP_PROGRESS $($Node.Name) copied=$copied verified=$verified"}
+  }catch{
+   $errors++
+   Log "BACKUP_ERROR $($Node.Name) $Scope $rel $($_.Exception.Message)"
+  }
+ }
+ if($changed){
+  $tempIndex=$indexPath+".new"
+  $index | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $tempIndex -Encoding UTF8
+  Move-Item -LiteralPath $tempIndex -Destination $indexPath -Force
+ }
+ return [pscustomobject]@{Verified=$verified;Copied=$copied;Errors=$errors;Unsupported=$unsupported}
+}
+){
+       $verified++
+       continue
+     }
+   }
    $meta=(Remote $Node "python3 $agent hash --scope $Scope --file '$rel'") | ConvertFrom-Json
    $expected=[string]$meta.sha256
    $valid=$false
