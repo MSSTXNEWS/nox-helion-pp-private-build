@@ -13,7 +13,20 @@ if (!(Test-Path (Join-Path $prime 'NOX_PRIME_9B_MANIFEST.json'))) {throw 'HOLD: 
 if (!(Test-Path $gpu)) {throw 'HOLD: existing DirectML training Python missing'}
 $drive=Get-PSDrive -Name C
 if ($drive.Free -lt 25GB) {throw ('HOLD: CPU/DISK offload needs 25GB free SSD. Available: {0:N1} GB' -f ($drive.Free/1GB))}
-& $gpu -c 'import torch,torch_directml,numpy,safetensors; d=torch_directml.device(); x=torch.tensor([2.],device=d,requires_grad=True); (x*x).sum().backward(); assert x.grad is not None; print("NOX RX6650M DIRECTML: AVAILABLE")'
+New-Item -ItemType Directory -Force $dir | Out-Null
+$probeGPU=Join-Path $dir 'NOX_GPU_PROBE.py'
+@'
+import torch
+import torch_directml
+import numpy
+import safetensors
+d = torch_directml.device()
+x = torch.tensor([2.0], device=d, requires_grad=True)
+(x*x).sum().backward()
+assert x.grad is not None and float(x.grad.detach().cpu()[0]) == 4.0
+print('NOX RX6650M DIRECTML: AVAILABLE')
+'@ | Set-Content -LiteralPath $probeGPU -Encoding UTF8
+& $gpu -u $probeGPU
 if ($LASTEXITCODE -ne 0) {throw 'HOLD: existing DirectML GPU backend unavailable'}
 New-Item -ItemType Directory -Force $dir | Out-Null
 if (!(Test-Path $cpu)) {
@@ -23,7 +36,15 @@ if (!(Test-Path $cpu)) {
   & $basepy -m venv (Join-Path $dir 'cpu-venv')
   if ($LASTEXITCODE -ne 0) {throw 'HOLD: CPU Python environment creation failed'}
 }
-& $cpu -c 'import torch,transformers,accelerate,safetensors,numpy;from transformers import Qwen3_5ForConditionalGeneration;from packaging.version import Version;assert Version(torch.__version__.split("+")[0])>=Version("2.6")'
+$probeCPU=Join-Path $dir 'NOX_CPU_PROBE.py'
+@'
+import torch, transformers, accelerate, safetensors, numpy
+from transformers import Qwen3_5ForConditionalGeneration
+from packaging.version import Version
+assert Version(torch.__version__.split('+')[0]) >= Version('2.6')
+print('NOX CPU QWEN3.5 RUNTIME: AVAILABLE')
+'@ | Set-Content -LiteralPath $probeCPU -Encoding UTF8
+& $cpu -u $probeCPU
 if ($LASTEXITCODE -ne 0) {
   Write-Host 'NOX: installing CPU-only Qwen3.5 runtime (old GPU environment untouched)' -ForegroundColor Cyan
   & $cpu -m pip install --disable-pip-version-check 'torch>=2.6,<3' --index-url 'https://download.pytorch.org/whl/cpu'
@@ -31,7 +52,7 @@ if ($LASTEXITCODE -ne 0) {
   & $cpu -m pip install --disable-pip-version-check 'transformers>=5.22,<6' 'accelerate>=1' 'safetensors>=0.6' 'numpy>=1.26' 'packaging>=24'
   if ($LASTEXITCODE -ne 0) {throw 'HOLD: CPU Qwen3.5 runtime installation failed'}
 }
-& $cpu -c 'from transformers import Qwen3_5ForConditionalGeneration;print("NOX QWEN3.5 CPU LOAD SUPPORT: AVAILABLE")'
+& $cpu -u $probeCPU
 if ($LASTEXITCODE -ne 0) {throw 'HOLD: Qwen3.5 CPU Transformers class not available'}
 # This URL and checksum are versioned at a single immutable GitHub commit.
 $commit='e5bb02eb46f5bcfeae8d0431bfcd2166cf7b56c3'
