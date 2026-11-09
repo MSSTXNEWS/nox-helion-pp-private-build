@@ -24,6 +24,8 @@ trap 'echo "NOX_INTERRUPTED"; exit 130' INT TERM
 test -f "$EMBRYO/embryo_manifest.json" || { echo "HOLD: original Embryo absent"; exit 11; }
 test -f "$MODEL/transfer_manifest.json" || { echo "HOLD: original 9B manifest absent"; exit 12; }
 test -s "$TEACHER_DATA" || { echo "HOLD: teacher corpus empty"; exit 13; }
+command -v runpodctl >/dev/null 2>&1 || { echo "HOLD: runpodctl unavailable, no reliable GPU autostop"; exit 18; }
+runpodctl pod get "$POD_ID" >/dev/null 2>&1 || { echo "HOLD: runpodctl not authenticated; no unattended training"; exit 19; }
 test "$(df -P /workspace | tail -1 | awk '{print $6}')" = /workspace || { echo "HOLD: /workspace not persistent mount"; exit 14; }
 PYTHON="$ROOT/genesis-venv/bin/python"
 test -x "$PYTHON" || { echo "HOLD: existing genesis Python environment missing"; exit 15; }
