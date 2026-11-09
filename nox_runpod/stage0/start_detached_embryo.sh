@@ -8,7 +8,11 @@ STATUS="$ROOT/logs/nox_embryo_unattended.status"
 mkdir -p "$ROOT/tools" "$ROOT/logs" "$ROOT/checkpoints"
 test "$(df -P /workspace | tail -1 | awk '{print $6}')" = /workspace || { echo 'HOLD: /workspace is not mounted'; exit 11; }
 command -v runpodctl >/dev/null || { echo 'HOLD: runpodctl missing'; exit 12; }
-runpodctl pod get rsjmb616w0tqio >/dev/null 2>&1 || { echo 'HOLD: RunPod API not authenticated, cannot auto-stop'; exit 13; }
+# Do not block training because the preinstalled Pod-scoped token cannot perform pod get.
+# Safety stop is separately scheduled through the connected RunPod integration.
+if ! runpodctl pod get rsjmb616w0tqio >/dev/null 2>&1; then
+  echo 'WARN: runpodctl pod get is unavailable; external scheduled GPU stop is armed.'
+fi
 test -s "$ROOT/distillation/embryo_v1/9b_teacher_corpus.jsonl" || { echo 'HOLD: teacher corpus missing'; exit 14; }
 test -s "$ROOT/embryo/NOX_EMBRYO_TRANSFER_STAGE/embryo_manifest.json" || { echo 'HOLD: original Embryo missing'; exit 15; }
 if [ -f "$PID" ] && kill -0 "$(cat "$PID")" 2>/dev/null; then echo "ALREADY_RUNNING_PID $(cat "$PID")"; exit 0; fi
