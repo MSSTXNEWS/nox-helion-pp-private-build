@@ -1,5 +1,5 @@
-name: NOX RunPod Direct Orchestrator (2+4)
-run-name: NOX A5000+A40 direct deploy
+name: NOX RunPod Direct Orchestrator (adapter-free A5000 boost)
+run-name: NOX A5000 direct second CUDA lane + A40 health
 on:
   workflow_dispatch:
   push:
@@ -52,7 +52,7 @@ jobs:
           mkdir -p ~/.ssh
           printf '%s\n' "$RUNPOD_KEY" > ~/.ssh/nox
           chmod 600 ~/.ssh/nox
-      - name: Deploy existing 2+4 NOX controller without stopping Pod
+      - name: Start A5000 second teacher CUDA stream (A40 unaffected)
         env:
           NODE: ${{ matrix.node }}
           HOST: ${{ matrix.host }}
@@ -60,7 +60,7 @@ jobs:
         run: |
           set -euo pipefail
           ssh -i ~/.ssh/nox -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new -p "$PORT" "root@$HOST" \
-            "curl --fail --silent --show-error --location https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/9cbe18b61af54ee8fd6cc87c1b6c6d9fdc44cbb8/nox_runpod/stage0/launch_two_four_parallel_nox.sh | bash -s -- $NODE"
+            "if [ \"$NODE\" = A5000 ]; then curl -fsSL https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/0f6d1a0899444019f2e8dfd910fdeec382f52757/nox_runpod/stage0/start_a5000_cuda_secondary_direct.sh | bash; else echo NOX_A40_EXISTING_TASKS_UNTOUCHED; fi"
       - name: Check remotely requested processes, GPU and persistence
         if: always()
         env:
