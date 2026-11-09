@@ -31,17 +31,34 @@ def load_rows():
     return [records[k]["text"] for k in sorted(records)]
 def load_embryo():
     config_file=E/"model_config.json"
-    code_file=E/"model.py"
-    if not config_file.is_file() or not code_file.is_file():
-        raise RuntimeError("Original model.py/model_config.json absent; cannot instantiate original embryo")
+    # The transferred original checkpoint contains train.py rather than model.py.
+    # Prefer the original model source; never download unrelated model code.
+    candidates=[E/"model.py",E/"train.py",E/"upgrade.py",E/"upgrade_experimental.py"]
+    code_file=next((p for p in candidates if p.is_file()),None)
+    if not config_file.is_file() or code_file is None:
+        raise RuntimeError("Original Embryo model config or training source absent. Refuse substitute weights.")
+    print(json.dumps({"event":"ORIGINAL_EMBRYO_SOURCE","code":str(code_file)}),flush=True)
     config=json.loads(config_file.read_text(encoding="utf-8"))
     if not isinstance(config,dict):raise RuntimeError("Invalid original model config")
     sys.path.insert(0,str(E))
+    # Extract module imports, model classes and non-executing definitions from original
+    # train.py so the original training CLI does not run at import time.
+    import ast,types
+    tree=ast.parse(code_file.read_text(encoding="utf-8-sig"),filename=str(code_file))
+    safe=[]
+    for node in tree.body:
+        if isinstance(node,(ast.Import,ast.ImportFrom,ast.FunctionDef,ast.AsyncFunctionDef,ast.ClassDef)):
+            safe.append(node)
+        elif isinstance(node,ast.Assign) and all(isinstance(t,ast.Name) for t in node.targets):
+            # Keep constant assignments only, never execute training at import.
+            if isinstance(node.value,(ast.Constant,ast.List,ast.Tuple,ast.Dict)):
+                safe.append(node)
     spec=importlib.util.spec_from_file_location("nox_embryo_original_model",str(code_file))
-    module=importlib.util.module_from_spec(spec);sys.modules[spec.name]=module;spec.loader.exec_module(module)
+    module=importlib.util.module_from_spec(spec);sys.modules[spec.name]=module
+    exec(compile(ast.Module(body=safe,type_ignores=[]),str(code_file),"exec"),module.__dict__)
     candidate_classes=[(name,cls) for name,cls in vars(module).items()
                        if inspect.isclass(cls) and issubclass(cls,nn.Module) and cls is not nn.Module and cls.__module__==module.__name__]
-    if not candidate_classes:raise RuntimeError("Original model.py defines no torch.nn.Module model")
+    if not candidate_classes:raise RuntimeError("Original training source defines no torch.nn.Module model")
     weight_paths=sorted(E.rglob("*.safetensors"))
     # Original is immutable. Prefer explicitly the latest original embryo candidate with readable weights.
     if not weight_paths:raise RuntimeError("Original Embryo safetensors checkpoint missing")
