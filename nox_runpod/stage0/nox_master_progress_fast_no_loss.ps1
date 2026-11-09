@@ -9,7 +9,7 @@ $k=Join-Path $env:USERPROFILE '.ssh\nox_runpod_ed25519'
 $repo='MSSTXNEWS/nox-helion-pp-private-build'
 $launcher='https://raw.githubusercontent.com/'+$repo+'/6836cd762fa5e7fc1e89293f48a66b1c86981cde/nox_runpod/stage0/start_minimal_progress_controller.sh'
 $unify='https://raw.githubusercontent.com/'+$repo+'/7dc29955c4e69bdcd870bc3384c9c53bc8dc9689/nox_runpod/stage0/start_a40_three_teacher_unification.sh'
-$backup='https://raw.githubusercontent.com/'+$repo+'/99959f75fd4baae87c91e665bbfc3ae62c42587e/nox_runpod/stage0/nox_backup_then_clean_2pods.ps1'
+$backup='https://raw.githubusercontent.com/'+$repo+'/10eb9339577cb149a944fd6a23a2154ab302bcb1/nox_runpod/stage0/nox_backup_then_clean_2pods.ps1'
 $backupPath='C:\NOX_HELION\NOX_NEW\scripts\nox_backup_then_clean_2pods.ps1'
 $nodes=@(
  [pscustomobject]@{Name='A5000';HostName='69.30.85.188';Port=22199},
