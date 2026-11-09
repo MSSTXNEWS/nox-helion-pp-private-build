@@ -12,7 +12,14 @@
     "runpod-a5000",
     "contabo"
   ],
-  "tasks": [],
+  "tasks": [
+    {
+      "id": "nox-health-windows-20261109-2206",
+      "target": "windows",
+      "action": "health",
+      "expires_at": "2026-11-10T20:00:00Z"
+    }
+  ],
   "security": {
     "repository_public": true,
     "arbitrary_shell": false,
