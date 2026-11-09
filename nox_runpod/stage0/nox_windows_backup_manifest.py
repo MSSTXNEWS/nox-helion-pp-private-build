@@ -6,7 +6,7 @@ import argparse,hashlib,json,os,pathlib,time
 SHARED=pathlib.Path("/workspace/nox")
 CONTAINER=pathlib.Path("/opt")
 DIRS={"shared":["checkpoints","models","distillation","memory","embryo","dispatcher","tools","logs"],
-      "container":["nox_historical_full_weights","nox_teacher_27b","nox_teachers"]}
+      "container":["nox_historical_full_weights","nox_teacher_27b","nox_teachers","nox_full_parameter_A40"]}
 def paths(scope):
  root=SHARED if scope=="shared" else CONTAINER
  for folder in DIRS[scope]:
