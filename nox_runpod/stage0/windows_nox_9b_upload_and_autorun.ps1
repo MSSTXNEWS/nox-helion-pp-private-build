@@ -50,9 +50,9 @@ for folder,manifest in sets:
 '@
 $encoded=[Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($verify))
 Remote "echo '$encoded' | base64 -d | python3"
-$runUrl=$base+'4f36c147b9360a9321905c99bcfc918743368fe8/nox_runpod/stage0/run_new_a5000_9b_autonomous.sh'
+$runUrl=$base+'474a3539c8b0691c456257898216991efd7ed81d/nox_runpod/stage0/run_new_a5000_9b_autonomous.sh'
 # Do not duplicate active trainer. Detach from Windows with setsid.
 $start="mkdir -p /workspace/nox/logs /workspace/nox/tools; if pgrep -af '[r]un_new_a5000_9b_autonomous.sh' | grep -q .; then echo NOX_9B_ALREADY_RUNNING; else curl -fLsS --retry 3 '$runUrl' -o /workspace/nox/tools/run_new_a5000_9b_autonomous.sh && bash -n /workspace/nox/tools/run_new_a5000_9b_autonomous.sh && nohup setsid bash /workspace/nox/tools/run_new_a5000_9b_autonomous.sh </dev/null >> /workspace/nox/logs/NOX_9B_AUTONOMOUS.log 2>&1 & echo NOX_9B_DETACHED_REQUESTED; fi"
 Remote $start
-Write-Host 'Upload verified. Training requested on RunPod. Windows may be shut down after you see NOX_9B_DETACHED_REQUESTED.' -ForegroundColor Green
+Write-Host 'Upload verified. Training requested on RunPod. Windows may be shut down after you see NOX_9B_DETACHED_REQUESTED. The GPU is NOT stopped after stage 1.' -ForegroundColor Green
 Write-Host 'Do not delete original or source disk. Actual steps and merged-model evidence are saved on /workspace.' -ForegroundColor Yellow
