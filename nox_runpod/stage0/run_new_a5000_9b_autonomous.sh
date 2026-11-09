@@ -36,7 +36,7 @@ attempt=1
 while [ "$attempt" -le 3 ]; do
   echo "NOX_9B_TRAIN_ATTEMPT=$attempt"
   rc=0
-  "$PY" -u "$TOOLS/nox_prime_9b.py" --teacher-exercises-per-topic 12 --passes 3 --context 1024 --grad-accum 4 --lora-rank 32 --batch-size 2 || rc="$?"
+  "$PY" -u "$TOOLS/nox_prime_9b.py" --teacher-exercises-per-topic 12 --passes 3 --context 1024 --grad-accum 4 --lora-rank 32 --batch-size 4 || rc="$?"
   if [ "$rc" -eq 0 ]; then break; fi
   if [ "$attempt" -ge 3 ]; then exit "$rc"; fi
   if ! find "$ROOT/checkpoints/NOX_PRIME_9B_GENESIS" -name SUCCESS.json -print -quit 2>/dev/null | grep -q .; then
