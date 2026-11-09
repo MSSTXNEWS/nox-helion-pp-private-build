@@ -98,8 +98,10 @@ def main():
  parser=argparse.ArgumentParser()
  parser.add_argument("--steps",type=int,default=20)
  parser.add_argument("--lr",type=float,default=1e-5)
+ parser.add_argument("--cycle",type=str,required=True)
  a=parser.parse_args()
  if a.steps<1 or a.steps>500:raise RuntimeError("STEPS_OUT_OF_BOUNDS")
+ if not a.cycle.replace("_","").isalnum() or len(a.cycle)>50:raise RuntimeError("INVALID_CYCLE_ID")
  if not (0<a.lr<=5e-5):raise RuntimeError("UNSAFE_LEARNING_RATE")
  lk=(STATE/"trainer.lock").open("a+")
  try:fcntl.flock(lk,fcntl.LOCK_EX|fcntl.LOCK_NB)
@@ -125,7 +127,7 @@ def main():
   report("HOLD","DATA_PREFLIGHT",target=a.steps,reason=str(e)[:250]);return
  report("RUNNING","FULL_PARAMETER_MODEL_LOADING",target=a.steps,extra={"train_examples":len(train),"holdout_examples":len(test),"teacher_counts":teachers})
  # At most one live full checkpoint on container disk. Never overwrite any prior artifact.
- output=DEST/("NOX_FULL_STEP_"+str(a.steps))
+ output=DEST/("NOX_FULL_CYCLE_"+a.cycle+"_STEP_"+str(a.steps))
  if output.exists():
   report("HOLD","OUTPUT_EXISTS",target=a.steps,reason="EXISTING_FULL_CHECKPOINT_PRESERVED")
   return
@@ -163,7 +165,7 @@ def main():
   after=float(loss_for(mod,tok,test[0][0]).detach().float().item())
  if not math.isfinite(after):raise RuntimeError("NONFINITE_HOLDOUT_LOSS")
  report("RUNNING","FULL_MODEL_STAGING",steps=a.steps,target=a.steps,loss=lastloss,holdout=after)
- stage=DEST/("._WRITING_"+str(a.steps))
+ stage=DEST/("._WRITING_"+a.cycle+"_STEP_"+str(a.steps))
  if stage.exists():raise RuntimeError("EXISTING_INCOMPLETE_STAGE_NOT_OVERWRITTEN")
  stage.mkdir()
  try:
@@ -174,7 +176,7 @@ def main():
    raise RuntimeError("FULL_WEIGHT_SHARDS_INCOMPLETE")
   hashes=[{"file":p.name,"bytes":p.stat().st_size,"sha256":sha(p)} for p in shards]
   receipt={"status":"FULL_PARAMETER_ADAPTER_FREE_STUDENT_CHECKPOINT_SAVED_NOT_ALL_KNOWLEDGE_ABSORBED",
-     "utc":utc(),"steps":a.steps,"parameter_count":total_params,
+     "utc":utc(),"cycle":a.cycle,"steps":a.steps,"parameter_count":total_params,
      "teacher_counts":teachers,"train_examples":len(train),
      "holdout_examples":len(test),"baseline_holdout_loss":baseline,
      "after_holdout_loss":after,"no_adapter_training":True,"shards":hashes,
