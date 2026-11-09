@@ -5,7 +5,7 @@ $Key=Join-Path $env:USERPROFILE '.ssh\nox_runpod_ed25519'
 $Backup='C:\NOX_HELION\NOX_NEW\RUNPOD_BACKUP'
 $Self='C:\NOX_HELION\NOX_NEW\scripts\nox_backup_27b_all.ps1'
 $Agent='/workspace/nox/tools/nox_backup_agent.py'
-$AgentUrl='https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/01038cc2f3e2407754a012baa1cb9d647f804579/nox_runpod/stage0/nox_backup_agent.py'
+$AgentUrl='https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/338653d0d566014c2120b5866feba8ba62d2510b/nox_runpod/stage0/nox_backup_agent.py'
 $DonorUrl='https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/36b7bb5bdf4bbb52912e24c031b2db2f07087668/nox_runpod/stage0/teacher_27b_container_verified_v2.sh'
 New-Item -ItemType Directory -Force -Path $Backup,(Split-Path $Self) | Out-Null
 if(!(Test-Path $Key)){throw 'SSH key missing'}
