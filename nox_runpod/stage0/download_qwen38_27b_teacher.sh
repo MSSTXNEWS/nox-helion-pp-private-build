@@ -13,11 +13,11 @@ REPO='unsloth/Qwen3.5-27B-GGUF'
 FILE='Qwen3.5-27B-Q4_K_M.gguf'
 # Need 17GB for model and substantial reserve for ongoing 9B checkpoints and final merges.
 free=$(df -BG --output=avail /workspace | tail -n1 | tr -dc '0-9')
-if [ -z "$free" ] || [ "$free" -lt 38 ]; then
-  echo "HOLD_LOW_DISK_FREE_GIB=$free - preserve 9B checkpoints; no donor download"
+if [ -z "$free" ] || [ "$free" -lt 30 ]; then
+  echo "HOLD_LOW_DISK_FREE_GIB=$free (need >=30 GiB for 27B + training reserve); original NOX preserved"
   exit 22
 fi
-if [ -s "$DEST/$FILE" ] && [ "$(stat -c%s "$DEST/$FILE")" -gt 15000000000 ]; then
+if [ -s "$DEST/teacher_receipt.json" ] && [ -s "$DEST/$FILE" ] && [ "$(stat -c%s "$DEST/$FILE")" -gt 15000000000 ]; then
   echo "NOX_27B_TEACHER_ALREADY_PRESENT"
   exit 0
 fi
