@@ -5,7 +5,7 @@ set -Eeuo pipefail
 ROOT=/workspace/nox
 LOG="$ROOT/logs"
 AUX="$ROOT/checkpoints/NOX_9B_PARALLEL_TECH"
-TEACHER="$ROOT/teachers/Qwen3.8-27B"
+TEACHER="$ROOT/teachers/Qwen3.5-27B"
 SCRIPT="$ROOT/tools/download_qwen38_27b_teacher.sh"
 PID="$LOG/nox_27b_dispatcher.pid"
 mkdir -p "$LOG" "$AUX" "$ROOT/tools"
@@ -38,6 +38,11 @@ while [ "$(date +%s)" -lt "$deadline" ]; do
  if [ -z "$active" ]; then break; fi
  sleep 15
 done
+active=$(pgrep -f "[p]ython.*nox_parallel_9b_lane.py" || true)
+if [ -n "$active" ]; then
+  echo "NOX_SECONDARY_9B_STILL_RUNNING: defer switch; checkpoints preserved" >>"$LOG/NOX_27B_DISPATCHER.log"
+  exit 0
+fi
 echo "NOX_SECONDARY_9B_SWITCHED_OFF_AFTER_CHECKPOINT" >>"$LOG/NOX_27B_DISPATCHER.log"
 bash "$ROOT/tools/download_qwen38_27b_teacher.sh" >>"$LOG/NOX_27B_DISPATCHER.log" 2>&1 || { echo "NOX_27B_DOWNLOAD_HOLD_OR_FAILED" >>"$LOG/NOX_27B_DISPATCHER.log"; exit 0; }
 echo "NOX_27B_DONOR_DOWNLOADED_INFERENCE_WAITING_FOR_FREE_GPU" >>"$LOG/NOX_27B_DISPATCHER.log"
