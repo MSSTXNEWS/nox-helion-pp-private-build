@@ -1,0 +1,26 @@
+{
+  "protocol": "NOX_CONTROL_V1",
+  "schema_version": 1,
+  "enabled": true,
+  "poll_seconds": 180,
+  "mode": "allowlisted",
+  "default_action": "none",
+  "targets": [
+    "all",
+    "windows",
+    "runpod-a40",
+    "runpod-a5000",
+    "contabo"
+  ],
+  "tasks": [],
+  "security": {
+    "repository_public": true,
+    "arbitrary_shell": false,
+    "remote_mutations_enabled": false,
+    "require_unique_id": true,
+    "require_expiration": true,
+    "require_target": true,
+    "require_authenticated_approval_for_mutations": true
+  },
+  "notes": "Control-plane manifest only. Agents must be installed separately on each host. Never execute shell text from this file."
+}
