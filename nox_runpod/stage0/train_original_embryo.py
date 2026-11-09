@@ -36,6 +36,7 @@ def load_embryo():
         raise RuntimeError("Original model.py/model_config.json absent; cannot instantiate original embryo")
     config=json.loads(config_file.read_text(encoding="utf-8"))
     if not isinstance(config,dict):raise RuntimeError("Invalid original model config")
+    sys.path.insert(0,str(E))
     spec=importlib.util.spec_from_file_location("nox_embryo_original_model",str(code_file))
     module=importlib.util.module_from_spec(spec);sys.modules[spec.name]=module;spec.loader.exec_module(module)
     candidate_classes=[(name,cls) for name,cls in vars(module).items()
@@ -101,7 +102,7 @@ def main():
     vocab=sample.shape[-1]
     if vocab<256:raise RuntimeError(f"Embryo vocab={vocab} <256; need original tokenizer, no guessed mapping")
     if vocab>256:
-        print(json.dumps({"warning":"Byte-level encoding used; student's native tokenizer may differ. No completion claim."}),flush=True)
+        print(json.dumps({"warning":"Byte-level UTF8 learning is provisional; Embryo native tokenizer may differ. No full absorption claim."}),flush=True)
     weights_initial=[p.detach().cpu().clone() for p in model.parameters() if p.requires_grad]
     if not weights_initial:raise RuntimeError("Embryo has no trainable parameters")
     tokens=[]
