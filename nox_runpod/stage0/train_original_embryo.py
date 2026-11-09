@@ -30,68 +30,74 @@ def load_rows():
     if len(records)<24:raise RuntimeError(f"Teacher dataset too small: {len(records)}; need >=24 real records")
     return [records[k]["text"] for k in sorted(records)]
 def load_embryo():
-    config_file=E/"model_config.json"
-    # The transferred original checkpoint contains train.py rather than model.py.
-    # Prefer the original model source; never download unrelated model code.
-    candidates=[E/"model.py",E/"train.py",E/"upgrade.py",E/"upgrade_experimental.py"]
-    code_file=next((p for p in candidates if p.is_file()),None)
-    if not config_file.is_file() or code_file is None:
-        raise RuntimeError("Original Embryo model config or training source absent. Refuse substitute weights.")
-    print(json.dumps({"event":"ORIGINAL_EMBRYO_SOURCE","code":str(code_file)}),flush=True)
-    config=json.loads(config_file.read_text(encoding="utf-8"))
-    if not isinstance(config,dict):raise RuntimeError("Invalid original model config")
+    """Instantiate ONLY the original NOXEmbryo architecture from transferred model.py."""
+    import ast
+    model_path=E/"model.py"
+    if not model_path.is_file():
+        raise RuntimeError("Original model.py missing from Embryo transfer")
     sys.path.insert(0,str(E))
-    # Extract module imports, model classes and non-executing definitions from original
-    # train.py so the original training CLI does not run at import time.
-    import ast,types
-    tree=ast.parse(code_file.read_text(encoding="utf-8-sig"),filename=str(code_file))
+    config_file=E/"model_config.json"
+    config=json.loads(config_file.read_text(encoding="utf-8")) if config_file.is_file() else {}
+    if not isinstance(config,dict):raise RuntimeError("Invalid Embryo config")
+    tree=ast.parse(model_path.read_text(encoding="utf-8-sig"),filename=str(model_path))
     safe=[]
     for node in tree.body:
         if isinstance(node,(ast.Import,ast.ImportFrom,ast.FunctionDef,ast.AsyncFunctionDef,ast.ClassDef)):
             safe.append(node)
         elif isinstance(node,ast.Assign) and all(isinstance(t,ast.Name) for t in node.targets):
-            # Keep constant assignments only, never execute training at import.
             if isinstance(node.value,(ast.Constant,ast.List,ast.Tuple,ast.Dict)):
                 safe.append(node)
-    spec=importlib.util.spec_from_file_location("nox_embryo_original_model",str(code_file))
-    module=importlib.util.module_from_spec(spec);sys.modules[spec.name]=module
-    exec(compile(ast.Module(body=safe,type_ignores=[]),str(code_file),"exec"),module.__dict__)
-    candidate_classes=[(name,cls) for name,cls in vars(module).items()
-                       if inspect.isclass(cls) and issubclass(cls,nn.Module) and cls is not nn.Module and cls.__module__==module.__name__]
-    if not candidate_classes:raise RuntimeError("Original training source defines no torch.nn.Module model")
-    weight_paths=sorted(E.rglob("*.safetensors"))
-    # Original is immutable. Prefer explicitly the latest original embryo candidate with readable weights.
-    if not weight_paths:raise RuntimeError("Original Embryo safetensors checkpoint missing")
-    def instantiate(cls):
+    module=type(sys)("nox_embryo_original_model")
+    module.__file__=str(model_path)
+    sys.modules[module.__name__]=module
+    exec(compile(ast.Module(body=safe,type_ignores=[]),str(model_path),"exec"),module.__dict__)
+    cls=getattr(module,"NOXEmbryo",None)
+    seed_cls=getattr(module,"SeedConfig",None)
+    if not inspect.isclass(cls) or not issubclass(cls,nn.Module):
+        raise RuntimeError("NOXEmbryo class missing from original model.py")
+    if seed_cls is None:raise RuntimeError("SeedConfig missing from original model.py")
+    # Prefer original training defaults, not fabricated student architecture.
+    def seed_instance():
+        try:return seed_cls(**{k:v for k,v in config.items()
+                              if k in inspect.signature(seed_cls).parameters})
+        except TypeError:
+            try:return seed_cls()
+            except Exception as ex:raise RuntimeError("Original SeedConfig requires original parameters: "+str(ex))
+    def instantiate():
         sig=inspect.signature(cls)
+        params={k:v for k,v in sig.parameters.items() if k!="self"}
         kwargs={}
-        for name,param in sig.parameters.items():
-            if name=="self":continue
-            if name in config:kwargs[name]=config[name]
-            elif name in ("config","cfg","model_config"):kwargs[name]=config
-            elif param.default is inspect.Parameter.empty:raise TypeError("Unknown required model argument: "+name)
-        return cls(**kwargs)
+        for name,p in params.items():
+            if name in ("cfg","config","seed_config"):kwargs[name]=seed_instance()
+            elif name in config:kwargs[name]=config[name]
+            elif p.default is inspect.Parameter.empty:
+                raise RuntimeError("Unsupported required original NOXEmbryo argument: "+name)
+        try:return cls(**kwargs)
+        except TypeError:
+            if len(params)==1:return cls(seed_instance())
+            raise
+    weights_paths=sorted(E.rglob("*.safetensors"),key=lambda p:p.stat().st_mtime,reverse=True)
+    if not weights_paths:raise RuntimeError("Original Embryo safetensors absent")
     errors=[]
-    for path in sorted(weight_paths,key=lambda p:p.stat().st_mtime,reverse=True):
-        try: weights=load_file(str(path),device="cpu")
-        except Exception as e:errors.append(f"{path.name}: {str(e)[:90]}");continue
-        state_variants=[weights]
-        for prefix in ("model.","module.","net."):
-            if any(k.startswith(prefix) for k in weights):
-                state_variants.append({k[len(prefix):] if k.startswith(prefix) else k:v for k,v in weights.items()})
-        for name,cls in candidate_classes:
-            try:
-                model=instantiate(cls)
-                for state in state_variants:
-                    result=model.load_state_dict(state,strict=False)
-                    total=len(model.state_dict())
-                    matched=total-len(result.missing_keys)
-                    if matched<max(2,int(0.9*total)):continue
-                    if result.missing_keys or result.unexpected_keys:
-                        continue # fail-closed: do not silently reinitialize embryo layers
-                    return model,path,config,name
-            except Exception as e:errors.append(f"{name}:{str(e)[:120]}")
-    raise RuntimeError("Cannot load original Embryo strictly; not recreating model: "+"; ".join(errors[:8]))
+    for weight_path in weights_paths:
+        try:
+            weights=load_file(str(weight_path),device="cpu")
+            variants=[weights]
+            for prefix in ("model.","module.","net."):
+                if any(k.startswith(prefix) for k in weights):
+                    variants.append({k[len(prefix):] if k.startswith(prefix) else k:v
+                                     for k,v in weights.items()})
+            for variant in variants:
+                model=instantiate()
+                try:
+                    model.load_state_dict(variant,strict=True)
+                    print(json.dumps({"event":"ORIGINAL_NOX_EMBRYO_LOADED",
+                        "weights":str(weight_path),"weights_sha256":digest(weight_path),
+                        "architecture":"model.py:NOXEmbryo:SeedConfig"}),flush=True)
+                    return model,weight_path,config,cls.__name__
+                except (RuntimeError,ValueError) as ex:errors.append(str(ex)[:220])
+        except Exception as ex:errors.append(str(ex)[:220])
+    raise RuntimeError("Original Embryo weight/architecture mismatch; not replacing originals: "+"; ".join(errors[:4]))
 def logits_from(model,tokens):
     try:out=model(tokens)
     except TypeError:out=model(input_ids=tokens)
