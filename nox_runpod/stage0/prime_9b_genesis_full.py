@@ -182,7 +182,7 @@ def train(tok,model,epochs,context,grad_accum,rank):
    break
   best=metric
  tok.save_pretrained(str(WORK/"tokenizer"))
- write_event("NOX_9B_ADAPTER_READY","result",str(WORK))
+ write_event("NOX_9B_ADAPTER_READY",result=str(WORK))
 def main():
  p=argparse.ArgumentParser()
  p.add_argument("--teacher-exercises-per-topic",type=int,default=8)
