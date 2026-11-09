@@ -1,36 +1,33 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 ROOT=/workspace/nox
-RUN="$ROOT/tools/run_embryo_training_autostop.sh"
-LOG="$ROOT/logs/nox_embryo_unattended.log"
-PID="$ROOT/logs/nox_embryo_unattended.pid"
-STATUS="$ROOT/logs/nox_embryo_unattended.status"
-mkdir -p "$ROOT/tools" "$ROOT/logs" "$ROOT/checkpoints"
-test "$(df -P /workspace | tail -1 | awk '{print $6}')" = /workspace || { echo 'HOLD: /workspace is not mounted'; exit 11; }
-command -v runpodctl >/dev/null || { echo 'HOLD: runpodctl missing'; exit 12; }
-# Do not block training because the preinstalled Pod-scoped token cannot perform pod get.
-# Safety stop is separately scheduled through the connected RunPod integration.
-if ! runpodctl pod get rsjmb616w0tqio >/dev/null 2>&1; then
-  echo 'WARN: runpodctl pod get is unavailable; external scheduled GPU stop is armed.'
+TOOLS="$ROOT/tools"
+LOG="$ROOT/logs"
+PID="$LOG/nox_embryo_unattended.pid"
+OUT="$LOG/nox_embryo_unattended.log"
+RUN_URL="https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/a9e25cc4b26bf8d4c1d2f8934b2e9b7abfbf0629/nox_runpod/stage0/run_embryo_training_autostop.sh"
+SUP_URL="https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/e8cff9b91f04f74fc80f1480362cd4841b892030/nox_runpod/stage0/supervise_embryo.sh"
+mkdir -p "$TOOLS" "$LOG"
+test -s "$ROOT/embryo/NOX_EMBRYO_TRANSFER_STAGE/embryo_manifest.json" || { echo "HOLD: Embryo absent"; exit 14; }
+test -s "$ROOT/distillation/embryo_v1/9b_teacher_corpus.jsonl" || { echo "HOLD: teacher data absent"; exit 15; }
+if [ -f "$PID" ] && kill -0 "$(cat "$PID")" 2>/dev/null; then
+  echo "ALREADY_RUNNING pid=$(cat "$PID")"
+  exit 0
 fi
-test -s "$ROOT/distillation/embryo_v1/9b_teacher_corpus.jsonl" || { echo 'HOLD: teacher corpus missing'; exit 14; }
-test -s "$ROOT/embryo/NOX_EMBRYO_TRANSFER_STAGE/embryo_manifest.json" || { echo 'HOLD: original Embryo missing'; exit 15; }
-if [ -f "$PID" ] && kill -0 "$(cat "$PID")" 2>/dev/null; then echo "ALREADY_RUNNING_PID $(cat "$PID")"; exit 0; fi
-curl -fsSL --retry 3 --connect-timeout 15 'https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/615d5ea54fce1cde751d397b81dfaccb1f5da670/nox_runpod/stage0/run_embryo_training_autostop.sh' -o "$RUN.new"
-bash -n "$RUN.new"
-mv -f "$RUN.new" "$RUN"
-chmod 700 "$RUN"
-echo "LAUNCHING" > "$STATUS"
-nohup setsid bash "$RUN" </dev/null >>"$LOG" 2>&1 &
-echo $! > "$PID"
+# Server fetches Linux files directly; never pass scripts through PowerShell CRLF.
+curl -fLsS --retry 3 "$RUN_URL" -o "$TOOLS/run_embryo_training_autostop.sh.new"
+curl -fLsS --retry 3 "$SUP_URL" -o "$TOOLS/supervise_embryo.sh.new"
+bash -n "$TOOLS/run_embryo_training_autostop.sh.new"
+bash -n "$TOOLS/supervise_embryo.sh.new"
+mv -f "$TOOLS/run_embryo_training_autostop.sh.new" "$TOOLS/run_embryo_training_autostop.sh"
+mv -f "$TOOLS/supervise_embryo.sh.new" "$TOOLS/supervise_embryo.sh"
+chmod 700 "$TOOLS/run_embryo_training_autostop.sh" "$TOOLS/supervise_embryo.sh"
+nohup setsid bash "$TOOLS/supervise_embryo.sh" </dev/null >>"$OUT" 2>&1 &
+echo "$!" > "$PID"
 sleep 3
-if ! kill -0 "$(cat "$PID")" 2>/dev/null; then echo "LAUNCH_FAILED"; tail -n 25 "$LOG"; exit 16; fi
-# Independent deadline guard: stop compute no later than 4h even if learner is stuck.
-WATCH="$ROOT/logs/nox_embryo_watchdog.pid"
-if [ ! -f "$WATCH" ] || ! kill -0 "$(cat "$WATCH")" 2>/dev/null; then
-  nohup setsid bash -c 'sleep 14460; runpodctl pod stop rsjmb616w0tqio' </dev/null >>"$ROOT/logs/nox_embryo_watchdog.log" 2>&1 &
-  echo $! > "$WATCH"
+if ! kill -0 "$(cat "$PID")" 2>/dev/null; then
+  echo "LAUNCH_FAILED"; tail -n 15 "$OUT"; exit 18
 fi
-echo "DETACHED_TRAINING_PROCESS_STARTED pid=$(cat "$PID")"
-echo "LOG=$LOG"
-echo "IMPORTANT: Detached process may fail later. Only receipt proves training. If stop API fails, manually stop pod."
+echo "NOX_SUPERVISOR_DETACHED pid=$(cat "$PID")"
+echo "NOX_CHECKPOINTS=$ROOT/checkpoints/nox_genesis_stage0"
+echo "WINDOWS_CAN_DISCONNECT; actual training only confirmed by step logs and checkpoint."
