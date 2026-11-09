@@ -1,7 +1,7 @@
 $ErrorActionPreference='Stop'
 $key=Join-Path $env:USERPROFILE '.ssh\nox_runpod_ed25519'
 if(!(Test-Path -LiteralPath $key -PathType Leaf)){throw 'NOX SSH key missing'}
-$scriptUrl='https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/ecd1f736cd58324d4be7bdeb1d476a3375a69afe/nox_runpod/stage0/start_detached_embryo.sh'
+$scriptUrl='https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/7ae187212852667e4f67edeebb0e039450148ca9/nox_runpod/stage0/start_detached_embryo.sh'
 Write-Host 'NOX GENESIS: launch/resume detached three-pass trainer on A5000; no Windows shell piping' -ForegroundColor Cyan
 # Server downloads and executes the script on Linux itself. Prevents PowerShell CRLF injection.
 $cmd="curl -fsSL --retry 3 --connect-timeout 15 '$scriptUrl' | bash"
