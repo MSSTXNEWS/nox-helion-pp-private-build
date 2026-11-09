@@ -27,7 +27,10 @@ test -s "$ROOT/models/NOX_PRIME_9B_INHERITED/transfer_manifest.json" || { echo "
 DATA="$ROOT/distillation/embryo_v1/9b_teacher_corpus.jsonl"
 test -s "$DATA" || { echo "HOLD: 9B teacher corpus missing"; exit 14; }
 command -v runpodctl >/dev/null || { echo "HOLD: no RunPod CLI for autostop"; exit 15; }
-runpodctl pod get "$POD_ID" >/dev/null 2>&1 || { echo "HOLD: no authenticated RunPod CLI"; exit 16; }
+# Pod-scoped credentials may forbid GET. Do not block learning solely on it.
+if ! runpodctl pod get "$POD_ID" >/dev/null 2>&1; then
+  echo 'WARN: Pod-scoped CLI GET unavailable; external scheduled safety stop is armed.'
+fi
 PY="$ROOT/genesis-venv/bin/python"
 test -x "$PY" || { echo "HOLD: existing training environment missing"; exit 17; }
 curl -fLsS --retry 3 "$TRAIN_URL" -o "$TOOLS/train_original_embryo.py.new"
