@@ -20,13 +20,9 @@ if [ "$ROLE" = A40 ];then
   echo NOX_A40_CUDA_BOOST_REQUEST
   curl -fLsS --retry 3 "$BOOST" | bash || echo NOX_A40_BOOST_HOLD_REVIEW_LOG
 else
-  # Preserve any existing GPU trainer. Do not issue stop, SIGTERM or QLoRA.
-  active="$(ps -eo args= | grep -E '[p]ython.*[/]workspace/nox/tools/a5000_pure_distillation.py' | head -1 || true)"
-  if [ -z "$active" ];then
-    echo NOX_A5000_EXISTING_TRAINER_UNTOUCHED_SECONDARY_CPU_MEMORY_ACTIVE
-  else
-    echo NOX_A5000_PURE_CUDA_TEACHER_ALREADY_ACTIVE
-  fi
+  DUAL='https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/e9fa4d36885089170c0534a66fc83862f2c1b0e5/nox_runpod/stage0/start_a5000_two_pure_cuda_streams.sh'
+  echo NOX_A5000_DUAL_PURE_CUDA_REQUEST
+  curl -fLsS --retry 3 "$DUAL" | bash || echo NOX_A5000_DUAL_CUDA_HOLD_CHECK_LEGACY_TRAINER_OR_RESOURCES
 fi
 SUP="$S/supervisor_${ROLE}.sh"
 cat > "$SUP" <<EOF
