@@ -4,7 +4,7 @@ $dir='C:\NOX_HELION\NOX_NEW\scripts'
 $backup=Join-Path $dir 'nox_backup_27b_all.ps1'
 New-Item -ItemType Directory -Force -Path $dir | Out-Null
 if(!(Test-Path -LiteralPath $key)){throw 'NOX_SSH_KEY_MISSING'}
-$url='https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/595ea7f886d208e677dec62e586fcbbe961f9557/nox_runpod/stage0/start_multigpu_no_adapter_controller.sh'
+$url='https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/9299563b0c34e6696fa51ee9e4ff8644c11c4493/nox_runpod/stage0/start_multigpu_no_adapter_controller.sh'
 function Launch([string]$role,[string]$ip,[int]$port){
  $cmd="curl -fLsS --retry 3 '$url' | bash -s -- '$role'"
  $previous=$ErrorActionPreference
