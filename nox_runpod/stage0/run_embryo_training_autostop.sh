@@ -5,7 +5,7 @@ POD_ID=rsjmb616w0tqio
 TOOLS="$ROOT/tools"
 LOG="$ROOT/logs"
 STAGE="$ROOT/checkpoints/nox_genesis_stage0"
-TRAIN_URL="https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/93ea2e21cbf85531f56e622e580a948b8c3d9dd6/nox_runpod/stage0/train_original_embryo.py"
+TRAIN_URL="https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/2c9dccb8279d98a3b61e5cf5cedc381e2e3a52bd/nox_runpod/stage0/train_original_embryo.py"
 mkdir -p "$TOOLS" "$LOG" "$STAGE"
 on_exit() {
   local code=$?
