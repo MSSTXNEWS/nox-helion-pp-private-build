@@ -1,0 +1,43 @@
+name: NOX HOME V16 source syntax gate
+on:
+  push:
+    branches:
+      - 'fix/home-v16-cinematic-contract-*'
+  pull_request:
+    paths:
+      - 'web-home/candidates/2026-11-10-v16-cinema/**'
+      - '.github/workflows/nox-home-v16-syntax.yml'
+jobs:
+  source-syntax:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate shipped JavaScript source (no fake runtime PASS)
+        run: |
+          node --check web-home/candidates/2026-11-10-v16-cinema/nox-engines/physical-worlds-v7.mjs
+          node --check web-home/candidates/2026-11-10-v16-cinema/nox-resonance-cinema-v13.js
+          node --check web-home/candidates/2026-11-09-v15-repair/nox-home-recovery.js
+          node --check web-home/candidates/2026-11-09-v15-repair/nox-orbit-original.js
+      - name: Verify 14-control source and explicit GPU hold
+        run: |
+          node - <<'NODE'
+          const fs=require('node:fs'), assert=require('node:assert/strict');
+          const root='web-home/candidates/';
+          const orbit=fs.readFileSync(root+'2026-11-09-v15-repair/nox-orbit-original.js','utf8');
+          const pbr=fs.readFileSync(root+'2026-11-10-v16-cinema/nox-engines/physical-worlds-v7.mjs','utf8');
+          const contract=fs.readFileSync(root+'2026-11-10-v16-cinema/CINEMATIC-CONTRACT.md','utf8');
+          for(const [name,count] of [['COLOR_IDS',6],['THEME_IDS',5],['MODE_IDS',3]]){
+            const match=orbit.match(new RegExp('const '+name+'=\\[([^\\]]+)\\]'));
+            assert(match,'Missing '+name);
+            assert.equal(match[1].split(',').length,count,name);
+          }
+          assert.match(pbr,/WebGLRenderer/);
+          assert.match(pbr,/MeshPhysicalMaterial/);
+          assert(!pbr.includes(',const zScale='),'Invalid JavaScript statement separator in the PBR scale patch');
+          assert(contract.includes('HOLD'),'Do not claim visual acceptance from syntax checks');
+          console.log('Source gate PASS; real GPU/render QA remains HOLD');
+          NODE
