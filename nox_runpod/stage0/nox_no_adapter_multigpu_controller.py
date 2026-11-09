@@ -80,7 +80,7 @@ def curate():
  tmp=out/"knowledge_sources.tmp.jsonl"
  with tmp.open("w",encoding="utf-8") as f:
   for k in sorted(items):
-   f.write(json.dumps(items[k],ensure_ascii=False)+"\\n")
+   f.write(json.dumps(items[k],ensure_ascii=False)+"\n")
   f.flush();os.fsync(f.fileno())
  os.replace(tmp,out/"knowledge_sources.jsonl")
  stamp={"counts":counts,"at":datetime.datetime.now(datetime.timezone.utc).isoformat(),
