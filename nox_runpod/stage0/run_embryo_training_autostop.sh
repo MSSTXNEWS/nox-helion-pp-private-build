@@ -5,7 +5,7 @@ POD_ID=rsjmb616w0tqio
 TOOLS="$ROOT/tools"
 LOG="$ROOT/logs"
 STAGE="$ROOT/checkpoints/nox_genesis_stage0"
-TRAIN_URL="https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/570c9d122d6f254a075cd28c41614ebc40110d4f/nox_runpod/stage0/train_original_embryo.py"
+TRAIN_URL="https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/93ea2e21cbf85531f56e622e580a948b8c3d9dd6/nox_runpod/stage0/train_original_embryo.py"
 mkdir -p "$TOOLS" "$LOG" "$STAGE"
 on_exit() {
   local code=$?
@@ -32,7 +32,11 @@ if ! runpodctl pod get "$POD_ID" >/dev/null 2>&1; then
   echo 'WARN: Pod-scoped CLI GET unavailable; external scheduled safety stop is armed.'
 fi
 PY="$ROOT/genesis-venv/bin/python"
-test -x "$PY" || { echo "HOLD: existing training environment missing"; exit 17; }
+if [ ! -x "$PY" ]; then
+  python -m venv --system-site-packages "$ROOT/genesis-venv"
+fi
+PY="$ROOT/genesis-venv/bin/python"
+"$PY" -m pip install --disable-pip-version-check --quiet safetensors 'numpy<3' || { echo "HOLD: dependencies unavailable"; exit 17; }
 curl -fLsS --retry 3 "$TRAIN_URL" -o "$TOOLS/train_original_embryo.py.new"
 "$PY" -m py_compile "$TOOLS/train_original_embryo.py.new"
 mv -f "$TOOLS/train_original_embryo.py.new" "$TOOLS/train_original_embryo.py"
