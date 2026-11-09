@@ -12,7 +12,7 @@ runpodctl pod get rsjmb616w0tqio >/dev/null 2>&1 || { echo 'HOLD: RunPod API not
 test -s "$ROOT/distillation/embryo_v1/9b_teacher_corpus.jsonl" || { echo 'HOLD: teacher corpus missing'; exit 14; }
 test -s "$ROOT/embryo/NOX_EMBRYO_TRANSFER_STAGE/embryo_manifest.json" || { echo 'HOLD: original Embryo missing'; exit 15; }
 if [ -f "$PID" ] && kill -0 "$(cat "$PID")" 2>/dev/null; then echo "ALREADY_RUNNING_PID $(cat "$PID")"; exit 0; fi
-curl -fsSL --retry 3 --connect-timeout 15 'https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/e2131e47bbc70b537602d88d036ec1ff8e021995/nox_runpod/stage0/run_embryo_training_autostop.sh' -o "$RUN.new"
+curl -fsSL --retry 3 --connect-timeout 15 'https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/d584054ed3a7aca41abc80b6ed53912250f60536/nox_runpod/stage0/run_embryo_training_autostop.sh' -o "$RUN.new"
 bash -n "$RUN.new"
 mv -f "$RUN.new" "$RUN"
 chmod 700 "$RUN"
