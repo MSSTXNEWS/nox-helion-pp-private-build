@@ -36,7 +36,7 @@ def main():
   for line in out.read_text(encoding="utf-8").splitlines():
    try:done.add(json.loads(line)["id"])
    except Exception:pass
- for cycle in range(a.passes):
+ for cycle in range(int(os.environ.get("NOX_CYCLE","0")),int(os.environ.get("NOX_CYCLE","0"))+a.passes):
   for topic,q in QUESTIONS:
    prompt=q+" Respond with a useful grounded educational example and explicit limitations."
    ident=hashlib.sha256((a.id+"|"+str(cycle)+"|"+topic+"|"+prompt).encode()).hexdigest()[:20]
