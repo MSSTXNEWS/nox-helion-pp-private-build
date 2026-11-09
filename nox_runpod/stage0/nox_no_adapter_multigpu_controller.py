@@ -46,42 +46,46 @@ def persist(role,slots,decisions):
  p=S/(role+"_snapshot.json");q=p.with_suffix(".tmp")
  q.write_text(json.dumps(state,ensure_ascii=False,indent=2),encoding="utf-8");os.replace(q,p)
 def curate():
- # Memory consolidation from all 3 teachers; stable, source-labelled and deduplicated.
+ # No SQLite on shared network volume: lock-protocol failures from WAL on NFS.
+ # A40 owns durable atomic JSONL knowledge export. A5000 reads A40's counts.
  out=R/"memory/THREE_TEACHERS"
  out.mkdir(parents=True,exist_ok=True)
- db=sqlite3.connect(out/"nox_memory.sqlite3",timeout=15)
- db.execute("PRAGMA journal_mode=WAL");db.execute("PRAGMA synchronous=FULL")
- db.execute("CREATE TABLE IF NOT EXISTS items(teacher TEXT,hash TEXT,source TEXT,source_id TEXT,topic TEXT,content TEXT,acquired TEXT,quality TEXT,PRIMARY KEY(teacher,hash))")
  sources={
- "qwen9":["nox_prime_9b_teacher.jsonl","nox_9b_knowledge_stage2.jsonl","NOX_A40_CUDA_DISTILLATION.jsonl","NOX_A5000_PURE_DISTILLATION.jsonl","NOX_A40_CUDA_PARALLEL_MEMORY_REASONING.jsonl"],
+ "qwen9":["nox_prime_9b_teacher.jsonl","nox_9b_knowledge_stage2.jsonl","NOX_A40_CUDA_DISTILLATION.jsonl","NOX_A5000_PURE_DISTILLATION.jsonl","NOX_A40_CUDA_PARALLEL_MEMORY_REASONING.jsonl","NOX_A5000_SECOND_TEACHER_KNOWLEDGE.jsonl"],
  "qwen27":["nox_teacher_qwen27.jsonl","nox_27b_teacher_knowledge.jsonl"],
- "deepseek32":["nox_teacher_deepseek32.jsonl"]
- }
- counts={}
- with db:
-  for teacher,names in sources.items():
-   for name in names:
-    p=R/"distillation"/name
-    if not p.is_file() or p.stat().st_size>500_000_000:continue
-    try:
-     with p.open(encoding="utf-8") as f:
-      for line in f:
-       if len(line)>500000:continue
-       try:
-        row=json.loads(line);content=str(row.get("text") or "").strip()
-        if len(content)<100:continue
-        orig=str(row.get("teacher") or "")
-        if teacher=="qwen27" and orig and "27" not in orig:continue
-        if teacher=="deepseek32" and orig and "deepseek" not in orig.lower() and "32" not in orig:continue
-        sha=hashlib.sha256(content.encode()).hexdigest()
-        db.execute("INSERT OR IGNORE INTO items VALUES(?,?,?,?,?,?,?,?)",
-         (teacher,sha,name,str(row.get("id",""))[:100],str(row.get("topic",""))[:120],content,
-          datetime.datetime.now(datetime.timezone.utc).isoformat(),"SYNTHETIC_NOT_INDEPENDENTLY_VERIFIED"))
-       except (ValueError,TypeError,sqlite3.Error):continue
-    except OSError:continue
-   counts[teacher]=db.execute("SELECT COUNT(*) FROM items WHERE teacher=?",(teacher,)).fetchone()[0]
- db.close()
- (out/"counts.json").write_text(json.dumps({"counts":counts,"at":datetime.datetime.now(datetime.timezone.utc).isoformat()},indent=2))
+ "deepseek32":["nox_teacher_deepseek32.jsonl"]}
+ items={};counts={}
+ for teacher,names in sources.items():
+  for name in names:
+   p=R/"distillation"/name
+   if not p.is_file() or p.stat().st_size>500_000_000:continue
+   try:
+    with p.open(encoding="utf-8") as f:
+     for line in f:
+      if len(line)>500000:continue
+      try:
+       row=json.loads(line);body=str(row.get("text") or "").strip()
+       if len(body)<100:continue
+       orig=str(row.get("teacher") or "")
+       if teacher=="qwen27" and orig and "27" not in orig:continue
+       if teacher=="deepseek32" and orig and "deepseek" not in orig.lower() and "32" not in orig:continue
+       sha=hashlib.sha256(body.encode()).hexdigest()
+       k=teacher+":"+sha
+       items.setdefault(k,{"teacher":teacher,"sha256":sha,"source":name,
+         "source_id":str(row.get("id",""))[:100],"topic":str(row.get("topic",""))[:120],
+         "text":body,"verified":False})
+      except (ValueError,TypeError,KeyError):continue
+   except OSError:continue
+  counts[teacher]=sum(1 for x in items.values() if x["teacher"]==teacher)
+ tmp=out/"knowledge_sources.tmp.jsonl"
+ with tmp.open("w",encoding="utf-8") as f:
+  for k in sorted(items):
+   f.write(json.dumps(items[k],ensure_ascii=False)+"\\n")
+  f.flush();os.fsync(f.fileno())
+ os.replace(tmp,out/"knowledge_sources.jsonl")
+ stamp={"counts":counts,"at":datetime.datetime.now(datetime.timezone.utc).isoformat(),
+  "status":"THREE_TEACHER_MEMORY_SOURCES_ONLY_NOT_TRAINED_WEIGHTS"}
+ x=out/"counts.tmp.json";x.write_text(json.dumps(stamp,indent=2));os.replace(x,out/"counts.json")
  return counts
 def supervisor(role):
  lock=(S/(role+".lock")).open("a+")
@@ -103,7 +107,9 @@ def supervisor(role):
    # Distillation job from previous command may already be running. Refuse blind duplicates.
    live=check_process("/workspace/nox/tools/a5000_pure_distillation.py")
    decisions["CUDA_TEACHER"]=("ACTIVE" if live else "HOLD_NEEDS_PRIOR_VERIFIED_LAUNCH")
-   try:decisions["MEMORY_CURATE"]="READY:"+json.dumps(curate())
+   try:
+    state=R/"memory/THREE_TEACHERS/counts.json"
+    decisions["MEMORY_CURATE"]="A40_CANONICAL:"+state.read_text()[:300] if state.is_file() else "WAIT_A40_MEMORY"
    except Exception as e:decisions["MEMORY_CURATE"]="ERROR:"+str(e)[:100]
   else:
    for idx,name in enumerate(("CUDA_TEACHER_1","CUDA_TEACHER_2")):
