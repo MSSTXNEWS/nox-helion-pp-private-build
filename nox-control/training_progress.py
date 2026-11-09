@@ -13,7 +13,7 @@ TEXT_SUFFIXES = {".log", ".json", ".jsonl", ".txt"}
 SKIP_DATA_DIRS = {"THREE_TEACHERS", "datasets", "examples", "samples"}
 STEP_PATTERNS = [
     re.compile(r'(?i)\b(?:global_step|optimizer_step|train_step|training_step)\s*["\':= ]+\s*(\d{1,9})\s*(?:/|of)\s*(\d{1,9})'),
-    re.compile(r'(?i)\b(?:global_step|optimizer_step|train_step|training_step|step)\s*["\':= ]+\s*(\d{1,9})')
+    re.compile(r'(?i)\b(?:global_step|optimizer_step|train_step|training_step)\s*["\':= ]+\s*(\d{1,9})')
 ]
 TOTAL_PATTERNS = [
     re.compile(r'(?i)\b(?:max_steps|total_steps|planned_steps|target_steps|num_training_steps)\s*["\':= ]+\s*(\d{1,9})')
