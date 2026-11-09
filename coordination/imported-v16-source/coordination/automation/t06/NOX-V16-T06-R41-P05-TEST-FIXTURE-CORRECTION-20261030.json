@@ -1,0 +1,28 @@
+{
+  "schema": "NOX_V16_T06_R41_P05_FIXTURE_CORRECTION_V1",
+  "runId": "NOX-V16-T06-R41-P05-TEST-FIXTURE-CORRECTION-20261030",
+  "existingTaskId": "T06",
+  "parentRunId": "NOX-V16-T06-R41-P01-P04-P05-OWNER-FINAL-SOURCE-20261030",
+  "sourcePreHead": "553eb2255915678cbe6ecad48ed7920bfecf14ff",
+  "sourcePreTree": "29efa2ee3b9d05eefd7bbfa696a8d753176490f8",
+  "sourcePostHead": "RESOLVE_FROM_GIT",
+  "changes": [
+    {
+      "path": "Packages/P05/Space/tests/Program.cs",
+      "preBlob": "c1ef83f7a7bb179e6d11881a5e81e2b7a4c26668",
+      "postBlob": "15cf95c15e65720460a66743c4145dfae8839fc4"
+    }
+  ],
+  "reason": "Confirmed independent Windows P05 test fixture incorrectly serializes case-colliding anonymous type before provider parser; use raw duplicate JSON fixture, retain all assertions and NFC production guard",
+  "tests": "PENDING_GITLAB_WINDOWS_NET8_SOURCE_QA",
+  "sourceReady": false,
+  "qaAccepted": false,
+  "exeAccepted": false,
+  "sourceLock": "Original parts and assets unchanged",
+  "host50": {
+    "bound": 50,
+    "nativePending": 14
+  },
+  "journal": "T02_ONLY",
+  "sourceWindow": "R41 after failed previous QA snapshot"
+}

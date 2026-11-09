@@ -1,0 +1,44 @@
+{
+  "schema": "NOX-EXPRESS-FOUR-GATES-R4",
+  "directive_date": "2026-11-02",
+  "developer_count": 15,
+  "sole_integrator": null,
+  "independent_release_acceptor": "ANY_DISTINCT_EXECUTOR_SAME_BUILD_ID",
+  "roles_7_are_logical_not_agents": true,
+  "auto_helpers": "ALL_15_GENERALISTS_PARALLEL_NO_SINGLE_OWNER",
+  "required_sources": [
+    "V16",
+    "MASTER",
+    "PR162_CURRENT_HEAD",
+    "READY_COMPONENTS_REV4",
+    "ERROR_REGISTER_DELTA",
+    "LESSONS_DELTA"
+  ],
+  "hard_sequence": [
+    "G1_SOURCELOCK_729_AND_LOADER_FIRSTBOOT_CALLBACKS",
+    "G2_REUSED_WPF_PYTHON_WEBVIEW2_NATIVE_IPC",
+    "G3_REAL_NSIS_SETUP_SAME_SHA_SIGNED_PREREQUISITES",
+    "G4_PHYSICAL_INSTALL_E07_NOLOSS_SAME_BUILD_ID"
+  ],
+  "full_e07_only_after_source_ready": true,
+  "allow_windows_runner_readiness_preflight_in_parallel": true,
+  "max_competing_installers": 1,
+  "existing_installers_only": true,
+  "source_only_patch": false,
+  "do_not_authorize_generated_code_execution": true,
+  "metrics": {
+    "time_to_accepted_feature": "NOT_MEASURED",
+    "measured_speedup": "UNKNOWN"
+  },
+  "product": "NOX_HELION_EXPRESS_INTEGRATOR_WINDOWS_X64_LOADER_WITH_EMBEDDED_WEB",
+  "execution_model": {
+    "all_fifteen_can_handle_every_gate": true,
+    "single_integrator_bottleneck_forbidden": true,
+    "megablock_integration": true,
+    "avoid_repeated_intermediate_tests_and_reports": true,
+    "one_essential_receipt_per_gate": true,
+    "source_commit_compare_and_swap": true,
+    "release_requires_physical_windows_e07": true,
+    "stop_sid_acl_consent_signature_no_loss_enforced": true
+  }
+}

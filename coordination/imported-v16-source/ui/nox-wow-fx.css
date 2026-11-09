@@ -1,0 +1,31 @@
+/* NOX WOW FX — comets, glow, smoke, fire. Secondary layer. Original HOME/MENU geometry unchanged. */
+.nox-fx{position:relative;isolation:isolate;overflow:hidden}
+.nox-fx:before,.nox-fx:after{content:"";position:absolute;pointer-events:none;inset:0}
+/* glow sweep */
+.nox-fx:before{background:linear-gradient(105deg,transparent 20%,rgba(123,205,221,.08) 50%,transparent 80%);background-size:200% 100%;animation:nox-fx-sweep 9s linear infinite}
+/* comet */
+.nox-fx:after{background:
+  radial-gradient(ellipse 80px 2px at 15% 30%,rgba(180,240,255,.85),transparent 70%),
+  radial-gradient(ellipse 60px 2px at 70% 60%,rgba(255,196,120,.7),transparent 70%),
+  radial-gradient(ellipse 40px 1px at 40% 80%,rgba(120,220,230,.5),transparent 70%);
+  animation:nox-fx-comet 7s linear infinite;opacity:.85}
+@keyframes nox-fx-sweep{from{background-position:0 0}to{background-position:200% 0}}
+@keyframes nox-fx-comet{from{transform:translateX(-8%)}to{transform:translateX(8%)}}
+/* smoke */
+.nox-fx-smoke{position:absolute;inset:auto 8% -20% 8%;height:40%;pointer-events:none;
+  background:radial-gradient(ellipse at 50% 100%,rgba(40,60,70,.35),transparent 70%);
+  filter:blur(8px);animation:nox-fx-smoke 6s ease-in-out infinite alternate}
+@keyframes nox-fx-smoke{from{opacity:.35;transform:translateY(6px)}to{opacity:.6;transform:translateY(-4px)}}
+/* fire on active/error */
+.nox-sb-tile[data-state="RUNNING"]:after,.nox-sb-tile[data-state="ERROR"]:after{
+  content:"";position:absolute;left:10%;right:10%;bottom:4px;height:6px;border-radius:6px;pointer-events:none;
+  background:linear-gradient(90deg,transparent,rgba(255,140,60,.8),rgba(255,210,120,.9),transparent);
+  filter:blur(1px);animation:nox-fx-fire 1.2s ease-in-out infinite alternate}
+@keyframes nox-fx-fire{from{opacity:.45;transform:scaleX(.85)}to{opacity:1;transform:scaleX(1)}}
+.nox-sb-tile{position:relative}
+@media(prefers-reduced-motion:reduce){
+  .nox-fx:before,.nox-fx:after,.nox-fx-smoke,.nox-sb-tile:after{animation:none!important}
+}
+.nox-fx-canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0}
+.nox-fx-smoke{position:absolute;right:6%;bottom:0;width:min(180px,40%);opacity:.65;pointer-events:none;z-index:1}
+.nox-fx > *{position:relative;z-index:2}

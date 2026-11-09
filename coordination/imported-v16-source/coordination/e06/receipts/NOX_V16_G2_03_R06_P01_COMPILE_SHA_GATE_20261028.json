@@ -1,0 +1,198 @@
+{
+  "schema": "NOX_V16_E06_G2_03_R06_P01_COMPILE_IDENTITY_V1",
+  "run_id": "NOX-V16-E06-G2-03-20261028T1109MSK-R06",
+  "date": "2026-10-28",
+  "owner": "E06",
+  "baseline": {
+    "immutable_common_commit_git_sha1": "0b3a7d435be735148d64171deb9027093a89646e",
+    "immutable_common_tree_git_sha1": "f108d604c444f718b32aaecfd07b90b8f91b9a6f",
+    "main_match_before_write": true,
+    "inventory_pr": 66,
+    "original_three_parts_raw_sha256": "UNVERIFIED",
+    "extracted_729_full_SourceLock": "UNVERIFIED_HOLD",
+    "donor_pr": 103,
+    "donor_commit_git_sha1": "3b3711ac6a48549ad4951af05e76d17546622a01",
+    "donor_tree_git_sha1": "b642ac985ea414e778ed5a7cbce3f1d981281877",
+    "donor_history_diverges_from_immutable_common": true
+  },
+  "candidate": {
+    "branch": "e06/v16-g2-03-nsis-owner-final-sha-20261028-r06",
+    "code_commit_git_sha1": "5ec6aef9d6145ba6689f872af4632e2560edec55",
+    "code_tree_git_sha1": "4a289f21b1980770ee78db68ddd4224ef774a1de",
+    "status": "ISOLATED_STACKED_SOURCE_CANDIDATE_HOLD",
+    "main_untouched": true,
+    "no_second_host": true,
+    "owner_file_changes_P02_P03_P04_P05": 0,
+    "approved_D02_WOW_CoreID_Persona_asset_edits": 0,
+    "files_deleted": 0
+  },
+  "files": [
+    {
+      "path": "coordination/e06/build_onehost_installer.ps1",
+      "owner": "E06",
+      "preimage_immutable_commit": "3b3711ac6a48549ad4951af05e76d17546622a01",
+      "pre_sha256": "7fbbc4ea2913e2a572842934bb7327acf36aa34a002eb163a8815d12f230cc34",
+      "post_sha256": "520d5f5e160ea4aa77d800300aa25a86c07cbfdccb6c2004688743a24bff5f63",
+      "pre_git_blob_sha1": "e461f53e8e5882839f50a8f3d38fc01b31d3f620",
+      "post_git_blob_sha1": "66e4fa6937008b6aefc5eeb5224750cac8aa6bb5",
+      "diff": "Before first write save exact 4 approved P01 NSIS SHA256 to $approvedPreflightHashes; immediately before makensis re-read same four paths and reject disappearance, reparse or any changed digest. Keep original owner scripts, Verify-Payload and rollback unchanged.",
+      "readback": "PASS SHA256+GIT_BLOB_SHA1"
+    },
+    {
+      "path": "coordination/e06/tests/onehost_builder_contract.test.mjs",
+      "owner": "E06",
+      "preimage_immutable_commit": "3b3711ac6a48549ad4951af05e76d17546622a01",
+      "pre_sha256": "7e8e83ff57f206b321fb72c284700b7e39da13494e0a532f027191bb3111c0a4",
+      "post_sha256": "f9eb07f4d0e4e45ca8a5e245ede1c0f74a087082bb8382c89a466ef4a694e963",
+      "pre_git_blob_sha1": "811697bcdb9fa63fc43c4fab3384b58fddc19cd8",
+      "post_git_blob_sha1": "7f6c750a623b10412be5481ebe4670c49e6ab2fe",
+      "diff": "Added ninth E06 saved contract test for two distinct four-file SHA verification phases, ordering, negative paths, and retained previous no-loss controls.",
+      "readback": "PASS SHA256+GIT_BLOB_SHA1"
+    }
+  ],
+  "receipt_self": {
+    "path": "coordination/e06/receipts/NOX_V16_G2_03_R06_P01_COMPILE_SHA_GATE_20261028.json",
+    "owner": "E06",
+    "pre_sha256": "ABSENT",
+    "post_sha256": "CALCULATE_FROM_SAVED_REMOTE_FILE_NOT_SELF_REFERENTIAL",
+    "post_git_blob_sha1": "CALCULATE_FROM_SAVED_REMOTE_FILE_NOT_SELF_REFERENTIAL"
+  },
+  "test_evidence": {
+    "V8_source_assertions": "12/12 PASS",
+    "saved_node_contract_callbacks_in_V8_adapted_harness": "9/9 PASS",
+    "original_Node_process": "NOT_RUN",
+    "PowerShell": "NOT_RUN_LINUX",
+    "WPF_WebView2_NSIS": "NOT_RUN_LINUX",
+    "Windows_install_update_rollback": "NOT_RUN_HOLD",
+    "E07_same_EXE_SHA": "NOT_RUN_HOLD"
+  },
+  "task_ledger": [
+    {
+      "TaskID": "E06-R06-01",
+      "status": "DONE",
+      "evidence": "V16+master+official continuation+E06+lessons pre-read"
+    },
+    {
+      "TaskID": "E06-R06-02",
+      "status": "DONE",
+      "evidence": "canonical main HEAD/tree verified"
+    },
+    {
+      "TaskID": "E06-R06-03",
+      "status": "DONE",
+      "evidence": "PR66 inventory-only + E06 owner source scopes"
+    },
+    {
+      "TaskID": "E06-R06-04",
+      "status": "DONE",
+      "evidence": "PR103 exact donor file SHA256 and Git blob match"
+    },
+    {
+      "TaskID": "E06-R06-05",
+      "status": "SOURCE",
+      "evidence": "pinned four-file preflight hash snapshot in existing script"
+    },
+    {
+      "TaskID": "E06-R06-06",
+      "status": "SOURCE",
+      "evidence": "late NSIS invocation identity gate"
+    },
+    {
+      "TaskID": "E06-R06-07",
+      "status": "COMPONENT_SYNTHETIC_ONLY",
+      "evidence": "one added saved source regression; 9/9 adapted V8 callbacks PASS"
+    },
+    {
+      "TaskID": "E06-R06-08",
+      "status": "DONE",
+      "evidence": "two files one atomic code Git commit; remote SHA+blob readback 2/2 PASS"
+    },
+    {
+      "TaskID": "E06-R06-09",
+      "status": "HOLD",
+      "evidence": "native Windows NSIS/WPF/WebView2, DPI, F11/Escape, install/update/rollback NOT_RUN"
+    },
+    {
+      "TaskID": "E06-R06-10",
+      "status": "PENDING_POSTSAVE",
+      "evidence": "one receipt, one E06 report, one lesson, master append+Drive readback"
+    }
+  ],
+  "seven_indicators": [
+    {
+      "executor": "E01",
+      "TaskID": "V16.26.3",
+      "source": "PR109 candidate",
+      "component": "V8 synthetic partial",
+      "integrated": "HOLD",
+      "windows_accepted": "NOT_RUN",
+      "percent": "N/D"
+    },
+    {
+      "executor": "E02",
+      "TaskID": "V16.26.4",
+      "source": "PR110 candidate",
+      "component": "offline fixture partial",
+      "integrated": "HOLD",
+      "windows_accepted": "NOT_RUN",
+      "percent": "N/D"
+    },
+    {
+      "executor": "E03",
+      "TaskID": "V16.26.5",
+      "source": "PR112 candidate",
+      "component": "offline fixture partial",
+      "integrated": "HOLD",
+      "windows_accepted": "NOT_RUN",
+      "percent": "N/D"
+    },
+    {
+      "executor": "E04",
+      "TaskID": "V16.26.6",
+      "source": "PR108 candidate",
+      "component": "real GPU NOT_RUN",
+      "integrated": "HOLD",
+      "windows_accepted": "NOT_RUN",
+      "percent": "N/D"
+    },
+    {
+      "executor": "E05",
+      "TaskID": "V16.26.7",
+      "source": "PR111 candidate",
+      "component": "offline fixture partial",
+      "integrated": "HOLD",
+      "windows_accepted": "NOT_RUN",
+      "percent": "N/D"
+    },
+    {
+      "executor": "E06",
+      "TaskID": "V16.26.8",
+      "source": "R06 atomic commit 5ec6aef9d6145ba6689f872af4632e2560edec55",
+      "component": "V8 saved callbacks 9/9",
+      "integrated": "HOLD",
+      "windows_accepted": "NOT_RUN",
+      "percent": "N/D"
+    },
+    {
+      "executor": "E07",
+      "TaskID": "QA01-QA10",
+      "source": "PR46 historical",
+      "component": "final installed one EXE absent",
+      "integrated": "HOLD",
+      "windows_accepted": "0/10 NOT_RUN",
+      "percent": "N/D"
+    }
+  ],
+  "weighted_progress": {
+    "formula": "0.20*P01+0.25*P02+0.20*P03+0.25*P04+0.10*P05",
+    "value": "N/D",
+    "reason": "no complete accepted weighted TaskID ledger and no E07 same BuildID/EXE SHA"
+  },
+  "new_source_error": {
+    "cause": "Initial approved P01 NSIS source SHA allowlist is not an execution-time identity seal; compiler reopens original mutable paths after staging",
+    "correction": "Exact initial observed SHA256 required unchanged immediately before compiler",
+    "native_exe_errors": "новых ошибок нет (current installed EXE NOT_RUN)"
+  },
+  "one_practical_lesson": "PINNED OWNER SCRIPT IDENTITY AT EXECUTION: even with two permitted EOL variants on first admission, freeze the exact observed SHA-256 for all four P01 scripts, compare again at the NSIS invocation boundary, fail closed on missing/reparse/change, and retain original P01 scripts and rollback code unchanged.",
+  "release": "SOURCE_CANDIDATE_ONLY_HOLD"
+}

@@ -1,0 +1,11 @@
+/* SVG Gauge original 2016 MIT runtime with static confirmed telemetry only. */
+.nox-native-svg-gauge{display:flex;align-items:center;gap:10px;min-height:62px;
+ border:1px solid rgba(102,194,220,.34);border-radius:12px;padding:8px;
+ color:#bce5f0;background:rgba(10,27,40,.7)}
+.nox-native-gauge-label{flex:1;font-size:11px;overflow-wrap:anywhere}
+.nox-native-gauge-canvas{flex:0 0 66px;width:66px;height:66px}
+.nox-native-gauge-canvas svg{width:100%;height:100%}
+.nox-native-gauge-canvas .dial{stroke:#3c6071;stroke-width:3;fill:none}
+.nox-native-gauge-canvas .value{stroke:#8bd9ed;stroke-width:4;fill:none}
+.nox-native-gauge-canvas .value-text{fill:#dceefa;font-size:17px;font-weight:700}
+@media(prefers-reduced-motion:reduce){.nox-native-svg-gauge *{transition:none!important;animation:none!important}}

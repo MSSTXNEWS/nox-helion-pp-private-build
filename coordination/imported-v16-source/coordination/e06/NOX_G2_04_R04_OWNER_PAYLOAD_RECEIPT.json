@@ -1,0 +1,63 @@
+{
+  "schema": "NOX_V16_E06_OWNER_CANDIDATE_RECEIPT_V1",
+  "run_id": "NOX-V16-E06-G2-04-20261028T0907MSK-R04",
+  "owner": "E06",
+  "baseline": {
+    "main_commit": "0b3a7d435be735148d64171deb9027093a89646e",
+    "main_tree": "f108d604c444f718b32aaecfd07b90b8f91b9a6f",
+    "parent_commit": "57703076a914b02f5d955edd9e6c036bcd8f3d49",
+    "parent_tree": "5199646e08d4a4e2313cd811618573c0407af114",
+    "source_lock": "HOLD_raw_source00_01_02_unhashed_729"
+  },
+  "operation": "E06-only immutable JSON snapshot for owner GPU ACK and canonical P05 events.v3. NO new DB/LLM/GPU/host/event bus",
+  "changes": [
+    {
+      "path": "coordination/e06/onehost_p02_p04.py",
+      "pre_sha256": "e95bf9c131e004b7b97a920c6353cd2cc10e09526a36c4cba4eb08e74edb508e",
+      "post_sha256": "77a9efeb9604a6e0988954f81bdae39ea9e06c905b127b4cea920c4289727c17",
+      "pre_git_blob_sha1": "7a885c29dba95586a2059e65fda5fd81ab5b6e8d",
+      "post_git_blob_sha1": "VERIFY_BY_GITHUB_READBACK",
+      "diff": "json snapshot helper, GPU verifier isolate, event verifier/publisher isolate"
+    },
+    {
+      "path": "tests/e06/test_onehost_p02_p04.py",
+      "pre_sha256": "6e34ec65ff94958bbcb7799df3bccedbaea2682052f31d0e28a5eda4d8aea0d1",
+      "post_sha256": "ddc9fc5991b798e4808669bf81d510c4cfb005809430c6b805ac3c63e31ed036",
+      "pre_git_blob_sha1": "e0f1ae220eed63604eba4fad860d33b4c9f3f367",
+      "post_git_blob_sha1": "VERIFY_BY_GITHUB_READBACK",
+      "diff": "5 new source-original tests 24..28",
+      "tests": "AUTHORED_NOT_RUN_IN_CURRENT_GITHUB_CI"
+    },
+    {
+      "path": "coordination/e06/NOX_G2_04_R04_OWNER_PAYLOAD_RECEIPT.json",
+      "pre_sha256": "ABSENT",
+      "pre_git_blob_sha1": "ABSENT",
+      "post_sha256": "EXTERNAL_READBACK_ONLY",
+      "post_git_blob_sha1": "VERIFY_BY_GITHUB_READBACK",
+      "diff": "ADD_ONLY receipt"
+    }
+  ],
+  "permission_map": {
+    "chat.send": "trusted Windows SID+session+SQLite ACL; mid-next durable transaction atomicity HOLD",
+    "gpu.stop/pause/resume/checkpoint/status": "native route auth + original worker control + owner ack verifier",
+    "gpu.observe": "native route auth + P05 verify+publish same snapshot",
+    "chat.rag": "existing P04 callback only",
+    "events.v3": "one P05 owner bus; no new bus"
+  },
+  "local_component": {
+    "synthetic_preimage": "5/22 FAIL",
+    "synthetic_postimage": "22/22 PASS",
+    "python_compile": "PASS",
+    "test_source": "offline deterministic stubs; real owners still NOT_RUN"
+  },
+  "hold": [
+    "raw SourceLock 729",
+    "PR91 E02 vs PR84 conflict",
+    "PR89 E04 original GPU owner+native callbacks",
+    "native revoked session before SQLite atomic commit",
+    "installed Ollama GPU checkpoint/eval Windows E07 exact BuildID/EXE SHA"
+  ],
+  "progress_weighted": "N/D",
+  "main_changed": false,
+  "exactly_one_lesson": "Snapshot owner JSON once; verify an isolated copy and publish the original immutable content, fail closed on nonJSON/nonfinite/oversize; no fake training completion."
+}

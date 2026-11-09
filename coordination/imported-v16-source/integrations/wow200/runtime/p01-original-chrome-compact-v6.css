@@ -1,0 +1,52 @@
+/* NOX HELION EXPRESS V6 · ORIGINAL WPF VISUAL P0 · source-only, NOT yet staged.
+   Corrects only the original sidebar text and host-controls layout when admitted
+   by the existing reviewed WOW200 owner; no runtime, native command, route,
+   security ACL, source ZIP729, model or installed Setup is changed here.
+   Approval requires a fresh physical Setup SHA and independent E07. */
+body .hostcontrols {
+  display:flex;flex-wrap:nowrap;align-items:center;gap:6px;
+  max-width:100%;min-height:48px;max-height:62px;
+  margin:8px 0 12px;padding:3px 0 7px;
+  overflow-x:auto;overflow-y:hidden;scrollbar-width:thin;
+  overscroll-behavior-x:contain;
+}
+body .hostcontrols > button {
+  flex:0 0 auto;width:auto;min-width:44px;min-height:40px;
+  margin:0;padding:8px 10px;font-size:12px;line-height:1.25;
+  white-space:nowrap;
+}
+/* Keep exact original native STOP and CANCEL button IDs, click handlers and
+   keyboard navigation; all other existing controls remain reachable by scroll. */
+body .hostcontrols > .hostmessage {
+  order:-3;flex:0 0 auto;margin:0;white-space:nowrap;
+}
+body .hostcontrols > #stop-app {order:-2;border-color:#b78367;}
+body .hostcontrols > #cancel-action {order:-1;border-color:#b78367;}
+body .hostcontrols > button:focus-visible {outline-offset:-2px;}
+/* Only visual MENU literal becomes a glyph; accessible original text and
+   data-screen='menu' route, aria-current, real button/event remain intact. */
+body .nav > button[data-screen="menu"] {font-size:0;}
+body .nav > button[data-screen="menu"]::before {
+  content:"✦";display:inline-block;font-size:19px;line-height:1.15;
+  vertical-align:middle;color:inherit;
+}
+@media (max-width:640px) {
+  body .hostcontrols {min-height:50px;max-height:64px;}
+  body .hostcontrols > button {min-height:44px;}
+  body .hostcontrols > #cancel-action {font-size:0;padding:8px;}
+  body .hostcontrols > #cancel-action::after {content:"ОТМЕНА";font-size:12px;}
+  body .hostcontrols > .hostmessage {
+    max-width:100px;overflow:hidden;text-overflow:ellipsis;
+  }
+  body .nav > button[data-screen="menu"]::before {font-size:19px;}
+}
+@media (max-width:360px) {
+  body .hostcontrols > .hostmessage {max-width:70px;}
+}
+@media (prefers-reduced-motion:reduce) {
+  body .hostcontrols {scroll-behavior:auto!important;}
+  body .hostcontrols > button {transition:none!important;animation:none!important;}
+}
+@media (forced-colors:active) {
+  body .hostcontrols > button {border-color:ButtonText;}
+}

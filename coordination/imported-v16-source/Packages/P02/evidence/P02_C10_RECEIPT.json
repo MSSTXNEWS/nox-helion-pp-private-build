@@ -1,0 +1,40 @@
+{
+  "schema": "NOX_E02_C10_OWNER_RECEIPT_V1",
+  "run_id": "NOX-V16-E02-STDIO-C10-20261028",
+  "owner": 2,
+  "paths": [
+    {
+      "path": "Packages/P02/worker-python/p02_framed_worker.py",
+      "owner": 2,
+      "preimage": "ABSENT",
+      "pre_sha256": null,
+      "post_sha256": "2204963f7ff6ed44f7fe4684b14c71266c0edfba09eef76623c8555f12207cad",
+      "bytes": 6418
+    },
+    {
+      "path": "Packages/P02/worker-python/test_p02_framed_worker.py",
+      "owner": 2,
+      "preimage": "ABSENT",
+      "pre_sha256": null,
+      "post_sha256": "3fcf4b399ae4e07ff21c0fce5a2f70cc86604a2e498026d9ea0d59b54763dfbb",
+      "bytes": 5181
+    },
+    {
+      "path": "Packages/P02/worker-python/STDIO_HOST_HANDOFF.md",
+      "owner": 2,
+      "preimage": "ABSENT",
+      "pre_sha256": null,
+      "post_sha256": "5003a944ca94f94a41c6b16301a256ffb64a7ae3c1571f2596658055eef2ca45",
+      "bytes": 3680
+    }
+  ],
+  "patch_sha256": "0efd5df23854484c75cf4afd7afbb09f3091903b04437d17850a91b645c224c9",
+  "tests": {
+    "local": 8,
+    "windows": "PENDING",
+    "real_wpf_python_host": "NOT_RUN"
+  },
+  "no_loss": true,
+  "original_app_source_lock": "HOLD",
+  "final_exe": "NOT_BUILT"
+}

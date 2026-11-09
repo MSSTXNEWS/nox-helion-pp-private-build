@@ -1,0 +1,132 @@
+{
+  "schema": "NOX-V16-E06-G2-04-OWNER-RECEIPT-v1",
+  "RunID": "NOX-V16-E06-G2-04-20261028T0610MSK",
+  "repo": "MSSTXNEWS/nox-helion-pp-private-build",
+  "owner": 6,
+  "baseline": {
+    "e06_commit": "0a832004d4b57127f08d3b045dc864ddf149d8a4",
+    "e06_tree_git_sha1": "806ea1899c4f79625429a2d3be36dcd13bb6e54d",
+    "full_unpacked_729_file_sourcelock_sha256": null,
+    "full_unpacked_sourcelock_status": "HOLD_NOT_RECONSTRUCTED"
+  },
+  "frozen_upstream_sources": {
+    "P02": {
+      "commit": "4939c92342e170a41dfca101b6a82c82c180041c",
+      "p02_chat_bridge_git_blob_sha1": "5108c0fa2da02f588c9235a2050d777479a0aca8",
+      "p02_runtime_git_blob_sha1": "bd34282956678b2674573a452e4f7bd4adc781a8",
+      "SQLite_host_schema_approval": "HOLD"
+    },
+    "P04": {
+      "commit": "9ffc97beb1e3db1c869c18ffccff89104bece81b",
+      "rag_python_compat_git_blob_sha1": "b6d9e320194b2164f02cedfc6a1724a8a10a6079",
+      "gpu_control_owner_receipt": "HOLD"
+    }
+  },
+  "changed_files": [
+    {
+      "path": "coordination/e06/onehost_p02_p04.py",
+      "owner": "E06",
+      "RunID": "NOX-V16-E06-G2-04-20261028T0610MSK",
+      "pre_sha256": "ABSENT",
+      "post_sha256": "1d34555f58030c96533160309ae3777efe642ad0e4a4d553e93095dbaf8fbf45",
+      "post_git_blob_sha1": "f51e64290eb1fb649f83d481133ce0082e7259b5",
+      "bytes_utf8": 8424,
+      "change": "NEW additive source file; no deletions",
+      "readback": "GITHUB_BLOB_SHA_MATCH"
+    },
+    {
+      "path": "tests/e06/test_onehost_p02_p04.py",
+      "owner": "E06",
+      "RunID": "NOX-V16-E06-G2-04-20261028T0610MSK",
+      "pre_sha256": "ABSENT",
+      "post_sha256": "8529c39e5cce71c60405db09bc371531b9b7c5a8086d685390702f72c76ae724",
+      "post_git_blob_sha1": "af4995ee9742a057803a74e4c97ee9f9dcca671a",
+      "bytes_utf8": 9940,
+      "change": "NEW additive source file; no deletions",
+      "readback": "GITHUB_BLOB_SHA_MATCH"
+    },
+    {
+      "path": ".github/workflows/nox-e06-p02p04-onehost.yml",
+      "owner": "E06",
+      "RunID": "NOX-V16-E06-G2-04-20261028T0610MSK",
+      "pre_sha256": "ABSENT",
+      "post_sha256": "09e14a6601b7f42909d5d9e455924a7c777be2a0fde5bdbbc38a7d1482777521",
+      "post_git_blob_sha1": "16710e5a4f49d1ca2c536990b1b7f1bc8a3ed415",
+      "bytes_utf8": 2608,
+      "change": "NEW additive source file; no deletions",
+      "readback": "GITHUB_BLOB_SHA_MATCH"
+    },
+    {
+      "path": "coordination/e06/NOX_G2_04_HANDOFF.md",
+      "owner": "E06",
+      "RunID": "NOX-V16-E06-G2-04-20261028T0610MSK",
+      "pre_sha256": "ABSENT",
+      "post_sha256": "39d5eb0c4074f16f28f7a8140936a0959d2b5f8d4aba43d3140c72649c7bc638",
+      "post_git_blob_sha1": "0ae896f433773b9bf72c4f8cb4a549ff5d4f4f78",
+      "bytes_utf8": 6661,
+      "change": "NEW additive source file; no deletions",
+      "readback": "GITHUB_BLOB_SHA_MATCH"
+    }
+  ],
+  "source_readback": "PASS",
+  "unit_tests": {
+    "count_authored": 17,
+    "result": "NOT_RUN",
+    "last_workflow_run": 40625854686,
+    "reason": "LINUX_AND_WINDOWS_JOBS_FAILED_PRE_STEP_STEPS_NULL"
+  },
+  "integration": {
+    "one_installed_WPF_Python_host": "HOLD",
+    "one_existing_SQLite": "SOURCE_ADAPTER_ONLY",
+    "live_ollama": "NOT_RUN",
+    "GPU_QLORA_training": "NOT_RUN",
+    "licensed_dataset": "HOLD",
+    "real_checkpoint": "NOT_PRODUCED",
+    "events_v3": "SOURCE_ADAPTER_ONLY",
+    "E07_same_exe_sha": "NOT_RUN",
+    "release": "BLOCKED"
+  },
+  "overlaps": {
+    "P02": "PR13/PR58 p02_runtime.py collision; native existing SQLite mapping not signed",
+    "P04": "PR62/PR65 alternate branches; no blind merge"
+  },
+  "ten_task_ids": [
+    "E06.G2.04.01",
+    "E06.G2.04.02",
+    "E06.G2.04.03",
+    "E06.G2.04.04",
+    "E06.G2.04.05",
+    "E06.G2.04.06",
+    "E06.G2.04.07",
+    "E06.G2.04.08",
+    "E06.G2.04.09",
+    "E06.G2.04.10"
+  ],
+  "seven_indicators": {
+    "E01": "N/D SOURCE/COMPONENT_VERIFIED_ND/INTEGRATED_HOLD/WINDOWS_ACCEPTED_HOLD",
+    "E02": "N/D SOURCE/COMPONENT_VERIFIED_ND/INTEGRATED_HOLD/WINDOWS_ACCEPTED_HOLD",
+    "E03": "N/D SOURCE/COMPONENT_VERIFIED_ND/INTEGRATED_HOLD/WINDOWS_ACCEPTED_HOLD",
+    "E04": "N/D SOURCE/COMPONENT_VERIFIED_ND/INTEGRATED_HOLD/WINDOWS_ACCEPTED_HOLD",
+    "E05": "N/D SOURCE/COMPONENT_VERIFIED_ND/INTEGRATED_HOLD/WINDOWS_ACCEPTED_HOLD",
+    "E06": "SOURCE_CANDIDATE/COMPONENT_NOT_RUN/INTEGRATED_HOLD/WINDOWS_ACCEPTED_HOLD",
+    "E07": "SOURCE_ND/COMPONENT_ND/INTEGRATED_NOT_RUN/WINDOWS_ACCEPTED_NOT_RUN"
+  },
+  "weighted_product_readiness": {
+    "weights": {
+      "P01": 20,
+      "P02": 25,
+      "P03": 20,
+      "P04": 25,
+      "P05": 10
+    },
+    "percent": null,
+    "status": "N/D_NO_ACCEPTED_DENOMINATORS"
+  },
+  "zero_loss": {
+    "deleted_files": 0,
+    "owner_files_changed": 0,
+    "original_assets_touched": false
+  },
+  "improvement": "Require one native P01 identity provenance receipt and same P02/P04 Ollama loopback listener prior to connecting source callbacks; fail closed on mismatch.",
+  "self_receipt_sha256": "RECORDED_EXTERNALLY_AFTER_GITHUB_READBACK_NOT_SELF_REFERENCED"
+}

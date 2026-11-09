@@ -1,0 +1,1043 @@
+/* Prevent PR30 visuals from moving/changing hitboxes of owner-approved D02. */
+.nox-orbit-stage .nox-orbit-core.nox-cinema-orb {
+  position:absolute; left:var(--x);top:var(--y);
+  transform:translate(-50%,-50%);
+}
+.nox-orbit-stage .nox-eclipse.nox-cinema-orb {position:relative;}
+.nox-orbit-stage .nox-eclipse.nox-cinema-orb > strong,
+.nox-orbit-stage .nox-eclipse.nox-cinema-orb > span,
+.nox-orbit-stage .nox-orbit-core.nox-cinema-orb > div {position:relative;z-index:4;}
+.nox-orbit-stage .nox-cinema-orb__layers,
+.nox-orbit-stage .nox-cinema-orb__layers * {pointer-events:none!important;}
+@media(prefers-reduced-motion:reduce){
+  .nox-orbit-stage .nox-cinema-orb__layers * {animation:none!important;}
+}
+/* NOX D02 ORB STEP01: original plasma ring only around existing HELION.
+   Concept researched from React Bits; NO third-party source code imported.
+   No new DOM, moving hitboxes, routing, native actions or telemetry. */
+.nox-orbit-stage .nox-eclipse.nox-cinema-orb > .nox-cinema-orb__layers::before,
+.nox-orbit-stage .nox-eclipse.nox-cinema-orb > .nox-cinema-orb__layers::after{
+ content:"";position:absolute;inset:-7%;border-radius:50%;
+ pointer-events:none!important;z-index:0;
+}
+.nox-orbit-stage .nox-eclipse.nox-cinema-orb > .nox-cinema-orb__layers::before{
+ background:conic-gradient(from 30deg,transparent,rgba(97,199,225,.47),
+ transparent,rgba(221,123,66,.22),transparent,rgba(129,133,225,.28),transparent);
+ opacity:.63;filter:blur(5px);mix-blend-mode:screen;
+ animation:nox-d02-orb-rotate 37s linear infinite;
+}
+.nox-orbit-stage .nox-eclipse.nox-cinema-orb > .nox-cinema-orb__layers::after{
+ border:1px solid rgba(146,217,228,.44);
+ box-shadow:0 0 18px rgba(105,205,220,.25),0 0 45px rgba(223,138,75,.16);
+ opacity:.6;animation:nox-d02-orb-pulse 8s ease-in-out infinite alternate;
+}
+@keyframes nox-d02-orb-rotate{to{transform:rotate(360deg)}}
+@keyframes nox-d02-orb-pulse{
+ from{transform:scale(.97);opacity:.35}to{transform:scale(1.02);opacity:.8}
+}
+.nox-orbit-stage[data-nox-fx-mode="eco"] .nox-eclipse .nox-cinema-orb__layers::before,
+.nox-orbit-stage[data-nox-fx-mode="eco"] .nox-eclipse .nox-cinema-orb__layers::after,
+body.nox-wow-eco .nox-orbit-stage .nox-eclipse .nox-cinema-orb__layers::before,
+body.nox-wow-eco .nox-orbit-stage .nox-eclipse .nox-cinema-orb__layers::after{
+ animation:none!important;filter:none;opacity:.32;
+}
+@media(prefers-reduced-motion:reduce){
+ .nox-orbit-stage .nox-eclipse .nox-cinema-orb__layers::before,
+ .nox-orbit-stage .nox-eclipse .nox-cinema-orb__layers::after{
+  animation:none!important;transform:none!important;filter:none;
+ }
+}
+@media(forced-colors:active){
+ .nox-orbit-stage .nox-eclipse .nox-cinema-orb__layers::before,
+ .nox-orbit-stage .nox-eclipse .nox-cinema-orb__layers::after{display:none!important}
+}
+
+/* NOX D02 GARGANTUA STEP02 — additive light-bending accretion disk.
+   CSS-only procedural gradients; preserves existing Orb, D02 coordinates,
+   native hitboxes and all original assets. Not a physical raytracing engine. */
+.nox-orbit-stage .nox-eclipse.nox-cinema-orb > .nox-cinema-orb__layers::before{
+  background:
+    radial-gradient(ellipse 78% 17% at 50% 51%,
+      transparent 40%,rgba(251,167,89,.70) 51%,rgba(247,109,58,.24) 62%,transparent 79%),
+    conic-gradient(from 13deg at 50% 50%,
+      transparent 0deg,rgba(93,184,221,.36) 62deg,transparent 115deg,
+      rgba(252,182,95,.62) 187deg,transparent 250deg,
+      rgba(150,117,232,.24) 310deg,transparent 360deg);
+  box-shadow:0 0 22px rgba(239,139,74,.16),0 0 64px rgba(105,164,220,.13);
+  animation:nox-d02-orb-rotate 37s linear infinite,nox-d02-accretion-breathe 9s ease-in-out infinite alternate;
+}
+.nox-orbit-stage .nox-eclipse.nox-cinema-orb > .nox-cinema-orb__layers::after{
+  border-color:rgba(243,177,108,.43);
+  box-shadow:0 0 10px 2px rgba(252,184,107,.24),
+             0 0 34px 8px rgba(115,146,235,.12),
+             inset 0 0 24px rgba(15,12,22,.55);
+}
+@keyframes nox-d02-accretion-breathe{
+  from{opacity:.44;filter:blur(3px) brightness(.88)}
+  to{opacity:.78;filter:blur(5px) brightness(1.15)}
+}
+/* All visual layers are noninteractive; avoid any global transform on
+   the orbit stage or interactive sphere element. */
+.nox-orbit-stage .nox-eclipse.nox-cinema-orb > .nox-cinema-orb__layers{
+  pointer-events:none!important;
+}
+.nox-orbit-stage[data-nox-fx-mode="eco"] .nox-eclipse .nox-cinema-orb__layers::before,
+body.nox-wow-eco .nox-orbit-stage .nox-eclipse .nox-cinema-orb__layers::before{
+  animation:none!important;filter:none!important;opacity:.27;
+}
+@media(prefers-reduced-motion:reduce){
+ .nox-orbit-stage .nox-eclipse .nox-cinema-orb__layers::before{
+  animation:none!important;filter:none!important;transform:none!important;
+ }
+}
+@media(forced-colors:active){
+ .nox-orbit-stage .nox-eclipse .nox-cinema-orb__layers::before,
+ .nox-orbit-stage .nox-eclipse .nox-cinema-orb__layers::after{display:none!important}
+}
+
+/* NOX D02 LIQUID CHROME STEP03 — ferrofluid-like light on existing
+   satellite shells. Does not change CoreID geometry, hitboxes or DOM. */
+.nox-orbit-stage .nox-orbit-core.nox-cinema-orb .nox-cinema-orb__layers{
+  position:absolute;inset:-7%;border-radius:50%;overflow:visible;
+  pointer-events:none!important;isolation:isolate;
+}
+.nox-orbit-stage .nox-orbit-core.nox-cinema-orb .nox-cinema-orb__layers::before,
+.nox-orbit-stage .nox-orbit-core.nox-cinema-orb .nox-cinema-orb__layers::after{
+  content:"";position:absolute;inset:2%;border-radius:50%;
+  pointer-events:none!important;
+}
+.nox-orbit-stage .nox-orbit-core.nox-cinema-orb .nox-cinema-orb__layers::before{
+  background:conic-gradient(from 35deg,
+    rgba(238,244,250,.36),transparent 17%,rgba(43,66,81,.06) 25%,
+    rgba(230,172,100,.29) 43%,transparent 61%,rgba(98,194,220,.26) 80%,
+    rgba(234,234,250,.33));
+  mix-blend-mode:screen;opacity:.58;
+  animation:nox-d02-ferrofluid 22s ease-in-out infinite alternate;
+}
+.nox-orbit-stage .nox-orbit-core.nox-cinema-orb .nox-cinema-orb__layers::after{
+  inset:8%;border:1px solid rgba(186,212,228,.26);
+  background:radial-gradient(ellipse at 28% 20%,rgba(253,252,246,.30),
+    transparent 18%,transparent 65%,rgba(16,27,35,.3) 92%);
+  box-shadow:inset -5px -7px 13px rgba(4,8,15,.33),
+    inset 2px 3px 10px rgba(207,224,234,.14);
+}
+@keyframes nox-d02-ferrofluid{
+  from{transform:rotate(-12deg) scale(.97);opacity:.39}
+  to{transform:rotate(18deg) scale(1.035);opacity:.74}
+}
+/* NOX D02 DARK VEIL STEP04 — one scene, atmospheric gradients only.
+   No overlay nodes, layout reflow, controls obstruction or fake telemetry. */
+.nox-orbit-stage{
+  background-image:
+    radial-gradient(ellipse 56% 38% at 8% 64%,rgba(48,67,114,.18),transparent 88%),
+    radial-gradient(ellipse 42% 53% at 95% 28%,rgba(80,42,103,.14),transparent 88%),
+    radial-gradient(ellipse 49% 42% at 52% 84%,rgba(130,70,33,.13),transparent 90%);
+  background-blend-mode:screen;
+}
+.nox-orbit-stage .nox-orbit-core.nox-cinema-orb > div,
+.nox-orbit-stage .nox-eclipse.nox-cinema-orb > strong,
+.nox-orbit-stage .nox-eclipse.nox-cinema-orb > span{
+  position:relative;z-index:4;
+}
+/* Power cap: suppress ALL new oscillations on ECO, OS reduced-motion,
+   and forced colors. These CSS effects do not assert real GPU usage. */
+.nox-orbit-stage[data-nox-fx-mode="eco"] .nox-orbit-core .nox-cinema-orb__layers::before,
+body.nox-wow-eco .nox-orbit-stage .nox-orbit-core .nox-cinema-orb__layers::before{
+  animation:none!important;filter:none!important;opacity:.25;
+}
+@media(prefers-reduced-motion:reduce){
+  .nox-orbit-stage .nox-orbit-core .nox-cinema-orb__layers::before,
+  .nox-orbit-stage .nox-orbit-core .nox-cinema-orb__layers::after{
+    animation:none!important;transform:none!important;filter:none!important;
+  }
+}
+@media(forced-colors:active){
+  .nox-orbit-stage{background-image:none!important}
+  .nox-orbit-stage .nox-orbit-core .nox-cinema-orb__layers::before,
+  .nox-orbit-stage .nox-orbit-core .nox-cinema-orb__layers::after{
+    display:none!important;
+  }
+}
+
+/* D02 source safety: the original renderer uses data-nox-mode and emits
+   gravitational ejecta beyond a satellite shell. Preserve its uncut bounds. */
+.nox-orbit-stage[data-nox-mode="eco"] .nox-eclipse .nox-cinema-orb__layers::before,
+.nox-orbit-stage[data-nox-mode="eco"] .nox-eclipse .nox-cinema-orb__layers::after,
+.nox-orbit-stage[data-nox-mode="eco"] .nox-orbit-core .nox-cinema-orb__layers::before,
+.nox-orbit-stage[data-nox-mode="reduced"] .nox-orbit-core .nox-cinema-orb__layers::before{
+ animation:none!important;filter:none!important;opacity:.26;
+}
+.nox-orbit-stage[data-nox-mode="reduced"] .nox-eclipse .nox-cinema-orb__layers::before,
+.nox-orbit-stage[data-nox-mode="reduced"] .nox-eclipse .nox-cinema-orb__layers::after,
+.nox-orbit-stage[data-nox-mode="reduced"] .nox-orbit-core .nox-cinema-orb__layers::after{
+ animation:none!important;filter:none!important;transform:none!important;
+}
+
+
+/* NOX SUPER WOW CINEMA LAYER V7 — STAGES 05–18.
+   Original procedural design. Reuse ONE D02 renderer, nine approved objects,
+   real existing host states and original particle SVG. Never alter orbit
+   coordinates, click targets, native routes, source images, or trusted ACL.
+   Optical effects here are artistic, not simulated sensor readings.
+   Inspiration candidates: OGL (Unlicense), tsParticles (MIT), postprocessing
+   (Zlib); no unreviewed third-party code or shaders copied. */
+
+/* 05 Photon orbit + 06 gravitational ejecta trails: the original SVG
+   renderer owns emission counts, paths and lifecycle. No second scheduler. */
+.nox-orbit-stage .nox-eclipse.nox-cinema-orb .nox-cinema-orb__rim {
+  inset:-1%;border-color:rgba(247,189,120,.44);
+  box-shadow:0 0 10px rgba(246,172,91,.32),
+             0 0 42px rgba(244,147,86,.16),
+             inset 0 0 24px rgba(112,192,232,.12);
+  background:
+    conic-gradient(from 20deg,
+      transparent 0deg,rgba(254,205,125,.04) 30deg,rgba(253,218,146,.55) 83deg,
+      transparent 118deg,rgba(127,214,235,.18) 184deg,
+      transparent 253deg,rgba(253,166,86,.28) 307deg,transparent 360deg);
+}
+.nox-orbit-stage .nox-eclipse.nox-cinema-orb .nox-cinema-orb__ejecta path {
+  filter:drop-shadow(0 0 2px rgba(249,194,123,.6))
+         drop-shadow(0 0 5px rgba(127,190,231,.22));
+}
+
+/* 07 host-state energy; the D02 JS only sets these states from trusted
+   events, never from animation timer or a fabricated telemetry stream. */
+.nox-orbit-stage[data-nox-state="thinking"] .nox-eclipse .nox-cinema-orb__corona {
+  border-color:rgba(144,206,249,.68);
+  box-shadow:0 0 34px rgba(88,173,246,.27),0 0 68px rgba(131,107,212,.1);
+}
+.nox-orbit-stage[data-nox-state="streaming"] .nox-eclipse .nox-cinema-orb__corona,
+.nox-orbit-stage[data-nox-state="training"] .nox-eclipse .nox-cinema-orb__corona {
+  border-color:rgba(119,231,229,.67);
+  box-shadow:0 0 28px rgba(98,227,227,.31),0 0 70px rgba(249,166,84,.15);
+}
+.nox-orbit-stage[data-nox-state="error"] .nox-eclipse .nox-cinema-orb__corona {
+  border-color:rgba(246,111,116,.75);
+  box-shadow:0 0 35px rgba(237,77,92,.28);
+}
+.nox-orbit-stage[data-nox-state="stopped"] .nox-cinema-orb__ejecta {
+  opacity:.08;
+}
+
+/* 08 Plasma filaments + 09 liquid obsidian caustics.
+   Keep all shimmer INSIDE decorative FX elements, not on buttons. */
+.nox-orbit-stage .nox-eclipse.nox-cinema-orb .nox-cinema-orb__filaments::before,
+.nox-orbit-stage .nox-eclipse.nox-cinema-orb .nox-cinema-orb__filaments::after {
+  content:"";position:absolute;inset:0;border-radius:50%;
+  pointer-events:none!important;
+}
+.nox-orbit-stage .nox-eclipse.nox-cinema-orb .nox-cinema-orb__filaments::before {
+  background:repeating-conic-gradient(from 9deg,
+     transparent 0deg,rgba(90,166,230,.22) 5deg,transparent 13deg,
+     rgba(255,165,96,.16) 27deg,transparent 39deg,transparent 58deg);
+  -webkit-mask-image:radial-gradient(ellipse,#0000 20%,#000 56%,#0000 73%);
+  mask-image:radial-gradient(ellipse,#0000 20%,#000 56%,#0000 73%);
+  animation:nox-cinema-v7-polar-wake 32s ease-in-out infinite alternate;
+}
+.nox-orbit-stage .nox-eclipse.nox-cinema-orb .nox-cinema-orb__filaments::after {
+  inset:10%;
+  background:radial-gradient(ellipse 45% 30% at 26% 19%,
+    rgba(225,246,249,.24),transparent 95%),
+    radial-gradient(ellipse 50% 70% at 82% 81%,
+    rgba(63,103,143,.29),transparent 90%);
+  mix-blend-mode:screen;
+  animation:nox-cinema-v7-ferro-caustic 15s ease-in-out infinite alternate;
+}
+@keyframes nox-cinema-v7-polar-wake {
+  0% {transform:rotate(-18deg);opacity:.35}
+  45% {transform:rotate(7deg);opacity:.57}
+  100% {transform:rotate(20deg);opacity:.72}
+}
+@keyframes nox-cinema-v7-ferro-caustic {
+  0% {transform:translate(-1.4%,1%) scale(.97);opacity:.36}
+  52% {transform:translate(1.2%,-.6%) scale(1.02);opacity:.58}
+  100% {transform:translate(-.5%,1.4%) scale(1);opacity:.42}
+}
+
+/* 10 spatial lensing + 11 warm/cold cinema grading. Lensing is a
+   stylized dual ring, NOT literal raytracing or a second WebGL context. */
+.nox-orbit-stage[data-nox-mode="max"] .nox-eclipse.nox-cinema-orb > .nox-cinema-orb__layers::before {
+  background:
+    radial-gradient(ellipse 88% 22% at 50% 49%,
+      transparent 35%,rgba(255,220,143,.72) 48%,rgba(255,132,66,.17) 61%,transparent 76%),
+    conic-gradient(from 31deg,
+      transparent 0deg,rgba(107,176,242,.48) 66deg,transparent 113deg,
+      rgba(249,167,100,.78) 190deg,transparent 248deg,
+      rgba(152,112,236,.42) 306deg,transparent 360deg);
+  box-shadow:0 0 45px rgba(242,143,79,.18),0 0 82px rgba(88,148,230,.1);
+}
+
+/* 12 eight unique atmospheric signatures. Deterministic offsets give
+   organic motion with no positional randomness and no overlapping hitboxes. */
+.nox-orbit-stage .nox-orbit-core.nox-cinema-orb:nth-child(2n) .nox-cinema-orb__filaments {
+  animation-delay:-7.1s;
+}
+.nox-orbit-stage .nox-orbit-core.nox-cinema-orb:nth-child(3n) .nox-cinema-orb__filaments {
+  animation-duration:37s;animation-delay:-12.8s;
+}
+.nox-orbit-stage .nox-orbit-core.nox-cinema-orb:nth-child(5n) .nox-cinema-orb__rim {
+  animation-duration:53s;animation-delay:-17s;
+}
+
+/* 13 readable HUD state, 14 cinematic state transitions: shadows only;
+   do not animate transforms of buttons, orbit centers or text geometry. */
+.nox-orbit-stage .nox-orbit-core.nox-cinema-orb[data-nox-state="speaking"] .nox-cinema-orb__rim {
+  border-color:rgba(151,241,246,.72);
+  box-shadow:0 0 18px rgba(131,231,246,.4);
+}
+.nox-orbit-stage .nox-orbit-core.nox-cinema-orb[data-nox-state="training"] .nox-cinema-orb__rim {
+  border-color:rgba(211,168,247,.66);
+  box-shadow:0 0 24px rgba(195,146,231,.32);
+}
+.nox-orbit-stage .nox-orbit-core.nox-cinema-orb[data-nox-state="success"] .nox-cinema-orb__rim {
+  border-color:rgba(136,233,180,.72);
+}
+.nox-orbit-stage .nox-orbit-core.nox-cinema-orb[data-nox-state="error"] .nox-cinema-orb__rim {
+  border-color:rgba(252,122,133,.72);
+}
+
+/* 15–18 adaptive governor: in ECO / REDUCED remove new costly layers.
+   The original engine retains STOP, click handling and all route semantics. */
+.nox-orbit-stage[data-nox-mode="eco"] .nox-eclipse .nox-cinema-orb__filaments::before,
+.nox-orbit-stage[data-nox-mode="eco"] .nox-eclipse .nox-cinema-orb__filaments::after,
+.nox-orbit-stage[data-nox-mode="reduced"] .nox-eclipse .nox-cinema-orb__filaments::before,
+.nox-orbit-stage[data-nox-mode="reduced"] .nox-eclipse .nox-cinema-orb__filaments::after,
+body.nox-wow-eco .nox-orbit-stage .nox-eclipse .nox-cinema-orb__filaments::before,
+body.nox-wow-eco .nox-orbit-stage .nox-eclipse .nox-cinema-orb__filaments::after {
+  animation:none!important;filter:none!important;opacity:0!important;
+}
+@media(prefers-reduced-motion:reduce){
+  .nox-orbit-stage .nox-cinema-orb__filaments::before,
+  .nox-orbit-stage .nox-cinema-orb__filaments::after {
+    animation:none!important;transform:none!important;filter:none!important;
+  }
+}
+@media(forced-colors:active) {
+  .nox-orbit-stage .nox-cinema-orb__filaments::before,
+  .nox-orbit-stage .nox-cinema-orb__filaments::after {
+    display:none!important;
+  }
+}
+
+
+/* NOX SUPER WOW CINEMA LAYER V1 · additive graphics UNDER the nine real controls.
+   The GPU canvas paints depth, photonic halo, atmospheric plasma and dust;
+   it never captures mouse/touch/key events, nor modifies orbital coordinates. */
+.nox-orbit-stage > .nox-cinema-film {
+ position:absolute!important;inset:0!important;width:100%;height:100%;
+ z-index:0;display:block;pointer-events:none!important;
+ opacity:.76;isolation:isolate;mix-blend-mode:screen;
+ filter:saturate(1.14) contrast(1.05);
+}
+.nox-orbit-stage > .nox-eclipse.nox-cinema-orb,
+.nox-orbit-stage > .nox-orbit-core.nox-cinema-orb {
+ z-index:2;
+}
+.nox-orbit-stage > .nox-cinema-film[data-nox-film-profile="max"] {
+ opacity:1;filter:saturate(1.23) contrast(1.12);
+}
+.nox-orbit-stage > .nox-cinema-film[data-nox-film-profile="eco"] {
+ opacity:.30;filter:none!important;
+}
+.nox-orbit-stage > .nox-cinema-film[data-nox-film-profile="reduced"],
+.nox-orbit-stage > .nox-cinema-film[data-nox-film="context-lost-hold"] {
+ display:none!important;
+}
+@media(prefers-reduced-motion:reduce){
+ .nox-orbit-stage > .nox-cinema-film{display:none!important;filter:none!important}
+}
+@media(forced-colors:active){
+ .nox-orbit-stage > .nox-cinema-film{display:none!important}
+}
+/* No overlapping orbit movement: irregular motion is inside per-core textures
+   and shader fog only. Button hitboxes, tab order and CoreIDs remain fixed. */
+
+
+/* NOX D02 GRAPHICS PLANET DOCK V1 — fixed bottom-of-HOME graphic switches.
+   AUTO is explicit opt-in. Static controls; no movement of existing eight CoreIDs. */
+#home .nox-quality-dock{
+ position:fixed;left:50%;bottom:calc(124px + env(safe-area-inset-bottom,0px));
+ transform:translateX(-50%);z-index:95;width:min(92vw,780px);
+ box-sizing:border-box;padding:8px 12px 11px;
+ border:1px solid rgba(205,178,138,.4);border-radius:22px;
+ background:radial-gradient(ellipse at 50% -20%,rgba(77,111,146,.3),transparent 62%),
+ linear-gradient(140deg,rgba(5,9,15,.96),rgba(20,20,31,.95) 60%,rgba(9,12,18,.97));
+ box-shadow:0 10px 36px #000b,inset 0 1px 0 rgba(253,242,216,.12),
+ 0 0 35px rgba(56,100,128,.13);
+ backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+ color:#e8e2d7;font:inherit;isolation:isolate;
+}
+#home .nox-quality-dock__head{
+ display:flex;justify-content:space-between;align-items:center;gap:12px;
+ padding:0 6px 7px;font-size:10px;letter-spacing:.11em;
+ color:#ddc7a1;text-shadow:0 0 8px #dbb77b26;
+}
+#home .nox-quality-dock__status{color:#a6d1d9;font-size:10px;letter-spacing:.045em;}
+#home .nox-quality-dock__row{
+ display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px;
+}
+#home .nox-quality-planet{
+ --planet-a:#a0b9ca;--planet-b:#3b536d;
+ min-width:0;min-height:86px;box-sizing:border-box;position:relative;
+ display:flex;flex-direction:column;align-items:center;justify-content:center;
+ gap:3px;padding:5px 6px 7px;cursor:pointer;overflow:visible;
+ border:1px solid rgba(148,178,203,.26);border-radius:16px;
+ background:linear-gradient(150deg,rgba(30,44,57,.72),rgba(7,12,20,.93));
+ color:#ede4d7;font:inherit;font-size:10px;font-weight:700;letter-spacing:.035em;
+ text-align:center;transition:border-color .18s,background .18s,box-shadow .18s;
+}
+#home .nox-quality-planet__sphere{
+ display:grid;place-items:center;width:42px;height:42px;flex-shrink:0;
+ border-radius:50%;color:#fff1d9;font-size:21px;
+ background:radial-gradient(circle at 29% 24%,rgba(255,255,255,.47),
+ var(--planet-a) 17%,var(--planet-b) 49%,#060911 82%);
+ box-shadow:inset -7px -9px 14px #000b,inset 3px 3px 5px #ffffff30,
+ 0 0 14px color-mix(in srgb,var(--planet-a),transparent 65%);
+ text-shadow:0 0 8px #ffffff7a;
+ transition:box-shadow .18s,filter .18s;
+}
+#home .nox-quality-planet strong{font-size:11px;line-height:1.1;white-space:normal;}
+#home .nox-quality-planet small{font-size:9px;font-weight:500;letter-spacing:.03em;color:#b4c7d1;}
+#home .nox-quality-planet[data-quality="MAX_WOW"]{--planet-a:#f8b87e;--planet-b:#9d431d}
+#home .nox-quality-planet[data-quality="CINEMA"]{--planet-a:#96d8ea;--planet-b:#255c76}
+#home .nox-quality-planet[data-quality="ECO"]{--planet-a:#91c8a2;--planet-b:#346c56}
+#home .nox-quality-planet[data-quality="MINI_START"]{--planet-a:#a7a8b5;--planet-b:#4b5265}
+#home .nox-quality-planet[data-quality="AUTO"]{--planet-a:#c4b4ff;--planet-b:#60599a}
+#home .nox-quality-planet.is-selected{
+ border-color:rgba(239,211,163,.9);
+ background:linear-gradient(145deg,rgba(45,56,70,.97),rgba(24,19,27,.98));
+ box-shadow:0 0 0 1px rgba(249,213,155,.38),0 0 22px rgba(210,163,93,.23);
+}
+#home .nox-quality-planet.is-selected .nox-quality-planet__sphere{
+ box-shadow:inset -7px -9px 14px #000b,inset 3px 3px 5px #ffffff40,
+ 0 0 21px var(--planet-a),0 0 37px color-mix(in srgb,var(--planet-a),transparent 60%);
+}
+#home .nox-quality-planet:focus-visible{
+ outline:3px solid #bbf4ff;outline-offset:2px;
+}
+#home .nox-quality-planet:hover:not(.is-selected){
+ border-color:rgba(185,220,235,.7);
+}
+@media(max-width:600px){
+ #home .nox-quality-dock{bottom:calc(106px + env(safe-area-inset-bottom,0px));width:min(96vw,460px);padding:6px 7px 8px;border-radius:17px}
+ #home .nox-quality-dock__row{grid-template-columns:repeat(5,minmax(0,1fr));gap:3px}
+ #home .nox-quality-planet{min-height:75px;padding:4px 2px 5px;border-radius:11px}
+ #home .nox-quality-planet__sphere{width:30px;height:30px;font-size:16px}
+ #home .nox-quality-planet strong{font-size:8px;letter-spacing:0}
+ #home .nox-quality-planet small{font-size:7px;letter-spacing:0}
+ #home .nox-quality-dock__head{font-size:9px;padding-bottom:4px}
+ #home .nox-quality-dock__status{font-size:8px}
+}
+@media(prefers-reduced-motion:reduce){
+ #home .nox-quality-dock,#home .nox-quality-planet,
+ #home .nox-quality-planet__sphere{transition:none!important;animation:none!important;}
+}
+@media(forced-colors:active){
+ #home .nox-quality-dock{background:Canvas;color:CanvasText;border:1px solid CanvasText;backdrop-filter:none}
+ #home .nox-quality-planet{background:Canvas;color:CanvasText;border:1px solid ButtonText}
+ #home .nox-quality-planet__sphere{background:ButtonFace;color:ButtonText;box-shadow:none}
+ #home .nox-quality-planet.is-selected{border:2px solid Highlight}
+}
+
+
+/* NOX QUALITY PLANET ATMOSPHERES V2 — original local CSS materials.
+   Five independent atmospheric worlds, no external network or extra renderer.
+   Actual D02 scene and its eight interactive CoreIDs are untouched. */
+#home .nox-quality-dock{
+ background:radial-gradient(ellipse 95% 155% at 48% -62%,
+ rgba(95,139,164,.23),transparent 72%),
+ linear-gradient(135deg,rgba(9,16,27,.73),rgba(16,14,28,.65) 55%,rgba(6,12,21,.72));
+ border-color:rgba(181,220,231,.35);
+ box-shadow:0 13px 45px rgba(0,0,0,.48),inset 0 1px rgba(247,244,235,.13),
+  0 0 40px rgba(69,121,166,.13);
+ backdrop-filter:blur(22px) saturate(1.23);
+ -webkit-backdrop-filter:blur(22px) saturate(1.23);
+}
+#home .nox-quality-planet{
+ background:linear-gradient(145deg,rgba(54,74,92,.31),rgba(8,13,24,.37));
+ border-color:rgba(198,216,233,.22);
+}
+#home .nox-quality-planet__sphere{
+ position:relative;isolation:isolate;overflow:visible;
+ background:
+ radial-gradient(ellipse 23% 19% at 30% 19%,rgba(255,255,255,.63),transparent 90%),
+ radial-gradient(circle at 36% 28%,var(--planet-a) 2%,var(--planet-b) 45%,
+  #080d15 85%);
+}
+#home .nox-quality-planet__sphere::before,
+#home .nox-quality-planet__sphere::after{
+ content:"";position:absolute;pointer-events:none!important;border-radius:50%;
+}
+#home .nox-quality-planet__sphere::before{
+ inset:2%;opacity:.64;mix-blend-mode:screen;
+ background:conic-gradient(from 38deg at 45% 55%,
+ rgba(240,246,255,.12),transparent 16%,var(--planet-a) 28%,
+ transparent 41%,rgba(245,230,204,.21) 55%,
+ transparent 68%,var(--planet-b) 82%,transparent);
+ -webkit-mask-image:radial-gradient(circle,#000 51%,rgba(0,0,0,.38) 72%,transparent 83%);
+ mask-image:radial-gradient(circle,#000 51%,rgba(0,0,0,.38) 72%,transparent 83%);
+ animation:nox-quality-atmosphere 11s linear infinite;
+}
+#home .nox-quality-planet__sphere::after{
+ inset:-8%;border:1px solid color-mix(in srgb,var(--planet-a),transparent 40%);
+ box-shadow:0 0 11px color-mix(in srgb,var(--planet-a),transparent 42%),
+ inset 0 0 7px color-mix(in srgb,var(--planet-a),transparent 60%);
+ opacity:.68;
+ animation:nox-quality-limb 5.8s ease-in-out infinite alternate;
+}
+/* MAX WOW: furnace, glowing lava fractures, hot gas and rotating crown. */
+#home .nox-quality-planet[data-quality="MAX_WOW"] .nox-quality-planet__sphere{
+ background:
+ radial-gradient(circle at 29% 24%,#ffe3a4,transparent 18%),
+ repeating-conic-gradient(from 6deg,rgba(255,127,36,.22) 0deg,
+ transparent 14deg,rgba(119,17,10,.3) 29deg,transparent 50deg),
+ radial-gradient(circle at 43% 38%,#ffad55 4%,#a63b20 42%,#1b0b16 82%);
+ box-shadow:inset -9px -10px 16px #070508,0 0 19px #d3633877;
+}
+#home .nox-quality-planet[data-quality="MAX_WOW"] .nox-quality-planet__sphere::before{
+ animation-duration:6.4s;opacity:.91;
+ background:conic-gradient(from 0deg,transparent,#ffd28d5e 38deg,transparent 90deg,
+ #f05830a8 146deg,transparent 200deg,#ffb04d66 277deg,transparent 360deg);
+}
+#home .nox-quality-planet[data-quality="MAX_WOW"] .nox-quality-planet__sphere::after{
+ inset:-13%;border-width:2px;box-shadow:0 0 16px #f9a05e99,0 0 25px #be3e2b66;
+}
+/* CINEMA: azure gas giant with blue-white auroral ribbons. */
+#home .nox-quality-planet[data-quality="CINEMA"] .nox-quality-planet__sphere{
+ background:radial-gradient(circle at 27% 18%,#c8f8ff,transparent 16%),
+ repeating-linear-gradient(160deg,transparent 0 5px,rgba(125,218,246,.17) 6px 8px,transparent 9px 16px),
+ radial-gradient(circle at 43% 43%,#60aeda,#215579 57%,#090f2c 88%);
+}
+#home .nox-quality-planet[data-quality="CINEMA"] .nox-quality-planet__sphere::before{
+ animation-duration:13s;opacity:.62;
+}
+/* ECO: soft emerald atmosphere with slow organic cloud drift. */
+#home .nox-quality-planet[data-quality="ECO"] .nox-quality-planet__sphere{
+ background:radial-gradient(circle at 29% 22%,#d9fff1,transparent 14%),
+ radial-gradient(ellipse at 69% 62%,rgba(105,228,159,.58),transparent 38%),
+ radial-gradient(circle at 43% 40%,#82d4a2,#225c58 56%,#091a27 87%);
+}
+#home .nox-quality-planet[data-quality="ECO"] .nox-quality-planet__sphere::before{
+ animation-duration:27s;opacity:.36;
+}
+#home .nox-quality-planet[data-quality="ECO"] .nox-quality-planet__sphere::after{
+ animation-duration:19s;opacity:.28;
+}
+/* MINI START: moon material. Atmospheric movement is permanently disabled. */
+#home .nox-quality-planet[data-quality="MINI_START"] .nox-quality-planet__sphere{
+ background:
+ radial-gradient(circle at 33% 38%,rgba(24,29,44,.42) 0 9%,transparent 11%),
+ radial-gradient(circle at 67% 64%,rgba(25,29,44,.44) 0 12%,transparent 14%),
+ radial-gradient(circle at 75% 26%,rgba(25,29,44,.31) 0 6%,transparent 8%),
+ radial-gradient(circle at 29% 21%,#e4e8f0,#8b95a8 36%,#2a334b 74%,#0a0d17 100%);
+}
+#home .nox-quality-planet[data-quality="MINI_START"] .nox-quality-planet__sphere::before,
+#home .nox-quality-planet[data-quality="MINI_START"] .nox-quality-planet__sphere::after{
+ animation:none!important;opacity:.19;
+}
+/* AUTO: violet atmosphere and dynamic ionized blue halo, user opt-in only. */
+#home .nox-quality-planet[data-quality="AUTO"] .nox-quality-planet__sphere{
+ background:radial-gradient(circle at 26% 19%,#e6f5ff,transparent 18%),
+ conic-gradient(from 34deg,#5c378f,#716eb8,#2c7097,#8669ad,#3c285c,#5c378f);
+}
+#home .nox-quality-planet[data-quality="AUTO"] .nox-quality-planet__sphere::before{
+ animation-duration:9s;opacity:.8;
+ background:conic-gradient(transparent,#aef4ff88 17%,transparent 33%,
+ #bd94ffa0 54%,transparent 76%,#7db7ff77);
+}
+/* The selected graphics budget governs the PLANET previews as well as D02.
+   MAX animates all atmospheres; CINEMA slows the secondary worlds;
+   ECO freezes unselected planets; MINI freezes every animation. */
+#home .nox-quality-dock[data-nox-effective="balanced"] .nox-quality-planet:not(.is-selected) .nox-quality-planet__sphere::before{
+ animation-duration:25s;opacity:.4;
+}
+#home .nox-quality-dock[data-nox-effective="eco"] .nox-quality-planet .nox-quality-planet__sphere::before,
+#home .nox-quality-dock[data-nox-effective="eco"] .nox-quality-planet .nox-quality-planet__sphere::after{
+ animation:none!important;filter:none!important;
+}
+#home .nox-quality-dock[data-nox-effective="reduced"] .nox-quality-planet .nox-quality-planet__sphere::before,
+#home .nox-quality-dock[data-nox-effective="reduced"] .nox-quality-planet .nox-quality-planet__sphere::after{
+ animation:none!important;filter:none!important;
+}
+#home .nox-quality-dock[data-nox-effective="reduced"]{
+ -webkit-backdrop-filter:none!important;backdrop-filter:none!important;
+}
+@keyframes nox-quality-atmosphere{
+ to{transform:rotate(360deg);}
+}
+@keyframes nox-quality-limb{
+ from{opacity:.28;transform:scale(.98)}
+ to{opacity:.88;transform:scale(1.045)}
+}
+@media(prefers-reduced-motion:reduce){
+ #home .nox-quality-planet__sphere,
+ #home .nox-quality-planet__sphere::before,
+ #home .nox-quality-planet__sphere::after{
+ animation:none!important;transition:none!important;transform:none!important;
+ }
+}
+@media(forced-colors:active){
+ #home .nox-quality-planet__sphere::before,
+ #home .nox-quality-planet__sphere::after{display:none!important}
+}
+
+
+/* NOX PLANETARY WORLDS V2 STYLE — one translucent HUD, five visual planets,
+   independent palettes and real local scene-activity graph. No moving controls. */
+#home .nox-quality-dock__head{flex-wrap:wrap}
+#home .nox-quality-dock__toggle{
+ margin-left:auto;min-height:31px;padding:5px 12px;cursor:pointer;
+ border:1px solid rgba(160,217,239,.46);border-radius:99px;
+ background:linear-gradient(140deg,rgba(42,67,85,.58),rgba(13,18,27,.5));
+ color:#b9effb;font:700 10px/1.3 Segoe UI,sans-serif;letter-spacing:.07em;
+}
+#home .nox-quality-dock__toggle:hover,#home .nox-quality-dock__toggle:focus-visible{
+ border-color:#e4d2b5;box-shadow:0 0 12px rgba(130,204,233,.24);
+}
+#home .nox-quality-dock__toggle:focus-visible{outline:2px solid #bff4ff;outline-offset:3px}
+#home .nox-quality-world[hidden]{display:none!important}
+#home .nox-quality-world{
+ display:grid;gap:10px;margin-top:10px;padding:12px;
+ border:1px solid rgba(160,195,214,.30);border-radius:16px;
+ background:radial-gradient(ellipse at 85% -45%,rgba(126,89,178,.22),transparent 80%),
+ linear-gradient(150deg,rgba(11,17,30,.82),rgba(18,22,31,.83));
+ box-shadow:inset 0 1px rgba(249,244,227,.1);
+ color:#dbe6ed;max-height:min(42vh,320px);overflow-x:hidden;overflow-y:auto;
+ overscroll-behavior:contain;
+}
+#home .nox-quality-world__title{font:700 13px/1.4 Segoe UI,sans-serif;
+ letter-spacing:.06em;color:#f7dab0;margin:0}
+#home .nox-quality-world__summary{font:12px/1.5 Segoe UI,sans-serif;
+ color:#b2ccd7;margin:0;max-width:76ch}
+#home .nox-quality-world__palettes,
+#home .nox-quality-world__actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+#home .nox-quality-world__palette,#home .nox-quality-world__action{
+ display:flex;align-items:center;justify-content:center;gap:6px;min-width:0;
+ min-height:43px;padding:8px 10px;box-sizing:border-box;text-align:center;
+ border:1px solid rgba(153,194,210,.4);border-radius:12px;
+ background:linear-gradient(125deg,rgba(29,48,66,.78),rgba(12,18,29,.85));
+ color:#d4edf4;text-decoration:none;cursor:pointer;
+ font:700 11px/1.3 Segoe UI,sans-serif;letter-spacing:.02em;
+ transition:border-color .18s,box-shadow .18s,background .18s;
+}
+#home .nox-quality-world__palette[aria-pressed="true"]{
+ color:#ffe5bc;border-color:rgba(255,205,134,.82);
+ box-shadow:inset 0 0 13px rgba(247,174,93,.12),0 0 13px rgba(199,160,101,.21);
+}
+#home .nox-quality-world__palette:focus-visible,
+#home .nox-quality-world__action:focus-visible{
+ outline:2px solid #c3f5ff;outline-offset:2px;
+}
+#home .nox-quality-world__observatory{
+ display:flex;align-items:center;justify-content:space-between;gap:12px;
+ border:1px solid rgba(102,160,182,.24);border-radius:12px;
+ background:linear-gradient(90deg,rgba(18,39,53,.77),rgba(8,15,25,.86));
+ padding:8px 11px;min-height:48px;
+}
+#home .nox-quality-world__reading{
+ flex:1;max-width:70%;font:700 11px/1.4 ui-monospace,monospace;
+ color:#afedec;font-variant-numeric:tabular-nums;letter-spacing:.01em;
+ overflow-wrap:anywhere;
+}
+#home .nox-quality-world__spark{width:min(32%,220px);height:38px;flex-shrink:0;
+ color:#e2b988;filter:drop-shadow(0 0 5px #e8a65435)}
+#home[data-nox-planet-world="max_wow"] .nox-quality-world{
+ border-color:rgba(249,154,94,.37);
+ background:radial-gradient(ellipse at 18% 0,rgba(205,86,33,.24),transparent 63%),rgba(16,12,20,.93);
+}
+#home[data-nox-planet-world="cinema"] .nox-quality-world{
+ background:radial-gradient(ellipse at 84% 0,rgba(57,142,182,.3),transparent 68%),rgba(12,21,33,.92);
+}
+#home[data-nox-planet-world="eco"] .nox-quality-world{
+ background:radial-gradient(ellipse at 85% 0,rgba(64,132,105,.25),transparent 65%),rgba(10,23,23,.91);
+}
+#home[data-nox-planet-world="mini_start"] .nox-quality-world{
+ background:linear-gradient(145deg,rgba(25,29,39,.92),rgba(11,13,22,.96));
+ box-shadow:none;backdrop-filter:none;
+}
+#home[data-nox-planet-world="auto"] .nox-quality-world{
+ background:radial-gradient(ellipse at 85% 0,rgba(116,82,174,.29),transparent 72%),rgba(17,13,31,.94);
+}
+/* Template palettes modify BACKDROP tint only: text and all interactive
+   approved HELION / 8 CoreID textures retain their original identity. */
+#home[data-nox-planet-palette="ember"] .nox-cinema-film{filter:hue-rotate(-15deg) saturate(1.18);}
+#home[data-nox-planet-palette="aurora"] .nox-cinema-film{filter:hue-rotate(24deg) saturate(1.12);}
+#home[data-nox-planet-palette="ion"] .nox-cinema-film{filter:hue-rotate(54deg) saturate(1.19);}
+#home[data-nox-planet-palette="verdant"] .nox-cinema-film{filter:hue-rotate(95deg) saturate(.72);}
+#home[data-nox-planet-palette="slate"] .nox-cinema-film{filter:saturate(.35) brightness(.8);}
+#home[data-nox-planet-palette="obsidian"] .nox-cinema-film{filter:saturate(.5) contrast(1.12);}
+@media(max-width:660px){
+ #home .nox-quality-dock__head{gap:5px;}
+ #home .nox-quality-world{padding:8px;max-height:36vh}
+ #home .nox-quality-world__palettes{grid-template-columns:repeat(3,minmax(0,1fr))}
+ #home .nox-quality-world__actions{grid-template-columns:repeat(2,minmax(0,1fr))}
+ #home .nox-quality-world__action:last-child{grid-column:1/-1}
+ #home .nox-quality-world__palette,#home .nox-quality-world__action{min-height:39px;padding:7px 4px;font-size:9px}
+ #home .nox-quality-world__reading{font-size:10px}
+}
+@media(prefers-reduced-motion:reduce){
+ #home .nox-quality-world *,#home .nox-quality-world *::before,#home .nox-quality-world *::after{
+ animation:none!important;transition:none!important;
+ }
+}
+@media(forced-colors:active){
+ #home .nox-quality-world{background:Canvas;color:CanvasText;border:1px solid CanvasText}
+ #home .nox-quality-world__palette,#home .nox-quality-world__action{background:ButtonFace;color:ButtonText;border:1px solid ButtonText}
+ #home .nox-quality-world__reading{color:CanvasText}
+}
+
+/* NOX EXPRESS D02 COLLAPSED-DOCK NO-OVERLAP v1.
+   The original five-action/A1 rail is fixed to the viewport bottom.
+   The closed graphics dock must sit above that rail, not at the same Y.
+   This applies even before the first OPEN WORLD click (no data attribute).
+   No CoreID, hitbox, native route or consent code is changed. */
+#home:not([data-nox-world-open="true"]) .nox-quality-dock{
+ bottom:calc(244px + env(safe-area-inset-bottom,0px))!important;
+}
+@media(max-width:600px){
+ #home:not([data-nox-world-open="true"]) .nox-quality-dock{
+  bottom:calc(248px + env(safe-area-inset-bottom,0px))!important;
+ }
+}
+/* On short windows, avoid clipping the two stacked rails altogether:
+   the visual dock returns to scrollable home flow; the primary rail stays
+   visible and keeps original keyboard focus/native handlers. */
+@media(max-height:650px){
+ #home{overflow-y:auto!important;overflow-x:hidden!important;}
+ #home:not([data-nox-world-open="true"]) .nox-quality-dock{
+  position:relative!important;left:auto!important;bottom:auto!important;
+  transform:none!important;
+  width:min(96vw,780px)!important;
+  margin:18px auto calc(200px + env(safe-area-inset-bottom,0px))!important;
+ }
+}
+
+/* NOX PLANETARY WORLDS V3 FLOW-SAFE: collapsed dock floats at the bottom;
+   expanded cockpit reenters document flow AFTER the approved D02 orbit.
+   No original CoreID coordinates, click regions or STOP controls are moved. */
+#home[data-nox-world-open="true"]{
+ overflow-y:auto!important;
+ overflow-x:hidden!important;
+}
+#home[data-nox-world-open="true"] .nox-quality-dock{
+ position:relative!important;
+ left:auto!important;right:auto!important;bottom:auto!important;
+ transform:none!important;
+ /* Expanded graphics mode is document-flow content; the original EXPRESS
+    five-button bar remains fixed. Preserve a scrollable clearance between
+    these real buttons instead of covering the graphics planet controls. */
+ margin:20px auto calc(156px + env(safe-area-inset-bottom,0px))!important;
+ scroll-margin-bottom:calc(156px + env(safe-area-inset-bottom,0px));
+ width:min(92vw,780px);
+ z-index:5;
+}
+@media(max-width:600px){
+ #home[data-nox-world-open="true"] .nox-quality-dock{
+  width:min(96vw,460px);
+  margin:10px auto calc(188px + env(safe-area-inset-bottom,0px))!important;
+  scroll-margin-bottom:calc(188px + env(safe-area-inset-bottom,0px));
+ }
+}
+@media(prefers-reduced-motion:reduce){
+ #home[data-nox-world-open="true"] .nox-quality-dock{
+  scroll-behavior:auto!important;
+ }
+}
+
+/* NOX SINGULARITY COMMAND V4 · 10 additive effects, no forged measurements.
+   Black-metal citadel, cyan holograms, amber singularity, reactive idle pulse.
+   Everything is scoped to existing owner-approved HELION + 8 cores. */
+#home .nox-future-core-indicator{
+ position:absolute;left:50%;bottom:-13px;transform:translateX(-50%);
+ z-index:14;pointer-events:none;user-select:none;white-space:nowrap;
+ display:flex;align-items:center;justify-content:center;gap:4px;
+ border:1px solid #7ddce66b;border-radius:22px;padding:3px 6px;
+ background:linear-gradient(105deg,#050b16ed,#112b39d9);color:#b6f6ff;
+ font:800 8px/1 Consolas,monospace;text-shadow:0 0 12px #4bd5fa;
+ box-shadow:0 0 10px #22cbff36,inset 0 0 8px #55d5ff13;
+}
+#home .nox-future-core-indicator__dot{display:block;width:5px;height:5px;border-radius:50%;
+ background:#85e5ff;box-shadow:0 0 9px #36d9f8;
+ animation:nox-future-heart 2.4s ease-in-out infinite;}
+#home .nox-eclipse .nox-future-core-indicator{color:#ffe9c8;border-color:#ffca7299;}
+#home .nox-eclipse .nox-future-core-indicator__dot{background:#ffc770;box-shadow:0 0 13px #ffb365;}
+#home .nox-future-hud{position:relative;isolation:isolate;overflow:hidden;
+ border:1px solid #7fd5ef51;border-radius:20px;margin-top:12px;padding:15px;
+ background:linear-gradient(140deg,#050b16eb,#101d28ee 44%,#060710f5),
+ radial-gradient(ellipse at 65% 0,#5bdef81f,transparent);
+ color:#d6f7ff;box-shadow:inset 0 1px #9ee4ff31,inset 0 0 42px #38b5e714,0 18px 60px #000b;}
+#home .nox-future-hud::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;
+ background:repeating-linear-gradient(90deg,transparent 0 37px,#65e5ff08 38px 39px),
+ repeating-linear-gradient(0deg,transparent 0 37px,#d0e9ff08 38px 39px);
+ animation:nox-future-hologram 9s ease-in-out infinite alternate;}
+#home .nox-future-hud::after{content:"";position:absolute;left:0;right:0;top:-20%;
+ height:26%;pointer-events:none;background:linear-gradient(transparent,#69dbff10,transparent);
+ animation:nox-future-scanner 11s linear infinite;}
+#home .nox-future-hud__headline{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:7px;}
+#home .nox-future-hud__headline strong{color:#f7dcb2;letter-spacing:.11em;
+ font:900 13px/1.3 Consolas,monospace;text-shadow:0 0 16px #ffc17d80;}
+#home .nox-future-hud__headline small{font:600 9px/1.3 Consolas,monospace;color:#98d5e9;}
+#home .nox-future-radar{position:relative;width:min(100%,340px);height:90px;margin:10px auto;
+ border-radius:50%;border:1px solid #55e4ff39;overflow:hidden;
+ background:repeating-radial-gradient(ellipse at center,transparent 0 12px,#8ce5f822 13px 14px,transparent 15px 28px),
+ conic-gradient(from -20deg,transparent,#7cbbfa16,transparent,#f7bd641b,transparent);
+ box-shadow:0 0 25px #7db7e426,inset 0 0 25px #a1e9fd1e;}
+#home .nox-future-radar::before{content:"";position:absolute;inset:10%;border-radius:50%;
+ border:2px solid #f6bc6059;box-shadow:0 0 16px #ffc26550;
+ animation:nox-future-iris 2.6s ease-in-out infinite alternate;}
+#home .nox-future-radar::after{content:"";position:absolute;inset:-40%;border-radius:50%;
+ background:conic-gradient(transparent 72%,#67c8ef1b 90%,transparent 93%);
+ animation:nox-future-sweep 8s linear infinite;}
+#home .nox-future-radar__focal{position:absolute;z-index:2;left:50%;top:50%;
+ transform:translate(-50%,-50%);color:#ffe4bc;font:800 14px/1 Consolas,monospace;
+ letter-spacing:.2em;text-shadow:0 0 14px #ffaa52;}
+#home .nox-future-grid{position:relative;z-index:1;display:grid;
+ grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;}
+#home .nox-future-metric{position:relative;overflow:hidden;min-width:0;
+ border:1px solid #7cb7df38;border-radius:11px;min-height:76px;padding:10px;
+ background:linear-gradient(130deg,#2a405034,#07121cde);
+ box-shadow:inset 0 1px #8bebff1f,inset 0 -15px 16px #0003;}
+#home .nox-future-metric::before{content:"";position:absolute;left:0;right:0;top:0;height:2px;
+ background:linear-gradient(90deg,transparent,#6cddf8ba,transparent);
+ animation:nox-future-data-line 4s ease-in-out infinite;}
+#home .nox-future-metric__title{display:block;color:#9fd7e6;font:700 9px/1.2 Consolas,monospace;
+ letter-spacing:.09em;}
+#home .nox-future-metric__value{display:block;color:#e4faff;margin:8px 0 6px;
+ font:900 clamp(15px,2vw,23px)/1 Consolas,monospace;text-shadow:0 0 12px #7ddcf866;}
+#home .nox-future-metric small{display:block;color:#a3b9c2;font:500 8px/1.3 Consolas,monospace;
+ overflow-wrap:anywhere;}
+#home .nox-future-metric__ring{position:absolute;top:10px;right:5px;width:28px;height:28px;
+ pointer-events:none;opacity:.65;}
+#home .nox-future-metric__ring svg{width:100%;height:100%;}
+#home .nox-future-metric[data-metric="training"],
+#home .nox-future-metric[data-metric="cores"]{border-color:#e4ae7357;}
+#home .nox-future-cores{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+ gap:6px;margin-top:11px;}
+#home .nox-future-core{min-width:0;position:relative;display:flex;align-items:center;
+ justify-content:space-between;gap:4px;border-radius:10px;
+ border:1px solid #87c8eb36;padding:8px;background:linear-gradient(110deg,#17394b4a,#040a14bc);}
+#home .nox-future-core strong{color:#bfeaff;font:700 9px/1.2 Consolas,monospace;overflow-wrap:anywhere;}
+#home .nox-future-core output{color:#f9c487;font:800 10px/1.2 Consolas,monospace;}
+#home .nox-future-core__ring{width:21px;height:21px;border-radius:50%;border:2px solid #85d8f362;
+ box-shadow:0 0 15px #47bafb35;position:relative;}
+#home .nox-future-core__ring::after{content:"";position:absolute;inset:5px;
+ border-radius:50%;background:#8fe8ff;opacity:.3;animation:nox-future-harmonic 2.7s ease-in-out infinite;}
+#home .nox-future-hud__disclaimer{font:500 9px/1.45 Consolas,monospace;
+ color:#a2c8d4;margin-top:12px;}
+#home[data-nox-ai-state="thinking"] .nox-future-radar{filter:hue-rotate(45deg);}
+#home[data-nox-ai-state="streaming"] .nox-future-core-indicator__dot,
+#home[data-nox-ai-state="training"] .nox-future-core-indicator__dot{animation-duration:.8s;}
+#home[data-nox-ai-state="error"] .nox-future-core-indicator__dot{background:#ff6c73;}
+#home[data-nox-reactor-mode="MAX"] .nox-future-hud{box-shadow:inset 0 0 56px #74ddf719,0 0 48px #6fd8ff2e;}
+#home[data-nox-reactor-mode="ECO"] .nox-future-radar::after{animation-duration:24s;}
+@keyframes nox-future-heart{0%,100%{transform:scale(.7);opacity:.35}45%{transform:scale(1.28);opacity:1}}
+@keyframes nox-future-hologram{from{opacity:.4}to{opacity:1}}
+@keyframes nox-future-scanner{from{transform:translateY(0)}to{transform:translateY(530%)}}
+@keyframes nox-future-sweep{to{transform:rotate(360deg)}}
+@keyframes nox-future-iris{from{transform:scale(.8);opacity:.35}to{transform:scale(1.14);opacity:1}}
+@keyframes nox-future-data-line{0%,100%{opacity:.2}45%{opacity:1}}
+@keyframes nox-future-harmonic{0%,100%{transform:scale(.45)}50%{transform:scale(1.15)}}
+@media(max-width:690px){#home .nox-future-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+#home .nox-future-cores{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:430px){#home .nox-future-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+#home .nox-future-hud{padding:10px}}
+@media(prefers-reduced-motion:reduce){
+#home .nox-future-hud *,#home .nox-future-hud::before,#home .nox-future-hud::after,
+#home .nox-future-core-indicator__dot{animation:none!important;transition:none!important;}}
+#home[data-nox-reactor-mode="REDUCED"] .nox-future-hud *,
+#home[data-nox-reactor-mode="REDUCED"] .nox-future-hud::before,
+#home[data-nox-reactor-mode="REDUCED"] .nox-future-hud::after,
+#home[data-nox-reactor-mode="REDUCED"] .nox-future-core-indicator__dot{animation:none!important;}
+@media(forced-colors:active){
+#home .nox-future-hud,#home .nox-future-metric,#home .nox-future-core,
+#home .nox-future-core-indicator{background:Canvas;color:CanvasText;border:1px solid CanvasText}}
+
+
+/* NOX EXPRESS · PREMIUM CINEMA BLOCK A V1 · additive source, not E07 proof.
+ * One OBSIDIAN/CYAN/AMBER visual language for HELION, eight CoreID, five
+ * planets and real-evidence HUD. Decorations never become model/owner status.
+ * Does not reposition original interactive CoreID or change hit targets. */
+
+/* 01 FIRST PULSE: a one-shot reveal which never blocks or moves controls. */
+#home.active .nox-orbit-stage .nox-eclipse{
+ animation-name:nox-block-a-reveal;
+ animation-duration:1100ms;
+ animation-timing-function:cubic-bezier(.22,.8,.22,1);
+ animation-iteration-count:1;
+}
+@keyframes nox-block-a-reveal{
+ from{opacity:.72;filter:brightness(.48) saturate(.55)}
+ 45%{filter:brightness(1.35) saturate(1.25)}
+ to{opacity:1;filter:brightness(1)}
+}
+
+/* 02 QUANTUM FOCUS: accessible focus visible regardless of visual profile. */
+#home .nox-orbit-core:focus-visible,
+#home .nox-eclipse:focus-visible,
+#home .nox-quality-planet:focus-visible,
+#home .nox-quality-dock__toggle:focus-visible,
+#home .nox-quality-world__action:focus-visible{
+ outline:2px solid #c0f5ff!important;
+ outline-offset:5px!important;
+ box-shadow:0 0 0 5px #61c8f333,0 0 26px #64d8ff88,
+            inset 0 0 11px #c8faff26!important;
+}
+#home .nox-orbit-core:active,
+#home .nox-quality-planet:active{filter:brightness(1.13)}
+
+/* 03 NANO SURFACE: premium film grain, titanium edges and shallow depth;
+   purely inside already-existing surfaces, no extra overlay hitboxes. */
+#home .nox-quality-dock{
+ border-color:#c7ab8170!important;
+ background-image:linear-gradient(145deg,#b3e5f40a,transparent 37%),
+  repeating-linear-gradient(115deg,transparent 0 5px,#c3eaff05 6px 7px),
+  linear-gradient(120deg,#080e1bed,#131e2bea 65%,#100f1bea)!important;
+ box-shadow:inset 0 1px 0 #dff7ff27,inset 0 0 19px #d9ad4810,
+            0 18px 38px #000b,0 0 23px #64cae61a!important;
+}
+#home .nox-quality-dock__head{
+ border-bottom:1px solid #96cfe51b;
+ padding-bottom:6px;
+}
+#home .nox-quality-world{
+ border-color:#9fb9c452;
+ box-shadow:inset 0 1px 0 #fff4d226,inset 0 0 28px #50bdea0d,0 6px 28px #0008;
+}
+#home .nox-future-hud{
+ border-color:#80d7f854;
+ background-image:radial-gradient(ellipse at 20% 0,#f2b46b14,transparent 47%),
+  repeating-linear-gradient(110deg,transparent 0 8px,#f5faff04 9px 10px),
+  linear-gradient(145deg,#080d18f0,#101f2ce9 67%,#0c0b18f2);
+}
+
+/* 04 REACTOR ORBIT IDENTITIES: eight source-defined CoreIDs get distinct
+   spectral materials. This is a graphic signature, not a core performance %
+   or proof of background work. */
+#home .nox-orbit-core{--nox-core-fx:#89dff1;}
+#home .nox-orbit-core[data-core-id="CONSCIOUSNESS"]{--nox-core-fx:#f8bd7e;}
+#home .nox-orbit-core[data-core-id="PERSONA"]{--nox-core-fx:#c5a3fb;}
+#home .nox-orbit-core[data-core-id="ATLAS"]{--nox-core-fx:#93d4fc;}
+#home .nox-orbit-core[data-core-id="VOICE"]{--nox-core-fx:#a4f0e4;}
+#home .nox-orbit-core[data-core-id="REFLECTION"]{--nox-core-fx:#f2a8c4;}
+#home .nox-orbit-core[data-core-id="CORE"]{--nox-core-fx:#f4c681;}
+#home .nox-orbit-core[data-core-id="NEXUS"]{--nox-core-fx:#8fcfff;}
+#home .nox-orbit-core[data-core-id="FORGE"]{--nox-core-fx:#f5a774;}
+#home .nox-orbit-core .nox-future-core-indicator{
+ border-color:var(--nox-core-fx)!important;
+ text-shadow:0 0 8px var(--nox-core-fx);
+}
+#home .nox-orbit-core .nox-future-core-indicator__dot{
+ background:var(--nox-core-fx)!important;
+ box-shadow:0 0 11px var(--nox-core-fx)!important;
+}
+#home .nox-future-core:nth-child(1){--nox-card-core:#ffc081;}
+#home .nox-future-core:nth-child(2){--nox-card-core:#c5a3fb;}
+#home .nox-future-core:nth-child(3){--nox-card-core:#93d4fc;}
+#home .nox-future-core:nth-child(4){--nox-card-core:#a4f0e4;}
+#home .nox-future-core:nth-child(5){--nox-card-core:#f2a8c4;}
+#home .nox-future-core:nth-child(6){--nox-card-core:#f4c681;}
+#home .nox-future-core:nth-child(7){--nox-card-core:#8fcfff;}
+#home .nox-future-core:nth-child(8){--nox-card-core:#f5a774;}
+#home .nox-future-core:nth-child(9){--nox-card-core:#ffcb8c;}
+#home .nox-future-core{
+ border-left:2px solid var(--nox-card-core,#80d3ef);
+}
+#home .nox-future-core__ring{
+ border-color:var(--nox-card-core,#80d3ef);
+ box-shadow:0 0 13px color-mix(in srgb,var(--nox-card-core,#80d3ef) 38%,transparent);
+}
+
+/* 05 CINEMATIC GLASS: solar glare and coherent small HUD devices.
+   Source verification still controls every displayed number. */
+#home .nox-future-metric{
+ background-image:linear-gradient(119deg,#a0e5f70c,transparent 46%),
+  linear-gradient(146deg,#1a334339,#070f1cda);
+}
+#home .nox-future-metric__value,
+#home .nox-future-core output{
+ font-variant-numeric:tabular-nums;
+ font-feature-settings:"tnum" 1;
+ text-shadow:0 0 9px #8eddf540;
+}
+#home .nox-quality-planet.is-selected .nox-quality-planet__sphere{
+ filter:drop-shadow(0 0 11px #e8ae6c72);
+}
+#home .nox-quality-world__palette[aria-pressed="true"]{
+ border-color:#edc688b0;
+ box-shadow:inset 0 0 13px #e6ac6031,0 0 10px #e6ab4b25;
+}
+
+/* 06 Responsive real command surface: compact without moving the original
+   eight CoreID or hiding STOP; controls never go under decorative canvases. */
+#home .nox-quality-dock,
+#home .nox-future-hud{box-sizing:border-box;min-width:0;max-width:100%}
+#home .nox-quality-dock__row{min-width:0;max-width:100%;overflow:visible}
+#home .nox-quality-planet{min-width:0;touch-action:manipulation}
+#home .nox-quality-world__actions{min-width:0}
+#home .nox-future-core strong{overflow-wrap:anywhere}
+@media(max-width:520px){
+ #home .nox-quality-dock{width:min(96vw,500px)!important}
+ #home .nox-quality-dock__row{gap:5px;flex-wrap:wrap;justify-content:center}
+ #home .nox-quality-planet{min-width:56px;max-width:19%;min-height:68px;padding:3px}
+ #home .nox-quality-planet strong{font-size:9px;letter-spacing:0}
+ #home .nox-future-hud__headline strong{font-size:11px;letter-spacing:.045em}
+ #home .nox-future-core{padding:5px}
+}
+@media(max-width:390px){
+ #home .nox-quality-planet{min-width:52px;max-width:19%}
+ #home .nox-quality-planet small{font-size:8px;line-height:1.1}
+ #home .nox-quality-world__actions,
+ #home .nox-quality-world__palettes{grid-template-columns:repeat(2,minmax(0,1fr))}
+ #home .nox-quality-world__palettes .nox-quality-world__palette:last-child{grid-column:1/-1}
+ #home .nox-future-hud{padding:8px}
+ #home .nox-future-metric{padding:7px 6px;min-height:70px}
+}
+@media(max-width:340px){
+ #home .nox-quality-planet{min-width:50px;max-width:31%;min-height:64px}
+ #home .nox-quality-dock__row{gap:7px}
+ #home .nox-quality-world__actions{grid-template-columns:1fr}
+ #home .nox-quality-world__action:last-child{grid-column:auto}
+}
+@media(min-width:1700px){
+ #home .nox-quality-dock{max-width:880px}
+ #home .nox-future-grid{gap:10px}
+ #home .nox-future-metric{min-height:92px}
+}
+
+/* 07 Accessibility & eco: premium surfaces remain legible without animation. */
+@media(prefers-reduced-motion:reduce){
+ #home.active .nox-orbit-stage .nox-eclipse{
+  animation:none!important;transition:none!important
+ }
+ #home .nox-quality-planet.is-selected .nox-quality-planet__sphere{
+  filter:none!important
+ }
+}
+#home[data-nox-reactor-mode="REDUCED"] .nox-quality-planet.is-selected .nox-quality-planet__sphere,
+#home[data-nox-reactor-mode="ECO"] .nox-quality-planet.is-selected .nox-quality-planet__sphere{
+ filter:none!important
+}
+@media(forced-colors:active){
+ #home .nox-quality-dock,#home .nox-quality-world,#home .nox-future-hud{
+  background:Canvas!important;color:CanvasText!important;
+  border:1px solid CanvasText!important;
+  box-shadow:none!important
+ }
+ #home .nox-future-core{border-left:2px solid Highlight}
+}
+
+/* Physical D02 41952527604: fixed graphic dock must stay to the right
+   of the 208px native host rail at 800/1044 WPF dimensions. No actions move. */
+@media (min-width:551px) and (max-width:1120px){
+ #home:not([data-nox-world-open="true"]) .nox-quality-dock{
+  left:calc(50% + 104px);
+  width:min(780px,calc(100vw - 238px));
+  max-width:calc(100vw - 238px);
+ }
+}
+@media (min-width:551px) and (max-width:1120px) and (max-height:650px){
+ #home:not([data-nox-world-open="true"]) .nox-quality-dock{
+  width:min(780px,calc(100vw - 238px))!important;
+  max-width:calc(100vw - 238px)!important;
+ }
+}

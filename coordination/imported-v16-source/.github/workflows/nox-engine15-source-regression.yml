@@ -1,0 +1,34 @@
+name: NOX EXPRESS Engine15 source integrity (not E07)
+on:
+  push:
+    branches:
+      - integration/nox-v16-unified-candidate-20261028-r01
+    paths:
+      - coordination/express/restore_engine15_sources.py
+      - coordination/express/NOX_ENGINE15_SOURCELOCK_42023301530.json
+      - tests/express/test_engine15_source_restore.py
+      - .github/workflows/nox-engine15-source-regression.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: nox-engine15-source-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  strict-source-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout original PR162 branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Check exact source-restoration contracts
+        shell: bash
+        run: |
+          python3 -m compileall -q coordination/express/restore_engine15_sources.py
+          python3 -m unittest discover -s tests/express -p 'test_engine15_source_restore.py' -v
+      - name: Keep source proof separate from EXE
+        shell: bash
+        run: |
+          echo "SOURCE_ONLY_NO_RUNTIME_INSTALL_NO_RELEASE"

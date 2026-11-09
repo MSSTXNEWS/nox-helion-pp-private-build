@@ -1,0 +1,287 @@
+{
+  "schema": "NOX_V16_E03_G1_03_R05_SOURCE_RECEIPT_V1",
+  "run_id": "NOX-V16-G1-03-20261028T0954MSK-R05",
+  "owner": "E03/ModelCenter-C40",
+  "frozen_baseline": {
+    "commit_git_sha1": "0b3a7d435be735148d64171deb9027093a89646e",
+    "tree_git_sha1": "f108d604c444f718b32aaecfd07b90b8f91b9a6f",
+    "verified_frozen_main_commit_and_tree": true,
+    "source_lock": "HOLD: source_00/01/02 raw archive SHA256 and extracted 729-file owner SourceLock not attested; PR66 is inventory only"
+  },
+  "source_parent": {
+    "pr": 92,
+    "commit_git_sha1": "8d2a3ff44adc43c60e2cea0b8fd8bacc20f9213e"
+  },
+  "branch": "owner3/nox-v16-g1-03-admission-20261028-r05",
+  "files": [
+    {
+      "path": "Packages/P03/Admission/p03_modelcenter_gate.py",
+      "owner": "E03",
+      "pre_sha256": "63a529837172769595def86e3c9548512326736ec0cc14f66499d5e4eacd2300",
+      "post_sha256": "fb3799919bbf987899f08b78017b6cc064e786eada1bfbbde73503047139d04d",
+      "pre_git_blob_sha1": "d6dd3ee887891277acd9d52a80b40693808bd668",
+      "post_git_blob_sha1": "dc98ba50d8f3deb56601e7f2a2bc0ba5734834ab",
+      "byte_count": 20081,
+      "diff": "R05_CHANGES.patch",
+      "test": "90/90 LOCAL UNIT PASS; Python py_compile PASS; GitHub readback pending"
+    },
+    {
+      "path": "Packages/P03/Admission/test_p03_modelcenter_gate.py",
+      "owner": "E03",
+      "pre_sha256": "2fd69c5366eb3752f1662ae9edc2365bb6fe8c8e752003c1bede47cb997529ba",
+      "post_sha256": "42c9fc2948681d23b63fa6a1d50a7fdb1bb26948ccf9ea7ad147b80abd399afc",
+      "pre_git_blob_sha1": "9a5d7bd2c8763057cbf1796e3185427e8eeaec96",
+      "post_git_blob_sha1": "423a61ebb698b9cb706fbd779e79af1a9ccaf1a5",
+      "byte_count": 25891,
+      "diff": "R05_CHANGES.patch",
+      "test": "90/90 LOCAL UNIT PASS; Python py_compile PASS; GitHub readback pending"
+    }
+  ],
+  "patch_sha256": "ee9c6a54c928a30dba5cccf4d31475d1ca37d6f2ab330fc18daac9ac64042111",
+  "tests": {
+    "local_unittest": "90/90 PASS",
+    "python_compile": "PASS",
+    "real_ollama_download": "NOT_RUN",
+    "real_GGUF_download": "NOT_RUN",
+    "real_asr_tts_weights": "NOT_RUN",
+    "native_host_integration": "HOLD",
+    "Windows_Exe_E2E": "NOT_RUN",
+    "GitHub_Actions": "PENDING; do not count no-step CI as PASS",
+    "real_downloads_started": false
+  },
+  "model_leads": {
+    "ollama_tag_candidates": [
+      "qwen3:0.6b",
+      "qwen3:1.7b",
+      "qwen3:4b",
+      "qwen3:8b",
+      "qwen3:14b",
+      "qwen3:30b",
+      "qwen3:32b",
+      "qwen2.5:0.5b",
+      "qwen2.5:1.5b",
+      "qwen2.5:3b",
+      "qwen2.5:7b",
+      "qwen2.5:14b",
+      "qwen2.5:32b",
+      "qwen2.5:72b",
+      "gemma3:270m",
+      "gemma3:1b",
+      "gemma3:4b",
+      "gemma3:12b",
+      "gemma3:27b",
+      "llama3.2:1b",
+      "llama3.2:3b",
+      "deepseek-r1:1.5b",
+      "deepseek-r1:7b",
+      "deepseek-r1:8b",
+      "deepseek-r1:14b"
+    ],
+    "external_candidates": [
+      {
+        "name": "asr-whisper-small",
+        "role": "ASR"
+      },
+      {
+        "name": "asr-whisper-large-v3",
+        "role": "ASR"
+      },
+      {
+        "name": "asr-faster-whisper",
+        "role": "ASR"
+      },
+      {
+        "name": "tts-piper-voices",
+        "role": "TTS"
+      },
+      {
+        "name": "tts-xtts-v2",
+        "role": "TTS"
+      },
+      {
+        "name": "tts-mms-rus",
+        "role": "TTS"
+      },
+      {
+        "name": "tts-mms-spa",
+        "role": "TTS"
+      },
+      {
+        "name": "tts-kokoro",
+        "role": "TTS"
+      },
+      {
+        "name": "image-sdxl",
+        "role": "IMAGE"
+      },
+      {
+        "name": "image-flux-schnell",
+        "role": "IMAGE"
+      },
+      {
+        "name": "image-qwen",
+        "role": "IMAGE"
+      },
+      {
+        "name": "video-wan",
+        "role": "VIDEO"
+      },
+      {
+        "name": "video-ltx",
+        "role": "VIDEO"
+      },
+      {
+        "name": "video-cogvideo",
+        "role": "VIDEO"
+      },
+      {
+        "name": "video-hunyuan",
+        "role": "VIDEO"
+      },
+      {
+        "name": "train-qwen3-0.6b",
+        "role": "TRAINING"
+      },
+      {
+        "name": "aligner-wav2vec",
+        "role": "ALIGNER"
+      }
+    ],
+    "pinned_immutable_weights_verified": 0,
+    "unverified_model_status": "HOLD/REVIEW_REQUIRED"
+  },
+  "tasks": [
+    {
+      "task_id": "G1.03.01",
+      "status": "SOURCE_ONLY",
+      "integrated": "HOLD"
+    },
+    {
+      "task_id": "G1.03.02",
+      "status": "SOURCE_ONLY",
+      "integrated": "HOLD"
+    },
+    {
+      "task_id": "G1.03.03",
+      "status": "SOURCE_ONLY",
+      "integrated": "HOLD"
+    },
+    {
+      "task_id": "G1.03.04",
+      "status": "SOURCE_ONLY",
+      "integrated": "HOLD"
+    },
+    {
+      "task_id": "G1.03.05",
+      "status": "SOURCE_ONLY",
+      "integrated": "HOLD"
+    },
+    {
+      "task_id": "G1.03.06",
+      "status": "SOURCE_ONLY",
+      "integrated": "HOLD"
+    },
+    {
+      "task_id": "G1.03.07",
+      "status": "SOURCE_ONLY",
+      "integrated": "HOLD"
+    },
+    {
+      "task_id": "G1.03.08",
+      "status": "SOURCE_ONLY",
+      "integrated": "HOLD"
+    },
+    {
+      "task_id": "G1.03.09",
+      "status": "SOURCE_ONLY",
+      "integrated": "HOLD"
+    },
+    {
+      "task_id": "G1.03.10",
+      "status": "SOURCE_ONLY",
+      "integrated": "HOLD"
+    }
+  ],
+  "seven_indicators": [
+    {
+      "executor": 1,
+      "TaskID": "V16.26.3/P01",
+      "weight": 20,
+      "source": "PR90",
+      "component": "partial local",
+      "integrated": "HOLD",
+      "windows": "NOT_RUN",
+      "accepted_pct": "N/D"
+    },
+    {
+      "executor": 2,
+      "TaskID": "V16.26.4/P02",
+      "weight": 25,
+      "source": "PR91",
+      "component": "partial local",
+      "integrated": "HOLD",
+      "windows": "NOT_RUN",
+      "accepted_pct": "N/D"
+    },
+    {
+      "executor": 3,
+      "TaskID": "V16.26.5/P03",
+      "weight": 20,
+      "source": "PR92 + R05",
+      "component": "90/90 policy tests, not native",
+      "integrated": "HOLD",
+      "windows": "NOT_RUN",
+      "accepted_pct": "N/D"
+    },
+    {
+      "executor": 4,
+      "TaskID": "V16.26.6/P04",
+      "weight": 25,
+      "source": "PR89",
+      "component": "GPU real NOT_RUN",
+      "integrated": "HOLD",
+      "windows": "NOT_RUN",
+      "accepted_pct": "N/D"
+    },
+    {
+      "executor": 5,
+      "TaskID": "V16.26.7/P05",
+      "weight": 10,
+      "source": "PR98",
+      "component": "65/65 local source only",
+      "integrated": "HOLD",
+      "windows": "NOT_RUN",
+      "accepted_pct": "N/D"
+    },
+    {
+      "executor": 6,
+      "TaskID": "V16.26.8/SourceLock",
+      "weight": null,
+      "source": "PR66 / PR79 / PR20",
+      "component": "raw original and host HOLD",
+      "integrated": "HOLD",
+      "windows": "NOT_RUN",
+      "accepted_pct": "N/D"
+    },
+    {
+      "executor": 7,
+      "TaskID": "QA01-QA10",
+      "weight": null,
+      "source": "PR46 historical",
+      "component": "installed final EXE NOT_RUN",
+      "integrated": "HOLD",
+      "windows": "NOT_RUN",
+      "accepted_pct": "N/D"
+    }
+  ],
+  "weighted_progress": "0.20*P01 + 0.25*P02 + 0.20*P03 + 0.25*P04 + 0.10*P05 = N/D (no complete owner-accepted ledger)",
+  "risk": "Old candidate native attestor accepted evidence only: unbound hardware/source/session and replayed queue events could pass synthetic policy fixtures. Not a proven installed exploit.",
+  "one_practical_self_improvement": "Bind native artifact evidence + measured context + original SourceLock in ONE trusted E06 attestor call and require same-session monotonic queue sequence before marking any model event. Treat missing SourceLock as HOLD, never synthetic PASS as installation.",
+  "no_loss": {
+    "main_unchanged": true,
+    "originals_D02_WOW_EXE_not_edited": true,
+    "existing_downloader_only": true,
+    "deleted_paths": 0
+  },
+  "handoff": "E06 must approve exact PR92 preimage and R05 postimage, bind two-argument attestor to one native P03 queue and verify source_00/01/02 raw SHA + 729 original; E07 Windows one-BuildID SHA after E06. Do not merge until owner receipts and Windows acceptance."
+}

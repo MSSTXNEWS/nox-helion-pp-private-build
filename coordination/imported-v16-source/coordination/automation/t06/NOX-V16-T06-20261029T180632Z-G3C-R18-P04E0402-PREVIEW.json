@@ -1,0 +1,122 @@
+{
+  "schema": "NOX_V16_T06_R18_SOURCE_PREVIEW_RECEIPT_V1",
+  "run_id": "NOX-V16-T06-20261029T180632Z-G3C-R18-P04E0402-PREVIEW",
+  "utc_start": "2026-10-29T18:02:32Z",
+  "utc_preparation": "2026-10-29T18:09:05.863Z",
+  "status": "INCOMPLETE_NOT_PRODUCT_DONE",
+  "scope": "Windows NOX HELION EXPRESS INTEGRATOR (not main NOX)",
+  "task": {
+    "task_id": "P04 E04.02",
+    "owner": "manual #3",
+    "integrator": "T06 sole PR162 writer",
+    "stage_before": "OPEN/SOURCE_PREPARED_ISOLATED",
+    "stage_after": "SOURCE_PREVIEW",
+    "product_baseline": "NOT_FIXED",
+    "product_progress": "N/D",
+    "accepted_delta": 0,
+    "source_mutation": false
+  },
+  "prestart_read_proof": {
+    "canon_revision": "AHj4eMQZ0_0E6J6emNbVCOHwSZVhcGcW-PLJb2yf1Heh7sQ7__OQwiDyAlU5A5LIQgnv-eI_OGDsahNTskqwwq5bowIjSbwvAv-hCtVt8RM",
+    "canon_rules_33": 56,
+    "canon_sections": "§§1–33,54–56,R29 and R18",
+    "policy_blob": "a66ff0177f68c04e875c9369334a53321e922e20",
+    "manual_roles_blob": "31fba12cee825226cc9dff60560550b178da8bc9",
+    "toolkit_blob": "631fbdacd398492d6db25fb0dbb2de893aa1dbc9",
+    "tests_blob": "f0f6282f065f1edb056dcf25451d93ff383ba89e",
+    "matrix_blob": "6775e071f872c432d4cbdd12b0b920fffbbca397",
+    "own_pre_r18_prompt_blob": "1d799788df86be4aece123e44d2f47b84a580cba",
+    "register_blob": "0d70249e7849159f7a28f1b82aa31b7c24d0c35f",
+    "register_branch_sha": "2b2073e88dad553b1a1dc3ffd67947d72b46639a",
+    "active_error_ids": [
+      "ERR-SYS-001",
+      "ERR-SYS-002",
+      "ERR-SRC-003",
+      "ERR-SRC-004",
+      "ERR-SRC-005",
+      "ERR-SYS-006",
+      "ERR-SYS-007",
+      "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+      "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+      "NOX-V16-T06-ROOT-STOP-20261029-R01",
+      "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+    ],
+    "master_revision": "AHj4eMRLmpkQKr-x9gaoFD7SdREQT_JAVT70PIw17kEJz5AQXf6KCCpPvpu6GwhahtigNShc_D_k7P5dX--RlLVQNtzxDDZBmaJTyIEXMlM",
+    "e06_revision": "AHj4eMQvsqhebXI-ZMHGNnf5ByWrz730Zob8Cn1tU8Oix-zgvTFZAyBa02VYY6edeiFk0MtiNgecDA2Uh9n1BIzVEwhHpvXOnTDR7YyV2x0",
+    "lessons_revision": "AHj4eMSVR_FJ3gur9EGn7vp45lqjhDZxcj2COxKftuTf_-sf15s7rBbnFBk8z8JyhVSynoKr9xf_5BapbJlKncarZyHhFA6b2Jw_TmZ42Mg",
+    "c34_revision": "AHj4eMTYjSLimS9IJiKymJLjP5O6wtJX4fqjq6fv5kQc2yhZa4bTP6lNHTbKDWy629JrAgj8yxW441sW78U9jTcOKsbEZHJUcDhpW4AGe1M",
+    "pr162_head_pre": "b6c8db1a0383a6ae3a9331240c8acd8b76386694",
+    "tree_pre": "13316feaba1fbf16aec78eafdde62abeefca1faf",
+    "observed_source_head_move": {
+      "from": "22ea5406ebb3599b2830dc655274ffe3ac50b71d",
+      "to": "b6c8db1a0383a6ae3a9331240c8acd8b76386694",
+      "changed": "coordination/e06/stage_p01.py",
+      "delta_files": 1,
+      "source_commit_message": "T06 P01: stage complete original WPF donor transactionally before publish"
+    }
+  },
+  "m3_handoff": {
+    "pr": 221,
+    "commit": "f1a391bd40003c5f098580ddc7e068450c8b193d",
+    "blob_preimage_matches": "5/5 at 22ea5406 HEAD, P04/P05 files unaffected by subsequent P01-only commit",
+    "paths": [
+      {
+        "path": "Packages/P04/Rag/RagIngestionService.cs",
+        "pre_git_blob": "a45386b1e3b4f3eb87e3452529b652328bcec687",
+        "post_git_blob": "d68b09de46b07f98f40f8254a399d5679e6e862a"
+      },
+      {
+        "path": "Packages/P04/Rag/RagService.cs",
+        "pre_git_blob": "a6730cd630dc7c9adc335b6182940ca84c4107ca",
+        "post_git_blob": "a98cf03da0ffeabe959faa9d7aa11608fdd04a21"
+      },
+      {
+        "path": "tests/P04/RagComponentHarness.cs",
+        "pre_git_blob": "3e7953439fd2686310624b598072307dcd74905c",
+        "post_git_blob": "d470efdf691fc41f30256fca66ec46d37a0b7367"
+      },
+      {
+        "path": "Packages/P05/Space/SpaceFeedClient.cs",
+        "pre_git_blob": "78cb5cefac8a1aad3af9338dc42653eac94f5537",
+        "post_git_blob": "5eceeaa130e9c06d030171212ce38709577ad77c"
+      },
+      {
+        "path": "Packages/P05/Space/tests/Program.cs",
+        "pre_git_blob": "83800381c0adb0070f968590db2ff3e550810285",
+        "post_git_blob": "2335f8f00a3808ec09e7a5e59e2fbfb61d712768"
+      }
+    ],
+    "three_p04_files": "candidate",
+    "two_p05_files": "candidate"
+  },
+  "checks": {
+    "five_exact_preimages": "STATIC_READBACK_MATCH",
+    "p04_sid_conversation_citation_SHA": "STATIC_SOURCE_INSPECTED_ONLY",
+    "p05_stop_cache_https_endpoint_timestamp": "STATIC_SOURCE_INSPECTED_ONLY",
+    "dotnet_sdk": "NOT_INSTALLED",
+    "dotnet_tests": "TOOL_NOT_RUN",
+    "r18_toolkit": "TOOL_NOT_RUN",
+    "native_windows_tests": "NOT_RUN",
+    "stop_acl_native_consent_privacy": "UNVERIFIED_AT_CURRENT_SOURCE_SHA",
+    "no_loss": "ONLY_THIS_RECEIPT_ADDED",
+    "original_zip_729": "UNCHANGED",
+    "exe_nsis_gitlab_ci_e07": "NOT_RUN",
+    "gitlab_authenticated_live_head": "UNKNOWN"
+  },
+  "self_improvement": {
+    "ERR-SYS-002": "FIX_PROCESS: fresh HEAD re-read after concurrent T06 source commit; no stale CAS or reset",
+    "ERR-SRC-004": "P04/P05 exact PRE/POST prepared; missing native dotnet and source QA, retain OPEN",
+    "ERR-SRC-003": "Owner patch present current admission.py d8d8e898..., T08 13 native same-SHA UNVERIFIED",
+    "ERR-SRC-005": "T08 independent fixture tests needed",
+    "ERR-SYS-006": "ALREADY_VERIFIED_CLOSED original 729/3 ZIP",
+    "ERR-SYS-007": "ALREADY_VERIFIED_CLOSED T04 34/34",
+    "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01": "INCOMPLETE, no false T06 8/8"
+  },
+  "blocker": {
+    "root": "No .NET SDK and no Windows/native runner in this execution environment; T06 SOURCE/P04-P05 may not be integrated before targeted dotnet checks",
+    "owner": "T06 .NET runner -> T08 independent QA",
+    "action": "dotnet run targeted P04 RagComponentHarness and P05 SpaceFeedClientR16Smoke then re-read fresh PR162 HEAD and CAS-integrate approved patches; T08 exact-head security QA; T09 freeze; T02 update existing ERR-SRC-004 and premature-stop incident"
+  },
+  "additional_journal_delta": "Master/E06/Lessons R22 report ERR-T06-20261029-DUPLICATE-P02-OWNER-ROUTE missing from compact 11-ID register; T02 sole journal writer must reconcile",
+  "checkpoint": "SOURCE_PREVIEW only; no product code changed by this run; do not run EXE, NSIS, CI, E07 or release"
+}

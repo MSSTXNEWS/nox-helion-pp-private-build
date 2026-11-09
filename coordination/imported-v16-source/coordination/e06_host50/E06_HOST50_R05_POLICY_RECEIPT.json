@@ -1,0 +1,554 @@
+{
+  "schema": "NOX_V16_E06_HOST50_R05_IMMUTABLE_POLICY_RECEIPT_V1",
+  "runId": "NOX-V16-E06-G2-02-20261028T1013MSK-R05",
+  "owner": "E06",
+  "baselineCommit": "0b3a7d435be735148d64171deb9027093a89646e",
+  "baselineTree": "f108d604c444f718b32aaecfd07b90b8f91b9a6f",
+  "donorPR27Head": "be1fe05d88443e41b0d196617840508d9dd39b7d",
+  "ownerMapBaseCommit": "eb46b49fb8a022cefa679afb8606877016808db1",
+  "preimagePR94Head": "311918961420bc4f0eaf8e4475153722fed4f634",
+  "changedFiles": [
+    {
+      "path": "coordination/e06_host50/admission.py",
+      "owner": "E06",
+      "preSha256": "eaeed7f6a531d447185feebcd06f69e2fd9dc9667611a3f8d2be44605d555419",
+      "postSha256": "3b3bfbc76d45a535cac3264dcdf6f179d2c44cfb173bda09f6bc00150de6040e",
+      "preGitBlob": "a0e729f7868b131c8130191725fb0870f351a6c1",
+      "postGitBlob": "cf256629b9807980017e9a4d7170a5480278fdab"
+    },
+    {
+      "path": "coordination/e06_host50/test_admission.py",
+      "owner": "E06",
+      "preSha256": "325471aa83fc558b3ab6e1242a55ffe393c864a53d0564242ec99eab9f3df6c4",
+      "postSha256": "19bd62b8a57728d76f3d76de4bc27f91d73c9607d5e7d8d975244c796e28fd96",
+      "preGitBlob": "052e0beb8ce6cc7a43312c695acb6833b621d6ae",
+      "postGitBlob": "5c5b25402bd964fd7b18c5d967013d7e1cea82dc"
+    }
+  ],
+  "sourceChecks": {
+    "preimageRiskDowngrade": "ACCEPTED_BY_OLD_SOURCE_REPRODUCED",
+    "localUnitTests": "29/29 PASS",
+    "pythonCompile": "PASS",
+    "liveWindowsHost": "NOT_RUN",
+    "independentE07": "NOT_RUN"
+  },
+  "coverage": {
+    "tasks": 50,
+    "sourceDescriptors": 37,
+    "unbound": 13,
+    "nativeCapabilitiesConfirmed": 0,
+    "integrated": 0,
+    "windowsAccepted": 0
+  },
+  "routeLedger": [
+    {
+      "taskId": "NIP01-01",
+      "routeId": "helion.chat",
+      "owner": 2,
+      "risk": "safe",
+      "sourceHandler": "PR27_BINDING_MAP_DESCRIPTOR_ONLY",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-02",
+      "routeId": "core.chat",
+      "owner": 2,
+      "risk": "safe",
+      "sourceHandler": "PR27_BINDING_MAP_DESCRIPTOR_ONLY",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-03",
+      "routeId": "persona.chat",
+      "owner": 2,
+      "risk": "safe",
+      "sourceHandler": "PR27_BINDING_MAP_DESCRIPTOR_ONLY",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-04",
+      "routeId": "chat.model",
+      "owner": 2,
+      "risk": "safe",
+      "sourceHandler": "PR27_BINDING_MAP_DESCRIPTOR_ONLY",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-05",
+      "routeId": "chat.history",
+      "owner": 2,
+      "risk": "sensitive",
+      "sourceHandler": "PR27_BINDING_MAP_DESCRIPTOR_ONLY",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-06",
+      "routeId": "chat.attach",
+      "owner": 2,
+      "risk": "sensitive",
+      "sourceHandler": "PR27_BINDING_MAP_DESCRIPTOR_ONLY",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-07",
+      "routeId": "chat.rag",
+      "owner": 2,
+      "risk": "safe",
+      "sourceHandler": "PR27_BINDING_MAP_DESCRIPTOR_ONLY",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-08",
+      "routeId": "chat.voice",
+      "owner": 2,
+      "risk": "sensitive",
+      "sourceHandler": "UNBOUND",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-09",
+      "routeId": "chat.stop",
+      "owner": 2,
+      "risk": "safe",
+      "sourceHandler": "PR27_BINDING_MAP_DESCRIPTOR_ONLY",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-10",
+      "routeId": "chat.commands",
+      "owner": 2,
+      "risk": "safe",
+      "sourceHandler": "PR27_BINDING_MAP_DESCRIPTOR_ONLY",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-11",
+      "routeId": "models.catalog",
+      "owner": 3,
+      "risk": "safe",
+      "sourceHandler": "PR27_BINDING_MAP_DESCRIPTOR_ONLY",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-12",
+      "routeId": "models.installed",
+      "owner": 3,
+      "risk": "safe",
+      "sourceHandler": "PR27_BINDING_MAP_DESCRIPTOR_ONLY",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-13",
+      "routeId": "models.pull",
+      "owner": 3,
+      "risk": "sensitive",
+      "sourceHandler": "PR27_BINDING_MAP_DESCRIPTOR_ONLY",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-14",
+      "routeId": "models.gguf.import",
+      "owner": 3,
+      "risk": "sensitive",
+      "sourceHandler": "PR27_BINDING_MAP_DESCRIPTOR_ONLY",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-15",
+      "routeId": "models.queue",
+      "owner": 3,
+      "risk": "safe",
+      "sourceHandler": "PR27_BINDING_MAP_DESCRIPTOR_ONLY",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-16",
+      "routeId": "models.cancel",
+      "owner": 3,
+      "risk": "safe",
+      "sourceHandler": "PR27_BINDING_MAP_DESCRIPTOR_ONLY",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-17",
+      "routeId": "models.retry",
+      "owner": 3,
+      "risk": "sensitive",
+      "sourceHandler": "PR27_BINDING_MAP_DESCRIPTOR_ONLY",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-18",
+      "routeId": "models.digest",
+      "owner": 3,
+      "risk": "safe",
+      "sourceHandler": "PR27_BINDING_MAP_DESCRIPTOR_ONLY",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-19",
+      "routeId": "models.preflight",
+      "owner": 3,
+      "risk": "safe",
+      "sourceHandler": "PR27_BINDING_MAP_DESCRIPTOR_ONLY",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-20",
+      "routeId": "models.licenses",
+      "owner": 3,
+      "risk": "safe",
+      "sourceHandler": "PR27_BINDING_MAP_DESCRIPTOR_ONLY",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-21",
+      "routeId": "rag.import",
+      "owner": 4,
+      "risk": "sensitive",
+      "sourceHandler": "PR27_BINDING_MAP_DESCRIPTOR_ONLY",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-22",
+      "routeId": "rag.search",
+      "owner": 4,
+      "risk": "safe",
+      "sourceHandler": "PR27_BINDING_MAP_DESCRIPTOR_ONLY",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-23",
+      "routeId": "memory.manage",
+      "owner": 4,
+      "risk": "sensitive",
+      "sourceHandler": "PR27_BINDING_MAP_DESCRIPTOR_ONLY",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-24",
+      "routeId": "datasets.review",
+      "owner": 4,
+      "risk": "safe",
+      "sourceHandler": "PR27_BINDING_MAP_DESCRIPTOR_ONLY",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-25",
+      "routeId": "gpu.preflight",
+      "owner": 4,
+      "risk": "safe",
+      "sourceHandler": "PR27_BINDING_MAP_DESCRIPTOR_ONLY",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-26",
+      "routeId": "training.start",
+      "owner": 4,
+      "risk": "dangerous",
+      "sourceHandler": "UNBOUND",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-27",
+      "routeId": "training.pause",
+      "owner": 4,
+      "risk": "safe",
+      "sourceHandler": "PR27_BINDING_MAP_DESCRIPTOR_ONLY",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-28",
+      "routeId": "training.resume",
+      "owner": 4,
+      "risk": "sensitive",
+      "sourceHandler": "PR27_BINDING_MAP_DESCRIPTOR_ONLY",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-29",
+      "routeId": "training.checkpoints",
+      "owner": 4,
+      "risk": "sensitive",
+      "sourceHandler": "PR27_BINDING_MAP_DESCRIPTOR_ONLY",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-30",
+      "routeId": "training.evaluate",
+      "owner": 4,
+      "risk": "safe",
+      "sourceHandler": "UNBOUND",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-31",
+      "routeId": "translate.ru_es",
+      "owner": 2,
+      "risk": "sensitive",
+      "sourceHandler": "PR27_BINDING_MAP_DESCRIPTOR_ONLY",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-32",
+      "routeId": "maestro.spanish",
+      "owner": 2,
+      "risk": "safe",
+      "sourceHandler": "PR27_BINDING_MAP_DESCRIPTOR_ONLY",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-33",
+      "routeId": "voice.settings",
+      "owner": 2,
+      "risk": "safe",
+      "sourceHandler": "PR27_BINDING_MAP_DESCRIPTOR_ONLY",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-34",
+      "routeId": "calls.dial",
+      "owner": 2,
+      "risk": "dangerous",
+      "sourceHandler": "PR27_BINDING_MAP_DESCRIPTOR_ONLY",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-35",
+      "routeId": "calls.history",
+      "owner": 2,
+      "risk": "sensitive",
+      "sourceHandler": "UNBOUND",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-36",
+      "routeId": "media.player",
+      "owner": 1,
+      "risk": "sensitive",
+      "sourceHandler": "UNBOUND",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-37",
+      "routeId": "media.subtitles",
+      "owner": 1,
+      "risk": "safe",
+      "sourceHandler": "UNBOUND",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-38",
+      "routeId": "browser.open",
+      "owner": 1,
+      "risk": "sensitive",
+      "sourceHandler": "UNBOUND",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-39",
+      "routeId": "browser.bookmarks",
+      "owner": 1,
+      "risk": "safe",
+      "sourceHandler": "UNBOUND",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-40",
+      "routeId": "images.generate",
+      "owner": 4,
+      "risk": "sensitive",
+      "sourceHandler": "UNBOUND",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-41",
+      "routeId": "space.news",
+      "owner": 5,
+      "risk": "safe",
+      "sourceHandler": "PR27_BINDING_MAP_DESCRIPTOR_ONLY",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-42",
+      "routeId": "space.weather",
+      "owner": 5,
+      "risk": "safe",
+      "sourceHandler": "PR27_BINDING_MAP_DESCRIPTOR_ONLY",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-43",
+      "routeId": "space.fx",
+      "owner": 5,
+      "risk": "safe",
+      "sourceHandler": "PR27_BINDING_MAP_DESCRIPTOR_ONLY",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-44",
+      "routeId": "space.bitcoin",
+      "owner": 5,
+      "risk": "safe",
+      "sourceHandler": "PR27_BINDING_MAP_DESCRIPTOR_ONLY",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-45",
+      "routeId": "space.brent",
+      "owner": 5,
+      "risk": "safe",
+      "sourceHandler": "PR27_BINDING_MAP_DESCRIPTOR_ONLY",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-46",
+      "routeId": "system.telemetry",
+      "owner": 5,
+      "risk": "safe",
+      "sourceHandler": "PR27_BINDING_MAP_DESCRIPTOR_ONLY",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-47",
+      "routeId": "system.update",
+      "owner": 1,
+      "risk": "dangerous",
+      "sourceHandler": "UNBOUND",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-48",
+      "routeId": "system.backup",
+      "owner": 1,
+      "risk": "dangerous",
+      "sourceHandler": "UNBOUND",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-49",
+      "routeId": "system.pc_control",
+      "owner": 1,
+      "risk": "dangerous",
+      "sourceHandler": "UNBOUND",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-50",
+      "routeId": "mobile.connect",
+      "owner": 6,
+      "risk": "sensitive",
+      "sourceHandler": "UNBOUND",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    }
+  ],
+  "holds": [
+    "ORIGINAL_3_PART_SHA256_AND_ALL_729_MEMBER_SOURCELOCK_UNVERIFIED",
+    "PR27_OWNER_BINDING_BASELINE_DRIFT",
+    "NATIVE_HANDLER_OWNER_RECEIPTS_NOT_ADMITTED",
+    "EXACT_WINDOWS_EXE_BUILDID_SHA_NOT_TESTED"
+  ],
+  "productWeightedProgress": "N/D",
+  "mainModified": false,
+  "lesson": "IMMUTABLE_NATIVE_ROUTE_OWNER_RISK_FLOOR"
+}

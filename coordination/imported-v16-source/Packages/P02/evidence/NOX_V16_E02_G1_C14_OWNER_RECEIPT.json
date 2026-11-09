@@ -1,0 +1,92 @@
+{
+  "schema": "NOX_V16_E02_C14_OWNER_RECEIPT_V1",
+  "run_id": "NOX-V16-E02-G1-C14-20261028T0650MSK",
+  "status": "SOURCE_CANDIDATE_INTEGRATION_HOLD",
+  "immutable_baseline": {
+    "repo": "MSSTXNEWS/nox-helion-pp-private-build",
+    "commit": "0b3a7d435be735148d64171deb9027093a89646e",
+    "git_tree_sha1": "f108d604c444f718b32aaecfd07b90b8f91b9a6f",
+    "source_00_01_02_sha256": "N/D",
+    "pr66": "INVENTORY_ONLY"
+  },
+  "owner_parent": {
+    "pr": 64,
+    "commit": "9218aad7dea32b52c544b58d46f1acbe1910e04c",
+    "owner": "E02"
+  },
+  "source_candidate": {
+    "branch": "e02/v16-g1-c14-original-store-admission-20261028",
+    "head": "fb8316505caa228ed21637e3060699405817e7f2"
+  },
+  "files": [
+    {
+      "path": "Packages/P02/worker-python/p02_runtime.py",
+      "owner": "E02",
+      "pre_git_blob_sha1": "3547a044576ed115649bd7b612feac7a384e7bf9",
+      "pre_sha256": "6e38cc0a1a7b328b28886741041f8e4464763f56256ebc89a54a83b898583396",
+      "post_sha256": "e9e581010db19e99dcee004c78a2b23c0f9647a7581fa2b4731ce67d84f4a0b6",
+      "post_git_blob_sha1": "59fd9cfdc4243eac7f2c10aa5e58983d283b82a1",
+      "run_id": "NOX-V16-E02-G1-C14-20261028T0650MSK",
+      "source_parent_commit": "9218aad7dea32b52c544b58d46f1acbe1910e04c",
+      "diff_summary": "V2 schema admission, verified trigger/index, history order from existing SQLite. V1 preserved."
+    },
+    {
+      "path": "Packages/P02/worker-python/p02_history_stable.py",
+      "owner": "E02",
+      "pre_git_blob_sha1": "40e1a2d158ebd053acb3df183d861aa0201e6ce2",
+      "pre_sha256": "9d94bc32f4e96a4d3ea6ad8ce0b6c75e569cfcfbe494fa14c964ad88b273a5af",
+      "post_sha256": "0bdacf35735ccba7491331abc2d1415d0e73fe11f8f15f02fce9d9c9ab6785f2",
+      "post_git_blob_sha1": "0ec3a074b17c618b3665b126419d5625d84b99f5",
+      "run_id": "NOX-V16-E02-G1-C14-20261028T0650MSK",
+      "source_parent_commit": "9218aad7dea32b52c544b58d46f1acbe1910e04c",
+      "diff_summary": "Upgrade one local no-auto-migrate V2 helper."
+    },
+    {
+      "path": "Packages/P02/worker-python/test_p02_history_stable.py",
+      "owner": "E02",
+      "pre_git_blob_sha1": "386d368c9aafcd7a200544830c77ad71a9978faf",
+      "pre_sha256": "950489ee0991f69326ce2988dc5d5b41986ff2e2f3b45c5349b0265fe3f399b2",
+      "post_sha256": "721f4c16c2d95430e03f4f4f0ba5363b311437addeccafaa9514e5236a4450f8",
+      "post_git_blob_sha1": "098e789103991ef5cb0372bfe331beceeda92ed4",
+      "run_id": "NOX-V16-E02-G1-C14-20261028T0650MSK",
+      "source_parent_commit": "9218aad7dea32b52c544b58d46f1acbe1910e04c",
+      "diff_summary": "31 same-second/VACUUM/ACL/safe backup tests."
+    },
+    {
+      "path": "Packages/P02/worker-python/test_p02_c13_original_store.py",
+      "owner": "E02",
+      "pre_git_blob_sha1": "ABSENT",
+      "pre_sha256": "ABSENT",
+      "post_sha256": "d80743d093ecccb107ccf1165f0438b8c104cd8f831c049ace7887bac387453f",
+      "post_git_blob_sha1": "89f66dd2602b7232d4b848efc0d31a112503ed2d",
+      "run_id": "NOX-V16-E02-G1-C14-20261028T0650MSK",
+      "source_parent_commit": "9218aad7dea32b52c544b58d46f1acbe1910e04c",
+      "diff_summary": "8 original P02Store tests for #6 Windows execution; NOT_RUN now."
+    },
+    {
+      "path": "Packages/P02/worker-python/apply_c13_to_original.py",
+      "owner": "E02",
+      "pre_git_blob_sha1": "ABSENT",
+      "pre_sha256": "ABSENT",
+      "post_sha256": "d7d940a64c23c6cfb93f5cf4c9d241dee2e0283af94662f1aa27ec81449bb0c0",
+      "post_git_blob_sha1": "15335a44b2330cd4c15715c4f2b63efcd3dc0fac",
+      "run_id": "NOX-V16-E02-G1-C14-20261028T0650MSK",
+      "source_parent_commit": "9218aad7dea32b52c544b58d46f1acbe1910e04c",
+      "diff_summary": "Exact preimage guarded stage-only apply script."
+    }
+  ],
+  "tests": {
+    "local_sqlite_31": "PASS (31/31, exact helper/test bytes)",
+    "original_store_8": "NOT_RUN",
+    "github_windows": "NOT_RUN",
+    "native_ollama": "NOT_VERIFIED",
+    "native_mic_asr_tts": "NOT_VERIFIED",
+    "gpu_weights": "NOT_VERIFIED"
+  },
+  "conflicts": [
+    "PR58 original P02Store V2 edit shares path but not preimage; both PRs preserved",
+    "original 729 extracted tree current SourceLock missing; owner6 hold"
+  ],
+  "no_loss": "No main change, no original archive/EXE/UI/D02/CoreID/Persona/weights deletion",
+  "integrator_handoff": "Owner6 exact owner preimage + source lock, run real original store 8 tests, approve backup, native chat/voice/RAG, E07 same EXE SHA; DO NOT auto-migrate."
+}

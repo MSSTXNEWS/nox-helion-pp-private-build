@@ -1,0 +1,23 @@
+{
+  "schema": "NOX-V16-E06-SOURCELOCK-OUTPUT-ANCESTRY-R17",
+  "run_id": "NOX-M1-20261028-R17",
+  "task_id": "V16.E06.SOURCELOCK_OUTPUT_PARENT_REPARSE_FAILCLOSED",
+  "source": {
+    "path": "coordination/e06/verify_original_729_source.py",
+    "pre_blob": "49c83214f3fcfcccc915d55212a52551411028ef",
+    "post_blob": "ecd17af8609f84baa191f12d7faaad2fa5e42ce8",
+    "pre_sha256": "94ac9f10a428ed4c8944e718b696288b0ab07167a244c789da11a73f0d0be654",
+    "post_sha256": "3892dbcb3159df40cad5e057e341a6c6b428f7c1494a6e5782c6c72d5a8d42c2"
+  },
+  "test": {
+    "path": "tests/e06/test_original_729_output_parent_r17.py",
+    "blob": "a15b6b588314f070f7c66e88caf279271dba4b52",
+    "sha256": "eea299ce5cdd32109f7a0ac4b421ef21c5aadb2c6705e34cf4c45066f67338a6",
+    "actual_excerpt_tests": "4/4 PASS local POSIX temporary filesystem",
+    "full_original_module": "NOT_RUN",
+    "windows_junction_race": "NOT_RUN"
+  },
+  "change": "Reject symlink/junction/non-directory/missing ancestors of output receipt before raw 729 checks and again before exclusive create; original three parts and ZIP data read-only and immutable.",
+  "source_ready": false,
+  "release_accepted": false
+}

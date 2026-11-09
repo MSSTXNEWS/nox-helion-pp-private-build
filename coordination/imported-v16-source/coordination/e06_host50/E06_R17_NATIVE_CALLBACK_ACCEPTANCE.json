@@ -1,0 +1,25 @@
+{
+  "schema": "NOX_V16_46_OWNER_M1_HOST50_NATIVE_CALLBACK_R17",
+  "task_id": "V16.46.P01.HOST50_NATIVE_CALLBACK_EXCEPTION_FAILCLOSED",
+  "run_id": "NOX-V16-M1-R17-20261028",
+  "owner_pr": 162,
+  "source": {
+    "path": "coordination/e06_host50/admission.py",
+    "pre_blob_sha1": "01a2e56d3d0e0347da79306635ea4c3892425631",
+    "post_blob_sha1": "d8e231de2d2ce14d13342569d07336e3b3e7db23",
+    "pre_sha256": "f87b8394c52f6bcd123413879ffcde1a4ddc146a905925db3c6d3d402da50ccb",
+    "post_sha256": "8f0003cc67dbc593ac7b2f87526aa818fb317c5a1702cdd9498040eda9debd08"
+  },
+  "test": {
+    "path": "coordination/e06_host50/test_native_callback_failclosed_r14.py",
+    "git_blob_sha1": "5c921ee948cbcfcc5c17a962b8912d27957ac97e",
+    "sha256": "77fb45cfc63dfa31ba111891224c26325d9221ada39d193d67390a2b4cd8b28c",
+    "tests": 2
+  },
+  "change": "Native consent/device/picker callback exceptions converted into fixed HOLD without exposing private exception content or creating pending ACK; original true/false consent behavior retained.",
+  "owner_isolated_test": "64/64 PASS in donor run only; shared PR exact test runner NOT_RUN",
+  "same_head_windows": "NOT_RUN",
+  "original_binary_archive": "UNMODIFIED",
+  "release_accepted": false,
+  "source_ready": false
+}

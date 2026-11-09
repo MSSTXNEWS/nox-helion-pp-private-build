@@ -1,0 +1,61 @@
+name: NOX WEB WOW Verified Bundle
+on:
+  push:
+    branches: [integration/nox-v16-unified-candidate-20261028-r01]
+    paths: [.github/workflows/nox-web-wow-verified-bundle.yml]
+  workflow_dispatch:
+permissions: {contents: read}
+jobs:
+  package:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify exact real WOW integration and package original source tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f ui/menu-pages/index.html
+          test -f ui/menu-pages/menu.js
+          test -f ui/menu-pages/nox-wow-scene.js
+          test -f ui/menu-pages/formwork-halo-hud.js
+          test -f ui/menu-pages/formwork-zodiac-cores.js
+          test -f ui/menu-pages/vendor/loquix-typing.mjs
+          test -f ui/menu-pages/vendor/svg-gauge.min.js
+          test -f ui/menu-pages/tabler-card-integration.css
+          test -f coordination/express/NOX_WEB_WOW_01_40_RUNTIME_MATRIX_20261106.json
+          node --check ui/menu-pages/menu.js
+          node --check ui/menu-pages/nox-wow-scene.js
+          node --check ui/menu-pages/native-gauge-adapter.js
+          mkdir -p dist/nox-web-wow/ui dist/nox-web-wow/coordination/e07 dist/nox-web-wow/coordination/express
+          cp -a ui/. dist/nox-web-wow/ui/
+          cp coordination/e07/nox_wow_static_server.cjs dist/nox-web-wow/coordination/e07/
+          cp coordination/express/NOX_WEB_WOW_01_40_RUNTIME_MATRIX_20261106.json dist/nox-web-wow/coordination/express/
+          git rev-parse HEAD > dist/nox-web-wow/SOURCE_COMMIT.txt
+          cat > dist/nox-web-wow/README.md <<'EOF'
+          # NOX HELION WEB WOW verified frontend
+          Existing menu original: ui/menu-pages/index.html
+          Local test server (read-only loopback): node coordination/e07/nox_wow_static_server.cjs
+          Open http://127.0.0.1:8765/ui/menu-pages/index.html
+          This package contains source + local visual assets and does NOT include a native OneHost backend,
+          installed Windows WebView2 binary, local Qwen model, or E07 acceptance.
+          Native controls correctly report HOLD without the original trusted OneHost.
+          Original selected libraries retain licenses under ui/.
+          EOF
+          (cd dist/nox-web-wow && find . -type f ! -name MANIFEST_SHA256.txt -print0 | sort -z | xargs -0 sha256sum > MANIFEST_SHA256.txt)
+          (cd dist && zip -q -r -0 NOX_WEB_WOW_VERIFIED_SOURCE.zip nox-web-wow)
+          (cd dist && sha256sum NOX_WEB_WOW_VERIFIED_SOURCE.zip > ARCHIVE_SHA256.txt)
+          unzip -tqq dist/NOX_WEB_WOW_VERIFIED_SOURCE.zip
+          (cd dist && unzip -q NOX_WEB_WOW_VERIFIED_SOURCE.zip -d verification && cd verification/nox-web-wow && sha256sum -c MANIFEST_SHA256.txt)
+          echo "PASS: actual WEB WOW frontend ZIP, source receipts, checksum and all files verified"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NOX_WEB_WOW_VERIFIED_COMPLETE_SOURCE
+          path: |
+            dist/NOX_WEB_WOW_VERIFIED_SOURCE.zip
+            dist/ARCHIVE_SHA256.txt
+          if-no-files-found: error
+          retention-days: 14

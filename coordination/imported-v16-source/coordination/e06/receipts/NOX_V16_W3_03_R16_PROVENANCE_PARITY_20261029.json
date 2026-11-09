@@ -1,0 +1,67 @@
+{
+  "schema": "NOX-V16-E06-OWNER-RECEIPT-v1",
+  "run_id": "NOX-V16-W3-03-20261028T2355MSK-R16",
+  "owner": "W3.03 E06",
+  "historical_origin": "0b3a7d435be735148d64171deb9027093a89646e",
+  "pr": 162,
+  "expected_head": "508bd5f706144bc5d184858f81d5a6cfd6e4eb7f",
+  "parent_tree": "cfef2927b21263258e49a4f92f20ba2c623a0d0e",
+  "ownership": "E06-only: existing onehost module and own tests/receipt",
+  "previous_lesson_id": "CLOSE_OWNER_LEASE_ONCE_AND_FAIL_CLOSED_BEFORE_TERMINAL",
+  "previous_lesson_applied": "YES: retained close_owner_once and 17 local R07+R15 contract regressions green",
+  "task_ledger": {
+    "E06-W3-03-R16-01": "DONE cross-language nested owner property collision fail-closed at onehost wire boundary",
+    "E06-W3-03-R16-02": "DONE 9-scenario negative/positive regression, same-source RED=8 failures; 115 offline selected tests green",
+    "E06-W3-03-R16-03": "DONE immutable owner preimage, tree CAS and readback receipt (subject to successful commit)",
+    "E06-W3-03-R16-04": "HOLD native .NET/WebView2 owner schema parity E2E",
+    "E06-W3-03-R16-05": "HOLD Ollama/RAG citation E2E on Windows",
+    "E06-W3-03-R16-06": "HOLD real GPU checkpoint/evaluation",
+    "E06-W3-03-R16-07": "HOLD physical 729 original source SHA",
+    "E06-W3-03-R16-08": "HOLD Azure authorized Windows agent",
+    "E06-W3-03-R16-09": "HOLD immutable installed Setup/EXE BuildID SHA",
+    "E06-W3-03-R16-10": "HOLD independent E07 10 same-SHA native tests"
+  },
+  "files": [
+    {
+      "path": "coordination/e06/onehost_p02_p04.py",
+      "owner": "E06/W3.03",
+      "pre_sha256": "c6fc685baef250f29a4775e1defbd036ba7482b8b8e0c6987b8696ee7f56c95a",
+      "post_sha256": "b56fdf5fac1cc949fe6aee02b40a6028ad520b5a1d063decc00a1c17eaeef0ee",
+      "pre_git_blob_sha1": "17d2ac810aa93e6ab67218e186c600740084e0fc",
+      "post_git_blob_sha1": "acf09d1daaae4ee98a95f55a092b9c92abbc8673",
+      "diff": "add unicodedata import; after validated JSON snapshot, iterative recursive NFC+casefold object-key collision guard before IPC"
+    },
+    {
+      "path": "tests/e06/test_onehost_nested_provenance_r16.py",
+      "owner": "E06/W3.03 QA",
+      "pre_sha256": "ABSENT",
+      "post_sha256": "8a2c908bb8c651a29215a5f8daddf26fa56ec1541829d70870f6e717d28e9e5d",
+      "pre_git_blob_sha1": "ABSENT",
+      "post_git_blob_sha1": "46f1a587ba11a7decc769bb5bdb07c3cc1899788",
+      "diff": "9 focused tests on nested RAG sources, GPU ACK, P05 event, valid detached frame"
+    }
+  ],
+  "test_evidence": {
+    "RED": "8 failures in 21 runs of new suite on exact R15 source",
+    "GREEN": "32/32 R15+R16 focused tests; 115/115 selected offline tests, 1 older module NOT_RUN due missing test_onehost_p02_p04 dependency",
+    "python_compile": "PASS",
+    "real_windows": "NOT_RUN",
+    "real_gpu": "NOT_RUN"
+  },
+  "single_practical_lesson": {
+    "id": "E06_NFC_CASEFOLD_OWNER_WIRE_PROPERTIES",
+    "error": "nested RAG/source/worker JSON allowed two differently cased or normalization-equivalent property keys",
+    "cause": "Python dict treats them distinct; native .NET or WebView parser may resolve one ambiguous property",
+    "fix": "iteratively reject NFC+casefold duplicate keys at every nested object of existing _owner_wire_snapshot",
+    "regression": "8 RED -> GREEN; separate valid control preserved; R15 close-once regression preserved"
+  },
+  "progress": {
+    "weighted_P01_P05": "N/D",
+    "E07_actual_windows": "0/10",
+    "source_ready": "HOLD",
+    "azure_build": "NOT_RUN"
+  },
+  "not_a_release": true,
+  "one_host_preserved": true,
+  "any_owner_data_deleted": false
+}

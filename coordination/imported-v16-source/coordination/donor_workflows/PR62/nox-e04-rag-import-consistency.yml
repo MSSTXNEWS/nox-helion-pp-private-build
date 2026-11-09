@@ -1,0 +1,38 @@
+name: NOX E04 RAG import provenance regression
+on:
+  push:
+    branches:
+      - e04/v16-turbo10-rag-consistency-20261028-c27
+    paths:
+      - 'Packages/P04/rag_python_compat.py'
+      - 'tests/P04/test_rag_fd_path_consistency.py'
+      - '.github/workflows/nox-e04-rag-import-consistency.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  rag-import-linux:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Actual P04 source provenance and existing index safety regressions
+        run: |
+          python -m unittest discover -s tests/P04 -p 'test_rag_fd_path_consistency.py' -v
+          python -m unittest discover -s tests/P04 -p 'test_rag_reparse_ancestors.py' -v
+          python -m unittest discover -s tests/P04 -p 'test_python_host_rag_compat.py' -v
+  rag-import-windows:
+    runs-on: windows-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Actual Windows P04 path provenance regression
+        run: |
+          python -m unittest discover -s tests/P04 -p 'test_rag_fd_path_consistency.py' -v
+          python -m unittest discover -s tests/P04 -p 'test_rag_reparse_ancestors.py' -v

@@ -1,0 +1,62 @@
+name: NOX E07 91a6 installed WPF real visual evidence - NOT RELEASE
+on:
+  push:
+    branches: [integration/nox-v16-unified-candidate-20261028-r01]
+    paths:
+      - .github/workflows/nox-e07-91a6-real-visual-u17.yml
+      - coordination/e07/probe_91a6_real_visual_u17.py
+      - tests/e07/test_91a6_real_visual_u17.py
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: nox-e07-91a6-physical-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  photo-original-wpf:
+    if: github.repository == 'MSSTXNEWS/nox-helion-pp-private-build'
+    runs-on: windows-2022
+    timeout-minutes: 42
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12.10'
+          architecture: x64
+          check-latest: false
+      - name: One original-source visual witness regression
+        shell: pwsh
+        run: |
+          python -B -m py_compile coordination/e07/probe_91a6_real_visual_u17.py
+          if ($LASTEXITCODE -ne 0) { throw 'U17_PHOTO_PY_SYNTAX_HOLD' }
+          python -B -m unittest discover -s tests/e07 -p test_91a6_real_visual_u17.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'U17_VISUAL_SOURCE_REGRESSION_HOLD' }
+      - name: Download immutable original FULL D02 Setup
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          run-id: 41885544063
+          github-token: ${{ github.token }}
+          name: nox-v16-e06-onehost-diagnostic-41885544063
+          path: input/full-d02-91a6
+      - name: Physical original WPF screenshot FX and NSIS no-loss lifecycle
+        id: physical
+        shell: pwsh
+        timeout-minutes: 24
+        run: |
+          $ErrorActionPreference='Stop'
+          $photo=Join-Path $env:RUNNER_TEMP 'nox-91a6-real-wpf.png'
+          python -B coordination/e07/probe_91a6_real_visual_u17.py --artifact-dir input/full-d02-91a6 --out work/u17/VISUAL_RECEIPT.json --png "$photo"
+          if ($LASTEXITCODE -ne 0) { throw 'U17_REAL_WPF_PHOTO_HOLD_NOT_RELEASE' }
+          Write-Host 'ORIGINAL_WPF_PHYSICAL_PHOTO_NOT_E07_DESIGN_APPROVAL'
+      - name: Keep source-bound photo and receipt even on HOLD
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: NOX-91A6-PHYSICAL-WPF-VISUAL-${{ github.run_id }}
+          path: |
+            work/u17/VISUAL_RECEIPT.json
+            ${{ runner.temp }}/nox-91a6-real-wpf.png
+          if-no-files-found: warn
+          retention-days: 14

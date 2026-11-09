@@ -1,0 +1,82 @@
+{
+  "task_id": "K02",
+  "pre_head": "21b943a9b0cc7370216fa69c7ad5914ee5501472",
+  "status": "SOURCE_IMPLEMENTED_TARGETED_CHECKS_PASS",
+  "files": [
+    {
+      "path": "src/nox_selfbuilder/onehost_store.py",
+      "pre_head": "ABSENT",
+      "post_sha256": "0f6275a33688b3789134c43af0ce5ca350a420975c8f2268097ea3733084e348",
+      "donor_sha256": "d8b7bb4d98eb1b11cb306984c83e36acf76c351785e2c3c1b6f9e5c991d91671"
+    },
+    {
+      "path": "src/nox_selfbuilder/original_store_adapter.py",
+      "pre_head": "ABSENT",
+      "post_sha256": "7b164f1b9ccc2815d22944da0be34ecde9f3e2d5c8be5a065143d3eb4d16f788",
+      "donor_sha256": null
+    },
+    {
+      "path": "src/nox_selfbuilder/seed.py",
+      "pre_head": "ABSENT",
+      "post_sha256": "652928ed41e6aa2370cec869d1465aa4e393dc56ed147cdec11dde0db916ed53",
+      "donor_sha256": "652928ed41e6aa2370cec869d1465aa4e393dc56ed147cdec11dde0db916ed53"
+    },
+    {
+      "path": "src/nox_selfbuilder/learning.py",
+      "pre_head": "ABSENT",
+      "post_sha256": "0cce774b73adb1d16dc870fb3314302761b79bdfa7e85fa5428f37eb757b94ff",
+      "donor_sha256": "0cce774b73adb1d16dc870fb3314302761b79bdfa7e85fa5428f37eb757b94ff"
+    },
+    {
+      "path": "tests/k02/test_actor_lifecycle.py",
+      "pre_head": "ABSENT",
+      "post_sha256": "bafa9316fffa48d9279b115313d47062c21f35dbcdeeec454ecafaae20b2714a",
+      "donor_sha256": null
+    },
+    {
+      "path": "tests/k02/test_onehost_chat_integration.py",
+      "pre_head": "ABSENT",
+      "post_sha256": "7e755161580bbc2c99edd981faa55fbf9bea020be38fd477783972a0cb163178",
+      "donor_sha256": null
+    },
+    {
+      "path": "tests/k02/test_original_store_adapter.py",
+      "pre_head": "ABSENT",
+      "post_sha256": "093b09e6493fad8b26b5622008b027cd93c8b626e8518ef9c93441faf22834df",
+      "donor_sha256": null
+    },
+    {
+      "path": "tests/k02/test_patch02_store_actor.py",
+      "pre_head": "ABSENT",
+      "post_sha256": "421cd40266de6779ea7be4e2e1ded3888293be505a4ae157c3762ea0c2baf7c4",
+      "donor_sha256": null
+    }
+  ],
+  "reused": [
+    "PATCH02 OneHostStoreActor",
+    "R4 seed.py and learning.py unchanged",
+    "original helion.storage.Store",
+    "original CoreRuntime._init_db/_history_rows/_history_epoch_in on same Store.conn",
+    "original helion.contracts.CORE_IDS and helion.personas.PERSONAS"
+  ],
+  "original_archive_sha256": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+  "seed_archive_sha256": "b1bc0c27997d76b4c654842101d28738080e8c83d3b077b12585aaa28b500c9f",
+  "tests": {
+    "targeted_original_store_tests": 7,
+    "integrated_current_native_ingress_original_store_test": 1,
+    "total_pass": 8,
+    "command": "PYTHONPATH=source/src:donors/original python -m unittest discover -s source/tests/k02 -v",
+    "scope": "Real original Store/SQLite, five persona/core/principal isolation, restart, existing approved recall, STOP rollback, epoch revoke, same-thread ownership, queued-timeout cancellation, unchanged original SEED. Integrated chat uses explicitly mocked Ollama client; native Windows not run."
+  },
+  "root_cause_fixed": "Original sqlite connection created on caller thread crossed native worker thread; instantiate and access/close on sole actor thread. Also prevent timed-out queued writes and close/sentinel admission race.",
+  "schema_preservation": "Original Store schema/user_version retained; original CoreRuntime migration reused on same connection; existing legacy rows not reattributed to new principal; no second database/history tables/LLM transport.",
+  "holds": [
+    "WINDOWS_BUILD_DEFERRED",
+    "NATIVE_WINDOWS_E07_DEFERRED",
+    "Original attachments handler unbound; not advertised as working",
+    "Original historical persona handles explicitly marked reconstructed in source; preserved unchanged",
+    "Real Ollama runtime not exercised; integrated test uses fixture"
+  ],
+  "source_only": true,
+  "release_accepted": false
+}
