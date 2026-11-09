@@ -8,20 +8,16 @@ LOG="$ROOT/logs"
 mkdir -p "$TOOLS" "$LOG"
 exec 9>"$LOG/nox_9b_mega.lock"
 flock -n 9 || { echo "NOX_9B_ALREADY_RUNNING"; exit 0; }
-status=1
-stop_gpu(){
-  local rc="$?"
+# NO AUTO-STOP HERE. GPU must stay running for queued NOX knowledge learning.
+# Stop is permitted only by an explicitly armed final supervisor after both stages.
+on_exit(){
+  local rc=$?
   trap - EXIT
   sync
-  echo "NOX_9B_EXIT code=$rc $(date -u +%FT%TZ)" >> "$LOG/nox_9b_autostop.log"
-  if command -v runpodctl >/dev/null 2>&1; then
-    runpodctl pod stop "$POD" >> "$LOG/nox_9b_autostop.log" 2>&1 || echo "RUNPOD_AUTOSTOP_FAILED: check console" >> "$LOG/nox_9b_autostop.log"
-  else
-    echo "RUNPOD_CLI_MISSING: check console" >> "$LOG/nox_9b_autostop.log"
-  fi
+  echo "NOX_STAGE1_EXIT code=$rc $(date -u +%FT%TZ); GPU_LEFT_RUNNING_FOR_STAGE2" >> "$LOG/nox_9b_stage1.log"
   exit "$rc"
 }
-trap stop_gpu EXIT
+trap on_exit EXIT
 test -s "$ROOT/models/NOX_PRIME_9B_INHERITED/transfer_manifest.json" || { echo "HOLD_NO_9B"; exit 31; }
 test -s "$ROOT/embryo/NOX_EMBRYO_TRANSFER_STAGE/embryo_manifest.json" || { echo "HOLD_NO_EMBRYO"; exit 32; }
 test "$(df -P /workspace | tail -1 | awk '{print $6}')" = /workspace || { echo "HOLD_VOLUME_NOT_MOUNTED"; exit 33; }
@@ -52,4 +48,4 @@ done
 echo "NOX_9B_FULL_WEIGHT_MERGE_BEGIN"
 "$PY" -u "$TOOLS/nox_9b_merge.py"
 test -s "$ROOT/models/NOX_9B_UNIFIED/NOX_UNIFIED_RECEIPT.json" || { echo "NOX_MERGE_RECEIPT_MISSING";exit 51; }
-echo "NOX_9B_FULL_MODEL_SAVED; requesting GPU stop"
+echo "NOX_9B_FULL_MODEL_SAVED; GPU_LEFT_RUNNING_FOR_STAGE2"
