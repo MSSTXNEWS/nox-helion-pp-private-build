@@ -111,6 +111,11 @@ try{
   if($code -eq 0){Log 'WINDOWS_BACKUP_SCHEDULED_5_MIN'}
   else{Log ("TASK_SCHEDULER_FAILED "+($output -join ' '))}
  }
+ # A40 low-priority S03 memory ingestion does not load a GPU model or interfere with active CUDA.
+ $memoryUrl='https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/5cef7521fe34c459b9a5d9ced6b1def20ee08b81/nox_runpod/stage0/start_a40_unified_nox_memory.sh'
+ try{
+  Log ("A40_MEMORY "+(Remote $Nodes[1] "curl -fsSL --retry 3 '$memoryUrl' | bash"))
+ }catch{Log ("A40_MEMORY_HOLD "+$_.Exception.Message)}
  foreach($node in $Nodes){InstallAgent $node}
  # Both Pods share one /workspace: backup once, via A5000.
  $shared=Backup $Nodes[0] 'shared' 'SHARED_NOX'
