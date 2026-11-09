@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
-# NOX donor acquisition queue: Qwen3.8-27B quantized teacher.
+# NOX donor acquisition queue: Qwen3.5-27B quantized teacher.
 # Download only; never load another large model while primary NOX 9B is running.
 set -Eeuo pipefail
 ROOT=/workspace/nox
-DEST="$ROOT/teachers/Qwen3.8-27B"
+DEST="$ROOT/teachers/Qwen3.5-27B"
 LOG="$ROOT/logs"
 mkdir -p "$DEST" "$LOG"
 exec 9>"$LOG/nox_teacher_27b_download.lock"
 flock -n 9 || { echo "NOX_27B_DOWNLOAD_ALREADY_RUNNING"; exit 0; }
 test "$(df -P /workspace | tail -n 1 | awk '{print $6}')" = "/workspace" || { echo "HOLD: persistent /workspace not mounted";exit 21; }
-REPO='unsloth/Qwen3.8-27B-GGUF'
-FILE='Qwen3.8-27B-UD-Q4_K_M.gguf'
+REPO='unsloth/Qwen3.5-27B-GGUF'
+FILE='Qwen3.5-27B-Q4_K_M.gguf'
 # Need 17GB for model and substantial reserve for ongoing 9B checkpoints and final merges.
 free=$(df -BG --output=avail /workspace | tail -n1 | tr -dc '0-9')
 if [ -z "$free" ] || [ "$free" -lt 38 ]; then
