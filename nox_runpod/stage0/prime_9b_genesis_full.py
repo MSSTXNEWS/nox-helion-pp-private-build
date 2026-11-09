@@ -104,7 +104,7 @@ def create_corpus(tok,model,per_topic):
  write_event("TEACHER_CORPUS_READY",count=len(completed))
  if len(completed)<48:raise RuntimeError("Insufficient genuine teacher outputs")
  return completed
-def train(tok,model,epochs,context,grad_accum,rank):
+def train(tok,model,epochs,context,grad_accum,rank,batch_size=2):
  from peft import LoraConfig,get_peft_model,prepare_model_for_kbit_training
  records=[json.loads(x)["text"] for x in CORPUS.read_text(encoding="utf-8").splitlines() if x.strip()]
  records=list(dict.fromkeys(records))
@@ -122,6 +122,9 @@ def train(tok,model,epochs,context,grad_accum,rank):
  model=get_peft_model(model,LoraConfig(r=rank,lora_alpha=2*rank,lora_dropout=0.05,
                   target_modules="all-linear",task_type="CAUSAL_LM"))
  model.train()
+ torch.backends.cuda.matmul.allow_tf32=True
+ torch.backends.cudnn.allow_tf32=True
+ torch.set_float32_matmul_precision("high")
  optimizer=torch.optim.AdamW([p for p in model.parameters() if p.requires_grad],lr=6e-5)
  completed=set()
  for i in range(1,epochs+1):
@@ -140,29 +143,43 @@ def train(tok,model,epochs,context,grad_accum,rank):
   passdir.mkdir(parents=True,exist_ok=True)
   optimizer=torch.optim.AdamW([p for p in model.parameters() if p.requires_grad],lr=6e-5/(ep**1.3))
   order=list(range(len(records)));random.Random(2026+ep).shuffle(order)
-  losses=[];step=0
-  for idx in order:
-   encoded=tok(records[idx],return_tensors="pt",truncation=True,max_length=context)
-   tokens=encoded["input_ids"].to(model.device)
-   masks=encoded["attention_mask"].to(model.device)
-   if tokens.shape[1]<10:continue
+  losses=[];step=0;processed=0;accum=0;live_batch=batch_size;live_context=context;cursor=0
+  optimizer.zero_grad(set_to_none=True)
+  while cursor<len(order):
+   ids=order[cursor:cursor+live_batch]
+   batch=[records[j] for j in ids]
    try:
-    output=model(input_ids=tokens,attention_mask=masks,labels=tokens)
+    encoded=tok(batch,return_tensors="pt",padding=True,truncation=True,
+                max_length=live_context,pad_to_multiple_of=8)
+    tokens=encoded["input_ids"].to(model.device)
+    masks=encoded["attention_mask"].to(model.device)
+    labels=tokens.masked_fill(masks==0,-100)
+    if tokens.shape[1]<10:
+     cursor+=len(ids);continue
+    output=model(input_ids=tokens,attention_mask=masks,labels=labels)
     loss=output.loss/grad_accum
     if not torch.isfinite(loss):raise RuntimeError("Non-finite loss")
     loss.backward()
-    losses.append(float(loss.item())*grad_accum)
-   except torch.cuda.OutOfMemoryError as exc:
-    optimizer.zero_grad(set_to_none=True)
+   except torch.cuda.OutOfMemoryError:
+    # Drop partial gradients, retry the same examples with a smaller batch/context.
+    optimizer.zero_grad(set_to_none=True);accum=0
     torch.cuda.empty_cache()
-    write_event("NOX_OOM_FAIL_CLOSED",epoch=ep,step=step,context=context)
-    raise RuntimeError("CUDA OOM; checkpoint preserved. Lower --context for next run.") from exc
-   step+=1
-   if step%grad_accum==0 or step==len(order):
+    if live_batch>1:
+     live_batch=max(1,live_batch//2)
+    elif live_context>256:
+     live_context=max(256,live_context//2)
+    else:
+     raise RuntimeError("GPU cannot hold one 256-token example; original weights unchanged")
+    write_event("NOX_GPU_AUTO_TUNE",batch_size=live_batch,context=live_context,cursor=cursor)
+    continue
+   losses.append(float(loss.item())*grad_accum)
+   cursor+=len(ids);processed+=len(ids);step+=1;accum+=1
+   if accum>=grad_accum or cursor>=len(order):
     torch.nn.utils.clip_grad_norm_(model.parameters(),1.0)
-    optimizer.step();optimizer.zero_grad(set_to_none=True)
+    optimizer.step();optimizer.zero_grad(set_to_none=True);accum=0
    if step%25==0:
-    write_event("NOX_9B_TRAINING",pass_number=ep,examples=step,total=len(order),
+    write_event("NOX_9B_TRAINING",pass_number=ep,examples=processed,total=len(order),
+                examples_per_step=live_batch,context=live_context,
                 training_loss=sum(losses[-25:])/min(len(losses),25))
   # Persist pass weights before starting the next pass
   tmp=passdir/"adapter_temp"
@@ -170,6 +187,7 @@ def train(tok,model,epochs,context,grad_accum,rank):
   final=passdir/"adapter"
   if final.exists():raise RuntimeError("Existing finalized adapter not overwritten")
   os.rename(tmp,final)
+  if not losses:raise RuntimeError("NOX_NO_TRAINING_STEPS")
   metric=sum(losses)/len(losses)
   receipt={"status":"ADAPTER_TRAINED_NOT_INDEPENDENTLY_EVALUATED",
     "pass_number":ep,"examples":step,"mean_training_loss":metric,
@@ -190,16 +208,18 @@ def main():
  p.add_argument("--context",type=int,default=512)
  p.add_argument("--grad-accum",type=int,default=4)
  p.add_argument("--lora-rank",type=int,default=32)
+ p.add_argument("--batch-size",type=int,default=2)
  a=p.parse_args()
  if not 1<=a.teacher_exercises_per_topic<=100:raise RuntimeError("Invalid teacher count")
  if not 1<=a.passes<=3:raise RuntimeError("Invalid passes")
+ if not 1<=a.batch_size<=16:raise RuntimeError("Invalid batch")
  verify()
  tok,model=load_4bit()
  create_corpus(tok,model,a.teacher_exercises_per_topic)
  del model
  torch.cuda.empty_cache()
  tok,model=load_4bit()
- train(tok,model,a.passes,a.context,a.grad_accum,a.lora_rank)
+ train(tok,model,a.passes,a.context,a.grad_accum,a.lora_rank,a.batch_size)
 if __name__=="__main__":
  try:main()
  except Exception as ex:
