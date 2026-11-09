@@ -1,0 +1,115 @@
+/* NOX HELION · HOME RECOVERY 2026-11-09
+   P0 source patch. Preserves D02 WebGL, 14 existing switches, 6 palettes, 5 skins,
+   3 performance modes, 9 routes and SAFE telemetry. BLACK MONOLITH SKY replaces
+   brown haze and scattered orbital positions. No additional WebGL renderer. */
+:root{--nox-gold:#e1ae69;--nox-metal:rgba(177,182,188,.19)}
+*{scrollbar-color:#38404c #080a0e}
+html,body.helion-home{overflow-x:hidden!important}
+body.helion-home{background:#020307!important}
+body.helion-home>.helion-deck{display:none!important}
+body.helion-home .nox-app-header{z-index:90!important;position:relative!important;min-height:60px!important;height:60px!important;background:linear-gradient(180deg,#080a0dcc,#040609ec)!important;border-bottom:1px solid #b7a28635!important;box-shadow:0 4px 24px #0005!important}
+body.helion-home .helion-stage{position:relative!important;isolation:isolate!important;display:block!important;overflow:hidden!important;min-height:600px!important;height:calc(100dvh - 78px)!important;max-height:none!important;margin:0!important;padding:0!important;background:radial-gradient(ellipse 72% 95% at 50% 48%,#060912 0%,#03050a 53%,#010205 100%)!important;border:0!important;box-shadow:none!important}
+body.helion-home .helion-stage::before,body.helion-home .helion-stage::after{display:none!important;content:none!important}
+body.helion-home .helion-stage #noxSkyLive{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;z-index:1!important;pointer-events:none!important;background:transparent!important}
+body.helion-home .helion-stage .noxCitadel{position:absolute!important;inset:0!important;z-index:2!important;pointer-events:none!important;opacity:.66!important}
+body.helion-home .noxCitadel:before,body.helion-home .noxCitadel:after{content:""!important;position:absolute!important;top:-6%!important;width:clamp(75px,11vw,190px)!important;height:112%!important;opacity:.43!important;filter:drop-shadow(0 0 9px #b7a48a14)!important}
+body.helion-home .noxCitadel:before{left:-4%!important;background:repeating-linear-gradient(90deg,#05090b 0 11px,#78818a1c 12px 13px,transparent 17px 40px),linear-gradient(90deg,#131a22ac,transparent)!important;transform:skewY(-7deg)!important}
+body.helion-home .noxCitadel:after{right:-4%!important;background:repeating-linear-gradient(90deg,#05090b 0 14px,#8b96a01b 15px 16px,transparent 20px 44px),linear-gradient(270deg,#131a22ac,transparent)!important;transform:skewY(7deg)!important}
+body.helion-home .helion-stage #noxEclipseCanvas{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;z-index:8!important;opacity:1!important;mix-blend-mode:screen!important;filter:none!important;transform:none!important;pointer-events:none!important}
+body.helion-home .helion-stage #noxCoreFallback{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;display:block!important;z-index:9!important;pointer-events:none!important}
+body.helion-home .helion-stage #noxCoreFallback[data-live="true"]{display:none!important}
+body.helion-home .helion-stage #noxWorldsV6Canvas{z-index:11!important;pointer-events:none!important}
+body.helion-home .helion-stage #noxLiveSceneBackdrop,body.helion-home .helion-stage #noxMetalContinuum{display:none!important}
+body.helion-home .helion-hero{display:none!important}
+body.helion-home #noxCoreEntry{position:absolute!important;top:69%!important;left:50%!important;transform:translate(-50%,-50%)!important;z-index:27!important;min-height:46px!important;padding:9px 25px!important;display:flex!important;justify-content:center!important;align-items:center!important;gap:11px!important;background:linear-gradient(115deg,#161a1bc7,#100d09ef 52%,#1d1810c7)!important;border:1px solid #d49c529d!important;border-radius:10px!important;box-shadow:0 0 18px #b3722937,inset 0 1px 0 #ffda9852!important;text-decoration:none!important;color:var(--nox-gold)!important;letter-spacing:.19em!important;font:700 clamp(13px,1vw,16px) 'Segoe UI',sans-serif!important;white-space:nowrap!important;transition:filter .25s ease,transform .25s ease!important}
+body.helion-home #noxCoreEntry:hover,body.helion-home #noxCoreEntry:focus-visible{filter:brightness(1.3)!important;transform:translate(-50%,-50%) scale(1.04)!important}
+body.helion-home #noxCoreEntry small{font:500 9px 'Segoe UI',sans-serif!important;color:#aaa8a4!important;letter-spacing:.09em!important}
+body.helion-home .helion-monitor,body.helion-home .helion-system{position:absolute!important;z-index:22!important;top:18px!important;background:rgba(6,9,13,.43)!important;border:1px solid rgba(198,176,140,.28)!important;box-shadow:0 10px 36px #0004,inset 0 1px #ffffff10!important;backdrop-filter:blur(8px)!important;-webkit-backdrop-filter:blur(8px)!important;border-radius:11px!important;color:#d4d1cd!important}
+body.helion-home .helion-monitor{left:15px!important;right:auto!important;width:clamp(135px,12vw,185px)!important;min-height:75px!important;height:auto!important;max-height:136px!important;padding:13px!important;font-size:10px!important}
+body.helion-home .helion-system{left:auto!important;right:15px!important;width:clamp(185px,17vw,240px)!important;max-height:315px!important;height:auto!important;padding:12px!important;overflow:hidden!important}
+body.helion-home .helion-system .nox-flow-title{font-size:9px!important}
+body.helion-home .helion-system .nox-flow-network,body.helion-home .helion-system .nox-flow-dials{display:none!important}
+body.helion-home .helion-system dl{margin:9px 0 7px!important;gap:4px!important}
+body.helion-home .helion-system dl>div{min-height:42px!important;padding:6px 4px!important}
+body.helion-home .helion-system .helion-spark{height:85px!important;max-height:85px!important;opacity:.8!important}
+body.helion-home .nox-orbit-halo,body.helion-home .nox-preview-help,body.helion-home .nox-preview-ribbon{display:none!important}
+body.helion-home section.home-palette-bottom.nox-orbital-controls{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;min-height:0!important;display:block!important;z-index:17!important;pointer-events:none!important;background:transparent!important;box-shadow:none!important;border:0!important}
+body.helion-home section.nox-orbital-controls button:is(.home-preset,.nox-world-profile,[data-mode]){--demo-scale:.62!important;opacity:.90!important;filter:saturate(.72) brightness(.84)!important;transition:opacity .3s,filter .3s!important}
+body.helion-home section.nox-orbital-controls button:is(.home-preset,.nox-world-profile,[data-mode]):is(:hover,:focus-visible,[aria-pressed=true]){opacity:1!important;filter:saturate(1.15) brightness(1.15) drop-shadow(0 0 7px #e4ad655e)!important}
+body.helion-home section.nox-orbital-controls .nox-world-profile .nox-world-name{font-size:9px!important;color:#c3c3c3!important}
+body.helion-home section.nox-orbital-controls button[aria-pressed=true]::before{border-color:#e5b86f!important;box-shadow:0 0 12px #c9a05b66!important}
+body.helion-home .helion-stage nav.helion-lower.home-primary-navigation{position:absolute!important;left:50%!important;right:auto!important;bottom:12px!important;top:auto!important;transform:translateX(-50%)!important;width:min(94%,1135px)!important;max-width:none!important;min-width:0!important;display:grid!important;grid-template-columns:repeat(9,minmax(0,1fr))!important;grid-template-rows:63px!important;gap:6px!important;z-index:33!important;background:transparent!important;padding:0!important}
+body.helion-home .helion-stage nav.helion-lower.home-primary-navigation>a.helion-card{grid-row:1!important;grid-column:auto!important;min-height:63px!important;height:63px!important;padding:5px 3px!important;background:linear-gradient(145deg,#17191cbd,#090c11ad)!important;border:1px solid #abb1b444!important;border-radius:10px!important;backdrop-filter:blur(8px)!important;color:#d9d6cf!important}
+body.helion-home .helion-stage nav.helion-lower.home-primary-navigation>a.helion-card strong{font-size:9px!important;line-height:1.25!important;letter-spacing:.02em!important}
+body.helion-home .helion-stage nav.helion-lower.home-primary-navigation>a.helion-card:hover{border-color:#d3ad78!important;box-shadow:0 0 16px #bb8b455a!important}
+body.helion-home .helion-stage nav.helion-lower.home-primary-navigation>a#homeChatTile{display:none!important}
+body.helion-home .helion-stage #sceneNotice:not([hidden]){position:absolute!important;left:14px!important;bottom:85px!important;top:auto!important;right:auto!important;width:min(300px,27vw)!important;transform:none!important;padding:8px 10px!important;font-size:9px!important;opacity:.72!important;z-index:38!important}
+body.helion-home .helion-foot{position:relative!important;min-height:18px!important;height:18px!important;margin:0!important;padding:2px 12px!important;font-size:9px!important}
+body.helion-home #nox-public-safe-preview{position:fixed!important;bottom:18px!important;right:6px!important;font-size:9px!important;background:#05080b9c!important;border-color:#8270593b!important;opacity:.62!important}
+html[data-nox-skin=obsidian] body.helion-home{--nox-gold:#c7cad4}
+html[data-nox-skin=reactor] body.helion-home{--nox-gold:#a1d6e9}
+html[data-nox-skin=liquid] body.helion-home{--nox-gold:#adbdc7}
+html[data-nox-skin=aurora] body.helion-home{--nox-gold:#a8d8c7}
+@media(max-width:1100px){body.helion-home .helion-system{width:176px!important;right:8px!important}body.helion-home .helion-monitor{width:130px!important;left:8px!important}body.helion-home .helion-stage nav.helion-lower.home-primary-navigation{width:99%!important;gap:3px!important}}
+@media(max-width:700px){body.helion-home .helion-stage{height:auto!important;min-height:880px!important;overflow:visible!important;padding-bottom:0!important}body.helion-home .helion-monitor{left:8px!important;top:9px!important;min-height:52px!important;max-height:95px!important;width:124px!important;padding:8px!important}body.helion-home .helion-system{right:6px!important;top:9px!important;width:135px!important;max-height:160px!important;padding:6px!important}body.helion-home .helion-system .helion-spark{display:none!important}body.helion-home .helion-system dl>div{min-height:30px!important}body.helion-home .helion-stage #noxSkyLive{height:510px!important}body.helion-home .helion-stage #noxCoreFallback{height:510px!important}body.helion-home .helion-stage #noxEclipseCanvas{height:510px!important}body.helion-home .helion-stage .noxCitadel{height:510px!important}body.helion-home #noxCoreEntry{top:420px!important}body.helion-home section.home-palette-bottom.nox-orbital-controls{position:relative!important;inset:auto!important;margin-top:510px!important;display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;min-height:350px!important;height:auto!important;padding:10px 2px!important;background:linear-gradient(#010307,#07090f)!important}body.helion-home section.nox-orbital-controls button:is(.home-preset,.nox-world-profile,[data-mode]){--demo-scale:1!important;position:relative!important;left:auto!important;top:auto!important;transform:none!important;width:72px!important;height:75px!important;margin:auto!important}body.helion-home .helion-stage nav.helion-lower.home-primary-navigation{position:relative!important;top:auto!important;bottom:auto!important;left:auto!important;transform:none!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;grid-template-rows:repeat(3,57px)!important;width:100%!important;gap:5px!important}body.helion-home .helion-stage nav.helion-lower.home-primary-navigation>a.helion-card{height:57px!important;min-height:57px!important}body.helion-home .helion-stage #sceneNotice:not([hidden]){left:8px!important;bottom:auto!important;top:445px!important;width:calc(100% - 16px)!important;opacity:.55!important}}
+@media(prefers-reduced-motion:reduce){body.helion-home .noxCitadel{animation:none!important}body.helion-home section.nox-orbital-controls button{transition:none!important}}
+
+/* No false metric: when WebGL is unavailable, the procedural visual preserves layout while footer retains HOLD. */
+html[data-nox-core-render=CANVAS2D_PROCEDURAL_FALLBACK] body.helion-home #sceneNotice:not([hidden]){display:none!important}
+html body.helion-home .helion-stage #noxCoreFallback{filter:saturate(1.05)!important}
+html body.helion-home .helion-system .helion-spark{height:71px!important;max-height:71px!important}
+
+/* Source-order-locked mobile layout. 14 live controls: 4 columns, never above D02. */
+@media(max-width:700px){
+ html body.helion-home .helion-stage{position:relative!important;height:auto!important;min-height:1090px!important;max-height:none!important;overflow:visible!important;padding:0!important;margin:0!important;display:block!important;background:#020407!important}
+ html body.helion-home .helion-stage section.home-palette-bottom.nox-orbital-controls{position:relative!important;inset:auto!important;top:auto!important;left:auto!important;right:auto!important;bottom:auto!important;display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;grid-auto-rows:82px!important;gap:5px 0!important;margin:512px 0 0!important;padding:12px 1px!important;width:100%!important;min-height:350px!important;height:auto!important;max-height:none!important;background:linear-gradient(180deg,#010205,#06080f)!important;z-index:15!important;pointer-events:auto!important}
+ html body.helion-home section.nox-orbital-controls .home-palette-controls,html body.helion-home section.nox-orbital-controls #homeModes{display:contents!important}
+ html body.helion-home section.nox-orbital-controls button:is(.home-preset,.nox-world-profile,[data-mode]){position:relative!important;inset:auto!important;left:auto!important;top:auto!important;transform:none!important;--demo-scale:1!important;display:flex!important;align-items:center!important;justify-content:center!important;flex-direction:column!important;opacity:1!important;max-width:92px!important;width:80px!important;min-height:76px!important;height:76px!important;margin:0 auto!important;padding:3px!important}
+ html body.helion-home .helion-stage nav.helion-lower.home-primary-navigation{position:relative!important;inset:auto!important;left:auto!important;right:auto!important;top:auto!important;bottom:auto!important;transform:none!important;margin:10px auto 2px!important;display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;grid-template-rows:repeat(3,58px)!important;gap:5px!important;width:100%!important;height:auto!important;min-height:0!important;max-width:100%!important}
+ html body.helion-home .helion-stage nav.helion-lower.home-primary-navigation>a.helion-card{grid-column:auto!important;grid-row:auto!important;min-height:58px!important;height:58px!important;padding:5px 2px!important}
+ html body.helion-home #noxCoreEntry{position:absolute!important;top:440px!important;left:50%!important;transform:translate(-50%,-50%)!important;width:auto!important;max-width:86vw!important;z-index:29!important;padding:8px 12px!important;gap:8px!important}
+ html body.helion-home .helion-stage #noxSkyLive,html body.helion-home .helion-stage #noxCoreFallback,html body.helion-home .helion-stage #noxEclipseCanvas,html body.helion-home .helion-stage .noxCitadel{height:510px!important;max-height:510px!important}
+ html body.helion-home .helion-system{right:5px!important;left:auto!important;top:7px!important;width:133px!important;max-height:150px!important;padding:6px!important}
+ html body.helion-home .helion-monitor{left:5px!important;right:auto!important;top:7px!important;width:120px!important;max-height:106px!important}
+ html body.helion-home .helion-foot{height:18px!important;margin:0!important}
+ html body.helion-home #nox-public-safe-preview{display:none!important}
+ html body.helion-home #sceneNotice:not([hidden]){top:475px!important;bottom:auto!important;left:6px!important;width:calc(100% - 12px)!important}
+}
+
+/* Mid-width & landscape tablets: no 14-body collisions, same nodes and handlers. */
+@media(min-width:701px) and (max-width:1100px){
+ html body.helion-home .helion-stage{position:relative!important;display:block!important;height:auto!important;min-height:955px!important;max-height:none!important;overflow:visible!important;padding:0!important}
+ html body.helion-home .helion-stage section.home-palette-bottom.nox-orbital-controls{position:relative!important;inset:auto!important;margin:510px 0 0!important;width:100%!important;min-height:205px!important;height:auto!important;display:grid!important;grid-template-columns:repeat(7,minmax(0,1fr))!important;grid-auto-rows:88px!important;gap:6px 0!important;padding:12px 4px!important;pointer-events:auto!important;background:linear-gradient(180deg,#010205,#050810)!important;z-index:18!important}
+ html body.helion-home section.nox-orbital-controls .home-palette-controls,html body.helion-home section.nox-orbital-controls #homeModes{display:contents!important}
+ html body.helion-home section.nox-orbital-controls button:is(.home-preset,.nox-world-profile,[data-mode]){position:relative!important;inset:auto!important;left:auto!important;top:auto!important;transform:none!important;max-width:92px!important;width:80px!important;height:76px!important;min-height:76px!important;margin:0 auto!important;--demo-scale:1!important}
+ html body.helion-home .helion-stage nav.helion-lower.home-primary-navigation{position:relative!important;inset:auto!important;left:auto!important;top:auto!important;bottom:auto!important;transform:none!important;display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;grid-template-rows:repeat(3,58px)!important;width:100%!important;height:auto!important;min-height:0!important;margin:10px auto 2px!important;gap:5px!important}
+ html body.helion-home .helion-stage nav.helion-lower.home-primary-navigation>a.helion-card{grid-column:auto!important;grid-row:auto!important;height:58px!important;min-height:58px!important}
+ html body.helion-home .helion-stage #noxSkyLive,html body.helion-home .helion-stage #noxCoreFallback,html body.helion-home .helion-stage #noxEclipseCanvas,html body.helion-home .helion-stage .noxCitadel{height:510px!important;max-height:510px!important}
+ html body.helion-home #noxCoreEntry{top:445px!important}
+ html body.helion-home .helion-system{right:7px!important;top:8px!important;width:165px!important;max-height:200px!important;padding:6px!important}
+ html body.helion-home .helion-monitor{left:7px!important;top:8px!important;width:128px!important;max-height:95px!important;padding:7px!important}
+}
+
+/* Surface-only spin: independent axis, never spin button labels or their hitboxes. */
+html body.helion-home .nox-orbital-controls .nox-rock-map{
+ transform-box:fill-box!important;transform-origin:center!important;
+ transform:rotate(var(--nox-axis-angle,0deg))!important;
+}
+html body.helion-home .nox-orbital-controls .nox-gas-clouds{
+ transform-box:fill-box!important;transform-origin:center!important;
+ transform:translateX(var(--nox-gas-shift,0px)) rotate(var(--nox-axis-angle,0deg))!important;
+}
+html body.helion-home .nox-orbital-controls .nox-asteroid-stone{
+ transform-origin:50% 50%!important;transform:rotate(var(--nox-axis-angle,0deg))!important;
+}
+html body.helion-home .nox-orbital-controls .nox-world-profile .nox-world-ball{
+ background-position:calc(50% + var(--nox-gas-shift,0px)) 50%!important;
+}
+@media(max-width:1100px){
+ html body.helion-home .nox-orbital-controls button.nox-free-drift-object{--demo-scale:1!important}
+}
+@media(prefers-reduced-motion:reduce){
+ html body.helion-home .nox-orbital-controls :is(.nox-rock-map,.nox-gas-clouds,.nox-asteroid-stone){
+  transform:none!important;animation:none!important;transition:none!important;
+ }
+}
