@@ -3,7 +3,7 @@
 Generates new multilingual exercises, runs 3 passes, saves merged standalone weights.
 Not a claim of independent pretraining, consciousness, or verified full teacher knowledge.
 """
-import hashlib,importlib.util,json,pathlib,sys
+import hashlib,importlib.util,json,pathlib,sys,os
 ROOT=pathlib.Path("/workspace/nox")
 BASE=ROOT/"models/NOX_9B_UNIFIED"
 WORK=ROOT/"checkpoints/NOX_9B_KNOWLEDGE"
@@ -39,17 +39,17 @@ def main():
  trainer.BASE=BASE
  trainer.WORK=WORK
  trainer.CORPUS=CORPUS
- trainer.TOPICS+=["Knowledge synthesis across disciplines","Proof checking and critical thinking",
+ trainer.TOPICS+=["NOX project history and architecture; distinguish recorded facts from speculation","NOX memory provenance and chronology; preserve original birth evidence","Self-improvement experiments, regression gates and rollback","Web-based research literacy and source reliability","Knowledge synthesis across disciplines","Proof checking and critical thinking",
                  "Computer networking diagnostics","Research design and experimental controls",
                  "Unit testing and property testing","Spanish to Russian technical translation",
                  "Formal logic and fallacies","Reliability engineering and incident response"]
  tok,model=trainer.load_4bit()
- trainer.create_corpus(tok,model,12)
+ trainer.create_corpus(tok,model,int(os.getenv("NOX_KNOWLEDGE_VARIANTS","24")))
  del model
  import torch
  torch.cuda.empty_cache()
  tok,model=trainer.load_4bit()
- trainer.train(tok,model,3,512,4,32)
+ trainer.train(tok,model,int(os.getenv("NOX_KNOWLEDGE_PASSES","8")),512,4,32)
  del model
  torch.cuda.empty_cache()
  merger=import_file(TOOLS/"nox_9b_merge.py","nox_merge_knowledge_stage2")
