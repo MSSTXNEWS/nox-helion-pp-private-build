@@ -3,7 +3,7 @@ $ErrorActionPreference='Stop'
 $Key=Join-Path $env:USERPROFILE '.ssh\nox_runpod_ed25519'
 $Base='C:\NOX_HELION\NOX_NEW\RUNPOD_BACKUP'
 $Self='C:\NOX_HELION\NOX_NEW\scripts\nox_backup_then_clean_2pods.ps1'
-$InventoryUrl='https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/4af4e1de0a27731053b43ad46da2dd1486fd7157/nox_runpod/stage0/nox_windows_backup_manifest.py'
+$InventoryUrl='https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/4cf52c74502ef336e0b4b200a27e4d4d63f1963d/nox_runpod/stage0/nox_windows_backup_manifest.py'
 $CleanupUrl='https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/c3b78dd2bbe96e54fbe7be554323b3d5fbf45b78/nox_runpod/stage0/nox_cleanup_after_windows_verified.py'
 $Nodes=@(
  [pscustomobject]@{Name='A5000';Host='69.30.85.188';Port=22199},
