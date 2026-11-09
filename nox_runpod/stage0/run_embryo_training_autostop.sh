@@ -33,9 +33,9 @@ test -x "$PY" || { echo "HOLD: existing training environment missing"; exit 17; 
 curl -fLsS --retry 3 "$TRAIN_URL" -o "$TOOLS/train_original_embryo.py.new"
 "$PY" -m py_compile "$TOOLS/train_original_embryo.py.new"
 mv -f "$TOOLS/train_original_embryo.py.new" "$TOOLS/train_original_embryo.py"
-P1="$STAGE/pass1"; P2="$STAGE/pass2"
-mkdir -p "$P1" "$P2"
-echo "NOX_GENESIS_2PASS_BEGIN"
+P1="$STAGE/pass1"; P2="$STAGE/pass2"; P3="$STAGE/pass3"
+mkdir -p "$P1" "$P2" "$P3"
+echo "NOX_GENESIS_3PASS_BEGIN"
 train_pass() {
   local dir="$1" rate="$2" resume_path="${3:-}"
   local attempt=1 rc=0
@@ -48,7 +48,7 @@ train_pass() {
     local args=(--steps 120 --context 128 --out "$dir" --lr "$rate" --checkpoint-every 10)
     if [ -n "$resume_path" ]; then args+=(--resume "$resume_path"); fi
     set +e
-    timeout --signal=INT --kill-after=60s 6600s "$PY" -u "$TOOLS/train_original_embryo.py" "${args[@]}"
+    timeout --signal=INT --kill-after=60s 3900s "$PY" -u "$TOOLS/train_original_embryo.py" "${args[@]}"
     rc=$?
     set -e
     if [ "$rc" -eq 0 ]; then return 0; fi
@@ -94,4 +94,22 @@ receipt={"status":"TWO_PASSES_TRAINED_NOT_INDEPENDENTLY_VALIDATED",
 (out/"two_pass_result.json").write_text(json.dumps(receipt,indent=2,ensure_ascii=False),encoding="utf-8")
 print("NOX_TWO_PASSES_TRAINED_NOT_INDEPENDENTLY_VALIDATED",flush=True)
 PYCHK
-echo "NOX_STAGE0_TWO_PASSES_COMPLETE_AND_SAVED"
+echo "NOX_GENESIS_PASS3_BEGIN"
+train_pass "$P3" 0.00001 "$P2/embryo_stage0_trained.safetensors"
+test -s "$P3/embryo_stage0_trained.safetensors" && test -s "$P3/stage0_receipt.json" || { echo "PASS3_MISSING_OUTPUT"; exit 20; }
+"$PY" - "$P1/stage0_receipt.json" "$P2/stage0_receipt.json" "$P3/stage0_receipt.json" "$STAGE" <<'PYCHK'
+import json,sys,pathlib,datetime,hashlib
+a,b,c=[json.load(open(p,encoding="utf-8")) for p in sys.argv[1:4]]
+assert c["steps"]>=120 and c["parameters_changed"]>0
+assert c["holdout_loss_after"] < b["holdout_loss_after"],"Third pass did not improve; preserve pass2"
+out=pathlib.Path(sys.argv[4])
+receipt={"status":"THREE_PASSES_TRAINED_NOT_INDEPENDENTLY_VALIDATED",
+ "teacher":"Local Qwen3.5-9B","student":"Original NOX Embryo V1 checkpoint",
+ "pass_sha256":[a["checkpoint_sha256"],b["checkpoint_sha256"],c["checkpoint_sha256"]],
+ "losses":[a["holdout_loss_before"],a["holdout_loss_after"],b["holdout_loss_after"],c["holdout_loss_after"]],
+ "date_utc":datetime.datetime.now(datetime.timezone.utc).isoformat(),
+ "birth_recorded":False,"full_teacher_absorption_verified":False}
+(out/"three_pass_result.json").write_text(json.dumps(receipt,indent=2,ensure_ascii=False),encoding="utf-8")
+print("NOX_THREE_PASSES_TRAINED_NOT_INDEPENDENTLY_VALIDATED",flush=True)
+PYCHK
+echo "NOX_STAGE0_THREE_PASSES_COMPLETE_AND_SAVED"
