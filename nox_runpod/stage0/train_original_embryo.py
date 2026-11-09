@@ -88,13 +88,22 @@ def main():
     ap=argparse.ArgumentParser()
     ap.add_argument("--steps",type=int,default=120)
     ap.add_argument("--context",type=int,default=128)
+    ap.add_argument("--resume",default=None,help="Prior verified NOX Embryo safetensors checkpoint")
+    ap.add_argument("--out",default=str(OUT))
+    ap.add_argument("--lr",type=float,default=8e-5)
     args=ap.parse_args()
     if not 1<=args.steps<=5000:raise RuntimeError("Invalid optimizer steps")
     if not 16<=args.context<=256:raise RuntimeError("Invalid sequence length")
     if not torch.cuda.is_available():raise RuntimeError("No NVIDIA GPU")
     device=torch.device("cuda:0")
+    if not (0 < args.lr <= 0.001):raise RuntimeError("Unsafe LR")
     rows=load_rows()
     model,src,config,classname=load_embryo()
+    if args.resume:
+        previous=pathlib.Path(args.resume)
+        if not previous.is_file():raise RuntimeError("Resume checkpoint missing")
+        model.load_state_dict(load_file(str(previous),device="cpu"),strict=True)
+        print(json.dumps({"event":"RESUMED_FROM_NOX_CHECKPOINT","sha256":digest(previous)}),flush=True)
     model=model.to(device)
     model.train()
     # Original embryo uses its own tokenizer/vocab. Byte mapping is valid only when vocab >= 256.
@@ -125,13 +134,14 @@ def main():
         model.train()
         return sum(vals)/len(vals)
     before=evaluate()
-    opt=torch.optim.AdamW([p for p in model.parameters() if p.requires_grad],lr=8e-5)
-    OUT.mkdir(parents=True,exist_ok=True)
+    opt=torch.optim.AdamW([p for p in model.parameters() if p.requires_grad],lr=args.lr)
+    output=pathlib.Path(args.out)
+    output.mkdir(parents=True,exist_ok=True)
     print(json.dumps({"event":"NOX_EMBRYO_TRAIN_BEGIN","original":str(src),"model_class":classname,
                       "teacher_records":len(rows),"training_batches":len(train),"vocab":vocab,
                       "holdout_loss_before":before}),flush=True)
-    checkpoint=OUT/"embryo_stage0_trained.safetensors"
-    log=OUT/"training_steps.jsonl"
+    checkpoint=output/"embryo_stage0_trained.safetensors"
+    log=output/"training_steps.jsonl"
     best=float("inf");steps=0
     for step in range(1,args.steps+1):
         seq=train[(step-1)%len(train)]
@@ -154,7 +164,7 @@ def main():
     if not changed:raise RuntimeError("NO PARAMETERS UPDATED. NOT TRAINED")
     model.eval()
     weights={k:v.detach().cpu().contiguous() for k,v in model.state_dict().items() if torch.is_tensor(v)}
-    temp=OUT/"embryo_stage0_trained.tmp.safetensors"
+    temp=output/"embryo_stage0_trained.tmp.safetensors"
     save_file(weights,str(temp))
     check=load_file(str(temp),device="cpu")
     if set(check)!=set(weights):raise RuntimeError("Checkpoint readback mismatch")
@@ -165,7 +175,7 @@ def main():
          "teacher_dataset_sha256":digest(SOURCE),"teacher_records":len(rows),"steps":steps,
          "parameters_changed":changed,"holdout_loss_before":before,"holdout_loss_after":after,
          "identity":"NOX_EMBRYO_V1","birth_recorded":False}
-    (OUT/"stage0_receipt.json").write_text(json.dumps(receipt,indent=2,ensure_ascii=False),encoding="utf-8")
+    (output/"stage0_receipt.json").write_text(json.dumps(receipt,indent=2,ensure_ascii=False),encoding="utf-8")
     print(json.dumps(receipt,ensure_ascii=False),flush=True)
 if __name__=="__main__":
     try:main()
