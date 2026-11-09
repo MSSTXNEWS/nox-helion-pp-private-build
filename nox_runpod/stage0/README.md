@@ -1,15 +1,15 @@
-# NOX HELION · RunPod Stage 0 Trainer
-This is **real**, GPU-only QLoRA fine-tuning of a compatible Qwen3-8B foundation, not training an 8B model from random initialization or a claim of consciousness.
+# NOX PRIME · RunPod stage 0 (Qwen3.5-9B)
 
-## Current state
-Trainer source only; NOT launched and NOT integrated into NOX UI. Existing local NOX weights, S03 memory and GitHub CI are unchanged.
+## State: source committed, not executed. No GPU rented here.
+Actual Windows model: `C:\NOX_HELION\NOX_NEW\brain\prime\models\NOX_PRIME_9B_INHERITED` with config `model_type=qwen3_5`, four safetensors shards (17.98 GiB observed). Windows contents are NOT accessible from the cloud or ChatGPT. Never silently substitute a standard Qwen checkpoint for the user's unique local model.
 
-## Required
-- RunPod NVIDIA GPU Pod with PyTorch/CUDA, enough VRAM/disk; no credentials committed.
-- User-approved training set /workspace/nox/data/approved.jsonl, JSON Lines with {"text":"..."} per line. It must contain at least two real nonempty entries. Do not use chats or private data without approval.
-- Install dependencies in the Pod: `python -m pip install -r requirements.txt`. Base image PyTorch should be CUDA compatible.
-- Start: `python train_stage0.py --data /workspace/nox/data/approved.jsonl --out /workspace/nox/checkpoints/stage0 --max-steps 50 --save-steps 10`
-- Checkpoints go to persistent /workspace/nox/checkpoints/stage0. Ensure /workspace is a persistent volume before creating any paid Pod.
-- Ctrl+C / SIGTERM requests safe checkpoint after current step. Abrupt Pod deletion can still lose progress not yet saved.
-- After training, output is **TRAINED_NOT_VALIDATED**. Evaluate RU/ES quality, regression and safety offline, then manually promote. Do NOT overwrite local NOX model or memory automatically.
-- Stop/terminate the paid Pod after copying and verifying checkpoints. GitHub Actions integration, auto-stop, budget guard, downloading and validation still need implementation before unattended runs.
+## Before billing a GPU
+1. Have an actual user-approved JSONL dataset, with at least 2 rows of `{"text":"..."}`. No fabricated records, no sensitive memory/chats without explicit approval.
+2. Transfer the verified original model directory to a persistent RunPod folder (for example `/workspace/nox/models/NOX_PRIME_9B_INHERITED`) using SSH/SFTP or an owner-controlled encrypted upload. Verify ALL four safetensors shards, `config.json`, tokenizer files, and SHA-256 hashes against Windows. Do not place model files in GitHub.
+3. Implement and verify a Pod autostop/termination guard BEFORE paid unattended run; storage also costs money. Verify CUDA/kernel compatibility and 24 GiB VRAM constraints first. A 48 GiB GPU may be needed if 4090 OOMs.
+4. Install a tested CUDA/PyTorch build and dependencies; validate exact package compatibility on the real GPU. `requirements.txt` gives ranges, not a proven lockfile.
+
+## Manual command, only AFTER preflight
+`python train_stage0.py --model /workspace/nox/models/NOX_PRIME_9B_INHERITED --data /workspace/nox/data/approved.jsonl --out /workspace/nox/checkpoints/stage0 --max-steps 10 --save-steps 5`
+
+This performs **QLoRA adaptation**, not teacher distillation or absorption of an arbitrary second model. A separate teacher-generation/selection/scoring workflow is required for distillation. Result is TRAINED_NOT_VALIDATED; do not auto-promote into Windows NOX. Stop the Pod explicitly and verify checkpoints were retained and transferred. Do not delete old working model or S03.
