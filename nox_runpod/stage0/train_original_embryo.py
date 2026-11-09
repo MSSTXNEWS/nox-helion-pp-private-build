@@ -92,8 +92,10 @@ def main():
     ap.add_argument("--out",default=str(OUT))
     ap.add_argument("--lr",type=float,default=8e-5)
     ap.add_argument("--checkpoint-every",type=int,default=10)
+    ap.add_argument("--max-epochs",type=int,default=8)
     args=ap.parse_args()
-    if not 1<=args.steps<=5000:raise RuntimeError("Invalid optimizer steps")
+    if not 1<=args.steps<=1_000_000:raise RuntimeError("Invalid optimizer steps")
+    if not 1<=args.max_epochs<=50:raise RuntimeError("Invalid epochs")
     if not 16<=args.context<=256:raise RuntimeError("Invalid sequence length")
     if not 1<=args.checkpoint_every<=args.steps:raise RuntimeError("Invalid checkpoint interval")
     if not torch.cuda.is_available():raise RuntimeError("No NVIDIA GPU")
@@ -126,6 +128,8 @@ def main():
     random.Random(42).shuffle(tokens)
     holdout=tokens[:max(2,len(tokens)//10)]
     train=tokens[len(holdout):]
+    effective_steps=min(args.steps,len(train)*args.max_epochs)
+    print(json.dumps({"event":"DATA_BOUNDED_STEPS","requested":args.steps,"effective":effective_steps,"training_sequences":len(train)}),flush=True)
     def loss_for(batch):
         tensor=torch.tensor(batch,dtype=torch.long,device=device)
         pred=logits_from(model,tensor[:,:-1])
@@ -150,7 +154,7 @@ def main():
     if resume_weights.is_file() and resume_state.is_file() and not checkpoint.is_file():
         saved=torch.load(str(resume_state),map_location="cpu",weights_only=True)
         meta={"source_sha256":digest(src),"dataset_sha256":digest(SOURCE),
-              "steps_target":args.steps,"context":args.context,"learning_rate":args.lr}
+              "steps_target":effective_steps,"context":args.context,"learning_rate":args.lr}
         if any(saved.get(k)!=v for k,v in meta.items()):
             raise RuntimeError("Existing training state belongs to different source/dataset/config")
         if digest(resume_weights)!=saved.get("weights_sha256"):
@@ -161,7 +165,7 @@ def main():
         if not 0<=start_step<args.steps:raise RuntimeError("Invalid saved step")
         print(json.dumps({"event":"AUTO_RESUME","step":start_step}),flush=True)
     best=float("inf");steps=start_step
-    for step in range(start_step+1,args.steps+1):
+    for step in range(start_step+1,effective_steps+1):
         seq=train[(step-1)%len(train)]
         opt.zero_grad(set_to_none=True)
         loss=loss_for([seq])
@@ -171,7 +175,7 @@ def main():
         if not torch.isfinite(norm):raise RuntimeError("Non-finite gradient norm")
         opt.step()
         steps=step
-        if step % args.checkpoint_every == 0 and step < args.steps:
+        if step % args.checkpoint_every == 0 and step < effective_steps:
             intermediate={k:v.detach().cpu().contiguous() for k,v in model.state_dict().items()
                           if torch.is_tensor(v)}
             tmp=output/"in_progress.tmp.safetensors"
@@ -185,7 +189,7 @@ def main():
             torch.save(meta,str(stmp))
             os.replace(stmp,resume_state)
             print(json.dumps({"event":"STEP_CHECKPOINT","step":step,"sha256":meta["weights_sha256"]}),flush=True)
-        if step%10==0 or step==1 or step==args.steps:
+        if step%10==0 or step==1 or step==effective_steps:
             value=evaluate()
             event={"step":step,"train_loss":float(loss.item()),"holdout_loss":value}
             with log.open("a",encoding="utf-8") as f:f.write(json.dumps(event)+"\n")
