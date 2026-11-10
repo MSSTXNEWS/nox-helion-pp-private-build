@@ -9,6 +9,7 @@ B=R/"dispatcher/nox_v3/bin"
 STATE=R/"dispatcher/nox_eu_genesis"
 STATE.mkdir(parents=True,exist_ok=True)
 TEACHERS=[
+ ("Qwen3.5-9B",R/"teachers/Qwen3.5-9B/Qwen3.5-9B-Q4_K_M.gguf"),
  ("Qwen3.5-27B",R/"teachers/Qwen3.5-27B/Qwen3.5-27B-Q4_K_M.gguf"),
  ("DeepSeek-R1-Distill-Qwen-32B",R/"teachers/DeepSeek-R1-Distill-Qwen-32B/DeepSeek-R1-Distill-Qwen-32B-Q4_K_M.gguf")]
 def utc():return datetime.datetime.now(datetime.timezone.utc).isoformat()
@@ -54,7 +55,8 @@ def source_ready(name,path):
  p=read(path.parent/"nox_teacher_proof.json")
  return path.is_file() and p.get("teacher")==name and p.get("status")=="SHA256_VERIFIED_SHARED" and p.get("bytes")==path.stat().st_size
 def task_set(name):
- src=R/"distillation"/("NOX_V3_QWEN27B_TEACHER.jsonl" if name=="Qwen3.5-27B" else "NOX_V3_DEEPSEEK32B_TEACHER.jsonl")
+ short={"Qwen3.5-9B":"QWEN9B","Qwen3.5-27B":"QWEN27B","DeepSeek-R1-Distill-Qwen-32B":"DEEPSEEK32B"}[name]
+ src=R/"distillation"/("NOX_V3_"+short+"_TEACHER.jsonl")
  out=set()
  try:
   with src.open(encoding="utf-8",errors="replace") as f:
@@ -106,7 +108,7 @@ def main():
       if not py.is_file():write({"state":"HOLD_TEACHER_CODE_MISSING"});break
       rc=work([str(D/"venv/bin/python"),"-u",str(py),"--node","A40SOLO",
          "--teacher",name,"--start",str(start),"--limit","50","--gpu-layers","38",
-         "--parallel","3","--ctx","4096"],"TEACHER_"+("27B" if "27B" in name else "32B"),5400)
+         "--parallel","3","--ctx","4096"],"TEACHER_"+("9B" if name=="Qwen3.5-9B" else ("27B" if "27B" in name else "32B")),5400)
       import_s03()
       if rc:break
    except Exception as e:
