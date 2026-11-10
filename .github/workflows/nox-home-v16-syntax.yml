@@ -22,6 +22,7 @@ jobs:
           node --check web-home/candidates/2026-11-10-v16-cinema/nox-resonance-cinema-v13.js
           node --check web-home/candidates/2026-11-10-v16-cinema/nox-cinematic-health.js
           node --check web-home/candidates/2026-11-10-v16-cinema/tools/browser-acceptance.mjs
+          node --check web-home/candidates/2026-11-10-v16-cinema/tools/physical-gpu-acceptance.mjs
           node --check web-home/candidates/2026-11-10-v16-cinema/tools/assemble-verified-site.mjs
           node --check web-home/candidates/2026-11-10-v16-cinema/nox-global-wow-v18.js
           node --check web-home/candidates/2026-11-10-v16-cinema/nox-home-flow.js
@@ -54,6 +55,11 @@ jobs:
           assert.match(health,/outOfViewport/);
           assert.match(runner,/physicalGpuAcceptance:'HOLD'/);
           assert.match(runner,/3840,2160/);
+          const gpuRunner=fs.readFileSync(root+'2026-11-10-v16-cinema/tools/physical-gpu-acceptance.mjs','utf8');
+          assert.match(gpuRunner,/WEBGL_debug_renderer_info/);
+          assert.match(gpuRunner,/swiftshader/);
+          assert.match(gpuRunner,/qa-report.json/);
+          assert.match(gpuRunner,/realHardware/);
           const wowCss=fs.readFileSync(root+'2026-11-10-v16-cinema/nox-global-wow-v18.css','utf8');
           const wowJs=fs.readFileSync(root+'2026-11-10-v16-cinema/nox-global-wow-v18.js','utf8');
           const assembler=fs.readFileSync(root+'2026-11-10-v16-cinema/tools/assemble-verified-site.mjs','utf8');
