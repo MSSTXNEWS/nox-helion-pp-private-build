@@ -132,12 +132,19 @@ try{
   await p.locator('.nox-v19-card input[type=file]').first().setInputFiles({name:'test.png',mimeType:'image/png',buffer:tinyPng});
   await p.waitForSelector('.nox-v19-gallery a',{timeout:15000});
   await p.waitForFunction(()=>!!document.querySelector('link[href*="photoswipe.css"]'),{timeout:12000});
-  report.v19Modules.push({name:'Галерея',source:'PhotoSwipe local',passed:await p.locator('.nox-v19-gallery a').count()===1});
+  await p.locator('.nox-v19-gallery a').first().click();
+  await p.waitForSelector('.pswp[aria-hidden="false"]',{timeout:15000});
+  const lightboxOpened=await p.locator('.pswp[aria-hidden="false"]').count()===1;
+  await p.keyboard.press('Escape');
+  report.v19Modules.push({name:'Галерея',source:'PhotoSwipe local',passed:lightboxOpened});
   await p.getByRole('button',{name:'Эффекты',exact:true}).click();
   await p.getByRole('button',{name:'ECO · 15'}).click();
-  await p.waitForFunction(()=>!!(window.tsParticles||window.__tsParticlesInternals?.engine?.tsParticles),{timeout:25000});
+  await p.waitForFunction(()=>!!document.querySelector('#nox-v19-particles canvas') &&
+      /GPU-эффекты: ECO/.test(document.querySelector('.nox-v19-status')?.textContent||''),{timeout:25000});
+  const realCanvas=await p.evaluate(()=>{const c=document.querySelector('#nox-v19-particles canvas');return !!c&&c.width>0&&c.height>0});
   await p.getByRole('button',{name:'STOP FX'}).click();
-  report.v19Modules.push({name:'Эффекты',source:'tsParticles local',passed:true,physicalGpu:'NOT_TESTED'});
+  const stopped=await p.evaluate(()=>!document.querySelector('#nox-v19-particles canvas')&&/FX STOP/.test(document.querySelector('.nox-v19-status')?.textContent||''));
+  report.v19Modules.push({name:'Эффекты',source:'tsParticles local',passed:realCanvas&&stopped,physicalGpu:'NOT_TESTED'});
  }catch(e){moduleErrors.push(String(e?.message||e))}
  report.v19ModuleErrors=moduleErrors;
  await p.close();
