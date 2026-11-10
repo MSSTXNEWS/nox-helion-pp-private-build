@@ -150,6 +150,11 @@ jobs:
           cp web-home/candidates/2026-11-10-v16-cinema/nox-home-recovery.js /tmp/nox-v19-download/source/
           cp web-home/candidates/2026-11-10-v16-cinema/nox-engines/physical-worlds-v7.mjs /tmp/nox-v19-download/source/
           cp web-home/candidates/2026-11-10-v16-cinema/build-approved-assets.mjs /tmp/nox-v19-download/source/
+          cp web-home/candidates/2026-11-10-v16-cinema/nox-owner-director-v20.js /tmp/nox-v19-download/source/
+          cp web-home/candidates/2026-11-10-v16-cinema/nox-owner-director-v20.css /tmp/nox-v19-download/source/
+          cp web-home/candidates/2026-11-10-v16-cinema/tools/browser-acceptance.mjs /tmp/nox-v19-download/source/
+          mkdir -p /tmp/nox-v19-download/source/assets/nox-owner-approved
+          cp web-home/candidates/2026-11-10-v16-cinema/assets/nox-owner-approved/*.webp /tmp/nox-v19-download/source/assets/nox-owner-approved/
       - name: Retrieve optional server and cinematic UI npm distributions
         run: |
           mkdir -p /tmp/nox-v19-download/optional
@@ -171,7 +176,10 @@ jobs:
           for item in receipt['files']:
               contents=(root/'vendor/nox-extra'/item['file']).read_bytes()
               assert len(contents)==item['size'] and hashlib.sha256(contents).hexdigest()==item['sha256'],item['file']
-          assert len(list((root/'source').glob('*')))==12
+          assert len(list((root/'source').glob('*')))==16
+          art=root/'source/assets/nox-owner-approved'
+          assert len(list(art.glob('*.webp')))==6
+          print('NOX_V20_PERSONA_ART_HANDOFF 5 exact cropped portraits + original approved HOME')
           print('NOX_V19_ARTIFACT_SHA256_PASS 18 binaries + source modules')
           PY
       - name: Preserve actual ZIP handoff for Drive
