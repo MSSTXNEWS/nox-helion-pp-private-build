@@ -54,10 +54,12 @@ def main():
  ap=argparse.ArgumentParser()
  ap.add_argument("--teacher",choices=tuple(MODELS),required=True)
  ap.add_argument("--limit",type=int,default=10)
+ ap.add_argument("--start",type=int,default=0)
+ ap.add_argument("--node",choices=("A40","A5000"),default="A40")
  ap.add_argument("--gpu-layers",type=int,default=30)
  ap.add_argument("--ctx",type=int,default=4096)
  args=ap.parse_args()
- if not 1<=args.limit<=20 or not 0<=args.gpu_layers<=50 or not 1024<=args.ctx<=8192:
+ if not 1<=args.limit<=20 or not 0<=args.start<100 or not 0<=args.gpu_layers<=50 or not 1024<=args.ctx<=8192:
   raise SystemExit("INVALID_BOUNDED_REQUEST")
  model=MODELS[args.teacher]
  proof=model.parent/"nox_teacher_proof.json"
@@ -69,7 +71,7 @@ def main():
  if model.stat().st_size!=p.get("bytes"):
   print("HOLD_MODEL_SIZE_CHANGED",flush=True);return 2
  D.mkdir(parents=True,exist_ok=True)
- lock=(D/"teacher_gpu.lock").open("a+")
+ lock=(D/("teacher_gpu_"+args.node+".lock")).open("a+")
  try:fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
  except BlockingIOError:print("HOLD_TEACHER_GPU_OWNED",flush=True);return 2
  digest_cache=D/("model_"+hashlib.sha256(str(model).encode()).hexdigest()[:12]+".json")
@@ -120,7 +122,7 @@ def main():
    if not ready:
     print("HOLD_TEACHER_SERVER_NOT_READY",args.teacher,flush=True);return 2
    done=0;tokens=0
-   for index in range(100):
+   for index in range(args.start,min(100,args.start+args.limit)):
     if done>=args.limit:break
     prompt=TOPICS[index%len(TOPICS)]+". Variant "+str(index//len(TOPICS)+1)+": provide a concrete, accurate original response with independent validation steps."
     ident=hashlib.sha256((args.teacher+"|V3|"+str(index)+"|"+prompt).encode()).hexdigest()
