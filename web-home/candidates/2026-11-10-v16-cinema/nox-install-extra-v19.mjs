@@ -9,6 +9,8 @@ import {createHash} from 'node:crypto';
 
 const version='2026-11-10-v19';
 const sources=[
+ {name:'fuse.min.js',url:'https://cdn.jsdelivr.net/npm/fuse.js@7.1.0/dist/fuse.min.js',minBytes:7000,maxBytes:120000,license:'Apache-2.0'},
+ {name:'FUSE-LICENSE.txt',url:'https://cdn.jsdelivr.net/npm/fuse.js@7.1.0/LICENSE',minBytes:100,maxBytes:15000,license:'Apache-2.0'},
  {name:'leaflet.js',url:'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js',minBytes:80000,maxBytes:300000,license:'BSD-2-Clause'},
  {name:'leaflet.css',url:'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css',minBytes:5000,maxBytes:30000,license:'BSD-2-Clause'},
  {name:'LEAFLET-PACKAGE.json',url:'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/package.json',minBytes:300,maxBytes:100000,license:'BSD-2-Clause'},
