@@ -20,18 +20,38 @@ try{
  for(const [name,width,height] of viewports){
   const page=await browser.newPage({viewport:{width,height},deviceScaleFactor:1});
   const errors=[];page.on('pageerror',e=>errors.push('JS: '+e.message));page.on('console',msg=>{if(msg.type()==='error')errors.push('CONSOLE: '+msg.text())});
-  let status=null,snapshot=null,assetCheck=null,blocked=null;
+  let status=null,snapshot=null,assetCheck=null,ownerCheck=null,blocked=null;
   try{
    const response=await page.goto(url,{waitUntil:'domcontentloaded',timeout:45000});
    status=response?.status()||null;
    await page.waitForTimeout(5000);
    blocked=await page.evaluate(()=>/authentication|log in|sign in/i.test(document.title)&&!document.querySelector('.helion-stage'));
    snapshot=await page.evaluate(()=>window.NOX_CINEMATIC_HEALTH?.snapshot?.()||null);
+   ownerCheck=await page.evaluate(()=>{
+    const cores=[...document.querySelectorAll('.nox-owner-core')],people=[...document.querySelectorAll('.nox-owner-persona')];
+    const rect=e=>{const b=e.getBoundingClientRect();return {x:b.left,y:b.top,w:b.width,h:b.height}};
+    const personas=people.map(p=>({name:p.textContent.trim(),size:rect(p)}));
+    const rig=cores.map(c=>({name:c.textContent.trim(),href:c.getAttribute('href'),size:rect(c)}));
+    return {ready:!!window.NOX_OWNER_HOME_V20,mode:document.body.dataset.noxOwnerLayout,
+     cores:rig,personas,art:!!document.querySelector('link[href*="nox-owner-director-v20.css"]'),
+     controlsPreserved:document.querySelectorAll('section.nox-orbital-controls button').length,
+     originalWebgl:!!document.getElementById('noxEclipseCanvas'),navLinks:document.querySelectorAll('nav.home-primary-navigation a[href]').length,
+     ownerButtons:document.querySelectorAll('.nox-owner-actions button').length};
+   });
+   if(name==='1440'){
+     ownerCheck.artHttp=await page.evaluate(async()=>{
+       const r=await fetch('./assets/nox-owner-approved/NOX_HOME_OWNER_APPROVED_WEB.webp',{cache:'no-store'});
+       if(!r.ok)return {status:r.status,verified:false};
+       const bytes=await r.arrayBuffer(),hash=await crypto.subtle.digest('SHA-256',bytes);
+       const sha=[...new Uint8Array(hash)].map(x=>x.toString(16).padStart(2,'0')).join('');
+       return {status:r.status,size:bytes.byteLength,sha256:sha,verified:sha==='3253d26819a70b49259fdb2a56c2eaa2455c6878cb2ccb8d62b225ec6ccdfa22'};
+     });
+   }
    if(name==='1440' && snapshot) assetCheck=await page.evaluate(()=>window.NOX_CINEMATIC_HEALTH.checkAssets().catch(e=>({error:String(e)})));
    await page.screenshot({path:path.join(out,name+'.png'),fullPage:true,timeout:30000});
   }catch(e){errors.push('RUN: '+String(e.message||e))}
   const acceptance=blocked?'BLOCKED_SSO':!snapshot?'HOLD_NO_RUNTIME_DIAGNOSTICS':snapshot.graphicsAcceptance==='CANDIDATE'&&errors.length===0?'BROWSER_CANDIDATE':'HOLD';
-  report.cases.push({viewport:name,width,height,httpStatus:status,acceptance,blocked,diagnostics:snapshot,assetCheck,errors});
+  report.cases.push({viewport:name,width,height,httpStatus:status,acceptance,blocked,diagnostics:snapshot,assetCheck,ownerCheck,errors});
   await page.close();
  }
  // Cross-section smoke checks: no fake backends, no hidden failures.
@@ -95,4 +115,4 @@ report.completedAt=new Date().toISOString();
 report.summary={browserCandidates:report.cases.filter(c=>c.acceptance==='BROWSER_CANDIDATE').length,total:report.cases.length,physicalGpu:'NOT_TESTED',v19ModulesPassed:report.v19Modules?.filter(x=>x.passed).length||0,pageUiPassed:report.sections?.filter(x=>x.acceptance==='PAGE_UI_PASS').length??0};
 await fs.writeFile(path.join(out,'report.json'),JSON.stringify(report,null,2));
 console.log(JSON.stringify(report.summary));
-if(report.summary.v19ModulesPassed!==3 || report.v19ModuleErrors?.length || report.summary.pageUiPassed!==10 || report.summary.browserCandidates!==viewports.length || report.cases.some(c=>c.assetCheck && c.assetCheck.passed!==14))process.exitCode=1;
+if(report.cases.some(c=>!c.ownerCheck?.ready||c.ownerCheck.cores?.length!==8||c.ownerCheck.personas?.length!==5||!c.ownerCheck.originalWebgl)||report.cases.some(c=>c.ownerCheck?.artHttp&&!c.ownerCheck.artHttp.verified)||report.summary.v19ModulesPassed!==3 || report.v19ModuleErrors?.length || report.summary.pageUiPassed!==10 || report.summary.browserCandidates!==viewports.length || report.cases.some(c=>c.assetCheck && c.assetCheck.passed!==14))process.exitCode=1;
