@@ -29,6 +29,9 @@ jobs:
           node --check web-home/candidates/2026-11-10-v16-cinema/nox-home.mjs
           node --check web-home/candidates/2026-11-10-v16-cinema/nox-home-recovery.js
           node --check web-home/candidates/2026-11-10-v16-cinema/build-approved-assets.mjs
+          node --check web-home/candidates/2026-11-10-v16-cinema/nox-universe-v19.js
+          node --check web-home/candidates/2026-11-10-v16-cinema/nox-install-extra-v19.mjs
+          node -e "const m=require('./web-home/candidates/2026-11-10-v16-cinema/nox-section-map-v19.json');if(!Array.isArray(m)||m.length!==130)process.exit(1)"
           node --check web-home/candidates/2026-11-09-v15-repair/nox-home-recovery.js
           node --check web-home/candidates/2026-11-09-v15-repair/nox-orbit-original.js
       - name: Verify 14-control source and explicit GPU hold
@@ -60,6 +63,17 @@ jobs:
           assert.match(gpuRunner,/swiftshader/);
           assert.match(gpuRunner,/qa-report.json/);
           assert.match(gpuRunner,/realHardware/);
+          const installer=fs.readFileSync(root+'2026-11-10-v16-cinema/nox-install-extra-v19.mjs','utf8');
+          const universe=fs.readFileSync(root+'2026-11-10-v16-cinema/nox-universe-v19.js','utf8');
+          const assetBuilder=fs.readFileSync(root+'2026-11-10-v16-cinema/build-approved-assets.mjs','utf8');
+          assert.match(installer,/leaflet@1\.9\.4/);
+          assert.match(installer,/pdfjs-dist@4\.10\.38/);
+          assert.match(installer,/epubjs@0\.3\.93/);
+          assert.match(installer,/shaka-player@4\.15\.67/);
+          assert.match(assetBuilder,/await installExtras\(out\)/);
+          assert.match(assetBuilder,/nox-universe-v19\.js/);
+          assert.match(universe,/tile\.openstreetmap\.org/);
+          assert.match(universe,/nox-v19-weather-map/);
           const wowCss=fs.readFileSync(root+'2026-11-10-v16-cinema/nox-global-wow-v18.css','utf8');
           const wowJs=fs.readFileSync(root+'2026-11-10-v16-cinema/nox-global-wow-v18.js','utf8');
           const assembler=fs.readFileSync(root+'2026-11-10-v16-cinema/tools/assemble-verified-site.mjs','utf8');
