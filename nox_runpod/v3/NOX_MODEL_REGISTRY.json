@@ -1,6 +1,6 @@
 {
   "schema": "nox-model-registry-v1",
-  "revision": 1,
+  "revision": 2,
   "source_of_truth": "NOX V3 existing teacher manifest + WOW MAX",
   "policy": {
     "single_student": "NOX PRIME 9B full-weight",
@@ -11,7 +11,16 @@
     "benchmark_data": "EVALUATION_ONLY_NEVER_TRAIN",
     "weight_slicing": "NOT_KNOWLEDGE_DISTILLATION",
     "segment_type": "independent teacher inference tasks with source ids",
-    "no_loss": true
+    "no_loss": true,
+    "accelerated_order": [
+      "use_existing_proven_9b",
+      "activate_cached_27b",
+      "activate_32b_when_sha_verified",
+      "light_emotion_memory_tools",
+      "optional_coder_teacher_only_if_missing_skill"
+    ],
+    "download_strategy": "Hugging Face cache-first; verify revision/hash/license, no unnecessary re-download, shared-network storage budget, background CPU-only small models",
+    "training_strategy": "A40 sequential full-parameter optimizer and compatible heavy-teacher inference; A5000 lightweight/quantized teacher inference and CPU asset preprocessing; no simultaneous 9B full trainer with GPU teacher on same A40"
   },
   "models": [
     {
@@ -88,6 +97,43 @@
       "state": "OPTIONAL_IF_EXISTING_EMBEDDING_WEAK",
       "schedule": "RETRIEVAL_QUALITY_COMPARISON_ONLY",
       "segments": 100
+    },
+    {
+      "id": "qwen3_embedding_06b",
+      "name": "Qwen/Qwen3-Embedding-0.6B",
+      "role": "existing_memory_embedding_model",
+      "owner": "A5000",
+      "modality": "embeddings",
+      "gpu_min_free_mib": 0,
+      "state": "DISCOVER_EXISTING_FIRST",
+      "source": "https://huggingface.co/Qwen/Qwen3-Embedding-0.6B",
+      "download": "ONLY_IF_MISSING_AND_BENCHMARK_BEATS_CURRENT",
+      "usage": "S03 semantic recall and anti-forgetting support; not raw neural absorption",
+      "segments": 100
+    },
+    {
+      "id": "qwen25_coder7b",
+      "name": "Qwen/Qwen2.5-Coder-7B-Instruct",
+      "role": "optional_coding_teacher",
+      "owner": "A5000",
+      "fallback_owner": "A40",
+      "modality": "text/code",
+      "gpu_min_free_mib": 9000,
+      "state": "HISTORICAL_CANDIDATE_NOT_CONFIRMED_PRESENT",
+      "source": "https://huggingface.co/Qwen/Qwen2.5-Coder-7B-Instruct",
+      "download": "ONLY_IF_EXISTING_SOURCE_PROVENANCE_AND_NO_BETTER_TEACHER",
+      "usage": "code task examples with tests, no code execution from model",
+      "segments": 100
+    },
+    {
+      "id": "genesis_identity",
+      "name": "NOX GENESIS WOW50 provenance",
+      "role": "non_model_canonical_identity",
+      "owner": "A5000",
+      "gpu_min_free_mib": 0,
+      "state": "CANONICAL_SPEC_NOT_NEURAL_WEIGHTS",
+      "source": "https://docs.google.com/document/d/18YLAo_Cja3HJKZn6qr57P-zsm0-AHcx2aag0rgSjwS4/edit",
+      "usage": "Factual self-model and test design, not invented consciousness"
     }
   ],
   "evaluations": [
@@ -104,5 +150,42 @@
       "kind": "situational_self_knowledge"
     }
   ],
-  "success": "Per teacher: model SHA, source task ID, generated count, independent quality, S03 imported, actual student optimizer steps, benchmark change, Windows checkpoint SHA."
+  "success": "Per teacher: model SHA, source task ID, generated count, independent quality, S03 imported, actual student optimizer steps, benchmark change, Windows checkpoint SHA.",
+  "priorities": [
+    {
+      "priority": 0,
+      "mode": "REUSE",
+      "ids": [
+        "qwen35_9b",
+        "qwen35_27b"
+      ],
+      "reason": "already trained donor and previous downloaded 27B: verify rather than redownload"
+    },
+    {
+      "priority": 1,
+      "mode": "DOWNLOAD_IF_UNVERIFIED",
+      "ids": [
+        "deepseek_r1_qwen32b"
+      ],
+      "reason": "large reasoning teacher available after source SHA verification"
+    },
+    {
+      "priority": 2,
+      "mode": "SMALL_CPU_PARALLEL",
+      "ids": [
+        "emotion_multilingual",
+        "qwen3_embedding_06b",
+        "e5_small"
+      ],
+      "reason": "RU/ES emotion/memory retrieval on A5000 spare CPU; compare before activation"
+    },
+    {
+      "priority": 3,
+      "mode": "OPTIONAL_CODE",
+      "ids": [
+        "qwen25_coder7b"
+      ],
+      "reason": "only when 9B/27B/32B lack demonstrated coding skill"
+    }
+  ]
 }
