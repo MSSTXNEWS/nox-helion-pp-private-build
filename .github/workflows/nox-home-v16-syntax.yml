@@ -201,7 +201,7 @@ jobs:
 
   site-build:
     needs: vendor-download
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
     permissions:
       contents: read
@@ -243,7 +243,7 @@ jobs:
         timeout-minutes: 10
         run: |
           npm install --no-save --no-audit --no-fund playwright@1.58.2
-          npx playwright install chromium
+          npx playwright install --with-deps chromium
           python3 -m http.server 8080 --bind 127.0.0.1 --directory dist >/tmp/nox-ci-http.log 2>&1 &
           NOX_PREVIEW_URL=http://127.0.0.1:8080/index.html NOX_ACCEPTANCE_DIR=./nox-v21-acceptance node tools/browser-acceptance.mjs
       - name: Preserve actual browser screenshots and acceptance logs
