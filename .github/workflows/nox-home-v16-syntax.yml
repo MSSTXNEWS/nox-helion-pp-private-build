@@ -24,6 +24,7 @@ jobs:
           node --check web-home/candidates/2026-11-10-v16-cinema/tools/browser-acceptance.mjs
           node --check web-home/candidates/2026-11-10-v16-cinema/tools/assemble-verified-site.mjs
           node --check web-home/candidates/2026-11-10-v16-cinema/nox-global-wow-v18.js
+          node --check web-home/candidates/2026-11-10-v16-cinema/nox-home-flow.js
           node --check web-home/candidates/2026-11-09-v15-repair/nox-home-recovery.js
           node --check web-home/candidates/2026-11-09-v15-repair/nox-orbit-original.js
       - name: Verify 14-control source and explicit GPU hold
@@ -60,6 +61,13 @@ jobs:
           assert.match(wowJs,/MutationObserver/);
           assert.match(wowCss,/prefers-reduced-motion/);
           assert.match(wowCss,/nox-wow-choice-group/);
+          const homeFlowJs=fs.readFileSync(root+'2026-11-10-v16-cinema/nox-home-flow.js','utf8');
+          const homeFlowCss=fs.readFileSync(root+'2026-11-10-v16-cinema/nox-home-flow.css','utf8');
+          assert.match(homeFlowJs,/DECORATIVE_ONLY/);
+          assert.match(homeFlowJs,/visibilitychange/);
+          assert.match(homeFlowCss,/prefers-reduced-motion/);
+          assert.match(assembler,/nox-home-flow.js/);
+          assert.match(assembler,/nox-home-flow.css/);
           assert(!pbr.includes(',const zScale='),'Invalid JavaScript statement separator in the PBR scale patch');
           assert(contract.includes('HOLD'),'Do not claim visual acceptance from syntax checks');
           console.log('Source gate PASS; real GPU/render QA remains HOLD');
