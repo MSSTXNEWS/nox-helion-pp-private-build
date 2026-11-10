@@ -71,6 +71,15 @@ def tick(node,improve):
      "--format=csv,noheader,nounits"],capture_output=True,text=True,timeout=6)
   status["gpu"]=sm.stdout.strip() if sm.returncode==0 else "UNAVAILABLE"
  except (OSError,subprocess.TimeoutExpired):status["gpu"]="UNAVAILABLE"
+ for key,path in (("v3_progress",S/("orchestrator_status_"+node+".json")),
+                  ("teacher_progress",S/"status.json"),
+                  ("neural_training",R/"dispatcher/a40_full_parameter/progress.json")):
+  if path.is_file():
+   try:
+    d=json.loads(path.read_text(encoding="utf-8"))
+    status[key]=({k:d.get(k) for k in ("utc","status","stage","steps_executed_this_cycle","cycle_progress_percent","optimizer_steps","teacher_batches") if k in d}
+                 if key!="teacher_progress" else {"utc":d.get("utc"),"teacher_names":list(d.get("teachers",{}))})
+   except (OSError,ValueError):status[key]={"status":"HOLD_UNREADABLE"}
  atomic(S/("watchdog_10s_"+node+".json"),status)
  print(json.dumps(status,ensure_ascii=False),flush=True)
 def main():
