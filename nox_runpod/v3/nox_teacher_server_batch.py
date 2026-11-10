@@ -55,7 +55,7 @@ def main():
  ap.add_argument("--teacher",choices=tuple(MODELS),required=True)
  ap.add_argument("--limit",type=int,default=10)
  ap.add_argument("--start",type=int,default=0)
- ap.add_argument("--node",choices=("A40","A5000"),default="A40")
+ ap.add_argument("--node",choices=("A40","A5000","A40NEW"),default="A40")
  ap.add_argument("--gpu-layers",type=int,default=30)
  ap.add_argument("--ctx",type=int,default=4096)
  args=ap.parse_args()
@@ -122,7 +122,7 @@ def main():
    if not ready:
     print("HOLD_TEACHER_SERVER_NOT_READY",args.teacher,flush=True);return 2
    done=0;tokens=0
-   if args.node=="A5000" and args.start>=50:
+   if args.node in ("A5000","A40NEW") and args.start>=50:
     raise RuntimeError("A5000_SEGMENT_RANGE_INVALID")
    if args.node=="A40" and args.start<50:
     raise RuntimeError("A40_SEGMENT_RANGE_INVALID")
