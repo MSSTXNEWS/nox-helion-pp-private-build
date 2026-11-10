@@ -1,0 +1,45 @@
+name: NOX V19 - Complete WOW Internet Assets Intake
+on:
+  push:
+    branches:
+      - 'fix/home-v16-cinematic-contract-*'
+    paths:
+      - 'web-home/candidates/2026-11-10-v16-cinema/tools/download-complete-wow-kit.py'
+      - '.github/workflows/nox-v19-complete-wow-download.yml'
+  workflow_dispatch:
+jobs:
+  download-real-vendor-sources:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Download all approved extended library candidates
+        run: |
+          python3 web-home/candidates/2026-11-10-v16-cinema/tools/download-complete-wow-kit.py
+      - name: Verify file bytes and manifest before packaging
+        run: |
+          python3 - <<'PY'
+          import pathlib,hashlib,json
+          p=pathlib.Path('/tmp/nox-v19-extended')
+          m=json.loads((p/'NOX-EXTENDED-DEPENDENCIES-MANIFEST.json').read_text())
+          assert m['packages_downloaded']>=40, f"Too few actual packages: {m['packages_downloaded']}"
+          assert m['packages_downloaded']+m['packages_failed']==m['packages_requested']
+          for a in m['files']:
+            if a['status']!='DOWNLOADED_SHA256_VERIFIED': continue
+            b=(p/'packages'/a['file']).read_bytes()
+            assert hashlib.sha256(b).hexdigest()==a['sha256'] and len(b)==a['size'],a['file']
+          print(f"NOX_EXTENDED_SHA256_PASS {m['packages_downloaded']} of {m['packages_requested']}, {m['bytes']} bytes")
+          PY
+      - name: Preserve actual full ZIP for Google Drive
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX-V19-EXTENDED-WOW-LIBRARIES
+          path: /tmp/nox-v19-extended/
+          if-no-files-found: error
+          retention-days: 14
