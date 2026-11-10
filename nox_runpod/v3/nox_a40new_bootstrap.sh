@@ -9,7 +9,7 @@ mkdir -p "$B" "$R/logs"
 findmnt -n /workspace >/dev/null || { echo HOLD_SHARED_VOLUME_NOT_MOUNTED;exit 2; }
 test -d "$R/teachers" || { echo HOLD_NO_TEACHERS_IN_SHARED_VOLUME;exit 2; }
 for n in nox_a40new_teacher_controller.py nox_teacher_server_batch.py nox_a40new_cutover_cpu_only.py;do
- tmp="$B/$n.$$.new"
+ tmp="/tmp/nox_a40new_${n}.$.new"
  curl -fsSL --retry 3 "$BASE/nox_runpod/v3/$n" -o "$tmp"
  python3 -m py_compile "$tmp"
  mv -f "$tmp" "$B/$n"
@@ -18,7 +18,11 @@ done
 # Build an actual CUDA binary on NEW A40's local disk, not shared /workspace.
 D=/opt/nox_a40new/llama.cpp
 GPU_BIN="$D/build/bin/llama-server"
+exec 8>/opt/nox_a40new/build.lock
 if [ ! -x "$GPU_BIN" ];then
+ flock -n 8 || { echo HOLD_CUDA_BUILD_ALREADY_IN_PROGRESS;exit 0; }
+ # Another process might have finished before acquiring the lock.
+ if [ -x "$GPU_BIN" ];then echo NOX_CUDA_BUILD_ALREADY_COMPLETED; else
  # CUDA runtime in PyTorch image is not the CUDA compiler; install toolkit,
  # without replacing NVIDIA host drivers. Never install package 'cuda' (includes drivers).
  if ! command -v nvcc >/dev/null 2>&1 && [ ! -x /usr/local/cuda-12.8/bin/nvcc ];then
@@ -43,7 +47,9 @@ if [ ! -x "$GPU_BIN" ];then
  fi
  cmake -S "$D" -B "$D/build" -DGGML_CUDA=ON -DCMAKE_BUILD_TYPE=Release -DCMAKE_CUDA_COMPILER="$(command -v nvcc)"
  cmake --build "$D/build" --target llama-server -j 3
+ fi
 fi
+flock -u 8
 test -x "$GPU_BIN" || { echo HOLD_CUDA_LLAMA_BINARY_MISSING;exit 3; }
 if ! "$GPU_BIN" --help 2>&1 | grep -qi 'gpu-layers';then
  echo HOLD_LLAMA_GPU_OPTION_MISSING;exit 3
