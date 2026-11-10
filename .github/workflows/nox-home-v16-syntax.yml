@@ -26,6 +26,7 @@ jobs:
           node --check web-home/candidates/2026-11-10-v16-cinema/tools/assemble-verified-site.mjs
           node --check web-home/candidates/2026-11-10-v16-cinema/nox-global-wow-v18.js
           node --check web-home/candidates/2026-11-10-v16-cinema/nox-owner-director-v20.js
+          node --check web-home/candidates/2026-11-10-v16-cinema/nox-owner-fidelity-v21.js
           node --check web-home/candidates/2026-11-10-v16-cinema/nox-home-flow.js
           node --check web-home/candidates/2026-11-10-v16-cinema/nox-home.mjs
           node --check web-home/candidates/2026-11-10-v16-cinema/nox-home-recovery.js
@@ -106,6 +107,10 @@ jobs:
           assert.match(ownerCss,/prefers-reduced-motion/);
           assert.match(ownerIndex,/nox-owner-director-v20.css/);
           assert.match(ownerIndex,/nox-owner-director-v20.js/);
+          assert.match(ownerIndex,/nox-owner-fidelity-v21.js/);
+          assert.match(ownerIndex,/nox-owner-fidelity-v21.css/);
+          assert.match(installer,/fuse.js@7\.1\.0/);
+          assert.match(universe,/new window.Fuse/);
           const expectedPeople={"kv":"4f349edf31118301b2c5d42b0fe5ad2c17aea05fae5622afab90a5a00950584b","am":"67390d082d29d0a90f09e09866875318fdd4c562ea6791f0f51c958adcd28768","la":"e03b0611b237f23ecafbbc1dd6e0aec93aabf38a3bb772af28b1ed0e90e27eaa","ev":"981b21da200f6a4d1c1741a4f5849c9379eb52d781d661ecfdb093ca29652c87","kw":"005d246edce84b4cd0f3d005a5eddb03adbedf8fdfe310ce29e6b95c6a16361e"};
           for(const [id,expected] of Object.entries(expectedPeople)) assert.equal(crypto.createHash('sha256').update(fs.readFileSync(root+'2026-11-10-v16-cinema/assets/nox-owner-approved/nox-owner-persona-'+id+'.webp')).digest('hex'),expected,'Approved portrait drift: '+id);
           for(const id of Object.keys(expectedPeople)) assert(ownerCss.includes('nox-owner-persona-'+id+'.webp'),'Missing real photo link '+id);
@@ -152,6 +157,8 @@ jobs:
           cp web-home/candidates/2026-11-10-v16-cinema/build-approved-assets.mjs /tmp/nox-v19-download/source/
           cp web-home/candidates/2026-11-10-v16-cinema/nox-owner-director-v20.js /tmp/nox-v19-download/source/
           cp web-home/candidates/2026-11-10-v16-cinema/nox-owner-director-v20.css /tmp/nox-v19-download/source/
+          cp web-home/candidates/2026-11-10-v16-cinema/nox-owner-fidelity-v21.js /tmp/nox-v19-download/source/
+          cp web-home/candidates/2026-11-10-v16-cinema/nox-owner-fidelity-v21.css /tmp/nox-v19-download/source/
           cp web-home/candidates/2026-11-10-v16-cinema/tools/browser-acceptance.mjs /tmp/nox-v19-download/source/
           mkdir -p /tmp/nox-v19-download/source/assets/nox-owner-approved
           cp web-home/candidates/2026-11-10-v16-cinema/assets/nox-owner-approved/*.webp /tmp/nox-v19-download/source/assets/nox-owner-approved/
