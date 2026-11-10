@@ -155,7 +155,7 @@ def main():
      with (OUT/(outfile.name+".write.lock")).open("a+") as out_lock:
       fcntl.flock(out_lock,fcntl.LOCK_EX)
       with outfile.open("a",encoding="utf-8") as f:
-       f.write(json.dumps(rec,ensure_ascii=False)+"\\n");f.flush();os.fsync(f.fileno())
+       f.write(json.dumps(rec,ensure_ascii=False)+"\n");f.flush();os.fsync(f.fileno())
      existing.add(ident);done+=1
      tokens+=int(res.get("tokens_predicted") or 0)
      print("NOX_V3_TEACHER_SAVED",args.teacher,"plan_task",index+1,"/100","new_batch",done,flush=True)
