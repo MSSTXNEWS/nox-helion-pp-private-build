@@ -12,20 +12,32 @@ try {
  $oldScp=@(Get-CimInstance Win32_Process -Filter "Name='scp.exe'" -ErrorAction SilentlyContinue | Where-Object { $_.CommandLine -like '*nox_full_parameter_A40*' })
  if($oldScp.Count){Write-Host "HOLD_LEGACY_TRANSFER_IN_PROGRESS PID=$($oldScp[0].ProcessId)";return}
  $py=@'
-import json,pathlib
-f=pathlib.Path("/workspace/nox/dispatcher/a40_full_parameter/progress.json")
-if not f.exists(): print(json.dumps({"status":"HOLD","reason":"NO_PROGRESS"}));raise SystemExit
-d=json.loads(f.read_text())
-out=(d.get("extra") or {}).get("output")
-if d.get("status")!="COMPLETE_VERIFIED" or not out:
- print(json.dumps({"status":"HOLD","reason":"NO_VERIFIED_CYCLE"}));raise SystemExit
-p=pathlib.Path(out)
-if p.parent!=pathlib.Path("/opt/nox_full_parameter_A40") or not p.name.startswith("NOX_FULL_CYCLE_"):
- print(json.dumps({"status":"HOLD","reason":"INVALID_PATH"}));raise SystemExit
-r=p/"NOX_FULL_TRAIN_RECEIPT.json"
-if not r.is_file(): print(json.dumps({"status":"HOLD","reason":"NO_RECEIPT"}));raise SystemExit
-obj=json.loads(r.read_text())
-print(json.dumps({"status":"READY","path":str(p),"cycle":obj.get("cycle"),"steps":obj.get("steps"),"shards":obj.get("shards",[])}))
+import json,pathlib,hashlib,datetime
+base=pathlib.Path("/opt/nox_full_parameter_A40")
+choices=[]
+for rp in base.glob("NOX_FULL_CYCLE_*/NOX_FULL_TRAIN_RECEIPT.json"):
+ try:
+  obj=json.loads(rp.read_text())
+  if not obj.get("shards") or float(obj.get("after_holdout_loss",1e12))>float(obj.get("baseline_holdout_loss",0))*1.05:continue
+  if any(not (rp.parent/s["file"]).is_file() for s in obj["shards"]):continue
+  choices.append((rp.stat().st_mtime_ns,rp,obj))
+ except (OSError,ValueError,KeyError,TypeError):pass
+if not choices:
+ print(json.dumps({"status":"HOLD","reason":"NO_ACCEPTED_CHECKPOINT"}));raise SystemExit
+_,rp,obj=max(choices,key=lambda x:x[0])
+shard_names={s["file"] for s in obj["shards"]}
+extras=[]
+for p in rp.parent.iterdir():
+ if not p.is_file() or p.name in shard_names or p.name=="NOX_FULL_TRAIN_RECEIPT.json":continue
+ if len(p.name)>128 or not p.name.endswith((".json",".txt",".model",".tiktoken")):continue
+ if p.stat().st_size>200*1024*1024:continue
+ h=hashlib.sha256()
+ with p.open("rb") as ff:
+  for v in iter(lambda:ff.read(4*1024*1024),b""):h.update(v)
+ extras.append({"file":p.name,"sha256":h.hexdigest(),"bytes":p.stat().st_size})
+print(json.dumps({"status":"READY","path":str(rp.parent),"cycle":obj.get("cycle"),
+ "steps":obj.get("steps"),"shards":obj["shards"],"extras":extras}))
+
 '@
  $b64=[Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($py))
  $sshArgs=@('-T','-i',$key,'-p','22088','-o','BatchMode=yes','-o','ConnectTimeout=20','-o','ServerAliveInterval=30','root@69.30.85.193',"echo '$b64' | base64 -d | python3")
@@ -44,7 +56,7 @@ print(json.dumps({"status":"READY","path":str(p),"cycle":obj.get("cycle"),"steps
    Write-Host "NOX_ALREADY_VERIFIED $local";return
   }
  }
- $items=@($status.shards)+@([pscustomobject]@{file='NOX_FULL_TRAIN_RECEIPT.json';sha256=$null})
+ $items=@($status.shards)+@($status.extras)+@([pscustomobject]@{file='NOX_FULL_TRAIN_RECEIPT.json';sha256=$null})
  foreach($item in $items){
   $file=[string]$item.file
   if($file -notmatch '^[A-Za-z0-9_.-]+$' -or $file.Contains('..')){throw "UNSAFE_NAME $file"}
