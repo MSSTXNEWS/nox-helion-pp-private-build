@@ -7,6 +7,7 @@
  const modules=['Кинотеатр','Книги','Календарь','Галерея','Эффекты','Новости','Уведомления','Погода','Валюта','Браузер','Разделы'];
  const $=(tag,props={},children=[])=>{const el=document.createElement(tag);for(const [k,v] of Object.entries(props)){if(k==='class')el.className=v;else if(k==='text')el.textContent=v;else if(k==='html')el.innerHTML=v;else el.setAttribute(k,v)};for(const c of children)el.append(c);return el};
  const state={active:'Кинотеатр',book:null,video:null,catalog:null,objectUrls:[],player:null,map:null,search:''};
+ const pendingScripts=new Map();
  const clean=()=>{if(state.fx){try{state.fx.destroy()}catch{}state.fx=null}if(state.calendar){try{state.calendar.destroy()}catch{}state.calendar=null}if(state.galleryLightbox){try{state.galleryLightbox.destroy()}catch{}state.galleryLightbox=null}if(state.map){try{state.map.remove()}catch{}state.map=null}for(const u of state.objectUrls)URL.revokeObjectURL(u);state.objectUrls=[];if(state.book?.destroy)try{state.book.destroy()}catch{}state.book=null;state.video?.pause?.();state.video=null;if(state.player?.destroy)try{state.player.destroy()}catch{}state.player=null};
  const root=$('div',{class:'nox-v19-root'}),openBtn=$('button',{type:'button',class:'nox-v19-launch',text:'✦ ВСЕЛЕННАЯ NOX','aria-label':'Открыть сервисы NOX'}),panel=$('section',{class:'nox-v19-panel',role:'dialog','aria-modal':'true','aria-label':'Сервисы NOX',hidden:''});
  const head=$('header',{class:'nox-v19-head'}),title=$('h2',{text:'NOX · МОДУЛИ'}),close=$('button',{type:'button',text:'✕ ЗАКРЫТЬ',class:'nox-v19-btn'});head.append(title,close);
@@ -29,7 +30,7 @@
  function cinema(){const c=shell('Кинотеатр · реальное воспроизведение');notice(c,'Разрешённые файлы и прямые HTTP(S) видеопотоки. DRM и закрытые сайты не обходятся. Каталог сторонних фильмов без лицензии не подставляется.');
  const url=field('URL прямого MP4/WebM/HLS или локальный файл'),local=field('Выбрать видеофайл','file');local.accept='video/*,.m3u8';
  const audio=field('Выбрать субтитры VTT','file');audio.accept='.vtt,text/vtt';
- const player=$('video',{controls:'',playsinline:'',preload:'metadata',class:'nox-v19-video'}),info=$('div',{class:'nox-v19-note'});
+ const player=$('video',{controls:'',playsinline:'',preload:'metadata',class:'nox-v19-video'}),info=$('div',{class:'nox-v19-note'});state.video=player;
  const bookmark=()=>{if(!player.currentSrc)return;const key='nox-watch:'+encodeURIComponent(player.dataset.source||player.currentSrc);try{localStorage.setItem(key,JSON.stringify({seconds:player.currentTime,at:Date.now()}));live('Позиция сохранена: '+Math.round(player.currentTime)+' с','ok')}catch(e){live('Не удалось сохранить: '+e.message,'error')}};
  player.addEventListener('timeupdate',()=>{if(player.currentTime&&Math.floor(player.currentTime)%15===0)bookmarkSilently()});
  function bookmarkSilently(){try{const key='nox-watch:'+encodeURIComponent(player.dataset.source||player.currentSrc);localStorage.setItem(key,JSON.stringify({seconds:player.currentTime,at:Date.now()}))}catch{}}
@@ -43,8 +44,20 @@
  const sources=shell('Медиаисточники и права');notice(sources,'Подключайте только файлы, которыми имеете право пользоваться. Доступность внешних URL зависит от CORS и политики владельца.');
  sources.append(row(action('ОТКРЫТЬ ЛЕГАЛЬНЫЕ ИСТОЧНИКИ',()=>openUrl('https://archive.org/details/movies')),action('ОТКРЫТЬ СУЩЕСТВУЮЩЕЕ КИНО NOX',()=>location.assign('cinema.html'))));
  }
- async function loadScript(src){if(document.querySelector('script[data-nox-extra="'+src+'"]')){if(document.querySelector('script[data-nox-extra="'+src+'"]').dataset.loaded==='1')return;throw Error('Модуль ещё загружается')}
- return await new Promise((resolve,reject)=>{const sc=$('script',{src,'data-nox-extra':src});sc.onload=()=>{sc.dataset.loaded='1';resolve()};sc.onerror=()=>reject(new Error('Библиотека отсутствует: '+src));document.head.append(sc)})}
+ async function loadScript(src){
+  if(!src.startsWith('./vendor/nox-extra/'))throw Error('Разрешены только локальные проверенные библиотеки');
+  if(pendingScripts.has(src))return pendingScripts.get(src);
+  const script=document.querySelector('script[data-nox-extra="'+src+'"]');
+  if(script?.dataset.loaded==='1')return;
+  const promise=new Promise((resolve,reject)=>{
+   const sc=script||$('script',{src,'data-nox-extra':src});
+   sc.onload=()=>{sc.dataset.loaded='1';resolve()};
+   sc.onerror=()=>{sc.remove();reject(new Error('Библиотека недоступна: '+src))};
+   if(!script)document.head.append(sc);
+  });
+  pendingScripts.set(src,promise);
+  try{return await promise}finally{pendingScripts.delete(src)}
+ }
  function books(){const c=shell('Библиотека · PDF / EPUB / TXT');notice(c,'Файлы остаются в браузере. Они не отправляются на сервер. Для EPUB используется epub.js; для PDF — PDF.js.');
  const file=field('Открыть PDF, EPUB или TXT','file');file.accept='.pdf,.epub,.txt,application/pdf,application/epub+zip,text/plain';const view=$('div',{class:'nox-v19-reader'});const prev=action('◀ НАЗАД',()=>nav(-1)),next=action('ВПЕРЁД ▶',()=>nav(1)),txt=$('span',{class:'nox-v19-note',text:'Не открыт файл'});let currentPage=1,pdf=null;
  async function nav(step){try{if(pdf){currentPage=Math.max(1,Math.min(pdf.numPages,currentPage+step));await showPdfPage();}else if(state.book?.rendition){await(step<0?state.book.rendition.prev():state.book.rendition.next())}}catch(e){live(String(e),'error')}}
