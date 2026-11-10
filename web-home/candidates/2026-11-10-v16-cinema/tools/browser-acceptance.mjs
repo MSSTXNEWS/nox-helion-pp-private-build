@@ -155,6 +155,20 @@ try{
   await p.getByRole('button',{name:'STOP FX'}).click();
   const stopped=await p.evaluate(()=>!document.querySelector('#nox-v19-particles canvas')&&/FX STOP/.test(document.querySelector('.nox-v19-status')?.textContent||''));
   report.v19Modules.push({name:'Эффекты',source:'tsParticles local',passed:realCanvas&&stopped,physicalGpu:'NOT_TESTED'});
+  // Local TXT reader: no user document leaves the browser.
+  await p.getByRole('button',{name:'Книги',exact:true}).click();
+  await p.locator('.nox-v19-card input[type="file"]').first().setInputFiles({
+    name:'nox-ci-reader.txt',mimeType:'text/plain',
+    buffer:Buffer.from('NOX VERIFIED LOCAL READER SMOKE', 'utf8')});
+  await p.waitForSelector('.nox-v19-text',{timeout:12000});
+  report.v19Modules.push({name:'Книги (TXT)',source:'existing NOX reader',passed:
+    (await p.locator('.nox-v19-text').textContent()).includes('NOX VERIFIED LOCAL READER SMOKE')});
+  // Fuzzy search must use actual 130 approved sections and the local Fuse.js bundle.
+  await p.getByRole('button',{name:'Разделы',exact:true}).click();
+  await p.waitForFunction(()=>!!window.Fuse&&document.querySelectorAll('.nox-v19-sections button').length>0,{timeout:14000});
+  await p.getByPlaceholder('Поиск раздела').fill('Кинотеатр');
+  await p.waitForFunction(()=>[...document.querySelectorAll('.nox-v19-sections button')].some(b=>b.textContent.includes('Кинотеатр')),{timeout:14000});
+  report.v19Modules.push({name:'Поиск разделов',source:'Fuse.js local + canonical catalog',passed:true});
  }catch(e){moduleErrors.push(String(e?.message||e))}
  report.v19ModuleErrors=moduleErrors;
  await p.close();
@@ -163,4 +177,4 @@ report.completedAt=new Date().toISOString();
 report.summary={browserCandidates:report.cases.filter(c=>c.acceptance==='BROWSER_CANDIDATE').length,total:report.cases.length,physicalGpu:'NOT_TESTED',v19ModulesPassed:report.v19Modules?.filter(x=>x.passed).length||0,pageUiPassed:report.sections?.filter(x=>x.acceptance==='PAGE_UI_PASS').length??0};
 await fs.writeFile(path.join(out,'report.json'),JSON.stringify(report,null,2));
 console.log(JSON.stringify(report.summary));
-if(report.cases.some(c=>!c.ownerCheck?.ready||c.ownerCheck.cores?.length!==8||c.ownerCheck.personas?.length!==5||!c.ownerCheck.originalWebgl)||report.cases.some(c=>c.ownerCheck?.artHttp&&!c.ownerCheck.artHttp.verified)||report.cases.some(c=>c.ownerCheck?.portraitsHttp&&c.ownerCheck.portraitsHttp.some(p=>!p.verified))||report.summary.v19ModulesPassed!==3 || report.v19ModuleErrors?.length || report.summary.pageUiPassed!==10 || report.summary.browserCandidates!==viewports.length || report.cases.some(c=>c.assetCheck && c.assetCheck.passed!==14))process.exitCode=1;
+if(report.cases.some(c=>!c.ownerCheck?.ready||c.ownerCheck.cores?.length!==8||c.ownerCheck.personas?.length!==5||!c.ownerCheck.originalWebgl)||report.cases.some(c=>c.ownerCheck?.artHttp&&!c.ownerCheck.artHttp.verified)||report.cases.some(c=>c.ownerCheck?.portraitsHttp&&c.ownerCheck.portraitsHttp.some(p=>!p.verified))||report.summary.v19ModulesPassed!==5 || report.v19ModuleErrors?.length || report.summary.pageUiPassed!==10 || report.summary.browserCandidates!==viewports.length || report.cases.some(c=>c.assetCheck && c.assetCheck.passed!==14))process.exitCode=1;
