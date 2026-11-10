@@ -47,6 +47,7 @@ from huggingface_hub import hf_hub_download,snapshot_download,model_info
 R=pathlib.Path("/workspace/nox")
 models=[
  ("Qwen3.5-9B","Qwen/Qwen3.5-9B",None,R/"models/NOX_9B_UNIFIED",21_000_000_000),
+ ("Qwen3.5-9B","bartowski/Qwen_Qwen3.5-9B-GGUF","Qwen3.5-9B-Q4_K_M.gguf",R/"teachers/Qwen3.5-9B",8_000_000_000),
  ("Qwen3.5-27B","bartowski/Qwen_Qwen3.5-27B-GGUF","Qwen3.5-27B-Q4_K_M.gguf",R/"teachers/Qwen3.5-27B",20_000_000_000),
  ("DeepSeek-R1-Distill-Qwen-32B","bartowski/DeepSeek-R1-Distill-Qwen-32B-GGUF","DeepSeek-R1-Distill-Qwen-32B-Q4_K_M.gguf",R/"teachers/DeepSeek-R1-Distill-Qwen-32B",22_000_000_000)]
 def sha(p):
@@ -126,4 +127,13 @@ content TEXT, topic TEXT, received_utc TEXT, created_utc TEXT, quality TEXT)""")
 c.commit();c.close()
 print("S03_SCHEMA_READY_NO_FAKE_TEACHER_DATA")
 PY
-say BOOTSTRAP_DONE_CHECK_MODEL_SHA_AND_START_MEGA
+# Launch the single-GPU sequential 3-teacher -> S03 -> all-parameter loop.
+CYCLE="$D/nox_eu_genesis_cycle.py"
+curl -fsSL --retry 3 "$BASE/nox_runpod/v3/nox_eu_genesis_cycle.py" -o "$CYCLE.new"
+python3 -m py_compile "$CYCLE.new"
+mv -f "$CYCLE.new" "$CYCLE"
+if ! pgrep -f "^$D/venv/bin/python -u $CYCLE$" >/dev/null;then
+ nohup "$D/venv/bin/python" -u "$CYCLE" >>"$R/logs/NOX_EU_GENESIS_ENGINE.log" 2>&1 </dev/null &
+ say "GENESIS_CYCLE_STARTED_PID=$!"
+else say GENESIS_CYCLE_ALREADY_RUNNING;fi
+say BOOTSTRAP_DONE_MODELS_MUST_SHOW_SHA_VERIFIED_BEFORE_GPU_TRAINING
