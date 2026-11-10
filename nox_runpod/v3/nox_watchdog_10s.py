@@ -56,7 +56,7 @@ def tick(node,improve):
     info=json.loads(path.read_text(encoding="utf-8"))
     age=time.time()-path.stat().st_mtime
    except (OSError,ValueError):info={};age=0
-   stale=info.get("node")==node and info.get("status") in ("PREPARED_NOT_STARTED","HOLD_CUTOVER_SAVEPOINT_PENDING") and age>180
+   stale=info.get("node")==node and info.get("status") in ("PREPARED_NOT_STARTED","HOLD_CUTOVER_SAVEPOINT_PENDING") and age>=0
    approved=gate.get("node")==node and gate.get("status")=="CUTOVER_READY"
    if stale and approved:
     try:
