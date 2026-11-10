@@ -25,12 +25,15 @@ jobs:
           node --check web-home/candidates/2026-11-10-v16-cinema/tools/assemble-verified-site.mjs
           node --check web-home/candidates/2026-11-10-v16-cinema/nox-global-wow-v18.js
           node --check web-home/candidates/2026-11-10-v16-cinema/nox-home-flow.js
+          node --check web-home/candidates/2026-11-10-v16-cinema/nox-home.mjs
+          node --check web-home/candidates/2026-11-10-v16-cinema/nox-home-recovery.js
+          node --check web-home/candidates/2026-11-10-v16-cinema/build-approved-assets.mjs
           node --check web-home/candidates/2026-11-09-v15-repair/nox-home-recovery.js
           node --check web-home/candidates/2026-11-09-v15-repair/nox-orbit-original.js
       - name: Verify 14-control source and explicit GPU hold
         run: |
           node - <<'NODE'
-          const fs=require('node:fs'), assert=require('node:assert/strict');
+          const fs=require('node:fs'), assert=require('node:assert/strict'), crypto=require('node:crypto');
           const root='web-home/candidates/';
           const orbit=fs.readFileSync(root+'2026-11-09-v15-repair/nox-orbit-original.js','utf8');
           const pbr=fs.readFileSync(root+'2026-11-10-v16-cinema/nox-engines/physical-worlds-v7.mjs','utf8');
@@ -63,8 +66,11 @@ jobs:
           assert.match(wowCss,/nox-wow-choice-group/);
           const homeFlowJs=fs.readFileSync(root+'2026-11-10-v16-cinema/nox-home-flow.js','utf8');
           const homeFlowCss=fs.readFileSync(root+'2026-11-10-v16-cinema/nox-home-flow.css','utf8');
-          assert.match(homeFlowJs,/DECORATIVE_ONLY/);
-          assert.match(homeFlowJs,/visibilitychange/);
+          assert.match(homeFlowJs,/NOX_FLOW_DIAGNOSTICS/);
+          assert.match(homeFlowJs,/document.hidden/);
+          const digest=file=>crypto.createHash('sha256').update(fs.readFileSync(root+'2026-11-10-v16-cinema/'+file)).digest('hex');
+          assert.equal(digest('nox-home.mjs'),'8066bc0a0f8ef5bb5f0fb1f58ad3f6ee29dc8506385c09d77d38d4235c7e42e9','Original D02 must not drift');
+          assert.equal(digest('nox-home-flow.js'),'a28dc4a9bd36638182aa05b89513d8ded2800ee78c0db3a52ccea07d292a52ca','Original HOME flow must not drift');
           assert.match(homeFlowCss,/prefers-reduced-motion/);
           assert.match(assembler,/nox-home-flow.js/);
           assert.match(assembler,/nox-home-flow.css/);
