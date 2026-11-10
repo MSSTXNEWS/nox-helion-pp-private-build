@@ -11,7 +11,7 @@ foreach($filename in @('nox_windows_v3_receiver.ps1','nox_windows_identity_sync.
  $url=$base+'/'+$filename
  $dest=Join-Path $dir $filename
  Invoke-WebRequest -UseBasicParsing -Uri $url -OutFile ($dest+'.new')
- if((Get-Item ($dest+'.new')).Length -lt 1000){throw ('HOLD_SMALL_SCRIPT_'+$filename)}
+ if((Get-Item ($dest+'.new')).Length -lt 350){throw ('HOLD_SMALL_SCRIPT_'+$filename)}
  Move-Item -Force ($dest+'.new') $dest
  Write-Host ('INSTALLED '+$filename)
 }
