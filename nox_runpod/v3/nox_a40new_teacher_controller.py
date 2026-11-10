@@ -60,7 +60,7 @@ def main():
    teacher=todo[n%len(todo)]
    n+=1
    cmd=["python3","-u",str(B/"nox_teacher_server_batch.py"),"--node","A40NEW",
-        "--teacher",teacher,"--start","0","--limit","50","--gpu-layers","50","--ctx","2048"]
+        "--teacher",teacher,"--start","0","--limit","50","--gpu-layers","50","--ctx","6144","--parallel","3"]
    log=R/"logs/NOX_A40NEW_TEACHERS.log";log.parent.mkdir(parents=True,exist_ok=True)
    if not pathlib.Path(cmd[2]).exists():
     emit(status="HOLD_SCRIPT_MISSING");time.sleep(60);continue
