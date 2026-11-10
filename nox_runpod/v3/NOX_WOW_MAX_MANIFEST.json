@@ -2,7 +2,7 @@
   "schema": "nox-wow-max-v1",
   "created_utc": "2026-11-10",
   "purpose": "Supplement one NOX with sourced emotional cues, self-evaluation, memory benchmark and creative tool source, without training on evaluation answers",
-  "max_concurrent_downloads": 1,
+  "max_concurrent_downloads": 2,
   "poll_seconds": 180,
   "gpu_training_interference": false,
   "hf_models": [
@@ -45,6 +45,22 @@
       "max_file_bytes": 650000000,
       "estimated_download_mb": 500,
       "source": "https://huggingface.co/intfloat/multilingual-e5-small"
+    },
+    {
+      "id": "Qwen/Qwen3-Embedding-0.6B",
+      "category": "existing_embedding_candidate",
+      "role": "RU/ES semantic S03 memory, do not replace existing Qwen embedding before quality A/B test",
+      "mandatory": false,
+      "download_priority": "P2_EXISTING_CACHE_FIRST",
+      "source": "https://huggingface.co/Qwen/Qwen3-Embedding-0.6B",
+      "files": [
+        "model.safetensors",
+        "config.json",
+        "tokenizer.json",
+        "tokenizer_config.json"
+      ],
+      "max_file_bytes": 2200000000,
+      "estimated_download_mb": 1250
     }
   ],
   "repositories": [
@@ -98,5 +114,13 @@
     "windows": "transfer only verified weights and manifests",
     "no_loss": true,
     "auto_delete": false
-  }
+  },
+  "revision": 2,
+  "priority": "neural full-parameter student and ready teachers > memory/emotion small tools > optional code teacher > creative",
+  "existing_teacher_registry": "NOX_MODEL_REGISTRY.json",
+  "large_downloads_first": [
+    "Only verified missing DeepSeek-R1-Distill-Qwen-32B",
+    "Never duplicate cached Qwen3.5-9B and 27B"
+  ],
+  "optional_teacher": "Qwen/Qwen2.5-Coder-7B-Instruct after memory/reasoning gates, not required overnight"
 }
