@@ -301,20 +301,27 @@
     await loadScript('./vendor/nox-extra/fuse.min.js');
     if(window.Fuse)finder=new window.Fuse(all,{keys:['page','section','id','actions'],threshold:0.33,ignoreLocation:true});
    }catch(e){live('Поиск: обычный режим (Fuse.js недоступен): '+e.message,'warn')}
-   const mapping={'Кинотеатр':'cinema.html','Книги / Reader':'memory.html','RU↔ES / Voice':'settings.html','GPU Training':'training.html','RAG':'memory.html','Ask NOX':'chat.html','System':'system.html','Главная':'index.html'};
+   // Show clickable buttons only where a real existing route exists.
+   // Retain all 130 requirements as READ-ONLY catalog data, not inert active controls.
+   const mapping={'Кинотеатр':'cinema.html','Книги / Reader':'memory.html','GPU Training':'training.html','RAG':'memory.html','Ask NOX':'chat.html','System':'system.html','Главная':'index.html'};
    function paint(){
     list.replaceChildren();
     const q=query.value.trim().toLowerCase();
     const results=q?(finder?finder.search(q,{limit:130}).map(r=>r.item):all.filter(x=>(x.page+' '+x.section+' '+x.id+' '+x.actions).toLowerCase().includes(q))):all;
+    let active=0,reference=0;
     for(const item of results.slice(0,130)){
-     const link=mapping[item.page];
-     const button=action(item.id+' · '+item.page,()=>{
-      if(link)location.assign(link);
-      else live(item.id+' · '+item.page+': нет принятого обработчика. ТЗ: '+item.actions,'warn');
-     });
-     button.classList.toggle('nox-v19-planned',!link);
-     list.append(button);
+      const link=mapping[item.page];
+      if(link){
+        const button=action(item.id+' · '+item.page,()=>location.assign(link));
+        button.dataset.noxAction='navigate';
+        list.append(button);active++;
+      }else{
+        const line=$('p',{class:'nox-v19-note',text:item.id+' · '+item.page+' — ТЗ, обработчик не подключён'});
+        line.dataset.noxRequirement='not-a-button';
+        list.append(line);reference++;
+      }
     }
+    live('Действующих кнопок перехода: '+active+' · только требования без обработчика: '+reference+'. Никаких ложных кнопок.');
    }
    query.addEventListener('input',paint);
    paint();live('Каталог загружен: '+all.length+' строк по утверждённой матрице');
