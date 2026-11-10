@@ -77,3 +77,30 @@ body.helion-home.nox-owner-cinema #noxCoreEntry{top:55%!important}
 body.helion-home.nox-owner-cinema details#homeJournal>summary{display:none!important}
 body.helion-home.nox-owner-cinema details#homeJournal .helion-journal-body{display:block!important}
 body.helion-home.nox-owner-cinema .nox-owner-core span{font-family:inherit;font-size:clamp(8px,.72vw,10px);font-weight:650;line-height:1.2}
+
+/* Exact photo crops from the owner-approved 2026-10-22 HOME source.
+   Faces are not invented, re-rendered or replaced by stock portraits. */
+body.helion-home.nox-owner-cinema .nox-owner-persona{background-size:100% 100%,cover!important;background-position:center center!important;background-repeat:no-repeat!important}
+body.helion-home.nox-owner-cinema .nox-owner-persona[data-idx="0"]{background-image:linear-gradient(0deg,#02030878,transparent 42%),url('./assets/nox-owner-approved/nox-owner-persona-kv.webp')!important}
+body.helion-home.nox-owner-cinema .nox-owner-persona[data-idx="1"]{background-image:linear-gradient(0deg,#02030878,transparent 42%),url('./assets/nox-owner-approved/nox-owner-persona-am.webp')!important}
+body.helion-home.nox-owner-cinema .nox-owner-persona[data-idx="2"]{background-image:linear-gradient(0deg,#02030878,transparent 42%),url('./assets/nox-owner-approved/nox-owner-persona-la.webp')!important}
+body.helion-home.nox-owner-cinema .nox-owner-persona[data-idx="3"]{background-image:linear-gradient(0deg,#02030878,transparent 42%),url('./assets/nox-owner-approved/nox-owner-persona-ev.webp')!important}
+body.helion-home.nox-owner-cinema .nox-owner-persona[data-idx="4"]{background-image:linear-gradient(0deg,#02030878,transparent 42%),url('./assets/nox-owner-approved/nox-owner-persona-kw.webp')!important}
+/* Approved original black-lava core remains visible when WebGL context is absent,
+   avoiding a black-hole cutout. It's behind D02, not a replacement renderer. */
+body.helion-home.nox-owner-cinema .helion-stage .nox-owner-core-still{
+ position:absolute!important;inset:0;z-index:3;pointer-events:none;
+ background-image:url('./assets/nox-owner-approved/NOX_HOME_OWNER_APPROVED_WEB.webp');
+ background-size:cover;background-position:center;
+ -webkit-mask-image:radial-gradient(ellipse 20% 33% at 50% 31%,#000 49%,#0009 70%,transparent 100%);
+ mask-image:radial-gradient(ellipse 20% 33% at 50% 31%,#000 49%,#0009 70%,transparent 100%);
+ opacity:.9;
+}
+body.helion-home.nox-owner-cinema[data-nox-owner-layout="PBR"] .nox-owner-core-still{display:none!important}
+@media(max-width:700px){
+ body.helion-home.nox-owner-cinema .helion-stage .nox-owner-core-still{
+  background-size:auto 100%;
+  -webkit-mask-image:radial-gradient(ellipse 32% 29% at 50% 31%,#000 52%,transparent 100%);
+  mask-image:radial-gradient(ellipse 32% 29% at 50% 31%,#000 52%,transparent 100%);
+ }
+}
