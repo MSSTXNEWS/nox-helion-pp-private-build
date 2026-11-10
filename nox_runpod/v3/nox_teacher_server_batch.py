@@ -142,8 +142,11 @@ def main():
       "model_sha256":p["sha256"],"text":answer,"prompt":prompt,
       "content_sha":hashlib.sha256(answer.encode()).hexdigest(),
       "method":"LOCAL_GGUF_LLAMA_SERVER","quality":"NOT_INDEPENDENTLY_FACT_CHECKED","created_at":utc()}
-    with outfile.open("a",encoding="utf-8") as f:
-     f.write(json.dumps(rec,ensure_ascii=False)+"\n");f.flush();os.fsync(f.fileno())
+    # Shared S03 source: serialize append even when old and new A40 work concurrently.
+    with (OUT/(outfile.name+".write.lock")).open("a+") as out_lock:
+     fcntl.flock(out_lock,fcntl.LOCK_EX)
+     with outfile.open("a",encoding="utf-8") as f:
+      f.write(json.dumps(rec,ensure_ascii=False)+"\n");f.flush();os.fsync(f.fileno())
     existing.add(ident);done+=1
     tokens+=int(res.get("tokens_predicted") or 0)
     print("NOX_V3_TEACHER_SAVED",args.teacher,"plan_task",index+1,"/100","new_batch",done,flush=True)
