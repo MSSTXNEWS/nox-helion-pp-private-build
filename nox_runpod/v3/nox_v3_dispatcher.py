@@ -6,7 +6,7 @@ start compute. 'active' runs one bounded step at a time; no force kill,
 no memory deletion, no model fabrication, and no GPU double ownership.
 """
 from __future__ import annotations
-import argparse, datetime, fcntl, json, os, pathlib, subprocess, sys, time, shutil
+import argparse, datetime, fcntl, json, os, pathlib, subprocess, sys, time, shutil, urllib.request
 
 ROOT=pathlib.Path("/workspace/nox")
 STATE=ROOT/"dispatcher/nox_v3"
@@ -16,6 +16,18 @@ PY=ROOT/"prime9b-venv/bin/python"
 DISTILL=BIN/"a40_full_parameter_distill_cycle.py"
 MEM=ROOT/"memory/NOX_UNIFIED_S03/unified_nox_knowledge.sqlite3"
 A40_TRAIN=ROOT/"dispatcher/a40_full_parameter/progress.json"
+MASTER_URL="https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/main/nox_runpod/control/NOX_MASTER_CONTROL.json"
+def check_github_master():
+    req=urllib.request.Request(MASTER_URL,headers={"User-Agent":"NOX-PRIME-V3/1"})
+    with urllib.request.urlopen(req,timeout=18) as f:
+        data=f.read(32769)
+    if len(data)>32768:raise RuntimeError("MASTER_TOO_LARGE")
+    doc=json.loads(data)
+    if (doc.get("schema")!="nox-control-v1" or doc.get("no_loss") is not True or
+        doc.get("allow_remote_delete") is not False or doc.get("allow_arbitrary_shell") is not False):
+        raise RuntimeError("MASTER_UNSAFE")
+    return doc["revision"]
+
 def utc():return datetime.datetime.now(datetime.timezone.utc).isoformat()
 def emit(obj):
     obj={"utc":utc(),**obj}
@@ -138,6 +150,7 @@ def main():
         print("NOX_V3_DISPATCHER_ALREADY_RUNNING",args.node,flush=True);return
     while True:
         try:
+            github_revision=check_github_master()
             plan=json.loads(PLAN.read_text())
             if plan.get("schema")!="nox-prime-v3" or plan.get("transition",{}).get("no_loss") is not True:
                 raise RuntimeError("UNSAFE_OR_INVALID_PLAN")
