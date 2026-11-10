@@ -50,10 +50,16 @@ def run(node,plan):
     if mode!="active":
         return emit({"node":node,"status":"PREPARED_NOT_STARTED","mode":mode})
     if node=="A5000":
-        if not (BIN/"nox_stage_27b_to_shared.py").is_file():
-            return emit({"node":node,"status":"HOLD_IMPORTER_MISSING"})
-        rc=launch(["python3",str(BIN/"nox_stage_27b_to_shared.py")],1800,"27B_STAGE")
-        return emit({"node":node,"task":"stage_27b_shared","status":"DONE" if rc==0 else "HOLD","exit_code":rc})
+        importer=BIN/"nox_stage_27b_to_shared.py"
+        self_model=BIN/"nox_self_model.py"
+        progress=BIN/"nox_progress_v3.py"
+        if not importer.is_file() or not self_model.is_file():
+            return emit({"node":node,"status":"HOLD_IMPORTER_OR_SELF_MODEL_MISSING"})
+        rc=launch(["python3",str(importer)],1800,"27B_STAGE")
+        self_rc=launch(["python3",str(self_model)],120,"SELF_MODEL")
+        prog_rc=launch(["python3",str(progress)],120,"PROGRESS") if progress.is_file() else 2
+        return emit({"node":node,"task":"27b_stage_s03_self_model","status":"DONE" if rc==0 and self_rc==0 and prog_rc==0 else "PARTIAL",
+                     "model_stage_rc":rc,"self_model_rc":self_rc,"progress_rc":prog_rc})
     if node!="A40":
         return emit({"node":node,"status":"HOLD_NODE_UNKNOWN"})
     if process_has("a40_cuda_distillation_direct.py") or process_has("a40_full_parameter_distill_cycle.py"):
