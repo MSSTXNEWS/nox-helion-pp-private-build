@@ -10,7 +10,7 @@ STATE=R/"dispatcher/nox_eu_genesis"
 STATE.mkdir(parents=True,exist_ok=True)
 TEACHERS=[
  ("Qwen3.5-9B",R/"teachers/Qwen3.5-9B/Qwen3.5-9B-Q4_K_M.gguf"),
- ("Qwen3.5-27B",R/"teachers/Qwen3.5-27B/Qwen3.5-27B-Q4_K_M.gguf"),
+ ("Qwen3.5-27B",R/"teachers/Qwen3.5-27B/Qwen_Qwen3.5-27B-Q4_K_M.gguf"),
  ("DeepSeek-R1-Distill-Qwen-32B",R/"teachers/DeepSeek-R1-Distill-Qwen-32B/DeepSeek-R1-Distill-Qwen-32B-Q4_K_M.gguf")]
 def utc():return datetime.datetime.now(datetime.timezone.utc).isoformat()
 def read(p):
