@@ -19,13 +19,29 @@ done
 D=/opt/nox_a40new/llama.cpp
 GPU_BIN="$D/build/bin/llama-server"
 if [ ! -x "$GPU_BIN" ];then
- if ! command -v nvcc >/dev/null 2>&1;then echo HOLD_CUDA_COMPILER_MISSING; exit 3;fi
+ # CUDA runtime in PyTorch image is not the CUDA compiler; install toolkit,
+ # without replacing NVIDIA host drivers. Never install package 'cuda' (includes drivers).
+ if ! command -v nvcc >/dev/null 2>&1 && [ ! -x /usr/local/cuda-12.8/bin/nvcc ];then
+  echo NOX_INSTALL_CUDA_12_8_COMPILER_ONLY
+  test "$(id -u)" = 0 || { echo HOLD_ROOT_REQUIRED_FOR_CUDA_TOOLKIT;exit 3; }
+  df -Pk / | awk 'NR==2 {if ($4 < 15*1024*1024)exit 3}' || { echo HOLD_DISK_NEED_15_GIB_FOR_CUDA_TOOLKIT;exit 3; }
+  if [ ! -f /etc/os-release ] || ! grep -q '^VERSION_ID="24.04"' /etc/os-release;then
+   echo HOLD_CUDA_INSTALL_UNSUPPORTED_UBUNTU_VERSION;exit 3
+  fi
+  curl -fsSL --retry 3 'https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-keyring_1.1-1_all.deb' -o /tmp/nox_cuda_keyring.deb
+  dpkg -i /tmp/nox_cuda_keyring.deb
+  DEBIAN_FRONTEND=noninteractive apt-get update -qq
+  DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends cuda-toolkit-12-8
+ fi
+ export PATH="/usr/local/cuda-12.8/bin:/usr/local/cuda/bin:$PATH"
+ command -v nvcc >/dev/null 2>&1 || { echo HOLD_CUDA_COMPILER_STILL_MISSING;exit 3; }
+ echo "NOX_CUDA_COMPILER $(nvcc --version | tail -n 1)"
  for dep in git cmake c++;do command -v "$dep" >/dev/null 2>&1 || { echo "HOLD_MISSING_$dep";exit 3; };done
  if [ ! -d "$D/.git" ];then
   mkdir -p /opt/nox_a40new
   git clone --depth 1 https://github.com/ggml-org/llama.cpp.git "$D"
  fi
- cmake -S "$D" -B "$D/build" -DGGML_CUDA=ON -DCMAKE_BUILD_TYPE=Release
+ cmake -S "$D" -B "$D/build" -DGGML_CUDA=ON -DCMAKE_BUILD_TYPE=Release -DCMAKE_CUDA_COMPILER="$(command -v nvcc)"
  cmake --build "$D/build" --target llama-server -j 3
 fi
 test -x "$GPU_BIN" || { echo HOLD_CUDA_LLAMA_BINARY_MISSING;exit 3; }
