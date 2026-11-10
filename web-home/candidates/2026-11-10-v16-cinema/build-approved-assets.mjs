@@ -124,6 +124,15 @@ const ownerFile=path.join(out,ownerAsset);
 if(!fs.existsSync(ownerFile))throw Error('NOX_OWNER_APPROVED_ART_NOT_PACKAGED');
 const ownerSha=crypto.createHash('sha256').update(fs.readFileSync(ownerFile)).digest('hex');
 if(ownerSha!=='3253d26819a70b49259fdb2a56c2eaa2455c6878cb2ccb8d62b225ec6ccdfa22')throw Error('NOX_OWNER_APPROVED_WEB_ART_SHA_DRIFT');
+const ownerPersonaSha={"kv":"4f349edf31118301b2c5d42b0fe5ad2c17aea05fae5622afab90a5a00950584b","am":"67390d082d29d0a90f09e09866875318fdd4c562ea6791f0f51c958adcd28768","la":"e03b0611b237f23ecafbbc1dd6e0aec93aabf38a3bb772af28b1ed0e90e27eaa","ev":"981b21da200f6a4d1c1741a4f5849c9379eb52d781d661ecfdb093ca29652c87","kw":"005d246edce84b4cd0f3d005a5eddb03adbedf8fdfe310ce29e6b95c6a16361e"};
+for(const [id,expected] of Object.entries(ownerPersonaSha)){
+ const rel='assets/nox-owner-approved/nox-owner-persona-'+id+'.webp';
+ const file=path.join(out,rel);
+ if(!fs.existsSync(file))throw Error('NOX_OWNER_PERSONA_FILE_MISSING:'+id);
+ const sha=crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+ if(sha!==expected)throw Error('NOX_OWNER_PERSONA_SOURCE_SHA_DRIFT:'+id);
+}
+
 for(const f of ['nox-owner-director-v20.css','nox-owner-director-v20.js'])if(!fs.existsSync(path.join(out,f)))throw Error('NOX_OWNER_CINEMATIC_FILE_MISSING:'+f);
 execFileSync('node',['--check',path.join(out,'nox-owner-director-v20.js')],{stdio:'pipe'});
 const ownerHtml=fs.readFileSync(path.join(out,'index.html'),'utf8');
@@ -142,7 +151,7 @@ for(const [filename,expected] of Object.entries(sourceOriginals)){
 const packReceipt={
  version:'2026-11-10-P0',assembly:'BUILD_SCRIPT_EXECUTED',pbrHdrCount:records.length,
  bennu:{bytes:bennuReceipt.bytes,sha256:bennuReceipt.sha256,triangles:bennuReceipt.triangles,stlStructure:bennuReceipt.verifiedStlStructure},
- pages:pagesEvidence,ownerApprovedArt:{file:ownerAsset,sha256:ownerSha,origin:'Google Drive owner-approved 2026-10-22 SHA256 382c1069afcaaaed11c319796f2c553d2bd977d7e46c68ecd7d55af26e132a4a'},requiredFiles:mandatory.length,v19LibraryFiles:extrasReceipt.files.length,v19LibraryHashes:extrasReceipt.files.map(x=>({name:x.file,sha256:x.sha256})),
+ pages:pagesEvidence,ownerApprovedArt:{file:ownerAsset,sha256:ownerSha,origin:'Google Drive owner-approved 2026-10-22 SHA256 382c1069afcaaaed11c319796f2c553d2bd977d7e46c68ecd7d55af26e132a4a'},ownerPersonaApprovedCrops:ownerPersonaSha,requiredFiles:mandatory.length,v19LibraryFiles:extrasReceipt.files.length,v19LibraryHashes:extrasReceipt.files.map(x=>({name:x.file,sha256:x.sha256})),
  d02Source:'HISTORICAL_ORIGINAL_VERCEL_SNAPSHOT_SHA256_VERIFIED',
  deployedGpuQA:'HOLD',browserAcceptance:'NOT_EXECUTED',productionModified:false
 };
