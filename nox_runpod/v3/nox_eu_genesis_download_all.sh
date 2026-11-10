@@ -48,7 +48,7 @@ R=pathlib.Path("/workspace/nox")
 models=[
  ("Qwen3.5-9B","Qwen/Qwen3.5-9B",None,R/"models/NOX_9B_UNIFIED",21_000_000_000),
  ("Qwen3.5-9B","bartowski/Qwen_Qwen3.5-9B-GGUF","Qwen3.5-9B-Q4_K_M.gguf",R/"teachers/Qwen3.5-9B",8_000_000_000),
- ("Qwen3.5-27B","bartowski/Qwen_Qwen3.5-27B-GGUF","Qwen3.5-27B-Q4_K_M.gguf",R/"teachers/Qwen3.5-27B",20_000_000_000),
+ ("Qwen3.5-27B","bartowski/Qwen_Qwen3.5-27B-GGUF","Qwen_Qwen3.5-27B-Q4_K_M.gguf",R/"teachers/Qwen3.5-27B",20_000_000_000),
  ("DeepSeek-R1-Distill-Qwen-32B","bartowski/DeepSeek-R1-Distill-Qwen-32B-GGUF","DeepSeek-R1-Distill-Qwen-32B-Q4_K_M.gguf",R/"teachers/DeepSeek-R1-Distill-Qwen-32B",22_000_000_000)]
 def sha(p):
  h=hashlib.sha256()
