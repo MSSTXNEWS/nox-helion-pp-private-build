@@ -50,13 +50,13 @@ def sqlite_summary():
   sources=c.execute("SELECT COUNT(DISTINCT source_file) FROM knowledge").fetchone()[0]
   return {"status":"OK","teacher_counts":counts,"duplicate_text_hash_groups":dup,"distinct_sources":sources}
  finally:c.close()
-def one(mode):
+def one(mode,s03):
  base={"utc":utc(),"worker":mode,"status":"CANDIDATE_ONLY","execution_boundary":"CPU_READ_ONLY",
        "promote_to_trained_weights":False,"memory_mutation":False}
  if mode=="memory_integrity":
-  base["evidence"]=sqlite_summary()
+  base["evidence"]=s03
  elif mode=="knowledge_gaps":
-  a=sqlite_summary();t=a.get("teacher_counts",{})
+  a=s03;t=a.get("teacher_counts",{})
   required=("Qwen3.5-9B","Qwen3.5-27B","DeepSeek-R1-Distill-Qwen-32B")
   base["missing_teacher_provenance"]=[m for m in required if not t.get(m)]
   base["recommended_action"]="Use original verified teacher GGUF with logged model SHA; never relabel 9B"
@@ -111,8 +111,17 @@ def run(node):
  if ram.get("MemAvailable",0)<4096:cores_usable=1
  cores_usable=max(1,min(cores_usable,len(MODES)))
  start=time.monotonic()
+ # One S03 query in the parent; children share an immutable summary.
+ s03={"status":"HOLD_S03_NOT_QUERIED"}
+ for attempt in range(4):
+  try:
+   s03=sqlite_summary()
+   if s03.get("status")=="OK":break
+  except sqlite3.Error as e:
+   s03={"status":"HOLD_S03_LOCKED","reason":str(e)[:160]}
+  time.sleep(min(2*(attempt+1),8))
  with concurrent.futures.ProcessPoolExecutor(max_workers=cores_usable) as pool:
-  futures={pool.submit(one,mode):mode for mode in MODES}
+  futures={pool.submit(one,mode,s03):mode for mode in MODES}
   results=[]
   for future,mode in futures.items():
    try:results.append(future.result(timeout=60))
