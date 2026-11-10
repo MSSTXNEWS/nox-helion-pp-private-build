@@ -23,6 +23,24 @@ for(const name of pages){
   if(!fs.existsSync(absolute)||!fs.statSync(absolute).isFile())missing.push({page,reason:'MISSING',path:relative});
  }
 }
-const result={pages:pages.length,localReferences:checked.length,missingCount:missing.length,missing};
+const cssReferences=[];
+async function walkCss(dir){
+ for(const item of fs.readdirSync(dir,{withFileTypes:true})){
+  const abs=path.join(dir,item.name);
+  if(item.isDirectory()){await walkCss(abs);continue}
+  if(!item.isFile()||!item.name.endsWith('.css'))continue;
+  const css=fs.readFileSync(abs,'utf8'),re=/url\\(\\s*['"]?([^)'"]+)/g;let m;
+  while((m=re.exec(css))){
+   const url=m[1].trim();
+   if(!url||/^(?:https?:|data:|blob:|#|\\/\\/)/i.test(url))continue;
+   const clean=url.split(/[?#]/,1)[0],absolute=url.startsWith('/')?path.resolve(root,url.slice(1)):path.resolve(path.dirname(abs),clean);
+   if(!absolute.startsWith(root+path.sep))throw Error('NOX_UNSAFE_CSS_ASSET:'+url);
+   cssReferences.push({css:path.relative(root,abs),url});
+   if(!fs.existsSync(absolute)||!fs.statSync(absolute).isFile())missing.push({css:path.relative(root,abs),reason:'MISSING_CSS_ASSET',url});
+  }
+ }
+}
+await walkCss(root);
+const result={pages:pages.length,localReferences:checked.length,cssReferences:cssReferences.length,missingCount:missing.length,missing};
 console.log('NOX_STATIC_REFERENCE_AUDIT',JSON.stringify(result));
 if(missing.length)process.exitCode=1;
