@@ -147,9 +147,20 @@ def main():
  try:train,test,teachers=samples()
  except Exception as e:
   report("HOLD","DATA_PREFLIGHT",target=a.steps,reason=str(e)[:250]);return
+ if a.cycle.startswith("v3_"):
+  prior=STATE/"v3_last_accepted_teacher_counts.json"
+  if prior.is_file():
+   try:
+    previous=json.loads(prior.read_text())
+    if not any(teachers.get(t,0)>int(previous.get(t,0)) for t in teachers):
+     report("HOLD","NEW_TEACHER_DATA_REQUIRED",target=a.steps,
+            reason="NO_NEW_TEACHER_EXAMPLES_SINCE_LAST_ACCEPTED_CYCLE")
+     return
+   except (ValueError,TypeError):
+    raise RuntimeError("HOLD_INVALID_LAST_TEACHER_COUNTS")
  report("RUNNING","FULL_PARAMETER_MODEL_LOADING",target=a.steps,extra={"train_examples":len(train),"holdout_examples":len(test),"teacher_counts":teachers})
  # At most one live full checkpoint on container disk. Never overwrite any prior artifact.
- output=DEST/("NOX_FULL_CYCLE_"+a.cycle+"_STEP_"+str(completed))
+ output=DEST/("NOX_FULL_CYCLE_"+a.cycle+"_STEP_"+str(a.steps))
  if output.exists():
   report("HOLD","OUTPUT_EXISTS",target=a.steps,reason="EXISTING_FULL_CHECKPOINT_PRESERVED")
   return
@@ -251,6 +262,11 @@ def main():
          extra={"output_candidate_not_promoted":str(output),"baseline_holdout_loss":baseline,
                 "checkpoint_shards":hashes,"requires_review":True})
   return
+ if a.cycle.startswith("v3_"):
+  tmp=STATE/"v3_last_accepted_teacher_counts.json.tmp"
+  with tmp.open("w",encoding="utf-8") as f:
+   json.dump(teachers,f,indent=2);f.flush();os.fsync(f.fileno())
+  os.replace(tmp,STATE/"v3_last_accepted_teacher_counts.json")
  report("COMPLETE_VERIFIED","FULL_WEIGHTS_SAVED_AND_HOLDOUT_EVALUATED",
         steps=a.steps,target=a.steps,loss=lastloss,holdout=after,
         extra={"output":str(output),"checkpoint_shards":hashes,
