@@ -13,7 +13,7 @@ STATE=ROOT/"dispatcher/nox_v3"
 BIN=STATE/"bin"
 PLAN=STATE/"NOX_PRIME_V3_PLAN.json"
 PY=ROOT/"prime9b-venv/bin/python"
-DISTILL=ROOT/"tools/a40_full_parameter_distill_cycle.py"
+DISTILL=BIN/"a40_full_parameter_distill_cycle.py"
 MEM=ROOT/"memory/NOX_UNIFIED_S03/unified_nox_knowledge.sqlite3"
 A40_TRAIN=ROOT/"dispatcher/a40_full_parameter/progress.json"
 def utc():return datetime.datetime.now(datetime.timezone.utc).isoformat()
@@ -67,7 +67,7 @@ def run(node,plan):
     out={}
     for teacher in ("Qwen3.5-27B","DeepSeek-R1-Distill-Qwen-32B"):
         model=ROOT/("teachers/Qwen3.5-27B/Qwen3.5-27B-Q4_K_M.gguf" if teacher=="Qwen3.5-27B"
-                    else "teachers/DeepSeek-R1-Distill-Qwen-32B/model.gguf")
+                    else "teachers/DeepSeek-R1-Distill-Qwen-32B/DeepSeek-R1-Distill-Qwen-32B-Q4_K_M.gguf")
         if not model.is_file():
             out[teacher]="HOLD_MODEL_NOT_READY"
             continue
