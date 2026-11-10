@@ -39,6 +39,18 @@ try{
      ownerButtons:document.querySelectorAll('.nox-owner-actions button').length};
    });
    if(name==='1440'){
+     ownerCheck.portraitsHttp=await page.evaluate(async()=>{
+       const expected={kv:'4f349edf31118301b2c5d42b0fe5ad2c17aea05fae5622afab90a5a00950584b',am:'67390d082d29d0a90f09e09866875318fdd4c562ea6791f0f51c958adcd28768',la:'e03b0611b237f23ecafbbc1dd6e0aec93aabf38a3bb772af28b1ed0e90e27eaa',ev:'981b21da200f6a4d1c1741a4f5849c9379eb52d781d661ecfdb093ca29652c87',kw:'005d246edce84b4cd0f3d005a5eddb03adbedf8fdfe310ce29e6b95c6a16361e'};
+       return await Promise.all(Object.entries(expected).map(async([id,sha])=>{
+         const r=await fetch('./assets/nox-owner-approved/nox-owner-persona-'+id+'.webp',{cache:'no-store'});
+         if(!r.ok)return {id,status:r.status,verified:false};
+         const bytes=await r.arrayBuffer(),hash=await crypto.subtle.digest('SHA-256',bytes);
+         const digest=[...new Uint8Array(hash)].map(x=>x.toString(16).padStart(2,'0')).join('');
+         return {id,status:r.status,bytes:bytes.byteLength,verified:digest===sha};
+       }));
+     });
+   }
+   if(name==='1440'){
      ownerCheck.artHttp=await page.evaluate(async()=>{
        const r=await fetch('./assets/nox-owner-approved/NOX_HOME_OWNER_APPROVED_WEB.webp',{cache:'no-store'});
        if(!r.ok)return {status:r.status,verified:false};
@@ -115,4 +127,4 @@ report.completedAt=new Date().toISOString();
 report.summary={browserCandidates:report.cases.filter(c=>c.acceptance==='BROWSER_CANDIDATE').length,total:report.cases.length,physicalGpu:'NOT_TESTED',v19ModulesPassed:report.v19Modules?.filter(x=>x.passed).length||0,pageUiPassed:report.sections?.filter(x=>x.acceptance==='PAGE_UI_PASS').length??0};
 await fs.writeFile(path.join(out,'report.json'),JSON.stringify(report,null,2));
 console.log(JSON.stringify(report.summary));
-if(report.cases.some(c=>!c.ownerCheck?.ready||c.ownerCheck.cores?.length!==8||c.ownerCheck.personas?.length!==5||!c.ownerCheck.originalWebgl)||report.cases.some(c=>c.ownerCheck?.artHttp&&!c.ownerCheck.artHttp.verified)||report.summary.v19ModulesPassed!==3 || report.v19ModuleErrors?.length || report.summary.pageUiPassed!==10 || report.summary.browserCandidates!==viewports.length || report.cases.some(c=>c.assetCheck && c.assetCheck.passed!==14))process.exitCode=1;
+if(report.cases.some(c=>!c.ownerCheck?.ready||c.ownerCheck.cores?.length!==8||c.ownerCheck.personas?.length!==5||!c.ownerCheck.originalWebgl)||report.cases.some(c=>c.ownerCheck?.artHttp&&!c.ownerCheck.artHttp.verified)||report.cases.some(c=>c.ownerCheck?.portraitsHttp&&c.ownerCheck.portraitsHttp.some(p=>!p.verified))||report.summary.v19ModulesPassed!==3 || report.v19ModuleErrors?.length || report.summary.pageUiPassed!==10 || report.summary.browserCandidates!==viewports.length || report.cases.some(c=>c.assetCheck && c.assetCheck.passed!==14))process.exitCode=1;
