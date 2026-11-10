@@ -19,7 +19,7 @@ const report={source:url,startedAt:new Date().toISOString(),browser:'Chromium Sw
 try{
  for(const [name,width,height] of viewports){
   const page=await browser.newPage({viewport:{width,height},deviceScaleFactor:1});
-  const errors=[];page.on('pageerror',e=>errors.push('JS: '+e.message));page.on('console',msg=>{if(msg.type()==='error')errors.push('CONSOLE: '+msg.text())});
+  const errors=[];page.on('pageerror',e=>errors.push('JS: '+e.message));page.on('response',r=>{if(r.status()>=400)errors.push('HTTP '+r.status()+' '+r.url())});page.on('console',msg=>{if(msg.type()==='error')errors.push('CONSOLE: '+msg.text())});
   let status=null,snapshot=null,assetCheck=null,ownerCheck=null,blocked=null;
   try{
    const response=await page.goto(url,{waitUntil:'domcontentloaded',timeout:45000});
@@ -71,7 +71,7 @@ try{
  report.sections=[];
  for(const name of pages){
   const page=await browser.newPage({viewport:{width:1440,height:900}});
-  const errors=[];page.on('pageerror',e=>errors.push(e.message));
+  const errors=[];page.on('pageerror',e=>errors.push(e.message));page.on('response',r=>{if(r.status()>=400)errors.push('HTTP '+r.status()+' '+r.url())});
   let status=null,checks=null;
   try{
    const response=await page.goto(new URL(name,url).href,{waitUntil:'domcontentloaded',timeout:45000});
@@ -97,7 +97,10 @@ try{
   const response=await p.goto(new URL('index.html',url).href,{waitUntil:'domcontentloaded',timeout:45000});
   if(response?.status()!==200)throw Error('HOME_HTTP_'+response?.status());
   await p.waitForFunction(()=>!!window.NOX_UNIVERSE_V19,{timeout:15000});
-  await p.locator('.nox-v19-launch').click();
+  // Owner-approved HOME has its own visible menu button; legacy launcher is intentionally hidden.
+  const ownerMenu=p.locator('.nox-owner-actions button').first();
+  if(await ownerMenu.isVisible())await ownerMenu.click();else await p.locator('.nox-v19-launch').click();
+  await p.waitForSelector('.nox-v19-panel:not([hidden])',{timeout:10000});
   const moduleButtons=await p.locator('.nox-v19-tabs button').allTextContents();
   for(const name of ['Кинотеатр','Книги','Календарь','Галерея','Эффекты','Новости','Уведомления','Погода','Валюта','Браузер','Разделы'])
    if(!moduleButtons.includes(name))throw Error('NOX_V19_MISSING_MODULE_BUTTON_'+name);
