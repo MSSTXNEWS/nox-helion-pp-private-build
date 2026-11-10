@@ -18,6 +18,8 @@ const sources=[
  {name:'photoswipe-lightbox.esm.js',url:'https://cdn.jsdelivr.net/npm/photoswipe@5.4.4/dist/photoswipe-lightbox.esm.js',minBytes:10000,maxBytes:350000,license:'MIT'},
  {name:'photoswipe.css',url:'https://cdn.jsdelivr.net/npm/photoswipe@5.4.4/dist/photoswipe.css',minBytes:500,maxBytes:80000,license:'MIT'},
  {name:'PHOTOSWIPE-LICENSE.txt',url:'https://cdn.jsdelivr.net/npm/photoswipe@5.4.4/LICENSE',minBytes:100,maxBytes:20000,license:'MIT'},
+ {name:'tsparticles.slim.bundle.min.js',url:'https://cdn.jsdelivr.net/npm/@tsparticles/slim@4.5.3/tsparticles.slim.bundle.min.js',minBytes:80000,maxBytes:450000,license:'MIT'},
+ {name:'TSPARTICLES-LICENSE.txt',url:'https://cdn.jsdelivr.net/npm/@tsparticles/slim@4.5.3/LICENSE',minBytes:100,maxBytes:10000,license:'MIT'},
  {name:'pdf.mjs',url:'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.mjs',minBytes:100000,maxBytes:5000000,license:'Apache-2.0'},
  {name:'pdf.worker.mjs',url:'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.worker.mjs',minBytes:100000,maxBytes:6000000,license:'Apache-2.0'},
  {name:'PDFJS-LICENSE.txt',url:'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/LICENSE',minBytes:500,maxBytes:100000,license:'Apache-2.0'},
