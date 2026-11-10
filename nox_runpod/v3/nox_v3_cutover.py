@@ -14,7 +14,9 @@ STOP={
 }
 KNOWN={
  "A40":{"a40_cuda_distillation_direct.py","a40_full_parameter_distill_cycle.py"},
- "A5000":{"a5000_cuda_secondary_direct.py","a5000_cuda_distillation_direct.py"}
+ "A5000":{"a5000_cuda_secondary_direct.py","a5000_cuda_distillation_direct.py",
+          "a5000_background_knowledge.py","a5000_second_cuda_distillation.py",
+          "a5000_pure_distillation.py"}
 }
 def processes():
     result=[]
