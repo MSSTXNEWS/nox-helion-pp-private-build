@@ -217,6 +217,14 @@ def main():
   report("HOLD","SAFE70_BEFORE_FIRST_OPTIMIZER_STEP",target=a.steps,
          reason="STOP_OR_HOLD_MARKER_PRESENT")
   return
+ # Interrupted but useful partial full-weight checkpoints identify the actual
+ # number of completed steps, not the original requested target.
+ if completed!=a.steps:
+  output=DEST/("NOX_FULL_CYCLE_"+a.cycle+"_STEP_"+str(completed))
+  if output.exists():
+   report("HOLD","PARTIAL_OUTPUT_EXISTS",steps=completed,target=a.steps,
+          reason="PRESERVE_EXISTING_PARTIAL_CHECKPOINT")
+   return
  # Last 10% is proof of durable full model save and evaluation, not a fake progress increment.
  mod.eval()
  with torch.inference_mode():
