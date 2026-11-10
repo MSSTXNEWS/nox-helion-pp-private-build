@@ -11,6 +11,14 @@ try {
  if(!$locked){Write-Host 'TRANSFER_ALREADY_RUNNING';return}
  $oldScp=@(Get-CimInstance Win32_Process -Filter "Name='scp.exe'" -ErrorAction SilentlyContinue | Where-Object { $_.CommandLine -like '*nox_full_parameter_A40*' })
  if($oldScp.Count){Write-Host "HOLD_LEGACY_TRANSFER_IN_PROGRESS PID=$($oldScp[0].ProcessId)";return}
+ # Heal master controller after Pod container restart; do not restart any training jobs.
+ $installer='https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/main/nox_runpod/control/install_nox_master_poller.sh'
+ foreach($node in @(@{name='A40';host='69.30.85.193';port='22088'},@{name='A5000';host='69.30.85.188';port='22199'})){
+  $cmd="curl -fsSL --retry 2 '$installer' -o /tmp/nox_control_repair.sh && bash /tmp/nox_control_repair.sh $($node.name)"
+  $a=@('-T','-i',$key,'-p',$node.port,'-o','BatchMode=yes','-o','ConnectTimeout=12',"root@$($node.host)",$cmd)
+  & ssh.exe @a | Out-Host
+  if($LASTEXITCODE -ne 0){Write-Warning "HOLD_CONTROLLER_REPAIR $($node.name)"}
+ }
  $py=@'
 import json,pathlib
 f=pathlib.Path("/workspace/nox/dispatcher/a40_full_parameter/progress.json")
