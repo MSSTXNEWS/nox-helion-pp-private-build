@@ -44,15 +44,20 @@ def launch(argv, timeout, label):
         except subprocess.TimeoutExpired:
             return 124
 def cloud_gpu_gate():
+    # Cloud NVIDIA GPU core is not an AMD Hot Spot. Three readings for
+    # temperature >=70 C before compute, missing sensor = fail-closed HOLD.
     try:
-        p=subprocess.run(["nvidia-smi","--query-gpu=temperature.gpu,memory.free",
-            "--format=csv,noheader,nounits"],capture_output=True,text=True,timeout=10)
-        if p.returncode!=0:return "HOLD_GPU_SENSOR_MISSING"
-        values=[v.strip() for v in p.stdout.splitlines()[0].split(",")]
-        temp=int(values[0])
-        if temp<=0:return "HOLD_GPU_SENSOR_MISSING"
-        if temp>=70:return "HOLD_GPU_TEMP_70C"
-        return None
+        hot=0
+        for i in range(3):
+            p=subprocess.run(["nvidia-smi","--query-gpu=temperature.gpu,memory.free",
+                "--format=csv,noheader,nounits"],capture_output=True,text=True,timeout=10)
+            if p.returncode!=0:return "HOLD_GPU_SENSOR_MISSING"
+            vals=[v.strip() for v in p.stdout.splitlines()[0].split(",")]
+            temp=int(vals[0])
+            if temp<=0:return "HOLD_GPU_SENSOR_MISSING"
+            hot=hot+1 if temp>=70 else 0
+            if i!=2:time.sleep(1)
+        return "STOP_GPU_TEMP_70C_3_READINGS" if hot>=3 else None
     except (OSError,ValueError,IndexError,subprocess.TimeoutExpired):
         return "HOLD_GPU_SENSOR_MISSING"
 
