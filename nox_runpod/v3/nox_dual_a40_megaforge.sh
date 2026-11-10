@@ -6,11 +6,12 @@ NODE="$1"
 case "$NODE" in A40|A40NEW);;*)exit 2;;esac
 R=/workspace/nox
 BASE=https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/feature/nox-prime-v3-teachers-progress-20261110/nox_runpod/v3
-G=$R/dispatcher/nox_guardian/bin
+G=/opt/nox_guardian/bin
 mkdir -p "$G" "$R/logs"
-curl -fsSL --retry 3 --connect-timeout 15 "$BASE/nox_guardian_60s.py" -o "$G/nox_guardian_60s.py.new"
-python3 -m py_compile "$G/nox_guardian_60s.py.new"
-mv -f "$G/nox_guardian_60s.py.new" "$G/nox_guardian_60s.py"
+curl -fsSL --retry 3 --connect-timeout 15 "$BASE/nox_guardian_60s.py" -o "/tmp/nox_guardian_${NODE}_$.py"
+python3 -m py_compile "/tmp/nox_guardian_${NODE}_$.py"
+install -m 644 "/tmp/nox_guardian_${NODE}_$.py" "$G/nox_guardian_60s.py"
+rm -f "/tmp/nox_guardian_${NODE}_$.py"
 if [ "$NODE" = A40NEW ];then
  curl -fsSL --retry 3 "$BASE/nox_a40new_bootstrap.sh" -o /tmp/nox_a40new_start.sh
  bash -n /tmp/nox_a40new_start.sh
