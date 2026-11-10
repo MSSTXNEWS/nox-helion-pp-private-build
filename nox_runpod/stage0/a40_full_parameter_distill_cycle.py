@@ -149,7 +149,7 @@ def main():
   report("HOLD","DATA_PREFLIGHT",target=a.steps,reason=str(e)[:250]);return
  report("RUNNING","FULL_PARAMETER_MODEL_LOADING",target=a.steps,extra={"train_examples":len(train),"holdout_examples":len(test),"teacher_counts":teachers})
  # At most one live full checkpoint on container disk. Never overwrite any prior artifact.
- output=DEST/("NOX_FULL_CYCLE_"+a.cycle+"_STEP_"+str(a.steps))
+ output=DEST/("NOX_FULL_CYCLE_"+a.cycle+"_STEP_"+str(completed))
  if output.exists():
   report("HOLD","OUTPUT_EXISTS",target=a.steps,reason="EXISTING_FULL_CHECKPOINT_PRESERVED")
   return
@@ -176,7 +176,14 @@ def main():
  buckets={t:[x for x in train if x[1]==t] for t in teacher_names}
  used_teacher_counts={t:0 for t in teacher_names}
  cycle_started=time.monotonic()
+ completed=0
+ interrupted=False
+ stop_marker=ROOT/"dispatcher/nox_v3/STOP_A40"
+ hold_marker=ROOT/"dispatcher/nox_v3/HOLD_A40"
  for step in range(1,a.steps+1):
+  if stop_marker.exists() or hold_marker.exists():
+   interrupted=True
+   break
   teacher=teacher_names[(step-1)%len(teacher_names)]
   examples=buckets[teacher]
   text=examples[((step-1)//len(teacher_names))%len(examples)][0]
@@ -185,6 +192,7 @@ def main():
   if not torch.isfinite(loss).item():raise RuntimeError("NONFINITE_TRAINING_LOSS")
   loss.backward()
   opt.step()
+  completed=step
   used_teacher_counts[teacher]+=1
   lastloss=float(loss.detach().float().item())
   elapsed=max(time.monotonic()-cycle_started,0.001)
@@ -194,13 +202,17 @@ def main():
                 "steps_per_hour":round(step/elapsed*3600,3),
                 "eta_seconds":round((a.steps-step)*elapsed/step,1),
                 "student_base":str(pathlib.Path(os.environ.get("NOX_STUDENT_BASE",str(BASE))))})
+ if completed==0:
+  report("HOLD","SAFE70_BEFORE_FIRST_OPTIMIZER_STEP",target=a.steps,
+         reason="STOP_OR_HOLD_MARKER_PRESENT")
+  return
  # Last 10% is proof of durable full model save and evaluation, not a fake progress increment.
  mod.eval()
  with torch.inference_mode():
   after=float(loss_for(mod,tok,test[0][0]).detach().float().item())
  if not math.isfinite(after):raise RuntimeError("NONFINITE_HOLDOUT_LOSS")
- report("RUNNING","FULL_MODEL_STAGING",steps=a.steps,target=a.steps,loss=lastloss,holdout=after)
- stage=DEST/("._WRITING_"+a.cycle+"_STEP_"+str(a.steps))
+ report("RUNNING","FULL_MODEL_STAGING",steps=completed,target=a.steps,loss=lastloss,holdout=after)
+ stage=DEST/("._WRITING_"+a.cycle+"_STEP_"+str(completed))
  if stage.exists():raise RuntimeError("EXISTING_INCOMPLETE_STAGE_NOT_OVERWRITTEN")
  stage.mkdir()
  try:
@@ -211,7 +223,8 @@ def main():
    raise RuntimeError("FULL_WEIGHT_SHARDS_INCOMPLETE")
   hashes=[{"file":p.name,"bytes":p.stat().st_size,"sha256":sha(p)} for p in shards]
   receipt={"status":"FULL_PARAMETER_ADAPTER_FREE_STUDENT_CHECKPOINT_SAVED_NOT_ALL_KNOWLEDGE_ABSORBED",
-     "utc":utc(),"cycle":a.cycle,"steps":a.steps,"parameter_count":total_params,
+     "utc":utc(),"cycle":a.cycle,"steps":completed,"planned_steps":a.steps,
+     "interrupted_for_safe70":interrupted,"parameter_count":total_params,
      "teacher_counts":teachers,"optimizer_steps_by_teacher":used_teacher_counts,
      "train_examples":len(train),
      "holdout_examples":len(test),"baseline_holdout_loss":baseline,
@@ -225,6 +238,12 @@ def main():
  except Exception:
   print("NOX_FULL_STAGE_PRESERVED_ON_ERROR",stage,flush=True)
   raise
+ if interrupted:
+  report("HOLD","SAFE70_INTERRUPTED_FULL_WEIGHTS_SAVED",
+         steps=completed,target=a.steps,loss=lastloss,holdout=after,
+         reason="STOP_OR_HOLD_MARKER_AFTER_STEP",
+         extra={"checkpoint_candidate":str(output),"windows_transfer_requires_review":True})
+  return
  if after>baseline*1.05:
   report("HOLD","FULL_WEIGHTS_SAVED_BUT_REJECTED_BY_HOLDOUT",
          steps=a.steps,target=a.steps,loss=lastloss,holdout=after,
