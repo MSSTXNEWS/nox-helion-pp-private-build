@@ -60,7 +60,7 @@ for(const item of records){
  if(!expected||expected.sha256!==item.sha256||expected.bytes!==item.bytes)throw Error('NOX_PINNED_ASSET_MISMATCH:'+item.path);
 }
 if(records.length!==pinned.files.length)throw Error('NOX_PINNED_ASSET_COUNT_MISMATCH');
-for(const file of ['nox-home.mjs','nox-home-recovery.js','nox-resonance-cinema-v13.js','nox-engines/physical-worlds-v7.mjs','nox-cinematic-health.js','industrial-assets.mjs','industrial-effects.mjs','nox-orbit-original.js']){
+for(const file of ['nox-home.mjs','nox-home-flow.js','nox-home-recovery.js','nox-resonance-cinema-v13.js','nox-engines/physical-worlds-v7.mjs','nox-cinematic-health.js','industrial-assets.mjs','industrial-effects.mjs','nox-orbit-original.js']){
  execFileSync('node',['--check',path.join(out,file)],{stdio:'pipe'});
 }
 for(const name of ['index.html','chat.html','models.html','memory.html','training.html','system.html','projects.html','cinema.html','settings.html','install.html']){
