@@ -124,6 +124,14 @@ jobs:
           cp web-home/candidates/2026-11-10-v16-cinema/nox-universe-v19.css /tmp/nox-v19-download/source/
           cp web-home/candidates/2026-11-10-v16-cinema/nox-section-map-v19.json /tmp/nox-v19-download/source/
           cp web-home/candidates/2026-11-10-v16-cinema/nox-install-extra-v19.mjs /tmp/nox-v19-download/source/
+          cp web-home/candidates/2026-11-10-v16-cinema/nox-global-wow-v18.js /tmp/nox-v19-download/source/
+          cp web-home/candidates/2026-11-10-v16-cinema/nox-global-wow-v18.css /tmp/nox-v19-download/source/
+          cp web-home/candidates/2026-11-10-v16-cinema/nox-home.mjs /tmp/nox-v19-download/source/
+          cp web-home/candidates/2026-11-10-v16-cinema/nox-home-flow.js /tmp/nox-v19-download/source/
+          cp web-home/candidates/2026-11-10-v16-cinema/nox-home-flow.css /tmp/nox-v19-download/source/
+          cp web-home/candidates/2026-11-10-v16-cinema/nox-home-recovery.js /tmp/nox-v19-download/source/
+          cp web-home/candidates/2026-11-10-v16-cinema/nox-engines/physical-worlds-v7.mjs /tmp/nox-v19-download/source/
+          cp web-home/candidates/2026-11-10-v16-cinema/build-approved-assets.mjs /tmp/nox-v19-download/source/
       - name: Retrieve optional server and cinematic UI npm distributions
         run: |
           mkdir -p /tmp/nox-v19-download/optional
@@ -141,12 +149,12 @@ jobs:
           import hashlib,json,pathlib
           root=pathlib.Path('/tmp/nox-v19-download')
           receipt=json.loads((root/'vendor/nox-extra/NOX-EXTRA-ASSETS-RECEIPT.json').read_text())
-          assert receipt['complete'] and len(receipt['files'])==10
+          assert receipt['complete'] and len(receipt['files'])==16
           for item in receipt['files']:
               contents=(root/'vendor/nox-extra'/item['file']).read_bytes()
               assert len(contents)==item['size'] and hashlib.sha256(contents).hexdigest()==item['sha256'],item['file']
-          assert len(list((root/'source').glob('*')))==4
-          print('NOX_V19_ARTIFACT_SHA256_PASS 10 binaries + 4 app sources')
+          assert len(list((root/'source').glob('*')))==12
+          print('NOX_V19_ARTIFACT_SHA256_PASS 16 binaries + source modules')
           PY
       - name: Preserve actual ZIP handoff for Drive
         uses: actions/upload-artifact@v4
