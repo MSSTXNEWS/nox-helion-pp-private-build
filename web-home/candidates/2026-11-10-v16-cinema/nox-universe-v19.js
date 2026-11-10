@@ -6,8 +6,8 @@
  if(window.NOX_UNIVERSE_V19)return;
  const modules=['Кинотеатр','Книги','Новости','Погода','Валюта','Браузер','Разделы'];
  const $=(tag,props={},children=[])=>{const el=document.createElement(tag);for(const [k,v] of Object.entries(props)){if(k==='class')el.className=v;else if(k==='text')el.textContent=v;else if(k==='html')el.innerHTML=v;else el.setAttribute(k,v)};for(const c of children)el.append(c);return el};
- const state={active:'Кинотеатр',book:null,video:null,catalog:null,objectUrls:[],player:null,search:''};
- const clean=()=>{for(const u of state.objectUrls)URL.revokeObjectURL(u);state.objectUrls=[];if(state.book?.destroy)try{state.book.destroy()}catch{}state.book=null;state.video?.pause?.();state.video=null;if(state.player?.destroy)try{state.player.destroy()}catch{}state.player=null};
+ const state={active:'Кинотеатр',book:null,video:null,catalog:null,objectUrls:[],player:null,map:null,search:''};
+ const clean=()=>{if(state.map){try{state.map.remove()}catch{}state.map=null}for(const u of state.objectUrls)URL.revokeObjectURL(u);state.objectUrls=[];if(state.book?.destroy)try{state.book.destroy()}catch{}state.book=null;state.video?.pause?.();state.video=null;if(state.player?.destroy)try{state.player.destroy()}catch{}state.player=null};
  const root=$('div',{class:'nox-v19-root'}),openBtn=$('button',{type:'button',class:'nox-v19-launch',text:'✦ ВСЕЛЕННАЯ NOX','aria-label':'Открыть сервисы NOX'}),panel=$('section',{class:'nox-v19-panel',role:'dialog','aria-modal':'true','aria-label':'Сервисы NOX',hidden:''});
  const head=$('header',{class:'nox-v19-head'}),title=$('h2',{text:'NOX · МОДУЛИ'}),close=$('button',{type:'button',text:'✕ ЗАКРЫТЬ',class:'nox-v19-btn'});head.append(title,close);
  const tabs=$('nav',{class:'nox-v19-tabs','aria-label':'Модули'}),body=$('div',{class:'nox-v19-body'}),status=$('div',{class:'nox-v19-status',role:'status','aria-live':'polite'});panel.append(head,tabs,body,status);root.append(openBtn,panel);
@@ -95,6 +95,7 @@
   if(!map){
    map=window.L.map(layer,{scrollWheelZoom:false,zoomControl:true,attributionControl:true,preferCanvas:true}).setView([lat,lon],8);
    window.L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:12,minZoom:2,attribution:'© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a>'}).addTo(map);
+   state.map=map;
   }else{map.setView([lat,lon],8);}
   if(marker)marker.remove();
   marker=window.L.circleMarker([lat,lon],{radius:10,color:'#e9b978',weight:2,fillColor:'#f2b76b',fillOpacity:.8}).addTo(map).bindPopup(label);
