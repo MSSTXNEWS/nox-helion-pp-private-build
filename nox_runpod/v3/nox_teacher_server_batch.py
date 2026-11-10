@@ -122,7 +122,11 @@ def main():
    if not ready:
     print("HOLD_TEACHER_SERVER_NOT_READY",args.teacher,flush=True);return 2
    done=0;tokens=0
-   for index in range(args.start,min(100,args.start+args.limit)):
+   if args.node=="A5000" and args.start>=50:
+    raise RuntimeError("A5000_SEGMENT_RANGE_INVALID")
+   if args.node=="A40" and args.start<50:
+    raise RuntimeError("A40_SEGMENT_RANGE_INVALID")
+   for index in range(args.start,min(100,args.start+50)):
     if done>=args.limit:break
     prompt=TOPICS[index%len(TOPICS)]+". Variant "+str(index//len(TOPICS)+1)+": provide a concrete, accurate original response with independent validation steps."
     ident=hashlib.sha256((args.teacher+"|V3|"+str(index)+"|"+prompt).encode()).hexdigest()
