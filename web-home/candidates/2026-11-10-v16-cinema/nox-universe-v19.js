@@ -4,7 +4,7 @@
  */
 (()=>{'use strict';
  if(window.NOX_UNIVERSE_V19)return;
- const modules=['Кинотеатр','Книги','Новости','Погода','Валюта','Браузер','Разделы'];
+ const modules=['Кинотеатр','Книги','Новости','Уведомления','Погода','Валюта','Браузер','Разделы'];
  const $=(tag,props={},children=[])=>{const el=document.createElement(tag);for(const [k,v] of Object.entries(props)){if(k==='class')el.className=v;else if(k==='text')el.textContent=v;else if(k==='html')el.innerHTML=v;else el.setAttribute(k,v)};for(const c of children)el.append(c);return el};
  const state={active:'Кинотеатр',book:null,video:null,catalog:null,objectUrls:[],player:null,map:null,search:''};
  const clean=()=>{if(state.map){try{state.map.remove()}catch{}state.map=null}for(const u of state.objectUrls)URL.revokeObjectURL(u);state.objectUrls=[];if(state.book?.destroy)try{state.book.destroy()}catch{}state.book=null;state.video?.pause?.();state.video=null;if(state.player?.destroy)try{state.player.destroy()}catch{}state.player=null};
@@ -19,7 +19,7 @@
  function notice(parent,text){parent.append($('p',{class:'nox-v19-note',text}))}
  function sectionButton(name){const b=action(name,()=>show(name));b.setAttribute('aria-pressed',String(name===state.active));tabs.append(b)}
  function show(name){clean();state.active=name;body.replaceChildren();tabs.replaceChildren();for(const key of modules)sectionButton(key);live('Источник данных и состояние указаны в каждом модуле. Действия подтверждаются вручную.');
- if(name==='Кинотеатр')cinema();else if(name==='Книги')books();else if(name==='Новости')news();else if(name==='Погода')weather();else if(name==='Валюта')currency();else if(name==='Браузер')browser();else sections();}
+ if(name==='Кинотеатр')cinema();else if(name==='Книги')books();else if(name==='Новости')news();else if(name==='Уведомления')notifications();else if(name==='Погода')weather();else if(name==='Валюта')currency();else if(name==='Браузер')browser();else sections();}
  function open(){panel.hidden=false;openBtn.hidden=true;show(state.active);close.focus()}
  function dismiss(){clean();panel.hidden=true;openBtn.hidden=false;openBtn.focus()}
  openBtn.addEventListener('click',open);close.addEventListener('click',dismiss);
@@ -129,6 +129,42 @@
  }
  city.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();search()}});
  c.append(row(city,action('НАЙТИ ГОРОД',search)),result,modeButtons,statusMap,layer,info,forecast);
+ }
+
+ function notifications(){
+  const c=shell('Уведомления · Центр событий NOX');
+  notice(c,'Локальное уведомление — это не серверный Web Push. Отправка на другое устройство требует подписки, VAPID, backend и подтверждённой доставки.');
+  const output=$('div',{class:'nox-v19-feed','aria-label':'Локальная история уведомлений'}),detail=$('p',{class:'nox-v19-note'});
+  const key='nox-v19-notifications';
+  const get=()=>{try{const value=JSON.parse(localStorage.getItem(key)||'[]');return Array.isArray(value)?value.slice(-50):[]}catch{return []}};
+  const save=x=>{try{localStorage.setItem(key,JSON.stringify(x.slice(-50)))}catch(e){live('История уведомлений не сохранена: '+e.message,'error')}};
+  const status=$('div',{class:'nox-v19-notification-state'});
+  async function inspect(){
+   const hasAPI=('Notification' in window),hasWorker=('serviceWorker' in navigator),secure=window.isSecureContext;
+   const permission=hasAPI?Notification.permission:'UNSUPPORTED';
+   let sub='HOLD';try{const registration=await navigator.serviceWorker?.getRegistration?.();const current=registration?.pushManager?await registration.pushManager.getSubscription():null;sub=current?'PUSH_SUBSCRIPTION_PRESENT_NOT_DELIVERY_VERIFIED':'NO_ACTIVE_PUSH_SUBSCRIPTION'}catch(e){sub='PUSH_CHECK_FAILED: '+e.message}
+   status.textContent='HTTPS: '+(secure?'OK':'HOLD')+' · Разрешение: '+permission+' · Service Worker: '+(hasWorker?'SUPPORTED':'UNAVAILABLE')+' · '+sub;
+   status.dataset.type=hasAPI&&secure?'info':'warn';
+  }
+  function paint(){output.replaceChildren();const rows=get().slice().reverse();if(!rows.length)output.append($('p',{class:'nox-v19-note',text:'Пока нет локальных уведомлений.'}));
+   for(const row of rows){const card=$('div',{class:'nox-v19-feed-item'});
+    card.append($('strong',{text:String(row.title||'NOX').slice(0,100)}),$('small',{text:String(row.at||'')+' · '+(row.read?'Прочитано':'Новое')}),$('p',{text:String(row.message||'').slice(0,500)}));
+    card.append(action('ПРОЧИТАНО',()=>{const all=get();const target=all.find(x=>x.id===row.id);if(target)target.read=true;save(all);paint()}));output.append(card);
+   }
+  }
+  async function localTest(){
+   if(!('Notification' in window)){live('Этот браузер не поддерживает уведомления','error');return}
+   if(!window.isSecureContext){live('Для уведомлений необходим безопасный HTTPS/localhost','error');return}
+   let permission=Notification.permission;
+   if(permission==='default')permission=await Notification.requestPermission();
+   if(permission!=='granted'){live('Пользователь не разрешил уведомления: '+permission,'warn');await inspect();return}
+   const event={id:String(Date.now()),title:'NOX HELION · Тест',message:'Локальное уведомление. Удалённая Web Push доставка НЕ проверена.',at:new Date().toISOString(),read:false};
+   try{new Notification(event.title,{body:event.message,tag:'nox-v19-local-test'})}catch(e){live('Системный показ HOLD: '+e.message,'error');return}
+   const all=get();all.push(event);save(all);paint();await inspect();live('Локальное уведомление показано. Это не push-доставка на устройство.','ok');
+  }
+  c.append(status,row(action('ПРОВЕРИТЬ ПОДПИСКУ',inspect),action('ТЕСТ НА ЭТОМ УСТРОЙСТВЕ',localTest),action('НАСТРОЙКИ PUSH NOX',()=>location.assign('settings.html')),action('ОЧИСТИТЬ ЛОКАЛЬНУЮ ИСТОРИЮ',()=>{if(confirm('Удалить только локальную историю уведомлений этого браузера?')){save([]);paint();live('Удалена только локальная история','ok')}})),detail,output);
+  detail.textContent='Реальная отправка через native-push-sw.js возможна лишь после подключения и проверки исходного API /api/ui/push, без фальшивого PASS.';
+  paint();inspect();
  }
  function currency(){const c=shell('Курсы · официальные справочные значения');notice(c,'Frankfurter v2: справочные курсы центральных банков, не биржевые котировки. BYN, EUR, USD, RUB доступны по данным поставщика.');const from=field('Исходная валюта, например EUR'),to=field('Целевая валюта, например BYN'),amount=field('Сумма','number');from.value='EUR';to.value='USD';amount.value='100';const output=$('div',{class:'nox-v19-big'});c.append(row(from,to,amount,action('ПОСЧИТАТЬ',async()=>{try{const a=from.value.trim().toUpperCase(),b=to.value.trim().toUpperCase(),n=Number(amount.value);if(!/^[A-Z]{3}$/.test(a)||!/^[A-Z]{3}$/.test(b)||!Number.isFinite(n)||n<0)throw Error('Введите ISO валюты и положительную сумму');if(a===b){output.textContent=n.toLocaleString('ru-RU')+' '+a;return}const r=await fetch('https://api.frankfurter.dev/v2/rate/'+encodeURIComponent(a.toLowerCase())+'/'+encodeURIComponent(b.toLowerCase()),{signal:AbortSignal.timeout(12000)});if(!r.ok)throw Error('HTTP '+r.status);const v=await r.json();if(!Number.isFinite(v.rate))throw Error('Курс недоступен');output.textContent=new Intl.NumberFormat('ru-RU',{style:'currency',currency:b}).format(n*v.rate);live('Frankfurter · '+v.date+' · 1 '+a+' = '+v.rate+' '+b,'ok')}catch(e){live('Курсы HOLD: '+e.message,'error')}})),output)}
  function browser(){const c=shell('Браузер источников');notice(c,'Используется изолированная вкладка браузера. Ограничения CORS, CSP, DRM и входа на сайты не обходятся.');const url=field('HTTPS URL страницы или поисковый запрос');const bookmarks=$('div',{class:'nox-v19-feed'});const key='nox-browser-bookmarks';const saved=()=>{try{return JSON.parse(localStorage.getItem(key)||'[]')}catch{return []}};const paint=()=>{bookmarks.replaceChildren();for(const u of saved())bookmarks.append(row(action('ОТКРЫТЬ '+new URL(u).host,()=>openUrl(u)),action('УДАЛИТЬ',()=>{localStorage.setItem(key,JSON.stringify(saved().filter(x=>x!==u)));paint()})))};
