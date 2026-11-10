@@ -12,7 +12,7 @@ OUT=ROOT/"distillation"
 STATE=ROOT/"dispatcher/nox_v3"
 MODELS={
     "Qwen3.5-27B": ROOT/"teachers/Qwen3.5-27B/Qwen3.5-27B-Q4_K_M.gguf",
-    "DeepSeek-R1-Distill-Qwen-32B": ROOT/"teachers/DeepSeek-R1-Distill-Qwen-32B/model.gguf",
+    "DeepSeek-R1-Distill-Qwen-32B": ROOT/"teachers/DeepSeek-R1-Distill-Qwen-32B/DeepSeek-R1-Distill-Qwen-32B-Q4_K_M.gguf",
 }
 TOPICS=[
     "Create a rigorous numerical reasoning problem with a complete checked solution",
@@ -79,7 +79,7 @@ def main():
         if sha(model)!=meta["sha256"]:
             print("HOLD_MODEL_SHA256_MISMATCH",flush=True);return 2
         atomic(cache,identity)
-    cli=shutil.which("llama-cli")
+    cli=shutil.which("llama-cli") or (str(ROOT/"tools/llama.cpp/build/bin/llama-cli") if (ROOT/"tools/llama.cpp/build/bin/llama-cli").is_file() else None)
     if not cli:
         print("HOLD_LLAMA_CPP_CLI_MISSING_INSTALL_RUNTIME_FIRST",flush=True);return 2
     # No teacher inference may overlap a full-parameter trainer on the same A40.
