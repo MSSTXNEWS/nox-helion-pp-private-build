@@ -22,6 +22,9 @@ mv "$BIN/a40_full_parameter_distill_cycle.py.tmp" "$BIN/a40_full_parameter_disti
 curl -fsSL --retry 3 "$BASE/nox_runpod/v3/NOX_PRIME_V3_PLAN.json" -o "$S/NOX_PRIME_V3_PLAN.json.tmp"
 python3 -m json.tool "$S/NOX_PRIME_V3_PLAN.json.tmp" >/dev/null
 mv "$S/NOX_PRIME_V3_PLAN.json.tmp" "$S/NOX_PRIME_V3_PLAN.json"
+curl -fsSL --retry 3 "$BASE/nox_runpod/v3/NOX_WOW50_IDENTITY.json" -o "$S/NOX_WOW50_IDENTITY.json.tmp"
+python3 -m json.tool "$S/NOX_WOW50_IDENTITY.json.tmp" >/dev/null
+mv "$S/NOX_WOW50_IDENTITY.json.tmp" "$S/NOX_WOW50_IDENTITY.json"
 if [ "$NODE" = A5000 ]; then
   python3 "$BIN/nox_stage_27b_to_shared.py" || echo HOLD_STAGE_27B_KEEP_ORIGINAL
 fi
