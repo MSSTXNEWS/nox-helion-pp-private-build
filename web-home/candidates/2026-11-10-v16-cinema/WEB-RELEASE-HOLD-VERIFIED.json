@@ -1,0 +1,59 @@
+{
+  "project": "NOX HELION",
+  "target": "preview",
+  "deployment": "dpl_LaD842iRKrpggcpJgpvydRg1cW12",
+  "url": "https://nox-helion-real-home-preview-12ef0smxz-msttx.vercel.app/",
+  "sourceFiles": 181,
+  "required": [
+    {
+      "file": "nox-home.mjs",
+      "present": false
+    },
+    {
+      "file": "nox-home-flow.js",
+      "present": false
+    },
+    {
+      "file": "nox-home-recovery.js",
+      "present": false
+    },
+    {
+      "file": "nox-ui.js",
+      "present": true
+    },
+    {
+      "file": "nox-ui.css",
+      "present": true
+    },
+    {
+      "file": "nox-global-wow-v18.js",
+      "present": false
+    },
+    {
+      "file": "nox-global-wow-v18.css",
+      "present": false
+    },
+    {
+      "file": "vendor/nox-liquid-glass/liquid-glass.css",
+      "present": true
+    },
+    {
+      "file": "build-approved-assets.mjs",
+      "present": true
+    }
+  ],
+  "deployStatus": "READY",
+  "buildLogObserved": "Build Completed in /vercel/output [71ms]; NOX ASSETS INSTALLED log absent",
+  "completeWebAcceptance": "HOLD",
+  "physicalGpuAcceptance": "NOT_TESTED",
+  "assetIntegrityRuntime": "NOT_VERIFIED",
+  "productionChanged": false,
+  "driveArchive": {
+    "name": "NOX_HELION_ONE_SOURCE_FUSION_V9_20261109.zip",
+    "bytes": 615706569,
+    "sha256": "4e3e365b5a33954819de59926b7c0bcc4614f2ebbba86fd0f51b08ad5da33648",
+    "zipEntries": 3993,
+    "logicalPaths": 6551,
+    "containsMissingWebRuntime": false
+  }
+}
