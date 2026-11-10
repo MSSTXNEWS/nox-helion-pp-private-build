@@ -95,6 +95,20 @@ def run(node,plan):
         if not importer.is_file() or not self_model.is_file():
             return emit({"node":node,"status":"HOLD_IMPORTER_OR_SELF_MODEL_MISSING"})
         rc=launch(["python3",str(importer)],1800,"27B_STAGE")
+        # When the 27B GGUF is verified and A5000 GPU is free, infer a
+        # ten-task segment on the A5000 while A40 owns full weight training.
+        teacher_rc=None
+        proof=ROOT/"teachers/Qwen3.5-27B/nox_teacher_proof.json"
+        server=BIN/"nox_teacher_server_batch.py"
+        try: verified=json.loads(proof.read_text()).get("status")=="SHA256_VERIFIED_SHARED"
+        except (OSError,ValueError):verified=False
+        if verified and server.is_file() and not process_has("a5000_cuda_secondary_direct.py"):
+            gpu_owners=subprocess.run(["nvidia-smi","--query-compute-apps=pid",
+               "--format=csv,noheader,nounits"],capture_output=True,text=True,timeout=10)
+            if gpu_owners.returncode==0 and not gpu_owners.stdout.strip():
+                teacher_rc=launch(["python3",str(server),"--node","A5000",
+                   "--teacher","Qwen3.5-27B","--gpu-layers","12",
+                   "--limit","10"],4000,"A5000_TEACHER_27B")
         self_rc=launch(["python3",str(self_model)],120,"SELF_MODEL")
         prog_rc=launch(["python3",str(progress)],120,"PROGRESS") if progress.is_file() else 2
         improvement=BIN/"nox_improvement_loop.py"
