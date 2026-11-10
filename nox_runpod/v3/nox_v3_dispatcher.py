@@ -32,7 +32,7 @@ def utc():return datetime.datetime.now(datetime.timezone.utc).isoformat()
 def emit(obj):
     obj={"utc":utc(),**obj}
     STATE.mkdir(parents=True,exist_ok=True)
-    path=STATE/"orchestrator_status.json"
+    path=STATE/("orchestrator_status_"+str(obj.get("node","UNKNOWN"))+".json")
     tmp=path.with_suffix(".tmp")
     with tmp.open("w",encoding="utf-8") as f:
         json.dump(obj,f,ensure_ascii=False,indent=2);f.flush();os.fsync(f.fileno())
