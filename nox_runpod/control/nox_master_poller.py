@@ -94,6 +94,18 @@ def tick(node):
              "s03_exists": (ROOT / "memory/NOX_UNIFIED_S03/unified_nox_knowledge.sqlite3").is_file(),
              "checkpoints": checkpoint_receipts() if node == "A40" else [],
              "remote_delete": False}
+    try:
+        gpu = subprocess.run(
+            ["nvidia-smi", "--query-gpu=name,utilization.gpu,memory.used,memory.free,temperature.gpu",
+             "--format=csv,noheader"], capture_output=True, text=True, timeout=10)
+        state["gpu"] = gpu.stdout.strip() if gpu.returncode == 0 else "HOLD_GPU_TELEMETRY"
+    except (OSError, subprocess.TimeoutExpired):
+        state["gpu"] = "HOLD_GPU_TELEMETRY"
+    try:
+        status = os.statvfs("/workspace")
+        state["workspace_free_gib"] = round(status.f_bavail * status.f_frsize / 1024**3, 2)
+    except OSError:
+        state["workspace_free_gib"] = None
     progress = ROOT / "dispatcher/a40_full_parameter/progress.json"
     if node == "A40" and progress.is_file():
         try:
