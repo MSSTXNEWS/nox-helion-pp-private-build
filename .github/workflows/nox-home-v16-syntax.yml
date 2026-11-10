@@ -24,6 +24,7 @@ jobs:
           node --check web-home/candidates/2026-11-10-v16-cinema/tools/browser-acceptance.mjs
           node --check web-home/candidates/2026-11-10-v16-cinema/tools/physical-gpu-acceptance.mjs
           node --check web-home/candidates/2026-11-10-v16-cinema/tools/assemble-verified-site.mjs
+          node --check web-home/candidates/2026-11-10-v16-cinema/tools/restore-pinned-baseline.mjs
           node --check web-home/candidates/2026-11-10-v16-cinema/nox-global-wow-v18.js
           node --check web-home/candidates/2026-11-10-v16-cinema/nox-owner-director-v20.js
           node --check web-home/candidates/2026-11-10-v16-cinema/nox-owner-fidelity-v21.js
@@ -208,6 +209,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Restore original public NOX WEB baseline with strict SHA256 pins
+        working-directory: web-home/candidates/2026-11-10-v16-cinema
+        run: node tools/restore-pinned-baseline.mjs
       - name: Build the actual ten-page NOX candidate with all mandatory assets
         working-directory: web-home/candidates/2026-11-10-v16-cinema
         run: |
