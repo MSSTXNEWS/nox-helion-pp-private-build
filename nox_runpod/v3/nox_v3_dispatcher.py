@@ -84,6 +84,9 @@ def run(node,plan):
     if mode!="active":
         return emit({"node":node,"status":"PREPARED_NOT_STARTED","mode":mode})
     if node=="A5000":
+        swarm=BIN/"nox_adaptive_swarm.py"
+        if swarm.is_file():
+            launch(["python3",str(swarm),"--node","A5000"],150,"SWARM_A5000")
         importer=BIN/"nox_stage_27b_to_shared.py"
         self_model=BIN/"nox_self_model.py"
         progress=BIN/"nox_progress_v3.py"
@@ -139,6 +142,9 @@ def run(node,plan):
     if process_has("a40_cuda_distillation_direct.py") or process_has("a40_full_parameter_distill_cycle.py"):
         return emit({"node":node,"status":"HOLD_GPU_REOCCUPIED","teachers":out})
     if safe70_halt(node):return emit({"node":node,"status":"HOLD_SAFE70_BEFORE_TRAINING","teachers":out})
+    swarm=BIN/"nox_adaptive_swarm.py"
+    if swarm.is_file():
+        launch(["python3",str(swarm),"--node","A40"],150,"SWARM_A40")
     if not PY.is_file() or not DISTILL.is_file():
         return emit({"node":node,"status":"HOLD_STUDENT_TRAINER_MISSING","teachers":out})
     if not A40_TRAIN.parent.is_dir():
