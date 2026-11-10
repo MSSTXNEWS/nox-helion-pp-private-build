@@ -76,9 +76,9 @@ def main():
        "known_processes_exited":True,"gpu_unowned":True,
        "in_flight_checkpoint_killed":False}
     write(S/("cutover_"+node+".json"),receipt)
-    data["mode"]="active"
-    write(P,data)
-    print("NOX_V3_CUTOVER_ACTIVE",node,flush=True)
+    # Do not activate both Pods by rewriting a SHARED /workspace plan.
+    # Every node needs its own receipt; dispatcher reads only matching node.
+    print("NOX_V3_CUTOVER_READY",node,flush=True)
     return 0
 if __name__=="__main__":
     sys.exit(main())
