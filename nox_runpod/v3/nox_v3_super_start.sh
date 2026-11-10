@@ -10,8 +10,8 @@ BRANCH=feature/nox-prime-v3-teachers-progress-20261110
 BASE=https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/$BRANCH
 mkdir -p "$S" "$BIN" "$R/logs"
 exec 9>"$S/install_$NODE.lock"
-flock -n 9 || { echo HOLD_INSTALL_IN_PROGRESS; exit 2; }
-for name in nox_v3_dispatcher.py nox_progress_v3.py nox_teacher_gguf_batch.py nox_teacher_server_batch.py nox_stage_27b_to_shared.py nox_self_model.py nox_improvement_loop.py nox_adaptive_swarm.py nox_v3_cutover.py; do
+flock -n 9 || { echo NOX_V3_INSTALL_ALREADY_RUNNING_NO_DUPLICATE; exit 0; }
+for name in nox_v3_dispatcher.py nox_progress_v3.py nox_teacher_gguf_batch.py nox_teacher_server_batch.py nox_stage_27b_to_shared.py nox_self_model.py nox_improvement_loop.py nox_adaptive_swarm.py nox_v3_cutover.py nox_v3_supervisor.py nox_v3_keeper.py; do
   curl -fsSL --retry 3 "$BASE/nox_runpod/v3/$name" -o "$BIN/$name.tmp"
   python3 -m py_compile "$BIN/$name.tmp"
   mv "$BIN/$name.tmp" "$BIN/$name"
