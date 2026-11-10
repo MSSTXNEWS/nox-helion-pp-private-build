@@ -123,6 +123,18 @@ for(const page of pages){
   if(!html.includes('nox-progress-panel.css'))html=html.replace(/<\/head>/i,progressStyle+'</head>');
   if(!html.includes('nox-progress-panel.js'))html=html.replace(/<\/body>/i,progressScript+'</body>');
  }
+ // Pin all known shared UI/chart dependencies to verifiable same-origin assets.
+ const pinnedCdn={
+   'https://cdn.jsdelivr.net/npm/lucide@0.456.0/dist/umd/lucide.min.js':'./vendor/nox-extra/lucide.min.js',
+   'https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js':'./vendor/nox-extra/echarts.min.js'
+ };
+ for(const [remote,local] of Object.entries(pinnedCdn)){
+   if(html.includes(remote)){
+    const bin=path.join(out,local.slice(2));
+    if(!fs.existsSync(bin))throw Error('NOX_PINNED_CDN_LOCAL_MISSING:'+local);
+    html=html.replaceAll(remote,local);
+   }
+ }
  if(html.includes('src="/https://'))html=html.replaceAll('src="/https://','src="https://'); // Repair three historically malformed Lucide URLs.
  if(page==='memory.html')html=html.replace(/<img\s+src="nox-memory-core\.svg"[^>]*>/i,''); // Missing decorative art is not fabricated or replaced with a false image.
 
