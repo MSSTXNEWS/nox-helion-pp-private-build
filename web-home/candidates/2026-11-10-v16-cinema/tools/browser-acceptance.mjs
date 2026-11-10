@@ -34,9 +34,31 @@ try{
   report.cases.push({viewport:name,width,height,httpStatus:status,acceptance,blocked,diagnostics:snapshot,assetCheck,errors});
   await page.close();
  }
+ // Cross-section smoke checks: no fake backends, no hidden failures.
+ const pages=['index.html','chat.html','cinema.html','install.html','memory.html','models.html','projects.html','settings.html','system.html','training.html'];
+ report.sections=[];
+ for(const name of pages){
+  const page=await browser.newPage({viewport:{width:1440,height:900}});
+  const errors=[];page.on('pageerror',e=>errors.push(e.message));
+  let status=null,checks=null;
+  try{
+   const response=await page.goto(new URL(name,url).href,{waitUntil:'domcontentloaded',timeout:45000});
+   status=response?.status()||null;
+   await page.waitForTimeout(1250);
+   checks=await page.evaluate(()=>{
+    const select=[...document.querySelectorAll('select')];
+    const visibleSelects=select.filter(el=>{const s=getComputedStyle(el),r=el.getBoundingClientRect();return s.visibility!=='hidden'&&s.display!=='none'&&s.opacity!=='0'&&r.width>1&&r.height>1});
+    const buttons=[...document.querySelectorAll('button')];
+    const missingLinks=[...document.querySelectorAll('a[href]')].filter(a=>!a.getAttribute('href')?.trim()).length;
+    return {sharedStyle:!!document.querySelector('link[href*="nox-global-wow-v18.css"]'),sharedScript:!!window.NOX_WOW_GLOBAL_V18,visibleSelects:visibleSelects.length,choiceGroups:document.querySelectorAll('.nox-wow-choice-group').length,buttons:buttons.length,missingLinks};
+   });
+  }catch(e){errors.push(String(e))}
+  report.sections.push({name,status,checks,errors,acceptance:status===200&&checks?.sharedStyle&&checks?.sharedScript&&checks.visibleSelects===0&&errors.length===0?'PAGE_UI_PASS':'HOLD'});
+  await page.close();
+ }
 }finally{await browser.close()}
 report.completedAt=new Date().toISOString();
-report.summary={browserCandidates:report.cases.filter(c=>c.acceptance==='BROWSER_CANDIDATE').length,total:report.cases.length,physicalGpu:'NOT_TESTED'};
+report.summary={browserCandidates:report.cases.filter(c=>c.acceptance==='BROWSER_CANDIDATE').length,total:report.cases.length,physicalGpu:'NOT_TESTED',pageUiPassed:report.sections?.filter(x=>x.acceptance==='PAGE_UI_PASS').length??0};
 await fs.writeFile(path.join(out,'report.json'),JSON.stringify(report,null,2));
 console.log(JSON.stringify(report.summary));
-if(report.summary.browserCandidates!==viewports.length || report.cases.some(c=>c.assetCheck && c.assetCheck.passed!==14))process.exitCode=1;
+if(report.summary.pageUiPassed!==10 || report.summary.browserCandidates!==viewports.length || report.cases.some(c=>c.assetCheck && c.assetCheck.passed!==14))process.exitCode=1;
