@@ -76,6 +76,9 @@ jobs:
           assert.match(universe,/nox-v19-weather-map/);
           assert.match(universe,/function calendar\(/);
           assert.match(universe,/function gallery\(/);
+          assert.match(universe,/function effects\(/);
+          assert.match(universe,/tsparticles.slim.bundle.min.js/);
+          assert.match(installer,/tsparticles\/slim@4\.5\.3/);
           assert.match(universe,/photoswipe-lightbox\.esm\.js/);
           assert.match(universe,/fullcalendar\.global\.min\.js/);
           assert.match(installer,/photoswipe@5\.4\.4/);
@@ -149,12 +152,12 @@ jobs:
           import hashlib,json,pathlib
           root=pathlib.Path('/tmp/nox-v19-download')
           receipt=json.loads((root/'vendor/nox-extra/NOX-EXTRA-ASSETS-RECEIPT.json').read_text())
-          assert receipt['complete'] and len(receipt['files'])==16
+          assert receipt['complete'] and len(receipt['files'])==18
           for item in receipt['files']:
               contents=(root/'vendor/nox-extra'/item['file']).read_bytes()
               assert len(contents)==item['size'] and hashlib.sha256(contents).hexdigest()==item['sha256'],item['file']
           assert len(list((root/'source').glob('*')))==12
-          print('NOX_V19_ARTIFACT_SHA256_PASS 16 binaries + source modules')
+          print('NOX_V19_ARTIFACT_SHA256_PASS 18 binaries + source modules')
           PY
       - name: Preserve actual ZIP handoff for Drive
         uses: actions/upload-artifact@v4
