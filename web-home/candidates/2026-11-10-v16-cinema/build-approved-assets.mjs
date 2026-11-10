@@ -117,6 +117,12 @@ for(const page of pages){
  if(!html.includes('nox-global-wow-v18.js'))html=html.replace(/<\/body>/i,script+'</body>');
  if(!html.includes('nox-universe-v19.css'))html=html.replace(/<\/head>/i,universeStyle+'</head>');
  if(!html.includes('nox-universe-v19.js'))html=html.replace(/<\/body>/i,universeScript+'</body>');
+ if(page==='system.html'||page==='training.html'){
+  const progressStyle='<link rel="stylesheet" href="./nox-progress-panel.css" data-nox-progress="evidence-only">';
+  const progressScript='<script defer src="./nox-progress-panel.js" data-nox-progress="evidence-only"></script>';
+  if(!html.includes('nox-progress-panel.css'))html=html.replace(/<\/head>/i,progressStyle+'</head>');
+  if(!html.includes('nox-progress-panel.js'))html=html.replace(/<\/body>/i,progressScript+'</body>');
+ }
  if(html.includes('src="/https://'))html=html.replaceAll('src="/https://','src="https://'); // Repair three historically malformed Lucide URLs.
  if(page==='memory.html')html=html.replace(/<img\s+src="nox-memory-core\.svg"[^>]*>/i,''); // Missing decorative art is not fabricated or replaced with a false image.
 
@@ -128,6 +134,18 @@ for(const f of ['nox-global-wow-v18.js','nox-global-wow-v18.css']){
 }
 execFileSync('node',['--check',path.join(out,'nox-global-wow-v18.js')],{stdio:'pipe'});
 execFileSync('node',['--check',path.join(out,'nox-universe-v19.js')],{stdio:'pipe'});
+for(const file of ['nox-progress-core.mjs','nox-progress-panel.js','nox-progress-panel.css','tools/nox-audit-distillation.mjs'])
+ if(!fs.existsSync(path.join(out,file)))throw Error('NOX_PROGRESS_SOURCE_MISSING:'+file);
+execFileSync('node',['--check',path.join(out,'nox-progress-panel.js')],{stdio:'pipe'});
+execFileSync('node',['--check',path.join(out,'nox-progress-core.mjs')],{stdio:'pipe'});
+execFileSync('node',['--check',path.join(out,'tools/nox-audit-distillation.mjs')],{stdio:'pipe'});
+// The static browser never invents an on-disk RunPod checkpoint; a real audit may
+// replace this receipt using the authenticated same-origin NOX runtime.
+fs.writeFileSync(path.join(out,'nox-progress-receipt.json'),JSON.stringify({
+ schema:'nox-progress-receipt-v1',status:'HOLD',reason:'RUNPOD_CHECKPOINT_AND_TRAINER_STATE_NOT_CONNECTED',
+ stepPercent:null,complete:false,weightUpdateVerified:false,windowsSyncVerified:false,
+ qualityGainVerified:false,source:'STATIC_PREVIEW_NO_GPU_EVIDENCE'
+},null,2));
 records.sort((a,b)=>a.path.localeCompare(b.path));
 fs.writeFileSync(path.join(target,'MANIFEST.json'),JSON.stringify({version:'2026-11-10',licenses:{planets:'Solar System Scope CC BY 4.0 — https://www.solarsystemscope.com/textures/',hdr:'Poly Haven Machine Shop 01 CC0',metal:'ambientCG Metal012 CC0'},files:records},null,2));
 fs.writeFileSync(path.join(target,'ATTRIBUTION.txt'),'Planet textures © Solar System Scope, licensed under CC BY 4.0. https://www.solarsystemscope.com/textures/\nHDRI Machine Shop 01 © Poly Haven, CC0.\nMetal012 PBR © ambientCG, CC0.\n');
