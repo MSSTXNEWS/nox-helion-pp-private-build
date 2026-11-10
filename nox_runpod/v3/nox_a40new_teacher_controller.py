@@ -6,7 +6,7 @@ Every 10 seconds monitor; after each bounded batch start next automatically.
 import datetime,fcntl,json,os,pathlib,subprocess,sys,time
 R=pathlib.Path("/workspace/nox")
 S=R/"dispatcher/nox_a40new"
-B=S/"bin"
+B=pathlib.Path("/opt/nox_a40new/bin")
 def utc():return datetime.datetime.now(datetime.timezone.utc).isoformat()
 def emit(**kw):
  obj={"utc":utc(),"node":"A40NEW","status":"RUNNING",**kw}
@@ -49,11 +49,9 @@ def main():
    if not todo:
     emit(status="HOLD_NO_VERIFIED_HEAVY_TEACHER",available=[str(p) for _,p in models if p.is_file()])
     time.sleep(60);continue
-   server=R/"tools/llama.cpp/build/bin/llama-server"
-   if not server.exists():
-    import shutil
-    if not shutil.which("llama-server"):
-     emit(status="HOLD_LLAMA_SERVER_MISSING");time.sleep(60);continue
+   server=pathlib.Path("/opt/nox_a40new/llama.cpp/build/bin/llama-server")
+   if not server.is_file():
+    emit(status="HOLD_LOCAL_CUDA_LLAMA_MISSING");time.sleep(60);continue
    cur=owners()
    if cur is None or cur:
     emit(status="GPU_OTHER_OWNER_PRESERVED",gpu=snapshot(),gpu_owners=cur);time.sleep(60);continue
