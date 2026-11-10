@@ -7,7 +7,7 @@ $branch='feature/nox-prime-v3-teachers-progress-20261110'
 $base='https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/'+$branch+'/nox_runpod/v3'
 New-Item -ItemType Directory -Force -Path $dir | Out-Null
 if(!(Test-Path $key)){throw 'NOX_SSH_KEY_MISSING'}
-foreach($filename in @('nox_windows_v3_receiver.ps1','nox_windows_identity_sync.ps1')){
+foreach($filename in @('nox_windows_v3_receiver.ps1','nox_windows_identity_sync.ps1','nox_windows_v3_cutover_retry.ps1')){
  $url=$base+'/'+$filename
  $dest=Join-Path $dir $filename
  Invoke-WebRequest -UseBasicParsing -Uri $url -OutFile ($dest+'.new')
@@ -28,7 +28,8 @@ foreach($task in $oldTasks){
 }
 $tasks=@(
  @{Name='NOX-V3-Checkpoint-Sync';File='nox_windows_v3_receiver.ps1'},
- @{Name='NOX-V3-Identity-Sync';File='nox_windows_identity_sync.ps1'}
+ @{Name='NOX-V3-Identity-Sync';File='nox_windows_identity_sync.ps1'},
+ @{Name='NOX-V3-Cutover-Retry';File='nox_windows_v3_cutover_retry.ps1'}
 )
 foreach($task in $tasks){
  $script=Join-Path $dir $task.File
