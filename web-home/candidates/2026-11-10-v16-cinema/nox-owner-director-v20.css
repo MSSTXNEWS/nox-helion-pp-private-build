@@ -72,3 +72,8 @@ body.helion-home.nox-owner-cinema #noxCoreEntry{top:55%!important}
  body.helion-home.nox-owner-cinema .helion-stage #noxEclipseCanvas{transform:translateY(-9vh) scale(1.19)!important}
  body.helion-home.nox-owner-cinema #noxCoreEntry{top:52%!important}
 }
+
+/* Approved UX: no disclosure dropdowns; real journal refresh button remains. */
+body.helion-home.nox-owner-cinema details#homeJournal>summary{display:none!important}
+body.helion-home.nox-owner-cinema details#homeJournal .helion-journal-body{display:block!important}
+body.helion-home.nox-owner-cinema .nox-owner-core span{font-family:inherit;font-size:clamp(8px,.72vw,10px);font-weight:650;line-height:1.2}
