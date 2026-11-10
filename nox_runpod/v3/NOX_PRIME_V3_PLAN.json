@@ -1,0 +1,79 @@
+{
+  "schema": "nox-prime-v3",
+  "revision": 1,
+  "updated": "2026-11-10",
+  "poll_seconds": 180,
+  "mode": "prepare_no_forced_cutover",
+  "purpose": "Measurable teacher-to-student knowledge distillation, not raw teacher weight addition or a consciousness proof",
+  "target_gpu_utilization_pct": [
+    75,
+    90
+  ],
+  "preserve": [
+    "/workspace/nox/memory",
+    "/workspace/nox/checkpoints",
+    "/workspace/nox/models",
+    "/opt/nox_full_parameter_A40",
+    "/opt/nox_teacher_27b"
+  ],
+  "teachers": {
+    "Qwen3.5-9B": {
+      "source_node": "A5000",
+      "status": "USED_IN_VERIFIED_20_STEP_CYCLE",
+      "model": "/workspace/nox/models/NOX_PRIME_9B_INHERITED",
+      "planned_tasks": 100,
+      "engine": "existing_9b",
+      "required_evidence": "existing receipts"
+    },
+    "Qwen3.5-27B": {
+      "source_node": "A5000",
+      "target_inference_node": "A40",
+      "status": "DOWNLOADED_NOT_LOADED",
+      "source_file": "/opt/nox_teacher_27b/Qwen3.5-27B-Q4_K_M.gguf",
+      "target_file": "/workspace/nox/teachers/Qwen3.5-27B/Qwen3.5-27B-Q4_K_M.gguf",
+      "source_receipt": "/opt/nox_teacher_27b/teacher_receipt.json",
+      "planned_tasks": 100,
+      "engine": "llama_cpp_cli",
+      "engine_executable": "llama-cli"
+    },
+    "DeepSeek-R1-Distill-Qwen-32B": {
+      "target_inference_node": "A40",
+      "status": "MODEL_NOT_VERIFIED",
+      "target_file": null,
+      "planned_tasks": 100,
+      "engine": "llama_cpp_cli",
+      "engine_executable": "llama-cli"
+    }
+  },
+  "stages": [
+    "model_verified",
+    "inference_ready",
+    "teacher_examples",
+    "source_verified",
+    "holdout_passed",
+    "student_optimizer_steps",
+    "full_checkpoint",
+    "windows_sha_verified"
+  ],
+  "train": {
+    "student": "NOX_9B_UNIFIED",
+    "full_parameter_only": true,
+    "no_lora": true,
+    "steps_per_cycle": 20,
+    "latest_accepted_checkpoint_required": true,
+    "guard_vram_gib": 37,
+    "guard_ram_gib": 24
+  },
+  "export": {
+    "windows_receiver": "NOX-Verified-Windows-Checkpoint-Sync",
+    "checkpoint_only": true,
+    "sha256_required": true,
+    "no_remote_deletion": true
+  },
+  "transition": {
+    "method": "finish_save_then_graceful_stop_then_start_new",
+    "no_kill": true,
+    "no_loss": true
+  },
+  "progress_definition": "100% means a fixed, verifiable per-teacher task set and its checkpoints/export are completed; absorbed_knowledge_percent remains null"
+}
