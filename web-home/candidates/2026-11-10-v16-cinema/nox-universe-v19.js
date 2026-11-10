@@ -316,12 +316,12 @@
         button.dataset.noxAction='navigate';
         list.append(button);active++;
       }else{
-        const line=$('p',{class:'nox-v19-note',text:item.id+' · '+item.page+' — ТЗ, обработчик не подключён'});
-        line.dataset.noxRequirement='not-a-button';
-        list.append(line);reference++;
+        // The requirement remains in the canonical JSON, but is not a visible
+        // fake action or a decorative placeholder in the user's live menu.
+        reference++;
       }
     }
-    live('Действующих кнопок перехода: '+active+' · только требования без обработчика: '+reference+'. Никаких ложных кнопок.');
+    live('Действующих кнопок: '+active+' · ещё не реализованы: '+reference+' (сохранены в реестре ТЗ и не показываются как функции).');
    }
    query.addEventListener('input',paint);
    paint();live('Каталог загружен: '+all.length+' строк по утверждённой матрице');
