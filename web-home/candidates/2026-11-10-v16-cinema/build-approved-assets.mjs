@@ -11,6 +11,7 @@ import {execFileSync} from 'node:child_process';
 const root=process.cwd(), out=path.join(root,'dist');
 fs.rmSync(out,{recursive:true,force:true});
 for(const name of fs.readdirSync(root)){if(['dist','node_modules','.git'].includes(name))continue;fs.cpSync(path.join(root,name),path.join(out,name),{recursive:true});}
+const {installExtras}=await import('./nox-install-extra-v19.mjs');
 const target=path.join(out,'assets/nox-approved');
 fs.mkdirSync(path.join(target,'planets'),{recursive:true});
 fs.mkdirSync(path.join(target,'hdr'),{recursive:true});
@@ -86,6 +87,7 @@ for(const item of ['metal/Metal012_1K-JPG_Color.jpg','metal/Metal012_1K-JPG_Norm
 }
 // Shared V18 UI gets injected into the original TEN HTML pages at build time.
 // The original functional page bodies, navigation and D02 scene are retained.
+const extrasReceipt=await installExtras(out);
 const pages=['index.html','chat.html','cinema.html','install.html','memory.html','models.html','projects.html','settings.html','system.html','training.html'];
 for(const page of pages){
  const p=path.join(out,page);
@@ -94,18 +96,24 @@ for(const page of pages){
  const style='<link rel="stylesheet" href="./nox-global-wow-v18.css" data-nox-wow-shared="v18">';
  const vendor='<link rel="stylesheet" href="./vendor/nox-liquid-glass/liquid-glass.css" data-nox-vendor-glass="original">';
  const script='<script defer src="./nox-global-wow-v18.js" data-nox-wow-shared="v18"></script>';
+ const universeStyle='<link rel="stylesheet" href="./nox-universe-v19.css" data-nox-universe="v19">';
+ const universeScript='<script defer src="./nox-universe-v19.js" data-nox-universe="v19"></script>';
  if(!html.includes('nox-global-wow-v18.css'))html=html.replace(/<\/head>/i,style+'</head>');
  if(!html.includes('vendor/nox-liquid-glass/liquid-glass.css')){
   if(!fs.existsSync(path.join(out,'vendor/nox-liquid-glass/liquid-glass.css')))throw Error('NOX_GLASS_VENDOR_MISSING');
   html=html.replace(/<\/head>/i,vendor+'</head>');
  }
  if(!html.includes('nox-global-wow-v18.js'))html=html.replace(/<\/body>/i,script+'</body>');
+ if(!html.includes('nox-universe-v19.css'))html=html.replace(/<\/head>/i,universeStyle+'</head>');
+ if(!html.includes('nox-universe-v19.js'))html=html.replace(/<\/body>/i,universeScript+'</body>');
  fs.writeFileSync(p,html);
 }
+for(const name of ['nox-universe-v19.js','nox-universe-v19.css','nox-section-map-v19.json','nox-install-extra-v19.mjs'])if(!fs.existsSync(path.join(out,name)))throw Error('NOX_UNIVERSE_V19_MISSING:'+name);
 for(const f of ['nox-global-wow-v18.js','nox-global-wow-v18.css']){
  if(!fs.existsSync(path.join(out,f)))throw Error('NOX_WOW_MISSING:'+f);
 }
 execFileSync('node',['--check',path.join(out,'nox-global-wow-v18.js')],{stdio:'pipe'});
+execFileSync('node',['--check',path.join(out,'nox-universe-v19.js')],{stdio:'pipe'});
 records.sort((a,b)=>a.path.localeCompare(b.path));
 fs.writeFileSync(path.join(target,'MANIFEST.json'),JSON.stringify({version:'2026-11-10',licenses:{planets:'Solar System Scope CC BY 4.0 — https://www.solarsystemscope.com/textures/',hdr:'Poly Haven Machine Shop 01 CC0',metal:'ambientCG Metal012 CC0'},files:records},null,2));
 fs.writeFileSync(path.join(target,'ATTRIBUTION.txt'),'Planet textures © Solar System Scope, licensed under CC BY 4.0. https://www.solarsystemscope.com/textures/\nHDRI Machine Shop 01 © Poly Haven, CC0.\nMetal012 PBR © ambientCG, CC0.\n');
@@ -125,7 +133,7 @@ for(const [filename,expected] of Object.entries(sourceOriginals)){
 const packReceipt={
  version:'2026-11-10-P0',assembly:'BUILD_SCRIPT_EXECUTED',pbrHdrCount:records.length,
  bennu:{bytes:bennuReceipt.bytes,sha256:bennuReceipt.sha256,triangles:bennuReceipt.triangles,stlStructure:bennuReceipt.verifiedStlStructure},
- pages:pagesEvidence,requiredFiles:mandatory.length,
+ pages:pagesEvidence,requiredFiles:mandatory.length,v19LibraryFiles:extrasReceipt.files.length,v19LibraryHashes:extrasReceipt.files.map(x=>({name:x.file,sha256:x.sha256})),
  d02Source:'HISTORICAL_ORIGINAL_VERCEL_SNAPSHOT_SHA256_VERIFIED',
  deployedGpuQA:'HOLD',browserAcceptance:'NOT_EXECUTED',productionModified:false
 };
