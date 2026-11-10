@@ -24,6 +24,21 @@ if [ "$NODE" = A40 ]; then
   # Existing CUDA teacher is asked to finish its in-flight example.
   mkdir -p "$R/dispatcher/a40_direct"
   touch "$R/dispatcher/a40_direct/STOP"
+  # Exact watchdog only; let the current teacher finish/exit on STOP.
+  python3 - <<'PY'
+import pathlib, os, signal
+target="/workspace/nox/dispatcher/a40_direct/watchdog_supervise.sh"
+for p in pathlib.Path("/proc").iterdir():
+    if not p.name.isdigit():
+        continue
+    try:
+        args=[a.decode(errors="replace") for a in (p/"cmdline").read_bytes().split(bytes([0])) if a]
+        if target in args:
+            print("LEGACY_A40_WATCHDOG_SIGTERM", p.name, flush=True)
+            os.kill(int(p.name), signal.SIGTERM)
+    except (OSError, ValueError):
+        pass
+PY
 fi
 if [ -f "$D/poller_${NODE}.pid" ]; then
   PID="$(cat "$D/poller_${NODE}.pid" 2>/dev/null || true)"
