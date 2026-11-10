@@ -50,7 +50,13 @@ def main():
   if active:
    status=read(S/("orchestrator_status_"+node+".json"))
    if not status:status=read(S/"orchestrator_status.json")
-   if status.get("node")!=node or status.get("status") not in ("PREPARED_NOT_STARTED","HOLD_CUTOVER_SAVEPOINT_PENDING","HOLD_OLD_OR_FULL_GPU_OWNER_ACTIVE","HOLD_OTHER_GPU_COMPUTE_OWNER"):
+   states=("PREPARED_NOT_STARTED","HOLD_CUTOVER_SAVEPOINT_PENDING",
+           "HOLD_OLD_OR_FULL_GPU_OWNER_ACTIVE","HOLD_OTHER_GPU_COMPUTE_OWNER")
+   training=read(R/"dispatcher/a40_full_parameter/progress.json")
+   verified_failure=(node=="A40" and status.get("status")=="HOLD"
+      and status.get("trainer_status")=="ERROR" and training.get("status")=="ERROR"
+      and training.get("stage")=="FULL_PARAMETER_CYCLE_FAILED")
+   if status.get("node")!=node or (status.get("status") not in states and not verified_failure):
     report(node,"DISPATCHER_EXISTING_NOT_IDLE",pids=active,current=status.get("status"));return
    gpu=owners();children=descendants(active[0])
    if gpu or children:
