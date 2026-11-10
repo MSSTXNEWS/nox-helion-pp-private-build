@@ -36,17 +36,25 @@
   managed.set(select,{group,update});
   update();
  }
+ function glass(root=document){
+  const nodes=root.querySelectorAll?.('.helion-monitor,.helion-system,.helion-journal,.sidebar,.panel,.card,.nox-glass-surface')||[];
+  for(const host of nodes){
+   if(host.classList.contains('nox-wow-glass-host')||host.closest('.nox-wow-choice-group'))continue;
+   host.classList.add('nox-wow-glass-host','lg-host');
+   for(const name of ['lg-layer','lg-sheen']){const el=document.createElement('span');el.className=name;el.setAttribute('aria-hidden','true');host.prepend(el)}
+  }
+ }
  function scan(root=document){
   if(root.nodeType!==1&&root.nodeType!==9)return;
   if(root.matches?.('select'))convert(root);
   root.querySelectorAll?.('select:not([data-nox-wow-converted])').forEach(convert);
  }
  function boot(){
-  scan();
+  scan();glass();
   const observer=new MutationObserver(records=>{
    for(const record of records){
     if(record.type==='childList'){
-     for(const node of record.addedNodes)scan(node);
+     for(const node of record.addedNodes){scan(node);if(node.nodeType===1 && !node.classList?.contains('lg-layer') && !node.classList?.contains('lg-sheen'))glass(node)}
      if(record.target.tagName==='SELECT'){
       const data=managed.get(record.target);
       if(data){data.group.remove();managed.delete(record.target);record.target.removeAttribute('data-nox-wow-converted');convert(record.target)}
