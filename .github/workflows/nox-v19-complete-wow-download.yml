@@ -27,7 +27,7 @@ jobs:
           import pathlib,hashlib,json
           p=pathlib.Path('/tmp/nox-v19-extended')
           m=json.loads((p/'NOX-EXTENDED-DEPENDENCIES-MANIFEST.json').read_text())
-          assert m['packages_downloaded']>=40, f"Too few actual packages: {m['packages_downloaded']}"
+          assert m['packages_requested']==50 and m['packages_downloaded']==50, f"Full 50-package intake failed: {m['packages_downloaded']}/{m['packages_requested']}"
           assert m['packages_downloaded']+m['packages_failed']==m['packages_requested']
           for a in m['files']:
             if a['status']!='DOWNLOADED_SHA256_VERIFIED': continue
