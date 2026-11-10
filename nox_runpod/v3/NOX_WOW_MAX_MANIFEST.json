@@ -1,0 +1,102 @@
+{
+  "schema": "nox-wow-max-v1",
+  "created_utc": "2026-11-10",
+  "purpose": "Supplement one NOX with sourced emotional cues, self-evaluation, memory benchmark and creative tool source, without training on evaluation answers",
+  "max_concurrent_downloads": 1,
+  "poll_seconds": 180,
+  "gpu_training_interference": false,
+  "hf_models": [
+    {
+      "id": "Horizon-Labs/multilingual-emotions-small",
+      "category": "emotion_ru_es",
+      "role": "CPU ONNX 28-label multilingual emotion cue detector, no subjective feelings",
+      "mandatory": true,
+      "files": [
+        "onnx/model_quantized.onnx",
+        "config.json",
+        "tokenizer.json",
+        "tokenizer_config.json",
+        "special_tokens_map.json",
+        "thresholds.json",
+        "ekman_mapping.json",
+        "README.md"
+      ],
+      "max_file_bytes": 650000000,
+      "estimated_download_mb": 305,
+      "license": "apache-2.0",
+      "source": "https://huggingface.co/Horizon-Labs/multilingual-emotions-small"
+    },
+    {
+      "id": "intfloat/multilingual-e5-small",
+      "category": "multilingual_memory_embeddings",
+      "role": "Optional RU/ES retrieval candidate only if existing Qwen embedding is absent or inferior",
+      "mandatory": false,
+      "files": [
+        "model.safetensors",
+        "config.json",
+        "tokenizer.json",
+        "tokenizer_config.json",
+        "special_tokens_map.json",
+        "sentencepiece.bpe.model",
+        "modules.json",
+        "1_Pooling/config.json",
+        "README.md"
+      ],
+      "max_file_bytes": 650000000,
+      "estimated_download_mb": 500,
+      "source": "https://huggingface.co/intfloat/multilingual-e5-small"
+    }
+  ],
+  "repositories": [
+    {
+      "id": "eq_bench",
+      "url": "https://github.com/EQ-bench/EQ-Bench.git",
+      "category": "emotion_evaluation",
+      "run_as_training_data": false,
+      "source": "https://github.com/EQ-bench/EQ-Bench"
+    },
+    {
+      "id": "longmemeval",
+      "url": "https://github.com/xiaowu0162/LongMemEval.git",
+      "category": "memory_evaluation",
+      "run_as_training_data": false,
+      "source": "https://github.com/xiaowu0162/LongMemEval"
+    },
+    {
+      "id": "sad",
+      "url": "https://github.com/LRudL/sad.git",
+      "category": "situational_self_knowledge_evaluation",
+      "run_as_training_data": false,
+      "source": "https://github.com/LRudL/sad"
+    },
+    {
+      "id": "comfyui",
+      "url": "https://github.com/Comfy-Org/ComfyUI.git",
+      "category": "creative_image_video_tool_source_only",
+      "run_as_training_data": false,
+      "source": "https://github.com/Comfy-Org/ComfyUI"
+    },
+    {
+      "id": "whisper_cpp",
+      "url": "https://github.com/ggml-org/whisper.cpp.git",
+      "category": "voice_tool_source_only",
+      "run_as_training_data": false,
+      "source": "https://github.com/ggml-org/whisper.cpp"
+    }
+  ],
+  "not_downloaded": [
+    "extra_large_llm",
+    "image_generation_checkpoint",
+    "video_generation_checkpoint"
+  ],
+  "integration_policy": {
+    "emotion_model": "offline CPU candidate pending independent RU_ES quality tests",
+    "model_weights_training": "separate A40 full-parameter trainer only",
+    "benchmarks": "sealed evaluation; never training corpora",
+    "creativity": "source only; no claims of installed GPU image model",
+    "genesis": "factual memory and provenance; not subjective consciousness",
+    "windows": "transfer only verified weights and manifests",
+    "no_loss": true,
+    "auto_delete": false
+  }
+}
