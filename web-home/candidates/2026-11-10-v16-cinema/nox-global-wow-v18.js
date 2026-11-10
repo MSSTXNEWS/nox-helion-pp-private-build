@@ -3,9 +3,9 @@
  if(window.NOX_WOW_GLOBAL_V18)return;
  const managed=new WeakMap();
  function convert(select){
-  if(!select||managed.has(select)||select.multiple||select.size>1||select.dataset.noxKeepNative==='true')return;
+  if(!select||managed.has(select))return;
   const options=[...select.options].filter(o=>!o.hidden);
-  if(options.length<2)return;
+  if(!options.length){select.dataset.noxWowConverted='true';select.tabIndex=-1;return;}
   const group=document.createElement('div');
   group.className='nox-wow-choice-group';
   group.setAttribute('role','group');
@@ -13,7 +13,7 @@
   group.setAttribute('aria-label',label);
   const update=()=>{
    const current=[...group.querySelectorAll('button')];
-   current.forEach(btn=>{const chosen=btn.dataset.value===select.value;btn.setAttribute('aria-pressed',String(chosen));btn.disabled=select.disabled||btn.dataset.optionDisabled==='true'});
+   current.forEach(btn=>{const opt=options.find(o=>o.value===btn.dataset.value);const chosen=!!opt&&(select.multiple?opt.selected:btn.dataset.value===select.value);btn.setAttribute('aria-pressed',String(chosen));btn.disabled=select.disabled||btn.dataset.optionDisabled==='true'});
   };
   for(const opt of options){
    const btn=document.createElement('button');btn.type='button';btn.className='nox-wow-choice';
@@ -22,7 +22,7 @@
    btn.disabled=select.disabled||opt.disabled;
    btn.addEventListener('click',()=>{
     if(select.disabled||opt.disabled)return;
-    select.value=opt.value;
+    if(select.multiple){opt.selected=!opt.selected}else{select.value=opt.value}
     select.dispatchEvent(new Event('input',{bubbles:true}));
     select.dispatchEvent(new Event('change',{bubbles:true}));
     update();
@@ -37,7 +37,8 @@
   update();
  }
  function glass(root=document){
-  const nodes=root.querySelectorAll?.('.helion-monitor,.helion-system,.helion-journal,.sidebar,.panel,.card,.nox-glass-surface')||[];
+  const selector='.helion-monitor,.helion-system,.helion-journal,.sidebar,.panel,.card,.nox-glass-surface';
+  const nodes=[...(root.matches?.(selector)?[root]:[]),...(root.querySelectorAll?.(selector)||[])];
   for(const host of nodes){
    if(host.classList.contains('nox-wow-glass-host')||host.closest('.nox-wow-choice-group'))continue;
    host.classList.add('nox-wow-glass-host','lg-host');
