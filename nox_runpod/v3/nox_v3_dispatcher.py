@@ -133,7 +133,7 @@ def run(node,plan):
                       "teacher":"Qwen3.5-27B","task_segment":"0-49",
                       "gpu":cloud_gpu_status()})
                 teacher_rc=launch(["python3",str(server),"--node","A5000","--start","0",
-                   "--teacher","Qwen3.5-27B","--gpu-layers","12",
+                   "--teacher","Qwen3.5-27B","--gpu-layers","36",
                    "--limit","10"],4000,"A5000_TEACHER_27B")
         self_rc=launch(["python3",str(self_model)],120,"SELF_MODEL")
         prog_rc=launch(["python3",str(progress)],120,"PROGRESS") if progress.is_file() else 2
