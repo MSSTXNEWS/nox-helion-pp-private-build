@@ -29,6 +29,11 @@ jobs:
           node --check web-home/candidates/2026-11-10-v16-cinema/nox-global-wow-v18.js
           node --check web-home/candidates/2026-11-10-v16-cinema/nox-owner-director-v20.js
           node --check web-home/candidates/2026-11-10-v16-cinema/nox-owner-fidelity-v21.js
+          node --check web-home/candidates/2026-11-10-v16-cinema/nox-progress-panel.js
+          node --check web-home/candidates/2026-11-10-v16-cinema/nox-progress-core.mjs
+          node --check web-home/candidates/2026-11-10-v16-cinema/tools/nox-audit-distillation.mjs
+          node --check web-home/candidates/2026-11-10-v16-cinema/tools/test-nox-progress.mjs
+          node web-home/candidates/2026-11-10-v16-cinema/tools/test-nox-progress.mjs
           node --check web-home/candidates/2026-11-10-v16-cinema/nox-glass-init.mjs
           node --check web-home/candidates/2026-11-10-v16-cinema/nox-home-flow.js
           node --check web-home/candidates/2026-11-10-v16-cinema/nox-home.mjs
@@ -229,6 +234,14 @@ jobs:
           for(const f of manifest.files){
             const buf=fs.readFileSync(dist+'vendor/nox-extra/'+f.file);
             if(buf.length!==f.size||crypto.createHash('sha256').update(buf).digest('hex')!==f.sha256)throw Error('NOX_VENDOR_SHA_MISMATCH:'+f.file);
+          }
+          const evidence=JSON.parse(fs.readFileSync(dist+'nox-progress-receipt.json','utf8'));
+          if(evidence.schema!=='nox-progress-receipt-v1'||evidence.status!=='HOLD'||evidence.stepPercent!==null||evidence.complete!==false)
+            throw Error('NOX_STATIC_PROGRESS_MUST_HOLD_WITHOUT_REAL_WEIGHTS');
+          for(const page of ['system.html','training.html']){
+            const html=fs.readFileSync(dist+page,'utf8');
+            for(const name of ['nox-progress-panel.js','nox-progress-panel.css'])if(!html.includes(name))
+              throw Error('NOX_PROGRESS_NOT_WIRED:'+page+':'+name);
           }
           const home=fs.readFileSync(dist+'index.html','utf8');
           for(const name of ['nox-home.mjs','nox-owner-director-v20.js','nox-owner-fidelity-v21.js','nox-owner-fidelity-v21.css','nox-universe-v19.js','nox-global-wow-v18.js'])if(!home.includes(name))throw Error('NOX_HOME_RUNTIME_NOT_WIRED:'+name);
