@@ -158,6 +158,13 @@ def run(node,plan):
     if not gpu.is_file() or not progress.is_file():
         return emit({"node":node,"status":"HOLD_V3_BINARIES_MISSING"})
     out={}
+    # A CUDA-only source is required for teacher inference. A CPU-only llama
+    # server caused repeated 300s timeouts; skip it rather than blocking weights.
+    cuda_server=pathlib.Path("/opt/nox_a40new/llama.cpp/build/bin/llama-server")
+    old_server=ROOT/"tools/llama.cpp/build/bin/llama-server"
+    gpu_ready=cuda_server.is_file() and cuda_server.stat().st_size>1_000_000
+    if not gpu_ready:
+        out["teacher_gpu"]="HOLD_NO_DEDICATED_CUDA_LLAMA_SERVER_PRIORITY_FULL_WEIGHT_TRAINING"
     # Adaptive order: do not spend every cycle on the teacher whose quota is
     # already complete, unless both teacher task sets are complete.
     metrics=STATE/"status.json"
@@ -165,7 +172,7 @@ def run(node,plan):
     except (OSError,ValueError):current={}
     priority=sorted(("Qwen3.5-27B","DeepSeek-R1-Distill-Qwen-32B"),
         key=lambda teacher: (current.get(teacher,{}).get("task_generation_percent") or 0,teacher))
-    for teacher in priority:
+    for teacher in (priority if gpu_ready else ()):
         if manual_stop(node):return emit({"node":node,"status":"HOLD_SAFE70","teachers":out})
         model=ROOT/("teachers/Qwen3.5-27B/Qwen3.5-27B-Q4_K_M.gguf" if teacher=="Qwen3.5-27B"
                     else "teachers/DeepSeek-R1-Distill-Qwen-32B/DeepSeek-R1-Distill-Qwen-32B-Q4_K_M.gguf")
