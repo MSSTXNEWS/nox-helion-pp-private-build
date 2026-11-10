@@ -82,10 +82,16 @@ def main():
  if old!=expected:
   if sha(model)!=p["sha256"]:raise SystemExit("HOLD_MODEL_SHA256_WRONG")
   atom(digest_cache,expected)
- server=shutil.which("llama-server")
- if not server:
-  candidate=R/"tools/llama.cpp/build/bin/llama-server"
-  if candidate.is_file():server=str(candidate)
+ # NEW A40 must never silently use shared CPU-only llama-server.
+ if args.node=="A40NEW":
+  server=os.environ.get("NOX_LLAMA_CUDA_SERVER","/opt/nox_a40new/llama.cpp/build/bin/llama-server")
+  if not pathlib.Path(server).is_file():
+   print("HOLD_A40NEW_CUDA_LLAMA_SERVER_MISSING",server,flush=True);return 2
+ else:
+  server=shutil.which("llama-server")
+  if not server:
+   candidate=R/"tools/llama.cpp/build/bin/llama-server"
+   if candidate.is_file():server=str(candidate)
  if not server:
   print("HOLD_LLAMA_SERVER_MISSING",flush=True);return 2
  # Run server only on loopback. Never stop a server we did not launch.
@@ -109,6 +115,8 @@ def main():
  with log.open("ab") as logf:
   cmd=[server,"-m",str(model),"-ngl",str(args.gpu_layers),"-c",str(args.ctx),"--parallel",str(args.parallel),
        "--host",host,"--port",str(port)]
+  if args.node=="A40NEW":
+   cmd.extend(["--no-warmup"])
   proc=subprocess.Popen(cmd,stdin=subprocess.DEVNULL,stdout=logf,stderr=subprocess.STDOUT,start_new_session=True)
   try:
    ready=False
