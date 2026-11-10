@@ -63,6 +63,7 @@ if(records.length!==pinned.files.length)throw Error('NOX_PINNED_ASSET_COUNT_MISM
 for(const file of ['nox-home.mjs','nox-home-flow.js','nox-home-recovery.js','nox-resonance-cinema-v13.js','nox-engines/physical-worlds-v7.mjs','nox-cinematic-health.js','industrial-assets.mjs','industrial-effects.mjs','nox-orbit-original.js']){
  execFileSync('node',['--check',path.join(out,file)],{stdio:'pipe'});
 }
+for(const name of ['nox-home-flow.css','nox-home-flow.js'])if(!fs.existsSync(path.join(out,name)))throw Error('NOX_HOME_FLOW_MISSING:'+name);
 for(const name of ['index.html','chat.html','models.html','memory.html','training.html','system.html','projects.html','cinema.html','settings.html','install.html']){
  if(!fs.existsSync(path.join(out,name)))throw Error('NOX_MISSING_PAGE:'+name);
 }
