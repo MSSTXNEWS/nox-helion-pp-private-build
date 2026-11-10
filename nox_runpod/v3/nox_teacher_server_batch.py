@@ -3,7 +3,7 @@
 
 Provenance-gated, local HTTP only. No teacher switching or student weight claims.
 """
-import argparse,datetime,fcntl,hashlib,json,os,pathlib,shutil,subprocess,sys,time,urllib.request,urllib.error,socket
+import argparse,datetime,fcntl,hashlib,json,os,pathlib,shutil,subprocess,sys,time,urllib.request,urllib.error,socket,concurrent.futures
 R=pathlib.Path("/workspace/nox")
 D=R/"dispatcher/nox_v3"
 OUT=R/"distillation"
@@ -57,9 +57,10 @@ def main():
  ap.add_argument("--start",type=int,default=0)
  ap.add_argument("--node",choices=("A40","A5000","A40NEW"),default="A40")
  ap.add_argument("--gpu-layers",type=int,default=30)
- ap.add_argument("--ctx",type=int,default=4096)
+ ap.add_argument("--ctx",type=int,default=6144)
+ ap.add_argument("--parallel",type=int,default=3)
  args=ap.parse_args()
- if not 1<=args.limit<=50 or not 0<=args.start<100 or not 0<=args.gpu_layers<=50 or not 1024<=args.ctx<=8192:
+ if not 1<=args.limit<=50 or not 0<=args.start<100 or not 0<=args.gpu_layers<=50 or not 1024<=args.ctx<=8192 or not 1<=args.parallel<=4:
   raise SystemExit("INVALID_BOUNDED_REQUEST")
  model=MODELS[args.teacher]
  proof=model.parent/"nox_teacher_proof.json"
@@ -106,7 +107,7 @@ def main():
  log.parent.mkdir(parents=True,exist_ok=True)
  started=time.monotonic()
  with log.open("ab") as logf:
-  cmd=[server,"-m",str(model),"-ngl",str(args.gpu_layers),"-c",str(args.ctx),
+  cmd=[server,"-m",str(model),"-ngl",str(args.gpu_layers),"-c",str(args.ctx),"--parallel",str(args.parallel),
        "--host",host,"--port",str(port)]
   proc=subprocess.Popen(cmd,stdin=subprocess.DEVNULL,stdout=logf,stderr=subprocess.STDOUT,start_new_session=True)
   try:
@@ -126,30 +127,40 @@ def main():
     raise RuntimeError("A5000_SEGMENT_RANGE_INVALID")
    if args.node=="A40" and args.start<50:
     raise RuntimeError("A40_SEGMENT_RANGE_INVALID")
+   jobs=[]
    for index in range(args.start,min(100,args.start+50)):
-    if done>=args.limit:break
     prompt=TOPICS[index%len(TOPICS)]+". Variant "+str(index//len(TOPICS)+1)+": provide a concrete, accurate original response with independent validation steps."
     ident=hashlib.sha256((args.teacher+"|V3|"+str(index)+"|"+prompt).encode()).hexdigest()
-    if ident in existing:continue
+    if ident not in existing:jobs.append((index,prompt,ident))
+   jobs=jobs[:args.limit]
+   def infer(job):
+    index,prompt,ident=job
     payload={"prompt":prompt,"n_predict":400,"temperature":0.2,"top_p":0.9,"stream":False}
-    try:res=http_json("http://127.0.0.1:"+str(port)+"/completion",payload,timeout=300)
-    except (OSError,ValueError,urllib.error.URLError) as e:
-     print("HOLD_INFERENCE_REQUEST",type(e).__name__,flush=True);break
-    answer=str(res.get("content") or "").strip()
-    if not 100<=len(answer)<=4000:
-     print("HOLD_OUTPUT_LENGTH",index,len(answer),flush=True);break
-    rec={"id":ident,"task_id":index,"teacher":args.teacher,"source_model":str(model),
-      "model_sha256":p["sha256"],"text":answer,"prompt":prompt,
-      "content_sha":hashlib.sha256(answer.encode()).hexdigest(),
-      "method":"LOCAL_GGUF_LLAMA_SERVER","quality":"NOT_INDEPENDENTLY_FACT_CHECKED","created_at":utc()}
-    # Shared S03 source: serialize append even when old and new A40 work concurrently.
-    with (OUT/(outfile.name+".write.lock")).open("a+") as out_lock:
-     fcntl.flock(out_lock,fcntl.LOCK_EX)
-     with outfile.open("a",encoding="utf-8") as f:
-      f.write(json.dumps(rec,ensure_ascii=False)+"\n");f.flush();os.fsync(f.fileno())
-    existing.add(ident);done+=1
-    tokens+=int(res.get("tokens_predicted") or 0)
-    print("NOX_V3_TEACHER_SAVED",args.teacher,"plan_task",index+1,"/100","new_batch",done,flush=True)
+    res=http_json("http://127.0.0.1:"+str(port)+"/completion",payload,timeout=360)
+    return index,prompt,ident,res
+   with concurrent.futures.ThreadPoolExecutor(max_workers=args.parallel) as executor:
+    futures={executor.submit(infer,job):job for job in jobs}
+    for future in concurrent.futures.as_completed(futures):
+     try:index,prompt,ident,res=future.result()
+     except (OSError,ValueError,urllib.error.URLError,TimeoutError) as e:
+      print("HOLD_INFERENCE_REQUEST",type(e).__name__,flush=True);continue
+     answer=str(res.get("content") or "").strip()
+     if not 100<=len(answer)<=4000:
+      print("HOLD_OUTPUT_LENGTH",index,len(answer),flush=True);continue
+     rec={"id":ident,"task_id":index,"teacher":args.teacher,"source_model":str(model),
+       "model_sha256":p["sha256"],"text":answer,"prompt":prompt,
+       "content_sha":hashlib.sha256(answer.encode()).hexdigest(),
+       "method":"LOCAL_GGUF_LLAMA_SERVER","quality":"NOT_INDEPENDENTLY_FACT_CHECKED","created_at":utc()}
+     # A single shared file lock protects concurrent readers/writers on both A40 Pods.
+     with (OUT/(outfile.name+".write.lock")).open("a+") as out_lock:
+      fcntl.flock(out_lock,fcntl.LOCK_EX)
+      with outfile.open("a",encoding="utf-8") as f:
+       f.write(json.dumps(rec,ensure_ascii=False)+"\\n");f.flush();os.fsync(f.fileno())
+     existing.add(ident);done+=1
+     tokens+=int(res.get("tokens_predicted") or 0)
+     print("NOX_V3_TEACHER_SAVED",args.teacher,"plan_task",index+1,"/100","new_batch",done,flush=True)
+   if jobs and done==0:
+    print("HOLD_ZERO_VERIFIED_RESPONSES",args.teacher,flush=True);return 2
    elapsed=max(0.001,time.monotonic()-started)
    print("NOX_V3_TEACHER_BATCH",args.teacher,"examples",done,"generated_tokens",tokens,
      "overall_tokens_per_second",round(tokens/elapsed,2),flush=True)
