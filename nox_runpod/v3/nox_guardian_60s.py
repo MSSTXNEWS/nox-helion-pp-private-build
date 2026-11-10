@@ -81,7 +81,7 @@ def once(node):
        action="CONTROLLER_WILL_REQUEUE_IF_ALIVE")
   if not running and not (D/"nox_a40new/STOP").exists():
    # The guardian does not start unverified scripts; only known installed controller.
-   script=D/"nox_a40new/bin/nox_a40new_teacher_controller.py"
+   script=pathlib.Path("/opt/nox_a40new/bin/nox_a40new_teacher_controller.py")
    if script.is_file():
     with (J/"start_A40NEW.lock").open("a+") as lk:
      fcntl.flock(lk,fcntl.LOCK_EX)
@@ -107,6 +107,19 @@ def once(node):
        error=str(train.get("reason",""))[:300],action="NEXT_CYCLE_GUARDED")
    state["last_training_error_utc"]=train.get("utc")
  atomic(statepath,{"utc":utc(),**state})
+ # Observable progress: teacher examples, optimizer steps and verified student receipt.
+ progress={}
+ for name,filepath in (("qwen27",R/"distillation/NOX_V3_QWEN27B_TEACHER.jsonl"),
+                       ("deepseek32",R/"distillation/NOX_V3_DEEPSEEK32B_TEACHER.jsonl")):
+  try:
+   with filepath.open("rb") as fh:progress[name+"_examples"]=sum(1 for line in fh if line.strip())
+  except OSError:progress[name+"_examples"]=None
+ train_state=read(D/"a40_full_parameter/progress.json")
+ progress["optimizer_steps_this_cycle"]=train_state.get("steps_executed_this_cycle")
+ progress["trainer_status"]=train_state.get("status")
+ progress["student_checkpoint_verified"]=train_state.get("status")=="COMPLETE_VERIFIED"
+ progress["knowledge_absorbed_percent"]=None
+ state["progress"]=progress
  atomic(J/(node+"_latest.json"),{"node":node,"utc":utc(),"gpu":gpu(),"status":state})
 def main():
  p=argparse.ArgumentParser()
