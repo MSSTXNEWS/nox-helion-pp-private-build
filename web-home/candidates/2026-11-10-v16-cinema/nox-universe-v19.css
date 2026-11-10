@@ -67,3 +67,8 @@
 .pswp{--pswp-bg:rgba(3,5,10,.98);z-index:2147482000!important}
 @media(prefers-reduced-motion:reduce){.nox-v19-gallery-item{transition:none!important;transform:none!important}}
 @media(max-width:600px){.nox-v19-calendar{padding:6px}.nox-v19-calendar .fc .fc-toolbar{display:flex;justify-content:center}.nox-v19-gallery{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* Isolated tsParticles celestial volume — never overlay or intercept original D02 controls. */
+.nox-v19-particles{position:relative;min-height:clamp(210px,40vh,420px);width:100%;overflow:hidden;border:1px solid rgba(217,164,99,.4);border-radius:16px;background:radial-gradient(ellipse at 50% 48%,#1b1b23,#080c14 53%,#030409 100%);box-shadow:inset 0 1px rgba(255,228,190,.14),0 16px 50px #0008;pointer-events:none}
+.nox-v19-particles canvas{pointer-events:none!important}
+@media(prefers-reduced-motion:reduce){.nox-v19-particles canvas{display:none!important}.nox-v19-particles{min-height:110px}}
