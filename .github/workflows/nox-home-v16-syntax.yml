@@ -34,6 +34,12 @@ jobs:
           node --check web-home/candidates/2026-11-10-v16-cinema/tools/nox-audit-distillation.mjs
           node --check web-home/candidates/2026-11-10-v16-cinema/tools/test-nox-progress.mjs
           node web-home/candidates/2026-11-10-v16-cinema/tools/test-nox-progress.mjs
+          # Negative integration test: no real RunPod checkpoint -> HOLD, never 0% or PASS.
+          mkdir -p /tmp/nox-progress-empty
+          rc=0
+          node web-home/candidates/2026-11-10-v16-cinema/tools/nox-audit-distillation.mjs --workspace /tmp/nox-progress-empty --out /tmp/nox-progress-empty/report.json || rc=$?
+          test "$rc" -eq 2
+          node -e "const r=require('/tmp/nox-progress-empty/report.json'); if(r.status!=='HOLD'||r.stepPercent!==null||r.complete)process.exit(1)"
           node --check web-home/candidates/2026-11-10-v16-cinema/nox-glass-init.mjs
           node --check web-home/candidates/2026-11-10-v16-cinema/nox-home-flow.js
           node --check web-home/candidates/2026-11-10-v16-cinema/nox-home.mjs
