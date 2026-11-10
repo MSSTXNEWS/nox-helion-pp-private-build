@@ -92,8 +92,10 @@ def run(node,plan):
         rc=launch(["python3",str(importer)],1800,"27B_STAGE")
         self_rc=launch(["python3",str(self_model)],120,"SELF_MODEL")
         prog_rc=launch(["python3",str(progress)],120,"PROGRESS") if progress.is_file() else 2
-        return emit({"node":node,"task":"27b_stage_s03_self_model","status":"DONE" if rc==0 and self_rc==0 and prog_rc==0 else "PARTIAL",
-                     "model_stage_rc":rc,"self_model_rc":self_rc,"progress_rc":prog_rc})
+        improvement=BIN/"nox_improvement_loop.py"
+        journal_rc=launch(["python3",str(improvement)],120,"IMPROVEMENT") if improvement.is_file() else 2
+        return emit({"node":node,"task":"27b_stage_s03_self_model_improvement","status":"DONE" if rc==0 and self_rc==0 and prog_rc==0 and journal_rc==0 else "PARTIAL",
+                     "model_stage_rc":rc,"self_model_rc":self_rc,"progress_rc":prog_rc,"journal_rc":journal_rc})
     if node!="A40":
         return emit({"node":node,"status":"HOLD_NODE_UNKNOWN"})
     thermal=cloud_gpu_gate()
@@ -107,17 +109,31 @@ def run(node,plan):
     if not gpu.is_file() or not progress.is_file():
         return emit({"node":node,"status":"HOLD_V3_BINARIES_MISSING"})
     out={}
-    for teacher in ("Qwen3.5-27B","DeepSeek-R1-Distill-Qwen-32B"):
+    # Adaptive order: do not spend every cycle on the teacher whose quota is
+    # already complete, unless both teacher task sets are complete.
+    metrics=STATE/"status.json"
+    try: current=json.loads(metrics.read_text()).get("teachers",{})
+    except (OSError,ValueError):current={}
+    priority=sorted(("Qwen3.5-27B","DeepSeek-R1-Distill-Qwen-32B"),
+        key=lambda teacher: (current.get(teacher,{}).get("task_generation_percent") or 0,teacher))
+    for teacher in priority:
         if safe70_halt(node):return emit({"node":node,"status":"HOLD_SAFE70","teachers":out})
         model=ROOT/("teachers/Qwen3.5-27B/Qwen3.5-27B-Q4_K_M.gguf" if teacher=="Qwen3.5-27B"
                     else "teachers/DeepSeek-R1-Distill-Qwen-32B/DeepSeek-R1-Distill-Qwen-32B-Q4_K_M.gguf")
         if not model.is_file():
             out[teacher]="HOLD_MODEL_NOT_READY"
             continue
+        if current.get(teacher,{}).get("task_generation_percent")==100:
+            out[teacher]="PLAN_TASK_SET_COMPLETE"
+            continue
+        if cloud_gpu_gate():
+            return emit({"node":node,"status":"HOLD_THERMAL_BEFORE_TEACHER","teachers":out})
         rc=launch(["python3",str(gpu),"--teacher",teacher,"--limit","10"],5400,
                   "TEACHER_"+("27B" if teacher=="Qwen3.5-27B" else "32B"))
         out[teacher]="BATCH_DONE" if rc==0 else "HOLD_EXIT_"+str(rc)
     launch(["python3",str(progress)],300,"PROGRESS")
+    improvement=BIN/"nox_improvement_loop.py"
+    if improvement.is_file():launch(["python3",str(improvement)],120,"IMPROVEMENT")
     # Training runs after teachers have exited. It is not started if the already
     # running legacy process came back, or if the last cycle is still in flight.
     if process_has("a40_cuda_distillation_direct.py") or process_has("a40_full_parameter_distill_cycle.py"):
@@ -136,6 +152,7 @@ def run(node,plan):
         steps=result.get("steps_executed_this_cycle",0)
     except (OSError,ValueError):
         status="UNKNOWN";steps=0
+    if improvement.is_file():launch(["python3",str(improvement)],120,"IMPROVEMENT")
     emit({"node":node,"status":"COMPLETE_VERIFIED" if status=="COMPLETE_VERIFIED" and rc==0 else "HOLD",
           "teacher_batches":out,"cycle":cycle,"optimizer_steps":steps,"trainer_status":status,"exit_code":rc})
 def main():
