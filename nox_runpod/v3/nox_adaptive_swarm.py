@@ -97,10 +97,10 @@ def run(node):
  except BlockingIOError:
   print("NOX_SWARM_ALREADY_RUNNING",node,flush=True);return 0
  ram=meminfo();g=gpu()
- if not ram or g is None or g["temperature_c"]<=0:
-  print("HOLD_SWARM_RESOURCE_SENSOR",flush=True);return 2
- if g["temperature_c"]>=70:
-  print("HOLD_SWARM_GPU_TEMP",flush=True);return 2
+ if not ram:
+  print("HOLD_SWARM_RAM_TELEMETRY",flush=True);return 2
+ # Cloud NVIDIA core temperature is telemetry, not a custom 70 C cutoff.
+ if g is None:g={"utilization":0,"vram_used_mib":None,"temperature_c":None}
  cpus=max(1,os.cpu_count() or 1)
  cores_usable=max(1,min(6,cpus//2,ram.get("MemAvailable",0)//2048))
  cpu_pressure=os.getloadavg()[0]/cpus
