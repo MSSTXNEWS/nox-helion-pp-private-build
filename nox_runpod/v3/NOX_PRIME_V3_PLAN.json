@@ -1,6 +1,6 @@
 {
   "schema": "nox-prime-v3",
-  "revision": 1,
+  "revision": 2,
   "updated": "2026-11-10",
   "poll_seconds": 180,
   "mode": "prepare_no_forced_cutover",
@@ -92,6 +92,94 @@
       "missing_sensor": "HOLD",
       "check_seconds": 20,
       "device": "NVIDIA GPU on remote Pods; Windows AMD hotspot needs actual telemetry"
+    },
+    "primary_mission": "grow measured NOX intelligence and identity first; self-build improvements second; art/video third"
+  },
+  "priority_order": [
+    {
+      "rank": 1,
+      "id": "COGNITIVE_SELF",
+      "description": "Real neural distillation, long-term memory, functional self-model, tested reasoning, autobiographical origins, contextual emotion behavior",
+      "gpu_priority": "A40 full-parameter training",
+      "acceptance": [
+        "real optimizer steps",
+        "S03 restart recall",
+        "frozen unseen skill tests",
+        "verified full checkpoint on Windows"
+      ]
+    },
+    {
+      "rank": 2,
+      "id": "SELF_BUILD",
+      "description": "NOX uses its intelligence to plan and safely modify its own core, memory, trainers, GitHub repository, existing web pages, UI controls and integrations",
+      "execution": "isolated candidate branch/worktree -> tests -> source SHA -> review -> promotion -> rollback",
+      "acceptance": [
+        "candidate patch with exact file paths",
+        "unit tests and UI regression",
+        "approved deployment to canonical NOX",
+        "no duplicated backend or dead buttons"
+      ]
+    },
+    {
+      "rank": 3,
+      "id": "CREATIVE_MEDIA",
+      "description": "Image/video and 3D production after cognitive and self-build gates",
+      "execution": "opt-in existing compatible tools",
+      "acceptance": [
+        "real generated artifact",
+        "media source/licence receipt",
+        "resource impact measured"
+      ]
     }
+  ],
+  "self_build": {
+    "status": "ARCHITECTURE_AND_CANDIDATE_ENGINE",
+    "autonomous_cycle": true,
+    "one_identity": true,
+    "scope": [
+      "model_training_core",
+      "memory_S03",
+      "reasoning_tools",
+      "GitHub_project_code",
+      "existing_NOX_WEB",
+      "D02_HOME",
+      "Resonance",
+      "functional_buttons",
+      "Windows_bridge",
+      "GPU_resource_controller"
+    ],
+    "forbidden": [
+      "blind_main_branch_write",
+      "automatic_prod_deploy_without_tests",
+      "self-authorized_permissions",
+      "duplicate_backend",
+      "destructive_cleanup_without_verified_restore",
+      "invented_test_pass"
+    ],
+    "steps": [
+      "observe_current_runtime_and_sources",
+      "identify_measurable_defect_or_missing_capability",
+      "write_spec_and_acceptance",
+      "generate_candidate_patch_in_isolated_worktree",
+      "run_unit_integration_UI_tests",
+      "benchmark_no_regression",
+      "review_candidate_and_promote_approved_change",
+      "record_outcome_and_rollback_anchor"
+    ],
+    "human_approval_gates": [
+      "destructive_changes",
+      "privileged_OS_control",
+      "external_publication",
+      "secrets_permissions"
+    ],
+    "autonomous_allowed": [
+      "inspect_source",
+      "generate_draft_patch",
+      "run_isolated_tests",
+      "build_artifact_candidate",
+      "report",
+      "prepare_rollback"
+    ],
+    "source_of_truth": "MSSTXNEWS/nox-helion-pp-private-build; existing canonical NOX web/UI; no substitute demo"
   }
 }
