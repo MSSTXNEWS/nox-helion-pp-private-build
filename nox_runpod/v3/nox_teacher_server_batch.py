@@ -8,6 +8,7 @@ R=pathlib.Path("/workspace/nox")
 D=R/"dispatcher/nox_v3"
 OUT=R/"distillation"
 MODELS={
+ "Qwen3.5-9B":R/"teachers/Qwen3.5-9B/Qwen3.5-9B-Q4_K_M.gguf",
  "Qwen3.5-27B":R/"teachers/Qwen3.5-27B/Qwen3.5-27B-Q4_K_M.gguf",
  "DeepSeek-R1-Distill-Qwen-32B":R/"teachers/DeepSeek-R1-Distill-Qwen-32B/DeepSeek-R1-Distill-Qwen-32B-Q4_K_M.gguf"
 }
@@ -101,7 +102,8 @@ def main():
   if sock.connect_ex((host,port))==0:
    print("HOLD_PORT_IN_USE",port,flush=True);return 2
  finally:sock.close()
- outfile=OUT/("NOX_V3_QWEN27B_TEACHER.jsonl" if args.teacher=="Qwen3.5-27B" else "NOX_V3_DEEPSEEK32B_TEACHER.jsonl")
+ short={"Qwen3.5-9B":"QWEN9B","Qwen3.5-27B":"QWEN27B","DeepSeek-R1-Distill-Qwen-32B":"DEEPSEEK32B"}[args.teacher]
+ outfile=OUT/("NOX_V3_"+short+"_TEACHER.jsonl")
  existing=set()
  if outfile.is_file():
   with outfile.open(encoding="utf-8",errors="replace") as f:
@@ -109,7 +111,7 @@ def main():
     try:existing.add(json.loads(line)["id"])
     except (ValueError,KeyError,TypeError):pass
  OUT.mkdir(parents=True,exist_ok=True)
- log=R/"logs"/("NOX_V3_SERVER_"+("27B" if args.teacher=="Qwen3.5-27B" else "32B")+".log")
+ log=R/"logs"/("NOX_V3_SERVER_"+("9B" if args.teacher=="Qwen3.5-9B" else ("27B" if args.teacher=="Qwen3.5-27B" else "32B"))+".log")
  log.parent.mkdir(parents=True,exist_ok=True)
  started=time.monotonic()
  with log.open("ab") as logf:
