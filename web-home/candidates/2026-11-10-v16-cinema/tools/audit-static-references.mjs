@@ -32,7 +32,7 @@ async function walkCss(dir){
   const css=fs.readFileSync(abs,'utf8'),re=/url\(\s*['"]?([^)'"]+)/g;let m;
   while((m=re.exec(css))){
    const url=m[1].trim();
-   if(!url||/^(?:https?:|data:|blob:|#|\\/\\/)/i.test(url))continue;
+   if(!url || url.startsWith('//') || /^(?:https?:|data:|blob:|#)/i.test(url))continue;
    const clean=url.split(/[?#]/,1)[0],absolute=url.startsWith('/')?path.resolve(root,url.slice(1)):path.resolve(path.dirname(abs),clean);
    if(!absolute.startsWith(root+path.sep))throw Error('NOX_UNSAFE_CSS_ASSET:'+url);
    cssReferences.push({css:path.relative(root,abs),url});
