@@ -55,8 +55,11 @@ for(const file of pages){
  const target=path.join(dst,file);
  let html=await fs.readFile(target,'utf8');
  if(!/<\/head>/i.test(html)||!/<\/body>/i.test(html))throw Error('NOX_HTML_STRUCTURE_INVALID: '+file);
+ const vendorGlass='<link rel="stylesheet" href="./vendor/nox-liquid-glass/liquid-glass.css" data-nox-vendor-glass="original">';
  const style='<link rel="stylesheet" href="./nox-global-wow-v18.css" data-nox-wow-shared="v18">';
  const script='<script defer src="./nox-global-wow-v18.js" data-nox-wow-shared="v18"></script>';
+ if(!await exists(path.join(dst,'vendor/nox-liquid-glass/liquid-glass.css')))throw Error('NOX_ORIGINAL_GLASS_VENDOR_MISSING');
+ if(!html.includes('vendor/nox-liquid-glass/liquid-glass.css'))html=html.replace(/<\/head>/i,vendorGlass+'</head>');
  if(!html.includes('nox-global-wow-v18.css'))html=html.replace(/<\/head>/i,style+'</head>');
  if(!html.includes('nox-global-wow-v18.js'))html=html.replace(/<\/body>/i,script+'</body>');
  await fs.writeFile(target,html);
