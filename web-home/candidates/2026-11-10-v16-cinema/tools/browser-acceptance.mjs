@@ -89,7 +89,10 @@ try{
     const visibleSelects=select.filter(el=>{const s=getComputedStyle(el),r=el.getBoundingClientRect();return s.visibility!=='hidden'&&s.display!=='none'&&s.opacity!=='0'&&r.width>1&&r.height>1});
     const buttons=[...document.querySelectorAll('button')];
     const missingLinks=[...document.querySelectorAll('a[href]')].filter(a=>!a.getAttribute('href')?.trim()).length;
-    return {v19Style:!!document.querySelector('link[href*="nox-universe-v19.css"]'),v19Script:!!window.NOX_UNIVERSE_V19,sharedStyle:!!document.querySelector('link[href*="nox-global-wow-v18.css"]'),sharedScript:!!window.NOX_WOW_GLOBAL_V18,visibleSelects:visibleSelects.length,choiceGroups:document.querySelectorAll('.nox-wow-choice-group').length,buttons:buttons.length,missingLinks};
+    const deadNavigation=[...document.querySelectorAll('a[href]')].filter(a=>['#','javascript:void(0)','javascript:;'].includes((a.getAttribute('href')||'').trim().toLowerCase())).length;
+    const disabledButtons=buttons.filter(b=>b.disabled).map(b=>({name:(b.textContent||b.getAttribute('aria-label')||'').trim().slice(0,75),id:b.id||''})).slice(0,30);
+    const buttonInventory=buttons.filter(b=>{const cs=getComputedStyle(b);const r=b.getBoundingClientRect();return cs.display!=='none'&&cs.visibility!=='hidden'&&r.width>1&&r.height>1}).map(b=>({name:(b.textContent||b.getAttribute('aria-label')||'').trim().slice(0,64),id:b.id||'',disabled:b.disabled||b.getAttribute('aria-disabled')==='true',type:b.type})).slice(0,130);
+    return {v19Style:!!document.querySelector('link[href*="nox-universe-v19.css"]'),v19Script:!!window.NOX_UNIVERSE_V19,sharedStyle:!!document.querySelector('link[href*="nox-global-wow-v18.css"]'),sharedScript:!!window.NOX_WOW_GLOBAL_V18,visibleSelects:visibleSelects.length,choiceGroups:document.querySelectorAll('.nox-wow-choice-group').length,buttons:buttons.length,missingLinks,deadNavigation,disabledButtons,buttonInventory};
    });
    if(name==='system.html'||name==='training.html'){
     await page.waitForFunction(()=>!!window.NOX_PROGRESS_PANEL,{timeout:7000});
@@ -102,7 +105,7 @@ try{
       errors.push('NOX_PROGRESS_MUST_HOLD_WITHOUT_CHECKPOINT_AND_TRAINER_HASHES');
    }
   }catch(e){errors.push(String(e))}
-  report.sections.push({name,status,checks,backendUnavailable,errors,acceptance:status===200&&checks?.sharedStyle&&checks?.sharedScript&&checks?.v19Style&&checks?.v19Script&&checks.visibleSelects===0&&errors.length===0?'PAGE_UI_PASS':'HOLD'});
+  report.sections.push({name,status,checks,backendUnavailable,errors,acceptance:status===200&&checks?.sharedStyle&&checks?.sharedScript&&checks?.v19Style&&checks?.v19Script&&checks.visibleSelects===0&&checks.deadNavigation===0&&errors.length===0?'PAGE_UI_PASS':'HOLD'});
   await page.close();
  }
 
@@ -173,6 +176,8 @@ try{
   await p.waitForFunction(()=>!!window.Fuse&&document.querySelectorAll('.nox-v19-sections button').length>0,{timeout:14000});
   await p.getByPlaceholder('Поиск раздела').fill('Кинотеатр');
   await p.waitForFunction(()=>[...document.querySelectorAll('.nox-v19-sections button')].some(b=>b.textContent.includes('Кинотеатр')),{timeout:14000});
+  const bogus=await p.locator('.nox-v19-sections button.nox-v19-planned,.nox-v19-sections button[disabled]').count();
+  if(bogus)throw Error('NOX_FAKE_CATALOG_BUTTONS_PRESENT:'+bogus);
   report.v19Modules.push({name:'Поиск разделов',source:'Fuse.js local + canonical catalog',passed:true});
  }catch(e){moduleErrors.push(String(e?.message||e))}
  report.v19ModuleErrors=moduleErrors;
