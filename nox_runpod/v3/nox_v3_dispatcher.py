@@ -66,7 +66,7 @@ def run(node,plan):
         return emit({"node":node,"status":"HOLD_OLD_OR_FULL_GPU_OWNER_ACTIVE"})
     if not MEM.is_file():
         return emit({"node":node,"status":"HOLD_S03_MEMORY_MISSING"})
-    gpu=BIN/"nox_teacher_gguf_batch.py"
+    gpu=BIN/"nox_teacher_server_batch.py"
     progress=BIN/"nox_progress_v3.py"
     if not gpu.is_file() or not progress.is_file():
         return emit({"node":node,"status":"HOLD_V3_BINARIES_MISSING"})
@@ -77,7 +77,7 @@ def run(node,plan):
         if not model.is_file():
             out[teacher]="HOLD_MODEL_NOT_READY"
             continue
-        rc=launch(["python3",str(gpu),"--teacher",teacher,"--limit","5"],5400,
+        rc=launch(["python3",str(gpu),"--teacher",teacher,"--limit","10"],5400,
                   "TEACHER_"+("27B" if teacher=="Qwen3.5-27B" else "32B"))
         out[teacher]="BATCH_DONE" if rc==0 else "HOLD_EXIT_"+str(rc)
     launch(["python3",str(progress)],300,"PROGRESS")
