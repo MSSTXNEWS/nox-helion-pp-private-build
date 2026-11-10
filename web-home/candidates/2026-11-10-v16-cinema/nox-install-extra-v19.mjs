@@ -9,6 +9,9 @@ import {createHash} from 'node:crypto';
 
 const version='2026-11-10-v19';
 const sources=[
+ {name:'leaflet.js',url:'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js',minBytes:80000,maxBytes:300000,license:'BSD-2-Clause'},
+ {name:'leaflet.css',url:'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css',minBytes:5000,maxBytes:30000,license:'BSD-2-Clause'},
+ {name:'LEAFLET-LICENSE.txt',url:'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/LICENSE',minBytes:300,maxBytes:10000,license:'BSD-2-Clause'},
  {name:'pdf.mjs',url:'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.mjs',minBytes:100000,maxBytes:5000000,license:'Apache-2.0'},
  {name:'pdf.worker.mjs',url:'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.worker.mjs',minBytes:100000,maxBytes:6000000,license:'Apache-2.0'},
  {name:'PDFJS-LICENSE.txt',url:'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/LICENSE',minBytes:500,maxBytes:100000,license:'Apache-2.0'},
