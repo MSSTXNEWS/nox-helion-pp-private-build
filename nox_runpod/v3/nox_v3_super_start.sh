@@ -19,9 +19,14 @@ done
 curl -fsSL --retry 3 "$BASE/nox_runpod/stage0/a40_full_parameter_distill_cycle.py" -o "$BIN/a40_full_parameter_distill_cycle.py.tmp"
 python3 -m py_compile "$BIN/a40_full_parameter_distill_cycle.py.tmp"
 mv "$BIN/a40_full_parameter_distill_cycle.py.tmp" "$BIN/a40_full_parameter_distill_cycle.py"
-curl -fsSL --retry 3 "$BASE/nox_runpod/v3/NOX_PRIME_V3_PLAN.json" -o "$S/NOX_PRIME_V3_PLAN.json.tmp"
-python3 -m json.tool "$S/NOX_PRIME_V3_PLAN.json.tmp" >/dev/null
-mv "$S/NOX_PRIME_V3_PLAN.json.tmp" "$S/NOX_PRIME_V3_PLAN.json"
+if [ ! -f "$S/NOX_PRIME_V3_PLAN.json" ];then
+  curl -fsSL --retry 3 "$BASE/nox_runpod/v3/NOX_PRIME_V3_PLAN.json" -o "$S/NOX_PRIME_V3_PLAN.json.tmp"
+  python3 -m json.tool "$S/NOX_PRIME_V3_PLAN.json.tmp" >/dev/null
+  mv "$S/NOX_PRIME_V3_PLAN.json.tmp" "$S/NOX_PRIME_V3_PLAN.json"
+else
+  python3 -m json.tool "$S/NOX_PRIME_V3_PLAN.json" >/dev/null
+  echo "NOX_V3_KEEP_LOCAL_CUTOVER_STATE"
+fi
 curl -fsSL --retry 3 "$BASE/nox_runpod/v3/NOX_WOW50_IDENTITY.json" -o "$S/NOX_WOW50_IDENTITY.json.tmp"
 python3 -m json.tool "$S/NOX_WOW50_IDENTITY.json.tmp" >/dev/null
 mv "$S/NOX_WOW50_IDENTITY.json.tmp" "$S/NOX_WOW50_IDENTITY.json"
