@@ -29,7 +29,7 @@ async function walkCss(dir){
   const abs=path.join(dir,item.name);
   if(item.isDirectory()){await walkCss(abs);continue}
   if(!item.isFile()||!item.name.endsWith('.css'))continue;
-  const css=fs.readFileSync(abs,'utf8'),re=/url\\(\\s*['"]?([^)'"]+)/g;let m;
+  const css=fs.readFileSync(abs,'utf8'),re=/url\(\s*['"]?([^)'"]+)/g;let m;
   while((m=re.exec(css))){
    const url=m[1].trim();
    if(!url||/^(?:https?:|data:|blob:|#|\\/\\/)/i.test(url))continue;
