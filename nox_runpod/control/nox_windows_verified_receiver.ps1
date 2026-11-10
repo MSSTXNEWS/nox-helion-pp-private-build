@@ -9,6 +9,8 @@ $locked=$false
 try {
  $locked=$mutex.WaitOne(0)
  if(!$locked){Write-Host 'TRANSFER_ALREADY_RUNNING';return}
+ $oldScp=@(Get-CimInstance Win32_Process -Filter "Name='scp.exe'" -ErrorAction SilentlyContinue | Where-Object { $_.CommandLine -like '*nox_full_parameter_A40*' })
+ if($oldScp.Count){Write-Host "HOLD_LEGACY_TRANSFER_IN_PROGRESS PID=$($oldScp[0].ProcessId)";return}
  $py=@'
 import json,pathlib
 f=pathlib.Path("/workspace/nox/dispatcher/a40_full_parameter/progress.json")
