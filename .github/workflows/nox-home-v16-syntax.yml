@@ -29,6 +29,7 @@ jobs:
           node --check web-home/candidates/2026-11-10-v16-cinema/nox-global-wow-v18.js
           node --check web-home/candidates/2026-11-10-v16-cinema/nox-owner-director-v20.js
           node --check web-home/candidates/2026-11-10-v16-cinema/nox-owner-fidelity-v21.js
+          node --check web-home/candidates/2026-11-10-v16-cinema/nox-glass-init.mjs
           node --check web-home/candidates/2026-11-10-v16-cinema/nox-home-flow.js
           node --check web-home/candidates/2026-11-10-v16-cinema/nox-home.mjs
           node --check web-home/candidates/2026-11-10-v16-cinema/nox-home-recovery.js
@@ -161,6 +162,9 @@ jobs:
           cp web-home/candidates/2026-11-10-v16-cinema/nox-owner-director-v20.css /tmp/nox-v19-download/source/
           cp web-home/candidates/2026-11-10-v16-cinema/nox-owner-fidelity-v21.js /tmp/nox-v19-download/source/
           cp web-home/candidates/2026-11-10-v16-cinema/nox-owner-fidelity-v21.css /tmp/nox-v19-download/source/
+          cp web-home/candidates/2026-11-10-v16-cinema/nox-glass-home.css /tmp/nox-v19-download/source/
+          cp web-home/candidates/2026-11-10-v16-cinema/nox-glass-film.css /tmp/nox-v19-download/source/
+          cp web-home/candidates/2026-11-10-v16-cinema/nox-glass-init.mjs /tmp/nox-v19-download/source/
           cp web-home/candidates/2026-11-10-v16-cinema/tools/browser-acceptance.mjs /tmp/nox-v19-download/source/
           mkdir -p /tmp/nox-v19-download/source/assets/nox-owner-approved
           cp web-home/candidates/2026-11-10-v16-cinema/assets/nox-owner-approved/*.webp /tmp/nox-v19-download/source/assets/nox-owner-approved/
@@ -181,15 +185,15 @@ jobs:
           import hashlib,json,pathlib
           root=pathlib.Path('/tmp/nox-v19-download')
           receipt=json.loads((root/'vendor/nox-extra/NOX-EXTRA-ASSETS-RECEIPT.json').read_text())
-          assert receipt['complete'] and len(receipt['files'])==23
+          assert receipt['complete'] and len(receipt['files'])==24
           for item in receipt['files']:
               contents=(root/'vendor/nox-extra'/item['file']).read_bytes()
               assert len(contents)==item['size'] and hashlib.sha256(contents).hexdigest()==item['sha256'],item['file']
-          assert len(list((root/'source').glob('*')))==18
+          assert len(list((root/'source').glob('*')))==21
           art=root/'source/assets/nox-owner-approved'
           assert len(list(art.glob('*.webp')))==6
           print('NOX_V20_PERSONA_ART_HANDOFF 5 exact cropped portraits + original approved HOME')
-          print('NOX_V19_ARTIFACT_SHA256_PASS 23 binaries + source modules')
+          print('NOX_V19_ARTIFACT_SHA256_PASS 24 binaries + source modules')
           PY
       - name: Preserve actual ZIP handoff for Drive
         uses: actions/upload-artifact@v4
@@ -221,7 +225,7 @@ jobs:
           import fs from 'node:fs';
           import crypto from 'node:crypto';
           const dist='dist/', manifest=JSON.parse(fs.readFileSync(dist+'vendor/nox-extra/NOX-EXTRA-ASSETS-RECEIPT.json','utf8'));
-          if(manifest.files.length!==23||!manifest.complete)throw Error('NOX_VENDOR_20_MISSING');
+          if(manifest.files.length!==24||!manifest.complete)throw Error('NOX_VENDOR_24_MISSING');
           for(const f of manifest.files){
             const buf=fs.readFileSync(dist+'vendor/nox-extra/'+f.file);
             if(buf.length!==f.size||crypto.createHash('sha256').update(buf).digest('hex')!==f.sha256)throw Error('NOX_VENDOR_SHA_MISMATCH:'+f.file);
@@ -233,7 +237,7 @@ jobs:
             const html=fs.readFileSync(dist+page+'.html','utf8');
             for(const asset of ['nox-universe-v19.js','nox-global-wow-v18.js'])if(!html.includes(asset))throw Error('NOX_SECTION_DISCONNECTED:'+page+':'+asset);
           }
-          console.log('NOX_V21_FULL_WEB_BUILD_STATIC_PASS 10/10 routes; 23 verified runtime files; GPU/browser HOLD');
+          console.log('NOX_V21_FULL_WEB_BUILD_STATIC_PASS 10/10 routes; 24 verified runtime files; GPU/browser HOLD');
           NODE
       - name: Reject missing local assets on all ten NOX pages
         working-directory: web-home/candidates/2026-11-10-v16-cinema
