@@ -1,0 +1,46 @@
+name: NOX Loquix original Web Component vendoring
+on:
+  push:
+    branches: [integration/nox-v16-unified-candidate-20261028-r01]
+    paths: [.github/workflows/nox-web-loquix-vendor.yml]
+permissions: {contents: write}
+jobs:
+  bundle:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Build a pinned self-contained Loquix component
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/nox-loquix
+          cd /tmp/nox-loquix
+          npm init -y >/dev/null
+          npm install --save-exact @loquix/core@latest lit@3 esbuild@0.25.12
+          printf "import '@loquix/core/define/define-typing-indicator';\n" > entry.js
+          npx esbuild entry.js --bundle --format=esm --platform=browser --target=es2020 --minify --outfile=/tmp/nox-loquix/original-loquix-typing.mjs --legal-comments=inline
+          node --check /tmp/nox-loquix/original-loquix-typing.mjs
+          node -p "JSON.stringify({loquix:require('./node_modules/@loquix/core/package.json').version,lit:require('./node_modules/lit/package.json').version})" > versions.json
+          cp node_modules/@loquix/core/LICENSE LICENSE-LOQUIX.txt
+          mkdir -p "$GITHUB_WORKSPACE/loquix-artifact"
+          cp original-loquix-typing.mjs versions.json LICENSE-LOQUIX.txt "$GITHUB_WORKSPACE/loquix-artifact/"
+          mkdir -p "$GITHUB_WORKSPACE/ui/menu-pages/vendor"
+          cp original-loquix-typing.mjs "$GITHUB_WORKSPACE/ui/menu-pages/vendor/loquix-typing.mjs"
+          cp LICENSE-LOQUIX.txt "$GITHUB_WORKSPACE/ui/menu-pages/vendor/loquix.LICENSE.txt"
+      - name: Commit pinned original component to the existing PR branch
+        run: |
+          set -euo pipefail
+          git config user.name "nox-ui-bot"
+          git config user.email "nox-ui-bot@users.noreply.github.com"
+          git add ui/menu-pages/vendor/loquix-typing.mjs ui/menu-pages/vendor/loquix.LICENSE.txt
+          git commit -m "WOW: vendor pinned original Loquix 0.6.0 typing component"
+          git push origin HEAD:integration/nox-v16-unified-candidate-20261028-r01
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NOX-LOQUIX-ORIGINAL-LOCAL-BUNDLE
+          path: loquix-artifact/
+          if-no-files-found: error
+          retention-days: 7

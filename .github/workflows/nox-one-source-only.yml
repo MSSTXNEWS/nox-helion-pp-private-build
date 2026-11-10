@@ -1,0 +1,48 @@
+name: NOX HELION ONE SOURCE ZIP (no EXE)
+on:
+  push:
+    branches: [feature/nox-r8-liquid-one-exe-20261106]
+    paths:
+      - coordination/nox-r8/tools/build_one_source.py
+      - .github/workflows/nox-one-source-only.yml
+      - coordination/nox-r8/legacy_drive_index.json
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  one_source:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify exact Git SHA and assemble one portable source file
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
+          mkdir -p dist
+          python3 coordination/nox-r8/tools/build_one_source.py \
+            --root . \
+            --out dist/NOX_HELION_ONE_SOURCE.zip \
+            --git-sha "${GITHUB_SHA}"
+          python3 - <<'PY'
+          import json, hashlib, zipfile, subprocess
+          from pathlib import Path
+          name=Path("dist/NOX_HELION_ONE_SOURCE.zip")
+          with zipfile.ZipFile(name) as z:
+              index=json.loads(z.read("NOX_SOURCE_INDEX.json"))
+              paths=[x["path"] for x in index["files"]]
+              tracked=[x.decode() for x in subprocess.check_output(["git","ls-files","-z"]).split(b"\0") if x]
+              assert len(paths)==len(tracked) and sorted(paths)==sorted(tracked)
+              assert index["unique_blob_count"] <= index["file_count"]
+              assert index["file_count"]>=300
+              for row in index["files"]:
+                  b=z.read("objects/"+row["sha256"][:2]+"/"+row["sha256"])
+                  assert len(b)==row["bytes"] and hashlib.sha256(b).hexdigest()==row["sha256"]
+          print("NOX_ONE_SOURCE_FULL_GIT_FILESET_SHA256_CRC_PASS")
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NOX-HELION-ONE-SOURCE
+          path: dist/NOX_HELION_ONE_SOURCE.zip
+          if-no-files-found: error
+          retention-days: 30

@@ -1,0 +1,26 @@
+{
+  "README_RU.md": {
+    "sha256": "f94da07e0dfce2ce5966fdda4ce5e2358f93d3cd52ce6e127eaa1a52c64a2c3e",
+    "bytes": 8698
+  },
+  "START_NOX_SOUL_GPU.ps1": {
+    "sha256": "b31b1e231bc206e75a556681310498abd8f80175a39133335cfdfc4afb11e3c4",
+    "bytes": 2134
+  },
+  "download_block.py": {
+    "sha256": "91e7b8f68f3f39d83818e488c6e7fcfb2c47f44249a4d2626f0e3e16c7182556",
+    "bytes": 3235
+  },
+  "soul_gpu.py": {
+    "sha256": "d7f442403719f5c7b6f485e7dd4ff95458778c19ebe622d1b85aba995cbdcb89",
+    "bytes": 20377
+  },
+  "tests/test_soul_gpu.py": {
+    "sha256": "93545aa82257370673011cfa1658715a00afff8a7bf173bde7302aa93bdc25b8",
+    "bytes": 2502
+  },
+  "train_qlora.py": {
+    "sha256": "11ec986348183908a65a2523aa9b6e1e9d7d48e45c1a68ac2a0b3e826389edf2",
+    "bytes": 10692
+  }
+}

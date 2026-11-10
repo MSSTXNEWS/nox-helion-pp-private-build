@@ -1,0 +1,44 @@
+{
+  "schema": "NOX-V16-E04-OWNER-RECEIPT-v1",
+  "run_id": "NOX-V16-W4-01-E04-20261028T2205MSK-R15",
+  "task_id": "E04-P04-GPU-TEMPERATURE-ROW-STRICT-R15",
+  "owner": "W4.01/E04 P04",
+  "canonical": "PR162",
+  "pre_head": "4b2eeb0f091dcd9566fae900f6357ad227e92712",
+  "pre_tree": "f95836b5038bb7ab65a025d1265899afe1db4939",
+  "immutable_origin": "0b3a7d435be735148d64171deb9027093a89646e",
+  "bug": "nvidia-smi selected UUID temperature parser accepted first row even when output held two distinct rows or trailing blank row; thermal guardian could trust ambiguous reading",
+  "cause": "strip().splitlines()[0] silently dropped unexpected rows",
+  "fix": "Require one literal stdout line before float parsing; multi-row/invalid/missing readings return None to existing GPU_TEMPERATURE_UNAVAILABLE HOLD",
+  "source": {
+    "path": "Packages/P04/train_qlora.py",
+    "pre_sha256": "525e706cb409e9c1c82d9592af8e0d46ee9d6f365d6862442df5457d3bd57cfc",
+    "post_sha256": "68fd739b5bd5db48049490b111c53c10ece222c347cd5331c6f5af51ddfa44c9",
+    "pre_blob_sha1": "413e5395c736934b2c0bf523382a569b0baa2b33"
+  },
+  "test": {
+    "path": "tests/P04/test_e04_temperature_single_row_r15.py",
+    "pre_sha256": "ABSENT",
+    "post_sha256": "bd9c4e007550f2cc537e80abc0e435ef9788142b23571745a5387bb1a33c629b"
+  },
+  "local_fixture": {
+    "pre": "5/7 PASS, 2 RED",
+    "post": "7/7 PASS",
+    "scope": "isolated exact GPU temperature function, NOT imported production module"
+  },
+  "production_module_tests": "11 unittest cases created; NOT_RUN pending Python runner",
+  "real_nvidia_gpu": "NOT_RUN",
+  "rights_and_weights": "NOT_VERIFIED",
+  "source_lock_729": "HOLD",
+  "E07_windows": "0/10 NOT_RUN",
+  "protect": [
+    "D02",
+    "WOW001-200",
+    "8 CoreID",
+    "5 Persona",
+    "P01-P05",
+    "original ZIP",
+    "user data"
+  ],
+  "lesson": "THERMAL_SENSOR_ONE_ROW_OR_HOLD"
+}

@@ -1,0 +1,65 @@
+{
+  "run_id": "NOX-K01-K06-20261031-MEGABLOCK",
+  "pre_head": "21b943a9b0cc7370216fa69c7ad5914ee5501472",
+  "post_head": "containing_commit",
+  "post_head_note": "Actual CAS commit SHA and readback are recorded in the final Google Drive journal; no self-referential commit hash.",
+  "branch": "integration/nox-v16-unified-candidate-20261028-r01",
+  "pr": 162,
+  "gates": {
+    "1": "PASS",
+    "2": "PASS_SOURCE_SCOPE",
+    "3": "PASS_SOURCE_SCOPE",
+    "4": "publication_and_readback_recorded_externally"
+  },
+  "parallel_workers": {
+    "integrator": 1,
+    "subagents": 6,
+    "new_agents_after_start": 0
+  },
+  "runtime_data_files": [
+    {
+      "source": "Packages/P03/Source/python-host/catalog30.discovery.json",
+      "runtime_path": "catalog30.discovery.json",
+      "sha256": "001a2bb8a1f2fbca715f756badae7aa132cf34d053ee209896d84be81c268d76",
+      "pyinstaller_destination": "."
+    },
+    {
+      "source": "Packages/P04/train_qlora.py",
+      "runtime_path": "Packages/P04/train_qlora.py",
+      "sha256": "836afa2847aa39dfe15160b88d4a2c4b3e7653c431c4984e17b5927859cd9712",
+      "pyinstaller_destination": "Packages/P04"
+    },
+    {
+      "source": "Packages/P04/preflight_local_gpu.py",
+      "runtime_path": "Packages/P04/preflight_local_gpu.py",
+      "sha256": "a59bb04884ff0de9cfa561366935e0d7a708ed0b3092afc7463b59d6cef2aaff",
+      "pyinstaller_destination": "Packages/P04"
+    },
+    {
+      "source": "Packages/P04/merge_qlora_adapter.py",
+      "runtime_path": "Packages/P04/merge_qlora_adapter.py",
+      "sha256": "8839132e2c68c46ddc04918008ad17ea208212c86ff2f2fd8c57b1ff3ea62484",
+      "pyinstaller_destination": "Packages/P04"
+    },
+    {
+      "source": "assets/NOX_SOUL_CPU_REAL_WEIGHTS_TRAINED_V1_20261022.zip",
+      "runtime_path": "assets/NOX_SOUL_CPU_REAL_WEIGHTS_TRAINED_V1_20261022.zip",
+      "sha256": "b1bc0c27997d76b4c654842101d28738080e8c83d3b077b12585aaa28b500c9f",
+      "pyinstaller_destination": "assets"
+    }
+  ],
+  "originals": "Original source archives, SEED/optimizer, canonical media, original P04/P05 and existing L01/L02 preserved.",
+  "runtime_config": "%LOCALAPPDATA%/NOX_HELION/onehost-native-config.json; native-owned only, no page paths or approval flags. See e06_native_stdio_owner.load_native_config.",
+  "holds": [
+    "C# compilation, final Windows packaging, installed Bootstrap native E2E and independent same-SHA E07 are deferred by task scope.",
+    "Live Ollama inference/download/import and compatible Windows GPU LoRA/QLoRA have not been executed here. No runtime acceptance is claimed.",
+    "P03 reviewed artifact registry is intentionally empty until exact artifact digest/license/resource evidence is approved; downloads remain REVIEW_REQUIRED.",
+    "SELF-BUILDER requires an approved clean source Git root, explicit source_paths and candidate workspace in native configuration.",
+    "FORGE requires approved native jobs, rights verifier, disjoint train/holdout data, pinned model snapshot, compatible GPU and approved Python training environment.",
+    "Frozen Python packaging must include listed runtime data; the original historical two-EXE builder is unchanged. The existing E06 installer requires a newly built, dynamically pinned and native-IPC-verified Python executable.",
+    "Attachments and unresolved historical Persona identity/media approvals are not newly declared accepted by this integration."
+  ],
+  "report_gate": "final journal readback required",
+  "release": "HOLD",
+  "manifest": "SOURCE_MANIFEST.json"
+}

@@ -1,0 +1,70 @@
+{
+  "schema": "NOX-SELFBUILDER-ROUTE-PROPOSALS-V1",
+  "status": "INTEGRATION_PROPOSAL_ONLY_R2_WINDOWS_LOOP",
+  "owner_existing_host": "P02/P03 OneHost, existing events.v3 and S03",
+  "routes": [
+    {
+      "id": "selfbuilder.seed.inspect",
+      "kind": "read",
+      "native_permission": "read-source",
+      "implementation": "nox_selfbuilder.seed.attest_seed"
+    },
+    {
+      "id": "selfbuilder.coding.models",
+      "kind": "read",
+      "native_permission": "model-catalog-read",
+      "implementation": "existing P03 models.catalog + reviewed contract file"
+    },
+    {
+      "id": "selfbuilder.propose",
+      "kind": "sensitive",
+      "native_permission": "selfbuilder.propose",
+      "implementation": "nox_selfbuilder.builder.SelfBuilder.propose"
+    },
+    {
+      "id": "selfbuilder.feedback",
+      "kind": "sensitive",
+      "native_permission": "selfbuilder.feedback",
+      "implementation": "existing S03 write with learning.make_learning_record"
+    },
+    {
+      "id": "selfbuilder.train.request",
+      "kind": "sensitive",
+      "native_permission": "training.request",
+      "implementation": "existing P04 FORGE handoff only"
+    },
+    {
+      "id": "selfbuilder.worker.status",
+      "kind": "read",
+      "native_permission": "read-worker-state",
+      "implementation": "existing S03 owner task ledger and worker heartbeat"
+    },
+    {
+      "id": "selfbuilder.worker.start",
+      "kind": "sensitive",
+      "native_permission": "worker.owner.opt-in",
+      "implementation": "existing host creates worker process using nox_selfbuilder.evolution"
+    },
+    {
+      "id": "selfbuilder.worker.stop",
+      "kind": "sensitive",
+      "native_permission": "worker.owner.stop",
+      "implementation": "existing global STOP/revoke service"
+    },
+    {
+      "id": "selfbuilder.reflect",
+      "kind": "sensitive",
+      "native_permission": "selfbuilder.reflect",
+      "implementation": "existing REFLECTION native verified callback"
+    }
+  ],
+  "UI": "Register through approved MENU/WORK/Ctrl+K; do not alter HOME, D02, original personas or graphics",
+  "disallow": [
+    "automatic host update",
+    "execute untrusted generated source",
+    "replace weights",
+    "new downloader",
+    "second SQLite",
+    "second application"
+  ]
+}

@@ -1,0 +1,53 @@
+{
+  "schema": "NOX.V16.E02.OwnerReceipt.v1",
+  "run_id": "NOX-V16-W3-01-20261028T225325MSK-R15",
+  "task_id": "E02-W3-R15-001-CITATION_LABEL_NATIVE_GATE",
+  "owner": "W3.01/E02/P02",
+  "pr": 162,
+  "branch": "integration/nox-v16-unified-candidate-20261028-r01",
+  "expected_head": "d91d08ea13006eb75fcbd2a1e5241f1551c024f0",
+  "expected_tree": "a43bc8e951d62ec55d284aec8d77bb1a47cfb4d1",
+  "historical_baseline": "0b3a7d435be735148d64171deb9027093a89646e",
+  "original_729_file_sourcelock": "HOLD_NOT_VERIFIED",
+  "paths": [
+    {
+      "path": "Packages/P02/worker-python/p02_host_admission.py",
+      "owner": "E02",
+      "pre_sha256": "5983e490f87032ed85fb6ca30422172d641f8dc4ce038b964d552256c720c7d3",
+      "post_sha256": "367c5407b0ab74599590c1d59b29eef5d8bcd911c2919bd9e0766bbf860eebb2",
+      "pre_git_blob_sha1": "2d7fdebfc87b6ce6acbc7bd119824ff80afb1623",
+      "post_git_blob_sha1": "b945f49eb9b4dd1c04f188c481b3c853028452eb",
+      "diff": "import unicodedata; reject Cc/Cf/Cs in source_id and title before verified citations cross into existing host event publisher."
+    },
+    {
+      "path": "Packages/P02/worker-python/test_p02_citation_label_gate_ci_r15_min.py",
+      "owner": "E02",
+      "pre_sha256": "ABSENT",
+      "post_sha256": "6ade7bdbd9e5d126b2048dd937b4e3da8066aac628fb7b17f2e5628991e0905b",
+      "pre_git_blob_sha1": "ABSENT",
+      "post_git_blob_sha1": "c8b5e1f83963b3c7673b27b8756606502eb24271",
+      "diff": "New exact-owner negative regression: bidi/control labels rejected; normal Russian/Spanish accepted."
+    },
+    {
+      "path": "Packages/P02/evidence/NOX_V16_W3_01_R15_CITATION_LABEL_OWNER_RECEIPT_20261028.json",
+      "owner": "E02",
+      "pre_sha256": "ABSENT",
+      "post_sha256": "OUTER_SHA256_MANIFEST_ONLY_NO_SELF_REFERENCE",
+      "pre_git_blob_sha1": "ABSENT",
+      "post_git_blob_sha1": "GIT_TREE_AFTER_COMMIT",
+      "diff": "Owner receipt with immutable preimage and test results."
+    }
+  ],
+  "tests": {
+    "old_source": "R15 full 6 tests: 1 PASS, 5 FAIL; min CI 1 unittest with 5 subcase failures",
+    "patched_source": "R15 full 6/6 PASS + R14 1/1 PASS; min CI 1/1 PASS",
+    "python_compile": "PASS",
+    "real_native_ollama": "NOT_RUN",
+    "installed_sqlite_host": "NOT_RUN",
+    "voice_ru_es_maestro": "NOT_RUN",
+    "same_sha_e07": "0/10 NOT_RUN"
+  },
+  "exactly_one_improvement": "CITATION_LABEL_GATE_AT_NATIVE_PUBLISH: validate visible source provenance labels for Cc/Cf/Cs after host producer boundary, RED→GREEN and preserve safe Unicode.",
+  "no_loss": "Only P02 owner source/test/receipt; no extra host, SQLite, Ollama, voice engine, process, D02/WOW/Core/Persona/archives/EXE edits.",
+  "release": "HOLD_SOURCE_ONLY"
+}

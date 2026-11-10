@@ -1,0 +1,75 @@
+{
+  "schema": "NOX_V16_T06_ROLE_WIDE_PREVENTION_RECEIPT_V1",
+  "run_id": "NOX-V16-T06-20261029-R10-OWNER-PORT-COLLISION",
+  "task": "M1/T06",
+  "status": "SOURCE_PATCH_APPLIED_TEST_AUTHORED_NATIVE_UNVERIFIED",
+  "source_ref": "integration/nox-v16-unified-candidate-20261028-r01",
+  "parent_head": "5abbf5cfeae619ce30c214ba596bda3d153f2dd9",
+  "parent_tree": "32e3efcd5858049bc96eba8a0c783fc4124a78bc",
+  "active_register_pre_blob": "2c8e374ec17f66b1a435e386e496f8cc8662ca00",
+  "incident": {
+    "id": "ERR-T06-20261029-DUPLICATE-P02-OWNER-ROUTE",
+    "parent_existing_error": "ERR-SRC-004",
+    "classification": "SOURCE_INTEGRATION_DEFECT",
+    "owner": "T06/E06 one-host binder; P02 voice owner",
+    "current_status": "FIX_APPLIED_UNVERIFIED",
+    "root_cause": "G2OneHostBinder independently collected legacy VOICE_METHODS calls.history and new P02 OwnerTwoPorts calls.history; both attempted one NoxPackHost route, aborting all-or-HOLD registration.",
+    "code_fix": "Derive immutable owner2 extra route set once under native host lock, reject invalid/foreign owner descriptors, skip intersecting legacy methods, verify exact staged registration set and preserve fallback legacy voice path.",
+    "prevention_all_roles": [
+      "Preflight one immutable (routeId,owner,handler) registry across every source owner before native bind.",
+      "One canonical route has exactly one selected handler; no competing adapter may register the same route.",
+      "Preserve original fallback when optional source owner absent; preserve functions rather than drop routes.",
+      "For each cross-owner collision add a negative regression on one real host plus rollback/source-identity assertions.",
+      "Never remove HOLD by setting availability/consent/ACL true; require real owner receipt and same-HEAD native proof.",
+      "T02 sole shared journal writer: deduplicate incident against ERR-SRC-004, CAS-append details to common register and Master/E06/Lessons; all T01–T11 must fresh-read."
+    ],
+    "focused_test": {
+      "path": "tests/e06/test_t06_r09_native_source_owner.py",
+      "assertions": "One source contract check: 12/12 PASS",
+      "python_unittest": "AUTHORED_NOT_EXECUTED",
+      "native_windows": "NOT_RUN"
+    }
+  },
+  "source_changes": [
+    {
+      "path": "coordination/e06/adapters/g2_space_mobile.py",
+      "pre_blob": "205428cb881803c130eca69da073dd5edbab3151",
+      "post_blob": "c8b937172eb431310229111945971bb11cd8ff90"
+    },
+    {
+      "path": "tests/e06/test_t06_r09_native_source_owner.py",
+      "pre_blob": "b3709e2e6a818c41f3853b520cfb179d0b28ca91",
+      "post_blob": "73ce76dde019e4f87efa51971b0d39c31eb3ae46"
+    }
+  ],
+  "whole_t06": {
+    "before_done": 1,
+    "after_done": 1,
+    "total": 8,
+    "pct_before": 12.5,
+    "pct_after": 12.5,
+    "delta_pp": 0,
+    "not_source_ready": true
+  },
+  "protected": [
+    "Original 729/3 ZIPs",
+    "T04 34/34",
+    "D02/WOW200",
+    "8 CoreID/5 Persona",
+    "P01-P05 prior DONE",
+    "one Ollama/SQLite/RAG",
+    "STOP/ACL/native consent/user data"
+  ],
+  "do_not_claim": [
+    "Executed Python unittest",
+    "Native route connected",
+    "All 13 HOLD cleared",
+    "T06 100%",
+    "EXE/NSIS/GitLab CI/E07"
+  ],
+  "sharing": {
+    "shared_error_json": "T02_ONLY_NOT_MODIFIED",
+    "master_e06_lessons": "T02_ONLY_NOT_MODIFIED",
+    "next": "T02 CAS+readback, T08 independent same-head reviewer"
+  }
+}

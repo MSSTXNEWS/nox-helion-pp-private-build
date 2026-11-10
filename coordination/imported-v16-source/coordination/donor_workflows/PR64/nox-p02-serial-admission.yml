@@ -1,0 +1,65 @@
+name: NOX P02 current owner Windows + PACK01 native binding
+on:
+  pull_request:
+    paths:
+      - 'Packages/P02/worker-python/**'
+      - '.github/workflows/nox-p02-serial-admission.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: nox-p02-owner-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  owner-p02-current-and-native-binding:
+    runs-on: windows-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout current P02 owner PR source
+        uses: actions/checkout@v4
+      - name: Checkout exact existing PACK01 integrator contract (read-only)
+        uses: actions/checkout@v4
+        with:
+          repository: MSSTXNEWS/nox-helion-pp-private-build
+          ref: 33774d985dd7f05e413f1830f74392f49645fe29
+          path: .nox-pinned-pack01
+          persist-credentials: false
+      - name: Checkout exact approved P04 RAG source (read-only)
+        uses: actions/checkout@v4
+        with:
+          repository: MSSTXNEWS/nox-helion-pp-private-build
+          ref: 8b86e706395bf75b847a19d678e11af811e52202
+          path: .nox-pinned-p04
+          persist-credentials: false
+      - name: Reuse Python already provided by runner
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Local component suite on Windows with actual SQLite + socket fixture
+        shell: pwsh
+        run: |
+          python -m compileall -q Packages/P02/worker-python
+          python -m unittest discover -s Packages/P02/worker-python -p 'test_*.py' -v
+      - name: Verify upstream PACK01 six real bindings and repaired same-second defect
+        shell: pwsh
+        env:
+          NOX_PACK01_CHECKOUT: ${{ github.workspace }}/.nox-pinned-pack01/proposals/NOX-PACK01-50
+          NOX_P02_OWNER_PATH: ${{ github.workspace }}/Packages/P02/worker-python
+        run: |
+          python Packages/P02/worker-python/run_pack01_owner_gate.py
+          python -m unittest discover -s Packages/P02/worker-python -p 'test_p02_ingress_pack01.py' -v
+      - name: P02 native route-port permissions and provider admission
+        shell: pwsh
+        run: |
+          python -m unittest discover -s Packages/P02/worker-python -p 'test_p02_owner_route_ports.py' -v
+      - name: Prove P02 current SQLite and P04 original local RAG are one scoped chat
+        shell: pwsh
+        env:
+          NOX_P04_SOURCE_DIR: ${{ github.workspace }}/.nox-pinned-p04/Packages/P04
+        run: |
+          python -m unittest discover -s Packages/P02/worker-python -p 'test_p02_p04_exact_owner.py' -v
+      - name: Release gate (intentional)
+        shell: pwsh
+        run: |
+          Write-Host 'SOURCE_OWNER_WINDOWS_TEST=PASS; PACK01_BRIDGE_FIX=PASS (only if previous steps passed)'
+          Write-Host 'APP_INTEGRATED=NO; ORIGINAL_APP_SOURCELOCK=HOLD; FINAL_EXE=NOT_BUILT; E07_QA=NOT_RUN'

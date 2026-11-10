@@ -1,0 +1,436 @@
+name: NOX R8 Windows desktop compilation
+on:
+  push:
+    branches: [feature/nox-r8-liquid-one-exe-20261106]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: B05 real NO-LOSS guard disposable Windows regression
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          & './coordination/nox-r8/installer/Test-NoLossGuard.ps1'
+          if (-not $?) { throw 'B05_NOLOSS_GUARD_FIXTURE_HOLD' }
+          & './coordination/nox-r8/installer/Test-NoxExactDuplicateCleanup.ps1'
+          if (-not $?) { throw 'NOX_EXACT_DUPLICATE_CLEANUP_HOLD' }
+      - name: Compile from exact source
+        shell: pwsh
+        run: |
+          # B01: GITHUB_SHA in a receipt is not proof of exact checkout.
+          # Refuse an unexpected or dirty tracked tree before staging/build.
+          $eventCommit=([string]$env:GITHUB_SHA).Trim().ToLowerInvariant()
+          $checkoutCommit=([string](git rev-parse HEAD)).Trim().ToLowerInvariant()
+          if ($LASTEXITCODE -ne 0 -or $eventCommit -cnotmatch '^[0-9a-f]{40}$' -or
+              $checkoutCommit -cne $eventCommit) { throw 'R8_CHECKOUT_EXACT_GITHUB_SHA_HOLD' }
+          $trackedChanges=@(git status --porcelain --untracked-files=no)
+          if ($LASTEXITCODE -ne 0 -or $trackedChanges.Count -gt 0) { throw 'R8_TRACKED_SOURCE_DIRTY_HOLD' }
+          $zip='coordination/nox-r8/NOX_R8_SOURCE.zip'
+          $hash=(Get-FileHash $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($hash -ne 'a1ed386b4b9356c21a007c9c54dc2f98f27a25ede42bad91dafada99ddd70325') { throw 'SOURCE_HASH_MISMATCH' }
+          Expand-Archive $zip -DestinationPath './r8' -Force
+          # D05 native source from same R8 branch; base archive remains SHA-pinned.
+          Copy-Item './coordination/nox-r8/overrides/src/MainWindow.xaml.cs' './r8/src/MainWindow.xaml.cs' -Force
+          Copy-Item './coordination/nox-r8/overrides/src/index.html' './r8/src/index.html' -Force
+          # V16 P01 cinema original donor is embedded in the canonical R8
+          # overrides/src/index.html before staging (never patch only r8/src).
+          $cinema='./coordination/nox-r8/integrations/v16/proposals/P01/WOW-MAX10/p01-cinematic-menu.css'
+          $cinemaBlob=([string](git hash-object $cinema)).Trim().ToLowerInvariant()
+          if ($LASTEXITCODE -ne 0 -or $cinemaBlob -cne '7205f4b747ed6b95856e0207a9b52cce29f9d118') { throw 'P01_CINEMA_ORIGINAL_BLOB_HOLD' }
+          $html=[IO.File]::ReadAllText((Resolve-Path './r8/src/index.html').Path)
+          if (-not $html.Contains('NOX V16 CINEMA CSS') -or
+              -not $html.Contains('body .core::before') -or
+              -not $html.Contains('<body class="reduced">')) { throw 'P01_R8_CINEMA_SOURCE_HOLD' }
+          # Stage HTML must stay byte-identical with the Git-tracked override.
+          # P03 exact original donor Git blob; compile the catalog into the SAME WPF/EXE host.
+          $p03Catalog='./coordination/nox-r8/integrations/v16/P03/Source/P03.ModelCenter/ModelCatalog.cs'
+          $p03Blob=([string](git hash-object $p03Catalog)).Trim().ToLowerInvariant()
+          if ($LASTEXITCODE -ne 0 -or $p03Blob -cne '73664042ab4e616e8f0c1e46abb9108780ebd7b3') { throw 'P03_MODELCATALOG_ORIGINAL_BLOB_HOLD' }
+          Copy-Item $p03Catalog './r8/src/ModelCatalog.cs' -Force
+          # P04 original vendor GPU telemetry reader: compile into same NOX EXE.
+          $p04Guardian='./coordination/nox-r8/integrations/v16/P04/GpuGuardian/GpuGuardian.cs'
+          $p04Blob=([string](git hash-object $p04Guardian)).Trim().ToLowerInvariant()
+          if ($LASTEXITCODE -ne 0 -or $p04Blob -cne '507065c7995827a3f2a98d8fd56273770266203a') { throw 'P04_GPU_GUARDIAN_ORIGINAL_BLOB_HOLD' }
+          Copy-Item $p04Guardian './r8/src/GpuGuardian.cs' -Force
+          # Original P04 is unchanged (exact blob attested above). Its standalone
+          # project supplies System.IO import; R8 compatibility is injected only
+          # into the ephemeral staged copy before source SHA inventory/publish.
+          $p04Staged='./r8/src/GpuGuardian.cs'
+          $p04Original=[IO.File]::ReadAllText((Resolve-Path $p04Staged).Path)
+          if (-not $p04Original.Contains('StreamReader')) { throw 'P04_GPU_GUARDIAN_EXPECTED_IO_SOURCE_HOLD' }
+          [IO.File]::WriteAllText((Resolve-Path $p04Staged).Path,
+            ('using System.IO;' + [Environment]::NewLine + $p04Original), [Text.Encoding]::UTF8)
+          # P04 original semantic RAG (3 donor files), compiled into SAME R8 WPF EXE.
+          $ragDonors=@(
+            @('RagService.cs','a98cf03da0ffeabe959faa9d7aa11608fdd04a21'),
+            @('RagIngestionService.cs','d68b09de46b07f98f40f8254a399d5679e6e862a'),
+            @('RagChatContextProvider.cs','079f0f280d254a93ba79a74c5b9b107d54c4fd83')
+          )
+          foreach($entry in $ragDonors){
+            $donor=Join-Path './coordination/nox-r8/integrations/v16/P04/Rag' $entry[0]
+            $donorHash=([string](git hash-object $donor)).Trim().ToLowerInvariant()
+            if ($LASTEXITCODE -ne 0 -or $donorHash -cne $entry[1]) { throw "P04_RAG_ORIGINAL_BLOB_HOLD_$($entry[0])" }
+            Copy-Item $donor (Join-Path './r8/src' $entry[0]) -Force
+          }
+          # The standalone original P04 csproj has ImplicitUsings enabled;
+          # R8 single-EXE source does not. Add imports only to staged copy,
+          # after original Git blob exact-SHA attestation and before inventory.
+          $ragStaged='./r8/src/RagService.cs'
+          $ragOriginal=[IO.File]::ReadAllText((Resolve-Path $ragStaged).Path)
+          if (-not $ragOriginal.Contains('class RagService')) { throw 'P04_RAG_EXPECTED_SOURCE_HOLD' }
+          $ragImports=@('using System;','using System.IO;','using System.Net.Http;',
+                        'using System.Collections.Generic;','using System.Threading;',
+                        'using System.Threading.Tasks;','using System.Linq;')
+          [IO.File]::WriteAllText((Resolve-Path $ragStaged).Path,
+            (($ragImports -join [Environment]::NewLine)+[Environment]::NewLine+$ragOriginal),
+            [Text.Encoding]::UTF8)
+          # P04 exact donor QLoRA sources are embedded as data resources
+          # in the SINGLE native EXE, not installed as a second application.
+          # NO training/python process runs during CI or app startup.
+          $workerDonors=@(
+            @('train_qlora.py','3375967b8beec14fcc88e09d2a1563af36462950'),
+            @('preflight_local_gpu.py','50756c056cd298152d2d3da5a9de2ec877f6cb86'),
+            @('merge_qlora_adapter.py','51a27181e94cf5e766e2faf943f8aa17ec6418c7'),
+            @('model_snapshot_probe.py','c370a18e058b879681a0b1da63cef3214f03b12a'),
+            @('requirements-qlora.txt','e98b757ffc52505f563348471209bba985851f0d')
+          )
+          New-Item -ItemType Directory -Force './r8/src/P04Worker' | Out-Null
+          foreach($entry in $workerDonors){
+            $donor=Join-Path './coordination/nox-r8/integrations/v16/P04' $entry[0]
+            $sha=([string](git hash-object $donor)).Trim().ToLowerInvariant()
+            if ($LASTEXITCODE -ne 0 -or $sha -cne $entry[1]) { throw "P04_QLORA_DONOR_SOURCE_DRIFT_HOLD_$($entry[0])" }
+            Copy-Item -LiteralPath $donor -Destination (Join-Path './r8/src/P04Worker' $entry[0]) -Force
+          }
+          $projectPath='./r8/src/NOX.HELION.csproj'
+          $project=[IO.File]::ReadAllText((Resolve-Path $projectPath).Path)
+          if (($project.Split('</Project>').Length - 1) -ne 1 -or
+              $project.Contains('P04Worker')) { throw 'P04_QLORA_PROJECT_PREIMAGE_HOLD' }
+          $resourceGroup=@'
+          <ItemGroup>
+            <EmbeddedResource Include="P04Worker\\*.*">
+              <LogicalName>NOX.HELION.P04.%(Filename)%(Extension)</LogicalName>
+            </EmbeddedResource>
+          </ItemGroup>
+          '@
+          $project=$project.Replace('</Project>',($resourceGroup+'</Project>'))
+          [IO.File]::WriteAllText((Resolve-Path $projectPath).Path,$project,[Text.Encoding]::UTF8)
+          if (-not $project.Contains('NOX.HELION.P04.%(Filename)%(Extension)')) { throw 'P04_QLORA_PROJECT_RESOURCE_HOLD' }
+          # Local Windows Speech API for explicitly consented RU/ES native ASR;
+          # pinned NuGet package, no background service, browser microphone denied.
+          $speechProject='./r8/src/NOX.HELION.csproj'
+          $speechXml=[IO.File]::ReadAllText((Resolve-Path $speechProject).Path)
+          if ($speechXml.Contains('System.Speech') -or
+              ($speechXml.Split('</Project>').Length - 1) -ne 1) {
+            throw 'NOX_SPEECH_PROJECT_PREIMAGE_HOLD'
+          }
+          $speechXml=$speechXml.Replace('</Project>',('<ItemGroup><PackageReference Include="System.Speech" Version="10.0.14" /></ItemGroup>'+[Environment]::NewLine+'</Project>'))
+          [IO.File]::WriteAllText((Resolve-Path $speechProject).Path,$speechXml,[Text.Encoding]::UTF8)
+          # B01: authoritative immutable inventory of actual expanded + Git-overlaid WPF sources.
+          # This is cloud-build provenance, NOT an owner NOX_NEW source-parity claim.
+          $srcRoot=(Resolve-Path './r8/src').Path
+          $sourceFiles=@(Get-ChildItem -LiteralPath $srcRoot -File -Recurse |
+            Where-Object {
+              $rel=[IO.Path]::GetRelativePath($srcRoot,$_.FullName).Replace([IO.Path]::DirectorySeparatorChar,'/')
+              $rel -notmatch '(^|/)(bin|obj)(/|$)'
+            } | Sort-Object FullName)
+          if ($sourceFiles.Count -lt 3) { throw 'R8_PROVENANCE_EMPTY_SOURCE_HOLD' }
+          $sourceRows=@($sourceFiles | ForEach-Object {
+            [ordered]@{
+              path=[IO.Path]::GetRelativePath($srcRoot,$_.FullName).Replace([IO.Path]::DirectorySeparatorChar,'/')
+              bytes=[long]$_.Length
+              sha256=(Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+            }
+          })
+          $sourceRecord=[ordered]@{
+            schema='NOX_R8_BUILD_SRC_PROVENANCE_V1'
+            source_git_sha=$checkoutCommit
+            source_zip_sha256=$hash
+            scope='ACTUAL_STAGED_R8_SRC_PRE_DOTNET_NOT_OWNER_PC'
+            files=$sourceRows
+          }
+          $sourceRecord | ConvertTo-Json -Depth 6 | Set-Content './r8/R8_SOURCE_PROVENANCE.json' -Encoding utf8
+          Copy-Item './coordination/nox-r8/tests/test_r8_learn_owner_queue.py' './r8/test_r8_learn_owner_queue.py'
+          python './r8/test_r8_learn_owner_queue.py'
+          if ($LASTEXITCODE -ne 0) { throw 'D05_LEARN_SOURCE_HOLD' }
+          Copy-Item './coordination/nox-r8/tests/test_r8_settings_contract.py' './r8/test_r8_settings_contract.py'
+          python './r8/test_r8_settings_contract.py'
+          if ($LASTEXITCODE -ne 0) { throw 'D06_SETTINGS_SOURCE_HOLD' }
+          Copy-Item './coordination/nox-r8/tests/test_r8_persona_memory.py' './r8/test_r8_persona_memory.py'
+          python './r8/test_r8_persona_memory.py'
+          if ($LASTEXITCODE -ne 0) { throw 'D03_PERSONA_MEMORY_SOURCE_HOLD' }
+          Copy-Item './coordination/nox-r8/tests/test_r8_gpu_fallback.cjs' './r8/test_r8_gpu_fallback.cjs'
+          node './r8/test_r8_gpu_fallback.cjs'
+          if ($LASTEXITCODE -ne 0) { throw 'D04_GPU_FALLBACK_SOURCE_HOLD' }
+          # D04: GPU sensor refresh must not block STOP, nor hide a hot second GPU.
+          node './coordination/nox-r8/tests/test_r8_d04_sensor_nonblocking.cjs'
+          if ($LASTEXITCODE -ne 0) { throw 'D04_NONBLOCKING_MULTIGPU_SENSOR_HOLD' }
+          Copy-Item './coordination/nox-r8/tests/test_r8_ipc_contract.py' './r8/test_r8_ipc_contract.py'
+          python './r8/test_r8_ipc_contract.py'
+          if ($LASTEXITCODE -ne 0) { throw 'B02_NATIVE_IPC_SOURCE_HOLD' }
+          Copy-Item './coordination/nox-r8/tests/test_r8_provider_recovery.py' './r8/test_r8_provider_recovery.py'
+          python './r8/test_r8_provider_recovery.py'
+          if ($LASTEXITCODE -ne 0) { throw 'TECHFIRST_PROVIDER_AUTOSTART_SOURCE_HOLD' }
+          # F01/B06 source-only guard before the single frozen EXE build.
+          Copy-Item './coordination/nox-r8/tests/test_r8_f01_native_backup_lock.py' './r8/test_r8_f01_native_backup_lock.py'
+          python './r8/test_r8_f01_native_backup_lock.py'
+          if ($LASTEXITCODE -ne 0) { throw 'F01_BACKUP_LOCK_AND_NATIVE_QWEN_GATE_SOURCE_HOLD' }
+          # F03 executes original navigation/ARIA/keyboard handlers on Windows runner.
+          Copy-Item './coordination/nox-r8/tests/test_r8_f03_responsive_routes.cjs' './r8/test_r8_f03_responsive_routes.cjs'
+          node './r8/test_r8_f03_responsive_routes.cjs'
+          if ($LASTEXITCODE -ne 0) { throw 'F03_RESPONSIVE_NATIVE_ROUTES_HOLD' }
+          $fxJsBlob=([string](git hash-object './coordination/nox-r8/integrations/v16/proposals/NOX-CINEMA-FX/nox-cinema.mjs')).Trim().ToLowerInvariant()
+          $fxCssBlob=([string](git hash-object './coordination/nox-r8/integrations/v16/proposals/NOX-CINEMA-FX/nox-cinema.css')).Trim().ToLowerInvariant()
+          if ($LASTEXITCODE -ne 0 -or $fxJsBlob -cne '7847ade31047b2534f929487ada9df02b14fb413' -or
+              $fxCssBlob -cne 'e5203f5720dc14147870ca898247fabae0e03522') { throw 'NOX_V16_CINEMA_DONOR_DRIFT_HOLD' }
+          node './coordination/nox-r8/tests/test_r8_cinema_v16_integrated.cjs'
+          if ($LASTEXITCODE -ne 0) { throw 'NOX_V16_CINEMA_NINE_ORBS_SOURCE_HOLD' }
+          node './coordination/nox-r8/tests/test_r8_model_snapshot_live.cjs'
+          if ($LASTEXITCODE -ne 0) { throw 'R8_MODEL_SNAPSHOT_READONLY_SOURCE_HOLD' }
+          node './coordination/nox-r8/tests/test_r8_real_p04_gpu_probe.cjs'
+          if ($LASTEXITCODE -ne 0) { throw 'R8_P04_REAL_GPU_PROBE_SOURCE_HOLD' }
+          node './coordination/nox-r8/tests/test_r8_qlora_preflight.cjs'
+          if ($LASTEXITCODE -ne 0) { throw 'P04_QLORA_READINESS_SOURCE_HOLD' }
+          node './coordination/nox-r8/tests/test_r8_rag_chat_native.cjs'
+          if ($LASTEXITCODE -ne 0) { throw 'R8_RAG_CHAT_SCOPE_SOURCE_HOLD' }
+          node './coordination/nox-r8/tests/test_r8_native_asr_source.cjs'
+          if ($LASTEXITCODE -ne 0) { throw 'NOX_NATIVE_RU_ES_ASR_SOURCE_HOLD' }
+          node './coordination/nox-r8/tests/test_r8_voice_tts_ru_es.cjs'
+          if ($LASTEXITCODE -ne 0) { throw 'R8_RU_ES_LOCAL_TTS_SOURCE_HOLD' }
+          node './coordination/nox-r8/tests/test_r8_voice_qwen_bridge.cjs'
+          if ($LASTEXITCODE -ne 0) { throw 'R8_VOICE_SHARED_QWEN_SOURCE_HOLD' }
+          node './coordination/nox-r8/tests/test_r8_theme_modes.cjs'
+          if ($LASTEXITCODE -ne 0) { throw 'R8_FIVE_THEME_SOURCE_HOLD' }
+          node './coordination/nox-r8/tests/test_r8_p03_catalog_runtime.cjs'
+          if ($LASTEXITCODE -ne 0) { throw 'P03_CATALOG_ORIGINAL_RUNTIME_HOLD' }
+          node './coordination/nox-r8/tests/test_r8_p04_gpu_guardian_live.cjs'
+          if ($LASTEXITCODE -ne 0) { throw 'P04_GPU_GUARDIAN_ORIGINAL_RUNTIME_HOLD' }
+          node './coordination/nox-r8/tests/test_r8_p04_live_rag.cjs'
+          if ($LASTEXITCODE -ne 0) { throw 'P04_RAG_ORIGINAL_RUNTIME_HOLD' }
+          Copy-Item './coordination/nox-r8/tests/test_r8_sqlite_commit_unknown.py' './r8/test_r8_sqlite_commit_unknown.py'
+          python './r8/test_r8_sqlite_commit_unknown.py'
+          if ($LASTEXITCODE -ne 0) { throw 'NOX_B04_SQLITE_COMMIT_UNKNOWN_HOLD' }
+          # B04: run original Model Center request-owner and durable receipt regression.
+          # The test reads ../overrides/src relative to its original tests/ folder.
+          node './coordination/nox-r8/tests/test_r8_b04_model_selection.cjs'
+          if ($LASTEXITCODE -ne 0) { throw 'B04_MODEL_OWNER_RECEIPT_SOURCE_HOLD' }
+          # B03: fail-closed native checkpoint contract with isolated WAL/foreign-file fixture.
+          Copy-Item './coordination/nox-r8/tests/test_r8_b03_checkpoint_no_loss.py' './r8/test_r8_b03_checkpoint_no_loss.py'
+          python './r8/test_r8_b03_checkpoint_no_loss.py'
+          if ($LASTEXITCODE -ne 0) { throw 'B03_CHECKPOINT_NOLOSS_SOURCE_HOLD' }
+          # D01: execute actual embedded chat click handler with offline/overlength/valid drafts.
+          Copy-Item './coordination/nox-r8/tests/test_r8_d01_chat_draft.cjs' './r8/test_r8_d01_chat_draft.cjs'
+          node './r8/test_r8_d01_chat_draft.cjs'
+          if ($LASTEXITCODE -ne 0) { throw 'D01_CHAT_OWNER_DRAFT_HOLD' }
+          # D03: production WebView2 note PersonaID and native SQLite prewrite guard.
+          node './coordination/nox-r8/tests/test_r8_d03_note_persona_guard.cjs'
+          if ($LASTEXITCODE -ne 0) { throw 'D03_NOTE_PERSONA_OWNER_SOURCE_HOLD' }
+          # D03: detect uncertain DELETE/COMMIT and prohibit automatic note replay.
+          node './coordination/nox-r8/tests/test_r8_d03_note_delete_commit_receipt.cjs'
+          if ($LASTEXITCODE -ne 0) { throw 'D03_NOTE_DELETE_COMMIT_SOURCE_HOLD' }
+          # D03: SQLite protective journal uncertain-state receipt and no VUNEO replay.
+          node './coordination/nox-r8/tests/test_r8_d03_vuneo_owner_path.cjs'
+          if ($LASTEXITCODE -ne 0) { throw 'D03_VUNEO_JOURNAL_STATE_SOURCE_HOLD' }
+          # B06 original-source regression D05_TASK_ADD_DURABLE; no owner Qwen E2E claim.
+          python './coordination/nox-r8/tests/test_r8_d05_task_add_durable_replay.py'
+          if ($LASTEXITCODE -ne 0) { throw 'B06_D05_TASK_ADD_DURABLE_HOLD' }
+          # B06 original-source regression F02_PROVENANCE_NEGATIVE; no owner Qwen E2E claim.
+          python './coordination/nox-r8/tests/test_r8_f02_provenance_negative.py'
+          if ($LASTEXITCODE -ne 0) { throw 'B06_F02_PROVENANCE_NEGATIVE_HOLD' }
+          # B06 original-source regression D03_PERSONA_MEMORY_SEARCH; no owner Qwen E2E claim.
+          node './coordination/nox-r8/tests/test_r8_d03_memory_search_persona.cjs'
+          if ($LASTEXITCODE -ne 0) { throw 'B06_D03_PERSONA_MEMORY_SEARCH_HOLD' }
+          # B06 original-source regression F01_REAL_CHAT_STOP_HANDLER; no owner Qwen E2E claim.
+          node './coordination/nox-r8/tests/test_r8_f01_chat_stop_owner_live_handler.cjs'
+          if ($LASTEXITCODE -ne 0) { throw 'B06_F01_REAL_CHAT_STOP_HANDLER_HOLD' }
+          dotnet publish './r8/src/NOX.HELION.csproj' -c Release -r win-x64 --self-contained true -o './out' -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:PublishTrimmed=false
+          if ($LASTEXITCODE -ne 0) { throw 'BUILD_FAILED' }
+          Get-FileHash './out/NOX.HELION.exe' -Algorithm SHA256
+      - name: Native WPF WebView2 eight-route smoke, isolated SQLite
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $exe=(Resolve-Path './out/NOX.HELION.exe').Path
+          $runId='NOX-R8-'+$env:GITHUB_RUN_ID
+          $started=[DateTime]::UtcNow
+          $p=Start-Process -FilePath $exe -WorkingDirectory (Split-Path $exe) -ArgumentList @('--nox-ui-smoke',"--nox-runid=$runId") -PassThru
+          try {
+            Wait-Process -Id $p.Id -Timeout 95 -ErrorAction Stop
+            $p.Refresh()
+            $file=Join-Path $env:LOCALAPPDATA "NOX_HELION/ui_selftest_$($p.Id).json"
+            if (!(Test-Path -LiteralPath $file)) {
+              # Missing UI receipts are not a PASS. Surface the process-bound
+              # startup failure rather than hiding its native error.
+              $startup=Join-Path $env:LOCALAPPDATA "NOX_HELION/startup_failure_$($p.Id).json"
+              $detail=if (Test-Path -LiteralPath $startup) { Get-Content -LiteralPath $startup -Raw } else { 'NO_STARTUP_FAILURE_RECEIPT' }
+              throw "NOX_R8_UI_RECEIPT_MISSING PID=$($p.Id) EXIT=$($p.ExitCode) STARTUP=$detail"
+            }
+            $n=Get-Content $file -Raw | ConvertFrom-Json
+            $sha=(Get-FileHash $exe -Algorithm SHA256).Hash
+            $stamp=[DateTimeOffset]::Parse([string]$n.checkedAt).UtcDateTime
+            if ($p.ExitCode -ne 0 -or $n.schema -ne 'NOX_WPF_UI_SMOKE_R7_V1' -or
+                $n.runId -cne $runId -or $n.pid -ne $p.Id -or
+                $stamp -lt $started -or !$n.wpfWebView2Accepted -or
+                $n.checks.real_webview2_eight_routes -ne 'PASS' -or
+                $n.checks.p04_native_model_snapshot_picker_no_read -ne 'PASS' -or
+                $n.checks.p02_native_ru_es_asr_installed_inventory_no_microphone -ne 'PASS' -or
+                $n.checks.p04_native_embedded_qlora_five_sources -ne 'PASS' -or
+                $n.checks.p01_native_webview2_v16_cinema_nine_orbs -ne 'PASS' -or
+                $n.checks.p03_native_webview2_catalog_31_families -ne 'PASS' -or
+                $n.checks.p04_native_webview2_gpu_guardian_readonly -ne 'PASS' -or
+                $n.checks.p04_native_webview2_rag_noindex_readback -ne 'PASS' -or
+                $n.checks.real_webview2_keyboard_routes -ne 'PASS' -or
+                $n.checks.d01_five_quick_native_routes -ne 'PASS' -or
+                $n.checks.d01_five_quick_windows_uia -ne 'PASS' -or
+                $n.checks.d01_five_quick_compact_320_390_800 -ne 'PASS' -or
+                $n.checks.f03_compact_native_coreid_focus_320_390_800 -ne 'PASS' -or
+                $n.checks.f03_webview2_injected_gpu_context_fallback -ne 'PASS' -or
+                $n.checks.f03_webview2_emulated_reduced_motion -ne 'PASS' -or
+                $n.checks.settings_windows_uia_host -ne 'PASS' -or
+                $n.checks.settings_webview2_accessible_controls -ne 'PASS' -or
+                $n.checks.settings_wpf_owner_sqlite_readback -ne 'PASS' -or
+                $n.checks.settings_wpf_motion_sqlite_readback -ne 'PASS' -or
+                $n.checks.settings_foreign_key_denial -ne 'PASS' -or
+                $n.checks.sqlite_native_backup_no_loss -ne 'PASS' -or
+                $n.checks.isolated_sqlite_path -ne 'PASS' -or
+                $n.checks.native_wpf_webview2_renderer -ne 'PASS' -or
+                ![string]::Equals($n.exeSha256,$sha,[StringComparison]::OrdinalIgnoreCase)) {
+              throw "NOX_R8_WINDOWS_UI_HOLD: $($n.error) checks=$($n.checks | ConvertTo-Json -Compress -Depth 4) exit=$($p.ExitCode) webview=$($n.wpfWebView2Accepted) sourceExeMatch=$([string]::Equals($n.exeSha256,$sha,[StringComparison]::OrdinalIgnoreCase))"
+            }
+            Copy-Item $file './out/UI_SMOKE_RECEIPT.json' -Force
+            Write-Host "NOX_R8_WINDOWS_UI_NATIVE_PASS SHA256=$sha (local Qwen E2E not checked)"
+          } finally {
+            $p.Refresh()
+            if (!$p.HasExited) { Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue }
+          }
+          # D06: a real second WPF/WebView2 process must recover ECO from the
+          # exact isolated SQLite DB, without writing to owner chat.sqlite3.
+          $restartStarted=[DateTime]::UtcNow
+          $restart=Start-Process -FilePath $exe -WorkingDirectory (Split-Path $exe) -ArgumentList @('--nox-ui-smoke','--nox-settings-restart-readback',"--nox-runid=$runId") -PassThru
+          try {
+            Wait-Process -Id $restart.Id -Timeout 95 -ErrorAction Stop
+            $restart.Refresh()
+            $restartFile=Join-Path $env:LOCALAPPDATA "NOX_HELION/ui_selftest_$($restart.Id).json"
+            if (!(Test-Path -LiteralPath $restartFile)) { throw 'NOX_R8_SETTINGS_RESTART_RECEIPT_MISSING' }
+            $r=Get-Content $restartFile -Raw | ConvertFrom-Json
+            $sha=(Get-FileHash $exe -Algorithm SHA256).Hash
+            $stamp=[DateTimeOffset]::Parse([string]$r.checkedAt).UtcDateTime
+            if ($restart.ExitCode -ne 0 -or $r.schema -ne 'NOX_WPF_UI_SMOKE_R7_V1' -or
+                $r.runId -cne $runId -or $r.pid -ne $restart.Id -or
+                $stamp -lt $restartStarted -or !$r.wpfWebView2Accepted -or
+                $r.checks.isolated_sqlite_path -ne 'PASS' -or
+                $r.checks.settings_wpf_owner_restart_readback -ne 'PASS' -or
+                ![string]::Equals($r.exeSha256,$sha,[StringComparison]::OrdinalIgnoreCase)) {
+              throw "NOX_R8_SETTINGS_RESTART_HOLD: $($r.error)"
+            }
+            Copy-Item $restartFile './out/SETTINGS_RESTART_RECEIPT.json' -Force
+            Write-Host "NOX_R8_SETTINGS_RESTART_NATIVE_PASS SHA256=$sha (owner-PC restart not tested)"
+          } finally {
+            $restart.Refresh()
+            if (!$restart.HasExited) { Stop-Process -Id $restart.Id -Force -ErrorAction SilentlyContinue }
+          }
+          # D06 Windows runner: inspect real isolated SQLite SID/DACL, not owner's database.
+          & './coordination/nox-r8/tests/Assert-R8-IsolatedSettingsAcl.ps1' -RunId $runId -ExePath $exe
+      - name: Package launch helper and verified EXE
+        shell: pwsh
+        run: |
+          # B01: reject any changed/deleted/added staged source after publish.
+          # A matching Git SHA alone never establishes which bytes were compiled.
+          $srcRoot=(Resolve-Path './r8/src').Path
+          $proof=Get-Content './r8/R8_SOURCE_PROVENANCE.json' -Raw -Encoding utf8 | ConvertFrom-Json
+          if ($proof.schema -cne 'NOX_R8_BUILD_SRC_PROVENANCE_V1' -or
+              $proof.source_git_sha -cne $env:GITHUB_SHA.ToLowerInvariant() -or
+              $proof.source_zip_sha256 -cne 'a1ed386b4b9356c21a007c9c54dc2f98f27a25ede42bad91dafada99ddd70325') {
+            throw 'R8_PROVENANCE_PREIMAGE_MISMATCH_HOLD'
+          }
+          $nowFiles=@(Get-ChildItem -LiteralPath $srcRoot -File -Recurse |
+            Where-Object {
+              $rel=[IO.Path]::GetRelativePath($srcRoot,$_.FullName).Replace([IO.Path]::DirectorySeparatorChar,'/')
+              $rel -notmatch '(^|/)(bin|obj)(/|$)'
+            } | Sort-Object FullName)
+          $expectedFiles=@($proof.files)
+          if ($nowFiles.Count -ne $expectedFiles.Count) { throw 'R8_PROVENANCE_FILESET_CHANGED_HOLD' }
+          foreach ($f in $expectedFiles) {
+            $relative=([string]$f.path).Replace('/',[IO.Path]::DirectorySeparatorChar)
+            $candidate=Join-Path -Path $srcRoot -ChildPath $relative
+            if (!(Test-Path -LiteralPath $candidate -PathType Leaf)) { throw 'R8_PROVENANCE_MISSING_FILE_HOLD' }
+            $got=(Get-FileHash -LiteralPath $candidate -Algorithm SHA256).Hash.ToLowerInvariant()
+            $gotSize=(Get-Item -LiteralPath $candidate).Length
+            if ($got -cne [string]$f.sha256 -or $gotSize -ne [long]$f.bytes) {
+              throw "R8_PROVENANCE_STAGED_SOURCE_CHANGED_HOLD $($f.path)"
+            }
+          }
+          Copy-Item './r8/R8_SOURCE_PROVENANCE.json' './out/SOURCE_PROVENANCE.json'
+          Copy-Item './r8/START_NOX.ps1' './out/START_NOX.ps1'
+          $script='@echo off'+[Environment]::NewLine+
+            'powershell.exe -NoProfile -File "%~dp0START_NOX.ps1"'+[Environment]::NewLine
+          [IO.File]::WriteAllText((Join-Path (Resolve-Path './out').Path 'START_NOX.cmd'),$script,[Text.Encoding]::ASCII)
+          Get-ChildItem './out' -File -Include '*.xml','*.pdb' | Remove-Item -Force -ErrorAction SilentlyContinue
+          $exe=(Resolve-Path './out/NOX.HELION.exe').Path
+          @{
+            schema='NOX_R8_NATIVE_SINGLE_EXE_V1';
+            source_sha256='a1ed386b4b9356c21a007c9c54dc2f98f27a25ede42bad91dafada99ddd70325';
+            source_git_sha=$env:GITHUB_SHA;
+            staged_source_manifest_sha256=(Get-FileHash './out/SOURCE_PROVENANCE.json' -Algorithm SHA256).Hash.ToLowerInvariant();
+            staged_source_file_count=@($proof.files).Count;
+            owner_source_parity='NOT_VERIFIED';
+            native_cs_sha256=(Get-FileHash './r8/src/MainWindow.xaml.cs' -Algorithm SHA256).Hash.ToLowerInvariant();
+            embedded_html_sha256=(Get-FileHash './r8/src/index.html' -Algorithm SHA256).Hash.ToLowerInvariant();
+            training='NOT_STARTED';
+            exe_sha256=(Get-FileHash $exe -Algorithm SHA256).Hash.ToLowerInvariant();
+            compiled_and_native_ui='PASS'; local_qwen_e2e='NOT_TESTED';
+            canonical_full_d02='NOT_ACCEPTED'; full_v16='NOT_IMPLEMENTED';
+            accepted_full_release=$false
+          } | ConvertTo-Json | Set-Content './out/BUILD_RECEIPT.json' -Encoding UTF8
+      - name: B05 compile SHA-pinned immutable NOX Setup from same EXE and source receipt
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $exe=(Resolve-Path './out/NOX.HELION.exe').Path
+          $receipt=(Resolve-Path './out/BUILD_RECEIPT.json').Path
+          $receiptObj=Get-Content -LiteralPath $receipt -Encoding utf8 -Raw | ConvertFrom-Json
+          $exeSha=(Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash.ToLowerInvariant()
+          $receiptSha=(Get-FileHash -LiteralPath $receipt -Algorithm SHA256).Hash.ToLowerInvariant()
+          $sourceSha=$env:GITHUB_SHA.ToLowerInvariant()
+          if ($receiptObj.schema -cne 'NOX_R8_NATIVE_SINGLE_EXE_V1' -or
+              $receiptObj.source_git_sha -cne $sourceSha -or
+              $receiptObj.exe_sha256 -cne $exeSha -or
+              $receiptObj.accepted_full_release -ne $false) {
+            throw 'B05_EXACT_SOURCE_RECEIPT_HOLD'
+          }
+          $compiler='C:\Program Files (x86)\NSIS\makensis.exe'
+          if (-not (Test-Path -LiteralPath $compiler -PathType Leaf)) {
+            choco install nsis -y --no-progress
+            if ($LASTEXITCODE -ne 0) { throw 'B05_NSIS_COMPILER_UNAVAILABLE_HOLD' }
+          }
+          if (-not (Test-Path -LiteralPath $compiler -PathType Leaf)) { throw 'B05_NSIS_MAKENSIS_MISSING_HOLD' }
+          $setup=Join-Path (Resolve-Path './out').Path 'NOX_R8_ImmutableUser_Setup.exe'
+          $script=(Resolve-Path './coordination/nox-r8/installer/NOX_R8_ImmutableUser_Setup.nsi').Path
+          $guard=(Resolve-Path './coordination/nox-r8/installer/NoLossGuard.ps1').Path
+          & $compiler /V2 "/DNOX_EXE_PATH=$exe" "/DNOX_RECEIPT_PATH=$receipt" "/DNOX_GUARD_PATH=$guard" "/DNOX_EXE_SHA256=$exeSha" "/DNOX_RECEIPT_SHA256=$receiptSha" "/DNOX_SOURCE_GIT_SHA=$sourceSha" "/DNOX_SETUP_OUT=$setup" $script
+          if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $setup -PathType Leaf)) {
+            throw 'B05_EXACT_SHA_NSIS_COMPILE_HOLD'
+          }
+          $setupSha=(Get-FileHash -LiteralPath $setup -Algorithm SHA256).Hash.ToLowerInvariant()
+          [ordered]@{
+            schema='NOX_R8_SHA_PINNED_INSTALLER_CI_V1';
+            source_git_sha=$sourceSha;
+            source_exe_sha256=$exeSha;
+            source_receipt_sha256=$receiptSha;
+            installer_sha256=$setupSha;
+            installer_bytes=(Get-Item -LiteralPath $setup).Length;
+            original_owner_pc='NOT_TESTED';
+            qwen_gpu_stream_stop_sqlite='NOT_TESTED';
+            accepted_full_release=$false
+          } | ConvertTo-Json -Depth 4 | Set-Content './out/INSTALLER_RECEIPT.json' -Encoding utf8
+          Write-Host "B05_REAL_SHA_PINNED_NSIS_COMPILE_PASS SHA256=$setupSha (owner PC NOT_TESTED)"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NOX-R8-WIN64
+          path: out/

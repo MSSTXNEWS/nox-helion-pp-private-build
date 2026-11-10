@@ -1,0 +1,242 @@
+{
+  "schema": "NOX-E06-G2-05-R08-RECEIPT-v1",
+  "runId": "NOX-V16-E06-G2-05-20261028T1310MSK-R08",
+  "owner": "E06#6",
+  "repo": "MSSTXNEWS/nox-helion-pp-private-build",
+  "branch": "e06/v16-g2-05-gpu-provenance-20261028-r08",
+  "baselineCommit": "0b3a7d435be735148d64171deb9027093a89646e",
+  "baselineTree": "f108d604c444f718b32aaecfd07b90b8f91b9a6f",
+  "immutableR07Parent": "c8b38c1548ee57ba806238485a36691fdb625547",
+  "immutableR07ParentTree": "cb25fcacc1f447b4fc95cc172c9d863de9dec88e",
+  "candidateBeforeReceiptCommit": "1af901144624a96b250220d55f59b000d276a71e",
+  "sourceLock": "HOLD_original_source_00_01_02_raw_SHA256_and_full_729_extracted_members_NOT_VERIFIED",
+  "sourceScope": "E06 integration-adapter/test/existing E06 Windows workflow + E07 handoff only; D02/WOW/other owner/main unchanged",
+  "fileReceipts": [
+    {
+      "path": "coordination/e06/adapters/g2_space_mobile.py",
+      "owner": "E06#6",
+      "runId": "NOX-V16-E06-G2-05-20261028T1310MSK-R08",
+      "immutableR07Parent": "c8b38c1548ee57ba806238485a36691fdb625547",
+      "preSha256": "48ff4fb7910f5fe995fd56849bf046bdc71137a4811cf46ac8d0590c8b745806",
+      "postSha256": "a9d5b95d4ee8576b6961cb6e883b67661a83de635e424ab3695dcbc2a7fc91d4",
+      "preGitBlobSha1": "10fdf7ee84a8493086335e3c639500479d1fcdc2",
+      "postGitBlobSha1": "aa90646429b12dd3ff4716d276c437703c348fb0",
+      "diffSummary": "Existing P05 projection binds verified native physical GPU DeviceId/device_id and quarantines ambiguous/mixed hardware; no owner file touched",
+      "necessaryTests": "10 new pinned owner integration tests #81–90 DEFINED_NOT_RUN"
+    },
+    {
+      "path": "coordination/e06/adapters/g2_gpu_provenance.py",
+      "owner": "E06#6",
+      "runId": "NOX-V16-E06-G2-05-20261028T1310MSK-R08",
+      "immutableR07Parent": "c8b38c1548ee57ba806238485a36691fdb625547",
+      "preSha256": "ABSENT",
+      "postSha256": "ef57cdb048bf63ce3ed093220d116894341bba592cbe1d5bfb2113fa9cd4bcbb",
+      "preGitBlobSha1": "ABSENT",
+      "postGitBlobSha1": "de92680299e5e8c709bae7d70af7d5363b588f37",
+      "diffSummary": "New E06-only GPU device identity/source lexical gate and coherence calculation; no new sensor worker",
+      "necessaryTests": "15/15 local isolated unittest PASS, Windows NOT_RUN"
+    },
+    {
+      "path": "tests/e06/adapters/test_g2_space_mobile.py",
+      "owner": "E06#6",
+      "runId": "NOX-V16-E06-G2-05-20261028T1310MSK-R08",
+      "immutableR07Parent": "c8b38c1548ee57ba806238485a36691fdb625547",
+      "preSha256": "6782cce480f0b63134856eb108da08f460b11dfb7bae63d9c5d9407b2a9c307d",
+      "postSha256": "c22779b4af38dd434d3bc652541087ce1fb0c79fe66cdb9b17ad6a2dbe882b7f",
+      "preGitBlobSha1": "a9ff2b2c2a78b6996ee4ef1bae8d354c68390059",
+      "postGitBlobSha1": "c21eafce6f3f0f58166b34fb282111814f74a4eb",
+      "diffSummary": "Retain 80 tests and append 10 GPU ID/provenance positive/negative tests",
+      "necessaryTests": "90 owner-pinned scenarios DEFINED, Windows NOT_RUN"
+    },
+    {
+      "path": "tests/e06/adapters/test_g2_gpu_provenance.py",
+      "owner": "E06#6",
+      "runId": "NOX-V16-E06-G2-05-20261028T1310MSK-R08",
+      "immutableR07Parent": "c8b38c1548ee57ba806238485a36691fdb625547",
+      "preSha256": "ABSENT",
+      "postSha256": "855af84e5c31d50f7a238940c91fd8e7b136fb10a933daf898b706aa170573e6",
+      "preGitBlobSha1": "ABSENT",
+      "postGitBlobSha1": "632b68c9a033432ff136213d22347ca542e2f634",
+      "diffSummary": "New standalone 15 helper regression tests with pinned adapter import resolution",
+      "necessaryTests": "15/15 local unittest PASS + py_compile PASS; not Windows"
+    },
+    {
+      "path": ".github/workflows/nox-e06-g2-space-mobile.yml",
+      "owner": "E06#6",
+      "runId": "NOX-V16-E06-G2-05-20261028T1310MSK-R08",
+      "immutableR07Parent": "c8b38c1548ee57ba806238485a36691fdb625547",
+      "preSha256": "ef73d2abc336b7bd47e037ce248c87dd14c183a9d8084e0f3557d68afd7fe537",
+      "postSha256": "903d91b9cea7f1b5f791d8fe54fa140faa4e1fa6aabf0782436d1df9cfc76be6",
+      "preGitBlobSha1": "ad8e4c203aa04c3c5776a930e4d2c76f5d1beb6b",
+      "postGitBlobSha1": "32e4bf08ae3cf572167267779574cd8bce496624",
+      "diffSummary": "Existing Windows workflow branch trigger R08 and 105 test label, no new runner",
+      "necessaryTests": "CI run 40670764547 failure with no test steps; INFRA_NOT_EXECUTED"
+    },
+    {
+      "path": "coordination/e06/adapters/G2_R08_HANDOFF.md",
+      "owner": "E06#6",
+      "runId": "NOX-V16-E06-G2-05-20261028T1310MSK-R08",
+      "immutableR07Parent": "c8b38c1548ee57ba806238485a36691fdb625547",
+      "preSha256": "ABSENT",
+      "postSha256": "7e5fe59caafa469ee477e3b44fb34a65573e150d8b52b4dee4e61df641167d3b",
+      "preGitBlobSha1": "ABSENT",
+      "postGitBlobSha1": "415373448d4851722aa4560d50956fccd6c3377f",
+      "diffSummary": "E07 handoff, seven statuses/10 TaskIDs/NO-LOSS/source release gate",
+      "necessaryTests": "Markdown GitHub exact readback PASS"
+    }
+  ],
+  "selfReceipt": {
+    "path": "coordination/e06/adapters/G2_R08_RECEIPT.json",
+    "owner": "E06#6",
+    "preSha256": "ABSENT",
+    "preGitBlobSha1": "ABSENT",
+    "postSha256": "EXTERNAL_READBACK_NO_CIRCULAR_HASH",
+    "postGitBlobSha1": "EXTERNAL_READBACK_NO_CIRCULAR_HASH"
+  },
+  "TaskIDLedger": [
+    {
+      "taskId": "G2-05-R08-01",
+      "action": "pre-read V16/master/E06/lessons",
+      "status": "SOURCE_DONE"
+    },
+    {
+      "taskId": "G2-05-R08-02",
+      "action": "frozen Git baseline and ownership checked",
+      "status": "SOURCE_VERIFIED"
+    },
+    {
+      "taskId": "G2-05-R08-03",
+      "action": "R07 immutable preimages compared; SourceLock 729 not verified",
+      "status": "SOURCE_VERIFIED_HOLD"
+    },
+    {
+      "taskId": "G2-05-R08-04",
+      "action": "read-only P05 GPU physical identity gate",
+      "status": "SOURCE_PATCHED_LOCAL_UNIT_PASS"
+    },
+    {
+      "taskId": "G2-05-R08-05",
+      "action": "P03 existing ModelCenter queue Pull/GGUF/STOP/Retry only",
+      "status": "SOURCE_RETAINED_RUNTIME_HOLD"
+    },
+    {
+      "taskId": "G2-05-R08-06",
+      "action": "P02 existing voice/MAESTRO/SIP provider/consent gate",
+      "status": "SOURCE_RETAINED_RUNTIME_HOLD"
+    },
+    {
+      "taskId": "G2-05-R08-07",
+      "action": "private mobile auth, original events.v3 preserved",
+      "status": "SOURCE_RETAINED_RUNTIME_HOLD"
+    },
+    {
+      "taskId": "G2-05-R08-08",
+      "action": "15 helper tests actual local",
+      "status": "COMPONENT_ISOLATED_PASS_NOT_NATIVE"
+    },
+    {
+      "taskId": "G2-05-R08-09",
+      "action": "90 pinned owner scenarios (105 including helper) defined",
+      "status": "WINDOWS_NOT_RUN"
+    },
+    {
+      "taskId": "G2-05-R08-10",
+      "action": "SHA receipt/Drive append one lesson/E07 handoff",
+      "status": "REPORT_READBACK_PENDING"
+    }
+  ],
+  "separateIndicators": [
+    {
+      "executor": "E01",
+      "taskId": "V16.26.3 / P01 / PR133",
+      "source": "SOURCE",
+      "componentVerified": "32/32 synthetic V8 owner-reported; native N/D",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN",
+      "progress": "N/D"
+    },
+    {
+      "executor": "E02",
+      "taskId": "V16.26.4 / P02 / PR135",
+      "source": "SOURCE",
+      "componentVerified": "37/37 offline owner mocks reported",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN",
+      "progress": "N/D"
+    },
+    {
+      "executor": "E03",
+      "taskId": "V16.26.5 / P03 / PR132",
+      "source": "SOURCE",
+      "componentVerified": "134/134 offline owner tests reported",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN",
+      "progress": "N/D"
+    },
+    {
+      "executor": "E04",
+      "taskId": "V16.26.6 / P04 / PR134",
+      "source": "SOURCE",
+      "componentVerified": "GPU real NOT_RUN",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN",
+      "progress": "N/D"
+    },
+    {
+      "executor": "E05",
+      "taskId": "V16.26.7 / P05 / PR131",
+      "source": "SOURCE",
+      "componentVerified": "101/101 local Node owner-reported; hardware native N/D",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN",
+      "progress": "N/D"
+    },
+    {
+      "executor": "E06",
+      "taskId": "G2-05-R08-01..10 / draft candidate",
+      "source": "SOURCE",
+      "componentVerified": "15/15 local isolated Python PASS; pinned Windows 105 NOT_RUN",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN",
+      "progress": "N/D"
+    },
+    {
+      "executor": "E07",
+      "taskId": "QA01..10 / PR46",
+      "source": "SOURCE",
+      "componentVerified": "installed EXE 0/10",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN",
+      "progress": "N/D"
+    }
+  ],
+  "weights": {
+    "P01": 0.2,
+    "P02": 0.25,
+    "P03": 0.2,
+    "P04": 0.25,
+    "P05": 0.1
+  },
+  "weightedAcceptedProgress": "N/D - receipt-complete accepted denominators unavailable",
+  "tests": {
+    "localIsolated": "15/15 Python unittest PASS; py_compile PASS",
+    "ownerPinned": "90 integration (80 retained +10 new) Windows NOT_RUN",
+    "totalWindowsDefined": 105,
+    "ciRun": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/40670764547",
+    "ciStatus": "FAILURE_WITHOUT_CONFIRMED_TEST_STEP",
+    "ciRootCause": "N/D",
+    "installedExe": "NOT_RUN"
+  },
+  "errors": [
+    {
+      "class": "SOURCE",
+      "finding": "GPU mixed-device or unidentified P05 projection previously could be marked LIVE",
+      "cause": "Adapter validated source+UTC but not native physical GPU DeviceId",
+      "fix": "E06 integration-only single device/source/time gate; unsupported GPU returns N_D; no fake values"
+    }
+  ],
+  "newInstalledWindowsErrors": "новых ошибок нет — installed final EXE not tested",
+  "onePracticalLesson": "GPU_DEVICE_IDENTITY_GATE: require same physically attested native device ID for GPU utilization, thermal and VRAM single tile; reject missing or conflicting IDs as N_D before native release; test each owner-pinned source version",
+  "handoff": "#7 PR46 after GitHub+Drive readback",
+  "release": "SOURCE_SAVED_RELEASE_HOLD"
+}

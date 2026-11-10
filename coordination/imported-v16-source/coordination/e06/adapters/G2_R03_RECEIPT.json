@@ -1,0 +1,137 @@
+{
+  "schema": "NOX-E06-G2-05-R03-RECEIPT-v1",
+  "runId": "NOX-V16-E06-G2-05-20261028T0814MSK-R03",
+  "owner": "E06#6",
+  "repo": "MSSTXNEWS/nox-helion-pp-private-build",
+  "branch": "e06/v16-g2-05-space-mobile-20261028-c01",
+  "immutableMainCommit": "0b3a7d435be735148d64171deb9027093a89646e",
+  "immutableMainTree": "f108d604c444f718b32aaecfd07b90b8f91b9a6f",
+  "mainUntouched": true,
+  "headBeforeReceipt": "4eae5f5d52556344c2d216898a65eafa80abcea0",
+  "sourceLock": {
+    "PR66": "inventory_only",
+    "rawOriginalPartsSha256": "N_D",
+    "rawExtracted729": "N_D",
+    "ownerReceiptsAdmitted": false,
+    "release": "HOLD"
+  },
+  "files": [
+    {
+      "owner": "E06#6",
+      "runId": "NOX-V16-E06-G2-05-20261028T0814MSK-R03",
+      "baselineCommitGitSha1": "0b3a7d435be735148d64171deb9027093a89646e",
+      "baselineTreeGitSha1": "f108d604c444f718b32aaecfd07b90b8f91b9a6f",
+      "sourceLock": "HOLD_UNVERIFIED_ORIGINAL_3_PARTS_729_EXTRACT",
+      "path": "coordination/e06/adapters/g2_space_mobile.py",
+      "preSha256": "8dbc742663c33446a19546a2f17f2c88ed30f2c90ab17eb475c69045a3827b7e",
+      "preGitBlobSha1": "0af98aebf380a2a967d44c696d00d18fddebeb34",
+      "postSha256": "c87014721f2abc6f54d0540cef368732e6e83df1fa2baf6f35f500fc657a2b32",
+      "postGitBlobSha1": "7061401f6b3f8432f82927d2d9c82903c1366c78",
+      "commit": "97174b9c720ca2fa2f3a5f6a375451d7d94bb3dd",
+      "diff": "PrivateMobile.connect two-phase native auth after host advertisement, gateway/identity revocation HOLD; bind double original SourceLock under existing single host lock; restore prior registry on abort",
+      "tests": [
+        "test_33",
+        "test_34",
+        "test_35",
+        "test_36",
+        "test_37"
+      ]
+    },
+    {
+      "owner": "E06#6",
+      "runId": "NOX-V16-E06-G2-05-20261028T0814MSK-R03",
+      "baselineCommitGitSha1": "0b3a7d435be735148d64171deb9027093a89646e",
+      "baselineTreeGitSha1": "f108d604c444f718b32aaecfd07b90b8f91b9a6f",
+      "sourceLock": "HOLD_UNVERIFIED_ORIGINAL_3_PARTS_729_EXTRACT",
+      "path": "tests/e06/adapters/test_g2_space_mobile.py",
+      "preSha256": "eece8b05ebfe5b6bdd9b3c2fbd195e92f9a049c7ddf0c2d602e430bd517b26da",
+      "preGitBlobSha1": "57e77b9c542586e3957edc6f4e740e9c6e80ffa0",
+      "postSha256": "f961d9e40d2c6e11fe2f5b5985992a5fd9df225ce624d2b9febce37ab63022a7",
+      "postGitBlobSha1": "1fe49cbb917d0470f47ebe0d87ee5e1fad598879",
+      "commit": "0f20073b89c301eb90495a5c6d9b81a2afbca9ef",
+      "diff": "five security negative test definitions, 32→37; no made-up test results",
+      "tests": [
+        "test_33",
+        "test_34",
+        "test_35",
+        "test_36",
+        "test_37"
+      ]
+    },
+    {
+      "owner": "E06#6",
+      "runId": "NOX-V16-E06-G2-05-20261028T0814MSK-R03",
+      "baselineCommitGitSha1": "0b3a7d435be735148d64171deb9027093a89646e",
+      "baselineTreeGitSha1": "f108d604c444f718b32aaecfd07b90b8f91b9a6f",
+      "sourceLock": "HOLD_UNVERIFIED_ORIGINAL_3_PARTS_729_EXTRACT",
+      "path": ".github/workflows/nox-e06-g2-space-mobile.yml",
+      "preSha256": "fa067815784c8ae51bc3c2e5fd449546fdfbee143fabb9f2aaea7c58a2dbc19d",
+      "preGitBlobSha1": "93037911ecd81c925c61da0c9a8de5c6d2a7a1d1",
+      "postSha256": "bd137d4fd2f50588d8c73c62474e13e1c32885cf6bad71b220a8bbd48f13cf06",
+      "postGitBlobSha1": "a2039677fc005f19ff342ffba061c66dc3441f6d",
+      "commit": "ff66619dde8780a70aebc526663d7d601a48c4a5",
+      "diff": "Windows test step label 32→37; no other workflow/provider changes",
+      "tests": [
+        "Windows 37 authored NOT_RUN"
+      ]
+    },
+    {
+      "owner": "E06#6",
+      "runId": "NOX-V16-E06-G2-05-20261028T0814MSK-R03",
+      "baselineCommitGitSha1": "0b3a7d435be735148d64171deb9027093a89646e",
+      "baselineTreeGitSha1": "f108d604c444f718b32aaecfd07b90b8f91b9a6f",
+      "sourceLock": "HOLD_UNVERIFIED_ORIGINAL_3_PARTS_729_EXTRACT",
+      "path": "coordination/e06/adapters/G2_R03_HANDOFF.md",
+      "preSha256": "ABSENT",
+      "preGitBlobSha1": "ABSENT",
+      "postSha256": "9871c5ca3bed25c71e0ea2057b530b87cdb59c82c29d33f0a3bd2ceaec865a79",
+      "postGitBlobSha1": "cf53b6a97a758b0d0c1878f1d64927546ef8c456",
+      "commit": "4eae5f5d52556344c2d216898a65eafa80abcea0",
+      "diff": "new E07 handoff, 10 tasks, seven owner gates, weighted progress HOLD",
+      "tests": [
+        "exact GitHub readback"
+      ]
+    }
+  ],
+  "taskIDs": [
+    "G2-05-R03-01",
+    "G2-05-R03-02",
+    "G2-05-R03-03",
+    "G2-05-R03-04",
+    "G2-05-R03-05",
+    "G2-05-R03-06",
+    "G2-05-R03-07",
+    "G2-05-R03-08",
+    "G2-05-R03-09",
+    "G2-05-R03-10"
+  ],
+  "targetedWindowsTests": 37,
+  "executedWindowsTests": null,
+  "componentStatus": "NOT_RUN",
+  "sourceStatus": "VERIFIED_GIT_READBACK",
+  "integrated": "HOLD",
+  "windowsAccepted": "NOT_RUN",
+  "zeroNewPublicPorts": true,
+  "zeroNewPaidCalls": true,
+  "noNewBus": true,
+  "noNewWorker": true,
+  "noNewDownloader": true,
+  "products": {
+    "P01": null,
+    "P02": null,
+    "P03": null,
+    "P04": null,
+    "P05": null
+  },
+  "weights": {
+    "P01": 20,
+    "P02": 25,
+    "P03": 20,
+    "P04": 25,
+    "P05": 10
+  },
+  "weightedProgress": null,
+  "onePracticalLesson": "Reattest real native session/SourceLock immediately after potentially blocking owner callback and before advertising or committing routes; reject mid-call revocations via negative regressions.",
+  "handoff": "coordination/e06/adapters/G2_R03_HANDOFF.md",
+  "readback": "PENDING_INDEPENDENT_GITHUB_FETCH_AND_DRIVE"
+}

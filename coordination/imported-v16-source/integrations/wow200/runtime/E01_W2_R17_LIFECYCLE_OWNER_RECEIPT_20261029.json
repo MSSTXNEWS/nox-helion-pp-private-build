@@ -1,0 +1,88 @@
+{
+  "schema": "NOX_V16_E01_W2_SOURCE_LIFECYCLE_R17_V1",
+  "runId": "NOX-V16-W2-01-E01-20261029T0045MSK-R17",
+  "owner": "E01/W2·01",
+  "parentHead": "605a1a4c9830f6a9f038db4a7b78cacbafa671be",
+  "parentTree": "4b4e90bf33f194ad1d169bb3b4cd939785855bbb",
+  "scope": "D02 original HOME renderer mount lifecycle only",
+  "priorLesson": {
+    "id": "DECORATIVE_FOREIGN_EVENT_GETTER_FAIL_CLOSED",
+    "status": "PRESERVED_AND_RECHECKED_IN_ACTIVE_ENGINE; N/A to lifecycle code"
+  },
+  "taskIDs": [
+    "E01-W2-R17-01",
+    "E01-W2-R17-02",
+    "E01-W2-R17-03",
+    "E01-W2-R17-04"
+  ],
+  "tasks": [
+    {
+      "id": "E01-W2-R17-01",
+      "defect": "Initial sync failure leaves nine FX ownership markers, rejects subsequent mount"
+    },
+    {
+      "id": "E01-W2-R17-02",
+      "defect": "Observer disconnect exception prevents teardown and marker release"
+    },
+    {
+      "id": "E01-W2-R17-03",
+      "defect": "Destroying an already-disposed handle clears a newer D02 mount"
+    },
+    {
+      "id": "E01-W2-R17-04",
+      "defect": "Renderer.destroy exception leaves stale mounted handle"
+    }
+  ],
+  "cause": "D02 marker, observer and mounted-handle ownership were released through multiple non-atomic paths without idempotent failure isolation.",
+  "fix": "One owner-scoped releaseFx() with idempotent guard, individual observer/motion cleanup, marker release and mounted=null in finally; shared by failed mount and destroy.",
+  "files": [
+    {
+      "path": "integrations/wow200/runtime/home-scene.mjs",
+      "preSHA256": "40c26943e4b7837e2b625251b38353cc5c0869b50221183a7d64ea09c2d9ec2b",
+      "postSHA256": "1f00f30ecb53e895b94605ce084889a8880f8ed9a5bc7026ee644a9c164f3957",
+      "preBlob": "e78d2c9e538c24cd8be9431ce9d8f460809f9225",
+      "postBlob": "da4a4e26d913636649bf22901ef4a07d37fdb718"
+    },
+    {
+      "path": "integrations/wow200/runtime/home-scene.lifecycle.r17.test.mjs",
+      "preSHA256": "ABSENT",
+      "postSHA256": "d840e62c703558f62f7bf29b00ea6f117d7b9b03576a4eacb932a7bd19b307ce",
+      "preBlob": "ABSENT",
+      "postBlob": "512d5a24471e1d05a40873bc7db6e4c0cca0212d"
+    },
+    {
+      "path": "integrations/wow200/runtime/E01_W2_R17_LIFECYCLE_OWNER_RECEIPT_20261029.json",
+      "preSHA256": "ABSENT",
+      "postSHA256": "COMPUTE_FROM_COMMITTED_BYTES",
+      "preBlob": "ABSENT",
+      "postBlob": "COMPUTE_FROM_COMMITTED_BYTES"
+    }
+  ],
+  "delta": [
+    {
+      "before": "  let detachMotion=()=>{};\n  try{",
+      "after": "  let detachMotion=()=>{};\n  // FX-owned DOM markers and observers form one rollback transaction.\n  let disposed=false;\n  function releaseFx(){\n    if(disposed)return;\n    disposed=true;\n    try{detachMotion();}catch(_){}\n    try{observer?.disconnect();}catch(_){}\n    try{bodyObserver?.disconnect();}catch(_){}\n    observer=null;bodyObserver=null;\n    for(const element of [central,...items]){\n      try{delete element.dataset.noxVerifiedFx;}catch(_){}\n    }\n    try{scene.destroy();}finally{mounted=null;}\n  }\n  try{"
+    },
+    {
+      "before": "      destroy(){detachMotion();observer?.disconnect();bodyObserver?.disconnect();observer=null;bodyObserver=null;\n        for(const element of [central,...items])delete element.dataset.noxVerifiedFx;\n        scene.destroy();mounted=null;}",
+      "after": "      destroy(){releaseFx();}"
+    },
+    {
+      "before": "  }catch(error){detachMotion();observer?.disconnect();bodyObserver?.disconnect();scene.destroy();throw error;}",
+      "after": "  }catch(error){try{releaseFx();}catch(_){}throw error;}"
+    }
+  ],
+  "redGreen": {
+    "before": "4/6 PASS, four negative regressions RED",
+    "after": "6/6 PASS same-source mocked-DOM V8",
+    "testRunner": "V8 source-derived real JS execution; Node CLI NOT_RUN; Windows/WebView2 NOT_RUN"
+  },
+  "ownerPreimageCAS": "605a1a4c9830f6a9f038db4a7b78cacbafa671be",
+  "noLoss": "NO deletion; 9 original nodes, 8 CoreID, 5 Persona, WOW001-200, all originals/archives preserved; host/backend/DB/CI untouched",
+  "featureCodeComplete": false,
+  "sourceReady": "HOLD",
+  "binaryBuild": "PROHIBITED",
+  "E07": "0/10 NOT_RUN",
+  "weighted": "N/D",
+  "lessonId": "D02_FX_LIFECYCLE_RELEASE_ON_ALL_EXIT_PATHS"
+}

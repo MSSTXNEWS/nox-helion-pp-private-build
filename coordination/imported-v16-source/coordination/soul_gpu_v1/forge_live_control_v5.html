@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NOX HELION — FORGE LIVE CONTROL</title>
+<style>
+:root{color-scheme:dark;--gold:#e4bb81;--muted:#8a9aa9;--line:rgba(154,187,214,.18);--cyan:#8adce1;--surface:rgba(5,12,23,.83);--red:#ff846e}
+*{box-sizing:border-box}html,body{min-height:100%;margin:0;background:#02070d;color:#e8edf1;font-family:Inter,"Segoe UI",Arial,sans-serif}
+body{overflow-x:hidden}button,a{font:inherit}button{cursor:pointer}
+#scene{position:fixed;inset:-2% -2%;z-index:0;border:0;width:104%;height:104%;opacity:.64;filter:saturate(1.35) contrast(1.05);pointer-events:none}
+.sceneveil{position:fixed;inset:0;z-index:1;background:linear-gradient(90deg,rgba(1,7,13,.95) 0%,rgba(1,7,13,.75) 25%,rgba(1,7,13,.2) 47%,rgba(1,7,13,.26) 66%,rgba(1,7,13,.88) 100%),linear-gradient(0deg,#02070d 0%,transparent 20%,transparent 85%,#02070d 100%);pointer-events:none}
+.shell{position:relative;z-index:2;max-width:1740px;margin:auto;padding:24px clamp(14px,2.7vw,44px) 40px;min-height:100vh}
+.top{display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;padding-bottom:18px;border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:14px}.brand .seal{display:grid;place-items:center;width:49px;height:49px;border:1px solid #d7aa72;border-radius:50%;box-shadow:inset 0 0 18px #8a582633,0 0 25px #e5af4820;font-size:25px;color:var(--gold)}
+.brand h1{font-size:17px;letter-spacing:.36em;font-weight:400;margin:0;color:#f0d1a4}.brand p{font-size:9px;letter-spacing:.36em;color:#d3ad80;margin:7px 0 0}
+.tools{display:flex;align-items:center;gap:11px;flex-wrap:wrap}
+.pill{padding:9px 12px;border-radius:100px;border:1px solid var(--line);background:#020b14c9;color:#a7c2ce;font-size:11px;letter-spacing:.09em}
+.pill.live{color:#89e4d8;border-color:#5bc8b55c}.pill.off{color:#d4a08e;border-color:#c77c565c}
+button{background:#0a1924;color:#e7edf2;border:1px solid #496072a6;border-radius:7px;padding:10px 13px;font-size:12px}
+button:hover{border-color:var(--gold);color:var(--gold)}button:focus-visible{outline:2px solid var(--cyan)}
+button:disabled{opacity:.34;cursor:not-allowed}a{text-decoration:none;color:#cde7eb}
+.sectiontitle{font-weight:500;letter-spacing:.22em;font-size:10px;color:var(--gold);margin:0 0 17px}
+.metrics{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:11px;margin-top:18px}
+.metric,.panel{border:1px solid var(--line);background:var(--surface);backdrop-filter:blur(15px);border-radius:13px;box-shadow:0 13px 55px #0004}
+.metric{padding:16px 15px;min-height:108px}.metric label{display:block;color:#8da2b1;letter-spacing:.12em;font-size:10px;text-transform:uppercase}
+.metric strong{display:block;font-size:clamp(20px,2.1vw,31px);font-weight:300;letter-spacing:.02em;margin:12px 0 4px;white-space:nowrap}
+.metric small{color:#91a1a7;font-size:10px}
+.main{display:grid;grid-template-columns:minmax(260px,335px) minmax(330px,1fr) minmax(260px,335px);gap:16px;margin-top:17px;align-items:stretch}
+.panel{padding:20px}.central{min-height:370px;display:flex;flex-direction:column;justify-content:space-between;align-items:center;text-align:center;background:rgba(3,8,18,.14);border:1px solid rgba(216,169,112,.21);border-radius:15px}
+.corelabel{margin-top:14px;color:#e0b580;font-size:12px;letter-spacing:.26em;text-shadow:0 0 14px #000}
+.corebottom{margin-bottom:18px;max-width:420px;padding:15px;background:#030a13bb;border:1px solid var(--line);border-radius:9px}
+.corebottom strong{display:block;color:#dbebf0;font-size:13px;letter-spacing:.12em}.corebottom p{font-size:12px;color:#acb5bf;line-height:1.55;margin:8px 0 0}
+.row{display:flex;justify-content:space-between;gap:12px;padding:13px 0;border-bottom:1px solid #54708333;font-size:12px}
+.row .key{color:#90a6b4}.row .value{color:#edf3f7;text-align:right;font-variant-numeric:tabular-nums;overflow-wrap:anywhere;max-width:65%}
+.progress{height:7px;background:#24404d;margin:11px 0 5px;border-radius:9px;overflow:hidden}
+.bar{width:0;height:100%;background:linear-gradient(90deg,#4ba3bc,#a7e0c5,#ecc68e);transition:width .4s}
+.graphbox{background:rgba(5,19,29,.8);border:1px solid var(--line);border-radius:10px;margin-top:15px;padding:11px}
+canvas{display:block;width:100%;height:130px}
+.sub{font-size:11px;color:#8ca6b7;margin:0;line-height:1.6}
+.bottom{display:grid;grid-template-columns:1.3fr 1fr;gap:15px;margin-top:16px}
+.models{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}
+.tag{font-size:11px;border:1px solid #58748661;border-radius:100px;padding:7px 11px;background:#0b1b26e0;color:#bed0d6}
+.notice{border-left:2px solid var(--gold);padding:8px 12px;margin-top:14px;color:#bcc8d0;background:#07141dc7;font-size:11px;line-height:1.7}
+.footer{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:17px;color:#718b9d;font-size:10px;letter-spacing:.07em}
+.glow{color:#8de4da}.amber{color:#e9b887}.danger{color:var(--red)}
+@media(max-width:1130px){.metrics{grid-template-columns:repeat(3,1fr)}.main{grid-template-columns:1fr 1.2fr}.central{grid-column:1/-1;grid-row:1;min-height:340px}.bottom{grid-template-columns:1fr}}
+@media(max-width:640px){.shell{padding:14px}.metrics{grid-template-columns:repeat(2,1fr)}.metric{padding:12px;min-height:100px}.main{grid-template-columns:1fr}.central{grid-column:auto}.panel{padding:15px}.brand h1{font-size:14px;letter-spacing:.24em}.top{align-items:flex-start}.tools{gap:6px}.bottom{grid-template-columns:1fr}}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}}
+</style></head>
+<body>
+<!-- Original owner-selected FORGE FOCUS V4 is the actual visual engine/layer. -->
+<iframe id="scene" title="NOX original WOW visual engine" src="/visual" tabindex="-1" aria-hidden="true"></iframe>
+<div class="sceneveil"></div>
+<div class="shell">
+  <header class="top"><div class="brand"><div class="seal">✦</div><div><h1>NOX HELION</h1><p>FORGE · LIVING INTELLIGENCE</p></div></div>
+    <div class="tools"><span id="connection" class="pill off">● CONNECTING</span><span class="pill" id="updated">TELEMETRY —</span>
+    <button type="button" id="refresh">↻ Обновить</button><a class="pill" href="/visual" target="_blank" rel="noopener">WOW оригинал</a>
+    <button type="button" id="export">Данные JSON</button></div></header>
+  <section class="metrics" aria-label="Действительные метрики">
+    <div class="metric"><label>Шаг обучения</label><strong id="step">—</strong><small id="steptype">Нет подтверждения</small></div>
+    <div class="metric"><label>GPU Hot Spot</label><strong id="gpu">—</strong><small id="gpusource">RX 6650M · LHM</small></div>
+    <div class="metric"><label>Loss</label><strong id="loss">—</strong><small>Из журнала тренера</small></div>
+    <div class="metric"><label>Батарея</label><strong id="battery">—</strong><small id="power">Заряд / питание</small></div>
+    <div class="metric"><label>Диск свободно</label><strong id="disk">—</strong><small>Резерв ≥60 ГБ</small></div>
+    <div class="metric"><label>Ollama модели</label><strong id="models">—</strong><small id="modelbytes">Физический каталог</small></div>
+  </section>
+  <div class="main">
+    <section class="panel"><h2 class="sectiontitle">01 / ОБУЧЕНИЕ</h2>
+      <div class="row"><span class="key">Состояние</span><span class="value" id="status">Ожидание</span></div>
+      <div class="row"><span class="key">PID тренера</span><span class="value" id="pid">—</span></div>
+      <div class="row"><span class="key">Checkpoint</span><span class="value" id="checkpoint">—</span></div>
+      <div class="row"><span class="key">Прогресс текущего блока</span><span class="value" id="percent">—</span></div>
+      <div class="progress"><div class="bar" id="bar"></div></div>
+      <div class="row"><span class="key">Свежесть данных</span><span class="value" id="age">—</span></div>
+      <div class="row"><span class="key">Оценка качества</span><span class="value">Не выполнена</span></div>
+      <div class="graphbox"><div class="sectiontitle">LOSS · РЕАЛЬНЫЕ ЗАПИСИ</div><canvas id="graph" width="550" height="160"></canvas></div>
+    </section>
+    <section class="central" aria-label="Оригинальная WOW-сцена NOX">
+      <div class="corelabel">H E L I O N · A C T I V E · C O R E</div>
+      <div class="corebottom"><strong id="corestate">Проверка локального ядра</strong><p id="coreinfo">Сферы отображаются оригинальным графическим движком. Показатели и статусы — только из локальных служб.</p></div>
+    </section>
+    <section class="panel"><h2 class="sectiontitle">02 / ЗАЩИТА И ВЕСА</h2>
+      <div class="row"><span class="key">GPU STOP</span><span class="value danger">≥70 °C</span></div>
+      <div class="row"><span class="key">Восстановление</span><span class="value">ниже 65 °C</span></div>
+      <div class="row"><span class="key">Охлаждение</span><span class="value">≥180 секунд</span></div>
+      <div class="row"><span class="key">Термозащита</span><span class="value amber">Не испытана на пороге</span></div>
+      <div class="row"><span class="key">Реальные веса LoRA</span><span class="value" id="adapter">—</span></div>
+      <div class="row"><span class="key">SHA-256</span><span class="value" id="hash">—</span></div>
+      <div class="row"><span class="key">Связь с STOP</span><span class="value danger">Не подключена</span></div>
+      <button type="button" disabled title="Управление процессом из веб-сервера не проверено">STOP · НЕДОСТУПНО</button>
+      <div class="notice" id="warning">Ни один статус не имитирует успешное обучение. Не используйте веб-страницу как единственную термозащиту.</div>
+    </section>
+  </div>
+  <div class="bottom">
+    <section class="panel"><h2 class="sectiontitle">03 / ЛОКАЛЬНАЯ БИБЛИОТЕКА</h2><div class="models" id="modeltags">Загрузка Ollama...</div><p class="sub" style="margin-top:13px">Вес моделей Ollama ≠ обученные адаптеры LoRA. Нельзя смешивать.</p></section>
+    <section class="panel"><h2 class="sectiontitle">04 / ТЕХНИЧЕСКОЕ СОСТОЯНИЕ</h2>
+      <div class="row"><span class="key">Температурный датчик</span><span class="value" id="sensor">—</span></div>
+      <div class="row"><span class="key">Контроль безопасности</span><span class="value">Только внешний контроллер</span></div>
+      <div class="row"><span class="key">Источник</span><span class="value">127.0.0.1/api/status</span></div>
+      <p class="sub" id="errors" aria-live="polite" style="margin-top:12px">Ожидание данных…</p>
+    </section>
+  </div>
+  <footer class="footer"><span>NOX · FORGE LIVE · REAL SOURCE ONLY</span><span>EXISTING WOW V4 ENGINE · NO SIMULATED TRAINING · READ ONLY</span></footer>
+</div>
+<script>
+"use strict";
+let snapshot=null;
+const $=id=>document.getElementById(id), n=v=>typeof v==="number"&&Number.isFinite(v),fmt=(v,d=0)=>n(v)?v.toLocaleString("ru-RU",{maximumFractionDigits:d}):"—";
+const set=(id,v)=>{$(id).textContent=v};
+function graph(values){
+ const c=$("graph"),ctx=c.getContext("2d"),w=c.width,h=c.height;
+ ctx.clearRect(0,0,w,h);ctx.strokeStyle="#37566a";ctx.lineWidth=1;
+ for(let y=20;y<h;y+=40){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke()}
+ const a=(Array.isArray(values)?values:[]).filter(n);
+ if(a.length<2){ctx.fillStyle="#94a5b1";ctx.font="13px Segoe UI";ctx.fillText("Нет достаточных измерений LOSS",18,h/2);return}
+ const lo=Math.min(...a),hi=Math.max(...a),range=Math.max(.00001,hi-lo),pad=8;
+ ctx.beginPath();
+ a.forEach((v,i)=>{const x=pad+i*(w-2*pad)/(a.length-1),y=pad+(hi-v)/range*(h-2*pad);if(i)ctx.lineTo(x,y);else ctx.moveTo(x,y)});
+ ctx.strokeStyle="#f0bc7c";ctx.lineWidth=2;ctx.stroke()
+}
+function update(d){
+ snapshot=d; const active=d.phase==="RUNNING"&&d.pid_active===true;
+ $("connection").textContent=active?"● GPU TRAINING LIVE":"● "+(d.phase==="STALE"?"HISTORICAL":"LOCAL LIVE");
+ $("connection").className="pill "+(active?"live":"off");
+ set("updated","SYNC "+new Date().toLocaleTimeString("ru-RU"));
+ set("step",fmt(d.step));set("steptype",active?"Подтверждённый активный PID":"Последний известный шаг · история");
+ set("gpu",n(d.gpu_temp)?fmt(d.gpu_temp,1)+" °C":"н/д");
+ set("gpusource",d.gpu_sensor_source||"датчик не отвечает");
+ set("loss",fmt(d.loss,4));set("battery",n(d.battery?.percent)?fmt(d.battery.percent)+" %":"н/д");
+ set("power",d.battery?.on_ac===true?"Сеть / заряд":d.battery?.on_ac===false?"Работа от батареи":"Питание неизвестно");
+ set("disk",n(d.disk_free_gib)?fmt(d.disk_free_gib,1)+" GiB":"н/д");
+ set("models",fmt(d.models?.count));set("modelbytes",n(d.models?.weights_gib)?fmt(d.models.weights_gib,1)+" GiB · Ollama":"Ollama недоступна");
+ set("status",active?"ОБУЧЕНИЕ":"НЕТ ПОДТВЕРЖДЁННОГО ПРОЦЕССА");
+ set("pid",d.pid_active===true?String(d.process_id):"—");
+ set("checkpoint",d.last_checkpoint||"Нет данных");
+ const progress=n(d.step)&&n(d.target_steps)&&d.target_steps>d.step-20?Math.max(0,Math.min(100,100*(d.step-(d.target_steps-20))/20)):null;
+ set("percent",n(progress)?fmt(progress,0)+" %":"—");
+ $("bar").style.width=n(progress)?progress+"%":"0%";
+ set("age",n(d.receipt_age_seconds)?fmt(d.receipt_age_seconds,0)+" сек":"—");
+ set("adapter",d.last_checkpoint||"Не подтверждены");
+ set("hash",d.last_sha||"Не рассчитан");
+ set("sensor",d.gpu_sensor_source||"—");
+ set("corestate",active?"REAL GPU TRAINING":"FORGE / STANDBY");
+ set("coreinfo",active?"Тренер подтверждён по локальному PID. Панель только отображает данные.":"Нет подтверждённого активного процесса. Сохранённая история остаётся доступной.");
+ set("warning",d.training||"Веб-управление обучением отключено; STOP недоступен.");
+ const tags=$("modeltags");tags.replaceChildren();
+ if(n(d.models?.count)&&d.models.count>0){
+ const t=document.createElement("span");t.className="tag";t.textContent=d.models.count+" локальных моделей · "+fmt(d.models.weights_gib,1)+" GiB";tags.appendChild(t)
+ }else tags.textContent="Ollama: нет подтверждённого списка моделей";
+ graph(d.loss_points);
+ set("errors",d.warnings?.join(" · ")||"Нет дополнительных сообщений")
+}
+async function poll(){try{
+ const res=await fetch("/api/status",{cache:"no-store",signal:AbortSignal.timeout(9000)});
+ if(!res.ok)throw Error("HTTP "+res.status);
+ const data=await res.json();
+ if(data.schema!=="NOX-FORGE-FOCUS-LIVE-v1")throw Error("Неверный источник телеметрии");
+ update(data)
+ }catch(e){set("connection","● SERVER OFFLINE");$("connection").className="pill off";set("errors","Недоступен локальный сервер: "+e.message);set("status","НЕТ СОЕДИНЕНИЯ")}}
+$("refresh").addEventListener("click",poll);
+$("export").addEventListener("click",()=>{if(!snapshot)return;const blob=new Blob([JSON.stringify(snapshot,null,2)],{type:"application/json"});const u=URL.createObjectURL(blob),a=document.createElement("a");a.href=u;a.download="NOX_FORGE_STATUS.json";a.click();setTimeout(()=>URL.revokeObjectURL(u),1000)});
+poll();setInterval(poll,4000);
+</script></body></html>

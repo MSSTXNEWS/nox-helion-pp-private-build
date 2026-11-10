@@ -1,0 +1,121 @@
+{
+  "task_id": "K01",
+  "pre_head": "21b943a9b0cc7370216fa69c7ad5914ee5501472",
+  "status": "SOURCE_PATCH_VERIFIED_WINDOWS_DEFERRED",
+  "files": [
+    {
+      "path": "coordination/e06/e06_native_stdio_owner.py",
+      "pre_sha256": "932b8b89df057efc2bf815848d4d20664471ff32b8087e20e17c9978e7ce762d",
+      "post_sha256": "ff009386b5b33472c9a98d5aec68c62fe6972e8a0a166af6b86c33ac4b600974"
+    },
+    {
+      "path": "coordination/e06/OneHostP02WebView2Bridge.cs",
+      "pre_sha256": "2809840c41148c64d4491fd72d4c6d1354b5eab470a295db605c659ba17ade9f",
+      "post_sha256": "0c44f9ff6563af29be49848ed696dce63e957ab9b5cf4dbaba498cea2d58f88d"
+    },
+    {
+      "path": "coordination/e06/MainWindow.NativeP02.cs",
+      "pre_sha256": "5f9b33a33f9028a0a32c57b7364f3151bd438836167f34add59ec08a74c96f6c",
+      "post_sha256": "68163ccf488df00cf7489671809d12b445c2dc874b4269af19089753686fd299"
+    },
+    {
+      "path": "coordination/e06/stage_native_stdio.py",
+      "pre_sha256": "bd8b22783f13e3d741cc468fd03dd9e8ef0f624fc46ac75fa6ec73f5d0915bd0",
+      "post_sha256": "05015d2ad7efe1709423dfa72449be9ed83697c309886e0efc9e4e523757f72f"
+    },
+    {
+      "path": "coordination/e06/onehost-native-config.example.json",
+      "pre_sha256": null,
+      "post_sha256": "d66f43a686f4b49057f6f9cfba5e3ce41752939b4b10faf67849a2149ae694d8"
+    },
+    {
+      "path": "Packages/P02/worker-chat/NativePythonPipe.cs",
+      "pre_sha256": "8a06125779b3618db17af9dd5b8d6a2d3ed59c4aa84a4525b3c1a70a5cc2ac3a",
+      "post_sha256": "d59e0a7785bc12a81066d480b43324ddc8b360e0b6acd498c89e311f9cb179aa"
+    },
+    {
+      "path": "tests/e06/test_native_stdio_owner_source.py",
+      "pre_sha256": "d7640e37f4e7658dfff984ab16c1d4ae3bf1fa9092646eb19aaee451d4319c64",
+      "post_sha256": "75aa53ae807510cfad6446679f138113745f0d0987954132c190257e08780599"
+    },
+    {
+      "path": "tests/e06/test_k01_native_config.py",
+      "pre_sha256": null,
+      "post_sha256": "80beadffd19c48d4cc7cb53cc8527de66627a2e9654346ab16a082b36b8e58bf"
+    }
+  ],
+  "staging": {
+    "original_app_sha256": "e43a1d1ef6875b75f4d0da1434464f675a77f3fc592941e2bb7f3410dae7cdae",
+    "staged_app_sha256": "b72dd549c31d3e505b3c790527d0ef93423a3c35031a145983469d13c711f0ed",
+    "pinned_addons": 29,
+    "original_archive_modified": false,
+    "runtime_data_files": [
+      {
+        "source": "Packages/P03/Source/python-host/catalog30.discovery.json",
+        "runtime_path": "catalog30.discovery.json",
+        "sha256": "001a2bb8a1f2fbca715f756badae7aa132cf34d053ee209896d84be81c268d76",
+        "pyinstaller_destination": "."
+      },
+      {
+        "source": "Packages/P04/train_qlora.py",
+        "runtime_path": "Packages/P04/train_qlora.py",
+        "sha256": "836afa2847aa39dfe15160b88d4a2c4b3e7653c431c4984e17b5927859cd9712",
+        "pyinstaller_destination": "Packages/P04"
+      },
+      {
+        "source": "Packages/P04/preflight_local_gpu.py",
+        "runtime_path": "Packages/P04/preflight_local_gpu.py",
+        "sha256": "a59bb04884ff0de9cfa561366935e0d7a708ed0b3092afc7463b59d6cef2aaff",
+        "pyinstaller_destination": "Packages/P04"
+      },
+      {
+        "source": "Packages/P04/merge_qlora_adapter.py",
+        "runtime_path": "Packages/P04/merge_qlora_adapter.py",
+        "sha256": "8839132e2c68c46ddc04918008ad17ea208212c86ff2f2fd8c57b1ff3ea62484",
+        "pyinstaller_destination": "Packages/P04"
+      },
+      {
+        "source": "assets/NOX_SOUL_CPU_REAL_WEIGHTS_TRAINED_V1_20261022.zip",
+        "runtime_path": "assets/NOX_SOUL_CPU_REAL_WEIGHTS_TRAINED_V1_20261022.zip",
+        "sha256": "b1bc0c27997d76b4c654842101d28738080e8c83d3b077b12585aaa28b500c9f",
+        "pyinstaller_destination": "assets"
+      }
+    ],
+    "native_python_source_smoke_verified_separately": true,
+    "installed_windows_exe_accepted": false,
+    "python_ast_files": 28,
+    "status": "PASS_DISPOSABLE_ORIGINAL_SOURCE_STAGE"
+  },
+  "targeted_checks": {
+    "config_negative_and_interpreter_pin": 5,
+    "exact_addon_pins_and_backbone": 2,
+    "real_original_store_native_chat_restart_isolation": 1,
+    "real_original_store_forge_native_boundary": 1,
+    "actual_ingress_selfbuilder_candidate": "PASS_K05_RECEIPT"
+  },
+  "root_defect_fixed": "Native owner bound only chat.model and created thread-affine Store outside worker; now one actor-backed original S03 and concrete dispatcher bindings share one P02 client/pipe.",
+  "implemented": [
+    "Real chat/history/STOP/model dispatch; actual event frames through the same pipe and authenticated WebView epoch checks",
+    "S03/SEED and native source/config/forge capabilities, exact private-pipe import receipts and same-client activation rollback",
+    "Original P03 queue within WPF with native picker, source-locked registry, real events and global cancellation",
+    "One atomic source staging manifest with all dependency pins and exact original SEED"
+  ],
+  "holds": [
+    "Windows C# compilation and installed EXE E2E deferred by user",
+    "Existing physical builder must package five runtime data assets from staging manifest; source staging alone is not frozen EXE proof",
+    "Managed source checkout, native configuration source paths/ForgeJobs and real reviewed model artifact registry must be supplied by owner configuration",
+    "Frozen trainer requires approved Python interpreter path and SHA; actual compatible GPU, dataset rights, training step/eval and E07 remain physical gates"
+  ],
+  "native_config_file": "LOCALAPPDATA/NOX_HELION/onehost-native-config.json",
+  "native_config_fields": [
+    "version",
+    "source_root",
+    "source_paths",
+    "candidate_workspace",
+    "forge_root",
+    "forge_jobs",
+    "forge_python_exe",
+    "forge_python_sha256"
+  ],
+  "permissions": "Configuration contains no grants; WPF exact-action consent, native session leases, monotonic STOP epoch, immutable route owners and no renderer internal prepare/record actions."
+}

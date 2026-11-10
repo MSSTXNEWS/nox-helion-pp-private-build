@@ -1,0 +1,176 @@
+"""Fail-closed exact UIA click navigation receipt tests (no physical Windows PASS)."""
+import importlib.util
+import hashlib
+import json
+import tempfile
+from pathlib import Path
+import unittest
+
+PATH = Path(__file__).resolve().parents[2] / "coordination" / "e07" / "probe_five_primary_action.py"
+spec = importlib.util.spec_from_file_location("probe_primary", PATH)
+import sys
+sys.path.insert(0, str(PATH.parent))
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+
+
+def witness():
+    return {"five_primary_buttons": {"status": "PASS", "buttons_present": list(module.PRIMARY)},
+            "ui_chat_action_probe": {"action": "CHAT", "actions_invoked": 1,
+                 "method": "NATIVE_UIA_INVOKEPATTERN", "navigation_verified": "PASS",
+                 "navigation_proof": "NEW_VISIBLE_UIA_CHAT_HEADING"},
+            "ui_safe_primary_navigation": {"actions_invoked": 4, "navigation_verified": "PASS",
+                "per_action": {name: {"button_actuated": "OBSERVED", "navigation_verified": "PASS",
+                                      "function_verified": "NOT_TESTED"} for name in module.PRIMARY[1:]}}}
+
+
+class FiveButtonGate(unittest.TestCase):
+    def test_full_five_click_navigation_not_release(self):
+        result = module.evaluate(witness())
+        self.assertEqual(result["actions_invoked"], 5)
+        self.assertFalse(result["release_accepted"])
+        self.assertFalse(result["live_inference_verified"])
+
+    def test_button_presence_not_click(self):
+        r = witness(); r["ui_chat_action_probe"]["actions_invoked"] = 0
+        with self.assertRaises(module.Hold): module.evaluate(r)
+
+    def test_no_preexisting_heading_false_pass(self):
+        r = witness(); r["ui_chat_action_probe"]["navigation_proof"] = "NONE"
+        with self.assertRaises(module.Hold): module.evaluate(r)
+
+    def test_missing_one_of_four(self):
+        r = witness(); r["ui_safe_primary_navigation"]["per_action"]["SETTINGS"]["navigation_verified"] = "NOT_TESTED"
+        with self.assertRaises(module.Hold): module.evaluate(r)
+
+    def test_legacy_reports_not_settings(self):
+        r = witness(); r["five_primary_buttons"]["buttons_present"][-1] = "REPORTS"
+        with self.assertRaises(module.Hold): module.evaluate(r)
+
+    def test_wrong_action_set(self):
+        r = witness(); r["ui_safe_primary_navigation"]["per_action"]["REPORTS"] = r["ui_safe_primary_navigation"]["per_action"].pop("SETTINGS")
+        with self.assertRaises(module.Hold): module.evaluate(r)
+
+    def test_untrusted_function_verification(self):
+        r = witness(); r["ui_safe_primary_navigation"]["per_action"]["INSTALL"]["function_verified"] = "PASS"
+        with self.assertRaises(module.Hold): module.evaluate(r)
+
+    def _owned_fixture(self, root):
+        shell = root / "NOX.P01.Shell.exe"
+        shell.write_bytes(b"MZNOX-frozen-owned-shell")
+        (root / "nox-p01-owned.txt").write_text("NOXHELION.P01 V16\n", encoding="utf-8")
+        manifest = {"schema": "NOX_P01_PAYLOAD_SHA256_V1",
+                    "entrypoint": shell.name,
+                    "files": [{"path": shell.name, "bytes": shell.stat().st_size,
+                               "sha256": hashlib.sha256(shell.read_bytes()).hexdigest()}]}
+        (root / "payload.sha256.json").write_text(json.dumps(manifest), encoding="utf-8")
+        return shell
+
+    def test_real_owned_bytes_snapshot_stable_with_unowned_user_file(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            self._owned_fixture(root)
+            user_file = root / "user-not-owned.txt"
+            user_file.write_bytes(b"preserve me")
+            baseline = module.snapshot_installed_owner(root)
+            self.assertEqual(baseline, module.snapshot_installed_owner(root))
+            self.assertEqual(len(baseline[0]), 1)
+            self.assertEqual(user_file.read_bytes(), b"preserve me")
+
+    def test_owned_executable_replaced_after_gui_must_hold(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            shell = self._owned_fixture(root)
+            baseline = module.snapshot_installed_owner(root)
+            shell.write_bytes(b"MZNOX-modified-owned-shell")
+            with self.assertRaises(module.Hold):
+                after = module.snapshot_installed_owner(root)
+                module.require(after == baseline, "E07_PRIMARY_OWNED_PAYLOAD_CHANGED_DURING_UIA_HOLD")
+
+    def test_owner_marker_mutation_after_gui_must_hold(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            self._owned_fixture(root)
+            baseline = module.snapshot_installed_owner(root)
+            owner = root / "nox-p01-owned.txt"
+            owner.write_text("NOXHELION.P01 V16\nUNTRUSTED", encoding="utf-8")
+            with self.assertRaises(module.Hold):
+                after = module.snapshot_installed_owner(root)
+                module.require(after == baseline, "E07_PRIMARY_OWNED_PAYLOAD_CHANGED_DURING_UIA_HOLD")
+
+    def test_manifest_replaced_with_matching_files_must_hold_on_pre_post(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            self._owned_fixture(root)
+            baseline = module.snapshot_installed_owner(root)
+            manifest_path = root / "payload.sha256.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["extra"] = "altered"
+            manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+            after = module.snapshot_installed_owner(root)
+            with self.assertRaises(module.Hold):
+                module.require(after == baseline, "E07_PRIMARY_OWNED_PAYLOAD_CHANGED_DURING_UIA_HOLD")
+
+    def test_d01_current_home_install_learn_not_misclassified_as_readonly_uia(self):
+        # Original five-button HOME delegates actual native INSTALL; obsolete
+        # informational headings cannot certify the new route or owner consent.
+        stage = (PATH.parents[2] / "coordination" / "express" /
+                 "stage_original_five_primary.py").read_text(encoding="utf-8")
+        probe = PATH.read_text(encoding="utf-8")
+        self.assertIn("INSTALL:['control','button#pc-install','button#pc-install']", stage)
+        self.assertIn("LEARN:['control','button#training-diagnostic','button#training-diagnostic']", stage)
+        self.assertIn('gui_hwnd(install / "NOX.P01.Shell.exe", local, safe_nav=False)', probe)
+        self.assertNotIn('gui_hwnd(install / "NOX.P01.Shell.exe", local, safe_nav=True)', probe)
+        self.assertIn('"NOT_RUN_OWNER_SCOPE_HOLD"', probe)
+
+    def test_d01_verified_producer_sha_survives_four_action_hold(self):
+        # Failed UIA actions cannot erase checked Source/Setup provenance or promote PASS.
+        probe = PATH.read_text(encoding="utf-8")
+        verified = probe.index('identity = checked_source_setup(')
+        bound = probe.index('receipt["source_setup"] = identity')
+        gui = probe.index('witness = gui_hwnd(')
+        counted = probe.index('receipt["installed_files_sha_verified"] = len(post_gui_owner[0])')
+        strict = probe.index('"five_primary": evaluate(witness)')
+        self.assertLess(verified, bound)
+        self.assertLess(bound, gui)
+        self.assertLess(gui, counted)
+        self.assertLess(counted, strict)
+        self.assertIn('safe_nav=False', probe)
+        self.assertIn('"release_accepted": False', probe)
+        r = witness()
+        r["ui_safe_primary_navigation"] = {
+            "status": "HOLD", "navigation_verified": "NOT_TESTED",
+            "actions_invoked": 0, "per_action": {}}
+        with self.assertRaises(module.Hold):
+            module.evaluate(r)
+
+    def test_d01_chat_only_never_promotes_unverified_four_to_five_pass(self):
+        result = witness()
+        result["ui_safe_primary_navigation"] = {
+            "status": "HOLD", "navigation_verified": "NOT_TESTED",
+            "actions_invoked": 0, "per_action": {}}
+        with self.assertRaises(module.Hold):
+            module.evaluate(result)
+
+    def test_no_source_guess(self):
+        with self.assertRaises(module.Hold):
+            module.checked_source_setup(Path('/not/real'), 'bad', 'nope')
+
+
+    def test_d01_physical_uia_requires_compact_primary_hit_targets(self):
+        # SourceLock HOME itself requires >=44x44 CSS px for each primary.
+        # The Windows UIA witnesses must not admit a 20x12 clipped/disabled dock.
+        independent = (PATH.parent / "independent_setup_e07.py").read_text(encoding="utf-8")
+        primary = independent.split("def observe_original_primary_buttons(", 1)[1].split(
+            "def classify_chat_invoke_witness(", 1)[0]
+        chat = independent.split("def observe_chat_input(", 1)[1].split(
+            "def classify_readonly_primary_navigation_witness(", 1)[0]
+        self.assertIn("$rect.Width -ge 44 -and $rect.Height -ge 44", primary)
+        self.assertIn("$bounds.Width -lt 44 -or $bounds.Height -lt 44", primary)
+        self.assertIn("$rect.Width -ge 44 -and $rect.Height -ge 44", chat)
+        self.assertIn('ControlType.Button|VISIBLE_ENABLED', independent)
+        self.assertIn('action = observe_chat_input(handle)', independent)
+        self.assertIn('safe_nav=False', PATH.read_text(encoding="utf-8"))
+        self.assertIn('"release_accepted": False', PATH.read_text(encoding="utf-8"))
+
+if __name__ == "__main__": unittest.main()

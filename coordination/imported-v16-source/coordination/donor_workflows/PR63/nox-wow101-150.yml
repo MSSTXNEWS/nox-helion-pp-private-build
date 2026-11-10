@@ -1,0 +1,24 @@
+name: NOX V16 WOW 101-150 director Windows source checks
+on:
+  push:
+    paths:
+      - 'proposals/NOX-WOW101-150/**'
+      - '.github/workflows/nox-wow101-150.yml'
+  pull_request:
+    paths:
+      - 'proposals/NOX-WOW101-150/**'
+      - '.github/workflows/nox-wow101-150.yml'
+jobs:
+  contract:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Fifty distinct scene trajectories
+        run: node --test proposals/NOX-WOW101-150/director.test.mjs
+      - name: Module syntax
+        run: |
+          node --check proposals/NOX-WOW101-150/director.mjs
+          node --check proposals/NOX-WOW101-150/catalog.mjs

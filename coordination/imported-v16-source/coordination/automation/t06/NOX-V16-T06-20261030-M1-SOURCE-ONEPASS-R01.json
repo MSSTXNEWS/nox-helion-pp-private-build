@@ -1,0 +1,100 @@
+{
+  "schema": "NOX_V16_T06_OWNER_IMMUTABLE_SOURCE_BATCH_V1",
+  "runId": "NOX-V16-T06-20261030-M1-SOURCE-ONEPASS-R01",
+  "taskId": "T06",
+  "role": "MANUAL1_SOLE_PR162_INTEGRATOR",
+  "branch": "integration/nox-v16-unified-candidate-20261028-r01",
+  "preHead": "cb25c487ee67fe9ec22909731aa51ea446b36f29",
+  "preTree": "bff2619b8cbef0c4f946a5ef3a4b9dcb5a8cf9d4",
+  "postHead": "RESOLVE_FROM_GIT_COMMIT_READBACK",
+  "postTree": "RESOLVE_FROM_GIT_COMMIT_READBACK",
+  "files": [
+    {
+      "path": "coordination/e06/t06_owner_receipt_same_head_gate_r23.py",
+      "preBlob": "f839f2edf12a7120a7be613afa0102a6e4d8aef5",
+      "postBlob": "16f2656ca21fa3634e0d3a54e37ac8e128361d95"
+    },
+    {
+      "path": "coordination/e06/test_t06_owner_receipt_same_head_gate_r23.py",
+      "preBlob": "9f1deb2aa265763893211b6ebdd65609b4c00225",
+      "postBlob": "966f84c0b42fecaf79c1d1140a5379e64d3f19a7"
+    },
+    {
+      "path": "proposals/NOX-PACK01-50/p04_owner_training_port.py",
+      "preBlob": "f403927f9fb99591af6edeaa20bb25620137527e",
+      "postBlob": "6d9ec2bfe0ec13baf8ebc9fd4fd1830c9c4d91a3"
+    },
+    {
+      "path": "proposals/NOX-PACK01-50/p04_comfy_image_owner_port.py",
+      "preBlob": "46e832afc2f9424ef8c0edeb6c4b9210ec988a80",
+      "postBlob": "5e63900d660e64303d10babe7fedbf03fbe64188"
+    },
+    {
+      "path": "proposals/NOX-PACK01-50/test_p04_owner_training_port.py",
+      "preBlob": "0c452e6327dfb35dd73f79c56310896978b553d0",
+      "postBlob": "bcad30af316511a4483b87a6c3c2030cc8010d8d"
+    },
+    {
+      "path": "proposals/NOX-PACK01-50/test_p04_comfy_image_owner_port.py",
+      "preBlob": "9fd9a2f036b8daa7f6c4239fb5ecaf8a15bb445c",
+      "postBlob": "0db6a73532a23b0fb328266bb6e7190b9f0769e4"
+    },
+    {
+      "path": "proposals/NOX-PACK01-50/owner-binding-map.json",
+      "preBlob": "6e3436821a975b1986261791de060a1020de7079",
+      "postBlob": "66b59aaa6d4db7c6adc7d34a802ba9c42498bda7"
+    }
+  ],
+  "proof": {
+    "sourcePreflight": "PASS_52_OF_52_GIT_BLOB_STATIC_CHECKS",
+    "sourceRoutes": "50_STABLE_TASKIDS_AND_ROUTEIDS",
+    "candidateOwnerBindingsAdded": 6,
+    "unitTestsAuthored": 4,
+    "unitTestsRuntime": "NOT_RUN_PRIVATE_FULL_TREE_NOT_AVAILABLE",
+    "P01WindowsPowershell51": "NOT_RUN",
+    "P04PythonFullSuite": "NOT_RUN",
+    "P05DotNet": "NOT_RUN",
+    "nativeWindows": "NOT_RUN",
+    "independentSameHeadQA": "PENDING"
+  },
+  "host50": {
+    "sourceCandidatePre": 40,
+    "sourceCandidatePost": 46,
+    "remainingUnbound": 4,
+    "nativePending": 14,
+    "exeAccepted": 0
+  },
+  "remainingUnbound": [
+    "browser.open",
+    "browser.bookmarks",
+    "system.update",
+    "system.pc_control"
+  ],
+  "stage": {
+    "sourceVerified": "OWNER_SOURCE_STATIC_PRECHECK_ONLY",
+    "integrated": "PENDING_GIT_CAS",
+    "qaAccepted": false,
+    "sourceReady": false,
+    "gitlabBuild": false,
+    "e07": false
+  },
+  "dedupeAlreadyInHead": [
+    "P03_QUEUE_ACK_JOBID_MODELTAG",
+    "P01_UNIQUE_JSON_MEMBER_POWERSHELL",
+    "P04_SNAPSHOT_TEST_BYTES"
+  ],
+  "preserved": [
+    "Original 729/3 original archive unchanged; current full SHA not reverified",
+    "D02/WOW200 8 CoreID 5 Persona unchanged",
+    "PACK01/02 and STOP ACL consent guards unchanged; native QA pending",
+    "Original accepted DONE and TaskID retained"
+  ],
+  "errorCluster": [
+    "ERR-SRC-003",
+    "ERR-SRC-004",
+    "ERR-SYS-001",
+    "ERR-SYS-002"
+  ],
+  "journal": "T02_SHARED_REGISTER_NOT_WRITTEN_THIS_RUN; THIS_IS_OWNER_ONLY_RECEIPT",
+  "lesson": "Avoid stale donor overwrite. Bind only existing owner methods with fail-closed native gates. No artificial SOURCE_READY."
+}

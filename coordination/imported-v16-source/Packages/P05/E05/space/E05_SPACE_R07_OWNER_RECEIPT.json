@@ -1,0 +1,55 @@
+{
+  "schema": "NOX_V16_E05_TURBO10_R07_OWNER_RECEIPT_V1",
+  "run_id": "NOX-V16-G1-05-20261028T1150MSK-R07",
+  "owner": "E05/P05",
+  "common_baseline_commit_sha1": "0b3a7d435be735148d64171deb9027093a89646e",
+  "common_baseline_tree_sha1": "f108d604c444f718b32aaecfd07b90b8f91b9a6f",
+  "source_lock_status": "HOLD: original 3 raw parts and 729 extracted file hashes unverified; PR66 is inventory only",
+  "owner_parent_commit_sha1": "822971063440bbab66e177e1c413ee0d97a1f04f",
+  "branch": "e05/v16-g1-05-space-truth-provenance-20261028-r07",
+  "files": [
+    {
+      "path": "Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs",
+      "owner": "E05/P05",
+      "pre_sha256": "0849892e0e0a76b482641c833dd7b65e337867d51c84652705b3476a06723082",
+      "post_sha256": "55e130f240ed8da5561f9f6cbd7ae298fc5e03a3d3042d96980074a456739439",
+      "pre_git_blob_sha1": "64c5546ac39afb77567c967522a37eb1ce8dbd0c",
+      "post_git_blob_sha1": "f741c3aa18fea69b168138c61432be826ef576f7"
+    },
+    {
+      "path": "Packages/P05/E05/space/E05SpaceReadOnlyProjection.test.mjs",
+      "owner": "E05/P05",
+      "pre_sha256": "93245a9865e83f5ef930b1fdcffae0ce346fa9732dc7bb44c415dffd405a39ba",
+      "post_sha256": "102ebe3ea8ed464c533c8f3fa86d6ee49108dc00f47cf5390d69ad94bd05685f",
+      "pre_git_blob_sha1": "e2bcbe245c83df21144c78cfe2711a435af50baa",
+      "post_git_blob_sha1": "7751c2074dbfa0d5e40a3c1cad80b0c430a751b2"
+    },
+    {
+      "path": "Packages/P05/E05/space/E05_SPACE_R07_OWNER_RECEIPT.json",
+      "owner": "E05/P05",
+      "pre_sha256": "ABSENT",
+      "post_sha256": "SEE_EXTERNAL_PACKAGE_MANIFEST",
+      "pre_git_blob_sha1": "ABSENT",
+      "post_git_blob_sha1": "SEE_GITHUB_READBACK"
+    }
+  ],
+  "tests": {
+    "linux_node_assertions_pass": 89,
+    "linux_node_assertions_fail": 0,
+    "new_regressions": 12,
+    "red_test_reproduced": true,
+    "syntax_checks_pass": 2,
+    "installed_windows": "NOT_RUN",
+    "app_side_drive_readback": "NOT_RUN"
+  },
+  "diff_sha256": "3b0d5286d77c7bcf321b5faf435f9fafe7fdb065daa1de963253454ca0707f2f",
+  "scope": [
+    "evidence_verified false terminal STOP/ERROR quarantined as unverified",
+    "all visible GPU metrics require physical device_id; mismatched adapters quarantined",
+    "strictly owner E05 read-only projection, no new events.v3 bus/network/OAuth/host"
+  ],
+  "one_practical_improvement": "PROVENANCE_BEFORE_STATE: do not turn reported terminal or multi-device GPU readings into live status before immutable native evidence/source identity matches",
+  "no_loss": "D02/WOW/events.v3 producer/main/originals/EXE untouched",
+  "global_progress": "N/D",
+  "release": "HOLD"
+}

@@ -1,0 +1,59 @@
+name: NOX independent installed D02 real pixel capture 722399
+on:
+  push:
+    branches: [integration/nox-v16-unified-candidate-20261028-r01]
+    paths:
+      - .github/workflows/nox-full-d02-722399-visual-u13.yml
+      - coordination/e07/probe_full_d02_visual_u13.py
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: nox-full-d02-722399-visual-u13
+  cancel-in-progress: false
+jobs:
+  physical-render:
+    if: github.repository == 'MSSTXNEWS/nox-helion-pp-private-build'
+    runs-on: windows-2022
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12.10'
+          architecture: x64
+          check-latest: false
+      - name: Compile physical D02 visual witness
+        shell: pwsh
+        run: |
+          python -B -m py_compile coordination/e07/probe_full_d02_visual_u13.py coordination/e07/probe_full_d02_722399_u13.py
+          if ($LASTEXITCODE -ne 0) { throw 'VISUAL_QA_PYTHON_SYNTAX_HOLD' }
+      - uses: actions/download-artifact@v4
+        with:
+          run-id: 41833271465
+          name: nox-v16-e06-onehost-diagnostic-41833271465
+          github-token: ${{ github.token }}
+          path: input/full-d02
+      - name: Real original Windows WPF WebView2 capture
+        id: actual
+        shell: pwsh
+        continue-on-error: true
+        timeout-minutes: 12
+        run: |
+          python -B coordination/e07/probe_full_d02_visual_u13.py --artifact-dir input/full-d02 --out-dir work/visual-722399
+          if ($LASTEXITCODE -ne 0) { throw 'REAL_VISUAL_PIXEL_CAPTURE_HOLD' }
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: NOX-FULL-D02-722399-REAL-PIXELS-${{ github.run_id }}
+          path: work/visual-722399/*
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Screenshot is never full independent E07
+        if: always()
+        shell: pwsh
+        run: |
+          if ('${{ steps.actual.outcome }}' -ne 'success') { throw 'REAL_VISUAL_CAPTURE_NOT_PROVEN_HOLD' }
+          Write-Host 'PHYSICAL_PIXELS_CAPTURED; independent visual approval and final release still HOLD'

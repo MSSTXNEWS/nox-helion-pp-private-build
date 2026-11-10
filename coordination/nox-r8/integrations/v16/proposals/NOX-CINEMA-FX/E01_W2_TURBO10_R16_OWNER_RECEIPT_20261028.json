@@ -1,0 +1,47 @@
+{
+  "schema": "NOX_V16_W2_01_OWNER_RECEIPT_V1",
+  "runId": "NOX-V16-W2-01-E01-20261028T234119MSK-R16",
+  "owner": "E01/W2·01",
+  "TaskID": "E01-W2-R16-01",
+  "exactParentHead": "cc22d7aaaa6fac6c05220c82bf952a155e7a2f24",
+  "exactParentTree": "2a856f3b3f24519dd2e53a24cfebcb052f7b6c5e",
+  "baseline": "PR162 current, original 0b3a7d435be735148d64171deb9027093a89646e historical",
+  "sourceLock729": "HOLD",
+  "files": [
+    {
+      "path": "proposals/NOX-CINEMA-FX/nox-cinema.mjs",
+      "preSHA256": "6d2d4ea32ef3bcfef7d15375e4feb58d3c987d49176402ce761ff793de8f6cb2",
+      "postSHA256": "580013df32f5e221fa6c425f4c55b4d2c978d0682e5a1881f63d5393b21e2e23",
+      "preBlob": "579c1d8af37757431c60aa46c22dc7746f6b2eae",
+      "postBlob": "7e4acf43c287b3578e38e0acab0266e0343132e3"
+    },
+    {
+      "path": "proposals/NOX-CINEMA-FX/nox-cinema.test.mjs",
+      "preSHA256": "48c5b8361585d4323e792ce4f123bc4bf06993abb2c7fce9996333653041aa2a",
+      "postSHA256": "62a54d5dd7f421b9b8c34888bb442f52bb1704efb93e795bd7c3541df398f5f4",
+      "preBlob": "f6832e6995a8c34e50af6dde1a9676e747419e48",
+      "postBlob": "fde93f66644c1a607ba2eff83143d53073177249"
+    },
+    {
+      "path": "proposals/NOX-CINEMA-FX/E01_W2_TURBO10_R16_OWNER_RECEIPT_20261028.json",
+      "preSHA256": "ABSENT",
+      "preBlob": "ABSENT",
+      "postSHA256": "COMPUTE_FROM_COMMITTED_BYTES"
+    }
+  ],
+  "defect": "Host callback trusted/runId/coreId getters on foreign Proxy throw and escape into shared host bus",
+  "cause": "FX subscribe handler dereferences native envelope fields without an exception boundary",
+  "fix": "Enclose only visual event-property reads and applyState within exception handler; malformed event dropped, valid trusted event still applies, no host changes.",
+  "diff": "Direct event field access inside subscription -> local try/catch and same validation/dispatcher",
+  "tests": {
+    "before": "3/3 hostile event payloads THROW (RED)",
+    "after": "3/3 fail closed + valid approved event and teardown PASS (GREEN)",
+    "fullNode": "NOT_RUN",
+    "windows": "NOT_RUN",
+    "E07": "0/10 NOT_RUN"
+  },
+  "ownedOnly": true,
+  "retain": "D02/HOME/MENU/CORE 8 CoreID 5 Persona WOW001-200 all original assets archives and user data; no host/backend/CI edits",
+  "integration": "SOURCE_ONLY",
+  "weighted": "N/D"
+}

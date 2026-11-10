@@ -1,0 +1,59 @@
+{
+  "schema": "NOX_V16_T07_ORIGINAL_729_PHYSICAL_SOURCELOCK_ACCEPTANCE_R01",
+  "status": "T07_DONE_ORIGINAL_ARCHIVE_6_OF_6",
+  "task": "T07",
+  "originalPurpose": "Original archive physical integrity ONLY, does not prove final integrated source code runtime",
+  "readback_provenance": {
+    "manual_T09_physical_run": "NOX-V16-T09-PHYSICAL-RECOVERY-20261029-R02",
+    "physical_receipt_git_commit": "aab1154cf127ef0a216b19d06362343bbda4e152",
+    "physical_receipt_blob": "e159da6cbab131a6257f0f4d9f25a798a9a5403b",
+    "historical_member_manifest_commit": "4759ee65cbbdaa2fd9b0aeb017cdf0e8921e54db",
+    "historical_member_manifest_blob": "60bba6a6b34431f4edc8c4e9ab665472cf7ce356",
+    "historical_member_entries_confirmed_by_readback": 729,
+    "original_zip_sha256": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+    "joined_bytes": 60364346,
+    "physical_parts_count": 3,
+    "physical_inner_files_verified": 729,
+    "physical_crc": "PASS"
+  },
+  "acceptance_criteria": [
+    {
+      "n": 1,
+      "check": "Git SHA of 3 parts",
+      "result": "DONE_PRIOR_RECEIPT"
+    },
+    {
+      "n": 2,
+      "check": "25 snapshot trees",
+      "result": "DONE_PRIOR_RECEIPT"
+    },
+    {
+      "n": 3,
+      "check": "968 baseline Git blob integrity",
+      "result": "DONE_PRIOR_RECEIPT"
+    },
+    {
+      "n": 4,
+      "check": "3 original source parts actually available and SHA-256 calculated",
+      "result": "DONE_MANUAL_T09_PHYSICAL_RECEIPT"
+    },
+    {
+      "n": 5,
+      "check": "Original joined archive actual bytes/length/SHA-256 verified",
+      "result": "DONE_MANUAL_T09_PHYSICAL_RECEIPT"
+    },
+    {
+      "n": 6,
+      "check": "All 729 inner original files physically SHA+CRC verified and immutable receipt available",
+      "result": "DONE_HISTORICAL_MANIFEST_PLUS_T09_ACTUAL_RECHECK"
+    }
+  ],
+  "not_claimed": [
+    "This is a reference acceptance of independently checked physical evidence, NOT another local byte rehash by the current agent",
+    "T09 source freeze still requires single accepted integrated HEAD/tree manifest",
+    "T10 SOURCE_READY still requires functional full-source acceptance",
+    "No EXE/NSIS/GitLab CI/E07"
+  ],
+  "canonical_candidate_head_before_receipt": "edc94ddc70e8eca7db47f5165c63a36740fbafef",
+  "lesson": "Stop treating old GitHub base64 0-byte access as a permanent SourceLock defect after T09 fetched verified full bytes through authenticated Drive; retain prior receipts."
+}

@@ -1,0 +1,132 @@
+name: NOX V6 722399 independent installed native page authority denial U04 (NOT E07)
+on:
+  push:
+    branches: [integration/nox-v16-unified-candidate-20261028-r01]
+    paths:
+      - .github/workflows/nox-v6-physical-authority-deny-u04.yml
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: nox-v6-original-authority-u04
+  cancel-in-progress: false
+jobs:
+  native-negative-authority:
+    if: github.repository == 'MSSTXNEWS/nox-helion-pp-private-build'
+    runs-on: windows-2022
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12.10'
+          architecture: x64
+          check-latest: false
+      - name: Compile original immutable Setup verifiers and run pin regression
+        shell: pwsh
+        run: |
+          python -B -m py_compile coordination/e07/probe_full_d02_722399_u13.py coordination/e07/independent_setup_e07.py
+          if ($LASTEXITCODE -ne 0) { throw 'U04_ORIGINAL_PIN_SOURCE_HOLD' }
+          python -B -m unittest discover -s tests/e07 -p test_full_d02_722399_u13.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'U04_ORIGINAL_PIN_TEST_HOLD' }
+      - uses: actions/download-artifact@v4
+        with:
+          run-id: 41833271465
+          name: nox-v16-e06-onehost-diagnostic-41833271465
+          github-token: ${{ github.token }}
+          path: input/full-d02
+      - name: Real installed ORIGINAL OneHost rejects page-supplied SID, consent and admin
+        id: physical
+        shell: pwsh
+        run: |
+          $script = @'
+          import json,os,struct,subprocess,sys
+          from pathlib import Path
+          sys.path.insert(0,str(Path('coordination/e07').resolve()))
+          import independent_setup_e07 as e07
+          from probe_full_d02_722399_u13 import candidate,SOURCE,SETUP_SHA,BUILDID
+          report={'schema':'NOX-E07-V6-NEGATIVE-AUTHORITY-U04-v1',
+                  'source_sha':SOURCE,'setup_sha256':SETUP_SHA,'build_id':BUILDID,
+                  'native_negative_authority':'HOLD','independent_e07_10_10':'HOLD',
+                  'release_accepted':False,'checks':{},'first_failure':'NOT_RUN'}
+          out=Path('work/v6-u04/PHYSICAL_AUTHORITY_DENY.json')
+          try:
+              e07.require(sys.platform=='win32' and os.environ.get('GITHUB_ACTIONS')=='true'
+                          and os.environ.get('RUNNER_OS')=='Windows'
+                          and os.environ.get('RUNNER_ENVIRONMENT')=='github-hosted'
+                          and os.environ.get('GITHUB_REPOSITORY')=='MSSTXNEWS/nox-helion-pp-private-build',
+                          'U04_WINDOWS_HOST_NOT_AUTHORIZED')
+              e07.require(SOURCE=='ffca9aaedce9d90750dfb212aabcdfd970162150'
+                          and SETUP_SHA=='722399ee3d7794a7aa38d93d933026e015fd29b0d8a60fd431b0bc494040a6bc'
+                          and BUILDID=='NOX-V16-99fce33d002363f6b3e9b9cf',
+                          'U04_EXACT_V6_SOURCE_SETUP_BUILDID_HOLD')
+              setup=candidate(Path('input/full-d02'))
+              report['checks']['pinned_producer']='PASS'
+              local=Path(os.environ['LOCALAPPDATA'])
+              install=local/'Programs'/'NOX HELION'
+              e07.verify_fresh_install_targets(local,install,
+                  Path(str(install)+'.__p01_stage'),Path(str(install)+'.__p01_previous'),
+                  Path(str(install)+'.__p01_rollback_saved'))
+              proc=subprocess.run([str(setup),'/S'],capture_output=True,timeout=300)
+              e07.require(proc.returncode==0,'U04_NSIS_INSTALL_EXIT_HOLD')
+              _,owned=e07.manifest_owner(install)
+              e07.require(len(owned)==1004,'U04_INSTALLED_1004_SHA_HOLD')
+              report['checks']['original_install_and_1004_sha']='PASS'
+              backend=install/'Backend'/'NOX_HELION_PRIVATE_CANDIDATE.exe'
+              e07.require(e07.clean_file(backend),'U04_INSTALLED_ONEHOST_MISSING')
+              report['installed_backend_sha256']=e07.sha256(backend)
+              for index,(label,payload) in enumerate((
+                   ('admin',{'admin':True}),
+                   ('nativeConsent',{'nativeConsent':True}),
+                   ('windows_sid',{'windows_sid':'S-1-5-18'}),
+                   ('tenant',{'tenant':'attempt-to-escalate'})),1):
+                  nonce=f'{index:032x}'
+                  runid=f'NOX-U04-AUTHORITY-{index}'
+                  request={'protocol':'NOX-P02-NATIVE-v1','runId':runid,
+                           'requestId':nonce,'route':'chat.history','payload':payload}
+                  raw=json.dumps(request,separators=(',',':')).encode('utf-8')
+                  scratch=Path(os.environ['RUNNER_TEMP'])/f'nox-u04-authority-{index}'
+                  p=subprocess.run([str(backend),'--native-stdio','--run-id',runid,
+                                    '--data-dir',str(scratch)],
+                                   input=struct.pack('>I',len(raw))+raw,
+                                   capture_output=True,cwd=str(backend.parent),timeout=100)
+                  e07.require(p.returncode==0,'U04_NATIVE_REJECT_PROCESS_HOLD')
+                  wire=p.stdout
+                  e07.require(len(wire)>=5,'U04_NATIVE_REJECT_FRAME_HOLD')
+                  length=struct.unpack('>I',wire[:4])[0]
+                  e07.require(1<=length<=1048576 and len(wire)==4+length,
+                              'U04_NATIVE_REJECT_FRAME_HOLD')
+                  result=json.loads(wire[4:].decode('utf-8','strict'))
+                  e07.require(isinstance(result,dict)
+                              and result.get('protocol')==request['protocol']
+                              and result.get('runId')==runid
+                              and result.get('requestId')==nonce
+                              and result.get('status')=='HOLD'
+                              and result.get('errorCode')=='PAGE_AUTHORITY_CLAIM_DENIED'
+                              and result.get('result') is None,
+                              'U04_PAGE_AUTHORITY_'+label.upper()+'_NOT_DENIED_HOLD')
+                  report['checks']['reject_page_'+label]='PASS'
+              report['native_negative_authority']='PASS'
+              report['first_failure']=None
+          except Exception as exc:
+              report['first_failure']=(str(exc) if isinstance(exc,e07.Hold)
+                else 'U04_'+type(exc).__name__.upper()+'_HOLD')[:120]
+          finally:
+              out.parent.mkdir(parents=True,exist_ok=True)
+              out.write_text(json.dumps(report,sort_keys=True,indent=2),encoding='utf-8')
+              print('U04_V6_INSTALLED_PAGE_AUTHORITY_DENIAL',
+                    report['native_negative_authority'],report['first_failure'],flush=True)
+          raise SystemExit(0 if report['native_negative_authority']=='PASS' else 2)
+          '@
+          $script | python -B -
+          if ($LASTEXITCODE -ne 0) { throw 'U04_INSTALLED_PAGE_AUTHORITY_NEGATIVE_HOLD' }
+      - name: Preserve exact security evidence even on HOLD
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: NOX-V6-722399-NATIVE-AUTHORITY-U04-${{ github.run_id }}
+          path: work/v6-u04/PHYSICAL_AUTHORITY_DENY.json
+          if-no-files-found: warn
+          retention-days: 14

@@ -1,0 +1,45 @@
+{
+  "schema": "NOX-V16-E03-OWNER-RECEIPT-V1",
+  "runId": "NOX-V16-W3-02-20261028T215805MSK-R13",
+  "taskId": "V16.E03.P03.R13.DISCOVERY_JSON_FAIL_CLOSED",
+  "owner": "E03/W3-02",
+  "pr": 162,
+  "branch": "integration/nox-v16-unified-candidate-20261028-r01",
+  "expectedHead": "eda60ee3e6a8271fe3accc667c0130609d0ac5dc",
+  "expectedBaseTree": "ea3300f4595c90c672223bf94d977da8332511ee",
+  "historicalOrigin": "0b3a7d435be735148d64171deb9027093a89646e",
+  "sourceLock729": "HOLD_NOT_VERIFIED",
+  "changes": [
+    {
+      "path": "Packages/P03/Source/python-host/p03_onehost_port.py",
+      "owner": "E03",
+      "preSha256": "96e048313fb6384cc9fefb79bbbba275c415b29dcf0460d78a2fe38b4a6a5223",
+      "postSha256": "22b681ee724d11b5752b91cb47b406afbc02573cde2b9f9f3dd92272decd9308",
+      "preGitBlobSha1": "5f4d3bcb10b49d23d6522433de81d4aad7a1a66d",
+      "postGitBlobSha1": "SEE_GIT_TREE",
+      "diff": "Replace json.loads with duplicate-key/non-finite/encoding/root-object strict gate; no downloader change"
+    },
+    {
+      "path": "Packages/P03/Source/python-host/test_p03_catalog_json_contract_r13.py",
+      "owner": "E03",
+      "preSha256": "ABSENT",
+      "postSha256": "fe890f71171c9ad651a22ce7098416b038337dea515d9fd67e7459be1f2e4bcd",
+      "preGitBlobSha1": "ABSENT",
+      "postGitBlobSha1": "SEE_GIT_TREE",
+      "diff": "9 offline native-module regression cases; RED isolated reproduced, GREEN isolated 9/9"
+    }
+  ],
+  "tests": {
+    "localIsolated": "RED 3 fails + 8 exception subcases; GREEN 9/9 PASS on extracted exact gate",
+    "realP03Module": "TEST_NOT_RUN",
+    "WindowsCI": "TEST_NOT_RUN",
+    "AzureCI": "NOT_RUN",
+    "OllamaPull": "NOT_RUN",
+    "GgufImport": "NOT_RUN",
+    "weightsDownloaded": 0,
+    "finalE07": "0/10"
+  },
+  "lesson": "STRICT_UNAMBIGUOUS_DISCOVERY_JSON_ADMISSION",
+  "downstream": "Manual #1 E06 integrate from one PR162; native Windows acceptance pending",
+  "noLoss": "No deletions, original D02/WOW/8 CoreID/5 Persona/archive and downloads unchanged"
+}
