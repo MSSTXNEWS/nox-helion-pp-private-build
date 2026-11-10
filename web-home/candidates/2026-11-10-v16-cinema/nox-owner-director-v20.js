@@ -64,7 +64,7 @@
  actions.append(menu,hud,controls,mode);stage.append(actions);
  // No selector is removed: old 14 source-controls and CPU/GPU widgets can be opened by actual buttons.
  const journal=stage.querySelector('details#homeJournal');
- if(journal){const summary=journal.querySelector('summary');if(summary){summary.setAttribute('role','button');summary.setAttribute('aria-label','Открыть или закрыть журнал событий');summary.style.cursor='pointer';}}
+ if(journal){journal.open=true;const summary=journal.querySelector('summary');if(summary){summary.hidden=true;summary.setAttribute('aria-hidden','true');summary.tabIndex=-1;}}
  const observer=new MutationObserver(()=>{
   const owner=stage.querySelector('#noxEclipseCanvas');if(owner&&body.dataset.noxOwnerLayout==='CINEMA')owner.style.willChange='transform';
  });
