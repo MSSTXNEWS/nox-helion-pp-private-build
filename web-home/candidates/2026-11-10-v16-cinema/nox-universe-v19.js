@@ -57,7 +57,78 @@
  function news(){const c=shell('Новости · реальные источники');notice(c,'Показаны проверяемые ссылки, даты и источники. Никаких вымышленных новостей и автоматических публикаций.');
  const target=$('div',{class:'nox-v19-feed'});c.append(row(action('ЗАГРУЗИТЬ ТЕХНОЛОГИИ',async()=>{target.replaceChildren();live('Получение HN Algolia…');try{const res=await fetch('https://hn.algolia.com/api/v1/search?tags=front_page&hitsPerPage=16',{signal:AbortSignal.timeout(12000)});if(!res.ok)throw Error('HTTP '+res.status);const j=await res.json();for(const h of j.hits||[]){if(!h.title)continue;const u=h.url||('https://news.ycombinator.com/item?id='+encodeURIComponent(h.objectID));let link=$('a',{href:u,target:'_blank',rel:'noopener noreferrer',text:h.title});let date=$('small',{text:' '+new Date(h.created_at).toLocaleString('ru-RU')+' · '+new URL(u).host});target.append($('div',{class:'nox-v19-feed-item'},[link,date]))}live('Получены свежие записи с указанием источников','ok')}catch(e){live('Новости HOLD: '+e.message,'error')}}),action('ЯНДЕКС ДЗЕН',()=>openUrl('https://dzen.ru/')),action('GOOGLE NEWS',()=>openUrl('https://news.google.com/'))),target);
  const rss=shell('RSS / Atom: проверка источника');const url=field('Публичный URL RSS/Atom');const output=$('div',{class:'nox-v19-feed'});rss.append(row(url,action('ПРОВЕРИТЬ RSS',async()=>{output.replaceChildren();try{const u=new URL(url.value);if(u.protocol!=='https:')throw Error('Только HTTPS');const res=await fetch(u.href,{signal:AbortSignal.timeout(10000)});if(!res.ok)throw Error('HTTP '+res.status);const xml=new DOMParser().parseFromString(await res.text(),'application/xml');if(xml.querySelector('parsererror'))throw Error('Некорректный XML');let entries=[...xml.querySelectorAll('item,entry')].slice(0,15);for(const e of entries){const title=e.querySelector('title')?.textContent?.trim()||'Без заголовка';const link=e.querySelector('link')?.getAttribute('href')||e.querySelector('link')?.textContent?.trim();if(!link)continue;const a=$('a',{href:new URL(link,u.href).href,target:'_blank',rel:'noopener noreferrer',text:title});const date=e.querySelector('pubDate,published,updated')?.textContent||'дата не указана';output.append($('div',{class:'nox-v19-feed-item'},[a,$('small',{text:date})]))}live('RSS загружен: '+entries.length+' записей','ok')}catch(e){live('RSS HOLD (возможен CORS): '+e.message,'error')}}),action('ОТКРЫТЬ ИСТОЧНИК',()=>openUrl(url.value))),output)}
- function weather(){const c=shell('Погода · по введённому городу');notice(c,'Open-Meteo, без доступа к геолокации и без выдуманной температуры. Бесплатные условия API ограничены некоммерческим использованием.');const city=field('Введите город, например Madrid');const list=$('div',{class:'nox-v19-feed'});c.append(row(city,action('НАЙТИ ГОРОД И ПРОГНОЗ',async()=>{list.replaceChildren();if(city.value.trim().length<2){live('Введите название города','error');return}try{let g=await fetch('https://geocoding-api.open-meteo.com/v1/search?name='+encodeURIComponent(city.value.trim())+'&count=5&language=ru&format=json',{signal:AbortSignal.timeout(11000)});if(!g.ok)throw Error('Geocoding HTTP '+g.status);const j=await g.json();if(!j.results?.length)throw Error('Город не найден');for(const item of j.results){list.append(action(item.name+', '+(item.country||''),async()=>{try{let u='https://api.open-meteo.com/v1/forecast?latitude='+encodeURIComponent(item.latitude)+'&longitude='+encodeURIComponent(item.longitude)+'&current=temperature_2m,relative_humidity_2m,precipitation,wind_speed_10m&timezone=auto';const r=await fetch(u,{signal:AbortSignal.timeout(11000)});if(!r.ok)throw Error('HTTP '+r.status);const j=await r.json();const v=j.current||{};const output=$('p',{class:'nox-v19-big',text:String(v.temperature_2m??'—')+' °C · влажность '+String(v.relative_humidity_2m??'—')+'% · ветер '+String(v.wind_speed_10m??'—')+' км/ч'});list.replaceChildren(output,$('p',{class:'nox-v19-note',text:'Open-Meteo · '+String(v.time||'нет даты')+' · '+item.name}));live('Получены реальные наблюдения/прогноз для '+item.name,'ok')}catch(e){live('Погода HOLD: '+e.message,'error')}}))}live('Выберите нужный город')}catch(e){live('Погода HOLD: '+e.message,'error')}}),list))}
+ function weather(){
+ const c=shell('Погода · интерактивная карта');
+ notice(c,'Open-Meteo — реальная погода и прогноз. Карта Leaflet / © OpenStreetMap. Для публичного коммерческого использования нужны разрешённые тарифы поставщиков.');
+ const city=field('Найти город: Мадрид, Альмерия, Москва…');
+ const layer=$('div',{class:'nox-v19-weather-map','aria-label':'Интерактивная карта прогноза'});
+ const info=$('div',{class:'nox-v19-weather-info'});
+ const modeButtons=row(),forecast=$('div',{class:'nox-v19-weather-days'});
+ const statusMap=$('p',{class:'nox-v19-note',text:'Карта появляется после выбора города. Сведения не запрашиваются автоматически.'});
+ let map=null,marker=null,data=null,mode='temperature',painted=false;
+ const metric={temperature:{name:'Температура',key:'temperature_2m',suffix:'°C'},wind:{name:'Ветер',key:'wind_speed_10m',suffix:'км/ч'},rain:{name:'Осадки',key:'precipitation',suffix:'мм'}};
+ const renderMetric=()=>{
+  modeButtons.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.mode===mode)));
+  if(!data)return;
+  const current=data.current||{},m=metric[mode],value=current[m.key];
+  const pretty=value===null||value===undefined?'нет данных':String(value)+' '+m.suffix;
+  const seen=current.time||'дата отсутствует';
+  info.replaceChildren($('div',{class:'nox-v19-big',text:pretty}),$('p',{class:'nox-v19-note',text:m.name+' · '+seen+' · Open-Meteo'}));
+  if(marker){const title=m.name+': '+pretty;marker.bindTooltip(title,{direction:'top',opacity:.94}).openTooltip();}
+  forecast.replaceChildren();
+  const days=data.daily||{};
+  (days.time||[]).slice(0,7).forEach((day,i)=>{
+   const hi=days.temperature_2m_max?.[i],lo=days.temperature_2m_min?.[i],rain=days.precipitation_sum?.[i],wind=days.wind_speed_10m_max?.[i];
+   forecast.append($('div',{class:'nox-v19-day'},[
+    $('strong',{text:day}),$('span',{text:(Number.isFinite(hi)?hi+'°':'—')+' / '+(Number.isFinite(lo)?lo+'°':'—')}),
+    $('small',{text:'Осадки '+(rain??'—')+' мм · ветер '+(wind??'—')+' км/ч'})
+   ]));
+  });
+ };
+ for(const [modeId,meta] of Object.entries(metric)){const button=action(meta.name,()=>{mode=modeId;renderMetric()});button.dataset.mode=modeId;modeButtons.append(button);}
+ async function ensureMap(lat,lon,label){
+  if(!window.L){
+   const css=document.createElement('link');css.rel='stylesheet';css.href='./vendor/nox-extra/leaflet.css';css.dataset.noxMapStyle='1';document.head.append(css);
+   await loadScript('./vendor/nox-extra/leaflet.js');
+  }
+  if(!window.L)throw Error('Leaflet не загрузился');
+  if(!map){
+   map=window.L.map(layer,{scrollWheelZoom:false,zoomControl:true,attributionControl:true,preferCanvas:true}).setView([lat,lon],8);
+   window.L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:12,minZoom:2,attribution:'© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a>'}).addTo(map);
+  }else{map.setView([lat,lon],8);}
+  if(marker)marker.remove();
+  marker=window.L.circleMarker([lat,lon],{radius:10,color:'#e9b978',weight:2,fillColor:'#f2b76b',fillOpacity:.8}).addTo(map).bindPopup(label);
+  marker.openPopup();
+  painted=true;
+  requestAnimationFrame(()=>map.invalidateSize());
+ }
+ const result=$('div',{class:'nox-v19-weather-results'});
+ async function getWeather(item){
+  const lat=Number(item.latitude),lon=Number(item.longitude);
+  try{
+   if(!Number.isFinite(lat)||!Number.isFinite(lon))throw Error('Нет координат');
+   const url='https://api.open-meteo.com/v1/forecast?latitude='+encodeURIComponent(lat)+'&longitude='+encodeURIComponent(lon)+'&current=temperature_2m,relative_humidity_2m,precipitation,wind_speed_10m,weather_code&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max&forecast_days=7&timezone=auto';
+   const res=await fetch(url,{signal:AbortSignal.timeout(15000)});if(!res.ok)throw Error('HTTP '+res.status);
+   data=await res.json();if(!data?.current)throw Error('Ответ без актуальных данных');
+   await ensureMap(lat,lon,item.name+', '+(item.country||''));
+   result.replaceChildren();statusMap.textContent='Выбрано: '+item.name+', '+(item.country||'')+' · данные '+(data.current.time||'без даты');
+   renderMetric();live('Карта и реальный прогноз обновлены для '+item.name,'ok');
+  }catch(e){live('Погодная карта HOLD: '+e.message,'error');statusMap.textContent='Ошибка источника: '+e.message}
+ }
+ async function search(){
+  result.replaceChildren();
+  if(city.value.trim().length<2){live('Введите город','error');return}
+  try{
+   const url='https://geocoding-api.open-meteo.com/v1/search?name='+encodeURIComponent(city.value.trim())+'&count=5&language=ru&format=json';
+   const r=await fetch(url,{signal:AbortSignal.timeout(15000)});if(!r.ok)throw Error('Geocoding HTTP '+r.status);
+   const j=await r.json();if(!j.results?.length)throw Error('Город не найден');
+   for(const item of j.results)result.append(action(item.name+', '+(item.country||'')+' · '+(item.admin1||''),()=>getWeather(item)));
+   live('Выберите город — загрузится карта и прогноз');
+  }catch(e){live('Поиск погоды HOLD: '+e.message,'error')}
+ }
+ city.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();search()}});
+ c.append(row(city,action('НАЙТИ ГОРОД',search)),result,modeButtons,statusMap,layer,info,forecast);
+ }
  function currency(){const c=shell('Курсы · официальные справочные значения');notice(c,'Frankfurter v2: справочные курсы центральных банков, не биржевые котировки. BYN, EUR, USD, RUB доступны по данным поставщика.');const from=field('Исходная валюта, например EUR'),to=field('Целевая валюта, например BYN'),amount=field('Сумма','number');from.value='EUR';to.value='USD';amount.value='100';const output=$('div',{class:'nox-v19-big'});c.append(row(from,to,amount,action('ПОСЧИТАТЬ',async()=>{try{const a=from.value.trim().toUpperCase(),b=to.value.trim().toUpperCase(),n=Number(amount.value);if(!/^[A-Z]{3}$/.test(a)||!/^[A-Z]{3}$/.test(b)||!Number.isFinite(n)||n<0)throw Error('Введите ISO валюты и положительную сумму');if(a===b){output.textContent=n.toLocaleString('ru-RU')+' '+a;return}const r=await fetch('https://api.frankfurter.dev/v2/rate/'+encodeURIComponent(a.toLowerCase())+'/'+encodeURIComponent(b.toLowerCase()),{signal:AbortSignal.timeout(12000)});if(!r.ok)throw Error('HTTP '+r.status);const v=await r.json();if(!Number.isFinite(v.rate))throw Error('Курс недоступен');output.textContent=new Intl.NumberFormat('ru-RU',{style:'currency',currency:b}).format(n*v.rate);live('Frankfurter · '+v.date+' · 1 '+a+' = '+v.rate+' '+b,'ok')}catch(e){live('Курсы HOLD: '+e.message,'error')}})),output)}
  function browser(){const c=shell('Браузер источников');notice(c,'Используется изолированная вкладка браузера. Ограничения CORS, CSP, DRM и входа на сайты не обходятся.');const url=field('HTTPS URL страницы или поисковый запрос');const bookmarks=$('div',{class:'nox-v19-feed'});const key='nox-browser-bookmarks';const saved=()=>{try{return JSON.parse(localStorage.getItem(key)||'[]')}catch{return []}};const paint=()=>{bookmarks.replaceChildren();for(const u of saved())bookmarks.append(row(action('ОТКРЫТЬ '+new URL(u).host,()=>openUrl(u)),action('УДАЛИТЬ',()=>{localStorage.setItem(key,JSON.stringify(saved().filter(x=>x!==u)));paint()})))};
  const normalize=()=>{const t=url.value.trim();if(!t)throw Error('Введите адрес или запрос');if(t.includes(' ')||!t.includes('.'))return 'https://www.google.com/search?q='+encodeURIComponent(t);const u=new URL(t.startsWith('http')?t:'https://'+t);if(!['https:','http:'].includes(u.protocol))throw Error('Запрещённая схема');return u.href};
