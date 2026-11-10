@@ -34,7 +34,7 @@ async function verifySet(items,kind){
  // Sharded full-weight sets must be large enough to exclude tiny prompt/adapter files.
  if(kind==='STUDENT'&&total<100_000_000)throw Error('STUDENT_FULL_WEIGHTS_BELOW_MINIMUM_BYTES');
  const combinedSha256=crypto.createHash('sha256').update(found.slice().sort((a,b)=>a.path.localeCompare(b.path))
-  .map(x=>x.sha256+':'+x.bytes+':'+x.path).join('\n')).digest('hex');
+  .map(x=>x.sha256+':'+x.bytes).join('\n')).digest('hex');
  return {files:found,combinedSha256,totalBytes:total};
 }
 async function main(){
@@ -47,14 +47,23 @@ async function main(){
   const weights=await verifySet(input.weights?.files,'STUDENT');
   if(input.baselineCombinedSha256&&input.baselineCombinedSha256!==baseline.combinedSha256)throw Error('BASELINE_COMBINED_DIGEST_DRIFT');
   if(input.weights?.combinedSha256&&input.weights.combinedSha256!==weights.combinedSha256)throw Error('STUDENT_COMBINED_DIGEST_DRIFT');
-  // This proof only attests on-disk checkpoints. Trainer counters and quality are
+  const stateProof=input.trainerState;
+  if(!stateProof||typeof stateProof.path!=='string'||path.isAbsolute(stateProof.path)||stateProof.path.includes('..')||!hex(stateProof.sha256))throw Error('TRAINER_STATE_PROOF_MISSING');
+  const statePath=path.resolve(workspace,stateProof.path);
+  if(!inside(workspace,statePath)||!inside(await fsp.realpath(workspace),await fsp.realpath(statePath)))throw Error('TRAINER_STATE_OUTSIDE_WORKSPACE');
+  if((await hashBuffer(statePath))!==stateProof.sha256)throw Error('TRAINER_STATE_SHA256_MISMATCH');
+  const trainer=JSON.parse(await fsp.readFile(statePath,'utf8'));
+  if(!Number.isSafeInteger(trainer.global_step)||trainer.global_step<0||
+     !Number.isSafeInteger(trainer.max_steps)||trainer.max_steps<=0||
+     trainer.global_step!==input.completedSteps||trainer.max_steps!==input.targetSteps)throw Error('TRAINER_STEP_COUNTERS_NOT_MATCHED');
+  // This proof attests checkpoint bytes and matching trainer state. Quality is
   // declarations unless the separate trainer/evaluator signatures are independently audited.
   const evidence={...input,baselineCombinedSha256:baseline.combinedSha256,
    weights:{...weights,kind:'FULL_STUDENT_WEIGHTS'},quality:{...input.quality,verified:false},
    windowsSync:{...input.windowsSync,verified:false},
    teachers:(input.teachers||[]).map(t=>({...t,samplesVerified:false}))};
   result=assessNoxProgress(evidence);
-  result.attestation='LOCAL_WEIGHT_BYTES_SHA256_CHECKED';
+  result.attestation='LOCAL_WEIGHT_AND_TRAINER_STATE_SHA256_CHECKED';
   result.qualityAttestation='NOT_INDEPENDENTLY_VERIFIED';
   result.windowsTransferAttestation='NOT_INDEPENDENTLY_VERIFIED';
   result.teacherAttestation='NOT_INDEPENDENTLY_VERIFIED';
