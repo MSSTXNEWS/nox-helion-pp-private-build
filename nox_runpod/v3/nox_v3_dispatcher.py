@@ -43,7 +43,11 @@ def launch(argv, timeout, label):
                                   stderr=subprocess.STDOUT,timeout=timeout,check=False).returncode
         except subprocess.TimeoutExpired:
             return 124
+def safe70_halt(node):
+    return (STATE/("STOP_"+node)).exists() or (STATE/("HOLD_"+node)).exists()
 def run(node,plan):
+    if safe70_halt(node):
+        return emit({"node":node,"status":"HOLD_SAFE70_OR_MISSING_SENSOR"})
     mode=plan.get("mode")
     if mode not in ("prepare_no_forced_cutover","active","hold"):
         return emit({"node":node,"status":"HOLD_INVALID_MODE"})
@@ -72,6 +76,7 @@ def run(node,plan):
         return emit({"node":node,"status":"HOLD_V3_BINARIES_MISSING"})
     out={}
     for teacher in ("Qwen3.5-27B","DeepSeek-R1-Distill-Qwen-32B"):
+        if safe70_halt(node):return emit({"node":node,"status":"HOLD_SAFE70","teachers":out})
         model=ROOT/("teachers/Qwen3.5-27B/Qwen3.5-27B-Q4_K_M.gguf" if teacher=="Qwen3.5-27B"
                     else "teachers/DeepSeek-R1-Distill-Qwen-32B/DeepSeek-R1-Distill-Qwen-32B-Q4_K_M.gguf")
         if not model.is_file():
@@ -85,6 +90,7 @@ def run(node,plan):
     # running legacy process came back, or if the last cycle is still in flight.
     if process_has("a40_cuda_distillation_direct.py") or process_has("a40_full_parameter_distill_cycle.py"):
         return emit({"node":node,"status":"HOLD_GPU_REOCCUPIED","teachers":out})
+    if safe70_halt(node):return emit({"node":node,"status":"HOLD_SAFE70_BEFORE_TRAINING","teachers":out})
     if not PY.is_file() or not DISTILL.is_file():
         return emit({"node":node,"status":"HOLD_STUDENT_TRAINER_MISSING","teachers":out})
     if not A40_TRAIN.parent.is_dir():
