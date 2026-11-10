@@ -1,0 +1,38 @@
+/* NOX HELION V19 · living glass service overlay. Original WebGL scene untouched. */
+.nox-v19-root{--nox-v19-gold:#d7ad79;--nox-v19-edge:rgba(225,178,114,.38);color:#e9e7e0;font-family:inherit;position:relative;z-index:2147481000}
+.nox-v19-launch{position:fixed;bottom:19px;left:18px;z-index:2147481000;background:linear-gradient(145deg,#24252b,#0c0d12);color:#f0c58e;border:1px solid var(--nox-v19-edge);border-radius:14px;padding:12px 18px;min-height:48px;cursor:pointer;font:600 13px/1.2 inherit;box-shadow:inset 0 1px rgba(255,255,255,.17),0 9px 28px #000b;animation:nox-v19-breathe 6s ease-in-out infinite}
+.nox-v19-panel[hidden],.nox-v19-launch[hidden]{display:none!important}
+.nox-v19-panel{position:fixed;inset:5vh max(12px,5vw);height:90vh;z-index:2147481002;border:1px solid var(--nox-v19-edge);border-radius:20px;overflow:auto;background:linear-gradient(150deg,rgba(34,35,45,.96),rgba(5,8,12,.97));box-shadow:0 30px 150px #000, inset 0 1px rgba(242,211,175,.25);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);padding:20px}
+.nox-v19-panel::before{content:'';pointer-events:none;position:sticky;top:0;display:block;height:1px;background:linear-gradient(90deg,transparent,#ffc78d,transparent);opacity:.65}
+.nox-v19-head{position:sticky;top:0;z-index:2;background:rgba(12,14,18,.93);display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid #ffffff18}
+.nox-v19-head h2{margin:0;font-size:clamp(1.1rem,2vw,1.65rem);letter-spacing:.18em;color:#e8c199}
+.nox-v19-tabs,.nox-v19-row{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin:14px 0}
+.nox-v19-btn{appearance:none;cursor:pointer;min-width:44px;min-height:44px;color:#e9d4bd;background:linear-gradient(140deg,#343840,#161820);border:1px solid var(--nox-v19-edge);border-radius:11px;padding:10px 15px;font-size:13px;font-weight:600;letter-spacing:.045em;transition:transform .22s,border-color .24s,box-shadow .28s}
+.nox-v19-btn:hover,.nox-v19-btn:focus-visible{border-color:#f2ca92;box-shadow:0 0 22px #dfa65e44,inset 0 1px #fff4;transform:translateY(-1px)}
+.nox-v19-btn:active{transform:translateY(1px) scale(.99)}
+.nox-v19-btn[aria-pressed=true]{background:linear-gradient(145deg,#85512c,#24272f);color:#fff0db}
+.nox-v19-btn.nox-v19-planned{opacity:.72;border-style:dashed}
+.nox-v19-body{display:grid;gap:13px;grid-template-columns:repeat(auto-fit,minmax(min(100%,450px),1fr));align-items:start;padding-bottom:25px}
+.nox-v19-card{background:linear-gradient(132deg,rgba(129,122,113,.16),rgba(21,25,32,.72));border:1px solid #ffffff23;box-shadow:inset 0 1px #ffffff19,0 7px 32px #0006;border-radius:16px;padding:18px;min-width:0}
+.nox-v19-card h3{color:#e8b983;font-size:1.07rem;margin:0 0 15px;letter-spacing:.08em}
+.nox-v19-note{color:#a9b4bb;font-size:.86rem;line-height:1.6;max-width:80ch}
+.nox-v19-input{font:inherit;color:#f1e5d7;background:rgba(3,6,10,.77);border:1px solid #bd8d5d66;border-radius:10px;padding:11px;min-height:44px;min-width:min(200px,100%);max-width:100%;flex:1 1 175px}
+.nox-v19-input[type=file]{font-size:.76rem}
+.nox-v19-input:focus-visible{outline:2px solid #ffce8a;outline-offset:2px}
+.nox-v19-video{width:100%;max-height:min(54vh,560px);background:#000;border:1px solid #8c6b4a;border-radius:12px}
+.nox-v19-reader{min-height:240px;max-height:66vh;overflow:auto;border-radius:12px;border:1px solid #856a4f77;background:#eeece7;color:#15191e;padding:12px}
+.nox-v19-pdfcanvas{display:block;margin:auto;max-width:100%;height:auto}
+.nox-v19-text{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.7}
+.nox-v19-feed{display:flex;flex-direction:column;gap:9px;max-height:55vh;overflow:auto}
+.nox-v19-feed-item{padding:12px;border-radius:10px;border:1px solid #ffffff1f;background:#03060866;display:flex;gap:8px;flex-direction:column}
+.nox-v19-feed a{color:#d7b78b;text-decoration:underline;text-underline-offset:3px;overflow-wrap:anywhere}
+.nox-v19-feed small{color:#99a4b1}
+.nox-v19-sections{display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:9px;max-height:58vh;overflow:auto}
+.nox-v19-sections .nox-v19-btn{font-size:12px;text-align:left}
+.nox-v19-big{font-size:clamp(1.2rem,2.5vw,2rem);color:#e8c28a;line-height:1.4}
+.nox-v19-status{border-top:1px solid #ffffff20;padding:12px;color:#b3bdc6;min-height:30px;font-size:13px;position:sticky;bottom:0;background:#0e1119}
+.nox-v19-status[data-type=error]{color:#f9a79c}.nox-v19-status[data-type=ok]{color:#addbb0}.nox-v19-status[data-type=warn]{color:#eac47d}
+@keyframes nox-v19-breathe{0%,100%{box-shadow:0 8px 28px #0009,inset 0 1px #fff2}50%{box-shadow:0 8px 28px #0009,0 0 17px #f2ac583a,inset 0 1px #fff3}}
+@media(max-width:600px){.nox-v19-panel{inset:0;height:100dvh;border-radius:0;padding:10px}.nox-v19-head h2{letter-spacing:.06em}.nox-v19-launch{left:8px;bottom:8px}.nox-v19-card{padding:13px}}
+@media(prefers-reduced-motion:reduce){.nox-v19-root *, .nox-v19-root *::after{animation:none!important;transition:none!important}}
+@media(prefers-reduced-transparency:reduce){.nox-v19-panel{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;background:#0e1219}}
