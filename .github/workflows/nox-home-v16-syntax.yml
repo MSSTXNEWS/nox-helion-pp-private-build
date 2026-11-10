@@ -34,6 +34,19 @@ jobs:
           node --check web-home/candidates/2026-11-10-v16-cinema/tools/nox-audit-distillation.mjs
           node --check web-home/candidates/2026-11-10-v16-cinema/tools/test-nox-progress.mjs
           node web-home/candidates/2026-11-10-v16-cinema/tools/test-nox-progress.mjs
+          node - <<'NODE'
+          const fs=require('node:fs'),assert=require('node:assert/strict');
+          const source=JSON.parse(fs.readFileSync('web-home/candidates/2026-11-10-v16-cinema/NOX-WOW30-TRACEABILITY.json','utf8'));
+          const ids=['R','W','C'].flatMap(group=>Array.from({length:10},(_,i)=>group+String(i+1).padStart(2,'0')));
+          assert.equal(source.criteria.length,30);
+          assert.deepEqual(source.criteria.map(x=>x.id),ids);
+          for(const row of source.criteria){
+            assert(row.requirement&&row.source,'WOW30_SOURCE_GAP');
+            if(row.implementationAccepted||row.physicalGpuAccepted||row.windowsAccepted||row.proof)
+              throw Error('NOX_WOW30_CLAIM_REQUIRES_INDEPENDENT_SAME_SHA_EVIDENCE:'+row.id);
+          }
+          console.log('NOX_WOW30_SOURCE_GATE_PASS 30/30 tracked, 0/30 claimed accepted');
+          NODE
           # Negative integration test: no real RunPod checkpoint -> HOLD, never 0% or PASS.
           mkdir -p /tmp/nox-progress-empty
           rc=0
