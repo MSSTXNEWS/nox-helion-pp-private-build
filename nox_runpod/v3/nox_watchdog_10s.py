@@ -45,6 +45,48 @@ def tick(node,improve):
    status["state"]="HOLD_DUPLICATE_DISPATCHERS";status["pids"]=current
   elif len(current)==1:
    status["state"]="DISPATCHER_ALIVE";status["pids"]=current
+   # A process existing is not proof of activity. Reload only an explicitly
+   # idle, stale dispatcher, after proving no GPU owner and no child process.
+   gate_file=S/("cutover_"+node+".json")
+   try:gate=json.loads(gate_file.read_text(encoding="utf-8"))
+   except (OSError,ValueError):gate={}
+   path=S/("orchestrator_status_"+node+".json")
+   if not path.is_file():path=S/"orchestrator_status.json"
+   try:
+    info=json.loads(path.read_text(encoding="utf-8"))
+    age=time.time()-path.stat().st_mtime
+   except (OSError,ValueError):info={};age=0
+   stale=info.get("node")==node and info.get("status") in ("PREPARED_NOT_STARTED","HOLD_CUTOVER_SAVEPOINT_PENDING") and age>180
+   approved=gate.get("node")==node and gate.get("status")=="CUTOVER_READY"
+   if stale and approved:
+    try:
+     gpu=subprocess.run(["nvidia-smi","--query-compute-apps=pid",
+       "--format=csv,noheader,nounits"],capture_output=True,text=True,timeout=8)
+     owners=[x for x in gpu.stdout.splitlines() if x.strip().isdigit()] if gpu.returncode==0 else ["UNAVAILABLE"]
+     children=[]
+     for p in pathlib.Path("/proc").iterdir():
+      if not p.name.isdigit():continue
+      try:
+       stat=(p/"stat").read_text()
+       parent=int(stat.rsplit(")",1)[1].strip().split()[1])
+       if parent==current[0]:children.append(int(p.name))
+      except (OSError,ValueError,IndexError):pass
+     if not owners and not children:
+      # One stale idle process. SIGTERM only; never force a live trainer.
+      os.kill(current[0],15)
+      time.sleep(1)
+      if ps_running(node):
+       status["state"]="HOLD_IDLE_DISPATCHER_DID_NOT_EXIT"
+      else:
+       status["state"]="IDLE_DISPATCHER_RELOADED"
+       supervisor=BIN/"nox_v3_supervisor.py"
+       if supervisor.is_file():
+        status["supervisor"]=run(["python3",str(supervisor),"--node",node],20)
+     else:
+      status["state"]="HOLD_IDLE_RESTART_GPU_OR_CHILD_OWNED"
+      status["gpu_owners"]=owners;status["children"]=children
+    except (OSError,subprocess.TimeoutExpired) as e:
+     status["state"]="HOLD_IDLE_RESTART_UNVERIFIED";status["reason"]=repr(e)[:200]
   else:
    gate=S/("cutover_"+node+".json")
    try:doc=json.loads(gate.read_text())
