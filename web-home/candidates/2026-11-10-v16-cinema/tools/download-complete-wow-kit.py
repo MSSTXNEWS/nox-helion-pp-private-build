@@ -30,7 +30,7 @@ PACKAGES = {
  "notifications": ["web-push", "workbox-window", "workbox-sw", "idb", "dexie"],
  "calendar": ["fullcalendar", "@fullcalendar/core", "@fullcalendar/daygrid", "@fullcalendar/timegrid", "@fullcalendar/interaction"],
  "analytics": ["echarts", "uplot", "chart.js"],
- "glass_interface": ["photoswipe", "@shoelace-style/shoelace", "@floating-ui/dom", "@tabler/icons", "lit"],
+ "glass_interface": ["photoswipe", "@shoelace-style/shoelace", "@floating-ui/dom", "@tabler/icons"],
 }
 # Don't run install scripts or launch network services.
 errors = []
