@@ -11,14 +11,14 @@ const version='2026-11-10-v19';
 const sources=[
  {name:'leaflet.js',url:'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js',minBytes:80000,maxBytes:300000,license:'BSD-2-Clause'},
  {name:'leaflet.css',url:'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css',minBytes:5000,maxBytes:30000,license:'BSD-2-Clause'},
- {name:'LEAFLET-LICENSE.txt',url:'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/LICENSE',minBytes:300,maxBytes:10000,license:'BSD-2-Clause'},
+ {name:'LEAFLET-PACKAGE.json',url:'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/package.json',minBytes:300,maxBytes:100000,license:'BSD-2-Clause'},
  {name:'pdf.mjs',url:'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.mjs',minBytes:100000,maxBytes:5000000,license:'Apache-2.0'},
  {name:'pdf.worker.mjs',url:'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.worker.mjs',minBytes:100000,maxBytes:6000000,license:'Apache-2.0'},
  {name:'PDFJS-LICENSE.txt',url:'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/LICENSE',minBytes:500,maxBytes:100000,license:'Apache-2.0'},
  {name:'epub.min.js',url:'https://cdn.jsdelivr.net/npm/epubjs@0.3.93/dist/epub.min.js',minBytes:30000,maxBytes:3500000,license:'BSD-2-Clause'},
- {name:'EPUB-LICENSE.txt',url:'https://cdn.jsdelivr.net/npm/epubjs@0.3.93/LICENSE',minBytes:50,maxBytes:100000,license:'BSD-2-Clause'},
+ {name:'EPUB-PACKAGE.json',url:'https://cdn.jsdelivr.net/npm/epubjs@0.3.93/package.json',minBytes:100,maxBytes:100000,license:'BSD-2-Clause'},
  {name:'shaka-player.compiled.js',url:'https://cdn.jsdelivr.net/npm/shaka-player@4.15.67/dist/shaka-player.compiled.js',minBytes:200000,maxBytes:8500000,license:'Apache-2.0'},
- {name:'SHAKA-LICENSE.txt',url:'https://cdn.jsdelivr.net/npm/shaka-player@4.15.67/LICENSE',minBytes:500,maxBytes:100000,license:'Apache-2.0'}
+ {name:'SHAKA-PACKAGE.json',url:'https://cdn.jsdelivr.net/npm/shaka-player@4.15.67/package.json',minBytes:200,maxBytes:100000,license:'Apache-2.0'}
 ];
 
 async function getFile(entry,output){
@@ -45,7 +45,7 @@ export async function installExtras(out){
  const files=[];
  // Avoid exhausting CDN sockets during a constrained 4-core Vercel build.
  for(const src of sources)files.push(await getFile(src,target));
- const report={version,origin:'PINNED_CDN',fetchedDuringBuild:true,complete:files.length===sources.length,files,
+ const report={version,origin:'PINNED_CDN',fetchedDuringBuild:true,complete:files.length===sources.length,licenseMetadata:'PACKAGE_JSON_LICENSE_DECLARATIONS_ONLY; FULL_LICENSE_TEXT_FETCH_STILL_OPEN',files,
   runtimePdf:'NOT_TESTED',runtimeEpub:'NOT_TESTED',runtimeHls:'NOT_TESTED',browserQa:'HOLD'};
  await fs.writeFile(path.join(target,'NOX-EXTRA-ASSETS-RECEIPT.json'),JSON.stringify(report,null,2));
  console.log('NOX V19 EXTRA ASSETS INSTALLED:',files.length,'verified SHA256',files.reduce((sum,x)=>sum+x.size,0),'bytes');
