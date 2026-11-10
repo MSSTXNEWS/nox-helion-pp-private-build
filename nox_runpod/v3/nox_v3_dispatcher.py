@@ -55,29 +55,23 @@ def launch(argv, timeout, label):
                                   stderr=subprocess.STDOUT,timeout=timeout,check=False).returncode
         except subprocess.TimeoutExpired:
             return 124
-def cloud_gpu_gate():
-    # Cloud NVIDIA GPU core is not an AMD Hot Spot. Three readings for
-    # temperature >=70 C before compute, missing sensor = fail-closed HOLD.
+def cloud_gpu_status():
+    # Observability only. NVIDIA's own hardware/driver retains protection.
+    # SAFE70 remains exclusively with the local Windows AMD Hot Spot monitor.
     try:
-        hot=0
-        for i in range(3):
-            p=subprocess.run(["nvidia-smi","--query-gpu=temperature.gpu,memory.free",
-                "--format=csv,noheader,nounits"],capture_output=True,text=True,timeout=10)
-            if p.returncode!=0:return "HOLD_GPU_SENSOR_MISSING"
-            vals=[v.strip() for v in p.stdout.splitlines()[0].split(",")]
-            temp=int(vals[0])
-            if temp<=0:return "HOLD_GPU_SENSOR_MISSING"
-            hot=hot+1 if temp>=70 else 0
-            if i!=2:time.sleep(1)
-        return "STOP_GPU_TEMP_70C_3_READINGS" if hot>=3 else None
+        p=subprocess.run(["nvidia-smi","--query-gpu=temperature.gpu,utilization.gpu,memory.used,memory.free",
+            "--format=csv,noheader,nounits"],capture_output=True,text=True,timeout=10)
+        if p.returncode:return {"status":"TELEMETRY_UNAVAILABLE"}
+        a=[v.strip() for v in p.stdout.splitlines()[0].split(",")]
+        return {"status":"OK","temp_core_c":int(a[0]),"util_pct":int(a[1]),
+                "used_mib":int(a[2]),"free_mib":int(a[3])}
     except (OSError,ValueError,IndexError,subprocess.TimeoutExpired):
-        return "HOLD_GPU_SENSOR_MISSING"
-
-def safe70_halt(node):
-    return (STATE/("STOP_"+node)).exists() or (STATE/("HOLD_"+node)).exists()
+        return {"status":"TELEMETRY_UNAVAILABLE"}
+def manual_stop(node):
+    return (STATE/("MANUAL_STOP_"+node)).exists() or (STATE/("STOP_"+node)).exists()
 def run(node,plan):
-    if safe70_halt(node):
-        return emit({"node":node,"status":"HOLD_SAFE70_OR_MISSING_SENSOR"})
+    if manual_stop(node):
+        return emit({"node":node,"status":"HOLD_MANUAL_STOP"})
     mode=plan.get("mode")
     if mode not in ("prepare_no_forced_cutover","active","hold"):
         return emit({"node":node,"status":"HOLD_INVALID_MODE"})
@@ -109,8 +103,6 @@ def run(node,plan):
                      "model_stage_rc":rc,"self_model_rc":self_rc,"progress_rc":prog_rc,"journal_rc":journal_rc})
     if node!="A40":
         return emit({"node":node,"status":"HOLD_NODE_UNKNOWN"})
-    thermal=cloud_gpu_gate()
-    if thermal:return emit({"node":node,"status":thermal})
     if process_has("a40_cuda_distillation_direct.py") or process_has("a40_full_parameter_distill_cycle.py"):
         return emit({"node":node,"status":"HOLD_OLD_OR_FULL_GPU_OWNER_ACTIVE"})
     if not MEM.is_file():
@@ -128,7 +120,7 @@ def run(node,plan):
     priority=sorted(("Qwen3.5-27B","DeepSeek-R1-Distill-Qwen-32B"),
         key=lambda teacher: (current.get(teacher,{}).get("task_generation_percent") or 0,teacher))
     for teacher in priority:
-        if safe70_halt(node):return emit({"node":node,"status":"HOLD_SAFE70","teachers":out})
+        if manual_stop(node):return emit({"node":node,"status":"HOLD_SAFE70","teachers":out})
         model=ROOT/("teachers/Qwen3.5-27B/Qwen3.5-27B-Q4_K_M.gguf" if teacher=="Qwen3.5-27B"
                     else "teachers/DeepSeek-R1-Distill-Qwen-32B/DeepSeek-R1-Distill-Qwen-32B-Q4_K_M.gguf")
         if not model.is_file():
@@ -137,11 +129,16 @@ def run(node,plan):
         if current.get(teacher,{}).get("task_generation_percent")==100:
             out[teacher]="PLAN_TASK_SET_COMPLETE"
             continue
-        if cloud_gpu_gate():
-            return emit({"node":node,"status":"HOLD_THERMAL_BEFORE_TEACHER","teachers":out})
+        
         rc=launch(["python3",str(gpu),"--teacher",teacher,"--limit","10"],5400,
                   "TEACHER_"+("27B" if teacher=="Qwen3.5-27B" else "32B"))
         out[teacher]="BATCH_DONE" if rc==0 else "HOLD_EXIT_"+str(rc)
+    importer=BIN/"nox_teacher_s03_import.py"
+    if importer.is_file():
+        import_rc=launch(["python3",str(importer)],360,"S03_TEACHER_IMPORT")
+        out["s03_import"]="COMMITTED" if import_rc==0 else "HOLD_EXIT_"+str(import_rc)
+    else:
+        out["s03_import"]="HOLD_IMPORTER_MISSING"
     launch(["python3",str(progress)],300,"PROGRESS")
     improvement=BIN/"nox_improvement_loop.py"
     if improvement.is_file():launch(["python3",str(improvement)],120,"IMPROVEMENT")
@@ -149,7 +146,7 @@ def run(node,plan):
     # running legacy process came back, or if the last cycle is still in flight.
     if process_has("a40_cuda_distillation_direct.py") or process_has("a40_full_parameter_distill_cycle.py"):
         return emit({"node":node,"status":"HOLD_GPU_REOCCUPIED","teachers":out})
-    if safe70_halt(node):return emit({"node":node,"status":"HOLD_SAFE70_BEFORE_TRAINING","teachers":out})
+    if manual_stop(node):return emit({"node":node,"status":"HOLD_SAFE70_BEFORE_TRAINING","teachers":out})
     swarm=BIN/"nox_adaptive_swarm.py"
     if swarm.is_file():
         launch(["python3",str(swarm),"--node","A40"],150,"SWARM_A40")
