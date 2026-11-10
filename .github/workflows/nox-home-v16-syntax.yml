@@ -74,6 +74,13 @@ jobs:
           assert.match(assetBuilder,/nox-universe-v19\.js/);
           assert.match(universe,/tile\.openstreetmap\.org/);
           assert.match(universe,/nox-v19-weather-map/);
+          assert.match(universe,/function calendar\(/);
+          assert.match(universe,/function gallery\(/);
+          assert.match(universe,/photoswipe-lightbox\.esm\.js/);
+          assert.match(universe,/fullcalendar\.global\.min\.js/);
+          assert.match(installer,/photoswipe@5\.4\.4/);
+          assert.match(installer,/fullcalendar@6\.1\.19/);
+          assert.match(universe,/localStorage\.setItem/);
           const wowCss=fs.readFileSync(root+'2026-11-10-v16-cinema/nox-global-wow-v18.css','utf8');
           const wowJs=fs.readFileSync(root+'2026-11-10-v16-cinema/nox-global-wow-v18.js','utf8');
           const assembler=fs.readFileSync(root+'2026-11-10-v16-cinema/tools/assemble-verified-site.mjs','utf8');
