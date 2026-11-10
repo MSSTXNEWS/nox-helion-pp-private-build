@@ -28,6 +28,7 @@ async function get(url,file,expected){
   if(expected==='jpg'&&!(bytes[0]===255&&bytes[1]===216))throw new Error('Bad JPEG '+url);
   if(expected==='hdr'&&!bytes.subarray(0,10).toString().startsWith('#?RADIANCE'))throw new Error('Bad HDR '+url);
   if(expected==='zip'&&!(bytes[0]===80&&bytes[1]===75))throw new Error('Bad ZIP '+url);
+  if(expected==='stl'&&bytes.length<1000)throw new Error('Bad STL '+url);
   fs.mkdirSync(path.dirname(file),{recursive:true});
   fs.writeFileSync(file,bytes);
   return bytes;
@@ -50,6 +51,18 @@ for(const file of fs.readdirSync(path.dirname(zip))){
  const data=fs.readFileSync(path.join(path.dirname(zip),file));
  records.push({path:'metal/'+file,bytes:data.length,sha256:crypto.createHash('sha256').update(data).digest('hex'),source:'https://ambientcg.com/a/Metal012'});
 }
+// Genuine NASA Bennu STL is a separate required asset, not counted among the 14 pinned PBR/HDRI files.
+const bennuUrl='https://assets.science.nasa.gov/content/dam/science/cds/3d/resources/printable/asteroid-101955-bennu/Asteroid%20101955%20Bennu.stl';
+const bennuPath=path.join(out,'assets13/asteroid_bennu.stl');
+await get(bennuUrl,bennuPath,'stl');
+const bennuBytes=fs.readFileSync(bennuPath);
+if(bennuBytes.length<1000||bennuBytes.length>12000000)throw Error('NOX_BENNU_SIZE_INVALID');
+const header=bennuBytes.toString('ascii',0,Math.min(5,bennuBytes.length));
+const triangles=bennuBytes.length>=84?bennuBytes.readUInt32LE(80):0;
+const binaryStl=triangles>0&&84+triangles*50===bennuBytes.length;
+const asciiStl=header.toLowerCase()==='solid'&&bennuBytes.subarray(0,4096).includes(Buffer.from('facet'));
+if(!binaryStl&&!asciiStl)throw Error('NOX_BENNU_STL_INVALID');
+fs.writeFileSync(path.join(out,'assets13/BENNU-RECEIPT.json'),JSON.stringify({source:bennuUrl,bytes:bennuBytes.length,sha256:crypto.createHash('sha256').update(bennuBytes).digest('hex'),triangles:binaryStl?triangles:null,verifiedStlStructure:true},null,2));
 for(const name of ['Color','NormalGL','Metalness','Roughness']){
  if(!records.some(x=>x.path==='metal/Metal012_1K-JPG_'+name+'.jpg'))throw new Error('Missing metal map '+name);
 }
