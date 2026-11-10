@@ -110,3 +110,20 @@ records.sort((a,b)=>a.path.localeCompare(b.path));
 fs.writeFileSync(path.join(target,'MANIFEST.json'),JSON.stringify({version:'2026-11-10',licenses:{planets:'Solar System Scope CC BY 4.0 — https://www.solarsystemscope.com/textures/',hdr:'Poly Haven Machine Shop 01 CC0',metal:'ambientCG Metal012 CC0'},files:records},null,2));
 fs.writeFileSync(path.join(target,'ATTRIBUTION.txt'),'Planet textures © Solar System Scope, licensed under CC BY 4.0. https://www.solarsystemscope.com/textures/\nHDRI Machine Shop 01 © Poly Haven, CC0.\nMetal012 PBR © ambientCG, CC0.\n');
 console.log('NOX ASSETS INSTALLED:',records.length,'total bytes:',records.reduce((s,x)=>s+x.bytes,0));
+
+const mandatory=['index.html','nox-home.mjs','nox-home-flow.js','nox-home-flow.css','nox-home-recovery.js','nox-ui.css','nox-global-wow-v18.css','nox-global-wow-v18.js','nox-orbit-original.js','nox-engines/physical-worlds-v7.mjs','assets/nox-approved/MANIFEST.json','assets13/asteroid_bennu.stl','assets13/BENNU-RECEIPT.json'];
+const remaining=mandatory.filter(f=>!fs.existsSync(path.join(out,f)));
+if(remaining.length)throw Error('NOX_P0_FILES_MISSING:'+remaining.join(','));
+const pagesEvidence=pages.map(n=>{const source=fs.readFileSync(path.join(out,n),'utf8');return {page:n,style:source.includes('nox-global-wow-v18.css'),script:source.includes('nox-global-wow-v18.js'),glass:source.includes('vendor/nox-liquid-glass/liquid-glass.css')}});
+if(pagesEvidence.some(p=>!p.style||!p.script||!p.glass))throw Error('NOX_P0_UI_PAGE_DISCONNECTED');
+const bennuReceipt=JSON.parse(fs.readFileSync(path.join(out,'assets13/BENNU-RECEIPT.json'),'utf8'));
+const packReceipt={
+ version:'2026-11-10-P0',assembly:'BUILD_SCRIPT_EXECUTED',pbrHdrCount:records.length,
+ bennu:{bytes:bennuReceipt.bytes,sha256:bennuReceipt.sha256,triangles:bennuReceipt.triangles,stlStructure:bennuReceipt.verifiedStlStructure},
+ pages:pagesEvidence,requiredFiles:mandatory.length,
+ d02Source:'RECONSTRUCTION_PENDING_EXACT_HISTORIC_SOURCE',
+ deployedGpuQA:'HOLD',browserAcceptance:'NOT_EXECUTED',productionModified:false
+};
+fs.writeFileSync(path.join(out,'NOX-P0-RECEIPT.json'),JSON.stringify(packReceipt,null,2));
+console.log('NOX_P0_BUILD_RECEIPT:',JSON.stringify({pages:pagesEvidence.length,assets:records.length,bennuBytes:bennuReceipt.bytes,stlVerified:bennuReceipt.verifiedStlStructure,gpuAcceptance:'HOLD'}));
+
