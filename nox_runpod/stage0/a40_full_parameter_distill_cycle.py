@@ -12,7 +12,7 @@ ROOT=pathlib.Path("/workspace/nox")
 STATE=ROOT/"dispatcher/a40_full_parameter"
 BASE=ROOT/"models/NOX_9B_UNIFIED"
 MEMORY=ROOT/"memory/NOX_UNIFIED_S03/unified_nox_knowledge.sqlite3"
-DEST=pathlib.Path("/opt/nox_full_parameter_A40")
+DEST=pathlib.Path(os.environ.get("NOX_CHECKPOINT_DEST","/opt/nox_full_parameter_A40"))
 STATE.mkdir(parents=True,exist_ok=True)
 DEST.mkdir(parents=True,exist_ok=True)
 def utc():return datetime.datetime.now(datetime.timezone.utc).isoformat()
@@ -137,8 +137,8 @@ def main():
  if free<37*1024**3:
   report("HOLD","GPU_PREFLIGHT",target=a.steps,reason="NEED_AT_LEAST_37_GIB_FREE_VRAM",
     extra={"free_gib":round(free/1024**3,2)});return
- if shutil.disk_usage("/opt").free<23*1024**3:
-  report("HOLD","DISK_PREFLIGHT",target=a.steps,reason="NEED_23_GIB_CONTAINER_DISK_FOR_FULL_WEIGHTS");return
+ if shutil.disk_usage(DEST).free<23*1024**3:
+  report("HOLD","DISK_PREFLIGHT",target=a.steps,reason="NEED_23_GIB_CHECKPOINT_DISK_FOR_FULL_WEIGHTS");return
  mem={}
  for line in pathlib.Path("/proc/meminfo").read_text().splitlines():
   if line.startswith("MemAvailable:"):mem["available_gib"]=int(line.split()[1])//1048576
