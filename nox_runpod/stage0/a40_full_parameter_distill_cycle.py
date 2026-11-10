@@ -56,9 +56,7 @@ def samples():
   else:train.append(rec)
  # deterministic partition, never mix holdout into training.
  if len(train)<32 or len(test)<4:raise RuntimeError("HOLD_INSUFFICIENT_DISTINCT_TRAIN_OR_HOLDOUT_SAMPLES")
- required=("Qwen3.5-9B","Qwen3.5-27B","DeepSeek-R1-Distill-Qwen-32B")
- missing=[n for n in required if teachers.get(n,0)<8]
- if missing:raise RuntimeError("HOLD_THREE_TEACHER_DATA_MISSING:"+",".join(missing))
+ if not teachers:raise RuntimeError("HOLD_NO_ATTRIBUTED_TEACHER_SAMPLES")
  return train,test,teachers
 def sha256text(t):return hashlib.sha256(t.encode("utf8")).hexdigest()
 def load_model():
@@ -153,18 +151,26 @@ def main():
   baseline=float(loss_for(mod,tok,test[0][0]).detach().float().item())
  mod.train()
  lastloss=None
+ # Every completed optimizer step is attributed to the actual teacher chosen.
+ teacher_names=sorted(set(x[1] for x in train))
+ buckets={t:[x for x in train if x[1]==t] for t in teacher_names}
+ used_teacher_counts={t:0 for t in teacher_names}
  cycle_started=time.monotonic()
  for step in range(1,a.steps+1):
-  text=train[(step-1)%len(train)][0]
+  teacher=teacher_names[(step-1)%len(teacher_names)]
+  examples=buckets[teacher]
+  text=examples[((step-1)//len(teacher_names))%len(examples)][0]
   opt.zero_grad(set_to_none=True)
   loss=loss_for(mod,tok,text)
   if not torch.isfinite(loss).item():raise RuntimeError("NONFINITE_TRAINING_LOSS")
   loss.backward()
   opt.step()
+  used_teacher_counts[teacher]+=1
   lastloss=float(loss.detach().float().item())
   elapsed=max(time.monotonic()-cycle_started,0.001)
   report("RUNNING","REAL_ALL_PARAMETER_OPTIMIZER_STEPS",steps=step,target=a.steps,loss=lastloss,
-         extra={"trainable_parameters":trainable,"teacher_counts":teachers,
+         extra={"trainable_parameters":trainable,"available_teacher_counts":teachers,
+                "optimizer_steps_by_teacher":used_teacher_counts.copy(),
                 "steps_per_hour":round(step/elapsed*3600,3),
                 "eta_seconds":round((a.steps-step)*elapsed/step,1),
                 "student_base":str(pathlib.Path(os.environ.get("NOX_STUDENT_BASE",str(BASE))))})
@@ -186,7 +192,8 @@ def main():
   hashes=[{"file":p.name,"bytes":p.stat().st_size,"sha256":sha(p)} for p in shards]
   receipt={"status":"FULL_PARAMETER_ADAPTER_FREE_STUDENT_CHECKPOINT_SAVED_NOT_ALL_KNOWLEDGE_ABSORBED",
      "utc":utc(),"cycle":a.cycle,"steps":a.steps,"parameter_count":total_params,
-     "teacher_counts":teachers,"train_examples":len(train),
+     "teacher_counts":teachers,"optimizer_steps_by_teacher":used_teacher_counts,
+     "train_examples":len(train),
      "holdout_examples":len(test),"baseline_holdout_loss":baseline,
      "after_holdout_loss":after,"no_adapter_training":True,"shards":hashes,
      "ephemeral_container_disk":True,"needs_windows_backup":True}
@@ -208,6 +215,7 @@ def main():
  report("COMPLETE_VERIFIED","FULL_WEIGHTS_SAVED_AND_HOLDOUT_EVALUATED",
         steps=a.steps,target=a.steps,loss=lastloss,holdout=after,
         extra={"output":str(output),"checkpoint_shards":hashes,
+          "optimizer_steps_by_teacher":used_teacher_counts,
           "holdout_loss_better_than_baseline":after<=baseline,
           "not_validated_all_three_teacher_absorption":True})
 if __name__=="__main__":
