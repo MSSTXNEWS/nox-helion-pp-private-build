@@ -295,11 +295,18 @@
    if(!response.ok)throw Error('Каталог HTTP '+response.status);
    const all=await response.json();
    if(!Array.isArray(all))throw Error('Некорректный каталог');
+   // Fuse.js runs only against the real approved local section catalog, never against invented data.
+   let finder=null;
+   try{
+    await loadScript('./vendor/nox-extra/fuse.min.js');
+    if(window.Fuse)finder=new window.Fuse(all,{keys:['page','section','id','actions'],threshold:0.33,ignoreLocation:true});
+   }catch(e){live('Поиск: обычный режим (Fuse.js недоступен): '+e.message,'warn')}
    const mapping={'Кинотеатр':'cinema.html','Книги / Reader':'memory.html','RU↔ES / Voice':'settings.html','GPU Training':'training.html','RAG':'memory.html','Ask NOX':'chat.html','System':'system.html','Главная':'index.html'};
    function paint(){
     list.replaceChildren();
     const q=query.value.trim().toLowerCase();
-    for(const item of all.filter(x=>(x.page+' '+x.section+' '+x.id).toLowerCase().includes(q)).slice(0,130)){
+    const results=q?(finder?finder.search(q,{limit:130}).map(r=>r.item):all.filter(x=>(x.page+' '+x.section+' '+x.id+' '+x.actions).toLowerCase().includes(q))):all;
+    for(const item of results.slice(0,130)){
      const link=mapping[item.page];
      const button=action(item.id+' · '+item.page,()=>{
       if(link)location.assign(link);
