@@ -6,7 +6,7 @@
   "mode": "prepare_no_forced_cutover",
   "purpose": "Measurable teacher-to-student knowledge distillation, not raw teacher weight addition or a consciousness proof",
   "target_gpu_utilization_pct": [
-    75,
+    70,
     90
   ],
   "preserve": [
@@ -75,5 +75,23 @@
     "no_kill": true,
     "no_loss": true
   },
-  "progress_definition": "100% means a fixed, verifiable per-teacher task set and its checkpoints/export are completed; absorbed_knowledge_percent remains null"
+  "progress_definition": "100% means a fixed, verifiable per-teacher task set and its checkpoints/export are completed; absorbed_knowledge_percent remains null",
+  "night_mode": {
+    "windows_alive_required": true,
+    "windows_heartbeat_seconds": 180,
+    "sync_on_checkpoint": true,
+    "metadata_sync": true,
+    "full_weight_transfer": "after_complete_checkpoint_only",
+    "disk_cleanup": "verified_transfer_only_no_auto_delete",
+    "chat_updates": "status_file_plus_s03_event_pending_runtime_chat_adapter",
+    "video_inbox": "C:\\NOX_HELION\\NOX_NEW\\VIDEO_INBOX_APPROVED",
+    "video_policy": "user_approved_only_extract_metadata_and_candidate_transcript_no_automatic_weight_training",
+    "temperature": {
+      "gpu_trip_celsius": 70,
+      "consecutive_readings": 3,
+      "missing_sensor": "HOLD",
+      "check_seconds": 20,
+      "device": "NVIDIA GPU on remote Pods; Windows AMD hotspot needs actual telemetry"
+    }
+  }
 }
