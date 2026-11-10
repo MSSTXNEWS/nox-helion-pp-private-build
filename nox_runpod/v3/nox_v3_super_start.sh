@@ -11,7 +11,7 @@ BASE=https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/$BR
 mkdir -p "$S" "$BIN" "$R/logs"
 exec 9>"$S/install_$NODE.lock"
 flock -n 9 || { echo NOX_V3_INSTALL_ALREADY_RUNNING_NO_DUPLICATE; exit 0; }
-for name in nox_v3_dispatcher.py nox_progress_v3.py nox_teacher_gguf_batch.py nox_teacher_server_batch.py nox_stage_27b_to_shared.py nox_self_model.py nox_improvement_loop.py nox_adaptive_swarm.py nox_teacher_s03_import.py nox_v3_cutover.py nox_v3_supervisor.py nox_v3_keeper.py; do
+for name in nox_v3_dispatcher.py nox_progress_v3.py nox_teacher_gguf_batch.py nox_teacher_server_batch.py nox_stage_27b_to_shared.py nox_self_model.py nox_improvement_loop.py nox_adaptive_swarm.py nox_teacher_s03_import.py nox_wow_acquire.py nox_v3_cutover.py nox_v3_supervisor.py nox_v3_keeper.py; do
   curl -fsSL --retry 3 "$BASE/nox_runpod/v3/$name" -o "$BIN/$name.tmp"
   python3 -m py_compile "$BIN/$name.tmp"
   mv "$BIN/$name.tmp" "$BIN/$name"
@@ -30,8 +30,18 @@ fi
 curl -fsSL --retry 3 "$BASE/nox_runpod/v3/NOX_WOW50_IDENTITY.json" -o "$S/NOX_WOW50_IDENTITY.json.tmp"
 python3 -m json.tool "$S/NOX_WOW50_IDENTITY.json.tmp" >/dev/null
 mv "$S/NOX_WOW50_IDENTITY.json.tmp" "$S/NOX_WOW50_IDENTITY.json"
+for asset in NOX_MODEL_REGISTRY.json NOX_WOW_MAX_MANIFEST.json; do
+  curl -fsSL --retry 3 "$BASE/nox_runpod/v3/$asset" -o "$S/$asset.tmp"
+  python3 -m json.tool "$S/$asset.tmp" >/dev/null
+  mv "$S/$asset.tmp" "$S/$asset"
+done
 if [ "$NODE" = A5000 ]; then
   python3 "$BIN/nox_stage_27b_to_shared.py" || echo HOLD_STAGE_27B_KEEP_ORIGINAL
+  # CPU-only small assets: optional, background and cache-first; don't delay the dispatcher.
+  if ! pgrep -f "^python3 .*nox_wow_acquire.py --node A5000$" >/dev/null; then
+    nohup python3 -u "$BIN/nox_wow_acquire.py" --node A5000 >>"$R/logs/NOX_WOW_ACQUIRE_A5000.log" 2>&1 </dev/null &
+    echo "NOX_WOW_SMALL_ASSETS_BACKGROUND_PID=$!"
+  fi
 fi
 if [ "$NODE" = A40 ]; then
   curl -fsSL --retry 3 "$BASE/nox_runpod/v3/nox_prepare_llama_cpp.sh" -o "$BIN/nox_prepare_llama_cpp.sh"
