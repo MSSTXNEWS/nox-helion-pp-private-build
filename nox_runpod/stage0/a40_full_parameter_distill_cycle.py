@@ -30,7 +30,7 @@ def report(status,stage,steps=0,target=20,loss=None,holdout=None,reason="",extra
       "steps_executed_this_cycle":steps,"target_steps_this_cycle":target,
       "last_train_loss":loss,"holdout_loss":holdout,"reason":reason,
       "all_teacher_knowledge_absorbed_percent":None,
-      "no_adapters":True,"training_method":"FULL_PARAMETER_BF16_ADAFACTOR",
+      "no_adapters":True,"training_method":"FULL_PARAMETER_BF16_CHUNKED_ADAFACTOR",
       "student_weight_promotion":"FULL_CHECKPOINT_ONLY",
       "extra":extra or {}}
  write("progress.json",obj)
@@ -175,7 +175,32 @@ def main():
  trainable=sum(p.numel() for p in mod.parameters() if p.requires_grad)
  if total_params!=trainable or total_params<8_000_000_000:
   raise RuntimeError("NOT_ALL_9B_PARAMETERS_TRAINABLE")
- opt=torch.optim.Adafactor(mod.parameters(),lr=a.lr,weight_decay=0.0,foreach=False)
+ # Split the optimizer into small weight views. Adafactor's unfactored
+ # intermediate on the largest 9B tensor caused a 1.89 GiB CUDA OOM.
+ # Each view shares physical storage with the ORIGINAL NOX weights.
+ # The optimizer has state per view, not an adapter or secondary network.
+ source_params=list(mod.parameters())
+ slices=[]
+ small=[]
+ max_elements=1_000_000
+ for p in source_params:
+  if not p.requires_grad:continue
+  if p.ndim==0:
+   view=torch.nn.Parameter(p.data,requires_grad=True)
+   slices.append((p,view,None,None))
+   small.append(view)
+   continue
+  row_elements=p.numel()//max(1,p.shape[0])
+  rows=max(1,max_elements//max(1,row_elements))
+  for begin in range(0,p.shape[0],rows):
+   length=min(rows,p.shape[0]-begin)
+   view=torch.nn.Parameter(p.data.narrow(0,begin,length),requires_grad=True)
+   slices.append((p,view,begin,length))
+   small.append(view)
+ opt=torch.optim.Adafactor(small,lr=a.lr,weight_decay=0.0,foreach=False)
+ report("RUNNING","CHUNKED_FULL_PARAMETER_OPTIMIZER_READY",target=a.steps,
+        extra={"source_parameters":total_params,"optimizer_views":len(small),
+               "optimizer_max_elements":max_elements,"no_adapters":True})
  # Verify that at least one sample not used for training predicts an actual loss.
  mod.eval()
  with torch.inference_mode():
@@ -198,11 +223,24 @@ def main():
   teacher=teacher_names[(step-1)%len(teacher_names)]
   examples=buckets[teacher]
   text=examples[((step-1)//len(teacher_names))%len(examples)][0]
-  opt.zero_grad(set_to_none=True)
+  # The original model accumulates actual gradients. They are exposed as
+  # views to the per-chunk Adafactor optimizer without allocating full-size
+  # Adafactor intermediates on the GPU.
+  for p in source_params:p.grad=None
   loss=loss_for(mod,tok,text)
   if not torch.isfinite(loss).item():raise RuntimeError("NONFINITE_TRAINING_LOSS")
   loss.backward()
-  opt.step()
+  with torch.no_grad():
+   for p,v,begin,length in slices:
+    if p.grad is None:
+     v.grad=None
+    elif begin is None:
+     v.grad=p.grad.detach()
+    else:
+     v.grad=p.grad.narrow(0,begin,length).detach()
+   opt.step()
+   for p,v,_,_ in slices:v.grad=None
+   for p in source_params:p.grad=None
   completed=step
   used_teacher_counts[teacher]+=1
   lastloss=float(loss.detach().float().item())
