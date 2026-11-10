@@ -107,7 +107,7 @@ for(const page of pages){
  if(!html.includes('nox-universe-v19.css'))html=html.replace(/<\/head>/i,universeStyle+'</head>');
  if(!html.includes('nox-universe-v19.js'))html=html.replace(/<\/body>/i,universeScript+'</body>');
  if(html.includes('src="/https://'))html=html.replaceAll('src="/https://','src="https://'); // Repair three historically malformed Lucide URLs.
- if(page==='memory.html')html=html.replace(/<img\\s+src="nox-memory-core\\.svg"[^>]*>/i,''); // Missing decorative art is not fabricated or replaced with a false image.
+ if(page==='memory.html')html=html.replace(/<img\s+src="nox-memory-core\.svg"[^>]*>/i,''); // Missing decorative art is not fabricated or replaced with a false image.
 
  fs.writeFileSync(p,html);
 }
