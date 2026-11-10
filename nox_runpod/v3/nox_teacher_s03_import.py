@@ -7,6 +7,7 @@ ROOT=pathlib.Path("/workspace/nox")
 D=ROOT/"distillation"; S=ROOT/"dispatcher/nox_v3"
 DB=ROOT/"memory/NOX_UNIFIED_S03/unified_nox_knowledge.sqlite3"
 SOURCES={
+ "Qwen3.5-9B":("NOX_V3_QWEN9B_TEACHER.jsonl","Qwen3.5-9B"),
  "Qwen3.5-27B":("NOX_V3_QWEN27B_TEACHER.jsonl","Qwen3.5-27B"),
  "DeepSeek-R1-Distill-Qwen-32B":("NOX_V3_DEEPSEEK32B_TEACHER.jsonl","DeepSeek-R1-Distill-Qwen-32B")
 }
