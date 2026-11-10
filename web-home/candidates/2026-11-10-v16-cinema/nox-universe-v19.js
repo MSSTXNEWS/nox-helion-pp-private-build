@@ -4,10 +4,10 @@
  */
 (()=>{'use strict';
  if(window.NOX_UNIVERSE_V19)return;
- const modules=['Кинотеатр','Книги','Календарь','Галерея','Новости','Уведомления','Погода','Валюта','Браузер','Разделы'];
+ const modules=['Кинотеатр','Книги','Календарь','Галерея','Эффекты','Новости','Уведомления','Погода','Валюта','Браузер','Разделы'];
  const $=(tag,props={},children=[])=>{const el=document.createElement(tag);for(const [k,v] of Object.entries(props)){if(k==='class')el.className=v;else if(k==='text')el.textContent=v;else if(k==='html')el.innerHTML=v;else el.setAttribute(k,v)};for(const c of children)el.append(c);return el};
  const state={active:'Кинотеатр',book:null,video:null,catalog:null,objectUrls:[],player:null,map:null,search:''};
- const clean=()=>{if(state.calendar){try{state.calendar.destroy()}catch{}state.calendar=null}if(state.galleryLightbox){try{state.galleryLightbox.destroy()}catch{}state.galleryLightbox=null}if(state.map){try{state.map.remove()}catch{}state.map=null}for(const u of state.objectUrls)URL.revokeObjectURL(u);state.objectUrls=[];if(state.book?.destroy)try{state.book.destroy()}catch{}state.book=null;state.video?.pause?.();state.video=null;if(state.player?.destroy)try{state.player.destroy()}catch{}state.player=null};
+ const clean=()=>{if(state.fx){try{state.fx.destroy()}catch{}state.fx=null}if(state.calendar){try{state.calendar.destroy()}catch{}state.calendar=null}if(state.galleryLightbox){try{state.galleryLightbox.destroy()}catch{}state.galleryLightbox=null}if(state.map){try{state.map.remove()}catch{}state.map=null}for(const u of state.objectUrls)URL.revokeObjectURL(u);state.objectUrls=[];if(state.book?.destroy)try{state.book.destroy()}catch{}state.book=null;state.video?.pause?.();state.video=null;if(state.player?.destroy)try{state.player.destroy()}catch{}state.player=null};
  const root=$('div',{class:'nox-v19-root'}),openBtn=$('button',{type:'button',class:'nox-v19-launch',text:'✦ ВСЕЛЕННАЯ NOX','aria-label':'Открыть сервисы NOX'}),panel=$('section',{class:'nox-v19-panel',role:'dialog','aria-modal':'true','aria-label':'Сервисы NOX',hidden:''});
  const head=$('header',{class:'nox-v19-head'}),title=$('h2',{text:'NOX · МОДУЛИ'}),close=$('button',{type:'button',text:'✕ ЗАКРЫТЬ',class:'nox-v19-btn'});head.append(title,close);
  const tabs=$('nav',{class:'nox-v19-tabs','aria-label':'Модули'}),body=$('div',{class:'nox-v19-body'}),status=$('div',{class:'nox-v19-status',role:'status','aria-live':'polite'});panel.append(head,tabs,body,status);root.append(openBtn,panel);
@@ -19,7 +19,7 @@
  function notice(parent,text){parent.append($('p',{class:'nox-v19-note',text}))}
  function sectionButton(name){const b=action(name,()=>show(name));b.setAttribute('aria-pressed',String(name===state.active));tabs.append(b)}
  function show(name){clean();state.active=name;body.replaceChildren();tabs.replaceChildren();for(const key of modules)sectionButton(key);live('Источник данных и состояние указаны в каждом модуле. Действия подтверждаются вручную.');
- if(name==='Кинотеатр')cinema();else if(name==='Книги')books();else if(name==='Календарь')calendar();else if(name==='Галерея')gallery();else if(name==='Новости')news();else if(name==='Уведомления')notifications();else if(name==='Погода')weather();else if(name==='Валюта')currency();else if(name==='Браузер')browser();else sections();}
+ if(name==='Кинотеатр')cinema();else if(name==='Книги')books();else if(name==='Календарь')calendar();else if(name==='Галерея')gallery();else if(name==='Эффекты')effects();else if(name==='Новости')news();else if(name==='Уведомления')notifications();else if(name==='Погода')weather();else if(name==='Валюта')currency();else if(name==='Браузер')browser();else sections();}
  function open(){panel.hidden=false;openBtn.hidden=true;show(state.active);close.focus()}
  function dismiss(){clean();panel.hidden=true;openBtn.hidden=false;openBtn.focus()}
  openBtn.addEventListener('click',open);close.addEventListener('click',dismiss);
@@ -117,6 +117,43 @@
   }
   input.addEventListener('change',()=>{render().catch(e=>live('Галерея HOLD: '+e.message,'error'))});
   c.append(row(input,reset),info,grid);
+ }
+ function effects(){
+  const c=shell('Атмосфера NOX · реальные частицы');
+  notice(c,'Локальный tsParticles Slim 4.5.3. Эффект работает только внутри панели сервисов, не создаёт второй рендерер D02. Во время чтения и Reduced Motion он не запускается.');
+  const reduced=matchMedia('(prefers-reduced-motion: reduce)');
+  const container=$('div',{id:'nox-v19-particles',class:'nox-v19-particles','aria-label':'Живая атмосферная сцена'}),details=$('p',{class:'nox-v19-note',text:'FX не запущен'});
+  const stop=async()=>{if(state.fx){try{await state.fx.destroy()}catch{}state.fx=null}container.replaceChildren();details.textContent='Эффект остановлен';live('FX STOP · без фоновых циклов','ok')};
+  async function run(level){
+   await stop();
+   if(reduced.matches){live('Reduced Motion: частицы отключены','warn');return}
+   try{
+    await loadScript('./vendor/nox-extra/tsparticles.slim.bundle.min.js');
+    const engine=window.tsParticles||window.__tsParticlesInternals?.engine?.tsParticles;
+    if(!engine?.load)throw Error('tsParticles bundle API unavailable');
+    const count=level==='MAX'?100:level==='BALANCED'?42:15;
+    const cfg={
+     background:{color:{value:'#04080e'}},fullScreen:{enable:false},
+     fpsLimit:level==='ECO'?24:level==='BALANCED'?36:48,
+     detectRetina:true,pauseOnBlur:true,pauseOnOutsideViewport:true,
+     particles:{
+      number:{value:count,density:{enable:true,area:1000}},
+      color:{value:['#b5b8c3','#e4b474','#7da0bb']},
+      opacity:{value:{min:.15,max:.53},animation:{enable:false}},
+      size:{value:{min:.5,max:1.7}},
+      links:{enable:false},collisions:{enable:false},
+      move:{enable:true,speed:level==='MAX'?.28:.12,random:true,straight:false,outModes:{default:'out'}},
+      shape:{type:'circle'}
+     },interactivity:{events:{onHover:{enable:false},onClick:{enable:false},resize:{enable:true}}}
+    };
+    const instance=await engine.load({id:'nox-v19-particles',options:cfg});
+    if(state.active!=='Эффекты'||!container.isConnected){instance?.destroy?.();return}
+    state.fx=instance;details.textContent='tsParticles Slim · '+level+' · '+count+' частиц (пресет, не метрика NOX)';
+    live('GPU-эффекты: '+level+' · источник локальный tsParticles','ok');
+   }catch(e){live('WOW FX HOLD: '+e.message,'error')}
+  }
+  c.append(row(action('MAX · 100 ЧАСТИЦ',()=>run('MAX')),action('BALANCED · 42',()=>run('BALANCED')),action('ECO · 15',()=>run('ECO')),action('STOP FX',stop)),details,container);
+  document.addEventListener('visibilitychange',()=>{if(document.hidden&&state.fx)state.fx.pause?.()},{once:true});
  }
  function news(){const c=shell('Новости · реальные источники');notice(c,'Показаны проверяемые ссылки, даты и источники. Никаких вымышленных новостей и автоматических публикаций.');
  const target=$('div',{class:'nox-v19-feed'});c.append(row(action('ЗАГРУЗИТЬ ТЕХНОЛОГИИ',async()=>{target.replaceChildren();live('Получение HN Algolia…');try{const res=await fetch('https://hn.algolia.com/api/v1/search?tags=front_page&hitsPerPage=16',{signal:AbortSignal.timeout(12000)});if(!res.ok)throw Error('HTTP '+res.status);const j=await res.json();for(const h of j.hits||[]){if(!h.title)continue;const u=h.url||('https://news.ycombinator.com/item?id='+encodeURIComponent(h.objectID));let link=$('a',{href:u,target:'_blank',rel:'noopener noreferrer',text:h.title});let date=$('small',{text:' '+new Date(h.created_at).toLocaleString('ru-RU')+' · '+new URL(u).host});target.append($('div',{class:'nox-v19-feed-item'},[link,date]))}live('Получены свежие записи с указанием источников','ok')}catch(e){live('Новости HOLD: '+e.message,'error')}}),action('ЯНДЕКС ДЗЕН',()=>openUrl('https://dzen.ru/')),action('GOOGLE NEWS',()=>openUrl('https://news.google.com/'))),target);
