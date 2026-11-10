@@ -98,3 +98,53 @@ jobs:
           assert(contract.includes('HOLD'),'Do not claim visual acceptance from syntax checks');
           console.log('Source gate PASS; real GPU/render QA remains HOLD');
           NODE
+
+  vendor-download:
+    needs: source-syntax
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Download real pinned reader, cinema and map binaries
+        run: |
+          mkdir -p /tmp/nox-v19-download
+          node --input-type=module -e "import {installExtras} from './web-home/candidates/2026-11-10-v16-cinema/nox-install-extra-v19.mjs'; await installExtras('/tmp/nox-v19-download')"
+          mkdir -p /tmp/nox-v19-download/source
+          cp web-home/candidates/2026-11-10-v16-cinema/nox-universe-v19.js /tmp/nox-v19-download/source/
+          cp web-home/candidates/2026-11-10-v16-cinema/nox-universe-v19.css /tmp/nox-v19-download/source/
+          cp web-home/candidates/2026-11-10-v16-cinema/nox-section-map-v19.json /tmp/nox-v19-download/source/
+          cp web-home/candidates/2026-11-10-v16-cinema/nox-install-extra-v19.mjs /tmp/nox-v19-download/source/
+      - name: Retrieve optional server and cinematic UI npm distributions
+        run: |
+          mkdir -p /tmp/nox-v19-download/optional
+          cd /tmp/nox-v19-download/optional
+          for pkg in web-push@3.6.7 rss-parser@3.13.0 fullcalendar@6.1.19 photoswipe@5.4.4 @tsparticles/engine@4.5.3 @tsparticles/slim@4.5.3; do
+            if npm pack "$pkg" --pack-destination . --silent; then
+              echo "PACKAGED $pkg" >> optional-download-status.txt
+            else
+              echo "HOLD $pkg NOT_DOWNLOADED" >> optional-download-status.txt
+            fi
+          done
+      - name: Verify complete downloaded payload
+        run: |
+          python3 - <<'PY'
+          import hashlib,json,pathlib
+          root=pathlib.Path('/tmp/nox-v19-download')
+          receipt=json.loads((root/'vendor/nox-extra/NOX-EXTRA-ASSETS-RECEIPT.json').read_text())
+          assert receipt['complete'] and len(receipt['files'])==10
+          for item in receipt['files']:
+              contents=(root/'vendor/nox-extra'/item['file']).read_bytes()
+              assert len(contents)==item['size'] and hashlib.sha256(contents).hexdigest()==item['sha256'],item['file']
+          assert len(list((root/'source').glob('*')))==4
+          print('NOX_V19_ARTIFACT_SHA256_PASS 10 binaries + 4 app sources')
+          PY
+      - name: Preserve actual ZIP handoff for Drive
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX-V19-REAL-DOWNLOADS
+          path: /tmp/nox-v19-download/
+          if-no-files-found: error
+          retention-days: 7
