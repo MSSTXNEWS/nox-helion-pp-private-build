@@ -59,7 +59,7 @@ def main():
  ap.add_argument("--gpu-layers",type=int,default=30)
  ap.add_argument("--ctx",type=int,default=4096)
  args=ap.parse_args()
- if not 1<=args.limit<=20 or not 0<=args.start<100 or not 0<=args.gpu_layers<=50 or not 1024<=args.ctx<=8192:
+ if not 1<=args.limit<=50 or not 0<=args.start<100 or not 0<=args.gpu_layers<=50 or not 1024<=args.ctx<=8192:
   raise SystemExit("INVALID_BOUNDED_REQUEST")
  model=MODELS[args.teacher]
  proof=model.parent/"nox_teacher_proof.json"
