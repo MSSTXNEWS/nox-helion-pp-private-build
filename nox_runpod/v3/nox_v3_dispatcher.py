@@ -81,8 +81,16 @@ def run(node,plan):
     mode=plan.get("mode")
     if mode not in ("prepare_no_forced_cutover","active","hold"):
         return emit({"node":node,"status":"HOLD_INVALID_MODE"})
-    if mode!="active":
-        return emit({"node":node,"status":"PREPARED_NOT_STARTED","mode":mode})
+    # Per-node savepoint and GPU ownership is recorded by the cutover agent.
+    # A shared plan must never activate a machine before its own cutover receipt.
+    receipt=STATE/("cutover_"+node+".json")
+    try: gate=json.loads(receipt.read_text(encoding="utf-8"))
+    except (OSError,ValueError):gate={}
+    active=gate.get("status")=="CUTOVER_READY" and gate.get("node")==node and gate.get("known_processes_exited") is True and gate.get("gpu_unowned") is True
+    if not active:
+        return emit({"node":node,"status":"HOLD_CUTOVER_SAVEPOINT_PENDING","plan_mode":mode})
+    if mode=="hold":
+        return emit({"node":node,"status":"HOLD_BY_MASTER_POLICY"})
     if node=="A5000":
         swarm=BIN/"nox_adaptive_swarm.py"
         if swarm.is_file():
