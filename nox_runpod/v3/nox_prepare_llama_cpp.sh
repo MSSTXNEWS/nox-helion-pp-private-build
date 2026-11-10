@@ -3,9 +3,9 @@
 set -Eeuo pipefail
 R=/workspace/nox
 D="$R/tools/llama.cpp"
-BIN="$D/build/bin/llama-cli"
+BIN="$D/build/bin/llama-server"
 mkdir -p "$R/tools" "$R/logs"
-if command -v llama-cli >/dev/null 2>&1 || [ -x "$BIN" ]; then
+if command -v llama-server >/dev/null 2>&1 || [ -x "$BIN" ]; then
  echo NOX_LLAMA_CLI_AVAILABLE
  exit 0
 fi
@@ -26,6 +26,6 @@ else
  echo NOX_LLAMA_GPU_TOOLCHAIN_UNAVAILABLE_USING_CPU_FALLBACK
  cmake -S . -B build -DGGML_CUDA=OFF -DCMAKE_BUILD_TYPE=Release
 fi
-cmake --build build --target llama-cli -j 2
+cmake --build build --target llama-server llama-cli -j 2
 test -x "$BIN" || { echo HOLD_LLAMA_CLI_NOT_BUILT; exit 2; }
 echo "NOX_LLAMA_CLI_READY $BIN"
