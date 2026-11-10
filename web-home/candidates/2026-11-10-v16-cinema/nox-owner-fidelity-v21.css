@@ -50,3 +50,13 @@ body.helion-home.nox-owner-cinema .nox-owner-portrait-status[hidden]{display:non
  body.helion-home.nox-owner-cinema .nox-owner-core,
  body.helion-home.nox-owner-cinema .nox-owner-persona{animation:none!important;transition:none!important}
 }
+
+/* Director review 2026-11-10, actual Chromium 1440 screenshot: one top navigation.
+   The existing shared header contains all essential routes and central HOME.
+   Keep the original HOME card links in DOM for legacy service handlers but do not render duplicate rail. */
+body.helion-home.nox-owner-cinema .helion-stage nav.home-primary-navigation{
+ display:none!important;visibility:hidden!important;pointer-events:none!important;
+}
+body.helion-home.nox-owner-cinema .nox-owner-persona span{
+ display:none!important; /* Owner-approved portrait assets already have their own names; no duplicated overlay captions. */
+}
