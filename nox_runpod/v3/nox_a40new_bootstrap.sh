@@ -8,7 +8,7 @@ BASE=https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/fea
 mkdir -p "$B" "$R/logs"
 findmnt -n /workspace >/dev/null || { echo HOLD_SHARED_VOLUME_NOT_MOUNTED;exit 2; }
 test -d "$R/teachers" || { echo HOLD_NO_TEACHERS_IN_SHARED_VOLUME;exit 2; }
-for n in nox_a40new_teacher_controller.py nox_teacher_server_batch.py;do
+for n in nox_a40new_teacher_controller.py nox_teacher_server_batch.py nox_a40new_cutover_cpu_only.py;do
  tmp="$B/$n.$$.new"
  curl -fsSL --retry 3 "$BASE/nox_runpod/v3/$n" -o "$tmp"
  python3 -m py_compile "$tmp"
@@ -33,11 +33,8 @@ if ! "$GPU_BIN" --help 2>&1 | grep -qi 'gpu-layers';then
  echo HOLD_LLAMA_GPU_OPTION_MISSING;exit 3
 fi
 echo "NOX_A40NEW_DEDICATED_GPU_SERVER_READY $GPU_BIN"
+python3 "$B/nox_a40new_cutover_cpu_only.py"
 if ! pgrep -f "^python3 -u $B/nox_a40new_teacher_controller.py$" >/dev/null;then
- if pgrep -f '/workspace/nox/dispatcher/nox_a40new/bin/nox_a40new_teacher_controller.py' >/dev/null;then
-  echo HOLD_OLD_SHARED_CONTROLLER_IN_FLIGHT
-  exit 4
- fi
  nohup python3 -u "$B/nox_a40new_teacher_controller.py" >>"$R/logs/NOX_A40NEW_CONTROLLER.log" 2>&1 </dev/null &
  echo "NEW_A40_CONTROLLER_PID=$!"
 else echo NEW_A40_CONTROLLER_ALREADY_RUNNING;fi
