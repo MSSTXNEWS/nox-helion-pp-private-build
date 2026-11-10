@@ -12,7 +12,7 @@ mkdir -p "$S" "$BIN" "$R/logs"
 exec 9>"$S/mega1_tick_$NODE.lock"
 flock -n 9 || { echo "NOX_MEGA1_TICK_ALREADY_ACTIVE_$NODE";exit 0; }
 ok=0
-for name in nox_v3_dispatcher.py nox_v3_keeper.py nox_v3_cutover.py nox_v3_supervisor.py nox_teacher_server_batch.py nox_teacher_s03_import.py nox_stage_27b_to_shared.py nox_progress_v3.py nox_self_model.py nox_improvement_loop.py nox_adaptive_swarm.py nox_wow_acquire.py nox_watchdog_10s.py nox_emergency_takeover.py; do
+for name in nox_v3_dispatcher.py nox_v3_keeper.py nox_v3_cutover.py nox_v3_supervisor.py nox_teacher_server_batch.py nox_teacher_s03_import.py nox_stage_27b_to_shared.py nox_progress_v3.py nox_self_model.py nox_improvement_loop.py nox_adaptive_swarm.py nox_wow_acquire.py nox_watchdog_10s.py nox_emergency_takeover.py nox_activate_idle_v3.py nox_force_work_now.py; do
  tmp="$BIN/$name.$NODE.$$.new"
  if curl --connect-timeout 15 --max-time 75 -fsSL --retry 2 "$BASE/$name" -o "$tmp" && python3 -m py_compile "$tmp"; then
   if ! cmp -s "$tmp" "$BIN/$name" 2>/dev/null;then mv -f "$tmp" "$BIN/$name";echo "NOX_UPDATED $name";else rm -f "$tmp";fi
