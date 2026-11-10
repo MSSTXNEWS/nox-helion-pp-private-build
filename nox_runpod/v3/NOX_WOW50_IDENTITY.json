@@ -243,5 +243,69 @@
     ],
     "motivation_semantics": "adopted durable objectives, not proof of subjective desire",
     "bounded_autonomy": true
+  },
+  "execution_priority_groups": [
+    {
+      "rank": 1,
+      "groups": [
+        "GENESIS",
+        "MEMORY",
+        "COGNITIVE"
+      ],
+      "critical": [
+        "G07",
+        "M08",
+        "C07",
+        "G06",
+        "M01",
+        "C06"
+      ]
+    },
+    {
+      "rank": 2,
+      "groups": [
+        "AUTONOMY"
+      ],
+      "critical": [
+        "A01",
+        "A02",
+        "A03",
+        "A04",
+        "A05",
+        "A09"
+      ],
+      "special_case": [
+        "X07",
+        "X08"
+      ],
+      "description": "Self-build NOX code, existing web and buttons, isolated tests, source-lock and rollout"
+    },
+    {
+      "rank": 3,
+      "groups": [
+        "CREATIVE"
+      ],
+      "critical": [
+        "X04",
+        "X05",
+        "X06"
+      ],
+      "description": "Image, video and 3D after cognition and self-building"
+    }
+  ],
+  "self_build_contract": {
+    "owner": "ONE NOX",
+    "source_of_truth": "existing NOX HELION GitHub and canonical NOX WEB",
+    "workflow": "evidence -> candidate patch -> sandbox tests -> UI test -> regression comparison -> accepted promotion",
+    "no_fake_pass": true,
+    "protect": [
+      "D02_HOME",
+      "Resonance",
+      "S03",
+      "single_backend",
+      "training_checkpoints",
+      "STOP"
+    ],
+    "owner_approval_required_for": "destructive or privileged changes"
   }
 }
