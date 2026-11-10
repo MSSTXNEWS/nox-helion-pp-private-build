@@ -1,0 +1,52 @@
+/* V21 fidelity patch: keep the approved image, D02 WebGL and existing services.
+   Layered after V20. No new renderer, placeholder media or backend. */
+body.helion-home.nox-owner-cinema .nox-owner-brand{display:none!important}
+body.helion-home.nox-owner-cinema .helion-stage nav.home-primary-navigation{
+  position:fixed!important;top:6px!important;bottom:auto!important;left:50%!important;
+  transform:translateX(-50%)!important;width:max-content!important;max-width:calc(100vw - 24px)!important;
+  flex-wrap:wrap!important;justify-content:center!important;z-index:75!important;
+  background:linear-gradient(125deg,rgba(5,8,13,.79),rgba(22,22,27,.7))!important;
+}
+body.helion-home.nox-owner-cinema .helion-stage nav.home-primary-navigation>a.helion-card{
+  width:auto!important;min-width:54px!important;max-width:124px!important;min-height:44px!important;
+  padding:7px 10px!important;flex:0 1 auto!important;border-radius:11px!important;
+}
+body.helion-home.nox-owner-cinema .helion-stage nav.home-primary-navigation>a.helion-card strong{
+  font-size:clamp(10px,.78vw,13px)!important;letter-spacing:.02em!important;
+}
+body.helion-home.nox-owner-cinema .nox-owner-persona{
+  background-image:linear-gradient(0deg,rgba(1,2,5,.92),rgba(3,4,9,.08) 48%),var(--nox-persona-image)!important;
+  background-size:cover!important;background-position:center,center 35%!important;
+  border-radius:7px!important;
+}
+body.helion-home.nox-owner-cinema .nox-owner-personas{bottom:clamp(100px,12vh,148px)!important;gap:clamp(7px,1.1vw,16px)!important}
+body.helion-home.nox-owner-cinema .nox-owner-actions{bottom:clamp(35px,6vh,76px)!important;gap:clamp(5px,1vw,14px)!important}
+body.helion-home.nox-owner-cinema .nox-owner-actions button{
+ border-radius:5px!important;min-height:44px!important;
+ background:linear-gradient(145deg,#2f3138e8 0%,#11141cdd 47%,#07090edb 100%)!important;
+ border:1px solid #c2a17c99!important;box-shadow:inset 0 1px #ffffff2b,inset 0 -2px #030305,0 11px 22px #000b!important;
+}
+body.helion-home.nox-owner-cinema .nox-owner-core{animation:none!important;will-change:transform}
+body.helion-home.nox-owner-cinema .nox-owner-core::before{
+ animation:none!important;background:radial-gradient(circle at 35% 30%,var(--core-bright),transparent 25%),
+ radial-gradient(circle at 52% 54%,#353943 0%,#0b0d14 43%,#020205 73%)!important;
+ box-shadow:inset -6px -8px 20px #000,0 0 15px var(--core-glow)!important;
+}
+body.helion-home.nox-owner-cinema .nox-owner-core::after{border-style:solid;opacity:.18}
+body.helion-home.nox-owner-cinema .nox-owner-core span{font-size:clamp(10px,.8vw,12px)!important;letter-spacing:.04em!important}
+body.helion-home.nox-owner-cinema .helion-stage #noxWorldsV6Canvas{opacity:.08!important}
+body.helion-home.nox-owner-cinema .nox-owner-portrait-status[hidden]{display:none!important}
+@media(max-width:850px){
+ body.helion-home.nox-owner-cinema .helion-stage nav.home-primary-navigation{top:4px!important;max-height:92px;overflow:auto}
+ body.helion-home.nox-owner-cinema .helion-stage nav.home-primary-navigation>a.helion-card{min-width:44px!important;padding:4px!important}
+ body.helion-home.nox-owner-cinema .nox-owner-personas{width:calc(100% - 18px)!important;bottom:120px!important;gap:4px!important}
+ body.helion-home.nox-owner-cinema .nox-owner-persona{aspect-ratio:.86/1!important}
+ body.helion-home.nox-owner-cinema .nox-owner-persona span{font-size:9px!important;letter-spacing:0!important}
+ body.helion-home.nox-owner-cinema .nox-owner-actions{bottom:55px!important;width:calc(100% - 12px)!important;flex-wrap:wrap!important}
+ body.helion-home.nox-owner-cinema .nox-owner-actions button{font-size:10px!important;padding:7px!important}
+ body.helion-home.nox-owner-cinema .nox-owner-core{width:clamp(44px,9vw,80px)!important}
+}
+@media(prefers-reduced-motion:reduce){
+ body.helion-home.nox-owner-cinema .nox-owner-core,
+ body.helion-home.nox-owner-cinema .nox-owner-persona{animation:none!important;transition:none!important}
+}
