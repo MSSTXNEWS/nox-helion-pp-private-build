@@ -55,7 +55,7 @@ def main():
  ap.add_argument("--teacher",choices=tuple(MODELS),required=True)
  ap.add_argument("--limit",type=int,default=10)
  ap.add_argument("--start",type=int,default=0)
- ap.add_argument("--node",choices=("A40","A5000","A40NEW"),default="A40")
+ ap.add_argument("--node",choices=("A40","A5000","A40NEW","A40SOLO"),default="A40")
  ap.add_argument("--gpu-layers",type=int,default=30)
  ap.add_argument("--ctx",type=int,default=6144)
  ap.add_argument("--parallel",type=int,default=3)
@@ -83,8 +83,8 @@ def main():
   if sha(model)!=p["sha256"]:raise SystemExit("HOLD_MODEL_SHA256_WRONG")
   atom(digest_cache,expected)
  # NEW A40 must never silently use shared CPU-only llama-server.
- if args.node=="A40NEW":
-  server=os.environ.get("NOX_LLAMA_CUDA_SERVER","/opt/nox_a40new/llama.cpp/build/bin/llama-server")
+ if args.node in ("A40NEW","A40SOLO"):
+  server=os.environ.get("NOX_LLAMA_CUDA_SERVER",("/opt/nox_primary_llama/llama.cpp/build/bin/llama-server" if args.node=="A40SOLO" else "/opt/nox_a40new/llama.cpp/build/bin/llama-server"))
   if not pathlib.Path(server).is_file():
    print("HOLD_A40NEW_CUDA_LLAMA_SERVER_MISSING",server,flush=True);return 2
  else:
@@ -115,7 +115,7 @@ def main():
  with log.open("ab") as logf:
   cmd=[server,"-m",str(model),"-ngl",str(args.gpu_layers),"-c",str(args.ctx),"--parallel",str(args.parallel),
        "--host",host,"--port",str(port)]
-  if args.node=="A40NEW":
+  if args.node in ("A40NEW","A40SOLO"):
    cmd.extend(["--no-warmup"])
   proc=subprocess.Popen(cmd,stdin=subprocess.DEVNULL,stdout=logf,stderr=subprocess.STDOUT,start_new_session=True)
   try:
