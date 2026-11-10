@@ -179,15 +179,15 @@ jobs:
           import hashlib,json,pathlib
           root=pathlib.Path('/tmp/nox-v19-download')
           receipt=json.loads((root/'vendor/nox-extra/NOX-EXTRA-ASSETS-RECEIPT.json').read_text())
-          assert receipt['complete'] and len(receipt['files'])==18
+          assert receipt['complete'] and len(receipt['files'])==20
           for item in receipt['files']:
               contents=(root/'vendor/nox-extra'/item['file']).read_bytes()
               assert len(contents)==item['size'] and hashlib.sha256(contents).hexdigest()==item['sha256'],item['file']
-          assert len(list((root/'source').glob('*')))==16
+          assert len(list((root/'source').glob('*')))==18
           art=root/'source/assets/nox-owner-approved'
           assert len(list(art.glob('*.webp')))==6
           print('NOX_V20_PERSONA_ART_HANDOFF 5 exact cropped portraits + original approved HOME')
-          print('NOX_V19_ARTIFACT_SHA256_PASS 18 binaries + source modules')
+          print('NOX_V19_ARTIFACT_SHA256_PASS 20 binaries + source modules')
           PY
       - name: Preserve actual ZIP handoff for Drive
         uses: actions/upload-artifact@v4
