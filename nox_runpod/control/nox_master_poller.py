@@ -24,7 +24,7 @@ def processes():
         if not p.name.isdigit():
             continue
         try:
-            args = [v.decode(errors="replace") for v in (p / "cmdline").read_bytes().split(b"\\0") if v]
+            args = [v.decode(errors="replace") for v in (p / "cmdline").read_bytes().split(bytes([0])) if v]
             if args and "python" in pathlib.Path(args[0]).name:
                 for label in ("a40_cuda_distillation_direct.py", "a40_full_parameter_distill_cycle.py",
                               "a5000_cuda_secondary_direct.py", "a5000_cuda_distillation_direct.py"):
