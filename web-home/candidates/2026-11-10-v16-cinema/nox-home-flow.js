@@ -1,29 +1,12 @@
-/* NOX HELION V18 — HOME flow layout companion, reconstructed from missing source.
-   Decorative visual system only. No fabricated telemetry, progress or model activity.
-   One static SVG graph with gentle CSS motion; zero additional GPU renderers. */
-(()=>{'use strict';
- if(window.NOX_HOME_FLOW)return;
- const network=document.querySelector('.nox-flow-network');
- if(!network||document.body.dataset.page!=='index')return;
- const svgNS='http://www.w3.org/2000/svg';
- const paths=network.querySelector('.nox-flow-links');
- const nodes=network.querySelector('.nox-flow-nodes');
- if(!paths||!nodes)return;
- const points=[[16,86],[51,38],[53,135],[93,84],[136,32],[138,139],[197,69],[232,118]];
- const edges=[[0,1],[0,2],[0,3],[1,3],[1,4],[2,3],[2,5],[3,4],[3,5],[3,6],[4,6],[5,6],[5,7],[6,7]];
- function el(tag,attrs){const e=document.createElementNS(svgNS,tag);for(const [key,value] of Object.entries(attrs))e.setAttribute(key,String(value));return e}
- for(const [a,b] of edges){const [x1,y1]=points[a],[x2,y2]=points[b];const line=el('path',{d:'M'+x1+','+y1+'L'+x2+','+y2,class:'nox-flow-connection'});paths.appendChild(line)}
- for(let i=0;i<points.length;i++){
-  const [cx,cy]=points[i];const g=el('g',{class:'nox-flow-point',transform:'translate('+cx+' '+cy+')'});
-  g.style.setProperty('--point-delay',String(((i*7)%11)*-0.43)+'s');
-  g.appendChild(el('circle',{r:7.2,class:'nox-flow-point-halo'}));
-  g.appendChild(el('circle',{r:2.5,class:'nox-flow-point-core'}));
-  nodes.appendChild(g);
- }
- const reduce=matchMedia('(prefers-reduced-motion: reduce)');
- function update(){network.classList.toggle('nox-flow-still',document.hidden||reduce.matches)}
- document.addEventListener('visibilitychange',update,{passive:true});
- if(reduce.addEventListener)reduce.addEventListener('change',update);else if(reduce.addListener)reduce.addListener(update);
- update();
- window.NOX_HOME_FLOW=Object.freeze({type:'DECORATIVE_ONLY',nodeCount:points.length,linkCount:edges.length,get paused(){return document.hidden||reduce.matches}});
+/* Original NOX HOME: add a network-diagram aesthetic; never synthesize hardware values. */
+(()=>{'use strict';if(document.body.dataset.page!=='index')return;
+const root=document.querySelector('.nox-flow-network');if(!root)return;const NS='http://www.w3.org/2000/svg';let seed=20261108;function rand(){seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;}
+const links=root.querySelector('.nox-flow-links'),nodes=root.querySelector('.nox-flow-nodes');const colors=['#74d0e5','#e18b79','#d6ae7c'];const linksData=[];
+for(let arm=0;arm<5;arm++){const toX=arm%2?226:22,toY=25+arm*30;for(let line=0;line<10;line++){const sx=119+(rand()-.5)*30,sy=83+(rand()-.5)*34,ey=toY+(line-5)*4;const path=document.createElementNS(NS,'path');path.setAttribute('d',`M${sx.toFixed(1)} ${sy.toFixed(1)} Q${(sx+toX)/2} ${(sy+ey)/2+(rand()-.5)*55} ${toX} ${ey}`);path.setAttribute('stroke',colors[(line+arm)%3]);links.append(path);linksData.push(path);
+const dot=document.createElementNS(NS,'circle');dot.setAttribute('cx',String(toX));dot.setAttribute('cy',String(ey));dot.setAttribute('r',String((line%4===0?2.8:1)+rand()*.9));dot.setAttribute('fill',colors[(line+arm)%3]);nodes.append(dot);}}
+const c=document.createElementNS(NS,'circle');c.setAttribute('cx','121');c.setAttribute('cy','83');c.setAttribute('r','5');c.setAttribute('fill','#d6aa76');nodes.append(c);
+// Actual metrics are read only from existing trusted NOX widgets, never from animated dots.
+const source={cpu:'cpuPercent',gpu:'gpuReadout',vram:'vramPercent'};let timer;
+function update(){for(const [name,id] of Object.entries(source)){const from=document.getElementById(id),to=document.querySelector(`[data-nox-dial-read="${name}"]`);if(!to)continue;const raw=from?.textContent?.trim()||'';const known=from?.dataset.instrumentState==='known'||from?.dataset.state==='known'||(from?.querySelector('.instrument-empty')===null&&/^[0-9.,]+\s*%?$/.test(raw));to.textContent=known?raw.slice(0,8):'—';to.title=known?'Показание из системы NOX':'Нет подтверждённого измерения';}}
+update();timer=setInterval(()=>{if(!document.hidden)update();},2500);addEventListener('pagehide',()=>clearInterval(timer));window.NOX_FLOW_DIAGNOSTICS=()=>({nodes:nodes.childElementCount,links:linksData.length,readings:Object.fromEntries(Object.keys(source).map(k=>[k,document.querySelector(`[data-nox-dial-read="${k}"]`)?.textContent])),demoDiagram:true});
 })();
