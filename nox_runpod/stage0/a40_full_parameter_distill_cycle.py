@@ -67,15 +67,35 @@ def load_model():
  except ImportError:
   from transformers import AutoModelForCausalLM as Class
  # Never load a PEFT adapter or quantized 4-bit training model.
- base=pathlib.Path(os.environ.get("NOX_STUDENT_BASE",str(BASE)))
+ # Resume only from an accepted, full-size SHA-verified student checkpoint.
+ override=os.environ.get("NOX_STUDENT_BASE")
+ if override:
+  base=pathlib.Path(override)
+ else:
+  candidates=[]
+  for receipt_path in DEST.glob("*/NOX_FULL_TRAIN_RECEIPT.json"):
+   try:
+    doc=json.loads(receipt_path.read_text(encoding="utf8"))
+    if doc.get("status")!="FULL_PARAMETER_ADAPTER_FREE_STUDENT_CHECKPOINT_SAVED_NOT_ALL_KNOWLEDGE_ABSORBED":
+     continue
+    if float(doc.get("after_holdout_loss",float("inf")))>float(doc.get("baseline_holdout_loss",0))*1.05:
+     continue
+    candidates.append((receipt_path.stat().st_mtime_ns,receipt_path.parent))
+   except (OSError,ValueError,TypeError):continue
+  # Use only the latest proven full-weight checkpoint, not another teacher/model.
+  base=max(candidates,key=lambda x:x[0])[1] if candidates else BASE
  if not base.is_dir():raise RuntimeError("NOX_STUDENT_BASE_DIRECTORY_MISSING")
  receipt=base/("NOX_FULL_TRAIN_RECEIPT.json" if (base/"NOX_FULL_TRAIN_RECEIPT.json").exists() else "NOX_UNIFIED_RECEIPT.json")
  if not receipt.is_file():raise RuntimeError("NOX_UNIFIED_FULL_BASE_NOT_VERIFIED")
  info=json.loads(receipt.read_text(encoding="utf8"))
- for shard in info.get("shards",[]):
+ shards=info.get("shards",[])
+ if not shards:raise RuntimeError("HOLD_BASE_SHARDS_UNDOCUMENTED")
+ for shard in shards:
   p=base/shard["file"]
   if not p.is_file() or p.stat().st_size!=int(shard.get("size",shard.get("bytes",-1))):
    raise RuntimeError("BASE_SHARD_MISSING")
+  if shard.get("sha256") and sha(p)!=shard["sha256"]:
+   raise RuntimeError("BASE_SHARD_SHA256_MISMATCH")
  tok=AutoTokenizer.from_pretrained(str(base),local_files_only=True,trust_remote_code=False)
  if tok.pad_token_id is None:tok.pad_token=tok.eos_token
  opts={"local_files_only":True,"trust_remote_code":False,
