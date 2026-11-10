@@ -133,8 +133,8 @@ try{
   await p.waitForSelector('.nox-v19-gallery a',{timeout:15000});
   await p.waitForFunction(()=>!!document.querySelector('link[href*="photoswipe.css"]'),{timeout:12000});
   await p.locator('.nox-v19-gallery a').first().click();
-  await p.waitForSelector('.pswp[aria-hidden="false"]',{timeout:15000});
-  const lightboxOpened=await p.locator('.pswp[aria-hidden="false"]').count()===1;
+  await p.waitForSelector('.pswp.pswp--open[role="dialog"]',{timeout:15000});
+  const lightboxOpened=await p.locator('.pswp.pswp--open[role="dialog"]').count()===1;
   await p.keyboard.press('Escape');
   report.v19Modules.push({name:'Галерея',source:'PhotoSwipe local',passed:lightboxOpened});
   await p.getByRole('button',{name:'Эффекты',exact:true}).click();
