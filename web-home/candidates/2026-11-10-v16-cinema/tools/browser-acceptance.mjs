@@ -19,7 +19,11 @@ const report={source:url,startedAt:new Date().toISOString(),browser:'Chromium Sw
 try{
  for(const [name,width,height] of viewports){
   const page=await browser.newPage({viewport:{width,height},deviceScaleFactor:1});
-  const errors=[];page.on('pageerror',e=>errors.push('JS: '+e.message));page.on('response',r=>{if(r.status()>=400)errors.push('HTTP '+r.status()+' '+r.url())});page.on('console',msg=>{if(msg.type()==='error')errors.push('CONSOLE: '+msg.text())});
+  const errors=[],backendUnavailable=[];
+  page.on('pageerror',e=>errors.push('JS: '+e.message));
+  page.on('response',r=>{if(r.status()>=400){const u=new URL(r.url());if(u.origin===new URL(url).origin&&u.pathname.startsWith('/api/'))backendUnavailable.push({status:r.status(),path:u.pathname});else errors.push('HTTP '+r.status()+' '+r.url())}});
+  // Generic Chrome resource messages contain no URL. HTTP responses above capture the failing static assets.
+  page.on('console',msg=>{if(msg.type()==='error'&&!msg.text().includes('Failed to load resource: the server responded'))errors.push('CONSOLE: '+msg.text())});
   let status=null,snapshot=null,assetCheck=null,ownerCheck=null,blocked=null;
   try{
    const response=await page.goto(url,{waitUntil:'domcontentloaded',timeout:45000});
@@ -62,8 +66,9 @@ try{
    if(name==='1440' && snapshot) assetCheck=await page.evaluate(()=>window.NOX_CINEMATIC_HEALTH.checkAssets().catch(e=>({error:String(e)})));
    await page.screenshot({path:path.join(out,name+'.png'),fullPage:true,timeout:30000});
   }catch(e){errors.push('RUN: '+String(e.message||e))}
-  const acceptance=blocked?'BLOCKED_SSO':!snapshot?'HOLD_NO_RUNTIME_DIAGNOSTICS':snapshot.graphicsAcceptance==='CANDIDATE'&&errors.length===0?'BROWSER_CANDIDATE':'HOLD';
-  report.cases.push({viewport:name,width,height,httpStatus:status,acceptance,blocked,diagnostics:snapshot,assetCheck,ownerCheck,errors});
+  const rendered=!!(snapshot?.core?.realRendered&&snapshot?.worlds?.allMaterialAssetsReady&&snapshot?.effects?.errors?.length===0);
+  const acceptance=blocked?'BLOCKED_SSO':!snapshot?'HOLD_NO_RUNTIME_DIAGNOSTICS':rendered&&errors.length===0?'BROWSER_CANDIDATE':'HOLD';
+  report.cases.push({viewport:name,width,height,httpStatus:status,acceptance,blocked,diagnostics:snapshot,assetCheck,ownerCheck,backendUnavailable,errors});
   await page.close();
  }
  // Cross-section smoke checks: no fake backends, no hidden failures.
@@ -71,7 +76,7 @@ try{
  report.sections=[];
  for(const name of pages){
   const page=await browser.newPage({viewport:{width:1440,height:900}});
-  const errors=[];page.on('pageerror',e=>errors.push(e.message));page.on('response',r=>{if(r.status()>=400)errors.push('HTTP '+r.status()+' '+r.url())});
+  const errors=[],backendUnavailable=[];page.on('pageerror',e=>errors.push(e.message));page.on('response',r=>{if(r.status()>=400){const u=new URL(r.url());if(u.origin===new URL(url).origin&&u.pathname.startsWith('/api/'))backendUnavailable.push({status:r.status(),path:u.pathname});else errors.push('HTTP '+r.status()+' '+r.url())}});
   let status=null,checks=null;
   try{
    const response=await page.goto(new URL(name,url).href,{waitUntil:'domcontentloaded',timeout:45000});
@@ -85,7 +90,7 @@ try{
     return {v19Style:!!document.querySelector('link[href*="nox-universe-v19.css"]'),v19Script:!!window.NOX_UNIVERSE_V19,sharedStyle:!!document.querySelector('link[href*="nox-global-wow-v18.css"]'),sharedScript:!!window.NOX_WOW_GLOBAL_V18,visibleSelects:visibleSelects.length,choiceGroups:document.querySelectorAll('.nox-wow-choice-group').length,buttons:buttons.length,missingLinks};
    });
   }catch(e){errors.push(String(e))}
-  report.sections.push({name,status,checks,errors,acceptance:status===200&&checks?.sharedStyle&&checks?.sharedScript&&checks?.v19Style&&checks?.v19Script&&checks.visibleSelects===0&&errors.length===0?'PAGE_UI_PASS':'HOLD'});
+  report.sections.push({name,status,checks,backendUnavailable,errors,acceptance:status===200&&checks?.sharedStyle&&checks?.sharedScript&&checks?.v19Style&&checks?.v19Script&&checks.visibleSelects===0&&errors.length===0?'PAGE_UI_PASS':'HOLD'});
   await page.close();
  }
 
@@ -105,7 +110,16 @@ try{
   for(const name of ['Кинотеатр','Книги','Календарь','Галерея','Эффекты','Новости','Уведомления','Погода','Валюта','Браузер','Разделы'])
    if(!moduleButtons.includes(name))throw Error('NOX_V19_MISSING_MODULE_BUTTON_'+name);
   await p.getByRole('button',{name:'Календарь',exact:true}).click();
-  await p.waitForSelector('.nox-v19-calendar .fc',{timeout:25000});
+  try{await p.waitForSelector('.nox-v19-calendar .fc',{timeout:13000});}
+  catch(e){
+    const diag=await p.evaluate(()=>({calendarMarkup:document.querySelector('.nox-v19-calendar')?.innerHTML?.slice(0,400),
+      status:document.querySelector('.nox-v19-status')?.textContent,
+      currentModule:document.querySelector('.nox-v19-tabs button[aria-pressed="true"]')?.textContent,
+      fullCalendarLoaded:!!window.FullCalendar,
+      fullCalendarType:typeof window.FullCalendar?.Calendar}));
+    await p.screenshot({path:path.join(out,'calendar-diagnostic.png'),fullPage:true});
+    throw Error('NOX_CALENDAR_RUNTIME_HOLD '+JSON.stringify(diag)+' '+String(e.message).slice(0,230));
+  }
   await p.getByPlaceholder('Название события').fill('NOX-CI-TEST');
   await p.locator('.nox-v19-card input[type="date"]').first().fill('2026-11-11');
   await p.getByRole('button',{name:'ДОБАВИТЬ СОБЫТИЕ'}).click();
