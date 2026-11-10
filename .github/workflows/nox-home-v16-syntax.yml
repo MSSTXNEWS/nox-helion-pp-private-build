@@ -196,3 +196,45 @@ jobs:
           path: /tmp/nox-v19-download/
           if-no-files-found: error
           retention-days: 7
+
+  site-build:
+    needs: vendor-download
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Build the actual ten-page NOX candidate with all mandatory assets
+        working-directory: web-home/candidates/2026-11-10-v16-cinema
+        run: |
+          node build-approved-assets.mjs
+          node --input-type=module - <<'NODE'
+          import fs from 'node:fs';
+          import crypto from 'node:crypto';
+          const dist='dist/', manifest=JSON.parse(fs.readFileSync(dist+'vendor/nox-extra/NOX-EXTRA-ASSETS-RECEIPT.json','utf8'));
+          if(manifest.files.length!==20||!manifest.complete)throw Error('NOX_VENDOR_20_MISSING');
+          for(const f of manifest.files){
+            const buf=fs.readFileSync(dist+'vendor/nox-extra/'+f.file);
+            if(buf.length!==f.size||crypto.createHash('sha256').update(buf).digest('hex')!==f.sha256)throw Error('NOX_VENDOR_SHA_MISMATCH:'+f.file);
+          }
+          const home=fs.readFileSync(dist+'index.html','utf8');
+          for(const name of ['nox-home.mjs','nox-owner-director-v20.js','nox-owner-fidelity-v21.js','nox-owner-fidelity-v21.css','nox-universe-v19.js','nox-global-wow-v18.js'])if(!home.includes(name))throw Error('NOX_HOME_RUNTIME_NOT_WIRED:'+name);
+          const pages=['index','chat','cinema','install','memory','models','projects','settings','system','training'];
+          for(const page of pages){
+            const html=fs.readFileSync(dist+page+'.html','utf8');
+            for(const asset of ['nox-universe-v19.js','nox-global-wow-v18.js'])if(!html.includes(asset))throw Error('NOX_SECTION_DISCONNECTED:'+page+':'+asset);
+          }
+          console.log('NOX_V21_FULL_WEB_BUILD_STATIC_PASS 10/10 routes; 20 verified runtime files; GPU/browser HOLD');
+          NODE
+      - name: Preserve candidate site with verifiable receipts, without publishing production
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX-V21-WEB-CANDIDATE-STAGING
+          path: web-home/candidates/2026-11-10-v16-cinema/dist/
+          if-no-files-found: warn
+          retention-days: 7
