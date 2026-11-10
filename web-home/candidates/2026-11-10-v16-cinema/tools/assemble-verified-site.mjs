@@ -44,6 +44,16 @@ const overlays=[
  ['industrial-assets.mjs','industrial-assets.mjs'],
  ['nox-global-wow-v18.css','nox-global-wow-v18.css'],
  ['nox-global-wow-v18.js','nox-global-wow-v18.js'],
+ ['nox-owner-director-v20.css','nox-owner-director-v20.css'],
+ ['nox-owner-director-v20.js','nox-owner-director-v20.js'],
+ ['nox-owner-fidelity-v21.css','nox-owner-fidelity-v21.css'],
+ ['nox-owner-fidelity-v21.js','nox-owner-fidelity-v21.js'],
+ ['assets/nox-owner-approved/NOX_HOME_OWNER_APPROVED_WEB.webp','assets/nox-owner-approved/NOX_HOME_OWNER_APPROVED_WEB.webp'],
+ ['assets/nox-owner-approved/nox-owner-persona-kv.webp','assets/nox-owner-approved/nox-owner-persona-kv.webp'],
+ ['assets/nox-owner-approved/nox-owner-persona-am.webp','assets/nox-owner-approved/nox-owner-persona-am.webp'],
+ ['assets/nox-owner-approved/nox-owner-persona-la.webp','assets/nox-owner-approved/nox-owner-persona-la.webp'],
+ ['assets/nox-owner-approved/nox-owner-persona-ev.webp','assets/nox-owner-approved/nox-owner-persona-ev.webp'],
+ ['assets/nox-owner-approved/nox-owner-persona-kw.webp','assets/nox-owner-approved/nox-owner-persona-kw.webp'],
 ];
 for(const [from,to] of overlays){
  const file=path.join(candidate,from);
@@ -72,6 +82,7 @@ for(const p of sameOrigin){
  if(!await exists(path.join(dst,p)))throw Error('NOX_ENTRYPOINT_MISSING: '+p);
 }
 if(!html.includes('nox-home.mjs'))throw Error('NOX_MASTER_D02_NOT_REFERENCED');
+if(!html.includes('nox-owner-fidelity-v21.js')||!html.includes('nox-owner-fidelity-v21.css'))throw Error('NOX_V21_FIDELITY_NOT_WIRED');
 const report={baseline:src,staging:dst,filesOverlaid:overlays.map(x=>x[1]),approvedAssetFiles:manifest.files.length,pagesEnhanced:pages,visibleDropdownsConvertedAtRuntime:true,assetIntegrity:'SHA256_VERIFIED',browserAcceptance:'NOT_RUN',physicalGpuAcceptance:'HOLD',productionChanged:false};
 await fs.writeFile(path.join(dst,'NOX-V18-ASSEMBLY-RECEIPT.json'),JSON.stringify(report,null,2));
 console.log('NOX source assembly complete, GPU acceptance HOLD:',JSON.stringify(report));
