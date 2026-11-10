@@ -17,15 +17,23 @@ def main():
     if not SRC.is_file() or not RECEIPT.is_file():
         raise SystemExit("HOLD_27B_MODEL_OR_RECEIPT_MISSING")
     r=json.loads(RECEIPT.read_text())
-    if r.get("filename")!=SRC.name or not isinstance(r.get("sha256"),str):
+    filename=r.get("filename",r.get("file",SRC.name))
+    expected=r.get("sha256",r.get("SHA256"))
+    byte_size=r.get("bytes",r.get("size",None))
+    if filename!=SRC.name or not isinstance(expected,str) or len(expected)!=64:
         raise SystemExit("HOLD_27B_UNTRUSTED_RECEIPT")
-    expected=r["sha256"].lower()
-    if SRC.stat().st_size!=int(r.get("bytes",-1)):
+    expected=expected.lower()
+    if byte_size is not None and SRC.stat().st_size!=int(byte_size):
         raise SystemExit("HOLD_27B_SOURCE_SIZE_MISMATCH")
     DEST.parent.mkdir(parents=True,exist_ok=True)
     # Full SHA-256 before accepting source, not just a downloaded label.
     if sha(SRC)!=expected: raise SystemExit("HOLD_27B_SOURCE_SHA_MISMATCH")
     if DEST.is_file() and DEST.stat().st_size==SRC.stat().st_size and sha(DEST)==expected:
+        proof={"teacher":"Qwen3.5-27B","model_file":DEST.name,"sha256":expected,"bytes":DEST.stat().st_size,
+               "source_receipt":str(RECEIPT),"status":"SHA256_VERIFIED_SHARED"}
+        tmp=DEST.parent/"nox_teacher_proof.json.tmp"
+        tmp.write_text(json.dumps(proof,indent=2),encoding="utf-8")
+        os.replace(tmp,DEST.parent/"nox_teacher_proof.json")
         print("27B_SHARED_ALREADY_VERIFIED",DEST,flush=True);return
     if shutil.disk_usage(DEST.parent).free<SRC.stat().st_size+2*1024**3:
         raise SystemExit("HOLD_SHARED_DISK_CAPACITY")
