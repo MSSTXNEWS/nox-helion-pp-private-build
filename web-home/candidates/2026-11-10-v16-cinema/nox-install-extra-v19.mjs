@@ -9,6 +9,7 @@ import {createHash} from 'node:crypto';
 
 const version='2026-11-10-v19';
 const sources=[
+ {name:'three.module.js',url:'https://cdn.jsdelivr.net/npm/three@0.160.1/build/three.module.js',minBytes:300000,maxBytes:2500000,license:'MIT'},
  {name:'fuse.min.js',url:'https://cdn.jsdelivr.net/npm/fuse.js@7.1.0/dist/fuse.min.js',minBytes:7000,maxBytes:120000,license:'Apache-2.0'},
  {name:'FUSE-LICENSE.txt',url:'https://cdn.jsdelivr.net/npm/fuse.js@7.1.0/LICENSE',minBytes:100,maxBytes:15000,license:'Apache-2.0'},
  {name:'leaflet.js',url:'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js',minBytes:80000,maxBytes:300000,license:'BSD-2-Clause'},
