@@ -57,7 +57,7 @@ def append(obj):
  digest=hashlib.sha256(raw.encode()).hexdigest()
  path=D/"teacher_improvement_journal.jsonl"
  with path.open("a",encoding="utf-8") as f:
-  f.write(raw+"\\n");f.flush();os.fsync(f.fileno())
+  f.write(raw+"\n");f.flush();os.fsync(f.fileno())
  atomic(chain,{"utc":obj["utc"],"sha256":digest})
  return digest
 def once():
