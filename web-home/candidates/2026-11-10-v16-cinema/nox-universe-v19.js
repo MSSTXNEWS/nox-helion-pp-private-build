@@ -4,10 +4,10 @@
  */
 (()=>{'use strict';
  if(window.NOX_UNIVERSE_V19)return;
- const modules=['Кинотеатр','Книги','Новости','Уведомления','Погода','Валюта','Браузер','Разделы'];
+ const modules=['Кинотеатр','Книги','Календарь','Галерея','Новости','Уведомления','Погода','Валюта','Браузер','Разделы'];
  const $=(tag,props={},children=[])=>{const el=document.createElement(tag);for(const [k,v] of Object.entries(props)){if(k==='class')el.className=v;else if(k==='text')el.textContent=v;else if(k==='html')el.innerHTML=v;else el.setAttribute(k,v)};for(const c of children)el.append(c);return el};
  const state={active:'Кинотеатр',book:null,video:null,catalog:null,objectUrls:[],player:null,map:null,search:''};
- const clean=()=>{if(state.map){try{state.map.remove()}catch{}state.map=null}for(const u of state.objectUrls)URL.revokeObjectURL(u);state.objectUrls=[];if(state.book?.destroy)try{state.book.destroy()}catch{}state.book=null;state.video?.pause?.();state.video=null;if(state.player?.destroy)try{state.player.destroy()}catch{}state.player=null};
+ const clean=()=>{if(state.calendar){try{state.calendar.destroy()}catch{}state.calendar=null}if(state.galleryLightbox){try{state.galleryLightbox.destroy()}catch{}state.galleryLightbox=null}if(state.map){try{state.map.remove()}catch{}state.map=null}for(const u of state.objectUrls)URL.revokeObjectURL(u);state.objectUrls=[];if(state.book?.destroy)try{state.book.destroy()}catch{}state.book=null;state.video?.pause?.();state.video=null;if(state.player?.destroy)try{state.player.destroy()}catch{}state.player=null};
  const root=$('div',{class:'nox-v19-root'}),openBtn=$('button',{type:'button',class:'nox-v19-launch',text:'✦ ВСЕЛЕННАЯ NOX','aria-label':'Открыть сервисы NOX'}),panel=$('section',{class:'nox-v19-panel',role:'dialog','aria-modal':'true','aria-label':'Сервисы NOX',hidden:''});
  const head=$('header',{class:'nox-v19-head'}),title=$('h2',{text:'NOX · МОДУЛИ'}),close=$('button',{type:'button',text:'✕ ЗАКРЫТЬ',class:'nox-v19-btn'});head.append(title,close);
  const tabs=$('nav',{class:'nox-v19-tabs','aria-label':'Модули'}),body=$('div',{class:'nox-v19-body'}),status=$('div',{class:'nox-v19-status',role:'status','aria-live':'polite'});panel.append(head,tabs,body,status);root.append(openBtn,panel);
@@ -19,7 +19,7 @@
  function notice(parent,text){parent.append($('p',{class:'nox-v19-note',text}))}
  function sectionButton(name){const b=action(name,()=>show(name));b.setAttribute('aria-pressed',String(name===state.active));tabs.append(b)}
  function show(name){clean();state.active=name;body.replaceChildren();tabs.replaceChildren();for(const key of modules)sectionButton(key);live('Источник данных и состояние указаны в каждом модуле. Действия подтверждаются вручную.');
- if(name==='Кинотеатр')cinema();else if(name==='Книги')books();else if(name==='Новости')news();else if(name==='Уведомления')notifications();else if(name==='Погода')weather();else if(name==='Валюта')currency();else if(name==='Браузер')browser();else sections();}
+ if(name==='Кинотеатр')cinema();else if(name==='Книги')books();else if(name==='Календарь')calendar();else if(name==='Галерея')gallery();else if(name==='Новости')news();else if(name==='Уведомления')notifications();else if(name==='Погода')weather();else if(name==='Валюта')currency();else if(name==='Браузер')browser();else sections();}
  function open(){panel.hidden=false;openBtn.hidden=true;show(state.active);close.focus()}
  function dismiss(){clean();panel.hidden=true;openBtn.hidden=false;openBtn.focus()}
  openBtn.addEventListener('click',open);close.addEventListener('click',dismiss);
@@ -54,6 +54,70 @@
  else{const t=await f.text();const pre=$('article',{class:'nox-v19-text',text:t.slice(0,3e6)});view.append(pre);txt.textContent='TXT · '+f.name;}
  live('Файл открыт локально: '+f.name,'ok');}catch(e){live('Ридер HOLD: '+e.message,'error')}});
  c.append(file,row(prev,next,txt),view)}
+ function calendar(){
+  const c=shell('Календарь NOX · реальные локальные события');
+  notice(c,'FullCalendar 6.1.19. События сохраняются только в этом браузере. Интеграция Google/Microsoft Calendar требует отдельного OAuth и разрешений.');
+  const name=field('Название события'),date=field('Дата события','date');
+  const mount=$('div',{class:'nox-v19-calendar',role:'application','aria-label':'Календарь NOX'});
+  const key='nox-v19-calendar-events';
+  const read=()=>{try{const v=JSON.parse(localStorage.getItem(key)||'[]');return Array.isArray(v)?v.slice(-1000):[]}catch{return []}};
+  const store=a=>localStorage.setItem(key,JSON.stringify(a.slice(-1000)));
+  const button=action('ДОБАВИТЬ СОБЫТИЕ',()=>{
+   if(!name.value.trim()||!date.value){live('Введите название и дату','warn');return}
+   try{const records=read(),event={id:String(Date.now())+'-'+Math.round(Math.random()*1e6),title:name.value.trim().slice(0,140),start:date.value,allDay:true};records.push(event);store(records);state.calendar?.addEvent(event);name.value='';live('Событие сохранено в браузере, не отправлено в календарный API','ok')}catch(e){live('Сохранение HOLD: '+e.message,'error')}
+  });
+  const clear=action('УДАЛИТЬ ВЫБРАННОЕ',()=>live('Нажмите событие в календаре и подтвердите удаление','warn'));
+  c.append(row(name,date,button,clear),mount);
+  loadScript('./vendor/nox-extra/fullcalendar.global.min.js').then(()=>{
+   if(state.active!=='Календарь'||!mount.isConnected)return;
+   const Calendar=window.FullCalendar?.Calendar;
+   if(!Calendar)throw Error('FullCalendar не инициализирован');
+   const instance=new Calendar(mount,{
+    initialView:'dayGridMonth',height:'auto',locale:'ru',firstDay:1,editable:false,selectable:false,
+    headerToolbar:{left:'prev,next today',center:'title',right:'dayGridMonth,dayGridWeek'},
+    buttonText:{today:'Сегодня',month:'Месяц',week:'Неделя'},
+    events:read(),eventClick:arg=>{
+     if(!confirm('Удалить событие «'+arg.event.title+'»?'))return;
+     try{store(read().filter(e=>e.id!==arg.event.id));arg.event.remove();live('Событие удалено локально','ok')}catch(e){live('Удаление HOLD: '+e.message,'error')}
+    }
+   });
+   instance.render();state.calendar=instance;live('FullCalendar загружен локально. События работают без серверного API.','ok');
+  }).catch(e=>live('Календарь HOLD: '+e.message,'error'));
+ }
+ function gallery(){
+  const c=shell('Галерея NOX · кинематографическое просмотр фото');
+  notice(c,'PhotoSwipe 5.4.4. Локальные изображения не отправляются в сеть. Масштаб, жесты и полноэкранное погружение доступны после загрузки файлов.');
+  const input=field('Выбрать изображения','file');input.accept='image/png,image/jpeg,image/webp,image/avif,image/gif';input.multiple=true;
+  const grid=$('div',{class:'nox-v19-gallery',id:'nox-v19-gallery-source'});
+  const info=$('div',{class:'nox-v19-note',role:'status',text:'Изображения пока не выбраны'});
+  const reset=action('ОЧИСТИТЬ ГАЛЕРЕЮ',()=>{state.galleryLightbox?.destroy?.();state.galleryLightbox=null;for(const u of state.objectUrls)URL.revokeObjectURL(u);state.objectUrls=[];grid.replaceChildren();info.textContent='Галерея очищена';});
+  async function render(){
+   state.galleryLightbox?.destroy?.();state.galleryLightbox=null;
+   for(const u of state.objectUrls)URL.revokeObjectURL(u);state.objectUrls=[];grid.replaceChildren();
+   const files=[...input.files||[]].slice(0,80);let added=0;
+   for(const file of files){
+    if(!file.type.startsWith('image/'))continue;
+    const url=objectURL(file);
+    const img=new Image();img.src=url;
+    try{await img.decode()}catch{continue}
+    const a=$('a',{href:url,target:'_blank',class:'nox-v19-gallery-item','data-pswp-width':String(img.naturalWidth),'data-pswp-height':String(img.naturalHeight),'aria-label':'Открыть '+file.name});
+    a.append($('img',{src:url,alt:file.name,loading:'lazy'}));grid.append(a);added++;
+   }
+   info.textContent='Реальные изображения: '+added+' · локальные файлы';
+   if(!added)return;
+   try{
+    const tag=document.querySelector('link[data-nox-photoswipe]');
+    if(!tag){const link=$('link',{rel:'stylesheet',href:'./vendor/nox-extra/photoswipe.css','data-nox-photoswipe':'true'});document.head.append(link)}
+    const mod=await import('./vendor/nox-extra/photoswipe-lightbox.esm.js');
+    if(state.active!=='Галерея'||!grid.isConnected)return;
+    const Lightbox=mod.default;
+    const lightbox=new Lightbox({gallery:'#nox-v19-gallery-source',children:'a',pswpModule:()=>import('./vendor/nox-extra/photoswipe.esm.js')});
+    lightbox.init();state.galleryLightbox=lightbox;live('PhotoSwipe загружен локально, изображений: '+added,'ok');
+   }catch(e){live('Галерея: обычные ссылки доступны, PhotoSwipe HOLD: '+e.message,'warn')}
+  }
+  input.addEventListener('change',()=>{render().catch(e=>live('Галерея HOLD: '+e.message,'error'))});
+  c.append(row(input,reset),info,grid);
+ }
  function news(){const c=shell('Новости · реальные источники');notice(c,'Показаны проверяемые ссылки, даты и источники. Никаких вымышленных новостей и автоматических публикаций.');
  const target=$('div',{class:'nox-v19-feed'});c.append(row(action('ЗАГРУЗИТЬ ТЕХНОЛОГИИ',async()=>{target.replaceChildren();live('Получение HN Algolia…');try{const res=await fetch('https://hn.algolia.com/api/v1/search?tags=front_page&hitsPerPage=16',{signal:AbortSignal.timeout(12000)});if(!res.ok)throw Error('HTTP '+res.status);const j=await res.json();for(const h of j.hits||[]){if(!h.title)continue;const u=h.url||('https://news.ycombinator.com/item?id='+encodeURIComponent(h.objectID));let link=$('a',{href:u,target:'_blank',rel:'noopener noreferrer',text:h.title});let date=$('small',{text:' '+new Date(h.created_at).toLocaleString('ru-RU')+' · '+new URL(u).host});target.append($('div',{class:'nox-v19-feed-item'},[link,date]))}live('Получены свежие записи с указанием источников','ok')}catch(e){live('Новости HOLD: '+e.message,'error')}}),action('ЯНДЕКС ДЗЕН',()=>openUrl('https://dzen.ru/')),action('GOOGLE NEWS',()=>openUrl('https://news.google.com/'))),target);
  const rss=shell('RSS / Atom: проверка источника');const url=field('Публичный URL RSS/Atom');const output=$('div',{class:'nox-v19-feed'});rss.append(row(url,action('ПРОВЕРИТЬ RSS',async()=>{output.replaceChildren();try{const u=new URL(url.value);if(u.protocol!=='https:')throw Error('Только HTTPS');const res=await fetch(u.href,{signal:AbortSignal.timeout(10000)});if(!res.ok)throw Error('HTTP '+res.status);const xml=new DOMParser().parseFromString(await res.text(),'application/xml');if(xml.querySelector('parsererror'))throw Error('Некорректный XML');let entries=[...xml.querySelectorAll('item,entry')].slice(0,15);for(const e of entries){const title=e.querySelector('title')?.textContent?.trim()||'Без заголовка';const link=e.querySelector('link')?.getAttribute('href')||e.querySelector('link')?.textContent?.trim();if(!link)continue;const a=$('a',{href:new URL(link,u.href).href,target:'_blank',rel:'noopener noreferrer',text:title});const date=e.querySelector('pubDate,published,updated')?.textContent||'дата не указана';output.append($('div',{class:'nox-v19-feed-item'},[a,$('small',{text:date})]))}live('RSS загружен: '+entries.length+' записей','ok')}catch(e){live('RSS HOLD (возможен CORS): '+e.message,'error')}}),action('ОТКРЫТЬ ИСТОЧНИК',()=>openUrl(url.value))),output)}
