@@ -29,7 +29,7 @@
   const burst=t<boostUntil, speed=burst?.46:.17;
   const waveColor=(document.documentElement.dataset.noxColor==="amethyst"?"173,187,218":"196,190,174");
   c.save();c.globalCompositeOperation="screen";
-  if(!reduced.matches){
+  if(!reduced.matches && burst){
    for(let j=0;j<2;j++){
     const phase=((t*speed+j*.51)%1),r=radius*(1.10+phase*(burst?1.10:1.40));
     const alpha=(1-phase)**2*(burst?.32:.235);
@@ -45,7 +45,7 @@
     }
     c.stroke();fronts++;
    }
-  }else{
+  }else if(reduced.matches && burst){
    c.strokeStyle="rgba(177,191,206,.12)";c.lineWidth=.7;
    c.beginPath();c.ellipse(cx,cy,radius*1.22,radius*.96,0,0,Math.PI*2);c.stroke();
   }
