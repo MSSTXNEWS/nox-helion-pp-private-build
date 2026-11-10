@@ -39,6 +39,59 @@ jobs:
             assert hashlib.sha256(b).hexdigest()==a['sha256'] and len(b)==a['size'],a['file']
           print(f"NOX_EXTENDED_SHA256_PASS {m['packages_downloaded']} of {m['packages_requested']}, {m['bytes']} bytes")
           PY
+      - name: Partition verified packages under Google Drive connector size limit
+        run: |
+          python3 - <<'PY'
+          import hashlib,json,pathlib,shutil
+          src=pathlib.Path('/tmp/nox-v19-extended')
+          out=pathlib.Path('/tmp/nox-v19-parts')
+          manifest=json.loads((src/'NOX-EXTENDED-DEPENDENCIES-MANIFEST.json').read_text())
+          assert manifest['packages_downloaded']==manifest['packages_requested']==50
+          cap=65000000
+          parts=[[]];size=0
+          for row in manifest['files']:
+            assert row['status']=='DOWNLOADED_SHA256_VERIFIED'
+            if size+row['size']>cap:
+              parts.append([]);size=0
+            parts[-1].append(row)
+            size+=row['size']
+          assert len(parts)==3, 'Archive size split needs an explicit review'
+          for i,rows in enumerate(parts,1):
+            dst=out/f'part-{i:02d}'
+            (dst/'packages').mkdir(parents=True,exist_ok=True)
+            for row in rows:
+              source=src/'packages'/row['file']
+              payload=source.read_bytes()
+              assert len(payload)==row['size'] and hashlib.sha256(payload).hexdigest()==row['sha256']
+              shutil.copyfile(source,dst/'packages'/row['file'])
+            (dst/'PART-RECEIPT.json').write_text(json.dumps({
+              'part':i,'parts_total':3,'packages_in_part':len(rows),
+              'all_packages_total':50,'files':rows,'source_sha256_verified':True
+            },ensure_ascii=False,indent=2))
+          (out/'part-01'/'NOX-EXTENDED-DEPENDENCIES-MANIFEST.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2))
+          print('NOX_50_DOWNLOAD_PARTITIONED verified parts',list(map(len,parts)))
+          PY
+      - name: Upload verified Drive part 01
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX-V21-50-LIBRARIES-PART-01
+          path: /tmp/nox-v19-parts/part-01/
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload verified Drive part 02
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX-V21-50-LIBRARIES-PART-02
+          path: /tmp/nox-v19-parts/part-02/
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload verified Drive part 03
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX-V21-50-LIBRARIES-PART-03
+          path: /tmp/nox-v19-parts/part-03/
+          if-no-files-found: error
+          retention-days: 14
       - name: Preserve actual full ZIP for Google Drive
         if: always()
         uses: actions/upload-artifact@v4
