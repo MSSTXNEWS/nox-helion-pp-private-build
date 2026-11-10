@@ -46,6 +46,29 @@ def process_has(name):
             if any(pathlib.Path(a).name==name for a in args[1:]):return True
         except (OSError,ValueError):pass
     return False
+def gpu_process_owners():
+    q=subprocess.run(["nvidia-smi","--query-compute-apps=pid",
+        "--format=csv,noheader,nounits"],capture_output=True,text=True,timeout=12)
+    if q.returncode!=0: return None
+    return {int(x.strip()) for x in q.stdout.splitlines() if x.strip().isdigit()}
+def gpu_owner_diagnosis():
+    owners=gpu_process_owners()
+    found=[]
+    for p in pathlib.Path("/proc").iterdir():
+        if not p.name.isdigit():continue
+        try:
+            args=[x.decode(errors="replace") for x in (p/"cmdline").read_bytes().split(bytes([0])) if x]
+            if not args:continue
+            hits=[a for a in args[1:] if pathlib.Path(a).name in
+                 ("a40_cuda_distillation_direct.py","a40_full_parameter_distill_cycle.py")]
+            if hits:
+                pid=int(p.name)
+                found.append({"pid":pid,"cmd":" ".join(args)[:220],
+                    "gpu_owner":owners is not None and pid in owners})
+        except (OSError,ValueError):continue
+    return {"gpu_owners":sorted(owners) if owners is not None else None,
+            "matching_compute_jobs":found}
+
 def launch(argv, timeout, label):
     log=ROOT/"logs"/("NOX_V3_"+label+".log")
     log.parent.mkdir(parents=True,exist_ok=True)
@@ -117,8 +140,14 @@ def run(node,plan):
                      "model_stage_rc":rc,"self_model_rc":self_rc,"progress_rc":prog_rc,"journal_rc":journal_rc})
     if node!="A40":
         return emit({"node":node,"status":"HOLD_NODE_UNKNOWN"})
-    if process_has("a40_cuda_distillation_direct.py") or process_has("a40_full_parameter_distill_cycle.py"):
-        return emit({"node":node,"status":"HOLD_OLD_OR_FULL_GPU_OWNER_ACTIVE"})
+    busy=gpu_owner_diagnosis()
+    if busy["matching_compute_jobs"]:
+        return emit({"node":node,"status":"HOLD_OLD_OR_FULL_GPU_OWNER_ACTIVE",
+                     "owner_diagnostics":busy,
+                     "note":"GPU_ZERO_DOES_NOT_PROVE_TRAINER_NOT_LOADING_CPU"})
+    if busy["gpu_owners"] is None or busy["gpu_owners"]:
+        return emit({"node":node,"status":"HOLD_OTHER_GPU_COMPUTE_OWNER",
+                     "owner_diagnostics":busy})
     if not MEM.is_file():
         return emit({"node":node,"status":"HOLD_S03_MEMORY_MISSING"})
     gpu=BIN/"nox_teacher_server_batch.py"
@@ -158,8 +187,10 @@ def run(node,plan):
     if improvement.is_file():launch(["python3",str(improvement)],120,"IMPROVEMENT")
     # Training runs after teachers have exited. It is not started if the already
     # running legacy process came back, or if the last cycle is still in flight.
-    if process_has("a40_cuda_distillation_direct.py") or process_has("a40_full_parameter_distill_cycle.py"):
-        return emit({"node":node,"status":"HOLD_GPU_REOCCUPIED","teachers":out})
+    later=gpu_owner_diagnosis()
+    if later["matching_compute_jobs"] or later["gpu_owners"] is None or later["gpu_owners"]:
+        return emit({"node":node,"status":"HOLD_GPU_REOCCUPIED","teachers":out,
+                     "owner_diagnostics":later})
     if manual_stop(node):return emit({"node":node,"status":"HOLD_SAFE70_BEFORE_TRAINING","teachers":out})
     swarm=BIN/"nox_adaptive_swarm.py"
     if swarm.is_file():
@@ -175,6 +206,9 @@ def run(node,plan):
         result=json.loads(A40_TRAIN.read_text())
         status=result.get("status","UNKNOWN")
         steps=result.get("steps_executed_this_cycle",0)
+        output_cycle=str((result.get("extra") or {}).get("output",""))
+        if status=="COMPLETE_VERIFIED" and ("NOX_FULL_CYCLE_"+cycle+"_STEP_") not in output_cycle:
+            status="HOLD_STALE_TRAINER_RECEIPT"
     except (OSError,ValueError):
         status="UNKNOWN";steps=0
     if improvement.is_file():launch(["python3",str(improvement)],120,"IMPROVEMENT")
