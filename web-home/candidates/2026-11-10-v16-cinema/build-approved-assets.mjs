@@ -119,6 +119,15 @@ fs.writeFileSync(path.join(target,'MANIFEST.json'),JSON.stringify({version:'2026
 fs.writeFileSync(path.join(target,'ATTRIBUTION.txt'),'Planet textures © Solar System Scope, licensed under CC BY 4.0. https://www.solarsystemscope.com/textures/\nHDRI Machine Shop 01 © Poly Haven, CC0.\nMetal012 PBR © ambientCG, CC0.\n');
 console.log('NOX ASSETS INSTALLED:',records.length,'total bytes:',records.reduce((s,x)=>s+x.bytes,0));
 
+const ownerAsset='assets/nox-owner-approved/NOX_HOME_OWNER_APPROVED_WEB.webp';
+const ownerFile=path.join(out,ownerAsset);
+if(!fs.existsSync(ownerFile))throw Error('NOX_OWNER_APPROVED_ART_NOT_PACKAGED');
+const ownerSha=crypto.createHash('sha256').update(fs.readFileSync(ownerFile)).digest('hex');
+if(ownerSha!=='3253d26819a70b49259fdb2a56c2eaa2455c6878cb2ccb8d62b225ec6ccdfa22')throw Error('NOX_OWNER_APPROVED_WEB_ART_SHA_DRIFT');
+for(const f of ['nox-owner-director-v20.css','nox-owner-director-v20.js'])if(!fs.existsSync(path.join(out,f)))throw Error('NOX_OWNER_CINEMATIC_FILE_MISSING:'+f);
+execFileSync('node',['--check',path.join(out,'nox-owner-director-v20.js')],{stdio:'pipe'});
+const ownerHtml=fs.readFileSync(path.join(out,'index.html'),'utf8');
+for(const f of ['nox-owner-director-v20.css','nox-owner-director-v20.js'])if(!ownerHtml.includes(f))throw Error('NOX_OWNER_HTML_NOT_ATTACHED:'+f);
 const mandatory=['index.html','nox-home.mjs','nox-home-flow.js','nox-home-flow.css','nox-home-recovery.js','nox-ui.css','nox-global-wow-v18.css','nox-global-wow-v18.js','nox-orbit-original.js','nox-engines/physical-worlds-v7.mjs','assets/nox-approved/MANIFEST.json','assets13/asteroid_bennu.stl','assets13/BENNU-RECEIPT.json'];
 const remaining=mandatory.filter(f=>!fs.existsSync(path.join(out,f)));
 if(remaining.length)throw Error('NOX_P0_FILES_MISSING:'+remaining.join(','));
@@ -133,7 +142,7 @@ for(const [filename,expected] of Object.entries(sourceOriginals)){
 const packReceipt={
  version:'2026-11-10-P0',assembly:'BUILD_SCRIPT_EXECUTED',pbrHdrCount:records.length,
  bennu:{bytes:bennuReceipt.bytes,sha256:bennuReceipt.sha256,triangles:bennuReceipt.triangles,stlStructure:bennuReceipt.verifiedStlStructure},
- pages:pagesEvidence,requiredFiles:mandatory.length,v19LibraryFiles:extrasReceipt.files.length,v19LibraryHashes:extrasReceipt.files.map(x=>({name:x.file,sha256:x.sha256})),
+ pages:pagesEvidence,ownerApprovedArt:{file:ownerAsset,sha256:ownerSha,origin:'Google Drive owner-approved 2026-10-22 SHA256 382c1069afcaaaed11c319796f2c553d2bd977d7e46c68ecd7d55af26e132a4a'},requiredFiles:mandatory.length,v19LibraryFiles:extrasReceipt.files.length,v19LibraryHashes:extrasReceipt.files.map(x=>({name:x.file,sha256:x.sha256})),
  d02Source:'HISTORICAL_ORIGINAL_VERCEL_SNAPSHOT_SHA256_VERIFIED',
  deployedGpuQA:'HOLD',browserAcceptance:'NOT_EXECUTED',productionModified:false
 };
