@@ -91,6 +91,16 @@ try{
     const missingLinks=[...document.querySelectorAll('a[href]')].filter(a=>!a.getAttribute('href')?.trim()).length;
     return {v19Style:!!document.querySelector('link[href*="nox-universe-v19.css"]'),v19Script:!!window.NOX_UNIVERSE_V19,sharedStyle:!!document.querySelector('link[href*="nox-global-wow-v18.css"]'),sharedScript:!!window.NOX_WOW_GLOBAL_V18,visibleSelects:visibleSelects.length,choiceGroups:document.querySelectorAll('.nox-wow-choice-group').length,buttons:buttons.length,missingLinks};
    });
+   if(name==='system.html'||name==='training.html'){
+    await page.waitForFunction(()=>!!window.NOX_PROGRESS_PANEL,{timeout:7000});
+    await page.locator('#nox-evidence-progress button').first().click();
+    await page.waitForFunction(()=>document.querySelector('.nox-evidence-status')?.textContent?.includes('HOLD'),{timeout:7000});
+    checks.progressPanel=!!await page.locator('#nox-evidence-progress').count();
+    checks.progressProofHold=(await page.locator('.nox-evidence-status').textContent()).includes('HOLD');
+    checks.progressSyntheticPercentVisible=await page.locator('.nox-evidence-metric').count()>0;
+    if(!checks.progressPanel||!checks.progressProofHold||checks.progressSyntheticPercentVisible)
+      errors.push('NOX_PROGRESS_MUST_HOLD_WITHOUT_CHECKPOINT_AND_TRAINER_HASHES');
+   }
   }catch(e){errors.push(String(e))}
   report.sections.push({name,status,checks,backendUnavailable,errors,acceptance:status===200&&checks?.sharedStyle&&checks?.sharedScript&&checks?.v19Style&&checks?.v19Script&&checks.visibleSelects===0&&errors.length===0?'PAGE_UI_PASS':'HOLD'});
   await page.close();
