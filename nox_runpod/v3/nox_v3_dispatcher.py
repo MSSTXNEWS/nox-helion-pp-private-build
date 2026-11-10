@@ -6,7 +6,7 @@ start compute. 'active' runs one bounded step at a time; no force kill,
 no memory deletion, no model fabrication, and no GPU double ownership.
 """
 from __future__ import annotations
-import argparse, datetime, fcntl, json, os, pathlib, subprocess, sys, time, shutil, urllib.request
+import argparse, datetime, fcntl, json, os, pathlib, subprocess, sys, time, shutil, urllib.request, hashlib
 
 ROOT=pathlib.Path("/workspace/nox")
 STATE=ROOT/"dispatcher/nox_v3"
@@ -190,6 +190,8 @@ def main():
     try:fcntl.flock(lk,fcntl.LOCK_EX|fcntl.LOCK_NB)
     except BlockingIOError:
         print("NOX_V3_DISPATCHER_ALREADY_RUNNING",args.node,flush=True);return
+    own_source=pathlib.Path(__file__)
+    own_digest=hashlib.sha256(own_source.read_bytes()).hexdigest()
     while True:
         try:
             github_revision=check_github_master()
@@ -200,5 +202,11 @@ def main():
         except Exception as e:
             emit({"node":args.node,"status":"HOLD_EXCEPTION","reason":type(e).__name__+":"+str(e)[:180]})
         if args.once:return
+        # Hot-update only BETWEEN complete jobs; never terminate teacher or trainer.
+        try:
+            updated=hashlib.sha256(own_source.read_bytes()).hexdigest()
+            if updated!=own_digest:
+                os.execv(sys.executable,[sys.executable,"-u",str(own_source),"--node",args.node])
+        except (OSError,ValueError):pass
         time.sleep(180)
 if __name__=="__main__":main()
