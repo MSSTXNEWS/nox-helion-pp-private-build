@@ -1,59 +1,81 @@
 {
   "project": "NOX HELION",
-  "target": "preview",
-  "deployment": "dpl_LaD842iRKrpggcpJgpvydRg1cW12",
-  "url": "https://nox-helion-real-home-preview-12ef0smxz-msttx.vercel.app/",
-  "sourceFiles": 181,
-  "required": [
+  "scope": "V18 P0",
+  "checkedAt": "2026-11-10",
+  "instructions_version": "0.0.6",
+  "pullRequest": 241,
+  "headSha": "cf2725facd2ff452d25f9a16e5729bbd6f25b524",
+  "preview": {
+    "deploymentId": "dpl_8qLmMaoHmHGVxGaj7dxBTCqK5LC5",
+    "url": "https://nox-helion-real-home-preview-q88wdhtf7-msttx.vercel.app/",
+    "state": "READY",
+    "target": null,
+    "protectedBySSO": true
+  },
+  "build": {
+    "sourceFilesDownloaded": 188,
+    "executedBuildScript": true,
+    "buildSecondsApprox": 2,
+    "logEvidence": [
+      "NOX ASSETS INSTALLED: 14 total bytes: 7808781",
+      "NOX_P0_BUILD_RECEIPT: {\"pages\":10,\"assets\":14,\"bennuBytes\":2457684,\"stlVerified\":true,\"gpuAcceptance\":\"HOLD\"}"
+    ],
+    "originalsPinnedSha256": {
+      "nox-home.mjs": "8066bc0a0f8ef5bb5f0fb1f58ad3f6ee29dc8506385c09d77d38d4235c7e42e9",
+      "nox-home-flow.js": "a28dc4a9bd36638182aa05b89513d8ded2800ee78c0db3a52ccea07d292a52ca"
+    }
+  },
+  "p0": [
     {
-      "file": "nox-home.mjs",
-      "present": false
+      "number": 1,
+      "name": "Original D02 WebGL runtime",
+      "source": "Historical Vercel sandbox snapshot snap_aiZOvX61iQFry0Emsu0xWf9wwboC",
+      "status": "EXACT_SOURCE_RESTORED_SHA_VERIFIED",
+      "runtime": "NOT_TESTED"
     },
     {
-      "file": "nox-home-flow.js",
-      "present": false
+      "number": 2,
+      "name": "HOME flow JS/CSS",
+      "status": "JS_ORIGINAL_SHA_VERIFIED_CSS_RECONSTRUCTED",
+      "runtime": "NOT_TESTED"
     },
     {
-      "file": "nox-home-recovery.js",
-      "present": false
+      "number": 3,
+      "name": "HOME recovery JS",
+      "status": "RESTORED_FROM_V11_SOURCE",
+      "runtime": "NOT_TESTED"
     },
     {
-      "file": "nox-ui.js",
-      "present": true
+      "number": 4,
+      "name": "14 PBR HDRI",
+      "status": "BUILD_SHA256_PIN_VERIFIED",
+      "runtime": "NOT_TESTED"
     },
     {
-      "file": "nox-ui.css",
-      "present": true
+      "number": 5,
+      "name": "NASA Bennu STL",
+      "status": "REAL_STL_VERIFIED_IN_BUILD",
+      "bytes": 2457684,
+      "runtime": "NOT_TESTED"
     },
     {
-      "file": "nox-global-wow-v18.js",
-      "present": false
+      "number": 6,
+      "name": "Full WEB source",
+      "status": "188_SOURCE_INPUTS_AND_10_PAGE_BUILD_VALIDATED",
+      "functionRegression": "NOT_TESTED"
     },
     {
-      "file": "nox-global-wow-v18.css",
-      "present": false
+      "number": 7,
+      "name": "Executable Vercel build",
+      "status": "PASS_BUILD_READY"
     },
     {
-      "file": "vendor/nox-liquid-glass/liquid-glass.css",
-      "present": true
-    },
-    {
-      "file": "build-approved-assets.mjs",
-      "present": true
+      "number": 8,
+      "name": "Physical GPU screenshots",
+      "status": "HOLD_NO_HARDWARE_BROWSER_ACCESS"
     }
   ],
-  "deployStatus": "READY",
-  "buildLogObserved": "Build Completed in /vercel/output [71ms]; NOX ASSETS INSTALLED log absent",
-  "completeWebAcceptance": "HOLD",
-  "physicalGpuAcceptance": "NOT_TESTED",
-  "assetIntegrityRuntime": "NOT_VERIFIED",
   "productionChanged": false,
-  "driveArchive": {
-    "name": "NOX_HELION_ONE_SOURCE_FUSION_V9_20261109.zip",
-    "bytes": 615706569,
-    "sha256": "4e3e365b5a33954819de59926b7c0bcc4614f2ebbba86fd0f51b08ad5da33648",
-    "zipEntries": 3993,
-    "logicalPaths": 6551,
-    "containsMissingWebRuntime": false
-  }
+  "releaseAccepted": false,
+  "notes": "Deployment Protection SSO blocks public screenshot inspection; no bypass/share link created. Build PASS != WebGL/browser acceptance."
 }
