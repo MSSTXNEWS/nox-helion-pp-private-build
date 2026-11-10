@@ -13,6 +13,9 @@ const sources=[
  {name:'FUSE-LICENSE.txt',url:'https://cdn.jsdelivr.net/npm/fuse.js@7.1.0/LICENSE',minBytes:100,maxBytes:15000,license:'Apache-2.0'},
  {name:'leaflet.js',url:'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js',minBytes:80000,maxBytes:300000,license:'BSD-2-Clause'},
  {name:'leaflet.css',url:'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css',minBytes:5000,maxBytes:30000,license:'BSD-2-Clause'},
+ {name:'images/layers.png',url:'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/images/layers.png',minBytes:300,maxBytes:20000,license:'BSD-2-Clause'},
+ {name:'images/layers-2x.png',url:'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/images/layers-2x.png',minBytes:300,maxBytes:30000,license:'BSD-2-Clause'},
+ {name:'images/marker-icon.png',url:'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/images/marker-icon.png',minBytes:200,maxBytes:20000,license:'BSD-2-Clause'},
  {name:'LEAFLET-PACKAGE.json',url:'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/package.json',minBytes:300,maxBytes:100000,license:'BSD-2-Clause'},
  {name:'fullcalendar.global.min.js',url:'https://cdn.jsdelivr.net/npm/fullcalendar@6.1.19/index.global.min.js',minBytes:50000,maxBytes:1400000,license:'MIT'},
  {name:'FULLCALENDAR-LICENSE.txt',url:'https://cdn.jsdelivr.net/npm/fullcalendar@6.1.19/LICENSE.md',minBytes:100,maxBytes:20000,license:'MIT'},
@@ -44,6 +47,7 @@ async function getFile(entry,output){
    const prefix=bytes.subarray(0,300).toString('utf8').toLowerCase();
    if(prefix.includes('<!doctype html')||prefix.includes('<html'))throw Error('HTML_INSTEAD_OF_LIBRARY');
    const sha256=createHash('sha256').update(bytes).digest('hex');
+   await fs.mkdir(path.dirname(path.join(output,entry.name)),{recursive:true});
    await fs.writeFile(path.join(output,entry.name),bytes);
    return {file:entry.name,size:bytes.length,sha256,source:entry.url,license:entry.license};
   }catch(e){last=e}finally{clearTimeout(timeout)}
