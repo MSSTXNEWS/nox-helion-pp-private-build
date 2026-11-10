@@ -35,7 +35,7 @@ def ps_running(node):
   except OSError:pass
  return found
 def tick(node,improve):
- status={"utc":utc(),"node":node,"watchdog_interval_seconds":10,
+ status={"utc":utc(),"node":node,"watchdog_interval_seconds":60,
          "actions":[],"auto_reboot_pod":False,"auto_kill_training":False}
  if (S/("STOP_"+node)).exists() or (S/("MANUAL_STOP_"+node)).exists() or (S/("HOLD_"+node)).exists():
   status["state"]="HOLD_STOP_MARKER"
@@ -141,10 +141,10 @@ def main():
    print("NOX_10S_WATCHDOG_ALREADY_RUNNING_"+a.node,flush=True);return
   counter=0
   while True:
-   try:tick(a.node,counter%18==0)
+   try:tick(a.node,counter%3==0)
    except Exception as e:
     atomic(S/("watchdog_10s_"+a.node+".json"),
        {"node":a.node,"utc":utc(),"state":"HOLD_WATCHDOG_EXCEPTION",
        "error":type(e).__name__+":"+str(e)[:200]})
-   counter+=1;time.sleep(10)
+   counter+=1;time.sleep(60)
 if __name__=="__main__":main()
