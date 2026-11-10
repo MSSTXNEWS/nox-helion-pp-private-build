@@ -39,6 +39,8 @@ const overlays=[
  ['nox-resonance-cinema-v13.js','nox-resonance-cinema-v13.js'],
  ['nox-resonance-cinema-v13.css','nox-resonance-cinema-v13.css'],
  ['nox-home-recovery.css','nox-home-recovery.css'],
+ ['nox-home-flow.js','nox-home-flow.js'],
+ ['nox-home-flow.css','nox-home-flow.css'],
  ['industrial-assets.mjs','industrial-assets.mjs'],
  ['nox-global-wow-v18.css','nox-global-wow-v18.css'],
  ['nox-global-wow-v18.js','nox-global-wow-v18.js'],
