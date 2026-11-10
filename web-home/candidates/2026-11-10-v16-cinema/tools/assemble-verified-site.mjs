@@ -40,6 +40,8 @@ const overlays=[
  ['nox-resonance-cinema-v13.css','nox-resonance-cinema-v13.css'],
  ['nox-home-recovery.css','nox-home-recovery.css'],
  ['industrial-assets.mjs','industrial-assets.mjs'],
+ ['nox-global-wow-v18.css','nox-global-wow-v18.css'],
+ ['nox-global-wow-v18.js','nox-global-wow-v18.js'],
 ];
 for(const [from,to] of overlays){
  const file=path.join(candidate,from);
@@ -47,12 +49,24 @@ for(const [from,to] of overlays){
  await fs.mkdir(path.dirname(path.join(dst,to)),{recursive:true});
  await fs.copyFile(file,path.join(dst,to));
 }
+// Single-source shared design for every live HTML route. Never replace functional page content.
+const pages=['index.html','chat.html','cinema.html','install.html','memory.html','models.html','projects.html','settings.html','system.html','training.html'];
+for(const file of pages){
+ const target=path.join(dst,file);
+ let html=await fs.readFile(target,'utf8');
+ if(!/<\/head>/i.test(html)||!/<\/body>/i.test(html))throw Error('NOX_HTML_STRUCTURE_INVALID: '+file);
+ const style='<link rel="stylesheet" href="./nox-global-wow-v18.css" data-nox-wow-shared="v18">';
+ const script='<script defer src="./nox-global-wow-v18.js" data-nox-wow-shared="v18"></script>';
+ if(!html.includes('nox-global-wow-v18.css'))html=html.replace(/<\/head>/i,style+'</head>');
+ if(!html.includes('nox-global-wow-v18.js'))html=html.replace(/<\/body>/i,script+'</body>');
+ await fs.writeFile(target,html);
+}
 const html=await fs.readFile(path.join(dst,'index.html'),'utf8');
 const sameOrigin=['nox-home.mjs','nox-orbit-original.js','nox-engines/physical-worlds-v7.mjs'];
 for(const p of sameOrigin){
  if(!await exists(path.join(dst,p)))throw Error('NOX_ENTRYPOINT_MISSING: '+p);
 }
 if(!html.includes('nox-home.mjs'))throw Error('NOX_MASTER_D02_NOT_REFERENCED');
-const report={baseline:src,staging:dst,filesOverlaid:overlays.map(x=>x[1]),approvedAssetFiles:manifest.files.length,assetIntegrity:'SHA256_VERIFIED',browserAcceptance:'NOT_RUN',physicalGpuAcceptance:'HOLD',productionChanged:false};
+const report={baseline:src,staging:dst,filesOverlaid:overlays.map(x=>x[1]),approvedAssetFiles:manifest.files.length,pagesEnhanced:pages,visibleDropdownsConvertedAtRuntime:true,assetIntegrity:'SHA256_VERIFIED',browserAcceptance:'NOT_RUN',physicalGpuAcceptance:'HOLD',productionChanged:false};
 await fs.writeFile(path.join(dst,'NOX-V18-ASSEMBLY-RECEIPT.json'),JSON.stringify(report,null,2));
 console.log('NOX source assembly complete, GPU acceptance HOLD:',JSON.stringify(report));
