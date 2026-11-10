@@ -26,7 +26,7 @@ def safe_policy():
  return d["revision"]
 def run_one(node):
  rev=safe_policy()
- if (STATE/("STOP_"+node)).exists() or (STATE/("HOLD_"+node)).exists():
+ if (STATE/("STOP_"+node)).exists() or (STATE/("MANUAL_STOP_"+node)).exists():
   return {"status":"HOLD_SAFE70_OR_STOP","master_revision":rev}
  # Exact external scripts are fetched & compile checked by installer, never arbitrary code from master JSON.
  for name in ("nox_v3_cutover.py","nox_v3_supervisor.py"):
