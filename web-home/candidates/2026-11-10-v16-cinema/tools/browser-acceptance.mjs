@@ -145,7 +145,12 @@ try{
   await p.locator('.nox-v19-gallery a').first().click();
   await p.waitForSelector('.pswp.pswp--open[role="dialog"]',{timeout:15000});
   const lightboxOpened=await p.locator('.pswp.pswp--open[role="dialog"]').count()===1;
-  await p.keyboard.press('Escape');
+  // Close the actual PhotoSwipe overlay before testing underlying buttons.
+  // Escape alone is asynchronous: without waiting, an overlay can intercept the next click.
+  const closeButton=p.locator('.pswp.pswp--open .pswp__button--close');
+  if(await closeButton.count())await closeButton.click();
+  else await p.keyboard.press('Escape');
+  await p.waitForFunction(()=>!document.querySelector('.pswp.pswp--open'),{timeout:12000});
   report.v19Modules.push({name:'Галерея',source:'PhotoSwipe local',passed:lightboxOpened});
   await p.getByRole('button',{name:'Эффекты',exact:true}).click();
   await p.getByRole('button',{name:'ECO · 15'}).click();
