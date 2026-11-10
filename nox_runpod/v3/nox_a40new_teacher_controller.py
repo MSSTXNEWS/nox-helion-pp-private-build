@@ -32,9 +32,9 @@ def main():
   n=0
   while True:
    if (S/"STOP").exists():
-    emit(status="HOLD_MANUAL_STOP");time.sleep(10);continue
+    emit(status="HOLD_MANUAL_STOP");time.sleep(60);continue
    if not (R/"teachers").is_dir():
-    emit(status="HOLD_SHARED_VOLUME_MISSING",hint="Reconnect /workspace");time.sleep(10);continue
+    emit(status="HOLD_SHARED_VOLUME_MISSING",hint="Reconnect /workspace");time.sleep(60);continue
    models=[
       ("Qwen3.5-27B",R/"teachers/Qwen3.5-27B/Qwen3.5-27B-Q4_K_M.gguf"),
       ("DeepSeek-R1-Distill-Qwen-32B",R/"teachers/DeepSeek-R1-Distill-Qwen-32B/DeepSeek-R1-Distill-Qwen-32B-Q4_K_M.gguf")
@@ -48,31 +48,31 @@ def main():
     except (OSError,ValueError):pass
    if not todo:
     emit(status="HOLD_NO_VERIFIED_HEAVY_TEACHER",available=[str(p) for _,p in models if p.is_file()])
-    time.sleep(10);continue
+    time.sleep(60);continue
    server=R/"tools/llama.cpp/build/bin/llama-server"
    if not server.exists():
     import shutil
     if not shutil.which("llama-server"):
-     emit(status="HOLD_LLAMA_SERVER_MISSING");time.sleep(10);continue
+     emit(status="HOLD_LLAMA_SERVER_MISSING");time.sleep(60);continue
    cur=owners()
    if cur is None or cur:
-    emit(status="GPU_OTHER_OWNER_PRESERVED",gpu=snapshot(),gpu_owners=cur);time.sleep(10);continue
+    emit(status="GPU_OTHER_OWNER_PRESERVED",gpu=snapshot(),gpu_owners=cur);time.sleep(60);continue
    teacher=todo[n%len(todo)]
    n+=1
    cmd=["python3","-u",str(B/"nox_teacher_server_batch.py"),"--node","A40NEW",
-        "--teacher",teacher,"--start","0","--limit","20","--gpu-layers","50","--ctx","2048"]
+        "--teacher",teacher,"--start","0","--limit","50","--gpu-layers","50","--ctx","2048"]
    log=R/"logs/NOX_A40NEW_TEACHERS.log";log.parent.mkdir(parents=True,exist_ok=True)
    if not pathlib.Path(cmd[2]).exists():
-    emit(status="HOLD_SCRIPT_MISSING");time.sleep(10);continue
+    emit(status="HOLD_SCRIPT_MISSING");time.sleep(60);continue
    with log.open("ab") as f:
     proc=subprocess.Popen(cmd,stdout=f,stderr=subprocess.STDOUT,stdin=subprocess.DEVNULL)
-    emit(status="TEACHER_BATCH_STARTED",teacher=teacher,pid=proc.pid,gpu=snapshot(),max_batch=20)
+    emit(status="TEACHER_BATCH_STARTED",teacher=teacher,pid=proc.pid,gpu=snapshot(),max_batch=50)
     while proc.poll() is None:
      emit(status="TEACHER_BATCH_RUNNING",teacher=teacher,pid=proc.pid,gpu=snapshot())
-     time.sleep(10)
+     time.sleep(60)
    emit(status="TEACHER_BATCH_FINISHED" if proc.returncode==0 else "HOLD_TEACHER_BATCH_FAILED",
         teacher=teacher,exit_code=proc.returncode,gpu=snapshot())
-   time.sleep(10 if proc.returncode==0 else 60)
+   time.sleep(60)
 if __name__=="__main__":
  try:main()
  except Exception as e:emit(status="HOLD_CONTROLLER_EXCEPTION",error=type(e).__name__+":"+str(e)[:280]);raise
