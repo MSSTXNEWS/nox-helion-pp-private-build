@@ -23,6 +23,7 @@ jobs:
           node --check web-home/candidates/2026-11-10-v16-cinema/nox-cinematic-health.js
           node --check web-home/candidates/2026-11-10-v16-cinema/tools/browser-acceptance.mjs
           node --check web-home/candidates/2026-11-10-v16-cinema/tools/assemble-verified-site.mjs
+          node --check web-home/candidates/2026-11-10-v16-cinema/nox-global-wow-v18.js
           node --check web-home/candidates/2026-11-09-v15-repair/nox-home-recovery.js
           node --check web-home/candidates/2026-11-09-v15-repair/nox-orbit-original.js
       - name: Verify 14-control source and explicit GPU hold
@@ -49,6 +50,16 @@ jobs:
           assert.match(health,/outOfViewport/);
           assert.match(runner,/physicalGpuAcceptance:'HOLD'/);
           assert.match(runner,/3840,2160/);
+          const wowCss=fs.readFileSync(root+'2026-11-10-v16-cinema/nox-global-wow-v18.css','utf8');
+          const wowJs=fs.readFileSync(root+'2026-11-10-v16-cinema/nox-global-wow-v18.js','utf8');
+          const assembler=fs.readFileSync(root+'2026-11-10-v16-cinema/tools/assemble-verified-site.mjs','utf8');
+          for(const f of ['index.html','chat.html','cinema.html','install.html','memory.html','models.html','projects.html','settings.html','system.html','training.html']) assert(assembler.includes("'"+f+"'"),'Missing route '+f);
+          assert.match(assembler,/nox-global-wow-v18.css/);
+          assert.match(assembler,/nox-global-wow-v18.js/);
+          assert.match(wowJs,/dispatchEvent\(new Event\('change'/);
+          assert.match(wowJs,/MutationObserver/);
+          assert.match(wowCss,/prefers-reduced-motion/);
+          assert.match(wowCss,/nox-wow-choice-group/);
           assert(!pbr.includes(',const zScale='),'Invalid JavaScript statement separator in the PBR scale patch');
           assert(contract.includes('HOLD'),'Do not claim visual acceptance from syntax checks');
           console.log('Source gate PASS; real GPU/render QA remains HOLD');
