@@ -6,7 +6,7 @@ set -Eeuo pipefail
 export HF_HUB_DISABLE_TELEMETRY=1
 R=/workspace/nox
 D=/opt/nox_eu_genesis
-BASE=https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/feature/nox-prime-v3-teachers-progress-20261110
+BASE="${NOX_SOURCE_ROOT:-https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/feature/nox-prime-v3-teachers-progress-20261110}"
 mkdir -p "$R/models" "$R/teachers" "$R/dispatcher/nox_v3/bin" "$R/distillation" "$R/logs" "$R/memory/NOX_UNIFIED_S03" "$D"
 exec 9>"$D/bootstrap.lock"
 flock -n 9 || { echo HOLD_BOOTSTRAP_ALREADY_RUNNING;exit 2; }
