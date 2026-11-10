@@ -64,7 +64,9 @@ try{
      });
    }
    if(name==='1440' && snapshot) assetCheck=await page.evaluate(()=>window.NOX_CINEMATIC_HEALTH.checkAssets().catch(e=>({error:String(e)})));
-   await page.screenshot({path:path.join(out,name+'.png'),fullPage:true,timeout:30000});
+   if(name==='4k'){
+     await page.screenshot({path:path.join(out,name+'.jpg'),type:'jpeg',quality:70,fullPage:false,timeout:90000});
+   }else await page.screenshot({path:path.join(out,name+'.png'),fullPage:true,timeout:30000});
   }catch(e){errors.push('RUN: '+String(e.message||e))}
   const rendered=!!(snapshot?.core?.realRendered&&snapshot?.worlds?.allMaterialAssetsReady&&snapshot?.effects?.errors?.length===0);
   const acceptance=blocked?'BLOCKED_SSO':!snapshot?'HOLD_NO_RUNTIME_DIAGNOSTICS':rendered&&errors.length===0?'BROWSER_CANDIDATE':'HOLD';
@@ -110,7 +112,7 @@ try{
   for(const name of ['Кинотеатр','Книги','Календарь','Галерея','Эффекты','Новости','Уведомления','Погода','Валюта','Браузер','Разделы'])
    if(!moduleButtons.includes(name))throw Error('NOX_V19_MISSING_MODULE_BUTTON_'+name);
   await p.getByRole('button',{name:'Календарь',exact:true}).click();
-  try{await p.waitForSelector('.nox-v19-calendar .fc',{timeout:13000});}
+  try{await p.waitForSelector('.nox-v19-calendar.fc .fc-toolbar',{timeout:13000});}
   catch(e){
     const diag=await p.evaluate(()=>({calendarMarkup:document.querySelector('.nox-v19-calendar')?.innerHTML?.slice(0,400),
       status:document.querySelector('.nox-v19-status')?.textContent,
