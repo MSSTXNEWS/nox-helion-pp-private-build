@@ -88,6 +88,17 @@ for(const item of ['metal/Metal012_1K-JPG_Color.jpg','metal/Metal012_1K-JPG_Norm
 // Shared V18 UI gets injected into the original TEN HTML pages at build time.
 // The original functional page bodies, navigation and D02 scene are retained.
 const extrasReceipt=await installExtras(out);
+// Historical UI imports the Three ES module locally. Restore the pinned official module
+// without changing the legacy WebGL entrypoints or the 14 PBR controls.
+const threeModule=path.join(out,'vendor/nox-extra/three.module.js');
+if(!fs.existsSync(threeModule))throw Error('NOX_THREE_MODULE_PIN_MISSING');
+fs.mkdirSync(path.join(out,'vendor/three'),{recursive:true});
+fs.copyFileSync(threeModule,path.join(out,'vendor/three/three.module.js'));
+for(const name of ['nox-glass-home.css','nox-glass-film.css','nox-glass-init.mjs']){
+ if(!fs.existsSync(path.join(out,name)))throw Error('NOX_GLASS_BRIDGE_MISSING:'+name);
+}
+execFileSync('node',['--check',path.join(out,'nox-glass-init.mjs')],{stdio:'pipe'});
+
 const pages=['index.html','chat.html','cinema.html','install.html','memory.html','models.html','projects.html','settings.html','system.html','training.html'];
 for(const page of pages){
  const p=path.join(out,page);
