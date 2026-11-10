@@ -106,6 +106,9 @@ for(const page of pages){
  if(!html.includes('nox-global-wow-v18.js'))html=html.replace(/<\/body>/i,script+'</body>');
  if(!html.includes('nox-universe-v19.css'))html=html.replace(/<\/head>/i,universeStyle+'</head>');
  if(!html.includes('nox-universe-v19.js'))html=html.replace(/<\/body>/i,universeScript+'</body>');
+ if(html.includes('src="/https://'))html=html.replaceAll('src="/https://','src="https://'); // Repair three historically malformed Lucide URLs.
+ if(page==='memory.html')html=html.replace(/<img\\s+src="nox-memory-core\\.svg"[^>]*>/i,''); // Missing decorative art is not fabricated or replaced with a false image.
+
  fs.writeFileSync(p,html);
 }
 for(const name of ['nox-universe-v19.js','nox-universe-v19.css','nox-section-map-v19.json','nox-install-extra-v19.mjs'])if(!fs.existsSync(path.join(out,name)))throw Error('NOX_UNIVERSE_V19_MISSING:'+name);
@@ -134,6 +137,7 @@ for(const [id,expected] of Object.entries(ownerPersonaSha)){
 }
 
 for(const f of ['nox-owner-director-v20.css','nox-owner-director-v20.js'])if(!fs.existsSync(path.join(out,f)))throw Error('NOX_OWNER_CINEMATIC_FILE_MISSING:'+f);
+if(!fs.existsSync(path.join(out,'nox-resonance-cinema-v13.css')))throw Error('NOX_RESONANCE_APPROVED_CSS_MISSING');
 execFileSync('node',['--check',path.join(out,'nox-owner-director-v20.js')],{stdio:'pipe'});
 // V21 assets must exist in the actual Vercel output, not only the GitHub patch directory.
  for(const f of ['nox-owner-fidelity-v21.css','nox-owner-fidelity-v21.js'])if(!fs.existsSync(path.join(out,f)))throw Error('NOX_V21_FIDELITY_MISSING:'+f);
