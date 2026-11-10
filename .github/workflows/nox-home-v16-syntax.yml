@@ -25,6 +25,7 @@ jobs:
           node --check web-home/candidates/2026-11-10-v16-cinema/tools/physical-gpu-acceptance.mjs
           node --check web-home/candidates/2026-11-10-v16-cinema/tools/assemble-verified-site.mjs
           node --check web-home/candidates/2026-11-10-v16-cinema/tools/restore-pinned-baseline.mjs
+          node --check web-home/candidates/2026-11-10-v16-cinema/tools/audit-static-references.mjs
           node --check web-home/candidates/2026-11-10-v16-cinema/nox-global-wow-v18.js
           node --check web-home/candidates/2026-11-10-v16-cinema/nox-owner-director-v20.js
           node --check web-home/candidates/2026-11-10-v16-cinema/nox-owner-fidelity-v21.js
@@ -234,6 +235,9 @@ jobs:
           }
           console.log('NOX_V21_FULL_WEB_BUILD_STATIC_PASS 10/10 routes; 20 verified runtime files; GPU/browser HOLD');
           NODE
+      - name: Reject missing local assets on all ten NOX pages
+        working-directory: web-home/candidates/2026-11-10-v16-cinema
+        run: node tools/audit-static-references.mjs dist
       - name: Preserve candidate site with verifiable receipts, without publishing production
         if: always()
         uses: actions/upload-artifact@v4
