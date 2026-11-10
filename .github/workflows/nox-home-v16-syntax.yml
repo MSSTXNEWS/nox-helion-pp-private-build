@@ -25,6 +25,7 @@ jobs:
           node --check web-home/candidates/2026-11-10-v16-cinema/tools/physical-gpu-acceptance.mjs
           node --check web-home/candidates/2026-11-10-v16-cinema/tools/assemble-verified-site.mjs
           node --check web-home/candidates/2026-11-10-v16-cinema/nox-global-wow-v18.js
+          node --check web-home/candidates/2026-11-10-v16-cinema/nox-owner-director-v20.js
           node --check web-home/candidates/2026-11-10-v16-cinema/nox-home-flow.js
           node --check web-home/candidates/2026-11-10-v16-cinema/nox-home.mjs
           node --check web-home/candidates/2026-11-10-v16-cinema/nox-home-recovery.js
@@ -94,6 +95,17 @@ jobs:
           assert.match(wowJs,/MutationObserver/);
           assert.match(wowCss,/prefers-reduced-motion/);
           assert.match(wowCss,/nox-wow-choice-group/);
+          const ownerJs=fs.readFileSync(root+'2026-11-10-v16-cinema/nox-owner-director-v20.js','utf8');
+          const ownerCss=fs.readFileSync(root+'2026-11-10-v16-cinema/nox-owner-director-v20.css','utf8');
+          const ownerIndex=fs.readFileSync(root+'2026-11-10-v16-cinema/index.html','utf8');
+          const ownerBinary=fs.readFileSync(root+'2026-11-10-v16-cinema/assets/nox-owner-approved/NOX_HOME_OWNER_APPROVED_WEB.webp');
+          assert.equal(crypto.createHash('sha256').update(ownerBinary).digest('hex'),'3253d26819a70b49259fdb2a56c2eaa2455c6878cb2ccb8d62b225ec6ccdfa22');
+          assert.match(ownerJs,/nox-owner-core-rig/);
+          assert.match(ownerJs,/nox-owner-personas/);
+          assert.match(ownerJs,/noxOwnerLayout/);
+          assert.match(ownerCss,/prefers-reduced-motion/);
+          assert.match(ownerIndex,/nox-owner-director-v20.css/);
+          assert.match(ownerIndex,/nox-owner-director-v20.js/);
           const homeFlowJs=fs.readFileSync(root+'2026-11-10-v16-cinema/nox-home-flow.js','utf8');
           const homeFlowCss=fs.readFileSync(root+'2026-11-10-v16-cinema/nox-home-flow.css','utf8');
           assert.match(homeFlowJs,/NOX_FLOW_DIAGNOSTICS/);
