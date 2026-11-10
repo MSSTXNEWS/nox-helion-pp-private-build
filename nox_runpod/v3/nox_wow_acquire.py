@@ -5,7 +5,7 @@ No extra large LLM, no activation of another chat model, no benchmark leakage
 into training. For model snapshots, HF file URLs are fetched with HTTP range
 resume only if server supports it. SHA receipts recorded after download.
 """
-import argparse,datetime,hashlib,json,os,pathlib,shutil,subprocess,sys,urllib.request,urllib.error,time
+import argparse,datetime,hashlib,json,os,pathlib,shutil,subprocess,sys,urllib.request,urllib.error,time,fcntl
 ROOT=pathlib.Path("/workspace/nox")
 DEST=ROOT/"assets/nox_wow_max"
 MANIFEST=ROOT/"dispatcher/nox_v3/NOX_WOW_MAX_MANIFEST.json"
@@ -79,12 +79,25 @@ def repo(name,url):
 def main():
  p=argparse.ArgumentParser();p.add_argument("--node",choices=("A40","A5000"),required=True);a=p.parse_args()
  DEST.mkdir(parents=True,exist_ok=True)
+ lk=(DEST/".acquisition.lock").open("a+")
+ try:fcntl.flock(lk,fcntl.LOCK_EX|fcntl.LOCK_NB)
+ except BlockingIOError:
+  print("NOX_WOW_ACQUISITION_ALREADY_RUNNING",flush=True);return
  # A5000 handles modest CPU self-model/evaluation assets in spare time.
  if a.node!="A5000":
   print("NOX_WOW_ASSETS_A5000_OWNER",flush=True);return
  if shutil.disk_usage(DEST).free<2*1024**3:
   print("HOLD_WOW_DISK_CAPACITY",flush=True);return
  for url,name,lim in FILES["emotion_cpu"]:download(url,DEST/name,lim)
+ # Embedding retrieval is optional: if existing Qwen3 embedding is already on
+ # the shared volume do not duplicate it. Never block heavy teacher training.
+ existing=list((ROOT/"models").glob("*Qwen3*Embedding*")) if (ROOT/"models").is_dir() else []
+ if not existing and shutil.disk_usage(DEST).free>5*1024**3:
+  model="Qwen/Qwen3-Embedding-0.6B"
+  for name,lim in (("model.safetensors",2_200_000_000),("config.json",1_000_000),
+                   ("tokenizer.json",25_000_000),("tokenizer_config.json",2_000_000)):
+   download("https://huggingface.co/"+model+"/resolve/main/"+name,
+            DEST/"embeddings_qwen3"/name,lim)
  for name,url in REPOS.items():repo(name,url)
  print("NOX_WOW_MAX_ACQUISITION_COMPLETED_WITH_PER_ITEM_RECEIPTS",flush=True)
 if __name__=="__main__":main()
