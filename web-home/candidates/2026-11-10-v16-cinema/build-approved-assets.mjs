@@ -68,7 +68,7 @@ for(const name of ['Color','NormalGL','Metalness','Roughness']){
  if(!records.some(x=>x.path==='metal/Metal012_1K-JPG_'+name+'.jpg'))throw new Error('Missing metal map '+name);
 }
 // Verify every downloaded byte against the already accepted V17 hashes.
-const pinned=JSON.parse(fs.readFileSync(path.join(root,'nox-approved-pin.json'),'utf8'));
+const pinned=JSON.parse(fs.readFileSync(path.join(root,'ASSET-MANIFEST-V17.json'),'utf8'));
 for(const item of records){
  const expected=pinned.files.find(x=>x.path===item.path);
  if(!expected||expected.sha256!==item.sha256||expected.bytes!==item.bytes)throw Error('NOX_PINNED_ASSET_MISMATCH:'+item.path);
