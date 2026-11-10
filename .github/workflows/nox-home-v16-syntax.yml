@@ -20,6 +20,8 @@ jobs:
         run: |
           node --check web-home/candidates/2026-11-10-v16-cinema/nox-engines/physical-worlds-v7.mjs
           node --check web-home/candidates/2026-11-10-v16-cinema/nox-resonance-cinema-v13.js
+          node --check web-home/candidates/2026-11-10-v16-cinema/nox-cinematic-health.js
+          node --check web-home/candidates/2026-11-10-v16-cinema/tools/browser-acceptance.mjs
           node --check web-home/candidates/2026-11-09-v15-repair/nox-home-recovery.js
           node --check web-home/candidates/2026-11-09-v15-repair/nox-orbit-original.js
       - name: Verify 14-control source and explicit GPU hold
@@ -37,6 +39,15 @@ jobs:
           }
           assert.match(pbr,/WebGLRenderer/);
           assert.match(pbr,/MeshPhysicalMaterial/);
+          const health=fs.readFileSync(root+'2026-11-10-v16-cinema/nox-cinematic-health.js','utf8');
+          const runner=fs.readFileSync(root+'2026-11-10-v16-cinema/tools/browser-acceptance.mjs','utf8');
+          assert.match(pbr,/planetMapsReady/);
+          assert.match(pbr,/metalMapsReady/);
+          assert.match(pbr,/allMaterialAssetsReady/);
+          assert.match(health,/overlappingControlPairs/);
+          assert.match(health,/outOfViewport/);
+          assert.match(runner,/physicalGpuAcceptance:'HOLD'/);
+          assert.match(runner,/3840,2160/);
           assert(!pbr.includes(',const zScale='),'Invalid JavaScript statement separator in the PBR scale patch');
           assert(contract.includes('HOLD'),'Do not claim visual acceptance from syntax checks');
           console.log('Source gate PASS; real GPU/render QA remains HOLD');
