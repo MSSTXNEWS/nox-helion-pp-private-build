@@ -207,7 +207,7 @@ def run(node,plan):
         A40_TRAIN.parent.mkdir(parents=True,exist_ok=True)
     cycle="v3_"+datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d_%H%M%S")
     # The trainer owns VRAM, RAM, dataset quality, checkpoint, and holdout gates.
-    rc=launch([str(PY),"-u",str(DISTILL),"--cycle",cycle,"--steps","20"],7200,"FULL_PARAMETER")
+    rc=launch([str(PY),"-u",str(DISTILL),"--cycle",cycle,"--steps","80"],7200,"FULL_PARAMETER")
     try:
         result=json.loads(A40_TRAIN.read_text())
         status=result.get("status","UNKNOWN")
