@@ -29,7 +29,7 @@ else
  python3 "$B/nox_v3_supervisor.py" --node "$NODE" || true
 fi
 # Autonomous check: one 10s watchdog per node, checked against exact argv.
-if ! pgrep -af 'nox_watchdog_10s.py' | grep -F -- "--node $NODE" | grep -v grep >/dev/null;then
+if ! pgrep -f "^python3 -u /workspace/nox/dispatcher/nox_v3/bin/nox_watchdog_10s.py --node $NODE$" >/dev/null;then
  nohup python3 -u "$B/nox_watchdog_10s.py" --node "$NODE" >>"$R/logs/NOX_WATCHDOG_10S_$NODE.log" 2>&1 </dev/null &
  echo "WATCHDOG_STARTED PID=$!"
 fi
