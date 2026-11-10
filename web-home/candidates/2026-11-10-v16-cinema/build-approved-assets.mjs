@@ -117,11 +117,16 @@ if(remaining.length)throw Error('NOX_P0_FILES_MISSING:'+remaining.join(','));
 const pagesEvidence=pages.map(n=>{const source=fs.readFileSync(path.join(out,n),'utf8');return {page:n,style:source.includes('nox-global-wow-v18.css'),script:source.includes('nox-global-wow-v18.js'),glass:source.includes('vendor/nox-liquid-glass/liquid-glass.css')}});
 if(pagesEvidence.some(p=>!p.style||!p.script||!p.glass))throw Error('NOX_P0_UI_PAGE_DISCONNECTED');
 const bennuReceipt=JSON.parse(fs.readFileSync(path.join(out,'assets13/BENNU-RECEIPT.json'),'utf8'));
+const sourceOriginals={'nox-home.mjs':'8066bc0a0f8ef5bb5f0fb1f58ad3f6ee29dc8506385c09d77d38d4235c7e42e9','nox-home-flow.js':'a28dc4a9bd36638182aa05b89513d8ded2800ee78c0db3a52ccea07d292a52ca'};
+for(const [filename,expected] of Object.entries(sourceOriginals)){
+ const actual=crypto.createHash('sha256').update(fs.readFileSync(path.join(out,filename))).digest('hex');
+ if(actual!==expected)throw Error('NOX_HISTORIC_ORIGINAL_CHANGED:'+filename);
+}
 const packReceipt={
  version:'2026-11-10-P0',assembly:'BUILD_SCRIPT_EXECUTED',pbrHdrCount:records.length,
  bennu:{bytes:bennuReceipt.bytes,sha256:bennuReceipt.sha256,triangles:bennuReceipt.triangles,stlStructure:bennuReceipt.verifiedStlStructure},
  pages:pagesEvidence,requiredFiles:mandatory.length,
- d02Source:'RECONSTRUCTION_PENDING_EXACT_HISTORIC_SOURCE',
+ d02Source:'HISTORICAL_ORIGINAL_VERCEL_SNAPSHOT_SHA256_VERIFIED',
  deployedGpuQA:'HOLD',browserAcceptance:'NOT_EXECUTED',productionModified:false
 };
 fs.writeFileSync(path.join(out,'NOX-P0-RECEIPT.json'),JSON.stringify(packReceipt,null,2));
