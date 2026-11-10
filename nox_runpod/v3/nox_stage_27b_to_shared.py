@@ -39,6 +39,10 @@ def main():
     if pending.stat().st_size!=SRC.stat().st_size or sha(pending)!=expected:
         raise SystemExit("HOLD_27B_COPY_SHA_MISMATCH")
     os.replace(pending,DEST)
+    proof={"teacher":"Qwen3.5-27B","model_file":DEST.name,"sha256":expected,"bytes":DEST.stat().st_size,"source_receipt":str(RECEIPT),"status":"SHA256_VERIFIED_SHARED"}
+    tmp=DEST.parent/"nox_teacher_proof.json.tmp"
+    tmp.write_text(json.dumps(proof,indent=2),encoding="utf-8")
+    os.replace(tmp,DEST.parent/"nox_teacher_proof.json")
     print("27B_SHARED_SHA256_VERIFIED",DEST,flush=True)
 
 if __name__=="__main__":
