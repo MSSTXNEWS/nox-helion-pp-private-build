@@ -72,3 +72,10 @@
 .nox-v19-particles{position:relative;min-height:clamp(210px,40vh,420px);width:100%;overflow:hidden;border:1px solid rgba(217,164,99,.4);border-radius:16px;background:radial-gradient(ellipse at 50% 48%,#1b1b23,#080c14 53%,#030409 100%);box-shadow:inset 0 1px rgba(255,228,190,.14),0 16px 50px #0008;pointer-events:none}
 .nox-v19-particles canvas{pointer-events:none!important}
 @media(prefers-reduced-motion:reduce){.nox-v19-particles canvas{display:none!important}.nox-v19-particles{min-height:110px}}
+
+/* HOME already has a working NOX MENU button in the approved owner action bar.
+   Do not draw the same service-launch control twice in front of the scene. */
+body.helion-home.nox-owner-cinema .nox-v19-launch{display:none!important}
+body.helion-home.nox-owner-cinema .nox-v19-root{pointer-events:none}
+body.helion-home.nox-owner-cinema .nox-v19-panel{pointer-events:auto}
+/* Keep all live service modules available through the native HOME MENU action. */
