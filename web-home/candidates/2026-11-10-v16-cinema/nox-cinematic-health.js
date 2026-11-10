@@ -18,11 +18,11 @@ function snapshot(){
  const pbr=document.getElementById('noxWorldsV6Canvas');
  const rect=x=>{if(!x)return null;const b=x.getBoundingClientRect();return {x:+b.left.toFixed(1),y:+b.top.toFixed(1),width:+b.width.toFixed(1),height:+b.height.toFixed(1)};};
  const coreReal=!!(core?.status==='READY'&&finite(core?.renderCount)&&core.renderCount>0);
- const pbrReal=!!(world?.render==='yes'&&world.count===14&&world.hdrEnvironment==='READY'&&world.texturesLoaded>0);
+ const pbrReal=!!(world?.render==='yes'&&world.count===14&&world.allMaterialAssetsReady===true&&world.textureFailures===0);
  return {
   inspectedAt:new Date().toISOString(),viewport:[innerWidth,innerHeight],reducedMotion:matchMedia('(prefers-reduced-motion: reduce)').matches,
   core:{state:core?.status||'UNAVAILABLE',realFrameCount:core?.renderCount??null,renderer:core?.threeRevision?'Three.js':null,realRendered:coreReal,fallback:fallback?.render||null,rect:rect(main)},
-  worlds:{count:world?.count??null,realRendered:pbrReal,hdrEnvironment:world?.hdrEnvironment??'UNVERIFIED',assetBase:world?.assetBase??null,mapsLoaded:world?.texturesLoaded??null,loadFailures:world?.textureFailures??null,asteroid:world?.asteroid??null,rect:rect(pbr)},
+  worlds:{count:world?.count??null,realRendered:pbrReal,hdrEnvironment:world?.hdrEnvironment??'UNVERIFIED',assetBase:world?.assetBase??null,mapsLoaded:world?.texturesLoaded??null,planetMapsReady:world?.planetMapsReady??null,metalMapsReady:world?.metalMapsReady??null,allMaterialAssetsReady:world?.allMaterialAssetsReady===true,loadFailures:world?.textureFailures??null,asteroid:world?.asteroid??null,rect:rect(pbr)},
   effects:{industrialMaps:industrial?.maps??null,industrialEnvironment:industrial?.environment??null,heatPass:industrial?.heat??null,errors:industrial?.errors??[]},
   motion:{frames:motion?.frames??null,contacts:motion?.actualImpacts??null,blocked:motion?.blockedMoves??null,overlappingPairs:orbit?.collisionPairs??null},
   controls:{total:selectors.length,selected,expected:14},resonance:{href:resonance?.link??null,frames:resonance?.frames??null,rect:rect(document.getElementById('noxCoreEntry'))},
