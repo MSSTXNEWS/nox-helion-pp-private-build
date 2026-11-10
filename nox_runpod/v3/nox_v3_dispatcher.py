@@ -129,7 +129,10 @@ def run(node,plan):
             gpu_owners=subprocess.run(["nvidia-smi","--query-compute-apps=pid",
                "--format=csv,noheader,nounits"],capture_output=True,text=True,timeout=10)
             if gpu_owners.returncode==0 and not gpu_owners.stdout.strip():
-                teacher_rc=launch(["python3",str(server),"--node","A5000",
+                emit({"node":node,"status":"RUNNING_TEACHER_INFERENCE",
+                      "teacher":"Qwen3.5-27B","task_segment":"0-49",
+                      "gpu":cloud_gpu_status()})
+                teacher_rc=launch(["python3",str(server),"--node","A5000","--start","0",
                    "--teacher","Qwen3.5-27B","--gpu-layers","12",
                    "--limit","10"],4000,"A5000_TEACHER_27B")
         self_rc=launch(["python3",str(self_model)],120,"SELF_MODEL")
@@ -173,7 +176,10 @@ def run(node,plan):
             out[teacher]="PLAN_TASK_SET_COMPLETE"
             continue
         
-        rc=launch(["python3",str(gpu),"--teacher",teacher,"--limit","10"],5400,
+        emit({"node":node,"status":"RUNNING_TEACHER_INFERENCE",
+              "teacher":teacher,"task_segment":"50-99","gpu":cloud_gpu_status()})
+        rc=launch(["python3",str(gpu),"--node","A40","--start","50",
+                   "--teacher",teacher,"--limit","10"],5400,
                   "TEACHER_"+("27B" if teacher=="Qwen3.5-27B" else "32B"))
         out[teacher]="BATCH_DONE" if rc==0 else "HOLD_EXIT_"+str(rc)
     importer=BIN/"nox_teacher_s03_import.py"
