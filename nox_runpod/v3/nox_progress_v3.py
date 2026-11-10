@@ -77,15 +77,19 @@ def main():
     for teacher,settings in plan["teachers"].items():
         target=int(settings.get("planned_tasks",100))
         count=count_teacher_files(teacher)
+        historical_supply = count is None
         if count is None:count=mem.get(teacher,0)
         curated=mem.get(teacher,0)
-        done=min(count,target)
-        rate=round(100*done/target,1)
+        # Old unattributed task IDs are not the V3 benchmark. Never call them
+        # 100% of a new plan merely because the S03 corpus contains >100 rows.
+        done=None if historical_supply else min(count,target)
+        rate=None if done is None else round(100*done/target,1)
         # A complete benchmark must also pass independent quality evaluation.
         report["teachers"][teacher]={
            "model_status":settings.get("status"),"source_node":settings.get("source_node",settings.get("target_inference_node")),
            "plan_tasks":target,"teacher_generated_examples":count,"s03_examples":curated,
-           "task_generation_percent":rate,"task_generation_remaining":max(0,target-done),
+           "task_generation_percent":rate,"task_generation_remaining":None if done is None else max(0,target-done),
+           "historical_teacher_data_only":historical_supply,
            "independent_quality_verified":None,"optimizer_steps_confirmed":totals[teacher],
            "windows_checkpoint_verified":None,"absorbed_knowledge_percent":None,
            "source_files":sources.get(teacher,[])}
