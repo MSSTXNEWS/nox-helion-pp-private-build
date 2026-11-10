@@ -107,7 +107,7 @@ def load_model():
  return tok,mod
 def loss_for(mod,tok,text,training=True):
  import torch
- inputs=tok(text,return_tensors="pt",truncation=True,max_length=128)
+ inputs=tok(text,return_tensors="pt",truncation=True,max_length=48)
  ids=inputs["input_ids"].to("cuda",non_blocking=True)
  mask=inputs.get("attention_mask")
  if mask is not None:mask=mask.to("cuda",non_blocking=True)
