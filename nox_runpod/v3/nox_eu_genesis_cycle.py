@@ -37,7 +37,8 @@ def work(cmd,stage,limit):
  started=time.monotonic()
  with log.open("ab") as out:
   env={**os.environ,"NOX_LLAMA_CUDA_SERVER":str(D/"llama.cpp/build/bin/llama-server"),
-       "PYTORCH_CUDA_ALLOC_CONF":"expandable_segments:True"}
+       "PYTORCH_CUDA_ALLOC_CONF":"expandable_segments:True",
+       "NOX_CHECKPOINT_DEST":str(R/"checkpoints/NOX_FULL_A40")}
   p=subprocess.Popen(cmd,env=env,stdout=out,stderr=subprocess.STDOUT,stdin=subprocess.DEVNULL,cwd=str(R))
   while p.poll() is None:
    if (STATE/"STOP").exists():
