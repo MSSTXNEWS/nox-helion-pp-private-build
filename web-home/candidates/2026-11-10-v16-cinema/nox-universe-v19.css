@@ -52,3 +52,18 @@
 .nox-v19-day small{color:#a9b7c8}
 .nox-v19-video{box-shadow:0 0 0 1px rgba(231,177,105,.25),0 24px 70px #000c;background:radial-gradient(ellipse at 50% 40%,#151820,#000 80%);border-radius:12px}
 @media(max-width:600px){.nox-v19-weather-map{height:310px}.nox-v19-weather-days{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* NOX V19 in-situ calendar and cinematic photo gallery. Real controls and files, no mock entries. */
+.nox-v19-calendar{width:100%;min-height:360px;background:linear-gradient(160deg,rgba(29,34,45,.9),rgba(6,10,17,.87));border:1px solid rgba(229,176,112,.36);border-radius:14px;padding:14px;overflow:auto}
+.nox-v19-calendar .fc{--fc-border-color:rgba(225,190,139,.19);--fc-page-bg-color:transparent;--fc-neutral-bg-color:rgba(19,26,34,.94);--fc-list-event-hover-bg-color:rgba(171,112,54,.3);--fc-today-bg-color:rgba(221,161,85,.12);--fc-button-bg-color:#303039;--fc-button-active-bg-color:#835334;--fc-button-border-color:rgba(237,187,118,.36);--fc-button-hover-bg-color:#5a4335;--fc-event-bg-color:#ae7648;--fc-event-border-color:#e8c49d;--fc-event-text-color:#14100b;color:#f0e0cc}
+.nox-v19-calendar .fc .fc-toolbar{gap:8px;flex-wrap:wrap}
+.nox-v19-calendar .fc .fc-toolbar-title{font-size:clamp(15px,1.6vw,22px);font-weight:690;color:#f1c48e}
+.nox-v19-calendar .fc a{color:#e8d2b5}
+.nox-v19-calendar .fc .fc-button{border-radius:8px;min-height:35px;font-size:12px}
+.nox-v19-gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(145px,40%),1fr));gap:11px;min-height:110px}
+.nox-v19-gallery-item{display:block;overflow:hidden;border:1px solid rgba(237,183,114,.38);border-radius:12px;aspect-ratio:4/3;background:#05070a;box-shadow:inset 0 1px rgba(255,255,255,.14),0 10px 30px #0008;transition:transform .24s,border-color .24s,box-shadow .24s}
+.nox-v19-gallery-item:hover,.nox-v19-gallery-item:focus-visible{transform:translateY(-2px);border-color:#f3c78e;box-shadow:0 12px 32px #000a,0 0 14px rgba(223,161,76,.23);outline-offset:3px}
+.nox-v19-gallery-item img{display:block;width:100%;height:100%;object-fit:cover}
+.pswp{--pswp-bg:rgba(3,5,10,.98);z-index:2147482000!important}
+@media(prefers-reduced-motion:reduce){.nox-v19-gallery-item{transition:none!important;transform:none!important}}
+@media(max-width:600px){.nox-v19-calendar{padding:6px}.nox-v19-calendar .fc .fc-toolbar{display:flex;justify-content:center}.nox-v19-gallery{grid-template-columns:repeat(2,minmax(0,1fr))}}
