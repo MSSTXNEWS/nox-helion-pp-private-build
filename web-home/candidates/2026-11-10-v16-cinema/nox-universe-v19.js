@@ -24,7 +24,7 @@
  function open(){panel.hidden=false;openBtn.hidden=true;show(state.active);close.focus()}
  function dismiss(){clean();panel.hidden=true;openBtn.hidden=false;openBtn.focus()}
  openBtn.addEventListener('click',open);close.addEventListener('click',dismiss);
- panel.addEventListener('keydown',e=>{if(e.key==='Escape')dismiss()});
+ panel.addEventListener('keydown',e=>{if(e.key==='Escape'&&!document.querySelector('.pswp.pswp--open'))dismiss()});
  const openUrl=(url)=>{try{const u=new URL(url);if(!['https:','http:'].includes(u.protocol))throw Error('Только HTTP(S)');window.open(u.href,'_blank','noopener,noreferrer')}catch(e){live('Недопустимый адрес: '+e.message,'error')}};
  function objectURL(file){const u=URL.createObjectURL(file);state.objectUrls.push(u);return u}
  function cinema(){const c=shell('Кинотеатр · реальное воспроизведение');notice(c,'Разрешённые файлы и прямые HTTP(S) видеопотоки. DRM и закрытые сайты не обходятся. Каталог сторонних фильмов без лицензии не подставляется.');
