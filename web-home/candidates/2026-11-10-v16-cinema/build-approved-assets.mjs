@@ -70,6 +70,28 @@ const moduleSource=fs.readFileSync(path.join(out,'industrial-assets.mjs'),'utf8'
 for(const item of ['metal/Metal012_1K-JPG_Color.jpg','metal/Metal012_1K-JPG_NormalGL.jpg','metal/Metal012_1K-JPG_Metalness.jpg','metal/Metal012_1K-JPG_Roughness.jpg','hdr/machine_shop_01_1k.hdr']){
  if(!moduleSource.includes('assets/nox-approved/'+item))throw Error('NOX_CORE_MATERIAL_DISCONNECTED:'+item);
 }
+// Shared V18 UI gets injected into the original TEN HTML pages at build time.
+// The original functional page bodies, navigation and D02 scene are retained.
+const pages=['index.html','chat.html','cinema.html','install.html','memory.html','models.html','projects.html','settings.html','system.html','training.html'];
+for(const page of pages){
+ const p=path.join(out,page);
+ let html=fs.readFileSync(p,'utf8');
+ if(!/<\/head>/i.test(html)||!/<\/body>/i.test(html))throw Error('NOX_PAGE_STRUCTURE:'+page);
+ const style='<link rel="stylesheet" href="./nox-global-wow-v18.css" data-nox-wow-shared="v18">';
+ const vendor='<link rel="stylesheet" href="./vendor/nox-liquid-glass/liquid-glass.css" data-nox-vendor-glass="original">';
+ const script='<script defer src="./nox-global-wow-v18.js" data-nox-wow-shared="v18"></script>';
+ if(!html.includes('nox-global-wow-v18.css'))html=html.replace(/<\/head>/i,style+'</head>');
+ if(!html.includes('vendor/nox-liquid-glass/liquid-glass.css')){
+  if(!fs.existsSync(path.join(out,'vendor/nox-liquid-glass/liquid-glass.css')))throw Error('NOX_GLASS_VENDOR_MISSING');
+  html=html.replace(/<\/head>/i,vendor+'</head>');
+ }
+ if(!html.includes('nox-global-wow-v18.js'))html=html.replace(/<\/body>/i,script+'</body>');
+ fs.writeFileSync(p,html);
+}
+for(const f of ['nox-global-wow-v18.js','nox-global-wow-v18.css']){
+ if(!fs.existsSync(path.join(out,f)))throw Error('NOX_WOW_MISSING:'+f);
+}
+execFileSync('node',['--check',path.join(out,'nox-global-wow-v18.js')],{stdio:'pipe'});
 records.sort((a,b)=>a.path.localeCompare(b.path));
 fs.writeFileSync(path.join(target,'MANIFEST.json'),JSON.stringify({version:'2026-11-10',licenses:{planets:'Solar System Scope CC BY 4.0 — https://www.solarsystemscope.com/textures/',hdr:'Poly Haven Machine Shop 01 CC0',metal:'ambientCG Metal012 CC0'},files:records},null,2));
 fs.writeFileSync(path.join(target,'ATTRIBUTION.txt'),'Planet textures © Solar System Scope, licensed under CC BY 4.0. https://www.solarsystemscope.com/textures/\nHDRI Machine Shop 01 © Poly Haven, CC0.\nMetal012 PBR © ambientCG, CC0.\n');
