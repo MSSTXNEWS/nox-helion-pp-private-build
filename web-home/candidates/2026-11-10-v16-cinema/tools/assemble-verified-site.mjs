@@ -48,6 +48,11 @@ const overlays=[
  ['nox-owner-director-v20.js','nox-owner-director-v20.js'],
  ['nox-owner-fidelity-v21.css','nox-owner-fidelity-v21.css'],
  ['nox-owner-fidelity-v21.js','nox-owner-fidelity-v21.js'],
+ ['nox-progress-core.mjs','nox-progress-core.mjs'],
+ ['nox-progress-panel.js','nox-progress-panel.js'],
+ ['nox-progress-panel.css','nox-progress-panel.css'],
+ ['tools/nox-audit-distillation.mjs','tools/nox-audit-distillation.mjs'],
+ ['tools/test-nox-progress.mjs','tools/test-nox-progress.mjs'],
  ['assets/nox-owner-approved/NOX_HOME_OWNER_APPROVED_WEB.webp','assets/nox-owner-approved/NOX_HOME_OWNER_APPROVED_WEB.webp'],
  ['assets/nox-owner-approved/nox-owner-persona-kv.webp','assets/nox-owner-approved/nox-owner-persona-kv.webp'],
  ['assets/nox-owner-approved/nox-owner-persona-am.webp','assets/nox-owner-approved/nox-owner-persona-am.webp'],
@@ -74,6 +79,12 @@ for(const file of pages){
  if(!html.includes('vendor/nox-liquid-glass/liquid-glass.css'))html=html.replace(/<\/head>/i,vendorGlass+'</head>');
  if(!html.includes('nox-global-wow-v18.css'))html=html.replace(/<\/head>/i,style+'</head>');
  if(!html.includes('nox-global-wow-v18.js'))html=html.replace(/<\/body>/i,script+'</body>');
+ if(file==='system.html'||file==='training.html'){
+  const pStyle='<link rel="stylesheet" href="./nox-progress-panel.css" data-nox-progress="evidence-only">';
+  const pScript='<script defer src="./nox-progress-panel.js" data-nox-progress="evidence-only"></script>';
+  if(!html.includes('nox-progress-panel.css'))html=html.replace(/<\/head>/i,pStyle+'</head>');
+  if(!html.includes('nox-progress-panel.js'))html=html.replace(/<\/body>/i,pScript+'</body>');
+ }
  await fs.writeFile(target,html);
 }
 const html=await fs.readFile(path.join(dst,'index.html'),'utf8');
