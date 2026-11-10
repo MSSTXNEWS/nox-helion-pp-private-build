@@ -1,0 +1,46 @@
+name: NOX PRIME V3 source checks
+on:
+  pull_request:
+    paths:
+      - 'nox_runpod/v3/**'
+      - 'nox_runpod/stage0/a40_full_parameter_distill_cycle.py'
+      - '.github/workflows/nox-prime-v3-checks.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Python source compile and plan invariants
+        run: |
+          set -euo pipefail
+          python3 -m compileall -q nox_runpod/v3
+          python3 -m py_compile nox_runpod/stage0/a40_full_parameter_distill_cycle.py
+          python3 - <<'PY'
+          import json,pathlib
+          p=json.loads(pathlib.Path('nox_runpod/v3/NOX_PRIME_V3_PLAN.json').read_text())
+          assert p['schema']=='nox-prime-v3'
+          assert p['transition']['no_loss'] is True
+          assert p['train']['no_lora'] is True and p['train']['full_parameter_only'] is True
+          assert p['mode']=='prepare_no_forced_cutover'
+          assert len(p['teachers'])==3
+          assert all(t['planned_tasks']>=100 for t in p['teachers'].values())
+          print('V3_SOURCE_CHECK_PASS')
+          PY
+      - name: Shell syntax
+        run: |
+          bash -n nox_runpod/v3/*.sh
+      - name: No destructive ops in V3 bootstrap
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('nox_runpod/v3/nox_v3_super_start.sh').read_text()
+          for bad in ('rm -rf', 'kill -9','SIGKILL','docker stop','runpod pod terminate'):
+            assert bad not in s,bad
+          assert 'nox_download_32b.sh' in s
+          assert 'nox_stage_27b_to_shared.py' in s
+          print('V3_NO_LOSS_BOOTSTRAP_PASS')
+          PY
