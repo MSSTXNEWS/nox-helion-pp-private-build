@@ -14,6 +14,7 @@
  body.dataset.noxOwnerLayout=read('nox.home.visual.owner.v20',['CINEMA','PBR'],'CINEMA');
  body.dataset.noxOwnerHud='false';body.dataset.noxOwnerControls='false';
  for(const cls of ['nox-owner-architecture','nox-owner-floor'])stage.prepend(el('div',{class:cls,'aria-hidden':'true'}));
+ const coreStill=el('div',{class:'nox-owner-core-still','aria-hidden':'true'});stage.prepend(coreStill);
  const brand=el('div',{class:'nox-owner-brand'},[el('span',{class:'nox-owner-brand-mark','aria-hidden':'true'}),el('div',{},[el('strong',{text:'NOX HELION'}),el('small',{text:'СИСТЕМА ИСКУССТВЕННОГО ИНТЕЛЛЕКТА'})])]);stage.append(brand);
  const defs=[
   ['CONSCIOUSNESS','chat.html','27%','31%','#f1ad66','#d9943e','-2.3s'],
