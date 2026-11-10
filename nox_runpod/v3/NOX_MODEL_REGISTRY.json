@@ -1,0 +1,108 @@
+{
+  "schema": "nox-model-registry-v1",
+  "revision": 1,
+  "source_of_truth": "NOX V3 existing teacher manifest + WOW MAX",
+  "policy": {
+    "single_student": "NOX PRIME 9B full-weight",
+    "max_gpu_utilization_goal_pct": 100,
+    "not_guaranteed": true,
+    "all_candidates_enter_queue": true,
+    "unknown_models": "QUARANTINE_UNTIL_SHA_LICENSE_RUNTIME_VERIFIED",
+    "benchmark_data": "EVALUATION_ONLY_NEVER_TRAIN",
+    "weight_slicing": "NOT_KNOWLEDGE_DISTILLATION",
+    "segment_type": "independent teacher inference tasks with source ids",
+    "no_loss": true
+  },
+  "models": [
+    {
+      "id": "qwen35_9b",
+      "name": "Qwen3.5-9B",
+      "role": "teacher_existing",
+      "owner": "A5000",
+      "modality": "text",
+      "gpu_min_free_mib": 12000,
+      "model_path": "/workspace/nox/models/NOX_PRIME_9B_INHERITED",
+      "runtime": "existing CUDA 9B worker",
+      "train_examples_source": "S03",
+      "state": "HISTORICAL_9B_EXAMPLES_CONFIRMED",
+      "schedule": "REUSE_EXISTING_PROVENANCE; no duplicate GPU worker until ownership verified",
+      "segments": 100
+    },
+    {
+      "id": "qwen35_27b",
+      "name": "Qwen3.5-27B",
+      "role": "heavy_teacher",
+      "owner": "A5000",
+      "fallback_owner": "A40",
+      "modality": "text",
+      "gpu_min_free_mib": 16000,
+      "model_path": "/workspace/nox/teachers/Qwen3.5-27B/Qwen3.5-27B-Q4_K_M.gguf",
+      "proof": "nox_teacher_proof.json",
+      "runtime": "llama-server",
+      "gpu_layers": {
+        "A5000": 12,
+        "A40": 30
+      },
+      "segments": 100,
+      "segment_size": 10
+    },
+    {
+      "id": "deepseek_r1_qwen32b",
+      "name": "DeepSeek-R1-Distill-Qwen-32B",
+      "role": "heavy_teacher",
+      "owner": "A40",
+      "modality": "text",
+      "gpu_min_free_mib": 22000,
+      "model_path": "/workspace/nox/teachers/DeepSeek-R1-Distill-Qwen-32B/DeepSeek-R1-Distill-Qwen-32B-Q4_K_M.gguf",
+      "proof": "nox_teacher_proof.json",
+      "runtime": "llama-server",
+      "gpu_layers": {
+        "A40": 30
+      },
+      "segments": 100,
+      "segment_size": 10
+    },
+    {
+      "id": "emotion_multilingual",
+      "name": "Horizon-Labs/multilingual-emotions-small",
+      "role": "emotion_feature_teacher",
+      "owner": "A5000",
+      "modality": "text",
+      "gpu_min_free_mib": 0,
+      "model_path": "/workspace/nox/assets/nox_wow_max/emotions/onnx/model_quantized.onnx",
+      "runtime": "onnxruntime CPU only after validated tokenizer and 28-label mapping",
+      "state": "CANDIDATE_UNTESTED",
+      "schedule": "LAB_ONLY_NEEDS_EVALUATION; no fabricated neural transfer",
+      "segments": 100,
+      "license": "apache-2.0"
+    },
+    {
+      "id": "e5_small",
+      "name": "intfloat/multilingual-e5-small",
+      "role": "memory_embedding_candidate",
+      "owner": "A5000",
+      "modality": "embeddings",
+      "gpu_min_free_mib": 0,
+      "model_path": "/workspace/nox/assets/nox_wow_max/embeddings/model.safetensors",
+      "runtime": "CPU evaluation candidate",
+      "state": "OPTIONAL_IF_EXISTING_EMBEDDING_WEAK",
+      "schedule": "RETRIEVAL_QUALITY_COMPARISON_ONLY",
+      "segments": 100
+    }
+  ],
+  "evaluations": [
+    {
+      "id": "longmemeval",
+      "kind": "memory"
+    },
+    {
+      "id": "eq_bench",
+      "kind": "emotion"
+    },
+    {
+      "id": "sad",
+      "kind": "situational_self_knowledge"
+    }
+  ],
+  "success": "Per teacher: model SHA, source task ID, generated count, independent quality, S03 imported, actual student optimizer steps, benchmark change, Windows checkpoint SHA."
+}
