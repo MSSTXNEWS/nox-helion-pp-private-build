@@ -6,6 +6,10 @@ on:
     paths:
       - 'web-home/candidates/2026-11-10-v16-cinema/tools/download-complete-wow-kit.py'
       - '.github/workflows/nox-v19-complete-wow-download.yml'
+  pull_request:
+    paths:
+      - 'web-home/candidates/2026-11-10-v16-cinema/tools/download-complete-wow-kit.py'
+      - '.github/workflows/nox-v19-complete-wow-download.yml'
   workflow_dispatch:
 jobs:
   download-real-vendor-sources:
