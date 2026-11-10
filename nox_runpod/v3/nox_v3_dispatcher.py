@@ -43,6 +43,19 @@ def launch(argv, timeout, label):
                                   stderr=subprocess.STDOUT,timeout=timeout,check=False).returncode
         except subprocess.TimeoutExpired:
             return 124
+def cloud_gpu_gate():
+    try:
+        p=subprocess.run(["nvidia-smi","--query-gpu=temperature.gpu,memory.free",
+            "--format=csv,noheader,nounits"],capture_output=True,text=True,timeout=10)
+        if p.returncode!=0:return "HOLD_GPU_SENSOR_MISSING"
+        values=[v.strip() for v in p.stdout.splitlines()[0].split(",")]
+        temp=int(values[0])
+        if temp<=0:return "HOLD_GPU_SENSOR_MISSING"
+        if temp>=70:return "HOLD_GPU_TEMP_70C"
+        return None
+    except (OSError,ValueError,IndexError,subprocess.TimeoutExpired):
+        return "HOLD_GPU_SENSOR_MISSING"
+
 def safe70_halt(node):
     return (STATE/("STOP_"+node)).exists() or (STATE/("HOLD_"+node)).exists()
 def run(node,plan):
@@ -66,6 +79,8 @@ def run(node,plan):
                      "model_stage_rc":rc,"self_model_rc":self_rc,"progress_rc":prog_rc})
     if node!="A40":
         return emit({"node":node,"status":"HOLD_NODE_UNKNOWN"})
+    thermal=cloud_gpu_gate()
+    if thermal:return emit({"node":node,"status":thermal})
     if process_has("a40_cuda_distillation_direct.py") or process_has("a40_full_parameter_distill_cycle.py"):
         return emit({"node":node,"status":"HOLD_OLD_OR_FULL_GPU_OWNER_ACTIVE"})
     if not MEM.is_file():
