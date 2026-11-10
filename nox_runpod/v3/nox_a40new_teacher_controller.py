@@ -59,14 +59,22 @@ def main():
     emit(status="GPU_OTHER_OWNER_PRESERVED",gpu=snapshot(),gpu_owners=cur);time.sleep(60);continue
    teacher=todo[n%len(todo)]
    n+=1
+   # Apply Guardian configuration only between megablocks.
+   try:cfg=json.loads((S/"guardian_config.json").read_text())
+   except (OSError,ValueError):cfg={}
+   parallel=max(1,min(4,int(cfg.get("parallel",3))))
+   gpu_layers=max(20,min(50,int(cfg.get("gpu_layers",40))))
+   ctx=max(2048,min(8192,int(cfg.get("ctx",4096))))
+   batch=max(1,min(50,int(cfg.get("batch",50))))
    cmd=["python3","-u",str(B/"nox_teacher_server_batch.py"),"--node","A40NEW",
-        "--teacher",teacher,"--start","0","--limit","50","--gpu-layers","50","--ctx","6144","--parallel","3"]
+        "--teacher",teacher,"--start","0","--limit",str(batch),"--gpu-layers",str(gpu_layers),
+        "--ctx",str(ctx),"--parallel",str(parallel)]
    log=R/"logs/NOX_A40NEW_TEACHERS.log";log.parent.mkdir(parents=True,exist_ok=True)
    if not pathlib.Path(cmd[2]).exists():
     emit(status="HOLD_SCRIPT_MISSING");time.sleep(60);continue
    with log.open("ab") as f:
     proc=subprocess.Popen(cmd,stdout=f,stderr=subprocess.STDOUT,stdin=subprocess.DEVNULL)
-    emit(status="TEACHER_BATCH_STARTED",teacher=teacher,pid=proc.pid,gpu=snapshot(),max_batch=50)
+    emit(status="TEACHER_BATCH_STARTED",teacher=teacher,pid=proc.pid,gpu=snapshot(),max_batch=batch,parallel=parallel,gpu_layers=gpu_layers,ctx=ctx)
     while proc.poll() is None:
      emit(status="TEACHER_BATCH_RUNNING",teacher=teacher,pid=proc.pid,gpu=snapshot())
      time.sleep(60)
