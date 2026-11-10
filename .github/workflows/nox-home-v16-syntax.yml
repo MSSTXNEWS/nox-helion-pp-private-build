@@ -22,6 +22,7 @@ jobs:
           node --check web-home/candidates/2026-11-10-v16-cinema/nox-resonance-cinema-v13.js
           node --check web-home/candidates/2026-11-10-v16-cinema/nox-cinematic-health.js
           node --check web-home/candidates/2026-11-10-v16-cinema/tools/browser-acceptance.mjs
+          node --check web-home/candidates/2026-11-10-v16-cinema/tools/assemble-verified-site.mjs
           node --check web-home/candidates/2026-11-09-v15-repair/nox-home-recovery.js
           node --check web-home/candidates/2026-11-09-v15-repair/nox-orbit-original.js
       - name: Verify 14-control source and explicit GPU hold
