@@ -111,7 +111,11 @@ try{
       await page.locator('section.nox-orbital-controls button.nox-world-profile').first().click();
       await page.locator('#homeModes > button[data-mode="BALANCED"]').click();
     }
-    await toggle.click();
+    if(name==='320'){
+      const exit=page.locator('.nox-v22-exit-worlds');
+      if(!await exit.isVisible())throw Error('NOX_V22_MOBILE_PBR_EXIT_NOT_VISIBLE');
+      await exit.click();
+    }else await toggle.click();
     await page.waitForFunction(()=>document.body.dataset.noxOwnerLayout==='CINEMA',{timeout:10000});
     ownerCheck.v22.restoredEightCores=true;
     if(name==='1440'){
