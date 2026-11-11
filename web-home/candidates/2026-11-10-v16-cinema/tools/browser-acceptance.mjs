@@ -92,9 +92,35 @@ try{
       controls:[...document.querySelectorAll('section.nox-orbital-controls button')].length}));
     if(worldCheck.controls!==14||worldCheck.alpha<.8)throw Error('NOX_V22_14_WORLDS_SWITCH_NOT_VISIBLE:'+JSON.stringify(worldCheck));
     ownerCheck.v22.pbrWorldCheck=worldCheck;
+    if(name==='1440'){
+      // Exercise all 14 ORIGINAL controls, not just count them.
+      const controls=page.locator('section.nox-orbital-controls button');
+      for(let i=0;i<14;i++){
+        const button=controls.nth(i);
+        if(!await button.isEnabled())throw Error('NOX_V22_ORIGINAL_SELECTOR_DISABLED:'+i);
+        await button.click({timeout:6000});
+        await page.waitForFunction(index=>{
+          const b=document.querySelectorAll('section.nox-orbital-controls button')[index];
+          return b?.getAttribute('aria-pressed')==='true';
+        },i,{timeout:3000});
+      }
+      ownerCheck.v22.originalWorldClicksPassed=14;
+    }
     await toggle.click();
     await page.waitForFunction(()=>document.body.dataset.noxOwnerLayout==='CINEMA',{timeout:10000});
     ownerCheck.v22.restoredEightCores=true;
+    if(name==='1440'){
+      const actions=page.locator('.nox-owner-actions button');
+      await actions.nth(1).click();
+      if(await page.evaluate(()=>document.body.dataset.noxOwnerHud)!=='true')
+        throw Error('NOX_V22_MONITOR_BUTTON_NOT_WORKING');
+      await actions.nth(1).click();
+      await actions.nth(2).click();
+      if(await page.evaluate(()=>document.body.dataset.noxOwnerControls)!=='true')
+        throw Error('NOX_V22_GRAPHICS_BUTTON_NOT_WORKING');
+      await actions.nth(2).click();
+      ownerCheck.v22.monitorAndGraphicsButtonsPassed=true;
+    }
    }
    if(name==='1440'){
     await page.locator('.nox-owner-persona[data-idx="4"]').click();
