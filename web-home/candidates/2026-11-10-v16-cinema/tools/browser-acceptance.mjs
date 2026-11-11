@@ -84,6 +84,33 @@ try{
     throw Error('NOX_V22_CANONICAL_LABEL_MISSING');
    if(width<=600&&(!ownerCheck.v22.resonanceBeforePersonas||!ownerCheck.v22.personasBeforeActions))
     throw Error('NOX_V22_MOBILE_OWNER_BANDS_COLLIDE');
+   // V24 fidelity: runtime computed styles, not only asset existence.
+   ownerCheck.v24=await page.evaluate(()=>{
+     const st=(selector,pseudo='')=>{const e=document.querySelector(selector);return e?getComputedStyle(e,pseudo):null};
+     const d02=st('#noxEclipseCanvas'),worlds=st('#noxWorldsV6Canvas');
+     const shell=st('.nox-owner-core','::before');
+     const arch=st('.nox-owner-architecture'),floor=st('.nox-owner-floor');
+     const fallback=st('.nox-owner-core-still');
+     return {
+       ready:!!window.NOX_VISUAL_SOURCE_LOCK_V24,
+       d02Filter:d02?.filter,worldFilter:worlds?.filter,
+       d02Transform:d02?.transform,
+       coreShellAnimation:shell?.animationName,
+       coreShellHasOriginalMaterial:!!shell?.backgroundImage?.includes('repeating-conic-gradient'),
+       architectureClip:arch?.clipPath,floorClip:floor?.clipPath,
+       originalFallbackHidden:document.body.dataset.noxD02Rendered==='true'?
+          fallback?.display==='none':null,
+       originalWebglRendered:window.NOX_CINEMATIC_HEALTH?.snapshot?.()?.core?.realRendered===true
+     };
+   });
+   if(!ownerCheck.v24.ready||ownerCheck.v24.d02Filter!=='none'||
+      ownerCheck.v24.worldFilter!=='none'||ownerCheck.v24.d02Transform!=='none'||
+      !ownerCheck.v24.coreShellHasOriginalMaterial||
+      !ownerCheck.v24.architectureClip?.includes('36%')&&width>600||
+      !ownerCheck.v24.floorClip?.includes('92%'))
+      throw Error('NOX_V24_ORIGINAL_VISUAL_FIDELITY_HOLD:'+JSON.stringify(ownerCheck.v24));
+   if(ownerCheck.v24.originalWebglRendered&&ownerCheck.v24.originalFallbackHidden!==true)
+      throw Error('NOX_V24_APPROVED_STILL_DOUBLE_EXPOSED');
    if(name==='1440'||name==='320'){
     const toggle=page.locator('.nox-owner-mode');
     await toggle.click();
@@ -91,6 +118,8 @@ try{
     const worldCheck=await page.evaluate(()=>({alpha:Number(getComputedStyle(document.getElementById('noxWorldsV6Canvas')).opacity),
       controls:[...document.querySelectorAll('section.nox-orbital-controls button')].length}));
     if(worldCheck.controls!==14||worldCheck.alpha<.8)throw Error('NOX_V22_14_WORLDS_SWITCH_NOT_VISIBLE:'+JSON.stringify(worldCheck));
+    const worldStyle=await page.evaluate(()=>getComputedStyle(document.getElementById('noxWorldsV6Canvas')).filter);
+    if(worldStyle!=='none')throw Error('NOX_V24_PBR_MATERIAL_COLORS_DISTORTED:'+worldStyle);
     ownerCheck.v22.pbrWorldCheck=worldCheck;
     if(name==='1440'){
       // Exercise all 14 ORIGINAL controls, not just count them.
@@ -147,6 +176,10 @@ try{
   const rendered=!!(snapshot?.core?.realRendered&&snapshot?.worlds?.allMaterialAssetsReady&&snapshot?.effects?.errors?.length===0);
   const acceptance=blocked?'BLOCKED_SSO':!snapshot?'HOLD_NO_RUNTIME_DIAGNOSTICS':rendered&&errors.length===0?'BROWSER_CANDIDATE':'HOLD';
   report.cases.push({viewport:name,width,height,httpStatus:status,acceptance,blocked,diagnostics:snapshot,assetCheck,ownerCheck,backendUnavailable,errors});
+  await fs.writeFile(path.join(out,'progress-report.json'),JSON.stringify({
+    ...report,stage:'VIEWPORT_'+name,completedViewportCount:report.cases.length
+  },null,2));
+  console.log('NOX_E2E_VIEWPORT',name,acceptance,errors.slice(0,2));
   await page.close();
  }
  // Cross-section smoke checks: no fake backends, no hidden failures.
@@ -192,6 +225,7 @@ try{
       errors.push('NOX_PROGRESS_MUST_HOLD_WITHOUT_CHECKPOINT_AND_TRAINER_HASHES');
    }
   }catch(e){errors.push(String(e))}
+  console.log('NOX_E2E_ROUTE',name,errors.length?'HOLD':'CHECKED',errors.slice(0,2));
   report.sections.push({name,status,checks,backendUnavailable,errors,acceptance:status===200&&checks?.sharedStyle&&checks?.sharedScript&&checks?.v19Style&&checks?.v19Script&&checks.visibleSelects===0&&checks.deadNavigation===0&&errors.length===0?'PAGE_UI_PASS':'HOLD'});
   await page.close();
  }
