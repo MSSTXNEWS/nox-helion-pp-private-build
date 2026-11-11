@@ -59,6 +59,19 @@
   });
   if(panelCount()!==14)console.warn('NOX_V22_14_WORLD_SELECTOR_HOLD',panelCount());
   syncMode();
+  // The historical Orbit V14 loader adds five CSS sheets asynchronously.
+  // Ensure this reversible repair remains last, instead of rewriting the donor files.
+  const fidelityStyle=document.querySelector('link[href*="nox-owner-release-v22.css"]');
+  if(fidelityStyle){
+   const keepLast=()=>{if(fidelityStyle.parentElement===document.head&&document.head.lastElementChild!==fidelityStyle)document.head.append(fidelityStyle);};
+   const observer=new MutationObserver(records=>{
+    if(records.some(r=>[...r.addedNodes].some(n=>n.nodeType===1&&n!==fidelityStyle&&
+      (n.tagName==='STYLE'||(n.tagName==='LINK'&&n.rel==='stylesheet')))))keepLast();
+   });
+   observer.observe(document.head,{childList:true});
+   keepLast();
+   setTimeout(()=>observer.disconnect(),7000);
+  }
   window.NOX_OWNER_RELEASE_V22=Object.freeze({
    version:'V22',engine:'ORIGINAL_D02_AND_PHYSICAL_WORLDS_V7',
    coreCount:coreLinks.length,worldCount:panelCount,approvedPortraits:personas.length,
