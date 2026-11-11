@@ -17,7 +17,7 @@ NODE = os.environ.get("NOX_CONTROL_NODE", "")
 VALID_NODES = {"runpod-5f3j8hwyicc0bp", "vast-60254538"}
 MAX_BODY = 8192
 LOCK = threading.BoundedSemaphore(4)
-MAX_PATH_SCAN = 2000
+MAX_PATH_SCAN = 500
 
 def read_gpu():
     try:
@@ -45,7 +45,7 @@ def read_gpu():
 
 def read_disk():
     out = {}
-    for name in ("/", "/workspace", "/root/nox"):
+    for name in ("/", "/tmp", "/root"):
         try:
             s = os.statvfs(name)
             out[name] = {"free_gib": round(s.f_bavail*s.f_frsize/1073741824,2),
@@ -69,7 +69,7 @@ def read_processes():
     return result
 
 def read_checkpoints():
-    roots = (Path("/tmp/nox36/ckpt"), Path("/root/nox36/ckpt"), Path("/workspace/nox36/ckpt"))
+    roots = (Path("/tmp/nox36/ckpt"), Path("/root/nox36/ckpt"))
     counts = {}
     for root in roots:
         count = 0
