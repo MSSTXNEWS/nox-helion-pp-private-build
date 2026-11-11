@@ -136,14 +136,13 @@ for(const page of pages){
    }
  }
  if(html.includes('src="/https://'))html=html.replaceAll('src="/https://','src="https://'); // Repair three historically malformed Lucide URLs.
- if(page==='memory.html')html=html.replace(/<img\\s+src="nox-memory-core\\.svg"[^>]*>/i,'');
+ if(page==='memory.html')html=html.replace(/<img\s+src="nox-memory-core\.svg"[^>]*>/i,'');
  if(page==='index.html'){
   for(const asset of ['nox-owner-release-v22.css','nox-owner-release-v22.js'])
    if(!fs.existsSync(path.join(out,asset)))throw Error('NOX_V22_SOURCE_MISSING:'+asset);
-  if(!html.includes('nox-owner-release-v22.css'))html=html.replace(/<\\/head>/i,'<link rel="stylesheet" href="./nox-owner-release-v22.css" data-nox-v22="approved-source-repair"></head>');
-  if(!html.includes('nox-owner-release-v22.js'))html=html.replace(/<\\/body>/i,'<script defer src="./nox-owner-release-v22.js" data-nox-v22="approved-source-repair"></script></body>');
- } // Missing decorative art is not fabricated or replaced with a false image.
-
+  if(!html.includes('nox-owner-release-v22.css'))html=html.replace('</head>','<link rel="stylesheet" href="./nox-owner-release-v22.css" data-nox-v22="source-repair"></head>');
+  if(!html.includes('nox-owner-release-v22.js'))html=html.replace('</body>','<script defer src="./nox-owner-release-v22.js" data-nox-v22="source-repair"></script></body>');
+ }
  fs.writeFileSync(p,html);
 }
 for(const name of ['nox-universe-v19.js','nox-universe-v19.css','nox-section-map-v19.json','nox-install-extra-v19.mjs'])if(!fs.existsSync(path.join(out,name)))throw Error('NOX_UNIVERSE_V19_MISSING:'+name);
