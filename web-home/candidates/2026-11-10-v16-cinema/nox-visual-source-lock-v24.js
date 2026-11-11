@@ -5,6 +5,10 @@
  const boot=()=>{
   const body=document.body;
   if(body.dataset.page!=='index'||!body.classList.contains('nox-owner-cinema')||window.NOX_VISUAL_SOURCE_LOCK_V24)return;
+  // One spatial motion owner: original GSAP if actually running, otherwise
+  // original CSS float. Both original visual material effects remain intact.
+  body.dataset.noxMotionOwner=window.NOX_OWNER_FIDELITY_V21?.motionEngine==='gsap-vendor'
+    ?'GSAP':'CSS_ORIGINAL';
   const canvas=document.getElementById('noxEclipseCanvas');
   const css=[...document.querySelectorAll('link[rel="stylesheet"]')].find(x=>x.href.includes('nox-visual-source-lock-v24.css'));
   const keepLast=()=>{if(css?.parentElement===document.head&&document.head.lastElementChild!==css)document.head.append(css)};
