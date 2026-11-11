@@ -211,7 +211,7 @@ jobs:
           import hashlib,json,pathlib
           root=pathlib.Path('/tmp/nox-v19-download')
           receipt=json.loads((root/'vendor/nox-extra/NOX-EXTRA-ASSETS-RECEIPT.json').read_text())
-          assert receipt['complete'] and len(receipt['files'])==26
+          assert receipt['complete'] and len(receipt['files'])==28
           for item in receipt['files']:
               contents=(root/'vendor/nox-extra'/item['file']).read_bytes()
               assert len(contents)==item['size'] and hashlib.sha256(contents).hexdigest()==item['sha256'],item['file']
@@ -219,7 +219,7 @@ jobs:
           art=root/'source/assets/nox-owner-approved'
           assert len(list(art.glob('*.webp')))==6
           print('NOX_V20_PERSONA_ART_HANDOFF 5 exact cropped portraits + original approved HOME')
-          print('NOX_V19_ARTIFACT_SHA256_PASS 26 binaries + source modules')
+          print('NOX_V19_ARTIFACT_SHA256_PASS 28 binaries + source modules')
           PY
       - name: Preserve actual ZIP handoff for Drive
         uses: actions/upload-artifact@v4
@@ -251,7 +251,7 @@ jobs:
           import fs from 'node:fs';
           import crypto from 'node:crypto';
           const dist='dist/', manifest=JSON.parse(fs.readFileSync(dist+'vendor/nox-extra/NOX-EXTRA-ASSETS-RECEIPT.json','utf8'));
-          if(manifest.files.length!==26||!manifest.complete)throw Error('NOX_VENDOR_26_MISSING');
+          if(manifest.files.length!==28||!manifest.complete)throw Error('NOX_VENDOR_28_MISSING');
           for(const f of manifest.files){
             const buf=fs.readFileSync(dist+'vendor/nox-extra/'+f.file);
             if(buf.length!==f.size||crypto.createHash('sha256').update(buf).digest('hex')!==f.sha256)throw Error('NOX_VENDOR_SHA_MISMATCH:'+f.file);
@@ -269,6 +269,16 @@ jobs:
             if(html.includes('cdn.jsdelivr.net/npm/lucide@0.456.0')||html.includes('cdn.jsdelivr.net/npm/echarts@5.5.1'))
               throw Error('NOX_DEPENDENCY_STILL_REMOTE:'+page);
           }
+          for(const loader of ['STLLoader.js','RGBELoader.js'])
+            if(!fs.existsSync('dist/vendor/three/addons/loaders/'+loader))
+              throw Error('NOX_THREE_ADDON_OFFLINE_MISSING:'+loader);
+          for(const page of ['index.html','settings.html']){
+            const html=fs.readFileSync('dist/'+page,'utf8');
+            if(html.includes('https://cdn.jsdelivr.net/npm/three@0.160.1'))
+              throw Error('NOX_THREE_IMPORTMAP_REMOTE:'+page);
+            if(html.includes('"three":')&&!html.includes('./vendor/three/three.module.js'))
+              throw Error('NOX_THREE_IMPORTMAP_LOCAL_MISSING:'+page);
+          }
           for(const lib of ['lucide.min.js','echarts.min.js'])
             if(!fs.existsSync('dist/vendor/nox-extra/'+lib))throw Error('NOX_OFFLINE_LIBRARY_MISSING:'+lib);
           for(const path of ['dist/nox-owner-release-v22.css','dist/nox-owner-release-v22.js'])
@@ -283,7 +293,7 @@ jobs:
             const html=fs.readFileSync(dist+page+'.html','utf8');
             for(const asset of ['nox-universe-v19.js','nox-global-wow-v18.js'])if(!html.includes(asset))throw Error('NOX_SECTION_DISCONNECTED:'+page+':'+asset);
           }
-          console.log('NOX_V21_FULL_WEB_BUILD_STATIC_PASS 10/10 routes; 26 verified runtime files; GPU/browser HOLD');
+          console.log('NOX_V21_FULL_WEB_BUILD_STATIC_PASS 10/10 routes; 28 verified runtime files; GPU/browser HOLD');
           NODE
       - name: Reject missing local assets on all ten NOX pages
         working-directory: web-home/candidates/2026-11-10-v16-cinema
