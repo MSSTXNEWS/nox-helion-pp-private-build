@@ -49,7 +49,8 @@
    mode.title='6 цветовых планет · 5 миров · 3 режима MAX/BALANCED/ECO';
   };
   const controlsToggle=[...document.querySelectorAll('.nox-owner-actions button')].find(b=>/НАСТРОЙКИ СЦЕНЫ|ЗАКРЫТЬ НАСТРОЙКИ/.test(b.textContent));
-  if(controlsToggle){originalControls.id='nox-owner-world-control-panel';controlsToggle.setAttribute('aria-controls',originalControls.id);}
+  if(!originalControls.id)originalControls.id='nox-owner-world-control-panel';
+  if(controlsToggle)controlsToggle.setAttribute('aria-controls',originalControls.id);
   originalControls.setAttribute('aria-label','Четырнадцать оригинальных графических переключателей NOX');
   mode.addEventListener('click',()=>{
    const open=body.dataset.noxOwnerLayout==='PBR';
