@@ -94,6 +94,13 @@ const threeModule=path.join(out,'vendor/nox-extra/three.module.js');
 if(!fs.existsSync(threeModule))throw Error('NOX_THREE_MODULE_PIN_MISSING');
 fs.mkdirSync(path.join(out,'vendor/three'),{recursive:true});
 fs.copyFileSync(threeModule,path.join(out,'vendor/three/three.module.js'));
+for(const loader of ['STLLoader.js','RGBELoader.js']){
+ const source=path.join(out,'vendor/nox-extra/addons/loaders',loader);
+ if(!fs.existsSync(source))throw Error('NOX_THREE_ADDON_MISSING:'+loader);
+ const destination=path.join(out,'vendor/three/addons/loaders',loader);
+ fs.mkdirSync(path.dirname(destination),{recursive:true});
+ fs.copyFileSync(source,destination);
+}
 for(const name of ['nox-glass-home.css','nox-glass-film.css','nox-glass-init.mjs']){
  if(!fs.existsSync(path.join(out,name)))throw Error('NOX_GLASS_BRIDGE_MISSING:'+name);
 }
@@ -135,6 +142,10 @@ for(const page of pages){
     html=html.replaceAll(remote,local);
    }
  }
+ // Use exactly the previously pinned Three version, but without the CDN at runtime.
+ const originalThree='https://cdn.jsdelivr.net/npm/three@0.160.1/';
+ html=html.replaceAll(originalThree+'build/three.module.js','./vendor/three/three.module.js');
+ html=html.replaceAll(originalThree+'examples/jsm/','./vendor/three/addons/');
  if(html.includes('src="/https://'))html=html.replaceAll('src="/https://','src="https://'); // Repair three historically malformed Lucide URLs.
  if(page==='memory.html')html=html.replace(/<img\s+src="nox-memory-core\.svg"[^>]*>/i,'');
  if(page==='index.html'){
