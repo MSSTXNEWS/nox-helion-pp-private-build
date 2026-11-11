@@ -1,0 +1,38 @@
+/* NOX HELION · MENU10 · isolated candidate only · original asset intact
+   Source target: GitLab R75 ead9b2b4 / coordination/mega814/mega814.css
+   Exact original blob SHA1 24e5eecf7d55994f6b2e1f32c296305503a63d5a
+   This is an ADDITIVE donor for the sole Windows owner/integrator, not accepted E07.
+   Ten original centers unchanged; media image, CoreIDs and owner actions unchanged. */
+@media (min-width:781px) {
+  /* Avoid overlapping adjacent bounding boxes: old hit targets were 15% x 24%.
+     Preserve center positions, source image and 10 real DOM buttons. */
+  .mega814-menu-scene .mega814-asteroid-button:not(.mega814-center-home) {
+    width:9.8%; height:17%; min-width:44px; min-height:44px;
+    clip-path:ellipse(49% 49% at 50% 50%);
+    border-radius:50%;
+  }
+}
+/* Mobile originals stay unchanged: existing 10 safe fallback buttons instead of
+   ambiguous overlapping spatial targets on small rendered approved bitmap.
+   Restyle only the 10 existing fallback buttons as small lava worlds. */
+@media (max-width:780px) {
+  .mega814-menu-scene .mega814-mobile-worlds {
+    display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;
+    background:radial-gradient(ellipse at 50% -20%,rgba(130,71,30,.13),transparent 75%);
+  }
+  .mega814-menu-scene .mega814-mobile-button {
+    display:grid;place-items:center;min-height:72px;border-radius:46% 54% 49% 51% / 54% 49% 51% 46%;
+    border:1px solid rgba(235,171,104,.55);
+    background:radial-gradient(ellipse at 35% 25%,rgba(130,77,46,.53),rgba(21,18,18,.93) 53%,#07090c 90%);
+    box-shadow:inset -6px -9px 17px rgba(0,0,0,.6),0 7px 18px rgba(0,0,0,.25);
+    color:#f6d7aa;min-width:0;overflow-wrap:anywhere;
+  }
+  .mega814-menu-scene .mega814-mobile-button[aria-pressed="true"],
+  .mega814-menu-scene .mega814-mobile-button:focus-visible {
+    border-color:#f6c785;box-shadow:0 0 0 2px rgba(248,194,121,.35),0 0 20px rgba(211,119,50,.34);
+  }
+}
+@media (prefers-reduced-motion:reduce) {
+ .mega814-menu-scene .mega814-asteroid-button,
+ .mega814-menu-scene .mega814-mobile-button {animation:none!important;transition:none!important}
+}

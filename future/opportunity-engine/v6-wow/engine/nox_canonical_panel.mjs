@@ -1,0 +1,88 @@
+/* NOX OIE · canonical-shell-only panel. No HOME/MENU/WORK overrides, no invented asteroids/personas. */
+export function mountOpportunityPanel(target, { apiBase = '', signal, onBack, onEvent, requestJob } = {}) {
+  if (!(target instanceof HTMLElement)) throw new TypeError('CANONICAL_HOST_REQUIRED');
+  if (target.dataset.noxScreen !== 'opportunity-engine') throw new Error('NOX_ROUTE_NOT_APPROVED');
+  const abort = new AbortController();
+  if (signal?.aborted) abort.abort();
+  else signal?.addEventListener('abort', () => abort.abort(), { once: true });
+  const root = target.shadowRoot || target.attachShadow({ mode: 'open' });
+  if (root.childNodes.length) throw new Error('ALREADY_MOUNTED');
+  const style = document.createElement('style');
+  style.textContent = `
+    :host{display:block}*{box-sizing:border-box}.panel{color:#eee0ce;font:14px/1.5 'Segoe UI',sans-serif}
+    h2{font-size:clamp(19px,2.2vw,29px);margin:0}header{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:18px}
+    .status{margin-left:auto;color:#e0bb87;font:11px monospace}.notice{color:#c4b4a3;font-size:12px}
+    input,button{font:inherit;color:inherit;background:#111419;border:1px solid #92704e;border-radius:8px;padding:10px;min-height:44px}
+    button{cursor:pointer}button:hover,button:focus-visible{border-color:#f0c38e}button:focus-visible,input:focus-visible{outline:2px solid #eac28c}
+    .toolbar{display:flex;gap:10px;margin:12px 0 20px;flex-wrap:wrap}.toolbar input{flex:1;min-width:180px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,230px),1fr));gap:12px}
+    .item{display:block;text-align:left;min-height:105px;padding:14px;background:linear-gradient(150deg,#221b18,#101319)}
+    .item small{display:block;color:#d4b087;margin:6px 0}.actions{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px}.detail{white-space:pre-wrap;overflow-wrap:anywhere;margin:18px 0;background:#101319;padding:16px;border:1px solid #635243;border-radius:8px}
+    [hidden]{display:none!important}@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+  `;
+  root.append(style);
+  const panel = document.createElement('section');panel.className='panel';panel.setAttribute('aria-label','Opportunity Engine');
+  panel.innerHTML = '<header><button type="button" data-action="back" aria-label="Назад">← Назад</button><h2>Фабрика возможностей</h2><span class="status">LOCAL · PREVIEW · HOLD</span></header><p class="notice">Исследовательские гипотезы, не запущенные компании. Встроенный раздел NOX, без замены HOME/MENU/WORK.</p><div class="toolbar"><input type="search" aria-label="Поиск идей" placeholder="Найти идею"><button type="button" data-action="clear">Сбросить</button></div><div class="toolbar"><input type="text" maxlength="240" data-theme aria-label="Тема исследования" placeholder="Тема для исследования"><button type="button" data-action="generate">Создать 3 гипотезы</button><button type="button" data-action="megablock">МЕГА-БЛОК 1</button></div><p role="status" class="notice"></p><div class="grid" role="list"></div><button type="button" data-action="more" hidden>Показать ещё</button><div class="detail" hidden aria-live="polite"></div>';
+  root.append(panel);
+  const input=panel.querySelector('input'),grid=panel.querySelector('.grid'),status=panel.querySelector('[role=status]'),more=panel.querySelector('[data-action=more]'),detail=panel.querySelector('.detail');
+  let data=[],limit=9,filtered=[],busy=false;
+  const emit=(type,detail={})=>{ try { onEvent?.({contract:'nox.oie.ui.v1',type,...detail}); } catch (_) { /* telemetry is noncritical */ } };
+  const theme=panel.querySelector("[data-theme]");
+  for(const id of ['generate','megablock']){
+    const b=panel.querySelector('[data-action='+id+']');
+    if(typeof requestJob!=='function') { b.disabled=true; b.title='HOLD · доверенный обработчик NOX не подключён'; }
+  }
+  if(typeof onBack!=='function'){
+    const b=panel.querySelector('[data-action=back]');b.disabled=true;b.title='HOLD · маршрут возврата не подключён';
+  }
+  async function get(path) {
+    if (typeof apiBase !== 'string' || !/^(?:|\/(?!\/)[a-zA-Z0-9/_-]*)$/.test(apiBase) || apiBase.includes('..')) throw Error('SAME_ORIGIN_API_REQUIRED');
+    const response=await fetch(apiBase+path,{signal:abort.signal,credentials:'omit',cache:'no-store'});
+    if(abort.signal.aborted)throw Error('ABORTED');
+    if(!response.ok)throw Error('HTTP_'+response.status);
+    const payload=await response.json();if(!payload.ok)throw Error(payload.error||'API_ERROR');return payload.result;
+  }
+  async function read(action,params,path){
+    if(typeof requestJob==='function'){
+      const payload=await requestJob(action,params,abort.signal);
+      if(abort.signal.aborted)throw Error('ABORTED');
+      if(!payload?.ok)throw Error(payload?.error||'HOST_READ_FAILED');
+      return payload.result;
+    }
+    return get(path);
+  }
+  async function post(endpoint){
+    if(busy)return;busy=true;status.textContent='Выполняется локальный расчёт…';
+    try {
+      if(typeof requestJob!=='function')throw Error('HOST_ACTION_NOT_CONNECTED');
+      const payload=await requestJob(endpoint==='/api/megablock1'?'megablock1.preview':'mission.run',{theme:theme.value,count:3},abort.signal);
+      if(abort.signal.aborted)throw Error('ABORTED');
+      if(!payload?.ok)throw Error(payload?.error||'HOST_ACTION_FAILED');
+      detail.textContent=JSON.stringify(payload.result,null,2);detail.hidden=false;status.textContent='Локальный результат создан · коммерческая проверка HOLD';emit('job.done',{endpoint});
+    } catch(err){if(!abort.signal.aborted){status.textContent='HOLD · '+err.message;emit('job.error',{endpoint,error:err.message});}}
+    finally{busy=false;}
+  }
+  function render(){
+    filtered=data.filter(x=>(x.name+' '+x.id+' '+(x.category||'')).toLocaleLowerCase().includes(input.value.trim().toLocaleLowerCase()));
+    grid.replaceChildren();
+    for(const item of filtered.slice(0,limit)){
+      const button=document.createElement('button');button.type='button';button.className='item';button.setAttribute('role','listitem');button.dataset.ideaId=item.id;
+      const name=document.createElement('strong');name.textContent=item.name;const meta=document.createElement('small');meta.textContent=item.id+' · '+(item.status||'HOLD');button.append(name,meta);grid.append(button);
+    }
+    more.hidden=limit>=filtered.length;status.textContent=filtered.length+' гипотез · показано '+Math.min(limit,filtered.length);
+  }
+  panel.addEventListener('click',async e=>{
+    const action=e.target.closest('button');if(!action)return;
+    if(action.dataset.action==='back'){try { if(typeof onBack!=='function')throw Error('HOST_BACK_NOT_CONNECTED');onBack();emit('navigation.back'); } catch(err){status.textContent='HOLD · '+err.message;}return;}
+    if(action.dataset.action==='generate'){await post('/api/mission');return;}
+    if(action.dataset.action==='megablock'){await post('/api/megablock1');return;}
+    if(action.dataset.action==='clear'){input.value='';limit=9;detail.hidden=true;render();return;}
+    if(action.dataset.action==='more'){limit+=9;render();return;}
+    if(action.dataset.ideaId){try{const result=await read('idea.inspect',{idea_id:action.dataset.ideaId},'/api/inspect?id='+encodeURIComponent(action.dataset.ideaId));detail.textContent=JSON.stringify(result.idea,null,2);detail.hidden=false;detail.setAttribute('tabindex','-1');detail.focus();emit('idea.inspect',{ideaId:action.dataset.ideaId});}catch(err){if(!abort.signal.aborted)status.textContent='Инспектор: '+err.message;}}
+  },{signal:abort.signal});
+  input.addEventListener('input',()=>{limit=9;render();},{signal:abort.signal});
+  read('idea.list',{},'/api/ideas').then(result=>{data=result.ideas||[];render();}).catch(err=>{if(!abort.signal.aborted)status.textContent='HOLD · '+err.message;});
+  const keyboard=e=>{if(e.key==='Escape'&&detail.hidden===false){detail.hidden=true;emit('inspector.close');}else if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();input.focus();}};
+  root.addEventListener('keydown',keyboard,{signal:abort.signal});
+  return {dispose(){abort.abort();root.replaceChildren();emit('panel.dispose');},refresh:()=>read('idea.list',{},'/api/ideas').then(result=>{data=result.ideas||[];render();})};
+}
