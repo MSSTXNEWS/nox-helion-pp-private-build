@@ -38,7 +38,19 @@
  const assign=async(value,source)=>{try{if(state.player?.destroy)await state.player.destroy();state.player=null;player.pause();player.removeAttribute('src');player.querySelectorAll('source,track').forEach(x=>x.remove());const u=new URL(value,location.href);if(u.protocol!=='https:'&&u.protocol!=='http:'&&u.protocol!=='blob:')throw Error('Недопустимый источник');player.dataset.source=source||value;
  if(/\.m3u8(?:$|\?)/i.test(u.pathname+u.search)&&!player.canPlayType('application/vnd.apple.mpegurl')){await loadScript('./vendor/nox-extra/shaka-player.compiled.js');if(!window.shaka?.Player?.isBrowserSupported())throw Error('HLS не поддерживается браузером');state.player=new window.shaka.Player();await state.player.attach(player);await state.player.load(value)}else player.src=value;
  info.textContent='Источник: '+(source||u.host)+' · Состояние: загружен источник, не подтверждено воспроизведение';if(!state.player)player.load();live('Источник установлен. Нажмите Play для начала просмотра.','ok');}catch(e){live('Плеер HOLD: '+e.message,'error')}};
- c.append(row(url,action('ОТКРЫТЬ URL',()=>assign(url.value.trim())),local),player,info,row(audio,action('СОХРАНИТЬ ПОЗИЦИЮ',bookmark),action('НА ВЕСЬ ЭКРАН',()=>player.requestFullscreen?.()),action('−10 С',()=>player.currentTime=Math.max(0,player.currentTime-10)),action('+10 С',()=>player.currentTime=Math.min(player.duration||Infinity,player.currentTime+10))));
+ const save=action('СОХРАНИТЬ ПОЗИЦИЮ',bookmark),
+  fullscreen=action('НА ВЕСЬ ЭКРАН',()=>player.requestFullscreen?.()),
+  back10=action('−10 С',()=>player.currentTime=Math.max(0,player.currentTime-10)),
+  ahead10=action('+10 С',()=>player.currentTime=Math.min(player.duration||Infinity,player.currentTime+10));
+ const updateMediaActions=()=>{
+  const ready=!!player.currentSrc&&player.readyState>=1;
+  for(const control of [save,fullscreen,back10,ahead10])control.disabled=!ready;
+ };
+ updateMediaActions();
+ player.addEventListener('loadedmetadata',updateMediaActions);
+ player.addEventListener('emptied',updateMediaActions);
+ c.append(row(url,action('ОТКРЫТЬ URL',()=>assign(url.value.trim())),local),player,info,
+  row(audio,save,fullscreen,back10,ahead10));
  local.addEventListener('change',()=>{if(local.files?.[0])assign(objectURL(local.files[0]),local.files[0].name+':'+local.files[0].size)});
  audio.addEventListener('change',()=>{if(!audio.files?.[0])return;player.querySelectorAll('track').forEach(x=>x.remove());const tr=$('track',{kind:'subtitles',label:audio.files[0].name,srclang:'ru',src:objectURL(audio.files[0]),default:''});player.append(tr);live('Субтитры VTT подключены','ok')});
  const sources=shell('Медиаисточники и права');notice(sources,'Подключайте только файлы, которыми имеете право пользоваться. Доступность внешних URL зависит от CORS и политики владельца.');
