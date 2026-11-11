@@ -1,5 +1,21 @@
 {
   "schema": "nox-runpod-readonly-v1",
   "node": "runpod-5f3j8hwyicc0bp",
-  "tasks": []
+  "tasks": [
+    {
+      "id": "runpod-gpu-probe-20261112",
+      "op": "gpu",
+      "expires_utc": "2026-11-13T12:00:00Z"
+    },
+    {
+      "id": "runpod-process-probe-20261112",
+      "op": "processes",
+      "expires_utc": "2026-11-13T12:00:00Z"
+    },
+    {
+      "id": "runpod-disk-probe-20261112",
+      "op": "disk",
+      "expires_utc": "2026-11-13T12:00:00Z"
+    }
+  ]
 }
