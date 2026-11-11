@@ -72,6 +72,9 @@
    keepLast();
    setTimeout(()=>observer.disconnect(),7000);
   }
+  const syncVisibility=()=>body.classList.toggle('nox-v22-paused',document.hidden);
+  document.addEventListener('visibilitychange',syncVisibility);
+  syncVisibility();
   window.NOX_OWNER_RELEASE_V22=Object.freeze({
    version:'V22',engine:'ORIGINAL_D02_AND_PHYSICAL_WORLDS_V7',
    coreCount:coreLinks.length,worldCount:panelCount,approvedPortraits:personas.length,
