@@ -159,6 +159,10 @@ for(const page of pages){
    if(!fs.existsSync(path.join(out,asset)))throw Error('NOX_V22_SOURCE_MISSING:'+asset);
   if(!html.includes('nox-owner-release-v22.css'))html=html.replace('</head>','<link rel="stylesheet" href="./nox-owner-release-v22.css" data-nox-v22="source-repair"></head>');
   if(!html.includes('nox-owner-release-v22.js'))html=html.replace('</body>','<script defer src="./nox-owner-release-v22.js" data-nox-v22="source-repair"></script></body>');
+  for(const name of ['nox-visual-source-lock-v24.css','nox-visual-source-lock-v24.js'])
+   if(!fs.existsSync(path.join(out,name)))throw Error('NOX_V24_FIDELITY_ASSET_MISSING:'+name);
+  if(!html.includes('nox-visual-source-lock-v24.css'))html=html.replace('</head>','<link rel="stylesheet" href="./nox-visual-source-lock-v24.css" data-nox-v24="original-materials"></head>');
+  if(!html.includes('nox-visual-source-lock-v24.js'))html=html.replace('</body>','<script defer src="./nox-visual-source-lock-v24.js" data-nox-v24="original-materials"></script></body>');
  }
  if(page==='chat.html'){
   for(const asset of ['nox-chat-training-v23.css','nox-chat-training-v23.mjs'])
