@@ -143,6 +143,12 @@ for(const page of pages){
    }
  }
  // Use exactly the previously pinned Three version, but without the CDN at runtime.
+ const tablerRemote='https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta21/dist/css/tabler.min.css';
+ const tablerLocal='./vendor/nox-extra/tabler-core.min.css';
+ if(html.includes(tablerRemote)){
+  if(!fs.existsSync(path.join(out,tablerLocal.slice(2))))throw Error('NOX_TABLER_LOCAL_CSS_MISSING');
+  html=html.replaceAll(tablerRemote,tablerLocal);
+ }
  const originalThree='https://cdn.jsdelivr.net/npm/three@0.160.1/';
  html=html.replaceAll(originalThree+'build/three.module.js','./vendor/three/three.module.js');
  html=html.replaceAll(originalThree+'examples/jsm/','./vendor/three/addons/');
