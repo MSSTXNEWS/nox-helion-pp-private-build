@@ -1,2 +1,3 @@
 /PP_MENU_CATALOG_BUNDLE.patch -text
 /PP_FAST_CANDIDATE_MODE.patch -text
+/m23_overlay/M23_SHELL_HOOKS.patch -text
