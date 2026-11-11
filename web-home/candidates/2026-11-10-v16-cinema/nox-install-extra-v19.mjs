@@ -9,6 +9,7 @@ import {createHash} from 'node:crypto';
 
 const version='2026-11-10-v19';
 const sources=[
+ {name:'tabler-core.min.css',url:'https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta21/dist/css/tabler.min.css',minBytes:30000,maxBytes:1300000,license:'MIT'},
  {name:'echarts.min.js',url:'https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js',minBytes:400000,maxBytes:4000000,license:'Apache-2.0'},
  {name:'lucide.min.js',url:'https://cdn.jsdelivr.net/npm/lucide@0.456.0/dist/umd/lucide.min.js',minBytes:20000,maxBytes:1500000,license:'ISC'},
  {name:'three.module.js',url:'https://cdn.jsdelivr.net/npm/three@0.160.1/build/three.module.js',minBytes:300000,maxBytes:2500000,license:'MIT'},
