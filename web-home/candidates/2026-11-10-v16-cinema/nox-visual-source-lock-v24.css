@@ -84,3 +84,49 @@ body.helion-home.nox-owner-cinema.nox-v22-paused .nox-owner-core::before{
   animation:none!important;transition:none!important
  }
 }
+/* NOX V24 ORIGINAL 14 SELECTOR PANEL: HIT-TARGET FIX (NO SHADER CHANGE) */
+/* The original orbit engine writes --demo-x/y for the floating world controls.
+   Inside the owner settings panel they become *buttons*, so retaining its
+   absolute placement makes AMETHYST cover CLASSIC at 1440px.
+   This rule affects only the UI hit targets while the 14-control panel is open;
+   the original WebGL worlds, their orbital physics and all materials remain intact. */
+html body.helion-home.nox-owner-cinema[data-nox-owner-controls="true"] section.home-palette-bottom.nox-orbital-controls button.home-preset,
+html body.helion-home.nox-owner-cinema[data-nox-owner-controls="true"] section.home-palette-bottom.nox-orbital-controls button.nox-world-profile,
+html body.helion-home.nox-owner-cinema[data-nox-owner-controls="true"] section.home-palette-bottom.nox-orbital-controls #homeModes > button {
+ position:relative!important;
+ left:auto!important;
+ top:auto!important;
+ right:auto!important;
+ bottom:auto!important;
+ inset:auto!important;
+ transform:none!important;
+ translate:none!important;
+ margin:0!important;
+ will-change:auto!important;
+ z-index:auto!important;
+ pointer-events:auto!important;
+ flex:0 0 64px!important;
+ width:64px!important;
+ height:64px!important;
+ min-width:54px!important;
+ min-height:54px!important;
+ max-width:74px!important;
+ max-height:74px!important;
+}
+html body.helion-home.nox-owner-cinema[data-nox-owner-controls="true"] section.home-palette-bottom.nox-orbital-controls :is(.home-palette-controls,#homeModes) {
+ position:relative!important;
+ display:flex!important;
+ flex-wrap:wrap!important;
+ justify-content:flex-start!important;
+ align-items:center!important;
+ gap:8px!important;
+ width:100%!important;
+ min-width:0!important;
+}
+@media(max-width:600px){
+ html body.helion-home.nox-owner-cinema[data-nox-owner-controls="true"] section.home-palette-bottom.nox-orbital-controls button.home-preset,
+ html body.helion-home.nox-owner-cinema[data-nox-owner-controls="true"] section.home-palette-bottom.nox-orbital-controls button.nox-world-profile,
+ html body.helion-home.nox-owner-cinema[data-nox-owner-controls="true"] section.home-palette-bottom.nox-orbital-controls #homeModes > button {
+  flex-basis:56px!important;width:56px!important;height:56px!important;
+ }
+}
