@@ -19,7 +19,9 @@ if [ "$DIGEST" != "$BLOB" ]; then echo "HOLD_SOURCE_SHA_MISMATCH"; exit 3; fi
 python3 -m py_compile "$TEMP"
 TARGET="$DIR/runpod_readonly_dispatcher.py"
 if [ -e "$TARGET" ] && ! cmp -s "$TARGET" "$TEMP"; then echo "HOLD_EXISTING_OBSERVER_DIFFERENT"; exit 4; fi
-if [ ! -e "$TARGET" ]; then install -m 0600 "$TEMP" "$TARGET"; fi
+if [ ! -e "$TARGET" ]; then cp -- "$TEMP" "$TARGET"; fi
+# RunPod network/global volume may refuse chmod/chown even when file creation works.
+# mktemp + umask 077 keeps the source private without metadata mutations.
 if [ -f "$DIR/agent.pid" ]; then
   PID=$(cat "$DIR/agent.pid")
   if [[ "$PID" =~ ^[0-9]+$ ]] && [ -e "/proc/$PID/cmdline" ]; then
