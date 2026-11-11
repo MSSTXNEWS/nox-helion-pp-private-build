@@ -3,6 +3,7 @@
 import json, os, pathlib, shutil, subprocess, sys, tempfile, unittest
 sys.path.insert(0,str(pathlib.Path(__file__).parent))
 from nox_local_preflight import assess,local_path,sha256_file
+from nox_local_telemetry import inspect
 
 HERE=pathlib.Path(__file__).parent
 ARCHIVE_TRAINER=pathlib.Path('/mnt/data/nox_training_review/NOX_TRAINING_PROGRAM_20261112/train_n36/train_n36.py')
@@ -56,6 +57,19 @@ class TestNoLossLocalFirst(unittest.TestCase):
  def test_trainer_network_dependency_holds(self):
   self.trainer.write_text('W="/workspace/nox36"\n')
   self.assertIn('TRAINER_STILL_DEPENDS_ON_NETWORK_PATH',assess(self.args())['problems'])
+ def test_telemetry_never_implies_full_weights(self):
+  proof=assess(self.args(True));data={'step':85,'total':100}
+  x=inspect(proof,data,5)
+  self.assertEqual(x['status'],'HOLD');self.assertFalse(x['fullStudentWeightsVerified'])
+  report={'step':85,'hashes':{n:sha256_file(str(self.root/'ckpt/sft/last'/n)) for n in ['STEP','adapter_model.safetensors','opt.pt','adapter_config.json']}}
+  p=self.root/'backup-sha.json';p.write_text(json.dumps(report))
+  a=self.args(True);a.backup_digest_manifest=str(p)
+  verified=assess(a)
+  r=inspect(verified,data,5)
+  self.assertEqual(r['status'],'LOCAL_TRAINER_STATUS_FILE_FRESH')
+  self.assertEqual(r['stepCompletionPercent'],85)
+  self.assertFalse(r['fullStudentWeightsVerified']);self.assertIsNone(r['intelligenceProgressPercent'])
+  self.assertEqual(inspect(verified,data,121)['status'],'LOCAL_CHECKPOINT_HASH_MATCHED')
  def test_network_rejected_before_stat(self):
   with self.assertRaisesRegex(ValueError,'NETWORK_PATH_BLOCKED'):local_path('/workspace/nox36')
  def test_network_symlink_rejected(self):
@@ -78,7 +92,7 @@ class TestNoLossLocalFirst(unittest.TestCase):
     '--reserve-gb','0'],capture_output=True,text=True)
   self.assertEqual(p.returncode,2);self.assertIn('NETWORK_PATH_BLOCKED',p.stdout)
  def test_script_is_syntactically_valid(self):
-  for name in ['nox_local_preflight.py','nox_patch_trainer.py','nox_copy_verified.py']:
+  for name in ['nox_local_preflight.py','nox_patch_trainer.py','nox_copy_verified.py','nox_local_telemetry.py']:
    import ast
    ast.parse((HERE/name).read_text())
 
