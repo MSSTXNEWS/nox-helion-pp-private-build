@@ -28,7 +28,12 @@ try{
   try{
    const response=await page.goto(url,{waitUntil:'domcontentloaded',timeout:45000});
    status=response?.status()||null;
-   await page.waitForTimeout(5000);
+   // Wait for the ORIGINAL WebGL renderer and HDRI/material maps, not a
+   // fixed 5s screenshot race. A timed-out renderer remains HOLD.
+   await page.waitForFunction(()=>{
+     const diag=window.NOX_CINEMATIC_HEALTH?.snapshot?.();
+     return diag?.core?.realRendered===true&&diag?.worlds?.allMaterialAssetsReady===true;
+   },null,{timeout:25000,polling:250}).catch(()=>{});
    blocked=await page.evaluate(()=>/authentication|log in|sign in/i.test(document.title)&&!document.querySelector('.helion-stage'));
    snapshot=await page.evaluate(()=>window.NOX_CINEMATIC_HEALTH?.snapshot?.()||null);
    ownerCheck=await page.evaluate(()=>{
@@ -132,6 +137,22 @@ try{
     if(worldStyle!=='none')throw Error('NOX_V24_PBR_MATERIAL_COLORS_DISTORTED:'+worldStyle);
     ownerCheck.v22.pbrWorldCheck=worldCheck;
     if(name==='1440'){
+      // Explicit hit-target test for all 14 selectors: no other planet may
+      // capture the center of a selected button. The WebGL remains unmodified.
+      const originalHitTargets=await page.evaluate(()=>{
+       const nodes=[...document.querySelectorAll('section.nox-orbital-controls button')];
+       const items=nodes.map((node,index)=>{
+         const r=node.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2;
+         const hit=document.elementFromPoint(cx,cy);
+         return {index,width:r.width,height:r.height,
+           unobstructed:hit===node||node.contains(hit),
+           hit:hit?.closest('button')?.getAttribute('title')||null};
+       });
+       return items;
+      });
+      if(originalHitTargets.length!==14||originalHitTargets.some(item=>!item.unobstructed))
+       throw Error('NOX_ORIGINAL_14_BUTTON_OVERLAP:'+JSON.stringify(originalHitTargets));
+      ownerCheck.v24.originalSelectorHitTargets=originalHitTargets.length;
       // Exercise all 14 ORIGINAL controls, not just count them.
       const controls=page.locator('section.nox-orbital-controls button');
       for(let i=0;i<14;i++){
