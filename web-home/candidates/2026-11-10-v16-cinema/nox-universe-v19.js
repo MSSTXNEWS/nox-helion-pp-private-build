@@ -59,11 +59,11 @@
   try{return await promise}finally{pendingScripts.delete(src)}
  }
  function books(){const c=shell('Библиотека · PDF / EPUB / TXT');notice(c,'Файлы остаются в браузере. Они не отправляются на сервер. Для EPUB используется epub.js; для PDF — PDF.js.');
- const file=field('Открыть PDF, EPUB или TXT','file');file.accept='.pdf,.epub,.txt,application/pdf,application/epub+zip,text/plain';const view=$('div',{class:'nox-v19-reader'});const prev=action('◀ НАЗАД',()=>nav(-1)),next=action('ВПЕРЁД ▶',()=>nav(1)),txt=$('span',{class:'nox-v19-note',text:'Не открыт файл'});let currentPage=1,pdf=null;
+ const file=field('Открыть PDF, EPUB или TXT','file');file.accept='.pdf,.epub,.txt,application/pdf,application/epub+zip,text/plain';const view=$('div',{class:'nox-v19-reader'});const prev=action('◀ НАЗАД',()=>nav(-1)),next=action('ВПЕРЁД ▶',()=>nav(1)),txt=$('span',{class:'nox-v19-note',text:'Не открыт файл'});let currentPage=1,pdf=null;prev.disabled=true;next.disabled=true;
  async function nav(step){try{if(pdf){currentPage=Math.max(1,Math.min(pdf.numPages,currentPage+step));await showPdfPage();}else if(state.book?.rendition){await(step<0?state.book.rendition.prev():state.book.rendition.next())}}catch(e){live(String(e),'error')}}
- async function showPdfPage(){const page=await pdf.getPage(currentPage);const vp=page.getViewport({scale:Math.min(2,Math.max(1,(view.clientWidth||700)/page.getViewport({scale:1}).width))});const cv=$('canvas',{class:'nox-v19-pdfcanvas'});cv.width=Math.floor(vp.width);cv.height=Math.floor(vp.height);view.replaceChildren(cv);await page.render({canvasContext:cv.getContext('2d'),viewport:vp}).promise;txt.textContent='Страница '+currentPage+' / '+pdf.numPages;}
- file.addEventListener('change',async()=>{const f=file.files?.[0];if(!f)return;view.replaceChildren();try{if(/\.pdf$/i.test(f.name)){const module=await import('./vendor/nox-extra/pdf.mjs');module.GlobalWorkerOptions.workerSrc='./vendor/nox-extra/pdf.worker.mjs';pdf=await module.getDocument({data:new Uint8Array(await f.arrayBuffer())}).promise;currentPage=1;await showPdfPage();}
- else if(/\.epub$/i.test(f.name)){await loadScript('./vendor/nox-extra/epub.min.js');const book=window.ePub(await f.arrayBuffer());const rendition=book.renderTo(view,{width:'100%',height:580});await rendition.display();state.book={destroy:()=>book.destroy(),rendition};txt.textContent='EPUB · '+f.name;}
+ async function showPdfPage(){const page=await pdf.getPage(currentPage);const vp=page.getViewport({scale:Math.min(2,Math.max(1,(view.clientWidth||700)/page.getViewport({scale:1}).width))});const cv=$('canvas',{class:'nox-v19-pdfcanvas'});cv.width=Math.floor(vp.width);cv.height=Math.floor(vp.height);view.replaceChildren(cv);await page.render({canvasContext:cv.getContext('2d'),viewport:vp}).promise;txt.textContent='Страница '+currentPage+' / '+pdf.numPages;prev.disabled=currentPage<=1;next.disabled=currentPage>=pdf.numPages;}
+ file.addEventListener('change',async()=>{const f=file.files?.[0];if(!f)return;pdf=null;prev.disabled=true;next.disabled=true;view.replaceChildren();try{if(/\.pdf$/i.test(f.name)){const module=await import('./vendor/nox-extra/pdf.mjs');module.GlobalWorkerOptions.workerSrc='./vendor/nox-extra/pdf.worker.mjs';pdf=await module.getDocument({data:new Uint8Array(await f.arrayBuffer())}).promise;currentPage=1;await showPdfPage();}
+ else if(/\.epub$/i.test(f.name)){await loadScript('./vendor/nox-extra/epub.min.js');const book=window.ePub(await f.arrayBuffer());const rendition=book.renderTo(view,{width:'100%',height:580});await rendition.display();state.book={destroy:()=>book.destroy(),rendition};prev.disabled=false;next.disabled=false;txt.textContent='EPUB · '+f.name;}
  else{const t=await f.text();const pre=$('article',{class:'nox-v19-text',text:t.slice(0,3e6)});view.append(pre);txt.textContent='TXT · '+f.name;}
  live('Файл открыт локально: '+f.name,'ok');}catch(e){live('Ридер HOLD: '+e.message,'error')}});
  c.append(file,row(prev,next,txt),view)}
@@ -79,7 +79,17 @@
    if(!name.value.trim()||!date.value){live('Введите название и дату','warn');return}
    try{const records=read(),event={id:String(Date.now())+'-'+Math.round(Math.random()*1e6),title:name.value.trim().slice(0,140),start:date.value,allDay:true};records.push(event);store(records);state.calendar?.addEvent(event);name.value='';live('Событие сохранено в браузере, не отправлено в календарный API','ok')}catch(e){live('Сохранение HOLD: '+e.message,'error')}
   });
-  const clear=action('УДАЛИТЬ ВЫБРАННОЕ',()=>live('Нажмите событие в календаре и подтвердите удаление','warn'));
+  let selectedEvent=null;
+  const clear=action('УДАЛИТЬ ВЫБРАННОЕ',()=>{
+   if(!selectedEvent)return;
+   const active=state.calendar?.getEventById(selectedEvent);
+   if(!active){selectedEvent=null;clear.disabled=true;return}
+   if(!confirm('Удалить событие «'+active.title+'»?'))return;
+   try{store(read().filter(e=>e.id!==selectedEvent));active.remove();selectedEvent=null;
+       clear.disabled=true;live('Выбранное событие удалено из локального календаря','ok')}
+   catch(e){live('Удаление HOLD: '+e.message,'error')}
+  });
+  clear.disabled=true;
   c.append(row(name,date,button,clear),mount);
   loadScript('./vendor/nox-extra/fullcalendar.global.min.js').then(()=>{
    if(state.active!=='Календарь'||!mount.isConnected)return;
@@ -90,8 +100,8 @@
     headerToolbar:{left:'prev,next today',center:'title',right:'dayGridMonth,dayGridWeek'},
     buttonText:{today:'Сегодня',month:'Месяц',week:'Неделя'},
     events:read(),eventClick:arg=>{
-     if(!confirm('Удалить событие «'+arg.event.title+'»?'))return;
-     try{store(read().filter(e=>e.id!==arg.event.id));arg.event.remove();live('Событие удалено локально','ok')}catch(e){live('Удаление HOLD: '+e.message,'error')}
+     selectedEvent=arg.event.id;clear.disabled=false;
+     live('Выбрано событие: '+arg.event.title+'. Нажмите «УДАЛИТЬ ВЫБРАННОЕ» для удаления.','ok');
     }
    });
    instance.render();state.calendar=instance;live('FullCalendar загружен локально. События работают без серверного API.','ok');
