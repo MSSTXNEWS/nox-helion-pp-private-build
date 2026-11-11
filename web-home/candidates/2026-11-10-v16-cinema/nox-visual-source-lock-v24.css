@@ -32,6 +32,11 @@ body.helion-home.nox-owner-cinema .nox-owner-core{
  animation:nox-core-float 11s ease-in-out infinite!important;
  animation-delay:var(--phase)!important
 }
+/* GSAP is the one spatial-motion owner when available; original V20 CSS
+   remains a precise fallback. Never sum two orbital movement rigs. */
+body.helion-home.nox-owner-cinema[data-nox-motion-owner="GSAP"] .nox-owner-core{
+ animation:none!important
+}
 body.helion-home.nox-owner-cinema .nox-owner-core::before{
  background:radial-gradient(circle at 37% 28%,var(--core-bright) -15%,transparent 17%),
  repeating-conic-gradient(from 9deg,var(--core-glow) 0deg,transparent 10deg,transparent 26deg,var(--core-glow) 31deg,transparent 48deg),
