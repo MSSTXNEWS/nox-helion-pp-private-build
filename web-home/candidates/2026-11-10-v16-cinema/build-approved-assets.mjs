@@ -136,7 +136,13 @@ for(const page of pages){
    }
  }
  if(html.includes('src="/https://'))html=html.replaceAll('src="/https://','src="https://'); // Repair three historically malformed Lucide URLs.
- if(page==='memory.html')html=html.replace(/<img\s+src="nox-memory-core\.svg"[^>]*>/i,''); // Missing decorative art is not fabricated or replaced with a false image.
+ if(page==='memory.html')html=html.replace(/<img\\s+src="nox-memory-core\\.svg"[^>]*>/i,'');
+ if(page==='index.html'){
+  for(const asset of ['nox-owner-release-v22.css','nox-owner-release-v22.js'])
+   if(!fs.existsSync(path.join(out,asset)))throw Error('NOX_V22_SOURCE_MISSING:'+asset);
+  if(!html.includes('nox-owner-release-v22.css'))html=html.replace(/<\\/head>/i,'<link rel="stylesheet" href="./nox-owner-release-v22.css" data-nox-v22="approved-source-repair"></head>');
+  if(!html.includes('nox-owner-release-v22.js'))html=html.replace(/<\\/body>/i,'<script defer src="./nox-owner-release-v22.js" data-nox-v22="approved-source-repair"></script></body>');
+ } // Missing decorative art is not fabricated or replaced with a false image.
 
  fs.writeFileSync(p,html);
 }
@@ -183,6 +189,7 @@ execFileSync('node',['--check',path.join(out,'nox-owner-director-v20.js')],{stdi
 // V21 assets must exist in the actual Vercel output, not only the GitHub patch directory.
  for(const f of ['nox-owner-fidelity-v21.css','nox-owner-fidelity-v21.js'])if(!fs.existsSync(path.join(out,f)))throw Error('NOX_V21_FIDELITY_MISSING:'+f);
  execFileSync('node',['--check',path.join(out,'nox-owner-fidelity-v21.js')],{stdio:'pipe'});
+execFileSync('node',['--check',path.join(out,'nox-owner-release-v22.js')],{stdio:'pipe'});
  const fuseFile=path.join(out,'vendor/nox-extra/fuse.min.js');
  if(!fs.existsSync(fuseFile)||fs.statSync(fuseFile).size<7000)throw Error('NOX_FUSE_LOCAL_VENDOR_MISSING');
  const ownerHtml=fs.readFileSync(path.join(out,'index.html'),'utf8');
