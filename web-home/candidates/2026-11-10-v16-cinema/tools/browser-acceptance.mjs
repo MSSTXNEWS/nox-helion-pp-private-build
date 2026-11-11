@@ -196,6 +196,12 @@ try{
   const moduleButtons=await p.locator('.nox-v19-tabs button').allTextContents();
   for(const name of ['Кинотеатр','Книги','Календарь','Галерея','Эффекты','Новости','Уведомления','Погода','Валюта','Браузер','Разделы'])
    if(!moduleButtons.includes(name))throw Error('NOX_V19_MISSING_MODULE_BUTTON_'+name);
+  await p.getByRole('button',{name:'Кинотеатр',exact:true}).click();
+  await p.waitForSelector('video.nox-v19-video',{timeout:12000});
+  for(const actionName of ['СОХРАНИТЬ ПОЗИЦИЮ','НА ВЕСЬ ЭКРАН','−10 С','+10 С']){
+   if(!await p.getByRole('button',{name:actionName,exact:true}).isDisabled())
+    throw Error('NOX_INERT_MEDIA_BUTTON_NOT_DISABLED:'+actionName);
+  }
   await p.getByRole('button',{name:'Календарь',exact:true}).click();
   try{await p.waitForSelector('.nox-v19-calendar.fc .fc-toolbar',{timeout:13000});}
   catch(e){
@@ -244,6 +250,10 @@ try{
   report.v19Modules.push({name:'Эффекты',source:'tsParticles local',passed:realCanvas&&stopped,physicalGpu:'NOT_TESTED'});
   // Local TXT reader: no user document leaves the browser.
   await p.getByRole('button',{name:'Книги',exact:true}).click();
+  for(const nav of ['◀ НАЗАД','ВПЕРЁД ▶'])
+   if(!await p.getByRole('button',{name:nav,exact:true}).isDisabled())
+    throw Error('NOX_INERT_READER_NAV_NOT_DISABLED:'+nav);
+
   await p.locator('.nox-v19-card input[type="file"]').first().setInputFiles({
     name:'nox-ci-reader.txt',mimeType:'text/plain',
     buffer:Buffer.from('NOX VERIFIED LOCAL READER SMOKE', 'utf8')});
