@@ -1,0 +1,8 @@
+{
+  "asserts_valid": false,
+  "forbidden_bytes": 79088677,
+  "forbidden_name": "NOX_HELION_PRIVATE_CANDIDATE.exe",
+  "forbidden_sha256": "93a329ba1ece9cfd66951b377e04e9c1166ec6ba3ce13a5911ba8e36de99dfb8",
+  "reason": "exe_in_kit_forbidden",
+  "schema": "NOX_M2_EXPECTED_V1"
+}

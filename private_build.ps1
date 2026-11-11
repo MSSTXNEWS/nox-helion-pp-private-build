@@ -39,6 +39,10 @@ $qaLockSha = $null
 $qaWheels = $null
 $qaDependencyFailure = $null
 $qaDependenciesReady = $false
+$m2ManifestSha = $null
+$referenceExeSha = '93a329ba1ece9cfd66951b377e04e9c1166ec6ba3ce13a5911ba8e36de99dfb8'
+$referenceExeName = 'NOX_HELION_PRIVATE_CANDIDATE.exe'
+$referenceExeTouched = $false
 
 New-Item -ItemType Directory -Path $evidence -Force | Out-Null
 New-Item -ItemType Directory -Path $work -Force | Out-Null
@@ -101,7 +105,7 @@ try {
     # P01 SourceLock: pin the checkout identity before touching the archived source.
     # The archive and its independent source-freeze binding remain authoritative.
     $checkoutCommit = (& git -C $root rev-parse HEAD 2>$null)
-    $checkoutTree = (& git -C $root rev-parse HEAD^{tree} 2>$null)
+    $checkoutTree = (& git -C $root rev-parse 'HEAD^{tree}' 2>$null)
     if ($LASTEXITCODE -ne 0 -or -not $checkoutCommit -or -not $checkoutTree) {
         throw 'P01_SOURCELOCK_CHECKOUT_UNAVAILABLE'
     }
@@ -319,9 +323,70 @@ try {
         & $venvPython @pythonArgs
     }
 
+    # M2.0 payload/fixtures. The pinned tree was already verified above. This overlay
+    # only renames the candidate outputs and packages the build inputs. It does
+    # not rewrite the reference executable name into the delivered files.
+    $m2Root = Join-Path $root 'build_inputs\m2'
+    $m2Payload = Join-Path $m2Root 'product_payload'
+    $m2Fixtures = Join-Path $m2Root 'fixtures'
+    foreach ($requiredM2 in @(
+        (Join-Path $m2Root 'M2_PAYLOAD_MANIFEST.json'),
+        (Join-Path $m2Payload 'app_import_manifest.json'),
+        (Join-Path $m2Payload 'M2_PACKAGED_MARKER.txt'),
+        (Join-Path $m2Payload 'GATE_HOLD.json'),
+        (Join-Path $m2Fixtures 'model_config.json'),
+        (Join-Path $m2Fixtures 'smoke_import_list.json')
+    )) {
+        if (-not (Test-Path -LiteralPath $requiredM2 -PathType Leaf)) { throw "M2_PAYLOAD_INPUT_MISSING:$requiredM2" }
+    }
+    $sprintPath = Join-Path $source 'C_RELEASE_SPRINT_BUILD.ps1'
+    $sprintText = [IO.File]::ReadAllText($sprintPath)
+    $guiAnchor = "Name='NOX_HELION_PRIVATE_CANDIDATE'"
+    $bgAnchor = "Name='NOX_HELION_BACKGROUND_CANDIDATE'"
+    if (-not $sprintText.Contains($guiAnchor) -or -not $sprintText.Contains($bgAnchor)) {
+        throw 'M2_OVERLAY_ANCHOR_MISSING'
+    }
+    $sprintText = $sprintText.Replace($guiAnchor, "Name='NOX_HELION_M2_0_PAYLOAD'")
+    $sprintText = $sprintText.Replace($bgAnchor, "Name='NOX_HELION_M2_0_BACKGROUND'")
+    $dataAnchor = '"$weights;helion/ai_weights/weights")'
+    if (-not $sprintText.Contains($dataAnchor)) { throw 'M2_OVERLAY_DATA_ANCHOR_MISSING' }
+    $payloadLiteral = ($m2Payload + ';product_payload').Replace("'", "''")
+    $fixturesLiteral = ($m2Fixtures + ';fixtures').Replace("'", "''")
+    $dataPrefix = '"$weights;helion/ai_weights/weights", '
+    $dataInsert = $dataPrefix + "'" + $payloadLiteral + "', '" + $fixturesLiteral + "')"
+    $anchorAt = $sprintText.IndexOf($dataAnchor)
+    $sprintText = $sprintText.Remove($anchorAt, $dataAnchor.Length).Insert($anchorAt, $dataInsert)
+    if ($sprintText.Contains($guiAnchor) -or $sprintText.Contains($bgAnchor)) {
+        throw 'M2_OVERLAY_REFERENCE_NAME_STILL_PRESENT'
+    }
+    $utf8NoBom = New-Object System.Text.UTF8Encoding $false
+    [IO.File]::WriteAllText($sprintPath, $sprintText, $utf8NoBom)
+    $m2ManifestSha = (Get-FileHash -LiteralPath (Join-Path $m2Root 'M2_PAYLOAD_MANIFEST.json') -Algorithm SHA256).Hash.ToLowerInvariant()
+
     New-Item -ItemType Directory -Path $output | Out-Null
     & (Join-Path $source 'C_RELEASE_SPRINT_BUILD.ps1') -OutputDirectory $output -AuthorizedIsolatedWindowsVM -FastCandidate
     if ($LASTEXITCODE -ne 0) { throw "C_RELEASE_SPRINT_BUILD_FAILED:$LASTEXITCODE" }
+
+    function Copy-M2Tree([string]$From, [string]$To) {
+        if (Test-Path -LiteralPath $To) { Remove-Item -LiteralPath $To -Recurse -Force }
+        Copy-Item -LiteralPath $From -Destination $To -Recurse -Force
+    }
+    Copy-M2Tree $m2Payload (Join-Path $output 'product_payload')
+    Copy-M2Tree $m2Fixtures (Join-Path $output 'fixtures')
+    Copy-Item -LiteralPath (Join-Path $m2Root 'M2_PAYLOAD_MANIFEST.json') -Destination (Join-Path $output 'M2_PAYLOAD_MANIFEST.json') -Force
+    Copy-Item -LiteralPath (Join-Path $m2Root 'VERSION.txt') -Destination (Join-Path $output 'VERSION.txt') -Force
+    $distDir = Join-Path $output 'dist'
+    if (Test-Path -LiteralPath $distDir -PathType Container) {
+        Copy-M2Tree $m2Payload (Join-Path $distDir 'product_payload')
+        Copy-M2Tree $m2Fixtures (Join-Path $distDir 'fixtures')
+    }
+    $guiExe = Join-Path $output 'NOX_HELION_M2_0_PAYLOAD.exe'
+    $backgroundExe = Join-Path $output 'NOX_HELION_M2_0_BACKGROUND.exe'
+    if (-not (Test-Path -LiteralPath $guiExe -PathType Leaf)) { throw 'M2_GUI_EXE_MISSING' }
+    if (-not (Test-Path -LiteralPath $backgroundExe -PathType Leaf)) { throw 'M2_BACKGROUND_EXE_MISSING' }
+    $smokeScript = Join-Path $root 'tools\m2_payload\m2_import_smoke.py'
+    & $venvPython -E -s $smokeScript --source $source --payload $m2Root --staged $output --exe $guiExe --background-exe $backgroundExe --out-dir $output
+    if ($LASTEXITCODE -ne 0) { throw "M2_IMPORT_SMOKE_FAILED:$LASTEXITCODE" }
 } catch {
     $failure = ($_ | Out-String).Trim()
     Write-Error $failure
@@ -330,6 +395,13 @@ try {
         $exeRecords = @(Get-ChildItem -LiteralPath $output -Filter '*.exe' -File -ErrorAction SilentlyContinue | ForEach-Object {
             [ordered]@{name=$_.Name;bytes=$_.Length;sha256=(Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()}
         })
+        foreach ($exeRecord in $exeRecords) {
+            if ($exeRecord.name -eq $referenceExeName -or $exeRecord.sha256 -eq $referenceExeSha) {
+                $referenceExeTouched = $true
+                $referenceViolation = 'REFERENCE_EXE_EMITTED'
+                if ($null -eq $failure) { $failure = $referenceViolation } else { $failure = $failure + "`n" + $referenceViolation }
+            }
+        }
     }
     $cReceiptPath = Join-Path $output 'C_RELEASE_SPRINT_BUILD_RECEIPT.json'
     if (Test-Path -LiteralPath $cReceiptPath -PathType Leaf) {
@@ -381,6 +453,10 @@ try {
         qa_requirements_sha256=$qaLockSha
         qa_dependencies_ready=$qaDependenciesReady
         qa_dependency_failure=$qaDependencyFailure
+        m2_version='M2.0-PP'
+        m2_payload_manifest_sha256=$m2ManifestSha
+        reference_exe_sha256=$referenceExeSha
+        reference_exe_touched=$referenceExeTouched
         source_qa_status=$sourceQaStatus
         native_smoke_status=$nativeSmokeStatus
         fast_candidate_mode=$fastCandidateSelected
@@ -403,6 +479,10 @@ try {
         "SOURCE_QA=$sourceQaStatus"
         "NATIVE_SMOKE=$nativeSmokeStatus"
         "fast_candidate_mode=$fastCandidateSelected"
+        "m2_version: M2.0-PP"
+        "m2_payload_manifest_sha256: $m2ManifestSha"
+        "reference_exe_sha256: $referenceExeSha"
+        "reference_exe_touched: $referenceExeTouched"
         "executables_observed: $($exeRecords.Count)"
         "source_base_tree: $baseTree"
         "source_patched_tree: $patchedTree"

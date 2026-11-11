@@ -1,0 +1,224 @@
+{
+  "files": [
+    {
+      "app_loader": "helion.approved_assets inventory",
+      "bytes": 6975,
+      "kind_claim": "NOT_A_FIRST_RUN_PRODUCT_KIND",
+      "path": "assets/asset_manifest.json",
+      "role": "static_asset_manifest",
+      "sha256": "bf8e9cd4a1eaa5f8cbb223129d9eb4f8d882b65794c45c42ece6940ebb151636"
+    },
+    {
+      "app_loader": "helion.s03_trait_engine.TraitStore.seed reads personas_5.json",
+      "bytes": 14524,
+      "kind_claim": "NOT_A_FIRST_RUN_PRODUCT_KIND",
+      "path": "assets/personas_5.json",
+      "role": "persona_trait_catalog",
+      "sha256": "d5c316266ca24f2e8dd7df049ce25651c40da72b3fa0c3b44451fb84f0a36b15"
+    },
+    {
+      "app_loader": "helion.g3_menu_provenance.load_pinned_menu_source",
+      "bytes": 42157,
+      "kind_claim": "NOT_A_FIRST_RUN_PRODUCT_KIND",
+      "path": "helion/data/menu_v2_full_catalog.json",
+      "role": "menu_catalog",
+      "sha256": "17404e0846dedbd57236c65918b05e6a8df00a7c000dcfd321d794e668490719"
+    },
+    {
+      "app_loader": "json.load; schema nox_helion.persona_trait_seed.v1",
+      "bytes": 31573,
+      "kind_claim": "NOT_A_FIRST_RUN_PRODUCT_KIND",
+      "path": "helion/data/traits_seed_64.json",
+      "role": "trait_seed_catalog",
+      "sha256": "9605c08d6f39feb6ef219fc5e643979fb510a7c39a2ac0ff3d7c252c64e89069"
+    },
+    {
+      "app_loader": "helion.first_release.load_model_config",
+      "bytes": 108,
+      "kind_claim": "NOT_A_FIRST_RUN_PRODUCT_KIND",
+      "path": "model_config.example.json",
+      "role": "unbound_model_config_example",
+      "sha256": "a55184817de53fe31c519dafb1ed852fd9fa1a36c1730c6814beb1596adaf83c"
+    },
+    {
+      "app_loader": "helion.ai_weights.nox_weights_bridge.VerifiedWeights.load",
+      "bytes": 18428,
+      "kind_claim": "NOT_A_FIRST_RUN_PRODUCT_KIND",
+      "path": "weights/01_truthful_memory.safetensors",
+      "role": "research_scorer",
+      "sha256": "776ea49d348c81eca1e7374e0fcb8070b5a42b22562cc87cee9bcc5deca94df7"
+    },
+    {
+      "app_loader": "helion.ai_weights.nox_weights_bridge.VerifiedWeights.load",
+      "bytes": 18428,
+      "kind_claim": "NOT_A_FIRST_RUN_PRODUCT_KIND",
+      "path": "weights/02_causal_chronology.safetensors",
+      "role": "research_scorer",
+      "sha256": "a89eb456acd6e6f52166f7ee6e6909b8e6a340228a905011a66a8a5a1741e4b2"
+    },
+    {
+      "app_loader": "helion.ai_weights.nox_weights_bridge.VerifiedWeights.load",
+      "bytes": 18420,
+      "kind_claim": "NOT_A_FIRST_RUN_PRODUCT_KIND",
+      "path": "weights/03_persona_voice.safetensors",
+      "role": "research_scorer",
+      "sha256": "5579a47fb198802f76fac355141a3a11c1600772e84264a2ad252409f8f731af"
+    },
+    {
+      "app_loader": "helion.ai_weights.nox_weights_bridge.VerifiedWeights.load",
+      "bytes": 18428,
+      "kind_claim": "NOT_A_FIRST_RUN_PRODUCT_KIND",
+      "path": "weights/04_longform_coverage.safetensors",
+      "role": "research_scorer",
+      "sha256": "3a1c6ea806f63204fd88c7de59bb1177e61c05d2bd6b702e1bc8366476733ff0"
+    },
+    {
+      "app_loader": "helion.ai_weights.nox_weights_bridge.VerifiedWeights.load",
+      "bytes": 18420,
+      "kind_claim": "NOT_A_FIRST_RUN_PRODUCT_KIND",
+      "path": "weights/05_anti_template.safetensors",
+      "role": "research_scorer",
+      "sha256": "4d5bce3ba481d6f0011c63eb335eb6c6469bb0c2e4d37739f65643a7660eb611"
+    },
+    {
+      "app_loader": "helion.ai_weights.nox_weights_bridge.VerifiedWeights.load",
+      "bytes": 18428,
+      "kind_claim": "NOT_A_FIRST_RUN_PRODUCT_KIND",
+      "path": "weights/06_empathy_boundaries.safetensors",
+      "role": "research_scorer",
+      "sha256": "d9cf323af82c4afa80406cee9a7d20da2d176e162069eff572aeba31a3ba8b60"
+    },
+    {
+      "app_loader": "helion.ai_weights.nox_weights_bridge.VerifiedWeights.load",
+      "bytes": 18428,
+      "kind_claim": "NOT_A_FIRST_RUN_PRODUCT_KIND",
+      "path": "weights/07_reflection_correction.safetensors",
+      "role": "research_scorer",
+      "sha256": "85126e27f5ba2e547801258af29d8f24a34b8dce296bc370c3049a8b836dc934"
+    },
+    {
+      "app_loader": "helion.ai_weights.nox_weights_bridge.VerifiedWeights.load",
+      "bytes": 3304,
+      "kind_claim": "NOT_A_FIRST_RUN_PRODUCT_KIND",
+      "path": "weights/MODEL_FEATURE_CONTRACT.json",
+      "role": "research_scorer_contract",
+      "sha256": "652f511528057c21e26bbfd297348d3499bf397a347b8c63cda22738440c0a24"
+    },
+    {
+      "app_loader": "helion.ai_weights.nox_weights_bridge.VerifiedWeights.load",
+      "bytes": 3174,
+      "kind_claim": "NOT_A_FIRST_RUN_PRODUCT_KIND",
+      "path": "weights/STAGING_MANIFEST.json",
+      "role": "research_scorer_manifest",
+      "sha256": "a961ddc63f5abd8e8c6cb7b04fc6e34c8ede9a7d2807160fddb3c39c8d9c4764"
+    }
+  ],
+  "live_ai": false,
+  "note": "schema_version 1 is an import inventory. It is not a first-run product_payload_gate pass: file roles are not base_model, tokenizer, adapter, rag_index, or cultural_index.",
+  "online": false,
+  "optimizer_state_named_but_absent": [
+    "01_truthful_memory.adamw.safetensors",
+    "02_causal_chronology.adamw.safetensors",
+    "03_persona_voice.adamw.safetensors",
+    "04_longform_coverage.adamw.safetensors",
+    "05_anti_template.adamw.safetensors",
+    "06_empathy_boundaries.adamw.safetensors",
+    "07_reflection_correction.adamw.safetensors"
+  ],
+  "product_acceptance": "0/1",
+  "schema": "NOX_M2_APP_IMPORT_MANIFEST_V1",
+  "schema_version": 1,
+  "source_copies": [
+    {
+      "bytes": 18428,
+      "path": "product_payload/weights/01_truthful_memory.safetensors",
+      "sha256": "776ea49d348c81eca1e7374e0fcb8070b5a42b22562cc87cee9bcc5deca94df7",
+      "source": "helion/ai_weights/weights/01_truthful_memory.safetensors"
+    },
+    {
+      "bytes": 18428,
+      "path": "product_payload/weights/02_causal_chronology.safetensors",
+      "sha256": "a89eb456acd6e6f52166f7ee6e6909b8e6a340228a905011a66a8a5a1741e4b2",
+      "source": "helion/ai_weights/weights/02_causal_chronology.safetensors"
+    },
+    {
+      "bytes": 18420,
+      "path": "product_payload/weights/03_persona_voice.safetensors",
+      "sha256": "5579a47fb198802f76fac355141a3a11c1600772e84264a2ad252409f8f731af",
+      "source": "helion/ai_weights/weights/03_persona_voice.safetensors"
+    },
+    {
+      "bytes": 18428,
+      "path": "product_payload/weights/04_longform_coverage.safetensors",
+      "sha256": "3a1c6ea806f63204fd88c7de59bb1177e61c05d2bd6b702e1bc8366476733ff0",
+      "source": "helion/ai_weights/weights/04_longform_coverage.safetensors"
+    },
+    {
+      "bytes": 18420,
+      "path": "product_payload/weights/05_anti_template.safetensors",
+      "sha256": "4d5bce3ba481d6f0011c63eb335eb6c6469bb0c2e4d37739f65643a7660eb611",
+      "source": "helion/ai_weights/weights/05_anti_template.safetensors"
+    },
+    {
+      "bytes": 18428,
+      "path": "product_payload/weights/06_empathy_boundaries.safetensors",
+      "sha256": "d9cf323af82c4afa80406cee9a7d20da2d176e162069eff572aeba31a3ba8b60",
+      "source": "helion/ai_weights/weights/06_empathy_boundaries.safetensors"
+    },
+    {
+      "bytes": 18428,
+      "path": "product_payload/weights/07_reflection_correction.safetensors",
+      "sha256": "85126e27f5ba2e547801258af29d8f24a34b8dce296bc370c3049a8b836dc934",
+      "source": "helion/ai_weights/weights/07_reflection_correction.safetensors"
+    },
+    {
+      "bytes": 3304,
+      "path": "product_payload/weights/MODEL_FEATURE_CONTRACT.json",
+      "sha256": "652f511528057c21e26bbfd297348d3499bf397a347b8c63cda22738440c0a24",
+      "source": "helion/ai_weights/weights/MODEL_FEATURE_CONTRACT.json"
+    },
+    {
+      "bytes": 3174,
+      "path": "product_payload/weights/STAGING_MANIFEST.json",
+      "sha256": "a961ddc63f5abd8e8c6cb7b04fc6e34c8ede9a7d2807160fddb3c39c8d9c4764",
+      "source": "helion/ai_weights/weights/STAGING_MANIFEST.json"
+    },
+    {
+      "bytes": 31573,
+      "path": "product_payload/helion/data/traits_seed_64.json",
+      "sha256": "9605c08d6f39feb6ef219fc5e643979fb510a7c39a2ac0ff3d7c252c64e89069",
+      "source": "helion/data/traits_seed_64.json"
+    },
+    {
+      "bytes": 42157,
+      "path": "product_payload/helion/data/menu_v2_full_catalog.json",
+      "sha256": "17404e0846dedbd57236c65918b05e6a8df00a7c000dcfd321d794e668490719",
+      "source": "helion/data/menu_v2_full_catalog.json"
+    },
+    {
+      "bytes": 14524,
+      "path": "product_payload/assets/personas_5.json",
+      "sha256": "d5c316266ca24f2e8dd7df049ce25651c40da72b3fa0c3b44451fb84f0a36b15",
+      "source": "assets/personas_5.json"
+    },
+    {
+      "bytes": 6975,
+      "path": "product_payload/assets/asset_manifest.json",
+      "sha256": "bf8e9cd4a1eaa5f8cbb223129d9eb4f8d882b65794c45c42ece6940ebb151636",
+      "source": "assets/asset_manifest.json"
+    },
+    {
+      "bytes": 108,
+      "path": "product_payload/model_config.example.json",
+      "sha256": "a55184817de53fe31c519dafb1ed852fd9fa1a36c1730c6814beb1596adaf83c",
+      "source": "model_config.example.json"
+    },
+    {
+      "bytes": 94446,
+      "path": "fixtures/rights/media_source_inventory_20261020.csv",
+      "sha256": "4c7751f09fc2e78164c05f839cb3b7de6ed8f9e30d381c99589af0acf9ca5b1a",
+      "source": "docs/media_source_inventory_20261020.csv"
+    }
+  ],
+  "version": "M2.0-PP"
+}

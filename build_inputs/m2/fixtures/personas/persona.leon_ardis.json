@@ -1,0 +1,25 @@
+{
+  "approved": false,
+  "consent": "PENDING",
+  "fictional": true,
+  "license": "PENDING",
+  "note": "Identity text is copied from the pinned source. Consent, license, and revoke stay unsigned.",
+  "owner_signed": false,
+  "portrait_bytes_in_payload": false,
+  "revoke": "PENDING",
+  "runtime_display_name": "Леон Ардис",
+  "runtime_persona_id": "persona.leon_ardis",
+  "runtime_role": "архитектор",
+  "schema": "NOX_M2_PERSONA_FIXTURE_V1",
+  "signed": false,
+  "source_files": [
+    "helion/personas.py",
+    "assets/personas_5.json"
+  ],
+  "status": "SOURCE_CATALOG_NOT_A_SIGNED_RUNTIME_PROFILE",
+  "traits_catalog_id": "LA",
+  "traits_catalog_name": "Леон Ардис",
+  "traits_catalog_role": "Архитектор",
+  "traits_filled": 0,
+  "traits_total": 64
+}

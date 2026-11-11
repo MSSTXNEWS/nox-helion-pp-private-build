@@ -1,0 +1,26 @@
+{
+  "approved": false,
+  "live_ai": false,
+  "missing_kinds": [
+    "base_model",
+    "tokenizer",
+    "adapter",
+    "rag_index",
+    "cultural_index"
+  ],
+  "native_model_load": "NOT_RUN",
+  "online": false,
+  "owner_signed": false,
+  "product_acceptance": "0/1",
+  "qwen_layer": {
+    "layer_sha256": "c5396e06af294bd101b30dce59131a76d2b773e76950acc870eda801d3ab0515",
+    "layer_size_bytes": 397807936,
+    "model_tag": "qwen2.5:0.5b-instruct-q4_K_M",
+    "note": "Prior checkpoints store this layer as Drive parts. Those bytes are not in this repository and were not fabricated.",
+    "present": false
+  },
+  "reason": "REQUIRED_PRODUCT_KINDS_NOT_IN_REPOSITORY",
+  "research_scorers_are_not_a_base_model": true,
+  "schema": "NOX_M2_FIRST_RUN_GATE_HOLD_V1",
+  "status": "HOLD"
+}

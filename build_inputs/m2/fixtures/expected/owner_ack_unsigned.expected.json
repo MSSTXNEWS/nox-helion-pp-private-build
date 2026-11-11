@@ -1,0 +1,7 @@
+{
+  "approved_must_be": false,
+  "asserts_valid": false,
+  "reason": "owner_ack_must_stay_unsigned",
+  "schema": "NOX_M2_EXPECTED_V1",
+  "signed_must_be": false
+}

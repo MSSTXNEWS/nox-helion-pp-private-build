@@ -1,0 +1,7 @@
+{
+  "asserts_valid": false,
+  "reason": "fake_rights_rows_forbidden",
+  "rights_cleared_must_equal": 0,
+  "row_count": 173,
+  "schema": "NOX_M2_EXPECTED_V1"
+}

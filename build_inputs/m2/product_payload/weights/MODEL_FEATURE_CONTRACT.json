@@ -1,0 +1,166 @@
+{
+  "schema": "nox.seven_pillars.features.v2",
+  "features": [
+    "event_provenance",
+    "event_occurred",
+    "speaker_consistent",
+    "user_question_relevance",
+    "chronological_order",
+    "elapsed_time_plausible",
+    "cause_present",
+    "consequence_present",
+    "identity_tone_fit",
+    "trait_value_match",
+    "style_expressivity_fit",
+    "stable_biography",
+    "coverage_identity",
+    "coverage_work",
+    "coverage_social",
+    "coverage_interests",
+    "lexical_novelty",
+    "structural_novelty",
+    "recent_repeat_penalty",
+    "long_turn_context_fit",
+    "context_seriousness",
+    "empathy_fit",
+    "boundary_respect",
+    "sensitivity_risk",
+    "correction_evidence",
+    "uncertainty_calibrated",
+    "update_provenance",
+    "self_reflection_quality",
+    "persona_kv",
+    "persona_am",
+    "persona_la",
+    "persona_ev",
+    "persona_kw",
+    "context_length",
+    "topic_complexity",
+    "social_familiarity"
+  ],
+  "personas": [
+    "KV",
+    "AM",
+    "LA",
+    "EV",
+    "KW"
+  ],
+  "specialists": [
+    {
+      "id": "01_truthful_memory",
+      "description": "grounded autobiographical recall",
+      "primary_indices": [
+        0,
+        1,
+        2,
+        3,
+        7
+      ],
+      "context_indices": [
+        24,
+        25,
+        26
+      ]
+    },
+    {
+      "id": "02_causal_chronology",
+      "description": "cause-before-effect, plausible timeline",
+      "primary_indices": [
+        4,
+        5,
+        6,
+        7,
+        19
+      ],
+      "context_indices": [
+        24,
+        25
+      ]
+    },
+    {
+      "id": "03_persona_voice",
+      "description": "distinct but canon-preserving self-expression",
+      "primary_indices": [
+        8,
+        9,
+        10,
+        11,
+        28,
+        29,
+        30,
+        31,
+        32
+      ],
+      "context_indices": [
+        20,
+        35
+      ]
+    },
+    {
+      "id": "04_longform_coverage",
+      "description": "full answer coverage without irrelevant padding",
+      "primary_indices": [
+        3,
+        12,
+        13,
+        14,
+        15,
+        33,
+        34
+      ],
+      "context_indices": [
+        16,
+        17
+      ]
+    },
+    {
+      "id": "05_anti_template",
+      "description": "novel form, non-repeat while preserving truth",
+      "primary_indices": [
+        16,
+        17,
+        18,
+        19,
+        33
+      ],
+      "context_indices": [
+        3,
+        8
+      ]
+    },
+    {
+      "id": "06_empathy_boundaries",
+      "description": "context-appropriate empathy and boundaries",
+      "primary_indices": [
+        20,
+        21,
+        22,
+        23,
+        35
+      ],
+      "context_indices": [
+        9,
+        25
+      ]
+    },
+    {
+      "id": "07_reflection_correction",
+      "description": "acknowledge error, update grounded preferences",
+      "primary_indices": [
+        24,
+        25,
+        26,
+        27,
+        6
+      ],
+      "context_indices": [
+        20,
+        3
+      ]
+    }
+  ],
+  "all_persona_profiles": "REVIEW_ONLY_NOT_OWNER_APPROVED",
+  "permissions": "HOST_S03_ONLY; neither predictions nor supplied host_state authorize user data/external actions",
+  "models_are": "numeric candidate scorers, NOT language generation, NOT LoRA, NOT emotion/sentience",
+  "status": "OFFTREE_NO_AUTOLOAD"
+}

@@ -1,0 +1,10 @@
+{
+  "approved": false,
+  "note": "Owner-only. This template does not sign or approve on the owner's behalf.",
+  "owner_signed": false,
+  "schema": "NOX_M2_CONSENT_RECEIPT_TEMPLATE_V1",
+  "signature": null,
+  "signed": false,
+  "signed_by": null,
+  "status": "TEMPLATE"
+}

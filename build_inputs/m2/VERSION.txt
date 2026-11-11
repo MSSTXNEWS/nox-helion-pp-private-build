@@ -1,0 +1,8 @@
+name=NOX_HELION_M2_0_PAYLOAD
+version=M2.0-PP
+channel=pre-pre-candidate
+reference_exe_name=NOX_HELION_PRIVATE_CANDIDATE.exe
+reference_exe_sha256=93a329ba1ece9cfd66951b377e04e9c1166ec6ba3ce13a5911ba8e36de99dfb8
+reference_exe_bytes=79088677
+reference_source_commit=ca1a876018655b7b3d12c7fb8f273def8d1e45ad
+reference_exe_touched=false
