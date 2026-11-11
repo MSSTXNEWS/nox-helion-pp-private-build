@@ -119,3 +119,19 @@ P0: correct the *current* gallery→FX navigation defect and rerun browser QA on
 - `.github/workflows/nox-home-v16-syntax.yml`: requires V22 files in compiled index, real scripts syntax, 29 pinned downloads, local Three STL/RGBE, local Tabler Core CSS, WOW30 30 source criteria without fabricated acceptance.
 - Remains **HOLD** until actual CI evidence at the exact V22 HEAD: 14 graphics clicks, mobile/1440/4K screenshots, physical GPU FPS/readability, original 30 WOW criteria, authenticated NOX chat/STOP/S03, external APIs, all-button/feature coverage. Old V21 SHA `456aa220` CI PASS does not certify V22.
 
+
+
+## V24 · восстановление оригинальных WOW-материалов и устранение наложений
+
+Дата 2026-11-12. Исходная проблема зафиксирована на реальных Chromium-скриншотах V23 (1920, 390, 320), опубликованных в CI #43106085534, на SHA `cdec3b4`: один утверждённый `NOX_HOME_OWNER_APPROVED_WEB.webp` был одновременно виден в `nox-owner-architecture`, `nox-owner-floor`, `nox-owner-core-still` и как пять самостоятельных карточек. В исходнике арт уже содержит персонажей, поэтому дублирование ухудшало композицию. CSS V20 насильно применял к D02 контраст/насыщенность/масштаб, а к PBR-рендереру `sepia + hue-rotate`; V21 замораживал самостоятельное вращение материалов CoreID и упрощал вид до одинаковых сфер.
+
+**Физическая правка, но не новая оболочка:** `nox-visual-source-lock-v24.css/js` добавлены поверх исходных слоёв, оригинальные `nox-home.mjs`, `nox-engines/physical-worlds-v7.mjs`, PBR/IBL шейдеры, GSAP, жидкое стекло и 14 кнопок остались без изменений. В PBR режим отображает реальные 14 миров при `opacity:1` и `filter:none`, в CINEMA — исходные восемь CoreID, PBR след не окрашивается сепией. Оригинальные материалы CoreID и их axial shell вращение восстановлены; **пространственной анимацией владеет только GSAP**, когда он доступен, иначе исходный CSS-путь. Это исключает двойную орбитальную анимацию и не выключает WOW.
+
+Утверждённый фон физически не заменён: верхняя архитектура и нижний пол используют исходные байты изображения в **непересекающихся полосах**. Лица, уже вшитые в арт нижней части, не видны за пятью отдельными утверждёнными портретами; D02 fallback из исходного арта скрывается **только после подтверждённого реального кадра** D02, иначе остаётся. Подписи, кнопки и нижние плашки читаемы без применения фильтров к WebGL.
+
+**Проверка цепочки движков:**
+- Немедленно в HOME: исходный D02 `nox-home.mjs` → локальный Three.js 0.160.1 → EffectComposer/RenderPass/UnrealBloomPass/OutputPass; исходные 14 PBR объектов `nox-orbit-14.js` → `physical-worlds-v7.mjs` → HDRI/Metal012/planet maps, GLSL материалы; GSAP и original liquid-glass-web через `nox-glass-init.mjs`.
+- Лениво по действию: tsParticles Slim, PhotoSwipe, FullCalendar, Shaka, PDF.js, epub.js, Leaflet, Fuse.js. Не запускать Pixi/OGL/postprocessing-альтернативы как ещё один рендерер поверх D02 ради формального 50/50.
+- `tools/audit-wow-wiring-v24.mjs` запускается в CI до Chromium; проверяет локальные бинарники, import graph, WOW CSS-last-order, 14-хэшный manifest. `tools/browser-acceptance.mjs` дополнен **реальными computed CSS/engine runtime checks**: отсутствие фильтров и изменения масштаба на D02, настоящие WebGL кадры/PBR готовность, GSAP, экземпляры жидкого стекла, оригинальный rotating material, отсутствие двойной подложки и одновременно работающих CSS+GSAP пространственных орбит.
+
+**Статусы:** исходники сохранены, текущий SHA/CI должны подтверждаться отдельным фактическим прогоном; никаких заявлений «визуал 100%», пока не приняты реальные скриншоты 320/390/1440/1920/4K и аппаратный GPU тест. Production и локальные веса NOX не менялись.
