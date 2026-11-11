@@ -35,6 +35,7 @@ jobs:
           node --check web-home/candidates/2026-11-10-v16-cinema/nox-owner-fidelity-v21.js
           node --check web-home/candidates/2026-11-10-v16-cinema/nox-owner-release-v22.js
           node --check web-home/candidates/2026-11-10-v16-cinema/nox-visual-source-lock-v24.js
+          node --check web-home/candidates/2026-11-10-v16-cinema/tools/audit-wow-wiring-v24.mjs
           node --check web-home/candidates/2026-11-10-v16-cinema/nox-chat-training-v23.mjs
           node --check web-home/candidates/2026-11-10-v16-cinema/tools/test-chat-training-v23.mjs
           node web-home/candidates/2026-11-10-v16-cinema/tools/test-chat-training-v23.mjs
@@ -326,6 +327,9 @@ jobs:
       - name: Reject missing local assets on all ten NOX pages
         working-directory: web-home/candidates/2026-11-10-v16-cinema
         run: node tools/audit-static-references.mjs dist
+      - name: Audit original WOW engines and unfiltered source/asset wiring
+        working-directory: web-home/candidates/2026-11-10-v16-cinema
+        run: node tools/audit-wow-wiring-v24.mjs dist
       - name: Real Chromium browser acceptance for ten routes and user actions
         working-directory: web-home/candidates/2026-11-10-v16-cinema
         timeout-minutes: 10
