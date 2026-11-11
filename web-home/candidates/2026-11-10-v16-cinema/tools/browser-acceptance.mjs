@@ -105,6 +105,11 @@ try{
         },i,{timeout:3000});
       }
       ownerCheck.v22.originalWorldClicksPassed=14;
+      // Restore the source's neutral theme, skin and balanced GPU profile
+      // before capturing the art-direction screenshot.
+      await page.locator('section.nox-orbital-controls button[data-home-preset="black-sun"]').click();
+      await page.locator('section.nox-orbital-controls button.nox-world-profile').first().click();
+      await page.locator('#homeModes > button[data-mode="BALANCED"]').click();
     }
     await toggle.click();
     await page.waitForFunction(()=>document.body.dataset.noxOwnerLayout==='CINEMA',{timeout:10000});
