@@ -170,6 +170,17 @@ try{
     const buttonInventory=buttons.filter(b=>{const cs=getComputedStyle(b);const r=b.getBoundingClientRect();return cs.display!=='none'&&cs.visibility!=='hidden'&&r.width>1&&r.height>1}).map(b=>({name:(b.textContent||b.getAttribute('aria-label')||'').trim().slice(0,64),id:b.id||'',disabled:b.disabled||b.getAttribute('aria-disabled')==='true',type:b.type})).slice(0,130);
     return {v19Style:!!document.querySelector('link[href*="nox-universe-v19.css"]'),v19Script:!!window.NOX_UNIVERSE_V19,sharedStyle:!!document.querySelector('link[href*="nox-global-wow-v18.css"]'),sharedScript:!!window.NOX_WOW_GLOBAL_V18,visibleSelects:visibleSelects.length,choiceGroups:document.querySelectorAll('.nox-wow-choice-group').length,buttons:buttons.length,missingLinks,deadNavigation,disabledButtons,buttonInventory};
    });
+   if(name==='chat.html'){
+    await page.waitForFunction(()=>!!window.NOX_CHAT_TRAINING_V23,{timeout:10000});
+    checks.trainingEvidencePanel=!!await page.locator('#nox-chat-training-v23').count();
+    checks.trainingEvidenceHold=(await page.locator('#nox-chat-training-v23 .nox-chat-training-state').textContent()).includes('HOLD');
+    checks.trainingEvidenceNoFakePercent=!(await page.locator('#nox-chat-training-v23 .nox-chat-training-data').textContent()).includes('%');
+    checks.trainingRealRoute=(await page.locator('#nox-chat-training-v23 a').getAttribute('href'))==='./training.html';
+    checks.trainingProofRefreshDisabled=await page.locator('#nox-chat-training-v23 button').isDisabled();
+    if(!checks.trainingEvidencePanel||!checks.trainingEvidenceHold||!checks.trainingEvidenceNoFakePercent||
+      !checks.trainingRealRoute||!checks.trainingProofRefreshDisabled)
+      errors.push('NOX_V23_CHAT_TRAINING_STATIC_PREVIEW_MUST_SHOW_HOLD_AND_GENUINE_TRAINING_ROUTE');
+   }
    if(name==='system.html'||name==='training.html'){
     await page.waitForFunction(()=>!!window.NOX_PROGRESS_PANEL,{timeout:7000});
     await page.locator('#nox-evidence-progress button').first().click();
