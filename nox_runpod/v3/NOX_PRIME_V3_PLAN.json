@@ -1,0 +1,194 @@
+{
+  "schema": "nox-prime-v3",
+  "revision": 3,
+  "updated": "2026-11-10",
+  "poll_seconds": 180,
+  "mode": "prepare_no_forced_cutover",
+  "purpose": "Measurable teacher-to-student knowledge distillation, not raw teacher weight addition or a consciousness proof",
+  "target_gpu_utilization_pct": [
+    85,
+    100
+  ],
+  "preserve": [
+    "/workspace/nox/memory",
+    "/workspace/nox/checkpoints",
+    "/workspace/nox/models",
+    "/opt/nox_full_parameter_A40",
+    "/opt/nox_teacher_27b"
+  ],
+  "teachers": {
+    "Qwen3.5-9B": {
+      "source_node": "A5000",
+      "status": "USED_IN_VERIFIED_20_STEP_CYCLE",
+      "model": "/workspace/nox/models/NOX_PRIME_9B_INHERITED",
+      "planned_tasks": 100,
+      "engine": "existing_9b",
+      "required_evidence": "existing receipts"
+    },
+    "Qwen3.5-27B": {
+      "source_node": "A5000",
+      "target_inference_node": "A40",
+      "status": "DOWNLOADED_NOT_LOADED",
+      "source_file": "/opt/nox_teacher_27b/Qwen3.5-27B-Q4_K_M.gguf",
+      "target_file": "/workspace/nox/teachers/Qwen3.5-27B/Qwen3.5-27B-Q4_K_M.gguf",
+      "source_receipt": "/opt/nox_teacher_27b/teacher_receipt.json",
+      "planned_tasks": 100,
+      "engine": "llama_cpp_cli",
+      "engine_executable": "llama-cli"
+    },
+    "DeepSeek-R1-Distill-Qwen-32B": {
+      "target_inference_node": "A40",
+      "status": "MODEL_NOT_VERIFIED",
+      "target_file": null,
+      "planned_tasks": 100,
+      "engine": "llama_cpp_cli",
+      "engine_executable": "llama-cli"
+    }
+  },
+  "stages": [
+    "model_verified",
+    "inference_ready",
+    "teacher_examples",
+    "source_verified",
+    "holdout_passed",
+    "student_optimizer_steps",
+    "full_checkpoint",
+    "windows_sha_verified"
+  ],
+  "train": {
+    "student": "NOX_9B_UNIFIED",
+    "full_parameter_only": true,
+    "no_lora": true,
+    "steps_per_cycle": 20,
+    "latest_accepted_checkpoint_required": true,
+    "guard_vram_gib": 37,
+    "guard_ram_gib": 24
+  },
+  "export": {
+    "windows_receiver": "NOX-Verified-Windows-Checkpoint-Sync",
+    "checkpoint_only": true,
+    "sha256_required": true,
+    "no_remote_deletion": true
+  },
+  "transition": {
+    "method": "finish_save_then_graceful_stop_then_start_new",
+    "no_kill": true,
+    "no_loss": true
+  },
+  "progress_definition": "100% means a fixed, verifiable per-teacher task set and its checkpoints/export are completed; absorbed_knowledge_percent remains null",
+  "night_mode": {
+    "windows_alive_required": true,
+    "windows_heartbeat_seconds": 180,
+    "sync_on_checkpoint": true,
+    "metadata_sync": true,
+    "full_weight_transfer": "after_complete_checkpoint_only",
+    "disk_cleanup": "verified_transfer_only_no_auto_delete",
+    "chat_updates": "status_file_plus_s03_event_pending_runtime_chat_adapter",
+    "video_inbox": "C:\\NOX_HELION\\NOX_NEW\\VIDEO_INBOX_APPROVED",
+    "video_policy": "user_approved_only_extract_metadata_and_candidate_transcript_no_automatic_weight_training",
+    "temperature": {
+      "local_windows_amd_hotspot": {
+        "trip_celsius": 70,
+        "consecutive_readings": 3,
+        "missing_sensor": "HOLD",
+        "device": "RX6650M Hot Spot"
+      },
+      "external_nvidia": {
+        "custom_70c_cutoff": false,
+        "custom_power_saving": false,
+        "device_protections": "NVIDIA hardware/driver",
+        "telemetry": true,
+        "oom_policy": "HOLD_SAVE_AND_RECOVER",
+        "policy": "maximum useful utilization"
+      }
+    },
+    "primary_mission": "maximum verified NOX full-parameter distillation; worker swarm from spare resources; fast Windows sync"
+  },
+  "priority_order": [
+    {
+      "rank": 1,
+      "id": "COGNITIVE_SELF",
+      "description": "Real neural distillation, long-term memory, functional self-model, tested reasoning, autobiographical origins, contextual emotion behavior",
+      "gpu_priority": "A40 full-parameter training",
+      "acceptance": [
+        "real optimizer steps",
+        "S03 restart recall",
+        "frozen unseen skill tests",
+        "verified full checkpoint on Windows"
+      ]
+    },
+    {
+      "rank": 2,
+      "id": "SELF_BUILD",
+      "description": "NOX uses its intelligence to plan and safely modify its own core, memory, trainers, GitHub repository, existing web pages, UI controls and integrations",
+      "execution": "isolated candidate branch/worktree -> tests -> source SHA -> review -> promotion -> rollback",
+      "acceptance": [
+        "candidate patch with exact file paths",
+        "unit tests and UI regression",
+        "approved deployment to canonical NOX",
+        "no duplicated backend or dead buttons"
+      ]
+    },
+    {
+      "rank": 3,
+      "id": "CREATIVE_MEDIA",
+      "description": "Image/video and 3D production after cognitive and self-build gates",
+      "execution": "opt-in existing compatible tools",
+      "acceptance": [
+        "real generated artifact",
+        "media source/licence receipt",
+        "resource impact measured"
+      ]
+    }
+  ],
+  "self_build": {
+    "status": "ARCHITECTURE_AND_CANDIDATE_ENGINE",
+    "autonomous_cycle": true,
+    "one_identity": true,
+    "scope": [
+      "model_training_core",
+      "memory_S03",
+      "reasoning_tools",
+      "GitHub_project_code",
+      "existing_NOX_WEB",
+      "D02_HOME",
+      "Resonance",
+      "functional_buttons",
+      "Windows_bridge",
+      "GPU_resource_controller"
+    ],
+    "forbidden": [
+      "blind_main_branch_write",
+      "automatic_prod_deploy_without_tests",
+      "self-authorized_permissions",
+      "duplicate_backend",
+      "destructive_cleanup_without_verified_restore",
+      "invented_test_pass"
+    ],
+    "steps": [
+      "observe_current_runtime_and_sources",
+      "identify_measurable_defect_or_missing_capability",
+      "write_spec_and_acceptance",
+      "generate_candidate_patch_in_isolated_worktree",
+      "run_unit_integration_UI_tests",
+      "benchmark_no_regression",
+      "review_candidate_and_promote_approved_change",
+      "record_outcome_and_rollback_anchor"
+    ],
+    "human_approval_gates": [
+      "destructive_changes",
+      "privileged_OS_control",
+      "external_publication",
+      "secrets_permissions"
+    ],
+    "autonomous_allowed": [
+      "inspect_source",
+      "generate_draft_patch",
+      "run_isolated_tests",
+      "build_artifact_candidate",
+      "report",
+      "prepare_rollback"
+    ],
+    "source_of_truth": "MSSTXNEWS/nox-helion-pp-private-build; existing canonical NOX web/UI; no substitute demo"
+  }
+}
