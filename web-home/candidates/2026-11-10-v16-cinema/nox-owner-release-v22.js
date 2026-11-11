@@ -71,7 +71,7 @@
   // Ensure this reversible repair remains last, instead of rewriting the donor files.
   const fidelityStyle=document.querySelector('link[href*="nox-owner-release-v22.css"]');
   if(fidelityStyle){
-   const keepLast=()=>{if(fidelityStyle.parentElement===document.head&&document.head.lastElementChild!==fidelityStyle)document.head.append(fidelityStyle);};
+   const keepLast=()=>{if(document.querySelector('link[href*="nox-visual-source-lock-v24.css"]'))return; if(fidelityStyle.parentElement===document.head&&document.head.lastElementChild!==fidelityStyle)document.head.append(fidelityStyle);};
    const observer=new MutationObserver(records=>{
     if(records.some(r=>[...r.addedNodes].some(n=>n.nodeType===1&&n!==fidelityStyle&&
       (n.tagName==='STYLE'||(n.tagName==='LINK'&&n.rel==='stylesheet')))))keepLast();
