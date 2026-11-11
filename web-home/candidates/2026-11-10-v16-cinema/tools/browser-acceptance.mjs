@@ -102,7 +102,10 @@ try{
        architectureClip:arch?.clipPath,floorClip:floor?.clipPath,
        originalFallbackHidden:document.body.dataset.noxD02Rendered==='true'?
           fallback?.display==='none':null,
-       originalWebglRendered:window.NOX_CINEMATIC_HEALTH?.snapshot?.()?.core?.realRendered===true
+       originalWebglRendered:window.NOX_CINEMATIC_HEALTH?.snapshot?.()?.core?.realRendered===true,
+       pbrHdrReady:window.NOX_CINEMATIC_HEALTH?.snapshot?.()?.worlds?.allMaterialAssetsReady===true,
+       gsapEngine:window.NOX_OWNER_FIDELITY_V21?.motionEngine||null,
+       liquidGlassInstances:window.NOX_GLASS_INTEGRATION?.attached?.()??null
      };
    });
    if(!ownerCheck.v24.ready||ownerCheck.v24.d02Filter!=='none'||
@@ -111,6 +114,9 @@ try{
       !ownerCheck.v24.architectureClip?.includes('36%')&&width>600||
       !ownerCheck.v24.floorClip?.includes('92%'))
       throw Error('NOX_V24_ORIGINAL_VISUAL_FIDELITY_HOLD:'+JSON.stringify(ownerCheck.v24));
+   if(name==='1440'&&(!ownerCheck.v24.originalWebglRendered||!ownerCheck.v24.pbrHdrReady||
+       ownerCheck.v24.gsapEngine!=='gsap-vendor'||!(ownerCheck.v24.liquidGlassInstances>0)))
+      throw Error('NOX_V24_ORIGINAL_WOW_ENGINE_RUNTIME_MISSING:'+JSON.stringify(ownerCheck.v24));
    if(ownerCheck.v24.motionOwner==='GSAP'&&ownerCheck.v24.spatialAnimation!=='none')
       throw Error('NOX_V24_DOUBLE_ORBIT_ENGINE_RUNNING');
    if(ownerCheck.v24.originalWebglRendered&&ownerCheck.v24.originalFallbackHidden!==true)
