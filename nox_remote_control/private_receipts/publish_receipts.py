@@ -53,7 +53,7 @@ def safe_data(receipt):
     if not isinstance(data, dict):
         return {}
     if op == "gpu":
-        raw = str(data.get("stdout", ""))[:400] if data.get("exit") == 0 else ""
+        raw = str(data.get("stdout", "")).strip()[:400] if data.get("exit") == 0 else ""
         # GPU name, numbers, units only; prevent carrying arbitrary process output.
         return {"exit": data.get("exit"), "nvidia_smi": raw if re.fullmatch(r"[\w .,%/+-]{0,400}", raw) else ""}
     if op == "disk":
