@@ -160,6 +160,14 @@ for(const page of pages){
   if(!html.includes('nox-owner-release-v22.css'))html=html.replace('</head>','<link rel="stylesheet" href="./nox-owner-release-v22.css" data-nox-v22="source-repair"></head>');
   if(!html.includes('nox-owner-release-v22.js'))html=html.replace('</body>','<script defer src="./nox-owner-release-v22.js" data-nox-v22="source-repair"></script></body>');
  }
+ if(page==='chat.html'){
+  for(const asset of ['nox-chat-training-v23.css','nox-chat-training-v23.mjs'])
+   if(!fs.existsSync(path.join(out,asset)))throw Error('NOX_V23_CHAT_SOURCE_MISSING:'+asset);
+  if(!html.includes('nox-chat-training-v23.css'))
+   html=html.replace('</head>','<link rel="stylesheet" href="./nox-chat-training-v23.css" data-nox-v23="native-evidence"></head>');
+  if(!html.includes('nox-chat-training-v23.mjs'))
+   html=html.replace('</body>','<script type="module" src="./nox-chat-training-v23.mjs" data-nox-v23="native-evidence"></script></body>');
+ }
  fs.writeFileSync(p,html);
 }
 for(const name of ['nox-universe-v19.js','nox-universe-v19.css','nox-section-map-v19.json','nox-install-extra-v19.mjs'])if(!fs.existsSync(path.join(out,name)))throw Error('NOX_UNIVERSE_V19_MISSING:'+name);
@@ -171,6 +179,7 @@ execFileSync('node',['--check',path.join(out,'nox-universe-v19.js')],{stdio:'pip
 for(const file of ['nox-progress-core.mjs','nox-progress-panel.js','nox-progress-panel.css','tools/nox-audit-distillation.mjs'])
  if(!fs.existsSync(path.join(out,file)))throw Error('NOX_PROGRESS_SOURCE_MISSING:'+file);
 execFileSync('node',['--check',path.join(out,'nox-progress-panel.js')],{stdio:'pipe'});
+execFileSync('node',['--check',path.join(out,'nox-chat-training-v23.mjs')],{stdio:'pipe'});
 execFileSync('node',['--check',path.join(out,'nox-progress-core.mjs')],{stdio:'pipe'});
 execFileSync('node',['--check',path.join(out,'tools/nox-audit-distillation.mjs')],{stdio:'pipe'});
 // The static browser never invents an on-disk RunPod checkpoint; a real audit may
