@@ -1,4 +1,8 @@
 name: NOX V19 - Complete WOW Internet Assets Intake
+# Avoid repeated 50-package downloads from stale commits. Never touches running GPU workers.
+concurrency:
+  group: nox-v19-intake-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 on:
   push:
     branches:
