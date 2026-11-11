@@ -64,6 +64,47 @@ try{
      });
    }
    if(name==='1440' && snapshot) assetCheck=await page.evaluate(()=>window.NOX_CINEMATIC_HEALTH.checkAssets().catch(e=>({error:String(e)})));
+   // Actual owner V22: verify 8 linked CoreIDs, 14 original 3D selectors,
+   // reversible mode switch and honest approved portrait interaction.
+   ownerCheck.v22=await page.evaluate(()=>{
+    const q=s=>document.querySelector(s);
+    const rect=e=>{const r=e?.getBoundingClientRect();return r?{top:r.top,bottom:r.bottom,left:r.left,right:r.right}:null};
+    const p=rect(q('.nox-owner-personas')),a=rect(q('.nox-owner-actions')),cta=rect(q('#noxCoreEntry'));
+    return {ready:!!window.NOX_OWNER_RELEASE_V22,
+      ics:window.NOX_OWNER_RELEASE_V22?.coreCount,
+      originalWorldControls:q('section.nox-orbital-controls')?.querySelectorAll('button').length||0,
+      coreNames:[...document.querySelectorAll('.nox-owner-core span')].map(e=>e.textContent.trim()),
+      personaName:q('.nox-owner-persona[data-idx="4"]')?.getAttribute('aria-label'),
+      resonanceBeforePersonas:!!(cta&&p&&cta.bottom<=p.top+4),
+      personasBeforeActions:!!(p&&a&&p.bottom<=a.top+4)};
+   });
+   if(!ownerCheck.v22.ready||ownerCheck.v22.ics!==8||ownerCheck.v22.originalWorldControls!==14)
+    throw Error('NOX_V22_CORE_WORLD_CONTRACT_MISSING:'+JSON.stringify(ownerCheck.v22));
+   if(ownerCheck.v22.coreNames.some(n=>!/[^\x00-\x7f]/.test(n))||!ownerCheck.v22.personaName?.includes('КАССИЕН ВЕЙР'))
+    throw Error('NOX_V22_CANONICAL_LABEL_MISSING');
+   if(width<=600&&(!ownerCheck.v22.resonanceBeforePersonas||!ownerCheck.v22.personasBeforeActions))
+    throw Error('NOX_V22_MOBILE_OWNER_BANDS_COLLIDE');
+   if(name==='1440'||name==='320'){
+    const toggle=page.locator('.nox-owner-mode');
+    await toggle.click();
+    await page.waitForFunction(()=>document.body.dataset.noxOwnerLayout==='PBR'&&document.body.dataset.noxOwnerControls==='true',{timeout:10000});
+    const worldCheck=await page.evaluate(()=>({alpha:Number(getComputedStyle(document.getElementById('noxWorldsV6Canvas')).opacity),
+      controls:[...document.querySelectorAll('section.nox-orbital-controls button')].length}));
+    if(worldCheck.controls!==14||worldCheck.alpha<.8)throw Error('NOX_V22_14_WORLDS_SWITCH_NOT_VISIBLE:'+JSON.stringify(worldCheck));
+    ownerCheck.v22.pbrWorldCheck=worldCheck;
+    await toggle.click();
+    await page.waitForFunction(()=>document.body.dataset.noxOwnerLayout==='CINEMA',{timeout:10000});
+    ownerCheck.v22.restoredEightCores=true;
+   }
+   if(name==='1440'){
+    await page.locator('.nox-owner-persona[data-idx="4"]').click();
+    const modal=page.locator('dialog.nox-v22-persona-dialog[open]');
+    await modal.waitFor({timeout:8000});
+    if(!(await modal.locator('img').getAttribute('src')).endsWith('nox-owner-persona-kw.webp'))
+     throw Error('NOX_V22_OWNER_KW_IMAGE_MISMATCH');
+    await modal.locator('button').click();
+    ownerCheck.v22.personaModalPassed=await modal.count()===0;
+   }
    if(name==='4k'){
      await page.screenshot({path:path.join(out,name+'.jpg'),type:'jpeg',quality:70,fullPage:false,timeout:90000});
    }else await page.screenshot({path:path.join(out,name+'.png'),fullPage:true,timeout:30000});
