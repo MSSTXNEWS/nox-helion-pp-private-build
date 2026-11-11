@@ -96,6 +96,8 @@ try{
        d02Filter:d02?.filter,worldFilter:worlds?.filter,
        d02Transform:d02?.transform,
        coreShellAnimation:shell?.animationName,
+       motionOwner:document.body.dataset.noxMotionOwner,
+       spatialAnimation:st('.nox-owner-core')?.animationName,
        coreShellHasOriginalMaterial:!!shell?.backgroundImage?.includes('repeating-conic-gradient'),
        architectureClip:arch?.clipPath,floorClip:floor?.clipPath,
        originalFallbackHidden:document.body.dataset.noxD02Rendered==='true'?
@@ -109,6 +111,8 @@ try{
       !ownerCheck.v24.architectureClip?.includes('36%')&&width>600||
       !ownerCheck.v24.floorClip?.includes('92%'))
       throw Error('NOX_V24_ORIGINAL_VISUAL_FIDELITY_HOLD:'+JSON.stringify(ownerCheck.v24));
+   if(ownerCheck.v24.motionOwner==='GSAP'&&ownerCheck.v24.spatialAnimation!=='none')
+      throw Error('NOX_V24_DOUBLE_ORBIT_ENGINE_RUNNING');
    if(ownerCheck.v24.originalWebglRendered&&ownerCheck.v24.originalFallbackHidden!==true)
       throw Error('NOX_V24_APPROVED_STILL_DOUBLE_EXPOSED');
    if(name==='1440'||name==='320'){
