@@ -48,6 +48,8 @@ const overlays=[
  ['nox-owner-director-v20.js','nox-owner-director-v20.js'],
  ['nox-owner-fidelity-v21.css','nox-owner-fidelity-v21.css'],
  ['nox-owner-fidelity-v21.js','nox-owner-fidelity-v21.js'],
+ ['nox-owner-release-v22.css','nox-owner-release-v22.css'],
+ ['nox-owner-release-v22.js','nox-owner-release-v22.js'],
  ['nox-progress-core.mjs','nox-progress-core.mjs'],
  ['nox-progress-panel.js','nox-progress-panel.js'],
  ['nox-progress-panel.css','nox-progress-panel.css'],
@@ -79,6 +81,12 @@ for(const file of pages){
  if(!html.includes('vendor/nox-liquid-glass/liquid-glass.css'))html=html.replace(/<\/head>/i,vendorGlass+'</head>');
  if(!html.includes('nox-global-wow-v18.css'))html=html.replace(/<\/head>/i,style+'</head>');
  if(!html.includes('nox-global-wow-v18.js'))html=html.replace(/<\/body>/i,script+'</body>');
+ if(file==='index.html'){
+  if(!html.includes('nox-owner-release-v22.css'))
+   html=html.replace('</head>','<link rel="stylesheet" href="./nox-owner-release-v22.css"></head>');
+  if(!html.includes('nox-owner-release-v22.js'))
+   html=html.replace('</body>','<script defer src="./nox-owner-release-v22.js"></script></body>');
+ }
  if(file==='system.html'||file==='training.html'){
   const pStyle='<link rel="stylesheet" href="./nox-progress-panel.css" data-nox-progress="evidence-only">';
   const pScript='<script defer src="./nox-progress-panel.js" data-nox-progress="evidence-only"></script>';
