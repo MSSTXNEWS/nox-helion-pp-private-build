@@ -1,4 +1,8 @@
 name: NOX HOME V16 source syntax gate
+# Only the newest commit on this WEB branch needs the expensive browser audit.
+concurrency:
+  group: nox-home-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 on:
   push:
     branches:
@@ -30,6 +34,9 @@ jobs:
           node --check web-home/candidates/2026-11-10-v16-cinema/nox-owner-director-v20.js
           node --check web-home/candidates/2026-11-10-v16-cinema/nox-owner-fidelity-v21.js
           node --check web-home/candidates/2026-11-10-v16-cinema/nox-owner-release-v22.js
+          node --check web-home/candidates/2026-11-10-v16-cinema/nox-chat-training-v23.mjs
+          node --check web-home/candidates/2026-11-10-v16-cinema/tools/test-chat-training-v23.mjs
+          node web-home/candidates/2026-11-10-v16-cinema/tools/test-chat-training-v23.mjs
           node --check web-home/candidates/2026-11-10-v16-cinema/build-approved-assets.mjs
           node --check web-home/candidates/2026-11-10-v16-cinema/nox-progress-panel.js
           node --check web-home/candidates/2026-11-10-v16-cinema/nox-progress-core.mjs
@@ -292,6 +299,10 @@ jobs:
             if(!fs.existsSync('dist/vendor/nox-extra/'+lib))throw Error('NOX_OFFLINE_LIBRARY_MISSING:'+lib);
           for(const path of ['dist/nox-owner-release-v22.css','dist/nox-owner-release-v22.js'])
             if(!fs.existsSync(path))throw Error('NOX_V22_SOURCE_NOT_PACKAGED:'+path);
+          const resonance=fs.readFileSync(dist+'chat.html','utf8');
+          for(const item of ['nox-chat-training-v23.mjs','nox-chat-training-v23.css'])
+            if(!resonance.includes(item)||!fs.existsSync('dist/'+item))
+              throw Error('NOX_RESONANCE_TRAINING_NOT_WIRED:'+item);
           const home=fs.readFileSync(dist+'index.html','utf8');
           for(const path of ['nox-owner-release-v22.css','nox-owner-release-v22.js'])
             if(!home.includes(path))throw Error('NOX_V22_HOME_NOT_WIRED:'+path);
