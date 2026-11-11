@@ -29,6 +29,8 @@ jobs:
           node --check web-home/candidates/2026-11-10-v16-cinema/nox-global-wow-v18.js
           node --check web-home/candidates/2026-11-10-v16-cinema/nox-owner-director-v20.js
           node --check web-home/candidates/2026-11-10-v16-cinema/nox-owner-fidelity-v21.js
+          node --check web-home/candidates/2026-11-10-v16-cinema/nox-owner-release-v22.js
+          node --check web-home/candidates/2026-11-10-v16-cinema/build-approved-assets.mjs
           node --check web-home/candidates/2026-11-10-v16-cinema/nox-progress-panel.js
           node --check web-home/candidates/2026-11-10-v16-cinema/nox-progress-core.mjs
           node --check web-home/candidates/2026-11-10-v16-cinema/tools/nox-audit-distillation.mjs
@@ -269,7 +271,12 @@ jobs:
           }
           for(const lib of ['lucide.min.js','echarts.min.js'])
             if(!fs.existsSync('dist/vendor/nox-extra/'+lib))throw Error('NOX_OFFLINE_LIBRARY_MISSING:'+lib);
+          for(const path of ['dist/nox-owner-release-v22.css','dist/nox-owner-release-v22.js'])
+            if(!fs.existsSync(path))throw Error('NOX_V22_SOURCE_NOT_PACKAGED:'+path);
           const home=fs.readFileSync(dist+'index.html','utf8');
+          for(const path of ['nox-owner-release-v22.css','nox-owner-release-v22.js'])
+            if(!home.includes(path))throw Error('NOX_V22_HOME_NOT_WIRED:'+path);
+
           for(const name of ['nox-home.mjs','nox-owner-director-v20.js','nox-owner-fidelity-v21.js','nox-owner-fidelity-v21.css','nox-universe-v19.js','nox-global-wow-v18.js'])if(!home.includes(name))throw Error('NOX_HOME_RUNTIME_NOT_WIRED:'+name);
           const pages=['index','chat','cinema','install','memory','models','projects','settings','system','training'];
           for(const page of pages){
