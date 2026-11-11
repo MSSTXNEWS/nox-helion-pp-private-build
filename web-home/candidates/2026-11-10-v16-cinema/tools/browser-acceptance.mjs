@@ -211,7 +211,14 @@ try{
   await p.locator('.nox-v19-card input[type="date"]').first().fill('2026-11-11');
   await p.getByRole('button',{name:'ДОБАВИТЬ СОБЫТИЕ'}).click();
   const events=await p.evaluate(()=>JSON.parse(localStorage.getItem('nox-v19-calendar-events')||'[]'));
-  report.v19Modules.push({name:'Календарь',source:'FullCalendar local',passed:events.some(e=>e.title==='NOX-CI-TEST')});
+  const created=events.some(e=>e.title==='NOX-CI-TEST');
+  await p.locator('.fc-event').filter({hasText:'NOX-CI-TEST'}).first().click({timeout:12000});
+  const deleteButton=p.getByRole('button',{name:'УДАЛИТЬ ВЫБРАННОЕ'});
+  if(!await deleteButton.isEnabled())throw Error('NOX_CALENDAR_SELECTED_DELETE_NOT_ENABLED');
+  p.once('dialog',dialog=>dialog.accept());
+  await deleteButton.click();
+  const retained=await p.evaluate(()=>JSON.parse(localStorage.getItem('nox-v19-calendar-events')||'[]'));
+  report.v19Modules.push({name:'Календарь',source:'FullCalendar local: create, select, delete',passed:created&&!retained.some(e=>e.title==='NOX-CI-TEST')});
   await p.getByRole('button',{name:'Галерея',exact:true}).click();
   const tinyPng=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jzF8AAAAASUVORK5CYII=','base64');
   await p.locator('.nox-v19-card input[type=file]').first().setInputFiles({name:'test.png',mimeType:'image/png',buffer:tinyPng});
