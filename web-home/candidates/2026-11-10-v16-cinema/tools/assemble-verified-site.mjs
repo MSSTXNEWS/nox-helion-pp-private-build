@@ -50,6 +50,8 @@ const overlays=[
  ['nox-owner-fidelity-v21.js','nox-owner-fidelity-v21.js'],
  ['nox-owner-release-v22.css','nox-owner-release-v22.css'],
  ['nox-owner-release-v22.js','nox-owner-release-v22.js'],
+ ['nox-visual-source-lock-v24.css','nox-visual-source-lock-v24.css'],
+ ['nox-visual-source-lock-v24.js','nox-visual-source-lock-v24.js'],
  ['nox-chat-training-v23.mjs','nox-chat-training-v23.mjs'],
  ['nox-chat-training-v23.css','nox-chat-training-v23.css'],
  ['nox-progress-core.mjs','nox-progress-core.mjs'],
@@ -88,6 +90,10 @@ for(const file of pages){
    html=html.replace('</head>','<link rel="stylesheet" href="./nox-owner-release-v22.css"></head>');
   if(!html.includes('nox-owner-release-v22.js'))
    html=html.replace('</body>','<script defer src="./nox-owner-release-v22.js"></script></body>');
+  if(!html.includes('nox-visual-source-lock-v24.css'))
+   html=html.replace('</head>','<link rel="stylesheet" href="./nox-visual-source-lock-v24.css"></head>');
+  if(!html.includes('nox-visual-source-lock-v24.js'))
+   html=html.replace('</body>','<script defer src="./nox-visual-source-lock-v24.js"></script></body>');
  }
  if(file==='chat.html'){
   if(!html.includes('nox-chat-training-v23.css'))
