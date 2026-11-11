@@ -63,6 +63,13 @@ const cssI=index.indexOf('nox-visual-source-lock-v24.css');
 const v22I=index.indexOf('nox-owner-release-v22.css');
 assert(cssI>v22I&&cssI!==-1,'FIDELITY_CSS_ORDER');
 const digest=name=>crypto.createHash('sha256').update(file(name)).digest('hex');
+const originalSha256={
+ 'nox-home.mjs':'8066bc0a0f8ef5bb5f0fb1f58ad3f6ee29dc8506385c09d77d38d4235c7e42e9',
+ 'nox-engines/physical-worlds-v7.mjs':'3f27609ea37b96579a711928e4c67778ec71e2ff7b090a3b7bb41e29040f3905',
+ 'assets/nox-owner-approved/NOX_HOME_OWNER_APPROVED_WEB.webp':'3253d26819a70b49259fdb2a56c2eaa2455c6878cb2ccb8d62b225ec6ccdfa22'
+};
+for(const [name,sha] of Object.entries(originalSha256))
+ assert(digest(name)===sha,'ORIGINAL_SOURCE_SHA_CHANGED:'+name);
 const report={
  scope:'ORIGINAL_SOURCE_WIRING_ONLY',source_sha256:{
   d02:digest('nox-home.mjs'),pbr14:digest('nox-engines/physical-worlds-v7.mjs'),
