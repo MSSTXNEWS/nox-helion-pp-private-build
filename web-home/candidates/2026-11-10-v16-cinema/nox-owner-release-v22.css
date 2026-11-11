@@ -136,6 +136,15 @@ body.helion-home.nox-owner-cinema .nox-v22-persona-dialog button{min-height:44px
  }
  body.helion-home.nox-owner-cinema .nox-owner-portrait-status{display:none!important}
 }
+/* Physical resource governor: no decorative shell cycles during ECO, offscreen,
+   PBR-only view, native reduced motion or when the tab is not visible. */
+html[data-nox-demo-mode="ECO"] body.helion-home.nox-owner-cinema .nox-owner-core::before,
+html[data-nox-graphics="ECO"] body.helion-home.nox-owner-cinema .nox-owner-core::before,
+body.helion-home.nox-owner-cinema.nox-eco .nox-owner-core::before,
+body.helion-home.nox-owner-cinema.nox-v22-paused .nox-owner-core::before,
+body.helion-home.nox-owner-cinema[data-nox-owner-layout="PBR"] .nox-owner-core::before{
+ animation:none!important;transition:none!important
+}
 @media(prefers-reduced-motion:reduce){
  body.helion-home.nox-owner-cinema .nox-owner-core::before{animation:none!important}
  body.helion-home.nox-owner-cinema .nox-owner-personas{scroll-behavior:auto!important}
