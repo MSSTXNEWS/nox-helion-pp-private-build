@@ -1,0 +1,81 @@
+/* NOX V24: original cinematic renderer/material/approved-art fidelity.
+   No new engine, no shader edits, no material or camera replacements.
+   Corrects only the duplicate art and CSS transforms added by V20–V22. */
+body.helion-home.nox-owner-cinema .helion-stage #noxEclipseCanvas{
+ filter:none!important;transform:none!important;opacity:1!important
+}
+body.helion-home.nox-owner-cinema .helion-stage #noxWorldsV6Canvas{
+ filter:none!important;transform:none!important
+}
+body.helion-home.nox-owner-cinema[data-nox-owner-layout="PBR"] .helion-stage #noxWorldsV6Canvas{
+ filter:none!important;opacity:1!important
+}
+body.helion-home.nox-owner-cinema:not([data-nox-owner-layout="PBR"]) .helion-stage #noxWorldsV6Canvas{
+ filter:none!important;opacity:.12!important
+}
+/* The approved background had been painted three times, including a second
+   row of baked-in Persona portraits. Retain its original upper architecture
+   and last floor strip in disjoint vertical bands; preserve approved bytes. */
+body.helion-home.nox-owner-cinema .nox-owner-architecture{
+ clip-path:inset(0 0 36% 0)!important;filter:none!important;opacity:.9!important
+}
+body.helion-home.nox-owner-cinema .nox-owner-floor{
+ clip-path:inset(92% 0 0 0)!important;filter:none!important;opacity:.74!important
+}
+/* Keep the approved fallback only when the ORIGINAL D02 has not rendered. */
+body.helion-home.nox-owner-cinema[data-nox-d02-rendered="true"] .nox-owner-core-still{
+ display:none!important
+}
+/* Restore V20's original per-core material and independent rotations instead
+   of the flat frozen V21 or generic brightness-only V22 shell. */
+body.helion-home.nox-owner-cinema .nox-owner-core{
+ animation:nox-core-float 11s ease-in-out infinite!important;
+ animation-delay:var(--phase)!important
+}
+body.helion-home.nox-owner-cinema .nox-owner-core::before{
+ background:radial-gradient(circle at 37% 28%,var(--core-bright) -15%,transparent 17%),
+ repeating-conic-gradient(from 9deg,var(--core-glow) 0deg,transparent 10deg,transparent 26deg,var(--core-glow) 31deg,transparent 48deg),
+ radial-gradient(circle at 37% 32%,#313039 0%,#0a0a0f 42%,#020305 68%)!important;
+ background-color:transparent!important;background-blend-mode:screen,normal,normal!important;
+ box-shadow:0 0 16px var(--core-glow),inset 0 0 16px var(--core-glow)!important;
+ animation:nox-core-shell 22s linear infinite!important
+}
+body.helion-home.nox-owner-cinema .nox-owner-core::after{opacity:.45!important}
+body.helion-home.nox-owner-cinema .nox-owner-core span{
+ text-shadow:0 2px 6px #000,0 0 5px #000!important
+}
+body.helion-home.nox-owner-cinema .nox-owner-actions button{
+ color:#ffe1b4!important;opacity:1!important;text-shadow:0 1px 5px #000!important;
+ background:linear-gradient(155deg,#363139ee,#12141af5)!important;
+ border-color:#ccad83b0!important
+}
+@media(max-width:600px){
+ body.helion-home.nox-owner-cinema .helion-stage #noxEclipseCanvas,
+ body.helion-home.nox-owner-cinema .helion-stage #noxWorldsV6Canvas{
+  transform:none!important;filter:none!important
+ }
+ body.helion-home.nox-owner-cinema .nox-owner-architecture{
+  clip-path:inset(0 0 34% 0)!important;filter:none!important
+ }
+ body.helion-home.nox-owner-cinema .nox-owner-floor{
+  clip-path:inset(92% 0 0 0)!important;filter:none!important
+ }
+}
+/* ECO/background/Reduced Motion are preserved. The real 3D renderer and
+   functional controls are not stopped or replaced by these CSS rules. */
+html[data-nox-demo-mode="ECO"] body.helion-home.nox-owner-cinema .nox-owner-core,
+html[data-nox-demo-mode="ECO"] body.helion-home.nox-owner-cinema .nox-owner-core::before,
+html[data-nox-graphics="ECO"] body.helion-home.nox-owner-cinema .nox-owner-core,
+html[data-nox-graphics="ECO"] body.helion-home.nox-owner-cinema .nox-owner-core::before,
+body.helion-home.nox-owner-cinema.nox-eco .nox-owner-core,
+body.helion-home.nox-owner-cinema.nox-eco .nox-owner-core::before,
+body.helion-home.nox-owner-cinema.nox-v22-paused .nox-owner-core,
+body.helion-home.nox-owner-cinema.nox-v22-paused .nox-owner-core::before{
+ animation:none!important
+}
+@media(prefers-reduced-motion:reduce){
+ body.helion-home.nox-owner-cinema .nox-owner-core,
+ body.helion-home.nox-owner-cinema .nox-owner-core::before{
+  animation:none!important;transition:none!important
+ }
+}
