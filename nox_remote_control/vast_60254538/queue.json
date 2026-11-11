@@ -5,12 +5,12 @@
     {
       "id": "gpu-check-20261111-01",
       "op": "gpu",
-      "expires_utc": "2026-11-12T12:00:00Z"
+      "expires_utc": "2026-11-14T12:00:00Z"
     },
     {
       "id": "disk-check-20261111-01",
       "op": "disk",
-      "expires_utc": "2026-11-12T12:00:00Z"
+      "expires_utc": "2026-11-14T12:00:00Z"
     }
   ]
 }
