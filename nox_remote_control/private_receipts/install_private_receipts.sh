@@ -13,14 +13,14 @@ chmod 700 /root/.config/nox-control /root/.local/lib/nox-private-receipts "$STAT
 TMP=$(mktemp /tmp/nox-private-XXXXXX)
 trap 'rm -f "$TMP"' EXIT
 curl --proto '=https' --tlsv1.2 -fsSL --retry 3 \
- 'https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/2e79c07367ba895112019e79fcfc3276342ae0e0/nox_remote_control/private_receipts/publish_receipts.py' -o "$TMP"
+ 'https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/19088f8d74aea6ba451741abe18db41d940c9bed/nox_remote_control/private_receipts/publish_receipts.py' -o "$TMP"
 DIGEST=$(python3 - "$TMP" <<'PY'
 import hashlib,sys
 b=open(sys.argv[1],"rb").read()
 print(hashlib.sha1(b"blob "+str(len(b)).encode()+b"\0"+b).hexdigest())
 PY
 )
-if [ "$DIGEST" != 845d940518c70796960a949cf23394b24dd9a041 ]; then echo HOLD_SOURCE_MISMATCH; exit 4; fi
+if [ "$DIGEST" != 72e56b550945e88176634fa5dfe834fcf813afa9 ]; then echo HOLD_SOURCE_MISMATCH; exit 4; fi
 python3 -m py_compile "$TMP"
 if test -e "$SCRIPT" && ! cmp -s "$TMP" "$SCRIPT"; then echo HOLD_EXISTING_AGENT_DIFFERS; exit 5; fi
 if ! test -e "$SCRIPT"; then cp "$TMP" "$SCRIPT"; chmod 600 "$SCRIPT"; fi
