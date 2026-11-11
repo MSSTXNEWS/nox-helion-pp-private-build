@@ -3,7 +3,7 @@
 import datetime as dt, fcntl, json, os, pathlib, re, subprocess, sys, time, urllib.request
 NODE="vast-60254538"
 ROOT=pathlib.Path("/root/nox/remote_control/vast_60254538")
-URL="https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/control/vast-60254538/nox_remote_control/vast_60254538/queue.json"
+URL="https://api.github.com/repos/MSSTXNEWS/nox-helion-pp-private-build/contents/nox_remote_control/vast_60254538/queue.json?ref=control%2Fvast-60254538"
 OPS={"gpu","processes","disk","checkpoints","health"}
 def stamp(): return dt.datetime.now(dt.timezone.utc).isoformat()
 def save(name, data):
@@ -56,7 +56,7 @@ def inspect(op):
     if op=="health": return {"gpu":gpu(),"disk":disk(),"processes":processes()}
     raise ValueError("UNAUTHORIZED_OPERATION")
 def tasks():
-    request=urllib.request.Request(URL+"?stamp="+str(int(time.time()//180)),headers={"User-Agent":"NOX-safe-observer/1","Cache-Control":"no-cache"})
+    request=urllib.request.Request(URL,headers={"User-Agent":"NOX-safe-observer/2","Accept":"application/vnd.github.raw+json","Cache-Control":"no-cache"})
     with urllib.request.urlopen(request,timeout=12) as response: data=response.read(16385)
     if len(data)>16384: raise ValueError("OVERSIZED_QUEUE")
     q=json.loads(data)
