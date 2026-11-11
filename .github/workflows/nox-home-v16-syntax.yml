@@ -34,6 +34,7 @@ jobs:
           node --check web-home/candidates/2026-11-10-v16-cinema/nox-owner-director-v20.js
           node --check web-home/candidates/2026-11-10-v16-cinema/nox-owner-fidelity-v21.js
           node --check web-home/candidates/2026-11-10-v16-cinema/nox-owner-release-v22.js
+          node --check web-home/candidates/2026-11-10-v16-cinema/nox-visual-source-lock-v24.js
           node --check web-home/candidates/2026-11-10-v16-cinema/nox-chat-training-v23.mjs
           node --check web-home/candidates/2026-11-10-v16-cinema/tools/test-chat-training-v23.mjs
           node web-home/candidates/2026-11-10-v16-cinema/tools/test-chat-training-v23.mjs
@@ -297,6 +298,8 @@ jobs:
           }
           for(const lib of ['lucide.min.js','echarts.min.js'])
             if(!fs.existsSync('dist/vendor/nox-extra/'+lib))throw Error('NOX_OFFLINE_LIBRARY_MISSING:'+lib);
+          for(const path of ['dist/nox-visual-source-lock-v24.css','dist/nox-visual-source-lock-v24.js'])
+            if(!fs.existsSync(path))throw Error('NOX_ORIGINAL_VISUAL_FIDELITY_SOURCE_MISSING:'+path);
           for(const path of ['dist/nox-owner-release-v22.css','dist/nox-owner-release-v22.js'])
             if(!fs.existsSync(path))throw Error('NOX_V22_SOURCE_NOT_PACKAGED:'+path);
           const resonance=fs.readFileSync(dist+'chat.html','utf8');
@@ -304,6 +307,11 @@ jobs:
             if(!resonance.includes(item)||!fs.existsSync('dist/'+item))
               throw Error('NOX_RESONANCE_TRAINING_NOT_WIRED:'+item);
           const home=fs.readFileSync(dist+'index.html','utf8');
+          for(const resource of ['nox-visual-source-lock-v24.css','nox-visual-source-lock-v24.js'])
+            if(!home.includes(resource))throw Error('NOX_ORIGINAL_VISUAL_FIDELITY_NOT_WIRED:'+resource);
+          if(home.indexOf('nox-owner-release-v22.css')>home.indexOf('nox-visual-source-lock-v24.css')||
+             home.indexOf('nox-owner-release-v22.js')>home.indexOf('nox-visual-source-lock-v24.js'))
+            throw Error('NOX_VISUAL_FIDELITY_STYLESHEETS_OUT_OF_ORDER');
           for(const path of ['nox-owner-release-v22.css','nox-owner-release-v22.js'])
             if(!home.includes(path))throw Error('NOX_V22_HOME_NOT_WIRED:'+path);
 
