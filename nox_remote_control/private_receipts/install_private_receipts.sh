@@ -29,7 +29,7 @@ if ! test -e "$CONF"; then
   printf "Paste token (hidden; never send via ChatGPT): "
   if ! IFS= read -rs TOKEN </dev/tty; then echo; echo HOLD_TTY_REQUIRED; exit 6; fi
   echo
-  TOKEN="$(printf '%s' "$TOKEN" | tr -d '\\r\\n')"
+  TOKEN="$(printf '%s' "$TOKEN" | tr -d '\r\n')"
   if [[ "$TOKEN" != github_pat_* && "$TOKEN" != ghp_* ]]; then echo HOLD_TOKEN_FORMAT_OR_EMPTY; exit 6; fi
   # Credentials remain on stdin: never pass them in URL or argv, never log them.
   if ! printf '%s' "$TOKEN" | python3 -c '
