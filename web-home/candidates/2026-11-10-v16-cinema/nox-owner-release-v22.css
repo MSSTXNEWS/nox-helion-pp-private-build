@@ -63,6 +63,19 @@ body.helion-home.nox-owner-cinema section.nox-orbital-controls button{
 body.helion-home.nox-owner-cinema[data-nox-owner-layout="PBR"] #noxWorldsV6Canvas{
  opacity:1!important;filter:none!important
 }
+body.helion-home.nox-owner-cinema .nox-v22-exit-worlds{
+ display:none!important;position:fixed!important;right:16px!important;top:84px!important;
+ z-index:140!important;min-height:44px!important;padding:9px 13px!important;
+ border:1px solid #d7a875!important;border-radius:9px!important;
+ color:#f7dfb9!important;background:linear-gradient(135deg,#40312c,#0a0d14)!important;
+ box-shadow:0 7px 25px #000b!important;cursor:pointer!important
+}
+body.helion-home.nox-owner-cinema[data-nox-owner-layout="PBR"] .nox-v22-exit-worlds{
+ display:block!important
+}
+@media(max-width:600px){body.helion-home.nox-owner-cinema .nox-v22-exit-worlds{
+ top:68px!important;right:9px!important;padding:8px 10px!important;font-size:12px!important
+}}
 body.helion-home.nox-owner-cinema .nox-v22-persona-dialog{
  background:linear-gradient(145deg,#1b1a21,#030407);color:#f4e4cf;
  border:1px solid #c79b60;border-radius:14px;padding:15px;
