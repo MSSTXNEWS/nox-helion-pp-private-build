@@ -40,6 +40,13 @@
     if(typeof dialog.showModal==='function')dialog.showModal();
    },true);
   });
+  // In narrow PBR mode the original 14-choice bottom sheet covers the
+  // composition buttons. A separate real return control prevents a trap.
+  const exitWorlds=document.createElement('button');exitWorlds.type='button';
+  exitWorlds.className='nox-v22-exit-worlds';exitWorlds.textContent='✕ 8 ЯДЕР';
+  exitWorlds.setAttribute('aria-label','Вернуться к восьми CoreID из 14 миров');
+  exitWorlds.addEventListener('click',()=>{if(body.dataset.noxOwnerLayout==='PBR')mode.click();});
+  document.body.append(exitWorlds);
   const panelCount=()=>originalControls.querySelectorAll('button').length;
   const syncMode=()=>{
    const isPBR=body.dataset.noxOwnerLayout==='PBR';
