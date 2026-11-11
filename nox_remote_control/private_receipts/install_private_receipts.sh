@@ -27,9 +27,24 @@ if ! test -e "$SCRIPT"; then cp "$TMP" "$SCRIPT"; chmod 600 "$SCRIPT"; fi
 if ! test -e "$CONF"; then
   echo "Configure a fine-grained GitHub PAT: private MSSTXNEWS/runpod-control, Contents Read/Write only."
   printf "Paste token (hidden; never send via ChatGPT): "
-  IFS= read -rs TOKEN
+  if ! IFS= read -rs TOKEN </dev/tty; then echo; echo HOLD_TTY_REQUIRED; exit 6; fi
   echo
-  if [[ "$TOKEN" != github_pat_* && "$TOKEN" != ghp_* ]]; then echo HOLD_TOKEN_FORMAT; exit 6; fi
+  TOKEN="$(printf '%s' "$TOKEN" | tr -d '\\r\\n')"
+  if [[ "$TOKEN" != github_pat_* && "$TOKEN" != ghp_* ]]; then echo HOLD_TOKEN_FORMAT_OR_EMPTY; exit 6; fi
+  # Credentials remain on stdin: never pass them in URL or argv, never log them.
+  if ! printf '%s' "$TOKEN" | python3 -c '
+import json,sys,urllib.request
+token=sys.stdin.read()
+try:
+    req=urllib.request.Request("https://api.github.com/repos/MSSTXNEWS/runpod-control",
+      headers={"Authorization":"Bearer "+token,"Accept":"application/vnd.github+json"})
+    with urllib.request.urlopen(req,timeout=15) as res:
+        repo=json.loads(res.read(16384))
+    ok=repo.get("private") is True and repo.get("full_name")=="MSSTXNEWS/runpod-control" and repo.get("permissions",{}).get("push") is True
+except Exception:
+    ok=False
+sys.exit(0 if ok else 1)
+'; then echo HOLD_TOKEN_ACCESS_PRIVATE_REPO; unset TOKEN; exit 6; fi
   printf '%s' "$TOKEN" | python3 -c 'import sys,json,pathlib; p=pathlib.Path(sys.argv[1]); p.write_text(json.dumps({"private_repo":"MSSTXNEWS/runpod-control","token":sys.stdin.read()},indent=2)+"\n")' "$CONF"
   unset TOKEN
   chmod 600 "$CONF"
