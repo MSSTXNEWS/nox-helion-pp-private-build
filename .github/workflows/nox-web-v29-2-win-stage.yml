@@ -42,6 +42,7 @@ jobs:
           if ($exitCode -eq 0) { throw 'FAIL_OPEN_MISSING_ZIP' }
           if (-not (($result | Out-String) -match 'NOX_ARCHIVE_MISSING')) { throw 'UNEXPECTED_FAILURE' }
           Write-Output 'NOX_V29_2_MISSING_ARCHIVE_FAIL_CLOSED_PASS'
+          $global:LASTEXITCODE=0  # Expected negative child exit was validated above.
       - name: Package Windows source verifier and pinned physical receipt
         shell: powershell
         run: |
