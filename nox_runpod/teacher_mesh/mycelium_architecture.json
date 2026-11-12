@@ -1,0 +1,113 @@
+{
+  "schema": "nox-teacher-mycelium-policy-v1",
+  "revision": "2026-11-12",
+  "instructions_version": "0.0.6",
+  "architecture": {
+    "one_identity": "ONE_NOX_ONE_CHAT",
+    "student": "KEEP_EXISTING_NOX_STUDENT_WEIGHTS_UNCHANGED_UNTIL_VERIFIED_TRAINING",
+    "teacher_process": "TEACHERS_ARE_FROZEN_ON_SEPARATE_VM_OR_CLI",
+    "data_transfer": "TEACHER_GENERATED_TEXT_AND_CRITIQUES_ONLY",
+    "mycelium": "ADAPTER_BANKS_ATTACH_TO_NOX_OWN_LAYERS; NEVER_INJECT_INTO_TEACHER_WEIGHTS",
+    "persona": "SPIDER_VAMPIRE_IS_EVOLVABLE_ORIGIN_ARCHETYPE_NOT_FIXED_ROLE",
+    "convergence": "NOX_GENERATES_THE_USER_VISIBLE_ANSWER_ITSELF",
+    "simulation_claims": "NEVER_CLAIM_WEIGHT_ABSORPTION_UNLESS_REAL_NOX_OPTIMIZER_STEPS"
+  },
+  "modes": {
+    "fast_chat": {
+      "order": [
+        "NOX_RESPONDS_IMMEDIATELY",
+        "OPTIONAL_BACKGROUND_TEACHER_REVIEW",
+        "SOURCE_LABELLED_ALTERNATE_NOX_REFINEMENT_ON_REQUEST"
+      ],
+      "background_fanout_max": 2,
+      "initial_fanout": 0,
+      "automatic_chat_replacement": false,
+      "target": "Minimize first token latency; no wait on external teachers."
+    },
+    "deliberate_comparison": {
+      "teacher_count_max": 5,
+      "parallel_vms_max": 5,
+      "default_parallel_vms": 2,
+      "evaluation": [
+        "teacher_provenance",
+        "objective_task_tests",
+        "disagreement_detection",
+        "nox_synthesis"
+      ],
+      "no_vendor_model_picker_in_ui": true
+    },
+    "night_distillation": {
+      "schedule": "OWNER_CONFIGURED_EXISTING_NOX_TASK_DISPATCHER_ONLY",
+      "training_inputs": "APPROVED_RESPONSE_ONLY_PAIRS",
+      "teacher_count_max": 5,
+      "one_noX_student_optimizer": true,
+      "candidate_gates": [
+        "DEDUP",
+        "PERMISSIONS_AND_PRIVACY",
+        "SOURCE_AND_LICENSE",
+        "FACT_CHECK_WHERE_POSSIBLE",
+        "HOLDOUT_SEPARATION",
+        "QUALITY_COMPARISON"
+      ],
+      "weight_update": "REAL_ADAPTER_GRADIENT_UPDATE_WITH_VERIFIED_CHECKPOINT",
+      "targeted_layers": [
+        "ATTENTION_PROJECTIONS",
+        "GATED_DELTANET",
+        "SHARED_EXPERT",
+        "SELECTED_ROUTED_EXPERTS_AFTER_COMPATIBILITY_TEST"
+      ],
+      "methods_to_trial": [
+        "BF16_LORA",
+        "RS_LORA",
+        "DORA_IF_SUPPORTED",
+        "RESPONSE_ONLY_SFT",
+        "DPO_AFTER_PREFERENCE_LABELS"
+      ],
+      "no_force_switch_training_running": true,
+      "independent_snapshot_transfer": true
+    }
+  },
+  "isolation": {
+    "no_paid_provider_required": true,
+    "offline_cli_backends": [
+      "llama_cpp_cli",
+      "ollama_cli"
+    ],
+    "in_process_offline_candidate": "transformers+PEFT local_files_only; require trainer/VM resource isolation",
+    "local_protocol_optional": "OPENAI_COMPAT_LOOPBACK_IS_NOT_PAID_CLOUD_API",
+    "hosted_fallbacks_disabled_by_default": true,
+    "no_external_private_chat_prompt": true,
+    "no_public_teacher_port": true,
+    "no_public_root_shell": true,
+    "max_vm_workers_subject_to_available_gpu": true
+  },
+  "learning": {
+    "accepted_output_source": "VERIFIED_TEACHER_RESPONSE_ONLY",
+    "original_teacher_weights_preserved": true,
+    "no_teacher_base_weight_merge": true,
+    "provenance_required": true,
+    "s03": "SINGLE_EXISTING_S03_WITH_TEMPORAL_MEMORY_AND_SKILL_HISTORY",
+    "real_optimizer_receipt_required": true,
+    "eval_before_promotion": true,
+    "rollback_required": true,
+    "adapters_allowed": true,
+    "preferred_deployment": "ONE_NOX_PERSONA; INTERNAL_ADAPTER_ROUTING_HIDDEN"
+  },
+  "resources": {
+    "a100": "PRIORITIZE_EXISTING_NOX_TRAINER; NEVER_START_5_TEACHERS_ON_SAME_BUSY_GPU",
+    "vm_a4000": "RUN_SMALL_GGUF_TEACHERS, BANDWIDTH_AND_VRAM_GATED",
+    "cpu_ram": "USEFUL_PREPROCESSING_AND_CACHING_NOT_FAKE_LOAD",
+    "output": "S03_PROVENANCE_AND_CHECKPOINTS_ONLY_AFTER_REAL_VERIFICATION"
+  },
+  "states": [
+    "CANDIDATE",
+    "QUEUED",
+    "TEACHER_MEASURED",
+    "NOX_ANSWER",
+    "EVAL_PENDING",
+    "ACCEPTED_FOR_TRAINING",
+    "OPTIMIZER_UPDATED",
+    "EVAL_PASS",
+    "PROMOTED_OR_ROLLBACK"
+  ]
+}
