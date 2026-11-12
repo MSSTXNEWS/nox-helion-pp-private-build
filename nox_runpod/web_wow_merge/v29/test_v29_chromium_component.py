@@ -11,7 +11,7 @@ CSS=(ROOT/'nox-v29-pc-genesis-addons.css').read_text('utf8')
 class BrowserTests(unittest.TestCase):
  @classmethod
  def setUpClass(cls):
-  cls.p=sync_playwright().start();cls.browser=cls.p.chromium.launch(executable_path='/usr/bin/chromium',headless=True,args=['--no-sandbox','--disable-dev-shm-usage'])
+  cls.p=sync_playwright().start();exe=os.environ.get('NOX_CHROMIUM_BIN');cls.browser=cls.p.chromium.launch(executable_path=exe or None,headless=True,args=['--no-sandbox','--disable-dev-shm-usage'])
  @classmethod
  def tearDownClass(cls):cls.browser.close();cls.p.stop()
  def page(self,kind,width=390,native=False):
@@ -52,6 +52,47 @@ class BrowserTests(unittest.TestCase):
   q=pg.evaluate('window.__NOX_TEST_LOG')
   self.assertEqual([x['url'] for x in q if x['url'] is not None],['/api/nox/status','/api/nox/progress'])
   self.assertTrue(all(x['method']=='GET' for x in q if x['url'] is not None))
+  pg.close()
+ def test_actual_pc_v25_s03_memory_and_history_routes(self):
+  pg=self.page('memory',390,True)
+  pg.evaluate("""window.__NOX_TEST_LOG=[];window.fetch=async (url,opts)=>{
+    window.__NOX_TEST_LOG.push({url,method:opts?.method||'GET'});
+    const v=url==='/api/nox/status'?
+      {host:'NOX_CHAT_V24.1',status:'READY',primary_model:'nox',
+       ollama:'http://127.0.0.1:11434',safe70:{limit:70}}:
+      url==='/api/nox/memory'?{status:'READY',stats:{M0:2,M1:1},segments:{M0:[]},ledger_chain_ok:true}:
+      url==='/api/nox/history'?{status:'READY',dialogs:[{messages:3},{messages:4}]}:
+      {status:'HOLD',reason:'NO_REAL_DATA_IN_FIXTURE'};
+    return {ok:true,status:200,headers:new Headers({'content-type':'application/json'}),
+            text:async()=>JSON.stringify(v)};
+  };""")
+  pg.locator('[data-nox-pc-action="pc-s03"]').click()
+  pg.wait_for_function("document.querySelector('.nox-v29-result').textContent.includes('M0: 2')")
+  self.assertIn('Genesis Ledger',pg.locator('.nox-v29-result').inner_text())
+  pg.locator('[data-nox-pc-action="s03-dialogs"]').click()
+  pg.wait_for_function("document.querySelector('.nox-v29-result').textContent.includes('Сообщений: 7')")
+  requests=pg.evaluate('window.__NOX_TEST_LOG')
+  self.assertEqual([x['url'] for x in requests],[
+    '/api/nox/status','/api/nox/memory','/api/nox/status','/api/nox/history'])
+  self.assertTrue(all(x['method']=='GET' for x in requests))
+  pg.close()
+ def test_actual_pc_v25_telemetry_values_and_safe70_hold(self):
+  pg=self.page('chat',1440,True)
+  pg.evaluate("""window.__NOX_TEST_LOG=[];window.fetch=async(url,opts)=>{
+    window.__NOX_TEST_LOG.push(url);
+    const v=url==='/api/nox/status'?
+      {host:'NOX_CHAT_V24.1',status:'READY',primary_model:'nox',
+       ollama:'http://127.0.0.1:11434',safe70:{limit:70}}:
+      {status:'READY',source:'LibreHardwareMonitor',gpu_load_percent:74,
+       gpu_hot_spot_c:52,cpu_load_percent:22,ram_used_gb:14,vram_used_gb:5};
+    return {ok:true,status:200,headers:new Headers({'content-type':'application/json'}),
+       text:async()=>JSON.stringify(v)};
+  };""")
+  pg.locator('[data-nox-pc-action="pc-gpu"]').click()
+  pg.wait_for_function("document.querySelector('.nox-v29-result').textContent.includes('GPU Hot Spot, °C: 52')")
+  self.assertIn('НЕ ПРОВЕДЕНА',pg.locator('.nox-v29-result').inner_text())
+  self.assertEqual(pg.evaluate('window.__NOX_TEST_LOG'),
+    ['/api/nox/status','/api/nox/pc-load'])
   pg.close()
  def test_mismatched_owner_blocks_addon(self):
   pg=self.page('memory',390,True)
