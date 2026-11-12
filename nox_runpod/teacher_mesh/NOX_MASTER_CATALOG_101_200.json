@@ -260,7 +260,7 @@
       "number": 115,
       "group": "CINEMA",
       "name": "Rive JS",
-      "url": "https://github.com/rive-app/rive-js",
+      "url": "https://github.com/rive-app/rive-wasm",
       "usage": "Интерактивные анимации графических кнопок",
       "state": "CANDIDATE_NOT_INSTALLED",
       "acquisition_state": "NOT_VERIFIED",
