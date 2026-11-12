@@ -1,0 +1,509 @@
+{
+  "schema": "nox-teacher-mycelium-feature-catalog-v1",
+  "revision": "2026-11-12",
+  "instructions_version": "0.0.6",
+  "owner_policy": "No additional backend; only verified optional plugins to existing NOX",
+  "use": "Candidate upstream reference, not a download/install manifest",
+  "features": [
+    {
+      "id": "F01",
+      "domain": "Учителя",
+      "function": "Скоростная VM-инференция",
+      "engine": "vLLM",
+      "source": "https://github.com/vllm-project/vllm",
+      "priority": "P0",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "integration": "Existing NOX; optional dependency, requires license+hardware gate"
+    },
+    {
+      "id": "F02",
+      "domain": "Учителя",
+      "function": "Быстрый MoE-сервер",
+      "engine": "SGLang",
+      "source": "https://github.com/sgl-project/sglang",
+      "priority": "P1",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "integration": "Existing NOX; optional dependency, requires license+hardware gate"
+    },
+    {
+      "id": "F03",
+      "domain": "Учителя",
+      "function": "GGUF на небольших GPU/CPU",
+      "engine": "llama.cpp",
+      "source": "https://github.com/ggml-org/llama.cpp",
+      "priority": "P0",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "integration": "Existing NOX; optional dependency, requires license+hardware gate"
+    },
+    {
+      "id": "F04",
+      "domain": "Учителя",
+      "function": "Простая локальная библиотека моделей",
+      "engine": "Ollama",
+      "source": "https://github.com/ollama/ollama",
+      "priority": "P1",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "integration": "Existing NOX; optional dependency, requires license+hardware gate"
+    },
+    {
+      "id": "F05",
+      "domain": "Учителя",
+      "function": "Единый адаптер API и fallback",
+      "engine": "LiteLLM",
+      "source": "https://github.com/BerriAI/litellm",
+      "priority": "P0",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "integration": "Existing NOX; optional dependency, requires license+hardware gate"
+    },
+    {
+      "id": "F06",
+      "domain": "Учителя",
+      "function": "Резерв бесплатных облачных ответов",
+      "engine": "OpenRouter Free",
+      "source": "https://openrouter.ai/collections/free-models",
+      "priority": "P1",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "integration": "Existing NOX; optional dependency, requires license+hardware gate"
+    },
+    {
+      "id": "F07",
+      "domain": "Учителя",
+      "function": "Скачивание моделей с SHA и версиями",
+      "engine": "huggingface_hub",
+      "source": "https://github.com/huggingface/huggingface_hub",
+      "priority": "P0",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "integration": "Existing NOX; optional dependency, requires license+hardware gate"
+    },
+    {
+      "id": "F08",
+      "domain": "Учителя",
+      "function": "Потоковая загрузка проверенных датасетов",
+      "engine": "HF Datasets",
+      "source": "https://github.com/huggingface/datasets",
+      "priority": "P0",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "integration": "Existing NOX; optional dependency, requires license+hardware gate"
+    },
+    {
+      "id": "F09",
+      "domain": "Учителя",
+      "function": "ETL и чистка корпусов",
+      "engine": "DataTrove",
+      "source": "https://github.com/huggingface/datatrove",
+      "priority": "P1",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "integration": "Existing NOX; optional dependency, requires license+hardware gate"
+    },
+    {
+      "id": "F10",
+      "domain": "Учителя",
+      "function": "Разметка хороших/плохих ответов",
+      "engine": "Argilla",
+      "source": "https://github.com/argilla-io/argilla",
+      "priority": "P1",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "integration": "Existing NOX; optional dependency, requires license+hardware gate"
+    },
+    {
+      "id": "F11",
+      "domain": "Обучение",
+      "function": "Фундаментальный нейронный тренер",
+      "engine": "Transformers",
+      "source": "https://github.com/huggingface/transformers",
+      "priority": "P0",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "integration": "Existing NOX; optional dependency, requires license+hardware gate"
+    },
+    {
+      "id": "F12",
+      "domain": "Обучение",
+      "function": "Адаптерная грибница разных слоёв",
+      "engine": "PEFT LoRA / rsLoRA / DoRA",
+      "source": "https://github.com/huggingface/peft",
+      "priority": "P0",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "integration": "Existing NOX; optional dependency, requires license+hardware gate"
+    },
+    {
+      "id": "F13",
+      "domain": "Обучение",
+      "function": "Response-only SFT и DPO",
+      "engine": "TRL",
+      "source": "https://github.com/huggingface/trl",
+      "priority": "P0",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "integration": "Existing NOX; optional dependency, requires license+hardware gate"
+    },
+    {
+      "id": "F14",
+      "domain": "Обучение",
+      "function": "Оптимизированные training kernels",
+      "engine": "Unsloth",
+      "source": "https://github.com/unslothai/unsloth",
+      "priority": "P1",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "integration": "Existing NOX; optional dependency, requires license+hardware gate"
+    },
+    {
+      "id": "F15",
+      "domain": "Обучение",
+      "function": "Воспроизводимые рецепты и конфиги",
+      "engine": "Axolotl",
+      "source": "https://github.com/axolotl-ai-cloud/axolotl",
+      "priority": "P1",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "integration": "Existing NOX; optional dependency, requires license+hardware gate"
+    },
+    {
+      "id": "F16",
+      "domain": "Обучение",
+      "function": "Fused loss и Triton kernels",
+      "engine": "Liger Kernel",
+      "source": "https://github.com/linkedin/Liger-Kernel",
+      "priority": "P1",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "integration": "Existing NOX; optional dependency, requires license+hardware gate"
+    },
+    {
+      "id": "F17",
+      "domain": "Обучение",
+      "function": "8-bit оптимизаторы",
+      "engine": "bitsandbytes",
+      "source": "https://github.com/bitsandbytes-foundation/bitsandbytes",
+      "priority": "P1",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "integration": "Existing NOX; optional dependency, requires license+hardware gate"
+    },
+    {
+      "id": "F18",
+      "domain": "Обучение",
+      "function": "Проверенная быстрая attention",
+      "engine": "FlashAttention",
+      "source": "https://github.com/Dao-AILab/flash-attention",
+      "priority": "P1",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "integration": "Existing NOX; optional dependency, requires license+hardware gate"
+    },
+    {
+      "id": "F19",
+      "domain": "Обучение",
+      "function": "Запуск на нескольких устройствах",
+      "engine": "Accelerate",
+      "source": "https://github.com/huggingface/accelerate",
+      "priority": "P1",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "integration": "Existing NOX; optional dependency, requires license+hardware gate"
+    },
+    {
+      "id": "F20",
+      "domain": "Обучение",
+      "function": "ZeRO и управление памятью",
+      "engine": "DeepSpeed",
+      "source": "https://github.com/deepspeedai/DeepSpeed",
+      "priority": "P2",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "integration": "Existing NOX; optional dependency, requires license+hardware gate"
+    },
+    {
+      "id": "F21",
+      "domain": "Качество",
+      "function": "Независимые тесты знаний/кода",
+      "engine": "lm-evaluation-harness",
+      "source": "https://github.com/EleutherAI/lm-evaluation-harness",
+      "priority": "P0",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "integration": "Existing NOX; optional dependency, requires license+hardware gate"
+    },
+    {
+      "id": "F22",
+      "domain": "Качество",
+      "function": "Лёгкие скоростные eval",
+      "engine": "LightEval",
+      "source": "https://github.com/huggingface/lighteval",
+      "priority": "P1",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "integration": "Existing NOX; optional dependency, requires license+hardware gate"
+    },
+    {
+      "id": "F23",
+      "domain": "Качество",
+      "function": "Проверка ответа с контекстом RAG",
+      "engine": "RAGAS",
+      "source": "https://github.com/explodinggradients/ragas",
+      "priority": "P1",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "integration": "Existing NOX; optional dependency, requires license+hardware gate"
+    },
+    {
+      "id": "F24",
+      "domain": "Качество",
+      "function": "Проверка reward-модели",
+      "engine": "RewardBench",
+      "source": "https://github.com/allenai/reward-bench",
+      "priority": "P2",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "integration": "Existing NOX; optional dependency, requires license+hardware gate"
+    },
+    {
+      "id": "F25",
+      "domain": "Качество",
+      "function": "Парное сравнение ответов",
+      "engine": "AlpacaEval",
+      "source": "https://github.com/tatsu-lab/alpaca_eval",
+      "priority": "P1",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "integration": "Existing NOX; optional dependency, requires license+hardware gate"
+    },
+    {
+      "id": "F26",
+      "domain": "Качество",
+      "function": "Тесты ошибок и рисков агентов",
+      "engine": "Giskard OSS",
+      "source": "https://github.com/Giskard-AI/giskard-oss",
+      "priority": "P1",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "integration": "Existing NOX; optional dependency, requires license+hardware gate"
+    },
+    {
+      "id": "F27",
+      "domain": "Качество",
+      "function": "Дедупликация схожих ответов",
+      "engine": "datasketch",
+      "source": "https://github.com/ekzhu/datasketch",
+      "priority": "P0",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "integration": "Existing NOX; optional dependency, requires license+hardware gate"
+    },
+    {
+      "id": "F28",
+      "domain": "Качество",
+      "function": "Структурированный JSON-ответ",
+      "engine": "Outlines",
+      "source": "https://github.com/dottxt-ai/outlines",
+      "priority": "P1",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "integration": "Existing NOX; optional dependency, requires license+hardware gate"
+    },
+    {
+      "id": "F29",
+      "domain": "Качество",
+      "function": "Валидация схем и инструментов",
+      "engine": "Instructor",
+      "source": "https://github.com/567-labs/instructor",
+      "priority": "P1",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "integration": "Existing NOX; optional dependency, requires license+hardware gate"
+    },
+    {
+      "id": "F30",
+      "domain": "Качество",
+      "function": "Автоподбор гиперпараметров",
+      "engine": "Optuna",
+      "source": "https://github.com/optuna/optuna",
+      "priority": "P2",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "integration": "Existing NOX; optional dependency, requires license+hardware gate"
+    },
+    {
+      "id": "F31",
+      "domain": "Память и агенты",
+      "function": "Векторный поиск внутри S03 SQLite",
+      "engine": "sqlite-vec",
+      "source": "https://github.com/asg017/sqlite-vec",
+      "priority": "P0",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "integration": "Existing NOX; optional dependency, requires license+hardware gate"
+    },
+    {
+      "id": "F32",
+      "domain": "Память и агенты",
+      "function": "Эмбеддинги RU/ES/EN для S03",
+      "engine": "Qwen3 Embedding 0.6B",
+      "source": "https://huggingface.co/Qwen/Qwen3-Embedding-0.6B",
+      "priority": "P0",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "integration": "Existing NOX; optional dependency, requires license+hardware gate"
+    },
+    {
+      "id": "F33",
+      "domain": "Память и агенты",
+      "function": "Ранжирование найденной памяти",
+      "engine": "Qwen3 Reranker 0.6B",
+      "source": "https://huggingface.co/Qwen/Qwen3-Reranker-0.6B",
+      "priority": "P1",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "integration": "Existing NOX; optional dependency, requires license+hardware gate"
+    },
+    {
+      "id": "F34",
+      "domain": "Память и агенты",
+      "function": "RAG по файлам и внешним знаниям",
+      "engine": "LlamaIndex",
+      "source": "https://github.com/run-llama/llama_index",
+      "priority": "P1",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "integration": "Existing NOX; optional dependency, requires license+hardware gate"
+    },
+    {
+      "id": "F35",
+      "domain": "Память и агенты",
+      "function": "Гибридные поисковые пайплайны",
+      "engine": "Haystack",
+      "source": "https://github.com/deepset-ai/haystack",
+      "priority": "P1",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "integration": "Existing NOX; optional dependency, requires license+hardware gate"
+    },
+    {
+      "id": "F36",
+      "domain": "Память и агенты",
+      "function": "Граф задач с долгим состоянием",
+      "engine": "LangGraph",
+      "source": "https://github.com/langchain-ai/langgraph",
+      "priority": "P0",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "integration": "Existing NOX; optional dependency, requires license+hardware gate"
+    },
+    {
+      "id": "F37",
+      "domain": "Память и агенты",
+      "function": "Разрешённые инструменты автономных агентов",
+      "engine": "smolagents",
+      "source": "https://github.com/huggingface/smolagents",
+      "priority": "P1",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "integration": "Existing NOX; optional dependency, requires license+hardware gate"
+    },
+    {
+      "id": "F38",
+      "domain": "Память и агенты",
+      "function": "Отложенные локальные задачи",
+      "engine": "APScheduler",
+      "source": "https://github.com/agronholm/apscheduler",
+      "priority": "P0",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "integration": "Existing NOX; optional dependency, requires license+hardware gate"
+    },
+    {
+      "id": "F39",
+      "domain": "Память и агенты",
+      "function": "Устойчивые долгие задания и retries",
+      "engine": "Temporal",
+      "source": "https://github.com/temporalio/temporal",
+      "priority": "P2",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "integration": "Existing NOX; optional dependency, requires license+hardware gate"
+    },
+    {
+      "id": "F40",
+      "domain": "Память и агенты",
+      "function": "Визуальные интеграции сервисов",
+      "engine": "n8n",
+      "source": "https://github.com/n8n-io/n8n",
+      "priority": "P2",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "integration": "Existing NOX; optional dependency, requires license+hardware gate"
+    },
+    {
+      "id": "F41",
+      "domain": "Автономия",
+      "function": "Самодоработка кода в sandbox",
+      "engine": "OpenHands",
+      "source": "https://github.com/OpenHands/OpenHands",
+      "priority": "P1",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "integration": "Existing NOX; optional dependency, requires license+hardware gate"
+    },
+    {
+      "id": "F42",
+      "domain": "Автономия",
+      "function": "Git-патчи из диалога",
+      "engine": "Aider",
+      "source": "https://github.com/Aider-AI/aider",
+      "priority": "P1",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "integration": "Existing NOX; optional dependency, requires license+hardware gate"
+    },
+    {
+      "id": "F43",
+      "domain": "Автономия",
+      "function": "Регрессионные тесты кода",
+      "engine": "pytest",
+      "source": "https://github.com/pytest-dev/pytest",
+      "priority": "P0",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "integration": "Existing NOX; optional dependency, requires license+hardware gate"
+    },
+    {
+      "id": "F44",
+      "domain": "Автономия",
+      "function": "UI-тесты Резонанса и Windows WebView",
+      "engine": "Playwright",
+      "source": "https://github.com/microsoft/playwright",
+      "priority": "P0",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "integration": "Existing NOX; optional dependency, requires license+hardware gate"
+    },
+    {
+      "id": "F45",
+      "domain": "Автономия",
+      "function": "Быстрая проверка и исправление Python",
+      "engine": "Ruff",
+      "source": "https://github.com/astral-sh/ruff",
+      "priority": "P0",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "integration": "Existing NOX; optional dependency, requires license+hardware gate"
+    },
+    {
+      "id": "F46",
+      "domain": "Автономия",
+      "function": "Изоляция учителей и исполняемого кода",
+      "engine": "Docker Engine",
+      "source": "https://docs.docker.com/engine/install/",
+      "priority": "P0",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "integration": "Existing NOX; optional dependency, requires license+hardware gate"
+    },
+    {
+      "id": "F47",
+      "domain": "Автономия",
+      "function": "Схема инструментов существующего backend",
+      "engine": "FastAPI",
+      "source": "https://github.com/fastapi/fastapi",
+      "priority": "P1",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "integration": "Existing NOX; optional dependency, requires license+hardware gate"
+    },
+    {
+      "id": "F48",
+      "domain": "Автономия",
+      "function": "Правдивая GPU/CPU/step-телеметрия",
+      "engine": "Prometheus",
+      "source": "https://github.com/prometheus/prometheus",
+      "priority": "P1",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "integration": "Existing NOX; optional dependency, requires license+hardware gate"
+    },
+    {
+      "id": "F49",
+      "domain": "Автономия",
+      "function": "Распознавание RU/ES речи",
+      "engine": "faster-whisper",
+      "source": "https://github.com/SYSTRAN/faster-whisper",
+      "priority": "P1",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "integration": "Existing NOX; optional dependency, requires license+hardware gate"
+    },
+    {
+      "id": "F50",
+      "domain": "Автономия",
+      "function": "Локальный голос RU/ES",
+      "engine": "Piper TTS",
+      "source": "https://github.com/OHF-Voice/piper1-gpl",
+      "priority": "P1",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "integration": "Existing NOX; optional dependency, requires license+hardware gate"
+    }
+  ]
+}

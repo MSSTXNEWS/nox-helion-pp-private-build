@@ -1,0 +1,389 @@
+{
+  "schema": "nox-existing-task-intake-v1",
+  "revision": "2026-11-12",
+  "instructions_version": "0.0.6",
+  "purpose": "Consolidate actual existing NOX, ONEPASS, Drive tasks into existing FORGE/OneHost task module; do not start new daemon or claim execution",
+  "mode": "SOURCE_ONLY_NOT_ENQUEUED",
+  "onepass": {
+    "file": "NOX_HELION_ONEPASS_FULL_FINISH_20261112.zip",
+    "reported_sha256": "942e89d535acdfa967d864796dc893875f87ba7e6daae25962bce9bb9713e4c0",
+    "reported_members": 299,
+    "web_files": 292,
+    "verified_in_current_session": false,
+    "artifact_location": "NOT_PRESENT_IN_CURRENT_REPOSITORY; historical Notion receipt",
+    "no_production_write": true
+  },
+  "existing_progress": {
+    "A40": "RUNNING at RunPod EU-SE-1, observed GPU 94%, VRAM 98%, OOM warnings; student global_step UNKNOWN",
+    "japan": "UNVERIFIED_ACCESS; cannot infer or replace previous checkpoints",
+    "historical_A40_step": "~130 described 2026-11-10, NOT live",
+    "historical_rtx_pro_6000": "three LoRA streams described 2026-11-10, NOT live",
+    "web_v25_1": "CI success recorded for PR241, physical OneHost/GPU HOLD",
+    "qa": "ONEPASS reported zip/checksum checks PASS; physical E2E HOLD"
+  },
+  "policies": {
+    "no_new_backend": true,
+    "no_new_scheduler": true,
+    "no_auto_training_restart": true,
+    "no_auto_install": true,
+    "stop_fail_closed": true,
+    "reuse_before_download": true,
+    "one_student": true,
+    "one_S03": true,
+    "production_untouched": true,
+    "no_automatic_task_enqueue": true
+  },
+  "sources": {
+    "genesis": "https://docs.google.com/document/d/18YLAo_Cja3HJKZn6qr57P-zsm0-AHcx2aag0rgSjwS4/edit",
+    "audit": "https://docs.google.com/document/d/1aX5ISphPE78PQwa6iTcIAr8Ecrr-SifbFwtaJ6YzzOY/edit",
+    "patchA": "https://docs.google.com/document/d/145dTIW5GHvTr6lJSRGb2X70fVg85CoYnUrsNr4RpbNk/edit",
+    "patchB": "https://docs.google.com/document/d/1-ig6JV71s7RodbQIFse3l4s0O3UqXQmVay5s1v9evVs/edit",
+    "v16": "https://docs.google.com/document/d/11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc/edit",
+    "onepass": "https://app.notion.com/p/40cacc184a9f8170bcabca204c7d4c33",
+    "web": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/241",
+    "teacher": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/251"
+  },
+  "tasks": [
+    {
+      "id": "INV-001",
+      "priority": "P0",
+      "lane": "PRIME",
+      "title": "Inventory Japan GPU/NOX artifacts + training logs read-only",
+      "state": "HOLD",
+      "gate": "Never infer Japan filesystem from Sweden pod; record SHA paths and step receipts; Vast snapshot SHA d5033064.. verified, model asset bge-m3 GGUF absent in tar",
+      "sources": [
+        "https://docs.google.com/document/d/18YLAo_Cja3HJKZn6qr57P-zsm0-AHcx2aag0rgSjwS4/edit",
+        "https://docs.google.com/document/d/1aX5ISphPE78PQwa6iTcIAr8Ecrr-SifbFwtaJ6YzzOY/edit"
+      ],
+      "execution": "DISCOVERY_OR_PROPOSAL_ONLY",
+      "runtime_accepted": false
+    },
+    {
+      "id": "INV-002",
+      "priority": "P0",
+      "lane": "PRIME",
+      "title": "A40 OOM diagnostics, checkpoint preservation and exact training progress",
+      "state": "HOLD",
+      "gate": "Read-only GPU/RAM/process/optimizer-step snapshots; no auto-restart; OOM observed",
+      "sources": [
+        "https://docs.google.com/document/d/1aX5ISphPE78PQwa6iTcIAr8Ecrr-SifbFwtaJ6YzzOY/edit"
+      ],
+      "execution": "DISCOVERY_OR_PROPOSAL_ONLY",
+      "runtime_accepted": false
+    },
+    {
+      "id": "GEN-001",
+      "priority": "P0",
+      "lane": "PRIME",
+      "title": "Confirm NOX_9B_UNIFIED/Qwen3.5-9B student identity and birth receipt",
+      "state": "HOLD",
+      "gate": "Check training checkpoint delta, optimizer receipt, immutable Genesis Ledger; historical step ~130 not current; Vast state cycle 530 is historical loop count not verified student optimizer steps; source adapter exists",
+      "sources": [
+        "https://docs.google.com/document/d/18YLAo_Cja3HJKZn6qr57P-zsm0-AHcx2aag0rgSjwS4/edit",
+        "https://docs.google.com/document/d/1aX5ISphPE78PQwa6iTcIAr8Ecrr-SifbFwtaJ6YzzOY/edit"
+      ],
+      "execution": "DISCOVERY_OR_PROPOSAL_ONLY",
+      "runtime_accepted": false
+    },
+    {
+      "id": "GEN-002",
+      "priority": "P0",
+      "lane": "PRIME",
+      "title": "Verify three LoRA streams and merge plan without duplicate training",
+      "state": "HOLD",
+      "gate": "Compare 3 source checkpoints, architecture compatibility and baseline blind A/B before promotion",
+      "sources": [
+        "https://docs.google.com/document/d/1aX5ISphPE78PQwa6iTcIAr8Ecrr-SifbFwtaJ6YzzOY/edit",
+        "https://docs.google.com/document/d/18YLAo_Cja3HJKZn6qr57P-zsm0-AHcx2aag0rgSjwS4/edit"
+      ],
+      "execution": "DISCOVERY_OR_PROPOSAL_ONLY",
+      "runtime_accepted": false
+    },
+    {
+      "id": "GROW-001",
+      "priority": "P0",
+      "lane": "PRIME",
+      "title": "Selection of one complementary teacher only on proved skill gap",
+      "state": "TODO",
+      "gate": "First exact host SHA inventory; no extra GPU jobs on OOM A40",
+      "sources": [
+        "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/251",
+        "https://docs.google.com/document/d/18YLAo_Cja3HJKZn6qr57P-zsm0-AHcx2aag0rgSjwS4/edit"
+      ],
+      "execution": "DISCOVERY_OR_PROPOSAL_ONLY",
+      "runtime_accepted": false
+    },
+    {
+      "id": "GROW-002",
+      "priority": "P0",
+      "lane": "PRIME",
+      "title": "Novel approved distillation corpus and actual student optimizer receipt",
+      "state": "HOLD",
+      "gate": "Source-separated holdout, no duplicate samples, no proof-free absorption",
+      "sources": [
+        "https://docs.google.com/document/d/18YLAo_Cja3HJKZn6qr57P-zsm0-AHcx2aag0rgSjwS4/edit",
+        "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/251"
+      ],
+      "execution": "DISCOVERY_OR_PROPOSAL_ONLY",
+      "runtime_accepted": false
+    },
+    {
+      "id": "MEM-001",
+      "priority": "P0",
+      "lane": "S03",
+      "title": "Single S03 M0-M7, recall-before-response and restart test",
+      "state": "HOLD",
+      "gate": "Test existing schema/owner scope/readback and avoid second DB",
+      "sources": [
+        "https://docs.google.com/document/d/11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc/edit",
+        "https://docs.google.com/document/d/18YLAo_Cja3HJKZn6qr57P-zsm0-AHcx2aag0rgSjwS4/edit"
+      ],
+      "execution": "DISCOVERY_OR_PROPOSAL_ONLY",
+      "runtime_accepted": false
+    },
+    {
+      "id": "MEM-002",
+      "priority": "P1",
+      "lane": "S03",
+      "title": "Genesis autobiography, temporal facts and memory provenance",
+      "state": "TODO",
+      "gate": "Never fabricate birth date; verified event ledger only",
+      "sources": [
+        "https://docs.google.com/document/d/18YLAo_Cja3HJKZn6qr57P-zsm0-AHcx2aag0rgSjwS4/edit"
+      ],
+      "execution": "DISCOVERY_OR_PROPOSAL_ONLY",
+      "runtime_accepted": false
+    },
+    {
+      "id": "CHAT-001",
+      "priority": "P0",
+      "lane": "COGNITIVE",
+      "title": "Existing Resonance OneHost stream, STOP, history, model SHA",
+      "state": "HOLD",
+      "gate": "Real nox/chat end-to-end on target host; avoid model-picker UI",
+      "sources": [
+        "https://app.notion.com/p/40cacc184a9f8170bcabca204c7d4c33",
+        "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/241"
+      ],
+      "execution": "DISCOVERY_OR_PROPOSAL_ONLY",
+      "runtime_accepted": false
+    },
+    {
+      "id": "COG-001",
+      "priority": "P1",
+      "lane": "COGNITIVE",
+      "title": "C01-C08, reflection, emotional RU/ES and skills without competing LLMs",
+      "state": "TODO",
+      "gate": "Validate actual functional maps against existing 8 CoreID",
+      "sources": [
+        "https://docs.google.com/document/d/18YLAo_Cja3HJKZn6qr57P-zsm0-AHcx2aag0rgSjwS4/edit",
+        "https://docs.google.com/document/d/11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc/edit"
+      ],
+      "execution": "DISCOVERY_OR_PROPOSAL_ONLY",
+      "runtime_accepted": false
+    },
+    {
+      "id": "FORGE-001",
+      "priority": "P0",
+      "lane": "FORGE",
+      "title": "Use native FORGE actions for self-build patch/test/rollback",
+      "state": "HOLD",
+      "gate": "Check existing callbacks and approval, not separate backend or blind shell",
+      "sources": [
+        "https://docs.google.com/document/d/145dTIW5GHvTr6lJSRGb2X70fVg85CoYnUrsNr4RpbNk/edit"
+      ],
+      "execution": "DISCOVERY_OR_PROPOSAL_ONLY",
+      "runtime_accepted": false
+    },
+    {
+      "id": "FORGE-002",
+      "priority": "P1",
+      "lane": "FORGE",
+      "title": "Code patch receipts, regression tests and staged owner review",
+      "state": "TODO",
+      "gate": "One patch-one test-one save, keep source in GitHub",
+      "sources": [
+        "https://docs.google.com/document/d/145dTIW5GHvTr6lJSRGb2X70fVg85CoYnUrsNr4RpbNk/edit",
+        "https://docs.google.com/document/d/18YLAo_Cja3HJKZn6qr57P-zsm0-AHcx2aag0rgSjwS4/edit"
+      ],
+      "execution": "DISCOVERY_OR_PROPOSAL_ONLY",
+      "runtime_accepted": false
+    },
+    {
+      "id": "WORM-001",
+      "priority": "P1",
+      "lane": "AUTOPILOT",
+      "title": "Native WormAutopilot/Swarm with STOP TTL quotas and provider gates",
+      "state": "HOLD",
+      "gate": "Existing idle tick only, no self-replication, no auto installs",
+      "sources": [
+        "https://docs.google.com/document/d/145dTIW5GHvTr6lJSRGb2X70fVg85CoYnUrsNr4RpbNk/edit"
+      ],
+      "execution": "DISCOVERY_OR_PROPOSAL_ONLY",
+      "runtime_accepted": false
+    },
+    {
+      "id": "INTAKE-001",
+      "priority": "P1",
+      "lane": "AUTOPILOT",
+      "title": "Local Intake SHA dedup + ModelCenter existing teacher inventory",
+      "state": "TODO",
+      "gate": "Never redownload model if same checksum exists",
+      "sources": [
+        "https://docs.google.com/document/d/145dTIW5GHvTr6lJSRGb2X70fVg85CoYnUrsNr4RpbNk/edit",
+        "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/251"
+      ],
+      "execution": "DISCOVERY_OR_PROPOSAL_ONLY",
+      "runtime_accepted": false
+    },
+    {
+      "id": "UI-001",
+      "priority": "P0",
+      "lane": "WEB",
+      "title": "Preserve WEB V25.1 original 292 files, D02 and 14 worlds",
+      "state": "HOLD",
+      "gate": "Verify exact commit and source manifest, do not redraw existing approved scene",
+      "sources": [
+        "https://app.notion.com/p/40cacc184a9f8170bcabca204c7d4c33",
+        "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/241"
+      ],
+      "execution": "DISCOVERY_OR_PROPOSAL_ONLY",
+      "runtime_accepted": false
+    },
+    {
+      "id": "UI-002",
+      "priority": "P1",
+      "lane": "WEB",
+      "title": "MENU10 graph buttons/native ACK/cinema/browser/event ticker",
+      "state": "HOLD",
+      "gate": "Real non-stub buttons, STOP, no drop-downs; reuse PATCH B plans",
+      "sources": [
+        "https://docs.google.com/document/d/1-ig6JV71s7RodbQIFse3l4s0O3UqXQmVay5s1v9evVs/edit",
+        "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/241"
+      ],
+      "execution": "DISCOVERY_OR_PROPOSAL_ONLY",
+      "runtime_accepted": false
+    },
+    {
+      "id": "VOICE-001",
+      "priority": "P1",
+      "lane": "COGNITIVE",
+      "title": "RU-ES ASR-NOX-TTS voice on actual student",
+      "state": "TODO",
+      "gate": "Physical mic and output, no synthetic PASS",
+      "sources": [
+        "https://docs.google.com/document/d/1aX5ISphPE78PQwa6iTcIAr8Ecrr-SifbFwtaJ6YzzOY/edit",
+        "https://docs.google.com/document/d/11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc/edit"
+      ],
+      "execution": "DISCOVERY_OR_PROPOSAL_ONLY",
+      "runtime_accepted": false
+    },
+    {
+      "id": "QA-001",
+      "priority": "P0",
+      "lane": "WEB",
+      "title": "ONEPASS source SHA and startup preflight verification",
+      "state": "HOLD",
+      "gate": "Archive 299 members and 292 web files per Notion record; actual ZIP not mounted in this PR; V2 302 files CRC PASS + Node 5/5 + PREFLIGHT PASS, physical still HOLD",
+      "sources": [
+        "https://app.notion.com/p/40cacc184a9f8170bcabca204c7d4c33"
+      ],
+      "execution": "DISCOVERY_OR_PROPOSAL_ONLY",
+      "runtime_accepted": false,
+      "source_evidence": "NOX_HELION_ONEPASS_V2_HARDENED_20261112.zip SHA256 ef1cf8262483879e47eee75d1cd81fab22f1be4e3109a1ea7966f1cc04a6f127"
+    },
+    {
+      "id": "QA-002",
+      "priority": "P0",
+      "lane": "WEB",
+      "title": "ONEPASS real OneHost E2E physical Windows/GPU/STOP tests",
+      "state": "HOLD",
+      "gate": "Must use existing NOX_ONEPASS/NOX_LIVE_ONEHOST_E2E after artifact available; no mock PASS",
+      "sources": [
+        "https://app.notion.com/p/40cacc184a9f8170bcabca204c7d4c33"
+      ],
+      "execution": "DISCOVERY_OR_PROPOSAL_ONLY",
+      "runtime_accepted": false
+    },
+    {
+      "id": "REL-001",
+      "priority": "P0",
+      "lane": "WEB",
+      "title": "Resolve PR241 WEB and PR251 teachers against current release source without forced merge",
+      "state": "HOLD",
+      "gate": "Independent no-loss integration and owner approval; production unchanged",
+      "sources": [
+        "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/241",
+        "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/251",
+        "https://app.notion.com/p/40cacc184a9f8170bcabca204c7d4c33"
+      ],
+      "execution": "DISCOVERY_OR_PROPOSAL_ONLY",
+      "runtime_accepted": false
+    },
+    {
+      "id": "SYNC-001",
+      "priority": "P1",
+      "lane": "PRIME",
+      "title": "Verified GPU checkpoint transfer to Windows and independent reload",
+      "state": "HOLD",
+      "gate": "Check actual SHA, full weights vs adapter before transfer; never wipe source; Vast snapshot has valid merged SHA but missing embedding model file named by manifest; full restore blocked",
+      "sources": [
+        "https://docs.google.com/document/d/18YLAo_Cja3HJKZn6qr57P-zsm0-AHcx2aag0rgSjwS4/edit",
+        "https://docs.google.com/document/d/1aX5ISphPE78PQwa6iTcIAr8Ecrr-SifbFwtaJ6YzzOY/edit"
+      ],
+      "execution": "DISCOVERY_OR_PROPOSAL_ONLY",
+      "runtime_accepted": false
+    },
+    {
+      "id": "FUT-001",
+      "priority": "P2",
+      "lane": "WEB",
+      "title": "Weather/news/calendar/remote controls and optional extras",
+      "state": "TODO",
+      "gate": "After core chat, memory and acceptance, no effect on current critical path",
+      "sources": [
+        "https://docs.google.com/document/d/1aX5ISphPE78PQwa6iTcIAr8Ecrr-SifbFwtaJ6YzzOY/edit",
+        "https://docs.google.com/document/d/11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc/edit"
+      ],
+      "execution": "DISCOVERY_OR_PROPOSAL_ONLY",
+      "runtime_accepted": false
+    }
+  ],
+  "onepass_v2": {
+    "name": "NOX_HELION_ONEPASS_V2_HARDENED_20261112.zip",
+    "sha256": "ef1cf8262483879e47eee75d1cd81fab22f1be4e3109a1ea7966f1cc04a6f127",
+    "archive_members": 302,
+    "web_source_files": 292,
+    "source": "ChatGPT Library local materialized existing artifact",
+    "verification_2026_11_12": {
+      "zip_crc": "PASS",
+      "node22_negative_tests": "5/5 PASS",
+      "NOX_PREFLIGHT_ONLY": "SOURCE PASS; STATIC PASS; PREFLIGHT PASS",
+      "hardware_onehost": "HOLD",
+      "windows_gpu": "HOLD"
+    },
+    "supersedes_qa_recipe_version": "V1 source recipe only, preserve historical V1 archive"
+  },
+  "vast_snapshot_2026_11_12": {
+    "source": "Google Drive files 12No3_06eCuWt2f3y3ty81LttgsJ5V-Ca and 1RUTItjr7gxXAglfluPUmhUCchsm8pn0L",
+    "sha256": "d5033064283f4127b52046f572e1f736f47eaf9276634b4739d8526347eb0e05",
+    "bytes": 152260986,
+    "integrity": "BOTH_PARTS_JOINED; COMBINED_SHA_PASS; TAR_READABLE",
+    "state_json": {
+      "cycle": 530,
+      "deployed_cycle": 1,
+      "know_cursor": 3488,
+      "sftq_offset": 2329,
+      "deployed_holdout": 0.8123664548235424
+    },
+    "actual_assets": [
+      "lora/deployed_adapter/adapter_model.safetensors",
+      "lora/knowledge_c0001.gguf",
+      "kb/knowledge.sqlite",
+      "kb/faiss.index"
+    ],
+    "missing_manifest_asset": "models/bge-m3-Q4_K_M.gguf",
+    "status": "PARTIAL_RESTORE_HOLD; FULL_NOX_TRAINED_WEIGHTS_NOT_PROVEN; CYCLE_COUNT_IS_NOT_OPTIMIZER_STEP",
+    "backup_policy": "Preserve original Drive parts; never overwrite or delete"
+  }
+}

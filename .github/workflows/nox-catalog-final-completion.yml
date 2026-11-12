@@ -1,0 +1,44 @@
+name: NOX Catalog Final Completion 1-100
+on:
+  push:
+    branches: [feature/nox-teacher-mycelium-20261112]
+    paths:
+      - .github/workflows/nox-catalog-final-completion.yml
+      - nox_runpod/teacher_mesh/download_missing_catalog.py
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/nox-catalog-final-completion.yml
+      - nox_runpod/teacher_mesh/download_missing_catalog.py
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verified-source-download:
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        target: ["70", "74", "32", "33", "77", "78", "6"]
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install HF download tooling
+        if: contains(fromJSON('["32","33","77","78"]'), matrix.target)
+        run: python -m pip install --disable-pip-version-check 'huggingface_hub>=0.35,<2' hf_xet
+      - name: Download complete pinned source snapshots
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET: ${{ matrix.target }}
+          HF_HUB_DISABLE_TELEMETRY: "1"
+          HF_HUB_ENABLE_HF_TRANSFER: "0"
+        run: python nox_runpod/teacher_mesh/download_missing_catalog.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NOX_CATALOG_COMPLETION_${{ matrix.target }}
+          path: out/
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
