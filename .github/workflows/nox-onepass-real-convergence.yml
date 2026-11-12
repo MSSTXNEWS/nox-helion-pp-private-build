@@ -1,0 +1,178 @@
+name: NOX ONEPASS Real Source Convergence (no production)
+on:
+  push:
+    branches: [feature/nox-onepass-real-convergence-20261112]
+    paths: [.github/workflows/nox-onepass-real-convergence.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: nox-onepass-real-source-convergence
+  cancel-in-progress: false
+
+jobs:
+  disposable-real-merges:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+          lfs: false
+          persist-credentials: true
+      - name: Fetch exact approved PR heads without changing any owner branch
+        env:
+          PR241: b55e9979765ea35449a99f7dc54917cfedcd65bb
+          PR243: 441df9632eaae3b20249b11ff9fd6f6a808f73c1
+          PR251: 263a8d99df1466b1a4e2bdfbb5b844e14689c493
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          git fetch --no-tags origin "$PR241" "$PR243" "$PR251"
+          git cat-file -e "$PR241^{commit}"
+          git cat-file -e "$PR243^{commit}"
+          git cat-file -e "$PR251^{commit}"
+      - name: Independently test 3 real Git merges, then one combined merge if clean
+        shell: bash
+        env:
+          PR241: b55e9979765ea35449a99f7dc54917cfedcd65bb
+          PR243: 441df9632eaae3b20249b11ff9fd6f6a808f73c1
+          PR251: 263a8d99df1466b1a4e2bdfbb5b844e14689c493
+        run: |
+          set -Eeuo pipefail
+          mkdir -p out
+          python3 - <<'PY'
+          import datetime
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+          import subprocess
+          import zipfile
+
+          root = Path.cwd()
+          temp = Path(os.environ["RUNNER_TEMP"])
+          out = root / "out"
+          targets = [
+              ("WEB_PR241", os.environ["PR241"]),
+              ("TRAIN_PR243", os.environ["PR243"]),
+              ("CATALOG_PR251", os.environ["PR251"]),
+          ]
+          def cmd(args, cwd=root):
+              return subprocess.run(args, cwd=cwd, capture_output=True,
+                                    text=True, errors="replace", check=False)
+          def sha(args, cwd=root):
+              r=cmd(args,cwd)
+              if r.returncode: raise RuntimeError((r.stderr+r.stdout)[-1000:])
+              return r.stdout.strip()
+          initial=sha(["git","rev-parse","HEAD"])
+          base=sha(["git","rev-parse","HEAD^"])
+          proof={"schema":"NOX-ONEPASS-FOUR-PR-MERGE-v1",
+                 "source_branch_sha":initial,"source_parent_pr162_sha":base,
+                 "source_control":"DISPOSABLE_WORKTREES_ONLY",
+                 "production_modified":False,"models_installed":False,
+                 "gpu_trainer_restarted":False,"windows_e07":"NOT_RUN",
+                 "operations":[],"sequential":[],"status":"HOLD"}
+          def merge_one(wd, label, ref):
+              r=cmd(["git","-c","user.name=NOX CI",
+                     "-c","user.email=nox-ci@users.noreply.github.com",
+                     "merge","--no-edit","--no-ff",ref],wd)
+              conflicts=[]
+              if r.returncode:
+                  c=cmd(["git","diff","--name-only","--diff-filter=U"],wd)
+                  conflicts=[x for x in c.stdout.splitlines() if x][:100]
+              return {"branch":label,"sha":ref,
+                      "merge_clean":r.returncode==0,
+                      "conflict_paths":conflicts,
+                      "stderr_tail":(r.stderr+r.stdout)[-1600:],
+                      "merged_commit":sha(["git","rev-parse","HEAD"],wd)
+                            if r.returncode==0 else None}
+          def workdir(name):
+              wd=temp/("nox-"+name)
+              r=cmd(["git","worktree","add","--detach",str(wd),initial])
+              if r.returncode: raise RuntimeError((r.stderr+r.stdout)[-800:])
+              return wd
+          try:
+              independent_clean=True
+              for name,ref in targets:
+                  wd=workdir(name.lower())
+                  result=merge_one(wd,name,ref)
+                  proof["operations"].append(result)
+                  independent_clean &= result["merge_clean"]
+                  cmd(["git","worktree","remove","--force",str(wd)])
+              if independent_clean:
+                  wd=workdir("combined")
+                  ok=True
+                  for name,ref in targets:
+                      result=merge_one(wd,name,ref)
+                      proof["sequential"].append(result)
+                      if not result["merge_clean"]:
+                          ok=False
+                          break
+                  if ok:
+                      proof["merged_sha"]=sha(["git","rev-parse","HEAD"],wd)
+                      changed=sha(["git","diff","--name-only",initial,"HEAD"],wd)
+                      proof["changed_paths"]=[v for v in changed.splitlines() if v]
+                      # Real source-only tests of the merged PR251 code. They are
+                      # not proof of Windows, S03, student updates or live models.
+                      test_dir=wd/"nox_runpod"/"teacher_mesh"
+                      if test_dir.is_dir():
+                          r=cmd(["python3","-m","unittest","discover",
+                                 "-s","tests","-v"],test_dir)
+                          proof["teacher_source_tests_passed"]=r.returncode==0
+                          proof["teacher_test_tail"]=(r.stdout+r.stderr)[-3000:]
+                          ok &= r.returncode==0
+                      else:
+                          proof["teacher_source_tests_passed"]=False
+                          ok=False
+                      if ok:
+                          z=out/"NOX_ONEPASS_PR162_241_243_251_SOURCE.zip"
+                          ar=cmd(["git","archive","--format=zip",
+                                  "-o",str(z),"HEAD"],wd)
+                          if ar.returncode: raise RuntimeError((ar.stderr+ar.stdout)[-1500:])
+                          with zipfile.ZipFile(z) as f:
+                              bad=f.testzip()
+                              if bad: raise RuntimeError("ZIP_CORRUPT:"+bad)
+                              proof["archive_files"]=len(f.namelist())
+                          proof["zip_bytes"]=z.stat().st_size
+                          proof["zip_sha256"]=hashlib.file_digest(z.open("rb"),"sha256").hexdigest()
+                          proof["status"]="STAGED_SOURCE_MERGE_TESTED_NOT_RELEASED"
+                  cmd(["git","worktree","remove","--force",str(wd)])
+              if proof["status"]=="HOLD":
+                  proof["first_blocker"]=next(
+                      (x for x in proof["operations"]+proof["sequential"]
+                       if not x["merge_clean"]),None)
+          except Exception as e:
+              proof["exception"]=str(e)[:800]
+              proof["status"]="HOLD"
+          finally:
+              proof["generated_utc"]=datetime.datetime.now(datetime.timezone.utc).isoformat()
+              (out/"NOX_ONEPASS_MERGE_AUDIT.json").write_text(
+                  json.dumps(proof,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
+              print("NOX_ONEPASS_MERGE_STATUS",proof["status"])
+              print("NOX_MERGE_AUDIT",json.dumps({k:v for k,v in proof.items()
+                  if k in ("source_parent_pr162_sha","operations","sequential",
+                           "status","first_blocker","archive_files","zip_sha256")}))
+          PY
+      - name: Retain merge provenance and candidate even on HOLD
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: NOX-ONEPASS-MERGE-AUDIT
+          path: out/
+          if-no-files-found: error
+          retention-days: 14
+      - name: Do not claim release or hide a conflict
+        if: always()
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          path=Path("out/NOX_ONEPASS_MERGE_AUDIT.json")
+          if not path.is_file():raise SystemExit("NOX_MERGE_AUDIT_MISSING")
+          p=json.loads(path.read_text(encoding="utf-8"))
+          if p["status"]!="STAGED_SOURCE_MERGE_TESTED_NOT_RELEASED":
+              raise SystemExit("NOX_MERGE_CONFLICT_OR_REGRESSION_HOLD")
+          print("SOURCE_MERGE_PASS__WINDOWS_AND_GPU_E07_HOLD")
+          PY
