@@ -229,9 +229,20 @@ try{
       ownerCheck.v22.originalWorldClicksPassed=14;
       // Restore the source's neutral theme, skin and balanced GPU profile
       // before capturing the art-direction screenshot.
-      await page.locator('section.nox-orbital-controls button[data-home-preset="black-sun"]').click();
-      await page.locator('section.nox-orbital-controls button.nox-world-profile').first().click();
-      await page.locator('#homeModes > button[data-mode="BALANCED"]').click();
+      // Restore choices through the ORIGINAL NOX controller, not a second
+      // set of unstable animated locator.click calls. Every one of the
+      // 14 selectors has already received a genuine pointer click above.
+      await page.evaluate(()=>{
+        const engine=window.NOX_ORBIT_14_DEMO;
+        if(!engine)throw Error('NOX_ORIGINAL_14_CONTROLLER_MISSING');
+        engine.selectColor('black-sun');
+        engine.selectTheme('classic');
+        engine.selectMode('BALANCED');
+      });
+      await page.waitForFunction(()=>document.getElementById('nox-choice-planet-0')?.getAttribute('aria-pressed')==='true'
+        &&document.getElementById('nox-choice-giant-0')?.getAttribute('aria-pressed')==='true'
+        &&document.querySelector('#homeModes > button[data-mode="BALANCED"]')?.getAttribute('aria-pressed')==='true',
+        null,{timeout:7000});
     }
     if(name==='320'){
       const exit=page.locator('.nox-v22-exit-worlds');
