@@ -244,10 +244,19 @@ def merge(web, chat25, chat24):
     return (None if conflicts else result), receipt
 
 
-def extract_onepass_qa(path: Path):
+def extract_onepass_qa(path: Path, original_web=None):
     """Preserve only 10 native QA/root files; do not duplicate its 292 site files."""
     raw = read_archive(path)
     qa = {p: body for p, body in raw.items() if not p.startswith("site/")}
+    onepass_site = {p[5:]: body for p, body in raw.items() if p.startswith("site/")}
+    source_identical = False
+    if original_web is not None:
+        if set(onepass_site) != set(original_web):
+            raise ValueError("NOX_ONEPASS_WEB_SOURCE_FILESET_MISMATCH")
+        for name, payload in onepass_site.items():
+            if digest(payload) != digest(original_web[name]):
+                raise ValueError("NOX_ONEPASS_WEB_SOURCE_SHA_MISMATCH: " + name)
+        source_identical = True
     if any("/" in p or "\\" in p for p in qa):
         raise ValueError("NOX_ONEPASS_UNEXPECTED_NESTED_QA_HOLD")
     missing = sorted(set(QA_REQUIRED) - set(qa))
@@ -256,6 +265,7 @@ def extract_onepass_qa(path: Path):
     meta = {"source": path.name, "sha256": digest_file(path),
             "zip_members": len(raw), "site_source_members": len(raw) - len(qa),
             "qa_source_members": len(qa),
+            "onepass_web_sha256_identical": source_identical,
             "qa_sha256": {p: digest(body) for p, body in sorted(qa.items())},
             "qa_original_manifest_is_not_current_for_merged_chat": True,
             "executed": False, "hardware_e2e": "NOT_RUN"}
@@ -266,7 +276,7 @@ def verify_onepass(path: Path):
     return extract_onepass_qa(path)[0]
 
 
-def output_candidate(dest, merged, receipt, inputs, onepass_path=None):
+def output_candidate(dest, merged, receipt, inputs, onepass_path=None, original_web=None):
     if dest.exists():
         raise ValueError("NOX_OUTPUT_ALREADY_EXISTS_NO_OVERWRITE")
     dest.mkdir(parents=True)
@@ -283,7 +293,7 @@ def output_candidate(dest, merged, receipt, inputs, onepass_path=None):
                              for name, path in inputs.items()}
         qa_files = {}
         if onepass_path is not None:
-            receipt["onepass"], qa_files = extract_onepass_qa(onepass_path)
+            receipt["onepass"], qa_files = extract_onepass_qa(onepass_path, original_web)
             for name, body in qa_files.items():
                 file = dest / "qa" / "onepass_v2_original" / name
                 file.parent.mkdir(parents=True, exist_ok=True)
@@ -348,7 +358,7 @@ def main():
     chat24 = chat_files(read_archive(ns.chat_v24))
     result, receipt = merge(web, chat25, chat24)
     receipt["policy"] = "NO_LOSS; ONE_NOX; SINGLE_S03; NO_AUTO_PROMOTE"
-    output_candidate(ns.output, result, receipt, inputs, ns.onepass_v2)
+    output_candidate(ns.output, result, receipt, inputs, ns.onepass_v2, original_web=web)
     print(json.dumps({"status": receipt["status"],
                       "conflicts": len(receipt["conflicts"]),
                       "staging": str(ns.output)}, ensure_ascii=False))
