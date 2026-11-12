@@ -60,7 +60,7 @@ test('real training controls only invoke attested local POST endpoints',()=>{
 test('native chat STOP, S03 uncertainty, and frame limits must remain fail closed',()=>{
   const s=file('nox-chat.js');
   for(const term of ['nativeReplayHold=true','run.controller.abort();','submitted=true','/api/nox/stop',
-    'result.length+frame.text.length>2000000','frame.length>262144'])
+    'result.length+frame.text.length>2000000','line.length>262144'])
     assert.ok(s.includes(term),'Missing native chat protection '+term);
   assert.ok(s.includes("Обновите историю S03 перед повторной отправкой"));
 });
