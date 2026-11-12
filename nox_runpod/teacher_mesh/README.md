@@ -112,3 +112,12 @@ Only install an engine after exact version pinning, license approval, dependency
 - [TRL response-only SFT](https://huggingface.co/docs/trl/sft_trainer)
 - [PEFT MoE LoRA](https://huggingface.co/docs/peft/en/package_reference/lora)
 - [Unsloth MoE](https://unsloth.ai/docs/models/qwen3.5/fine-tune)
+
+
+## ONEPASS + Google Drive task intake (source-only, 2026-11-12)
+
+The existing `self_improvement.py` now exposes `propose_existing_nox_task_intake(...)`, backed by `nox_task_intake.py` and `nox_onepass_task_intake.json`. The task catalog contains 22 unique, provenance-linked tasks collected from Google Drive Genesis, November 10 gap audit, PATCH A/B, V16 and existing ONEPASS Notion receipt. It preserves historic A40/RTX Pro 6000 checkpoints as *claims requiring host verification*, not proven current training progress. It also explicitly records A40 OOM warnings from RunPod.
+
+This integration is an intake **proposal inside the existing self-improvement module**, not another agent service or queue. Nothing is enqueued until existing task IDs, authenticated owner approval, STOP and ACL are checked by the live OneHost. No GPU job, auto restart, download, production merge, S03 write or schedule is triggered by import. Call `propose_existing_nox_task_intake(existing_task_ids, stop_available=verified_stop, owner_approved=authenticated_owner_approval)` to obtain candidate tasks, then the existing trusted queue must decide admission separately.
+
+ONEPASS ZIP is referenced by exact historical name/SHA and 299 reported archive members, but it was not mounted or deployed by this PR. The live `NOX_ONEPASS.mjs` and `NOX_LIVE_ONEHOST_E2E.mjs` must be physically inspected and run on Windows before a full completion claim. This branch contains only source-level integration and tests; do not assert actual training or Windows acceptance.
