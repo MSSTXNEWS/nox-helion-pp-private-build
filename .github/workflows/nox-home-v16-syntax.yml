@@ -66,6 +66,7 @@ jobs:
           node -e "const r=require('/tmp/nox-progress-empty/report.json'); if(r.status!=='HOLD'||r.stepPercent!==null||r.complete)process.exit(1)"
           python3 -m py_compile web-home/candidates/2026-11-10-v16-cinema/tools/apply-web-v27.py
           node --check web-home/candidates/2026-11-10-v16-cinema/tools/test-web-v27.mjs
+          node --check web-home/candidates/2026-11-10-v16-cinema/tools/test-web-v27-browser.mjs
           node --check web-home/candidates/2026-11-10-v16-cinema/nox-glass-init.mjs
           node --check web-home/candidates/2026-11-10-v16-cinema/nox-home-flow.js
           node --check web-home/candidates/2026-11-10-v16-cinema/nox-home.mjs
@@ -349,6 +350,7 @@ jobs:
           # Provenance: test exactly the same checkout that was compiled above.
           NOX_AUDIT_SOURCE_SHA="$(git rev-parse HEAD)" NOX_PREVIEW_URL=http://127.0.0.1:8080/index.html NOX_ACCEPTANCE_DIR=./nox-v21-acceptance node tools/browser-acceptance.mjs
           NOX_PREVIEW_URL=http://127.0.0.1:8080/index.html node tools/test-web-v26-browser.mjs
+          NOX_PREVIEW_URL=http://127.0.0.1:8080/index.html node tools/test-web-v27-browser.mjs
       - name: Preserve actual browser screenshots and acceptance logs
         if: always()
         uses: actions/upload-artifact@v4
