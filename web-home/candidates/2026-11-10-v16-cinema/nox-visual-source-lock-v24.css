@@ -173,8 +173,16 @@ body.helion-home.nox-owner-cinema .nox-owner-core:nth-child(8)::before{backgroun
    above the starfield but behind original PBR and D02 WebGL. Mask the approved
    composite's built-in satellite orbs and portrait rows: no duplicate objects. */
 body.helion-home.nox-owner-cinema .nox-owner-architecture{
- z-index:2!important;
+ z-index:5!important;
  -webkit-mask-image:linear-gradient(90deg,#000 0%,#000 12%,transparent 23%,transparent 77%,#000 88%,#000 100%)!important;
  mask-image:linear-gradient(90deg,#000 0%,#000 12%,transparent 23%,transparent 77%,#000 88%,#000 100%)!important
 }
 body.helion-home.nox-owner-cinema .nox-owner-floor{z-index:2!important}
+
+/* V25 readable liquid glass: the vendor refraction layers stay live, but
+   cannot paint over the action labels. The two existing glass elements are
+   below live button text, within its isolation stack. No engine disabled. */
+body.helion-home.nox-owner-cinema .nox-owner-actions button>.lg-layer,
+body.helion-home.nox-owner-cinema .nox-owner-actions button>.lg-sheen{
+ z-index:-1!important
+}
