@@ -45,7 +45,7 @@ jobs:
           original=json.loads(Path("nox_runpod/teacher_mesh/NOX_MASTER_CATALOG_100.json").read_text(encoding="utf-8"))
           rows=[r for r in original["entries"] if int(os.environ["START"])<=r["number"]<=int(os.environ["END"])]
           assert len(rows)==int(os.environ["END"])-int(os.environ["START"])+1 and sorted(x["number"] for x in rows)==list(range(int(os.environ["START"]),int(os.environ["END"])+1))
-          assert len({r["url"] for r in rows})==17
+          assert len({r["url"] for r in rows})==len(rows)
           token=os.environ.get("GH_TOKEN","")
           def request(url, auth=False):
               headers={"User-Agent":"NOX-Catalog-Snapshot/1.0 (CI source archive verification)","Accept":"application/vnd.github+json"}
