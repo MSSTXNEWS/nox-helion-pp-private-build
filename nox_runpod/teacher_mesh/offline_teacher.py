@@ -13,6 +13,7 @@ import re
 import shutil
 import subprocess
 import time
+import tempfile
 
 MAX_PROMPT = 6000
 MAX_RESPONSE = 14000
@@ -86,7 +87,10 @@ def infer_offline(teacher: OfflineTeacher, prompt: str, max_seconds: int = 75) -
             return {"status": "HOLD_GGUF_NOT_STAGED", "teacher": teacher.name}
         if not shutil.which("llama-cli", path=RUN_PATH):
             return {"status": "HOLD_LLAMA_CLI_MISSING", "teacher": teacher.name}
-        command = ["llama-cli", "-m", teacher.model_path, "-p", prompt,
+        # Keep private prompt OUT of /proc/$PID/cmdline: use a 0600 temporary
+        # file with llama-cli -f and -no-cnv, not "-p <prompt>".
+        command = ["llama-cli", "-m", teacher.model_path,
+                   "-f", "NOX_PROMPT_FILE", "-no-cnv",
                    "-n", "768", "--temp", "0.25"]
         stdin = None
     else:
@@ -99,8 +103,20 @@ def infer_offline(teacher: OfflineTeacher, prompt: str, max_seconds: int = 75) -
         stdin = prompt
     start = time.monotonic()
     try:
-        proc = subprocess.run(command, input=stdin, capture_output=True, text=True,
-                              timeout=max_seconds, env=_env(), check=False)
+        if teacher.backend == "llama_cpp_cli":
+            # The OS closes and unlinks this file even if llama-cli fails.
+            with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8",
+                    suffix=".prompt", prefix="nox_teacher_", delete=True) as tmp:
+                os.chmod(tmp.name, 0o600)
+                tmp.write(prompt)
+                tmp.flush()
+                cmd = [tmp.name if item == "NOX_PROMPT_FILE" else item
+                       for item in command]
+                proc = subprocess.run(cmd, input=stdin, capture_output=True,
+                    text=True, timeout=max_seconds, env=_env(), check=False)
+        else:
+            proc = subprocess.run(command, input=stdin, capture_output=True,
+                text=True, timeout=max_seconds, env=_env(), check=False)
     except (OSError, subprocess.TimeoutExpired, UnicodeError):
         return {"status": "HOLD_OFFLINE_TIMEOUT", "teacher": teacher.name}
     if proc.returncode:
