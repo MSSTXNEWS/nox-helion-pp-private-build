@@ -16,7 +16,7 @@ const expected={
   'chat.html':'f8c9d1f89371ec3dbf257e140910e86effd6560a71c5f69231915a3e7d0a2b77',
   'nox-chat.js':'0734c06fb3867307b3381bcac3a41703878f935117516de893be63e0be46ce49',
   'nox-telemetry.js':'459a2eec7bc3b3a56120a2038b5197b2d5d83f608ab450228fffc69ddb3b3627',
-  'nox-function-catalog.js':'392791ba9d5fe49e087deccf8ac6f953e70edba6e15c48c792bf91a03e979933',
+  'nox-function-catalog.js':'67f6672da1ed87f5bd456ee3fb3d0b3ac578f15a2059abd563c87460c1293a53',
   'nox-ui.js':'c5f6b23d5fc6c31c4c388a574bfa8c61243cda6000cefb0026732ebe4183b765',
   'nox-function-catalog.css':'8be0ca95b6713c30b94d27ac80390267498b255d3ec6aa16a149098a8cdeb82b',
   'nox-universe-v19.js':'4c2c9a2d456da77bfeab74f2aa5037b8828eb723a3690579c382b93fe2af6d68'
@@ -54,6 +54,7 @@ test('all 5 public modules use the existing shared V19 runtime without fake acti
     assert.ok(cat.includes("'v19:"+m+"'"),m+' catalog binding absent');
     assert.ok(shared.includes("'"+m+"'"),m+' original module absent');
   }
+  assert.ok(cat.includes("['fx','Валюта · курсы'"),'Currency must be findable by Валюта');
   assert.ok(cat.includes('window.NOX_UNIVERSE_V19.open(module)'));
   assert.ok(shared.includes("function open(moduleName)"));
   assert.ok(cat.includes("!native"),'native UI must preserve existing owner routes');
