@@ -46,6 +46,11 @@ def local_entry(label, target):
 
 
 def clean_static(name, data):
+    if name == "pages/_vendor/excalidraw/excalidraw.production.min.js":
+        # Vendored Excalidraw bundles a public Firebase room-persistence
+        # API key. The NOX local canvas must not depend on remote Firebase.
+        # Empty only this confirmed *vendor* key field, not other tokens.
+        data = SENSITIVE["google_api"].sub(b"", data)
     if name.endswith(TEXT_ASSETS):
         for key, pattern in SENSITIVE.items():
             if pattern.search(data):
@@ -109,7 +114,6 @@ def merge_physical(web, pc25, pc24, qa):
             collisions.append(name)
 
     for name, value in qa_files.items():
-        site["../"] if False else None  # no output pollution
         if not name or "/" in name or "\\" in name:
             raise ValueError("NOX_QA_PATH_HOLD: " + name)
     if site["index.html"] != web["index.html"]:
@@ -143,6 +147,7 @@ def merge_physical(web, pc25, pc24, qa):
         "windows_exe": "NOT_BUILT",
         "production_modified": False,
         "no_duplicate_backend": True,
+        "vendor_external_firebase_room_key_removed": True,
         "never_touch": list(NO_TOUCH_PATHS),
         "release_accepted": False
     }
