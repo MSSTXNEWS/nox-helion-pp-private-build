@@ -29,6 +29,7 @@ STATIC_ABS = re.compile(
     rb"""(?P<q>["'])(?:/)(?P<dir>vendor|v22|v23|v24|v25|predator|assets13|assets|nox-engines|nox-worlds|pages)/""",
     re.I,
 )
+STATIC_INTERNAL_PAGES = re.compile(rb"""(?P<q>["'])/(?P<page>menu|world|hub)\.html""", re.I)
 REQUIRED_PC = ("chat.html", "resonance.html", "memory.html", "index.html")
 NO_TOUCH_PATHS = ("C:\\NOX\\helion", "C:\\NOX\\lora", "C:\\NOX\\agents",
                   "127.0.0.1:8766", "Ollama", "S03", "OneHost")
@@ -57,7 +58,8 @@ def clean_static(name, data):
                 raise ValueError("NOX_PC_SOURCE_POTENTIAL_SECRET_HOLD: " + key + " " + name)
         # Keep real API endpoints (/api/...) and external sites unchanged.
         if name.endswith((".html", ".htm", ".js", ".mjs", ".css")):
-            return STATIC_ABS.sub(lambda m: m.group("q") + b"/pc/" + m.group("dir") + b"/", data)
+            data = STATIC_ABS.sub(lambda m: m.group("q") + b"/pc/" + m.group("dir") + b"/", data)
+            return STATIC_INTERNAL_PAGES.sub(lambda m: m.group("q") + b"/pc/" + m.group("page") + b".html", data)
     return data
 
 
