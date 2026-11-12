@@ -101,7 +101,16 @@
     "a100": "PRIORITIZE_EXISTING_NOX_TRAINER; NEVER_START_5_TEACHERS_ON_SAME_BUSY_GPU",
     "vm_a4000": "RUN_SMALL_GGUF_TEACHERS, BANDWIDTH_AND_VRAM_GATED",
     "cpu_ram": "USEFUL_PREPROCESSING_AND_CACHING_NOT_FAKE_LOAD",
-    "output": "S03_PROVENANCE_AND_CHECKPOINTS_ONLY_AFTER_REAL_VERIFICATION"
+    "output": "S03_PROVENANCE_AND_CHECKPOINTS_ONLY_AFTER_REAL_VERIFICATION",
+    "a40_current_observed": {
+      "pod": "saep5w24i02tl0",
+      "location": "EU-SE-1 Sweden",
+      "gpu_util_pct": 94,
+      "gpu_memory_util_pct": 98,
+      "OOM_warning_in_system_logs": true,
+      "training_progress": "UNKNOWN",
+      "policy": "NO_EXTRA_TEACHERS_OR_GPU_JOBS_UNTIL_MEMORY_OOM_TRIAGED; NO_AUTO_RESTART"
+    }
   },
   "states": [
     "CANDIDATE",
