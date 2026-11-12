@@ -242,5 +242,23 @@ const packReceipt={
  deployedGpuQA:'HOLD',browserAcceptance:'NOT_EXECUTED',productionModified:false
 };
 fs.writeFileSync(path.join(out,'NOX-P0-RECEIPT.json'),JSON.stringify(packReceipt,null,2));
+// V26 must ship in the exact same dist/ as the original D02/PBR assets.
+// Running fixes only in GitHub CI would leave Vercel with the old WEB.
+// The script refuses unknown input SHA and the source contracts pin its output.
+const v26Script=path.join(root,'tools/apply-web-v26.py');
+if(!fs.existsSync(v26Script))throw Error('NOX_V26_SOURCE_PATCH_MISSING');
+let pythonCommand=null;
+for(const candidate of ['python3','python']){
+ try{
+  execFileSync(candidate,['tools/apply-web-v26.py'],{cwd:root,stdio:'inherit',timeout:30000});
+  pythonCommand=candidate;break;
+ }catch(error){
+  if(error?.code==='ENOENT')continue;
+  throw error;
+ }
+}
+if(!pythonCommand)throw Error('NOX_V26_PYTHON3_NOT_AVAILABLE');
+execFileSync('node',['--test','tools/test-web-v26.mjs'],{cwd:root,stdio:'inherit',timeout:30000});
+console.log('NOX_V26_BUILD_MATCH',JSON.stringify({site:'dist/',paths:7,sourceLocked:true,physicalGpu:'HOLD',nativeOneHost:'HOLD'}));
 console.log('NOX_P0_BUILD_RECEIPT:',JSON.stringify({pages:pagesEvidence.length,assets:records.length,bennuBytes:bennuReceipt.bytes,stlVerified:bennuReceipt.verifiedStlStructure,gpuAcceptance:'HOLD'}));
 
