@@ -119,7 +119,7 @@ try{
        uniqueCoreAtlasFrames:new Set(coreAtlas.map(e=>e.frame)).size,
        nexusOffD02Center,
        architectureClip:arch?.clipPath,floorClip:floor?.clipPath,
-       approvedCitadelAboveSky:arch?.zIndex==='2'&&floor?.zIndex==='2',
+       approvedCitadelAboveSky:arch?.zIndex==='5'&&floor?.zIndex==='2',
        approvedCitadelMasked:!!arch?.maskImage?.includes('23%')&&!!arch?.maskImage?.includes('77%'),
        floorDuplicateTextMask:floor?.maskImage||floor?.webkitMaskImage||'none',
        originalFallbackHidden:document.body.dataset.noxD02Rendered==='true'?
