@@ -50,7 +50,7 @@
       "lane": "PRIME",
       "title": "Inventory Japan GPU/NOX artifacts + training logs read-only",
       "state": "HOLD",
-      "gate": "Never infer Japan filesystem from Sweden pod; record SHA paths and step receipts",
+      "gate": "Never infer Japan filesystem from Sweden pod; record SHA paths and step receipts; Vast snapshot SHA d5033064.. verified, model asset bge-m3 GGUF absent in tar",
       "sources": [
         "https://docs.google.com/document/d/18YLAo_Cja3HJKZn6qr57P-zsm0-AHcx2aag0rgSjwS4/edit",
         "https://docs.google.com/document/d/1aX5ISphPE78PQwa6iTcIAr8Ecrr-SifbFwtaJ6YzzOY/edit"
@@ -77,7 +77,7 @@
       "lane": "PRIME",
       "title": "Confirm NOX_9B_UNIFIED/Qwen3.5-9B student identity and birth receipt",
       "state": "HOLD",
-      "gate": "Check training checkpoint delta, optimizer receipt, immutable Genesis Ledger; historical step ~130 not current",
+      "gate": "Check training checkpoint delta, optimizer receipt, immutable Genesis Ledger; historical step ~130 not current; Vast state cycle 530 is historical loop count not verified student optimizer steps; source adapter exists",
       "sources": [
         "https://docs.google.com/document/d/18YLAo_Cja3HJKZn6qr57P-zsm0-AHcx2aag0rgSjwS4/edit",
         "https://docs.google.com/document/d/1aX5ISphPE78PQwa6iTcIAr8Ecrr-SifbFwtaJ6YzzOY/edit"
@@ -284,12 +284,13 @@
       "lane": "WEB",
       "title": "ONEPASS source SHA and startup preflight verification",
       "state": "HOLD",
-      "gate": "Archive 299 members and 292 web files per Notion record; actual ZIP not mounted in this PR",
+      "gate": "Archive 299 members and 292 web files per Notion record; actual ZIP not mounted in this PR; V2 302 files CRC PASS + Node 5/5 + PREFLIGHT PASS, physical still HOLD",
       "sources": [
         "https://app.notion.com/p/40cacc184a9f8170bcabca204c7d4c33"
       ],
       "execution": "DISCOVERY_OR_PROPOSAL_ONLY",
-      "runtime_accepted": false
+      "runtime_accepted": false,
+      "source_evidence": "NOX_HELION_ONEPASS_V2_HARDENED_20261112.zip SHA256 ef1cf8262483879e47eee75d1cd81fab22f1be4e3109a1ea7966f1cc04a6f127"
     },
     {
       "id": "QA-002",
@@ -325,7 +326,7 @@
       "lane": "PRIME",
       "title": "Verified GPU checkpoint transfer to Windows and independent reload",
       "state": "HOLD",
-      "gate": "Check actual SHA, full weights vs adapter before transfer; never wipe source",
+      "gate": "Check actual SHA, full weights vs adapter before transfer; never wipe source; Vast snapshot has valid merged SHA but missing embedding model file named by manifest; full restore blocked",
       "sources": [
         "https://docs.google.com/document/d/18YLAo_Cja3HJKZn6qr57P-zsm0-AHcx2aag0rgSjwS4/edit",
         "https://docs.google.com/document/d/1aX5ISphPE78PQwa6iTcIAr8Ecrr-SifbFwtaJ6YzzOY/edit"
@@ -347,5 +348,42 @@
       "execution": "DISCOVERY_OR_PROPOSAL_ONLY",
       "runtime_accepted": false
     }
-  ]
+  ],
+  "onepass_v2": {
+    "name": "NOX_HELION_ONEPASS_V2_HARDENED_20261112.zip",
+    "sha256": "ef1cf8262483879e47eee75d1cd81fab22f1be4e3109a1ea7966f1cc04a6f127",
+    "archive_members": 302,
+    "web_source_files": 292,
+    "source": "ChatGPT Library local materialized existing artifact",
+    "verification_2026_11_12": {
+      "zip_crc": "PASS",
+      "node22_negative_tests": "5/5 PASS",
+      "NOX_PREFLIGHT_ONLY": "SOURCE PASS; STATIC PASS; PREFLIGHT PASS",
+      "hardware_onehost": "HOLD",
+      "windows_gpu": "HOLD"
+    },
+    "supersedes_qa_recipe_version": "V1 source recipe only, preserve historical V1 archive"
+  },
+  "vast_snapshot_2026_11_12": {
+    "source": "Google Drive files 12No3_06eCuWt2f3y3ty81LttgsJ5V-Ca and 1RUTItjr7gxXAglfluPUmhUCchsm8pn0L",
+    "sha256": "d5033064283f4127b52046f572e1f736f47eaf9276634b4739d8526347eb0e05",
+    "bytes": 152260986,
+    "integrity": "BOTH_PARTS_JOINED; COMBINED_SHA_PASS; TAR_READABLE",
+    "state_json": {
+      "cycle": 530,
+      "deployed_cycle": 1,
+      "know_cursor": 3488,
+      "sftq_offset": 2329,
+      "deployed_holdout": 0.8123664548235424
+    },
+    "actual_assets": [
+      "lora/deployed_adapter/adapter_model.safetensors",
+      "lora/knowledge_c0001.gguf",
+      "kb/knowledge.sqlite",
+      "kb/faiss.index"
+    ],
+    "missing_manifest_asset": "models/bge-m3-Q4_K_M.gguf",
+    "status": "PARTIAL_RESTORE_HOLD; FULL_NOX_TRAINED_WEIGHTS_NOT_PROVEN; CYCLE_COUNT_IS_NOT_OPTIMIZER_STEP",
+    "backup_policy": "Preserve original Drive parts; never overwrite or delete"
+  }
 }
