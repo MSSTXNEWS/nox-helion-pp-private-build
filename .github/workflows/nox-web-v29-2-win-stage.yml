@@ -49,13 +49,19 @@ jobs:
           New-Item -ItemType Directory -Force -Path dist | Out-Null
           Copy-Item -LiteralPath 'nox_runpod/web_wow_merge/v29/NOX_V29_2_WINDOWS_STAGE.ps1' -Destination 'dist/NOX_V29_2_WINDOWS_STAGE.ps1'
           Copy-Item -LiteralPath 'nox_runpod/web_wow_merge/v29/NOX_V29_2_REAL_PC_API_ACCEPTANCE.json' -Destination 'dist/NOX_V29_2_REAL_PC_API_ACCEPTANCE.json'
+          foreach ($name in @('build_v29_from_v28.py','nox-v29-pc-genesis-addons.mjs',
+             'nox-v29-pc-genesis-addons.css','test_v29_source.py','test_v29_chromium_component.py',
+             'test_v29_pc_api_contract.cjs','test_v29_static_routes.py',
+             'verify_rebuilt_v29.py','NOX_V29_2_REBUILD.cmd','NOX_V29_2_REBUILD_README_RU.md')) {
+            Copy-Item -LiteralPath ("nox_runpod/web_wow_merge/v29/"+$name) -Destination ("dist/"+$name)
+          }
           $hashes=@(Get-ChildItem dist -File | ForEach-Object {
             (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()+'  '+$_.Name
           })
           $hashes | Set-Content -LiteralPath 'dist/SHA256SUMS.txt' -Encoding ASCII
       - uses: actions/upload-artifact@v4
         with:
-          name: NOX_V29_2_WINDOWS_STAGE_VERIFIED_SOURCE
+          name: NOX_V29_2_OFFLINE_REBUILD_KIT
           path: dist/
           if-no-files-found: error
           retention-days: 14
