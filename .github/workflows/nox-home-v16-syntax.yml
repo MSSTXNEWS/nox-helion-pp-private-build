@@ -252,6 +252,12 @@ jobs:
       - name: Restore original public NOX WEB baseline with strict SHA256 pins
         working-directory: web-home/candidates/2026-11-10-v16-cinema
         run: node tools/restore-pinned-baseline.mjs
+      - name: Apply exact WEB V26 source corrections (original D02 and worlds immutable)
+        working-directory: web-home/candidates/2026-11-10-v16-cinema
+        run: |
+          python3 tools/apply-web-v26.py
+          for source in nox-chat.js nox-telemetry.js nox-function-catalog.js nox-universe-v19.js; do node --check "$source"; done
+          node tools/test-web-v26.mjs
       - name: Build the actual ten-page NOX candidate with all mandatory assets
         working-directory: web-home/candidates/2026-11-10-v16-cinema
         run: |
