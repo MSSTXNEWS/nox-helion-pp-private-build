@@ -1,0 +1,122 @@
+name: NOX V29 ONEPASS MAX SOURCE CONSOLIDATION
+on:
+  push:
+    branches: [feature/nox-teacher-mycelium-20261112]
+    paths:
+      - .github/workflows/nox-v29-onepass-max.yml
+      - nox_runpod/teacher_mesh/stages/**
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  frozen-source-consolidation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Strict source tests + SQLite S03 witness and P02 RAG
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          python3 -m compileall -q nox_runpod/teacher_mesh nox_runpod/web_wow_merge
+          python3 -m unittest discover -s nox_runpod/teacher_mesh/stages -p 'test_stage*.py' -v
+          python3 -m unittest discover -s nox_runpod/teacher_mesh/tests -p 'test_genesis_recall_contract.py' -v
+          python3 -m unittest discover -s nox_runpod/teacher_mesh/tests -p 'test_autonomous_hunt_v27.py' -v
+          python3 -m unittest discover -s nox_runpod/teacher_mesh/tests -p 'test_v28_experiment_gate.py' -v
+          python3 -m unittest discover -s nox_runpod/web_wow_merge/tests -p 'test_genesis_web_stage.py' -v
+          node --check nox_runpod/web_wow_merge/nox_genesis_live_panel.mjs
+      - name: Pin inheritance from original PR162 without hidden runtime merge
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          PIN=56eddf293717851ae08585ce12dccda23fadeaa3
+          git fetch --no-tags --depth=1 origin pull/162/head
+          ACTUAL="$(git rev-parse FETCH_HEAD)"
+          if [ "$ACTUAL" != "$PIN" ]; then
+            echo "::error::PR162 moved; manual reconcile required. expected $PIN observed $ACTUAL"
+            exit 1
+          fi
+          mkdir -p dist/inherited_native_pr162
+          git archive "$PIN" src/nox_selfbuilder Packages/P02/worker-python Packages/P02/worker-chat Packages/P04/Rag | tar -xf - -C dist/inherited_native_pr162/
+          python3 - <<'PY'
+          from pathlib import Path
+          import ast
+          root=Path('dist/inherited_native_pr162')
+          required=[
+            'src/nox_selfbuilder/worms.py','src/nox_selfbuilder/worm_autopilot.py',
+            'src/nox_selfbuilder/worm_idea_loop.py','src/nox_selfbuilder/worm_providers.py',
+            'Packages/P02/worker-python/p02_onehost.py',
+            'Packages/P02/worker-python/p02_chat_bridge.py',
+            'Packages/P02/worker-chat/ChatSqliteStore.cs',
+            'Packages/P04/Rag/RagChatContextProvider.cs']
+          for r in required:
+            f=root/r
+            assert f.is_file() and f.stat().st_size>300, 'missing pinned native source '+r
+            if f.suffix=='.py':ast.parse(f.read_text(encoding='utf-8'))
+          source=(root/'Packages/P02/worker-python/p02_chat_bridge.py').read_text(encoding='utf8')
+          assert 'rag_context(tenant, principal, chat_id, prompt)' in source
+          assert 'class ChatBridge:' in source
+          assert 'def send(' in source
+          print('NOX_NATIVE_PR162_VERIFIED_PINNED_8_8')
+          PY
+      - name: Package full PR251 source, originally pinned OneHost, V28 program and catalog pointers
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          mkdir -p dist/source_pr251/nox_runpod
+          cp -a nox_runpod/teacher_mesh dist/source_pr251/nox_runpod/
+          cp -a nox_runpod/web_wow_merge dist/source_pr251/nox_runpod/
+          find dist -type d -name __pycache__ -prune -exec rm -rf {} +
+          cp nox_runpod/teacher_mesh/stages/NOX_V29_ONEPASS_MAX_MASTER_README_RU.md dist/READ_ME_FIRST_RU.md
+          python3 - <<'PY'
+          import hashlib,json,pathlib,re,os
+          root=pathlib.Path('dist')
+          suspicious=[]
+          markers=[
+              re.compile(rb'github_pat_[A-Za-z0-9_]{24,}'),
+              re.compile(rb'ghp_[A-Za-z0-9]{25,}'),
+              re.compile(rb'-----BEGIN [A-Z ]*PRIVATE KEY-----'),
+              re.compile(rb'sk-[A-Za-z0-9]{28,}'),
+          ]
+          files=[]
+          for p in sorted(root.rglob('*')):
+              if not p.is_file():continue
+              if p.is_symlink():raise SystemExit('NOX_HOLD_SYMLINK: '+str(p))
+              rel=p.relative_to(root).as_posix()
+              b=p.read_bytes()
+              if any(m.search(b) for m in markers):suspicious.append(rel)
+              files.append({'name':rel,'bytes':len(b),'sha256':hashlib.sha256(b).hexdigest()})
+          if suspicious:raise SystemExit('NOX_HOLD_POTENTIAL_SECRETS: '+repr(suspicious[:10]))
+          native=sum(x['name'].startswith('inherited_native_pr162/') for x in files)
+          current=sum(x['name'].startswith('source_pr251/') for x in files)
+          assert native>=8 and current>=60,(native,current)
+          receipt={
+             'schema':'nox-v29-onepass-max-source-bundle-v1',
+             'pr251_commit':os.environ['GITHUB_SHA'],
+             'inherited_native_pr162_commit':'56eddf293717851ae08585ce12dccda23fadeaa3',
+             'source_only':True,'native_source_merged_into_installed_host':False,
+             'windows_e07_verified':False,'gpu_training_verified':False,
+             'source_files_current':current,'source_files_native_original':native,
+             'files':files,
+             'downloaded_source_catalog_existing_drive':
+               'https://drive.google.com/drive/folders/180zabWv3mn0tPI3k7BLgA2frf4zSRRjF',
+             'web_v25_zip_drive_id':'1cNt9FYth9K9dNihLi-ixIxdRgJy05mzV',
+             'chat_v25_zip_drive_id':'1bORWgKORNkeFkWIEIsWhSKq6sQJ8f_M6',
+             'onepass_v2_zip_drive_id':'1TWXd7YSufzRjNF2MCydVEqGYzVHw2Q6x',
+             'web_v26_staging_candidate_sha256':
+               '829173a42a2ba42586328c6c810a5334f2332e1b6a856aec96088f5053cf1ca9'
+          }
+          (root/'NOX_V29_MASTER_SOURCE_RECEIPT.json').write_text(json.dumps(receipt,ensure_ascii=False,indent=2)+'\n')
+          (root/'SHA256SUMS.txt').write_text(''.join(x['sha256']+'  '+x['name']+'\n' for x in files))
+          print('NOX_V29_SOURCE_MAX_NOLOSS_SHA_PASS',len(files),current,native)
+          PY
+      - name: Upload physical source package
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_V29_ONEPASS_MAX_ALL_REAL_CODE_NATIVE_AND_PATCHES
+          path: dist/
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
