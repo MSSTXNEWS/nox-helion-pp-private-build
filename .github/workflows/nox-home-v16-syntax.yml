@@ -347,6 +347,7 @@ jobs:
           python3 -m http.server 8080 --bind 127.0.0.1 --directory dist >/tmp/nox-ci-http.log 2>&1 &
           # Provenance: test exactly the same checkout that was compiled above.
           NOX_AUDIT_SOURCE_SHA="$(git rev-parse HEAD)" NOX_PREVIEW_URL=http://127.0.0.1:8080/index.html NOX_ACCEPTANCE_DIR=./nox-v21-acceptance node tools/browser-acceptance.mjs
+          NOX_PREVIEW_URL=http://127.0.0.1:8080/index.html node tools/test-web-v26-browser.mjs
       - name: Preserve actual browser screenshots and acceptance logs
         if: always()
         uses: actions/upload-artifact@v4
