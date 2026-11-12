@@ -3,7 +3,7 @@ Safe to run exactly once after tools/restore-pinned-baseline.mjs; does not touch
 """
 from pathlib import Path
 import hashlib, re
-root = Path(__file__).resolve().parent.parent
+root = Path(__file__).resolve().parent.parent / 'dist'
 locks = {
  'chat.html': 'a9abd5e5d855b72dc047898a65d622a152ca5c1009a7da1b78e2dd5892259b0b',
  'nox-chat.js': 'd598379aa8f4fbb1da43539ed39634d74efe3bc4a3d129f00721d6cf7bc95b4a',
