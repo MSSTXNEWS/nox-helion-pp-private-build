@@ -130,3 +130,25 @@ html body.helion-home.nox-owner-cinema[data-nox-owner-controls="true"] section.h
   flex-basis:56px!important;width:56px!important;height:56px!important;
  }
 }
+
+/* NOX V24 APPROVED-ART DUPLICATE-CAPTION MASK (SOURCE BYTES UNCHANGED) */
+/* The approved single HOME composite has original lettering baked into the
+   upper edge and the floor. Those labels must NOT be painted a second time
+   behind the live navigation. Crop only the overlay's duplicate-text bands.
+   All source pixels, real D02 WebGL and the metal/volumetric effects remain. */
+body.helion-home.nox-owner-cinema .nox-owner-architecture{
+ clip-path:inset(8% 0 36% 0)!important;
+}
+body.helion-home.nox-owner-cinema .nox-owner-floor{
+ clip-path:inset(92% 0 0 0)!important;
+ -webkit-mask-image:linear-gradient(90deg,#000 0%,#000 24%,transparent 42%,transparent 58%,#000 76%,#000 100%)!important;
+ mask-image:linear-gradient(90deg,#000 0%,#000 24%,transparent 42%,transparent 58%,#000 76%,#000 100%)!important;
+}
+@media(max-width:600px){
+ body.helion-home.nox-owner-cinema .nox-owner-architecture{
+  clip-path:inset(9% 0 34% 0)!important;
+ }
+ body.helion-home.nox-owner-cinema .nox-owner-floor{
+  clip-path:inset(92% 0 0 0)!important;
+ }
+}
