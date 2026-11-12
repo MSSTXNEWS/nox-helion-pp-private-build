@@ -24,6 +24,8 @@ jobs:
           set -Eeuo pipefail
           mkdir -p /tmp/nox-wow-v25/tests
           cp nox_runpod/web_wow_merge/merge_nox_web_wow.py /tmp/nox-wow-v25/
+          cp nox_runpod/web_wow_merge/merge_physical_web_v25.py /tmp/nox-wow-v25/
+          cp nox_runpod/web_wow_merge/qa_physical_web_v25.py /tmp/nox-wow-v25/
           cp nox_runpod/web_wow_merge/MERGE_NOX_WEB_WOW_STAGING.cmd /tmp/nox-wow-v25/
           cp nox_runpod/web_wow_merge/README_RU.md /tmp/nox-wow-v25/
           cp nox_runpod/web_wow_merge/tests/test_*.py /tmp/nox-wow-v25/tests/
