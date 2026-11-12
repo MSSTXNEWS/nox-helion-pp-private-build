@@ -16,7 +16,8 @@ try{
   await page.waitForFunction(()=>window.NoxFunctionCatalog&&window.NOX_UNIVERSE_V19,{timeout:30000});
   assert.equal(await page.locator('#noxPublicFunctionOpen').count(),1,'Secondary WEB missing real graphical catalog entry');
   for(const [id,name] of [['weather','Погода'],['news','Новости'],['fx','Валюта'],['calendar','Календарь'],['notifications','Уведомления']]){
-   await page.evaluate(query=>window.NoxFunctionCatalog.open(query),name);
+   await page.locator('#noxPublicFunctionOpen').click();
+   await page.locator('#noxFunctionCatalogSearch').fill(name);
    const item=page.locator('.nox-function-card[data-function-id="'+id+'"]');
    assert.equal(await item.count(),1,'Catalog entry '+id+' not rendered');
    await item.click();
@@ -32,6 +33,9 @@ try{
    await page.evaluate(()=>window.NOX_UNIVERSE_V19.close());
    checked.push({viewport:viewport.width,id,selected:current.selected});
   }
+  await page.keyboard.press('Control+k');
+  assert.equal(await page.locator('dialog#noxFunctionCatalog[open]').count(),1,'Ctrl+K must open the actual public catalog');
+  await page.keyboard.press('Escape');
   const voice=await page.evaluate(()=>window.NoxFunctionCatalog.entries.find(x=>x.id==='voice'));
   assert.equal(voice?.page,'chat');assert.equal(voice?.anchor,'chatDictate');
   const chat=await page.goto(new URL('chat.html',base).href,{waitUntil:'domcontentloaded',timeout:60000});
