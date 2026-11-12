@@ -1,0 +1,203 @@
+name: NOX HF Source Weight Chunks 32 33
+on:
+  push:
+    branches: [feature/nox-teacher-mycelium-20261112]
+    paths: ['.github/workflows/nox-hf-chunks-32-33.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  shard-complete-weight-snapshots:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    strategy:
+      fail-fast: false
+      matrix:
+        no: [32, 33]
+    steps:
+      - name: Install verified download client
+        run: python -m pip -q install 'huggingface_hub>=0.34,<2'
+      - name: Download real model weights and split into Drive-sized verified pieces
+        shell: bash
+        env:
+          NOX_NO: ${{ matrix.no }}
+          HF_HUB_DISABLE_TELEMETRY: '1'
+        run: |
+          set -Eeuo pipefail
+          python3 - <<'PY'
+          import os,pathlib,json,hashlib,tarfile
+          from huggingface_hub import snapshot_download,model_info
+          no=int(os.environ["NOX_NO"])
+          repo={32:"Qwen/Qwen3-Embedding-0.6B",33:"Qwen/Qwen3-Reranker-0.6B"}[no]
+          out=pathlib.Path(f"NOX_HF_CHUNKS_{no}");out.mkdir(parents=True,exist_ok=True)
+          report={"number":no,"source":"https://huggingface.co/"+repo,"status":"FAILED","chunk_size":75*1024*1024,"parts":[]}
+          try:
+              rev=model_info(repo).sha
+              target=out/"download"
+              snapshot_download(repo_id=repo,revision=rev,local_dir=target,max_workers=8)
+              files=[p for p in target.rglob("*") if p.is_file() and ".cache" not in p.parts]
+              weights=[p for p in files if p.suffix in (".safetensors",".bin",".gguf",".pt",".onnx")]
+              if not weights:raise RuntimeError("No weights downloaded")
+              tar=out/"model-full-snapshot.tar"
+              with tarfile.open(tar,"w") as f:
+                  for p in files:f.add(p,arcname=p.relative_to(target).as_posix(),recursive=False)
+              origsha=hashlib.sha256()
+              with tar.open("rb") as fi:
+                  i=0
+                  while part:=fi.read(75*1024*1024):
+                      name=f"piece{i:02d}"
+                      (out/name).write_bytes(part)
+                      origsha.update(part)
+                      report["parts"].append({"name":name,"bytes":len(part),"sha256":hashlib.sha256(part).hexdigest()})
+                      i+=1
+              report.update({"revision":rev,"model_weight_bytes":sum(p.stat().st_size for p in weights),"archive_sha256":origsha.hexdigest(),"archive_bytes":tar.stat().st_size,"status":"DOWNLOADED_VERIFIED"})
+              tar.unlink()
+              for p in files:p.unlink()
+          except Exception as e:report["error"]=type(e).__name__+": "+str(e)[:500]
+          (out/"RESULT.json").write_text(json.dumps(report,ensure_ascii=False,indent=2)+"\n")
+          print("NOX_HF_CHUNKS",no,report["status"],len(report["parts"]),report.get("archive_bytes",0),report.get("error",""),flush=True)
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NOX_HF_${{ matrix.no }}_MANIFEST
+          path: NOX_HF_CHUNKS_${{ matrix.no }}/RESULT.json
+          if-no-files-found: warn
+          retention-days: 7
+          compression-level: 0
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NOX_HF_${{ matrix.no }}_CHUNK_00
+          path: NOX_HF_CHUNKS_${{ matrix.no }}/piece00
+          if-no-files-found: warn
+          retention-days: 7
+          compression-level: 0
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NOX_HF_${{ matrix.no }}_CHUNK_01
+          path: NOX_HF_CHUNKS_${{ matrix.no }}/piece01
+          if-no-files-found: warn
+          retention-days: 7
+          compression-level: 0
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NOX_HF_${{ matrix.no }}_CHUNK_02
+          path: NOX_HF_CHUNKS_${{ matrix.no }}/piece02
+          if-no-files-found: warn
+          retention-days: 7
+          compression-level: 0
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NOX_HF_${{ matrix.no }}_CHUNK_03
+          path: NOX_HF_CHUNKS_${{ matrix.no }}/piece03
+          if-no-files-found: warn
+          retention-days: 7
+          compression-level: 0
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NOX_HF_${{ matrix.no }}_CHUNK_04
+          path: NOX_HF_CHUNKS_${{ matrix.no }}/piece04
+          if-no-files-found: warn
+          retention-days: 7
+          compression-level: 0
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NOX_HF_${{ matrix.no }}_CHUNK_05
+          path: NOX_HF_CHUNKS_${{ matrix.no }}/piece05
+          if-no-files-found: warn
+          retention-days: 7
+          compression-level: 0
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NOX_HF_${{ matrix.no }}_CHUNK_06
+          path: NOX_HF_CHUNKS_${{ matrix.no }}/piece06
+          if-no-files-found: warn
+          retention-days: 7
+          compression-level: 0
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NOX_HF_${{ matrix.no }}_CHUNK_07
+          path: NOX_HF_CHUNKS_${{ matrix.no }}/piece07
+          if-no-files-found: warn
+          retention-days: 7
+          compression-level: 0
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NOX_HF_${{ matrix.no }}_CHUNK_08
+          path: NOX_HF_CHUNKS_${{ matrix.no }}/piece08
+          if-no-files-found: warn
+          retention-days: 7
+          compression-level: 0
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NOX_HF_${{ matrix.no }}_CHUNK_09
+          path: NOX_HF_CHUNKS_${{ matrix.no }}/piece09
+          if-no-files-found: warn
+          retention-days: 7
+          compression-level: 0
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NOX_HF_${{ matrix.no }}_CHUNK_10
+          path: NOX_HF_CHUNKS_${{ matrix.no }}/piece10
+          if-no-files-found: warn
+          retention-days: 7
+          compression-level: 0
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NOX_HF_${{ matrix.no }}_CHUNK_11
+          path: NOX_HF_CHUNKS_${{ matrix.no }}/piece11
+          if-no-files-found: warn
+          retention-days: 7
+          compression-level: 0
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NOX_HF_${{ matrix.no }}_CHUNK_12
+          path: NOX_HF_CHUNKS_${{ matrix.no }}/piece12
+          if-no-files-found: warn
+          retention-days: 7
+          compression-level: 0
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NOX_HF_${{ matrix.no }}_CHUNK_13
+          path: NOX_HF_CHUNKS_${{ matrix.no }}/piece13
+          if-no-files-found: warn
+          retention-days: 7
+          compression-level: 0
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NOX_HF_${{ matrix.no }}_CHUNK_14
+          path: NOX_HF_CHUNKS_${{ matrix.no }}/piece14
+          if-no-files-found: warn
+          retention-days: 7
+          compression-level: 0
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NOX_HF_${{ matrix.no }}_CHUNK_15
+          path: NOX_HF_CHUNKS_${{ matrix.no }}/piece15
+          if-no-files-found: warn
+          retention-days: 7
+          compression-level: 0
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NOX_HF_${{ matrix.no }}_CHUNK_16
+          path: NOX_HF_CHUNKS_${{ matrix.no }}/piece16
+          if-no-files-found: warn
+          retention-days: 7
+          compression-level: 0
