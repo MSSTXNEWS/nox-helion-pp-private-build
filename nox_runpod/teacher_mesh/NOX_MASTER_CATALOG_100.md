@@ -213,3 +213,16 @@ The catalog is NOT a deployment. No live GPU trainer or production route was mod
 - **Measure WOW:** independent task success increase, zero critical regressions, fewer hallucinated self-history claims, code accepted by tests, time-to-first-token, and GPU-hours per verified improvement. If benefit is absent, cancel the proposed teacher or change and retain the last good NOX.
 
 This architecture favors **fast user experience + selective background learning**, not constant model consultation. Runtime wiring and GPU benchmark remain pending physical acceptance.
+
+
+## V4 — Япония + фактическая сверка RunPod A40 (12.11.2026)
+
+**Не смешивать машины:** владелец указывает отдельный сервер в Японии, однако через доступный RunPod API обнаружен Pod `saep5w24i02tl0` в **EU-SE-1, Швеция**. Японская машина не проверена физически: отсутствуют её текущее `nvidia-smi`, пути, SHA весов, процессы, S03 и чекпоинты. Каталог обязан сначала повторно использовать реально обнаруженные японские активы и не делать пустую «переустановку с нуля».
+
+**RunPod API — реально проверено:** `saep5w24i02tl0` RUNNING, NVIDIA A40 ×1, 94% GPU util, 98% GPU memory util (момент ответа API), $0.59/hour, `/workspace` global volume `cmw9c11rb000007l6dr6d0eu9`, `/workspace-2` network volume `8kzyakleln`. Журнал системных сообщений 12.11 04:04–04:19 UTC многократно сообщает `container is unhealthy: triggered memory limits (OOM)`; пик `46.57 / 46.57 GiB (99%)` относится к памяти контейнера, **не** к VRAM. Журнал контейнера показывает запуск CUDA/SSH/Jupyter; **нет доказательств текущего `global_step`, checkpoint SHA, активной дистилляции и прироста интеллекта**.
+
+**Корректирующая политика:** не загружать дополнительные модели/учителей на A40; сначала read-only анализ RAM/VRAM/process list/cgroup OOM/тренерских логов и двух последовательных optimizer шагов, validate сохранность последнего checkpoint и S03. При риске ресурса — только согласованный штатный безопасный checkpoint/STOP, не принудительный restart или убийство процессов.
+
+**WOW PRIME = reuse and measured improvement:** One NOX, one S03, FAST independent of GPU teachers, one complementary teacher only if measured gap, no duplicate weights, selective distillation, no inflated learning progress, six independent workstreams with one verified student optimizer. Separate Japan inventory from Sweden A40. Runtime production/training untouched by this catalog change.
+
+**Master catalog:** [100 engines, 15 teacher candidates, 20 worm types, V2 complementary selection and V3 efficiency](https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/feature/nox-teacher-mycelium-20261112/nox_runpod/teacher_mesh/NOX_MASTER_CATALOG_100.md). Machine JSON: [NOX_MASTER_CATALOG_100.json](https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/feature/nox-teacher-mycelium-20261112/nox_runpod/teacher_mesh/NOX_MASTER_CATALOG_100.json).
