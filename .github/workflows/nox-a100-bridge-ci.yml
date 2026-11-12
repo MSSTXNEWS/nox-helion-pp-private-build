@@ -51,7 +51,7 @@ jobs:
           result=t.stage_fast75()
           print("FAST75_PACKAGE_STAGE",result)
           assert result.get("state")=="READY", "archive not usable"
-          assert result.get("sha256_verified") is True
+          assert result.get("sha256")=="33afe7ea74fb5cf635815f1891298e92bc54b516d5a5462beb3214a2a9d8b652"
           assert t.FAST.joinpath("START_FAST75.sh").is_file()
           assert t.FAST.joinpath("preflight.py").is_file()
           assert t.prepare_local()["state"].startswith("HOLD"),"unsafe silent start"
