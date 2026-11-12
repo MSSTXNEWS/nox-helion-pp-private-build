@@ -248,6 +248,11 @@ def extract_onepass_qa(path: Path, original_web=None):
     """Preserve only 10 native QA/root files; do not duplicate its 292 site files."""
     raw = read_archive(path)
     qa = {p: body for p, body in raw.items() if not p.startswith("site/")}
+    if any("/" in p or "\\" in p for p in qa):
+        raise ValueError("NOX_ONEPASS_UNEXPECTED_NESTED_QA_HOLD")
+    missing = sorted(set(QA_REQUIRED) - set(qa))
+    if missing:
+        raise ValueError("NOX_ONEPASS_REQUIRED_FILE_MISSING: " + ",".join(missing))
     onepass_site = {p[5:]: body for p, body in raw.items() if p.startswith("site/")}
     source_identical = False
     if original_web is not None:
@@ -257,11 +262,6 @@ def extract_onepass_qa(path: Path, original_web=None):
             if digest(payload) != digest(original_web[name]):
                 raise ValueError("NOX_ONEPASS_WEB_SOURCE_SHA_MISMATCH: " + name)
         source_identical = True
-    if any("/" in p or "\\" in p for p in qa):
-        raise ValueError("NOX_ONEPASS_UNEXPECTED_NESTED_QA_HOLD")
-    missing = sorted(set(QA_REQUIRED) - set(qa))
-    if missing:
-        raise ValueError("NOX_ONEPASS_REQUIRED_FILE_MISSING: " + ",".join(missing))
     meta = {"source": path.name, "sha256": digest_file(path),
             "zip_members": len(raw), "site_source_members": len(raw) - len(qa),
             "qa_source_members": len(qa),
