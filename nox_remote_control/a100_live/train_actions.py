@@ -202,21 +202,27 @@ def resume_training():
         if free<8*1024**3:return {"state":"HOLD_LOCAL_DISK_LT8_GIB","free_gib":round(free/1024**3,2)}
     except OSError:return {"state":"HOLD_DISK"}
     STATE.mkdir(parents=True,exist_ok=True)
-    runfile=FAST/"START_FAST75.sh"
+    sync_armed=(Path("/root/.ssh/nox_vast").is_file()
+                and Path("/root/.ssh/known_hosts").is_file()
+                and shutil.which("rsync") is not None
+                and (FAST/"RUN_NOW_AND_EXPORT.sh").is_file()
+                and (FAST/"SYNC_ACCEPTED_CHECKPOINTS.sh").is_file())
+    runfile=FAST/("RUN_NOW_AND_EXPORT.sh" if sync_armed else "START_FAST75.sh")
     if not runfile.is_file():return {"state":"HOLD_TRAINER_PACKAGE"}
     env=os.environ.copy()
     env.update({"NOX_LOCAL_ROOT":str(LOCAL),"NOX_COMMON_ROOT":str(Path("/tmp/nox_seed_gpu")),
                 "BASE":str(BASE),"EXPECTED_STEP":str(ready["step"]),"MIN_RESUME_STEP":str(ready["step"]),
                 "CPU_FRACTION":"0.75","MB":"8192","SAVE_MIN":"10",
                 "HF_HUB_OFFLINE":"1","TRANSFORMERS_OFFLINE":"1",
-                "NOX_EXPORT_COMMAND":""})
+                "NOX_EXPORT_COMMAND":"","ENABLE_CHECKPOINT_SYNC":"1" if sync_armed else "0"})
     logfile=STATE/"train_resume_stdout.log"
     with logfile.open("ab",buffering=0) as log:
         p=subprocess.Popen(["bash",str(runfile)],cwd=str(FAST),stdin=subprocess.DEVNULL,
                 stdout=log,stderr=subprocess.STDOUT,env=env,start_new_session=True,close_fds=True)
     (STATE/"training.pid").write_text(str(p.pid))
     return {"state":"LAUNCH_REQUESTED_NOT_STEP_VERIFIED","pid":p.pid,"resume_step":ready["step"],
-            "profile":"FAST75","gpu":"A100","cpu_target_pct":75}
+            "profile":"FAST75","gpu":"A100","cpu_target_pct":75,
+            "nonblocking_checkpoint_sync_armed":sync_armed}
 
 AUTO=STATE/"auto_resume.json"
 
