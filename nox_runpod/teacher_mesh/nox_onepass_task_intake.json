@@ -242,7 +242,7 @@
       "lane": "WEB",
       "title": "Preserve WEB V25.1 original 292 files, D02 and 14 worlds",
       "state": "HOLD",
-      "gate": "Verify exact commit and source manifest, do not redraw existing approved scene",
+      "gate": "Verify exact commit and source manifest, do not redraw existing approved scene; 292 original WEB ZIP member names, sizes, CRC32 and ZIP methods matched ONEPASS V2 292/292; physical WEB QA still HOLD",
       "sources": [
         "https://app.notion.com/p/40cacc184a9f8170bcabca204c7d4c33",
         "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/241"
@@ -284,7 +284,7 @@
       "lane": "WEB",
       "title": "ONEPASS source SHA and startup preflight verification",
       "state": "HOLD",
-      "gate": "Archive 299 members and 292 web files per Notion record; actual ZIP not mounted in this PR; V2 302 files CRC PASS + Node 5/5 + PREFLIGHT PASS, physical still HOLD",
+      "gate": "Original V1 archive reported 299 files; real ONEPASS V2 file was inspected: 302 members including 292 original WEB entries and 10 root QA sources; V2 302 files CRC PASS + Node 5/5 + PREFLIGHT PASS, physical still HOLD",
       "sources": [
         "https://app.notion.com/p/40cacc184a9f8170bcabca204c7d4c33"
       ],
@@ -354,14 +354,15 @@
       "lane": "WEB",
       "title": "Merge original V25.1 WOW + Windows CHAT V25 memory + V24 missing dependencies into one staged web candidate",
       "state": "HOLD",
-      "gate": "Run existing GitHub merger against actual ZIPs in C:\\NOX\\incoming, resolve detected shared SHA collisions without replacing original D02 or 14 worlds; then OneHost/S03/STOP/Windows E2E with same SHA. Do not overwrite live port 8766.",
+      "gate": "Run existing GitHub merger against actual ZIPs in C:\\NOX\\incoming, resolve detected shared SHA collisions without replacing original D02 or 14 worlds; then OneHost/S03/STOP/Windows E2E with same SHA. Do not overwrite live port 8766.; QA 17/17 CI PASS at 43252314380; actual V25 PC/V24 archives not run through merger, no unified ZIP released",
       "sources": [
         "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/tree/feature/nox-teacher-mycelium-20261112/nox_runpod/web_wow_merge",
         "https://drive.google.com/file/d/1bORWgKORNkeFkWIEIsWhSKq6sQJ8f_M6/view",
         "https://drive.google.com/file/d/1XfWLP4wrFzvKioxdbZH-adAgwJZ9n3Nu/view"
       ],
       "execution": "DISCOVERY_OR_PROPOSAL_ONLY",
-      "runtime_accepted": false
+      "runtime_accepted": false,
+      "ci_evidence": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43252314380"
     },
     {
       "id": "INV-003",
@@ -433,5 +434,22 @@
       "chat_v24": "https://drive.google.com/file/d/1XfWLP4wrFzvKioxdbZH-adAgwJZ9n3Nu/view"
     },
     "policy": "Do not redo Windows migration, reinstall models or remove junctions without proof; treat report as owner testimony until Windows read-only audit"
+  },
+  "web_wow_merge_2026_11_12": {
+    "status": "SOURCE_MERGER_CI_VERIFIED_PHYSICAL_MERGE_HOLD",
+    "ci_run": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43252314380",
+    "ci_tests": "17/17 PASS",
+    "script": "nox_runpod/web_wow_merge/merge_nox_web_wow.py",
+    "starter": "nox_runpod/web_wow_merge/MERGE_NOX_WEB_WOW_STAGING.cmd",
+    "code_archive": "https://drive.google.com/file/d/14oBt-8nfiDUwxQ_8ctyXHJlF7BqZhlXf/view",
+    "web_source": "https://drive.google.com/file/d/1cNt9FYth9K9dNihLi-ixIxdRgJy05mzV/view",
+    "chat25": "https://drive.google.com/file/d/1bORWgKORNkeFkWIEIsWhSKq6sQJ8f_M6/view",
+    "chat24": "https://drive.google.com/file/d/1XfWLP4wrFzvKioxdbZH-adAgwJZ9n3Nu/view",
+    "onepass": "https://drive.google.com/file/d/1TWXd7YSufzRjNF2MCydVEqGYzVHw2Q6x/view",
+    "evidence": "292/292 ONEPASS site entries match WEB V25.1 by filename+CRC32+uncompressed size+ZIP compression method. The code now requires SHA256 equality on physical merge.",
+    "onepass_qa_reuse": "Ten QA sources extracted; no 2nd copy of 292 WEB site files in staged candidate",
+    "physical_merge": "HOLD_PRIVATE_CHAT_ZIPS_NOT_PROCESSED_IN_CURRENT_RUNTIME",
+    "windows_8766_onehost_s03_voice_gpu": "NOT_TESTED",
+    "production": "UNTOUCHED"
   }
 }
