@@ -1,0 +1,33 @@
+name: NOX WEB WOW V25 Source Merger QA
+on:
+  push:
+    branches: [feature/nox-teacher-mycelium-20261112]
+    paths: ['nox_runpod/web_wow_merge/**', '.github/workflows/nox-web-wow-v25-merge.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  safe-source-merge-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Syntax and negative NO-LOSS merge tests
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          python3 -m compileall -q nox_runpod/web_wow_merge
+          python3 -m unittest discover -s nox_runpod/web_wow_merge/tests -v
+      - name: Exact source artifact with SHA256
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          mkdir -p /tmp/nox-wow-v25
+          cp nox_runpod/web_wow_merge/merge_nox_web_wow.py /tmp/nox-wow-v25/
+          sha256sum /tmp/nox-wow-v25/merge_nox_web_wow.py > /tmp/nox-wow-v25/SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NOX_WEB_WOW_V25_SAFE_MERGER_SOURCE
+          path: /tmp/nox-wow-v25/
+          retention-days: 7
+          if-no-files-found: error
