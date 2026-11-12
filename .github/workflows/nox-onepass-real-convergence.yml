@@ -5,7 +5,7 @@ on:
     paths: [.github/workflows/nox-onepass-real-convergence.yml]
   workflow_dispatch:
 permissions:
-  contents: read
+  contents: write
 concurrency:
   group: nox-onepass-real-source-convergence
   cancel-in-progress: false
@@ -167,7 +167,27 @@ jobs:
                               proof["archive_files"]=len(f.namelist())
                           proof["zip_bytes"]=z.stat().st_size
                           proof["zip_sha256"]=hashlib.file_digest(z.open("rb"),"sha256").hexdigest()
-                          proof["status"]="STAGED_SOURCE_MERGE_TESTED_NOT_RELEASED"
+                          # Publish the checked result ONLY to its isolated
+                          # integration branch, and only if its tip has not
+                          # drifted since checkout. No force, no main/production.
+                          target="feature/nox-onepass-real-convergence-20261112"
+                          remote=cmd(["git","ls-remote","--heads","origin","refs/heads/"+target],wd)
+                          observed=(remote.stdout.split()[0] if remote.returncode==0
+                                    and remote.stdout.strip() else None)
+                          proof["publish_lease_expected"]=initial
+                          proof["publish_remote_observed"]=observed
+                          if observed != initial:
+                              proof["status"]="HOLD_BRANCH_DRIFT_NOT_PUBLISHED"
+                          else:
+                              pushed=cmd(["git","push","origin","HEAD:refs/heads/"+target],wd)
+                              proof["publish_exit"]=pushed.returncode
+                              proof["publish_tail"]=(pushed.stdout+pushed.stderr)[-1200:]
+                              if pushed.returncode==0:
+                                  proof["published_branch"]=target
+                                  proof["published_sha"]=proof["merged_sha"]
+                                  proof["status"]="STAGED_SOURCE_MERGE_TESTED_NOT_RELEASED"
+                              else:
+                                  proof["status"]="HOLD_PUBLISH_DENIED"
                   cmd(["git","worktree","remove","--force",str(wd)])
               if proof["status"]=="HOLD":
                   proof["first_blocker"]=next(
