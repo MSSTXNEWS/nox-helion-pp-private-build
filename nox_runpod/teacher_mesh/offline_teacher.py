@@ -2,7 +2,7 @@
 """NOX Offline Teacher: independent local-model inference with NO PAID EXTERNAL API.
 
 Supports already-downloaded GGUF through llama-cli and preinstalled Ollama models.
-No shell=True; no downloads, remote accounts, dynamic executable args, or writes
+No arbitrary shell execution; no downloads, remote accounts or writes
 to the NOX student model. Run on an isolated VM, not on the busy NOX A100 trainer.
 """
 from dataclasses import dataclass
@@ -93,7 +93,7 @@ def infer_offline(teacher: OfflineTeacher, prompt: str, max_seconds: int = 75) -
         if not shutil.which("ollama", path=RUN_PATH):
             return {"status": "HOLD_OLLAMA_NOT_INSTALLED", "teacher": teacher.name}
         if not _installed_ollama(teacher.model_id):
-            # Never call 'ollama pull' implicitly or download a missing model.
+            # Never download a model implicitly or when the local model is absent.
             return {"status": "HOLD_OLLAMA_MODEL_NOT_PRESENT", "teacher": teacher.name}
         command = ["ollama", "run", teacher.model_id]
         stdin = prompt
