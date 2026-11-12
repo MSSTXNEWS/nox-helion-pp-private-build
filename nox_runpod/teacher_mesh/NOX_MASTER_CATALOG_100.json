@@ -2098,5 +2098,75 @@
     "deduplication": "Compare response clusters, factual provenance, model-family correlations and existing S03; do not equate multiple same-family models with independent evidence",
     "checkpoint_policy": "No automatic overwrite of active NOX weights; STOP fail closed; preserve snapshots and rollback",
     "note": "This is a prioritization proposal, not proof these are the best performing models."
+  },
+  "efficiency_policy": {
+    "version": "NOX_WOW_EFFICIENCY_V3",
+    "status": "PROPOSAL_NOT_RUNTIME_DEPLOYED",
+    "objective": "Maximize verified student ability per GPU-hour and user-perceived responsiveness; not model count, token volume, utilization or activity.",
+    "user_chat": {
+      "always_student_first": true,
+      "default_teacher_fanout": 0,
+      "external_teacher_wait_ms": 0,
+      "automatic_teacher_polling_per_chat": false,
+      "verified_s03_recall_only": true,
+      "reflect_only_on_task_failure_or_high_stakes": true,
+      "explicit_deep_review_opt_in": true,
+      "return_unverified_as_uncertain": true
+    },
+    "teacher_planning": {
+      "selection_by": "missing_skill_on_source_separated_holdout",
+      "active_teacher_default": 1,
+      "second_teacher_only_if": "complementary_family_or_measured_disagreement_with_expected_quality_gain",
+      "max_parallel": "hardware_and_owner_budget_gated",
+      "stop_if": "no_incremental_gain_on_distinct_holdout_or_cost_exceeds_benefit",
+      "download_only_after": "existing_sha_inventory_and_license_security_checks",
+      "never_duplicate_existing_weights": true
+    },
+    "training": {
+      "sample_policy": "approved_nonprivate_examples_only; novelty_and_source_dedup before GPU work",
+      "learning_trigger": "verified_skill_gap_and_evaluable_training_corpus",
+      "teacher_output_not_proof_of_training": true,
+      "receipt": "actual student optimizer steps and immutable checkpoint SHA",
+      "evaluation": "blind holdout before/after including latency, RU/ES, reasoning, code tests, memory and safety regressions",
+      "promotion": "NO_GAIN => HOLD_OR_ROLLBACK; owner acceptance; never interrupt active trainer",
+      "model_identity": "one NOX regardless of internal teacher or training process"
+    },
+    "memory": {
+      "one_S03": true,
+      "recall_budget": "topical bounded retrieval then rerank only if ambiguous",
+      "provenance": "source, timestamp, confidence, conflict, verified_event",
+      "no_history_fabrication": true,
+      "cache": "invalidate on S03 changes; not an independent memory store"
+    },
+    "worms": {
+      "run": "existing idle tick only",
+      "trigger": "changed_source_or_unmet_skill_gap_or_verified_error",
+      "TTL_and_quotas_required": true,
+      "stop_fail_closed": true,
+      "proposal_only": true,
+      "no_self_replication": true,
+      "no_auto_install_or_merge": true
+    },
+    "forge": {
+      "patch_then_test_then_accept": true,
+      "real_artifact_or_hold": true,
+      "no_stub_pass": true,
+      "one_patch_one_test_one_save": true
+    },
+    "metrics": [
+      "student_task_success_delta",
+      "regression_count",
+      "accepted_novel_samples",
+      "gpu_hours_per_verified_gain",
+      "median_first_token_latency",
+      "S03_recall_precision",
+      "FORGE_patches_passed_with_real_tests"
+    ],
+    "anti_metrics": [
+      "teacher_count",
+      "gpu_utilization_as_intelligence",
+      "number_of_worm_processes",
+      "unverified_training_percent"
+    ]
   }
 }
