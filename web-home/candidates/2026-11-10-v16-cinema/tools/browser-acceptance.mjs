@@ -203,11 +203,26 @@ try{
       for(let i=0;i<14;i++){
         const button=controls.nth(i);
         if(!await button.isEnabled())throw Error('NOX_V22_ORIGINAL_SELECTOR_DISABLED:'+i);
-        await button.click({timeout:6000});
+        // Pointer click at the REAL element centre, following a fresh hit-test.
+        // Playwright locator.click waits for a motionless element, which the
+        // original living planets deliberately never are. Force click is
+        // forbidden: it could hide a real overlay/interception defect.
+        await button.scrollIntoViewIfNeeded({timeout:8000});
+        const hit=await page.evaluate(index=>{
+          const target=document.querySelectorAll('section.nox-orbital-controls button')[index];
+          const r=target.getBoundingClientRect(),x=r.left+r.width/2,y=r.top+r.height/2;
+          const at=document.elementFromPoint(x,y);
+          return {x,y,visible:!!r.width&&!!r.height&&x>=0&&x<innerWidth&&y>=0&&y<innerHeight,
+            unobstructed:at===target||target.contains(at),
+            blocker:at?.closest('button')?.getAttribute('title')||at?.tagName||null};
+        },i);
+        if(!hit.visible||!hit.unobstructed)
+          throw Error('NOX_ORIGINAL_REAL_POINTER_BLOCKED:'+i+':'+JSON.stringify(hit));
+        await page.mouse.click(hit.x,hit.y);
         await page.waitForFunction(index=>{
           const b=document.querySelectorAll('section.nox-orbital-controls button')[index];
           return b?.getAttribute('aria-pressed')==='true';
-        },i,{timeout:3000});
+        },i,{timeout:8000});
       }
       ownerCheck.v22.originalWorldClicksPassed=14;
       // Restore the source's neutral theme, skin and balanced GPU profile
@@ -271,7 +286,10 @@ try{
   auditURL.searchParams.set('nox_visual_audit','1');
   const response=await nativeAuditPage.goto(auditURL.toString(),{waitUntil:'domcontentloaded',timeout:45000});
   if(response?.status()!==200)throw Error('NOX_ORIGINAL_VISUAL_AUDIT_HTTP_'+response?.status());
-  await nativeAuditPage.waitForFunction(()=>!!window.NOX_V7_VISUAL_AUDIT,{timeout:60000,polling:350});
+  // Third argument is Playwright wait options. Supplying it second passes
+  // an opaque function arg and silently falls back to 30 seconds.
+  await nativeAuditPage.waitForFunction(()=>!!window.NOX_V7_VISUAL_AUDIT,null,
+    {timeout:110000,polling:350});
   const original=await nativeAuditPage.evaluate(()=>window.NOX_V7_VISUAL_AUDIT);
   const results=original.results||{};
   const all=Object.entries(results).every(([key,val])=>val===true);
@@ -302,6 +320,16 @@ try{
  }catch(error){
   report.originalVisualAuditV7.status='HOLD';
   report.originalVisualAuditV7.errors.push(String(error?.message||error).slice(0,1500));
+  try{
+    report.originalVisualAuditV7.diagnostics=await nativeAuditPage.evaluate(()=>({
+      loaded:!!window.NOX_V7_VISUAL_AUDIT,
+      materialCount:window.NOX_PHYSICAL_WORLDS_QA?.()?.materialAudit?.length??null,
+      realWebgl:window.NOX_CINEMATIC_HEALTH?.snapshot?.()?.core?.realRendered??null,
+      selectedControls:[...document.querySelectorAll('.nox-orbital-controls button[aria-pressed="true"]')].map(b=>b.id)
+    }));
+    await nativeAuditPage.screenshot({path:path.join(out,'original-v7-hold-debug.png'),
+      fullPage:false,timeout:30000});
+  }catch(e){report.originalVisualAuditV7.errors.push('DIAGNOSTICS:'+String(e?.message||e).slice(0,300));}
   console.error('NOX_ORIGINAL_V7_VISUAL_AUDIT_HOLD',String(error?.message||error).slice(0,500));
  }finally{await nativeAuditPage.close();}
  // Cross-section smoke checks: no fake backends, no hidden failures.
