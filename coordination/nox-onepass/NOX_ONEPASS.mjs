@@ -143,8 +143,9 @@ function validateChromiumReport(){
   screenshotHashes[f]=sha(file);
  }
  const previous=state.phases.CHROMIUM?.screenshots;
- if(previous&&Object.keys(previous).some(f=>previous[f]!==screenshotHashes[f]))
-  return {ok:false,reason:'CHROMIUM_SCREENSHOT_CHANGED'};
+ if(state.phases.CHROMIUM?.status==='PASS'&&(!previous||Object.keys(previous).length!==7||
+    IMG_FILES.some(f=>previous[f]!==screenshotHashes[f])))
+  return {ok:false,reason:'CHROMIUM_CACHED_SCREENSHOT_PROOF_MISSING_OR_CHANGED'};
  return {ok:true,q,screenshotHashes};
 }
 async function chromiumQA(localUrl){
