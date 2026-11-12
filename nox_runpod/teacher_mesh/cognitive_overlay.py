@@ -175,11 +175,14 @@ def _classify_affect(text: str, language: str,
 class CognitiveOverlay:
     def __init__(self,s03:S03Port,model:NOXModelPort,
                  affect_classifier:Callable[[str,str],dict]|None=None,
-                 *, clock:Callable[[],float]|None=None):
+                 *, clock:Callable[[],float]|None=None,
+                 approval_validator:Callable[[str,dict],bool]|None=None):
         self.s03=s03
         self.model=model
         self.affect_classifier=affect_classifier
         self.clock=clock or (lambda:datetime.now(timezone.utc).timestamp())
+        # Permission must come from the authenticated application, never LLM output.
+        self.approval_validator=approval_validator
 
     def prepare(self,prompt:str,*,scope:str="owner",language:str="ru")->dict:
         if (not isinstance(prompt,str) or not 1<=len(prompt.strip())<=MAX_INPUT_CHARS
@@ -252,6 +255,18 @@ class CognitiveOverlay:
         body=event.get("content")
         if not isinstance(body,str) or not 1<=len(body)<=MAX_SOURCE_CHARS:
             return {"state":"HOLD_EVENT_SIZE"}
+        # A model-controlled JSON flag is never authorization to persist memory.
+        if self.approval_validator is None:
+            return {"state":"HOLD_APPROVAL_VERIFIER_MISSING"}
+        try:
+            authorized=self.approval_validator(scope,event)
+        except Exception:
+            return {"state":"HOLD_APPROVAL_VERIFIER_FAILED"}
+        if authorized is not True:
+            return {"state":"HOLD_APPROVAL_NOT_CONFIRMED"}
+        if re.search(r"(?:github_pat_[A-Za-z0-9_]{8,}|-----BEGIN [A-Z ]*PRIVATE KEY-----|(?:api[_-]?key|password)\\s*[:=])",
+                     body,re.IGNORECASE):
+            return {"state":"HOLD_SECRET_MATERIAL"}
         try: receipt=self.s03.append_approved(scope=scope,event=event)
         except Exception:return {"state":"HOLD_S03_WRITE"}
         return {"state":"S03_WRITE_CONFIRMED" if isinstance(receipt,str) and receipt else "HOLD_S03_NO_RECEIPT",
