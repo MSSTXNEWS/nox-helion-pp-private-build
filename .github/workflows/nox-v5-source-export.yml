@@ -38,3 +38,5 @@ jobs:
           retention-days: 7
           if-no-files-found: error
           include-hidden-files: true
+
+# Export refresh: ONEPASS V2 + Vast checkpoint receipts verified 2026-11-12.
