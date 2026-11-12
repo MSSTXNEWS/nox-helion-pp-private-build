@@ -77,7 +77,7 @@ function checkSource(){
  const fp=sha(sourceManifestFile);
  if(state.fingerprint&&state.fingerprint!==fp){
   log('SOURCE','File changes detected; invalidating earlier QA results for previous fingerprint');
-  for(const key of ['STATIC','CHROMIUM','PHYSICAL_GPU'])delete state.phases[key];
+  for(const key of ['STATIC','CHROMIUM','PHYSICAL_GPU','LIVE_ONEHOST'])delete state.phases[key];
  }
  state.fingerprint=fp;state.sourceHead=PIN.sourceHead;phase('SOURCE','PASS',{fingerprint:fp,filesChecked:all.length,pins:PIN.files,sourceHead:PIN.sourceHead});
 }
@@ -213,16 +213,25 @@ async function gpuQA(localUrl){
 }
 async function liveQA(){
  if(state.phases.LIVE_ONEHOST?.status==='FULL_VERIFIED'&&recent(state.phases.LIVE_ONEHOST.at,120000))return;
+ // No stale native proof from a crashed runner or an earlier source revision.
+ const attemptStart=Date.now();
+ const nativeOrigin=new URL(process.env.NOX_ONEHOST_URL||'http://127.0.0.1:18775/').origin;
  const prev=state.phases.LIVE_ONEHOST;
  if(prev?.status?.startsWith('HOLD')&&Date.now()-Date.parse(prev.at)<120000)return;
  try{
   await exec(process.execPath,[path.join(root,'NOX_LIVE_ONEHOST_E2E.mjs')],{
    NOX_ONEHOST_URL:process.env.NOX_ONEHOST_URL||'http://127.0.0.1:18775/',
    NOX_LIVE_OUT:path.join(work,'onehost-proof.json'),
+   NOX_EXPECTED_SOURCE_SHA:PIN.sourceHead,NOX_EXPECTED_SITE_FINGERPRINT:state.fingerprint,
    NOX_ALLOW_TEST_CHAT:process.env.NOX_ALLOW_TEST_CHAT||'0'},'onehost-existing-api',6);
  }catch(e){log('ONEHOST',String(e.message||e).slice(0,200))}
  const p=readJson(path.join(work,'onehost-proof.json'),{});
- const facts=p.checks||{};
+ const fresh=p.schema==='NOX_LIVE_ONEHOST_QA_1'&&p.sourceHead===PIN.sourceHead&&
+   p.siteFingerprint===state.fingerprint&&p.origin===nativeOrigin&&
+   Number.isFinite(Date.parse(p.at))&&Date.parse(p.at)>=attemptStart-5000&&
+   Date.parse(p.at)<=Date.now()+5000&&
+   Object.keys(p.reads||{}).length===6&&Object.values(p.reads||{}).every(v=>v==='HTTP_JSON_OK');
+ const facts=fresh?(p.checks||{}):{};
  // A separate exclusive native STOP/S03-restart test must provide a full
  // transcript and a hash-pinned receipt. This runner cannot safely cause the
  // shared STOP or reboot an active OneHost to produce these itself.
@@ -233,10 +242,10 @@ async function liveQA(){
    isolated.stop?.acknowledged===true&&isolated.stop?.lateTokensRejected===true&&
    isolated.s03?.persistedAcrossRestart===true&&isolated.s03?.sqliteIntegrity==='ok'&&
    fs.existsSync(transcript)&&sha(transcript)===isolated.transcriptSha256;
- const full=facts.ownerBound&&facts.s03DialogsBound&&facts.voiceRuEs&&facts.trainingCoordinator&&facts.weightsComplete&&facts.windowsSynced&&facts.qualityVerified&&
+ const full=fresh&&facts.ownerBound&&facts.s03DialogsBound&&facts.voiceRuEs&&facts.trainingCoordinator&&facts.weightsComplete&&facts.windowsSynced&&facts.qualityVerified&&
   p.chat?.state==='PASS'&&isolatedVerified;
  phase('LIVE_ONEHOST',full?'FULL_VERIFIED':'HOLD_NEEDS_REAL_ONEHOST_END_TO_END',{
-  readPaths:p.reads||{},checks:facts,chat:p.chat?.state||'NOT_TESTED',
+  liveProofFresh:fresh,readPaths:p.reads||{},checks:facts,chat:fresh?(p.chat?.state||'NOT_TESTED'):'HOLD_STALE_OR_WRONG_SOURCE',
   isolatedStopAndS03:isolatedVerified?'VERIFIED':'HOLD_NEEDS_EXCLUSIVE_PHYSICAL_QA',
   stop:p.stop?.state||'NOT_TESTED',s03:p.s03?.state||'NOT_TESTED'});
 }
