@@ -42,3 +42,18 @@ jobs:
           assert bridge_v2.checkpoint()["sha_verified"] is False
           print("NOX_TRAINING_CONTROL_CI_PASS")
           PY
+      - name: Verify actual FAST75 archive transfer and safe staging
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          PYTHONPATH=nox_remote_control/a100_live python3 - <<'PY'
+          import train_actions as t
+          result=t.stage_fast75()
+          print("FAST75_PACKAGE_STAGE",result)
+          assert result.get("state")=="READY", "archive not usable"
+          assert result.get("sha256_verified") is True
+          assert t.FAST.joinpath("START_FAST75.sh").is_file()
+          assert t.FAST.joinpath("preflight.py").is_file()
+          assert t.prepare_local()["state"].startswith("HOLD"),"unsafe silent start"
+          print("NOX_FAST75_TRANSFER_VERIFIED")
+          PY
