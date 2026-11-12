@@ -30,6 +30,7 @@ jobs:
           assert "free_gib" in b.disk()
           assert b.preflight()["state"]=="HOLD_NOT_READY"
           print("NOX_BRIDGE_TESTS_PASS")
+          PY
       - name: Validate gated training control without launching a trainer
         shell: bash
         run: |
