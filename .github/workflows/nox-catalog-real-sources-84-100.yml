@@ -5,6 +5,11 @@ on:
       - feature/nox-teacher-mycelium-20261112
     paths:
       - '.github/workflows/nox-catalog-real-sources-84-100.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/nox-catalog-real-sources-84-100.yml'
   workflow_dispatch:
 permissions:
   contents: read
