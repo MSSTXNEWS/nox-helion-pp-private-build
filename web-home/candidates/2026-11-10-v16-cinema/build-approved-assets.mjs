@@ -260,5 +260,14 @@ for(const candidate of ['python3','python']){
 if(!pythonCommand)throw Error('NOX_V26_PYTHON3_NOT_AVAILABLE');
 execFileSync('node',['--test','tools/test-web-v26.mjs'],{cwd:root,stdio:'inherit',timeout:30000});
 console.log('NOX_V26_BUILD_MATCH',JSON.stringify({site:'dist/',paths:7,sourceLocked:true,physicalGpu:'HOLD',nativeOneHost:'HOLD'}));
+// V27 only touches V26's local function-catalog JS/CSS in the same
+// assembled original dist. It refuses unknown preimages and never edits
+// original D02, PBR/HDRI/14 worlds or native OneHost.
+const v27Script=path.join(root,'tools/apply-web-v27.py');
+if(!fs.existsSync(v27Script))throw Error('NOX_V27_SOURCE_PATCH_MISSING');
+execFileSync(pythonCommand,['tools/apply-web-v27.py'],{cwd:root,stdio:'inherit',timeout:30000});
+execFileSync('node',['--check','dist/nox-function-catalog.js'],{cwd:root,stdio:'inherit',timeout:30000});
+execFileSync('node',['--test','tools/test-web-v27.mjs'],{cwd:root,stdio:'inherit',timeout:30000});
+console.log('NOX_V27_BUILD_MATCH',JSON.stringify({site:'dist/',sourceLocked:true,routeOnlyFavorites:true,physicalGpu:'HOLD',nativeOneHost:'HOLD'}));
 console.log('NOX_P0_BUILD_RECEIPT:',JSON.stringify({pages:pagesEvidence.length,assets:records.length,bennuBytes:bennuReceipt.bytes,stlVerified:bennuReceipt.verifiedStlStructure,gpuAcceptance:'HOLD'}));
 
