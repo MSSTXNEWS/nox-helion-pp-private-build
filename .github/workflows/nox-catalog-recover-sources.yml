@@ -30,7 +30,7 @@ jobs:
           set -Eeuo pipefail
           python3 - <<'PY'
           import os,urllib.request,urllib.parse,json,zipfile,tarfile,hashlib,base64,time,pathlib
-          no=int(os.environ["NOX_NO"]);root=pathlib.Path(f"NOX_CATALOG_RECOVERY_{no:03d}");root.mkdir(exist_ok=True)
+          no=int(os.environ["NOX_NO"]);root=pathlib.Path(f"NOX_CATALOG_RECOVERY_{no}");root.mkdir(exist_ok=True)
           sources=root/"sources";sources.mkdir(exist_ok=True)
           selection={
           10:("pypi","argilla"),20:("pypi","deepspeed"),25:("pypi","alpaca-eval"),34:("pypi","llama-index-core"),
