@@ -7,8 +7,8 @@ import crypto from 'node:crypto';
 import os from 'node:os';
 import {execFileSync} from 'node:child_process';
 
-const sourceUrl = 'https://sb-ow5ftc09y8ww.vercel.run/NOX_V29_SITE_PAYLOAD.tar.gz';
-const expectedArchive = '3319c26b3600b4a20a3aaf3a92d240b7c87cc80dffab11d4ce42a3f0d7014b3c';
+const sourceUrl = 'https://sb-1rg7k0fdgj6j.vercel.run/NOX_V29_SITE_PAYLOAD.tar.gz';
+const expectedArchive = '009b32e0b94e93492570af5062e3bd4c3bf95613d481821fe039c91ab2263f8c';
 const sourceV29 = '1481e26f8f0e2febf80d773a78557094fb6ee91d8d7f39a70374855dde0570f1';
 const manifestSha = '8d7041db6784e98825c8eace42dad6c863270728247be7b47d2b3ab9a0267d60';
 const output = path.join(process.cwd(), 'web_v29_preview_dist');
@@ -19,7 +19,7 @@ const digest = crypto.createHash('sha256');
 let bytes = 0;
 try {
   const url = new URL(sourceUrl);
-  if (url.protocol!=='https:' || url.hostname!=='sb-ow5ftc09y8ww.vercel.run' || url.pathname!=='/NOX_V29_SITE_PAYLOAD.tar.gz') throw Error('UNTRUSTED_SOURCE_URL');
+  if (url.protocol!=='https:' || url.hostname!=='sb-1rg7k0fdgj6j.vercel.run' || url.pathname!=='/NOX_V29_SITE_PAYLOAD.tar.gz') throw Error('UNTRUSTED_SOURCE_URL');
   const response = await fetch(url,{redirect:'error',signal:AbortSignal.timeout(180_000)});
   if (response.status!==200 || !response.body) throw Error('NOX_SOURCE_READ_HOLD_'+response.status);
   const fd = fs.openSync(tmp,'wx');
@@ -31,7 +31,7 @@ try {
     }
   } finally {fs.closeSync(fd)}
   const sourceHash=digest.digest('hex');
-  if(sourceHash!==expectedArchive || bytes!==79_765_326) throw Error('NOX_SOURCE_SHA256_HOLD:'+sourceHash+':'+bytes);
+  if(sourceHash!==expectedArchive || bytes!==75_651_010) throw Error('NOX_SOURCE_SHA256_HOLD:'+sourceHash+':'+bytes);
   const paths=execFileSync('tar',['-tzf',tmp],{encoding:'utf8',maxBuffer:2*1024*1024}).trim().split('\n');
   if(paths.length!==1053 || paths.some(p=>!p||p.startsWith('/')||p.split('/').some(s=>s==='..'||s==='.'||s==='')))throw Error('NOX_TAR_UNSAFE_OR_INCOMPLETE');
   execFileSync('tar',['-xzf',tmp,'-C',output],{timeout:100_000});
