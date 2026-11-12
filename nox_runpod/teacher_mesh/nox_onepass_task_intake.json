@@ -347,6 +347,34 @@
       ],
       "execution": "DISCOVERY_OR_PROPOSAL_ONLY",
       "runtime_accepted": false
+    },
+    {
+      "id": "UI-003",
+      "priority": "P0",
+      "lane": "WEB",
+      "title": "Merge original V25.1 WOW + Windows CHAT V25 memory + V24 missing dependencies into one staged web candidate",
+      "state": "HOLD",
+      "gate": "Run existing GitHub merger against actual ZIPs in C:\\NOX\\incoming, resolve detected shared SHA collisions without replacing original D02 or 14 worlds; then OneHost/S03/STOP/Windows E2E with same SHA. Do not overwrite live port 8766.",
+      "sources": [
+        "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/tree/feature/nox-teacher-mycelium-20261112/nox_runpod/web_wow_merge",
+        "https://drive.google.com/file/d/1bORWgKORNkeFkWIEIsWhSKq6sQJ8f_M6/view",
+        "https://drive.google.com/file/d/1XfWLP4wrFzvKioxdbZH-adAgwJZ9n3Nu/view"
+      ],
+      "execution": "DISCOVERY_OR_PROPOSAL_ONLY",
+      "runtime_accepted": false
+    },
+    {
+      "id": "INV-003",
+      "priority": "P1",
+      "lane": "PRIME",
+      "title": "Confirm Windows C:\\NOX migration SHA and active junctions without destructively repeating cleanup",
+      "state": "HOLD",
+      "gate": "Read-only inventory C:\\NOX\\helion/agents/lora/incoming/builds/archive, SHA and running :8766/Ollama, rollback script presence. Preserve original model and S03.",
+      "sources": [
+        "https://drive.google.com/file/d/1bORWgKORNkeFkWIEIsWhSKq6sQJ8f_M6/view"
+      ],
+      "execution": "DISCOVERY_OR_PROPOSAL_ONLY",
+      "runtime_accepted": false
     }
   ],
   "onepass_v2": {
@@ -385,5 +413,25 @@
     "missing_manifest_asset": "models/bge-m3-Q4_K_M.gguf",
     "status": "PARTIAL_RESTORE_HOLD; FULL_NOX_TRAINED_WEIGHTS_NOT_PROVEN; CYCLE_COUNT_IS_NOT_OPTIMIZER_STEP",
     "backup_policy": "Preserve original Drive parts; never overwrite or delete"
+  },
+  "windows_layout_2026_11_12": {
+    "status": "USER_REPORTED_NOT_REMOTELY_INSPECTED",
+    "root": "C:\\NOX",
+    "helion": "C:\\NOX\\helion",
+    "agents": "C:\\NOX\\agents",
+    "lora": "C:\\NOX\\lora",
+    "incoming": "C:\\NOX\\incoming",
+    "builds": "C:\\NOX\\builds",
+    "archive": "C:\\NOX\\archive",
+    "legacy_junction": "C:\\NOX_HELION -> C:\\NOX\\helion (user reported)",
+    "live_chat": "http://127.0.0.1:8766/memory.html (user reported)",
+    "ollama": "RUNNING (user reported)",
+    "reported_free_space_recovered_gb": 4.83,
+    "rollback": "C:\\NOX\\archive\\ROLLBACK_20261112.ps1",
+    "sources": {
+      "chat_v25": "https://drive.google.com/file/d/1bORWgKORNkeFkWIEIsWhSKq6sQJ8f_M6/view",
+      "chat_v24": "https://drive.google.com/file/d/1XfWLP4wrFzvKioxdbZH-adAgwJZ9n3Nu/view"
+    },
+    "policy": "Do not redo Windows migration, reinstall models or remove junctions without proof; treat report as owner testimony until Windows read-only audit"
   }
 }
