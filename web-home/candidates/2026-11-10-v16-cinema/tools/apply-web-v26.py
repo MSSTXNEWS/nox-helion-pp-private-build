@@ -27,6 +27,8 @@ def change(name,operation):
 change('chat.html',lambda s:once(once(s,'data-action="dictate" aria-label="Микрофон"','id="chatDictate" data-action="dictate" aria-label="Микрофон"'),'<button class="graphic-button" data-action="translate">Перевести</button>','<button id="chatTranslate" class="graphic-button" data-action="translate">Перевести</button>'))
 change('nox-universe-v19.js',lambda s:once(s,'function open(){panel.hidden=false;openBtn.hidden=true;show(state.active);close.focus()}',"function open(moduleName){panel.hidden=false;openBtn.hidden=true;show(typeof moduleName==='string'&&modules.includes(moduleName)?moduleName:state.active);close.focus()}"))
 def catalog(s):
+ # Real user query 'Валюта' must match this native entry, not just the stem 'валют'.
+ s=once(s,"['fx','Курсы валют'","['fx','Валюта · курсы'")
  s=once(s,"['voice','Голос NOX','mic','settings','native-push-panel'","['voice','Голос NOX','mic','chat','chatDictate'")
  s=once(s,"['diagnostics','Диагностика','terminal','dashboard','nox-widget-diagnostics'","['diagnostics','Диагностика','terminal','dashboard','dashboard-overview'")
  for item,anchor in [('training','trainer-queue'),('language','translation'),('monitoring','cpu-monitor')]:
