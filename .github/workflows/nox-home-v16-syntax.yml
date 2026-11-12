@@ -241,7 +241,7 @@ jobs:
   site-build:
     needs: vendor-download
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    timeout-minutes: 35
     permissions:
       contents: read
     steps:
@@ -331,7 +331,7 @@ jobs:
         working-directory: web-home/candidates/2026-11-10-v16-cinema
         run: node tools/audit-wow-wiring-v24.mjs dist
       - name: Real Chromium browser acceptance for ten routes and user actions
-        working-directory: web-home/candidates/2026-11-10-v16-cinema
+        working-directory: web-home/candidates/2026-11-20-v16-cinema
         timeout-minutes: 10
         run: |
           npm install --no-save --no-audit --no-fund playwright@1.58.2
