@@ -33,8 +33,13 @@ jobs:
         run: |
           $p='nox_runpod/web_wow_merge/v29/NOX_V29_2_WINDOWS_STAGE.ps1'
           $target=Join-Path $env:TEMP 'NOX_V29_2_ARCHIVE_NOT_PRESENT.zip'
-          $result=& powershell.exe -NoProfile -ExecutionPolicy Bypass -File $p -Archive $target -Root (Join-Path $env:TEMP 'NOX_TEST_NONPROD') 2>&1
-          if ($LASTEXITCODE -eq 0) { throw 'FAIL_OPEN_MISSING_ZIP' }
+          $savedAction=$ErrorActionPreference
+          try {
+            $ErrorActionPreference='Continue'
+            $result=& powershell.exe -NoProfile -ExecutionPolicy Bypass -File $p -Archive $target -Root (Join-Path $env:TEMP 'NOX_TEST_NONPROD') 2>&1
+            $exitCode=$LASTEXITCODE
+          } finally { $ErrorActionPreference=$savedAction }
+          if ($exitCode -eq 0) { throw 'FAIL_OPEN_MISSING_ZIP' }
           if (-not (($result | Out-String) -match 'NOX_ARCHIVE_MISSING')) { throw 'UNEXPECTED_FAILURE' }
           Write-Output 'NOX_V29_2_MISSING_ARCHIVE_FAIL_CLOSED_PASS'
       - name: Package Windows source verifier and pinned physical receipt
