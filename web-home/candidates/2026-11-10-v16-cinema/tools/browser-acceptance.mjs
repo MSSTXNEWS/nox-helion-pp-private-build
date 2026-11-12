@@ -94,6 +94,17 @@ try{
      const st=(selector,pseudo='')=>{const e=document.querySelector(selector);return e?getComputedStyle(e,pseudo):null};
      const d02=st('#noxEclipseCanvas'),worlds=st('#noxWorldsV6Canvas');
      const shell=st('.nox-owner-core','::before');
+     // Verify all eight visible CoreID controls actually render different
+     // regions of the SHA-pinned owner-approved original artwork; never pass
+     // from a generic CSS conic disc or simply from 8 anchor elements.
+     const coreAtlas=[...document.querySelectorAll('.nox-owner-core')].map(el=>{
+       const css=getComputedStyle(el,'::before');
+       return {image:css.backgroundImage,frame:css.backgroundSize+'|'+css.backgroundPosition};
+     });
+     const nexus=document.querySelector('.nox-owner-core:nth-child(7)');
+     const stage=document.querySelector('.helion-stage');
+     const n=nexus?.getBoundingClientRect(),g=stage?.getBoundingClientRect();
+     const nexusOffD02Center=innerWidth<=600||!!(n&&g&&(n.left+n.width/2)>g.left+g.width*.73);
      const arch=st('.nox-owner-architecture'),floor=st('.nox-owner-floor');
      const fallback=st('.nox-owner-core-still');
      return {
@@ -103,7 +114,10 @@ try{
        coreShellAnimation:shell?.animationName,
        motionOwner:document.body.dataset.noxMotionOwner,
        spatialAnimation:st('.nox-owner-core')?.animationName,
-       coreShellHasOriginalMaterial:!!shell?.backgroundImage?.includes('repeating-conic-gradient'),
+       coreShellHasApprovedArtwork:!!shell?.backgroundImage?.includes('NOX_HOME_OWNER_APPROVED_WEB.webp'),
+       coreAtlasTextures:coreAtlas.filter(e=>e.image.includes('NOX_HOME_OWNER_APPROVED_WEB.webp')).length,
+       uniqueCoreAtlasFrames:new Set(coreAtlas.map(e=>e.frame)).size,
+       nexusOffD02Center,
        architectureClip:arch?.clipPath,floorClip:floor?.clipPath,
        floorDuplicateTextMask:floor?.maskImage||floor?.webkitMaskImage||'none',
        originalFallbackHidden:document.body.dataset.noxD02Rendered==='true'?
@@ -116,7 +130,7 @@ try{
    });
    if(!ownerCheck.v24.ready||ownerCheck.v24.d02Filter!=='none'||
       ownerCheck.v24.worldFilter!=='none'||ownerCheck.v24.d02Transform!=='none'||
-      !ownerCheck.v24.coreShellHasOriginalMaterial||
+      !ownerCheck.v24.coreShellHasApprovedArtwork||ownerCheck.v24.coreAtlasTextures!==8||ownerCheck.v24.uniqueCoreAtlasFrames!==8||!ownerCheck.v24.nexusOffD02Center||
       !ownerCheck.v24.architectureClip?.includes('36%')&&width>600||
       !ownerCheck.v24.floorClip?.includes('92%'))
       throw Error('NOX_V24_ORIGINAL_VISUAL_FIDELITY_HOLD:'+JSON.stringify(ownerCheck.v24));
