@@ -30,7 +30,7 @@ jobs:
       - name: Verify actual merged V29 source and ten reachable routes (not mock)
         working-directory: nox_runpod/web_wow_merge/v29
         env:
-          NOX_BASE: https://sb-ow5ftc09y8ww.vercel.run
+          NOX_BASE: https://sb-1rg7k0fdgj6j.vercel.run
         run: |
           set -Eeuo pipefail
           curl --fail --retry 5 --retry-delay 2 -LsS "$NOX_BASE/NOX_V29_STATIC_PREVIEW_RECEIPT.json" -o receipt.json
@@ -67,8 +67,8 @@ jobs:
         working-directory: nox_runpod/web_wow_merge/v29
         timeout-minutes: 24
         env:
-          NOX_PREVIEW_URL: https://sb-ow5ftc09y8ww.vercel.run/index.html
-          NOX_V29_TEST_ORIGIN: https://sb-ow5ftc09y8ww.vercel.run/
+          NOX_PREVIEW_URL: https://sb-1rg7k0fdgj6j.vercel.run/index.html
+          NOX_V29_TEST_ORIGIN: https://sb-1rg7k0fdgj6j.vercel.run/
           NOX_AUDIT_SOURCE_SHA: 1481e26f8f0e2febf80d773a78557094fb6ee91d8d7f39a70374855dde0570f1
           NOX_ACCEPTANCE_DIR: v29-e2e
           NOX_V29_SCREENSHOTS_DIR: v29-e2e
