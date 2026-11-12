@@ -1,0 +1,88 @@
+name: NOX WEB V29 unified physical-source Chromium QA
+on:
+  push:
+    branches: [feature/nox-teacher-mycelium-20261112]
+    paths:
+      - 'nox_runpod/web_wow_merge/v29/**'
+      - '.github/workflows/nox-v29-unified-browser-qa.yml'
+      - 'vercel.json'
+  pull_request:
+    paths:
+      - 'nox_runpod/web_wow_merge/v29/**'
+      - '.github/workflows/nox-v29-unified-browser-qa.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: nox-v29-merged-web-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  real-chromium-static-merged:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify actual merged V29 source and ten reachable routes (not mock)
+        working-directory: nox_runpod/web_wow_merge/v29
+        env:
+          NOX_BASE: https://sb-ow5ftc09y8ww.vercel.run
+        run: |
+          set -Eeuo pipefail
+          curl --fail --retry 5 --retry-delay 2 -LsS "$NOX_BASE/NOX_V29_STATIC_PREVIEW_RECEIPT.json" -o receipt.json
+          node - <<'NODE'
+          const assert=require('node:assert/strict'),fs=require('node:fs');
+          const r=JSON.parse(fs.readFileSync('receipt.json','utf8'));
+          assert.equal(r.schema,'NOX_WEB_V29_STATIC_BUNDLE_CHECKSUM_V1');
+          assert.equal(r.source_build_sha256,'1481e26f8f0e2febf80d773a78557094fb6ee91d8d7f39a70374855dde0570f1');
+          assert.equal(r.file_digest_manifest_sha256,'8d7041db6784e98825c8eace42dad6c863270728247be7b47d2b3ab9a0267d60');
+          assert.equal(r.files,1052);assert.equal(r.native_acceptance,'HOLD');
+          console.log('NOX_V29_UNIFIED_SOURCE_BINDING_VERIFIED',r.source_build_sha256);
+          NODE
+          for route in index chat memory training system settings models projects cinema install pc/resonance pc/memory pc/chat; do
+            status=$(curl --silent --location --output /dev/null --write-out '%{http_code}' --fail "$NOX_BASE/$route.html")
+            test "$status" = 200 || { echo "NOX_ROUTE_HOLD $route $status"; exit 1; }
+          done
+          for item in tools/browser-acceptance.mjs tools/test-web-v26-browser.mjs tools/test-web-v27-browser.mjs; do
+            curl --fail --retry 3 -LsS "$NOX_BASE/$item" -o "$(basename "$item")"
+          done
+          printf '%s  %s\n' \
+            '22980da79581d18692396988b3b70ade20cdfdd3c92623aa8aecbd0dde25c153' browser-acceptance.mjs \
+            '855653d576b84b0ca556d7d2ba9abca1e1283f2fe07171498c334db6634dfc9b' test-web-v26-browser.mjs \
+            'c4649bd95e8232e0171800498a859a3bfdb69d50880cb0a9f5c06bb8fd42c5c8' test-web-v27-browser.mjs | sha256sum --check
+          node --check browser-acceptance.mjs
+          node --check test-web-v26-browser.mjs
+          node --check test-web-v27-browser.mjs
+          node --check test_v29_merged_preview.mjs
+      - name: Install original Playwright Chromium for real SVG/WebGL browser checks
+        working-directory: nox_runpod/web_wow_merge/v29
+        run: |
+          npm install --no-save --no-audit --no-fund playwright@1.58.2
+          npx playwright install --with-deps chromium
+      - name: Physical Chromium SwiftShader — original 7 viewports, 14 worlds, all 10 WEB pages, V26+V27+V29 click tests
+        working-directory: nox_runpod/web_wow_merge/v29
+        timeout-minutes: 24
+        env:
+          NOX_PREVIEW_URL: https://sb-ow5ftc09y8ww.vercel.run/index.html
+          NOX_V29_TEST_ORIGIN: https://sb-ow5ftc09y8ww.vercel.run/
+          NOX_AUDIT_SOURCE_SHA: 1481e26f8f0e2febf80d773a78557094fb6ee91d8d7f39a70374855dde0570f1
+          NOX_ACCEPTANCE_DIR: v29-e2e
+          NOX_V29_SCREENSHOTS_DIR: v29-e2e
+        run: |
+          node browser-acceptance.mjs
+          node test-web-v26-browser.mjs
+          node test-web-v27-browser.mjs
+          node test_v29_merged_preview.mjs
+          echo 'NOX_V29_BROWSER_QA_COMPLETE; native OneHost, hardware GPU, owner WOW30 remain HOLD until separately verified.'
+      - name: Preserve the actual V29 merged-browser evidence (never fabricate missing screenshots)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX-V29-ACTUAL-MERGED-CHROMIUM-QA
+          path: nox_runpod/web_wow_merge/v29/v29-e2e/
+          retention-days: 14
+          if-no-files-found: warn
