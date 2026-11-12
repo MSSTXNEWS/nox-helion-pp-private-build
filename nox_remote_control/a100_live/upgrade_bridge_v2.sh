@@ -8,9 +8,9 @@ FILE="$BASE/bridge.py"
 HELPER="$BASE/train_actions.py"
 PIDFILE="$BASE/agent.pid"
 OLD_BLOB=df3117c3e2be533faa04e7a79a361c703cabffa2
-NEW_BLOB=a8502a725b436c2f7c961fef31c0d84ebe3d1dbd
-HELPER_BLOB=fea76bf64c175ab1d9c313d4e54a206e26afee2c
-COMMIT=13d35dcb7147f9bc61bd98fadff81a21f893a7c0
+NEW_BLOB=dd4dd914b6a7790d87816a38bb541a5e5dc75312
+HELPER_BLOB=2d31f98e7a8ce648074e12e45c69ea7fc6d406e5
+COMMIT=e267cd6511bebd9a136ea83b08e6b397690a053d
 URL="https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/$COMMIT/nox_remote_control/a100_live"
 mkdir -p "$BASE"
 TMP=$(mktemp -d /tmp/nox-bridge-upgrade-XXXXXXXX)
