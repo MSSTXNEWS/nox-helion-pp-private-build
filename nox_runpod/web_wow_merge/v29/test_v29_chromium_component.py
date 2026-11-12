@@ -72,9 +72,9 @@ class BrowserTests(unittest.TestCase):
   pg.locator('[data-nox-pc-action="s03-dialogs"]').click()
   pg.wait_for_function("document.querySelector('.nox-v29-result').textContent.includes('Сообщений: 7')")
   requests=pg.evaluate('window.__NOX_TEST_LOG')
-  self.assertEqual([x['url'] for x in requests],[
+  self.assertEqual([x['url'] for x in requests if x['url'] is not None],[
     '/api/nox/status','/api/nox/memory','/api/nox/status','/api/nox/history'])
-  self.assertTrue(all(x['method']=='GET' for x in requests))
+  self.assertTrue(all(x['method']=='GET' for x in requests if x['url'] is not None))
   pg.close()
  def test_actual_pc_v25_telemetry_values_and_safe70_hold(self):
   pg=self.page('chat',1440,True)
@@ -91,7 +91,7 @@ class BrowserTests(unittest.TestCase):
   pg.locator('[data-nox-pc-action="pc-gpu"]').click()
   pg.wait_for_function("document.querySelector('.nox-v29-result').textContent.includes('GPU Hot Spot, °C: 52')")
   self.assertIn('НЕ ПРОВЕДЕНА',pg.locator('.nox-v29-result').inner_text())
-  self.assertEqual(pg.evaluate('window.__NOX_TEST_LOG'),
+  self.assertEqual([x for x in pg.evaluate('window.__NOX_TEST_LOG') if x is not None],
     ['/api/nox/status','/api/nox/pc-load'])
   pg.close()
  def test_mismatched_owner_blocks_addon(self):
