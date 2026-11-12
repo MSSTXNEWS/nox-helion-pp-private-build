@@ -44,7 +44,7 @@ jobs:
           assert sum(len(g['parts']) for g in groups)==69
           assert all(p['drive_url'] and len(p['sha256'])==64 for g in groups for p in g['parts'])
           assert all(e['state'] and e['source_reference'] for e in audit['entry_status'])
-          assert 'HOSTED' in next(e for e in audit['entry_status'] if e['number']==6)['state']
+          assert 'SERVICE_REFERENCE' in next(e for e in audit['entry_status'] if e['number']==6)['state']
           assert len((base/'NOX_MASTER_CATALOG_200_FINAL_README_RU.md').read_text())>1500
           print('NOX_MASTER_CATALOG_200_FINAL_AUDIT_CONTRACT_PASS')
           PY
