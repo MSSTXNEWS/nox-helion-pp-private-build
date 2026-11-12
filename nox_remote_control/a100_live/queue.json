@@ -3,23 +3,18 @@
   "node": "runpod-5f3j8hwyicc0bp",
   "tasks": [
     {
-      "id": "nox36-stage-fast75-20261112-v2a",
-      "op": "stage_fast75",
+      "id": "nox-a100-gpu-20261112-compat",
+      "op": "gpu",
       "expires_utc": "2026-11-12T18:00:00Z"
     },
     {
-      "id": "nox36-prepare-local-20261112-v2a",
-      "op": "prepare_local",
+      "id": "nox-a100-preflight-20261112-compat",
+      "op": "preflight",
       "expires_utc": "2026-11-12T18:00:00Z"
     },
     {
-      "id": "nox36-arm-resume-training-20261112-v2a",
-      "op": "arm_resume_training",
-      "expires_utc": "2026-11-12T18:00:00Z"
-    },
-    {
-      "id": "nox36-training-status-20261112-v2a",
-      "op": "training_status",
+      "id": "nox-a100-checkpoint-20261112-compat",
+      "op": "checkpoint",
       "expires_utc": "2026-11-12T18:00:00Z"
     }
   ]
