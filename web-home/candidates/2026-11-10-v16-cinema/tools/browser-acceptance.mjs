@@ -105,6 +105,7 @@ try{
        spatialAnimation:st('.nox-owner-core')?.animationName,
        coreShellHasOriginalMaterial:!!shell?.backgroundImage?.includes('repeating-conic-gradient'),
        architectureClip:arch?.clipPath,floorClip:floor?.clipPath,
+       floorDuplicateTextMask:floor?.maskImage||floor?.webkitMaskImage||'none',
        originalFallbackHidden:document.body.dataset.noxD02Rendered==='true'?
           fallback?.display==='none':null,
        originalWebglRendered:window.NOX_CINEMATIC_HEALTH?.snapshot?.()?.core?.realRendered===true,
@@ -119,6 +120,13 @@ try{
       !ownerCheck.v24.architectureClip?.includes('36%')&&width>600||
       !ownerCheck.v24.floorClip?.includes('92%'))
       throw Error('NOX_V24_ORIGINAL_VISUAL_FIDELITY_HOLD:'+JSON.stringify(ownerCheck.v24));
+   // Original owner image stays SHA-locked. Verify the approved art is NOT
+   // painted with duplicate baked-in navigation labels behind live buttons.
+   if(ownerCheck.v24.floorDuplicateTextMask==='none'||
+      !ownerCheck.v24.floorDuplicateTextMask.includes('linear-gradient')||
+      (width<=600&&!ownerCheck.v24.architectureClip?.includes('9%'))||
+      (width>600&&!ownerCheck.v24.architectureClip?.includes('8%')))
+      throw Error('NOX_V24_DUPLICATE_BACKGROUND_TEXT_NOT_MASKED:'+JSON.stringify(ownerCheck.v24));
    if(name==='1440'&&(!ownerCheck.v24.originalWebglRendered||!ownerCheck.v24.pbrHdrReady||
        ownerCheck.v24.gsapEngine!=='gsap-vendor'||!(ownerCheck.v24.liquidGlassInstances>0)))
       throw Error('NOX_V24_ORIGINAL_WOW_ENGINE_RUNTIME_MISSING:'+JSON.stringify(ownerCheck.v24));
