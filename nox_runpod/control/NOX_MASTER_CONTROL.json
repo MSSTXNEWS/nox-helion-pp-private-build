@@ -1,0 +1,56 @@
+{
+  "schema": "nox-control-v1",
+  "revision": 2,
+  "poll_seconds": 180,
+  "mode": "safe_transition",
+  "no_loss": true,
+  "allow_remote_delete": false,
+  "allow_arbitrary_shell": false,
+  "goals": {
+    "gpu_utilization_target_percent": [
+      80,
+      90
+    ],
+    "checkpoint_export": "on_complete_verified",
+    "windows_receiver": "required_for_verified"
+  },
+  "nodes": {
+    "A40": {
+      "pod_id": "ypfijzzibqvrl7",
+      "role": "teacher_inference_27b_then_32b_and_scheduled_full_parameter_cycles",
+      "old_worker": "a40_cuda_distillation_direct.py",
+      "legacy_action": "request_graceful_stop",
+      "full_parameter_cycle": "manual_gate_until_memory_and_model_ready"
+    },
+    "A5000": {
+      "pod_id": "erkgy956g04n6c",
+      "role": "student_memory_skills_evaluation_and_windows_export_preparation",
+      "legacy_action": "inventory_only",
+      "full_parameter_training": "disabled_vram_24g"
+    }
+  },
+  "require": {
+    "trainer_steps_evidence": true,
+    "checkpoint_receipt_sha256": true,
+    "s03_durable": true,
+    "windows_ack_before_remote_cleanup": true
+  },
+  "notes": [
+    "This file is a policy manifest, never a shell command queue.",
+    "A40 full-weight training requires >=37GiB available VRAM; only after teacher inference is finished.",
+    "A5000 is 24GiB; cannot run the existing A40-only trainer.",
+    "A40 27B GGUF receipt is downloaded only; 32B teacher not yet independently verified.",
+    "The 3-minute poller is not a background ChatGPT task; install and run on each Pod."
+  ],
+  "transition": {
+    "strategy": "finish_current_save_then_cutover",
+    "state": "REQUESTED",
+    "old_jobs": "graceful_stop_only_after_output_flush",
+    "new_jobs": "start_only_after_old_owner_exits",
+    "checkpoint": "require_complete_receipt_before_transfer",
+    "windows": "verify_sha256_before_promote",
+    "rollback": "preserve_all_previous_checkpoint_and_process_configs",
+    "on_missing_safe_stop": "HOLD_AND_KEEP_RUNNING",
+    "no_forced_kill": true
+  }
+}
