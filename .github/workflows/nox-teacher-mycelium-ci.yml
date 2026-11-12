@@ -1,0 +1,34 @@
+name: NOX Teacher Mycelium CI
+on:
+  push:
+    branches:
+      - feature/nox-teacher-mycelium-20261112
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  static-source-and-policy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run offline model/ensemble contract tests (NO network)
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          python3 -m compileall -q nox_runpod/teacher_mesh
+          cd nox_runpod/teacher_mesh
+          python3 -m unittest discover -s tests -v
+      - name: Check forbidden auto-download and arbitrary shell controls
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          src=(Path("nox_runpod/teacher_mesh/offline_teacher.py").read_text()
+             +Path("nox_runpod/teacher_mesh/teacher_ensemble.py").read_text()
+             +Path("nox_runpod/teacher_mesh/teacher_mesh.py").read_text())
+          for bad in ("shell=True", "os.system(", "eval(", "exec(", "ollama pull"):
+              assert bad not in src, bad
+          print("NOX_NO_SHELL_AND_NO_AUTO_DOWNLOAD_PASS")
+          PY
