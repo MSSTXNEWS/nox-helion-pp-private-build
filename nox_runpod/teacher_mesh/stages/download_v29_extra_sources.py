@@ -7,12 +7,12 @@ Missing/oversized repos remain HOLD, not fabricated download successes.
 GitHub archive contents are CRC tested, SHA-256 recorded, upstream revision fixed.
 """
 from __future__ import annotations
-import argparse,datetime,hashlib,json,os,pathlib,re,urllib.request,zipfile
+import argparse,datetime,hashlib,json,os,pathlib,re,urllib.request,zipfile,subprocess,tempfile,shutil
 from contextlib import closing
 
 REPOS={
   "kernels":[
-    "pytorch/ao","pytorch/torchtune","huggingface/safetensors",
+    "pytorch/ao","meta-pytorch/torchtune","safetensors/safetensors",
     "flashinfer-ai/flashinfer","LMCache/LMCache","mlc-ai/xgrammar",
     "huggingface/optimum"
   ],
@@ -70,16 +70,57 @@ def main():
         owner,name=repo.split("/")
         entry={"repo":repo,"status":"HOLD_NOT_DOWNLOADED","source":"https://github.com/"+repo}
         try:
-            info=metadata("https://api.github.com/repos/"+repo)
-            if info.get("archived") is True:
-                entry["maintenance"]="UPSTREAM_ARCHIVED"
-            branch=info["default_branch"]
-            commit=metadata("https://api.github.com/repos/"+repo+"/commits/"+branch)["sha"]
-            license_id=(info.get("license") or {}).get("spdx_id") or "UNKNOWN"
-            entry.update({"commit_sha":commit,"license_spdx":license_id,"branch":branch,
-                          "rights":"LICENSE_REVIEW_REQUIRED" if license_id not in APPROVED_FOR_RESEARCH else "UPSTREAM_LICENSE_ID_READ"})
+            # GitHub API for public repos was HTTP 403 under a repo-scoped CI
+            # token on 12 Nov. Use public Git transport, NEVER elevated tokens.
+            # Git ls-remote HEAD pins one immutable commit, then codeload ZIP.
+            git_url="https://github.com/"+repo+".git"
+            result=subprocess.run(["git","ls-remote",git_url,"HEAD"],
+                stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,
+                timeout=45,env={**os.environ,"GIT_TERMINAL_PROMPT":"0"})
+            if result.returncode:
+                raise RuntimeError("PIN_LOOKUP_FAILED_GIT_REMOTE_"+str(result.returncode))
+            sha=result.stdout.strip().split()[0] if result.stdout.strip() else ""
+            if not re.fullmatch(r"[0-9a-f]{40}",sha):
+                raise RuntimeError("NO_VERIFIED_UPSTREAM_SHA")
+            # Public repo content is never executed. License is REVIEW_REQUIRED
+            # until upstream LICENSE bytes and legal use are approved.
+            entry.update({"commit_sha":sha,"branch":"UPSTREAM_DEFAULT_HEAD",
+                          "license_spdx":"UNKNOWN_FROM_GIT_ONLY",
+                          "rights":"LICENSE_REVIEW_REQUIRED",
+                          "acquisition":"PUBLIC_GIT_HEAD_AND_PINNED_CODLOAD_ZIP"})
             file=(root/("%02d_%s_%s.zip"%(index,owner,name))).resolve()
-            data=dl_to_zip("https://codeload.github.com/"+repo+"/zip/"+commit,file)
+            try:
+                data=dl_to_zip("https://codeload.github.com/"+repo+"/zip/"+sha,file)
+            except Exception as first_error:
+                # If codeload is also blocked, shallow clone GitHub directly.
+                # No submodules, hooks or Git LFS smudge; archive tracked files.
+                with tempfile.TemporaryDirectory() as d:
+                    clone=pathlib.Path(d)/"src"
+                    env={**os.environ,"GIT_LFS_SKIP_SMUDGE":"1","GIT_TERMINAL_PROMPT":"0"}
+                    check=subprocess.run(["git","clone","--depth","1","--filter=blob:none",
+                          "--no-tags","--quiet",git_url,str(clone)],env=env,
+                          stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,timeout=135)
+                    if check.returncode:
+                        raise RuntimeError("CODELOAD_AND_GIT_CLONE_BLOCKED: "+str(first_error)[:100])
+                    cur=subprocess.check_output(["git","-C",str(clone),"rev-parse","HEAD"],text=True).strip()
+                    if cur!=sha:raise RuntimeError("UPSTREAM_MOVED_DURING_FALLBACK")
+                    paths=subprocess.check_output(["git","-C",str(clone),"ls-files","-z"]).decode().split("\x00")
+                    with zipfile.ZipFile(file,"w",compression=zipfile.ZIP_DEFLATED,compresslevel=6) as z:
+                        total=0
+                        for rel in paths:
+                            if not rel:continue
+                            p=clone/rel
+                            if not p.is_file() or p.is_symlink():continue
+                            total+=p.stat().st_size
+                            if total>LIMIT_PER_REPO:
+                                raise RuntimeError("GIT_CLONE_SOURCE_OVER_SIZE_LIMIT")
+                            z.write(p,arcname=repo.replace("/","-")+"-"+sha+"/"+rel)
+                    with zipfile.ZipFile(file) as z:
+                        assert z.testzip() is None
+                        members=len(z.namelist())
+                    data={"bytes":file.stat().st_size,"sha256":hashlib.sha256(file.read_bytes()).hexdigest(),
+                          "members":members}
+                    entry["acquisition"]="PUBLIC_GIT_SHALLOW_CLONE_PINNED_ZIP"
             entry.update({"status":"SOURCE_ARCHIVE_DOWNLOADED_SHA_CRC_VERIFIED",
                           "archive":file.name,**data,
                           "license_usage_approved_for_nox_training":False,
