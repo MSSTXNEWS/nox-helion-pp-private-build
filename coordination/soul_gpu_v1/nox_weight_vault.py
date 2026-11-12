@@ -1,4 +1,4 @@
-"""NOX weight vault V2: verified ingestion, cross-folder deduplication, no unsafe deletions.
+r"""NOX weight vault V2: verified ingestion, cross-folder deduplication, no unsafe deletions.
 
 Source files are never removed by this script. It uses a canonical content-addressed
 vault and an explicit removal manifest for *verified redundant copies only*.
