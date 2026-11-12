@@ -23,3 +23,23 @@
 ## Политика
 Не создавать второй backend, вторую S03, ещё 20 OS-процессов или 17 видимых моделей. Не удалять checkpoints, модели или пользовательские чаты до доказанной замены. Не публиковать ключи/секреты. Изучать только законно доступные официальные репозитории, pin SHA/license; не запускать чужой код автоматически. Скачивание ≠ обучение, SOURCE CI PASS ≠ физический Windows / GPU PASS.
 Исторический l03 11.11: GSM8K 88/100, IFEval 54/100, HumanEval 84/100, ruMMLU 117/200 — source report only, not current model.
+
+
+## Реально дополнительно скачано: 14/14 внешних репозиториев, SOURCE VERIFIED
+
+**Рабочая папка:** [NOX MASTER CATALOG](https://drive.google.com/drive/folders/180zabWv3mn0tPI3k7BLgA2frf4zSRRjF). Новые исходники не ставились в production и не обучали GPU. Использованы Git-коммиты, ZIP CRC, SHA-256; реестр лицензий помечен review-required.
+
+- Группа kernels: 6 Git source archives (pytorch/ao, meta-pytorch/torchtune, safetensors/safetensors, LMCache/LMCache, mlc-ai/xgrammar, huggingface/optimum), 1 большая исходная ветка отдельно. Файлы: NOX_V29_EXTRA_kernels_INDEX.zip и NOX_V29_EXTRA_kernels_PART_00.zip.
+- Группа benchmarks: evalplus/evalplus, NVIDIA/RULER, open-compass/opencompass, allenai/open-instruct, SWE-bench/SWE-bench, THUDM/LongBench. Файлы: NOX_V29_EXTRA_benchmarks_INDEX.zip, PART_00.zip и PART_01.zip.
+- FlashInfer: исходники flashinfer-ai/flashinfer, exact Git SHA 168920874c95f1bc9888bdd015d13e056fa3a341, NOX_V29_LARGE_flashinfer_INDEX.zip и PART_00..03.zip.
+- τ²-bench: исходники sierra-research/tau2-bench, exact Git SHA c06b07dd7c4d4ec61ba6ff9bcdf0b15dd7ef36d4, NOX_V29_LARGE_tau2_INDEX.zip и PART_00..02.zip.
+
+CI: [14-репозиторная первая загрузка](https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43314658703) SUCCESS (12/14 + two oversized HOLD, replaced by separate full archive) и [дозагрузка двух больших](https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43315623058) SUCCESS (2/2). Сумма: 14/14 verified upstream source snapshots. Файлы на Drive: четыре манифеста плюс десять частей (14 физических ZIP), после загрузки Drive metadata проверены по именам/размерам. Полная обратная SHA-проверка всех байтов с Drive пока не проводилась.
+
+**Сборка и проверка:** скачать ZIP всех четырёх групп и запустить скрипт reassemble_v29_extra_sources.py из этого пакета:
+- python reassemble_v29_extra_sources.py <папка> — проверить части и общий SHA, без записи TAR.
+- python reassemble_v29_extra_sources.py <папка> --assemble <пустая_папка> — физически собрать четыре TAR без автоматической распаковки чужого кода. Не перезаписывает файлы, не исполняет пакеты.
+
+**Новый source-only P02→S03 adapter:** stage1_p02_s03_rag.py; tests/test_stage1_p02_s03_rag.py используют изолированную настоящую SQLite для контрактов native owner scope, STOP, обучения и проверенного исторического M7. Реальное P02/S03 подключение на Windows отдельно не проверено.
+
+**Важно:** не выбирать TorchAO или torchtune как единственный активный тренер без проверки состояния сопровождения; это исследовательские исходники. Список источников ограничен полезными NOX репозиториями, а не буквальным «всем Интернетом».
