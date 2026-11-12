@@ -20,7 +20,7 @@
 | 112 | PixiJS | Ускоренная 2D-графика и HUD | [GitHub](https://github.com/pixijs/pixijs) |
 | 113 | regl | Низкоуровневый WebGL для кастомных эффектов | [GitHub](https://github.com/regl-project/regl) |
 | 114 | gl-matrix | Быстрая математика векторных анимаций | [GitHub](https://github.com/toji/gl-matrix) |
-| 115 | Rive JS | Интерактивные анимации графических кнопок | [GitHub](https://github.com/rive-app/rive-js) |
+| 115 | Rive JS | Интерактивные анимации графических кнопок | [GitHub](https://github.com/rive-app/rive-wasm) |
 | 116 | lottie-web | Векторные анимации кнопок и индикаторов | [GitHub](https://github.com/airbnb/lottie-web) |
 | 117 | Lenis | Плавный скролл кинематографичных экранов | [GitHub](https://github.com/darkroomengineering/lenis) |
 | 118 | Theatre.js | Режиссура временных сцен и камеры | [GitHub](https://github.com/theatre-js/theatre) |
