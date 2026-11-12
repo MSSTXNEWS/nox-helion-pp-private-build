@@ -1,4 +1,4 @@
-"""NOX HELION temperature sensors: observed readings only.
+r"""NOX HELION temperature sensors: observed readings only.
 
 Priority:
   1) LibreHardwareMonitor WMI (root\LibreHardwareMonitor)

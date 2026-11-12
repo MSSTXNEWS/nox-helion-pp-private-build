@@ -25,7 +25,7 @@ class CleanupTests(unittest.TestCase):
 
     def test_receipt_guard_requires_complete_matching_sha(self):
         with TemporaryDirectory() as d:
-            folder=Path(d)/"revision_"+("a"*12)
+            folder=Path(d)/("revision_"+("a"*12))
             folder.mkdir()
             model=folder/"model.safetensors"
             model.write_bytes(b"official fixture weights")

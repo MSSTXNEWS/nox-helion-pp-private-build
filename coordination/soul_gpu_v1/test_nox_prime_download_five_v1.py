@@ -26,9 +26,8 @@ class DownloadFiveTests(TestCase):
             return SimpleNamespace(id=model_id,sha="b"*40,
                 card_data=SimpleNamespace(license="cc-by-nc-4.0"),
                 siblings=[SimpleNamespace(rfilename="model.safetensors",size=8)])
-        with patch("huggingface_hub.HfApi",create=True):
-            with self.assertRaises(RuntimeError):
-                d.official_metadata(SimpleNamespace(model_info=info),"Qwen/Qwen3-0.6B")
+        with self.assertRaises(RuntimeError):
+            d.official_metadata(SimpleNamespace(model_info=info),"Qwen/Qwen3-0.6B")
     def test_real_file_checksum_then_skip_duplicate(self):
         with TemporaryDirectory() as temp:
             root=Path(temp);(root/"brain").mkdir()
