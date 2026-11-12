@@ -410,7 +410,7 @@
       "domain": "Автономия",
       "function": "Самодоработка кода в sandbox",
       "engine": "OpenHands",
-      "source": "https://github.com/All-Hands-AI/OpenHands",
+      "source": "https://github.com/OpenHands/OpenHands",
       "priority": "P1",
       "state": "CANDIDATE_NOT_INSTALLED",
       "integration": "Existing NOX; optional dependency, requires license+hardware gate"
