@@ -69,6 +69,18 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
+      - name: PRIME weight-vault and non-destructive cleanup on Windows (source only)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          python -B -m py_compile coordination/soul_gpu_v1/nox_weight_vault.py coordination/soul_gpu_v1/nox_thermal_sensors_v1.py
+          if ($LASTEXITCODE -ne 0) { throw 'NOX_PRIME_WINDOWS_PATH_PYTHON_HOLD' }
+          Push-Location coordination/soul_gpu_v1
+          try {
+            python -B -m unittest -q test_nox_cleanup_exact_duplicates_v1 test_nox_prime_download_five_v1
+            if ($LASTEXITCODE -ne 0) { throw 'NOX_PRIME_WEIGHT_CLEANUP_AND_DOWNLOAD_REGRESSION_HOLD' }
+          } finally { Pop-Location }
+          Write-Host 'NOX_PRIME_WINDOWS_WEIGHT_VAULT_SOURCE_PASS_NOT_NATIVE_MODEL_ACCEPTANCE'
       - name: G1 exact HEAD + full immutable source ZIP
         shell: pwsh
         run: |
