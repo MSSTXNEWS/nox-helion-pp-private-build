@@ -1,0 +1,7 @@
+{
+  "version": 2,
+  "buildCommand": "node build-approved-assets.mjs",
+  "outputDirectory": "dist",
+  "installCommand": "echo NOX_STATIC_BUILD",
+  "framework": null
+}

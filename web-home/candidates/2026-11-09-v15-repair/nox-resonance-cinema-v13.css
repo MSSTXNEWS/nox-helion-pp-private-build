@@ -1,0 +1,171 @@
+/* Cinematic NOX resonance — never a generic rectangular button. */
+html body.helion-home #noxCoreEntry{
+ top:69%!important;left:50%!important;width:clamp(235px,32vw,570px)!important;
+ max-width:76vw!important;height:auto!important;min-height:90px!important;padding:10px 14px!important;
+ transform:translate(-50%,-50%)!important;
+ display:flex!important;align-items:center!important;justify-content:center!important;flex-direction:column!important;gap:10px!important;
+ border:0!important;outline:0!important;background:none!important;
+ border-radius:0!important;box-shadow:none!important;backdrop-filter:none!important;
+ filter:none!important;isolation:isolate!important;white-space:normal!important;
+ text-align:center!important;text-decoration:none!important;cursor:pointer!important;
+ transition:filter .5s ease!important;
+}
+html body.helion-home #noxCoreEntry::before,html body.helion-home #noxCoreEntry::after{
+ content:none!important;display:none!important;
+}
+html body.helion-home #noxCoreEntry .nox-resonance-word{
+ display:block!important;font-family:'Tektur','Segoe UI',sans-serif!important;
+ font-weight:600!important;font-variation-settings:'wdth' 100!important;
+ font-size:clamp(22px,2.55vw,43px)!important;line-height:1.12!important;
+ letter-spacing:.32em!important;text-indent:.32em!important;
+ background:linear-gradient(180deg,#eff2f5 0%,#b6c7d0 33%,#9b9c9b 55%,#e6c6a3 72%,#756e64 100%)!important;
+ background-clip:text!important;-webkit-background-clip:text!important;
+ -webkit-text-fill-color:transparent!important;color:#d9dce2!important;
+ -webkit-text-stroke:.38px #dde4eb8c!important;
+ text-shadow:0 0 9px #fff3,0 0 27px #8a9aa735!important;
+ filter:drop-shadow(0 6px 7px #0009)!important;
+ transform:none!important;
+}
+html body.helion-home #noxCoreEntry small{
+ display:block!important;font-family:'Tektur','Segoe UI',sans-serif!important;
+ font-weight:400!important;font-size:clamp(8px,.65vw,11px)!important;
+ letter-spacing:.32em!important;text-indent:.32em!important;line-height:1.35!important;
+ color:#a9b1bc!important;opacity:.68!important;
+ text-shadow:0 0 13px #9cb0be37!important;
+}
+html body.helion-home #noxCoreEntry:hover .nox-resonance-word,
+html body.helion-home #noxCoreEntry:focus-visible .nox-resonance-word{
+ text-shadow:0 0 12px #cbd9ec9e,0 0 32px #d8b98e66!important;
+ filter:drop-shadow(0 4px 14px #adb8c899)!important;
+}
+html body.helion-home #noxCoreEntry:hover,html body.helion-home #noxCoreEntry:focus-visible{
+ transform:translate(-50%,-50%)!important;
+}
+html body.helion-home #noxCoreEntry:focus-visible{
+ outline:1px solid #a4c3de80!important;outline-offset:8px!important;
+}
+html body.helion-home .helion-stage #noxResonanceWaveCanvas{
+ position:absolute!important;inset:0!important;width:100%!important;height:100%!important;
+ z-index:16!important;pointer-events:none!important;mix-blend-mode:screen!important;
+ opacity:.76!important;
+}
+html body.helion-home .helion-stage{background-color:#020305!important;background-image:none!important;}
+html body.helion-home .helion-stage .noxCitadel{
+ opacity:.76!important;background:linear-gradient(90deg,#0b1218c4 0%,transparent 18%,transparent 83%,#090e16c4 100%)!important;
+}
+html body.helion-home .helion-stage .noxCitadel::before,
+html body.helion-home .helion-stage .noxCitadel::after{
+ opacity:.5!important;filter:none!important;
+}
+html body.helion-home section.nox-orbital-controls button:is(.home-preset,.nox-world-profile,[data-mode]){
+ filter:brightness(.77) saturate(.65) contrast(1.08)!important;
+}
+html body.helion-home section.nox-orbital-controls button:is(.home-preset,.nox-world-profile,[data-mode]):is(:hover,:focus-visible,[aria-pressed=true]){
+ filter:brightness(1.01) saturate(.83) contrast(1.04)!important;
+}
+@media(max-width:1100px){
+ html body.helion-home #noxCoreEntry{top:440px!important;width:min(82vw,430px)!important;min-height:85px!important}
+ html body.helion-home #noxCoreEntry .nox-resonance-word{font-size:clamp(20px,3.7vw,33px)!important;letter-spacing:.24em!important}
+ html body.helion-home .helion-stage #noxResonanceWaveCanvas{height:510px!important}
+}
+@media(max-width:700px){
+ html body.helion-home #noxCoreEntry{top:438px!important;min-height:75px!important;width:95%!important;max-width:90vw!important;padding:7px!important}
+ html body.helion-home #noxCoreEntry .nox-resonance-word{font-size:clamp(19px,6vw,27px)!important;letter-spacing:.18em!important;text-indent:.18em!important}
+ html body.helion-home #noxCoreEntry small{font-size:8px!important;letter-spacing:.17em!important}
+}
+@media(prefers-reduced-motion:reduce){
+ html body.helion-home #noxCoreEntry{transition:none!important}
+ html body.helion-home .helion-stage #noxResonanceWaveCanvas{opacity:.34!important}
+}
+/* V13: one central title BELOW the black sun, not superimposed on its surface. */
+html body.helion-home #noxCoreEntry{
+ top:var(--nox-resonance-label-top,76%)!important;
+ left:50%!important;transform:translateX(-50%)!important;
+ min-height:63px!important;height:auto!important;
+ width:min(81%,500px)!important;max-width:81vw!important;
+ padding:0 7px!important;gap:5px!important;
+ border:0!important;background:transparent!important;box-shadow:none!important;
+ text-align:center!important;z-index:34!important;
+}
+html body.helion-home #noxCoreEntry:hover,
+html body.helion-home #noxCoreEntry:focus-visible{
+ transform:translateX(-50%)!important;
+}
+html body.helion-home #noxCoreEntry .nox-resonance-word{
+ font-size:clamp(22px,2.34vw,38px)!important;font-weight:500!important;
+ letter-spacing:.27em!important;text-indent:.27em!important;
+ background:linear-gradient(180deg,#e0e7ec 0%,#b4bec7 36%,#b6ac9f 66%,#78818b 100%)!important;
+ background-clip:text!important;-webkit-background-clip:text!important;
+ -webkit-text-fill-color:transparent!important;
+ -webkit-text-stroke:.2px #a6b3c2a8!important;
+ text-shadow:0 0 5px #cad7e420,0 7px 19px #000a!important;
+ filter:drop-shadow(0 4px 6px #0008)!important;
+}
+html body.helion-home #noxCoreEntry small{
+ font-size:clamp(8px,.68vw,10px)!important;
+ letter-spacing:.24em!important;text-indent:.24em!important;
+ opacity:.6!important;
+}
+html body.helion-home .helion-stage #noxResonanceWaveCanvas{opacity:.9!important}
+html body.helion-home .helion-stage #noxCoreFallback{
+ filter:saturate(.78) contrast(1.1)!important;
+}
+@media(max-width:1100px){
+ html body.helion-home #noxCoreEntry{
+  top:var(--nox-resonance-label-top,80%)!important;
+  width:min(86%,440px)!important;min-height:61px!important;
+ }
+ html body.helion-home #noxCoreEntry .nox-resonance-word{
+  font-size:clamp(20px,3.4vw,33px)!important;letter-spacing:.19em!important;text-indent:.19em!important;
+ }
+}
+@media(max-width:700px){
+ html body.helion-home #noxCoreEntry{top:var(--nox-resonance-label-top,78%)!important;min-height:54px!important;width:90%!important;}
+ html body.helion-home #noxCoreEntry .nox-resonance-word{
+ font-size:clamp(18px,5.7vw,26px)!important;letter-spacing:.15em!important;text-indent:.15em!important;}
+ html body.helion-home #noxCoreEntry small{font-size:8px!important;letter-spacing:.12em!important;text-indent:.12em!important;}
+}
+
+/* NOX V14 COMPOSITION REPAIR 2026-11-09 — additive, no replacement renderer */
+@media (min-width:1101px) {
+ html body.helion-home #noxCoreEntry {
+  top:var(--nox-resonance-label-top,79%)!important; left:50%!important;
+  transform:translateX(-50%)!important;
+  width:min(470px,45vw)!important;min-height:52px!important;
+  padding:0 8px!important;gap:3px!important;
+ }
+ html body.helion-home #noxCoreEntry:hover,
+ html body.helion-home #noxCoreEntry:focus-visible {
+  transform:translateX(-50%)!important;
+ }
+ html body.helion-home #noxCoreEntry .nox-resonance-word {
+  font-size:clamp(23px,2.15vw,36px)!important;
+  letter-spacing:.18em!important;text-indent:.18em!important;
+ }
+}
+html[data-nox-live-rendered="yes"] body.helion-home .nox-orbital-controls
+ :is(.home-preset,.nox-world-profile,.nox-asteroid-mode)
+ :is(.home-palette-planet,.nox-world-ball,.nox-theme-gas-svg,.nox-gas-planet,.nox-asteroid-stone) {
+ opacity:0!important;visibility:hidden!important;
+}
+html body.helion-home #noxWorldsV6Canvas {z-index:15!important;}
+html body.helion-home section.nox-orbital-controls button.nox-free-drift-object {
+ isolation:isolate!important;
+}
+html body.helion-home section.nox-orbital-controls button.nox-free-drift-object
+ :is(.nox-world-name,strong,small) {
+ position:relative;z-index:19;pointer-events:none;
+ text-shadow:0 2px 8px #000e!important;
+}
+html body.helion-home .nox-preview-help,
+html body.helion-home .nox-preview-ribbon {display:none!important;}
+@media(max-width:1100px){
+ html body.helion-home section.nox-orbital-controls button.nox-free-drift-object {
+  max-width:100%!important;
+ }
+ html body.helion-home #noxWorldsV6Canvas {z-index:11!important;}
+}
+@media(prefers-reduced-motion:reduce){
+ html body.helion-home #noxCoreEntry,
+ html body.helion-home section.nox-orbital-controls button.nox-free-drift-object {transition:none!important;}
+}

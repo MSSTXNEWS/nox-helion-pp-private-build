@@ -1,0 +1,106 @@
+name: NOX V19 - Complete WOW Internet Assets Intake
+# Avoid repeated 50-package downloads from stale commits. Never touches running GPU workers.
+concurrency:
+  group: nox-v19-intake-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+on:
+  push:
+    branches:
+      - 'fix/home-v16-cinematic-contract-*'
+    paths:
+      - 'web-home/candidates/2026-11-10-v16-cinema/tools/download-complete-wow-kit.py'
+      - '.github/workflows/nox-v19-complete-wow-download.yml'
+  pull_request:
+    paths:
+      - 'web-home/candidates/2026-11-10-v16-cinema/tools/download-complete-wow-kit.py'
+      - '.github/workflows/nox-v19-complete-wow-download.yml'
+  workflow_dispatch:
+jobs:
+  download-real-vendor-sources:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Download all approved extended library candidates
+        run: |
+          python3 web-home/candidates/2026-11-10-v16-cinema/tools/download-complete-wow-kit.py
+      - name: Verify file bytes and manifest before packaging
+        run: |
+          python3 - <<'PY'
+          import pathlib,hashlib,json
+          p=pathlib.Path('/tmp/nox-v19-extended')
+          m=json.loads((p/'NOX-EXTENDED-DEPENDENCIES-MANIFEST.json').read_text())
+          assert m['packages_requested']==50 and m['packages_downloaded']==50, f"Full 50-package intake failed: {m['packages_downloaded']}/{m['packages_requested']}"
+          assert m['packages_downloaded']+m['packages_failed']==m['packages_requested']
+          for a in m['files']:
+            if a['status']!='DOWNLOADED_SHA256_VERIFIED': continue
+            b=(p/'packages'/a['file']).read_bytes()
+            assert hashlib.sha256(b).hexdigest()==a['sha256'] and len(b)==a['size'],a['file']
+          print(f"NOX_EXTENDED_SHA256_PASS {m['packages_downloaded']} of {m['packages_requested']}, {m['bytes']} bytes")
+          PY
+      - name: Partition verified packages under Google Drive connector size limit
+        run: |
+          python3 - <<'PY'
+          import hashlib,json,pathlib,shutil
+          src=pathlib.Path('/tmp/nox-v19-extended')
+          out=pathlib.Path('/tmp/nox-v19-parts')
+          manifest=json.loads((src/'NOX-EXTENDED-DEPENDENCIES-MANIFEST.json').read_text())
+          assert manifest['packages_downloaded']==manifest['packages_requested']==50
+          cap=65000000
+          parts=[[]];size=0
+          for row in manifest['files']:
+            assert row['status']=='DOWNLOADED_SHA256_VERIFIED'
+            if size+row['size']>cap:
+              parts.append([]);size=0
+            parts[-1].append(row)
+            size+=row['size']
+          assert len(parts)==3, 'Archive size split needs an explicit review'
+          for i,rows in enumerate(parts,1):
+            dst=out/f'part-{i:02d}'
+            (dst/'packages').mkdir(parents=True,exist_ok=True)
+            for row in rows:
+              source=src/'packages'/row['file']
+              payload=source.read_bytes()
+              assert len(payload)==row['size'] and hashlib.sha256(payload).hexdigest()==row['sha256']
+              shutil.copyfile(source,dst/'packages'/row['file'])
+            (dst/'PART-RECEIPT.json').write_text(json.dumps({
+              'part':i,'parts_total':3,'packages_in_part':len(rows),
+              'all_packages_total':50,'files':rows,'source_sha256_verified':True
+            },ensure_ascii=False,indent=2))
+          (out/'part-01'/'NOX-EXTENDED-DEPENDENCIES-MANIFEST.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2))
+          print('NOX_50_DOWNLOAD_PARTITIONED verified parts',list(map(len,parts)))
+          PY
+      - name: Upload verified Drive part 01
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX-V21-50-LIBRARIES-PART-01
+          path: /tmp/nox-v19-parts/part-01/
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload verified Drive part 02
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX-V21-50-LIBRARIES-PART-02
+          path: /tmp/nox-v19-parts/part-02/
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload verified Drive part 03
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX-V21-50-LIBRARIES-PART-03
+          path: /tmp/nox-v19-parts/part-03/
+          if-no-files-found: error
+          retention-days: 14
+      - name: Preserve actual full ZIP for Google Drive
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX-V19-EXTENDED-WOW-LIBRARIES
+          path: /tmp/nox-v19-extended/
+          if-no-files-found: error
+          retention-days: 14

@@ -1,0 +1,97 @@
+{
+  "version": "2026-11-10",
+  "licenses": {
+    "planets": "Solar System Scope CC BY 4.0 — https://www.solarsystemscope.com/textures/",
+    "hdr": "Poly Haven Machine Shop 01 CC0",
+    "metal": "ambientCG Metal012 CC0"
+  },
+  "files": [
+    {
+      "path": "hdr/machine_shop_01_1k.hdr",
+      "bytes": 1779643,
+      "sha256": "0c4b0aef41f93bd9f3ab598e8ca87c46813b67505d49331d42c86fde0f8d6b63",
+      "source": "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/machine_shop_01_1k.hdr"
+    },
+    {
+      "path": "metal/Metal012_1K-JPG_Color.jpg",
+      "bytes": 412556,
+      "sha256": "9d32b9bbcf071433a3ed69f0409cc11886bb3c554300acaf0da93a92a2059e5b",
+      "source": "https://ambientcg.com/a/Metal012"
+    },
+    {
+      "path": "metal/Metal012_1K-JPG_Displacement.jpg",
+      "bytes": 589576,
+      "sha256": "02ef08c2fb1494588ff5586b677bf9039d5a824370070702be435c2d53922f16",
+      "source": "https://ambientcg.com/a/Metal012"
+    },
+    {
+      "path": "metal/Metal012_1K-JPG_Metalness.jpg",
+      "bytes": 4257,
+      "sha256": "843102638fa0a5bf897888868877efab8ccdc4cb84a48e57bdb52bfb30f5e714",
+      "source": "https://ambientcg.com/a/Metal012"
+    },
+    {
+      "path": "metal/Metal012_1K-JPG_NormalGL.jpg",
+      "bytes": 580484,
+      "sha256": "6ea43f0b48f5fc7d1d11ead571c22f11233053e2a1926c5e21ea27de7d3a4287",
+      "source": "https://ambientcg.com/a/Metal012"
+    },
+    {
+      "path": "metal/Metal012_1K-JPG_Roughness.jpg",
+      "bytes": 452778,
+      "sha256": "d808a07ffe8786a8b410dfa29f19b0a31492e450256dd9191bb9731e110dba40",
+      "source": "https://ambientcg.com/a/Metal012"
+    },
+    {
+      "path": "planets/earth.jpg",
+      "bytes": 463087,
+      "sha256": "767ee1dc6eb3802699bfccf6f264880f8acd0b80de3191cd24984fe279b07b7c",
+      "source": "https://raw.githubusercontent.com/Sanghel/solar-system-3d/develop/public/textures/earth.jpg"
+    },
+    {
+      "path": "planets/jupiter.jpg",
+      "bytes": 498976,
+      "sha256": "b0f04d005350252636b0e3396fc592548cbd9e9126b269d32d5c6abd4b0e4f2b",
+      "source": "https://raw.githubusercontent.com/Sanghel/solar-system-3d/develop/public/textures/jupiter.jpg"
+    },
+    {
+      "path": "planets/mars.jpg",
+      "bytes": 750547,
+      "sha256": "2d187f3e77a98eaa8cea5f4cc722f633c122ef170b9e94ace6b5fb6cbc3f8e01",
+      "source": "https://raw.githubusercontent.com/Sanghel/solar-system-3d/develop/public/textures/mars.jpg"
+    },
+    {
+      "path": "planets/mercury.jpg",
+      "bytes": 872555,
+      "sha256": "5a5c80607f643496bac9a631e71957def35ed788895f18b678ac849c2b38e48a",
+      "source": "https://raw.githubusercontent.com/Sanghel/solar-system-3d/develop/public/textures/mercury.jpg"
+    },
+    {
+      "path": "planets/neptune.jpg",
+      "bytes": 241580,
+      "sha256": "cb42ea82709741d28b0af44d8b283cbc6dbd0c521a7f0e1e1e010ade00977df6",
+      "source": "https://raw.githubusercontent.com/Sanghel/solar-system-3d/develop/public/textures/neptune.jpg"
+    },
+    {
+      "path": "planets/saturn.jpg",
+      "bytes": 199916,
+      "sha256": "54a900ca9bf7ab62e70f862852759abdf342e6d6436a95a2fe9ebdb6bcd3bbac",
+      "source": "https://raw.githubusercontent.com/Sanghel/solar-system-3d/develop/public/textures/saturn.jpg"
+    },
+    {
+      "path": "planets/uranus.jpg",
+      "bytes": 77751,
+      "sha256": "d15239d46f82d3ea13d2b260b5b29b2a382f42f2916dae0694d0387b1204a09d",
+      "source": "https://raw.githubusercontent.com/Sanghel/solar-system-3d/develop/public/textures/uranus.jpg"
+    },
+    {
+      "path": "planets/venus.jpg",
+      "bytes": 885075,
+      "sha256": "dbe5db1c794a8ab4cbf7dd6bf193540c400fc833ce1e6cc399318aa68026278b",
+      "source": "https://raw.githubusercontent.com/Sanghel/solar-system-3d/develop/public/textures/venus.jpg"
+    }
+  ],
+  "deployment": "dpl_EFtKefgs61tPqzJbdnSLCWyc39NT",
+  "preview": "https://nox-helion-real-home-preview-h2o0lpna0-msttx.vercel.app/",
+  "visualAcceptance": "HOLD"
+}

@@ -1,0 +1,422 @@
+[
+  {
+    "path": "assets13-loader.js",
+    "sha256": "a9f306ac4886cd3d91b96e2872c4d90024f83cad654fa441e6fa39553d1f3b3a",
+    "bytes": 2179
+  },
+  {
+    "path": "chat.html",
+    "sha256": "709d8075d9851a6680c288c4a79dbf2a435c255f389fe6da129632b2998d2a84",
+    "bytes": 14076
+  },
+  {
+    "path": "cinema.html",
+    "sha256": "9bbc075113757287b6e117bd4e1fba713c79a511f5317f238f9e867eff4daa26",
+    "bytes": 10511
+  },
+  {
+    "path": "cinema.js",
+    "sha256": "0c645699748a0643b630e21b35b00a69e70f278f83f09b9d87fbc59df08796e0",
+    "bytes": 12225
+  },
+  {
+    "path": "eclipse-materials.mjs",
+    "sha256": "0fb0ccf03b997a08e4bbbe854da0c3ce3e538d2652cbac21cc136ab3f68bebec",
+    "bytes": 14179
+  },
+  {
+    "path": "favicon.svg",
+    "sha256": "c1fd92ffa569d488bf15c08e9a6b7396020ffde725cccd9a4077f5962450c5f9",
+    "bytes": 285
+  },
+  {
+    "path": "index.html",
+    "sha256": "bf076461419d2fa4b5add7e782200198e8961288fa6b97964de96d4f2963dd4b",
+    "bytes": 18519
+  },
+  {
+    "path": "industrial-assets.mjs",
+    "sha256": "87c31845a7f117fb420fe3635233c27e438136e3cfd83ac5fbd6a117270019d5",
+    "bytes": 1076
+  },
+  {
+    "path": "industrial-effects.css",
+    "sha256": "b1707936996ec198fb720e09a562f6f375ff002e2ad2d664c9e744b6f47f974d",
+    "bytes": 4277
+  },
+  {
+    "path": "industrial-effects.mjs",
+    "sha256": "8c52f3752d15ece57080a23cc3c284fc8c52d356eeb1d8369913b990585be03d",
+    "bytes": 12112
+  },
+  {
+    "path": "industrial-provenance.json",
+    "sha256": "852112575ad6286236bda4794244e2a71729bd1a1fabb3a9309aac89ceec32ec",
+    "bytes": 2147
+  },
+  {
+    "path": "install.html",
+    "sha256": "570c2872bfb0a1058c3614a90ba3606a0e500923fd748fab931620bf5ddaf331",
+    "bytes": 4123
+  },
+  {
+    "path": "memory.html",
+    "sha256": "5cd67dd531f2934e571bd241ef00fa10dddcbb54cec0f97eb2e106c89b7baf10",
+    "bytes": 12661
+  },
+  {
+    "path": "models.html",
+    "sha256": "ff14c0b649b6c761b6e8e6be2a6954b910f90774bf95d5c3695b6fd198d6b5d4",
+    "bytes": 9262
+  },
+  {
+    "path": "native-push-sw.js",
+    "sha256": "0c86ee95408c0bd2b920d983eb004d9df1afe6d928d298fe269272011b9aaac7",
+    "bytes": 1150
+  },
+  {
+    "path": "native-push.js",
+    "sha256": "0d2df5217fefdb3aa37ab55c1109a3b8ddf994c7a5fa0c67780504cefd7e9925",
+    "bytes": 6922
+  },
+  {
+    "path": "nox-appearance.css",
+    "sha256": "7b300b8651d436b72d74bd17ebc6cdde9e5d46609007fec9163e72ce3cf9a840",
+    "bytes": 10580
+  },
+  {
+    "path": "nox-appearance.mjs",
+    "sha256": "b0efc179aaafbc5085cc236b4c9f858e08bd0de29fd604588f4b85d0970b9ac9",
+    "bytes": 5650
+  },
+  {
+    "path": "nox-asteroid-controls.css",
+    "sha256": "d30afcc4b4eab344449e86f901e77f36caf10a29fbc9190c808a524df4e0aa04",
+    "bytes": 4075
+  },
+  {
+    "path": "nox-atmosphere-ui.css",
+    "sha256": "774085a73cb1453f8383fe24aaa1c53447a8ff375602dbbf085b6905e20d5b13",
+    "bytes": 3447
+  },
+  {
+    "path": "nox-atmosphere-ui.js",
+    "sha256": "823073f1e37587ed6e03872afe652485f43ac09c6ded0fff180c2349535543f0",
+    "bytes": 5302
+  },
+  {
+    "path": "nox-background-controls.css",
+    "sha256": "020bf25275fb2a4019082efed24e83deebeaef879a9003bd886b04407ec4900f",
+    "bytes": 4195
+  },
+  {
+    "path": "nox-background-controls.js",
+    "sha256": "30aa4b73d2a49dbab3f81db4cfb2aa93a282ce2b255306f2cf3d199612d6fd7a",
+    "bytes": 5475
+  },
+  {
+    "path": "nox-background-engine.mjs",
+    "sha256": "cda4c923f05bc80529363bf87ebe23d30f3cd4703b2e7a7879c1dacbf36805f2",
+    "bytes": 7858
+  },
+  {
+    "path": "nox-chat-diagrams.js",
+    "sha256": "f85f2626bf4c9dfa94ee6950ae0e4dda08cbe7403dada4a7414eedda292b0090",
+    "bytes": 14723
+  },
+  {
+    "path": "nox-chat-layout.css",
+    "sha256": "aad7cbbe7039d9dbbe7a3d98c751482e314c7658bacdbb45088652ac62805662",
+    "bytes": 20110
+  },
+  {
+    "path": "nox-chat-space.css",
+    "sha256": "bf2288adadef362ed79beba888ad500b066d0fa61858c6ddfc09ac44bb1e2cc0",
+    "bytes": 2066
+  },
+  {
+    "path": "nox-chat.js",
+    "sha256": "d598379aa8f4fbb1da43539ed39634d74efe3bc4a3d129f00721d6cf7bc95b4a",
+    "bytes": 65323
+  },
+  {
+    "path": "nox-cinematic-director.mjs",
+    "sha256": "1ee6381266b9796a82f6bae07d903b9a0ba038a2ac1aab36334e5f068f54c1e3",
+    "bytes": 5054
+  },
+  {
+    "path": "nox-cinematic-motion.css",
+    "sha256": "c417801d4474ea7fba4795ce1018fee76d4f45bb240b0aa11c1c26abaa374baa",
+    "bytes": 4876
+  },
+  {
+    "path": "nox-cinematic-motion.js",
+    "sha256": "f3eec3f21997414f37ce77871ac1574aa6526298c392f8123db5405f7b79b72c",
+    "bytes": 2716
+  },
+  {
+    "path": "nox-cinematic-scenes.css",
+    "sha256": "21906cc8aceee0ec6d4805e5bd64e1dfa766632e475722339dff604c5ff52c6d",
+    "bytes": 4487
+  },
+  {
+    "path": "nox-clear-cinema.css",
+    "sha256": "2a22f8c6426cf2890fb6d64653b6121cb3d67d99abbb445c3f6af56c37e64595",
+    "bytes": 1646
+  },
+  {
+    "path": "nox-command-center.css",
+    "sha256": "ee77e6d4f98bf6edf421af3d4e1321aaa1dee882a512556edabd65576f243e05",
+    "bytes": 3262
+  },
+  {
+    "path": "nox-command-center.js",
+    "sha256": "784462f9eae305f8ab06b0eaa027d67e049cecd2494f9e1e1e28411a6dc23fca",
+    "bytes": 18052
+  },
+  {
+    "path": "nox-core-badge.js",
+    "sha256": "f5ce94c63a880518b520ef073cc9be1e9c7cea13b8f3aa75f90c15c57d8cffda",
+    "bytes": 3164
+  },
+  {
+    "path": "nox-core-inspector.js",
+    "sha256": "133292d57f0943e9f57991cf5afc28d34661a61dfd35e8f05dce2d7087f22c9f",
+    "bytes": 4677
+  },
+  {
+    "path": "nox-core-restore.mjs",
+    "sha256": "dba4f14ad30b776e6edeeac5e74366278c751dc53086ca0fd57ec449dc72aadf",
+    "bytes": 1250
+  },
+  {
+    "path": "nox-dashboard-cinema.css",
+    "sha256": "822e3cf8e7d0427ea456a4ad3b62a24387953a30d20ba427384d2f177f71333e",
+    "bytes": 12540
+  },
+  {
+    "path": "nox-dashboard-cinema.js",
+    "sha256": "8725afae043ea02074f0c0d901f91a6347d1612c6637822cb45a07ced9a1544e",
+    "bytes": 8488
+  },
+  {
+    "path": "nox-direct-mapping.mjs",
+    "sha256": "c7eb0a602a1c94c367c41a9b4e11d7002ce1c82fd0eba811897f47e30cbe7677",
+    "bytes": 3370
+  },
+  {
+    "path": "nox-documents.css",
+    "sha256": "2921ea370f94a8d8fd2ff2445abfebdc33305aff71afbcf3f742778a71cbdb9b",
+    "bytes": 2589
+  },
+  {
+    "path": "nox-documents.js",
+    "sha256": "25a9f3518544a8a7e00999102b359f83887b57288b32d2e225348e0c1fb172fe",
+    "bytes": 26512
+  },
+  {
+    "path": "nox-eclipse-backdrop.mjs",
+    "sha256": "ebdb185a39610f478ebe31cf6a59f00da608683cd13dce0af2e3a9f7791c5bdf",
+    "bytes": 13018
+  },
+  {
+    "path": "nox-engines/LICENSE-GENESIS.txt",
+    "sha256": "26a10bbe59cef00e6a907d4cbd89e1cbdb44e1c00b70fa4d0896f99c2a4ea2ad",
+    "bytes": 1281
+  },
+  {
+    "path": "nox-engines/LICENSE-GRAVITAS.txt",
+    "sha256": "953f2287b63c51441c5e507e99fd5a976620a4a2ca9b293f3ce1d6d978937d64",
+    "bytes": 1071
+  },
+  {
+    "path": "nox-engines/LICENSE-REALTIME-GPL3.txt",
+    "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
+    "bytes": 35149
+  },
+  {
+    "path": "nox-engines/THIRD_PARTY.txt",
+    "sha256": "5cc51616eea9575b6d7f28313d7f8ae094f4157e78da30de282a0ca00fc5b288",
+    "bytes": 731
+  },
+  {
+    "path": "nox-engines/genesis-gas.mjs",
+    "sha256": "1bb0fe24974e45401c5bfe2c8459f13d574bcc0a489b46ef4b436136384a31de",
+    "bytes": 4750
+  },
+  {
+    "path": "nox-engines/genesis-planet.mjs",
+    "sha256": "55e6cec5b8362c70118c4720317ddb0cd4f1e463b35e1cf9371fb8ccf5a2c65b",
+    "bytes": 2415
+  },
+  {
+    "path": "nox-engines/gravitas-bodyglow-original.jsx.txt",
+    "sha256": "2c5dddd734a338497c5a1d333c3349fb59c52fed48f73c89e86fd0f0fafe6f3d",
+    "bytes": 2185
+  },
+  {
+    "path": "nox-engines/live.mjs",
+    "sha256": "2db5895c53abea6e654e26c83f00901f85af28a098319b09f9e38ec6a8c24e02",
+    "bytes": 7993
+  },
+  {
+    "path": "nox-engines/nox-world-shaders.mjs",
+    "sha256": "124a5d341059eb1070adcf58640657aa471ea4888e4409101503ecaa9337f952",
+    "bytes": 3029
+  },
+  {
+    "path": "nox-engines/physical-worlds-v6.mjs",
+    "sha256": "0bb23391a5daf175e819d7b611cdd17ad5e8299d8bafbe53510817169c63047e",
+    "bytes": 8442
+  },
+  {
+    "path": "nox-engines/physical-worlds-v7.mjs",
+    "sha256": "1f523631106ba0e86b4ab0aae21c8d20be39c8018a0675fa9f61ac71b7588121",
+    "bytes": 7946
+  },
+  {
+    "path": "nox-engines/realtime-planet-original.glsl",
+    "sha256": "72e785dcb844dabfeeb0e5620662dc7d3195a5bae52971eb596ca5d410c5212e",
+    "bytes": 8391
+  },
+  {
+    "path": "nox-engines/starfield-original.js.txt",
+    "sha256": "93aa714223d62fd10955d39d89bca5296a204ccdc01fc2d4c61a1256b30acf98",
+    "bytes": 6985
+  },
+  {
+    "path": "nox-function-catalog.css",
+    "sha256": "80cb5fe3e77b638b9c21e12fe065672c09775dbda4f9961bfe60b2b2da97de05",
+    "bytes": 4176
+  },
+  {
+    "path": "nox-function-catalog.js",
+    "sha256": "f5582dd797a3772b6c3e53a9bf7967e07b002810fd1b5ffe6a3a8f42b5d6675f",
+    "bytes": 13634
+  },
+  {
+    "path": "nox-memory.js",
+    "sha256": "2fe5950e5a5d8c1bfcf6a4393c146b163a4ee2dc99991ac9edc8fe0891bb135e",
+    "bytes": 21246
+  },
+  {
+    "path": "nox-motion-qa.mjs",
+    "sha256": "fd923f9a691f5dea0ff0624d299db0fc79c5bc318b5d4bdebac09b22198ded15",
+    "bytes": 1173
+  },
+  {
+    "path": "nox-music.js",
+    "sha256": "12ffb581ddcb90eaf69694eaead7f47c7135c815a9dff5b345ff931cf2c9034b",
+    "bytes": 16514
+  },
+  {
+    "path": "nox-nano-navigation.css",
+    "sha256": "8adbdee0c842ab937d948cb14d897af93bc3f2e6e5f2a64e5d97da521e6e2f63",
+    "bytes": 3500
+  },
+  {
+    "path": "nox-nano-navigation.js",
+    "sha256": "ebf3393abc64ec08bba88bfaf3300e0df0f70bb5f13b3ee2614c9b9b5ce8e2a9",
+    "bytes": 7026
+  },
+  {
+    "path": "nox-nano-wait.css",
+    "sha256": "92e1685b620dce1e9ded60f4f7ea2e3978ce50e4bc31d11e388c4d5b5240597d",
+    "bytes": 1188
+  },
+  {
+    "path": "nox-nano-wait.js",
+    "sha256": "a19b0f48e09e336bd6e70182be5dbef8c08c7c8232650e7d3bfcca1a18dc83e0",
+    "bytes": 12316
+  },
+  {
+    "path": "nox-orbit-14.css",
+    "sha256": "231a23d6cb0d1462f33e98fd3fc09e43f663bf09244e0e2a5ff6f20ef78cc9e9",
+    "bytes": 15365
+  },
+  {
+    "path": "nox-orbit-14.js",
+    "sha256": "3aced1774354b6212b665ef40514e78fb7660a3319fd346c4b12bbf277a39d38",
+    "bytes": 1512
+  },
+  {
+    "path": "nox-orbit-base.js",
+    "sha256": "4a7ad4b9d09013bd21900362b4a61045c01356117c11a5a1e42af24dd7a6f8f7",
+    "bytes": 5245
+  },
+  {
+    "path": "nox-orbit-original.js",
+    "sha256": "716a0df6c8fc9ad32b786de894fc44158a1868d30f78449304d8365c4e515c30",
+    "bytes": 14118
+  },
+  {
+    "path": "nox-orbital-controls.css",
+    "sha256": "7a3e3c2235c1431d5a76e47e8ce15f2ca13ec211474be427c672e389dae0b088",
+    "bytes": 10276
+  },
+  {
+    "path": "nox-orbital-controls.js",
+    "sha256": "28069e1b65edf4bf485b490d7f0a2a02a81894e670e9580ac681f13d6d583e32",
+    "bytes": 15313
+  },
+  {
+    "path": "nox-owner-check.css",
+    "sha256": "0aa42d6dd9fa3ff0abc42a671d126a4941c3aec83e311ad95a8cc57f1d81623a",
+    "bytes": 1002
+  },
+  {
+    "path": "nox-owner-check.js",
+    "sha256": "05c628db64dddfbae80b3bfa89cefc8203fdfb1b7b0a1d34e5745d9f0791a4bb",
+    "bytes": 10764
+  },
+  {
+    "path": "nox-project-calendar.css",
+    "sha256": "422756649f28fbdbfe8c0b9ba549dc3b6acc031ea44c99fd830761a424e99f13",
+    "bytes": 1780
+  },
+  {
+    "path": "nox-project-calendar.js",
+    "sha256": "8a0bb1ba4e4c70f9e27a3e933dc38e408606cf398d723b93d4b10abf42447f2e",
+    "bytes": 5451
+  },
+  {
+    "path": "nox-quality-qa.mjs",
+    "sha256": "aff48c80850cf50a73c2574183e0cb346ef13cd24a9211498b627064e61740a2",
+    "bytes": 1667
+  },
+  {
+    "path": "nox-recordings.css",
+    "sha256": "fc445393dd5b5926e8ceaff6f548215a07ea2175655d2b68d5437a4cad2c5571",
+    "bytes": 1288
+  },
+  {
+    "path": "nox-recordings.js",
+    "sha256": "299a4c3ae432e5bcf78f85936dc2cdaf408031383fdaf91b3f964a92693ec16e",
+    "bytes": 6894
+  },
+  {
+    "path": "nox-resonance-focus.css",
+    "sha256": "9f5fc474cfd04b273172753bdb5fe62151c71dc7b331ac3120c2b3eb5f4a0387",
+    "bytes": 5542
+  },
+  {
+    "path": "nox-resonance-focus.js",
+    "sha256": "5503b6e868627eaf55a74c1425919fc89b7f76c71bf2e57029ec1dc9f0a30113",
+    "bytes": 3627
+  },
+  {
+    "path": "nox-selection-corrective-v7.css",
+    "sha256": "0921f58966dc52d8c9aceaf4bb3a35c508ce22ec0d8d9e18f013cfe4b6dacdd7",
+    "bytes": 1854
+  },
+  {
+    "path": "nox-selection-v6.css",
+    "sha256": "6813a1baaf306087a980cf8df4b6249d167714c2bbe02d6fc112d482762847bc",
+    "bytes": 2277
+  },
+  {
+    "path": "nox-services.css",
+    "sha256": "ef3c8ec122aa0f93598565ffb907c6e96905f21d187271668735dccfe8eb10ed",
+    "bytes": 9873
+  }
+]

@@ -1,0 +1,14 @@
+/* NOX owner-approved HOME: thin glass contours. Retains active D02 and pointer targets. */
+body.helion-home .nox-owner-actions button,
+body.helion-home .nox-owner-persona {
+  --lg-tint:rgba(14,17,24,.16);
+  --lg-radius:8px;
+  isolation:isolate;
+}
+body.helion-home .nox-owner-actions button>.lg-layer,
+body.helion-home .nox-owner-persona>.lg-layer {z-index:0}
+body.helion-home .nox-owner-actions button>.lg-sheen,
+body.helion-home .nox-owner-persona>.lg-sheen {z-index:0;opacity:.14}
+body.helion-home .nox-owner-actions button:focus-visible,
+body.helion-home .nox-owner-persona:focus-visible{outline:2px solid #e6ba7d;outline-offset:3px}
+@media(prefers-reduced-motion:reduce){body.helion-home .lg-sheen{transition:none!important}}
