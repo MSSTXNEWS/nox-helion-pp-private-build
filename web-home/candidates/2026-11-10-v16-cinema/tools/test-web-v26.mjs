@@ -16,7 +16,9 @@ const expected={
   'chat.html':'f8c9d1f89371ec3dbf257e140910e86effd6560a71c5f69231915a3e7d0a2b77',
   'nox-chat.js':'0734c06fb3867307b3381bcac3a41703878f935117516de893be63e0be46ce49',
   'nox-telemetry.js':'459a2eec7bc3b3a56120a2038b5197b2d5d83f608ab450228fffc69ddb3b3627',
-  'nox-function-catalog.js':'175c1d8be3d9bd6c5011faade2a29cf6f253bc2e1d9769898b267ca969e84816',
+  'nox-function-catalog.js':'392791ba9d5fe49e087deccf8ac6f953e70edba6e15c48c792bf91a03e979933',
+  'nox-ui.js':'c5f6b23d5fc6c31c4c388a574bfa8c61243cda6000cefb0026732ebe4183b765',
+  'nox-function-catalog.css':'8be0ca95b6713c30b94d27ac80390267498b255d3ec6aa16a149098a8cdeb82b',
   'nox-universe-v19.js':'4c2c9a2d456da77bfeab74f2aa5037b8828eb723a3690579c382b93fe2af6d68'
 };
 test('exact V26 changes applied to only five pre-locked source files',()=>{
@@ -29,6 +31,15 @@ test('original D02 and 14 PBR physical worlds preserve byte-identical originals'
 test('all existing original ten pages remain in the candidate',()=>{
   for(const p of ['index','chat','cinema','install','memory','models','projects','settings','system','training'])
     assert.ok(fs.existsSync(path.join(root,p+'.html')),'Missing '+p+'.html');
+});
+test('public secondary pages load the real graphical catalog and Ctrl+K while HOME remains clean',()=>{
+  const ui=file('nox-ui.js'),catalog=file('nox-function-catalog.js'),css=file('nox-function-catalog.css');
+  assert.ok(ui.includes("!nativeOwner&&document.body?.dataset.page!=='index'"));
+  assert.ok(ui.includes("import('./nox-function-catalog.js')"));
+  assert.ok(catalog.includes("launch.id='noxPublicFunctionOpen'"));
+  assert.ok(catalog.includes("event.key.toLowerCase()==='k'"));
+  assert.ok(css.includes('.nox-function-public-open'));
+  assert.ok(css.includes('body.helion-home .nox-function-public-open{display:none!important}'));
 });
 test('real native Resonance microphone and translation targets exist',()=>{
   const html=file('chat.html'),catalog=file('nox-function-catalog.js');

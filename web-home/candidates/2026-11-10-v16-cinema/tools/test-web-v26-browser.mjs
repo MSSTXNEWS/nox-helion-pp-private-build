@@ -11,9 +11,10 @@ try{
   const page=await browser.newPage({viewport,serviceWorkers:'block',acceptDownloads:false});
   const errors=[];
   page.on('pageerror',e=>errors.push(e.message));
-  const res=await page.goto(base,{waitUntil:'domcontentloaded',timeout:60000});
+  const res=await page.goto(new URL('settings.html',base).href,{waitUntil:'domcontentloaded',timeout:60000});
   assert.equal(res?.status(),200,'Existing HOME not reachable in Chromium');
   await page.waitForFunction(()=>window.NoxFunctionCatalog&&window.NOX_UNIVERSE_V19,{timeout:30000});
+  assert.equal(await page.locator('#noxPublicFunctionOpen').count(),1,'Secondary WEB missing real graphical catalog entry');
   for(const [id,name] of [['weather','Погода'],['news','Новости'],['fx','Валюта'],['calendar','Календарь'],['notifications','Уведомления']]){
    await page.evaluate(query=>window.NoxFunctionCatalog.open(query),name);
    const item=page.locator('.nox-function-card[data-function-id="'+id+'"]');

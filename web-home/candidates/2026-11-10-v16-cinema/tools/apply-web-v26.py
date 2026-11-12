@@ -6,6 +6,8 @@ import hashlib, re
 root = Path(__file__).resolve().parent.parent / 'dist'
 locks = {
  'chat.html': 'a9abd5e5d855b72dc047898a65d622a152ca5c1009a7da1b78e2dd5892259b0b',
+ 'nox-ui.js': '294f6a9efb523735dbadd9ce6c35433fb9b2489f9c7e1df4d5d3d157286932bc',
+ 'nox-function-catalog.css': '80cb5fe3e77b638b9c21e12fe065672c09775dbda4f9961bfe60b2b2da97de05',
  'nox-chat.js': 'd598379aa8f4fbb1da43539ed39634d74efe3bc4a3d129f00721d6cf7bc95b4a',
  'nox-telemetry.js': 'c2eed8a1fd9b611e1f989f09269f06042a71d91291ce1226d768952cc784ec89',
  'nox-function-catalog.js': 'f5582dd797a3772b6c3e53a9bf7967e07b002810fd1b5ffe6a3a8f42b5d6675f',
@@ -42,6 +44,20 @@ def catalog(s):
   s=once(s,line,line[:-2]+",'v19:"+module+"'],")
  needle="if(item.ui){event.preventDefault();const method=item.ui==='commands'?'open':'openInbox';"
  replacement="if(item.ui?.startsWith('v19:')&&!native){event.preventDefault();const module=item.ui.slice(4);if(window.NOX_UNIVERSE_V19?.modules?.includes(module)){dialog.close();window.NOX_UNIVERSE_V19.open(module);}else{status.textContent='Модуль '+module+' не загружен · HOLD';}return;}if(item.ui&&['commands','inbox'].includes(item.ui)){event.preventDefault();const method=item.ui==='commands'?'open':'openInbox';"
+ s=once(s,needle,replacement)
+ needle="window.NoxFunctionCatalog={open,entries:entries.map(n=>({...n})),diagnostics:()=>({entries:entries.length,open:dialog.open,search:search.value,networkRequestsOnOpen:0,automaticActions:false})};"
+ replacement="""// The native owner has the real command center; public WEB gets only this
+// existing read-only catalog without privileged actions or a second router.
+if(!native&&document.body?.dataset.page!=='index'){
+ const launch=make('button','nox-function-public-open');launch.id='noxPublicFunctionOpen';launch.type='button';launch.dataset.noxCatalogOpen='';
+ launch.setAttribute('aria-label','Все функции NOX · Ctrl+K');launch.setAttribute('aria-keyshortcuts','Control+K');
+ launch.append(glyph('grid-2x2'),make('span','','ВСЕ ФУНКЦИИ'));
+ (document.querySelector('.nox-v19-root')||document.querySelector('.nox-app-header')||document.body).append(launch);
+ document.addEventListener('keydown',event=>{if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='k'&&!event.repeat&&!event.isComposing){
+  event.preventDefault();if(dialog.open)close();else open();
+ }});
+}
+window.NoxFunctionCatalog={open,entries:entries.map(n=>({...n})),diagnostics:()=>({entries:entries.length,open:dialog.open,search:search.value,networkRequestsOnOpen:0,automaticActions:false})};"""
  return once(s,needle,replacement)
 change('nox-function-catalog.js',catalog)
 def telemetry(s):
@@ -86,3 +102,24 @@ def chat(s):
  s=once(s,"    run.stopping=true;\n    try {\n      const r=nativeOwner?await api('/api/nox/stop',{}):", "    run.stopping=true;\n    if(nativeOwner)state.nativeReplayHold=true;\n    run.controller.abort(); // No new UI tokens after STOP; native STOP call below is separate.\n    try {\n      const r=nativeOwner?await api('/api/nox/stop',{}):")
  return s
 change('nox-chat.js',chat)
+
+def ui_public(s):
+ return once(s,"  const nativeOwner=window.NOX_NATIVE_OWNER===true;","""  const nativeOwner=window.NOX_NATIVE_OWNER===true;
+  // Keep native owner-only extensions protected, while restoring the existing
+  // read-only function catalog on public secondary pages (no new backend).
+  if(!nativeOwner&&document.body?.dataset.page!=='index'){
+    const publicCatalog=()=>void import('./nox-function-catalog.js').catch(error=>console.warn('NOX function catalog HOLD:',String(error?.message||error)));
+    if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',publicCatalog,{once:true});else publicCatalog();
+  }""")
+change('nox-ui.js',ui_public)
+public_css="""
+/* Public secondary WEB pages: one discoverable graphical entry, native owner
+   remains on the original trusted command center. HOME has no added controls. */
+.nox-function-public-open{position:fixed;bottom:19px;left:230px;z-index:2147481001;display:inline-flex;align-items:center;justify-content:center;gap:9px;min-height:48px;min-width:150px;padding:9px 14px;border:1px solid rgba(225,178,114,.38);border-radius:14px;color:#f0c58e;background:linear-gradient(145deg,#24252b,#0c0d12);box-shadow:inset 0 1px rgba(255,255,255,.17),0 9px 28px #000b;font:600 12px/1.2 inherit;cursor:pointer}
+.nox-function-public-open svg{width:18px;height:18px;flex:none}
+.nox-function-public-open:focus-visible{outline:2px solid #dfc497;outline-offset:3px}
+body.helion-home .nox-function-public-open{display:none!important}
+@media(max-width:600px){.nox-function-public-open{left:auto;right:8px;bottom:8px;min-width:48px;padding:8px 12px}.nox-function-public-open span{display:none}}
+@media(prefers-reduced-motion:reduce){.nox-function-public-open{animation:none!important;transition:none!important}}
+"""
+change('nox-function-catalog.css',lambda s:s+public_css)
