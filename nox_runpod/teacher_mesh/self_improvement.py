@@ -87,3 +87,19 @@ def assess_candidate(proposal:dict,*,baseline:Observation,
             "source":candidate.evidence_url,
             "next":"existing GitHub PR review + rollback evidence; no automatic merge",
             "production_modified":False}
+
+
+def propose_existing_nox_task_intake(existing_task_ids, *,
+                                     stop_available=False,
+                                     owner_approved=False):
+    """SOURCE-ONLY intake for EXISTING FORGE/OneHost task scheduler.
+
+    It does not enqueue, train, install, schedule, touch S03, or call tools.
+    The host must perform its own authenticated ACL/STOP and queue admission.
+    """
+    from nox_task_intake import propose_for_existing_scheduler
+    return propose_for_existing_scheduler(
+        existing_task_ids,
+        stop_available=stop_available,
+        owner_approved=owner_approved
+    )
