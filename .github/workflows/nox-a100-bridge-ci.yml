@@ -30,4 +30,20 @@ jobs:
           assert "free_gib" in b.disk()
           assert b.preflight()["state"]=="HOLD_NOT_READY"
           print("NOX_BRIDGE_TESTS_PASS")
-          PY
+      - name: Validate gated training control without launching a trainer
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          python3 -m py_compile nox_remote_control/a100_live/bridge_v2.py nox_remote_control/a100_live/train_actions.py
+          bash -n nox_remote_control/a100_live/upgrade_bridge_v2.sh
+          PYTHONPATH=nox_remote_control/a100_live python3 - <<'PY'
+          import bridge_v2,train_actions
+          assert "resume_training" in bridge_v2.OPS
+          assert bridge_v2.WRITE_OPS == {"stage_fast75","prepare_local","resume_training"}
+          assert train_actions.PACK_SHA == "33afe7ea74fb5cf635815f1891298e92bc54b516d5a5462beb3214a2a9d8b652"
+          assert "resume_training" in train_actions.OPS_LIMIT
+          # Verify that the only mutation action has no user-specified command parameter.
+          import inspect
+          assert len(inspect.signature(train_actions.resume_training).parameters)==0
+          assert "/workspace" not in str(train_actions.LOCAL)
+          print("NOX_TRAIN_GATE_STATIC_PASS")
