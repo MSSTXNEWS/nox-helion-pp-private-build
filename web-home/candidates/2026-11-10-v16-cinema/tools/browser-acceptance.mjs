@@ -15,7 +15,7 @@ const viewports = [
  ['1024',1024,768],['1440',1440,900],['1920',1920,1080],['4k',3840,2160]
 ];
 const browser=await chromium.launch({headless:true,args:['--enable-webgl','--use-gl=angle','--use-angle=swiftshader']});
-const report={source:url,startedAt:new Date().toISOString(),browser:'Chromium SwiftShader (not a physical GPU)',cases:[],physicalGpuAcceptance:'HOLD'};
+const report={source:url,sourceRevision:process.env.NOX_AUDIT_SOURCE_SHA||null,startedAt:new Date().toISOString(),browser:'Chromium SwiftShader (not a physical GPU)',cases:[],physicalGpuAcceptance:'HOLD'};
 try{
  for(const [name,width,height] of viewports){
   const page=await browser.newPage({viewport:{width,height},deviceScaleFactor:1});
@@ -161,6 +161,43 @@ try{
       if(originalHitTargets.length!==14||originalHitTargets.some(item=>!item.unobstructed))
        throw Error('NOX_ORIGINAL_14_BUTTON_OVERLAP:'+JSON.stringify(originalHitTargets));
       ownerCheck.v24.originalSelectorHitTargets=originalHitTargets.length;
+
+      // Independent original-renderer evidence: this is the actual Three
+      // scene's diagnostic output, not merely 14 HTML nodes or a mock status.
+      const materials=await page.evaluate(()=>window.NOX_PHYSICAL_WORLDS_QA?.());
+      const mat=materials?.materialAudit||[];
+      if(materials?.count!==14||mat.length!==14||
+         !materials.allMaterialAssetsReady||materials.hdrEnvironment!=='READY'||
+         materials.planetMapsReady!==8||materials.metalMapsReady!==4||
+         materials.metalMapsFailed?.length||
+         mat.filter(v=>v.category==='asteroid').length!==3||
+         mat.filter(v=>v.category!=='asteroid').length!==11||
+         mat.some(v=>!Number.isFinite(v.roughness)||!Number.isFinite(v.metalness)||
+                     v.roughness<0||v.roughness>1||v.metalness<0||v.metalness>1)||
+         mat.some(v=>v.category!=='asteroid'&&!v.textureLoaded))
+        throw Error('NOX_ORIGINAL_14_REAL_MATERIALS_NOT_READY:'+JSON.stringify({
+         count:materials?.count,hdri:materials?.hdrEnvironment,maps:materials?.planetMapsReady,
+         metal:materials?.metalMapsReady,failed:materials?.metalMapsFailed,
+         loaded:mat.map(v=>[v.index,v.name,v.type,v.textureLoaded])
+        }));
+      const lighting=materials?.sceneLighting||{};
+      if(!lighting.applied||!Number.isFinite(lighting.keyIntensity)||
+         lighting.keyIntensity<=0||!Number.isFinite(lighting.exposure)||lighting.exposure<=0)
+        throw Error('NOX_ORIGINAL_CINEMATIC_LIGHT_NOT_APPLIED:'+JSON.stringify(lighting));
+      ownerCheck.v24.originalMaterialAudit={count:14,hdri:'READY',planetTextures:8,
+       metalTextures:4,asteroids:3,physicalMaterials:11,lightScene:lighting.scene,
+       lightChanges:lighting.changes,lightIntensity:lighting.keyIntensity,
+       exposure:lighting.exposure,source:'NOX_PHYSICAL_WORLDS_QA',hardwareGpu:'NOT_TESTED'};
+      // Verify the original world geometry is still rotating independently.
+      const rotationsBefore=mat.map(x=>x.axialRotationRadians);
+      await page.waitForTimeout(1100);
+      const rotationsAfter=await page.evaluate(()=>window.NOX_PHYSICAL_WORLDS_QA?.().materialAudit
+        .map(x=>x.axialRotationRadians));
+      const moving=rotationsAfter?.filter((x,i)=>Math.abs(x-rotationsBefore[i])>0.0003).length||0;
+      if(moving<8)throw Error('NOX_ORIGINAL_AXIAL_ROTATION_NOT_RUNNING:'+moving);
+      ownerCheck.v24.rotatingMeshes=moving;
+      await page.screenshot({path:path.join(out,'1440-pbr-14-original-materials.png'),fullPage:false,timeout:30000});
+
       // Exercise all 14 ORIGINAL controls, not just count them.
       const controls=page.locator('section.nox-orbital-controls button');
       for(let i=0;i<14;i++){
