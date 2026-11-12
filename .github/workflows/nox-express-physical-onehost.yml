@@ -73,13 +73,17 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference='Stop'
-          python -B -m py_compile coordination/soul_gpu_v1/nox_weight_vault.py coordination/soul_gpu_v1/nox_thermal_sensors_v1.py
+          # ast.parse validates the exact files without creating __pycache__ in SourceLock.
+          python -B -c "import ast,pathlib; paths=['coordination/soul_gpu_v1/nox_weight_vault.py','coordination/soul_gpu_v1/nox_thermal_sensors_v1.py']; [ast.parse(pathlib.Path(p).read_text(encoding='utf-8'), filename=p) for p in paths]"
           if ($LASTEXITCODE -ne 0) { throw 'NOX_PRIME_WINDOWS_PATH_PYTHON_HOLD' }
           Push-Location coordination/soul_gpu_v1
           try {
             python -B -m unittest -q test_nox_cleanup_exact_duplicates_v1 test_nox_prime_download_five_v1
             if ($LASTEXITCODE -ne 0) { throw 'NOX_PRIME_WEIGHT_CLEANUP_AND_DOWNLOAD_REGRESSION_HOLD' }
           } finally { Pop-Location }
+          # A read-only diagnostic must never change exact SourceLock checkout.
+          $dirty = @(& git status --porcelain --untracked-files=all)
+          if ($dirty.Count -gt 0) { throw 'NOX_PRIME_PREFLIGHT_CHANGED_REPO_TREE' }
           Write-Host 'NOX_PRIME_WINDOWS_WEIGHT_VAULT_SOURCE_PASS_NOT_NATIVE_MODEL_ACCEPTANCE'
       - name: G1 exact HEAD + full immutable source ZIP
         shell: pwsh
