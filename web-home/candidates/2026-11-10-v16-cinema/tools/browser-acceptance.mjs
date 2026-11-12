@@ -207,7 +207,9 @@ try{
         // Playwright locator.click waits for a motionless element, which the
         // original living planets deliberately never are. Force click is
         // forbidden: it could hide a real overlay/interception defect.
-        await button.scrollIntoViewIfNeeded({timeout:8000});
+        // The centre of every visible selector was hit-tested above.
+        // Scrolling a permanently animated planet waits for "stable" and
+        // times out; clicking its freshly checked centre is the real input.
         const hit=await page.evaluate(index=>{
           const target=document.querySelectorAll('section.nox-orbital-controls button')[index];
           const r=target.getBoundingClientRect(),x=r.left+r.width/2,y=r.top+r.height/2;
