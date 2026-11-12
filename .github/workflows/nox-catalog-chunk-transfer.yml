@@ -1,0 +1,276 @@
+name: NOX Catalog Chunk Transfer 1-100
+on:
+  push:
+    branches: [feature/nox-teacher-mycelium-20261112]
+    paths: [.github/workflows/nox-catalog-chunk-transfer.yml]
+  pull_request:
+    branches: [main]
+    paths: [.github/workflows/nox-catalog-chunk-transfer.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  shard-existing-full-snapshots:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        target: ["32", "33", "70", "74", "77", "78"]
+    steps:
+      - name: Download already completed source artifact (no repeat fetch)
+        uses: actions/download-artifact@v4
+        with:
+          name: NOX_CATALOG_COMPLETION_${{ matrix.target }}
+          path: input
+          repository: MSSTXNEWS/nox-helion-pp-private-build
+          run-id: 43234180775
+          github-token: ${{ github.token }}
+      - name: Independently verify original source bytes then split for Drive
+        shell: bash
+        env:
+          TARGET: ${{ matrix.target }}
+        run: |
+          set -Eeuo pipefail
+          python3 - <<'PY'
+          import os,sys,json,hashlib,pathlib,tarfile,zipfile
+          id=int(os.environ["TARGET"])
+          src=pathlib.Path("input")
+          dst=pathlib.Path("out");dst.mkdir(exist_ok=True)
+          pieces=dst/"chunks";pieces.mkdir(exist_ok=True)
+          report=json.loads((src/"RESULTS.json").read_text())
+          assert report["catalog_number"]==id,(id,report)
+          assert report["status"]=="DOWNLOADED_VERIFIED",report
+          def checksum(path):
+            h=hashlib.sha256()
+            with path.open("rb") as f:
+              for b in iter(lambda:f.read(4*1024*1024),b""):h.update(b)
+            return h.hexdigest()
+          if "bundle" in report:
+            entry=report["bundle"]
+            primary=src/entry["file"]
+            assert tarfile.is_tarfile(primary),primary
+          else:
+            entry=report["files"][0]
+            primary=src/entry["file"]
+            assert zipfile.is_zipfile(primary),primary
+          assert primary.exists() and primary.stat().st_size==entry["bytes"],(primary,entry)
+          assert checksum(primary)==entry["sha256"],"original source checksum mismatch"
+          archive=dst/"snapshot_with_audit.tar"
+          with tarfile.open(archive,"w") as t:
+            for p in sorted(src.rglob("*")):
+              if p.is_file():t.add(p,arcname=p.relative_to(src).as_posix(),recursive=False)
+          size=80*1024*1024
+          sha=hashlib.sha256()
+          partlist=[]
+          with archive.open("rb") as f:
+            idx=0
+            while block:=f.read(size):
+              name=f"piece{idx:02d}"
+              (pieces/name).write_bytes(block)
+              sha.update(block)
+              partlist.append({"name":name,"bytes":len(block),"sha256":hashlib.sha256(block).hexdigest()})
+              idx+=1
+          originalbytes=archive.stat().st_size
+          archive.unlink()
+          audit={"schema":"nox-source-chunk-transfer-v1","catalog_number":id,"source_status":"DOWNLOADED_VERIFIED",
+                 "source_revision":report.get("revision"),"package_type":"TAR_WITH_RESULTS_AND_FULL_SOURCE_SNAPSHOT",
+                 "archive_name":f"NOX_CATALOG_{id:03d}_FULL_SOURCE.tar",
+                 "archive_bytes":originalbytes,"archive_sha256":sha.hexdigest(),
+                 "part_size":size,"parts":partlist,
+                 "policy":"OFFLINE SOURCE BACKUP ONLY, DO NOT EXECUTE PICKLE OR ALTER NOX PRODUCTION/WEIGHTS"}
+          (dst/"PARTS_INDEX.json").write_text(json.dumps(audit,ensure_ascii=False,indent=2)+"\n")
+          print("NOX_CHUNKS_VERIFIED",id,len(partlist),originalbytes,audit["archive_sha256"],flush=True)
+          assert len(partlist)<=20,"Too many chunks, update upload steps"
+          PY
+      - name: Upload audit manifest
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NOX_CATALOG_${{ matrix.target }}_MANIFEST
+          path: out/PARTS_INDEX.json
+          retention-days: 7
+          if-no-files-found: warn
+          compression-level: 0
+      - name: Transfer part 00
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NOX_CATALOG_${{ matrix.target }}_PART_00
+          path: out/chunks/piece00
+          retention-days: 7
+          if-no-files-found: ignore
+          compression-level: 0
+      - name: Transfer part 01
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NOX_CATALOG_${{ matrix.target }}_PART_01
+          path: out/chunks/piece01
+          retention-days: 7
+          if-no-files-found: ignore
+          compression-level: 0
+      - name: Transfer part 02
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NOX_CATALOG_${{ matrix.target }}_PART_02
+          path: out/chunks/piece02
+          retention-days: 7
+          if-no-files-found: ignore
+          compression-level: 0
+      - name: Transfer part 03
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NOX_CATALOG_${{ matrix.target }}_PART_03
+          path: out/chunks/piece03
+          retention-days: 7
+          if-no-files-found: ignore
+          compression-level: 0
+      - name: Transfer part 04
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NOX_CATALOG_${{ matrix.target }}_PART_04
+          path: out/chunks/piece04
+          retention-days: 7
+          if-no-files-found: ignore
+          compression-level: 0
+      - name: Transfer part 05
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NOX_CATALOG_${{ matrix.target }}_PART_05
+          path: out/chunks/piece05
+          retention-days: 7
+          if-no-files-found: ignore
+          compression-level: 0
+      - name: Transfer part 06
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NOX_CATALOG_${{ matrix.target }}_PART_06
+          path: out/chunks/piece06
+          retention-days: 7
+          if-no-files-found: ignore
+          compression-level: 0
+      - name: Transfer part 07
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NOX_CATALOG_${{ matrix.target }}_PART_07
+          path: out/chunks/piece07
+          retention-days: 7
+          if-no-files-found: ignore
+          compression-level: 0
+      - name: Transfer part 08
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NOX_CATALOG_${{ matrix.target }}_PART_08
+          path: out/chunks/piece08
+          retention-days: 7
+          if-no-files-found: ignore
+          compression-level: 0
+      - name: Transfer part 09
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NOX_CATALOG_${{ matrix.target }}_PART_09
+          path: out/chunks/piece09
+          retention-days: 7
+          if-no-files-found: ignore
+          compression-level: 0
+      - name: Transfer part 10
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NOX_CATALOG_${{ matrix.target }}_PART_10
+          path: out/chunks/piece10
+          retention-days: 7
+          if-no-files-found: ignore
+          compression-level: 0
+      - name: Transfer part 11
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NOX_CATALOG_${{ matrix.target }}_PART_11
+          path: out/chunks/piece11
+          retention-days: 7
+          if-no-files-found: ignore
+          compression-level: 0
+      - name: Transfer part 12
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NOX_CATALOG_${{ matrix.target }}_PART_12
+          path: out/chunks/piece12
+          retention-days: 7
+          if-no-files-found: ignore
+          compression-level: 0
+      - name: Transfer part 13
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NOX_CATALOG_${{ matrix.target }}_PART_13
+          path: out/chunks/piece13
+          retention-days: 7
+          if-no-files-found: ignore
+          compression-level: 0
+      - name: Transfer part 14
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NOX_CATALOG_${{ matrix.target }}_PART_14
+          path: out/chunks/piece14
+          retention-days: 7
+          if-no-files-found: ignore
+          compression-level: 0
+      - name: Transfer part 15
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NOX_CATALOG_${{ matrix.target }}_PART_15
+          path: out/chunks/piece15
+          retention-days: 7
+          if-no-files-found: ignore
+          compression-level: 0
+      - name: Transfer part 16
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NOX_CATALOG_${{ matrix.target }}_PART_16
+          path: out/chunks/piece16
+          retention-days: 7
+          if-no-files-found: ignore
+          compression-level: 0
+      - name: Transfer part 17
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NOX_CATALOG_${{ matrix.target }}_PART_17
+          path: out/chunks/piece17
+          retention-days: 7
+          if-no-files-found: ignore
+          compression-level: 0
+      - name: Transfer part 18
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NOX_CATALOG_${{ matrix.target }}_PART_18
+          path: out/chunks/piece18
+          retention-days: 7
+          if-no-files-found: ignore
+          compression-level: 0
+      - name: Transfer part 19
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NOX_CATALOG_${{ matrix.target }}_PART_19
+          path: out/chunks/piece19
+          retention-days: 7
+          if-no-files-found: ignore
+          compression-level: 0
