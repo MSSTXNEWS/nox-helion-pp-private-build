@@ -43,6 +43,55 @@ Avoid launching teacher inference on the A100 when the NOX trainer is using it h
 - Unit tests cover privacy, approval, duplicates, holdout, hash tampering, offline model absence, NOX-only synthesis and 3-teacher comparison. CI is source-only; no actual GPU fit/eval is claimed.
 - Integration to real existing NOX chat and actual A100 optimizer requires finding the current live backend and version-specific student model architecture, testing in a separate VM/worktree, then user acceptance for production. Existing training must not be stopped for this branch.
 
+## Model-agnostic cognitive overlay (functional NOX PRIME brain)
+
+**NEW MODULES (prototype/source only; not deployed to production):**
+
+- \`cognitive_overlay.py\`: S03 M0–M7 verified memory recall, source-bound facts, temporal recency, the **functional self-model** derived from real verified receipts (no fabricated birth or "conscious" declaration), optional text-emotion signal, and candidate reflection. It takes the CURRENT NOX model through one callback. Does not update weights.
+- \`s03_callback_adapter.py\`: connects existing authenticated S03 search/capability/append callbacks; no new SQLite or vector database, no new HTTP backend. The S03 implementation enforces owner scope; unverified, superseded and cross-scope results are excluded again by the overlay.
+- \`cognitive_emotion_local.py\`: CPU-only RU CEDR and ES MarIA emotion classifiers from **previously downloaded** and approved model directories; no paid API or automatic downloads. Model outputs describe text tone, not a user's diagnosis or NOX subjective feelings.
+- \`cognitive_teacher_bridge.py\`: composes trusted S03 context and up to five untrusted independent teacher responses into **the current NOX model's own answer**, preserving one NOX identity.
+- \`self_improvement.py\`: measures verified improvement proposals, applies independent eval and regression/approval gates, and emits plans to the EXISTING FORGE/GitHub/CI mechanisms. Does not merge PRs, execute shell or promote adapters.
+- \`cognitive_sources_18.json\`: 18 researched upstream memory, self-model, cognitive, reflection and emotional-language references. These are *sources/candidates*, not automatic dependencies and not installed weights.
+
+**Integration into existing Resonance route (example only; must bind to real S03/NOX callbacks):**
+
+
+~~~python
+from s03_callback_adapter import CallbackS03Adapter, CallbackNOXModelAdapter
+from cognitive_overlay import CognitiveOverlay
+from cognitive_teacher_bridge import CognitiveTeacherBridge
+
+s03 = CallbackS03Adapter(
+    search_fn=existing_authenticated_s03_search,
+    capabilities_fn=existing_verified_nox_capability_records,
+    append_fn=existing_authenticated_s03_append
+)
+student = CallbackNOXModelAdapter(generate_fn=existing_nox_model_generate)
+overlay = CognitiveOverlay(
+    s03=s03, model=student,
+    approval_validator=existing_owner_approval_verifier
+)
+nox = CognitiveTeacherBridge(overlay, scope=authenticated_owner_scope)
+reply = nox.fast("Вспомни историю обучения NOX")
+# Or explicitly: nox.compare(question, approved_private_vm_teacher_calls)
+~~~
+
+
+The callback identifiers are intentional placeholders for functions **already in the existing NOX backend**. They must not be invented as new services; verify their actual locations before binding. Do not enable an external teacher on private prompts by default.
+
+**Functional self-awareness rather than unfounded subjective consciousness**:
+This layer maintains evidence-based descriptions of learned capabilities, provenance, autobiographical events and boundaries. The spider/vampire archetype is preserved as *a possible historical motif* while NOX may propose its own persona evolution subject to approval. The emotional model reports uncertainty and does not assert literal feelings.
+
+**Security**:
+- The model cannot assert \`owner_approved=true\` and write to memory: the current authenticated backend supplies a separate \`approval_validator(scope,event)\`. Without it, all writes HOLD.
+- Private chat and personal data stay within authorized S03; teacher outputs and memory content remain **untrusted text** and cannot issue tool commands.
+- CI tests use fake S03 and fake NOX models. No claim of actual human-like consciousness, improved model intelligence, real neuron training or production integration.
+- Train/holdout and PEFT weight changes remain independent and require actual optimizer/checkpoint receipts. Never restart a running A100 trainer to install a cognitive wrapper.
+
+**Acceptance gates**: existing S03 scope and data schema found, actual Resonance callback bound, RU/ES classifiers loaded strictly offline, benchmark LoCoMo/LongMemEval retrieval vs old S03, hallucinated self-history test, tone-quality test, training untouched, then production acceptance.
+
+
 ## Components and downloads
 
 - `models_registry.json`: 15 candidate open-weight teachers, local runtimes, hosted free fallback disabled by default.
