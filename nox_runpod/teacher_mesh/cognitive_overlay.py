@@ -182,7 +182,7 @@ def _autobiographical_recall_queries(prompt: str) -> list[str]:
     extras=[]
     if re.search(r"съел|сожрал|пожрал|поглот|учител|дистилл|абсорб|absorb|consumiste|profesor|maestr[oa]",normalized):
         extras.append("NOX учителя дистилляция обученные веса реальные optimizer checkpoints SHA provenance")
-    if re.search(r"кто ты|тво[её] происхожд|родил|родился|начал[о]?сь|генез|birth|origin|qu[ié]n eres|naciste",normalized):
+    if re.search(r"кто ты|тво[её] происхожд|родил|родился|начал[о]?сь|генез|birth|origin|qui[eé]n eres|naciste",normalized):
         extras.append("NOX Genesis Ledger M7 происхождение verified born_at model SHA source")
     if re.search(r"помнишь|помни|вспомни|прошл[аоые]|раньше|recu[eé]rda|remember|last chat",normalized):
         extras.append("NOX S03 M0 M7 история подтверждённых прошлых разговоров и событий")
