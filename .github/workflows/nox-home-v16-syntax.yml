@@ -324,10 +324,9 @@ jobs:
           }
           console.log('NOX_V21_FULL_WEB_BUILD_STATIC_PASS 10/10 routes; 29 verified runtime files; GPU/browser HOLD');
           NODE
-      - name: Apply exact WEB V26 source corrections (original D02 and worlds immutable)
+      - name: Verify the same source-locked V26 dist built for Vercel and CI
         working-directory: web-home/candidates/2026-11-10-v16-cinema
         run: |
-          python3 tools/apply-web-v26.py
           for source in dist/nox-chat.js dist/nox-telemetry.js dist/nox-function-catalog.js dist/nox-universe-v19.js; do node --check "$source"; done
           node tools/test-web-v26.mjs
       - name: Reject missing local assets on all ten NOX pages
