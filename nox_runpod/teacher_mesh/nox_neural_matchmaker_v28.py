@@ -54,6 +54,9 @@ def match_advisors(task:dict, registry:list[dict], policy:dict, *, now:datetime|
         return {"schema":SCHEMA,"status":"HOLD_NATIVE_OWNER_POLICY","advisors":[]}
     if policy.get("allow_teacher_comparison") is not True:
         return {"schema":SCHEMA,"status":"NO_COMPARE_BY_POLICY","advisors":[]}
+    student_sha=task.get("active_student_sha256")
+    if not isinstance(student_sha,str) or not SHA.fullmatch(student_sha):
+        return {"schema":SCHEMA,"status":"HOLD_ACTIVE_STUDENT_SHA","advisors":[]}
     if not isinstance(registry,list) or len(registry)>100:
         return {"schema":SCHEMA,"status":"HOLD_REGISTRY","advisors":[]}
     max_count=policy.get("max_advisors",1)
@@ -84,6 +87,12 @@ def match_advisors(task:dict, registry:list[dict], policy:dict, *, now:datetime|
         profiles=m.get("verified_benchmarks")
         if not isinstance(profiles,dict) or not _valid_verified_score(profiles.get(domain)):continue
         ev=profiles[domain]
+        if ev.get("student_model_sha256")!=student_sha:
+            continue
+        allowed_harnesses=policy.get("accepted_harness_shas",[])
+        if (not isinstance(allowed_harnesses,list) or
+                ev["harness_sha256"] not in allowed_harnesses):
+            continue
         improvement=ev["teacher_score"]-ev["student_score"]
         # Do not pay additional latency for same-family/no-measured-benefit teachers.
         if improvement<=0.02:continue
