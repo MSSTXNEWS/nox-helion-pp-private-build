@@ -20,7 +20,13 @@
       "requires_acceptance": true,
       "model_card_url_checked_2026_11_12": true,
       "download_verified": false,
-      "license_must_recheck": true
+      "license_must_recheck": true,
+      "selection_tier": "RESERVE_DONT_DOWNLOAD",
+      "unique_skill_hypothesis": "fast_low_cost_baseline",
+      "selection_rationale": "Overlaps Qwen3.5 larger models; use only for latency/cost or small-GPU control",
+      "incremental_gain_verified": false,
+      "existing_asset_inventory_checked": false,
+      "automatic_download_allowed": false
     },
     {
       "id": "qwen35-9b",
@@ -38,7 +44,13 @@
       "requires_acceptance": true,
       "model_card_url_checked_2026_11_12": true,
       "download_verified": false,
-      "license_must_recheck": true
+      "license_must_recheck": true,
+      "selection_tier": "RESERVE_DONT_DOWNLOAD",
+      "unique_skill_hypothesis": "small_gpu_baseline",
+      "selection_rationale": "Overlaps Qwen3.5 27B; promote only if hardware economics or quality-per-euro wins",
+      "incremental_gain_verified": false,
+      "existing_asset_inventory_checked": false,
+      "automatic_download_allowed": false
     },
     {
       "id": "qwen35-27b",
@@ -56,7 +68,13 @@
       "requires_acceptance": true,
       "model_card_url_checked_2026_11_12": true,
       "download_verified": false,
-      "license_must_recheck": true
+      "license_must_recheck": true,
+      "selection_tier": "CORE_CANDIDATE",
+      "unique_skill_hypothesis": "general_multilingual",
+      "selection_rationale": "Broad general and RU/ES competence; verify incremental gain against current student and existing Qwen teachers",
+      "incremental_gain_verified": false,
+      "existing_asset_inventory_checked": false,
+      "automatic_download_allowed": false
     },
     {
       "id": "qwen35-moe",
@@ -74,7 +92,13 @@
       "requires_acceptance": true,
       "model_card_url_checked_2026_11_12": true,
       "download_verified": false,
-      "license_must_recheck": true
+      "license_must_recheck": true,
+      "selection_tier": "RESERVE_DONT_DOWNLOAD",
+      "unique_skill_hypothesis": "moe_efficiency_challenger",
+      "selection_rationale": "Overlaps Qwen3.5 27B; trial only if MoE throughput/quality beats selected generalist",
+      "incremental_gain_verified": false,
+      "existing_asset_inventory_checked": false,
+      "automatic_download_allowed": false
     },
     {
       "id": "qwen3-8b",
@@ -92,7 +116,13 @@
       "requires_acceptance": true,
       "model_card_url_checked_2026_11_12": false,
       "download_verified": false,
-      "license_must_recheck": true
+      "license_must_recheck": true,
+      "selection_tier": "EXISTING_ASSET_AUDIT",
+      "unique_skill_hypothesis": "student_or_existing_baseline",
+      "selection_rationale": "Potential current NOX-related Qwen3 8B asset; never redownload until inventory and SHA checked",
+      "incremental_gain_verified": false,
+      "existing_asset_inventory_checked": false,
+      "automatic_download_allowed": false
     },
     {
       "id": "qwen3-32b",
@@ -110,7 +140,13 @@
       "requires_acceptance": true,
       "model_card_url_checked_2026_11_12": false,
       "download_verified": false,
-      "license_must_recheck": true
+      "license_must_recheck": true,
+      "selection_tier": "RESERVE_DONT_DOWNLOAD",
+      "unique_skill_hypothesis": "reasoning_challenger",
+      "selection_rationale": "Overlaps DeepSeek R1 Distill and general Qwen family; require unique score gain",
+      "incremental_gain_verified": false,
+      "existing_asset_inventory_checked": false,
+      "automatic_download_allowed": false
     },
     {
       "id": "qwen3coder",
@@ -128,7 +164,13 @@
       "requires_acceptance": true,
       "model_card_url_checked_2026_11_12": true,
       "download_verified": false,
-      "license_must_recheck": true
+      "license_must_recheck": true,
+      "selection_tier": "CORE_CANDIDATE",
+      "unique_skill_hypothesis": "coding_engineering",
+      "selection_rationale": "Code generation, architecture, repo-level repairs; test code execution and regression",
+      "incremental_gain_verified": false,
+      "existing_asset_inventory_checked": false,
+      "automatic_download_allowed": false
     },
     {
       "id": "deepseek-r1-distill-32b",
@@ -146,7 +188,13 @@
       "requires_acceptance": true,
       "model_card_url_checked_2026_11_12": false,
       "download_verified": false,
-      "license_must_recheck": true
+      "license_must_recheck": true,
+      "selection_tier": "CORE_CANDIDATE",
+      "unique_skill_hypothesis": "math_reasoning_verification",
+      "selection_rationale": "Reasoning and mathematical critique; correlated Qwen-based lineage: require independent holdout",
+      "incremental_gain_verified": false,
+      "existing_asset_inventory_checked": false,
+      "automatic_download_allowed": false
     },
     {
       "id": "gpt-oss-20b",
@@ -164,7 +212,13 @@
       "requires_acceptance": true,
       "model_card_url_checked_2026_11_12": true,
       "download_verified": false,
-      "license_must_recheck": true
+      "license_must_recheck": true,
+      "selection_tier": "SPECIALIST_CANDIDATE",
+      "unique_skill_hypothesis": "tools_and_planning",
+      "selection_rationale": "Tool use and agent workflows; compare task-success with existing student",
+      "incremental_gain_verified": false,
+      "existing_asset_inventory_checked": false,
+      "automatic_download_allowed": false
     },
     {
       "id": "gpt-oss-120b",
@@ -182,7 +236,13 @@
       "requires_acceptance": true,
       "model_card_url_checked_2026_11_12": false,
       "download_verified": false,
-      "license_must_recheck": true
+      "license_must_recheck": true,
+      "selection_tier": "HOLD_RESOURCE",
+      "unique_skill_hypothesis": "large_reasoning_challenger",
+      "selection_rationale": "High memory and inference cost; no deployment absent budgeted demonstrable gain",
+      "incremental_gain_verified": false,
+      "existing_asset_inventory_checked": false,
+      "automatic_download_allowed": false
     },
     {
       "id": "phi4",
@@ -200,7 +260,13 @@
       "requires_acceptance": true,
       "model_card_url_checked_2026_11_12": true,
       "download_verified": false,
-      "license_must_recheck": true
+      "license_must_recheck": true,
+      "selection_tier": "RESERVE_DONT_DOWNLOAD",
+      "unique_skill_hypothesis": "compact_math_challenger",
+      "selection_rationale": "Only if distinct math/low-resource gain exceeds reasoning teacher",
+      "incremental_gain_verified": false,
+      "existing_asset_inventory_checked": false,
+      "automatic_download_allowed": false
     },
     {
       "id": "mistral-small31",
@@ -218,7 +284,13 @@
       "requires_acceptance": true,
       "model_card_url_checked_2026_11_12": false,
       "download_verified": false,
-      "license_must_recheck": true
+      "license_must_recheck": true,
+      "selection_tier": "SPECIALIST_CANDIDATE",
+      "unique_skill_hypothesis": "independent_ru_es",
+      "selection_rationale": "Cross-family multilingual judge; compare RU/ES errors, not just eloquence",
+      "incremental_gain_verified": false,
+      "existing_asset_inventory_checked": false,
+      "automatic_download_allowed": false
     },
     {
       "id": "glm45-air",
@@ -236,7 +308,13 @@
       "requires_acceptance": true,
       "model_card_url_checked_2026_11_12": false,
       "download_verified": false,
-      "license_must_recheck": true
+      "license_must_recheck": true,
+      "selection_tier": "RESERVE_DONT_DOWNLOAD",
+      "unique_skill_hypothesis": "agent_challenger",
+      "selection_rationale": "Overlaps GLM 4.6 and tool specialist; no second GLM family by default",
+      "incremental_gain_verified": false,
+      "existing_asset_inventory_checked": false,
+      "automatic_download_allowed": false
     },
     {
       "id": "glm46",
@@ -254,7 +332,13 @@
       "requires_acceptance": true,
       "model_card_url_checked_2026_11_12": false,
       "download_verified": false,
-      "license_must_recheck": true
+      "license_must_recheck": true,
+      "selection_tier": "HOLD_RESOURCE",
+      "unique_skill_hypothesis": "long_code_agent_challenger",
+      "selection_rationale": "High GPU expense and overlap coding/tool specialists; evaluate off-line before install",
+      "incremental_gain_verified": false,
+      "existing_asset_inventory_checked": false,
+      "automatic_download_allowed": false
     },
     {
       "id": "gemma4-26b",
@@ -272,7 +356,13 @@
       "requires_acceptance": true,
       "model_card_url_checked_2026_11_12": true,
       "download_verified": false,
-      "license_must_recheck": true
+      "license_must_recheck": true,
+      "selection_tier": "SPECIALIST_CANDIDATE",
+      "unique_skill_hypothesis": "vision_multimodal",
+      "selection_rationale": "Conditional vision specialist only after model-card, license and actual image-input inference checks",
+      "incremental_gain_verified": false,
+      "existing_asset_inventory_checked": false,
+      "automatic_download_allowed": false
     }
   ],
   "sidecars": [
@@ -408,5 +498,43 @@
     }
   ],
   "license_status": "MODEL_CARD_METADATA_REQUIRES_RECHECK_PRIOR_TO_EACH_DOWNLOAD_AND_TRAINING",
-  "free_policy": "MODEL_WEIGHTS_MAY_BE_FREE_BUT_VM_GPU_POWER_IS_NOT; NO_AUTOMATED_SCRAPING_OF_WEB_CHATS"
+  "free_policy": "MODEL_WEIGHTS_MAY_BE_FREE_BUT_VM_GPU_POWER_IS_NOT; NO_AUTOMATED_SCRAPING_OF_WEB_CHATS",
+  "selection_policy": {
+    "version": "NOX_COMPLEMENTARY_TEACHERS_V2",
+    "status": "PROPOSED_NOT_DEPLOYED",
+    "principle": "Teach missing validated skills, not raw model count. Keep one student NOX, one S03, frozen teachers.",
+    "groups": {
+      "core_candidates": [
+        "qwen35-27b",
+        "deepseek-r1-distill-32b",
+        "qwen3coder"
+      ],
+      "specialist_candidates": [
+        "mistral-small31",
+        "gpt-oss-20b",
+        "gemma4-26b"
+      ]
+    },
+    "activation": "ALL_DISABLED_UNTIL_INVENTORY_LICENSE_HARDWARE_AND_BENCHMARK",
+    "inventory_first": [
+      "Check existing model paths, hashes, owner-approved current training checkpoint and model identities",
+      "No redownload or duplicate copies for existing teacher",
+      "Protect student checkpoints and S03"
+    ],
+    "gates": [
+      "Unique capability against CURRENT NOX and previously accepted teachers on source-separated holdout",
+      "Licensed and consented use of teacher outputs for distillation",
+      "Quality uplift, errors/regressions, RU/ES and task-success versus cost per useful accepted sample",
+      "Actual GPU memory and throughput tested on target VM",
+      "No production promotion before independent evaluation and owner acceptance"
+    ],
+    "scheduler": {
+      "max_parallel_teachers": "min(available_isolated_gpu_slots, approved_budget); never assume 3-5 fit on one GPU",
+      "start_with_one_teacher": true,
+      "no_training_claim_without_optimizer_checkpoint_receipts": true
+    },
+    "deduplication": "Compare response clusters, factual provenance, model-family correlations and existing S03; do not equate multiple same-family models with independent evidence",
+    "checkpoint_policy": "No automatic overwrite of active NOX weights; STOP fail closed; preserve snapshots and rollback",
+    "note": "This is a prioritization proposal, not proof these are the best performing models."
+  }
 }
