@@ -78,4 +78,37 @@ class Tests(unittest.TestCase):
         with sqlite3.connect(self.host.path) as db:db.execute(
             "update fact set verified=0 where id='e1'")
         self.assertEqual(self.host.rag()("nox","owner","chat1","Ты кого съел?")["memory_state"],"HOLD")
+    def test_owner_global_memory_requires_separate_native_grant(self):
+        # The real existing S03 native read callback must itself honor and
+        # enforce signed owner-scope access. Test shows the adapter never
+        # elevates cross-chat rows on its own.
+        record={
+            "id":"global-e1","tenant":"nox","principal":"owner",
+            "scope_chat_id":"chat-old","content":"NOX получил учителя на предыдущем чате",
+            "source_uri":"s03://owner/global","segment":"M7",
+            "timestamp_utc":T,"importance":.94,"verified":True,
+            "superseded":False,"owner_global_memory_approved":True}
+        def native_scope_search(t,p,c,query,limit):
+            return [record]
+        def make(grant):
+            return ExistingS03Rag(
+                native_authorize=self.host.auth,native_stop=self.host.stopfn,
+                search_authenticated=native_scope_search,
+                owner_memory_scope_authorized=lambda t,p,c:grant)
+        self.assertEqual(make(False)("nox","owner","chat1","Ты кого съел?")["memory_state"],"HOLD")
+        result=make(True)("nox","owner","chat1","Ты кого съел?")
+        self.assertEqual(result["evidence_count"],1)
+        self.assertIn("предыдущем чате",result["context"])
+        # No grant ever crosses principal or tenant.
+        self.assertEqual(make(True)("nox","stranger","chat1","Ты кого съел?")["memory_state"],"HOLD")
+
+    def test_global_memory_must_be_verified_by_native_readback(self):
+        rec={"id":"e1","tenant":"nox","principal":"owner","scope_chat_id":"prior",
+             "content":"NOX выучил доказанное событие","source_uri":"s03://owner/proof",
+             "segment":"M7","timestamp_utc":T,"importance":.9,
+             "verified":False,"superseded":False,"owner_global_memory_approved":True}
+        rag=ExistingS03Rag(native_authorize=self.host.auth,native_stop=self.host.stopfn,
+            search_authenticated=lambda t,p,c,q,limit:[rec],
+            owner_memory_scope_authorized=lambda t,p,c:True)
+        self.assertEqual(rag("nox","owner","chat1","Ты кого съел?")["memory_state"],"HOLD")
 if __name__=="__main__":unittest.main()
