@@ -332,7 +332,9 @@ jobs:
         run: node tools/audit-wow-wiring-v24.mjs dist
       - name: Real Chromium browser acceptance for ten routes and user actions
         working-directory: web-home/candidates/2026-11-10-v16-cinema
-        timeout-minutes: 10
+        # 7 actual WebGL sizes + 10 routes + original V7 material/light audit
+        # can exceed ten minutes on GitHub's software GPU. Do not skip tests.
+        timeout-minutes: 20
         run: |
           npm install --no-save --no-audit --no-fund playwright@1.58.2
           npx playwright install --with-deps chromium
