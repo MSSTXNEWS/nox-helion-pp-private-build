@@ -23,7 +23,7 @@ PACK_URL=("https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-bui
  "0d93d440910f7f1b0ad9bf68e3b7a64fbc78b491/"
  "nox_remote_control/a100_live/assets/NOX_A100_FAST75_V2.tgz.b64")
 PACK_SHA="33afe7ea74fb5cf635815f1891298e92bc54b516d5a5462beb3214a2a9d8b652"
-OPS_LIMIT={"stage_fast75","prepare_local","resume_training","training_status"}
+OPS_LIMIT={"stage_fast75","prepare_local","resume_training","training_status","arm_resume_training","cancel_auto_resume"}
 
 def safe_local(path):
     raw=str(path)
@@ -192,6 +192,7 @@ def training_status():
 def resume_training():
     existing=existing_trainers()
     if existing: return {"state":"HOLD_TRAINER_ALREADY_ACTIVE","pids":existing}
+    if (LOCAL/"STOP_sft").exists():return {"state":"HOLD_STOP_MARKER"}
     stage=stage_fast75()
     if stage["state"]!="READY": return stage
     ready=prepare_local()
@@ -217,9 +218,47 @@ def resume_training():
     return {"state":"LAUNCH_REQUESTED_NOT_STEP_VERIFIED","pid":p.pid,"resume_step":ready["step"],
             "profile":"FAST75","gpu":"A100","cpu_target_pct":75}
 
+AUTO=STATE/"auto_resume.json"
+
+def arm_resume_training():
+    STATE.mkdir(parents=True,exist_ok=True)
+    if AUTO.is_file():
+        return {"state":"AUTO_RESUME_ALREADY_ARMED"}
+    data={"created_epoch":int(time.time()),"expires_epoch":int(time.time()+6*3600)}
+    temp=STATE/("auto_resume."+str(os.getpid())+".tmp")
+    with temp.open("w") as f:
+        json.dump(data,f);f.flush();os.fsync(f.fileno())
+    os.replace(temp,AUTO)
+    return {"state":"AUTO_RESUME_ARMED","hours":6,"checkpoint_min_step":106}
+
+def cancel_auto_resume():
+    AUTO.unlink(missing_ok=True)
+    return {"state":"AUTO_RESUME_CANCELLED","trainer_untouched":True}
+
+def poll_auto_resume():
+    if not AUTO.is_file():return None
+    try:
+        conf=json.loads(AUTO.read_text())
+        if time.time()>float(conf["expires_epoch"]):
+            AUTO.unlink(missing_ok=True)
+            return {"state":"AUTO_RESUME_EXPIRED"}
+    except (OSError,ValueError,KeyError):return {"state":"HOLD_AUTO_RESUME_STATE"}
+    attempt=STATE/"auto_resume_last_attempt"
+    try:
+        if time.time()-float(attempt.read_text())<120:return None
+    except (OSError,ValueError):pass
+    attempt.write_text(str(time.time()))
+    if (LOCAL/"STOP_sft").exists():return {"state":"HOLD_STOP_MARKER"}
+    result=resume_training()
+    if result.get("state")=="LAUNCH_REQUESTED_NOT_STEP_VERIFIED":
+        AUTO.unlink(missing_ok=True)
+    return result
+
 def run_operation(op):
     if op=="stage_fast75":return stage_fast75()
     if op=="prepare_local":return prepare_local()
     if op=="resume_training":return resume_training()
     if op=="training_status":return training_status()
+    if op=="arm_resume_training":return arm_resume_training()
+    if op=="cancel_auto_resume":return cancel_auto_resume()
     raise ValueError("OP_NOT_ALLOWED")
