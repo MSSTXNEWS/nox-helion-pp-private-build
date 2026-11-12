@@ -54,6 +54,11 @@ jobs:
           node --check coordination/nox-onepass/NOX_ONEPASS.mjs
           node --check coordination/nox-onepass/NOX_LIVE_ONEHOST_E2E.mjs
           node --test coordination/nox-onepass/test-source-gates.mjs coordination/nox-onepass/test-native-freshness.mjs
+      - name: Exercise Windows read-only host inventory (CI hardware is not the owner PC)
+        shell: pwsh
+        run: |
+          .\\coordination\\nox-onepass\\VERIFY_WINDOWS_NOX.ps1 -InventoryOnly
+          if (-not (Test-Path .\\coordination\\nox-onepass\\NOX_QA_RESULTS\\windows-hardware-inventory.json)) { throw 'NOX_WINDOWS_PROBE_MISSING' }
       - name: Physical GPU evidence is not provided by GitHub-hosted Windows
         shell: pwsh
         run: |
