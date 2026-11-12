@@ -172,6 +172,25 @@ def _classify_affect(text: str, language: str,
         "claims_about_internal_emotion":False}
 
 
+def _autobiographical_recall_queries(prompt: str) -> list[str]:
+    """Expand elliptical RU/ES/EN owner questions to S03 source evidence, not canned replies.
+
+    This cannot invent teacher consumption, optimizer steps or a birth certificate.
+    Only the EXISTING permissioned S03 is queried, within the original owner scope.
+    """
+    normalized=prompt.casefold()
+    extras=[]
+    if re.search(r"съел|сожрал|пожрал|поглот|учител|дистилл|абсорб|absorb|consumiste|profesor|maestr[oa]",normalized):
+        extras.append("NOX учителя дистилляция обученные веса реальные optimizer checkpoints SHA provenance")
+    if re.search(r"кто ты|тво[её] происхожд|родил|родился|начал[о]?сь|генез|birth|origin|qu[ié]n eres|naciste",normalized):
+        extras.append("NOX Genesis Ledger M7 происхождение verified born_at model SHA source")
+    if re.search(r"помнишь|помни|вспомни|прошл[аоые]|раньше|recu[eé]rda|remember|last chat",normalized):
+        extras.append("NOX S03 M0 M7 история подтверждённых прошлых разговоров и событий")
+    if re.search(r"науч|умеешь|навык|learn|capacidad|aprend",normalized):
+        extras.append("NOX Skill Memory проверенные capability benchmarks тренировка checkpoint")
+    return extras[:2]
+
+
 class CognitiveOverlay:
     def __init__(self,s03:S03Port,model:NOXModelPort,
                  affect_classifier:Callable[[str,str],dict]|None=None,
@@ -192,10 +211,15 @@ class CognitiveOverlay:
         now=float(self.clock())
         try:
             records=self.s03.search(query=prompt,scope=scope,limit=60)
+            aliases=_autobiographical_recall_queries(prompt)
+            for alias in aliases:
+                # Re-use the same S03; never query external providers or alter memory.
+                records.extend(self.s03.search(query=alias,scope=scope,limit=30))
             capabilities=self.s03.capabilities(scope=scope)
         except Exception:
             return {"state":"HOLD_S03_UNAVAILABLE"}
-        memories,rejected=_clean_recalled(records,prompt,scope,now)
+        ranking_query=prompt+" "+" ".join(aliases)
+        memories,rejected=_clean_recalled(records,ranking_query,scope,now)
         return {"state":"PREPARED","schema":SCHEMA,"language":language,
             "scope":scope,"memories":memories,"rejected_memory_ids":rejected,
             "self_model":functional_self_model(capabilities),
