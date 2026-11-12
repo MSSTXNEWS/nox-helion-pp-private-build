@@ -63,7 +63,7 @@ class RealZipStaging(unittest.TestCase):
         make_zip(self.web, {"WEB/site/" + p: d for p, d in web_files().items()})
         make_zip(self.v25, {"EXPORTED_V25/site/" + p: d for p, d in chat_v25().items()})
         make_zip(self.v24, {"EXPORTED_V24/site/" + p: d for p, d in chat_v24().items()})
-        make_zip(self.qa, {"ONEPASS/" + p: d for p, d in onepass_pack().items()})
+        make_zip(self.qa, onepass_pack())
 
     def run_merge(self):
         out = self.root / "staging"
@@ -139,7 +139,7 @@ class RealZipStaging(unittest.TestCase):
         self.assertFalse(out.exists())
 
     def test_missing_qa_runner_holds_without_output(self):
-        make_zip(self.qa, {"ONEPASS/NOX_ONEPASS.mjs": b"x"})
+        make_zip(self.qa, {"NOX_ONEPASS.mjs": b"x"})
         run, out = self.run_merge()
         self.assertEqual(run.returncode, 2)
         self.assertIn("NOX_ONEPASS_REQUIRED_FILE_MISSING", run.stderr)
