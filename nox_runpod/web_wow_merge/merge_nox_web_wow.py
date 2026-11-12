@@ -244,15 +244,26 @@ def merge(web, chat25, chat24):
     return (None if conflicts else result), receipt
 
 
-def verify_onepass(path: Path):
+def extract_onepass_qa(path: Path):
+    """Preserve only 10 native QA/root files; do not duplicate its 292 site files."""
     raw = read_archive(path)
-    names = {PurePosixPath(p).name for p in raw}
-    missing = sorted(set(QA_REQUIRED) - names)
+    qa = {p: body for p, body in raw.items() if not p.startswith("site/")}
+    if any("/" in p or "\\" in p for p in qa):
+        raise ValueError("NOX_ONEPASS_UNEXPECTED_NESTED_QA_HOLD")
+    missing = sorted(set(QA_REQUIRED) - set(qa))
     if missing:
         raise ValueError("NOX_ONEPASS_REQUIRED_FILE_MISSING: " + ",".join(missing))
-    return {"source": path.name, "sha256": digest_file(path),
-            "zip_members": len(raw), "executed": False,
-            "hardware_e2e": "NOT_RUN"}
+    meta = {"source": path.name, "sha256": digest_file(path),
+            "zip_members": len(raw), "site_source_members": len(raw) - len(qa),
+            "qa_source_members": len(qa),
+            "qa_sha256": {p: digest(body) for p, body in sorted(qa.items())},
+            "qa_original_manifest_is_not_current_for_merged_chat": True,
+            "executed": False, "hardware_e2e": "NOT_RUN"}
+    return meta, qa
+
+
+def verify_onepass(path: Path):
+    return extract_onepass_qa(path)[0]
 
 
 def output_candidate(dest, merged, receipt, inputs, onepass_path=None):
@@ -270,8 +281,20 @@ def output_candidate(dest, merged, receipt, inputs, onepass_path=None):
         receipt["inputs"] = {name: {"filename": path.name,
                              "sha256": digest_file(path), "bytes": path.stat().st_size}
                              for name, path in inputs.items()}
+        qa_files = {}
         if onepass_path is not None:
-            receipt["onepass"] = verify_onepass(onepass_path)
+            receipt["onepass"], qa_files = extract_onepass_qa(onepass_path)
+            for name, body in qa_files.items():
+                file = dest / "qa" / "onepass_v2_original" / name
+                file.parent.mkdir(parents=True, exist_ok=True)
+                file.write_bytes(body)
+            (dest / "qa" / "QA_NOTES.txt").write_text(
+                "Original ONEPASS V2 QA scripts are preserved only as SOURCE.\n"
+                "The original SOURCE_MANIFEST.json refers to pre-merge WEB and\n"
+                "MUST NOT be passed as proof for merged chat.html or memory.html.\n"
+                "Run a fresh SHA-pinned Windows/OneHost E2E acceptance on the merged\n"
+                "site before deployment; do not declare the original ZIP PASS applicable.\n",
+                encoding="utf-8")
         (dest / "NOX_MERGE_RECEIPT.json").write_text(
             json.dumps(receipt, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         (dest / "READ_ME.txt").write_text(
@@ -287,8 +310,10 @@ def output_candidate(dest, merged, receipt, inputs, onepass_path=None):
                         z.write(path, "site/" + path.relative_to(dest / "site").as_posix())
                 for name in ("NOX_MERGE_RECEIPT.json", "READ_ME.txt"):
                     z.write(dest / name, name)
-                if onepass_path is not None:
-                    z.write(onepass_path, "qa/NOX_ONEPASS_V2_SOURCE_UNEXECUTED.zip")
+                if qa_files:
+                    for f in sorted((dest / "qa").rglob("*")):
+                        if f.is_file():
+                            z.write(f, "qa/" + f.relative_to(dest / "qa").as_posix())
             with zipfile.ZipFile(output) as check:
                 if check.testzip() is not None:
                     raise ValueError("NOX_CANDIDATE_ZIP_CRC_FAILED")
