@@ -200,8 +200,9 @@ if qa28.exists():
     assert report['acceptance']=='SOURCE_AND_ADDON_DOM_QA_PASS_NOT_NATIVE_RELEASE'
     assert report['live_http_200_checks']==15
     site['qa/v28_cross_source_static_and_dom_report.json']=qa28.read_bytes()
-    site['qa/v28_static_dom_test_source.py']=(R/'test_nox_v28_static_dom.py').read_bytes()
-    site['qa/v28_merge_builder_source.py']=(R/'build_nox_web_v28.py').read_bytes()
+    qa_script=R/'test_nox_v28_static_dom.py'
+    if qa_script.is_file():site['qa/v28_static_dom_test_source.py']=qa_script.read_bytes()
+    site['qa/v28_merge_builder_source.py']=Path(__file__).read_bytes()
 # Static 10+addon routes and provenance. No duplicate v25 active root/index.
 index_unchanged=(sha(site['index.html'])==HASH['index'])
 assert index_unchanged
