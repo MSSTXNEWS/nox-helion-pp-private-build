@@ -2168,5 +2168,43 @@
       "number_of_worm_processes",
       "unverified_training_percent"
     ]
+  },
+  "infrastructure_context_2026_11_12": {
+    "source": "RunPod pod metadata + system/container logs, 2026-11-12; Japanese host reported by owner, not accessed",
+    "japan_server": {
+      "region": "Japan per owner; not confirmed via current RunPod account",
+      "live_filesystem_inspected": false,
+      "teacher_inventory_confirmed": false,
+      "checkpoint_and_optimizer_steps_confirmed": false,
+      "status": "HOLD_INVENTORY",
+      "policy": "Treat preexisting NOX assets as valuable, never redownload/delete/retrain blindly"
+    },
+    "runpod_A40": {
+      "pod_id": "saep5w24i02tl0",
+      "provider": "RunPod",
+      "region": "EU-SE-1 Sweden; separate from Japan location",
+      "status": "RUNNING",
+      "GPU": "NVIDIA A40",
+      "GPUs": 1,
+      "GPU_util_percent": 94,
+      "GPU_memory_util_percent": 98,
+      "cost_usd_hour": 0.59,
+      "container_memory_log_peak": "46.57 / 46.57 GiB (99%)",
+      "logs": "Multiple container unhealthy triggered memory limits (OOM) warnings, 2026-11-12 04:04–04:19 UTC",
+      "container_logs": "Only CUDA/SSH/Jupyter startup; no optimizer step receipts in retrieved container logs",
+      "mounts": {
+        "/workspace": "global volume cmw9c11rb000007l6dr6d0eu9",
+        "/workspace-2": "network volume 8kzyakleln"
+      },
+      "training_progress": "UNVERIFIED; GPU busy is not completed training",
+      "recommended_action": "Read-only inspect process tree, nvidia-smi processes, cgroup RAM/OOM counters, trainer logs, last two global_step/checkpoint SHAs and persisted state; do not add teacher loads or restart"
+    },
+    "crosscheck": [
+      "Japan host separate until verified",
+      "Avoid repeat downloads and duplicate teachers",
+      "No production rollout or training restart",
+      "GPU and container memory warning requires investigation before load increases",
+      "Only optimizer receipt and holdout gain establish distillation progress"
+    ]
   }
 }
