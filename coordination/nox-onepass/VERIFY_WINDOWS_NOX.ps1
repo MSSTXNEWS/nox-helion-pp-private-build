@@ -48,7 +48,7 @@ try{
    $json.backend -eq 'EXISTING_NATIVE_ONEHOST' -and $json.native_p02_bound -eq $true){
    $report.oneHost='NATIVE_STATUS_ENDPOINT_REACHABLE_NOT_FULLY_ACCEPTED'
  }else{$report.oneHost='HOLD_NATIVE_IDENTITY_UNVERIFIED'}
-}catch{$report.oneHost='HOLD_ONEHOST_NOT_REACHABLE';$report.warnings+='No local OneHost status receipt (not evidence the owner's machine is down)'}
+}catch{$report.oneHost='HOLD_ONEHOST_NOT_REACHABLE';$report.warnings+='No local OneHost status receipt (not evidence that local Windows is offline)'}
 $dest=Join-Path $out 'windows-hardware-inventory.json'
 # This report contains hardware metadata only, no local S03/identity content.
 $report|ConvertTo-Json -Depth 8 | Set-Content -Path $dest -Encoding UTF8
