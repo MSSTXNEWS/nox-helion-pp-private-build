@@ -1,0 +1,36 @@
+name: NOX ONEPASS evidence gates (source-only)
+on:
+  push:
+    branches:
+      - 'fix/home-v16-cinematic-contract-onepass-*'
+    paths:
+      - 'coordination/nox-onepass/**'
+      - '.github/workflows/nox-onepass-source.yml'
+  pull_request:
+    paths:
+      - 'coordination/nox-onepass/**'
+      - '.github/workflows/nox-onepass-source.yml'
+permissions:
+  contents: read
+concurrency:
+  group: nox-onepass-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  fail-closed-unit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate executable syntax and negative API cases (no GPU acceptance claim)
+        run: |
+          node --check coordination/nox-onepass/NOX_ONEPASS.mjs
+          node --check coordination/nox-onepass/NOX_LIVE_ONEHOST_E2E.mjs
+          node --test coordination/nox-onepass/test-source-gates.mjs
+      - name: Do not infer hardware or production readiness
+        run: |
+          echo 'NOX_ONEPASS_CODE_TEST_PASS only — hardware GPU, OneHost/S03/STOP and owner acceptance remain HOLD'
