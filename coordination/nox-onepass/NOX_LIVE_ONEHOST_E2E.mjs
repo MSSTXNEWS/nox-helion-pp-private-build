@@ -11,10 +11,14 @@ const base = new URL(process.env.NOX_ONEHOST_URL || 'http://127.0.0.1:18775/');
 if (!['127.0.0.1','localhost','[::1]'].includes(base.hostname) || !['http:','https:'].includes(base.protocol)) {
   throw new Error('ONEHOST_MUST_BE_LOCAL_TO_AVOID_PRIVATE_INFORMATION_LEAKS');
 }
+// Bind independent native evidence to the exact WEB source and manifest; no stale reuse.
+const expectedSourceHead=process.env.NOX_EXPECTED_SOURCE_SHA||null;
+const expectedSiteFingerprint=process.env.NOX_EXPECTED_SITE_FINGERPRINT||null;
+const isRecent=(iso,maxMs)=>Number.isFinite(Date.parse(iso))&&Date.now()-Date.parse(iso)>=0&&Date.now()-Date.parse(iso)<=maxMs;
 const out = path.resolve(process.env.NOX_LIVE_OUT || './runtime/onehost-proof.json');
 fs.mkdirSync(path.dirname(out), {recursive:true});
 const stamp=()=>new Date().toISOString();
-const report={schema:'NOX_LIVE_ONEHOST_QA_1',at:stamp(),origin:base.origin,reads:{},checks:{},
+const report={schema:'NOX_LIVE_ONEHOST_QA_1',at:stamp(),sourceHead:expectedSourceHead,siteFingerprint:expectedSiteFingerprint,origin:base.origin,reads:{},checks:{},
   chat:{state:'NOT_TESTED'},stop:{state:'HOLD_SHARED_SCOPE_NEEDS_ISOLATED_TEST'},
   s03:{state:'NOT_TESTED'}, acceptance:'HOLD'};
 const save=()=>{let tmp=out+'.tmp-'+process.pid;fs.writeFileSync(tmp,JSON.stringify(report,null,2));fs.renameSync(tmp,out);};
@@ -63,8 +67,13 @@ const intent=path.join(path.dirname(out),'native-chat-write-intent.json');
 const reply=path.join(path.dirname(out),'native-chat-write-receipt.json');
 if(enableWrite&&report.checks.ownerBound&&report.checks.s03DialogsBound){
  if(fs.existsSync(reply)){
-  const prev=JSON.parse(fs.readFileSync(reply,'utf8'));
-  report.chat={state:prev.acceptance==='PASS'?'PASS':'HOLD_PRIOR_TEST_UNVERIFIED',nonce:prev.nonce||null};
+  let prev={};try{prev=JSON.parse(fs.readFileSync(reply,'utf8'))}catch{}
+  const sameRevision=!!expectedSourceHead&&!!expectedSiteFingerprint&&
+    prev.sourceHead===expectedSourceHead&&prev.siteFingerprint===expectedSiteFingerprint&&
+    prev.modelIdentity===owner.primary_model&&
+    prev.studentWeightsSha256===proof.studentWeightsSha256&&
+    isRecent(prev.at,24*3600000);
+  report.chat={state:prev.acceptance==='PASS'&&sameRevision?'PASS':'HOLD_PRIOR_TEST_STALE_OR_UNVERIFIED',nonce:prev.nonce||null};
  }else if(fs.existsSync(intent))report.chat={state:'HOLD_UNCERTAIN_PRIOR_POST_DO_NOT_REPLAY'};
  else {
   const nonce=crypto.randomUUID(),prompt='NOX E2E '+nonce+': ответь коротко, только слово NOX.';
@@ -94,7 +103,9 @@ if(enableWrite&&report.checks.ownerBound&&report.checks.s03DialogsBound){
    }finally{clearTimeout(timer)}
    const valid=!!text.trim()&&!!done&&done.saved===true&&done.s03_integrated===true&&
     (!model||/^nox(?:[-_:]|$)/i.test(model));
-   const evidence={schema:'NOX_NATIVE_CHAT_QA_1',at:stamp(),nonce,frames:frameCount,
+   const evidence={schema:'NOX_NATIVE_CHAT_QA_1',at:stamp(),sourceHead:expectedSourceHead,
+     siteFingerprint:expectedSiteFingerprint,modelIdentity:owner.primary_model||null,
+     studentWeightsSha256:proof.studentWeightsSha256||null,nonce,frames:frameCount,
      replyBytes:Buffer.byteLength(text),nativeCommit:done?.saved===true,s03Integrated:done?.s03_integrated===true,
      exchangeId:done?.exchange_id||null,acceptance:valid?'PASS':'HOLD'};
    fs.writeFileSync(reply,JSON.stringify(evidence,null,2));
