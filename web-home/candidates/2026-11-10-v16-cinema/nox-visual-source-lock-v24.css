@@ -37,12 +37,17 @@ body.helion-home.nox-owner-cinema .nox-owner-core{
 body.helion-home.nox-owner-cinema[data-nox-motion-owner="GSAP"] .nox-owner-core{
  animation:none!important
 }
+/* V25 original owner-approved volcanic CoreID source atlas. This is only a
+   visual texture on eight existing controls; the original D02/14 PBR engines
+   and their materials, lighting and animation are left byte-for-byte intact.
+   Source WEBP is the SHA-256-pinned approved HOME image already in the build. */
 body.helion-home.nox-owner-cinema .nox-owner-core::before{
- background:radial-gradient(circle at 37% 28%,var(--core-bright) -15%,transparent 17%),
- repeating-conic-gradient(from 9deg,var(--core-glow) 0deg,transparent 10deg,transparent 26deg,var(--core-glow) 31deg,transparent 48deg),
- radial-gradient(circle at 37% 32%,#313039 0%,#0a0a0f 42%,#020305 68%)!important;
- background-color:transparent!important;background-blend-mode:screen,normal,normal!important;
- box-shadow:0 0 16px var(--core-glow),inset 0 0 16px var(--core-glow)!important;
+ background-image:url('./assets/nox-owner-approved/NOX_HOME_OWNER_APPROVED_WEB.webp')!important;
+ background-repeat:no-repeat!important;
+ background-origin:border-box!important;
+ background-color:#0b0b11!important;
+ background-blend-mode:normal!important;
+ box-shadow:0 0 14px var(--core-glow),inset 0 0 11px #000a!important;
  animation:nox-core-shell 22s linear infinite!important
 }
 body.helion-home.nox-owner-cinema .nox-owner-core::after{opacity:.45!important}
@@ -148,4 +153,18 @@ body.helion-home.nox-owner-cinema .nox-owner-floor{
  body.helion-home.nox-owner-cinema .nox-owner-floor{
   clip-path:inset(92% 0 0 0)!important;
  }
+}
+
+/* Eight unique natural-source crops from the immutable 1650×929 owner image. */
+body.helion-home.nox-owner-cinema .nox-owner-core:nth-child(1)::before{background-size:1447.36842% auto!important;background-position:28.32031% 20.98160%!important} /* CONSCIOUSNESS */
+body.helion-home.nox-owner-cinema .nox-owner-core:nth-child(2)::before{background-size:1289.06250% auto!important;background-position:35.61104% 5.36829%!important} /* PERSONA */
+body.helion-home.nox-owner-cinema .nox-owner-core:nth-child(3)::before{background-size:1527.77778% auto!important;background-position:50.45396% 0.36541%!important} /* ATLAS */
+body.helion-home.nox-owner-cinema .nox-owner-core:nth-child(4)::before{background-size:1375.00000% auto!important;background-position:63.46405% 6.92213%!important} /* VOICE */
+body.helion-home.nox-owner-cinema .nox-owner-core:nth-child(5)::before{background-size:1352.45902% auto!important;background-position:71.79319% 21.93309%!important} /* REFLECTION */
+body.helion-home.nox-owner-cinema .nox-owner-core:nth-child(6)::before{background-size:1352.45902% auto!important;background-position:65.05236% 39.40520%!important} /* CORE */
+body.helion-home.nox-owner-cinema .nox-owner-core:nth-child(7)::before{background-size:1527.77778% auto!important;background-position:49.93515% 50.30451%!important} /* NEXUS */
+body.helion-home.nox-owner-cinema .nox-owner-core:nth-child(8)::before{background-size:1422.41379% auto!important;background-position:35.26728% 38.37638%!important} /* FORGE */
+/* Preserve the V22 mobile composition, avoid live D02 eclipse on desktop. */
+@media(min-width:601px){
+ body.helion-home.nox-owner-cinema .nox-owner-core:nth-child(7){left:81%!important;top:54%!important}
 }
