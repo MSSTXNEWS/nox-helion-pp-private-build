@@ -119,6 +119,8 @@ try{
        uniqueCoreAtlasFrames:new Set(coreAtlas.map(e=>e.frame)).size,
        nexusOffD02Center,
        architectureClip:arch?.clipPath,floorClip:floor?.clipPath,
+       approvedCitadelAboveSky:arch?.zIndex==='2'&&floor?.zIndex==='2',
+       approvedCitadelMasked:!!arch?.maskImage?.includes('23%')&&!!arch?.maskImage?.includes('77%'),
        floorDuplicateTextMask:floor?.maskImage||floor?.webkitMaskImage||'none',
        originalFallbackHidden:document.body.dataset.noxD02Rendered==='true'?
           fallback?.display==='none':null,
@@ -132,7 +134,7 @@ try{
       ownerCheck.v24.worldFilter!=='none'||ownerCheck.v24.d02Transform!=='none'||
       !ownerCheck.v24.coreShellHasApprovedArtwork||ownerCheck.v24.coreAtlasTextures!==8||ownerCheck.v24.uniqueCoreAtlasFrames!==8||!ownerCheck.v24.nexusOffD02Center||
       !ownerCheck.v24.architectureClip?.includes('36%')&&width>600||
-      !ownerCheck.v24.floorClip?.includes('92%'))
+      !ownerCheck.v24.floorClip?.includes('92%')||!ownerCheck.v24.approvedCitadelAboveSky||!ownerCheck.v24.approvedCitadelMasked)
       throw Error('NOX_V24_ORIGINAL_VISUAL_FIDELITY_HOLD:'+JSON.stringify(ownerCheck.v24));
    // Original owner image stays SHA-locked. Verify the approved art is NOT
    // painted with duplicate baked-in navigation labels behind live buttons.
