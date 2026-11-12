@@ -264,7 +264,7 @@ class CognitiveOverlay:
             return {"state":"HOLD_APPROVAL_VERIFIER_FAILED"}
         if authorized is not True:
             return {"state":"HOLD_APPROVAL_NOT_CONFIRMED"}
-        if re.search(r"(?:github_pat_[A-Za-z0-9_]{8,}|-----BEGIN [A-Z ]*PRIVATE KEY-----|(?:api[_-]?key|password)\\s*[:=])",
+        if re.search(r"(?:github_pat_[A-Za-z0-9_]{8,}|-----BEGIN [A-Z ]*PRIVATE KEY-----|(?:api[_-]?key|password)\s*[:=])",
                      body,re.IGNORECASE):
             return {"state":"HOLD_SECRET_MATERIAL"}
         try: receipt=self.s03.append_approved(scope=scope,event=event)
