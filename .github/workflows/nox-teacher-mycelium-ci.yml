@@ -17,6 +17,8 @@ jobs:
         run: |
           set -Eeuo pipefail
           python3 -m compileall -q nox_runpod/teacher_mesh
+          python3 -m compileall -q nox_runpod/web_wow_merge
+          python3 -m unittest discover -s nox_runpod/web_wow_merge/tests -v
           cd nox_runpod/teacher_mesh
           python3 -m unittest discover -s tests -v
       - name: Check forbidden auto-download and arbitrary shell controls
