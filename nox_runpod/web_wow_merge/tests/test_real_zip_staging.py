@@ -63,7 +63,8 @@ class RealZipStaging(unittest.TestCase):
         make_zip(self.web, {"WEB/site/" + p: d for p, d in web_files().items()})
         make_zip(self.v25, {"EXPORTED_V25/site/" + p: d for p, d in chat_v25().items()})
         make_zip(self.v24, {"EXPORTED_V24/site/" + p: d for p, d in chat_v24().items()})
-        make_zip(self.qa, onepass_pack())
+        make_zip(self.qa, {**onepass_pack(),
+                           **{"site/" + p: d for p, d in web_files().items()}})
 
     def run_merge(self):
         out = self.root / "staging"
@@ -80,6 +81,7 @@ class RealZipStaging(unittest.TestCase):
         self.assertFalse(external["owner_acceptance"])
         self.assertFalse(external["production_modified"])
         self.assertEqual(external["onepass"]["executed"], False)
+        self.assertTrue(external["onepass"]["onepass_web_sha256_identical"])
         merged = out / "NOX_WEB_WOW_V25_UNIFIED_CANDIDATE.zip"
         self.assertEqual(external["output_zip_sha256"], hashlib.sha256(merged.read_bytes()).hexdigest())
         with zipfile.ZipFile(merged) as z:
@@ -110,6 +112,8 @@ class RealZipStaging(unittest.TestCase):
         w = web_files()
         w["chat-ui-v25.js"] = b"REAL EXISTING WEB DEPENDENCY"
         make_zip(self.web, {"site/" + p: d for p, d in w.items()})
+        make_zip(self.qa, {**onepass_pack(),
+                           **{"site/" + p: d for p, d in w.items()}})
         run, out = self.run_merge()
         self.assertEqual(run.returncode, 2)
         r = json.loads((out / "NOX_MERGE_RECEIPT.json").read_text(encoding="utf-8"))
@@ -138,8 +142,19 @@ class RealZipStaging(unittest.TestCase):
         self.assertIn("NOX_CHAT_V25_BOTH_ENTRYPOINTS_REQUIRED", run.stderr)
         self.assertFalse(out.exists())
 
+    def test_onepass_v2_original_site_sha_mismatch_blocks_merge(self):
+        altered = web_files()
+        altered["index.html"] = b"FORGED_D02"
+        make_zip(self.qa, {**onepass_pack(),
+                           **{"site/" + p: d for p, d in altered.items()}})
+        run, out = self.run_merge()
+        self.assertEqual(run.returncode, 2)
+        self.assertIn("NOX_ONEPASS_WEB_SOURCE_SHA_MISMATCH", run.stderr)
+        self.assertFalse(out.exists())
+
     def test_missing_qa_runner_holds_without_output(self):
-        make_zip(self.qa, {"NOX_ONEPASS.mjs": b"x"})
+        make_zip(self.qa, {"NOX_ONEPASS.mjs": b"x",
+                           **{"site/" + p: d for p, d in web_files().items()}})
         run, out = self.run_merge()
         self.assertEqual(run.returncode, 2)
         self.assertIn("NOX_ONEPASS_REQUIRED_FILE_MISSING", run.stderr)
