@@ -1,0 +1,39 @@
+name: NOX V29.2 Native Windows Source Stage Syntax & Safety
+on:
+  push:
+    branches: [feature/nox-teacher-mycelium-20261112]
+    paths:
+      - 'nox_runpod/web_wow_merge/v29/NOX_V29_2_WINDOWS_STAGE.ps1'
+      - '.github/workflows/nox-web-v29-2-win-stage.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  powershell-fail-closed:
+    runs-on: windows-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Parse actual Windows PowerShell and check all safety gates
+        shell: powershell
+        run: |
+          $p='nox_runpod/web_wow_merge/v29/NOX_V29_2_WINDOWS_STAGE.ps1'
+          $tokens=$null; $errors=$null
+          [void][System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path $p).Path,[ref]$tokens,[ref]$errors)
+          if ($errors -and $errors.Count) { $errors | Out-String | Write-Error; exit 1 }
+          $text=Get-Content -LiteralPath $p -Raw -Encoding UTF8
+          foreach ($needed in @('NOX_ARCHIVE_SOURCELOCK_HOLD','NOX_STAGE_ALREADY_EXISTS_NO_OVERWRITE',
+             'NOX_SHA_DRIFT_HOLD','NOX_D02_SOURCE_HASH_HOLD','NOX_WINDOWS_WEBVIEW2_E07_HOLD',
+             'NOX_V29_2_1085_LOCKED_SHA_PASS')) {
+            if (-not $text.Contains($needed)) { throw "MISSING_REQUIRED_GUARD: $needed" }
+          }
+          Write-Output 'NOX_V29_2_NATIVE_WINDOWS_PARSER_PASS_NO_LIVE_PC_MODIFICATION'
+      - name: Fail closed on absent ZIP (never touches production)
+        shell: powershell
+        run: |
+          $p='nox_runpod/web_wow_merge/v29/NOX_V29_2_WINDOWS_STAGE.ps1'
+          $target=Join-Path $env:TEMP 'NOX_V29_2_ARCHIVE_NOT_PRESENT.zip'
+          $result=& powershell.exe -NoProfile -ExecutionPolicy Bypass -File $p -Archive $target -Root (Join-Path $env:TEMP 'NOX_TEST_NONPROD') 2>&1
+          if ($LASTEXITCODE -eq 0) { throw 'FAIL_OPEN_MISSING_ZIP' }
+          if (-not (($result | Out-String) -match 'NOX_ARCHIVE_MISSING')) { throw 'UNEXPECTED_FAILURE' }
+          Write-Output 'NOX_V29_2_MISSING_ARCHIVE_FAIL_CLOSED_PASS'
