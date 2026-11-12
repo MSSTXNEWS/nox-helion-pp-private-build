@@ -1,0 +1,123 @@
+name: NOX Catalog Real Upstream Sources 84-100
+on:
+  push:
+    branches:
+      - feature/nox-teacher-mycelium-20261112
+    paths:
+      - '.github/workflows/nox-catalog-real-sources-84-100.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  fetch-exact-source-archives:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch real upstream archives, pin SHA and verify SHA256
+        id: download
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -Eeuo pipefail
+          python3 - <<'PY'
+          import os, json, hashlib, urllib.request, urllib.parse, zipfile, tarfile, time, re, sys
+          from pathlib import Path
+          ROOT=Path("NOX_MASTER_CATALOG_84_100_REAL_SOURCES")
+          SRC=ROOT/"sources"
+          SRC.mkdir(parents=True,exist_ok=True)
+          original=json.loads(Path("nox_runpod/teacher_mesh/NOX_MASTER_CATALOG_100.json").read_text(encoding="utf-8"))
+          rows=[r for r in original["entries"] if 84<=r["number"]<=100]
+          assert len(rows)==17 and sorted(x["number"] for x in rows)==list(range(84,101))
+          assert len({r["url"] for r in rows})==17
+          token=os.environ.get("GH_TOKEN","")
+          def request(url, auth=False):
+              headers={"User-Agent":"NOX-Catalog-Snapshot/1.0 (CI source archive verification)","Accept":"application/vnd.github+json"}
+              if auth and token: headers["Authorization"]="Bearer "+token
+              return urllib.request.Request(url,headers=headers)
+          def api(url):
+              with urllib.request.urlopen(request(url,auth=True),timeout=30) as r:
+                  return json.load(r)
+          def fetch(url, dest, limit=150_000_000):
+              temp=dest.with_suffix(dest.suffix+".partial")
+              h=hashlib.sha256()
+              total=0
+              try:
+                  with urllib.request.urlopen(request(url),timeout=120) as response, open(temp,"wb") as f:
+                      while True:
+                          chunk=response.read(1024*1024)
+                          if not chunk: break
+                          total+=len(chunk)
+                          if total>limit: raise RuntimeError("Upstream archive exceeds safe size cap")
+                          f.write(chunk);h.update(chunk)
+                  if total<100: raise RuntimeError("Truncated upstream archive")
+                  if zipfile.is_zipfile(temp):
+                      with zipfile.ZipFile(temp) as z:
+                          assert z.namelist(), "Empty zip"
+                          bad=z.testzip()
+                          if bad: raise RuntimeError("Corrupt ZIP member "+bad)
+                  elif tarfile.is_tarfile(temp):
+                      with tarfile.open(temp,"r:*") as t:
+                          if not t.getmembers(): raise RuntimeError("Empty tar")
+                  else: raise RuntimeError("Downloaded content is not an archive")
+                  os.replace(temp,dest)
+                  return {"bytes":total,"sha256":h.hexdigest()}
+              except:
+                  temp.unlink(missing_ok=True)
+                  raise
+          results=[]
+          for entry in rows:
+              no=entry["number"]; name=entry["name"]; url=entry["url"]
+              row={"number":no,"name":name,"source_url":url,"status":"FAILED"}
+              try:
+                  u=urllib.parse.urlparse(url)
+                  if u.hostname=="github.com":
+                      p=u.path.strip("/").split("/")
+                      if len(p)<2: raise ValueError("Not a GitHub repository")
+                      owner,repo=p[0],p[1].removesuffix(".git")
+                      metadata=api(f"https://api.github.com/repos/{owner}/{repo}")
+                      branch=metadata["default_branch"]
+                      commit=api(f"https://api.github.com/repos/{owner}/{repo}/commits/{urllib.parse.quote(branch,safe='')}")
+                      sha=commit["sha"]; archive=f"https://codeload.github.com/{owner}/{repo}/zip/{sha}"
+                      path=SRC/f"{no:03d}_{owner}_{repo}_{sha[:12]}.zip"
+                      row.update({"revision":sha,"default_branch":branch,"archive_url":archive})
+                  elif u.hostname=="pypi.org" and no==100:
+                      pkg=api("https://pypi.org/pypi/nvidia-ml-py/json")
+                      candidates=[x for x in pkg["urls"] if x["packagetype"]=="sdist"]
+                      if not candidates: candidates=[x for x in pkg["urls"] if x["packagetype"]=="bdist_wheel"]
+                      if not candidates: raise RuntimeError("No PyPI artifact")
+                      art=candidates[0];archive=art["url"]
+                      path=SRC/f"{no:03d}_{art['filename']}"
+                      row.update({"version":pkg["info"]["version"],"archive_url":archive,"pypi_expected_sha256":art["digests"]["sha256"]})
+                  else: raise RuntimeError("Unsupported upstream source")
+                  last=None
+                  for attempt in range(3):
+                      try:
+                          v=fetch(archive,path)
+                          if "pypi_expected_sha256" in row and v["sha256"]!=row["pypi_expected_sha256"]:
+                              path.unlink(missing_ok=True);raise RuntimeError("PyPI SHA256 mismatch")
+                          row.update(v);row["status"]="DOWNLOADED_VERIFIED";row["file"]=str(path.relative_to(ROOT))
+                          last=None;break
+                      except Exception as exc:
+                          last=exc;time.sleep(2*(attempt+1))
+                  if last: raise last
+              except Exception as exc:
+                  row["error"]=type(exc).__name__+": "+str(exc)[:400]
+              results.append(row)
+              print(f"NOX_SOURCE_{no:03d} {row['status']} {row.get('bytes',0)} {row.get('error','')}",flush=True)
+          meta={"catalog_source":"https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/251","scope":"84-100","expected":17,"verified":sum(x["status"]=="DOWNLOADED_VERIFIED" for x in results),"results":results,"policy":"NO-INSTALL; do not alter production or training; audit licenses before activation"}
+          (ROOT/"RESULTS.json").write_text(json.dumps(meta,indent=2,ensure_ascii=False)+"\n",encoding="utf-8")
+          (ROOT/"SHA256SUMS.txt").write_text("".join(f"{r['sha256']}  {r['file']}\n" for r in results if r["status"]=="DOWNLOADED_VERIFIED"),encoding="utf-8")
+          (ROOT/"README.txt").write_text("REAL upstream source snapshots. Original catalog PR #251. See RESULTS.json for statuses, upstream pinned commits and SHA256SUMS.txt. Files are NOT installed, executed, or integrated.\n",encoding="utf-8")
+          print("NOX_CATALOG_SUMMARY",meta["verified"],"/",meta["expected"])
+          if meta["verified"]!=meta["expected"]: sys.exit(1)
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NOX_MASTER_CATALOG_84_100_REAL_SOURCES
+          path: NOX_MASTER_CATALOG_84_100_REAL_SOURCES/
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
