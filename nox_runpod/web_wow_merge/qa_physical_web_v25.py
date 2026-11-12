@@ -55,7 +55,7 @@ def run(archive,original_web):
                 u=urlsplit(ref);path=u.path
                 if not path or u.scheme or u.netloc or path.startswith(("#","data:","javascript:","/api/","/ws","/nox/")):
                     continue
-                if path.startswith("/"): dest=path.lstrip("/")
+                if path.startswith("/"): dest=PurePosixPath(path.lstrip("/")).as_posix()
                 else:
                     stack=list(PurePosixPath(page).parent.parts)
                     if stack==["."]:stack=[]
