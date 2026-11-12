@@ -65,7 +65,7 @@ class PhysicalMergerTests(unittest.TestCase):
 
     def test_explicit_third_party_firebase_key_removed(self):
         name="pages/_vendor/excalidraw/excalidraw.production.min.js"
-        secret=b"AIza"+"x"*35
+        secret=b"AIza"+b"x"*35
         src=b'VITE_APP_FIREBASE_CONFIG:{"apiKey":"'+secret+b'"}'
         out=clean_static(name,src)
         self.assertNotIn(secret,out)
