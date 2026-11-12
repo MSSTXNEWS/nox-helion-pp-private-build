@@ -11,7 +11,7 @@ import re
 
 SCHEMA = "nox-genesis-live-evidence-v1"
 SHA = re.compile(r"^[a-f0-9]{64}$")
-URL = re.compile(r"^(?:https://|s03://|nox-checkpoint://|github://)[^\\s]{1,900}$")
+URL = re.compile(r"^(?:https://|s03://|nox-checkpoint://|github://)\S{1,900}$")
 
 def _utc(s: Any):
     if not isinstance(s, str):
