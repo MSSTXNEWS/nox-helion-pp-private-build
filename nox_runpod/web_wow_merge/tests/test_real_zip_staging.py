@@ -89,8 +89,10 @@ class RealZipStaging(unittest.TestCase):
             self.assertEqual(z.read("site/memory.html"), chat_v25()["memory.html"])
             self.assertEqual(z.read("site/nox-client-v25.mjs"),
                              chat_v25()["nox-client-v25.mjs"])
-            self.assertEqual(z.read("qa/NOX_ONEPASS_V2_SOURCE_UNEXECUTED.zip"),
-                             self.qa.read_bytes())
+            self.assertEqual(z.read("qa/onepass_v2_original/NOX_ONEPASS.mjs"),
+                             onepass_pack()["NOX_ONEPASS.mjs"])
+            self.assertNotIn("qa/NOX_ONEPASS_V2_SOURCE_UNEXECUTED.zip", z.namelist())
+            self.assertIn("qa/QA_NOTES.txt", z.namelist())
             self.assertNotIn("site/legacy.js", z.namelist())
 
     def test_missing_real_resource_holds_and_writes_receipt_no_artifact(self):
