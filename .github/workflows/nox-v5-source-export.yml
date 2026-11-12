@@ -16,8 +16,11 @@ jobs:
         run: |
           set -Eeuo pipefail
           python3 -m compileall -q nox_runpod/teacher_mesh
+          (cd nox_runpod/teacher_mesh && python3 -m unittest discover -s tests -v)
           mkdir -p /tmp/nox-bundle/nox_runpod
           cp -R nox_runpod/teacher_mesh /tmp/nox-bundle/nox_runpod/
+          mkdir -p /tmp/nox-bundle/.github
+          cp -R .github/workflows /tmp/nox-bundle/.github/
           find /tmp/nox-bundle -type d -name __pycache__ -exec rm -rf {} +
           python3 - <<'PY'
           import hashlib,json,pathlib
