@@ -78,15 +78,46 @@ jobs:
                      "-c","user.email=nox-ci@users.noreply.github.com",
                      "merge","--no-edit","--no-ff",ref],wd)
               conflicts=[]
+              resolved=None
               if r.returncode:
                   c=cmd(["git","diff","--name-only","--diff-filter=U"],wd)
                   conflicts=[x for x in c.stdout.splitlines() if x][:100]
+                  # The historical upstream menu test has a divergent expected
+                  # event count but NO production source conflict. Retain the
+                  # actual PR162 test by exact Git blob identity; validate in
+                  # the merged tree before making a disposable merge commit.
+                  collision="coordination/mega814/test_menu_v2.mjs"
+                  left=cmd(["git","rev-parse","HEAD:"+collision],wd)
+                  right=cmd(["git","rev-parse",ref+":"+collision],wd)
+                  if (conflicts==[collision]
+                      and left.returncode==0 and right.returncode==0
+                      and left.stdout.strip()=="55bec3a4156b48d5c08f3731f87f93b06e1d422b"
+                      and right.stdout.strip()=="538e4839021b568ba974265c4ca926f1196dc1ad"):
+                      ours=cmd(["git","show","HEAD:"+collision],wd)
+                      if ours.returncode==0:
+                          (wd/collision).write_text(ours.stdout,encoding="utf-8")
+                          verify=cmd(["node",collision],wd)
+                          resolved={"sha_baseline":left.stdout.strip(),
+                                    "sha_donor":right.stdout.strip(),
+                                    "test_exit":verify.returncode,
+                                    "test_tail":(verify.stdout+verify.stderr)[-1200:],
+                                    "choice":"PRESERVE_PR162_BASELINE_ONLY_AFTER_NODE_PASS"}
+                          if verify.returncode==0:
+                              add=cmd(["git","add","--",collision],wd)
+                              commit=(cmd(["git","-c","user.name=NOX CI",
+                                           "-c","user.email=nox-ci@users.noreply.github.com",
+                                           "commit","--no-edit"],wd)
+                                      if add.returncode==0 else add)
+                              if commit.returncode==0:
+                                  r=commit
+                                  conflicts=[]
               return {"branch":label,"sha":ref,
-                      "merge_clean":r.returncode==0,
+                      "merge_clean":r.returncode==0 and not conflicts,
                       "conflict_paths":conflicts,
+                      "resolution_receipt":resolved,
                       "stderr_tail":(r.stderr+r.stdout)[-1600:],
                       "merged_commit":sha(["git","rev-parse","HEAD"],wd)
-                            if r.returncode==0 else None}
+                            if r.returncode==0 and not conflicts else None}
           def workdir(name):
               wd=temp/("nox-"+name)
               r=cmd(["git","worktree","add","--detach",str(wd),initial])
