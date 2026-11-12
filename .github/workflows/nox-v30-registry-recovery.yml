@@ -1,0 +1,29 @@
+name: NOX V30 Official Registry Recovery
+on:
+  push:
+    branches: [feature/nox-teacher-mycelium-20261112]
+    paths:
+      - .github/workflows/nox-v30-registry-recovery.yml
+      - nox_runpod/teacher_mesh/stages/download_v30_registry_fallback.py
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  download-official-distributions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - name: Official npm PyPI distribution retrieval and registry-integrity validation
+        run: |
+          set -Eeuo pipefail
+          python3 nox_runpod/teacher_mesh/stages/download_v30_registry_fallback.py
+      - name: Deliver complete verification report and registry archives
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NOX_V30_PROMPTFOO_PYDANTIC_OFFICIAL_DISTRIBUTIONS
+          path: NOX_V30_OFFICIAL_REGISTRY_DISTRIBUTIONS/
+          retention-days: 14
+          compression-level: 0
+          if-no-files-found: warn
