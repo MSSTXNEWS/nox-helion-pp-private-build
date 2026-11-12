@@ -16,9 +16,9 @@ import urllib.request
 NODE="runpod-5f3j8hwyicc0bp"
 ROOT=Path("/root/.local/state/nox-a100-live-bridge")
 API="https://api.github.com/repos/MSSTXNEWS/nox-helion-pp-private-build/contents/nox_remote_control/a100_live/queue.json?ref=control%2Fnox-a100-live-bridge-20261112"
-from train_actions import run_operation
-WRITE_OPS={"stage_fast75","prepare_local","resume_training"}
-OPS={"gpu","disk","processes","checkpoint","preflight","health","stage_fast75","prepare_local","resume_training","training_status"}
+from train_actions import run_operation,poll_auto_resume
+WRITE_OPS={"stage_fast75","prepare_local","resume_training","arm_resume_training","cancel_auto_resume"}
+OPS={"gpu","disk","processes","checkpoint","preflight","health","stage_fast75","prepare_local","resume_training","training_status","arm_resume_training","cancel_auto_resume"}
 ID=re.compile(r"^[A-Za-z0-9_-]{8,64}$")
 POLL_SECONDS=30
 LOCAL_CKPT=Path("/root/nox36/ckpt/sft/last")
@@ -114,7 +114,7 @@ def inspect(op):
     if op=="checkpoint":return checkpoint()
     if op=="preflight":return preflight()
     if op=="health":return {"gpu":gpu(),"disk":disk(),"checkpoint":checkpoint()}
-    if op in {"stage_fast75","prepare_local","resume_training","training_status"}:
+    if op in {"stage_fast75","prepare_local","resume_training","training_status","arm_resume_training","cancel_auto_resume"}:
         return run_operation(op)
     raise ValueError("UNSUPPORTED_OPERATION")
 
@@ -175,6 +175,14 @@ def run():
             except Exception as exc:
                 # No exception text or credentials are written to container logs.
                 report({"node":NODE,"event":"HOLD_AGENT","error":type(exc).__name__,"utc":utc()})
+            try:
+                auto=poll_auto_resume()
+                if isinstance(auto,dict):
+                    report({"node":NODE,"event":"AUTO_RESUME_TICK","utc":utc(),
+                            "state":str(auto.get("state","UNKNOWN"))[:100],
+                            "resume_step":auto.get("resume_step")})
+            except Exception as exc:
+                report({"node":NODE,"event":"HOLD_AUTO_RESUME","error":type(exc).__name__,"utc":utc()})
             time.sleep(POLL_SECONDS)
 
 if __name__=="__main__":
