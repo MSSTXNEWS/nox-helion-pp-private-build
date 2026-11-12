@@ -222,11 +222,22 @@ async function liveQA(){
  }catch(e){log('ONEHOST',String(e.message||e).slice(0,200))}
  const p=readJson(path.join(work,'onehost-proof.json'),{});
  const facts=p.checks||{};
+ // A separate exclusive native STOP/S03-restart test must provide a full
+ // transcript and a hash-pinned receipt. This runner cannot safely cause the
+ // shared STOP or reboot an active OneHost to produce these itself.
+ const isolated=readJson(path.join(work,'isolated-native-proof.json'),{});
+ const transcript=path.join(work,'isolated-native-transcript.ndjson');
+ const isolatedVerified=isolated.schema==='NOX_ISOLATED_NATIVE_PROOF_V1'&&
+   isolated.sourceHead===PIN.sourceHead&&isolated.exclusiveScope===true&&
+   isolated.stop?.acknowledged===true&&isolated.stop?.lateTokensRejected===true&&
+   isolated.s03?.persistedAcrossRestart===true&&isolated.s03?.sqliteIntegrity==='ok'&&
+   fs.existsSync(transcript)&&sha(transcript)===isolated.transcriptSha256;
  const full=facts.ownerBound&&facts.s03DialogsBound&&facts.voiceRuEs&&facts.trainingCoordinator&&facts.weightsComplete&&facts.windowsSynced&&facts.qualityVerified&&
-  p.chat?.state==='PASS'&&p.stop?.state==='PASS'&&p.s03?.state==='PASS_RESTART_PERSISTENCE';
+  p.chat?.state==='PASS'&&isolatedVerified;
  phase('LIVE_ONEHOST',full?'FULL_VERIFIED':'HOLD_NEEDS_REAL_ONEHOST_END_TO_END',{
-  readPaths:p.reads||{},checks:facts,chat:p.chat?.state||'NOT_TESTED',stop:p.stop?.state||'NOT_TESTED',
-  s03:p.s03?.state||'NOT_TESTED'});
+  readPaths:p.reads||{},checks:facts,chat:p.chat?.state||'NOT_TESTED',
+  isolatedStopAndS03:isolatedVerified?'VERIFIED':'HOLD_NEEDS_EXCLUSIVE_PHYSICAL_QA',
+  stop:p.stop?.state||'NOT_TESTED',s03:p.s03?.state||'NOT_TESTED'});
 }
 function finalManifest(){
  const check=['SOURCE','STATIC','CHROMIUM','PHYSICAL_GPU','LIVE_ONEHOST'];
