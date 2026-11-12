@@ -102,6 +102,9 @@ def chat(s):
       render();
     }""")
  s=once(s,"    run.stopping=true;\n    try {\n      const r=nativeOwner?await api('/api/nox/stop',{}):", "    run.stopping=true;\n    if(nativeOwner)state.nativeReplayHold=true;\n    run.controller.abort(); // No new UI tokens after STOP; native STOP call below is separate.\n    try {\n      const r=nativeOwner?await api('/api/nox/stop',{}):")
+ s=once(s,"const rules = {send:busy||!state.ready||!draft().trim()||Boolean(state.recorder||state.transcribing),stop:","const rules = {send:busy||!state.ready||!draft().trim()||Boolean(state.recorder||state.transcribing)||(nativeOwner&&state.nativeReplayHold===true),stop:")
+ s=once(s,"translate:busy||!state.ready||(!a&&!draft().trim()),attach:busy,","translate:busy||!state.ready||(nativeOwner&&state.nativeReplayHold===true)||(!a&&!draft().trim()),attach:busy,")
+ s=once(s,"if(state.active||!state.ready||!text.trim())return;\\n    if(state.nativeDialog","if(state.active||!state.ready||!text.trim())return;\\n    if(state.nativeReplayHold===true){say('HOLD · история S03 не обновлена; повторная отправка запрещена');return;}\\n    if(state.nativeDialog")
  return s
 change('nox-chat.js',chat)
 
