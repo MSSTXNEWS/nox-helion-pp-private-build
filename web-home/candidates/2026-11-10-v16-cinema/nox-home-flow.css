@@ -1,0 +1,13 @@
+/* NOX HOME V18 cinematic flow. Layout still owned by nox-home-recovery.css. */
+body.helion-home .nox-flow-network{width:100%;height:auto;max-height:170px;overflow:visible;display:block;pointer-events:none;opacity:.78}
+body.helion-home .nox-flow-connection{fill:none;stroke:rgba(166,184,199,.30);stroke-width:.9;stroke-linecap:round;stroke-dasharray:2 7;animation:nox-flow-drift 19s linear infinite}
+body.helion-home .nox-flow-point-halo{fill:rgba(197,156,94,.08);stroke:rgba(217,183,136,.16);stroke-width:.65}
+body.helion-home .nox-flow-point-core{fill:#e5bd83;opacity:.66;filter:drop-shadow(0 0 3px rgba(213,163,95,.38));animation:nox-flow-breathe 7.8s ease-in-out infinite;animation-delay:var(--point-delay,0s)}
+body.helion-home .nox-flow-title{color:#e1c5a4;letter-spacing:.11em;font-weight:650}
+body.helion-home .nox-flow-title span{font-size:.64em;letter-spacing:.07em;opacity:.68;white-space:normal}
+body.helion-home .nox-flow-network.nox-flow-still .nox-flow-connection,body.helion-home .nox-flow-network.nox-flow-still .nox-flow-point-core{animation-play-state:paused}
+@keyframes nox-flow-drift{to{stroke-dashoffset:-81}}
+@keyframes nox-flow-breathe{0%,100%{opacity:.48}50%{opacity:.83}}
+@media(prefers-reduced-motion:reduce){body.helion-home .nox-flow-connection,body.helion-home .nox-flow-point-core{animation:none!important}}
+@media(max-width:800px){body.helion-home .nox-flow-network{max-height:120px;opacity:.60}}
+@media(prefers-contrast:more){body.helion-home .nox-flow-connection{stroke:rgba(231,231,231,.65);stroke-width:1.2}body.helion-home .nox-flow-title span{opacity:1}}

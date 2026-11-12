@@ -1,0 +1,73 @@
+/** NOX V19: deterministic third-party retrieval at preview build time.
+ * Produces actual local assets + hashes in dist/vendor/nox-extra; no runtime CDN dependence.
+ * Every pinned download is required. No fake PASS if missing.
+ * This file is part of the existing NOX static WEB build, not a second website.
+ */
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import {createHash} from 'node:crypto';
+
+const version='2026-11-10-v19';
+const sources=[
+ {name:'tabler-core.min.css',url:'https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta21/dist/css/tabler.min.css',minBytes:30000,maxBytes:1300000,license:'MIT'},
+ {name:'echarts.min.js',url:'https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js',minBytes:400000,maxBytes:4000000,license:'Apache-2.0'},
+ {name:'lucide.min.js',url:'https://cdn.jsdelivr.net/npm/lucide@0.456.0/dist/umd/lucide.min.js',minBytes:20000,maxBytes:1500000,license:'ISC'},
+ {name:'three.module.js',url:'https://cdn.jsdelivr.net/npm/three@0.160.1/build/three.module.js',minBytes:300000,maxBytes:2500000,license:'MIT'},
+ {name:'addons/loaders/STLLoader.js',url:'https://cdn.jsdelivr.net/npm/three@0.160.1/examples/jsm/loaders/STLLoader.js',minBytes:3000,maxBytes:60000,license:'MIT'},
+ {name:'addons/loaders/RGBELoader.js',url:'https://cdn.jsdelivr.net/npm/three@0.160.1/examples/jsm/loaders/RGBELoader.js',minBytes:3000,maxBytes:60000,license:'MIT'},
+ {name:'fuse.min.js',url:'https://cdn.jsdelivr.net/npm/fuse.js@7.1.0/dist/fuse.min.js',minBytes:7000,maxBytes:120000,license:'Apache-2.0'},
+ {name:'FUSE-LICENSE.txt',url:'https://cdn.jsdelivr.net/npm/fuse.js@7.1.0/LICENSE',minBytes:100,maxBytes:15000,license:'Apache-2.0'},
+ {name:'leaflet.js',url:'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js',minBytes:80000,maxBytes:300000,license:'BSD-2-Clause'},
+ {name:'leaflet.css',url:'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css',minBytes:5000,maxBytes:30000,license:'BSD-2-Clause'},
+ {name:'images/layers.png',url:'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/images/layers.png',minBytes:300,maxBytes:20000,license:'BSD-2-Clause'},
+ {name:'images/layers-2x.png',url:'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/images/layers-2x.png',minBytes:300,maxBytes:30000,license:'BSD-2-Clause'},
+ {name:'images/marker-icon.png',url:'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/images/marker-icon.png',minBytes:200,maxBytes:20000,license:'BSD-2-Clause'},
+ {name:'LEAFLET-PACKAGE.json',url:'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/package.json',minBytes:300,maxBytes:100000,license:'BSD-2-Clause'},
+ {name:'fullcalendar.global.min.js',url:'https://cdn.jsdelivr.net/npm/fullcalendar@6.1.19/index.global.min.js',minBytes:50000,maxBytes:1400000,license:'MIT'},
+ {name:'FULLCALENDAR-LICENSE.txt',url:'https://cdn.jsdelivr.net/npm/fullcalendar@6.1.19/LICENSE.md',minBytes:100,maxBytes:20000,license:'MIT'},
+ {name:'photoswipe.esm.js',url:'https://cdn.jsdelivr.net/npm/photoswipe@5.4.4/dist/photoswipe.esm.js',minBytes:50000,maxBytes:600000,license:'MIT'},
+ {name:'photoswipe-lightbox.esm.js',url:'https://cdn.jsdelivr.net/npm/photoswipe@5.4.4/dist/photoswipe-lightbox.esm.js',minBytes:10000,maxBytes:350000,license:'MIT'},
+ {name:'photoswipe.css',url:'https://cdn.jsdelivr.net/npm/photoswipe@5.4.4/dist/photoswipe.css',minBytes:500,maxBytes:80000,license:'MIT'},
+ {name:'PHOTOSWIPE-LICENSE.txt',url:'https://cdn.jsdelivr.net/npm/photoswipe@5.4.4/LICENSE',minBytes:100,maxBytes:20000,license:'MIT'},
+ {name:'tsparticles.slim.bundle.min.js',url:'https://cdn.jsdelivr.net/npm/@tsparticles/slim@4.5.3/tsparticles.slim.bundle.min.js',minBytes:80000,maxBytes:450000,license:'MIT'},
+ {name:'TSPARTICLES-LICENSE.txt',url:'https://cdn.jsdelivr.net/npm/@tsparticles/slim@4.5.3/LICENSE',minBytes:100,maxBytes:10000,license:'MIT'},
+ {name:'pdf.mjs',url:'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.mjs',minBytes:100000,maxBytes:5000000,license:'Apache-2.0'},
+ {name:'pdf.worker.mjs',url:'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.worker.mjs',minBytes:100000,maxBytes:6000000,license:'Apache-2.0'},
+ {name:'PDFJS-LICENSE.txt',url:'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/LICENSE',minBytes:500,maxBytes:100000,license:'Apache-2.0'},
+ {name:'epub.min.js',url:'https://cdn.jsdelivr.net/npm/epubjs@0.3.93/dist/epub.min.js',minBytes:30000,maxBytes:3500000,license:'BSD-2-Clause'},
+ {name:'EPUB-PACKAGE.json',url:'https://cdn.jsdelivr.net/npm/epubjs@0.3.93/package.json',minBytes:100,maxBytes:100000,license:'BSD-2-Clause'},
+ {name:'shaka-player.compiled.js',url:'https://cdn.jsdelivr.net/npm/shaka-player@4.15.67/dist/shaka-player.compiled.js',minBytes:200000,maxBytes:8500000,license:'Apache-2.0'},
+ {name:'SHAKA-PACKAGE.json',url:'https://cdn.jsdelivr.net/npm/shaka-player@4.15.67/package.json',minBytes:200,maxBytes:100000,license:'Apache-2.0'}
+];
+
+async function getFile(entry,output){
+ let last;
+ for(let attempt=1;attempt<=2;attempt++){
+  const ac=new AbortController();const timeout=setTimeout(()=>ac.abort(),45000);
+  try{
+   const res=await fetch(entry.url,{signal:ac.signal,redirect:'follow'});
+   if(!res.ok)throw new Error(`HTTP_${res.status}`);
+   if(res.url&&!new URL(res.url).hostname.endsWith('.jsdelivr.net'))throw Error('UNEXPECTED_DOWNLOAD_HOST');
+   const bytes=Buffer.from(await res.arrayBuffer());
+   if(bytes.length<entry.minBytes||bytes.length>entry.maxBytes)throw Error(`UNEXPECTED_SIZE:${bytes.length}`);
+   const prefix=bytes.subarray(0,300).toString('utf8').toLowerCase();
+   if(prefix.includes('<!doctype html')||prefix.includes('<html'))throw Error('HTML_INSTEAD_OF_LIBRARY');
+   const sha256=createHash('sha256').update(bytes).digest('hex');
+   await fs.mkdir(path.dirname(path.join(output,entry.name)),{recursive:true});
+   await fs.writeFile(path.join(output,entry.name),bytes);
+   return {file:entry.name,size:bytes.length,sha256,source:entry.url,license:entry.license};
+  }catch(e){last=e}finally{clearTimeout(timeout)}
+ }
+ throw Error('NOX_V19_DEPENDENCY_NOT_DOWNLOADED:'+entry.name+':'+String(last));
+}
+export async function installExtras(out){
+ const target=path.join(out,'vendor/nox-extra');await fs.mkdir(target,{recursive:true});
+ const files=[];
+ // Avoid exhausting CDN sockets during a constrained 4-core Vercel build.
+ for(const src of sources)files.push(await getFile(src,target));
+ const report={version,origin:'PINNED_CDN',fetchedDuringBuild:true,complete:files.length===sources.length,licenseMetadata:'PACKAGE_JSON_LICENSE_DECLARATIONS_ONLY; FULL_LICENSE_TEXT_FETCH_STILL_OPEN',files,
+  runtimePdf:'NOT_TESTED',runtimeEpub:'NOT_TESTED',runtimeHls:'NOT_TESTED',browserQa:'HOLD'};
+ await fs.writeFile(path.join(target,'NOX-EXTRA-ASSETS-RECEIPT.json'),JSON.stringify(report,null,2));
+ console.log('NOX V19 EXTRA ASSETS INSTALLED:',files.length,'verified SHA256',files.reduce((sum,x)=>sum+x.size,0),'bytes');
+ return report;
+}

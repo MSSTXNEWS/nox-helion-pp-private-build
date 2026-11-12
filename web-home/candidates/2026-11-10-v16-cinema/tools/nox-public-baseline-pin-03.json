@@ -1,0 +1,27 @@
+[
+  {
+    "path": "vendor/three/addons/shaders/CopyShader.js",
+    "sha256": "4e3346db194db56a596cd074e9bdb39fb5eb52040c333e0d29dc4eb1324d3b1d",
+    "bytes": 571
+  },
+  {
+    "path": "vendor/three/addons/shaders/LuminosityHighPassShader.js",
+    "sha256": "3d841cc594a0c1767d1b0185720b32761a0133c5f1b70b56658e28f2fb9b7900",
+    "bytes": 1192
+  },
+  {
+    "path": "vendor/three/addons/shaders/OutputShader.js",
+    "sha256": "53a52e430c27bc36ceaab8ae90a2b4af7b02672d7ee4b29d6ba3c28e09c92c2a",
+    "bytes": 1393
+  },
+  {
+    "path": "workspace-pages.js",
+    "sha256": "e4be7569cde26b4fd09921bfb92715a3a71ab13f639879f10e36db141f4b2858",
+    "bytes": 54448
+  },
+  {
+    "path": "workspace.js",
+    "sha256": "9b77c5011da892769c7332826c4b35bce581fb121960c13694638657735fc0ae",
+    "bytes": 6451
+  }
+]

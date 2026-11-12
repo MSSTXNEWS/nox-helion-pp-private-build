@@ -1,0 +1,12 @@
+/* Liquid glass cinematic tone, not an alternative renderer. */
+body.helion-home .lg-host {--lg-solid:rgba(14,17,24,.94)}
+body.helion-home .nox-owner-actions .lg-host,
+body.helion-home .nox-owner-persona.lg-host{
+ -webkit-backdrop-filter:blur(7px);backdrop-filter:blur(7px);
+}
+@media(prefers-reduced-transparency:reduce){
+ body.helion-home .nox-owner-actions .lg-host,
+ body.helion-home .nox-owner-persona.lg-host{
+   -webkit-backdrop-filter:none!important;backdrop-filter:none!important;
+ }
+}

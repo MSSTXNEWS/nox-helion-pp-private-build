@@ -1,0 +1,188 @@
+/* NOX V24: original cinematic renderer/material/approved-art fidelity.
+   No new engine, no shader edits, no material or camera replacements.
+   Corrects only the duplicate art and CSS transforms added by V20–V22. */
+body.helion-home.nox-owner-cinema .helion-stage #noxEclipseCanvas{
+ filter:none!important;transform:none!important;opacity:1!important
+}
+body.helion-home.nox-owner-cinema .helion-stage #noxWorldsV6Canvas{
+ filter:none!important;transform:none!important
+}
+body.helion-home.nox-owner-cinema[data-nox-owner-layout="PBR"] .helion-stage #noxWorldsV6Canvas{
+ filter:none!important;opacity:1!important
+}
+body.helion-home.nox-owner-cinema:not([data-nox-owner-layout="PBR"]) .helion-stage #noxWorldsV6Canvas{
+ filter:none!important;opacity:.12!important
+}
+/* The approved background had been painted three times, including a second
+   row of baked-in Persona portraits. Retain its original upper architecture
+   and last floor strip in disjoint vertical bands; preserve approved bytes. */
+body.helion-home.nox-owner-cinema .nox-owner-architecture{
+ clip-path:inset(0 0 36% 0)!important;filter:none!important;opacity:.9!important
+}
+body.helion-home.nox-owner-cinema .nox-owner-floor{
+ clip-path:inset(92% 0 0 0)!important;filter:none!important;opacity:.74!important
+}
+/* Keep the approved fallback only when the ORIGINAL D02 has not rendered. */
+body.helion-home.nox-owner-cinema[data-nox-d02-rendered="true"] .nox-owner-core-still{
+ display:none!important
+}
+/* Restore V20's original per-core material and independent rotations instead
+   of the flat frozen V21 or generic brightness-only V22 shell. */
+body.helion-home.nox-owner-cinema .nox-owner-core{
+ animation:nox-core-float 11s ease-in-out infinite!important;
+ animation-delay:var(--phase)!important
+}
+/* GSAP is the one spatial-motion owner when available; original V20 CSS
+   remains a precise fallback. Never sum two orbital movement rigs. */
+body.helion-home.nox-owner-cinema[data-nox-motion-owner="GSAP"] .nox-owner-core{
+ animation:none!important
+}
+/* V25 original owner-approved volcanic CoreID source atlas. This is only a
+   visual texture on eight existing controls; the original D02/14 PBR engines
+   and their materials, lighting and animation are left byte-for-byte intact.
+   Source WEBP is the SHA-256-pinned approved HOME image already in the build. */
+body.helion-home.nox-owner-cinema .nox-owner-core::before{
+ background-image:url('./assets/nox-owner-approved/NOX_HOME_OWNER_APPROVED_WEB.webp')!important;
+ background-repeat:no-repeat!important;
+ background-origin:border-box!important;
+ background-color:#0b0b11!important;
+ background-blend-mode:normal!important;
+ box-shadow:0 0 14px var(--core-glow),inset 0 0 11px #000a!important;
+ animation:nox-core-shell 22s linear infinite!important
+}
+body.helion-home.nox-owner-cinema .nox-owner-core::after{opacity:.45!important}
+body.helion-home.nox-owner-cinema .nox-owner-core span{
+ text-shadow:0 2px 6px #000,0 0 5px #000!important
+}
+body.helion-home.nox-owner-cinema .nox-owner-actions button{
+ color:#ffe1b4!important;opacity:1!important;text-shadow:0 1px 5px #000!important;
+ background:linear-gradient(155deg,#363139ee,#12141af5)!important;
+ border-color:#ccad83b0!important
+}
+@media(max-width:600px){
+ body.helion-home.nox-owner-cinema .helion-stage #noxEclipseCanvas,
+ body.helion-home.nox-owner-cinema .helion-stage #noxWorldsV6Canvas{
+  transform:none!important;filter:none!important
+ }
+ body.helion-home.nox-owner-cinema .nox-owner-architecture{
+  clip-path:inset(0 0 34% 0)!important;filter:none!important
+ }
+ body.helion-home.nox-owner-cinema .nox-owner-floor{
+  clip-path:inset(92% 0 0 0)!important;filter:none!important
+ }
+}
+/* ECO/background/Reduced Motion are preserved. The real 3D renderer and
+   functional controls are not stopped or replaced by these CSS rules. */
+html[data-nox-demo-mode="ECO"] body.helion-home.nox-owner-cinema .nox-owner-core,
+html[data-nox-demo-mode="ECO"] body.helion-home.nox-owner-cinema .nox-owner-core::before,
+html[data-nox-graphics="ECO"] body.helion-home.nox-owner-cinema .nox-owner-core,
+html[data-nox-graphics="ECO"] body.helion-home.nox-owner-cinema .nox-owner-core::before,
+body.helion-home.nox-owner-cinema.nox-eco .nox-owner-core,
+body.helion-home.nox-owner-cinema.nox-eco .nox-owner-core::before,
+body.helion-home.nox-owner-cinema.nox-v22-paused .nox-owner-core,
+body.helion-home.nox-owner-cinema.nox-v22-paused .nox-owner-core::before{
+ animation:none!important
+}
+@media(prefers-reduced-motion:reduce){
+ body.helion-home.nox-owner-cinema .nox-owner-core,
+ body.helion-home.nox-owner-cinema .nox-owner-core::before{
+  animation:none!important;transition:none!important
+ }
+}
+/* NOX V24 ORIGINAL 14 SELECTOR PANEL: HIT-TARGET FIX (NO SHADER CHANGE) */
+/* The original orbit engine writes --demo-x/y for the floating world controls.
+   Inside the owner settings panel they become *buttons*, so retaining its
+   absolute placement makes AMETHYST cover CLASSIC at 1440px.
+   This rule affects only the UI hit targets while the 14-control panel is open;
+   the original WebGL worlds, their orbital physics and all materials remain intact. */
+html body.helion-home.nox-owner-cinema[data-nox-owner-controls="true"] section.home-palette-bottom.nox-orbital-controls :is(button.home-preset,button.nox-world-profile,#homeModes > button) {
+ position:relative!important;
+ left:auto!important;
+ top:auto!important;
+ right:auto!important;
+ bottom:auto!important;
+ inset:auto!important;
+ transform:none!important;
+ translate:none!important;
+ margin:0!important;
+ will-change:auto!important;
+ z-index:auto!important;
+ pointer-events:auto!important;
+ flex:0 0 64px!important;
+ width:64px!important;
+ height:64px!important;
+ min-width:54px!important;
+ min-height:54px!important;
+ max-width:74px!important;
+ max-height:74px!important;
+ box-sizing:border-box!important;
+}
+html body.helion-home.nox-owner-cinema[data-nox-owner-controls="true"] section.home-palette-bottom.nox-orbital-controls :is(.home-palette-controls,#homeModes) {
+ position:relative!important;
+ display:flex!important;
+ flex-wrap:wrap!important;
+ justify-content:flex-start!important;
+ align-items:center!important;
+ gap:8px!important;
+ width:100%!important;
+ min-width:0!important;
+}
+@media(max-width:600px){
+ html body.helion-home.nox-owner-cinema[data-nox-owner-controls="true"] section.home-palette-bottom.nox-orbital-controls :is(button.home-preset,button.nox-world-profile,#homeModes > button) {
+  flex-basis:56px!important;width:56px!important;height:56px!important;
+ }
+}
+
+/* NOX V24 APPROVED-ART DUPLICATE-CAPTION MASK (SOURCE BYTES UNCHANGED) */
+/* The approved single HOME composite has original lettering baked into the
+   upper edge and the floor. Those labels must NOT be painted a second time
+   behind the live navigation. Crop only the overlay's duplicate-text bands.
+   All source pixels, real D02 WebGL and the metal/volumetric effects remain. */
+body.helion-home.nox-owner-cinema .nox-owner-architecture{
+ clip-path:inset(8% 0 36% 0)!important;
+}
+body.helion-home.nox-owner-cinema .nox-owner-floor{
+ clip-path:inset(92% 0 0 0)!important;
+ -webkit-mask-image:linear-gradient(90deg,#000 0%,#000 24%,transparent 42%,transparent 58%,#000 76%,#000 100%)!important;
+ mask-image:linear-gradient(90deg,#000 0%,#000 24%,transparent 42%,transparent 58%,#000 76%,#000 100%)!important;
+}
+@media(max-width:600px){
+ body.helion-home.nox-owner-cinema .nox-owner-architecture{
+  clip-path:inset(9% 0 34% 0)!important;
+ }
+ body.helion-home.nox-owner-cinema .nox-owner-floor{
+  clip-path:inset(92% 0 0 0)!important;
+ }
+}
+
+/* Eight unique natural-source crops from the immutable 1650×929 owner image. */
+body.helion-home.nox-owner-cinema .nox-owner-core:nth-child(1)::before{background-size:1447.36842% auto!important;background-position:28.32031% 20.98160%!important} /* CONSCIOUSNESS */
+body.helion-home.nox-owner-cinema .nox-owner-core:nth-child(2)::before{background-size:1289.06250% auto!important;background-position:35.61104% 5.36829%!important} /* PERSONA */
+body.helion-home.nox-owner-cinema .nox-owner-core:nth-child(3)::before{background-size:1527.77778% auto!important;background-position:50.45396% 0.36541%!important} /* ATLAS */
+body.helion-home.nox-owner-cinema .nox-owner-core:nth-child(4)::before{background-size:1375.00000% auto!important;background-position:63.46405% 6.92213%!important} /* VOICE */
+body.helion-home.nox-owner-cinema .nox-owner-core:nth-child(5)::before{background-size:1352.45902% auto!important;background-position:71.79319% 21.93309%!important} /* REFLECTION */
+body.helion-home.nox-owner-cinema .nox-owner-core:nth-child(6)::before{background-size:1352.45902% auto!important;background-position:65.05236% 39.40520%!important} /* CORE */
+body.helion-home.nox-owner-cinema .nox-owner-core:nth-child(7)::before{background-size:1527.77778% auto!important;background-position:49.93515% 50.30451%!important} /* NEXUS */
+body.helion-home.nox-owner-cinema .nox-owner-core:nth-child(8)::before{background-size:1422.41379% auto!important;background-position:35.26728% 38.37638%!important} /* FORGE */
+/* Preserve the V22 mobile composition, avoid live D02 eclipse on desktop. */
+@media(min-width:601px){
+ body.helion-home.nox-owner-cinema .nox-owner-core:nth-child(7){left:81%!important;top:54%!important}
+}
+
+/* V25 approved industrial citadel: reveal only the lateral original architecture
+   above the starfield but behind original PBR and D02 WebGL. Mask the approved
+   composite's built-in satellite orbs and portrait rows: no duplicate objects. */
+body.helion-home.nox-owner-cinema .nox-owner-architecture{
+ z-index:5!important;
+ -webkit-mask-image:linear-gradient(90deg,#000 0%,#000 12%,transparent 23%,transparent 77%,#000 88%,#000 100%)!important;
+ mask-image:linear-gradient(90deg,#000 0%,#000 12%,transparent 23%,transparent 77%,#000 88%,#000 100%)!important
+}
+body.helion-home.nox-owner-cinema .nox-owner-floor{z-index:2!important}
+
+/* V25 readable liquid glass: the vendor refraction layers stay live, but
+   cannot paint over the action labels. The two existing glass elements are
+   below live button text, within its isolation stack. No engine disabled. */
+body.helion-home.nox-owner-cinema .nox-owner-actions button>.lg-layer,
+body.helion-home.nox-owner-cinema .nox-owner-actions button>.lg-sheen{
+ z-index:-1!important
+}

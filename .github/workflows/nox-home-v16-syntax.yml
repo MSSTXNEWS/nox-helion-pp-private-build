@@ -1,0 +1,369 @@
+name: NOX HOME V16 source syntax gate
+# Only the newest commit on this WEB branch needs the expensive browser audit.
+concurrency:
+  group: nox-home-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+on:
+  push:
+    branches:
+      - 'fix/home-v16-cinematic-contract-*'
+  pull_request:
+    paths:
+      - 'web-home/candidates/2026-11-10-v16-cinema/**'
+      - '.github/workflows/nox-home-v16-syntax.yml'
+jobs:
+  source-syntax:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate shipped JavaScript source (no fake runtime PASS)
+        run: |
+          node --check web-home/candidates/2026-11-10-v16-cinema/nox-engines/physical-worlds-v7.mjs
+          node --check web-home/candidates/2026-11-10-v16-cinema/nox-resonance-cinema-v13.js
+          node --check web-home/candidates/2026-11-10-v16-cinema/nox-cinematic-health.js
+          node --check web-home/candidates/2026-11-10-v16-cinema/tools/browser-acceptance.mjs
+          node --check web-home/candidates/2026-11-10-v16-cinema/tools/physical-gpu-acceptance.mjs
+          node --check web-home/candidates/2026-11-10-v16-cinema/tools/assemble-verified-site.mjs
+          node --check web-home/candidates/2026-11-10-v16-cinema/tools/restore-pinned-baseline.mjs
+          node --check web-home/candidates/2026-11-10-v16-cinema/tools/audit-static-references.mjs
+          node --check web-home/candidates/2026-11-10-v16-cinema/nox-global-wow-v18.js
+          node --check web-home/candidates/2026-11-10-v16-cinema/nox-owner-director-v20.js
+          node --check web-home/candidates/2026-11-10-v16-cinema/nox-owner-fidelity-v21.js
+          node --check web-home/candidates/2026-11-10-v16-cinema/nox-owner-release-v22.js
+          node --check web-home/candidates/2026-11-10-v16-cinema/nox-visual-source-lock-v24.js
+          node --check web-home/candidates/2026-11-10-v16-cinema/tools/audit-wow-wiring-v24.mjs
+          node --check web-home/candidates/2026-11-10-v16-cinema/nox-chat-training-v23.mjs
+          node --check web-home/candidates/2026-11-10-v16-cinema/tools/test-chat-training-v23.mjs
+          node web-home/candidates/2026-11-10-v16-cinema/tools/test-chat-training-v23.mjs
+          node --check web-home/candidates/2026-11-10-v16-cinema/build-approved-assets.mjs
+          node --check web-home/candidates/2026-11-10-v16-cinema/nox-progress-panel.js
+          node --check web-home/candidates/2026-11-10-v16-cinema/nox-progress-core.mjs
+          node --check web-home/candidates/2026-11-10-v16-cinema/tools/nox-audit-distillation.mjs
+          node --check web-home/candidates/2026-11-10-v16-cinema/tools/test-nox-progress.mjs
+          node web-home/candidates/2026-11-10-v16-cinema/tools/test-nox-progress.mjs
+          node - <<'NODE'
+          const fs=require('node:fs'),assert=require('node:assert/strict');
+          const source=JSON.parse(fs.readFileSync('web-home/candidates/2026-11-10-v16-cinema/NOX-WOW30-TRACEABILITY.json','utf8'));
+          const ids=['R','W','C'].flatMap(group=>Array.from({length:10},(_,i)=>group+String(i+1).padStart(2,'0')));
+          assert.equal(source.criteria.length,30);
+          assert.deepEqual(source.criteria.map(x=>x.id),ids);
+          for(const row of source.criteria){
+            assert(row.requirement&&row.source,'WOW30_SOURCE_GAP');
+            if(row.implementationAccepted||row.physicalGpuAccepted||row.windowsAccepted||row.proof)
+              throw Error('NOX_WOW30_CLAIM_REQUIRES_INDEPENDENT_SAME_SHA_EVIDENCE:'+row.id);
+          }
+          console.log('NOX_WOW30_SOURCE_GATE_PASS 30/30 tracked, 0/30 claimed accepted');
+          NODE
+          # Negative integration test: no real RunPod checkpoint -> HOLD, never 0% or PASS.
+          mkdir -p /tmp/nox-progress-empty
+          rc=0
+          node web-home/candidates/2026-11-10-v16-cinema/tools/nox-audit-distillation.mjs --workspace /tmp/nox-progress-empty --out /tmp/nox-progress-empty/report.json || rc=$?
+          test "$rc" -eq 2
+          node -e "const r=require('/tmp/nox-progress-empty/report.json'); if(r.status!=='HOLD'||r.stepPercent!==null||r.complete)process.exit(1)"
+          python3 -m py_compile web-home/candidates/2026-11-10-v16-cinema/tools/apply-web-v27.py
+          node --check web-home/candidates/2026-11-10-v16-cinema/tools/test-web-v27.mjs
+          node --check web-home/candidates/2026-11-10-v16-cinema/tools/test-web-v27-browser.mjs
+          node --check web-home/candidates/2026-11-10-v16-cinema/nox-glass-init.mjs
+          node --check web-home/candidates/2026-11-10-v16-cinema/nox-home-flow.js
+          node --check web-home/candidates/2026-11-10-v16-cinema/nox-home.mjs
+          node --check web-home/candidates/2026-11-10-v16-cinema/nox-home-recovery.js
+          node --check web-home/candidates/2026-11-10-v16-cinema/build-approved-assets.mjs
+          node --check web-home/candidates/2026-11-10-v16-cinema/nox-universe-v19.js
+          node --check web-home/candidates/2026-11-10-v16-cinema/nox-install-extra-v19.mjs
+          node -e "const m=require('./web-home/candidates/2026-11-10-v16-cinema/nox-section-map-v19.json');if(!Array.isArray(m)||m.length!==130)process.exit(1)"
+          node --check web-home/candidates/2026-11-09-v15-repair/nox-home-recovery.js
+          node --check web-home/candidates/2026-11-09-v15-repair/nox-orbit-original.js
+      - name: Verify 14-control source and explicit GPU hold
+        run: |
+          node - <<'NODE'
+          const fs=require('node:fs'), assert=require('node:assert/strict'), crypto=require('node:crypto');
+          const root='web-home/candidates/';
+          const orbit=fs.readFileSync(root+'2026-11-09-v15-repair/nox-orbit-original.js','utf8');
+          const pbr=fs.readFileSync(root+'2026-11-10-v16-cinema/nox-engines/physical-worlds-v7.mjs','utf8');
+          const contract=fs.readFileSync(root+'2026-11-10-v16-cinema/CINEMATIC-CONTRACT.md','utf8');
+          for(const [name,count] of [['COLOR_IDS',6],['THEME_IDS',5],['MODE_IDS',3]]){
+            const match=orbit.match(new RegExp('const '+name+'=\\[([^\\]]+)\\]'));
+            assert(match,'Missing '+name);
+            assert.equal(match[1].split(',').length,count,name);
+          }
+          assert.match(pbr,/WebGLRenderer/);
+          assert.match(pbr,/MeshPhysicalMaterial/);
+          const health=fs.readFileSync(root+'2026-11-10-v16-cinema/nox-cinematic-health.js','utf8');
+          const runner=fs.readFileSync(root+'2026-11-10-v16-cinema/tools/browser-acceptance.mjs','utf8');
+          assert.match(pbr,/planetMapsReady/);
+          assert.match(pbr,/metalMapsReady/);
+          assert.match(pbr,/allMaterialAssetsReady/);
+          assert.match(health,/overlappingControlPairs/);
+          assert.match(health,/outOfViewport/);
+          assert.match(runner,/physicalGpuAcceptance:'HOLD'/);
+          assert.match(runner,/3840,2160/);
+          const gpuRunner=fs.readFileSync(root+'2026-11-10-v16-cinema/tools/physical-gpu-acceptance.mjs','utf8');
+          assert.match(gpuRunner,/WEBGL_debug_renderer_info/);
+          assert.match(gpuRunner,/swiftshader/);
+          assert.match(gpuRunner,/qa-report.json/);
+          assert.match(gpuRunner,/realHardware/);
+          const installer=fs.readFileSync(root+'2026-11-10-v16-cinema/nox-install-extra-v19.mjs','utf8');
+          const universe=fs.readFileSync(root+'2026-11-10-v16-cinema/nox-universe-v19.js','utf8');
+          const assetBuilder=fs.readFileSync(root+'2026-11-10-v16-cinema/build-approved-assets.mjs','utf8');
+          assert.match(installer,/leaflet@1\.9\.4/);
+          assert.match(installer,/pdfjs-dist@4\.10\.38/);
+          assert.match(installer,/epubjs@0\.3\.93/);
+          assert.match(installer,/shaka-player@4\.15\.67/);
+          assert.match(assetBuilder,/await installExtras\(out\)/);
+          assert.match(assetBuilder,/nox-universe-v19\.js/);
+          assert.match(universe,/tile\.openstreetmap\.org/);
+          assert.match(universe,/nox-v19-weather-map/);
+          assert.match(universe,/function calendar\(/);
+          assert.match(universe,/function gallery\(/);
+          assert.match(universe,/function effects\(/);
+          assert.match(universe,/tsparticles.slim.bundle.min.js/);
+          assert.match(installer,/tsparticles\/slim@4\.5\.3/);
+          assert.match(universe,/photoswipe-lightbox\.esm\.js/);
+          assert.match(universe,/fullcalendar\.global\.min\.js/);
+          assert.match(installer,/photoswipe@5\.4\.4/);
+          assert.match(installer,/fullcalendar@6\.1\.19/);
+          assert.match(universe,/localStorage\.setItem/);
+          const wowCss=fs.readFileSync(root+'2026-11-10-v16-cinema/nox-global-wow-v18.css','utf8');
+          const wowJs=fs.readFileSync(root+'2026-11-10-v16-cinema/nox-global-wow-v18.js','utf8');
+          const assembler=fs.readFileSync(root+'2026-11-10-v16-cinema/tools/assemble-verified-site.mjs','utf8');
+          for(const f of ['index.html','chat.html','cinema.html','install.html','memory.html','models.html','projects.html','settings.html','system.html','training.html']) assert(assembler.includes("'"+f+"'"),'Missing route '+f);
+          assert.match(assembler,/nox-global-wow-v18.css/);
+          assert.match(assembler,/nox-global-wow-v18.js/);
+          assert.match(wowJs,/dispatchEvent\(new Event\('change'/);
+          assert.match(wowJs,/MutationObserver/);
+          assert.match(wowCss,/prefers-reduced-motion/);
+          assert.match(wowCss,/nox-wow-choice-group/);
+          const ownerJs=fs.readFileSync(root+'2026-11-10-v16-cinema/nox-owner-director-v20.js','utf8');
+          const ownerCss=fs.readFileSync(root+'2026-11-10-v16-cinema/nox-owner-director-v20.css','utf8');
+          const ownerIndex=fs.readFileSync(root+'2026-11-10-v16-cinema/index.html','utf8');
+          const ownerBinary=fs.readFileSync(root+'2026-11-10-v16-cinema/assets/nox-owner-approved/NOX_HOME_OWNER_APPROVED_WEB.webp');
+          assert.equal(crypto.createHash('sha256').update(ownerBinary).digest('hex'),'3253d26819a70b49259fdb2a56c2eaa2455c6878cb2ccb8d62b225ec6ccdfa22');
+          assert.match(ownerJs,/nox-owner-core-rig/);
+          assert.match(ownerJs,/nox-owner-personas/);
+          assert.match(ownerJs,/noxOwnerLayout/);
+          assert.match(ownerCss,/prefers-reduced-motion/);
+          assert.match(ownerIndex,/nox-owner-director-v20.css/);
+          assert.match(ownerIndex,/nox-owner-director-v20.js/);
+          assert.match(ownerIndex,/nox-owner-fidelity-v21.js/);
+          assert.match(ownerIndex,/nox-owner-fidelity-v21.css/);
+          assert.match(installer,/fuse.js@7\.1\.0/);
+          assert.match(universe,/new window.Fuse/);
+          const expectedPeople={"kv":"4f349edf31118301b2c5d42b0fe5ad2c17aea05fae5622afab90a5a00950584b","am":"67390d082d29d0a90f09e09866875318fdd4c562ea6791f0f51c958adcd28768","la":"e03b0611b237f23ecafbbc1dd6e0aec93aabf38a3bb772af28b1ed0e90e27eaa","ev":"981b21da200f6a4d1c1741a4f5849c9379eb52d781d661ecfdb093ca29652c87","kw":"005d246edce84b4cd0f3d005a5eddb03adbedf8fdfe310ce29e6b95c6a16361e"};
+          for(const [id,expected] of Object.entries(expectedPeople)) assert.equal(crypto.createHash('sha256').update(fs.readFileSync(root+'2026-11-10-v16-cinema/assets/nox-owner-approved/nox-owner-persona-'+id+'.webp')).digest('hex'),expected,'Approved portrait drift: '+id);
+          for(const id of Object.keys(expectedPeople)) assert(ownerCss.includes('nox-owner-persona-'+id+'.webp'),'Missing real photo link '+id);
+          const homeFlowJs=fs.readFileSync(root+'2026-11-10-v16-cinema/nox-home-flow.js','utf8');
+          const homeFlowCss=fs.readFileSync(root+'2026-11-10-v16-cinema/nox-home-flow.css','utf8');
+          assert.match(homeFlowJs,/NOX_FLOW_DIAGNOSTICS/);
+          assert.match(homeFlowJs,/document.hidden/);
+          const digest=file=>crypto.createHash('sha256').update(fs.readFileSync(root+'2026-11-10-v16-cinema/'+file)).digest('hex');
+          assert.equal(digest('nox-home.mjs'),'8066bc0a0f8ef5bb5f0fb1f58ad3f6ee29dc8506385c09d77d38d4235c7e42e9','Original D02 must not drift');
+          assert.equal(digest('nox-home-flow.js'),'a28dc4a9bd36638182aa05b89513d8ded2800ee78c0db3a52ccea07d292a52ca','Original HOME flow must not drift');
+          assert.match(homeFlowCss,/prefers-reduced-motion/);
+          assert.match(assembler,/nox-home-flow.js/);
+          assert.match(assembler,/nox-home-flow.css/);
+          assert(!pbr.includes(',const zScale='),'Invalid JavaScript statement separator in the PBR scale patch');
+          assert(contract.includes('HOLD'),'Do not claim visual acceptance from syntax checks');
+          console.log('Source gate PASS; real GPU/render QA remains HOLD');
+          NODE
+
+  vendor-download:
+    needs: source-syntax
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Download real pinned reader, cinema and map binaries
+        run: |
+          mkdir -p /tmp/nox-v19-download
+          node --input-type=module -e "import {installExtras} from './web-home/candidates/2026-11-10-v16-cinema/nox-install-extra-v19.mjs'; await installExtras('/tmp/nox-v19-download')"
+          mkdir -p /tmp/nox-v19-download/source
+          cp web-home/candidates/2026-11-10-v16-cinema/nox-universe-v19.js /tmp/nox-v19-download/source/
+          cp web-home/candidates/2026-11-10-v16-cinema/nox-universe-v19.css /tmp/nox-v19-download/source/
+          cp web-home/candidates/2026-11-10-v16-cinema/nox-section-map-v19.json /tmp/nox-v19-download/source/
+          cp web-home/candidates/2026-11-10-v16-cinema/nox-install-extra-v19.mjs /tmp/nox-v19-download/source/
+          cp web-home/candidates/2026-11-10-v16-cinema/nox-global-wow-v18.js /tmp/nox-v19-download/source/
+          cp web-home/candidates/2026-11-10-v16-cinema/nox-global-wow-v18.css /tmp/nox-v19-download/source/
+          cp web-home/candidates/2026-11-10-v16-cinema/nox-home.mjs /tmp/nox-v19-download/source/
+          cp web-home/candidates/2026-11-10-v16-cinema/nox-home-flow.js /tmp/nox-v19-download/source/
+          cp web-home/candidates/2026-11-10-v16-cinema/nox-home-flow.css /tmp/nox-v19-download/source/
+          cp web-home/candidates/2026-11-10-v16-cinema/nox-home-recovery.js /tmp/nox-v19-download/source/
+          cp web-home/candidates/2026-11-10-v16-cinema/nox-engines/physical-worlds-v7.mjs /tmp/nox-v19-download/source/
+          cp web-home/candidates/2026-11-10-v16-cinema/build-approved-assets.mjs /tmp/nox-v19-download/source/
+          cp web-home/candidates/2026-11-10-v16-cinema/nox-owner-director-v20.js /tmp/nox-v19-download/source/
+          cp web-home/candidates/2026-11-10-v16-cinema/nox-owner-director-v20.css /tmp/nox-v19-download/source/
+          cp web-home/candidates/2026-11-10-v16-cinema/nox-owner-fidelity-v21.js /tmp/nox-v19-download/source/
+          cp web-home/candidates/2026-11-10-v16-cinema/nox-owner-fidelity-v21.css /tmp/nox-v19-download/source/
+          cp web-home/candidates/2026-11-10-v16-cinema/nox-glass-home.css /tmp/nox-v19-download/source/
+          cp web-home/candidates/2026-11-10-v16-cinema/nox-glass-film.css /tmp/nox-v19-download/source/
+          cp web-home/candidates/2026-11-10-v16-cinema/nox-glass-init.mjs /tmp/nox-v19-download/source/
+          cp web-home/candidates/2026-11-10-v16-cinema/tools/browser-acceptance.mjs /tmp/nox-v19-download/source/
+          mkdir -p /tmp/nox-v19-download/source/assets/nox-owner-approved
+          cp web-home/candidates/2026-11-10-v16-cinema/assets/nox-owner-approved/*.webp /tmp/nox-v19-download/source/assets/nox-owner-approved/
+      - name: Retrieve optional server and cinematic UI npm distributions
+        run: |
+          mkdir -p /tmp/nox-v19-download/optional
+          cd /tmp/nox-v19-download/optional
+          for pkg in web-push@3.6.7 rss-parser@3.13.0 fullcalendar@6.1.19 photoswipe@5.4.4 @tsparticles/engine@4.5.3 @tsparticles/slim@4.5.3; do
+            if npm pack "$pkg" --pack-destination . --silent; then
+              echo "PACKAGED $pkg" >> optional-download-status.txt
+            else
+              echo "HOLD $pkg NOT_DOWNLOADED" >> optional-download-status.txt
+            fi
+          done
+      - name: Verify complete downloaded payload
+        run: |
+          python3 - <<'PY'
+          import hashlib,json,pathlib
+          root=pathlib.Path('/tmp/nox-v19-download')
+          receipt=json.loads((root/'vendor/nox-extra/NOX-EXTRA-ASSETS-RECEIPT.json').read_text())
+          assert receipt['complete'] and len(receipt['files'])==29
+          for item in receipt['files']:
+              contents=(root/'vendor/nox-extra'/item['file']).read_bytes()
+              assert len(contents)==item['size'] and hashlib.sha256(contents).hexdigest()==item['sha256'],item['file']
+          assert len(list((root/'source').glob('*')))==21
+          art=root/'source/assets/nox-owner-approved'
+          assert len(list(art.glob('*.webp')))==6
+          print('NOX_V20_PERSONA_ART_HANDOFF 5 exact cropped portraits + original approved HOME')
+          print('NOX_V19_ARTIFACT_SHA256_PASS 29 binaries + source modules')
+          PY
+      - name: Preserve actual ZIP handoff for Drive
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX-V19-REAL-DOWNLOADS
+          path: /tmp/nox-v19-download/
+          if-no-files-found: error
+          retention-days: 7
+
+  site-build:
+    needs: vendor-download
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Restore original public NOX WEB baseline with strict SHA256 pins
+        working-directory: web-home/candidates/2026-11-10-v16-cinema
+        run: node tools/restore-pinned-baseline.mjs
+      - name: Build the actual ten-page NOX candidate with all mandatory assets
+        working-directory: web-home/candidates/2026-11-10-v16-cinema
+        run: |
+          node build-approved-assets.mjs
+          node --input-type=module - <<'NODE'
+          import fs from 'node:fs';
+          import crypto from 'node:crypto';
+          const dist='dist/', manifest=JSON.parse(fs.readFileSync(dist+'vendor/nox-extra/NOX-EXTRA-ASSETS-RECEIPT.json','utf8'));
+          if(manifest.files.length!==29||!manifest.complete)throw Error('NOX_VENDOR_29_MISSING');
+          for(const f of manifest.files){
+            const buf=fs.readFileSync(dist+'vendor/nox-extra/'+f.file);
+            if(buf.length!==f.size||crypto.createHash('sha256').update(buf).digest('hex')!==f.sha256)throw Error('NOX_VENDOR_SHA_MISMATCH:'+f.file);
+          }
+          const evidence=JSON.parse(fs.readFileSync(dist+'nox-progress-receipt.json','utf8'));
+          if(evidence.schema!=='nox-progress-receipt-v1'||evidence.status!=='HOLD'||evidence.stepPercent!==null||evidence.complete!==false)
+            throw Error('NOX_STATIC_PROGRESS_MUST_HOLD_WITHOUT_REAL_WEIGHTS');
+          for(const page of ['system.html','training.html']){
+            const html=fs.readFileSync(dist+page,'utf8');
+            for(const name of ['nox-progress-panel.js','nox-progress-panel.css'])if(!html.includes(name))
+              throw Error('NOX_PROGRESS_NOT_WIRED:'+page+':'+name);
+          }
+          for(const page of ['index','chat','cinema','install','memory','models','projects','settings','system','training']){
+            const html=fs.readFileSync(dist+page+'.html','utf8');
+            if(html.includes('cdn.jsdelivr.net/npm/lucide@0.456.0')||html.includes('cdn.jsdelivr.net/npm/echarts@5.5.1'))
+              throw Error('NOX_DEPENDENCY_STILL_REMOTE:'+page);
+          }
+          for(const loader of ['STLLoader.js','RGBELoader.js'])
+            if(!fs.existsSync('dist/vendor/three/addons/loaders/'+loader))
+              throw Error('NOX_THREE_ADDON_OFFLINE_MISSING:'+loader);
+          for(const page of ['index.html','settings.html']){
+            const html=fs.readFileSync('dist/'+page,'utf8');
+            if(html.includes('https://cdn.jsdelivr.net/npm/three@0.160.1'))
+              throw Error('NOX_THREE_IMPORTMAP_REMOTE:'+page);
+            if(html.includes('"three":')&&!html.includes('./vendor/three/three.module.js'))
+              throw Error('NOX_THREE_IMPORTMAP_LOCAL_MISSING:'+page);
+          }
+          if(!fs.existsSync('dist/vendor/nox-extra/tabler-core.min.css'))
+            throw Error('NOX_TABLER_CSS_NOT_DOWNLOADED');
+          for(const page of ['chat','cinema','install','memory','models','projects','settings','system','training']){
+            const html=fs.readFileSync('dist/'+page+'.html','utf8');
+            if(html.includes('cdn.jsdelivr.net/npm/@tabler/core@'))
+              throw Error('NOX_TABLER_CSS_STILL_REMOTE:'+page);
+            if(!html.includes('./vendor/nox-extra/tabler-core.min.css'))
+              throw Error('NOX_TABLER_CSS_NOT_WIRED:'+page);
+          }
+          for(const lib of ['lucide.min.js','echarts.min.js'])
+            if(!fs.existsSync('dist/vendor/nox-extra/'+lib))throw Error('NOX_OFFLINE_LIBRARY_MISSING:'+lib);
+          for(const path of ['dist/nox-visual-source-lock-v24.css','dist/nox-visual-source-lock-v24.js'])
+            if(!fs.existsSync(path))throw Error('NOX_ORIGINAL_VISUAL_FIDELITY_SOURCE_MISSING:'+path);
+          for(const path of ['dist/nox-owner-release-v22.css','dist/nox-owner-release-v22.js'])
+            if(!fs.existsSync(path))throw Error('NOX_V22_SOURCE_NOT_PACKAGED:'+path);
+          const resonance=fs.readFileSync(dist+'chat.html','utf8');
+          for(const item of ['nox-chat-training-v23.mjs','nox-chat-training-v23.css'])
+            if(!resonance.includes(item)||!fs.existsSync('dist/'+item))
+              throw Error('NOX_RESONANCE_TRAINING_NOT_WIRED:'+item);
+          const home=fs.readFileSync(dist+'index.html','utf8');
+          for(const resource of ['nox-visual-source-lock-v24.css','nox-visual-source-lock-v24.js'])
+            if(!home.includes(resource))throw Error('NOX_ORIGINAL_VISUAL_FIDELITY_NOT_WIRED:'+resource);
+          if(home.indexOf('nox-owner-release-v22.css')>home.indexOf('nox-visual-source-lock-v24.css')||
+             home.indexOf('nox-owner-release-v22.js')>home.indexOf('nox-visual-source-lock-v24.js'))
+            throw Error('NOX_VISUAL_FIDELITY_STYLESHEETS_OUT_OF_ORDER');
+          for(const path of ['nox-owner-release-v22.css','nox-owner-release-v22.js'])
+            if(!home.includes(path))throw Error('NOX_V22_HOME_NOT_WIRED:'+path);
+
+          for(const name of ['nox-home.mjs','nox-owner-director-v20.js','nox-owner-fidelity-v21.js','nox-owner-fidelity-v21.css','nox-universe-v19.js','nox-global-wow-v18.js'])if(!home.includes(name))throw Error('NOX_HOME_RUNTIME_NOT_WIRED:'+name);
+          const pages=['index','chat','cinema','install','memory','models','projects','settings','system','training'];
+          for(const page of pages){
+            const html=fs.readFileSync(dist+page+'.html','utf8');
+            for(const asset of ['nox-universe-v19.js','nox-global-wow-v18.js'])if(!html.includes(asset))throw Error('NOX_SECTION_DISCONNECTED:'+page+':'+asset);
+          }
+          console.log('NOX_V21_FULL_WEB_BUILD_STATIC_PASS 10/10 routes; 29 verified runtime files; GPU/browser HOLD');
+          NODE
+      - name: Verify V27 source-locked existing NOX dist, D02 and 14-world no-loss
+        working-directory: web-home/candidates/2026-11-10-v16-cinema
+        run: |
+          for source in dist/nox-chat.js dist/nox-telemetry.js dist/nox-function-catalog.js dist/nox-universe-v19.js; do node --check "$source"; done
+          node --test tools/test-web-v27.mjs
+      - name: Reject missing local assets on all ten NOX pages
+        working-directory: web-home/candidates/2026-11-10-v16-cinema
+        run: node tools/audit-static-references.mjs dist
+      - name: Audit original WOW engines and unfiltered source/asset wiring
+        working-directory: web-home/candidates/2026-11-10-v16-cinema
+        run: node tools/audit-wow-wiring-v24.mjs dist
+      - name: Real Chromium browser acceptance for ten routes and user actions
+        working-directory: web-home/candidates/2026-11-10-v16-cinema
+        # 7 actual WebGL sizes + 10 routes + original V7 material/light audit
+        # can exceed ten minutes on GitHub's software GPU. Do not skip tests.
+        timeout-minutes: 20
+        run: |
+          npm install --no-save --no-audit --no-fund playwright@1.58.2
+          npx playwright install --with-deps chromium
+          python3 -m http.server 8080 --bind 127.0.0.1 --directory dist >/tmp/nox-ci-http.log 2>&1 &
+          # Provenance: test exactly the same checkout that was compiled above.
+          NOX_AUDIT_SOURCE_SHA="$(git rev-parse HEAD)" NOX_PREVIEW_URL=http://127.0.0.1:8080/index.html NOX_ACCEPTANCE_DIR=./nox-v21-acceptance node tools/browser-acceptance.mjs
+          NOX_PREVIEW_URL=http://127.0.0.1:8080/index.html node tools/test-web-v26-browser.mjs
+          NOX_PREVIEW_URL=http://127.0.0.1:8080/index.html node tools/test-web-v27-browser.mjs
+      - name: Preserve actual browser screenshots and acceptance logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX-V21-CHROMIUM-ACCEPTANCE
+          path: web-home/candidates/2026-11-10-v16-cinema/nox-v21-acceptance/
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Preserve candidate site with verifiable receipts, without publishing production
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX-V21-WEB-CANDIDATE-STAGING
+          path: web-home/candidates/2026-11-10-v16-cinema/dist/
+          if-no-files-found: warn
+          retention-days: 7

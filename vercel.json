@@ -1,0 +1,7 @@
+{
+  "version": 2,
+  "framework": null,
+  "installCommand": "echo NOX_WEB_NO_EXTRA_INSTALL",
+  "buildCommand": "cd web-home/candidates/2026-11-10-v16-cinema && node tools/restore-pinned-baseline.mjs && node build-approved-assets.mjs",
+  "outputDirectory": "web-home/candidates/2026-11-10-v16-cinema/dist"
+}
