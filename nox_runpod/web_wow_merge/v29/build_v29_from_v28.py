@@ -42,6 +42,16 @@ for name in mutations:
 for name in ['nox-v29-pc-genesis-addons.mjs','nox-v29-pc-genesis-addons.css']:
  assert name not in new
  new[name]=(ROOT/name).read_bytes()
+# One original Resonance, plus a truthful compatibility route for PC hub/world.
+assert 'resonance.html' not in new, 'NOX_PRIMARY_RESONANCE_ROUTE_COLLISION_HOLD'
+new['resonance.html']=(
+ '<!doctype html><html lang="ru"><head><meta charset="utf-8">'
+ '<meta name="viewport" content="width=device-width,initial-scale=1">'
+ '<meta http-equiv="refresh" content="0;url=chat.html">'
+ '<title>NOX HELION · Резонанс</title>'
+ '<script>location.replace("./chat.html");</script>'
+ '</head><body><a href="chat.html">Открыть основной Резонанс</a></body></html>\n'
+).encode('utf-8')
 for name in IMMUTABLE:
  assert digest(new[name])==IMMUTABLE[name] and new[name]==old[name],('NO_LOSS_FAIL',name)
 for name in old:
@@ -51,7 +61,8 @@ assert b'href="system.html#dashboard-overview"' in new['system.html']
 for name in ['chat.html','memory.html','training.html']:
  assert new[name].count(b'nox-v29-pc-genesis-addons.mjs')==1
 assert new['index.html']==old['index.html']
-for fname in ['test_v29_source.py','test_v29_chromium_component.py']:
+for fname in ['test_v29_source.py','test_v29_chromium_component.py',
+              'test_v29_pc_api_contract.cjs','test_v29_static_routes.py']:
  new['qa/v29/'+fname]=(ROOT/fname).read_bytes()
 receipt={
  'schema':'NOX_HELION_WEB_V29_ONEPASS_SIX_TASKS_SOURCE_RECEIPT_V1',
@@ -59,7 +70,10 @@ receipt={
  'scope':'WEB-only V27 PRIMARY plus PC V25/GENESIS addons; no new backend or active alternate chat',
  'source':{'v28_sha256':EXPECTED,'v27_source_head':'64053cead613ab646f7dcf05ea68479bab8bf434','pc_source_pr':251},
  'mutations':{name:{'before':digest(old[name]),'after':digest(new[name])} for name in mutations},
- 'added':['nox-v29-pc-genesis-addons.mjs','nox-v29-pc-genesis-addons.css','qa/v29/test_v29_source.py','qa/v29/test_v29_chromium_component.py'],
+ 'added':['nox-v29-pc-genesis-addons.mjs','nox-v29-pc-genesis-addons.css',
+          'resonance.html','qa/v29/test_v29_source.py',
+          'qa/v29/test_v29_chromium_component.py','qa/v29/test_v29_pc_api_contract.cjs',
+          'qa/v29/test_v29_static_routes.py'],
  'immutable':IMMUTABLE,
  'web_tasks':{'monitoring_route':'FIXED_REAL_PAGE','pc_tools_primary_resonance':'INTEGRATED_READ_ONLY_SAME_ONEHOST','pc_memory_primary_page':'INTEGRATED_READ_ONLY_SAME_S03','genesis':'GATED_EXISTING_NATIVE_STATUS_AND_PROGRESS','browser_e2e':'SEPARATE_EVIDENCE_REQUIRED','wow30':'SOURCE_MATRIX_CHECKED_PHYSICAL_GPU_HOLD','preview':'DEPLOY_NOT_YET_CONFIRMED'},
  'native_onehost_live':'NOT_TESTED','physical_windows_gpu':'NOT_TESTED',

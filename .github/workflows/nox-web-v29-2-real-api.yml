@@ -1,0 +1,38 @@
+name: NOX WEB V29.2 Actual PC API Contract QA
+on:
+  push:
+    branches: [feature/nox-teacher-mycelium-20261112]
+    paths:
+      - 'nox_runpod/web_wow_merge/v29/**'
+      - '.github/workflows/nox-web-v29-2-real-api.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verified-read-only-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile source scripts
+        run: |
+          set -Eeuo pipefail
+          python3 -m py_compile nox_runpod/web_wow_merge/v29/build_v29_from_v28.py nox_runpod/web_wow_merge/v29/test_v29_static_routes.py
+          node --check nox_runpod/web_wow_merge/v29/nox-v29-pc-genesis-addons.mjs
+          node nox_runpod/web_wow_merge/v29/test_v29_pc_api_contract.cjs
+      - name: Source receipt and actual Python-PC endpoint controls
+        run: |
+          python3 - <<'PY'
+          import json,pathlib
+          root=pathlib.Path('nox_runpod/web_wow_merge/v29')
+          r=json.loads((root/'NOX_V29_2_REAL_PC_API_ACCEPTANCE.json').read_text())
+          assert r['candidate']['sha256']=='3379770d33d56e501d267c2ca603d58bce0e301b2582b6585c1944d5f5ec57d0'
+          assert r['candidate']['zip_crc']=='PASS'
+          assert r['release_gate']['accepted'] is False
+          assert r['release_gate']['production_modified'] is False
+          src=(root/'nox-v29-pc-genesis-addons.mjs').read_text()
+          assert "'/api/nox/memory'" in src and "'/api/nox/history'" in src
+          assert '/api/ui/memory/status' not in src
+          assert '/api/ui/memory/dialogs/status' not in src
+          print('NOX_V29_2_SOURCE_CONTRACT_PASS_WINDOWS_E07_HOLD')
+          PY
