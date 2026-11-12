@@ -1,0 +1,36 @@
+name: NOX PRIME V5 source export
+on:
+  push:
+    branches: [feature/nox-teacher-mycelium-20261112]
+    paths: [.github/workflows/nox-v5-source-export.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify source and stage clean bundle
+        run: |
+          set -Eeuo pipefail
+          python3 -m compileall -q nox_runpod/teacher_mesh
+          mkdir -p /tmp/nox-bundle/nox_runpod
+          cp -R nox_runpod/teacher_mesh /tmp/nox-bundle/nox_runpod/
+          find /tmp/nox-bundle -type d -name __pycache__ -exec rm -rf {} +
+          python3 - <<'PY'
+          import hashlib,json,pathlib
+          root=pathlib.Path('/tmp/nox-bundle')
+          out={}
+          for f in sorted(root.rglob('*')):
+              if f.is_file():out[str(f.relative_to(root))]=hashlib.sha256(f.read_bytes()).hexdigest()
+          (root/'SHA256_MANIFEST.json').write_text(json.dumps(out,indent=2)+'\n')
+          print('NOX_V5_SOURCE_FILES',len(out))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NOX_PRIME_V5_TEACHER_COGNITIVE_SOURCE
+          path: /tmp/nox-bundle/
+          retention-days: 7
+          if-no-files-found: error
