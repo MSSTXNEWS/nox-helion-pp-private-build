@@ -1,0 +1,33 @@
+name: NOX A100 bridge CI
+on:
+  push:
+    branches:
+      - control/nox-a100-live-bridge-20261112
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile Python and check Bash
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          python3 -m py_compile nox_remote_control/a100_live/bridge.py
+          bash -n nox_remote_control/a100_live/install.sh
+          python3 - <<'PY'
+          import importlib.util
+          p="nox_remote_control/a100_live/bridge.py"
+          spec=importlib.util.spec_from_file_location("bridge",p)
+          b=importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(b)
+          assert b.OPS=={"gpu","disk","processes","checkpoint","preflight","health"}
+          assert b.NODE=="runpod-5f3j8hwyicc0bp"
+          assert b.checkpoint()["sha_verified"] is False
+          assert "state" in b.gpu()
+          assert "free_gib" in b.disk()
+          assert b.preflight()["state"]=="HOLD_NOT_READY"
+          print("NOX_BRIDGE_TESTS_PASS")
+          PY
