@@ -196,3 +196,20 @@
 **Функция отбора:** компетенция, которую NOX пока не демонстрирует → поиск уже имеющегося подходящего учителя → тест на непересекающихся заданиях → лицензия/стоимость/GPU → одна разрешённая загрузка → отбор проверенных ответов → отдельная дистилляция → независимый экзамен NOX → откат при NO_GAIN. При сомнении — HOLD, а не фальшивый PASS.
 
 **Чего не делать:** не принимать 15 моделей за 15 источников независимого знания; не объявлять «поглощение весов» при простом сравнении ответов; не создавать вторую S03; не менять active_student или production; не смешивать чужие данные и разрешения с текущим обучением.
+
+
+## WOW efficiency V3 — no busywork, no slower NOX
+
+The catalog is NOT a deployment. No live GPU trainer or production route was modified here. Change the scheduling policy first, then run physical A/B on the current student.
+
+- **Chat:** one NOX response immediately; zero default teacher fanout; bounded S03 recall, optional reflection only when justified, never wait for VM teachers.
+- **Choose skills, not model names:** measure a skill gap on blind, source-separated tasks and check existing model SHA and previous lesson coverage before any download.
+- **Start with ONE suitable teacher:** only add a second if it contributes an independent family or a measurable disagreement requiring resolution. No automatic 3–5-model ensemble.
+- **Dedup BEFORE paying GPU:** cluster near-identical prompts and outputs, reject license-unknown or unverifiable samples. Prefer novelty and independently verified answers.
+- **Train real NOX weights separately:** teacher text is data, not weight absorption. Only optimizer steps, checkpoint hash, and independent post-train gains count as neural improvement.
+- **S03:** single authoritative store; bounded targeted retrieval, provenance/conflict handling and recall invalidation; not a second database.
+- **Worms:** event/idle-driven, strictly limited by TTL, owner approval, quota and fail-closed STOP. No scanning in circles, self-replication or installations based on search results.
+- **FORGE:** real patch → real test → acceptance; no fabricated PASS or production writes before acceptance.
+- **Measure WOW:** independent task success increase, zero critical regressions, fewer hallucinated self-history claims, code accepted by tests, time-to-first-token, and GPU-hours per verified improvement. If benefit is absent, cancel the proposed teacher or change and retain the last good NOX.
+
+This architecture favors **fast user experience + selective background learning**, not constant model consultation. Runtime wiring and GPU benchmark remain pending physical acceptance.
