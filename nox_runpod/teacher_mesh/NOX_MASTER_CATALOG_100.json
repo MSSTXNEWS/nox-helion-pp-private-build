@@ -11,7 +11,8 @@
       "02 · Web / UI / браузер": 16,
       "03 · Когнитивная надстройка": 17,
       "04 · Черви / отказоустойчивость / мини-инструменты": 17
-    }
+    },
+    "teacher_policy_revision": "NOX_COMPLEMENTARY_TEACHERS_V2"
   },
   "policy": {
     "one_identity": "NOX",
@@ -1786,105 +1787,150 @@
       "url": "https://huggingface.co/Qwen/Qwen3.5-4B",
       "enabled": false,
       "status": "CANDIDATE_NOT_DEPLOYED",
-      "placement": "VM_A4000"
+      "placement": "VM_A4000",
+      "selection_tier": "RESERVE_DONT_DOWNLOAD",
+      "incremental_gain_verified": false,
+      "automatic_download_allowed": false
     },
     {
       "name": "Qwen3.5 9B",
       "url": "https://huggingface.co/Qwen/Qwen3.5-9B",
       "enabled": false,
       "status": "CANDIDATE_NOT_DEPLOYED",
-      "placement": "VM_A4000"
+      "placement": "VM_A4000",
+      "selection_tier": "RESERVE_DONT_DOWNLOAD",
+      "incremental_gain_verified": false,
+      "automatic_download_allowed": false
     },
     {
       "name": "Qwen3.5 27B",
       "url": "https://huggingface.co/Qwen/Qwen3.5-27B",
       "enabled": false,
       "status": "CANDIDATE_NOT_DEPLOYED",
-      "placement": "LARGER_GPU_OR_HOSTED"
+      "placement": "LARGER_GPU_OR_HOSTED",
+      "selection_tier": "CORE_CANDIDATE",
+      "incremental_gain_verified": false,
+      "automatic_download_allowed": false
     },
     {
       "name": "Qwen3.5 35B-A3B",
       "url": "https://huggingface.co/Qwen/Qwen3.5-35B-A3B",
       "enabled": false,
       "status": "CANDIDATE_NOT_DEPLOYED",
-      "placement": "LARGER_GPU_OR_HOSTED"
+      "placement": "LARGER_GPU_OR_HOSTED",
+      "selection_tier": "RESERVE_DONT_DOWNLOAD",
+      "incremental_gain_verified": false,
+      "automatic_download_allowed": false
     },
     {
       "name": "Qwen3 8B",
       "url": "https://huggingface.co/Qwen/Qwen3-8B",
       "enabled": false,
       "status": "CANDIDATE_NOT_DEPLOYED",
-      "placement": "VM_A4000"
+      "placement": "VM_A4000",
+      "selection_tier": "EXISTING_ASSET_AUDIT",
+      "incremental_gain_verified": false,
+      "automatic_download_allowed": false
     },
     {
       "name": "Qwen3 32B",
       "url": "https://huggingface.co/Qwen/Qwen3-32B",
       "enabled": false,
       "status": "CANDIDATE_NOT_DEPLOYED",
-      "placement": "LARGER_GPU_OR_HOSTED"
+      "placement": "LARGER_GPU_OR_HOSTED",
+      "selection_tier": "RESERVE_DONT_DOWNLOAD",
+      "incremental_gain_verified": false,
+      "automatic_download_allowed": false
     },
     {
       "name": "Qwen3 Coder 30B-A3B",
       "url": "https://huggingface.co/Qwen/Qwen3-Coder-30B-A3B-Instruct",
       "enabled": false,
       "status": "CANDIDATE_NOT_DEPLOYED",
-      "placement": "LARGER_GPU_OR_HOSTED"
+      "placement": "LARGER_GPU_OR_HOSTED",
+      "selection_tier": "CORE_CANDIDATE",
+      "incremental_gain_verified": false,
+      "automatic_download_allowed": false
     },
     {
       "name": "DeepSeek R1 Distill Qwen 32B",
       "url": "https://huggingface.co/deepseek-ai/DeepSeek-R1-Distill-Qwen-32B",
       "enabled": false,
       "status": "CANDIDATE_NOT_DEPLOYED",
-      "placement": "LARGER_GPU_OR_HOSTED"
+      "placement": "LARGER_GPU_OR_HOSTED",
+      "selection_tier": "CORE_CANDIDATE",
+      "incremental_gain_verified": false,
+      "automatic_download_allowed": false
     },
     {
       "name": "gpt-oss 20B",
       "url": "https://huggingface.co/openai/gpt-oss-20b",
       "enabled": false,
       "status": "CANDIDATE_NOT_DEPLOYED",
-      "placement": "VM_A4000_IF_MEMORY_FITS"
+      "placement": "VM_A4000_IF_MEMORY_FITS",
+      "selection_tier": "SPECIALIST_CANDIDATE",
+      "incremental_gain_verified": false,
+      "automatic_download_allowed": false
     },
     {
       "name": "gpt-oss 120B",
       "url": "https://huggingface.co/openai/gpt-oss-120b",
       "enabled": false,
       "status": "CANDIDATE_NOT_DEPLOYED",
-      "placement": "MULTI_GPU_OR_HOSTED"
+      "placement": "MULTI_GPU_OR_HOSTED",
+      "selection_tier": "HOLD_RESOURCE",
+      "incremental_gain_verified": false,
+      "automatic_download_allowed": false
     },
     {
       "name": "Phi-4",
       "url": "https://huggingface.co/microsoft/phi-4",
       "enabled": false,
       "status": "CANDIDATE_NOT_DEPLOYED",
-      "placement": "VM_A4000_IF_QUANTIZED"
+      "placement": "VM_A4000_IF_QUANTIZED",
+      "selection_tier": "RESERVE_DONT_DOWNLOAD",
+      "incremental_gain_verified": false,
+      "automatic_download_allowed": false
     },
     {
       "name": "Mistral Small 3.1 24B",
       "url": "https://huggingface.co/mistralai/Mistral-Small-3.1-24B-Instruct-2503",
       "enabled": false,
       "status": "CANDIDATE_NOT_DEPLOYED",
-      "placement": "LARGER_GPU_OR_HOSTED"
+      "placement": "LARGER_GPU_OR_HOSTED",
+      "selection_tier": "SPECIALIST_CANDIDATE",
+      "incremental_gain_verified": false,
+      "automatic_download_allowed": false
     },
     {
       "name": "GLM 4.5 Air",
       "url": "https://huggingface.co/zai-org/GLM-4.5-Air",
       "enabled": false,
       "status": "CANDIDATE_NOT_DEPLOYED",
-      "placement": "MULTI_GPU_OR_HOSTED"
+      "placement": "MULTI_GPU_OR_HOSTED",
+      "selection_tier": "RESERVE_DONT_DOWNLOAD",
+      "incremental_gain_verified": false,
+      "automatic_download_allowed": false
     },
     {
       "name": "GLM 4.6",
       "url": "https://huggingface.co/zai-org/GLM-4.6",
       "enabled": false,
       "status": "CANDIDATE_NOT_DEPLOYED",
-      "placement": "MULTI_GPU_OR_HOSTED"
+      "placement": "MULTI_GPU_OR_HOSTED",
+      "selection_tier": "HOLD_RESOURCE",
+      "incremental_gain_verified": false,
+      "automatic_download_allowed": false
     },
     {
       "name": "Gemma 4 26B A4B",
       "url": "https://huggingface.co/google/gemma-4-26B-A4B-it",
       "enabled": false,
       "status": "CANDIDATE_NOT_DEPLOYED",
-      "placement": "LARGER_GPU_OR_HOSTED"
+      "placement": "LARGER_GPU_OR_HOSTED",
+      "selection_tier": "SPECIALIST_CANDIDATE",
+      "incremental_gain_verified": false,
+      "automatic_download_allowed": false
     }
   ],
   "worms": [
@@ -2014,5 +2060,43 @@
     "Candidate URLs are upstream project repositories or model cards; each needs a fresh version/license/security audit before download.",
     "100 tools are choices, not 100 packages to install simultaneously.",
     "Worms are logical roles and queues on existing NOX infrastructure, not self-replicating executables."
-  ]
+  ],
+  "teacher_selection": {
+    "version": "NOX_COMPLEMENTARY_TEACHERS_V2",
+    "status": "PROPOSED_NOT_DEPLOYED",
+    "principle": "Teach missing validated skills, not raw model count. Keep one student NOX, one S03, frozen teachers.",
+    "groups": {
+      "core_candidates": [
+        "qwen35-27b",
+        "deepseek-r1-distill-32b",
+        "qwen3coder"
+      ],
+      "specialist_candidates": [
+        "mistral-small31",
+        "gpt-oss-20b",
+        "gemma4-26b"
+      ]
+    },
+    "activation": "ALL_DISABLED_UNTIL_INVENTORY_LICENSE_HARDWARE_AND_BENCHMARK",
+    "inventory_first": [
+      "Check existing model paths, hashes, owner-approved current training checkpoint and model identities",
+      "No redownload or duplicate copies for existing teacher",
+      "Protect student checkpoints and S03"
+    ],
+    "gates": [
+      "Unique capability against CURRENT NOX and previously accepted teachers on source-separated holdout",
+      "Licensed and consented use of teacher outputs for distillation",
+      "Quality uplift, errors/regressions, RU/ES and task-success versus cost per useful accepted sample",
+      "Actual GPU memory and throughput tested on target VM",
+      "No production promotion before independent evaluation and owner acceptance"
+    ],
+    "scheduler": {
+      "max_parallel_teachers": "min(available_isolated_gpu_slots, approved_budget); never assume 3-5 fit on one GPU",
+      "start_with_one_teacher": true,
+      "no_training_claim_without_optimizer_checkpoint_receipts": true
+    },
+    "deduplication": "Compare response clusters, factual provenance, model-family correlations and existing S03; do not equate multiple same-family models with independent evidence",
+    "checkpoint_policy": "No automatic overwrite of active NOX weights; STOP fail closed; preserve snapshots and rollback",
+    "note": "This is a prioritization proposal, not proof these are the best performing models."
+  }
 }
