@@ -1,0 +1,44 @@
+name: NOX Catalog Completion Tools
+on:
+  push:
+    branches: [feature/nox-teacher-mycelium-20261112]
+    paths:
+      - .github/workflows/nox-catalog-completion-tools.yml
+      - nox_runpod/teacher_mesh/reassemble_catalog_completion.py
+      - nox_runpod/teacher_mesh/NOX_CATALOG_COMPLETION_README_RU.md
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/nox-catalog-completion-tools.yml
+      - nox_runpod/teacher_mesh/reassemble_catalog_completion.py
+      - nox_runpod/teacher_mesh/NOX_CATALOG_COMPLETION_README_RU.md
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify-and-package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile and smoke-test offline reassembler
+        run: |
+          set -Eeuo pipefail
+          python3 -m py_compile nox_runpod/teacher_mesh/reassemble_catalog_completion.py
+          python3 nox_runpod/teacher_mesh/reassemble_catalog_completion.py --help >/dev/null
+          mkdir -p dist
+          cp nox_runpod/teacher_mesh/reassemble_catalog_completion.py dist/
+          cp nox_runpod/teacher_mesh/NOX_CATALOG_COMPLETION_README_RU.md dist/
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path("dist/reassemble_catalog_completion.py")
+          assert "SHA256" in p.read_text() and p.stat().st_size > 1000
+          print("NOX_COMPLETION_TOOLS_REAL_FILES_PASS")
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NOX_CATALOG_COMPLETION_TOOLS
+          path: dist/
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
