@@ -32,7 +32,7 @@ jobs:
           import os,json,pathlib,hashlib,tarfile
           no=int(os.environ["NOX_NO"])
           models={32:"Qwen/Qwen3-Embedding-0.6B",33:"Qwen/Qwen3-Reranker-0.6B",77:"cointegrated/rubert-tiny2-cedr-emotion-detection",78:"UMUTeam/MarIA-emotion-es"}
-          repo=models[no];root=pathlib.Path(f"NOX_HF_ASSET_{no:03d}");root.mkdir(exist_ok=True)
+          repo=models[no];root=pathlib.Path(f"NOX_HF_ASSET_{no}");root.mkdir(exist_ok=True)
           result={"number":no,"source":"https://huggingface.co/"+repo,"type":"HF_MODEL_FULL_FILES","status":"FAILED"}
           try:
               info=model_info(repo)
