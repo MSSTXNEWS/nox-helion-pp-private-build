@@ -74,6 +74,10 @@ NEWPID=$!
 printf '%s\n' "$NEWPID" > "$PIDFILE"
 sleep 3
 if kill -0 "$NEWPID" 2>/dev/null;then
+  PYTHONPATH="$BASE" python3 - <<'PY'
+from train_actions import arm_resume_training
+print("NOX_AUTOMATIC_TRAINING",arm_resume_training())
+PY
   echo "NOX_TRAIN_CONTROL_READY PID=$NEWPID"
   echo "NO_TRAINER_STOP_OR_RESET=TRUE"
   echo "NEXT_TASKS=stage_fast75,prepare_local,resume_training,training_status"
