@@ -36,6 +36,13 @@ Code and manifests in this branch are **candidates for integration**. Running NO
 
 Avoid launching teacher inference on the A100 when the NOX trainer is using it heavily. VM and GPU resources are physical constraints.
 
+## Approved night corpus and adapter plan
+
+- `corpus_gate.py` refuses unreviewed/unknown-license/secret-bearing teacher samples, produces response-only TRL prompt-completion JSONL, stable cluster-level train/holdout separation and versioned SHA-256 manifests; no S03 schema duplication.
+- `adapter_recipe.py` verifies the exported corpus hashes and provenance hashes, then emits a *NOX student's* LoRA/rsLoRA PEFT recipe; **never starts an optimizer or claims weight absorption**.
+- Unit tests cover privacy, approval, duplicates, holdout, hash tampering, offline model absence, NOX-only synthesis and 3-teacher comparison. CI is source-only; no actual GPU fit/eval is claimed.
+- Integration to real existing NOX chat and actual A100 optimizer requires finding the current live backend and version-specific student model architecture, testing in a separate VM/worktree, then user acceptance for production. Existing training must not be stopped for this branch.
+
 ## Components and downloads
 
 - `models_registry.json`: 15 candidate open-weight teachers, local runtimes, hosted free fallback disabled by default.
