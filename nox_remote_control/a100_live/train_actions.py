@@ -36,7 +36,17 @@ def safe_local(path):
 
 def stage_fast75():
     if (FAST/"START_FAST75.sh").is_file() and (FAST/"preflight.py").is_file():
-        return {"state":"READY","package":"FAST75_V2","location":"LOCAL_TMP"}
+        try:
+            digests={
+                "START_FAST75.sh":"54a74ca58ad51728954f77df836c5d1eb7b51b8b092ff731009829f4f8d5f063",
+                "preflight.py":"35ba5b1193582156a6f43bb2f94f0479a4a6625524c9fb80b1058c1739ed9f27",
+                "trainer/train_n36_fast75.py":"ed6886289a8666476d8365165ddfe06ff089d7018632cf775313099ed1aca307"
+            }
+            for name, expected in digests.items():
+                if hashlib.sha256((FAST/name).read_bytes()).hexdigest()!=expected:
+                    return {"state":"HOLD_PACKAGE_CHANGED","name":name}
+        except OSError:return {"state":"HOLD_PACKAGE_UNREADABLE"}
+        return {"state":"READY","package":"FAST75_V2","location":"LOCAL_TMP","sha256_verified":True}
     req=urllib.request.Request(PACK_URL,headers={"User-Agent":"NOX-fixed-training/1"})
     with urllib.request.urlopen(req,timeout=20) as r:
         raw=r.read(30000)
@@ -131,6 +141,12 @@ def prepare_local():
     if not common: return {"state":"HOLD_COMMON_CODE"}
     if not BASE.is_dir() or not (BASE/"config.json").is_file():
         return {"state":"HOLD_BASE_NOT_LOCAL"}
+    try:
+        for shard in BASE.glob("*.safetensors"):
+            safe_local(shard)
+            if not shard.is_file() or shard.stat().st_size<1000:
+                return {"state":"HOLD_BASE_SHARD_NOT_LOCAL"}
+    except (OSError,ValueError):return {"state":"HOLD_BASE_SHARD_INVALID"}
     LOCAL.mkdir(parents=True,exist_ok=True)
     for link,target in [
         (LOCAL/"data/tok",dataset),
