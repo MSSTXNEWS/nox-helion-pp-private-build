@@ -54,7 +54,7 @@ def site_files(raw, *, required=("index.html",), strict=True):
     for path in raw:
         if path.endswith("/index.html") or path=="index.html":
             candidates.add(path[:-len("index.html")])
-    for prefix in sorted(candidates, key=lambda x:(-sum((prefix+x) in raw for x in ROUTES),len(x))):
+    for prefix in sorted(candidates, key=lambda p:(-sum((p+x) in raw for x in ROUTES),len(p))):
         if not all(prefix+x in raw for x in required):
             continue
         files={name[len(prefix):]:data for name,data in raw.items()
