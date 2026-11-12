@@ -1,0 +1,64 @@
+name: NOX V28 Stage 00 01 Source Baseline and S03 Witness QA
+on:
+  push:
+    branches: [feature/nox-teacher-mycelium-20261112]
+    paths:
+      - .github/workflows/nox-v28-stage00-01.yml
+      - nox_runpod/teacher_mesh/stages/**
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify-stage0-and-stage1:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile source-only stage tools
+        run: |
+          set -Eeuo pipefail
+          python -m compileall -q nox_runpod/teacher_mesh/stages
+      - name: Stage 0 pinned WEB/model reporting audit and source regression
+        run: |
+          set -Eeuo pipefail
+          mkdir -p dist
+          python nox_runpod/teacher_mesh/stages/stage0_source_lock.py --repo . --out dist/NOX_V28_STAGE0_SOURCE_RECEIPT.json
+          python -m unittest discover -s nox_runpod/teacher_mesh/stages -p 'test_stage0_*.py' -v
+      - name: Stage 1 read-only S03 memory witness logic and restart fixture
+        run: |
+          set -Eeuo pipefail
+          python -m unittest discover -s nox_runpod/teacher_mesh/stages -p 'test_stage1_*.py' -v
+          python -m unittest discover -s nox_runpod/teacher_mesh/tests -p 'test_genesis_recall_contract.py' -v
+      - name: Produce immutable handoff package and verify hashes
+        run: |
+          set -Eeuo pipefail
+          mkdir -p dist/stages
+          cp nox_runpod/teacher_mesh/stages/V28_STAGE_00_SOURCE_BASELINE_20261113.json dist/stages/
+          cp nox_runpod/teacher_mesh/stages/NOX_V28_STAGES_00_01_GUIDE_RU.md dist/
+          cp nox_runpod/teacher_mesh/stages/stage0_source_lock.py dist/stages/
+          cp nox_runpod/teacher_mesh/stages/test_stage0_source_lock.py dist/stages/
+          cp nox_runpod/teacher_mesh/stages/stage1_memory_witness.py dist/stages/
+          cp nox_runpod/teacher_mesh/stages/test_stage1_memory_witness.py dist/stages/
+          cp nox_runpod/teacher_mesh/cognitive_overlay.py dist/stages/
+          cp nox_runpod/teacher_mesh/s03_callback_adapter.py dist/stages/
+          (cd dist && find . -type f ! -name SHA256SUMS.txt -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS.txt)
+          python3 - <<'PY'
+          import hashlib,pathlib,json
+          root=pathlib.Path('dist')
+          for row in (root/'SHA256SUMS.txt').read_text().splitlines():
+              expected,path=row.split('  ',1)
+              assert hashlib.sha256((root/path).read_bytes()).hexdigest()==expected
+          receipt=json.loads((root/'NOX_V28_STAGE0_SOURCE_RECEIPT.json').read_text())
+          assert receipt['status']=='SOURCE_BASELINE_VERIFIED_RUNTIME_HOLD'
+          assert receipt['training_optimizer_steps_verified']==0
+          assert receipt['new_weights_training'] is False
+          assert len(receipt['runtime_e07_gates'])==8
+          print('NOX_V28_STAGE_00_SOURCE_LOCK_PASS_STAGE_01_SOURCE_WITNESS_TESTED_LIVE_HOLD')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NOX_V28_STAGE00_01_BASELINE_MEMORY_SOURCE_VERIFIED
+          path: dist/
+          retention-days: 14
+          compression-level: 0
+          if-no-files-found: error
