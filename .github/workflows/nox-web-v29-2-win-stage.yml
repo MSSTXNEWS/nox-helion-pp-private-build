@@ -37,3 +37,20 @@ jobs:
           if ($LASTEXITCODE -eq 0) { throw 'FAIL_OPEN_MISSING_ZIP' }
           if (-not (($result | Out-String) -match 'NOX_ARCHIVE_MISSING')) { throw 'UNEXPECTED_FAILURE' }
           Write-Output 'NOX_V29_2_MISSING_ARCHIVE_FAIL_CLOSED_PASS'
+      - name: Package Windows source verifier and pinned physical receipt
+        shell: powershell
+        run: |
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          Copy-Item -LiteralPath 'nox_runpod/web_wow_merge/v29/NOX_V29_2_WINDOWS_STAGE.ps1' -Destination 'dist/NOX_V29_2_WINDOWS_STAGE.ps1'
+          Copy-Item -LiteralPath 'nox_runpod/web_wow_merge/v29/NOX_V29_2_REAL_PC_API_ACCEPTANCE.json' -Destination 'dist/NOX_V29_2_REAL_PC_API_ACCEPTANCE.json'
+          $hashes=@(Get-ChildItem dist -File | ForEach-Object {
+            (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()+'  '+$_.Name
+          })
+          $hashes | Set-Content -LiteralPath 'dist/SHA256SUMS.txt' -Encoding ASCII
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NOX_V29_2_WINDOWS_STAGE_VERIFIED_SOURCE
+          path: dist/
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
