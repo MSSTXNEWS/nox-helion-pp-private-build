@@ -18,7 +18,7 @@ class Native:
             db.row_factory=sqlite3.Row
             rows=db.execute("select * from fact where tenant=? and principal=? and chat=?",
                            (t,p,c)).fetchmany(limit)
-        return [dict(x,scope_chat_id=x["chat"]) for x in rows]
+        return [dict(x,scope_chat_id=x["chat"],verified=bool(x["verified"]),superseded=bool(x["superseded"])) for x in rows]
     def rag(self):
         return ExistingS03Rag(native_authorize=self.auth,native_stop=self.stopfn,
                               search_authenticated=self.search)
@@ -67,7 +67,7 @@ class Tests(unittest.TestCase):
             result=original(*a,**k);self.host.stop=True;return result
         self.host.search=stopping
         cb=self.host.rag()
-        self.assertEqual(cb("nox","owner","chat1","Ты кого съел?")["reason"],"STOP_OR_SCOPE_REVOKED_AFTER_S03")
+        self.assertEqual(cb("nox","owner","chat1","Что известно?")["reason"],"STOP_OR_SCOPE_REVOKED_AFTER_S03")
     def test_refused_scope_holds(self):
         self.assertEqual(self.host.rag()("nox","other","chat1","Ты кого съел?")["memory_state"],"HOLD")
         self.assertEqual(self.host.rag()("nox","owner","chat-other","Ты кого съел?")["memory_state"],"HOLD")
@@ -77,6 +77,5 @@ class Tests(unittest.TestCase):
     def test_hallucinated_source_never_promoted(self):
         with sqlite3.connect(self.host.path) as db:db.execute(
             "update fact set verified=0 where id='e1'")
-        self.assertEqual(self.host.rag()("nox","owner","chat1","Ты кого съел?")["evidence_count"] if False else
-                         self.host.rag()("nox","owner","chat1","Ты кого съел?")["memory_state"],"HOLD")
+        self.assertEqual(self.host.rag()("nox","owner","chat1","Ты кого съел?")["memory_state"],"HOLD")
 if __name__=="__main__":unittest.main()
