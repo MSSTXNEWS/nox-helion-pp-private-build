@@ -56,7 +56,9 @@ class CognitiveTests(unittest.TestCase):
     def setUp(self):
         self.mem=FakeS03()
         self.model=FakeModel()
-        self.overlay=CognitiveOverlay(self.mem,self.model,clock=lambda:NOW)
+        self.overlay=CognitiveOverlay(self.mem,self.model,clock=lambda:NOW,
+            approval_validator=lambda scope,event:(
+                scope=="owner" and event.get("event_id")=="fix102"))
 
     def test_single_s03_memory_source_not_new_db(self):
         result=self.overlay.respond("Что известно о checkpoint?")
@@ -116,6 +118,12 @@ class CognitiveTests(unittest.TestCase):
                          "HOLD_EVENT_NOT_APPROVED")
         self.assertEqual(self.overlay.save_approved_event(dict(event,verified=False))["state"],
                          "HOLD_EVENT_NOT_APPROVED")
+        without_verifier=CognitiveOverlay(self.mem,self.model,clock=lambda:NOW)
+        self.assertEqual(without_verifier.save_approved_event(event)["state"],
+                         "HOLD_APPROVAL_VERIFIER_MISSING")
+        spoofed=dict(event,event_id="self_created_by_model")
+        self.assertEqual(self.overlay.save_approved_event(spoofed)["state"],
+                         "HOLD_APPROVAL_NOT_CONFIRMED")
         result=self.overlay.save_approved_event(event)
         self.assertEqual(result["state"],"S03_WRITE_CONFIRMED")
         self.assertEqual(len(self.mem.writes),1)
