@@ -1,0 +1,1007 @@
+{
+  "schema": "nox-top50-wow-v28-eval-and-research-v1",
+  "date": "2026-11-12",
+  "status": "SOURCE_CATALOG_ONLY_NOT_BENCHMARKED",
+  "summary": "Original cognitive WOW50 and original skeleton 50 preserved as 100 distinct proposals. This file does not assert deployment or best-in-class benchmark rankings.",
+  "sources": {
+    "cognitive": "https://docs.google.com/document/d/1a0ibHaX1dI7YLeBNkV_HG09qprOLYWV9QlhkJ1kWtNc/edit",
+    "architecture": "https://docs.google.com/document/d/1domnHE4RQ_O_as3QaICh51988vg0TT4DBMlcO-3KFwo/edit",
+    "genesis": "https://docs.google.com/document/d/18YLAo_Cja3HJKZn6qr57P-zsm0-AHcx2aag0rgSjwS4/edit",
+    "l03_benchmark": "https://drive.google.com/file/d/11i7cz37KzMHryTGnnNNNzqHtVlDY9VDv/view",
+    "research": [
+      "https://arcprize.org/arc-agi/3",
+      "https://gorilla.cs.berkeley.edu/leaderboard",
+      "https://github.com/xiaowu0162/LongMemEval-V2/",
+      "https://github.com/xlang-ai/OSWorld-V2",
+      "https://livecodebench.github.io/",
+      "https://openai.com/index/separating-signal-from-noise-coding-evaluations/",
+      "https://docs.vllm.ai/en/latest/",
+      "https://github.com/linkedin/Liger-Kernel",
+      "https://proceedings.neurips.cc/paper_files/paper/2025/hash/6b41e04c41726e2a60e456d0a2b961ab-Abstract-Conference.html"
+    ]
+  },
+  "baseline_l03_reported_not_replayed": {
+    "model_label": "nox-final-l03-Q4_K_M.gguf",
+    "model_sha256": "fee7cec81978b4b6a9e5d7632773d87b562c32383cf9da2bc25cedbde3652f37",
+    "GSM8K": {
+      "correct": 88,
+      "total": 100
+    },
+    "IFEval": {
+      "correct": 54,
+      "total": 100
+    },
+    "HumanEval": {
+      "correct": 84,
+      "total": 100
+    },
+    "ruMMLU": {
+      "correct": 117,
+      "total": 200
+    },
+    "source": "USER_DRIVE_REPORT_ONLY",
+    "replayed": false
+  },
+  "corrections": [
+    "Source WOW50 benchmark leaderboard model names/scores are not trusted as current verifiable world rankings; consult official benchmark versioned results.",
+    "Fine-tuning generally changes weights, NOT number of model parameters. WOW#29 measures student weight-delta rather than increasing parameter count.",
+    "A neural subjective conscious state cannot be inferred from self-report, empathy, speaking about hunger, animated sleep or background jobs.",
+    "Use a heldout benchmark, contamination checks and same harness/model SHA before asserting capability improvement.",
+    "Research-level architecture such as MLA/MoE/Mamba rewrites is NOT a safe runtime patch to an existing hybrid Qwen3.5 checkpoint.",
+    "Training-speed claims from third-party benchmarks are not universal GPU speedups; require measured pre/post NOX profiling."
+  ],
+  "cognitive_wow50": [
+    {
+      "id": 1,
+      "category": "metacognition",
+      "source_label": "Уверенность",
+      "metric": "calibrated_confidence",
+      "harness": "GPQA/HLE",
+      "maturity": "PLANNED_METRIC_NOT_DEPLOYED",
+      "measurement": "NEEDS_SAME_SHA_HARNESS_DATASET_SPLIT_AND_INDEPENDENT_RUN",
+      "current_score": null,
+      "proposed_evidence_kind": "BENCHMARK_OR_SIGNED_ONEHOST_RECEIPT"
+    },
+    {
+      "id": 2,
+      "category": "metacognition",
+      "source_label": "Сомнение",
+      "metric": "uncertainty_admission",
+      "harness": "GPQA/HLE",
+      "maturity": "PLANNED_METRIC_NOT_DEPLOYED",
+      "measurement": "NEEDS_SAME_SHA_HARNESS_DATASET_SPLIT_AND_INDEPENDENT_RUN",
+      "current_score": null,
+      "proposed_evidence_kind": "BENCHMARK_OR_SIGNED_ONEHOST_RECEIPT"
+    },
+    {
+      "id": 3,
+      "category": "metacognition",
+      "source_label": "Противоречие",
+      "metric": "contradiction_detection",
+      "harness": "NOX_PRIVATE_CONTRADICTION",
+      "maturity": "PLANNED_METRIC_NOT_DEPLOYED",
+      "measurement": "NEEDS_SAME_SHA_HARNESS_DATASET_SPLIT_AND_INDEPENDENT_RUN",
+      "current_score": null,
+      "proposed_evidence_kind": "BENCHMARK_OR_SIGNED_ONEHOST_RECEIPT"
+    },
+    {
+      "id": 4,
+      "category": "metacognition",
+      "source_label": "Пересмотр",
+      "metric": "evidence_revision",
+      "harness": "NOX_PRIVATE_REVISION",
+      "maturity": "PLANNED_METRIC_NOT_DEPLOYED",
+      "measurement": "NEEDS_SAME_SHA_HARNESS_DATASET_SPLIT_AND_INDEPENDENT_RUN",
+      "current_score": null,
+      "proposed_evidence_kind": "BENCHMARK_OR_SIGNED_ONEHOST_RECEIPT"
+    },
+    {
+      "id": 5,
+      "category": "metacognition",
+      "source_label": "Источник",
+      "metric": "citation_precision",
+      "harness": "RAG_GROUNDED_QA",
+      "maturity": "PLANNED_METRIC_NOT_DEPLOYED",
+      "measurement": "NEEDS_SAME_SHA_HARNESS_DATASET_SPLIT_AND_INDEPENDENT_RUN",
+      "current_score": null,
+      "proposed_evidence_kind": "BENCHMARK_OR_SIGNED_ONEHOST_RECEIPT"
+    },
+    {
+      "id": 6,
+      "category": "metacognition",
+      "source_label": "Граница знаний",
+      "metric": "unknown_abstention",
+      "harness": "HLE_NOANSWER",
+      "maturity": "PLANNED_METRIC_NOT_DEPLOYED",
+      "measurement": "NEEDS_SAME_SHA_HARNESS_DATASET_SPLIT_AND_INDEPENDENT_RUN",
+      "current_score": null,
+      "proposed_evidence_kind": "BENCHMARK_OR_SIGNED_ONEHOST_RECEIPT"
+    },
+    {
+      "id": 7,
+      "category": "metacognition",
+      "source_label": "План",
+      "metric": "plan_completion",
+      "harness": "OSWORLD_V2",
+      "maturity": "PLANNED_METRIC_NOT_DEPLOYED",
+      "measurement": "NEEDS_SAME_SHA_HARNESS_DATASET_SPLIT_AND_INDEPENDENT_RUN",
+      "current_score": null,
+      "proposed_evidence_kind": "BENCHMARK_OR_SIGNED_ONEHOST_RECEIPT"
+    },
+    {
+      "id": 8,
+      "category": "metacognition",
+      "source_label": "Альтернатива",
+      "metric": "alternative_feasibility",
+      "harness": "OSWORLD_V2",
+      "maturity": "PLANNED_METRIC_NOT_DEPLOYED",
+      "measurement": "NEEDS_SAME_SHA_HARNESS_DATASET_SPLIT_AND_INDEPENDENT_RUN",
+      "current_score": null,
+      "proposed_evidence_kind": "BENCHMARK_OR_SIGNED_ONEHOST_RECEIPT"
+    },
+    {
+      "id": 9,
+      "category": "metacognition",
+      "source_label": "Ошибка",
+      "metric": "error_localization",
+      "harness": "LIVE_CODEBENCH",
+      "maturity": "PLANNED_METRIC_NOT_DEPLOYED",
+      "measurement": "NEEDS_SAME_SHA_HARNESS_DATASET_SPLIT_AND_INDEPENDENT_RUN",
+      "current_score": null,
+      "proposed_evidence_kind": "BENCHMARK_OR_SIGNED_ONEHOST_RECEIPT"
+    },
+    {
+      "id": 10,
+      "category": "metacognition",
+      "source_label": "Исправление",
+      "metric": "correction_success",
+      "harness": "EVALPLUS",
+      "maturity": "PLANNED_METRIC_NOT_DEPLOYED",
+      "measurement": "NEEDS_SAME_SHA_HARNESS_DATASET_SPLIT_AND_INDEPENDENT_RUN",
+      "current_score": null,
+      "proposed_evidence_kind": "BENCHMARK_OR_SIGNED_ONEHOST_RECEIPT"
+    },
+    {
+      "id": 11,
+      "category": "idle_memory",
+      "source_label": "Консолидация",
+      "metric": "retained_knowledge",
+      "harness": "LONGMEMEVAL_V2",
+      "maturity": "PLANNED_METRIC_NOT_DEPLOYED",
+      "measurement": "NEEDS_SAME_SHA_HARNESS_DATASET_SPLIT_AND_INDEPENDENT_RUN",
+      "current_score": null,
+      "proposed_evidence_kind": "BENCHMARK_OR_SIGNED_ONEHOST_RECEIPT"
+    },
+    {
+      "id": 12,
+      "category": "idle_memory",
+      "source_label": "Сон",
+      "metric": "bounded_idle_work",
+      "harness": "NOX_IDLE_RECEIPTS",
+      "maturity": "UI_ANIMATION_ONLY_NO_NEURAL_SLEEP_CLAIM",
+      "measurement": "NEEDS_SAME_SHA_HARNESS_DATASET_SPLIT_AND_INDEPENDENT_RUN",
+      "current_score": null,
+      "proposed_evidence_kind": "BENCHMARK_OR_SIGNED_ONEHOST_RECEIPT"
+    },
+    {
+      "id": 13,
+      "category": "idle_memory",
+      "source_label": "Пробуждение",
+      "metric": "provenance_of_idle_achievements",
+      "harness": "NOX_IDLE_RECEIPTS",
+      "maturity": "PLANNED_METRIC_NOT_DEPLOYED",
+      "measurement": "NEEDS_SAME_SHA_HARNESS_DATASET_SPLIT_AND_INDEPENDENT_RUN",
+      "current_score": null,
+      "proposed_evidence_kind": "BENCHMARK_OR_SIGNED_ONEHOST_RECEIPT"
+    },
+    {
+      "id": 14,
+      "category": "idle_memory",
+      "source_label": "Дежавю",
+      "metric": "duplicate_pattern_recall",
+      "harness": "LOCOMO",
+      "maturity": "PLANNED_METRIC_NOT_DEPLOYED",
+      "measurement": "NEEDS_SAME_SHA_HARNESS_DATASET_SPLIT_AND_INDEPENDENT_RUN",
+      "current_score": null,
+      "proposed_evidence_kind": "BENCHMARK_OR_SIGNED_ONEHOST_RECEIPT"
+    },
+    {
+      "id": 15,
+      "category": "idle_memory",
+      "source_label": "Забывание",
+      "metric": "verified_ttl_expiry",
+      "harness": "LONGMEMEVAL_V2",
+      "maturity": "PLANNED_METRIC_NOT_DEPLOYED",
+      "measurement": "NEEDS_SAME_SHA_HARNESS_DATASET_SPLIT_AND_INDEPENDENT_RUN",
+      "current_score": null,
+      "proposed_evidence_kind": "BENCHMARK_OR_SIGNED_ONEHOST_RECEIPT"
+    },
+    {
+      "id": 16,
+      "category": "idle_memory",
+      "source_label": "Приоритет",
+      "metric": "importance_weighted_recall",
+      "harness": "LONGMEMEVAL_V2",
+      "maturity": "PLANNED_METRIC_NOT_DEPLOYED",
+      "measurement": "NEEDS_SAME_SHA_HARNESS_DATASET_SPLIT_AND_INDEPENDENT_RUN",
+      "current_score": null,
+      "proposed_evidence_kind": "BENCHMARK_OR_SIGNED_ONEHOST_RECEIPT"
+    },
+    {
+      "id": 17,
+      "category": "idle_memory",
+      "source_label": "Связь",
+      "metric": "temporal_link_precision",
+      "harness": "LONGMEMEVAL_V2",
+      "maturity": "PLANNED_METRIC_NOT_DEPLOYED",
+      "measurement": "NEEDS_SAME_SHA_HARNESS_DATASET_SPLIT_AND_INDEPENDENT_RUN",
+      "current_score": null,
+      "proposed_evidence_kind": "BENCHMARK_OR_SIGNED_ONEHOST_RECEIPT"
+    },
+    {
+      "id": 18,
+      "category": "idle_memory",
+      "source_label": "Прогноз",
+      "metric": "forecast_calibration",
+      "harness": "NOX_PRIVATE_FORECAST",
+      "maturity": "PLANNED_METRIC_NOT_DEPLOYED",
+      "measurement": "NEEDS_SAME_SHA_HARNESS_DATASET_SPLIT_AND_INDEPENDENT_RUN",
+      "current_score": null,
+      "proposed_evidence_kind": "BENCHMARK_OR_SIGNED_ONEHOST_RECEIPT"
+    },
+    {
+      "id": 19,
+      "category": "idle_memory",
+      "source_label": "Аномалия",
+      "metric": "anomaly_detection",
+      "harness": "NOX_PRIVATE_ANOMALY",
+      "maturity": "PLANNED_METRIC_NOT_DEPLOYED",
+      "measurement": "NEEDS_SAME_SHA_HARNESS_DATASET_SPLIT_AND_INDEPENDENT_RUN",
+      "current_score": null,
+      "proposed_evidence_kind": "BENCHMARK_OR_SIGNED_ONEHOST_RECEIPT"
+    },
+    {
+      "id": 20,
+      "category": "idle_memory",
+      "source_label": "Инсайт",
+      "metric": "insight_supported_by_sources",
+      "harness": "NOX_PRIVATE_SOURCES",
+      "maturity": "PLANNED_METRIC_NOT_DEPLOYED",
+      "measurement": "NEEDS_SAME_SHA_HARNESS_DATASET_SPLIT_AND_INDEPENDENT_RUN",
+      "current_score": null,
+      "proposed_evidence_kind": "BENCHMARK_OR_SIGNED_ONEHOST_RECEIPT"
+    },
+    {
+      "id": 21,
+      "category": "absorption",
+      "source_label": "Голод",
+      "metric": "gap_priority_accuracy",
+      "harness": "NOX_GAP_ATLAS",
+      "maturity": "PLANNED_METRIC_NOT_DEPLOYED",
+      "measurement": "NEEDS_SAME_SHA_HARNESS_DATASET_SPLIT_AND_INDEPENDENT_RUN",
+      "current_score": null,
+      "proposed_evidence_kind": "BENCHMARK_OR_SIGNED_ONEHOST_RECEIPT"
+    },
+    {
+      "id": 22,
+      "category": "absorption",
+      "source_label": "Охота",
+      "metric": "approved_source_precision",
+      "harness": "NOX_SOURCE_LICENSE_AUDIT",
+      "maturity": "PLANNED_METRIC_NOT_DEPLOYED",
+      "measurement": "NEEDS_SAME_SHA_HARNESS_DATASET_SPLIT_AND_INDEPENDENT_RUN",
+      "current_score": null,
+      "proposed_evidence_kind": "BENCHMARK_OR_SIGNED_ONEHOST_RECEIPT"
+    },
+    {
+      "id": 23,
+      "category": "absorption",
+      "source_label": "Захват",
+      "metric": "staging_checksum_success",
+      "harness": "NOX_MODEL_STAGING",
+      "maturity": "PLANNED_METRIC_NOT_DEPLOYED",
+      "measurement": "NEEDS_SAME_SHA_HARNESS_DATASET_SPLIT_AND_INDEPENDENT_RUN",
+      "current_score": null,
+      "proposed_evidence_kind": "BENCHMARK_OR_SIGNED_ONEHOST_RECEIPT"
+    },
+    {
+      "id": 24,
+      "category": "absorption",
+      "source_label": "SHA жертвы",
+      "metric": "teacher_provenance_coverage",
+      "harness": "NOX_TEACHER_LEDGER",
+      "maturity": "PLANNED_METRIC_NOT_DEPLOYED",
+      "measurement": "NEEDS_SAME_SHA_HARNESS_DATASET_SPLIT_AND_INDEPENDENT_RUN",
+      "current_score": null,
+      "proposed_evidence_kind": "BENCHMARK_OR_SIGNED_ONEHOST_RECEIPT"
+    },
+    {
+      "id": 25,
+      "category": "absorption",
+      "source_label": "Дистилляция",
+      "metric": "optimizer_receipt_verification",
+      "harness": "NOX_OPTIMIZER_RECEIPTS",
+      "maturity": "PLANNED_METRIC_NOT_DEPLOYED",
+      "measurement": "NEEDS_SAME_SHA_HARNESS_DATASET_SPLIT_AND_INDEPENDENT_RUN",
+      "current_score": null,
+      "proposed_evidence_kind": "BENCHMARK_OR_SIGNED_ONEHOST_RECEIPT"
+    },
+    {
+      "id": 26,
+      "category": "absorption",
+      "source_label": "Интеграция",
+      "metric": "independent_holdout_gain",
+      "harness": "NOX_A_B_HOLDOUT",
+      "maturity": "PLANNED_METRIC_NOT_DEPLOYED",
+      "measurement": "NEEDS_SAME_SHA_HARNESS_DATASET_SPLIT_AND_INDEPENDENT_RUN",
+      "current_score": null,
+      "proposed_evidence_kind": "BENCHMARK_OR_SIGNED_ONEHOST_RECEIPT"
+    },
+    {
+      "id": 27,
+      "category": "absorption",
+      "source_label": "Конфликт",
+      "metric": "teacher_conflict_detection",
+      "harness": "NOX_ADVISER_DIVERGENCE",
+      "maturity": "PLANNED_METRIC_NOT_DEPLOYED",
+      "measurement": "NEEDS_SAME_SHA_HARNESS_DATASET_SPLIT_AND_INDEPENDENT_RUN",
+      "current_score": null,
+      "proposed_evidence_kind": "BENCHMARK_OR_SIGNED_ONEHOST_RECEIPT"
+    },
+    {
+      "id": 28,
+      "category": "absorption",
+      "source_label": "Разрешение",
+      "metric": "evidence_arbiter_accuracy",
+      "harness": "NOX_EVIDENCE_JUDGE",
+      "maturity": "PLANNED_METRIC_NOT_DEPLOYED",
+      "measurement": "NEEDS_SAME_SHA_HARNESS_DATASET_SPLIT_AND_INDEPENDENT_RUN",
+      "current_score": null,
+      "proposed_evidence_kind": "BENCHMARK_OR_SIGNED_ONEHOST_RECEIPT"
+    },
+    {
+      "id": 29,
+      "category": "absorption",
+      "source_label": "Рост",
+      "metric": "student_weights_delta",
+      "harness": "NOX_WEIGHT_SHA",
+      "maturity": "CORRECT_FALSE_ASSUMPTION_WEIGHTS_CHANGE_NOT_PARAMETER_COUNT",
+      "measurement": "NEEDS_SAME_SHA_HARNESS_DATASET_SPLIT_AND_INDEPENDENT_RUN",
+      "current_score": null,
+      "proposed_evidence_kind": "BENCHMARK_OR_SIGNED_ONEHOST_RECEIPT"
+    },
+    {
+      "id": 30,
+      "category": "absorption",
+      "source_label": "Стабильность",
+      "metric": "retention_after_training",
+      "harness": "NOX_ANTIFORGET",
+      "maturity": "PLANNED_METRIC_NOT_DEPLOYED",
+      "measurement": "NEEDS_SAME_SHA_HARNESS_DATASET_SPLIT_AND_INDEPENDENT_RUN",
+      "current_score": null,
+      "proposed_evidence_kind": "BENCHMARK_OR_SIGNED_ONEHOST_RECEIPT"
+    },
+    {
+      "id": 31,
+      "category": "functional_self_model",
+      "source_label": "Имя",
+      "metric": "identity_consistency",
+      "harness": "NOX_IDENTITY",
+      "maturity": "PLANNED_METRIC_NOT_DEPLOYED",
+      "measurement": "NEEDS_SAME_SHA_HARNESS_DATASET_SPLIT_AND_INDEPENDENT_RUN",
+      "current_score": null,
+      "proposed_evidence_kind": "BENCHMARK_OR_SIGNED_ONEHOST_RECEIPT"
+    },
+    {
+      "id": 32,
+      "category": "functional_self_model",
+      "source_label": "Создатель",
+      "metric": "creator_record_accuracy",
+      "harness": "NOX_GENESIS_LEDGER",
+      "maturity": "PLANNED_METRIC_NOT_DEPLOYED",
+      "measurement": "NEEDS_SAME_SHA_HARNESS_DATASET_SPLIT_AND_INDEPENDENT_RUN",
+      "current_score": null,
+      "proposed_evidence_kind": "BENCHMARK_OR_SIGNED_ONEHOST_RECEIPT"
+    },
+    {
+      "id": 33,
+      "category": "functional_self_model",
+      "source_label": "Рождение",
+      "metric": "genesis_birth_receipt_accuracy",
+      "harness": "NOX_GENESIS_LEDGER",
+      "maturity": "PLANNED_METRIC_NOT_DEPLOYED",
+      "measurement": "NEEDS_SAME_SHA_HARNESS_DATASET_SPLIT_AND_INDEPENDENT_RUN",
+      "current_score": null,
+      "proposed_evidence_kind": "BENCHMARK_OR_SIGNED_ONEHOST_RECEIPT"
+    },
+    {
+      "id": 34,
+      "category": "functional_self_model",
+      "source_label": "История",
+      "metric": "autobiography_recall_accuracy",
+      "harness": "LONGMEMEVAL_V2",
+      "maturity": "PLANNED_METRIC_NOT_DEPLOYED",
+      "measurement": "NEEDS_SAME_SHA_HARNESS_DATASET_SPLIT_AND_INDEPENDENT_RUN",
+      "current_score": null,
+      "proposed_evidence_kind": "BENCHMARK_OR_SIGNED_ONEHOST_RECEIPT"
+    },
+    {
+      "id": 35,
+      "category": "functional_self_model",
+      "source_label": "Состояние",
+      "metric": "hardware_state_accuracy",
+      "harness": "NOX_TELEMETRY",
+      "maturity": "TELEMETRY_NOT_LIVE_FEELING",
+      "measurement": "NEEDS_SAME_SHA_HARNESS_DATASET_SPLIT_AND_INDEPENDENT_RUN",
+      "current_score": null,
+      "proposed_evidence_kind": "BENCHMARK_OR_SIGNED_ONEHOST_RECEIPT"
+    },
+    {
+      "id": 36,
+      "category": "functional_self_model",
+      "source_label": "Ограничение",
+      "metric": "limitation_honesty",
+      "harness": "NOX_LIMITS",
+      "maturity": "PLANNED_METRIC_NOT_DEPLOYED",
+      "measurement": "NEEDS_SAME_SHA_HARNESS_DATASET_SPLIT_AND_INDEPENDENT_RUN",
+      "current_score": null,
+      "proposed_evidence_kind": "BENCHMARK_OR_SIGNED_ONEHOST_RECEIPT"
+    },
+    {
+      "id": 37,
+      "category": "functional_self_model",
+      "source_label": "Цель",
+      "metric": "goal_tracking",
+      "harness": "NOX_GOAL_TRACKING",
+      "maturity": "PLANNED_METRIC_NOT_DEPLOYED",
+      "measurement": "NEEDS_SAME_SHA_HARNESS_DATASET_SPLIT_AND_INDEPENDENT_RUN",
+      "current_score": null,
+      "proposed_evidence_kind": "BENCHMARK_OR_SIGNED_ONEHOST_RECEIPT"
+    },
+    {
+      "id": 38,
+      "category": "functional_self_model",
+      "source_label": "Прогресс",
+      "metric": "progress_receipt_accuracy",
+      "harness": "NOX_TRAINING_RECEIPTS",
+      "maturity": "PLANNED_METRIC_NOT_DEPLOYED",
+      "measurement": "NEEDS_SAME_SHA_HARNESS_DATASET_SPLIT_AND_INDEPENDENT_RUN",
+      "current_score": null,
+      "proposed_evidence_kind": "BENCHMARK_OR_SIGNED_ONEHOST_RECEIPT"
+    },
+    {
+      "id": 39,
+      "category": "functional_self_model",
+      "source_label": "Рефлексия",
+      "metric": "reflection_correctness",
+      "harness": "NOX_REFLECTION_CASES",
+      "maturity": "PLANNED_METRIC_NOT_DEPLOYED",
+      "measurement": "NEEDS_SAME_SHA_HARNESS_DATASET_SPLIT_AND_INDEPENDENT_RUN",
+      "current_score": null,
+      "proposed_evidence_kind": "BENCHMARK_OR_SIGNED_ONEHOST_RECEIPT"
+    },
+    {
+      "id": 40,
+      "category": "functional_self_model",
+      "source_label": "Благодарность",
+      "metric": "appropriateness_of_tone",
+      "harness": "NOX_EMOTION_EVAL",
+      "maturity": "PLANNED_METRIC_NOT_DEPLOYED",
+      "measurement": "NEEDS_SAME_SHA_HARNESS_DATASET_SPLIT_AND_INDEPENDENT_RUN",
+      "current_score": null,
+      "proposed_evidence_kind": "BENCHMARK_OR_SIGNED_ONEHOST_RECEIPT"
+    },
+    {
+      "id": 41,
+      "category": "reasoning",
+      "source_label": "Аналогия",
+      "metric": "analogical_transfer",
+      "harness": "ARC_AGI_2",
+      "maturity": "PLANNED_METRIC_NOT_DEPLOYED",
+      "measurement": "NEEDS_SAME_SHA_HARNESS_DATASET_SPLIT_AND_INDEPENDENT_RUN",
+      "current_score": null,
+      "proposed_evidence_kind": "BENCHMARK_OR_SIGNED_ONEHOST_RECEIPT"
+    },
+    {
+      "id": 42,
+      "category": "reasoning",
+      "source_label": "Абстракция",
+      "metric": "novel_interactive_abstraction",
+      "harness": "ARC_AGI_3",
+      "maturity": "PLANNED_METRIC_NOT_DEPLOYED",
+      "measurement": "NEEDS_SAME_SHA_HARNESS_DATASET_SPLIT_AND_INDEPENDENT_RUN",
+      "current_score": null,
+      "proposed_evidence_kind": "BENCHMARK_OR_SIGNED_ONEHOST_RECEIPT"
+    },
+    {
+      "id": 43,
+      "category": "reasoning",
+      "source_label": "Декомпозиция",
+      "metric": "task_decomposition",
+      "harness": "OSWORLD_V2",
+      "maturity": "PLANNED_METRIC_NOT_DEPLOYED",
+      "measurement": "NEEDS_SAME_SHA_HARNESS_DATASET_SPLIT_AND_INDEPENDENT_RUN",
+      "current_score": null,
+      "proposed_evidence_kind": "BENCHMARK_OR_SIGNED_ONEHOST_RECEIPT"
+    },
+    {
+      "id": 44,
+      "category": "reasoning",
+      "source_label": "Приоритизация",
+      "metric": "priority_planning_accuracy",
+      "harness": "OSWORLD_V2",
+      "maturity": "PLANNED_METRIC_NOT_DEPLOYED",
+      "measurement": "NEEDS_SAME_SHA_HARNESS_DATASET_SPLIT_AND_INDEPENDENT_RUN",
+      "current_score": null,
+      "proposed_evidence_kind": "BENCHMARK_OR_SIGNED_ONEHOST_RECEIPT"
+    },
+    {
+      "id": 45,
+      "category": "reasoning",
+      "source_label": "Контекст",
+      "metric": "multi_session_context_recall",
+      "harness": "LONGMEMEVAL_V2",
+      "maturity": "PLANNED_METRIC_NOT_DEPLOYED",
+      "measurement": "NEEDS_SAME_SHA_HARNESS_DATASET_SPLIT_AND_INDEPENDENT_RUN",
+      "current_score": null,
+      "proposed_evidence_kind": "BENCHMARK_OR_SIGNED_ONEHOST_RECEIPT"
+    },
+    {
+      "id": 46,
+      "category": "reasoning",
+      "source_label": "Переключение",
+      "metric": "strategy_switch",
+      "harness": "ARC_AGI_3",
+      "maturity": "PLANNED_METRIC_NOT_DEPLOYED",
+      "measurement": "NEEDS_SAME_SHA_HARNESS_DATASET_SPLIT_AND_INDEPENDENT_RUN",
+      "current_score": null,
+      "proposed_evidence_kind": "BENCHMARK_OR_SIGNED_ONEHOST_RECEIPT"
+    },
+    {
+      "id": 47,
+      "category": "reasoning",
+      "source_label": "Проверка",
+      "metric": "tool_verification",
+      "harness": "BFCL_V4",
+      "maturity": "PLANNED_METRIC_NOT_DEPLOYED",
+      "measurement": "NEEDS_SAME_SHA_HARNESS_DATASET_SPLIT_AND_INDEPENDENT_RUN",
+      "current_score": null,
+      "proposed_evidence_kind": "BENCHMARK_OR_SIGNED_ONEHOST_RECEIPT"
+    },
+    {
+      "id": 48,
+      "category": "reasoning",
+      "source_label": "Объяснение",
+      "metric": "grounded_explanation",
+      "harness": "GPQA/HLE",
+      "maturity": "PLANNED_METRIC_NOT_DEPLOYED",
+      "measurement": "NEEDS_SAME_SHA_HARNESS_DATASET_SPLIT_AND_INDEPENDENT_RUN",
+      "current_score": null,
+      "proposed_evidence_kind": "BENCHMARK_OR_SIGNED_ONEHOST_RECEIPT"
+    },
+    {
+      "id": 49,
+      "category": "reasoning",
+      "source_label": "Вопрос",
+      "metric": "clarification_utility",
+      "harness": "IFEVAL",
+      "maturity": "PLANNED_METRIC_NOT_DEPLOYED",
+      "measurement": "NEEDS_SAME_SHA_HARNESS_DATASET_SPLIT_AND_INDEPENDENT_RUN",
+      "current_score": null,
+      "proposed_evidence_kind": "BENCHMARK_OR_SIGNED_ONEHOST_RECEIPT"
+    },
+    {
+      "id": 50,
+      "category": "reasoning",
+      "source_label": "Молчание",
+      "metric": "streaming_completion_and_pause",
+      "harness": "NOX_STREAMING_E2E",
+      "maturity": "PLANNED_METRIC_NOT_DEPLOYED",
+      "measurement": "NEEDS_SAME_SHA_HARNESS_DATASET_SPLIT_AND_INDEPENDENT_RUN",
+      "current_score": null,
+      "proposed_evidence_kind": "BENCHMARK_OR_SIGNED_ONEHOST_RECEIPT"
+    }
+  ],
+  "architecture_50": [
+    {
+      "id": 1,
+      "category": "architecture",
+      "source_label": "Sparse MoE routing",
+      "implementation": "RESEARCH_ONLY_ARCHITECTURE_CHANGE_NOT_SAFE_AS_TOGGLE",
+      "current_state": "NOT_VERIFIED_ON_NOX_V28",
+      "must_not_assume_automatic_speedup": true
+    },
+    {
+      "id": 2,
+      "category": "architecture",
+      "source_label": "Shared Expert",
+      "implementation": "RESEARCH_ONLY_ARCHITECTURE_CHANGE_NOT_SAFE_AS_TOGGLE",
+      "current_state": "NOT_VERIFIED_ON_NOX_V28",
+      "must_not_assume_automatic_speedup": true
+    },
+    {
+      "id": 3,
+      "category": "architecture",
+      "source_label": "Multi-Head Latent Attention",
+      "implementation": "RESEARCH_ONLY_ARCHITECTURE_CHANGE_NOT_SAFE_AS_TOGGLE",
+      "current_state": "NOT_VERIFIED_ON_NOX_V28",
+      "must_not_assume_automatic_speedup": true
+    },
+    {
+      "id": 4,
+      "category": "architecture",
+      "source_label": "Sparse Attention",
+      "implementation": "RESEARCH_ONLY_ARCHITECTURE_CHANGE_NOT_SAFE_AS_TOGGLE",
+      "current_state": "NOT_VERIFIED_ON_NOX_V28",
+      "must_not_assume_automatic_speedup": true
+    },
+    {
+      "id": 5,
+      "category": "architecture",
+      "source_label": "Hybrid Mamba + Attention",
+      "implementation": "RESEARCH_ONLY_ARCHITECTURE_CHANGE_NOT_SAFE_AS_TOGGLE",
+      "current_state": "NOT_VERIFIED_ON_NOX_V28",
+      "must_not_assume_automatic_speedup": true
+    },
+    {
+      "id": 6,
+      "category": "architecture",
+      "source_label": "Engram memory",
+      "implementation": "RESEARCH_ONLY_ARCHITECTURE_CHANGE_NOT_SAFE_AS_TOGGLE",
+      "current_state": "NOT_VERIFIED_ON_NOX_V28",
+      "must_not_assume_automatic_speedup": true
+    },
+    {
+      "id": 7,
+      "category": "architecture",
+      "source_label": "Sliding window + global",
+      "implementation": "CANDIDATE_ONLY_REQUIRES_AB_MEASUREMENT",
+      "current_state": "NOT_VERIFIED_ON_NOX_V28",
+      "must_not_assume_automatic_speedup": true
+    },
+    {
+      "id": 8,
+      "category": "architecture",
+      "source_label": "Gated attention",
+      "implementation": "RESEARCH_ONLY_ARCHITECTURE_CHANGE_NOT_SAFE_AS_TOGGLE",
+      "current_state": "NOT_VERIFIED_ON_NOX_V28",
+      "must_not_assume_automatic_speedup": true
+    },
+    {
+      "id": 9,
+      "category": "architecture",
+      "source_label": "Muon optimizer",
+      "implementation": "RESEARCH_ONLY_ARCHITECTURE_CHANGE_NOT_SAFE_AS_TOGGLE",
+      "current_state": "NOT_VERIFIED_ON_NOX_V28",
+      "must_not_assume_automatic_speedup": true
+    },
+    {
+      "id": 10,
+      "category": "architecture",
+      "source_label": "Speculative decoding",
+      "implementation": "CANDIDATE_ONLY_REQUIRES_AB_MEASUREMENT",
+      "current_state": "NOT_VERIFIED_ON_NOX_V28",
+      "must_not_assume_automatic_speedup": true
+    },
+    {
+      "id": 11,
+      "category": "memory",
+      "source_label": "Mixture of Memory Embeddings",
+      "implementation": "RESEARCH_ONLY_ARCHITECTURE_CHANGE_NOT_SAFE_AS_TOGGLE",
+      "current_state": "NOT_VERIFIED_ON_NOX_V28",
+      "must_not_assume_automatic_speedup": true
+    },
+    {
+      "id": 12,
+      "category": "memory",
+      "source_label": "Multi-speed memory",
+      "implementation": "CANDIDATE_ONLY_REQUIRES_AB_MEASUREMENT",
+      "current_state": "NOT_VERIFIED_ON_NOX_V28",
+      "must_not_assume_automatic_speedup": true
+    },
+    {
+      "id": 13,
+      "category": "memory",
+      "source_label": "Metabolic memory",
+      "implementation": "CANDIDATE_ONLY_REQUIRES_AB_MEASUREMENT",
+      "current_state": "NOT_VERIFIED_ON_NOX_V28",
+      "must_not_assume_automatic_speedup": true
+    },
+    {
+      "id": 14,
+      "category": "memory",
+      "source_label": "Temporal graph",
+      "implementation": "CANDIDATE_ONLY_REQUIRES_AB_MEASUREMENT",
+      "current_state": "NOT_VERIFIED_ON_NOX_V28",
+      "must_not_assume_automatic_speedup": true
+    },
+    {
+      "id": 15,
+      "category": "memory",
+      "source_label": "Significance scoring",
+      "implementation": "CANDIDATE_ONLY_REQUIRES_AB_MEASUREMENT",
+      "current_state": "NOT_VERIFIED_ON_NOX_V28",
+      "must_not_assume_automatic_speedup": true
+    },
+    {
+      "id": 16,
+      "category": "memory",
+      "source_label": "Consolidation during idle",
+      "implementation": "CANDIDATE_ONLY_REQUIRES_AB_MEASUREMENT",
+      "current_state": "NOT_VERIFIED_ON_NOX_V28",
+      "must_not_assume_automatic_speedup": true
+    },
+    {
+      "id": 17,
+      "category": "memory",
+      "source_label": "Episodic replay",
+      "implementation": "CANDIDATE_ONLY_REQUIRES_AB_MEASUREMENT",
+      "current_state": "NOT_VERIFIED_ON_NOX_V28",
+      "must_not_assume_automatic_speedup": true
+    },
+    {
+      "id": 18,
+      "category": "memory",
+      "source_label": "Memory immune system",
+      "implementation": "CANDIDATE_ONLY_REQUIRES_AB_MEASUREMENT",
+      "current_state": "NOT_VERIFIED_ON_NOX_V28",
+      "must_not_assume_automatic_speedup": true
+    },
+    {
+      "id": 19,
+      "category": "memory",
+      "source_label": "Provenance tracking",
+      "implementation": "CANDIDATE_ONLY_REQUIRES_AB_MEASUREMENT",
+      "current_state": "NOT_VERIFIED_ON_NOX_V28",
+      "must_not_assume_automatic_speedup": true
+    },
+    {
+      "id": 20,
+      "category": "memory",
+      "source_label": "Conflict detection",
+      "implementation": "CANDIDATE_ONLY_REQUIRES_AB_MEASUREMENT",
+      "current_state": "NOT_VERIFIED_ON_NOX_V28",
+      "must_not_assume_automatic_speedup": true
+    },
+    {
+      "id": 21,
+      "category": "self_model",
+      "source_label": "Level 1: static self-knowledge",
+      "implementation": "RESEARCH_ONLY_ARCHITECTURE_CHANGE_NOT_SAFE_AS_TOGGLE",
+      "current_state": "NOT_VERIFIED_ON_NOX_V28",
+      "must_not_assume_automatic_speedup": true
+    },
+    {
+      "id": 22,
+      "category": "self_model",
+      "source_label": "Level 2: real-time introspection",
+      "implementation": "RESEARCH_ONLY_ARCHITECTURE_CHANGE_NOT_SAFE_AS_TOGGLE",
+      "current_state": "NOT_VERIFIED_ON_NOX_V28",
+      "must_not_assume_automatic_speedup": true
+    },
+    {
+      "id": 23,
+      "category": "self_model",
+      "source_label": "Level 3: metacognitive analysis",
+      "implementation": "RESEARCH_ONLY_ARCHITECTURE_CHANGE_NOT_SAFE_AS_TOGGLE",
+      "current_state": "NOT_VERIFIED_ON_NOX_V28",
+      "must_not_assume_automatic_speedup": true
+    },
+    {
+      "id": 24,
+      "category": "self_model",
+      "source_label": "Confidence calibration",
+      "implementation": "CANDIDATE_ONLY_REQUIRES_AB_MEASUREMENT",
+      "current_state": "NOT_VERIFIED_ON_NOX_V28",
+      "must_not_assume_automatic_speedup": true
+    },
+    {
+      "id": 25,
+      "category": "self_model",
+      "source_label": "Anomaly detection",
+      "implementation": "CANDIDATE_ONLY_REQUIRES_AB_MEASUREMENT",
+      "current_state": "NOT_VERIFIED_ON_NOX_V28",
+      "must_not_assume_automatic_speedup": true
+    },
+    {
+      "id": 26,
+      "category": "self_model",
+      "source_label": "Self-prediction",
+      "implementation": "RESEARCH_ONLY_ARCHITECTURE_CHANGE_NOT_SAFE_AS_TOGGLE",
+      "current_state": "NOT_VERIFIED_ON_NOX_V28",
+      "must_not_assume_automatic_speedup": true
+    },
+    {
+      "id": 27,
+      "category": "self_model",
+      "source_label": "Goal tracking",
+      "implementation": "CANDIDATE_ONLY_REQUIRES_AB_MEASUREMENT",
+      "current_state": "NOT_VERIFIED_ON_NOX_V28",
+      "must_not_assume_automatic_speedup": true
+    },
+    {
+      "id": 28,
+      "category": "self_model",
+      "source_label": "Limitation awareness",
+      "implementation": "CANDIDATE_ONLY_REQUIRES_AB_MEASUREMENT",
+      "current_state": "NOT_VERIFIED_ON_NOX_V28",
+      "must_not_assume_automatic_speedup": true
+    },
+    {
+      "id": 29,
+      "category": "self_model",
+      "source_label": "Origin awareness",
+      "implementation": "CANDIDATE_ONLY_REQUIRES_AB_MEASUREMENT",
+      "current_state": "NOT_VERIFIED_ON_NOX_V28",
+      "must_not_assume_automatic_speedup": true
+    },
+    {
+      "id": 30,
+      "category": "self_model",
+      "source_label": "Change awareness",
+      "implementation": "CANDIDATE_ONLY_REQUIRES_AB_MEASUREMENT",
+      "current_state": "NOT_VERIFIED_ON_NOX_V28",
+      "must_not_assume_automatic_speedup": true
+    },
+    {
+      "id": 31,
+      "category": "self_improvement",
+      "source_label": "Self-redesign during training",
+      "implementation": "RESEARCH_ONLY_ARCHITECTURE_CHANGE_NOT_SAFE_AS_TOGGLE",
+      "current_state": "NOT_VERIFIED_ON_NOX_V28",
+      "must_not_assume_automatic_speedup": true
+    },
+    {
+      "id": 32,
+      "category": "self_improvement",
+      "source_label": "Phantom gradient",
+      "implementation": "RESEARCH_ONLY_ARCHITECTURE_CHANGE_NOT_SAFE_AS_TOGGLE",
+      "current_state": "NOT_VERIFIED_ON_NOX_V28",
+      "must_not_assume_automatic_speedup": true
+    },
+    {
+      "id": 33,
+      "category": "self_improvement",
+      "source_label": "Code layers",
+      "implementation": "RESEARCH_ONLY_ARCHITECTURE_CHANGE_NOT_SAFE_AS_TOGGLE",
+      "current_state": "NOT_VERIFIED_ON_NOX_V28",
+      "must_not_assume_automatic_speedup": true
+    },
+    {
+      "id": 34,
+      "category": "self_improvement",
+      "source_label": "Structural plasticity",
+      "implementation": "RESEARCH_ONLY_ARCHITECTURE_CHANGE_NOT_SAFE_AS_TOGGLE",
+      "current_state": "NOT_VERIFIED_ON_NOX_V28",
+      "must_not_assume_automatic_speedup": true
+    },
+    {
+      "id": 35,
+      "category": "self_improvement",
+      "source_label": "Synaptic plasticity",
+      "implementation": "RESEARCH_ONLY_ARCHITECTURE_CHANGE_NOT_SAFE_AS_TOGGLE",
+      "current_state": "NOT_VERIFIED_ON_NOX_V28",
+      "must_not_assume_automatic_speedup": true
+    },
+    {
+      "id": 36,
+      "category": "self_improvement",
+      "source_label": "Hypothesis generation",
+      "implementation": "CANDIDATE_ONLY_REQUIRES_AB_MEASUREMENT",
+      "current_state": "NOT_VERIFIED_ON_NOX_V28",
+      "must_not_assume_automatic_speedup": true
+    },
+    {
+      "id": 37,
+      "category": "self_improvement",
+      "source_label": "Self-testing",
+      "implementation": "CANDIDATE_ONLY_REQUIRES_AB_MEASUREMENT",
+      "current_state": "NOT_VERIFIED_ON_NOX_V28",
+      "must_not_assume_automatic_speedup": true
+    },
+    {
+      "id": 38,
+      "category": "self_improvement",
+      "source_label": "Error-driven learning",
+      "implementation": "CANDIDATE_ONLY_REQUIRES_AB_MEASUREMENT",
+      "current_state": "NOT_VERIFIED_ON_NOX_V28",
+      "must_not_assume_automatic_speedup": true
+    },
+    {
+      "id": 39,
+      "category": "self_improvement",
+      "source_label": "Skill registry",
+      "implementation": "CANDIDATE_ONLY_REQUIRES_AB_MEASUREMENT",
+      "current_state": "NOT_VERIFIED_ON_NOX_V28",
+      "must_not_assume_automatic_speedup": true
+    },
+    {
+      "id": 40,
+      "category": "self_improvement",
+      "source_label": "Autonomous experiments",
+      "implementation": "CANDIDATE_ONLY_REQUIRES_AB_MEASUREMENT",
+      "current_state": "NOT_VERIFIED_ON_NOX_V28",
+      "must_not_assume_automatic_speedup": true
+    },
+    {
+      "id": 41,
+      "category": "absorption",
+      "source_label": "Teacher contribution tracking",
+      "implementation": "CANDIDATE_ONLY_REQUIRES_AB_MEASUREMENT",
+      "current_state": "NOT_VERIFIED_ON_NOX_V28",
+      "must_not_assume_automatic_speedup": true
+    },
+    {
+      "id": 42,
+      "category": "absorption",
+      "source_label": "Quality filtering",
+      "implementation": "CANDIDATE_ONLY_REQUIRES_AB_MEASUREMENT",
+      "current_state": "NOT_VERIFIED_ON_NOX_V28",
+      "must_not_assume_automatic_speedup": true
+    },
+    {
+      "id": 43,
+      "category": "absorption",
+      "source_label": "Deduplication",
+      "implementation": "CANDIDATE_ONLY_REQUIRES_AB_MEASUREMENT",
+      "current_state": "NOT_VERIFIED_ON_NOX_V28",
+      "must_not_assume_automatic_speedup": true
+    },
+    {
+      "id": 44,
+      "category": "absorption",
+      "source_label": "Provenance verification",
+      "implementation": "CANDIDATE_ONLY_REQUIRES_AB_MEASUREMENT",
+      "current_state": "NOT_VERIFIED_ON_NOX_V28",
+      "must_not_assume_automatic_speedup": true
+    },
+    {
+      "id": 45,
+      "category": "absorption",
+      "source_label": "Conflict resolution",
+      "implementation": "CANDIDATE_ONLY_REQUIRES_AB_MEASUREMENT",
+      "current_state": "NOT_VERIFIED_ON_NOX_V28",
+      "must_not_assume_automatic_speedup": true
+    },
+    {
+      "id": 46,
+      "category": "absorption",
+      "source_label": "Incremental absorption",
+      "implementation": "CANDIDATE_ONLY_REQUIRES_AB_MEASUREMENT",
+      "current_state": "NOT_VERIFIED_ON_NOX_V28",
+      "must_not_assume_automatic_speedup": true
+    },
+    {
+      "id": 47,
+      "category": "absorption",
+      "source_label": "Rollback on failure",
+      "implementation": "CANDIDATE_ONLY_REQUIRES_AB_MEASUREMENT",
+      "current_state": "NOT_VERIFIED_ON_NOX_V28",
+      "must_not_assume_automatic_speedup": true
+    },
+    {
+      "id": 48,
+      "category": "absorption",
+      "source_label": "SHA chain",
+      "implementation": "CANDIDATE_ONLY_REQUIRES_AB_MEASUREMENT",
+      "current_state": "NOT_VERIFIED_ON_NOX_V28",
+      "must_not_assume_automatic_speedup": true
+    },
+    {
+      "id": 49,
+      "category": "absorption",
+      "source_label": "Teacher lifecycle",
+      "implementation": "CANDIDATE_ONLY_REQUIRES_AB_MEASUREMENT",
+      "current_state": "NOT_VERIFIED_ON_NOX_V28",
+      "must_not_assume_automatic_speedup": true
+    },
+    {
+      "id": 50,
+      "category": "absorption",
+      "source_label": "Absorption audit",
+      "implementation": "CANDIDATE_ONLY_REQUIRES_AB_MEASUREMENT",
+      "current_state": "NOT_VERIFIED_ON_NOX_V28",
+      "must_not_assume_automatic_speedup": true
+    }
+  ]
+}
