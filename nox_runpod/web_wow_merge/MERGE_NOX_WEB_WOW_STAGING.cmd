@@ -18,11 +18,12 @@ for %%F in (
   "NOX_HELION_WEB_V25_1_CANDIDATE_20261112.zip"
   "NOX_CHAT_V25_SOURCES_PC_20261112.zip"
   "NOX_CHAT_V24_SOURCES_20261112.zip"
+  "NOX_HELION_ONEPASS_V2_HARDENED_20261112.zip"
 ) do if not exist "%SRC%\%%~F" (
   echo NOX_HOLD: missing %SRC%\%%~F
   exit /b 2
 )
-py -3 "%MERGER%" --web-v25 "%SRC%\NOX_HELION_WEB_V25_1_CANDIDATE_20261112.zip" --chat-v25 "%SRC%\NOX_CHAT_V25_SOURCES_PC_20261112.zip" --chat-v24 "%SRC%\NOX_CHAT_V24_SOURCES_20261112.zip" --output "%OUT%"
+py -3 "%MERGER%" --web-v25 "%SRC%\NOX_HELION_WEB_V25_1_CANDIDATE_20261112.zip" --chat-v25 "%SRC%\NOX_CHAT_V25_SOURCES_PC_20261112.zip" --chat-v24 "%SRC%\NOX_CHAT_V24_SOURCES_20261112.zip" --onepass-v2 "%SRC%\NOX_HELION_ONEPASS_V2_HARDENED_20261112.zip" --output "%OUT%"
 if errorlevel 1 (
   echo NOX_HOLD: inspect %OUT%\NOX_MERGE_RECEIPT.json
   exit /b 2
