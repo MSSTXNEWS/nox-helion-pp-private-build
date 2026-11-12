@@ -1,0 +1,65 @@
+name: NOX ONEPASS evidence gates (source-only)
+on:
+  push:
+    branches:
+      - 'fix/home-v16-cinematic-contract-onepass-*'
+    paths:
+      - 'coordination/nox-onepass/**'
+      - '.github/workflows/nox-onepass-source.yml'
+  pull_request:
+    paths:
+      - 'coordination/nox-onepass/**'
+      - '.github/workflows/nox-onepass-source.yml'
+permissions:
+  contents: read
+concurrency:
+  group: nox-onepass-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  fail-closed-unit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate executable syntax and negative API cases (no GPU acceptance claim)
+        run: |
+          node --check coordination/nox-onepass/NOX_ONEPASS.mjs
+          node --check coordination/nox-onepass/NOX_LIVE_ONEHOST_E2E.mjs
+          node --test coordination/nox-onepass/test-source-gates.mjs
+          node --test coordination/nox-onepass/test-native-freshness.mjs
+      - name: Do not infer hardware or production readiness
+        run: |
+          echo 'NOX_ONEPASS_CODE_TEST_PASS only — hardware GPU, OneHost/S03/STOP and owner acceptance remain HOLD'
+
+  windows-host-contract:
+    name: Windows OS source contracts (NOT physical GPU acceptance)
+    runs-on: windows-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate real Windows Node process and negative-only OneHost behavior
+        shell: pwsh
+        run: |
+          node --version
+          node --check coordination/nox-onepass/NOX_ONEPASS.mjs
+          node --check coordination/nox-onepass/NOX_LIVE_ONEHOST_E2E.mjs
+          node --test coordination/nox-onepass/test-source-gates.mjs coordination/nox-onepass/test-native-freshness.mjs
+      - name: Exercise Windows read-only host inventory (CI hardware is not the owner PC)
+        shell: pwsh
+        run: |
+          .\\coordination\\nox-onepass\\VERIFY_WINDOWS_NOX.ps1 -InventoryOnly
+          if (-not (Test-Path .\\coordination\\nox-onepass\\NOX_QA_RESULTS\\windows-hardware-inventory.json)) { throw 'NOX_WINDOWS_PROBE_MISSING' }
+      - name: Physical GPU evidence is not provided by GitHub-hosted Windows
+        shell: pwsh
+        run: |
+          Write-Host 'WINDOWS_CI_SOURCE_CONTRACT_PASS only; physical Edge+GPU, original OneHost/SQLite and owner acceptance remain HOLD'
