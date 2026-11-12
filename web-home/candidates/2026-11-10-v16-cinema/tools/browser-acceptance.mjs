@@ -258,6 +258,52 @@ try{
   console.log('NOX_E2E_VIEWPORT',name,acceptance,errors.slice(0,2));
   await page.close();
  }
+
+ // An independent test authored in the ORIGINAL NOX source, not a mock or
+ // a derivative rendering. The baseline's ?nox_visual_audit=1 runs 5 giant
+ // scenes, 4 extra lighting scenes, 6 colors and material/selection checks.
+ // It restores its input settings when it finishes. Current checkout SHA
+ // is recorded in report.sourceRevision by the GitHub Actions runner.
+ report.originalVisualAuditV7={status:'HOLD',checks:null,errors:[]};
+ const nativeAuditPage=await browser.newPage({viewport:{width:1440,height:900},deviceScaleFactor:1});
+ try{
+  const auditURL=new URL(url);
+  auditURL.searchParams.set('nox_visual_audit','1');
+  const response=await nativeAuditPage.goto(auditURL.toString(),{waitUntil:'domcontentloaded',timeout:45000});
+  if(response?.status()!==200)throw Error('NOX_ORIGINAL_VISUAL_AUDIT_HTTP_'+response?.status());
+  await nativeAuditPage.waitForFunction(()=>!!window.NOX_V7_VISUAL_AUDIT,{timeout:60000,polling:350});
+  const original=await nativeAuditPage.evaluate(()=>window.NOX_V7_VISUAL_AUDIT);
+  const results=original.results||{};
+  const all=Object.entries(results).every(([key,val])=>val===true);
+  const has14=original.world?.count===14&&original.world?.materialAudit?.length===14;
+  const countScenes=original.giantScenes?.length===5&&original.extraScenes?.length===4&&
+    original.colors?.length===6&&original.selectionMarkers?.length===3;
+  const noFailures=original.world?.textureFailures===0&&original.world?.sceneLighting?.applied===true;
+  report.originalVisualAuditV7={
+    status:all&&has14&&countScenes&&noFailures?'BROWSER_CANDIDATE':'HOLD',
+    originalReportVersion:original.version,
+    originalShader:original.colors?.[0]?.shader||null,
+    checks:results,sceneNames:original.giantScenes?.map(x=>x.name),
+    extraSceneNames:original.extraScenes?.map(x=>x.name),
+    worldCount:original.world?.count,materialCount:original.world?.materialAudit?.length,
+    shaderTexturesLoaded:original.world?.texturesLoaded,
+    light:original.world?.sceneLighting?.scene||null,
+    sources:'ORIGINAL_NOX_V7_VISUAL_AUDIT_SAME_CHECKOUT',
+    sourceRevision:report.sourceRevision
+  };
+  await fs.writeFile(path.join(out,'original-wow-visual-audit-v7.json'),
+    JSON.stringify({sourceRevision:report.sourceRevision,kind:'ORIGINAL_NOX_AUDIT',original},null,2));
+  await nativeAuditPage.locator('#nox-v7-visual-audit').evaluate(node=>node.remove());
+  await nativeAuditPage.screenshot({path:path.join(out,'original-wow-visual-audit-v7-1440.png'),timeout:30000});
+  if(report.originalVisualAuditV7.status!=='BROWSER_CANDIDATE')
+    throw Error('NOX_ORIGINAL_V7_VISUAL_AUDIT_HOLD:'+JSON.stringify({
+      checks:results,has14,countScenes,noFailures
+    }));
+ }catch(error){
+  report.originalVisualAuditV7.status='HOLD';
+  report.originalVisualAuditV7.errors.push(String(error?.message||error).slice(0,1500));
+  console.error('NOX_ORIGINAL_V7_VISUAL_AUDIT_HOLD',String(error?.message||error).slice(0,500));
+ }finally{await nativeAuditPage.close();}
  // Cross-section smoke checks: no fake backends, no hidden failures.
  const pages=['index.html','chat.html','cinema.html','install.html','memory.html','models.html','projects.html','settings.html','system.html','training.html'];
  report.sections=[];
@@ -401,4 +447,4 @@ report.completedAt=new Date().toISOString();
 report.summary={browserCandidates:report.cases.filter(c=>c.acceptance==='BROWSER_CANDIDATE').length,total:report.cases.length,physicalGpu:'NOT_TESTED',v19ModulesPassed:report.v19Modules?.filter(x=>x.passed).length||0,pageUiPassed:report.sections?.filter(x=>x.acceptance==='PAGE_UI_PASS').length??0};
 await fs.writeFile(path.join(out,'report.json'),JSON.stringify(report,null,2));
 console.log(JSON.stringify(report.summary));
-if(report.cases.some(c=>!c.ownerCheck?.ready||c.ownerCheck.cores?.length!==8||c.ownerCheck.personas?.length!==5||!c.ownerCheck.originalWebgl)||report.cases.some(c=>c.ownerCheck?.artHttp&&!c.ownerCheck.artHttp.verified)||report.cases.some(c=>c.ownerCheck?.portraitsHttp&&c.ownerCheck.portraitsHttp.some(p=>!p.verified))||report.summary.v19ModulesPassed!==5 || report.v19ModuleErrors?.length || report.summary.pageUiPassed!==10 || report.summary.browserCandidates!==viewports.length || report.cases.some(c=>c.assetCheck && c.assetCheck.passed!==14))process.exitCode=1;
+if(report.cases.some(c=>!c.ownerCheck?.ready||c.ownerCheck.cores?.length!==8||c.ownerCheck.personas?.length!==5||!c.ownerCheck.originalWebgl)||report.cases.some(c=>c.ownerCheck?.artHttp&&!c.ownerCheck.artHttp.verified)||report.cases.some(c=>c.ownerCheck?.portraitsHttp&&c.ownerCheck.portraitsHttp.some(p=>!p.verified))||report.summary.v19ModulesPassed!==5 || report.v19ModuleErrors?.length || report.originalVisualAuditV7?.status!=='BROWSER_CANDIDATE' || report.summary.pageUiPassed!==10 || report.summary.browserCandidates!==viewports.length || report.cases.some(c=>c.assetCheck && c.assetCheck.passed!==14))process.exitCode=1;
