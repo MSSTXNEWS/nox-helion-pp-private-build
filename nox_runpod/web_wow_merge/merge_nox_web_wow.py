@@ -164,6 +164,16 @@ def output_candidate(dest,merged,receipt,inputs):
             "HOLD_CONFLICTS: resolve shared dependency conflicts before deployment.\n"
             "SOURCE_MERGED_PHYSICAL_QA_HOLD: requires OneHost, S03, STOP, GPU, 14 worlds and Windows acceptance.\n",
             encoding="utf-8")
+        if merged:
+            with zipfile.ZipFile(dest/"NOX_WEB_WOW_V25_UNIFIED_CANDIDATE.zip","w",compression=zipfile.ZIP_DEFLATED,compresslevel=6) as archive:
+                for path in sorted((dest/"site").rglob("*")):
+                    if path.is_file():
+                        archive.write(path,arcname="site/"+path.relative_to(dest/"site").as_posix())
+                archive.write(dest/"NOX_MERGE_RECEIPT.json",arcname="NOX_MERGE_RECEIPT.json")
+                archive.write(dest/"READ_ME.txt",arcname="READ_ME.txt")
+            with zipfile.ZipFile(dest/"NOX_WEB_WOW_V25_UNIFIED_CANDIDATE.zip") as verify:
+                if verify.testzip() is not None:
+                    raise ValueError("NOX_MERGED_ZIP_CRC_FAILED")
     except BaseException:
         shutil.rmtree(dest,ignore_errors=True)
         raise
