@@ -50,12 +50,18 @@ def _hold(reason):
 
 class ExistingS03Rag:
     def __init__(self, *,native_authorize:Callable,native_stop:Callable,
-                 search_authenticated:Callable):
+                 search_authenticated:Callable,
+                 owner_memory_scope_authorized:Callable|None=None):
         if not all(callable(f) for f in (native_authorize,native_stop,search_authenticated)):
             raise TypeError("EXISTING_NATIVE_CALLBACKS_REQUIRED")
+        if owner_memory_scope_authorized is not None and not callable(owner_memory_scope_authorized):
+            raise TypeError("EXISTING_OWNER_MEMORY_SCOPE_AUTH_REQUIRED")
         self._auth=native_authorize
         self._stop=native_stop
         self._search=search_authenticated
+        # Optional explicit native grant for owner-wide verified events across
+        # multiple chats. Never infer it from request text or LLM output.
+        self._memory_scope_auth=owner_memory_scope_authorized
 
     def _valid_host(self,tenant,principal,chat_id)->bool:
         if not all(isinstance(x,str) and SCOPE.fullmatch(x) for x in (tenant,principal,chat_id)):
@@ -64,10 +70,19 @@ class ExistingS03Rag:
         except Exception:return False
 
     @staticmethod
-    def _verified_record(r:Any,tenant,principal,chat_id):
+    def _verified_record(r:Any,tenant,principal,chat_id,
+                         allow_cross_chat:bool=False):
         if not isinstance(r,dict):return None
+        # The native S03 owner SID and tenant are mandatory. A record from
+        # another conversation is admissible ONLY with a distinct verified
+        # OneHost owner-memory grant; no global/per-persona bypass otherwise.
         if (r.get("tenant")!=tenant or r.get("principal")!=principal or
-            r.get("scope_chat_id")!=chat_id or r.get("verified") is not True or
+            (r.get("scope_chat_id")!=chat_id and not (
+                allow_cross_chat is True and
+                isinstance(r.get("scope_chat_id"),str) and
+                SCOPE.fullmatch(r["scope_chat_id"]) and
+                r.get("owner_global_memory_approved") is True)) or
+            r.get("verified") is not True or
             r.get("superseded") is True or r.get("segment") not in ("M1","M2","M3","M4","M6","M7")):
             return None
         rid=r.get("id")
@@ -94,6 +109,13 @@ class ExistingS03Rag:
             return _hold("STOP_OR_NATIVE_SCOPE_DENIED")
         queries=[prompt]
         if RECALL.search(prompt):queries.append(ALIAS)
+        # Separate native owner-memory ACL permits S03 recall across the same
+        # owner's different chats without exposing other tenants/principals.
+        # The source callback must itself enforce this grant in its SQL query.
+        owner_global=False
+        if self._memory_scope_auth is not None:
+            try:owner_global=(self._memory_scope_auth(tenant,principal,chat_id) is True)
+            except Exception:owner_global=False
         unique={}
         for query in queries[:1+ALIAS_LIMIT]:
             if not self._valid_host(tenant,principal,chat_id):
@@ -104,7 +126,8 @@ class ExistingS03Rag:
             if not isinstance(results,list) or len(results)>100:
                 return _hold("S03_RESULT_FORMAT_INVALID")
             for raw in results:
-                rec=self._verified_record(raw,tenant,principal,chat_id)
+                rec=self._verified_record(raw,tenant,principal,chat_id,
+                                          allow_cross_chat=owner_global)
                 if rec is None:continue
                 # Do not dedupe by text alone when conflicts are versioned:
                 # source ID is canonical; superseded must have been excluded.
