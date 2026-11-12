@@ -1,0 +1,67 @@
+name: NOX Catalog HF Model Assets 32 33 77 78
+on:
+  push:
+    branches: [feature/nox-teacher-mycelium-20261112]
+    paths: ['.github/workflows/nox-catalog-hf-assets.yml']
+  pull_request:
+    branches: [main]
+    paths: ['.github/workflows/nox-catalog-hf-assets.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  download-real-model-weights:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    strategy:
+      fail-fast: false
+      matrix:
+        no: [32, 33, 77, 78]
+    steps:
+      - name: Install Hugging Face downloader
+        run: python -m pip -q install 'huggingface_hub>=0.34,<2'
+      - name: Snapshot complete public model, include actual weights, SHA256 audit
+        shell: bash
+        env:
+          NOX_NO: ${{ matrix.no }}
+          HF_HUB_DISABLE_TELEMETRY: "1"
+        run: |
+          set -Eeuo pipefail
+          python3 - <<'PY'
+          from huggingface_hub import snapshot_download,model_info
+          import os,json,pathlib,hashlib,tarfile
+          no=int(os.environ["NOX_NO"])
+          models={32:"Qwen/Qwen3-Embedding-0.6B",33:"Qwen/Qwen3-Reranker-0.6B",77:"cointegrated/rubert-tiny2-cedr-emotion-detection",78:"UMUTeam/MarIA-emotion-es"}
+          repo=models[no];root=pathlib.Path(f"NOX_HF_ASSET_{no:03d}");root.mkdir(exist_ok=True)
+          result={"number":no,"source":"https://huggingface.co/"+repo,"type":"HF_MODEL_FULL_FILES","status":"FAILED"}
+          try:
+              info=model_info(repo)
+              commit=info.sha
+              result["revision"]=commit
+              target=root/"snapshot"
+              snapshot_download(repo_id=repo,revision=commit,local_dir=target,max_workers=8)
+              allfiles=[p for p in target.rglob("*") if p.is_file() and ".cache" not in p.parts]
+              weightfiles=[p for p in allfiles if p.suffix in (".safetensors",".bin",".gguf",".pt",".onnx")]
+              if not weightfiles:raise RuntimeError("No model weight file in returned snapshot")
+              size=sum(p.stat().st_size for p in allfiles)
+              if size>4_000_000_000:raise RuntimeError("Asset exceeds 4GB safety cap")
+              dest=root/f"NOX_HF_{no}_SNAPSHOT.tar"
+              with tarfile.open(dest,"w") as t:
+                  for p in allfiles:t.add(p,arcname=p.relative_to(target).as_posix(),recursive=False)
+              h=hashlib.sha256()
+              with dest.open("rb") as f:
+                  for chunk in iter(lambda:f.read(8*1024*1024),b''):h.update(chunk)
+              result.update({"status":"DOWNLOADED_VERIFIED","files":len(allfiles),"weight_file_count":len(weightfiles),"weight_total_bytes":sum(p.stat().st_size for p in weightfiles),"snapshot_unpacked_bytes":size,"archive_bytes":dest.stat().st_size,"sha256":h.hexdigest(),"archive":dest.name})
+          except Exception as e:result["error"]=type(e).__name__+": "+str(e)[:500]
+          (root/"RESULT.json").write_text(json.dumps(result,indent=2,ensure_ascii=False)+"\n")
+          print("NOX_HF_RESULT",no,result["status"],result.get("weight_total_bytes",0),result.get("error",""))
+          PY
+          rm -rf NOX_HF_ASSET_${NOX_NO}/snapshot
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NOX_HF_ASSET_${{ matrix.no }}
+          path: NOX_HF_ASSET_${{ matrix.no }}/
+          if-no-files-found: warn
+          retention-days: 7
+          compression-level: 0
