@@ -1,5 +1,21 @@
 {
   "schema": "nox-live-safe-v1",
   "node": "runpod-5f3j8hwyicc0bp",
-  "tasks": []
+  "tasks": [
+    {
+      "id": "nox-a100-gpu-20261112-01",
+      "op": "gpu",
+      "expires_utc": "2026-11-12T09:00:00Z"
+    },
+    {
+      "id": "nox-a100-preflight-20261112-01",
+      "op": "preflight",
+      "expires_utc": "2026-11-12T09:00:00Z"
+    },
+    {
+      "id": "nox-a100-disk-20261112-01",
+      "op": "disk",
+      "expires_utc": "2026-11-12T09:00:00Z"
+    }
+  ]
 }
