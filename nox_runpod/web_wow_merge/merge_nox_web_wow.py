@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Merge the EXISTING NOX WEB and CHAT sources into isolated, auditable staging.
+r"""Merge the EXISTING NOX WEB and CHAT sources into isolated, auditable staging.
 
 No live writes to C:\NOX\helion, training, OneHost, S03, Ollama, or port 8766.
 An output ZIP is a SOURCE candidate only; Windows E2E is a separate release gate.
