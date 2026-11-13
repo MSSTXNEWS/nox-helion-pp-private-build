@@ -1,0 +1,16 @@
+{
+  "README_RU.md": "0af2a67585b7af376e70f9e3b9e4d85ef2a323ec6d73f4929909e74c7aee1b2e",
+  "nox_runpod/teacher_mesh/v38/__init__.py": "01178973745df411a15bd452f925b9c5234d2566b5e4a1ab0a2fcc586d3a1a22",
+  "nox_runpod/teacher_mesh/v38/durable_runtime.py": "96c0421f99f0db19de6db5a81d618aedde137d790cfff4cef4206538cd933b36",
+  "nox_runpod/teacher_mesh/v38/native_bridge_v38.py": "9a8c89e6bd9708ab2ba25aec644938067ce868a68ba430fc730982fa0c9ad4c5",
+  "nox_runpod/teacher_mesh/v38/noxctl.py": "ff3507087e920a1c792fb7e399e009eb9277b9728b2e855e9f301757a3e30323",
+  "nox_runpod/teacher_mesh/v38/synaptic_brain.py": "e527da308beeed3c1dd6350e8eb25a01dbb58bffb41caa2740da578db4f04700",
+  "nox_runpod/teacher_mesh/v38/tests/__init__.py": "d5b54115b37124ee8a3dc16e45fd4ac5902649e89c82b3cdfcb7116d4c9cb38b",
+  "nox_runpod/teacher_mesh/v38/tests/test_v38_control.py": "c4023a2f3b155b8cab3d0c527bdf6ccf312d579253cf86451d575445c4331fb8",
+  "nox_runpod/teacher_mesh/v38/tests/test_v38_memory_speed.py": "47714f96cfd891777fc77e00effa48aefb2d49df1713ee346c306bc8ef562520",
+  "reference/EXTERNAL_TOOLS.json": "d1ff6d04d5ea8edd625a6b1d2dbb2005f44f56438ca2ae5fd59d73d019f97ebf",
+  "scripts/FETCH_OPTIONAL_TOOLS_AFTER_ADMISSION.sh": "124101cc90005f1bf22ec74c3d64bd56961771c0ad741922280bb0e1b7bfc078",
+  "scripts/RUN_READONLY_AUDIT.sh": "effcc8d98886dcef4f7570221db7f9128d8df16fb32875262ba83b2eb75acd8d",
+  "scripts/STAGE_ONLY.sh": "9b8ee315268fec5bcb6eef0e9d6c5f1558e6a0d34f11491b76706625ac7b80ca",
+  "TEST_RESULTS.json": "4270415141d7a04f02d16ab4101d83e49ba64decb4aef841a9909111a7d415f0"
+}
