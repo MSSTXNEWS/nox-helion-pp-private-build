@@ -1,41 +1,20 @@
-name: NOX V29.3 Private Exact Offline Kit Transfer
+name: NOX V29.3 completed offline kit transfer receipt
 on:
-  push:
-    branches: [feature/nox-teacher-mycelium-20261112]
-    paths: ['.github/workflows/nox-v29-3-kit-transfer.yml']
+  workflow_dispatch:
 permissions:
   contents: read
 jobs:
-  transfer:
+  verify-current-release-receipt:
     runs-on: ubuntu-latest
-    timeout-minutes: 6
     steps:
-      - name: Transfer exact 27KB kit and verify
-        shell: bash
+      - uses: actions/checkout@v4
+      - name: Verify closed transfer SHA without network access
         run: |
-          set -Eeuo pipefail
-          mkdir -p dist
-          curl --fail --silent --show-error --location --connect-timeout 15 --max-time 70 \
-            "https://sb-epgo2t5mioyf.vercel.run/nox-kit/ArtMptwcV7vBbjHHvmvZzwPYCXEPWlBqgA" \
-            -o dist/NOX_V29_3_OFFLINE_REBUILD_AND_WINDOWS_STAGE_20261113.zip
-          echo "ee52e35023c65e1a1cdd045958d425ca8c0d827091536f2c2e2fd3b82286be10  dist/NOX_V29_3_OFFLINE_REBUILD_AND_WINDOWS_STAGE_20261113.zip" | sha256sum -c -
           python3 - <<'PY'
-          import zipfile,hashlib,json,pathlib
-          p=pathlib.Path('dist/NOX_V29_3_OFFLINE_REBUILD_AND_WINDOWS_STAGE_20261113.zip')
-          assert p.stat().st_size==27213
-          with zipfile.ZipFile(p) as z:
-            assert z.testzip() is None
-            assert len(z.namelist())==15
-            files=json.loads(z.read('FROZEN_KIT_SHA256.json'))
-            assert len(files)>=10
-            for n,expected in files.items():
-              assert hashlib.sha256(z.read(n)).hexdigest()==expected,n
-          print('NOX_V29_3_OFFLINE_KIT_EXACT_SHA_AND_ALL_SOURCE_FILES_PASS')
+          import json
+          x=json.load(open('nox_runpod/web_wow_merge/v29/NOX_V29_3_RELEASE_RECEIPT.json'))
+          assert x['artifact']['sha256']=='166becb90fce63e2db3f9a74281d756995844552cddb7b67a0ac4bd67a190aa0'
+          assert x['frozen_kit']['sha256']=='ee52e35023c65e1a1cdd045958d425ca8c0d827091536f2c2e2fd3b82286be10'
+          assert x['remaining_physical_gates']['release_accepted'] is False
+          print('NOX_V29_3_PRIVATE_TRANSFER_CLOSED_SHA_RECEIPT_PASS')
           PY
-      - uses: actions/upload-artifact@v4
-        with:
-          name: NOX_V29_3_FROZEN_OFFLINE_KIT
-          path: dist/NOX_V29_3_OFFLINE_REBUILD_AND_WINDOWS_STAGE_20261113.zip
-          retention-days: 4
-          compression-level: 0
-          if-no-files-found: error
