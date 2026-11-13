@@ -1,0 +1,90 @@
+name: NOX V29.6 Real Offline RU ES Neural Voices
+on:
+  push:
+    branches: [feature/nox-teacher-mycelium-20261112]
+    paths:
+      - .github/workflows/nox-v296-real-ru-es-neural-voice.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  download-synthesize-license-qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install local CPU Piper runtime for smoke test (not bundled)
+        run: python -m pip install --disable-pip-version-check 'huggingface_hub>=0.28,<2' 'piper-tts==1.8.0'
+      - name: Download two real ONNX voices at one pinned upstream revision, validate license, synthesize RU/ES WAV
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          python3 - <<'PY'
+          import hashlib,json,pathlib,wave,zipfile,os
+          from huggingface_hub import HfApi,hf_hub_download
+          from piper import PiperVoice
+          root=pathlib.Path('nox-voice-download').resolve()
+          root.mkdir(exist_ok=True)
+          repo='rhasspy/piper-voices'
+          commit=HfApi().model_info(repo).sha
+          assert len(commit)==40 and all(c in '0123456789abcdef' for c in commit)
+          voices={
+            'ru':('ru/ru_RU/denis/medium','ru_RU-denis-medium','Привет. Я NOX, голос на русском.','CC0'),
+            'es':('es/es_ES/sharvard/medium','es_ES-sharvard-medium','Hola. Soy NOX, una voz en español.','CC-BY-3.0'),
+          }
+          results=[]
+          for language,(directory,name,phrase,license_id) in voices.items():
+            items=[directory+'/'+name+'.onnx',directory+'/'+name+'.onnx.json',directory+'/MODEL_CARD']
+            src=[]
+            for f in items:
+              p=hf_hub_download(repo_id=repo,revision=commit,filename=f,local_dir=str(root))
+              p=pathlib.Path(p)
+              assert p.is_file() and p.stat().st_size>20
+              src.append(p)
+            card=src[-1].read_text('utf8','replace').lower()
+            if language=='ru':
+              assert 'cc0' in card,('NOX_LICENSE_REVIEW_HOLD_RU',card)
+            else:
+              assert ('creativecommons.org/licenses/by/3.0' in card or 'cc by' in card or 'cc-by' in card),('NOX_LICENSE_REVIEW_HOLD_ES',card)
+            model=src[0]
+            assert model.stat().st_size>40_000_000
+            voice=PiperVoice.load(str(model),use_cuda=False)
+            wav_path=root/('qa-voice-'+language+'.wav')
+            with wave.open(str(wav_path),'wb') as w:voice.synthesize_wav(phrase,w)
+            with wave.open(str(wav_path),'rb') as w:
+              duration=w.getnframes()/max(1,w.getframerate())
+              assert w.getnframes()>2000 and 0.2<duration<30
+              assert w.getnchannels() in (1,2)
+            results.append({'language':language,'model':str(model.relative_to(root)),
+              'model_sha256':hashlib.sha256(model.read_bytes()).hexdigest(),'model_bytes':model.stat().st_size,
+              'model_license':license_id,'license_card':str(src[-1].relative_to(root)),
+              'wav_sha256':hashlib.sha256(wav_path.read_bytes()).hexdigest(),
+              'wav_bytes':wav_path.stat().st_size,'duration_s':round(duration,3),
+              'status':'REAL_CPU_TTS_WAV_VERIFIED'})
+          receipt={'schema':'NOX_REAL_PIPER_RU_ES_V296-v1','upstream_repo':repo,'upstream_revision':commit,
+            'engine':'piper-tts==1.8.0 GPL-3.0-or-later (tested only, binary NOT bundled)',
+            'license_notice':'RU CC0, ES CC BY 3.0: attribution required. Review voice MODEL_CARD.',
+            'voices':results,'users_windows_native_audio_verified':False,'release_accepted':False}
+          (root/'NOX_V296_VOICE_RECEIPT.json').write_text(json.dumps(receipt,ensure_ascii=False,indent=2)+'\n')
+          allfiles=[p for p in root.rglob('*') if p.is_file()]
+          (root/'SHA256SUMS.txt').write_text(''.join(hashlib.sha256(p.read_bytes()).hexdigest()+'  '+p.relative_to(root).as_posix()+'\n' for p in sorted(allfiles)))
+          out=pathlib.Path('NOX_V296_RU_ES_PIPER_REAL_MODELS.zip')
+          with zipfile.ZipFile(out,'w',zipfile.ZIP_STORED,allowZip64=True) as z:
+            for p in sorted(root.rglob('*')):
+              if p.is_file():z.write(p,p.relative_to(root).as_posix())
+          with zipfile.ZipFile(out) as z:
+            assert z.testzip() is None
+            for voice in results:
+              assert z.getinfo(voice['model']).file_size==voice['model_bytes']
+          print('NOX_V296_REAL_RU_ES_NEURAL_WAV_PASS',out.stat().st_size,receipt['upstream_revision'])
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NOX_V296_REAL_RU_ES_PIPER_MODELS_AND_WAV
+          path: NOX_V296_RU_ES_PIPER_REAL_MODELS.zip
+          compression-level: 0
+          retention-days: 14
+          if-no-files-found: error

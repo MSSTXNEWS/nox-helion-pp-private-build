@@ -1,0 +1,84 @@
+name: NOX V29.6 Verified Real RU ES Voice Split Delivery
+on:
+  push:
+    branches: [feature/nox-teacher-mycelium-20261112]
+    paths:
+      - '.github/workflows/nox-v296-voice-split-delivery.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  split-previously-verified-real-models:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: NOX_V296_REAL_RU_ES_PIPER_MODELS_AND_WAV
+          run-id: 43459333614
+          github-token: ${{ github.token }}
+          path: input
+      - name: Build two independent real per-language voice packs with exact SHA
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          mkdir -p out
+          python3 - <<'PY'
+          import zipfile,pathlib,json,hashlib
+          original=pathlib.Path('input/NOX_V296_RU_ES_PIPER_REAL_MODELS.zip')
+          assert original.is_file()
+          with zipfile.ZipFile(original) as z:
+            assert z.testzip() is None
+            manifest=json.loads(z.read('NOX_V296_VOICE_RECEIPT.json'))
+            assert manifest['schema']=='NOX_REAL_PIPER_RU_ES_V296-v1'
+            assert len(manifest['voices'])==2
+            report={'schema':'NOX-V296-VOICE-LICENSED-SPLIT-v1',
+              'original_bundle_sha256':hashlib.sha256(original.read_bytes()).hexdigest(),
+              'upstream_revision':manifest['upstream_revision'],'sources':[]}
+            for item in manifest['voices']:
+              lang=item['language']
+              assert lang in ('ru','es')
+              model=item['model'];model_prefix=model.removesuffix('.onnx')
+              files=[model,model_prefix+'.onnx.json',item['license_card'],'qa-voice-'+lang+'.wav',
+                     'NOX_V296_VOICE_RECEIPT.json']
+              archive=pathlib.Path('out/NOX_V296_REAL_'+lang.upper()+'_MODEL_AND_WAV.zip')
+              with zipfile.ZipFile(archive,'w',zipfile.ZIP_STORED) as out:
+                for name in files:
+                  data=z.read(name)
+                  out.writestr(name,data)
+              with zipfile.ZipFile(archive) as check:
+                assert check.testzip() is None
+                assert hashlib.sha256(check.read(model)).hexdigest()==item['model_sha256']
+                assert hashlib.sha256(check.read('qa-voice-'+lang+'.wav')).hexdigest()==item['wav_sha256']
+              assert archive.stat().st_size<100000000,(lang,archive.stat().st_size)
+              report['sources'].append({'language':lang,'file':archive.name,
+                'bytes':archive.stat().st_size,'sha256':hashlib.sha256(archive.read_bytes()).hexdigest(),
+                'model_sha256':item['model_sha256'],'wav_sha256':item['wav_sha256'],
+                'license':item['model_license']})
+            assert len(report['sources'])==2
+            pathlib.Path('out/NOX_V296_VOICE_SPLIT_INDEX.json').write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n')
+            print('NOX_V296_REAL_RU_ES_INDEPENDENT_PACKS_SHA_CRC_WAV_PASS',[(x['language'],x['bytes']) for x in report['sources']])
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NOX_V296_RU_REAL_NEURAL_VOICE
+          path: out/NOX_V296_REAL_RU_MODEL_AND_WAV.zip
+          compression-level: 0
+          retention-days: 14
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NOX_V296_ES_REAL_NEURAL_VOICE
+          path: out/NOX_V296_REAL_ES_MODEL_AND_WAV.zip
+          compression-level: 0
+          retention-days: 14
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NOX_V296_RU_ES_LICENSE_AND_SHA_INDEX
+          path: out/NOX_V296_VOICE_SPLIT_INDEX.json
+          compression-level: 0
+          retention-days: 14
+          if-no-files-found: error

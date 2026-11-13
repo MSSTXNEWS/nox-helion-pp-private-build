@@ -1,0 +1,79 @@
+{
+  "schema": "NOX-WEB-V29_2-PHYSICAL-STAGING-RECEIPT-v1",
+  "instructions_version": "0.0.6",
+  "generated_utc": "2026-11-12T23:18:51.928587+00:00",
+  "source": {
+    "v28_file": "NOX_HELION_WEB_V28_V27_PC_GENESIS_UNIFIED_SOURCE_20261113.zip",
+    "v28_sha256": "def872e6c81d407a57c96f1385438ee010c8cf7df89e0c74e5d61de2f9589905",
+    "v28_site_files": 1080
+  },
+  "candidate": {
+    "file": "NOX_HELION_WEB_V29_2_REAL_PC_API_ROUTES_20261113.zip",
+    "sha256": "3379770d33d56e501d267c2ca603d58bce0e301b2582b6585c1944d5f5ec57d0",
+    "bytes": 85217685,
+    "zip_entries": 1089,
+    "manifest_sha_pinned": 1085,
+    "zip_crc": "PASS"
+  },
+  "source_delta": {
+    "changed_original": [
+      "chat.html",
+      "memory.html",
+      "system.html",
+      "training.html"
+    ],
+    "added_files": [
+      "NOX_V29_UNIFIED_RECEIPT.json",
+      "SOURCE_MANIFEST_V29.json",
+      "nox-v29-pc-genesis-addons.css",
+      "nox-v29-pc-genesis-addons.mjs",
+      "qa/v29/test_v29_chromium_component.py",
+      "qa/v29/test_v29_pc_api_contract.cjs",
+      "qa/v29/test_v29_source.py",
+      "qa/v29/test_v29_static_routes.py",
+      "resonance.html"
+    ],
+    "unchanged_original_files": 1076,
+    "d02_sha256": "f3fc804d238146ffe42c50103d3e04c9736b8b587c6572987f59b61a6112eb17",
+    "original_d02_byte_identical": true
+  },
+  "endpoint_contract": {
+    "verified_against_original_pc25_python_source": [
+      "/api/nox/status",
+      "/api/nox/memory",
+      "/api/nox/history",
+      "/api/nox/creator",
+      "/api/nox/mood",
+      "/api/nox/pc-load",
+      "/api/nox/progress"
+    ],
+    "replaced_absent_paths": [
+      "/api/ui/memory/status",
+      "/api/ui/memory/dialogs/status"
+    ],
+    "node_contract_tests": "PASS 16 assertions",
+    "live_pc_api": "NOT_TESTED"
+  },
+  "source_qa": {
+    "active_html_pages": 38,
+    "missing_static_links": 0,
+    "python_unittest": "3/3 PASS",
+    "node_contract": "PASS",
+    "node_syntax": "PASS",
+    "static_http_routes": "17/17 HTTP 200"
+  },
+  "release_gate": {
+    "window_WPF_WebView2": "HOLD",
+    "Ollama_stream_and_STOP": "HOLD",
+    "S03_restart": "HOLD",
+    "GPU_SAFE70": "HOLD",
+    "own_weight_delta": "HOLD",
+    "independent_E07": "HOLD",
+    "production_modified": false,
+    "accepted": false
+  },
+  "original_drive": {
+    "v28": "https://drive.google.com/file/d/1YBOJYNzvsjnhzg5TAZj7iL2h543NgOe0/view"
+  },
+  "github": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/251"
+}

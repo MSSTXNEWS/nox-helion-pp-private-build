@@ -1,0 +1,178 @@
+name: NOX V29 Oversized Pinned Source Recovery
+on:
+  push:
+    branches: [feature/nox-teacher-mycelium-20261112]
+    paths:
+      - .github/workflows/nox-v29-oversized-source.yml
+      - nox_runpod/teacher_mesh/stages/download_v29_oversized_only.py
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source-recovery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        group: [flashinfer,tau2]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Acquire only last two big pinned public research repos
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          python3 nox_runpod/teacher_mesh/stages/download_v29_oversized_only.py --group ${{ matrix.group }} --out source
+      - name: Independently verify and split actual source tar
+        run: |
+          set -Eeuo pipefail
+          mkdir -p transfer/parts
+          tar --sort=name -cf transfer/SOURCE_SNAPSHOT.tar -C source .
+          python3 - <<'PY'
+          import pathlib,json,hashlib
+          root=pathlib.Path('source')
+          info=json.loads((root/'UPSTREAM_PROVENANCE.json').read_text())
+          assert info['verified_downloads']==1, 'FULL_SOURCE_REPO_NOT_VERIFIED'
+          p=pathlib.Path('transfer/SOURCE_SNAPSHOT.tar')
+          print('SOURCE_VERIFIED',info['sources'][0]['repo'],info['sources'][0]['commit_sha'],p.stat().st_size)
+          PY
+          split -b 45m -d -a 2 transfer/SOURCE_SNAPSHOT.tar transfer/parts/piece
+          python3 - <<'PY'
+          import pathlib,hashlib,json
+          root=pathlib.Path('transfer')
+          archive=root/'SOURCE_SNAPSHOT.tar'
+          parts=[{'name':p.name,'bytes':p.stat().st_size,
+                  'sha256':hashlib.sha256(p.read_bytes()).hexdigest()}
+                 for p in sorted((root/'parts').glob('piece*'))]
+          assert 1<=len(parts)<=12,(len(parts), 'NOX_SOURCE_TOO_LARGE')
+          index={'schema':'nox-v29-oversized-pinned-source-v1',
+                 'group':'${{ matrix.group }}',
+                 'archive_name':'SOURCE_SNAPSHOT.tar',
+                 'archive_sha256':hashlib.sha256(archive.read_bytes()).hexdigest(),
+                 'archive_bytes':archive.stat().st_size,'parts':parts,
+                 'source_only':True,'training_licensing_review_required':True}
+          (root/'PARTS_INDEX.json').write_text(json.dumps(index,indent=2)+'\n')
+          print('SOURCE_PARTS_HASH_VERIFIED',index['group'],len(parts))
+          PY
+          rm transfer/SOURCE_SNAPSHOT.tar
+      - name: Upload source provenance and digest index
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NOX_V29_LARGE_${{ matrix.group }}_INDEX
+          path: |
+            transfer/PARTS_INDEX.json
+            source/UPSTREAM_PROVENANCE.json
+            source/SHA256SUMS.txt
+          retention-days: 10
+          compression-level: 0
+          if-no-files-found: warn
+      - name: Upload verified source part 00
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: NOX_V29_LARGE_${{ matrix.group }}_PART_00
+          path: transfer/parts/piece00
+          retention-days: 10
+          compression-level: 0
+          if-no-files-found: ignore
+      - name: Upload verified source part 01
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: NOX_V29_LARGE_${{ matrix.group }}_PART_01
+          path: transfer/parts/piece01
+          retention-days: 10
+          compression-level: 0
+          if-no-files-found: ignore
+      - name: Upload verified source part 02
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: NOX_V29_LARGE_${{ matrix.group }}_PART_02
+          path: transfer/parts/piece02
+          retention-days: 10
+          compression-level: 0
+          if-no-files-found: ignore
+      - name: Upload verified source part 03
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: NOX_V29_LARGE_${{ matrix.group }}_PART_03
+          path: transfer/parts/piece03
+          retention-days: 10
+          compression-level: 0
+          if-no-files-found: ignore
+      - name: Upload verified source part 04
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: NOX_V29_LARGE_${{ matrix.group }}_PART_04
+          path: transfer/parts/piece04
+          retention-days: 10
+          compression-level: 0
+          if-no-files-found: ignore
+      - name: Upload verified source part 05
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: NOX_V29_LARGE_${{ matrix.group }}_PART_05
+          path: transfer/parts/piece05
+          retention-days: 10
+          compression-level: 0
+          if-no-files-found: ignore
+      - name: Upload verified source part 06
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: NOX_V29_LARGE_${{ matrix.group }}_PART_06
+          path: transfer/parts/piece06
+          retention-days: 10
+          compression-level: 0
+          if-no-files-found: ignore
+      - name: Upload verified source part 07
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: NOX_V29_LARGE_${{ matrix.group }}_PART_07
+          path: transfer/parts/piece07
+          retention-days: 10
+          compression-level: 0
+          if-no-files-found: ignore
+      - name: Upload verified source part 08
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: NOX_V29_LARGE_${{ matrix.group }}_PART_08
+          path: transfer/parts/piece08
+          retention-days: 10
+          compression-level: 0
+          if-no-files-found: ignore
+      - name: Upload verified source part 09
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: NOX_V29_LARGE_${{ matrix.group }}_PART_09
+          path: transfer/parts/piece09
+          retention-days: 10
+          compression-level: 0
+          if-no-files-found: ignore
+      - name: Upload verified source part 10
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: NOX_V29_LARGE_${{ matrix.group }}_PART_10
+          path: transfer/parts/piece10
+          retention-days: 10
+          compression-level: 0
+          if-no-files-found: ignore
+      - name: Upload verified source part 11
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: NOX_V29_LARGE_${{ matrix.group }}_PART_11
+          path: transfer/parts/piece11
+          retention-days: 10
+          compression-level: 0
+          if-no-files-found: ignore

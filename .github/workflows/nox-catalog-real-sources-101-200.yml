@@ -1,0 +1,147 @@
+name: NOX Catalog Real Upstream Sources 101-200
+on:
+  push:
+    branches:
+      - feature/nox-teacher-mycelium-20261112
+    paths:
+      - '.github/workflows/nox-catalog-real-sources-101-200.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/nox-catalog-real-sources-101-200.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  fetch-exact-source-archives:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {start: 101, end: 110}
+          - {start: 111, end: 120}
+          - {start: 121, end: 130}
+          - {start: 131, end: 140}
+          - {start: 141, end: 150}
+          - {start: 151, end: 160}
+          - {start: 161, end: 170}
+          - {start: 171, end: 180}
+          - {start: 181, end: 190}
+          - {start: 191, end: 200}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/nox-teacher-mycelium-20261112
+      - name: Fetch real upstream archives, pin SHA and verify SHA256
+        id: download
+        shell: bash
+        env:
+          START: ${{ matrix.start }}
+          END: ${{ matrix.end }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -Eeuo pipefail
+          python3 - <<'PY'
+          import os, json, hashlib, urllib.request, urllib.parse, zipfile, tarfile, time, re, sys
+          from pathlib import Path
+          ROOT=Path(f"NOX_MASTER_CATALOG_{os.environ['START']}_{os.environ['END']}_REAL_SOURCES")
+          SRC=ROOT/"sources"
+          SRC.mkdir(parents=True,exist_ok=True)
+          original=json.loads(Path("nox_runpod/teacher_mesh/NOX_MASTER_CATALOG_200.json").read_text(encoding="utf-8"))
+          rows=[r for r in original["entries"] if int(os.environ["START"])<=r["number"]<=int(os.environ["END"])]
+          print("NOX_DEBUG_CATALOG",len(original["entries"]),"RANGE",os.environ["START"],os.environ["END"],"ROWS",len(rows),flush=True)
+          assert len(rows)==int(os.environ["END"])-int(os.environ["START"])+1, "Invalid range length"
+          assert len({r["url"] for r in rows})==len(rows)
+          token=os.environ.get("GH_TOKEN","")
+          def request(url, auth=False):
+              headers={"User-Agent":"NOX-Catalog-Snapshot/1.0 (CI source archive verification)","Accept":"application/vnd.github+json"}
+              if auth and token: headers["Authorization"]="Bearer "+token
+              return urllib.request.Request(url,headers=headers)
+          def api(url):
+              with urllib.request.urlopen(request(url,auth=True),timeout=30) as r:
+                  return json.load(r)
+          def fetch(url, dest, limit=220_000_000):
+              temp=dest.with_suffix(dest.suffix+".partial")
+              h=hashlib.sha256()
+              total=0
+              try:
+                  with urllib.request.urlopen(request(url),timeout=120) as response, open(temp,"wb") as f:
+                      while True:
+                          chunk=response.read(1024*1024)
+                          if not chunk: break
+                          total+=len(chunk)
+                          if total>limit: raise RuntimeError("Upstream archive exceeds safe size cap")
+                          f.write(chunk);h.update(chunk)
+                  if total<100: raise RuntimeError("Truncated upstream archive")
+                  if zipfile.is_zipfile(temp):
+                      with zipfile.ZipFile(temp) as z:
+                          assert z.namelist(), "Empty zip"
+                          bad=z.testzip()
+                          if bad: raise RuntimeError("Corrupt ZIP member "+bad)
+                  elif tarfile.is_tarfile(temp):
+                      with tarfile.open(temp,"r:*") as t:
+                          if not t.getmembers(): raise RuntimeError("Empty tar")
+                  else: raise RuntimeError("Downloaded content is not an archive")
+                  os.replace(temp,dest)
+                  return {"bytes":total,"sha256":h.hexdigest()}
+              except:
+                  temp.unlink(missing_ok=True)
+                  raise
+          results=[]
+          for entry in rows:
+              no=entry["number"]; name=entry["name"]; url=entry["url"]
+              row={"number":no,"name":name,"source_url":url,"status":"FAILED"}
+              try:
+                  u=urllib.parse.urlparse(url)
+                  if u.hostname=="github.com":
+                      p=u.path.strip("/").split("/")
+                      if len(p)<2: raise ValueError("Not a GitHub repository")
+                      owner,repo=p[0],p[1].removesuffix(".git")
+                      metadata=api(f"https://api.github.com/repos/{owner}/{repo}")
+                      branch=metadata["default_branch"]
+                      commit=api(f"https://api.github.com/repos/{owner}/{repo}/commits/{urllib.parse.quote(branch,safe='')}")
+                      sha=commit["sha"]; archive=f"https://codeload.github.com/{owner}/{repo}/zip/{sha}"
+                      path=SRC/f"{no:03d}_{owner}_{repo}_{sha[:12]}.zip"
+                      row.update({"revision":sha,"default_branch":branch,"archive_url":archive})
+                  elif u.hostname=="pypi.org" and no==100:
+                      pkg=api("https://pypi.org/pypi/nvidia-ml-py/json")
+                      candidates=[x for x in pkg["urls"] if x["packagetype"]=="sdist"]
+                      if not candidates: candidates=[x for x in pkg["urls"] if x["packagetype"]=="bdist_wheel"]
+                      if not candidates: raise RuntimeError("No PyPI artifact")
+                      art=candidates[0];archive=art["url"]
+                      path=SRC/f"{no:03d}_{art['filename']}"
+                      row.update({"version":pkg["info"]["version"],"archive_url":archive,"pypi_expected_sha256":art["digests"]["sha256"]})
+                  else: raise RuntimeError("Unsupported upstream source")
+                  last=None
+                  for attempt in range(3):
+                      try:
+                          v=fetch(archive,path)
+                          if "pypi_expected_sha256" in row and v["sha256"]!=row["pypi_expected_sha256"]:
+                              path.unlink(missing_ok=True);raise RuntimeError("PyPI SHA256 mismatch")
+                          row.update(v);row["status"]="DOWNLOADED_VERIFIED";row["file"]=str(path.relative_to(ROOT))
+                          last=None;break
+                      except Exception as exc:
+                          last=exc;time.sleep(2*(attempt+1))
+                  if last: raise last
+              except Exception as exc:
+                  row["error"]=type(exc).__name__+": "+str(exc)[:400]
+              results.append(row)
+              print(f"NOX_SOURCE_{no:03d} {row['status']} {row.get('bytes',0)} {row.get('error','')}",flush=True)
+          meta={"catalog_source":"https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/251","scope":f"{os.environ['START']}-{os.environ['END']}","expected":len(rows),"verified":sum(x["status"]=="DOWNLOADED_VERIFIED" for x in results),"results":results,"policy":"NO-INSTALL; do not alter production or training; audit licenses before activation"}
+          (ROOT/"RESULTS.json").write_text(json.dumps(meta,indent=2,ensure_ascii=False)+"\n",encoding="utf-8")
+          (ROOT/"SHA256SUMS.txt").write_text("".join(f"{r['sha256']}  {r['file']}\n" for r in results if r["status"]=="DOWNLOADED_VERIFIED"),encoding="utf-8")
+          (ROOT/"README.txt").write_text("REAL upstream source snapshots. Original catalog PR #251. See RESULTS.json for statuses, upstream pinned commits and SHA256SUMS.txt. Files are NOT installed, executed, or integrated.\n",encoding="utf-8")
+          print("NOX_CATALOG_SUMMARY",meta["verified"],"/",meta["expected"])
+          if meta["verified"]!=meta["expected"]: print("NOX_PARTIAL_SOURCE_ARCHIVE: inspect RESULTS.json; no fake PASS",flush=True)
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NOX_MASTER_CATALOG_${{ matrix.start }}_${{ matrix.end }}_REAL_SOURCES
+          path: NOX_MASTER_CATALOG_${{ matrix.start }}_${{ matrix.end }}_REAL_SOURCES/
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0

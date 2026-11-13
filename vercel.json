@@ -1,0 +1,7 @@
+{
+  "version": 2,
+  "framework": null,
+  "installCommand": "echo NOX_V29_REUSE_VERIFIED_SOURCES",
+  "buildCommand": "node nox_runpod/web_wow_merge/v29/build_v29_vercel_source_lock.mjs",
+  "outputDirectory": "web_v29_preview_dist"
+}

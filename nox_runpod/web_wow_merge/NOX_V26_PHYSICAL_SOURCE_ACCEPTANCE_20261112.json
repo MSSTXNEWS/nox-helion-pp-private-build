@@ -1,0 +1,59 @@
+{
+  "schema": "NOX-HELiON-WEB-WOW-V26-PHYSICAL-SOURCE-ACCEPTANCE-V1",
+  "instructions_version": "0.0.6",
+  "date": "2026-11-12",
+  "artifact_kind": "ISOLATED_SOURCE_STAGING_ONLY",
+  "project": "nox-helion-real-home-preview",
+  "vercel_sandbox": "nox-web-wow-merge-20261112",
+  "source": {
+    "file": "NOX_WEB_WOW_V25_PC_UNIFIED_SOURCE_CANDIDATE.zip",
+    "relative_path": "/vercel/nox-merge/output_v3/NOX_WEB_WOW_V25_PC_UNIFIED_SOURCE_CANDIDATE.zip",
+    "bytes": 76185778,
+    "sha256": "9556b5be3e8e9ce24eee7c6ae77a62ab8c8d58fe145568a35981565e14240145",
+    "zip_members": 1057
+  },
+  "candidate": {
+    "file": "NOX_WEB_WOW_V25_GENESIS_S03_SOURCE_CANDIDATE.zip",
+    "relative_path": "/vercel/nox-merge/output_v4_genesis/NOX_WEB_WOW_V25_GENESIS_S03_SOURCE_CANDIDATE.zip",
+    "bytes": 76189556,
+    "sha256": "829173a42a2ba42586328c6c810a5334f2332e1b6a856aec96088f5053cf1ca9",
+    "zip_members": 1059,
+    "site_files": 1046
+  },
+  "changed_original_entries": [
+    "site/pc/chat.html",
+    "site/pc/memory.html",
+    "site/pc/resonance.html",
+    "site/training.html"
+  ],
+  "added_entries": [
+    "NOX_GENESIS_STAGING_RECEIPT.json",
+    "site/nox_genesis_live_panel.mjs"
+  ],
+  "integrity": {
+    "source_zip_crc": "PASS",
+    "candidate_zip_crc": "PASS",
+    "unchanged_original_files": "1053/1053 BYTE_IDENTICAL",
+    "original_d02_sha256": "f3fc804d238146ffe42c50103d3e04c9736b8b587c6572987f59b61a6112eb17",
+    "staged_d02_sha256": "f3fc804d238146ffe42c50103d3e04c9736b8b587c6572987f59b61a6112eb17",
+    "local_http_routes": "11/11 HTTP_200"
+  },
+  "gates": {
+    "source_verified": true,
+    "static_local_http_verified": true,
+    "physical_windows_onehost": false,
+    "authenticated_genesis_endpoint": false,
+    "s03_restart": false,
+    "streaming_stop": false,
+    "voice_ru_es": false,
+    "gpu_training": false,
+    "independent_windows_e07": false,
+    "production_installed": false,
+    "release_accepted": false
+  },
+  "retrieval_command": "vercel --scope msttx sandbox cp \"nox-web-wow-merge-20261112:/vercel/nox-merge/output_v4_genesis/NOX_WEB_WOW_V25_GENESIS_S03_SOURCE_CANDIDATE.zip\" \"C:\\NOX\\incoming\\NOX_WEB_WOW_V25_GENESIS_S03_SOURCE_CANDIDATE.zip\"",
+  "sources": {
+    "repo": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/251",
+    "notion": "https://app.notion.com/p/40cacc184a9f8170bcabca204c7d4c33"
+  }
+}

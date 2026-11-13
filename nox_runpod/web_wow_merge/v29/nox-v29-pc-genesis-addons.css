@@ -1,0 +1,13 @@
+/* NOX V29 PC/GENESIS one-surface addon. Approved main HOME and original D02 are untouched. */
+.nox-v29-addons{position:relative;z-index:11;width:min(100%,1010px);box-sizing:border-box;margin:9px auto 13px;padding:13px 16px;border-radius:14px;border:1px solid #9b794b77;background:linear-gradient(145deg,#080b11ef,#25190eeb);box-shadow:inset 0 1px #ffffff16,0 12px 38px #0008;color:#f1d6ab}
+.nox-v29-heading{font:650 11px/1.35 system-ui,sans-serif;letter-spacing:.12em;color:#edca9b}
+.nox-v29-tip{font:400 12px/1.45 system-ui,sans-serif;color:#d4c4b5;margin:7px 0 10px}
+.nox-v29-actions{display:flex;align-items:center;flex-wrap:wrap;gap:9px}
+.nox-v29-button{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:9px 13px;border-radius:11px;border:1px solid #ba986982;color:#f7dca7;background:linear-gradient(155deg,#363029fa,#10151bfa);box-shadow:inset 0 1px #ffffff23;cursor:pointer;font:600 12px/1.3 system-ui,sans-serif}
+.nox-v29-button:hover{filter:brightness(1.15);box-shadow:inset 0 1px #ffffff2b,0 0 14px #c4924d42}
+.nox-v29-button:focus-visible{outline:2px solid #f0d299;outline-offset:2px}
+.nox-v29-output{margin-top:12px;padding:12px;border-radius:10px;background:#05070ddc;border:1px solid #aa8a634f;color:#efdfca}
+.nox-v29-output[hidden]{display:none}
+.nox-v29-result{white-space:pre-wrap;overflow-wrap:anywhere;color:#f2dcc1;font:12px/1.65 ui-monospace,Consolas,monospace;margin:0 0 9px}
+@media(max-width:600px){.nox-v29-addons{margin:7px 5px;width:calc(100% - 10px);padding:10px 9px}.nox-v29-actions>*{flex:1 1 145px;min-height:44px}}
+@media(prefers-reduced-motion:reduce){.nox-v29-addons *{animation:none!important;transition:none!important;scroll-behavior:auto!important}}

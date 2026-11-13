@@ -1,0 +1,526 @@
+{
+  "schema": "nox-v28-skill-and-model-templates-v1",
+  "version": "V28",
+  "date": "2026-11-12",
+  "templates": [
+    {
+      "id": "T01",
+      "key": "FAST_ANSWER",
+      "lane": "CHAT",
+      "backend_source": "NOX_STUDENT",
+      "inputs": "User message and verified recent S03",
+      "outputs": "Streaming NOX answer with completion receipt",
+      "acceptance_metric": "p95_ttft_ms",
+      "gate": "chat_priority",
+      "status": "BLUEPRINT_SOURCE_ONLY_NOT_LIVE_BOUND",
+      "params": {
+        "student_model": "ONE_NOX_SHA_ONLY",
+        "teacher_count_max": 0,
+        "memory": "S03_ONLY",
+        "stop": "NATIVE_STOP_REQUIRED",
+        "owner_scope": "SIGNED_POLICY_REQUIRED"
+      },
+      "deliverable": "SOURCE_CANDIDATE_OR_TRUSTED_NATIVE_RECEIPT"
+    },
+    {
+      "id": "T02",
+      "key": "DEEP_REASONING",
+      "lane": "REASONING",
+      "backend_source": "NOX_STUDENT",
+      "inputs": "Question plus vetted evidence",
+      "outputs": "Structured conclusions and uncertainty",
+      "acceptance_metric": "reasoning_accuracy",
+      "gate": "independent_source_check",
+      "status": "BLUEPRINT_SOURCE_ONLY_NOT_LIVE_BOUND",
+      "params": {
+        "student_model": "ONE_NOX_SHA_ONLY",
+        "teacher_count_max": 0,
+        "memory": "S03_ONLY",
+        "stop": "NATIVE_STOP_REQUIRED",
+        "owner_scope": "SIGNED_POLICY_REQUIRED"
+      },
+      "deliverable": "SOURCE_CANDIDATE_OR_TRUSTED_NATIVE_RECEIPT"
+    },
+    {
+      "id": "T03",
+      "key": "RAG_CITED",
+      "lane": "MEMORY",
+      "backend_source": "S03",
+      "inputs": "Scoped source query and permissions",
+      "outputs": "Cited factual answer with provenance",
+      "acceptance_metric": "citation_precision",
+      "gate": "scope_ttl_revoke",
+      "status": "BLUEPRINT_SOURCE_ONLY_NOT_LIVE_BOUND",
+      "params": {
+        "student_model": "ONE_NOX_SHA_ONLY",
+        "teacher_count_max": 0,
+        "memory": "S03_ONLY",
+        "stop": "NATIVE_STOP_REQUIRED",
+        "owner_scope": "SIGNED_POLICY_REQUIRED"
+      },
+      "deliverable": "SOURCE_CANDIDATE_OR_TRUSTED_NATIVE_RECEIPT"
+    },
+    {
+      "id": "T04",
+      "key": "CHAT_MEMORY",
+      "lane": "MEMORY",
+      "backend_source": "S03",
+      "inputs": "Previous approved conversation events",
+      "outputs": "Verified cross-session factual recall",
+      "acceptance_metric": "longmem_accuracy",
+      "gate": "privacy_scope",
+      "status": "BLUEPRINT_SOURCE_ONLY_NOT_LIVE_BOUND",
+      "params": {
+        "student_model": "ONE_NOX_SHA_ONLY",
+        "teacher_count_max": 0,
+        "memory": "S03_ONLY",
+        "stop": "NATIVE_STOP_REQUIRED",
+        "owner_scope": "SIGNED_POLICY_REQUIRED"
+      },
+      "deliverable": "SOURCE_CANDIDATE_OR_TRUSTED_NATIVE_RECEIPT"
+    },
+    {
+      "id": "T05",
+      "key": "AUTOBIOGRAPHY",
+      "lane": "SOUL",
+      "backend_source": "S03_GENESIS_LEDGER",
+      "inputs": "Verified optimizer and birth receipts",
+      "outputs": "NOX narrative with exact event identifiers",
+      "acceptance_metric": "self_history_consistency",
+      "gate": "no_fake_birth",
+      "status": "BLUEPRINT_SOURCE_ONLY_NOT_LIVE_BOUND",
+      "params": {
+        "student_model": "ONE_NOX_SHA_ONLY",
+        "teacher_count_max": 0,
+        "memory": "S03_ONLY",
+        "stop": "NATIVE_STOP_REQUIRED",
+        "owner_scope": "SIGNED_POLICY_REQUIRED"
+      },
+      "deliverable": "SOURCE_CANDIDATE_OR_TRUSTED_NATIVE_RECEIPT"
+    },
+    {
+      "id": "T06",
+      "key": "TEACHER_DUEL",
+      "lane": "REASONING",
+      "backend_source": "LOCAL_FROZEN_TEACHERS",
+      "inputs": "Owner-pinned VM candidates and tested quality",
+      "outputs": "Evidence for NOX synthesis not a substituted reply",
+      "acceptance_metric": "advisor_incremental_gain",
+      "gate": "no_private_leak",
+      "status": "BLUEPRINT_SOURCE_ONLY_NOT_LIVE_BOUND",
+      "params": {
+        "student_model": "ONE_NOX_SHA_ONLY",
+        "teacher_count_max": 3,
+        "memory": "S03_ONLY",
+        "stop": "NATIVE_STOP_REQUIRED",
+        "owner_scope": "SIGNED_POLICY_REQUIRED"
+      },
+      "deliverable": "SOURCE_CANDIDATE_OR_TRUSTED_NATIVE_RECEIPT"
+    },
+    {
+      "id": "T07",
+      "key": "BENCH_CANDIDATE",
+      "lane": "FORGE",
+      "backend_source": "INDEPENDENT_EVAL",
+      "inputs": "Same-harness heldout baseline candidate",
+      "outputs": "Result and anti-forgetting delta",
+      "acceptance_metric": "same_harness_gain",
+      "gate": "source_separated",
+      "status": "BLUEPRINT_SOURCE_ONLY_NOT_LIVE_BOUND",
+      "params": {
+        "student_model": "ONE_NOX_SHA_ONLY",
+        "teacher_count_max": 0,
+        "memory": "S03_ONLY",
+        "stop": "NATIVE_STOP_REQUIRED",
+        "owner_scope": "SIGNED_POLICY_REQUIRED"
+      },
+      "deliverable": "SOURCE_CANDIDATE_OR_TRUSTED_NATIVE_RECEIPT"
+    },
+    {
+      "id": "T08",
+      "key": "SKILL_CAPSULE",
+      "lane": "MEMORY",
+      "backend_source": "S03_SKILL_DNA",
+      "inputs": "Verified task test code rights and source",
+      "outputs": "Source-anchored reusable skill entry",
+      "acceptance_metric": "skill_reuse_success",
+      "gate": "owner_approved_write",
+      "status": "BLUEPRINT_SOURCE_ONLY_NOT_LIVE_BOUND",
+      "params": {
+        "student_model": "ONE_NOX_SHA_ONLY",
+        "teacher_count_max": 0,
+        "memory": "S03_ONLY",
+        "stop": "NATIVE_STOP_REQUIRED",
+        "owner_scope": "SIGNED_POLICY_REQUIRED"
+      },
+      "deliverable": "SOURCE_CANDIDATE_OR_TRUSTED_NATIVE_RECEIPT"
+    },
+    {
+      "id": "T09",
+      "key": "SFT_CORPUS",
+      "lane": "FORGE",
+      "backend_source": "AUTHORIZED_TEACHER_DATA",
+      "inputs": "Vetted teacher examples and holdout",
+      "outputs": "Versioned response-only corpus proposal",
+      "acceptance_metric": "approved_examples_ratio",
+      "gate": "train_rights_required",
+      "status": "BLUEPRINT_SOURCE_ONLY_NOT_LIVE_BOUND",
+      "params": {
+        "student_model": "ONE_NOX_SHA_ONLY",
+        "teacher_count_max": 0,
+        "memory": "S03_ONLY",
+        "stop": "NATIVE_STOP_REQUIRED",
+        "owner_scope": "SIGNED_POLICY_REQUIRED"
+      },
+      "deliverable": "SOURCE_CANDIDATE_OR_TRUSTED_NATIVE_RECEIPT"
+    },
+    {
+      "id": "T10",
+      "key": "DPO_PAIRS",
+      "lane": "FORGE",
+      "backend_source": "VERIFIED_PREFERENCE_JUDGE",
+      "inputs": "Approved chosen-rejected examples",
+      "outputs": "Preference corpus proposal without immediate GPU job",
+      "acceptance_metric": "preference_quality",
+      "gate": "judge_independence",
+      "status": "BLUEPRINT_SOURCE_ONLY_NOT_LIVE_BOUND",
+      "params": {
+        "student_model": "ONE_NOX_SHA_ONLY",
+        "teacher_count_max": 0,
+        "memory": "S03_ONLY",
+        "stop": "NATIVE_STOP_REQUIRED",
+        "owner_scope": "SIGNED_POLICY_REQUIRED"
+      },
+      "deliverable": "SOURCE_CANDIDATE_OR_TRUSTED_NATIVE_RECEIPT"
+    },
+    {
+      "id": "T11",
+      "key": "MODEL_STAGE",
+      "lane": "TOOLS",
+      "backend_source": "MODEL_REGISTRY",
+      "inputs": "Pinned source and signed owner grants",
+      "outputs": "SHA-verified staging receipt",
+      "acceptance_metric": "download_hash_pass",
+      "gate": "no_auto_promote",
+      "status": "BLUEPRINT_SOURCE_ONLY_NOT_LIVE_BOUND",
+      "params": {
+        "student_model": "ONE_NOX_SHA_ONLY",
+        "teacher_count_max": 0,
+        "memory": "S03_ONLY",
+        "stop": "NATIVE_STOP_REQUIRED",
+        "owner_scope": "SIGNED_POLICY_REQUIRED"
+      },
+      "deliverable": "SOURCE_CANDIDATE_OR_TRUSTED_NATIVE_RECEIPT"
+    },
+    {
+      "id": "T12",
+      "key": "GPU_TRAIN",
+      "lane": "FORGE",
+      "backend_source": "EXISTING_TRAINER",
+      "inputs": "Vetted dataset optimizer budget SAFE70",
+      "outputs": "Real job ACK, checkpoint pending",
+      "acceptance_metric": "optimizer_receipts_verified",
+      "gate": "stop_sensor_disk_guard",
+      "status": "BLUEPRINT_SOURCE_ONLY_NOT_LIVE_BOUND",
+      "params": {
+        "student_model": "ONE_NOX_SHA_ONLY",
+        "teacher_count_max": 0,
+        "memory": "S03_ONLY",
+        "stop": "NATIVE_STOP_REQUIRED",
+        "owner_scope": "SIGNED_POLICY_REQUIRED"
+      },
+      "deliverable": "SOURCE_CANDIDATE_OR_TRUSTED_NATIVE_RECEIPT"
+    },
+    {
+      "id": "T13",
+      "key": "ADAPTER_MERGE",
+      "lane": "FORGE",
+      "backend_source": "SINGLE_NOX_STUDENT",
+      "inputs": "Verified update trainable base and owner grant",
+      "outputs": "Single student model candidate SHA",
+      "acceptance_metric": "reload_and_benchmark_parity",
+      "gate": "rollback_and_replay",
+      "status": "BLUEPRINT_SOURCE_ONLY_NOT_LIVE_BOUND",
+      "params": {
+        "student_model": "ONE_NOX_SHA_ONLY",
+        "teacher_count_max": 0,
+        "memory": "S03_ONLY",
+        "stop": "NATIVE_STOP_REQUIRED",
+        "owner_scope": "SIGNED_POLICY_REQUIRED"
+      },
+      "deliverable": "SOURCE_CANDIDATE_OR_TRUSTED_NATIVE_RECEIPT"
+    },
+    {
+      "id": "T14",
+      "key": "SLEEP_REPLAY",
+      "lane": "MEMORY",
+      "backend_source": "S03",
+      "inputs": "Approved bounded idle episodes",
+      "outputs": "Candidate corrections and training hypotheses",
+      "acceptance_metric": "verified_idle_insights",
+      "gate": "never_claim_neural_sleep",
+      "status": "BLUEPRINT_SOURCE_ONLY_NOT_LIVE_BOUND",
+      "params": {
+        "student_model": "ONE_NOX_SHA_ONLY",
+        "teacher_count_max": 0,
+        "memory": "S03_ONLY",
+        "stop": "NATIVE_STOP_REQUIRED",
+        "owner_scope": "SIGNED_POLICY_REQUIRED"
+      },
+      "deliverable": "SOURCE_CANDIDATE_OR_TRUSTED_NATIVE_RECEIPT"
+    },
+    {
+      "id": "T15",
+      "key": "EMOTION_RU_ES",
+      "lane": "SOUL",
+      "backend_source": "RUNTIME_CLASSIFIER",
+      "inputs": "User language and bounded tone classification",
+      "outputs": "Natural calibrated voice and text tone",
+      "acceptance_metric": "human_rated_empathy",
+      "gate": "no_claim_of_feelings",
+      "status": "BLUEPRINT_SOURCE_ONLY_NOT_LIVE_BOUND",
+      "params": {
+        "student_model": "ONE_NOX_SHA_ONLY",
+        "teacher_count_max": 0,
+        "memory": "S03_ONLY",
+        "stop": "NATIVE_STOP_REQUIRED",
+        "owner_scope": "SIGNED_POLICY_REQUIRED"
+      },
+      "deliverable": "SOURCE_CANDIDATE_OR_TRUSTED_NATIVE_RECEIPT"
+    },
+    {
+      "id": "T16",
+      "key": "VISION_AGENT",
+      "lane": "TOOLS",
+      "backend_source": "NOX_MULTIMODAL",
+      "inputs": "Owner-authorized local image and task",
+      "outputs": "Grounded visual interpretation by NOX",
+      "acceptance_metric": "visual_qa_accuracy",
+      "gate": "no_unverified_activation",
+      "status": "BLUEPRINT_SOURCE_ONLY_NOT_LIVE_BOUND",
+      "params": {
+        "student_model": "ONE_NOX_SHA_ONLY",
+        "teacher_count_max": 0,
+        "memory": "S03_ONLY",
+        "stop": "NATIVE_STOP_REQUIRED",
+        "owner_scope": "SIGNED_POLICY_REQUIRED"
+      },
+      "deliverable": "SOURCE_CANDIDATE_OR_TRUSTED_NATIVE_RECEIPT"
+    },
+    {
+      "id": "T17",
+      "key": "BROWSER_SANDBOX",
+      "lane": "TOOLS",
+      "backend_source": "APPROVED_BROWSER",
+      "inputs": "Native consent and isolated window",
+      "outputs": "Verified task and screenshot/test receipt",
+      "acceptance_metric": "sandbox_task_success",
+      "gate": "explicit_grant",
+      "status": "BLUEPRINT_SOURCE_ONLY_NOT_LIVE_BOUND",
+      "params": {
+        "student_model": "ONE_NOX_SHA_ONLY",
+        "teacher_count_max": 0,
+        "memory": "S03_ONLY",
+        "stop": "NATIVE_STOP_REQUIRED",
+        "owner_scope": "SIGNED_POLICY_REQUIRED"
+      },
+      "deliverable": "SOURCE_CANDIDATE_OR_TRUSTED_NATIVE_RECEIPT"
+    },
+    {
+      "id": "T18",
+      "key": "VOICE_DUPLEX",
+      "lane": "SOUL",
+      "backend_source": "LOCAL_ASR_TTS",
+      "inputs": "RU or ES turn with S03 context",
+      "outputs": "Consistent low-latency spoken answer",
+      "acceptance_metric": "voice_turn_latency",
+      "gate": "no_background_private_upload",
+      "status": "BLUEPRINT_SOURCE_ONLY_NOT_LIVE_BOUND",
+      "params": {
+        "student_model": "ONE_NOX_SHA_ONLY",
+        "teacher_count_max": 0,
+        "memory": "S03_ONLY",
+        "stop": "NATIVE_STOP_REQUIRED",
+        "owner_scope": "SIGNED_POLICY_REQUIRED"
+      },
+      "deliverable": "SOURCE_CANDIDATE_OR_TRUSTED_NATIVE_RECEIPT"
+    },
+    {
+      "id": "T19",
+      "key": "AUTO_WORMS",
+      "lane": "TOOLS",
+      "backend_source": "EXISTING_WORM_SWARM",
+      "inputs": "Signed policy gaps and source head",
+      "outputs": "Deduplicated virtual worm tasks",
+      "acceptance_metric": "useful_findings_per_tick",
+      "gate": "stop_quota_no_new_daemon",
+      "status": "BLUEPRINT_SOURCE_ONLY_NOT_LIVE_BOUND",
+      "params": {
+        "student_model": "ONE_NOX_SHA_ONLY",
+        "teacher_count_max": 0,
+        "memory": "S03_ONLY",
+        "stop": "NATIVE_STOP_REQUIRED",
+        "owner_scope": "SIGNED_POLICY_REQUIRED"
+      },
+      "deliverable": "SOURCE_CANDIDATE_OR_TRUSTED_NATIVE_RECEIPT"
+    },
+    {
+      "id": "T20",
+      "key": "SCIENCE_LAB",
+      "lane": "REASONING",
+      "backend_source": "SANDBOX_TESTS",
+      "inputs": "Proposed hypothesis and tools",
+      "outputs": "Measured experiment outcome",
+      "acceptance_metric": "hypothesis_reproducibility",
+      "gate": "no_live_sys_write",
+      "status": "BLUEPRINT_SOURCE_ONLY_NOT_LIVE_BOUND",
+      "params": {
+        "student_model": "ONE_NOX_SHA_ONLY",
+        "teacher_count_max": 0,
+        "memory": "S03_ONLY",
+        "stop": "NATIVE_STOP_REQUIRED",
+        "owner_scope": "SIGNED_POLICY_REQUIRED"
+      },
+      "deliverable": "SOURCE_CANDIDATE_OR_TRUSTED_NATIVE_RECEIPT"
+    },
+    {
+      "id": "T21",
+      "key": "SELF_REPAIR",
+      "lane": "INTEGRATION_QA",
+      "backend_source": "GITHUB_CI",
+      "inputs": "Verified bug reproduced in exact source revision",
+      "outputs": "PR candidate with tests and rollback",
+      "acceptance_metric": "verified_fix_rate",
+      "gate": "human_review_before_merge",
+      "status": "BLUEPRINT_SOURCE_ONLY_NOT_LIVE_BOUND",
+      "params": {
+        "student_model": "ONE_NOX_SHA_ONLY",
+        "teacher_count_max": 0,
+        "memory": "S03_ONLY",
+        "stop": "NATIVE_STOP_REQUIRED",
+        "owner_scope": "SIGNED_POLICY_REQUIRED"
+      },
+      "deliverable": "SOURCE_CANDIDATE_OR_TRUSTED_NATIVE_RECEIPT"
+    },
+    {
+      "id": "T22",
+      "key": "WEB_GENESIS",
+      "lane": "INTEGRATION_QA",
+      "backend_source": "EXISTING_WEB_V25",
+      "inputs": "OneHost verified JSON receipt",
+      "outputs": "Cinematic truthful training and S03 status",
+      "acceptance_metric": "ui_receipt_truth_rate",
+      "gate": "no_fake_gpu",
+      "status": "BLUEPRINT_SOURCE_ONLY_NOT_LIVE_BOUND",
+      "params": {
+        "student_model": "ONE_NOX_SHA_ONLY",
+        "teacher_count_max": 0,
+        "memory": "S03_ONLY",
+        "stop": "NATIVE_STOP_REQUIRED",
+        "owner_scope": "SIGNED_POLICY_REQUIRED"
+      },
+      "deliverable": "SOURCE_CANDIDATE_OR_TRUSTED_NATIVE_RECEIPT"
+    },
+    {
+      "id": "T23",
+      "key": "ADAPTIVE_INFERENCE",
+      "lane": "CORE",
+      "backend_source": "EXISTING_INFERENCE_PROVIDER",
+      "inputs": "Measured profiling and exact model architecture",
+      "outputs": "One A/B plan not three toggles",
+      "acceptance_metric": "p95_ttft_and_quality",
+      "gate": "no_unproven_speedup",
+      "status": "BLUEPRINT_SOURCE_ONLY_NOT_LIVE_BOUND",
+      "params": {
+        "student_model": "ONE_NOX_SHA_ONLY",
+        "teacher_count_max": 0,
+        "memory": "S03_ONLY",
+        "stop": "NATIVE_STOP_REQUIRED",
+        "owner_scope": "SIGNED_POLICY_REQUIRED"
+      },
+      "deliverable": "SOURCE_CANDIDATE_OR_TRUSTED_NATIVE_RECEIPT"
+    },
+    {
+      "id": "T24",
+      "key": "MODEL_MATCHMAKER",
+      "lane": "REASONING",
+      "backend_source": "SIGNED_MODEL_REGISTRY",
+      "inputs": "Measured local teacher results source/VRAM",
+      "outputs": "NOX-selected evidence from independent teachers",
+      "acceptance_metric": "advisor_gain_after_ab",
+      "gate": "one_visible_student",
+      "status": "BLUEPRINT_SOURCE_ONLY_NOT_LIVE_BOUND",
+      "params": {
+        "student_model": "ONE_NOX_SHA_ONLY",
+        "teacher_count_max": 0,
+        "memory": "S03_ONLY",
+        "stop": "NATIVE_STOP_REQUIRED",
+        "owner_scope": "SIGNED_POLICY_REQUIRED"
+      },
+      "deliverable": "SOURCE_CANDIDATE_OR_TRUSTED_NATIVE_RECEIPT"
+    }
+  ],
+  "not_installed": true,
+  "one_model_identity": true,
+  "module_roles": {
+    "NOX_STUDENT": "Single user-visible model, current active trained SHA only",
+    "LOCAL_FROZEN_TEACHERS": "Frozen approved independent local VM models only; no user-visible model switch",
+    "RUNTIME_CLASSIFIER": "Small RU/ES tone classifier, optional and isolated from student weights",
+    "S03": "Existing scoped single SQLite + vector/temporal memory, no new database",
+    "MODEL_REGISTRY": "Owner-signed allowed teacher IDs, revisions, SHA and rights, no auto-freeform download",
+    "EXISTING_TRAINER": "Single real authenticated GPU trainer, no adapter simulation",
+    "EXISTING_WEB_V25": "Current original D02 WEB + CHAT V25/ONEPASS source locked"
+  },
+  "model_cards": [
+    {
+      "name": "NOX PRIME 9B student",
+      "source": "https://huggingface.co/Qwen/Qwen3.5-9B",
+      "role": "CURRENT_NOX_STUDENT_AFTER_VERIFIED_TRAINING",
+      "architecture": "hybrid Gated DeltaNet + Gated Attention",
+      "weights": "NOX_SHA_MUST_BE_VERIFIED",
+      "status": "NOT_DEPLOYED_BY_V28"
+    },
+    {
+      "name": "Qwen3.5-27B teacher",
+      "source": "https://huggingface.co/Qwen/Qwen3.5-27B",
+      "role": "FROZEN_TEACHER_CANDIDATE",
+      "status": "ONLY_IF_DEVICE_AND_RIGHTS_FIT"
+    },
+    {
+      "name": "DeepSeek-R1-Distill-Qwen-32B teacher",
+      "source": "https://huggingface.co/deepseek-ai/DeepSeek-R1-Distill-Qwen-32B",
+      "role": "INDEPENDENT_REASONING_TEACHER_CANDIDATE",
+      "status": "NOT_STARTED_BY_V28"
+    },
+    {
+      "name": "Qwen3 Embedding 0.6B",
+      "source": "https://huggingface.co/Qwen/Qwen3-Embedding-0.6B",
+      "role": "OPTIONAL_INTERNAL_S03_EMBEDDING",
+      "status": "DOWNLOAD_ARCHIVED_NOT_INSTALLED"
+    },
+    {
+      "name": "Qwen3 Reranker 0.6B",
+      "source": "https://huggingface.co/Qwen/Qwen3-Reranker-0.6B",
+      "role": "OPTIONAL_INTERNAL_RERANKER",
+      "status": "DOWNLOAD_ARCHIVED_NOT_INSTALLED"
+    },
+    {
+      "name": "ruBERT CEDR Emotion",
+      "source": "https://huggingface.co/cointegrated/rubert-tiny2-cedr-emotion-detection",
+      "role": "OPTIONAL_INTERNAL_RU_TONE",
+      "status": "DOWNLOAD_ARCHIVED_LICENSE_RECHECK"
+    },
+    {
+      "name": "MarIA Emotion ES",
+      "source": "https://huggingface.co/UMUTeam/MarIA-emotion-es",
+      "role": "OPTIONAL_INTERNAL_ES_TONE",
+      "status": "DOWNLOAD_ARCHIVED_LICENSE_RECHECK"
+    }
+  ],
+  "warnings": [
+    "A model card is a source/option, not proof of GPU deployment, compatible licensing or training.",
+    "Templates are data-only. They do not create 24 processes or install packages.",
+    "Qwen3.5 hybrid architecture cannot be freely rewritten to MoE/MLA/Mamba without training/evaluation.",
+    "Training optimizer and checkpoint receipts remain HOLD until physical native host validation."
+  ]
+}
