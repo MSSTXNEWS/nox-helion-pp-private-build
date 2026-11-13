@@ -27,38 +27,73 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Verify actual merged V29 source and ten reachable routes (not mock)
+      # Source archive is cached by exact SHA and re-hashed at every run.
+      # It is downloaded once, never fetched from an expiring sandbox during E2E.
+      - uses: actions/cache@v4
+        with:
+          path: nox_runpod/web_wow_merge/v29/nox-v29-verified.tar.gz
+          key: nox-v29-source-009b32e0b94e93492570af5062e3bd4c3bf95613d481821fe039c91ab2263f8c
+      - name: Materialize immutable V29 once and serve from local GitHub runner
         working-directory: nox_runpod/web_wow_merge/v29
         env:
-          NOX_BASE: https://sb-1rg7k0fdgj6j.vercel.run
+          NOX_SOURCE_ORIGIN: https://sb-1rg7k0fdgj6j.vercel.run
         run: |
           set -Eeuo pipefail
-          curl --fail --retry 5 --retry-delay 2 -LsS "$NOX_BASE/NOX_V29_STATIC_PREVIEW_RECEIPT.json" -o receipt.json
-          node - <<'NODE'
-          const assert=require('node:assert/strict'),fs=require('node:fs');
-          const r=JSON.parse(fs.readFileSync('receipt.json','utf8'));
-          assert.equal(r.schema,'NOX_WEB_V29_STATIC_BUNDLE_CHECKSUM_V1');
-          assert.equal(r.source_build_sha256,'1481e26f8f0e2febf80d773a78557094fb6ee91d8d7f39a70374855dde0570f1');
-          assert.equal(r.file_digest_manifest_sha256,'8d7041db6784e98825c8eace42dad6c863270728247be7b47d2b3ab9a0267d60');
-          assert.equal(r.files,1052);assert.equal(r.native_acceptance,'HOLD');
-          console.log('NOX_V29_UNIFIED_SOURCE_BINDING_VERIFIED',r.source_build_sha256);
-          NODE
-          for route in index chat memory training system settings models projects cinema install pc/resonance pc/memory pc/chat; do
-            status=$(curl --silent --location --output /dev/null --write-out '%{http_code}' --fail "$NOX_BASE/$route.html")
-            test "$status" = 200 || { echo "NOX_ROUTE_HOLD $route $status"; exit 1; }
-          done
-          for item in tools/browser-acceptance.mjs tools/test-web-v26-browser.mjs tools/test-web-v27-browser.mjs; do
-            curl --fail --retry 3 -LsS "$NOX_BASE/$item" -o "$(basename "$item")"
+          if test ! -s nox-v29-verified.tar.gz; then
+            curl --fail --retry 6 --retry-delay 3 --connect-timeout 12 --max-time 160 -LsS "$NOX_SOURCE_ORIGIN/NOX_V29_SITE_PAYLOAD.tar.gz" -o nox-v29-verified.tar.gz.tmp
+            mv nox-v29-verified.tar.gz.tmp nox-v29-verified.tar.gz
+          fi
+          printf '%s  %s\n' '009b32e0b94e93492570af5062e3bd4c3bf95613d481821fe039c91ab2263f8c' nox-v29-verified.tar.gz | sha256sum --check
+          test "$(wc -c < nox-v29-verified.tar.gz)" -eq 75651010
+          mkdir -p "$RUNNER_TEMP/nox-v29-site"
+          tar -xzf nox-v29-verified.tar.gz -C "$RUNNER_TEMP/nox-v29-site"
+          export NOX_V29_SITE="$RUNNER_TEMP/nox-v29-site"
+          python3 - <<'PY'
+          import os,json,pathlib,hashlib
+          p=pathlib.Path(os.environ["NOX_V29_SITE"])
+          files=[x for x in p.rglob("*") if x.is_file()]
+          assert len(files)==1053,(len(files),"WRONG_FILE_COUNT")
+          r=json.loads((p/"NOX_V29_STATIC_PREVIEW_RECEIPT.json").read_text())
+          assert r["schema"]=="NOX_WEB_V29_STATIC_BUNDLE_CHECKSUM_V1"
+          assert r["source_build_sha256"]=="1481e26f8f0e2febf80d773a78557094fb6ee91d8d7f39a70374855dde0570f1"
+          assert r["file_digest_manifest_sha256"]=="8d7041db6784e98825c8eace42dad6c863270728247be7b47d2b3ab9a0267d60"
+          assert r["files"]==1052 and r["native_acceptance"]=="HOLD"
+          for name,digest in {
+            "index.html":"f3fc804d238146ffe42c50103d3e04c9736b8b587c6572987f59b61a6112eb17",
+            "nox-home.mjs":"8066bc0a0f8ef5bb5f0fb1f58ad3f6ee29dc8506385c09d77d38d4235c7e42e9",
+            "nox-engines/physical-worlds-v7.mjs":"3f27609ea37b96579a711928e4c67778ec71e2ff7b090a3b7bb41e29040f3905",
+            "nox-chat.js":"d9fa29e0fa726502adc6e83ea344adf13b8a2354acd3610b3de96ec378e942ce",
+            "nox-function-catalog.js":"c509870d8fc664bb7c60cd53d3daf21280aa410832d978d3fedbd0543730f661",
+          }.items():
+            assert hashlib.sha256((p/name).read_bytes()).hexdigest()==digest,"NOX_PRIMARY_DRIFT:"+name
+          print("NOX_V29_LOCAL_SOURCE_LOCK_PASS",len(files),"STATIC_V29_NOT_NATIVE_ACCEPTANCE")
+          PY
+          for item in browser-acceptance.mjs test-web-v26-browser.mjs test-web-v27-browser.mjs; do
+            cp "$RUNNER_TEMP/nox-v29-site/tools/$item" "$item"
           done
           printf '%s  %s\n' \
             '22980da79581d18692396988b3b70ade20cdfdd3c92623aa8aecbd0dde25c153' browser-acceptance.mjs \
             '855653d576b84b0ca556d7d2ba9abca1e1283f2fe07171498c334db6634dfc9b' test-web-v26-browser.mjs \
             'c4649bd95e8232e0171800498a859a3bfdb69d50880cb0a9f5c06bb8fd42c5c8' test-web-v27-browser.mjs | sha256sum --check
-          node --check browser-acceptance.mjs
           node --check browser-acceptance-v29.mjs
-          node --check test-web-v26-browser.mjs
-          node --check test-web-v27-browser.mjs
           node --check test_v29_merged_preview.mjs
+          python3 -m http.server 8080 --bind 127.0.0.1 --directory "$RUNNER_TEMP/nox-v29-site" > "$RUNNER_TEMP/nox-v29-server.log" 2>&1 &
+          for attempt in 1 2 3 4 5 6 7 8; do
+            curl -sS --connect-timeout 2 --max-time 3 http://127.0.0.1:8080/index.html -o /dev/null && break
+            sleep 1
+          done
+          for route in index chat memory training system settings models projects cinema install pc/resonance pc/memory pc/chat; do
+            status=$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:8080/$route.html")
+            test "$status" = 200 || { echo "NOX_V29_LOCAL_ROUTE_HOLD $route $status"; exit 1; }
+          done
+          echo 'NOX_V29_LOCAL_HTTP_PASS: all 13/13 canonical + PC routes'
+      - name: Preserve immutable V29 source artifact for future independent reruns
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX-V29-VERIFIED-SOURCE-SHA009b32e0
+          path: nox_runpod/web_wow_merge/v29/nox-v29-verified.tar.gz
+          retention-days: 60
+          if-no-files-found: error
       - name: Install original Playwright Chromium for real SVG/WebGL browser checks
         working-directory: nox_runpod/web_wow_merge/v29
         run: |
@@ -68,8 +103,8 @@ jobs:
         working-directory: nox_runpod/web_wow_merge/v29
         timeout-minutes: 24
         env:
-          NOX_PREVIEW_URL: https://sb-1rg7k0fdgj6j.vercel.run/index.html
-          NOX_V29_TEST_ORIGIN: https://sb-1rg7k0fdgj6j.vercel.run/
+          NOX_PREVIEW_URL: http://127.0.0.1:8080/index.html
+          NOX_V29_TEST_ORIGIN: http://127.0.0.1:8080/
           NOX_AUDIT_SOURCE_SHA: 1481e26f8f0e2febf80d773a78557094fb6ee91d8d7f39a70374855dde0570f1
           NOX_ACCEPTANCE_DIR: v29-e2e
           NOX_V29_SCREENSHOTS_DIR: v29-e2e
