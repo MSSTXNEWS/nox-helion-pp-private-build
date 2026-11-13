@@ -1,0 +1,30 @@
+name: NOX V34 native cortex source gate
+on:
+  pull_request:
+    paths:
+      - 'nox_runpod/teacher_mesh/v34/**'
+      - '.github/workflows/nox-v34-neural-s03-ci.yml'
+  push:
+    branches:
+      - 'feature/nox-v34-neural-s03-forge-20261113'
+jobs:
+  source_gate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile new source without installing or executing model packages
+        run: |
+          python -m py_compile nox_runpod/teacher_mesh/v34/brain/neural_s03_live_v34.py
+          python -m py_compile nox_runpod/teacher_mesh/v34/brain/forge_bridge_v34.py
+          python -m py_compile nox_runpod/teacher_mesh/v34/STAGE_V34_FOR_JAPAN.py
+      - name: Native FORGE admission tests only
+        working-directory: nox_runpod/teacher_mesh/v34
+        run: |
+          python -m unittest brain.test_forge_v34 -v
+      - name: Explicit acceptance boundary
+        run: echo "SOURCE TESTS ONLY. NOT GPU TRAINED, NOT WINDOWS E07, NOT VAST JAPAN DEPLOYED."
