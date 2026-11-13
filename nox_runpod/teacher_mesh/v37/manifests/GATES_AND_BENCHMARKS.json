@@ -1,0 +1,16 @@
+{
+  "schema": "NOX_V37_14DAY_NATIVE_ACCEPTANCE_V1",
+  "baseline": "NEVER_PRESUME_PAST_TESTS_APPLY_TO_NEW_STUDENT_OR_HOST",
+  "daily": [
+    {"name": "trainer_continuity", "checks": ["actual optimiser step before/after", "native worker PID", "no duplicate job fingerprint", "real checkpoint SHA", "restorable external backup"]},
+    {"name": "latency", "checks": ["TTFT median and p95", "tokens_per_second median/p95", "tokens/sec/W per V100", "real 24h GPU compute occupancy p50/p95 excluding idle holds"]},
+    {"name": "memory", "checks": ["LongMemEval-style source-disjoint recall", "correction over time", "revocation", "isolation between tenant/PersonaID", "S03 persistence across restart"]},
+    {"name": "intelligence", "checks": ["RU+ES conversation blind holdout", "IFEval", "math and code pass@1", "tool dispatch rights", "uncertainty abstention and source citations", "replay regressions"]},
+    {"name": "self_builder", "checks": ["owner-approved scoped Git diff", "SHA unchanged before gate", "offline component tests", "separate reviewer", "source-only draft PR", "no self-merging"]},
+    {"name": "creative", "checks": ["SDXL image quality with approved visual master", "unchanged approved Persona identity", "FPS/clip length/VRAM of Wan", "owner-reviewed output rights", "no pretend live capture"]}
+  ],
+  "release": ["one student model", "native S03 owner-granted readback", "NO LOSS current checkpoint", "STOP and ACL", "GGUF SHA", "independent Windows same BuildID E07", "no hidden tool actions"],
+  "source_links": ["https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/254", "https://drive.google.com/file/d/1QSbMlCZA3aYqEzicfSuxO_FVVByFuiRF/view"],
+  "real_benchmark_measurements": null,
+  "status": "SPEC_ONLY_CURRENT_HOST_NOT_PROBED"
+}

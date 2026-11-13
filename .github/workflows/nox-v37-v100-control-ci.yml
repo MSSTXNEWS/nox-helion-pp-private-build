@@ -1,0 +1,31 @@
+name: NOX V37 V100 control source gate
+on:
+  pull_request:
+    paths:
+      - 'nox_runpod/teacher_mesh/v37/**'
+      - '.github/workflows/nox-v37-v100-control-ci.yml'
+  push:
+    branches:
+      - 'feature/nox-v37-v100-firsthour-14d-20261113'
+permissions:
+  contents: read
+jobs:
+  source_gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Pure stdlib 38 source contract tests, no GPU and no network
+        env:
+          PYTHONPATH: nox_runpod/teacher_mesh/v37
+        run: |
+          python -m unittest discover -s nox_runpod/teacher_mesh/v37/tests -p 'test_v37.py' -v
+      - name: Compile / no host mutation
+        run: |
+          python -m compileall -q nox_runpod/teacher_mesh/v37/nox_v37
+          bash -n nox_runpod/teacher_mesh/v37/scripts/START_FIRST_HOUR_READONLY.sh
+          bash -n nox_runpod/teacher_mesh/v37/scripts/START_24H_MONITOR_AFTER_NATIVE_APPROVAL.sh
+      - name: Explicit acceptance boundary
+        run: echo 'SOURCE TESTS ONLY. NO 24/7 GPU LAUNCH, NO REAL V100 CHECKPOINT, NO PRODUCTION MERGE.'

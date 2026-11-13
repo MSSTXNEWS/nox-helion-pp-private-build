@@ -1,0 +1,91 @@
+{
+  "additional_source_refs": [
+    {
+      "name": "NOX_PRIME_BIRTH_20261110 Drive folder",
+      "reported": "60 GGUF parts, evidence readback required, not the current V100 trainable FP16 source weights",
+      "url": "https://drive.google.com/drive/folders/1nJb6myK7c4WtwtWiFTX5zSWxg6OLGra0"
+    },
+    {
+      "name": "prior teacher training report",
+      "reported": "9B A40 LoRA, historical data prompts_all ~5987, style weakness, emotion gap, 69MB teacher responses, MUST VERIFY on new V100",
+      "url": "https://docs.google.com/document/d/12SIMZNChehhT2ZIN61H6UdZIcEej2ZAD4GAqt9WjMW0/edit"
+    }
+  ],
+  "as_of": "2026-11-13",
+  "items": [
+    {
+      "action": "VERIFY_ONLY_DO_NOT_RETRAIN_OR_REDOWNLOAD",
+      "id": "nox_birth_9b",
+      "origin": "Drive BIRTH_EVENT / NOX PRIME 2026-11-10",
+      "protected": true,
+      "reference": "https://docs.google.com/document/d/1Ddc5GQ2r0ehFlTRJ97hOAMFAovEC0568SoXQFXu5QmE/edit",
+      "reported": "9B GGUF in 60 parts; birth reported 2026-11-10 22:04:59 Europe/Madrid",
+      "status": "HISTORICAL_CLAIM_NEEDS_CURRENT_HOST_SHA_AND_RECEIPT"
+    },
+    {
+      "action": "AUDIT_CHECKPOINT_OPTIMIZER_DATA_HASH_BEFORE_NEW_TRAINING",
+      "id": "nox_other_training",
+      "origin": "10-Nov training notes",
+      "protected": true,
+      "reference": "https://docs.google.com/document/d/12SIMZNChehhT2ZIN61H6UdZIcEej2ZAD4GAqt9WjMW0/edit",
+      "reported": "LoRA/QLoRA 9B plus emotion/self-critique and memory runs historically claimed",
+      "status": "NOT_LIVE_VERIFIED"
+    },
+    {
+      "action": "REUSE_WEIGHTS_EVAL_BEFORE_RETRAIN",
+      "id": "nox_v32_router",
+      "origin": "V32",
+      "protected": true,
+      "reference": "https://drive.google.com/file/d/122nniub8gEjRfhDZS07TjffcrKm3RlWC/view",
+      "reported": "router.safetensors; 120 CPU AdamW updates on synthetic lexical data",
+      "status": "VERIFIED_SOURCE_SYNTHETIC_NOT_REAL_DIALOGUE"
+    },
+    {
+      "action": "REUSE_IN_P02_GATE_BENCHMARK",
+      "id": "nox_v33_assoc",
+      "origin": "V33/V34",
+      "protected": true,
+      "reference": "https://drive.google.com/file/d/1QfIzLw2fIw919ZaclqBlmL5qnVzGyLkY/view",
+      "reported": "assoc_v33.safetensors; 300 CPU AdamW steps; V34 adds neural S03 ranking",
+      "status": "VERIFIED_SOURCE_SYNTHETIC_NOT_LIVE_S03"
+    },
+    {
+      "action": "REUSE_SOURCE_INDICES_AND_ONLY_APPROVED_TEXT",
+      "id": "nox_v35_map",
+      "origin": "V35",
+      "protected": true,
+      "reference": "https://drive.google.com/file/d/1QSbMlCZA3aYqEzicfSuxO_FVVByFuiRF/view",
+      "reported": "1536 clusters, 1312 source excerpts, 945 source links, 144 historical tasks, project-only SFT review candidates",
+      "status": "VERIFIED_ARCHIVE_NOT_IMPORTED_LIVE"
+    },
+    {
+      "action": "DO_NOT_REDOWNLOAD_SOURCE_IF_HASH_MATCHES_AND_LICENSE_OK",
+      "id": "prior_upstream_17",
+      "origin": "V34",
+      "protected": true,
+      "reference": "https://drive.google.com/file/d/1QfIzLw2fIw919ZaclqBlmL5qnVzGyLkY/view",
+      "reported": "Graphiti/Mem0/LangMem/sqlite-vec/PEFT/TRL etc source bundles (17 real archives)",
+      "status": "ARCHIVED_SOURCES_NOT_INSTALLED"
+    },
+    {
+      "action": "DISCOVER_VIA_AUTHORIZED_VM_INVENTORY_NO_PRODUCTION_MUTATION",
+      "id": "japan_vast_runtime",
+      "origin": "prior project",
+      "protected": true,
+      "reference": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/254",
+      "reported": "Japanese Vast.ai runtime and current optimizer not accessible for verified inventory this session",
+      "status": "UNKNOWN"
+    }
+  ],
+  "policies": [
+    "DO_NOT_RETRAIN_V32_ROUTER_SYNTHETIC",
+    "DO_NOT_RETRAIN_V33_ASSOC_SYNTHETIC",
+    "DO_NOT_REDOWLOAD_V35_945_LINKS",
+    "DO_NOT_RENAME_NOX_PRIME_OR_BIRTH",
+    "DO_NOT_DOWNLOAD_EXISTING_TEACHERS_ON_ANY_HOST_UNTIL_LISTED",
+    "CHECKPOINT_SHA_BEFORE_ANY_DISTILLATION",
+    "NO_PRIVATE_SFT_WITHOUT_OWNER_REVIEW",
+    "NO_AUTO_DELETE_CHECKPOINTS"
+  ],
+  "schema": "nox-v36-prior-work-v1"
+}
