@@ -1,0 +1,44 @@
+name: NOX V29.3 SHA-locked private artifact transfer
+on:
+  push:
+    branches: [feature/nox-teacher-mycelium-20261112]
+    paths: [.github/workflows/nox-v29-3-private-artifact-transfer.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  copy-verified-blob:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Transfer only exact NOX V29.3 archive
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          mkdir -p output
+          curl --fail --show-error --silent --location --retry 2 --connect-timeout 15 --max-time 350 \
+            "https://sb-epgo2t5mioyf.vercel.run/nox-transfer/xceMLwytzXjm7sytQtL8w8h2H2-WX16XwA" \
+            -o output/NOX_HELION_WEB_V29_3_FROZEN_20261113.zip
+          echo "166becb90fce63e2db3f9a74281d756995844552cddb7b67a0ac4bd67a190aa0  output/NOX_HELION_WEB_V29_3_FROZEN_20261113.zip" | sha256sum -c -
+          python3 - <<'PY'
+          import pathlib,hashlib,zipfile,json
+          p=pathlib.Path("output/NOX_HELION_WEB_V29_3_FROZEN_20261113.zip")
+          assert p.stat().st_size==85218272
+          with zipfile.ZipFile(p) as z:
+              assert z.testzip() is None
+              assert len(z.namelist())==1089
+              m=json.loads(z.read("site/SOURCE_MANIFEST_V29.json"))
+              assert len(m)==1085
+              for name,record in m.items():
+                  data=z.read("site/"+name)
+                  assert len(data)==record["bytes"]
+                  assert hashlib.sha256(data).hexdigest()==record["sha256"]
+          print("NOX_V29_3_EXACT_SHA_CRC_AND_1085_INTERNAL_LOCKS_PASS")
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NOX_HELION_WEB_V29_3_FULL_VERIFIED_ARCHIVE
+          path: output/NOX_HELION_WEB_V29_3_FROZEN_20261113.zip
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 4
