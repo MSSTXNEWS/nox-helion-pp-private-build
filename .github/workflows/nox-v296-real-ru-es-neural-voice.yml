@@ -26,7 +26,7 @@ jobs:
           import hashlib,json,pathlib,wave,zipfile,os
           from huggingface_hub import HfApi,hf_hub_download
           from piper import PiperVoice
-          root=pathlib.Path('nox-voice-download')
+          root=pathlib.Path('nox-voice-download').resolve()
           root.mkdir(exist_ok=True)
           repo='rhasspy/piper-voices'
           commit=HfApi().model_info(repo).sha
