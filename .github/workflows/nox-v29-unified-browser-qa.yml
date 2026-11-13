@@ -55,6 +55,7 @@ jobs:
             '855653d576b84b0ca556d7d2ba9abca1e1283f2fe07171498c334db6634dfc9b' test-web-v26-browser.mjs \
             'c4649bd95e8232e0171800498a859a3bfdb69d50880cb0a9f5c06bb8fd42c5c8' test-web-v27-browser.mjs | sha256sum --check
           node --check browser-acceptance.mjs
+          node --check browser-acceptance-v29.mjs
           node --check test-web-v26-browser.mjs
           node --check test-web-v27-browser.mjs
           node --check test_v29_merged_preview.mjs
@@ -73,7 +74,7 @@ jobs:
           NOX_ACCEPTANCE_DIR: v29-e2e
           NOX_V29_SCREENSHOTS_DIR: v29-e2e
         run: |
-          node browser-acceptance.mjs
+          node browser-acceptance-v29.mjs
           node test-web-v26-browser.mjs
           node test-web-v27-browser.mjs
           node test_v29_merged_preview.mjs
