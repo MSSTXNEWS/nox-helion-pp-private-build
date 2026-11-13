@@ -1,0 +1,134 @@
+name: NOX WEB V29.3 frozen full Chromium acceptance
+on:
+  push:
+    branches: [qa/nox-web-v29-3-frozen-20261113]
+    paths:
+      - '.github/workflows/nox-web-v29-3-frozen-full-e2e.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: nox-web-v29-3-frozen-qa
+  cancel-in-progress: false
+jobs:
+  real-merged-browser:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Restore exact existing private 85MB V29.3 ZIP from successful GH evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: NOX_HELION_WEB_V29_3_FULL_VERIFIED_ARCHIVE
+          repository: MSSTXNEWS/nox-helion-pp-private-build
+          run-id: 43441048683
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: frozen-source
+      - name: Independently check ZIP, 1085 source digests and original D02/PBR
+        env:
+          NOX_FROZEN_SITE: /tmp/nox-v293/site
+        run: |
+          set -Eeuo pipefail
+          export NOX_FROZEN_SITE="$RUNNER_TEMP/nox-v293/site"
+          python3 - <<'PY'
+          import zipfile,hashlib,pathlib,json,os,stat
+          p=pathlib.Path('frozen-source/NOX_HELION_WEB_V29_3_FROZEN_20261113.zip')
+          assert p.is_file() and p.stat().st_size==85218272, 'NOX_ZIP_SIZE_HOLD'
+          assert hashlib.sha256(p.read_bytes()).hexdigest()=='166becb90fce63e2db3f9a74281d756995844552cddb7b67a0ac4bd67a190aa0'
+          with zipfile.ZipFile(p) as z:
+           assert z.testzip() is None and len(z.namelist())==1089
+           names=set()
+           for info in z.infolist():
+            n=info.filename
+            assert n and n.startswith('site/') and '..' not in pathlib.PurePosixPath(n).parts and not n.startswith('/')
+            assert n.casefold() not in names,'ZIP_CASE_COLLISION'
+            assert (info.external_attr>>16)&0o170000 != 0o120000,'ZIP_SYMLINK_BLOCK'
+            names.add(n.casefold())
+           m=z.read('site/SOURCE_MANIFEST_V29.json')
+           assert hashlib.sha256(m).hexdigest()=='a28d0b25f79087d4458bba41ad8c0fb35e76067aac8ad35c453d2770616916f5'
+           manifest=json.loads(m)
+           assert len(manifest)==1085,'NOX_MANIFEST_COUNT'
+           for rel,meta in manifest.items():
+            b=z.read('site/'+rel)
+            assert len(b)==meta['bytes'] and hashlib.sha256(b).hexdigest()==meta['sha256'],rel
+           for rel,expected in {
+             'index.html':'f3fc804d238146ffe42c50103d3e04c9736b8b587c6572987f59b61a6112eb17',
+             'nox-home.mjs':'8066bc0a0f8ef5bb5f0fb1f58ad3f6ee29dc8506385c09d77d38d4235c7e42e9',
+             'nox-engines/physical-worlds-v7.mjs':'3f27609ea37b96579a711928e4c67778ec71e2ff7b090a3b7bb41e29040f3905',
+             'nox-chat.js':'d9fa29e0fa726502adc6e83ea344adf13b8a2354acd3610b3de96ec378e942ce',
+             'nox-function-catalog.js':'c509870d8fc664bb7c60cd53d3daf21280aa410832d978d3fedbd0543730f661',
+             'nox-v29-pc-genesis-addons.mjs':'5968f7b9ca72cbfd053c77e90853fcee9076c1671b2d0592b00a67cf4e2b9f5c'
+           }.items():
+            assert hashlib.sha256(z.read('site/'+rel)).hexdigest()==expected,rel
+           dest=pathlib.Path(os.environ['NOX_FROZEN_SITE']).parent
+           dest.mkdir(parents=True,exist_ok=True)
+           z.extractall(dest)
+          print('NOX_V29_3_FULL_INTEGRITY_PASS ZIP 1089; MANIFEST 1085; HOME+PBR SHA; NO-LOSS')
+          PY
+      - name: Publish only the verified source as a private Actions artifact (60 days)
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX-V29-3-FROZEN-SOURCE-VERIFIED-SHA166bec
+          path: frozen-source/NOX_HELION_WEB_V29_3_FROZEN_20261113.zip
+          retention-days: 60
+          compression-level: 0
+          if-no-files-found: error
+      - name: Check exact original PC API routes and serve merged source locally
+        run: |
+          set -Eeuo pipefail
+          export SITE="$RUNNER_TEMP/nox-v293/site"
+          node "$SITE/qa/v29/test_v29_pc_api_contract.cjs"
+          for f in browser-acceptance.mjs test-web-v26-browser.mjs test-web-v27-browser.mjs; do
+            cp "$SITE/tools/$f" "nox_runpod/web_wow_merge/v29/$f"
+          done
+          cd nox_runpod/web_wow_merge/v29
+          printf '%s  %s\n' \
+            '22980da79581d18692396988b3b70ade20cdfdd3c92623aa8aecbd0dde25c153' browser-acceptance.mjs \
+            '855653d576b84b0ca556d7d2ba9abca1e1283f2fe07171498c334db6634dfc9b' test-web-v26-browser.mjs \
+            'c4649bd95e8232e0171800498a859a3bfdb69d50880cb0a9f5c06bb8fd42c5c8' test-web-v27-browser.mjs | sha256sum -c -
+          node --check browser-acceptance-v29.mjs
+          node --check test_v29_merged_preview.mjs
+          python3 -m http.server 8080 --bind 127.0.0.1 --directory "$SITE" > "$RUNNER_TEMP/nox-v293-server.log" 2>&1 &
+          for n in $(seq 1 10); do
+            curl -sf http://127.0.0.1:8080/index.html >/dev/null && break
+            sleep 1
+          done
+          for route in index chat memory training system settings models projects cinema install resonance pc/resonance pc/memory pc/chat; do
+            status=$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:8080/$route.html")
+            test "$status" = 200 || { echo "NOX_V29_3_LOCAL_HTTP_HOLD $route $status"; exit 1; }
+          done
+          echo "NOX_V29_3_LOCAL_ROUTE_PASS 14/14, PRIVATE_ARTIFACT_PINNED, ONEHOST_NOT_TESTED"
+      - name: Install Chromium on GitHub runner
+        working-directory: nox_runpod/web_wow_merge/v29
+        run: |
+          npm install --no-save --no-audit --no-fund playwright@1.58.2
+          npx playwright install --with-deps chromium
+      - name: Physical Chromium SwiftShader 7 sizes + 10 pages + WOW/PBR + interactive PC tests
+        working-directory: nox_runpod/web_wow_merge/v29
+        timeout-minutes: 23
+        env:
+          NOX_PREVIEW_URL: http://127.0.0.1:8080/index.html
+          NOX_V29_TEST_ORIGIN: http://127.0.0.1:8080/
+          NOX_AUDIT_SOURCE_SHA: 166becb90fce63e2db3f9a74281d756995844552cddb7b67a0ac4bd67a190aa0
+          NOX_ACCEPTANCE_DIR: v29-3-e2e
+          NOX_V29_SCREENSHOTS_DIR: v29-3-e2e
+        run: |
+          node browser-acceptance-v29.mjs
+          node test-web-v26-browser.mjs
+          node test-web-v27-browser.mjs
+          node test_v29_merged_preview.mjs
+          echo "NOX_V29_3_MERGED_CHROMIUM_PASS; WINDOWS_HARDWARE_GPU_AND_NATIVE_ONEHOST_NOT_TESTED"
+      - name: Preserve real merged Chromium results, not screenshots reconstructed later
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX-V29-3-FROZEN-CHROMIUM-EVIDENCE
+          path: nox_runpod/web_wow_merge/v29/v29-3-e2e/
+          retention-days: 60
+          if-no-files-found: warn
