@@ -1,7 +1,7 @@
 name: NOX WEB V29 unified physical-source Chromium QA
 on:
   push:
-    branches: [feature/nox-teacher-mycelium-20261112]
+    branches: [feature/nox-teacher-mycelium-20261112, qa/nox-web-v29-source-lock-20261113]
     paths:
       - 'nox_runpod/web_wow_merge/v29/**'
       - '.github/workflows/nox-v29-unified-browser-qa.yml'
