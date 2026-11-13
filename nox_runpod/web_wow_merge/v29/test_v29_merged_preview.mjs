@@ -9,7 +9,7 @@ const origin = process.env.NOX_V29_TEST_ORIGIN;
 // Accept exactly the verified QA loopback origin for offline, same-SHA Chromium.
 // Do not widen to LAN, arbitrary HTTP or another deployment.
 const url=origin?new URL(origin):null;
-const trustedSandbox=!!url&&url.protocol==='https:'&&/^sb-[a-z0-9]+\\.vercel\\.run$/.test(url.hostname)&&url.pathname==='/'&&!url.search&&!url.hash;
+const trustedSandbox=!!url&&url.protocol==='https:'&&/^sb-[a-z0-9]+\.vercel\.run$/.test(url.hostname)&&url.pathname==='/'&&!url.search&&!url.hash;
 const trustedLocal=!!url&&url.protocol==='http:'&&url.hostname==='127.0.0.1'&&url.port==='8080'&&url.pathname==='/'&&!url.search&&!url.hash;
 if(!trustedSandbox&&!trustedLocal)throw Error('NOX_V29_PREVIEW_ORIGIN_UNTRUSTED');
 const screenshots = process.env.NOX_V29_SCREENSHOTS_DIR || './v29-e2e';
