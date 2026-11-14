@@ -38,6 +38,28 @@ print('NATIVE_V126_SOURCE='+json.dumps({'s03_source_sha256':hashlib.sha256(code)
  'function_count':len(functions),'read_only':True},separators=(',',':')))
 for i in range(0,min(len(functions),80),3):
  print('NATIVE_V126_FUNCTIONS='+json.dumps(functions[i:i+3],separators=(',',':')))
+remember_fn=next((n for n in tree.body if isinstance(n,ast.FunctionDef) and n.name=='remember'),None)
+if remember_fn is None:raise RuntimeError('HOLD_WRITER_REMEMBER_ABSENT')
+params=remember_fn.args.args
+tail_defaults=remember_fn.args.defaults
+optional={a.arg for a in params[len(params)-len(tail_defaults):]}
+safe_defaults={}
+for arg,default in zip(params[len(params)-len(tail_defaults):],tail_defaults):
+ if arg.arg in ('db',):continue
+ if isinstance(default,ast.Constant) and isinstance(default.value,(str,int,float,bool)) and len(str(default.value))<30:
+  safe_defaults[arg.arg]=default.value
+calls=[]
+for n in ast.walk(remember_fn):
+ if isinstance(n,ast.Call):
+  target=n.func
+  if isinstance(target,ast.Name):calls.append(target.id)
+  elif isinstance(target,ast.Attribute):calls.append(target.attr)
+sql_literals=[n.value for n in ast.walk(remember_fn) if isinstance(n,ast.Constant) and isinstance(n.value,str) and any(v in n.value.upper() for v in ('INSERT','UPDATE','SELECT','DELETE'))]
+print('NATIVE_V126_REMEMBER='+json.dumps({'params':[a.arg for a in params],
+ 'optional':sorted(optional),'safe_defaults':safe_defaults,
+ 'calls':sorted(set(calls))[:24],
+ 'sql_verbs':sorted(set(re.findall(r'(?i)\\b(?:INSERT|UPDATE|SELECT|DELETE|REPLACE)\\b',' '.join(sql_literals))))[:8],
+ 'source_sha_matches':hashlib.sha256(code).hexdigest()=='82c592ea5a59281fb5fc1061d133ac4e149b8e95a6d0947a254882715cba7f91'},separators=(',',':')))
 db=Path(s03_memory.DB)
 if not db.is_file() or db.is_symlink():raise RuntimeError('HOLD_ORIGINAL_S03_DB')
 with sqlite3.connect('file:'+str(db)+'?mode=ro',uri=True,timeout=4) as conn:
