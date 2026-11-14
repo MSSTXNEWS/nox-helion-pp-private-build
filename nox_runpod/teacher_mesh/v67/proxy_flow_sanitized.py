@@ -31,7 +31,7 @@ class Redact(ast.NodeTransformer):
         if isinstance(node.value,str):
             return ast.copy_location(ast.Constant(value=node.value if node.value in allowed else '[REDACTED]'),node)
         return node
-targets={'chat_api':35,'chat':10,'_proxy_completion':135,'_ops_agent_http':35}
+targets={'chat_api':35,'chat':10,'_proxy_completion':135,'_ops_agent_http':35,'_understanding_http':85,'_build_messages':70,'_trim_ctx':50,'_wrap_ttft':50}
 for n in ast.walk(tree):
     if isinstance(n,(ast.FunctionDef,ast.AsyncFunctionDef)) and n.name in targets:
         safe=Redact().visit(copy.deepcopy(n))
