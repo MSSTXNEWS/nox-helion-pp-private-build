@@ -127,11 +127,29 @@ proxy = Path('/root/nox/scripts/chat_proxy.py')
 bridge = Path('/root/nox/scripts/nox_v29_chat_bridge.py')
 if proxy.is_file() and not proxy.is_symlink() and proxy.stat().st_size < 500000:
     b = proxy.read_bytes()
+    bridge_ok = bridge.is_file() and not bridge.is_symlink() and bridge.stat().st_size < 500000
     emit('WEB_SOURCE', source_sha256=hashlib.sha256(b).hexdigest(),
          registration_marker=(b'register_native_v29_chat(app, globals())' in b),
-         bridge_module_exists=(bridge.is_file() and not bridge.is_symlink()))
+         bridge_module_exists=bridge_ok,
+         bridge_sha256=(hashlib.sha256(bridge.read_bytes()).hexdigest() if bridge_ok else None))
 else:
     emit('WEB_SOURCE', valid_proxy_source=False)
+
+# Send only unauthenticated negative security probes, never chat prompts.
+# An active route must reject both calls before any STOP or model code runs.
+for label, endpoint in (('STREAM', '/api/nox/chat/stream'), ('STOP', '/api/nox/stop')):
+    try:
+        request = urllib.request.Request(
+            'http://127.0.0.1:8080' + endpoint,
+            data=b'{}', method='POST',
+            headers={'Content-Type': 'application/json'})
+        with urllib.request.urlopen(request, timeout=3) as response:
+            status = response.status
+    except urllib.error.HTTPError as exc:
+        status = exc.code
+    except (urllib.error.URLError, TimeoutError, OSError):
+        status = 0
+    emit('AUTH_' + label, http=status, rejects_anonymous=(status == 401))
 
 private = Path('/root/nox/forge/base_train_input_v108')
 manifest = private / 'manifest.json'
@@ -151,6 +169,8 @@ roots = ('/root/nox/models', '/root/nox/forge', '/root/nox/checkpoints',
          '/workspace/nox/models', '/workspace/nox/forge')
 dirs_scanned = 0
 hf_candidates = 0
+hf_shard_bytes = 0
+hf_architectures = []
 optimizer_files = 0
 optimizer_bytes = 0
 for root in roots:
@@ -167,6 +187,22 @@ for root in roots:
             for name in files)
         if has_hf:
             hf_candidates += 1
+            for name in files:
+                if name.endswith('.safetensors') or (name.startswith('pytorch_model')
+                                                      and name.endswith('.bin')):
+                    try:
+                        hf_shard_bytes += (Path(current) / name).stat().st_size
+                    except OSError:
+                        pass
+            try:
+                conf = Path(current) / 'config.json'
+                if conf.stat().st_size < 250000:
+                    cfg = json.loads(conf.read_text(encoding='utf-8'))
+                    mt = cfg.get('model_type')
+                    if isinstance(mt, str) and re.fullmatch(r'[a-zA-Z0-9_.-]{1,50}', mt):
+                        hf_architectures.append(mt)
+            except (OSError, ValueError):
+                pass
         for name in files:
             if (name == 'optimizer_state.pt' or name.startswith('optimizer_state.')
                     or name == 'optimizer.pt'):
@@ -184,6 +220,7 @@ for root in roots:
         break
 emit('TRAINABLE', scanned_directories=dirs_scanned,
      partial_scan=True, local_hf_candidates=hf_candidates,
+     hf_shard_bytes=hf_shard_bytes, model_types=hf_architectures[:3],
      optimizer_file_candidates=optimizer_files,
      optimizer_file_bytes=optimizer_bytes,
      restore_verified=False, owner_lease_verified=False)
