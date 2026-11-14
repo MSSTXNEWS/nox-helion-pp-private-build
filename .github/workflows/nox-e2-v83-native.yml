@@ -1,0 +1,37 @@
+name: NOX E2 V83 pinpoint real Forge fault and browser stream
+on:
+  push:
+    branches: [nox/e2-v83-live-recovery-20261114]
+    paths:
+      - '.github/workflows/nox-e2-v83-native.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: nox-e2-v83-readonly-60509551
+  cancel-in-progress: false
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - name: Source safety preflight
+        run: |
+          set -euo pipefail
+          test -n "$NOX2"
+          python3 -m py_compile nox_runpod/teacher_mesh/v83/diagnose_native.py
+      - name: ONE authenticated Vast native inventory for real trainer and chat
+        run: python3 -m nox_runpod.teacher_mesh.v83.diagnose_native
+      - name: Revoke temporary owner SSH key on all outcomes
+        if: always()
+        run: python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup
+      - name: No changes to live NOX
+        if: success()
+        run: |
+          echo 'NOX_S03_UNCHANGED=true'
+          echo 'NOX_TRAINER_UNCHANGED=true'
+          echo 'NOX_MODEL_UNCHANGED=true'
