@@ -1,0 +1,26 @@
+name: NOX V118 cookiejar shadow root cause source regression
+on:
+  push:
+    branches: [nox/e2-v118-http-shadow-fix-20261115]
+    paths:
+      - '.github/workflows/nox-e2-v118-cookiejar-source.yml'
+      - 'nox_runpod/teacher_mesh/v118/owner_nested_static_hotfix.py'
+      - 'nox_runpod/teacher_mesh/v118/test_http_cookiejar_shadow.py'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  isolated-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Real root cause regression; absolutely no native server access
+        run: |
+          set -euo pipefail
+          python3 -m py_compile nox_runpod/teacher_mesh/v118/owner_nested_static_hotfix.py
+          python3 -m unittest -v nox_runpod.teacher_mesh.v118.test_http_cookiejar_shadow
+          echo 'NOX_V118_HTTP_COOKIEJAR_SHADOW_REGRESSION=PASS'
+          echo 'NOX_V118_SERVER_RESTARTS=0'
