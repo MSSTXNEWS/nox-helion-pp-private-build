@@ -42,5 +42,20 @@ class NativeSource(unittest.TestCase):
         self.assertIn("if stopped():raise RuntimeError('HOLD_STOP')",self.script)
         self.assertIn("if count!=5 or stopped():raise RuntimeError('HOLD_POST_ROUTE_ACCEPTANCE')",self.script)
 
+
+    def test_owner_cookie_auth_middleware_exact_path_allowlist(self):
+        source=self.script
+        self.assertIn("PROXY_OLD_GUARD=",source)
+        self.assertIn("PROXY_NEW_GUARD=",source)
+        self.assertIn("pxsource.count(PROXY_OLD_GUARD)!=1",source)
+        self.assertIn("compile(pxchanged,str(PX),'exec')",source)
+        self.assertIn("new_proxy_sha256=file_sha(PX)",source)
+        self.assertIn("'/api/nox/system/processes'",source)
+        self.assertIn("'/api/nox/premium/capabilities'",source)
+        self.assertIn("_session_ok(request):",source)
+        self.assertIn("atomic(PX,pxchanged,pxmeta,'.nox-v125-proxy.tmp')",source)
+        self.assertIn("atomic(PX,pxbefore,pxmeta,'.nox-v125-proxy-rollback.tmp')",source)
+        self.assertIn("file_sha(PX)==PX_EXPECTED",source)
+
 if __name__=='__main__':
     unittest.main()
