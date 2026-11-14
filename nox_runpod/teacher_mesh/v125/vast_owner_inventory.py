@@ -14,28 +14,36 @@ import urllib.parse
 import urllib.request
 
 EXPECTED=60509551
-BASE="https://console.vast.ai/api/v1/instances"
+BASES=(
+    "https://console.vast.ai/api/v1/instances",
+    "https://console.vast.ai/api/v1/instances/",
+    "https://cloud.vast.ai/api/v1/instances/",
+    "https://cloud.vast.ai/api/v1/instances",
+)
 
 def fetch(page: str, token: str) -> tuple[int, dict]:
     query={"limit":"25"}
     if page: query["after_token"]=page
-    url=BASE+"?"+urllib.parse.urlencode(query)
-    request=urllib.request.Request(url,headers={
-        "Authorization":"Bearer "+token,
-        "Accept":"application/json"},method="GET")
-    for attempt in range(3):
-        try:
-            with urllib.request.urlopen(request,timeout=20) as resp:
-                body=resp.read(350000)
-                return resp.status,json.loads(body)
-        except urllib.error.HTTPError as exc:
-            if exc.code==429 and attempt<2:
-                time.sleep((8,18)[attempt])
-                continue
-            return exc.code,{}
-        except (TimeoutError,urllib.error.URLError,ValueError,OSError):
-            return 0,{}
-    return 0,{}
+    for base in BASES:
+        url=base+"?"+urllib.parse.urlencode(query)
+        request=urllib.request.Request(url,headers={
+            "Authorization":"Bearer "+token,
+            "Accept":"application/json"},method="GET")
+        for attempt in range(3):
+            try:
+                with urllib.request.urlopen(request,timeout=20) as resp:
+                    body=resp.read(350000)
+                    return resp.status,json.loads(body)
+            except urllib.error.HTTPError as exc:
+                if exc.code==429 and attempt<2:
+                    time.sleep((8,18)[attempt])
+                    continue
+                if exc.code==404:
+                    break  # Only alternate official Vast.ai URL path/origin.
+                return exc.code,{}
+            except (TimeoutError,urllib.error.URLError,ValueError,OSError):
+                return 0,{}
+    return 404,{}
 
 def main() -> int:
     key=os.environ.get("NOX2","")
