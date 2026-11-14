@@ -3,7 +3,7 @@ run-name: ONEPASS NOX PRIME 60509551 - one controlled native application
 on:
   push:
     branches: [nox/e2-v72-onepass-live-20261114]
-    paths: ['.github/workflows/nox-e2-v72-onepass.yml']
+    paths: ['.github/workflows/nox-e2-v72-onepass.yml', 'nox_runpod/teacher_mesh/v72/test_onepass_contract.py']
   workflow_dispatch:
 permissions:
   contents: read
