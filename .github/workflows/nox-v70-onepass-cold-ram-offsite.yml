@@ -2,7 +2,7 @@ name: NOX V70 ONEPASS 3 cold files RAM to encrypted offsite in one run
 on:
   push:
     branches: [feature/nox-v38-synaptic-brain-20261114]
-    paths: [.github/workflows/nox-v70-onepass-cold-ram-offsite.yml]
+    paths: [.github/workflows/nox-v70-onepass-cold-ram-offsite.yml, nox_runpod/teacher_mesh/v70/onepass_cold_offload.py]
   workflow_dispatch:
 permissions:
   contents: read
@@ -13,7 +13,7 @@ jobs:
   onepass:
     if: ${{ github.actor == 'MSSTXNEWS' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 45
     env:
       NOX2: ${{ secrets.NOX2 }}
     steps:
