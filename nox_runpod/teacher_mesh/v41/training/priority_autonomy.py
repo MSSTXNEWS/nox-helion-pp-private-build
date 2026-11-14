@@ -113,3 +113,88 @@ def submit_verified_plan(plan: Mapping, host: SchedulerPorts, *, owner_scope: st
             return {'state':'HOLD_NATIVE_SCHEDULER_ERROR', 'jobs_enqueued':len(receipts), 'receipts':receipts}
     return {'state':'NATIVE_QUEUE_READBACK_VERIFIED', 'jobs_enqueued':len(receipts), 'receipts':receipts,
             'training_started':False, 'source_only':False}
+
+
+@dataclass(frozen=True)
+class ChatFirstBudget:
+    """Admission policy for existing OneHost; never starts a process."""
+    quiet_seconds: int = 20
+    chat_recent_seconds: int = 45
+    disk_checkpoint_reserve_bytes: int = 20_000_000_000
+    min_gpu_free_mib: int = 3072
+    max_gpu_temp_c: int = 80
+    target_idle_compute_pct: int = 90
+
+
+def chat_first_admission(status: Mapping, *, budget: ChatFirstBudget = ChatFirstBudget()) -> dict:
+    """Turn live OneHost observations into an *advisory* background-work decision.
+
+    A chat request is a preemption signal, not permission to kill a trainer in
+    mid-step. OneHost must pause at a verified optimizer/checkpoint boundary.
+    No disk/backup proof -> allow nonmutating preparation, not training/weights.
+    Missing telemetry, heartbeat or chat state -> fail closed.
+    """
+    result = {'schema': 'NOX_CHAT_FIRST_ADMISSION_V1', 'queue_owner': 'EXISTING_NOX_ONEHOST',
+              'new_scheduler': False, 'launch': False, 'training_launch': False,
+              'target_compute_pct_idle': budget.target_idle_compute_pct,
+              'chat_reserved': True, 'actions': [], 'reasons': []}
+    if not isinstance(status, Mapping) or status.get('owner_authorized') is not True:
+        result['reasons'].append('HOLD_NO_OWNER_HEARTBEAT')
+        return result
+    if status.get('stop_active') is not False:
+        result['reasons'].append('HOLD_STOP_OR_UNKNOWN')
+        return result
+    if status.get('chat_state') not in ('idle', 'pending', 'generating'):
+        result['reasons'].append('HOLD_CHAT_STATE_UNKNOWN')
+        return result
+    elapsed = status.get('seconds_since_chat_activity')
+    if type(elapsed) not in (int, float) or elapsed < 0:
+        result['reasons'].append('HOLD_CHAT_HEARTBEAT_UNKNOWN')
+        return result
+    if status['chat_state'] in ('pending','generating') or elapsed < budget.chat_recent_seconds:
+        result['actions'] = ['CHAT_P0', 'PAUSE_GPU_BACKGROUND_AT_SAFE_BOUNDARY',
+                             'PRESERVE_MODEL_AND_S03']
+        result['reasons'].append('CHAT_FIRST')
+        return result
+
+    result['actions'] = ['KEEP_MAIN_NOX_MODEL_WARM', 'ALLOW_CPU_KNOWLEDGE_PREP',
+                         'ALLOW_INDEXED_S03_RETRIEVAL']
+    result['launch'] = True
+    gpus = status.get('gpus')
+    disk = status.get('disk_free_bytes')
+    if not isinstance(gpus, list) or len(gpus) != 2 or any(
+        not isinstance(g, Mapping) or
+        type(g.get('vram_free_mib')) is not int or g['vram_free_mib'] < 0 or
+        type(g.get('temperature_c')) is not int or
+        g['temperature_c'] < 0 for g in gpus):
+        result['reasons'].append('HOLD_GPU_TELEMETRY')
+        return result
+    if any(g['temperature_c'] >= budget.max_gpu_temp_c for g in gpus):
+        result['reasons'].append('HOLD_GPU_TEMP')
+        return result
+    if not isinstance(disk, int) or disk < budget.disk_checkpoint_reserve_bytes:
+        result['reasons'].append('HOLD_DISK_RESERVE')
+        return result
+    if status.get('external_restore_verified') is not True:
+        result['reasons'].append('HOLD_EXTERNAL_RESTORE')
+        return result
+    if status.get('checkpoint_resume_verified') is not True:
+        result['reasons'].append('HOLD_CHECKPOINT_RESUME')
+        return result
+    if status.get('runtime_gpu_abi_verified') is not True:
+        result['reasons'].append('HOLD_CUDA_RUNTIME')
+        return result
+    if status.get('training_owner_lease') is not True:
+        result['reasons'].append('HOLD_NATIVE_TRAINING_LEASE')
+        return result
+    available = [i for i,g in enumerate(gpus)
+                 if g['vram_free_mib'] >= budget.min_gpu_free_mib]
+    # GPU0 should remain dedicated to chat; offloading optimizer to GPU0
+    # is not admitted even if telemetry reports spare capacity.
+    if 1 not in available:
+        result['reasons'].append('HOLD_GPU1_HEADROOM')
+        return result
+    result['actions'].append('REQUEST_ONEHOST_GPU1_DISTILLATION_ADMISSION')
+    result['training_launch'] = False  # lease check is NOT an actual queue receipt
+    result['reasons'].append('READY_FOR_NATIVE_QUEUE_AND_PEAK_VRAM_CHECK')
+    return result
