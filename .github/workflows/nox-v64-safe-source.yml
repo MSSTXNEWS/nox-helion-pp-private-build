@@ -1,0 +1,32 @@
+name: NOX E2 V64 redacted agent streaming source inspection
+on:
+  push:
+    branches: [nox/e2-chat-latency-20261114]
+    paths:
+      - '.github/workflows/nox-v64-safe-source.yml'
+      - 'nox_runpod/teacher_mesh/v63/redacted_agent_source.py'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: nox-e2-v64-safe-source
+  cancel-in-progress: false
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Check script syntax
+        run: |
+          python3 -m py_compile nox_runpod/teacher_mesh/v63/redacted_agent_source.py
+          test -n "$NOX2"
+      - name: Redact literals and inspect exact existing chat control flow
+        run: python3 -m nox_runpod.teacher_mesh.v63.redacted_agent_source
+      - name: Clean temporary SSH key
+        if: always()
+        run: python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup
