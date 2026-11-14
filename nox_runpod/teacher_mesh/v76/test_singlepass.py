@@ -28,8 +28,11 @@ class SevenStages(unittest.TestCase):
         self.assertIn("PRAGMA quick_check",self.code)
     def test_git_sha_pinned_and_staged_not_live(self):
         self.assertIn('aa77a7d43bcceee696e2d6ff73d3285d217ab001',self.code)
-        self.assertIn("sha_blob(body)!=expected",self.code)
+        self.assertIn("sha_blob(body)!=sources[member.name]",self.code)
         self.assertIn('production_activated=False',self.code)
+        self.assertIn("base64.b64decode(BUNDLE_B64",self.code)
+        self.assertNotIn("raw.githubusercontent.com",self.code)
+        self.assertGreater(len(job._bundle_existing_sources()),100)
     def test_single_model_onehost_preserved(self):
         self.assertIn("'production_main_model_changed':False",self.code)
         self.assertIn("'production_proxy_changed':False",self.code)
