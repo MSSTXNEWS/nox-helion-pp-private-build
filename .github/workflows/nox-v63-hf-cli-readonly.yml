@@ -28,3 +28,6 @@ jobs:
       - name: Mandatory temporary SSH key revoke
         if: always()
         run: python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup
+      - name: GENESIS admissibility receipt
+        if: success()
+        run: echo 'NOX_GENESIS_V1_1_HF_DEPENDENCY_AUDITED=true'
