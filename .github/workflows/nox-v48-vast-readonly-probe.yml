@@ -266,6 +266,86 @@ jobs:
                       print('JUPYTER_API_'+scheme+'_HOLD_'+type(e).__name__)
           print('JUPYTER_API_READ_VERIFIED=False')
           PY
+      - name: Safely inspect SSH key registration; detach only our orphan if found
+        if: success()
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os,json,urllib.request,urllib.error
+          key=os.environ['VAST_API_KEY']
+          base='https://console.vast.ai/api/v0/instances/60509551/ssh'
+          head={'Authorization':'Bearer '+key,'Accept':'application/json'}
+          def get():
+              req=urllib.request.Request(base,headers=head)
+              with urllib.request.urlopen(req,timeout=15) as r:return json.load(r)
+          try:
+              response=get()
+          except urllib.error.HTTPError as e:
+              print('HOLD_INSTANCE_SSH_KEYS_GET_HTTP_'+str(e.code))
+              raise SystemExit(0)
+          except Exception as e:
+              print('HOLD_INSTANCE_SSH_KEYS_GET_'+type(e).__name__)
+              raise SystemExit(0)
+          rows=response.get('ssh_keys',[]) if isinstance(response,dict) else response
+          if isinstance(rows,str):
+              try: rows=json.loads(rows)
+              except ValueError:rows=[]
+          if isinstance(rows,dict):rows=list(rows.values())
+          if not isinstance(rows,list):rows=[]
+          print('INSTANCE_SSH_KEY_COUNT='+str(len(rows)))
+          mine=[item for item in rows if isinstance(item,dict) and
+                'nox-e2-one-time' in ' '.join(str(item.get(k,'')) for k in ('key','public_key','name','comment'))]
+          print('E2_TEMP_KEYS_FOUND='+str(len(mine)))
+          for item in mine:
+              item_id=item.get('id')
+              if not (isinstance(item_id,int) or str(item_id).isdigit()):
+                  print('HOLD_NO_NUMERIC_ID_FOR_E2_KEY')
+                  continue
+              req=urllib.request.Request(base+'/'+str(item_id),headers=head,method='DELETE')
+              try:
+                  with urllib.request.urlopen(req,timeout=15) as r:
+                      response=json.load(r)
+                      if isinstance(response,dict) and response.get('success') is False:
+                          print('HOLD_E2_KEY_DETACH_API_REJECTED')
+                      else:
+                          print('E2_TEMP_KEY_DETACH_REQUEST_ACCEPTED')
+              except urllib.error.HTTPError as e:
+                  print('HOLD_E2_KEY_DETACH_HTTP_'+str(e.code))
+              except Exception as e:
+                  print('HOLD_E2_KEY_DETACH_'+type(e).__name__)
+          try:
+              fresh=get()
+              arr=fresh.get('ssh_keys',[]) if isinstance(fresh,dict) else fresh
+              if isinstance(arr,str):arr=json.loads(arr)
+              if not isinstance(arr,list):arr=[]
+              remaining=[a for a in arr if isinstance(a,dict) and 'nox-e2-one-time' in ' '.join(str(a.get(k,'')) for k in ('key','public_key','name','comment'))]
+              print('E2_TEMP_KEYS_REMAINING='+str(len(remaining)))
+          except Exception:
+              print('HOLD_POST_DETACH_READBACK')
+          PY
+      - name: Check sanitized instance log indicators without exporting raw logs
+        if: success()
+        shell: bash
+        run: |
+          set -euo pipefail
+          if timeout 35s vastai logs 60509551 --tail 70 > "$RUNNER_TEMP/instance.log" 2>/dev/null; then
+            python3 - <<'PY'
+          import os,re
+          from pathlib import Path
+          t=(Path(os.environ['RUNNER_TEMP'])/'instance.log').read_text(errors='replace')
+          print('INSTANCE_LOG_QUERY_ACCEPTED=true')
+          for label,regex in [
+            ('SSH_AUTH_BAD_MODES',r'Authentication refused: bad ownership or modes'),
+            ('SSH_PUBLICKEY_REFUSED',r'Failed publickey'),
+            ('SSHD_START_FAILURE',r'(?:sshd).{0,80}(?:fail|error)'),
+            ('JUPYTER_START_FAILURE',r'(?:jupyter).{0,80}(?:fail|error)'),
+            ('TRAIN_ERROR_STEP0',r'train_error.{0,20}step.{0,5}0'),
+          ]: print(label+'='+str(bool(re.search(regex,t,re.I))))
+          PY
+          else
+            echo "HOLD_INSTANCE_LOGS_CLI_UNAVAILABLE"
+          fi
       - name: Upload sanitized API receipt (no host or credentials)
         if: always()
         uses: actions/upload-artifact@v4
