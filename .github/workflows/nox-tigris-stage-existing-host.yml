@@ -1,0 +1,153 @@
+name: NOX Tigris source-only stage onto original Vast host
+on:
+  push:
+    branches: [feature/nox-tigris-warm-20261115]
+    paths: ['.github/workflows/nox-tigris-stage-existing-host.yml']
+  workflow_dispatch:
+permissions: {contents: read}
+concurrency:
+  group: nox-tigris-stage-native-60509551
+  cancel-in-progress: false
+jobs:
+  stage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - name: Test source before staging
+        run: |
+          set -euo pipefail
+          python3 -m pip -q install 'boto3>=1.35,<2'
+          python3 -m py_compile nox_runpod/teacher_mesh/v43/nox/tigris_warm.py
+          python3 -m unittest discover -s nox_runpod/teacher_mesh/v43/tests -p test_tigris_warm.py
+      - name: Stage verified module on EXISTING Vast.ai 60509551, no activation
+        run: |
+          set -euo pipefail
+          test -n "$NOX2" || { echo "HOLD_NOX2_NOT_AVAILABLE"; exit 2; }
+          python3 - <<'PYSTAGE'
+          import base64,hashlib,io,ipaddress,os,subprocess
+          from contextlib import redirect_stdout
+          from pathlib import Path
+          from nox_runpod.teacher_mesh.v51 import ephemeral_ssh_probe as bridge
+          src=Path('nox_runpod/teacher_mesh/v43/nox/tigris_warm.py').read_bytes()
+          if not (18000 <= len(src) <= 45000):
+              raise SystemExit('HOLD_SOURCE_SIZE')
+          compile(src,'tigris_warm.py','exec')
+          sha=hashlib.sha256(src).hexdigest()
+          encoded=base64.b64encode(src).decode('ascii')
+          # This custom stage marker is distinct from the V51 read-only marker.
+          stage=r"""
+          set -euo pipefail
+          python3 - <<'PYHOST'
+          import base64,hashlib,os,json,urllib.request
+          from pathlib import Path
+          def hold(code):
+              print('NATIVE_TIGRIS_STAGE='+code)
+              raise SystemExit(2)
+          root=Path('/root/nox')
+          if not root.is_dir() or root.is_symlink():hold('HOLD_NOX_ROOT')
+          stops=('/root/nox/STOP','/root/nox/STOP.flag','/root/nox/stop.flag',
+                 '/root/nox/.stop','/workspace/NOX_STOP','/root/nox/program/STOP')
+          if any(Path(x).exists() for x in stops):hold('HOLD_STOP_ACTIVE')
+          for port in (8080,8081):
+              try:
+                  with urllib.request.urlopen('http://127.0.0.1:'+str(port)+'/health',timeout=3) as r:
+                      if r.status!=200:hold('HOLD_NOX_HEALTH')
+              except Exception:hold('HOLD_NOX_HEALTH')
+          expected='__SHA__'
+          raw=base64.b64decode('__PAYLOAD__',validate=True)
+          if hashlib.sha256(raw).hexdigest()!=expected:hold('HOLD_TRANSPORT_SHA')
+          compile(raw, 'nox_tigris_warm.py', 'exec')
+          base=root/'NOX_TOOLS'
+          targetdir=base/'TIGRIS_STAGE'
+          if base.is_symlink() or targetdir.is_symlink():hold('HOLD_STAGE_SYMLINK')
+          targetdir.mkdir(mode=0o700,parents=True,exist_ok=True)
+          if targetdir.is_symlink():hold('HOLD_STAGE_SYMLINK_AFTER_MKDIR')
+          target=targetdir/('tigris_warm_'+expected[:16]+'.py')
+          if target.exists():
+              if not target.is_file() or target.is_symlink() or hashlib.sha256(target.read_bytes()).hexdigest()!=expected:
+                  hold('HOLD_TARGET_COLLISION')
+              print('NATIVE_TIGRIS_STAGE=ALREADY_STAGED_SHA_VERIFIED')
+          else:
+              tmp=targetdir/('.pending-'+expected[:16])
+              try:
+                  fd=os.open(tmp,os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600)
+                  with os.fdopen(fd,'wb') as f:
+                      f.write(raw);f.flush();os.fsync(f.fileno())
+                  try:os.link(tmp,target)
+                  except FileExistsError:hold('HOLD_CONCURRENT_STAGE')
+              finally:
+                  tmp.unlink(missing_ok=True)
+              if hashlib.sha256(target.read_bytes()).hexdigest()!=expected:
+                  hold('HOLD_STAGE_READBACK_SHA')
+              print('NATIVE_TIGRIS_STAGE=NEW_SOURCE_STAGED_SHA_VERIFIED')
+          print('NATIVE_TIGRIS_STAGE_SHA256='+expected)
+          print('NATIVE_TIGRIS_STAGE_FILE_BYTES='+str(len(raw)))
+          print('NATIVE_TIGRIS_MODEL_WEIGHTS_TRANSFERRED=false')
+          print('NATIVE_TIGRIS_CREDENTIALS_ACCESSED=false')
+          print('NATIVE_TIGRIS_NOX_RESTARTED=false')
+          print('NATIVE_TIGRIS_ACTIVATED=false')
+          print('NATIVE_TIGRIS_STAGE_COMPLETE=true')
+          PYHOST
+          """
+          stage=stage.replace('__SHA__',sha).replace('__PAYLOAD__',encoded)
+          verified=False
+          staged=False
+          cleanup=False
+          output=io.StringIO()
+          try:
+              # Established bridge verifies Vast instance identity and SSH
+              # banner, attaches only a temporary key. This part is read-only.
+              with redirect_stdout(output):
+                  verified=bridge.probe()
+              if not verified:
+                  print('NOX_TIGRIS_SOURCE_STAGE=HOLD_V51_NATIVE_READ_ONLY')
+              else:
+                  d=bridge.api('GET',f'/instances/{bridge.INSTANCE}/',os.environ['NOX2'])
+                  d=d.get('instances',d) if isinstance(d,dict) else None
+                  if isinstance(d,list):
+                      d=next((x for x in d if str(x.get('id'))==str(bridge.INSTANCE)),None)
+                  if not isinstance(d,dict) or str(d.get('id'))!=str(bridge.INSTANCE):
+                      raise RuntimeError('HOLD_INSTANCE_CHANGED')
+                  host=d.get('public_ipaddr')
+                  if not ipaddress.ip_address(host).is_global:
+                      raise RuntimeError('HOLD_SSH_IP_NOT_GLOBAL')
+                  ports=d.get('ports',{}).get('22/tcp',[])
+                  if not isinstance(ports,list):
+                      raise RuntimeError('HOLD_SSH_PORT_MAP')
+                  for row in ports:
+                      raw=row.get('HostPort') if isinstance(row,dict) else None
+                      if not str(raw).isdigit() or not(1<=int(raw)<=65535):continue
+                      cmd=['ssh','-T','-i',str(bridge.KEY),'-p',str(int(raw)),
+                           '-o','BatchMode=yes','-o','IdentitiesOnly=yes',
+                           '-o','ConnectTimeout=10','-o','NumberOfPasswordPrompts=0',
+                           '-o','StrictHostKeyChecking=yes',
+                           '-o','UserKnownHostsFile='+str(bridge.RUNNER/'known_hosts'),
+                           'root@'+host,'bash','-se']
+                      try:
+                          proc=subprocess.run(cmd,input=stage,encoding='utf8',
+                                              capture_output=True,timeout=35)
+                      except subprocess.TimeoutExpired:
+                          continue
+                      if proc.returncode==0 and 'NATIVE_TIGRIS_STAGE_COMPLETE=true' in proc.stdout:
+                          for line in proc.stdout.splitlines():
+                              if line.startswith('NATIVE_TIGRIS_') and len(line)<250:
+                                  print(line)
+                          staged=True
+                          break
+                  if not staged:print('NOX_TIGRIS_SOURCE_STAGE=HOLD_STAGE_SSH_OR_READBACK')
+          except Exception as ex:
+              print('NOX_TIGRIS_SOURCE_STAGE=HOLD_NATIVE_STAGE')
+          finally:
+              try:
+                  with redirect_stdout(output):
+                      cleanup=bridge.cleanup()
+              except Exception:cleanup=False
+              for line in output.getvalue().splitlines():
+                  if line.startswith('TEMP_SSH_CLEANUP='):print(line)
+          print('NOX_TIGRIS_SOURCE_STAGE_VERIFIED='+str(bool(verified and staged and cleanup)).lower())
+          raise SystemExit(0 if verified and staged and cleanup else 2)
+          PYSTAGE
