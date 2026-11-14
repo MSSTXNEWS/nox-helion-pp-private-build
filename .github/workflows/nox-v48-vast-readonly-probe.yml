@@ -20,14 +20,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 7
     env:
-      VAST_API_KEY: ${{ secrets.VAST_API_KEY }}
+      VAST_API_KEY: ${{ secrets.NOX2 }}
     steps:
       - name: Confirm existing GitHub Actions credential without disclosing it
         shell: bash
         run: |
           set -euo pipefail
           if [ -z "${VAST_API_KEY:-}" ]; then
-            echo "::error::VAST_API_KEY is not configured for this workflow; no remote connection attempted."
+            echo "::error::NOX2 is not configured for this workflow; no remote connection attempted."
             exit 2
           fi
           echo "VAST_API_KEY_PRESENT=true"
@@ -64,15 +64,15 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          timeout 75s vastai execute 60509551 "nvidia-smi -L" > "$RUNNER_TEMP/nox_execute_response.txt"
+          timeout 75s vastai execute 60509551 "ls /workspace" > "$RUNNER_TEMP/nox_execute_response.txt"
           python - <<'PY'
-          import os,re
+          import os,re,hashlib
           data=open(os.path.join(os.environ['RUNNER_TEMP'],'nox_execute_response.txt'),encoding='utf-8',errors='replace').read()
           if len(data)>20000:raise SystemExit('HOLD_OVERSIZED_EXEC_RESPONSE')
           if re.search(r'(401|403|unauthorized|permission denied|error)',data,re.I):
               print('HOLD_EXECUTION_DENIED_OR_ERROR')
               raise SystemExit(2)
           print('VAST_EXEC_RESPONSE_RECEIVED=true')
-          print('RECEIPT_EVIDENCE='+data[:1800])
-          print('NOTE=EXEC_RESPONSE_NOT_PROOF_OF_REMOTE_COMPLETION_UNTIL_RESULT_READBACK')
+          print('EXEC_RESPONSE_SHA256='+hashlib.sha256(data.encode()).hexdigest())
+          print('NOTE=EXEC_RESPONSE_ONLY_REMOTE_COMPLETION_REQUIRES_NATIVE_READBACK')
           PY
