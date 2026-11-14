@@ -1,4 +1,5 @@
 name: NOX V125 original S03 owner fact API one-shot native acceptance
+# Verified source regression: 21/21 after pre-route 404/401 distinction, preserve mandatory post-route 401.
 on:
   push:
     branches: [nox/e2-v125-owner-s03-facts-20261115]
