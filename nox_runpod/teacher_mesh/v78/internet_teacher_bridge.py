@@ -130,13 +130,33 @@ def fetch_hub_metadata(model_id: str, *, timeout: float = 8.0):
         data = json.loads(raw)
         if not isinstance(data, dict):
             return {"state": "HOLD_METADATA"}
+        # Do not infer "trust_remote_code=False" merely because the Hub API
+        # omits that field. Inspect the advertised repo file listing and config.
+        # This is metadata-only, NOT a source-code security audit or install.
+        siblings = data.get("siblings")
+        config = data.get("config")
+        if not isinstance(siblings, list) or not siblings:
+            return {"state": "HOLD_REMOTE_CODE_METADATA_NOT_AVAILABLE"}
+        if any(not isinstance(entry, dict) or not isinstance(entry.get("rfilename"), str)
+               for entry in siblings):
+            return {"state": "HOLD_REMOTE_CODE_METADATA_NOT_AVAILABLE"}
+        repo_names = [entry["rfilename"].lower() for entry in siblings]
+        custom_python = any(name.endswith((".py", ".so", ".pyd", ".dll")) for name in repo_names)
+        auto_map = isinstance(config, dict) and bool(config.get("auto_map"))
+        if custom_python or auto_map or data.get("custom_code") is True:
+            return {"state": "HOLD_REMOTE_CODE"}
         card = data.get("cardData")
         license_name = card.get("license") if isinstance(card, dict) else None
         normalized = {"id": data.get("id"), "sha": data.get("sha"),
                       "license": license_name or data.get("license"),
                       "gated": data.get("gated", False) is not False,
                       "trust_remote_code": False}
-        return discover_candidate(model_id, metadata=normalized)
+        reviewed = discover_candidate(model_id, metadata=normalized)
+        if reviewed.get("state") == "CANDIDATE_REVIEWED_NOT_INSTALLED":
+            return {**reviewed, "metadata_file_list_checked": True,
+                    "remote_code_execution_enabled": False,
+                    "full_code_audit_completed": False}
+        return reviewed
     except (OSError, ValueError, TimeoutError, KeyError):
         return {"state": "HOLD_NETWORK_OR_METADATA"}
 
