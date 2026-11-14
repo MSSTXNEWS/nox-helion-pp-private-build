@@ -1,5 +1,10 @@
 name: NOX V130 existing S03 owner fact write source QA
 on:
+  pull_request:
+    branches: [feature/nox-v37-v100-firsthour-14d-20261113]
+    paths:
+      - 'nox_runpod/teacher_mesh/v130/**'
+      - '.github/workflows/nox-v130-owner-s03-facts-source.yml'
   push:
     branches: [feature/nox-v38-synaptic-brain-20261114]
     paths:
