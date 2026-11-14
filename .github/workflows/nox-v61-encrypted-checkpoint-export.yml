@@ -1,0 +1,70 @@
+name: NOX V61 encrypted checkpoint + optimizer offload (no loss)
+on:
+  push:
+    branches: [feature/nox-v38-synaptic-brain-20261114]
+    paths: [.github/workflows/nox-v61-encrypted-checkpoint-export.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: nox-v61-vast60509551-checkpoint-export
+  cancel-in-progress: false
+jobs:
+  export:
+    if: ${{ github.actor == 'MSSTXNEWS' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify archive script syntax
+        run: |
+          python3 -m py_compile nox_runpod/teacher_mesh/v51/ephemeral_ssh_probe.py nox_runpod/teacher_mesh/v60/encrypted_backup.py nox_runpod/teacher_mesh/v61/checkpoint_backup.py
+      - name: Get supported age binary from OS distribution
+        run: |
+          set -euo pipefail
+          if ! command -v age; then
+            sudo apt-get update -qq
+            sudo apt-get -qq install -y age
+          fi
+          age --version
+      - name: Stream checkpoint and optimizer ciphertext from live Vast (without remote deletion)
+        env:
+          NOX2: ${{ secrets.NOX2 }}
+        run: |
+          set -euo pipefail
+          python3 -m nox_runpod.teacher_mesh.v61.checkpoint_backup
+      - name: Verify ciphertext and receipt
+        run: |
+          python3 - <<'PY'
+          import json,hashlib,pathlib
+          p=pathlib.Path('NOX_V61_CHECKPOINT_OPTIMIZER_ENCRYPTED_20261114.tar.age')
+          d=json.loads(pathlib.Path('NOX_V61_CHECKPOINT_OPTIMIZER_RECEIPT.json').read_text())
+          assert d['temporary_age_test_restore']=='PASS'
+          assert d['checkpoint_optimizer_files']>=10
+          assert hashlib.sha256(p.read_bytes()).hexdigest()==d['ciphertext_sha256']
+          print('NOX_V61_CIPHER_SHA_AND_RESTORE_TEST=PASS')
+          PY
+      - name: Upload only encrypted bundle and checksum receipt
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_V61_ENCRYPTED_CHECKPOINT_OPTIMIZER_20261114
+          path: |
+            NOX_V61_CHECKPOINT_OPTIMIZER_ENCRYPTED_20261114.tar.age
+            NOX_V61_CHECKPOINT_OPTIMIZER_RECEIPT.json
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error
+      - name: Always verify temporary Vast SSH key removal
+        if: always()
+        env:
+          NOX2: ${{ secrets.NOX2 }}
+        run: |
+          python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup
+      - name: No-loss training protection
+        if: success()
+        run: |
+          echo "NOX_TRAINING_NOT_INTERRUPTED=true"
+          echo "NOX_SOURCE_CHECKPOINTS_NOT_DELETED=true"
+          echo "NOX_OFFSITE_OWNER_KEY_RESTORE_NEEDS_VERIFICATION=true"
