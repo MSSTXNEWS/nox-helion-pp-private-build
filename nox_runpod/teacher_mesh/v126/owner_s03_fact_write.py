@@ -6,7 +6,7 @@ JSON metadata. No inferred fact verification, no arbitrary PC commands.
 """
 from __future__ import annotations
 import asyncio
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import hashlib
 import json
 import re
@@ -85,7 +85,7 @@ def _validate(data):
     if stamp.tzinfo is None:
         raise ValueError("TIMEZONE_REQUIRED")
     # Do not let future dates be represented as already verified observations.
-    if stamp.astimezone(timezone.utc)>datetime.now(timezone.utc).replace(microsecond=0)+__import__("datetime").timedelta(days=1):
+    if stamp.astimezone(timezone.utc)>datetime.now(timezone.utc).replace(microsecond=0)+timedelta(days=1):
         raise ValueError("FUTURE_VALID_FROM")
     return {"fact_key":key,"content":content,"source_sha256":digest,
             "source_ref":ref,"valid_from":stamp.astimezone(timezone.utc).isoformat()}
