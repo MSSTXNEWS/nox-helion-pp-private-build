@@ -109,10 +109,31 @@ try:
  source=old.decode('utf8')
  anchor="async def _proxy_completion(body: dict):\n"
  after="    payload['messages'] = _trim_ctx(_build_messages(body))\n"
- if source.count(anchor)!=1 or source.count(after)!=1 or 'nox_v113_verified_local_teacher' in source:
-  emit(state='HOLD_PATCH_ANCHORS',owner_fn_count=source.count(anchor),build_messages_count=source.count(after),already_patched=('nox_v113_verified_local_teacher' in source))
-  raise RuntimeError('HOLD_PATCH_ANCHORS')
- updated=source.replace(anchor,HELPER+anchor,1).replace(after,after+INJECT,1)
+ if source.count(anchor)!=1 or 'nox_v113_verified_local_teacher' in source:
+  raise RuntimeError('HOLD_OWNER_FUNCTION_ANCHOR')
+ original_ast=ast.parse(source)
+ original_proxy=next(n for n in original_ast.body
+                     if isinstance(n,ast.AsyncFunctionDef) and n.name=='_proxy_completion')
+ assignments=[]
+ for n in ast.walk(original_proxy):
+  if not isinstance(n,ast.Assign) or len(n.targets)!=1:continue
+  t=n.targets[0]
+  if (isinstance(t,ast.Subscript) and isinstance(t.value,ast.Name)
+      and t.value.id=='payload' and isinstance(t.slice,ast.Constant)
+      and t.slice.value=='messages' and isinstance(n.value,ast.Call)
+      and isinstance(n.value.func,ast.Name) and n.value.func.id=='_trim_ctx'):
+   assignments.append(n)
+ if len(assignments)!=1:
+  emit(state='HOLD_AST_PAYLOAD_MESSAGES_ASSIGN',matches=len(assignments))
+  raise RuntimeError('HOLD_AST_PAYLOAD_MESSAGES_ASSIGN')
+ assign=assignments[0]
+ lines=source.splitlines(keepends=True)
+ original_line=lines[assign.lineno-1]
+ if not original_line.startswith('    ') or original_line.startswith('        '):
+  raise RuntimeError('HOLD_AST_INSERT_INDENT')
+ lines.insert(assign.end_lineno,INJECT)
+ updated=''.join(lines)
+ updated=updated.replace(anchor,HELPER+anchor,1)
  compile(updated,str(P),'exec')
  tree=ast.parse(updated)
  proxy=next(x for x in tree.body if isinstance(x,ast.AsyncFunctionDef) and x.name=='_proxy_completion')
