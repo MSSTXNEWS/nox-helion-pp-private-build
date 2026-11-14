@@ -2,7 +2,7 @@
   "schema": "NOX_R60_SOURCE_PLAN_V1",
   "instance_id": 60509551,
   "source_matrix_path": "nox_runpod/teacher_mesh/v47/control/TASKS_60_V46.json",
-  "source_matrix_blob_sha": "02cd6dde32d13578389682328332f900ac433eb6",
+  "source_matrix_blob_sha": "2640604ffce6e98efc4042bdb7c326eda5ea1be9",
   "onehost_only": true,
   "live_queue_verified": false,
   "registered_count": 0,
@@ -34,7 +34,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "strategic_wave": 0,
+      "strategic_order": 8
     },
     {
       "task_id": "R60-002",
@@ -62,7 +64,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "strategic_wave": 0,
+      "strategic_order": 9
     },
     {
       "task_id": "R60-003",
@@ -73,7 +77,7 @@
       "depends_on": [
         "R60-002"
       ],
-      "priority": "P1",
+      "priority": "P2",
       "resource_class": "CPU_IO",
       "resource_limits": {
         "gpu_slots": 0,
@@ -90,7 +94,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "strategic_wave": 3,
+      "strategic_order": 3
     },
     {
       "task_id": "R60-004",
@@ -102,7 +108,7 @@
         "R60-001",
         "R60-003"
       ],
-      "priority": "P1",
+      "priority": "P2",
       "resource_class": "CPU_IO",
       "resource_limits": {
         "gpu_slots": 0,
@@ -119,7 +125,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "strategic_wave": 3,
+      "strategic_order": 4
     },
     {
       "task_id": "R60-005",
@@ -130,7 +138,7 @@
       "depends_on": [
         "R60-002"
       ],
-      "priority": "P1",
+      "priority": "P2",
       "resource_class": "GPU1_EXCLUSIVE",
       "resource_limits": {
         "gpu1_slots": 1,
@@ -147,7 +155,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "strategic_wave": 3,
+      "strategic_order": 15
     },
     {
       "task_id": "R60-006",
@@ -158,7 +168,7 @@
       "depends_on": [
         "R60-005"
       ],
-      "priority": "P1",
+      "priority": "P2",
       "resource_class": "GPU1_EXCLUSIVE",
       "resource_limits": {
         "gpu1_slots": 1,
@@ -175,7 +185,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "strategic_wave": 3,
+      "strategic_order": 16
     },
     {
       "task_id": "R60-007",
@@ -187,7 +199,7 @@
         "R60-001",
         "R60-002"
       ],
-      "priority": "P1",
+      "priority": "P2",
       "resource_class": "CPU_LIGHT",
       "resource_limits": {
         "gpu_slots": 0,
@@ -204,7 +216,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "strategic_wave": 3,
+      "strategic_order": 5
     },
     {
       "task_id": "R60-008",
@@ -215,7 +229,7 @@
       "depends_on": [
         "R60-007"
       ],
-      "priority": "P1",
+      "priority": "P2",
       "resource_class": "CPU_LIGHT",
       "resource_limits": {
         "gpu_slots": 0,
@@ -232,7 +246,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "strategic_wave": 3,
+      "strategic_order": 6
     },
     {
       "task_id": "R60-009",
@@ -260,7 +276,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "strategic_wave": 0,
+      "strategic_order": 10
     },
     {
       "task_id": "R60-010",
@@ -271,7 +289,7 @@
       "depends_on": [
         "R60-009"
       ],
-      "priority": "P1",
+      "priority": "P2",
       "resource_class": "CPU_LIGHT",
       "resource_limits": {
         "gpu_slots": 0,
@@ -288,7 +306,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "strategic_wave": 3,
+      "strategic_order": 17
     },
     {
       "task_id": "R60-011",
@@ -314,7 +334,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "strategic_wave": 0,
+      "strategic_order": 3
     },
     {
       "task_id": "R60-012",
@@ -342,7 +364,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "strategic_wave": 1,
+      "strategic_order": 1
     },
     {
       "task_id": "R60-013",
@@ -370,7 +394,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "strategic_wave": 1,
+      "strategic_order": 2
     },
     {
       "task_id": "R60-014",
@@ -398,7 +424,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "strategic_wave": 1,
+      "strategic_order": 5
     },
     {
       "task_id": "R60-015",
@@ -427,7 +455,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "strategic_wave": 1,
+      "strategic_order": 6
     },
     {
       "task_id": "R60-016",
@@ -438,6 +468,100 @@
       "depends_on": [
         "R60-011",
         "R60-012"
+      ],
+      "priority": "P1",
+      "resource_class": "CPU_LIGHT",
+      "resource_limits": {
+        "gpu_slots": 0,
+        "cpu_slots": 1
+      },
+      "checkpoint": {
+        "required": false,
+        "verified": false
+      },
+      "requires_native_owner": true,
+      "backup_restore_required": false,
+      "license_privacy_required": false,
+      "modifies_live_system": true,
+      "artifact_sha256": null,
+      "native_receipt": null,
+      "native_queue_id": null,
+      "verified": false,
+      "strategic_wave": 1,
+      "strategic_order": 3
+    },
+    {
+      "task_id": "R60-017",
+      "legacy_task_id": "NOX-V46-17",
+      "title": "Функциональная самомодель и границы",
+      "owner": "executor-1",
+      "state": "PENDING_NATIVE_REGISTRATION",
+      "depends_on": [
+        "R60-016",
+        "R60-013",
+        "R60-019"
+      ],
+      "priority": "P1",
+      "resource_class": "CPU_LIGHT",
+      "resource_limits": {
+        "gpu_slots": 0,
+        "cpu_slots": 1
+      },
+      "checkpoint": {
+        "required": false,
+        "verified": false
+      },
+      "requires_native_owner": true,
+      "backup_restore_required": false,
+      "license_privacy_required": false,
+      "modifies_live_system": true,
+      "artifact_sha256": null,
+      "native_receipt": null,
+      "native_queue_id": null,
+      "verified": false,
+      "strategic_wave": 1,
+      "strategic_order": 4
+    },
+    {
+      "task_id": "R60-018",
+      "legacy_task_id": "NOX-V46-18",
+      "title": "Эмоциональное поведение и RU/ES без диагнозов",
+      "owner": "executor-1",
+      "state": "PENDING_NATIVE_REGISTRATION",
+      "depends_on": [
+        "R60-011",
+        "R60-017"
+      ],
+      "priority": "P1",
+      "resource_class": "CPU_LIGHT",
+      "resource_limits": {
+        "gpu_slots": 0,
+        "cpu_slots": 1
+      },
+      "checkpoint": {
+        "required": false,
+        "verified": false
+      },
+      "requires_native_owner": true,
+      "backup_restore_required": false,
+      "license_privacy_required": false,
+      "modifies_live_system": true,
+      "artifact_sha256": null,
+      "native_receipt": null,
+      "native_queue_id": null,
+      "verified": false,
+      "strategic_wave": 1,
+      "strategic_order": 8
+    },
+    {
+      "task_id": "R60-019",
+      "legacy_task_id": "NOX-V46-19",
+      "title": "PersonaID ACL, revoke и no-leak",
+      "owner": "executor-1",
+      "state": "PENDING_NATIVE_REGISTRATION",
+      "depends_on": [
+        "R60-011",
+        "R60-053"
       ],
       "priority": "P0",
       "resource_class": "CPU_LIGHT",
@@ -456,92 +580,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
-    },
-    {
-      "task_id": "R60-017",
-      "legacy_task_id": "NOX-V46-17",
-      "title": "Функциональная самомодель и границы",
-      "owner": "executor-1",
-      "state": "PENDING_NATIVE_REGISTRATION",
-      "depends_on": [
-        "R60-016"
-      ],
-      "priority": "P1",
-      "resource_class": "CPU_LIGHT",
-      "resource_limits": {
-        "gpu_slots": 0,
-        "cpu_slots": 1
-      },
-      "checkpoint": {
-        "required": false,
-        "verified": false
-      },
-      "requires_native_owner": true,
-      "backup_restore_required": false,
-      "license_privacy_required": false,
-      "modifies_live_system": true,
-      "artifact_sha256": null,
-      "native_receipt": null,
-      "native_queue_id": null,
-      "verified": false
-    },
-    {
-      "task_id": "R60-018",
-      "legacy_task_id": "NOX-V46-18",
-      "title": "Эмоциональное поведение и RU/ES без диагнозов",
-      "owner": "executor-1",
-      "state": "PENDING_NATIVE_REGISTRATION",
-      "depends_on": [
-        "R60-011"
-      ],
-      "priority": "P1",
-      "resource_class": "CPU_LIGHT",
-      "resource_limits": {
-        "gpu_slots": 0,
-        "cpu_slots": 1
-      },
-      "checkpoint": {
-        "required": false,
-        "verified": false
-      },
-      "requires_native_owner": true,
-      "backup_restore_required": false,
-      "license_privacy_required": false,
-      "modifies_live_system": true,
-      "artifact_sha256": null,
-      "native_receipt": null,
-      "native_queue_id": null,
-      "verified": false
-    },
-    {
-      "task_id": "R60-019",
-      "legacy_task_id": "NOX-V46-19",
-      "title": "PersonaID ACL, revoke и no-leak",
-      "owner": "executor-1",
-      "state": "PENDING_NATIVE_REGISTRATION",
-      "depends_on": [
-        "R60-011",
-        "R60-018"
-      ],
-      "priority": "P1",
-      "resource_class": "CPU_LIGHT",
-      "resource_limits": {
-        "gpu_slots": 0,
-        "cpu_slots": 1
-      },
-      "checkpoint": {
-        "required": false,
-        "verified": false
-      },
-      "requires_native_owner": true,
-      "backup_restore_required": false,
-      "license_privacy_required": false,
-      "modifies_live_system": true,
-      "artifact_sha256": null,
-      "native_receipt": null,
-      "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "strategic_wave": 0,
+      "strategic_order": 7
     },
     {
       "task_id": "R60-020",
@@ -570,7 +611,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "strategic_wave": 1,
+      "strategic_order": 7
     },
     {
       "task_id": "R60-021",
@@ -579,7 +622,7 @@
       "owner": "executor-2",
       "state": "PENDING_NATIVE_REGISTRATION",
       "depends_on": [],
-      "priority": "P0",
+      "priority": "P2",
       "resource_class": "CPU_LIGHT",
       "resource_limits": {
         "gpu_slots": 0,
@@ -596,7 +639,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "strategic_wave": 3,
+      "strategic_order": 1
     },
     {
       "task_id": "R60-022",
@@ -607,7 +652,7 @@
       "depends_on": [
         "R60-021"
       ],
-      "priority": "P0",
+      "priority": "P2",
       "resource_class": "CPU_LIGHT",
       "resource_limits": {
         "gpu_slots": 0,
@@ -624,7 +669,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "strategic_wave": 3,
+      "strategic_order": 2
     },
     {
       "task_id": "R60-023",
@@ -636,7 +683,7 @@
         "R60-003",
         "R60-022"
       ],
-      "priority": "P1",
+      "priority": "P2",
       "resource_class": "CPU_LIGHT",
       "resource_limits": {
         "gpu_slots": 0,
@@ -653,7 +700,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "strategic_wave": 3,
+      "strategic_order": 7
     },
     {
       "task_id": "R60-024",
@@ -664,7 +713,7 @@
       "depends_on": [
         "R60-023"
       ],
-      "priority": "P1",
+      "priority": "P2",
       "resource_class": "CPU_LIGHT",
       "resource_limits": {
         "gpu_slots": 0,
@@ -681,7 +730,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "strategic_wave": 3,
+      "strategic_order": 8
     },
     {
       "task_id": "R60-025",
@@ -692,7 +743,7 @@
       "depends_on": [
         "R60-024"
       ],
-      "priority": "P1",
+      "priority": "P2",
       "resource_class": "CPU_IO",
       "resource_limits": {
         "gpu_slots": 0,
@@ -709,7 +760,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "strategic_wave": 3,
+      "strategic_order": 9
     },
     {
       "task_id": "R60-026",
@@ -720,7 +773,7 @@
       "depends_on": [
         "R60-025"
       ],
-      "priority": "P1",
+      "priority": "P2",
       "resource_class": "CPU_IO",
       "resource_limits": {
         "gpu_slots": 0,
@@ -737,7 +790,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "strategic_wave": 3,
+      "strategic_order": 10
     },
     {
       "task_id": "R60-027",
@@ -748,7 +803,7 @@
       "depends_on": [
         "R60-026"
       ],
-      "priority": "P1",
+      "priority": "P2",
       "resource_class": "GPU1_EXCLUSIVE",
       "resource_limits": {
         "gpu1_slots": 1,
@@ -765,7 +820,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "strategic_wave": 3,
+      "strategic_order": 11
     },
     {
       "task_id": "R60-028",
@@ -776,7 +833,7 @@
       "depends_on": [
         "R60-026"
       ],
-      "priority": "P1",
+      "priority": "P2",
       "resource_class": "GPU1_EXCLUSIVE",
       "resource_limits": {
         "gpu1_slots": 1,
@@ -793,7 +850,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "strategic_wave": 3,
+      "strategic_order": 12
     },
     {
       "task_id": "R60-029",
@@ -804,7 +863,7 @@
       "depends_on": [
         "R60-026"
       ],
-      "priority": "P1",
+      "priority": "P2",
       "resource_class": "GPU1_EXCLUSIVE",
       "resource_limits": {
         "gpu1_slots": 1,
@@ -821,7 +880,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "strategic_wave": 3,
+      "strategic_order": 13
     },
     {
       "task_id": "R60-030",
@@ -838,7 +899,7 @@
         "R60-029",
         "R60-009"
       ],
-      "priority": "P1",
+      "priority": "P2",
       "resource_class": "GPU1_EXCLUSIVE",
       "resource_limits": {
         "gpu1_slots": 1,
@@ -855,7 +916,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "strategic_wave": 3,
+      "strategic_order": 14
     },
     {
       "task_id": "R60-031",
@@ -863,34 +926,9 @@
       "title": "Планирование задач с явными правами",
       "owner": "executor-2",
       "state": "PENDING_NATIVE_REGISTRATION",
-      "depends_on": [],
-      "priority": "P1",
-      "resource_class": "CPU_LIGHT",
-      "resource_limits": {
-        "gpu_slots": 0,
-        "cpu_slots": 1
-      },
-      "checkpoint": {
-        "required": false,
-        "verified": false
-      },
-      "requires_native_owner": true,
-      "backup_restore_required": false,
-      "license_privacy_required": false,
-      "modifies_live_system": false,
-      "artifact_sha256": null,
-      "native_receipt": null,
-      "native_queue_id": null,
-      "verified": false
-    },
-    {
-      "task_id": "R60-032",
-      "legacy_task_id": "NOX-V46-32",
-      "title": "Reasoning regression / self-correction",
-      "owner": "executor-2",
-      "state": "PENDING_NATIVE_REGISTRATION",
       "depends_on": [
-        "R60-031"
+        "R60-051",
+        "R60-053"
       ],
       "priority": "P1",
       "resource_class": "CPU_LIGHT",
@@ -909,7 +947,40 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "strategic_wave": 2,
+      "strategic_order": 1
+    },
+    {
+      "task_id": "R60-032",
+      "legacy_task_id": "NOX-V46-32",
+      "title": "Reasoning regression / self-correction",
+      "owner": "executor-2",
+      "state": "PENDING_NATIVE_REGISTRATION",
+      "depends_on": [
+        "R60-031",
+        "R60-017"
+      ],
+      "priority": "P1",
+      "resource_class": "CPU_LIGHT",
+      "resource_limits": {
+        "gpu_slots": 0,
+        "cpu_slots": 1
+      },
+      "checkpoint": {
+        "required": false,
+        "verified": false
+      },
+      "requires_native_owner": true,
+      "backup_restore_required": false,
+      "license_privacy_required": false,
+      "modifies_live_system": false,
+      "artifact_sha256": null,
+      "native_receipt": null,
+      "native_queue_id": null,
+      "verified": false,
+      "strategic_wave": 2,
+      "strategic_order": 8
     },
     {
       "task_id": "R60-033",
@@ -937,7 +1008,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "strategic_wave": 2,
+      "strategic_order": 9
     },
     {
       "task_id": "R60-034",
@@ -965,7 +1038,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "strategic_wave": 2,
+      "strategic_order": 10
     },
     {
       "task_id": "R60-035",
@@ -993,7 +1068,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "strategic_wave": 2,
+      "strategic_order": 3
     },
     {
       "task_id": "R60-036",
@@ -1021,7 +1098,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "strategic_wave": 2,
+      "strategic_order": 4
     },
     {
       "task_id": "R60-037",
@@ -1030,7 +1109,8 @@
       "owner": "executor-2",
       "state": "PENDING_NATIVE_REGISTRATION",
       "depends_on": [
-        "R60-031"
+        "R60-031",
+        "R60-019"
       ],
       "priority": "P1",
       "resource_class": "CPU_LIGHT",
@@ -1049,7 +1129,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "strategic_wave": 2,
+      "strategic_order": 2
     },
     {
       "task_id": "R60-038",
@@ -1078,7 +1160,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "strategic_wave": 2,
+      "strategic_order": 5
     },
     {
       "task_id": "R60-039",
@@ -1087,7 +1171,8 @@
       "owner": "executor-2",
       "state": "PENDING_NATIVE_REGISTRATION",
       "depends_on": [
-        "R60-038"
+        "R60-038",
+        "R60-013"
       ],
       "priority": "P1",
       "resource_class": "CPU_LIGHT",
@@ -1106,7 +1191,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "strategic_wave": 2,
+      "strategic_order": 6
     },
     {
       "task_id": "R60-040",
@@ -1115,7 +1202,8 @@
       "owner": "executor-2",
       "state": "PENDING_NATIVE_REGISTRATION",
       "depends_on": [
-        "R60-039"
+        "R60-039",
+        "R60-015"
       ],
       "priority": "P1",
       "resource_class": "CPU_LIGHT",
@@ -1134,7 +1222,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "strategic_wave": 2,
+      "strategic_order": 7
     },
     {
       "task_id": "R60-041",
@@ -1160,7 +1250,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "strategic_wave": 0,
+      "strategic_order": 4
     },
     {
       "task_id": "R60-042",
@@ -1188,7 +1280,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "strategic_wave": 0,
+      "strategic_order": 5
     },
     {
       "task_id": "R60-043",
@@ -1199,7 +1293,7 @@
       "depends_on": [
         "R60-042"
       ],
-      "priority": "P2",
+      "priority": "P3",
       "resource_class": "CPU_LIGHT",
       "resource_limits": {
         "gpu_slots": 0,
@@ -1216,7 +1310,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "strategic_wave": 4,
+      "strategic_order": 1
     },
     {
       "task_id": "R60-044",
@@ -1227,7 +1323,7 @@
       "depends_on": [
         "R60-043"
       ],
-      "priority": "P2",
+      "priority": "P3",
       "resource_class": "CPU_LIGHT",
       "resource_limits": {
         "gpu_slots": 0,
@@ -1244,7 +1340,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "strategic_wave": 4,
+      "strategic_order": 2
     },
     {
       "task_id": "R60-045",
@@ -1255,7 +1353,7 @@
       "depends_on": [
         "R60-042"
       ],
-      "priority": "P2",
+      "priority": "P3",
       "resource_class": "CPU_IO",
       "resource_limits": {
         "gpu_slots": 0,
@@ -1272,7 +1370,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "strategic_wave": 4,
+      "strategic_order": 3
     },
     {
       "task_id": "R60-046",
@@ -1284,7 +1384,7 @@
         "R60-007",
         "R60-045"
       ],
-      "priority": "P2",
+      "priority": "P3",
       "resource_class": "GPU1_EXCLUSIVE",
       "resource_limits": {
         "gpu1_slots": 1,
@@ -1301,7 +1401,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "strategic_wave": 4,
+      "strategic_order": 4
     },
     {
       "task_id": "R60-047",
@@ -1313,7 +1415,7 @@
         "R60-007",
         "R60-046"
       ],
-      "priority": "P2",
+      "priority": "P3",
       "resource_class": "GPU1_EXCLUSIVE",
       "resource_limits": {
         "gpu1_slots": 1,
@@ -1330,7 +1432,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "strategic_wave": 4,
+      "strategic_order": 5
     },
     {
       "task_id": "R60-048",
@@ -1341,7 +1445,7 @@
       "depends_on": [
         "R60-041"
       ],
-      "priority": "P2",
+      "priority": "P1",
       "resource_class": "CPU_LIGHT",
       "resource_limits": {
         "gpu_slots": 0,
@@ -1358,7 +1462,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "strategic_wave": 2,
+      "strategic_order": 15
     },
     {
       "task_id": "R60-049",
@@ -1370,7 +1476,7 @@
         "R60-046",
         "R60-047"
       ],
-      "priority": "P2",
+      "priority": "P3",
       "resource_class": "CPU_LIGHT",
       "resource_limits": {
         "gpu_slots": 0,
@@ -1387,7 +1493,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "strategic_wave": 4,
+      "strategic_order": 6
     },
     {
       "task_id": "R60-050",
@@ -1399,7 +1507,7 @@
         "R60-041",
         "R60-049"
       ],
-      "priority": "P2",
+      "priority": "P3",
       "resource_class": "CPU_LIGHT",
       "resource_limits": {
         "gpu_slots": 0,
@@ -1416,7 +1524,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "strategic_wave": 4,
+      "strategic_order": 7
     },
     {
       "task_id": "R60-051",
@@ -1442,7 +1552,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "strategic_wave": 0,
+      "strategic_order": 1
     },
     {
       "task_id": "R60-052",
@@ -1470,7 +1582,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "strategic_wave": 0,
+      "strategic_order": 11
     },
     {
       "task_id": "R60-053",
@@ -1498,7 +1612,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "strategic_wave": 0,
+      "strategic_order": 2
     },
     {
       "task_id": "R60-054",
@@ -1526,7 +1642,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "strategic_wave": 0,
+      "strategic_order": 12
     },
     {
       "task_id": "R60-055",
@@ -1537,7 +1655,7 @@
       "depends_on": [
         "R60-053"
       ],
-      "priority": "P0",
+      "priority": "P3",
       "resource_class": "CPU_IO",
       "resource_limits": {
         "gpu_slots": 0,
@@ -1554,7 +1672,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "strategic_wave": 4,
+      "strategic_order": 8
     },
     {
       "task_id": "R60-056",
@@ -1583,7 +1703,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "strategic_wave": 0,
+      "strategic_order": 6
     },
     {
       "task_id": "R60-057",
@@ -1592,7 +1714,7 @@
       "owner": "executor-2",
       "state": "PENDING_NATIVE_REGISTRATION",
       "depends_on": [
-        "R60-030",
+        "R60-038",
         "R60-056"
       ],
       "priority": "P1",
@@ -1612,7 +1734,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "strategic_wave": 2,
+      "strategic_order": 11
     },
     {
       "task_id": "R60-058",
@@ -1640,7 +1764,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "strategic_wave": 2,
+      "strategic_order": 12
     },
     {
       "task_id": "R60-059",
@@ -1668,7 +1794,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "strategic_wave": 2,
+      "strategic_order": 13
     },
     {
       "task_id": "R60-060",
@@ -1678,7 +1806,7 @@
       "state": "PENDING_NATIVE_REGISTRATION",
       "depends_on": [
         "R60-020",
-        "R60-030",
+        "R60-039",
         "R60-059"
       ],
       "priority": "P1",
@@ -1698,7 +1826,21 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "strategic_wave": 2,
+      "strategic_order": 14
     }
-  ]
+  ],
+  "strategic_policy_version": "NOX_V93_FUNCTIONAL_SELF_MODEL_SKILLS_FIRST",
+  "strategic_goal_sequence": [
+    "safety_and_chat",
+    "memory_and_self_model",
+    "autonomous_skills",
+    "gpu1_weights_and_teacher_distillation",
+    "multimodal_and_wow"
+  ],
+  "chat_operational_priority": "P0",
+  "background_jobs_operational_priority": "P1",
+  "priority_note": "Strategic P0..P3 ranks are relative only inside existing R60. The authenticated Resonance chat/STOP always outranks all queued background jobs. No native queue IDs or progress fabricated.",
+  "actual_queue_status": "HOLD_NATIVE_SIGNED_ONEHOST_ENQUEUE_AND_READBACK"
 }
