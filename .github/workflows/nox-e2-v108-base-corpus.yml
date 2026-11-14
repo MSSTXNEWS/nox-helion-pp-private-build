@@ -2,7 +2,9 @@ name: NOX V108 native private V105 to V47 full-base training corpus
 on:
   push:
     branches: [nox/e2-v108-teacher-corpus-repair-20261114]
-    paths: ['.github/workflows/nox-e2-v108-base-corpus.yml']
+    paths:
+      - '.github/workflows/nox-e2-v108-base-corpus.yml'
+      - 'nox_runpod/teacher_mesh/v108/prepare_v47_corpus.py'
   workflow_dispatch:
 permissions:
   contents: read
