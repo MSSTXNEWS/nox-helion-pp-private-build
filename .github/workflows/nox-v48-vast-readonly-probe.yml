@@ -14,14 +14,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 9
     env:
-      VAST_API_KEY: \${{ secrets.NOX2 }}
-      NOX_VAST_SSH_PRIVATE_KEY: \${{ secrets.NOX_VAST_SSH_PRIVATE_KEY }}
+      VAST_API_KEY: ${{ secrets.NOX2 }}
+      NOX_VAST_SSH_PRIVATE_KEY: ${{ secrets.NOX_VAST_SSH_PRIVATE_KEY }}
     steps:
       - name: Check existing NOX2 secret without showing it
         shell: bash
         run: |
           set -euo pipefail
-          test -n "\${VAST_API_KEY:-}" || { echo "::error::HOLD_NOX2_MISSING"; exit 2; }
+          test -n "${VAST_API_KEY:-}" || { echo "::error::HOLD_NOX2_MISSING"; exit 2; }
           echo "NOX2_PRESENT=YES (value never logged)"
       - name: Install official Vast.ai CLI in temporary runner only
         shell: bash
@@ -85,7 +85,7 @@ jobs:
           else
             echo "HOLD_LIMITED_EXECUTE (no remote changes)"
           fi
-          if [ -z "\${NOX_VAST_SSH_PRIVATE_KEY:-}" ]; then
+          if [ -z "${NOX_VAST_SSH_PRIVATE_KEY:-}" ]; then
             echo "HOLD_NO_EXISTING_VAST_SSH_KEY_SECRET; skip direct SSH"
             exit 0
           fi
@@ -100,11 +100,11 @@ jobs:
           print(d.get('ssh_port',''))
           PY
           )
-          if [ -z "\${hp[0]}" ] || ! [[ "\${hp[1]}" =~ ^[0-9]+$ ]]; then
+          if [ -z "${hp[0]}" ] || ! [[ "${hp[1]}" =~ ^[0-9]+$ ]]; then
             echo "HOLD_SSH_NO_HOST_PORT"
             exit 0
           fi
-          if timeout 60s ssh -i "$RUNNER_TEMP/vast.key" -p "\${hp[1]}" -o BatchMode=yes -o ConnectTimeout=12 -o StrictHostKeyChecking=accept-new "root@\${hp[0]}" \
+          if timeout 60s ssh -i "$RUNNER_TEMP/vast.key" -p "${hp[1]}" -o BatchMode=yes -o ConnectTimeout=12 -o StrictHostKeyChecking=accept-new "root@${hp[0]}" \
             "nvidia-smi --query-gpu=index,name,memory.total,memory.used,memory.free,utilization.gpu,temperature.gpu --format=csv,noheader && free -m && df -B1 /workspace" > "$RUNNER_TEMP/gpu.txt" 2>/dev/null; then
               echo "SSH_REMOTE_GPU_RAM_DISK_RECEIPT_BEGIN"
               head -n 12 "$RUNNER_TEMP/gpu.txt"
@@ -118,6 +118,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: nox-e2-vast60509551-api-inventory
-          path: \${{ runner.temp }}/receipt.json
+          path: ${{ runner.temp }}/receipt.json
           if-no-files-found: ignore
           retention-days: 7
