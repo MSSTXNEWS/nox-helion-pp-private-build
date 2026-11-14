@@ -67,6 +67,33 @@ try:
  emit('SLOTS',{'count':len(a) if isinstance(a,list) else -1,
    'busy':sum(bool(x.get('is_processing',x.get('processing',False))) for x in a if isinstance(x,dict)) if isinstance(a,list) else -1})
 except Exception:emit('SLOTS',{'status':'UNKNOWN'})
+# Import the installed app in a separate process, read route metadata only.
+# This cannot establish functional E2E but distinguishes real route registration from global 401.
+PYCODE = """
+import json,sys
+sys.path.insert(0,'/root/nox/scripts')
+import chat_proxy
+from fastapi.routing import APIRoute
+routes=[{'path':r.path,'methods':sorted(r.methods)} for r in chat_proxy.app.routes if isinstance(r,APIRoute)]
+print('NOX_ROUTE_INVENTORY_JSON='+json.dumps(routes,separators=(',',':')))
+"""
+interpreters=['/root/nox/venv/bin/python','/root/nox/.venv/bin/python',
+              '/opt/venv/bin/python','/venv/bin/python','/usr/local/bin/python3']
+for interpreter in interpreters:
+ if not Path(interpreter).is_file():continue
+ try:
+  proc=subprocess.run([interpreter,'-c',PYCODE],cwd='/root/nox/scripts',
+                      text=True,capture_output=True,timeout=18)
+  line=next((v for v in proc.stdout.splitlines() if v.startswith('NOX_ROUTE_INVENTORY_JSON=')),None)
+  if proc.returncode or line is None:continue
+  got=json.loads(line.split('=',1)[1])
+  emit('REGISTERED_ROUTES_COUNT',{'count':len(got)})
+  for route in sorted(got,key=lambda x:x['path']):
+   if route['path'].startswith('/api/'):
+    emit('APP_ROUTE',route)
+  break
+ except (OSError,subprocess.TimeoutExpired,ValueError):continue
+else:emit('REGISTERED_ROUTES_COUNT',{'status':'HOLD_APP_IMPORT_FAILED'})
 print('NATIVE_READ_ONLY_COMPLETE=true')
 PYREMOTE
 """
