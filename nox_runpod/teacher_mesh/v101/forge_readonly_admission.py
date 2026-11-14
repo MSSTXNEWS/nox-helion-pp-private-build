@@ -43,7 +43,7 @@ for name in ('nox-proxy','nox-teacher-serve-t811u','nox-train-worm-t811u','nox-t
  except Exception:services[name]='UNKNOWN'
 emit('SUPERVISOR',services)
 models=[]; jsonls=[];checked=0;visited=0;started=time.monotonic();seen=set()
-roots=[Path('/root/nox/models'),Path('/root/nox/forge'),Path('/root/nox/training'),
+roots=[Path('/root/nox/progress_pull_t784u'),Path('/root/nox/models'),Path('/root/nox/forge'),Path('/root/nox/training'),
  Path('/root/nox/checkpoints'),Path('/workspace/models'),Path('/workspace'),
  Path('/root/.cache/huggingface/hub')]
 SKIP={'.git','node_modules','__pycache__','venv','.venv','dist','build','logs','tmp','temp','web','www','assets','images','images-staging','static','screenshots','films'}
@@ -90,6 +90,28 @@ for base in roots:
      except OSError:pass
 emit('HF_STUDENTS',{'checked_configs':checked,'dirs_visited':visited,'candidates':models})
 emit('DATASETS',{'jsonl_count':len(jsonls),'candidate_files':jsonls[:20]})
+# Verify existing V105 curated owner templates by SHA without exporting their text.
+curated=Path('/root/nox/forge/curated_owner_sft_v105')
+proven={}
+for fname,expected,expected_lines in [
+ ('train.jsonl','3530f0eddafb91bf913bd4c215116da30d53d53bcf3486f4b1ce3c42f4c5ca58',1927),
+ ('holdout.jsonl','322a6d73630fc34b3532f00dd627b917197b9319ad5a560bc977871bcb31c5ee',227)]:
+ p=curated/fname
+ entry={'present':False,'sha_verified':False,'rows_verified':False}
+ try:
+  if p.is_file() and not p.is_symlink() and p.stat().st_size<50_000_000:
+   h=hashlib.sha256();rows=0
+   with p.open('rb') as f:
+    for line in f:
+     h.update(line);rows+=1
+   entry={'present':True,'sha_verified':h.hexdigest()==expected,
+          'rows_verified':rows==expected_lines,'rows':rows,'size_bytes':p.stat().st_size}
+ except Exception:pass
+ proven[fname]=entry
+approved_corpus_proven=all(x['present'] and x['sha_verified'] and x['rows_verified'] for x in proven.values())
+emit('CURATED_OWNER_DATA',{'files':proven,'train_holdout_verified':approved_corpus_proven,
+                          'text_exported':False})
+
 trainer={}
 for file in ['/root/nox/scripts/train_qlora_35b_t866u.py','/root/nox/scripts/train_worm_t811u.py']:
  p=Path(file)
@@ -100,14 +122,14 @@ emit('TRAINERS',trainer)
 # External ciphertext without owner-key restore is not full training restore evidence.
 full_weight_ready=bool(not STOP and disk.free>20*1024**3 and
  any(v.get('weights_bytes',0)>4_000_000_000 for v in models) and
- jsonls and
+ approved_corpus_proven and
  not trainer.get('train_qlora_35b_t866u.py',{}).get('peft_or_lora',False) and
  len(gpu)>=2 and gpu[1]['vram_free_mib']>=12288)
 emit('ADMISSION',{'state':'SOURCE_INVENTORY_ONLY_NOT_TRAINING' if full_weight_ready else 'HOLD_FULL_WEIGHT_TRAINING',
 'resource_gate':bool(len(gpu)>=2 and gpu[1]['vram_free_mib']>=12288 and disk.free>20*1024**3),
 'trainable_base_candidate':any(v.get('weights_bytes',0)>4_000_000_000 for v in models),
-'approved_dataset_proven':False,'owner_key_restore_proven':False,
-'full_weight_optimizer_steps_verified':0,'training_started':False})
+'approved_dataset_proven':approved_corpus_proven,'owner_key_restore_proven':False,
+'full_weight_optimizer_steps_verified':0,'training_started':False,'full_weight_trainer_without_adapters_verified':False,'full_checkpoint_disk_space_verified':disk.free>85*1024**3})
 print('NATIVE_READ_ONLY_COMPLETE=true')
 PYREMOTE
 """
