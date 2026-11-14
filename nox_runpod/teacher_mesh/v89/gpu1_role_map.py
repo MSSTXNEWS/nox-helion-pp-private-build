@@ -43,7 +43,7 @@ except Exception:supervisors={}
 for row in rows[:35]:
  try:
   gpu,pid,mem=row
-  pid=int(pid.strip());mem=int(mem.strip())
+  pid=int(pid.strip());m=re.search(r'[0-9]+',mem);mem=int(m.group()) if m else 0
   pp=proc(pid)
   if pp is None:continue
   pp['gpu_uuid_hint']=gpu.strip()[-12:]
