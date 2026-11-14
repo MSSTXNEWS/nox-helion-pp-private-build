@@ -43,12 +43,12 @@ OLD_BRIDGE='1bc401535634f6a8856744c0ea62348b3f798d433c3cf7502e442aaf406d5129'
 BACKUP=M.with_name(M.name+'.nox-v111-'+OLD_BRIDGE[:12]+'.bak')
 STOP=('/root/nox/STOP','/root/nox/STOP.flag','/root/nox/stop.flag',
       '/root/nox/.stop','/workspace/NOX_STOP','/root/nox/program/STOP')
-OLD="""    for choice in obj.get('choices') or []:
+OLD='''    for choice in obj.get('choices') or []:
         if not isinstance(choice, dict):
             continue
         part = (choice.get('delta') or {}).get('content')
-"""
-NEW="""    choices = obj.get('choices')
+'''
+NEW='''    choices = obj.get('choices')
     if not isinstance(choices, list):
         return ('', '')
     for choice in choices:
@@ -58,7 +58,7 @@ NEW="""    choices = obj.get('choices')
         if not isinstance(delta, dict):
             continue
         part = delta.get('content')
-"""
+'''
 
 def digest(blob):
     return hashlib.sha256(blob).hexdigest()
