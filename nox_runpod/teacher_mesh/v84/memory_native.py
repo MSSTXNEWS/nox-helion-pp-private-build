@@ -68,7 +68,16 @@ def retrieve(question: str, *, scope: str, paths: Mapping, native: NativeMemoryA
         if not any(t in text.casefold() for t in terms):return
         obj={"kind":kind,"id":str(identity)[:128],"text":text,"source":provenance}
         # Native callback sees source metadata and MUST evaluate tenant/persona ACL.
-        if native.allow_record(scope,kind,obj) is not True:return
+        # The trusted host must receive the record's own session/scope metadata
+        # to enforce ACL; the model/user never supplies this metadata.
+        acl_meta=dict(obj)
+        if kind.startswith("s03_"):
+            acl_meta["record_session"]=_clean_string(row["session"],128)
+        elif kind=="fact":
+            acl_meta["record_dialog_id"]=_clean_string(row["dialog_id"],128)
+        elif kind=="node":
+            acl_meta["record_node_meta"]=_clean_string(row["meta"],600)
+        if native.allow_record(scope,kind,acl_meta) is not True:return
         digest=hashlib.sha256((kind+"|"+text+"|"+provenance).encode()).hexdigest()
         if digest in seen:return
         seen.add(digest)
@@ -88,10 +97,10 @@ def retrieve(question: str, *, scope: str, paths: Mapping, native: NativeMemoryA
                 # do not release raw payload through generic knowledge retrieval.
         if paths.get("infinite"):
             with _open(paths["infinite"]) as con:
-                for row in con.execute("SELECT fact_id,key,value,source,active,is_test,superseded_by FROM facts ORDER BY ts_utc DESC LIMIT 500"):
+                for row in con.execute("SELECT fact_id,key,value,source,active,is_test,superseded_by,dialog_id FROM facts ORDER BY ts_utc DESC LIMIT 500"):
                     if row["active"] != 1 or row["is_test"] == 1 or row["superseded_by"]:continue
                     append("fact",row,str(row["key"])+": "+str(row["value"]),row["source"],row["fact_id"])
-                for row in con.execute("SELECT node_id,text,source,is_test,hidden,kind FROM brain_nodes ORDER BY ts_utc DESC LIMIT 1000"):
+                for row in con.execute("SELECT node_id,text,source,is_test,hidden,kind,meta FROM brain_nodes ORDER BY ts_utc DESC LIMIT 1000"):
                     if row["is_test"] == 1 or row["hidden"] == 1:continue
                     append("node",row,row["text"],row["source"],row["node_id"])
         results.sort(key=lambda x:(-x["term_hits"],x["kind"],x["id"]))
