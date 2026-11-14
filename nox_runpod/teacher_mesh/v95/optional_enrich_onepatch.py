@@ -59,7 +59,7 @@ _NOX_OPTIONAL_ENRICH_POOL = _NoxPool(max_workers=1,thread_name_prefix='nox-optio
 _NOX_OPTIONAL_ENRICH_GATE = _NoxSemaphore(1)
 
 def _nox_bounded_optional_enrich(fn, prompt):
-    """Bound the extra emotion/registry lookup; never bound essential S03."""
+    # Bounded optional context; never bind essential S03 to this timer.
     if any(Path(p).exists() for p in ('/root/nox/STOP','/root/nox/STOP.flag','/workspace/NOX_STOP')):
         return []
     if not _NOX_OPTIONAL_ENRICH_GATE.acquire(blocking=False):
