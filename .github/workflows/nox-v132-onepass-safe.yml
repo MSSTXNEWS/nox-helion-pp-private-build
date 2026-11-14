@@ -1,5 +1,11 @@
 name: NOX V132 ONEPASS real release gates and guarded existing OneHost
 on:
+  pull_request:
+    branches: [feature/nox-v37-v100-firsthour-14d-20261113]
+    paths:
+      - 'nox_runpod/teacher_mesh/v132/**'
+      - 'nox_runpod/teacher_mesh/v130/**'
+      - '.github/workflows/nox-v132-onepass-safe.yml'
   push:
     branches: [feature/nox-v38-synaptic-brain-20261114]
     paths:
