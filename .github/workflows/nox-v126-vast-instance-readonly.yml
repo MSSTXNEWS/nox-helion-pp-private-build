@@ -1,0 +1,48 @@
+name: NOX V126 verify only original Vast OneHost instance status, no SSH
+on:
+  push:
+    branches: [nox/v126-native-s03-owner-facts-20261115]
+    paths:
+      - '.github/workflows/nox-v126-vast-instance-readonly.yml'
+permissions:
+  contents: read
+jobs:
+  status:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Read only Vast instance 60509551 status through preexisting NOX2
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import os
+          from nox_runpod.teacher_mesh.v51 import ephemeral_ssh_probe as v
+          key=os.environ.get('NOX2','')
+          if not key:
+              print('NOX_INSTANCE_STATUS=HOLD_NOX2_MISSING')
+              raise SystemExit(2)
+          try:
+              response=v.api('GET',f'/instances/{v.INSTANCE}/',key)
+              if isinstance(response,dict):
+                  item=response.get('instances',response)
+                  if isinstance(item,list):
+                      item=next((x for x in item if isinstance(x,dict) and str(x.get('id'))==str(v.INSTANCE)),None)
+                  if isinstance(item,dict) and str(item.get('id'))==str(v.INSTANCE):
+                      status=str(item.get('actual_status','unknown'))[:32]
+                      gpus=item.get('num_gpus')
+                      print('NOX_INSTANCE_STATUS=OBSERVED_'+status)
+                      print('NOX_INSTANCE_GPUS='+str(gpus)[:8])
+                      raise SystemExit(0)
+              print('NOX_INSTANCE_STATUS=HOLD_RESPONSE_SHAPE')
+              raise SystemExit(2)
+          except RuntimeError as ex:
+              reason=str(ex)
+              print('NOX_INSTANCE_STATUS='+ (reason if reason.startswith('HOLD_VAST_API_HTTP_') else 'HOLD_API_READ'))
+              raise SystemExit(2)
+          PY
