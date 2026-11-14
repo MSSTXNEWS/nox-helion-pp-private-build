@@ -89,7 +89,8 @@ def main():
         except Exception:cleanup=False
     rows=[]
     for line in out.getvalue().splitlines():
-        if line.startswith('NATIVE_V125_') and len(line)<760:
+        if line.startswith(('NATIVE_V125_REMEMBER=','NATIVE_V125_TABLES=',
+                             'NATIVE_V125_COLUMNS=','NATIVE_V125_SOURCE=')) and len(line)<760:
             print(line);rows.append(line)
         if line.startswith('TEMP_SSH_CLEANUP='):
             print(line[:120])
