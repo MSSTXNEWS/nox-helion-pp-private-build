@@ -31,11 +31,22 @@ try:
  if hashlib.sha256(RAW).hexdigest()!=EXPECTED:raise RuntimeError('HOLD_SOURCE_SHA')
  if TARGET.parent.is_symlink():raise RuntimeError('HOLD_DIRECTORY_SYMLINK')
  TARGET.parent.mkdir(mode=0o700,parents=True,exist_ok=True)
- if TARGET.exists():
-  if TARGET.is_symlink() or hashlib.sha256(TARGET.read_bytes()).hexdigest()!=EXPECTED:
-   raise RuntimeError('HOLD_EXISTING_STAGE_CONFLICT')
+ if TARGET.exists() and TARGET.is_symlink():raise RuntimeError('HOLD_STAGE_SYMLINK')
+ current_sha=hashlib.sha256(TARGET.read_bytes()).hexdigest() if TARGET.exists() else None
+ OLD='731331ecaeeddd15d28de8eff931cbad6b51485c7c1e32e44a23a15bdb744c04'
+ if current_sha==EXPECTED:
   emit('ALREADY_STAGED_VERIFIED',sha256=EXPECTED)
- else:
+ elif current_sha is None or current_sha==OLD:
+  if current_sha==OLD:
+   backup=TARGET.with_name('nox_v84_memory_native.pre_acl_fix.py')
+   if backup.exists():
+    if backup.is_symlink() or hashlib.sha256(backup.read_bytes()).hexdigest()!=OLD:
+     raise RuntimeError('HOLD_BACKUP_CONFLICT')
+   else:
+    fd=os.open(backup,os.O_CREAT|os.O_EXCL|os.O_WRONLY,0o600)
+    with os.fdopen(fd,'wb') as f:
+     f.write(TARGET.read_bytes());f.flush();os.fsync(f.fileno())
+    if hashlib.sha256(backup.read_bytes()).hexdigest()!=OLD:raise RuntimeError('HOLD_BACKUP_VERIFY')
   temp=TARGET.with_name('.nox_v84_stage.tmp')
   if temp.exists():raise RuntimeError('HOLD_TEMP_EXISTS')
   fd=os.open(temp,os.O_CREAT|os.O_EXCL|os.O_WRONLY,0o600)
@@ -47,7 +58,9 @@ try:
   finally:
    temp.unlink(missing_ok=True)
   if hashlib.sha256(TARGET.read_bytes()).hexdigest()!=EXPECTED:raise RuntimeError('HOLD_STAGE_READBACK')
-  emit('STAGED_SOURCE_SHA_VERIFIED',sha256=EXPECTED)
+  emit('STAGED_SOURCE_SHA_VERIFIED',sha256=EXPECTED,replaced_known_version=current_sha==OLD)
+ else:
+  raise RuntimeError('HOLD_EXISTING_STAGE_CONFLICT')
  # staging only; no import into active OneHost.
  print('NATIVE_S03_DATABASE_MUTATED=false')
  print('NATIVE_CHAT_RESTARTED=false')
