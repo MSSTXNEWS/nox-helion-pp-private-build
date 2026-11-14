@@ -1,0 +1,502 @@
+{
+  "schema": "NOX_E2_R60_READ_HANDOFF_V1",
+  "project": "NOX HELION",
+  "instance_id": 60509551,
+  "onehost_bridge": "nox_runpod/teacher_mesh/v49/onehost_bridge.py",
+  "existing_master": "coordination/NOX_R60_MASTER.json",
+  "existing_master_blob_sha": "239749717a3ad5e7c3ca36b8707c59ceded96dda",
+  "source_plan_count": 30,
+  "live_enqueued_count": 0,
+  "read_only_preflight": true,
+  "no_new_dispatcher": true,
+  "signing_key_source": "existing_owner_native_runtime_only",
+  "production_status": "HOLD_UNTIL_NATIVE_BRIDGE_RECEIPTS",
+  "tasks": [
+    {
+      "task_id": "R60-021",
+      "legacy_task_id": "NOX-V46-21",
+      "title": "Прочитать реальную причину train_error step=0",
+      "priority": "P0",
+      "resource_class": "CPU_LIGHT",
+      "depends_on": [],
+      "read_action": "nox.training.status",
+      "state": "READ_PROBE_PLAN_NOT_EXECUTED",
+      "native_receipt": null,
+      "optimizer_steps": null,
+      "weights_sha_before": null,
+      "weights_sha_after": null
+    },
+    {
+      "task_id": "R60-022",
+      "legacy_task_id": "NOX-V46-22",
+      "title": "Зафиксировать текущий student и optimizer SHA",
+      "priority": "P0",
+      "resource_class": "CPU_LIGHT",
+      "depends_on": [
+        "R60-021"
+      ],
+      "read_action": "server.checkpoints",
+      "state": "READ_PROBE_PLAN_NOT_EXECUTED",
+      "native_receipt": null,
+      "optimizer_steps": null,
+      "weights_sha_before": null,
+      "weights_sha_after": null
+    },
+    {
+      "task_id": "R60-023",
+      "legacy_task_id": "NOX-V46-23",
+      "title": "Сверить установленных учителей и их права",
+      "priority": "P1",
+      "resource_class": "CPU_LIGHT",
+      "depends_on": [
+        "R60-003",
+        "R60-022"
+      ],
+      "read_action": "nox.teachers.status",
+      "state": "READ_PROBE_PLAN_NOT_EXECUTED",
+      "native_receipt": null,
+      "optimizer_steps": null,
+      "weights_sha_before": null,
+      "weights_sha_after": null
+    },
+    {
+      "task_id": "R60-024",
+      "legacy_task_id": "NOX-V46-24",
+      "title": "Собрать источники только с разрешёнными данными",
+      "priority": "P1",
+      "resource_class": "CPU_LIGHT",
+      "depends_on": [
+        "R60-023"
+      ],
+      "read_action": "nox.s03.status",
+      "state": "READ_PROBE_PLAN_NOT_EXECUTED",
+      "native_receipt": null,
+      "optimizer_steps": null,
+      "weights_sha_before": null,
+      "weights_sha_after": null
+    },
+    {
+      "task_id": "R60-025",
+      "legacy_task_id": "NOX-V46-25",
+      "title": "Дедуп лицензионного корпуса и антиповторы",
+      "priority": "P1",
+      "resource_class": "CPU_IO",
+      "depends_on": [
+        "R60-024"
+      ],
+      "read_action": "nox.training.status",
+      "state": "READ_PROBE_PLAN_NOT_EXECUTED",
+      "native_receipt": null,
+      "optimizer_steps": null,
+      "weights_sha_before": null,
+      "weights_sha_after": null
+    },
+    {
+      "task_id": "R60-026",
+      "legacy_task_id": "NOX-V46-26",
+      "title": "Зафиксировать train/dev/holdout и версии",
+      "priority": "P1",
+      "resource_class": "CPU_IO",
+      "depends_on": [
+        "R60-025"
+      ],
+      "read_action": "nox.training.status",
+      "state": "READ_PROBE_PLAN_NOT_EXECUTED",
+      "native_receipt": null,
+      "optimizer_steps": null,
+      "weights_sha_before": null,
+      "weights_sha_after": null
+    },
+    {
+      "task_id": "R60-027",
+      "legacy_task_id": "NOX-V46-27",
+      "title": "DeepSeek reasoning — ответы и проверка",
+      "priority": "P1",
+      "resource_class": "GPU1_EXCLUSIVE",
+      "depends_on": [
+        "R60-026"
+      ],
+      "read_action": "nox.teachers.status",
+      "state": "READ_PROBE_PLAN_NOT_EXECUTED",
+      "native_receipt": null,
+      "optimizer_steps": null,
+      "weights_sha_before": null,
+      "weights_sha_after": null
+    },
+    {
+      "task_id": "R60-028",
+      "legacy_task_id": "NOX-V46-28",
+      "title": "Qwen RU/ES — знания и независимые тесты",
+      "priority": "P1",
+      "resource_class": "GPU1_EXCLUSIVE",
+      "depends_on": [
+        "R60-026"
+      ],
+      "read_action": "nox.teachers.status",
+      "state": "READ_PROBE_PLAN_NOT_EXECUTED",
+      "native_receipt": null,
+      "optimizer_steps": null,
+      "weights_sha_before": null,
+      "weights_sha_after": null
+    },
+    {
+      "task_id": "R60-029",
+      "legacy_task_id": "NOX-V46-29",
+      "title": "Coder — программирование и тесты",
+      "priority": "P1",
+      "resource_class": "GPU1_EXCLUSIVE",
+      "depends_on": [
+        "R60-026"
+      ],
+      "read_action": "nox.teachers.status",
+      "state": "READ_PROBE_PLAN_NOT_EXECUTED",
+      "native_receipt": null,
+      "optimizer_steps": null,
+      "weights_sha_before": null,
+      "weights_sha_after": null
+    },
+    {
+      "task_id": "R60-030",
+      "legacy_task_id": "NOX-V46-30",
+      "title": "Optimizer, checkpoint, reload, blind holdout",
+      "priority": "P1",
+      "resource_class": "GPU1_EXCLUSIVE",
+      "depends_on": [
+        "R60-021",
+        "R60-022",
+        "R60-026",
+        "R60-027",
+        "R60-028",
+        "R60-029",
+        "R60-009"
+      ],
+      "read_action": "server.checkpoints",
+      "state": "READ_PROBE_PLAN_NOT_EXECUTED",
+      "native_receipt": null,
+      "optimizer_steps": null,
+      "weights_sha_before": null,
+      "weights_sha_after": null
+    },
+    {
+      "task_id": "R60-031",
+      "legacy_task_id": "NOX-V46-31",
+      "title": "Планирование задач с явными правами",
+      "priority": "P1",
+      "resource_class": "CPU_LIGHT",
+      "depends_on": [],
+      "read_action": "nox.jobs.status",
+      "state": "READ_PROBE_PLAN_NOT_EXECUTED",
+      "native_receipt": null,
+      "optimizer_steps": null,
+      "weights_sha_before": null,
+      "weights_sha_after": null
+    },
+    {
+      "task_id": "R60-032",
+      "legacy_task_id": "NOX-V46-32",
+      "title": "Reasoning regression / self-correction",
+      "priority": "P1",
+      "resource_class": "CPU_LIGHT",
+      "depends_on": [
+        "R60-031"
+      ],
+      "read_action": "nox.learning.status",
+      "state": "READ_PROBE_PLAN_NOT_EXECUTED",
+      "native_receipt": null,
+      "optimizer_steps": null,
+      "weights_sha_before": null,
+      "weights_sha_after": null
+    },
+    {
+      "task_id": "R60-033",
+      "legacy_task_id": "NOX-V46-33",
+      "title": "Математика, логика и верификация",
+      "priority": "P1",
+      "resource_class": "CPU_LIGHT",
+      "depends_on": [
+        "R60-032"
+      ],
+      "read_action": "nox.learning.status",
+      "state": "READ_PROBE_PLAN_NOT_EXECUTED",
+      "native_receipt": null,
+      "optimizer_steps": null,
+      "weights_sha_before": null,
+      "weights_sha_after": null
+    },
+    {
+      "task_id": "R60-034",
+      "legacy_task_id": "NOX-V46-34",
+      "title": "Языковая корректность и RU/ES",
+      "priority": "P1",
+      "resource_class": "CPU_LIGHT",
+      "depends_on": [
+        "R60-031"
+      ],
+      "read_action": "nox.learning.status",
+      "state": "READ_PROBE_PLAN_NOT_EXECUTED",
+      "native_receipt": null,
+      "optimizer_steps": null,
+      "weights_sha_before": null,
+      "weights_sha_after": null
+    },
+    {
+      "task_id": "R60-035",
+      "legacy_task_id": "NOX-V46-35",
+      "title": "Поиск свежих источников и provenance",
+      "priority": "P1",
+      "resource_class": "CPU_LIGHT",
+      "depends_on": [
+        "R60-031"
+      ],
+      "read_action": "nox.skills.status",
+      "state": "READ_PROBE_PLAN_NOT_EXECUTED",
+      "native_receipt": null,
+      "optimizer_steps": null,
+      "weights_sha_before": null,
+      "weights_sha_after": null
+    },
+    {
+      "task_id": "R60-036",
+      "legacy_task_id": "NOX-V46-36",
+      "title": "Разработка и тестирование приложений",
+      "priority": "P1",
+      "resource_class": "CPU_LIGHT",
+      "depends_on": [
+        "R60-035"
+      ],
+      "read_action": "nox.skills.status",
+      "state": "READ_PROBE_PLAN_NOT_EXECUTED",
+      "native_receipt": null,
+      "optimizer_steps": null,
+      "weights_sha_before": null,
+      "weights_sha_after": null
+    },
+    {
+      "task_id": "R60-037",
+      "legacy_task_id": "NOX-V46-37",
+      "title": "Изолированное исполнение разрешённых шагов",
+      "priority": "P1",
+      "resource_class": "CPU_LIGHT",
+      "depends_on": [
+        "R60-031"
+      ],
+      "read_action": "nox.audit.status",
+      "state": "READ_PROBE_PLAN_NOT_EXECUTED",
+      "native_receipt": null,
+      "optimizer_steps": null,
+      "weights_sha_before": null,
+      "weights_sha_after": null
+    },
+    {
+      "task_id": "R60-038",
+      "legacy_task_id": "NOX-V46-38",
+      "title": "Исправление кода: patch→test→save",
+      "priority": "P1",
+      "resource_class": "CPU_LIGHT",
+      "depends_on": [
+        "R60-036",
+        "R60-037"
+      ],
+      "read_action": "nox.jobs.status",
+      "state": "READ_PROBE_PLAN_NOT_EXECUTED",
+      "native_receipt": null,
+      "optimizer_steps": null,
+      "weights_sha_before": null,
+      "weights_sha_after": null
+    },
+    {
+      "task_id": "R60-039",
+      "legacy_task_id": "NOX-V46-39",
+      "title": "Skill Memory, retain и recall",
+      "priority": "P1",
+      "resource_class": "CPU_LIGHT",
+      "depends_on": [
+        "R60-038"
+      ],
+      "read_action": "nox.skills.status",
+      "state": "READ_PROBE_PLAN_NOT_EXECUTED",
+      "native_receipt": null,
+      "optimizer_steps": null,
+      "weights_sha_before": null,
+      "weights_sha_after": null
+    },
+    {
+      "task_id": "R60-040",
+      "legacy_task_id": "NOX-V46-40",
+      "title": "DREAM replay на проверенных ошибках",
+      "priority": "P1",
+      "resource_class": "CPU_LIGHT",
+      "depends_on": [
+        "R60-039"
+      ],
+      "read_action": "nox.learning.status",
+      "state": "READ_PROBE_PLAN_NOT_EXECUTED",
+      "native_receipt": null,
+      "optimizer_steps": null,
+      "weights_sha_before": null,
+      "weights_sha_after": null
+    },
+    {
+      "task_id": "R60-051",
+      "legacy_task_id": "NOX-V46-51",
+      "title": "Управление STOP везде и fail-closed",
+      "priority": "P0",
+      "resource_class": "CPU_LIGHT",
+      "depends_on": [],
+      "read_action": "nox.audit.status",
+      "state": "READ_PROBE_PLAN_NOT_EXECUTED",
+      "native_receipt": null,
+      "optimizer_steps": null,
+      "weights_sha_before": null,
+      "weights_sha_after": null
+    },
+    {
+      "task_id": "R60-052",
+      "legacy_task_id": "NOX-V46-52",
+      "title": "V100 CUDA12 FP16 и аппаратная телеметрия",
+      "priority": "P0",
+      "resource_class": "CPU_LIGHT",
+      "depends_on": [
+        "R60-051"
+      ],
+      "read_action": "server.gpus",
+      "state": "READ_PROBE_PLAN_NOT_EXECUTED",
+      "native_receipt": null,
+      "optimizer_steps": null,
+      "weights_sha_before": null,
+      "weights_sha_after": null
+    },
+    {
+      "task_id": "R60-053",
+      "legacy_task_id": "NOX-V46-53",
+      "title": "Подтверждённый Host/OneHost API и авторизация",
+      "priority": "P0",
+      "resource_class": "CPU_LIGHT",
+      "depends_on": [
+        "R60-001"
+      ],
+      "read_action": "server.services",
+      "state": "READ_PROBE_PLAN_NOT_EXECUTED",
+      "native_receipt": null,
+      "optimizer_steps": null,
+      "weights_sha_before": null,
+      "weights_sha_after": null
+    },
+    {
+      "task_id": "R60-054",
+      "legacy_task_id": "NOX-V46-54",
+      "title": "Подключение частного MCP Secure Tunnel",
+      "priority": "P0",
+      "resource_class": "CPU_LIGHT",
+      "depends_on": [
+        "R60-053"
+      ],
+      "read_action": "nox.audit.status",
+      "state": "READ_PROBE_PLAN_NOT_EXECUTED",
+      "native_receipt": null,
+      "optimizer_steps": null,
+      "weights_sha_before": null,
+      "weights_sha_after": null
+    },
+    {
+      "task_id": "R60-055",
+      "legacy_task_id": "NOX-V46-55",
+      "title": "Vast CLI execute fallback без SSH",
+      "priority": "P0",
+      "resource_class": "CPU_IO",
+      "depends_on": [
+        "R60-053"
+      ],
+      "read_action": "server.status",
+      "state": "READ_PROBE_PLAN_NOT_EXECUTED",
+      "native_receipt": null,
+      "optimizer_steps": null,
+      "weights_sha_before": null,
+      "weights_sha_after": null
+    },
+    {
+      "task_id": "R60-056",
+      "legacy_task_id": "NOX-V46-56",
+      "title": "Снимок S03 и проверка restore",
+      "priority": "P0",
+      "resource_class": "CPU_IO",
+      "depends_on": [
+        "R60-011",
+        "R60-053"
+      ],
+      "read_action": "nox.s03.status",
+      "state": "READ_PROBE_PLAN_NOT_EXECUTED",
+      "native_receipt": null,
+      "optimizer_steps": null,
+      "weights_sha_before": null,
+      "weights_sha_after": null
+    },
+    {
+      "task_id": "R60-057",
+      "legacy_task_id": "NOX-V46-57",
+      "title": "Контроль качества/регрессий перед merge",
+      "priority": "P1",
+      "resource_class": "CPU_LIGHT",
+      "depends_on": [
+        "R60-030",
+        "R60-056"
+      ],
+      "read_action": "nox.learning.status",
+      "state": "READ_PROBE_PLAN_NOT_EXECUTED",
+      "native_receipt": null,
+      "optimizer_steps": null,
+      "weights_sha_before": null,
+      "weights_sha_after": null
+    },
+    {
+      "task_id": "R60-058",
+      "legacy_task_id": "NOX-V46-58",
+      "title": "GitHub CI, source-lock и tests",
+      "priority": "P1",
+      "resource_class": "CPU_LIGHT",
+      "depends_on": [
+        "R60-057"
+      ],
+      "read_action": "nox.audit.status",
+      "state": "READ_PROBE_PLAN_NOT_EXECUTED",
+      "native_receipt": null,
+      "optimizer_steps": null,
+      "weights_sha_before": null,
+      "weights_sha_after": null
+    },
+    {
+      "task_id": "R60-059",
+      "legacy_task_id": "NOX-V46-59",
+      "title": "Выпуск без остановки чата, rollback",
+      "priority": "P1",
+      "resource_class": "CPU_LIGHT",
+      "depends_on": [
+        "R60-058"
+      ],
+      "read_action": "server.checkpoints",
+      "state": "READ_PROBE_PLAN_NOT_EXECUTED",
+      "native_receipt": null,
+      "optimizer_steps": null,
+      "weights_sha_before": null,
+      "weights_sha_after": null
+    },
+    {
+      "task_id": "R60-060",
+      "legacy_task_id": "NOX-V46-60",
+      "title": "Реальные проценты знаний/навыков/весов",
+      "priority": "P1",
+      "resource_class": "CPU_LIGHT",
+      "depends_on": [
+        "R60-020",
+        "R60-030",
+        "R60-059"
+      ],
+      "read_action": "nox.learning.status",
+      "state": "READ_PROBE_PLAN_NOT_EXECUTED",
+      "native_receipt": null,
+      "optimizer_steps": null,
+      "weights_sha_before": null,
+      "weights_sha_after": null
+    }
+  ]
+}
