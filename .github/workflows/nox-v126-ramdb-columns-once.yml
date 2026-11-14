@@ -1,0 +1,43 @@
+name: NOX V126 read original RAM writer field comparison (synthetic only)
+on:
+  push:
+    branches: [nox/v126-native-s03-owner-facts-20261115]
+    paths:
+      - '.github/workflows/nox-v126-ramdb-columns-once.yml'
+permissions:
+  contents: read
+concurrency:
+  group: nox-v126-writer-compare-no-original-db-60509551
+  cancel-in-progress: false
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Assert disposable S03 writer probe safely compiles
+        run: |
+          python -m py_compile nox_runpod/teacher_mesh/v126/physical_writer_ramdb_probe.py
+          python -m unittest -v nox_runpod.teacher_mesh.v126.test_physical_writer_ramdb_probe
+  ram_only:
+    needs: source
+    if: ${{ github.actor == 'MSSTXNEWS' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 11
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Compare only booleans of synthetic tmpfs writer fields
+        run: |
+          test -n "$NOX2" || { echo 'HOLD_NOX2'; exit 2; }
+          python -m nox_runpod.teacher_mesh.v126.physical_writer_ramdb_probe
+      - name: Always delete only temporary attached SSH identity
+        if: always()
+        run: python -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup
