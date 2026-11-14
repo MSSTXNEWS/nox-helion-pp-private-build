@@ -46,10 +46,12 @@ def _knowledge(q:str='',facts_only:bool=False,limit:int=32):
             # Native V125 stores the literal key in provenance; native V130
             # puts the key in original S03 meta.fact_key. Both must be found.
             # instr() is case-insensitive here and doesn't interpret wildcards.
+            escaped=json.dumps(q,ensure_ascii=True)[1:-1]
             clauses.append("(instr(lower(COALESCE(text,'')),lower(?))>0 OR "
                            "instr(lower(COALESCE(provenance,'')),lower(?))>0 OR "
+                           "instr(lower(COALESCE(meta,'')),lower(?))>0 OR "
                            "instr(lower(COALESCE(meta,'')),lower(?))>0)")
-            params.extend([q,q,q])
+            params.extend([q,q,q,escaped])
         where=' WHERE '+' AND '.join(clauses) if clauses else ''
         sql=('SELECT id,segment,text,provenance,sha256,ts,meta FROM s03_items'
              +where+' ORDER BY ts DESC LIMIT ?')
