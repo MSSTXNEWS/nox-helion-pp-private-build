@@ -52,7 +52,8 @@ if all(checks[k] for k in ('frozen_source_sha_ok','owner_bridge_exists','auth_40
 bridgecode=bridge.read_text(encoding='utf-8',errors='replace') if sha(bridge) else ''
 # Read-only SHA/pinned-anchor conflict localization, without returning code or secrets.
 import shutil,sqlite3
-space=shutil.disk_usage('/workspace')
+try:disk_free_bytes=shutil.disk_usage('/workspace').free
+except (OSError,ValueError):disk_free_bytes=None
 structural={
  'bridge_expected_sha':sha(bridge)=='cc27928b38f9b86d2375de8092d09dbdc34f81c6e51e8a68d36041ee71529750',
  'proxy_expected_sha':sha(proxy)=='4d90215d7099344dd5aaed2412645b764baa0228acc0b0e153cfe425217591ad',
@@ -65,7 +66,7 @@ structural={
  'async_stop_present':'_next_native_chunk_or_stop' in bridgecode,
  'bridge_bytes':bridge.stat().st_size if bridge.is_file() else None,
  'proxy_bytes':proxy.stat().st_size if proxy.is_file() else None,
- 'workspace_free_bytes':space.free,
+ 'workspace_free_bytes':disk_free_bytes,
 }
 try:
  import s03_memory
