@@ -140,7 +140,9 @@ print('NOX_V108_ISOLATED_ROUTES=PASS')
    try:
     with urllib.request.urlopen(req,timeout=5) as r:codes.append(r.status)
    except urllib.error.HTTPError as e:codes.append(e.code)
-  if codes!=[401,401,401] or stopped():raise RuntimeError('HOLD_OWNER_AUTH_ROUTES')
+  if codes!=[401,401,401] or stopped():
+   emit(state='NATIVE_OWNER_ROUTE_CODES_AUDIT',unauthenticated_http=codes,stop_active=stopped())
+   raise RuntimeError('HOLD_OWNER_AUTH_ROUTES')
   emit(state='NATIVE_V29_LATE_ROUTES_REGISTERED',new_sha256=sha(new),
        backup_sha_verified=True,service='nox-proxy',model_health=200,
        unauthenticated_http=codes,owner_login_e2e_verified=False,
