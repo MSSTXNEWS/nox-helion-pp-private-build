@@ -56,6 +56,7 @@ try:
  login=req(opener,'/chat/login','POST',{'password':password},5)
  password=None
  if login.status!=200 or not any(True for _ in jar):raise RuntimeError('HOLD_OFFICIAL_LOGIN')
+ print('NATIVE_V114_COOKIE_META='+json.dumps([{'name':c.name,'path':c.path} for c in jar]))
  owner=True
  session=body(req(opener,'/chat/session',timeout=5),2000)
  if session.get('ok') is not True:raise RuntimeError('HOLD_OWNER_COOKIE')
@@ -181,7 +182,7 @@ def main():
     for row in captured.getvalue().splitlines():
         if row.startswith('NATIVE_V114_RESULT=') and len(row)<1800:
             seen.append(row);print(row)
-        elif row.startswith('NATIVE_V114_HTTP=') and len(row)<350:print(row)
+        elif row.startswith(('NATIVE_V114_HTTP=','NATIVE_V114_COOKIE_META=')) and len(row)<350:print(row)
         elif row.startswith('TEMP_SSH_CLEANUP='):print(row[:120])
         elif row.startswith('NATIVE_V114_AUTH_FULL_E2E_ACCEPTED='):print(row)
     accepted=success and len(seen)==1 and any(
