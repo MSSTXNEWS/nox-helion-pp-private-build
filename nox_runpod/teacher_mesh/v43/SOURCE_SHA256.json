@@ -1,0 +1,56 @@
+{
+  "schema": "NOX_V43_SOURCE_SHA256",
+  "count": 10,
+  "files": [
+    {
+      "path": "INTEGRATION_NATIVE_RU.md",
+      "bytes": 5638,
+      "sha256": "c0e7ca686951fb7f2251f96953f6fac823ef9c82a07648e70be20e8e00b51bab"
+    },
+    {
+      "path": "README_RU.md",
+      "bytes": 10813,
+      "sha256": "308c539a3ca8dae23ddaa68e358a78d07cb08cd11118ba3509b7d14bd432f67d"
+    },
+    {
+      "path": "models.v43.json",
+      "bytes": 3500,
+      "sha256": "d38757548045a0998ab4809f90f62f0c16884fdd27273b1f39f5fbf8b44dc510"
+    },
+    {
+      "path": "nox/resource_brain.py",
+      "bytes": 5319,
+      "sha256": "5b2166f16607b733ecf1577096039ec57c8ce7b106a585cae6e39236842434af"
+    },
+    {
+      "path": "pc/START_LOCAL_ROUTER.ps1",
+      "bytes": 1895,
+      "sha256": "acfc8a356ae4630e359ca4174ad4e8fc6825c1d96beee92243f2a0182dd4e596"
+    },
+    {
+      "path": "pc/START_PC_DOWNLOAD.ps1",
+      "bytes": 1123,
+      "sha256": "36509137e02828881bd57aa0591658c088ad6fe6e629c9a01533104dae1ec6d2"
+    },
+    {
+      "path": "pc/SYNC_COLD_TO_DRIVE.ps1",
+      "bytes": 855,
+      "sha256": "8826f53cf9f06d25965749a1e248ba7a7fb71bcb0a588e6c9af67edd2f71ebea"
+    },
+    {
+      "path": "pc/download_models.py",
+      "bytes": 9765,
+      "sha256": "0ebdd71ec2785693029ab8a4d93461589a7b38c8b98cfad80b900e997a51d8ac"
+    },
+    {
+      "path": "requirements-windows.txt",
+      "bytes": 24,
+      "sha256": "65299989fc38a33ce38dc4a81148bcf01de4ded9a1ae282d75859e4c45fd70c9"
+    },
+    {
+      "path": "tests/test_v43.py",
+      "bytes": 5406,
+      "sha256": "da8624559d6e26411c86b5da4df3e3c18e5f534e9b3d974c4d0fa9f767efa162"
+    }
+  ]
+}

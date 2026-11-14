@@ -1,0 +1,87 @@
+{
+  "schema": "nox-v43-cold-vault-1",
+  "instance": "60509551",
+  "policy": {
+    "primary_student": "nox-current-35b",
+    "teacher_runtime_default": "ON_DEMAND_ONLY",
+    "protect": ["main_nox_chat", "S03", "optimizer", "active_checkpoint"],
+    "min_vast_disk_free_gb": 20,
+    "min_pc_disk_free_after_download_gb": 12,
+    "max_simultaneous_teachers_on_pc": 1,
+    "max_simultaneous_teachers_on_vast": 0,
+    "target_gpu_compute_pct_when_training_safely_admitted": 85,
+    "remote_management": "NO_REMOTE_ACCESS_CONFIGURED",
+    "notes": "Only pinned archive revisions with verified SHA may be used; host actions require real native OneHost approval and readback. Q4 are inference teachers; not trainable original weights."
+  },
+  "models": [
+    {
+      "id": "qwen35-27b-q4",
+      "role": "TEACHER_LANGUAGE_RU_ES",
+      "source_repo": "unsloth/Qwen3.5-27B-GGUF",
+      "source_file": "Qwen3.5-27B-Q4_K_M.gguf",
+      "method": "single_file",
+      "approx_gb": 16.7,
+      "sha256": "84b5f7f112156d63836a01a69dc3f11a6ba63b10a23b8ca7a7efaf52d5a2d806",
+      "source_url": "https://huggingface.co/unsloth/Qwen3.5-27B-GGUF",
+      "license": "apache-2.0",
+      "tier": "PC_COLD",
+      "priority": 2,
+      "source_revision": "PIN_AT_DOWNLOAD"
+    },
+    {
+      "id": "deepseek-r1-32b-q4",
+      "role": "TEACHER_REASONING",
+      "source_repo": "bartowski/DeepSeek-R1-Distill-Qwen-32B-GGUF",
+      "source_file": "DeepSeek-R1-Distill-Qwen-32B-Q4_K_M.gguf",
+      "method": "single_file",
+      "approx_gb": 19.85,
+      "sha256": "bed9b0f551f5b95bf9da5888a48f0f87c37ad6b72519c4cbd775f54ac0b9fc62",
+      "source_url": "https://huggingface.co/bartowski/DeepSeek-R1-Distill-Qwen-32B-GGUF",
+      "license": "MIT/Qwen base (verify terms)",
+      "tier": "PC_COLD",
+      "priority": 1,
+      "source_revision": "PIN_AT_DOWNLOAD"
+    },
+    {
+      "id": "qwen38-27b-q4",
+      "role": "TEACHER_CHALLENGER_CODING_VISION",
+      "source_repo": "bartowski/Qwen3.8-27B-GGUF",
+      "source_file": "Qwen3.8-27B-Q4_K_M.gguf",
+      "method": "single_file",
+      "approx_gb": 17.44,
+      "sha256": "880a52af8317974f7b4b064a6bc29ff49e188b91aa218e08eea3078b6b1cc673",
+      "source_url": "https://huggingface.co/bartowski/Qwen3.8-27B-GGUF",
+      "license": "apache-2.0",
+      "tier": "PC_COLD",
+      "priority": 3,
+      "source_revision": "PIN_AT_DOWNLOAD",
+      "note": "Text backbone only; vision requires separately tested mmproj; not auto-downloaded."
+    },
+    {
+      "id": "z-image-turbo",
+      "role": "IMAGE_TOOL",
+      "source_repo": "Tongyi-MAI/Z-Image-Turbo",
+      "method": "official_snapshot",
+      "approx_gb": 32.9,
+      "source_url": "https://huggingface.co/Tongyi-MAI/Z-Image-Turbo",
+      "license": "apache-2.0",
+      "tier": "DRIVE_COLD_AFTER_PC_DOWNLOAD",
+      "priority": 5,
+      "source_revision": "PIN_AT_DOWNLOAD",
+      "note": "Different diffusion runtime; do not load using llama.cpp language router; verify supported diffusers."
+    },
+    {
+      "id": "wan21-t2v-13b",
+      "role": "VIDEO_TOOL",
+      "source_repo": "Wan-AI/Wan2.1-T2V-1.3B",
+      "method": "official_snapshot",
+      "approx_gb": 17.6,
+      "source_url": "https://huggingface.co/Wan-AI/Wan2.1-T2V-1.3B",
+      "license": "apache-2.0",
+      "tier": "DRIVE_COLD_AFTER_PC_DOWNLOAD",
+      "priority": 4,
+      "source_revision": "PIN_AT_DOWNLOAD",
+      "note": "Official repo contains PTH files; never unpickle untrusted data, run only approved isolated inference runtime."
+    }
+  ]
+}
