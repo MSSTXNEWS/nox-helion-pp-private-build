@@ -75,7 +75,9 @@ try:
   con.execute('PRAGMA query_only=ON')
   structural['s03_quick_check']=con.execute('PRAGMA quick_check').fetchone()[0]=='ok'
 except Exception:structural['s03_quick_check']=False
-receipt={'state':status,'checks':checks,'registered':counts,'sha_drift_diagnosis':structural,
+detail=json.dumps(structural,separators=(',',':'),sort_keys=True)
+print('NATIVE_V125_SHA_DIAG='+detail if len(detail)<720 else 'NATIVE_V125_SHA_DIAG={"error":"HOLD_DIAG_LENGTH"}')
+receipt={'state':status,'checks':checks,'registered':counts,
  'frozen_js_sha256':sha(original),'bridge_sha256':sha(bridge),'proxy_sha256':sha(proxy),
  'v122_native_overlay_present':'def _overlay_v122_owner_ui' in bridgecode,
  'private_rows_exported':False,'password_or_cookie_exported':False,
@@ -110,7 +112,7 @@ def main():
         except Exception:cleanup=False
     lines=stream.getvalue().splitlines()
     for line in lines:
-        if line.startswith(('NATIVE_V122_','NATIVE_AUDIT_SCHEMA=','TEMP_SSH_CLEANUP=')) and len(line)<1800:
+        if line.startswith(('NATIVE_V122_','NATIVE_V125_','NATIVE_AUDIT_SCHEMA=','TEMP_SSH_CLEANUP=')) and len(line)<1800:
             print(line)
     receipts=[x.split('=',1)[1] for x in lines if x.startswith('NATIVE_V122_PREFLIGHT=')]
     accepted=False
