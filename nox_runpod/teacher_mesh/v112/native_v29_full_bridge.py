@@ -231,6 +231,46 @@ def _catalog_owner_overlay(raw: bytes, expected_sha: str = _FROZEN_V29_CATALOG_S
     return text.replace(_ORIGINAL_CATALOG_LINK, _STAGED_CATALOG_LINK, 1).encode('utf-8')
 
 
+
+_V122_FROZEN_NOX_UI_SHA = 'c5f6b23d5fc6c31c4c388a574bfa8c61243cda6000cefb0026732ebe4183b765'
+_V122_OWNER_UI_PATCHES = (
+    (
+        "const sampledAt=number(observedActivity?.sampled_at),age=sampledAt===null?null:Date.now()/1000-sampledAt;",
+        "const sampledAt=number(observedActivity?.sampled_at??observedActivity?.timestamp),age=sampledAt===null?null:Date.now()/1000-sampledAt;",
+    ),
+    (
+        "const observedKnown=observedActivity?.status==='OBSERVED_NATIVE_OWNER'&&Number.isInteger(count)&&count>=0&&age!==null&&age>=-5&&age<=30;",
+        "const observedKnown=(observedActivity?.status==='OBSERVED_NATIVE_OWNER'||(observedActivity?.status==='READY'&&observedActivity?.source==='ACTUAL_NOX_MODEL_SLOTS'))&&Number.isInteger(count)&&count>=0&&age!==null&&age>=-5&&age<=30;",
+    ),
+    (
+        "const ready=health?.status==='READY'&&health.owner_transport_bound===true&&core?.native_p02_bound===true&&core.native_contract?.transport_bound===true&&typeof core.primary_model==='string'&&Boolean(core.primary_model);",
+        "const ready=health?.status==='READY'&&health?.backend==='EXISTING_NOX_ONEHOST'&&health.chat_http===200&&health.model_http===200&&core?.backend==='EXISTING_NATIVE_ONEHOST'&&core.native_p02_bound===true&&core.native_cognitive_memory_bound===true&&core.native_dialogs_ready===true&&typeof core.primary_model==='string'&&Boolean(core.primary_model);",
+    ),
+)
+
+
+def _overlay_v122_owner_ui(raw: bytes, *, expected_sha: str = _V122_FROZEN_NOX_UI_SHA) -> bytes:
+    """Keep frozen V29.3 bytes untouched. Reconcile owner-proven V118 HTTP fields.
+
+    No fabricated health, inference activity or GPU figures: all ready fields
+    require real authenticated OneHost, live model HTTP and durable S03.
+    Only served inside the already-protected /nox-web-v29/ mount.
+    """
+    if not isinstance(raw,bytes) or len(raw)>100_000:
+        raise ValueError('HOLD_V122_OWNER_UI_INPUT')
+    if hashlib.sha256(raw).hexdigest()!=expected_sha:
+        raise ValueError('HOLD_V122_FROZEN_NOX_UI_SHA')
+    try:
+        source=raw.decode('utf-8')
+    except UnicodeDecodeError as exc:
+        raise ValueError('HOLD_V122_OWNER_UI_ENCODING') from exc
+    for old,new in _V122_OWNER_UI_PATCHES:
+        if source.count(old)!=1 or new in source:
+            raise ValueError('HOLD_V122_OWNER_UI_ANCHOR_DRIFT')
+        source=source.replace(old,new,1)
+    return source.encode('utf-8')
+
+
 class _OwnerStatic(StaticFiles):
     def __init__(self, directory, auth, unauthorized):
         super().__init__(directory=str(directory), html=True, check_dir=True)
@@ -249,6 +289,16 @@ class _OwnerStatic(StaticFiles):
                             media_type='application/javascript',
                             headers={'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'})
         response=await super().get_response(path,scope)
+        if path.lstrip('/')=='nox-ui.js' and response.status_code==200:
+            file=Path(getattr(response,'path',''))
+            if not file.is_file() or file.is_symlink():
+                return Response('HOLD_V122_NOX_UI_FILE',status_code=409)
+            try:
+                js=_overlay_v122_owner_ui(file.read_bytes())
+            except (ValueError,OSError,UnicodeDecodeError):
+                return Response('HOLD_V122_NOX_UI_SOURCE_PIN',status_code=409)
+            return Response(js,media_type='application/javascript',headers={
+                'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'})
         if path.lstrip('/') == 'nox-function-catalog.js' and response.status_code == 200:
             file=Path(getattr(response,'path',''))
             if not file.is_file() or file.is_symlink():
