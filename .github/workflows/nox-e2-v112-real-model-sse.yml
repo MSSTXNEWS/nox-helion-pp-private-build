@@ -1,0 +1,46 @@
+name: NOX V112 one bounded real GPU0 response and streaming QA
+on:
+  push:
+    branches: [nox/e2-v109-stream-delta-guard-20261115]
+    paths:
+      - '.github/workflows/nox-e2-v112-real-model-sse.yml'
+      - 'nox_runpod/teacher_mesh/v112/**'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: nox-v112-real-model-smoke-60509551
+  cancel-in-progress: false
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Validate exact bounded smoke and safety
+        run: |
+          set -euo pipefail
+          python3 -m compileall -q nox_runpod/teacher_mesh/v112
+          python3 -m unittest -v nox_runpod.teacher_mesh.v112.test_native_inference_smoke
+  native:
+    needs: source
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Only existing authorized Vast owner route
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$NOX2" || { echo "HOLD_NOX2"; exit 2; }
+      - name: One low-token real GPU0 inference test, no writes or extra model
+        run: python3 -m nox_runpod.teacher_mesh.v112.native_inference_smoke
+      - name: Revoke ephemeral SSH key even if response is incomplete
+        if: always()
+        run: python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup

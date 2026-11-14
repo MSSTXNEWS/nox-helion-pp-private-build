@@ -59,10 +59,16 @@ def _token_from_delta(line: str) -> tuple[str, str]:
         return ('', '')
     if not isinstance(obj, dict):
         return ('', '')
-    for choice in obj.get('choices') or []:
+    choices = obj.get('choices')
+    if not isinstance(choices, list):
+        return ('', '')
+    for choice in choices:
         if not isinstance(choice, dict):
             continue
-        part = (choice.get('delta') or {}).get('content')
+        delta = choice.get('delta')
+        if not isinstance(delta, dict):
+            continue
+        part = delta.get('content')
         if isinstance(part, str) and part:
             return ('delta', part)
     return ('', '')
