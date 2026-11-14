@@ -6,6 +6,13 @@ on:
       - 'nox_runpod/teacher_mesh/v118/**'
       - '.github/workflows/nox-v118-real-read-surfaces.yml'
   workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Only after read-only forensics, idle slots, STOP and current source SHA review'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
 permissions:
   contents: read
 concurrency:
@@ -35,7 +42,7 @@ jobs:
           print('NOX_V118_SOURCE_COMPILE_PASS=true')
           PY
   native:
-    if: ${{ github.actor == 'MSSTXNEWS' }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' }}
     needs: source
     runs-on: ubuntu-latest
     timeout-minutes: 13

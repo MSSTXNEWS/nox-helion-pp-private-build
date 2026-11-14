@@ -6,6 +6,13 @@ on:
       - 'nox_runpod/teacher_mesh/v118/owner_nested_static_hotfix.py'
       - '.github/workflows/nox-v118-nested-owner-static.yml'
   workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Only after read-only forensics, idle slots, STOP and current exact SHA review'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
 permissions:
   contents: read
 concurrency:
@@ -41,7 +48,7 @@ jobs:
           print('NOX_V118_PRODUCTION_NOT_SWITCHED_BY_SOURCE_TEST=true')
           PY
   native:
-    if: ${{ github.actor == 'MSSTXNEWS' }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' }}
     needs: source
     runs-on: ubuntu-latest
     timeout-minutes: 12
