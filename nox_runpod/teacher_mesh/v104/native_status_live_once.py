@@ -54,7 +54,7 @@ def rollback(old,meta):
    time.sleep(1)
  except Exception:pass
  return False
-BLOCK="""
+BLOCK='''
 @app.get('/api/nox/status')
 async def nox_v29_native_status(request: Request):
     if not _session_ok(request):
@@ -85,7 +85,7 @@ async def nox_v29_native_status(request: Request):
         'native_stream_receipt_accepted':False,
         'onehost':True
     })
-"""
+'''
 try:
  if any(Path(x).exists() for x in STOPS):raise RuntimeError('HOLD_STOP')
  if not FILE.is_file() or FILE.is_symlink():raise RuntimeError('HOLD_SOURCE_MISSING')
