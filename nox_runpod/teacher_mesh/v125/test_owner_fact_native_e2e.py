@@ -29,11 +29,23 @@ class LiveFactContract(unittest.TestCase):
         for value in (
             "'/api/nox/memory/facts','POST',payload",
             "'/api/ui/memory/facts/history?fact_key='",
-            "SELECT id,segment,sha256 FROM s03_items WHERE provenance=?",
+            "SELECT id,segment,sha256,meta,text FROM s03_items WHERE provenance=?",
             "PRAGMA quick_check", "HOLD_FACT_NOT_FOUND_IN_EXISTING_HISTORY",
             "HOLD_NATIVE_FACT_DEDUPLICATION", "'M2'",
             "EXISTING_OWNER_FACT_TO_S03_HISTORY_PASS"):
             self.assertIn(value,self.src)
+
+    def test_s03_internal_digest_is_not_assumed_equal_to_source_digest(self):
+        self.assertIn("internal_sha=rows[0][2]",self.src)
+        self.assertIn("source_meta.get('source_sha256')!=content_sha",self.src)
+        self.assertIn("x.get('source_sha256')==internal_sha",self.src)
+        self.assertNotIn("x.get('source_sha256')==content_sha",self.src)
+
+    def test_acceptance_reuses_existing_qa_fact_without_polluting_s03(self):
+        self.assertIn("reused_qa=previous is not None",self.src)
+        self.assertIn("if before_count!=int(reused_qa)",self.src)
+        self.assertIn("reused_existing_synthetic_fact=reused_qa",self.src)
+        self.assertIn("HOLD_PREVIOUS_QA_SOURCE_META",self.src)
 
     def test_no_fake_training_and_no_private_records_leak(self):
         for value in ("'model_weights_changed':False",
