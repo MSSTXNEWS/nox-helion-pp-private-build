@@ -29,12 +29,16 @@ def _stopped():
 
 def _safe_request(request):
     site=request.headers.get('sec-fetch-site','')
-    if site not in ('','same-origin','none'):
+    if site=='same-origin':
+        # Browser-generated Fetch Metadata identifies the owner host even when
+        # the existing reverse proxy forwards the request to localhost:8080.
+        return True
+    if site not in ('','none'):
         return False
     origin=request.headers.get('origin','')
     if not origin:
         return True
-    # The real owner interface is mounted on the same existing HTTPS origin.
+    # Non-browser clients without Fetch Metadata must use actual same origin.
     expected=str(request.base_url).rstrip('/')
     return origin==expected
 
