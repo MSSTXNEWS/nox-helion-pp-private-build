@@ -261,7 +261,9 @@ class SynapticBrain:
         deadline = (self.cfg.deep_deadline_ms if deep else self.cfg.fast_deadline_ms) / 1000
         utc = datetime.now(timezone.utc).isoformat()
         submitted = {}
-        for name in CORE_NAMES:
+        # C02 is a hard dependency: reserve the first worker/queue slot for
+        # indexed S03 recall instead of letting optional sensors starve memory.
+        for name in ('C02', *(k for k in CORE_NAMES if k != 'C02')):
             if not self.inflight.acquire(blocking=False):
                 submitted[name] = None
                 continue
