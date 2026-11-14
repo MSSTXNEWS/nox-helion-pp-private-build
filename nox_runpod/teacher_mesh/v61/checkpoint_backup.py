@@ -50,7 +50,7 @@ raw=json.dumps({'schema':'NOX_V61_CHECKPOINT_OPTIMIZER_MANIFEST_V1',
                 'origin_instance_id':60509551,
                 'files':manifest,'original_files_deleted':False},
                sort_keys=True,separators=(',',':')).encode()
-with tarfile.open(fileobj=sys.stdout.buffer,mode='w|gz',compresslevel=1) as archive:
+with tarfile.open(fileobj=sys.stdout.buffer,mode='w|gz') as archive:
     for p,_ in selected:
         archive.add(p,arcname='NOX_CHECKPOINTS/'+str(p.relative_to(root)),recursive=False)
     entry=tarfile.TarInfo('RESTORE_MANIFEST.json')
