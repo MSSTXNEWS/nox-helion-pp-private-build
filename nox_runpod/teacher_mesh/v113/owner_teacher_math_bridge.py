@@ -110,6 +110,7 @@ try:
  anchor="async def _proxy_completion(body: dict):\n"
  after="    payload['messages'] = _trim_ctx(_build_messages(body))\n"
  if source.count(anchor)!=1 or source.count(after)!=1 or 'nox_v113_verified_local_teacher' in source:
+  emit(state='HOLD_PATCH_ANCHORS',owner_fn_count=source.count(anchor),build_messages_count=source.count(after),already_patched=('nox_v113_verified_local_teacher' in source))
   raise RuntimeError('HOLD_PATCH_ANCHORS')
  updated=source.replace(anchor,HELPER+anchor,1).replace(after,after+INJECT,1)
  compile(updated,str(P),'exec')
