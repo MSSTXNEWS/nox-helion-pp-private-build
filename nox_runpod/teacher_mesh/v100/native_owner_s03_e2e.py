@@ -8,7 +8,43 @@ from nox_runpod.teacher_mesh.v51 import ephemeral_ssh_probe as ssh
 REMOTE=r"""
 set -euo pipefail
 cd /root/nox/scripts
-python3 - <<'PYREMOTE'
+NOX_PY="$(python3 - <<'PYFIND'
+import os,re,subprocess
+from pathlib import Path
+candidates=[]
+try:
+ p=subprocess.run(['supervisorctl','status','nox-proxy'],text=True,capture_output=True,timeout=6)
+ m=re.search(r'pid\s+(\d+)',p.stdout)
+ if m:
+  raw=(Path('/proc')/m.group(1)/'cmdline').read_bytes()
+  argv=[x.decode('utf8','replace') for x in raw.split(b'\0') if x]
+  for part in argv[:3]:
+   if part.startswith('/') and ('python' in Path(part).name):
+    candidates.append(part)
+   if part.startswith('/') and 'uvicorn' in Path(part).name and Path(part).is_file():
+    with Path(part).open('rb') as fh:line=fh.readline(255).decode('utf8','replace')
+    if line.startswith('#!') and line[2:].strip().startswith('/'):
+     candidates.append(line[2:].strip().split()[0])
+except Exception:pass
+candidates.extend(('/root/nox/venv/bin/python','/root/nox/.venv/bin/python',
+ '/root/nox/env/bin/python','/opt/venv/bin/python','/venv/bin/python',
+ '/root/nox/scripts/venv/bin/python','/usr/local/bin/python3'))
+seen=set()
+for candidate in candidates:
+ if candidate in seen:continue
+ seen.add(candidate)
+ if not candidate.startswith(('/root/nox/','/opt/venv/','/venv/','/usr/local/bin/')):continue
+ if not Path(candidate).is_file():continue
+ try:
+  v=subprocess.run([candidate,'-c','import fastapi, httpx, uvicorn'],capture_output=True,timeout=5)
+  if v.returncode==0:
+   print(candidate)
+   raise SystemExit(0)
+ except Exception:pass
+raise SystemExit('HOLD_FASTAPI_RUNTIME_NOT_FOUND')
+PYFIND
+)"
+"$NOX_PY" - <<'PYREMOTE'
 import asyncio,hashlib,json,secrets,subprocess,sys,time,urllib.request
 from pathlib import Path
 print('NOX_NATIVE_V51_SSH_EXECUTED=true')
