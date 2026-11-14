@@ -92,6 +92,14 @@ class V130Tests(unittest.TestCase):
         self.assertEqual(response.status_code,403)
         self.assertEqual(self.calls,0)
 
+    def test_browser_same_origin_through_reverse_proxy(self):
+        # Sec-Fetch-Site is browser-generated, not controlled by regular JS.
+        response=self.post(headers={'Origin':'https://owner.nox.example',
+                                    'Sec-Fetch-Site':'same-origin'})
+        self.assertEqual(response.status_code,200,response.text)
+        self.assertTrue(response.json()['readback_verified'])
+        self.assertEqual(self.calls,1)
+
     def test_cross_site_browser_rejected(self):
         response=self.post(headers={'Sec-Fetch-Site':'cross-site'})
         self.assertEqual(response.status_code,403)
