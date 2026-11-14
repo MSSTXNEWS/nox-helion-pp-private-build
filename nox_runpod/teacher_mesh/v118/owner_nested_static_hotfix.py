@@ -68,7 +68,9 @@ def restart():
 def http(url,opener=None):
  req=urllib.request.Request('http://127.0.0.1:8080'+url,
   headers={'User-Agent':'NOX-V118-SAFE-STATIC-ACCEPTANCE'})
- try:return (opener or urllib.request).urlopen(req,timeout=5)
+ try:
+  client = opener.open if opener is not None else urllib.request.urlopen
+  return client(req,timeout=5)
  except urllib.error.HTTPError as e:return e
 def rollback(data,metadata):
  try:
