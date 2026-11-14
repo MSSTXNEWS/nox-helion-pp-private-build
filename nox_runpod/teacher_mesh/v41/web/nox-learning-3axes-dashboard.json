@@ -1,0 +1,30 @@
+{
+  "schema": "nox-learning-3axes-dashboard-v1",
+  "at_utc": "2026-11-14T00:12:38.290066+00:00",
+  "axes": {
+    "knowledge": {
+      "state": "HOLD",
+      "percent": null,
+      "reason": "NO_NATIVE_PROOF"
+    },
+    "skills": {
+      "state": "HOLD",
+      "percent": null,
+      "reason": "NO_NATIVE_PROOF"
+    },
+    "weights": {
+      "state": "HOLD",
+      "percent": null,
+      "reason": "NO_NATIVE_PROOF"
+    }
+  },
+  "overall": {
+    "state": "HOLD",
+    "percent": null,
+    "reason": "INCOMPLETE_VERIFIED_AXES"
+  },
+  "overall_release_accepted": false,
+  "gpu_target_compute_percent": 85,
+  "note": "Progress of fixed, versioned checks. NOT a measure of consciousness or all possible intelligence.",
+  "source_state": "SOURCE_READ"
+}

@@ -1,0 +1,67 @@
+name: NOX V49 Jupyter TLS-only diagnosis (zero credentials sent)
+on:
+  push:
+    branches: [feature/nox-v38-synaptic-brain-20261114]
+    paths: [.github/workflows/nox-v49-jupyter-tls-readonly.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  tls-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - name: Inspect TLS handshake on authenticated Vast instance metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os,sys,json,ssl,socket,urllib.request,ipaddress
+          key=os.environ.get('NOX2','')
+          if not key:raise SystemExit('HOLD_NOX2_NOT_CONFIGURED')
+          req=urllib.request.Request('https://console.vast.ai/api/v0/instances/60509551/',
+              headers={'Authorization':'Bearer '+key,'Accept':'application/json'})
+          with urllib.request.urlopen(req,timeout=20) as r:data=json.load(r)
+          d=data.get('instances',data) if isinstance(data,dict) else None
+          if isinstance(d,list):d=next((x for x in d if str(x.get('id'))=='60509551'),None)
+          if not isinstance(d,dict) or str(d.get('id'))!='60509551' or d.get('actual_status')!='running':
+              raise SystemExit('HOLD_INSTANCE_ID_OR_STATUS')
+          addr=d.get('public_ipaddr')
+          try:
+              if not ipaddress.ip_address(addr).is_global:raise ValueError()
+          except (ValueError,TypeError):
+              raise SystemExit('HOLD_NO_VERIFIED_PUBLIC_IP')
+          ports=d.get('ports') or {}
+          if not isinstance(ports,dict):raise SystemExit('HOLD_PORT_MAP')
+          mapped=None
+          for k,v in ports.items():
+              if str(k) not in ('8080/tcp','8888/tcp','8080','8888'):continue
+              if isinstance(v,list) and v and isinstance(v[0],dict):
+                  value=v[0].get('HostPort')
+                  if str(value).isdigit() and 1<=int(value)<=65535:
+                      mapped=int(value);break
+          if not mapped:raise SystemExit('HOLD_JUPYTER_MAP_NOT_FOUND')
+          # No HTTP auth headers, GET, cookies, token or commands sent to Jupyter.
+          try:
+              context=ssl.create_default_context()
+              with socket.create_connection((addr,mapped),timeout=7) as raw:
+                  with context.wrap_socket(raw,server_hostname=addr) as sock:
+                      print('JUPYTER_TLS_TRUSTED=true')
+                      print('JUPYTER_TLS_PROTOCOL='+str(sock.version()))
+          except ssl.SSLCertVerificationError:
+              print('JUPYTER_TLS_TRUSTED=false')
+              print('JUPYTER_TLS_DIAG=UNTRUSTED_OR_HOSTNAME_MISMATCH')
+          except ssl.SSLError as e:
+              reason=str(getattr(e,'reason','UNKNOWN')).upper()
+              import re
+              reason=re.sub(r'[^A-Z0-9_]','',reason)[:48] or 'UNKNOWN'
+              print('JUPYTER_TLS_TRUSTED=false')
+              print('JUPYTER_TLS_DIAG='+reason)
+          except (OSError,TimeoutError):
+              print('JUPYTER_TLS_TRUSTED=false')
+              print('JUPYTER_TLS_DIAG=NETWORK_OR_TIMEOUT')
+          print('JUPYTER_AUTH_TOKEN_NOT_TRANSMITTED=true')
+          print('REMOTE_EXECUTION_ATTEMPTED=false')
+          PY

@@ -1,0 +1,35 @@
+name: NOX V41 standalone source acceptance
+on:
+  push:
+    branches:
+      - feature/nox-v38-synaptic-brain-20261114
+    paths:
+      - 'nox_runpod/teacher_mesh/v39/**'
+      - 'nox_runpod/teacher_mesh/v41/**'
+      - '.github/workflows/nox-v41-source-ci.yml'
+  pull_request:
+    paths:
+      - 'nox_runpod/teacher_mesh/v39/**'
+      - 'nox_runpod/teacher_mesh/v41/**'
+      - '.github/workflows/nox-v41-source-ci.yml'
+permissions:
+  contents: read
+jobs:
+  source-only-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Python source and 43 V41 tests
+        run: |
+          cd nox_runpod/teacher_mesh/v41
+          python3 -m compileall -q training tests
+          PYTHONPATH=. python3 -m unittest discover -s tests -p 'test_*.py' -v
+      - name: Original V37 and V38 tests (59)
+        run: |
+          python3 -m unittest nox_runpod.teacher_mesh.v37.tests.test_v37 nox_runpod.teacher_mesh.v38.tests.test_v38_control nox_runpod.teacher_mesh.v38.tests.test_v38_memory_speed -v
+      - name: Original NOX web script syntax
+        run: node --check nox_runpod/teacher_mesh/v41/web/nox-learning-3axes.js
+      - name: Web baseline source-lock only, never deploy
+        run: |
+          echo 'SOURCE_ONLY: no Vast.ai restart, no changes to NOX production weights or S03'

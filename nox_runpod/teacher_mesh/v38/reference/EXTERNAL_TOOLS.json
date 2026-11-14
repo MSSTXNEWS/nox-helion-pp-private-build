@@ -1,0 +1,14 @@
+{
+  "scope": "OPTIONAL; not downloaded/installed on Vast.ai",
+  "server": "Vast.ai instance 60509551, Tesla V100 SM70",
+  "runtime_rule": "Pin licenses, Python/CUDA/driver compatibility and file SHA before offline install. Never replace production trainer environment.",
+  "sources": [
+    {"name":"NVIDIA DCGM Exporter","url":"https://github.com/NVIDIA/dcgm-exporter","documentation":"https://docs.nvidia.com/datacenter/dcgm/latest/installation/install-dcgm-exporter.html","role":"GPU telemetry and metrics","status":"candidate only; no installation"},
+    {"name":"psutil","url":"https://github.com/giampaolo/psutil","license":"BSD-3-Clause","role":"CPU, process and RAM inspection","status":"candidate only; no installation"},
+    {"name":"Prometheus Python client","url":"https://github.com/prometheus/client_python","license":"Apache-2.0","role":"optional existing NOX instrumentation","status":"candidate only; no installation"},
+    {"name":"watchdog","url":"https://github.com/gorakhargosh/watchdog","license":"Apache-2.0","role":"checkpoint directory event notification","status":"candidate only; no installation"},
+    {"name":"Supervisor","url":"https://supervisord.org/","role":"existing NOX process inventory","status":"reuse existing supervisorctl"},
+    {"name":"SQLite backup API","url":"https://www.sqlite.org/backup.html","role":"online S03 snapshots via existing native callback","status":"requires verified native integration"},
+    {"name":"SQLite durability PRAGMA","url":"https://www.sqlite.org/pragma.html#pragma_synchronous","role":"S03 WAL synchronous FULL before durable acknowledgement","status":"design constraint; do not change live DB here"}
+  ]
+}

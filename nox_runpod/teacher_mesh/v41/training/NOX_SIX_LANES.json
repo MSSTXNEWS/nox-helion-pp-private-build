@@ -1,0 +1,19 @@
+{
+  "schema": "NOX_V40_SIX_LANE_PLAN_NOT_ENQUEUED",
+  "scheduler": "EXISTING_NOX_ONEHOST_ONLY",
+  "priority_rule": "USER_CHAT > S03_SAVE > RECOVERY > VERIFIED_DISTILLATION > SOURCES > BACKGROUND",
+  "max_gpu_jobs_without_verified_admission": 0,
+  "compute_target_pct_per_gpu": 85,
+  "lanes": [
+    {"name":"CORE", "task":"Keep single NOX model responding; measure TTFT p50/p95 and tokens/s", "requires":"existing chat and STOP", "resource":"GPU0 if available"},
+    {"name":"MEMORY", "task":"S03 M0-M7 indexed recall, dedup, source-link and offsite restart restore", "requires":"native S03 owner scope", "resource":"CPU/RAM"},
+    {"name":"FORGE", "task":"Diagnose train_error step 0, preserve optimizer and student checkpoint; prepare 20-step smoke", "requires":"full offsite backup, CUDA12 FP16, native admission", "resource":"GPU1 only when admitted"},
+    {"name":"SKILLS", "task":"Run source-disjoint RU/ES, coding, reasoning, agent tool benchmarks", "requires":"fixed suite SHA and independent evaluator", "resource":"CPU/GPU idle share"},
+    {"name":"TEACHERS", "task":"Verify existing teachers, distillation rights, dedup teacher answers, prepare versioned candidate corpus", "requires":"source and licensing gate, no personal raw chat export", "resource":"independent idle resources"},
+    {"name":"WEB_QA", "task":"Integrate existing V29.3 WEB three donuts and legacy evidence UI; verify NO-LOSS visual and STOP", "requires":"source lock and browser E2E", "resource":"CPU"}
+  ],
+  "work_queue_status": "PROPOSAL_NOT_RUNNING",
+  "do_not_replace": ["NOX S1-L05", "OneHost", "S03", "existing checkpoints", "current V29.3 canonical web"],
+  "weight_learning_definition": "train optimizer changed weights + verified checkpoint SHA + reload + independent held-out gain. Teacher data does not mean absorbed weights.",
+  "autonomy": "Native bounded jobs -> observed result -> S03 verified journal -> reflection -> approved distillation examples -> verified FORGE update -> benchmarks, no self-reinforcing model hallucinations."
+}

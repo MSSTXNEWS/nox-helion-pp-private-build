@@ -1,0 +1,1380 @@
+{
+  "schema": "NOX_V46_SIX_LANE_SIXTY_TASKS_V1",
+  "program": "GENESIS 0–4, V29.3+V37–V44, NO-LOSS",
+  "as_of": "2026-11-14",
+  "production_task_ids": [],
+  "live_verified": false,
+  "dispatch_policy": {
+    "concurrent_cpu_max": 8,
+    "concurrent_gpu1_max": 1,
+    "concurrent_downloads_max": 2,
+    "main_student_gpu0_pinned": true,
+    "s03_single_native": true,
+    "no_task_count_as_intelligence": true,
+    "readiness_default": "HOLD_NATIVE_BINDINGS"
+  },
+  "groups": [
+    {
+      "id": "A",
+      "lane": "CORE",
+      "name": "Ресурсы и модели"
+    },
+    {
+      "id": "B",
+      "lane": "MEMORY",
+      "name": "Мозг и память"
+    },
+    {
+      "id": "C",
+      "lane": "FORGE",
+      "name": "Обучение и собственные веса"
+    },
+    {
+      "id": "D",
+      "lane": "SKILLS",
+      "name": "Интеллект и автономия"
+    },
+    {
+      "id": "E",
+      "lane": "WEB_QA",
+      "name": "Резонанс, голос, зрение и кино"
+    },
+    {
+      "id": "F",
+      "lane": "CORE",
+      "name": "Надёжность, мост и приёмка"
+    }
+  ],
+  "tasks": [
+    {
+      "task_id": "NOX-V46-01",
+      "number": 1,
+      "group": "A",
+      "lane": "CORE",
+      "title": "Инвентаризация Vast, GPU, RAM, диска и PID",
+      "depends_on": [],
+      "priority": "P0",
+      "resource": "CPU_LIGHT",
+      "requires_native_owner": true,
+      "requires_backup_restore": false,
+      "requires_license_and_privacy": false,
+      "modifies_live_system": false,
+      "expected_evidence": [
+        "native_task_receipt_sha256",
+        "s03_event_ref",
+        "independent_readback"
+      ],
+      "state": "PLANNED_NOT_ENQUEUED"
+    },
+    {
+      "task_id": "NOX-V46-02",
+      "number": 2,
+      "group": "A",
+      "lane": "CORE",
+      "title": "Хеш-инвентаризация весов и checkpoints",
+      "depends_on": [
+        "NOX-V46-01"
+      ],
+      "priority": "P0",
+      "resource": "CPU_IO",
+      "requires_native_owner": true,
+      "requires_backup_restore": false,
+      "requires_license_and_privacy": false,
+      "modifies_live_system": false,
+      "expected_evidence": [
+        "native_task_receipt_sha256",
+        "s03_event_ref",
+        "independent_readback"
+      ],
+      "state": "PLANNED_NOT_ENQUEUED"
+    },
+    {
+      "task_id": "NOX-V46-03",
+      "number": 3,
+      "group": "A",
+      "lane": "CORE",
+      "title": "Сверка 200 готовых источников и лицензий",
+      "depends_on": [
+        "NOX-V46-02"
+      ],
+      "priority": "P1",
+      "resource": "CPU_IO",
+      "requires_native_owner": true,
+      "requires_backup_restore": false,
+      "requires_license_and_privacy": true,
+      "modifies_live_system": false,
+      "expected_evidence": [
+        "native_task_receipt_sha256",
+        "s03_event_ref",
+        "independent_readback"
+      ],
+      "state": "PLANNED_NOT_ENQUEUED"
+    },
+    {
+      "task_id": "NOX-V46-04",
+      "number": 4,
+      "group": "A",
+      "lane": "CORE",
+      "title": "Каталог моделей ПК / Drive / Vast без дублей",
+      "depends_on": [
+        "NOX-V46-01",
+        "NOX-V46-03"
+      ],
+      "priority": "P1",
+      "resource": "CPU_IO",
+      "requires_native_owner": true,
+      "requires_backup_restore": false,
+      "requires_license_and_privacy": true,
+      "modifies_live_system": false,
+      "expected_evidence": [
+        "native_task_receipt_sha256",
+        "s03_event_ref",
+        "independent_readback"
+      ],
+      "state": "PLANNED_NOT_ENQUEUED"
+    },
+    {
+      "task_id": "NOX-V46-05",
+      "number": 5,
+      "group": "A",
+      "lane": "CORE",
+      "title": "Сравнение Q8/Q5/Q4 с полным эталоном",
+      "depends_on": [
+        "NOX-V46-02"
+      ],
+      "priority": "P1",
+      "resource": "GPU1_EXCLUSIVE",
+      "requires_native_owner": true,
+      "requires_backup_restore": false,
+      "requires_license_and_privacy": true,
+      "modifies_live_system": false,
+      "expected_evidence": [
+        "native_task_receipt_sha256",
+        "s03_event_ref",
+        "independent_readback"
+      ],
+      "state": "PLANNED_NOT_ENQUEUED"
+    },
+    {
+      "task_id": "NOX-V46-06",
+      "number": 6,
+      "group": "A",
+      "lane": "CORE",
+      "title": "Оценка TTFT, TPS и качества квантов",
+      "depends_on": [
+        "NOX-V46-05"
+      ],
+      "priority": "P1",
+      "resource": "GPU1_EXCLUSIVE",
+      "requires_native_owner": true,
+      "requires_backup_restore": false,
+      "requires_license_and_privacy": false,
+      "modifies_live_system": false,
+      "expected_evidence": [
+        "native_task_receipt_sha256",
+        "s03_event_ref",
+        "independent_readback"
+      ],
+      "state": "PLANNED_NOT_ENQUEUED"
+    },
+    {
+      "task_id": "NOX-V46-07",
+      "number": 7,
+      "group": "A",
+      "lane": "CORE",
+      "title": "План горячей RAM/VRAM и cold storage",
+      "depends_on": [
+        "NOX-V46-01",
+        "NOX-V46-02"
+      ],
+      "priority": "P1",
+      "resource": "CPU_LIGHT",
+      "requires_native_owner": true,
+      "requires_backup_restore": false,
+      "requires_license_and_privacy": false,
+      "modifies_live_system": false,
+      "expected_evidence": [
+        "native_task_receipt_sha256",
+        "s03_event_ref",
+        "independent_readback"
+      ],
+      "state": "PLANNED_NOT_ENQUEUED"
+    },
+    {
+      "task_id": "NOX-V46-08",
+      "number": 8,
+      "group": "A",
+      "lane": "CORE",
+      "title": "Безопасная выгрузка простаивающего учителя",
+      "depends_on": [
+        "NOX-V46-07"
+      ],
+      "priority": "P1",
+      "resource": "CPU_LIGHT",
+      "requires_native_owner": true,
+      "requires_backup_restore": true,
+      "requires_license_and_privacy": false,
+      "modifies_live_system": true,
+      "expected_evidence": [
+        "native_task_receipt_sha256",
+        "s03_event_ref",
+        "independent_readback"
+      ],
+      "state": "PLANNED_NOT_ENQUEUED"
+    },
+    {
+      "task_id": "NOX-V46-09",
+      "number": 9,
+      "group": "A",
+      "lane": "CORE",
+      "title": "Offsite backup и тест восстановления модели",
+      "depends_on": [
+        "NOX-V46-02"
+      ],
+      "priority": "P0",
+      "resource": "CPU_IO",
+      "requires_native_owner": true,
+      "requires_backup_restore": false,
+      "requires_license_and_privacy": false,
+      "modifies_live_system": true,
+      "expected_evidence": [
+        "native_task_receipt_sha256",
+        "s03_event_ref",
+        "independent_readback"
+      ],
+      "state": "PLANNED_NOT_ENQUEUED"
+    },
+    {
+      "task_id": "NOX-V46-10",
+      "number": 10,
+      "group": "A",
+      "lane": "CORE",
+      "title": "Отчёт о реальном освобождённом месте",
+      "depends_on": [
+        "NOX-V46-09"
+      ],
+      "priority": "P1",
+      "resource": "CPU_LIGHT",
+      "requires_native_owner": true,
+      "requires_backup_restore": true,
+      "requires_license_and_privacy": false,
+      "modifies_live_system": true,
+      "expected_evidence": [
+        "native_task_receipt_sha256",
+        "s03_event_ref",
+        "independent_readback"
+      ],
+      "state": "PLANNED_NOT_ENQUEUED"
+    },
+    {
+      "task_id": "NOX-V46-11",
+      "number": 11,
+      "group": "B",
+      "lane": "MEMORY",
+      "title": "Аудит действующей S03 и PersonaID",
+      "depends_on": [],
+      "priority": "P0",
+      "resource": "CPU_LIGHT",
+      "requires_native_owner": true,
+      "requires_backup_restore": false,
+      "requires_license_and_privacy": false,
+      "modifies_live_system": false,
+      "expected_evidence": [
+        "native_task_receipt_sha256",
+        "s03_event_ref",
+        "independent_readback"
+      ],
+      "state": "PLANNED_NOT_ENQUEUED"
+    },
+    {
+      "task_id": "NOX-V46-12",
+      "number": 12,
+      "group": "B",
+      "lane": "MEMORY",
+      "title": "Миграция/контроль M0–M7 без второй БД",
+      "depends_on": [
+        "NOX-V46-11"
+      ],
+      "priority": "P1",
+      "resource": "CPU_IO",
+      "requires_native_owner": true,
+      "requires_backup_restore": false,
+      "requires_license_and_privacy": false,
+      "modifies_live_system": true,
+      "expected_evidence": [
+        "native_task_receipt_sha256",
+        "s03_event_ref",
+        "independent_readback"
+      ],
+      "state": "PLANNED_NOT_ENQUEUED"
+    },
+    {
+      "task_id": "NOX-V46-13",
+      "number": 13,
+      "group": "B",
+      "lane": "MEMORY",
+      "title": "Индексированный recall с проверкой источников",
+      "depends_on": [
+        "NOX-V46-12"
+      ],
+      "priority": "P1",
+      "resource": "CPU_IO",
+      "requires_native_owner": true,
+      "requires_backup_restore": false,
+      "requires_license_and_privacy": false,
+      "modifies_live_system": false,
+      "expected_evidence": [
+        "native_task_receipt_sha256",
+        "s03_event_ref",
+        "independent_readback"
+      ],
+      "state": "PLANNED_NOT_ENQUEUED"
+    },
+    {
+      "task_id": "NOX-V46-14",
+      "number": 14,
+      "group": "B",
+      "lane": "MEMORY",
+      "title": "Граф тем, событий и временных связей",
+      "depends_on": [
+        "NOX-V46-13"
+      ],
+      "priority": "P1",
+      "resource": "CPU_LIGHT",
+      "requires_native_owner": true,
+      "requires_backup_restore": false,
+      "requires_license_and_privacy": false,
+      "modifies_live_system": false,
+      "expected_evidence": [
+        "native_task_receipt_sha256",
+        "s03_event_ref",
+        "independent_readback"
+      ],
+      "state": "PLANNED_NOT_ENQUEUED"
+    },
+    {
+      "task_id": "NOX-V46-15",
+      "number": 15,
+      "group": "B",
+      "lane": "MEMORY",
+      "title": "Дедупликация и разрешение противоречий",
+      "depends_on": [
+        "NOX-V46-13",
+        "NOX-V46-14"
+      ],
+      "priority": "P1",
+      "resource": "CPU_LIGHT",
+      "requires_native_owner": true,
+      "requires_backup_restore": false,
+      "requires_license_and_privacy": false,
+      "modifies_live_system": false,
+      "expected_evidence": [
+        "native_task_receipt_sha256",
+        "s03_event_ref",
+        "independent_readback"
+      ],
+      "state": "PLANNED_NOT_ENQUEUED"
+    },
+    {
+      "task_id": "NOX-V46-16",
+      "number": 16,
+      "group": "B",
+      "lane": "MEMORY",
+      "title": "GENESIS ledger / биография NOX с SHA",
+      "depends_on": [
+        "NOX-V46-11",
+        "NOX-V46-12"
+      ],
+      "priority": "P0",
+      "resource": "CPU_LIGHT",
+      "requires_native_owner": true,
+      "requires_backup_restore": false,
+      "requires_license_and_privacy": false,
+      "modifies_live_system": true,
+      "expected_evidence": [
+        "native_task_receipt_sha256",
+        "s03_event_ref",
+        "independent_readback"
+      ],
+      "state": "PLANNED_NOT_ENQUEUED"
+    },
+    {
+      "task_id": "NOX-V46-17",
+      "number": 17,
+      "group": "B",
+      "lane": "MEMORY",
+      "title": "Функциональная самомодель и границы",
+      "depends_on": [
+        "NOX-V46-16"
+      ],
+      "priority": "P1",
+      "resource": "CPU_LIGHT",
+      "requires_native_owner": true,
+      "requires_backup_restore": false,
+      "requires_license_and_privacy": false,
+      "modifies_live_system": true,
+      "expected_evidence": [
+        "native_task_receipt_sha256",
+        "s03_event_ref",
+        "independent_readback"
+      ],
+      "state": "PLANNED_NOT_ENQUEUED"
+    },
+    {
+      "task_id": "NOX-V46-18",
+      "number": 18,
+      "group": "B",
+      "lane": "MEMORY",
+      "title": "Эмоциональное поведение и RU/ES без диагнозов",
+      "depends_on": [
+        "NOX-V46-11"
+      ],
+      "priority": "P1",
+      "resource": "CPU_LIGHT",
+      "requires_native_owner": true,
+      "requires_backup_restore": false,
+      "requires_license_and_privacy": false,
+      "modifies_live_system": true,
+      "expected_evidence": [
+        "native_task_receipt_sha256",
+        "s03_event_ref",
+        "independent_readback"
+      ],
+      "state": "PLANNED_NOT_ENQUEUED"
+    },
+    {
+      "task_id": "NOX-V46-19",
+      "number": 19,
+      "group": "B",
+      "lane": "MEMORY",
+      "title": "PersonaID ACL, revoke и no-leak",
+      "depends_on": [
+        "NOX-V46-11",
+        "NOX-V46-18"
+      ],
+      "priority": "P1",
+      "resource": "CPU_LIGHT",
+      "requires_native_owner": true,
+      "requires_backup_restore": false,
+      "requires_license_and_privacy": false,
+      "modifies_live_system": true,
+      "expected_evidence": [
+        "native_task_receipt_sha256",
+        "s03_event_ref",
+        "independent_readback"
+      ],
+      "state": "PLANNED_NOT_ENQUEUED"
+    },
+    {
+      "task_id": "NOX-V46-20",
+      "number": 20,
+      "group": "B",
+      "lane": "MEMORY",
+      "title": "Restore S03 и межчатовая проверка памяти",
+      "depends_on": [
+        "NOX-V46-16",
+        "NOX-V46-56"
+      ],
+      "priority": "P1",
+      "resource": "CPU_IO",
+      "requires_native_owner": true,
+      "requires_backup_restore": false,
+      "requires_license_and_privacy": false,
+      "modifies_live_system": true,
+      "expected_evidence": [
+        "native_task_receipt_sha256",
+        "s03_event_ref",
+        "independent_readback"
+      ],
+      "state": "PLANNED_NOT_ENQUEUED"
+    },
+    {
+      "task_id": "NOX-V46-21",
+      "number": 21,
+      "group": "C",
+      "lane": "FORGE",
+      "title": "Прочитать реальную причину train_error step=0",
+      "depends_on": [],
+      "priority": "P0",
+      "resource": "CPU_LIGHT",
+      "requires_native_owner": true,
+      "requires_backup_restore": false,
+      "requires_license_and_privacy": false,
+      "modifies_live_system": false,
+      "expected_evidence": [
+        "native_task_receipt_sha256",
+        "s03_event_ref",
+        "independent_readback"
+      ],
+      "state": "PLANNED_NOT_ENQUEUED"
+    },
+    {
+      "task_id": "NOX-V46-22",
+      "number": 22,
+      "group": "C",
+      "lane": "FORGE",
+      "title": "Зафиксировать текущий student и optimizer SHA",
+      "depends_on": [
+        "NOX-V46-21"
+      ],
+      "priority": "P0",
+      "resource": "CPU_LIGHT",
+      "requires_native_owner": true,
+      "requires_backup_restore": false,
+      "requires_license_and_privacy": false,
+      "modifies_live_system": false,
+      "expected_evidence": [
+        "native_task_receipt_sha256",
+        "s03_event_ref",
+        "independent_readback"
+      ],
+      "state": "PLANNED_NOT_ENQUEUED"
+    },
+    {
+      "task_id": "NOX-V46-23",
+      "number": 23,
+      "group": "C",
+      "lane": "TEACHERS",
+      "title": "Сверить установленных учителей и их права",
+      "depends_on": [
+        "NOX-V46-03",
+        "NOX-V46-22"
+      ],
+      "priority": "P1",
+      "resource": "CPU_LIGHT",
+      "requires_native_owner": true,
+      "requires_backup_restore": false,
+      "requires_license_and_privacy": false,
+      "modifies_live_system": false,
+      "expected_evidence": [
+        "native_task_receipt_sha256",
+        "s03_event_ref",
+        "independent_readback"
+      ],
+      "state": "PLANNED_NOT_ENQUEUED"
+    },
+    {
+      "task_id": "NOX-V46-24",
+      "number": 24,
+      "group": "C",
+      "lane": "TEACHERS",
+      "title": "Собрать источники только с разрешёнными данными",
+      "depends_on": [
+        "NOX-V46-23"
+      ],
+      "priority": "P1",
+      "resource": "CPU_LIGHT",
+      "requires_native_owner": true,
+      "requires_backup_restore": true,
+      "requires_license_and_privacy": true,
+      "modifies_live_system": true,
+      "expected_evidence": [
+        "native_task_receipt_sha256",
+        "s03_event_ref",
+        "independent_readback"
+      ],
+      "state": "PLANNED_NOT_ENQUEUED"
+    },
+    {
+      "task_id": "NOX-V46-25",
+      "number": 25,
+      "group": "C",
+      "lane": "TEACHERS",
+      "title": "Дедуп лицензионного корпуса и антиповторы",
+      "depends_on": [
+        "NOX-V46-24"
+      ],
+      "priority": "P1",
+      "resource": "CPU_IO",
+      "requires_native_owner": true,
+      "requires_backup_restore": true,
+      "requires_license_and_privacy": true,
+      "modifies_live_system": true,
+      "expected_evidence": [
+        "native_task_receipt_sha256",
+        "s03_event_ref",
+        "independent_readback"
+      ],
+      "state": "PLANNED_NOT_ENQUEUED"
+    },
+    {
+      "task_id": "NOX-V46-26",
+      "number": 26,
+      "group": "C",
+      "lane": "TEACHERS",
+      "title": "Зафиксировать train/dev/holdout и версии",
+      "depends_on": [
+        "NOX-V46-25"
+      ],
+      "priority": "P1",
+      "resource": "CPU_IO",
+      "requires_native_owner": true,
+      "requires_backup_restore": true,
+      "requires_license_and_privacy": true,
+      "modifies_live_system": true,
+      "expected_evidence": [
+        "native_task_receipt_sha256",
+        "s03_event_ref",
+        "independent_readback"
+      ],
+      "state": "PLANNED_NOT_ENQUEUED"
+    },
+    {
+      "task_id": "NOX-V46-27",
+      "number": 27,
+      "group": "C",
+      "lane": "TEACHERS",
+      "title": "DeepSeek reasoning — ответы и проверка",
+      "depends_on": [
+        "NOX-V46-26"
+      ],
+      "priority": "P1",
+      "resource": "GPU1_EXCLUSIVE",
+      "requires_native_owner": true,
+      "requires_backup_restore": true,
+      "requires_license_and_privacy": true,
+      "modifies_live_system": false,
+      "expected_evidence": [
+        "native_task_receipt_sha256",
+        "s03_event_ref",
+        "independent_readback"
+      ],
+      "state": "PLANNED_NOT_ENQUEUED"
+    },
+    {
+      "task_id": "NOX-V46-28",
+      "number": 28,
+      "group": "C",
+      "lane": "TEACHERS",
+      "title": "Qwen RU/ES — знания и независимые тесты",
+      "depends_on": [
+        "NOX-V46-26"
+      ],
+      "priority": "P1",
+      "resource": "GPU1_EXCLUSIVE",
+      "requires_native_owner": true,
+      "requires_backup_restore": true,
+      "requires_license_and_privacy": true,
+      "modifies_live_system": false,
+      "expected_evidence": [
+        "native_task_receipt_sha256",
+        "s03_event_ref",
+        "independent_readback"
+      ],
+      "state": "PLANNED_NOT_ENQUEUED"
+    },
+    {
+      "task_id": "NOX-V46-29",
+      "number": 29,
+      "group": "C",
+      "lane": "TEACHERS",
+      "title": "Coder — программирование и тесты",
+      "depends_on": [
+        "NOX-V46-26"
+      ],
+      "priority": "P1",
+      "resource": "GPU1_EXCLUSIVE",
+      "requires_native_owner": true,
+      "requires_backup_restore": true,
+      "requires_license_and_privacy": true,
+      "modifies_live_system": false,
+      "expected_evidence": [
+        "native_task_receipt_sha256",
+        "s03_event_ref",
+        "independent_readback"
+      ],
+      "state": "PLANNED_NOT_ENQUEUED"
+    },
+    {
+      "task_id": "NOX-V46-30",
+      "number": 30,
+      "group": "C",
+      "lane": "FORGE",
+      "title": "Optimizer, checkpoint, reload, blind holdout",
+      "depends_on": [
+        "NOX-V46-21",
+        "NOX-V46-22",
+        "NOX-V46-26",
+        "NOX-V46-27",
+        "NOX-V46-28",
+        "NOX-V46-29",
+        "NOX-V46-09"
+      ],
+      "priority": "P1",
+      "resource": "GPU1_EXCLUSIVE",
+      "requires_native_owner": true,
+      "requires_backup_restore": true,
+      "requires_license_and_privacy": true,
+      "modifies_live_system": true,
+      "expected_evidence": [
+        "native_task_receipt_sha256",
+        "s03_event_ref",
+        "independent_readback"
+      ],
+      "state": "PLANNED_NOT_ENQUEUED"
+    },
+    {
+      "task_id": "NOX-V46-31",
+      "number": 31,
+      "group": "D",
+      "lane": "SKILLS",
+      "title": "Планирование задач с явными правами",
+      "depends_on": [],
+      "priority": "P1",
+      "resource": "CPU_LIGHT",
+      "requires_native_owner": true,
+      "requires_backup_restore": false,
+      "requires_license_and_privacy": false,
+      "modifies_live_system": false,
+      "expected_evidence": [
+        "native_task_receipt_sha256",
+        "s03_event_ref",
+        "independent_readback"
+      ],
+      "state": "PLANNED_NOT_ENQUEUED"
+    },
+    {
+      "task_id": "NOX-V46-32",
+      "number": 32,
+      "group": "D",
+      "lane": "SKILLS",
+      "title": "Reasoning regression / self-correction",
+      "depends_on": [
+        "NOX-V46-31"
+      ],
+      "priority": "P1",
+      "resource": "CPU_LIGHT",
+      "requires_native_owner": true,
+      "requires_backup_restore": false,
+      "requires_license_and_privacy": false,
+      "modifies_live_system": false,
+      "expected_evidence": [
+        "native_task_receipt_sha256",
+        "s03_event_ref",
+        "independent_readback"
+      ],
+      "state": "PLANNED_NOT_ENQUEUED"
+    },
+    {
+      "task_id": "NOX-V46-33",
+      "number": 33,
+      "group": "D",
+      "lane": "SKILLS",
+      "title": "Математика, логика и верификация",
+      "depends_on": [
+        "NOX-V46-32"
+      ],
+      "priority": "P1",
+      "resource": "CPU_LIGHT",
+      "requires_native_owner": true,
+      "requires_backup_restore": false,
+      "requires_license_and_privacy": false,
+      "modifies_live_system": false,
+      "expected_evidence": [
+        "native_task_receipt_sha256",
+        "s03_event_ref",
+        "independent_readback"
+      ],
+      "state": "PLANNED_NOT_ENQUEUED"
+    },
+    {
+      "task_id": "NOX-V46-34",
+      "number": 34,
+      "group": "D",
+      "lane": "SKILLS",
+      "title": "Языковая корректность и RU/ES",
+      "depends_on": [
+        "NOX-V46-31"
+      ],
+      "priority": "P1",
+      "resource": "CPU_LIGHT",
+      "requires_native_owner": true,
+      "requires_backup_restore": false,
+      "requires_license_and_privacy": false,
+      "modifies_live_system": false,
+      "expected_evidence": [
+        "native_task_receipt_sha256",
+        "s03_event_ref",
+        "independent_readback"
+      ],
+      "state": "PLANNED_NOT_ENQUEUED"
+    },
+    {
+      "task_id": "NOX-V46-35",
+      "number": 35,
+      "group": "D",
+      "lane": "SKILLS",
+      "title": "Поиск свежих источников и provenance",
+      "depends_on": [
+        "NOX-V46-31"
+      ],
+      "priority": "P1",
+      "resource": "CPU_LIGHT",
+      "requires_native_owner": true,
+      "requires_backup_restore": false,
+      "requires_license_and_privacy": false,
+      "modifies_live_system": false,
+      "expected_evidence": [
+        "native_task_receipt_sha256",
+        "s03_event_ref",
+        "independent_readback"
+      ],
+      "state": "PLANNED_NOT_ENQUEUED"
+    },
+    {
+      "task_id": "NOX-V46-36",
+      "number": 36,
+      "group": "D",
+      "lane": "SKILLS",
+      "title": "Разработка и тестирование приложений",
+      "depends_on": [
+        "NOX-V46-35"
+      ],
+      "priority": "P1",
+      "resource": "CPU_LIGHT",
+      "requires_native_owner": true,
+      "requires_backup_restore": false,
+      "requires_license_and_privacy": false,
+      "modifies_live_system": true,
+      "expected_evidence": [
+        "native_task_receipt_sha256",
+        "s03_event_ref",
+        "independent_readback"
+      ],
+      "state": "PLANNED_NOT_ENQUEUED"
+    },
+    {
+      "task_id": "NOX-V46-37",
+      "number": 37,
+      "group": "D",
+      "lane": "SKILLS",
+      "title": "Изолированное исполнение разрешённых шагов",
+      "depends_on": [
+        "NOX-V46-31"
+      ],
+      "priority": "P1",
+      "resource": "CPU_LIGHT",
+      "requires_native_owner": true,
+      "requires_backup_restore": false,
+      "requires_license_and_privacy": false,
+      "modifies_live_system": true,
+      "expected_evidence": [
+        "native_task_receipt_sha256",
+        "s03_event_ref",
+        "independent_readback"
+      ],
+      "state": "PLANNED_NOT_ENQUEUED"
+    },
+    {
+      "task_id": "NOX-V46-38",
+      "number": 38,
+      "group": "D",
+      "lane": "SKILLS",
+      "title": "Исправление кода: patch→test→save",
+      "depends_on": [
+        "NOX-V46-36",
+        "NOX-V46-37"
+      ],
+      "priority": "P1",
+      "resource": "CPU_LIGHT",
+      "requires_native_owner": true,
+      "requires_backup_restore": false,
+      "requires_license_and_privacy": false,
+      "modifies_live_system": true,
+      "expected_evidence": [
+        "native_task_receipt_sha256",
+        "s03_event_ref",
+        "independent_readback"
+      ],
+      "state": "PLANNED_NOT_ENQUEUED"
+    },
+    {
+      "task_id": "NOX-V46-39",
+      "number": 39,
+      "group": "D",
+      "lane": "SKILLS",
+      "title": "Skill Memory, retain и recall",
+      "depends_on": [
+        "NOX-V46-38"
+      ],
+      "priority": "P1",
+      "resource": "CPU_LIGHT",
+      "requires_native_owner": true,
+      "requires_backup_restore": false,
+      "requires_license_and_privacy": false,
+      "modifies_live_system": true,
+      "expected_evidence": [
+        "native_task_receipt_sha256",
+        "s03_event_ref",
+        "independent_readback"
+      ],
+      "state": "PLANNED_NOT_ENQUEUED"
+    },
+    {
+      "task_id": "NOX-V46-40",
+      "number": 40,
+      "group": "D",
+      "lane": "SKILLS",
+      "title": "DREAM replay на проверенных ошибках",
+      "depends_on": [
+        "NOX-V46-39"
+      ],
+      "priority": "P1",
+      "resource": "CPU_LIGHT",
+      "requires_native_owner": true,
+      "requires_backup_restore": false,
+      "requires_license_and_privacy": false,
+      "modifies_live_system": true,
+      "expected_evidence": [
+        "native_task_receipt_sha256",
+        "s03_event_ref",
+        "independent_readback"
+      ],
+      "state": "PLANNED_NOT_ENQUEUED"
+    },
+    {
+      "task_id": "NOX-V46-41",
+      "number": 41,
+      "group": "E",
+      "lane": "WEB_QA",
+      "title": "Сохранить оригинальные chat.html и resonance.html",
+      "depends_on": [],
+      "priority": "P0",
+      "resource": "CPU_LIGHT",
+      "requires_native_owner": true,
+      "requires_backup_restore": false,
+      "requires_license_and_privacy": false,
+      "modifies_live_system": false,
+      "expected_evidence": [
+        "native_task_receipt_sha256",
+        "s03_event_ref",
+        "independent_readback"
+      ],
+      "state": "PLANNED_NOT_ENQUEUED"
+    },
+    {
+      "task_id": "NOX-V46-42",
+      "number": 42,
+      "group": "E",
+      "lane": "WEB_QA",
+      "title": "Измерить быстрый stream/p95 TTFT",
+      "depends_on": [
+        "NOX-V46-41"
+      ],
+      "priority": "P0",
+      "resource": "CPU_LIGHT",
+      "requires_native_owner": true,
+      "requires_backup_restore": false,
+      "requires_license_and_privacy": false,
+      "modifies_live_system": false,
+      "expected_evidence": [
+        "native_task_receipt_sha256",
+        "s03_event_ref",
+        "independent_readback"
+      ],
+      "state": "PLANNED_NOT_ENQUEUED"
+    },
+    {
+      "task_id": "NOX-V46-43",
+      "number": 43,
+      "group": "E",
+      "lane": "WEB_QA",
+      "title": "Whisper RU/ES с тестами точности",
+      "depends_on": [
+        "NOX-V46-42"
+      ],
+      "priority": "P2",
+      "resource": "CPU_LIGHT",
+      "requires_native_owner": true,
+      "requires_backup_restore": false,
+      "requires_license_and_privacy": false,
+      "modifies_live_system": true,
+      "expected_evidence": [
+        "native_task_receipt_sha256",
+        "s03_event_ref",
+        "independent_readback"
+      ],
+      "state": "PLANNED_NOT_ENQUEUED"
+    },
+    {
+      "task_id": "NOX-V46-44",
+      "number": 44,
+      "group": "E",
+      "lane": "WEB_QA",
+      "title": "Piper/Kokoro TTS и паузы",
+      "depends_on": [
+        "NOX-V46-43"
+      ],
+      "priority": "P2",
+      "resource": "CPU_LIGHT",
+      "requires_native_owner": true,
+      "requires_backup_restore": false,
+      "requires_license_and_privacy": false,
+      "modifies_live_system": true,
+      "expected_evidence": [
+        "native_task_receipt_sha256",
+        "s03_event_ref",
+        "independent_readback"
+      ],
+      "state": "PLANNED_NOT_ENQUEUED"
+    },
+    {
+      "task_id": "NOX-V46-45",
+      "number": 45,
+      "group": "E",
+      "lane": "WEB_QA",
+      "title": "OCR по документам с правами",
+      "depends_on": [
+        "NOX-V46-42"
+      ],
+      "priority": "P2",
+      "resource": "CPU_IO",
+      "requires_native_owner": true,
+      "requires_backup_restore": false,
+      "requires_license_and_privacy": false,
+      "modifies_live_system": false,
+      "expected_evidence": [
+        "native_task_receipt_sha256",
+        "s03_event_ref",
+        "independent_readback"
+      ],
+      "state": "PLANNED_NOT_ENQUEUED"
+    },
+    {
+      "task_id": "NOX-V46-46",
+      "number": 46,
+      "group": "E",
+      "lane": "WEB_QA",
+      "title": "Z-Image изображение как отдельный инструмент",
+      "depends_on": [
+        "NOX-V46-07",
+        "NOX-V46-45"
+      ],
+      "priority": "P2",
+      "resource": "GPU1_EXCLUSIVE",
+      "requires_native_owner": true,
+      "requires_backup_restore": false,
+      "requires_license_and_privacy": true,
+      "modifies_live_system": true,
+      "expected_evidence": [
+        "native_task_receipt_sha256",
+        "s03_event_ref",
+        "independent_readback"
+      ],
+      "state": "PLANNED_NOT_ENQUEUED"
+    },
+    {
+      "task_id": "NOX-V46-47",
+      "number": 47,
+      "group": "E",
+      "lane": "WEB_QA",
+      "title": "Wan видео — отдельно от LLM GPU",
+      "depends_on": [
+        "NOX-V46-07",
+        "NOX-V46-46"
+      ],
+      "priority": "P2",
+      "resource": "GPU1_EXCLUSIVE",
+      "requires_native_owner": true,
+      "requires_backup_restore": false,
+      "requires_license_and_privacy": true,
+      "modifies_live_system": true,
+      "expected_evidence": [
+        "native_task_receipt_sha256",
+        "s03_event_ref",
+        "independent_readback"
+      ],
+      "state": "PLANNED_NOT_ENQUEUED"
+    },
+    {
+      "task_id": "NOX-V46-48",
+      "number": 48,
+      "group": "E",
+      "lane": "WEB_QA",
+      "title": "PC CONTROL только по подтверждению",
+      "depends_on": [
+        "NOX-V46-41"
+      ],
+      "priority": "P2",
+      "resource": "CPU_LIGHT",
+      "requires_native_owner": true,
+      "requires_backup_restore": false,
+      "requires_license_and_privacy": false,
+      "modifies_live_system": true,
+      "expected_evidence": [
+        "native_task_receipt_sha256",
+        "s03_event_ref",
+        "independent_readback"
+      ],
+      "state": "PLANNED_NOT_ENQUEUED"
+    },
+    {
+      "task_id": "NOX-V46-49",
+      "number": 49,
+      "group": "E",
+      "lane": "WEB_QA",
+      "title": "CINEMA/STUDIO и медиа-очередь",
+      "depends_on": [
+        "NOX-V46-46",
+        "NOX-V46-47"
+      ],
+      "priority": "P2",
+      "resource": "CPU_LIGHT",
+      "requires_native_owner": true,
+      "requires_backup_restore": false,
+      "requires_license_and_privacy": false,
+      "modifies_live_system": true,
+      "expected_evidence": [
+        "native_task_receipt_sha256",
+        "s03_event_ref",
+        "independent_readback"
+      ],
+      "state": "PLANNED_NOT_ENQUEUED"
+    },
+    {
+      "task_id": "NOX-V46-50",
+      "number": 50,
+      "group": "E",
+      "lane": "WEB_QA",
+      "title": "D02 WOW эффекты, 14 планет, Reduced Motion",
+      "depends_on": [
+        "NOX-V46-41",
+        "NOX-V46-49"
+      ],
+      "priority": "P2",
+      "resource": "CPU_LIGHT",
+      "requires_native_owner": true,
+      "requires_backup_restore": false,
+      "requires_license_and_privacy": false,
+      "modifies_live_system": true,
+      "expected_evidence": [
+        "native_task_receipt_sha256",
+        "s03_event_ref",
+        "independent_readback"
+      ],
+      "state": "PLANNED_NOT_ENQUEUED"
+    },
+    {
+      "task_id": "NOX-V46-51",
+      "number": 51,
+      "group": "F",
+      "lane": "CORE",
+      "title": "Управление STOP везде и fail-closed",
+      "depends_on": [],
+      "priority": "P0",
+      "resource": "CPU_LIGHT",
+      "requires_native_owner": true,
+      "requires_backup_restore": false,
+      "requires_license_and_privacy": false,
+      "modifies_live_system": false,
+      "expected_evidence": [
+        "native_task_receipt_sha256",
+        "s03_event_ref",
+        "independent_readback"
+      ],
+      "state": "PLANNED_NOT_ENQUEUED"
+    },
+    {
+      "task_id": "NOX-V46-52",
+      "number": 52,
+      "group": "F",
+      "lane": "CORE",
+      "title": "V100 CUDA12 FP16 и аппаратная телеметрия",
+      "depends_on": [
+        "NOX-V46-51"
+      ],
+      "priority": "P0",
+      "resource": "CPU_LIGHT",
+      "requires_native_owner": true,
+      "requires_backup_restore": false,
+      "requires_license_and_privacy": false,
+      "modifies_live_system": false,
+      "expected_evidence": [
+        "native_task_receipt_sha256",
+        "s03_event_ref",
+        "independent_readback"
+      ],
+      "state": "PLANNED_NOT_ENQUEUED"
+    },
+    {
+      "task_id": "NOX-V46-53",
+      "number": 53,
+      "group": "F",
+      "lane": "CORE",
+      "title": "Подтверждённый Host/OneHost API и авторизация",
+      "depends_on": [
+        "NOX-V46-01"
+      ],
+      "priority": "P0",
+      "resource": "CPU_LIGHT",
+      "requires_native_owner": true,
+      "requires_backup_restore": false,
+      "requires_license_and_privacy": false,
+      "modifies_live_system": false,
+      "expected_evidence": [
+        "native_task_receipt_sha256",
+        "s03_event_ref",
+        "independent_readback"
+      ],
+      "state": "PLANNED_NOT_ENQUEUED"
+    },
+    {
+      "task_id": "NOX-V46-54",
+      "number": 54,
+      "group": "F",
+      "lane": "CORE",
+      "title": "Подключение частного MCP Secure Tunnel",
+      "depends_on": [
+        "NOX-V46-53"
+      ],
+      "priority": "P0",
+      "resource": "CPU_LIGHT",
+      "requires_native_owner": true,
+      "requires_backup_restore": false,
+      "requires_license_and_privacy": false,
+      "modifies_live_system": true,
+      "expected_evidence": [
+        "native_task_receipt_sha256",
+        "s03_event_ref",
+        "independent_readback"
+      ],
+      "state": "PLANNED_NOT_ENQUEUED"
+    },
+    {
+      "task_id": "NOX-V46-55",
+      "number": 55,
+      "group": "F",
+      "lane": "CORE",
+      "title": "Vast CLI execute fallback без SSH",
+      "depends_on": [
+        "NOX-V46-53"
+      ],
+      "priority": "P0",
+      "resource": "CPU_IO",
+      "requires_native_owner": true,
+      "requires_backup_restore": false,
+      "requires_license_and_privacy": false,
+      "modifies_live_system": true,
+      "expected_evidence": [
+        "native_task_receipt_sha256",
+        "s03_event_ref",
+        "independent_readback"
+      ],
+      "state": "PLANNED_NOT_ENQUEUED"
+    },
+    {
+      "task_id": "NOX-V46-56",
+      "number": 56,
+      "group": "F",
+      "lane": "CORE",
+      "title": "Снимок S03 и проверка restore",
+      "depends_on": [
+        "NOX-V46-11",
+        "NOX-V46-53"
+      ],
+      "priority": "P0",
+      "resource": "CPU_IO",
+      "requires_native_owner": true,
+      "requires_backup_restore": false,
+      "requires_license_and_privacy": false,
+      "modifies_live_system": true,
+      "expected_evidence": [
+        "native_task_receipt_sha256",
+        "s03_event_ref",
+        "independent_readback"
+      ],
+      "state": "PLANNED_NOT_ENQUEUED"
+    },
+    {
+      "task_id": "NOX-V46-57",
+      "number": 57,
+      "group": "F",
+      "lane": "CORE",
+      "title": "Контроль качества/регрессий перед merge",
+      "depends_on": [
+        "NOX-V46-30",
+        "NOX-V46-56"
+      ],
+      "priority": "P1",
+      "resource": "CPU_LIGHT",
+      "requires_native_owner": true,
+      "requires_backup_restore": false,
+      "requires_license_and_privacy": false,
+      "modifies_live_system": false,
+      "expected_evidence": [
+        "native_task_receipt_sha256",
+        "s03_event_ref",
+        "independent_readback"
+      ],
+      "state": "PLANNED_NOT_ENQUEUED"
+    },
+    {
+      "task_id": "NOX-V46-58",
+      "number": 58,
+      "group": "F",
+      "lane": "WEB_QA",
+      "title": "GitHub CI, source-lock и tests",
+      "depends_on": [
+        "NOX-V46-57"
+      ],
+      "priority": "P1",
+      "resource": "CPU_LIGHT",
+      "requires_native_owner": true,
+      "requires_backup_restore": false,
+      "requires_license_and_privacy": false,
+      "modifies_live_system": true,
+      "expected_evidence": [
+        "native_task_receipt_sha256",
+        "s03_event_ref",
+        "independent_readback"
+      ],
+      "state": "PLANNED_NOT_ENQUEUED"
+    },
+    {
+      "task_id": "NOX-V46-59",
+      "number": 59,
+      "group": "F",
+      "lane": "WEB_QA",
+      "title": "Выпуск без остановки чата, rollback",
+      "depends_on": [
+        "NOX-V46-58"
+      ],
+      "priority": "P1",
+      "resource": "CPU_LIGHT",
+      "requires_native_owner": true,
+      "requires_backup_restore": true,
+      "requires_license_and_privacy": false,
+      "modifies_live_system": true,
+      "expected_evidence": [
+        "native_task_receipt_sha256",
+        "s03_event_ref",
+        "independent_readback"
+      ],
+      "state": "PLANNED_NOT_ENQUEUED"
+    },
+    {
+      "task_id": "NOX-V46-60",
+      "number": 60,
+      "group": "F",
+      "lane": "WEB_QA",
+      "title": "Реальные проценты знаний/навыков/весов",
+      "depends_on": [
+        "NOX-V46-20",
+        "NOX-V46-30",
+        "NOX-V46-59"
+      ],
+      "priority": "P1",
+      "resource": "CPU_LIGHT",
+      "requires_native_owner": true,
+      "requires_backup_restore": false,
+      "requires_license_and_privacy": false,
+      "modifies_live_system": true,
+      "expected_evidence": [
+        "native_task_receipt_sha256",
+        "s03_event_ref",
+        "independent_readback"
+      ],
+      "state": "PLANNED_NOT_ENQUEUED"
+    }
+  ]
+}

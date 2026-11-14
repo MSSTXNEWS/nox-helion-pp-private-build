@@ -1,0 +1,20 @@
+{
+  "web_baseline_source": "NOX_HELION_WEB_V29_3_FROZEN_20261113.zip",
+  "base_archive_sha256": "166becb90fce63e2db3f9a74281d756995844552cddb7b67a0ac4bd67a190aa0",
+  "web_paths": {
+    "site/training.html": {
+      "base_sha256": "a91d60514518e7b6b7ae19bb029409a70e139e18a9f40e5cda92b9a47bd4a0a6",
+      "patched_sha256": "20590e6ec4e7e2dfcb6c20c552cc4fda64b8254280fbf4ef2a6c4e62dd708077",
+      "base_bytes": 20023,
+      "patched_bytes": 20201
+    },
+    "site/pc/training.html": {
+      "base_sha256": "cf7fb053ac7c245d4fc5cfce26f7a8587bb4ba5d00fae26dcf329178ea234d1a",
+      "patched_sha256": "1c4a478f15911eb9b492318cbb2107eeeadd4e9c032c94035a439201a6baf192",
+      "base_bytes": 20506,
+      "patched_bytes": 20684
+    }
+  },
+  "patch_method": "insert-only, 2 scripts/styles linked to existing training pages",
+  "production_deployed": false
+}

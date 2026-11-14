@@ -1,0 +1,65 @@
+name: NOX R60 Jupyter TLS health probe (no token)
+on:
+  push:
+    branches: [feature/nox-v38-synaptic-brain-20261114]
+    paths: [.github/workflows/nox-r60-jupyter-health-readonly.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    env:
+      VAST_API_KEY: ${{ secrets.NOX2 }}
+    steps:
+      - name: Probe existing Jupyter route without credentials or remote commands
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os,json,urllib.request,urllib.error,ssl,ipaddress
+          key=os.environ.get('VAST_API_KEY')
+          if not key:raise SystemExit('HOLD_NOX2')
+          req=urllib.request.Request('https://console.vast.ai/api/v0/instances/60509551/',headers={'Authorization':'Bearer '+key})
+          with urllib.request.urlopen(req,timeout=25) as f:x=json.load(f)
+          d=x.get('instances',x)
+          if isinstance(d,list):d=next((i for i in d if str(i.get('id'))=='60509551'),None)
+          if not isinstance(d,dict) or str(d.get('id'))!='60509551':raise SystemExit('HOLD_INSTANCE_NOT_VERIFIED')
+          host=d.get('public_ipaddr','')
+          try:
+              if not ipaddress.ip_address(host).is_global:raise ValueError()
+          except ValueError:
+              print('HOLD_NO_VERIFIED_PUBLIC_ADDRESS')
+              raise SystemExit(2)
+          ports=d.get('ports') or {}
+          port=None
+          if isinstance(ports,dict):
+              for k,v in ports.items():
+                  if str(k) not in ('8080/tcp','8888/tcp','8080','8888'):continue
+                  if isinstance(v,list) and v and isinstance(v[0],dict):
+                      candidate=v[0].get('HostPort')
+                      if str(candidate).isdigit() and 1<=int(candidate)<=65535:
+                          port=int(candidate);break
+          if not port:
+              print('HOLD_JUPYTER_PUBLIC_PORT_UNMAPPED')
+              raise SystemExit(2)
+          print('JUPYTER_ROUTE_METADATA_PRESENT=true')
+          class NoRedirect(urllib.request.HTTPRedirectHandler):
+              def redirect_request(self,*args,**kwargs):return None
+          opener=urllib.request.build_opener(NoRedirect)
+          for scheme in ('https','http'):
+              url=f'{scheme}://{host}:{port}/api/status'
+              try:
+                  # No token, no cookies, no authorization: transport health only
+                  request=urllib.request.Request(url,method='GET')
+                  with opener.open(request,timeout=9) as resp:
+                      code=resp.status
+                  print(f'JUPYTER_{scheme.upper()}_HTTP_CODE={code}')
+              except urllib.error.HTTPError as e:
+                  print(f'JUPYTER_{scheme.upper()}_HTTP_CODE={e.code}')
+              except Exception as e:
+                  print(f'JUPYTER_{scheme.upper()}_NETWORK_RESULT={type(e).__name__}')
+          print('NO_TOKEN_TRANSMITTED=true')
+          print('NO_NATIVE_COMMAND_EXECUTED=true')
+          PY

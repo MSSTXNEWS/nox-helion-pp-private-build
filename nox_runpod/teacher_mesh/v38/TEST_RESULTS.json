@@ -1,0 +1,13 @@
+{
+  "suite": "NOX_HELION_V38_1",
+  "result": "PASS_LOCAL_SOURCE_ONLY",
+  "tests": 21,
+  "failures": 0,
+  "errors": 0,
+  "live_vast_installed": false,
+  "native_callbacks_bound": false,
+  "remote_training_verified": false,
+  "memory_mandatory": true,
+  "persona_isolation": true,
+  "note": "21 deterministic unit tests using local simulated callbacks; not production acceptance"
+}
