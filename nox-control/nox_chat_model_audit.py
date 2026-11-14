@@ -39,6 +39,7 @@ def main():
     for key,url in HOSTS.items():
         r=fetch(url)
         result["services"][key]={k:v for k,v in r.items() if k!="body"}
+        result["services"][key]["reachable"] = r.get("http") is not None
         if key=="ollama_tags":
             result["installed_models"]=[model_summary(m) for m in (r.get("body") or {}).get("models",[]) if isinstance(m,dict)]
         if key=="ollama_running":
@@ -59,7 +60,7 @@ def main():
             result["warmup"]={**r,"response_model":body.get("model"),"load_duration_ns":body.get("load_duration"),"eval_duration_ns":body.get("eval_duration")}
             result["note"]="Warmup only. NOX native routing unchanged. Do not infer best model from model name or modification timestamp."
     print(json.dumps(result,ensure_ascii=False,indent=2))
-    if not result["services"]["nox_chat"]["ok"] or not result["services"]["nox_web"]["ok"]:
+    if not result["services"]["nox_chat"]["reachable"] or not result["services"]["nox_web"]["reachable"]:
         print("ATTENTION: NOX web/chat availability incomplete; GET on a POST-only endpoint may yield 405, which does NOT prove chat is down.")
 if __name__=="__main__":
     main()
