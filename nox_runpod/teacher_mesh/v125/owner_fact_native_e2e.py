@@ -100,24 +100,44 @@ try:
     db=Path(s03_memory.DB)
     if not db.is_file() or db.is_symlink():
         raise RuntimeError('HOLD_ORIGINAL_S03_MISSING')
-    marker='NOX-V125-QA-'+secrets.token_hex(5)
-    text='Контроль сохранения в S03: 17 × 19 = 323. Идентификатор: '+marker
+    # Reuse the last *synthetic V125 QA row* if one exists. Reruns never
+    # pollute user memory with another test record.
+    with sqlite3.connect('file:'+str(db)+'?mode=ro',uri=True,timeout=4) as con:
+        con.execute('PRAGMA query_only=ON')
+        previous=con.execute(
+          "SELECT text,provenance,meta FROM s03_items "
+          "WHERE provenance LIKE 'owner-fact:NOX-V125-QA-%|NOX-LOCAL-QA-VERIFIED' "
+          "ORDER BY ts DESC LIMIT 1").fetchone()
+    reused_qa=previous is not None
+    if reused_qa:
+        text,provenance,stored_meta=previous
+        marker=provenance.split('|',1)[0].removeprefix('owner-fact:')
+        meta=json.loads(stored_meta) if isinstance(stored_meta,str) else {}
+        valid_from=meta.get('valid_from')
+        if (meta.get('source_sha256')!=digest(text.encode('utf8'))
+            or meta.get('owner_confirmed') is not True
+            or not isinstance(valid_from,str)):
+            raise RuntimeError('HOLD_PREVIOUS_QA_SOURCE_META')
+    else:
+        marker='NOX-V125-QA-'+secrets.token_hex(5)
+        text='Контроль сохранения в S03: 17 × 19 = 323. Идентификатор: '+marker
+        provenance='owner-fact:'+marker+'|NOX-LOCAL-QA-VERIFIED'
+        valid_from=datetime.now(timezone.utc).isoformat()
     content_sha=digest(text.encode('utf8'))
     payload={'fact_key':marker,'content':text,'source_ref':'NOX-LOCAL-QA-VERIFIED',
-             'source_sha256':content_sha,
-             'valid_from':datetime.now(timezone.utc).isoformat()}
-    provenance='owner-fact:'+marker+'|NOX-LOCAL-QA-VERIFIED'
+             'source_sha256':content_sha,'valid_from':valid_from}
     with sqlite3.connect('file:'+str(db)+'?mode=ro',uri=True,timeout=4) as con:
         before_count=con.execute(
           'SELECT COUNT(*) FROM s03_items WHERE provenance=?',(provenance,)).fetchone()[0]
-    if before_count:raise RuntimeError('HOLD_DUPLICATE_QA_MARKER')
+    if before_count!=int(reused_qa):
+        raise RuntimeError('HOLD_PREEXISTING_QA_DUPLICATES')
     if stopped():raise RuntimeError('HOLD_STOP_BEFORE_FACT_POST')
     with request(signed,'/api/nox/memory/facts','POST',payload) as r:
         if r.status!=200:raise RuntimeError('HOLD_OWNER_FACT_POST_'+str(r.status))
         answer=json.loads(r.read(16000))
     record_id=answer.get('event_id')
     if (answer.get('status')!='SAVED' or answer.get('s03_integrated') is not True
-        or answer.get('saved') is not True or answer.get('deduplicated') is not False
+        or answer.get('saved') is not True or answer.get('deduplicated') is not reused_qa
         or not isinstance(record_id,str) or not record_id):
         raise RuntimeError('HOLD_NATIVE_FACT_WRITE_RECEIPT')
     with request(signed,'/api/nox/memory/facts','POST',payload) as r:
@@ -131,19 +151,28 @@ try:
         if r.status!=200:raise RuntimeError('HOLD_EXISTING_HISTORY_HTTP')
         hist=json.loads(r.read(140000))
     events=hist.get('events') if isinstance(hist,dict) else None
-    if (hist.get('status')!='READY' or not isinstance(events,list)
-        or not any(isinstance(x,dict) and x.get('id')==record_id
-                   and x.get('content')==text and
-                   x.get('source_sha256')==content_sha for x in events)):
-        raise RuntimeError('HOLD_FACT_NOT_FOUND_IN_EXISTING_HISTORY')
     with sqlite3.connect('file:'+str(db)+'?mode=ro',uri=True,timeout=4) as con:
+        con.execute('PRAGMA query_only=ON')
         if con.execute('PRAGMA quick_check').fetchone()[0]!='ok':
             raise RuntimeError('HOLD_POSTFACT_S03_QUICKCHECK')
         rows=con.execute(
-           'SELECT id,segment,sha256 FROM s03_items WHERE provenance=?',
+           'SELECT id,segment,sha256,meta,text FROM s03_items WHERE provenance=?',
            (provenance,)).fetchall()
-    if len(rows)!=1 or rows[0]!=(record_id,'M2',content_sha):
+    if len(rows)!=1 or rows[0][0]!=record_id or rows[0][1]!='M2' or rows[0][4]!=text:
         raise RuntimeError('HOLD_ORIGINAL_S03_FACT_ROW')
+    internal_sha=rows[0][2]
+    source_meta=json.loads(rows[0][3]) if isinstance(rows[0][3],str) else {}
+    if (source_meta.get('source_sha256')!=content_sha
+        or source_meta.get('owner_confirmed') is not True):
+        raise RuntimeError('HOLD_ORIGINAL_S03_SOURCE_META')
+    # The native S03 internal digest is NOT the source content checksum.
+    # V120 history must reflect the original S03 row SHA, while source content
+    # SHA is independently protected in source_meta.
+    if (hist.get('status')!='READY' or not isinstance(events,list)
+        or not any(isinstance(x,dict) and x.get('id')==record_id
+                   and x.get('content')==text
+                   and x.get('source_sha256')==internal_sha for x in events)):
+        raise RuntimeError('HOLD_FACT_NOT_FOUND_IN_EXISTING_HISTORY')
     if stopped():raise RuntimeError('HOLD_STOP_AFTER_FACT')
     with urllib.request.urlopen('http://127.0.0.1:8081/health',timeout=4) as r:
         if r.status!=200:raise RuntimeError('HOLD_MODEL_HEALTH_AFTER_FACT')
@@ -152,7 +181,9 @@ try:
          saved_once=True,dedup_verified=True,
          native_s03_row_count=1,existing_history_readback=True,
          s03_integrity='ok',model_http=200,
-         original_qa_fact_new=True)
+         original_qa_fact_new=(not reused_qa),
+         reused_existing_synthetic_fact=reused_qa,
+         source_checksum_metadata_verified=True)
     print('NATIVE_V125_OWNER_FACT_S03_E2E_ACCEPTED=true')
 except Exception as exc:
     cause=str(exc)
