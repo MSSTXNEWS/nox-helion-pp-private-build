@@ -72,9 +72,18 @@ try:
  chat=next((x for x in tree.body if isinstance(x,ast.AsyncFunctionDef) and x.name=='chat_api'),None)
  if not chat or not chat.decorator_list:raise RuntimeError('HOLD_CHAT_ROUTE_NOT_FOUND')
  if 'register_native_v29_chat(' in src:raise RuntimeError('HOLD_BRIDGE_ALREADY_REGISTERED')
+ # V106 originally inserted registration before the chat handlers existed.
+ # Register ONLY after all module-level functions have been defined (on import),
+ # preserving the existing FastAPI app, S03 and owner session validation.
+ handler=next((x for x in tree.body if isinstance(x,(ast.AsyncFunctionDef,ast.FunctionDef))
+               and x.name=='_proxy_completion'),None)
+ if handler is None or not callable(getattr(ast,'parse',None)):
+  raise RuntimeError('HOLD_NATIVE_OWNER_HANDLER_NOT_DEFINED')
  lines=src.splitlines(keepends=True)
- where=min(d.lineno for d in chat.decorator_list)-1
- lines.insert(where,'from nox_v29_chat_bridge import register_native_v29_chat\nregister_native_v29_chat(app, globals())\n\n')
+ if lines and not lines[-1].endswith('\n'):lines.append('\n')
+ lines.append('\n# NOX V108 native WEB compatibility registration (same app/owner)\n')
+ lines.append('from nox_v29_chat_bridge import register_native_v29_chat\n')
+ lines.append('register_native_v29_chat(app, globals())\n')
  changed=''.join(lines).encode('utf8')
  compile(changed,str(P),'exec')
  if len(changed)>160000:raise RuntimeError('HOLD_PATCH_SIZE')
