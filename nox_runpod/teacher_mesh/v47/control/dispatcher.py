@@ -134,6 +134,13 @@ def plan(matrix:dict, observations:Mapping, *, max_new:int=8)->dict:
         if id in existing or _valid_completion(completed.get(id),id):continue
         for dep in t['depends_on']:
             if not _valid_completion(completed.get(dep),dep):reasons.append('PENDING_DEPENDENCY:'+dep)
+        # Owner's V93 strategy: do not fill "free" slots with GPU training,
+        # cold catalog or WOW while memory-backed self-model and code-repair
+        # skills are unverified. A completed task must have native S03 evidence.
+        if type(t.get('strategic_wave')) is int and t['strategic_wave']>=3:
+            for foundation in ('NOX-V46-17','NOX-V46-38','NOX-V46-39'):
+                if not _valid_completion(completed.get(foundation),foundation):
+                    reasons.append('SELF_MODEL_SKILLS_FIRST:'+foundation)
         if t['requires_backup_restore'] and observations.get('offsite_restore_verified') is not True:reasons.append('BACKUP_RESTORE_GATE')
         if t['requires_license_and_privacy'] and observations.get('license_privacy_verified') is not True:reasons.append('DATA_RIGHTS_GATE')
         # 10 GB floor protects NEW WRITES, never the chat or read-only CPU work.
