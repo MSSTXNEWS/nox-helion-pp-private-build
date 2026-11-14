@@ -1,0 +1,93 @@
+{
+  "schema": "NOX_WEB_V293_ONEPASS_RELEASE_GATE_V1",
+  "instructions_version": "0.0.6",
+  "date": "2026-11-15",
+  "policy": "ONE_FROZEN_SOURCE_ONE_CONTROLLER_ONE_S03_NO_STUBS_NO_MODEL_LOSS",
+  "canonical_source": {
+    "zip": "NOX_HELION_WEB_V29_3_FROZEN_20261113.zip",
+    "sha256": "166becb90fce63e2db3f9a74281d756995844552cddb7b67a0ac4bd67a190aa0",
+    "entries": 1089
+  },
+  "derived_ui_candidate": {
+    "filename": "NOX_HELION_WEB_V29_3_ONEPASS_VERIFIED.zip",
+    "sha256": "e70f0439fdf0a028c1d52fc638a38086aa7863fb7b33733a9609532dd544a9d5",
+    "entries": 1090,
+    "original_files_preserved": 1084,
+    "changed_html_pages": 5,
+    "live_selection_controls": 13,
+    "local_chromium_source_qA": "PASS",
+    "owner_windows_browser_qA": "HOLD"
+  },
+  "server": {
+    "existing_instance_id": 60509551,
+    "create_new_instance": false,
+    "onehost": true,
+    "existing_s03": true,
+    "last_physical_api_route_match": 23,
+    "expected": 92,
+    "not_directly_matched": 69,
+    "last_verified_native_s03_e2e": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43650605385",
+    "latest_authorized_runtime": "UNKNOWN_VAST_404",
+    "official_sdk_probe": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43653284425",
+    "live_changes_in_onepass": false
+  },
+  "owner_fact": {
+    "canonical": "nox_runpod/teacher_mesh/v130/owner_s03_fact_write.py",
+    "repair_baseline": "V132_IN_FEATURE",
+    "source_qa": "PASS",
+    "on_host_e2e": "HOLD",
+    "do_not_merge_parallel_v126": true
+  },
+  "safety": {
+    "model_weights_touched": false,
+    "owner_original_S03_touched": false,
+    "production_main_promoted": false,
+    "windows_exe_accepted": false,
+    "full_weight_optimizer_checkpoint_restore_verified": false,
+    "native_gpu_stop_verified": false
+  },
+  "gates": [
+    {
+      "id": "G01",
+      "name": "Frozen original ZIP/hash/CRC and exact 92 API",
+      "status": "PASS_LOCAL"
+    },
+    {
+      "id": "G02",
+      "name": "Source-only verified 13 live graphical selection controls",
+      "status": "PASS_LOCAL_CHROMIUM"
+    },
+    {
+      "id": "G03",
+      "name": "Original ONEHOST 23/92 direct routes",
+      "status": "HISTORICAL_PASS_LIMITED"
+    },
+    {
+      "id": "G04",
+      "name": "Provider SDK/CLI access to original 60509551",
+      "status": "HOLD_API_404"
+    },
+    {
+      "id": "G05",
+      "name": "V132 owner fact S03 content+internal SHA/receipt on native",
+      "status": "HOLD_NATIVE_E2E"
+    },
+    {
+      "id": "G06",
+      "name": "69 remaining route contracts on correct host and actions",
+      "status": "HOLD_NO_FAKE_ROUTES"
+    },
+    {
+      "id": "G07",
+      "name": "Actual owner Windows Chromium/WebView/installer and restore",
+      "status": "HOLD"
+    },
+    {
+      "id": "G08",
+      "name": "Offsite checkpoint SHA independent restore, full-no-adapter optimizer and GPU STOP",
+      "status": "HOLD"
+    }
+  ],
+  "next_hinge": "Restore authorized provider access or existing private SSH without new VM, read exact source SHAs and durable backup receipts, then gated native E2E and Windows owner acceptance. No automatic production promotion.",
+  "release_status": "HOLD_FULL_WEB_V293"
+}
