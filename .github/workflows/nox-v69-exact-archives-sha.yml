@@ -2,7 +2,9 @@ name: NOX V69 four cold archive full SHA read-only
 on:
   push:
     branches: [feature/nox-v38-synaptic-brain-20261114]
-    paths: [.github/workflows/nox-v69-exact-archives-sha.yml]
+    paths:
+      - .github/workflows/nox-v69-exact-archives-sha.yml
+      - nox_runpod/teacher_mesh/v69/exact_archives.py
   workflow_dispatch:
 permissions:
   contents: read
