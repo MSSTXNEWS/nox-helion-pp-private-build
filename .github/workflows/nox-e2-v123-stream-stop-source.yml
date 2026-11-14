@@ -1,0 +1,44 @@
+name: NOX V123 scoped STOP without waiting for next model token - source only
+on:
+  push:
+    branches: [nox/e2-v123-prompt-independent-stream-stop-20261115]
+    paths:
+      - '.github/workflows/nox-e2-v123-stream-stop-source.yml'
+      - 'nox_runpod/teacher_mesh/v112/native_v29_full_bridge.py'
+      - 'nox_runpod/teacher_mesh/v112/tests/**'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install isolated regression dependencies only
+        run: python -m pip install -q fastapi==0.128.2 httpx==0.28.1
+      - name: Test independent STOP cancel and original S03 owner chat
+        run: |
+          set -euo pipefail
+          python -m compileall -q nox_runpod/teacher_mesh/v112
+          python -m unittest discover -s nox_runpod/teacher_mesh/v112/tests -p 'test_*.py' -v
+          python - <<'PY'
+          from pathlib import Path
+          workflow=Path('.github/workflows/nox-v112-owner-chat-auth-e2e.yml').read_text()
+          assert "inputs.allow_owner_e2e == 'YES'" in workflow
+          assert "github.event_name == 'workflow_dispatch'" in workflow
+          assert "default: 'NO'" in workflow
+          assert "if: ${{ github.actor == 'MSSTXNEWS' }}" not in workflow
+          print('NOX_V123_NO_AUTOMATIC_NATIVE_E2E=PASS')
+          PY
+          echo 'NOX_V123_SOURCE_REGRESSION=PASS'
+      - name: Strictly do not claim live stop or GPU cancellation
+        run: |
+          echo 'NOX_V123_LIVE_STOP_TESTED=false'
+          echo 'NOX_V123_GPU_COMPUTE_STOP_VERIFIED=false'
+          echo 'NOX_V123_SERVICE_RESTARTS=0'

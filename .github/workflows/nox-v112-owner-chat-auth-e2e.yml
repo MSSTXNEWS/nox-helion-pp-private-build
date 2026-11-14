@@ -6,6 +6,13 @@ on:
       - 'nox_runpod/teacher_mesh/v112/**'
       - '.github/workflows/nox-v112-owner-chat-auth-e2e.yml'
   workflow_dispatch:
+    inputs:
+      allow_owner_e2e:
+        description: 'Explicitly permit one synthetic owner-cookie chat/S03 E2E after idle and current SHA checks'
+        type: choice
+        required: true
+        options: ['NO','YES']
+        default: 'NO'
 permissions:
   contents: read
 concurrency:
@@ -13,7 +20,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   native:
-    if: ${{ github.actor == 'MSSTXNEWS' }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.allow_owner_e2e == 'YES' && github.actor == 'MSSTXNEWS' }}
     runs-on: ubuntu-latest
     timeout-minutes: 9
     env:

@@ -271,6 +271,37 @@ def _overlay_v122_owner_ui(raw: bytes, *, expected_sha: str = _V122_FROZEN_NOX_U
     return source.encode('utf-8')
 
 
+async def _next_native_chunk_or_stop(iterator, cancel: asyncio.Event):
+    """Race the next real model token against scoped STOP, with no busy-wait.
+
+    Stops the *HTTP stream* even when the upstream model has not emitted its
+    next token. This is NOT proof that GPU compute has ceased: that requires
+    a native model slot receipt. No S03 write occurs in this helper.
+    """
+    if cancel.is_set():
+        return ('stop', None)
+    next_task = asyncio.create_task(anext(iterator))
+    stop_task = asyncio.create_task(cancel.wait())
+    try:
+        finished, _ = await asyncio.wait(
+            {next_task, stop_task}, return_when=asyncio.FIRST_COMPLETED)
+        if stop_task in finished or cancel.is_set():
+            next_task.cancel()
+            try:
+                await asyncio.wait_for(next_task, timeout=0.5)
+            except (asyncio.CancelledError, asyncio.TimeoutError,
+                    StopAsyncIteration):
+                pass
+            return ('stop', None)
+        try:
+            return ('chunk', await next_task)
+        except StopAsyncIteration:
+            return ('eof', None)
+    finally:
+        stop_task.cancel()
+        await asyncio.gather(stop_task, return_exceptions=True)
+
+
 class _OwnerStatic(StaticFiles):
     def __init__(self, directory, auth, unauthorized):
         super().__init__(directory=str(directory), html=True, check_dir=True)
@@ -539,10 +570,14 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
                     return
                 yield _jsonl({'type':'start','model':'NOX HELION','stream_mode':'NATIVE_TOKEN_STREAM'})
                 decoder=codecs.getincrementaldecoder('utf8')('replace')
-                async for chunk in wire.body_iterator:
-                    if cancel.is_set():
+                upstream=wire.body_iterator.__aiter__()
+                while True:
+                    event,chunk=await _next_native_chunk_or_stop(upstream,cancel)
+                    if event=='stop':
                         yield _jsonl({'type':'error','error':'STREAM_STOP_REQUESTED'})
                         return
+                    if event=='eof':
+                        break
                     buffer+=decoder.decode(chunk if isinstance(chunk,bytes) else str(chunk).encode())
                     if len(buffer)>300000:
                         yield _jsonl({'type':'error','error':'HOLD_SSE_FRAME_LIMIT'})
