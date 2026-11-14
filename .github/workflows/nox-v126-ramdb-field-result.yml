@@ -1,0 +1,43 @@
+name: NOX V126 inspect only boolean native S03 RAM row mismatch
+on:
+  push:
+    branches: [nox/v126-native-s03-owner-facts-20261115]
+    paths:
+      - '.github/workflows/nox-v126-ramdb-field-result.yml'
+permissions:
+  contents: read
+concurrency:
+  group: nox-v126-final-ram-field-60509551
+  cancel-in-progress: false
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Test synthetic disposable S03 proof code
+        run: |
+          python -m py_compile nox_runpod/teacher_mesh/v126/physical_writer_ramdb_probe.py
+          python -m unittest -v nox_runpod.teacher_mesh.v126.test_physical_writer_ramdb_probe
+  native:
+    needs: source
+    if: ${{ github.actor == 'MSSTXNEWS' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 11
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Inspect only booleans from native temporary RAM SQLite
+        run: |
+          test -n "$NOX2" || { echo 'HOLD_NOX2'; exit 2; }
+          python -m nox_runpod.teacher_mesh.v126.physical_writer_ramdb_probe
+      - name: Revoke ephemeral SSH even on expected HOLD
+        if: always()
+        run: python -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup
