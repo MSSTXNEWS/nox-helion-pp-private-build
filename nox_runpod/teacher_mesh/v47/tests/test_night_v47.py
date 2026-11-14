@@ -22,7 +22,14 @@ def good():
             'privacy_sanitized':True,'independent_holdout_sealed':True,
             'native_owner_write_scope_verified':True,'trainable_student_sha256':S,
             'checkpoint_sha256':S,'optimizer_sha256':S,'dataset_sha256':S,
-            'holdout_sha256':S,'student_format':'HF_SAFETENSORS','no_live_optimizer_process':True}
+            'holdout_sha256':S,'student_format':'HF_SAFETENSORS','no_live_optimizer_process':True,
+            'training_owner_lease':True,'chat_state':'idle','chat_recent':False,
+            'gpu1_teacher_in_flight':False,'training_mode':'BASE_WEIGHTS',
+            'memory_estimate_verified':True,'microbatch':1,'gradient_checkpointing':True,
+            'tokenizer_sha256':S,'optimizer_profile_sha256':S,
+            'gpu1_model_resident_mib':8500,'gpu1_trainable_grad_mib':500,
+            'gpu1_optimizer_state_mib':2000,'gpu1_activation_peak_mib':1100,
+            'gpu1_kernel_scratch_mib':500}
 
 class TestNight(unittest.TestCase):
     def test_01_requires_native_inventory(self):self.assertEqual(assess({})['state'],'HOLD')
@@ -64,6 +71,22 @@ class TestNight(unittest.TestCase):
         d=good();d['trainer_step0_root_cause_fixed']=False;self.assertIn('TRAIN_ERROR_STEP0_NOT_FIXED',assess(d)['reasons'])
     def test_15_bad_sha(self):
         d=good();d['checkpoint_sha256']='not-sha';self.assertIn('SHA_MISSING_CHECKPOINT_SHA256',assess(d)['reasons'])
+    def test_15a_real_v100_gpu1_oom_fails_before_trainer(self):
+        d=good();d['gpus'][1]['vram_free_mib']=12523
+        d['gpu1_model_resident_mib']=11000
+        self.assertIn('HOLD_CUDA_OOM_EXPECTED',assess(d)['reasons'])
+    def test_15b_active_teacher_cannot_compete_for_gpu1(self):
+        d=good();d['gpu1_teacher_in_flight']=True
+        self.assertIn('HOLD_TEACHER_ACTIVE_OR_UNKNOWN',assess(d)['reasons'])
+    def test_15c_qlora_is_not_no_adapter_base_training(self):
+        d=good();d['training_mode']='QLORA'
+        self.assertIn('HOLD_BASE_WEIGHT_ONLY_NOT_ADAPTER',assess(d)['reasons'])
+    def test_15d_peak_model_snapshot_unverified_is_hold(self):
+        d=good();d['memory_estimate_verified']=False
+        self.assertIn('HOLD_PEAK_ESTIMATE_UNVERIFIED',assess(d)['reasons'])
+    def test_15e_recent_chat_preempts_gpu1_training(self):
+        d=good();d['chat_state']='generating'
+        self.assertIn('HOLD_CHAT_P0_PREEMPTS_GPU1',assess(d)['reasons'])
     def test_16_fail_no_ports(self):
         self.assertEqual(stage_native_smoke(None,'owner-test')['state'],'HOLD_NATIVE_CALLBACKS')
     def test_17_matrix(self):
