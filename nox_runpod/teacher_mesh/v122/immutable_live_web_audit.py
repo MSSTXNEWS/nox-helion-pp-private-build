@@ -26,7 +26,12 @@ stops=('/root/nox/STOP','/root/nox/STOP.flag','/root/nox/stop.flag','/root/nox/.
 def sha(path):
  if not path.is_file() or path.is_symlink():return None
  return hashlib.sha256(path.read_bytes()).hexdigest()
-def emit(d):print('NATIVE_V122_READBACK='+json.dumps(d,sort_keys=True,separators=(',',':')))
+def emit(d):
+ src=('state','proxy_sha256','bridge_sha256','frozen_catalog_sha256',
+      'nested_owner_path_absolute','nested_owner_path_relative')
+ print('NATIVE_V122_SOURCE='+json.dumps({k:d[k] for k in src},sort_keys=True,separators=(',',':')))
+ print('NATIVE_V122_RUNTIME='+json.dumps({k:v for k,v in d.items() if k not in src},
+       sort_keys=True,separators=(',',':')))
 paths=json.loads(base64.b64decode('___ROUTES___',validate=True))
 if len(paths)!=92 or len(set(paths))!=92:raise RuntimeError('HOLD_MATRIX_92')
 ps=sha(proxy);bs=sha(bridge);cs=sha(catalog)
@@ -121,10 +126,14 @@ def main():
         except Exception:okay=False
     lines=buffer.getvalue().splitlines()
     for line in lines:
-        if line.startswith(('NATIVE_V122_READBACK=','TEMP_SSH_CLEANUP=')) and len(line)<3200:
+        if line.startswith(('NATIVE_V122_SOURCE=','NATIVE_V122_RUNTIME=',
+                            'TEMP_SSH_CLEANUP=','SSH_ATTEMPT_','SSH_FAILURE_CLASS=',
+                            'NOX_NATIVE_')) and len(line)<800:
             print(line)
-    proofs=[line for line in lines if line.startswith('NATIVE_V122_READBACK=')]
-    result=bool(okay and len(proofs)==1 and 'NATIVE_READ_ONLY_COMPLETE=true' in lines)
+    source=[line for line in lines if line.startswith('NATIVE_V122_SOURCE=')]
+    runtime=[line for line in lines if line.startswith('NATIVE_V122_RUNTIME=')]
+    result=bool(okay and len(source)==1 and len(runtime)==1 and
+                'NATIVE_READ_ONLY_COMPLETE=true' in lines)
     print('NOX_V122_READ_ONLY_NATIVE_AUDIT='+('PASS' if result else 'HOLD'))
     return 0 if result else 2
 
