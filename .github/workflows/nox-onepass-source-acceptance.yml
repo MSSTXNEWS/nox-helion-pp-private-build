@@ -31,6 +31,7 @@ jobs:
           set -euo pipefail
           python -m py_compile nox_runpod/teacher_mesh/v130/owner_s03_fact_write.py coordination/onepass/vast_official_readonly.py
           python -m unittest -v coordination.onepass.test_vast_official_readonly
+          python -m unittest -v coordination.onepass.test_frozen_web_contract
           python -m unittest -v nox_runpod.teacher_mesh.v130.tests.test_owner_s03_fact_write
           python -m unittest -v nox_runpod.teacher_mesh.v130.tests.test_install_native_owner_fact
       - name: No server or weight action in this workflow
