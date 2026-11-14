@@ -1,0 +1,33 @@
+name: NOX E2 V67 native chat owner mapping
+on:
+  push:
+    branches: [nox/e2-urgent-chat-recovery-20261114]
+    paths:
+      - '.github/workflows/nox-e2-v67-agent-runtime-map.yml'
+      - 'nox_runpod/teacher_mesh/v67/agent_runtime_map.py'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: nox-e2-v67-agent-runtime
+  cancel-in-progress: false
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Static and credential preflight
+        run: |
+          set -euo pipefail
+          test -n "$NOX2"
+          python3 -m py_compile nox_runpod/teacher_mesh/v67/agent_runtime_map.py
+      - name: Inspect authenticated live NOX process listener route
+        run: python3 -m nox_runpod.teacher_mesh.v67.agent_runtime_map
+      - name: Revoke exact temporary SSH key
+        if: always()
+        run: python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup
