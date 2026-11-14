@@ -86,12 +86,13 @@ def _priority(task:dict,progress:Mapping)->tuple:
     p=info.get('percent') if verified else None
     advancing=type(p) in (int,float) and 50<=p<100
     rank={'P0':0,'P1':1,'P2':2,'P3':3}.get(task['priority'],4)
-    wave=task.get('performance_wave')
+    wave=task.get('training_wave',task.get('performance_wave'))
     if type(wave) is not int or not 0<=wave<=4:wave=rank
-    order=task.get('performance_order')
+    order=task.get('training_order',task.get('performance_order'))
     if type(order) is not int or order<1:order=task['number']
-    # Hardware/library/chat/answer quality precede GPU-heavy distillation and
-    # optional media. Verified >=50% progress breaks ties WITHIN the same wave.
+    # Owner V99: real model/optimizer preparation and base-weight training come
+    # before optional cognitive/media work. A verified 99% media job cannot
+    # preempt the weight pipeline, and no background job preempts the P0 chat.
     return (wave, 0 if advancing else 1, -p if advancing else 0,
             rank,order,task['number'])
 
@@ -157,7 +158,9 @@ def plan(matrix:dict, observations:Mapping, *, max_new:int=8)->dict:
         if len(selected)>=max_new:continue
         selected.append({'task_id':id,'lane':t['lane'],'priority':'P1',
           'source_priority':t['priority'],'performance_wave':t.get('performance_wave'),
-          'performance_order':t.get('performance_order'),'chat_priority':'P0',
+          'performance_order':t.get('performance_order'),
+          'training_wave':t.get('training_wave'),'training_order':t.get('training_order'),
+          'training_target_compute_pct':85,'chat_priority':'P0',
           'ai_acceleration_tasks':t.get('ai_acceleration_tasks',[]),
           'title':t['title'],'job_sha256':canonical_hash(t),'requires_native_owner':True,
           'requires_native_worker':True,'proposed_not_queued':True})
@@ -165,7 +168,12 @@ def plan(matrix:dict, observations:Mapping, *, max_new:int=8)->dict:
         else:cpu_slots-=1
     return {'state':'SOURCE_PLAN_ONLY','source_sha256':source_hash,'planned':selected,
        'blocked_count':len(blocked),'sample_blocked':blocked[:12],
-       'jobs_enqueued':0,'native_receipts':[],'main_student_preserved':True}
+       'jobs_enqueued':0,'native_receipts':[],'main_student_preserved':True,
+       'training_gpu1_compute_target_pct':85,
+       'cpu_data_preparation_threads_max_fraction':0.85,
+       'ram_cache_cgroup_fraction_max':0.85,
+       'cpu_initial_worker_limit':8,
+       'actual_training_started':False}
 
 
 def enqueue_approved(native:NativePorts,matrix:dict,owner_scope:str,*,limit:int=8)->dict:
@@ -195,6 +203,8 @@ def enqueue_approved(native:NativePorts,matrix:dict,owner_scope:str,*,limit:int=
             payload={'task_id':tid,'lane':proposal['lane'],'priority':'P1','chat_priority':'P0',
                      'source_priority':proposal.get('source_priority'),
                      'performance_wave':proposal.get('performance_wave'),
+                     'training_wave':proposal.get('training_wave'),
+                     'training_target_compute_pct':85,
                      'must_recheck_chat_before_work':True,
                      'job_sha256':proposal['job_sha256'],'matrix_sha256':p['source_sha256'],
                      'scope':owner_scope,'native_worker_required':True}
