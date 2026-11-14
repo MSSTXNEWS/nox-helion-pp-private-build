@@ -4,6 +4,7 @@ on:
     branches: [nox/e2-v94-performance-ai-volta-20261114]
     paths:
       - '.github/workflows/nox-e2-v94-install-accel.yml'
+      - 'nox_runpod/teacher_mesh/v94/install_accel_wheels_onepass.py'
   workflow_dispatch:
 permissions:
   contents: read
@@ -37,7 +38,7 @@ jobs:
           assert code.count("NOX_V94_ACCEL_INSTALL_V1")>=1
           print("V94_SOURCE_SAFETY=PASS")
           PY
-      - name: ONE Vast native install with pinned wheel hashes and CPU smoke
+      - name: ONE Vast native install with pinned wheel hashes and CPU smoke (no model restart)
         shell: bash
         run: |
           set -euo pipefail
