@@ -35,6 +35,23 @@ def load_matrix(path:Path|None=None)->dict:
     for t in tasks:
         if not isinstance(t.get('depends_on'),list) or any(d not in ids or d==t['task_id'] for d in t['depends_on']):
             raise ValueError('HOLD_MATRIX_DEPENDENCY')
+    if matrix.get('dispatch_policy',{}).get('performance_policy_version')=='NOX_V94_VOLTA_AI_ACCEL_FIRST':
+        ranks=set()
+        deps={t['task_id']:t['depends_on'] for t in tasks}
+        seen={}
+        def check(task_id):
+            if seen.get(task_id)==2:return
+            if seen.get(task_id)==1:raise ValueError('HOLD_V94_DEPENDENCY_CYCLE')
+            seen[task_id]=1
+            for d in deps[task_id]:check(d)
+            seen[task_id]=2
+        for t in tasks:
+            w,o=t.get('performance_wave'),t.get('performance_order')
+            if type(w) is not int or not 0<=w<=4 or type(o) is not int or o<1:
+                raise ValueError('HOLD_V94_PERFORMANCE_PRIORITY_METADATA')
+            if (w,o) in ranks:raise ValueError('HOLD_V94_DUPLICATE_ORDER')
+            ranks.add((w,o))
+            check(t['task_id'])
     return matrix
 
 
@@ -69,7 +86,15 @@ def _priority(task:dict,progress:Mapping)->tuple:
     p=info.get('percent') if verified else None
     advancing=type(p) in (int,float) and 50<=p<100
     rank={'P0':0,'P1':1,'P2':2,'P3':3}.get(task['priority'],4)
-    return (0 if advancing else 1, -p if advancing else 0,rank,task['number'])
+    wave=task.get('training_wave',task.get('performance_wave'))
+    if type(wave) is not int or not 0<=wave<=4:wave=rank
+    order=task.get('training_order',task.get('performance_order'))
+    if type(order) is not int or order<1:order=task['number']
+    # Owner V99: real model/optimizer preparation and base-weight training come
+    # before optional cognitive/media work. A verified 99% media job cannot
+    # preempt the weight pipeline, and no background job preempts the P0 chat.
+    return (wave, 0 if advancing else 1, -p if advancing else 0,
+            rank,order,task['number'])
 
 
 def plan(matrix:dict, observations:Mapping, *, max_new:int=8)->dict:
@@ -95,8 +120,8 @@ def plan(matrix:dict, observations:Mapping, *, max_new:int=8)->dict:
     if type(budget_cpu) is not int or not 0<=budget_cpu<=8 or type(budget_gpu) is not int or not 0<=budget_gpu<=1:
         return {'state':'HOLD_UNKNOWN_RESOURCE_BUDGET','planned':[],'source_sha256':source_hash}
     disk=resources.get('disk_free_bytes')
-    reserve=resources.get('checkpoint_disk_reserve_bytes',20_000_000_000)
-    if type(disk) is not int or type(reserve) is not int or disk<0 or reserve<20_000_000_000:
+    reserve=resources.get('checkpoint_disk_reserve_bytes',10_000_000_000)
+    if type(disk) is not int or type(reserve) is not int or disk<0 or reserve<10_000_000_000:
         return {'state':'HOLD_DISK_TELEMETRY','planned':[],'source_sha256':source_hash}
     selected=[];blocked=[]
     gpu_slots=min(1,budget_gpu);cpu_slots=min(8,budget_cpu)
@@ -107,10 +132,21 @@ def plan(matrix:dict, observations:Mapping, *, max_new:int=8)->dict:
             if not _valid_completion(completed.get(dep),dep):reasons.append('PENDING_DEPENDENCY:'+dep)
         if t['requires_backup_restore'] and observations.get('offsite_restore_verified') is not True:reasons.append('BACKUP_RESTORE_GATE')
         if t['requires_license_and_privacy'] and observations.get('license_privacy_verified') is not True:reasons.append('DATA_RIGHTS_GATE')
-        # No large model downloads and no optimizer without 20GB free reserve.
-        if t['resource']=='GPU1_EXCLUSIVE' and disk<reserve:reasons.append('DISK_BELOW_CHECKPOINT_RESERVE')
-        if t['resource']=='GPU1_EXCLUSIVE' and observations.get('gpu1_trainer_active') is True:
-            reasons.append('GPU1_HAS_ACTIVE_TRAINER')
+        # The 10GB floor applies to NEW disk writes, never healthy chat,
+        # CPU-only diagnostics or RAM-backed read-only operations.
+        if t['modifies_live_system'] and disk<reserve:
+            reasons.append('HOLD_NEW_DISK_WRITE_BELOW_10GB_FLOOR')
+        if t['resource']=='GPU1_EXCLUSIVE':
+            if observations.get('gpu1_peak_verified') is not True:
+                reasons.append('HOLD_GPU1_PEAK_VRAM_UNVERIFIED')
+            if observations.get('gpu1_owner_lease') is not True:
+                reasons.append('HOLD_ONEHOST_GPU1_LEASE')
+            if observations.get('gpu1_teacher_active') is not False or observations.get('gpu1_trainer_active') is not False:
+                reasons.append('HOLD_GPU1_ALREADY_USED')
+            if observations.get('chat_state')!='idle' or observations.get('chat_recent') is not False:
+                reasons.append('HOLD_CHAT_P0_FIRST')
+            if t['modifies_live_system'] and observations.get('gpu1_write_budget_verified') is not True:
+                reasons.append('HOLD_GPU1_CHECKPOINT_DISK_BUDGET')
         if t['modifies_live_system'] and observations.get('native_writes_available') is not True:
             reasons.append('NATIVE_WRITES_UNAVAILABLE')
         if t['resource']=='GPU1_EXCLUSIVE':
@@ -120,14 +156,24 @@ def plan(matrix:dict, observations:Mapping, *, max_new:int=8)->dict:
             blocked.append({'task_id':id,'reasons':reasons})
             continue
         if len(selected)>=max_new:continue
-        selected.append({'task_id':id,'lane':t['lane'],'priority':t['priority'],'title':t['title'],
-          'job_sha256':canonical_hash(t),'requires_native_owner':True,
+        selected.append({'task_id':id,'lane':t['lane'],'priority':'P1',
+          'source_priority':t['priority'],'performance_wave':t.get('performance_wave'),
+          'performance_order':t.get('performance_order'),
+          'training_wave':t.get('training_wave'),'training_order':t.get('training_order'),
+          'training_target_compute_pct':85,'chat_priority':'P0',
+          'ai_acceleration_tasks':t.get('ai_acceleration_tasks',[]),
+          'title':t['title'],'job_sha256':canonical_hash(t),'requires_native_owner':True,
           'requires_native_worker':True,'proposed_not_queued':True})
         if t['resource']=='GPU1_EXCLUSIVE':gpu_slots-=1
         else:cpu_slots-=1
     return {'state':'SOURCE_PLAN_ONLY','source_sha256':source_hash,'planned':selected,
        'blocked_count':len(blocked),'sample_blocked':blocked[:12],
-       'jobs_enqueued':0,'native_receipts':[],'main_student_preserved':True}
+       'jobs_enqueued':0,'native_receipts':[],'main_student_preserved':True,
+       'training_gpu1_compute_target_pct':85,
+       'cpu_data_preparation_threads_max_fraction':0.85,
+       'ram_cache_cgroup_fraction_max':0.85,
+       'cpu_initial_worker_limit':8,
+       'actual_training_started':False}
 
 
 def enqueue_approved(native:NativePorts,matrix:dict,owner_scope:str,*,limit:int=8)->dict:
@@ -154,7 +200,12 @@ def enqueue_approved(native:NativePorts,matrix:dict,owner_scope:str,*,limit:int=
             if not gate():return {'state':'HOLD_STOP_DURING_QUEUE','jobs_enqueued':len(receipts),'receipts':receipts}
             tid=proposal['task_id']
             if native.native_duplicate_check(tid) is not False:continue
-            payload={'task_id':tid,'lane':proposal['lane'],'priority':proposal['priority'],
+            payload={'task_id':tid,'lane':proposal['lane'],'priority':'P1','chat_priority':'P0',
+                     'source_priority':proposal.get('source_priority'),
+                     'performance_wave':proposal.get('performance_wave'),
+                     'training_wave':proposal.get('training_wave'),
+                     'training_target_compute_pct':85,
+                     'must_recheck_chat_before_work':True,
                      'job_sha256':proposal['job_sha256'],'matrix_sha256':p['source_sha256'],
                      'scope':owner_scope,'native_worker_required':True}
             digest=canonical_hash(payload)

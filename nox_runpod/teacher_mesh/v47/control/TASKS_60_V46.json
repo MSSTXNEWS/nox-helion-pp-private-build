@@ -1,6 +1,6 @@
 {
   "schema": "NOX_V46_SIX_LANE_SIXTY_TASKS_V1",
-  "program": "GENESIS 0–4, V29.3+V37–V44, NO-LOSS",
+  "program": "NOX PRIME V99: train base weights first at up-to-85% measured compute after P0 chat/STOP, RAM CPU prep and verified optimizer restore",
   "as_of": "2026-11-14",
   "production_task_ids": [],
   "live_verified": false,
@@ -11,7 +11,30 @@
     "main_student_gpu0_pinned": true,
     "s03_single_native": true,
     "no_task_count_as_intelligence": true,
-    "readiness_default": "HOLD_NATIVE_BINDINGS"
+    "readiness_default": "HOLD_NATIVE_BINDINGS",
+    "performance_policy_version": "NOX_V94_VOLTA_AI_ACCEL_FIRST",
+    "goal_order": [
+      "P0_CHAT_SAFETY_AND_TRAINING_RESOURCE_BASELINE",
+      "RAM_CPU_DATA_PREPARATION_AND_BONA_FIDE_BASE_WEIGHT_FORGE",
+      "ANSWER_QUALITY_MEMORY_AND_SELF_REPAIR",
+      "OPTIONAL_MEDIA_AND_UNSUPPORTED_FALLBACKS"
+    ],
+    "onehost_only": true,
+    "one_student_only": true,
+    "chat_priority": "P0",
+    "r60_background_priority": "P1",
+    "max_gpu1_training_jobs": 1,
+    "disk_floor_for_new_writes_bytes": 10000000000,
+    "training_priority_policy_version": "NOX_V99_DIRECT_BASE_TRAINING_85_FIRST",
+    "gpu1_training_compute_target_pct": 85,
+    "cpu_max_workers_ratio": 0.85,
+    "cgroup_ram_pagecache_max_ratio": 0.85,
+    "p0_chat_never_waits_for_training": true,
+    "training_gpu1_lease_required": true,
+    "trainable_checkpoint_owner_restore_required": true,
+    "direct_base_weights_no_lora": true,
+    "forced_gpu0_training": false,
+    "cuda_oom_guard_required": true
   },
   "groups": [
     {
@@ -64,7 +87,11 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "performance_wave": 0,
+      "performance_order": 6,
+      "training_wave": 0,
+      "training_order": 7
     },
     {
       "task_id": "NOX-V46-02",
@@ -86,7 +113,11 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "performance_wave": 0,
+      "performance_order": 12,
+      "training_wave": 0,
+      "training_order": 8
     },
     {
       "task_id": "NOX-V46-03",
@@ -97,7 +128,7 @@
       "depends_on": [
         "NOX-V46-02"
       ],
-      "priority": "P1",
+      "priority": "P0",
       "resource": "CPU_IO",
       "requires_native_owner": true,
       "requires_backup_restore": false,
@@ -108,7 +139,15 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "performance_wave": 1,
+      "performance_order": 1,
+      "ai_acceleration_tasks": [
+        "specialized AI wheels provenance/license audit",
+        "wheel-only SHA256 lock"
+      ],
+      "training_wave": 0,
+      "training_order": 12
     },
     {
       "task_id": "NOX-V46-04",
@@ -120,7 +159,7 @@
         "NOX-V46-01",
         "NOX-V46-03"
       ],
-      "priority": "P1",
+      "priority": "P0",
       "resource": "CPU_IO",
       "requires_native_owner": true,
       "requires_backup_restore": false,
@@ -131,7 +170,14 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "performance_wave": 1,
+      "performance_order": 2,
+      "ai_acceleration_tasks": [
+        "model snapshot deduplication and no-repeat download"
+      ],
+      "training_wave": 0,
+      "training_order": 13
     },
     {
       "task_id": "NOX-V46-05",
@@ -153,7 +199,14 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "performance_wave": 1,
+      "performance_order": 3,
+      "ai_acceleration_tasks": [
+        "GGUF Q4/Q5/Q8 independent answer quality and memory benchmarks"
+      ],
+      "training_wave": 1,
+      "training_order": 5
     },
     {
       "task_id": "NOX-V46-06",
@@ -175,7 +228,16 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "performance_wave": 1,
+      "performance_order": 4,
+      "ai_acceleration_tasks": [
+        "quantized KV cache acceptance",
+        "parallel slots versus prompt latency",
+        "prefix reuse and prefill"
+      ],
+      "training_wave": 1,
+      "training_order": 6
     },
     {
       "task_id": "NOX-V46-07",
@@ -187,7 +249,7 @@
         "NOX-V46-01",
         "NOX-V46-02"
       ],
-      "priority": "P1",
+      "priority": "P0",
       "resource": "CPU_LIGHT",
       "requires_native_owner": true,
       "requires_backup_restore": false,
@@ -198,7 +260,16 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "performance_wave": 0,
+      "performance_order": 8,
+      "ai_acceleration_tasks": [
+        "NUMA topology",
+        "RAM and /dev/shm cache budgets",
+        "Volta GPU VRAM admission"
+      ],
+      "training_wave": 0,
+      "training_order": 9
     },
     {
       "task_id": "NOX-V46-08",
@@ -209,7 +280,7 @@
       "depends_on": [
         "NOX-V46-07"
       ],
-      "priority": "P1",
+      "priority": "P0",
       "resource": "CPU_LIGHT",
       "requires_native_owner": true,
       "requires_backup_restore": true,
@@ -220,7 +291,15 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "performance_wave": 1,
+      "performance_order": 5,
+      "ai_acceleration_tasks": [
+        "single GPU1 lease",
+        "reclaim idle teachers only at verified safe checkpoint"
+      ],
+      "training_wave": 0,
+      "training_order": 17
     },
     {
       "task_id": "NOX-V46-09",
@@ -242,7 +321,11 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "performance_wave": 0,
+      "performance_order": 13,
+      "training_wave": 0,
+      "training_order": 14
     },
     {
       "task_id": "NOX-V46-10",
@@ -264,7 +347,14 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "performance_wave": 1,
+      "performance_order": 6,
+      "ai_acceleration_tasks": [
+        "zstandard persistent encrypted Cold Vault and recovery receipts"
+      ],
+      "training_wave": 1,
+      "training_order": 11
     },
     {
       "task_id": "NOX-V46-11",
@@ -284,7 +374,11 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "performance_wave": 0,
+      "performance_order": 9,
+      "training_wave": 0,
+      "training_order": 16
     },
     {
       "task_id": "NOX-V46-12",
@@ -306,7 +400,11 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "performance_wave": 0,
+      "performance_order": 10,
+      "training_wave": 2,
+      "training_order": 1
     },
     {
       "task_id": "NOX-V46-13",
@@ -328,7 +426,14 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "performance_wave": 0,
+      "performance_order": 11,
+      "ai_acceleration_tasks": [
+        "FAISS index / verified S03 recency cache benchmark, no second database"
+      ],
+      "training_wave": 2,
+      "training_order": 2
     },
     {
       "task_id": "NOX-V46-14",
@@ -350,7 +455,11 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "performance_wave": 2,
+      "performance_order": 1,
+      "training_wave": 2,
+      "training_order": 3
     },
     {
       "task_id": "NOX-V46-15",
@@ -373,7 +482,11 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "performance_wave": 2,
+      "performance_order": 2,
+      "training_wave": 2,
+      "training_order": 4
     },
     {
       "task_id": "NOX-V46-16",
@@ -385,7 +498,7 @@
         "NOX-V46-11",
         "NOX-V46-12"
       ],
-      "priority": "P0",
+      "priority": "P1",
       "resource": "CPU_LIGHT",
       "requires_native_owner": true,
       "requires_backup_restore": false,
@@ -396,7 +509,11 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "performance_wave": 2,
+      "performance_order": 3,
+      "training_wave": 2,
+      "training_order": 5
     },
     {
       "task_id": "NOX-V46-17",
@@ -418,7 +535,11 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "performance_wave": 2,
+      "performance_order": 4,
+      "training_wave": 2,
+      "training_order": 6
     },
     {
       "task_id": "NOX-V46-18",
@@ -440,7 +561,11 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "performance_wave": 2,
+      "performance_order": 5,
+      "training_wave": 2,
+      "training_order": 7
     },
     {
       "task_id": "NOX-V46-19",
@@ -463,7 +588,11 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "performance_wave": 2,
+      "performance_order": 6,
+      "training_wave": 2,
+      "training_order": 8
     },
     {
       "task_id": "NOX-V46-20",
@@ -486,7 +615,11 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "performance_wave": 2,
+      "performance_order": 7,
+      "training_wave": 2,
+      "training_order": 9
     },
     {
       "task_id": "NOX-V46-21",
@@ -506,7 +639,14 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "performance_wave": 1,
+      "performance_order": 7,
+      "ai_acceleration_tasks": [
+        "OOM root cause and real GPU1 peak memory budget"
+      ],
+      "training_wave": 0,
+      "training_order": 10
     },
     {
       "task_id": "NOX-V46-22",
@@ -528,7 +668,11 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "performance_wave": 1,
+      "performance_order": 8,
+      "training_wave": 0,
+      "training_order": 11
     },
     {
       "task_id": "NOX-V46-23",
@@ -551,7 +695,14 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "performance_wave": 1,
+      "performance_order": 9,
+      "ai_acceleration_tasks": [
+        "teacher inference version and model provenance"
+      ],
+      "training_wave": 1,
+      "training_order": 1
     },
     {
       "task_id": "NOX-V46-24",
@@ -573,7 +724,14 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "performance_wave": 1,
+      "performance_order": 10,
+      "ai_acceleration_tasks": [
+        "CPU parallel source preprocessing and tokenization in RAM"
+      ],
+      "training_wave": 1,
+      "training_order": 2
     },
     {
       "task_id": "NOX-V46-25",
@@ -595,7 +753,14 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "performance_wave": 1,
+      "performance_order": 11,
+      "ai_acceleration_tasks": [
+        "orjson/rapidfuzz/zstd/FAISS CPU index and dataset deduplication"
+      ],
+      "training_wave": 1,
+      "training_order": 3
     },
     {
       "task_id": "NOX-V46-26",
@@ -617,7 +782,11 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "performance_wave": 1,
+      "performance_order": 12,
+      "training_wave": 1,
+      "training_order": 4
     },
     {
       "task_id": "NOX-V46-27",
@@ -639,7 +808,11 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "performance_wave": 3,
+      "performance_order": 1,
+      "training_wave": 1,
+      "training_order": 7
     },
     {
       "task_id": "NOX-V46-28",
@@ -661,7 +834,11 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "performance_wave": 3,
+      "performance_order": 2,
+      "training_wave": 1,
+      "training_order": 8
     },
     {
       "task_id": "NOX-V46-29",
@@ -683,7 +860,14 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "performance_wave": 3,
+      "performance_order": 3,
+      "ai_acceleration_tasks": [
+        "coder teacher benchmarking before any base-weight distillation"
+      ],
+      "training_wave": 1,
+      "training_order": 9
     },
     {
       "task_id": "NOX-V46-30",
@@ -711,7 +895,14 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "performance_wave": 3,
+      "performance_order": 4,
+      "ai_acceleration_tasks": [
+        "optimizer resume, checkpoint reload, blind holdout, no LoRA claim"
+      ],
+      "training_wave": 1,
+      "training_order": 10
     },
     {
       "task_id": "NOX-V46-31",
@@ -731,7 +922,11 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "performance_wave": 2,
+      "performance_order": 8,
+      "training_wave": 2,
+      "training_order": 10
     },
     {
       "task_id": "NOX-V46-32",
@@ -753,7 +948,11 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "performance_wave": 2,
+      "performance_order": 9,
+      "training_wave": 2,
+      "training_order": 11
     },
     {
       "task_id": "NOX-V46-33",
@@ -775,7 +974,11 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "performance_wave": 2,
+      "performance_order": 10,
+      "training_wave": 2,
+      "training_order": 12
     },
     {
       "task_id": "NOX-V46-34",
@@ -797,7 +1000,11 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "performance_wave": 2,
+      "performance_order": 11,
+      "training_wave": 2,
+      "training_order": 13
     },
     {
       "task_id": "NOX-V46-35",
@@ -819,7 +1026,14 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "performance_wave": 1,
+      "performance_order": 13,
+      "ai_acceleration_tasks": [
+        "provenance source retrieval, license/privacy guard"
+      ],
+      "training_wave": 2,
+      "training_order": 14
     },
     {
       "task_id": "NOX-V46-36",
@@ -841,7 +1055,14 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "performance_wave": 1,
+      "performance_order": 14,
+      "ai_acceleration_tasks": [
+        "sandbox patch/test loop, wheel imports and subprocess safeguards"
+      ],
+      "training_wave": 2,
+      "training_order": 15
     },
     {
       "task_id": "NOX-V46-37",
@@ -863,7 +1084,11 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "performance_wave": 1,
+      "performance_order": 15,
+      "training_wave": 2,
+      "training_order": 16
     },
     {
       "task_id": "NOX-V46-38",
@@ -886,7 +1111,14 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "performance_wave": 1,
+      "performance_order": 16,
+      "ai_acceleration_tasks": [
+        "automated code patch → test → rollback (owner authorization)"
+      ],
+      "training_wave": 2,
+      "training_order": 17
     },
     {
       "task_id": "NOX-V46-39",
@@ -908,7 +1140,11 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "performance_wave": 2,
+      "performance_order": 12,
+      "training_wave": 2,
+      "training_order": 18
     },
     {
       "task_id": "NOX-V46-40",
@@ -930,7 +1166,11 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "performance_wave": 2,
+      "performance_order": 13,
+      "training_wave": 2,
+      "training_order": 19
     },
     {
       "task_id": "NOX-V46-41",
@@ -950,7 +1190,11 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "performance_wave": 0,
+      "performance_order": 4,
+      "training_wave": 0,
+      "training_order": 4
     },
     {
       "task_id": "NOX-V46-42",
@@ -972,7 +1216,16 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "performance_wave": 0,
+      "performance_order": 5,
+      "ai_acceleration_tasks": [
+        "SSE first-delta TTFT",
+        "p50/p95 time-to-first-text and token/s",
+        "llama.cpp KV q8_0 vs f16 quality benchmark"
+      ],
+      "training_wave": 0,
+      "training_order": 5
     },
     {
       "task_id": "NOX-V46-43",
@@ -983,7 +1236,7 @@
       "depends_on": [
         "NOX-V46-42"
       ],
-      "priority": "P2",
+      "priority": "P3",
       "resource": "CPU_LIGHT",
       "requires_native_owner": true,
       "requires_backup_restore": false,
@@ -994,7 +1247,11 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "performance_wave": 4,
+      "performance_order": 1,
+      "training_wave": 3,
+      "training_order": 1
     },
     {
       "task_id": "NOX-V46-44",
@@ -1005,7 +1262,7 @@
       "depends_on": [
         "NOX-V46-43"
       ],
-      "priority": "P2",
+      "priority": "P3",
       "resource": "CPU_LIGHT",
       "requires_native_owner": true,
       "requires_backup_restore": false,
@@ -1016,7 +1273,11 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "performance_wave": 4,
+      "performance_order": 2,
+      "training_wave": 3,
+      "training_order": 2
     },
     {
       "task_id": "NOX-V46-45",
@@ -1027,7 +1288,7 @@
       "depends_on": [
         "NOX-V46-42"
       ],
-      "priority": "P2",
+      "priority": "P3",
       "resource": "CPU_IO",
       "requires_native_owner": true,
       "requires_backup_restore": false,
@@ -1038,7 +1299,11 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "performance_wave": 4,
+      "performance_order": 3,
+      "training_wave": 3,
+      "training_order": 3
     },
     {
       "task_id": "NOX-V46-46",
@@ -1050,7 +1315,7 @@
         "NOX-V46-07",
         "NOX-V46-45"
       ],
-      "priority": "P2",
+      "priority": "P3",
       "resource": "GPU1_EXCLUSIVE",
       "requires_native_owner": true,
       "requires_backup_restore": false,
@@ -1061,7 +1326,11 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "performance_wave": 4,
+      "performance_order": 4,
+      "training_wave": 3,
+      "training_order": 4
     },
     {
       "task_id": "NOX-V46-47",
@@ -1073,7 +1342,7 @@
         "NOX-V46-07",
         "NOX-V46-46"
       ],
-      "priority": "P2",
+      "priority": "P3",
       "resource": "GPU1_EXCLUSIVE",
       "requires_native_owner": true,
       "requires_backup_restore": false,
@@ -1084,7 +1353,11 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "performance_wave": 4,
+      "performance_order": 5,
+      "training_wave": 3,
+      "training_order": 5
     },
     {
       "task_id": "NOX-V46-48",
@@ -1095,7 +1368,7 @@
       "depends_on": [
         "NOX-V46-41"
       ],
-      "priority": "P2",
+      "priority": "P3",
       "resource": "CPU_LIGHT",
       "requires_native_owner": true,
       "requires_backup_restore": false,
@@ -1106,7 +1379,11 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "performance_wave": 4,
+      "performance_order": 6,
+      "training_wave": 3,
+      "training_order": 6
     },
     {
       "task_id": "NOX-V46-49",
@@ -1118,7 +1395,7 @@
         "NOX-V46-46",
         "NOX-V46-47"
       ],
-      "priority": "P2",
+      "priority": "P3",
       "resource": "CPU_LIGHT",
       "requires_native_owner": true,
       "requires_backup_restore": false,
@@ -1129,7 +1406,11 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "performance_wave": 4,
+      "performance_order": 7,
+      "training_wave": 3,
+      "training_order": 7
     },
     {
       "task_id": "NOX-V46-50",
@@ -1141,7 +1422,7 @@
         "NOX-V46-41",
         "NOX-V46-49"
       ],
-      "priority": "P2",
+      "priority": "P3",
       "resource": "CPU_LIGHT",
       "requires_native_owner": true,
       "requires_backup_restore": false,
@@ -1152,7 +1433,11 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "performance_wave": 4,
+      "performance_order": 8,
+      "training_wave": 3,
+      "training_order": 8
     },
     {
       "task_id": "NOX-V46-51",
@@ -1172,7 +1457,11 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "performance_wave": 0,
+      "performance_order": 1,
+      "training_wave": 0,
+      "training_order": 1
     },
     {
       "task_id": "NOX-V46-52",
@@ -1194,7 +1483,16 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "performance_wave": 0,
+      "performance_order": 7,
+      "ai_acceleration_tasks": [
+        "CUDA 12.x SM70 kernel probe",
+        "PyTorch CUDA 12.6 wheel compatibility",
+        "FP16 microbatch and gradient checkpointing"
+      ],
+      "training_wave": 0,
+      "training_order": 6
     },
     {
       "task_id": "NOX-V46-53",
@@ -1216,7 +1514,11 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "performance_wave": 0,
+      "performance_order": 2,
+      "training_wave": 0,
+      "training_order": 2
     },
     {
       "task_id": "NOX-V46-54",
@@ -1238,7 +1540,11 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "performance_wave": 0,
+      "performance_order": 3,
+      "training_wave": 0,
+      "training_order": 3
     },
     {
       "task_id": "NOX-V46-55",
@@ -1249,7 +1555,7 @@
       "depends_on": [
         "NOX-V46-53"
       ],
-      "priority": "P0",
+      "priority": "P3",
       "resource": "CPU_IO",
       "requires_native_owner": true,
       "requires_backup_restore": false,
@@ -1260,7 +1566,11 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "performance_wave": 2,
+      "performance_order": 15,
+      "training_wave": 3,
+      "training_order": 9
     },
     {
       "task_id": "NOX-V46-56",
@@ -1283,7 +1593,11 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "performance_wave": 0,
+      "performance_order": 14,
+      "training_wave": 0,
+      "training_order": 15
     },
     {
       "task_id": "NOX-V46-57",
@@ -1292,8 +1606,8 @@
       "lane": "CORE",
       "title": "Контроль качества/регрессий перед merge",
       "depends_on": [
-        "NOX-V46-30",
-        "NOX-V46-56"
+        "NOX-V46-42",
+        "NOX-V46-13"
       ],
       "priority": "P1",
       "resource": "CPU_LIGHT",
@@ -1306,7 +1620,11 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "performance_wave": 1,
+      "performance_order": 17,
+      "training_wave": 2,
+      "training_order": 20
     },
     {
       "task_id": "NOX-V46-58",
@@ -1328,7 +1646,11 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "performance_wave": 1,
+      "performance_order": 18,
+      "training_wave": 2,
+      "training_order": 21
     },
     {
       "task_id": "NOX-V46-59",
@@ -1350,7 +1672,11 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "performance_wave": 1,
+      "performance_order": 19,
+      "training_wave": 2,
+      "training_order": 22
     },
     {
       "task_id": "NOX-V46-60",
@@ -1374,7 +1700,11 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "performance_wave": 2,
+      "performance_order": 14,
+      "training_wave": 2,
+      "training_order": 23
     }
   ]
 }
