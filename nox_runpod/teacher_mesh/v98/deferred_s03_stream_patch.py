@@ -97,7 +97,7 @@ try:
  prior="                ans = payload.get('_agent_final') or ''"
  if source.count(anchor)!=1 or source.count(prior)!=1 or '_nox_owner_s03_after_stream' in source:
   print('NOX_V98_SOURCE_ANCHOR_COUNTS='+str((source.count(anchor),source.count(prior))))
-  raise RuntimeError('HOLD_UNIQUE_OWNER_STREAM_ANCHORS')
+  raise RuntimeError('HOLD_OWNER_S03_ANCHOR_A'+str(source.count(anchor))+'_P'+str(source.count(prior))+'_I'+str(int('_nox_owner_s03_after_stream' in source)))
  # Preserve nonstream (synchronous) S03 persistence. Streaming response receives
  # final text only after body_iterator is fully consumed, not at response creation.
  updated=source.replace(anchor,anchor+PATCH,1).replace(prior,"                ans = (payload.get('_agent_final') or '') if not stream else ''",1)
