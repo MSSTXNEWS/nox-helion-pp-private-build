@@ -76,8 +76,10 @@ try:
  "            _memory_payload = {'messages': dialog_msgs} if _bounded_history else {'message': user_text or ''}\n"
  "            did = NOX_MEM.jp_dialog_id(_memory_payload)"
  )}
- for a,b in anchors.items():
-  if text.count(a)!=1:raise RuntimeError('HOLD_ANCHOR_COUNT')
+ for index,(a,b) in enumerate(anchors.items()):
+  if text.count(a)!=1:
+   emit(state='HOLD_ANCHOR_COUNT',anchor_index=index,anchor_count=text.count(a))
+   raise RuntimeError('HOLD_ANCHOR_COUNT')
   text=text.replace(a,b,1)
  new=text.encode('utf8')
  if len(new)>145000:raise RuntimeError('HOLD_PATCH_SIZE')
