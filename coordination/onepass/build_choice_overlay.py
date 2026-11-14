@@ -59,7 +59,7 @@ def build(source_zip: Path, target_zip: Path, script_file: Path) -> dict:
                 after=before
                 if info.filename in ORIGINAL_SELECTS:
                     html=before.decode("utf-8")
-                    select_count=len(re.findall(r"<select\\b",html,flags=re.I))
+                    select_count=len(re.findall(r"<select\b",html,flags=re.I))
                     if select_count!=ORIGINAL_SELECTS[info.filename]:
                         raise ValueError("HOLD_FROZEN_SELECT_SOURCE_DRIFT")
                     if html.count("</body>")!=1 or SCRIPT_REF in html:
