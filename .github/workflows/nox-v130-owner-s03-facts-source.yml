@@ -4,11 +4,13 @@ on:
     branches: [feature/nox-v37-v100-firsthour-14d-20261113]
     paths:
       - 'nox_runpod/teacher_mesh/v130/**'
+      - 'nox_runpod/teacher_mesh/v132/**'
       - '.github/workflows/nox-v130-owner-s03-facts-source.yml'
   push:
     branches: [feature/nox-v38-synaptic-brain-20261114]
     paths:
       - 'nox_runpod/teacher_mesh/v130/**'
+      - 'nox_runpod/teacher_mesh/v132/**'
       - '.github/workflows/nox-v130-owner-s03-facts-source.yml'
   workflow_dispatch:
 permissions:
@@ -16,7 +18,7 @@ permissions:
 jobs:
   fixtures:
     runs-on: ubuntu-latest
-    timeout-minutes: 7
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
         with:
@@ -33,3 +35,22 @@ jobs:
           python -m unittest discover -s nox_runpod/teacher_mesh/v130/tests -p 'test_*.py' -v
           echo 'NOX_V130_FIXTURE_QA_ONLY=true'
           echo 'NOX_V130_REAL_S03_NOT_MUTATED_BY_CI=true'
+          python -m py_compile nox_runpod/teacher_mesh/v132/onepass_release_gate.py
+          python -m unittest discover -s nox_runpod/teacher_mesh/v132/tests -p 'test_*.py' -v
+          python -m nox_runpod.teacher_mesh.v132.onepass_release_gate --root . --out nox_v132_onepass_receipt.json
+          python - <<'PY'
+          import json
+          d=json.load(open('nox_v132_onepass_receipt.json',encoding='utf8'))
+          assert d['web_baseline']['expected_exact_paths']==92
+          assert d['web_baseline']['last_observed_exact_registered']==23
+          assert d['release']['state']=='HOLD_REQUIRED_LIVE_ACCEPTANCE'
+          assert d['v130']['state']=='SOURCE_STAGED_NOT_LIVE_VERIFIED'
+          print('ONEPASS_V132_SOURCE_ACCEPTANCE=PASS')
+          PY
+      - name: Save source-only onepass NOX gate receipt without private records
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_V132_SOURCE_PROOF
+          path: nox_v132_onepass_receipt.json
+          if-no-files-found: error
+          retention-days: 30
