@@ -2,7 +2,7 @@ name: NOX V85 stage V84 offline memory on live Vast no service restart
 on:
   push:
     branches: [feature/nox-v38-synaptic-brain-20261114]
-    paths: ['nox_runpod/teacher_mesh/v85/**','.github/workflows/nox-v85-stage-memory.yml']
+    paths: ['nox_runpod/teacher_mesh/v85/**','nox_runpod/teacher_mesh/v84/**','.github/workflows/nox-v85-stage-memory.yml']
   workflow_dispatch:
 permissions:
   contents: read
