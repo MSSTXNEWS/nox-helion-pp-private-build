@@ -20,6 +20,7 @@ from nox_runpod.teacher_mesh.v60 import encrypted_backup as v60
 SOURCE_BYTES=85_218_466
 SOURCE_SHA="171c1b7894391ead3d376ae0e375fb34991854eeb3cce2aa04f2c28a301000c5"
 SOURCE_AUDIT_RUN="https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43622575039"
+OWNER_V60_RECIPIENT_FINGERPRINT="4a9cab493ae0f51145c0609271022a185b9310b6432ec1914b5b0ce89b7571a5"
 OUTPUT=Path("NOX_V69_COLD_INCOMING_85218466_20261114.zip.age")
 RECEIPT=Path("NOX_V69_COLD_INCOMING_85218466_RECEIPT.json")
 RUN=Path(os.environ.get("RUNNER_TEMP", "/tmp")) / "nox-v69-owner-cipher"
@@ -107,9 +108,26 @@ def test_decrypt(encrypted:Path,identity:Path)->tuple[int,str]:
         if p.stderr:p.stderr.close()
     return length,h.hexdigest()
 
+def existing_owner_recipient_pinned()->tuple[str,str]:
+    """Identify EXACT V60 owner SSH recipient, never choose a random key."""
+    records=v60.conn.keys(os.environ['NOX2'])
+    candidates=[]
+    for item in records:
+        raw=str(item.get('public_key','')).strip()
+        parts=raw.split()
+        if len(parts)<2 or parts[0] not in ('ssh-ed25519','ssh-rsa'):
+            continue
+        recipient=' '.join(parts[:2])
+        fp=hashlib.sha256(recipient.encode()).hexdigest()
+        if fp==OWNER_V60_RECIPIENT_FINGERPRINT:
+            candidates.append(recipient)
+    if len(candidates)!=1:
+        raise RuntimeError('HOLD_ORIGINAL_V60_OWNER_KEY_NOT_PRESENT_OR_AMBIGUOUS')
+    return candidates[0],OWNER_V60_RECIPIENT_FINGERPRINT
+
 def run()->None:
     if not os.environ.get('NOX2'):raise RuntimeError('HOLD_NOX2')
-    owner,owner_fingerprint=v60.existing_owner_recipient()
+    owner,owner_fingerprint=existing_owner_recipient_pinned()
     host,port=v60.live_direct_route()
     RUN.mkdir(mode=0o700,parents=True,exist_ok=True)
     identity=RUN/'test_identity.agekey'
