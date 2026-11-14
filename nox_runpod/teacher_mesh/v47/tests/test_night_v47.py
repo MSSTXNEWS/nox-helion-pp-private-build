@@ -16,6 +16,7 @@ def good():
             'cuda_major':12,'torch_cuda_sm70_verified':True,'precision':'fp16','uses_flashattention2':False,
             'uses_bf16':False,'trainer_step0_root_cause_fixed':True,
             'disk_free_bytes':75_000_000_000,'estimated_new_checkpoint_bytes':20_000_000_000,
+            'estimated_temp_bytes':2_000_000_000,'disk_write_estimate_verified':True,
             'ram_available_mib':30000,'offsite_optimizer_restore_verified':True,
             's03_offsite_restore_verified':True,'train_data_license_verified':True,
             'privacy_sanitized':True,'independent_holdout_sealed':True,
@@ -40,6 +41,17 @@ class TestNight(unittest.TestCase):
         d=good();d['train_data_license_verified']=False;self.assertIn('LICENSE_OR_PRIVACY_GATE',assess(d)['reasons'])
     def test_09_disk_reserve(self):
         d=good();d['disk_free_bytes']=19_000_000_000;self.assertIn('CHECKPOINT_SPACE_AND_RESERVE_NOT_PROVEN',assess(d)['reasons'])
+    def test_09a_measured_smaller_checkpoint_below_20gb_is_eligible(self):
+        d=good();d['disk_free_bytes']=17_475_031_040
+        d['estimated_new_checkpoint_bytes']=1_000_000_000
+        d['estimated_temp_bytes']=1_000_000_000
+        self.assertEqual(assess(d)['state'],'READY_FOR_NATIVE_OWNER_APPROVAL')
+    def test_09b_unknown_checkpoint_temp_never_eligible(self):
+        d=good();d['estimated_temp_bytes']=None
+        self.assertIn('CHECKPOINT_SPACE_AND_RESERVE_NOT_PROVEN',assess(d)['reasons'])
+    def test_09c_no_verified_estimate_is_hold(self):
+        d=good();d['disk_write_estimate_verified']=False
+        self.assertIn('CHECKPOINT_SPACE_AND_RESERVE_NOT_PROVEN',assess(d)['reasons'])
     def test_10_no_gguf_training(self):
         d=good();d['student_format']='GGUF';self.assertIn('TRAINABLE_STUDENT_REQUIRED_GGUF_NOT_TRAINABLE',assess(d)['reasons'])
     def test_11_student_gpu_protected(self):
