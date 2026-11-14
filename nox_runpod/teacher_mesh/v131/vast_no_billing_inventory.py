@@ -54,5 +54,10 @@ def main():
     print('NOX_V131_VAST_READ_ONLY='+json.dumps({'instance':INSTANCE,'checks':outcomes,
         'ssh_key_created':False,'server_modified':False,'no_new_billing':True},separators=(',',':')))
     print('NOX_V131_READONLY_COMPLETE=true')
-    return 0 if any(x['http']==200 for x in outcomes) else 2
+    # Access to any account-level API is insufficient: the exact existing
+    # instance must belong to this account and be RUNNING before native writes.
+    confirmed=any(x['http']==200 and x['target_present'] is True and
+                  x['target_status']=='running' for x in outcomes)
+    print('NOX_V131_EXACT_EXISTING_RUNNING_INSTANCE='+str(confirmed).lower())
+    return 0 if confirmed else 2
 if __name__=='__main__':raise SystemExit(main())
