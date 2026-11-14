@@ -20,7 +20,7 @@ def prepare():
         raise RuntimeError('HOLD_V128_ALREADY_REPINNED')
     updated=remote.replace(BRIDGE_BEFORE,BRIDGE_CURRENT,1).replace(PROXY_BEFORE,PROXY_CURRENT,1)
     assert updated.count(BRIDGE_CURRENT)==1 and updated.count(PROXY_CURRENT)==1
-    script=updated.split("<<'PYREMOTE'\\n",1)[1].rsplit('\\nPYREMOTE',1)[0]
+    script=updated.partition("<<'PYREMOTE'")[2].rpartition('PYREMOTE')[0]
     compile(script,'<V128 REUSED V114 AUTH E2E>','exec')
     return updated
 
