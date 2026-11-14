@@ -2,7 +2,7 @@
 from __future__ import annotations
 import json,time, unittest
 from ..synaptic_brain import SynapticBrain, NativePorts, Session, PulseConfig
-from ..native_bridge_v38 import AttachedNOX, HostBindings
+from ..native_bridge_v38 import AttachedNOX, HostBindings, automatic_quality_mode
 from ..durable_runtime import WarmS03Cache
 
 S=Session(tenant='nox',principal='owner',chat_id='resonance')
@@ -149,6 +149,29 @@ class RequiredMemory(unittest.TestCase):
         list(brain.stream(S,'Глубокий анализ',lambda p,m:calls.append(m) or iter(['Ответ']),deep=True))
         self.assertEqual(len(calls),1)
         self.assertEqual(calls[0]['response_contract']['quality_mode'],'deep')
+
+    def test_auto_deep_is_deterministic_and_fast_remains_fast(self):
+        self.assertFalse(automatic_quality_mode('Привет!'))
+        self.assertFalse(automatic_quality_mode('Как дела?'))
+        self.assertTrue(automatic_quality_mode('Сравни модели, проанализируй ошибки и предложи исправления'))
+        self.assertTrue(automatic_quality_mode('Please compare the architectures and analyze likely failures'))
+
+    def test_auto_deep_reaches_single_main_model(self):
+        called=[]
+        def main(prompt,meta):
+            called.append(meta)
+            return iter(['Ответ'])
+        agent=AttachedNOX(HostBindings(
+            authorize=lambda s:True,stop=lambda:False,
+            s03_recall=lambda s,p,l:[record()],
+            s03_revision=lambda s:'one',
+            s03_append=lambda s,p:{'verified':True,'durable':True,'event_id':'event'},
+            model_stream=main),PulseConfig(max_workers=8))
+        self.addCleanup(agent.close)
+        res=list(agent.stream(S,'Сравни и проанализируй причины ошибки','nox-deep-001'))
+        self.assertEqual(res[-1]['type'],'done')
+        self.assertEqual(len(called),1)
+        self.assertEqual(called[0]['response_contract']['quality_mode'],'deep')
 
     def test_first_visible_delta_early_and_durable(self):
         receipts=[]
