@@ -16,6 +16,7 @@ import shlex
 import subprocess
 import sys
 import tempfile
+import time
 import urllib.error
 import urllib.request
 
@@ -177,6 +178,30 @@ class Vast:
             raise RuntimeError("HOLD_DETACH_NOT_ACCEPTED")
 
 
+def classify_ssh_error(stderr: str) -> str:
+    """Never print raw SSH stderr (hostnames, routes and fingerprints are private)."""
+    lower=stderr.lower()
+    patterns=(
+        ("remote host identification has changed","HOST_KEY_CHANGED"),
+        ("host key verification failed","HOST_KEY_REJECTED"),
+        ("permission denied","AUTH_DENIED"),
+        ("too many authentication failures","AUTH_KEYS_EXHAUSTED"),
+        ("could not resolve hostname","DNS_FAILURE"),
+        ("connection refused","CONNECT_REFUSED"),
+        ("connection timed out","CONNECT_TIMEOUT"),
+        ("no route to host","NO_ROUTE"),
+        ("connection reset","CONNECT_RESET"),
+        ("connection closed","CONNECT_CLOSED"),
+        ("kex_exchange_identification","KEY_EXCHANGE"),
+        ("bad permissions","KEY_PERMISSIONS"),
+        ("invalid format","KEY_FORMAT"),
+        ("open failed","PROXY_CHANNEL_FAILURE"),
+    )
+    for term,label in patterns:
+        if term in lower:return label
+    return "UNKNOWN_SSH_ERROR"
+
+
 def ssh_audit(host:str,port:int,private_key:Path,known_hosts:Path)->dict:
     nonce=secrets.token_hex(16)
     remote_command="python3 -c "+shlex.quote(REMOTE)+" "+shlex.quote(nonce)
@@ -187,11 +212,21 @@ def ssh_audit(host:str,port:int,private_key:Path,known_hosts:Path)->dict:
              "-o",f"UserKnownHostsFile={known_hosts}",
              "-o","ConnectTimeout=12","-i",str(private_key),
              "-p",str(port),"root@"+host,remote_command]
-    try:
-        out=subprocess.run(command,capture_output=True,text=True,timeout=45,check=False)
-    except subprocess.TimeoutExpired:
-        return {"native_verified":False,"exit_code":124,"reason":"HOLD_SSH_TIMEOUT"}
+    for attempt in range(3):
+        try:
+            out=subprocess.run(command,capture_output=True,text=True,timeout=45,check=False)
+        except subprocess.TimeoutExpired:
+            return {"native_verified":False,"exit_code":124,"reason":"HOLD_SSH_TIMEOUT"}
+        failure_class=classify_ssh_error(out.stderr)
+        if out.returncode==255 and failure_class=="AUTH_DENIED" and attempt<2:
+            # Vast's Docker agent may not apply newly attached keys instantly.
+            # Bounded retry; never start a second process or touch trained weights.
+            time.sleep(5+attempt*5)
+            continue
+        break
     result={"native_verified":False,"exit_code":out.returncode,
+            "ssh_attempts":attempt+1,
+            "ssh_error_class":failure_class if out.returncode else None,
             "stdout_sha256":hashlib.sha256(out.stdout.encode()).hexdigest(),
             "stderr_sha256":hashlib.sha256(out.stderr.encode()).hexdigest(),
             "stderr_present":bool(out.stderr)}
