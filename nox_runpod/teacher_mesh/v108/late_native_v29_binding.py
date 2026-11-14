@@ -1,5 +1,6 @@
 """V108: bind existing V29 stream routes after all OneHost functions are defined.
 No new LLM, DB or scheduler. SHA-pinned, idle-gated, undoable.
+Release remains HOLD until authenticated V29 dialog scope, S03 and STOP E2E.
 """
 from __future__ import annotations
 import contextlib,io,time
