@@ -39,7 +39,11 @@
     "physically_written": false,
     "user_pc_file_system_access_available": false,
     "existing_receiver_kit": "https://drive.google.com/file/d/1fmFZenC1tPDDJJGJFQTEBvWDnftNL5Ml/view",
-    "receiver_kit_precedes_new_v69_archive": true
+    "receiver_kit_precedes_new_v69_archive": true,
+    "updated_six_archive_receiver_kit": "https://drive.google.com/file/d/1oVxptFWybZWgmByDmhtpJ1LKClZplQgB/view",
+    "updated_receiver_kit_bytes": 6601,
+    "updated_receiver_kit_windows_parser_source_ci": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43623711555",
+    "updated_receiver_includes_cold_v69_ciphertext": true
   },
   "cleanup": {
     "bytes_freed_by_this_offload": 0,
