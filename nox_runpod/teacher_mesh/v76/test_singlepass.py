@@ -31,10 +31,10 @@ class SevenStages(unittest.TestCase):
         self.assertIn("sha_blob(body)!=expected",self.code)
         self.assertIn('production_activated=False',self.code)
     def test_single_model_onehost_preserved(self):
-        self.assertIn('"production_main_model_changed":False',self.code)
-        self.assertIn('"production_proxy_changed":False',self.code)
-        self.assertIn('"native_onehost_replaced":False',self.code)
-        self.assertIn('"optimizer_steps":0',self.code)
+        self.assertIn("'production_main_model_changed':False",self.code)
+        self.assertIn("'production_proxy_changed':False",self.code)
+        self.assertIn("'native_onehost_replaced':False",self.code)
+        self.assertIn("'optimizer_steps':0",self.code)
     def test_seven_gates_disclosed(self):
         for k in ('chat_and_one_model','s03_ram','onehost_native','cold_restore',
                   'forge_weight_change','r60_jobs','quality_and_rollback'):
@@ -42,11 +42,11 @@ class SevenStages(unittest.TestCase):
     def test_no_fake_training_and_queue_ids(self):
         self.assertIn("HOLD_NATIVE_TRAINABLE_STUDENT_OWNER_LEASE_AND_RESTORE",self.code)
         self.assertIn("HOLD_NATIVE_QUEUE_OWNER_READBACK_AND_SIGNED_JOB_RECEIPTS",self.code)
-        self.assertIn('"native_task_ids":[]',self.code)
+        self.assertIn("'native_task_ids':[]",self.code)
     def test_single_native_runner_one_invocation(self):
         # Transport is existing V72, which enforces a single remote payload
         # after authorization, with key cleanup in its finally block.
-        self.assertIn("runner.REMOTE=REMOTE",job.main.__code__.co_names and
-                      "runner.REMOTE=REMOTE" if 'runner' in job.main.__code__.co_names else '')
+        import inspect
+        self.assertIn("runner.REMOTE=REMOTE",inspect.getsource(job.main))
 if __name__=='__main__':
     unittest.main()
