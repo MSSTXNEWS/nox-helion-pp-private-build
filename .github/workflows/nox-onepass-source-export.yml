@@ -1,0 +1,29 @@
+name: NOX ONEPASS exact source export for reproducible frozen WEB overlay
+on:
+  push:
+    branches: [control/nox-web-onepass-acceptance-20261115]
+    paths:
+      - '.github/workflows/nox-onepass-source-export.yml'
+permissions:
+  contents: read
+jobs:
+  export-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - name: Preserve exact repository source and SHA manifest (no live installation)
+        run: |
+          set -euo pipefail
+          mkdir -p onepass-export/coordination/onepass
+          cp coordination/onepass/nox_choice_buttons_v293.js coordination/onepass/build_choice_overlay.py coordination/onepass/frozen_web_contract.py coordination/onepass/test_frozen_web_contract.py onepass-export/coordination/onepass/
+          (cd onepass-export && find . -type f -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS.txt)
+          (cd onepass-export && zip -q -r ../NOX_ONEPASS_REPO_SOURCES.zip .)
+          sha256sum NOX_ONEPASS_REPO_SOURCES.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NOX_ONEPASS_REPO_SOURCES
+          path: NOX_ONEPASS_REPO_SOURCES.zip
+          if-no-files-found: error
+          retention-days: 7
