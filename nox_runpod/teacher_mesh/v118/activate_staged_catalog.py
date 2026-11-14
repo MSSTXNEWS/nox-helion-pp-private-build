@@ -1,4 +1,4 @@
-"""V118: single native stage-only WEB V29 catalog navigation repair.
+"""V118: single SHA-locked WEB V29 nested bootstrap + catalog navigation repair.
 
 Exact SHA, STOP, idle, native auth, retained backup and immediate rollback.
 No original WEB ZIP, model, S03, primary UI page, new backend or GPU changes.
@@ -22,13 +22,15 @@ set -euo pipefail
 import ast,hashlib,http.cookiejar,json,os,stat,subprocess,time,urllib.error,urllib.request
 from pathlib import Path
 print('NOX_NATIVE_V51_SSH_EXECUTED=true')
-print('NATIVE_V118_SCHEMA=EXACT_SHA_AUTH_CATALOG_ROUTE_FIX_V1')
+print('NATIVE_V118_SCHEMA=EXACT_SHA_AUTH_CATALOG_AND_NESTED_BOOTSTRAP_V124')
 M=Path('/root/nox/scripts/nox_v29_chat_bridge.py')
 P=Path('/root/nox/scripts/chat_proxy.py')
 WEB=Path('/root/nox/incoming_t800u/v29_3/NOX_HELION_WEB_V29_3_FROZEN_20261113/site/nox-function-catalog.js')
 OLD='066ed91555a9a6251420b5897a040eda13a03b3d6c2d85b936e384c5f4113cd4'
-PROXY='568b5950cfbd263a96a106525f81de8fdc024526fe86fab7765a3c25baa180f8'
+PROXY='4d90215d7099344dd5aaed2412645b764baa0228acc0b0e153cfe425217591ad'
 CATALOG='c509870d8fc664bb7c60cd53d3daf21280aa410832d978d3fedbd0543730f661'
+HEAD_OLD='<head><script src="./native-owner.js"></script>'
+HEAD_NEW='<head><script src="/nox-web-v29/native-owner.js"></script>'
 BACKUP=M.with_name('nox_v29_chat_bridge.py.v118-'+OLD[:12]+'.bak')
 STOPS=('/root/nox/STOP','/root/nox/STOP.flag','/root/nox/stop.flag','/root/nox/.stop',
        '/workspace/NOX_STOP','/root/nox/program/STOP')
@@ -141,8 +143,15 @@ def accepted_owner_catalog():
         with op.open(req('/nox-web-v29/nox-function-catalog.js'),timeout=6) as resp:
             js=resp.read(40000)
             if resp.status!=200 or resp.headers.get('Cache-Control')!='no-store':return False
-        return (b"/nox-web-v29/" in js and b"location.pathname.startsWith" in js
-                and sha(WEB.read_bytes())==CATALOG)
+        if not (b"/nox-web-v29/" in js and b"location.pathname.startsWith" in js
+                and sha(WEB.read_bytes())==CATALOG):return False
+        for path in ('/nox-web-v29/chat.html','/nox-web-v29/pc/pages/cinema/index.html'):
+            with op.open(req(path),timeout=8) as resp:
+                if resp.status!=200 or HEAD_NEW.encode() not in resp.read(500000):return False
+            if http_code('http://127.0.0.1:8080'+path)!=401:return False
+        with op.open(req('/nox-web-v29/native-owner.js'),timeout=6) as resp:
+            if resp.status!=200 or b'NOX_NATIVE_OWNER = true;' not in resp.read(2500):return False
+        return True
     except Exception:return False
     finally:
         try:
@@ -161,8 +170,10 @@ try:
         raise RuntimeError('HOLD_FROZEN_CATALOG_DRIFT')
     if before.count(OLD_ROUTE.encode())!=1 or b'_catalog_owner_overlay' in before or before.count(b'class _OwnerStatic')!=1:
         raise RuntimeError('HOLD_BRIDGE_STRUCTURE_CHANGED')
+    if before.count(HEAD_OLD.encode())!=1 or HEAD_NEW.encode() in before:
+        raise RuntimeError('HOLD_NATIVE_OWNER_HEAD_ANCHOR')
     changed=before.decode('utf8').replace('class _OwnerStatic',HELPER+'class _OwnerStatic',1)
-    changed=changed.replace(OLD_ROUTE,NEW_ROUTE,1).encode('utf8')
+    changed=changed.replace(OLD_ROUTE,NEW_ROUTE,1).replace(HEAD_OLD,HEAD_NEW,1).encode('utf8')
     ast.parse(changed.decode('utf8'));compile(changed,str(M),'exec')
     if len(changed)>120000:raise RuntimeError('HOLD_PATCH_TOO_LARGE')
     if not (health(8080) and health(8081) and running()):
@@ -187,7 +198,7 @@ try:
         accepted_owner_catalog()):
         emit('V118_NATIVE_CATALOG_LINKS_ACTIVE',new_bridge_sha256=sha(changed),
              original_bridge_backup_verified=True,authorized_js_served=True,
-             anonymous_js_http=401)
+             nested_pages_verified=2,anonymous_js_http=401)
     else:
         rolled=restore(before,meta)
         emit('HOLD_ROLLED_BACK' if rolled else 'HOLD_ROLLBACK_UNVERIFIED',

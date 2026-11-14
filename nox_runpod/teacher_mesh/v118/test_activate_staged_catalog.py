@@ -16,7 +16,7 @@ class InstallSafety(unittest.TestCase):
     def test_exact_preimages_and_no_loss(self):
         for text in (
             "OLD='066ed91555a9a6251420b5897a040eda13a03b3d6c2d85b936e384c5f4113cd4'",
-            "PROXY='568b5950cfbd263a96a106525f81de8fdc024526fe86fab7765a3c25baa180f8'",
+            "PROXY='4d90215d7099344dd5aaed2412645b764baa0228acc0b0e153cfe425217591ad'",
             "CATALOG='c509870d8fc664bb7c60cd53d3daf21280aa410832d978d3fedbd0543730f661'",
             "HOLD_CONCURRENT_PROXY_OR_BRIDGE_SHA_DRIFT",
             "HOLD_CONCURRENT_CHANGE_PRE_RESTART",
@@ -43,6 +43,19 @@ class InstallSafety(unittest.TestCase):
         self.assertIn("_catalog_owner_overlay",self.source)
         self.assertIn("frozen_web_unchanged",self.source)
         self.assertIn("s03_unchanged",self.source)
+
+
+    def test_v124_frozen_nested_bootstrap_is_corrected_together_with_catalog(self):
+        for text in (
+            'EXACT_SHA_AUTH_CATALOG_AND_NESTED_BOOTSTRAP_V124',
+            'HEAD_OLD=', 'HEAD_NEW=', 'HOLD_NATIVE_OWNER_HEAD_ANCHOR',
+            'replace(OLD_ROUTE,NEW_ROUTE,1).replace(HEAD_OLD,HEAD_NEW,1)',
+            'nested_pages_verified=2', '/nox-web-v29/pc/pages/cinema/index.html',
+            '/nox-web-v29/native-owner.js', "if http_code('http://127.0.0.1:8080'+path)!=401"
+        ):
+            self.assertIn(text, self.source)
+        self.assertIn("sha(P.read_bytes())!=PROXY", self.source)
+        self.assertIn('original_bridge_backup_verified=True', self.source)
 
 
 if __name__=='__main__':
