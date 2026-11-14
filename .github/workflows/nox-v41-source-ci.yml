@@ -24,7 +24,7 @@ jobs:
         run: |
           cd nox_runpod/teacher_mesh/v41
           python3 -m compileall -q training tests
-          PYTHONPATH=. python3 -m unittest discover -s tests -p 'test_*.py' -v
+          PYTHONPATH="$GITHUB_WORKSPACE:$PWD" python3 -m unittest discover -s tests -p 'test_*.py' -v
       - name: Original V37 and V38 tests (59)
         run: |
           python3 -m unittest nox_runpod.teacher_mesh.v37.tests.test_v37 nox_runpod.teacher_mesh.v38.tests.test_v38_control nox_runpod.teacher_mesh.v38.tests.test_v38_memory_speed -v
