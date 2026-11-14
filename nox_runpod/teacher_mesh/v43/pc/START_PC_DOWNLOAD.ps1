@@ -1,22 +1,47 @@
-# NOX V43 — local Windows cold-vault downloader; no services started.
-param([switch]$DownloadAll, [string]$Vault='C:\NOX_HELION\MODEL_VAULT')
-$ErrorActionPreference='Stop'
-$root=Split-Path -Parent $PSScriptRoot
-Write-Host 'NOX V43 — verified PC model cold vault (NOX not restarted)'
+# NOX V43 — one existing Windows PC Cold Vault entrypoint. No backend or services.
+param(
+    [switch]$DownloadAll,
+    [switch]$ShowLinks,
+    [switch]$VerifyLinks,
+    [switch]$DownloadDirect,
+    [string[]]$Ids = @(),
+    [string]$Vault = 'C:\NOX_HELION\MODEL_VAULT'
+)
+$ErrorActionPreference = 'Stop'
+$root = Split-Path -Parent $PSScriptRoot
+$linkScript = Join-Path $PSScriptRoot 'direct_links.py'
+Write-Host 'NOX V43 — PC Cold Vault only (NOX chat, Vast and GPU untouched)'
 if (-not (Get-Command py -ErrorAction SilentlyContinue)) {
-    throw 'Python 3 / py launcher is required. Install Python, rerun this script.'
+    throw 'Python 3 launcher (py) is required.'
 }
-$venv=Join-Path $root '.venv'
-if (-not (Test-Path (Join-Path $venv 'Scripts\python.exe'))) {
+# Link display and SHA metadata verification do not create a venv or install anything.
+if ($ShowLinks -or $VerifyLinks) {
+    if ($ShowLinks -and $VerifyLinks) { throw 'Choose either -ShowLinks or -VerifyLinks.' }
+    $cmd = @('-3', $linkScript)
+    if ($VerifyLinks) { $cmd += '--verify-upstream' }
+    if ($Ids.Count -gt 0) { $cmd += '--ids'; $cmd += $Ids }
+    & py @cmd
+    if ($LASTEXITCODE -ne 0) { throw 'At least one model URL or SHA is HOLD.' }
+    return
+}
+if ($DownloadAll -and $DownloadDirect) { throw 'Choose V43 -DownloadAll or direct -DownloadDirect.' }
+if ($DownloadDirect -and $Ids.Count -eq 0) { throw 'Direct download needs explicit -Ids.' }
+$venv = Join-Path $root '.venv'
+$python = Join-Path $venv 'Scripts\python.exe'
+if ((-not (Test-Path $python)) -and ($DownloadAll -or $DownloadDirect)) {
     py -3 -m venv $venv
+    if ($LASTEXITCODE -ne 0) { throw 'Python venv creation failed.' }
 }
-$python=Join-Path $venv 'Scripts\python.exe'
-& $python -m pip install --disable-pip-version-check 'huggingface_hub>=1.2,<2'
-if ($LASTEXITCODE -ne 0) { throw 'Dependency install failed' }
-if ($DownloadAll) {
-    Write-Host 'Downloading ALL FIVE confirmed files/official snapshots sequentially to local disk.'
-    & $python (Join-Path $root 'pc\download_models.py') --root $Vault --all --download
+if ($DownloadAll -or $DownloadDirect) {
+    & $python -m pip install --disable-pip-version-check 'huggingface_hub>=1.2,<2'
+    if ($LASTEXITCODE -ne 0) { throw 'Dependency install failed.' }
+}
+if ($DownloadDirect) {
+    & $python $linkScript --root $Vault --ids @Ids --download
+} elseif ($DownloadAll) {
+    Write-Host 'Opt-in: download existing V43 five models sequentially to Windows Cold Vault.'
+    & $python (Join-Path $PSScriptRoot 'download_models.py') --root $Vault --all --download
 } else {
-    & $python (Join-Path $root 'pc\download_models.py') --root $Vault
+    & py -3 (Join-Path $PSScriptRoot 'download_models.py') --root $Vault
 }
-if ($LASTEXITCODE -ne 0) { throw 'At least one item is HOLD; see output, previous files kept.' }
+if ($LASTEXITCODE -ne 0) { throw 'HOLD: see result; NOX and previous files preserved.' }
