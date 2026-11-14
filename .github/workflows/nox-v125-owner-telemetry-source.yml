@@ -24,6 +24,8 @@ jobs:
           set -euo pipefail
           python -m py_compile nox_runpod/teacher_mesh/v125/live_owner_readonly.py
           python -m unittest -v nox_runpod.teacher_mesh.v125.test_live_owner_readonly
+          python -m py_compile nox_runpod/teacher_mesh/v125/install_owner_readonly.py
+          python -m unittest -v nox_runpod.teacher_mesh.v125.test_install_owner_readonly
       - name: No native deployment performed
         run: |
           echo 'NOX_V125_SOURCE_ONLY_PASS=true'
