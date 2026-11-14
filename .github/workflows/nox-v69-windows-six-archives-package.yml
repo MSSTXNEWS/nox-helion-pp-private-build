@@ -1,0 +1,53 @@
+name: NOX V69 Windows six encrypted offsite archives receiver package
+on:
+  push:
+    branches: [feature/nox-v38-synaptic-brain-20261114]
+    paths: [.github/workflows/nox-v69-windows-six-archives-package.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test-and-package:
+    runs-on: windows-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Parse real PowerShell source and check strict no-loss contract
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $path='nox_runpod/teacher_mesh/v66/windows_offsite_receiver.ps1'
+          $tokens=$null
+          $errors=$null
+          [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path $path),[ref]$tokens,[ref]$errors)|Out-Null
+          if($errors.Count -ne 0){$errors | ForEach-Object { Write-Error $_.Message }; throw 'HOLD_V69_POWERSHELL_SYNTAX'}
+          $s=Get-Content $path -Raw
+          if(($s -split 'NOX_V69_OWNER_ENCRYPTED_COLD_INCOMING_20261114.zip').Count -ne 2){
+            throw 'HOLD_V69_COLD_COPY_MISSING_OR_DUPLICATED'
+          }
+          if($s -notmatch '3cc65b5ddc113316351314328177b7d46644ec09adfabd11616b81ba82ed536d'){
+            throw 'HOLD_V69_ZIP_SHA_GUARD'
+          }
+          if($s -notmatch 'NOX_PC_OFFSITE_ENCRYPTED_COPIES_V69'){throw 'HOLD_V69_ACCEPTANCE_SCHEMA'}
+          if($s -match 'Remove-Item|Clear-RecycleBin|Invoke-Expression|Stop-Process|Restart-Service'){
+            throw 'HOLD_V69_UNSAFE_PC_MUTATION'
+          }
+          Write-Host 'NOX_V69_WINDOWS_RECEIVER_SYNTAX_AND_SHA_GATES=PASS'
+          Write-Host 'OWNER_PC_NOT_ACCESSED_BY_CI=true'
+      - name: Stage receiver for six encrypted archives
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path distribution -Force|Out-Null
+          Copy-Item nox_runpod/teacher_mesh/v66/windows_offsite_receiver.ps1 distribution/
+          Copy-Item nox_runpod/teacher_mesh/v69/NOX_V69_PC_OFFSITE_README_RU.md distribution/
+          Copy-Item nox_runpod/teacher_mesh/v69/NOX_V69_COPY_OFFSITE_TO_PC.cmd distribution/
+          Copy-Item coordination/NOX_V69_RAM_DRIVE_ARCHIVE_RECEIPT_20261114.json distribution/
+      - name: Upload Windows receiver without secrets
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_V69_WINDOWS_SIX_OFFSITE_RECEIVER_20261114
+          path: distribution/*
+          retention-days: 30
+          if-no-files-found: error
