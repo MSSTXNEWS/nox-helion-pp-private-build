@@ -31,14 +31,31 @@ def models(port):
 try:
  if stopped():raise RuntimeError('HOLD_STOP')
  if not idle():raise RuntimeError('HOLD_USER_MODEL_BUSY')
- endpoints={p:models(p) for p in (8081,8082,8092)}
+ endpoints={p:models(p) for p in (8081,8084,8086,8087,8088)}
  safe={str(p):[Path(x).name[:65] for x in ids] for p,ids in endpoints.items()}
  print('NATIVE_V107_MODEL_IDS='+json.dumps(safe,sort_keys=True,separators=(',',':')))
  primary={Path(x).name for x in endpoints[8081]}
- teacher_port=next((p for p in (8082,8092) if endpoints[p] and
-                   any(Path(x).name not in primary for x in endpoints[p])),None)
- if teacher_port is None:raise RuntimeError('HOLD_NO_DISTINCT_LOCAL_TEACHER')
- model_id=endpoints[teacher_port][0]
+ def suitable(mid):
+  name=Path(mid).name.casefold()
+  return (('vikhr-nemo-12b' in name or 'saiga_nemo_12b' in name)
+          and not any(k in name for k in ('embed','bge','rerank','guard','moderation'))
+          and Path(mid).name not in primary)
+ selected=next(((p,mid) for p in (8084,8086,8087,8088)
+      for mid in endpoints[p] if suitable(mid)),None)
+ if selected is None:raise RuntimeError('HOLD_NO_VERIFIED_GENERATIVE_TEACHER')
+ teacher_port,model_id=selected
+ # Do not compete with ongoing GPU1 compute; no new model residency requested.
+ try:
+  gp=subprocess.run(['nvidia-smi','--query-gpu=index,utilization.gpu,memory.free',
+     '--format=csv,noheader,nounits'],capture_output=True,text=True,timeout=8)
+  gpus={int(row.split(',')[0].strip()):(int(row.split(',')[1].strip()),
+         int(row.split(',')[2].strip())) for row in gp.stdout.splitlines()
+         if row.count(',')==2}
+  if gp.returncode!=0 or 1 not in gpus or gpus[1][0]>85 or gpus[1][1]<2000:
+   raise RuntimeError('HOLD_GPU1_BUSY_OR_VRAM_LOW')
+ except (OSError,ValueError,subprocess.TimeoutExpired):
+  raise RuntimeError('HOLD_GPU1_TELEMETRY')
+ if not idle():raise RuntimeError('HOLD_CHAT_PREEMPTS_TEACHER')
  # Existing inference endpoint only; no network egress and no private memory.
  question='Чему равно произведение 17 на 19? Ответь только числом.'
  payload={'model':model_id,'messages':[{'role':'user','content':question}],
@@ -46,7 +63,7 @@ try:
  data=json.dumps(payload,ensure_ascii=False).encode('utf8')
  req=urllib.request.Request('http://127.0.0.1:'+str(teacher_port)+'/v1/chat/completions',
        data=data,headers={'Content-Type':'application/json'},method='POST')
- with urllib.request.urlopen(req,timeout=45) as r:
+ with urllib.request.urlopen(req,timeout=30) as r:
   if r.status!=200:raise RuntimeError('HOLD_TEACHER_HTTP')
   raw=r.read(90000)
  response=json.loads(raw)
@@ -68,7 +85,9 @@ try:
   'port':teacher_port,'teacher_model_basename':Path(model_id).name[:65],
   'independent_public_fact_validated':good,'s03_exact_marker_readback':found,
   'private_records_exported':False,'external_prompt_sent':False,
-  'training_optimizer_steps':0,'neural_weights_changed':False})
+  'training_optimizer_steps':0,'neural_weights_changed':False,
+  'generation_model_capability':'verified_generation_not_embedding_or_guard',
+  'gpu1_p0_chat_preempted':False})
  if found:print('NATIVE_V107_TEACHER_LESSON_PASS=true')
 except Exception as e:
  v=str(e)
