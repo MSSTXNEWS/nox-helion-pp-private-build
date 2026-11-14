@@ -35,6 +35,8 @@ PROXY_SHA='4d90215d7099344dd5aaed2412645b764baa0228acc0b0e153cfe425217591ad'
 BRIDGE_SHA='d0590c2a582bd4ad0df5ff26a036284cf1426e31ca41b283cf1695c7726f7cd5'
 CODE=base64.b64decode('___SOURCE64___',validate=True)
 EXPECTED='___SOURCE_SHA___'
+PREVIOUS='38997324053456fdfa5339f1eaed66485657fe2c795711accaa24b706dfbc490'
+BACKUP=DEST.with_name(DEST.name+'.original-'+PREVIOUS[:12]+'.bak')
 def sha(blob):return hashlib.sha256(blob).hexdigest()
 def emit(state,**kw):
     receipt={'state':state,'service_restarted':False,'fact_api_activated':False,
@@ -59,9 +61,36 @@ try:
         with urllib.request.urlopen('http://127.0.0.1:'+str(port)+'/health',timeout=3) as r:
             if r.status!=200:raise RuntimeError('HOLD_NATIVE_HEALTH')
     if DEST.exists() or DEST.is_symlink():
-        if DEST.is_symlink() or sha(DEST.read_bytes())!=EXPECTED:
+        if DEST.is_symlink():raise RuntimeError('HOLD_EXISTING_FACT_MODULE_SYMLINK')
+        previous=DEST.read_bytes()
+        if sha(previous)==EXPECTED:
+            emit('EXISTING_SOURCE_SHA_VERIFIED',module_sha256=EXPECTED)
+        elif sha(previous)==PREVIOUS:
+            # Old module is staged, NOT imported by active proxy. Preserve every byte.
+            if BACKUP.exists() or BACKUP.is_symlink():
+                if BACKUP.is_symlink() or sha(BACKUP.read_bytes())!=PREVIOUS:
+                    raise RuntimeError('HOLD_FACT_BACKUP_COLLISION')
+            else:
+                with BACKUP.open('xb') as f:
+                    f.write(previous);f.flush();os.fsync(f.fileno())
+                os.chmod(BACKUP,0o600)
+            temp=DEST.with_name('.nox-v125-safe-stage-v2.tmp')
+            if temp.exists() or temp.is_symlink():
+                raise RuntimeError('HOLD_FACT_STAGE_TEMP_CONFLICT')
+            with temp.open('xb') as f:
+                f.write(CODE);f.flush();os.fsync(f.fileno())
+            os.chmod(temp,0o600)
+            if sha(temp.read_bytes())!=EXPECTED:
+                raise RuntimeError('HOLD_FACT_NEW_DIGEST')
+            if stopped() or sha(DEST.read_bytes())!=PREVIOUS:
+                raise RuntimeError('HOLD_FACT_STAGE_CHANGED_CONCURRENTLY')
+            os.replace(temp,DEST)
+            if sha(DEST.read_bytes())!=EXPECTED:
+                raise RuntimeError('HOLD_STAGE_READBACK_SHA')
+            emit('UPDATED_SOURCE_STAGED_BACKUP_VERIFIED',module_sha256=EXPECTED,
+                 old_module_backup_sha256=PREVIOUS,staged_bytes=len(CODE))
+        else:
             raise RuntimeError('HOLD_EXISTING_FACT_MODULE_CONFLICT')
-        emit('EXISTING_SOURCE_SHA_VERIFIED',module_sha256=EXPECTED)
     else:
         with DEST.open('xb') as f:
             f.write(CODE);f.flush();os.fsync(f.fileno())
@@ -108,7 +137,8 @@ def main():
     okay=(connected and detached and len(status)==1 and
           any(name in status[0] for name in (
               '"state":"NEW_SOURCE_STAGED_SHA_VERIFIED"',
-              '"state":"EXISTING_SOURCE_SHA_VERIFIED"')))
+              '"state":"EXISTING_SOURCE_SHA_VERIFIED"',
+              '"state":"UPDATED_SOURCE_STAGED_BACKUP_VERIFIED"')))
     print('NOX_V125_EXISTING_HOST_SOURCE_STAGING='+('PASS' if okay else 'HOLD'))
     return 0 if okay else 2
 
