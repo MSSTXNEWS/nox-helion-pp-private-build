@@ -127,6 +127,29 @@ class RequiredMemory(unittest.TestCase):
         self.assertEqual(result['state'],'READY_FOR_ONE_NOX_MODEL')
         self.assertEqual(result['cores']['C02']['hit_count'],1)
 
+    def test_response_contract_is_single_model_and_proactive_with_evidence(self):
+        calls=[]
+        def generator(prompt,meta):
+            calls.append(meta)
+            return iter(['Проверенный ответ NOX.'])
+        brain=self._p(lambda s,p,l:[record()])
+        events=list(brain.stream(S,'Объясни и предложи исправление',generator))
+        self.assertEqual(len(calls),1)
+        self.assertEqual(events[-1]['type'],'done')
+        policy=calls[0]['response_contract']
+        self.assertEqual(policy['quality_mode'],'fast')
+        self.assertIn('native receipt',policy['initiative_policy'])
+        self.assertIn('M0-M7',policy['memory_policy'])
+        self.assertIn('S03',calls[0]['cognitive_context'])
+        self.assertNotIn('teacher_response',calls[0])
+
+    def test_deep_contract_reuses_same_installed_model(self):
+        calls=[]
+        brain=self._p(lambda s,p,l:[record()])
+        list(brain.stream(S,'Глубокий анализ',lambda p,m:calls.append(m) or iter(['Ответ']),deep=True))
+        self.assertEqual(len(calls),1)
+        self.assertEqual(calls[0]['response_contract']['quality_mode'],'deep')
+
     def test_first_visible_delta_early_and_durable(self):
         receipts=[]
         def persist(s,p):
