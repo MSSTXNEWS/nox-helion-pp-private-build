@@ -52,7 +52,7 @@ for service in ('nox-proxy','nox-teacher-serve-t811u','nox-agent-tuner-t858u'):
       'model_basenames':model[:3],'port_numbers':ports[:3]})
    except Exception:pass
  except Exception as e:emit('SERVICE',{'name':service,'state':'UNKNOWN','error_type':type(e).__name__})
-for port in (8080,8081,8082,8090,8091,8092,8110,8111,8112,8120):
+for port in (8080,8081,8082,8084,8090,8091,8092,8096,8110,8111,8112,8120):
  result={}
  for route in ('/health','/v1/models'):
   try:
@@ -65,6 +65,7 @@ for port in (8080,8081,8082,8090,8091,8092,8110,8111,8112,8120):
      if isinstance(data,dict):
       entries=data.get('data') or []
       result[route]['model_count']=len(entries) if isinstance(entries,list) else None
+      result[route]['model_basenames']=[Path(str(x.get('id') or '')).name[:70] for x in entries[:7] if isinstance(x,dict)] if isinstance(entries,list) else []
   except Exception:pass
  if result:emit('PORT',{'port':port,'routes':result})
 emit('READINESS',{'stop_active':stop,'internet_teacher_bridge_live_bound':False,
