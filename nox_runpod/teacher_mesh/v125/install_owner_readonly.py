@@ -15,7 +15,7 @@ REMOTE_TEMPLATE=r"""
 set -euo pipefail
 cd /root/nox/scripts
 /root/nox/venv/bin/python - <<'PYREMOTE'
-import ast,base64,hashlib,http.cookiejar,json,os,sqlite3,stat,subprocess,time,urllib.error,urllib.request
+import ast,base64,hashlib,http.cookiejar as cookiejar,json,os,sqlite3,stat,subprocess,time,urllib.error,urllib.request
 from pathlib import Path
 print('NOX_NATIVE_V51_SSH_EXECUTED=true')
 print('NATIVE_V125_SCHEMA=REAL_OWNER_SERVER_TELEMETRY_V1')
@@ -75,7 +75,7 @@ def owner_test():
  from chat_proxy import _read_chat_password
  password=_read_chat_password()
  if not isinstance(password,str) or len(password)<6:raise RuntimeError('HOLD_LOCAL_OWNER_CREDENTIAL')
- jar=http.cookiejar.CookieJar()
+ jar=cookiejar.CookieJar()
  op=urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar))
  req=urllib.request.Request('http://127.0.0.1:8080/chat/login',
        data=json.dumps({'password':password}).encode('utf8'),
