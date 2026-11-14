@@ -37,3 +37,5 @@ jobs:
           echo "NOX_MODELS_DOWNLOADED=false"
           echo "NOX_TRAINING_RESTARTED=false"
           echo "NOX_SERVICES_NOT_RESTARTED_BY_THIS_WORKFLOW=true"
+          echo "NOX_PROGRAM_SOURCE=GENESIS_V1_1_20261108"
+          echo "NOX_DOWNLOAD_DECISION_REQUIRES_FREE_SPACE_AND_SHA=true"
