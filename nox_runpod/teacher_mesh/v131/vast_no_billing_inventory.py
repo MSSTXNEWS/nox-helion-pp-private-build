@@ -34,6 +34,8 @@ def main():
         return 2
     outcomes=[]
     urls=(
+      ('V0_CLOUD_LIST','https://cloud.vast.ai/api/v0/instances/'),
+      ('V0_CONSOLE_LIST','https://console.vast.ai/api/v0/instances/'),
       ('V1_CONSOLE_LIST','https://console.vast.ai/api/v1/instances?limit=25'),
       ('V1_CLOUD_LIST','https://cloud.vast.ai/api/v1/instances?limit=25'),
       ('V0_CONSOLE_DETAIL','https://console.vast.ai/api/v0/instances/'+str(INSTANCE)+'/'),
