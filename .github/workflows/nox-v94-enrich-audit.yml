@@ -2,7 +2,7 @@ name: NOX V94 read-only optional context latency provider inspection
 on:
   push:
     branches: [feature/nox-v38-synaptic-brain-20261114]
-    paths: [.github/workflows/nox-v94-enrich-audit.yml]
+    paths: [.github/workflows/nox-v94-enrich-audit.yml, nox_runpod/teacher_mesh/v94/enrich_provider_audit.py]
   workflow_dispatch:
 permissions: {contents: read}
 concurrency:
