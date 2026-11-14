@@ -216,7 +216,7 @@ def probe() -> bool:
     print("VAST_EPHEMERAL_KEY_MATCHED_BY_EXACT_PUBLIC_KEY=true")
     print("VAST_INSTANCE_RUNNING_PRESERVED=true")
     known = RUNNER / "known_hosts"
-    cmd = ["ssh","-T","-i",str(KEY),"-p",str(port),
+    cmd = ["ssh","-vv","-T","-i",str(KEY),"-p",str(port),
            "-o","BatchMode=yes","-o","IdentitiesOnly=yes",
            "-o","ConnectTimeout=12","-o","NumberOfPasswordPrompts=0",
            "-o","StrictHostKeyChecking=accept-new",
@@ -237,7 +237,25 @@ def probe() -> bool:
             print("SSH_READONLY_REMOTE_EXIT_CODE=0")
             print("SSH_HOST_IDENTITY_POLICY=TOFU_EPHEMERAL_READ_ONLY")
             return True
+        stderr = result.stderr.lower()
+        checks = [
+            ("permission denied", "AUTH_PERMISSION_DENIED"),
+            ("host key verification failed", "HOST_KEY_VALIDATION"),
+            ("connection refused", "NETWORK_REFUSED"),
+            ("connection timed out", "NETWORK_TIMEOUT"),
+            ("operation timed out", "NETWORK_TIMEOUT"),
+            ("connection closed", "CONNECTION_CLOSED"),
+            ("connection reset", "CONNECTION_RESET"),
+            ("could not resolve hostname", "DNS_FAILURE"),
+            ("kex_exchange_identification", "SSH_KEX_FAILURE"),
+            ("no matching host key type", "HOST_KEY_ALGORITHM"),
+            ("no route to host", "NETWORK_NO_ROUTE"),
+            ("server accepts key", "KEY_ACCEPTED_REMOTE_FAILURE"),
+        ]
+        reason = next((name for needle,name in checks if needle in stderr),
+                      "UNCLASSIFIED")
         print("SSH_ATTEMPT_"+str(attempt+1)+"=FAILED_RC_"+str(result.returncode))
+        print("SSH_FAILURE_CLASS="+reason)
         time.sleep(4)
     raise RuntimeError("HOLD_EPHEMERAL_SSH_CONNECT_OR_EXECUTION")
 
