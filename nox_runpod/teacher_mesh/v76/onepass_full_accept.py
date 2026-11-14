@@ -5,14 +5,20 @@ SSH channel and honest receipts. Stages exact verified source into isolated
 workspace, not production. Every unmet dependent gate is explicit HOLD.
 """
 from __future__ import annotations
+import ast
+import base64
+import hashlib
+import io
 import json
+import tarfile
+import time
 from pathlib import Path
 from nox_runpod.teacher_mesh.v72 import onepass_live as runner
 
 REMOTE=r"""
 set -euo pipefail
 python3 - <<'PYREMOTE'
-import hashlib,importlib,json,os,re,shutil,sqlite3,subprocess,sys,time,urllib.request,urllib.error
+import base64,hashlib,importlib,io,json,os,re,shutil,sqlite3,subprocess,sys,tarfile,time,urllib.request,urllib.error
 from pathlib import Path
 R={'schema':'NOX_V72_ONEPASS_NATIVE_RECEIPT_V1',
    'instance_id':60509551,'state':'LIVE_CHECKS_PASS_PARTIAL_HOLD',
@@ -126,7 +132,9 @@ gate('s03_ram','PASS' if len(s03)==3 else 'HOLD_S03_RAM_READBACK',db_count=len(s
 # service mutation; staging is needed for safe OneHost callback integration.
 base=Path('/workspace/nox_mega_stage_verified')
 dest=base/'v76_prime_package'
-raw='https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/'+R['source_revision']+'/'
+# Source bundles are verified in the ephemeral GitHub Actions runner and
+# carried inside the same authenticated SSH session; no untrusted raw URLs.
+BUNDLE_B64='__NOX_V76_BUNDLE__'
 sources={
 'nox_runpod/teacher_mesh/v71/__init__.py':'c0d071384a2072007d50f88a9feb72f607ea1754',
 'nox_runpod/teacher_mesh/v71/one_prime.py':'307c987eb4d62b1d8a997c75e57a5e4d43496e99',
@@ -145,15 +153,24 @@ staged=False;stage_error='HOLD_UNKNOWN';total_bytes=0
 if stop_clear and free>10_000_000_000:
     try:
         src={}
-        for name,expected in sources.items():
-            u=urllib.request.Request(raw+name,headers={'User-Agent':'NOX-PRIME-V76-SourceLocked'})
-            with urllib.request.urlopen(u,timeout=8) as rsp:
-                body=rsp.read(140000)
-            if sha_blob(body)!=expected:
-                raise RuntimeError('HOLD_GITHUB_SOURCE_SHA')
-            compile(body.decode('utf-8'),name,'exec')
-            src[name]=body
-            total_bytes+=len(body)
+        raw_bytes=base64.b64decode(BUNDLE_B64,validate=True)
+        if len(raw_bytes)>150_000:
+            raise RuntimeError('HOLD_BUNDLE_SIZE')
+        with tarfile.open(fileobj=io.BytesIO(raw_bytes),mode='r:gz') as tf:
+            members=tf.getmembers()
+            if len(members)!=len(sources) or set(m.name for m in members)!=set(sources):
+                raise RuntimeError('HOLD_BUNDLE_FILE_MANIFEST')
+            for member in members:
+                if not member.isfile() or member.size>140000 or member.name not in sources:
+                    raise RuntimeError('HOLD_BUNDLE_MEMBER')
+                stream=tf.extractfile(member)
+                if stream is None:raise RuntimeError('HOLD_BUNDLE_FILE')
+                body=stream.read(140001)
+                if sha_blob(body)!=sources[member.name]:
+                    raise RuntimeError('HOLD_LOCAL_SOURCE_BLOB_SHA')
+                compile(body.decode('utf-8'),member.name,'exec')
+                src[member.name]=body
+                total_bytes+=len(body)
         if dest.exists():
             if dest.is_symlink() or not dest.is_dir():raise RuntimeError('HOLD_OLD_STAGE_CONFLICT')
             for name,body in src.items():
@@ -164,14 +181,17 @@ if stop_clear and free>10_000_000_000:
             if base.is_symlink():raise RuntimeError('HOLD_STAGE_PARENT_SYMLINK')
             base.mkdir(parents=True,exist_ok=True)
             import tempfile
-            with tempfile.TemporaryDirectory(prefix='nox-v76-',dir=base) as temp:
-                temp=Path(temp)
+            temp=Path(tempfile.mkdtemp(prefix='nox-v76-',dir=base))
+            try:
                 for name,body in src.items():
                     f=temp/name
                     f.parent.mkdir(parents=True,exist_ok=True)
-                    f.write_bytes(body)
+                    with f.open('xb') as out:
+                        out.write(body);out.flush();os.fsync(out.fileno())
                     f.chmod(0o600)
                 os.rename(temp,dest)
+            finally:
+                if temp.exists():shutil.rmtree(temp)
             # Read exact source back after atomic stage.
         staged=all((dest/n).is_file() and sha_blob((dest/n).read_bytes())==h
                    for n,h in sources.items())
@@ -258,9 +278,54 @@ emit()
 PYREMOTE
 """
 
+def _bundle_existing_sources() -> str:
+    """Bundle only SHA-allowlisted repo code, not keys, user data or weights."""
+    root=Path(__file__).resolve().parents[3]
+    script=REMOTE.lstrip('\n').split("python3 - <<'PYREMOTE'\n",1)[1].rsplit("\nPYREMOTE",1)[0]
+    parsed=ast.parse(script)
+    src=None
+    for statement in parsed.body:
+        if isinstance(statement,ast.Assign) and any(
+             isinstance(t,ast.Name) and t.id=='sources' for t in statement.targets):
+            src=ast.literal_eval(statement.value)
+            break
+    if not isinstance(src,dict) or len(src)!=12:
+        raise RuntimeError('HOLD_SOURCE_MAP')
+    memory=io.BytesIO()
+    with tarfile.open(fileobj=memory,mode='w:gz') as tar:
+        for name,expected in sorted(src.items()):
+            if not name.startswith('nox_runpod/teacher_mesh/') or '../' in name:
+                raise RuntimeError('HOLD_SOURCE_PATH')
+            p=root/name
+            data=p.read_bytes()
+            sha=hashlib.sha1(b'blob '+str(len(data)).encode()+b'\0'+data).hexdigest()
+            if sha!=expected:raise RuntimeError('HOLD_LOCAL_SOURCE_SHA_'+name.rsplit('/',1)[-1])
+            info=tarfile.TarInfo(name)
+            info.size=len(data);info.mtime=0;info.mode=0o600
+            tar.addfile(info,io.BytesIO(data))
+    if len(memory.getvalue())>150000:raise RuntimeError('HOLD_ARCHIVE_TOO_LARGE')
+    return base64.b64encode(memory.getvalue()).decode('ascii')
+
 def main()->int:
-    runner.REMOTE=REMOTE
+    try:
+        source_bundle=_bundle_existing_sources()
+    except Exception:
+        print('NOX_V76_STATE=HOLD_LOCAL_SOURCE_PACKAGING')
+        return 2
+    runner.REMOTE=REMOTE.replace('__NOX_V76_BUNDLE__',source_bundle)
     result=runner.onepass()
+    # Existing V60 attach mutates V51.TRACK to its runner directory. We must
+    # read back that exact registry entry, not a fresh V51 default directory.
+    # One bounded reconciliation is allowed; no second SSH invocation.
+    from nox_runpod.teacher_mesh.v51 import ephemeral_ssh_probe as one_key
+    if one_key.TRACK.exists():
+        try:
+            if one_key.cleanup():
+                result['temp_ssh_key_revoked']=not one_key.TRACK.exists()
+        except Exception:
+            result['temp_ssh_key_revoked']=False
+    else:
+        result['temp_ssh_key_revoked']=True
     path=Path("NOX_V76_ONEPASS_NATIVE_RECEIPT.json")
     native=result.get('native') if isinstance(result.get('native'),dict) else {}
     output={
