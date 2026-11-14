@@ -1,0 +1,80 @@
+name: NOX Tigris existing-host RAM read-only preflight
+on:
+  push:
+    branches: [feature/nox-tigris-warm-20261115]
+    paths: ['.github/workflows/nox-tigris-existing-host-preflight.yml']
+  workflow_dispatch:
+permissions: {contents: read}
+concurrency:
+  group: nox-tigris-native-preflight-60509551
+  cancel-in-progress: false
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - name: Read-only native instance RAM, tmpfs, NOX health and Tigris DNS
+        run: |
+          set -euo pipefail
+          test -n "$NOX2" || { echo "HOLD_NOX2_UNAVAILABLE"; exit 2; }
+          python3 - <<'PY'
+          from nox_runpod.teacher_mesh.v51 import ephemeral_ssh_probe as bridge
+          bridge.REMOTE = r"""
+          set -euo pipefail
+          python3 - <<'PYREMOTE'
+          import json,os,socket,urllib.request
+          from pathlib import Path
+          print('NOX_NATIVE_V51_SSH_EXECUTED=true')
+          print('NATIVE_TIGRIS_PREFLIGHT_MODE=READ_ONLY')
+          try:
+              f=os.statvfs('/dev/shm')
+              print('NATIVE_TIGRIS_TMPFS_FREE_MIB='+str(f.f_bavail*f.f_frsize//(1024**2)))
+              print('NATIVE_TIGRIS_TMPFS_TOTAL_MIB='+str(f.f_blocks*f.f_frsize//(1024**2)))
+          except OSError:
+              print('NATIVE_TIGRIS_TMPFS=HOLD_UNAVAILABLE')
+          try:
+              mem=Path('/proc/meminfo').read_text().splitlines()
+              for line in mem:
+                  if line.startswith('MemAvailable:'):
+                      print('NATIVE_TIGRIS_RAM_AVAILABLE_MIB='+str(int(line.split()[1])//1024))
+                      break
+          except OSError:
+              print('NATIVE_TIGRIS_RAM=HOLD_UNKNOWN')
+          for label,path in (('CGROUP_MAX','/sys/fs/cgroup/memory.max'),('CGROUP_CURRENT','/sys/fs/cgroup/memory.current')):
+              try:
+                  val=Path(path).read_text().strip()
+                  if val.isdigit():
+                      print('NATIVE_TIGRIS_'+label+'_MIB='+str(int(val)//(1024**2)))
+                  elif val=='max':
+                      print('NATIVE_TIGRIS_'+label+'=UNLIMITED')
+              except OSError:pass
+          try:
+              socket.getaddrinfo('t3.storage.dev',443)
+              print('NATIVE_TIGRIS_DNS=PASS')
+          except OSError:
+              print('NATIVE_TIGRIS_DNS=HOLD')
+          for port in (8080,8081):
+              try:
+                  with urllib.request.urlopen('http://127.0.0.1:'+str(port)+'/health',timeout=3) as resp:
+                      result=(resp.status==200)
+              except Exception: result=False
+              print('NATIVE_TIGRIS_NOX_HEALTH_'+str(port)+'='+('PASS' if result else 'HOLD'))
+          print('NATIVE_TIGRIS_CREDENTIALS_READ=false')
+          print('NATIVE_TIGRIS_MODELS_UPLOADED=false')
+          print('NATIVE_TIGRIS_MODELS_MODIFIED=false')
+          print('NATIVE_READ_ONLY_COMPLETE=true')
+          PYREMOTE
+          """
+          verified=False
+          cleanup=False
+          try:
+              verified=bridge.probe()
+          finally:
+              cleanup=bridge.cleanup()
+          print('NOX_TIGRIS_NATIVE_READONLY_PREFLIGHT='+('PASS' if verified and cleanup else 'HOLD'))
+          raise SystemExit(0 if verified and cleanup else 2)
+          PY
