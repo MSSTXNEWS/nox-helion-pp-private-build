@@ -139,6 +139,41 @@ if proxy.is_file() and not proxy.is_symlink() and proxy.stat().st_size < 500000:
 else:
     emit('WEB_SOURCE', valid_proxy_source=False)
 
+# Execute just the parser function's AST in a sterile namespace.
+# This does NOT import or execute the live proxy, request a model, or read S03.
+if bridge.is_file() and not bridge.is_symlink() and bridge.stat().st_size < 500000:
+    try:
+        module_ast = __import__('ast').parse(bridge.read_text(encoding='utf8'))
+        fn = next((n for n in module_ast.body
+                   if isinstance(n,(__import__('ast').FunctionDef,
+                                    __import__('ast').AsyncFunctionDef))
+                   and n.name == '_token_from_delta'), None)
+        if isinstance(fn,__import__('ast').FunctionDef):
+            sandbox = {'json':json}
+            block = __import__('ast').Module(body=[fn],type_ignores=[])
+            exec(compile(__import__('ast').fix_missing_locations(block),
+                         '<v110-parsing-sandbox>','exec'),sandbox)
+            parser = sandbox['_token_from_delta']
+            good = parser('data: {"choices":[{"delta":{"content":"ok"}}]}') == ('delta','ok')
+            done = parser('data: [DONE]') == ('done','')
+            private = parser('data: {"choices":[{"delta":{"reasoning_content":"never"}}]}') == ('','')
+            unexpected = all(
+                parser('data: '+json.dumps({'choices':bad})) == ('','')
+                for bad in ({'delta':'bad'},'broken',123,None))
+            nested = all(
+                parser('data: '+json.dumps({'choices':[{'delta':bad}]})) == ('','')
+                for bad in ('broken',['x'],123,None))
+            emit('PARSER', status='TESTED',valid_delta=good,done=done,
+                 reasoning_excluded=private,invalid_choices_safe=unexpected,
+                 invalid_delta_safe=nested,
+                 contract_pass=all((good,done,private,unexpected,nested)))
+        else:
+            emit('PARSER', status='UNSUPPORTED_MODULE_SHAPE')
+    except Exception:
+        emit('PARSER', status='HOLD_SANDBOX_EXECUTION')
+else:
+    emit('PARSER', status='HOLD_MODULE_MISSING')
+
 # Send only unauthenticated negative security probes, never chat prompts.
 # An active route must reject both calls before any STOP or model code runs.
 for label, endpoint in (('STREAM', '/api/nox/chat/stream'), ('STOP', '/api/nox/stop')):
