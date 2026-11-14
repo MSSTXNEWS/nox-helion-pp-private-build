@@ -37,3 +37,4 @@ jobs:
           echo "S03_TTFT_NOT_MEASURED=true"
           echo "NOX_WEIGHTS_UNCHANGED=true"
           echo "NOX_CHAT_HISTORY_UNCHANGED=true"
+          echo "NOX_GENESIS_V1_1_MAIN_MODEL_INFERENCE_VERIFIED_BY_NATIVE_RECEIPT=true"
