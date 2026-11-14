@@ -1,0 +1,69 @@
+name: NOX Tigris OAuth existing-host readiness read only
+on:
+  push:
+    branches: [feature/nox-tigris-warm-20261115]
+    paths: ['.github/workflows/nox-tigris-oauth-readiness.yml']
+  workflow_dispatch:
+permissions: {contents: read}
+concurrency:
+  group: nox-tigris-oauth-readiness-60509551
+  cancel-in-progress: false
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - name: Read only inspect original host Node npm and Tigris tooling
+        run: |
+          set -euo pipefail
+          test -n "$NOX2" || { echo 'NOX_TIGRIS_OAUTH=HOLD_NOX2'; exit 2; }
+          python3 - <<'PY'
+          import contextlib, io
+          from nox_runpod.teacher_mesh.v51 import ephemeral_ssh_probe as bridge
+          bridge.REMOTE = r'''
+          set -euo pipefail
+          python3 - <<'PYREMOTE'
+          import json,os,shutil,subprocess,urllib.request
+          from pathlib import Path
+          print('NOX_NATIVE_V51_SSH_EXECUTED=true')
+          print('NATIVE_TIGRIS_OAUTH_READINESS=READ_ONLY')
+          for name in ('node','npm','npx','tigris','t3'):
+              found=shutil.which(name)
+              print('NATIVE_TIGRIS_TOOL_'+name.upper()+'='+('PRESENT' if found else 'MISSING'))
+              if found and name=='node':
+                  try:
+                      v=subprocess.run([found,'--version'],capture_output=True,text=True,timeout=4)
+                      version=v.stdout.strip()
+                      if v.returncode==0 and len(version)<35 and version.startswith('v') and all(c.isdigit() or c in 'v.' for c in version):
+                          print('NATIVE_TIGRIS_NODE_VERSION='+version)
+                  except Exception: pass
+          try:
+              v=shutil.disk_usage('/root/nox')
+              print('NATIVE_TIGRIS_NOX_DISK_FREE_GIB='+str(round(v.free/1024**3,2)))
+          except Exception: print('NATIVE_TIGRIS_NOX_DISK=UNKNOWN')
+          for port in (8080,8081):
+              try:
+                  with urllib.request.urlopen('http://127.0.0.1:'+str(port)+'/health',timeout=3) as response:
+                      ok=response.status==200
+              except Exception:ok=False
+              print('NATIVE_TIGRIS_NOX_HEALTH_'+str(port)+'='+('PASS' if ok else 'HOLD'))
+          print('NATIVE_TIGRIS_OAUTH_NOT_STARTED=true')
+          print('NATIVE_TIGRIS_CREDENTIALS_NOT_READ=true')
+          print('NATIVE_TIGRIS_FILES_NOT_MODIFIED=true')
+          print('NATIVE_READ_ONLY_COMPLETE=true')
+          PYREMOTE
+          '''
+          out=io.StringIO();ok=False;clean=False
+          try:
+              with contextlib.redirect_stdout(out):ok=bridge.probe()
+          finally:
+              with contextlib.redirect_stdout(out):clean=bridge.cleanup()
+          for line in out.getvalue().splitlines():
+              if line.startswith(('NATIVE_TIGRIS_','TEMP_SSH_CLEANUP=')) and len(line)<170:print(line)
+          print('NOX_TIGRIS_OAUTH_PREFLIGHT='+('PASS' if ok and clean else 'HOLD'))
+          raise SystemExit(0 if ok and clean else 2)
+          PY
