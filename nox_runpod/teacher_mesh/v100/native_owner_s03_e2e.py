@@ -87,6 +87,7 @@ except Exception as e:
  v=str(e)
  emit({'state':v if v.startswith('HOLD_') and len(v)<100 else 'HOLD_NATIVE_STREAM_RUNTIME',
        'failed_stage':stage,'exception_type':type(e).__name__,
+       'missing_python_module':(e.name if isinstance(e,ModuleNotFoundError) else None),
        'private_records_exported':False,'model_weights_changed':False})
 print('NATIVE_READ_ONLY_COMPLETE=true')
 PYREMOTE
