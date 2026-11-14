@@ -11,6 +11,7 @@ after offsite snapshot+restore validation and dataset privacy/license audit.
 This script is not an installer, supervisor, SSH bridge or production trainer.
 """
 from __future__ import annotations
+from nox_runpod.teacher_mesh.v71.disk_budget import verify_new_write_space
 import argparse, datetime as dt, gc, hashlib, json, os, pathlib, shutil, sys, tempfile
 
 
@@ -148,7 +149,15 @@ def run(args):
     if not out.parent.is_dir():raise RuntimeError('HOLD_OUTPUT_PARENT_REQUIRED')
     weights_bytes=model_manifest_bytes(student)
     space=shutil.disk_usage(out.parent).free
-    if space<weights_bytes*1.3 + 20_000_000_000:
+    # A real new checkpoint writes model + optimizer + temp; preserve owner's
+    # 10GB disk floor. This budget protects new writes, never live inference.
+    disk_gate=verify_new_write_space({
+        'disk_free_bytes':space,
+        'estimated_new_checkpoint_bytes':int(weights_bytes*3.0)+1,
+        'estimated_temp_bytes':int(weights_bytes*0.5)+1,
+        'disk_write_estimate_verified':True,
+    })
+    if disk_gate['state']!='READY_FOR_OTHER_NATIVE_GATES':
         raise RuntimeError('HOLD_CHECKPOINT_DISK_SPACE')
     train,train_sources=read_samples(args.train,'TRAIN')
     holdout,held_sources=read_samples(args.holdout,'HOLDOUT')

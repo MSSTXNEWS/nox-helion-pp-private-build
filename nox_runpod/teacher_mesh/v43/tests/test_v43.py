@@ -72,9 +72,16 @@ class TestResourceBrain(unittest.TestCase):
     def test_no_disruption_active_optimizer(self):
         self.s['optimizer_step_active']=True
         self.assertEqual(plan_load(self.req,self.s)['state'],'HOLD_CHECKPOINT_OR_ACTIVE_OPTIMIZER')
-    def test_disk_below_20gb_moves_cold(self):
+    def test_existing_verified_teacher_can_be_proposed_below_20gb(self):
         self.s['disk_free_bytes']=15_000_000_000
+        self.assertEqual(plan_load(self.req,self.s)['state'],'OWNER_NATIVE_APPROVAL_REQUIRED')
+    def test_new_download_never_started_by_resource_brain(self):
+        self.req['download_needed']=True
         self.assertEqual(plan_load(self.req,self.s)['state'],'REMOTE_PC_COLD_OR_DRIVE_ONLY')
+    def test_any_new_disk_write_requires_separate_budget(self):
+        self.req['new_disk_bytes']=1_000_000_000
+        self.assertEqual(plan_load(self.req,self.s)['state'],
+                         'HOLD_NEW_DISK_WRITE_NEEDS_SEPARATE_VERIFIED_BUDGET')
     def test_two_vram_not_sum(self):
         self.s['gpus'][1]['vram_free_mib']=12000
         self.assertEqual(plan_load(self.req,self.s)['state'],'REMOTE_PC_OR_HOLD')

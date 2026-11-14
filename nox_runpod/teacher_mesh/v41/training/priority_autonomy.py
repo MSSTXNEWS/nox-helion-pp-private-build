@@ -12,6 +12,8 @@ import json
 import re
 from typing import Any
 
+from nox_runpod.teacher_mesh.v71.disk_budget import SAFETY_FLOOR_BYTES, verify_new_write_space
+
 _SHA = re.compile(r'^[0-9a-f]{64}$')
 _ID = re.compile(r'^[A-Za-z0-9._:-]{4,120}$')
 LANES = frozenset({'CORE', 'MEMORY', 'FORGE', 'SKILLS', 'TEACHERS', 'WEB_QA'})
@@ -96,7 +98,9 @@ def submit_verified_plan(plan: Mapping, host: SchedulerPorts, *, owner_scope: st
                 return {'state': 'HOLD_STOP_DURING_QUEUE', 'jobs_enqueued': len(receipts), 'receipts': receipts}
             if host.native_duplicate_check(job['task_id']):
                 continue
-            data = dict(job, owner_scope=owner_scope, requires_native_worker=True, priority='P0')
+            data = dict(job, owner_scope=owner_scope, requires_native_worker=True,
+                        priority='P1', chat_priority='P0',
+                        requires_native_chat_recheck=True)
             data['manifest_sha256'] = sha256(json.dumps(data,sort_keys=True,separators=(',',':')).encode()).hexdigest()
             ticket = host.queue_enqueue(data)
             if not isinstance(ticket, Mapping) or ticket.get('accepted') is not True or not _ID.fullmatch(str(ticket.get('job_id', ''))):
@@ -120,7 +124,8 @@ class ChatFirstBudget:
     """Admission policy for existing OneHost; never starts a process."""
     quiet_seconds: int = 20
     chat_recent_seconds: int = 45
-    disk_checkpoint_reserve_bytes: int = 20_000_000_000
+    # Minimum filesystem rollback headroom for NEW WRITES, not a chat threshold.
+    disk_checkpoint_reserve_bytes: int = 10_000_000_000
     min_gpu_free_mib: int = 3072
     max_gpu_temp_c: int = 80
     target_idle_compute_pct: int = 85
@@ -161,7 +166,13 @@ def chat_first_admission(status: Mapping, *, budget: ChatFirstBudget = ChatFirst
                          'ALLOW_INDEXED_S03_RETRIEVAL']
     result['launch'] = True
     gpus = status.get('gpus')
-    disk = status.get('disk_free_bytes')
+    # Chat inference itself is never held for an arbitrary 20 GB disk threshold.
+    # A new checkpoint, optimizer/temp write or training cycle requires a real
+    # verified per-operation footprint, with a small emergency floor.
+    disk_snapshot = dict(status)
+    disk_snapshot['min_free_after_bytes'] = budget.disk_checkpoint_reserve_bytes
+    disk_gate = verify_new_write_space(disk_snapshot)
+    result['disk_gate'] = disk_gate['state']
     if not isinstance(gpus, list) or len(gpus) != 2 or any(
         not isinstance(g, Mapping) or
         type(g.get('vram_free_mib')) is not int or g['vram_free_mib'] < 0 or
@@ -172,8 +183,8 @@ def chat_first_admission(status: Mapping, *, budget: ChatFirstBudget = ChatFirst
     if any(g['temperature_c'] >= budget.max_gpu_temp_c for g in gpus):
         result['reasons'].append('HOLD_GPU_TEMP')
         return result
-    if not isinstance(disk, int) or disk < budget.disk_checkpoint_reserve_bytes:
-        result['reasons'].append('HOLD_DISK_RESERVE')
+    if disk_gate['state'] != 'READY_FOR_OTHER_NATIVE_GATES':
+        result['reasons'].append(disk_gate['state'])
         return result
     if status.get('external_restore_verified') is not True:
         result['reasons'].append('HOLD_EXTERNAL_RESTORE')

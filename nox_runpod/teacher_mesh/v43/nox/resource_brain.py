@@ -11,7 +11,9 @@ from dataclasses import dataclass
 class Policy:
     min_vram_free_mib: int = 3072
     min_ram_free_mib: int = 12288
-    min_disk_free_bytes: int = 20_000_000_000
+    # Existing SHA-verified local models can be mapped without new downloads.
+    # No hard 20 GB gate on chat/teacher inference. New writes use V71 budget.
+    min_disk_free_bytes: int = 10_000_000_000
     max_loaded_teachers: int = 1
     protected_roles: tuple[str,...] = ('student','chat','optimizer','checkpoint','s03')
 
@@ -37,8 +39,14 @@ def plan_load(request, inventory, policy=Policy()):
         return {'state':'HOLD_STOP_OR_SENSOR','performed':False}
     if inventory.get('checkpoint_pending') is True or inventory.get('optimizer_step_active') is True:
         return {'state':'HOLD_CHECKPOINT_OR_ACTIVE_OPTIMIZER','performed':False}
-    if inventory.get('disk_free_bytes',0)<policy.min_disk_free_bytes:
-        return {'state':'REMOTE_PC_COLD_OR_DRIVE_ONLY','performed':False,'reason':'VAST_DISK_BELOW_RESERVE'}
+    # This is a loader for ALREADY LOCAL assets, not a model downloader.
+    # Never silently fetch a teacher on the almost-full Vast disk.
+    if request.get('download_needed') is True or source.get('installed_locally') is False:
+        return {'state':'REMOTE_PC_COLD_OR_DRIVE_ONLY','performed':False,
+                'reason':'NO_NEW_MODEL_DOWNLOAD_FROM_RESOURCE_BRAIN'}
+    if request.get('new_disk_bytes',0)!=0:
+        return {'state':'HOLD_NEW_DISK_WRITE_NEEDS_SEPARATE_VERIFIED_BUDGET',
+                'performed':False}
     if inventory.get('ram_free_mib',0)<policy.min_ram_free_mib:
         return {'state':'REMOTE_PC_OR_HOLD','performed':False,'reason':'RAM_RESERVE'}
     if request['role'] in ('image','video') and source.get('runtime')!='dedicated_vetted_tool':

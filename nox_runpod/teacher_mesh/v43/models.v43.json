@@ -4,14 +4,21 @@
   "policy": {
     "primary_student": "nox-current-35b",
     "teacher_runtime_default": "ON_DEMAND_ONLY",
-    "protect": ["main_nox_chat", "S03", "optimizer", "active_checkpoint"],
-    "min_vast_disk_free_gb": 20,
+    "protect": [
+      "main_nox_chat",
+      "S03",
+      "optimizer",
+      "active_checkpoint"
+    ],
+    "min_vast_disk_free_gb": 10,
     "min_pc_disk_free_after_download_gb": 12,
     "max_simultaneous_teachers_on_pc": 1,
     "max_simultaneous_teachers_on_vast": 0,
     "target_gpu_compute_pct_when_training_safely_admitted": 85,
     "remote_management": "NO_REMOTE_ACCESS_CONFIGURED",
-    "notes": "Only pinned archive revisions with verified SHA may be used; host actions require real native OneHost approval and readback. Q4 are inference teachers; not trainable original weights."
+    "notes": "Only pinned archive revisions with verified SHA may be used; host actions require real native OneHost approval and readback. Q4 are inference teachers; not trainable original weights.",
+    "min_disk_for_chat_gb": null,
+    "disk_reserve_note": "10GB reserve only for measured NEW disk writes and rollback; existing chat and RAM-backed memory services continue below threshold; no new model downloads without own footprint"
   },
   "models": [
     {
