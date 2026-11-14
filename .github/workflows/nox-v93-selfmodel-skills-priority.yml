@@ -1,0 +1,49 @@
+name: NOX V93 one OneHost self-model + self-repair skills first
+on:
+  push:
+    branches: [nox/e2-v93-selfmodel-skills-priority-20261114]
+    paths:
+      - '.github/workflows/nox-v93-selfmodel-skills-priority.yml'
+      - 'nox_runpod/teacher_mesh/v47/control/**'
+      - 'coordination/NOX_R60_MASTER.json'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  priority-source-lock:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    env:
+      PYTHONPATH: ".:nox_runpod/teacher_mesh/v41:nox_runpod/teacher_mesh/v47"
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - name: Canonical R60 source-blob SHA and 60 jobs full partition
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual="$(git rev-parse HEAD:nox_runpod/teacher_mesh/v47/control/TASKS_60_V46.json)"
+          expected="$(python3 -c 'import json;print(json.load(open("coordination/NOX_R60_MASTER.json"))["source_matrix_blob_sha"])')"
+          [ "$actual" = "$expected" ] || { echo "::error::NOX R60 source-lock mismatch"; exit 2; }
+          python3 -c 'import json;a=json.load(open("coordination/NOX_R60_MASTER.json")); assert len(a["tasks"])==60; assert a["registered_count"]==0; assert a["onehost_only"] is True'
+      - name: Code syntax and old/no-loss regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile nox_runpod/teacher_mesh/v47/control/dispatcher.py
+          python3 -m unittest -v \
+            nox_runpod.teacher_mesh.v47.control.test_v93_priority \
+            nox_runpod.teacher_mesh.v41.tests.test_priority_autonomy \
+            nox_runpod.teacher_mesh.v47.tests.test_night_v47 \
+            nox_runpod.teacher_mesh.v71.test_one_prime
+      - name: Explicit source-only safe acceptance
+        if: success()
+        shell: bash
+        run: |
+          echo "NOX_60_TASKS_REORDERED=true"
+          echo "NOX_P0_CHAT_AND_STOP_ABOVE_ALL_BACKGROUND=true"
+          echo "NOX_FUNCTIONAL_SELF_MODEL_AND_CODING_SKILLS_BEFORE_DISTILLATION=true"
+          echo "NOX_NATIVE_JOB_IDS_VERIFIED=0"
+          echo "NOX_NEW_SERVERS_OR_SCHEDULERS=0"
+          echo "NOX_PRODUCTION_RESTARTS=0"
+          echo "NOX_WEIGHTS_CHANGED=false"
