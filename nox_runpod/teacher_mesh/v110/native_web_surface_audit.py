@@ -74,6 +74,12 @@ import json,sys
 sys.path.insert(0,'/root/nox/scripts')
 import chat_proxy
 from fastapi.routing import APIRoute
+from starlette.routing import Mount
+for idx,route in enumerate(chat_proxy.app.routes):
+ if isinstance(route,Mount) and idx<120:
+  print('NOX_MOUNT_JSON='+json.dumps({'index':idx,'path':route.path}))
+ elif isinstance(route,APIRoute) and (route.path.startswith('/api/ui/') or route.path.startswith('/api/nox/status')):
+  print('NOX_TARGET_ROUTE_JSON='+json.dumps({'index':idx,'path':route.path,'methods':sorted(route.methods)}))
 routes=[{'path':r.path,'methods':sorted(r.methods)} for r in chat_proxy.app.routes if isinstance(r,APIRoute)]
 print('NOX_ROUTE_INVENTORY_JSON='+json.dumps(routes,separators=(',',':')))
 '''
@@ -87,6 +93,9 @@ for interpreter in interpreters:
   line=next((v for v in proc.stdout.splitlines() if v.startswith('NOX_ROUTE_INVENTORY_JSON=')),None)
   if proc.returncode or line is None:continue
   got=json.loads(line.split('=',1)[1])
+  for row in proc.stdout.splitlines():
+   if row.startswith(('NOX_MOUNT_JSON=','NOX_TARGET_ROUTE_JSON=')):
+    emit('ROUTE_ORDER',json.loads(row.split('=',1)[1]))
   emit('REGISTERED_ROUTES_COUNT',{'count':len(got)})
   for route in sorted(got,key=lambda x:x['path']):
    if route['path'].startswith('/api/'):
