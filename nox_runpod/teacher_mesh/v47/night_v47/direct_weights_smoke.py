@@ -70,6 +70,11 @@ def model_manifest_bytes(folder):
         raise RuntimeError('HOLD_UNREADABLE_HF_CONFIG')
     if not isinstance(cfg,dict) or cfg.get('peft_type') or cfg.get('adapter_type'):
         raise RuntimeError('HOLD_ADAPTER_CONFIG_NOT_BASE_WEIGHTS')
+    # Preserve the existing explicit GGUF/no-weight failure before inspecting
+    # tokenizer/config completeness, avoiding a misleading config error.
+    shards=sorted(root.glob('*.safetensors'))
+    if not shards:
+        raise RuntimeError('HOLD_GGUF_OR_NO_TRAINABLE_SHARDS')
     if not isinstance(cfg.get('model_type'),str) or not cfg['model_type'].strip():
         raise RuntimeError('HOLD_UNKNOWN_HF_MODEL_TYPE')
     if (root/'adapter_config.json').exists() or (root/'adapter_model.safetensors').exists():
@@ -77,9 +82,6 @@ def model_manifest_bytes(folder):
     if not any((root/name).is_file() and not (root/name).is_symlink()
                for name in ('tokenizer.json','tokenizer.model','tokenizer_config.json')):
         raise RuntimeError('HOLD_FULL_MODEL_TOKENIZER_MISSING')
-    shards=sorted(root.glob('*.safetensors'))
-    if not shards:
-        raise RuntimeError('HOLD_GGUF_OR_NO_TRAINABLE_SHARDS')
     if list(root.glob('pytorch_model*.bin')):
         raise RuntimeError('HOLD_UNTRUSTED_PICKLE_WEIGHTS')
     expected_index=root/'model.safetensors.index.json'
