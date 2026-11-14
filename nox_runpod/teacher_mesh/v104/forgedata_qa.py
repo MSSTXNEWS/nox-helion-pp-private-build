@@ -15,8 +15,23 @@ print('NATIVE_AUDIT_SCHEMA=NOX_V104_PRIVACY_LICENSE_CORPUS_ADMISSION_V1')
 def emit(label,obj):
  s=json.dumps(obj,sort_keys=True,separators=(',',':'))
  if len(s)<1800:print('NATIVE_V104_'+label+'='+s)
-model=Path('/root/nox/progress_pull_t784u/merged_hf')
-hf={'exists':model.is_dir()}
+base=Path('/root/nox/progress_pull_t784u')
+wanted={'mix_understanding_t700u.jsonl','understanding_sft_t700u.jsonl',
+ 'understanding_pref_t700u.jsonl','pool_best.jsonl','dpo_pairs.jsonl',
+ 'anchors.jsonl','identity_sft_t733u.jsonl','s03_curriculum_t642u.jsonl'}
+found={x:[] for x in wanted};models=[]
+scan_dirs=0
+for folder,dirs,files_in_dir in os.walk(base,followlinks=False):
+ scan_dirs+=1
+ depth=len(Path(folder).relative_to(base).parts)
+ if scan_dirs>15000:break
+ dirs[:]=[x for x in dirs if depth<9 and x not in ('node_modules','.git','logs','tmp','cache','venv','.venv','__pycache__') and not (Path(folder)/x).is_symlink()][:90]
+ p=Path(folder)
+ if p.name=='merged_hf' and 'config.json' in files_in_dir and not p.is_symlink():models.append(p)
+ for name in wanted.intersection(files_in_dir):
+  if not (p/name).is_symlink():found[name].append(p/name)
+model=models[0] if len(models)==1 else Path('/root/nox/NO_MODEL_SELECTED')
+hf={'exists':len(models)==1,'model_locator_count':len(models),'scanned_dirs':scan_dirs}
 if model.is_dir():
  try:
   cfg=json.loads((model/'config.json').read_text(encoding='utf8')[:30000])
@@ -35,17 +50,14 @@ if model.is_dir():
   hf['tokenizer_files_present']=any((model/x).exists() for x in ('tokenizer.json','tokenizer_config.json','vocab.json'))
  except Exception as e:hf['metadata_hold']=type(e).__name__
 emit('MODEL',hf)
-base=Path('/root/nox/progress_pull_t784u')
-files=['data/mix_understanding_t700u.jsonl','data/understanding_sft_t700u.jsonl',
-'data/understanding_pref_t700u.jsonl','data/pool_best.jsonl',
-'data/dpo_pairs.jsonl','data/anchors.jsonl','data/identity_sft_t733u.jsonl',
-'data_real/s03_curriculum_t642u.jsonl']
+files=sorted(wanted)
 SENSITIVE=re.compile(r'(?i)(?:\b(?:passport|medical|diagnosis|expediente|nie|email|phone)\b|\b(?:паспорт|диагноз|медицинск|адрес|полиц|врач|интервью)\w*|[A-Za-z0-9_.+\-]+@[A-Za-z0-9_.\-]+\.[a-z]{2,}|\b\+?[0-9][0-9\s().\-]{8,}\b)')
 ALLOW={'apache-2.0','mit','cc0-1.0','cc-by-4.0','bsd-3-clause','public-domain'}
 for rel in files:
- p=base/rel
- result={'filename':p.name,'present':p.is_file(),'private_text_exported':False}
- if not p.is_file() or p.is_symlink():
+ options=found.get(rel,[])
+ p=options[0] if len(options)==1 else Path('/root/nox/NO_DATASET_SELECTED')
+ result={'filename':rel,'present':len(options)==1,'locator_count':len(options),'private_text_exported':False}
+ if len(options)!=1 or not p.is_file() or p.is_symlink():
   emit('DATASET',result);continue
  seen=set();dup=0;malformed=0;rows=0;pii=0;empty=0;licensed=0;consented=0;schema=Counter();lic=Counter();src=Counter()
  try:
@@ -111,8 +123,8 @@ def main():
  for line in out.getvalue().splitlines():
   if line.startswith(('NATIVE_V104_','TEMP_SSH_CLEANUP=')):
    print(line[:1900]);lines.append(line)
- passed=bool(okay and any(x.startswith('NATIVE_V104_MODEL=') for x in lines) and
-             sum(x.startswith('NATIVE_V104_DATASET=') for x in lines)>=5 and
+ passed=bool(okay and any(x.startswith('NATIVE_V104_MODEL=') and '"exists":true' in x for x in lines) and
+             any(x.startswith('NATIVE_V104_DATASET=') and '"present":true' in x and '"rows_scanned":' in x for x in lines) and
              'NATIVE_READ_ONLY_COMPLETE=true' in out.getvalue())
  print('NOX_V104_CORPUS_PROVENANCE_AUDIT='+str(passed).lower())
  return 0 if passed else 2
