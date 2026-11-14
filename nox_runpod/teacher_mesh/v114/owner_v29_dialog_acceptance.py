@@ -30,7 +30,7 @@ def req(opener,path,method='GET',data=None,timeout=8):
    method=method,headers={'Content-Type':'application/json','Accept':'application/json'})
  try:response=opener.open(request,timeout=timeout)
  except urllib.error.HTTPError as exc:response=exc
- if path.startswith('/api/') or path.startswith('/nox-web-v29/'):
+ if path.startswith(('/api/','/nox-web-v29/','/chat/')):
   print('NATIVE_V114_HTTP='+json.dumps({'path':path.split('?',1)[0],'method':method,'status':response.status},sort_keys=True))
  return response
 def body(result,limit=10000):
@@ -181,6 +181,7 @@ def main():
     for row in captured.getvalue().splitlines():
         if row.startswith('NATIVE_V114_RESULT=') and len(row)<1800:
             seen.append(row);print(row)
+        elif row.startswith('NATIVE_V114_HTTP=') and len(row)<350:print(row)
         elif row.startswith('TEMP_SSH_CLEANUP='):print(row[:120])
         elif row.startswith('NATIVE_V114_AUTH_FULL_E2E_ACCEPTED='):print(row)
     accepted=success and len(seen)==1 and any(
