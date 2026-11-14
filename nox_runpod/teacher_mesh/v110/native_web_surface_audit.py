@@ -69,14 +69,14 @@ try:
 except Exception:emit('SLOTS',{'status':'UNKNOWN'})
 # Import the installed app in a separate process, read route metadata only.
 # This cannot establish functional E2E but distinguishes real route registration from global 401.
-PYCODE = """
+PYCODE = '''
 import json,sys
 sys.path.insert(0,'/root/nox/scripts')
 import chat_proxy
 from fastapi.routing import APIRoute
 routes=[{'path':r.path,'methods':sorted(r.methods)} for r in chat_proxy.app.routes if isinstance(r,APIRoute)]
 print('NOX_ROUTE_INVENTORY_JSON='+json.dumps(routes,separators=(',',':')))
-"""
+'''
 interpreters=['/root/nox/venv/bin/python','/root/nox/.venv/bin/python',
               '/opt/venv/bin/python','/venv/bin/python','/usr/local/bin/python3']
 for interpreter in interpreters:
