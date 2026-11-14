@@ -13,7 +13,9 @@ class TeacherBridgeTests(unittest.TestCase):
             native_teacher_infer=lambda model, q: {"answer":"Verified example"},
             independently_check=lambda q,a,m: {"verified":True,"score":0.95,"source_uri":"https://example.org/evidence"},
             s03_write=lambda entry: self.persist(entry),
-            s03_verify=lambda receipt,entry: entry in self.records and receipt.get("id")=="receipt-1"
+            s03_verify=lambda receipt,entry: entry in self.records and receipt.get("id")=="receipt-1",
+            approved_lesson=lambda question,answer,evidence: {"text":"Verified public fact","source_uri":evidence["source_uri"],
+                      "privacy_approved":True,"rights_verified":True,"independent_review":True}
         )
     def persist(self, entry):
         self.records.append(entry)
@@ -43,11 +45,30 @@ class TeacherBridgeTests(unittest.TestCase):
         self.assertEqual(r["state"],"TEACHER_HELP_AND_S03_VERIFIED")
         self.assertIs(r["neural_weights_changed"],False)
         self.assertEqual(len(self.records),1)
+        self.assertEqual(self.records[0]["verified_lesson_text"], "Verified public fact")
+        self.assertNotIn("hi", str(self.records[0]))
     def test_no_false_learning_without_s03_receipt(self):
         p=self.ports
         p=TeacherPorts(p.discover_metadata,p.consent_for_external_prompt,p.safe_to_use_teacher,p.native_teacher_infer,
-                       p.independently_check,p.s03_write,lambda r,e:False)
+                       p.independently_check,p.s03_write,lambda r,e:False,p.approved_lesson)
         r=consult_teacher(model_id="org/model",question="hi",conversation_scope="owner1",ports=p,owner_approved=True)
         self.assertEqual(r["state"],"HOLD_S03_NOT_DURABLE")
+
+    def test_no_memory_without_lesson_review(self):
+        p=self.ports
+        p=TeacherPorts(p.discover_metadata,p.consent_for_external_prompt,p.safe_to_use_teacher,p.native_teacher_infer,
+                       p.independently_check,p.s03_write,p.s03_verify,None)
+        r=consult_teacher(model_id="org/model",question="hi",conversation_scope="owner1",ports=p,owner_approved=True)
+        self.assertEqual(r["state"],"HOLD_NATIVE_LESSON_REVIEW_MISSING")
+        self.assertFalse(self.records)
+    def test_refuse_unreviewed_lesson(self):
+        p=self.ports
+        p=TeacherPorts(p.discover_metadata,p.consent_for_external_prompt,p.safe_to_use_teacher,p.native_teacher_infer,
+                       p.independently_check,p.s03_write,p.s03_verify,
+                       lambda q,a,e: {"text":"unverified","source_uri":e["source_uri"],"privacy_approved":True,
+                                       "rights_verified":True,"independent_review":False})
+        r=consult_teacher(model_id="org/model",question="hi",conversation_scope="owner1",ports=p,owner_approved=True)
+        self.assertEqual(r["state"],"HOLD_LESSON_SOURCE_OR_REVIEW")
+        self.assertFalse(self.records)
 
 if __name__=="__main__":unittest.main()
