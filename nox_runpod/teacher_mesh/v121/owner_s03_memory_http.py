@@ -103,6 +103,9 @@ def main():
     out=io.StringIO();ok=False
     try:
         with contextlib.redirect_stdout(out):ok=ssh.probe()
+    except Exception as exc:
+        value=str(exc)
+        print('NOX_V121_SSH_HOLD='+(value if value.startswith('HOLD_') and len(value)<90 else 'SSH_TRANSPORT'))
     finally:
         try:
             with contextlib.redirect_stdout(out):
@@ -110,7 +113,7 @@ def main():
         except Exception:ok=False
     lines=out.getvalue().splitlines()
     for l in lines:
-        if l.startswith(('NATIVE_V121=','NATIVE_V121_OWNER_MEMORY_READBACK_PASS=','TEMP_SSH_CLEANUP=')):
+        if l.startswith(('NATIVE_V121=','NATIVE_V121_OWNER_MEMORY_READBACK_PASS=','SSH_ATTEMPT_','SSH_FAILURE_CLASS=','TEMP_SSH_CLEANUP=')):
             print(l[:2300])
     accepted=bool(ok and 'NATIVE_V121_OWNER_MEMORY_READBACK_PASS=true' in lines)
     print('NOX_V121_OWNER_MEMORY_HTTP_ACCEPTED='+str(accepted).lower())
