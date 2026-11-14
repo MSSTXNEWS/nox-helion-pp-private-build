@@ -36,6 +36,8 @@ jobs:
         if: success()
         run: |
           echo "NOX_TUNER_ONE_NATIVE_START_VERIFIED=true"
+          echo "NOX_PROGRAM_SOURCE=GENESIS_V1_1_GOOGLE_DRIVE_20261108"
+          echo "NOX_TRAINING_NOT_STARTED_BY_THIS_RECOVERY=true"
           echo "NOX_TRAIN_WORM_NOT_STARTED=true"
           echo "NOX_DOWNLOADS_NOT_STARTED=true"
           echo "NOX_TEACHER_SERVE_NOT_RESTARTED=true"
