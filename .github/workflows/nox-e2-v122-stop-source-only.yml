@@ -1,0 +1,26 @@
+name: NOX V122 session-scoped STOP source-only checks
+on:
+  push:
+    branches: [nox/e2-v122-scoped-stop-s03-20261115]
+    paths:
+      - '.github/workflows/nox-e2-v122-stop-source-only.yml'
+      - 'nox_runpod/teacher_mesh/v122/**'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Compile source and embedded native payload, no server connections
+        run: |
+          set -euo pipefail
+          python3 -m compileall -q nox_runpod/teacher_mesh/v122
+          python3 -m unittest -v nox_runpod.teacher_mesh.v122.test_scoped_stop_native_e2e
+          echo "NOX_V122_SOURCE_TEST_ONLY=PASS"
+          echo "NOX_V122_NATIVE_STOP_EXECUTED=false"
+          echo "NOX_V122_S03_AND_WEIGHTS_UNMODIFIED_BY_CI=true"
