@@ -136,7 +136,16 @@ def main():
     catalog_marker="        if path.lstrip('/') == 'nox-function-catalog.js'"
     if any(src.count(x)!=1 for x in (fun_marker,class_marker,response_marker,catalog_marker)):
         raise RuntimeError('HOLD_RUNNER_V122_SOURCE_ANCHORS')
-    fun=fun_marker+src.split(fun_marker,1)[1].split(class_marker,1)[0]
+    import ast
+    tree=ast.parse(src)
+    first=next(n.lineno for n in tree.body if isinstance(n,ast.Assign)
+               and any(isinstance(t,ast.Name) and t.id=='_V122_FROZEN_NOX_UI_SHA' for t in n.targets))
+    end=next(n.end_lineno for n in tree.body if isinstance(n,ast.FunctionDef)
+             and n.name=='_overlay_v122_owner_ui')
+    fragment=[n for n in tree.body if first<=n.lineno<=end]
+    if len(fragment)!=3 or [type(n).__name__ for n in fragment]!=['Assign','Assign','FunctionDef']:
+        raise RuntimeError('HOLD_RUNNER_PATCH_OVERREACH')
+    fun=''.join(src.splitlines(keepends=True)[first-1:end])+'\n\n'
     route=src.split(response_marker,1)[1].split(catalog_marker,1)[0]
     if 'def _overlay_v122_owner_ui' not in fun or 'HOLD_V122_NOX_UI_SOURCE_PIN' not in route:
         raise RuntimeError('HOLD_RUNNER_PATCH_SOURCE')
