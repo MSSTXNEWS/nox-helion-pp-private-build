@@ -37,7 +37,11 @@ try:
    integrity=cx.execute('PRAGMA quick_check').fetchone()[0]
   if len(rows)!=1 or integrity!='ok':raise RuntimeError('HOLD_TEMP_S03_INTEGRITY')
   row=rows[0]
-  if row[1]!='M2' or row[2]!=t or row[3]!='NOX-V126-SYNTHETIC' or row[4]!=m['source_sha256']:
+  equal={'segment':row[1]=='M2','content':row[2]==t,
+         'provenance':row[3]=='NOX-V126-SYNTHETIC',
+         'sha256':row[4]==m['source_sha256']}
+  print('NATIVE_V126_COMPARISON='+json.dumps(equal,sort_keys=True,separators=(',',':')))
+  if not all(equal.values()):
    raise RuntimeError('HOLD_ORIGINAL_S03_WRITER_SEMANTICS')
   stored=json.loads(row[5])
   if stored.get('fact_key')!=m['fact_key'] or stored.get('source_sha256')!=m['source_sha256']:
