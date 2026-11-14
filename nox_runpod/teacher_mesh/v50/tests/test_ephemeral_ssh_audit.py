@@ -116,6 +116,12 @@ class TestBoundedAudit(unittest.TestCase):
         self.assertEqual(out["reason"],"HOLD_INSTANCE_NOT_RUNNING")
         remote.assert_not_called()
 
+    def test_error_classification_removes_sensitive_stderr(self):
+        self.assertEqual(e.classify_ssh_error("Permission denied (publickey)"),"AUTH_DENIED")
+        self.assertEqual(e.classify_ssh_error("Host key verification failed."),"HOST_KEY_REJECTED")
+        self.assertEqual(e.classify_ssh_error("ssh: connect to host secret 1234: Connection refused"),"CONNECT_REFUSED")
+        self.assertEqual(e.classify_ssh_error("secret remote info without signature"),"UNKNOWN_SSH_ERROR")
+
     def test_api_whitelist(self):
         with self.assertRaises(RuntimeError):
             e.Vast("valid-test-key-123456").api("instances/60509551/","DELETE")
