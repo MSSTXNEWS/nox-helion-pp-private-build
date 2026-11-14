@@ -19,7 +19,7 @@ def _api(method,path,key,data=None):
             if method!="GET" or str(exc)!="HOLD_VAST_API_HTTP_429" or attempt==3:raise
             time.sleep((10,20,40)[attempt])
 
-REMOTE=r"""
+REMOTE=r'''
 set -euo pipefail
 python3 - <<'PYREMOTE'
 import ast,os,hashlib,json,stat,subprocess,time,urllib.request
@@ -137,7 +137,7 @@ except Exception as exc:
       source_changed=False,weights_changed=False)
 print('NATIVE_READ_ONLY_COMPLETE=true')
 PYREMOTE
-"""
+'''
 
 def main():
     ssh.api=_api
