@@ -1,0 +1,33 @@
+name: NOX E2 V67 native model-vs-proxy SSE comparison
+on:
+  push:
+    branches: [nox/e2-urgent-chat-recovery-20261114]
+    paths:
+      - '.github/workflows/nox-e2-v67-stream-comparison.yml'
+      - 'nox_runpod/teacher_mesh/v67/proxy_stream_comparison.py'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: nox-e2-v67-sse-test
+  cancel-in-progress: false
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Compile and verify authorized API key
+        run: |
+          set -euo pipefail
+          test -n "$NOX2"
+          python3 -m py_compile nox_runpod/teacher_mesh/v67/proxy_stream_comparison.py
+      - name: Compare model vs proxy SSE without restarting services
+        run: python3 -m nox_runpod.teacher_mesh.v67.proxy_stream_comparison
+      - name: Revoke one-time SSH key
+        if: always()
+        run: python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup
