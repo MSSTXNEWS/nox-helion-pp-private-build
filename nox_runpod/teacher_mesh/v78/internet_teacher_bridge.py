@@ -90,6 +90,41 @@ def consult_teacher(*, model_id: str, question: str, conversation_scope: str,
         return {"state": "HOLD_NATIVE_TEACHER_ERROR"}
 
 
+import urllib.request
+import urllib.parse
+
+def fetch_hub_metadata(model_id: str, *, timeout: float = 8.0):
+    """Pinned Hub discovery via HTTPS; no file download or remote code execution."""
+    if not isinstance(model_id, str) or not MODEL_ID.fullmatch(model_id):
+        return {"state": "HOLD_MODEL_ID"}
+    if not isinstance(timeout, (float, int)) or not 0 < timeout <= 15:
+        return {"state": "HOLD_TIMEOUT"}
+    # Reject redirects to arbitrary hosts; model metadata cannot redirect a NOX worker.
+    class NoRedirect(urllib.request.HTTPRedirectHandler):
+        def redirect_request(self, req, fp, code, msg, headers, newurl):
+            return None
+    endpoint = "https://huggingface.co/api/models/" + urllib.parse.quote(model_id, safe="/")
+    try:
+        req = urllib.request.Request(endpoint, headers={"Accept": "application/json", "User-Agent": "NOX-V78-Metadata/1"})
+        with urllib.request.build_opener(NoRedirect).open(req, timeout=timeout) as response:
+            if response.geturl() != endpoint or response.status != 200:
+                return {"state": "HOLD_HUB_HTTP"}
+            raw = response.read(64_001)
+        if len(raw) > 64_000:
+            return {"state": "HOLD_METADATA_TOO_LARGE"}
+        data = json.loads(raw)
+        if not isinstance(data, dict):
+            return {"state": "HOLD_METADATA"}
+        card = data.get("cardData")
+        license_name = card.get("license") if isinstance(card, dict) else None
+        normalized = {"id": data.get("id"), "sha": data.get("sha"),
+                      "license": license_name or data.get("license"),
+                      "gated": data.get("gated", False) is not False,
+                      "trust_remote_code": False}
+        return discover_candidate(model_id, metadata=normalized)
+    except (OSError, ValueError, TimeoutError, KeyError):
+        return {"state": "HOLD_NETWORK_OR_METADATA"}
+
 def discovery_via_existing_native_port(model_id: str, metadata_callback: Callable[[str], Mapping]):
     """Owner-managed HF metadata callback; caller enforces network allowlist and timeouts."""
     if not isinstance(model_id, str) or not MODEL_ID.fullmatch(model_id):
