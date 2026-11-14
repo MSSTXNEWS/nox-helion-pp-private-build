@@ -24,8 +24,12 @@ for directory,dirs,files in os.walk(root,followlinks=False):
     dirs[:]=[d for d in dirs if d not in skip][:140]
     for name in files:
         low=name.lower()
+        # Match the verified V58 checkpoint classifier, but leave
+        # heavyweight .safetensors/GGUF to the separate cold-weights lane.
+        if low.endswith(('.safetensors','.gguf')):
+            continue
         if not (low.endswith(('.pt','.pth','.ckpt')) or
-                'optimizer' in low or low.startswith('optim.')):
+                'checkpoint' in low or 'optimizer' in low or low.startswith('optim.')):
             continue
         p=Path(directory)/name
         try:
@@ -125,7 +129,19 @@ def run():
                 raise RuntimeError('HOLD_CHECKPOINT_STREAM_TIMEOUT')
             if rc==0 and encrypted.returncode==0 and FINAL.is_file() and FINAL.stat().st_size>1024:
                 break
-            print('NOX_V61_ATTEMPT_'+str(i+1)+'=HOLD_RETRY')
+            emsg=(ssh.stderr.read(10000) if ssh.stderr is not None else b'').lower()
+            if rc==21:cls='CHECKPOINT_FILE_COUNT'
+            elif rc==22:cls='CHECKPOINT_TOTAL_SIZE_LIMIT'
+            elif rc==28:cls='CHECKPOINT_ITEM_SIZE_LIMIT'
+            elif rc==31:cls='CHECKPOINT_CHANGED_DURING_STREAM'
+            elif b'permission denied' in emsg:cls='SSH_AUTH_DENIED'
+            elif b'timed out' in emsg:cls='SSH_NETWORK_TIMEOUT'
+            elif b'traceback' in emsg:cls='REMOTE_PYTHON'
+            else:cls='OTHER'
+            print('NOX_V61_ATTEMPT_'+str(i+1)+'_CLASS='+cls)
+            print('NOX_V61_ATTEMPT_'+str(i+1)+'_SSH_RC='+str(rc))
+            print('NOX_V61_ATTEMPT_'+str(i+1)+'_AGE_RC='+str(encrypted.returncode))
+            print('NOX_V61_ATTEMPT_'+str(i+1)+'_CIPHERTEXT_BYTES='+str(FINAL.stat().st_size if FINAL.exists() else 0))
             time.sleep(5)
         else:
             raise RuntimeError('HOLD_CHECKPOINT_STREAM_TRANSPORT')
