@@ -1,0 +1,44 @@
+name: NOX V126 read-only original S03 writer signature and schema inventory
+on:
+  push:
+    branches: [nox/v126-native-s03-owner-facts-20261115]
+    paths:
+      - '.github/workflows/nox-v126-s03-readonly.yml'
+permissions:
+  contents: read
+concurrency:
+  group: nox-60509551-v126-s03-readonly
+  cancel-in-progress: false
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Compile remote forensics and reject mutations to original S03
+        run: |
+          set -euo pipefail
+          python -m py_compile nox_runpod/teacher_mesh/v126/native_s03_writer_contract.py
+          python -m unittest -v nox_runpod.teacher_mesh.v126.test_native_s03_writer_contract
+  native_readonly:
+    needs: source
+    if: ${{ github.actor == 'MSSTXNEWS' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Read only existing S03 Python writer signatures and DB column names
+        run: |
+          test -n "$NOX2" || { echo 'HOLD_NOX2'; exit 2; }
+          python -m nox_runpod.teacher_mesh.v126.native_s03_writer_contract
+      - name: Always revoke ephemeral SSH identity
+        if: always()
+        run: python -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup
