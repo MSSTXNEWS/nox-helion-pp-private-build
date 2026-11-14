@@ -1,0 +1,31 @@
+name: NOX E2 V83 inspect exact native OneHost memory callbacks
+on:
+  push:
+    branches: [nox/e2-v83-live-recovery-20261114]
+    paths:
+      - '.github/workflows/nox-e2-v83-bindings.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: nox-e2-v83-native-memory-bindings
+  cancel-in-progress: false
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - name: Static source gate
+        run: |
+          set -euo pipefail
+          test -n "$NOX2"
+          python3 -m py_compile nox_runpod/teacher_mesh/v83/bindings_audit.py
+      - name: Existing Vast native read-only S03 and proxy callback audit
+        run: python3 -m nox_runpod.teacher_mesh.v83.bindings_audit
+      - name: Revoke only temporary SSH key
+        if: always()
+        run: python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup
