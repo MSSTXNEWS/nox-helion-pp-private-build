@@ -24,7 +24,7 @@ try:
   s=lines[i]
   if len(s)>950:continue
   if not any(v in s for v in ('fetch(','.read()','getReader(', 'TextDecoder','stream:', 'requestAnimationFrame(', 'append', 'data:', 'JSON.parse','delta','content','display','flush','message','render','[DONE]','if(')):continue
-  s=re.sub(r"""(["'])(?:\\.|(?!\1).)*?\1""",'STR',s)
+  s=re.sub(r'\\x22[^\\x22]*\\x22|\\x27[^\\x27]*\\x27','STR',s)
   s=re.sub(r'(?i)(token|password|secret|authorization)\s*[:=]\s*[^,;]+',r'\1=<REDACTED>',s)
   output('NATIVE_STREAM_SOURCE_LINE',{'line':i+1,'code':s[:300]})
 except Exception as e:output('NATIVE_STREAM_SOURCE_LINE',{'state':'HOLD_HTTP','kind':type(e).__name__})
