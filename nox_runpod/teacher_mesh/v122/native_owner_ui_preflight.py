@@ -50,7 +50,31 @@ checks={
 if all(checks[k] for k in ('frozen_source_sha_ok','owner_bridge_exists','auth_401','proxy_health_200','model_health_200')) and not stop:
  status='PASS_STAGING_PREFLIGHT'
 bridgecode=bridge.read_text(encoding='utf-8',errors='replace') if sha(bridge) else ''
-receipt={'state':status,'checks':checks,'registered':counts,
+# Read-only SHA/pinned-anchor conflict localization, without returning code or secrets.
+import shutil,sqlite3
+space=shutil.disk_usage('/workspace')
+structural={
+ 'bridge_expected_sha':sha(bridge)=='cc27928b38f9b86d2375de8092d09dbdc34f81c6e51e8a68d36041ee71529750',
+ 'proxy_expected_sha':sha(proxy)=='4d90215d7099344dd5aaed2412645b764baa0228acc0b0e153cfe425217591ad',
+ 'web_expected_sha':sha(original)==expected,
+ 'owner_static_class_count':bridgecode.count('class _OwnerStatic(StaticFiles):'),
+ 'static_response_anchor_count':bridgecode.count('        response=await super().get_response(path,scope)'),
+ 'owner_ui_overlay_present':'def _overlay_v122_owner_ui' in bridgecode,
+ 'owner_js_route_present':"path.lstrip('/')=='nox-ui.js'" in bridgecode,
+ 'catalog_fix_present':'_catalog_owner_overlay' in bridgecode,
+ 'async_stop_present':'_next_native_chunk_or_stop' in bridgecode,
+ 'bridge_bytes':bridge.stat().st_size if bridge.is_file() else None,
+ 'proxy_bytes':proxy.stat().st_size if proxy.is_file() else None,
+ 'workspace_free_bytes':space.free,
+}
+try:
+ import s03_memory
+ db=Path(s03_memory.DB)
+ with sqlite3.connect('file:'+str(db)+'?mode=ro',uri=True,timeout=3) as con:
+  con.execute('PRAGMA query_only=ON')
+  structural['s03_quick_check']=con.execute('PRAGMA quick_check').fetchone()[0]=='ok'
+except Exception:structural['s03_quick_check']=False
+receipt={'state':status,'checks':checks,'registered':counts,'sha_drift_diagnosis':structural,
  'frozen_js_sha256':sha(original),'bridge_sha256':sha(bridge),'proxy_sha256':sha(proxy),
  'v122_native_overlay_present':'def _overlay_v122_owner_ui' in bridgecode,
  'private_rows_exported':False,'password_or_cookie_exported':False,
