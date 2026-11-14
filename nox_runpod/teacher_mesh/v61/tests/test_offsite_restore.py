@@ -62,14 +62,11 @@ class TestOfflineRestore(unittest.TestCase):
 
     def test_tampered_chunk_detected(self):
         target=self.dir/"NOX_V61_CIPHERTEXT_PART_02_20261114.zip"
+        with zipfile.ZipFile(self.dir/"NOX_V61_CIPHERTEXT_PART_01_20261114.zip") as good:
+            original_index=good.read("NOX_V61_CHUNK_INDEX.json")
         with zipfile.ZipFile(target,"w") as z:
             z.writestr("NOX_V61_CIPHER.part02",b"TAMPERED")
-            _,sha=_fixture(self.dir)  # rebuild fixture, then overwrite archive only
-        with zipfile.ZipFile(target,"w") as z:
-            z.writestr("NOX_V61_CIPHER.part02",b"TAMPERED")
-            # use correct index from part 1; attack cannot silently pass hash
-            with zipfile.ZipFile(self.dir/"NOX_V61_CIPHERTEXT_PART_01_20261114.zip") as good:
-                z.writestr("NOX_V61_CHUNK_INDEX.json",good.read("NOX_V61_CHUNK_INDEX.json"))
+            z.writestr("NOX_V61_CHUNK_INDEX.json",original_index)
         with self.assertRaisesRegex(ValueError,"HOLD_PART_SHA_MISMATCH"):
             self.restored()
         self.assertFalse(self.out.exists())
