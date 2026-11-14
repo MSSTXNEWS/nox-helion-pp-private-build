@@ -1,0 +1,70 @@
+name: NOX V122 guarded live owner WEB minimal install with rollback
+on:
+  pull_request:
+    branches: [feature/nox-v37-v100-firsthour-14d-20261113]
+    paths: ['.github/workflows/nox-v122-owner-ui-install.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: nox-v122-onehost-guarded-live-install
+  cancel-in-progress: false
+jobs:
+  verify-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: FastAPI source and strict authenticated overlays
+        run: |
+          set -euo pipefail
+          python -m pip install -q fastapi==0.128.2 httpx==0.28.1
+          python -m py_compile nox_runpod/teacher_mesh/v112/native_v29_full_bridge.py nox_runpod/teacher_mesh/v122/install_owner_ui_live.py
+          python -m unittest discover -s nox_runpod/teacher_mesh/v112/tests -p 'test_v122_owner_ui_contract.py' -v
+      - name: Compile exact live patch and reject unexpected frontend source
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import ast, pathlib
+          p=pathlib.Path('nox_runpod/teacher_mesh/v122/install_owner_ui_live.py')
+          tree=ast.parse(p.read_text(encoding='utf8'))
+          remote=next(n.value.value for n in tree.body if isinstance(n,ast.Assign) and n.targets[0].id=='REMOTE_TEMPLATE')
+          code=remote.split("<<'PYREMOTE'\n",1)[1].rsplit('\nPYREMOTE',1)[0]
+          compile(code,'<V122 SHA PINNED LIVE NATIVE>','exec')
+          v112=pathlib.Path('nox_runpod/teacher_mesh/v112/native_v29_full_bridge.py').read_text()
+          start='_V122_FROZEN_NOX_UI_SHA = '
+          klass='class _OwnerStatic(StaticFiles):\n'
+          anchor='        response=await super().get_response(path,scope)\n'
+          catalog="        if path.lstrip('/') == 'nox-function-catalog.js'"
+          assert all(v112.count(k)==1 for k in (start,klass,anchor,catalog))
+          fun=start+v112.split(start,1)[1].split(klass,1)[0]
+          route=v112.split(anchor,1)[1].split(catalog,1)[0]
+          assert 1500<len(fun)<5000 and 250<len(route)<1200
+          assert 'HOLD_V122_NOX_UI_SOURCE_PIN' in route
+          assert all(k in code for k in ('HOLD_BACKUP_CHECK','HOLD_CONCURRENT_SOURCE_SHA_DRIFT','HOLD_OWNER_COOKIE_SHADOW_SHA','HOLD_ROLLED_BACK','NATIVE_V122_APPLY='))
+          print('NOX_V122_LIVE_SOURCE_ADMISSION=PASS')
+          PY
+  native-owner:
+    if: github.event_name == 'pull_request' && github.actor == 'MSSTXNEWS' && github.event.pull_request.head.repo.full_name == github.repository
+    needs: verify-source
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Apply only current SHA-pinned owner JS bridge while idle, automatic rollback
+        run: python -m nox_runpod.teacher_mesh.v122.install_owner_ui_live
+      - name: Always revoke the exact temporary SSH key
+        if: always()
+        run: python -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup
