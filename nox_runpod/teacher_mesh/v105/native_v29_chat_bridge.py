@@ -103,8 +103,20 @@ def register_native_v29_chat(app, trusted: dict) -> None:
             return JSONResponse({'error': 'INVALID_MESSAGE'}, status_code=422)
         # Until native scope ACL and history API are accepted, never accept a
         # client-chosen dialog id as owner memory authority.
-        if item.get('dialog_id'):
-            return JSONResponse({'error': 'HOLD_DIALOG_SCOPE_NOT_BOUND'}, status_code=409)
+        dialog_id = item.get('dialog_id')
+        if dialog_id is not None:
+            # A client-supplied dialog is never proof of memory ownership.
+            verifier = trusted.get('_verify_dialog_scope')
+            receipt_reader = trusted.get('_readback_dialog_receipt')
+            if (not isinstance(dialog_id, str) or not 1 <= len(dialog_id) <= 128
+                    or not callable(verifier) or not callable(receipt_reader)):
+                return JSONResponse({'error': 'HOLD_DIALOG_SCOPE_NOT_BOUND'}, status_code=409)
+            try:
+                permitted = await asyncio.to_thread(verifier, request, dialog_id)
+            except Exception:
+                permitted = False
+            if permitted is not True:
+                return JSONResponse({'error': 'HOLD_DIALOG_SCOPE_NOT_BOUND'}, status_code=409)
         rows = item.get('history') or []
         if not isinstance(rows, list) or len(rows) > 24:
             return JSONResponse({'error': 'HOLD_HISTORY_LIMIT'}, status_code=422)
@@ -122,6 +134,8 @@ def register_native_v29_chat(app, trusted: dict) -> None:
             history.append({'role': row['role'], 'content': body})
         payload = {'messages': history + [{'role': 'user', 'content': text}],
                    '_owner': True, 'stream': True}
+        if dialog_id is not None:
+            payload['dialog_id'] = dialog_id
         scope = _scope(request)
         if scope is None:
             return JSONResponse({'error': 'HOLD_SESSION_COOKIE_SCOPE'}, status_code=401)
@@ -169,14 +183,30 @@ def register_native_v29_chat(app, trusted: dict) -> None:
                     return
                 # The original V98 postflight has now finished. Check the
                 # single existing S03 database by exact question+answer text.
-                proof = await asyncio.to_thread(_readback, text, reply)
+                if dialog_id is not None:
+                    try:
+                        proof = await asyncio.to_thread(
+                            trusted['_readback_dialog_receipt'],
+                            request, dialog_id, text, reply)
+                    except Exception:
+                        proof = None
+                    if (not isinstance(proof, dict)
+                            or proof.get('dialog_id') != dialog_id
+                            or not isinstance(proof.get('record_id'), str)
+                            or not proof['record_id']):
+                        proof = None
+                else:
+                    proof = await asyncio.to_thread(_readback, text, reply)
                 if proof is None:
                     yield _jsonl({'type': 'error', 'error': 'HOLD_S03_COMMIT_NOT_VERIFIED'})
                     return
-                yield _jsonl({'type': 'done', 'model': 'NOX HELION',
-                              'saved': True, 's03_integrated': True,
-                              'stream_mode': 'NATIVE_TOKEN_STREAM',
-                              'exchange_id': proof['record_id']})
+                done = {'type': 'done', 'model': 'NOX HELION',
+                        'saved': True, 's03_integrated': True,
+                        'stream_mode': 'NATIVE_TOKEN_STREAM',
+                        'exchange_id': proof['record_id']}
+                if dialog_id is not None:
+                    done['dialog_id'] = dialog_id
+                yield _jsonl(done)
             except asyncio.CancelledError:
                 raise
             except Exception:
