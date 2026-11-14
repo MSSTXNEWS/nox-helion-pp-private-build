@@ -13,9 +13,17 @@ from nox_runpod.teacher_mesh.v51 import ephemeral_ssh_probe as bridge
 
 _old_api=bridge.api
 def _api_with_key_settle(method,path,key,data=None):
-    result=_old_api(method,path,key,data)
-    if method=="POST" and path.endswith("/ssh/"):time.sleep(18)
-    return result
+    # Vast rate limiting is transient; retry only idempotent GET requests.
+    # Never repeat POST/DELETE automatically: an SSH-key mutation may have landed.
+    for attempt in range(4):
+        try:
+            result=_old_api(method,path,key,data)
+            if method=="POST" and path.endswith("/ssh/"):time.sleep(18)
+            return result
+        except RuntimeError as exc:
+            if method!="GET" or str(exc)!="HOLD_VAST_API_HTTP_429" or attempt==3:
+                raise
+            time.sleep((10,20,40)[attempt])
 
 REMOTE=r"""
 set -euo pipefail
