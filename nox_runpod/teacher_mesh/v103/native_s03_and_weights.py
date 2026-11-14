@@ -29,10 +29,13 @@ try:
     columns=[x[1] for x in con.execute('PRAGMA table_info("'+table+'")')][:30]
     count=con.execute('SELECT COUNT(*) FROM "'+table+'"').fetchone()[0]
     matches=0
+    teacher_matches=0
     for col in columns:
      if re.fullmatch('[A-Za-z0-9_]{1,80}',col) and any(x in col.lower() for x in ('content','text','value','answer','message','payload','meta','provenance','source')):
       matches+=int(con.execute('SELECT COUNT(*) FROM "'+table+'" WHERE CAST("'+col+'" AS TEXT) LIKE ?',('%N100S03CYCLE%',)).fetchone()[0])
-    emit('S03_TABLE',{'table':table,'rows':count,'columns':columns,'synthetic_marker_matches_sum':matches})
+      teacher_matches+=int(con.execute('SELECT COUNT(*) FROM "'+table+'" WHERE CAST("'+col+'" AS TEXT) LIKE ?',('%N107_TEACHER_LESSON_%',)).fetchone()[0])
+    emit('S03_TABLE',{'table':table,'rows':count,'columns':columns,'synthetic_marker_matches_sum':matches,
+      'local_teacher_marker_matches_sum':teacher_matches})
   emit('S03_FILE',state)
 except Exception as e:emit('S03_FILE',{'state':'HOLD_SOURCE_OR_SQL','error_type':type(e).__name__})
 # Larger restored progress packages can contain full weights without adjacent
