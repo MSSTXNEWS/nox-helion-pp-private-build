@@ -30,7 +30,7 @@ else:
    return node
  for n in ast.walk(tree):
   if not isinstance(n,(ast.FunctionDef,ast.AsyncFunctionDef)):continue
-  if n.name not in ('extra_parts','_extra_parts','enrich','add_context','fetch','_fetch','_call','_ollama'):continue
+  if n.name not in ('extra_parts','_active_live','detect_emotion','_port_ok','_http_ok','load_reg'):continue
   code=ast.unparse(Redact().visit(copy.deepcopy(n))).splitlines()[:95]
   for i,line in enumerate(code):
    if len(line)>270:line=line[:270]
