@@ -34,16 +34,21 @@ class Priorities(unittest.TestCase):
         self.assertTrue(self.master['onehost_only'])
         self.assertTrue(all(t['native_queue_id'] is None for t in self.master['tasks']))
         self.assertTrue(all(t['verified'] is False for t in self.master['tasks']))
-        self.assertEqual(self.m['dispatch_policy']['performance_policy_version'],
-                         'NOX_V94_VOLTA_AI_ACCEL_FIRST')
+        self.assertEqual(self.m['dispatch_policy']['training_priority_policy_version'],
+                         'NOX_V99_DIRECT_BASE_TRAINING_85_FIRST')
+        self.assertEqual(self.m['dispatch_policy']['gpu1_training_compute_target_pct'],85)
     def test_gpu_and_model_diagnosis_before_all_optional_wow(self):
         for n in (7,52,42,2,3,4,5,6,21,25):
             self.assertLess(_priority(self.n[n],{}),_priority(self.n[46],{}))
             self.assertLess(_priority(self.n[n],{}),_priority(self.n[49],{}))
-    def test_accelerator_quality_diagnostics_before_teacher_distill(self):
-        for n in (7,42,21,25,38,39):
+    def test_acceleration_pretraining_then_real_weight_training_before_wow(self):
+        for n in (7,42,21,25,26):
             self.assertLess(_priority(self.n[n],{}),_priority(self.n[27],{}))
             self.assertLess(_priority(self.n[n],{}),_priority(self.n[28],{}))
+        # Owner's newest priority: full-weight training ahead of nonessential
+        # self-repair/media, but mandatory P0 chat/STOP always wins.
+        self.assertLess(_priority(self.n[27],{}),_priority(self.n[38],{}))
+        self.assertLess(_priority(self.n[30],{}),_priority(self.n[49],{}))
     def test_verified_99percent_media_never_preempts_safety_or_accel(self):
         p={self.n[50]['task_id']:{
             'native_verified':True,'receipt_sha256':'f'*64,'percent':99}}
@@ -57,6 +62,8 @@ class Priorities(unittest.TestCase):
             self.assertEqual(x['priority'],'P1')
             self.assertEqual(x['chat_priority'],'P0')
             self.assertIsInstance(x['performance_wave'],int)
+            self.assertIsInstance(x['training_wave'],int)
+            self.assertEqual(x['training_target_compute_pct'],85)
             self.assertTrue(x['requires_native_worker'])
             self.assertTrue(x['proposed_not_queued'])
         self.assertEqual(out['jobs_enqueued'],0)
@@ -85,6 +92,8 @@ class Priorities(unittest.TestCase):
             mapped=r['R60-'+str(t['number']).zfill(3)]
             self.assertEqual(mapped['performance_wave'],t['performance_wave'])
             self.assertEqual(mapped['performance_order'],t['performance_order'])
+            self.assertEqual(mapped['training_wave'],t['training_wave'])
+            self.assertEqual(mapped['training_order'],t['training_order'])
             self.assertEqual(mapped['priority'],t['priority'])
             self.assertEqual(set(mapped['depends_on']),
                          {'R60-'+x[-2:].rjust(3,'0') for x in t['depends_on']})
@@ -93,4 +102,6 @@ class Priorities(unittest.TestCase):
         self.assertTrue(self.m['dispatch_policy']['one_student_only'])
         self.assertEqual(self.m['dispatch_policy']['chat_priority'],'P0')
         self.assertEqual(self.m['dispatch_policy']['max_gpu1_training_jobs'],1)
+        self.assertEqual(self.master['training_compute_target_pct'],85)
+        self.assertEqual(self.master['cpu_worker_fraction_max'],0.85)
 if __name__=='__main__':unittest.main()
