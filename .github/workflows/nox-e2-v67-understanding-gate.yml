@@ -1,0 +1,33 @@
+name: NOX E2 V67 inspect prestream understanding gate
+on:
+  push:
+    branches: [nox/e2-urgent-chat-recovery-20261114]
+    paths:
+      - '.github/workflows/nox-e2-v67-understanding-gate.yml'
+      - 'nox_runpod/teacher_mesh/v67/understanding_gate_sanitized.py'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: nox-e2-v67-understanding-gate
+  cancel-in-progress: false
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Source syntax and NOX2
+        run: |
+          set -euo pipefail
+          test -n "$NOX2"
+          python3 -m py_compile nox_runpod/teacher_mesh/v67/understanding_gate_sanitized.py
+      - name: Read bounded sanitized pre-stream NOX gate control flow
+        run: python3 -m nox_runpod.teacher_mesh.v67.understanding_gate_sanitized
+      - name: Revoke temporary SSH key
+        if: always()
+        run: python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup
