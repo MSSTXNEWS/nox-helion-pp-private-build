@@ -1,0 +1,39 @@
+name: NOX E2 V67 urgent chat freeze diagnosis (native read-only)
+on:
+  push:
+    branches: [nox/e2-urgent-chat-recovery-20261114]
+    paths: ['.github/workflows/nox-e2-v67-urgent-chat.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: nox-e2-v67-native-main-chat
+  cancel-in-progress: false
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Existing NOX2 owner key and syntax gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$NOX2" || { echo "::error::HOLD_NOX2"; exit 2; }
+          python3 -m py_compile nox_runpod/teacher_mesh/v67/urgent_chat_probe.py
+      - name: Native live chat health, slots and GPU, no service changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m nox_runpod.teacher_mesh.v67.urgent_chat_probe
+      - name: Verify temporary Vast SSH key detached
+        if: always()
+        shell: bash
+        run: python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup
+      - name: Honest acceptance boundary
+        if: success()
+        run: echo "NOX_V67_IS_A_READ_ONLY_DIAGNOSTIC_NOT_A_FIX=true"
