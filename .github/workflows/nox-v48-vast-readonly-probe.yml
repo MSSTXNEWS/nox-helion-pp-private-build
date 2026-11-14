@@ -155,6 +155,52 @@ jobs:
           else
             echo "HOLD_SSH_KEYS_LIST_UNAVAILABLE"
           fi
+      - name: Verify existing Jupyter route without exposing token
+        if: success()
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os,urllib.parse,urllib.request,urllib.error,ssl
+          raw=json.load(open(os.path.join(os.environ['RUNNER_TEMP'],'instance.json')))
+          d=raw.get('instances',raw) if isinstance(raw,dict) else raw
+          if isinstance(d,list):d=next((v for v in d if str(v.get('id'))=='60509551'),{})
+          names=sorted(k for k in d if ('jup' in k.lower() or 'port' in k.lower() or 'token' in k.lower()))
+          print('JUPYTER_API_FIELDS_PRESENT='+','.join(names[:25]))
+          url=str(d.get('jupyter_url') or d.get('jup_url') or '')
+          token=str(d.get('jupyter_token') or '')
+          if not url:
+              print('HOLD_NO_JUPYTER_URL_FIELD')
+              raise SystemExit(0)
+          p=urllib.parse.urlsplit(url)
+          if not token:
+              token=urllib.parse.parse_qs(p.query).get('token',[''])[0]
+          if p.scheme not in ('http','https') or not p.hostname:
+              print('HOLD_JUPYTER_URL_MALFORMED')
+              raise SystemExit(0)
+          print('JUPYTER_SCHEME='+p.scheme)
+          print('JUPYTER_TOKEN_AVAILABLE='+str(bool(token)))
+          root=p.path.rstrip('/')
+          for suffix in ('/lab','/tree','/login'):
+              if root.endswith(suffix):root=root[:-len(suffix)]
+          probe=urllib.parse.urlunsplit((p.scheme,p.netloc,root+'/api','',''))
+          headers={'Accept':'application/json'}
+          if token:headers['Authorization']='token '+token
+          class NoRedirect(urllib.request.HTTPRedirectHandler):
+              def redirect_request(self,*args,**kwargs): return None
+          opener=urllib.request.build_opener(NoRedirect,urllib.request.HTTPSHandler(context=ssl.create_default_context()))
+          try:
+              with opener.open(urllib.request.Request(probe,headers=headers),timeout=10) as rsp:
+                  payload=rsp.read(4096)
+                  try: obj=json.loads(payload)
+                  except (json.JSONDecodeError,UnicodeDecodeError):obj={}
+                  print('JUPYTER_API_VERIFIED='+str(rsp.status==200 and isinstance(obj,dict) and ('version' in obj or 'status' in obj)))
+                  print('JUPYTER_HTTP_STATUS='+str(rsp.status))
+          except urllib.error.HTTPError as e:
+              print('HOLD_JUPYTER_HTTP_'+str(e.code))
+          except Exception as e:
+              print('HOLD_JUPYTER_CONNECT_'+type(e).__name__)
+          PY
       - name: Upload sanitized API receipt (no host or credentials)
         if: always()
         uses: actions/upload-artifact@v4
