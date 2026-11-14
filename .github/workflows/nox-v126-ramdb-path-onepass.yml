@@ -1,0 +1,44 @@
+name: NOX V126 original S03 remember on Path-based disposable RAM DB
+on:
+  push:
+    branches: [nox/v126-native-s03-owner-facts-20261115]
+    paths:
+      - '.github/workflows/nox-v126-ramdb-path-onepass.yml'
+permissions:
+  contents: read
+concurrency:
+  group: nox-v126-ram-path-only-60509551
+  cancel-in-progress: false
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Original Python + isolated test compile
+        run: |
+          set -euo pipefail
+          python -m py_compile nox_runpod/teacher_mesh/v126/physical_writer_ramdb_probe.py
+          python -m unittest -v nox_runpod.teacher_mesh.v126.test_physical_writer_ramdb_probe
+  native_ram:
+    needs: source
+    if: ${{ github.actor == 'MSSTXNEWS' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Original S03 remember(Path) into disposable /dev/shm only
+        run: |
+          test -n "$NOX2" || { echo 'HOLD_NOX2'; exit 2; }
+          python -m nox_runpod.teacher_mesh.v126.physical_writer_ramdb_probe
+      - name: Always detach temporary SSH identity
+        if: always()
+        run: python -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup
