@@ -43,6 +43,7 @@ print('NATIVE_V117_ROUTE_SUMMARY='+json.dumps({'expected':len(expected),
  'registered_native_api_routes':len(api),
  'src_sha256':hashlib.sha256(proxy.read_bytes()).hexdigest()},sort_keys=True,separators=(',',':')))
 print('NATIVE_V117_NATIVE_MATCHES='+json.dumps(matched,separators=(',',':')))
+print('NATIVE_V117_ALL_EXISTING_ROUTES='+json.dumps(sorted(api),separators=(',',':')))
 print('NATIVE_V117_MISSING_EXAMPLES='+json.dumps(missing[:60],separators=(',',':')))
 print('NATIVE_V117_GROUP_COUNTS='+json.dumps(groups,sort_keys=True,separators=(',',':')))
 print('NATIVE_V117_PRIVATE_RECORDS_EXPORTED=false')
