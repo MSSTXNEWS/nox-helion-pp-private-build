@@ -31,7 +31,7 @@ class TestNativeP0(unittest.TestCase):
         t=x.REMOTE
         self.assertIn("desired=max(old,target_nice)",t)
         self.assertIn("os.setpriority(os.PRIO_PROCESS,pid,desired)",t)
-        self.assertIn("data['nice_after']",t)
+        self.assertIn("'nice_after':second['nice']",t)
         self.assertNotIn("nvidia-smi -pm",t)
         self.assertNotIn("supervisorctl','restart",t)
         self.assertNotIn("os.kill",t)
