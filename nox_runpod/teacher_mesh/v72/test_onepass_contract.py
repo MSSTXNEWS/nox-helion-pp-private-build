@@ -10,9 +10,10 @@ class OnePassContract(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         start="python3 - <<'PYREMOTE'\n"
-        assert run.REMOTE.startswith("set -euo pipefail\n"+start)
-        assert run.REMOTE.rstrip().endswith("PYREMOTE")
-        cls.body=run.REMOTE.split(start,1)[1].rsplit("\nPYREMOTE",1)[0]
+        command=run.REMOTE.lstrip("\n")
+        assert command.startswith("set -euo pipefail\n"+start)
+        assert command.rstrip().endswith("PYREMOTE")
+        cls.body=command.split(start,1)[1].rsplit("\nPYREMOTE",1)[0]
         cls.ast=ast.parse(cls.body)
 
     def test_embedded_python_syntax(self):
