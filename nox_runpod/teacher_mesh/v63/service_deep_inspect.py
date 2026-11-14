@@ -162,8 +162,13 @@ def main()->int:
     connection.REMOTE=REMOTE
     ok=False
     try:ok=connection.probe()
-    except Exception:
-        print("NOX_V63_DEEP=HOLD_NATIVE_INSPECT")
+    except Exception as e:
+        # Do not export hostnames, keys, stdout or exception internals.
+        msg=str(e)
+        if msg.startswith("HOLD_") and len(msg)<100 and all(ch.isupper() or ch.isdigit() or ch=="_" for ch in msg):
+            print("NOX_V63_DEEP="+msg)
+        else:
+            print("NOX_V63_DEEP=HOLD_NATIVE_"+type(e).__name__)
     finally:
         try:
             if not connection.cleanup():ok=False
