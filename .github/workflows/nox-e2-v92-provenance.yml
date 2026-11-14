@@ -1,0 +1,30 @@
+name: NOX E2 V92 verify large HF model completeness and optimizer tensor headers
+on:
+  push:
+    branches: [nox/e2-v92-trainable-vault-20261114]
+    paths: ['.github/workflows/nox-e2-v92-provenance.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: nox-e2-v92-native-checkpoint-provenance
+  cancel-in-progress: false
+jobs:
+  provenance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - name: Verify existing key and checked source
+        run: |
+          set -euo pipefail
+          test -n "$NOX2"
+          python3 -m py_compile nox_runpod/teacher_mesh/v92/model_provenance_headers.py
+      - name: ONE native safe model and optimizer metadata inspection
+        run: python3 -m nox_runpod.teacher_mesh.v92.model_provenance_headers
+      - name: Revoke ephemeral SSH key
+        if: always()
+        run: python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup
