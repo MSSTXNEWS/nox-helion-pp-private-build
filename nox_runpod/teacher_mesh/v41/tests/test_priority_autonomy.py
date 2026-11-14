@@ -111,6 +111,7 @@ class TestChatFirstAdmission(unittest.TestCase):
   self.assertIn('CHAT_FIRST',self.live(seconds_since_chat_activity=10)['reasons'])
  def test_idle_allows_only_native_admission(self):
   x=self.live()
+  self.assertEqual(x['target_compute_pct_idle'],85)
   self.assertIn('REQUEST_ONEHOST_GPU1_DISTILLATION_ADMISSION',x['actions'])
   self.assertFalse(x['training_launch'])
   self.assertEqual(x['queue_owner'],'EXISTING_NOX_ONEHOST')
