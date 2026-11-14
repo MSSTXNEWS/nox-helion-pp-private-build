@@ -1,0 +1,43 @@
+name: NOX E2 V63 live student latency (read-only)
+on:
+  push:
+    branches: [nox/e2-chat-latency-20261114]
+    paths:
+      - '.github/workflows/nox-v63-chat-latency.yml'
+      - 'nox_runpod/teacher_mesh/v63/chat_latency_diagnostic.py'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: nox-e2-v63-readonly-60509551
+  cancel-in-progress: false
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Static compilation and existing OneHost routing gate
+        run: |
+          set -euo pipefail
+          python3 -m py_compile nox_runpod/teacher_mesh/v63/chat_latency_diagnostic.py
+          grep -F 'connection.REMOTE = REMOTE' nox_runpod/teacher_mesh/v63/chat_latency_diagnostic.py >/dev/null
+          test -n "$NOX2" || { echo "::error::HOLD_NOX2_MISSING"; exit 2; }
+      - name: Test existing live student only with four synthetic prompts
+        run: |
+          set -euo pipefail
+          python3 -m nox_runpod.teacher_mesh.v63.chat_latency_diagnostic
+      - name: Double-check temporary SSH key detachment
+        if: always()
+        run: |
+          python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup
+      - name: No deployment or training mutation
+        if: success()
+        run: |
+          echo "NOX_MODELS_UNCHANGED=true"
+          echo "NOX_WEIGHTS_UNCHANGED=true"
+          echo "NOX_ONEHOST_UNCHANGED=true"
