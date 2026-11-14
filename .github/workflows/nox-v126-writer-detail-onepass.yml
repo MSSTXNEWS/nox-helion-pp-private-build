@@ -1,0 +1,44 @@
+name: NOX V126 one-shot original S03 remember AST detail, no writes
+on:
+  push:
+    branches: [nox/v126-native-s03-owner-facts-20261115]
+    paths:
+      - '.github/workflows/nox-v126-writer-detail-onepass.yml'
+permissions:
+  contents: read
+concurrency:
+  group: nox-v126-original-writer-readonly-60509551
+  cancel-in-progress: false
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Compile remote read-only script and test no-write guards
+        run: |
+          set -euo pipefail
+          python -m py_compile nox_runpod/teacher_mesh/v126/native_s03_writer_contract.py
+          python -m unittest -v nox_runpod.teacher_mesh.v126.test_native_s03_writer_contract
+  native_readonly:
+    needs: source
+    if: ${{ github.actor == 'MSSTXNEWS' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 11
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Inventory original S03 remember signature and defaults without reading user records
+        run: |
+          test -n "$NOX2" || { echo 'HOLD_NOX2'; exit 2; }
+          python -m nox_runpod.teacher_mesh.v126.native_s03_writer_contract
+      - name: Always revoke attached ephemeral SSH key
+        if: always()
+        run: python -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup
