@@ -10,7 +10,7 @@ class TestMemory(unittest.TestCase):
         self.seed=str(root/'seed.sqlite3');self.inf=str(root/'infinite.sqlite3')
         c=sqlite3.connect(self.seed)
         c.execute("CREATE TABLE s03_segments(id TEXT,level TEXT,content TEXT,provenance TEXT,ref TEXT,sha256 TEXT,session TEXT,significance REAL)")
-        c.executemany("INSERT INTO s03_segments VALUES (?,?,?,?,?,?,?,?,?)",[
+        c.executemany("INSERT INTO s03_segments VALUES (?,?,?,?,?,?,?,?)",[
             ("one","M3","NOX memory tested","source://one",None,None,"scope1",0.9),
             ("two","M3","NOX hidden memory",None,None,None,"scope1",0.8),
             ("three","M3","NOX wrong scope","source://other",None,None,"other",0.7)])
