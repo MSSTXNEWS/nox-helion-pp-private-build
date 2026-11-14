@@ -177,7 +177,10 @@ try:
     if len(modified)>220000:raise RuntimeError('HOLD_V125_PROXY_SIZE')
     if not (health(8080) and health(8081) and status()):
         raise RuntimeError('HOLD_NATIVE_HEALTH')
-    if code_for('/api/nox/memory/facts','POST',{})[0]!=401:
+    pre_http=code_for('/api/nox/memory/facts','POST',{})[0]
+    # The route is not yet installed: 404 (not registered) and 401
+    # (middleware challenge) are both fail-closed safe preconditions.
+    if pre_http not in (401,404):
         raise RuntimeError('HOLD_ANONYMOUS_FACT_ROUTE_PRECHECK')
     for attempt in range(3):
         if stopped() or not idle():
