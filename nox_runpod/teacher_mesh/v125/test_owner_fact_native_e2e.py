@@ -47,6 +47,14 @@ class LiveFactContract(unittest.TestCase):
         self.assertIn("reused_existing_synthetic_fact=reused_qa",self.src)
         self.assertIn("HOLD_PREVIOUS_QA_SOURCE_META",self.src)
 
+    def test_vast_429_backoff_never_retries_post_writes(self):
+        import inspect
+        from nox_runpod.teacher_mesh.v125.owner_fact_native_e2e import transport
+        source=inspect.getsource(transport)
+        self.assertIn('method!="GET"',source)
+        self.assertIn('"HOLD_VAST_API_HTTP_429"',source)
+        self.assertIn('(10,20,40)',source)
+
     def test_no_fake_training_and_no_private_records_leak(self):
         for value in ("'model_weights_changed':False",
                       "'services_restarted':False",
