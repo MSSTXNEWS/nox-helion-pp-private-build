@@ -148,7 +148,7 @@ sources={
 'nox_runpod/teacher_mesh/v38/durable_runtime.py':'17aca9d60aa2d11c4f6eeef47982963a4a5946e6',
 'nox_runpod/teacher_mesh/v41/training/__init__.py':'e69de29bb2d1d6434b8b29ae775ad8c2e48c5391',
 'nox_runpod/teacher_mesh/v41/training/priority_autonomy.py':'d4e07f995ec3de52b68519a7ebf61c3134cca782',
-'nox_runpod/teacher_mesh/v43/nox/resource_brain.py':'dd6d15af686e2ca9e3e8bfe9729f9fda9cb3c2'
+'nox_runpod/teacher_mesh/v43/nox/resource_brain.py':'dd6d15af686e2ca9e3e8e8bfe9729f9fda9cb3c2'
 }
 staged=False;stage_error='HOLD_UNKNOWN';total_bytes=0
 if stop_clear and free>10_000_000_000:
