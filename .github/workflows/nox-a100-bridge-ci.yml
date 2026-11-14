@@ -1,0 +1,59 @@
+name: NOX A100 bridge CI
+on:
+  push:
+    branches:
+      - control/nox-a100-live-bridge-20261112
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile scripts and validate strict allowlists
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          python3 -m py_compile nox_remote_control/a100_live/bridge.py nox_remote_control/a100_live/bridge_v2.py nox_remote_control/a100_live/train_actions.py nox_remote_control/a100_live/nox_resonance_control.py
+          bash -n nox_remote_control/a100_live/install.sh
+          bash -n nox_remote_control/a100_live/upgrade_bridge_v2.sh
+          PYTHONPATH=nox_remote_control/a100_live python3 - <<'PY'
+          import bridge, bridge_v2, train_actions, nox_resonance_control as ch
+          from nox_resonance_control import Auth
+          assert bridge.OPS=={"gpu","disk","processes","checkpoint","preflight","health"}
+          assert bridge_v2.WRITE_OPS=={"stage_fast75","prepare_local","resume_training","arm_resume_training","cancel_auto_resume"}
+          assert train_actions.PACK_SHA=="33afe7ea74fb5cf635815f1891298e92bc54b516d5a5462beb3214a2a9d8b652"
+          assert train_actions.LOCAL.as_posix().startswith("/tmp/")
+          assert "resume_training" in bridge_v2.OPS
+          assert "arm_resume_training" in bridge_v2.OPS
+          assert ch.parse_intent("запусти обучение")["intent"]=="resume"
+          owner=Auth(True,True,"verified-session")
+          nonowner=Auth(True,False,"verified-session")
+          assert ch.dispatch("запусти обучение",nonowner)["state"]=="HOLD_UNAUTHORIZED"
+          assert ch.dispatch("запусти обучение",owner)["state"]=="CONFIRM_REQUIRED"
+          seen=[]
+          def capture(task):
+              seen.append(task);return True
+          result=ch.dispatch("запусти обучение",owner,approved_intent="resume",queue_writer=capture)
+          assert result["state"]=="ENQUEUED_NOT_EXECUTED"
+          assert seen[0]["op"]=="arm_resume_training"
+          assert ch.parse_intent("rm -rf /root/nox36")["state"]=="HOLD_UNSUPPORTED_DANGEROUS_COMMAND"
+          assert bridge_v2.checkpoint()["sha_verified"] is False
+          print("NOX_TRAINING_CONTROL_CI_PASS")
+          PY
+      - name: Verify actual FAST75 archive transfer and safe staging
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          PYTHONPATH=nox_remote_control/a100_live python3 - <<'PY'
+          import train_actions as t
+          result=t.stage_fast75()
+          print("FAST75_PACKAGE_STAGE",result)
+          assert result.get("state")=="READY", "archive not usable"
+          assert result.get("sha256")=="33afe7ea74fb5cf635815f1891298e92bc54b516d5a5462beb3214a2a9d8b652"
+          assert t.FAST.joinpath("START_FAST75.sh").is_file()
+          assert t.FAST.joinpath("preflight.py").is_file()
+          assert t.prepare_local()["state"].startswith("HOLD"),"unsafe silent start"
+          print("NOX_FAST75_TRANSFER_VERIFIED")
+          PY

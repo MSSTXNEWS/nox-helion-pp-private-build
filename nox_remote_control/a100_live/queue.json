@@ -1,0 +1,21 @@
+{
+  "schema": "nox-live-safe-v1",
+  "node": "runpod-5f3j8hwyicc0bp",
+  "tasks": [
+    {
+      "id": "nox36-training-status-20261112-audit01",
+      "op": "training_status",
+      "expires_utc": "2026-11-12T09:00:00Z"
+    },
+    {
+      "id": "nox36-trainer-processes-20261112-audit01",
+      "op": "processes",
+      "expires_utc": "2026-11-12T09:00:00Z"
+    },
+    {
+      "id": "nox36-gpu-current-20261112-audit01",
+      "op": "gpu",
+      "expires_utc": "2026-11-12T09:00:00Z"
+    }
+  ]
+}
