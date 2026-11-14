@@ -80,7 +80,7 @@ class V112Tests(unittest.TestCase):
             ('/nox-web-v29/','get'),
             ('/nox-web-v29/native-owner.js','get'),
         ]:
-            r=getattr(self.client,method)(url,json={} if method=='post' else None)
+            r=(self.client.post(url,json={}) if method=='post' else self.client.get(url))
             self.assertEqual(r.status_code,401,url)
         self.assertEqual(self.calls,[])
 
