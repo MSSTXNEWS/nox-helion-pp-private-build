@@ -43,6 +43,9 @@ print('NATIVE_V117_ROUTE_SUMMARY='+json.dumps({'expected':len(expected),
  'registered_native_api_routes':len(api),
  'src_sha256':hashlib.sha256(proxy.read_bytes()).hexdigest()},sort_keys=True,separators=(',',':')))
 print('NATIVE_V117_NATIVE_MATCHES='+json.dumps(matched,separators=(',',':')))
+method_info=[{'path':r.path,'methods':sorted(r.methods)} for r in chat_proxy.app.routes if isinstance(r,APIRoute) and r.path in set(expected)]
+for offset in range(0,len(method_info),5):
+ print('NATIVE_V117_ROUTE_METHODS_'+str(offset//5)+'='+json.dumps(method_info[offset:offset+5],separators=(',',':')))
 for n in range(0,len(api),9):
  print('NATIVE_V117_NATIVE_ROUTE_PART_'+str(n//9)+'='+json.dumps(sorted(api)[n:n+9],separators=(',',':')))
 print('NATIVE_V117_MISSING_EXAMPLES='+json.dumps(missing[:60],separators=(',',':')))
