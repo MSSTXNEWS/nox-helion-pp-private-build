@@ -170,6 +170,9 @@ def attach_temporary_key() -> None:
         raise RuntimeError('HOLD_TEMP_KEY_NOT_REGISTERED')
     conn.TRACK.write_text(json.dumps({'public':public,'key_id':found[0]}))
     print('NOX_V60_TEMP_KEY_ATTACH=VERIFIED')
+    # Vast's running-container authorized_keys injection is not instantaneous:
+    # earlier native probes authenticated only after several retries.
+    time.sleep(12)
 
 
 def restore_test(encrypted: Path, test_identity: Path) -> dict:
@@ -223,7 +226,7 @@ def run() -> None:
     attach_temporary_key()
     known=RUN/'known_hosts'
     try:
-        for attempt in range(4):
+        for attempt in range(10):
             FINAL.unlink(missing_ok=True)
             command=['ssh','-T','-i',str(conn.KEY),'-p',str(port),
                      '-o','BatchMode=yes','-o','IdentitiesOnly=yes',
@@ -270,7 +273,7 @@ def run() -> None:
             print('NOX_V60_ATTEMPT_'+str(attempt+1)+'_SSH_RC='+str(ssh_result))
             print('NOX_V60_ATTEMPT_'+str(attempt+1)+'_AGE_RC='+str(crypt.returncode))
             print('NOX_V60_ATTEMPT_'+str(attempt+1)+'_CIPHERTEXT_BYTES='+str(FINAL.stat().st_size if FINAL.exists() else 0))
-            time.sleep(3)
+            time.sleep(5)
         else:
             raise RuntimeError('HOLD_SSH_OR_AGE_STREAM')
         result=restore_test(FINAL,test_identity)
