@@ -1,0 +1,49 @@
+name: NOX R60 Vast Jupyter metadata read-only
+on:
+  push:
+    branches: [feature/nox-v38-synaptic-brain-20261114]
+    paths: [.github/workflows/nox-r60-jupyter-metadata-readonly.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  jupyter-metadata:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    env:
+      VAST_API_KEY: ${{ secrets.NOX2 }}
+    steps:
+      - name: Verify existing instance Jupyter metadata without exposing routes or tokens
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os,urllib.request
+          key=os.environ.get('VAST_API_KEY','')
+          if not key: raise SystemExit('HOLD_NOX2_MISSING')
+          url='https://console.vast.ai/api/v0/instances/60509551/'
+          req=urllib.request.Request(url,headers={'Authorization':'Bearer '+key,'Accept':'application/json'})
+          with urllib.request.urlopen(req,timeout=25) as response:
+              data=json.load(response)
+          if not isinstance(data,dict):raise SystemExit('HOLD_VAST_RESPONSE_SCHEMA')
+          obj=data.get('instances',data)
+          if isinstance(obj,list):obj=next((x for x in obj if str(x.get('id'))=='60509551'),None)
+          if not isinstance(obj,dict) or str(obj.get('id'))!='60509551':raise SystemExit('HOLD_WRONG_INSTANCE')
+          if obj.get('actual_status')!='running':raise SystemExit('HOLD_INSTANCE_NOT_RUNNING')
+          mode=str(obj.get('image_runtype') or 'unknown')
+          if mode not in ('ssh','jupyter','args'):mode='other'
+          ports=obj.get('ports') or {}
+          jup_port=False
+          if isinstance(ports,dict):
+              jup_port=any('8080' in str(k) or '8888' in str(k) for k in ports)
+          has_token=bool(obj.get('jupyter_token'))
+          has_route=bool(obj.get('ssh_host') and obj.get('ssh_port'))
+          print('INSTANCE_ID=60509551')
+          print('ACTUAL_STATUS=running')
+          print('INSTANCE_MODE='+mode)
+          print('JUPYTER_TOKEN_PRESENT='+str(has_token).lower())
+          print('JUPYTER_PORT_IN_PORT_MAP='+str(jup_port).lower())
+          print('SSH_ROUTE_PRESENT='+str(has_route).lower())
+          print('JUPYTER_NATIVE_HTTP_AUTH_VERIFIED=false')
+          print('NO_REMOTE_COMMAND_EXECUTED=true')
+          PY
