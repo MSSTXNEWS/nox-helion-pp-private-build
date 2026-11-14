@@ -1,0 +1,31 @@
+name: NOX E2 V64 agent events and supervisor ownership audit
+on:
+  push:
+    branches: [nox/e2-chat-latency-20261114]
+    paths: ['.github/workflows/nox-v64-agent-events.yml','nox_runpod/teacher_mesh/v63/agent_events_audit.py']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: nox-e2-v64-agent-events
+  cancel-in-progress: false
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Check syntax
+        run: |
+          set -euo pipefail
+          python3 -m py_compile nox_runpod/teacher_mesh/v63/agent_events_audit.py
+          test -n "$NOX2"
+      - name: Read existing agent event kinds and process service without modifying NOX
+        run: python3 -m nox_runpod.teacher_mesh.v63.agent_events_audit
+      - name: Cleanup temporary SSH key
+        if: always()
+        run: python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup
