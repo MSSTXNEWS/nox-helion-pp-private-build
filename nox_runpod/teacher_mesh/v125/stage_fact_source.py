@@ -31,8 +31,8 @@ print('NATIVE_V125_STAGE_SCHEMA=EXISTING_ONEHOST_FACT_API_SOURCE_V1')
 PROXY=Path('/root/nox/scripts/chat_proxy.py')
 BRIDGE=Path('/root/nox/scripts/nox_v29_chat_bridge.py')
 DEST=Path('/root/nox/scripts/nox_v125_owner_fact_write.py')
-PROXY_SHA='4d90215d7099344dd5aaed2412645b764baa0228acc0b0e153cfe425217591ad'
-BRIDGE_SHA='d0590c2a582bd4ad0df5ff26a036284cf1426e31ca41b283cf1695c7726f7cd5'
+PROXY_SHA='e79aa0747511cf010f79f72150fc4e64b36b9c9ccea3b09d788a6306c63c0c95'
+BRIDGE_SHA='2c714c7f952be64a2b278c993da9d59014a43a32075281b5aa755ada02c6fb8e'
 CODE=base64.b64decode('___SOURCE64___',validate=True)
 EXPECTED='___SOURCE_SHA___'
 PREVIOUS='38997324053456fdfa5339f1eaed66485657fe2c795711accaa24b706dfbc490'
