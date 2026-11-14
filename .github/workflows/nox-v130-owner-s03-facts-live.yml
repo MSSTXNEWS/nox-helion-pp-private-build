@@ -36,7 +36,7 @@ jobs:
           python -m unittest discover -s nox_runpod/teacher_mesh/v130/tests -p 'test_*.py' -v
           echo NOX_V130_SOURCE_GATE=PASS
   native-once:
-    if: github.actor == 'MSSTXNEWS' && ((github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) || (github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES'))
+    if: github.event_name == 'workflow_dispatch' && github.actor == 'MSSTXNEWS' && inputs.allow_native == 'YES'
     needs: verify-source
     runs-on: ubuntu-latest
     timeout-minutes: 15
