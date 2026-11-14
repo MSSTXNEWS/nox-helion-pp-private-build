@@ -28,6 +28,12 @@ class NativeFactInstallSafety(unittest.TestCase):
                        "rollback(previous,meta,new_sha)"):
             self.assertIn(needle,self.script)
 
+    def test_before_route_404_is_not_a_false_failure_or_an_auth_bypass(self):
+        self.assertIn("pre_http not in (401,404)",self.script)
+        self.assertIn("HOLD_ANONYMOUS_FACT_ROUTE_PRECHECK",self.script)
+        self.assertIn("if code_for('/api/nox/memory/facts','POST',{})[0]!=401",
+                      self.script)
+
     def test_real_authorization_and_no_fake_pass(self):
         for needle in ("_read_chat_password()", "cookiejar.CookieJar()",
                        "'/chat/login'", "'/chat/session'", "'/chat/logout'",
