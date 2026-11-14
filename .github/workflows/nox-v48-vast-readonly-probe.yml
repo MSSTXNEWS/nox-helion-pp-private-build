@@ -1,0 +1,78 @@
+name: NOX Vast 60509551 connection probe (read-only)
+
+on:
+  push:
+    branches:
+      - feature/nox-v38-synaptic-brain-20261114
+    paths:
+      - .github/workflows/nox-v48-vast-readonly-probe.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nox-vast-60509551-readonly-probe
+  cancel-in-progress: true
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    env:
+      VAST_API_KEY: ${{ secrets.VAST_API_KEY }}
+    steps:
+      - name: Confirm existing GitHub Actions credential without disclosing it
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${VAST_API_KEY:-}" ]; then
+            echo "::error::VAST_API_KEY is not configured for this workflow; no remote connection attempted."
+            exit 2
+          fi
+          echo "VAST_API_KEY_PRESENT=true"
+
+      - name: Install official Vast.ai CLI on ephemeral runner only
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --quiet --disable-pip-version-check --no-input vastai
+          vastai --help > /dev/null
+
+      - name: Read Vast.ai instance state without changing anything
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 65s vastai show instance 60509551 --raw > "$RUNNER_TEMP/nox_vast_instance.json"
+          python - <<'PY'
+          import json,os
+          p=os.path.join(os.environ['RUNNER_TEMP'],'nox_vast_instance.json')
+          data=json.load(open(p,encoding='utf-8'))
+          if isinstance(data,list):
+              data=next((x for x in data if str(x.get('id'))=='60509551'),{})
+          if not isinstance(data,dict):
+              raise SystemExit('HOLD_BAD_INSTANCE_RESPONSE')
+          instance_id=data.get('id',data.get('instance_id'))
+          if str(instance_id)!='60509551':
+              raise SystemExit('HOLD_WRONG_INSTANCE')
+          fields=('id','actual_status','status','gpu_name','num_gpus','gpu_ram','disk_space','disk_usage')
+          print('NOX_VAST_INSTANCE_READONLY='+json.dumps({k:data[k] for k in fields if k in data},ensure_ascii=False))
+          print('VAST_INSTANCE_ID_VERIFIED=true')
+          PY
+
+      - name: Read-only server GPU command via Vast backend (no SSH)
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 75s vastai execute 60509551 "nvidia-smi -L" > "$RUNNER_TEMP/nox_execute_response.txt"
+          python - <<'PY'
+          import os,re
+          data=open(os.path.join(os.environ['RUNNER_TEMP'],'nox_execute_response.txt'),encoding='utf-8',errors='replace').read()
+          if len(data)>20000:raise SystemExit('HOLD_OVERSIZED_EXEC_RESPONSE')
+          if re.search(r'(401|403|unauthorized|permission denied|error)',data,re.I):
+              print('HOLD_EXECUTION_DENIED_OR_ERROR')
+              raise SystemExit(2)
+          print('VAST_EXEC_RESPONSE_RECEIVED=true')
+          print('RECEIPT_EVIDENCE='+data[:1800])
+          print('NOTE=EXEC_RESPONSE_NOT_PROOF_OF_REMOTE_COMPLETION_UNTIL_RESULT_READBACK')
+          PY
