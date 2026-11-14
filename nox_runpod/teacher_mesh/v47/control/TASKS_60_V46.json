@@ -1,6 +1,6 @@
 {
   "schema": "NOX_V46_SIX_LANE_SIXTY_TASKS_V1",
-  "program": "NOX PRIME V94: AI hardware/software optimizations and verified response quality FIRST; P0 chat, native OneHost, S03 remain protected",
+  "program": "NOX PRIME V99: train base weights first at up-to-85% measured compute after P0 chat/STOP, RAM CPU prep and verified optimizer restore",
   "as_of": "2026-11-14",
   "production_task_ids": [],
   "live_verified": false,
@@ -14,18 +14,27 @@
     "readiness_default": "HOLD_NATIVE_BINDINGS",
     "performance_policy_version": "NOX_V94_VOLTA_AI_ACCEL_FIRST",
     "goal_order": [
-      "V100_P0_CHAT_PROTECTION_AND_BASELINE",
-      "AI_ACCEL_LIBRARIES_CPU_RAM_LLAMACPP_AND_QUALITY",
-      "RAG_SELF_REPAIR_SKILLS_AND_ANSWER_CORRECTNESS",
-      "FULL_WEIGHT_DISTILLATION_ONLY_AFTER_GPU1_RESTORE",
-      "OPTIONAL_VOICE_CINEMA_WOW"
+      "P0_CHAT_SAFETY_AND_TRAINING_RESOURCE_BASELINE",
+      "RAM_CPU_DATA_PREPARATION_AND_BONA_FIDE_BASE_WEIGHT_FORGE",
+      "ANSWER_QUALITY_MEMORY_AND_SELF_REPAIR",
+      "OPTIONAL_MEDIA_AND_UNSUPPORTED_FALLBACKS"
     ],
     "onehost_only": true,
     "one_student_only": true,
     "chat_priority": "P0",
     "r60_background_priority": "P1",
     "max_gpu1_training_jobs": 1,
-    "disk_floor_for_new_writes_bytes": 10000000000
+    "disk_floor_for_new_writes_bytes": 10000000000,
+    "training_priority_policy_version": "NOX_V99_DIRECT_BASE_TRAINING_85_FIRST",
+    "gpu1_training_compute_target_pct": 85,
+    "cpu_max_workers_ratio": 0.85,
+    "cgroup_ram_pagecache_max_ratio": 0.85,
+    "p0_chat_never_waits_for_training": true,
+    "training_gpu1_lease_required": true,
+    "trainable_checkpoint_owner_restore_required": true,
+    "direct_base_weights_no_lora": true,
+    "forced_gpu0_training": false,
+    "cuda_oom_guard_required": true
   },
   "groups": [
     {
@@ -80,7 +89,9 @@
       ],
       "state": "PLANNED_NOT_ENQUEUED",
       "performance_wave": 0,
-      "performance_order": 6
+      "performance_order": 6,
+      "training_wave": 0,
+      "training_order": 7
     },
     {
       "task_id": "NOX-V46-02",
@@ -104,7 +115,9 @@
       ],
       "state": "PLANNED_NOT_ENQUEUED",
       "performance_wave": 0,
-      "performance_order": 12
+      "performance_order": 12,
+      "training_wave": 0,
+      "training_order": 8
     },
     {
       "task_id": "NOX-V46-03",
@@ -115,7 +128,7 @@
       "depends_on": [
         "NOX-V46-02"
       ],
-      "priority": "P1",
+      "priority": "P0",
       "resource": "CPU_IO",
       "requires_native_owner": true,
       "requires_backup_restore": false,
@@ -132,7 +145,9 @@
       "ai_acceleration_tasks": [
         "specialized AI wheels provenance/license audit",
         "wheel-only SHA256 lock"
-      ]
+      ],
+      "training_wave": 0,
+      "training_order": 12
     },
     {
       "task_id": "NOX-V46-04",
@@ -144,7 +159,7 @@
         "NOX-V46-01",
         "NOX-V46-03"
       ],
-      "priority": "P1",
+      "priority": "P0",
       "resource": "CPU_IO",
       "requires_native_owner": true,
       "requires_backup_restore": false,
@@ -160,7 +175,9 @@
       "performance_order": 2,
       "ai_acceleration_tasks": [
         "model snapshot deduplication and no-repeat download"
-      ]
+      ],
+      "training_wave": 0,
+      "training_order": 13
     },
     {
       "task_id": "NOX-V46-05",
@@ -187,7 +204,9 @@
       "performance_order": 3,
       "ai_acceleration_tasks": [
         "GGUF Q4/Q5/Q8 independent answer quality and memory benchmarks"
-      ]
+      ],
+      "training_wave": 1,
+      "training_order": 5
     },
     {
       "task_id": "NOX-V46-06",
@@ -216,7 +235,9 @@
         "quantized KV cache acceptance",
         "parallel slots versus prompt latency",
         "prefix reuse and prefill"
-      ]
+      ],
+      "training_wave": 1,
+      "training_order": 6
     },
     {
       "task_id": "NOX-V46-07",
@@ -246,7 +267,9 @@
         "NUMA topology",
         "RAM and /dev/shm cache budgets",
         "Volta GPU VRAM admission"
-      ]
+      ],
+      "training_wave": 0,
+      "training_order": 9
     },
     {
       "task_id": "NOX-V46-08",
@@ -257,7 +280,7 @@
       "depends_on": [
         "NOX-V46-07"
       ],
-      "priority": "P1",
+      "priority": "P0",
       "resource": "CPU_LIGHT",
       "requires_native_owner": true,
       "requires_backup_restore": true,
@@ -274,7 +297,9 @@
       "ai_acceleration_tasks": [
         "single GPU1 lease",
         "reclaim idle teachers only at verified safe checkpoint"
-      ]
+      ],
+      "training_wave": 0,
+      "training_order": 17
     },
     {
       "task_id": "NOX-V46-09",
@@ -298,7 +323,9 @@
       ],
       "state": "PLANNED_NOT_ENQUEUED",
       "performance_wave": 0,
-      "performance_order": 13
+      "performance_order": 13,
+      "training_wave": 0,
+      "training_order": 14
     },
     {
       "task_id": "NOX-V46-10",
@@ -325,7 +352,9 @@
       "performance_order": 6,
       "ai_acceleration_tasks": [
         "zstandard persistent encrypted Cold Vault and recovery receipts"
-      ]
+      ],
+      "training_wave": 1,
+      "training_order": 11
     },
     {
       "task_id": "NOX-V46-11",
@@ -347,7 +376,9 @@
       ],
       "state": "PLANNED_NOT_ENQUEUED",
       "performance_wave": 0,
-      "performance_order": 9
+      "performance_order": 9,
+      "training_wave": 0,
+      "training_order": 16
     },
     {
       "task_id": "NOX-V46-12",
@@ -358,7 +389,7 @@
       "depends_on": [
         "NOX-V46-11"
       ],
-      "priority": "P0",
+      "priority": "P1",
       "resource": "CPU_IO",
       "requires_native_owner": true,
       "requires_backup_restore": false,
@@ -371,7 +402,9 @@
       ],
       "state": "PLANNED_NOT_ENQUEUED",
       "performance_wave": 0,
-      "performance_order": 10
+      "performance_order": 10,
+      "training_wave": 2,
+      "training_order": 1
     },
     {
       "task_id": "NOX-V46-13",
@@ -382,7 +415,7 @@
       "depends_on": [
         "NOX-V46-12"
       ],
-      "priority": "P0",
+      "priority": "P1",
       "resource": "CPU_IO",
       "requires_native_owner": true,
       "requires_backup_restore": false,
@@ -398,7 +431,9 @@
       "performance_order": 11,
       "ai_acceleration_tasks": [
         "FAISS index / verified S03 recency cache benchmark, no second database"
-      ]
+      ],
+      "training_wave": 2,
+      "training_order": 2
     },
     {
       "task_id": "NOX-V46-14",
@@ -422,7 +457,9 @@
       ],
       "state": "PLANNED_NOT_ENQUEUED",
       "performance_wave": 2,
-      "performance_order": 1
+      "performance_order": 1,
+      "training_wave": 2,
+      "training_order": 3
     },
     {
       "task_id": "NOX-V46-15",
@@ -447,7 +484,9 @@
       ],
       "state": "PLANNED_NOT_ENQUEUED",
       "performance_wave": 2,
-      "performance_order": 2
+      "performance_order": 2,
+      "training_wave": 2,
+      "training_order": 4
     },
     {
       "task_id": "NOX-V46-16",
@@ -472,7 +511,9 @@
       ],
       "state": "PLANNED_NOT_ENQUEUED",
       "performance_wave": 2,
-      "performance_order": 3
+      "performance_order": 3,
+      "training_wave": 2,
+      "training_order": 5
     },
     {
       "task_id": "NOX-V46-17",
@@ -496,7 +537,9 @@
       ],
       "state": "PLANNED_NOT_ENQUEUED",
       "performance_wave": 2,
-      "performance_order": 4
+      "performance_order": 4,
+      "training_wave": 2,
+      "training_order": 6
     },
     {
       "task_id": "NOX-V46-18",
@@ -520,7 +563,9 @@
       ],
       "state": "PLANNED_NOT_ENQUEUED",
       "performance_wave": 2,
-      "performance_order": 5
+      "performance_order": 5,
+      "training_wave": 2,
+      "training_order": 7
     },
     {
       "task_id": "NOX-V46-19",
@@ -545,7 +590,9 @@
       ],
       "state": "PLANNED_NOT_ENQUEUED",
       "performance_wave": 2,
-      "performance_order": 6
+      "performance_order": 6,
+      "training_wave": 2,
+      "training_order": 8
     },
     {
       "task_id": "NOX-V46-20",
@@ -570,7 +617,9 @@
       ],
       "state": "PLANNED_NOT_ENQUEUED",
       "performance_wave": 2,
-      "performance_order": 7
+      "performance_order": 7,
+      "training_wave": 2,
+      "training_order": 9
     },
     {
       "task_id": "NOX-V46-21",
@@ -579,7 +628,7 @@
       "lane": "FORGE",
       "title": "Прочитать реальную причину train_error step=0",
       "depends_on": [],
-      "priority": "P1",
+      "priority": "P0",
       "resource": "CPU_LIGHT",
       "requires_native_owner": true,
       "requires_backup_restore": false,
@@ -595,7 +644,9 @@
       "performance_order": 7,
       "ai_acceleration_tasks": [
         "OOM root cause and real GPU1 peak memory budget"
-      ]
+      ],
+      "training_wave": 0,
+      "training_order": 10
     },
     {
       "task_id": "NOX-V46-22",
@@ -606,7 +657,7 @@
       "depends_on": [
         "NOX-V46-21"
       ],
-      "priority": "P1",
+      "priority": "P0",
       "resource": "CPU_LIGHT",
       "requires_native_owner": true,
       "requires_backup_restore": false,
@@ -619,7 +670,9 @@
       ],
       "state": "PLANNED_NOT_ENQUEUED",
       "performance_wave": 1,
-      "performance_order": 8
+      "performance_order": 8,
+      "training_wave": 0,
+      "training_order": 11
     },
     {
       "task_id": "NOX-V46-23",
@@ -647,7 +700,9 @@
       "performance_order": 9,
       "ai_acceleration_tasks": [
         "teacher inference version and model provenance"
-      ]
+      ],
+      "training_wave": 1,
+      "training_order": 1
     },
     {
       "task_id": "NOX-V46-24",
@@ -674,7 +729,9 @@
       "performance_order": 10,
       "ai_acceleration_tasks": [
         "CPU parallel source preprocessing and tokenization in RAM"
-      ]
+      ],
+      "training_wave": 1,
+      "training_order": 2
     },
     {
       "task_id": "NOX-V46-25",
@@ -701,7 +758,9 @@
       "performance_order": 11,
       "ai_acceleration_tasks": [
         "orjson/rapidfuzz/zstd/FAISS CPU index and dataset deduplication"
-      ]
+      ],
+      "training_wave": 1,
+      "training_order": 3
     },
     {
       "task_id": "NOX-V46-26",
@@ -725,7 +784,9 @@
       ],
       "state": "PLANNED_NOT_ENQUEUED",
       "performance_wave": 1,
-      "performance_order": 12
+      "performance_order": 12,
+      "training_wave": 1,
+      "training_order": 4
     },
     {
       "task_id": "NOX-V46-27",
@@ -736,7 +797,7 @@
       "depends_on": [
         "NOX-V46-26"
       ],
-      "priority": "P2",
+      "priority": "P1",
       "resource": "GPU1_EXCLUSIVE",
       "requires_native_owner": true,
       "requires_backup_restore": true,
@@ -749,7 +810,9 @@
       ],
       "state": "PLANNED_NOT_ENQUEUED",
       "performance_wave": 3,
-      "performance_order": 1
+      "performance_order": 1,
+      "training_wave": 1,
+      "training_order": 7
     },
     {
       "task_id": "NOX-V46-28",
@@ -760,7 +823,7 @@
       "depends_on": [
         "NOX-V46-26"
       ],
-      "priority": "P2",
+      "priority": "P1",
       "resource": "GPU1_EXCLUSIVE",
       "requires_native_owner": true,
       "requires_backup_restore": true,
@@ -773,7 +836,9 @@
       ],
       "state": "PLANNED_NOT_ENQUEUED",
       "performance_wave": 3,
-      "performance_order": 2
+      "performance_order": 2,
+      "training_wave": 1,
+      "training_order": 8
     },
     {
       "task_id": "NOX-V46-29",
@@ -784,7 +849,7 @@
       "depends_on": [
         "NOX-V46-26"
       ],
-      "priority": "P2",
+      "priority": "P1",
       "resource": "GPU1_EXCLUSIVE",
       "requires_native_owner": true,
       "requires_backup_restore": true,
@@ -800,7 +865,9 @@
       "performance_order": 3,
       "ai_acceleration_tasks": [
         "coder teacher benchmarking before any base-weight distillation"
-      ]
+      ],
+      "training_wave": 1,
+      "training_order": 9
     },
     {
       "task_id": "NOX-V46-30",
@@ -817,7 +884,7 @@
         "NOX-V46-29",
         "NOX-V46-09"
       ],
-      "priority": "P2",
+      "priority": "P1",
       "resource": "GPU1_EXCLUSIVE",
       "requires_native_owner": true,
       "requires_backup_restore": true,
@@ -833,7 +900,9 @@
       "performance_order": 4,
       "ai_acceleration_tasks": [
         "optimizer resume, checkpoint reload, blind holdout, no LoRA claim"
-      ]
+      ],
+      "training_wave": 1,
+      "training_order": 10
     },
     {
       "task_id": "NOX-V46-31",
@@ -855,7 +924,9 @@
       ],
       "state": "PLANNED_NOT_ENQUEUED",
       "performance_wave": 2,
-      "performance_order": 8
+      "performance_order": 8,
+      "training_wave": 2,
+      "training_order": 10
     },
     {
       "task_id": "NOX-V46-32",
@@ -879,7 +950,9 @@
       ],
       "state": "PLANNED_NOT_ENQUEUED",
       "performance_wave": 2,
-      "performance_order": 9
+      "performance_order": 9,
+      "training_wave": 2,
+      "training_order": 11
     },
     {
       "task_id": "NOX-V46-33",
@@ -903,7 +976,9 @@
       ],
       "state": "PLANNED_NOT_ENQUEUED",
       "performance_wave": 2,
-      "performance_order": 10
+      "performance_order": 10,
+      "training_wave": 2,
+      "training_order": 12
     },
     {
       "task_id": "NOX-V46-34",
@@ -927,7 +1002,9 @@
       ],
       "state": "PLANNED_NOT_ENQUEUED",
       "performance_wave": 2,
-      "performance_order": 11
+      "performance_order": 11,
+      "training_wave": 2,
+      "training_order": 13
     },
     {
       "task_id": "NOX-V46-35",
@@ -954,7 +1031,9 @@
       "performance_order": 13,
       "ai_acceleration_tasks": [
         "provenance source retrieval, license/privacy guard"
-      ]
+      ],
+      "training_wave": 2,
+      "training_order": 14
     },
     {
       "task_id": "NOX-V46-36",
@@ -981,7 +1060,9 @@
       "performance_order": 14,
       "ai_acceleration_tasks": [
         "sandbox patch/test loop, wheel imports and subprocess safeguards"
-      ]
+      ],
+      "training_wave": 2,
+      "training_order": 15
     },
     {
       "task_id": "NOX-V46-37",
@@ -1005,7 +1086,9 @@
       ],
       "state": "PLANNED_NOT_ENQUEUED",
       "performance_wave": 1,
-      "performance_order": 15
+      "performance_order": 15,
+      "training_wave": 2,
+      "training_order": 16
     },
     {
       "task_id": "NOX-V46-38",
@@ -1033,7 +1116,9 @@
       "performance_order": 16,
       "ai_acceleration_tasks": [
         "automated code patch → test → rollback (owner authorization)"
-      ]
+      ],
+      "training_wave": 2,
+      "training_order": 17
     },
     {
       "task_id": "NOX-V46-39",
@@ -1057,7 +1142,9 @@
       ],
       "state": "PLANNED_NOT_ENQUEUED",
       "performance_wave": 2,
-      "performance_order": 12
+      "performance_order": 12,
+      "training_wave": 2,
+      "training_order": 18
     },
     {
       "task_id": "NOX-V46-40",
@@ -1081,7 +1168,9 @@
       ],
       "state": "PLANNED_NOT_ENQUEUED",
       "performance_wave": 2,
-      "performance_order": 13
+      "performance_order": 13,
+      "training_wave": 2,
+      "training_order": 19
     },
     {
       "task_id": "NOX-V46-41",
@@ -1103,7 +1192,9 @@
       ],
       "state": "PLANNED_NOT_ENQUEUED",
       "performance_wave": 0,
-      "performance_order": 4
+      "performance_order": 4,
+      "training_wave": 0,
+      "training_order": 4
     },
     {
       "task_id": "NOX-V46-42",
@@ -1132,7 +1223,9 @@
         "SSE first-delta TTFT",
         "p50/p95 time-to-first-text and token/s",
         "llama.cpp KV q8_0 vs f16 quality benchmark"
-      ]
+      ],
+      "training_wave": 0,
+      "training_order": 5
     },
     {
       "task_id": "NOX-V46-43",
@@ -1156,7 +1249,9 @@
       ],
       "state": "PLANNED_NOT_ENQUEUED",
       "performance_wave": 4,
-      "performance_order": 1
+      "performance_order": 1,
+      "training_wave": 3,
+      "training_order": 1
     },
     {
       "task_id": "NOX-V46-44",
@@ -1180,7 +1275,9 @@
       ],
       "state": "PLANNED_NOT_ENQUEUED",
       "performance_wave": 4,
-      "performance_order": 2
+      "performance_order": 2,
+      "training_wave": 3,
+      "training_order": 2
     },
     {
       "task_id": "NOX-V46-45",
@@ -1204,7 +1301,9 @@
       ],
       "state": "PLANNED_NOT_ENQUEUED",
       "performance_wave": 4,
-      "performance_order": 3
+      "performance_order": 3,
+      "training_wave": 3,
+      "training_order": 3
     },
     {
       "task_id": "NOX-V46-46",
@@ -1229,7 +1328,9 @@
       ],
       "state": "PLANNED_NOT_ENQUEUED",
       "performance_wave": 4,
-      "performance_order": 4
+      "performance_order": 4,
+      "training_wave": 3,
+      "training_order": 4
     },
     {
       "task_id": "NOX-V46-47",
@@ -1254,7 +1355,9 @@
       ],
       "state": "PLANNED_NOT_ENQUEUED",
       "performance_wave": 4,
-      "performance_order": 5
+      "performance_order": 5,
+      "training_wave": 3,
+      "training_order": 5
     },
     {
       "task_id": "NOX-V46-48",
@@ -1278,7 +1381,9 @@
       ],
       "state": "PLANNED_NOT_ENQUEUED",
       "performance_wave": 4,
-      "performance_order": 6
+      "performance_order": 6,
+      "training_wave": 3,
+      "training_order": 6
     },
     {
       "task_id": "NOX-V46-49",
@@ -1303,7 +1408,9 @@
       ],
       "state": "PLANNED_NOT_ENQUEUED",
       "performance_wave": 4,
-      "performance_order": 7
+      "performance_order": 7,
+      "training_wave": 3,
+      "training_order": 7
     },
     {
       "task_id": "NOX-V46-50",
@@ -1328,7 +1435,9 @@
       ],
       "state": "PLANNED_NOT_ENQUEUED",
       "performance_wave": 4,
-      "performance_order": 8
+      "performance_order": 8,
+      "training_wave": 3,
+      "training_order": 8
     },
     {
       "task_id": "NOX-V46-51",
@@ -1350,7 +1459,9 @@
       ],
       "state": "PLANNED_NOT_ENQUEUED",
       "performance_wave": 0,
-      "performance_order": 1
+      "performance_order": 1,
+      "training_wave": 0,
+      "training_order": 1
     },
     {
       "task_id": "NOX-V46-52",
@@ -1379,7 +1490,9 @@
         "CUDA 12.x SM70 kernel probe",
         "PyTorch CUDA 12.6 wheel compatibility",
         "FP16 microbatch and gradient checkpointing"
-      ]
+      ],
+      "training_wave": 0,
+      "training_order": 6
     },
     {
       "task_id": "NOX-V46-53",
@@ -1403,7 +1516,9 @@
       ],
       "state": "PLANNED_NOT_ENQUEUED",
       "performance_wave": 0,
-      "performance_order": 2
+      "performance_order": 2,
+      "training_wave": 0,
+      "training_order": 2
     },
     {
       "task_id": "NOX-V46-54",
@@ -1427,7 +1542,9 @@
       ],
       "state": "PLANNED_NOT_ENQUEUED",
       "performance_wave": 0,
-      "performance_order": 3
+      "performance_order": 3,
+      "training_wave": 0,
+      "training_order": 3
     },
     {
       "task_id": "NOX-V46-55",
@@ -1438,7 +1555,7 @@
       "depends_on": [
         "NOX-V46-53"
       ],
-      "priority": "P1",
+      "priority": "P3",
       "resource": "CPU_IO",
       "requires_native_owner": true,
       "requires_backup_restore": false,
@@ -1451,7 +1568,9 @@
       ],
       "state": "PLANNED_NOT_ENQUEUED",
       "performance_wave": 2,
-      "performance_order": 15
+      "performance_order": 15,
+      "training_wave": 3,
+      "training_order": 9
     },
     {
       "task_id": "NOX-V46-56",
@@ -1476,7 +1595,9 @@
       ],
       "state": "PLANNED_NOT_ENQUEUED",
       "performance_wave": 0,
-      "performance_order": 14
+      "performance_order": 14,
+      "training_wave": 0,
+      "training_order": 15
     },
     {
       "task_id": "NOX-V46-57",
@@ -1501,7 +1622,9 @@
       ],
       "state": "PLANNED_NOT_ENQUEUED",
       "performance_wave": 1,
-      "performance_order": 17
+      "performance_order": 17,
+      "training_wave": 2,
+      "training_order": 20
     },
     {
       "task_id": "NOX-V46-58",
@@ -1525,7 +1648,9 @@
       ],
       "state": "PLANNED_NOT_ENQUEUED",
       "performance_wave": 1,
-      "performance_order": 18
+      "performance_order": 18,
+      "training_wave": 2,
+      "training_order": 21
     },
     {
       "task_id": "NOX-V46-59",
@@ -1549,7 +1674,9 @@
       ],
       "state": "PLANNED_NOT_ENQUEUED",
       "performance_wave": 1,
-      "performance_order": 19
+      "performance_order": 19,
+      "training_wave": 2,
+      "training_order": 22
     },
     {
       "task_id": "NOX-V46-60",
@@ -1575,7 +1702,9 @@
       ],
       "state": "PLANNED_NOT_ENQUEUED",
       "performance_wave": 2,
-      "performance_order": 14
+      "performance_order": 14,
+      "training_wave": 2,
+      "training_order": 23
     }
   ]
 }
