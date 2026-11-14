@@ -21,7 +21,7 @@ print('NATIVE_V107_PROXY='+json.dumps({'sha256':hashlib.sha256(src).hexdigest(),
 print('NATIVE_V107_MODULE='+json.dumps({'present':B.is_file(),'size':B.stat().st_size if B.is_file() else 0,
     'mode':oct(stat.S_IMODE(B.stat().st_mode)) if B.is_file() else None},separators=(',',':')))
 if not B.is_file():raise SystemExit('HOLD_NO_STAGED_BRIDGE')
-test_source="""
+test_source='''
 import sys,types,ast
 sys.path.insert(0,'/root/nox/scripts')
 from pathlib import Path
@@ -42,7 +42,7 @@ assert '/api/nox/status' in routes
 assert '/api/nox/chat/stream' in routes
 assert '/api/nox/stop' in routes
 print('ISOLATED_BRIDGE_REGISTERED')
-"""
+'''
 for candidate in ('/root/nox/venv/bin/python','/root/nox/.venv/bin/python',
   '/opt/venv/bin/python','/venv/bin/python','/usr/local/bin/python3'):
  p=Path(candidate)
