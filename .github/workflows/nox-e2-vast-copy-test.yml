@@ -1,0 +1,68 @@
+name: NOX E2 - Vast copy transport test (read-only)
+on:
+  push:
+    branches: [nox/e2-vast-file-transfer-20261114]
+    paths: ['.github/workflows/nox-e2-vast-copy-test.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  copy-probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    env:
+      VAST_API_KEY: ${{ secrets.NOX2 }}
+    steps:
+      - name: Verify existing Vast credentials and active instance
+        shell: bash
+        run: |
+          set -euo pipefail
+          [ -n "$VAST_API_KEY" ] || { echo "::error::HOLD_NOX2"; exit 2; }
+          python3 -m pip -q install --disable-pip-version-check vastai
+          vastai show instance 60509551 --raw > "$RUNNER_TEMP/nox-instance.json"
+          python3 - <<'PY'
+          import json,os
+          x=json.load(open(os.path.join(os.environ['RUNNER_TEMP'],'nox-instance.json')))
+          d=x.get('instances',x) if isinstance(x,dict) else x
+          if isinstance(d,list): d=next((v for v in d if str(v.get('id'))=='60509551'),{})
+          if str(d.get('id'))!='60509551' or d.get('actual_status')!='running':
+              raise SystemExit('HOLD_VAST_INSTANCE')
+          print('VAST_INSTANCE_CONFIRMED=60509551, running')
+          PY
+      - name: Try built-in copy of one harmless system file (no remote modifications)
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/nox-copy-probe"
+          set +e
+          timeout 95s vastai copy 60509551:/etc/os-release "local:$RUNNER_TEMP/nox-copy-probe/" > "$RUNNER_TEMP/copy-log.txt" 2>&1
+          RESULT=$?
+          set -e
+          export COPY_RESULT="$RESULT"
+          python3 - <<'PY'
+          from pathlib import Path
+          import os,hashlib,re
+          p=Path(os.environ['RUNNER_TEMP'])
+          o=p/'nox-copy-probe'
+          files=[f for f in o.rglob('*') if f.is_file()]
+          log=(p/'copy-log.txt').read_text(errors='replace')
+          print('VAST_COPY_CLI_EXIT='+os.environ['COPY_RESULT'])
+          print('VAST_COPY_FILE_COUNT='+str(len(files)))
+          valid=[]
+          for f in files:
+              if f.stat().st_size > 1_000_000: continue
+              s=f.read_bytes()
+              if b'NAME=' in s and b'ID=' in s:
+                  valid.append(f)
+                  print('NOX_COPY_PROBE_VERIFIED_SHA256='+hashlib.sha256(s).hexdigest())
+                  print('NOX_COPY_PROBE_SIZE_BYTES='+str(len(s)))
+          if not valid:
+              code='HOLD_COPY_NO_PHYSICAL_FILE'
+              if re.search(r'permission denied|unauthorized|401|403',log,re.I): code='HOLD_COPY_NOT_AUTHORIZED'
+              elif re.search(r'not found|no such file',log,re.I): code='HOLD_COPY_SOURCE_UNAVAILABLE'
+              elif re.search(r'unsupported|invalid path|invalid format',log,re.I): code='HOLD_COPY_SYNTAX'
+              elif os.environ['COPY_RESULT']=='124': code='HOLD_COPY_TIMEOUT'
+              print('NOX_COPY_RESULT='+code)
+              raise SystemExit(3)
+          print('NOX_COPY_RESULT=PHYSICAL_FILE_VERIFIED_READ_ONLY')
+          PY
