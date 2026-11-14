@@ -1,0 +1,24 @@
+name: NOX V66 cache cleanup source safety contract
+on:
+  push:
+    branches: [feature/nox-v38-synaptic-brain-20261114]
+    paths: [.github/workflows/nox-v66-cache-purge-ci.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Compile and 5 offline guards
+        run: |
+          set -euo pipefail
+          python3 -m py_compile nox_runpod/teacher_mesh/v66/cache_purge.py
+          python3 -m unittest discover -s nox_runpod/teacher_mesh/v66/tests -p "test_*.py" -v
+      - name: Source checks not live cleanup
+        run: |
+          echo "NO_REMOTE_FILES_DELETED=true"
