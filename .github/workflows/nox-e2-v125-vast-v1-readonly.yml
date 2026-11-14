@@ -1,4 +1,5 @@
 name: NOX Vast.ai current API v1 owner-instance existence check
+# One read-only official console/cloud endpoint fallback after HTTP 404, no SSH keys or changes.
 on:
   push:
     branches: [nox/e2-v125-owner-s03-facts-20261115]
