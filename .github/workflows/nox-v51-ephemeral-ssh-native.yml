@@ -4,6 +4,7 @@ on:
     branches: [feature/nox-v38-synaptic-brain-20261114]
     paths:
       - ".github/workflows/nox-v51-ephemeral-ssh-native.yml"
+      - "nox_runpod/teacher_mesh/v51/ephemeral_ssh_probe.py"
   workflow_dispatch:
 permissions:
   contents: read
