@@ -346,6 +346,35 @@ jobs:
           else
             echo "HOLD_INSTANCE_LOGS_CLI_UNAVAILABLE"
           fi
+      - name: Check pre-existing Vast.ai Cloud Sync connections (redacted)
+        if: success()
+        shell: bash
+        run: |
+          set -euo pipefail
+          if timeout 35s vastai show connections --raw > "$RUNNER_TEMP/cloud_connections.json" 2>"$RUNNER_TEMP/cloud_connections.err"; then
+            python3 - <<'PY'
+          import json,os
+          from pathlib import Path
+          p=Path(os.environ['RUNNER_TEMP'])/'cloud_connections.json'
+          try:r=json.loads(p.read_text())
+          except (ValueError,UnicodeError):
+              print('HOLD_CLOUD_CONNECTION_RESPONSE_UNPARSEABLE')
+              raise SystemExit(0)
+          if isinstance(r,dict):
+              for key in ('connections','results','data'):
+                  if isinstance(r.get(key),list):r=r[key];break
+          if not isinstance(r,list):
+              print('HOLD_CLOUD_CONNECTIONS_NOT_LIST')
+              raise SystemExit(0)
+          print('CLOUD_CONNECTION_COUNT='+str(len(r)))
+          for item in r:
+              if not isinstance(item,dict):continue
+              safe={k:item.get(k) for k in ('id','provider','service','type','cloud_type') if isinstance(item.get(k),(int,str)) and len(str(item.get(k)))<80}
+              print('CLOUD_CONNECTION_SAFE='+json.dumps(safe,sort_keys=True))
+          PY
+          else
+            echo "HOLD_VAST_CONNECTIONS_API_UNAVAILABLE"
+          fi
       - name: Upload sanitized API receipt (no host or credentials)
         if: always()
         uses: actions/upload-artifact@v4
