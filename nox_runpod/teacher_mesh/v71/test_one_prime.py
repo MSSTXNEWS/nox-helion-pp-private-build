@@ -7,6 +7,7 @@ from nox_runpod.teacher_mesh.v38.native_bridge_v38 import HostBindings
 from nox_runpod.teacher_mesh.v38.synaptic_brain import Session
 from nox_runpod.teacher_mesh.v71.disk_budget import verify_new_write_space
 from nox_runpod.teacher_mesh.v71.ram_policy import plan_ram, GIB, MIB
+from nox_runpod.teacher_mesh.v71.offload_policy import plan_offload
 from nox_runpod.teacher_mesh.v71.one_prime import OnePrime, NativeOneHost
 
 
@@ -92,6 +93,47 @@ class Disk10GB(unittest.TestCase):
             'estimated_temp_bytes':0,
             'disk_write_estimate_verified':False})
         self.assertFalse(r['training_allowed_by_disk_alone'])
+
+
+class Offload10GB(unittest.TestCase):
+    def test_above_floor_never_deletes_or_migrates(self):
+        out=plan_offload({'disk_free_bytes':17_462_976_512})
+        self.assertEqual(out['state'],'NO_CLEANUP_NEEDED')
+        self.assertEqual(out['actions'],[])
+        self.assertTrue(out['chat_allowed'])
+        self.assertFalse(out['source_deleted'])
+
+    def test_below_floor_proposes_cache_first(self):
+        data={'disk_free_bytes':8_200_000_000,'stop_active':False,
+              'native_owner_authorized':True,
+              'drive_destination_authorized':True,
+              'candidates':[{'kind':'pip_cache','native_verified':True,
+                'not_open':True,'not_used_by_running_process':True,
+                'allowlisted_root':True}]}
+        out=plan_offload(data)
+        self.assertEqual(out['state'],'OFFLOAD_REQUIRED')
+        self.assertIn('OWNER_NATIVE_REGENERABLE_CACHE_CLEANUP_PROPOSAL',out['actions'])
+        self.assertIn('ENCRYPTED_DRIVE_COPY_THROUGH_EXISTING_OFFLOAD',out['actions'])
+        self.assertFalse(out['performed'])
+
+    def test_protected_weight_memory_and_checkpoint_never_candidates(self):
+        out=plan_offload({'disk_free_bytes':7_000_000_000,
+           'stop_active':False,'native_owner_authorized':True,
+           'candidates':[{'kind':k,'native_verified':True,'not_open':True,
+                'not_used_by_running_process':True,'allowlisted_root':True}
+                for k in ('active_student','s03','checkpoint','optimizer')]})
+        self.assertFalse(any('CLEANUP_PROPOSAL' in v for v in out['actions']))
+
+    def test_cold_backup_not_owner_restored_blocks_deletion(self):
+        out=plan_offload({'disk_free_bytes':7_000_000_000,
+           'stop_active':False,'native_owner_authorized':True,
+           'candidates':[{'kind':'cold_model','active_student':False,
+                          'original_full_sha_verified':True,
+                          'offsite_cipher_sha_verified':True,
+                          'offsite_download_roundtrip_verified':True,
+                          'owner_key_restore_verified':False}]})
+        self.assertIn('VERIFY_COLD_MODEL_OFFSITE_AND_RESTORE_BEFORE_CLEANUP',out['actions'])
+        self.assertFalse(any('VERIFIED_COLD_COPY_CLEANUP_PROPOSAL'==x for x in out['actions']))
 
 
 class OnePrimeTest(unittest.TestCase):
