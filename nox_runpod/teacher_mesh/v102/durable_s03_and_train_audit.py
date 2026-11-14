@@ -37,6 +37,31 @@ for name,path in paths:
    result['quick_check_ok']=con.execute('PRAGMA quick_check').fetchone()[0]=='ok'
  except Exception as e:result['hold']=type(e).__name__
  emit('CROSS_PROCESS_S03',result)
+# Confirm the REAL database used by s03_memory from a different process.
+try:
+ import sys
+ sys.path.insert(0,'/root/nox/scripts')
+ import s03_memory
+ db=Path(s03_memory.DB)
+ result={'db_basename':db.name[:80],'present':db.is_file(),'read_only':True}
+ if db.is_file() and not db.is_symlink():
+  with sqlite3.connect('file:'+str(db)+'?mode=ro',uri=True,timeout=4) as con:
+   con.execute('PRAGMA query_only=ON')
+   tables={x[0] for x in con.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+   fields={}
+   for table in ('s03_segments','chat_messages','messages','memories','memory','segments'):
+    if table not in tables:continue
+    cols={r[1].lower():r[1] for r in con.execute('PRAGMA table_info("'+table+'")')}
+    matches=0
+    for cname in ('content','text','message','user_text','answer','value','payload'):
+     if cname in cols:
+      matches+=int(con.execute('SELECT COUNT(*) FROM "'+table+'" WHERE CAST("'+cols[cname]+'" AS TEXT) LIKE ?',('%N100S03CYCLE%',)).fetchone()[0])
+    fields[table]=matches
+   result['synthetic_marker_matches_by_table']=fields
+   result['quick_check_ok']=con.execute('PRAGMA quick_check').fetchone()[0]=='ok'
+ emit('NATIVE_S03_FILE',result)
+except Exception as e:emit('NATIVE_S03_FILE',{'state':'HOLD_NATIVE_S03_FILE_READ','error_type':type(e).__name__})
+
 # Actual running trainer process / source family and existence of data are sampled
 # via numeric metadata; no logs, prompts or private files are exported.
 svc={}
@@ -75,7 +100,7 @@ for base in roots:
      if kind in ('safetensors','gguf','torch_other'):row['weights_bytes']+=st.st_size
     except Exception:pass
 emit('WEIGHT_AND_DATA_LOCATIONS',{'dirs_seen':count,'scan_limited':limit_hit,
-'categories':sorted(({'storage_bucket':k,**v} for k,v in grouped.items()),key=lambda x:-x['weights_bytes'])[:22]})
+'categories':sorted(({'storage_bucket':k,**v} for k,v in grouped.items()),key=lambda x:-x['weights_bytes'])[:8]})
 # Safe source-level indicators only; 'running' by supervisor is not proof of optimizer work.
 for path in ('/root/nox/scripts/train_qlora_35b_t866u.py','/root/nox/scripts/train_worm_t811u.py'):
  p=Path(path)
