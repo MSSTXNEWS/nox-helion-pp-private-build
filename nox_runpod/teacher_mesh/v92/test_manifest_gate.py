@@ -70,7 +70,7 @@ class BaseWeightsGate(unittest.TestCase):
 
     def test_bad_json_header_rejected(self):
         make(self.root)
-        (self.root/"model.safetensors").write_bytes(struct.pack('<Q',3)+b'???'+b'\0'*10)
+        (self.root/"model.safetensors").write_bytes(struct.pack('<Q',3)+b'???'+b'\0'*64)
         with self.assertRaisesRegex(RuntimeError,"SAFETENSORS_HEADER"):
             model_manifest_bytes(self.root)
 
