@@ -1,0 +1,34 @@
+name: NOX E2 V64 diagnose live chat stall read only
+on:
+  push:
+    branches: [nox/e2-chat-latency-20261114]
+    paths:
+      - '.github/workflows/nox-v64-live-hang.yml'
+      - 'nox_runpod/teacher_mesh/v63/live_hang_probe.py'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: nox-e2-v64-live-hang
+  cancel-in-progress: false
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Static syntax and authentication
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile nox_runpod/teacher_mesh/v63/live_hang_probe.py
+          test -n "$NOX2" || { echo "::error::HOLD_NOX2_MISSING"; exit 2; }
+      - name: Bounded live chat diagnostics
+        run: python3 -m nox_runpod.teacher_mesh.v63.live_hang_probe
+      - name: Cleanup exact temporary key
+        if: always()
+        run: python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup
