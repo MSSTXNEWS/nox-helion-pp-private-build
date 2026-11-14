@@ -225,7 +225,7 @@ def run()->None:
             ENC.unlink(missing_ok=True)
             argv=['ssh','-T','-n','-i',str(v60.conn.KEY),'-p',str(port),
                 '-o','BatchMode=yes','-o','IdentitiesOnly=yes',
-                '-o','ConnectTimeout=12','-o','StrictHostKeyChecking=accept-new',
+                '-o','ConnectTimeout=12','-o','ServerAliveInterval=30','-o','ServerAliveCountMax=6','-o','StrictHostKeyChecking=accept-new',
                 '-o','UserKnownHostsFile='+str(known),'root@'+host,
                 'python3 -c '+shlex.quote(REMOTE)]
             remote=subprocess.Popen(argv,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
@@ -234,7 +234,7 @@ def run()->None:
             assert remote.stdout is not None
             remote.stdout.close()
             try:
-                encrypted.communicate(timeout=400)
+                encrypted.communicate(timeout=1800)
                 rc=remote.wait(timeout=30)
             except subprocess.TimeoutExpired:
                 remote.kill();encrypted.kill()
