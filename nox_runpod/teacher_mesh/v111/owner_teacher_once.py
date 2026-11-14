@@ -141,9 +141,9 @@ try:
  names={x.name:x for x in tree.body if isinstance(x,(ast.FunctionDef,ast.AsyncFunctionDef))}
  if not {'_proxy_completion','_nox_v111_teacher_hint','_augment','auth_mw'}.issubset(names):
   raise RuntimeError('HOLD_AST_NATIVE_FUNCTIONS')
- if not any(isinstance(x,ast.Call) and isinstance(x.func,ast.Name)
-            and x.func.id=='_nox_v111_teacher_hint' for x in ast.walk(names['_proxy_completion'])):
-  raise RuntimeError('HOLD_NO_CALL') # Called via asyncio.to_thread argument, see AST below
+ if not any(isinstance(x,ast.Name) and x.id=='_nox_v111_teacher_hint'
+            for x in ast.walk(names['_proxy_completion'])):
+  raise RuntimeError('HOLD_NO_TEACHER_CALLBACK_REFERENCE')
  if source.count('_s03_augment(retrieve_text)')!=1 or updated.count('_s03_augment(retrieve_text)')!=1:
   raise RuntimeError('HOLD_S03_CHANGED')
  new=updated.encode('utf8')
