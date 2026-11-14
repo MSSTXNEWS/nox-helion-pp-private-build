@@ -69,6 +69,13 @@ emit('SOURCE',proxy_sha256=digest(base/'chat_proxy.py'),
     proxy_http=health(8080),model_http=health(8081),
     nox_writes=False,stop_active=any(Path(p).exists() for p in (
       '/root/nox/STOP','/root/nox/STOP.flag','/workspace/NOX_STOP')))
+proxy_source=(base/'chat_proxy.py').read_text(encoding='utf8')
+emit('ANCHORS',
+     v120_registrations=proxy_source.count('register_nox_v120_s03_memory_views(app, globals())'),
+     owner_auth_scope_matches=proxy_source.count(
+       "'/api/nox/history','/api/nox/experience','/api/training/status'"),
+     already_fact_bound=('register_nox_v125_owner_fact_write(' in proxy_source),
+     external_source_text_logged=False)
 print('NATIVE_READ_ONLY_COMPLETE=true')
 PYREMOTE
 """
@@ -90,13 +97,15 @@ def main():
     rows=[]
     for line in out.getvalue().splitlines():
         if line.startswith(('NATIVE_V125_REMEMBER=','NATIVE_V125_TABLES=',
-                             'NATIVE_V125_COLUMNS=','NATIVE_V125_SOURCE=')) and len(line)<760:
+                             'NATIVE_V125_COLUMNS=','NATIVE_V125_SOURCE=',
+                             'NATIVE_V125_ANCHORS=')) and len(line)<760:
             print(line);rows.append(line)
         if line.startswith('TEMP_SSH_CLEANUP='):
             print(line[:120])
     good=bool(attached and cleanup and
               {'NATIVE_V125_REMEMBER','NATIVE_V125_TABLES',
-               'NATIVE_V125_COLUMNS','NATIVE_V125_SOURCE'} ==
+               'NATIVE_V125_COLUMNS','NATIVE_V125_SOURCE',
+               'NATIVE_V125_ANCHORS'} ==
               {s.split('=',1)[0] for s in rows})
     print('NOX_V125_S03_CONTRACT_READONLY='+('PASS' if good else 'HOLD'))
     return 0 if good else 2
