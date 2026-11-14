@@ -94,9 +94,20 @@ try:
  if health(8080)!=200 or health(8081)!=200 or service()!='RUNNING' or not idle():
   raise RuntimeError('HOLD_CHAT_NOT_IDLE')
  src=old.decode('utf8')
- anchor="@app.post('/chat/api')"
- if src.count(anchor)!=1 or "/api/nox/status" in src:raise RuntimeError('HOLD_ROUTE_CONFLICT')
- updated=src.replace(anchor,BLOCK+'\n'+anchor,1).encode('utf8')
+ tree=ast.parse(src)
+ def decorated_at(fn,path,method):
+  return any(isinstance(x,ast.Call) and isinstance(x.func,ast.Attribute)
+      and x.func.attr==method and x.args and isinstance(x.args[0],ast.Constant)
+      and x.args[0].value==path for x in fn.decorator_list)
+ existing=[n for n in tree.body if isinstance(n,(ast.FunctionDef,ast.AsyncFunctionDef))
+     and decorated_at(n,'/api/nox/status','get')]
+ chat=[n for n in tree.body if isinstance(n,ast.AsyncFunctionDef)
+     and n.name=='chat_api' and decorated_at(n,'/chat/api','post')]
+ if existing or len(chat)!=1:raise RuntimeError('HOLD_ROUTE_CONFLICT')
+ lines=src.splitlines(keepends=True)
+ pos=min(x.lineno for x in chat[0].decorator_list)-1
+ lines.insert(pos,BLOCK+'\n')
+ updated=''.join(lines).encode('utf8')
  code=ast.parse(updated);compile(updated,str(FILE),'exec')
  names=[x.name for x in code.body if isinstance(x,ast.AsyncFunctionDef) and x.name=='nox_v29_native_status']
  if len(names)!=1 or len(updated)>155000:raise RuntimeError('HOLD_NATIVE_AST')
@@ -120,13 +131,22 @@ try:
     live=True;break
    time.sleep(1)
   if not live or sha(FILE.read_bytes())!=sha(updated):raise RuntimeError('HOLD_POST_HEALTH')
-  # An unauthorized call may return 401 even for a missing route. Check
-  # that the current registered ASGI app actually declares our new path.
-  import sys
-  sys.path.insert(0,'/root/nox/scripts')
-  import chat_proxy
-  registered=any('/api/nox/status'==getattr(x,'path',None) and 'GET' in getattr(x,'methods',set())
-                 for x in chat_proxy.app.routes)
+  # Authorization alone does not prove a route. Load the actual proxy app
+  # with its installed interpreter and inspect registered FastAPI routes.
+  candidates=['/root/nox/venv/bin/python','/root/nox/.venv/bin/python',
+      '/opt/venv/bin/python','/venv/bin/python','/usr/local/bin/python3']
+  registered=False
+  check_code=("import chat_proxy; from fastapi.routing import APIRoute; "
+      "assert any(isinstance(x, APIRoute) and x.path=='/api/nox/status' "
+      "and 'GET' in x.methods for x in chat_proxy.app.routes); print('NOX_ROUTE_OK')")
+  for interpreter in candidates:
+   if not Path(interpreter).is_file():continue
+   try:
+    check=subprocess.run([interpreter,'-c',check_code],cwd='/root/nox/scripts',
+        capture_output=True,text=True,timeout=12)
+    if check.returncode==0 and 'NOX_ROUTE_OK' in check.stdout:
+     registered=True;break
+   except Exception:pass
   if not registered:raise RuntimeError('HOLD_NATIVE_ROUTE_MISSING')
   request=urllib.request.Request('http://127.0.0.1:8080/api/nox/status',method='GET')
   try:
