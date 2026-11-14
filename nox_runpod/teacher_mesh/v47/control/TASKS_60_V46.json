@@ -1,6 +1,6 @@
 {
   "schema": "NOX_V46_SIX_LANE_SIXTY_TASKS_V1",
-  "program": "GENESIS 0–4, V29.3+V37–V44, NO-LOSS",
+  "program": "NOX PRIME: P0 chat/STOP, durable S03 + verified functional self-model, then autonomous coding/repair/skills, THEN GPU1 full-base distillation",
   "as_of": "2026-11-14",
   "production_task_ids": [],
   "live_verified": false,
@@ -11,7 +11,23 @@
     "main_student_gpu0_pinned": true,
     "s03_single_native": true,
     "no_task_count_as_intelligence": true,
-    "readiness_default": "HOLD_NATIVE_BINDINGS"
+    "readiness_default": "HOLD_NATIVE_BINDINGS",
+    "strategic_policy_version": "NOX_V93_FUNCTIONAL_SELF_MODEL_SKILLS_FIRST",
+    "goal_order": [
+      "safety_and_chat",
+      "memory_and_self_model",
+      "autonomous_skills",
+      "gpu1_weights_and_teacher_distillation",
+      "multimodal_and_wow"
+    ],
+    "chat_operational_priority": "P0",
+    "r60_jobs_operational_priority": "P1",
+    "strategic_wave_drives_queue_order": true,
+    "stop_and_owner_acl_mandatory": true,
+    "prohibit_claimed_consciousness": true,
+    "prohibit_fake_optimizer_steps": true,
+    "full_weight_training_after_proven_restore": true,
+    "disk_floor_new_writes_bytes": 10000000000
   },
   "groups": [
     {
@@ -64,7 +80,9 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "strategic_wave": 0,
+      "strategic_order": 8
     },
     {
       "task_id": "NOX-V46-02",
@@ -86,7 +104,9 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "strategic_wave": 0,
+      "strategic_order": 9
     },
     {
       "task_id": "NOX-V46-03",
@@ -97,7 +117,7 @@
       "depends_on": [
         "NOX-V46-02"
       ],
-      "priority": "P1",
+      "priority": "P2",
       "resource": "CPU_IO",
       "requires_native_owner": true,
       "requires_backup_restore": false,
@@ -108,7 +128,9 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "strategic_wave": 3,
+      "strategic_order": 3
     },
     {
       "task_id": "NOX-V46-04",
@@ -120,7 +142,7 @@
         "NOX-V46-01",
         "NOX-V46-03"
       ],
-      "priority": "P1",
+      "priority": "P2",
       "resource": "CPU_IO",
       "requires_native_owner": true,
       "requires_backup_restore": false,
@@ -131,7 +153,9 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "strategic_wave": 3,
+      "strategic_order": 4
     },
     {
       "task_id": "NOX-V46-05",
@@ -142,7 +166,7 @@
       "depends_on": [
         "NOX-V46-02"
       ],
-      "priority": "P1",
+      "priority": "P2",
       "resource": "GPU1_EXCLUSIVE",
       "requires_native_owner": true,
       "requires_backup_restore": false,
@@ -153,7 +177,9 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "strategic_wave": 3,
+      "strategic_order": 15
     },
     {
       "task_id": "NOX-V46-06",
@@ -164,7 +190,7 @@
       "depends_on": [
         "NOX-V46-05"
       ],
-      "priority": "P1",
+      "priority": "P2",
       "resource": "GPU1_EXCLUSIVE",
       "requires_native_owner": true,
       "requires_backup_restore": false,
@@ -175,7 +201,9 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "strategic_wave": 3,
+      "strategic_order": 16
     },
     {
       "task_id": "NOX-V46-07",
@@ -187,7 +215,7 @@
         "NOX-V46-01",
         "NOX-V46-02"
       ],
-      "priority": "P1",
+      "priority": "P2",
       "resource": "CPU_LIGHT",
       "requires_native_owner": true,
       "requires_backup_restore": false,
@@ -198,7 +226,9 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "strategic_wave": 3,
+      "strategic_order": 5
     },
     {
       "task_id": "NOX-V46-08",
@@ -209,7 +239,7 @@
       "depends_on": [
         "NOX-V46-07"
       ],
-      "priority": "P1",
+      "priority": "P2",
       "resource": "CPU_LIGHT",
       "requires_native_owner": true,
       "requires_backup_restore": true,
@@ -220,7 +250,9 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "strategic_wave": 3,
+      "strategic_order": 6
     },
     {
       "task_id": "NOX-V46-09",
@@ -242,7 +274,9 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "strategic_wave": 0,
+      "strategic_order": 10
     },
     {
       "task_id": "NOX-V46-10",
@@ -253,7 +287,7 @@
       "depends_on": [
         "NOX-V46-09"
       ],
-      "priority": "P1",
+      "priority": "P2",
       "resource": "CPU_LIGHT",
       "requires_native_owner": true,
       "requires_backup_restore": true,
@@ -264,7 +298,9 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "strategic_wave": 3,
+      "strategic_order": 17
     },
     {
       "task_id": "NOX-V46-11",
@@ -284,7 +320,9 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "strategic_wave": 0,
+      "strategic_order": 3
     },
     {
       "task_id": "NOX-V46-12",
@@ -306,7 +344,9 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "strategic_wave": 1,
+      "strategic_order": 1
     },
     {
       "task_id": "NOX-V46-13",
@@ -328,7 +368,9 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "strategic_wave": 1,
+      "strategic_order": 2
     },
     {
       "task_id": "NOX-V46-14",
@@ -350,7 +392,9 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "strategic_wave": 1,
+      "strategic_order": 5
     },
     {
       "task_id": "NOX-V46-15",
@@ -373,7 +417,9 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "strategic_wave": 1,
+      "strategic_order": 6
     },
     {
       "task_id": "NOX-V46-16",
@@ -384,6 +430,82 @@
       "depends_on": [
         "NOX-V46-11",
         "NOX-V46-12"
+      ],
+      "priority": "P1",
+      "resource": "CPU_LIGHT",
+      "requires_native_owner": true,
+      "requires_backup_restore": false,
+      "requires_license_and_privacy": false,
+      "modifies_live_system": true,
+      "expected_evidence": [
+        "native_task_receipt_sha256",
+        "s03_event_ref",
+        "independent_readback"
+      ],
+      "state": "PLANNED_NOT_ENQUEUED",
+      "strategic_wave": 1,
+      "strategic_order": 3
+    },
+    {
+      "task_id": "NOX-V46-17",
+      "number": 17,
+      "group": "B",
+      "lane": "MEMORY",
+      "title": "Функциональная самомодель и границы",
+      "depends_on": [
+        "NOX-V46-16",
+        "NOX-V46-13",
+        "NOX-V46-19"
+      ],
+      "priority": "P1",
+      "resource": "CPU_LIGHT",
+      "requires_native_owner": true,
+      "requires_backup_restore": false,
+      "requires_license_and_privacy": false,
+      "modifies_live_system": true,
+      "expected_evidence": [
+        "native_task_receipt_sha256",
+        "s03_event_ref",
+        "independent_readback"
+      ],
+      "state": "PLANNED_NOT_ENQUEUED",
+      "strategic_wave": 1,
+      "strategic_order": 4
+    },
+    {
+      "task_id": "NOX-V46-18",
+      "number": 18,
+      "group": "B",
+      "lane": "MEMORY",
+      "title": "Эмоциональное поведение и RU/ES без диагнозов",
+      "depends_on": [
+        "NOX-V46-11",
+        "NOX-V46-17"
+      ],
+      "priority": "P1",
+      "resource": "CPU_LIGHT",
+      "requires_native_owner": true,
+      "requires_backup_restore": false,
+      "requires_license_and_privacy": false,
+      "modifies_live_system": true,
+      "expected_evidence": [
+        "native_task_receipt_sha256",
+        "s03_event_ref",
+        "independent_readback"
+      ],
+      "state": "PLANNED_NOT_ENQUEUED",
+      "strategic_wave": 1,
+      "strategic_order": 8
+    },
+    {
+      "task_id": "NOX-V46-19",
+      "number": 19,
+      "group": "B",
+      "lane": "MEMORY",
+      "title": "PersonaID ACL, revoke и no-leak",
+      "depends_on": [
+        "NOX-V46-11",
+        "NOX-V46-53"
       ],
       "priority": "P0",
       "resource": "CPU_LIGHT",
@@ -396,74 +518,9 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
-    },
-    {
-      "task_id": "NOX-V46-17",
-      "number": 17,
-      "group": "B",
-      "lane": "MEMORY",
-      "title": "Функциональная самомодель и границы",
-      "depends_on": [
-        "NOX-V46-16"
-      ],
-      "priority": "P1",
-      "resource": "CPU_LIGHT",
-      "requires_native_owner": true,
-      "requires_backup_restore": false,
-      "requires_license_and_privacy": false,
-      "modifies_live_system": true,
-      "expected_evidence": [
-        "native_task_receipt_sha256",
-        "s03_event_ref",
-        "independent_readback"
-      ],
-      "state": "PLANNED_NOT_ENQUEUED"
-    },
-    {
-      "task_id": "NOX-V46-18",
-      "number": 18,
-      "group": "B",
-      "lane": "MEMORY",
-      "title": "Эмоциональное поведение и RU/ES без диагнозов",
-      "depends_on": [
-        "NOX-V46-11"
-      ],
-      "priority": "P1",
-      "resource": "CPU_LIGHT",
-      "requires_native_owner": true,
-      "requires_backup_restore": false,
-      "requires_license_and_privacy": false,
-      "modifies_live_system": true,
-      "expected_evidence": [
-        "native_task_receipt_sha256",
-        "s03_event_ref",
-        "independent_readback"
-      ],
-      "state": "PLANNED_NOT_ENQUEUED"
-    },
-    {
-      "task_id": "NOX-V46-19",
-      "number": 19,
-      "group": "B",
-      "lane": "MEMORY",
-      "title": "PersonaID ACL, revoke и no-leak",
-      "depends_on": [
-        "NOX-V46-11",
-        "NOX-V46-18"
-      ],
-      "priority": "P1",
-      "resource": "CPU_LIGHT",
-      "requires_native_owner": true,
-      "requires_backup_restore": false,
-      "requires_license_and_privacy": false,
-      "modifies_live_system": true,
-      "expected_evidence": [
-        "native_task_receipt_sha256",
-        "s03_event_ref",
-        "independent_readback"
-      ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "strategic_wave": 0,
+      "strategic_order": 7
     },
     {
       "task_id": "NOX-V46-20",
@@ -486,7 +543,9 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "strategic_wave": 1,
+      "strategic_order": 7
     },
     {
       "task_id": "NOX-V46-21",
@@ -495,7 +554,7 @@
       "lane": "FORGE",
       "title": "Прочитать реальную причину train_error step=0",
       "depends_on": [],
-      "priority": "P0",
+      "priority": "P2",
       "resource": "CPU_LIGHT",
       "requires_native_owner": true,
       "requires_backup_restore": false,
@@ -506,7 +565,9 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "strategic_wave": 3,
+      "strategic_order": 1
     },
     {
       "task_id": "NOX-V46-22",
@@ -517,7 +578,7 @@
       "depends_on": [
         "NOX-V46-21"
       ],
-      "priority": "P0",
+      "priority": "P2",
       "resource": "CPU_LIGHT",
       "requires_native_owner": true,
       "requires_backup_restore": false,
@@ -528,7 +589,9 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "strategic_wave": 3,
+      "strategic_order": 2
     },
     {
       "task_id": "NOX-V46-23",
@@ -540,7 +603,7 @@
         "NOX-V46-03",
         "NOX-V46-22"
       ],
-      "priority": "P1",
+      "priority": "P2",
       "resource": "CPU_LIGHT",
       "requires_native_owner": true,
       "requires_backup_restore": false,
@@ -551,7 +614,9 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "strategic_wave": 3,
+      "strategic_order": 7
     },
     {
       "task_id": "NOX-V46-24",
@@ -562,7 +627,7 @@
       "depends_on": [
         "NOX-V46-23"
       ],
-      "priority": "P1",
+      "priority": "P2",
       "resource": "CPU_LIGHT",
       "requires_native_owner": true,
       "requires_backup_restore": true,
@@ -573,7 +638,9 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "strategic_wave": 3,
+      "strategic_order": 8
     },
     {
       "task_id": "NOX-V46-25",
@@ -584,7 +651,7 @@
       "depends_on": [
         "NOX-V46-24"
       ],
-      "priority": "P1",
+      "priority": "P2",
       "resource": "CPU_IO",
       "requires_native_owner": true,
       "requires_backup_restore": true,
@@ -595,7 +662,9 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "strategic_wave": 3,
+      "strategic_order": 9
     },
     {
       "task_id": "NOX-V46-26",
@@ -606,7 +675,7 @@
       "depends_on": [
         "NOX-V46-25"
       ],
-      "priority": "P1",
+      "priority": "P2",
       "resource": "CPU_IO",
       "requires_native_owner": true,
       "requires_backup_restore": true,
@@ -617,7 +686,9 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "strategic_wave": 3,
+      "strategic_order": 10
     },
     {
       "task_id": "NOX-V46-27",
@@ -628,7 +699,7 @@
       "depends_on": [
         "NOX-V46-26"
       ],
-      "priority": "P1",
+      "priority": "P2",
       "resource": "GPU1_EXCLUSIVE",
       "requires_native_owner": true,
       "requires_backup_restore": true,
@@ -639,7 +710,9 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "strategic_wave": 3,
+      "strategic_order": 11
     },
     {
       "task_id": "NOX-V46-28",
@@ -650,7 +723,7 @@
       "depends_on": [
         "NOX-V46-26"
       ],
-      "priority": "P1",
+      "priority": "P2",
       "resource": "GPU1_EXCLUSIVE",
       "requires_native_owner": true,
       "requires_backup_restore": true,
@@ -661,7 +734,9 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "strategic_wave": 3,
+      "strategic_order": 12
     },
     {
       "task_id": "NOX-V46-29",
@@ -672,7 +747,7 @@
       "depends_on": [
         "NOX-V46-26"
       ],
-      "priority": "P1",
+      "priority": "P2",
       "resource": "GPU1_EXCLUSIVE",
       "requires_native_owner": true,
       "requires_backup_restore": true,
@@ -683,7 +758,9 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "strategic_wave": 3,
+      "strategic_order": 13
     },
     {
       "task_id": "NOX-V46-30",
@@ -700,7 +777,7 @@
         "NOX-V46-29",
         "NOX-V46-09"
       ],
-      "priority": "P1",
+      "priority": "P2",
       "resource": "GPU1_EXCLUSIVE",
       "requires_native_owner": true,
       "requires_backup_restore": true,
@@ -711,7 +788,9 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "strategic_wave": 3,
+      "strategic_order": 14
     },
     {
       "task_id": "NOX-V46-31",
@@ -719,7 +798,10 @@
       "group": "D",
       "lane": "SKILLS",
       "title": "Планирование задач с явными правами",
-      "depends_on": [],
+      "depends_on": [
+        "NOX-V46-51",
+        "NOX-V46-53"
+      ],
       "priority": "P1",
       "resource": "CPU_LIGHT",
       "requires_native_owner": true,
@@ -731,7 +813,9 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "strategic_wave": 2,
+      "strategic_order": 1
     },
     {
       "task_id": "NOX-V46-32",
@@ -740,7 +824,8 @@
       "lane": "SKILLS",
       "title": "Reasoning regression / self-correction",
       "depends_on": [
-        "NOX-V46-31"
+        "NOX-V46-31",
+        "NOX-V46-17"
       ],
       "priority": "P1",
       "resource": "CPU_LIGHT",
@@ -753,7 +838,9 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "strategic_wave": 2,
+      "strategic_order": 8
     },
     {
       "task_id": "NOX-V46-33",
@@ -775,7 +862,9 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "strategic_wave": 2,
+      "strategic_order": 9
     },
     {
       "task_id": "NOX-V46-34",
@@ -797,7 +886,9 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "strategic_wave": 2,
+      "strategic_order": 10
     },
     {
       "task_id": "NOX-V46-35",
@@ -819,7 +910,9 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "strategic_wave": 2,
+      "strategic_order": 3
     },
     {
       "task_id": "NOX-V46-36",
@@ -841,7 +934,9 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "strategic_wave": 2,
+      "strategic_order": 4
     },
     {
       "task_id": "NOX-V46-37",
@@ -850,7 +945,8 @@
       "lane": "SKILLS",
       "title": "Изолированное исполнение разрешённых шагов",
       "depends_on": [
-        "NOX-V46-31"
+        "NOX-V46-31",
+        "NOX-V46-19"
       ],
       "priority": "P1",
       "resource": "CPU_LIGHT",
@@ -863,7 +959,9 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "strategic_wave": 2,
+      "strategic_order": 2
     },
     {
       "task_id": "NOX-V46-38",
@@ -886,7 +984,9 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "strategic_wave": 2,
+      "strategic_order": 5
     },
     {
       "task_id": "NOX-V46-39",
@@ -895,7 +995,8 @@
       "lane": "SKILLS",
       "title": "Skill Memory, retain и recall",
       "depends_on": [
-        "NOX-V46-38"
+        "NOX-V46-38",
+        "NOX-V46-13"
       ],
       "priority": "P1",
       "resource": "CPU_LIGHT",
@@ -908,7 +1009,9 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "strategic_wave": 2,
+      "strategic_order": 6
     },
     {
       "task_id": "NOX-V46-40",
@@ -917,7 +1020,8 @@
       "lane": "SKILLS",
       "title": "DREAM replay на проверенных ошибках",
       "depends_on": [
-        "NOX-V46-39"
+        "NOX-V46-39",
+        "NOX-V46-15"
       ],
       "priority": "P1",
       "resource": "CPU_LIGHT",
@@ -930,7 +1034,9 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "strategic_wave": 2,
+      "strategic_order": 7
     },
     {
       "task_id": "NOX-V46-41",
@@ -950,7 +1056,9 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "strategic_wave": 0,
+      "strategic_order": 4
     },
     {
       "task_id": "NOX-V46-42",
@@ -972,7 +1080,9 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "strategic_wave": 0,
+      "strategic_order": 5
     },
     {
       "task_id": "NOX-V46-43",
@@ -983,7 +1093,7 @@
       "depends_on": [
         "NOX-V46-42"
       ],
-      "priority": "P2",
+      "priority": "P3",
       "resource": "CPU_LIGHT",
       "requires_native_owner": true,
       "requires_backup_restore": false,
@@ -994,7 +1104,9 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "strategic_wave": 4,
+      "strategic_order": 1
     },
     {
       "task_id": "NOX-V46-44",
@@ -1005,7 +1117,7 @@
       "depends_on": [
         "NOX-V46-43"
       ],
-      "priority": "P2",
+      "priority": "P3",
       "resource": "CPU_LIGHT",
       "requires_native_owner": true,
       "requires_backup_restore": false,
@@ -1016,7 +1128,9 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "strategic_wave": 4,
+      "strategic_order": 2
     },
     {
       "task_id": "NOX-V46-45",
@@ -1027,7 +1141,7 @@
       "depends_on": [
         "NOX-V46-42"
       ],
-      "priority": "P2",
+      "priority": "P3",
       "resource": "CPU_IO",
       "requires_native_owner": true,
       "requires_backup_restore": false,
@@ -1038,7 +1152,9 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "strategic_wave": 4,
+      "strategic_order": 3
     },
     {
       "task_id": "NOX-V46-46",
@@ -1050,7 +1166,7 @@
         "NOX-V46-07",
         "NOX-V46-45"
       ],
-      "priority": "P2",
+      "priority": "P3",
       "resource": "GPU1_EXCLUSIVE",
       "requires_native_owner": true,
       "requires_backup_restore": false,
@@ -1061,7 +1177,9 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "strategic_wave": 4,
+      "strategic_order": 4
     },
     {
       "task_id": "NOX-V46-47",
@@ -1073,7 +1191,7 @@
         "NOX-V46-07",
         "NOX-V46-46"
       ],
-      "priority": "P2",
+      "priority": "P3",
       "resource": "GPU1_EXCLUSIVE",
       "requires_native_owner": true,
       "requires_backup_restore": false,
@@ -1084,7 +1202,9 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "strategic_wave": 4,
+      "strategic_order": 5
     },
     {
       "task_id": "NOX-V46-48",
@@ -1095,7 +1215,7 @@
       "depends_on": [
         "NOX-V46-41"
       ],
-      "priority": "P2",
+      "priority": "P1",
       "resource": "CPU_LIGHT",
       "requires_native_owner": true,
       "requires_backup_restore": false,
@@ -1106,7 +1226,9 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "strategic_wave": 2,
+      "strategic_order": 15
     },
     {
       "task_id": "NOX-V46-49",
@@ -1118,7 +1240,7 @@
         "NOX-V46-46",
         "NOX-V46-47"
       ],
-      "priority": "P2",
+      "priority": "P3",
       "resource": "CPU_LIGHT",
       "requires_native_owner": true,
       "requires_backup_restore": false,
@@ -1129,7 +1251,9 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "strategic_wave": 4,
+      "strategic_order": 6
     },
     {
       "task_id": "NOX-V46-50",
@@ -1141,7 +1265,7 @@
         "NOX-V46-41",
         "NOX-V46-49"
       ],
-      "priority": "P2",
+      "priority": "P3",
       "resource": "CPU_LIGHT",
       "requires_native_owner": true,
       "requires_backup_restore": false,
@@ -1152,7 +1276,9 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "strategic_wave": 4,
+      "strategic_order": 7
     },
     {
       "task_id": "NOX-V46-51",
@@ -1172,7 +1298,9 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "strategic_wave": 0,
+      "strategic_order": 1
     },
     {
       "task_id": "NOX-V46-52",
@@ -1194,7 +1322,9 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "strategic_wave": 0,
+      "strategic_order": 11
     },
     {
       "task_id": "NOX-V46-53",
@@ -1216,7 +1346,9 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "strategic_wave": 0,
+      "strategic_order": 2
     },
     {
       "task_id": "NOX-V46-54",
@@ -1238,7 +1370,9 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "strategic_wave": 0,
+      "strategic_order": 12
     },
     {
       "task_id": "NOX-V46-55",
@@ -1249,7 +1383,7 @@
       "depends_on": [
         "NOX-V46-53"
       ],
-      "priority": "P0",
+      "priority": "P3",
       "resource": "CPU_IO",
       "requires_native_owner": true,
       "requires_backup_restore": false,
@@ -1260,7 +1394,9 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "strategic_wave": 4,
+      "strategic_order": 8
     },
     {
       "task_id": "NOX-V46-56",
@@ -1283,7 +1419,9 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "strategic_wave": 0,
+      "strategic_order": 6
     },
     {
       "task_id": "NOX-V46-57",
@@ -1292,7 +1430,7 @@
       "lane": "CORE",
       "title": "Контроль качества/регрессий перед merge",
       "depends_on": [
-        "NOX-V46-30",
+        "NOX-V46-38",
         "NOX-V46-56"
       ],
       "priority": "P1",
@@ -1306,7 +1444,9 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "strategic_wave": 2,
+      "strategic_order": 11
     },
     {
       "task_id": "NOX-V46-58",
@@ -1328,7 +1468,9 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "strategic_wave": 2,
+      "strategic_order": 12
     },
     {
       "task_id": "NOX-V46-59",
@@ -1350,7 +1492,9 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "strategic_wave": 2,
+      "strategic_order": 13
     },
     {
       "task_id": "NOX-V46-60",
@@ -1360,7 +1504,7 @@
       "title": "Реальные проценты знаний/навыков/весов",
       "depends_on": [
         "NOX-V46-20",
-        "NOX-V46-30",
+        "NOX-V46-39",
         "NOX-V46-59"
       ],
       "priority": "P1",
@@ -1374,7 +1518,9 @@
         "s03_event_ref",
         "independent_readback"
       ],
-      "state": "PLANNED_NOT_ENQUEUED"
+      "state": "PLANNED_NOT_ENQUEUED",
+      "strategic_wave": 2,
+      "strategic_order": 14
     }
   ]
 }
