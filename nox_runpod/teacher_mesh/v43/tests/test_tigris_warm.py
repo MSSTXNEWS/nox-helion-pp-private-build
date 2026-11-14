@@ -47,6 +47,9 @@ class VaultTests(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         self.root = Path(self.tmp.name)
+        stop_patch = patch.object(vault, "STOP_PATHS", (str(self.root / "STOP"),))
+        stop_patch.start()
+        self.addCleanup(stop_patch.stop)
         self.models = self.root / "models"
         self.models.mkdir()
         self.f = self.models / "model.gguf"
@@ -138,6 +141,63 @@ class VaultTests(unittest.TestCase):
         with patch.dict(os.environ, {"AWS_ACCESS_KEY_ID": "", "AWS_SECRET_ACCESS_KEY": ""}):
             with self.assertRaisesRegex(vault.Hold, "HOLD_TIGRIS_CREDENTIALS_NOT_PROVISIONED"):
                 vault.s3_from_env()
+
+
+    def _fake_ram(self, free=60 * 1024**3):
+        return (patch.object(vault, "_ram_root_guard", side_effect=lambda p: Path(p).absolute()),
+                patch.object(vault, "_ram_available_bytes", return_value=free))
+
+    def test_warm_ram_direct_no_disk_and_repeat(self):
+        digest = hashlib.sha256(self.f.read_bytes()).hexdigest()
+        key = f"models/sha256/{digest}/model.gguf"
+        self.s3.data[key] = (self.f.read_bytes(), {"sha256": digest})
+        ram = self.root / "ram"
+        check, free = self._fake_ram()
+        with check, free:
+            r = vault.warm_ram(self.s3, key, ram)
+            self.assertEqual(r["state"], "WARM_RAM_SHA_VERIFIED")
+            self.assertTrue(r["disk_downloaded"] is False and r["student_evicted"] is False)
+            self.assertEqual(Path(r["local"]).read_bytes(), self.f.read_bytes())
+            self.assertEqual(vault.warm_ram(self.s3, key, ram)["state"],
+                             "ALREADY_IN_RAM_SHA_VERIFIED")
+
+    def test_warm_ram_refuses_low_memory_before_writing(self):
+        digest = hashlib.sha256(self.f.read_bytes()).hexdigest()
+        key = f"models/sha256/{digest}/model.gguf"
+        self.s3.data[key] = (self.f.read_bytes(), {"sha256": digest})
+        ram = self.root / "ram"
+        check, free = self._fake_ram(free=32)
+        with check, free:
+            state = vault.warm_ram(self.s3, key, ram)["state"]
+        self.assertEqual(state, "HOLD_RAM_RESERVE")
+        self.assertFalse(ram.exists())
+
+    def test_warm_ram_corrupt_remote_leaves_no_published_file(self):
+        digest = hashlib.sha256(self.f.read_bytes()).hexdigest()
+        key = f"models/sha256/{digest}/model.gguf"
+        self.s3.data[key] = (b"Z" * len(self.f.read_bytes()), {"sha256": digest})
+        ram = self.root / "ram"
+        check, free = self._fake_ram()
+        with check, free:
+            with self.assertRaisesRegex(vault.Hold, "HOLD_RAM_STREAM_SHA_MISMATCH"):
+                vault.warm_ram(self.s3, key, ram)
+        self.assertEqual(list(ram.iterdir()), [])
+
+    def test_ram_mode_rejects_non_tmpfs_and_stop_unknown(self):
+        with self.assertRaisesRegex(vault.Hold, "HOLD_RAM_ROOT_NOT_DEDICATED_TMPFS"):
+            vault._ram_root_guard(self.root)
+        with patch("pathlib.Path.exists", side_effect=PermissionError("denied")):
+            with self.assertRaisesRegex(vault.Hold, "HOLD_STOP_STATE_UNREADABLE"):
+                vault.stopped()
+
+    def test_warm_ram_stop_never_writes(self):
+        digest = hashlib.sha256(self.f.read_bytes()).hexdigest()
+        key = f"models/sha256/{digest}/model.gguf"
+        self.s3.data[key] = (self.f.read_bytes(), {"sha256": digest})
+        with patch.object(vault, "stopped", return_value=True):
+            with self.assertRaisesRegex(vault.Hold, "HOLD_NOX_STOP_ACTIVE"):
+                vault.warm_ram(self.s3, key, self.root / "ram")
+        self.assertFalse((self.root / "ram").exists())
 
 
 if __name__ == "__main__":

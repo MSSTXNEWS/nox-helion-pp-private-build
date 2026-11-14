@@ -20,6 +20,9 @@ ENDPOINT = "https://t3.storage.dev"
 REGION = "auto"
 CHUNK = 8 * 1024 * 1024
 RESERVE = 10 * 1024**3
+RAM_RESERVE = 12 * 1024**3
+RAM_MAX_OBJECT = 96 * 1024**3
+RAM_ROOT = "/dev/shm/nox_model_warm"
 SHA = re.compile(r"^[a-f0-9]{64}$")
 NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,200}$")
 KEY = re.compile(r"^models/sha256/([a-f0-9]{64})/([A-Za-z0-9][A-Za-z0-9._-]{0,200})$")
@@ -35,7 +38,11 @@ class Hold(RuntimeError):
 
 
 def stopped():
-    return any(Path(s).exists() for s in STOP_PATHS)
+    try:
+        return any(Path(s).exists() for s in STOP_PATHS)
+    except OSError:
+        # Never ignore an unreadable STOP state on a real host.
+        raise Hold("HOLD_STOP_STATE_UNREADABLE") from None
 
 
 def require_run_allowed():
@@ -263,6 +270,153 @@ def restore(s3, key, cache_root, reserve_bytes=RESERVE):
         Path(tmp).unlink(missing_ok=True)
 
 
+
+def _ram_root_guard(ram_root):
+    """Only accept a dedicated tmpfs subdirectory, never a regular SSD path."""
+    root = Path(ram_root).absolute()
+    base = Path(RAM_ROOT)
+    if root != base and base not in root.parents:
+        raise Hold("HOLD_RAM_ROOT_NOT_DEDICATED_TMPFS")
+    if Path("/dev/shm").is_symlink():
+        raise Hold("HOLD_RAM_TMPFS_SYMLINK")
+    try:
+        mountinfo = Path("/proc/self/mountinfo").read_text()
+        if not any(
+            entry.split(" - ", 1)[0].split()[4] == "/dev/shm"
+            and entry.split(" - ", 1)[1].split()[0] == "tmpfs"
+            for entry in mountinfo.splitlines() if " - " in entry
+        ):
+            raise Hold("HOLD_RAM_TMPFS_NOT_MOUNTED")
+    except OSError:
+        raise Hold("HOLD_RAM_TMPFS_UNVERIFIED") from None
+    node = Path("/dev/shm")
+    for part in root.relative_to(node).parts:
+        node = node / part
+        if node.is_symlink():
+            raise Hold("HOLD_RAM_PATH_SYMLINK")
+    if root.exists() and not root.is_dir():
+        raise Hold("HOLD_RAM_NOT_DIRECTORY")
+    return root
+
+
+def _ram_available_bytes():
+    """Minimum of tmpfs room, host MemAvailable and container cgroup headroom."""
+    try:
+        stat = os.statvfs("/dev/shm")
+        tmpfs_free = stat.f_bavail * stat.f_frsize
+        lines = Path("/proc/meminfo").read_text().splitlines()
+        mem = {line.split(":", 1)[0]: int(line.split(":", 1)[1].split()[0]) * 1024
+               for line in lines if ":" in line}
+        host_free = mem.get("MemAvailable")
+        if host_free is None:
+            raise Hold("HOLD_HOST_MEMORY_UNKNOWN")
+        maxpath = Path("/sys/fs/cgroup/memory.max")
+        curpath = Path("/sys/fs/cgroup/memory.current")
+        if maxpath.is_file() and curpath.is_file():
+            limit = maxpath.read_text().strip()
+            current = int(curpath.read_text().strip())
+            cgroup_free = max(0, int(limit) - current) if limit.isdigit() else host_free
+            swap = Path("/sys/fs/cgroup/memory.swap.current")
+            if swap.is_file() and int(swap.read_text().strip()) > 0:
+                raise Hold("HOLD_SWAP_IN_USE")
+        else:
+            maxpath = Path("/sys/fs/cgroup/memory/memory.limit_in_bytes")
+            curpath = Path("/sys/fs/cgroup/memory/memory.usage_in_bytes")
+            if not maxpath.is_file() or not curpath.is_file():
+                raise Hold("HOLD_CGROUP_MEMORY_UNKNOWN")
+            raw_limit = int(maxpath.read_text().strip())
+            current = int(curpath.read_text().strip())
+            cgroup_free = max(0, raw_limit - current) if raw_limit < (1 << 60) else host_free
+        return min(tmpfs_free, host_free, cgroup_free)
+    except Hold:
+        raise
+    except (OSError, ValueError, IndexError):
+        raise Hold("HOLD_RAM_CAPACITY_UNVERIFIED") from None
+
+
+def warm_ram(s3, key, ram_root=RAM_ROOT, reserve_bytes=RAM_RESERVE):
+    """Fetch one complete, verified model weight into dedicated tmpfs, not SSD.
+
+    Does not load into GPU or switch models. The existing OneHost must still
+    check its CHAT/STOP/resource leases before launching the teacher. Do not
+    warm full multi-shard models without verifying *all* required shards.
+    """
+    matched = KEY.fullmatch(key)
+    if not matched:
+        raise Hold("HOLD_INVALID_CONTENT_ADDRESS")
+    if not 0 <= reserve_bytes <= 256 * 1024**3:
+        raise Hold("HOLD_RAM_RESERVE_BOUNDS")
+    require_run_allowed()
+    root = _ram_root_guard(ram_root)
+    expected, name = matched.groups()
+    head = _head(s3, key)
+    if head is None or head.get("Metadata", {}).get("sha256") != expected:
+        raise Hold("HOLD_REMOTE_METADATA_MISMATCH")
+    size = head.get("ContentLength")
+    if not isinstance(size, int) or size <= 0 or size > RAM_MAX_OBJECT:
+        raise Hold("HOLD_RAM_OBJECT_SIZE")
+    dest = root / f"{expected}-{name}"
+    if dest.is_symlink():
+        raise Hold("HOLD_RAM_SYMLINK")
+    if dest.exists():
+        if not dest.is_file() or dest.stat().st_size != size:
+            raise Hold("HOLD_RAM_COLLISION")
+        with dest.open("rb") as f:
+            if sha256_file(f) != expected:
+                raise Hold("HOLD_RAM_SHA_MISMATCH")
+        return {"state": "ALREADY_IN_RAM_SHA_VERIFIED", "local": str(dest),
+                "bytes": size, "sha256": expected, "gpu_unchanged": True}
+    free = _ram_available_bytes()
+    if free < size + reserve_bytes:
+        return {"state": "HOLD_RAM_RESERVE", "needed_bytes": size + reserve_bytes,
+                "free_bytes": free, "no_files_modified": True}
+    # No automatic delete/eviction: only the native OneHost owns lifecycle.
+    root.mkdir(parents=True, exist_ok=True)
+    root = _ram_root_guard(root)
+    fd, tmp = tempfile.mkstemp(prefix=".nox-ram-incomplete-", dir=root)
+    try:
+        with os.fdopen(fd, "wb") as out:
+            try:
+                body = s3.get_object(Bucket=BUCKET, Key=key)["Body"]
+                count, digest = 0, hashlib.sha256()
+                try:
+                    for chunk in body.iter_chunks(chunk_size=CHUNK):
+                        require_run_allowed()
+                        if not chunk:
+                            continue
+                        count += len(chunk)
+                        if count > size:
+                            raise Hold("HOLD_RAM_REMOTE_OVERRUN")
+                        # Additional bytes already allocated are reflected in
+                        # cgroup usage; preserve reserve as streaming proceeds.
+                        if _ram_available_bytes() < reserve_bytes + len(chunk):
+                            raise Hold("HOLD_RAM_PRESSURE_DURING_STREAM")
+                        out.write(chunk)
+                        digest.update(chunk)
+                finally:
+                    body.close()
+            except Hold:
+                raise
+            except Exception:
+                raise Hold("HOLD_RAM_STREAM_FAILED") from None
+            out.flush()
+            os.fsync(out.fileno())
+        if count != size or digest.hexdigest() != expected:
+            raise Hold("HOLD_RAM_STREAM_SHA_MISMATCH")
+        require_run_allowed()
+        if _ram_available_bytes() < reserve_bytes:
+            raise Hold("HOLD_RAM_PRESSURE_AFTER_STREAM")
+        try:
+            os.link(tmp, dest)
+        except FileExistsError:
+            raise Hold("HOLD_RAM_CONCURRENT_WRITER") from None
+        return {"state": "WARM_RAM_SHA_VERIFIED", "local": str(dest),
+                "bytes": count, "sha256": expected, "gpu_unchanged": True,
+                "disk_downloaded": False, "student_evicted": False}
+    finally:
+        Path(tmp).unlink(missing_ok=True)
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__)
     sub = ap.add_subparsers(dest="command", required=True)
@@ -276,6 +430,10 @@ def main(argv=None):
     rest.add_argument("--key", required=True)
     rest.add_argument("--cache-root", required=True)
     rest.add_argument("--reserve-gib", type=int, default=10)
+    ram = sub.add_parser("warm-ram")
+    ram.add_argument("--key", required=True)
+    ram.add_argument("--ram-root", default=RAM_ROOT)
+    ram.add_argument("--reserve-gib", type=int, default=12)
     args = ap.parse_args(argv)
     try:
         cli = s3_from_env()
@@ -285,6 +443,11 @@ def main(argv=None):
             result = backup(cli, args.model_root, args.file)
         elif args.command == "verify":
             result = verify_remote(cli, args.key)
+        elif args.command == "warm-ram":
+            if not 0 <= args.reserve_gib <= 256:
+                raise Hold("HOLD_RAM_RESERVE_BOUNDS")
+            result = warm_ram(cli, args.key, args.ram_root,
+                              args.reserve_gib * 1024**3)
         else:
             if not 1 <= args.reserve_gib <= 1024:
                 raise Hold("HOLD_RESERVE_BOUNDS")
