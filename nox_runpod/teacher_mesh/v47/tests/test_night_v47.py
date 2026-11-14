@@ -111,6 +111,31 @@ class TestNight(unittest.TestCase):
         d=good();self.assertEqual(assess(d)['optimizer_steps_executed'],0)
 if __name__=='__main__':unittest.main()
 
+class TestVoltaOomPreflight(unittest.TestCase):
+    def test_12gb_free_rejects_9gb_base_weights(self):
+        from night_v47.direct_weights_smoke import ensure_gpu1_preload_budget
+        with self.assertRaisesRegex(RuntimeError,'MODEL_PRELOAD_OOM_EXPECTED'):
+            ensure_gpu1_preload_budget(12*1024**3,9*1024**3)
+    def test_20gb_free_accepts_2gb_base(self):
+        from night_v47.direct_weights_smoke import ensure_gpu1_preload_budget
+        self.assertLess(ensure_gpu1_preload_budget(20*1024**3,2*1024**3),20*1024**3)
+    def test_optimizer_memory_is_reserved_after_model_load(self):
+        from night_v47.direct_weights_smoke import ensure_gpu1_postload_budget
+        with self.assertRaisesRegex(RuntimeError,'OPTIMIZER_ACTIVATION_OOM_EXPECTED'):
+            ensure_gpu1_postload_budget(4*1024**3,100_000_000)
+    def test_zero_gradient_params_rejected(self):
+        from night_v47.direct_weights_smoke import ensure_gpu1_postload_budget
+        with self.assertRaisesRegex(RuntimeError,'TRAINABLE_TENSOR_MEASUREMENT'):
+            ensure_gpu1_postload_budget(20*1024**3,0)
+    def test_reload_drops_optimizer_before_second_model(self):
+        import inspect
+        from night_v47 import direct_weights_smoke
+        src=inspect.getsource(direct_weights_smoke.run)
+        self.assertLess(src.index('del optimizer'),src.index('reload_model='))
+        self.assertLess(src.index('del params'),src.index('reload_model='))
+        self.assertIn('ensure_gpu1_preload_budget(int(available_for_reload)',src)
+
+
 class TestSmokeReadOnly(unittest.TestCase):
     def test_sample_file_consent_and_split(self):
         import tempfile, json
