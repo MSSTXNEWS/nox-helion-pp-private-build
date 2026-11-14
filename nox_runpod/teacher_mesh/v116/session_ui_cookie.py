@@ -81,9 +81,19 @@ try:
  tree=ast.parse(text)
  auth=[n for n in tree.body if isinstance(n,ast.AsyncFunctionDef) and n.name=='auth_mw']
  if len(auth)!=1:raise RuntimeError('HOLD_MIDDLEWARE_FUNCTION')
- old="    auth = request.headers.get('authorization') or request.headers.get('x-api-key')\n"
- if text.count(old)!=1 or old not in ast.get_source_segment(text,auth[0]):
+ checks=[x for x in ast.walk(auth[0]) if isinstance(x,ast.Assign)
+         and len(x.targets)==1 and isinstance(x.targets[0],ast.Name)
+         and x.targets[0].id=='auth']
+ if len(checks)!=1:
+  emit(state='HOLD_MIDDLEWARE_ANCHOR',auth_assign_count=len(checks))
   raise RuntimeError('HOLD_MIDDLEWARE_ANCHOR')
+ auth_line=checks[0].lineno
+ original_lines=text.splitlines(keepends=True)
+ if not original_lines[auth_line-1].startswith('    ') or original_lines[auth_line-1].startswith('        '):
+  raise RuntimeError('HOLD_AUTH_FUNCTION_INDENT')
+ rhs=ast.unparse(checks[0].value)
+ if 'authorization' not in rhs or 'x-api-key' not in rhs:
+  raise RuntimeError('HOLD_AUTH_SOURCE_SEMANTICS')
  if '_nox_v116_valid_owner_ui_session' in text:raise RuntimeError('HOLD_COOKIE_PATCH_ALREADY_PRESENT')
  newguard="""    # _nox_v116_valid_owner_ui_session: SAME existing signed cookie HMAC gate.
     # Only existing owner-authenticated V29 pages and UI routes may pass.
@@ -91,7 +101,8 @@ try:
     if request.url.path.startswith(('/api/ui/', '/nox-web-v29/')) and _session_ok(request):
         return await call_next(request)
 """
- patched=text.replace(old,newguard+old,1)
+ original_lines.insert(auth_line-1,newguard)
+ patched=''.join(original_lines)
  ast.parse(patched);compile(patched,str(SOURCE),'exec')
  middleware=[n for n in ast.parse(patched).body if isinstance(n,ast.AsyncFunctionDef) and n.name=='auth_mw'][0]
  assert sum(isinstance(n,ast.Call) and isinstance(n.func,ast.Name) and n.func.id=='_session_ok'
