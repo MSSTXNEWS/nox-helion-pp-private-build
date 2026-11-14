@@ -24,10 +24,16 @@ def native_once(remote:str,required_marker:str="NATIVE_PATCH_COMPLETE=true")->di
             "native_ack":False,"remote_exit_code":None,
             "ssh_authenticated":False,"key_detached":False,
             "write_attempts":0}
-    if not isinstance(remote,str) or len(remote)>45000 or not remote.startswith("set -euo pipefail\npython3 - <<'PYREMOTE'\n"):
-        return {**result,"state":"HOLD_UNTRUSTED_REMOTE_SOURCE"}
     if required_marker!="NATIVE_PATCH_COMPLETE=true":
         return {**result,"state":"HOLD_ACK_PROTOCOL"}
+    if not isinstance(remote,str) or len(remote)>45000:
+        return {**result,"state":"HOLD_UNTRUSTED_REMOTE_SOURCE"}
+    # The checked-in heredoc may start with one formatting newline; strip
+    # only that newline, never permit a command prefix or arbitrary leading code.
+    if remote.startswith("\n"):
+        remote=remote[1:]
+    if not remote.startswith("set -euo pipefail\npython3 - <<'PYREMOTE'\n"):
+        return {**result,"state":"HOLD_UNTRUSTED_REMOTE_SOURCE"}
     secret=os.environ.get("NOX2","")
     if not isinstance(secret,str) or len(secret)<10:
         return {**result,"state":"HOLD_NOX2"}
