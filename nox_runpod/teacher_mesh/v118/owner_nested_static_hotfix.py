@@ -14,7 +14,7 @@ cd /root/nox/scripts
 /root/nox/venv/bin/python - <<'PYREMOTE'
 import ast
 import hashlib
-import http.cookiejar
+import http.cookiejar as _nox_cookiejar
 import json
 import os
 import stat
@@ -120,7 +120,7 @@ try:
  password=chat_proxy._read_chat_password()
  if not isinstance(password,str) or len(password)<6:
   raise RuntimeError('HOLD_OWNER_LOGIN_CREDENTIAL')
- jar=http.cookiejar.CookieJar()
+ jar=_nox_cookiejar.CookieJar()
  opener=urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar))
  req=urllib.request.Request('http://127.0.0.1:8080/chat/login',
     data=json.dumps({'password':password}).encode(),method='POST',
