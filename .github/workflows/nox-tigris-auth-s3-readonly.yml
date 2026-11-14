@@ -47,8 +47,18 @@ jobs:
               print('NOX_TIGRIS_SECRET_VALUES_PRINTED=false')
               print('NOX_TIGRIS_REMOTE_OBJECTS_MODIFIED=false')
           except Exception as exc:
-              # Do not print SDK exceptions: some may contain request details.
+              # Print only constrained error codes (never error messages or values).
+              from botocore.exceptions import ClientError
+              known={'AccessDenied','InvalidAccessKeyId','SignatureDoesNotMatch',
+                     'NoSuchBucket','AuthorizationHeaderMalformed',
+                     'InvalidToken','ExpiredToken','Forbidden','InvalidRequest'}
+              code=''
+              if isinstance(exc, ClientError):
+                  raw=str(exc.response.get('Error',{}).get('Code',''))
+                  code=raw if raw in known else 'OTHER_S3_ERROR'
               print('NOX_TIGRIS_AUTHENTICATED_BUCKET_READ=HOLD')
-              print('NOX_TIGRIS_ERROR_TYPE='+type(exc).__name__)
+              print('NOX_TIGRIS_KEY_ID_FORMAT_OK='+str(key.startswith('tid_')).lower())
+              print('NOX_TIGRIS_SECRET_FORMAT_OK='+str(secret.startswith('tsec_')).lower())
+              print('NOX_TIGRIS_ERROR_CODE='+(code or 'NON_S3_ERROR'))
               sys.exit(2)
           PY
