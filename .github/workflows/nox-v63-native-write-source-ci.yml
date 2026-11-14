@@ -2,7 +2,11 @@ name: NOX V63 single native write transport and Downloads patch safety CI
 on:
   push:
     branches: [feature/nox-v38-synaptic-brain-20261114]
-    paths: [.github/workflows/nox-v63-native-write-source-ci.yml]
+    paths:
+      - .github/workflows/nox-v63-native-write-source-ci.yml
+      - nox_runpod/teacher_mesh/v63/native_once.py
+      - nox_runpod/teacher_mesh/v63/repair_download_hf_path.py
+      - nox_runpod/teacher_mesh/v63/tests/test_native_write_gate.py
   workflow_dispatch:
 permissions:
   contents: read
