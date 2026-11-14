@@ -21,6 +21,7 @@ from nox_runpod.teacher_mesh.v43.nox.resource_brain import (
     Policy as ResourcePolicy, plan_load,
 )
 from .ram_policy import plan_ram
+from .offload_policy import plan_offload
 
 MODEL_IDENTITY="NOX PRIME"
 CHAT_SURFACE="Резонанс"
@@ -133,6 +134,10 @@ class OnePrime:
     def ram_admission(self)->dict:
         """Allocate nothing until the installed native OneHost opts in."""
         return plan_ram(self.observe())
+
+    def offload_admission(self) -> dict:
+        """10GB trigger only; archive and deletion require independent receipts."""
+        return plan_offload(self.observe())
 
     def enqueue_existing_verified_plan(self,plan:Mapping,*,owner_scope:str)->dict:
         """Never creates a new task queue or reports a fabricated job ID."""
