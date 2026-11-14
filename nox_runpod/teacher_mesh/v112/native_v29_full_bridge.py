@@ -208,6 +208,29 @@ def _model_name(data):
                 return value[:200]
     return ''
 
+_FROZEN_V29_CATALOG_SHA = 'c509870d8fc664bb7c60cd53d3daf21280aa410832d978d3fedbd0543730f661'
+_ORIGINAL_CATALOG_LINK = "const path=page=>native?'/nox/'+page:(files[page]||page)+'.html';"
+_STAGED_CATALOG_LINK = (
+    "const path=page=>native&&location.pathname.startsWith('/nox-web-v29/')?"
+    "'/nox-web-v29/'+(files[page]||page)+'.html':"
+    "native?'/nox/'+page:(files[page]||page)+'.html';"
+)
+
+
+def _catalog_owner_overlay(raw: bytes, expected_sha: str = _FROZEN_V29_CATALOG_SHA) -> bytes:
+    """Fix only frozen catalog navigation in the existing authenticated WEB mount.
+
+    Neither changes the frozen ZIP/on-disk source nor affects Windows native
+    /nox/* routes. No new backend and no synthetic command execution.
+    """
+    if hashlib.sha256(raw).hexdigest() != expected_sha:
+        raise ValueError('HOLD_FROZEN_V29_CATALOG_SHA')
+    text = raw.decode('utf-8')
+    if text.count(_ORIGINAL_CATALOG_LINK) != 1:
+        raise ValueError('HOLD_CATALOG_LINK_SOURCE_DRIFT')
+    return text.replace(_ORIGINAL_CATALOG_LINK, _STAGED_CATALOG_LINK, 1).encode('utf-8')
+
+
 class _OwnerStatic(StaticFiles):
     def __init__(self, directory, auth, unauthorized):
         super().__init__(directory=str(directory), html=True, check_dir=True)
@@ -226,6 +249,16 @@ class _OwnerStatic(StaticFiles):
                             media_type='application/javascript',
                             headers={'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'})
         response=await super().get_response(path,scope)
+        if path.lstrip('/') == 'nox-function-catalog.js' and response.status_code == 200:
+            file=Path(getattr(response,'path',''))
+            if not file.is_file() or file.is_symlink():
+                return Response('HOLD_CATALOG_FILE', status_code=409)
+            try:
+                js=_catalog_owner_overlay(file.read_bytes())
+            except (ValueError, OSError, UnicodeDecodeError):
+                return Response('HOLD_CATALOG_SOURCE_PIN', status_code=409)
+            return Response(js, media_type='application/javascript', headers={
+                'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'})
         if response.status_code != 200 or not (path.endswith('.html') or path in ('.','','/')):
             return response
         file=Path(getattr(response,'path',''))
