@@ -201,6 +201,71 @@ jobs:
           except Exception as e:
               print('HOLD_JUPYTER_CONNECT_'+type(e).__name__)
           PY
+      - name: Probe existing Jupyter-mapped ports only (no config changes)
+        if: success()
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os,ipaddress,socket,urllib.request,urllib.error,ssl
+          d=json.load(open(os.path.join(os.environ['RUNNER_TEMP'],'instance.json')))
+          d=d.get('instances',d)
+          if isinstance(d,list):d=next((v for v in d if str(v.get('id'))=='60509551'),{})
+          raw=d.get('ports',{})
+          if isinstance(raw,str):
+              try: raw=json.loads(raw)
+              except json.JSONDecodeError:raw={}
+          print('VAST_PORTS_MAPPING_TYPE='+type(raw).__name__)
+          if not isinstance(raw,dict):
+              print('HOLD_NO_STRUCTURED_PORTS')
+              raise SystemExit(0)
+          print('VAST_INTERNAL_PORT_KEYS='+','.join(sorted(raw.keys())[:20]))
+          public=d.get('public_ipaddr') or d.get('public_ip')
+          try:
+              ipaddress.ip_address(public)
+          except (ValueError,TypeError):
+              print('HOLD_NO_TRUSTED_PUBLIC_IP_FIELD')
+              raise SystemExit(0)
+          token=str(d.get('jupyter_token') or '')
+          matched=[]
+          for internal in ('8080/tcp','8888/tcp','8081/tcp','8889/tcp'):
+              for item in raw.get(internal,[]) or []:
+                  if isinstance(item,dict):
+                      ext=item.get('HostPort') or item.get('host_port')
+                      try:
+                          ext=int(ext)
+                          if 1<=ext<=65535:matched.append((internal,ext))
+                      except (TypeError,ValueError):pass
+          print('JUPYTER_LIKELY_PORTS='+str(len(matched)))
+          headers={'Accept':'application/json'}
+          if token:headers['Authorization']='token '+token
+          class NoRedirect(urllib.request.HTTPRedirectHandler):
+              def redirect_request(self,*args,**kwargs): return None
+          opener=urllib.request.build_opener(NoRedirect,urllib.request.HTTPSHandler(context=ssl.create_default_context()))
+          for internal,ext in matched[:6]:
+              try:
+                  s=socket.create_connection((public,ext),timeout=5);s.close()
+                  print('JUPYTER_PORT_'+internal.replace('/','_')+'_TCP=OPEN')
+              except OSError as e:
+                  print('JUPYTER_PORT_'+internal.replace('/','_')+'_TCP=HOLD_'+type(e).__name__)
+                  continue
+              for scheme in ('https','http'):
+                  req=urllib.request.Request(f'{scheme}://{public}:{ext}/api',headers=headers)
+                  try:
+                      with opener.open(req,timeout=7) as rsp:
+                          payload=rsp.read(4096)
+                          try:o=json.loads(payload)
+                          except (ValueError,UnicodeDecodeError):o={}
+                          if rsp.status==200 and isinstance(o,dict) and 'version' in o:
+                              print('JUPYTER_API_READ_VERIFIED=True')
+                              raise SystemExit(0)
+                          print('JUPYTER_API_'+scheme+'_UNVERIFIED_RESPONSE')
+                  except urllib.error.HTTPError as e:
+                      print('JUPYTER_API_'+scheme+'_HTTP_'+str(e.code))
+                  except Exception as e:
+                      print('JUPYTER_API_'+scheme+'_HOLD_'+type(e).__name__)
+          print('JUPYTER_API_READ_VERIFIED=False')
+          PY
       - name: Upload sanitized API receipt (no host or credentials)
         if: always()
         uses: actions/upload-artifact@v4
