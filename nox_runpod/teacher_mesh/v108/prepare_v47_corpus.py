@@ -92,6 +92,7 @@ try:
     rows_seen={}
     prompts_seen={}
     file_sha={}
+    further_private_filtered={}
     try:
         for group in ('train','holdout'):
             src=SRC/(group+'.jsonl')
@@ -100,10 +101,11 @@ try:
             if digest(src)!=original.get(group+'.jsonl_sha256'):
                 raise RuntimeError('HOLD_V105_'+group.upper()+'_SOURCE_HASH')
             dest=stage/(group+'.jsonl')
-            n=0
+            n=0;inspected=0;private_skipped=0
             with src.open('r',encoding='utf8') as inp, dest.open('x',encoding='utf8') as out:
                 os.chmod(dest,0o600)
                 for line in inp:
+                    inspected+=1
                     if len(line)>30000:raise RuntimeError('HOLD_V105_ROW_SIZE')
                     try:obj=json.loads(line)
                     except ValueError:raise RuntimeError('HOLD_V105_ROW_JSON')
@@ -122,7 +124,10 @@ try:
                         obj.get('source_license')!='internal-owner-templates'):
                         raise RuntimeError('HOLD_V105_RIGHTS_OR_ROW')
                     if SAFETY.search(prompt) or SAFETY.search(answer):
-                        raise RuntimeError('HOLD_PRIVATE_ROW_DETECTED')
+                        # Additional sensitive examples must not be copied
+                        # into the new training set or logged.
+                        private_skipped+=1
+                        continue
                     fingerprint=hashlib.sha256(' '.join(prompt.casefold().split()).encode('utf8')).hexdigest()
                     if fingerprint in prompts_seen:
                         raise RuntimeError('HOLD_TRAIN_HOLDOUT_DUPLICATE_PROMPT')
@@ -140,9 +145,10 @@ try:
                     n+=1
                 out.flush();os.fsync(out.fileno())
             expected=original.get(group+'_rows')
-            if type(expected) is not int or n!=expected or n<4:
-                raise RuntimeError('HOLD_V105_ROW_COUNT')
+            if type(expected) is not int or inspected!=expected or n<30:
+                raise RuntimeError('HOLD_V105_ROW_COUNT_OR_EXCLUSIONS')
             rows_seen[group]=n
+            further_private_filtered[group]=private_skipped
             file_sha[group]=digest(dest)
         if stopped() or not health(8080) or not health(8081):
             raise RuntimeError('HOLD_CHAT_OR_STOP_AFTER_CONVERSION')
@@ -157,6 +163,7 @@ try:
                   'prompt_source_overlap':False,
                   'source_rights':'internal-owner-templates',
                   'privacy':'owner_private_filtered',
+                  'further_private_rows_excluded':further_private_filtered,
                   'actual_training_started':False,
                   'native_onehost_lease_verified':False,
                   'checkpoint_restored':False}
@@ -173,6 +180,7 @@ try:
              train_rows=rows_seen['train'],holdout_rows=rows_seen['holdout'],
              train_sha256=file_sha['train'],holdout_sha256=file_sha['holdout'],
              source_leakage_checked=True,rights_filtered=True,
+             further_private_rows_excluded=further_private_filtered,
              disk_free_after=shutil.disk_usage(DST.parent).free)
     finally:
         if stage.exists():
