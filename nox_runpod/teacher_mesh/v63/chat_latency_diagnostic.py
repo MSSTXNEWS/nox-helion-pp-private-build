@@ -11,7 +11,7 @@ python3 - <<'PYREMOTE'
 import json,time,statistics,urllib.request,urllib.error,subprocess,re,sys,hashlib
 from collections import Counter
 print('NOX_NATIVE_V51_SSH_EXECUTED=true')
-print('NOX_V63_DIAGNOSTIC_SCHEMA=NOX_MAIN_CHAT_LATENCY_V1')
+print('NATIVE_V63_DIAGNOSTIC_SCHEMA=NOX_MAIN_CHAT_LATENCY_V1')
 
 def health(port,path='/health',timeout=2.5):
     try:
@@ -23,7 +23,7 @@ def health(port,path='/health',timeout=2.5):
 
 for port in (8080,8081,8082,8084,8087,8088,8092,8093,8095):
     status,_=health(port)
-    print(f'NOX_HTTP_{port}_HEALTH='+str(status if status is not None else 'HOLD'))
+    print(f'NATIVE_HTTP_{port}_HEALTH='+str(status if status is not None else 'HOLD'))
 
 try:
     with urllib.request.urlopen('http://127.0.0.1:8081/v1/models',timeout=3) as r:
@@ -31,7 +31,7 @@ try:
     model=models[0].get('id') if models else None
     if not isinstance(model,str) or not model.endswith('/models/current.gguf'):
         raise RuntimeError('HOLD_WRONG_STUDENT')
-    print('NOX_MAIN_STUDENT_VERIFIED=true')
+    print('NATIVE_MAIN_STUDENT_VERIFIED=true')
 except Exception:
     raise SystemExit('HOLD_MODEL_NOT_VERIFIED')
 
@@ -42,7 +42,7 @@ def snapshots():
         if r.returncode==0:
             for line in r.stdout.splitlines()[:2]:
                 if re.fullmatch(r'[0-9 ,]+',line):
-                    print('NOX_GPU='+line.replace(' ',''))
+                    print('NATIVE_GPU='+line.replace(' ',''))
     except (OSError,subprocess.TimeoutExpired):pass
 snapshots()
 
@@ -53,17 +53,17 @@ try:
         if isinstance(slots,list):
             total=len(slots)
             processing=sum(bool(slot.get('is_processing')) for slot in slots if isinstance(slot,dict))
-            print('NOX_LLAMA_SLOTS='+str(total))
-            print('NOX_LLAMA_SLOTS_PROCESSING='+str(processing))
-        else:print('NOX_LLAMA_SLOTS=HOLD_SCHEMA')
-    else:print('NOX_LLAMA_SLOTS=HOLD_HTTP_'+str(status))
-except Exception:print('NOX_LLAMA_SLOTS=HOLD')
+            print('NATIVE_LLAMA_SLOTS='+str(total))
+            print('NATIVE_LLAMA_SLOTS_PROCESSING='+str(processing))
+        else:print('NATIVE_LLAMA_SLOTS=HOLD_SCHEMA')
+    else:print('NATIVE_LLAMA_SLOTS=HOLD_HTTP_'+str(status))
+except Exception:print('NATIVE_LLAMA_SLOTS=HOLD')
 
 try:
     r=subprocess.run(['ps','-eo','comm='],capture_output=True,text=True,timeout=6)
     names=r.stdout.lower().splitlines()
     for term in ('llama','python','supervis','torchrun'):
-        print('NOX_PROCESS_'+term.upper()+'_COUNT='+str(sum(term in name for name in names)))
+        print('NATIVE_PROCESS_'+term.upper()+'_COUNT='+str(sum(term in name for name in names)))
 except (OSError,subprocess.TimeoutExpired):pass
 
 cases=[('short_ru','Ответь одним словом: готово.',24),
@@ -106,23 +106,23 @@ for tag,prompt,max_tokens in cases:
         if first is None:raise RuntimeError('HOLD_NO_CONTENT')
         ttft=(first-start)*1000
         out.append((tag,round(ttft,1),round(elapsed,1),chunks,tokens,done))
-        print('NOX_CASE='+tag+',TTFT_MS='+str(round(ttft,1))+',E2E_MS='+str(round(elapsed,1))+',CHUNKS='+str(chunks)+',USAGE_TOKENS='+str(tokens or 'UNKNOWN')+',DONE='+str(done))
+        print('NATIVE_CASE='+tag+',TTFT_MS='+str(round(ttft,1))+',E2E_MS='+str(round(elapsed,1))+',CHUNKS='+str(chunks)+',USAGE_TOKENS='+str(tokens or 'UNKNOWN')+',DONE='+str(done))
     except Exception:
-        print('NOX_CASE='+tag+',RESULT=HOLD_TIMEOUT_OR_STREAM')
+        print('NATIVE_CASE='+tag+',RESULT=HOLD_TIMEOUT_OR_STREAM')
         continue
 
 if len(out)>=3:
     ttft=sorted(x[1] for x in out)
     e2e=sorted(x[2] for x in out)
-    print('NOX_SAMPLE_TTFT_P50_MS='+str(round(statistics.median(ttft),1)))
-    print('NOX_SAMPLE_TTFT_P95_NEAREST_MS='+str(ttft[-1]))
-    print('NOX_SAMPLE_E2E_P50_MS='+str(round(statistics.median(e2e),1)))
-    print('NOX_SAMPLE_E2E_P95_NEAREST_MS='+str(e2e[-1]))
-    print('NOX_LATENCY_SAMPLE_COUNT='+str(len(out)))
-    print('NOX_LATENCY_SCOPE=DIRECT_MODEL_SYNTHETIC_NOT_FULL_UI_S03')
+    print('NATIVE_SAMPLE_TTFT_P50_MS='+str(round(statistics.median(ttft),1)))
+    print('NATIVE_SAMPLE_TTFT_P95_NEAREST_MS='+str(ttft[-1]))
+    print('NATIVE_SAMPLE_E2E_P50_MS='+str(round(statistics.median(e2e),1)))
+    print('NATIVE_SAMPLE_E2E_P95_NEAREST_MS='+str(e2e[-1]))
+    print('NATIVE_LATENCY_SAMPLE_COUNT='+str(len(out)))
+    print('NATIVE_LATENCY_SCOPE=DIRECT_MODEL_SYNTHETIC_NOT_FULL_UI_S03')
     print('NATIVE_READ_ONLY_COMPLETE=true')
 else:
-    print('NOX_LATENCY_RESULT=HOLD_INSUFFICIENT_SAMPLES')
+    print('NATIVE_LATENCY_RESULT=HOLD_INSUFFICIENT_SAMPLES')
     print('NATIVE_READ_ONLY_COMPLETE=true')
 PYREMOTE
 """
