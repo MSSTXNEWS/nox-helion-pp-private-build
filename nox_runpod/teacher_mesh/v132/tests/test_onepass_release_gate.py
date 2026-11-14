@@ -23,6 +23,8 @@ class OnepassV132Tests(unittest.TestCase):
         self.assertEqual(m["last_observed_host_partition"][gate.OWNER_PC],16)
         self.assertEqual(m["last_observed_host_partition"][gate.EXTERNAL],12)
         self.assertFalse(m["current_runtime_recounted_by_this_job"])
+        self.assertEqual(self.source['live_runtime']['state'],'HOLD_NOX2_AUTH_ERROR')
+        self.assertTrue(self.source['live_runtime']['instance_existence_not_inferred_from_404'])
 
     def test_real_source_files_hashed_without_embedded_credentials(self):
         self.assertEqual(len(self.source["sources_sha256"]),len(gate.REQUIRED_SOURCE))
