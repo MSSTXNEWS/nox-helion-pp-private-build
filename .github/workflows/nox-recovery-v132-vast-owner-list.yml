@@ -1,0 +1,42 @@
+name: NOX Recovery V132 — documented Vast v0 owner-list read-only
+on:
+  push:
+    branches: [nox/recovery-onepass-20261115]
+    paths:
+      - '.github/workflows/nox-recovery-v132-vast-owner-list.yml'
+      - 'nox_runpod/teacher_mesh/v131/vast_no_billing_inventory.py'
+      - 'nox_runpod/teacher_mesh/v131/tests/test_v132_official_v0_owner_inventory.py'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: No mutation, exact Vast canonical URL and source tests
+        run: |
+          set -euo pipefail
+          python3 -m compileall -q nox_runpod/teacher_mesh/v131
+          python3 -m unittest -v nox_runpod.teacher_mesh.v131.tests.test_v132_official_v0_owner_inventory
+          echo NOX_V132_SOURCE_PASS=true
+  real-owner-read-only:
+    needs: source
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Requires existing authorized owner key
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$NOX2" || { echo HOLD_NOX2_UNAVAILABLE; exit 2; }
+      - name: Read account-owned Vast instances via canonical v0 list, no SSH and no writes
+        run: python3 -m nox_runpod.teacher_mesh.v131.vast_no_billing_inventory
