@@ -128,7 +128,12 @@ class Vast:
     def api(self, path:str,method:str="GET",body:dict|None=None)->dict:
         if not re.fullmatch(r"instances/60509551/(?:ssh/(?:[0-9]+/?)?|)",path):
             raise RuntimeError("HOLD_API_PATH")
-        if method not in ("GET","POST","DELETE"):
+        instance_path=f"instances/{INSTANCE}/"
+        keys_path=f"instances/{INSTANCE}/ssh/"
+        if ((path==instance_path and method!="GET") or
+            (path==keys_path and method not in ("GET","POST")) or
+            (path not in (instance_path,keys_path) and
+             (not re.fullmatch(r"instances/60509551/ssh/[0-9]+/",path) or method!="DELETE"))):
             raise RuntimeError("HOLD_API_METHOD")
         headers={"Authorization":"Bearer "+self.key,
                  "Accept":"application/json"}
@@ -214,6 +219,7 @@ def audit(vast:Vast)->dict:
             "api_verified":False,"native_verified":False,"ssh_key_detached_verified":False}
     public_key=None
     attached=False
+    attempted_attach=False
     try:
         instance=vast.instance()
         host,port=validated_route(instance)
@@ -229,6 +235,7 @@ def audit(vast:Vast)->dict:
                 raise RuntimeError("HOLD_GENERATED_PUBLIC_KEY")
             try:
                 # Intentionally never print public key or provider SSH route.
+                attempted_attach=True
                 vast.attach(public_key)
                 attached=True
                 ids=[find_key_id(vast.keys(),public_key)]
@@ -237,15 +244,19 @@ def audit(vast:Vast)->dict:
                 status["remote"]=ssh_audit(host,port,private_key,Path(folder)/"known_hosts")
                 status["native_verified"]=status["remote"]["native_verified"]
             finally:
-                if attached:
+                if attempted_attach:
                     try:
                         matching=find_key_id(vast.keys(),public_key)
                         if matching is None:
-                            raise RuntimeError("HOLD_KEY_NOT_FOUND_FOR_REVOKE")
-                        vast.detach(matching)
-                        remaining=find_key_id(vast.keys(),public_key)
-                        status["ssh_key_detached_verified"]=remaining is None
-                        if remaining is not None:status["cleanup_hold"]="HOLD_KEY_STILL_ATTACHED"
+                            if attached:
+                                raise RuntimeError("HOLD_KEY_NOT_FOUND_FOR_REVOKE")
+                            # Attach failed; readback proves our exact key was not listed.
+                            status["ssh_key_detached_verified"]=True
+                        else:
+                            vast.detach(matching)
+                            remaining=find_key_id(vast.keys(),public_key)
+                            status["ssh_key_detached_verified"]=remaining is None
+                            if remaining is not None:status["cleanup_hold"]="HOLD_KEY_STILL_ATTACHED"
                     except Exception:
                         status["cleanup_hold"]="HOLD_REVOKE_NOT_VERIFIED"
     except Exception as e:
