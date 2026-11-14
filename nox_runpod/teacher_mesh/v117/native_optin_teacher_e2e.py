@@ -58,6 +58,27 @@ def construct_remote() -> str:
         " prompt='[QA '+marker+'] Сколько будет 17 умножить на 19? Ответь только числом.'",
         " prompt='@учитель: 17*19'",
     )
+    # Grant a *bounded* idle window for the current owner session. No stream,
+    # slot, service or GPU process is cancelled or restarted; STOP still wins.
+    remote = replace_exact(
+        remote,
+        """ with urllib.request.urlopen('http://127.0.0.1:8081/slots',timeout=4) as response:
+  slots=json.loads(response.read(30000))
+ if not isinstance(slots,list) or len(slots)!=6 or any(
+   r.get('is_processing',r.get('processing',False)) for r in slots if isinstance(r,dict)):
+  raise RuntimeError('HOLD_ONEHOST_BUSY')""",
+        """ idle=False
+ for idle_attempt in range(5):
+  if stop():raise RuntimeError('HOLD_STOP_WHILE_WAITING_FOR_IDLE')
+  with urllib.request.urlopen('http://127.0.0.1:8081/slots',timeout=4) as response:
+   slots=json.loads(response.read(30000))
+  idle=(isinstance(slots,list) and len(slots)==6 and all(
+   isinstance(r,dict) and (r.get('is_processing') if 'is_processing' in r
+                           else r.get('processing')) is False for r in slots))
+  if idle:break
+  if idle_attempt!=4:time.sleep(3)
+ if not idle:raise RuntimeError('HOLD_ONEHOST_BUSY')""",
+    )
     # The exact owner teacher hook logs this one marker only when its verified
     # native teacher evidence was actually injected for the model answer.
     remote = replace_exact(
