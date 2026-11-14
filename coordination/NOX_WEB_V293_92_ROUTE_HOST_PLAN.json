@@ -219,18 +219,18 @@
     {
       "route": "/api/nox/premium/capabilities",
       "referenced_by_files": 2,
-      "source_runtime_status": "V125_SOURCE_TESTS_PASS_NATIVE_ACCEPTANCE_PENDING",
+      "source_runtime_status": "V125_NATIVE_OWNER_HTTP_200_ANONYMOUS_401",
       "host_boundary": "EXISTING_ONEHOST",
-      "functional_e2e": "NOT_CLAIMED",
-      "next_gate": "LIVE_OWNER_COOKIE_HTTP_200_ANON_401_S03_HEALTH"
+      "functional_e2e": "SCOPED_REAL_READ_ONLY_HTTP_ACCEPTED",
+      "next_gate": "CONTINUOUS_REAL_DATA_PROVENANCE_AND_WINDOWS_OWNER_HOST_SCOPE_NOT_CLAIMED"
     },
     {
       "route": "/api/nox/premium/status",
       "referenced_by_files": 1,
-      "source_runtime_status": "V125_SOURCE_TESTS_PASS_NATIVE_ACCEPTANCE_PENDING",
+      "source_runtime_status": "V125_NATIVE_OWNER_HTTP_200_ANONYMOUS_401",
       "host_boundary": "EXISTING_ONEHOST",
-      "functional_e2e": "NOT_CLAIMED",
-      "next_gate": "LIVE_OWNER_COOKIE_HTTP_200_ANON_401_S03_HEALTH"
+      "functional_e2e": "SCOPED_REAL_READ_ONLY_HTTP_ACCEPTED",
+      "next_gate": "CONTINUOUS_REAL_DATA_PROVENANCE_AND_WINDOWS_OWNER_HOST_SCOPE_NOT_CLAIMED"
     },
     {
       "route": "/api/nox/progress",
@@ -267,10 +267,10 @@
     {
       "route": "/api/nox/system/processes",
       "referenced_by_files": 3,
-      "source_runtime_status": "V125_SOURCE_TESTS_PASS_NATIVE_ACCEPTANCE_PENDING",
+      "source_runtime_status": "V125_NATIVE_OWNER_HTTP_200_ANONYMOUS_401",
       "host_boundary": "EXISTING_ONEHOST",
-      "functional_e2e": "NOT_CLAIMED",
-      "next_gate": "LIVE_OWNER_COOKIE_HTTP_200_ANON_401_S03_HEALTH"
+      "functional_e2e": "SCOPED_REAL_READ_ONLY_HTTP_ACCEPTED",
+      "next_gate": "CONTINUOUS_REAL_DATA_PROVENANCE_AND_WINDOWS_OWNER_HOST_SCOPE_NOT_CLAIMED"
     },
     {
       "route": "/api/nox/training/",
@@ -283,10 +283,10 @@
     {
       "route": "/api/nox/training/status",
       "referenced_by_files": 4,
-      "source_runtime_status": "V125_SOURCE_TESTS_PASS_NATIVE_ACCEPTANCE_PENDING",
+      "source_runtime_status": "V125_NATIVE_OWNER_HTTP_200_ANONYMOUS_401",
       "host_boundary": "EXISTING_ONEHOST",
-      "functional_e2e": "NOT_CLAIMED",
-      "next_gate": "LIVE_OWNER_COOKIE_HTTP_200_ANON_401_S03_HEALTH"
+      "functional_e2e": "SCOPED_REAL_READ_ONLY_HTTP_ACCEPTED",
+      "next_gate": "CONTINUOUS_REAL_DATA_PROVENANCE_AND_WINDOWS_OWNER_HOST_SCOPE_NOT_CLAIMED"
     },
     {
       "route": "/api/nox/voice/speak",
@@ -459,10 +459,10 @@
     {
       "route": "/api/status",
       "referenced_by_files": 3,
-      "source_runtime_status": "V125_SOURCE_TESTS_PASS_NATIVE_ACCEPTANCE_PENDING",
+      "source_runtime_status": "V125_NATIVE_OWNER_HTTP_200_ANONYMOUS_401",
       "host_boundary": "EXISTING_ONEHOST",
-      "functional_e2e": "NOT_CLAIMED",
-      "next_gate": "LIVE_OWNER_COOKIE_HTTP_200_ANON_401_S03_HEALTH"
+      "functional_e2e": "SCOPED_REAL_READ_ONLY_HTTP_ACCEPTED",
+      "next_gate": "CONTINUOUS_REAL_DATA_PROVENANCE_AND_WINDOWS_OWNER_HOST_SCOPE_NOT_CLAIMED"
     },
     {
       "route": "/api/training/",
@@ -752,5 +752,14 @@
       "functional_e2e": "NOT_CLAIMED",
       "next_gate": "INSPECT_WEB_CALLSITE_AND_NATIVE_HANDLER_OR_OWNER_PC_SERVICE"
     }
-  ]
+  ],
+  "native_current_20261115": {
+    "physical_install": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43650383484",
+    "independent_route_audit": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43650605385",
+    "exact_registered": 23,
+    "exact_unregistered": 69,
+    "original_s03_quick_check": "ok",
+    "bridge_sha256": "2c714c7f952be64a2b278c993da9d59014a43a32075281b5aa755ada02c6fb8e",
+    "proxy_sha256": "e79aa0747511cf010f79f72150fc4e64b36b9c9ccea3b09d788a6306c63c0c95"
+  }
 }
