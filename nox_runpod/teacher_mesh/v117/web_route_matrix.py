@@ -38,7 +38,8 @@ for name in expected:
  key=(parts[1] if len(parts)>1 else 'unknown')
  if key=='ui' and len(parts)>2:key='ui/'+parts[2]
  groups[key]+=1
-print('NATIVE_V117_ROUTE_SCOPE='+json.dumps({'runtime':'CURRENT_EXISTING_ONEHOST_FASTAPI','expected':len(expected),'matched':len(matched),'unmapped':len(missing),'no_mock_pass_claims':True},sort_keys=True,separators=(',',':')))\nprint('NATIVE_V117_ROUTE_SUMMARY='+json.dumps({'expected':len(expected),
+print('NATIVE_V117_ROUTE_SCOPE='+json.dumps({'runtime':'CURRENT_EXISTING_ONEHOST_FASTAPI','expected':len(expected),'matched':len(matched),'unmapped':len(missing),'no_mock_pass_claims':True},sort_keys=True,separators=(',',':')))
+print('NATIVE_V117_ROUTE_SUMMARY='+json.dumps({'expected':len(expected),
  'native_direct_match':len(matched),'no_direct_route':len(missing),
  'registered_native_api_routes':len(api),
  'src_sha256':hashlib.sha256(proxy.read_bytes()).hexdigest()},sort_keys=True,separators=(',',':')))
