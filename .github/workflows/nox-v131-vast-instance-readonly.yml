@@ -3,6 +3,7 @@ on:
   pull_request:
     branches: [feature/nox-v37-v100-firsthour-14d-20261113]
     paths:
+      - 'nox_runpod/teacher_mesh/v131/**'
       - '.github/workflows/nox-v131-vast-instance-readonly.yml'
   workflow_dispatch:
 permissions:
