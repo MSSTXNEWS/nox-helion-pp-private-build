@@ -125,7 +125,7 @@ class ChatFirstBudget:
     quiet_seconds: int = 20
     chat_recent_seconds: int = 45
     # Minimum filesystem rollback headroom for NEW WRITES, not a chat threshold.
-    disk_checkpoint_reserve_bytes: int = SAFETY_FLOOR_BYTES
+    disk_checkpoint_reserve_bytes: int = 10_000_000_000
     min_gpu_free_mib: int = 3072
     max_gpu_temp_c: int = 80
     target_idle_compute_pct: int = 85
