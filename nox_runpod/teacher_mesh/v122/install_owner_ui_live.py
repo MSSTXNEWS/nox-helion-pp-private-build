@@ -91,7 +91,7 @@ try:
  if stopped():raise RuntimeError('HOLD_STOP')
  if sha(P)!=OLD or sha(PX)!=PX_SHA or sha(WEB)!=WEB_SHA:raise RuntimeError('HOLD_CONCURRENT_SOURCE_SHA_DRIFT')
  if os.getuid()!=0 or service()!='RUNNING' or health(8080)!=200 or health(8081)!=200 or not idle():raise RuntimeError('HOLD_NATIVE_BUSY')
- if not (1500<len(FUN)<3200 and 250<len(ROUTE)<1200):raise RuntimeError('HOLD_PATCH_BOUNDS')
+ if not (1500<len(FUN)<5000 and 250<len(ROUTE)<1200):raise RuntimeError('HOLD_PATCH_BOUNDS')
  meta=P.stat();before=P.read_bytes();text=before.decode('utf8')
  anchor='class _OwnerStatic(StaticFiles):\n'
  response='        response=await super().get_response(path,scope)\n'
