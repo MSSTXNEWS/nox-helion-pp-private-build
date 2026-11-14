@@ -66,3 +66,22 @@ python3 -m nox_runpod.teacher_mesh.v43.nox.tigris_warm restore \
 - `/dev/shm` в некоторых контейнерах ограничен 64 MiB: если недостаточен, команда вернёт HOLD и не будет создавать новый сервер, перемонтировать tmpfs или перенастраивать GPU.
 - Сеть Tigris → RAM ограничивает первый запуск; скорость последующих запросов к тому же весу определяется RAM-кэшем, пока он не освобождён.
 - Нужен реальный OneHost-хук и секрет Tigris, безопасно введённый в существующий Vast #60509551: это отдельно от автономного теста и пока **не подтверждено**.
+
+
+## Большие модели: native RAM / memfd (без ограничения 21 GiB /dev/shm)
+
+По настоящему read-only preflight существующего Vast.ai #60509551 ([GitHub Actions #43648093290](https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43648093290)) свободно **21 890 MiB** tmpfs, при **279 791 MiB** MemAvailable на хосте и cgroup headroom ≈ **66 742 MiB**. Для модели 20 GiB + резерва 12 GiB режим `warm-ram` с tmpfs здесь должен отказывать (HOLD), не переполнять память.
+
+В том же модуле добавлен Python native-API `warm_memfd(s3, key, reserve_bytes=12*1024**3)`: S3 → anonymous Linux memfd → SHA-256 → опциональные Linux seals → объект `RAMWeightHandle`. Он **не зависит от свободного места раздела /dev/shm**, но требует свободного cgroup RAM и не вытесняет основную модель. Пример для существующего OneHost-кода:
+
+```python
+from nox_runpod.teacher_mesh.v43.nox.tigris_warm import s3_from_env, warm_memfd
+# Only after OneHost owner lease / STOP / RAM+GPU budget admission.
+with warm_memfd(s3_from_env(), requested_verified_key) as weight:
+    # Pass weight.local to a compatible SAME-PROCESS model loader.
+    # Keep handle alive until all inference consumers finish.
+    native_onehost_load_from_local_path(weight.local)
+    native_onehost_unload_and_confirm()
+```
+
+**Граница гарантий:** пока это только источник для нативной интеграции, не доказанное прямое монтирование веса в уже работающий движок. Пути вида /proc/self/fd/N действительны только при живом FD в том же процессе. Для многокомпонентных моделей нужен групповой manifest всех shards и tokenizer, а также проверка совместимости загрузчика. Секретный ключ Tigris на сервер не передан; фактические backup/restore и скорость S3 ещё не испытаны.

@@ -200,5 +200,49 @@ class VaultTests(unittest.TestCase):
         self.assertFalse((self.root / "ram").exists())
 
 
+
+    def test_memfd_streamed_to_ram_and_closed_by_owner(self):
+        if not hasattr(os, "memfd_create"):
+            self.skipTest("Linux memfd not available")
+        digest = hashlib.sha256(self.f.read_bytes()).hexdigest()
+        key = f"models/sha256/{digest}/model.gguf"
+        self.s3.data[key] = (self.f.read_bytes(), {"sha256": digest})
+        with patch.object(vault, "_memfd_available_bytes", return_value=60*1024**3):
+            with vault.warm_memfd(self.s3, key) as weight:
+                self.assertEqual(weight.sha256, digest)
+                self.assertEqual(weight.bytes, self.f.stat().st_size)
+                self.assertTrue(weight.local.startswith("/proc/self/fd/"))
+                os.lseek(weight.fd, 0, os.SEEK_SET)
+                self.assertEqual(os.read(weight.fd, weight.bytes), self.f.read_bytes())
+            with self.assertRaisesRegex(vault.Hold, "HOLD_MEMFD_CLOSED"):
+                _ = weight.local
+
+    def test_memfd_holds_if_not_enough_ram(self):
+        digest = hashlib.sha256(self.f.read_bytes()).hexdigest()
+        key = f"models/sha256/{digest}/model.gguf"
+        self.s3.data[key] = (self.f.read_bytes(), {"sha256": digest})
+        with patch.object(vault, "_memfd_available_bytes", return_value=128):
+            result = vault.warm_memfd(self.s3, key)
+        self.assertEqual(result["state"], "HOLD_RAM_RESERVE")
+
+    def test_memfd_corrupt_stream_rejects(self):
+        if not hasattr(os, "memfd_create"):
+            self.skipTest("Linux memfd not available")
+        digest = hashlib.sha256(self.f.read_bytes()).hexdigest()
+        key = f"models/sha256/{digest}/model.gguf"
+        self.s3.data[key] = (b"Z"*self.f.stat().st_size, {"sha256": digest})
+        with patch.object(vault, "_memfd_available_bytes", return_value=60*1024**3):
+            with self.assertRaisesRegex(vault.Hold, "HOLD_MEMFD_SHA_MISMATCH"):
+                vault.warm_memfd(self.s3, key)
+
+    def test_memfd_stop_cannot_stage_weights(self):
+        digest = hashlib.sha256(self.f.read_bytes()).hexdigest()
+        key = f"models/sha256/{digest}/model.gguf"
+        self.s3.data[key] = (self.f.read_bytes(), {"sha256": digest})
+        with patch.object(vault, "stopped", return_value=True):
+            with self.assertRaisesRegex(vault.Hold, "HOLD_NOX_STOP_ACTIVE"):
+                vault.warm_memfd(self.s3, key)
+
+
 if __name__ == "__main__":
     unittest.main()

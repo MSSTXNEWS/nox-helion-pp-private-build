@@ -417,6 +417,137 @@ def warm_ram(s3, key, ram_root=RAM_ROOT, reserve_bytes=RAM_RESERVE):
         Path(tmp).unlink(missing_ok=True)
 
 
+
+class RAMWeightHandle:
+    """Memfd is valid only while owning OneHost process retains this handle.
+
+    The path /proc/self/fd/<fd> is usable only within the same process.
+    For a separate native loader, use the owner's /proc/<pid>/fd/<fd> under
+    an explicitly permissioned local process; this does not spawn one.
+    """
+    def __init__(self, fd, digest, size):
+        self.fd, self.sha256, self.bytes = fd, digest, size
+        self.closed = False
+    @property
+    def local(self):
+        if self.closed:
+            raise Hold("HOLD_MEMFD_CLOSED")
+        return f"/proc/self/fd/{self.fd}"
+    def close(self):
+        if not self.closed:
+            os.close(self.fd)
+            self.closed = True
+    def __enter__(self):
+        return self
+    def __exit__(self, exc_type, exc, traceback):
+        self.close()
+
+
+def _memfd_available_bytes():
+    """Conservative headroom excluding /dev/shm size; no swap fallback."""
+    try:
+        lines = Path("/proc/meminfo").read_text().splitlines()
+        available = [int(row.split()[1]) * 1024 for row in lines
+                     if row.startswith("MemAvailable:")]
+        if len(available) != 1:
+            raise Hold("HOLD_HOST_RAM_UNVERIFIED")
+        host_free = available[0]
+        cmax = Path("/sys/fs/cgroup/memory.max")
+        ccur = Path("/sys/fs/cgroup/memory.current")
+        if cmax.is_file() and ccur.is_file():
+            limit = cmax.read_text().strip()
+            current = int(ccur.read_text().strip())
+            cgroup_free = (max(0, int(limit)-current)
+                           if limit.isdigit() else host_free)
+            swap = Path("/sys/fs/cgroup/memory.swap.current")
+            if swap.is_file() and int(swap.read_text().strip()) > 0:
+                raise Hold("HOLD_SWAP_IN_USE")
+        else:
+            limit_path = Path("/sys/fs/cgroup/memory/memory.limit_in_bytes")
+            current_path = Path("/sys/fs/cgroup/memory/memory.usage_in_bytes")
+            if not limit_path.is_file() or not current_path.is_file():
+                raise Hold("HOLD_CGROUP_RAM_UNVERIFIED")
+            limit, current = int(limit_path.read_text()), int(current_path.read_text())
+            cgroup_free = max(0, limit-current) if limit < (1 << 60) else host_free
+        return min(host_free, cgroup_free)
+    except Hold:
+        raise
+    except (OSError, ValueError, IndexError):
+        raise Hold("HOLD_MEMFD_MEMORY_UNVERIFIED") from None
+
+
+def warm_memfd(s3, key, *, reserve_bytes=RAM_RESERVE):
+    """Native OneHost-only API: verified S3 model weight directly into RAM.
+
+    Not a CLI command: returning only a path would close the fd on process
+    exit. Owner must keep handle alive until the native teacher unloads.
+    No model is loaded, no VRAM is changed, no separate service is created.
+    """
+    if not 0 <= reserve_bytes <= 256 * 1024**3:
+        raise Hold("HOLD_RAM_RESERVE_BOUNDS")
+    if not hasattr(os, "memfd_create") or not hasattr(os, "MFD_ALLOW_SEALING"):
+        raise Hold("HOLD_MEMFD_UNSUPPORTED")
+    try:
+        import fcntl
+    except ImportError:
+        raise Hold("HOLD_MEMFD_SEALS_UNSUPPORTED") from None
+    matched = KEY.fullmatch(key)
+    if not matched:
+        raise Hold("HOLD_INVALID_CONTENT_ADDRESS")
+    require_run_allowed()
+    expected, _ = matched.groups()
+    head = _head(s3, key)
+    if head is None or head.get("Metadata", {}).get("sha256") != expected:
+        raise Hold("HOLD_REMOTE_METADATA_MISMATCH")
+    size = head.get("ContentLength")
+    if not isinstance(size, int) or size <= 0 or size > RAM_MAX_OBJECT:
+        raise Hold("HOLD_RAM_OBJECT_SIZE")
+    available = _memfd_available_bytes()
+    if available < size + reserve_bytes:
+        return {"state": "HOLD_RAM_RESERVE", "needed_bytes": size + reserve_bytes,
+                "free_bytes": available, "no_files_modified": True}
+    fd = os.memfd_create("nox-onehost-weight-" + expected[:12],
+                         os.MFD_CLOEXEC | os.MFD_ALLOW_SEALING)
+    handle = RAMWeightHandle(fd, expected, size)
+    try:
+        try:
+            body = s3.get_object(Bucket=BUCKET, Key=key)["Body"]
+            count, digest = 0, hashlib.sha256()
+            try:
+                for chunk in body.iter_chunks(chunk_size=CHUNK):
+                    require_run_allowed()
+                    if not chunk:
+                        continue
+                    count += len(chunk)
+                    if count > size:
+                        raise Hold("HOLD_MEMFD_REMOTE_OVERRUN")
+                    if _memfd_available_bytes() < reserve_bytes + len(chunk):
+                        raise Hold("HOLD_MEMFD_RAM_PRESSURE")
+                    off = 0
+                    while off < len(chunk):
+                        off += os.write(fd, chunk[off:])
+                    digest.update(chunk)
+            finally:
+                body.close()
+        except Hold:
+            raise
+        except Exception:
+            raise Hold("HOLD_MEMFD_REMOTE_STREAM") from None
+        if count != size or digest.hexdigest() != expected:
+            raise Hold("HOLD_MEMFD_SHA_MISMATCH")
+        require_run_allowed()
+        if _memfd_available_bytes() < reserve_bytes:
+            raise Hold("HOLD_MEMFD_RAM_AFTER_STREAM")
+        os.lseek(fd, 0, os.SEEK_SET)
+        seals = (fcntl.F_SEAL_WRITE | fcntl.F_SEAL_SHRINK | fcntl.F_SEAL_GROW |
+                 fcntl.F_SEAL_SEAL)
+        fcntl.fcntl(fd, fcntl.F_ADD_SEALS, seals)
+        return handle
+    except Exception:
+        handle.close()
+        raise
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__)
     sub = ap.add_subparsers(dest="command", required=True)
