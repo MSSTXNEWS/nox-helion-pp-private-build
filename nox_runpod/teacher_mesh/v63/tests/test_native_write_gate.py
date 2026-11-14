@@ -36,7 +36,7 @@ class TestNativeWriteGate(unittest.TestCase):
     def test_separate_native_ack_not_fake_readonly(self):
         self.assertIn("NATIVE_PATCH_COMPLETE=true",repair_download_hf_path.REMOTE)
         self.assertNotIn("NATIVE_READ_ONLY_COMPLETE=true",repair_download_hf_path.REMOTE)
-        self.assertIn("NATIVE_PATCH_COMPLETE=true",native_once.native_once.__code__.co_consts)
+        self.assertEqual(native_once.native_once.__defaults__,("NATIVE_PATCH_COMPLETE=true",))
 
     def test_untrusted_payload_cannot_run(self):
         x=native_once.native_once("echo bad",required_marker="NATIVE_PATCH_COMPLETE=true")
