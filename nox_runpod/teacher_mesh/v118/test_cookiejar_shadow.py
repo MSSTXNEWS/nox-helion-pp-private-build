@@ -5,7 +5,7 @@ from nox_runpod.teacher_mesh.v118.owner_nested_static_hotfix import REMOTE
 
 class CookieJarShadowTests(unittest.TestCase):
     def test_remote_cookiejar_namespace_is_not_overwritten_by_http_helper(self):
-        source = REMOTE.split("<<'PYREMOTE'", 1)[1].split('\\nPYREMOTE', 1)[0]
+        source = REMOTE.split("<<'PYREMOTE'", 1)[1].split('PYREMOTE', 1)[0]
         tree = ast.parse(source)
         imports = [n for n in tree.body if isinstance(n, ast.Import)]
         self.assertTrue(any(any(a.name == 'http.cookiejar' and a.asname == 'cookiejar'
