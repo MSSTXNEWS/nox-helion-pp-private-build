@@ -1,6 +1,6 @@
 # NOX HELION V49 — защищённый исходящий мост к существующему OneHost
 
-**Состояние на 14.11.2026: SOURCE VERIFIED, LIVE HOLD.** Проверка GitHub Actions №43594171493: 28/28 unit-тестов PASS на тестовых native callbacks; ни одна команда на Vast.ai #60509551 этим пакетом пока не запускалась. Не путать CI с настоящим подключением.
+**Состояние на 14.11.2026: SOURCE VERIFIED, LIVE HOLD.** Проверка GitHub Actions №43594171493: 35/35 unit-тестов PASS на тестовых native callbacks; ни одна команда на Vast.ai #60509551 этим пакетом пока не запускалась. Не путать CI с настоящим подключением.
 
 ## Что построено
 
@@ -52,6 +52,14 @@ bridge = OutboundOneHostBridge(native_admin, native_s03_ports, bridge_hmac_key)
 result = poll_existing_onehost(bridge, github_token=repo_scoped_token)
 # existing_scheduler сохраняет status/receipt и обрабатывает HOLD.
 ```
+
+### Владельческий подписывающий workflow
+
+В `.github/workflows/nox-v49-sign-readonly.yml` подготовлен ручной signer только для владельца GitHub `MSSTXNEWS`, ветки PR #256 и восьми фиксированных статусов. `sign_readonly.py` не заменяет существующие запросы в inbox и не запишет секрет. Он честно завершится `HOLD_BRIDGE_HMAC_KEY_MISSING`, пока отдельный секрет моста не размещён в защищённом хранилище **и** не привязан к native OneHost; `NOX2` остаётся только ключом Vast API. Учитывать, что GitHub может разрешать ручной `workflow_dispatch` только для workflow, присутствующего на default branch; до проверенного безопасного продвижения это исходник, а не работающая кнопка управления.
+
+### Почему Jupyter не использован для установки
+
+Дополнительная [native TLS-only диагностика #43594810937](https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43594810937) показала `JUPYTER_TLS_TRUSTED=false`, `JUPYTER_TLS_DIAG=RECORD_LAYER_FAILURE`. Никакие Jupyter токены, cookies или команды не передавались. Следующий допустимый канал — авторизованный SSH либо отдельно проверенная TLS-терминация/доверенный tunnel. Не отключать TLS verification и не отправлять токены по HTTP.
 
 ## Контрольные ссылки
 
