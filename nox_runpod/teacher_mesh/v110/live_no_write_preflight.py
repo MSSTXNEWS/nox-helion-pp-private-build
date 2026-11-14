@@ -128,10 +128,14 @@ bridge = Path('/root/nox/scripts/nox_v29_chat_bridge.py')
 if proxy.is_file() and not proxy.is_symlink() and proxy.stat().st_size < 500000:
     b = proxy.read_bytes()
     bridge_ok = bridge.is_file() and not bridge.is_symlink() and bridge.stat().st_size < 500000
+    bridge_bytes = bridge.read_bytes() if bridge_ok else b''
     emit('WEB_SOURCE', source_sha256=hashlib.sha256(b).hexdigest(),
          registration_marker=(b'register_native_v29_chat(app, globals())' in b),
          bridge_module_exists=bridge_ok,
-         bridge_sha256=(hashlib.sha256(bridge.read_bytes()).hexdigest() if bridge_ok else None))
+         bridge_sha256=(hashlib.sha256(bridge_bytes).hexdigest() if bridge_ok else None),
+         guarded_delta=(b'if not isinstance(delta, dict):' in bridge_bytes
+                        and b'if not isinstance(choices, list):' in bridge_bytes),
+         legacy_delta=(b"for choice in obj.get('choices') or []:" in bridge_bytes))
 else:
     emit('WEB_SOURCE', valid_proxy_source=False)
 
