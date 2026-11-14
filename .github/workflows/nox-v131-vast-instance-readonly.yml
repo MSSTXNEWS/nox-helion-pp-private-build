@@ -1,0 +1,27 @@
+name: NOX V131 Vast NOX2 instance read-only 404 diagnosis
+on:
+  pull_request:
+    branches: [feature/nox-v37-v100-firsthour-14d-20261113]
+    paths:
+      - '.github/workflows/nox-v131-vast-instance-readonly.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inspect:
+    if: github.event_name == 'pull_request' && github.actor == 'MSSTXNEWS' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Only inspect connected instance metadata, no SSH or billable operation
+        run: |
+          python -m py_compile nox_runpod/teacher_mesh/v131/vast_no_billing_inventory.py
+          python -m nox_runpod.teacher_mesh.v131.vast_no_billing_inventory
