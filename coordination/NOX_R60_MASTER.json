@@ -2,7 +2,7 @@
   "schema": "NOX_R60_SOURCE_PLAN_V1",
   "instance_id": 60509551,
   "source_matrix_path": "nox_runpod/teacher_mesh/v47/control/TASKS_60_V46.json",
-  "source_matrix_blob_sha": "02cd6dde32d13578389682328332f900ac433eb6",
+  "source_matrix_blob_sha": "7e6ff6aa898740c3f8698f13ade372d138bc8dc3",
   "onehost_only": true,
   "live_queue_verified": false,
   "registered_count": 0,
@@ -34,7 +34,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "performance_wave": 0,
+      "performance_order": 6
     },
     {
       "task_id": "R60-002",
@@ -62,7 +64,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "performance_wave": 0,
+      "performance_order": 12
     },
     {
       "task_id": "R60-003",
@@ -90,7 +94,13 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "performance_wave": 1,
+      "performance_order": 1,
+      "ai_acceleration_tasks": [
+        "specialized AI wheels provenance/license audit",
+        "wheel-only SHA256 lock"
+      ]
     },
     {
       "task_id": "R60-004",
@@ -119,7 +129,12 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "performance_wave": 1,
+      "performance_order": 2,
+      "ai_acceleration_tasks": [
+        "model snapshot deduplication and no-repeat download"
+      ]
     },
     {
       "task_id": "R60-005",
@@ -147,7 +162,12 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "performance_wave": 1,
+      "performance_order": 3,
+      "ai_acceleration_tasks": [
+        "GGUF Q4/Q5/Q8 independent answer quality and memory benchmarks"
+      ]
     },
     {
       "task_id": "R60-006",
@@ -175,7 +195,14 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "performance_wave": 1,
+      "performance_order": 4,
+      "ai_acceleration_tasks": [
+        "quantized KV cache acceptance",
+        "parallel slots versus prompt latency",
+        "prefix reuse and prefill"
+      ]
     },
     {
       "task_id": "R60-007",
@@ -187,7 +214,7 @@
         "R60-001",
         "R60-002"
       ],
-      "priority": "P1",
+      "priority": "P0",
       "resource_class": "CPU_LIGHT",
       "resource_limits": {
         "gpu_slots": 0,
@@ -204,7 +231,14 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "performance_wave": 0,
+      "performance_order": 8,
+      "ai_acceleration_tasks": [
+        "NUMA topology",
+        "RAM and /dev/shm cache budgets",
+        "Volta GPU VRAM admission"
+      ]
     },
     {
       "task_id": "R60-008",
@@ -232,7 +266,13 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "performance_wave": 1,
+      "performance_order": 5,
+      "ai_acceleration_tasks": [
+        "single GPU1 lease",
+        "reclaim idle teachers only at verified safe checkpoint"
+      ]
     },
     {
       "task_id": "R60-009",
@@ -260,7 +300,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "performance_wave": 0,
+      "performance_order": 13
     },
     {
       "task_id": "R60-010",
@@ -288,7 +330,12 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "performance_wave": 1,
+      "performance_order": 6,
+      "ai_acceleration_tasks": [
+        "zstandard persistent encrypted Cold Vault and recovery receipts"
+      ]
     },
     {
       "task_id": "R60-011",
@@ -314,7 +361,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "performance_wave": 0,
+      "performance_order": 9
     },
     {
       "task_id": "R60-012",
@@ -325,7 +374,7 @@
       "depends_on": [
         "R60-011"
       ],
-      "priority": "P1",
+      "priority": "P0",
       "resource_class": "CPU_IO",
       "resource_limits": {
         "gpu_slots": 0,
@@ -342,7 +391,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "performance_wave": 0,
+      "performance_order": 10
     },
     {
       "task_id": "R60-013",
@@ -353,7 +404,7 @@
       "depends_on": [
         "R60-012"
       ],
-      "priority": "P1",
+      "priority": "P0",
       "resource_class": "CPU_IO",
       "resource_limits": {
         "gpu_slots": 0,
@@ -370,7 +421,12 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "performance_wave": 0,
+      "performance_order": 11,
+      "ai_acceleration_tasks": [
+        "FAISS index / verified S03 recency cache benchmark, no second database"
+      ]
     },
     {
       "task_id": "R60-014",
@@ -398,7 +454,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "performance_wave": 2,
+      "performance_order": 1
     },
     {
       "task_id": "R60-015",
@@ -427,7 +485,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "performance_wave": 2,
+      "performance_order": 2
     },
     {
       "task_id": "R60-016",
@@ -439,7 +499,7 @@
         "R60-011",
         "R60-012"
       ],
-      "priority": "P0",
+      "priority": "P1",
       "resource_class": "CPU_LIGHT",
       "resource_limits": {
         "gpu_slots": 0,
@@ -456,7 +516,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "performance_wave": 2,
+      "performance_order": 3
     },
     {
       "task_id": "R60-017",
@@ -484,7 +546,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "performance_wave": 2,
+      "performance_order": 4
     },
     {
       "task_id": "R60-018",
@@ -512,7 +576,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "performance_wave": 2,
+      "performance_order": 5
     },
     {
       "task_id": "R60-019",
@@ -541,7 +607,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "performance_wave": 2,
+      "performance_order": 6
     },
     {
       "task_id": "R60-020",
@@ -570,7 +638,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "performance_wave": 2,
+      "performance_order": 7
     },
     {
       "task_id": "R60-021",
@@ -579,7 +649,7 @@
       "owner": "executor-2",
       "state": "PENDING_NATIVE_REGISTRATION",
       "depends_on": [],
-      "priority": "P0",
+      "priority": "P1",
       "resource_class": "CPU_LIGHT",
       "resource_limits": {
         "gpu_slots": 0,
@@ -596,7 +666,12 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "performance_wave": 1,
+      "performance_order": 7,
+      "ai_acceleration_tasks": [
+        "OOM root cause and real GPU1 peak memory budget"
+      ]
     },
     {
       "task_id": "R60-022",
@@ -607,7 +682,7 @@
       "depends_on": [
         "R60-021"
       ],
-      "priority": "P0",
+      "priority": "P1",
       "resource_class": "CPU_LIGHT",
       "resource_limits": {
         "gpu_slots": 0,
@@ -624,7 +699,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "performance_wave": 1,
+      "performance_order": 8
     },
     {
       "task_id": "R60-023",
@@ -653,7 +730,12 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "performance_wave": 1,
+      "performance_order": 9,
+      "ai_acceleration_tasks": [
+        "teacher inference version and model provenance"
+      ]
     },
     {
       "task_id": "R60-024",
@@ -681,7 +763,12 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "performance_wave": 1,
+      "performance_order": 10,
+      "ai_acceleration_tasks": [
+        "CPU parallel source preprocessing and tokenization in RAM"
+      ]
     },
     {
       "task_id": "R60-025",
@@ -709,7 +796,12 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "performance_wave": 1,
+      "performance_order": 11,
+      "ai_acceleration_tasks": [
+        "orjson/rapidfuzz/zstd/FAISS CPU index and dataset deduplication"
+      ]
     },
     {
       "task_id": "R60-026",
@@ -737,7 +829,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "performance_wave": 1,
+      "performance_order": 12
     },
     {
       "task_id": "R60-027",
@@ -748,7 +842,7 @@
       "depends_on": [
         "R60-026"
       ],
-      "priority": "P1",
+      "priority": "P2",
       "resource_class": "GPU1_EXCLUSIVE",
       "resource_limits": {
         "gpu1_slots": 1,
@@ -765,7 +859,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "performance_wave": 3,
+      "performance_order": 1
     },
     {
       "task_id": "R60-028",
@@ -776,7 +872,7 @@
       "depends_on": [
         "R60-026"
       ],
-      "priority": "P1",
+      "priority": "P2",
       "resource_class": "GPU1_EXCLUSIVE",
       "resource_limits": {
         "gpu1_slots": 1,
@@ -793,7 +889,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "performance_wave": 3,
+      "performance_order": 2
     },
     {
       "task_id": "R60-029",
@@ -804,7 +902,7 @@
       "depends_on": [
         "R60-026"
       ],
-      "priority": "P1",
+      "priority": "P2",
       "resource_class": "GPU1_EXCLUSIVE",
       "resource_limits": {
         "gpu1_slots": 1,
@@ -821,7 +919,12 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "performance_wave": 3,
+      "performance_order": 3,
+      "ai_acceleration_tasks": [
+        "coder teacher benchmarking before any base-weight distillation"
+      ]
     },
     {
       "task_id": "R60-030",
@@ -838,7 +941,7 @@
         "R60-029",
         "R60-009"
       ],
-      "priority": "P1",
+      "priority": "P2",
       "resource_class": "GPU1_EXCLUSIVE",
       "resource_limits": {
         "gpu1_slots": 1,
@@ -855,7 +958,12 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "performance_wave": 3,
+      "performance_order": 4,
+      "ai_acceleration_tasks": [
+        "optimizer resume, checkpoint reload, blind holdout, no LoRA claim"
+      ]
     },
     {
       "task_id": "R60-031",
@@ -881,7 +989,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "performance_wave": 2,
+      "performance_order": 8
     },
     {
       "task_id": "R60-032",
@@ -909,7 +1019,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "performance_wave": 2,
+      "performance_order": 9
     },
     {
       "task_id": "R60-033",
@@ -937,7 +1049,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "performance_wave": 2,
+      "performance_order": 10
     },
     {
       "task_id": "R60-034",
@@ -965,7 +1079,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "performance_wave": 2,
+      "performance_order": 11
     },
     {
       "task_id": "R60-035",
@@ -993,7 +1109,12 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "performance_wave": 1,
+      "performance_order": 13,
+      "ai_acceleration_tasks": [
+        "provenance source retrieval, license/privacy guard"
+      ]
     },
     {
       "task_id": "R60-036",
@@ -1021,7 +1142,12 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "performance_wave": 1,
+      "performance_order": 14,
+      "ai_acceleration_tasks": [
+        "sandbox patch/test loop, wheel imports and subprocess safeguards"
+      ]
     },
     {
       "task_id": "R60-037",
@@ -1049,7 +1175,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "performance_wave": 1,
+      "performance_order": 15
     },
     {
       "task_id": "R60-038",
@@ -1078,7 +1206,12 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "performance_wave": 1,
+      "performance_order": 16,
+      "ai_acceleration_tasks": [
+        "automated code patch → test → rollback (owner authorization)"
+      ]
     },
     {
       "task_id": "R60-039",
@@ -1106,7 +1239,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "performance_wave": 2,
+      "performance_order": 12
     },
     {
       "task_id": "R60-040",
@@ -1134,7 +1269,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "performance_wave": 2,
+      "performance_order": 13
     },
     {
       "task_id": "R60-041",
@@ -1160,7 +1297,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "performance_wave": 0,
+      "performance_order": 4
     },
     {
       "task_id": "R60-042",
@@ -1188,7 +1327,14 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "performance_wave": 0,
+      "performance_order": 5,
+      "ai_acceleration_tasks": [
+        "SSE first-delta TTFT",
+        "p50/p95 time-to-first-text and token/s",
+        "llama.cpp KV q8_0 vs f16 quality benchmark"
+      ]
     },
     {
       "task_id": "R60-043",
@@ -1199,7 +1345,7 @@
       "depends_on": [
         "R60-042"
       ],
-      "priority": "P2",
+      "priority": "P3",
       "resource_class": "CPU_LIGHT",
       "resource_limits": {
         "gpu_slots": 0,
@@ -1216,7 +1362,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "performance_wave": 4,
+      "performance_order": 1
     },
     {
       "task_id": "R60-044",
@@ -1227,7 +1375,7 @@
       "depends_on": [
         "R60-043"
       ],
-      "priority": "P2",
+      "priority": "P3",
       "resource_class": "CPU_LIGHT",
       "resource_limits": {
         "gpu_slots": 0,
@@ -1244,7 +1392,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "performance_wave": 4,
+      "performance_order": 2
     },
     {
       "task_id": "R60-045",
@@ -1255,7 +1405,7 @@
       "depends_on": [
         "R60-042"
       ],
-      "priority": "P2",
+      "priority": "P3",
       "resource_class": "CPU_IO",
       "resource_limits": {
         "gpu_slots": 0,
@@ -1272,7 +1422,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "performance_wave": 4,
+      "performance_order": 3
     },
     {
       "task_id": "R60-046",
@@ -1284,7 +1436,7 @@
         "R60-007",
         "R60-045"
       ],
-      "priority": "P2",
+      "priority": "P3",
       "resource_class": "GPU1_EXCLUSIVE",
       "resource_limits": {
         "gpu1_slots": 1,
@@ -1301,7 +1453,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "performance_wave": 4,
+      "performance_order": 4
     },
     {
       "task_id": "R60-047",
@@ -1313,7 +1467,7 @@
         "R60-007",
         "R60-046"
       ],
-      "priority": "P2",
+      "priority": "P3",
       "resource_class": "GPU1_EXCLUSIVE",
       "resource_limits": {
         "gpu1_slots": 1,
@@ -1330,7 +1484,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "performance_wave": 4,
+      "performance_order": 5
     },
     {
       "task_id": "R60-048",
@@ -1341,7 +1497,7 @@
       "depends_on": [
         "R60-041"
       ],
-      "priority": "P2",
+      "priority": "P3",
       "resource_class": "CPU_LIGHT",
       "resource_limits": {
         "gpu_slots": 0,
@@ -1358,7 +1514,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "performance_wave": 4,
+      "performance_order": 6
     },
     {
       "task_id": "R60-049",
@@ -1370,7 +1528,7 @@
         "R60-046",
         "R60-047"
       ],
-      "priority": "P2",
+      "priority": "P3",
       "resource_class": "CPU_LIGHT",
       "resource_limits": {
         "gpu_slots": 0,
@@ -1387,7 +1545,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "performance_wave": 4,
+      "performance_order": 7
     },
     {
       "task_id": "R60-050",
@@ -1399,7 +1559,7 @@
         "R60-041",
         "R60-049"
       ],
-      "priority": "P2",
+      "priority": "P3",
       "resource_class": "CPU_LIGHT",
       "resource_limits": {
         "gpu_slots": 0,
@@ -1416,7 +1576,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "performance_wave": 4,
+      "performance_order": 8
     },
     {
       "task_id": "R60-051",
@@ -1442,7 +1604,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "performance_wave": 0,
+      "performance_order": 1
     },
     {
       "task_id": "R60-052",
@@ -1470,7 +1634,14 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "performance_wave": 0,
+      "performance_order": 7,
+      "ai_acceleration_tasks": [
+        "CUDA 12.x SM70 kernel probe",
+        "PyTorch CUDA 12.6 wheel compatibility",
+        "FP16 microbatch and gradient checkpointing"
+      ]
     },
     {
       "task_id": "R60-053",
@@ -1498,7 +1669,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "performance_wave": 0,
+      "performance_order": 2
     },
     {
       "task_id": "R60-054",
@@ -1526,7 +1699,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "performance_wave": 0,
+      "performance_order": 3
     },
     {
       "task_id": "R60-055",
@@ -1537,7 +1712,7 @@
       "depends_on": [
         "R60-053"
       ],
-      "priority": "P0",
+      "priority": "P1",
       "resource_class": "CPU_IO",
       "resource_limits": {
         "gpu_slots": 0,
@@ -1554,7 +1729,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "performance_wave": 2,
+      "performance_order": 15
     },
     {
       "task_id": "R60-056",
@@ -1583,7 +1760,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "performance_wave": 0,
+      "performance_order": 14
     },
     {
       "task_id": "R60-057",
@@ -1592,8 +1771,8 @@
       "owner": "executor-2",
       "state": "PENDING_NATIVE_REGISTRATION",
       "depends_on": [
-        "R60-030",
-        "R60-056"
+        "R60-042",
+        "R60-013"
       ],
       "priority": "P1",
       "resource_class": "CPU_LIGHT",
@@ -1612,7 +1791,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "performance_wave": 1,
+      "performance_order": 17
     },
     {
       "task_id": "R60-058",
@@ -1640,7 +1821,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "performance_wave": 1,
+      "performance_order": 18
     },
     {
       "task_id": "R60-059",
@@ -1668,7 +1851,9 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "performance_wave": 1,
+      "performance_order": 19
     },
     {
       "task_id": "R60-060",
@@ -1698,7 +1883,20 @@
       "artifact_sha256": null,
       "native_receipt": null,
       "native_queue_id": null,
-      "verified": false
+      "verified": false,
+      "performance_wave": 2,
+      "performance_order": 14
     }
-  ]
+  ],
+  "performance_policy_version": "NOX_V94_VOLTA_AI_ACCEL_FIRST",
+  "priority_order": [
+    "V100_P0_CHAT_PROTECTION_AND_BASELINE",
+    "AI_ACCEL_LIBRARIES_CPU_RAM_LLAMACPP_AND_QUALITY",
+    "RAG_SELF_REPAIR_SKILLS_AND_ANSWER_CORRECTNESS",
+    "FULL_WEIGHT_DISTILLATION_ONLY_AFTER_GPU1_RESTORE",
+    "OPTIONAL_VOICE_CINEMA_WOW"
+  ],
+  "chat_operational_priority": "P0",
+  "background_jobs_operational_priority": "P1",
+  "priority_note": "AI speed/quality and Volta optimization first after P0 chat/STOP/S03 integrity. Native queue still requires signed OneHost and real readback; no fake jobs/progress."
 }
