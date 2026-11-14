@@ -18,7 +18,7 @@ class TestMemory(unittest.TestCase):
         c=sqlite3.connect(self.inf)
         c.execute("CREATE TABLE facts(fact_id TEXT,key TEXT,value TEXT,source TEXT,active INTEGER,is_test INTEGER,superseded_by TEXT,ts_utc TEXT,dialog_id TEXT)")
         c.execute("CREATE TABLE brain_nodes(node_id TEXT,text TEXT,source TEXT,is_test INTEGER,hidden INTEGER,kind TEXT,ts_utc TEXT,meta TEXT)")
-        c.executemany("INSERT INTO facts VALUES (?,?,?,?,?,?,?,?)",[
+        c.executemany("INSERT INTO facts VALUES (?,?,?,?,?,?,?,?,?)",[
             ("fact1","NOX","knowledge","source://fact",1,0,None,"2026-01-01","scope1"),
             ("fact2","NOX","obsolete","source://fact",0,0,None,"2026-01-02","scope1"),
             ("fact3","NOX","test","source://fact",1,1,None,"2026-01-03","scope1")])
