@@ -48,7 +48,7 @@ def total_folder(path):
 
 ROOT=Path('/root/nox/tools/ai-accelerators')
 FINAL=ROOT/'v94'
-REQUIREMENTS="""orjson>=3.10,<4
+REQUIREMENTS='''orjson>=3.10,<4
 zstandard>=0.24,<1
 lz4>=4.4,<5
 rapidfuzz>=3.12,<4
@@ -64,7 +64,7 @@ nvidia-ml-py>=12.575,<14
 msgpack>=1.1,<2
 uvloop>=0.20,<1
 xxhash>=3.5,<4
-"""
+'''
 try:
     if stop():raise RuntimeError('HOLD_STOP')
     if health(8080)!=200 or health(8081)!=200:
@@ -121,7 +121,7 @@ try:
                 '--require-hashes','--only-binary',':all:',str(lock)],
                 timeout=35,env=env)
         if rc!=0:raise RuntimeError('HOLD_WHEEL_SHA_INSTALL')
-        smoke="""import orjson,zstandard,lz4.frame,rapidfuzz,faiss,numpy as np
+        smoke='''import orjson,zstandard,lz4.frame,rapidfuzz,faiss,numpy as np
 import safetensors.numpy,watchdog,diskcache,rank_bm25,sentencepiece
 import huggingface_hub,hf_xet,uvloop,msgpack,xxhash,pynvml
 from rapidfuzz import fuzz
@@ -142,7 +142,7 @@ names=('orjson','zstandard','lz4','rapidfuzz','safetensors','huggingface-hub',
 'nvidia-ml-py','msgpack','uvloop','xxhash')
 print(__import__('json').dumps({'versions':{n:m.version(n) for n in names},
   'readiness':'CPU_ACCEL_SMOKE_PASS'},sort_keys=True))
-"""
+'''
         rc=subprocess.run([str(stage/'bin/python'),'-c',smoke],
                 capture_output=True,text=True,timeout=12,env=env)
         if rc.returncode!=0:
