@@ -7,6 +7,8 @@ Run only in ephemeral GitHub Actions environment; never embed NOX2 in code.
 """
 from __future__ import annotations
 import json
+import ipaddress
+import socket
 import os
 from pathlib import Path
 import re
@@ -181,11 +183,40 @@ def probe() -> bool:
         raise RuntimeError("HOLD_INSTANCE_NOT_RUNNING")
     if str(d.get("num_gpus")) != "2":
         raise RuntimeError("HOLD_GPU_COUNT_CHANGED")
-    host, port = d.get("ssh_host"), d.get("ssh_port")
-    if not isinstance(host, str) or not HOST_RE.fullmatch(host):
-        raise RuntimeError("HOLD_SSH_HOST")
-    if not str(port).isdigit() or not (1 <= int(port) <= 65535):
-        raise RuntimeError("HOLD_SSH_PORT")
+    # Vast proxy route sometimes accepts TCP but does not emit an SSH banner.
+    # Prefer the direct, authenticated API-provided 22/tcp mapping, requiring
+    # a genuine SSH-2.0 banner BEFORE generating or attaching any key.
+    ip = d.get("public_ipaddr")
+    try:
+        if not ipaddress.ip_address(ip).is_global:
+            raise ValueError("private")
+    except (TypeError,ValueError):
+        raise RuntimeError("HOLD_DIRECT_SSH_IP_NOT_GLOBAL")
+    ports = d.get("ports")
+    if not isinstance(ports,dict):
+        raise RuntimeError("HOLD_DIRECT_SSH_PORT_MAP")
+    mappings = ports.get("22/tcp")
+    if not isinstance(mappings,list):
+        raise RuntimeError("HOLD_DIRECT_SSH_MAPPINGS")
+    host,port = None,None
+    for row in mappings:
+        if not isinstance(row,dict):
+            continue
+        raw = row.get("HostPort")
+        if not str(raw).isdigit() or not (1<=int(raw)<=65535):
+            continue
+        try:
+            with socket.create_connection((ip,int(raw)),timeout=7) as sock:
+                sock.settimeout(5)
+                banner = sock.recv(128)
+                if banner.startswith(b"SSH-2.0"):
+                    host,port = ip,int(raw)
+                    break
+        except (OSError,TimeoutError):
+            continue
+    if host is None:
+        raise RuntimeError("HOLD_DIRECT_SSH_BANNER_UNAVAILABLE")
+    print("SSH_ROUTE=VAST_API_DIRECT_MAPPED_22_WITH_BANNER")
     RUNNER.mkdir(mode=0o700,parents=True,exist_ok=True)
     subprocess.run(
         ["ssh-keygen", "-q", "-t", "ed25519", "-N", "", "-C",
