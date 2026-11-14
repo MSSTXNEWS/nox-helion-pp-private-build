@@ -4,6 +4,7 @@ read-only records, no new database, no mock results and no write operations.
 """
 from __future__ import annotations
 import asyncio
+import json
 import sqlite3
 from pathlib import Path
 from fastapi import Request
@@ -20,27 +21,63 @@ def _connect():
     con.row_factory=sqlite3.Row
     return con
 
+def _metadata(raw):
+    # Existing S03 writer owns this JSON; never trust it to change record identity.
+    if not isinstance(raw,str) or len(raw)>16000:
+        return {}
+    try:
+        data=json.loads(raw)
+        return data if isinstance(data,dict) else {}
+    except (ValueError,TypeError):
+        return {}
+
+
 def _knowledge(q:str='',facts_only:bool=False,limit:int=32):
+    if not isinstance(q,str) or len(q)>240 or not isinstance(limit,int) or not 1<=limit<=50:
+        raise RuntimeError('HOLD_S03_QUERY_BOUNDS')
     with _connect() as db:
         cols={str(r[1]) for r in db.execute('PRAGMA table_info(s03_items)')}
-        if not {'id','segment','text','provenance','sha256','ts'}.issubset(cols):
+        if not {'id','segment','text','provenance','sha256','ts','meta'}.issubset(cols):
             raise RuntimeError('HOLD_NATIVE_S03_SCHEMA')
         clauses=[];params=[]
         if facts_only:
             clauses.append('segment=?');params.append('M2')
         if q:
-            clauses.append('(instr(lower(text),lower(?))>0 OR instr(lower(provenance),lower(?))>0)')
-            params.extend([q,q])
+            # Native V125 stores the literal key in provenance; native V130
+            # puts the key in original S03 meta.fact_key. Both must be found.
+            # instr() is case-insensitive here and doesn't interpret wildcards.
+            escaped=json.dumps(q,ensure_ascii=True)[1:-1]
+            clauses.append("(instr(lower(COALESCE(text,'')),lower(?))>0 OR "
+                           "instr(lower(COALESCE(provenance,'')),lower(?))>0 OR "
+                           "instr(lower(COALESCE(meta,'')),lower(?))>0 OR "
+                           "instr(lower(COALESCE(meta,'')),lower(?))>0)")
+            params.extend([q,q,q,escaped])
         where=' WHERE '+' AND '.join(clauses) if clauses else ''
-        sql='SELECT id,segment,text,provenance,sha256,ts FROM s03_items'+where+' ORDER BY ts DESC LIMIT ?'
+        sql=('SELECT id,segment,text,provenance,sha256,ts,meta FROM s03_items'
+             +where+' ORDER BY ts DESC LIMIT ?')
         params.append(limit)
         rows=db.execute(sql,tuple(params)).fetchall()
-    return [{'id':str(x['id'])[:150],'fact_key':str(x['id'])[:150],
-             'content':str(x['text'] or '')[:5000],
-             'segment':str(x['segment'] or '')[:14],
-             'source_ref':str(x['provenance'] or '')[:350],
-             'source_sha256':str(x['sha256'] or '')[:64],
-             'recorded_at':str(x['ts'] or '')[:55]} for x in rows]
+    results=[]
+    for row in rows:
+        meta=_metadata(row['meta'])
+        fact_key=meta.get('fact_key')
+        if not isinstance(fact_key,str) or not 1<=len(fact_key)<=160:
+            fact_key=str(row['id'])
+        source_content_sha=meta.get('source_sha256')
+        if not isinstance(source_content_sha,str) or len(source_content_sha)!=64:
+            source_content_sha=None
+        results.append({
+            'id':str(row['id'])[:150],
+            'fact_key':fact_key[:160],
+            'content':str(row['text'] or '')[:5000],
+            'segment':str(row['segment'] or '')[:14],
+            # Keep original provenance and internal S03 sha256 untouched.
+            'source_ref':str(row['provenance'] or '')[:350],
+            'source_sha256':str(row['sha256'] or '')[:64],
+            'submitted_content_sha256':source_content_sha,
+            'recorded_at':str(row['ts'] or '')[:55],
+        })
+    return results
 
 def _history(limit:int=50):
     with _connect() as db:

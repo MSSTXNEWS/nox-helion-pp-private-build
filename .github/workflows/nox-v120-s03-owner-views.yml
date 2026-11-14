@@ -6,6 +6,13 @@ on:
       - 'nox_runpod/teacher_mesh/v120/**'
       - '.github/workflows/nox-v120-s03-owner-views.yml'
   workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Manual only, after current live SHA and source/DB restore verification'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
 permissions:
   contents: read
 concurrency:
@@ -34,7 +41,7 @@ jobs:
           print('NOX_V120_SOURCE_COMPILE=PASS')
           PY
   native:
-    if: ${{ github.actor == 'MSSTXNEWS' }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' }}
     needs: syntax
     runs-on: ubuntu-latest
     timeout-minutes: 12
