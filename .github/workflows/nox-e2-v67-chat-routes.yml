@@ -1,0 +1,33 @@
+name: NOX E2 V67 map actual agent chat path
+on:
+  push:
+    branches: [nox/e2-urgent-chat-recovery-20261114]
+    paths:
+      - '.github/workflows/nox-e2-v67-chat-routes.yml'
+      - 'nox_runpod/teacher_mesh/v67/real_chat_chain_audit.py'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: nox-e2-v67-chat-routes
+  cancel-in-progress: false
+jobs:
+  native:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify source and existing NOX2
+        run: |
+          set -euo pipefail
+          test -n "$NOX2"
+          python3 -m py_compile nox_runpod/teacher_mesh/v67/real_chat_chain_audit.py
+      - name: Inspect installed agent routes without remote writes
+        run: python3 -m nox_runpod.teacher_mesh.v67.real_chat_chain_audit
+      - name: Detach exact temporary SSH key
+        if: always()
+        run: python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup
