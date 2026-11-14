@@ -146,9 +146,11 @@ print('NOX_V108_ISOLATED_ROUTES=PASS')
        unauthenticated_http=codes,owner_login_e2e_verified=False,
        native_s03_recall_unchanged=True,weights_changed=False,
        full_web_compatibility_verified=False)
- except Exception:
+ except Exception as issue:
+  failure=str(issue)
   restored=rollback(original,meta)
-  emit(state='HOLD_ROLLED_BACK' if restored else 'HOLD_ROLLBACK_UNVERIFIED',rollback=restored)
+  emit(state='HOLD_ROLLED_BACK' if restored else 'HOLD_ROLLBACK_UNVERIFIED',rollback=restored,
+       failed_gate=failure[:95] if failure.startswith('HOLD_') else type(issue).__name__)
 except Exception as exc:
  msg=str(exc)
  emit(state=msg if msg.startswith('HOLD_') and len(msg)<110 else 'HOLD_NATIVE_PREFLIGHT',
