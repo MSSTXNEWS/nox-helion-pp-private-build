@@ -290,7 +290,7 @@ def ssh_run(*,host:str,port:int,key:Path,known:Path,script:str,limit:int):
           "-o","StrictHostKeyChecking=yes","root@"+host,"bash","-se"]
     return subprocess.run(base,input=script,text=True,capture_output=True,timeout=limit)
 
-def onepass() -> dict:
+def _onepass_attempt() -> dict:
     receipt={"schema":"NOX_V72_RUNNER_RECEIPT_V1","instance_id":60509551,
              "remote_attempts":0,"onehost_replaced":False,
              "new_llm":False,"new_scheduler":False,"new_optimizer_steps_verified":False}
@@ -353,6 +353,14 @@ def onepass() -> dict:
                 receipt["temp_ssh_key_revoked"]=False
         else:
             receipt["temp_ssh_key_revoked"]=True
+
+def onepass() -> dict:
+    """Return after the finally cleanup, not before it has executed."""
+    outcome=_onepass_attempt()
+    # Existing V51 removes the TRACK file *only* after remote key absence is
+    # read back from the authorized Vast key registry.
+    outcome["temp_ssh_key_revoked"]=not v51.TRACK.exists()
+    return outcome
 
 def main()->int:
     result=onepass()
