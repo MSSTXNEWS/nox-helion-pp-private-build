@@ -5,6 +5,11 @@ on:
     paths:
       - 'nox_runpod/teacher_mesh/v105/**'
       - '.github/workflows/nox-v105-chat-bridge-ci.yml'
+  pull_request:
+    branches: [feature/nox-v38-synaptic-brain-20261114]
+    paths:
+      - 'nox_runpod/teacher_mesh/v105/**'
+      - '.github/workflows/nox-v105-chat-bridge-ci.yml'
   workflow_dispatch:
 permissions: {contents: read}
 concurrency:
