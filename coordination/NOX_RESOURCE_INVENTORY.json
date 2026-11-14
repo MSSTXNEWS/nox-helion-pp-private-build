@@ -112,11 +112,12 @@
       "POST"
     ],
     "queue_get_readback_supported": false,
-    "native_queue_r60_registered_count_verified": 0,
     "main_chat_ttft_p50_p95_verified": false,
     "stop_native_verified": false,
     "checkpoint_restore_verified": false,
     "native_optimizer_steps_verified": false,
-    "active_s03_wiring_verified": false
+    "active_s03_wiring_verified": false,
+    "native_queue_readback": "NOT_VERIFIED_POST_ONLY_ROUTE",
+    "r60_source_manifest_registered_count": 0
   }
 }
