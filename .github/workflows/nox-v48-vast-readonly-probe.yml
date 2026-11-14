@@ -1,78 +1,123 @@
-name: NOX Vast 60509551 connection probe (read-only)
-
+name: NOX Executor 2 / Vast 60509551 live preflight
 on:
   push:
-    branches:
-      - feature/nox-v38-synaptic-brain-20261114
-    paths:
-      - .github/workflows/nox-v48-vast-readonly-probe.yml
+    branches: [nox/executor2-r60-vast-probe-20261114]
+    paths: ['.github/workflows/nox-v48-vast-readonly-probe.yml']
   workflow_dispatch:
-
 permissions:
   contents: read
-
 concurrency:
-  group: nox-vast-60509551-readonly-probe
-  cancel-in-progress: true
-
+  group: nox-vast-60509551-executor2-readonly
+  cancel-in-progress: false
 jobs:
-  probe:
+  inventory:
     runs-on: ubuntu-latest
-    timeout-minutes: 7
+    timeout-minutes: 9
     env:
-      VAST_API_KEY: ${{ secrets.VAST_API_KEY }}
+      VAST_API_KEY: \${{ secrets.NOX2 }}
+      NOX_VAST_SSH_PRIVATE_KEY: \${{ secrets.NOX_VAST_SSH_PRIVATE_KEY }}
     steps:
-      - name: Confirm existing GitHub Actions credential without disclosing it
+      - name: Check existing NOX2 secret without showing it
         shell: bash
         run: |
           set -euo pipefail
-          if [ -z "${VAST_API_KEY:-}" ]; then
-            echo "::error::VAST_API_KEY is not configured for this workflow; no remote connection attempted."
-            exit 2
+          test -n "\${VAST_API_KEY:-}" || { echo "::error::HOLD_NOX2_MISSING"; exit 2; }
+          echo "NOX2_PRESENT=YES (value never logged)"
+      - name: Install official Vast.ai CLI in temporary runner only
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip -q install --disable-pip-version-check vastai
+          vastai --version || vastai --help >/dev/null
+      - name: Authenticated show instance and sanitized receipt
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 65s vastai show instance 60509551 --raw > "$RUNNER_TEMP/instance.json"
+          python3 - <<'PY'
+          import json,os,hashlib
+          from pathlib import Path
+          p=Path(os.environ['RUNNER_TEMP'])
+          x=json.loads((p/'instance.json').read_text())
+          d=x.get('instances',x) if isinstance(x,dict) else x
+          if isinstance(d,list): d=next((v for v in d if str(v.get('id'))=='60509551'),{})
+          if not isinstance(d,dict) or str(d.get('id'))!='60509551':
+              raise SystemExit('HOLD_INSTANCE_ID_NOT_VERIFIED')
+          # Only these fields can be exported: NO credentials, IP, SSH host or port.
+          public=('id','actual_status','intended_status','gpu_name','num_gpus','gpu_ram','disk_space','disk_usage')
+          receipt={'schema':'NOX_R60_VAST_API_RECEIPT_V1','source':'Vast.ai CLI live',
+                   'instance':{k:d[k] for k in public if k in d},
+                   'instance_verified':True,'remote_gpu_inspected':False,
+                   'optimizer_steps_verified':False,'model_weights_changed':False}
+          (p/'receipt.json').write_text(json.dumps(receipt,ensure_ascii=False,sort_keys=True,indent=2))
+          print('VAST_API_RECEIPT='+json.dumps(receipt,ensure_ascii=False))
+          print('VAST_API_RECEIPT_SHA256='+hashlib.sha256((p/'receipt.json').read_bytes()).hexdigest())
+          PY
+      - name: Inspect SSH route (no address output) and limited execute
+        if: success()
+        shell: bash
+        run: |
+          set -euo pipefail
+          if timeout 35s vastai ssh-url 60509551 > "$RUNNER_TEMP/sshroute.txt" 2>/dev/null; then
+            python3 - <<'PY'
+          import os
+          from pathlib import Path
+          from urllib.parse import urlparse
+          raw=(Path(os.environ['RUNNER_TEMP'])/'sshroute.txt').read_text().strip()
+          p=urlparse(raw)
+          if p.scheme=='ssh' and p.hostname and p.port:
+              print('SSH_ROUTE_AVAILABLE=true (route redacted)')
+          else:
+              print('HOLD_SSH_ROUTE_FORMAT')
+          PY
+          else
+            echo "HOLD_SSH_ROUTE_UNAVAILABLE"
           fi
-          echo "VAST_API_KEY_PRESENT=true"
-
-      - name: Install official Vast.ai CLI on ephemeral runner only
-        shell: bash
-        run: |
-          set -euo pipefail
-          python -m pip install --quiet --disable-pip-version-check --no-input vastai
-          vastai --help > /dev/null
-
-      - name: Read Vast.ai instance state without changing anything
-        shell: bash
-        run: |
-          set -euo pipefail
-          timeout 65s vastai show instance 60509551 --raw > "$RUNNER_TEMP/nox_vast_instance.json"
-          python - <<'PY'
-          import json,os
-          p=os.path.join(os.environ['RUNNER_TEMP'],'nox_vast_instance.json')
-          data=json.load(open(p,encoding='utf-8'))
-          if isinstance(data,list):
-              data=next((x for x in data if str(x.get('id'))=='60509551'),{})
-          if not isinstance(data,dict):
-              raise SystemExit('HOLD_BAD_INSTANCE_RESPONSE')
-          instance_id=data.get('id',data.get('instance_id'))
-          if str(instance_id)!='60509551':
-              raise SystemExit('HOLD_WRONG_INSTANCE')
-          fields=('id','actual_status','status','gpu_name','num_gpus','gpu_ram','disk_space','disk_usage')
-          print('NOX_VAST_INSTANCE_READONLY='+json.dumps({k:data[k] for k in fields if k in data},ensure_ascii=False))
-          print('VAST_INSTANCE_ID_VERIFIED=true')
-          PY
-
-      - name: Read-only server GPU command via Vast backend (no SSH)
-        shell: bash
-        run: |
-          set -euo pipefail
-          timeout 75s vastai execute 60509551 "nvidia-smi -L" > "$RUNNER_TEMP/nox_execute_response.txt"
-          python - <<'PY'
+          if timeout 40s vastai execute 60509551 'nvidia-smi -L' > "$RUNNER_TEMP/limited_execute.txt" 2>&1; then
+            python3 - <<'PY'
           import os,re
-          data=open(os.path.join(os.environ['RUNNER_TEMP'],'nox_execute_response.txt'),encoding='utf-8',errors='replace').read()
-          if len(data)>20000:raise SystemExit('HOLD_OVERSIZED_EXEC_RESPONSE')
-          if re.search(r'(401|403|unauthorized|permission denied|error)',data,re.I):
-              print('HOLD_EXECUTION_DENIED_OR_ERROR')
-              raise SystemExit(2)
-          print('VAST_EXEC_RESPONSE_RECEIVED=true')
-          print('RECEIPT_EVIDENCE='+data[:1800])
-          print('NOTE=EXEC_RESPONSE_NOT_PROOF_OF_REMOTE_COMPLETION_UNTIL_RESULT_READBACK')
+          from pathlib import Path
+          data=(Path(os.environ['RUNNER_TEMP'])/'limited_execute.txt').read_text(errors='replace')
+          ok=bool(re.search(r'\b(?:Tesla\s+)?V100\b',data,re.I))
+          print('LIMITED_REMOTE_GPU_LIST='+('VERIFIED_V100_RESPONSE' if ok else 'UNVERIFIED_RESPONSE'))
+          print('NOTE=CLI_execute_is_not_full_SSH_or_OneHost_receipt')
           PY
+          else
+            echo "HOLD_LIMITED_EXECUTE (no remote changes)"
+          fi
+          if [ -z "\${NOX_VAST_SSH_PRIVATE_KEY:-}" ]; then
+            echo "HOLD_NO_EXISTING_VAST_SSH_KEY_SECRET; skip direct SSH"
+            exit 0
+          fi
+          printf '%s\n' "$NOX_VAST_SSH_PRIVATE_KEY" > "$RUNNER_TEMP/vast.key"
+          chmod 600 "$RUNNER_TEMP/vast.key"
+          readarray -t hp < <(python3 - <<'PY'
+          import json,os
+          x=json.load(open(os.path.join(os.environ['RUNNER_TEMP'],'instance.json')))
+          d=x.get('instances',x) if isinstance(x,dict) else x
+          if isinstance(d,list): d=next((v for v in d if str(v.get('id'))=='60509551'),{})
+          print(d.get('ssh_host',''))
+          print(d.get('ssh_port',''))
+          PY
+          )
+          if [ -z "\${hp[0]}" ] || ! [[ "\${hp[1]}" =~ ^[0-9]+$ ]]; then
+            echo "HOLD_SSH_NO_HOST_PORT"
+            exit 0
+          fi
+          if timeout 60s ssh -i "$RUNNER_TEMP/vast.key" -p "\${hp[1]}" -o BatchMode=yes -o ConnectTimeout=12 -o StrictHostKeyChecking=accept-new "root@\${hp[0]}" \
+            "nvidia-smi --query-gpu=index,name,memory.total,memory.used,memory.free,utilization.gpu,temperature.gpu --format=csv,noheader && free -m && df -B1 /workspace" > "$RUNNER_TEMP/gpu.txt" 2>/dev/null; then
+              echo "SSH_REMOTE_GPU_RAM_DISK_RECEIPT_BEGIN"
+              head -n 12 "$RUNNER_TEMP/gpu.txt"
+              echo "SSH_REMOTE_GPU_RAM_DISK_RECEIPT_END"
+          else
+              echo "HOLD_REMOTE_SSH_CREDENTIAL_OR_NETWORK"
+          fi
+          rm -f "$RUNNER_TEMP/vast.key"
+      - name: Upload sanitized API receipt (no host or credentials)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nox-e2-vast60509551-api-inventory
+          path: \${{ runner.temp }}/receipt.json
+          if-no-files-found: ignore
+          retention-days: 7
