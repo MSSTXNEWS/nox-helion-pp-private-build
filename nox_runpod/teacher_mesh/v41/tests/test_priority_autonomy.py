@@ -96,6 +96,9 @@ class TestChatFirstAdmission(unittest.TestCase):
   from training.priority_autonomy import chat_first_admission
   data={'owner_authorized':True,'stop_active':False,'chat_state':'idle',
         'seconds_since_chat_activity':90,'disk_free_bytes':25_000_000_000,
+        'estimated_new_checkpoint_bytes':1_000_000_000,
+        'estimated_temp_bytes':500_000_000,
+        'disk_write_estimate_verified':True,
         'external_restore_verified':True,'checkpoint_resume_verified':True,
         'runtime_gpu_abi_verified':True,'training_owner_lease':True,
         'gpus':[{'vram_free_mib':4500,'temperature_c':40},
@@ -115,11 +118,21 @@ class TestChatFirstAdmission(unittest.TestCase):
   self.assertIn('REQUEST_ONEHOST_GPU1_DISTILLATION_ADMISSION',x['actions'])
   self.assertFalse(x['training_launch'])
   self.assertEqual(x['queue_owner'],'EXISTING_NOX_ONEHOST')
- def test_disk_hold_allows_only_cpu_prep(self):
+ def test_17gb_not_a_hard_chat_or_training_threshold(self):
   x=self.live(disk_free_bytes=17_475_031_040)
   self.assertIn('ALLOW_CPU_KNOWLEDGE_PREP',x['actions'])
-  self.assertIn('HOLD_DISK_RESERVE',x['reasons'])
+  self.assertEqual(x['disk_gate'],'READY_FOR_OTHER_NATIVE_GATES')
+  self.assertIn('REQUEST_ONEHOST_GPU1_DISTILLATION_ADMISSION',x['actions'])
+  self.assertFalse(x['training_launch'])  # OneHost approval still required
+ def test_insufficient_write_size_holds_training_not_chat(self):
+  x=self.live(disk_free_bytes=1_000_000_000)
+  self.assertIn('HOLD_INSUFFICIENT_SPACE_FOR_NEW_WRITE',x['reasons'])
+  self.assertIn('ALLOW_CPU_KNOWLEDGE_PREP',x['actions'])
   self.assertNotIn('REQUEST_ONEHOST_GPU1_DISTILLATION_ADMISSION',x['actions'])
+ def test_unknown_checkpoint_footprint_never_train(self):
+  x=self.live(estimated_new_checkpoint_bytes=None)
+  self.assertIn('HOLD_DISK_BUDGET_UNVERIFIED',x['reasons'])
+  self.assertFalse(x['training_launch'])
  def test_missing_backup_hold(self):
   self.assertIn('HOLD_EXTERNAL_RESTORE',self.live(external_restore_verified=False)['reasons'])
  def test_stop_prevents_work(self):
