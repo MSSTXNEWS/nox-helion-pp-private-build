@@ -13,7 +13,7 @@ class Policy:
     min_ram_free_mib: int = 12288
     # Existing SHA-verified local models can be mapped without new downloads.
     # No hard 20 GB gate on chat/teacher inference. New writes use V71 budget.
-    min_disk_free_bytes: int = 512 * 1024 * 1024
+    min_disk_free_bytes: int = 10_000_000_000
     max_loaded_teachers: int = 1
     protected_roles: tuple[str,...] = ('student','chat','optimizer','checkpoint','s03')
 
