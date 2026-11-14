@@ -1,0 +1,49 @@
+name: NOX V111 exact-SHA safe V29 parser repair and rollback
+on:
+  push:
+    branches: [nox/e2-v109-stream-delta-guard-20261115]
+    paths:
+      - '.github/workflows/nox-e2-v111-stream-guard-live.yml'
+      - 'nox_runpod/teacher_mesh/v111/**'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: nox-v111-existing-proxy-60509551
+  cancel-in-progress: false
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify exact-SHA atomic module repair and regressions
+        run: |
+          set -euo pipefail
+          python3 -m compileall -q nox_runpod/teacher_mesh/v111
+          python3 -m unittest -v \
+            nox_runpod.teacher_mesh.v111.test_guarded_stream_patch \
+            nox_runpod.teacher_mesh.v105.tests.test_v109_delta_shapes \
+            nox_runpod.teacher_mesh.v106.tests.test_v108_registration_order
+  native:
+    needs: source
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Fail closed if owner API is not authenticated
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$NOX2" || { echo "HOLD_NOX2_SECRET"; exit 2; }
+      - name: Apply only parser delta on exact SHA, idle, healthy service; rollback on failure
+        run: python3 -m nox_runpod.teacher_mesh.v111.guarded_stream_patch
+      - name: Revoke ephemeral instance key even when patch HOLDs
+        if: always()
+        run: python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup
