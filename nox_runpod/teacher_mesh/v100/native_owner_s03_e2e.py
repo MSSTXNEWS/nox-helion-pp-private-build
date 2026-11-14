@@ -27,13 +27,16 @@ def idle():
   with urllib.request.urlopen('http://127.0.0.1:8081/slots',timeout=3) as r:slots=json.loads(r.read(25000))
   return isinstance(slots,list) and len(slots)==6 and not any(v.get('is_processing',v.get('processing',False)) for v in slots if isinstance(v,dict))
  except Exception:return False
+stage='initial'
 try:
  if stopped():raise RuntimeError('HOLD_STOP')
  if not SOURCE.is_file() or SOURCE.is_symlink() or hashlib.sha256(SOURCE.read_bytes()).hexdigest()!=EXPECTED:
   raise RuntimeError('HOLD_SOURCE_NOT_V98')
  if health(8080)!=200 or health(8081)!=200 or not idle():
   raise RuntimeError('HOLD_BUSY_OR_HEALTH')
+ stage='native_import_s03'
  import s03_memory
+ stage='native_import_chat_proxy'
  import chat_proxy
  if not callable(chat_proxy.s03_recall) or not callable(chat_proxy.s03_persist):
   raise RuntimeError('HOLD_NATIVE_S03_NOT_BOUND')
@@ -43,6 +46,7 @@ try:
  # entrypoint here, NOT by a public HTTP endpoint or a user-controlled owner flag.
  body={'messages':[{'role':'user','content':question}],'stream':True,'_owner':True,
        'max_tokens':64,'temperature':0.1}
+ stage='native_s03_counts_before'
  pre=s03_memory.counts()
  t0=time.monotonic()
  async def invoke():
@@ -57,9 +61,12 @@ try:
    n+=len(b);chunks+=1
    if n>50000:raise RuntimeError('HOLD_STREAM_TOO_LARGE')
   return {'chunks':chunks,'bytes':n,'first_chunk_ms':first,'total_ms':round((time.monotonic()-t0)*1000)}
+ stage='stream_inference'
  stream=asyncio.run(asyncio.wait_for(invoke(),timeout=95))
+ stage='native_s03_counts_after'
  post=s03_memory.counts()
  if stopped():raise RuntimeError('HOLD_STOP_AFTER_STREAM')
+ stage='native_s03_recall'
  matches=s03_memory.recall(marker,k=30)
  found=any(marker in str(item) for item in matches[:30]) if isinstance(matches,list) else False
  count_deltas={}
@@ -79,6 +86,7 @@ try:
 except Exception as e:
  v=str(e)
  emit({'state':v if v.startswith('HOLD_') and len(v)<100 else 'HOLD_NATIVE_STREAM_RUNTIME',
+       'failed_stage':stage,'exception_type':type(e).__name__,
        'private_records_exported':False,'model_weights_changed':False})
 print('NATIVE_READ_ONLY_COMPLETE=true')
 PYREMOTE
