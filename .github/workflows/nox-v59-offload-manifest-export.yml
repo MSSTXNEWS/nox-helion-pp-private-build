@@ -34,7 +34,7 @@ jobs:
           prefixes=('NATIVE_OFFLOAD_','NATIVE_CLASS_','NATIVE_GPU_','NATIVE_EXTERNAL_','NATIVE_PROCESS_')
           for line in data.splitlines():
               if line.startswith(prefixes) and len(line)<200:
-                  if re.fullmatch('[A-Za-z0-9_.=,:+/-]{2,200}',line):
+                  if '=' in line and re.fullmatch('[A-Za-z0-9_.=,:+/-]{2,200}',line):
                       accepted.append(line)
           if len(accepted)<20: raise SystemExit('HOLD_NO_NATIVE_INVENTORY')
           artifact={
