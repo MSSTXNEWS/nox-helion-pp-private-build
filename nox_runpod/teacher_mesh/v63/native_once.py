@@ -87,22 +87,33 @@ def native_once(remote:str,required_marker:str="NATIVE_PATCH_COMPLETE=true")->di
         if len(found)!=1:raise RuntimeError("HOLD_ATTACHED_KEY_NOT_VERIFIED")
         v51.TRACK.write_text(json.dumps({"public":public,"key_id":found[0]}))
         time.sleep(18)
-        common=["ssh","-T","-n","-i",str(v51.KEY),"-p",str(port),
+        common=["ssh","-T","-i",str(v51.KEY),"-p",str(port),
                 "-o","BatchMode=yes","-o","IdentitiesOnly=yes",
-                "-o","ConnectTimeout=10","-o","NumberOfPasswordPrompts=0",
+                "-o","ConnectTimeout=12","-o","NumberOfPasswordPrompts=0",
                 "-o","UserKnownHostsFile="+str(v51.RUNNER/"known_hosts")]
         target="root@"+public_ip
         for attempt in range(4):
-            probe=subprocess.run(common+["-o","StrictHostKeyChecking=accept-new",target,"true"],
-                                 capture_output=True,text=True,timeout=20)
+            # Match the already proven V51 'bash -se' route, but run only
+            # POSIX ':' (no-op). Do not transmit the patch until this succeeds.
+            probe=subprocess.run(common+["-o","StrictHostKeyChecking=accept-new",target,"bash","-se"],
+                                 input=":\n",capture_output=True,text=True,timeout=25)
             if probe.returncode==0:
                 result["ssh_authenticated"]=True
                 break
+            error=probe.stderr.lower()
+            reasons=(("permission denied","AUTH_DENIED"),
+                     ("connection timed out","NETWORK_TIMEOUT"),
+                     ("connection refused","NETWORK_REFUSED"),
+                     ("host key verification failed","HOST_KEY_REJECTED"),
+                     ("connection reset","NETWORK_RESET"),
+                     ("connection closed","NETWORK_CLOSED"))
+            result["ssh_auth_failure_class"]=next(
+                (name for needle,name in reasons if needle in error),"OTHER_SSH_FAILURE")
             time.sleep(5)
         if not result["ssh_authenticated"]:
             raise RuntimeError("HOLD_SSH_AUTH_NOT_VERIFIED")
         # Once authenticated, require same pinned known_hosts for mutation.
-        cmd=[x for x in common if x!="-n"]
+        cmd=common
         result["write_attempts"]=1
         process=subprocess.run(cmd+["-o","StrictHostKeyChecking=yes",
                             target,"bash","-se"],input=remote,capture_output=True,
