@@ -1,5 +1,11 @@
 name: NOX V122 authenticated V29 owner UI contract and safe live preflight
 on:
+  pull_request:
+    branches: [feature/nox-v37-v100-firsthour-14d-20261113]
+    paths:
+      - 'nox_runpod/teacher_mesh/v112/**'
+      - 'nox_runpod/teacher_mesh/v122/**'
+      - '.github/workflows/nox-v122-owner-ui-preflight.yml'
   push:
     branches: [feature/nox-v38-synaptic-brain-20261114]
     paths:
@@ -40,7 +46,7 @@ jobs:
           print('NOX_V122_READONLY_SOURCE_COMPILE=PASS')
           PY
   native-readonly:
-    if: github.actor == 'MSSTXNEWS'
+    if: github.event_name == 'push' && github.actor == 'MSSTXNEWS'
     needs: source
     runs-on: ubuntu-latest
     timeout-minutes: 15
