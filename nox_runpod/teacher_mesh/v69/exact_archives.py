@@ -5,7 +5,7 @@ import time
 _orig=c.api
 def _api(method,path,key,data=None):
     r=_orig(method,path,key,data)
-    if method=="POST" and path.endswith("/ssh/"):time.sleep(15)
+    if method=="POST" and path.endswith("/ssh/"):time.sleep(25)
     return r
 REMOTE=r"""
 set -euo pipefail
