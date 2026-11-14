@@ -1,0 +1,33 @@
+name: NOX E2 V67 inspect live chat proxy source shape
+on:
+  push:
+    branches: [nox/e2-urgent-chat-recovery-20261114]
+    paths:
+      - '.github/workflows/nox-e2-v67-proxy-ast.yml'
+      - 'nox_runpod/teacher_mesh/v67/chat_proxy_ast_audit.py'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: nox-e2-v67-proxy-ast
+  cancel-in-progress: false
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Preflight
+        run: |
+          set -euo pipefail
+          test -n "$NOX2"
+          python3 -m py_compile nox_runpod/teacher_mesh/v67/chat_proxy_ast_audit.py
+      - name: Native audited proxy request-route introspection
+        run: python3 -m nox_runpod.teacher_mesh.v67.chat_proxy_ast_audit
+      - name: Revoke temp SSH key
+        if: always()
+        run: python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup
