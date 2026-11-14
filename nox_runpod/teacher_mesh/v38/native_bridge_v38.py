@@ -34,6 +34,22 @@ class HostBindings:
     s03_backup_verify: Callable[[Session, Mapping[str, Any]], bool] | None = None
 
 
+def automatic_quality_mode(prompt: str) -> bool:
+    """Deterministic fast/deep routing without a second model or user dropdown.
+
+    Deep means a little more bounded context time, NOT spawning teachers or
+    disclosing hidden reasoning. Must not be used as proof of reasoning gain.
+    """
+    if not isinstance(prompt, str):
+        return False
+    low = prompt.casefold()
+    markers = ('объясни почему', 'сравни', 'проанализиру', 'разберись',
+               'проверь и исправ', 'подумай', 'ошибк', 'аргумент',
+               'анализ', 'причин', 'доказ', 'compare', 'analyze',
+               'reasoning', 'analiza', 'compara', 'explica por')
+    return len(prompt) > 900 or sum(term in low for term in markers) >= 2
+
+
 class AttachedNOX:
     """Small, bounded cognitive overlay using trusted host ports only.
 
@@ -73,7 +89,7 @@ class AttachedNOX:
             yield {'type':'hold','state':'HOLD_INVALID_PROMPT'}
             return
         yield from self.turn.run(session,prompt,turn_id,self.host.model_stream,
-                     deep=deep,postcheck=real_postcheck,revise_stream=real_revise_stream,
+                     deep=(deep or automatic_quality_mode(prompt)),postcheck=real_postcheck,revise_stream=real_revise_stream,
                      ui_replace_supported=ui_supports_replace)
 
     def on_s03_write(self,session:Session):
