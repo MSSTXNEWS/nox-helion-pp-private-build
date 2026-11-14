@@ -7,7 +7,6 @@ after an exact native SQLite readback. Cannot assert truth of user-supplied fact
 from __future__ import annotations
 
 import asyncio
-import base64
 import hashlib
 import json
 import re
@@ -21,6 +20,7 @@ from fastapi.responses import JSONResponse
 _MAX_BODY = 17000
 _MAX_TEXT = 5000
 _HEX = re.compile(r"^[0-9a-f]{64}$")
+_FACT_KEY = re.compile(r"^[A-Za-z0-9_.:-]{1,160}$")
 _STOP_PATHS = (
     "/root/nox/STOP", "/root/nox/STOP.flag",
     "/root/nox/stop.flag", "/root/nox/.stop",
@@ -52,10 +52,8 @@ def _validate(body: object) -> dict:
     source = body.get("source_ref")
     supplied = body.get("source_sha256")
     valid_from = body.get("valid_from")
-    if not isinstance(key, str) or not 1 <= len(key.strip()) <= 160:
+    if not isinstance(key, str) or not _FACT_KEY.fullmatch(key.strip()):
         raise ValueError("INVALID_FACT_KEY")
-    if any(ord(ch) < 32 or ord(ch) == 127 for ch in key):
-        raise ValueError("INVALID_FACT_KEY_CONTROL")
     if not isinstance(content, str) or not content.strip() or len(content) > _MAX_TEXT:
         raise ValueError("INVALID_FACT_CONTENT")
     if len(content.encode("utf8")) > 14000:
@@ -83,8 +81,9 @@ def _validate(body: object) -> dict:
 
 
 def _provenance(key: str, source: str) -> tuple[str, str]:
-    encoded = base64.urlsafe_b64encode(key.encode("utf8")).decode("ascii").rstrip("=")
-    prefix = "owner-fact:" + encoded + "|"
+    # V120 existing facts/history searches text and provenance literally.
+    # A validated literal key is searchable; a base64-only key is not.
+    prefix = "owner-fact:" + key + "|"
     return prefix, prefix + source
 
 
