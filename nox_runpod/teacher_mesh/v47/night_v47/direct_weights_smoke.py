@@ -50,14 +50,88 @@ def read_samples(path, label):
 
 
 def model_manifest_bytes(folder):
-    """Conservative space estimate: sum local .safetensors/.bin snapshot weights only."""
-    root=pathlib.Path(folder)
-    if not root.is_dir() or not (root/'config.json').is_file():
-        raise RuntimeError('HOLD_LOCAL_TRAINABLE_HF_MODEL_NOT_FOUND')
-    shards=list(root.glob('*.safetensors'))+list(root.glob('pytorch_model*.bin'))
-    if not shards:raise RuntimeError('HOLD_GGUF_OR_NO_TRAINABLE_SHARDS')
-    return sum(p.stat().st_size for p in shards)
+    """Verify a full local HF base-weight snapshot before any GPU allocation.
 
+    Fail closed on LoRA/adapters, incomplete shard indexes, untrusted binary
+    pickles and missing tokenizer/config. This reads metadata only (not tensors).
+    BF16 base tensors are NOT treated as GPU1-ready; later Volta FP16 and peak
+    VRAM guards must approve explicit conversion and loading.
+    """
+    import struct
+    root=pathlib.Path(folder)
+    if not root.is_dir() or root.is_symlink():
+        raise RuntimeError('HOLD_LOCAL_TRAINABLE_HF_MODEL_NOT_FOUND')
+    config=root/'config.json'
+    if not config.is_file() or config.is_symlink() or config.stat().st_size>750000:
+        raise RuntimeError('HOLD_FULL_BASE_HF_CONFIG_REQUIRED')
+    try:
+        cfg=json.loads(config.read_text(encoding='utf-8'))
+    except (OSError,UnicodeError,ValueError):
+        raise RuntimeError('HOLD_UNREADABLE_HF_CONFIG')
+    if not isinstance(cfg,dict) or cfg.get('peft_type') or cfg.get('adapter_type'):
+        raise RuntimeError('HOLD_ADAPTER_CONFIG_NOT_BASE_WEIGHTS')
+    if not isinstance(cfg.get('model_type'),str) or not cfg['model_type'].strip():
+        raise RuntimeError('HOLD_UNKNOWN_HF_MODEL_TYPE')
+    if (root/'adapter_config.json').exists() or (root/'adapter_model.safetensors').exists():
+        raise RuntimeError('HOLD_LORA_ADAPTER_NOT_BASE_WEIGHTS')
+    if not any((root/name).is_file() and not (root/name).is_symlink()
+               for name in ('tokenizer.json','tokenizer.model','tokenizer_config.json')):
+        raise RuntimeError('HOLD_FULL_MODEL_TOKENIZER_MISSING')
+    shards=sorted(root.glob('*.safetensors'))
+    if not shards:
+        raise RuntimeError('HOLD_GGUF_OR_NO_TRAINABLE_SHARDS')
+    if list(root.glob('pytorch_model*.bin')):
+        raise RuntimeError('HOLD_UNTRUSTED_PICKLE_WEIGHTS')
+    expected_index=root/'model.safetensors.index.json'
+    if len(shards)>1 and not expected_index.is_file():
+        raise RuntimeError('HOLD_SHARDED_HF_INDEX_MISSING')
+    if expected_index.exists():
+        if (expected_index.is_symlink() or expected_index.stat().st_size>3_000_000):
+            raise RuntimeError('HOLD_HF_INDEX_SIZE_OR_LINK')
+        try:
+            index=json.loads(expected_index.read_text(encoding='utf-8'))
+            values=(index.get('weight_map') or {})
+            needed=set(values.values()) if isinstance(values,dict) else set()
+        except (ValueError,OSError,UnicodeError):
+            raise RuntimeError('HOLD_HF_INDEX_INVALID')
+        if not needed or needed!={p.name for p in shards}:
+            raise RuntimeError('HOLD_HF_SHARDS_INCOMPLETE_OR_UNEXPECTED')
+    total=0;tensors=0
+    for p in shards:
+        if not p.is_file() or p.is_symlink():
+            raise RuntimeError('HOLD_HF_WEIGHT_SYMLINK_OR_NONFILE')
+        st=p.stat()
+        if st.st_size<40 or st.st_size>80_000_000_000:
+            raise RuntimeError('HOLD_HF_WEIGHT_FILE_SIZE')
+        try:
+            with p.open('rb') as stream:
+                length=struct.unpack('<Q',stream.read(8))[0]
+                if not 1<=length<=8_000_000 or length+8>=st.st_size:
+                    raise ValueError()
+                header=json.loads(stream.read(length))
+            if not isinstance(header,dict):raise ValueError()
+        except (OSError,ValueError,UnicodeError,struct.error):
+            raise RuntimeError('HOLD_HF_SAFETENSORS_HEADER')
+        keys=[k for k in header if k!='__metadata__']
+        if not keys:raise RuntimeError('HOLD_HF_NO_BASE_TENSORS')
+        for name in keys:
+            if not isinstance(name,str) or not isinstance(header.get(name),dict):
+                raise RuntimeError('HOLD_HF_TENSOR_METADATA')
+            if any(term in name.casefold() for term in (
+                    'lora_a','lora_b','lora_embedding','adapter_layer','modules_to_save')):
+                raise RuntimeError('HOLD_LORA_ADAPTER_NOT_BASE_WEIGHTS')
+            descriptor=header[name]
+            if descriptor.get('dtype') not in ('F16','BF16','F32','F8_E4M3','F8_E5M2'):
+                raise RuntimeError('HOLD_HF_WEIGHT_DTYPE')
+            span=descriptor.get('data_offsets')
+            if not isinstance(span,list) or len(span)!=2 or any(type(v) is not int for v in span):
+                raise RuntimeError('HOLD_HF_WEIGHT_OFFSETS')
+            if not 0<=span[0]<span[1]<=st.st_size-length-8:
+                raise RuntimeError('HOLD_HF_WEIGHT_OFFSETS')
+            tensors+=1
+        total+=st.st_size
+    if tensors<1:return 0
+    return total
 
 def select_last_block(model):
     import torch
