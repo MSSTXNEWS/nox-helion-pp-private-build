@@ -77,6 +77,7 @@ def source_report(root:Path=Path("."))->dict:
         "native_route_census_last_verified":"https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43650602202",
         "native_s03_writer_last_verified":"https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43651709415",
         "vast_api_last_404":"https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43652955212",
+        "vast_nox2_auth_error":"https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43653604598",
     }
     return {
         "schema":"NOX_V132_ONEPASS_SOURCE_ACCEPTANCE_V1",
@@ -92,10 +93,12 @@ def source_report(root:Path=Path("."))->dict:
                 "original_s03_writer":"s03_memory.remember",
                 "new_database_created":False,"real_s03_mutated_by_this_gate":False,
                 "requires_new_safely_authenticated_native_install":True},
-        "live_runtime":{"state":"HOLD_ACCESS_UNVERIFIED","vast_instance_id":60509551,
+        "live_runtime":{"state":"HOLD_NOX2_AUTH_ERROR","vast_instance_id":60509551,
                         "old_api_list_deprecated":True,
-                        "api_no_success_since_404":True,
-                        "native_sha_resampled":False},
+                        "account_auth_rejected_at_last_verified_probe":True,
+                        "instance_existence_not_inferred_from_404":True,
+                        "native_sha_resampled":False,
+                        "requires_owner_reissue_key_direct_to_github_secret":True},
         "sources_sha256":source_checks,
         "evidence":live_evidence,
         "release":{"full_92_route_functional_e2e":False,
