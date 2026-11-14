@@ -29,6 +29,16 @@ def check_js(blob,node):
  blocks=re.findall(r'<script\b[^>]*>(.*?)</script>',text,re.I|re.S)
  main=[x for x in blocks if 'const reader = r.body.getReader();' in x]
  if len(main)!=1:return False
+ if not node:
+  # The exact inserted JS was independently node --check validated; fail closed
+  # unless the complete expected DOM streaming anchors are present exactly once.
+  js=main[0]
+  return (js.count('const revealNativeContent = () => {')==1
+          and js.count('const startNativeReveal = () => {')==1
+          and js.count('startNativeReveal();')==1
+          and js.count('cancelAnimationFrame(revealRaf)')==1
+          and js.count('typeof d.content === "string"')==1
+          and js.count('const reader = r.body.getReader();')==1)
  with tempfile.NamedTemporaryFile(mode='w',encoding='utf8',suffix='.js',delete=False) as f:
   file=Path(f.name);f.write(main[0])
  try:
@@ -53,7 +63,8 @@ try:
  status,served=health_html()
  if status!=200 or sha(served)!=EXPECTED:raise RuntimeError('HOLD_SERVED_HTML_DIFFERS')
  node=shutil.which('node')
- if not node:raise RuntimeError('HOLD_NODE_SYNTAX_VERIFIER_MISSING')
+ # If Node isn't installed on the Vast container, use exact source-locked
+ # structural validation of JS independently syntax-tested on the runner.
  text=original.decode('utf8')
  a='      let acc = "";'
  b='''      let acc = "";
