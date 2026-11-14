@@ -31,6 +31,15 @@ jobs:
             nox_runpod.teacher_mesh.v106.tests.test_v108_registration_order
       - name: Source-only honesty boundary
         run: |
+          python3 - <<'PY'
+          import hashlib
+          from pathlib import Path
+          for label,path in (
+              ("NOX_V109_REPO_BRIDGE_SHA256","nox_runpod/teacher_mesh/v105/native_v29_chat_bridge.py"),
+              ("NOX_V109_REPO_INSTALLER_SHA256","nox_runpod/teacher_mesh/v106/native_install_v29_bridge.py"),
+          ):
+              print(label+"="+hashlib.sha256(Path(path).read_bytes()).hexdigest())
+          PY
           echo "NOX_V110_SOURCE_TESTS_ONLY=true"
           echo "NOX_V110_NATIVE_NOT_CHECKED_IN_THIS_JOB=true"
   native-inventory:
