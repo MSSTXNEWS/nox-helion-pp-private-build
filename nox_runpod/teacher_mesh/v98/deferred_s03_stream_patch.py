@@ -93,7 +93,7 @@ try:
  if meta.st_uid!=0 or len(original)>150000 or sha(original)!=EXPECTED:raise RuntimeError('HOLD_UNEXPECTED_SOURCE_SHA')
  if state()!='RUNNING' or health(8080)!=200 or health(8081)!=200 or not idle():raise RuntimeError('HOLD_ACTIVE_OR_UNHEALTHY_CHAT')
  source=original.decode('utf8')
- anchor="            resp = _wrap_ttft(resp, t_gate, _utext)\n"
+ anchor="            resp = await owner_completion(url, payload, _last_user_text(body), stream)\n            resp = _wrap_ttft(resp, t_gate, _utext)\n"
  prior="                ans = payload.get('_agent_final') or ''"
  if source.count(anchor)!=1 or source.count(prior)!=1 or '_nox_owner_s03_after_stream' in source:
   raise RuntimeError('HOLD_UNIQUE_OWNER_STREAM_ANCHORS')
