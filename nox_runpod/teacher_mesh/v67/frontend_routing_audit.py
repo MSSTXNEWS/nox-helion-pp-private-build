@@ -42,8 +42,8 @@ js=Path('/root/nox/incoming_t800u/v29_3/NOX_HELION_WEB_V29_3_FROZEN_20261113/sit
 if js.is_file() and js.stat().st_size<1_000_000:
     txt=js.read_text(encoding='utf-8',errors='replace')
     urls=set()
-    for regex in (r"""fetch\(\s*['"](/[-_a-zA-Z0-9/{}/.]{1,110})""",
-                  r"""['"](/(?:api|v1|nox|chat|resonance)[/_a-zA-Z0-9/{}/.]{1,110})['"]"""):
+    for regex in (r'''fetch\(\s*['"](/[-_a-zA-Z0-9/{}/.]{1,110})''',
+                  r'''['"](/(?:api|v1|nox|chat|resonance)[/_a-zA-Z0-9/{}/.]{1,110})['"]'''):
         for match in re.findall(regex,txt):
             if len(match)<=120 and not any(x in match.lower() for x in ('token','key','secret','password')):
                 urls.add(match)
