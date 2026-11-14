@@ -140,10 +140,15 @@ activities={label:0 for label in ('train_worm_t811u.py','direct_weights_smoke.py
 for name in os.listdir('/proc'):
     if not name.isdigit():continue
     try:
-        cmd=(Path('/proc')/name/'cmdline').read_bytes()[:1800].replace(b'\0',b' ').decode('utf-8','replace')
+        if int(name)==os.getpid():continue
+        argv=[v.decode('utf-8','replace') for v in
+              (Path('/proc')/name/'cmdline').read_bytes()[:1800].split(b'\0') if v]
+        if not argv or '-c' in argv[:2]:continue
+        exe=Path(argv[0]).name
         for label in activities:
-            if label in cmd:activities[label]+=1
-    except OSError:pass
+            if exe==label or any(Path(v).name==label for v in argv[1:6]):
+                activities[label]+=1
+    except (OSError,ValueError):pass
 print('NATIVE_TRAIN_PROCESSES='+json.dumps(activities,separators=(',',':')))
 free=shutil.disk_usage('/workspace').free
 gpu1=next((g for g in gpus if g['id']==1),None)
