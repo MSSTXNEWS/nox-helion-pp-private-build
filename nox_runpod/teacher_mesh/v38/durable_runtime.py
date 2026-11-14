@@ -93,12 +93,21 @@ class WarmS03Cache:
         self.stats['misses']+=1
         got=self.recall(session,prompt,limit)
         if not isinstance(got,list):return got
-        # Store only verified, non-superseded, exact-scope native records.
-        safe=[dict(x) for x in got[:min(4*limit,80)] if isinstance(x,dict)
-              and x.get('verified') is True and not x.get('superseded')
-              and (x.get('tenant'),x.get('principal'),x.get('chat_id'))
-                 ==(session.tenant,session.principal,session.chat_id)
-              and x.get('segment') in SEGMENTS]
+        # Critical: cached results must be equivalent to the native callback.
+        # Filtering or truncating records in the cache changes subsequent recall
+        # (including records shared across chats by a trusted host grant).
+        # For anything not independently cache-safe, bypass RAM entirely and let
+        # SynapticBrain perform the usual scope/persona authorisation.
+        cap=min(4*limit,80)
+        scope=(session.tenant,session.principal,session.chat_id)
+        if len(got)>cap or any(
+            not isinstance(x,dict) or x.get('verified') is not True
+            or x.get('superseded') is True
+            or (x.get('tenant'),x.get('principal'),x.get('chat_id'))!=scope
+            or x.get('segment') not in SEGMENTS for x in got):
+            self.stats['bypasses']+=1
+            return got
+        safe=[dict(x) for x in got]
         try:n=len(json.dumps(safe,ensure_ascii=False).encode('utf8'))
         except (ValueError,TypeError):return got
         if n>self.max_bytes//2:return got
