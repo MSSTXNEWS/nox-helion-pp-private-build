@@ -1,4 +1,5 @@
 name: NOX V63 repair existing Downloads hf executable PATH once with backup
+run-name: NOX V63 verified bash-se SSH, single backup and PATH patch
 on:
   push:
     branches: [feature/nox-v38-synaptic-brain-20261114]
