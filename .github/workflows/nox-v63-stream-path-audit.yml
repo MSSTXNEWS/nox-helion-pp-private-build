@@ -1,0 +1,33 @@
+name: NOX E2 V63 inspect existing stream path (read-only)
+on:
+  push:
+    branches: [nox/e2-chat-latency-20261114]
+    paths:
+      - '.github/workflows/nox-v63-stream-path-audit.yml'
+      - 'nox_runpod/teacher_mesh/v63/stream_pipeline_audit.py'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: nox-e2-v63-stream-audit
+  cancel-in-progress: false
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Compile safe structural audit
+        run: |
+          set -euo pipefail
+          python3 -m py_compile nox_runpod/teacher_mesh/v63/stream_pipeline_audit.py
+          test -n "$NOX2"
+      - name: Inspect existing agent-loop and original web streaming, no raw source
+        run: python3 -m nox_runpod.teacher_mesh.v63.stream_pipeline_audit
+      - name: Detach temporary key
+        if: always()
+        run: python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup
