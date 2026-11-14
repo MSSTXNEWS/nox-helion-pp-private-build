@@ -28,12 +28,13 @@ for name in fnames:
  fn=getattr(s03_memory,name,None)
  node=next((n for n in tree.body if isinstance(n,(ast.FunctionDef,ast.AsyncFunctionDef)) and n.name==name),None)
  if not callable(fn) or node is None:continue
- try:signature=str(inspect.signature(fn))
- except Exception:signature='UNKNOWN'
+ parameters=[x.arg for x in node.args.posonlyargs+node.args.args+node.args.kwonlyargs]
  calls=sorted({n.func.id if isinstance(n.func,ast.Name) else n.func.attr
   for n in ast.walk(node) if isinstance(n,ast.Call) and isinstance(n.func,(ast.Name,ast.Attribute))
  })[:28]
- emit('FUNC_'+name.upper(),{'signature':signature[:240],
+ emit('FUNC_'+name.upper(),{'parameters':parameters[:25],
+ 'vararg':node.args.vararg.arg if node.args.vararg else None,
+ 'varkw':node.args.kwarg.arg if node.args.kwarg else None,
  'async':isinstance(node,ast.AsyncFunctionDef),'calls':calls,
  'line_count':node.end_lineno-node.lineno+1})
 with sqlite3.connect('file:'+str(db)+'?mode=ro',uri=True,timeout=4) as con:
