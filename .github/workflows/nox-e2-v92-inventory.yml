@@ -1,0 +1,38 @@
+name: NOX E2 V92 all trainable weights and optimizer files live inventory
+on:
+  push:
+    branches: [nox/e2-v92-trainable-vault-20261114]
+    paths: ['.github/workflows/nox-e2-v92-inventory.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: nox-e2-v92-60509551-inventory
+  cancel-in-progress: false
+jobs:
+  inventory:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Existing credential and source gate
+        run: |
+          set -euo pipefail
+          test -n "$NOX2" || exit 2
+          python3 -m py_compile nox_runpod/teacher_mesh/v92/weight_vault_inventory.py
+      - name: ONE live Vast read-only inventory of trainable HF and optimizer
+        run: python3 -m nox_runpod.teacher_mesh.v92.weight_vault_inventory
+      - name: Revoke ephemeral SSH key
+        if: always()
+        run: python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup
+      - name: Explicit no-loss scope
+        if: success()
+        run: |
+          echo "NOX_V92_NO_MODEL_DOWNLOADS=true"
+          echo "NOX_V92_NO_NEW_SERVICES=true"
+          echo "NOX_V92_NO_WEIGHTS_MUTATED=true"
+          echo "NOX_V92_NATIVE_TRAINER_NOT_STARTED=true"
