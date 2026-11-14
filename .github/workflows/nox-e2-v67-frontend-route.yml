@@ -1,0 +1,33 @@
+name: NOX E2 V67 verify live backend-to-frontend route
+on:
+  push:
+    branches: [nox/e2-urgent-chat-recovery-20261114]
+    paths:
+      - '.github/workflows/nox-e2-v67-frontend-route.yml'
+      - 'nox_runpod/teacher_mesh/v67/frontend_routing_audit.py'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: nox-e2-v67-frontend-route
+  cancel-in-progress: false
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Syntax gate and NOX2 check
+        run: |
+          set -euo pipefail
+          test -n "$NOX2"
+          python3 -m py_compile nox_runpod/teacher_mesh/v67/frontend_routing_audit.py
+      - name: Inspect live process/listener and frozen frontend
+        run: python3 -m nox_runpod.teacher_mesh.v67.frontend_routing_audit
+      - name: Cleanup one-time SSH key
+        if: always()
+        run: python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup
