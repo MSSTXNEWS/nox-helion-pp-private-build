@@ -24,6 +24,9 @@ print('NOX_NATIVE_V51_SSH_EXECUTED=true')
 print('NATIVE_V99_SCHEMA=NOX_PRIME_RAM_ACCELERATED_WEIGHT_CACHE_V1')
 GIB=1024**3
 MAX_READ=24*GIB
+RAM_TARGET_FRACTION=0.85
+# Target at most 85% of the ACTUAL container memory cgroup limit.
+# This is a reversible page-cache goal, not a promise to pin all weights.
 MIN_CGROUP_HEADROOM=12*GIB
 MIN_WARM=1*GIB
 CHUNK=8*1024**2
@@ -37,7 +40,17 @@ report={'schema':'NOX_V99_RAM_WARM_RECEIPT_V1','read_bytes':0,
   'ram_warmed_not_equivalent_to_training':True}
 
 def emit():
-    print('NATIVE_V99_RESULT='+json.dumps(report,sort_keys=True,separators=(',',':'))[:2800])
+    # V51 emits only <=800-char native lines. Separate bounded proof fields.
+    fields=('state','read_bytes','maximum_read_bytes','duration_s',
+      'sequential_read_mib_per_s','main_chat_preserved','hf_model_type',
+      'hf_shards_index_verified','gguf_architecture',
+      'architecture_family_matches_candidate','weights_same_identity_verified',
+      'nice','worker_cpu_affinity_count','gpu_allocations','optimizer_steps')
+    core={k:report[k] for k in fields if k in report}
+    print('NATIVE_V99_RESULT='+json.dumps(core,sort_keys=True,separators=(',',':')))
+    for field in ('cgroup_before','cgroup_after','memory_events_after'):
+        if field in report:
+            print('NATIVE_V99_'+field.upper()+'='+json.dumps(report[field],sort_keys=True,separators=(',',':')))
 def event_counts():
     p=Path('/sys/fs/cgroup/memory.events')
     try:return {k:int(v) for k,v in (s.split() for s in p.read_text().splitlines()) if k in ('oom','oom_kill','high')}
@@ -91,7 +104,7 @@ def model_root():
             raise RuntimeError('HOLD_HF_MODEL_ARCH_NOT_EXPECTED')
         names=sorted(set((ix.get('weight_map') or {}).values()))
         if len(names)!=26 or any(not isinstance(x,str) or
-                 not re.fullmatch('[A-Za-z0-9._-]+\\.safetensors',x) for x in names):
+                 not re.fullmatch(r'[A-Za-z0-9._-]+\.safetensors',x) for x in names):
             raise RuntimeError('HOLD_HF_SHARD_INDEX')
         shards=[path/n for n in names]
         if any(not f.is_file() or f.is_symlink() or f.stat().st_size<100_000_000 for f in shards):
@@ -150,7 +163,13 @@ try:
         raise RuntimeError('HOLD_CGROUP_MEMORY_BUDGET')
     report['cgroup_before']=before
     report['memory_events_before']=event_counts()
-    report['maximum_read_bytes']=min(MAX_READ,
+    # Respect 85% cgroup use (not 85% of misleading host MemAvailable).
+    # Existing file cache may be evicted, but never induce reclaim pressure to
+    # reach a target when the chat is idle or the trainer is not ready.
+    room_to_target=max(0,int(before['max_bytes']*RAM_TARGET_FRACTION)-before['current_bytes'])
+    report['cgroup_target_pct']=85
+    report['cgroup_target_bytes']=int(before['max_bytes']*RAM_TARGET_FRACTION)
+    report['maximum_read_bytes']=min(MAX_READ,room_to_target,
         max(0,before['headroom_bytes']-MIN_CGROUP_HEADROOM))
     if report['maximum_read_bytes']<MIN_WARM:raise RuntimeError('HOLD_RAM_BUDGET_TOO_LOW')
     shards,config=model_root()
@@ -188,6 +207,9 @@ try:
                     current=status()
                     if not current or current['headroom_bytes']<MIN_CGROUP_HEADROOM:
                         raise RuntimeError('HOLD_RAM_PRESSURE')
+                    if current['current_bytes']>=int(current['max_bytes']*RAM_TARGET_FRACTION):
+                        report['target_85pct_reached']=True
+                        raise RuntimeError('HOLD_CGROUP_TARGET_REACHED')
                     if event_counts().get('oom_kill',0)>report['memory_events_before'].get('oom_kill',0):
                         raise RuntimeError('HOLD_MEMORY_OOM_EVENT')
                 take=min(8*1024**2,report['maximum_read_bytes']-report['read_bytes'])
