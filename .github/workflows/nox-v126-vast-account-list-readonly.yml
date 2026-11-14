@@ -1,0 +1,47 @@
+name: NOX Vast original account instance list read-only diagnosis (no instance mutation)
+on:
+  push:
+    branches: [nox/v126-native-s03-owner-facts-20261115]
+    paths:
+      - '.github/workflows/nox-v126-vast-account-list-readonly.yml'
+permissions:
+  contents: read
+jobs:
+  visibility:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Query original Vast API account list; only counts/target visibility
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import os
+          from nox_runpod.teacher_mesh.v51 import ephemeral_ssh_probe as api
+          key=os.environ.get('NOX2','')
+          if not key:
+              print('NOX_VAST_VISIBILITY=HOLD_NOX2')
+              raise SystemExit(2)
+          try:
+              items=api.api('GET','/instances/',key)
+          except RuntimeError as exc:
+              code=str(exc)
+              print('NOX_VAST_VISIBILITY='+ (code if code.startswith('HOLD_VAST_API_HTTP_') else 'HOLD_VAST_ACCOUNT_QUERY'))
+              raise SystemExit(2)
+          if isinstance(items,dict):
+              items=items.get('instances')
+          if not isinstance(items,list):
+              print('NOX_VAST_VISIBILITY=HOLD_RESPONSE_SHAPE')
+              raise SystemExit(2)
+          found=[x for x in items if isinstance(x,dict) and str(x.get('id'))=='60509551']
+          print('NOX_VAST_ACCOUNT_QUERY=PASS')
+          print('NOX_VAST_INSTANCE_COUNT='+str(len(items)))
+          print('NOX_VAST_TARGET_60509551_VISIBLE='+str(bool(found)).lower())
+          if found:
+              print('NOX_VAST_TARGET_STATE='+str(found[0].get('actual_status','unknown'))[:30])
+          PY
