@@ -24,7 +24,7 @@ class V130Tests(unittest.TestCase):
             with sqlite3.connect(self.db) as db:
                 db.execute("INSERT INTO s03_items VALUES(?,?,?,?,?,?,?)",(
                     uuid.uuid4().hex,segment,text,provenance,
-                    hashlib.sha256(text.encode('utf8')).hexdigest(),
+                    hashlib.sha256((segment+'|'+text+'|'+provenance+'|'+json.dumps(meta,sort_keys=True)).encode('utf8')).hexdigest(),
                     json.dumps(meta,ensure_ascii=False),'2026-11-15T00:00:00Z'))
         module.remember=remember
         previous=sys.modules.get('s03_memory')
@@ -67,6 +67,8 @@ class V130Tests(unittest.TestCase):
         self.assertEqual(row[1],'M2')
         self.assertEqual(row[2],self.payload['content'])
         self.assertEqual(row[3],'OWNER-CONFIRMED:'+self.payload['source_ref'])
+        self.assertEqual(r['source_sha256'],self.payload['source_sha256'])
+        self.assertNotEqual(r['record_sha256'],r['source_sha256'])
         self.assertEqual(json.loads(row[4])['fact_key'],self.payload['fact_key'])
         second=self.post()
         self.assertEqual(second.status_code,200,second.text)
