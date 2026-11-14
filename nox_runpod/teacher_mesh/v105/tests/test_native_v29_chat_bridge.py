@@ -108,12 +108,12 @@ class NativeV29BridgeTests(unittest.TestCase):
             question = body['messages'][-1]['content']
             answer = 'Проверенный ответ NOX.'
             async def wire():
-                yield 'data: ' + json.dumps({'choices':[{'delta':{'content':answer}}]},ensure_ascii=False) + '\\n\\n'
+                yield 'data: ' + json.dumps({'choices':[{'delta':{'content':answer}}]},ensure_ascii=False) + '\n\n'
                 with sqlite3.connect(self.db) as db:
                     db.execute('INSERT INTO s03_items VALUES(?,?,?,?)',
                         ('receipt-dialog',hashlib.sha256((question+answer).encode()).hexdigest(),
                          'U:'+question+' A:'+answer,'2026-11-15T00:00:00Z'))
-                yield 'data: [DONE]\\n\\n'
+                yield 'data: [DONE]\n\n'
             return StreamingResponse(wire(), media_type='text/event-stream')
         def verify(req, dialog):
             return req.cookies.get('nox_owner')=='yes' and dialog=='owned-dialog'
