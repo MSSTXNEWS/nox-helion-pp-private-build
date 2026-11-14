@@ -51,6 +51,18 @@ for n in range(0,len(api),9):
  print('NATIVE_V117_NATIVE_ROUTE_PART_'+str(n//9)+'='+json.dumps(sorted(api)[n:n+9],separators=(',',':')))
 print('NATIVE_V117_MISSING_EXAMPLES='+json.dumps(missing[:60],separators=(',',':')))
 print('NATIVE_V117_GROUP_COUNTS='+json.dumps(groups,sort_keys=True,separators=(',',':')))
+def group(path):
+ parts=path.strip('/').split('/')
+ return parts[1] if len(parts)>1 else 'unknown'
+missing_groups=Counter(group(x) for x in missing)
+matched_groups=Counter(group(x) for x in matched)
+print('NATIVE_V117_MATCHED_GROUPS='+json.dumps(matched_groups,sort_keys=True,separators=(',',':')))
+print('NATIVE_V117_MISSING_GROUPS='+json.dumps(missing_groups,sort_keys=True,separators=(',',':')))
+bridge=Path('/root/nox/scripts/nox_v29_chat_bridge.py')
+print('NATIVE_V117_CURRENT_SHAS='+json.dumps({
+ 'proxy_sha256':hashlib.sha256(proxy.read_bytes()).hexdigest(),
+ 'bridge_sha256':hashlib.sha256(bridge.read_bytes()).hexdigest() if bridge.is_file() else None,
+ 'registration_only_not_functional_e2e':True},sort_keys=True,separators=(',',':')))
 print('NATIVE_V117_PRIVATE_RECORDS_EXPORTED=false')
 print('NATIVE_V117_SERVICES_RESTARTED=false')
 print('NATIVE_V117_WEIGHTS_CHANGED=false')
