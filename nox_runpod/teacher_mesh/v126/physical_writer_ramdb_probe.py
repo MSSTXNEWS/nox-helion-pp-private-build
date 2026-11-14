@@ -29,7 +29,7 @@ try:
  with tempfile.TemporaryDirectory(prefix='nox-v126-',dir=ram) as d:
   path=Path(d)/'isolated.sqlite'
   result=s03_memory.remember(text=t,segment='M2',provenance='NOX-V126-SYNTHETIC',
-      salience=.65,meta=m,db=str(path))
+      salience=.65,meta=m,db=path)
   if not path.is_file():raise RuntimeError('HOLD_NATIVE_WRITER_DID_NOT_USE_TEMP_DB')
   with sqlite3.connect('file:'+str(path)+'?mode=ro',uri=True,timeout=3) as cx:
    cx.execute('PRAGMA query_only=ON')
