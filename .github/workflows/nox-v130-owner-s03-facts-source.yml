@@ -41,6 +41,7 @@ jobs:
           python -m unittest discover -s nox_runpod/teacher_mesh/v61/tests -p 'test_*.py' -v
           python -m unittest discover -s nox_runpod/teacher_mesh/v70/tests -p 'test_*.py' -v
           python -m nox_runpod.teacher_mesh.v132.onepass_release_gate --root . --out nox_v132_onepass_receipt.json
+          python -m nox_runpod.teacher_mesh.v132.build_source_bundle --root . --receipt nox_v132_onepass_receipt.json --output NOX_HELION_V132_ONEPASS_SAFE_SOURCE_20261115.zip
           python - <<'PY'
           import json
           d=json.load(open('nox_v132_onepass_receipt.json',encoding='utf8'))
@@ -55,5 +56,12 @@ jobs:
         with:
           name: NOX_V132_SOURCE_PROOF
           path: nox_v132_onepass_receipt.json
+          if-no-files-found: error
+          retention-days: 30
+      - name: Upload reproducible NOX ONEPASS source and Windows receiver ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_V132_ONEPASS_SAFE_SOURCE_ZIP
+          path: NOX_HELION_V132_ONEPASS_SAFE_SOURCE_20261115.zip
           if-no-files-found: error
           retention-days: 30
