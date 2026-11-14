@@ -113,6 +113,48 @@ jobs:
               echo "HOLD_REMOTE_SSH_CREDENTIAL_OR_NETWORK"
           fi
           rm -f "$RUNNER_TEMP/vast.key"
+      - name: Diagnose SSH transport and clean only our orphaned one-time keys
+        if: success()
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os,socket
+          d=json.load(open(os.path.join(os.environ['RUNNER_TEMP'],'instance.json')))
+          d=d.get('instances',d)
+          if isinstance(d,list): d=next((x for x in d if str(x.get('id'))=='60509551'),{})
+          host,port=d.get('ssh_host'),d.get('ssh_port')
+          print('SSH_META_PRESENT='+str(bool(host and port)))
+          print('JUPYTER_META_PRESENT='+str(bool(d.get('jupyter_token') or d.get('jupyter_url'))))
+          if host and port:
+              try:
+                  sock=socket.create_connection((str(host),int(port)),timeout=7)
+                  sock.close()
+                  print('SSH_TCP_TRANSPORT=OPEN')
+              except (OSError,ValueError) as exc:
+                  print('SSH_TCP_TRANSPORT=HOLD_'+type(exc).__name__)
+          PY
+          if timeout 30s vastai show ssh-keys 60509551 --raw > "$RUNNER_TEMP/sshkeys.json" 2>/dev/null; then
+            python3 - <<'PY'
+          import json,os,subprocess
+          x=json.load(open(os.path.join(os.environ['RUNNER_TEMP'],'sshkeys.json')))
+          z=x.get('ssh_keys',[]) if isinstance(x,dict) else x
+          if isinstance(z,str):
+              try:z=json.loads(z)
+              except Exception:z=[]
+          if not isinstance(z,list): z=[]
+          owned=[v for v in z if isinstance(v,dict) and 'nox-e2-one-time' in (str(v.get('public_key',''))+' '+str(v.get('name','')))]
+          print('E2_ORPHANED_KEYS_VISIBLE='+str(len(owned)))
+          for v in owned:
+              kid=v.get('id')
+              if isinstance(kid,int):
+                  p=subprocess.run(['vastai','detach','ssh','60509551',str(kid),'--raw'],capture_output=True,text=True,timeout=25)
+                  print('E2_KEY_DETACH_'+str(kid)+'='+('API_CALL_SUCCESS' if p.returncode==0 else 'HOLD_DETACH_FAILED'))
+              else: print('HOLD_KEY_ID_MISSING')
+          PY
+          else
+            echo "HOLD_SSH_KEYS_LIST_UNAVAILABLE"
+          fi
       - name: Upload sanitized API receipt (no host or credentials)
         if: always()
         uses: actions/upload-artifact@v4
