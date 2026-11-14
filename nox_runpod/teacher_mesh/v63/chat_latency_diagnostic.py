@@ -120,10 +120,10 @@ if len(out)>=3:
     print('NOX_SAMPLE_E2E_P95_NEAREST_MS='+str(e2e[-1]))
     print('NOX_LATENCY_SAMPLE_COUNT='+str(len(out)))
     print('NOX_LATENCY_SCOPE=DIRECT_MODEL_SYNTHETIC_NOT_FULL_UI_S03')
-    print('NOX_READ_ONLY_COMPLETE=true')
+    print('NATIVE_READ_ONLY_COMPLETE=true')
 else:
     print('NOX_LATENCY_RESULT=HOLD_INSUFFICIENT_SAMPLES')
-    print('NOX_READ_ONLY_COMPLETE=true')
+    print('NATIVE_READ_ONLY_COMPLETE=true')
 PYREMOTE
 """
 
