@@ -59,6 +59,12 @@ try:
     fields[table]=matches
    result['synthetic_marker_matches_by_table']=fields
    result['quick_check_ok']=con.execute('PRAGMA quick_check').fetchone()[0]=='ok'
+   result['table_names']=[x for x in sorted(tables) if not x.startswith('sqlite_')][:25]
+   result['columns_metadata']={}
+   for table in sorted(tables):
+    if any(word in table.casefold() for word in ('segment','message','memory','knowledge','fact','turn','record')):
+     result['columns_metadata'][table]=[row[1] for row in con.execute('PRAGMA table_info("'+table.replace('"','')+'")')][:14]
+     if len(result['columns_metadata'])>=6:break
  emit('NATIVE_S03_FILE',result)
 except Exception as e:emit('NATIVE_S03_FILE',{'state':'HOLD_NATIVE_S03_FILE_READ','error_type':type(e).__name__})
 
@@ -99,8 +105,10 @@ for base in roots:
      row[kind]+=1
      if kind in ('safetensors','gguf','torch_other'):row['weights_bytes']+=st.st_size
     except Exception:pass
-emit('WEIGHT_AND_DATA_LOCATIONS',{'dirs_seen':count,'scan_limited':limit_hit,
-'categories':sorted(({'storage_bucket':k,**v} for k,v in grouped.items()),key=lambda x:-x['weights_bytes'])[:8]})
+_totals={kind:sum(entry.get(kind,0) for entry in grouped.values()) for kind in ('safetensors','gguf','jsonl','parquet','torch_other','weights_bytes')}
+emit('STORAGE_SUMMARY',{'dirs_seen':count,'scan_limited':limit_hit,'storage_buckets':len(grouped),'totals':_totals})
+for _bucket in sorted(({'storage_bucket':k,**v} for k,v in grouped.items()),key=lambda x:-x['weights_bytes'])[:12]:
+ emit('STORAGE_BUCKET',_bucket)
 # Safe source-level indicators only; 'running' by supervisor is not proof of optimizer work.
 for path in ('/root/nox/scripts/train_qlora_35b_t866u.py','/root/nox/scripts/train_worm_t811u.py'):
  p=Path(path)
@@ -140,7 +148,7 @@ def main():
   if line.startswith(('NATIVE_V102_','TEMP_SSH_CLEANUP=')):
    print(line[:3600]);lines.append(line)
  passed=bool(okay and any(x.startswith('NATIVE_V102_CROSS_PROCESS_S03=') for x in lines) and
-              any(x.startswith('NATIVE_V102_WEIGHT_AND_DATA_LOCATIONS=') for x in lines) and
+              any(x.startswith('NATIVE_V102_STORAGE_SUMMARY=') for x in lines) and
               'NATIVE_READ_ONLY_COMPLETE=true' in out.getvalue())
  print('NOX_V102_PHYSICAL_METADATA_ACCEPTED='+str(passed).lower())
  return 0 if passed else 2
