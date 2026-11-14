@@ -111,6 +111,23 @@ class OriginalS03FactTests(unittest.TestCase):
         self.assertEqual(len(self.records()),2)
         self.assertEqual(json.loads(self.records()[1][4])['supersedes'],id1)
 
+    def test_new_fact_is_discoverable_by_original_v120_history(self):
+        from nox_runpod.teacher_mesh.v120.s03_owner_memory_views import _knowledge
+        note=self.body(content='Сохраняем для исходной памяти NOX',key='CHAT-NOTE-EXAMPLE-01')
+        response=self.client.post('/api/nox/memory/facts',cookies=self.cookie,json=note)
+        self.assertEqual(response.status_code,200)
+        matches=_knowledge(q=note['fact_key'],facts_only=True,limit=32)
+        self.assertEqual(len(matches),1)
+        self.assertEqual(matches[0]['content'],note['content'])
+        self.assertEqual(matches[0]['id'],response.json()['event_id'])
+        self.assertIn(note['fact_key'],matches[0]['source_ref'])
+
+    def test_key_delimiter_injection_is_rejected_before_s03_write(self):
+        data=self.body(key='A|B')
+        response=self.client.post('/api/nox/memory/facts',cookies=self.cookie,json=data)
+        self.assertEqual(response.status_code,422)
+        self.assertEqual(self.write_count,0)
+
     def test_not_authenticated_is_401_no_write(self):
         result=self.client.post('/api/nox/memory/facts',json=self.body())
         self.assertEqual(result.status_code,401)
