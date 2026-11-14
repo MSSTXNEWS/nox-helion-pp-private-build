@@ -84,7 +84,19 @@ async def nox_v29_status(request: Request):
         return _unauthorized()
     return await nox_status()
 """
- new=original+tail.encode()
+ # __main__ may call uvicorn.run() and block execution forever.
+ # Register before that guard, but after _proxy_completion and nox_status exist.
+ guard=[n for n in tree.body if isinstance(n,ast.If)
+        and isinstance(n.test,ast.Compare) and isinstance(n.test.left,ast.Name)
+        and n.test.left.id=='__name__'
+        and any(isinstance(v,ast.Constant) and v.value=='__main__' for v in n.test.comparators)]
+ if len(guard)!=1:raise RuntimeError('HOLD_UNIQUE_MAIN_GUARD')
+ insertion=guard[0].lineno-1
+ if max(names[k].end_lineno for k in ('_proxy_completion','_session_ok','_unauthorized','nox_status'))>=insertion+1:
+  raise RuntimeError('HOLD_NATIVE_FUNCTIONS_NOT_DEFINED')
+ lines=original.decode('utf8').splitlines(keepends=True)
+ lines.insert(insertion,tail)
+ new=''.join(lines).encode('utf8')
  compile(new,str(P),'exec')
  # Offline route registration proof with the exact same current runtime interpreter.
  # Never forward user data; no test chat generated.
