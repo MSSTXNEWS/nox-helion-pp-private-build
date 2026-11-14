@@ -38,6 +38,14 @@ for label,source in dbs:
      try:counts[t]=int(con.execute('SELECT COUNT(*) FROM "'+t+'"').fetchone()[0])
      except sqlite3.DatabaseError:pass
    info['row_counts']=counts
+   public_schema={}
+   for t in safe:
+    if t in ('s03_segments','genesis_ledger','facts','brain_nodes','brain_edges','memory_marks'):
+     try:
+      cols=[str(row[1]) for row in con.execute('PRAGMA table_info("'+t+'")') if re.fullmatch('[A-Za-z0-9_]{1,70}',str(row[1]))]
+      public_schema[t]=cols[:35]
+     except sqlite3.DatabaseError:pass
+   info['column_names_only']=public_schema
    total+=sum(counts.values())
  except Exception as e:info['hold']=type(e).__name__
  print('NATIVE_S03_DATABASE='+json.dumps(info,separators=(',',':'),sort_keys=True))
