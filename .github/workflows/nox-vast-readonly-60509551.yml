@@ -15,17 +15,17 @@ jobs:
       - name: Check credential is configured
         shell: bash
         env:
-          VAST_API_KEY: ${{ secrets.VAST_API_KEY }}
+          VAST_API_KEY: ${{ secrets.NOX2 }}
         run: |
           if [ -z "$VAST_API_KEY" ]; then
-            echo "::error::Missing VAST_API_KEY. Add it under repository Actions secrets."
+            echo "::error::Missing NOX2 repository secret (Vast.ai API key)."
             exit 1
           fi
           echo "Credential present; requesting read-only status."
       - name: Read-only inspect NOX Vast.ai instance
         shell: bash
         env:
-          VAST_API_KEY: ${{ secrets.VAST_API_KEY }}
+          VAST_API_KEY: ${{ secrets.NOX2 }}
         run: |
           set -euo pipefail
           python3 - <<'PY'
