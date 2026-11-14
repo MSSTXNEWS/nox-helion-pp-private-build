@@ -1,0 +1,56 @@
+name: NOX V110 source regression and native read-only blockers
+on:
+  push:
+    branches: [nox/e2-v109-stream-delta-guard-20261115]
+    paths:
+      - '.github/workflows/nox-e2-v110-no-write-audit.yml'
+      - 'nox_runpod/teacher_mesh/v105/native_v29_chat_bridge.py'
+      - 'nox_runpod/teacher_mesh/v105/tests/test_v109_delta_shapes.py'
+      - 'nox_runpod/teacher_mesh/v110/**'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: nox-v110-readonly-audit-60509551
+  cancel-in-progress: false
+jobs:
+  source-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Native bridge regression and no-write preflight
+        run: |
+          set -euo pipefail
+          python3 -m compileall -q nox_runpod/teacher_mesh/v105 nox_runpod/teacher_mesh/v110
+          python3 -m unittest -v \
+            nox_runpod.teacher_mesh.v105.tests.test_v109_delta_shapes \
+            nox_runpod.teacher_mesh.v110.test_live_no_write_preflight \
+            nox_runpod.teacher_mesh.v106.tests.test_v108_registration_order
+      - name: Source-only honesty boundary
+        run: |
+          echo "NOX_V110_SOURCE_TESTS_ONLY=true"
+          echo "NOX_V110_NATIVE_NOT_CHECKED_IN_THIS_JOB=true"
+  native-inventory:
+    needs: source-regression
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify read-only contract and authorized existing NOX2
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$NOX2" || { echo "HOLD_NOX2_NOT_CONNECTED"; exit 2; }
+          python3 -m py_compile nox_runpod/teacher_mesh/v110/live_no_write_preflight.py
+      - name: Read-only existing OneHost physical inventory
+        run: python3 -m nox_runpod.teacher_mesh.v110.live_no_write_preflight
+      - name: Revoke temporary Vast instance key after every outcome
+        if: always()
+        run: python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup
