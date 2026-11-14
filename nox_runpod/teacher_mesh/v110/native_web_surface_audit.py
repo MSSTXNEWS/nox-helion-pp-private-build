@@ -79,7 +79,21 @@ for idx,route in enumerate(chat_proxy.app.routes):
  if isinstance(route,Mount) and idx<120:
   print('NOX_MOUNT_JSON='+json.dumps({'index':idx,'path':route.path}))
  elif isinstance(route,APIRoute) and (route.path.startswith('/api/ui/') or route.path.startswith('/api/nox/status')):
-  print('NOX_TARGET_ROUTE_JSON='+json.dumps({'index':idx,'path':route.path,'methods':sorted(route.methods)}))
+  print('NOX_TARGET_ROUTE_JSON='+json.dumps({'index':idx,'path':route.path,'methods':sorted(route.methods),'handler':route.endpoint.__name__,'module':route.endpoint.__module__}))
+from starlette.routing import Match
+for key in ('/api/nox/status','/api/ui/capabilities','/api/ui/memory/dialogs/status'):
+ scope={'type':'http','method':'GET','path':key,'root_path':'','query_string':b'',
+        'headers':[],'scheme':'http','server':('127.0.0.1',8080),'client':('127.0.0.1',0),'http_version':'1.1'}
+ target=None
+ for ix,route in enumerate(chat_proxy.app.routes):
+  match,_=route.matches(scope)
+  if match==Match.FULL:
+   target={'path':key,'index':ix,'route_path':route.path,
+     'handler':getattr(getattr(route,'endpoint',None),'__name__','mount')}
+   break
+ print('NOX_MATCH_JSON='+json.dumps(target))
+print('NOX_MIDDLEWARE_JSON='+json.dumps([
+ getattr(item.cls,'__name__','UNKNOWN') for item in chat_proxy.app.user_middleware]))
 routes=[{'path':r.path,'methods':sorted(r.methods)} for r in chat_proxy.app.routes if isinstance(r,APIRoute)]
 print('NOX_ROUTE_INVENTORY_JSON='+json.dumps(routes,separators=(',',':')))
 '''
@@ -94,7 +108,7 @@ for interpreter in interpreters:
   if proc.returncode or line is None:continue
   got=json.loads(line.split('=',1)[1])
   for row in proc.stdout.splitlines():
-   if row.startswith(('NOX_MOUNT_JSON=','NOX_TARGET_ROUTE_JSON=')):
+   if row.startswith(('NOX_MOUNT_JSON=','NOX_TARGET_ROUTE_JSON=','NOX_MATCH_JSON=','NOX_MIDDLEWARE_JSON=')):
     emit('ROUTE_ORDER',json.loads(row.split('=',1)[1]))
   emit('REGISTERED_ROUTES_COUNT',{'count':len(got)})
   for route in sorted(got,key=lambda x:x['path']):
