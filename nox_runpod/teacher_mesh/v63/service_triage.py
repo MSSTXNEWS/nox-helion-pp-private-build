@@ -5,6 +5,16 @@ GPU training, or secrets/log text export. Uses the same authorized Vast route.
 """
 from __future__ import annotations
 from nox_runpod.teacher_mesh.v51 import ephemeral_ssh_probe as connection
+import time
+
+# Keep the shared V51 transport unchanged. Applied only to this read-only probe:
+# Vast SSH key attachment can succeed before sshd starts honoring the key.
+_v51_api = connection.api
+def _v63_delayed_attach(method,path,key,data=None):
+    receipt=_v51_api(method,path,key,data)
+    if method=="POST" and path.endswith("/ssh/"):
+        time.sleep(12)
+    return receipt
 
 REMOTE = r"""
 set -euo pipefail
@@ -194,6 +204,7 @@ PYREMOTE
 
 def main() -> int:
     connection.REMOTE=REMOTE
+    connection.api=_v63_delayed_attach
     ok=False
     try:
         ok=connection.probe()
