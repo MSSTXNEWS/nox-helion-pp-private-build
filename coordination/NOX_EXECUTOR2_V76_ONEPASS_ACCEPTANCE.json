@@ -1,0 +1,53 @@
+{
+  "schema": "NOX_EXECUTOR2_V76_PHYSICAL_ONEPASS_ACCEPTANCE_V1",
+  "observed_at_utc": "2026-11-14T18:33:56Z",
+  "instance_id": 60509551,
+  "run": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43627192886",
+  "repo_branch": "nox/e2-v76-onepass-accept-20261114",
+  "source_revision_pinned": "aa77a7d43bcceee696e2d6ff73d3285d217ab001",
+  "native_receipt_sha256": "7bd677155b4985fa031353bba977e6fbb4bf6a7d7120484ac9e92648f7299069",
+  "native_ssh_key_revoked_verified": true,
+  "source_tests": {
+    "executed": 136,
+    "passed": 136,
+    "source_only": true
+  },
+  "actual_physical_actions": {
+    "verified_git_blob_staging": true,
+    "staged_source_file_count": 12,
+    "staged_oneprime_import_verified": true,
+    "s03_ram_online_snapshots_verified": true,
+    "live_model_and_proxy_health_verified": true,
+    "main_model_switched": false,
+    "main_chat_proxy_restarted": false,
+    "s03_original_changed": false,
+    "weight_optimizer_steps_executed": 0,
+    "source_files_deleted": false,
+    "second_backend_created": false,
+    "second_scheduler_created": false
+  },
+  "gates": {
+    "chat_and_one_model": "PASS_DIRECT_MAIN_MODEL_AND_PROXY_HEALTH",
+    "s03_ram": "PASS_ONLINE_VOLATILE_SQLITE_BACKUP_ONLY",
+    "oneprime_staged": "PASS_SHA_PINNED_AND_IMPORTABLE_ON_VAST",
+    "onehost_native": "HOLD_V71_NATIVE_CALLBACKS_NOT_BOUND",
+    "cold_restore": "HOLD_OWNER_KEY_OFFSITE_RESTORE_AND_OPTIMIZER_RESUME_UNVERIFIED",
+    "forge_weight_change": "HOLD_NATIVE_TRAINABLE_STUDENT_OWNER_LEASE_AND_RESTORE",
+    "r60_jobs": "HOLD_NATIVE_QUEUE_OWNER_READBACK_AND_SIGNED_JOB_RECEIPTS",
+    "quality_and_rollback": "HOLD_AUTHENTICATED_RESONANCE_S03_STOP_ROLLBACK_E2E"
+  },
+  "executor2_r60": {
+    "planned": 30,
+    "native_confirmed_queue_ids": 0,
+    "verified_training_steps": 0
+  },
+  "priority_policy": {
+    "chat": "P0",
+    "teachers_and_forge": "P1",
+    "disk_new_write_reserve_bytes": 10000000000,
+    "chat_blocked_due_to_disk_floor": false
+  },
+  "no_loss": true,
+  "complete": false,
+  "next_acceptance_gate": "EXISTING_ONEHOST_OWNER_APPROVED_V71_NATIVE_CALLBACKS_WITH_AUTHENTICATED_RESONANCE_S03_E2E"
+}
