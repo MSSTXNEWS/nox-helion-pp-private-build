@@ -9,6 +9,7 @@ import os
 import sys
 import urllib.error
 import urllib.request
+from urllib.parse import urlsplit
 
 REQUIRED = (
     "/api/nox/status",
@@ -35,6 +36,9 @@ def main():
     p.add_argument("--matrix", default="coordination/NOX_V98_WEB_FULL_REAL_API_MATRIX.json")
     p.add_argument("--authorized", action="store_true", help="Read-only authorized status test; requires NOX_SESSION_COOKIE")
     args = p.parse_args()
+    dest = urlsplit(args.base)
+    if dest.hostname not in ("127.0.0.1", "localhost", "::1") or dest.scheme != "http" or dest.username or dest.password:
+        raise SystemExit("HOLD_ONLY_LOCAL_ONEHOST_ENDPOINT_ALLOWED")
     with open(args.matrix, encoding="utf-8") as f:
         matrix = json.load(f)
     routes = {item["route"] for item in matrix["functions"]}
@@ -52,7 +56,7 @@ def main():
         report["critical_routes"][path] = {
             "anonymous_http": status,
             "anonymous_auth_rejected": status in (401, 403),
-            "exists_proven": status in (401, 403),
+            "route_existence_verified": False,  # 401/403 can originate in global auth middleware
             "feature_e2e_pass": False,
         }
     cookie = os.environ.get("NOX_SESSION_COOKIE", "")
@@ -69,6 +73,8 @@ def main():
             and info.get("native_p02_bound") is True
         )
         report["authorized_status_http"] = code
+    report["dialog_scope_e2e_pass"] = False
+    report["frontend_v29_dialog_id_bridge_compatible"] = False
     report["gate"] = "HOLD_FULL_REAL_E2E"
     # An authenticated status alone never establishes generation, memory or STOP safety.
     print(json.dumps(report, ensure_ascii=False, sort_keys=True))
