@@ -14,7 +14,7 @@ import urllib.request
 from collections.abc import Mapping
 from typing import Any
 
-from .onehost_bridge import INBOX_SCHEMA, RECEIPT_SCHEMA, canon
+from .onehost_bridge import INBOX_SCHEMA, RECEIPT_SCHEMA, SIG_RE, canon
 
 REPO = "MSSTXNEWS/nox-helion-pp-private-build"
 BRANCH = "feature/nox-v38-synaptic-brain-20261114"
@@ -118,6 +118,8 @@ class GitHubHTTPSMailbox:
             return False
         if "request_id" not in receipt or not isinstance(receipt["request_id"], str):
             return False
+        if not isinstance(receipt.get("receipt_signature"), str) or not SIG_RE.fullmatch(receipt["receipt_signature"]):
+            return False
         ledger, blob_sha = self._file(RECEIPTS)
         if ledger.get("schema") != "NOX_ONEHOST_BRIDGE_RECEIPTS_V1":
             return False
@@ -151,6 +153,8 @@ def poll_existing_onehost(bridge, *, github_token: str | None = None) -> dict:
     try:
         mailbox = GitHubHTTPSMailbox(token=github_token)
         return bridge.poll_once(mailbox.read_inbox(), mailbox.publish)
-    except (urllib.error.URLError, ValueError, TypeError, OSError, json.JSONDecodeError):
+    except Exception:
+        # Corrupt response, TLS error or failed write must never crash OneHost.
+        # The native S03 claim remains the source of truth after uncertain writes.
         return {"state": "HOLD_HTTPS_BRIDGE_TRANSPORT", "published": 0,
-                "native_queue_registered": 0}
+                "native_queue_registered": 0, "may_have_processed": True}
