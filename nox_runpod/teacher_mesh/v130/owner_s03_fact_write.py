@@ -95,11 +95,15 @@ def _matching(data):
             raise RuntimeError('HOLD_ORIGINAL_S03_INTEGRITY')
         rows=db.execute(
           "SELECT id,sha256,provenance,meta,ts FROM s03_items "
-          "WHERE segment='M2' AND text=? ORDER BY rowid DESC LIMIT 100",
-          (data['content'],)).fetchall()
+          "WHERE segment='M2' AND text=? AND provenance=? ORDER BY rowid DESC LIMIT 100",
+          (data['content'],'OWNER-CONFIRMED:'+data['source_ref'])).fetchall()
         found=[]
         for row in rows:
-            if row['sha256']!=data['source_sha256']:
+            # Original S03 row digest can hash structured/provenance fields,
+            # not just the submitted UTF-8 note. Verify it as native evidence,
+            # while the owner-supplied source_sha256 remains the text digest.
+            native_sha=str(row['sha256'] or '')
+            if not _HEX.fullmatch(native_sha):
                 continue
             if row['provenance']!='OWNER-CONFIRMED:'+data['source_ref']:
                 continue
@@ -112,7 +116,8 @@ def _matching(data):
                 and meta.get('source_sha256')==data['source_sha256']
                 and meta.get('valid_from')==data['valid_from']
                 and isinstance(row['id'],str) and len(row['id'])>=6):
-                found.append({'id':row['id'],'sha256':row['sha256']})
+                found.append({'id':row['id'],'record_sha256':native_sha,
+                              'content_sha256':data['source_sha256']})
         return found
 
 def _persist(data):
@@ -121,8 +126,9 @@ def _persist(data):
     before=_matching(data)
     if before:
         return {'status':'READY','event_id':before[0]['id'],'id':before[0]['id'],
-                'source_sha256':before[0]['sha256'],'duplicate':True,
-                'committed':True,'readback_verified':True,
+                'source_sha256':before[0]['content_sha256'],
+                'record_sha256':before[0]['record_sha256'],
+                'duplicate':True,'committed':True,'readback_verified':True,
                 'source':'EXISTING_NATIVE_S03_M2','weight_update':False}
     import s03_memory
     if not callable(getattr(s03_memory,'remember',None)):
@@ -139,8 +145,9 @@ def _persist(data):
     if created is None:
         raise RuntimeError('HOLD_S03_WRITE_READBACK')
     return {'status':'READY','event_id':created['id'],'id':created['id'],
-            'source_sha256':created['sha256'],'duplicate':False,
-            'committed':True,'readback_verified':True,
+            'source_sha256':created['content_sha256'],
+            'record_sha256':created['record_sha256'],
+            'duplicate':False,'committed':True,'readback_verified':True,
             'source':'EXISTING_NATIVE_S03_M2','weight_update':False}
 
 def register_nox_v130_owner_fact_write(app,trusted):
