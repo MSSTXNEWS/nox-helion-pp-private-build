@@ -1,4 +1,6 @@
 name: NOX V125 final original S03 owner fact idempotent readback (no restart)
+# Final schema-correct proof: original S03 checksum via V120 history, source content SHA via S03 metadata.
+# Existing synthetic QA row is reused; retry only Vast GET 429, never writes.
 on:
   push:
     branches: [nox/e2-v125-owner-s03-facts-20261115]
