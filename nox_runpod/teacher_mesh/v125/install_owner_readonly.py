@@ -30,6 +30,9 @@ ANCHOR='    directory=Path(site_dir) if site_dir is not None else SITE\n'
 SNIPPET=("    from nox_v125_live_readonly import register_nox_v125_live_readonly\n"
          "    register_nox_v125_live_readonly(app,trusted)\n")
 BACK=P.with_name(P.name+'.nox-v125-'+OLD[:12]+'.bak')
+PX_BACK=PX.with_name(PX.name+'.nox-v125-'+PX_EXPECTED[:12]+'.bak')
+PROXY_OLD_GUARD="if (request.url.path.startswith(('/api/ui/', '/nox-web-v29/')) or request.url.path in ('/api/health','/api/nox/activity','/api/nox/model','/api/nox/memory','/api/nox/history','/api/nox/experience','/api/training/status')) and _session_ok(request):"
+PROXY_NEW_GUARD="if (request.url.path.startswith(('/api/ui/', '/nox-web-v29/')) or request.url.path in ('/api/health','/api/nox/activity','/api/nox/model','/api/nox/memory','/api/nox/history','/api/nox/experience','/api/training/status','/api/status','/api/nox/system/processes','/api/nox/premium/status','/api/nox/premium/capabilities','/api/nox/training/status')) and _session_ok(request):"
 STOP=('/root/nox/STOP','/root/nox/STOP.flag','/root/nox/stop.flag',
       '/root/nox/.stop','/workspace/NOX_STOP','/root/nox/program/STOP')
 def sha(data):return hashlib.sha256(data).hexdigest()
@@ -94,7 +97,7 @@ def owner_test():
    with http(urllib.request.build_opener(),route) as anon:
     if anon.status!=401:raise RuntimeError('HOLD_ANONYMOUS_'+route.split('/')[-1].upper())
    with http(op,route) as owner:
-    if owner.status!=200:raise RuntimeError('HOLD_OWNER_HTTP_'+str(owner.status))
+    if owner.status!=200:raise RuntimeError('HOLD_OWNER_HTTP_'+str(owner.status)+'_'+route.strip('/').replace('/','_').upper()[:40])
     body=json.loads(owner.read(110000))
    if not isinstance(body,dict) or 'status' not in body:
     raise RuntimeError('HOLD_ROUTE_BODY')
@@ -131,7 +134,7 @@ def s03_status():
   return quick=='ok'
  except Exception:return False
 def emit(**d):print('NATIVE_V125_RESULT='+json.dumps(d,sort_keys=True,separators=(',',':')))
-patched=False;before=None;meta=None
+patched_bridge=False;patched_proxy=False;before=None;meta=None;pxbefore=None;pxmeta=None
 try:
  if stopped():raise RuntimeError('HOLD_STOP')
  if os.getuid()!=0 or file_sha(P)!=OLD or file_sha(PX)!=PX_EXPECTED:
@@ -150,6 +153,11 @@ try:
   raise RuntimeError('HOLD_BRIDGE_SOURCE_ANCHOR')
  changed=source.replace(ANCHOR,SNIPPET+ANCHOR,1).encode('utf8')
  compile(changed,str(P),'exec')
+ pxbefore=PX.read_bytes();pxmeta=PX.stat();pxsource=pxbefore.decode('utf8')
+ if pxmeta.st_uid!=0 or len(pxsource)>200000 or pxsource.count(PROXY_OLD_GUARD)!=1:
+  raise RuntimeError('HOLD_AUTH_GUARD_SOURCE_DRIFT')
+ pxchanged=pxsource.replace(PROXY_OLD_GUARD,PROXY_NEW_GUARD,1).encode('utf8')
+ compile(pxchanged,str(PX),'exec')
  if M.exists():
   if file_sha(M)!=MOD_SHA:raise RuntimeError('HOLD_NATIVE_MODULE_CONFLICT')
  else:
@@ -167,25 +175,39 @@ try:
   with BACK.open('xb') as f:f.write(before);f.flush();os.fsync(f.fileno())
   os.chmod(BACK,stat.S_IMODE(meta.st_mode));os.chown(BACK,meta.st_uid,meta.st_gid)
  if file_sha(BACK)!=OLD:raise RuntimeError('HOLD_BACKUP_VERIFY')
+ if PX_BACK.exists():
+  if file_sha(PX_BACK)!=PX_EXPECTED:raise RuntimeError('HOLD_PROXY_BACKUP_CONFLICT')
+ else:
+  with PX_BACK.open('xb') as f:f.write(pxbefore);f.flush();os.fsync(f.fileno())
+  os.chmod(PX_BACK,stat.S_IMODE(pxmeta.st_mode));os.chown(PX_BACK,pxmeta.st_uid,pxmeta.st_gid)
+ if file_sha(PX_BACK)!=PX_EXPECTED:raise RuntimeError('HOLD_PROXY_BACKUP_VERIFY')
+ if stopped() or file_sha(P)!=OLD or file_sha(PX)!=PX_EXPECTED or not idle():
+  raise RuntimeError('HOLD_CONCURRENT_BEFORE_ATOMIC')
+ atomic(PX,pxchanged,pxmeta,'.nox-v125-proxy.tmp')
+ patched_proxy=True
  atomic(P,changed,meta,'.nox-v125-bridge.tmp')
- patched=True
- if not restart() or file_sha(P)!=sha(changed) or not s03_status():
+ patched_bridge=True
+ if not restart() or file_sha(P)!=sha(changed) or file_sha(PX)!=sha(pxchanged) or not s03_status():
   raise RuntimeError('HOLD_POST_RESTART_HEALTH')
  count=owner_test()
  if count!=5 or stopped():raise RuntimeError('HOLD_POST_ROUTE_ACCEPTANCE')
  emit(state='V125_NATIVE_OWNER_READS_ACTIVE',routes_owner_cookie_pass=count,
    routes_anonymous_http401=count,new_bridge_sha256=file_sha(P),
-   module_sha256=file_sha(M),original_backup_verified=True,
+   new_proxy_sha256=file_sha(PX),module_sha256=file_sha(M),
+   original_backup_verified=True,original_proxy_backup_verified=True,
    original_s03_quick_check='ok',model_weights_unchanged=True,
    original_frozen_web_unchanged=True,primary_chat_endpoint_preserved=True,
    physical_windows_pc_telemetry_claimed=False)
 except Exception as exc:
  reason=str(exc)
  if not reason.startswith('HOLD_') or len(reason)>100:reason='HOLD_V125_'+type(exc).__name__
- if patched:
+ if patched_bridge or patched_proxy:
   try:
-   atomic(P,before,meta,'.nox-v125-rollback.tmp')
-   restored=restart() and file_sha(P)==OLD
+   if patched_bridge:
+    atomic(P,before,meta,'.nox-v125-rollback.tmp')
+   if patched_proxy:
+    atomic(PX,pxbefore,pxmeta,'.nox-v125-proxy-rollback.tmp')
+   restored=restart() and file_sha(P)==OLD and file_sha(PX)==PX_EXPECTED
   except Exception:restored=False
   emit(state='HOLD_ROLLED_BACK' if restored else 'HOLD_ROLLBACK_UNVERIFIED',
        reason=reason,rollback_verified=restored,model_weights_unchanged=True)
