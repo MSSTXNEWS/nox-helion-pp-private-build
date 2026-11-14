@@ -1,0 +1,24 @@
+{
+  "schema": "NOX_V46_ORIGINAL_WEB_V29_3_SOURCE_LOCK",
+  "web_zip_name": "NOX_HELION_WEB_V29_3_FROZEN_20261113.zip",
+  "web_zip_sha256": "166becb90fce63e2db3f9a74281d756995844552cddb7b67a0ac4bd67a190aa0",
+  "baseline_files": {
+    "site/chat.html": {
+      "sha256": "b16aa117a9ff802529547693a92a5b97df9a8537a531dceb64e432b0c55901d3",
+      "bytes": 14705
+    },
+    "site/pc/resonance.html": {
+      "sha256": "9a5ee14787f4fc529926576339f86e07ce6ec838fe6e34fe6b2523f102719194",
+      "bytes": 13785
+    },
+    "site/nox-chat.js": {
+      "sha256": "d9fa29e0fa726502adc6e83ea344adf13b8a2354acd3610b3de96ec378e942ce",
+      "bytes": 66619
+    },
+    "site/pc/nox-chat.js": {
+      "sha256": "7fcd4abf7f090ca66c54d90e432f4c4e433e887e0ba5ea0c89fe1acaf3a34238",
+      "bytes": 65425
+    }
+  },
+  "change_scope": "only 2 link additions to each of site/chat.html and site/pc/resonance.html; do not overwrite nox-chat.js or other assets"
+}
