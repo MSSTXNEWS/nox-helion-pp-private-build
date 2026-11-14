@@ -55,10 +55,10 @@ jobs:
               print('JUPYTER_TLS_DIAG=UNTRUSTED_OR_HOSTNAME_MISMATCH')
           except ssl.SSLError as e:
               reason=str(getattr(e,'reason','UNKNOWN')).upper()
-              accepted={'WRONG_VERSION_NUMBER','TLSV1_ALERT_UNKNOWN_CA','SSLV3_ALERT_BAD_CERTIFICATE',
-                        'UNEXPECTED_EOF_WHILE_READING','NO_SHARED_CIPHER','UNKNOWN'}
+              import re
+              reason=re.sub(r'[^A-Z0-9_]','',reason)[:48] or 'UNKNOWN'
               print('JUPYTER_TLS_TRUSTED=false')
-              print('JUPYTER_TLS_DIAG='+ (reason if reason in accepted else 'OTHER_SSL_ERROR'))
+              print('JUPYTER_TLS_DIAG='+reason)
           except (OSError,TimeoutError):
               print('JUPYTER_TLS_TRUSTED=false')
               print('JUPYTER_TLS_DIAG=NETWORK_OR_TIMEOUT')
