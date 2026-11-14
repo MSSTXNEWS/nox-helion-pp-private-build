@@ -41,7 +41,7 @@ class NativeS03FactHistory(unittest.TestCase):
             with sqlite3.connect(db) as con:
                 con.execute("INSERT INTO s03_items VALUES(?,?,?,?,?,?,?,?)",(
                     identifier, segment, text, provenance,
-                    hashlib.sha256(text.encode('utf8')).hexdigest(),salience,
+                    hashlib.sha256((segment+'|'+text+'|'+provenance+'|'+json.dumps(meta,sort_keys=True)).encode('utf8')).hexdigest(),salience,
                     '2026-11-15T00:00:00Z',json.dumps(meta,ensure_ascii=True)))
             return identifier
         self.fake.remember=remember
@@ -89,6 +89,10 @@ class NativeS03FactHistory(unittest.TestCase):
         self.assertEqual(events[0]['content'],body['content'])
         self.assertEqual(events[0]['source_sha256'],body['source_sha256'])
         self.assertEqual(events[0]['submitted_content_sha256'],body['source_sha256'])
+        # Real S03 rows can hash structured fields; their record digest is
+        # not interchangeable with the user's source text checksum.
+        self.assertNotEqual(events[0]['record_sha256'],body['source_sha256'])
+        self.assertEqual(first.json()['record_sha256'],events[0]['record_sha256'])
         self.assertEqual(self.writes,1)
 
     def test_two_identical_contents_different_keys_are_distinct(self):
@@ -119,6 +123,25 @@ class NativeS03FactHistory(unittest.TestCase):
         self.assertEqual(len(events),1)
         self.assertEqual(events[0]['id'],'legacy-v125-record')
         self.assertEqual(events[0]['fact_key'],marker)
+
+    def test_invalid_meta_source_digest_cannot_replace_native_hash(self):
+        marker='SOURCE-META-INVALID'
+        content='Original S03 must not advertise a false source digest'
+        native_digest=hashlib.sha256(('native-structure|'+content).encode()).hexdigest()
+        wrong='a'*64
+        self.assertNotEqual(native_digest,wrong)
+        with sqlite3.connect(self.db_path) as con:
+            con.execute("INSERT INTO s03_items VALUES(?,?,?,?,?,?,?,?)",(
+                'legacy-mismatch','M2',content,
+                'owner-fact:'+marker+'|OWNER-QA',native_digest,0.5,
+                '2026-11-15T00:00:00Z',
+                json.dumps({'fact_key':marker,'source_sha256':wrong})))
+        result=self.query(marker)
+        self.assertEqual(result.status_code,200)
+        item=result.json()['events'][0]
+        self.assertEqual(item['record_sha256'],native_digest)
+        self.assertEqual(item['source_sha256'],native_digest)
+        self.assertIsNone(item['submitted_content_sha256'])
 
     def test_legacy_m2_without_meta_still_retrievable(self):
         with sqlite3.connect(self.db_path) as con:
