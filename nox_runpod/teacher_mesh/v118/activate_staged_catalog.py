@@ -16,7 +16,7 @@ def _settled(method,path,key,data=None):
         time.sleep(12)
     return result
 
-REMOTE=r"""
+REMOTE=r'''
 set -euo pipefail
 python3 - <<'PYREMOTE'
 import ast,hashlib,http.cookiejar,json,os,stat,subprocess,time,urllib.error,urllib.request
@@ -195,7 +195,7 @@ except Exception as exc:
     emit(reason if reason.startswith('HOLD_') and len(reason)<85 else 'HOLD_V118_PRECHECK')
 print('NATIVE_READ_ONLY_COMPLETE=true')
 PYREMOTE
-"""
+'''
 
 
 def main():
