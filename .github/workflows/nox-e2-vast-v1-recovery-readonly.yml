@@ -1,0 +1,37 @@
+name: NOX recovery investigate Vast V1 instances endpoint - read only
+on:
+  push:
+    branches: [nox/e2-vast-v1-readonly-recovery-20261115]
+    paths:
+      - '.github/workflows/nox-e2-vast-v1-recovery-readonly.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  read-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Confirm original secret is configured without displaying it
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$NOX2" || { echo "HOLD_OWNER_VAST_KEY_NOT_CONFIGURED"; exit 2; }
+      - name: Inspect canonical V131 Vast V1 inventory, NO SSH and NO billing
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile nox_runpod/teacher_mesh/v131/vast_no_billing_inventory.py
+          python3 -m nox_runpod.teacher_mesh.v131.vast_no_billing_inventory
+      - name: Strict proof boundary
+        if: always()
+        run: |
+          echo "NOX_V1_READ_ONLY=true"
+          echo "NOX_V1_INSTANCE_MODIFICATIONS=0"
+          echo "NOX_V1_NEW_PAID_INSTANCES=0"
+          echo "NOX_V1_EPHEMERAL_SSH_KEYS_CREATED=0"
