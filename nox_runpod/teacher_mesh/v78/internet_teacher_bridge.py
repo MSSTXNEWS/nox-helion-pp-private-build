@@ -21,6 +21,7 @@ class TeacherPorts:
     independently_check: Callable[[str, str, str], Mapping]
     s03_write: Callable[[Mapping], Mapping]
     s03_verify: Callable[[Mapping, Mapping], bool]
+    approved_lesson: Callable[[str, str, Mapping], Mapping] | None = None
 
 
 def discover_candidate(model_id: str, *, metadata: Mapping, allowed_licenses=frozenset(("apache-2.0", "mit", "bsd-3-clause"))):
@@ -72,11 +73,25 @@ def consult_teacher(*, model_id: str, question: str, conversation_scope: str,
         source = evidence.get("source_uri")
         if not isinstance(source, str) or not source.startswith("https://"):
             return {"state": "HOLD_SOURCE_PROVENANCE"}
+        # A trustworthy, native-approved extract is mandatory for useful memory.
+        # Never write raw private user questions or unreviewed teacher output.
+        if not callable(ports.approved_lesson):
+            return {"state": "HOLD_NATIVE_LESSON_REVIEW_MISSING"}
+        lesson = ports.approved_lesson(question, answer, evidence)
+        if not isinstance(lesson, Mapping) or lesson.get("privacy_approved") is not True or lesson.get("rights_verified") is not True:
+            return {"state": "HOLD_LESSON_NOT_APPROVED"}
+        lesson_text = lesson.get("text")
+        if not isinstance(lesson_text, str) or not 1 <= len(lesson_text.strip()) <= 2000:
+            return {"state": "HOLD_LESSON_LENGTH"}
+        if lesson.get("source_uri") != source or lesson.get("independent_review") is not True:
+            return {"state": "HOLD_LESSON_SOURCE_OR_REVIEW"}
         record = {"schema": "NOX_V78_TEACHER_EXPERIENCE",
                   "scope": conversation_scope, "teacher": model_id,
                   "question_sha256": hashlib.sha256(question.encode()).hexdigest(),
                   "answer_sha256": hashlib.sha256(answer.encode()).hexdigest(),
                   "evidence_source": source, "score": float(score),
+                  "verified_lesson_text": lesson_text.strip(),
+                  "lesson_sha256": hashlib.sha256(lesson_text.strip().encode()).hexdigest(),
                   "neural_weights_changed": False,
                   "requires_independent_holdout_before_forge": True}
         receipt = ports.s03_write(record)
