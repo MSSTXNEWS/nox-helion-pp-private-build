@@ -1,0 +1,352 @@
+--- a/Packages/P02/worker-python/p02_runtime.py
++++ b/Packages/P02/worker-python/p02_runtime.py
+@@ -266,7 +266,11 @@
+                 isinstance(t, str) and t and len(t) <= 128 for t in approved_host_tables):
+             raise TypeError('Native host approved table names required')
+         self.approved_host_tables = approved_host_tables
+-        self.root = pathlib.Path(attachment_root).resolve()
++        original_root = pathlib.Path(attachment_root).absolute()
++        # Native owner must give the actual app-owned directory, never a symlink.
++        if original_root.is_symlink():
++            raise P02Error('ATTACHMENT_ROOT_SYMLINK_DENIED')
++        self.root = original_root.resolve()
+         self.staging = self.root / "staging"
+         self.blobs = self.root / "stored"
+         # This is host-selected application data, NEVER a path from webpage JS.
+@@ -311,6 +315,9 @@
+             enabled = self.db.execute('PRAGMA foreign_keys').fetchone()
+             if enabled != (1,):
+                 raise P02Error('HOST_SQLITE_FOREIGN_KEYS_REQUIRED')
++            # Explicit BEGIN makes CREATE TABLE/INDEX and metadata insert one
++            # rollbackable unit (sqlite3's implicit transactions skip DDL).
++            self.db.execute('BEGIN IMMEDIATE')
+             with self.db:
+                 yield
+ 
+@@ -359,6 +366,26 @@
+                     cols = {r[1] for r in self.db.execute(f'PRAGMA table_info({table})')}
+                     if cols != expected_columns:
+                         raise P02Error('P02_SCHEMA_COLUMNS_MISMATCH; restore verified backup')
++                    key_columns = {'p02_chats': 'id', 'p02_messages': 'id',
++                                   'p02_attachments': 'id', 'p02_gc': 'storage',
++                                   'p02_meta': 'key'}
++                    info = list(self.db.execute(f'PRAGMA table_info({table})'))
++                    if not any(row[1] == key_columns[table] and row[5] == 1 for row in info):
++                        raise P02Error('P02_SCHEMA_PRIMARY_KEY_DRIFT; restore verified backup')
++                # A forged attachment table with matching column names but no
++                # storage uniqueness could bind one physical blob to several chats.
++                indices = list(self.db.execute('PRAGMA index_list(p02_attachments)'))
++                found_storage_unique = False
++                for index_row in indices:
++                    if index_row[2] != 1:  # unique = 1
++                        continue
++                    index_name = str(index_row[1]).replace('"', '""')
++                    keys = [row[2] for row in self.db.execute(
++                        f'PRAGMA index_info("{index_name}")')]
++                    if keys == ['storage']:
++                        found_storage_unique = True
++                if not found_storage_unique:
++                    raise P02Error('P02_STORAGE_UNIQUENESS_DRIFT; restore verified backup')
+                 for table in ('p02_messages', 'p02_attachments'):
+                     rows = list(self.db.execute(f'PRAGMA foreign_key_list({table})'))
+                     if not any(row[2] == 'p02_chats' and row[3] == 'chat_id'
+@@ -435,6 +462,11 @@
+         if mime not in ALLOWED_MIME:
+             raise P02Error("Unsupported MIME")
+         _check_scope(tenant, user, chat)
++        # Deny unauthorized streams BEFORE allocating staging bytes. Ownership
++        # is checked again in the committing SQLite transaction to prevent TOCTOU.
++        with self._lock:
++            self._owned(tenant, user, chat)
++        self._assert_storage_roots()
+         fd, tmp_name = tempfile.mkstemp(prefix="p02_", suffix=".stage", dir=self.staging)
+         tmp = pathlib.Path(tmp_name)
+         storage = uuid.uuid4().hex
+@@ -443,21 +475,37 @@
+         size = 0
+         first = bytearray()
+         digest = hashlib.sha256()
++        text_decoder = None
++        if mime == 'text/plain':
++            import codecs
++            text_decoder = codecs.getincrementaldecoder('utf-8')('strict')
+         try:
+             with os.fdopen(fd, "wb") as out:
+                 while True:
+                     chunk = source.read(65536)
+-                    if not chunk:
++                    if chunk == b'':
+                         break
+-                    if not isinstance(chunk, bytes):
+-                        raise P02Error("Attachment source must supply bytes")
++                    if not isinstance(chunk, bytes) or len(chunk) > 65536:
++                        raise P02Error('ATTACHMENT_STREAM_INVALID_CHUNK')
+                     size += len(chunk)
+                     if size > MAX_FILE:
+                         raise P02Error("Attachment exceeds 25 MiB limit")
++                    if text_decoder is not None:
++                        if b'\x00' in chunk:
++                            raise P02Error('ATTACHMENT_PLAINTEXT_NUL_DENIED')
++                        try:
++                            text_decoder.decode(chunk, final=False)
++                        except UnicodeError as exc:
++                            raise P02Error('ATTACHMENT_PLAINTEXT_UTF8_REQUIRED') from exc
+                     digest.update(chunk)
+                     if len(first) < 12:
+                         first.extend(chunk[:12 - len(first)])
+                     out.write(chunk)
++                if text_decoder is not None:
++                    try:
++                        text_decoder.decode(b'', final=True)
++                    except UnicodeError as exc:
++                        raise P02Error('ATTACHMENT_PLAINTEXT_UTF8_REQUIRED') from exc
+                 out.flush()
+                 os.fsync(out.fileno())
+             if size == 0:
+@@ -507,8 +555,11 @@
+             path = _safe_blob_path(self.blobs, storage)
+             fd = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+             with os.fdopen(fd, "rb") as f:
+-                if not stat.S_ISREG(os.fstat(f.fileno()).st_mode):
+-                    raise P02Error("Not a regular stored file")
++                file_stat = os.fstat(f.fileno())
++                if not stat.S_ISREG(file_stat.st_mode):
++                    raise P02Error('Not a regular stored file')
++                if file_stat.st_nlink != 1:
++                    raise P02Error('ATTACHMENT_HARDLINK_ALIAS_DENIED')
+                 content = f.read(MAX_FILE + 1)
+             if len(content) != expected or hashlib.sha256(content).hexdigest() != sha:
+                 raise P02Error("Stored attachment checksum mismatch")
+@@ -545,7 +596,13 @@
+                     continue
+                 self._assert_storage_roots()
+                 path = _safe_blob_path(self.blobs, storage)
+-                with contextlib.suppress(FileNotFoundError):
++                try:
++                    st = path.lstat()
++                except FileNotFoundError:
++                    st = None
++                if st is not None:
++                    if not stat.S_ISREG(st.st_mode) or st.st_nlink != 1:
++                        raise P02Error('ATTACHMENT_GC_UNSAFE_FILE_TYPE')
+                     path.unlink()
+                 with self.db:
+                     self.db.execute("DELETE FROM p02_gc WHERE storage=?", (storage,))
+--- a/Packages/P02/worker-python/p02_host_admission.py
++++ b/Packages/P02/worker-python/p02_host_admission.py
+@@ -8,6 +8,7 @@
+ 
+ import json
+ import re
++import urllib.parse
+ from dataclasses import dataclass
+ from typing import Callable, Mapping
+ from p02_runtime import P02Error
+@@ -65,7 +66,8 @@
+         if kind == 'chat.start':
+             if self._started:
+                 raise P02Error('DUPLICATE_CHAT_START')
+-            if not isinstance(event.get('model'), str) or not event['model']:
++            if (not isinstance(event.get('model'), str) or
++                    not 0 < len(event['model']) <= 256):
+                 raise P02Error('CHAT_START_MODEL_REQUIRED')
+         elif not self._started:
+             raise P02Error('CHAT_START_REQUIRED')
+@@ -75,7 +77,8 @@
+             raise P02Error('CHAT_DELTA_NOT_TEXT')
+         if kind == 'chat.sources' and not isinstance(event.get('sources'), list):
+             raise P02Error('CHAT_SOURCES_INVALID')
+-        if kind == 'chat.complete' and (not isinstance(event.get('chars'), int) or event['chars'] < 0):
++        if kind == 'chat.complete' and (type(event.get('chars')) is not int or
++                                        not 0 <= event['chars'] <= 1_000_000):
+             raise P02Error('CHAT_COMPLETE_INVALID')
+         payload = {k: v for k, v in event.items() if k != 'type'}
+         # Native host schemas are explicit, not a generic JSON-to-privilege
+@@ -110,6 +113,14 @@
+                         ('url' in row and
+                          (not isinstance(row['url'], str) or len(row['url']) > 2048))):
+                     raise P02Error('CHAT_SOURCES_SCHEMA_INVALID')
++                if 'url' in row:
++                    try:
++                        u = urllib.parse.urlsplit(row['url'])
++                        if (u.scheme != 'https' or not u.hostname or u.username or
++                                u.password or any(ord(c) < 32 for c in row['url'])):
++                            raise P02Error('CHAT_SOURCE_URL_FORBIDDEN')
++                    except ValueError as exc:
++                        raise P02Error('CHAT_SOURCE_URL_FORBIDDEN') from exc
+         try:
+             serialized = json.dumps(payload, ensure_ascii=False, allow_nan=False)
+         except (TypeError, ValueError, OverflowError) as exc:
+--- /dev/null
++++ b/Packages/P02/worker-python/test_p02_c5_integrity.py
+@@ -0,0 +1,139 @@
++"""C5 additive synthetic security regressions; no real user data or external calls."""
++import io
++import os
++import pathlib
++import sqlite3
++import tempfile
++import unittest
++import uuid
++from unittest import mock
++from p02_runtime import P02Store, P02Error
++from p02_host_admission import NativeHostBinding, P02EventRelay, P02_TYPES
++from p02_capabilities import Identity
++
++
++class C5Safety(unittest.TestCase):
++    def setUp(self):
++        self.tmp = tempfile.TemporaryDirectory()
++        self.base = pathlib.Path(self.tmp.name)
++        self.db = sqlite3.connect(':memory:')
++        self.store = P02Store(self.db, self.base/'app')
++        self.store.initialize()
++        self.store.create_chat('tenant', 'alice', 'chat')
++
++    def tearDown(self):
++        self.db.close()
++        self.tmp.cleanup()
++
++    def test_01_ddl_atomic_rollback_if_schema_create_fails(self):
++        class Broken(sqlite3.Connection):
++            def execute(self, sql, *args, **kwargs):
++                if str(sql).lstrip().startswith('CREATE INDEX IF NOT EXISTS p02_messages'):
++                    raise RuntimeError('simulated power loss at DDL')
++                return super().execute(sql, *args, **kwargs)
++        db = sqlite3.connect(':memory:', factory=Broken)
++        with self.assertRaisesRegex(RuntimeError, 'simulated power loss'):
++            with tempfile.TemporaryDirectory() as path:
++                P02Store(db, path).initialize()
++        self.assertEqual(db.execute('SELECT name FROM sqlite_master WHERE name LIKE "p02_%"').fetchall(), [])
++        db.close()
++
++    def test_02_existing_schema_missing_primary_key_stays_untouched(self):
++        self.db.execute('PRAGMA foreign_keys=OFF')
++        self.db.execute('DROP TABLE p02_messages')
++        self.db.execute('CREATE TABLE p02_messages (id TEXT, chat_id TEXT NOT NULL REFERENCES p02_chats(id) ON DELETE CASCADE, role TEXT NOT NULL, content TEXT NOT NULL, created_at INTEGER NOT NULL)')
++        self.db.commit()
++        with self.assertRaisesRegex(P02Error, 'P02_SCHEMA_PRIMARY_KEY_DRIFT'):
++            self.store.initialize()
++        self.assertEqual(self.db.execute('PRAGMA table_info(p02_messages)').fetchall()[0][-1],0)
++
++    def test_03_storage_uniqueness_drift_stops_admission(self):
++        self.db.execute('PRAGMA foreign_keys=OFF')
++        self.db.execute('DROP TABLE p02_attachments')
++        self.db.execute('CREATE TABLE p02_attachments(id TEXT PRIMARY KEY, chat_id TEXT NOT NULL REFERENCES p02_chats(id) ON DELETE CASCADE, storage TEXT NOT NULL, sha256 TEXT NOT NULL, mime TEXT NOT NULL, bytes INTEGER NOT NULL, created_at INTEGER NOT NULL)')
++        self.db.commit()
++        with self.assertRaisesRegex(P02Error, 'P02_STORAGE_UNIQUENESS_DRIFT'):
++            self.store.initialize()
++
++    def test_04_root_symlink_refused_before_any_upload(self):
++        other = self.base/'other';other.mkdir()
++        link = self.base/'linked'
++        try:
++            link.symlink_to(other, target_is_directory=True)
++        except (OSError,NotImplementedError):
++            self.skipTest('symlink privilege unavailable')
++        with self.assertRaisesRegex(P02Error, 'ATTACHMENT_ROOT_SYMLINK_DENIED'):
++            P02Store(self.db, link)
++
++    def test_05_stream_none_is_error_not_successful_EOF(self):
++        class Broken:
++            def read(self, n): return None
++        with self.assertRaisesRegex(P02Error, 'ATTACHMENT_STREAM_INVALID_CHUNK'):
++            self.store.store_file('tenant','alice','chat','application/pdf',Broken())
++        self.assertFalse(list(self.store.staging.iterdir()))
++
++    def test_05b_unauthorized_stream_never_read_or_staged(self):
++        class Stream:
++            def __init__(self): self.calls = 0
++            def read(self, n):
++                self.calls += 1
++                return b'%PDF-1.7\n'
++        stream = Stream()
++        with self.assertRaises(PermissionError):
++            self.store.store_file('tenant', 'mallory', 'chat', 'application/pdf', stream)
++        self.assertEqual(stream.calls, 0)
++        self.assertFalse(list(self.store.staging.iterdir()))
++
++    def test_06_stream_over_read_quota_disallowed(self):
++        class Broken:
++            def read(self,n): return b'x'*(n+1)
++        with self.assertRaisesRegex(P02Error, 'ATTACHMENT_STREAM_INVALID_CHUNK'):
++            self.store.store_file('tenant','alice','chat','application/pdf',Broken())
++        self.assertFalse(list(self.store.staging.iterdir()))
++
++    def test_07_text_nul_after_first_header_rejected(self):
++        with self.assertRaisesRegex(P02Error, 'ATTACHMENT_PLAINTEXT_NUL_DENIED'):
++            self.store.store_file('tenant','alice','chat','text/plain', io.BytesIO(b'A'*70000+b'\0'))
++
++    def test_08_text_truncated_multibyte_rejected(self):
++        with self.assertRaisesRegex(P02Error, 'ATTACHMENT_PLAINTEXT_UTF8_REQUIRED'):
++            self.store.store_file('tenant','alice','chat','text/plain',io.BytesIO(b'hello\xe2\x82'))
++        ack=self.store.store_file('tenant','alice','chat','text/plain',io.BytesIO(b'hello'*13107+'\N{EURO SIGN}'.encode()))
++        self.assertEqual(self.store.read_file('tenant','alice','chat',ack['stored_id'])[-3:],b'\xe2\x82\xac')
++
++    def test_09_hardlink_alias_read_and_gc_fail_closed(self):
++        ack = self.store.store_file('tenant','alice','chat','application/pdf',io.BytesIO(b'%PDF-1.7\nfixture'))
++        (storage,) = self.db.execute('SELECT storage FROM p02_attachments').fetchone()
++        blob=self.store.blobs/(storage+'.blob');link=self.base/'external_alias'
++        try:
++            os.link(blob,link)
++        except (NotImplementedError,OSError):
++            self.skipTest('Hardlinks not available')
++        with self.assertRaisesRegex(P02Error,'ATTACHMENT_HARDLINK_ALIAS_DENIED'):
++            self.store.read_file('tenant','alice','chat',ack['stored_id'])
++        self.store.delete_attachment('tenant','alice','chat',ack['stored_id'])
++        with self.assertRaisesRegex(P02Error,'ATTACHMENT_GC_UNSAFE_FILE_TYPE'):
++            self.store.collect_garbage()
++        self.assertTrue(blob.exists())
++        link.unlink()
++        self.assertEqual(self.store.collect_garbage(),1)
++
++    def _relay(self):
++        allowed = {typ:'native.'+typ for typ in P02_TYPES}
++        calls=[]
++        bind=NativeHostBinding(Identity('t','u','core','persona','session'), True,
++          frozenset(allowed.values()),allowed,lambda typ,data: calls.append((typ,data)))
++        relay=P02EventRelay(bind);run=uuid.uuid4().hex
++        relay.relay({'type':'chat.start','run_id':run,'model':'installed'})
++        return relay,run,calls
++
++    def test_10_boolean_complete_and_untrusted_citation_url_denied(self):
++        relay,run,calls=self._relay()
++        with self.assertRaisesRegex(P02Error,'CHAT_COMPLETE_INVALID'):
++            relay.relay({'type':'chat.complete','run_id':run,'chars':True})
++        with self.assertRaisesRegex(P02Error,'CHAT_SOURCE_URL_FORBIDDEN'):
++            relay.relay({'type':'chat.sources','run_id':run,'sources':[{'source_id':'1','title':'doc','url':'javascript:alert(1)'}]})
++        self.assertEqual(len(calls),1)
++
++if __name__ == '__main__':
++    unittest.main(verbosity=2)
+--- /dev/null
++++ b/Packages/P02/worker-python/C5_NOLOSS_HANDOFF.md
+@@ -0,0 +1,28 @@
++# NOX V16 E02 C5 — no-loss handoff to integrator #6
++
++RunID: `NOX-V16-E02-C5-20261028`. Owner **2**. This is a source-only candidate, not an integrated Windows EXE. `main`, `MainWindow`, D02 HOME/MENU/CORE, original 8 CoreID, Persona, GPU LoRA/QLoRA, voices, SIP, model weights and all WOW 10+10+10 are untouched. No new backend, renderer, SQLite DB, event bus, model downloader or server.
++
++## Apply selectively — do not overwrite the existing host
++
++Use `P02_C5.patch` only after owner #6 reconstructs and hashes original source archive, freezes a current SourceLock and maps the authoritative database, selected model, WebView2 origin and existing events.v3 bridge. The Python code is **not** evidence of a production .NET/Python host binding. Retain every other candidate as an independent preserved source until content-level reconciliation is complete.
++
++## Ten fail-closed corrections
++
++1. Reject symlink attachment roots before `.resolve()` (never let root link select a foreign store).
++2. Explicit SQLite `BEGIN IMMEDIATE` makes initial DDL and metadata rollbackable on a failure.
++3. Deny existing schemas with matching columns but missing chat/message/attachment primary keys.
++4. Deny existing attachment schemas with no UNIQUE index on `storage`.
++5. Revalidate staging/storage roots **before** creating the first temporary file.
++6. Check trusted-owner ACL **before** consuming an input stream; recheck before transaction commit.
++7. Reject `read()` returning `None`, non-byte output or chunks larger than the requested bound.
++8. Reject `text/plain` containing NUL anywhere or invalid/incomplete UTF-8 even across chunks.
++9. Detect unexpected hardlink aliases on authorized reads and queued physical deletion.
++10. Validate existing host event model/complete ranges and reject unsafe citation URL schemes at the relay boundary.
++
++### Focused evidence and limitations
++
++`python -m unittest discover -p 'test_*.py' -q`: **52/52 PASS** in isolated Python 3.13 fixture on Linux. `python -m compileall -q`: PASS. New file `test_p02_c5_integrity.py` covers 11 adversarial cases. This does **not** test actual native Windows, Windows NTFS hardlink behavior, live Ollama, real user SQLite migrations or native WebView2. Critical HOLD until #6 maps real app and #7 validates exact EXE SHA.
++
++Source-admission guard: Git blob SHA-1 preimages of `p02_runtime.py` and `p02_host_admission.py` must exactly match values recorded in `P02_C5_RECEIPT.json`. Do not use a 40-hex Git blob as a 64-hex SourceLock hash. Existing C4 source and tests stay preserved. Verify snapshot and target files before any cherry-pick.
++
++Host privacy: native authority supplies actual principal, tenant, consent and RouteID mapping. Never accept a page-provided userId, bridge scope, model-installed flag, microphone authorization, tariff or SIP quote. No Codex login without approved official flow. No new model downloads, hardware training or calls were performed.

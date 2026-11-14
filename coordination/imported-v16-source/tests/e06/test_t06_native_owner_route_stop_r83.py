@@ -1,0 +1,175 @@
+"""R83: original WPF native-owner routes and real MENU STOP; SOURCE contracts only.
+
+Windows .NET compile, installed WebView2/IPC, and independent E07 are separate gates.
+"""
+import hashlib
+from pathlib import Path
+import unittest
+
+ROOT = Path(__file__).resolve().parents[2]
+E06 = ROOT / "coordination" / "e06"
+OWNER = E06 / "MainWindow.NativeP02.cs"
+BRIDGE = E06 / "OneHostP02WebView2Bridge.cs"
+BUILDER = E06 / "build_onehost_installer.ps1"
+COMPILER = E06 / "t06_compile_original_wpf_p02.py"
+
+
+def git_blob(path):
+    raw = path.read_bytes()
+    if b"\r\n" in raw and b"\r" not in raw.replace(b"\r\n", b""):
+        raw = raw.replace(b"\r\n", b"\n")
+    return hashlib.sha1(b"blob " + str(len(raw)).encode("ascii") + b"\0" + raw).hexdigest()
+
+
+class OriginalNativeOwnerMenuStopR83(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.owner = OWNER.read_text(encoding="utf-8")
+        cls.bridge = BRIDGE.read_text(encoding="utf-8")
+        cls.builder = BUILDER.read_text(encoding="utf-8")
+        cls.compiler = COMPILER.read_text(encoding="utf-8")
+
+    def test_all_existing_wpf_only_routes_reach_original_owner(self):
+        clause = self.bridge.split("if (_nativeOwnerAction is not null &&", 1)[1].split("var ownerResult", 1)[0]
+        for route in ("browser.navidle", "menu.dispatch", "menu.binding",
+                      "selfwrite.ack", "selflearn.ack"):
+            with self.subTest(route=route):
+                self.assertIn('route=="' + route + '"', clause)
+        self.assertIn("_nativeOwnerAction(route, payload.Clone(), cancel)", self.bridge)
+
+    def test_menu_stop_delegates_to_real_native_onehost(self):
+        stop = self.owner.split('if (route == "menu.binding") {', 1)[1].split('if (route == "menu.dispatch") {', 1)[0]
+        self.assertIn('await DispatchNativeOwnerAsync(', stop)
+        self.assertIn('"chat.stop", JsonSerializer.SerializeToElement(new { }), cancel', stop)
+        self.assertIn('NativeP02Acl(stopSid, "chat.stop")', stop)
+        self.assertIn('if (!nativeStop.Accepted || !string.IsNullOrEmpty(nativeStop.ErrorCode))', stop)
+        self.assertIn('status = "MENU_STOP_REQUESTED"', stop)
+        self.assertNotIn('status = "MENU_STOP_ACK"', stop)
+
+    def test_stop_overtakes_modal_and_rejects_stale_completion(self):
+        self.assertIn('!isMenuStop &&\n                !await _nativeConsent(', self.bridge)
+        self.assertNotIn('route == "chat.stop" || isMenuStop)\n                Interlocked.Increment(ref _streamEpoch)', self.bridge)
+        self.assertIn('if ((route == "chat.stop" || isMenuStop) && ownerAccepted)\n                    Interlocked.Increment(ref _streamEpoch)', self.bridge)
+        self.assertIn('var ownerAccepted = ownerResult.Accepted &&\n                    string.IsNullOrEmpty(ownerResult.ErrorCode);', self.bridge)
+        self.assertIn('ownerState = ownerAccepted ? "STOP_REQUESTED" : "HOLD";', self.bridge)
+        self.assertIn('var accepted = result.Accepted &&\n                    string.IsNullOrEmpty(result.ErrorCode);', self.bridge)
+        self.assertIn('if (route == "chat.stop" && accepted)\n                    Interlocked.Increment(ref _streamEpoch);', self.bridge)
+        self.assertIn('payload.EnumerateObject().Count() == 1', self.bridge)
+        self.assertIn('MENU_STOP_PAYLOAD_HOLD', self.owner)
+
+    def test_nested_native_denial_blocks_owner_ack(self):
+        self.assertIn("NativeResultExplicitlyDenied(JsonElement? candidate)", self.bridge)
+        self.assertIn("if (ownerAccepted && NativeResultExplicitlyDenied(ownerResult.Result))", self.bridge)
+        self.assertIn("if (accepted && NativeResultExplicitlyDenied(result.Result))", self.bridge)
+        self.assertIn('field.Name is "ok" or "ack"', self.bridge)
+        self.assertIn('field.Name is "error" or "errorCode" or "error_code"', self.bridge)
+        self.assertIn('field.Name is "result" or "receipt" or "nativeResult"', self.bridge)
+        # A nested native owner denial or cancelled user action must never become
+        # a completed ACK even when the transport reports Accepted=true.
+        self.assertIn('or "ownerResult" &&', self.bridge)
+        self.assertIn('or "success" or "approved" or "authorized" &&', self.bridge)
+        self.assertIn('or "CANCELLED" or', self.bridge)
+        self.assertIn('"NATIVE_OWNER_RESULT_HOLD"', self.bridge)
+
+    def test_native_spaced_denial_normalization_source_contract(self):
+        # SOURCE_ONLY: physical Windows .NET and E07 are separate requirements.
+        import re
+        scopes = (
+            self.owner.split("private static bool LegacyOwnerStatusDenied(", 1)[1].split(
+                "private static bool LegacyOwnerDenial(", 1)[0],
+            self.bridge.split("private static bool NativeOwnerStatusDenied(", 1)[1].split(
+                "private static bool NativeResultExplicitlyDenied(", 1)[0],
+        )
+        for source in scopes:
+            self.assertIn('@"[\\s-]+"', source)
+            self.assertIn('").ToUpperInvariant();', source)
+            exacts = set(re.findall(r'"([A-Z][A-Z_]+)"', source))
+            suffixes = set(re.findall(r'"(_[A-Z]+)"', source))
+            for state in ("CONSENT REQUIRED", "OWNER-DENIED", "SID MISMATCH",
+                          "PROVIDER OFFLINE", "AUTH REQUIRED", "NOT AUTHORIZED",
+                          "NOT AUTHENTICATED", "PERMISSION-DENIED",
+                          "FORBIDDEN", "UNAVAILABLE"):
+                value = re.sub(r"[\\s-]+", "_", state.strip()).upper()
+                self.assertTrue(value in exacts or any(value.endswith(s) for s in suffixes),
+                                msg=f"Unrecognized owner denial: {state}")
+            for approved in ("COMPLETED", "QUEUED", "RUNNING"):
+                self.assertFalse(approved in exacts or any(approved.endswith(s) for s in suffixes))
+
+    def test_learn_settings_native_denial_is_not_completion(self):
+        # SOURCE_ONLY assertion; native Windows WPF and E07 are separate.
+        scope = self.bridge.split("private static bool NativeOwnerStatusDenied(", 1)[1].split(
+            "private async void OnWebMessageReceived(", 1)[0]
+        for label in ("_HOLD", "_DENIED", "_REQUIRED", "_MISMATCH",
+                      "_UNAVAILABLE", "_OFFLINE", "CONSENT_PENDING",
+                      "NOT_AUTHORIZED", "AWAITING_CONSENT"):
+            with self.subTest(label=label):
+                self.assertIn('"' + label + '"', scope)
+        self.assertIn('NativeOwnerStatusDenied(field.Value.GetString())', scope)
+        self.assertIn('field.Name is "result" or "receipt" or "nativeResult" or "owner"', scope)
+        self.assertIn('NativeResultExplicitlyDenied(ownerResult.Result)', self.bridge)
+        self.assertIn('NativeResultExplicitlyDenied(result.Result)', self.bridge)
+        self.assertIn('!await _nativeConsent(route, payload.Clone(), cancel)', self.bridge)
+        self.assertIn('!_nativeAcl(_ownerWindowsSid, route)', self.bridge)
+
+    def test_revocation_only_stops_an_active_native_chat(self):
+        # SOURCE_ONLY: Windows WPF native STOP and E07 require physical proof.
+        body = self.bridge.split("private void RevokeDocument()", 1)[1].split(
+            "private async Task StopRevokedChatAsync()", 1)[0]
+        self.assertIn("var chatWasActive = Volatile.Read(ref _activeChat) > 0;", body)
+        self.assertLess(body.index("var chatWasActive = "), body.index("revoked.Cancel()"))
+        self.assertIn(
+            "if (chatWasActive && Interlocked.CompareExchange(ref _stopPending, 1, 0) == 0)",
+            body,
+        )
+        self.assertEqual(body.count("_ = StopRevokedChatAsync();"), 1)
+        self.assertIn("Interlocked.Increment(ref _epoch)", body)
+        self.assertIn("Interlocked.Increment(ref _streamEpoch)", body)
+        self.assertIn("finally { revoked.Dispose(); }", body)
+        self.assertIn('_existingPipe.RequestAsync("chat.stop", new { }', self.bridge)
+        self.assertIn('NativeSidMatches() && _nativeAcl(_ownerWindowsSid, "chat.stop")', self.bridge)
+
+    def test_legacy_home_owner_security_denials_never_complete(self):
+        # SOURCE_ONLY: the actual C# WPF application and installed E07 are separate.
+        source = self.owner.split("private static bool LegacyOwnerStatusDenied(", 1)[1].split(
+            "private async Task DispatchLegacyNativeAsync(", 1)[0]
+        for suffix in ("_HOLD", "_DENIED", "_REQUIRED", "_MISMATCH",
+                       "_UNAVAILABLE", "_OFFLINE", "_FAILED", "_ERROR",
+                       "_BLOCKED", "_REFUSED"):
+            with self.subTest(suffix=suffix):
+                self.assertIn('"' + suffix + '"', source)
+        for state in ("CONSENT_PENDING", "NOT_AUTHORIZED", "AWAITING_CONSENT",
+                      "REJECTED", "CANCELLED"):
+            with self.subTest(state=state):
+                self.assertIn('"' + state + '"', source)
+        self.assertIn("LegacyOwnerStatusDenied(state)", source)
+        self.assertIn('or "ownerResult" &&', source)
+        self.assertIn("LegacyOwnerDenial(p.Value,depth+1)", source)
+        self.assertIn("!result.Accepted || !string.IsNullOrWhiteSpace(result.ErrorCode)", self.owner)
+
+    def test_original_builder_and_compiler_pins_are_coherent(self):
+        for filename, sha in ((OWNER, git_blob(OWNER)), (BRIDGE, git_blob(BRIDGE))):
+            with self.subTest(path=filename.name):
+                self.assertIn(("sha='" if filename == OWNER else "blob='") + sha + "'", self.builder)
+                self.assertIn('"coordination/e06/' + filename.name + '":"' + sha + '"',
+                              self.compiler)
+        self.assertIn('T06_CANONICAL_OWNER_STAGING_PINS_DIVERGED', self.compiler)
+
+
+    def test_menu_native_bindings_require_real_owner_result(self):
+        body = self.owner.split('if (route == "menu.binding") {', 1)[1].split(
+            'if (route == "menu.dispatch") {', 1)[0]
+        self.assertNotIn('status = "MENU_BINDING_ACK"', body)
+        self.assertIn('MENU_BUTTON_TARGET_REQUIRED_HOLD', body)
+        self.assertIn('name == "model" ? "models.catalog" : "chat.commands"', body)
+        self.assertIn('action = "selfbuilder.worker.status"', body)
+        self.assertIn('NativeP02Acl(ownerSid, ownerRoute)', body)
+        self.assertIn('await ConfirmP02NativeAsync(ownerRoute, ownerPayload, cancel)', body)
+        self.assertIn('await DispatchNativeOwnerAsync(ownerRoute, ownerPayload, cancel)', body)
+        self.assertIn('!ownerResult.Accepted || !string.IsNullOrEmpty(ownerResult.ErrorCode)', body)
+        self.assertIn('ownerResult.Result is not JsonElement nativeResult', body)
+        self.assertIn('MENU_NATIVE_OWNER_RESULT', body)
+        self.assertIn('!nativeStop.Accepted || !string.IsNullOrEmpty(nativeStop.ErrorCode)', body)
+
+
+if __name__ == "__main__":
+    unittest.main()

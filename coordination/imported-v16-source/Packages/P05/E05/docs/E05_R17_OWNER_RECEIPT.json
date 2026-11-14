@@ -1,0 +1,51 @@
+{
+  "schema": "NOX-V16-E05-OWNER-RECEIPT-v1",
+  "run_id": "NOX-V16-E05-R17-20261028",
+  "owner": "E05/P05-executor-5",
+  "utc_recorded": "2026-10-28T02:50:57.438Z",
+  "parent_commit_sha1": "bb8961546631595faa2496ffe3e7a102196ce51e",
+  "source_branch": "e05/v16-r17-attested-space-20261028",
+  "base_tree_sha1": "a93a04395ef285771586727472ef413fe3be117e",
+  "scope": "Attested NOX SPACE product progress; forbid arbitrary scalar, require same RunID, fresh seven-bar projection and five independently verified owner seals.",
+  "src_status": "SOURCE_CANDIDATE",
+  "readback": "GITHUB_CONTENTS_PASS_2026-10-28T02:51Z",
+  "windows_runtime": "NOT_RUN",
+  "e06_integration": "HOLD",
+  "e07_same_exe": "NOT_RUN",
+  "original_d02": "UNTOUCHED",
+  "files": [
+    {
+      "path": "Packages/P05/E05/src/E05ApprovedSpace.cs",
+      "pre_git_blob_sha1": "9f5d36c55539522b5c00a25ac0b4a50984a083a9",
+      "pre_sha256": "ef655b65a51cc41b1cc244e6de256a8a44f45252ab6b1ec8cdb58846e883ee76",
+      "post_sha256": "ed0e81f3cdfb34c475bbcc8956cc24e2f8ef82b412b199b3b0b5d7f4550ceba8",
+      "change_type": "narrow_update",
+      "post_git_blob_sha1": "0cfa73d640fe2cd23c040e7bcf1a481a7cde28cb"
+    },
+    {
+      "path": "Packages/P05/E05/src/E05HostStateAdapter.cs",
+      "pre_git_blob_sha1": "f1075999161cbda2675446c93ee574953aeac43b",
+      "pre_sha256": "520aa048ea6f1e902ef15e262fb71fd0a7487739161f30544db8f52fdc6fdeab",
+      "post_sha256": "59934965c771d3d6522e0d583d2e6381a39f6397da68faea53d46b2fcb895b32",
+      "change_type": "narrow_update",
+      "post_git_blob_sha1": "d3f7f566572fcd9db6cde857de8cfaf86f44a7dc"
+    },
+    {
+      "path": "Packages/P05/E05/checks/E05VerifiedProjectionChecks.cs",
+      "pre_git_blob_sha1": "12caa8b4873aac2f8088eb5debc681f7e2e689c3",
+      "pre_sha256": "0822a9cf7e25235877989be603d6260c54357aa9c6e449fab0f79e110960f9c3",
+      "post_sha256": "c590f70886eaba1b810e138ac7d4f07177dc10fedc556b6762333b47386f1e77",
+      "change_type": "narrow_update",
+      "post_git_blob_sha1": "d0e03dfd302f4b6d9f1589e02a393e6aabd17691"
+    }
+  ],
+  "change_set_sha256": "85a08a676784959e62026ccb3de11e491113e09369a2e8e0744e1c17b3618d64",
+  "ci_check": "HOLD_PRE_JOB_STEPS_NO_COMPILER_OUTPUT",
+  "ci_runs": [
+    40623360902,
+    40623360925,
+    40623360949
+  ],
+  "ci_note": "All three run attempts terminated before steps; job logs unavailable. New R17 .NET build/tests unverified, not PASS.",
+  "source_commit_sha1": "6469ed5c7cb770837db2534100f7ff7c8ece78d9"
+}

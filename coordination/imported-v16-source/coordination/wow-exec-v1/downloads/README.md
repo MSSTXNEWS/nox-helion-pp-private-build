@@ -1,0 +1,2 @@
+# NOX EXPRESS INTEGRATOR R11/MENU10 BLOCK 1
+Download only. Never execute downloaded EXE, merge into OneHost or claim installed E07. Sources: Microsoft signed WebView2 x64, official Nuget, optional Ollama, NSIS, dotnet helper, original Fluent SVG, optional Motion 14.9.0, tsParticles Engine/Slim 4.4.0, esbuild 0.28.2, kitUIN source. One Windows GitHub CI artifact, SHA256/signature receipt and package-lock. Existing Drive kit SHA256 28f22d182137b653f44e01349b882044fbd98570f3ce5a276a98603dbd06cbd2 reused. Phase 2 is a separately controlled integration.

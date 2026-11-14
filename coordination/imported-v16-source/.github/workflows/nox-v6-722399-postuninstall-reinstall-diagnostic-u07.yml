@@ -1,0 +1,138 @@
+name: NOX V6 U07 physical post-uninstall second NSIS diagnostic on frozen Setup (HOLD)
+on:
+  push:
+    branches: [integration/nox-v16-unified-candidate-20261028-r01]
+    paths:
+      - .github/workflows/nox-v6-722399-postuninstall-reinstall-diagnostic-u07.yml
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: nox-v6-u07-postuninstall-diagnostic
+  cancel-in-progress: false
+jobs:
+  diagnose-reinstall:
+    if: github.repository == 'MSSTXNEWS/nox-helion-pp-private-build'
+    runs-on: windows-2022
+    timeout-minutes: 30
+    steps:
+      - name: Checkout QA source without credentials
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Pin Python 3.12
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12.10'
+          architecture: x64
+          check-latest: false
+      - name: Strict original source preflight, no weakening or model download
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          python -B -m py_compile coordination/e07/independent_setup_e07.py coordination/e07/probe_full_d02_722399_u13.py coordination/e07/probe_five_primary_action.py
+          if ($LASTEXITCODE -ne 0) { throw 'U07_ORIGINAL_E07_PYTHON_SYNTAX_HOLD' }
+          python -B -m unittest discover -s tests/e07 -p test_full_d02_722399_u13.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'U07_ORIGINAL_V6_SOURCE_REGRESSION_HOLD' }
+          python -B -m unittest discover -s tests/e07 -p test_primary_destination_witness_b3.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'U07_ORIGINAL_NAV_V3_SOURCE_REGRESSION_HOLD' }
+      - name: Fetch ONLY existing immutable V6 E06 artifact, never download models
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 41833271465
+          name: nox-v16-e06-onehost-diagnostic-41833271465
+          github-token: ${{ github.token }}
+          path: input/nox
+      - name: Recreate original strict five-UIA NSIS lifecycle and preserve receipt
+        id: lifecycle
+        shell: pwsh
+        timeout-minutes: 16
+        run: |
+          $ErrorActionPreference='Stop'
+          python -B coordination/e07/probe_full_d02_722399_u13.py --artifact-dir input/nox --out work/u07/FIVE_PRIMARY.json
+          if ($LASTEXITCODE -ne 0) { throw 'U07_ORIGINAL_UIA_NSIS_FIRST_LIFECYCLE_HOLD' }
+          $r=Get-Content -LiteralPath work/u07/FIVE_PRIMARY.json -Raw -Encoding UTF8 -ErrorAction Stop | ConvertFrom-Json
+          if ($r.source_sha -cne 'ffca9aaedce9d90750dfb212aabcdfd970162150' -or
+              $r.setup_sha256 -cne '722399ee3d7794a7aa38d93d933026e015fd29b0d8a60fd431b0bc494040a6bc' -or
+              $r.build_id -cne 'NOX-V16-99fce33d002363f6b3e9b9cf' -or
+              $r.five_uia -cne 'PASS' -or $r.five_primary.status -cne 'PASS' -or
+              $r.independent_e07_10_10 -cne 'HOLD' -or $r.release_accepted -ne $false) {
+            throw 'U07_ORIGINAL_LIFECYCLE_RECEIPT_IDENTITY_HOLD'
+          }
+          Write-Host 'U07_FROZEN_SETUP_FIRST_FIVE_UIA_NSIS_PASS_NOT_FULL_E07'
+      - name: Diagnose second exact NSIS install after conservative uninstall, no user-file deletion
+        id: reinstall
+        if: steps.lifecycle.outcome == 'success'
+        shell: pwsh
+        timeout-minutes: 7
+        run: |
+          $ErrorActionPreference='Stop'
+          $root=Join-Path $env:LOCALAPPDATA 'Programs/NOX HELION'
+          function Get-SafeSlotState {
+            $exists=Test-Path -LiteralPath $root -PathType Container
+            $reparse=$false
+            $topLevelCount=0
+            if ($exists) {
+              $info=Get-Item -LiteralPath $root -Force -ErrorAction Stop
+              $reparse=(($info.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0)
+              if (-not $reparse) { $topLevelCount=@(Get-ChildItem -LiteralPath $root -Force -ErrorAction Stop).Count }
+            }
+            return @{
+              root_exists=[bool]$exists
+              root_is_reparse=[bool]$reparse
+              root_top_level_count=[int]$topLevelCount
+              backend_exists=[bool](Test-Path -LiteralPath (Join-Path $root 'Backend/NOX_HELION_PRIVATE_CANDIDATE.exe') -PathType Leaf)
+            }
+          }
+          $nox=Join-Path 'input/nox/e06/onehost-wow-diagnostic' 'NOX-HELION-V16-DIAGNOSTIC-SETUP.exe'
+          if (-not (Test-Path -LiteralPath $nox -PathType Leaf)) { throw 'U07_FROZEN_SETUP_ABSENT' }
+          $before=(Get-FileHash -LiteralPath $nox -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($before -cne '722399ee3d7794a7aa38d93d933026e015fd29b0d8a60fd431b0bc494040a6bc') { throw 'U07_SETUP_SHA_MISMATCH_HOLD' }
+          $pre=Get-SafeSlotState
+          $exitCode=-999
+          $startException='NONE'
+          try {
+            $p=Start-Process -FilePath (Resolve-Path -LiteralPath $nox).Path -ArgumentList '/S' -Wait -PassThru -ErrorAction Stop
+            $exitCode=[int]$p.ExitCode
+          } catch {
+            $startException=$_.Exception.GetType().Name
+          }
+          $post=Get-SafeSlotState
+          $after=(Get-FileHash -LiteralPath $nox -Algorithm SHA256).Hash.ToLowerInvariant()
+          $proof=[ordered]@{
+            schema='NOX-E07-U07-V6-SECOND-NSIS-FIRSTFAIL-v1'
+            source_sha='ffca9aaedce9d90750dfb212aabcdfd970162150'
+            setup_sha256='722399ee3d7794a7aa38d93d933026e015fd29b0d8a60fd431b0bc494040a6bc'
+            build_id='NOX-V16-99fce33d002363f6b3e9b9cf'
+            original_uia_nsis_lifecycle='PASS'
+            second_installer_exit_code=$exitCode
+            second_installer_start_exception=$startException
+            install_slot_before=$pre
+            install_slot_after=$post
+            setup_sha_after=$after
+            changed_product_files=0
+            user_data_deleted=$false
+            independent_e07_10_10='HOLD'
+            release_accepted=$false
+          }
+          New-Item -ItemType Directory -Path work/u07 -Force | Out-Null
+          $proof | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath work/u07/SECOND_INSTALL_DIAGNOSTIC.json -Encoding utf8 -ErrorAction Stop
+          Write-Host ('U07_SECOND_NSIS_EXIT_CODE=' + $exitCode)
+          Write-Host ('U07_SECOND_NSIS_START_EXCEPTION=' + $startException)
+          Write-Host ('U07_INSTALL_ROOT_EXISTED_AFTER_FIRST_UNINSTALL=' + $pre.root_exists)
+          Write-Host ('U07_INSTALL_ROOT_REPARSE_AFTER_FIRST_UNINSTALL=' + $pre.root_is_reparse)
+          Write-Host ('U07_POSTUNINSTALL_TOP_LEVEL_COUNT=' + $pre.root_top_level_count)
+          if ($after -cne $before) { throw 'U07_FROZEN_SETUP_CHANGED_DURING_DIAGNOSTIC_HOLD' }
+          if ($startException -ne 'NONE') { throw 'U07_SECOND_NSIS_PROCESS_START_HOLD' }
+          if ($exitCode -ne 0) { throw ('U07_SECOND_NSIS_NONZERO_HOLD_EXIT_' + $exitCode) }
+          Write-Host 'U07_SAME_SETUP_POST_UNINSTALL_REINSTALL_DIAGNOSTIC_PASS_NOT_FULL_E07'
+      - name: Archive only candidate-bound diagnostics, never claim full acceptance
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: NOX-V6-U07-SECOND-NSIS-DIAGNOSTIC-${{ github.sha }}-${{ github.run_id }}
+          path: |
+            work/u07/FIVE_PRIMARY.json
+            work/u07/SECOND_INSTALL_DIAGNOSTIC.json
+          if-no-files-found: warn
+          retention-days: 14

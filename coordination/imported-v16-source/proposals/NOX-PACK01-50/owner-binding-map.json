@@ -1,0 +1,728 @@
+{
+  "schema": "NOX_PACK01_NATIVE_BINDING_MAP_V1",
+  "parentPR": 21,
+  "currentPR": 22,
+  "sourceBaseCommit": "eb46b49fb8a022cefa679afb8606877016808db1",
+  "counts": {
+    "catalogue": 50,
+    "sourceOwnerMethodBound": 50,
+    "p02": 15,
+    "p03": 10,
+    "p04": 11,
+    "e05": 6,
+    "e06": 1,
+    "unbound": 0,
+    "exeIntegrated": 0,
+    "releaseAccepted": 0,
+    "p01": 7
+  },
+  "notes": [
+    "50/50 existing single-host source method descriptors only; no native Windows installation or independent QA accepted.",
+    "User's original 729-file source is integrity verified but still not unified with this proposal.",
+    "All 50 route IDs now have source handler descriptors. The original 14 native-pending rows are unchanged; windows-backed P01 routes require authenticated callback integration and native acceptance.",
+    "Windows CI evidence for the four most recent method bindings must be read back before promotion from SOURCE_CANDIDATE.",
+    "Voice settings require installed approved voices, do not claim free weights installed.",
+    "Model license view lists REVIEW_REQUIRED for unverified catalog families, never marks them legally approved.",
+    "Dataset rights and checkpoint functions call exact owner methods; real GPU training/merged LoRA/phone call NOT RUN.",
+    "P02 history same-second ordering regression still tracked, not resolved by candidate routes.",
+    "Original WOW 10+10+10, 8 CoreID, Persona/D02 and source archived files untouched.",
+    "P02 OwnerTwoPorts: three source route method descriptors linked; native owner services/STOP/SID/consent unverified, all 14 original native-blocker rows preserved.",
+    "R26 M1 six owner method candidates reuse P01 theater/restic and P04 original QLoRA/Comfy; no automatic native permissions, downloads, or Windows acceptance.",
+    "M1 R02: P01 OS owner adapter reuses Windows default browser, read-only Edge/Chrome bookmarks, SHA-pinned winget, and only NOX-owned cache. No new HTTP server or DB. Runtime Windows NOT_RUN; security negative tests run on local Linux fixtures, native approval remains mandatory."
+  ],
+  "routes": [
+    {
+      "taskId": "NIP01-01",
+      "routeId": "helion.chat",
+      "owner": 2,
+      "sourceBinding": "proposals/NOX-PACK01-50/native_bridge.py:ExistingP02Adapter.chat",
+      "componentCI": "WINDOWS_COMPONENT_PASS_OWNER_P02",
+      "exeIntegrated": false,
+      "hardwareAccepted": false,
+      "releaseAccepted": false,
+      "blocker": "E06_HOST_SOURCELOCK_AND_NATIVE_IDENTITY"
+    },
+    {
+      "taskId": "NIP01-02",
+      "routeId": "core.chat",
+      "owner": 2,
+      "sourceBinding": "proposals/NOX-PACK01-50/native_bridge.py:ExistingP02Adapter.chat",
+      "componentCI": "WINDOWS_COMPONENT_PASS_OWNER_P02",
+      "exeIntegrated": false,
+      "hardwareAccepted": false,
+      "releaseAccepted": false,
+      "blocker": "E06_HOST_SOURCELOCK_AND_NATIVE_IDENTITY"
+    },
+    {
+      "taskId": "NIP01-03",
+      "routeId": "persona.chat",
+      "owner": 2,
+      "sourceBinding": "proposals/NOX-PACK01-50/native_bridge.py:ExistingP02Adapter.chat",
+      "componentCI": "WINDOWS_COMPONENT_PASS_OWNER_P02",
+      "exeIntegrated": false,
+      "hardwareAccepted": false,
+      "releaseAccepted": false,
+      "blocker": "E06_HOST_SOURCELOCK_AND_NATIVE_IDENTITY"
+    },
+    {
+      "taskId": "NIP01-04",
+      "routeId": "chat.model",
+      "owner": 2,
+      "sourceBinding": "proposals/NOX-PACK01-50/native_bridge.py:ExistingP02Adapter.list_models",
+      "componentCI": "WINDOWS_COMPONENT_PASS_OWNER_P02",
+      "exeIntegrated": false,
+      "hardwareAccepted": false,
+      "releaseAccepted": false,
+      "blocker": "E06_HOST_SOURCELOCK_AND_NATIVE_IDENTITY"
+    },
+    {
+      "taskId": "NIP01-05",
+      "routeId": "chat.history",
+      "owner": 2,
+      "sourceBinding": "proposals/NOX-PACK01-50/native_bridge.py:ExistingP02Adapter.history",
+      "componentCI": "WINDOWS_COMPONENT_PASS_OWNER_P02",
+      "exeIntegrated": false,
+      "hardwareAccepted": false,
+      "releaseAccepted": false,
+      "blocker": "P02_SAME_SECOND_HISTORY_ORDER_KNOWN_DEFECT"
+    },
+    {
+      "taskId": "NIP01-06",
+      "routeId": "chat.attach",
+      "owner": 2,
+      "sourceBinding": "proposals/NOX-PACK01-50/native_bridge.py:ExistingP02Adapter.attach_native_selected",
+      "componentCI": "WINDOWS_COMPONENT_PASS_OWNER_P02",
+      "exeIntegrated": false,
+      "hardwareAccepted": false,
+      "releaseAccepted": false,
+      "blocker": "TRUSTED_NATIVE_FILE_PICKER_AND_HOST"
+    },
+    {
+      "taskId": "NIP01-07",
+      "routeId": "chat.rag",
+      "owner": 2,
+      "sourceBinding": "Packages/P02/worker-python/p02_owner_route_ports.py:OwnerTwoPorts.rag_context",
+      "componentCI": "NOT_RUN",
+      "exeIntegrated": false,
+      "hardwareAccepted": false,
+      "releaseAccepted": false,
+      "blocker": "CURRENT_NATIVE_OWNER_CAPABILITY_CONSENT_SOURCELOCK_NOT_VERIFIED"
+    },
+    {
+      "taskId": "NIP01-08",
+      "routeId": "chat.voice",
+      "owner": 2,
+      "sourceBinding": "Packages/P02/worker-python/p02_owner_route_ports.py:OwnerTwoPorts.captured_voice",
+      "componentCI": "NOT_RUN",
+      "exeIntegrated": false,
+      "hardwareAccepted": false,
+      "releaseAccepted": false,
+      "blocker": "CURRENT_NATIVE_OWNER_CAPABILITY_CONSENT_SOURCELOCK_NOT_VERIFIED"
+    },
+    {
+      "taskId": "NIP01-09",
+      "routeId": "chat.stop",
+      "owner": 2,
+      "sourceBinding": "proposals/NOX-PACK01-50/native_bridge.py:ExistingP02Adapter.stop",
+      "componentCI": "WINDOWS_COMPONENT_PASS_OWNER_P02",
+      "exeIntegrated": false,
+      "hardwareAccepted": false,
+      "releaseAccepted": false,
+      "blocker": "E06_HOST_SOURCELOCK_AND_NATIVE_IDENTITY"
+    },
+    {
+      "taskId": "NIP01-10",
+      "routeId": "chat.commands",
+      "owner": 2,
+      "sourceBinding": "proposals/NOX-PACK01-50/native_bridge.py:ExistingP02Adapter.scoped_commands",
+      "componentCI": "WINDOWS_COMPONENT_PASS_OWNER_P02",
+      "exeIntegrated": false,
+      "hardwareAccepted": false,
+      "releaseAccepted": false,
+      "blocker": "CANONICAL_HOST_ROUTE_REGISTRY"
+    },
+    {
+      "taskId": "NIP01-11",
+      "routeId": "models.catalog",
+      "owner": 3,
+      "sourceBinding": "proposals/NOX-PACK01-50/P03OwnerPack.cs:P03OwnerPack.ExecuteAsync",
+      "componentCI": "WINDOWS_COMPONENT_PASS_OWNER_P03",
+      "exeIntegrated": false,
+      "hardwareAccepted": false,
+      "releaseAccepted": false,
+      "blocker": "HOST_SOURCELOCK_PINNED_MODEL_LICENSE_LIVE_OLLAMA_NOT_VERIFIED"
+    },
+    {
+      "taskId": "NIP01-12",
+      "routeId": "models.installed",
+      "owner": 3,
+      "sourceBinding": "proposals/NOX-PACK01-50/P03OwnerPack.cs:P03OwnerPack.ExecuteAsync",
+      "componentCI": "WINDOWS_COMPONENT_PASS_OWNER_P03",
+      "exeIntegrated": false,
+      "hardwareAccepted": false,
+      "releaseAccepted": false,
+      "blocker": "HOST_SOURCELOCK_PINNED_MODEL_LICENSE_LIVE_OLLAMA_NOT_VERIFIED"
+    },
+    {
+      "taskId": "NIP01-13",
+      "routeId": "models.pull",
+      "owner": 3,
+      "sourceBinding": "proposals/NOX-PACK01-50/P03OwnerPack.cs:P03OwnerPack.ExecuteAsync",
+      "componentCI": "WINDOWS_COMPONENT_PASS_OWNER_P03",
+      "exeIntegrated": false,
+      "hardwareAccepted": false,
+      "releaseAccepted": false,
+      "blocker": "HOST_SOURCELOCK_PINNED_MODEL_LICENSE_LIVE_OLLAMA_NOT_VERIFIED"
+    },
+    {
+      "taskId": "NIP01-14",
+      "routeId": "models.gguf.import",
+      "owner": 3,
+      "sourceBinding": "proposals/NOX-PACK01-50/P03OwnerPack.cs:P03OwnerPack.ExecuteAsync",
+      "componentCI": "WINDOWS_COMPONENT_PASS_OWNER_P03",
+      "exeIntegrated": false,
+      "hardwareAccepted": false,
+      "releaseAccepted": false,
+      "blocker": "HOST_SOURCELOCK_PINNED_MODEL_LICENSE_LIVE_OLLAMA_NOT_VERIFIED"
+    },
+    {
+      "taskId": "NIP01-15",
+      "routeId": "models.queue",
+      "owner": 3,
+      "sourceBinding": "proposals/NOX-PACK01-50/P03OwnerPack.cs:P03OwnerPack.ExecuteAsync",
+      "componentCI": "WINDOWS_COMPONENT_PASS_OWNER_P03",
+      "exeIntegrated": false,
+      "hardwareAccepted": false,
+      "releaseAccepted": false,
+      "blocker": "HOST_SOURCELOCK_PINNED_MODEL_LICENSE_LIVE_OLLAMA_NOT_VERIFIED"
+    },
+    {
+      "taskId": "NIP01-16",
+      "routeId": "models.cancel",
+      "owner": 3,
+      "sourceBinding": "proposals/NOX-PACK01-50/P03OwnerPack.cs:P03OwnerPack.ExecuteAsync",
+      "componentCI": "WINDOWS_COMPONENT_PASS_OWNER_P03",
+      "exeIntegrated": false,
+      "hardwareAccepted": false,
+      "releaseAccepted": false,
+      "blocker": "HOST_SOURCELOCK_PINNED_MODEL_LICENSE_LIVE_OLLAMA_NOT_VERIFIED"
+    },
+    {
+      "taskId": "NIP01-17",
+      "routeId": "models.retry",
+      "owner": 3,
+      "sourceBinding": "proposals/NOX-PACK01-50/P03OwnerPack.cs:P03OwnerPack.ExecuteAsync",
+      "componentCI": "WINDOWS_COMPONENT_PASS_OWNER_P03",
+      "exeIntegrated": false,
+      "hardwareAccepted": false,
+      "releaseAccepted": false,
+      "blocker": "HOST_SOURCELOCK_PINNED_MODEL_LICENSE_LIVE_OLLAMA_NOT_VERIFIED"
+    },
+    {
+      "taskId": "NIP01-18",
+      "routeId": "models.digest",
+      "owner": 3,
+      "sourceBinding": "proposals/NOX-PACK01-50/P03OwnerPack.cs:P03OwnerPack.ExecuteAsync",
+      "componentCI": "WINDOWS_COMPONENT_PASS_OWNER_P03",
+      "exeIntegrated": false,
+      "hardwareAccepted": false,
+      "releaseAccepted": false,
+      "blocker": "HOST_SOURCELOCK_PINNED_MODEL_LICENSE_LIVE_OLLAMA_NOT_VERIFIED"
+    },
+    {
+      "taskId": "NIP01-19",
+      "routeId": "models.preflight",
+      "owner": 3,
+      "sourceBinding": "proposals/NOX-PACK01-50/P03OwnerPack.cs:P03OwnerPack.ExecuteAsync",
+      "componentCI": "WINDOWS_COMPONENT_PASS_OWNER_P03",
+      "exeIntegrated": false,
+      "hardwareAccepted": false,
+      "releaseAccepted": false,
+      "blocker": "HOST_SOURCELOCK_PINNED_MODEL_LICENSE_LIVE_OLLAMA_NOT_VERIFIED"
+    },
+    {
+      "taskId": "NIP01-20",
+      "routeId": "models.licenses",
+      "owner": 3,
+      "sourceBinding": "proposals/NOX-PACK01-50/P03OwnerPack.cs:P03OwnerPack.ExecuteAsync",
+      "componentCI": "WINDOWS_COMPONENT_PENDING_CURRENT_OWNER_CI",
+      "exeIntegrated": false,
+      "hardwareAccepted": false,
+      "releaseAccepted": false,
+      "blocker": "EXACT_TAG_LICENSE_REVIEW_REQUIRED_EVEN_WITH_LIVE_CATALOGUE"
+    },
+    {
+      "taskId": "NIP01-21",
+      "routeId": "rag.import",
+      "owner": 4,
+      "sourceBinding": "proposals/NOX-PACK01-50/P04OwnerPack.cs:P04OwnerPack.ExecuteAsync",
+      "componentCI": "WINDOWS_COMPONENT_PASS_OWNER_P04",
+      "exeIntegrated": false,
+      "hardwareAccepted": false,
+      "releaseAccepted": false,
+      "blocker": "RAG_EMBEDDINGS_MODEL_NATIVE_SCOPE_AND_HOST"
+    },
+    {
+      "taskId": "NIP01-22",
+      "routeId": "rag.search",
+      "owner": 4,
+      "sourceBinding": "proposals/NOX-PACK01-50/P04OwnerPack.cs:P04OwnerPack.ExecuteAsync",
+      "componentCI": "WINDOWS_COMPONENT_PASS_OWNER_P04",
+      "exeIntegrated": false,
+      "hardwareAccepted": false,
+      "releaseAccepted": false,
+      "blocker": "RAG_EMBEDDINGS_MODEL_NATIVE_SCOPE_AND_HOST"
+    },
+    {
+      "taskId": "NIP01-23",
+      "routeId": "memory.manage",
+      "owner": 4,
+      "sourceBinding": "proposals/NOX-PACK01-50/P04OwnerPack.cs:P04OwnerPack.ExecuteAsync",
+      "componentCI": "WINDOWS_COMPONENT_PASS_OWNER_P04",
+      "exeIntegrated": false,
+      "hardwareAccepted": false,
+      "releaseAccepted": false,
+      "blocker": "RAG_EMBEDDINGS_MODEL_NATIVE_SCOPE_AND_HOST"
+    },
+    {
+      "taskId": "NIP01-24",
+      "routeId": "datasets.review",
+      "owner": 4,
+      "sourceBinding": "proposals/NOX-PACK01-50/p04_training_readonly.py:P04TrainingReadOnlyPack.review_dataset",
+      "componentCI": "WINDOWS_COMPONENT_PENDING_CURRENT_OWNER_CI",
+      "exeIntegrated": false,
+      "hardwareAccepted": false,
+      "releaseAccepted": false,
+      "blocker": "APPROVED_NATIVE_DATASET_RIGHTS_VERIFIER_AND_HOST"
+    },
+    {
+      "taskId": "NIP01-25",
+      "routeId": "gpu.preflight",
+      "owner": 4,
+      "sourceBinding": "proposals/NOX-PACK01-50/P04OwnerPack.cs:P04OwnerPack.ExecuteAsync",
+      "componentCI": "WINDOWS_COMPONENT_PASS_OWNER_P04",
+      "exeIntegrated": false,
+      "hardwareAccepted": false,
+      "releaseAccepted": false,
+      "blocker": "REAL_OWNER_GPU_HARDWARE_AND_HOST"
+    },
+    {
+      "taskId": "NIP01-26",
+      "routeId": "training.start",
+      "owner": 4,
+      "sourceBinding": "proposals/NOX-PACK01-50/p04_owner_training_port.py:P04OriginalTrainingPorts.start",
+      "componentCI": "NOT_RUN",
+      "exeIntegrated": false,
+      "hardwareAccepted": false,
+      "releaseAccepted": false,
+      "blocker": "OWNER_SOURCE_CANDIDATE_NATIVE_RECEIPT_CONSENT_SAME_SHA_QA_HOLD"
+    },
+    {
+      "taskId": "NIP01-27",
+      "routeId": "training.pause",
+      "owner": 4,
+      "sourceBinding": "proposals/NOX-PACK01-50/P04OwnerPack.cs:P04OwnerPack.ExecuteAsync",
+      "componentCI": "WINDOWS_COMPONENT_PASS_OWNER_P04",
+      "exeIntegrated": false,
+      "hardwareAccepted": false,
+      "releaseAccepted": false,
+      "blocker": "AUTHORIZED_GPU_WORKER_NATIVE_RUNTIME_AND_HOST"
+    },
+    {
+      "taskId": "NIP01-28",
+      "routeId": "training.resume",
+      "owner": 4,
+      "sourceBinding": "proposals/NOX-PACK01-50/P04OwnerPack.cs:P04OwnerPack.ExecuteAsync",
+      "componentCI": "WINDOWS_COMPONENT_PASS_OWNER_P04",
+      "exeIntegrated": false,
+      "hardwareAccepted": false,
+      "releaseAccepted": false,
+      "blocker": "AUTHORIZED_GPU_WORKER_NATIVE_RUNTIME_AND_HOST"
+    },
+    {
+      "taskId": "NIP01-29",
+      "routeId": "training.checkpoints",
+      "owner": 4,
+      "sourceBinding": "proposals/NOX-PACK01-50/p04_training_readonly.py:P04TrainingReadOnlyPack.inspect_checkpoint",
+      "componentCI": "WINDOWS_COMPONENT_PENDING_CURRENT_OWNER_CI",
+      "exeIntegrated": false,
+      "hardwareAccepted": false,
+      "releaseAccepted": false,
+      "blocker": "EXISTING_FULL_STATE_CKPT_AND_NATIVE_OWNER_HOST"
+    },
+    {
+      "taskId": "NIP01-30",
+      "routeId": "training.evaluate",
+      "owner": 4,
+      "sourceBinding": "proposals/NOX-PACK01-50/p04_owner_training_port.py:P04OriginalTrainingPorts.evaluate",
+      "componentCI": "NOT_RUN",
+      "exeIntegrated": false,
+      "hardwareAccepted": false,
+      "releaseAccepted": false,
+      "blocker": "OWNER_SOURCE_CANDIDATE_NATIVE_RECEIPT_CONSENT_SAME_SHA_QA_HOLD"
+    },
+    {
+      "taskId": "NIP01-31",
+      "routeId": "translate.ru_es",
+      "owner": 2,
+      "sourceBinding": "proposals/NOX-PACK01-50/native_bridge.py:ExistingP02VoiceAdapter.speak.translate",
+      "componentCI": "WINDOWS_COMPONENT_PASS_OWNER_P02",
+      "exeIntegrated": false,
+      "hardwareAccepted": false,
+      "releaseAccepted": false,
+      "blocker": "LOCAL_ASR_TTS_WEIGHTS_REAL_MIC_AND_HOST"
+    },
+    {
+      "taskId": "NIP01-32",
+      "routeId": "maestro.spanish",
+      "owner": 2,
+      "sourceBinding": "proposals/NOX-PACK01-50/native_bridge.py:ExistingP02VoiceAdapter.speak.maestro",
+      "componentCI": "WINDOWS_COMPONENT_PASS_OWNER_P02",
+      "exeIntegrated": false,
+      "hardwareAccepted": false,
+      "releaseAccepted": false,
+      "blocker": "LOCAL_ASR_TTS_WEIGHTS_REAL_MIC_AND_HOST"
+    },
+    {
+      "taskId": "NIP01-33",
+      "routeId": "voice.settings",
+      "owner": 2,
+      "sourceBinding": "proposals/NOX-PACK01-50/native_bridge.py:ExistingP02VoiceAdapter.voice_settings",
+      "componentCI": "WINDOWS_COMPONENT_PENDING_CURRENT_OWNER_CI",
+      "exeIntegrated": false,
+      "hardwareAccepted": false,
+      "releaseAccepted": false,
+      "blocker": "APPROVED_INSTALLED_TTS_VOICES_AND_NATIVE_HOST"
+    },
+    {
+      "taskId": "NIP01-34",
+      "routeId": "calls.dial",
+      "owner": 2,
+      "sourceBinding": "proposals/NOX-PACK01-50/native_bridge.py:ExistingP02VoiceAdapter.dial",
+      "componentCI": "WINDOWS_COMPONENT_PASS_OWNER_P02",
+      "exeIntegrated": false,
+      "hardwareAccepted": false,
+      "releaseAccepted": false,
+      "blocker": "SIP_PROVIDER_QUOTE_NATIVE_APPROVAL_AND_HOST"
+    },
+    {
+      "taskId": "NIP01-35",
+      "routeId": "calls.history",
+      "owner": 2,
+      "sourceBinding": "Packages/P02/worker-python/p02_owner_route_ports.py:OwnerTwoPorts.calls_history",
+      "componentCI": "NOT_RUN",
+      "exeIntegrated": false,
+      "hardwareAccepted": false,
+      "releaseAccepted": false,
+      "blocker": "CURRENT_NATIVE_OWNER_CAPABILITY_CONSENT_SOURCELOCK_NOT_VERIFIED"
+    },
+    {
+      "taskId": "NIP01-36",
+      "routeId": "media.player",
+      "owner": 1,
+      "sourceBinding": "integrations/creative/bridge/CreativeHostBridge.cs:OpenOwnerMediaRouteAsync",
+      "componentCI": "NOT_RUN",
+      "exeIntegrated": false,
+      "hardwareAccepted": false,
+      "releaseAccepted": false,
+      "blocker": "OWNER_SOURCE_CANDIDATE_NATIVE_RECEIPT_CONSENT_SAME_SHA_QA_HOLD"
+    },
+    {
+      "taskId": "NIP01-37",
+      "routeId": "media.subtitles",
+      "owner": 1,
+      "sourceBinding": "integrations/creative/bridge/CreativeHostBridge.cs:OpenOwnerMediaRouteAsync",
+      "componentCI": "NOT_RUN",
+      "exeIntegrated": false,
+      "hardwareAccepted": false,
+      "releaseAccepted": false,
+      "blocker": "OWNER_SOURCE_CANDIDATE_NATIVE_RECEIPT_CONSENT_SAME_SHA_QA_HOLD"
+    },
+    {
+      "taskId": "NIP01-38",
+      "routeId": "browser.open",
+      "owner": 1,
+      "sourceBinding": "proposals/NOX-PACK01-50/p01_windows_owner_ports.py:P01WindowsOwnerPorts.open_browser",
+      "componentCI": "NOT_RUN",
+      "exeIntegrated": false,
+      "hardwareAccepted": false,
+      "releaseAccepted": false,
+      "blocker": "SOURCE_CANDIDATE_NATIVE_WINDOWS_OWNER_PRECONDITIONS_AND_INDEPENDENT_QA_HOLD"
+    },
+    {
+      "taskId": "NIP01-39",
+      "routeId": "browser.bookmarks",
+      "owner": 1,
+      "sourceBinding": "proposals/NOX-PACK01-50/p01_windows_owner_ports.py:P01WindowsOwnerPorts.bookmarks",
+      "componentCI": "NOT_RUN",
+      "exeIntegrated": false,
+      "hardwareAccepted": false,
+      "releaseAccepted": false,
+      "blocker": "SOURCE_CANDIDATE_NATIVE_WINDOWS_OWNER_PRECONDITIONS_AND_INDEPENDENT_QA_HOLD"
+    },
+    {
+      "taskId": "NIP01-40",
+      "routeId": "images.generate",
+      "owner": 4,
+      "sourceBinding": "proposals/NOX-PACK01-50/p04_comfy_image_owner_port.py:P04ComfyOwnerPort.generate",
+      "componentCI": "NOT_RUN",
+      "exeIntegrated": false,
+      "hardwareAccepted": false,
+      "releaseAccepted": false,
+      "blocker": "OWNER_SOURCE_CANDIDATE_NATIVE_RECEIPT_CONSENT_SAME_SHA_QA_HOLD"
+    },
+    {
+      "taskId": "NIP01-41",
+      "routeId": "space.news",
+      "owner": 5,
+      "sourceBinding": "proposals/NOX-PACK01-50/E05OwnerPack.cs:E05OwnerPack.ExecuteAsync",
+      "componentCI": "WINDOWS_COMPONENT_PASS_OWNER_E05",
+      "exeIntegrated": false,
+      "hardwareAccepted": false,
+      "releaseAccepted": false,
+      "blocker": "OWNER_LICENSED_SOURCE_CONFIG_AND_NATIVE_HOST"
+    },
+    {
+      "taskId": "NIP01-42",
+      "routeId": "space.weather",
+      "owner": 5,
+      "sourceBinding": "proposals/NOX-PACK01-50/E05OwnerPack.cs:E05OwnerPack.ExecuteAsync",
+      "componentCI": "WINDOWS_COMPONENT_PASS_OWNER_E05",
+      "exeIntegrated": false,
+      "hardwareAccepted": false,
+      "releaseAccepted": false,
+      "blocker": "OWNER_LICENSED_SOURCE_CONFIG_AND_NATIVE_HOST"
+    },
+    {
+      "taskId": "NIP01-43",
+      "routeId": "space.fx",
+      "owner": 5,
+      "sourceBinding": "proposals/NOX-PACK01-50/E05OwnerPack.cs:E05OwnerPack.ExecuteAsync",
+      "componentCI": "WINDOWS_COMPONENT_PASS_OWNER_E05",
+      "exeIntegrated": false,
+      "hardwareAccepted": false,
+      "releaseAccepted": false,
+      "blocker": "OWNER_LICENSED_SOURCE_CONFIG_AND_NATIVE_HOST"
+    },
+    {
+      "taskId": "NIP01-44",
+      "routeId": "space.bitcoin",
+      "owner": 5,
+      "sourceBinding": "proposals/NOX-PACK01-50/E05OwnerPack.cs:E05OwnerPack.ExecuteAsync",
+      "componentCI": "WINDOWS_COMPONENT_PASS_OWNER_E05",
+      "exeIntegrated": false,
+      "hardwareAccepted": false,
+      "releaseAccepted": false,
+      "blocker": "OWNER_LICENSED_SOURCE_CONFIG_AND_NATIVE_HOST"
+    },
+    {
+      "taskId": "NIP01-45",
+      "routeId": "space.brent",
+      "owner": 5,
+      "sourceBinding": "proposals/NOX-PACK01-50/E05OwnerPack.cs:E05OwnerPack.ExecuteAsync",
+      "componentCI": "WINDOWS_COMPONENT_PASS_OWNER_E05",
+      "exeIntegrated": false,
+      "hardwareAccepted": false,
+      "releaseAccepted": false,
+      "blocker": "OWNER_LICENSED_SOURCE_CONFIG_AND_NATIVE_HOST"
+    },
+    {
+      "taskId": "NIP01-46",
+      "routeId": "system.telemetry",
+      "owner": 5,
+      "sourceBinding": "proposals/NOX-PACK01-50/E05OwnerPack.cs:E05OwnerPack.ExecuteAsync",
+      "componentCI": "WINDOWS_COMPONENT_PASS_OWNER_E05",
+      "exeIntegrated": false,
+      "hardwareAccepted": false,
+      "releaseAccepted": false,
+      "blocker": "NATIVE_SENSOR_HOST_BRIDGE"
+    },
+    {
+      "taskId": "NIP01-47",
+      "routeId": "system.update",
+      "owner": 1,
+      "sourceBinding": "proposals/NOX-PACK01-50/p01_windows_owner_ports.py:P01WindowsOwnerPorts.update",
+      "componentCI": "NOT_RUN",
+      "exeIntegrated": false,
+      "hardwareAccepted": false,
+      "releaseAccepted": false,
+      "blocker": "SOURCE_CANDIDATE_NATIVE_WINDOWS_OWNER_PRECONDITIONS_AND_INDEPENDENT_QA_HOLD"
+    },
+    {
+      "taskId": "NIP01-48",
+      "routeId": "system.backup",
+      "owner": 1,
+      "sourceBinding": "proposals/NOX-PACK01-50/p01_restic_backup_port.py:P01ResticBackupPort.backup",
+      "componentCI": "NOT_RUN",
+      "exeIntegrated": false,
+      "hardwareAccepted": false,
+      "releaseAccepted": false,
+      "blocker": "OWNER_SOURCE_CANDIDATE_NATIVE_RECEIPT_CONSENT_SAME_SHA_QA_HOLD"
+    },
+    {
+      "taskId": "NIP01-49",
+      "routeId": "system.pc_control",
+      "owner": 1,
+      "sourceBinding": "proposals/NOX-PACK01-50/p01_windows_owner_ports.py:P01WindowsOwnerPorts.pc_control",
+      "componentCI": "NOT_RUN",
+      "exeIntegrated": false,
+      "hardwareAccepted": false,
+      "releaseAccepted": false,
+      "blocker": "SOURCE_CANDIDATE_NATIVE_WINDOWS_OWNER_PRECONDITIONS_AND_INDEPENDENT_QA_HOLD"
+    },
+    {
+      "taskId": "NIP01-50",
+      "routeId": "mobile.connect",
+      "owner": 6,
+      "sourceBinding": "coordination/e06/adapters/g2_space_mobile.py:PrivateMobileContract.connect",
+      "componentCI": "NOT_RUN",
+      "exeIntegrated": false,
+      "hardwareAccepted": false,
+      "releaseAccepted": false,
+      "blocker": "NATIVE_PRIVATE_GATEWAY_HOST_ACK_AND_SAME_SHA_QA_PENDING"
+    }
+  ],
+  "proof": {
+    "routeContract": {
+      "runId": 40599944071,
+      "tests": 57,
+      "passed": 57,
+      "failed": 0,
+      "commit": "43b3e3b99f44bec2046d9aa81241ffbde73828c2"
+    },
+    "p02Owner": {
+      "runId": 40599944080,
+      "pythonTests": 15,
+      "knownExpectedFailures": 1,
+      "commit": "43b3e3b99f44bec2046d9aa81241ffbde73828c2"
+    },
+    "p03Owner": {
+      "runId": 40599944082,
+      "build": "PASS",
+      "syntheticOwnerSmoke": "PASS",
+      "warningCount": 1,
+      "commit": "43b3e3b99f44bec2046d9aa81241ffbde73828c2"
+    },
+    "e05Owner": {
+      "runId": 40599944081,
+      "build": "PASS",
+      "sourceSensorSmoke": "PASS",
+      "warningCount": 1,
+      "commit": "43b3e3b99f44bec2046d9aa81241ffbde73828c2"
+    },
+    "finalExe": {
+      "status": "NOT_INTEGRATED",
+      "sameShaAcceptance": "NOT_RUN"
+    },
+    "p04Owner": {
+      "runId": 40600745617,
+      "head": "b9d47a06696e41ef73e613a9e1233948e0a5983b",
+      "build": "PASS",
+      "scopedRagSmoke": "PASS",
+      "realGpuReadOrND": "PASS",
+      "localModelTraining": "NOT_RUN"
+    },
+    "p02Voice": {
+      "runId": 40601244511,
+      "head": "0917b457e4a05b1dc47ffbd5b67133111fcda9c7",
+      "contract": "PASS",
+      "liveVoiceModels": "NOT_INSTALLED_OR_VERIFIED",
+      "realSipProvider": "NOT_CONNECTED"
+    },
+    "p02NativeExtensions": {
+      "runId": 40601244469,
+      "head": "0917b457e4a05b1dc47ffbd5b67133111fcda9c7",
+      "sourceAttachmentsAndCommands": "PASS"
+    },
+    "originalArchive": {
+      "runId": 40601804526,
+      "files": 729,
+      "sha256": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+      "result": "EXACT_SOURCE_SHA_AND_STATIC_FUNCTION_AUDIT_PASS",
+      "acceptance": "NOT_INTEGRATED"
+    },
+    "newOwnerBindings": {
+      "routeIds": [
+        "voice.settings",
+        "models.licenses",
+        "datasets.review",
+        "training.checkpoints"
+      ],
+      "status": "SOURCE_CANDIDATE_CI_PENDING",
+      "ownerP03": "P03 C40 original ModelCatalog.OfficialFamilies",
+      "ownerP04": "P04 verified original train_qlora.py methods"
+    }
+  },
+  "remainingNativeBlockers": [
+    {
+      "taskId": "NIP01-07",
+      "routeId": "chat.rag",
+      "owner": 2
+    },
+    {
+      "taskId": "NIP01-08",
+      "routeId": "chat.voice",
+      "owner": 2
+    },
+    {
+      "taskId": "NIP01-26",
+      "routeId": "training.start",
+      "owner": 4
+    },
+    {
+      "taskId": "NIP01-30",
+      "routeId": "training.evaluate",
+      "owner": 4
+    },
+    {
+      "taskId": "NIP01-35",
+      "routeId": "calls.history",
+      "owner": 2
+    },
+    {
+      "taskId": "NIP01-36",
+      "routeId": "media.player",
+      "owner": 1
+    },
+    {
+      "taskId": "NIP01-37",
+      "routeId": "media.subtitles",
+      "owner": 1
+    },
+    {
+      "taskId": "NIP01-38",
+      "routeId": "browser.open",
+      "owner": 1
+    },
+    {
+      "taskId": "NIP01-39",
+      "routeId": "browser.bookmarks",
+      "owner": 1
+    },
+    {
+      "taskId": "NIP01-40",
+      "routeId": "images.generate",
+      "owner": 4
+    },
+    {
+      "taskId": "NIP01-47",
+      "routeId": "system.update",
+      "owner": 1
+    },
+    {
+      "taskId": "NIP01-48",
+      "routeId": "system.backup",
+      "owner": 1
+    },
+    {
+      "taskId": "NIP01-49",
+      "routeId": "system.pc_control",
+      "owner": 1
+    },
+    {
+      "taskId": "NIP01-50",
+      "routeId": "mobile.connect",
+      "owner": 6
+    }
+  ]
+}

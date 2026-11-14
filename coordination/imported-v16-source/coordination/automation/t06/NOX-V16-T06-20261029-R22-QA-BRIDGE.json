@@ -1,0 +1,48 @@
+{
+  "schema": "NOX_V16_T06_R22_QA_GATE_SAME_HEAD_RECEIPT_V1",
+  "run_id": "NOX-V16-T06-20261029-R22-QA-BRIDGE",
+  "role": "manual_1_T06 sole PR162 writer",
+  "pre_head": "70cd7b19a1e92eb5bfdc40612ff56d076e21f36c",
+  "pre_tree": "656ed36f4f61eaba1276f38fdd2136afbb2cfef1",
+  "active_error_register_sha": "69bc78d10f6767de1536b7c6c84c82889b38809d",
+  "error_ids": [
+    "ERR-SRC-004",
+    "ERR-SRC-005",
+    "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN",
+    "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01"
+  ],
+  "task": "T06/P01-P05 common_integration independent QA receipt gate",
+  "owner_donor_source": "coordination/r22/QA/t08_autofix_closeout_gate_PROPOSED.py",
+  "owner_donor_git_blob": "d8396f6c91a68eb292602a9563f4eb9743572f85",
+  "change": [
+    {
+      "path": "coordination/automation/t08/t08_autofix_closeout_gate.py",
+      "pre_blob": "923211baca7f0aab4229e7676b36de0436b10ac5",
+      "post_blob": "d8396f6c91a68eb292602a9563f4eb9743572f85"
+    },
+    {
+      "path": "coordination/automation/t08/test_t08_head_alias_conflict_r22.py",
+      "pre_blob": null,
+      "post_blob": "e7557a7922389085eb053932e6fdc14201f2a641"
+    }
+  ],
+  "root_cause": "T08 downstream gate used any matching receipt head alias, allowing a receipt containing conflicting head/source_head to appear valid.",
+  "fix": "All present SHA aliases must be valid and identical to pinned source HEAD before independent source QA can consider a Git receipt consistent.",
+  "test": {
+    "focused_13_cases": "PASS",
+    "python_unittest": "1/1 isolated exact helper; full checkout not run",
+    "owner_negative_source_test": "NEW_BLOB_CREATED",
+    "native_windows": "NOT_RUN"
+  },
+  "flow_improvement": "T06-T08-T02 R22 per-existing-TaskID handoff/readback prompts verified; first P01 component review issue #177 comment 6506049424, central status not auto-promoted.",
+  "guardrails": "P01-P05, Host50, original 729, D02/WOW200, 8 CoreID, 5 Persona, STOP, ACL, consent, user data and prior DONE unchanged",
+  "acceptance": {
+    "T06": "1/8",
+    "percent": 12.5,
+    "delta": 0,
+    "product": "N/D",
+    "SOURCE_READY": false
+  },
+  "no_build": true,
+  "shared_error_writer": "T02 only"
+}

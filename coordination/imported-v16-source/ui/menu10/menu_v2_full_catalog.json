@@ -1,0 +1,1553 @@
+{
+  "format": "NOX_FULL_MENU_V1",
+  "source_sha256": "4f311d1ca2d7c28fd54144cafe4747e94c9c83e74e4fa552dcda863ca11bbca4",
+  "source_url": "https://drive.google.com/file/d/1Ep0HKp-XZzN62mQ2IoNt9xXnOOi7rJGE/view",
+  "item_count": 193,
+  "items": [
+    {
+      "key": "MENU_V2_001",
+      "world": 0,
+      "group": "Основные функции",
+      "label": "Моя работа сегодня",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_002",
+      "world": 0,
+      "group": "Основные функции",
+      "label": "Проекты",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_003",
+      "world": 0,
+      "group": "Основные функции",
+      "label": "Задачи",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_004",
+      "world": 0,
+      "group": "Основные функции",
+      "label": "Миссии",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_005",
+      "world": 0,
+      "group": "Основные функции",
+      "label": "AI Crew / агенты",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_006",
+      "world": 0,
+      "group": "Основные функции",
+      "label": "Команды и роли",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_007",
+      "world": 0,
+      "group": "Основные функции",
+      "label": "Планирование",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_008",
+      "world": 0,
+      "group": "Основные функции",
+      "label": "Календарь",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_009",
+      "world": 0,
+      "group": "Основные функции",
+      "label": "Очереди / долгие задачи",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_010",
+      "world": 0,
+      "group": "Основные функции",
+      "label": "Автоматизации",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_011",
+      "world": 0,
+      "group": "Основные функции",
+      "label": "Approvals",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_012",
+      "world": 0,
+      "group": "Основные функции",
+      "label": "Решения",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_013",
+      "world": 0,
+      "group": "Основные функции",
+      "label": "Результаты / прогресс",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_014",
+      "world": 0,
+      "group": "Основные функции",
+      "label": "Продолжить сессию",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_015",
+      "world": 0,
+      "group": "Основные функции",
+      "label": "Шаблоны / Kanban",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_016",
+      "world": 0,
+      "group": "Основные функции",
+      "label": "Цели",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_017",
+      "world": 0,
+      "group": "Основные функции",
+      "label": "Architecture / Forge",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_018",
+      "world": 0,
+      "group": "Основные функции",
+      "label": "Быстрые команды",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_019",
+      "world": 1,
+      "group": "Основные функции",
+      "label": "Ask NOX / глобальный чат",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_020",
+      "world": 1,
+      "group": "Основные функции",
+      "label": "Прямой чат с каждым из 8 CoreID",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_021",
+      "world": 1,
+      "group": "Основные функции",
+      "label": "Выбор Core / Persona / модели",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_022",
+      "world": 1,
+      "group": "Основные функции",
+      "label": "Deep Research",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_023",
+      "world": 1,
+      "group": "Основные функции",
+      "label": "Web/Search as an embedded tool",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_024",
+      "world": 1,
+      "group": "Основные функции",
+      "label": "FACT ATLAS",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_025",
+      "world": 1,
+      "group": "Основные функции",
+      "label": "Проверка фактов",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_026",
+      "world": 1,
+      "group": "Основные функции",
+      "label": "Анализ документа",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_027",
+      "world": 1,
+      "group": "Основные функции",
+      "label": "Анализ изображения",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_028",
+      "world": 1,
+      "group": "Основные функции",
+      "label": "Анализ видео",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_029",
+      "world": 1,
+      "group": "Основные функции",
+      "label": "Анализ экрана",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_030",
+      "world": 1,
+      "group": "Основные функции",
+      "label": "Сравнение",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_031",
+      "world": 1,
+      "group": "Основные функции",
+      "label": "Расчёты",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_032",
+      "world": 1,
+      "group": "Основные функции",
+      "label": "Код / Data Analysis",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_033",
+      "world": 1,
+      "group": "Основные функции",
+      "label": "Источники / цитаты",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_034",
+      "world": 1,
+      "group": "Основные функции",
+      "label": "Гипотезы",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_035",
+      "world": 1,
+      "group": "Основные функции",
+      "label": "AI Council",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_036",
+      "world": 1,
+      "group": "Основные функции",
+      "label": "Debate Arena",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_037",
+      "world": 2,
+      "group": "Основные функции",
+      "label": "Моя память",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_038",
+      "world": 2,
+      "group": "Основные функции",
+      "label": "Память проектов",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_039",
+      "world": 2,
+      "group": "Основные функции",
+      "label": "Persona Memory",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_040",
+      "world": 2,
+      "group": "Основные функции",
+      "label": "Agent Memory",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_041",
+      "world": 2,
+      "group": "Основные функции",
+      "label": "Knowledge Base / RAG",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_042",
+      "world": 2,
+      "group": "Основные функции",
+      "label": "Документы",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_043",
+      "world": 2,
+      "group": "Основные функции",
+      "label": "Архивы",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_044",
+      "world": 2,
+      "group": "Основные функции",
+      "label": "История диалогов",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_045",
+      "world": 2,
+      "group": "Основные функции",
+      "label": "Web Sources",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_046",
+      "world": 2,
+      "group": "Основные функции",
+      "label": "Knowledge Graph",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_047",
+      "world": 2,
+      "group": "Основные функции",
+      "label": "Timeline",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_048",
+      "world": 2,
+      "group": "Основные функции",
+      "label": "Люди / сущности",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_049",
+      "world": 2,
+      "group": "Основные функции",
+      "label": "Решения",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_050",
+      "world": 2,
+      "group": "Основные функции",
+      "label": "Ошибки / уроки",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_051",
+      "world": 2,
+      "group": "Основные функции",
+      "label": "Semantic Search",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_052",
+      "world": 2,
+      "group": "Основные функции",
+      "label": "Import / Export",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_053",
+      "world": 2,
+      "group": "Основные функции",
+      "label": "Forget / Restore",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_054",
+      "world": 2,
+      "group": "Основные функции",
+      "label": "Provenance / источник / страница / таймкод",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_055",
+      "world": 3,
+      "group": "Основные функции",
+      "label": "Evolution Lab",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_056",
+      "world": 3,
+      "group": "Основные функции",
+      "label": "Фоновое обучение / memory-RAG learning",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_057",
+      "world": 3,
+      "group": "Основные функции",
+      "label": "24/7 Supervisor",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_058",
+      "world": 3,
+      "group": "Основные функции",
+      "label": "Study Queue",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_059",
+      "world": 3,
+      "group": "Основные функции",
+      "label": "Индексация",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_060",
+      "world": 3,
+      "group": "Основные функции",
+      "label": "Обучение по книгам",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_061",
+      "world": 3,
+      "group": "Основные функции",
+      "label": "Обучение по фильмам / видео",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_062",
+      "world": 3,
+      "group": "Основные функции",
+      "label": "Curriculum",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_063",
+      "world": 3,
+      "group": "Основные функции",
+      "label": "Skill Academy",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_064",
+      "world": 3,
+      "group": "Основные функции",
+      "label": "Практика / экзамены",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_065",
+      "world": 3,
+      "group": "Основные функции",
+      "label": "Benchmark Arena",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_066",
+      "world": 3,
+      "group": "Основные функции",
+      "label": "Learning Proofs",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_067",
+      "world": 3,
+      "group": "Основные функции",
+      "label": "Experience Memory",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_068",
+      "world": 3,
+      "group": "Основные функции",
+      "label": "Ошибки / повторение",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_069",
+      "world": 3,
+      "group": "Основные функции",
+      "label": "День / ночь / scheduler",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_070",
+      "world": 3,
+      "group": "Основные функции",
+      "label": "Dataset Lab",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_071",
+      "world": 3,
+      "group": "Основные функции",
+      "label": "LoRA / QLoRA / adapters",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_072",
+      "world": 3,
+      "group": "Основные функции",
+      "label": "GPU training / VRAM preflight",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_073",
+      "world": 3,
+      "group": "Основные функции",
+      "label": "Checkpoint",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_074",
+      "world": 3,
+      "group": "Основные функции",
+      "label": "Before/After Compare",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_075",
+      "world": 3,
+      "group": "Основные функции",
+      "label": "Rollback / STOP",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_076",
+      "world": 3,
+      "group": "Основные функции",
+      "label": "Persona Evolution / traits / history / reflection",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_077",
+      "world": 4,
+      "group": "Кинотеатр",
+      "label": "Что посмотреть",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_078",
+      "world": 4,
+      "group": "Кинотеатр",
+      "label": "AI-поиск фильма",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_079",
+      "world": 4,
+      "group": "Кинотеатр",
+      "label": "По настроению / жанру / актёру / режиссёру / сюжету / длительности",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_080",
+      "world": 4,
+      "group": "Кинотеатр",
+      "label": "Похожее на…",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_081",
+      "world": 4,
+      "group": "Кинотеатр",
+      "label": "Фильм на вечер",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_082",
+      "world": 4,
+      "group": "Кинотеатр",
+      "label": "Рекомендации Persona",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_083",
+      "world": 4,
+      "group": "Кинотеатр",
+      "label": "Совместный выбор несколькими Persona",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_084",
+      "world": 4,
+      "group": "Источники кино",
+      "label": "Разрешённые сайты пользователя",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_085",
+      "world": 4,
+      "group": "Источники кино",
+      "label": "Streaming providers",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_086",
+      "world": 4,
+      "group": "Источники кино",
+      "label": "Локальные файлы",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_087",
+      "world": 4,
+      "group": "Источники кино",
+      "label": "Media server / Jellyfin",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_088",
+      "world": 4,
+      "group": "Источники кино",
+      "label": "Embedded browser/web-view as a hidden tool",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_089",
+      "world": 4,
+      "group": "Источники кино",
+      "label": "Movie Source Manager",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_090",
+      "world": 4,
+      "group": "Источники кино",
+      "label": "Где доступно легально",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_091",
+      "world": 4,
+      "group": "Player",
+      "label": "Play/Pause/Resume",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_092",
+      "world": 4,
+      "group": "Player",
+      "label": "History",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_093",
+      "world": 4,
+      "group": "Player",
+      "label": "Subtitles",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_094",
+      "world": 4,
+      "group": "Player",
+      "label": "Audio tracks",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_095",
+      "world": 4,
+      "group": "Player",
+      "label": "Timecodes / bookmarks / favorites / playlists",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_096",
+      "world": 4,
+      "group": "AI во время просмотра",
+      "label": "Кто этот актёр?",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_097",
+      "world": 4,
+      "group": "AI во время просмотра",
+      "label": "Что произошло?",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_098",
+      "world": 4,
+      "group": "AI во время просмотра",
+      "label": "Объясни сцену",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_099",
+      "world": 4,
+      "group": "AI во время просмотра",
+      "label": "Без спойлеров",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_100",
+      "world": 4,
+      "group": "AI во время просмотра",
+      "label": "Переведи реплику",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_101",
+      "world": 4,
+      "group": "AI во время просмотра",
+      "label": "Найди факт / место",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_102",
+      "world": 4,
+      "group": "AI во время просмотра",
+      "label": "Обсуди с Persona",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_103",
+      "world": 4,
+      "group": "AI во время просмотра",
+      "label": "Отправить сцену в обучение",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_104",
+      "world": 4,
+      "group": "Сериалы",
+      "label": "Seasons / next episode / recap / continue",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_105",
+      "world": 4,
+      "group": "Книги и аудио",
+      "label": "PDF / EPUB / TXT reader",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_106",
+      "world": 4,
+      "group": "Книги и аудио",
+      "label": "Audiobooks / podcasts / music / radio",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_107",
+      "world": 4,
+      "group": "Книги и аудио",
+      "label": "Notes / citations / AI discussion",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_108",
+      "world": 4,
+      "group": "Игры",
+      "label": "Chess / strategy / stories / co-op / persona games / virtual worlds",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_109",
+      "world": 4,
+      "group": "Entertainment Spaces",
+      "label": "Cinema room / planetarium / fireplace / Black Sky / Virtual Planet Window / multi-screen cinema",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_110",
+      "world": 5,
+      "group": "Основные функции",
+      "label": "5 canonical Persona",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_111",
+      "world": 5,
+      "group": "Основные функции",
+      "label": "Individual Persona chat / profile / memory / relationships",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_112",
+      "world": 5,
+      "group": "Основные функции",
+      "label": "Real contacts / team / friends",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_113",
+      "world": 5,
+      "group": "Основные функции",
+      "label": "HELION SOCIAL / Living World",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_114",
+      "world": 5,
+      "group": "Основные функции",
+      "label": "Clubs / communities / private inbox",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_115",
+      "world": 5,
+      "group": "Основные функции",
+      "label": "Gmail / Outlook / IMAP",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_116",
+      "world": 5,
+      "group": "Основные функции",
+      "label": "Telegram / WhatsApp / Signal / Discord / Slack / Teams",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_117",
+      "world": 5,
+      "group": "Основные функции",
+      "label": "Unified Inbox",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_118",
+      "world": 5,
+      "group": "Основные функции",
+      "label": "Calls / video calls",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_119",
+      "world": 5,
+      "group": "Основные функции",
+      "label": "Calendar / meetings / reminders",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_120",
+      "world": 5,
+      "group": "Основные функции",
+      "label": "RU↔ES live translation",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_121",
+      "world": 5,
+      "group": "Основные функции",
+      "label": "Voice",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_122",
+      "world": 5,
+      "group": "Основные функции",
+      "label": "Drafts / attachments",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_123",
+      "world": 6,
+      "group": "Основные функции",
+      "label": "Creative Studio",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_124",
+      "world": 6,
+      "group": "Основные функции",
+      "label": "Image Studio",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_125",
+      "world": 6,
+      "group": "Основные функции",
+      "label": "Video Studio",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_126",
+      "world": 6,
+      "group": "Основные функции",
+      "label": "Audio / music / sound",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_127",
+      "world": 6,
+      "group": "Основные функции",
+      "label": "Voice creation",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_128",
+      "world": 6,
+      "group": "Основные функции",
+      "label": "Documents",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_129",
+      "world": 6,
+      "group": "Основные функции",
+      "label": "PPTX / PDF / vector",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_130",
+      "world": 6,
+      "group": "Основные функции",
+      "label": "3D / animation",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_131",
+      "world": 6,
+      "group": "Основные функции",
+      "label": "Avatar / Character Studio",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_132",
+      "world": 6,
+      "group": "Основные функции",
+      "label": "Storyboard",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_133",
+      "world": 6,
+      "group": "Основные функции",
+      "label": "Editing / effects / render",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_134",
+      "world": 6,
+      "group": "Основные функции",
+      "label": "Assets / versions / export",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_135",
+      "world": 6,
+      "group": "Основные функции",
+      "label": "Live Studio",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_136",
+      "world": 6,
+      "group": "Основные функции",
+      "label": "World Builder",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_137",
+      "world": 7,
+      "group": "Основные функции",
+      "label": "Marketing Director",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_138",
+      "world": 7,
+      "group": "Основные функции",
+      "label": "SEO Studio",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_139",
+      "world": 7,
+      "group": "Основные функции",
+      "label": "GSC / analytics",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_140",
+      "world": 7,
+      "group": "Основные функции",
+      "label": "Research / competitors",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_141",
+      "world": 7,
+      "group": "Основные функции",
+      "label": "Content / editorial",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_142",
+      "world": 7,
+      "group": "Основные функции",
+      "label": "Brands / campaigns",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_143",
+      "world": 7,
+      "group": "Основные функции",
+      "label": "CRM / funnel / leads",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_144",
+      "world": 7,
+      "group": "Основные функции",
+      "label": "Site Factory / apps / deploy",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_145",
+      "world": 7,
+      "group": "Основные функции",
+      "label": "Vercel / Railway",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_146",
+      "world": 7,
+      "group": "Основные функции",
+      "label": "Dashboards",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_147",
+      "world": 7,
+      "group": "Основные функции",
+      "label": "Sheets / Excel",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_148",
+      "world": 7,
+      "group": "Основные функции",
+      "label": "Databases / SQL / Neon",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_149",
+      "world": 7,
+      "group": "Основные функции",
+      "label": "Reports",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_150",
+      "world": 7,
+      "group": "Основные функции",
+      "label": "Forecast / finance / commerce",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_151",
+      "world": 7,
+      "group": "Основные функции",
+      "label": "Decision Room: facts / options / assumptions / scenarios / risks / confidence",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_152",
+      "world": 8,
+      "group": "Основные функции",
+      "label": "Maps",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_153",
+      "world": 8,
+      "group": "Основные функции",
+      "label": "Countries / cities / places",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_154",
+      "world": 8,
+      "group": "Основные функции",
+      "label": "Languages",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_155",
+      "world": 8,
+      "group": "Основные функции",
+      "label": "Events / news / reality feed",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_156",
+      "world": 8,
+      "group": "Основные функции",
+      "label": "Research / statistics",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_157",
+      "world": 8,
+      "group": "Основные функции",
+      "label": "Environment",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_158",
+      "world": 8,
+      "group": "Основные функции",
+      "label": "Knowledge Map",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_159",
+      "world": 8,
+      "group": "Основные функции",
+      "label": "Digital Twin",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_160",
+      "world": 8,
+      "group": "Основные функции",
+      "label": "Simulation",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_161",
+      "world": 8,
+      "group": "Основные функции",
+      "label": "Scenario Builder",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_162",
+      "world": 8,
+      "group": "Основные функции",
+      "label": "What If",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_163",
+      "world": 8,
+      "group": "Основные функции",
+      "label": "Forecast",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_164",
+      "world": 8,
+      "group": "Основные функции",
+      "label": "Risk Map",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_165",
+      "world": 8,
+      "group": "Основные функции",
+      "label": "Trends",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_166",
+      "world": 8,
+      "group": "Основные функции",
+      "label": "Timeline",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_167",
+      "world": 9,
+      "group": "Мой ПК",
+      "label": "CPU / GPU / RAM / VRAM / SSD",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_168",
+      "world": 9,
+      "group": "Мой ПК",
+      "label": "Processes / autostart",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_169",
+      "world": 9,
+      "group": "Мой ПК",
+      "label": "RAM management",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_170",
+      "world": 9,
+      "group": "Мой ПК",
+      "label": "Safe TEMP/cache cleanup",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_171",
+      "world": 9,
+      "group": "Мой ПК",
+      "label": "Large files / disks",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_172",
+      "world": 9,
+      "group": "Мой ПК",
+      "label": "Apps / Windows / services / drivers",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_173",
+      "world": 9,
+      "group": "Мой ПК",
+      "label": "Network / Wi-Fi / Bluetooth",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_174",
+      "world": 9,
+      "group": "Мой ПК",
+      "label": "Displays / audio / camera / microphone / peripherals",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_175",
+      "world": 9,
+      "group": "Мой ПК",
+      "label": "Power / fans / temperatures",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_176",
+      "world": 9,
+      "group": "Мой ПК",
+      "label": "MAX / BALANCED / ECO",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_177",
+      "world": 9,
+      "group": "PC CONTROL",
+      "label": "Preview → Permission → Confirm → Execute → Verify → Undo/Restore",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_178",
+      "world": 9,
+      "group": "PC CONTROL",
+      "label": "Global STOP / revoke",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_179",
+      "world": 9,
+      "group": "Devices / Spaces",
+      "label": "TV / Cast / G-FLIP / multi-monitor",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_180",
+      "world": 9,
+      "group": "Devices / Spaces",
+      "label": "Smart Home",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_181",
+      "world": 9,
+      "group": "Devices / Spaces",
+      "label": "AR/VR",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_182",
+      "world": 9,
+      "group": "Devices / Spaces",
+      "label": "Wearables / sensors / robots",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_183",
+      "world": 9,
+      "group": "NOX Core",
+      "label": "8 Core status",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_184",
+      "world": 9,
+      "group": "NOX Core",
+      "label": "Models / Provider Router / Local AI / Cloud AI",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_185",
+      "world": 9,
+      "group": "NOX Core",
+      "label": "Model Library",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_186",
+      "world": 9,
+      "group": "NOX Core",
+      "label": "Skills / Skill Market",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_187",
+      "world": 9,
+      "group": "NOX Core",
+      "label": "Plugins / MCP / Connectors / APIs",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_188",
+      "world": 9,
+      "group": "NOX Core",
+      "label": "Agent Builder / Workflow Builder / Tool Builder",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_189",
+      "world": 9,
+      "group": "NOX Core",
+      "label": "Developer Mode / Sandbox",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_190",
+      "world": 9,
+      "group": "NOX Core",
+      "label": "Logs / Traces / Evals",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_191",
+      "world": 9,
+      "group": "NOX Core",
+      "label": "Security / Permissions / Secrets / Audit",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_192",
+      "world": 9,
+      "group": "NOX Core",
+      "label": "Backup / Recovery / Updates / Versions",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    },
+    {
+      "key": "MENU_V2_193",
+      "world": 9,
+      "group": "NOX Core",
+      "label": "Provider Status / Settings",
+      "source": "MENU_TREE_V2",
+      "status": "CONTRACT_REQUIRED"
+    }
+  ],
+  "note": "Source-listed entries only. 216 future subsections mentioned in MAIN is a separate reconciliation target; not invented here."
+}

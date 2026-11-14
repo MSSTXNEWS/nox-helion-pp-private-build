@@ -1,0 +1,102 @@
+{
+  "schema": "NOX_V16_E02_R10_OWNER_SOURCE_RECEIPT_V1",
+  "run_id": "NOX-V16-E02-G1-20261028T1446MSK-R10",
+  "owner": "E02",
+  "status": "SOURCE_TESTED_INTEGRATION_HOLD",
+  "baseline_commit": "0b3a7d435be735148d64171deb9027093a89646e",
+  "baseline_tree": "f108d604c444f718b32aaecfd07b90b8f91b9a6f",
+  "parent_commit": "9ade984a8be08b39e4339da762aeb100b512b789",
+  "branch": "e02/v16-g1-r10-history-snapshot-20261028",
+  "source_lock": "NO_NEW_E06_729_FILE_SOURCELOCK; PR66 INVENTORY_ONLY",
+  "files": [
+    {
+      "path": "Packages/P02/worker-python/p02_chat_bridge.py",
+      "owner": "E02",
+      "pre_sha256": "3f573ed0ce2b52e796b8423b2707a769550aec928a0d6922da4d510ae92a6d79",
+      "pre_git_blob_sha1": "ec88add55891b28cf8e01eaeece9ce0ccb66959e",
+      "post_sha256": "e2d308a3aec769353a0e80877283c9d5fd500353d23bc1a58a1f5bc8b609650b",
+      "post_git_blob_sha1": "03b5f43b34ca0216cb1e957b3f9aafc29d42d9e8",
+      "diff_summary": "Validate and freeze bounded authorized dialogue rows into explicit role/content snapshot before model/RAG; reject forged system/developer roles, invalid Unicode, oversize/invalid shape; never modify existing SQLite/voice/LLM."
+    },
+    {
+      "path": "Packages/P02/worker-python/test_p02_history_integrity_r10.py",
+      "owner": "E02",
+      "pre_sha256": "ABSENT",
+      "pre_git_blob_sha1": "ABSENT",
+      "post_sha256": "bc22754bf2bdca408de9872ca1a00169b781fe8cabe501955244dbe9aa170492",
+      "post_git_blob_sha1": "e5e65edf4c5b3ae78e2e4de03f5300078be84261",
+      "diff_summary": "Ten offline negative and preservation regressions on exact owner seam."
+    }
+  ],
+  "tests": {
+    "historical_offline": "49/49 PASS",
+    "r10_preimage_negative": "10 cases: 2 PASS, 7 FAIL, 1 ERROR",
+    "r10_patched_offline": "59/59 PASS",
+    "runtime_ollama": "NOT_RUN",
+    "shared_production_sqlite": "NOT_RUN",
+    "installed_windows": "NOT_RUN",
+    "microphone_weights_sip": "NOT_RUN"
+  },
+  "audit": {
+    "no_second_db": true,
+    "no_second_llm": true,
+    "no_second_host": true,
+    "main_unchanged": true,
+    "do_not_merge_without_e06_owner_receipt": true,
+    "original_raw_source_parts_sha256": "NOT_VERIFIED",
+    "original_extracted_729_source_sha256": "NOT_VERIFIED"
+  },
+  "self_improvement": "BOUND_AND_FREEZE_HOST_HISTORY_BEFORE_OLLAMA",
+  "run_ledger": [
+    [
+      "E02-R10-01",
+      "immutable source verification",
+      "SOURCE MATCH"
+    ],
+    [
+      "E02-R10-02",
+      "one authenticated WPF WebView2 Python host",
+      "HOLD native"
+    ],
+    [
+      "E02-R10-03",
+      "installed /api/tags model",
+      "HOLD runtime"
+    ],
+    [
+      "E02-R10-04",
+      "/api/chat streaming STOP TIMEOUT",
+      "OFFLINE 49 PASS; live HOLD"
+    ],
+    [
+      "E02-R10-05",
+      "SQLite same-second ordered history V1/V2",
+      "SOURCE ROWID/STABLE; migration HOLD"
+    ],
+    [
+      "E02-R10-06",
+      "ACL history/attachments/quota",
+      "R10 HISTORY GUARD 10 PASS; native ACL HOLD"
+    ],
+    [
+      "E02-R10-07",
+      "HELION and eight CoreID five Persona",
+      "HOLD native contexts"
+    ],
+    [
+      "E02-R10-08",
+      "P04 cited RAG single index",
+      "SOURCE legacy tests PASS; native HOLD"
+    ],
+    [
+      "E02-R10-09",
+      "RU-ES ASR LLM TTS MAESTRO",
+      "HOLD physical mic"
+    ],
+    [
+      "E02-R10-10",
+      "SIP native consent/tariff and targeted regression",
+      "SIP HOLD; test 10/10"
+    ]
+  ]
+}

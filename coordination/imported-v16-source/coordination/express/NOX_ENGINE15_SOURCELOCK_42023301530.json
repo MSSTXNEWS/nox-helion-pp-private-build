@@ -1,0 +1,147 @@
+{
+  "schema": "NOX_ENGINE15_VERIFIED_UPSTREAM_SOURCES_V1",
+  "source_run": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/42023301530",
+  "run_id": 42023301530,
+  "download_jobs_passed": 15,
+  "source_only": true,
+  "installed": false,
+  "e07_accepted": false,
+  "license_review_required": true,
+  "engines": [
+    {
+      "index": 1,
+      "name": "ripgrep",
+      "upstream": "BurntSushi/ripgrep",
+      "commit": "91f5d22ef48bde459d90a8c7dbeab416e97d0f2b",
+      "parts": 1,
+      "sha256": "6389db95d6dea6c8b2ebc2bbcd62e034ccb8bb1adf7c2f129f944cc94903a9d8",
+      "artifact_prefix": "NOX_ENGINE_01_ripgrep"
+    },
+    {
+      "index": 2,
+      "name": "tree-sitter",
+      "upstream": "tree-sitter/tree-sitter",
+      "commit": "62816e1c0d0a4ca9553174f3cbe5b9631047f7f4",
+      "parts": 1,
+      "sha256": "958431327bb34e48409c31bb51cd1bc5645dd2a8218b603d820687b2453782c8",
+      "artifact_prefix": "NOX_ENGINE_02_tree-sitter"
+    },
+    {
+      "index": 3,
+      "name": "uv",
+      "upstream": "astral-sh/uv",
+      "commit": "68cde085b41eacaf6a82bb6de841fb7f5c82c30b",
+      "parts": 1,
+      "sha256": "ec982bcd0479651e4be613b05a1d21c919372e83f7c9c1b13403c96e77682bab",
+      "artifact_prefix": "NOX_ENGINE_03_uv"
+    },
+    {
+      "index": 4,
+      "name": "ruff",
+      "upstream": "astral-sh/ruff",
+      "commit": "0696c1efd3226ff994a7b7cc1a044c917fa2f4c8",
+      "parts": 1,
+      "sha256": "9025a0ae6ebc8a360f7d271f321dec2326447160168e2479ea981fc88b3b4a5a",
+      "artifact_prefix": "NOX_ENGINE_04_ruff"
+    },
+    {
+      "index": 5,
+      "name": "sqlite-vec",
+      "upstream": "asg017/sqlite-vec",
+      "commit": "04d28bd21773981e2d266bbf6aa4efbd011eb4f6",
+      "parts": 1,
+      "sha256": "4995f30180e019a19cafa1af81cf9fabf3edea38e9132343ece0fc8b0f52cfea",
+      "artifact_prefix": "NOX_ENGINE_05_sqlite-vec"
+    },
+    {
+      "index": 6,
+      "name": "playwright",
+      "upstream": "microsoft/playwright",
+      "commit": "71350712ca049af48d50f8d23441c6ac82a21da0",
+      "parts": 1,
+      "sha256": "a080b4b3fcae6e1e6f67136643cee600ccbf9252e57debbb218d8af635e0af93",
+      "artifact_prefix": "NOX_ENGINE_06_playwright"
+    },
+    {
+      "index": 7,
+      "name": "crawl4ai",
+      "upstream": "unclecode/crawl4ai",
+      "commit": "cae74b203a33994f7e13b9052c3b0d5c93daa0e6",
+      "parts": 1,
+      "sha256": "3624717b85641c6e72554bcb581b2defe91c548359e74730bd50330f4dd79ab2",
+      "artifact_prefix": "NOX_ENGINE_07_crawl4ai"
+    },
+    {
+      "index": 8,
+      "name": "trafilatura",
+      "upstream": "adbar/trafilatura",
+      "commit": "ba50901169a3d38e256034939cd1b66c203d2b43",
+      "parts": 1,
+      "sha256": "11ff2af6250000f15685a2f8a1e06fbad5c3cb55b6e508d3d71f20123d354e04",
+      "artifact_prefix": "NOX_ENGINE_08_trafilatura"
+    },
+    {
+      "index": 9,
+      "name": "aider",
+      "upstream": "Aider-AI/aider",
+      "commit": "5dc9490bb35f9729ef2c95d00a19ccd30c26339c",
+      "parts": 2,
+      "sha256": "e382662c134547f7bd1e97570a8b9079267422852f30d0fd5feea107f460ba80",
+      "artifact_prefix": "NOX_ENGINE_09_aider"
+    },
+    {
+      "index": 10,
+      "name": "fluent-icons",
+      "upstream": "microsoft/fluentui-system-icons",
+      "commit": "9bfae3d782fda4c8764f2128cec4d0dda160b283",
+      "parts": 4,
+      "sha256": "438e8619d0a8e05c6d96787c87b44deb91ce70f06528af4c74d5941f24124204",
+      "artifact_prefix": "NOX_ENGINE_10_fluent-icons"
+    },
+    {
+      "index": 11,
+      "name": "godot",
+      "upstream": "godotengine/godot",
+      "commit": "bf194eb5bd4d88544134442834c1c325304f070b",
+      "parts": 2,
+      "sha256": "fbbc174fbf7df34106c8a003d8e9decc7cfa03e26a0c5930aaf7ce6dd07c60e4",
+      "artifact_prefix": "NOX_ENGINE_11_godot"
+    },
+    {
+      "index": 12,
+      "name": "blender",
+      "upstream": "blender/blender",
+      "commit": "d1b26491df2bcd75be83a1b46dc289f13b76d1cd",
+      "parts": 3,
+      "sha256": "4efa2bbcff879b15ab0fa9954498a9caca08822dd1f89add2032495d5aa73443",
+      "artifact_prefix": "NOX_ENGINE_12_blender"
+    },
+    {
+      "index": 13,
+      "name": "comfyui",
+      "upstream": "Comfy-Org/ComfyUI",
+      "commit": "fb2b26fdac507b7da81277c7becaf54c5e46ac6b",
+      "parts": 1,
+      "sha256": "f4575e7d86bfc9592b4efcfff62079ba159b4c86ba748fd14462de0db65f0271",
+      "artifact_prefix": "NOX_ENGINE_13_comfyui"
+    },
+    {
+      "index": 14,
+      "name": "ffmpeg",
+      "upstream": "FFmpeg/FFmpeg",
+      "commit": "db8537d8cc7962bd3d07254d6ceff21d888817d4",
+      "parts": 1,
+      "sha256": "f48a30e57dd43358f1188158abc9dd7cfa86ef63a38424abdf54dc2aeb52393c",
+      "artifact_prefix": "NOX_ENGINE_14_ffmpeg"
+    },
+    {
+      "index": 15,
+      "name": "llama-cpp",
+      "upstream": "ggml-org/llama.cpp",
+      "commit": "ea40a3a1e1774534b7fe605caa1e85558175e3e8",
+      "parts": 1,
+      "sha256": "fdce009920418937e6ff1cc10feaf75d12a71e192e34a9387927198cf46d1721",
+      "artifact_prefix": "NOX_ENGINE_15_llama-cpp"
+    }
+  ]
+}

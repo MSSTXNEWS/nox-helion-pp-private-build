@@ -1,0 +1,32 @@
+{
+  "schema": "PP_QWEN_LAYER_DRIVE_BINDING_V1",
+  "release_id": "PP-ONE-037",
+  "task_id": "C1-T5-MANIFEST",
+  "role_id": "AI-RUNTIME-MANIFEST-BINDING",
+  "run_id": "PP-ONE-037-C1-T5-AIRUNTIME-20261025T161059Z",
+  "model": {
+    "tag": "qwen2.5:0.5b-instruct-q4_K_M",
+    "ollama_manifest_sha256": "a8b0c51577010a279d933d14c2a8ab4b268079d44c5c8830c0a93900f1827c67",
+    "layer_sha256": "c5396e06af294bd101b30dce59131a76d2b773e76950acc870eda801d3ab0515",
+    "layer_size_bytes": 397807936,
+    "storage_status": "PERSISTED_AS_ORDERED_DRIVE_PARTS_NOT_INSTALLED",
+    "parts": [
+      {"index": 0, "id": "1gzqR-7WEF8cYLJdrHuKSGsLDolywl3uN", "name": "qwen2.5-0.5b-instruct-q4_K_M.layer.part-00-of-05", "size_bytes": 90000000, "sha256": "6481c212a1d2aa68af8fbee3811ca7c4b19bd90abbab5d18d5e428b9c74bb4a5"},
+      {"index": 1, "id": "18jqTXReu-F-Lj9spBZc6zbkjCM2QUKx0", "name": "qwen2.5-0.5b-instruct-q4_K_M.layer.part-01-of-05", "size_bytes": 90000000, "sha256": "6f246f5282b46955d35c97e3d611ad2c454fe494c1a51ca1f9686368bd807b9b"},
+      {"index": 2, "id": "15VqnjOOmak0EhnvElARnCdVRXuWFsUK1", "name": "qwen2.5-0.5b-instruct-q4_K_M.layer.part-02-of-05", "size_bytes": 90000000, "sha256": "b7055362aae7211d2ecef32d8860f95ec588e8f77db03102f5bfb07fe71218d0"},
+      {"index": 3, "id": "1ohL1RO5MJf3jqaZcSkX8w8ju2wZM8gBP", "name": "qwen2.5-0.5b-instruct-q4_K_M.layer.part-03-of-05", "size_bytes": 90000000, "sha256": "05bbba2823f8e567edf9f2fd3d328655dbb9d5a7a79cc54f42886a6374260a64"},
+      {"index": 4, "id": "1AViac6Ov_oWqW07OaFyCkc2lSW3_uA9h", "name": "qwen2.5-0.5b-instruct-q4_K_M.layer.part-04-of-05", "size_bytes": 37807936, "sha256": "e87e70103b4d9d860c2ad5fbe943f8a20673741cbf2791dda0bb3e7c98e75a9a"}
+    ]
+  },
+  "config_id": "1JblGA_T_wYawYSRsNOltWjws6sJ-wgnJ",
+  "provenance_receipt_id": "1MMB6Bs8f3uqicS1VQM1c1BOV9Z1NX_y9",
+  "license": {
+    "id": "19AvGo_iXwHSVDGefypoHGZusoJmdqivj",
+    "spdx_id": "Apache-2.0",
+    "sha256": "832dd9e00a68dd83b3c3fb9f5588dad7dcf337a0db50f7d9483f310cd292e92e",
+    "size_bytes": 11343,
+    "config_records_owner_license_acknowledged": true
+  },
+  "reassembly": "Download parts 00 through 04 in order, concatenate bytes without separators, then compare the assembled file size and SHA-256 above before installation.",
+  "runtime_status": "NOT_INSTALLED_NOT_EXECUTED_NO_SAME_EXE_AI_EVIDENCE"
+}

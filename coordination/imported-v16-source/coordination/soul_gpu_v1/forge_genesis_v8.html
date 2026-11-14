@@ -1,0 +1,59 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>NOX HELION · FORGE GENESIS LIVE</title>
+<!-- Adapted from Google Drive NOX_HELION_DESKTOP_CINEMATIC_V2.html, NOX CONTROL CENTER, and NOX FORGE FOCUS V4 layout. Real values ONLY. -->
+<style>
+:root{color-scheme:dark;--ice:#94c9e4;--line:#9bb9c329;--gold:#e3b97a;--ink:#e8f0f6;--muted:#8395a5;font:14px "Segoe UI",Arial,sans-serif}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 40% 35%,#192738,#03060b 72%);color:var(--ink)}
+header{padding:25px 4%;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:12px}
+.brand{font-size:14px;font-weight:700;letter-spacing:.35em}.sub{font-size:11px;letter-spacing:.14em;color:var(--muted);margin-top:7px}
+.live{color:#8addbd;font-size:11px;letter-spacing:.12em}main{max-width:1700px;margin:auto;padding:24px 4%;display:grid;grid-template-columns:1.07fr 1fr;gap:24px}
+.scene{position:relative;min-height:625px;border:1px solid var(--line);border-radius:18px;background:radial-gradient(ellipse at 50% 45%,#1b2d48aa,#050810 66%);overflow:hidden}
+.scene h1{position:absolute;left:26px;top:20px;font-size:14px;letter-spacing:.23em;font-weight:500}
+.orbit{position:absolute;left:50%;top:48%;width:75%;max-width:530px;aspect-ratio:1;border:1px solid #8296a328;border-radius:50%;transform:translate(-50%,-50%)}
+.orbit.two{width:58%;max-width:405px;border-color:#bb9d6b36}
+.sun{position:absolute;top:48%;left:50%;width:39%;max-width:270px;aspect-ratio:1;border-radius:50%;transform:translate(-50%,-50%);background:radial-gradient(circle at 34% 26%,#1a2a3a,#010205 63%);box-shadow:0 0 45px #d59a5650,0 0 105px #6a96b525,inset -16px -23px 35px #000;border:2px solid #bd8a477d;animation:breathe 7s ease-in-out infinite}
+.sun:after{content:"";position:absolute;inset:0;border-radius:50%;border-bottom:4px solid #e2ad69a9;transform:rotate(-20deg);filter:blur(3px);animation:orbit 48s linear infinite}
+@keyframes breathe{50%{filter:brightness(1.28);box-shadow:0 0 70px #d59a5660,0 0 125px #6a96b530}}
+@keyframes orbit{to{transform:rotate(340deg)}}
+.nodes{position:absolute;inset:0;pointer-events:none}.nodes span{position:absolute;font:10px Consolas,monospace;color:#bad3de;padding:7px 10px;border-radius:30px;border:1px solid #7396ac42;background:#07111bbb}
+.nodes span:nth-child(1){top:20%;left:40%}.nodes span:nth-child(2){top:28%;right:10%}.nodes span:nth-child(3){top:51%;right:4%}.nodes span:nth-child(4){bottom:25%;right:13%}.nodes span:nth-child(5){bottom:11%;left:43%}.nodes span:nth-child(6){bottom:25%;left:12%}.nodes span:nth-child(7){top:51%;left:3%}.nodes span:nth-child(8){top:28%;left:10%}
+.scene footer{position:absolute;bottom:20px;left:24px;right:24px;font-size:11px;color:var(--muted)}
+.column{display:flex;flex-direction:column;gap:13px}.card{border:1px solid var(--line);border-radius:14px;background:#0b121bdf;padding:17px 20px}
+h2{margin:0 0 12px;font-size:12px;letter-spacing:.16em;font-weight:650;color:#ccd6df}
+.big{font-size:34px;font-weight:650}.status{font-size:12px;color:var(--ice)}.small{font-size:11px;color:var(--muted)}
+.progress{height:8px;border-radius:9px;background:#202c3c;overflow:hidden;margin:10px 0}.progress>i{display:block;height:100%;width:0;background:linear-gradient(90deg,#bb884b,#e7c995,#9ad6e6);transition:width .5s}
+.row{display:flex;align-items:center;justify-content:space-between;gap:8px}.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:11px}.value{font-size:24px;font-weight:600;font-variant-numeric:tabular-nums}
+.log{max-height:165px;overflow:auto;white-space:pre-wrap;word-break:break-word;font:11px/1.4 Consolas,monospace;color:#a4bccd}
+.note{color:#e3b97a;font-size:11px;margin-top:8px}@media(max-width:930px){main{grid-template-columns:1fr}.scene{min-height:450px}}@media(max-width:500px){.scene{min-height:360px}.nodes span{font-size:8px;padding:4px}.metrics{grid-template-columns:repeat(2,1fr)}}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}}
+</style></head><body><header><div><div class="brand">N O X &nbsp; H E L I O N</div><div class="sub">FORGE · GENESIS · ВЕБ-КОНТРОЛЬ ОБУЧЕНИЯ</div></div><div class="live" id="live">ПОДКЛЮЧЕНИЕ</div></header>
+<main><section class="scene"><h1>NOX / FORGE / LIVE</h1><div class="orbit"></div><div class="orbit two"></div><div class="sun"></div>
+<div class="nodes"><span>CONSCIOUSNESS</span><span>ATLAS</span><span>REFLECTION</span><span>NEXUS</span><span>FORGE</span><span>CORE</span><span>VOICE</span><span>PERSONA</span></div><footer>Движение орбит декоративное. Оно не является показателем обучения нейросети.</footer></section>
+<section class="column"><article class="card"><div class="row"><h2>ГОТОВНОСТЬ GENESIS · ПРОВЕРКИ</h2><span id="stage" class="status">—</span></div><div class="big" id="ready">Н/Д</div><div class="progress"><i id="readybar"></i></div><div class="small" id="checks">Это технические проверки, не рейтинг интеллекта.</div></article>
+<article class="card"><h2>NEURAL / LoRA · РЕАЛЬНЫЕ ШАГИ</h2><div class="row"><div class="value" id="steps">—</div><span class="status" id="tstatus">HOLD</span></div><div class="progress"><i id="trainbar"></i></div><div class="small" id="tnote">Проверенные шаги из telemetry/training.json</div></article>
+<div class="metrics"><article class="card"><h2>ВЕСА</h2><div class="value" id="models">—</div><div class="small">Модели Ollama</div></article><article class="card"><h2>ПАМЯТЬ</h2><div class="value" id="memory">—</div><div class="small">Записи SOUL</div></article><article class="card"><h2>ЧЕРВИ</h2><div class="value" id="worms">—</div><div class="small">План / исполнено</div></article>
+<article class="card"><h2>GPU °C</h2><div class="value" id="temp">Н/Д</div><div class="small">65 °C / 180 сек</div></article><article class="card"><h2>БАТАРЕЯ</h2><div class="value" id="battery">Н/Д</div><div class="small">Щадящий режим</div></article><article class="card"><h2>ДИСК</h2><div class="value" id="disk">Н/Д</div><div class="small">Резерв ≥60 ГБ</div></article></div>
+<article class="card"><div class="row"><h2>РЕАЛЬНОЕ СОСТОЯНИЕ</h2><span class="status">READ ONLY</span></div><div class="log" id="events">Подключение...</div><div class="note" id="stop">STOP нативного EXE не подключён к веб-панели.</div></article></section></main>
+<script>
+const E=id=>document.getElementById(id),N=(v,d='—')=>v===null||v===undefined?d:String(v);
+function bar(id,v){E(id).style.width=Number.isFinite(v)?Math.max(0,Math.min(100,v))+'%':'0%'}
+async function tick(){
+try{const r=await fetch('/api/status',{cache:'no-store'});if(!r.ok)throw Error('HTTP '+r.status);
+const d=await r.json();if(d.schema!=='NOX-GENESIS-FORGE-V8')throw Error('Неверный сервер');
+E('live').textContent='LIVE · '+new Date(d.updated_utc).toLocaleTimeString();
+const g=Object.entries(d.genesis?.gates||{}),n=g.filter(x=>x[1]===true).length,p=g.length?100*n/g.length:NaN;
+E('ready').textContent=g.length?n+' / '+g.length:'НЕТ ОЦЕНКИ';bar('readybar',p);
+E('checks').textContent=g.length?'Выполнено '+n+' из '+g.length+' технических проверок. Это не IQ.':'Ожидается первый генезис-отчёт';
+E('stage').textContent=N(d.cycle?.status,'ОЖИДАНИЕ');
+const t=d.training||{};E('steps').textContent=t.step===null?'Не подтверждены':t.step+' / '+N(t.requested_steps,'?');
+E('tstatus').textContent=N(t.status);bar('trainbar',t.progress_percent);
+E('tnote').textContent='Этап '+N(t.stage)+' · loss '+N(t.loss_metrics?.loss)+' · охлаждение '+N(t.cooldown_seconds)+' сек';
+E('models').textContent=(d.models||[]).length;E('memory').textContent=N(d.memory?.memories,0);
+E('worms').textContent=N(d.worms?.planned,0)+' / '+N(d.worms?.executed,0);
+E('temp').textContent=d.gpu_temperature_c===null?'Н/Д':d.gpu_temperature_c+' °C';
+E('battery').textContent=d.battery?.percent===null?'Н/Д':d.battery.percent+'%';
+E('disk').textContent=d.disk_free_bytes===null?'Н/Д':(d.disk_free_bytes/1e9).toFixed(1)+' ГБ';
+E('events').textContent=JSON.stringify({genesis:d.cycle,training:d.training,last_runner:d.last_runner,native_S03:d.native_s03_verified,exe_rebuilt:d.native_exe_rebuilt},null,2).slice(0,7000);
+E('stop').textContent=d.stop?.available?'STOP подключён':'STOP: '+N(d.stop?.reason);
+}catch(e){E('live').textContent='OFFLINE · '+e.message;E('stage').textContent='НЕТ ДАННЫХ'}
+}tick();setInterval(tick,3000);
+</script></body></html>

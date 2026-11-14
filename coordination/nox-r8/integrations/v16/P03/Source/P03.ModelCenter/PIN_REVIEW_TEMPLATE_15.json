@@ -1,0 +1,80 @@
+{
+  "schema": "P03_REVIEW_LEADS_ONLY_V1",
+  "items": [
+    {
+      "family": "llama3.1",
+      "officialSourceUrl": "https://ollama.com/library/llama3.1",
+      "reviewStatus": "REVIEW_REQUIRED"
+    },
+    {
+      "family": "llama3.2",
+      "officialSourceUrl": "https://ollama.com/library/llama3.2",
+      "reviewStatus": "REVIEW_REQUIRED"
+    },
+    {
+      "family": "deepseek-r1",
+      "officialSourceUrl": "https://ollama.com/library/deepseek-r1",
+      "reviewStatus": "REVIEW_REQUIRED"
+    },
+    {
+      "family": "qwen2.5",
+      "officialSourceUrl": "https://ollama.com/library/qwen2.5",
+      "reviewStatus": "REVIEW_REQUIRED"
+    },
+    {
+      "family": "qwen3",
+      "officialSourceUrl": "https://ollama.com/library/qwen3",
+      "reviewStatus": "REVIEW_REQUIRED"
+    },
+    {
+      "family": "gemma3",
+      "officialSourceUrl": "https://ollama.com/library/gemma3",
+      "reviewStatus": "REVIEW_REQUIRED"
+    },
+    {
+      "family": "gemma2",
+      "officialSourceUrl": "https://ollama.com/library/gemma2",
+      "reviewStatus": "REVIEW_REQUIRED"
+    },
+    {
+      "family": "mistral",
+      "officialSourceUrl": "https://ollama.com/library/mistral",
+      "reviewStatus": "REVIEW_REQUIRED"
+    },
+    {
+      "family": "qwen2.5-coder",
+      "officialSourceUrl": "https://ollama.com/library/qwen2.5-coder",
+      "reviewStatus": "REVIEW_REQUIRED"
+    },
+    {
+      "family": "phi3",
+      "officialSourceUrl": "https://ollama.com/library/phi3",
+      "reviewStatus": "REVIEW_REQUIRED"
+    },
+    {
+      "family": "mxbai-embed-large",
+      "officialSourceUrl": "https://ollama.com/library/mxbai-embed-large",
+      "reviewStatus": "REVIEW_REQUIRED"
+    },
+    {
+      "family": "llava",
+      "officialSourceUrl": "https://ollama.com/library/llava",
+      "reviewStatus": "REVIEW_REQUIRED"
+    },
+    {
+      "family": "gpt-oss",
+      "officialSourceUrl": "https://ollama.com/library/gpt-oss",
+      "reviewStatus": "REVIEW_REQUIRED"
+    },
+    {
+      "family": "qwen3-coder",
+      "officialSourceUrl": "https://ollama.com/library/qwen3-coder",
+      "reviewStatus": "REVIEW_REQUIRED"
+    },
+    {
+      "family": "tinyllama",
+      "officialSourceUrl": "https://ollama.com/library/tinyllama",
+      "reviewStatus": "REVIEW_REQUIRED"
+    }
+  ]
+}

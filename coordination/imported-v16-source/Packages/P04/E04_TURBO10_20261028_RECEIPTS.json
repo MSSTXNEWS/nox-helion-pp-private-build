@@ -1,0 +1,86 @@
+{
+  "schema": "NOX-E04-TURBO10-OWNER-RECEIPTS-v1",
+  "run_id": "NOX-V16-E04-TURBO10-20261028-0246Z",
+  "owner": 4,
+  "repository": "MSSTXNEWS/nox-helion-pp-private-build",
+  "base_commit_sha1": "9ffc97beb1e3db1c869c18ffccff89104bece81b",
+  "source_commit_sha1": "e90f8feba3f1724fa72c9c9db31879bcb313ee32",
+  "branch": "e04/v16-turbo10-real-gpu-hardening-20261028",
+  "pull_request": 57,
+  "source_present": true,
+  "integrated_into_main": false,
+  "gpu_training_completed": false,
+  "authorized_gpu_available": false,
+  "authorized_dataset_and_model_verified": false,
+  "windows_app_accepted": false,
+  "tests": {
+    "targeted_case_count": 10,
+    "status": "HOLD_CI_INFRA",
+    "workflow_run": 40622875005,
+    "reason": "both GitHub jobs failed in 3-4s with runner_name empty and steps[]; no test execution evidence"
+  },
+  "files": [
+    {
+      "task_id": "NOX-V16-E04-TURBO10-01",
+      "owner": 4,
+      "path": "Packages/P04/rag_python_compat.py",
+      "preimage_sha256": "92a7b7a1b28aeec5328d453db2505b2a708bef79b9a5b288a62eff352eed490f",
+      "preimage_git_blob_sha1": "b6d9e320194b2164f02cedfc6a1724a8a10a6079",
+      "postimage_sha256": "169aaf7c9e4623795b8b5966e578641ec59433b959a5001d93efbd99c10a17fd",
+      "postimage_git_blob_sha1": "2c11b9e142b7cd0a566f2351bbf69238f1329b46",
+      "patch_sha256": "5b3ec55debf5fe92141e5b446857a5cf4c0bf5ac995dad59c9fd9743705a5c5f",
+      "patch_available": true,
+      "change": "additive/no original removal"
+    },
+    {
+      "task_id": "NOX-V16-E04-TURBO10-02",
+      "owner": 4,
+      "path": "Packages/P04/train_qlora.py",
+      "preimage_sha256": "6a0c713dcac7cf95766e612713abd0b07314db9dd91c81e11f05610ed7f7f44c",
+      "preimage_git_blob_sha1": "df8e17431e90d3465814c5dd8d8d71a5347d0a39",
+      "postimage_sha256": "fe45f1211dc546b8608143a795b7c61039edf796789ee3e4597a6dd348c40d07",
+      "postimage_git_blob_sha1": "572f3293810af4951c3dcbb4e23e714293d2f0a2",
+      "patch_sha256": "c47bea998c9887b8b8a59e497bb930c3adff60a1c822a0c92225509c2eec6538",
+      "patch_available": true,
+      "change": "additive/no original removal"
+    },
+    {
+      "task_id": "NOX-V16-E04-TURBO10-03",
+      "owner": 4,
+      "path": "Packages/P04/merge_qlora_adapter.py",
+      "preimage_sha256": "af1dca8da51e70de39fef31bcd2586eb9ca9ce1719c9f3c11531bdc284890488",
+      "preimage_git_blob_sha1": "5558de50933943756d84d34482a5d0600cd097a7",
+      "postimage_sha256": "6d02bc277708ee34352ae4147d8f1564d888806f833bc8f309e07a3997ef2d75",
+      "postimage_git_blob_sha1": "8cdd0cbba5a0153361053753c68df0d42396d852",
+      "patch_sha256": "b7f85fc2edf447039fa7e35b3e08ad8de7025e5a9196c3cd312362fa426dfa3a",
+      "patch_available": true,
+      "change": "additive/no original removal"
+    },
+    {
+      "task_id": "NOX-V16-E04-TURBO10-04",
+      "owner": 4,
+      "path": "tests/P04/test_turbo10_integrity_guards.py",
+      "preimage_sha256": null,
+      "preimage_git_blob_sha1": null,
+      "postimage_sha256": "b9c4d9bf23e58e82e0923a6a246b818d626c0ba1e991d84f12b61a99ee6e774d",
+      "postimage_git_blob_sha1": "f4b35b3bbc6bc1357d0e2b8561a1cedbf5482e43",
+      "patch_sha256": "7d35a2dc4b12ac3ecc9b82b130a140456cb98dbde5f42d8a0a78b90e146eba66",
+      "patch_available": true,
+      "change": "additive/no original removal"
+    },
+    {
+      "task_id": "NOX-V16-E04-TURBO10-05",
+      "owner": 4,
+      "path": ".github/workflows/nox-p04-candidate-ci.yml",
+      "preimage_sha256": "20ac160767eedd25176706956458e648e91cb2b166a59c52977e875f6ac6bcab",
+      "preimage_git_blob_sha1": "b792b4bca3402c9555360e4992fd059b60a5e32d",
+      "postimage_sha256": "4600559c431e40e2dfa2d6a0a5fead1e45e83eb365ac276e4ee1822e77a8b431",
+      "postimage_git_blob_sha1": "17d593424d1dd77f6e3d920ee0037af21f8b812d",
+      "patch_sha256": "54df0d67aee81743dc474417f1d5f71984f9e0ec756ff7358ed286029b46add9",
+      "patch_available": true,
+      "change": "additive/no original removal"
+    }
+  ],
+  "readback_required": true,
+  "handoff": "E06 owner #6: SourceLock rebuild, serial PR7/12/57 admission, one P02/P04 chat host + E05 events; E07 final same EXE SHA"
+}

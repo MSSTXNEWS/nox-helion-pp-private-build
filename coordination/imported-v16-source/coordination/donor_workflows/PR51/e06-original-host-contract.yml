@@ -1,0 +1,25 @@
+name: E06 read-only one-host source contract recovery
+on:
+  push:
+    branches: [e06/v16-express-onehost-20261028]
+    paths: ['coordination/e06/original_host_contract_extract.py', '.github/workflows/e06-original-host-contract.yml']
+permissions:
+  contents: read
+jobs:
+  pin-original:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python coordination/e06/original_host_contract_extract.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: e06-original-python-host-contract
+          path: e06-original-host-source/
+          retention-days: 10
+          if-no-files-found: error

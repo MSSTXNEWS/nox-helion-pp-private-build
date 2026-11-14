@@ -1,0 +1,87 @@
+{
+  "schema": "NOX_V16_E06_HOST50_OWNER_RECEIPT_V3",
+  "runId": "NOX-V16-E06-G2-03-20261028T0810MSK-R03",
+  "owner": "E06/integrator-6",
+  "status": "SOURCE_ONLY_COMPONENT_LOCAL_PASS_NATIVE_INTEGRATION_HOLD",
+  "frozenCommonBaseline": {
+    "commit": "0b3a7d435be735148d64171deb9027093a89646e",
+    "tree": "f108d604c444f718b32aaecfd07b90b8f91b9a6f",
+    "approvedRaw729SourceLock": "NOT_VERIFIED"
+  },
+  "ownerPreimage": {
+    "branch": "coordination/e06-host50-guard-c01",
+    "head": "543a14b847c3f1e6488263f0b9ac0adf0d072437"
+  },
+  "changedFiles": [
+    {
+      "path": "coordination/e06_host50/admission.py",
+      "owner": "E06",
+      "pre_sha256": "9fa78da51522f38088a6ea03140c1547237fba34f1aea4e32f307df9940595dd",
+      "post_sha256": "a1f3f2faa35fb1ef837f321322f1fa9c66eb239e1eaaab1965e47ed131af9ed1",
+      "pre_git_blob_sha1": "9c4ff267b8b58743b5a3ecb05eb15433bcbe1f99",
+      "post_git_blob_sha1": "73536fa4479aadca73d509684144616cb1367670",
+      "commit": "f3fee095c393388e38e3aa62581f99396ef09871"
+    },
+    {
+      "path": "coordination/e06_host50/test_admission.py",
+      "owner": "E06",
+      "pre_sha256": "b7d2eac0828a0b56889ffee5b19ee4aa996b0eafff92c770ec9c779e746359e2",
+      "post_sha256": "7723f1b99b553683da018aaccd57311967a20c15adc3f337fb0ba637933aebaa",
+      "pre_git_blob_sha1": "cca2c5c40c3f918325a1cac894457e5d5ec5ce7f",
+      "post_git_blob_sha1": "c8cc80c42325c29cdf16e9278797e290c838bcf5",
+      "commit": "25d3f2614bccd70aeaa3e8464d050642658dd7e8"
+    }
+  ],
+  "diff": "Same draft PR #71, only two E06-owned source files; 0 deleted files; original D02/WOW/EXE/owner modules untouched.",
+  "taskLedger": {
+    "path": "coordination/e06_host50/CURRENT_50_TASK_LEDGER.json",
+    "git_blob_sha1": "21c9b4504ed89f0c59fd1a8178acef20958bb375",
+    "catalogGitBlob": "c8c9b19e44d9b5ff3af00a38e8446d8c0507b69d",
+    "ownerBindingGitBlob": "014c61a1446ed72a5128f52a3b801a8842652712",
+    "taskCount": 50,
+    "routeOwnerMatches": 50,
+    "sourceMethodCandidates": 37,
+    "missingSourceBinding": 13,
+    "nativeCapabilitiesVerified": 0,
+    "nativeIntegrated": 0,
+    "windowsAccepted": 0,
+    "legacyOwnerMapBaseCommit": "eb46b49fb8a022cefa679afb8606877016808db1",
+    "baselineDrift": true
+  },
+  "tenWorkItems": [
+    "E06-R03-01: read V16 sections 26-30 and current master/E06/lessons before edits",
+    "E06-R03-02: verify canonical main commit/tree and preserve raw729 HOLD",
+    "E06-R03-03: compare 50 PACK01 TaskID, routes and owner bindings",
+    "E06-R03-04: freeze exact owner E06 preimages Git SHA1 and SHA256",
+    "E06-R03-05: gate STOP ACK state to STOP_REQUESTED, never DONE",
+    "E06-R03-06: bind native file selection to authenticated chat",
+    "E06-R03-07: bind native file digest and opaque ticket digest to signed ACK",
+    "E06-R03-08: bound pending native action store and lease ACK",
+    "E06-R03-09: reject extraneous signed ACK fields and malformed UUID",
+    "E06-R03-10: run targeted regressions, read back Git blobs and record HOLD"
+  ],
+  "tests": {
+    "trackedGitHubOwnerTestModule": "16/16 local Python unittest PASS",
+    "historicalExtendedFixtures": "27/27 PASS after updating local-only chat-scoped picker and ACK schema fixtures",
+    "combined": "43/43 local PASS",
+    "pythonCompile": "PASS",
+    "nativeWindowsE2E": "NOT_RUN",
+    "windowsExeAcceptance": "NOT_RUN"
+  },
+  "noLoss": {
+    "mainChanged": false,
+    "otherOwnerSourcesChanged": false,
+    "oldBranchesDeleted": false,
+    "priorD02OrWowAltered": false,
+    "secondLLMOrDbOrTrainerCreated": false,
+    "webToWindowsControlCreated": false
+  },
+  "hardHolds": [
+    "original source_00/01/02 SHA and full 729-member SourceLock unsigned",
+    "owner map pinned to old baseline",
+    "no native owner capability receipt or original canonical host binding",
+    "no same-BuildID Windows EXE E07 QA"
+  ],
+  "weightedProgress": "N/D",
+  "oneLesson": "When signing native outcomes, bind STOP/action-class and file picker identity to the same expiring authenticated per-task ACK; negative tests must cover cross-chat file replays and false STOP completion."
+}

@@ -1,0 +1,60 @@
+{
+  "schema": "NOX-V16-E04-OWNER-RECEIPT-v1",
+  "run_id": "NOX-V16-W4-01-E04-20261028T2309MSK-R16",
+  "task_id": "E04-P04-MODEL-LOCK-TYPED-ID-R16",
+  "owner": "W4·01 E04 P04",
+  "baseline_pr": 162,
+  "branch": "integration/nox-v16-unified-candidate-20261028-r01",
+  "expected_head": "996112a4de854eb378c2c94b65cfc7d643bd1c2e",
+  "expected_tree": "a4ca5a8844a3bf30240e6cecb553ae8561ed1b53",
+  "original_historical_origin": "0b3a7d435be735148d64171deb9027093a89646e",
+  "status": "SOURCE_PATCH_NOT_GPU_PROOF",
+  "error": "owner_approval_id truthy non-string and blank model_id accepted by model authorization lock",
+  "cause": "truthiness and only type on model_id; not typed nonblank on both owner identities",
+  "fix": "Require nonblank strings for owner_approval_id and model_id before pinned tree digest",
+  "files": [
+    {
+      "path": "Packages/P04/train_qlora.py",
+      "owner": "E04",
+      "pre_sha256": "68fd739b5bd5db48049490b111c53c10ece222c347cd5331c6f5af51ddfa44c9",
+      "post_sha256": "773a02d6176ea267d58b5df5a4145f1e52b03377379238bb45ce872d74f3f027",
+      "pre_git_blob_sha1": "dd3afa1a2c8d293f7a1e825b36f974b68a0a742a",
+      "post_git_blob_sha1": "b3c85bac47cbe570cb525f283c61504564a8f5ff"
+    },
+    {
+      "path": "tests/P04/test_e04_model_lock_identity_r16.py",
+      "owner": "E04",
+      "pre_sha256": "ABSENT",
+      "post_sha256": "cb94d9d3f7225020fc19e489b4955831c20abc6516174cddbd5be6534ede927b",
+      "pre_git_blob_sha1": "ABSENT",
+      "post_git_blob_sha1": "93435dd9cf5f376a48cbf2089ff46b15419c2244"
+    },
+    {
+      "path": "coordination/e04/receipts/NOX_V16_W4_01_E04_20261028_R16_MODEL_LOCK.json",
+      "owner": "E04",
+      "pre_sha256": "ABSENT",
+      "post_sha256": "self-referential: independently verify after commit",
+      "pre_git_blob_sha1": "ABSENT",
+      "post_git_blob_sha1": "independently verify after commit"
+    }
+  ],
+  "diff": "    if lock.get(\"license_status\") != \"APPROVED\" or not lock.get(\"owner_approval_id\"):\n        raise ValueError(\"MODEL_LICENSE_OR_OWNER_APPROVAL_MISSING\")\n→\n    if (lock.get(\"license_status\") != \"APPROVED\"\n            or not isinstance(lock.get(\"owner_approval_id\"), str)\n            or not lock[\"owner_approval_id\"].strip()):\n        raise ValueError(\"MODEL_LICENSE_OR_OWNER_APPROVAL_MISSING\")\n    if lock.get(\"model_id\") is None or not isinstance(lock[\"model_id\"], str):\n        raise ValueError(\"MODEL_ID_MISSING\")\n→\n    if not isinstance(lock.get(\"model_id\"), str) or not lock[\"model_id\"].strip():\n        raise ValueError(\"MODEL_ID_MISSING\")",
+  "tests": {
+    "isolated_reproducer_original": "5 unittest methods; FAILED 10 subcases (actual local sandbox helper shim)",
+    "isolated_candidate": "5 methods PASS on exact extracted production function with disk fixtures",
+    "production_direct_import": "SAVED_NOT_RUN",
+    "github_actions": "NOT_RUN",
+    "cuda_gpu": "NOT_RUN",
+    "azure_windows": "NOT_RUN",
+    "e07": "0/10 NOT_RUN"
+  },
+  "progress": {
+    "source_presence_historical": "10/10",
+    "closure_gates_historical": "1/6",
+    "operational": "N/D HOLD",
+    "historical_v15": "27/50 tasks; weighted 52.5%",
+    "current_comparable": "N/D"
+  },
+  "one_improvement": "MODEL_LOCK_RIGHTS_IDENTITIES_TYPED_NONBLANK_BEFORE_TREE: reject truthy non-string or whitespace-only approval/model IDs before integrity work; prove via negative test",
+  "preserve": "PR162 only modified owned P04+test+receipt, no main/PR6/7/12, no D02/WOW/ZIP/model/data mutation"
+}

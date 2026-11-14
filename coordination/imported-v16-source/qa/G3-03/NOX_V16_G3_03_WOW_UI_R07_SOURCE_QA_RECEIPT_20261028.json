@@ -1,0 +1,252 @@
+{
+  "schema": "NOX_V16_G3_03_R07_FINAL_SOURCE_QA",
+  "runId": "NOX-V16-G3-03-20261028T1227MSK-R07",
+  "created": "2026-10-28",
+  "scope": "UI_ONLY_NO_NATIVE_INTEGRATION",
+  "pre_read": [
+    "V16 §§21–27 Doc 11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+    "Original WOW Living UI 10+10+10 Doc 1nkzWT2e3Va5_cJEtZWWEqAnx4Xn9D_Mi",
+    "Original D02 Doc 1t_XTI0IKHXlVeVFEFkjG0rH9PerReETj",
+    "Master 1evk2XhCAT_zY97MmMunTCCHXViSlnTshf2EzfKYWR98",
+    "E06 17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4",
+    "Lessons 14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ"
+  ],
+  "baseline": {
+    "repo": "MSSTXNEWS/nox-helion-pp-private-build",
+    "immutableMainCommit": "0b3a7d435be735148d64171deb9027093a89646e",
+    "immutableMainTree": "f108d604c444f718b32aaecfd07b90b8f91b9a6f",
+    "mainReadback": "EXACT_MATCH",
+    "inventory": "PR66 INVENTORY_ONLY",
+    "rawPart00_01_02_sha256": "N/D_HOLD",
+    "extracted729FullSourceLock": "N/D_HOLD",
+    "e01Owner": "PR121 owns D02/approved UI; QA path alone is modified"
+  },
+  "sourceCommit": {
+    "sha": "f2bb76e8eb85a55a48071c854bef0877ce243bc0",
+    "tree": "fa34b1ccd3c645619824f17725191a965de6cf0e",
+    "parent": "df5f9f2e61c45c2955480a8523e1da153d11c52e",
+    "parentTree": "c2f3b42b75d49bccb49840232a7a1b8abecc7392",
+    "branch": "qa/nox-v16-g3-03-native-event-snapshot-20261028-r07",
+    "pr": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/129",
+    "draft": true,
+    "filesChanged": 2,
+    "mainNotModified": true
+  },
+  "files": [
+    {
+      "path": "qa/G3-03/candidates/nox-cinema.mjs",
+      "owner": "G3-03 QA isolated; approved production UI owned by E01",
+      "run_id": "NOX-V16-G3-03-20261028T1227MSK-R07",
+      "immutable_parent_commit": "df5f9f2e61c45c2955480a8523e1da153d11c52e",
+      "pre_sha256": "e2b0940d664d6c852cfc9df9b26533927306667f1d364c12169b540b5e81e2db",
+      "post_sha256": "0bb24144765569b7c6d33493d161635b91fdd54c230e77569a40ee08d8ab2ef2",
+      "pre_git_blob_sha1": "9220e3a6e277ad2675cb43bfabdd9f55e63a5edd",
+      "post_git_blob_sha1": "72baa5959e56d947957bcc1efd839fe9e9d3fbed",
+      "diff": "Capture Object.freeze({next,runId,coreId}) before synchronous callback returns, validate state/ids string types, replay primitives via applyState.",
+      "exact_patch": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/commit/f2bb76e8eb85a55a48071c854bef0877ce243bc0",
+      "readback": "SHA256+GitBlob_PASS"
+    },
+    {
+      "path": "qa/G3-03/tests/nox-cinema-visibility.test.mjs",
+      "owner": "G3-03 QA isolated; approved production UI owned by E01",
+      "run_id": "NOX-V16-G3-03-20261028T1227MSK-R07",
+      "immutable_parent_commit": "df5f9f2e61c45c2955480a8523e1da153d11c52e",
+      "pre_sha256": "e1985787d64bd363323a15f8ef1421ad88e603335dae92c1e577e6d8616c2a25",
+      "post_sha256": "100f49651ee2a1762a421bebf188ea125bf31028fb8baac69ac788aba9d78605",
+      "pre_git_blob_sha1": "1877f3920535945f4f44adf2cddb2cab4b36f88e",
+      "post_git_blob_sha1": "581d7b3097914566132721136aa16dafcf39c249",
+      "diff": "Append 3 RED-to-GREEN regression tests for mutable sync event, typed RunID/CoreID and first snapshot fidelity.",
+      "exact_patch": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/commit/f2bb76e8eb85a55a48071c854bef0877ce243bc0",
+      "readback": "SHA256+GitBlob_PASS"
+    }
+  ],
+  "cssUnchanged": {
+    "path": "qa/G3-03/candidates/nox-cinema.css",
+    "sha256": "312a08bbdc094fc5a960a236cc1fb530b01a85b117d65e39584c9825b3489a27",
+    "gitBlobSha1": "fd06fb17a29f91e079f37be4364669a0ff20ddc7"
+  },
+  "qa": {
+    "r05PreimageRed": {
+      "pass": 15,
+      "fail": 3,
+      "skippedAsyncNode": 3
+    },
+    "r07SavedGreen": {
+      "pass": 18,
+      "fail": 0,
+      "skippedAsyncNode": 3
+    },
+    "method": "synchronous V8 fake DOM, NOT Node/browser",
+    "sourceHashReadback": "2/2_PASS",
+    "cssReadback": "MATCH",
+    "nativeEXE": "NOT_RUN",
+    "nativeEvents": "HOLD",
+    "originalAssetRehash": "NOT_RUN",
+    "gpuLoad": "NOT_RUN"
+  },
+  "tenCriticalChecks": [
+    {
+      "taskId": "G3-03-R07-01",
+      "name": "Liquid obsidian sun/lava/corona",
+      "evidence": "SOURCE: five layers visible in code",
+      "hold": "PBR material + runtime HOLD"
+    },
+    {
+      "taskId": "G3-03-R07-02",
+      "name": "Rare gravity ejecta/return",
+      "evidence": "COMPONENT: gravitationalSample and rare profile cadence",
+      "hold": "physical Windows/runtime HOLD"
+    },
+    {
+      "taskId": "G3-03-R07-03",
+      "name": "Eight unique CoreID",
+      "evidence": "COMPONENT: nine unique DOM elements and IDs",
+      "hold": "original material IDs/Windows HOLD"
+    },
+    {
+      "taskId": "G3-03-R07-04",
+      "name": "Floating luminous buttons",
+      "evidence": "SOURCE: CSS ::after, pointer-events:none",
+      "hold": "WebView2 click/focus HOLD"
+    },
+    {
+      "taskId": "G3-03-R07-05",
+      "name": "Glass panels",
+      "evidence": "SOURCE: backdrop-filter, scope",
+      "hold": "real DPI contrast HOLD"
+    },
+    {
+      "taskId": "G3-03-R07-06",
+      "name": "Camera and seamless transitions",
+      "evidence": "HOLD: not implemented by QA-only FX add-on",
+      "hold": "E01 owner runtime HOLD"
+    },
+    {
+      "taskId": "G3-03-R07-07",
+      "name": "Five approved Persona",
+      "evidence": "HOLD: untouched, not falsely substituted",
+      "hold": "approved video loops runtime HOLD"
+    },
+    {
+      "taskId": "G3-03-R07-08",
+      "name": "Truthful LIVE events",
+      "evidence": "COMPONENT: 3 new regressions RED->GREEN",
+      "hold": "native events.v3 evidence E06 HOLD"
+    },
+    {
+      "taskId": "G3-03-R07-09",
+      "name": "Adaptivity 320/390/800x480/4K",
+      "evidence": "SOURCE: @media exists",
+      "hold": "all real viewports NOT_RUN"
+    },
+    {
+      "taskId": "G3-03-R07-10",
+      "name": "ECO/Reduced Motion",
+      "evidence": "COMPONENT: profile and hidden/intersection guards",
+      "hold": "real GPU coexistence NOT_RUN"
+    }
+  ],
+  "sevenIndicators": [
+    {
+      "executor": "E01",
+      "taskId": "V16.26.3",
+      "weight": "20%",
+      "source": "PR121; QA PR129",
+      "componentVerified": "SYNTHETIC PARTIAL",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN",
+      "acceptedProgress": "N/D"
+    },
+    {
+      "executor": "E02",
+      "taskId": "V16.26.4",
+      "weight": "25%",
+      "source": "PR123",
+      "componentVerified": "MOCKED PARTIAL",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN",
+      "acceptedProgress": "N/D"
+    },
+    {
+      "executor": "E03",
+      "taskId": "V16.26.5",
+      "weight": "20%",
+      "source": "PR122",
+      "componentVerified": "LOCAL PARTIAL",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN",
+      "acceptedProgress": "N/D"
+    },
+    {
+      "executor": "E04",
+      "taskId": "V16.26.6",
+      "weight": "25%",
+      "source": "PR119",
+      "componentVerified": "GPU NOT_RUN",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN",
+      "acceptedProgress": "N/D"
+    },
+    {
+      "executor": "E05",
+      "taskId": "V16.26.7",
+      "weight": "10%",
+      "source": "PR120",
+      "componentVerified": "SYNTHETIC PARTIAL",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN",
+      "acceptedProgress": "N/D"
+    },
+    {
+      "executor": "E06",
+      "taskId": "V16.26.8",
+      "weight": "gate",
+      "source": "PR66/128",
+      "componentVerified": "SOURCELOCK N/D",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN",
+      "acceptedProgress": "N/D"
+    },
+    {
+      "executor": "E07",
+      "taskId": "QA01-QA10",
+      "weight": "gate",
+      "source": "PR46",
+      "componentVerified": "WINDOWS 0/10",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN",
+      "acceptedProgress": "N/D"
+    }
+  ],
+  "weightedProgress": {
+    "formula": "0.20*P01+0.25*P02+0.20*P03+0.25*P04+0.10*P05",
+    "result": "N/D_HOLD",
+    "reason": "no accepted weighted task ledger; E06 and E07 mandatory release gates"
+  },
+  "errors": [
+    {
+      "cause": "mutable native event buffered by reference",
+      "fix": "immutable typed scalar snapshot",
+      "proof": "R05 red/R07 green",
+      "status": "QA_SOURCE_ONLY"
+    },
+    {
+      "cause": "regex coerced RunID object/number",
+      "fix": "strict string type validation",
+      "proof": "R05 red/R07 green",
+      "status": "QA_SOURCE_ONLY"
+    }
+  ],
+  "onePracticalSelfImprovement": {
+    "id": "IMMUTABLE_TRUTH_EVENT_CAPTURE_GATE",
+    "implementation": "Snapshot validated primitive host states before deferred replay, regression-test mutation/coercion before owner integration. Native attestation remains E06 owned."
+  },
+  "noLoss": "No D02 approved assets, E01 renderer, Persona, host, SQLite, Ollama, GPU training, installer, EXE, archives or main overwritten.",
+  "newReceiptFile": {
+    "path": "qa/G3-03/NOX_V16_G3_03_WOW_UI_R07_SOURCE_QA_RECEIPT_20261028.json",
+    "pre_sha256": "ABSENT",
+    "post_sha256": "DERIVED_AFTER_GITHUB_READBACK_AND_LOGGED_IN_E06",
+    "gitBlobSha1": "DERIVED_AFTER_GITHUB_READBACK_AND_LOGGED_IN_E06"
+  },
+  "release": "HOLD_OWNER_SOURCELOCK_WINDOWS"
+}

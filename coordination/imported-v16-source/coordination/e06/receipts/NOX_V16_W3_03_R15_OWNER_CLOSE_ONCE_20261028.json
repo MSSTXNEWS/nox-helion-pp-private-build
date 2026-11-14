@@ -1,0 +1,61 @@
+{
+  "schema": "NOX-V16-E06-OWNER-RECEIPT-v1",
+  "run_id": "NOX-V16-W3-03-20261028T225500MSK-R15",
+  "owner": "W3·03 E06",
+  "pr": 162,
+  "branch": "integration/nox-v16-unified-candidate-20261028-r01",
+  "expected_head": "0acabfe1ed1dfe03181e86db82ed66598bcb5348",
+  "parent_tree": "6d717a17b11d87ae4df85913e70a5e5d5fc3056f",
+  "historical_origin": "0b3a7d435be735148d64171deb9027093a89646e",
+  "task_ledger": {
+    "E06-W3-03-R15-01": "DONE fix duplicate close after terminal WebView2 message",
+    "E06-W3-03-R15-02": "DONE fail-closed private owner cleanup exception with STOP",
+    "E06-W3-03-R15-03": "DONE new five-scenario negative/positive regression; 3 prior errors -> all green",
+    "E06-W3-03-R15-04": "HOLD real Ollama/SQLite/Windows stream close tests",
+    "E06-W3-03-R15-05": "HOLD real GPU checkpoint/evaluation",
+    "E06-W3-03-R15-06": "HOLD 729 physical source member SHA",
+    "E06-W3-03-R15-07": "HOLD Azure Windows authorized runner",
+    "E06-W3-03-R15-08": "HOLD installed EXE/Setup SHA",
+    "E06-W3-03-R15-09": "HOLD E07 same-BuildID 10 native E2E",
+    "E06-W3-03-R15-10": "HOLD owner-level atomic STOP/SQLite side effect"
+  },
+  "files": [
+    {
+      "path": "coordination/e06/onehost_p02_p04.py",
+      "owner": "E06/W3·03",
+      "pre_sha256": "51ce8b00d2b27e24505dd05af89092330ac3909e0ca1dffe63cd347a4d6988cd",
+      "post_sha256": "c6fc685baef250f29a4775e1defbd036ba7482b8b8e0c6987b8696ee7f56c95a",
+      "pre_git_blob_sha1": "523da67d83b96c304c40c47ba374c3afccf3a7a9",
+      "post_git_blob_sha1": "17d2ac810aa93e6ab67218e186c600740084e0fc"
+    },
+    {
+      "path": "tests/e06/test_onehost_close_once_r15.py",
+      "owner": "E06 QA",
+      "pre_sha256": "ABSENT",
+      "post_sha256": "61419f31218bd1dc5c895a6f62ccd797cd8bc10c1a5f976b25d5bc7e771190a2",
+      "pre_git_blob_sha1": "ABSENT",
+      "post_git_blob_sha1": "fdcb53ede17ff88d119e96b00d334c22a06965b2"
+    }
+  ],
+  "test_evidence": "Exactly same preimage 3 regression errors (11 runs incl imported tests); patch new module 11/11 PASS incl fixtures; selected suite 86/86 PASS incl repeated imports; py_compile PASS. All deterministic stubs, Windows/GPU NOT_RUN.",
+  "change": "Introduce idempotent close_owner_once around existing owner stream; set native_stop and OneHostHold if native close fails before terminal WebView2 delivery. No extra worker, database, RAG, host or events.",
+  "permission_map": [
+    "native SID exact",
+    "trusted session/tenant/core/persona context",
+    "native_authorize per frame",
+    "existing P02 SQLite history ACL",
+    "existing P02 ChatBridge/one Ollama listener",
+    "existing P04 RAG citation callback",
+    "existing owner P04 GPU control and P05 verification callbacks unchanged"
+  ],
+  "holds": [
+    "Original physical 729 SourceLock unverified",
+    "Real Ollama and worker GPU checkpoint/evaluation NOT_RUN",
+    "Windows Azure pipeline and EXE SHA NOT_RUN",
+    "E07 installed 0/10",
+    "native atomicity of SQLite/STOP not proven"
+  ],
+  "one_lesson": "CLOSE_OWNER_LEASE_ONCE_AND_FAIL_CLOSED_BEFORE_TERMINAL",
+  "no_loss": "Only the E06 seam and its test modified. D02/WOW001-200/8 CoreID/5 Persona/original archives/EXE/user data unchanged.",
+  "concurrent_head_recovery": "Exact owner blob confirmed unchanged on live head; previous orphan git commits preserved, not merged."
+}

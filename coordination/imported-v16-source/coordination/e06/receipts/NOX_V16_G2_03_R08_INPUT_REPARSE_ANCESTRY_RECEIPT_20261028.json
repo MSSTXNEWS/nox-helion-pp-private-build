@@ -1,0 +1,186 @@
+{
+  "schema": "NOX_V16_E06_G2_03_R08_IMMUTABLE_INPUT_ANCESTRY_V1",
+  "run_id": "NOX-V16-E06-G2-03-20261028T1314MSK-R08",
+  "owner": "E06",
+  "status": "SOURCE_ONLY_CANDIDATE_WINDOWS_HOLD",
+  "immutable_common": {
+    "commit": "0b3a7d435be735148d64171deb9027093a89646e",
+    "tree": "f108d604c444f718b32aaecfd07b90b8f91b9a6f",
+    "main_compare": "IDENTICAL",
+    "inventory_pr": 66,
+    "raw_source_729_sha256": "UNVERIFIED_HOLD"
+  },
+  "donor": {
+    "commit": "d7c984cb01210fc9328b1046497e0596f0576a7b",
+    "tree": "34e751df0fa03eafd88b70044105087bacb8cd3e",
+    "pr": 125,
+    "branch": "e06/v16-g2-03-manifest-final-verify-20261028-r07",
+    "preimage_verified": true,
+    "ownership": "E06_ONLY"
+  },
+  "task_ledger": [
+    {
+      "task_id": "E06-R08-01",
+      "description": "READ_V16_MASTER_E06_LESSONS",
+      "status": "SOURCE_ONLY"
+    },
+    {
+      "task_id": "E06-R08-02",
+      "description": "BASELINE_MAIN_TREE_CHECK",
+      "status": "SOURCE_ONLY"
+    },
+    {
+      "task_id": "E06-R08-03",
+      "description": "REVIEW_PR66_OWNERSHIP",
+      "status": "SOURCE_ONLY"
+    },
+    {
+      "task_id": "E06-R08-04",
+      "description": "EXACT_R07_PREIMAGE_SHA",
+      "status": "SOURCE_ONLY"
+    },
+    {
+      "task_id": "E06-R08-05",
+      "description": "IMMUTABLE_WPF_SOURCE_ANCESTRY_GUARD",
+      "status": "SOURCE_ONLY"
+    },
+    {
+      "task_id": "E06-R08-06",
+      "description": "PYTHON_P01_CREATIVE_ANCESTRY_GUARDS",
+      "status": "SOURCE_ONLY"
+    },
+    {
+      "task_id": "E06-R08-07",
+      "description": "PRESERVE_D02_EIGHT_CORES_FIVE_PERSONAS_BY_NO_TOUCH",
+      "status": "SOURCE_ONLY"
+    },
+    {
+      "task_id": "E06-R08-08",
+      "description": "SOURCE_STATIC_CONTRACT_ASSERTIONS",
+      "status": "SOURCE_ONLY"
+    },
+    {
+      "task_id": "E06-R08-09",
+      "description": "ATOMIC_GIT_RECEIPT_READBACK",
+      "status": "SOURCE_ONLY"
+    },
+    {
+      "task_id": "E06-R08-10",
+      "description": "WINDOWS_BUILD_ROLLBACK_E07_HOLD",
+      "status": "HOLD"
+    }
+  ],
+  "files": [
+    {
+      "path": "coordination/e06/build_onehost_installer.ps1",
+      "owner": "E06",
+      "pre_sha256": "67c32ccf5e9b77210d9f0cc102a1ada5d49e5c64512e0d3ae102284f420bec89",
+      "post_sha256": "dc3346e12dbc03b5ac3a28156428031f542e8bc2669c15524cf77d542fd7285f",
+      "pre_git_blob_sha1": "0b1581f81fc9d6626ff968c2e00c47188e29a965",
+      "post_git_blob_sha1": "a773d38bb49a56d04585da2bab114dfceff3144e",
+      "change": "Add a no-reparse ancestry check for SourceRoot, PythonExe, approved P01 installer root, creative web root before build writes."
+    },
+    {
+      "path": "coordination/e06/tests/onehost_builder_contract.test.mjs",
+      "owner": "E06",
+      "pre_sha256": "43cfcef256f036a7f694663383aa2c728faf8c90526771c39b698d14fa241b3b",
+      "post_sha256": "d4055d2a5b6404d5d5db662284c9d52d6148017601b545408ea28fd074b4aff5",
+      "pre_git_blob_sha1": "2f7c3c0e820fb1c5ca7ce8c4d780bd281a245e66",
+      "post_git_blob_sha1": "1986f9363d7d5f7cf7fc6004a6653de213404921",
+      "change": "Add source-only contract regression for guarded ancestry, preservation of existing P01 verifier and no deletion."
+    },
+    {
+      "path": "coordination/e06/receipts/NOX_V16_G2_03_R08_INPUT_REPARSE_ANCESTRY_RECEIPT_20261028.json",
+      "owner": "E06",
+      "pre_sha256": "ABSENT",
+      "post_sha256": "SEE_EXTERNAL_GITHUB_READBACK",
+      "pre_git_blob_sha1": "ABSENT",
+      "post_git_blob_sha1": "SEE_EXTERNAL_GITHUB_READBACK",
+      "change": "new external receipt: exact hash stored in Google Drive report/readback"
+    }
+  ],
+  "patch_summary": "Strict fail-closed reparse ancestor check for immutable host build inputs; no original P01/UI or P02-P05 owner edit.",
+  "diff": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/NEW_R08_PENDING",
+  "checks": {
+    "source_static": "10/10 PASS",
+    "node": "NOT_RUN",
+    "powershell": "NOT_RUN_LINUX",
+    "windows_dotnet_wpf_webview2_nsis": "NOT_RUN_LINUX",
+    "install_update_rollback": "HOLD",
+    "E07_same_exe": "HOLD",
+    "raw_archive_SourceLock": "HOLD"
+  },
+  "indicators": [
+    {
+      "executor": "E01",
+      "task_id": "V16.26.3",
+      "source": "PR133",
+      "component": "OWNER_REPORTED_OFFLINE_ONLY",
+      "integrated": "HOLD",
+      "windows_accepted": "NOT_RUN",
+      "progress": "N/D"
+    },
+    {
+      "executor": "E02",
+      "task_id": "V16.26.4",
+      "source": "PR135",
+      "component": "OWNER_REPORTED_LOCAL_ONLY",
+      "integrated": "HOLD",
+      "windows_accepted": "NOT_RUN",
+      "progress": "N/D"
+    },
+    {
+      "executor": "E03",
+      "task_id": "V16.26.5",
+      "source": "PR132",
+      "component": "OWNER_REPORTED_LOCAL_ONLY",
+      "integrated": "HOLD",
+      "windows_accepted": "NOT_RUN",
+      "progress": "N/D"
+    },
+    {
+      "executor": "E04",
+      "task_id": "V16.26.6",
+      "source": "PR134",
+      "component": "GPU_NOT_RUN",
+      "integrated": "HOLD",
+      "windows_accepted": "NOT_RUN",
+      "progress": "N/D"
+    },
+    {
+      "executor": "E05",
+      "task_id": "V16.26.7",
+      "source": "PR131",
+      "component": "OWNER_REPORTED_LOCAL_ONLY",
+      "integrated": "HOLD",
+      "windows_accepted": "NOT_RUN",
+      "progress": "N/D"
+    },
+    {
+      "executor": "E06",
+      "task_id": "V16.26.8/E06-R08-01..10",
+      "source": "THIS_R08",
+      "component": "V8_SOURCE_10_10",
+      "integrated": "HOLD",
+      "windows_accepted": "NOT_RUN",
+      "progress": "N/D"
+    },
+    {
+      "executor": "E07",
+      "task_id": "QA01..QA10",
+      "source": "PR46_HISTORICAL",
+      "component": "FINAL_EXE_NOT_RUN",
+      "integrated": "HOLD",
+      "windows_accepted": "NOT_RUN",
+      "progress": "N/D"
+    }
+  ],
+  "weighted_progress_formula": "0.20*P01+0.25*P02+0.20*P03+0.25*P04+0.10*P05",
+  "weighted_progress": "N/D",
+  "new_error": "E06 build inputs were leaf-hash-checked but parent reparse points could redirect SourceRoot/PythonExe/P01/creative; no installed exploit shown.",
+  "root_cause": "Prior guards covered approved script leaves and output ancestors, not the complete immutable source input ancestry.",
+  "fix": "Shared read-only immutable input ancestry gate on existing E06 builder only.",
+  "one_practical_lesson": "IMMUTABLE_INPUT_ANCESTRY_BEFORE_HASH: validate the entire source input ancestor chain for reparse points BEFORE accepting leaf hashes or staging; a correct file SHA does not seal its filesystem provenance.",
+  "loss": "NO_LOSS; zero original D02/WOW/P02-P05/archive/EXE modifications",
+  "release": "HOLD"
+}

@@ -1,0 +1,97 @@
+{
+  "schema": "NOX_V16_T06_OWNER_RECEIPT_AUDIT_R23",
+  "run_id": "NOX-V16-T06-20261029-M1-R23-OWNER-SAMEHEAD-SELFIMPROVEMENT",
+  "role": "M1/T06",
+  "source_branch": "integration/nox-v16-unified-candidate-20261028-r01",
+  "evaluated_head": "dde1be7f03cd512a22f30046c6ba2d5de3582353",
+  "evaluated_tree": "106c03a6a8b85700d1b2442f345bb43380436977",
+  "shared_error_register": "fecf68671d30b0c879ae5f43fbaa210143e3c530",
+  "source_files": [
+    {
+      "path": "coordination/e06/t06_owner_receipt_same_head_gate_r23.py",
+      "before": null,
+      "after": "12bc43ca210022fba418ca7345876e598edc33e3"
+    },
+    {
+      "path": "coordination/e06/test_t06_owner_receipt_same_head_gate_r23.py",
+      "before": null,
+      "after": "c36e6ed5fb0659c07539d7482169cfe363b67336"
+    }
+  ],
+  "actual_owner_receipts": {
+    "P01": {
+      "receipt": "a5037015bb2dd7a8f82ba164a33655494d7f30ff",
+      "source_blobs_matched": 28,
+      "source_blobs_checked": 28
+    },
+    "P02": {
+      "receipt": "18a8717ff6bcd7bc9a902674c6dc5976623ed77e",
+      "digest_type": "SHA256_BYTES",
+      "current_sha256_revalidation": "PENDING_LOCAL_CHECKOUT"
+    },
+    "P03": {
+      "receipt": "1d6aa6f8574ff44208eb5fc0262a6389381b7763",
+      "matched": 2,
+      "checked": 2
+    },
+    "P04": {
+      "receipt": "6375a87e825a7f7946e106a7d4a5319009113582",
+      "matched": 3,
+      "checked": 4,
+      "stale": [
+        "Packages/P04/rag_python_compat.py"
+      ],
+      "missing": [
+        ".github/workflows/nox-p04-candidate-ci.yml"
+      ]
+    },
+    "P05": {
+      "receipt": "aa2cce569966fb6e858a4722c99e0b484dde8bbe",
+      "matched": 1,
+      "checked": 2,
+      "stale": [
+        "Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs"
+      ]
+    }
+  },
+  "real_functional_tests": {
+    "origin": "NOX_V16_E01_TURBO10_C07_HANDOFF.zip",
+    "original_bytes": 21867377,
+    "original_sha256": "90076eba83a213ba2b410632ced3288d41a6691ab63f81ad0520aa3cbbbfcb52",
+    "original_tests": "19 PASS, 1 stale P05 expectation",
+    "copied_temporary_fixture_tests": "20/20 PASS after V7 to V15 and C1-5 to C1-10 assertion correction",
+    "original_files_changed": false,
+    "host50_windows": "NOT_RUN"
+  },
+  "host50": {
+    "source_bound": 39,
+    "unbound": 11,
+    "native_routes_pending": 14,
+    "receipt": "e79efd9f50da4281f72c719f60fddcf527187e2f",
+    "same_head_windows": "NOT_RUN",
+    "source_ready": false
+  },
+  "six_github_runs": {
+    "head": "632bc1464a2f927087e77d394d5248890fad4912",
+    "reported_failures": 6,
+    "job_logs": "BLOB_NOT_FOUND",
+    "cause": "UNVERIFIED_NO_GUESS"
+  },
+  "one_focused_source_check": "11/11 PASS; new Python unittest saved NOT_RUN; canonical HEAD receipt script NOT_RUN",
+  "error_ids": [
+    "ERR-SRC-004",
+    "ERR-SRC-003",
+    "ERR-SYS-002",
+    "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01"
+  ],
+  "prevention": "Owner receipts must match current Git blobs or exact SHA256; do not promote historical receipts, synthetic tests, or GitHub Actions results to native/same-HEAD QA acceptance.",
+  "T06_progress": {
+    "accepted": 1,
+    "total": 8,
+    "percent": 12.5,
+    "delta_pp": 0,
+    "remaining": 7
+  },
+  "next_owners": "T08 independent source QA, T09 frozen HEAD, T10 SOURCE_READY; actual signed Windows-native Host50 runtime needed before 14 route acceptance",
+  "forbidden": "No EXE/NSIS/CI/E07 build; preserve NO-LOSS/ACL/STOP/consent/729/T04 34/34"
+}

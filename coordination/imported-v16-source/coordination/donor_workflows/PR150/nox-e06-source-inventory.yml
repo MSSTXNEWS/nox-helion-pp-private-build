@@ -1,0 +1,32 @@
+name: NOX E06 original-source inventory
+on:
+  push:
+    paths:
+      - "coordination/e06/source_deep_inventory.py"
+      - ".github/workflows/nox-e06-source-inventory.yml"
+  pull_request:
+    paths:
+      - "coordination/e06/source_deep_inventory.py"
+      - ".github/workflows/nox-e06-source-inventory.yml"
+permissions:
+  contents: read
+jobs:
+  source-inventory:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Read-only exact SHA, source paths and API seam inventory
+        shell: pwsh
+        run: python coordination/e06/source_deep_inventory.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nox-e06-original-source-inventory
+          path: e06-source-inventory.json
+          if-no-files-found: error
+          retention-days: 30

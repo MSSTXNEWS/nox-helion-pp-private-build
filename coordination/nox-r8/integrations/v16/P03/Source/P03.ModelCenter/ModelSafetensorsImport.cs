@@ -1,0 +1,223 @@
+using System.Buffers.Binary;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
+using System.Text.RegularExpressions;
+
+namespace Nox.P03;
+
+// This object is built from the authenticated P04 native result, never deserialized
+// from browser payloads. P04 verifies dataset rights before granting this approval.
+public sealed record P04MergedImportApproval(string Directory, string MergedPayloadSha256,
+    string MergeReceiptSha256, string TrainingReceiptPath, string TrainingReceiptSha256,
+    string RightsAttestationId, string RightsAttestationSha256, string LicenseSource,
+    string NativeApprovalId, bool NativeRightsVerified);
+public sealed record ImportedModelFile(string Path, string Sha256, long SizeBytes);
+
+public sealed class SafetensorsImportHold(string code) : IOException(code)
+{
+    public string Code { get; } = code;
+}
+
+internal static class ModelSafetensorsImport
+{
+    private static readonly Regex Sha=new("^[a-f0-9]{64}$");
+    private static readonly Regex Name=new("^[A-Za-z0-9][A-Za-z0-9._-]{0,159}$");
+    private const long MaxTotal=1L<<40;
+    internal static async Task<IReadOnlyList<ImportedModelFile>> ValidateAsync(
+        P04MergedImportApproval approval,CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(approval);
+        // Native P04-reviewed directory and training receipt identities must not
+        // be reinterpreted through a mutable process working directory when a
+        // historical queue job or direct original Ollama adapter calls us.
+        // EnqueueVerifiedMergedAsync checks these paths too; this is the
+        // shared execution-time fence before any filesystem operation.
+        if (string.IsNullOrWhiteSpace(approval.Directory) ||
+            string.IsNullOrWhiteSpace(approval.TrainingReceiptPath) ||
+            !System.IO.Path.IsPathFullyQualified(approval.Directory) ||
+            !System.IO.Path.IsPathFullyQualified(approval.TrainingReceiptPath))
+            throw new InvalidDataException("P03_P04_MERGE_OWNER_ABSOLUTE_PATH_HOLD");
+        if (!approval.NativeRightsVerified || string.IsNullOrWhiteSpace(approval.NativeApprovalId) ||
+            approval.NativeApprovalId.Length>200 || string.IsNullOrWhiteSpace(approval.RightsAttestationId) ||
+            !new[]{approval.MergedPayloadSha256,approval.MergeReceiptSha256,
+                approval.TrainingReceiptSha256,approval.RightsAttestationSha256}.All(x=>Sha.IsMatch(x??"")) ||
+            // Historical approved P04 jobs must obey the same external
+            // evidence boundary at execution time, not only at enqueue.
+            !ModelDownloadQueueStore.HasReviewedGgufAuthority(
+                approval.RightsAttestationId, approval.LicenseSource))
+            throw new InvalidDataException("P03_P04_NATIVE_RIGHTS_APPROVAL_REQUIRED");
+        ModelLocalAttestation.RequireNoExistingReparsePoint(approval.Directory);
+        if (!System.IO.Directory.Exists(approval.Directory))
+            throw new InvalidDataException("P03_MERGED_DIRECTORY_MISSING");
+        using var merge=await ReadPinnedJsonAsync(System.IO.Path.Combine(approval.Directory,"merge-receipt.json"),approval.MergeReceiptSha256,ct);
+        using var training=await ReadPinnedJsonAsync(approval.TrainingReceiptPath,approval.TrainingReceiptSha256,ct);
+        var m=merge.RootElement;var t=training.RootElement;
+        if (m.GetProperty("schema").GetString()!="NOX-QLORA-MERGE-RECEIPT-v1" || m.GetProperty("status").GetString()!="CREATED" ||
+            m.GetProperty("merged_payload_sha256").GetString()!=approval.MergedPayloadSha256 ||
+            m.GetProperty("training_receipt_sha256").GetString()!=approval.TrainingReceiptSha256 ||
+            t.GetProperty("schema").GetString()!="NOX-QLORA-TRAINING-RECEIPT-v2" || t.GetProperty("status").GetString()!="COMPLETED" ||
+            t.GetProperty("dataset").GetProperty("rights_attestation_id").GetString()!=approval.RightsAttestationId ||
+            t.GetProperty("dataset").GetProperty("rights_attestation_sha256").GetString()!=approval.RightsAttestationSha256 ||
+            t.GetProperty("training").GetProperty("evaluation_status").GetString()!="VALID" ||
+            t.GetProperty("adapter_sha256").GetString()!=m.GetProperty("adapter_sha256").GetString())
+            throw new InvalidDataException("P03_P04_MERGE_EVIDENCE_MISMATCH");
+        var model=t.GetProperty("model");var dataset=t.GetProperty("dataset");
+        if (model.GetProperty("id").GetString()!=m.GetProperty("model_id").GetString() ||
+            model.GetProperty("revision").GetString()!=m.GetProperty("model_revision").GetString() ||
+            model.GetProperty("snapshot_sha256").GetString()!=m.GetProperty("model_snapshot_sha256").GetString() ||
+            string.IsNullOrWhiteSpace(dataset.GetProperty("owner_approval_id").GetString()) ||
+            string.IsNullOrWhiteSpace(dataset.GetProperty("license_id").GetString()) ||
+            !Sha.IsMatch(dataset.GetProperty("train_sha256").GetString()??"") ||
+            !Sha.IsMatch(dataset.GetProperty("holdout_sha256").GetString()??"") ||
+            dataset.GetProperty("train_sha256").GetString()==dataset.GetProperty("holdout_sha256").GetString())
+            throw new InvalidDataException("P03_P04_BASE_RIGHTS_HOLDOUT_MISMATCH");
+        var baseline=t.GetProperty("training").GetProperty("baseline_eval_loss").GetDouble();
+        var trained=t.GetProperty("training").GetProperty("adapter_eval_loss").GetDouble();
+        if (!double.IsFinite(baseline) || !double.IsFinite(trained) || baseline<0 || trained<0 || trained>=baseline ||
+            m.GetProperty("baseline_eval_loss").GetDouble()!=baseline || m.GetProperty("adapter_eval_loss").GetDouble()!=trained)
+            throw new InvalidDataException("P03_P04_EVALUATION_HOLD");
+        var entries=System.IO.Directory.GetFileSystemEntries(approval.Directory);
+        if (entries.Length is < 4 or > 257)throw new InvalidDataException("P03_MERGED_FILE_COUNT_HOLD");
+        var files=new List<ImportedModelFile>();long total=0;
+        foreach(var path in entries.OrderBy(System.IO.Path.GetFileName,StringComparer.Ordinal))
+        {
+            ct.ThrowIfCancellationRequested();var name=System.IO.Path.GetFileName(path);
+            ModelLocalAttestation.RequireRegularUnlinkedFile(path);
+            if (name=="merge-receipt.json")continue;
+            if (!Name.IsMatch(name) || !(name.EndsWith(".safetensors",StringComparison.Ordinal) ||
+                name.EndsWith(".json",StringComparison.Ordinal) || name.EndsWith(".model",StringComparison.Ordinal) ||
+                name.EndsWith(".txt",StringComparison.Ordinal) || name.EndsWith(".jinja",StringComparison.Ordinal)))
+                throw new InvalidDataException("P03_MERGED_FILE_TYPE_HOLD");
+            await using var stream=new FileStream(path,FileMode.Open,FileAccess.Read,FileShare.Read,1<<20,true);
+            // Preflight is not enough: attest the actual opened model-weight handle.
+            ModelLocalAttestation.RequireSingleLinkFileHandle(stream.SafeFileHandle);
+            if (stream.Length is <=0 or > (1L<<38))throw new InvalidDataException("P03_MERGED_FILE_SIZE_HOLD");
+            total=checked(total+stream.Length);if(total>MaxTotal)throw new InvalidDataException("P03_MERGED_TOTAL_SIZE_HOLD");
+            if(name.EndsWith(".safetensors",StringComparison.Ordinal))await CheckSafetensorsAsync(stream,ct);
+            stream.Position=0;var hash=Convert.ToHexString(await SHA256.HashDataAsync(stream,ct)).ToLowerInvariant();
+            files.Add(new(name,hash,stream.Length));
+        }
+        if (!files.Any(x=>x.Path=="config.json") || !files.Any(x=>x.Path.EndsWith(".safetensors",StringComparison.Ordinal)) ||
+            !files.Any(x=>x.Path is "tokenizer.json" or "tokenizer.model"))
+            throw new InvalidDataException("P03_MERGED_MODEL_CONFIG_TOKENIZER_REQUIRED");
+        using var tree=IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+        foreach(var file in files)
+        {
+            var name=Encoding.UTF8.GetBytes(file.Path);var length=new byte[4];
+            BinaryPrimitives.WriteUInt32BigEndian(length,checked((uint)name.Length));
+            tree.AppendData(length);tree.AppendData(name);tree.AppendData(Convert.FromHexString(file.Sha256));
+        }
+        if (Convert.ToHexString(tree.GetHashAndReset()).ToLowerInvariant()!=approval.MergedPayloadSha256)
+            throw new InvalidDataException("P03_MERGED_PAYLOAD_SHA_MISMATCH");
+        return files.AsReadOnly();
+    }
+
+    private static async Task<JsonDocument> ReadPinnedJsonAsync(string path,string expected,CancellationToken ct)
+    {
+        ModelLocalAttestation.RequireRegularUnlinkedFile(path);
+        await using var file=new FileStream(path,FileMode.Open,FileAccess.Read,FileShare.Read,8192,true);
+        // Pin checks alone do not authorize a substituted/hardlinked receipt inode.
+        ModelLocalAttestation.RequireSingleLinkFileHandle(file.SafeFileHandle);
+        if(file.Length is <2 or > 1048576)throw new InvalidDataException("P03_P04_RECEIPT_SIZE_HOLD");
+        using var memory=new MemoryStream();await file.CopyToAsync(memory,ct);var bytes=memory.ToArray();
+        if(Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant()!=expected)
+            throw new InvalidDataException("P03_P04_RECEIPT_SHA_MISMATCH");
+        return JsonDocument.Parse(bytes,new JsonDocumentOptions { MaxDepth=32 });
+    }
+
+    // An owner-approved SHA cannot make duplicate JSON keys or overlapping
+    // tensor byte ranges safe to load through different Safetensors readers.
+    private static void RequireUniqueHeaderFields(JsonElement node)
+    {
+        if (node.ValueKind == JsonValueKind.Array)
+            foreach (var element in node.EnumerateArray()) RequireUniqueHeaderFields(element);
+        else if (node.ValueKind == JsonValueKind.Object)
+        {
+            var names = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var property in node.EnumerateObject())
+            {
+                if (!names.Add(property.Name))
+                    throw new InvalidDataException("P03_SAFETENSORS_DUPLICATE_JSON_FIELD_HOLD");
+                RequireUniqueHeaderFields(property.Value);
+            }
+        }
+    }
+
+    private static async Task CheckSafetensorsAsync(FileStream file,CancellationToken ct)
+    {
+        var header=new byte[8];await file.ReadExactlyAsync(header,ct);
+        var size=BinaryPrimitives.ReadUInt64LittleEndian(header);
+        if(size is <2 or > 16777216 || size>(ulong)Math.Max(0,file.Length-8))
+            throw new InvalidDataException("P03_SAFETENSORS_HEADER_INVALID");
+        var bytes=new byte[checked((int)size)];await file.ReadExactlyAsync(bytes,ct);
+        using var doc=JsonDocument.Parse(bytes,new JsonDocumentOptions {MaxDepth=16});
+        if(doc.RootElement.ValueKind!=JsonValueKind.Object)
+            throw new InvalidDataException("P03_SAFETENSORS_HEADER_INVALID");
+        RequireUniqueHeaderFields(doc.RootElement);
+        var tensors=0;
+        var ranges=new List<(long Start,long End)>();
+        foreach(var tensor in doc.RootElement.EnumerateObject())
+        {
+            if(tensor.Name=="__metadata__")
+            {
+                if(tensor.Value.ValueKind!=JsonValueKind.Object ||
+                    tensor.Value.EnumerateObject().Any(x=>x.Value.ValueKind!=JsonValueKind.String))
+                    throw new InvalidDataException("P03_SAFETENSORS_METADATA_SCHEMA_HOLD");
+                continue;
+            }
+            if(tensor.Value.ValueKind!=JsonValueKind.Object ||
+                !tensor.Value.TryGetProperty("data_offsets",out var offsets) ||
+                offsets.ValueKind!=JsonValueKind.Array || offsets.GetArrayLength()!=2 ||
+                !offsets[0].TryGetInt64(out var start) || !offsets[1].TryGetInt64(out var end) ||
+                start<0 || end<start || end>file.Length-8-(long)size)
+                throw new InvalidDataException("P03_SAFETENSORS_OFFSETS_INVALID");
+            // An SHA-256-pinned header must still describe a valid tensor:
+            // offsets, dtype, shape and actual byte span must agree.
+            if(!tensor.Value.TryGetProperty("dtype",out var dtype) ||
+                dtype.ValueKind!=JsonValueKind.String ||
+                !tensor.Value.TryGetProperty("shape",out var shape) ||
+                shape.ValueKind!=JsonValueKind.Array)
+                throw new InvalidDataException("P03_SAFETENSORS_TENSOR_SCHEMA_HOLD");
+            var byteWidth=dtype.GetString() switch
+            {
+                "BOOL" or "I8" or "U8" or "F8_E4M3FN" or "F8_E4M3FNUZ" or
+                    "F8_E5M2" or "F8_E5M2FNUZ" => 1,
+                "I16" or "U16" or "F16" or "BF16" => 2,
+                "I32" or "U32" or "F32" => 4,
+                "I64" or "U64" or "F64" => 8,
+                _ => 0
+            };
+            if(byteWidth==0)
+                throw new InvalidDataException("P03_SAFETENSORS_UNSUPPORTED_DTYPE_HOLD");
+            long tensorBytes=byteWidth;
+            foreach(var dimension in shape.EnumerateArray())
+            {
+                if(dimension.ValueKind!=JsonValueKind.Number ||
+                    !dimension.TryGetInt64(out var count) || count<0 ||
+                    (count>0 && tensorBytes>long.MaxValue/count))
+                    throw new InvalidDataException("P03_SAFETENSORS_SHAPE_OVERFLOW_HOLD");
+                tensorBytes*=count;
+            }
+            if(end-start!=tensorBytes)
+                throw new InvalidDataException("P03_SAFETENSORS_TENSOR_BYTES_MISMATCH_HOLD");
+            if(start<end)ranges.Add((start,end)); // Empty tensors are allowed.
+            tensors++;
+        }
+        if(tensors==0)throw new InvalidDataException("P03_SAFETENSORS_NO_TENSORS");
+        // Safetensors forbids gaps anywhere in tensor data: prevent polyglot payloads.
+        // Verify SAME pinned, open file handle before recording native import.
+        ranges.Sort((a,b)=>a.Start.CompareTo(b.Start));
+        long covered=0;
+        foreach(var span in ranges)
+        {
+            if(span.Start<covered)
+                throw new InvalidDataException("P03_SAFETENSORS_OVERLAPPING_TENSORS_HOLD");
+            if(span.Start>covered)
+                throw new InvalidDataException("P03_SAFETENSORS_UNINDEXED_BYTES_HOLD");
+            covered=span.End;
+        }
+        if(covered!=file.Length-8-(long)size)
+            throw new InvalidDataException("P03_SAFETENSORS_UNINDEXED_BYTES_HOLD");
+    }
+}

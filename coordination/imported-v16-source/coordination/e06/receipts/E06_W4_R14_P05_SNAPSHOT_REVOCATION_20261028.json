@@ -1,0 +1,49 @@
+{
+  "schema": "NOX-V16-E06-IMMUTABLE-OWNER-RECEIPT-v1",
+  "run_id": "NOX-V16-W4-03-20261028T2205MSK-R14-P05-REVOCATION",
+  "owner": "E06/W4-03",
+  "pr": 162,
+  "branch": "integration/nox-v16-unified-candidate-20261028-r01",
+  "expected_head": "642600294f53964fef09f47084a4facde2691d43",
+  "parent_tree": "40cd4fc4406611c82e45ab6d81174b46dd8811f3",
+  "historical_origin": "0b3a7d435be735148d64171deb9027093a89646e",
+  "reason": "Owner5 feed/sensor consent can be revoked while snapshot() runs; preimage checked availability only before snapshot, permitting post-revocation dated source or telemetry projection.",
+  "exact_diff": "@@ read(session, route, args): after raw=self.owner.snapshot(session), re-probe existing owner.available(route) and fail closed G2Hold before any feed or sensor response.",
+  "files": [
+    {
+      "path": "coordination/e06/adapters/g2_space_mobile.py",
+      "pre_sha256": "93ac131c86e84a7cad262c4c94c0339fc0acca714c0026c234161943d62e99bc",
+      "post_sha256": "4571d64b378349764db0ca0db65630bf58e7f038ae4de2605b0c2467171ed193",
+      "pre_git_blob_sha1": "e521129c3cd2ca39100682eee8cde5bf971f258a",
+      "post_git_blob_sha1": "58a8e694221321cece73c5f2e3a6a406e10615f9",
+      "status": "SOURCE_ONLY_NOT_WINDOWS_VERIFIED"
+    },
+    {
+      "path": "tests/e06/adapters/test_g2_p05_snapshot_revocation_r14.py",
+      "pre_sha256": "ABSENT",
+      "post_sha256": "4d55befe2e909c83b50a8c486d3a02e70839792ce70053d77af2612834a06430",
+      "pre_git_blob_sha1": "ABSENT",
+      "post_git_blob_sha1": "2797c502d6bfbeadb20874fb1802e7cf311aeceb",
+      "status": "SOURCE_ONLY_NOT_WINDOWS_VERIFIED"
+    }
+  ],
+  "tests": {
+    "isolated_python_source_derived_reproduction": "RED: both feed and telemetry leak before guard; GREEN: both HOLD after guard; stable source-dated feed unchanged. This was a minimal extracted control-flow harness, not execution of full GitHub module.",
+    "github_component_suite": "6 new tests defined; NOT_RUN on full target/Windows",
+    "azure": "NOT_RUN",
+    "installed_e07": "0/10 NOT_RUN"
+  },
+  "task_ids": {
+    "R14-01": "DONE read V16/issue177/canonical/master/lessons",
+    "R14-02": "DONE pin live PR162 HEAD/tree + owner blob",
+    "R14-03": "DONE negative reproduction owner revoke during snapshot",
+    "R14-04": "DONE source guard without new producer/host",
+    "R14-05": "DONE 6 targeted Windows-capable regression tests authored",
+    "R14-06": "DONE Git blob SHA/pre/post SHA256 receipt created",
+    "R14-07": "PENDING CAS shared PR162",
+    "R14-08": "PENDING GitHub readback",
+    "R14-09": "PENDING Drive append+readback and E07 handoff",
+    "R14-10": "HOLD native provider/Windows and E07 same EXE"
+  },
+  "limits": "Does not prove live provider/voice/GPU/SIP; original physical 729-member ZIP SHA NOT_VERIFIED. No original assets/owner P02/P03/P05 code changed."
+}

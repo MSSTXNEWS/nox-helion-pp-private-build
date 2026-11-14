@@ -1,0 +1,74 @@
+name: NOX R11 Block1 - verified Ollama transport chunks
+on:
+  push:
+    branches: [integration/nox-v16-unified-candidate-20261028-r01]
+    paths:
+      - '.github/workflows/nox-r11-block1-ollama-chunks.yml'
+      - 'coordination/wow-exec-v1/downloads/split-existing-ollama.py'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  split-existing-artifact:
+    runs-on: windows-2022
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Fetch already verified immutable Ollama artifact from prior Windows run
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 41324910974
+          name: nox-r11-official-ollama-41324910974
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: ${{ runner.temp }}\nox-r11-ollama-existing
+      - name: Verify whole SHA and split for connector transport
+        shell: pwsh
+        run: |
+          python coordination/wow-exec-v1/downloads/split-existing-ollama.py
+      - name: Upload verified part 01
+        uses: actions/upload-artifact@v4
+        with:
+          name: nox-r11-ollama-part01-${{ github.run_id }}
+          path: ${{ runner.temp }}\nox-r11-ollama-parts\OllamaSetup-v0.40.13-x64.part01
+          compression-level: 0
+          retention-days: 14
+      - name: Upload verified part 02
+        uses: actions/upload-artifact@v4
+        with:
+          name: nox-r11-ollama-part02-${{ github.run_id }}
+          path: ${{ runner.temp }}\nox-r11-ollama-parts\OllamaSetup-v0.40.13-x64.part02
+          compression-level: 0
+          retention-days: 14
+      - name: Upload verified part 03
+        uses: actions/upload-artifact@v4
+        with:
+          name: nox-r11-ollama-part03-${{ github.run_id }}
+          path: ${{ runner.temp }}\nox-r11-ollama-parts\OllamaSetup-v0.40.13-x64.part03
+          compression-level: 0
+          retention-days: 14
+      - name: Upload verified part 04
+        uses: actions/upload-artifact@v4
+        with:
+          name: nox-r11-ollama-part04-${{ github.run_id }}
+          path: ${{ runner.temp }}\nox-r11-ollama-parts\OllamaSetup-v0.40.13-x64.part04
+          compression-level: 0
+          retention-days: 14
+      - name: Upload verified part 05
+        uses: actions/upload-artifact@v4
+        with:
+          name: nox-r11-ollama-part05-${{ github.run_id }}
+          path: ${{ runner.temp }}\nox-r11-ollama-parts\OllamaSetup-v0.40.13-x64.part05
+          compression-level: 0
+          retention-days: 14
+      - name: Upload whole-file and individual SHA-256 receipts
+        uses: actions/upload-artifact@v4
+        with:
+          name: nox-r11-ollama-chunks-manifest-${{ github.run_id }}
+          path: ${{ runner.temp }}\nox-r11-ollama-parts\CHUNKS_MANIFEST.json
+          retention-days: 14

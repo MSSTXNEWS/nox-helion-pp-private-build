@@ -1,0 +1,17 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+const code = readFileSync(new URL('./onehost-menu-bindings.mjs',import.meta.url),'utf8');
+const match = code.match(/export function nativeOwnerActionReceipt\([\s\S]*?\n}\s*(?=export function isNativeChatTerminal)/);
+assert.ok(match,'Native owner ACK verifier must exist in original UI binding');
+assert.match(code,/return nativeOwnerActionReceipt\(result,route,request\.actionId\);/);
+const verify = new Function(match[0].replace(/^export /,'')+'\nreturn nativeOwnerActionReceipt;')();
+const valid={routeId:'chat.commands',state:'COMPLETED',result:{ack:true,run_id:'S03-r115-test',source_head:'a'.repeat(40),status:'QUEUED'}};
+test('completed envelope cannot promote owner ack=false',()=>{const r=verify({...valid,result:{ack:false,run_id:'S03-r115-test',source_head:'a'.repeat(40)}},'chat.commands','selfbuilder.propose');assert.equal(r.ack,false);});
+test('completed envelope requires explicit native owner ACK',()=>{assert.equal(verify({...valid,result:{status:'QUEUED'}},'chat.commands','selfbuilder.propose').ack,false);});
+test('read action accepts only native ack true',()=>{const r=verify({...valid,result:{ack:true,status:'S03_READ'}},'chat.commands','selfbuilder.worker.status');assert.equal(r.ack,true);assert.equal(r.status,'S03_READ');});
+test('unexpected route is denied',()=>{assert.equal(verify({...valid,routeId:'training.start'},'chat.commands','selfbuilder.propose').ack,false);});
+test('incomplete native action is denied',()=>{assert.equal(verify({...valid,state:'STOP_REQUESTED'},'chat.commands','selfbuilder.propose').ack,false);});
+test('propose requires verified S03 run id',()=>{assert.equal(verify({...valid,result:{ack:true,run_id:'unverified',source_head:'a'.repeat(40)}},'chat.commands','selfbuilder.propose').ack,false);});
+test('propose requires pinned source SHA',()=>{assert.equal(verify({...valid,result:{ack:true,run_id:'S03-r115-test',source_head:'unverified'}},'chat.commands','selfbuilder.propose').ack,false);});
+test('valid native S03 receipt remains available',()=>{const r=verify(valid,'chat.commands','selfbuilder.propose');assert.equal(r.ack,true);assert.equal(r.run_id,'S03-r115-test');});

@@ -1,0 +1,118 @@
+"""Source-only fixtures; real Windows WebView2/UIA/E07 are distinct."""
+import hashlib
+import unittest
+from unittest.mock import patch
+import importlib.util
+from pathlib import Path
+
+SOURCE = Path(__file__).resolve().parents[2] / "coordination/express/stage_original_five_primary.py"
+SPEC = importlib.util.spec_from_file_location("nox_u08_stage_original_five_primary", SOURCE)
+assert SPEC is not None and SPEC.loader is not None
+target = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(target)
+
+
+class FivePrimaryTests(unittest.TestCase):
+    def setUp(self):
+        self.raw = b'<html><body><script>let chatScrollFrame=0;const items=[chatLog=document.getElementById(\'chat-log\'),1];</script><a href="/chat">CHAT</a><main>ORIGINAL</main></body></html>'
+        self.guard = (patch.object(target, 'ORIGINAL_BYTES', len(self.raw)),
+                      patch.object(target, 'ORIGINAL_SHA256', hashlib.sha256(self.raw).hexdigest()))
+        for item in self.guard: item.start()
+
+    def tearDown(self):
+        for item in reversed(self.guard): item.stop()
+
+    def test_original_preserved_five_buttons_source_only(self):
+        output, proof = target.publish(self.raw)
+        self.assertIn(b'<main>ORIGINAL</main>', output)
+        self.assertIn(b"const chatLog=document.getElementById('chat-log');", output)
+        self.assertEqual(output.count(b'data-nox-primary='), 5)
+        self.assertIn(b'prefers-reduced-motion', output)
+        self.assertIn(b'event.isTrusted', output)
+        self.assertIn(b'window.chrome.webview.postMessage', output)
+        self.assertEqual(proof['installed_ui_automation'], 'NOT_RUN')
+        self.assertIs(proof['release_accepted'], False)
+        self.assertEqual(proof['source_sha256'], hashlib.sha256(self.raw).hexdigest())
+        self.assertIn("invokeMatches[0].click();", target.INSERT)
+        self.assertIn("button#training-diagnostic", target.INSERT)
+        self.assertIn("button#pc-install", target.INSERT)
+        self.assertNotIn("if(name==='MODELS')target.click();", target.INSERT)
+        self.assertIn("No direct privileged IPC", target.INSERT)
+        self.assertIn('data-nox-check="A1"', target.INSERT)
+        self.assertIn('NOX-A1-NATIVE-COMMAND-STATUS-v1', target.INSERT)
+        self.assertIn("payload:{action:'selfbuilder.a1.status'}", target.INSERT)
+        self.assertNotIn("payload:{action:'selfbuilder.a1.boot'}", target.INSERT)
+        self.assertNotIn("payload:{action:'selfbuilder.a1.tick'}", target.INSERT)
+
+    def test_a1_native_denials_source_contract(self):
+        # Native A1 status must reject explicit owner/provider denial, not merely transport.
+        source=target.INSERT
+        self.assertIn("function a1ReceiptDenied(envelope,depth=0,trail=new Set())",source)
+        for field in ('errorMessage','error_message','nativeResult','ownerResult'):
+            self.assertIn(field,source)
+        self.assertIn("has('ack')&&envelope.ack!==true",source)
+        self.assertIn("has('ok')&&envelope.ok!==true",source)
+        self.assertIn("trail.has(envelope)",source)
+        self.assertIn("!a1ReceiptDenied(value)&&!a1ReceiptDenied(owner)",source)
+
+    def test_medium_wpf_webview_viewport_keeps_five_in_one_row_source_only(self):
+        # Physical 800x600 WPF can expose only 551..780 CSS px after native chrome.
+        # Without this bounded grid, flex-wrap could move SETTINGS to row two
+        # and the strict original single-dock UIA proof correctly remains HOLD.
+        css=target.INSERT
+        self.assertIn('@media (min-width:551px) and (max-width:1120px)', css)
+        self.assertIn('grid-template-columns:repeat(5,minmax(0,1fr))', css)
+        # R11 WPF leaves a 551px WebView2 viewport at compact window sizes.
+        # A fixed 12px uppercase SETTINGS label exceeds the approx. 55px cell.
+        # The original five-column dock/owner routes remain unchanged, while
+        # the source-locked compact typography must shrink without clipping.
+        self.assertIn('font-size:clamp(9px,1.5vw,12px);letter-spacing:0', css)
+        for viewport in (551, 600, 700, 800, 1044):
+            dock_width=min(650,viewport-238)
+            track=(dock_width-40)/5  # border/padding + four 5px gaps
+            font=max(9,min(12,viewport*0.015))
+            # Approximate fixture sanity only; physical WebView2/UIA still HOLD.
+            self.assertGreaterEqual(track,8*0.65*font+4)
+        for viewport in (320,390):
+            self.assertGreaterEqual((viewport-12-24)/5,8*0.65*9+2)
+
+        self.assertIn('#nox-express-primary button[data-nox-primary]{width:100%;min-width:0;', css)
+        self.assertIn('[data-nox-check="A1"],#nox-express-primary [data-nox-state]{grid-column:1/-1;', css)
+        self.assertIn('@media(max-width:550px)',css)
+        self.assertIn('@media(prefers-reduced-motion:reduce)',css)
+        self.assertEqual(sum(css.count('data-nox-primary="'+label+'"') for label in
+                             ('CHAT','INSTALL','MODELS','LEARN','SETTINGS')),5)
+        self.assertIn('event.isTrusted',css)
+        self.assertIn("if(name==='MODELS'",css)
+
+    def test_settings_original_back_focus_source_contract(self):
+        # The real native UIA SETTINGS route requires keyboard focus on
+        # a unique original Back button AFTER the original tile opens detail.
+        # Source-only; installed WPF/WebView2 action remains E07 HOLD.
+        script=target.INSERT
+        self.assertIn("const backButtons=Array.from(document.querySelectorAll('#menu-detail button'))",script)
+        self.assertIn("backButtons.length!==1||backButtons[0].getClientRects().length===0",script)
+        self.assertIn("backButtons[0].focus({preventScroll:false});",script)
+        self.assertIn("document.activeElement!==backButtons[0]",script)
+        self.assertNotIn("backButtons[0].click();",script)
+        self.assertIn("SETTINGS: исходная обратная кнопка без фокуса · HOLD",script)
+
+    def test_tampered_bytes_rejected(self):
+        with self.assertRaisesRegex(ValueError, 'SHA_HOLD'):
+            target.publish(self.raw.replace(b'ORIGINAL', b'ORIGINA!'))
+
+    def test_changed_length_rejected(self):
+        with self.assertRaisesRegex(ValueError, 'BYTES_HOLD'):
+            target.publish(self.raw + b'!')
+
+    def test_malformed_or_duplicate_markup_rejected(self):
+        for suffix in (b'</body>', b'id="nox-express-primary"'):
+            changed = self.raw.replace(b'ORIGINAL', suffix)
+            with patch.object(target, 'ORIGINAL_BYTES', len(changed)), patch.object(target, 'ORIGINAL_SHA256', hashlib.sha256(changed).hexdigest()):
+                with self.assertRaises(ValueError): target.publish(changed)
+
+    def test_renderer_does_not_fake_ack_or_disable_security(self):
+        bad = ['NATIVE_PERMISSION_GRANTED', 'release_accepted": True', 'models.pull', 'training.start', 'window.open(', 'fetch(']
+        for word in bad: self.assertNotIn(word, target.INSERT)
+
+if __name__ == '__main__': unittest.main()

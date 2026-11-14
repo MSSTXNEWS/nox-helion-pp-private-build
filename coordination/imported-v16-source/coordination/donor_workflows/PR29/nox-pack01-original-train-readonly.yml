@@ -1,0 +1,35 @@
+name: NOX PACK01 P04 data rights and checkpoint original source Windows
+on:
+  pull_request:
+    paths:
+      - 'proposals/NOX-PACK01-50/p04_training_readonly.py'
+      - 'proposals/NOX-PACK01-50/test_p04_training_readonly.py'
+      - '.github/workflows/nox-pack01-original-train-readonly.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  original-p04-training-readonly:
+    runs-on: windows-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Checkout original owner 4 immutable training source
+        uses: actions/checkout@v4
+        with:
+          repository: MSSTXNEWS/nox-helion-pp-private-build
+          ref: 24f24693c618a6379c78e2ba3bb8ebf48e6a2b2c
+          path: owner-p04
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify syntax
+        shell: pwsh
+        run: |
+          python -m py_compile proposals/NOX-PACK01-50/p04_training_readonly.py proposals/NOX-PACK01-50/test_p04_training_readonly.py
+      - name: Run owner rights/checkpoint source tests without training
+        shell: pwsh
+        env:
+          NOX_P04_TRAIN_SOURCE: ${{ github.workspace }}/owner-p04/Packages/P04/train_qlora.py
+        run: |
+          python -m unittest discover -s proposals/NOX-PACK01-50 -p test_p04_training_readonly.py -v

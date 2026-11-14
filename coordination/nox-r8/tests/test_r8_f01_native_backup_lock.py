@@ -1,0 +1,63 @@
+"""F01/B06 R8 source-only guard for single-EXE backup-lock and visible HTTP STOP.
+No model mock, no owner-PC access, no claim of completed Windows acceptance.
+"""
+from pathlib import Path
+here = Path(__file__).resolve().parent
+if here.name == "tests" and here.parent.name == "nox-r8":
+    src = here.parent / "overrides" / "src" / "MainWindow.xaml.cs"
+elif here.name == "r8":
+    src = here / "src" / "MainWindow.xaml.cs"
+else:
+    raise AssertionError("F01_SOURCE_ORIGIN_HOLD")
+assert src.is_file(), "F01_SOURCE_MISSING_HOLD"
+code = src.read_text(encoding="utf-8")
+checkpoint = code.split("private string CheckpointSqlite(",1)[1].split("private void VerifyIsolatedSqliteBackup()",1)[0]
+backup = code.split("private void VerifyIsolatedSqliteBackup()",1)[1].split("// Fail closed if any existing parent",1)[0]
+native = code.split("private async Task RunNativeSelfTestAsync()",1)[1].split("private bool HasSavedPrompt(",1)[0]
+assert checkpoint.count("Pooling = false") == 2, "F01_BACKUP_POOLING_HOLD"
+assert "FileShare.None" in backup and "NOX_F01_BACKUP_LOCKED_HANDLE_HOLD" in backup
+assert "NOX_F01_SNAPSHOT_EMPTY_HOLD" in backup
+for x in (
+    'generationStreamingTokenCount) + 2',
+    'NOX_WEBVIEW2_STREAM_TOKEN_NOT_VISIBLE_HOLD',
+    'NOX_F01_FIRST_CHAT_NOT_VISIBLE_HOLD',
+    'NOX_F01_LATE_TOKEN_OR_PARTIAL_SQLITE_HOLD',
+    'NOX_F01_STOP_RECOVERY_NOT_VISIBLE_HOLD',
+    'checks["real_chat_visible_webview_sqlite_ack"] = "PASS"',
+    'checks["real_chat_after_http_stop_sqlite"] = "PASS"',
+    'checks.Count == 7 && checks.Values.All(v => v == "PASS")',
+    'WaitForSavedChatUiReleaseAsync(TimeSpan.FromSeconds(4))',
+):
+    assert x in native, "F01_REAL_NATIVE_E2E_SOURCE_HOLD: "+x
+assert native.index('WaitForVisibleChatTokenAsync') < native.index("document.getElementById('stop').click()")
+assert native.index('NOX_F01_LATE_TOKEN_OR_PARTIAL_SQLITE_HOLD') < native.index('real_chat_after_http_stop_sqlite')
+for token in ("NOX_F01_LOCKED_SNAPSHOT_ACCEPTED_HOLD", "NOX_F01_LOCKED_MANIFEST_ACCEPTED_HOLD", "NOX_F01_BACKUP_OR_MANIFEST_LOCKED_HOLD"):
+    assert token in backup, "F01_NEGATIVE_LOCK_MISSING_HOLD:" + token
+# Windows native smoke must snapshot an isolated WAL DB while an actual
+# SQLite writer holds an uncommitted row, then rollback and prove both views
+# exclude that row. This Python guard does not execute the Windows test.
+for x in ("NOX_F01_WAL_WRITER_FIXTURE_HOLD",
+          "NOX_F01_WAL_UNCOMMITTED_VISIBLE_HOLD",
+          "NOX_F01_WAL_ROLLBACK_FAILED_HOLD",
+          "uncommitted.Rollback();",
+          'CheckpointSqlite(live, "SMOKE_ISOLATED")'):
+    assert x in backup, "F01_WAL_NEGATIVE_CONTROL_MISSING_HOLD:" + x
+assert backup.index("NOX_F01_WAL_WRITER_FIXTURE_HOLD") < backup.index(
+    'CheckpointSqlite(live, "SMOKE_ISOLATED")') < backup.index(
+    "NOX_F01_WAL_UNCOMMITTED_VISIBLE_HOLD") < backup.index(
+    "uncommitted.Rollback();") < backup.index(
+    "NOX_F01_WAL_ROLLBACK_FAILED_HOLD")
+# A positive committed marker and simultaneous uncommitted writer distinguish
+# a faithful online snapshot from a copy that merely excludes pending data.
+for token in ("NOX_F01_WAL_COMMITTED_FIXTURE_HOLD",
+              "NOX_F01_WAL_COMMITTED_SNAPSHOT_MISSING_HOLD",
+              "NOX_F01_WAL_COMMITTED_SOURCE_MISSING_HOLD",
+              "NOX_F01_WAL_COMMITTED_CLEANUP_HOLD"):
+    assert token in backup, "F01_COMMITTED_WAL_PROOF_MISSING_HOLD:" + token
+assert backup.index("NOX_F01_WAL_COMMITTED_FIXTURE_HOLD") < backup.index(
+    "NOX_F01_WAL_WRITER_FIXTURE_HOLD") < backup.index(
+    'CheckpointSqlite(live, "SMOKE_ISOLATED")') < backup.index(
+    "NOX_F01_WAL_COMMITTED_SNAPSHOT_MISSING_HOLD") < backup.index(
+    "uncommitted.Rollback();") < backup.index(
+    "NOX_F01_WAL_COMMITTED_CLEANUP_HOLD")
+print("F01_B06_NATIVE_BACKUP_AND_REAL_QWEN_STOP_ORACLE_SOURCE_ONLY_PASS_OWNER_NOT_TESTED")

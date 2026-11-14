@@ -1,0 +1,70 @@
+name: NOX P04 isolated component checks
+on:
+  push:
+    branches:
+      - e04/v16-pr7-guard-tests-20261028
+      - e04/v16-turbo10-real-gpu-hardening-20261028
+  pull_request:
+    branches:
+      - codex/p04-create-rag-training-gpu-20261027
+    paths:
+      - 'Packages/P04/**'
+      - 'tests/P04/**'
+      - '.github/workflows/nox-p04-candidate-ci.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  p04-source:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Fail-closed synthetic Python regression tests
+        run: python -m unittest discover -s tests/P04 -p 'test_*.py' -v
+      - name: Compile RAG and GPU components
+        run: dotnet build Packages/P04/NoxP04.csproj -c Release --nologo
+      - name: Compile opt-in live Ollama smoke without running it
+        run: dotnet build tests/P04/RagLiveSmoke.csproj -c Release --nologo
+      - name: Run fake-loopback RAG ACL, provenance, and lifecycle fixture
+        run: dotnet run --project tests/P04/RagComponentHarness.csproj -c Release
+
+      - name: Stage exact P02 Python ChatBridge source without merging it
+        env:
+          P02_SHA: c1b23eb597877200f246b1c3d3b635b9defd3433
+        run: |
+          git fetch --no-tags --depth=1 origin "$P02_SHA"
+          mkdir -p "$RUNNER_TEMP/p02-pinned"
+          git show "$P02_SHA:Packages/P02/worker-python/p02_runtime.py" > "$RUNNER_TEMP/p02-pinned/p02_runtime.py"
+          git show "$P02_SHA:Packages/P02/worker-python/p02_chat_bridge.py" > "$RUNNER_TEMP/p02-pinned/p02_chat_bridge.py"
+      - name: Verify actual pinned P02 ChatBridge against P04 Python RAG
+        run: NOX_P02_SOURCE_DIR="$RUNNER_TEMP/p02-pinned" python -m unittest discover -s tests/P04 -p 'test_p02_bridge_integration.py' -v
+
+  p04-windows-python:
+    runs-on: windows-2022
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Windows stdlib P04 source and security regressions
+        run: python -m unittest discover -s tests/P04 -p 'test_*.py' -v
+      - name: Pin existing P02 Python ChatBridge commit on Windows
+        shell: bash
+        env:
+          P02_SHA: c1b23eb597877200f246b1c3d3b635b9defd3433
+        run: |
+          git fetch --no-tags --depth=1 origin "$P02_SHA"
+          mkdir -p "$RUNNER_TEMP/p02-pinned"
+          git show "$P02_SHA:Packages/P02/worker-python/p02_runtime.py" > "$RUNNER_TEMP/p02-pinned/p02_runtime.py"
+          git show "$P02_SHA:Packages/P02/worker-python/p02_chat_bridge.py" > "$RUNNER_TEMP/p02-pinned/p02_chat_bridge.py"
+      - name: Windows P02-P04 actual cross-branch chat bridge
+        shell: bash
+        run: NOX_P02_SOURCE_DIR="$RUNNER_TEMP/p02-pinned" python -m unittest discover -s tests/P04 -p 'test_p02_bridge_integration.py' -v

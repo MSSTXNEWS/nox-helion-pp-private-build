@@ -1,0 +1,84 @@
+{
+  "schema": "NOX-EXPRESS-FROZEN-SOURCE-COVERAGE-CHECKPOINT-v1",
+  "date": "2026-11-03",
+  "instructions_version": "0.0.6",
+  "project": "NOX HELION EXPRESS integrator",
+  "release_accepted": false,
+  "full_archive_consolidation_completed": false,
+  "database_contents_merged": false,
+  "new_windows_setup_created_in_this_pass": false,
+  "e07": "NOT_RUN",
+  "code": {
+    "canonical_pr": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/162",
+    "base_sha": "8f2b9b2796149676ff602b71e5f9e5b0aab17cbd",
+    "commit_sha": "957416b0d60448beb830cc1337549fc778b87a5f",
+    "commit_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/commit/957416b0d60448beb830cc1337549fc778b87a5f",
+    "integration": "Non-force expected-HEAD update succeeded; PR162 head read back as this SHA.",
+    "modified_existing_builder": "coordination/e06/t06_native_proven_builder.py",
+    "new_helper": "coordination/e06/t06_frozen_source_coverage.py",
+    "helper_blob": "85fc382d08bd9bc1b1e10c7993a70bf35e72d1cf",
+    "new_tests": "tests/e06/test_t06_frozen_source_coverage.py",
+    "tests_blob": "d4836072b80f5904a34829748699985b40e479bf",
+    "behavior": [
+      "Derive native hidden imports from existing stage_native_stdio.ADDONS instead of relying only on the incomplete manually maintained list.",
+      "Verify each admitted Python source's Git blob and syntax before packaging; P04 separate-interpreter jobs remain existing source-pinned data, not native imports.",
+      "Inspect the resulting same-byte PyInstaller CArchive/PYZ for every admitted module and exact runtime data SHA256 before issuing any successful binary receipt.",
+      "Embed frozen_source_coverage into existing candidate receipts; missing module/data or byte drift fails closed.",
+      "No alternate installer, runtime, native permission, UI replacement, database, or E07 success claim was introduced."
+    ]
+  },
+  "executed_tests": {
+    "environment": "Temporary remote Vercel Python3.13 Linux sandbox; not a Windows runner",
+    "unit_command": "python -m unittest discover -s tests/e06 -p test_t06_frozen_source_coverage.py -v",
+    "unit_tests": 11,
+    "unit_passed": 11,
+    "unit_failed": 0,
+    "unit_skipped": 0,
+    "exact_tested_helper_and_test_blobs_read_back_from_commit": true,
+    "pyinstaller_version": "6.16.0",
+    "real_archive_fixture": {
+      "scope": "Real PyInstaller CArchive plus nested PYZ created by the pinned package writers, not a mocked reader and not an executable",
+      "modules_checked": 2,
+      "data_files_checked": 1,
+      "missing_module_negative": "REJECTED",
+      "changed_data_negative": "REJECTED",
+      "bytes": 483,
+      "sha256": "aafe4f9a0fd2cadc416c44aabc1d8f593de7062576492f5e8dd0cfe8388fbd13"
+    },
+    "linux_onefile_fixture_build": "BLOCKED: objdump unavailable; no executable build or execution is claimed",
+    "full_nox_windows_binary_coverage": "NOT_RUN"
+  },
+  "build_attempts": {
+    "github_automatic_run": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/41558053730",
+    "github_result": "Windows and Ubuntu jobs failed with empty steps and runner_id 0; dependent diagnostic installer job skipped. This is not a source compilation verdict.",
+    "frozen_github_ref": "buildpin/nox-express-20261102-957416b0d604",
+    "gitlab_bootstrap_branch": "build/canonical-957416b0d604",
+    "gitlab_bootstrap_sha": "2f77b4d359d335acb0d11a6934ef58be672d0fcd",
+    "gitlab_bootstrap_url": "https://gitlab.com/s-grouptwet/nox-helion-pp-private-build/-/commit/2f77b4d359d335acb0d11a6934ef58be672d0fcd",
+    "gitlab_attempt_count": 1,
+    "gitlab_result": "The pipeline did not run. Review the workflow:rules configuration for the pipeline.",
+    "gitlab_pipeline_id": null,
+    "private_github_read_access_in_gitlab": "NOT_PROVEN; workflow requires preconfigured NOX_T06_GITHUB_READ_TOKEN. No secret was retrieved, copied, or written.",
+    "identical_reruns": 0,
+    "bootstrap_is_new_product_or_installer": false
+  },
+  "remaining": [
+    "Reconcile and prove all unique donor code and database state, not merely preserve archives.",
+    "Resolve current A1 native owner composition and reviewed P03 artifact inputs identified by the separate R72 audit.",
+    "Obtain an authorized Windows build of the pinned canonical tree rather than the stale GitLab diagnostic overlay.",
+    "Resolve original installed WebView2 crash and run independent same-Setup-SHA E07.",
+    "Do not delete recovery archives until no-loss consolidation is proven."
+  ],
+  "storage": {
+    "new_drive_deletions_in_this_pass": 0,
+    "previous_recorded_total_deleted_files": 33,
+    "previous_recorded_total_file_bytes": 1354239632,
+    "account_quota_change_measured": false,
+    "source_library": "/NOX_HELION/BOOST_CACHE",
+    "recovery_library": "/NOX_HELION/RECOVERY_FROM_DRIVE_20261103",
+    "recovery_source_archives": "/NOX_HELION/RECOVERY_FROM_DRIVE_20261103/SOURCE_ARCHIVES",
+    "recovery_is_drive_or_ephemeral_container": false
+  },
+  "independent_subagents_started": 0,
+  "schedules_changed": false
+}

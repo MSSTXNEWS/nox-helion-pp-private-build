@@ -1,0 +1,91 @@
+# QA-only: independent physical receipt chain for frozen V6; never a release PASS.
+name: NOX V6 U11 physical same-Setup receipt chain
+on:
+  push:
+    branches: [integration/nox-v16-unified-candidate-20261028-r01]
+    paths: ['.github/workflows/nox-v6-u11-independent-receipt-chain.yml']
+  workflow_dispatch:
+permissions:
+  actions: read
+  contents: read
+jobs:
+  audit:
+    runs-on: windows-2022
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12.10'
+          architecture: x64
+          check-latest: false
+      - name: Regress fail-closed U09 binder before reading physical evidence
+        shell: pwsh
+        run: |
+          python -B -m unittest discover -s tests/e07 -p test_verify_v6_samevm_ownership_u09.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'U11_U09_NEGATIVE_REGRESSIONS_HOLD' }
+      - name: Authenticate immutable producer and hosted Windows U08 run
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference='Stop'
+          if ($env:GITHUB_ACTIONS -cne 'true' -or $env:RUNNER_OS -cne 'Windows' -or $env:RUNNER_ENVIRONMENT -cne 'github-hosted' -or $env:GITHUB_REPOSITORY -cne 'MSSTXNEWS/nox-helion-pp-private-build') { throw 'U11_UNTRUSTED_RUNNER_HOLD' }
+          $h=@{Authorization="Bearer $env:GH_TOKEN";Accept='application/vnd.github+json'}
+          $p=Invoke-RestMethod "https://api.github.com/repos/$env:GITHUB_REPOSITORY/actions/runs/41833271465" -Headers $h
+          $q=Invoke-RestMethod "https://api.github.com/repos/$env:GITHUB_REPOSITORY/actions/runs/41840503939" -Headers $h
+          if ($p.conclusion -cne 'success' -or $p.head_sha -cne 'ffca9aaedce9d90750dfb212aabcdfd970162150' -or $q.conclusion -cne 'success' -or $q.head_sha -cne '7fbee7eebf0aab1f4c5bb05c73f20a9036db7b2d') { throw 'U11_GENUINE_WINDOWS_PROVENANCE_HOLD' }
+      - uses: actions/download-artifact@v4
+        with:
+          run-id: 41840503939
+          name: NOX-V6-ORDERED-QWEN-THEN-UIA-U08-7fbee7eebf0aab1f4c5bb05c73f20a9036db7b2d-41840503939
+          github-token: ${{ github.token }}
+          path: proof
+      - uses: actions/download-artifact@v4
+        with:
+          run-id: 41833271465
+          name: nox-v16-e06-onehost-diagnostic-41833271465
+          github-token: ${{ github.token }}
+          path: producer
+      - name: Rehash physical frozen Setup and bind native Qwen STOP SQLite + five UIA to original producer
+        shell: pwsh
+        run: |
+          @'
+          import json,hashlib
+          from pathlib import Path
+          from coordination.e07.verify_v6_samevm_ownership_u09 import verify,SOURCE,SETUP,BUILD
+          def find(root,name):
+              x=list(Path(root).rglob(name))
+              if len(x)!=1 or not x[0].is_file() or x[0].is_symlink() or getattr(x[0],'is_junction',lambda:False)():raise ValueError('U11_UNIQUE_ARTIFACT_HOLD')
+              return x[0]
+          def read(root,name):
+              f=find(root,name)
+              if f.stat().st_size>1048576:raise ValueError('U11_JSON_BOUNDS_HOLD')
+              v=json.loads(f.read_text(encoding='utf-8-sig'))
+              if type(v)!=dict:raise ValueError('U11_JSON_OBJECT_HOLD')
+              return v
+          setup=find('producer','NOX-HELION-V16-DIAGNOSTIC-SETUP.exe')
+          if setup.stat().st_size!=169612753:raise ValueError('U11_SETUP_SIZE_HOLD')
+          h=hashlib.sha256()
+          with setup.open('rb') as f:
+              for chunk in iter(lambda:f.read(1048576),b''):h.update(chunk)
+          if h.hexdigest()!=SETUP:raise ValueError('U11_SETUP_SHA_HOLD')
+          p=read('producer','E07_BUILT_HANDOFF.json')
+          if not (p.get('source_commit_sha1')==SOURCE and p.get('setup_sha256')==SETUP and p.get('build_id')==BUILD and p.get('source_files')==729 and p.get('source_receipts_729_parity_verified') is True and p.get('release_accepted') is False):raise ValueError('U11_SOURCELOCK_HOLD')
+          result=verify(read('producer','ONEHOST_DIAGNOSTIC_RECEIPT.json'),
+              read('proof','FIVE_PRIMARY.json'),read('proof','QWEN_INSTALLED_RECEIPT.json'),
+              read('proof','ACTIVE_STOP_FULL_D02_RECEIPT.json'),read('proof','PRE_E07_UNINSTALL.json'))
+          if not (result.get('receipt_identity_chain')=='PASS' and result.get('independent_e07_10_10')=='HOLD' and result.get('release_accepted') is False):raise ValueError('U11_RELEASE_CLAIM_HOLD')
+          result.update({'producer_run':41833271465,'same_vm_run':41840503939,'physical_setup_sha256_rechecked':SETUP,'independent_e07_10_10':'HOLD','release_accepted':False})
+          out=Path('work/u11/receipt_chain.json');out.parent.mkdir(parents=True,exist_ok=True)
+          out.write_text(json.dumps(result,sort_keys=True,indent=2),encoding='utf-8')
+          print('U11_PHYSICAL_V6_BACKEND_OWNER_CHAIN_PASS_NOT_INDEPENDENT_E07')
+          '@ | python -B -
+          if ($LASTEXITCODE -ne 0) { throw 'U11_U09_REAL_RECEIPT_CHAIN_HOLD' }
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: NOX-V6-U11-RECEIPT-CHAIN-HOLD-${{ github.run_id }}
+          path: work/u11/receipt_chain.json
+          if-no-files-found: warn
+          retention-days: 14

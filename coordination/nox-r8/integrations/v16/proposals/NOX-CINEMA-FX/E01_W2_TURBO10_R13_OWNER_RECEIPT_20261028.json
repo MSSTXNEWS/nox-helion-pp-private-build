@@ -1,0 +1,131 @@
+{
+  "schema": "NOX_V16_E01_OWNER_RECEIPT_V1",
+  "run_id": "NOX-V16-W2-01-E01-20261028T1848MSK-R13",
+  "owner": "E01/W2-01/P01/D02",
+  "state": "SOURCE_ONLY_COMPONENT_V8_VERIFIED",
+  "historical_baseline": {
+    "commit": "0b3a7d435be735148d64171deb9027093a89646e",
+    "tree": "f108d604c444f718b32aaecfd07b90b8f91b9a6f"
+  },
+  "preimage_head": "9dbb2d2ecb1f1551b5a4f3d302f3c95c964b1658",
+  "files": [
+    {
+      "path": "proposals/NOX-CINEMA-FX/nox-cinema-events.mjs",
+      "owner": "E01",
+      "pre_sha256": "2dfd1850c01849eb2a95720e66a9bc546c8c94e64babcf261eb93f53a8321c4a",
+      "post_sha256": "1199b6884d2f3324fecae24425c6015478925154b8cbd9c42662871b4e5df7c1",
+      "pre_git_blob_sha1": "8faec3dffca15978add253b7d169ead192030da2",
+      "post_git_blob_sha1": "eb6161f54f27e7dcf22da53d2dd638dccf6e937e",
+      "diff": "setState(...) === false -> setState(...) !== true"
+    },
+    {
+      "path": "proposals/NOX-CINEMA-FX/nox-cinema-events.test.mjs",
+      "owner": "E01",
+      "pre_sha256": "34b2fc7481b718fe228a500e38c503b4c23dce6fd42cf37ac006e99a20f517aa",
+      "post_sha256": "7ed367cb782ae81abc55fdedf305072bd2cc3688cfae51e282e0106a7c6f10a7",
+      "pre_git_blob_sha1": "bdbc1fc0cde3bb5e895ab22188df0666501bad33",
+      "post_git_blob_sha1": "ad726493bef7c316cb0da6e4302a1ac219fd6697",
+      "diff": "five historical fixtures explicitly return true on successful rendering; append ten R13 regressions"
+    },
+    {
+      "path": "proposals/NOX-CINEMA-FX/E01_W2_TURBO10_R13_OWNER_RECEIPT_20261028.json",
+      "owner": "E01",
+      "pre_sha256": "ABSENT",
+      "post_sha256": "SEE_GITHUB_READBACK",
+      "post_git_blob_sha1": "SEE_GITHUB_READBACK"
+    }
+  ],
+  "tasks": [
+    {
+      "task_id": "E01-W2-R13-01",
+      "name": "UNDEFINED_ACK",
+      "regression": "PASS"
+    },
+    {
+      "task_id": "E01-W2-R13-02",
+      "name": "NULL_ACK",
+      "regression": "PASS"
+    },
+    {
+      "task_id": "E01-W2-R13-03",
+      "name": "NUMERIC_ACK",
+      "regression": "PASS"
+    },
+    {
+      "task_id": "E01-W2-R13-04",
+      "name": "FALSE_ACK",
+      "regression": "PASS"
+    },
+    {
+      "task_id": "E01-W2-R13-05",
+      "name": "PROMISE_ACK",
+      "regression": "PASS"
+    },
+    {
+      "task_id": "E01-W2-R13-06",
+      "name": "OBJECT_ACK",
+      "regression": "PASS"
+    },
+    {
+      "task_id": "E01-W2-R13-07",
+      "name": "TRUE_ACK_SEQUENCE",
+      "regression": "PASS"
+    },
+    {
+      "task_id": "E01-W2-R13-08",
+      "name": "TERMINAL_ACK_RETRY",
+      "regression": "PASS"
+    },
+    {
+      "task_id": "E01-W2-R13-09",
+      "name": "EXCEPTION_RETRY",
+      "regression": "PASS"
+    },
+    {
+      "task_id": "E01-W2-R13-10",
+      "name": "CACHE_EVICTION_ACK",
+      "regression": "PASS"
+    }
+  ],
+  "test_evidence": {
+    "engine": "V8 ECMAScript on fetched exact GitHub source and test file; node:test adapter locally",
+    "before": {
+      "pass": 26,
+      "total": 33,
+      "expected_red": [
+        "R13-01-undefined ACK must not consume sequence",
+        "R13-02-null ACK must not consume sequence",
+        "R13-03-zero ACK must not consume sequence",
+        "R13-05-Promise ACK must not consume sequence",
+        "R13-06-object ACK must not consume sequence",
+        "R13-08 undefined terminal ACK cannot lock later progress",
+        "R13-10 unacknowledged 41st run cannot evict prior terminal"
+      ]
+    },
+    "after": {
+      "pass": 33,
+      "total": 33
+    },
+    "node_cli": "NOT_RUN",
+    "windows": "NOT_RUN"
+  },
+  "component_scope": "Decorator adapter only; no host/backend/ZIP/EXE changes",
+  "source_lock_729": "HOLD_UNVERIFIED",
+  "azure_windows": "NOT_RUN",
+  "e07_windows": "0/10",
+  "merge_admission": "HOLD",
+  "lesson": "EXPLICIT_SYNC_RENDER_ACK_BEFORE_SEQUENCE_COMMIT",
+  "no_loss": [
+    "Original D02",
+    "HELION+8 CoreID",
+    "5 Persona",
+    "WOW001-200",
+    "HOME/MENU",
+    "user data",
+    "historical baseline"
+  ],
+  "preimage_tree": "959bd00cb8fbb0ba2e9c0c770db777865cd8b205",
+  "actual_start_msk": "2026-10-28T18:48:53+03:00",
+  "build_id": null,
+  "original_zip_729": "UNVERIFIED"
+}

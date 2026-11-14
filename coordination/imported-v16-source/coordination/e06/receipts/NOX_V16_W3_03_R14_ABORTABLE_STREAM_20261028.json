@@ -1,0 +1,63 @@
+{
+  "schema": "NOX-V16-E06-IMMUTABLE-OWNER-RECEIPT-v1",
+  "run_id": "NOX-V16-W3-03-20261028T215500MSK-R14",
+  "owner": "E06/W3-03",
+  "pr": 162,
+  "branch": "integration/nox-v16-unified-candidate-20261028-r01",
+  "expected_head": "438e007f17b5e6953fc0117ddd7f951027a2d0d6",
+  "parent_tree": "c48e57adbdf2f18c2487a0ce592fba2180bd0de1",
+  "historical_origin": "0b3a7d435be735148d64171deb9027093a89646e",
+  "task_ledger": {
+    "R14-01": "DONE verified V16 §§33/47-48 and fresh E06/master/lessons",
+    "R14-02": "DONE exact PR162 HEAD owner/blob/tree preimage",
+    "R14-03": "DONE reproduced four unsafe owner stream contracts, RED 4/5",
+    "R14-04": "DONE abortable real-owner generator admission guard",
+    "R14-05": "DONE five targeted negative/positive regression scenarios",
+    "R14-06": "DONE local 75-run selected offline regression / compilation",
+    "R14-07": "PENDING immutable GitHub CAS and readback",
+    "R14-08": "PENDING Drive append-only E06/master/lesson readback",
+    "R14-09": "PENDING handoff independent E07/manual #1",
+    "R14-10": "HOLD real installed Windows/Ollama/GPU/E07"
+  },
+  "files": [
+    {
+      "path": "coordination/e06/onehost_p02_p04.py",
+      "owner": "E06/W3-03",
+      "pre_sha256": "5c83c33338629d18fb662c3d67f8b29cd61b2e0568ba6b309f26515cd07040fc",
+      "post_sha256": "51ce8b00d2b27e24505dd05af89092330ac3909e0ca1dffe63cd347a4d6988cd",
+      "pre_git_blob_sha1": "d0adf0a7adc6814cffb25d038370e1e379208b53",
+      "post_git_blob_sha1": "523da67d83b96c304c40c47ba374c3afccf3a7a9"
+    },
+    {
+      "path": "tests/e06/test_onehost_abortable_stream_r14.py",
+      "owner": "E06 QA",
+      "pre_sha256": "ABSENT",
+      "post_sha256": "93b21869a24366413fd344f94c6b9d45f92cb4d4ff2ddd5ca923e88faf174aec",
+      "pre_git_blob_sha1": "ABSENT",
+      "post_git_blob_sha1": "6e5c299c75e78f3a03d25a507f0544fe91be728c"
+    }
+  ],
+  "diff": "After existing ChatBridge.send() returns and before guarded_stream(), require callable __next__ and callable close; on mismatch set native STOP, close callable partial stream, raise OneHostHold; never advance unabortable iterator.",
+  "permission_map": [
+    "ONE existing native host SID lookup",
+    "native conversation scope and trusted route authorization",
+    "one P02 SQLite history ACL",
+    "one owner Ollama ChatBridge generator closable STOP",
+    "one P04 RAG citation callback",
+    "real GPU worker and P05 event verifiers unchanged"
+  ],
+  "evidence": {
+    "before": "New test module 4/5 RED on exact pre-image; 11 total with imported R07 fixture, 4 FAIL.",
+    "after": "New test module 5/5 GREEN; 75 local selected unittest runs GREEN, some duplicate fixture imports; Python compile PASS",
+    "runtime": "Live Ollama/GPU/Windows NOT_RUN; E07 installed 0/10"
+  },
+  "lesson": "REQUIRE_CLOSABLE_EXISTING_OWNER_STREAM_BEFORE_PRIVATE_FRAME",
+  "holds": [
+    "ZIP729 physical SHA member 0/729",
+    "Azure Windows run/installed EXE BuildID-SHA NOT_VERIFIED",
+    "P04 real GPU checkpoint/evaluation NOT_RUN",
+    "native E07 same-BuildID 0/10",
+    "legacy STOP frame contract owner agreement HOLD"
+  ],
+  "no_loss": "No main merge; no second host/LLM/RAG/trainer/DB/events.v3; D02/WOW/Persona/voice/archives untouched"
+}

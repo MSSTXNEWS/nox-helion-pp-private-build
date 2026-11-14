@@ -1,0 +1,22 @@
+{
+  "run_id": "NOX-K01-K06-20261031-MEGABLOCK",
+  "pre_head": "21b943a9b0cc7370216fa69c7ad5914ee5501472",
+  "status": "PASS_SOURCE_INTEGRATION_ONLY",
+  "component_receipts": [
+    {
+      "path": "coordination/k01-k06/K04.json",
+      "sha256": "721e9cecac3e873d6818bd81397cfafe8037ad09cb8c43d226426c234ebee3b8"
+    },
+    {
+      "path": "coordination/k01-k06/K05.json",
+      "sha256": "9a6ea63b2ae66aad7a2f68360811a43118793e1994d478fda1472fcf3f57e736"
+    },
+    {
+      "path": "coordination/k01-k06/K06.json",
+      "sha256": "e006e8a801554d3b042a246d26a371438e4f542ec48e801ef729aec6e2b71109"
+    }
+  ],
+  "compiled_windows_acceptance": "DEFERRED",
+  "real_ollama_and_gpu_end_to_end": "NOT_RUN",
+  "release": "HOLD"
+}

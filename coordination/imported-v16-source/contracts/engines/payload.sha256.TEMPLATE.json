@@ -1,0 +1,9 @@
+{
+  "schema": "NOX-PAYLOAD-SHA256-TEMPLATE",
+  "status": "EMPTY_UNTIL_EXE",
+  "files": {
+    "NOX HELION.exe": "",
+    "payload.sha256.json": ""
+  },
+  "note": "Do not fill with invented hashes. Fill after a published Windows EXE."
+}

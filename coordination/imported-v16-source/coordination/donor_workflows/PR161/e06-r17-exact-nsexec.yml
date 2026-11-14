@@ -1,0 +1,50 @@
+name: NOX E06 R17 targeted Windows 2022 native NSIS verifier forensic only
+on:
+  push:
+    branches: [e06/v16-r17-nsexec-proof-20261028]
+    paths:
+      - 'coordination/e06/R17-ExactNsExecProof.ps1'
+      - '.github/workflows/e06-r17-exact-nsexec.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  forensic:
+    runs-on: windows-2022
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Checkout immutable E06 R13 signed Microsoft prerequisite (read-only)
+        uses: actions/checkout@v4
+        with:
+          repository: MSSTXNEWS/nox-helion-pp-private-build
+          ref: b5233bbb58a059783d1d143b2523e32cae3724d3
+          path: .r13-prerequisite
+          persist-credentials: false
+      - name: Signed Microsoft WebView2 runtime on disposable Windows
+        shell: pwsh
+        run: |
+          $env:CI='true'
+          ./.r13-prerequisite/coordination/e06/Test-OfficialWebView2Prereq.ps1
+      - name: Install official NSIS 3.11 for isolated forensic executable
+        shell: pwsh
+        run: |
+          choco install nsis --version=3.11 --no-progress -y
+          if($LASTEXITCODE -ne 0){throw 'R17_NSIS_PIN_INSTALL_HOLD'}
+      - name: Proof of original NSIS verifier output under native nsExec versus direct PowerShell
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ./coordination/e06/R17-ExactNsExecProof.ps1
+      - name: Save forensic evidence irrespective of result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nox-e06-r17-nsexec-${{ github.run_id }}
+          path: e06-r17-nsexec-receipt.json
+          retention-days: 30
+          if-no-files-found: warn

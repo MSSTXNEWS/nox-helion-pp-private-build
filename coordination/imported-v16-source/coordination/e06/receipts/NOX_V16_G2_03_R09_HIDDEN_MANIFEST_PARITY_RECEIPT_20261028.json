@@ -1,0 +1,191 @@
+{
+  "schema": "NOX_V16_E06_G2_03_R09_NOLOSS_RECEIPT_V1",
+  "run_id": "NOX-V16-E06-G2-03-20261028T1410MSK-R09",
+  "owner": "E06",
+  "scope": "existing Windows WPF/WebView2/NSIS onehost build manifest ONLY",
+  "status": "SOURCE_CANDIDATE_VERIFIED_IN_V8_WINDOWS_HOLD",
+  "common_baseline": {
+    "commit": "0b3a7d435be735148d64171deb9027093a89646e",
+    "tree": "f108d604c444f718b32aaecfd07b90b8f91b9a6f",
+    "main_compare": "IDENTICAL",
+    "inventory_pr": 66,
+    "archive_source_00_01_02_sha256": "UNVERIFIED_HOLD",
+    "extracted_729_file_SourceLock": "UNVERIFIED_HOLD",
+    "new_common_SourceLock": "NOT_PUBLISHED"
+  },
+  "donor": {
+    "commit": "ad690ff7c419eee06b6bfb61730c5caa000473e3",
+    "git_tree": "a0a347587698661a2a3c667ebc79ad12589ae943",
+    "pr": 138,
+    "branch": "e06/v16-g2-03-input-ancestry-sha-20261028-r08",
+    "ownership": "E06_ONLY"
+  },
+  "files": [
+    {
+      "path": "coordination/e06/build_onehost_installer.ps1",
+      "owner": "E06",
+      "pre_sha256": "dc3346e12dbc03b5ac3a28156428031f542e8bc2669c15524cf77d542fd7285f",
+      "post_sha256": "1a551a4c9e7e255ed7dd3a9f9685577831e6b3df482f79b570f249b5e85472ca",
+      "pre_git_blob_sha1": "a773d38bb49a56d04585da2bab114dfceff3144e",
+      "post_git_blob_sha1": "29eef9f31c0d661c15729b934c91f46ee3908d08",
+      "diff": "Get-ChildItem -LiteralPath $payload -File -Recurse -> add -Force; preserve pinned owner P01 Verify-Payload"
+    },
+    {
+      "path": "coordination/e06/tests/onehost_builder_contract.test.mjs",
+      "owner": "E06",
+      "pre_sha256": "d4055d2a5b6404d5d5db662284c9d52d6148017601b545408ea28fd074b4aff5",
+      "post_sha256": "189dfe165daad32e85a4915873a8c655fc3a13beb31e7cec188dda4df1ea4ffb",
+      "pre_git_blob_sha1": "1986f9363d7d5f7cf7fc6004a6653de213404921",
+      "post_git_blob_sha1": "5a0fa4b278724cb1a5110ecc6268734c8441067e",
+      "diff": "One new Node-contract test for hidden/system payload file manifest enumeration; initial regex test error corrected before release."
+    }
+  ],
+  "theater_readonly_sha256": {
+    "html": "59823e151104200c6ba64d2b56ff6ea1a4a1f72a97bcf12f75b749fc05468f11",
+    "js": "62562ac81c5ff565e5e9c584c9201a26809bb390155a23b6c5cfee0948da6b42"
+  },
+  "task_ledger": [
+    [
+      "E06-R09-01",
+      "V16/master/E06/lessons pre-read",
+      "SOURCE_REVIEWED"
+    ],
+    [
+      "E06-R09-02",
+      "main fixed baseline exact compare",
+      "VERIFIED"
+    ],
+    [
+      "E06-R09-03",
+      "PR66 inventory/ownership, archive gap",
+      "HOLD_ARCHIVE"
+    ],
+    [
+      "E06-R09-04",
+      "R08 parent preimage SHA256 + Git blob",
+      "VERIFIED"
+    ],
+    [
+      "E06-R09-05",
+      "reproduce hidden-file manifest gap",
+      "RED_SOURCE_VERIFIED"
+    ],
+    [
+      "E06-R09-06",
+      "single E06 builder source correction",
+      "PATCHED"
+    ],
+    [
+      "E06-R09-07",
+      "one added contract regression, V8 suite",
+      "COMPONENT_V8_VERIFIED"
+    ],
+    [
+      "E06-R09-08",
+      "read back final builder/test/theater SHA and blobs",
+      "VERIFIED"
+    ],
+    [
+      "E06-R09-09",
+      "Drive append-only report/master/one lesson",
+      "PENDING_DRIVE_READBACK"
+    ],
+    [
+      "E06-R09-10",
+      "Windows native build/install/update/rollback + E07",
+      "HOLD_NOT_RUN"
+    ]
+  ],
+  "test_evidence": {
+    "V8_adapted_12_of_12": "PASS",
+    "GitHub_builder_test_theater_4_of_4_readback": "PASS",
+    "native_node": "NOT_RUN",
+    "windows_powershell": "NOT_RUN",
+    "windows_wpf_webview2_nsis": "NOT_RUN",
+    "install_update_rollback": "HOLD",
+    "E07_same_BuildID_EXE_SHA": "NOT_RUN"
+  },
+  "errors": [
+    {
+      "error": "P01 manifest generator enumerated regular payload files without -Force, whereas approved P01 Verify-Payload explicitly includes hidden/system files and rejects unmanifested extras.",
+      "root_cause": "Mismatch in filesystem enumeration contract between E06 builder and original immutable P01 verifier.",
+      "fix": "Include -Force during complete SHA manifest generation; original P01 rejection of unlisted entries remains intact.",
+      "regression": "V8-adapted 12/12 source assertions; native Windows test pending."
+    },
+    {
+      "error": "Initial R09 test regex escaped $payload incorrectly.",
+      "root_cause": "Double-escaped JS string inside generated RegExp literal.",
+      "fix": "Replaced with exact literal-string count assertion before final V8 test; no other code changes.",
+      "regression": "Final exact file V8 suite 12/12 PASS."
+    }
+  ],
+  "one_practical_self_improvement": "MANIFEST_WALK_PARITY_WITH_OWNER_VERIFIER: whenever the existing E06 builder generates a SHA manifest, enumerate the SAME complete visible+hidden file set as the original P01 Verify-Payload (-Force), then assert enumerator parity in one immutable source regression; do not interpret passing mocks as installed verification.",
+  "loss": "NO_LOSS: no E01/P01 original, P02/P03/P04/P05, D02/WOW/8 CoreID/5 Persona, archives, existing EXE, backups, main or other PR changes",
+  "status_details": "Only source candidate. New E06 receipt records external SHA after creation (a JSON file cannot embed its own final SHA without self-reference). Windows and E07 RELEASE HOLD.",
+  "seven_indicators": [
+    [
+      "E01",
+      "V16.26.3/P01",
+      "PR144",
+      "OWNER_REPORTED_SYNTHETIC",
+      "HOLD",
+      "NOT_RUN",
+      "N/D"
+    ],
+    [
+      "E02",
+      "V16.26.4/P02",
+      "PR146",
+      "OWNER_REPORTED_OFFLINE_49_PASS",
+      "HOLD",
+      "NOT_RUN",
+      "N/D"
+    ],
+    [
+      "E03",
+      "V16.26.5/P03",
+      "PR142",
+      "OWNER_REPORTED_OFFLINE_150_PASS",
+      "HOLD",
+      "NOT_RUN",
+      "N/D"
+    ],
+    [
+      "E04",
+      "V16.26.6/P04",
+      "PR143",
+      "OWNER_REPORTED_CPU_FIXTURE_ONLY_GPU_NOT_RUN",
+      "HOLD",
+      "NOT_RUN",
+      "N/D"
+    ],
+    [
+      "E05",
+      "V16.26.7/P05",
+      "PR145",
+      "OWNER_REPORTED_OFFLINE_113_PASS",
+      "HOLD",
+      "NOT_RUN",
+      "N/D"
+    ],
+    [
+      "E06",
+      "V16.26.8/E06-R09-01..10",
+      "THIS_R09",
+      "V8_12_OF_12_PASS",
+      "HOLD",
+      "NOT_RUN",
+      "N/D"
+    ],
+    [
+      "E07",
+      "QA01..QA10",
+      "PR46_HISTORICAL",
+      "FINAL_EXE_ZERO_OF_TEN",
+      "HOLD",
+      "NOT_RUN",
+      "N/D"
+    ]
+  ],
+  "weighted_progress": "0.20*P01 + 0.25*P02 + 0.20*P03 + 0.25*P04 + 0.10*P05 = N/D"
+}

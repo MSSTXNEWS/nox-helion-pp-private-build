@@ -1,0 +1,23 @@
+/* Additional WOW 001–200 preview uses original dark metal/amber/cyan NOX tokens.
+   Secondary only, all HOME/8 Core assets and buttons untouched. */
+.nox-w200-ui{--nox-w200-edge:rgba(201,163,107,.35);border:1px solid var(--nox-w200-edge);background:linear-gradient(145deg,rgba(5,8,12,.9),rgba(29,27,25,.75));padding:clamp(12px,2.8vw,24px);color:#f4e8d6;border-radius:12px;margin:18px 0;position:relative;overflow:hidden;isolation:isolate}
+.nox-w200-ui h3{margin:0 0 8px;color:#e7c78c;font-weight:500;letter-spacing:.13em}.nox-w200-ui p{color:#d8c9b5;max-width:68ch;font-size:13px}.nox-w200-controls{display:grid;grid-template-columns:minmax(0,1.8fr) minmax(180px,1fr) minmax(140px,.4fr);gap:12px;align-items:end}
+.nox-w200-control-label{min-width:0;color:#e7c78c;font-size:13px;letter-spacing:.04em}
+.nox-w200-effect-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(48px,1fr));gap:7px;max-height:220px;overflow-y:auto;overscroll-behavior:contain;padding:10px;margin-top:8px;border:1px solid #725d46;border-radius:12px;background:linear-gradient(125deg,#080d13,#1b1515)}
+.nox-w200-mode-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:8px}
+.nox-w200-controls button{min-height:44px;min-width:0;border:1px solid rgba(219,191,149,.45);background:radial-gradient(circle at 30% 25%,#293440,#10151a 72%);color:#f5ddad;border-radius:9px;padding:9px;cursor:pointer;transition:transform .18s,border-color .18s,box-shadow .18s}
+.nox-w200-controls button:hover,.nox-w200-controls button:focus-visible{border-color:#e4b268;box-shadow:0 0 0 2px #e4b26844;transform:translateY(-1px)}
+.nox-w200-effect-tile{aspect-ratio:1;border-radius:50%!important;font-variant-numeric:tabular-nums;font-weight:650;box-shadow:inset -7px -8px 13px #03040599,0 0 12px #d5995322}
+.nox-w200-controls button.is-active{border-color:#ffe0a0;box-shadow:0 0 0 2px #ffd18c99,inset 0 0 18px #d9944066;background:radial-gradient(circle at 30% 20%,#b78045,#191c24 75%)}
+.nox-w200-controls #nox-wow200-preview{align-self:end;min-height:48px}
+.nox-w200-cinema{position:relative;min-height:195px;border:1px solid #6b5542;border-radius:14px;background:radial-gradient(circle at 50% 60%,rgba(196,122,55,.2),transparent 65%),linear-gradient(#111923,#040506);margin-top:15px;overflow:hidden;pointer-events:none}
+.nox-w200-cinema>output{font-size:12px;max-width:80%;position:relative;z-index:3;pointer-events:none}
+.nox-w200-pack01{overflow:auto;max-height:220px;display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:8px;margin-top:12px}
+.nox-w200-pack01 .nox-pack01__tile{min-height:44px;border:1px solid #66533d;background:linear-gradient(145deg,#171e24,#181311);color:#f2e1c7;border-radius:8px;text-align:left;padding:9px;cursor:pointer;transition:transform .18s,border-color .2s}
+.nox-w200-pack01 .nox-pack01__tile:hover,.nox-w200-pack01 .nox-pack01__tile:focus-visible{transform:translateY(-1px);border-color:#e4b268}
+.nox-w200-pack01 .nox-pack01__tile span{display:block;font-size:10px;color:#b9c7ce;margin-top:4px}
+.nox-w200-note{font:12px/1.5 Segoe UI,sans-serif;white-space:pre-wrap;color:#cbbdab;margin-top:10px}.nox-w200-stage{position:relative;overflow:hidden;height:170px}
+.nox-w200-orbs{position:relative;display:flex;gap:8px;justify-content:center;align-items:center;flex-wrap:wrap;min-height:155px}
+.nox-w200-orbs>span{width:38px;height:38px;border-radius:50%;border:1px solid #b48b5d;background:radial-gradient(circle at 30% 30%,#b36f3a,#100f12 70%);box-shadow:0 0 16px #b38e5444}
+@media(max-width:800px){.nox-w200-controls{grid-template-columns:minmax(0,1fr) minmax(160px,.7fr)}.nox-w200-controls #nox-wow200-preview{grid-column:1/-1}}\n@media(max-width:390px){.nox-w200-controls{grid-template-columns:1fr}.nox-w200-cinema{min-height:170px}.nox-w200-pack01{grid-template-columns:1fr 1fr}}
+@media(prefers-reduced-motion:reduce){.nox-w200-ui *{animation:none!important;transition:none!important}}

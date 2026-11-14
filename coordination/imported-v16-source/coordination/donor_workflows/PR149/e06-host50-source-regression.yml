@@ -1,0 +1,43 @@
+name: NOX V16 E06 host50 policy source tests
+on:
+  pull_request:
+    paths:
+      - 'coordination/e06_host50/**'
+      - '.github/workflows/e06-host50-source-regression.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source-contract:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Offline security and STOP contract tests
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          python -m unittest discover -s coordination/e06_host50 -p test_admission.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'E06_SECURITY_TEST_FAILED' }
+      - uses: actions/checkout@v4
+        with:
+          repository: MSSTXNEWS/nox-helion-pp-private-build
+          ref: be1fe05d88443e41b0d196617840508d9dd39b7d
+          path: source-pr27
+      - name: Audit exact 50 route source ledger without enabling handlers
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          python coordination/e06_host50/admission.py source-pr27/proposals/NOX-PACK01-50/catalog.json source-pr27/proposals/NOX-PACK01-50/owner-binding-map.json > host50-source-audit.json
+          if ($LASTEXITCODE -ne 0) { throw 'E06_LEDGER_AUDIT_FAILED' }
+          python -c "import json; d=json.load(open('host50-source-audit.json')); assert len(d['routes'])==50 and d['sourceBound']==37 and d['unbound']==13 and d['baselineDrift'] is True and d['nativeIntegrated']==0 and d['windowsAccepted']==0"
+          if ($LASTEXITCODE -ne 0) { throw 'E06_FALSE_SUCCESS_GATE' }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e06-host50-readonly-audit
+          path: host50-source-audit.json
+          if-no-files-found: warn

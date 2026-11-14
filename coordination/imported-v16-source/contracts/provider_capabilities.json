@@ -1,0 +1,44 @@
+{
+  "schema": "NOX-SELFBUILDER-PROVIDERS-V2",
+  "policy": "LOCAL_FIRST_NO_HIDDEN_COSTS",
+  "providers": [
+    {
+      "id": "existing_p02_ollama",
+      "type": "local",
+      "status": "SUPPORTED_VIA_EXISTING_HOST_CALLBACK",
+      "pricing": "no provider API charge; local power/hardware costs",
+      "autonomous_loop_eligible": true,
+      "requires": "installed model, owner approval, P03 digest/rights check",
+      "evidence": "https://ollama.com/library/qwen2.5-coder"
+    },
+    {
+      "id": "chatgpt_codex_cli",
+      "type": "external_client",
+      "status": "INTEGRATION_REVIEW_ONLY",
+      "pricing": "ChatGPT plan uses quotas; not unlimited; separate API not included",
+      "autonomous_loop_eligible": false,
+      "requires": "explicit owner login; officially supported noninteractive entitlement before scheduled use",
+      "evidence": "https://help.openai.com/en/articles/11369540-using-codex-with-your-chatgpt-plan"
+    },
+    {
+      "id": "google_gemini_cli",
+      "type": "external_client",
+      "status": "INTEGRATION_REVIEW_ONLY",
+      "pricing": "free tier subject to daily quota and service conditions",
+      "autonomous_loop_eligible": false,
+      "requires": "official login and documented supported automation terms; user opt-in",
+      "evidence": "https://github.com/google-gemini/gemini-cli/blob/main/docs/resources/quota-and-pricing.md"
+    },
+    {
+      "id": "third_party_models",
+      "type": "pluggable_adapter",
+      "status": "REVIEW_REQUIRED",
+      "pricing": "verify actual terms/quotas",
+      "autonomous_loop_eligible": false,
+      "requires": "licence, pinned artifact, native approval, security tests",
+      "evidence": null
+    }
+  ],
+  "never": "No browser cookie scraping, account abuse, quota circumvention, hidden API billing or auto account registration",
+  "weights": "EXTERNAL_LLM_BYTES_NOT_BUNDLED"
+}

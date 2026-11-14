@@ -1,0 +1,166 @@
+{
+  "schema": "NOX_V16_M1_T06_OWNER_SAFE_MEGABLOCK_R12",
+  "task_id": "M1/T06",
+  "run_id": "NOX-V16-T06-20261029T181631MSK-M1-R12",
+  "phase": "SOURCE_ONLY",
+  "source_branch": "integration/nox-v16-unified-candidate-20261028-r01",
+  "source_pre_head": "46e09f6965160922e87a1ac889a32ad80323a3c8",
+  "source_pre_tree": "dfa7545a7e323b924ca2a4e7a7060af46002eac6",
+  "post_commit": "SAME_COMMIT_AS_THIS_RECEIPT_VERIFY_GIT_REF_READBACK",
+  "source_changed_paths": [
+    {
+      "path": "Packages/P02/worker-python/p02_owner_route_ports.py",
+      "pre_blob": "b6b06a1431a3fbb19bc596d6c4c0829e50fabe2f",
+      "post_blob": "4d02549071fa645c4dc6789f3be2e276a1f530f6",
+      "description": "NoxPackHost immutable MappingProxyType acceptance; strict owner/ACL and rollback unchanged"
+    },
+    {
+      "path": "Packages/P02/worker-python/test_p02_owner_route_ports.py",
+      "pre_blob": "55086d3bf29b8c7f600346a9fe14729f93b440e4",
+      "post_blob": "368c0da31cd99155c24b5d7672f64a7036ee4720",
+      "description": "Existing actual NoxPackHost integration/denial regression test (NOT EXECUTED)"
+    }
+  ],
+  "error_register_blob": "81c8ecc72d1bcb35f434745cff9fba14eb9f2940",
+  "all_open_or_unverified_error_ids_read": [
+    "ERR-SYS-001",
+    "ERR-SYS-002",
+    "ERR-SRC-003",
+    "ERR-SRC-004",
+    "ERR-SRC-005",
+    "ERR-SYS-006",
+    "ERR-SYS-007",
+    "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+    "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+    "NOX-V16-T06-ROOT-STOP-20261029-R01",
+    "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+  ],
+  "ack": [
+    {
+      "error_id": "ERR-SYS-001",
+      "action": "T02_CROSS_OWNER_JOURNAL",
+      "status": "OPEN"
+    },
+    {
+      "error_id": "ERR-SYS-002",
+      "action": "LIVE_SHA_RECHECKED",
+      "status": "OPEN"
+    },
+    {
+      "error_id": "ERR-SRC-003",
+      "action": "T08_INDEPENDENT_NATIVE_GATE_PENDING",
+      "status": "FIX_APPLIED_UNVERIFIED"
+    },
+    {
+      "error_id": "ERR-SRC-004",
+      "action": "CURRENT_P02_PACK01_MAPPING_FIX_APPLIED_SOURCE_ONLY;OTHER_SOURCE_HANDOFF_PENDING",
+      "status": "OPEN"
+    },
+    {
+      "error_id": "ERR-SRC-005",
+      "action": "EXISTING_PATCH_PRESERVED_T08_VERIFY",
+      "status": "FIX_APPLIED_UNVERIFIED"
+    },
+    {
+      "error_id": "ERR-SYS-006",
+      "action": "NO_REOPEN_ALREADY_VERIFIED"
+    },
+    {
+      "error_id": "ERR-SYS-007",
+      "action": "NO_REOPEN_ALREADY_VERIFIED"
+    },
+    {
+      "error_id": "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+      "action": "T09_INDEPENDENT_SHA_GATE"
+    },
+    {
+      "error_id": "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+      "action": "ONE_PHYSICAL_FIX_WITH_READBACK"
+    },
+    {
+      "error_id": "NOX-V16-T06-ROOT-STOP-20261029-R01",
+      "action": "INCOMPLETE_8_8_WORK_CONTINUES"
+    },
+    {
+      "error_id": "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN",
+      "action": "T08_INDEPENDENT_ROUTE_GATE"
+    }
+  ],
+  "history_index_status": "IN_PROGRESS_NOT_ALL_OWNER_RECEIPTS_READ",
+  "one_focused_verification": {
+    "type": "SOURCE_CONTRACT_STATIC_AND_PREIMAGE",
+    "status": "PASS",
+    "checks": [
+      {
+        "name": "source_pre_blob",
+        "passed": true
+      },
+      {
+        "name": "unit_pre_blob",
+        "passed": true
+      },
+      {
+        "name": "accepts_immutable_route",
+        "passed": true
+      },
+      {
+        "name": "accepts_immutable_descriptor",
+        "passed": true
+      },
+      {
+        "name": "still_owner_exact",
+        "passed": true
+      },
+      {
+        "name": "still_collision_reject",
+        "passed": true
+      },
+      {
+        "name": "still_atomic_rollback",
+        "passed": true
+      },
+      {
+        "name": "native_test_present",
+        "passed": true
+      },
+      {
+        "name": "untouched_source_rest",
+        "passed": true
+      }
+    ],
+    "runtime_python_tests": "NOT_RUN",
+    "windows_native": "NOT_RUN",
+    "t08_independent": "NOT_RUN"
+  },
+  "progress": {
+    "previous": "1/8",
+    "current": "1/8",
+    "percent": 12.5,
+    "delta_pp": 0,
+    "bar": "█░░░░░░░░░",
+    "closed_criterion": [
+      "base"
+    ],
+    "remaining": [
+      "P01",
+      "P02",
+      "P03",
+      "P04",
+      "P05",
+      "common_integration",
+      "accepted_head_manifest"
+    ]
+  },
+  "applied_lesson": "E06 Lessons: direct-code incompatibility must be corrected on original host, while signed native source acceptance remains distinct from mock/fixture PASS.",
+  "no_loss": "NO_ORIGINAL_OR_D02_WOW_OR_DATA_PATH_CHANGED",
+  "no_exe": true,
+  "no_nsis": true,
+  "no_ci": true,
+  "no_e07": true,
+  "central_register_unmodified": true,
+  "handoff": {
+    "T02": "ACK 11 IDs and unchanged journal ownership",
+    "T08": "verify P02 mapping proxy/ACL and Host50 native 13",
+    "T09": "await 8/8 accepted_head_manifest"
+  }
+}

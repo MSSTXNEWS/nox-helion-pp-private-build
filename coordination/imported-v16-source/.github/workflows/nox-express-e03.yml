@@ -1,0 +1,44 @@
+name: NOX Express exact ModelCenter + 729 original source evidence
+on:
+  pull_request:
+    paths: ['Packages/P03/**','coordination/express/**','.github/workflows/nox-express-e03.yml']
+  push:
+    branches: [integration/nox-v16-express-modelcenter-20261028]
+permissions:
+  contents: read
+jobs:
+  source-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate 50 immutable original ModelCenter donor files
+        run: python3 coordination/express/verify_p03.py
+      - name: Reconstruct/check 729 original NOX members and all SHA-256
+        run: python3 coordination/source-lock/verify_original_archive.py --parts-dir . --expected-files 729 --output "${RUNNER_TEMP}/nox-original-729.json"
+      - name: Run existing exact C40 admission mock tests
+        run: python3 -m unittest discover -s Packages/P03/Admission -p 'test_p03*.py' -v
+      - name: E03 real UI ACK, progress and terminal lifecycle regression
+        run: node coordination/express/tests/p03_ui_runtime.cjs
+      - name: Check original Quick20 UI contract
+        run: |
+          node --check Packages/P03/Source/P03.ModelCenter.Wow/ui.js
+          node Packages/P03/Source/P03.ModelCenter.QuickSmoke/quick20_contract.cjs
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: source-only-original-729-evidence
+          path: ${{ runner.temp }}/nox-original-729.json
+          retention-days: 14
+  modelcenter-component:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Compile existing P03 source (no network model downloads)
+        run: dotnet build Packages/P03/Source/P03.ModelCenter/P03.ModelCenter.csproj --configuration Release
+      - name: Run C40 admission and original Queue/STOP/Retry smoke
+        run: dotnet run --project Packages/P03/Source/P03.ModelCenter.QuickSmoke/P03.ModelCenter.QuickSmoke.csproj --configuration Release

@@ -1,0 +1,646 @@
+diff --git a/P03.ModelCenter.Smoke/Program.cs b/P03.ModelCenter.Smoke/Program.cs
+index 5fe25b2..063d852 100644
+--- a/P03.ModelCenter.Smoke/Program.cs
++++ b/P03.ModelCenter.Smoke/Program.cs
+@@ -20,7 +20,7 @@ try
+     {
+         EvidenceStatus = CatalogEvidenceStatus.ArtifactVerified,
+         ExactTag = "tinyllama:1.1b", Version = "test-version", License = "test-license",
+-        ArtifactBytes = 128, RequiredDiskBytes = 256,
++        ArtifactBytes = 128, RequiredDiskBytes = 256, RecommendedRamBytes = 512,
+         ExpectedSha256 = new string('b', 64),
+         ExpectedManifestDigestSha256 = new string('a', 64),
+         ImmutableRevision = "test-immutable-revision", CompatibilityReviewed = true,
+@@ -30,9 +30,12 @@ try
+     var reviewed = await store.EnqueueVerifiedPullAsync(reviewedFixture, true);
+     if (reviewed.ExpectedOllamaDigest != new string('a', 64))
+         throw new Exception("Manifest pin was not persisted");
+-    var queued = await store.EnqueueAsync(ModelJobKind.OllamaPull, "tinyllama:1.1b", null,
+-        true, "https://ollama.com/library/tinyllama");
+-    if ((await store.ReadAsync()).Count != 2) throw new Exception("Queue persist failed");
++    await AssertThrowsAsync<InvalidOperationException>(() => store.EnqueueAsync(
++        ModelJobKind.OllamaPull, "tinyllama:1.1b", null, true, "https://ollama.com/library/tinyllama"));
++    var queued = reviewed;
++    if ((await store.ReadAsync()).Count != 1) throw new Exception("Verified queue persist failed");
++    await AssertThrowsAsync<InvalidOperationException>(() => store.UpdateAsync(queued.Id,
++        j => j with { ExpectedOllamaDigest = new string('c',64) }));
+     await store.UpdateAsync(queued.Id, j => j with { State = ModelJobState.Running });
+     var recovered = await store.RecoverInterruptedAsync();
+     if (recovered != 1) throw new Exception("Interrupted queue not recovered");
+@@ -44,6 +47,20 @@ try
+     if ((await File.ReadAllTextAsync(Path.Combine(root, "p03-model-download-queue.json"))) != "{broken")
+         throw new Exception("Corrupt queue overwritten");
+ 
++    // Restore a byte-verified backup after deliberate corruption, no silent overwrite.
++    await AssertThrowsAsync<InvalidOperationException>(() => store.RestoreBackupAsync(false));
++    await store.RestoreBackupAsync(true);
++    if ((await store.ReadAsync()).Count == 0) throw new Exception("Backup restore failed");
++    if (!ModelCatalog.IsValidFamilyIndex()) throw new Exception("Family discovery index mutated");
++    var validCommand = System.Text.Json.JsonSerializer.Serialize(new {
++        type = "p03.command.v1", action = "pull", commandId = "test-1",
++        modelId = "tinyllama", licenseAcknowledged = true });
++    if (Nox.P03.Wow.ModelWowBridgeContract.TryParseCommand(validCommand,
++        await store.ReadAsync(), new[] { reviewedFixture }, new(), out _))
++        throw new Exception("Unauthorized pull command accepted");
++    if (!Nox.P03.Wow.ModelWowBridgeContract.TryParseCommand(validCommand,
++        await store.ReadAsync(), new[] { reviewedFixture }, new(Pull: true), out var parsed)
++        || parsed?.Action != "pull") throw new Exception("Authorized pull command rejected");
+     var fakeManifest = new string('a', 64);
+     var job = queued with { State = ModelJobState.Running,
+         ExpectedOllamaDigest = fakeManifest, ImmutableRevision = "verified-fixture-revision" };
+@@ -52,7 +69,7 @@ try
+     {
+         using var unpinnedClient = new HttpClient(new FakeOllamaHandler(true)) { BaseAddress = new Uri("http://localhost:11434/") };
+         await new OllamaModelAdapter(unpinnedClient, Path.Combine(root, "receipts"))
+-            .PullAsync(queued, (e, token) => ValueTask.CompletedTask, default);
++            .PullAsync(queued with { ExpectedOllamaDigest = null, ImmutableRevision = null }, (e, token) => ValueTask.CompletedTask, default);
+     }
+     var url = "http://localhost:11434/";
+     using var okClient = new HttpClient(new FakeOllamaHandler(true)) { BaseAddress = new Uri(url) };
+@@ -67,7 +84,20 @@ try
+     await AssertThrowsAsync<InvalidDataException>(() => new OllamaModelAdapter(mismatchedClient,
+         Path.Combine(root, "receipts")).PullAsync(job with { ExpectedOllamaDigest = new string('b', 64) },
+         (e, token) => ValueTask.CompletedTask, default));
+-    Console.WriteLine("P03_SMOKE_PASS: queue/recovery/corruption/GGUF gate/Pull terminal/digest lock");
++    // Real local file-byte verification against a deterministic fake Ollama API.
++    var smallGguf = Path.Combine(root, "fixture.gguf");
++    await File.WriteAllBytesAsync(smallGguf, Encoding.ASCII.GetBytes("GGUFsmall-fixture"));
++    var smallBytes = new FileInfo(smallGguf).Length;
++    var ggufSha = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(await File.ReadAllBytesAsync(smallGguf))).ToLowerInvariant();
++    var importJob = await store.EnqueueVerifiedGgufAsync("local:fixture", smallGguf,
++        smallBytes, ggufSha, "rights-test-fixture", "https://ollama.com/library/tinyllama");
++    using var importClient = new HttpClient(new FakeOllamaHandler(true)) { BaseAddress = new Uri(url) };
++    var importAdapter = new OllamaModelAdapter(importClient, Path.Combine(root, "receipts"));
++    var imported = await importAdapter.ImportGgufAsync(importJob,
++        (e, token) => ValueTask.CompletedTask, default);
++    if (imported.Bytes != smallBytes || imported.Sha256 != ggufSha ||
++        !File.Exists(importAdapter.ReceiptPathFor(importJob.Id))) throw new Exception("GGUF import receipt failed");
++    Console.WriteLine("P03_SMOKE_PASS: queue/provenance/restore/bridge/Pull/GGUF digest");
+ }
+ finally { Directory.Delete(root, recursive: true); }
+ 
+@@ -89,8 +119,11 @@ sealed class FakeOllamaHandler(bool success) : HttpMessageHandler
+                 Content = new StringContent(success
+                     ? "{\"status\":\"downloading\",\"digest\":\"sha256:a\",\"completed\":3,\"total\":3}\n{\"status\":\"success\"}\n"
+                     : "{\"status\":\"downloading\"}\n", Encoding.UTF8) },
++            "/api/create" => new HttpResponseMessage(HttpStatusCode.OK) {
++                Content = new StringContent("{\"status\":\"parsing GGUF\"}\n{\"status\":\"success\"}\n", Encoding.UTF8) },
+             "/api/tags" => new HttpResponseMessage(HttpStatusCode.OK) {
+-                Content = new StringContent("{\"models\":[{\"name\":\"tinyllama:1.1b\",\"digest\":\"sha256:" + new string('a',64) + "\"}]}" ) },
++                Content = new StringContent("{\"models\":[{\"name\":\"tinyllama:1.1b\",\"digest\":\"sha256:" + new string('a',64) + "\"},{\"name\":\"local:fixture\",\"digest\":\"sha256:" + new string('a',64) + "\"}]}" ) },
++            _ when route.StartsWith("/api/blobs/sha256:", StringComparison.Ordinal) => new HttpResponseMessage(HttpStatusCode.OK),
+             _ => new HttpResponseMessage(HttpStatusCode.NotFound)
+         };
+         return Task.FromResult(response);
+diff --git a/P03.ModelCenter.Wow/index.html b/P03.ModelCenter.Wow/index.html
+index 28804d2..eb1827d 100644
+--- a/P03.ModelCenter.Wow/index.html
++++ b/P03.ModelCenter.Wow/index.html
+@@ -13,7 +13,7 @@
+     </aside>
+     <main class="main" id="main">
+       <section class="hero" aria-label="Обзор модели"><div class="hero-backdrop"></div><div class="orbit-wrap"><div class="orbit" id="orbit"><div class="orbit-track"></div><div class="orbit-glow"></div><div class="orbit-nucleus"><span class="nucleus-star">✦</span></div></div><div class="orbit-label" id="orbitLabel">ОЖИДАНИЕ</div></div>
+-        <div class="hero-info"><div class="eyebrow">АРХИТЕКТУРА / МОДЕЛЬНЫЕ ВЕСА</div><h2 id="selectedName">Выберите модель</h2><p id="heroSubtitle">Проверяйте происхождение, совместимость и состояние установки в одном месте.</p><div id="heroChips" class="chips"><span class="chip warning">REVIEW_REQUIRED</span></div><div class="hero-actions"><button id="stopBtn" class="button danger" disabled>■ Остановить</button><button id="retryBtn" class="button" disabled><img class="inline-icon" src="icons/play.svg" alt=""> Повторить</button><button id="diagBtn" class="button ghost" disabled>Диагностика</button></div><p class="small-hint" id="actionHint">Действия подключаются только к подтверждённым командам host.</p></div>
++        <div class="hero-info"><div class="eyebrow">АРХИТЕКТУРА / МОДЕЛЬНЫЕ ВЕСА</div><h2 id="selectedName">Выберите модель</h2><p id="heroSubtitle">Проверяйте происхождение, совместимость и состояние установки в одном месте.</p><div id="heroChips" class="chips"><span class="chip warning">REVIEW_REQUIRED</span></div><div class="hero-actions"><button id="pullBtn" class="button" disabled>↓ Скачать в NOX</button><button id="importBtn" class="button ghost" disabled>Импорт GGUF</button><button id="stopBtn" class="button danger" disabled>■ Остановить</button><button id="retryBtn" class="button" disabled><img class="inline-icon" src="icons/play.svg" alt=""> Повторить</button><button id="diagBtn" class="button ghost" disabled>Диагностика</button></div><label class="small-hint"><input type="checkbox" id="licenseAck" /> Подтверждаю проверку лицензии и права использования выбранной модели.</label><p class="small-hint" id="actionHint">Действия подключаются только к подтверждённым командам host.</p></div>
+       </section>
+       <section class="metrics" aria-label="Контроль модели"><div class="metric"><label>СОСТОЯНИЕ</label><strong id="jobState">Н/Д</strong><small id="jobPhase">Нет активной операции</small></div><div class="metric"><label>ПЕРЕДАНО</label><strong id="transfer">Н/Д</strong><small id="transferNote">Только реальные счётчики</small></div><div class="metric"><label>РАЗМЕР</label><strong id="modelSize">Н/Д</strong><small>Подтверждённые данные</small></div><div class="metric"><label>СОВМЕСТИМОСТЬ</label><strong id="hardwareState">Неизвестна</strong><small id="hardwareHint">Ожидание датчиков ПК</small></div></section>
+       <section class="content-grid">
+diff --git a/P03.ModelCenter.Wow/ui.js b/P03.ModelCenter.Wow/ui.js
+index dc3d5c0..f9ddb42 100644
+--- a/P03.ModelCenter.Wow/ui.js
++++ b/P03.ModelCenter.Wow/ui.js
+@@ -24,7 +24,8 @@ const modelId = x=>typeof x==='string' && /^[a-z0-9][a-z0-9._-]{0,79}$/i.test(x)
+ function el(tag, className, text){const n=document.createElement(tag);if(className)n.className=className;if(text!==undefined)n.textContent=String(text);return n;}
+ const current = () => state.models.find(m=>m.id===state.activeId)||state.models[0]||null;
+ const hasEvidence = m => !!(m && m.artifactVerified===true && m.exactTag && m.immutableRevision && m.license &&
+-  m.licenseEvidenceUrl && numeric(m.artifactBytes)>0 && isDigest(m.sha256) && m.compatibilityReviewed===true);
++  m.licenseEvidenceUrl && numeric(m.artifactBytes)>0 && isDigest(m.sha256) && isDigest(m.manifestSha256) &&
++  (numeric(m.requiredVramGiB)>0 || numeric(m.recommendedRamGiB)>0) && m.compatibilityReviewed===true);
+ const currentJob = () => state.activeJob && current() &&
+   (state.activeJob.modelId===current().id || state.activeJob.modelTag===current().exactTag ||
+    state.activeJob.modelTag===current().id) ? state.activeJob : null;
+@@ -36,7 +37,7 @@ function renderCatalog(){const list=$('catalog');list.replaceChildren();const q=
+   if(!filtered.length){list.append(el('p','empty-search','Нет совпадений'));return;}
+   for(const m of filtered){const b=el('button','model-card'+(m.id===state.activeId?' selected':''));b.type='button';b.setAttribute('aria-current',m.id===state.activeId?'true':'false');
+     const mark=el('span','model-mark','✧'),meta=el('span','model-data');meta.append(el('span','model-name',m.name),el('span','model-state',hasEvidence(m)?'ARTIFACT VERIFIED':'REVIEW_REQUIRED'));
+-    b.append(mark,meta); b.addEventListener('click',()=>{state.activeId=m.id;render();});
++    b.append(mark,meta); b.addEventListener('click',()=>{state.activeId=m.id;$('licenseAck').checked=false;render();});
+     const check=el('input','compare-check');check.type='checkbox';check.checked=state.compare.includes(m.id);check.setAttribute('aria-label','Сравнить '+m.name);
+     check.addEventListener('click',e=>e.stopPropagation());check.addEventListener('change',()=>{const idx=state.compare.indexOf(m.id);if(idx>=0)state.compare.splice(idx,1);else {if(state.compare.length>=2)state.compare.shift();state.compare.push(m.id);}renderCatalog();renderComparison();});
+     b.append(check);list.append(b);
+@@ -55,6 +56,8 @@ function renderHero(){const m=current();const j=currentJob();const verified=hasE
+   $('modelSize').textContent=bytes(m?.artifactBytes);
+   const cap=state.capabilities||{};const canStop=state.hostReady&&cap.stop===true&&j&&['Running','Downloading'].includes(j.state);
+   const canRetry=state.hostReady&&cap.retry===true&&j&&['Failed','Cancelled','Paused'].includes(j.state);
++  $('pullBtn').disabled=!(state.hostReady&&cap.pull===true&&verified&&$('licenseAck').checked&&!state.pending.has('pull'));
++  $('importBtn').disabled=!(state.hostReady&&cap.importGguf===true&&$('licenseAck').checked&&!state.pending.has('importGguf'));
+   $('stopBtn').disabled=!(canStop&&!state.pending.has('stop'));
+   $('retryBtn').disabled=!(canRetry&&!state.pending.has('retry'));
+   $('diagBtn').disabled=!(state.hostReady&&cap.diagnose===true&&!state.pending.has('diagnose'));
+@@ -90,9 +93,14 @@ function renderEvents(){const feed=$('eventFeed');feed.replaceChildren();if(stat
+ }
+ function render(){renderCatalog();renderHero();renderDna();renderPreflight();renderComparison();renderEvents();}
+ function sendAction(action){const c=state.capabilities||{};const job=currentJob();if(!state.hostReady||c[action]!==true)return;
+- if(action!=='diagnose'&&(!job||!job.jobId||!['stop','retry'].includes(action)))return;
++ if(action==='pull'&&(!hasEvidence(current())||!$('licenseAck').checked))return;
++ if(action==='importGguf'&&!$('licenseAck').checked)return;
++ if(['stop','retry'].includes(action)&&(!job||!job.jobId))return;
++ if(!['diagnose','pull','importGguf','stop','retry'].includes(action))return;
+  if(state.pending.has(action))return;state.pending.add(action);renderHero();const commandId='c'+Date.now().toString(36)+Math.random().toString(36).slice(2,9);
+- const data={type:'p03.command.v1',commandId,action,modelId:current()?.id||null,jobId:action==='diagnose'?null:job.jobId};
++ const data={type:'p03.command.v1',commandId,action,modelId:current()?.id||null,
++  licenseAcknowledged:['pull','importGguf'].includes(action)&&$('licenseAck').checked,
++  jobId:['stop','retry'].includes(action)?job.jobId:null};
+  try{window.chrome.webview.postMessage(data);showToast('Команда отправлена host. Ожидание ответа.');}catch{state.pending.delete(action);renderHero();showToast('Связь с host отсутствует.');}
+  // Pending is not interpreted as success; delayed ACK clears this lock.
+ }
+@@ -114,10 +122,13 @@ function processMessage(data){if(!data||typeof data!=='object'||!['p03.snapshot.
+     if(['completed','failed','cancelled'].includes(evt.phase))job.state=evt.phase==='completed'?'Completed':evt.phase==='failed'?'Failed':'Cancelled';}
+   render();
+  }else if(data.type==='p03.command.ack.v1'){
+-  if(!['stop','retry','diagnose'].includes(data.action))return;state.pending.delete(data.action);renderHero();showToast(data.accepted===true?'Host принял команду; результат будет в событиях.':`Host отклонил: ${ellipsis(data.reason||'причина не указана')}`);
++  if(!['pull','importGguf','stop','retry','diagnose'].includes(data.action))return;state.pending.delete(data.action);renderHero();showToast(data.accepted===true?'Host принял команду; результат будет в событиях.':`Host отклонил: ${ellipsis(data.reason||'причина не указана')}`);
+  }}
+ $('search').addEventListener('input',renderCatalog);
+ for(const b of document.querySelectorAll('[data-filter]'))b.addEventListener('click',()=>{state.filter=b.dataset.filter;for(const btn of document.querySelectorAll('[data-filter]')){btn.classList.toggle('active',btn===b);btn.setAttribute('aria-pressed',String(btn===b));}renderCatalog();});
++$('pullBtn').addEventListener('click',()=>sendAction('pull'));
++$('importBtn').addEventListener('click',()=>sendAction('importGguf'));
++$('licenseAck').addEventListener('change',renderHero);
+ $('stopBtn').addEventListener('click',()=>sendAction('stop'));
+ $('retryBtn').addEventListener('click',()=>sendAction('retry'));
+ $('diagBtn').addEventListener('click',()=>sendAction('diagnose'));
+diff --git a/P03.ModelCenter/MODEL_LEADS_SPEECH_GPU_REVIEW_REQUIRED.json b/P03.ModelCenter/MODEL_LEADS_SPEECH_GPU_REVIEW_REQUIRED.json
+new file mode 100644
+index 0000000..2773ff6
+--- /dev/null
++++ b/P03.ModelCenter/MODEL_LEADS_SPEECH_GPU_REVIEW_REQUIRED.json
+@@ -0,0 +1,78 @@
++{
++  "schema": "NOX_P03_SOURCE_LEADS_V1",
++  "note": "Candidates only, not independently pinned or installed; validate rights and source revision before download.",
++  "existingOllamaFamilyCount": 30,
++  "existingOfficialUrlLeads": 15,
++  "additionalSpeechLeads": [
++    {
++      "id": "asr-whisper-small",
++      "officialSourceLead": "https://huggingface.co/openai/whisper-small",
++      "use": "ASR",
++      "languageScope": "RU↔ES",
++      "reviewStatus": "REVIEW_REQUIRED",
++      "downloadAllowed": false,
++      "revision": null,
++      "license": null,
++      "artifactSha256": null,
++      "modelBytes": null,
++      "vramBytes": null,
++      "compatibility": null
++    },
++    {
++      "id": "tts-piper-voices",
++      "officialSourceLead": "https://huggingface.co/rhasspy/piper-voices",
++      "use": "TTS",
++      "languageScope": "RU↔ES",
++      "reviewStatus": "REVIEW_REQUIRED",
++      "downloadAllowed": false,
++      "revision": null,
++      "license": null,
++      "artifactSha256": null,
++      "modelBytes": null,
++      "vramBytes": null,
++      "compatibility": null
++    },
++    {
++      "id": "qwen3-0.6b",
++      "officialSourceLead": "https://huggingface.co/Qwen/Qwen3-0.6B",
++      "use": "LLM teacher",
++      "languageScope": "Spanish tutor",
++      "reviewStatus": "REVIEW_REQUIRED",
++      "downloadAllowed": false,
++      "revision": null,
++      "license": null,
++      "artifactSha256": null,
++      "modelBytes": null,
++      "vramBytes": null,
++      "compatibility": null
++    },
++    {
++      "id": "wav2vec2-aligner",
++      "officialSourceLead": "https://huggingface.co/facebook/wav2vec2-base-960h",
++      "use": "aligner",
++      "languageScope": "English-only reference; RU↔ES not confirmed",
++      "reviewStatus": "REVIEW_REQUIRED",
++      "downloadAllowed": false,
++      "revision": null,
++      "license": null,
++      "artifactSha256": null,
++      "modelBytes": null,
++      "vramBytes": null,
++      "compatibility": null
++    },
++    {
++      "id": "whisper-large-v3",
++      "officialSourceLead": "https://huggingface.co/openai/whisper-large-v3",
++      "use": "ASR",
++      "languageScope": "RU↔ES",
++      "reviewStatus": "REVIEW_REQUIRED",
++      "downloadAllowed": false,
++      "revision": null,
++      "license": null,
++      "artifactSha256": null,
++      "modelBytes": null,
++      "vramBytes": null,
++      "compatibility": null
++    }
++  ]
++}
+diff --git a/P03.ModelCenter/ModelCatalog.cs b/P03.ModelCenter/ModelCatalog.cs
+index 457b2de..a607d8c 100644
+--- a/P03.ModelCenter/ModelCatalog.cs
++++ b/P03.ModelCenter/ModelCatalog.cs
+@@ -38,6 +38,7 @@ public sealed record ModelCatalogEntry(
+         && LicenseEvidenceUri is { Scheme: "https" }
+         && CompatibilityEvidenceUri is { Scheme: "https" }
+         && !string.IsNullOrWhiteSpace(ImmutableRevision)
++        && (RecommendedRamBytes is > 0 || RecommendedVramBytes is > 0)
+         && CompatibilityReviewed;
+ 
+     private static bool IsSha256(string? value) => value is { Length: 64 }
+@@ -69,6 +70,12 @@ public static class ModelCatalog
+         Family("phi4", "Phi 4"), Family("muse-glimmer", "Muse Glimmer")
+     ];
+ 
++    // Catalog integrity is independent of actual source-page or license review.
++    public static bool IsValidFamilyIndex() => OfficialFamilies.Length >= 24
++        && OfficialFamilies.Select(x => x.Id).Distinct(StringComparer.OrdinalIgnoreCase).Count() == OfficialFamilies.Length
++        && OfficialFamilies.All(x => x.EvidenceStatus == CatalogEvidenceStatus.FamilyListed
++            && x.OfficialLibraryPage.IsAbsoluteUri && x.OfficialLibraryPage.Scheme == Uri.UriSchemeHttps);
++
+     public static ModelCatalogEntry Get(string id) => OfficialFamilies.FirstOrDefault(x =>
+         string.Equals(x.Id, id, StringComparison.OrdinalIgnoreCase))
+         ?? throw new KeyNotFoundException($"Unknown model family '{id}'.");
+diff --git a/P03.ModelCenter/ModelDownloadQueueStore.cs b/P03.ModelCenter/ModelDownloadQueueStore.cs
+index b63b49f..7c09da7 100644
+--- a/P03.ModelCenter/ModelDownloadQueueStore.cs
++++ b/P03.ModelCenter/ModelDownloadQueueStore.cs
+@@ -52,28 +52,16 @@ public sealed class ModelDownloadQueueStore
+         finally { _gate.Release(); }
+     }
+ 
+-    public async Task<ModelJob> EnqueueAsync(ModelJobKind kind, string tag, string? localPath,
++    public Task<ModelJob> EnqueueAsync(ModelJobKind kind, string tag, string? localPath,
+         bool licenseAcknowledged, string licenseSource, CancellationToken ct = default)
+     {
+         if (!licenseAcknowledged) throw new InvalidOperationException("Review the model license and explicitly acknowledge it before queueing.");
+         if (string.IsNullOrWhiteSpace(licenseSource) || !Uri.TryCreate(licenseSource, UriKind.Absolute, out var source)
+             || source.Scheme != Uri.UriSchemeHttps)
+             throw new ArgumentException("A reviewed HTTPS license/source URL is required.", nameof(licenseSource));
+-        if (kind == ModelJobKind.GgufImport)
+-            throw new InvalidOperationException("GGUF requires EnqueueVerifiedGgufAsync with explicit size/SHA and rights receipt.");
+-        ValidateTag(tag);
+-
+-        await _gate.WaitAsync(ct);
+-        try
+-        {
+-            var jobs = (await ReadCoreAsync(ct)).ToList();
+-            var now = DateTimeOffset.UtcNow;
+-            var job = new ModelJob(Guid.NewGuid(), kind, tag.Trim(), localPath, true, source.ToString(), now, now);
+-            jobs.Add(job);
+-            await SaveCoreAsync(jobs, ct);
+-            return job;
+-        }
+-        finally { _gate.Release(); }
++        // Legacy path intentionally retained for binary compatibility, never usable
++        // for network transfers without a reviewed pinned artifact.
++        throw new InvalidOperationException("REVIEW_REQUIRED: use EnqueueVerifiedPullAsync or EnqueueVerifiedGgufAsync.");
+     }
+ 
+     /// <summary>Explicitly reviewed GGUF artifact; cannot enqueue a file with unknown
+@@ -161,7 +149,13 @@ public sealed class ModelDownloadQueueStore
+                 proposed.ModelTag != previous.ModelTag ||
+                 proposed.LicenseSource != previous.LicenseSource ||
+                 proposed.ExpectedOllamaDigest != previous.ExpectedOllamaDigest ||
+-                proposed.ImmutableRevision != previous.ImmutableRevision)
++                proposed.ImmutableRevision != previous.ImmutableRevision ||
++                proposed.LicenseAcknowledged != previous.LicenseAcknowledged ||
++                proposed.LocalPath != previous.LocalPath ||
++                proposed.ExpectedLocalBytes != previous.ExpectedLocalBytes ||
++                proposed.ExpectedLocalSha256 != previous.ExpectedLocalSha256 ||
++                proposed.RightsReceiptId != previous.RightsReceiptId ||
++                proposed.RetryOfJobId != previous.RetryOfJobId)
+                 throw new InvalidOperationException("Job identity/provenance is immutable.");
+             if (proposed.CompletedBytes < 0 || proposed.TotalBytes < 0 ||
+                 (proposed.CompletedBytes is { } done && proposed.TotalBytes is { } total && done > total))
+@@ -220,6 +214,9 @@ public sealed class ModelDownloadQueueStore
+                 CreatedAtUtc = now, UpdatedAtUtc = now, Status = "Retry queued", Error = null,
+                 RetryOfJobId = failed.Id,
+                 CompletedBytes = null, TotalBytes = null, ComputedSha256 = null, ReceiptPath = null };
++            if (retry.Kind == ModelJobKind.OllamaPull &&
++                (retry.ExpectedOllamaDigest is not { Length: 64 } || string.IsNullOrWhiteSpace(retry.ImmutableRevision)))
++                throw new InvalidOperationException("REVIEW_REQUIRED: legacy unpinned pull cannot be retried.");
+             jobs.Add(retry);
+             await SaveCoreAsync(jobs, ct);
+             return retry;
+@@ -227,6 +224,35 @@ public sealed class ModelDownloadQueueStore
+         finally { _gate.Release(); }
+     }
+ 
++    /// <summary>Explicit, confirmed restore. Snapshot of current queue retained for rollback.
++    /// Never silently replaces a newer queue on application startup.</summary>
++    public async Task RestoreBackupAsync(bool explicitlyConfirmed, CancellationToken ct = default)
++    {
++        if (!explicitlyConfirmed) throw new InvalidOperationException("Queue rollback requires explicit confirmation.");
++        await _gate.WaitAsync(ct);
++        try
++        {
++            var backup = _path + ".bak";
++            if (!File.Exists(backup)) throw new FileNotFoundException("No queue backup exists.", backup);
++            var bytes = await File.ReadAllBytesAsync(backup, ct);
++            if (bytes.Length == 0 || bytes.Length > MaxQueueFileBytes)
++                throw new InvalidDataException("Queue backup is invalid or too large.");
++            var snapshot = JsonSerializer.Deserialize<List<ModelJob>>(bytes, JsonOptions)
++                ?? throw new InvalidDataException("Backup queue is null.");
++            ValidateJobs(snapshot);
++            var preserved = _path + ".pre_restore." + Guid.NewGuid().ToString("N");
++            if (File.Exists(_path)) File.Copy(_path, preserved, overwrite: false);
++            var temp = _path + ".restore." + Guid.NewGuid().ToString("N") + ".tmp";
++            try
++            {
++                await File.WriteAllBytesAsync(temp, bytes, ct);
++                File.Move(temp, _path, overwrite: true);
++            }
++            finally { if (File.Exists(temp)) File.Delete(temp); }
++        }
++        finally { _gate.Release(); }
++    }
++
+     private async Task<IReadOnlyList<ModelJob>> ReadCoreAsync(CancellationToken ct)
+     {
+         if (!File.Exists(_path)) return [];
+@@ -237,6 +263,17 @@ public sealed class ModelDownloadQueueStore
+         {
+             var jobs = await JsonSerializer.DeserializeAsync<List<ModelJob>>(input, JsonOptions, ct)
+                 ?? throw new InvalidDataException("Null queue is not a valid snapshot.");
++            ValidateJobs(jobs);
++            return jobs;
++        }
++        catch (JsonException ex)
++        {
++            throw new InvalidDataException("Queue is corrupt; original bytes preserved.", ex);
++        }
++    }
++
++    private static void ValidateJobs(IReadOnlyList<ModelJob> jobs)
++    {
+             if (jobs.Any(j => j is null || j.Id == Guid.Empty || j.Attempts < 0 ||
+                 j.CompletedBytes < 0 || j.TotalBytes < 0 ||
+                 (j.CompletedBytes is { } c && j.TotalBytes is { } t && c > t)) ||
+@@ -249,12 +286,6 @@ public sealed class ModelDownloadQueueStore
+                      (j.ExpectedLocalBytes is not > 4 || !ShaPattern.IsMatch(j.ExpectedLocalSha256 ?? "") ||
+                       string.IsNullOrWhiteSpace(j.RightsReceiptId)))))
+                 throw new InvalidDataException("Queue contains duplicate/invalid jobs; original bytes preserved.");
+-            return jobs;
+-        }
+-        catch (JsonException ex)
+-        {
+-            throw new InvalidDataException("Queue is corrupt; original bytes preserved.", ex);
+-        }
+     }
+ 
+     private async Task SaveCoreAsync(IReadOnlyList<ModelJob> jobs, CancellationToken ct)
+diff --git a/P03.ModelCenter/ModelDownloadQueueWorker.cs b/P03.ModelCenter/ModelDownloadQueueWorker.cs
+index 0ea10ef..5797065 100644
+--- a/P03.ModelCenter/ModelDownloadQueueWorker.cs
++++ b/P03.ModelCenter/ModelDownloadQueueWorker.cs
+@@ -15,6 +15,14 @@ public sealed class ModelDownloadQueueWorker(
+         {
+             var job = (await store.ReadAsync(ct)).FirstOrDefault(x => x.State == ModelJobState.Queued);
+             if (job is null) return;
++            // Legacy unpinned jobs remain preserved in the queue, but cannot execute.
++            if (job.Kind == ModelJobKind.OllamaPull &&
++                (job.ExpectedOllamaDigest is not { Length: 64 } || string.IsNullOrWhiteSpace(job.ImmutableRevision)))
++            {
++                await store.UpdateAsync(job.Id, j => j with { State = ModelJobState.Failed,
++                    Status = "REVIEW_REQUIRED", Error = "UNPINNED_ARTIFACT" }, ct);
++                return;
++            }
+             using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct);
+             lock (_running) _running[job.Id] = linked;
+             // CancelQueuedAsync may win between snapshot and this transition.
+@@ -48,7 +56,8 @@ public sealed class ModelDownloadQueueWorker(
+                     await store.UpdateAsync(job.Id, j => j with { ComputedSha256 = imported.Sha256 }, ct);
+                 }
+                 var done = await store.UpdateAsync(job.Id, j => j.State == ModelJobState.Running
+-                    ? j with { State = ModelJobState.Completed, Status = "Installed" } : j, CancellationToken.None);
++                    ? j with { State = ModelJobState.Completed, Status = "Installed",
++                        ReceiptPath = ollama.ReceiptPathFor(j.Id) } : j, CancellationToken.None);
+                 if (done?.State != ModelJobState.Completed)
+                     throw new OperationCanceledException("Cancellation won the terminal-state race.", linked.Token);
+                 await SafePublishAsync(job, "completed", "Installed", done.CompletedBytes, done.TotalBytes, digest, null, CancellationToken.None);
+diff --git a/P03.ModelCenter/ModelWowBridgeContract.cs b/P03.ModelCenter/ModelWowBridgeContract.cs
+index fabbd02..2738108 100644
+--- a/P03.ModelCenter/ModelWowBridgeContract.cs
++++ b/P03.ModelCenter/ModelWowBridgeContract.cs
+@@ -14,7 +14,8 @@ public static class ModelWowBridgeContract
+     private const double GiB = 1073741824d;
+ 
+     public sealed record DeviceSnapshot(double? VramFreeGiB, double? RamFreeGiB, double? DiskFreeGiB);
+-    public sealed record Capabilities(bool Stop = false, bool Retry = false, bool Diagnose = false);
++    public sealed record Capabilities(bool Stop = false, bool Retry = false, bool Diagnose = false,
++        bool Pull = false, bool ImportGguf = false);
+     public sealed record Command(string CommandId, string Action, Guid? JobId, string? ModelId);
+ 
+     public static string SnapshotJson(IEnumerable<ModelCatalogEntry> entries,
+@@ -42,7 +43,8 @@ public static class ModelWowBridgeContract
+                 sha256 = m.ExpectedSha256, manifestSha256 = m.ExpectedManifestDigestSha256,
+                 compatibilityReviewed = m.CompatibilityReviewed,
+                 requiredDiskGiB = m.RequiredDiskBytes is > 0 ? m.RequiredDiskBytes.Value / GiB : (double?)null,
+-                requiredVramGiB = m.RecommendedVramBytes is > 0 ? m.RecommendedVramBytes.Value / GiB : (double?)null
++                requiredVramGiB = m.RecommendedVramBytes is > 0 ? m.RecommendedVramBytes.Value / GiB : (double?)null,
++                recommendedRamGiB = m.RecommendedRamBytes is > 0 ? m.RecommendedRamBytes.Value / GiB : (double?)null
+             }),
+             activeJob = job is null ? null : new
+             {
+@@ -76,6 +78,11 @@ public static class ModelWowBridgeContract
+     /// per-job ACL, and capability before calling the worker; success ACK is not completion.
+     /// </summary>
+     public static bool TryParseCommand(string payload, IReadOnlyCollection<ModelJob> jobs,
++        Capabilities allowed, out Command? command) =>
++        TryParseCommand(payload, jobs, [], allowed, out command);
++
++    public static bool TryParseCommand(string payload, IReadOnlyCollection<ModelJob> jobs,
++        IReadOnlyCollection<ModelCatalogEntry> approvedCatalog,
+         Capabilities allowed, out Command? command)
+     {
+         command = null;
+@@ -94,6 +101,24 @@ public static class ModelWowBridgeContract
+             string? id = idProp.GetString();
+             if (string.IsNullOrWhiteSpace(id) || id.Length > 64 ||
+                 id.Any(c => !char.IsAsciiLetterOrDigit(c) && c != '-' && c != '_')) return false;
++            if (action == "pull" && allowed.Pull)
++            {
++                if (!root.TryGetProperty("modelId", out var selected) || selected.ValueKind != JsonValueKind.String ||
++                    !root.TryGetProperty("licenseAcknowledged", out var ack) || ack.ValueKind != JsonValueKind.True)
++                    return false;
++                var m = approvedCatalog.FirstOrDefault(x => x.Id == selected.GetString());
++                if (m is null || !m.CanOfferOneClickPull) return false;
++                command = new Command(id, action, null, m.Id);
++                return true;
++            }
++            if (action == "importGguf" && allowed.ImportGguf)
++            {
++                if (!root.TryGetProperty("licenseAcknowledged", out var ack) || ack.ValueKind != JsonValueKind.True) return false;
++                // File picker, rights approval, SHA and ACL must be hosted natively by #6.
++                // Never accept untrusted JS paths, blobs or checksum claims.
++                command = new Command(id, action, null, null);
++                return true;
++            }
+             if (action == "diagnose" && allowed.Diagnose)
+             {
+                 command = new Command(id, action, null, null);
+diff --git a/P03.ModelCenter/OllamaModelAdapter.cs b/P03.ModelCenter/OllamaModelAdapter.cs
+index f5b979b..17133fe 100644
+--- a/P03.ModelCenter/OllamaModelAdapter.cs
++++ b/P03.ModelCenter/OllamaModelAdapter.cs
+@@ -38,12 +38,17 @@ public sealed class OllamaModelAdapter(HttpClient http, string receiptDirectory)
+                 if (nextDone < 0 || nextDone > update.Total.Value)
+                     throw new InvalidDataException("Invalid Ollama layer counters.");
+                 if (layers.TryGetValue(update.Digest, out var old))
+-                    layers[update.Digest] = (Math.Max(nextDone, old.Completed), Math.Max(update.Total.Value, old.Total));
++                {
++                    if (update.Total.Value != old.Total) throw new InvalidDataException("Ollama layer size changed during transfer.");
++                    layers[update.Digest] = (Math.Max(nextDone, old.Completed), old.Total);
++                }
+                 else layers[update.Digest] = (nextDone, update.Total.Value);
+             }
+             else if (layers.Count == 1 && update.Completed is not null)
+             {
+                 var key = layers.Keys.First();
++                if (update.Completed.Value < 0 || update.Completed.Value > layers[key].Total)
++                    throw new InvalidDataException("Invalid aggregate Ollama progress.");
+                 layers[key] = (Math.Max(update.Completed.Value, layers[key].Completed), layers[key].Total);
+             }
+             var completed = layers.Count == 0 ? update.Completed : checked(layers.Values.Sum(x => x.Completed));
+@@ -51,8 +56,7 @@ public sealed class OllamaModelAdapter(HttpClient http, string receiptDirectory)
+             await progress(update with { Completed = completed, Total = total }, ct);
+         }
+         if (!terminalSuccess) throw new InvalidDataException("OLLAMA_PULL_STREAM_TRUNCATED_NO_SUCCESS");
+-        var local = await GetLocalModelDigestAsync(job.ModelTag, ct);
+-        if (string.IsNullOrWhiteSpace(local)) throw new InvalidDataException("OLLAMA_PULL_LOCAL_DIGEST_MISSING");
++        var local = RequireOllamaDigest(await GetLocalModelDigestAsync(job.ModelTag, ct));
+         if (!string.Equals(local.Replace("sha256:", "", StringComparison.OrdinalIgnoreCase),
+             job.ExpectedOllamaDigest, StringComparison.OrdinalIgnoreCase))
+             throw new InvalidDataException("OLLAMA_PULL_PINNED_DIGEST_MISMATCH");
+@@ -103,6 +107,9 @@ public sealed class OllamaModelAdapter(HttpClient http, string receiptDirectory)
+             else presence.EnsureSuccessStatusCode();
+         }
+ 
++        using (var verifiedBlob = await http.SendAsync(new HttpRequestMessage(HttpMethod.Head, "api/blobs/" + digest), ct))
++            verifiedBlob.EnsureSuccessStatusCode();
++
+         var payload = new { model = job.ModelTag, files = new Dictionary<string, string> { [Path.GetFileName(path)] = digest }, stream = true };
+         using var create = await SendStreamingJsonAsync("api/create", payload, ct);
+         create.EnsureSuccessStatusCode();
+@@ -114,17 +121,22 @@ public sealed class OllamaModelAdapter(HttpClient http, string receiptDirectory)
+             await progress(update, ct);
+         }
+         if (!createSuccess) throw new InvalidDataException("OLLAMA_CREATE_STREAM_TRUNCATED_NO_SUCCESS");
+-        var ollamaDigest = await GetLocalModelDigestAsync(job.ModelTag, ct);
+-        if (string.IsNullOrWhiteSpace(ollamaDigest) ||
+-            !ollamaDigest.StartsWith("sha256:", StringComparison.OrdinalIgnoreCase) ||
+-            ollamaDigest.Length != 71 || !ollamaDigest[7..].All(Uri.IsHexDigit))
+-            throw new InvalidDataException("OLLAMA_GGUF_LOCAL_DIGEST_MISSING_OR_INVALID");
++        var ollamaDigest = RequireOllamaDigest(await GetLocalModelDigestAsync(job.ModelTag, ct));
+         await WriteReceiptAsync(new ModelInstallReceipt("NOX_P03_INSTALL_RECEIPT_V1", job.Id,
+             job.ModelTag, "gguf-import", DateTimeOffset.UtcNow, bytes, sha, ollamaDigest,
+             job.LicenseSource, http.BaseAddress?.ToString() ?? "http://localhost:11434/"), ct);
+         return (bytes, sha);
+     }
+ 
++    // C41 source semantics re-bound to C40. A success event is not install proof.
++    private static string RequireOllamaDigest(string? digest)
++    {
++        if (digest is not { Length: 71 } || !digest.StartsWith("sha256:", StringComparison.OrdinalIgnoreCase)
++            || !digest.AsSpan(7).ToArray().All(Uri.IsHexDigit))
++            throw new InvalidDataException("OLLAMA_LOCAL_MANIFEST_DIGEST_MISSING_OR_INVALID");
++        return digest.ToLowerInvariant();
++    }
++
+     private static async Task<bool> TryReadGgufHeaderAsync(Stream file, byte[] header, CancellationToken ct)
+     {
+         try { await file.ReadExactlyAsync(header, ct); return true; }
+@@ -183,16 +195,24 @@ public sealed class OllamaModelAdapter(HttpClient http, string receiptDirectory)
+         return await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
+     }
+ 
++    public string ReceiptPathFor(Guid id) => Path.Combine(receiptDirectory, $"{id:N}.json");
++
+     private async Task WriteReceiptAsync(ModelInstallReceipt receipt, CancellationToken ct)
+     {
+         Directory.CreateDirectory(receiptDirectory);
+-        var path = Path.Combine(receiptDirectory, $"{receipt.JobId:N}.json");
+-        var temp = path + ".tmp";
+-        await using (var output = new FileStream(temp, FileMode.Create, FileAccess.Write, FileShare.None, 4096, true))
++        var path = ReceiptPathFor(receipt.JobId);
++        var temp = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
++        try
+         {
+-            await JsonSerializer.SerializeAsync(output, receipt, JsonOptions, ct);
+-            await output.FlushAsync(ct);
++            await using (var output = new FileStream(temp, FileMode.CreateNew, FileAccess.Write, FileShare.None,
++                4096, FileOptions.Asynchronous | FileOptions.WriteThrough))
++            {
++                await JsonSerializer.SerializeAsync(output, receipt, JsonOptions, ct);
++                await output.FlushAsync(ct);
++                output.Flush(flushToDisk: true);
++            }
++            File.Move(temp, path, true);
+         }
+-        File.Move(temp, path, true);
++        finally { if (File.Exists(temp)) File.Delete(temp); }
+     }
+ }
+diff --git a/P03.ModelCenter/WindowsComponentAdapter.cs b/P03.ModelCenter/WindowsComponentAdapter.cs
+index 9f051dd..7ab68f6 100644
+--- a/P03.ModelCenter/WindowsComponentAdapter.cs
++++ b/P03.ModelCenter/WindowsComponentAdapter.cs
+@@ -20,9 +20,20 @@ public sealed class WindowsComponentAdapter
+             ProbeAsync("python", new[] { "--version" }, ct),
+             ProbeAsync("git", new[] { "--version" }, ct),
+             ProbeAsync("nvidia-smi", new[] { "--query-gpu=name,memory.total,memory.free,temperature.gpu",
+-                "--format=csv,noheader,nounits" }, ct)
++                "--format=csv,noheader,nounits" }, ct),
++            ProbeAsync("python", new[] { "-c", "import importlib.metadata as m;print(' '.join(p+'='+m.version(p) for p in ('torch','peft','trl','accelerate')))" }, ct)
+         });
+ 
++    /// <summary>Read-only exact-ID WinGet probe; no auto installation or user permissions.</summary>
++    public async Task<ComponentStatus> ProbeInstalledPackageAsync(string component, CancellationToken ct = default)
++    {
++        if (!OperatingSystem.IsWindows())
++            return new ComponentStatus(component, false, null, "WinGet requires Windows");
++        if (!WingetPackages.TryGetValue(component, out var id))
++            throw new ArgumentOutOfRangeException(nameof(component));
++        return await ProbeAsync("winget", new[] { "list", "--id", id, "--exact", "--source", "winget" }, ct);
++    }
++
+     public async Task InstallWithWingetAsync(string component, bool explicitlyConfirmed, CancellationToken ct = default)
+     {
+         if (!OperatingSystem.IsWindows()) throw new PlatformNotSupportedException("WinGet integration is Windows-only.");
+diff --git a/README_TURBO10.md b/README_TURBO10.md
+new file mode 100644
+index 0000000..1dcae8c
+--- /dev/null
++++ b/README_TURBO10.md
+@@ -0,0 +1,13 @@
++# NOX V16 · E03 TURBO10 · NO-LOSS source candidate
++RunID: NOX-V16-E03-TURBO10-20261028
++Owner: executor 3. Scope: P03.ModelCenter and its own P03.ModelCenter.Wow/Smoke only.
++Preimage: C40 ZIP SHA256 7eda02703538517e3efabf0e1814bcbee3ced167f897185e48eff7ed06c7c46b.
++C41 original is an unsealed patch based on an older donor; only its fail-closed local digest behavior was reconciled, no blind cherry-pick.
++CRITICAL: original D02, HOME/MENU/CORE, chat, RAG, LoRA/GPU trainers, NOX SPACE, mobile, voice, cinema 10+10+10 and other owner paths untouched.
++No data/model deletes, PR merges, downloader duplicates or host changes. All C40 files retained; one new additive source-lead JSON and this README.
++Model discovery: 30 families + 15 official link leads + 5 additional speech leads. These are NOT 20 legally pinned/installable models: remaining artifact revision, rights, size, digest and VRAM are REVIEW_REQUIRED. Do not download weights without permission.
++Commands pull/importGguf only emit WebView2 messages after capability+license ACK. Host #6 must verify trusted origin, ACL, source revision, rights, disk/VRAM and picker; this candidate is not live integrated.
++Stop cancels a client HTTP operation; does not guarantee server-side shared Ollama cancellation. No fictional pause/resume.
++Pre/post per-file SHA in separate receipt. Tests: node --check and headless Chromium local bridge; native .NET build pending Windows CI for these exact modified bytes.
++SourceLock: BLOCKED until #6 binds current app archive/source_00-02 and exact one-owner matrix. #7 final same-SHA QA not run. RELEASE BLOCKED.
++All ten TaskIDs and evidence are recorded in the receipt and final report. Accept only product criteria with actual evidence, not 10/10 activity.

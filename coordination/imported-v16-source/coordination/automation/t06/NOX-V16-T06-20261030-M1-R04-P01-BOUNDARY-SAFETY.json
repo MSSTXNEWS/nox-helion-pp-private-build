@@ -1,0 +1,59 @@
+{
+  "schema": "NOX_V16_T06_R04_OWNER_SOURCE_REGRESSION_V1",
+  "runId": "NOX-V16-T06-20261030-M1-R04-P01-BOUNDARY-SAFETY",
+  "role": "MANUAL1/T06",
+  "existingTaskId": "T06",
+  "preHead": "ff01a3ba2ac96d5e46db612521d081a5ced5fe81",
+  "preTree": "3da985162f75dd7e651957762ab0ec988109d30b",
+  "postHead": "READ_FROM_PINNED_GIT_COMMIT",
+  "postTree": "READ_FROM_PINNED_GIT_COMMIT",
+  "files": [
+    {
+      "path": "proposals/NOX-PACK01-50/p01_windows_owner_ports.py",
+      "pre": "8c6c4dedf6799661d90fbb23d4fbab33bb40e0f0",
+      "post": "9527c02ff7ad5a8c4e8cc777b69c75cb2e1412db"
+    },
+    {
+      "path": "proposals/NOX-PACK01-50/test_p01_windows_owner_ports.py",
+      "pre": "0a7f49ce87cb6ce8083e4e87a9dbf1839dbf8ade",
+      "post": "bd00b9687a9e10ff072903d5ccf2ca4c4016f682"
+    }
+  ],
+  "physical": [
+    "P01 bookmark file identity/size/mtime before-after bounded read",
+    "P01 native consent recheck after OS browser callback",
+    "P01 WinGet stdout/stderr redirected to DEVNULL to avoid unbounded capture",
+    "P01 cache inspect rechecks consent/STOP before returning"
+  ],
+  "checks": {
+    "localPython": "20/20 PASS",
+    "sourceByteIdentity": "local git hash-object equals both staged Git blob SHA1",
+    "pythonCompile": "PASS",
+    "newTests": 4,
+    "fullProject": "NOT_RUN",
+    "windowsNative": "NOT_RUN",
+    "powershell51": "NOT_RUN",
+    "netSdk": "NOT_RUN",
+    "sourceLock729": "NOT_RECHECKED",
+    "independentManual2": "PENDING"
+  },
+  "host50": {
+    "sourceDescriptors": 50,
+    "total": 50,
+    "nativePending": 14,
+    "exeAccepted": 0
+  },
+  "blocked": {
+    "sourceReady": true,
+    "independentQa": true,
+    "gitlabBuild": true,
+    "e07": true
+  },
+  "errorClusters": [
+    "ERR-SRC-004",
+    "ERR-SYS-002"
+  ],
+  "lesson": "Mock-positive source route never means installed native action; mitigate post-selection and post-callback drift, bound subprocess output and retain independent Windows verification.",
+  "disposition": "SOURCE_COMPONENT_TESTED_NOT_INDEPENDENT_QA_ACCEPTED",
+  "journal": "T02_SOLE_SHARED_WRITER_NEEDS_CAS_READBACK"
+}

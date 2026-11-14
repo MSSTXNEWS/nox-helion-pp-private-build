@@ -1,0 +1,11 @@
+/* Original Loquix 0.6.0 Lit Web Component · UI decoration only.
+ * Local vendor module, no network. Never owns helion.chat / chat.stop. */
+loquix-typing-indicator.nox-loquix-typing{
+ display:block;align-self:flex-start;min-height:26px;max-width:160px;
+ padding:4px 10px;border:1px solid rgba(121,197,222,.31);
+ border-radius:13px;background:rgba(17,35,47,.8);
+}
+body[data-fx="ECO"] loquix-typing-indicator.nox-loquix-typing{box-shadow:none}
+@media(prefers-reduced-motion:reduce){
+ loquix-typing-indicator.nox-loquix-typing{animation:none!important;transition:none!important}
+}

@@ -1,0 +1,110 @@
+{
+  "schema": "NOX_V16_T08_ERROR_INCIDENT_AUTOFIX_GATE_R17_V1",
+  "incidentId": "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN",
+  "runId": "NOX-V16-T08-MANUAL-R17-20261029-HOST50-AUTOFIX",
+  "at_msk": "2026-10-29T17:43:16+03:00",
+  "project": "NOX HELION EXPRESS INTEGRATOR Windows loader ONLY",
+  "severity": "P1_SOURCE_INTEGRATION_DEFECT_AND_PROCESS_RECURRENT_FAILURE",
+  "root_cause": {
+    "code": "Host50Admission used historical BASE_TREE in active_tree gate, Capability.frozen_tree and native sourceLockTree ticket. Old production gate would always HOLD on modern approved source tree even if native owner capabilities were real.",
+    "process": "Manual and scheduled executors treated an individual reply ending after a HOLD report as a completed execution cycle; no mandatory incident ID linked code finding → owner fix → targeted verification → SHA CAS/readback → central writer CAS/readback → T09/T10 acceptance. A source-only audit entry in E06 lacked exact single error closure state in Master/Lessons/C34.",
+    "architecture": "Source owner T06 writes canonical product source; T08 only verifies proven P0/P1; T02 is sole writer of three shared Docs; T09/T10 are independent gates. This intentional split requires immutable handoffs, not magical cross-run auto-patching.",
+    "system_limit": "A synchronous chat turn cannot indefinitely run after reply. Enabled hourly automations are separate runs and must report actual execution; an automation completion != product task completion."
+  },
+  "source": {
+    "canonical_repo": "MSSTXNEWS/nox-helion-pp-private-build",
+    "fixed_by_owner_T06_on_canonical_branch": true,
+    "pre_source_commit_git_sha1": "0cdeb101848e97088f9c464f502a68dc28049b7b",
+    "fix_commit_git_sha1": "244d2c6c7ffd1cddbf6282839eb6f7ad9d036a8d",
+    "last_verified_head_git_sha1": "64d3d7169614ed04417f5c777cf484dc68e69b6c",
+    "path": "coordination/e06_host50/admission.py",
+    "pre_git_blob_sha1": "9a3cdd174da6e8a1303a5cce3ef3c42b9a32f60f",
+    "post_git_blob_sha1": "efd5af93853d04cf5c1748af41b13570fc49c0ad",
+    "changes": [
+      "Keep BASE_COMMIT and BASE_TREE immutable for catalog provenance",
+      "For current integrated trees require source_attestation with exact sourceHead/tree, owner receipt digest, historic owner-map binding, nativeApproved and HMAC seal validated by constant-time comparison",
+      "Require trusted native_source_verifier callback to validate owner-approved commit-to-tree/source receipts",
+      "Use self.source_tree for _cap frozen_tree and native request-ticket sourceLockTree; do not substitute old BASE_TREE",
+      "Never mark any of 13 Host50 source HOLD native handlers active without real owner source/ACL/STOP/consent receipts"
+    ],
+    "readback": "PASS_DIRECT_GITHUB_COMMIT_AND_FILE_SHA_PRE_POST",
+    "independent_native_windows_test": "NOT_RUN",
+    "new_host50_focused_test": "NOT_VERIFIED_AT_TIME_OF_RECEIPT",
+    "original_source_729_sha": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+    "original_729": "PASS_PER_T07_T09_RECEIPTS"
+  },
+  "existing_process_fix": {
+    "T06_guard_path": "coordination/e06/t06_closeout_guard.py",
+    "T06_guard_blob_git_sha1": "038258f8bcd48db6f0dd345858fe4971c6e35b60",
+    "T06_test_path": "coordination/e06/test_t06_closeout_guard.py",
+    "T06_test_blob_git_sha1": "97df7ce0da7f4fd9aaf5e37600672f413104a628",
+    "T06_guard_behavior": "Rejects synthetic DONE if 8 criteria lack owner receipts/pre/post/task test proof, immutable head/tree/manifest and independent source QA. Does not control assistant turn lifetime.",
+    "T06_guard_test_execution": "NOT_VERIFIED",
+    "duplicate_code_implementation": "NONE"
+  },
+  "journal_status": {
+    "E06": "HOST50_STATIC_CONFLICT_ALREADY_RECORDED_IN_LAST_T02_COORDINATOR_DELTA",
+    "Master": "NO EXACT INCIDENT MARKER AT_LAST_READ",
+    "Lessons": "NO EXACT INCIDENT MARKER AT_LAST_READ",
+    "C34": "HISTORICAL_READ_ONLY_BY_CANON; NEW INCIDENT TO_BE_APPEND_ONLY_THROUGH_AUTHORIZED_WRITER_OR_SUPPORTED_ROUTE",
+    "one_writer": "T02 / Assembly C",
+    "T02_google_docs_CAS_readback": "NOT_YET_DONE",
+    "reporting_problem": "Prior assistant promised error journal/self-improvement without actually enforcing logged unique incident and post-write readback in all required destinations."
+  },
+  "progress": {
+    "T08_fixed_three": "1/3=33.3% until T06 FULL owner-accepted source tuple and SAME-SHA T08 decision",
+    "T06_full_eight": "1/8=12.5% in latest R09",
+    "disposition_T02": "5/5 historical entries classified",
+    "proven_code_defect_Host50": "FIXED_STATICALLY_IN_CURRENT_SOURCE",
+    "source_integrated_native_handler_acceptance": "HOLD_13_ROUTES",
+    "final_SOURCE_READY": "HOLD"
+  },
+  "autofix_closeout_contract": [
+    {
+      "id": "E1",
+      "owner": "T08",
+      "required": "Immutable exact incident ID, code path, PRE/POST blob, scoped severity. CREATE once, no repeated cosmetic reports.",
+      "current": "DONE_BY_THIS_RECEIPT"
+    },
+    {
+      "id": "E2",
+      "owner": "T06/G6-B",
+      "required": "Owner product code CAS patch on ONE canonical branch, exact commit/tree and retained security gates.",
+      "current": "CODE_COMMIT_DONE"
+    },
+    {
+      "id": "E3",
+      "owner": "T06/G6-B or authorized test-owner",
+      "required": "Focused before RED / after GREEN test for current/source-attested tree, including no-attestation, wrong-signature, tree-drift, invalid owner capability, native ACK tree match. Never assume static inspection equals executed tests.",
+      "current": "HOLD_NOT_VERIFIED"
+    },
+    {
+      "id": "E4",
+      "owner": "T02 only",
+      "required": "Add incidentId+RunID+patch SHA+lesson to Master/E06/Lessons using requiredRevisionId, then read back exact marker each once. C34 historical immutable.",
+      "current": "HOLD_CAS_READBACK"
+    },
+    {
+      "id": "E5",
+      "owner": "T06→T08→T09/T10",
+      "required": "T06 FULL owner-accepted source/head/tree/manifest on SAME SHA, T08 final P0/P1 disposition and handoff; T09/T10 independently sign SOURCE_READY when all criteria pass.",
+      "current": "HOLD_T06_FULL_ACCEPTANCE"
+    }
+  ],
+  "self_improvement": {
+    "failure": "Error found but prematurely ended turn with 'HOLD' and generic lessons rather than auditable owner-code fix + test + journal readback.",
+    "applied": "Reused already-merged T06 owner patch rather than overwriting it; pinned actual PRE/POST Git blob; created new immutable machine-readable incident; made missing test+central CAS explicit gates; next T08 scheduled run must check incidentId before claiming final DONE.",
+    "repeat_prevention": "If a known code defect is found, first look for exact committed owner fix by source SHA; if present verify not duplicate. Handoff focused test and single-writer journal. If not, only authorized owner patches. No repeated broad scans or synthetic 100%."
+  },
+  "hard_safety": {
+    "no_exe": true,
+    "no_nsis": true,
+    "no_gitlab_ci": true,
+    "no_e07": true,
+    "no_force_push": true,
+    "no_source_edits_by_T08": true,
+    "no_fake_native_proof": true,
+    "no_user_data_changes": true,
+    "owner_NO_LOSS": true
+  }
+}

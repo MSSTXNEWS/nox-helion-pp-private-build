@@ -1,0 +1,25 @@
+{
+  "schema": "NOX_V16_46_P03_QUEUE_CLAIM_CLEANUP_V1",
+  "task_id": "V16.46.P03.RUNNING_CLAIM_EXCEPTION_CTS_CLEANUP",
+  "run_id": "NOX-V16-M1-20261028-R16-P03-CLAIM",
+  "pr": 162,
+  "change": "Use original ModelDownloadQueueWorker: catch failed TryStartQueuedAsync and remove its own linked cancellation-token registration before throw; preserve queued-null cancellation and existing single lease.",
+  "source": {
+    "path": "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueWorker.cs",
+    "pre_blob": "a2528be4d4045f39e6b884e3f5188bd3c1ab7d75",
+    "post_blob": "8cf2f867d353be837e29c7c517a89dafe5c53e29",
+    "pre_sha256": "3011a132bd83b86e72e9eb834738efabd507d7a6a073b981cbad6972f61f55c0",
+    "post_sha256": "bcccdc859a9c8b1aefd0f45bda88955053975bfe0ba193b15f12229f309084b2"
+  },
+  "test": {
+    "path": "tests/e06/test_p03_queue_claim_cleanup_r16.py",
+    "blob": "1adb018ac484cb74fb25b508cd16a8f4c45ee35a",
+    "sha256": "df71743ac9baaa8701a53f80380f7501545cdde979b861893fb5ce4276835c66",
+    "static_extracted_before": "1/4",
+    "static_extracted_after": "4/4",
+    "actual_net_runtime": "NOT_RUN"
+  },
+  "no_loss": "Single original queue/store/event-publisher only, no second model loader or new database",
+  "source_ready": false,
+  "release_accepted": false
+}

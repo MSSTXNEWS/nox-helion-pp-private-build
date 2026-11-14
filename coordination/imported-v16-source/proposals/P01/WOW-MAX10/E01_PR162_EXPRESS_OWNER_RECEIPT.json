@@ -1,0 +1,149 @@
+{
+  "schema": "NOX_E01_P01_EXPRESS_PR162_ADMISSION_V1",
+  "RunID": "NOX-V16-E01-PR162-EXPRESS-20261028",
+  "owner": "E01",
+  "sourceParentGitSha1": "833a37bca2930e0cb9b272ae07f5d6545e3d5096",
+  "sourceChangeCommit": "10426dabab1e0142a9e1fd09e0c567fcf71ff4b6",
+  "donorPR167": "4559719dfdfe16a9aed82d983e952c9cb29a3941",
+  "PR": 179,
+  "changedPriorFiles": 4,
+  "addedFiles": 3,
+  "removedFiles": 0,
+  "originalArtChanged": false,
+  "sourceTasks": [
+    {
+      "TaskID": "E01-EX-01",
+      "title": "Approved PR167 byte-exact donor intake with PR162 fixed baseline",
+      "status": "SOURCE_APPLIED",
+      "nativeAcceptance": "HOLD"
+    },
+    {
+      "TaskID": "E01-EX-02",
+      "title": "Native sensitive-action explicit consent",
+      "status": "SOURCE_APPLIED",
+      "nativeAcceptance": "HOLD"
+    },
+    {
+      "TaskID": "E01-EX-03",
+      "title": "Native capability recheck after approval",
+      "status": "SOURCE_APPLIED",
+      "nativeAcceptance": "HOLD"
+    },
+    {
+      "TaskID": "E01-EX-04",
+      "title": "Atomic duplicate-click suppression",
+      "status": "SOURCE_APPLIED",
+      "nativeAcceptance": "HOLD"
+    },
+    {
+      "TaskID": "E01-EX-05",
+      "title": "Receipt-bound native ACK instead of fake UI success",
+      "status": "SOURCE_APPLIED",
+      "nativeAcceptance": "HOLD"
+    },
+    {
+      "TaskID": "E01-EX-06",
+      "title": "Explicit trusted authorization of WOW 101–150 shots",
+      "status": "SOURCE_APPLIED",
+      "nativeAcceptance": "HOLD"
+    },
+    {
+      "TaskID": "E01-EX-07",
+      "title": "Explicit trusted authorization of WOW 151–200 compositions",
+      "status": "SOURCE_APPLIED",
+      "nativeAcceptance": "HOLD"
+    },
+    {
+      "TaskID": "E01-EX-08",
+      "title": "Validate native events before any visual observer fanout",
+      "status": "SOURCE_APPLIED",
+      "nativeAcceptance": "HOLD"
+    },
+    {
+      "TaskID": "E01-EX-09",
+      "title": "Reject replay/stale/foreign CoreID before secondary WOW",
+      "status": "SOURCE_APPLIED",
+      "nativeAcceptance": "HOLD"
+    },
+    {
+      "TaskID": "E01-EX-10",
+      "title": "No-loss scoped CI, focused regression cases and SHA/receipt verification",
+      "status": "SOURCE_APPLIED",
+      "nativeAcceptance": "HOLD"
+    }
+  ],
+  "hashSemantics": "SHA256 of GitHub utf8 file contents; patch_hunk_sha256 is SHA256 of GitHub PR179 returned unified per-file patch hunk; native Git blob SHA1 separate",
+  "fileEvidence": [
+    {
+      "owner": "E01",
+      "path": "proposals/P01/WOW-MAX10/mount-p01.mjs",
+      "pre_sha256": "218b0a3d9a6abafde62b9fa4dde94d446d5d38e1f251a737785cba88b3936db3",
+      "post_sha256": "9299cda06bd82b97bd8beea491a09f5f1927680bbf897e698bcf69321956b1f1",
+      "patch_hunk_sha256": "66cf2b454db6a073a4e9f9ae6e9bb38ddd2b16c4c0ee76a2b6bb78d37015c298",
+      "pre_git_blob_sha1": "f9804acc96c977632f2588dded9bea4eeb5ebf8d",
+      "post_git_blob_sha1": "be736a5ff2251affd19296586756bff90239c60f"
+    },
+    {
+      "owner": "E01",
+      "path": "proposals/P01/WOW-MAX10/route-dispatch.mjs",
+      "pre_sha256": "78f5a2be79e27e7bc9a7c08eebcec0c5fab5807065c4001b5a530fe8b1e70149",
+      "post_sha256": "8b155a1a4b5c41c4bf3fb42bb961e115c86e62356d108622b13e066232944bee",
+      "patch_hunk_sha256": "0af86ab00da4c91ecfe9ade65d71c4f6fe8a429ac814c7d2177870e22531ebda",
+      "pre_git_blob_sha1": "7a98e2222661e83f5d79416628089dae75168f07",
+      "post_git_blob_sha1": "5b7717d1db46485bf763462d1eccd8eec2f4dbc0"
+    },
+    {
+      "owner": "E01",
+      "path": "proposals/P01/WOW-MAX10/d02-native-events.mjs",
+      "pre_sha256": "24af40ca8f5aa9b3076ac0dbc526b363da10e9a1eb16c649afe2be8c1b28f45f",
+      "post_sha256": "e22f869932efde48e1e06e4b6fb95cf82aedf775807b50831017ce77bc18a4ba",
+      "patch_hunk_sha256": "54e45f61bb09f99aaa0fdc80f97b49d25124d2d732318822c369faa869896270",
+      "pre_git_blob_sha1": "ce49a2a38dd0be8b3b9913d594a67a6e3369993a",
+      "post_git_blob_sha1": "3e02376a557b456c3a31c63b633272d303432646"
+    },
+    {
+      "owner": "E01",
+      "path": "proposals/P01/WOW-MAX10/route-dispatch.test.mjs",
+      "pre_sha256": "ccec437d5ddaf9c805cf25b2e1ceb4ff80e925fe7335935cc4d7ae00388ad629",
+      "post_sha256": "c0ea6e4725f643b485c1fc1b5e88fa8143664cd30b46b8a886058b0c50139734",
+      "patch_hunk_sha256": "bbfba4db2026a6f0ddde4cc35a6c7d47b6525059eb88b41f5895070b6bd5ce66",
+      "pre_git_blob_sha1": "102a927e6e2e4cbbb504b17bf2b149fd6d89a156",
+      "post_git_blob_sha1": "d6cf2df02da12b5c522a0603876d9a3aeff95df4"
+    },
+    {
+      "owner": "E01",
+      "path": "proposals/P01/WOW-MAX10/express-security.test.mjs",
+      "pre_sha256": "ABSENT",
+      "post_sha256": "2834f1710fb3fb8f96a8dfc7550bdd3eef2a47dd2ac0caf8db66fa7d123fed90",
+      "patch_hunk_sha256": "b81349607da0b5dbec59eab0a50dca274419fc31f120974987dbdef38a701ae0",
+      "pre_git_blob_sha1": null,
+      "post_git_blob_sha1": "67e8452ce1634e443ab6adc52c937e0da518e23e"
+    },
+    {
+      "owner": "E01",
+      "path": "proposals/P01/WOW-MAX10/e01-express-fanout.test.mjs",
+      "pre_sha256": "ABSENT",
+      "post_sha256": "0dcf265a80d360a2d03f59d1852d40f3e77c3e53e10d330add6dd0dc77d01902",
+      "patch_hunk_sha256": "6e84e61335bcda26d4820ebcdf5a41837aebb95fd534d6e12606d95fe5ed6c48",
+      "pre_git_blob_sha1": null,
+      "post_git_blob_sha1": "e9d435c22fe183c3f1a3149c70260d413f1523a5"
+    },
+    {
+      "owner": "E01",
+      "path": ".github/workflows/p01-pr162-express.yml",
+      "pre_sha256": "ABSENT",
+      "post_sha256": "70f0ad9339f8bc85a02352be7eadf770451316103e121713becc9a76b56ca326",
+      "patch_hunk_sha256": "004abbe6619d672443689684a268f479602b94a971814e7c367280ec19d2bda8",
+      "pre_git_blob_sha1": null,
+      "post_git_blob_sha1": "e2a168b44ef853b383b1eb2e406a47975d687007"
+    }
+  ],
+  "exactDiffScope": "only proposals/P01/WOW-MAX10 and separate P01 workflow",
+  "tests": "SOURCE_CASES_AUTHORED, NOT_RUN on Windows: GitHub Actions 40688969363 failed with null steps",
+  "original729SHA": "HOLD",
+  "installedOnehost": "HOLD",
+  "windowsNSISClean": "NOT_RUN",
+  "E07sameEXESHA": "NOT_RUN",
+  "releasable": false,
+  "selfImprovement": "Previously security-verified owner PR167 remained unmerged in PR162; use exact blob admission and validate events BEFORE fanout; prevent stale or untrusted visual statuses"
+}

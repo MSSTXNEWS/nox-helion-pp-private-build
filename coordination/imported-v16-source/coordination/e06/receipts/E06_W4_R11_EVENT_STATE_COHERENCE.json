@@ -1,0 +1,69 @@
+{
+  "schema": "NOX-V16-E06-W4-R11-EVENT-COHERENCE-v1",
+  "runId": "NOX-V16-E06-W4-R11-20261028T1707MSK-EVENT-COHERENCE",
+  "owner": "E06#6",
+  "createdUtc": "2026-10-28T14:14:31.570Z",
+  "repo": "MSSTXNEWS/nox-helion-pp-private-build",
+  "branch": "integration/nox-v16-unified-candidate-20261028-r01",
+  "immutableParent": {
+    "commit": "8f81da2022ee660a6f0d50e84781fd75270fac2a",
+    "tree": "2a192276881c368779d167316f17c09f230f546f"
+  },
+  "historicalBaseline": {
+    "commit": "0b3a7d435be735148d64171deb9027093a89646e",
+    "tree": "f108d604c444f718b32aaecfd07b90b8f91b9a6f"
+  },
+  "sourceLock729": "HOLD; original source_00/01/02 ZIP 729 SHA256 not verified",
+  "changeReason": "E01 terminal event visual truth lesson: contradictory task.completed/task.failed event_type/state previously passed E06 structural gate and could reach native verifier; reject before attestation without inventing evidence.",
+  "taskIds": [
+    "E06-W4-R11-01",
+    "E06-W4-R11-02",
+    "E06-W4-R11-03",
+    "E06-W4-R11-04",
+    "E06-W4-R11-05",
+    "E06-W4-R11-06",
+    "E06-W4-R11-07",
+    "E06-W4-R11-08",
+    "E06-W4-R11-09",
+    "E06-W4-R11-10"
+  ],
+  "files": [
+    {
+      "path": "coordination/e06/adapters/g2_space_mobile.py",
+      "owner": "E06#6",
+      "preSha256": "d965f71a639518e5d7243c2270c664a242e69dabbe79897936ff214440a3e20d",
+      "postSha256": "8926f3523328b3a68fa8140a92ed9f35d194b567364ec2488d6256e9a9fdd76b",
+      "preGitBlobSha1": "c0771ef4c72d6cd63391e3bf22c08ac08099a91c",
+      "diff": "Import E06 pure state gate; require event_type/state coherence before existing native evidence callback and unchanged single events.v3 publisher",
+      "necessaryTests": "4 same-source adapter tests DEFINED_NOT_RUN; Windows NOT_RUN"
+    },
+    {
+      "path": "coordination/e06/adapters/g2_event_state_gate.py",
+      "owner": "E06#6",
+      "preSha256": "ABSENT",
+      "postSha256": "112c6453b4341b5eb18929dad3cad91a922f8813ea67f555262a0d628c1c476f",
+      "preGitBlobSha1": "ABSENT",
+      "diff": "Pure fail-closed event/state classifier; no host, new bus, downloader or fabricated evidence",
+      "necessaryTests": "12 local pure unittest PASS; compile PASS"
+    },
+    {
+      "path": "tests/e06/adapters/test_g2_event_state_gate.py",
+      "owner": "E06#6",
+      "preSha256": "ABSENT",
+      "postSha256": "e81c8d4647977a97076e0123bea87f4aa8f87ba998d35278d77facfe29602e86",
+      "preGitBlobSha1": "ABSENT",
+      "diff": "12 pure tests plus 4 same-source host integration tests only when real checkout available",
+      "necessaryTests": "12 PASS / 4 SKIP isolated; Windows target NOT_RUN"
+    }
+  ],
+  "localTests": "12 PASS, 4 SKIP due missing full owner checkout; Python compile PASS",
+  "windowsTests": "NOT_RUN",
+  "p03ModelCenter": "OWNER_HOLD_NATIVE",
+  "p02VoiceSip": "OWNER_HOLD_NATIVE_NO_CHARGES",
+  "p05Events": "ONE_EXISTING_BUS_ONLY",
+  "mobile": "PRIVATE_AUTH_ONLY_NO_PUBLIC_PORT",
+  "actualInstalledEXE": "HOLD",
+  "e07SameBuildAcceptance": "NOT_RUN",
+  "readback": "PENDING",
+  "exactlyOneLesson": "EVENT_STATE_TYPE_COHERENCE_BEFORE_NATIVE_ATTESTATION: reject terminal state/event mismatches before checking trusted native receipt while retaining existing SourceLock, evidence and single event bus."
+}

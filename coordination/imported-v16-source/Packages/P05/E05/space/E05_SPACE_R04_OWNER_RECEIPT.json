@@ -1,0 +1,129 @@
+{
+  "schema": "NOX-V16-E05-OWNER-SOURCE-CANDIDATE-RECEIPT-v4",
+  "run_id": "NOX-V16-G1-05-20261028T0846MSK-R04",
+  "owner": "E05/P05 executor #5",
+  "immutable_common_baseline": {
+    "commit_sha1": "0b3a7d435be735148d64171deb9027093a89646e",
+    "tree_sha1": "f108d604c444f718b32aaecfd07b90b8f91b9a6f",
+    "pr66_inventory_only": true,
+    "original_729_source_sha256": "N/D"
+  },
+  "candidate": {
+    "pr": 75,
+    "branch": "e05/v16-g1-05-space-readonly-20261028-r02",
+    "preimage_commit": "c8437479bc3c9803579b25ad580c33139c67b506",
+    "source_code_commit": "ca7423701b2c331ca45a4a03cce1b095f61d0fa8",
+    "test_commit": "93eb7423ad79298f1acff7f50a9fdc434a1615ec",
+    "no_main_merge": true
+  },
+  "files": [
+    {
+      "path": "Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs",
+      "owner": "E05/P05",
+      "pre_sha256": "13ccd3230ece1ea8071cf667988ec831115f212d036b08f650322c2eab7a0339",
+      "post_sha256": "cd943778d1ec97da5662f316dd3c39f212f200ddb1fc0b17c45f7c987139e0c5",
+      "pre_git_blob_sha1": "d2e404c39e3f845a64819fcc8be66a14a4d80aae",
+      "post_git_blob_sha1": "87fb6611d93109514d3833cbd0f5bddcb4cb08ac",
+      "diff": "E05_R04_SOURCE.patch",
+      "tests": "53/53 Node synthetic component PASS"
+    },
+    {
+      "path": "Packages/P05/E05/space/E05SpaceReadOnlyProjection.test.mjs",
+      "owner": "E05/P05",
+      "pre_sha256": "efe8209175a3723accd4cb98b9f78b4d9433200dec6389ade019dfd32426d751",
+      "post_sha256": "b575a9293d949d20213dc2f3bcf40ebcc04dd4c1b05d1694418179d9bcead681",
+      "pre_git_blob_sha1": "7f4b71bfd8759174d080be67e6190ce42ad1e0f6",
+      "post_git_blob_sha1": "c849d44526ea0569bb265a56cdfc38c12acea58a",
+      "diff": "E05_R04_SOURCE.patch",
+      "tests": "13 new regressions; 40 prior preserved"
+    }
+  ],
+  "new_receipt_file": {
+    "path": "Packages/P05/E05/space/E05_SPACE_R04_OWNER_RECEIPT.json",
+    "owner": "E05/P05",
+    "pre_sha256": "ABSENT",
+    "pre_git_blob_sha1": "ABSENT",
+    "self_sha256": "SEE GITHUB READBACK AND MASTER",
+    "diff": "ADD_ONLY"
+  },
+  "patch_sha256": "5525510dae3d6849b6eccde26cf53caf3260add7ddae8938d515fcdb71e7bfc4",
+  "ledger": [
+    {
+      "task_id": "G1-05-01",
+      "area": "events.v3 canonical envelope",
+      "stage": "COMPONENT VERIFIED",
+      "evidence": "source + synthetic Node 53 PASS"
+    },
+    {
+      "task_id": "G1-05-02",
+      "area": "STOP/ERROR collision/replay/overflow",
+      "stage": "COMPONENT VERIFIED",
+      "evidence": "13 new negative cases"
+    },
+    {
+      "task_id": "G1-05-03",
+      "area": "CPU polling evidence ordering",
+      "stage": "COMPONENT VERIFIED",
+      "evidence": "synthetic frame tests only"
+    },
+    {
+      "task_id": "G1-05-04",
+      "area": "GPU/VRAM/temperature sources",
+      "stage": "SOURCE",
+      "evidence": "NVML/P05 runtime native NOT_RUN"
+    },
+    {
+      "task_id": "G1-05-05",
+      "area": "HELION/8 CoreID/5 Persona",
+      "stage": "SOURCE",
+      "evidence": "static projection only; original owner manifest HOLD"
+    },
+    {
+      "task_id": "G1-05-06",
+      "area": "seven bars and weighted 20/25/20/25/10",
+      "stage": "COMPONENT VERIFIED",
+      "evidence": "fixture math only; accepted ledger N/D"
+    },
+    {
+      "task_id": "G1-05-07",
+      "area": "NOX SPACE/WebView2 same host",
+      "stage": "HOLD",
+      "evidence": "native installed WebView2 NOT_RUN"
+    },
+    {
+      "task_id": "G1-05-08",
+      "area": "weather/news/ECB/BTC/Brent dates/licensing",
+      "stage": "COMPONENT VERIFIED",
+      "evidence": "synthetic date/order/negative price tests; live providers HOLD"
+    },
+    {
+      "task_id": "G1-05-09",
+      "area": "offline cache TTL and provenance",
+      "stage": "COMPONENT VERIFIED",
+      "evidence": "static synthetic tests only"
+    },
+    {
+      "task_id": "G1-05-10",
+      "area": "app-side Drive OAuth/readback",
+      "stage": "HOLD",
+      "evidence": "no real app-side receipt; E06 must integrate"
+    }
+  ],
+  "tests": {
+    "runtime": "Node.js v22.16.0 Linux",
+    "synthetic_assertions": "53/53 PASS",
+    "syntax": "2/2 PASS",
+    "github_blob_expected": "2/2 post-source exact",
+    "windows_native": "NOT_RUN",
+    "real_hw": "NOT_RUN",
+    "real_feeds": "NOT_RUN",
+    "app_side_drive": "NOT_RUN"
+  },
+  "improvement": "One applied cross-frame provenance-coherence gate: collision quarantine plus sensor/market timestamp consistency; fail closed rather than displaying contradictory facts.",
+  "original_d02": "UNMODIFIED",
+  "original_events_v3": "READ_ONLY_NO_WRITES",
+  "new_bus": "NONE",
+  "network_clients": "NONE",
+  "windows_release": "HOLD",
+  "weighted_accepted_progress": "N/D"
+}

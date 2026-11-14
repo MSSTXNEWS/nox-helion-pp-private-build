@@ -1,0 +1,65 @@
+name: NOX E06 original Python binary native diagnose contract
+on:
+  push:
+    branches: [e06/v16-express-onehost-20261028]
+    paths: ['.github/workflows/e06-r10-original-binary-diagnose.yml']
+permissions:
+  contents: read
+  actions: read
+jobs:
+  original-diagnose:
+    runs-on: windows-2025
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Execute exact SHA-pinned original Python CLI with read-only diagnostic
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference='Stop'
+          $meta=gh api repos/MSSTXNEWS/nox-helion-pp-private-build/actions/artifacts/12781339660 | ConvertFrom-Json
+          if ($meta.id -ne 12781339660 -or $meta.expired -or
+              $meta.workflow_run.id -ne 40609239316 -or
+              $meta.workflow_run.head_sha -cne 'ff28eef5c7cc0e01473fb8ba65656b08b1e348ef') {
+              throw 'ORIGINAL_BACKEND_ARTIFACT_PROVENANCE_HOLD'
+          }
+          $path=Join-Path $env:RUNNER_TEMP 'nox-e06-original-diagnose'
+          New-Item -ItemType Directory -Path $path | Out-Null
+          gh run download 40609239316 --repo MSSTXNEWS/nox-helion-pp-private-build --name nox-e06-original-diagnostic-40609239316 --dir $path
+          if ($LASTEXITCODE -ne 0) { throw 'ORIGINAL_BACKEND_FETCH_HOLD' }
+          $exe=Join-Path $path 'work/candidate/dist/NOX_HELION_PRIVATE_CANDIDATE.exe'
+          if (!(Test-Path -LiteralPath $exe -PathType Leaf)) { throw 'ORIGINAL_BACKEND_EXE_MISSING' }
+          $sha=(Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($sha -cne '4e488372cf3f6410d268a7ef72b3e4b359a7a3e6642c7a16ac2e6f7eb06fc5f3') { throw 'ORIGINAL_BACKEND_BINARY_SHA_HOLD' }
+          $root=Join-Path $env:RUNNER_TEMP 'nox-e06-r10-temporary-data'
+          if (Test-Path -LiteralPath $root) { throw 'PREEXISTING_DATA_HOLD' }
+          $out=Join-Path $env:RUNNER_TEMP 'nox-original-diagnose-stdout.json'
+          $err=Join-Path $env:RUNNER_TEMP 'nox-original-diagnose-stderr.txt'
+          $p=Start-Process -FilePath $exe -ArgumentList @('--diagnose','--data-dir',('"'+$root+'"')) -NoNewWindow -PassThru -RedirectStandardOutput $out -RedirectStandardError $err
+          if (-not $p.WaitForExit(30000)) { Stop-Process -Id $p.Id -Force; throw 'ORIGINAL_BACKEND_DIAGNOSE_TIMEOUT' }
+          if ($p.ExitCode -ne 0) { throw "ORIGINAL_BACKEND_DIAGNOSE_EXIT:$($p.ExitCode)" }
+          if ((Get-Item -LiteralPath $out).Length -gt 65536 -or (Get-Item -LiteralPath $err).Length -gt 8192) { throw 'ORIGINAL_BACKEND_DIAGNOSE_TOO_LARGE' }
+          $data=Get-Content -LiteralPath $out -Raw -Encoding utf8 | ConvertFrom-Json
+          if ($data.source_status -cne 'RECONSTRUCTED_BASE' -or
+              $data.routes_total -lt 1 -or
+              @($data.cores).Count -ne 8) { throw 'ORIGINAL_BACKEND_DIAGNOSE_CONTRACT_HOLD' }
+          $receipt=[ordered]@{
+            schema='NOX-E06-R10-BACKEND-DIAGNOSE-RECEIPT-v1'; run_id=$env:GITHUB_RUN_ID;
+            source_sha='ff28eef5c7cc0e01473fb8ba65656b08b1e348ef';
+            exe_sha256=$sha; core_count=@($data.cores).Count;
+            route_count=$data.routes_total; source_status=$data.source_status;
+            original_native_diagnostic='PASS'; ollama_live_verified=$false;
+            gpu_train_verified=$false; WPF_BRIDGE_END_TO_END=$false;
+            e07_accepted=$false; release_accepted=$false
+          }
+          $receipt | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath 'e06-r10-original-python-diagnose-receipt.json' -Encoding utf8
+          Write-Host "E06_ORIGINAL_BACKEND_NATIVE_DIAGNOSE_PASS: routes=$($data.routes_total) cores=$(@($data.cores).Count)"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e06-r10-original-python-diagnose
+          path: e06-r10-original-python-diagnose-receipt.json
+          if-no-files-found: warn

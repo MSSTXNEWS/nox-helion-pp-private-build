@@ -1,0 +1,36 @@
+{
+  "schema": "NOX_V16_46_MANUAL1_P02_VOICE_STOP_RECEIPT_V1",
+  "run_id": "NOX-V16-M1-20261028-R16-VOICE-STOP",
+  "task_id": "V16.46.P02.NATIVE_VOICE_STOP_CAPTURE_OUTPUT",
+  "source_pr": 162,
+  "files": [
+    {
+      "path": "Packages/P02/worker-python/p02_owner_route_ports.py",
+      "pre_git_sha1": "5a3b1364319f706df903f83b2067bd77bcf5a70f",
+      "post_git_sha1": "b6b06a1431a3fbb19bc596d6c4c0829e50fabe2f",
+      "pre_sha256": "d183b25ac8c97fdc4940e96772ffddd763bd54891371dcf6e8c73a17f9567113",
+      "post_sha256": "094ec8369033ffaf95b08d5955b19c79ef2e11483d19822132d56034792fb1ed"
+    },
+    {
+      "path": "Packages/P02/worker-python/test_p02_owner_route_ports.py",
+      "pre_git_sha1": "23bdf43bbcd2bf43ed6b105d00a100fa337b4a9d",
+      "post_git_sha1": "55086d3bf29b8c7f600346a9fe14729f93b440e4",
+      "pre_sha256": "b7b856cd9b808609719944039cc5e9fd703325e3bb9f7fe33d087d2178577ecd",
+      "post_sha256": "8e8c3efb72827339bfb8214c62890dc827af01f9afe7c0d0cbe941bca6b6b966"
+    }
+  ],
+  "tests": {
+    "local_extracted_voice_owner_harness": {
+      "before": "1_PASS_2_FAIL",
+      "after": "3_PASS_0_FAIL"
+    },
+    "original_full_module": "NOT_RUN",
+    "windows_e2e": "NOT_RUN"
+  },
+  "notes": "STOP checks added before consuming one-use native capture, after native capture and before publishing TTS audio. Preserve STOP safety when ASR/LLM/TTS adapters fail to terminate. Host native cancellation still needed for atomic output storage; no claim of E2E.",
+  "no_new_modules": true,
+  "no_new_server": true,
+  "no_new_database": true,
+  "source_ready": false,
+  "release_accepted": false
+}

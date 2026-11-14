@@ -1,0 +1,302 @@
+--- /dev/null
++++ b/Packages/P02/worker-python/p02_framed_worker.py
+@@ -0,0 +1,153 @@
++"""NOX E02: bounded binary frame pump for the already-existing Python host.
++
++Owner #6 owns the authentic Windows SID/session, original backend process and
++WPF/WebView2 transport. This module is ONLY an in-process stdio/pipe adapter to
++an injected P02 NativeIngress. It never launches a process, accepts network
++connections, constructs a session, creates a database or bypasses native consent.
++
++Frames: unsigned 32-bit big-endian byte count followed by a UTF-8 P02 native
++JSON envelope. Responses use the same framing and carry exact requestId. A
++valid chat.stop bypasses the non-STOP worker to preserve cancellation liveness.
++"""
++from __future__ import annotations
++
++import json
++import re
++import struct
++import threading
++from typing import BinaryIO
++
++from p02_native_ingress import MAX_INPUT, MAX_OUTPUT, NativeIngress, ProtocolHold
++
++_NONCE = re.compile(r"[0-9a-f]{32}\Z")
++_HEADER = struct.Struct(">I")
++_MAX_FAIL = 1024
++
++
++def _read_exact(reader: BinaryIO, n: int) -> bytes:
++    data = bytearray()
++    while len(data) < n:
++        block = reader.read(n - len(data))
++        if not isinstance(block, bytes) or not block:
++            raise ProtocolHold("NATIVE_TRUNCATED_FRAME")
++        data.extend(block)
++    return bytes(data)
++
++
++def _encode_status(ingress: NativeIngress, nonce: str | None, code: str) -> bytes:
++    payload = {"protocol": "NOX-P02-NATIVE-v1", "runId": ingress.run_id,
++               "requestId": nonce, "status": "HOLD", "errorCode": code}
++    result = json.dumps(payload, ensure_ascii=True, separators=(",", ":")).encode("ascii")
++    if len(result) > _MAX_FAIL:
++        raise ProtocolHold("NATIVE_ERROR_REPLY_TOO_LARGE")
++    return result
++
++
++def serve_native_frames(ingress: NativeIngress, reader: BinaryIO,
++                        writer: BinaryIO, *, drain_timeout: float = 5.0) -> int:
++    """Serve frames on the *existing* host transport. No standalone server.
++
++    Only one non-STOP request may execute at a time. The reader always remains
++    responsive to STOP. Output frames are atomic; an earlier request may finish
++    after STOP, so consumers must match requestId, not assume reply order.
++    The caller owns process lifetime; no long-lived thread is spawned here.
++    """
++    if not isinstance(ingress, NativeIngress):
++        raise TypeError("An already authenticated P02 NativeIngress is required")
++    if not (hasattr(reader, "read") and hasattr(writer, "write") and
++            hasattr(writer, "flush")):
++        raise TypeError("Existing binary host pipe handles required")
++    if not isinstance(drain_timeout, (int, float)) or not 0 < drain_timeout <= 30:
++        raise ValueError("Invalid transport shutdown budget")
++
++    write_lock = threading.Lock()
++    active_lock = threading.Lock()
++    active = False
++    workers: list[threading.Thread] = []
++    count = 0
++    fatal_errors: list[Exception] = []
++
++    def send(payload: bytes) -> None:
++        if not isinstance(payload, bytes) or not 0 < len(payload) <= MAX_OUTPUT:
++            raise ProtocolHold("NATIVE_FRAME_OUTPUT_INVALID")
++        with write_lock:
++            writer.write(_HEADER.pack(len(payload)))
++            writer.write(payload)
++            writer.flush()
++
++    def dispatch(data: bytes, nonce: str | None) -> None:
++        nonlocal active
++        try:
++            try:
++                result = ingress.handle(data)
++            except ProtocolHold as exc:
++                # Only fixed, documented error codes are returned. No raw data,
++                # file paths, model prompts, or exception traces leave the host.
++                code = str(exc)
++                if not re.fullmatch(r"[A-Z][A-Z0-9_]{0,99}", code):
++                    code = "NATIVE_PROVIDER_HOLD"
++                result = _encode_status(ingress, nonce, code)
++            except Exception:
++                result = _encode_status(ingress, nonce, "NATIVE_PROVIDER_HOLD")
++            send(result)
++        except Exception as exc:
++            fatal_errors.append(exc)
++        finally:
++            with active_lock:
++                active = False
++
++    try:
++        while True:
++            header = reader.read(1)
++            if header == b"":
++                break
++            if not isinstance(header, bytes) or len(header) != 1:
++                raise ProtocolHold("NATIVE_TRUNCATED_HEADER")
++            header += _read_exact(reader, 3)
++            if count >= 8192:
++                raise ProtocolHold("NATIVE_SESSION_FRAME_WINDOW_EXHAUSTED")
++            size = _HEADER.unpack(header)[0]
++            if not 0 < size <= MAX_INPUT:
++                raise ProtocolHold("NATIVE_FRAME_SIZE_INVALID")
++            data = _read_exact(reader, size)
++            count += 1
++            nonce = None
++            route = None
++            try:
++                request = json.loads(data.decode("utf-8"))
++                if isinstance(request, dict):
++                    candidate = request.get("requestId")
++                    nonce = candidate if isinstance(candidate, str) and _NONCE.fullmatch(candidate) else None
++                    route = request.get("route")
++            except (ValueError, UnicodeError):
++                pass
++            # Let NativeIngress validate even malformed STOP envelopes; it
++            # independently verifies run ID, nonce, capabilities and session.
++            if route == "chat.stop":
++                try:
++                    send(ingress.handle(data))
++                except ProtocolHold as exc:
++                    code = str(exc)
++                    send(_encode_status(ingress, nonce, code if re.fullmatch(r"[A-Z][A-Z0-9_]{0,99}", code) else "NATIVE_PROVIDER_HOLD"))
++                continue
++            with active_lock:
++                if active:
++                    busy = True
++                else:
++                    active = True
++                    busy = False
++            if busy:
++                send(_encode_status(ingress, nonce, "NATIVE_BUSY"))
++            else:
++                t = threading.Thread(target=dispatch, args=(data, nonce), daemon=True)
++                workers = [old for old in workers if old.is_alive()]
++                workers.append(t)
++                t.start()
++    finally:
++        for worker in workers:
++            worker.join(timeout=drain_timeout)
++        if any(worker.is_alive() for worker in workers):
++            raise ProtocolHold("NATIVE_WORKER_NOT_DRAINED")
++        if fatal_errors:
++            raise ProtocolHold("NATIVE_OUTPUT_TRANSPORT_FAILED") from fatal_errors[0]
++    return count
+--- /dev/null
++++ b/Packages/P02/worker-python/test_p02_framed_worker.py
+@@ -0,0 +1,114 @@
++"""Deterministic byte transport regression against the one existing ingress."""
++import io
++import subprocess
++import sys
++import json
++import struct
++import threading
++import unittest
++from p02_native_ingress import NativeIngress, ProtocolHold
++from p02_framed_worker import serve_native_frames
++
++R = "NOX-FRAME-GATE-C10"
++
++def request(n, route="chat.model", payload=None, **extra):
++    x={"protocol":"NOX-P02-NATIVE-v1","requestId":f"{n:032x}",
++       "route":route,"payload":payload if payload is not None else {},"runId":R}
++    x.update(extra)
++    return json.dumps(x, separators=(",", ":")).encode("utf-8")
++
++def frames(*payloads):
++    return b"".join(struct.pack(">I",len(x))+x for x in payloads)
++
++def read_frames(blob):
++    result=[];cursor=io.BytesIO(blob)
++    while True:
++        header=cursor.read(4)
++        if not header:break
++        self_size=struct.unpack(">I",header)[0]
++        body=cursor.read(self_size)
++        assert len(body)==self_size
++        result.append(json.loads(body))
++    return result
++
++class Dispatch:
++    def __init__(self):
++        self.seen=[];self.ready=threading.Event();self.allow=threading.Event()
++    def execute(self,route,payload,session):
++        assert session=="native-only"
++        self.seen.append(route)
++        if route=="helion.chat":
++            self.ready.set()
++            if not self.allow.wait(1):raise RuntimeError("chat transport was never stopped")
++        elif route=="chat.stop":
++            self.allow.set()
++        return {"r":route}
++
++class Tests(unittest.TestCase):
++    def setUp(self):
++        self.d=Dispatch()
++        self.ingress=NativeIngress(self.d, lambda:"native-only",expected_run_id=R)
++    def serve(self,*data):
++        output=io.BytesIO()
++        n=serve_native_frames(self.ingress,io.BytesIO(frames(*data)),output)
++        return n,read_frames(output.getvalue())
++    def test_stop_overtakes_chat_and_reply_frames_keep_ids(self):
++        n,rows=self.serve(request(1,"helion.chat"),request(2,"chat.stop"))
++        self.assertEqual(n,2)
++        self.assertEqual({x["requestId"] for x in rows},{f"{1:032x}",f"{2:032x}"})
++        self.assertTrue(all(x["status"]=="OK" for x in rows))
++        self.assertEqual(set(self.d.seen),{"helion.chat","chat.stop"})
++    def test_invalid_native_session_is_hold_not_success(self):
++        ingress=NativeIngress(self.d,lambda:None,expected_run_id=R)
++        out=io.BytesIO()
++        serve_native_frames(ingress,io.BytesIO(frames(request(3))),out)
++        self.assertEqual(read_frames(out.getvalue())[0]["errorCode"],"NATIVE_AUTHENTICATED_SESSION_REQUIRED")
++    def test_webview_authority_payload_denied(self):
++        n,rows=self.serve(request(4,payload={"admin":True}))
++        self.assertEqual(rows[0]["status"],"HOLD")
++        self.assertEqual(rows[0]["errorCode"],"PAGE_AUTHORITY_CLAIM_DENIED")
++        self.assertFalse(self.d.seen)
++    def test_duplicate_nonce_denied_without_second_dispatch(self):
++        # Each request may be processed while previous worker still drains;
++        # either BUSY or replay-denied is safe, never two owner calls.
++        n,rows=self.serve(request(5),request(5))
++        self.assertEqual(n,2)
++        self.assertEqual(len(self.d.seen),1)
++        self.assertEqual(sorted(x["status"] for x in rows),["HOLD","OK"])
++    def test_oversize_and_truncated_frames_fail_closed(self):
++        for blob in (struct.pack(">I",65537),struct.pack(">I",99)+b"abc",b"\x00"):
++            with self.subTest(blob=blob[:8]):
++                with self.assertRaises(ProtocolHold):
++                    serve_native_frames(self.ingress,io.BytesIO(blob),io.BytesIO())
++    def test_foreign_run_stays_denied(self):
++        _,rows=self.serve(request(6,runId="not-our-run"))
++        self.assertEqual(rows[0]["status"],"HOLD")
++        self.assertEqual(rows[0]["errorCode"],"NATIVE_PROTOCOL_OR_RUN_MISMATCH")
++    def test_actual_os_subprocess_stdin_stdout_frames(self):
++        # Actual Windows/Linux child process + OS pipes, not a second service.
++        code = """import sys
++from p02_native_ingress import NativeIngress
++from p02_framed_worker import serve_native_frames
++class ExistingOwner:
++ def execute(self,route,payload,session):
++  assert session == 'native-only'
++  return {'route':route,'status':'real-process-boundary'}
++ingress=NativeIngress(ExistingOwner(),lambda:'native-only',expected_run_id='NOX-FRAME-GATE-C10')
++serve_native_frames(ingress,sys.stdin.buffer,sys.stdout.buffer)
++"""
++        result=subprocess.run([sys.executable,'-c',code],input=frames(request(10)),
++                              stdout=subprocess.PIPE,stderr=subprocess.PIPE,
++                              cwd=str(__import__('pathlib').Path(__file__).parent),
++                              timeout=10,check=True)
++        answers=read_frames(result.stdout)
++        self.assertEqual(len(answers),1)
++        self.assertEqual(answers[0]['status'],'OK')
++        self.assertEqual(answers[0]['result']['status'],'real-process-boundary')
++
++    def test_frame_size_includes_utf8_bytes_not_codepoints(self):
++        req=request(7,payload={"text":"Привет"})
++        n,rows=self.serve(req)
++        self.assertEqual(n,1)
++        self.assertEqual(rows[0]["status"],"OK")
++
++if __name__=="__main__": unittest.main()
+--- /dev/null
++++ b/Packages/P02/worker-python/STDIO_HOST_HANDOFF.md
+@@ -0,0 +1,26 @@
++# NOX V16 E02 · existing-host framed transport handoff
++
++RunID: `NOX-V16-E02-STDIO-C10-20261028`. Owner: executor **2**, only `Packages/P02/**` source. The runner is **not a second backend** and opens no HTTP listener, database, frontend, Ollama provider, RAG index or process. It is an injectable function for the already-existing original Python backend, supervised by owner #6's single WPF/WebView2 host.
++
++## Why this closes a different gap
++
++Previous owner `p02_native_ingress.py` validated bytes in-process, but there was no reusable bounded OS process transport for #6 to send a request to the embedded original Python backend. `p02_framed_worker.serve_native_frames(ingress, binary_input, binary_output)` supplies this transport seam. Integrator #6 owns process launch/termination/identity, source lock, one actual SQLite connection, event translation and the real WPF WebView2 host. This module does NOT instantiate `NativeIngress` or decide who the user is.
++
++### Protocol
++
++Wire format: `uint32_be(payload_bytes) + JSON payload`, UTF-8, no line-delimiter ambiguity. Input must be 1–65,536 bytes. Output no more than 1,048,576 bytes. Header and payload are read byte-exact. Responses carry existing `NOX-P02-NATIVE-v1`, host RunID, requestId and `OK/result` or `HOLD/errorCode`. No raw file paths, prompts, provider secrets or stack traces in transport failures. On 8,192 frames, HOLD and restart an authenticated session/RunID; never recycle nonce IDs.
++
++`chat.stop` is dispatched by the reader, bypassing the one non-STOP in-flight worker; other commands are immediately HOLD/NATIVE_BUSY while that worker is processing. Replies can arrive out of order; WPF must correlate by `requestId`. The caller owns the original process lifetime; no automatic retry/privilege escalation. If an active worker cannot drain at shutdown, the pump fails rather than falsely saying success. Write to stderr for host logs only; stdout is framed bytes.
++
++### Trusted host requirements — owner #6 only
++
++1. Verify WebView2 navigation/origin, Windows SID and native session permissions independently of page JSON. Inject `NativeIngress(existing_pack01_dispatcher, native_session_provider, expected_run_id=...)`; do NOT use page-supplied user, principal, consent, model rights or provider status.
++2. Call `serve_native_frames` on the existing original Python backend's **host-owned private binary pipe**, never an unauthenticated public port. WPF must enforce same RunID, requestId, source provenance, session end and STOP priority.
++3. Map one installed local Ollama to the preexisting `P02Store`, one owner #4 RAG runtime, existing events.v3 and approved Persona/CoreID contexts. No second service or storage. All provider-dependent operations without actual credentials/rights/hardware remain HOLD.
++4. Only after pinned original source tree+owner receipts: exercise genuine WPF-to-Python request/STOP on a clean Windows runner, install/rollback, and original D02 visual. Final EXE needs independent executor #7 same-BuildID/SHA acceptance.
++
++### Evidence and rollback
++
++- Tests are in `test_p02_framed_worker.py`: 8 local Python tests, including actual OS subprocess stdio and STOP-overlapping-chat. A GitHub Windows CI on the exact owner commit is required. These do **not** establish original WPF host integration.
++- No previous files are changed, so rollback is exclusion of these two additive owner paths. D02, 8 CoreID, GPU LoRA/QLoRA, original Python EXE, voices, SIP/mobile, approved WOW 10+10+10, historical archives and owner PRs remain untouched.
++- Fresh E06 combined installer may have independent NSIS /S prerequisites/activation errors. This adapter does NOT cure or bypass them.

@@ -1,0 +1,57 @@
+{
+  "schema": "NOX-EXPRESS-C34-LEARNING-v1",
+  "instructions_version": "0.0.6",
+  "source_journal": "https://docs.google.com/document/d/1DzXIiABcXOgh4fyaCz84ApEp59lY317HRgVdPtXNVLU/edit",
+  "scope": "Read-only deterministic build and QA lessons; NOT model weights, GPU training or release acceptance.",
+  "release_accepted": false,
+  "rules": [
+    {
+      "id": "C34-SHA-SCOPES",
+      "symptom": "SourceLock drift or unlike source/archive/Setup identities compared",
+      "cause": "Git blob, source tree, archive and installed Setup are different SHA scopes",
+      "action": "Preserve exact CSS->stage->builder source pins; bind E07 to single Setup SHA",
+      "prevention": "Fail-closed source pin checks before Windows compile",
+      "evidence": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/162"
+    },
+    {
+      "id": "C34-STALE-CI",
+      "symptom": "Repeated heavyweight Windows CI for unchanged historical frozen Setup",
+      "cause": "Three legacy E07 workflows still subscribed to every shared verifier-source push",
+      "action": "Preserve manual historical reproduction but remove old automatic push triggers",
+      "prevention": "Exactly one new candidate E07 auto-trigger, old E07 manual-only",
+      "evidence": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/41917447387"
+    },
+    {
+      "id": "C34-EXITCODE-LOSS",
+      "symptom": "Independent source tests not individually checked before heavy downloads",
+      "cause": "Subsequent Python test command overwrote LASTEXITCODE",
+      "action": "Check every Python unittest command exit immediately",
+      "prevention": "Regression guard rejects any unguarded source test",
+      "evidence": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/41917447387"
+    },
+    {
+      "id": "C34-TRUTH-SCOPE",
+      "symptom": "Original UI clicks and source gates misreported as functional or release PASS",
+      "cause": "Observation receipts confused with privileged operation, OS Reduced Motion or E07 acceptance",
+      "action": "Keep NOT_TESTED until native owner permissions, effects, physical WebView2 media query and same-Setup E07 evidence",
+      "prevention": "Source regression requires fail-closed function and reduced-motion acceptance",
+      "evidence": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/41911174827"
+    },
+    {
+      "id": "C34-OLD-TEST-LITERAL",
+      "symptom": "E07 fails source regression after producer expands read-only Windows animation evidence",
+      "cause": "Test expected obsolete literal OS_MEDIA_QUERY_NOT_PHYSICALLY_VERIFIED",
+      "action": "Assert WebView2 still NOT_TESTED, Reduced Motion HOLD and current producer shape",
+      "prevention": "Run focused source test before fetching Ollama or setup",
+      "evidence": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/commit/8d425c5fe1e6993617e2d840138df5451f9ca1ba"
+    },
+    {
+      "id": "C34-UNMANAGED-NSIS",
+      "symptom": "Repeated fresh install fails after conservative uninstall retains user file",
+      "cause": "No-loss retention changes filesystem preconditions",
+      "action": "Run clean install and Qwen then final destructive lifecycle last; never delete unowned data",
+      "prevention": "Actual installed NSIS no-loss and same-Setup E07 remain required",
+      "evidence": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/41840503939"
+    }
+  ]
+}

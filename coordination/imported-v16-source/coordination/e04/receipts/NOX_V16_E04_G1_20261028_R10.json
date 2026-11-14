@@ -1,0 +1,70 @@
+{
+  "schema": "NOX_V16_E04_OWNER_RECEIPT_R10",
+  "run_id": "NOX-V16-E04-G1-20261028-R10",
+  "owner": "E04",
+  "baseline": {
+    "immutable_commit": "0b3a7d435be735148d64171deb9027093a89646e",
+    "immutable_tree": "f108d604c444f718b32aaecfd07b90b8f91b9a6f",
+    "inventory_pr": 66,
+    "source_lock_729": "HOLD_UNVERIFIED"
+  },
+  "parent": {
+    "commit": "353705bf5b097677cdec9a27091325bcb14828b6",
+    "tree": "e1adacaf63cd8b8cb6b4e295ffa865a75c46c93c",
+    "pr": 143
+  },
+  "conflict_lock": "NO_MERGE_MAIN_OR_PR6_7_12",
+  "source_change": "reject NTFS junction/reparse and symlink in approval receipt archive/latest/digest paths before writing",
+  "checks": "7 actual-module Python unittest cases defined; GitHub Actions execution pending; no Windows native junction or GPU claim",
+  "files": [
+    {
+      "path": "Packages/P04/train_qlora.py",
+      "owner": "E04",
+      "pre_sha256": "c7eed491550f9ec93d92af7a576ca4b7f1742cb4bec6823e5952be107720d018",
+      "post_sha256": "e8a225b586be4c00c8d82aeff89b884a4164133f9ec10f0061f284bbb72340ef",
+      "pre_git_blob_sha1": "a42251f454dd07b5d022edce62796164f6b09a65",
+      "post_git_blob_sha1": "c4f7961bc137179c01e9c8b33a503deab2048baf"
+    },
+    {
+      "path": "tests/P04/test_e04_receipt_junction_guard.py",
+      "owner": "E04",
+      "pre_sha256": "ABSENT",
+      "post_sha256": "d130b19fb94b8346fe1fc25448ff1a117f555d8a2a761440a0791099d9dbfc3c",
+      "pre_git_blob_sha1": "ABSENT",
+      "post_git_blob_sha1": "1c78407f9abac0d5ad0821de08e84dc13c4955ac"
+    },
+    {
+      "path": ".github/workflows/nox-e04-g1-holdout-integrity.yml",
+      "owner": "E04",
+      "pre_sha256": "a8fba31c15305971a4c376b57da44456d1e9627f0965ed9e70c1ce719b659a9d",
+      "post_sha256": "d75ea3867a44f92a491de94ef65f2c05a5aac7c2b51af8bdf59a2aef5b0adae0",
+      "pre_git_blob_sha1": "30b6c8c2b6c6706b2821a8c648cfe31f2ca85b20",
+      "post_git_blob_sha1": "8259b94ecdcdbad2194a3a485284fecccac9b52e"
+    },
+    {
+      "path": "coordination/e04/receipts/NOX_V16_E04_G1_20261028_R10.json",
+      "owner": "E04",
+      "pre_sha256": "ABSENT",
+      "post_sha256": "RECORDED_IN_DRIVE_AND_PR_READBACK",
+      "pre_git_blob_sha1": "ABSENT",
+      "post_git_blob_sha1": "RECORDED_IN_DRIVE_AND_PR_READBACK"
+    }
+  ],
+  "one_practical_lesson": "VERIFY_ALL_RECEIPT_DESTINATIONS_BEFORE_FIRST_WRITE: fail closed on NTFS junctions/reparse links and symlinks for receipt archive/latest/digest target; keep existing single receipt writer.",
+  "gpu": "HOLD_NO_CUDA_OR_APPROVED_WEIGHTS_DATASET",
+  "integrated": "HOLD_E06",
+  "windows_accepted": "NOT_RUN_E07",
+  "accepted_product_progress": "N/D",
+  "run_turbo10": [
+    "RAG existing SOURCE preserved; E2E HOLD",
+    "Ingestion/OCR existing SOURCE preserved; HOLD",
+    "Embedding/index existing SOURCE preserved; HOLD",
+    "Provenance/citations existing SOURCE preserved; HOLD",
+    "Update/reindex/SQLite ACL HOLD",
+    "Rights dataset HOLD without approval",
+    "NVIDIA LoRA/QLoRA HOLD",
+    "GPU Guardian runtime HOLD",
+    "Checkpoint receipt path patch saved; actual GPU checkpoint HOLD",
+    "Evaluation/merge real GPU HOLD"
+  ]
+}

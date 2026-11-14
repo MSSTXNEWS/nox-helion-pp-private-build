@@ -1,0 +1,58 @@
+{
+  "schema": "NOX_V16_T06_OWNER_READONLY_INTEGRATION_RECEIPT_V1",
+  "run_id": "NOX-V16-T06-20261029-M1-P04-ONEHOST-R16",
+  "role": "M1/T06 sole source writer",
+  "status": "SOURCE_PATCH_NOT_NATIVE_ACCEPTANCE",
+  "canonical_branch": "integration/nox-v16-unified-candidate-20261028-r01",
+  "source_head_before": "23c1557c0347fa0b66a7cd8d92a4a76637861402",
+  "source_tree_before": "4dc3325a52b6cfc863e29dd565c758210c059a88",
+  "latest_register_blob": "2c8e374ec17f66b1a435e386e496f8cc8662ca00",
+  "error_ids": [
+    "ERR-SYS-001",
+    "ERR-SYS-002",
+    "ERR-SRC-003",
+    "ERR-SRC-004",
+    "ERR-SRC-005",
+    "ERR-SYS-006",
+    "ERR-SYS-007",
+    "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+    "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+    "NOX-V16-T06-ROOT-STOP-20261029-R01",
+    "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+  ],
+  "defect_cluster": "ERR-SRC-004 P04 read-only owner methods not mounted to canonical G2OneHostBinder",
+  "root_cause": "Existing authenticated P04TrainingReadOnlyPack existed in one source but G2OneHostBinder only mounted P02/P03/P05 native routes",
+  "physical_patch": [
+    {
+      "path": "coordination/e06/adapters/g2_space_mobile.py",
+      "pre": "c8b937172eb431310229111945971bb11cd8ff90",
+      "post": "e1f14ea075e9a384346757d7fd23c9a61745200c"
+    },
+    {
+      "path": "tests/e06/test_immutable_onehost_binder_r12.py",
+      "pre": "b50d9154cf57f44cd2b5eaa2a81d68850c254e69",
+      "post": "c6092045c1759ebe9d54b5d6d3aaf8ecd830cb8b"
+    }
+  ],
+  "applied_lesson": "Reuse P04 review_dataset/inspect_checkpoint behind current native owner receipt, route-specific pre/post consent and source-readiness probe; do not create a trainer or report fake installed service",
+  "single_focused_check": {
+    "type": "STATIC_SOURCE_CONTRACT",
+    "passed": 10,
+    "total": 10,
+    "source_test_added": 1,
+    "python_test_execution": "NOT_RUN",
+    "independent_windows": "NOT_RUN"
+  },
+  "regression_prevention_all_roles": "A source method without native host route, owner SHA receipt and permission checks is not an integrated feature; every owner route must be unique, native-authorized and tested on one immutable HEAD before DONE",
+  "shared_writes": "T02_ONLY",
+  "historical_preservation": "T04 34/34; 3 original source parts/729; P01–P05 earlier DONE; D02/WOW200; eight CoreID; five Persona; STOP, ACL, consent, SQLite and data",
+  "progress": {
+    "before": "1/8",
+    "after": "1/8",
+    "pct_before": 12.5,
+    "pct_after": 12.5,
+    "delta": 0,
+    "remaining": 7
+  },
+  "no_exe_nsis_gitlab_ci_e07": true
+}

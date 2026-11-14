@@ -1,0 +1,23 @@
+name: NOX WEB WOW original Three regression
+on:
+  push:
+    branches:
+      - integration/nox-v16-unified-candidate-20261028-r01
+    paths:
+      - .github/workflows/nox-web-wow-three-regression.yml
+  workflow_dispatch:
+permissions: {contents: read}
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: JS syntax and original WOW regression tests
+        run: |
+          node --check ui/menu-pages/nox-wow-scene.js
+          node --check ui/menu-pages/express-wow-three.mjs
+          node --test ui/menu-pages/express-wow-three.test.mjs ui/menu-pages/express-wow-v3.test.mjs ui/menu-pages/express-wow-v4.test.mjs ui/menu-pages/navigation.test.mjs

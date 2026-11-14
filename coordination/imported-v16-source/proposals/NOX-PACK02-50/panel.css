@@ -1,0 +1,15 @@
+/* PACK02 only: isolated D02-compatible obsidian controls; no HOME changes */
+.nox-p2{--p2-gold:#e7b57e;--p2-line:rgba(232,184,121,.24);--p2-ink:#ebe5df;--p2-surface:rgba(13,17,24,.92);font:inherit;color:var(--p2-ink);background:var(--p2-surface);border:1px solid var(--p2-line);padding:16px;border-radius:20px;max-width:1250px;margin:auto;box-shadow:0 14px 48px rgba(0,0,0,.3)}
+.nox-p2 *{box-sizing:border-box}.nox-p2-header{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;letter-spacing:.06em;color:var(--p2-gold)}
+.nox-p2-header small{font-size:12px;color:#afaaa3}.nox-p2-search,.nox-p2-editor,.nox-p2-options{width:100%;background:#111721;border:1px solid var(--p2-line);border-radius:11px;color:var(--p2-ink);font:inherit;padding:12px;margin-top:12px}
+.nox-p2-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;max-height:360px;overflow:auto;padding:14px 0}
+.nox-p2-tool,.nox-p2-run{min-height:44px;text-align:left;border:1px solid var(--p2-line);background:linear-gradient(130deg,rgba(29,33,40,.95),rgba(11,14,20,.92));color:var(--p2-ink);border-radius:10px;padding:10px;font:inherit;cursor:pointer;transition:box-shadow .2s ease,transform .2s ease,border-color .2s ease}
+.nox-p2-tool:hover{transform:translateY(-1px);border-color:var(--p2-gold);box-shadow:inset 0 0 12px rgba(219,131,48,.12),0 2px 15px rgba(225,137,54,.1)}
+.nox-p2-tool[aria-pressed=true]{border-color:var(--p2-gold);box-shadow:0 0 20px rgba(221,149,71,.17)}
+.nox-p2-workspace{border-top:1px solid var(--p2-line);padding-top:10px}.nox-p2-workspace h3{font-size:16px;color:var(--p2-gold);margin-bottom:0}
+.nox-p2-editor,.nox-p2-options{resize:vertical;line-height:1.4;min-height:55px}.nox-p2-run{display:block;margin:10px 0;background:linear-gradient(125deg,#654122,#291d1c);border-color:#c08d5a}
+.nox-p2-run:disabled{opacity:.45;cursor:not-allowed}.nox-p2-result{white-space:pre-wrap;overflow-wrap:anywhere;background:#090e14;border:1px solid var(--p2-line);border-radius:10px;min-height:55px;max-height:300px;overflow:auto;padding:12px}
+.nox-p2-status{display:block;color:#a6b4c8;font-size:12px;margin:9px 0}.nox-p2 button:focus-visible,.nox-p2 textarea:focus-visible,.nox-p2 input:focus-visible{outline:2px solid var(--p2-gold);outline-offset:3px}.nox-p2 [hidden]{display:none!important}
+@media(max-width:390px){.nox-p2{padding:9px;border-radius:12px}.nox-p2-grid{grid-template-columns:1fr 1fr;gap:6px}.nox-p2-tool{font-size:11px;padding:7px}}
+@media(prefers-reduced-motion:reduce){.nox-p2 *{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+[data-nox-mode=eco] .nox-p2 *{animation:none!important;transition:none!important}

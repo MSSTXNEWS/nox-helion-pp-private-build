@@ -1,0 +1,135 @@
+{
+  "schema": "NOX_V16_E06_ONEHOST_WIRE_TYPE_R08_RECEIPT_V1",
+  "run_id": "NOX-V16-E06-G2-04-20261028T1307MSK-R08",
+  "owner": "E06_integrator_only",
+  "scope": "P02↔P04 E06-owned native adapter; no owner files touched",
+  "canonical_baseline": {
+    "commit": "0b3a7d435be735148d64171deb9027093a89646e",
+    "tree": "f108d604c444f718b32aaecfd07b90b8f91b9a6f",
+    "status": "COMPARE_IDENTICAL_CURRENT_MAIN",
+    "inventory_pr": 66,
+    "raw_source_parts_sha256": "NOT_VERIFIED",
+    "extracted_729_file_sourcelock": "HOLD"
+  },
+  "immutable_parent": {
+    "commit": "b5b43b80ec466060af466757e688387de479ee1e",
+    "tree": "513025de3a8cb17ccea33b4f358d63e41d32446f",
+    "source_pr": 127,
+    "stop_contract": "OWNER_ACK_PENDING_LEGACY_24_OF_25"
+  },
+  "candidate_before_receipt": {
+    "commit": "a30e35c56f7c32fc0da6ff01e70e4fde3b5e4bfe",
+    "tree": "3f2640249c225cf4e2d042ffe3a431569aeccca6"
+  },
+  "files": [
+    {
+      "path": "coordination/e06/onehost_p02_p04.py",
+      "owner": "E06",
+      "pre_sha256": "ec3ed83595bf4dcd8b1bccc829e60efcad9e8ecc2574f014cf0dcf94bf861a80",
+      "post_sha256": "be101d0a3cc7b88329c9b08110fd97811b88789db3bda04919cfcc8dd33229e8",
+      "pre_git_blob_sha1": "ead6da257e92788288749c8561fd1b51b4b2cc73",
+      "post_git_blob_sha1": "1c79b3e5a3e354224e9edf2f9ddd0bb0a6d5772d",
+      "diff": "E06_R08_TYPE_GATE.patch",
+      "changed": "type-first allowlists chat/GPU/event; UTF-8 JSON fail closed"
+    },
+    {
+      "path": "tests/e06/test_onehost_wire_type_r08.py",
+      "owner": "E06",
+      "pre_sha256": "ABSENT",
+      "post_sha256": "86073299d7af853066208a4cf5844c288ef5019dc70dd4ef559c2788e93360b9",
+      "pre_git_blob_sha1": "ABSENT",
+      "post_git_blob_sha1": "f3925cfe51351018b2b34b5fe463954a6c591b77",
+      "diff": "NEW_FILE",
+      "changed": "11 additional offline regression cases, six imported R07 cases"
+    }
+  ],
+  "diff_sha256": "e8ed7e571f228de599b40fba88460c62c131435eb5f676d13cd743c5d8856519",
+  "permission_map": [
+    {
+      "action": "chat.send",
+      "host_check": "NativeScope exact class, identity tenant/principal/session, Windows SID, contextual existing chat, native_authorize, existing SQLite history ACL, pre/post owner next, STOP",
+      "owner_port": "P02 ChatBridge.send/OllamaClient; P04 LocalRag callback"
+    },
+    {
+      "action": "gpu.stop|gpu.pause|gpu.resume|gpu.checkpoint|gpu.status",
+      "host_check": "string command allowlist, native_authorize+SID+existing SQLite context, immutable ACK, owner verify, post-await reauthorization",
+      "owner_port": "existing P04 GPU worker, not a trainer clone"
+    },
+    {
+      "action": "gpu.observe",
+      "host_check": "native scope, event schema/type allowlist, evidence_verified true, native verification, post-await reauthorization",
+      "owner_port": "existing P05 events.v3 verified publish"
+    }
+  ],
+  "tests": {
+    "r07_preimage_new_suite": "17 collected / 8 error (8 new negative RED)",
+    "patched_new_suite": "17/17 PASS offline (11 new + 6 imported R07)",
+    "r07_suite": "6/6 PASS offline",
+    "legacy_r06_suite": "24/25 PASS; test_11 existing STOP contract mismatch",
+    "python_compile": "PASS",
+    "real_windows_gpu_ollama_sqlite": "NOT_RUN_HOLD",
+    "ci": "NOT_RUN_NO_WAIVER"
+  },
+  "task_ledger": [
+    [
+      "E06-R08-01",
+      "V16/master/E06/lessons pre-read",
+      "DONE"
+    ],
+    [
+      "E06-R08-02",
+      "immutable common baseline compare",
+      "DONE"
+    ],
+    [
+      "E06-R08-03",
+      "owner/PR66 raw 729 SourceLock",
+      "HOLD_RAW_BYTES"
+    ],
+    [
+      "E06-R08-04",
+      "R07 original exact preimage SHA/blob",
+      "DONE"
+    ],
+    [
+      "E06-R08-05",
+      "eight new negative RED test reproductions",
+      "DONE"
+    ],
+    [
+      "E06-R08-06",
+      "E06-only type-first/Unicode patch",
+      "DONE"
+    ],
+    [
+      "E06-R08-07",
+      "targeted GREEN + legacy regression",
+      "DONE_WITH_STOP_CONFLICT_HOLD"
+    ],
+    [
+      "E06-R08-08",
+      "GitHub SHA/blob readback and receipt",
+      "DONE_SOURCE_ONLY"
+    ],
+    [
+      "E06-R08-09",
+      "append E06 report/master + one lesson/readback",
+      "EXTERNAL_FOLLOWUP"
+    ],
+    [
+      "E06-R08-10",
+      "E07 independent handoff",
+      "EXTERNAL_FOLLOWUP"
+    ]
+  ],
+  "hold": [
+    "STOP_CONTRACT_E02_OWNER_ACK_MISSING",
+    "FULL_729_RAW_SOURCELOCK_MISSING",
+    "OWNER_EXACT_NATIVE_INTEGRATION_HOLD",
+    "REAL_OLLAMA_SQLITE_GPU_CHECKPOINT_EVAL_NOT_RUN",
+    "ONE_INSTALLED_WINDOWS_EXE_BUILDID_SHA_E07_NOT_RUN",
+    "CI_NOT_EXECUTED"
+  ],
+  "one_practical_lesson": "TYPE_FIRST_JSON_WIRE_ADMISSION: For externally supplied values, check exact primitive type before set membership or UTF-8 conversion and convert malformed JSON payloads into typed HOLD without publishing or calling GPU owners.",
+  "no_loss": "main, original P02/P04/P05, D02, WOW, Persona/CoreID, archives, EXE unchanged; draft only"
+}

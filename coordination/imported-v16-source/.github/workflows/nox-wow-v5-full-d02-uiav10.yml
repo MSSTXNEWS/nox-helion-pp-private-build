@@ -1,0 +1,59 @@
+name: NOX WOW V5 physical frozen D02 five native UIA - not full E07
+on:
+  push:
+    branches: [integration/nox-v16-unified-candidate-20261028-r01]
+    paths:
+      - .github/workflows/nox-wow-v5-full-d02-uiav10.yml
+      - coordination/e07/probe_wow_v5_five_uia_u10.py
+      - tests/e07/test_wow_v5_candidate_u10.py
+permissions:
+  actions: read
+  contents: read
+concurrency:
+  group: nox-wow-v5-5uia-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  physical-v5-five-uia:
+    if: github.repository == 'MSSTXNEWS/nox-helion-pp-private-build'
+    runs-on: windows-2022
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12.10'
+          architecture: x64
+          check-latest: false
+      - name: Exact producer pin and existing strict QA regressions
+        shell: pwsh
+        run: |
+          python -B -m py_compile coordination/e07/independent_setup_e07.py coordination/e07/probe_five_primary_action.py coordination/e07/probe_wow_v5_five_uia_u10.py
+          if ($LASTEXITCODE -ne 0) { throw 'U10_V5_SOURCE_SYNTAX_HOLD' }
+          python -B -m unittest discover -s tests/e07 -p test_wow_v5_candidate_u10.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'U10_V5_FROZEN_PIN_TEST_HOLD' }
+          python -B -m unittest discover -s tests/e07 -p test_probe_five_primary_action_u06.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'U10_V5_EXISTING_NAV_GATE_REGRESSION_HOLD' }
+          python -B -m unittest discover -s tests/e07 -p test_primary_destination_witness_b3.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'U10_V5_DESTINATION_COMPONENT_REGRESSION_HOLD' }
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          run-id: 41831552929
+          name: nox-v16-e06-onehost-diagnostic-41831552929
+          github-token: ${{ github.token }}
+          path: input/wow-v5
+      - name: Independent real Windows 5 UIA and NSIS install update rollback uninstall
+        shell: pwsh
+        timeout-minutes: 30
+        run: |
+          python -B coordination/e07/probe_wow_v5_five_uia_u10.py --artifact-dir input/wow-v5 --out work/u10/E07_WOW_V5_FIVE_UIA.json
+          if ($LASTEXITCODE -ne 0) { throw 'U10_V5_REAL_FIVE_UIA_HOLD_NOT_RELEASE' }
+      - name: Save real physical receipt including HOLD
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: NOX-WOW-V5-FIVE-UIA-U10
+          path: work/u10/E07_WOW_V5_FIVE_UIA.json
+          if-no-files-found: warn
+          retention-days: 14

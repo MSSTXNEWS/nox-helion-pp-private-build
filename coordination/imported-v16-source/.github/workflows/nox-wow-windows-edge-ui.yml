@@ -1,0 +1,37 @@
+name: NOX WOW Windows Edge physical UI
+on:
+  push:
+    branches: [integration/nox-v16-unified-candidate-20261028-r01]
+    paths: [.github/workflows/nox-wow-windows-edge-ui.yml]
+  workflow_dispatch:
+permissions: {contents: read}
+jobs:
+  windows-ui:
+    runs-on: windows-2022
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install test-only Playwright client
+        shell: pwsh
+        run: npm install --no-save --ignore-scripts playwright@1.58.2
+      - name: Windows Microsoft Edge final 7-viewports and no-overflow acceptance
+        shell: pwsh
+        run: |
+          $p=Start-Process -FilePath node -ArgumentList @('coordination/e07/nox_wow_static_server.cjs') -PassThru -NoNewWindow
+          try {
+            Start-Sleep -Seconds 3
+            $env:NOX_BROWSER_CHANNEL='msedge'
+            node ui/menu-pages/express-wow-three.browser.mjs
+            if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+          }
+          finally {Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue}
+      - name: Preserve screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX-WOW-WINDOWS-EDGE-RENDER
+          path: wow-three-*.png
+          if-no-files-found: ignore

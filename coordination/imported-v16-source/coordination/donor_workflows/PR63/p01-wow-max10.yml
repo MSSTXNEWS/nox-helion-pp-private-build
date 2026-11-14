@@ -1,0 +1,84 @@
+name: NOX E01 P01 WOW MAX10 source and exact owner NSIS regression
+on:
+  push:
+    branches:
+      - e01/v16-wow-max10-one-scene-20261028
+      - e01/v16-d02-wow-turbo10-20261028
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  p01-fast-node:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Source syntax, native CoreID, 8 MENU and owner smoke tests
+        run: |
+          for f in proposals/P01/WOW-MAX10/*.mjs; do node --check "$f"; done
+          node --test proposals/P01/WOW-MAX10/*.test.mjs
+      - name: No-loss owner scope relative to frozen PR56
+        run: |
+          git diff --name-only 4053ae8d28c7be5992503eadec7428d4c24ca112 HEAD > /tmp/paths
+          if grep -vE '^(proposals/P01/WOW-MAX10/|\.github/workflows/p01-wow-max10\.yml$)' /tmp/paths; then
+            echo 'E01_OWNER_SCOPE_FAILED'; exit 1
+          fi
+          if test -n "$(git diff --diff-filter=D --name-only 4053ae8d28c7be5992503eadec7428d4c24ca112 HEAD)"; then
+            echo 'E01_ORIGINAL_ASSET_DELETION'; exit 1
+          fi
+  p01-component:
+    runs-on: windows-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Single-source cinematic owner syntax
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Get-ChildItem proposals/P01/WOW-MAX10 -Filter '*.mjs' | ForEach-Object {
+            node --check $_.FullName
+            if ($LASTEXITCODE -ne 0) { throw 'P01_WOW_SYNTAX_FAIL' }
+          }
+      - name: All owner component assertions
+        shell: pwsh
+        run: |
+          node --test proposals/P01/WOW-MAX10/*.test.mjs
+          if ($LASTEXITCODE -ne 0) { throw 'P01_WOW_TEST_FAIL' }
+      - name: No deletion of original D02, 200 effects or other owners
+        shell: pwsh
+        run: |
+          $paths = @(git diff --name-only ef10bbba7370f67c734d69dbab8b509d3c2c457e HEAD)
+          $bad = @($paths | Where-Object {
+            $_ -notlike 'proposals/P01/WOW-MAX10/*' -and
+            $_ -ne '.github/workflows/p01-wow-max10.yml'
+          })
+          if ($bad.Count -gt 0) { throw ('P01_OWNER_SCOPE_VIOLATION '+($bad -join ',')) }
+          $deleted = @(git diff --diff-filter=D --name-only ef10bbba7370f67c734d69dbab8b509d3c2c457e HEAD)
+          if ($deleted.Count -gt 0) { throw ('P01_NO_LOSS_FAIL '+($deleted -join ',')) }
+      - name: Read-only checkout exact approved owner1 NSIS safety branch
+        uses: actions/checkout@v4
+        with:
+          repository: MSSTXNEWS/nox-helion-pp-private-build
+          ref: 8e42bb15aecbee8412c342b0e9049b6cce044297
+          path: owner1-approved-nsis
+          persist-credentials: false
+      - name: P01 native PowerShell security regression (not full install)
+        shell: pwsh
+        run: |
+          $base='owner1-approved-nsis/stage/proposals/P01/C09'
+          & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$base/QA/P01_E01_C09/Test-P01Native-C09.ps1" -SourceRoot $base
+          if ($LASTEXITCODE -ne 0) { throw 'P01_APPROVED_NATIVE_C09_FAILED' }
+          & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File 'owner1-approved-nsis/stage/proposals/P01/C11/QA/Test-P01C11.ps1'
+          if ($LASTEXITCODE -ne 0) { throw 'P01_APPROVED_NATIVE_C11_FAILED' }

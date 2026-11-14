@@ -1,0 +1,182 @@
+{
+  "schema": "NOX_V16_T06_ONE_TREE_SOURCE_CAS_R09",
+  "task_id": "T06",
+  "run_id": "NOX-V16-T06-20261029T172252MSK-R09",
+  "scope": "NOX HELION EXPRESS INTEGRATOR Windows loader source only",
+  "source_branch": "integration/nox-v16-unified-candidate-20261028-r01",
+  "plan_start_msk": "2026-10-29T17:15:00+03:00",
+  "observed_start_msk": "2026-10-29T17:22:52+03:00",
+  "receipt_recorded_utc": "2026-10-29T14:31:27.241Z",
+  "historical_checkpoint": {
+    "run_id": "NOX-V16-T06-20261029T170832MSK-R08",
+    "base_head": "7f78e15f51451b60ce4dc6cec7ccd9724639b04a",
+    "criteria_done": 1,
+    "criteria_total": 8,
+    "percent": 12.5,
+    "immutable_working_manifest_commit": "e223a2c749940340e562f2389d64ebb067f29b43"
+  },
+  "current_checkpoint": {
+    "criteria_done": 1,
+    "criteria_total": 8,
+    "percent": 12.5,
+    "previous_percent": 12.5,
+    "delta_pp": 0,
+    "remaining": 7,
+    "bar": "█░░░░░░░░░",
+    "source_head_before": "e51b2b0199feca59dded179d2d5a2edadeef312c",
+    "source_commit": "e32b129219354712932157187241f2fc80842410",
+    "accepted_final_head": null,
+    "source_ready": "HOLD"
+  },
+  "criteria": [
+    {
+      "n": 1,
+      "name": "Owner-selected official canonical base/head",
+      "status": "DONE",
+      "evidence": {
+        "branch": "integration/nox-v16-unified-candidate-20261028-r01",
+        "owner_choice_blob": "e5ba5ca3402fdbfacf6923f6add733a2b70543f3",
+        "latest_observed_head": "e32b129219354712932157187241f2fc80842410"
+      }
+    },
+    {
+      "n": 2,
+      "name": "P01 in one tree + C09 WPF/MainWindow functionality accepted",
+      "status": "HOLD",
+      "evidence": {
+        "bridge_blob": "6338c56c509c31d8deee70afef6eb639603e1e2d",
+        "functional_acceptance": null
+      }
+    },
+    {
+      "n": 3,
+      "name": "P02 IPC/voice/STOP/ACL fully accepted",
+      "status": "HOLD",
+      "evidence": {
+        "framed_worker_blob": "8af1338bee7ebb03ffbb0dd4bfdeed7af7870bc1",
+        "native_ingress_blob": "842f3d60f9506a7ed54a4cf4e158254bf6617df6",
+        "voice_native_acceptance": null
+      }
+    },
+    {
+      "n": 4,
+      "name": "P03 ModelCenter/PACK01 Host50 accepted",
+      "status": "HOLD",
+      "evidence": {
+        "onehost_source_blob": "17bad1e52aa174ff8b1af9d39be3ea2056e7874a",
+        "g3_donor_preimages_mismatch": true
+      }
+    },
+    {
+      "n": 5,
+      "name": "P04 GPU/RAG accepted",
+      "status": "HOLD",
+      "evidence": {
+        "model_snapshot_source_blob": "7815e7356b538166cb6c068d8eaafd098f3f42c9",
+        "runtime_acceptance": null
+      }
+    },
+    {
+      "n": 6,
+      "name": "P05/events/E06 accepted",
+      "status": "HOLD",
+      "evidence": {
+        "space_source_blob": "a1f1ca5a72388a43be2dc035150487405820ffcf",
+        "runtime_acceptance": null
+      }
+    },
+    {
+      "n": 7,
+      "name": "Full D02/WOW200/Host50/E06/729 NO-LOSS accepted",
+      "status": "HOLD",
+      "evidence": {
+        "original_zip_sha256": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+        "original_members_verified_by_T09": 729,
+        "original_archive_only": true,
+        "host50_source_hold": 13
+      }
+    },
+    {
+      "n": 8,
+      "name": "Final single integrated HEAD/tree/manifest+owner receipts T09",
+      "status": "HOLD",
+      "evidence": {
+        "current_source_commit": "e32b129219354712932157187241f2fc80842410",
+        "full_functional_tree_accepted": false,
+        "final_tree_sha": null
+      }
+    }
+  ],
+  "source_change": {
+    "path": "coordination/e06/run_source_integrations_r13.py",
+    "owner": "T06 integration harness; no P01-P05 owner path edited",
+    "pre_commit": "e51b2b0199feca59dded179d2d5a2edadeef312c",
+    "pre_git_blob_sha1": "c2b249ea5572e111222962bec87cae2d73db73e1",
+    "post_git_blob_sha1": "d086fce7ec876c9851c2e81ffd5d38272cce60bb",
+    "pre_file_sha256": "2046acb30569569f4cd308f1bec95f62d71610a9a75caeb6ccfa2e3aa38670e1",
+    "post_file_sha256": "5dbd5d0ed41400a2eb9951783cf7fe06e336291e4d60f5fee8fa0b1b7c3c8456",
+    "commit": "e32b129219354712932157187241f2fc80842410",
+    "effect": "P02/P03 focused tests import SHA-verified copied owner fixtures and NOX_PINNED_P02_PATH/NOX_PINNED_PACK01_PATH now point at copied fixtures rather than mutable live paths; only this existing integration runner modified",
+    "github_contents_cas": "PASS",
+    "exact_git_readback": "PASS",
+    "git_compare": {
+      "ahead": 1,
+      "behind": 0,
+      "paths_changed": [
+        "coordination/e06/run_source_integrations_r13.py"
+      ],
+      "deletions_of_files": 0
+    }
+  },
+  "focused_regression": {
+    "type": "isolated real-runner path-selection test with synthetic owner fixtures and mocked subprocess; not actual full P02/P03 suites",
+    "before": "RED: unittest assertion fails because pinned P02 path pointed at live source",
+    "after": "GREEN: both environment paths and both P02/P03 discovered tests resolve to SHA-verified owner snapshot; exit 0",
+    "python_py_compile": "PASS",
+    "actual_owner_component_suites": "NOT_RUN",
+    "native_windows": "NOT_RUN"
+  },
+  "preserved_historical": {
+    "t01": "DONE",
+    "t02": "DONE",
+    "t03": "DONE",
+    "t04": "34/34 VERSION SELECTION ONLY",
+    "t05": "13/13 DONOR TRIAGE ONLY",
+    "t07": "ORIGINAL PHYSICAL ARCHIVE 729/729 PASS",
+    "no_original_729_or_archival_snapshot_mutation": true,
+    "pr162_single_tree": true
+  },
+  "lesson_applied": "SHA-checking a fixture copy is insufficient if tests import owner source from the mutable checkout. Bind the focused test runner's import paths and test discovery to the exact copy it has verified; keep runtime acceptance independent.",
+  "controlling_blocker": {
+    "owner": "T06 / G6-B / functional owners P01-P05",
+    "code": "FULL_P01_P05_HOST50_VOICE_SOURCE_CONTRACT_ACCEPTANCE_NOT_PROVEN",
+    "detail": "13 Host50 source HOLD plus missing exact same-HEAD P01-P05/voice/ACL consent functional receipts; archive selection and two P02 fixes alone cannot mark SOURCE_READY."
+  },
+  "handoff_to": [
+    "T02",
+    "T08",
+    "T09",
+    "T10",
+    "T11"
+  ],
+  "safeguards": {
+    "main_edited": false,
+    "other_branch_edited": false,
+    "other_owner_product_path_edited": false,
+    "shared_google_docs_edited": false,
+    "exe": false,
+    "nsis": false,
+    "gitlab_ci": false,
+    "windows_ci": false,
+    "e07": false,
+    "release": false
+  },
+  "docs_read_only": {
+    "canon_id": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+    "master_id": "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+    "e06_id": "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4",
+    "lessons_id": "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ",
+    "c34_id": "1DzXIiABcXOgh4fyaCz84ApEp59lY317HRgVdPtXNVLU",
+    "rules_consolidated_blob": "46fc22c8b2f5e49e78526a2f75456555577e5571"
+  }
+}

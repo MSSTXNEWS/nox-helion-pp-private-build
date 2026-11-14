@@ -1,0 +1,6 @@
+/* WOW donor #22 · real local Three.js point field, not a fake screenshot. */
+.universe > .nox-wow-three{position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;opacity:.6;mix-blend-mode:screen}
+.universe > .nox-wow-three[hidden]{display:none!important}
+body[data-fx="ECO"] .nox-wow-three{display:none!important}
+@media(prefers-reduced-motion:reduce){.universe > .nox-wow-three{display:none!important}}
+@media(max-width:520px){.universe > .nox-wow-three{opacity:.34}}

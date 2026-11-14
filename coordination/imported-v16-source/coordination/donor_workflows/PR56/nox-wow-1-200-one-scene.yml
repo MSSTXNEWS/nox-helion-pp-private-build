@@ -1,0 +1,42 @@
+name: NOX WOW 1-200 single scene Windows gate
+on:
+  pull_request:
+    paths:
+      - 'proposals/NOX-WOW-UNIFIED-1-150/**'
+      - 'proposals/NOX-WOW151-200/finale.mjs'
+      - '.github/workflows/nox-wow-1-200-one-scene.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  one-scene:
+    runs-on: windows-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax-check original and unified scene
+        shell: pwsh
+        run: |
+          node --check proposals/NOX-WOW-UNIFIED-1-150/gate.mjs
+          if ($LASTEXITCODE -ne 0) { throw 'WOW200_GATE_SYNTAX' }
+          node --check proposals/NOX-WOW151-200/finale.mjs
+          if ($LASTEXITCODE -ne 0) { throw 'WOW200_FINALE_SYNTAX' }
+      - name: Verify 50 final compositions, native event source, no duplicate rendering
+        shell: pwsh
+        run: |
+          node --test proposals/NOX-WOW-UNIFIED-1-150/gate.test.mjs
+          if ($LASTEXITCODE -ne 0) { throw 'WOW200_TRUTHFUL_SINGLE_SCENE_FAILURE' }
+      - name: Preserve approved original D02 and all source WOW effects
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $gate = Get-Content proposals/NOX-WOW-UNIFIED-1-150/gate.mjs -Raw
+          if (!$gate.Contains('NOX_UNIFIED_SECONDARY_TRUSTED_SLOT_REQUIRED')) {throw 'HOME_GATE_MISSING'}
+          if (!$gate.Contains('COMPOSITION_BY_ID')) {throw 'WOW151_200_MISSING'}
+          if (!$gate.Contains('receiveCanonicalEvent:()=>false')) {throw 'FORGED_EVENT_GATE_MISSING'}
+          $a = Get-Content proposals/NOX-WOW151-200/catalog.mjs -Raw
+          if (!$a.Contains('"id": 200')) {throw 'FINAL_CINEMA_200_MISSING'}
+          Write-Host "NOX_WOW_1_200_SOURCE_AND_NATIVE_TRUTH_GATE_PASS"

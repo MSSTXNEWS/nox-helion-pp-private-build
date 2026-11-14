@@ -1,0 +1,1792 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NOX HELION</title>
+<style>
+:root{color-scheme:dark;font:14px/1.5 "Segoe UI",system-ui,sans-serif;--text:#e3edf5;--muted:#8c9db3;--edge:#243649;--gold:#dca56b;--blue:#66a7cf}
+*{box-sizing:border-box}body{margin:0;color:var(--text);background:#04070c;min-height:100vh;overflow:hidden}
+body:before{content:"";position:fixed;inset:0;background:radial-gradient(ellipse at 35% 47%,#16283a 0,#090f1b 45%,#030508 80%);pointer-events:none}
+main{position:relative;display:grid;grid-template-columns:minmax(450px,1fr) minmax(390px,38%);height:100vh}
+header{display:flex;align-items:center;justify-content:space-between;gap:15px}.brand{font-weight:700;letter-spacing:.4em;font-size:17px}.eyebrow{font-size:10px;color:var(--muted);letter-spacing:.22em}
+.visual{padding:24px 32px;min-height:0;display:flex;flex-direction:column}.constellation{position:relative;flex:1;min-height:260px;overflow:hidden;isolation:isolate}
+.ring{position:absolute;top:50%;left:50%;width:min(68vh,65vw);height:min(68vh,65vw);transform:translate(-50%,-50%) rotate(-17deg);border:1px solid #4661783a;border-radius:50%;box-shadow:0 0 55px #1c5b8220;pointer-events:none}
+.ring:before,.ring:after{content:"";position:absolute;inset:11%;border:1px solid #95704a27;border-radius:50%}.ring:after{inset:25%;border-color:#69a7ca24}
+.helion{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:min(38vh,31vw);height:min(38vh,31vw);min-width:170px;min-height:170px;border-radius:50%;background:radial-gradient(circle at 41% 35%,#0a111c 0%,#010205 43%,#182233 59%,#bf8650 63%,#432c1b 66%,#010308 73%);box-shadow:0 0 38px #c882473a,0 0 140px #3e69822b,inset 0 0 50px #000}
+.helion-core{position:absolute;inset:24%;border-radius:50%;background:radial-gradient(circle at 34% 32%,#192537,#030508 42%,#020307 68%,#482a1d 77%,transparent 84%);box-shadow:inset 0 0 30px #000,0 0 32px #ca82473a}
+.helion:after{content:"";position:absolute;inset:-8%;border:1px solid #cd926344;border-radius:50%;transform:rotateX(68deg) rotate(-12deg)}
+.core{position:absolute;z-index:2;width:92px;height:92px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;background:radial-gradient(circle at 36% 28%,#26374c 0,#080d16 50%,#010308 75%);border:1px solid #6e8da550;color:#bfd4e6;box-shadow:inset 0 0 23px #000,0 0 23px #2d5b7823;cursor:pointer;transition:filter .2s,border-color .2s;letter-spacing:.09em;font-size:9px}
+.core:before{content:"";position:absolute;inset:-4px;border:1px solid #e19c5033;border-radius:50%}.core span{font-size:17px;color:#d3a777}
+.core:hover,.core.active{border-color:#e3ac77;filter:brightness(1.35)}
+.c1{top:4%;left:calc(50% - 46px)}.c2{top:18%;right:11%}.c3{top:calc(50% - 46px);right:1%}.c4{bottom:18%;right:11%}.c5{bottom:4%;left:calc(50% - 46px)}.c6{bottom:18%;left:11%}.c7{top:calc(50% - 46px);left:1%}.c8{top:18%;left:11%}
+.visual-foot{display:flex;justify-content:space-between;color:#768da4;font-size:10px;letter-spacing:.17em}
+.side{border-left:1px solid var(--edge);background:#070d16ed;display:flex;flex-direction:column;min-height:0;padding:23px;overflow:auto}
+.routeHead{padding-top:15px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--edge);padding-bottom:12px}
+h2{font-size:16px;letter-spacing:.19em;margin:0}.status{font:11px monospace;color:#91b7d6}
+.panel{display:none;flex-direction:column;gap:13px;flex:1;min-height:0;padding-top:17px}.panel.active{display:flex}
+.intro{color:#94a9b9;font-size:12px}.feed{flex:1;min-height:120px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere}.entry{border:1px solid #2b3b4c;background:#101b29;border-radius:13px;padding:13px;margin-bottom:10px}.entry.user{border-color:#476982}.entry small{display:block;color:var(--muted);margin-bottom:5px}
+.controls{display:flex;gap:8px}.controls>*{min-width:0}textarea,input,select{background:#101d2b;border:1px solid #36536b;border-radius:9px;color:#dceaf4;padding:12px;font:inherit;outline-color:#9abbd2}textarea{resize:vertical;min-height:80px;flex:1}input{flex:1}button.action{border:1px solid #42617b;border-radius:9px;background:#14283d;color:#d8e8f5;padding:10px 13px;cursor:pointer}button.action:hover{background:#25445c}button.action.danger{border-color:#9b6b64}button:disabled{opacity:.45;cursor:default}
+.meter{height:7px;background:#152635;border:1px solid #35526b;border-radius:99px;overflow:hidden}.meter span{display:block;height:100%;width:0%;background:linear-gradient(90deg,#357895,#edab6a);transition:width .3s ease}.meterLabel{font:12px Consolas,monospace;color:#9ec2d5}
+.mono{font:12px/1.6 ui-monospace,Consolas,monospace;white-space:pre-wrap;color:#a4bbca;overflow-wrap:anywhere}.hint{font-size:11px;color:#a9a8aa}.task{display:flex;align-items:center;gap:10px;padding:9px 6px;border-bottom:1px solid #1b3041}.task.done{text-decoration:line-through;color:#708395}.scroll{overflow:auto;max-height:55vh}.sr-only{position:absolute;left:-9999px}
+@media(prefers-reduced-motion:no-preference){.helion{animation:breath 8s ease-in-out infinite}@keyframes breath{50%{box-shadow:0 0 55px #c8824763,0 0 155px #3e69823a,inset 0 0 50px #000}}}
+body.reduced .helion{animation:none}button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid #f6be87;outline-offset:3px}
+@media(max-width:1000px){main{grid-template-columns:1fr}.visual{height:49vh;padding:15px}.constellation{min-height:170px}.core{width:56px;height:56px;font-size:6px}.core span{font-size:12px}.c1{left:calc(50% - 28px)}.c3{top:calc(50% - 28px)}.c5{left:calc(50% - 28px)}.c7{top:calc(50% - 28px)}.helion{min-width:110px;min-height:110px;width:22vh;height:22vh}.side{height:51vh;border-left:0;border-top:1px solid var(--edge);padding:14px}.visual-foot{display:none}}
+
+/* R1 D02 cinematic interface: nine real interactive spheres, responsive HUD */
+:root{--obsidian:#040609;--orange:#f4aa72;--cyan:#73c9df;--frost:#a8bacb;--aura:#316f84}
+html{scroll-behavior:smooth}body{background:linear-gradient(140deg,#020307,#07101b 55%,#020307)}
+body:after{content:"";position:fixed;inset:0;pointer-events:none;opacity:.18;background-image:radial-gradient(#8ca9c5 0.45px,transparent .55px);background-size:19px 19px;mask-image:linear-gradient(110deg,#0003,transparent 70%)}
+main{isolation:isolate}.visual{background:radial-gradient(ellipse at 49% 54%,#14253a16,#04070a00 70%)}
+.visual header{position:relative;z-index:12}.brand{font-weight:600;text-shadow:0 0 19px #6eacd655}
+.constellation{min-height:330px;perspective:900px}.constellation:before{content:"";position:absolute;inset:6% 8%;background:radial-gradient(ellipse at center,#ffffff08,transparent 69%);border:1px solid #6e869617;clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%);pointer-events:none}
+.ring{border-color:#7b9cb72e;filter:drop-shadow(0 0 18px #5282b323)}.ring:before{inset:7%;border-color:#d4a16e3b;border-style:dashed;box-shadow:0 0 26px #e4a46b10}.ring:after{inset:23%;border-color:#73b6ca47}
+.helion{width:min(41vh,33vw);height:min(41vh,33vw);border:1px solid #d9a16d6e;background:radial-gradient(circle at 31% 25%,#193047cc 0%,#05070e 31%,#000104 44%,#05090f 57%,#9d5d31 63%,#e6a46c 65%,#2b1c13 69%,#010205 75%);box-shadow:0 0 2px #ffcea1,0 0 36px #de864b50,0 0 92px #ba653020,0 0 170px #427d9440,inset 0 0 60px #000;z-index:1}
+.helion:before{content:"";position:absolute;inset:-22%;border-radius:50%;background:conic-gradient(from 30deg,transparent 0 8%,#d17a4335 10%,transparent 15% 46%,#55acc030 50%,transparent 59% 83%,#f8ad7535 86%,transparent 95%);filter:blur(13px);z-index:-1}
+.helion-core{inset:14%;background:radial-gradient(ellipse at 27% 22%,#1a3540 0%,#02040a 32%,#000 70%,#c07b5224 82%,transparent 88%);box-shadow:inset 0 0 60px #000,0 0 55px #be704130}
+.helion-core:after{content:"";position:absolute;inset:13%;border-radius:50%;background:radial-gradient(ellipse at 73% 89%,#ffd2a016,#0000 40%);border:1px solid #f4a97508}
+.helion:after{border-color:#e3a97677;inset:-18%;box-shadow:0 0 30px #cc88554f}
+.core{box-shadow:inset 0 0 28px #000,0 0 18px #2b7f9f26,0 0 1px #d3a67c8a;backdrop-filter:blur(4px);color:#c9dbe9}
+.core span{font-size:22px;text-shadow:0 0 12px #ffba7195}.core.active{box-shadow:inset 0 0 24px #000,0 0 33px #eaa06c44,0 0 4px #e4a36d66}
+.core:hover,.core:focus-visible{filter:brightness(1.45);transform:scale(1.04)}
+.side{background:linear-gradient(165deg,#07121fe8,#05080de9 58%,#0c121bee);border-color:#42637b50;box-shadow:-18px 0 100px #0006}
+.routeHead{border-image:linear-gradient(90deg,#e3ac785e,#5fb0db42,transparent) 1}
+.panel{padding-bottom:12px}h2{font-weight:600;letter-spacing:.13em}.intro{color:#a2b4c1}
+.status{background:#12263a;padding:5px 9px;border:1px solid #31516b;border-radius:8px;color:#c2d8e9;max-width:205px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.core:focus-visible,.action:focus-visible{outline:2px solid #ffb67e;outline-offset:4px}
+.panel .intro{line-height:1.6}.entry{background:linear-gradient(130deg,#101e2e,#111926);border-color:#3145587c}.entry.user{background:#152838;border-color:#558c9e83}
+.entry .ratings{display:flex;gap:8px;margin-top:12px}.pill{font-size:10px;letter-spacing:.12em;color:#a2bfd1;border:1px solid #35536e88;padding:6px 9px;border-radius:20px;background:#0b1b2a}
+.rowtitle{font-weight:600;letter-spacing:.12em;margin:6px 0 3px}.rowsummary{font-size:12px;color:#94a8ba}
+.hud{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;padding:11px 0}
+.hud-item{padding:10px 11px;background:linear-gradient(155deg,#0f2233bf,#09111ce6);border:1px solid #35536b82;border-radius:11px}
+.hud-item strong{display:block;color:#a7d9ea;letter-spacing:.06em;font-size:12px}.hud-item small{display:block;color:#7693a6;font-size:9px;letter-spacing:.12em}
+.quick{display:flex;gap:8px;padding-top:9px;flex-wrap:wrap}.quick .action{font-size:10px;letter-spacing:.08em;padding:8px 12px}
+/* D01 accessibility: preserve five native quick actions in compact layouts;
+   minimum 44 CSS px touch targets at 320/390/800. */
+@media(max-width:1000px){.quick .action{min-height:44px;min-width:44px}}
+#modelPicker{width:100%;max-width:100%}.note-card{border:1px solid #304e62;border-radius:12px;background:#101c29;padding:13px;margin:7px 0;overflow-wrap:anywhere}
+.note-card .meta{font-size:10px;color:#88a1b6}.note-card p{white-space:pre-wrap;line-height:1.5;margin:8px 0}.note-title{font-weight:600;color:#e1cbad}
+.inspector{font:11px/1.5 Consolas,ui-monospace,monospace;color:#a7bac8;white-space:pre-wrap;overflow-wrap:anywhere;max-height:25vh;overflow:auto}
+hr{height:1px;background:#263b4d;border:0;width:100%}.controls .wide{flex:1}input[type=checkbox]{accent-color:#d6a477;cursor:pointer}
+.live-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#bd7c55;margin-right:7px;box-shadow:0 0 7px #df9777}.live-dot.on{background:#61cd9b;box-shadow:0 0 9px #62db9c}
+.topline{position:relative;z-index:20;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #2f4b6155;padding-bottom:14px;gap:20px}
+.topline .device-status{font:11px ui-monospace,monospace;color:#87a8b8}.security{font-size:10px;letter-spacing:.09em;color:#83b7c1}
+.generation{margin-top:6px;height:2px;width:100%;border-radius:2px;overflow:hidden;background:#294050;opacity:0;transition:opacity .2s}.generation.on{opacity:1}.generation:after{content:"";display:block;width:35%;height:100%;background:linear-gradient(90deg,#e2b078,#76c5d7);animation:gen 2s ease-in-out infinite alternate}
+@keyframes gen{from{transform:translateX(-25%)}to{transform:translateX(290%)}}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}}
+body.reduced *,body.reduced *:before,body.reduced *:after{animation:none!important;transition:none!important}
+@media(max-width:1250px){main{grid-template-columns:minmax(400px,1fr) minmax(390px,43%)}.core{width:80px;height:80px}.c1{left:calc(50% - 40px)}.c5{left:calc(50% - 40px)}.c3,.c7{top:calc(50% - 40px)}.helion{width:min(33vh,32vw);height:min(33vh,32vw)}}
+@media(max-width:1000px){body{overflow:auto}main{height:100vh;grid-template-columns:1fr;grid-template-rows:46vh 54vh}.visual{height:auto;padding:14px 18px;min-height:0}.constellation{min-height:130px}.side{height:auto;overflow-x:hidden;overflow-y:auto}.core{width:56px;height:56px}.c1,.c5{left:calc(50% - 28px)}.c3,.c7{top:calc(50% - 28px)}.helion{min-width:95px;min-height:95px;width:23vh;height:23vh}.visual-foot{display:none}.side{padding:12px 16px}.panel{padding-top:10px}.hud{gap:5px}.hud-item{padding:8px}.quick{padding-top:4px}}
+@media(max-height:570px) and (min-width:1001px){.visual{padding:14px}.constellation{min-height:160px}.core{height:64px;width:64px}.core span{font-size:16px}.core{font-size:7px}.c1,.c5{left:calc(50% - 32px)}.c3,.c7{top:calc(50% - 32px)}.side{padding:13px}.helion{min-height:140px;min-width:140px;width:28vh;height:28vh}}
+
+@media(max-width:1000px) and (max-height:620px){
+  .visual{height:45vh;min-height:200px}.side{height:55vh}
+  .core{width:52px;height:52px;transform:none}
+  .c1,.c2,.c3,.c4{top:2%;bottom:auto;right:auto}
+  .c5,.c6,.c7,.c8{top:auto;bottom:2%;right:auto}
+  .c1,.c5{left:calc(13% - 26px)}.c2,.c6{left:calc(35% - 26px)}
+  .c3,.c7{left:calc(65% - 26px)}.c4,.c8{left:calc(87% - 26px)}
+  .helion{width:17vh;height:17vh;min-width:100px;min-height:100px}
+  .ring{width:43vh;height:43vh}
+}
+
+/* Native WebGL2 liquid HELION: fully offline, GPU canvas with CSS fallback. */
+.helion{overflow:visible;contain:layout style;will-change:filter}
+.helion-fx{position:absolute;z-index:2;inset:-24%;width:148%;height:148%;pointer-events:none;border-radius:50%;opacity:.97;mix-blend-mode:screen;filter:drop-shadow(0 0 17px #e6a16f66)}
+.helion-core{z-index:1;opacity:.14;pointer-events:none}
+.helion[data-fx="active"]{background:radial-gradient(circle at 50% 50%,#000 13%,#010307 64%,#2b1c19 75%,transparent 82%)}
+.helion[data-fx="disabled"] .helion-fx{display:none}
+.helion[data-fx="disabled"] .helion-core{opacity:1}
+.core{transform:translateZ(0)}.core:after{content:"";position:absolute;inset:8px;border:1px solid #d69b5638;border-radius:50%;box-shadow:inset -6px -7px 13px #0009;pointer-events:none}
+.core.active{animation:orb-active 5s ease-in-out infinite;}
+@keyframes orb-active{0%,100%{box-shadow:0 0 14px #c67c4240,inset 0 0 21px #000}50%{box-shadow:0 0 34px #eab27280,inset 0 0 18px #000}}
+@media(prefers-reduced-motion:reduce){.helion-fx{filter:none}.core.active{animation:none}}
+body.reduced .helion-fx{filter:none}body.reduced .core.active{animation:none}
+
+/* NOX V16 CINEMA CSS, original donor 7205f4b747ed6b95856e0207a9b52cce29f9d118; selectors map to current R8 DOM */
+/* NOX R11 — original eight MENU tiles, theatrical light. Never hide/replace source art. */
+body{isolation:isolate;--nox-r11-amber:rgba(242,181,109,.74);--nox-r11-blue:rgba(128,209,235,.25)}
+body .core{isolation:isolate;overflow:visible;will-change:auto;transition:filter .23s ease,box-shadow .23s ease;outline-offset:4px}
+body .core::before{content:"";position:absolute;pointer-events:none;inset:-2px;border:1px solid rgba(247,187,119,.22);border-radius:inherit;opacity:.72;box-shadow:inset 0 1px rgba(254,213,161,.16),0 0 25px rgba(214,126,56,.08);transition:opacity .25s,border-color .25s,box-shadow .25s}
+body .core::after{content:"";position:absolute;pointer-events:none;inset:-5px;border-radius:inherit;background:radial-gradient(ellipse at 50% 103%,rgba(255,180,96,.17),transparent 63%);filter:blur(9px);opacity:0;transition:opacity .25s}
+body .core:hover:not(:disabled),body .core:focus-visible{filter:brightness(1.13) saturate(1.11);box-shadow:0 0 30px rgba(237,154,90,.15),0 10px 27px rgba(0,0,0,.18)}
+body .core:hover:not(:disabled)::before,body .core:focus-visible::before{border-color:rgba(255,208,143,.8);opacity:1;box-shadow:inset 0 0 12px rgba(246,180,115,.18),0 0 27px rgba(238,172,107,.33)}
+body .core:hover:not(:disabled)::after,body .core:focus-visible::after{opacity:1}
+body .core:focus-visible{outline:2px solid #f7c895}
+body .core[data-nox-native-state="pending"]::before{border-color:rgba(235,194,119,.95);box-shadow:0 0 22px rgba(249,196,113,.5);animation:nox-r11-await 1.25s ease-in-out infinite}
+body .core[data-nox-native-state="confirmed"]::before{border-color:rgba(142,238,231,.8);box-shadow:0 0 26px rgba(103,231,222,.4)}
+body .core[data-nox-native-state="hold"]::before{border-color:rgba(255,134,102,.7);box-shadow:0 0 12px rgba(240,122,78,.25)}
+body .nox-r11-cinematic-subworld{transition:box-shadow .23s ease,filter .23s ease}
+body .nox-r11-cinematic-subworld:hover:not(:disabled),body .nox-r11-cinematic-subworld:focus-visible{filter:brightness(1.14);box-shadow:0 0 24px rgba(245,175,104,.22)}
+.nox-r11-cinematic-surface{position:relative;isolation:isolate}
+.nox-r11-cinematic-atmosphere{position:absolute;inset:0;overflow:hidden;z-index:0;pointer-events:none!important;isolation:isolate}
+.nox-r11-cinematic-beam{position:absolute;inset:0;background:radial-gradient(ellipse at 75% -25%,rgba(255,164,89,.11),transparent 62%);opacity:.7;mix-blend-mode:screen;animation:nox-r11-breathe 10s ease-in-out infinite alternate}
+.nox-r11-cinematic-dust{position:absolute;inset:0;opacity:.25;background-image:radial-gradient(1px 1px at 14% 18%,rgba(255,213,156,.6),transparent),radial-gradient(1px 1px at 72% 29%,rgba(252,218,174,.5),transparent),radial-gradient(2px 2px at 84% 65%,rgba(155,204,242,.3),transparent),radial-gradient(1px 1px at 38% 79%,rgba(245,196,142,.5),transparent);background-size:100% 100%;animation:nox-r11-breathe 12s ease-in-out infinite alternate-reverse}
+body[data-nox-r11-cinematic-mode="ECO"] .nox-r11-cinematic-atmosphere,body[data-nox-r11-cinematic-hidden="true"] .nox-r11-cinematic-atmosphere{display:none}
+body[data-nox-r11-cinematic-mode="BALANCED"] .nox-r11-cinematic-dust{animation:none}
+@keyframes nox-r11-await{50%{opacity:.5}}@keyframes nox-r11-breathe{from{opacity:.26}to{opacity:.72}}
+@media(prefers-reduced-motion:reduce){body .core,body .core::before,body .core::after,body .nox-r11-cinematic-subworld,body .nox-r11-cinematic-atmosphere,body .nox-r11-cinematic-atmosphere *{animation:none!important;transition:none!important;transform:none!important}}
+body[data-nox-r11-cinematic-mode="REDUCED"] .core,body[data-nox-r11-cinematic-mode="REDUCED"] .core::before,body[data-nox-r11-cinematic-mode="REDUCED"] .core::after,body[data-nox-r11-cinematic-mode="REDUCED"] .nox-r11-cinematic-subworld,body[data-nox-r11-cinematic-mode="REDUCED"] .nox-r11-cinematic-atmosphere,body[data-nox-r11-cinematic-mode="REDUCED"] .nox-r11-cinematic-atmosphere *{animation:none!important;transition:none!important;transform:none!important}
+@media(forced-colors:active){body .core::before{border-color:CanvasText}body .core:hover:not(:disabled){filter:none}}
+
+
+/* NOX FIVE THEMES: additive to one canonical WebView2 HOME, all routes.
+   Visual-only. Does not change native IPC, sensors, models, navigation or SQLite. */
+.nox-theme-toggle{position:fixed;left:10px;top:74px;z-index:50;width:36px;height:36px;border:1px solid var(--gold);border-radius:9px;color:var(--gold);background:rgba(6,11,21,.88);box-shadow:0 0 17px rgba(220,165,107,.2);cursor:pointer;font-size:20px;line-height:1}
+.nox-theme-toggle:focus-visible{outline:3px solid var(--blue);outline-offset:3px}
+.nox-theme-toggle:hover{filter:brightness(1.18)}
+body[data-nox-theme="aurora"]{--gold:#80dcce;--blue:#b2a6ff;--edge:#45606a}
+body[data-nox-theme="aurora"]::before{background:radial-gradient(ellipse at 34% 42%,#193854 0%,#0d1d35 47%,#040711 88%)}
+body[data-nox-theme="aurora"] .helion,body[data-nox-theme="aurora"] .core{filter:hue-rotate(100deg) saturate(1.15)}
+body[data-nox-theme="copper"]{--gold:#ff9b64;--blue:#e5c18c;--edge:#664035}
+body[data-nox-theme="copper"]::before{background:radial-gradient(ellipse at 35% 44%,#3c231c 0%,#1d1115 50%,#080609 89%)}
+body[data-nox-theme="copper"] .helion,body[data-nox-theme="copper"] .core{filter:hue-rotate(-25deg) saturate(1.3)}
+body[data-nox-theme="nebula"]{--gold:#cb99ed;--blue:#72bee6;--edge:#48365e}
+body[data-nox-theme="nebula"]::before{background:radial-gradient(ellipse at 60% 38%,#32254b 0%,#121a36 49%,#050610 87%)}
+body[data-nox-theme="nebula"] .helion,body[data-nox-theme="nebula"] .core{filter:hue-rotate(185deg) saturate(1.2)}
+body[data-nox-theme="frost"]{--gold:#b5dbe9;--blue:#68d6ed;--edge:#355766}
+body[data-nox-theme="frost"]::before{background:radial-gradient(ellipse at 45% 38%,#1b3949 0%,#0d202c 48%,#050e16 87%)}
+body[data-nox-theme="frost"] .helion,body[data-nox-theme="frost"] .core{filter:hue-rotate(150deg) saturate(.7)}
+body[data-nox-theme]:not([data-nox-theme="obsidian"]) .ring{border-color:var(--edge);box-shadow:0 0 50px color-mix(in srgb,var(--blue) 24%,transparent)}
+@media(max-width:600px){.nox-theme-toggle{left:5px;top:58px;width:31px;height:31px;font-size:17px}}
+@media(prefers-reduced-motion:reduce){.nox-theme-toggle{transition:none}}
+
+
+/* NOX CINEMA V16 exact donor additive; preserve native absolute orbits. */
+/* NOX CINEMA FX V16 — additive licensed-original D02 effects.
+   Trusted local WebView2 pages only. Does not overwrite approved image/video assets.
+   Deliberately avoids 3D runtimes, external fonts, HTTP and privileged host messages. */
+.nox-cinema-scope {
+  --nox-ice: rgba(155, 234, 238, .62);
+  --nox-ember: rgba(224, 120, 55, .52);
+  --nox-panel: rgba(13, 23, 31, .64);
+  --nox-border: rgba(169, 224, 232, .3);
+  --nox-fg: #eaf4f5;
+  --nox-wake: 1;
+  color-scheme: dark;
+}
+.nox-cinema-panel {
+  position:relative; isolation:isolate;
+  border:1px solid var(--nox-border);
+  border-radius:18px; color:var(--nox-fg);
+  background:linear-gradient(145deg,rgba(83,110,123,.16),var(--nox-panel) 58%,rgba(3,8,13,.75));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.17),inset 0 -2px 12px rgba(0,0,0,.24),
+    0 10px 32px rgba(0,0,0,.32),0 0 24px rgba(107,194,209,.055);
+  backdrop-filter:blur(9px) saturate(1.13);
+  -webkit-backdrop-filter:blur(9px) saturate(1.13);
+  transition:box-shadow .28s ease,border-color .28s ease,background .28s ease;
+}
+.nox-cinema-panel::before {
+  content:"";pointer-events:none;position:absolute;inset:0;border-radius:inherit;
+  background:linear-gradient(115deg,transparent 30%,rgba(178,237,245,.1) 49%,transparent 66%);
+  background-size:240% 100%;
+  animation:nox-cinema-sweep 16s ease-in-out infinite;
+}
+.nox-cinema-panel::after {
+  content:"";pointer-events:none;position:absolute;inset:0;border-radius:inherit;
+  box-shadow:inset 1px 1px 0 rgba(193,249,253,.09),inset -1px -1px 0 rgba(217,105,54,.07);
+}
+.nox-cinema-panel:hover,.nox-cinema-panel:focus-within {
+  border-color:rgba(152,233,241,.51);
+  box-shadow:0 12px 32px rgba(0,0,0,.42),0 0 28px rgba(102,202,222,.13),
+    inset 0 1px rgba(233,254,255,.2);
+}
+.nox-cinema-control {
+  --nox-float-shift: 0px;
+  position:relative; isolation:isolate;overflow:hidden;
+  color:var(--nox-fg);background:linear-gradient(160deg,rgba(60,78,93,.44),rgba(9,18,26,.87));
+  border:1px solid rgba(154,224,232,.32);
+  border-radius:11px;
+  box-shadow:inset 0 1px rgba(255,255,255,.14),0 5px 14px #0005,0 0 12px #5ca6b111;
+  text-shadow:0 0 9px #c2fcff25;
+  transition:box-shadow .25s,border-color .25s,filter .25s;
+}
+.nox-cinema-control::before {
+  content:"";position:absolute;pointer-events:none;inset:0;
+  background:linear-gradient(120deg,transparent 32%,rgba(178,249,251,.18) 50%,transparent 70%);
+  background-size:260% 100%;
+  animation:nox-cinema-sweep 13s linear infinite;
+}
+.nox-cinema-control[data-nox-float="true"]::before {
+  animation:nox-cinema-float 6s ease-in-out infinite;
+  animation-delay:var(--nox-delay, 0s);
+}
+.nox-cinema-control:hover:not(:disabled),.nox-cinema-control:focus-visible {
+  border-color:rgba(195,249,255,.86);filter:brightness(1.13);
+  box-shadow:0 9px 20px #0007,0 0 19px rgba(100,224,235,.29),inset 0 0 12px #b3f6ff1a;
+}
+.nox-cinema-control:active:not(:disabled) { filter:brightness(1.3); }
+.nox-cinema-control:focus-visible { outline:2px solid #c4ffff;outline-offset:3px; }
+.nox-cinema-control:disabled { opacity:.45;cursor:not-allowed;animation:none; }
+.nox-cinema-scope[data-nox-fx-state="streaming"] .nox-cinema-panel {
+  border-color:rgba(113,212,221,.5);
+}
+.nox-cinema-scope[data-nox-fx-state="error"] .nox-cinema-panel {
+  border-color:rgba(241,138,129,.65);
+}
+.nox-cinema-scope[data-nox-fx-state="paused"] .nox-cinema-panel {
+  border-color:rgba(228,166,92,.6);
+}
+/* Each orb preserves the original approved asset under/behind translucent layers. */
+.nox-cinema-orb {
+  position:relative;isolation:isolate;border-radius:50%;
+  --nox-orb-heat:.4;
+}
+.nox-cinema-orb__layers {
+  position:absolute;inset:-7%;z-index:2;overflow:visible;pointer-events:none;border-radius:50%;
+  contain:layout style;
+}
+.nox-cinema-orb__lava,.nox-cinema-orb__crust,.nox-cinema-orb__corona {
+  position:absolute;inset:8%;border-radius:50%;pointer-events:none;
+}
+.nox-cinema-orb__lava {
+  background:
+    conic-gradient(from 18deg,transparent 2%,rgba(198,75,33,.38) 8%,transparent 14%,
+      rgba(220,110,55,.14) 21%,transparent 31%,rgba(238,133,51,.42) 40%,
+      transparent 45%,rgba(214,96,35,.23) 55%,transparent 65%,rgba(237,133,57,.3) 79%,transparent 90%),
+    radial-gradient(ellipse at 63% 58%,rgba(224,116,47,.38),transparent 55%),
+    radial-gradient(ellipse at 39% 39%,rgba(233,99,43,.2),transparent 42%);
+  mix-blend-mode:screen;
+  filter:blur(2px) contrast(1.25);
+  opacity:.68;animation:nox-cinema-lava-flow 23s ease-in-out infinite alternate;
+}
+.nox-cinema-orb__crust {
+  background:radial-gradient(circle at 32% 25%,rgba(221,239,237,.13),transparent 25%),
+    conic-gradient(from 0deg,rgba(0,0,0,.13),rgba(10,12,15,.42),rgba(0,0,0,.15),rgba(20,19,18,.49),rgba(0,0,0,.13));
+  box-shadow:inset -13px -17px 19px rgba(0,0,0,.5),
+    inset 8px 6px 12px rgba(225,240,237,.045);
+  opacity:.5;animation:nox-cinema-crust-drift 39s linear infinite;
+}
+.nox-cinema-orb__corona {
+  inset:1%;border:1px solid rgba(224,132,78,.19);
+  box-shadow:0 0 11px rgba(231,101,50,.22),0 0 27px rgba(206,89,46,.16),
+    inset 0 0 18px rgba(221,124,55,.14);
+  opacity:.66;animation:nox-cinema-corona 6.5s ease-in-out infinite alternate;
+}
+.nox-cinema-orb[data-nox-fx-state="training"] {--nox-orb-heat:.8;}
+.nox-cinema-orb[data-nox-fx-state="offline"] .nox-cinema-orb__lava { opacity:.12; }
+.nox-cinema-orb[data-nox-fx-state="error"] .nox-cinema-orb__corona {border-color:#e99b91;box-shadow:0 0 20px #c55c4999;}
+.nox-cinema-orb__ejecta {
+  position:absolute;inset:0;width:100%;height:100%;z-index:3;
+  pointer-events:none;mix-blend-mode:screen;
+}
+@keyframes nox-cinema-float {
+  0%,100%{transform:translate3d(0,0,0) rotate(-.3deg)}
+  50%{transform:translate3d(0,-3px,0) rotate(.3deg)}
+}
+@keyframes nox-cinema-sweep { from{background-position:160% 0}to{background-position:-170% 0} }
+@keyframes nox-cinema-lava-flow {
+  0%{transform:rotate(-9deg) scale(.98);opacity:.55}
+  100%{transform:rotate(21deg) scale(1.045);opacity:.82}
+}
+@keyframes nox-cinema-crust-drift {to{transform:rotate(360deg)}}
+@keyframes nox-cinema-corona {
+  0%{transform:scale(.99);opacity:.43}
+  100%{transform:scale(1.026);opacity:.83}
+}
+.nox-cinema-scope[data-nox-fx-mode="eco"] .nox-cinema-panel {backdrop-filter:none;-webkit-backdrop-filter:none;}
+.nox-cinema-scope[data-nox-fx-mode="eco"] .nox-cinema-orb__lava {filter:none;}
+.nox-cinema-scope[data-nox-fx-mode="eco"] .nox-cinema-control::before,
+.nox-cinema-scope[data-nox-fx-mode="eco"] .nox-cinema-panel::before {animation-duration:25s;}
+.nox-cinema-scope[data-nox-fx-mode="eco"] .nox-cinema-control[data-nox-float="true"]::before {animation-duration:10s;}
+/* Original WebView2 HOME: the OS Reduced Motion preference must suppress
+   ALL D02 transitions and pseudo-element animations, not only orb layers.
+   Keep the original controls interactive; no media emulation or JS overrides. */
+@media(prefers-reduced-motion:reduce) {
+  .nox-cinema-scope, .nox-cinema-scope *,
+  .nox-cinema-scope *::before, .nox-cinema-scope *::after {
+    animation:none!important;transition:none!important;
+  }
+}
+@media(forced-colors:active) {
+  .nox-cinema-panel,.nox-cinema-control {background:Canvas;color:CanvasText;border:1px solid CanvasText;}
+  .nox-cinema-control:focus-visible {outline:2px solid Highlight;}
+}
+
+/* V16 D02 · liquid obsidian, fissures and rare gravitationally returning ejecta.
+   These overlays are purely ornamental; original approved sphere artwork stays below. */
+.nox-cinema-orb__filaments {
+  position:absolute;inset:10%;border-radius:50%;pointer-events:none;
+  background:
+    repeating-conic-gradient(from 3deg at 45% 55%,
+      rgba(235,124,58,.08) 0deg,transparent 5deg,transparent 23deg,
+      rgba(241,111,59,.35) 27deg,transparent 30deg,transparent 60deg),
+    radial-gradient(ellipse at 52% 64%,transparent 39%,rgba(242,112,53,.24) 45%,transparent 52%),
+    radial-gradient(ellipse at 70% 38%,transparent 26%,rgba(233,126,71,.3) 35%,transparent 43%);
+  mix-blend-mode:screen;
+  -webkit-mask-image:radial-gradient(circle,#000 10%,#000 69%,transparent 76%);
+  mask-image:radial-gradient(circle,#000 10%,#000 69%,transparent 76%);
+  opacity:.77;
+  animation:nox-cinema-filament-flow 29s ease-in-out infinite alternate;
+}
+.nox-cinema-orb__rim {
+  position:absolute;inset:1%;pointer-events:none;border-radius:50%;
+  border:1px solid rgba(238,149,83,.19);
+  background:conic-gradient(from 130deg,transparent 4%,rgba(216,96,51,.22) 18%,
+    transparent 36%,rgba(230,123,67,.11) 49%,transparent 64%,
+    rgba(244,180,105,.2) 78%,transparent 89%);
+  box-shadow:inset 0 0 12px rgba(241,141,75,.15),0 0 17px rgba(207,77,51,.12);
+  opacity:.6;
+  animation:nox-cinema-rim-spin 47s linear infinite;
+}
+.nox-cinema-orb__ejecta path {
+  filter:drop-shadow(0 0 1.6px rgba(236,114,56,.55));
+}
+.nox-cinema-orb[data-nox-fx-state="training"] .nox-cinema-orb__filaments,
+.nox-cinema-orb[data-nox-fx-state="streaming"] .nox-cinema-orb__filaments {
+  opacity:.95;
+}
+.nox-cinema-orb[data-nox-fx-state="paused"] .nox-cinema-orb__corona {
+  border-color:rgba(233,189,119,.37);
+  box-shadow:0 0 16px rgba(243,165,80,.26);
+}
+.nox-cinema-orb[data-nox-fx-state="speaking"] .nox-cinema-orb__rim {
+  border-color:rgba(151,238,240,.48);
+  box-shadow:0 0 22px rgba(116,206,217,.17);
+}
+.nox-cinema-orb[data-nox-fx-state="offline"] .nox-cinema-orb__filaments {opacity:.14;}
+.nox-cinema-orb[data-nox-fx-state="error"] .nox-cinema-orb__filaments {filter:hue-rotate(-20deg);}
+.nox-cinema-scope[data-nox-fx-mode="max"] .nox-cinema-orb__corona {
+  box-shadow:0 0 14px rgba(243,142,64,.28),0 0 36px rgba(192,66,35,.22),
+    inset 0 0 20px rgba(233,147,83,.12);
+}
+/* Active secondary-screen controls only; decorative layer never receives clicks.
+   Keep original button handlers, keyboard focus and readable foreground intact. */
+.nox-cinema-scope .nox-cinema-control {will-change:auto;}
+.nox-cinema-scope .nox-cinema-control[data-nox-float="true"]::before {
+  animation:nox-cinema-float 7.4s ease-in-out infinite;
+}
+.nox-cinema-scope .nox-cinema-control[data-nox-float="true"]:nth-child(4n+2)::before {
+  animation-duration:8.9s;animation-delay:-2.7s;
+}
+.nox-cinema-scope .nox-cinema-control[data-nox-float="true"]:nth-child(4n+3)::before {
+  animation-duration:10.6s;animation-delay:-4.1s;
+}
+.nox-cinema-scope .nox-cinema-panel {
+  background-image:linear-gradient(130deg,rgba(107,161,175,.08),transparent 39%),
+    linear-gradient(145deg,rgba(83,110,123,.16),var(--nox-panel) 58%,rgba(3,8,13,.75));
+}
+.nox-cinema-scope[data-nox-fx-mode="eco"] .nox-cinema-orb__filaments,
+.nox-cinema-scope[data-nox-fx-mode="eco"] .nox-cinema-orb__rim,
+.nox-cinema-scope[data-nox-fx-mode="reduced"] .nox-cinema-orb__filaments,
+.nox-cinema-scope[data-nox-fx-mode="reduced"] .nox-cinema-orb__rim {
+  animation:none;filter:none;
+}
+.nox-cinema-scope[data-nox-fx-mode="reduced"] .nox-cinema-control::before,
+.nox-cinema-scope[data-nox-fx-mode="reduced"] .nox-cinema-control::before,
+.nox-cinema-scope[data-nox-fx-mode="reduced"] .nox-cinema-panel::before,
+.nox-cinema-scope[data-nox-fx-mode="reduced"] .nox-cinema-orb__lava,
+.nox-cinema-scope[data-nox-fx-mode="reduced"] .nox-cinema-orb__crust,
+.nox-cinema-scope[data-nox-fx-mode="reduced"] .nox-cinema-orb__corona {
+  animation:none!important;
+}
+@keyframes nox-cinema-filament-flow {
+  0% {transform:rotate(-15deg) scale(.94);opacity:.56;}
+  100% {transform:rotate(24deg) scale(1.045);opacity:.88;}
+}
+@keyframes nox-cinema-rim-spin {to{transform:rotate(360deg);}}
+@media(max-width:650px) {
+  .nox-cinema-orb__filaments {filter:none;opacity:.5;}
+  .nox-cinema-orb__rim {opacity:.4;}
+  .nox-cinema-scope .nox-cinema-panel {
+    -webkit-backdrop-filter:blur(5px);backdrop-filter:blur(5px);
+  }
+}
+@media(prefers-reduced-motion:reduce) {
+  .nox-cinema-orb__filaments,.nox-cinema-orb__rim,
+  .nox-cinema-scope .nox-cinema-control[data-nox-float="true"]::before {
+    animation:none!important;
+  }
+}
+
+/* Pause CSS work as well as JavaScript rAF when E06 host hides the view.
+   Scope only our FX so original application controls never stop processing. */
+.nox-cinema-scope[data-nox-fx-visible="false"] .nox-cinema-orb__lava,
+.nox-cinema-scope[data-nox-fx-visible="false"] .nox-cinema-orb__filaments,
+.nox-cinema-scope[data-nox-fx-visible="false"] .nox-cinema-orb__crust,
+.nox-cinema-scope[data-nox-fx-visible="false"] .nox-cinema-orb__corona,
+.nox-cinema-scope[data-nox-fx-visible="false"] .nox-cinema-orb__rim,
+.nox-cinema-scope[data-nox-fx-visible="false"] .nox-cinema-control::before,
+.nox-cinema-scope[data-nox-fx-visible="false"] .nox-cinema-control::before,
+.nox-cinema-scope[data-nox-fx-visible="false"] .nox-cinema-panel::before {
+  animation-play-state:paused!important;
+}
+
+.constellation .helion.nox-cinema-orb,.constellation button.core.nox-cinema-orb{position:absolute}
+.constellation .nox-cinema-orb__layers{pointer-events:none}
+</style></head><body class="reduced"><button type="button" id="noxThemeToggle" class="nox-theme-toggle" aria-label="Сменить оформление NOX: Обсидиан" title="Обсидиан · выбрать следующий фон">◧</button>
+<main>
+<section class="visual" aria-label="Навигация NOX HELION">
+<header class="topline"><div><div class="brand">NOX HELION</div><div class="eyebrow">D02 · LIQUID SUN · LOCAL FIRST</div></div><span class="security"><span class="live-dot" id="visualLiveDot"></span><span id="visualLive">ПРОВЕРКА ИИ</span></span></header>
+<div class="constellation"><div class="ring"></div><div class="helion" aria-hidden="true"><canvas id="helionFx" class="helion-fx"></canvas><div class="helion-core"></div></div>
+<button class="core c1 active" data-route="consciousness"><span>✦</span>CONSCIOUSNESS</button>
+<button class="core c2" data-route="atlas"><span>◇</span>ATLAS</button>
+<button class="core c3" data-route="reflection"><span>◈</span>REFLECTION</button>
+<button class="core c4" data-route="nexus"><span>✳</span>NEXUS</button>
+<button class="core c5" data-route="forge"><span>✧</span>FORGE</button>
+<button class="core c6" data-route="core"><span>◉</span>CORE</button>
+<button class="core c7" data-route="voice"><span>◎</span>VOICE</button>
+<button class="core c8" data-route="persona"><span>✺</span>PERSONA</button>
+</div><div class="visual-foot"><span>09 SPHERES · 08 SYSTEMS</span><span>LOCAL / NO CLOUD API</span></div>
+</section>
+<aside class="side"><header><div class="brand" style="font-size:12px">CORE SYSTEM</div><div class="eyebrow">R1 · WINDOWS</div></header>
+<div class="hud" aria-label="Индикаторы состояния">
+<div class="hud-item"><small>MODEL</small><strong id="hudModel">QWEN</strong></div>
+<div class="hud-item"><small>ENGINE</small><strong id="hudEngine">CHECKING</strong></div>
+<div class="hud-item"><small>MEMORY</small><strong id="hudMemory">SQLite</strong></div></div>
+<div class="quick"><button class="action" data-open="core">CHAT</button><button class="action" data-open="nexus">MODELS</button><button class="action" data-open="forge">LEARN</button><button class="action" data-open="persona">SETTINGS</button><button class="action" id="maxMode">✦ MAX</button></div>
+<div class="routeHead"><h2 id="routeTitle">CONSCIOUSNESS</h2><span class="status" id="status">CONNECTING</span></div><div class="generation" id="generation"></div>
+<section class="panel active" data-panel="consciousness"><p class="intro">Живая локальная система. Показывает проверенный статус движка, а не имитацию работы.</p><button class="action" id="overviewHealth">Проверить Qwen</button><button class="action" id="startEngine">Запустить локальный Qwen</button><button class="action" id="refreshSensors">Обновить датчики CPU/GPU</button><div id="overview" class="mono">Ожидает проверки…</div><div class="rowtitle">ПРИБОРНАЯ ПАНЕЛЬ</div><div class="inspector" id="systemInfo">Локальная информация при загрузке.</div><button class="action" data-open="core">Открыть живой чат</button></section>
+<section class="panel" data-panel="core"><div class="intro">Настоящий потоковый ответ Qwen. STOP отменяет запрос. Завершённые диалоги сохраняются в SQLite.</div><div id="messages" class="feed" aria-live="polite"></div><div class="controls"><textarea id="prompt" placeholder="Напиши NOX…" aria-label="Сообщение" maxlength="32000"></textarea><button class="action" id="send">SEND</button><button class="action danger" id="stop">STOP</button></div><div class="hint" id="streamHint">STOP отменяет потоковую генерацию через HTTP; частичный ответ не сохраняется как завершённый. Для поиска по импортированным документам: /rag ваш вопрос (до 160 символов). Без подтверждённых источников ответ не генерируется.</div><div class="hint" id="chatRagSources" role="status" aria-live="polite">RAG-источники не подключены к текущему ответу.</div><div class="hint" id="inferenceMetrics" role="status">Метрики генерации ожидаются.</div><div class="controls"><button class="action" id="feedbackUp">👍 Полезно</button><button class="action" id="feedbackDown">👎 Исправить</button></div></section>
+<section class="panel" data-panel="atlas"><p class="intro">Локальные задачи в SQLite. Добавление и отметка выполнения — реальные операции.</p><div class="controls"><input id="taskInput" placeholder="Новая задача" maxlength="500"><button class="action" id="taskAdd">Добавить</button></div><div class="scroll" id="tasks"></div></section>
+<section class="panel" data-panel="reflection"><p class="intro">Сохранённые разговоры и поиск по локальной SQLite-памяти без подключения к сети.</p><div class="controls"><input id="memoryQuery" placeholder="Поиск в истории" aria-label="Поиск в памяти"><button class="action" id="memorySearch">Найти</button></div><button class="action" id="reloadHistory">Обновить историю</button><div class="rowtitle">ЗАМЕТКИ · ЛОКАЛЬНАЯ ПАМЯТЬ</div>
+<input id="noteTitle" maxlength="120" placeholder="Название знания" aria-label="Название заметки">
+<textarea id="noteText" maxlength="8000" placeholder="Текст знания. Сохраняется только на этом ПК." aria-label="Заметка"></textarea>
+<button class="action" id="noteAdd">Сохранить знание</button><div class="scroll" id="notes"></div>
+<hr><div class="rowtitle">ЛОКАЛЬНЫЕ ДОКУМЕНТЫ · RAG / FTS5</div>
+<p class="hint">Только файлы, которые ты выбрал. NOX индексирует тексты локально и использует выдержки как контекст Qwen; веса модели не переобучаются. До 20 файлов, 1 МБ на файл.</p>
+<button class="action" id="knowledgeImport">Добавить документы в память…</button>
+<button class="action" id="vuneoImport">Импорт VUNEO (только с согласием владельца)…</button>
+<p class="hint" id="vuneoImportStatus" role="status" aria-live="polite">Импорт из резервной SQLite только после подтверждения владельца в Windows.</p>
+<div class="mono" id="knowledgeStats">Документы не проверены</div>
+<div class="controls"><input id="knowledgeQuery" maxlength="160" placeholder="Поиск по добавленным документам" aria-label="Поиск в документах"><button class="action" id="knowledgeSearch">Найти</button></div>
+<div class="scroll" id="knowledgeResults"></div>
+<hr><div class="rowtitle">P04 · СЕМАНТИЧЕСКАЯ ПАМЯТЬ (OLLAMA EMBEDDINGS)</div>
+<p class="hint">Оригинальный P04 RAG: отдельный индекс в AppData, локальный qwen3-embedding:0.6b; без автоматических загрузок. Только файл TXT/MD, выбранный владельцем. Память SQLite не перезаписывается.</p>
+<button class="action" id="ragImport">Добавить локальный TXT/MD в P04 RAG…</button>
+<div class="controls"><input id="ragQuery" maxlength="160" aria-label="Семантический поиск" placeholder="Семантический поиск по документам"><button class="action" id="ragSearch">Найти по смыслу</button></div>
+<div id="ragImportStatus" class="mono" role="status" aria-live="polite">Импорт не выполнялся.</div>
+<div id="ragResults" class="mono scroll" role="status" aria-live="polite">P04 RAG ещё не проверен.</div>
+<hr><div class="rowtitle">ПОИСК ПО ДИАЛОГАМ</div><div class="scroll" id="memoryResults"></div>
+<hr><div class="rowtitle">ПОСЛЕДНИЕ ДИАЛОГИ</div><div class="scroll" id="history"></div></section>
+<section class="panel" data-panel="nexus"><p class="intro">Реальный список моделей, прочитанный из локального Ollama API.</p><button class="action" id="healthButton">Обновить состояние</button><div id="health" class="mono"></div><div class="rowtitle">31 СЕМЕЙСТВО МОДЕЛЕЙ · КАТАЛОГ, НЕ УСТАНОВКА</div><div id="modelCatalog" class="mono scroll" role="status" aria-live="polite">Каталог моделей ещё не прочитан.</div><label class="rowtitle" for="modelPicker">ДОСТУПНЫЕ ЛОКАЛЬНЫЕ МОДЕЛИ</label><select id="modelPicker" aria-label="Модель Ollama"><option>Ожидает Ollama</option></select><button class="action" id="saveModel">Использовать выбранную модель</button><p class="hint" id="modelSelectStatus" role="status" aria-live="polite">Выбор не подтверждён SQLite.</p><p class="hint">Список моделей считывается с localhost:11436. Загрузка новых весов только по явному нажатию с подтверждением.</p><label class="rowtitle" for="modelToDownload">УСТАНОВКА МОДЕЛИ ПО ТОЧНОМУ ТЕГУ</label><div class="controls"><input id="modelToDownload" placeholder="qwen2.5-coder:7b" maxlength="100" aria-label="Точный тег Ollama"><button class="action" id="pullModel">INSTALL</button><button class="action danger" id="cancelPull">STOP</button></div><div class="meter"><span id="downloadBar"></span></div><div class="meterLabel" id="downloadStatus">Загрузка не запущена</div></section>
+<section class="panel" data-panel="forge"><p class="intro">Состояние файлов обучения NOX. Наличие файлов не означает успешность обучения.</p><button class="action" id="trainingButton">Прочитать состояние</button>
+<button class="action" id="gpuGuardianRefresh">Проверить датчик P04 GPU Guardian</button>
+<button class="action" id="qloraPrepare">Подготовить встроенные P04 QLoRA файлы…</button><button class="action" id="qloraPreflight">Проверить готовность P04 QLoRA на этом ПК</button><button class="action" id="qloraGpuProbe">Запустить реальную локальную GPU/CUDA проверку (без обучения)</button><label for="qloraModelRevision">Неизменяемая ревизия модели · 40 hex</label><input id="qloraModelRevision" maxlength="40" placeholder="Git commit ревизии исходных весов"><button class="action" id="qloraSnapshotProbe">Проверить локальные исходные веса HF/safetensors</button><div id="qloraSnapshotState" class="mono" role="status" aria-live="polite">Исходные веса не проверены; Ollama GGUF не подходит для QLoRA.</div><div id="qloraGpuProbeState" class="mono" role="status" aria-live="polite">P04 GPU preflight: не выполнялась.</div><div id="qloraPreflightState" class="mono" role="status" aria-live="polite">Worker, CUDA, веса и права ещё не проверены.</div>
+<div id="gpuGuardianState" class="mono" role="status" aria-live="polite">Датчики NVIDIA ещё не проверены. Обучение HOLD.</div>
+<button class="action" id="learnRequest">Подготовка QLoRA · согласие Windows</button>
+<button class="action danger" id="learnCancel">STOP · отозвать запрос</button>
+<p class="hint">Запрос сохраняется в SQLite, но GPU-обучение не запускается без проверенного worker и прав на веса. Температура не выше 65°C; при достижении лимита пауза 180 секунд. Чекпойнт SHA: NOT VERIFIED.</p>
+<div id="learnReceipt" class="mono" role="status">Нет подтверждённого результата.</div>
+<div id="learnQueue" class="mono" aria-live="polite">Очередь не читалась.</div><div class="meter" aria-label="Физический прогресс обучения"><span id="trainingBar"></span></div><div id="trainingMeasured" class="meterLabel">Метрика не измерена</div><div id="training" class="mono"></div></section>
+<section class="panel" data-panel="voice"><p class="intro">Локальный RU↔ES переводчик и преподаватель испанского используют действующий Qwen CHAT, общий STOP и SQLite. Микрофон/ASR не подключён.</p><label for="voiceTask">Режим</label><select id="voiceTask"><option value="ru-es">Перевод RU → ES</option><option value="es-ru">Перевод ES → RU</option><option value="maestro">MAESTRO · преподаватель испанского</option></select><label for="voiceLevel">Уровень испанского</label><select id="voiceLevel"><option>A1</option><option>A2</option><option>B1</option><option>B2</option><option>C1</option><option>C2</option></select><label for="voiceText">Текст</label><textarea id="voiceText" maxlength="4000" rows="3" placeholder="Введите текст на русском или испанском"></textarea><div class="controls"><label for="asrLocale">Локальный микрофон</label><select id="asrLocale"><option value="ru-RU">Русский · RU</option><option value="es-ES">Español · ES</option></select></div><div class="controls"><button class="action" id="asrInventory">Проверить распознаватели Windows</button><button class="action" id="asrStart">Микрофон · 20 секунд</button><button class="action danger" id="asrStop" disabled>STOP микрофона</button></div><div id="asrState" class="mono" role="status" aria-live="polite">Микрофон выключен. Запуск только после согласия Windows.</div><p class="hint">Только локальный Windows SAPI. Текст добавляется в поле VOICE, не отправляется автоматически в Qwen. При отсутствии RU/ES распознавателя — HOLD.</p><button class="action" id="voiceChatSend">Отправить в локальный Qwen CHAT</button><div id="voiceTaskStatus" class="mono" role="status" aria-live="polite">Ожидание текста</div><hr><label for="voiceSpeechLocale">Язык озвучивания установленным голосом</label><select id="voiceSpeechLocale"><option value="ru-RU">Русский · RU</option><option value="es-ES">Español · ES</option></select><button class="action" id="voiceListRefresh">Проверить голоса RU/ES</button><div id="voiceAvailable" class="mono" role="status" aria-live="polite">Голоса устройства не проверялись</div><button class="action" id="speak">Озвучить последний ответ</button><button class="action danger" id="silence">Остановить речь</button><div id="voiceStatus" class="mono" role="status" aria-live="polite">Озвучивание только по нажатию.</div></section>
+<section class="panel" data-panel="persona"><p class="intro">Локальные настройки SQLite. PersonaID сохраняется, но не подменяет автоматически личность модели.</p><label for="persona">PersonaID</label><select id="persona"><option value="KV">KV</option><option value="AM">AM</option><option value="LA">LA</option><option value="EV">EV</option><option value="KW">KW</option></select><button class="action" id="savePersona">Сохранить PersonaID</button><label><input type="checkbox" id="reduceMotion"> Отключить анимацию</label><button class="action" id="saveMotion">Сохранить движение</button><label><input type="checkbox" id="useContext" checked> Добавлять локальную память и последние диалоги в запрос</label><button class="action" id="saveContext">Сохранить использование памяти</button><label for="performance">Режим локального ИИ</label><select id="performance"><option>MAX</option><option selected>BALANCED</option><option>ECO</option></select><button class="action" id="savePerformance">Сохранить режим</button><button class="action" id="backup">Резервная копия SQLite…</button><div id="personaStatus" class="mono" role="status" aria-live="polite"></div><p class="hint">Смена PersonaID не означает наличие обученного адаптера личности. Экспорт памяти выполняется только по твоей команде.</p></section>
+</aside></main>
+<script id="nox-liquid-core">
+/* NOX liquid Helion original GPU shader, offline and non-interactive. */
+(function(){
+  'use strict';
+  const canvas=document.getElementById('helionFx');
+  if(!canvas)return;
+  const sphere=canvas.parentElement;
+  // WebView2 runtime versions can expose legacy MediaQueryList listeners or
+  // reject the OS motion observer. Neither must disable graphics or native IPC.
+  let motionQuery=null,motionUnreadable=false;
+  try{
+    if(typeof window.matchMedia==='function'){
+      motionQuery=window.matchMedia('(prefers-reduced-motion: reduce)');
+      // A present but broken WebView2 media API gives no trustworthy OS preference.
+      if(!motionQuery){motionUnreadable=true;console.warn('NOX reduced-motion query returned empty state');}
+    }else{
+      // Missing matchMedia is also unknown OS state, not permission to animate.
+      // WebView2/native IPC still works; retain one accessible static frame.
+      motionUnreadable=true;
+      console.warn('NOX reduced-motion query API unavailable; freezing animation');
+    }
+  }catch(e){motionUnreadable=true;console.warn('NOX reduced-motion query unavailable:',String(e?.message||e));}
+  // A failing Windows MediaQueryList.matches getter must never escape an
+  // animation frame. Unknown OS preference errs on the accessible static pose.
+  // Latch once to avoid repeated GPU-frame exceptions or console flooding.
+  const reduce=()=>{
+    if(document.body.classList.contains('reduced')||motionUnreadable)return true;
+    if(!motionQuery)return false;
+    try{
+      const matches=motionQuery.matches;
+      if(typeof matches!=='boolean'){
+        motionUnreadable=true;
+        console.warn('NOX reduced-motion state unavailable: expected boolean');
+        return true;
+      }
+      return matches;
+    }catch(e){
+      motionUnreadable=true;
+      console.warn('NOX reduced-motion state inaccessible:',String(e?.message||e));
+      return true;
+    }
+  };
+  function watchMotion(redraw){
+    if(!motionQuery)return;
+    // An older WebView2 MediaQueryList can expose addEventListener but reject it.
+    // Fall back to addListener before giving up on OS motion change events.
+    try{
+      if(typeof motionQuery.addEventListener==='function'){
+        motionQuery.addEventListener('change',redraw);return;
+      }
+    }catch(e){console.warn('NOX modern reduced-motion observer unavailable:',String(e?.message||e));}
+    try{
+      if(typeof motionQuery.addListener==='function'){
+        motionQuery.addListener(redraw);return;
+      }
+    }catch(e){console.warn('NOX legacy reduced-motion observer unavailable:',String(e?.message||e));}
+    // If BOTH WebView2 change observers are missing/rejected, later OS changes
+    // cannot be detected. Never leave a perpetual RAF under unknown motion policy.
+    motionUnreadable=true;
+    console.warn('NOX reduced-motion observer unavailable; freezing animation');
+  }
+  // Dynamic WebView2/DPI layout changes do not always fire window.resize.
+  // Observe the existing element so Reduced Motion still gets one accurate
+  // static frame, without starting a continuous animation.
+  function watchSize(target,redraw){
+    if(typeof window.ResizeObserver!=='function')return ()=>{};
+    let observer=null;
+    try{observer=new window.ResizeObserver(redraw);observer.observe(target);}
+    catch(e){
+      try{observer?.disconnect();}catch(_){}
+      console.warn('NOX element resize observer unavailable:',String(e?.message||e));
+      return ()=>{};
+    }
+    return ()=>{try{observer.disconnect();}catch(_){}};
+  }
+  // Coalesce repeated WebView2 resize/mode/energy invalidations into one RAF;
+  // cancel only when hidden or context lost, never starve a frame during DPI drags.
+  function startCanvas2d(fallbackCanvas, initialMode='BALANCED', initialEnergy=0, initialThermalHold=false){
+    const canvas=fallbackCanvas;
+    // 2D fallback retains visible fluid motion even when GPU acceleration is
+    // disabled by the machine or by remote desktop / headless Windows CI.
+    // If Canvas2D itself is unavailable or fails mid-draw, the original CSS
+    // sphere remains visible and the native IPC/chat remain independent.
+    let stopSizeWatch=()=>{};
+    function staticCss(reason){
+      stopSizeWatch();
+      sphere.dataset.fx='disabled';
+      window.noxVisual={setMode(){},setEnergy(){},setThermalHold(){},refresh(){}};
+      console.warn('NOX Canvas2D static CSS fallback:',reason);
+    }
+    let ctx;
+    try{ctx=canvas.getContext('2d',{alpha:true});}
+    catch(e){staticCss('CONTEXT_FAILED_'+String(e?.message||e));return;}
+    if(!ctx){staticCss('CONTEXT_UNAVAILABLE');return;}
+    let mode=initialMode,energy=initialEnergy,thermalHold=initialThermalHold,raf=0,last=0,started=performance.now(),rendered=false,failed=false,contextLost=false;
+    function frame(now){
+      if(failed||contextLost||document.hidden){raf=0;return;}
+      const effectiveMode=thermalHold?'ECO':mode;
+      const fps=reduce()?0:effectiveMode==='MAX'?30:effectiveMode==='ECO'?8:18;
+      if(rendered&&(!fps||now-last<1000/fps)){raf=fps?requestAnimationFrame(frame):0;return;}
+      last=now;rendered=true;
+      try{
+      const r=canvas.getBoundingClientRect(),max=effectiveMode==='ECO'?280:effectiveMode==='MAX'?650:480;
+      const scale=Math.min(1.5,Math.max(1,window.devicePixelRatio||1));
+      const w=Math.min(max,Math.max(80,Math.ceil(r.width*scale)));
+      const h=Math.min(max,Math.max(80,Math.ceil(r.height*scale)));
+      if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;}
+      ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,w,h);
+      const S=Math.min(w,h),cx=w*.5,cy=h*.5,t=reduce()?0:(now-started)/1000;
+      const disk=.259*S;
+      const core=ctx.createRadialGradient(cx-disk*.3,cy-disk*.39,disk*.1,cx,cy,disk*1.05);
+      core.addColorStop(0,'#101b28');core.addColorStop(.42,'#020409');core.addColorStop(.79,'#010204');
+      core.addColorStop(.92,'#422516');core.addColorStop(.97,'#c78742');core.addColorStop(1,'#030507');
+      ctx.fillStyle=core;ctx.beginPath();ctx.arc(cx,cy,disk,0,Math.PI*2);ctx.fill();
+      ctx.lineCap='round';
+      for(let band=0;band<4;band++){
+        ctx.beginPath();const seg=96;
+        for(let i=0;i<=seg;i++){
+          const a=i/seg*Math.PI*2;
+          const wave=Math.sin(a*9-t*.42+band*.8)*.012+Math.sin(a*21+t*.3+band)*.005;
+          const rr=disk*(1.0+wave+band*.015);
+          const x=cx+Math.cos(a)*rr,y=cy+Math.sin(a)*rr;
+          if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+        }
+        ctx.strokeStyle=['#f4ab6e','#eda56088','#83b7bd44','#e0a26922'][band];
+        ctx.lineWidth=[2.5,3,1.5,1][band]*S/400;ctx.shadowBlur=(18+energy*18)*S/400;
+        ctx.shadowColor='#e99c5d';ctx.stroke();ctx.shadowBlur=0;
+      }
+      ctx.save();ctx.translate(cx,cy);ctx.rotate(-.4+t*.025);ctx.scale(1,.31);
+      ctx.beginPath();ctx.arc(0,0,disk*1.25,0,Math.PI*2);
+      ctx.strokeStyle='#a6824e30';ctx.lineWidth=S/450;ctx.stroke();ctx.restore();
+      }catch(e){
+        failed=true;raf=0;
+        staticCss('DRAW_FAILED_'+String(e?.message||e));
+        return;
+      }
+      raf=fps?requestAnimationFrame(frame):0;
+    }
+    function redraw(){if(failed||contextLost)return;rendered=false;if(document.hidden){if(raf)cancelAnimationFrame(raf);raf=0;return;}if(!raf)raf=requestAnimationFrame(frame);}
+    sphere.dataset.fx='canvas2d';
+    window.noxVisual={setMode(v){mode=['MAX','BALANCED','ECO'].includes(v)?v:'BALANCED';redraw();},
+      setEnergy(v){energy=v?1:0;redraw();},
+      setThermalHold(value){thermalHold=value===true;redraw();},refresh:redraw};
+    // Some WebView2/Chromium drivers lose the 2D surface without throwing.
+    // Stop the RAF loop and reveal the original CSS sphere until the actual
+    // canvas context restores; preserve mode, energy, chat, and native IPC.
+    canvas.addEventListener('contextlost',()=>{
+      if(failed||contextLost)return;
+      contextLost=true;
+      if(raf)cancelAnimationFrame(raf);
+      raf=0;rendered=false;sphere.dataset.fx='disabled';
+      console.warn('NOX Canvas2D context lost; static CSS fallback active');
+    });
+    canvas.addEventListener('contextrestored',()=>{
+      if(failed||!contextLost)return;
+      contextLost=false;rendered=false;sphere.dataset.fx='canvas2d';
+      redraw();
+    });
+    document.addEventListener('visibilitychange',()=>{if(document.hidden){if(raf)cancelAnimationFrame(raf);raf=0;}else redraw();});
+    window.addEventListener('resize',redraw,{passive:true});
+    watchMotion(redraw);
+    stopSizeWatch=watchSize(canvas,redraw);
+    redraw();
+  }
+
+  let gl=null;
+  try{gl=canvas.getContext('webgl2',{alpha:true,antialias:false,depth:false,stencil:false,
+    premultipliedAlpha:false,preserveDrawingBuffer:false,powerPreference:'high-performance'});}
+  catch(e){console.warn('NOX WebGL2 unavailable:',e.message);}
+  if(!gl){startCanvas2d(canvas);return;}
+
+  const vert=`#version 300 es
+  in vec2 aPosition;
+  void main(){gl_Position=vec4(aPosition,0.0,1.0);}`;
+  const frag=`#version 300 es
+  precision highp float;
+  uniform vec2 uResolution;
+  uniform float uTime;
+  uniform float uEnergy;
+  out vec4 color;
+  #define PI 3.141592653589793
+  float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453123);}
+  float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);
+    return mix(mix(hash(i),hash(i+vec2(1.,0.)),f.x),
+      mix(hash(i+vec2(0.,1.)),hash(i+vec2(1.,1.)),f.x),f.y);}
+  float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<5;i++){
+    v+=a*noise(p);p=mat2(.8,-.6,.6,.8)*p*2.11+17.;a*=.49;}
+    return v;}
+  float smoothRing(float r,float target,float thickness){return 1.-smoothstep(thickness,thickness*2.,abs(r-target));}
+  void main(){
+    vec2 p=(gl_FragCoord.xy-.5*uResolution.xy)/min(uResolution.x,uResolution.y)*2.0;
+    float r=length(p),a=atan(p.y,p.x),t=uTime;
+    float flow=fbm(vec2(a*3.4+t*.17,r*9.-t*.13));
+    float swirl=fbm(p*4.8+vec2(t*.12,-t*.11));
+    float ripple=sin(a*13.+t*.35+flow*6.)*.012+sin(a*23.-t*.22+swirl*7.)*.006;
+    float edge=.51+ripple;
+    float disk=1.-smoothstep(edge-.014,edge+.008,r);
+    float rim=smoothRing(r,edge,.012);
+    float flare=pow(max(0.,cos(a*3.1+t*.10+flow*1.8)),7.0);
+    float emissive=(.23+1.2*flare+flow*.45)*(1.+uEnergy*.43);
+    vec3 dark=vec3(.006,.009,.015)+vec3(.020,.031,.043)*pow(1.-min(r/.52,1.),1.7);
+    float liquid=smoothstep(.05,.9,fbm(p*5.+vec2(t*.16,-t*.08))) * .11;
+    vec3 metal=mix(dark,vec3(.10,.075,.061),liquid);
+    float goldBand=smoothstep(.27,.96,flow+sin(a*5.-t*.12)*.15);
+    vec3 amber=mix(vec3(.72,.25,.09),vec3(1.,.77,.43),goldBand);
+    vec3 surface=metal+amber*rim*emissive*1.35;
+    float sliver=pow(max(0.,dot(normalize(p+vec2(.001)),normalize(vec2(.40,-.91)))),3.0);
+    surface+=amber*sliver*rim*.8;
+    float glow=exp(-pow(max(r-edge,0.)*8.,1.15))*(1.-disk)*(.035+.13*flare);
+    vec3 halo=amber*glow;
+    float orbit=smoothRing(r,.67+.024*sin(a*4.0+t*.12),.004)*(.12+.18*flow);
+    float orbit2=smoothRing(r,.79,.0025)*(.08+.13*sin(a*9.-t*.1)*sin(a*9.-t*.1));
+    vec3 field=vec3(.12,.36,.50)*(orbit+orbit2);
+    float dust=step(.9985,hash(floor((p+vec2(t*.004,0.))*280.0))) *
+      (1.-smoothstep(.51,1.15,r))*.4;
+    vec3 result=surface*disk+halo+field+vec3(.8,.46,.23)*dust;
+    float alpha=clamp(disk+glow*1.8+orbit+orbit2+dust,0.,1.);
+    color=vec4(result,alpha);
+  }`;
+  function shader(type,src){const sh=gl.createShader(type);if(!sh)throw new Error('GL_SHADER_ALLOC_FAILED');gl.shaderSource(sh,src);gl.compileShader(sh);
+    if(!gl.getShaderParameter(sh,gl.COMPILE_STATUS))throw new Error(gl.getShaderInfoLog(sh)||'GLSL compile failed');return sh;}
+  let program,time,res,ene;
+  // GPU setup can fail after shader link (lost device, uniform/buffer failure).
+  // Keep the complete GL initialization inside the same fail-closed boundary.
+  try{program=gl.createProgram();if(!program)throw new Error('GL_PROGRAM_ALLOC_FAILED');let v=shader(gl.VERTEX_SHADER,vert),f=shader(gl.FRAGMENT_SHADER,frag);
+    gl.attachShader(program,v);gl.attachShader(program,f);gl.linkProgram(program);
+    if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw new Error(gl.getProgramInfoLog(program)||'GL link failed');
+    gl.deleteShader(v);gl.deleteShader(f);
+    time=gl.getUniformLocation(program,'uTime');res=gl.getUniformLocation(program,'uResolution');ene=gl.getUniformLocation(program,'uEnergy');
+    // Missing uniforms can silently paint an empty sphere without GL errors.
+    if(time===null||res===null||ene===null)throw new Error('GL_REQUIRED_UNIFORM_MISSING');
+    const buf=gl.createBuffer();if(!buf)throw new Error('GL_BUFFER_ALLOC_FAILED');gl.bindBuffer(gl.ARRAY_BUFFER,buf);
+    gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]),gl.STATIC_DRAW);
+    const attr=gl.getAttribLocation(program,'aPosition');
+    if(!Number.isInteger(attr)||attr<0)throw new Error('GL_REQUIRED_ATTRIBUTE_MISSING');
+    gl.enableVertexAttribArray(attr);gl.vertexAttribPointer(attr,2,gl.FLOAT,false,0,0);
+  }catch(e){console.warn('NOX WebGL initialization fallback:',e.message);const replacement=canvas.cloneNode(false);canvas.replaceWith(replacement);startCanvas2d(replacement);return;}
+  let raf=0,mode='BALANCED',energy=0,thermalHold=false,rendered=false,last=0,started=performance.now(),gpuFrames=0;
+  let gpuActive=true;
+  let stopSizeWatch=()=>{};
+  function switchToCanvas2d(reason){
+    if(!gpuActive)return;
+    gpuActive=false;
+    stopSizeWatch();
+    if(raf)cancelAnimationFrame(raf);
+    raf=0;
+    const replacement=canvas.cloneNode(false);
+    canvas.replaceWith(replacement);
+    console.warn('NOX WebGL2 switching to Canvas2D:',reason);
+    startCanvas2d(replacement,mode,energy,thermalHold);
+  }
+  function resize(){const rect=canvas.getBoundingClientRect();const effectiveMode=thermalHold?'ECO':mode;
+    let max=effectiveMode==='ECO'?320:effectiveMode==='MAX'?768:512;
+    let scale=Math.min(1.5,Math.max(1,window.devicePixelRatio||1));
+    const w=Math.min(max,Math.max(64,Math.floor(rect.width*scale)));
+    const h=Math.min(max,Math.max(64,Math.floor(rect.height*scale)));
+    if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;gl.viewport(0,0,w,h);rendered=false;}}
+  function frame(now){if(!gpuActive||document.hidden){raf=0;return;}
+    const effectiveMode=thermalHold?'ECO':mode;
+    const fps=reduce()?0:effectiveMode==='MAX'?60:effectiveMode==='ECO'?15:30;
+    if(rendered && (!fps || now-last<1000/fps)){raf=fps?requestAnimationFrame(frame):0;return;}
+    last=now;rendered=true;
+    try{resize();gl.useProgram(program);gl.uniform2f(res,canvas.width,canvas.height);
+      gl.uniform1f(time,reduce()?0:(now-started)*.001);gl.uniform1f(ene,energy);
+      gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT);gl.drawArrays(gl.TRIANGLES,0,6);
+      if(gl.isContextLost&&gl.isContextLost()){switchToCanvas2d('CONTEXT_LOST');return;}
+      // Drivers can report draw/VRAM errors without throwing or losing context.
+      // Sample the genuine GPU error state on the first frame and every 30th
+      // frame to avoid a readback stall every animation frame.
+      if(typeof gl.getError==='function' && (++gpuFrames===1 || gpuFrames%30===0)){
+        const gpuError=gl.getError();
+        if(gpuError!==gl.NO_ERROR)throw new Error('GL_RUNTIME_ERROR_'+gpuError);
+      }}
+    catch(e){switchToCanvas2d(e.message);return;}
+    raf=fps?requestAnimationFrame(frame):0;
+  }
+  function redraw(){if(!gpuActive)return;rendered=false;if(document.hidden){if(raf)cancelAnimationFrame(raf);raf=0;return;}if(!raf)raf=requestAnimationFrame(frame);}
+  sphere.dataset.fx='active';
+  window.noxVisual={setMode(value){mode=['MAX','BALANCED','ECO'].includes(value)?value:'BALANCED';rendered=false;redraw();},
+    setEnergy(isGenerating){energy=isGenerating?1:0;rendered=false;redraw();},
+    setThermalHold(value){thermalHold=value===true;rendered=false;redraw();},refresh:()=>{rendered=false;redraw()}};
+  document.addEventListener('visibilitychange',()=>{if(!gpuActive)return;if(!document.hidden)redraw();else if(raf){cancelAnimationFrame(raf);raf=0;}});
+  window.addEventListener('resize',redraw,{passive:true});
+  watchMotion(redraw);
+  stopSizeWatch=watchSize(canvas,redraw);
+  canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();switchToCanvas2d('CONTEXT_LOST');});
+  redraw();
+})();
+</script>
+<script>
+'use strict';
+const $=id=>document.getElementById(id);const post=(type,data={})=>{const bridge=window.chrome?.webview;if(typeof bridge?.postMessage!=='function'){$('status').textContent='NATIVE BRIDGE OFFLINE';return false}try{bridge.postMessage({type,...data});return true}catch{$('status').textContent='NATIVE BRIDGE DISPATCH FAILED';return false}};
+let responseBox=null,lastAnswer='',busy=false,settingsDenial='',activeChatId=null,pendingStopId=null,requestSequence=0,pendingChatDraft=null,pendingTask=null,pendingNote=null,pendingNoteDelete=null,pendingTaskToggle=null,pendingModel=null,pendingModelPull=null,committedModel="",pendingSettings=null,committedSettings={},settingsReconcile=null,visibleDraftPersona='KV',pendingVuneo=null,pendingMemorySearch=null;
+let vuneoImportUncertain=false;
+let noteAddUncertain=false; // Possible SQLite INSERT: preserve draft, block silent duplicate.
+let noteDeleteUncertain=false; // Unknown COMMIT: do not auto-replay an irreversible DELETE.
+let pendingLearnRequest=null,pendingLearnStop=null; // Native owner-correlated consent and cancellation.
+let pendingRagSearch=null,pendingRagImport=null; // P04 original RAG scope/owner correlated.
+// B04: in-session ambiguous SQLite COMMIT guard; prompts remain volatile RAM only.
+const uncertainChatKeys=new Set();const uncertainChatKey=(persona,prompt)=>persona+'\u0000'+prompt.trim();
+const nextChatId=()=>typeof crypto!=='undefined'&&typeof crypto.randomUUID==='function'
+  ? crypto.randomUUID()
+  : 'r'+Date.now().toString(36)+'_'+(++requestSequence).toString(36)+'_'+Math.random().toString(36).slice(2);const headings={consciousness:'CONSCIOUSNESS',atlas:'ATLAS / TASKS',reflection:'REFLECTION / HISTORY',nexus:'NEXUS / MODELS',forge:'FORGE / TRAINING',core:'CORE / LIVE CHAT',voice:'VOICE',persona:'PERSONA'};
+function switchPersonaDrafts(next){
+  if(!['KV','AM','LA','EV','KW'].includes(next))return false;
+  const previous=visibleDraftPersona;
+  if(next===previous)return true;
+  const fields=['noteTitle','noteText','memoryQuery','knowledgeQuery','prompt','taskInput'];
+  // Optional P04 field does not exist in historical native D01-only fixture.
+  // In actual WebView2 it remains PersonaID-isolated; no accidental cross-Persona draft.
+  const ragField=typeof document!=='undefined'&&typeof document.getElementById==='function'
+    ?document.getElementById('ragQuery'):null;
+  const drafts=Object.fromEntries(fields.map(id=>[id,$(id).value]));
+  if(ragField)drafts.ragQuery=ragField.value;
+  personaDrafts.set(previous,drafts);
+  const restored=personaDrafts.get(next)||{};
+  fields.forEach(id=>{$(id).value=restored[id]||''});
+  if(ragField)ragField.value=restored.ragQuery||'';
+  visibleDraftPersona=next;
+  const hint=$('streamHint');
+  if(hint)hint.textContent='PersonaID переключена · предыдущий поток не относится к текущему чату';
+  return true;
+}
+function route(id){if(!Object.prototype.hasOwnProperty.call(headings,id))return false;const originPanel=document.activeElement?.closest('.panel[data-panel]');const movedFromPanel=originPanel&&originPanel.dataset.panel!==id;document.querySelectorAll('.core[data-route]').forEach(x=>{const selected=x.dataset.route===id;x.classList.toggle('active',selected);if(selected)x.setAttribute('aria-current','page');else x.removeAttribute('aria-current')});document.querySelectorAll('.panel[data-panel]').forEach(x=>x.classList.toggle('active',x.dataset.panel===id));$('routeTitle').textContent=headings[id];const activeSide=document.querySelector?.('aside.side');if(activeSide)activeSide.scrollTop=0;if(movedFromPanel)document.querySelector('button.core[data-route="'+id+'"]')?.focus();if(id==='consciousness'||id==='nexus')post('health');if(id==='nexus')post('model.catalog');if(id==='atlas')post('tasks.list');if(id==='reflection'){post('history');post('notes.list');post('knowledge.stats');}if(id==='forge'){post('training');post('learn.queue');}if(id==='persona')post('settings.get');return true}
+document.querySelectorAll('[data-route]').forEach(b=>b.onclick=()=>route(b.dataset.route));document.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>route(b.dataset.open));
+const coreRouteButtons=[...document.querySelectorAll('button.core[data-route]')];coreRouteButtons.forEach((button,index)=>button.addEventListener('keydown',e=>{if(e.defaultPrevented||e.isComposing||e.keyCode===229||e.repeat||e.ctrlKey||e.altKey||e.metaKey||e.shiftKey)return;if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End'].includes(e.key))return;const count=coreRouteButtons.length;if(!count)return;const target=e.key==='Home'?0:e.key==='End'?count-1:(index+(e.key==='ArrowLeft'||e.key==='ArrowUp'?-1:1)+count)%count;e.preventDefault();coreRouteButtons[target].focus();route(coreRouteButtons[target].dataset.route)}));
+function element(tag,text,cls){let n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n}
+function entry(container,text,title,cls){const d=element('div',undefined,'entry '+(cls||''));if(title)d.append(element('small',title));d.append(element('div',text));container.prepend(d);return d}
+$('send').onclick=()=>{const text=$('prompt').value.trim();if(!text||busy)return;if(text.length>32000){$('streamHint').textContent='Слишком длинное сообщение: максимум 32 000 символов';return;}const uncertainKey=uncertainChatKey(visibleDraftPersona,text);if(uncertainChatKeys.has(uncertainKey)&&!window.confirm('SQLite мог сохранить этот запрос. Откройте REFLECTION и проверьте историю. Повторить с риском дубля?')){$('streamHint').textContent='Повтор заблокирован до проверки истории.';route('reflection');return;}const requestId=nextChatId();if(post('chat',{text,requestId})===false){$('streamHint').textContent='Нативный чат недоступен. Черновик сохранён.';return;}uncertainChatKeys.delete(uncertainKey);busy=true;activeChatId=requestId;pendingStopId=null;pendingChatDraft={requestId,raw:$('prompt').value,persona:visibleDraftPersona};lastAnswer='';$('streamHint').textContent='Генерация ответа · не сохранено';entry($('messages'),text,'YOU','user');responseBox=entry($('messages'),'','NOX QWEN');$('prompt').value='';};
+$('stop').onclick=()=>{if(!busy||!activeChatId||pendingStopId===activeChatId)return;const stopOwner=activeChatId;pendingStopId=stopOwner;if(post('stop',{requestId:stopOwner})===false)pendingStopId=null};$('prompt').onkeydown=e=>{if(e.key==='Enter'&&!e.defaultPrevented&&!e.repeat&&!e.shiftKey&&!e.ctrlKey&&!e.altKey&&!e.metaKey&&!e.isComposing&&e.keyCode!==229){e.preventDefault();$('send').click()}};
+$('overviewHealth').onclick=()=>post('health');$('startEngine').onclick=()=>post('engine.start');$('refreshSensors').onclick=()=>post('system.status');$('healthButton').onclick=()=>{post('health');post('model.catalog')};$('trainingButton').onclick=()=>post('training');$('qloraPrepare').onclick=()=>{$('qloraPreflightState').textContent='P04 · ожидается подтверждение подготовки файлов';if(post('qlora.prepare')===false)$('qloraPreflightState').textContent='P04 · нативный host недоступен · HOLD';};
+let pendingSnapshotProbe=null;
+$('qloraSnapshotProbe').onclick=()=>{
+  if(pendingSnapshotProbe)return;
+  const revision=$('qloraModelRevision').value.trim();
+  if(!/^[a-f0-9]{40}$/i.test(revision)){
+    $('qloraSnapshotState').textContent='Требуется неизменяемая ревизия модели: 40 hex символов';return;
+  }
+  const requestId=nextChatId();
+  pendingSnapshotProbe=requestId;
+  $('qloraSnapshotProbe').disabled=true;
+  $('qloraSnapshotState').textContent='Ожидается выбор папки и подтверждение владельца Windows…';
+  if(post('qlora.snapshot-probe',{revision,requestId})===false){
+    pendingSnapshotProbe=null;
+    $('qloraSnapshotProbe').disabled=false;
+    $('qloraSnapshotState').textContent='Локальный host недоступен · HOLD';
+  }
+};
+let pendingGpuProbe=null;
+$('qloraGpuProbe').onclick=()=>{
+  if(pendingGpuProbe)return;
+  const requestId=nextChatId();
+  pendingGpuProbe=requestId;
+  $('qloraGpuProbe').disabled=true;
+  $('qloraGpuProbeState').textContent='P04 · ожидается подтверждение владельца и локальная проверка…';
+  if(post('qlora.gpu-probe',{requestId})===false){
+    pendingGpuProbe=null;
+    $('qloraGpuProbe').disabled=false;
+    $('qloraGpuProbeState').textContent='P04 · native IPC недоступен · HOLD';
+  }
+};
+$('qloraPreflight').onclick=()=>{const box=$('qloraPreflightState');box.textContent='QLoRA · проверяю локальные prerequisites…';if(post('qlora.preflight')===false)box.textContent='QLoRA · локальный host недоступен · HOLD';};
+$('gpuGuardianRefresh').onclick=()=>{$('gpuGuardianState').textContent='GPU Guardian · проверка нативного датчика…';$('gpuGuardianState').dataset.readback='PENDING';$('gpuGuardianState').dataset.source='';if(post('gpu.guardian')===false){$('gpuGuardianState').textContent='Датчики NVIDIA: IPC недоступен · HOLD';}};$('learnRequest').onclick=()=>{
+  if(pendingLearnRequest||pendingLearnStop)return;
+  const requestId=nextChatId();pendingLearnRequest=requestId;$('learnRequest').disabled=true;
+  $('learnReceipt').textContent='LEARN · ожидается согласие владельца Windows; GPU не запущен';
+  if(post('learn.request',{requestId})===false){
+    pendingLearnRequest=null;$('learnRequest').disabled=false;
+    $('learnReceipt').textContent='LEARN IPC HOLD · запрос не подтверждён';
+  }
+};
+$('learnCancel').onclick=()=>{
+  if(pendingLearnStop)return;
+  const requestId=nextChatId();pendingLearnStop=requestId;$('learnCancel').disabled=true;
+  if(post('learn.cancel',{requestId})===false){
+    pendingLearnStop=null;$('learnCancel').disabled=false;
+    $('learnReceipt').textContent='LEARN STOP IPC HOLD · проверьте очередь';
+  }
+};$('reloadHistory').onclick=()=>post('history');$('taskAdd').onclick=()=>{const text=$('taskInput').value.trim();if(!text||pendingTask)return;const requestId=nextChatId();pendingTask={requestId,text,persona:visibleDraftPersona};$('taskAdd').disabled=true;if(post('tasks.add',{text,requestId})===false){pendingTask=null;$('taskAdd').disabled=false}};
+// One outstanding SETTINGS write. UI buttons cannot imply successful SQLite
+// persistence until an independent native COMMIT readback and matching ACK.
+function setSettingsBusy(value){for(const id of ['savePersona','saveMotion','savePerformance','saveContext','maxMode'])$(id).disabled=value;}
+function applyCommittedSettings(v){
+  // Reconcile SQLite persona on initial hydration and native event readback.
+  // Draft ownership is tracked separately from settings receipt timing.
+  const nextPersona=v?.persona||'KV';
+  if(nextPersona!==visibleDraftPersona){
+    if(!switchPersonaDrafts(nextPersona))return;
+    // SQLite hydration can change the visible PersonaID without a separate
+    // persona.changed receipt. Do not retain the previous owner's CHAT/ATLAS.
+    for(const id of ['messages','history','notes','memoryResults','knowledgeResults'])$(id).replaceChildren();
+    lastAnswer='';responseBox=null;
+    if('speechSynthesis' in window)speechSynthesis.cancel();
+    if(busy&&activeChatId)$('stop').click();
+    $('generation').classList.remove('on');window.noxVisual?.setEnergy(false);
+    // Initial native history/notes may have arrived before the SQLite settings.
+    post('history');post('notes.list');post('knowledge.stats');
+  }
+  committedSettings={...v};
+  $('persona').value=v?.persona||'KV';$('performance').value=v?.performance||'BALANCED';
+  $('useContext').checked=v?.context!=='off';$('reduceMotion').checked=v?.motion==='off';
+  document.body.classList.toggle('reduced',$('reduceMotion').checked);
+  window.noxVisual?.setMode(v?.performance||'BALANCED');
+}
+function saveSetting(key,value){
+  if(pendingSettings||settingsReconcile){$('personaStatus').textContent='NOX_SETTINGS_OWNER_IN_FLIGHT';return false;}
+  const requestId=nextChatId();
+  pendingSettings={requestId,key,value};
+  setSettingsBusy(true);
+  $('personaStatus').textContent='Запрос отправлен · SQLite ещё не подтверждена';
+  if(post('settings.put',{key,value,requestId})===false){
+    pendingSettings=null;setSettingsBusy(false);applyCommittedSettings(committedSettings);
+    $('personaStatus').textContent='NOX_SETTINGS_NATIVE_DISPATCH_HOLD';return false;
+  }
+  return true;
+}
+$('savePersona').onclick=()=>{if(pendingNote||pendingNoteDelete){$('personaStatus').textContent='NOX_PERSONA_NOTE_WRITE_IN_FLIGHT_HOLD';return false;}return saveSetting('persona',$('persona').value);};
+$('saveMotion').onclick=()=>saveSetting('motion',$('reduceMotion').checked?'off':'on');
+$('savePerformance').onclick=()=>saveSetting('performance',$('performance').value);
+$('saveContext').onclick=()=>saveSetting('context',$('useContext').checked?'on':'off');$('backup').onclick=()=>post('backup');$('knowledgeImport').onclick=()=>post('knowledge.import');
+$('vuneoImport').onclick=()=>{
+  if(pendingVuneo||vuneoImportUncertain)return false;
+  const requestId=nextChatId();pendingVuneo={requestId};
+  $('vuneoImport').disabled=true;
+  $('vuneoImportStatus').textContent='Ожидание нативного подтверждения владельца; импорт не завершён';
+  if(post('knowledge.vuneo',{requestId})===false){
+    pendingVuneo=null;$('vuneoImport').disabled=false;
+    $('vuneoImportStatus').textContent='NOX_VUNEO_NATIVE_DISPATCH_HOLD';return false;
+  }
+  return true;
+};$('knowledgeSearch').onclick=()=>post('knowledge.search',{query:$('knowledgeQuery').value.trim()});$('knowledgeQuery').onkeydown=e=>{if(e.key==='Enter'&&!e.defaultPrevented&&!e.ctrlKey&&!e.altKey&&!e.metaKey&&!e.isComposing&&e.keyCode!==229&&!e.shiftKey){e.preventDefault();if(!e.repeat)$('knowledgeSearch').click()}};$('memorySearch').onclick=()=>{
+  if(!['KV','AM','LA','EV','KW'].includes(visibleDraftPersona)){
+    $('memoryResults').textContent='NOX_MEMORY_PERSONA_NOT_READY_HOLD';return false;
+  }
+  const requestId=nextChatId();
+  pendingMemorySearch={requestId,persona:visibleDraftPersona};
+  $('memoryResults').replaceChildren();
+  if(post('memory.search',{query:$('memoryQuery').value.trim(),requestId})===false){
+    pendingMemorySearch=null;$('memoryResults').textContent='NOX_MEMORY_NATIVE_DISPATCH_HOLD';
+    return false;
+  }
+  return true;
+};$('memoryQuery').onkeydown=e=>{if(e.key==='Enter'&&!e.defaultPrevented&&!e.ctrlKey&&!e.altKey&&!e.metaKey&&!e.isComposing&&e.keyCode!==229&&!e.shiftKey){e.preventDefault();if(!e.repeat)$('memorySearch').click()}};
+$('maxMode').onclick=()=>{route('persona');if(pendingSettings)return;$('performance').value='MAX';saveSetting('performance','MAX');};
+$('saveModel').onclick=()=>{const model=$('modelPicker').value;if(!model||pendingModel)return;const requestId=nextChatId();pendingModel={requestId,model,previous:committedModel};$('saveModel').disabled=true;$('modelSelectStatus').textContent='Проверка локального тега и SQLite…';if(post('model.select',{model,requestId})===false){const previous=pendingModel.previous;pendingModel=null;$('saveModel').disabled=false;if(previous)$('modelPicker').value=previous;$('modelSelectStatus').textContent='Нет нативного соединения. Предыдущая модель сохранена.';}};$('pullModel').onclick=()=>{
+  if(pendingModelPull)return;
+  const model=$('modelToDownload').value.trim();
+  if(!/^[a-zA-Z0-9][a-zA-Z0-9._/-]*:[a-zA-Z0-9._-]+$/.test(model)||model.length>100){
+    $('downloadStatus').textContent='Укажи корректный локальный тег модели';return;
+  }
+  const requestId=nextChatId();pendingModelPull={requestId,model};
+  $('pullModel').disabled=true;$('cancelPull').disabled=false;
+  $('downloadStatus').textContent=model+' · ожидается разрешение владельца Windows';
+  if(post('model.pull',{model,requestId})===false){
+    pendingModelPull=null;$('pullModel').disabled=false;$('cancelPull').disabled=true;
+    $('downloadStatus').textContent='NOX_MODEL_PULL_IPC_HOLD · загрузка не подтверждена';
+  }
+};
+$('cancelPull').disabled=true;
+$('cancelPull').onclick=()=>{
+  if(!pendingModelPull)return;
+  const {requestId,model}=pendingModelPull;
+  if(post('model.cancel',{requestId,model})===false)
+    $('downloadStatus').textContent='NOX_MODEL_STOP_IPC_HOLD · проверьте статус загрузки';
+};
+
+$('ragSearch').onclick=()=>{
+  if(pendingRagSearch)return;
+  const query=$('ragQuery').value.trim(),requestId=nextChatId(),persona=visibleDraftPersona;
+  if(!query||query.length>160)return;
+  pendingRagSearch={requestId,persona};$('ragSearch').disabled=true;
+  $('ragResults').dataset.readback='PENDING';$('ragResults').dataset.source='';
+  $('ragResults').textContent='Поиск P04 RAG в локальном индексе…';
+  if(post('rag.search',{query,requestId})===false){
+    pendingRagSearch=null;$('ragSearch').disabled=false;
+    $('ragResults').textContent='NOX_RAG_NATIVE_BRIDGE_HOLD';
+  }
+};
+$('ragImport').onclick=()=>{
+  if(pendingRagImport)return;
+  const requestId=nextChatId(),persona=visibleDraftPersona;
+  pendingRagImport={requestId,persona};$('ragImport').disabled=true;
+  $('ragImportStatus').textContent='Выберите файл TXT или Markdown в окне Windows…';
+  if(post('rag.import',{requestId})===false){
+    pendingRagImport=null;$('ragImport').disabled=false;
+    $('ragImportStatus').textContent='NOX_RAG_IMPORT_BRIDGE_HOLD';
+  }
+};
+$('ragQuery').onkeydown=e=>{if(e.key==='Enter'&&!e.defaultPrevented&&!e.isComposing&&!e.repeat&&!e.shiftKey&&!e.ctrlKey&&!e.altKey&&!e.metaKey){e.preventDefault();$('ragSearch').click();}};
+
+$('noteAdd').onclick=()=>{const title=$('noteTitle').value.trim(),content=$('noteText').value.trim();if(!title||!content||pendingNote||noteAddUncertain)return;const persona=visibleDraftPersona;if(!['KV','AM','LA','EV','KW'].includes(persona)){$('status').textContent='NOX_NOTE_PERSONA_NOT_READY_HOLD';return;}const requestId=nextChatId();pendingNote={requestId,title,content,persona};$('noteAdd').disabled=true;if(post('notes.add',{title,content,persona,requestId})===false){pendingNote=null;$('noteAdd').disabled=false}};
+$('feedbackUp').onclick=()=>{if(lastAnswer)post('feedback',{rating:1,answer:lastAnswer})};$('feedbackDown').onclick=()=>{if(lastAnswer)post('feedback',{rating:-1,answer:lastAnswer})};
+// Voice output is local WebView2 TTS only, not microphone/ASR. Exact locale
+// voice must actually be installed; never claim a Spanish/Russian voice by guess.
+function installedSpeechVoice(locale){
+  if(!('speechSynthesis' in window))return null;
+  const voices=window.speechSynthesis.getVoices();
+  return voices.find(v=>v?.lang?.toLowerCase()===locale.toLowerCase())||null;
+}
+function updateSpeechVoiceInventory(){
+  const label=$('voiceAvailable');
+  if(!('speechSynthesis' in window)||!('SpeechSynthesisUtterance' in window)){
+    label.textContent='Движок озвучивания Windows/WebView2 недоступен · HOLD';return;
+  }
+  label.textContent=['ru-RU','es-ES'].map(lang=>lang+': '+
+    (installedSpeechVoice(lang)?'голос установлен':'голос не обнаружен')).join(' | ');
+}
+$('voiceListRefresh').onclick=updateSpeechVoiceInventory;
+if('speechSynthesis' in window&&typeof window.speechSynthesis.addEventListener==='function')
+  window.speechSynthesis.addEventListener('voiceschanged',updateSpeechVoiceInventory);
+$('speak').onclick=()=>{
+  const status=$('voiceStatus');
+  const locale=$('voiceSpeechLocale').value;
+  if(!['ru-RU','es-ES'].includes(locale)){status.textContent='Язык не подтверждён · HOLD';return;}
+  if(!('speechSynthesis' in window)||!('SpeechSynthesisUtterance' in window)){
+    status.textContent='Движок озвучивания недоступен · HOLD';return;
+  }
+  if(!lastAnswer){status.textContent='Сначала получите завершённый ответ модели';return;}
+  const installed=installedSpeechVoice(locale);
+  if(!installed){status.textContent=locale+': голос не установлен · HOLD';return;}
+  window.speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance(lastAnswer);
+  u.lang=locale;u.voice=installed;
+  u.onstart=()=>{status.textContent=locale+' · воспроизведение началось';};
+  u.onend=()=>{status.textContent=locale+' · воспроизведение завершено';};
+  u.onerror=()=>{status.textContent=locale+' · ошибка движка озвучивания · HOLD';};
+  window.speechSynthesis.speak(u);
+  status.textContent=locale+' · отправлено в локальный речевой движок';
+};
+$('silence').onclick=()=>{if('speechSynthesis'in window)speechSynthesis.cancel();$('voiceStatus').textContent='Речь остановлена'};
+window.chrome?.webview?.addEventListener('message',e=>{const m=e.data,v=m.value;
+if(['status','token','metrics','complete'].includes(m.type) && (!v || v.requestId!==activeChatId))return;
+if(m.type==='error' && v && typeof v==='object' && v.requestId && (v.requestId!==activeChatId || pendingChatDraft?.persona!==visibleDraftPersona))return;
+switch(m.type){
+case 'status':if(pendingChatDraft?.persona!==visibleDraftPersona)break;$('status').textContent=v.state;$('generation').classList.toggle('on',v.state==='GENERATING');window.noxVisual?.setEnergy(v.state==='GENERATING');break;
+case 'token':if(pendingChatDraft?.persona!==visibleDraftPersona||pendingStopId===activeChatId)break;lastAnswer+=v.text;if(responseBox)responseBox.lastChild.textContent+=v.text;break;
+case 'metrics':if(pendingChatDraft?.persona!==visibleDraftPersona)break;$('inferenceMetrics').textContent=v?.measured?`QWEN · ${v.outputTokens} токенов · ${v.tokensPerSecond} ток/с · prompt ${v.promptTokens}`:'Модель не сообщила достоверные метрики';break;
+case 'complete':{const retry=pendingChatDraft?.requestId===v?.requestId?pendingChatDraft:null;pendingChatDraft=null;busy=false;activeChatId=null;pendingStopId=null;$('generation').classList.remove('on');window.noxVisual?.setEnergy(false);let restored=false;if(!v?.ok&&retry){if(retry.persona===visibleDraftPersona){if($('prompt').value===''){$('prompt').value=retry.raw;restored=true;}}else if(['KV','AM','LA','EV','KW'].includes(retry.persona)){const saved=personaDrafts.get(retry.persona)||{};if(!saved.prompt){personaDrafts.set(retry.persona,{...saved,prompt:retry.raw});restored=true;}}}if(retry?.persona!==visibleDraftPersona){if(v?.sqliteUnknown===true&&retry)uncertainChatKeys.add(uncertainChatKey(retry.persona,retry.raw));lastAnswer='';break;}if(v?.stopped){lastAnswer='';$('streamHint').textContent='Поток остановлен. Частичный ответ не сохранён.'+(restored?(retry.persona===visibleDraftPersona?' Запрос восстановлен.':' Запрос сохранён в исходной PersonaID.'):'');}else if(v?.sqliteUnknown===true){if(retry)uncertainChatKeys.add(uncertainChatKey(retry.persona,retry.raw));lastAnswer='';$('streamHint').textContent='SQLite мог сохранить ответ. Проверьте историю перед повторной отправкой.'+(restored?' Черновик восстановлен.':'');}else if(v?.ok)$('streamHint').textContent='Ответ завершён и сохранён в SQLite.';else{lastAnswer='';$('streamHint').textContent='Ответ не сохранён.'+(restored?(retry.persona===visibleDraftPersona?' Исходный запрос восстановлен.':' Исходный запрос сохранён в исходной PersonaID.'):' Новый черновик не изменён.');}break;}
+case 'error':$('status').textContent='ERROR';entry($('messages'),v&&typeof v==='object'?String(v.message||'NATIVE_ERROR'):String(v),'ERROR');/* Only the matching native complete may unlock a busy chat. */break;
+case 'model.catalog':{
+  // A family index is NOT proof of downloaded model bytes, rights, or a GPU-ready tag.
+  const rows=Array.isArray(v)?v.filter(x=>x&&typeof x.id==='string'&&typeof x.name==='string'
+    &&x.evidenceStatus==='FamilyListed'&&x.oneClickVerified===false).slice(0,64):[];
+  $('modelCatalog').textContent=rows.length?rows.map(x=>x.name+' ('+x.id+') · только каталог; установку проверяет Ollama').join('\n')
+    :'Неподтверждённый каталог. Локальные модели показаны выше.';
+  break;
+}
+case 'health':{const s=v.online?(v.modelVisible?'QWEN ONLINE':'SERVER ONLINE / MODEL ABSENT'):'PROVIDER OFFLINE';$('status').textContent=s;$('hudModel').textContent=(v.model||'QWEN').split(':')[0].toUpperCase().slice(0,13);$('hudEngine').textContent=v.modelVisible?'ONLINE':v.online?'NO MODEL':'OFFLINE';$('visualLive').textContent=v.modelVisible?'LOCAL AI ONLINE':'AI NOT READY';$('visualLiveDot').classList.toggle('on',!!v.modelVisible);const out=JSON.stringify(v,null,2);$('health').textContent=out;$('overview').textContent=out;const picker=$('modelPicker');picker.replaceChildren();(v.models||[]).forEach(name=>{let op=document.createElement('option');op.value=name;op.textContent=name;picker.append(op)});if(v.model&&!pendingModel){committedModel=v.model;picker.value=v.model;}if(!v.models?.length){let op=document.createElement('option');op.textContent='Нет доступных моделей';picker.append(op)}break}
+case 'history':{if(!v||v.persona!==visibleDraftPersona||!Array.isArray(v.rows))break;const rows=v.rows,box=$('history');box.replaceChildren();rows.forEach(x=>entry(box,x.prompt+'\n\n'+x.answer,x.timestamp));if(!rows.length)box.textContent='Нет сохранённых диалогов';break}
+case 'tasks':{const box=$('tasks');box.replaceChildren();(v||[]).forEach(x=>{let row=element('div',undefined,'task'+(x.complete?' done':''));row.dataset.taskId=String(x.id);let cb=document.createElement('input');cb.type='checkbox';cb.checked=x.complete;cb.disabled=!!pendingTaskToggle;cb.onchange=()=>{if(pendingTaskToggle)return;const requestId=nextChatId();pendingTaskToggle={requestId,id:x.id,previous:x.complete,target:cb.checked};document.querySelectorAll('#tasks input[type=checkbox]').forEach(b=>b.disabled=true);if(post('tasks.toggle',{id:x.id,complete:cb.checked,requestId})===false){cb.checked=x.complete;pendingTaskToggle=null;document.querySelectorAll('#tasks input[type=checkbox]').forEach(b=>b.disabled=false)}};row.append(cb,element('span',x.title));box.append(row)});if(!v?.length)box.textContent='Задач пока нет';break}
+case 'tasks.toggle.receipt':if(pendingTaskToggle&&v?.requestId===pendingTaskToggle.requestId&&v?.id===pendingTaskToggle.id&&v?.saved===true&&v?.complete===pendingTaskToggle.target){const id=pendingTaskToggle.id,target=pendingTaskToggle.target;pendingTaskToggle=null;document.querySelectorAll('#tasks .task').forEach(row=>{const cb=row.querySelector('input[type=checkbox]');if(cb){if(row.dataset.taskId===String(id))cb.checked=target;cb.disabled=false;}});$('status').textContent='TASK UPDATED · SQLITE';}break;
+case 'tasks.toggle.denied':if(pendingTaskToggle&&v?.requestId===pendingTaskToggle.requestId&&v?.id===pendingTaskToggle.id){const previous=pendingTaskToggle.previous,id=pendingTaskToggle.id;pendingTaskToggle=null;document.querySelectorAll('#tasks .task').forEach(row=>{const cb=row.querySelector('input[type=checkbox]');if(cb){if(row.dataset.taskId===String(id))cb.checked=previous;cb.disabled=false}});$('status').textContent=String(v.reason||'TASK UPDATE HOLD');post('tasks.list');}break;
+case 'tasks.toggle.uncertain':if(pendingTaskToggle&&v?.requestId===pendingTaskToggle.requestId&&v?.id===pendingTaskToggle.id){pendingTaskToggle=null;$('status').textContent=String(v?.reason||'TASK COMMIT UNKNOWN · REFRESH REQUIRED');if(post('tasks.list')===false)$('status').textContent='TASK COMMIT UNKNOWN · LOCAL READBACK REQUIRED';}break;
+case 'tasks.add.receipt':if(pendingTask&&v?.requestId===pendingTask.requestId&&v.saved===true){if(visibleDraftPersona===pendingTask.persona&&$('taskInput').value.trim()===pendingTask.text)$('taskInput').value='';pendingTask=null;$('taskAdd').disabled=false;$('status').textContent='TASK SAVED · SQLITE';}break;
+case 'tasks.add.uncertain':if(pendingTask&&v?.requestId===pendingTask.requestId){pendingTask.uncertain=true;$('taskAdd').disabled=true;$('status').textContent=String(v?.reason||'TASK COMMIT UNKNOWN')+' · проверьте список задач перед повтором';post('tasks.list');}break;
+case 'tasks.add.denied':if(pendingTask&&v?.requestId===pendingTask.requestId){pendingTask=null;$('taskAdd').disabled=false;$('status').textContent=String(v.reason||'TASK SAVE HOLD');}break;
+case 'model.select.receipt':if(pendingModel&&v?.requestId===pendingModel.requestId&&v.model===pendingModel.model&&v.saved===true){committedModel=v.model;pendingModel=null;$('saveModel').disabled=false;$('modelSelectStatus').textContent='SQLite подтверждена · '+v.model;}break;
+case 'model.select.denied':if(pendingModel&&v?.requestId===pendingModel.requestId){const previous=pendingModel.previous;pendingModel=null;$('saveModel').disabled=false;if(previous)$('modelPicker').value=previous;$('modelSelectStatus').textContent=String(v.reason||'NOX_MODEL_SELECT_HOLD');post('health');}break;
+case 'download':{
+  // Never accept a progress/STOP/DONE event from a previous owner request.
+  if(!pendingModelPull||v?.requestId!==pendingModelPull.requestId||v?.model!==pendingModelPull.model)break;
+  const state=String(v.status||'');
+  $('downloadStatus').textContent=v.model+' · '+state+(typeof v.percent==='number'?' · '+v.percent+'%':'')+
+    (v.reason?' · '+String(v.reason):'');
+  if(typeof v.percent==='number')$('downloadBar').style.width=Math.max(0,Math.min(100,v.percent))+'%';
+  if(['DONE','STOPPED','ERROR','DENIED'].includes(state)){
+    pendingModelPull=null;$('pullModel').disabled=false;$('cancelPull').disabled=true;
+    if(state==='DONE')post('health'); // Read-only refresh after verified Ollama tag.
+  }
+  break;
+}
+case 'learn.receipt':{
+  const requestAck=!!pendingLearnRequest&&v?.requestId===pendingLearnRequest;
+  const stopAck=!!pendingLearnStop&&v?.requestId===pendingLearnStop;
+  if(!requestAck&&!stopAck)break;
+  if(requestAck){pendingLearnRequest=null;$('learnRequest').disabled=false;}
+  if(stopAck){pendingLearnStop=null;$('learnCancel').disabled=false;}
+  const state=String(v?.state||'HOLD'),id=Number.isSafeInteger(v?.id)?'#'+v.id:'';
+  $('learnReceipt').textContent='LEARN '+id+' · '+state+(v?.reason?' · '+String(v.reason):'')+
+    ' · GPU не запущен; SHA checkpoint не подтверждён';
+  break;
+}
+case 'learn.denied':{
+  const requestAck=!!pendingLearnRequest&&v?.requestId===pendingLearnRequest;
+  const stopAck=!!pendingLearnStop&&v?.requestId===pendingLearnStop;
+  if(!requestAck&&!stopAck)break;
+  if(requestAck){pendingLearnRequest=null;$('learnRequest').disabled=false;}
+  if(stopAck){pendingLearnStop=null;$('learnCancel').disabled=false;}
+  $('learnReceipt').textContent=String(v?.reason||'NOX_LEARN_DENIED_HOLD')+' · GPU не запущен';
+  post('learn.queue');
+  break;
+}
+ case 'learn.queue':{const rows=Array.isArray(v)?v:[];$('learnQueue').textContent=rows.length?rows.map(x=>'Запрос #'+x.id+' · '+String(x.model)+' · '+String(x.state)+' · обучение не запущено').join('\n'):'Нет записанных запросов LEARN';break;}
+ case 'training':{const run=v?.measuredTrainingRuns?.find(r=>r.progressVerified===true&&r.checkpointVerified===true&&typeof r.progressPercent==='number');const pct=run?Math.max(0,Math.min(100,run.progressPercent)):0;$('trainingBar').style.width=pct+'%';$('trainingMeasured').textContent=run?`Подтверждённые шаги: ${run.globalStep}/${run.maxSteps} · ${pct}%`:'Обучение GPU не подтверждено · 0%';const count=Array.isArray(v?.observedExternalRuns)?v.observedExternalRuns.length:0;$('training').textContent=count?`Найдено внешних журналов: ${count}. Их шаги и loss не связаны с подтверждённым NOX checkpoint.`:'Нет подтверждённых результатов GPU/QLoRA';break;}
+case 'settings':if(!pendingSettings&&!settingsReconcile){applyCommittedSettings(v||{});$('personaStatus').textContent=settingsDenial||'Настройки прочитаны из SQLite';}break;
+case 'persona.changed':if(v?.persona===visibleDraftPersona)break;if(!switchPersonaDrafts(v?.persona))break;pendingMemorySearch=null;$('messages').replaceChildren();$('history').replaceChildren();$('notes').replaceChildren();$('memoryResults').replaceChildren();$('knowledgeResults').replaceChildren();lastAnswer='';responseBox=null;if('speechSynthesis' in window)speechSynthesis.cancel();post('history');post('notes.list');post('knowledge.stats');break;
+case 'settings.receipt':{
+  if(!pendingSettings || v?.requestId!==pendingSettings.requestId ||
+      v?.key!==pendingSettings.key || v?.value!==pendingSettings.value || v?.saved!==true)break;
+  const {key,value}=pendingSettings;pendingSettings=null;setSettingsBusy(false);
+  settingsDenial='';applyCommittedSettings({...committedSettings,[key]:value});
+  $('personaStatus').textContent='SQLite подтверждена: '+key+' = '+value;
+  break;
+}
+case 'settings.denied':{
+  if(pendingSettings && v?.requestId!==pendingSettings.requestId)break;
+  const deniedWrite=pendingSettings;
+  if(deniedWrite){pendingSettings=null;setSettingsBusy(false);applyCommittedSettings(committedSettings);}
+  const allowed=['NOX_SETTINGS_INVALID_REQUEST','NOX_SETTINGS_REJECTED',
+    'NOX_SETTINGS_SQLITE_HOLD','NOX_SETTINGS_NATIVE_HOLD',
+    'NOX_SETTINGS_COMMIT_UNKNOWN_HOLD','NOX_PERSONA_GENERATION_ACTIVE_HOLD'];
+  const reason=typeof v?.reason==='string'?v.reason:'NOX_SETTINGS_NATIVE_HOLD';
+  settingsDenial=allowed.includes(reason)?reason:'NOX_SETTINGS_NATIVE_HOLD';
+  $('personaStatus').textContent=settingsDenial;
+  if(deniedWrite && settingsDenial==='NOX_SETTINGS_COMMIT_UNKNOWN_HOLD'){
+    // No speculative retry/ACK: native DB readback must carry the exact owner requestId.
+    const reconcile={requestId:deniedWrite.requestId,key:deniedWrite.key,value:deniedWrite.value};
+    settingsReconcile=reconcile;setSettingsBusy(true);
+    reconcile.timer=setTimeout(()=>{
+      if(settingsReconcile!==reconcile)return;
+      settingsReconcile=null;setSettingsBusy(false);
+      $('personaStatus').textContent='NOX_SETTINGS_READBACK_TIMEOUT_HOLD';
+      post('settings.get'); // best-effort refresh, NEVER a success receipt
+    },8000);
+    if(post('settings.get',{requestId:reconcile.requestId})===false){
+      clearTimeout(reconcile.timer);settingsReconcile=null;setSettingsBusy(false);
+      $('personaStatus').textContent='NOX_SETTINGS_READBACK_IPC_HOLD';
+    }
+  }else post('settings.get');
+  break;
+}
+case 'settings.readback':{
+  const r=settingsReconcile;
+  if(!r||v?.requestId!==r.requestId)break;
+  clearTimeout(r.timer);settingsReconcile=null;setSettingsBusy(false);
+  if(!v.values||typeof v.values!=='object'||Array.isArray(v.values)){
+    $('personaStatus').textContent='NOX_SETTINGS_READBACK_INVALID_HOLD';break;
+  }
+  const matches=v.values[r.key]===r.value;
+  applyCommittedSettings(v.values);
+  settingsDenial='';
+  $('personaStatus').textContent=matches
+    ? 'SQLite повторно прочитана: '+r.key+' = '+r.value
+    : 'NOX_SETTINGS_COMMIT_UNKNOWN_HOLD · состояние SQLite восстановлено';
+  break;
+}
+case 'settings.readback.denied':{
+  const r=settingsReconcile;
+  if(!r||v?.requestId!==r.requestId)break;
+  clearTimeout(r.timer);settingsReconcile=null;setSettingsBusy(false);
+  $('personaStatus').textContent='NOX_SETTINGS_READBACK_SQLITE_HOLD';
+  break;
+}
+case 'knowledge.vuneo.result':{
+  if(!pendingVuneo||v?.requestId!==pendingVuneo.requestId||v?.backupVerified!==true)break;
+  pendingVuneo=null;$('vuneoImport').disabled=false;
+  $('vuneoImportStatus').textContent='Нативный ответ получен; резервная копия SQLite проверена. Состояние индекса — в статистике.';
+  break;
+}
+case 'knowledge.vuneo.unknown':{
+  if(!pendingVuneo||v?.requestId!==pendingVuneo.requestId||
+     !['NOX_VUNEO_COMMIT_UNKNOWN_HOLD','NOX_VUNEO_JOURNAL_STATE_UNKNOWN_HOLD'].includes(v?.reason)||
+     v?.backupVerified!==true)break;
+  // Neither journal COMMIT nor import outcome is known: disallow replay.
+  pendingVuneo=null;vuneoImportUncertain=true;$('vuneoImport').disabled=true;
+  $('vuneoImportStatus').textContent=v.reason+(v.reason==='NOX_VUNEO_JOURNAL_STATE_UNKNOWN_HOLD'
+    ? ': запись защитного журнала SQLite не подтверждена; повтор заблокирован до проверки.'
+    : ': результат импорта неопределён; повтор заблокирован до сверки SQLite и статистики.');
+  break;
+}
+case 'knowledge.vuneo.denied':{
+  if(!pendingVuneo||v?.requestId!==pendingVuneo.requestId)break;
+  pendingVuneo=null;
+  // Read the durable native SQLite admission result, not a generic retryable denial.
+  // A journaled attempt or completed import cannot be retried after restart.
+  const allowed=['OWNER_DECLINED','NOX_VUNEO_IMPORT_HOLD','NOX_VUNEO_REQUEST_ID_HOLD',
+    'NOX_VUNEO_ALREADY_IMPORTED_HOLD','NOX_VUNEO_PREVIOUS_OUTCOME_REVIEW_HOLD',
+    'NOX_VUNEO_JOURNAL_READ_HOLD','NOX_VUNEO_REQUEST_LIMIT_HOLD','NOX_VUNEO_REPLAY_HOLD'];
+  const reason=allowed.includes(v?.reason)?v.reason:'NOX_VUNEO_IMPORT_HOLD';
+  const locked=['NOX_VUNEO_ALREADY_IMPORTED_HOLD','NOX_VUNEO_PREVIOUS_OUTCOME_REVIEW_HOLD',
+    'NOX_VUNEO_REQUEST_LIMIT_HOLD'].includes(reason);
+  if(locked)vuneoImportUncertain=true;
+  $('vuneoImport').disabled=vuneoImportUncertain;
+  $('vuneoImportStatus').textContent=reason==='OWNER_DECLINED'?'Импорт отменён владельцем.':reason;
+  break;
+}
+case 'knowledge.stats':$('knowledgeStats').textContent=`В SQLite: ${v?.documents??0} документов · ${v?.chunks??0} фрагментов`;break;
+case 'knowledge.imported':$('knowledgeStats').textContent=`Импортировано: ${v?.documents??0}; дублей: ${v?.skipped??0}; фрагментов: ${v?.chunks??0}`;post('knowledge.stats');break;
+case 'knowledge.results':{const box=$('knowledgeResults');box.replaceChildren();(v||[]).forEach(x=>entry(box,x.excerpt,x.title+' · '+x.source));if(!v?.length)box.textContent='Совпадений не найдено';break;}
+case 'memory':{
+  if(!pendingMemorySearch||!v||v.persona!==visibleDraftPersona||
+     v.persona!==pendingMemorySearch.persona||
+     v.requestId!==pendingMemorySearch.requestId||!Array.isArray(v.rows))break;
+  pendingMemorySearch=null;
+  const box=$('memoryResults');box.replaceChildren();
+  v.rows.forEach(x=>entry(box,x.prompt+'\n\n'+x.answer,x.timestamp));
+  if(!v.rows.length)box.textContent='Совпадений нет';
+  break;
+}
+case 'memory.denied':
+  if(pendingMemorySearch&&v?.requestId===pendingMemorySearch.requestId){
+    pendingMemorySearch=null;
+    $('memoryResults').textContent=String(v.reason||'NOX_MEMORY_READ_HOLD');
+  }
+  break;
+case 'notes':{if(pendingNoteDelete||!v||v.persona!==visibleDraftPersona||!Array.isArray(v.rows))break;const rows=v.rows;const box=$('notes');box.replaceChildren();rows.forEach(n=>{const card=element('div',undefined,'note-card');card.append(element('div',n.title,'note-title'),element('div',n.timestamp,'meta'),element('p',n.content));const b=element('button','Удалить заметку','action');b.disabled=noteDeleteUncertain;b.onclick=()=>{if(pendingNoteDelete||noteDeleteUncertain)return;const requestId=nextChatId();pendingNoteDelete={requestId,id:n.id};document.querySelectorAll('#notes .note-card button').forEach(button=>button.disabled=true);if(post('notes.delete',{id:n.id,requestId})===false){pendingNoteDelete=null;document.querySelectorAll('#notes .note-card button').forEach(button=>button.disabled=false)}};card.append(b);box.append(card)});if(!rows.length)box.textContent='Пока нет сохранённых заметок';break}
+case 'notes.delete.receipt':if(pendingNoteDelete&&v?.requestId===pendingNoteDelete.requestId&&v?.id===pendingNoteDelete.id&&v.deleted===true&&v.backupVerified===true){pendingNoteDelete=null;$('status').textContent='NOTE DELETED · VERIFIED SQLITE BACKUP';}break;
+case 'notes.delete.denied':if(pendingNoteDelete&&v?.requestId===pendingNoteDelete.requestId&&v?.id===pendingNoteDelete.id){pendingNoteDelete=null;document.querySelectorAll('#notes .note-card button').forEach(button=>button.disabled=false);$('status').textContent=String(v.reason||'NOX_NOTE_DELETE_HOLD');post('notes.list');}break;
+case 'notes.delete.unknown':if(pendingNoteDelete&&v?.requestId===pendingNoteDelete.requestId&&v?.id===pendingNoteDelete.id&&v?.persona===visibleDraftPersona&&v?.reason==='NOX_NOTE_DELETE_COMMIT_UNKNOWN_HOLD'){pendingNoteDelete=null;noteDeleteUncertain=true;document.querySelectorAll('#notes .note-card button').forEach(button=>button.disabled=true);$('status').textContent='NOX_NOTE_DELETE_COMMIT_UNKNOWN_HOLD · Проверьте SQLite и резервную копию перед повтором.';post('notes.list');}break;
+case 'notes.add.receipt':if(pendingNote&&v?.requestId===pendingNote.requestId&&v.saved===true){if(visibleDraftPersona===pendingNote.persona&&$('noteTitle').value.trim()===pendingNote.title)$('noteTitle').value='';if(visibleDraftPersona===pendingNote.persona&&$('noteText').value.trim()===pendingNote.content)$('noteText').value='';pendingNote=null;$('noteAdd').disabled=false;$('status').textContent='NOTE SAVED · SQLITE';}break;
+case 'notes.add.denied':if(pendingNote&&v?.requestId===pendingNote.requestId){pendingNote=null;$('noteAdd').disabled=false;$('status').textContent=String(v.reason||'NOTE SAVE HOLD');}break;
+case 'notes.add.unknown':if(pendingNote&&v?.requestId===pendingNote.requestId&&v?.reason==='NOX_NOTE_ADD_COMMIT_UNKNOWN_HOLD'){pendingNote=null;noteAddUncertain=true;$('noteAdd').disabled=true;$('status').textContent='NOX_NOTE_ADD_COMMIT_UNKNOWN_HOLD · Проверьте записи в памяти перед повторением.';post('notes.list');}break;
+case 'asr.installed':{
+  if(v?.source!=='WINDOWS_SAPI_LOCAL')break;
+  const langs=Array.isArray(v.languages)?v.languages:[];
+  $('asrState').textContent='Распознаватели Windows: '+(['ru-RU','es-ES'].map(l=>
+    l+' '+(langs.includes(l)?'есть':'не установлен')).join(' | '));
+  $('asrState').dataset.inventoryReadback='DONE';
+  break;
+}
+case 'asr.started':{
+  if(v?.source!=='WINDOWS_SAPI_LOCAL'||v.requestId!==activeAsrRequestId)break;
+  $('asrStart').disabled=true;
+  $('asrStop').disabled=false;
+  $('asrState').textContent='Микрофон Windows активен · '+String(v.locale).slice(0,12)+' · максимум 20 секунд';
+  break;
+}
+case 'asr.denied':{
+  if(v?.requestId!==activeAsrRequestId)break;
+  activeAsrRequestId=null;
+  $('asrStart').disabled=false;$('asrStop').disabled=true;
+  $('asrState').textContent='ASR HOLD · '+String(v.reason||'UNAVAILABLE').slice(0,100);
+  break;
+}
+case 'asr.complete':{
+  if(v?.requestId!==activeAsrRequestId)break;
+  activeAsrRequestId=null;
+  $('asrStart').disabled=false;$('asrStop').disabled=true;
+  if(v?.ok===true && typeof v.text==='string' && v.text.length<=4000){
+    const existing=$('voiceText').value;
+    const combined=existing ? existing+'\\n'+v.text : v.text;
+    if(combined.length<=4000){
+      $('voiceText').value=combined;
+      $('asrState').textContent='Локальное распознавание завершено · текст добавлен, не отправлен';
+    }else $('asrState').textContent='Распознанный текст превышает лимит поля · HOLD';
+  }else $('asrState').textContent='ASR · '+String(v?.status||'NO_TRANSCRIPT').slice(0,100);
+  break;
+}
+case 'qlora.prepare.receipt':{
+  const box=$('qloraPreflightState');
+  box.dataset.prepareReadback='DONE';
+  box.textContent=v?.saved===true&&v?.trainingStarted===false
+    ?'P04 · исходники подготовлены локально: '+String(v.files||0)+' файлов; обучение НЕ запущено'
+    :'P04 · подготовка HOLD: '+String(v?.status||'UNKNOWN').slice(0,90);
+  break;
+}
+case 'qlora.snapshot-probe':{
+  if(!pendingSnapshotProbe||v?.requestId!==pendingSnapshotProbe)break;
+  pendingSnapshotProbe=null;
+  $('qloraSnapshotProbe').disabled=false;
+  const sha=typeof v?.snapshotManifestSha256==='string' && /^[a-f0-9]{64}$/i.test(v.snapshotManifestSha256)
+    ? v.snapshotManifestSha256.slice(0,16):'N/D';
+  $('qloraSnapshotState').textContent='P04 модель · '+String(v?.status||'HOLD').slice(0,80)+
+    ' · файлов весов '+String(Number.isInteger(v?.checkedFiles)?v.checkedFiles:0)+
+    ' · manifest SHA '+sha+' · лицензия/обучение/merge НЕ подтверждены';
+  break;
+}
+case 'qlora.gpu-probe':{
+  if(!pendingGpuProbe||v?.requestId!==pendingGpuProbe)break;
+  pendingGpuProbe=null;
+  $('qloraGpuProbe').disabled=false;
+  $('qloraGpuProbeState').textContent='P04 GPU/CUDA · '+String(v.status||'HOLD').slice(0,100)+
+    ' · проверка '+(v.ran===true?'выполнена':'не запущена')+
+    ' · обучение НЕ выполнялось · checkpoint и merge НЕ подтверждены';
+  break;
+}
+case 'qlora.preflight':{
+  if(v?.source!=='P04_QLORA_PREFLIGHT_READONLY')break;
+  const row=$('qloraPreflightState');
+  row.dataset.source='P04_QLORA_PREFLIGHT_READONLY';
+  row.dataset.readback='DONE';
+  const ready=Array.isArray(v.scripts)?v.scripts.filter(x=>x?.available===true).length:0;
+  row.textContent='P04 QLoRA · '+ready+'/4 исходников · Python '+(v.localPython===true?'есть':'HOLD')+
+    ' · GPU '+(v.gpuTelemetryAvailable===true?'обнаружен':'HOLD')+
+    ' · CUDA/права/веса/датасет НЕ ПРОВЕРЕНЫ · обучение НЕ ЗАПУЩЕНО';
+  break;
+}
+case 'gpu.guardian':{
+  // Read-only telemetry from original P04; absent hardware/sensors MUST stay HOLD.
+  if(v?.source!=='P04_GPU_GUARDIAN')break;
+  const box=$('gpuGuardianState');
+  box.dataset.source='P04_GPU_GUARDIAN';
+  box.dataset.readback='DONE';
+  if(v.available!==true||!Array.isArray(v.samples)||!v.samples.length){
+    box.textContent='Датчики NVIDIA недоступны · '+String(v.reason||'HOLD').slice(0,90)+' · обучение HOLD';
+    window.noxVisual?.setThermalHold?.(true);
+    break;
+  }
+  const valid=v.samples.every(s=>s&&s.state==='READY'&&typeof s.temperatureC==='number'&&
+    Number.isFinite(s.temperatureC)&&s.temperatureC>=0&&s.temperatureC<=150&&
+    typeof s.memoryTotalMiB==='number'&&s.memoryTotalMiB>0);
+  if(!valid){box.textContent='Датчики NVIDIA: некорректная проба · HOLD';window.noxVisual?.setThermalHold?.(true);break;}
+  box.textContent='GPU Guardian · '+v.samples.map(s=>String(s.name||'NVIDIA').slice(0,70)+
+    ' · '+s.temperatureC+'°C · '+s.memoryUsedMiB+'/'+s.memoryTotalMiB+' MiB').join(' | ')+
+    (v.thermalHold===true?' · температурный HOLD':' · только чтение');
+  if(v.thermalHold===true)window.noxVisual?.setThermalHold?.(true);
+  break;
+}
+
+case 'rag.chat.sources':{
+  if(v?.requestId!==activeChatId||v?.persona!==visibleDraftPersona)break;
+  const rows=Array.isArray(v.citations)?v.citations.slice(0,5):[];
+  $('chatRagSources').textContent=rows.length?
+    'P04 RAG: '+rows.map(x=>'['+String(x.fileName||'').slice(0,100)+' #'+
+      String(Number(x.chunkIndex)+1)+'] SHA '+String(x.sha256||'').slice(0,12)).join(' | '):
+    'P04 RAG: нет подтверждённых источников';
+  break;
+}
+case 'rag.search.results':{
+  if(!pendingRagSearch||v?.requestId!==pendingRagSearch.requestId||
+     v?.persona!==pendingRagSearch.persona||v.persona!==visibleDraftPersona)break;
+  pendingRagSearch=null;$('ragSearch').disabled=false;
+  const box=$('ragResults'),rows=Array.isArray(v.rows)?v.rows.slice(0,5):[];
+  box.dataset.source=v.source==='P04_SEMANTIC_RAG'?'P04_SEMANTIC_RAG':'INVALID';
+  box.dataset.readback='DONE';
+  box.textContent=rows.length?rows.map(s=>'['+String(s.fileName||'').slice(0,120)+' #'+
+    String(s.chunkIndex+1)+'] SHA '+String(s.sha256||'').slice(0,12)+
+    ' · '+String(s.text||'').slice(0,600)).join('\n\n'):'0 совпадений в P04 RAG — импортируйте локальный TXT/MD';
+  break;
+}
+case 'rag.import.receipt':{
+  if(!pendingRagImport||v?.requestId!==pendingRagImport.requestId||
+     v?.persona!==pendingRagImport.persona||v.persona!==visibleDraftPersona)break;
+  pendingRagImport=null;$('ragImport').disabled=false;
+  $('ragImportStatus').textContent=v?.saved===true?
+    'P04 RAG: индексировано '+String(v.chunks)+' фрагментов · '+String(v.fileName||'').slice(0,120):
+    'P04 RAG: импорт не подтверждён';
+  break;
+}
+case 'rag.denied':{
+  const isSearch=v?.action==='search'&&pendingRagSearch?.requestId===v?.requestId;
+  const isImport=v?.action==='import'&&pendingRagImport?.requestId===v?.requestId;
+  if(v?.persona!==visibleDraftPersona||(!isSearch&&!isImport))break;
+  const reason=String(v.reason||'NOX_RAG_NATIVE_HOLD').slice(0,100);
+  if(isSearch){
+    pendingRagSearch=null;$('ragSearch').disabled=false;
+    $('ragResults').textContent=reason+' · локальный P04 RAG недоступен';
+  }else{
+    pendingRagImport=null;$('ragImport').disabled=false;
+    $('ragImportStatus').textContent=reason;
+  }
+  break;
+}
+
+case 'system':{
+  // Prefer a conservative ECO rendering cap until the native sensor proves safe.
+  // Never mutate the persisted mode or interrupt Qwen STREAM/STOP.
+  const sensorUnknown=v?.gpu?.available!==true;
+  const thermalHold=sensorUnknown||v.gpu.thermalHold===true;
+  window.noxVisual?.setThermalHold?.(thermalHold);
+  $('systemInfo').textContent=JSON.stringify(v,null,2)+(thermalHold?'\nVISUAL SAFETY: ECO (GPU HOT / SENSOR UNVERIFIED)':'');
+  $('hudMemory').textContent='SQLITE';break;}
+case 'notice':$('personaStatus').textContent=String(v);break;
+}});
+let activeAsrRequestId=null;
+$('asrInventory').onclick=()=>post('asr.installed');
+$('asrStart').onclick=()=>{
+  if(activeAsrRequestId)return;
+  const locale=$('asrLocale').value;
+  if(locale!=='ru-RU'&&locale!=='es-ES')return;
+  const requestId=nextChatId();
+  activeAsrRequestId=requestId;
+  $('asrStart').disabled=true;
+  $('asrState').textContent='Ожидается разрешение владельца Windows…';
+  if(post('asr.start',{locale,requestId})===false){
+    activeAsrRequestId=null;
+    $('asrStart').disabled=false;
+    $('asrState').textContent='Локальный микрофон недоступен · HOLD';
+  }
+};
+$('asrStop').onclick=()=>{
+  if(!activeAsrRequestId)return;
+  post('asr.stop',{requestId:activeAsrRequestId});
+  $('asrStop').disabled=true;
+};
+document.addEventListener('keydown',e=>{
+  // Escape belongs to IME until composition ends; repeated/handled keys must
+  // not send duplicate native STOP or steal accessibility shortcuts.
+  if(e.defaultPrevented||e.isComposing||e.keyCode===229||e.repeat)return;
+  if(e.key==='Escape'&&busy&&activeChatId){e.preventDefault();$('stop').click();return;}
+  if(e.ctrlKey&&!e.altKey&&!e.metaKey&&!e.shiftKey&&e.key.toLowerCase()==='k'){
+    e.preventDefault();route('core');$('prompt').focus();
+  }
+});
+
+// One visual appearance state shared by all existing route panels.
+// Nothing is sent to the native privileged bridge.
+const noxThemes=[['obsidian','Обсидиан'],['aurora','Аврора'],['copper','Медь'],['nebula','Туманность'],['frost','Лёд']];
+let noxThemeIndex=0;
+const noxThemeToggle=typeof document.getElementById==='function' ? document.getElementById('noxThemeToggle') : null;
+if(noxThemeToggle) noxThemeToggle.addEventListener('click',()=>{
+  noxThemeIndex=(noxThemeIndex+1)%noxThemes.length;
+  const [id,name]=noxThemes[noxThemeIndex];
+  document.body.dataset.noxTheme=id;
+  noxThemeToggle.setAttribute('aria-label','Сменить оформление NOX: '+name);
+  noxThemeToggle.title=name+' · выбрать следующий фон';
+});
+// VOICE: zero new providers. User action routes prepared text through the
+// original CHAT click handler (same Qwen, STOP, PersonaID and SQLite).
+const voiceChatButton=$('voiceChatSend');
+if(voiceChatButton)voiceChatButton.onclick=()=>{
+  const raw=String($('voiceText').value||'').trim();
+  if(!raw){$('voiceTaskStatus').textContent='Введите текст';return;}
+  if(busy){$('voiceTaskStatus').textContent='Дождитесь ответа или нажмите STOP в CHAT';return;}
+  const mode=$('voiceTask').value;
+  const level=$('voiceLevel').value;
+  const prefix=mode==='ru-es'
+    ?'Переведи следующий текст с русского на испанский. Выведи только точный перевод без комментариев:'
+    :mode==='es-ru'
+    ?'Переведи следующий текст с испанского на русский. Выведи только точный перевод без комментариев:'
+    :'Ты преподаватель испанского языка уровня '+level+'. Отвечай на запрос по-русски с корректными испанскими примерами и короткими пояснениями:';
+  const message=prefix+'\\n'+raw;
+  if(message.length>32000){$('voiceTaskStatus').textContent='Слишком длинный текст';return;}
+  const prior=$('prompt').value;
+  if(prior.trim()){ $('voiceTaskStatus').textContent='CHAT содержит несохранённый черновик — сначала сохраните или очистите его';return; }
+  $('prompt').value=message;
+  route('core');
+  $('send').click();
+  $('voiceTaskStatus').textContent=busy?'Передано в действующий Qwen CHAT':'Не отправлено: проверьте состояние локального движка; текст остаётся в CHAT';
+};
+route('consciousness');
+
+/* NOX_V16_CINEMA_FX_INTEGRATED: exact donor, same canonical script and host */
+(()=>{
+/*
+ * NOX HELION · CINEMA FX gravity / obsidian renderer, V16.
+ * This module decorates ONLY the approved existing nine D02 sphere elements.
+ * It never replaces HOME, menu, persona photos or a host feature.
+ * No dependencies, network, storage, model downloads or privileged commands.
+ * Cinematic ejecta is decorative. Backend/learning telemetry is NEVER fabricated.
+ */
+const CORE_COUNT=8;
+const STATES=Object.freeze([
+  "idle","thinking","streaming","speaking","loading","training",
+  "paused","stopped","success","error","offline"
+]);
+const PROFILES=Object.freeze({
+  ECO:Object.freeze({fps:12,maxParticles:3,minimumBurstMs:32000,maximumBurstMs:52000}),
+  BALANCED:Object.freeze({fps:24,maxParticles:12,minimumBurstMs:18000,maximumBurstMs:35000}),
+  MAX:Object.freeze({fps:30,maxParticles:24,minimumBurstMs:10000,maximumBurstMs:22000}),
+  REDUCED:Object.freeze({fps:0,maxParticles:0,minimumBurstMs:Infinity,maximumBurstMs:Infinity})
+});
+const stateSet=new Set(STATES);
+const profileSet=new Set(Object.keys(PROFILES));
+const pattern=/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
+const mounted=new WeakMap();
+const SVG_NS="http://www.w3.org/2000/svg";
+function clamp(value,min,max){
+  if(!Number.isFinite(value))return min;
+  return Math.max(min,Math.min(max,value));
+}
+function validateScene(orbs){
+  if(!Array.isArray(orbs)||orbs.length!==CORE_COUNT+1)
+    throw new Error("NOX_FX_REQUIRES_HELION_PLUS_EIGHT_CORES");
+  const ids=orbs.map(x=>x?.id);
+  if(ids[0]!=="HELION"||new Set(ids).size!==CORE_COUNT+1||
+     ids.slice(1).some(x=>typeof x!=="string"||!pattern.test(x)))
+    throw new Error("NOX_FX_INVALID_CANONICAL_CORE_IDS");
+  if(orbs.some(x=>!x?.element||x.element.nodeType!==1))
+    throw new Error("NOX_FX_MISSING_ORB_ELEMENTS");
+  if(new Set(orbs.map(x=>x.element)).size!==CORE_COUNT+1)
+    throw new Error("NOX_FX_DUPLICATE_ORB_ELEMENTS");
+  return true;
+}
+function profileFor(mode,reduced){
+  if(!profileSet.has(mode))throw new Error("NOX_FX_INVALID_PROFILE");
+  return PROFILES[reduced?"REDUCED":mode];
+}
+// Burst outward, slow near the apex, and return to the point of emergence.
+// It is a designed visual cue, not a claim of astronomical simulation.
+function gravitationalSample(p,timeMs){
+  if(!p||!Number.isFinite(timeMs)||
+     ["started","duration","surfaceRadius","reach","swirl","angle","brightness","rotation"].some(k=>!Number.isFinite(p[k]))||
+     p.duration<=0||p.surfaceRadius<0||p.surfaceRadius>200||
+     p.reach<0||p.reach>200||Math.abs(p.swirl)>200||
+     Math.abs(p.angle)>Math.PI*20000||
+     Math.abs(p.rotation)>360||p.brightness<0||p.brightness>1)
+    throw new Error("NOX_FX_INVALID_PARTICLE");
+  // R09: reject overflowing timestamps before DOM/SVG formatting.
+  const elapsed=timeMs-p.started;
+  if(!Number.isFinite(elapsed)||!Number.isFinite(elapsed/p.duration))
+    throw new Error("NOX_FX_INVALID_PARTICLE");
+  const t=clamp(elapsed/p.duration,0,1);
+  const arc=Math.sin(Math.PI*t);
+  const radius=p.surfaceRadius+arc*p.reach;
+  const sideways=p.swirl*arc*Math.cos(Math.PI*t);
+  const angle=p.angle;
+  const x=100+Math.cos(angle)*radius-Math.sin(angle)*sideways;
+  const y=100+Math.sin(angle)*radius+Math.cos(angle)*sideways;
+  const opacity=(t<=0||t>=1)?0:clamp(Math.pow(arc,.6)*p.brightness,0,1);
+  const visualAngle=t*320+p.rotation;
+  if(![x,y,radius,sideways,opacity,visualAngle].every(Number.isFinite))
+    throw new Error("NOX_FX_INVALID_PARTICLE");
+  return {x,y,opacity,angle:visualAngle,done:t>=1,t,radius};
+}
+function svgElement(doc,name,attributes={}){
+  const el=doc.createElementNS(SVG_NS,name);
+  for(const [key,value] of Object.entries(attributes))el.setAttribute(key,String(value));
+  return el;
+}
+function layer(doc,cls){
+  const e=doc.createElement("div");e.className=cls;
+  return e;
+}
+function installNoxCinemaFX({root,orbs,controls=[],panels=[],profile="BALANCED",
+  hostEvents=null,random=Math.random,clock=null}={}){
+  validateScene(orbs);
+  if(!root||root.nodeType!==1)throw new Error("NOX_FX_TRUSTED_ROOT_REQUIRED");
+  if(mounted.has(root))throw new Error("NOX_FX_ALREADY_MOUNTED");
+  if(root.classList.contains("nox-cinema-scope")||
+     ["noxFxMode","noxFxState","noxFxVisible"].some(k=>Object.prototype.hasOwnProperty.call(root.dataset,k))||
+     orbs.some(x=>Object.prototype.hasOwnProperty.call(x.element.dataset,"noxFxState")))
+    throw new Error("NOX_FX_OWNERSHIP_COLLISION");
+  if(!profileSet.has(profile)||typeof random!=="function")
+    throw new Error("NOX_FX_INVALID_OPTIONS");
+  const doc=root.ownerDocument;
+  const win=doc.defaultView;
+  if(!win||typeof win.requestAnimationFrame!=="function")
+    throw new Error("NOX_FX_ANIMATION_HOST_REQUIRED");
+  if(hostEvents && (typeof hostEvents.subscribe!=="function"))
+    throw new Error("NOX_FX_INVALID_EVENT_SOURCE");
+  if(orbs.some(x=>!root.contains(x.element)||x.element.querySelector(".nox-cinema-orb__layers")))
+    throw new Error("NOX_FX_ORB_OUTSIDE_HOST_OR_ALREADY_DECORATED");
+  if(!Array.isArray(controls)||!Array.isArray(panels)||
+     [...controls,...panels].some(e=>!e||e.nodeType!==1||!root.contains(e)))
+    throw new Error("NOX_FX_INVALID_DECORATION_PREFLIGHT");
+  // R08-01/02: fail closed before creating any decorative DOM.
+  if(clock!==null&&typeof clock!=="function")throw new Error("NOX_FX_INVALID_CLOCK");
+  const time=clock||(()=>win.performance.now());
+  let initialNow;
+  try{initialNow=time();}catch(_){throw new Error("NOX_FX_INVALID_CLOCK");}
+  if(!Number.isFinite(initialNow)||initialNow<0)throw new Error("NOX_FX_INVALID_CLOCK");
+  const motion=typeof win.matchMedia==="function"?
+    win.matchMedia("(prefers-reduced-motion: reduce)"):null;
+  let preference=!!motion?.matches;
+  let mode=profile;
+  let disposed=false,hostVisible=true,intersectVisible=true,raf=0,lastFrame=0,frameCount=0;
+  let state="idle",stateRunId=null,emissions=0,particleCount=0;
+  let ownerRoot=false;
+  const decorated=[];
+  const particles=[];
+  function unitRandom(){let v;try{v=random();}catch(_){return .5;}
+    return typeof v==="number"&&Number.isFinite(v)&&v>=0&&v<1?v:.5;}
+  // R08-03..05: decorator transaction preserving original D02 nodes.
+  const each=[];
+  function undoOwnedDom(){
+    for(const orb of each){
+      try{orb.layers.remove();}catch(_){}
+      delete orb.element.dataset.noxFxState;
+    }
+    for(const item of decorated){
+      if(item.added)try{item.element.classList.remove(item.cls);}catch(_){}
+    }
+    if(ownerRoot){
+      try{root.classList.remove("nox-cinema-scope");}catch(_){}
+      delete root.dataset.noxFxMode;
+      delete root.dataset.noxFxState;
+      delete root.dataset.noxFxVisible;
+      ownerRoot=false;
+    }
+  }
+  function constructOrbs(){
+    orbs.forEach((entry,index)=>{
+      const element=entry.element;
+      if(!root.contains(element)||element.querySelector(".nox-cinema-orb__layers"))
+        throw new Error("NOX_FX_DUPLICATE_OR_OUTSIDE_ORB");
+      const layers=layer(doc,"nox-cinema-orb__layers");
+      for(const name of ["lava","filaments","crust","corona","rim"])
+        layers.appendChild(layer(doc,"nox-cinema-orb__"+name));
+      const svg=svgElement(doc,"svg",{
+        class:"nox-cinema-orb__ejecta",viewBox:"0 0 200 200",
+        "aria-hidden":"true",focusable:"false"
+      });
+      layers.appendChild(svg);
+      const added=!element.classList.contains("nox-cinema-orb");
+      const shape={id:entry.id,element,layers,svg,index,
+        nextBurst:initialNow+4500+unitRandom()*18000};
+      each.push(shape);
+      decorated.push({element,cls:"nox-cinema-orb",added});
+      if(added)element.classList.add("nox-cinema-orb");
+      element.dataset.noxFxState="idle";
+      element.appendChild(layers);
+    });
+  }
+  function decorate(items,cls){
+    if(!Array.isArray(items))throw new Error("NOX_FX_DECORATION_LIST");
+    for(const e of items){
+      if(!e||e.nodeType!==1||!root.contains(e))continue;
+      // Buttons and panels remain original controls. Only cosmetic classes added.
+      const added=!e.classList.contains(cls);
+      if(added)e.classList.add(cls);
+      decorated.push({element:e,cls,added});
+    }
+  }
+  try{
+    constructOrbs();
+    decorate(controls,"nox-cinema-control");
+    decorate(panels,"nox-cinema-panel");
+    root.classList.add("nox-cinema-scope");ownerRoot=true;
+    root.dataset.noxFxMode=(preference?"REDUCED":mode).toLowerCase();
+    root.dataset.noxFxVisible="true";
+    root.dataset.noxFxState=state;
+  }catch(error){undoOwnedDom();throw error;}
+  function clearParticles(){
+    for(const p of particles){p.node.remove();}
+    particles.length=0;particleCount=0;
+  }
+  function nextDelay(policy){return policy.minimumBurstMs+
+    unitRandom()*(policy.maximumBurstMs-policy.minimumBurstMs);}
+  function makeParticle(orb,now){
+    const angle=2*Math.PI*unitRandom();
+    const size=clamp(.65+unitRandom()*1.85,.6,2.5);
+    const node=svgElement(doc,"path",{d:"M "+(-size)+" 0 L 0 "+(-size*.42)+
+      " L "+size+" 0 L 0 "+(size*.42)+" Z",
+      fill:unitRandom()<.23?"#323032":"#c57244",
+      opacity:"0"});
+    orb.svg.appendChild(node);
+    const p={node,started:now,duration:2200+unitRandom()*1900,
+      surfaceRadius:86+unitRandom()*6,reach:(orb.index===0?16:8)+unitRandom()*(orb.index===0?29:20),
+      angle,swirl:(unitRandom()-.5)*17,brightness:.48+unitRandom()*.42,
+      rotation:unitRandom()*360};
+    particles.push(p);particleCount++;emissions++;
+  }
+  function loop(now){
+    raf=0;
+    // Browser clocks may be malformed; fail closed without emitting SVG NaN.
+    if(!Number.isFinite(now)||now<0){sleep();return;}
+    if(disposed||!hostVisible||!intersectVisible||doc.hidden)return;
+    const policy=profileFor(mode,preference);
+    if(policy.fps===0){clearParticles();return;}
+    raf=win.requestAnimationFrame(loop);
+    if(now-lastFrame<1000/policy.fps)return;
+    lastFrame=now;frameCount++;
+    for(let i=particles.length-1;i>=0;i--){
+      const p=particles[i],position=gravitationalSample(p,now);
+      if(position.done){p.node.remove();particles.splice(i,1);particleCount--;continue;}
+      p.node.setAttribute("transform","translate("+position.x.toFixed(2)+" "+
+        position.y.toFixed(2)+") rotate("+(position.angle|0)+")");
+      p.node.setAttribute("opacity",position.opacity.toFixed(2));
+    }
+    for(const orb of each){
+      if(now<orb.nextBurst)continue;
+      orb.nextBurst=now+nextDelay(policy)*(orb.index===0?1:2.1);
+      if(particleCount>=policy.maxParticles)continue;
+      if(orb.index!==0 && unitRandom()>.38)continue;
+      const count=orb.index===0?2:1;
+      for(let i=0;i<count&&particleCount<policy.maxParticles;i++)makeParticle(orb,now);
+    }
+  }
+  function wake(){
+    if(!disposed&&hostVisible&&intersectVisible&&!doc.hidden&&!preference&&mode!=="REDUCED"&&!raf){
+      lastFrame=0;raf=win.requestAnimationFrame(loop);
+    }
+  }
+  function sleep(){
+    if(raf){win.cancelAnimationFrame(raf);raf=0;}
+    clearParticles();
+  }
+  function onVisibility(){if(disposed)return;root.dataset.noxFxVisible=(!doc.hidden&&hostVisible&&intersectVisible)?"true":"false";if(doc.hidden)sleep();else wake();}
+  const onMotion=e=>{if(disposed)return;preference=!!e.matches;
+    root.dataset.noxFxMode=(preference?"REDUCED":mode).toLowerCase();
+    if(preference)sleep();else wake();};
+  let listenerReady=false,motionReady=false,observer=null;
+  // R08-06..09: handle browser registration exceptions atomically.
+  try{
+    doc.addEventListener("visibilitychange",onVisibility);listenerReady=true;
+    if(motion){
+      if(typeof motion.addEventListener==="function"){
+        motion.addEventListener("change",onMotion);motionReady=true;
+      }else if(typeof motion.addListener==="function"){
+        motion.addListener(onMotion);motionReady=true;
+      }
+    }
+    observer=typeof win.IntersectionObserver==="function"?
+      new win.IntersectionObserver(items=>{
+        if(disposed)return;
+        intersectVisible=Array.isArray(items)&&items.some(x=>x?.isIntersecting===true);
+        root.dataset.noxFxVisible=(!doc.hidden&&hostVisible&&intersectVisible)?"true":"false";
+        if(intersectVisible)wake();else sleep();
+      },{threshold:.001}):null;
+    if(observer)observer.observe(root);
+  }catch(error){rollbackFailedMount();throw error;}
+  function applyState(next,runId=null,coreId=null){
+    if(disposed)return false;
+    if(!stateSet.has(next)||
+       (runId!==null&&(typeof runId!=="string"||!pattern.test(runId)))||
+       (coreId!==null&&(typeof coreId!=="string"||!pattern.test(coreId))))
+      return false;
+    if(coreId!==null){
+      const orb=each.find(x=>x.id===coreId);
+      if(!orb)return false;
+      orb.element.dataset.noxFxState=next;
+    }else{
+      state=next;stateRunId=runId;
+      root.dataset.noxFxState=next;
+      each[0].element.dataset.noxFxState=next;
+    }
+    return true;
+  }
+  // Roll back only FX-owned nodes on malformed native subscription.
+  function rollbackFailedMount(){
+    if(listenerReady)try{doc.removeEventListener("visibilitychange",onVisibility);}catch(_){}
+    if(motionReady&&motion){
+      try{
+        if(typeof motion.removeEventListener==="function")motion.removeEventListener("change",onMotion);
+        else if(typeof motion.removeListener==="function")motion.removeListener(onMotion);
+      }catch(_){}
+    }
+    if(observer)try{observer.disconnect();}catch(_){}
+    undoOwnedDom();
+  }
+  // No document-wide listeners; subscribe to the existing validated event source only.
+  let unsubscribe=null;
+  if(hostEvents){
+    let un;
+    try{un=hostEvents.subscribe(event=>{
+      if(disposed)return;
+      try{
+        if(!event||typeof event!=="object"||event.trusted!==true ||
+           typeof event.state!=="string")return;
+        // Host event envelopes may be foreign or Proxy objects. Never let a
+        // throwing accessor escape from decorative FX into the native bus.
+        applyState(event.state,event.runId===undefined?null:event.runId,
+          event.coreId===undefined?null:event.coreId);
+      }catch(_){
+        // Malformed payload: preserve the last confirmed visual state.
+      }
+    });}catch(error){rollbackFailedMount();throw error;}
+    if(typeof un!=="function"){rollbackFailedMount();
+      throw new Error("NOX_FX_SUBSCRIBE_REQUIRES_CLEANUP");}
+    unsubscribe=un;
+  }
+  mounted.set(root,true);
+  try{wake();}catch(error){
+    disposed=true;rollbackFailedMount();mounted.delete(root);throw error;
+  }
+  return Object.freeze({
+    setProfile(next){
+      if(disposed)return false;
+      if(!profileSet.has(next))return false;
+      // Budget applies to ALREADY LIVE ejecta, not just the next emission.
+      const newPolicy=profileFor(next,preference);
+      while(particles.length>newPolicy.maxParticles){
+        const p=particles.pop();p.node.remove();
+      }
+      particleCount=particles.length;
+      // A slower ECO policy must not inherit MAX's imminent burst.
+      if(newPolicy.fps>0 && PROFILES[next].minimumBurstMs>PROFILES[mode].minimumBurstMs){
+        for(const orb of each)orb.nextBurst=Math.max(orb.nextBurst,
+          (lastFrame||initialNow)+newPolicy.minimumBurstMs);
+      }
+      mode=next;root.dataset.noxFxMode=(preference?"REDUCED":mode).toLowerCase();
+      if(next==="REDUCED")sleep();else wake();return true;
+    },
+    setState:applyState,
+    setVisible(value){if(disposed||typeof value!=="boolean")return false;hostVisible=value;
+      root.dataset.noxFxVisible=(!doc.hidden&&hostVisible&&intersectVisible)?"true":"false";
+      if(hostVisible)wake();else sleep();return true;},
+    snapshot(){return Object.freeze({profile:preference?"REDUCED":mode,
+      active:!doc.hidden&&hostVisible&&intersectVisible&&!disposed&&!preference&&mode!=="REDUCED",coreCount:CORE_COUNT,
+      particles:particleCount,emitted:emissions,frames:frameCount,
+      state,stateRunId,telemetry:"HOST_ONLY"});},
+    destroy(){
+      if(disposed)return;
+      disposed=true;
+      try{sleep();}finally{
+        try{if(unsubscribe)unsubscribe();}catch(_){/* host may throw on teardown */}
+        rollbackFailedMount();
+        mounted.delete(root);
+      }
+    }
+  });
+}
+
+
+;(()=>{
+  // Live NOX V16 cinema renderer: nine original R8 DOM orbs; no alternate host.
+  const root=document.querySelector('.constellation');
+  const star=root?.querySelector('.helion');
+  const buttons=[...root.querySelectorAll('button.core[data-route]')];
+  const ids=['CONSCIOUSNESS','ATLAS','REFLECTION','NEXUS','FORGE','CORE','VOICE','PERSONA'];
+  if(!star||buttons.length!==8||typeof installNoxCinemaFX!=='function')return;
+  const orbs=[{id:'HELION',element:star},...buttons.map((element,i)=>({id:ids[i],element}))];
+  try{
+    const fx=installNoxCinemaFX({root,orbs,profile:'REDUCED'});
+    window.noxCinemaFX=fx;
+    const synchronize=()=>{
+      const p=document.getElementById('performance');
+      const value=['ECO','BALANCED','MAX'].includes(p?.value)?p.value:'BALANCED';
+      const reduced=document.body.classList.contains('reduced')||
+        window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches===true;
+      fx.setProfile(reduced?'REDUCED':value);
+    };
+    synchronize();
+    const watcher=new MutationObserver(synchronize);
+    watcher.observe(document.body,{attributes:true,attributeFilter:['class']});
+    const perf=document.getElementById('performance');
+    perf?.addEventListener('change',synchronize);
+    // Native WPF settings update often changes select.value programmatically.
+    // Keep profile synchronized when the existing native settings events arrive.
+    window.chrome?.webview?.addEventListener?.('message',event=>{
+      if(event?.data?.type==='settings')synchronize();
+    });
+    window.addEventListener('pagehide',()=>{watcher.disconnect();fx.destroy()},{once:true});
+  }catch(err){
+    console.warn('NOX CINEMA FX HOLD (base UI preserved):',String(err?.message||err));
+  }
+})();
+
+})();
+</script></body></html>

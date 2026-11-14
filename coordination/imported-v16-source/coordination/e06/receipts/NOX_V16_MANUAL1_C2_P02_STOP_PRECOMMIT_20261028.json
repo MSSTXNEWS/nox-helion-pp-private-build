@@ -1,0 +1,20 @@
+{
+  "schema": "NOX_V16_P02_STOP_PRECOMMIT_SOURCE_V1",
+  "run_id": "NOX-V16-MANUAL1-C2-20261028-P02-SQLITE",
+  "task_id": "V16.42.C2.P02_STOP_PRECOMMIT",
+  "pre_head": "91e7427441f396259ed04a24e5c10e2fd93350c6",
+  "pre_git_sha1": {
+    "runtime": "59fd9cfdc4243eac7f2c10aa5e58983d283b82a1",
+    "bridge": "6f9fde1c732528804d768ab8b2b2e7049ccd673d",
+    "azure": "40c625028a5c12a2420d024596b05fabc1505090"
+  },
+  "test": "Packages/P02/worker-python/test_p02_sqlite_stop_before_commit_r15.py",
+  "regression_methods": 6,
+  "static_gates": "6/6 PASS",
+  "actual_python_unittest": "NOT_RUN",
+  "windows_build": "NOT_RUN",
+  "e07_native": "0/10",
+  "release_accepted": false,
+  "improvement": "STOP_IN_SAME_SQLITE_TRANSACTION_BEFORE_COMMIT",
+  "limitations": "STOP after final precommit check requires native serialized STOP-vs-COMMIT lease; no claim of full atomic STOP."
+}
