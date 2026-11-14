@@ -19,7 +19,7 @@ ID='60509551'
 @dataclass(frozen=True)
 class Limits:
     # Small safety floor; actual checkpoint and optimizer/temp estimates are mandatory.
-    disk_reserve_bytes: int = SAFETY_FLOOR_BYTES
+    disk_reserve_bytes: int = 10_000_000_000
     gpu1_headroom_mib: int = 3072
     ram_reserve_mib: int = 12288
     max_cpu_jobs: int = 8
