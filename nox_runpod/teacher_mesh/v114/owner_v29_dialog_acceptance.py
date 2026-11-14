@@ -17,7 +17,7 @@ print('NOX_NATIVE_V51_SSH_EXECUTED=true')
 print('NATIVE_AUDIT_SCHEMA=NOX_V114_AUTH_NATIVE_WEB_DIALOG_S03_ONEHOST_V1')
 PROXY=Path('/root/nox/scripts/chat_proxy.py')
 BRIDGE=Path('/root/nox/scripts/nox_v29_chat_bridge.py')
-PROXY_SHA='568b5950cfbd263a96a106525f81de8fdc024526fe86fab7765a3c25baa180f8'
+PROXY_SHA='58e7fb20eb87e582a3e52486dcc93899affc34aa7b80f029b09696c545353d16'
 BRIDGE_SHA='066ed91555a9a6251420b5897a040eda13a03b3d6c2d85b936e384c5f4113cd4'
 STOPS=('/root/nox/STOP','/root/nox/STOP.flag','/root/nox/stop.flag','/root/nox/.stop',
        '/workspace/NOX_STOP','/root/nox/program/STOP')
