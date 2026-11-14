@@ -5,7 +5,7 @@ import time
 _orig_api=conn.api
 def _delayed_api(method,path,key,data=None):
     result=_orig_api(method,path,key,data)
-    if method=="POST" and path.endswith('/ssh/'):time.sleep(12)
+    if method=="POST" and path.endswith('/ssh/'):time.sleep(24)
     return result
 
 REMOTE=r"""
@@ -48,7 +48,7 @@ def snapshot():
         for key,script in SERVICES.items():
             if script.encode() in args or key.encode() in args:
                 info=process(item)
-                if info is not None and len(associations[key])<12:
+                if info is not None and len(associations[key])<6:
                     associations[key].append(info)
     return states,associations
 s1,a1=snapshot()
