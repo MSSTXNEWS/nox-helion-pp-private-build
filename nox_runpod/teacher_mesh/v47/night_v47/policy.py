@@ -11,12 +11,15 @@ from hashlib import sha256
 import json, re
 from typing import Mapping
 
+from nox_runpod.teacher_mesh.v71.disk_budget import SAFETY_FLOOR_BYTES, verify_new_write_space
+
 _SHA = re.compile(r'^[a-f0-9]{64}$')
 ID='60509551'
 
 @dataclass(frozen=True)
 class Limits:
-    disk_reserve_bytes: int = 20_000_000_000
+    # Small safety floor; actual checkpoint and optimizer/temp estimates are mandatory.
+    disk_reserve_bytes: int = SAFETY_FLOOR_BYTES
     gpu1_headroom_mib: int = 3072
     ram_reserve_mib: int = 12288
     max_cpu_jobs: int = 8
@@ -67,9 +70,10 @@ def assess(snapshot, limits=Limits()):
         errors.append('VOLTA_UNSUPPORTED_KERNEL_OR_PRECISION')
     if snapshot.get('trainer_step0_root_cause_fixed') is not True:
         errors.append('TRAIN_ERROR_STEP0_NOT_FIXED')
-    disk=snapshot.get('disk_free_bytes')
-    save=snapshot.get('estimated_new_checkpoint_bytes')
-    if type(disk) is not int or type(save) is not int or save<=0 or disk < limits.disk_reserve_bytes+save:
+    disk_snapshot=dict(snapshot)
+    disk_snapshot['min_free_after_bytes']=limits.disk_reserve_bytes
+    disk_gate=verify_new_write_space(disk_snapshot)
+    if disk_gate['state']!='READY_FOR_OTHER_NATIVE_GATES':
         errors.append('CHECKPOINT_SPACE_AND_RESERVE_NOT_PROVEN')
     ram=snapshot.get('ram_available_mib')
     if type(ram) is not int or ram < limits.ram_reserve_mib:errors.append('RAM_RESERVE_UNVERIFIED')
