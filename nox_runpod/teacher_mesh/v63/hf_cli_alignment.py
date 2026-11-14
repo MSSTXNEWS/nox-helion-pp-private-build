@@ -60,7 +60,7 @@ for service,exe in paths:
     print('NATIVE_HF_VENV_ENTRYPOINT='+json.dumps({
       'python_sha_hint':hashlib.sha256(str(exe).encode()).hexdigest()[:12],
       'interpreter_basename':exe.name,'entrypoints':entry,
-      'local_hf_import_available':True
+      'local_hf_import_available':'NOT_TESTED'
     },separators=(',',':')))
 print('NATIVE_READ_ONLY_COMPLETE=true')
 PYREMOTE
