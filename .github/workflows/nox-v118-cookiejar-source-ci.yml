@@ -1,0 +1,35 @@
+name: NOX V118 CookieJar offline source-only regression
+on:
+  push:
+    branches:
+      - fix/nox-v118-cookiejar-shadow-20261115
+  pull_request:
+    paths:
+      - 'nox_runpod/teacher_mesh/v118/owner_nested_static_hotfix.py'
+      - 'nox_runpod/teacher_mesh/v118/test_cookiejar_shadow.py'
+      - '.github/workflows/nox-v118-cookiejar-source-ci.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile only; never execute remote script
+        run: |
+          python -m py_compile nox_runpod/teacher_mesh/v118/owner_nested_static_hotfix.py
+          python -m py_compile nox_runpod/teacher_mesh/v118/test_cookiejar_shadow.py
+      - name: V118 CookieJar module-shadowing AST regression (no SSH)
+        run: python -m unittest -v nox_runpod.teacher_mesh.v118.test_cookiejar_shadow
+      - name: Source-only release boundary
+        run: |
+          echo 'V118_COOKIEJAR_SOURCE_TESTED=true'
+          echo 'V118_LIVE_DEPLOYED=false'
+          echo 'NOX_ONEHOST_UNCHANGED=true'
