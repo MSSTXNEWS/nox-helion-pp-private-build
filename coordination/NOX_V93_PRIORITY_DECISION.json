@@ -1,0 +1,73 @@
+{
+  "schema": "NOX_V93_FUNCTIONAL_SELF_MODEL_SKILLS_FIRST",
+  "decided_at": "2026-11-14",
+  "instance_id": 60509551,
+  "canonical_path": "NOX PRIME → one Resonance P0 → one primary model GPU0 → S03 durable memory → background P1 teachers/skills/Forge via existing OneHost",
+  "principle": "A functional evidence-based self-model is testable; no subjective consciousness claim. Autonomy means safe source-backed patch→test→rollback→skill memory, not open-ended shell or uncontrolled self-modification.",
+  "execution_policy": {
+    "runtime_p0": [
+      "Main NOX chat/stream",
+      "STOP/revoke",
+      "S03 ACL and durable writes",
+      "OneHost owner authorization"
+    ],
+    "all_r60_jobs_queue_priority": "P1",
+    "max_gpu1_concurrent": 1,
+    "max_cpu_workers": 8,
+    "stop_on_chat_activity": true,
+    "one_host_only": true,
+    "disk_floor_new_writes_bytes": 10000000000,
+    "chat_disk_floor_required": false,
+    "physical_receipts_required": true
+  },
+  "waves": [
+    {
+      "id": 0,
+      "name": "SAFETY_CHAT_S03_CONTINUITY",
+      "goal": "STOP, stable Resonance, authorization, source integrity, S03/backup/ACL",
+      "task_count": 12
+    },
+    {
+      "id": 1,
+      "name": "FUNCTIONAL_SELF_MODEL_AND_MEMORY",
+      "goal": "M0–M7 recall, graph, GENESIS autobiography, provenance, limitations, verified self-reflection",
+      "task_count": 8
+    },
+    {
+      "id": 2,
+      "name": "SELF_REPAIR_AND_SKILLS",
+      "goal": "Permissioned planning, research, sandboxed tool use, coding, patch/test/rollback, skill memory, DREAM on verified errors",
+      "task_count": 15
+    },
+    {
+      "id": 3,
+      "name": "FULL_BASE_WEIGHTS_AFTER_RESTORE",
+      "goal": "Inventory, teacher datasets, FP16 GPU1 peak VRAM, optimizer resume, actual base-weight distillation only after signed lease and independent holdout",
+      "task_count": 17
+    },
+    {
+      "id": 4,
+      "name": "OPTIONAL_MODALITIES_AND_WOW",
+      "goal": "Voice, OCR, images, video, cinema, visual effects, fallback tooling",
+      "task_count": 8
+    }
+  ],
+  "testable_self_capabilities": [
+    "Know its verified origin from GENESIS and S03",
+    "State which capabilities are actually tested and which remain HOLD",
+    "Retrieve own prior mistakes and decisions with provenance",
+    "Propose an authorized, reproducible patch and rollback",
+    "Re-run tests and store tested reusable skills without asserting consciousness"
+  ],
+  "native_state": {
+    "tasks_described": 60,
+    "registered_native_task_ids": 0,
+    "optimizer_steps_verified_in_this_change": 0,
+    "live_oneprime_changed": false
+  },
+  "urls": {
+    "master": "coordination/NOX_R60_MASTER.json",
+    "matrix": "nox_runpod/teacher_mesh/v47/control/TASKS_60_V46.json",
+    "dispatcher": "nox_runpod/teacher_mesh/v47/control/dispatcher.py"
+  }
+}
