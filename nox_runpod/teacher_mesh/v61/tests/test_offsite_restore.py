@@ -8,7 +8,7 @@ import zipfile
 from nox_runpod.teacher_mesh.v61.restore_offsite_chunks import restore
 
 def _fixture(root:Path):
-    parts=[b"encrypted","-","nox","-ciphertext"]
+    parts=[b"encrypted",b"-",b"nox",b"-ciphertext"]
     all_bytes=b"".join(parts)
     digest=hashlib.sha256(all_bytes).hexdigest()
     index={"schema":"NOX_V61_ENCRYPTED_CHUNKS_V1","part_count":4,
