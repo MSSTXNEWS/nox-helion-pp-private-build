@@ -10,6 +10,7 @@ import base64
 import hashlib
 import io
 import json
+import subprocess
 import tarfile
 import time
 from pathlib import Path
@@ -296,8 +297,14 @@ def _bundle_existing_sources() -> str:
         for name,expected in sorted(src.items()):
             if not name.startswith('nox_runpod/teacher_mesh/') or '../' in name:
                 raise RuntimeError('HOLD_SOURCE_PATH')
-            p=root/name
-            data=p.read_bytes()
+            # Read the original committed Git blob, not a working-tree file
+            # that .gitattributes may rewrite during checkout.
+            actual=subprocess.run(['git','-C',str(root),'rev-parse','HEAD:'+name],
+                capture_output=True,text=True,check=True,timeout=5).stdout.strip()
+            if actual!=expected:
+                raise RuntimeError('HOLD_GIT_TREE_BLOB_SHA_'+name.rsplit('/',1)[-1])
+            data=subprocess.run(['git','-C',str(root),'cat-file','blob',expected],
+                capture_output=True,check=True,timeout=6).stdout
             sha=hashlib.sha1(b'blob '+str(len(data)).encode()+b'\0'+data).hexdigest()
             if sha!=expected:raise RuntimeError('HOLD_LOCAL_SOURCE_SHA_'+name.rsplit('/',1)[-1])
             info=tarfile.TarInfo(name)
