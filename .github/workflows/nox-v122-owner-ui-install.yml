@@ -4,6 +4,13 @@ on:
     branches: [feature/nox-v37-v100-firsthour-14d-20261113]
     paths: ['.github/workflows/nox-v122-owner-ui-install.yml']
   workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Explicit owner-approved source-SHA-pinned live update after current forensic'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
 permissions:
   contents: read
 concurrency:
@@ -65,7 +72,7 @@ jobs:
           print('NOX_V122_LIVE_SOURCE_ADMISSION=PASS')
           PY
   native-owner:
-    if: github.event_name == 'pull_request' && github.actor == 'MSSTXNEWS' && github.event.pull_request.head.repo.full_name == github.repository
+    if: github.event_name == 'workflow_dispatch' && github.actor == 'MSSTXNEWS' && inputs.allow_native == 'YES'
     needs: verify-source
     runs-on: ubuntu-latest
     timeout-minutes: 15
