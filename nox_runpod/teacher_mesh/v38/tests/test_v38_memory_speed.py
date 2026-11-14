@@ -173,6 +173,53 @@ class RequiredMemory(unittest.TestCase):
         self.assertEqual(len(called),1)
         self.assertEqual(called[0]['response_contract']['quality_mode'],'deep')
 
+    def test_placeholder_only_answer_gets_one_same_model_retry(self):
+        calls=[]
+        def model(prompt,metadata):
+            calls.append(metadata)
+            return iter(['...', ' ']) if len(calls)==1 else iter(['Полный ответ NOX'])
+        brain=self._p(lambda s,p,l:[record()])
+        events=list(brain.stream(S,'Почему? Объясни и исправь.',model))
+        self.assertEqual(len(calls),2)
+        self.assertEqual([e['text'] for e in events if e['type']=='delta'],['Полный ответ NOX'])
+        self.assertEqual(events[-1]['type'],'done')
+        self.assertIn('repair_instruction',calls[1]['response_contract'])
+
+    def test_twice_placeholder_never_claims_done(self):
+        brain=self._p(lambda s,p,l:[record()])
+        calls=[]
+        def model(prompt,meta):
+            calls.append(meta)
+            return iter(['…'])
+        events=list(brain.stream(S,'Проверь работу',model))
+        self.assertEqual(len(calls),2)
+        self.assertEqual(events[-1]['state'],'HOLD_PLACEHOLDER_ONLY_MODEL_ANSWER')
+        self.assertFalse(any(e['type']=='delta' for e in events))
+
+    def test_real_reply_is_one_call_no_quality_regression(self):
+        brain=self._p(lambda s,p,l:[record()])
+        calls=[]
+        def model(prompt,meta):
+            calls.append(meta)
+            return iter(['Привет', ', чем могу помочь?'])
+        events=list(brain.stream(S,'Привет',model))
+        self.assertEqual(len(calls),1)
+        self.assertEqual(''.join(e['text'] for e in events if e['type']=='delta'),'Привет, чем могу помочь?')
+        self.assertEqual(events[-1]['type'],'done')
+
+    def test_stop_during_placeholder_retry_prevents_second_call(self):
+        calls=[];live=[False]
+        brain=SynapticBrain(NativePorts(authorize=lambda s:True,stop=lambda:live[0],
+            s03_recall=lambda s,p,l:[record()]),PulseConfig(max_workers=8))
+        self.addCleanup(brain.close)
+        def model(p,m):
+            calls.append(True)
+            live[0]=True
+            return iter(['...'])
+        events=list(brain.stream(S,'Привет',model))
+        self.assertEqual(len(calls),1)
+        self.assertEqual(events[-1]['state'],'HOLD_STOP_DURING_STREAM')
+
     def test_first_visible_delta_early_and_durable(self):
         receipts=[]
         def persist(s,p):
