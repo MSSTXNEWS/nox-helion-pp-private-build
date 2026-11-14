@@ -2,7 +2,7 @@ name: NOX V107 native v29 bridge isolated failure diagnosis
 on:
   push:
     branches: [feature/nox-v38-synaptic-brain-20261114]
-    paths: [.github/workflows/nox-v107-bridge-readonly.yml]
+    paths: [.github/workflows/nox-v107-bridge-readonly.yml, nox_runpod/teacher_mesh/v107/native_bridge_postfailure.py]
   workflow_dispatch:
 permissions: {contents: read}
 concurrency:
