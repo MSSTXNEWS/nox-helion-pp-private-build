@@ -169,6 +169,7 @@ class OutboundOneHostBridge:
             # Do not publish unsigned request errors. OneHost keeps local audit.
             if outcome.get("request_id") is None:
                 continue
+            outcome["receipt_signature"] = sign_request(outcome, self.key)
             try:
                 if publish(outcome) is not True:
                     return {"state": "HOLD_RECEIPT_PUBLICATION",
