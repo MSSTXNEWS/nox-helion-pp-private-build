@@ -90,3 +90,48 @@ class TestNativePublish(unittest.TestCase):
    x=publish_from_native(lambda:{'schema':'nox-learning-3axes-evidence-v1','axes':{}},
        lambda d:True,lambda:True,lambda:False,existing_web_root=d)
    self.assertTrue(x['written']);self.assertEqual(json.loads(dest.read_text())['overall']['percent'],None)
+
+class TestChatFirstAdmission(unittest.TestCase):
+ def live(self,**overrides):
+  from training.priority_autonomy import chat_first_admission
+  data={'owner_authorized':True,'stop_active':False,'chat_state':'idle',
+        'seconds_since_chat_activity':90,'disk_free_bytes':25_000_000_000,
+        'external_restore_verified':True,'checkpoint_resume_verified':True,
+        'runtime_gpu_abi_verified':True,'training_owner_lease':True,
+        'gpus':[{'vram_free_mib':4500,'temperature_c':40},
+                {'vram_free_mib':6500,'temperature_c':55}]}
+  data.update(overrides)
+  return chat_first_admission(data)
+ def test_user_message_preempts_background(self):
+  x=self.live(chat_state='pending',seconds_since_chat_activity=0)
+  self.assertIn('CHAT_P0',x['actions'])
+  self.assertIn('PAUSE_GPU_BACKGROUND_AT_SAFE_BOUNDARY',x['actions'])
+  self.assertFalse(x['training_launch'])
+ def test_recent_turn_stays_chat_first(self):
+  self.assertIn('CHAT_FIRST',self.live(seconds_since_chat_activity=10)['reasons'])
+ def test_idle_allows_only_native_admission(self):
+  x=self.live()
+  self.assertIn('REQUEST_ONEHOST_GPU1_DISTILLATION_ADMISSION',x['actions'])
+  self.assertFalse(x['training_launch'])
+  self.assertEqual(x['queue_owner'],'EXISTING_NOX_ONEHOST')
+ def test_disk_hold_allows_only_cpu_prep(self):
+  x=self.live(disk_free_bytes=17_475_031_040)
+  self.assertIn('ALLOW_CPU_KNOWLEDGE_PREP',x['actions'])
+  self.assertIn('HOLD_DISK_RESERVE',x['reasons'])
+  self.assertNotIn('REQUEST_ONEHOST_GPU1_DISTILLATION_ADMISSION',x['actions'])
+ def test_missing_backup_hold(self):
+  self.assertIn('HOLD_EXTERNAL_RESTORE',self.live(external_restore_verified=False)['reasons'])
+ def test_stop_prevents_work(self):
+  x=self.live(stop_active=True)
+  self.assertFalse(x['launch'])
+  self.assertEqual(x['actions'],[])
+ def test_gpu1_headroom_hold(self):
+  x=self.live(gpus=[{'vram_free_mib':4500,'temperature_c':40},
+                      {'vram_free_mib':2500,'temperature_c':55}])
+  self.assertIn('HOLD_GPU1_HEADROOM',x['reasons'])
+ def test_unknown_heartbeat_fail_closed(self):
+  self.assertIn('HOLD_CHAT_HEARTBEAT_UNKNOWN',self.live(seconds_since_chat_activity=None)['reasons'])
+ def test_hot_gpu_hold(self):
+  x=self.live(gpus=[{'vram_free_mib':4500,'temperature_c':40},
+                      {'vram_free_mib':6500,'temperature_c':86}])
+  self.assertIn('HOLD_GPU_TEMP',x['reasons'])
