@@ -77,6 +77,26 @@ try:
  "            did = NOX_MEM.jp_dialog_id(_memory_payload)"
  )}
  for index,(a,b) in enumerate(anchors.items()):
+  if index==2:
+   # AST locates the native dialog assignment even when quote/spacing differs.
+   source_ast=ast.parse(text)
+   source_fn=next(x for x in source_ast.body if isinstance(x,ast.FunctionDef) and x.name=='_augment')
+   candidates=[x for x in ast.walk(source_fn)
+               if isinstance(x,ast.Assign)
+               and any(isinstance(t,ast.Name) and t.id=='did' for t in x.targets)
+               and isinstance(x.value,ast.Call)
+               and isinstance(x.value.func,ast.Attribute)
+               and x.value.func.attr=='jp_dialog_id']
+   if len(candidates)!=1 or candidates[0].lineno!=candidates[0].end_lineno:
+    raise RuntimeError('HOLD_AST_MEMORY_ASSIGNMENT_NOT_UNIQUE')
+   lines=text.splitlines(keepends=True)
+   line=lines[candidates[0].lineno-1]
+   indent=line[:len(line)-len(line.lstrip())]
+   if 'NOX_MEM.jp_dialog_id(' not in line or len(indent)!=12:
+    raise RuntimeError('HOLD_MEMORY_SOURCE_LAYOUT')
+   lines[candidates[0].lineno-1]=b+'\n'
+   text=''.join(lines)
+   continue
   if text.count(a)!=1:
    emit(state='HOLD_ANCHOR_COUNT',anchor_index=index,anchor_count=text.count(a))
    raise RuntimeError('HOLD_ANCHOR_COUNT')
