@@ -26,7 +26,7 @@ required={}
 for file in sorted(site.iterdir()):
  if file.suffix not in ('.js','.mjs') or not file.is_file() or file.is_symlink():continue
  text=file.read_text(errors='replace')
- for m in re.finditer(r"""['"](/(?:api|v1)/[a-zA-Z0-9_/?={}&.\-]+)['"]""",text):
+ for m in re.finditer(r'''["'](/(?:api|v1)/[a-zA-Z0-9_/?={}&.\-]+)["']''',text):
   route=m.group(1).split('?',1)[0]
   required.setdefault(route,[]).append(file.name)
 source=proxy.read_text()
