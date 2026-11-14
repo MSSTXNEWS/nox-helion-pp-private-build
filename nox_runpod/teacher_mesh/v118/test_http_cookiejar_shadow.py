@@ -37,12 +37,15 @@ class CookieJarCollision(unittest.TestCase):
 
     def test_live_v118_requires_manual_admission(self):
         from pathlib import Path
-        workflow=(Path(__file__).resolve().parents[3] /
-                  '.github/workflows/nox-v118-nested-owner-static.yml').read_text()
-        self.assertIn("inputs.allow_native == 'YES'",workflow)
-        self.assertIn("github.event_name == 'workflow_dispatch'",workflow)
-        self.assertIn("default: 'NO'",workflow)
-        self.assertNotIn("if: ${{ github.actor == 'MSSTXNEWS' }}",workflow)
+        root=Path(__file__).resolve().parents[3]
+        for name in ("nox-v118-nested-owner-static.yml",
+                     "nox-v118-real-read-surfaces.yml"):
+            with self.subTest(workflow=name):
+                workflow=(root/'.github'/'workflows'/name).read_text()
+                self.assertIn("inputs.allow_native == 'YES'",workflow)
+                self.assertIn("github.event_name == 'workflow_dispatch'",workflow)
+                self.assertIn("default: 'NO'",workflow)
+                self.assertNotIn("if: ${{ github.actor == 'MSSTXNEWS' }}",workflow)
 
     def test_no_unsafe_restart_added(self):
         self.assertIn("HOLD_ROLLED_BACK",self.source)
