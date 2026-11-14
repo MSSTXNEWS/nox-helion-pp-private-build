@@ -1,0 +1,95 @@
+name: NOX E2 authenticated SSH inventory (ephemeral key)
+on:
+  push:
+    branches: [nox/executor2-r60-vast-probe-20261114]
+    paths: ['.github/workflows/nox-e2-ephemeral-ssh-audit.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: nox-e2-ephemeral-ssh-vast60509551
+  cancel-in-progress: false
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      VAST_API_KEY: ${{ secrets.NOX2 }}
+      NOX_INSTANCE_ID: '60509551'
+    steps:
+      - name: Existing authorized API and running-only gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$VAST_API_KEY" || { echo "::error::HOLD_NOX2_NOT_AVAILABLE"; exit 1; }
+          python -m pip -q install --disable-pip-version-check vastai
+          vastai show instance "$NOX_INSTANCE_ID" --raw > "$RUNNER_TEMP/instance.json"
+          python3 - <<'PY'
+          import os,json
+          d=json.load(open(os.path.join(os.environ['RUNNER_TEMP'],'instance.json')))
+          if 'instances' in d: d=d['instances']
+          if isinstance(d,list): d=next((x for x in d if str(x.get('id'))=='60509551'),{})
+          if str(d.get('id'))!='60509551' or d.get('actual_status')!='running':
+              raise SystemExit('HOLD_INSTANCE_NOT_CURRENTLY_RUNNING')
+          if not d.get('ssh_host') or not d.get('ssh_port'):
+              raise SystemExit('HOLD_SSH_ROUTE_UNKNOWN')
+          print('VAST_AUTH_INSTANCE_RUNNING_AND_SSH_ROUTE_READY')
+          PY
+      - name: Attach one-time key, read GPU / RAM / disk / processes, detach
+        shell: bash
+        run: |
+          set -euo pipefail
+          KEY="$RUNNER_TEMP/nox-e2-$(date +%s).key"
+          ssh-keygen -q -t ed25519 -N '' -f "$KEY" -C nox-e2-one-time >/dev/null
+          chmod 600 "$KEY"
+          HOST=""
+          PORT=""
+          ATTACHED=0
+          cleanup() {
+            set +e
+            if [ "$ATTACHED" = 1 ] && [ -n "$HOST" ] && [ -n "$PORT" ]; then
+              cat "$KEY.pub" | timeout 20s ssh -i "$KEY" -o BatchMode=yes -o ConnectTimeout=8 \
+                -o UserKnownHostsFile="$RUNNER_TEMP/known_hosts" \
+                -o StrictHostKeyChecking=accept-new -p "$PORT" "root@$HOST" \
+                "python3 -c 'from pathlib import Path;import sys;p=Path.home()/\".ssh/authorized_keys\";k=sys.stdin.read().strip();lines=p.read_text().splitlines() if p.exists() else [];kept=[line for line in lines if k not in line];p.write_text(\"\\n\".join(kept)+\"\\n\") if p.exists() and len(kept)!=len(lines) else None'" > /dev/null 2>&1
+              if [ "$?" -eq 0 ]; then echo "ONE_TIME_KEY_REMOVED_FROM_AUTHORIZED_KEYS"; else echo "HOLD_REMOTE_KEY_CLEANUP_UNCONFIRMED_PRIVATE_KEY_EPHEMERAL"; fi
+            fi
+            rm -f "$KEY" "$KEY.pub"
+          }
+          trap cleanup EXIT
+          readarray -t HP < <(python3 - <<'PY'
+          import json,os
+          d=json.load(open(os.path.join(os.environ['RUNNER_TEMP'],'instance.json')))
+          if 'instances' in d: d=d['instances']
+          if isinstance(d,list): d=next((x for x in d if str(x.get('id'))=='60509551'),{})
+          print(d.get('ssh_host',''))
+          print(d.get('ssh_port',''))
+          PY
+          )
+          HOST="${HP[0]}"
+          PORT="${HP[1]}"
+          [[ "$PORT" =~ ^[0-9]+$ ]] && [ -n "$HOST" ] || { echo "::error::HOLD_NO_SSH_ROUTE"; exit 2; }
+          if ! timeout 40s vastai attach ssh "$NOX_INSTANCE_ID" "$(cat "$KEY.pub")" --raw > "$RUNNER_TEMP/attach.json" 2>&1; then
+            echo "::error::HOLD_ATTACH_SSH_NOT_AUTHORIZED"
+            exit 2
+          fi
+          ATTACHED=1
+          echo "ONE_TIME_SSH_KEY_ATTACH_REQUEST_ACCEPTED"
+          sleep 3
+          REMOTE="nvidia-smi --query-gpu=index,name,driver_version,memory.total,memory.used,memory.free,utilization.gpu,temperature.gpu --format=csv,noheader; free -m; df -B1 /workspace; ps -eo comm= | grep -E 'python|llama|torch' | sort | uniq -c | head -n 12; find /workspace -maxdepth 4 -type f \\( -name '*.safetensors' -o -name '*.gguf' -o -name '*checkpoint*' -o -name '*optimizer*' -o -iname '*s03*' \\) | wc -l"
+          if timeout 65s ssh -i "$KEY" -p "$PORT" -o BatchMode=yes \
+             -o ConnectTimeout=12 -o ServerAliveInterval=5 -o UserKnownHostsFile="$RUNNER_TEMP/known_hosts" \
+             -o StrictHostKeyChecking=accept-new "root@$HOST" "$REMOTE" \
+             > "$RUNNER_TEMP/remote_receipt.txt" 2>"$RUNNER_TEMP/remote_error.txt"; then
+            echo "NOX_E2_REMOTE_SSH_RECEIPT_BEGIN"
+            head -n 40 "$RUNNER_TEMP/remote_receipt.txt"
+            echo "NOX_E2_REMOTE_SSH_RECEIPT_END"
+            sha256sum "$RUNNER_TEMP/remote_receipt.txt" | cut -d' ' -f1 | sed 's/^/NOX_E2_REMOTE_RECEIPT_SHA256=/'
+          else
+            echo "::error::HOLD_SSH_LOGIN_NOT_CONFIRMED"
+            exit 3
+          fi
+      - name: No system modifications
+        if: always()
+        shell: bash
+        run: echo "NOX GPU processes, trainers, checkpoints and OneHost left unchanged"
