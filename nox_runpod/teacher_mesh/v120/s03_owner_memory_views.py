@@ -4,7 +4,9 @@ read-only records, no new database, no mock results and no write operations.
 """
 from __future__ import annotations
 import asyncio
+import hashlib
 import json
+import re
 import sqlite3
 from pathlib import Path
 from fastapi import Request
@@ -63,17 +65,25 @@ def _knowledge(q:str='',facts_only:bool=False,limit:int=32):
         fact_key=meta.get('fact_key')
         if not isinstance(fact_key,str) or not 1<=len(fact_key)<=160:
             fact_key=str(row['id'])
-        source_content_sha=meta.get('source_sha256')
-        if not isinstance(source_content_sha,str) or len(source_content_sha)!=64:
-            source_content_sha=None
+        # The original S03 row SHA can hash structured source/metadata, not
+        # only note text. V130 POST returns the SHA256 of the actual UTF-8
+        # content. Expose that under source_sha256 for V29 readback, while
+        # returning the original S03 digest unmodified as record_sha256.
+        native_sha=str(row['sha256'] or '')[:64]
+        actual_text=str(row['text'] or '')
+        submitted=meta.get('source_sha256')
+        source_content_sha=(submitted if isinstance(submitted,str)
+                            and re.fullmatch(r'[0-9a-f]{64}',submitted)
+                            and submitted==hashlib.sha256(actual_text.encode('utf8')).hexdigest()
+                            else None)
         results.append({
             'id':str(row['id'])[:150],
             'fact_key':fact_key[:160],
-            'content':str(row['text'] or '')[:5000],
+            'content':actual_text[:5000],
             'segment':str(row['segment'] or '')[:14],
-            # Keep original provenance and internal S03 sha256 untouched.
             'source_ref':str(row['provenance'] or '')[:350],
-            'source_sha256':str(row['sha256'] or '')[:64],
+            'source_sha256':source_content_sha if source_content_sha is not None else native_sha,
+            'record_sha256':native_sha,
             'submitted_content_sha256':source_content_sha,
             'recorded_at':str(row['ts'] or '')[:55],
         })
