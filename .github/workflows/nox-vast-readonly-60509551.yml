@@ -1,0 +1,56 @@
+name: NOX Vast.ai connection preflight (read only)
+run-name: Vast 60509551 connectivity check
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: nox-vast-readonly-preflight
+  cancel-in-progress: false
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Check credential is configured
+        shell: bash
+        env:
+          VAST_API_KEY: ${{ secrets.VAST_API_KEY }}
+        run: |
+          if [ -z "$VAST_API_KEY" ]; then
+            echo "::error::Missing VAST_API_KEY. Add it under repository Actions secrets."
+            exit 1
+          fi
+          echo "Credential present; requesting read-only status."
+      - name: Read-only inspect NOX Vast.ai instance
+        shell: bash
+        env:
+          VAST_API_KEY: ${{ secrets.VAST_API_KEY }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, urllib.request, urllib.error
+          url = "https://console.vast.ai/api/v0/instances/60509551/"
+          request = urllib.request.Request(url, headers={
+              "Authorization": "Bearer " + os.environ["VAST_API_KEY"],
+              "Accept": "application/json"
+          }, method="GET")
+          try:
+              with urllib.request.urlopen(request, timeout=30) as resp:
+                  data = json.load(resp)
+          except urllib.error.HTTPError as e:
+              print(f"::error::Vast API returned HTTP {e.code}; key or instance access may be invalid.")
+              raise SystemExit(1)
+          except Exception as e:
+              print(f"::error::Vast API request failed: {type(e).__name__}")
+              raise SystemExit(1)
+          inst = data.get("instances", data) if isinstance(data, dict) else None
+          if isinstance(inst, list):
+              inst = next((v for v in inst if str(v.get("id")) == "60509551"), None)
+          if not isinstance(inst, dict) or str(inst.get("id")) != "60509551":
+              print("::error::Expected Vast instance 60509551 was not returned.")
+              raise SystemExit(1)
+          allowed = ("id", "actual_status", "intended_status", "gpu_name", "num_gpus", "gpu_ram", "dph_total", "disk_space")
+          print("NOX Vast.ai connection verified; read-only instance status:")
+          print(json.dumps({k: inst.get(k) for k in allowed if k in inst}, ensure_ascii=False))
+          PY
