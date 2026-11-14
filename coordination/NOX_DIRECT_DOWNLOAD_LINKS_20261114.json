@@ -1,0 +1,137 @@
+{
+  "schema": "NOX_DIRECT_DOWNLOAD_LINKS_V1",
+  "observed_on": "2026-11-14",
+  "purpose": "External Hugging Face model files for OneHost/PC Cold Vault; upstream metadata verified at pinned commit before download; source-only by default",
+  "project": "NOX HELION",
+  "source_manifest": "nox_runpod/teacher_mesh/v43/models.v43.json",
+  "instance_id": 60509551,
+  "policy": {
+    "destination": "PC_COLD_OR_GOOGLE_DRIVE_COLD_ONLY",
+    "vast_direct_download": "DENIED_UNTIL_NATIVE_DISK_RESERVE_AND_ONEHOST_APPROVAL",
+    "vast_min_free_disk_gb": 20,
+    "preserve_active_model": true,
+    "preserve_s03_checkpoint_optimizer": true,
+    "no_auto_download": true,
+    "no_auto_activate": true,
+    "all_resolve_main_links_must_validate_sha256": true,
+    "training_use": "GGUF quantized teacher files are inference-only; do not call distillation or optimizer steps",
+    "safetensors_note": "Single model.safetensors files require model config/tokenizer/processor files from the same exact revision.",
+    "existing_downloader_reused": "nox_runpod/teacher_mesh/v43/pc/download_models.py",
+    "direct_links_adapter": "nox_runpod/teacher_mesh/v43/pc/direct_links.py",
+    "upstream_revision": "Resolve live repo commit via Hugging Face API ?blobs=true; verify LFS SHA before download; pin commit",
+    "license_review": "Required before enabling external models in production"
+  },
+  "files": [
+    {
+      "id": "qwen35-27b-q4",
+      "role": "language_ru_es",
+      "size_gb_approx": 16.7,
+      "format": "GGUF Q4_K_M",
+      "url": "https://huggingface.co/unsloth/Qwen3.5-27B-GGUF/resolve/main/Qwen3.5-27B-Q4_K_M.gguf",
+      "expected_sha256": "84b5f7f112156d63836a01a69dc3f11a6ba63b10a23b8ca7a7efaf52d5a2d806",
+      "source_repo": "unsloth/Qwen3.5-27B-GGUF",
+      "filename": "Qwen3.5-27B-Q4_K_M.gguf",
+      "source_revision": "PIN_AND_VERIFY_AT_DOWNLOAD",
+      "sha_source_url": "https://huggingface.co/unsloth/Qwen3.5-27B-GGUF/blob/main/Qwen3.5-27B-Q4_K_M.gguf"
+    },
+    {
+      "id": "deepseek-r1-distill-qwen-32b-q4",
+      "role": "reasoning_teacher",
+      "size_gb_approx": 19.85,
+      "format": "GGUF Q4_K_M",
+      "url": "https://huggingface.co/bartowski/DeepSeek-R1-Distill-Qwen-32B-GGUF/resolve/main/DeepSeek-R1-Distill-Qwen-32B-Q4_K_M.gguf",
+      "expected_sha256": "bed9b0f551f5b95bf9da5888a48f0f87c37ad6b72519c4cbd775f54ac0b9fc62",
+      "source_repo": "bartowski/DeepSeek-R1-Distill-Qwen-32B-GGUF",
+      "filename": "DeepSeek-R1-Distill-Qwen-32B-Q4_K_M.gguf",
+      "source_revision": "PIN_AND_VERIFY_AT_DOWNLOAD",
+      "sha_source_url": "https://huggingface.co/bartowski/DeepSeek-R1-Distill-Qwen-32B-GGUF/blob/main/DeepSeek-R1-Distill-Qwen-32B-Q4_K_M.gguf"
+    },
+    {
+      "id": "qwen38-27b-q4",
+      "role": "challenger_teacher",
+      "size_gb_approx": 17.44,
+      "format": "GGUF Q4_K_M",
+      "url": "https://huggingface.co/bartowski/Qwen3.8-27B-GGUF/resolve/main/Qwen3.8-27B-Q4_K_M.gguf",
+      "expected_sha256": "880a52af8317974f7b4b064a6bc29ff49e188b91aa218e08eea3078b6b1cc673",
+      "source_repo": "bartowski/Qwen3.8-27B-GGUF",
+      "filename": "Qwen3.8-27B-Q4_K_M.gguf",
+      "source_revision": "PIN_AND_VERIFY_AT_DOWNLOAD",
+      "sha_source_url": "https://huggingface.co/bartowski/Qwen3.8-27B-GGUF/blob/main/Qwen3.8-27B-Q4_K_M.gguf"
+    },
+    {
+      "id": "qwen3-coder-30b-a3b-instruct-q4",
+      "role": "coding_teacher",
+      "size_gb_approx": 18.6,
+      "format": "GGUF Q4_K_M",
+      "url": "https://huggingface.co/lmstudio-community/Qwen3-Coder-30B-A3B-Instruct-GGUF/resolve/main/Qwen3-Coder-30B-A3B-Instruct-Q4_K_M.gguf",
+      "expected_sha256": "79ad15a5ee3caddc3f4ff0db33a14454a5a3eb503d7fa1c1e35feafc579de486",
+      "source_repo": "lmstudio-community/Qwen3-Coder-30B-A3B-Instruct-GGUF",
+      "filename": "Qwen3-Coder-30B-A3B-Instruct-Q4_K_M.gguf",
+      "source_revision": "PIN_AND_VERIFY_AT_DOWNLOAD",
+      "sha_source_url": "https://huggingface.co/lmstudio-community/Qwen3-Coder-30B-A3B-Instruct-GGUF/blob/main/Qwen3-Coder-30B-A3B-Instruct-Q4_K_M.gguf"
+    },
+    {
+      "id": "qwen3-embedding-0.6b",
+      "role": "s03_embedding",
+      "size_gb_approx": 1.19,
+      "format": "safetensors (weights only)",
+      "url": "https://huggingface.co/Qwen/Qwen3-Embedding-0.6B/resolve/main/model.safetensors",
+      "expected_sha256": "0437e45c94563b09e13cb7a64478fc406947a93cb34a7e05870fc8dcd48e23fd",
+      "requires_repo_snapshot": true,
+      "source_repo": "Qwen/Qwen3-Embedding-0.6B",
+      "filename": "model.safetensors",
+      "source_revision": "PIN_AND_VERIFY_AT_DOWNLOAD",
+      "sha_source_url": "https://huggingface.co/Qwen/Qwen3-Embedding-0.6B/blob/main/model.safetensors"
+    },
+    {
+      "id": "qwen3-reranker-0.6b",
+      "role": "s03_reranker",
+      "size_gb_approx": 1.19,
+      "format": "safetensors (weights only)",
+      "url": "https://huggingface.co/Qwen/Qwen3-Reranker-0.6B/resolve/main/model.safetensors",
+      "expected_sha256": "27cd75a405b9c1b46b59abfd88aaa209e6fed2a1972cde9b70e7659537c5e65b",
+      "requires_repo_snapshot": true,
+      "source_repo": "Qwen/Qwen3-Reranker-0.6B",
+      "filename": "model.safetensors",
+      "source_revision": "PIN_AND_VERIFY_AT_DOWNLOAD",
+      "sha_source_url": "https://huggingface.co/Qwen/Qwen3-Reranker-0.6B/blob/main/model.safetensors"
+    },
+    {
+      "id": "whisper-large-v3-turbo",
+      "role": "ru_es_asr",
+      "size_gb_approx": 1.62,
+      "format": "safetensors (weights only)",
+      "url": "https://huggingface.co/openai/whisper-large-v3-turbo/resolve/main/model.safetensors",
+      "expected_sha256": "542566a422ae4f3fd23f1ba11add198fca01bbf82e66e6a2857b3f608b1eb9d1",
+      "requires_repo_snapshot": true,
+      "source_repo": "openai/whisper-large-v3-turbo",
+      "filename": "model.safetensors",
+      "source_revision": "PIN_AND_VERIFY_AT_DOWNLOAD",
+      "sha_source_url": "https://huggingface.co/openai/whisper-large-v3-turbo/blob/main/model.safetensors"
+    }
+  ],
+  "multi_file_repositories": [
+    {
+      "id": "z-image-turbo",
+      "repo": "Tongyi-MAI/Z-Image-Turbo",
+      "url": "https://huggingface.co/Tongyi-MAI/Z-Image-Turbo",
+      "download_method": "hf snapshot-download at pinned revision only",
+      "destination": "PC_COLD"
+    },
+    {
+      "id": "wan2.1-1.3b",
+      "repo": "Wan-AI/Wan2.1-T2V-1.3B",
+      "url": "https://huggingface.co/Wan-AI/Wan2.1-T2V-1.3B",
+      "download_method": "hf snapshot-download at pinned revision only",
+      "destination": "PC_COLD"
+    }
+  ],
+  "current_state": {
+    "download_performed": false,
+    "installed_on_vast": false,
+    "native_onehost_accepted": false,
+    "source_uploaded_to_branch": true,
+    "url_sha_public_blob_pages_verified": true,
+    "upstream_revision_live_probe_pending": true
+  }
+}
