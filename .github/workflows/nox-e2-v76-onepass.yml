@@ -3,7 +3,10 @@ run-name: NOX PRIME V76 | ONE SSH | 7 gates | stop-on-unsafe
 on:
   push:
     branches: [nox/e2-v76-onepass-accept-20261114]
-    paths: ['.github/workflows/nox-e2-v76-onepass.yml']
+    paths:
+      - '.github/workflows/nox-e2-v76-onepass.yml'
+      - 'nox_runpod/teacher_mesh/v76/onepass_full_accept.py'
+      - 'nox_runpod/teacher_mesh/v76/test_singlepass.py'
   workflow_dispatch:
 permissions:
   contents: read
