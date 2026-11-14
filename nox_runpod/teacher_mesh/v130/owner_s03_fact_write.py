@@ -99,7 +99,10 @@ def _matching(data):
           (data['content'],)).fetchall()
         found=[]
         for row in rows:
-            if row['sha256']!=data['source_sha256']:
+            # Native S03 uses its own internal row digest. It is NOT the
+            # owner-supplied SHA256(content), which is verified separately
+            # against both the text and the persisted provenance metadata.
+            if not isinstance(row['sha256'],str) or not _HEX.fullmatch(row['sha256']):
                 continue
             if row['provenance']!='OWNER-CONFIRMED:'+data['source_ref']:
                 continue
@@ -121,7 +124,8 @@ def _persist(data):
     before=_matching(data)
     if before:
         return {'status':'READY','event_id':before[0]['id'],'id':before[0]['id'],
-                'source_sha256':before[0]['sha256'],'duplicate':True,
+                'source_sha256':data['source_sha256'],
+                'native_record_sha256':before[0]['sha256'],'duplicate':True,
                 'committed':True,'readback_verified':True,
                 'source':'EXISTING_NATIVE_S03_M2','weight_update':False}
     import s03_memory
@@ -139,7 +143,8 @@ def _persist(data):
     if created is None:
         raise RuntimeError('HOLD_S03_WRITE_READBACK')
     return {'status':'READY','event_id':created['id'],'id':created['id'],
-            'source_sha256':created['sha256'],'duplicate':False,
+            'source_sha256':data['source_sha256'],
+            'native_record_sha256':created['sha256'],'duplicate':False,
             'committed':True,'readback_verified':True,
             'source':'EXISTING_NATIVE_S03_M2','weight_update':False}
 
