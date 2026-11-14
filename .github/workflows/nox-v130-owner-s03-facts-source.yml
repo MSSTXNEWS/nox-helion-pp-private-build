@@ -37,6 +37,9 @@ jobs:
           echo 'NOX_V130_REAL_S03_NOT_MUTATED_BY_CI=true'
           python -m py_compile nox_runpod/teacher_mesh/v132/onepass_release_gate.py
           python -m unittest discover -s nox_runpod/teacher_mesh/v132/tests -p 'test_*.py' -v
+          python -m unittest discover -s nox_runpod/teacher_mesh/v112/tests -p 'test_*.py' -v
+          python -m unittest discover -s nox_runpod/teacher_mesh/v61/tests -p 'test_*.py' -v
+          python -m unittest discover -s nox_runpod/teacher_mesh/v70/tests -p 'test_*.py' -v
           python -m nox_runpod.teacher_mesh.v132.onepass_release_gate --root . --out nox_v132_onepass_receipt.json
           python - <<'PY'
           import json
