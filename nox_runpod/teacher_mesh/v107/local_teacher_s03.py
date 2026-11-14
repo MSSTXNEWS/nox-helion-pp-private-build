@@ -31,13 +31,17 @@ def models(port):
 try:
  if stopped():raise RuntimeError('HOLD_STOP')
  if not idle():raise RuntimeError('HOLD_USER_MODEL_BUSY')
- endpoints={p:models(p) for p in (8081,8082,8092)}
+ endpoints={p:models(p) for p in (8081,8082,8084,8092,8096)}
  safe={str(p):[Path(x).name[:65] for x in ids] for p,ids in endpoints.items()}
  print('NATIVE_V107_MODEL_IDS='+json.dumps(safe,sort_keys=True,separators=(',',':')))
  primary={Path(x).name for x in endpoints[8081]}
- teacher_port=next((p for p in (8082,8092) if endpoints[p] and
-                   any(Path(x).name not in primary for x in endpoints[p])),None)
- if teacher_port is None:raise RuntimeError('HOLD_NO_DISTINCT_LOCAL_TEACHER')
+ # Only the V106-readback confirmed generative model at port 8084 may be
+ # consulted. BGE-M3 (embedding) and Qwen3Guard (safety) are not teachers
+ # for the /v1/chat/completions general reasoning task.
+ teacher_port=next((p for p in (8084,) if endpoints[p] and
+                   any('vikhr-nemo-12b' in Path(x).name.casefold()
+                       and Path(x).name not in primary for x in endpoints[p])),None)
+ if teacher_port is None:raise RuntimeError('HOLD_NO_VERIFIED_GENERATIVE_TEACHER')
  model_id=endpoints[teacher_port][0]
  # Existing inference endpoint only; no network egress and no private memory.
  question='Чему равно произведение 17 на 19? Ответь только числом.'
