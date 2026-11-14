@@ -3,6 +3,7 @@ from __future__ import annotations
 import json,time, unittest
 from ..synaptic_brain import SynapticBrain, NativePorts, Session, PulseConfig
 from ..native_bridge_v38 import AttachedNOX, HostBindings
+from ..durable_runtime import WarmS03Cache
 
 S=Session(tenant='nox',principal='owner',chat_id='resonance')
 
@@ -75,6 +76,56 @@ class RequiredMemory(unittest.TestCase):
         self.assertEqual(answer[-1]['type'],'done')
         self.assertEqual(calls[0]['segments'],[f'M{i}' for i in range(8)])
         self.assertGreater(len(calls[0]['queries']),1)
+
+    def test_cache_repeat_never_drops_native_records(self):
+        calls=[]
+        rows=[record(text='cached '+str(i)) for i in range(2)]
+        def recall(s,p,l):
+            calls.append((p,l));return [dict(x) for x in rows]
+        cache=WarmS03Cache(recall,lambda s:'revision-1')
+        first=cache(S,'вспомни',8)
+        second=cache(S,'вспомни',8)
+        self.assertEqual(first,second)
+        self.assertEqual(len(calls),1)
+        second[0]['content']='caller mutated copy'
+        self.assertEqual(cache(S,'вспомни',8)[0]['content'],'cached 0')
+
+    def test_cache_bypasses_foreign_chat_without_losing_authorised_record(self):
+        calls=[]
+        rows=[record(chat='other-chat',text='owner-granted cross chat')]
+        def recall(s,p,l):
+            calls.append(True);return rows
+        cache=WarmS03Cache(recall,lambda s:'revision-1')
+        self.assertEqual(cache(S,'test',8),rows)
+        self.assertEqual(cache(S,'test',8),rows)
+        self.assertEqual(len(calls),2)
+        self.assertEqual(cache.stats['hits'],0)
+
+    def test_cache_bypasses_overflow_instead_of_truncating(self):
+        calls=[]
+        rows=[record(text='row'+str(i)) for i in range(9)]
+        def recall(s,p,l):
+            calls.append(True);return rows
+        cache=WarmS03Cache(recall,lambda s:'revision-1')
+        self.assertEqual(len(cache(S,'test',2)),9)
+        self.assertEqual(len(cache(S,'test',2)),9)
+        self.assertEqual(len(calls),2)
+
+    def test_memory_scheduled_before_optional_slow_sensors(self):
+        seen=[]
+        def native_memory(s,p,l):
+            seen.append('memory');return [record()]
+        def sensor(s):
+            time.sleep(.04)
+            seen.append('sensor');return {'gpu':'real'}
+        brain=SynapticBrain(NativePorts(authorize=lambda s:True,stop=lambda:False,
+            s03_recall=native_memory,sensors=sensor),
+            PulseConfig(max_workers=1,max_inflight=1,fast_deadline_ms=25,
+                        deep_deadline_ms=180,memory_deadline_ms=180))
+        self.addCleanup(brain.close)
+        result=brain.pulse(S,'memory test')
+        self.assertEqual(result['state'],'READY_FOR_ONE_NOX_MODEL')
+        self.assertEqual(result['cores']['C02']['hit_count'],1)
 
     def test_first_visible_delta_early_and_durable(self):
         receipts=[]
