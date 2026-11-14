@@ -39,9 +39,8 @@ class TestTunerAdmission(unittest.TestCase):
 
     def test_result_is_not_fake_pass_on_remote_hold(self):
         main=recover_agent_tuner.main.__code__
-        self.assertIn("HOLD_NOT_ACCEPTED_OR_UNVERIFIED",main.co_consts)
-        self.assertTrue("NATIVE_TUNER_RUNNING_VERIFIED" in main.co_consts)
-        self.assertTrue("ALREADY_RUNNING" in main.co_consts)
+        self.assertTrue(any(isinstance(x,str) and "HOLD_NOT_ACCEPTED_OR_UNVERIFIED" in x for x in main.co_consts))
+        self.assertTrue(any(isinstance(x,tuple) and "NATIVE_TUNER_RUNNING_VERIFIED" in x and "ALREADY_RUNNING" in x for x in main.co_consts))
 
 
 if __name__=="__main__":
