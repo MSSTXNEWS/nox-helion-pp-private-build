@@ -56,7 +56,7 @@ try:
         db.execute('PRAGMA query_only=ON')
         integrity=db.execute('PRAGMA quick_check').fetchone()[0]
         rows=db.execute(
-            "SELECT id,segment,text,provenance,sha256 FROM s03_items "
+            "SELECT id,segment,text,provenance,sha256,meta FROM s03_items "
             "WHERE provenance LIKE 'owner-fact:NOX-V125-QA-%|NOX-LOCAL-QA-VERIFIED' "
             "ORDER BY ts DESC LIMIT 3").fetchall()
     if not rows:
@@ -64,7 +64,8 @@ try:
              s03_ok=(integrity=='ok'),native_writes=False)
     else:
         row=rows[0]
-        record_id,segment,content,provenance,stored_sha=row
+        record_id,segment,content,provenance,stored_sha,meta_json=row
+        meta=json.loads(meta_json) if isinstance(meta_json,str) else {}
         key=provenance.split('|',1)[0].removeprefix('owner-fact:')
         expected_sha=hashlib.sha256(content.encode()).hexdigest()
         from chat_proxy import _read_chat_password
@@ -87,7 +88,7 @@ try:
         if not isinstance(events,list):events=[]
         same_id=[e for e in events if isinstance(e,dict) and e.get('id')==record_id]
         same_content=[e for e in same_id if e.get('content')==content]
-        same_sha=[e for e in same_content if e.get('source_sha256')==expected_sha]
+        same_sha=[e for e in same_content if e.get('source_sha256')==stored_sha]
         emit(state='S03_NATIVE_QA_HISTORY_COMPARED',
              synthetic_count=len(rows),s03_ok=(integrity=='ok'),
              segment_is_m2=(segment=='M2'),
@@ -97,7 +98,9 @@ try:
              history_events_count=len(events),
              record_id_found=bool(same_id),
              content_match=bool(same_content),
-             sha_match=bool(same_sha),
+             history_native_sha_match=bool(same_sha),
+             meta_source_sha_matches_content=(meta.get('source_sha256')==expected_sha),
+             owner_meta_confirmed=(meta.get('owner_confirmed') is True),
              module_cookie_verified=True,
              private_data_exported=False,native_writes=False)
 except Exception as exc:
