@@ -58,6 +58,26 @@ for fn in ('/etc/supervisor/conf.d','/etc/supervisord.d'):
         if re.search('agent_loop\\.py|agent.loop|nox-agent',text,re.I):
             if re.fullmatch('[A-Za-z0-9_.@:-]{1,100}',conf.name):
                 print('NATIVE_AGENT_SUPERVISOR_CONF='+conf.name)
+try:
+    import configparser
+    target=Path('/etc/supervisor/conf.d/nox-t855u.conf')
+    if target.is_file():
+        parser=configparser.ConfigParser(interpolation=None)
+        parser.read(str(target),encoding='utf-8')
+        for name in parser.sections():
+            if not name.startswith('program:'):continue
+            service=name.split(':',1)[1]
+            if not re.fullmatch(r'[A-Za-z0-9_.-]{1,70}',service):continue
+            cmd=parser[name].get('command','')
+            print('NATIVE_SUPERVISOR_PROGRAM='+service)
+            print('NATIVE_SUPERVISOR_AGENT_LOOP_COMMAND='+str('agent_loop' in cmd))
+            print('NATIVE_SUPERVISOR_UVICORN_COMMAND='+str('uvicorn' in cmd))
+            print('NATIVE_SUPERVISOR_AUTORESTART='+str(parser[name].get('autorestart','unknown')))
+            result=subprocess.run(['supervisorctl','status',service],capture_output=True,text=True,timeout=6)
+            state=(result.stdout.strip().split() or ['','HOLD'])[1] if result.returncode==0 else 'HOLD_STATUS'
+            print('NATIVE_SUPERVISOR_CURRENT_STATUS='+state[:30])
+except Exception as e:
+    print('NATIVE_SUPERVISOR_AUDIT=HOLD_'+type(e).__name__)
 print('NATIVE_READ_ONLY_COMPLETE=true')
 PYREMOTE
 """
