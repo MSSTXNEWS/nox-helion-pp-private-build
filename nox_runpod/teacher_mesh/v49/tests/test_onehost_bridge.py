@@ -290,7 +290,14 @@ class TestGitHubMailbox(unittest.TestCase):
         self.assertRaises(ValueError, mail.publish, {
             "schema": "NOX_ONEHOST_BRIDGE_RECEIPT_V1",
             "request_id": "request-001",
+            "receipt_signature": "c" * 64,
         })
+
+    def test_no_signed_receipt_cannot_publish(self):
+        self.assertFalse(self.mail.publish({
+            "schema": "NOX_ONEHOST_BRIDGE_RECEIPT_V1",
+            "request_id": "request-001",
+        }))
 
     def test_wrong_branch_failclosed(self):
         with self.assertRaises(ValueError):
