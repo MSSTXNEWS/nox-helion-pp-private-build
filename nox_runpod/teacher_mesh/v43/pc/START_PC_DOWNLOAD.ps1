@@ -37,7 +37,7 @@ if ($DownloadAll -or $DownloadDirect) {
     if ($LASTEXITCODE -ne 0) { throw 'Dependency install failed.' }
 }
 if ($DownloadDirect) {
-    & $python $linkScript --root $Vault --ids @Ids --download
+    & $python $linkScript --root $Vault --ids $Ids --download
 } elseif ($DownloadAll) {
     Write-Host 'Opt-in: download existing V43 five models sequentially to Windows Cold Vault.'
     & $python (Join-Path $PSScriptRoot 'download_models.py') --root $Vault --all --download
