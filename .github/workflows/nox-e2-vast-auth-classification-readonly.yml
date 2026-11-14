@@ -1,0 +1,38 @@
+name: NOX Vast official GET-only V1 route and account auth classification
+on:
+  push:
+    branches: [nox/e2-vast-v1-readonly-recovery-20261115]
+    paths:
+      - '.github/workflows/nox-e2-vast-auth-classification-readonly.yml'
+      - 'nox_runpod/teacher_mesh/v132/vast_auth_readonly.py'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  classify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Validate only fixed official URLs, no redirect or write
+        run: |
+          set -euo pipefail
+          python3 -m py_compile nox_runpod/teacher_mesh/v132/vast_auth_readonly.py
+          python3 - <<'PY'
+          from nox_runpod.teacher_mesh.v132.vast_auth_readonly import URLS
+          assert len(URLS)==3
+          assert all(x.startswith('https://console.vast.ai/api/') for x in URLS.values())
+          print('NOX_V132_ONLY_OFFICIAL_GET_ENDPOINTS=true')
+          PY
+      - name: Check existing owner credentials and route classification, no SSH
+        run: python3 -m nox_runpod.teacher_mesh.v132.vast_auth_readonly
+      - name: Strict no-server-changes boundary
+        if: always()
+        run: |
+          echo "NOX_V132_NO_NEW_GPU=true"
+          echo "NOX_V132_NO_SSH_KEY=true"
+          echo "NOX_V132_NO_SOURCE_OR_MODEL_CHANGES=true"
