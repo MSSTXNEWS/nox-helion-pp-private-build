@@ -150,11 +150,12 @@ for service in SERVICES:
         'service':service,
         'supervisor_state':known.get(service,'UNKNOWN'),
         'config_file_count':len(config_hits[service]),
-        'config_candidates':config_hits[service][:3],
-        'matching_processes':proc_hits(service),
+        'config_first':config_hits[service][0]['path'][:100] if config_hits[service] else None,
+        'config_sha256':config_hits[service][0]['sha256'] if config_hits[service] else None,
+        'matching_pids':[p['pid'] for p in proc_hits(service)][:6],
         'log_source':log_source,
         'log_sha256':hashlib.sha256(log).hexdigest() if log else None,
-        'error_signals':classify(log.decode('utf-8',errors='replace')) if log else None,
+        'error_signals':[k for k,v in classify(log.decode('utf-8',errors='replace')).items() if v] if log else [],
         'log_readable':bool(log),
     }
     print('NATIVE_SERVICE_TRIAGE='+json.dumps(result,ensure_ascii=False,separators=(',',':')))
