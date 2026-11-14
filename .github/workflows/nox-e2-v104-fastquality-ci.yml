@@ -1,0 +1,37 @@
+name: NOX E2 V104 safe fast answers and truthful source gate
+on:
+  push:
+    branches: [nox/e2-v104-chatquality-training-recovery-20261114]
+    paths:
+      - '.github/workflows/nox-e2-v104-fastquality-ci.yml'
+      - 'nox_runpod/teacher_mesh/v104/fast_quality_policy.py'
+      - 'nox_runpod/teacher_mesh/v104/test_fast_quality_policy.py'
+  workflow_dispatch:
+permissions: {contents: read}
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    env:
+      PYTHONPATH: ".:nox_runpod/teacher_mesh/v41:nox_runpod/teacher_mesh/v47"
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - name: Compile pure source quality guard
+        run: |
+          set -euo pipefail
+          python3 -m py_compile nox_runpod/teacher_mesh/v104/fast_quality_policy.py
+      - name: Test short RU/ES, authenticated memory and deep question preservation
+        run: |
+          set -euo pipefail
+          python3 -m unittest -v \
+            nox_runpod.teacher_mesh.v104.test_fast_quality_policy \
+            nox_runpod.teacher_mesh.v38.tests.test_v38_memory_speed \
+            nox_runpod.teacher_mesh.v71.test_one_prime
+      - name: Honest acceptance
+        if: success()
+        run: |
+          echo 'NOX_MAIN_MODEL_UNCHANGED=true'
+          echo 'NOX_DEEP_QUERIES_PRESERVE_REASONING=true'
+          echo 'NOX_KV_CACHE_REUSE_REQUIRES_EXACT_AUTHENTICATED_SCOPE=true'
+          echo 'NOX_NATIVE_CACHE_PATCH_NOT_APPLIED=true'
