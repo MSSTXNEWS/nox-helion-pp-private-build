@@ -57,7 +57,9 @@ for candidate in ('/root/nox/venv/bin/python','/root/nox/.venv/bin/python',
     kinds.append(x.split(':',1)[0])
   report={'interpreter_basename':p.name,'interpreter_prefix':p.parent.parent.name,
       'returncode':cmd.returncode,'isolated_registered':'ISOLATED_BRIDGE_REGISTERED' in cmd.stdout,
-      'failure_types':kinds}
+      'failure_types':kinds,
+      'safe_hold_code':next((x.split(':',1)[1].strip()[:85] for x in lines[-8:]
+          if x.startswith('RuntimeError: HOLD_')),None)}
   print('NATIVE_V107_RESULT='+json.dumps(report,separators=(',',':')))
   if report['isolated_registered']:break
  except Exception as ex:
