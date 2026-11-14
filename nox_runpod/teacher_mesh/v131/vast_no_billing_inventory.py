@@ -2,10 +2,9 @@
 from __future__ import annotations
 import json,os,time,urllib.error,urllib.request
 
-API="https://console.vast.ai/api/v0"
 INSTANCE=60509551
-def get(path,key):
-    req=urllib.request.Request(API+path,headers={
+def get(url,key):
+    req=urllib.request.Request(url,headers={
         'Authorization':'Bearer '+key,'Accept':'application/json'},method='GET')
     for attempt in range(3):
         try:
@@ -34,16 +33,24 @@ def main():
         print('NOX_V131_HOLD=NOX2_MISSING')
         return 2
     outcomes=[]
-    for path in ('/instances/','/instances/'+str(INSTANCE)+'/','/instances/'+str(INSTANCE)):
-        code,value=get(path,key)
+    urls=(
+      ('V1_CONSOLE_LIST','https://console.vast.ai/api/v1/instances/?limit=25'),
+      ('V1_CLOUD_LIST','https://cloud.vast.ai/api/v1/instances/?limit=25'),
+      ('V0_CONSOLE_DETAIL','https://console.vast.ai/api/v0/instances/'+str(INSTANCE)+'/'),
+      ('V0_CLOUD_DETAIL','https://cloud.vast.ai/api/v0/instances/'+str(INSTANCE)+'/'))
+    for label,url in urls:
+        code,value=get(url,key)
         records=unpack(value)
-        direct_id=value.get('id') if isinstance(value,dict) else None
+        direct=value.get('instances',value) if isinstance(value,dict) else None
+        if isinstance(direct,list):direct=None
         target=next((v for v in records if isinstance(v,dict) and str(v.get('id'))==str(INSTANCE)),None) if records else None
-        outcomes.append({'endpoint_kind':'LIST' if path=='/instances/' else 'DETAIL_SLASH' if path.endswith('/') else 'DETAIL_NO_SLASH',
-          'http':code,'list_count':len(records) if records is not None else None,
-          'target_present':bool(target or str(direct_id)==str(INSTANCE)),
-          'target_status':str((target or value if direct_id is not None else target or {}).get('actual_status','UNKNOWN'))[:30]
-          if isinstance(target or value if direct_id is not None else target,dict) else 'UNKNOWN'})
+        if isinstance(direct,dict) and str(direct.get('id'))==str(INSTANCE):target=direct
+        error=value.get('error') if isinstance(value,dict) else None
+        outcomes.append({'endpoint_kind':label,'http':code,
+          'list_count':len(records) if records is not None else None,
+          'target_present':isinstance(target,dict),
+          'target_status':str(target.get('actual_status','UNKNOWN'))[:30] if isinstance(target,dict) else 'UNKNOWN',
+          'provider_error':str(error)[:40] if isinstance(error,str) else None})
     print('NOX_V131_VAST_READ_ONLY='+json.dumps({'instance':INSTANCE,'checks':outcomes,
         'ssh_key_created':False,'server_modified':False,'no_new_billing':True},separators=(',',':')))
     print('NOX_V131_READONLY_COMPLETE=true')
