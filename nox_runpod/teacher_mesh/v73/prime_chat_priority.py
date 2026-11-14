@@ -146,7 +146,8 @@ print('NATIVE_PRIME_AFTER='+json.dumps(after,separators=(',',':')))
 print('NATIVE_PRIME_RESULT='+json.dumps({
  'state':state,'changed_service_count':sum(x.get('performed') is True for x in receipts),
  'verified_service_count':sum(x.get('state')=='BACKGROUND_CPU_PRIORITY_CONFIRMED' for x in receipts),
- 'service_results':receipts,'main_model_changed':False,'s03_changed':False,
+ 'service_states':[x.get('state') for x in receipts],
+ 'main_model_changed':False,'s03_changed':False,
  'weights_changed':False,'optimizer_steps':0,'training_started':False,
  'gpu_settings_changed':False,'service_restart_count':0,
  'rollback_success':all(rollbacks) if rollbacks else None,
