@@ -94,13 +94,13 @@ try:
  if state()!='RUNNING' or health(8080)!=200 or health(8081)!=200 or not idle():raise RuntimeError('HOLD_ACTIVE_OR_UNHEALTHY_CHAT')
  source=original.decode('utf8')
  anchor="            resp = await owner_completion(url, payload, _last_user_text(body), stream)\n            resp = _wrap_ttft(resp, t_gate, _utext)\n"
- prior="                ans = payload.get('_agent_final') or ''"
- if source.count(anchor)!=1 or source.count(prior)!=1 or '_nox_owner_s03_after_stream' in source:
-  print('NOX_V98_SOURCE_ANCHOR_COUNTS='+str((source.count(anchor),source.count(prior))))
-  raise RuntimeError('HOLD_OWNER_S03_ANCHOR_A'+str(source.count(anchor))+'_P'+str(source.count(prior))+'_I'+str(int('_nox_owner_s03_after_stream' in source)))
+ # The current native owner answer expression varies; do not rewrite it.
+ # V99 physically confirmed exactly one owner+wrap anchor and no existing hook.
+ if source.count(anchor)!=1 or '_nox_owner_s03_after_stream' in source:
+  raise RuntimeError('HOLD_OWNER_S03_ANCHOR_A'+str(source.count(anchor)))
  # Preserve nonstream (synchronous) S03 persistence. Streaming response receives
  # final text only after body_iterator is fully consumed, not at response creation.
- updated=source.replace(anchor,anchor+PATCH,1).replace(prior,"                ans = (payload.get('_agent_final') or '') if not stream else ''",1)
+ updated=source.replace(anchor,anchor+PATCH,1)
  tree=ast.parse(updated);compile(updated,str(FILE),'exec')
  proxy=next(n for n in tree.body if isinstance(n,ast.AsyncFunctionDef) and n.name=='_proxy_completion')
  if sum(1 for x in ast.walk(proxy) if isinstance(x,ast.AsyncFunctionDef) and x.name=='_nox_owner_s03_after_stream')!=1:
