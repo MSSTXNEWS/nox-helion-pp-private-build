@@ -31,6 +31,19 @@ def construct_remote() -> str:
         remote,
         "NATIVE_V114_RESULT=", "NATIVE_V117_RESULT=",
     )
+    # The existing V51 SSH transport forwards only native stdout lines
+    # strictly shorter than 800 bytes. Emit a minimal, independently useful
+    # receipt instead of the large V114 diagnostic object.
+    remote = replace_exact(
+        remote,
+        "def emit(**obj):print('NATIVE_V117_RESULT='+json.dumps(obj,sort_keys=True,separators=(',',':')))",
+        """def emit(**obj):
+ keys=('state','teacher_hint_marker_seen','teacher_optin_exact',
+       'live_s03_committed','native_dialog_history_readback','dialog_list_readback',
+       'first_delta_ms','total_ms','model_weights_changed','user_private_data_exported')
+ compact={key:obj[key] for key in keys if key in obj}
+ print('NATIVE_V117_RESULT='+json.dumps(compact,sort_keys=True,separators=(',',':')))""",
+    )
     remote = replace_exact(
         remote,
         "NATIVE_V114_HTTP=", "NATIVE_V117_HTTP=",
