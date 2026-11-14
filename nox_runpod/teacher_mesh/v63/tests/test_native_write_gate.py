@@ -1,6 +1,8 @@
 """Offline tests for one-shot NOX V63 Downloads CLI PATH repair."""
 import ast
 import unittest
+import os
+from unittest.mock import patch
 from nox_runpod.teacher_mesh.v63 import native_once,repair_download_hf_path
 
 def py_script():
@@ -46,6 +48,12 @@ class TestNativeWriteGate(unittest.TestCase):
     def test_unexpected_ack_not_allowed(self):
         x=native_once.native_once(repair_download_hf_path.REMOTE,required_marker="fake-success")
         self.assertEqual(x["state"],"HOLD_ACK_PROTOCOL")
+        self.assertEqual(x["write_attempts"],0)
+
+    def test_checked_in_source_is_accepted_before_any_vast_api(self):
+        with patch.dict(os.environ,{"NOX2":""}):
+            x=native_once.native_once(repair_download_hf_path.REMOTE)
+        self.assertEqual(x["state"],"HOLD_NOX2")
         self.assertEqual(x["write_attempts"],0)
 
     def test_production_result_fail_closed(self):
