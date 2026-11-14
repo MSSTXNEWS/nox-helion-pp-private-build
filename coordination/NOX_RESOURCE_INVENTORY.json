@@ -119,5 +119,36 @@
     "active_s03_wiring_verified": false,
     "native_queue_readback": "NOT_VERIFIED_POST_ONLY_ROUTE",
     "r60_source_manifest_registered_count": 0
+  },
+  "latest_offload": {
+    "as_of": "2026-11-14",
+    "v59_drive": "https://drive.google.com/file/d/1-Rfa9N54dvtDapjBEXY_bDTMOhVx3qBc/view",
+    "v60_drive": "https://drive.google.com/file/d/1apxeUe1-oYn2RyivXG7Hykw6uIWHClyL/view",
+    "v61_drive_part_ids": [
+      "1LIEmvwSv0wFOXqjntODDZ1Hb9lgreUEs",
+      "1VaaScfe4F14C2lME4oIfEZ9KW2YCKhaE",
+      "14c4nUFxsfGK95E-xiDNx58unHWAcLsDF",
+      "14omlA5DoZBzdGfgoyp-uFPCLRBjVE_do"
+    ],
+    "v61_ciphertext_sha256": "389a1378990a8cc55be09edc7dddecea746ba144ff82011ad71812d1fd9bd6b6",
+    "checkpoint_optimizer_files_exported_and_hash_verified": 12,
+    "v61_drive_parts_roundtrip_sha_verified": true,
+    "owner_key_native_restore_verified": false,
+    "checkpoint_optimizer_live_resume_verified": false,
+    "weights_fully_offloaded": false,
+    "source_files_deleted": false,
+    "source": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43608293727"
+  },
+  "latest_transfer_limit": {
+    "google_drive_single_file_bytes_max_approx": 104857600,
+    "observed_large_file_upload_error": "HTTP_413_FILE_TOO_LARGE",
+    "workaround": "encrypted_ciphertext_in_75MB_ZIP_chunks"
+  },
+  "latest_vast_api_limiter": {
+    "state": "HOLD_HTTP_429",
+    "attempted_run": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43609965123",
+    "duplicate_weight_fingerprint_scan_verified": false,
+    "remote_mutation_performed": false,
+    "observation": "Vast API rejected the V62 read-only scan before native SSH; no new utilization measurement"
   }
 }
