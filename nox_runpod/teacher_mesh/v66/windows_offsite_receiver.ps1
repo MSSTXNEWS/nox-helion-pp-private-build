@@ -12,7 +12,8 @@ $files=@(
  @{Name='NOX_V61_CIPHERTEXT_PART_01_20261114.zip';Bytes=[long]75001450;ZipSHA='';Part=1;PartSHA='5c0583568fca3ae898a6854dffe9601d6f769e4f1e54586f3ba252a331e68ecf'},
  @{Name='NOX_V61_CIPHERTEXT_PART_02_20261114.zip';Bytes=[long]75001450;ZipSHA='';Part=2;PartSHA='9e9d70d378734e08a03dd9d7b39653be164cb40f27597af0dd29839de0687509'},
  @{Name='NOX_V61_CIPHERTEXT_PART_03_20261114.zip';Bytes=[long]75001450;ZipSHA='';Part=3;PartSHA='401cdd7b7c0b5aa485b3dadd78a63e8fbd7fca791807c558acd35a546da876e3'},
- @{Name='NOX_V61_CIPHERTEXT_PART_04_20261114.zip';Bytes=[long]40877534;ZipSHA='';Part=4;PartSHA='6ffb6653034cb1f1aa96dbbcd5784a4479db159070375992177389b74e761717'}
+ @{Name='NOX_V61_CIPHERTEXT_PART_04_20261114.zip';Bytes=[long]40877534;ZipSHA='';Part=4;PartSHA='6ffb6653034cb1f1aa96dbbcd5784a4479db159070375992177389b74e761717'},
+ @{Name='NOX_V69_OWNER_ENCRYPTED_COLD_INCOMING_20261114.zip';Bytes=[long]85241014;ZipSHA='3cc65b5ddc113316351314328177b7d46644ec09adfabd11616b81ba82ed536d';Part=0;PartSHA=''}
 )
 function Sha([string]$file){return (Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash.ToLowerInvariant()}
 function CheckPart([string]$zipFile,[int]$n,[string]$expected) {
@@ -93,16 +94,17 @@ foreach($f in $files){
  Write-Host ('OFFSITE_ENCRYPTED_COPY_PASS '+$f.Name)
 }
 $receipt=[ordered]@{
- schema='NOX_PC_OFFSITE_ENCRYPTED_COPIES_V66'
+ schema='NOX_PC_OFFSITE_ENCRYPTED_COPIES_V69'
  verified_utc=[DateTimeOffset]::UtcNow.ToString('o')
  target=$TargetRoot
  verified_files=$copies
  v61_ciphertext_whole_sha256='389a1378990a8cc55be09edc7dddecea746ba144ff82011ad71812d1fd9bd6b6'
+ v69_ciphertext_sha256='026541c57fc41e11f1d7b77d9dab67c3ada0e28e8f7a953d5672447bd5763699'
  whole_v61_ciphertext_reassembled=$false
  owner_private_key_decryption_verified=$false
  source_vast_files_deleted=$false
 }
-$marker=Join-Path $TargetRoot 'NOX_V66_PC_OFFSITE_SHA_RECEIPT.json'
+$marker=Join-Path $TargetRoot 'NOX_V69_PC_OFFSITE_SHA_RECEIPT.json'
 $receipt|ConvertTo-Json -Depth 6|Set-Content -LiteralPath ($marker+'.partial') -Encoding UTF8
 Move-Item -LiteralPath ($marker+'.partial') -Destination $marker -Force
 Write-Host ('NOX_PC_ENCRYPTED_BACKUP_VERIFIED '+$TargetRoot)
