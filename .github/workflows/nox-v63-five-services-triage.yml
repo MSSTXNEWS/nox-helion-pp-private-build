@@ -40,3 +40,5 @@ jobs:
           echo "NOX_V63_NATIVE_TRIAGE_EXECUTED=true"
           echo "SERVICE_RESTARTS_PERFORMED=false"
           echo "ONEHOST_S03_CHECKPOINTS_UNCHANGED=true"
+
+# NOX V64 post-patch collision readback: refresh after downloader state changed.
