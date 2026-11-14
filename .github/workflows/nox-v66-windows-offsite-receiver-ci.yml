@@ -1,0 +1,37 @@
+name: NOX V66 Windows encrypted Drive-to-PC receiver syntax and safety CI
+on:
+  push:
+    branches: [feature/nox-v38-synaptic-brain-20261114]
+    paths: [.github/workflows/nox-v66-windows-offsite-receiver-ci.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  parse-windows:
+    runs-on: windows-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Parse true Windows PowerShell source without running transfers
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $p='nox_runpod/teacher_mesh/v66/windows_offsite_receiver.ps1'
+          $tokens=$null
+          $errors=$null
+          [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path $p),[ref]$tokens,[ref]$errors)|Out-Null
+          if($errors.Count -ne 0){
+            $errors | ForEach-Object { Write-Error $_.Message }
+            throw 'HOLD_WINDOWS_POWERSHELL_SYNTAX'
+          }
+          $src=Get-Content $p -Raw
+          if($src -match 'Remove-Item|Clear-RecycleBin|Invoke-Expression|Start-Process.+powershell'){
+            throw 'HOLD_UNEXPECTED_DESTRUCTIVE_PC_COMMAND'
+          }
+          if($src -notmatch 'NOX_PC_OFFSITE_ENCRYPTED_COPIES_V66' -or $src -notmatch 'HOLD_PART_SHA256'){
+            throw 'HOLD_MISSING_SHA_GATES'
+          }
+          Write-Host 'NOX_V66_WINDOWS_PARSER=PASS'
+          Write-Host 'NO_WINDOWS_BACKUPS_CLAIMED_COPIED=true'
