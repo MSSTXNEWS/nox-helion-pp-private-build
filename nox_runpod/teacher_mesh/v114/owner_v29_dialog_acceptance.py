@@ -28,8 +28,11 @@ def req(opener,path,method='GET',data=None,timeout=8):
  payload=None if data is None else json.dumps(data,ensure_ascii=False).encode('utf8')
  request=urllib.request.Request('http://127.0.0.1:8080'+path,data=payload,
    method=method,headers={'Content-Type':'application/json','Accept':'application/json'})
- try:return opener.open(request,timeout=timeout)
- except urllib.error.HTTPError as exc:return exc
+ try:response=opener.open(request,timeout=timeout)
+ except urllib.error.HTTPError as exc:response=exc
+ if path.startswith('/api/') or path.startswith('/nox-web-v29/'):
+  print('NATIVE_V114_HTTP='+json.dumps({'path':path.split('?',1)[0],'method':method,'status':response.status},sort_keys=True))
+ return response
 def body(result,limit=10000):
  if result.status!=200:raise RuntimeError('HOLD_RESPONSE_HTTP_'+str(result.status))
  return json.loads(result.read(limit))
