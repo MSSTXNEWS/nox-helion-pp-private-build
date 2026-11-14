@@ -98,7 +98,9 @@ def submit_verified_plan(plan: Mapping, host: SchedulerPorts, *, owner_scope: st
                 return {'state': 'HOLD_STOP_DURING_QUEUE', 'jobs_enqueued': len(receipts), 'receipts': receipts}
             if host.native_duplicate_check(job['task_id']):
                 continue
-            data = dict(job, owner_scope=owner_scope, requires_native_worker=True, priority='P0')
+            data = dict(job, owner_scope=owner_scope, requires_native_worker=True,
+                        priority='P1', chat_priority='P0',
+                        requires_native_chat_recheck=True)
             data['manifest_sha256'] = sha256(json.dumps(data,sort_keys=True,separators=(',',':')).encode()).hexdigest()
             ticket = host.queue_enqueue(data)
             if not isinstance(ticket, Mapping) or ticket.get('accepted') is not True or not _ID.fullmatch(str(ticket.get('job_id', ''))):
