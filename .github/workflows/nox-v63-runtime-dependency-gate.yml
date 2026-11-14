@@ -37,3 +37,4 @@ jobs:
           echo "NOX_SERVICE_RESTARTS=NONE"
           echo "NOX_INSTALLS_OR_DOWNLOADS=NONE"
           echo "NOX_NATIVE_ENV_READONLY_PASS=true"
+          echo "NOX_ACTIVATION_PREFLIGHT=GENESIS_V1_1"
