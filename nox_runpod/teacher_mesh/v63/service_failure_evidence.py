@@ -5,6 +5,17 @@ command arguments, credentials, files, prompt contents, or memory leave Vast.
 """
 from __future__ import annotations
 from nox_runpod.teacher_mesh.v51 import ephemeral_ssh_probe as connection
+import time
+
+# V51 is shared with executor #2. Keep its source unchanged. Vast may accept an
+# attached key before sshd can use it. Delay only THIS read-only probe's first
+# SSH attempt, then V51's bounded retry and mandatory revoke still apply.
+_v51_api = connection.api
+def _api_with_ssh_propagation(method, path, key, data=None):
+    result = _v51_api(method, path, key, data)
+    if method == "POST" and path.endswith("/ssh/"):
+        time.sleep(12)
+    return result
 
 REMOTE = r"""
 set -euo pipefail
@@ -116,6 +127,7 @@ PYREMOTE
 
 def main()->int:
     connection.REMOTE=REMOTE
+    connection.api=_api_with_ssh_propagation
     ok=False
     try:ok=connection.probe()
     except Exception as e:
