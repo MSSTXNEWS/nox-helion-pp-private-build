@@ -12,10 +12,16 @@ from nox_runpod.teacher_mesh.v51 import ephemeral_ssh_probe as ssh
 _ORIGINAL_API=ssh.api
 
 def transport(method,path,key,data=None):
-    result=_ORIGINAL_API(method,path,key,data)
-    if method=="POST" and path.endswith("/ssh/"):
-        time.sleep(12)
-    return result
+    for attempt in range(4):
+        try:
+            result=_ORIGINAL_API(method,path,key,data)
+            if method=="POST" and path.endswith("/ssh/"):
+                time.sleep(12)
+            return result
+        except RuntimeError as exc:
+            if method!="GET" or str(exc)!="HOLD_VAST_API_HTTP_429" or attempt==3:
+                raise
+            time.sleep((10,20,40)[attempt])
 
 REMOTE=r'''
 set -euo pipefail
@@ -204,8 +210,10 @@ def main():
     detached=False
     try:
         with contextlib.redirect_stdout(capture):connected=ssh.probe()
-    except Exception:
-        print('NOX_V125_FACT_E2E=HOLD_NATIVE_SSH')
+    except Exception as exc:
+        reason=str(exc)
+        print('NOX_V125_FACT_E2E='+(reason if reason.startswith('HOLD_') and len(reason)<96
+                                    else 'HOLD_NATIVE_SSH'))
     finally:
         try:
             with contextlib.redirect_stdout(capture):detached=ssh.cleanup()
