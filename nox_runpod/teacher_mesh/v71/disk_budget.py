@@ -1,6 +1,6 @@
 """Shared NOX PRIME evidence-based disk gate.
 
-Never use a historical 20GB constant to block an otherwise healthy chat.
+Never use a arbitrary historical reserve to block an otherwise healthy chat.
 Actual *new writes* (checkpoint, temp, optimizer, output) need a verified
 worst-case size and space for rollback. This pure function never writes.
 """
@@ -8,8 +8,8 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
-# Small nonzero filesystem headroom, not a fixed requirement of 20GB.
-SAFETY_FLOOR_BYTES = 512 * 1024 * 1024
+# Small nonzero filesystem headroom, is the owner's new 10GB write-reserve policy, NEVER a chat gate.
+SAFETY_FLOOR_BYTES = 10_000_000_000
 
 
 def verify_new_write_space(snapshot: Mapping, *, checkpoint_key: str =
