@@ -6,6 +6,8 @@ on:
       - '.github/workflows/nox-e2-v125-install-source-ci.yml'
       - 'nox_runpod/teacher_mesh/v125/install_fact_route.py'
       - 'nox_runpod/teacher_mesh/v125/test_install_fact_route.py'
+      - 'nox_runpod/teacher_mesh/v125/owner_fact_native_e2e.py'
+      - 'nox_runpod/teacher_mesh/v125/test_owner_fact_native_e2e.py'
   workflow_dispatch:
 permissions:
   contents: read
@@ -25,6 +27,7 @@ jobs:
           python -m py_compile nox_runpod/teacher_mesh/v125/install_fact_route.py
           python -m unittest -v \
             nox_runpod.teacher_mesh.v125.test_install_fact_route \
+            nox_runpod.teacher_mesh.v125.test_owner_fact_native_e2e \
             nox_runpod.teacher_mesh.v125.test_owner_fact_write
           echo 'NOX_V125_INSTALL_SOURCE_ONLY_PASS=true'
           echo 'NOX_V125_NATIVE_INSTALL_TESTED=false'
