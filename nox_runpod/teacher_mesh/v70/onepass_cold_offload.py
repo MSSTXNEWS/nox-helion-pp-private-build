@@ -275,6 +275,9 @@ def run()->None:
             'user_pc_copy_verified':False
         }
         RECEIPT.write_text(json.dumps(record,indent=2,sort_keys=True)+'\n')
+        # First ciphertext chunk carries both indexes and the authenticated
+        # source manifest for independent Drive/Windows acceptance.
+        (PARTS_DIR/'part01'/RECEIPT.name).write_bytes(RECEIPT.read_bytes())
         print('NOX_V70_COLD_COUNT='+str(len(manifest)))
         print('NOX_V70_COLD_BYTES='+str(record['source_total_bytes']))
         print('NOX_V70_CIPHER_SHA256='+index['ciphertext_sha256'])
