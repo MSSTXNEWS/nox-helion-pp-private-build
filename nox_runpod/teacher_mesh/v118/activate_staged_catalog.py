@@ -18,7 +18,7 @@ def _settled(method,path,key,data=None):
 
 REMOTE=r'''
 set -euo pipefail
-python3 - <<'PYREMOTE'
+/root/nox/venv/bin/python - <<'PYREMOTE'
 import ast,hashlib,http.cookiejar,json,os,stat,subprocess,time,urllib.error,urllib.request
 from pathlib import Path
 print('NOX_NATIVE_V51_SSH_EXECUTED=true')
@@ -148,6 +148,7 @@ def accepted_owner_catalog():
         try:
             with op.open(req('/chat/logout','POST',{}),timeout=3):pass
         except Exception:pass
+patched=False
 try:
     if stopped():raise RuntimeError('HOLD_STOP')
     if any(not f.is_file() or f.is_symlink() for f in (P,M,WEB)):
@@ -180,6 +181,7 @@ try:
     if stopped() or not idle() or sha(M.read_bytes())!=OLD or sha(P.read_bytes())!=PROXY:
         raise RuntimeError('HOLD_CONCURRENT_CHANGE_PRE_RESTART')
     atomic(changed,meta,'.nox-v118-staging.tmp')
+    patched=True
     if (restart() and sha(M.read_bytes())==sha(changed) and
         http_code('http://127.0.0.1:8080/nox-web-v29/nox-function-catalog.js')==401 and
         accepted_owner_catalog()):
@@ -192,7 +194,12 @@ try:
              rollback_verified=rolled)
 except Exception as exc:
     reason=str(exc)
-    emit(reason if reason.startswith('HOLD_') and len(reason)<85 else 'HOLD_V118_PRECHECK')
+    if patched:
+        recovered=restore(before,meta)
+        emit('HOLD_ROLLED_BACK' if recovered else 'HOLD_ROLLBACK_UNVERIFIED',
+             rollback_verified=recovered)
+    else:
+        emit(reason if reason.startswith('HOLD_') and len(reason)<85 else 'HOLD_V118_PRECHECK')
 print('NATIVE_READ_ONLY_COMPLETE=true')
 PYREMOTE
 '''
