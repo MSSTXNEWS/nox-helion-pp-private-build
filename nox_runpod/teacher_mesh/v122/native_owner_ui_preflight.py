@@ -77,6 +77,54 @@ try:
 except Exception:structural['s03_quick_check']=False
 detail=json.dumps(structural,separators=(',',':'),sort_keys=True)
 print('NATIVE_V125_SHA_DIAG='+detail if len(detail)<720 else 'NATIVE_V125_SHA_DIAG={"error":"HOLD_DIAG_LENGTH"}')
+# Bounded owner cookie GET — proves live server serves the exact V122 JS.
+# No chat generation, DB mutation or personal memory content exported.
+import http.cookiejar as cookiejar
+owner_report={'state':'HOLD_OWNER_HTTP','owner_session':False,
+ 'anonymous_js_401':get('/nox-web-v29/nox-ui.js')==401,
+ 'ui_sha256':None,'ui_patch_expected':False,'owner_s03_routes_ok':False,
+ 'credentials_exported':False,'private_rows_exported':False}
+session=None
+try:
+ if status!='PASS_STAGING_PREFLIGHT':raise RuntimeError('HOLD_NATIVE_PREFLIGHT')
+ from chat_proxy import _read_chat_password
+ local_password=_read_chat_password()
+ if not isinstance(local_password,str) or len(local_password)<6:
+  raise RuntimeError('HOLD_AUTH_LOCAL')
+ jar=cookiejar.CookieJar()
+ session=urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar))
+ req=urllib.request.Request('http://127.0.0.1:8080/chat/login',
+    data=json.dumps({'password':local_password}).encode('utf8'),
+    headers={'Content-Type':'application/json'},method='POST')
+ with session.open(req,timeout=6) as response:
+  if response.status!=200:raise RuntimeError('HOLD_OWNER_LOGIN')
+ local_password=None
+ with session.open('http://127.0.0.1:8080/chat/session',timeout=5) as response:
+  owner_report['owner_session']=response.status==200 and json.loads(response.read(2500)).get('ok') is True
+ if not owner_report['owner_session']:raise RuntimeError('HOLD_SIGNED_SESSION')
+ with session.open('http://127.0.0.1:8080/nox-web-v29/nox-ui.js',timeout=6) as response:
+  raw=response.read(85000)
+  owner_report['ui_sha256']=hashlib.sha256(raw).hexdigest() if response.status==200 else None
+  owner_report['cache_no_store']='no-store' in response.headers.get('Cache-Control','')
+  owner_report['javascript_response']='javascript' in response.headers.get('content-type','')
+ owner_report['ui_patch_expected']=owner_report['ui_sha256']=='18d8c8d6009323188b9f903920308b3b871a6123f7b425a77184a6b2c147640e'
+ good_s03=True
+ for endpoint in ('/api/nox/history','/api/nox/experience?q=NOX'):
+  with session.open('http://127.0.0.1:8080'+endpoint,timeout=7) as response:
+   good_s03=good_s03 and response.status==200 and isinstance(json.loads(response.read(250000)),dict)
+ owner_report['owner_s03_routes_ok']=good_s03
+ if all(owner_report.get(key) for key in ('owner_session','anonymous_js_401','ui_patch_expected','owner_s03_routes_ok','cache_no_store','javascript_response')):
+  owner_report['state']='PASS_OWNER_V126'
+except Exception as ex:
+ owner_report['error_type']=type(ex).__name__
+finally:
+ if session is not None:
+  try:
+   logout=urllib.request.Request('http://127.0.0.1:8080/chat/logout',data=b'{}',
+       headers={'Content-Type':'application/json'},method='POST')
+   session.open(logout,timeout=3).close()
+  except Exception:pass
+print('NATIVE_V126_OWNER_UI='+json.dumps(owner_report,separators=(',',':'),sort_keys=True))
 receipt={'state':status,'checks':checks,'registered':counts,
  'frozen_js_sha256':sha(original),'bridge_sha256':sha(bridge),'proxy_sha256':sha(proxy),
  'v122_native_overlay_present':'def _overlay_v122_owner_ui' in bridgecode,
@@ -112,14 +160,19 @@ def main():
         except Exception:cleanup=False
     lines=stream.getvalue().splitlines()
     for line in lines:
-        if line.startswith(('NATIVE_V122_','NATIVE_V125_','NATIVE_AUDIT_SCHEMA=','TEMP_SSH_CLEANUP=')) and len(line)<1800:
+        if line.startswith(('NATIVE_V122_','NATIVE_V125_','NATIVE_V126_','NATIVE_AUDIT_SCHEMA=','TEMP_SSH_CLEANUP=')) and len(line)<1800:
             print(line)
     receipts=[x.split('=',1)[1] for x in lines if x.startswith('NATIVE_V122_PREFLIGHT=')]
     accepted=False
     if len(receipts)==1:
         try:accepted=json.loads(receipts[0]).get('state')=='PASS_STAGING_PREFLIGHT'
         except (TypeError,ValueError):pass
-    good=bool(transport and cleanup and accepted and 'NATIVE_READ_ONLY_COMPLETE=true' in lines)
+    v126=[x.split('=',1)[1] for x in lines if x.startswith('NATIVE_V126_OWNER_UI=')]
+    owner_ui_ok=False
+    if len(v126)==1:
+        try:owner_ui_ok=json.loads(v126[0]).get('state')=='PASS_OWNER_V126'
+        except (TypeError,ValueError):pass
+    good=bool(transport and cleanup and accepted and owner_ui_ok and 'NATIVE_READ_ONLY_COMPLETE=true' in lines)
     print('NOX_V122_READONLY_NATIVE_PREFLIGHT_ACCEPTED='+str(good).lower())
     print('NOX_V122_LIVE_DEPLOYED=false')
     return 0 if good else 2
