@@ -6,6 +6,13 @@ on:
       - '.github/workflows/nox-e2-v118-native-catalog-live.yml'
       - 'nox_runpod/teacher_mesh/v118/**'
   workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Only after native forensics, fresh source SHA readback, STOP and offsite backup review'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
 permissions:
   contents: read
 concurrency:
@@ -24,6 +31,7 @@ jobs:
           python3 -m py_compile nox_runpod/teacher_mesh/v118/activate_staged_catalog.py
           python3 -m unittest -v nox_runpod.teacher_mesh.v118.test_activate_staged_catalog
   native:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' }}
     needs: safety
     runs-on: ubuntu-latest
     timeout-minutes: 9
