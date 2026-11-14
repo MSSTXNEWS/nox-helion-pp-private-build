@@ -31,7 +31,7 @@ jobs:
           set -euo pipefail
           python -m py_compile nox_runpod/teacher_mesh/v73/prime_chat_priority.py
           python -m unittest discover -s nox_runpod/teacher_mesh/v73/tests -p test_prime_priority.py -v
-          python -m unittest discover -s nox_runpod/teacher_mesh/v41/tests -p test_chat_activity_lease.py -v
+          PYTHONPATH=".:nox_runpod/teacher_mesh/v41" python -m unittest discover -s nox_runpod/teacher_mesh/v41/tests -p test_chat_activity_lease.py -v
       - name: One-shot safe live background nice priority, independent P02 HTTP readback
         run: |
           set -euo pipefail
