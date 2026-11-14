@@ -123,7 +123,7 @@ class ChatFirstBudget:
     disk_checkpoint_reserve_bytes: int = 20_000_000_000
     min_gpu_free_mib: int = 3072
     max_gpu_temp_c: int = 80
-    target_idle_compute_pct: int = 90
+    target_idle_compute_pct: int = 85
 
 
 def chat_first_admission(status: Mapping, *, budget: ChatFirstBudget = ChatFirstBudget()) -> dict:
