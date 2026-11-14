@@ -54,7 +54,7 @@ try:
 except Exception as ex:
  reason=str(ex)
  print('NATIVE_V126_TEMPDB='+json.dumps({'state':reason if reason.startswith('HOLD_') else 'HOLD_TEMP_WRITER',
-  'original_s03_writes':False,'error_type':type(ex).__name__},separators=(',',':')))
+  'original_s03_writes':False,'field_checks':locals().get('equal'), 'error_type':type(ex).__name__},separators=(',',':')))
 print('NATIVE_READ_ONLY_COMPLETE=true')
 PYREMOTE
 """
