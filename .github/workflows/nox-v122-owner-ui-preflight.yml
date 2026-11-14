@@ -46,7 +46,7 @@ jobs:
           print('NOX_V122_READONLY_SOURCE_COMPILE=PASS')
           PY
   native-readonly:
-    if: github.event_name == 'push' && github.actor == 'MSSTXNEWS'
+    if: github.event_name == 'pull_request' && github.actor == 'MSSTXNEWS' && github.event.pull_request.head.repo.full_name == github.repository
     needs: source
     runs-on: ubuntu-latest
     timeout-minutes: 15
