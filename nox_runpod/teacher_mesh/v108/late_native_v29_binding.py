@@ -5,7 +5,7 @@ from __future__ import annotations
 import contextlib,io,time
 from nox_runpod.teacher_mesh.v51 import ephemeral_ssh_probe as ssh
 
-REMOTE=r"""
+REMOTE=r'''
 set -euo pipefail
 python3 - <<'PYREMOTE'
 import ast,hashlib,json,os,stat,subprocess,time,urllib.request,urllib.error
@@ -155,7 +155,7 @@ except Exception as exc:
       live_patched=False)
 print('NATIVE_READ_ONLY_COMPLETE=true')
 PYREMOTE
-"""
+'''
 def main():
     ssh.REMOTE=REMOTE
     old=ssh.api
