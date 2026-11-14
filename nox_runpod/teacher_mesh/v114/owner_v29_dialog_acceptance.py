@@ -18,7 +18,7 @@ print('NATIVE_AUDIT_SCHEMA=NOX_V114_AUTH_NATIVE_WEB_DIALOG_S03_ONEHOST_V1')
 PROXY=Path('/root/nox/scripts/chat_proxy.py')
 BRIDGE=Path('/root/nox/scripts/nox_v29_chat_bridge.py')
 PROXY_SHA='4d90215d7099344dd5aaed2412645b764baa0228acc0b0e153cfe425217591ad'
-BRIDGE_SHA='066ed91555a9a6251420b5897a040eda13a03b3d6c2d85b936e384c5f4113cd4'
+BRIDGE_SHA='cc27928b38f9b86d2375de8092d09dbdc34f81c6e51e8a68d36041ee71529750'
 STOPS=('/root/nox/STOP','/root/nox/STOP.flag','/root/nox/stop.flag','/root/nox/.stop',
        '/workspace/NOX_STOP','/root/nox/program/STOP')
 def stop():return any(Path(p).exists() for p in STOPS)
