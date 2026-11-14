@@ -12,6 +12,7 @@ import json, re
 from typing import Mapping
 
 from nox_runpod.teacher_mesh.v71.disk_budget import SAFETY_FLOOR_BYTES, verify_new_write_space
+from nox_runpod.teacher_mesh.v87.gpu1_oom_gate import gpu1_peak_admission
 
 _SHA = re.compile(r'^[a-f0-9]{64}$')
 ID='60509551'
@@ -94,6 +95,23 @@ def assess(snapshot, limits=Limits()):
         errors.append('TRAINABLE_STUDENT_REQUIRED_GGUF_NOT_TRAINABLE')
     if snapshot.get('no_live_optimizer_process') is not True:
         errors.append('MAY_INTERRUPT_EXISTING_OPTIMIZER')
+    # Hardware-aware V87 Volta memory gate prevents V83's repeated CUDA OOM
+    # before requesting any native OneHost trainer lease. No GPU work here.
+    gpu1=next((x for x in (gpu or []) if isinstance(x,Mapping) and x.get('index')==1),{})
+    peak=dict(snapshot)
+    peak.update({
+        'main_gpu0_student_healthy':snapshot.get('chat_gpu0_healthy'),
+        'onehost_gpu1_lease':snapshot.get('training_owner_lease'),
+        'gpu1_optimizer_in_flight':False if snapshot.get('no_live_optimizer_process') is True else None,
+        'gpu1_free_mib':gpu1.get('vram_free_mib'),
+        'gpu1_compute_capability':gpu1.get('compute_capability'),
+        'gpu1_name':gpu1.get('name'),
+        'torch_cuda_major':snapshot.get('cuda_major'),
+        'trainable_base_sha256':snapshot.get('trainable_student_sha256'),
+    })
+    oom_gate=gpu1_peak_admission(peak)
+    if oom_gate['state']!='READY_FOR_OWNER_AND_CHECKPOINT_GATES':
+        errors.extend(oom_gate['reasons'])
     if errors:return _hold(errors)
     preimage=sha256(json.dumps(dict(snapshot),sort_keys=True,ensure_ascii=False,separators=(',',':')).encode()).hexdigest()
     return {'schema':'NOX_V47_NIGHT_ADMISSION','state':'READY_FOR_NATIVE_OWNER_APPROVAL',

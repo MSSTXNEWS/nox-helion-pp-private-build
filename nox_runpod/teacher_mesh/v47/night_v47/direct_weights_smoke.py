@@ -137,6 +137,35 @@ def gpu_guards():
     return free,total
 
 
+
+def ensure_gpu1_preload_budget(free_bytes: int, weights_bytes: int) -> int:
+    """Upper-bound GPU1 full-model residency before loading an HF model.
+
+    The already-running teacher may consume GPU1; do not assume aggregate
+    2 x V100 VRAM is one 64GiB device. No adapters or GPU0 model offload.
+    """
+    if type(free_bytes) is not int or type(weights_bytes) is not int or free_bytes < 0 or weights_bytes <= 0:
+        raise RuntimeError('HOLD_GPU1_PRELOAD_MEASUREMENT')
+    reserve=6*1024**3
+    model_overhead=max(weights_bytes//4,1024**3)
+    needed=weights_bytes+model_overhead+reserve
+    if free_bytes < needed:
+        raise RuntimeError('HOLD_GPU1_MODEL_PRELOAD_OOM_EXPECTED')
+    return needed
+
+
+def ensure_gpu1_postload_budget(free_bytes: int, trainable_param_count: int) -> int:
+    """Allow native optimizer creation only with conservative m/v/grads+activations headroom."""
+    if type(free_bytes) is not int or type(trainable_param_count) is not int or free_bytes < 0 or trainable_param_count <= 0:
+        raise RuntimeError('HOLD_GPU1_TRAINABLE_TENSOR_MEASUREMENT')
+    # Worst-case AdamW fp32 moments + FP16 grads (8+2 bytes/element);
+    # 4GiB for activations, allocator fragmentation and no-loss reserve.
+    needed=trainable_param_count*10+4*1024**3
+    if free_bytes < needed:
+        raise RuntimeError('HOLD_GPU1_OPTIMIZER_ACTIVATION_OOM_EXPECTED')
+    return needed
+
+
 def run(args):
     if not args.execute or os.getenv('NOX_ONEHOST_NATIVE_APPROVED')!='1':
         raise RuntimeError('HOLD_ONEHOST_NATIVE_APPROVAL_REQUIRED')
@@ -169,8 +198,7 @@ def run(args):
     from transformers import AutoTokenizer,AutoModelForCausalLM
     torch.manual_seed(3407)
     free,total=gpu_guards()
-    if free < weights_bytes*1.1 + 3*1024**3:
-        raise RuntimeError('HOLD_GPU1_VRAM_ESTIMATE')
+    ensure_gpu1_preload_budget(int(free),int(weights_bytes))
     device=torch.device('cuda:1')
     # No trust_remote_code and no network: user must have supplied vetted local HF weights.
     tokenizer=AutoTokenizer.from_pretrained(str(student),local_files_only=True,trust_remote_code=False)
@@ -184,6 +212,11 @@ def run(args):
         model.enable_input_require_grads()
     block,params=select_last_block(model)
     if not params:raise RuntimeError('HOLD_NO_DIRECT_TRAINABLE_PARAMETERS')
+    # Check AFTER the complete model is resident, BEFORE backward or AdamW.
+    # An early HOLD here prevents V83's observed 19 OOM log signals.
+    available_after_model,_=torch.cuda.mem_get_info(1)
+    ensure_gpu1_postload_budget(int(available_after_model),
+                                sum(int(p.numel()) for p in params))
     baseline_sha=trainable_tensor_digest(params)
     first_eval=mean_holdout_loss(model,tokenizer,device,holdout,args.max_tokens)
     optimizer=torch.optim.AdamW(params,lr=args.lr,betas=(0.9,0.95),weight_decay=0.01)
@@ -215,8 +248,17 @@ def run(args):
                     'steps':completed,'seed':3407,'block':block},str(stage/'optimizer_state.pt'))
         model.eval()
         after_eval=mean_holdout_loss(model,tokenizer,device,holdout,args.max_tokens)
+        # Optimizer holds references to *all trained layer parameters*.
+        # Drop optimizer, loss graph and params before loading a second full
+        # model, otherwise old tensors stay on GPU and cause reload OOM.
+        del optimizer
+        del params
+        if 'loss' in locals(): del loss
+        if 'norm' in locals(): del norm
         del model
         gc.collect();torch.cuda.empty_cache()
+        available_for_reload,_=torch.cuda.mem_get_info(1)
+        ensure_gpu1_preload_budget(int(available_for_reload),int(weights_bytes))
         reload_model=AutoModelForCausalLM.from_pretrained(str(stage),local_files_only=True,
                    torch_dtype=torch.float16,trust_remote_code=False,attn_implementation='eager').to(device)
         layers_name,params_reload=select_last_block(reload_model)
