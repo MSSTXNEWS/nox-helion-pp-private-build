@@ -1,0 +1,1704 @@
+{
+  "schema": "NOX_R60_SOURCE_PLAN_V1",
+  "instance_id": 60509551,
+  "source_matrix_path": "nox_runpod/teacher_mesh/v47/control/TASKS_60_V46.json",
+  "source_matrix_blob_sha": "02cd6dde32d13578389682328332f900ac433eb6",
+  "onehost_only": true,
+  "live_queue_verified": false,
+  "registered_count": 0,
+  "source_planned_count": 60,
+  "activation_policy": "HOLD_CONNECTION until signed native OneHost queue enqueue + readback; STOP/backup/ACL first",
+  "task_id_mapping": "NOX-V46-NN to R60-NNN; never replace native queue IDs",
+  "tasks": [
+    {
+      "task_id": "R60-001",
+      "legacy_task_id": "NOX-V46-01",
+      "title": "Инвентаризация Vast, GPU, RAM, диска и PID",
+      "owner": "executor-1",
+      "state": "PENDING_NATIVE_REGISTRATION",
+      "depends_on": [],
+      "priority": "P0",
+      "resource_class": "CPU_LIGHT",
+      "resource_limits": {
+        "gpu_slots": 0,
+        "cpu_slots": 1
+      },
+      "checkpoint": {
+        "required": false,
+        "verified": false
+      },
+      "requires_native_owner": true,
+      "backup_restore_required": false,
+      "license_privacy_required": false,
+      "modifies_live_system": false,
+      "artifact_sha256": null,
+      "native_receipt": null,
+      "native_queue_id": null,
+      "verified": false
+    },
+    {
+      "task_id": "R60-002",
+      "legacy_task_id": "NOX-V46-02",
+      "title": "Хеш-инвентаризация весов и checkpoints",
+      "owner": "executor-1",
+      "state": "PENDING_NATIVE_REGISTRATION",
+      "depends_on": [
+        "R60-001"
+      ],
+      "priority": "P0",
+      "resource_class": "CPU_IO",
+      "resource_limits": {
+        "gpu_slots": 0,
+        "cpu_slots": 1
+      },
+      "checkpoint": {
+        "required": false,
+        "verified": false
+      },
+      "requires_native_owner": true,
+      "backup_restore_required": false,
+      "license_privacy_required": false,
+      "modifies_live_system": false,
+      "artifact_sha256": null,
+      "native_receipt": null,
+      "native_queue_id": null,
+      "verified": false
+    },
+    {
+      "task_id": "R60-003",
+      "legacy_task_id": "NOX-V46-03",
+      "title": "Сверка 200 готовых источников и лицензий",
+      "owner": "executor-1",
+      "state": "PENDING_NATIVE_REGISTRATION",
+      "depends_on": [
+        "R60-002"
+      ],
+      "priority": "P1",
+      "resource_class": "CPU_IO",
+      "resource_limits": {
+        "gpu_slots": 0,
+        "cpu_slots": 1
+      },
+      "checkpoint": {
+        "required": false,
+        "verified": false
+      },
+      "requires_native_owner": true,
+      "backup_restore_required": false,
+      "license_privacy_required": true,
+      "modifies_live_system": false,
+      "artifact_sha256": null,
+      "native_receipt": null,
+      "native_queue_id": null,
+      "verified": false
+    },
+    {
+      "task_id": "R60-004",
+      "legacy_task_id": "NOX-V46-04",
+      "title": "Каталог моделей ПК / Drive / Vast без дублей",
+      "owner": "executor-1",
+      "state": "PENDING_NATIVE_REGISTRATION",
+      "depends_on": [
+        "R60-001",
+        "R60-003"
+      ],
+      "priority": "P1",
+      "resource_class": "CPU_IO",
+      "resource_limits": {
+        "gpu_slots": 0,
+        "cpu_slots": 1
+      },
+      "checkpoint": {
+        "required": false,
+        "verified": false
+      },
+      "requires_native_owner": true,
+      "backup_restore_required": false,
+      "license_privacy_required": true,
+      "modifies_live_system": false,
+      "artifact_sha256": null,
+      "native_receipt": null,
+      "native_queue_id": null,
+      "verified": false
+    },
+    {
+      "task_id": "R60-005",
+      "legacy_task_id": "NOX-V46-05",
+      "title": "Сравнение Q8/Q5/Q4 с полным эталоном",
+      "owner": "executor-1",
+      "state": "PENDING_NATIVE_REGISTRATION",
+      "depends_on": [
+        "R60-002"
+      ],
+      "priority": "P1",
+      "resource_class": "GPU1_EXCLUSIVE",
+      "resource_limits": {
+        "gpu1_slots": 1,
+        "cpu_slots": 1
+      },
+      "checkpoint": {
+        "required": false,
+        "verified": false
+      },
+      "requires_native_owner": true,
+      "backup_restore_required": false,
+      "license_privacy_required": true,
+      "modifies_live_system": false,
+      "artifact_sha256": null,
+      "native_receipt": null,
+      "native_queue_id": null,
+      "verified": false
+    },
+    {
+      "task_id": "R60-006",
+      "legacy_task_id": "NOX-V46-06",
+      "title": "Оценка TTFT, TPS и качества квантов",
+      "owner": "executor-1",
+      "state": "PENDING_NATIVE_REGISTRATION",
+      "depends_on": [
+        "R60-005"
+      ],
+      "priority": "P1",
+      "resource_class": "GPU1_EXCLUSIVE",
+      "resource_limits": {
+        "gpu1_slots": 1,
+        "cpu_slots": 1
+      },
+      "checkpoint": {
+        "required": false,
+        "verified": false
+      },
+      "requires_native_owner": true,
+      "backup_restore_required": false,
+      "license_privacy_required": false,
+      "modifies_live_system": false,
+      "artifact_sha256": null,
+      "native_receipt": null,
+      "native_queue_id": null,
+      "verified": false
+    },
+    {
+      "task_id": "R60-007",
+      "legacy_task_id": "NOX-V46-07",
+      "title": "План горячей RAM/VRAM и cold storage",
+      "owner": "executor-1",
+      "state": "PENDING_NATIVE_REGISTRATION",
+      "depends_on": [
+        "R60-001",
+        "R60-002"
+      ],
+      "priority": "P1",
+      "resource_class": "CPU_LIGHT",
+      "resource_limits": {
+        "gpu_slots": 0,
+        "cpu_slots": 1
+      },
+      "checkpoint": {
+        "required": false,
+        "verified": false
+      },
+      "requires_native_owner": true,
+      "backup_restore_required": false,
+      "license_privacy_required": false,
+      "modifies_live_system": false,
+      "artifact_sha256": null,
+      "native_receipt": null,
+      "native_queue_id": null,
+      "verified": false
+    },
+    {
+      "task_id": "R60-008",
+      "legacy_task_id": "NOX-V46-08",
+      "title": "Безопасная выгрузка простаивающего учителя",
+      "owner": "executor-1",
+      "state": "PENDING_NATIVE_REGISTRATION",
+      "depends_on": [
+        "R60-007"
+      ],
+      "priority": "P1",
+      "resource_class": "CPU_LIGHT",
+      "resource_limits": {
+        "gpu_slots": 0,
+        "cpu_slots": 1
+      },
+      "checkpoint": {
+        "required": true,
+        "verified": false
+      },
+      "requires_native_owner": true,
+      "backup_restore_required": true,
+      "license_privacy_required": false,
+      "modifies_live_system": true,
+      "artifact_sha256": null,
+      "native_receipt": null,
+      "native_queue_id": null,
+      "verified": false
+    },
+    {
+      "task_id": "R60-009",
+      "legacy_task_id": "NOX-V46-09",
+      "title": "Offsite backup и тест восстановления модели",
+      "owner": "executor-1",
+      "state": "PENDING_NATIVE_REGISTRATION",
+      "depends_on": [
+        "R60-002"
+      ],
+      "priority": "P0",
+      "resource_class": "CPU_IO",
+      "resource_limits": {
+        "gpu_slots": 0,
+        "cpu_slots": 1
+      },
+      "checkpoint": {
+        "required": false,
+        "verified": false
+      },
+      "requires_native_owner": true,
+      "backup_restore_required": false,
+      "license_privacy_required": false,
+      "modifies_live_system": true,
+      "artifact_sha256": null,
+      "native_receipt": null,
+      "native_queue_id": null,
+      "verified": false
+    },
+    {
+      "task_id": "R60-010",
+      "legacy_task_id": "NOX-V46-10",
+      "title": "Отчёт о реальном освобождённом месте",
+      "owner": "executor-1",
+      "state": "PENDING_NATIVE_REGISTRATION",
+      "depends_on": [
+        "R60-009"
+      ],
+      "priority": "P1",
+      "resource_class": "CPU_LIGHT",
+      "resource_limits": {
+        "gpu_slots": 0,
+        "cpu_slots": 1
+      },
+      "checkpoint": {
+        "required": true,
+        "verified": false
+      },
+      "requires_native_owner": true,
+      "backup_restore_required": true,
+      "license_privacy_required": false,
+      "modifies_live_system": true,
+      "artifact_sha256": null,
+      "native_receipt": null,
+      "native_queue_id": null,
+      "verified": false
+    },
+    {
+      "task_id": "R60-011",
+      "legacy_task_id": "NOX-V46-11",
+      "title": "Аудит действующей S03 и PersonaID",
+      "owner": "executor-1",
+      "state": "PENDING_NATIVE_REGISTRATION",
+      "depends_on": [],
+      "priority": "P0",
+      "resource_class": "CPU_LIGHT",
+      "resource_limits": {
+        "gpu_slots": 0,
+        "cpu_slots": 1
+      },
+      "checkpoint": {
+        "required": false,
+        "verified": false
+      },
+      "requires_native_owner": true,
+      "backup_restore_required": false,
+      "license_privacy_required": false,
+      "modifies_live_system": false,
+      "artifact_sha256": null,
+      "native_receipt": null,
+      "native_queue_id": null,
+      "verified": false
+    },
+    {
+      "task_id": "R60-012",
+      "legacy_task_id": "NOX-V46-12",
+      "title": "Миграция/контроль M0–M7 без второй БД",
+      "owner": "executor-1",
+      "state": "PENDING_NATIVE_REGISTRATION",
+      "depends_on": [
+        "R60-011"
+      ],
+      "priority": "P1",
+      "resource_class": "CPU_IO",
+      "resource_limits": {
+        "gpu_slots": 0,
+        "cpu_slots": 1
+      },
+      "checkpoint": {
+        "required": false,
+        "verified": false
+      },
+      "requires_native_owner": true,
+      "backup_restore_required": false,
+      "license_privacy_required": false,
+      "modifies_live_system": true,
+      "artifact_sha256": null,
+      "native_receipt": null,
+      "native_queue_id": null,
+      "verified": false
+    },
+    {
+      "task_id": "R60-013",
+      "legacy_task_id": "NOX-V46-13",
+      "title": "Индексированный recall с проверкой источников",
+      "owner": "executor-1",
+      "state": "PENDING_NATIVE_REGISTRATION",
+      "depends_on": [
+        "R60-012"
+      ],
+      "priority": "P1",
+      "resource_class": "CPU_IO",
+      "resource_limits": {
+        "gpu_slots": 0,
+        "cpu_slots": 1
+      },
+      "checkpoint": {
+        "required": false,
+        "verified": false
+      },
+      "requires_native_owner": true,
+      "backup_restore_required": false,
+      "license_privacy_required": false,
+      "modifies_live_system": false,
+      "artifact_sha256": null,
+      "native_receipt": null,
+      "native_queue_id": null,
+      "verified": false
+    },
+    {
+      "task_id": "R60-014",
+      "legacy_task_id": "NOX-V46-14",
+      "title": "Граф тем, событий и временных связей",
+      "owner": "executor-1",
+      "state": "PENDING_NATIVE_REGISTRATION",
+      "depends_on": [
+        "R60-013"
+      ],
+      "priority": "P1",
+      "resource_class": "CPU_LIGHT",
+      "resource_limits": {
+        "gpu_slots": 0,
+        "cpu_slots": 1
+      },
+      "checkpoint": {
+        "required": false,
+        "verified": false
+      },
+      "requires_native_owner": true,
+      "backup_restore_required": false,
+      "license_privacy_required": false,
+      "modifies_live_system": false,
+      "artifact_sha256": null,
+      "native_receipt": null,
+      "native_queue_id": null,
+      "verified": false
+    },
+    {
+      "task_id": "R60-015",
+      "legacy_task_id": "NOX-V46-15",
+      "title": "Дедупликация и разрешение противоречий",
+      "owner": "executor-1",
+      "state": "PENDING_NATIVE_REGISTRATION",
+      "depends_on": [
+        "R60-013",
+        "R60-014"
+      ],
+      "priority": "P1",
+      "resource_class": "CPU_LIGHT",
+      "resource_limits": {
+        "gpu_slots": 0,
+        "cpu_slots": 1
+      },
+      "checkpoint": {
+        "required": false,
+        "verified": false
+      },
+      "requires_native_owner": true,
+      "backup_restore_required": false,
+      "license_privacy_required": false,
+      "modifies_live_system": false,
+      "artifact_sha256": null,
+      "native_receipt": null,
+      "native_queue_id": null,
+      "verified": false
+    },
+    {
+      "task_id": "R60-016",
+      "legacy_task_id": "NOX-V46-16",
+      "title": "GENESIS ledger / биография NOX с SHA",
+      "owner": "executor-1",
+      "state": "PENDING_NATIVE_REGISTRATION",
+      "depends_on": [
+        "R60-011",
+        "R60-012"
+      ],
+      "priority": "P0",
+      "resource_class": "CPU_LIGHT",
+      "resource_limits": {
+        "gpu_slots": 0,
+        "cpu_slots": 1
+      },
+      "checkpoint": {
+        "required": false,
+        "verified": false
+      },
+      "requires_native_owner": true,
+      "backup_restore_required": false,
+      "license_privacy_required": false,
+      "modifies_live_system": true,
+      "artifact_sha256": null,
+      "native_receipt": null,
+      "native_queue_id": null,
+      "verified": false
+    },
+    {
+      "task_id": "R60-017",
+      "legacy_task_id": "NOX-V46-17",
+      "title": "Функциональная самомодель и границы",
+      "owner": "executor-1",
+      "state": "PENDING_NATIVE_REGISTRATION",
+      "depends_on": [
+        "R60-016"
+      ],
+      "priority": "P1",
+      "resource_class": "CPU_LIGHT",
+      "resource_limits": {
+        "gpu_slots": 0,
+        "cpu_slots": 1
+      },
+      "checkpoint": {
+        "required": false,
+        "verified": false
+      },
+      "requires_native_owner": true,
+      "backup_restore_required": false,
+      "license_privacy_required": false,
+      "modifies_live_system": true,
+      "artifact_sha256": null,
+      "native_receipt": null,
+      "native_queue_id": null,
+      "verified": false
+    },
+    {
+      "task_id": "R60-018",
+      "legacy_task_id": "NOX-V46-18",
+      "title": "Эмоциональное поведение и RU/ES без диагнозов",
+      "owner": "executor-1",
+      "state": "PENDING_NATIVE_REGISTRATION",
+      "depends_on": [
+        "R60-011"
+      ],
+      "priority": "P1",
+      "resource_class": "CPU_LIGHT",
+      "resource_limits": {
+        "gpu_slots": 0,
+        "cpu_slots": 1
+      },
+      "checkpoint": {
+        "required": false,
+        "verified": false
+      },
+      "requires_native_owner": true,
+      "backup_restore_required": false,
+      "license_privacy_required": false,
+      "modifies_live_system": true,
+      "artifact_sha256": null,
+      "native_receipt": null,
+      "native_queue_id": null,
+      "verified": false
+    },
+    {
+      "task_id": "R60-019",
+      "legacy_task_id": "NOX-V46-19",
+      "title": "PersonaID ACL, revoke и no-leak",
+      "owner": "executor-1",
+      "state": "PENDING_NATIVE_REGISTRATION",
+      "depends_on": [
+        "R60-011",
+        "R60-018"
+      ],
+      "priority": "P1",
+      "resource_class": "CPU_LIGHT",
+      "resource_limits": {
+        "gpu_slots": 0,
+        "cpu_slots": 1
+      },
+      "checkpoint": {
+        "required": false,
+        "verified": false
+      },
+      "requires_native_owner": true,
+      "backup_restore_required": false,
+      "license_privacy_required": false,
+      "modifies_live_system": true,
+      "artifact_sha256": null,
+      "native_receipt": null,
+      "native_queue_id": null,
+      "verified": false
+    },
+    {
+      "task_id": "R60-020",
+      "legacy_task_id": "NOX-V46-20",
+      "title": "Restore S03 и межчатовая проверка памяти",
+      "owner": "executor-1",
+      "state": "PENDING_NATIVE_REGISTRATION",
+      "depends_on": [
+        "R60-016",
+        "R60-056"
+      ],
+      "priority": "P1",
+      "resource_class": "CPU_IO",
+      "resource_limits": {
+        "gpu_slots": 0,
+        "cpu_slots": 1
+      },
+      "checkpoint": {
+        "required": false,
+        "verified": false
+      },
+      "requires_native_owner": true,
+      "backup_restore_required": false,
+      "license_privacy_required": false,
+      "modifies_live_system": true,
+      "artifact_sha256": null,
+      "native_receipt": null,
+      "native_queue_id": null,
+      "verified": false
+    },
+    {
+      "task_id": "R60-021",
+      "legacy_task_id": "NOX-V46-21",
+      "title": "Прочитать реальную причину train_error step=0",
+      "owner": "executor-2",
+      "state": "PENDING_NATIVE_REGISTRATION",
+      "depends_on": [],
+      "priority": "P0",
+      "resource_class": "CPU_LIGHT",
+      "resource_limits": {
+        "gpu_slots": 0,
+        "cpu_slots": 1
+      },
+      "checkpoint": {
+        "required": false,
+        "verified": false
+      },
+      "requires_native_owner": true,
+      "backup_restore_required": false,
+      "license_privacy_required": false,
+      "modifies_live_system": false,
+      "artifact_sha256": null,
+      "native_receipt": null,
+      "native_queue_id": null,
+      "verified": false
+    },
+    {
+      "task_id": "R60-022",
+      "legacy_task_id": "NOX-V46-22",
+      "title": "Зафиксировать текущий student и optimizer SHA",
+      "owner": "executor-2",
+      "state": "PENDING_NATIVE_REGISTRATION",
+      "depends_on": [
+        "R60-021"
+      ],
+      "priority": "P0",
+      "resource_class": "CPU_LIGHT",
+      "resource_limits": {
+        "gpu_slots": 0,
+        "cpu_slots": 1
+      },
+      "checkpoint": {
+        "required": false,
+        "verified": false
+      },
+      "requires_native_owner": true,
+      "backup_restore_required": false,
+      "license_privacy_required": false,
+      "modifies_live_system": false,
+      "artifact_sha256": null,
+      "native_receipt": null,
+      "native_queue_id": null,
+      "verified": false
+    },
+    {
+      "task_id": "R60-023",
+      "legacy_task_id": "NOX-V46-23",
+      "title": "Сверить установленных учителей и их права",
+      "owner": "executor-2",
+      "state": "PENDING_NATIVE_REGISTRATION",
+      "depends_on": [
+        "R60-003",
+        "R60-022"
+      ],
+      "priority": "P1",
+      "resource_class": "CPU_LIGHT",
+      "resource_limits": {
+        "gpu_slots": 0,
+        "cpu_slots": 1
+      },
+      "checkpoint": {
+        "required": false,
+        "verified": false
+      },
+      "requires_native_owner": true,
+      "backup_restore_required": false,
+      "license_privacy_required": false,
+      "modifies_live_system": false,
+      "artifact_sha256": null,
+      "native_receipt": null,
+      "native_queue_id": null,
+      "verified": false
+    },
+    {
+      "task_id": "R60-024",
+      "legacy_task_id": "NOX-V46-24",
+      "title": "Собрать источники только с разрешёнными данными",
+      "owner": "executor-2",
+      "state": "PENDING_NATIVE_REGISTRATION",
+      "depends_on": [
+        "R60-023"
+      ],
+      "priority": "P1",
+      "resource_class": "CPU_LIGHT",
+      "resource_limits": {
+        "gpu_slots": 0,
+        "cpu_slots": 1
+      },
+      "checkpoint": {
+        "required": true,
+        "verified": false
+      },
+      "requires_native_owner": true,
+      "backup_restore_required": true,
+      "license_privacy_required": true,
+      "modifies_live_system": true,
+      "artifact_sha256": null,
+      "native_receipt": null,
+      "native_queue_id": null,
+      "verified": false
+    },
+    {
+      "task_id": "R60-025",
+      "legacy_task_id": "NOX-V46-25",
+      "title": "Дедуп лицензионного корпуса и антиповторы",
+      "owner": "executor-2",
+      "state": "PENDING_NATIVE_REGISTRATION",
+      "depends_on": [
+        "R60-024"
+      ],
+      "priority": "P1",
+      "resource_class": "CPU_IO",
+      "resource_limits": {
+        "gpu_slots": 0,
+        "cpu_slots": 1
+      },
+      "checkpoint": {
+        "required": true,
+        "verified": false
+      },
+      "requires_native_owner": true,
+      "backup_restore_required": true,
+      "license_privacy_required": true,
+      "modifies_live_system": true,
+      "artifact_sha256": null,
+      "native_receipt": null,
+      "native_queue_id": null,
+      "verified": false
+    },
+    {
+      "task_id": "R60-026",
+      "legacy_task_id": "NOX-V46-26",
+      "title": "Зафиксировать train/dev/holdout и версии",
+      "owner": "executor-2",
+      "state": "PENDING_NATIVE_REGISTRATION",
+      "depends_on": [
+        "R60-025"
+      ],
+      "priority": "P1",
+      "resource_class": "CPU_IO",
+      "resource_limits": {
+        "gpu_slots": 0,
+        "cpu_slots": 1
+      },
+      "checkpoint": {
+        "required": true,
+        "verified": false
+      },
+      "requires_native_owner": true,
+      "backup_restore_required": true,
+      "license_privacy_required": true,
+      "modifies_live_system": true,
+      "artifact_sha256": null,
+      "native_receipt": null,
+      "native_queue_id": null,
+      "verified": false
+    },
+    {
+      "task_id": "R60-027",
+      "legacy_task_id": "NOX-V46-27",
+      "title": "DeepSeek reasoning — ответы и проверка",
+      "owner": "executor-2",
+      "state": "PENDING_NATIVE_REGISTRATION",
+      "depends_on": [
+        "R60-026"
+      ],
+      "priority": "P1",
+      "resource_class": "GPU1_EXCLUSIVE",
+      "resource_limits": {
+        "gpu1_slots": 1,
+        "cpu_slots": 1
+      },
+      "checkpoint": {
+        "required": true,
+        "verified": false
+      },
+      "requires_native_owner": true,
+      "backup_restore_required": true,
+      "license_privacy_required": true,
+      "modifies_live_system": false,
+      "artifact_sha256": null,
+      "native_receipt": null,
+      "native_queue_id": null,
+      "verified": false
+    },
+    {
+      "task_id": "R60-028",
+      "legacy_task_id": "NOX-V46-28",
+      "title": "Qwen RU/ES — знания и независимые тесты",
+      "owner": "executor-2",
+      "state": "PENDING_NATIVE_REGISTRATION",
+      "depends_on": [
+        "R60-026"
+      ],
+      "priority": "P1",
+      "resource_class": "GPU1_EXCLUSIVE",
+      "resource_limits": {
+        "gpu1_slots": 1,
+        "cpu_slots": 1
+      },
+      "checkpoint": {
+        "required": true,
+        "verified": false
+      },
+      "requires_native_owner": true,
+      "backup_restore_required": true,
+      "license_privacy_required": true,
+      "modifies_live_system": false,
+      "artifact_sha256": null,
+      "native_receipt": null,
+      "native_queue_id": null,
+      "verified": false
+    },
+    {
+      "task_id": "R60-029",
+      "legacy_task_id": "NOX-V46-29",
+      "title": "Coder — программирование и тесты",
+      "owner": "executor-2",
+      "state": "PENDING_NATIVE_REGISTRATION",
+      "depends_on": [
+        "R60-026"
+      ],
+      "priority": "P1",
+      "resource_class": "GPU1_EXCLUSIVE",
+      "resource_limits": {
+        "gpu1_slots": 1,
+        "cpu_slots": 1
+      },
+      "checkpoint": {
+        "required": true,
+        "verified": false
+      },
+      "requires_native_owner": true,
+      "backup_restore_required": true,
+      "license_privacy_required": true,
+      "modifies_live_system": false,
+      "artifact_sha256": null,
+      "native_receipt": null,
+      "native_queue_id": null,
+      "verified": false
+    },
+    {
+      "task_id": "R60-030",
+      "legacy_task_id": "NOX-V46-30",
+      "title": "Optimizer, checkpoint, reload, blind holdout",
+      "owner": "executor-2",
+      "state": "PENDING_NATIVE_REGISTRATION",
+      "depends_on": [
+        "R60-021",
+        "R60-022",
+        "R60-026",
+        "R60-027",
+        "R60-028",
+        "R60-029",
+        "R60-009"
+      ],
+      "priority": "P1",
+      "resource_class": "GPU1_EXCLUSIVE",
+      "resource_limits": {
+        "gpu1_slots": 1,
+        "cpu_slots": 1
+      },
+      "checkpoint": {
+        "required": true,
+        "verified": false
+      },
+      "requires_native_owner": true,
+      "backup_restore_required": true,
+      "license_privacy_required": true,
+      "modifies_live_system": true,
+      "artifact_sha256": null,
+      "native_receipt": null,
+      "native_queue_id": null,
+      "verified": false
+    },
+    {
+      "task_id": "R60-031",
+      "legacy_task_id": "NOX-V46-31",
+      "title": "Планирование задач с явными правами",
+      "owner": "executor-2",
+      "state": "PENDING_NATIVE_REGISTRATION",
+      "depends_on": [],
+      "priority": "P1",
+      "resource_class": "CPU_LIGHT",
+      "resource_limits": {
+        "gpu_slots": 0,
+        "cpu_slots": 1
+      },
+      "checkpoint": {
+        "required": false,
+        "verified": false
+      },
+      "requires_native_owner": true,
+      "backup_restore_required": false,
+      "license_privacy_required": false,
+      "modifies_live_system": false,
+      "artifact_sha256": null,
+      "native_receipt": null,
+      "native_queue_id": null,
+      "verified": false
+    },
+    {
+      "task_id": "R60-032",
+      "legacy_task_id": "NOX-V46-32",
+      "title": "Reasoning regression / self-correction",
+      "owner": "executor-2",
+      "state": "PENDING_NATIVE_REGISTRATION",
+      "depends_on": [
+        "R60-031"
+      ],
+      "priority": "P1",
+      "resource_class": "CPU_LIGHT",
+      "resource_limits": {
+        "gpu_slots": 0,
+        "cpu_slots": 1
+      },
+      "checkpoint": {
+        "required": false,
+        "verified": false
+      },
+      "requires_native_owner": true,
+      "backup_restore_required": false,
+      "license_privacy_required": false,
+      "modifies_live_system": false,
+      "artifact_sha256": null,
+      "native_receipt": null,
+      "native_queue_id": null,
+      "verified": false
+    },
+    {
+      "task_id": "R60-033",
+      "legacy_task_id": "NOX-V46-33",
+      "title": "Математика, логика и верификация",
+      "owner": "executor-2",
+      "state": "PENDING_NATIVE_REGISTRATION",
+      "depends_on": [
+        "R60-032"
+      ],
+      "priority": "P1",
+      "resource_class": "CPU_LIGHT",
+      "resource_limits": {
+        "gpu_slots": 0,
+        "cpu_slots": 1
+      },
+      "checkpoint": {
+        "required": false,
+        "verified": false
+      },
+      "requires_native_owner": true,
+      "backup_restore_required": false,
+      "license_privacy_required": false,
+      "modifies_live_system": false,
+      "artifact_sha256": null,
+      "native_receipt": null,
+      "native_queue_id": null,
+      "verified": false
+    },
+    {
+      "task_id": "R60-034",
+      "legacy_task_id": "NOX-V46-34",
+      "title": "Языковая корректность и RU/ES",
+      "owner": "executor-2",
+      "state": "PENDING_NATIVE_REGISTRATION",
+      "depends_on": [
+        "R60-031"
+      ],
+      "priority": "P1",
+      "resource_class": "CPU_LIGHT",
+      "resource_limits": {
+        "gpu_slots": 0,
+        "cpu_slots": 1
+      },
+      "checkpoint": {
+        "required": false,
+        "verified": false
+      },
+      "requires_native_owner": true,
+      "backup_restore_required": false,
+      "license_privacy_required": false,
+      "modifies_live_system": false,
+      "artifact_sha256": null,
+      "native_receipt": null,
+      "native_queue_id": null,
+      "verified": false
+    },
+    {
+      "task_id": "R60-035",
+      "legacy_task_id": "NOX-V46-35",
+      "title": "Поиск свежих источников и provenance",
+      "owner": "executor-2",
+      "state": "PENDING_NATIVE_REGISTRATION",
+      "depends_on": [
+        "R60-031"
+      ],
+      "priority": "P1",
+      "resource_class": "CPU_LIGHT",
+      "resource_limits": {
+        "gpu_slots": 0,
+        "cpu_slots": 1
+      },
+      "checkpoint": {
+        "required": false,
+        "verified": false
+      },
+      "requires_native_owner": true,
+      "backup_restore_required": false,
+      "license_privacy_required": false,
+      "modifies_live_system": false,
+      "artifact_sha256": null,
+      "native_receipt": null,
+      "native_queue_id": null,
+      "verified": false
+    },
+    {
+      "task_id": "R60-036",
+      "legacy_task_id": "NOX-V46-36",
+      "title": "Разработка и тестирование приложений",
+      "owner": "executor-2",
+      "state": "PENDING_NATIVE_REGISTRATION",
+      "depends_on": [
+        "R60-035"
+      ],
+      "priority": "P1",
+      "resource_class": "CPU_LIGHT",
+      "resource_limits": {
+        "gpu_slots": 0,
+        "cpu_slots": 1
+      },
+      "checkpoint": {
+        "required": false,
+        "verified": false
+      },
+      "requires_native_owner": true,
+      "backup_restore_required": false,
+      "license_privacy_required": false,
+      "modifies_live_system": true,
+      "artifact_sha256": null,
+      "native_receipt": null,
+      "native_queue_id": null,
+      "verified": false
+    },
+    {
+      "task_id": "R60-037",
+      "legacy_task_id": "NOX-V46-37",
+      "title": "Изолированное исполнение разрешённых шагов",
+      "owner": "executor-2",
+      "state": "PENDING_NATIVE_REGISTRATION",
+      "depends_on": [
+        "R60-031"
+      ],
+      "priority": "P1",
+      "resource_class": "CPU_LIGHT",
+      "resource_limits": {
+        "gpu_slots": 0,
+        "cpu_slots": 1
+      },
+      "checkpoint": {
+        "required": false,
+        "verified": false
+      },
+      "requires_native_owner": true,
+      "backup_restore_required": false,
+      "license_privacy_required": false,
+      "modifies_live_system": true,
+      "artifact_sha256": null,
+      "native_receipt": null,
+      "native_queue_id": null,
+      "verified": false
+    },
+    {
+      "task_id": "R60-038",
+      "legacy_task_id": "NOX-V46-38",
+      "title": "Исправление кода: patch→test→save",
+      "owner": "executor-2",
+      "state": "PENDING_NATIVE_REGISTRATION",
+      "depends_on": [
+        "R60-036",
+        "R60-037"
+      ],
+      "priority": "P1",
+      "resource_class": "CPU_LIGHT",
+      "resource_limits": {
+        "gpu_slots": 0,
+        "cpu_slots": 1
+      },
+      "checkpoint": {
+        "required": false,
+        "verified": false
+      },
+      "requires_native_owner": true,
+      "backup_restore_required": false,
+      "license_privacy_required": false,
+      "modifies_live_system": true,
+      "artifact_sha256": null,
+      "native_receipt": null,
+      "native_queue_id": null,
+      "verified": false
+    },
+    {
+      "task_id": "R60-039",
+      "legacy_task_id": "NOX-V46-39",
+      "title": "Skill Memory, retain и recall",
+      "owner": "executor-2",
+      "state": "PENDING_NATIVE_REGISTRATION",
+      "depends_on": [
+        "R60-038"
+      ],
+      "priority": "P1",
+      "resource_class": "CPU_LIGHT",
+      "resource_limits": {
+        "gpu_slots": 0,
+        "cpu_slots": 1
+      },
+      "checkpoint": {
+        "required": false,
+        "verified": false
+      },
+      "requires_native_owner": true,
+      "backup_restore_required": false,
+      "license_privacy_required": false,
+      "modifies_live_system": true,
+      "artifact_sha256": null,
+      "native_receipt": null,
+      "native_queue_id": null,
+      "verified": false
+    },
+    {
+      "task_id": "R60-040",
+      "legacy_task_id": "NOX-V46-40",
+      "title": "DREAM replay на проверенных ошибках",
+      "owner": "executor-2",
+      "state": "PENDING_NATIVE_REGISTRATION",
+      "depends_on": [
+        "R60-039"
+      ],
+      "priority": "P1",
+      "resource_class": "CPU_LIGHT",
+      "resource_limits": {
+        "gpu_slots": 0,
+        "cpu_slots": 1
+      },
+      "checkpoint": {
+        "required": false,
+        "verified": false
+      },
+      "requires_native_owner": true,
+      "backup_restore_required": false,
+      "license_privacy_required": false,
+      "modifies_live_system": true,
+      "artifact_sha256": null,
+      "native_receipt": null,
+      "native_queue_id": null,
+      "verified": false
+    },
+    {
+      "task_id": "R60-041",
+      "legacy_task_id": "NOX-V46-41",
+      "title": "Сохранить оригинальные chat.html и resonance.html",
+      "owner": "executor-1",
+      "state": "PENDING_NATIVE_REGISTRATION",
+      "depends_on": [],
+      "priority": "P0",
+      "resource_class": "CPU_LIGHT",
+      "resource_limits": {
+        "gpu_slots": 0,
+        "cpu_slots": 1
+      },
+      "checkpoint": {
+        "required": false,
+        "verified": false
+      },
+      "requires_native_owner": true,
+      "backup_restore_required": false,
+      "license_privacy_required": false,
+      "modifies_live_system": false,
+      "artifact_sha256": null,
+      "native_receipt": null,
+      "native_queue_id": null,
+      "verified": false
+    },
+    {
+      "task_id": "R60-042",
+      "legacy_task_id": "NOX-V46-42",
+      "title": "Измерить быстрый stream/p95 TTFT",
+      "owner": "executor-1",
+      "state": "PENDING_NATIVE_REGISTRATION",
+      "depends_on": [
+        "R60-041"
+      ],
+      "priority": "P0",
+      "resource_class": "CPU_LIGHT",
+      "resource_limits": {
+        "gpu_slots": 0,
+        "cpu_slots": 1
+      },
+      "checkpoint": {
+        "required": false,
+        "verified": false
+      },
+      "requires_native_owner": true,
+      "backup_restore_required": false,
+      "license_privacy_required": false,
+      "modifies_live_system": false,
+      "artifact_sha256": null,
+      "native_receipt": null,
+      "native_queue_id": null,
+      "verified": false
+    },
+    {
+      "task_id": "R60-043",
+      "legacy_task_id": "NOX-V46-43",
+      "title": "Whisper RU/ES с тестами точности",
+      "owner": "executor-1",
+      "state": "PENDING_NATIVE_REGISTRATION",
+      "depends_on": [
+        "R60-042"
+      ],
+      "priority": "P2",
+      "resource_class": "CPU_LIGHT",
+      "resource_limits": {
+        "gpu_slots": 0,
+        "cpu_slots": 1
+      },
+      "checkpoint": {
+        "required": false,
+        "verified": false
+      },
+      "requires_native_owner": true,
+      "backup_restore_required": false,
+      "license_privacy_required": false,
+      "modifies_live_system": true,
+      "artifact_sha256": null,
+      "native_receipt": null,
+      "native_queue_id": null,
+      "verified": false
+    },
+    {
+      "task_id": "R60-044",
+      "legacy_task_id": "NOX-V46-44",
+      "title": "Piper/Kokoro TTS и паузы",
+      "owner": "executor-1",
+      "state": "PENDING_NATIVE_REGISTRATION",
+      "depends_on": [
+        "R60-043"
+      ],
+      "priority": "P2",
+      "resource_class": "CPU_LIGHT",
+      "resource_limits": {
+        "gpu_slots": 0,
+        "cpu_slots": 1
+      },
+      "checkpoint": {
+        "required": false,
+        "verified": false
+      },
+      "requires_native_owner": true,
+      "backup_restore_required": false,
+      "license_privacy_required": false,
+      "modifies_live_system": true,
+      "artifact_sha256": null,
+      "native_receipt": null,
+      "native_queue_id": null,
+      "verified": false
+    },
+    {
+      "task_id": "R60-045",
+      "legacy_task_id": "NOX-V46-45",
+      "title": "OCR по документам с правами",
+      "owner": "executor-1",
+      "state": "PENDING_NATIVE_REGISTRATION",
+      "depends_on": [
+        "R60-042"
+      ],
+      "priority": "P2",
+      "resource_class": "CPU_IO",
+      "resource_limits": {
+        "gpu_slots": 0,
+        "cpu_slots": 1
+      },
+      "checkpoint": {
+        "required": false,
+        "verified": false
+      },
+      "requires_native_owner": true,
+      "backup_restore_required": false,
+      "license_privacy_required": false,
+      "modifies_live_system": false,
+      "artifact_sha256": null,
+      "native_receipt": null,
+      "native_queue_id": null,
+      "verified": false
+    },
+    {
+      "task_id": "R60-046",
+      "legacy_task_id": "NOX-V46-46",
+      "title": "Z-Image изображение как отдельный инструмент",
+      "owner": "executor-1",
+      "state": "PENDING_NATIVE_REGISTRATION",
+      "depends_on": [
+        "R60-007",
+        "R60-045"
+      ],
+      "priority": "P2",
+      "resource_class": "GPU1_EXCLUSIVE",
+      "resource_limits": {
+        "gpu1_slots": 1,
+        "cpu_slots": 1
+      },
+      "checkpoint": {
+        "required": false,
+        "verified": false
+      },
+      "requires_native_owner": true,
+      "backup_restore_required": false,
+      "license_privacy_required": true,
+      "modifies_live_system": true,
+      "artifact_sha256": null,
+      "native_receipt": null,
+      "native_queue_id": null,
+      "verified": false
+    },
+    {
+      "task_id": "R60-047",
+      "legacy_task_id": "NOX-V46-47",
+      "title": "Wan видео — отдельно от LLM GPU",
+      "owner": "executor-1",
+      "state": "PENDING_NATIVE_REGISTRATION",
+      "depends_on": [
+        "R60-007",
+        "R60-046"
+      ],
+      "priority": "P2",
+      "resource_class": "GPU1_EXCLUSIVE",
+      "resource_limits": {
+        "gpu1_slots": 1,
+        "cpu_slots": 1
+      },
+      "checkpoint": {
+        "required": false,
+        "verified": false
+      },
+      "requires_native_owner": true,
+      "backup_restore_required": false,
+      "license_privacy_required": true,
+      "modifies_live_system": true,
+      "artifact_sha256": null,
+      "native_receipt": null,
+      "native_queue_id": null,
+      "verified": false
+    },
+    {
+      "task_id": "R60-048",
+      "legacy_task_id": "NOX-V46-48",
+      "title": "PC CONTROL только по подтверждению",
+      "owner": "executor-1",
+      "state": "PENDING_NATIVE_REGISTRATION",
+      "depends_on": [
+        "R60-041"
+      ],
+      "priority": "P2",
+      "resource_class": "CPU_LIGHT",
+      "resource_limits": {
+        "gpu_slots": 0,
+        "cpu_slots": 1
+      },
+      "checkpoint": {
+        "required": false,
+        "verified": false
+      },
+      "requires_native_owner": true,
+      "backup_restore_required": false,
+      "license_privacy_required": false,
+      "modifies_live_system": true,
+      "artifact_sha256": null,
+      "native_receipt": null,
+      "native_queue_id": null,
+      "verified": false
+    },
+    {
+      "task_id": "R60-049",
+      "legacy_task_id": "NOX-V46-49",
+      "title": "CINEMA/STUDIO и медиа-очередь",
+      "owner": "executor-1",
+      "state": "PENDING_NATIVE_REGISTRATION",
+      "depends_on": [
+        "R60-046",
+        "R60-047"
+      ],
+      "priority": "P2",
+      "resource_class": "CPU_LIGHT",
+      "resource_limits": {
+        "gpu_slots": 0,
+        "cpu_slots": 1
+      },
+      "checkpoint": {
+        "required": false,
+        "verified": false
+      },
+      "requires_native_owner": true,
+      "backup_restore_required": false,
+      "license_privacy_required": false,
+      "modifies_live_system": true,
+      "artifact_sha256": null,
+      "native_receipt": null,
+      "native_queue_id": null,
+      "verified": false
+    },
+    {
+      "task_id": "R60-050",
+      "legacy_task_id": "NOX-V46-50",
+      "title": "D02 WOW эффекты, 14 планет, Reduced Motion",
+      "owner": "executor-1",
+      "state": "PENDING_NATIVE_REGISTRATION",
+      "depends_on": [
+        "R60-041",
+        "R60-049"
+      ],
+      "priority": "P2",
+      "resource_class": "CPU_LIGHT",
+      "resource_limits": {
+        "gpu_slots": 0,
+        "cpu_slots": 1
+      },
+      "checkpoint": {
+        "required": false,
+        "verified": false
+      },
+      "requires_native_owner": true,
+      "backup_restore_required": false,
+      "license_privacy_required": false,
+      "modifies_live_system": true,
+      "artifact_sha256": null,
+      "native_receipt": null,
+      "native_queue_id": null,
+      "verified": false
+    },
+    {
+      "task_id": "R60-051",
+      "legacy_task_id": "NOX-V46-51",
+      "title": "Управление STOP везде и fail-closed",
+      "owner": "executor-2",
+      "state": "PENDING_NATIVE_REGISTRATION",
+      "depends_on": [],
+      "priority": "P0",
+      "resource_class": "CPU_LIGHT",
+      "resource_limits": {
+        "gpu_slots": 0,
+        "cpu_slots": 1
+      },
+      "checkpoint": {
+        "required": false,
+        "verified": false
+      },
+      "requires_native_owner": true,
+      "backup_restore_required": false,
+      "license_privacy_required": false,
+      "modifies_live_system": false,
+      "artifact_sha256": null,
+      "native_receipt": null,
+      "native_queue_id": null,
+      "verified": false
+    },
+    {
+      "task_id": "R60-052",
+      "legacy_task_id": "NOX-V46-52",
+      "title": "V100 CUDA12 FP16 и аппаратная телеметрия",
+      "owner": "executor-2",
+      "state": "PENDING_NATIVE_REGISTRATION",
+      "depends_on": [
+        "R60-051"
+      ],
+      "priority": "P0",
+      "resource_class": "CPU_LIGHT",
+      "resource_limits": {
+        "gpu_slots": 0,
+        "cpu_slots": 1
+      },
+      "checkpoint": {
+        "required": false,
+        "verified": false
+      },
+      "requires_native_owner": true,
+      "backup_restore_required": false,
+      "license_privacy_required": false,
+      "modifies_live_system": false,
+      "artifact_sha256": null,
+      "native_receipt": null,
+      "native_queue_id": null,
+      "verified": false
+    },
+    {
+      "task_id": "R60-053",
+      "legacy_task_id": "NOX-V46-53",
+      "title": "Подтверждённый Host/OneHost API и авторизация",
+      "owner": "executor-2",
+      "state": "PENDING_NATIVE_REGISTRATION",
+      "depends_on": [
+        "R60-001"
+      ],
+      "priority": "P0",
+      "resource_class": "CPU_LIGHT",
+      "resource_limits": {
+        "gpu_slots": 0,
+        "cpu_slots": 1
+      },
+      "checkpoint": {
+        "required": false,
+        "verified": false
+      },
+      "requires_native_owner": true,
+      "backup_restore_required": false,
+      "license_privacy_required": false,
+      "modifies_live_system": false,
+      "artifact_sha256": null,
+      "native_receipt": null,
+      "native_queue_id": null,
+      "verified": false
+    },
+    {
+      "task_id": "R60-054",
+      "legacy_task_id": "NOX-V46-54",
+      "title": "Подключение частного MCP Secure Tunnel",
+      "owner": "executor-2",
+      "state": "PENDING_NATIVE_REGISTRATION",
+      "depends_on": [
+        "R60-053"
+      ],
+      "priority": "P0",
+      "resource_class": "CPU_LIGHT",
+      "resource_limits": {
+        "gpu_slots": 0,
+        "cpu_slots": 1
+      },
+      "checkpoint": {
+        "required": false,
+        "verified": false
+      },
+      "requires_native_owner": true,
+      "backup_restore_required": false,
+      "license_privacy_required": false,
+      "modifies_live_system": true,
+      "artifact_sha256": null,
+      "native_receipt": null,
+      "native_queue_id": null,
+      "verified": false
+    },
+    {
+      "task_id": "R60-055",
+      "legacy_task_id": "NOX-V46-55",
+      "title": "Vast CLI execute fallback без SSH",
+      "owner": "executor-2",
+      "state": "PENDING_NATIVE_REGISTRATION",
+      "depends_on": [
+        "R60-053"
+      ],
+      "priority": "P0",
+      "resource_class": "CPU_IO",
+      "resource_limits": {
+        "gpu_slots": 0,
+        "cpu_slots": 1
+      },
+      "checkpoint": {
+        "required": false,
+        "verified": false
+      },
+      "requires_native_owner": true,
+      "backup_restore_required": false,
+      "license_privacy_required": false,
+      "modifies_live_system": true,
+      "artifact_sha256": null,
+      "native_receipt": null,
+      "native_queue_id": null,
+      "verified": false
+    },
+    {
+      "task_id": "R60-056",
+      "legacy_task_id": "NOX-V46-56",
+      "title": "Снимок S03 и проверка restore",
+      "owner": "executor-2",
+      "state": "PENDING_NATIVE_REGISTRATION",
+      "depends_on": [
+        "R60-011",
+        "R60-053"
+      ],
+      "priority": "P0",
+      "resource_class": "CPU_IO",
+      "resource_limits": {
+        "gpu_slots": 0,
+        "cpu_slots": 1
+      },
+      "checkpoint": {
+        "required": false,
+        "verified": false
+      },
+      "requires_native_owner": true,
+      "backup_restore_required": false,
+      "license_privacy_required": false,
+      "modifies_live_system": true,
+      "artifact_sha256": null,
+      "native_receipt": null,
+      "native_queue_id": null,
+      "verified": false
+    },
+    {
+      "task_id": "R60-057",
+      "legacy_task_id": "NOX-V46-57",
+      "title": "Контроль качества/регрессий перед merge",
+      "owner": "executor-2",
+      "state": "PENDING_NATIVE_REGISTRATION",
+      "depends_on": [
+        "R60-030",
+        "R60-056"
+      ],
+      "priority": "P1",
+      "resource_class": "CPU_LIGHT",
+      "resource_limits": {
+        "gpu_slots": 0,
+        "cpu_slots": 1
+      },
+      "checkpoint": {
+        "required": false,
+        "verified": false
+      },
+      "requires_native_owner": true,
+      "backup_restore_required": false,
+      "license_privacy_required": false,
+      "modifies_live_system": false,
+      "artifact_sha256": null,
+      "native_receipt": null,
+      "native_queue_id": null,
+      "verified": false
+    },
+    {
+      "task_id": "R60-058",
+      "legacy_task_id": "NOX-V46-58",
+      "title": "GitHub CI, source-lock и tests",
+      "owner": "executor-2",
+      "state": "PENDING_NATIVE_REGISTRATION",
+      "depends_on": [
+        "R60-057"
+      ],
+      "priority": "P1",
+      "resource_class": "CPU_LIGHT",
+      "resource_limits": {
+        "gpu_slots": 0,
+        "cpu_slots": 1
+      },
+      "checkpoint": {
+        "required": false,
+        "verified": false
+      },
+      "requires_native_owner": true,
+      "backup_restore_required": false,
+      "license_privacy_required": false,
+      "modifies_live_system": true,
+      "artifact_sha256": null,
+      "native_receipt": null,
+      "native_queue_id": null,
+      "verified": false
+    },
+    {
+      "task_id": "R60-059",
+      "legacy_task_id": "NOX-V46-59",
+      "title": "Выпуск без остановки чата, rollback",
+      "owner": "executor-2",
+      "state": "PENDING_NATIVE_REGISTRATION",
+      "depends_on": [
+        "R60-058"
+      ],
+      "priority": "P1",
+      "resource_class": "CPU_LIGHT",
+      "resource_limits": {
+        "gpu_slots": 0,
+        "cpu_slots": 1
+      },
+      "checkpoint": {
+        "required": true,
+        "verified": false
+      },
+      "requires_native_owner": true,
+      "backup_restore_required": true,
+      "license_privacy_required": false,
+      "modifies_live_system": true,
+      "artifact_sha256": null,
+      "native_receipt": null,
+      "native_queue_id": null,
+      "verified": false
+    },
+    {
+      "task_id": "R60-060",
+      "legacy_task_id": "NOX-V46-60",
+      "title": "Реальные проценты знаний/навыков/весов",
+      "owner": "executor-2",
+      "state": "PENDING_NATIVE_REGISTRATION",
+      "depends_on": [
+        "R60-020",
+        "R60-030",
+        "R60-059"
+      ],
+      "priority": "P1",
+      "resource_class": "CPU_LIGHT",
+      "resource_limits": {
+        "gpu_slots": 0,
+        "cpu_slots": 1
+      },
+      "checkpoint": {
+        "required": false,
+        "verified": false
+      },
+      "requires_native_owner": true,
+      "backup_restore_required": false,
+      "license_privacy_required": false,
+      "modifies_live_system": true,
+      "artifact_sha256": null,
+      "native_receipt": null,
+      "native_queue_id": null,
+      "verified": false
+    }
+  ]
+}
