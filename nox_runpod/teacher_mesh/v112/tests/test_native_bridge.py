@@ -35,6 +35,9 @@ class V112Tests(unittest.TestCase):
         (self.site/'index.html').write_text('<html><head></head><body>NOX</body></html>')
         (self.site/'chat.html').write_text('<html><head></head><body>Резонанс</body></html>')
         (self.site/'nox-chat.js').write_text('/* WEB source fixture, not a model */')
+        nested=self.site/'pc'/'pages'/'cinema'
+        nested.mkdir(parents=True)
+        (nested/'index.html').write_text('<html><head></head><body>Кинотеатр</body></html>')
         self.app=FastAPI()
         @self.app.get('/api/nox/status')
         async def old_status():
@@ -152,10 +155,14 @@ class V112Tests(unittest.TestCase):
     def test_owner_only_static_html_bootstrap(self):
         ok=self.client.get('/nox-web-v29/chat.html',cookies=self.cookie)
         self.assertEqual(ok.status_code,200)
-        self.assertIn('./native-owner.js',ok.text)
+        self.assertIn('src="/nox-web-v29/native-owner.js"',ok.text)
         js=self.client.get('/nox-web-v29/native-owner.js',cookies=self.cookie)
         self.assertEqual(js.status_code,200)
         self.assertIn('NOX_NATIVE_OWNER = true',js.text)
+        nested=self.client.get('/nox-web-v29/pc/pages/cinema/index.html',cookies=self.cookie)
+        self.assertEqual(nested.status_code,200)
+        self.assertIn('src="/nox-web-v29/native-owner.js"',nested.text)
+        self.assertNotIn('src="./native-owner.js"',nested.text)
 
     def test_no_false_gpu_stop(self):
         r=self.client.post('/api/nox/stop',cookies=self.cookie,json={})
