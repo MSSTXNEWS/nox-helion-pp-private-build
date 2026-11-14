@@ -246,9 +246,30 @@ def run() -> None:
             if ssh_result==0 and crypt.returncode==0 and FINAL.exists() and FINAL.stat().st_size>500:
                 print('NOX_V60_STREAM_ENCRYPTED=PASS')
                 break
-            # Never log stdout/stderr (may contain data or route); auth can
-            # converge after temporary Vast per-instance SSH key propagation.
-            print('NOX_V60_ATTEMPT_'+str(attempt+1)+'=RETRY_NO_CONTENT_EXPORTED')
+            # Never log raw stdout/stderr: logs can contain host/route data.
+            # Only fixed diagnostic classes, integer return codes and sizes.
+            emsg=(ssh.stderr.read(12000) if ssh.stderr is not None else b'').lower()
+            age_msg=(err or b'').lower()
+            def matches(st,needles):
+                return any(n in st for n in needles)
+            if matches(emsg,(b'permission denied',b'authentication failed')):
+                reason='SSH_AUTH'
+            elif matches(emsg,(b'connection timed out',b'operation timed out')):
+                reason='SSH_NETWORK_TIMEOUT'
+            elif matches(emsg,(b'connection refused',b'connection reset')):
+                reason='SSH_NETWORK_REFUSED_OR_RESET'
+            elif matches(emsg,(b'traceback',b'sqlite3.',b'database is locked')):
+                reason='REMOTE_PYTHON_OR_SQLITE'
+            elif matches(age_msg,(b'no recipients',b'failed to parse',b'invalid recipient',b'unknown recipient')):
+                reason='AGE_RECIPIENT'
+            elif matches(age_msg,(b'failed to write',b'broken pipe')):
+                reason='AGE_PIPE'
+            else:
+                reason='OTHER'
+            print('NOX_V60_ATTEMPT_'+str(attempt+1)+'_CLASS='+reason)
+            print('NOX_V60_ATTEMPT_'+str(attempt+1)+'_SSH_RC='+str(ssh_result))
+            print('NOX_V60_ATTEMPT_'+str(attempt+1)+'_AGE_RC='+str(crypt.returncode))
+            print('NOX_V60_ATTEMPT_'+str(attempt+1)+'_CIPHERTEXT_BYTES='+str(FINAL.stat().st_size if FINAL.exists() else 0))
             time.sleep(3)
         else:
             raise RuntimeError('HOLD_SSH_OR_AGE_STREAM')
