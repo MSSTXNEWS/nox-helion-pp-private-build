@@ -6,6 +6,13 @@ on:
       - 'nox_runpod/teacher_mesh/v128/**'
       - '.github/workflows/nox-v128-owner-chat-post-v126.yml'
   workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Explicit owner-approved single synthetic chat QA'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
 permissions:
   contents: read
 concurrency:
@@ -36,7 +43,7 @@ jobs:
           print('NOX_V128_ORIGINAL_V114_REUSE_AND_NATIVE_COMPILE=PASS')
           PY
   native-owner:
-    if: github.event_name == 'pull_request' && github.actor == 'MSSTXNEWS' && github.event.pull_request.head.repo.full_name == github.repository
+    if: github.event_name == 'workflow_dispatch' && github.actor == 'MSSTXNEWS' && inputs.allow_native == 'YES'
     needs: source
     runs-on: ubuntu-latest
     timeout-minutes: 12
