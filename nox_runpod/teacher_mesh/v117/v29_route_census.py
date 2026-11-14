@@ -92,3 +92,5 @@ def main():
     print('NOX_V117_NATIVE_AUDIT_PASS='+str(bool(okay and len(summaries)==1)).lower())
     return 0 if okay and len(summaries)==1 else 2
 if __name__=='__main__':raise SystemExit(main())
+
+# V117 audit requested again after verified V114/V116 owner WEB E2E; read-only.
