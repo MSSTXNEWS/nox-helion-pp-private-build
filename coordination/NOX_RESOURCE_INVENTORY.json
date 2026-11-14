@@ -1,0 +1,48 @@
+{
+  "schema": "NOX_R60_RESOURCE_INVENTORY_V1",
+  "source": "GitHub Actions authorized Vast API read-only",
+  "instance_id": 60509551,
+  "as_observed_at": "2026-11-14T11:58:43Z",
+  "source_run_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43592515568",
+  "vast_api": {
+    "verified": true,
+    "actual_status": "running",
+    "gpu_name": "Tesla V100",
+    "num_gpus": 2,
+    "gpu_ram_mb_per_gpu": 32768,
+    "disk_space_gb_reported": 171.25472701262254,
+    "disk_usage_gb_reported": 156
+  },
+  "native_inventory": {
+    "verified": false,
+    "gpu_used_mb": null,
+    "gpu_utilization": null,
+    "temperature_c": null,
+    "ram_total_mb": null,
+    "ram_used_mb": null,
+    "disk_free_bytes": null,
+    "process_ids": null,
+    "weight_hashes": null,
+    "optimizer_steps": null,
+    "checkpoint_inventory": null,
+    "onehost_queue_readback": null
+  },
+  "connection": {
+    "vast_api": "PASS",
+    "ssh_route": "AVAILABLE_REDACTED",
+    "ssh_auth": "HOLD_NO_AUTHORIZED_PRIVATE_KEY_SECRET",
+    "jupyter": "UNKNOWN",
+    "onehost": "HOLD_NATIVE_UNAVAILABLE",
+    "vast_execute_running": "DENIED_HTTP_400"
+  },
+  "safety": {
+    "stop_native_verified": false,
+    "offsite_backup_verified": false,
+    "cleanup_authorized": false
+  },
+  "notes": [
+    "Vast disk_space/disk_usage are platform API fields, not independently verified `df` free space.",
+    "A green status for a previous V48 run was a false-positive on an empty execute response; corrected V48 #5 intentionally fails closed for native access.",
+    "No remote shell executed and no OneHost tasks were native-registered."
+  ]
+}
