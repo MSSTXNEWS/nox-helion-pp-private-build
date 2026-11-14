@@ -96,6 +96,7 @@ try:
  anchor="            resp = await owner_completion(url, payload, _last_user_text(body), stream)\n            resp = _wrap_ttft(resp, t_gate, _utext)\n"
  prior="                ans = payload.get('_agent_final') or ''"
  if source.count(anchor)!=1 or source.count(prior)!=1 or '_nox_owner_s03_after_stream' in source:
+  print('NOX_V98_SOURCE_ANCHOR_COUNTS='+str((source.count(anchor),source.count(prior))))
   raise RuntimeError('HOLD_UNIQUE_OWNER_STREAM_ANCHORS')
  # Preserve nonstream (synchronous) S03 persistence. Streaming response receives
  # final text only after body_iterator is fully consumed, not at response creation.
