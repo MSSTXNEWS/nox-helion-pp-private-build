@@ -130,6 +130,18 @@ def run():
             if rc==0 and encrypted.returncode==0 and FINAL.is_file() and FINAL.stat().st_size>1024:
                 break
             emsg=(ssh.stderr.read(10000) if ssh.stderr is not None else b'').lower()
+            if rc==1 and b'traceback' in emsg:
+                exception_names=('TypeError','ValueError','NameError','AttributeError',
+                    'FileNotFoundError','PermissionError','RuntimeError','OSError',
+                    'IsADirectoryError','BrokenPipeError','MemoryError','KeyError',
+                    'tarfile.ReadError','tarfile.TarError')
+                kind=next((k for k in exception_names if (k.lower()+':').encode() in emsg), 'UNKNOWN_EXCEPTION')
+                import re
+                line_match=re.findall(rb'line (\d+)',emsg)
+                last_line=line_match[-1].decode() if line_match else 'UNKNOWN'
+                print('NOX_V61_REMOTE_EXCEPTION_CLASS='+kind)
+                print('NOX_V61_REMOTE_EXCEPTION_LINE='+last_line)
+                raise RuntimeError('HOLD_REMOTE_CHECKPOINT_SCRIPT_EXCEPTION')
             if rc==21:cls='CHECKPOINT_FILE_COUNT'
             elif rc==22:cls='CHECKPOINT_TOTAL_SIZE_LIMIT'
             elif rc==28:cls='CHECKPOINT_ITEM_SIZE_LIMIT'
