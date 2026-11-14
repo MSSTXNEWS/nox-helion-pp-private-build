@@ -5,17 +5,8 @@ existing script, independently retained original backup, bash syntax check,
 native readback and no side effects on other Supervisor services.
 """
 from __future__ import annotations
-from nox_runpod.teacher_mesh.v51 import ephemeral_ssh_probe as connection
-import contextlib
-import io
+from .native_once import native_once
 import json
-import time
-
-_original=connection.api
-def _slow_ssh_key(method,path,key,data=None):
-    result=_original(method,path,key,data)
-    if method=="POST" and path.endswith("/ssh/"):time.sleep(25)
-    return result
 
 REMOTE=r"""
 set -euo pipefail
@@ -37,7 +28,7 @@ STOP_FILES=('/root/nox/STOP','/root/nox/STOP.flag','/root/nox/stop.flag',
 MARK='# NOX_V63_HF_PATH_PIN'
 def emit(state,**kwargs):
     print('NATIVE_DOWNLOAD_PATH_REPAIR='+json.dumps(dict(state=state,service=NAME,**kwargs),sort_keys=True,separators=(',',':')))
-    print('NATIVE_READ_ONLY_COMPLETE=true')
+    print('NATIVE_PATCH_COMPLETE=true')
 def hold(reason):
     emit(reason,patch_applied=False,download_started=False)
     raise SystemExit(0)
@@ -144,37 +135,20 @@ PYREMOTE
 """
 
 def main():
-    connection.REMOTE=REMOTE
-    connection.api=_slow_ssh_key
-    transcript=io.StringIO()
-    completed=False
-    cleanup=False
-    try:
-        with contextlib.redirect_stdout(transcript):
-            completed=connection.probe()
-    except Exception as e:
-        msg=str(e)
-        print("NOX_V63_HF="+msg if msg.startswith("HOLD_") and len(msg)<90 else "NOX_V63_HF=HOLD_NATIVE_ERROR")
-    finally:
-        try:
-            with contextlib.redirect_stdout(transcript):
-                cleanup=connection.cleanup()
-        except Exception:
-            print("NOX_V63_HF=HOLD_SSH_REVOKE")
-    states=[]
-    for line in transcript.getvalue().splitlines():
-        if line.startswith("NATIVE_DOWNLOAD_PATH_REPAIR=") and len(line)<800:
-            try:
-                x=json.loads(line.split("=",1)[1])
-                if x.get("service")=="nox-downloads-t802u":
-                    states.append(x.get("state"))
-                    print(line)
-            except (ValueError,TypeError):pass
-        elif line.startswith(("TEMP_SSH_CLEANUP=","SSH_ROUTE=")) and len(line)<130:
-            print(line)
-    good=completed is True and cleanup is True and len(states)==1 and states[0] in (
-        "NATIVE_HF_PATH_PATCH_VERIFIED","ALREADY_PATCHED")
-    print("NOX_V63_DOWNLOAD_HF_INTEGRATION_VERIFIED="+str(good).lower())
-    return 0 if good else 2
+    result=native_once(REMOTE)
+    receipt=result.get("receipt") if isinstance(result.get("receipt"),dict) else {}
+    state=receipt.get("state")
+    verified=(result.get("native_ack") is True
+              and result.get("key_detached") is True
+              and state in ("NATIVE_HF_PATH_PATCH_VERIFIED","ALREADY_PATCHED"))
+    if receipt:
+        print("NATIVE_DOWNLOAD_PATH_REPAIR="+json.dumps(receipt,sort_keys=True,separators=(",",":")))
+    print("NOX_V63_NATIVE_WRITE_ATTEMPTS="+str(result.get("write_attempts")))
+    print("NOX_V63_NATIVE_ACK="+str(result.get("native_ack") is True).lower())
+    print("NOX_V63_EPHEMERAL_KEY_DETACHED="+str(result.get("key_detached") is True).lower())
+    print("NOX_V63_DOWNLOAD_HF_INTEGRATION_VERIFIED="+str(verified).lower())
+    if not verified:
+        print("NOX_V63_HF_STATE="+str(result.get("state","HOLD_NATIVE_UNKNOWN")))
+    return 0 if verified else 2
 
 if __name__=="__main__":raise SystemExit(main())
