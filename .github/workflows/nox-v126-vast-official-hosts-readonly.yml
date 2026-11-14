@@ -1,0 +1,53 @@
+name: NOX Vast official API hosts read-only availability diagnostic
+on:
+  push:
+    branches: [nox/v126-native-s03-owner-facts-20261115]
+    paths:
+      - '.github/workflows/nox-v126-vast-official-hosts-readonly.yml'
+permissions:
+  contents: read
+jobs:
+  read-only-api-hosts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Compare two officially documented Vast API hosts with GET only; no redirects, no user fields
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json,os,urllib.error,urllib.request
+          secret=os.environ.get('NOX2','')
+          if not secret:
+              print('NOX_VAST_AUTH_STATE=HOLD_NOX2')
+              raise SystemExit(2)
+          class NoRedirect(urllib.request.HTTPRedirectHandler):
+              def redirect_request(self,*args,**kwargs):return None
+          op=urllib.request.build_opener(NoRedirect())
+          hosts={'console-v0':'https://console.vast.ai/api/v0/instances/',
+                 'cloud-v0':'https://cloud.vast.ai/api/v0/instances/'}
+          for label,url in hosts.items():
+              req=urllib.request.Request(url,method='GET',
+                      headers={'Authorization':'Bearer '+secret,'Accept':'application/json'})
+              try:
+                  with op.open(req,timeout=12) as response:
+                      status=response.status
+                      body=response.read(200000)
+                  try:parsed=json.loads(body)
+                  except Exception:parsed=None
+                  items=parsed.get('instances') if isinstance(parsed,dict) else None
+                  count=len(items) if isinstance(items,list) else None
+                  found=bool(isinstance(items,list) and any(isinstance(x,dict) and str(x.get('id'))=='60509551' for x in items))
+                  print('NOX_VAST_OFFICIAL_'+label+'=HTTP_'+str(status))
+                  print('NOX_VAST_OFFICIAL_'+label+'_TARGET_VISIBLE='+str(found).lower())
+                  print('NOX_VAST_OFFICIAL_'+label+'_COUNT='+str(count))
+              except urllib.error.HTTPError as exc:
+                  print('NOX_VAST_OFFICIAL_'+label+'=HTTP_'+str(exc.code))
+              except (OSError,TimeoutError):
+                  print('NOX_VAST_OFFICIAL_'+label+'=NETWORK_HOLD')
+          PY
