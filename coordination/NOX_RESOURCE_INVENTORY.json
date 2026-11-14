@@ -2,7 +2,7 @@
   "schema": "NOX_R60_RESOURCE_INVENTORY_V1",
   "source": "GitHub Actions authorized Vast API read-only",
   "instance_id": 60509551,
-  "as_observed_at": "2026-11-14T11:58:43Z",
+  "as_observed_at": "2026-11-14T12:02:15Z",
   "source_run_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43592515568",
   "vast_api": {
     "verified": true,
@@ -31,7 +31,7 @@
     "vast_api": "PASS",
     "ssh_route": "AVAILABLE_REDACTED",
     "ssh_auth": "HOLD_NO_AUTHORIZED_PRIVATE_KEY_SECRET",
-    "jupyter": "UNKNOWN",
+    "jupyter": "HOLD_HTTP_401_TLS_UNVERIFIED",
     "onehost": "HOLD_NATIVE_UNAVAILABLE",
     "vast_execute_running": "DENIED_HTTP_400"
   },
@@ -44,5 +44,15 @@
     "Vast disk_space/disk_usage are platform API fields, not independently verified `df` free space.",
     "A green status for a previous V48 run was a false-positive on an empty execute response; corrected V48 #5 intentionally fails closed for native access.",
     "No remote shell executed and no OneHost tasks were native-registered."
-  ]
+  ],
+  "jupyter_probe": {
+    "source": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43592821513",
+    "token_present_in_vast_metadata": true,
+    "exposed_port_mapped": true,
+    "http_unauthenticated_status": 401,
+    "https_without_credentials": "URLError",
+    "authenticated_jupyter_verified": false,
+    "token_transmitted": false,
+    "native_command_executed": false
+  }
 }
