@@ -138,25 +138,50 @@ emit({'service':TARGET,'state':state,'source_sha256':SOURCE_SHA,
       'gpu_delta_mb':gpu_delta,'stop_active':stop_active,
       'rollback_verified':rolled_back if not stable else None,
       'started':bool(stable),'other_services_touched':False,
-      'weights_or_checkpoints_changed_by_script':False})
+      'weights_or_checkpoints_changed_by_script':'NOT_MEASURED'})
 print('NATIVE_READ_ONLY_COMPLETE=true')
 PYREMOTE
 """
 
 def main()->int:
+    import contextlib
+    import io
+    import json
     connection.REMOTE=REMOTE
     connection.api=_delayed_key_api
-    ok=False
-    try:ok=connection.probe()
+    transcript=io.StringIO()
+    completed=False
+    cleanup_ok=False
+    try:
+        with contextlib.redirect_stdout(transcript):
+            completed=connection.probe()
     except Exception as e:
         msg=str(e)
         print("NOX_V63_TUNER="+msg if msg.startswith("HOLD_") and len(msg)<100 else "NOX_V63_TUNER=HOLD_NATIVE_EXECUTION")
     finally:
         try:
-            if not connection.cleanup():ok=False
+            with contextlib.redirect_stdout(transcript):
+                cleanup_ok=connection.cleanup()
         except Exception:
             print("NOX_V63_TUNER=HOLD_SSH_KEY_CLEANUP")
-            ok=False
-    return 0 if ok else 2
+            cleanup_ok=False
+    seen=[]
+    for line in transcript.getvalue().splitlines():
+        if line.startswith("NATIVE_TUNER_RECOVERY=") and len(line)<800:
+            try:
+                value=json.loads(line.split("=",1)[1])
+                if isinstance(value,dict) and value.get("service")=="nox-agent-tuner-t858u":
+                    seen.append(value)
+                    print(line)
+            except (ValueError,TypeError):pass
+        elif line.startswith(("TEMP_SSH_CLEANUP=","SSH_ROUTE=")) and len(line)<130:
+            print(line)
+    states=[x.get("state") for x in seen]
+    accepted=completed is True and cleanup_ok is True and len(states)==1 and states[0] in (
+        "NATIVE_TUNER_RUNNING_VERIFIED","ALREADY_RUNNING")
+    print("NOX_V63_TUNER_NATIVE_ACCEPTED="+str(accepted).lower())
+    if not accepted:
+        print("NOX_V63_TUNER=HOLD_NOT_ACCEPTED_OR_UNVERIFIED")
+    return 0 if accepted else 2
 
 if __name__=="__main__":raise SystemExit(main())
