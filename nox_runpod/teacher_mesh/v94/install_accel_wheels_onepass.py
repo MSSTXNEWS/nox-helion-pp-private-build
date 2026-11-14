@@ -103,7 +103,7 @@ try:
         lock=cache/'requirements.lock'
         rc=run(['uv','pip','compile',str(req),'--python-version','3.10',
                 '--generate-hashes','--only-binary',':all:',
-                '--output-file',str(lock)],timeout=22,env=env)
+                '--output-file',str(lock)],timeout=75,env=env)
         if rc!=0 or not lock.is_file():raise RuntimeError('HOLD_HASHED_BINARY_LOCK_RESOLUTION')
         locked=lock.read_bytes()
         if b'--hash=sha256:' not in locked or len(locked)<100:
@@ -119,7 +119,7 @@ try:
                 raise RuntimeError('HOLD_CPU_VENV_CREATION')
         rc=run(['uv','pip','sync','--python',str(stage/'bin/python'),
                 '--require-hashes','--only-binary',':all:',str(lock)],
-                timeout=35,env=env)
+                timeout=75,env=env)
         if rc!=0:raise RuntimeError('HOLD_WHEEL_SHA_INSTALL')
         smoke='''import orjson,zstandard,lz4.frame,rapidfuzz,faiss,numpy as np
 import safetensors.numpy,watchdog,diskcache,rank_bm25,sentencepiece
@@ -187,6 +187,13 @@ except Exception as ex:
 PYREMOTE
 """
 def main():
+    # This job runs exactly one native remote command; allow bounded wheel
+    # resolution/install time, not the 70s audit timeout of the shared V72.
+    original_ssh_run=runner.ssh_run
+    def wheel_ssh_run(*,host,port,key,known,script,limit):
+        return original_ssh_run(host=host,port=port,key=key,known=known,
+                                script=script,limit=min(max(limit,195),220))
+    runner.ssh_run=wheel_ssh_run
     runner.REMOTE=REMOTE
     result=runner.onepass()
     native=result.get('native',{})
