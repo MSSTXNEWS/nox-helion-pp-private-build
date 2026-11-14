@@ -235,7 +235,7 @@ class _OwnerStatic(StaticFiles):
         if '<head>' not in raw:
             return response
         injected=raw.replace('<head>',
-            '<head><script src="./native-owner.js"></script>',1)
+            '<head><script src="/nox-web-v29/native-owner.js"></script>',1)
         return HTMLResponse(injected, headers={
             'Cache-Control':'no-store',
             'X-Content-Type-Options':'nosniff',
