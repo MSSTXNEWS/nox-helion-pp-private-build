@@ -1,0 +1,31 @@
+name: NOX E2 V64 live chat service ownership audit
+on:
+  push:
+    branches: [nox/e2-chat-latency-20261114]
+    paths: ['.github/workflows/nox-v64-service-owner.yml','nox_runpod/teacher_mesh/v63/live_service_owner.py']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: nox-e2-v64-owner
+  cancel-in-progress: false
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify read-only source
+        run: |
+          set -euo pipefail
+          python3 -m py_compile nox_runpod/teacher_mesh/v63/live_service_owner.py
+          test -n "$NOX2"
+      - name: Inspect only actual service ownership
+        run: python3 -m nox_runpod.teacher_mesh.v63.live_service_owner
+      - name: Clean temporary key
+        if: always()
+        run: python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup
