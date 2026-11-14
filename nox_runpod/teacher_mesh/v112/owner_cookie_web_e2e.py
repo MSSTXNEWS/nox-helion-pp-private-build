@@ -8,7 +8,7 @@ from nox_runpod.teacher_mesh.v51 import ephemeral_ssh_probe as ssh
 REMOTE=r'''
 set -euo pipefail
 cd /root/nox/scripts
-python3 - <<'PYREMOTE'
+/root/nox/venv/bin/python - <<'PYREMOTE'
 import hashlib,http.cookiejar,json,secrets,sys,time,urllib.error,urllib.request
 from pathlib import Path
 print('NOX_NATIVE_V51_SSH_EXECUTED=true')
