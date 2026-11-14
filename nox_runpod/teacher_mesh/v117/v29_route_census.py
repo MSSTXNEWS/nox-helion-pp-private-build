@@ -23,7 +23,7 @@ paths={}
 for f in sorted(site.iterdir()):
  if f.suffix not in ('.js','.mjs') or not f.is_file() or f.is_symlink():continue
  raw=f.read_text(errors='replace')
- for found in re.finditer(r'''["'](/(?:api|v1)/[a-zA-Z0-9_/?={}&.\-]+)["']''',raw):
+ for found in re.finditer(r"""[\"'](/(?:api|v1)/[a-zA-Z0-9_/?={}&.\-]+)[\"']""",raw):
   path=found.group(1).split('?',1)[0]
   paths.setdefault(path,set()).add(f.name)
 import chat_proxy
