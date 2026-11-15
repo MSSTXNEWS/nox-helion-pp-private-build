@@ -32,12 +32,26 @@ jobs:
               print('NOX_V174=HOLD_OWNER_API_SECRET_ABSENT')
               raise SystemExit(2)
           previous=v51.api
+          selected_pin_port=None
           def api(method,path,key,data=None):
               if method=='GET' and path=='/instances/':
                   req=urllib.request.Request('https://console.vast.ai/api/v1/instances/',
                       headers={'Authorization':'Bearer '+key,'Accept':'application/json'})
                   with urllib.request.urlopen(req,timeout=18) as response:
                       result=json.loads(response.read(500000))
+                  if selected_pin_port is not None and isinstance(result,dict):
+                      # Restrict V51 to ONLY the previously pinned live instance mapping.
+                      rows=result.get('instances')
+                      if isinstance(rows,list):
+                          patched=[]
+                          for row in rows:
+                              if isinstance(row,dict) and str(row.get('id'))==INSTANCE:
+                                  row=dict(row)
+                                  ports=dict(row.get('ports') or {})
+                                  ports['22/tcp']=[{'HostPort':str(selected_pin_port)}]
+                                  row['ports']=ports
+                              patched.append(row)
+                          result=dict(result,instances=patched)
                   return result
               return previous(method,path,key,data)
           v51.api=api
@@ -60,25 +74,28 @@ jobs:
               mapped=[int(x['HostPort']) for x in maps if isinstance(x,dict)
                       and str(x.get('HostPort','')).isdigit()] if isinstance(maps,list) else []
               print('NOX_V174_DIRECT_22_PORTS_COUNT='+str(len(mapped)))
-              if len(mapped)!=1 or not ip:
+              if not 1<=len(mapped)<=6 or not ip:
                   print('NOX_V174=HOLD_V1_DIRECT_PORT_MAP')
-                  raise SystemExit(2)
-              port=mapped[0]
-              scanned=subprocess.run(['ssh-keyscan','-T','10','-t','ed25519','-p',str(port),ip],
-                  capture_output=True,text=True,timeout=17)
-              if scanned.returncode!=0 or not scanned.stdout.strip():
-                  print('NOX_V174=HOLD_SSH_ED25519_KEYSCAN')
                   raise SystemExit(2)
               from pathlib import Path
               temp=Path(os.environ.get('RUNNER_TEMP','/tmp'))/'nox-v174-host-pin'
-              temp.write_text(scanned.stdout,encoding='utf8')
-              temp.chmod(0o600)
-              finger=subprocess.run(['ssh-keygen','-lf',str(temp),'-E','sha256'],
-                  capture_output=True,text=True,timeout=8)
-              if finger.returncode!=0 or PIN not in finger.stdout:
-                  print('NOX_V174=HOLD_HOST_KEY_NOT_PREVIOUSLY_PINNED')
+              for candidate in sorted(set(mapped)):
+                  if not 1<=candidate<=65535:continue
+                  scan=subprocess.run(['ssh-keyscan','-T','10','-t','ed25519',
+                      '-p',str(candidate),ip],capture_output=True,text=True,timeout=17)
+                  if scan.returncode!=0 or not scan.stdout.strip():continue
+                  temp.write_text(scan.stdout,encoding='utf8')
+                  temp.chmod(0o600)
+                  finger=subprocess.run(['ssh-keygen','-lf',str(temp),'-E','sha256'],
+                      capture_output=True,text=True,timeout=8)
+                  if finger.returncode==0 and PIN in finger.stdout:
+                      selected_pin_port=candidate
+                      break
+              if selected_pin_port is None:
+                  print('NOX_V174=HOLD_ALL_DIRECT_PORTS_NOT_PINNED')
                   raise SystemExit(2)
               print('NOX_V174_SSH_ED25519_PREVIOUS_PIN_MATCH=true')
+              print('NOX_V174_SSH_PINNED_MAPPING_SELECTED=true')
               try:
                   existing=v51.keys(KEY)
               except Exception as ex:
