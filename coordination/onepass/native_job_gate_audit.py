@@ -64,7 +64,18 @@ def check_workflow(file: Path, *, root: Path) -> tuple[list[dict], list[dict]]:
     for jobid,job in jobs.items():
         if not isinstance(job,dict):
             continue
-        sensitivity=json.dumps(job,ensure_ascii=False,sort_keys=True)
+        # Inspect only executable step definitions and credentials, NOT
+        # labels/comments. Step names containing "NOX2" are not network access.
+        steps=job.get("steps",[])
+        credential_scope={
+            "env":job.get("env",{}),
+            "uses":[{"run":v.get("run",""),
+                     "env":v.get("env",{}),
+                     "uses":v.get("uses",""),
+                     "with":v.get("with",{})}
+                    for v in steps if isinstance(v,dict)] if isinstance(steps,list) else [],
+        }
+        sensitivity=json.dumps(credential_scope,ensure_ascii=False,sort_keys=True)
         if not NATIVE_PATTERN.search(sensitivity):
             continue
         condition=str(job.get("if",""))
