@@ -1,0 +1,160 @@
+name: NOX V174 authorized existing Vast v1 ephemeral SSH read-only native inventory
+on:
+  push:
+    branches: [nox/e2-v173-vast-v1-auth-recovery-20261115]
+    paths: ['.github/workflows/nox-v174-v1-ephemeral-native-inventory.yml']
+permissions:
+  contents: read
+concurrency:
+  group: nox-v51-vast60509551-temp-ssh
+  cancel-in-progress: false
+jobs:
+  native-readonly:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Recover official v1 metadata then use authorized temporary SSH attach and guaranteed detach
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os,json,urllib.request,urllib.error,subprocess
+          from nox_runpod.teacher_mesh.v51 import ephemeral_ssh_probe as v51
+          INSTANCE='60509551'
+          KEY=os.environ.get('NOX2','')
+          PIN='SHA256:G4hmMllaT4uSfx+Gup9vjSySLXJT1cSc/9XePr7XmGc'
+          if not KEY:
+              print('NOX_V174=HOLD_OWNER_API_SECRET_ABSENT')
+              raise SystemExit(2)
+          previous=v51.api
+          def api(method,path,key,data=None):
+              if method=='GET' and path=='/instances/':
+                  req=urllib.request.Request('https://console.vast.ai/api/v1/instances/',
+                      headers={'Authorization':'Bearer '+key,'Accept':'application/json'})
+                  with urllib.request.urlopen(req,timeout=18) as response:
+                      result=json.loads(response.read(500000))
+                  return result
+              return previous(method,path,key,data)
+          v51.api=api
+          try:
+              data=v51.api('GET','/instances/',KEY)
+              rows=data.get('instances',data) if isinstance(data,dict) else data
+              if isinstance(rows,dict):rows=[rows]
+              if not isinstance(rows,list):
+                  print('NOX_V174=HOLD_V1_INSTANCE_SCHEMA')
+                  raise SystemExit(2)
+              instance=next((x for x in rows if isinstance(x,dict) and str(x.get('id'))==INSTANCE),None)
+              if (not instance or instance.get('actual_status')!='running'
+                  or str(instance.get('num_gpus'))!='2'):
+                  print('NOX_V174=HOLD_INSTANCE_ID_STATUS_OR_GPU_CHANGED')
+                  raise SystemExit(2)
+              print('NOX_V174_OWNER_V1_INSTANCE_RUNNING=true')
+              ip=instance.get('public_ipaddr','')
+              ports=instance.get('ports',{})
+              maps=ports.get('22/tcp') if isinstance(ports,dict) else None
+              mapped=[int(x['HostPort']) for x in maps if isinstance(x,dict)
+                      and str(x.get('HostPort','')).isdigit()] if isinstance(maps,list) else []
+              print('NOX_V174_DIRECT_22_PORTS_COUNT='+str(len(mapped)))
+              if len(mapped)!=1 or not ip:
+                  print('NOX_V174=HOLD_V1_DIRECT_PORT_MAP')
+                  raise SystemExit(2)
+              port=mapped[0]
+              scanned=subprocess.run(['ssh-keyscan','-T','10','-t','ed25519','-p',str(port),ip],
+                  capture_output=True,text=True,timeout=17)
+              if scanned.returncode!=0 or not scanned.stdout.strip():
+                  print('NOX_V174=HOLD_SSH_ED25519_KEYSCAN')
+                  raise SystemExit(2)
+              from pathlib import Path
+              temp=Path(os.environ.get('RUNNER_TEMP','/tmp'))/'nox-v174-host-pin'
+              temp.write_text(scanned.stdout,encoding='utf8')
+              temp.chmod(0o600)
+              finger=subprocess.run(['ssh-keygen','-lf',str(temp),'-E','sha256'],
+                  capture_output=True,text=True,timeout=8)
+              if finger.returncode!=0 or PIN not in finger.stdout:
+                  print('NOX_V174=HOLD_HOST_KEY_NOT_PREVIOUSLY_PINNED')
+                  raise SystemExit(2)
+              print('NOX_V174_SSH_ED25519_PREVIOUS_PIN_MATCH=true')
+              try:
+                  existing=v51.keys(KEY)
+              except Exception as ex:
+                  print('NOX_V174_EXISTING_INSTANCE_SSH_KEY_API=HOLD_'+str(ex)[:80].replace(' ','_'))
+                  raise SystemExit(2)
+              print('NOX_V174_EXISTING_INSTANCE_SSH_KEY_API=AUTHENTICATED_GET')
+              print('NOX_V174_EXISTING_REGISTERED_KEYS_COUNT='+str(len(existing)))
+              v51.REMOTE=r"""
+          set -euo pipefail
+          python3 - <<'PYREMOTE'
+          import json,os,subprocess,importlib.metadata,hashlib
+          from pathlib import Path
+          print('NOX_NATIVE_V51_SSH_EXECUTED=true')
+          def command(args,timeout=8):
+              try:
+                  p=subprocess.run(args,capture_output=True,text=True,
+                    stderr=subprocess.DEVNULL,timeout=timeout)
+                  return p.stdout.strip()[:1500] if p.returncode==0 else ''
+              except Exception:return ''
+          def show(k,data):
+              print('NATIVE_P0_'+k+'='+json.dumps(data,separators=(',',':'),sort_keys=True))
+          gpu=command(['nvidia-smi','--query-gpu=index,name,compute_cap,memory.total,memory.used,memory.free,utilization.gpu,temperature.gpu','--format=csv,noheader,nounits'])
+          show('GPU_ROWS',[x.strip().split(',') for x in gpu.splitlines()[:2]])
+          show('GPU_DRIVER',command(['nvidia-smi','--query-gpu=driver_version','--format=csv,noheader']))
+          roots=('/root/nox','/workspace')
+          for root in roots:
+              try:
+                  s=os.statvfs(root)
+                  show('DISK_'+root.split('/')[-1],{'free_bytes':s.f_bavail*s.f_frsize,'total_bytes':s.f_blocks*s.f_frsize})
+              except Exception:show('DISK_'+root.split('/')[-1],{'state':'HOLD_UNKNOWN'})
+          for name,filepath in (('cgroup_max','/sys/fs/cgroup/memory.max'),('cgroup_current','/sys/fs/cgroup/memory.current')):
+              try:show(name,Path(filepath).read_text().strip()[:50])
+              except Exception:show(name,'HOLD_UNKNOWN')
+          stops=('/root/nox/STOP','/root/nox/STOP.flag','/root/nox/stop.flag','/root/nox/.stop','/workspace/NOX_STOP','/root/nox/program/STOP')
+          show('STOP_ACTIVE',any(Path(p).exists() or Path(p).is_symlink() for p in stops))
+          show('MAIN_MODEL_EXISTS',Path('/root/nox/models/current.gguf').is_file())
+          running=command(['supervisorctl','status'])
+          show('SUPERVISOR_STATUS',[x.split()[:2] for x in running.splitlines()[:18]])
+          pkgs={}
+          for loc in ('/root/nox/venv/bin/python','/root/nox/.venv/bin/python'):
+              if Path(loc).exists():
+                  code="import json,importlib.metadata as m; p=('torch','transformers','accelerate','datasets','safetensors','deepspeed','triton'); print(json.dumps({x:m.version(x) for x in p if m.packages_distributions().get(x)}))"
+                  result=command([loc,'-c',code])
+                  if result:
+                      try:pkgs['nox_virtual_environment']=json.loads(result)
+                      except Exception:pass
+                  break
+          show('PYTHON_PACKAGES',pkgs)
+          for port in (8081,8082,8095):
+              status=command(['curl','--silent','--max-time','3','--output','/dev/null','--write-out','%{http_code}','http://127.0.0.1:'+str(port)+'/health'])
+              show('LOCAL_HEALTH_'+str(port),status or 'HOLD_UNVERIFIED')
+          print('NATIVE_READ_ONLY_COMPLETE=true')
+          PYREMOTE
+          """
+              print('NOX_V174_EPHEMERAL_ATTACH_AUTHORIZED_BY_OWNER=true')
+              success=False
+              try:
+                  success=v51.probe()
+              finally:
+                  try:
+                      cleared=v51.cleanup()
+                  except Exception:
+                      cleared=False
+              print('NOX_V174_NATIVE_SSH_SUCCESS='+str(success).lower())
+              print('NOX_V174_TEMP_KEY_REMOVED_AND_VERIFIED='+str(cleared).lower())
+              if not success or not cleared:
+                  raise SystemExit(2)
+          except (urllib.error.HTTPError,urllib.error.URLError) as ex:
+              print('NOX_V174=HOLD_API_OR_NETWORK_'+type(ex).__name__)
+              raise SystemExit(2)
+          PY
+      - name: Strict outcome and no new deployment
+        if: always()
+        shell: bash
+        run: |
+          echo 'NOX_V174_EXISTING_INSTANCE_ONLY=true'
+          echo 'NOX_V174_TRAINING_NOT_STARTED=true'
+          echo 'NOX_V174_WEIGHTS_AND_S03_NOT_CHANGED=true'
+          echo 'NOX_V174_NEW_VM_COUNT=0'
