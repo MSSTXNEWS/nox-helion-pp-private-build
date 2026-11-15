@@ -76,6 +76,8 @@ jobs:
                     window.nativeProof.aborted=true;
                     try{control.error(new DOMException('Aborted','AbortError'));}catch{}
                   },{once:true});
+                  // Original V112 OneHost always sends start before the first delta.
+                  control.enqueue(encoder.encode(JSON.stringify({type:'start',model:'NOX HELION'})+'\n'));
                   control.enqueue(encoder.encode(JSON.stringify({type:'delta',text:modelText})+'\n'));
                   if(scenario==='full'||scenario==='reject'||scenario==='rafblocked'){
                     setTimeout(()=>{
