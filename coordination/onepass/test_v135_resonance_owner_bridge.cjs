@@ -40,7 +40,7 @@ function fake(owner=true,pathname='/nox-web-v29/pc/resonance.html',rejectReceipt
       assert.equal(opts.credentials,'same-origin');
       const bytes=new TextEncoder();
       const stream=new ReadableStream({async start(ctrl){
-        ctrl.enqueue(bytes.encode(JSON.stringify({type:'preparing'})+'\n'));
+        ctrl.enqueue(bytes.encode(JSON.stringify({type:'preparing',stream_mode:'NATIVE_TOKEN_STREAM'})+'\n'));
         ctrl.enqueue(bytes.encode(JSON.stringify({type:'start',model:'NOX HELION'})+'\n'));
         ctrl.enqueue(bytes.encode(JSON.stringify({type:'delta',text:reply.slice(0,firstDeltaAt)})+'\n'));
         await new Promise(ok=>setTimeout(ok,110));
@@ -437,7 +437,7 @@ test('V157 native done is terminal: reject trailing control frame before S03 REA
 test('V158 unknown or missing native event before done cannot report persisted S03',async()=>{
   const p='V158 unexpected protocol event',a='Verifiable original reply';
   const good=[
-    {type:'preparing'},
+    {type:'preparing',stream_mode:'NATIVE_TOKEN_STREAM'},
     {type:'start',model:'NOX HELION'},
     {type:'delta',text:a},
     {type:'done',saved:true,s03_integrated:true,dialog_id:id,exchange_id:'v158-receipt-001'}
@@ -484,7 +484,7 @@ test('V159 require real native start before delta/done and reject duplicate star
   // A fake/incomplete startless sequence must never become an S03 success.
   const p='V159 start contract',a='Valid upstream answer';
   const good=[
-    {type:'preparing'},
+    {type:'preparing',stream_mode:'NATIVE_TOKEN_STREAM'},
     {type:'start',model:'NOX HELION'},
     {type:'delta',text:a},
     {type:'done',saved:true,s03_integrated:true,dialog_id:id,exchange_id:'v159-real-start-001'}
@@ -635,5 +635,54 @@ test('V161 missing native preparing cannot become persisted S03 success',async()
     assert.equal(bad.json.history_persisted,false);
     assert(!bad.calls.includes('/api/ui/memory/dialogs/history'),
       'no original S03 acceptance after missing native preparing');
+  }
+});
+
+
+test('V162 original native preparing mode must match V112 before S03 acceptance',async()=>{
+  const question='V162 strict original stream mode',answer='Original native response';
+  async function run(mode){
+    const calls=[];
+    const frames=[
+      mode===undefined?{type:'preparing'}:{type:'preparing',stream_mode:mode},
+      {type:'start',model:'NOX HELION',stream_mode:'NATIVE_TOKEN_STREAM'},
+      {type:'delta',text:answer},
+      {type:'done',saved:true,s03_integrated:true,dialog_id:id,exchange_id:'v162-mode-001'}
+    ];
+    const native=async path=>{
+      const u=new URL(String(path),'https://nox.local');
+      calls.push(u.pathname);
+      if(u.pathname==='/api/ui/memory/dialogs/create')
+        return Response.json({dialog_id:id,title:'V162'});
+      if(u.pathname==='/api/ui/memory/dialogs/history')
+        return Response.json({status:'READY',dialog_id:id,messages:[
+          {role:'user',content:question},{role:'assistant',content:answer}]});
+      if(u.pathname==='/api/nox/chat/stream')
+        return new Response(new ReadableStream({start(c){
+          c.enqueue(new TextEncoder().encode(frames.map(e=>JSON.stringify(e)+'\n').join('')));
+          c.close();
+        }}),{headers:{'content-type':'application/x-ndjson'}});
+      return new Response('NO_NATIVE_ROUTE',{status:404});
+    };
+    const w={NOX_NATIVE_OWNER:true,fetch:native};
+    const loc={pathname:'/nox-web-v29/pc/resonance.html',
+      href:'https://nox.local/nox-web-v29/pc/resonance.html',origin:'https://nox.local'};
+    vm.runInNewContext(JS,{window:w,location:loc,URL,Request,Response,ReadableStream,
+      TextDecoder,TextEncoder,AbortController,performance,console,Intl,setTimeout});
+    const r=await w.fetch('/api/nox/chat',{method:'POST',
+      body:JSON.stringify({message:question})});
+    return {status:r.status,json:await r.json(),calls};
+  }
+  const good=await run('NATIVE_TOKEN_STREAM');
+  assert.equal(good.status,200,'documented V112 mode must remain accepted');
+  assert.equal(good.json.history_persisted,true);
+  assert(good.calls.includes('/api/ui/memory/dialogs/history'));
+  for(const mode of [undefined,null,'SSE_FALLBACK','NATIVE_BUFFER_ONLY']){
+    const bad=await run(mode);
+    assert.equal(bad.status,503,'invalid V112 stream mode must HOLD');
+    assert.match(bad.json.error,/HOLD_NATIVE_STREAM_MODE/);
+    assert.equal(bad.json.history_persisted,false);
+    assert(!bad.calls.includes('/api/ui/memory/dialogs/history'),
+      'no S03 success/readback for missing or incorrect original native mode');
   }
 });
