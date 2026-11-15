@@ -29,7 +29,7 @@ jobs:
       - name: Compile modules and JS
         run: |
           set -euo pipefail
-          python -m py_compile nox_runpod/teacher_mesh/v137/owner_self_observation.py
+          python -m py_compile nox_runpod/teacher_mesh/v137/owner_self_observation.py nox_runpod/teacher_mesh/v137/owner_response_contract.py
           node --check coordination/onepass/nox-v135-resonance-owner-bridge.js
           node --check coordination/onepass/nox-v137-owner-self-status.js
       - name: Real model delta split and native S03 terminal proof fixtures
@@ -43,11 +43,12 @@ jobs:
       - name: Existing OneHost native self and process evidence fixtures
         run: |
           set -euo pipefail
-          python -m unittest -v nox_runpod.teacher_mesh.v137.tests.test_owner_self_observation
+          python -m unittest -v nox_runpod.teacher_mesh.v137.tests.test_owner_self_observation nox_runpod.teacher_mesh.v137.tests.test_owner_response_contract
       - name: Assert no production mutations
         run: |
           echo 'NOX_V137_SOURCE_GATES=PASS'
           echo 'NOX_V137_LIVE_DEPLOYED=false'
           echo 'NOX_V137_C03_SELF_NATIVE_BOUND=false'
+          echo 'NOX_V137_ONE_MODEL_GROUNDING_SOURCE_TESTED=true'
           echo 'NOX_V137_REAL_GPU_TRAINING_CHANGED=false'
           echo 'NOX_V137_EXISTING_S03_MUTATED=false'
