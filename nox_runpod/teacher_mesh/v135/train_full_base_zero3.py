@@ -10,7 +10,7 @@ import argparse,hashlib,hmac,json,os,re,time,math
 from pathlib import Path
 from collections.abc import Mapping
 
-from .zero3_fullbase_plan import fullbase_admission,zero3_cpu_config,sha256_manifest
+from .zero3_fullbase_plan import fullbase_admission,zero3_cpu_config,sha256_manifest,STOP_PATHS
 from .curate_teacher_distillation import _file_sha
 
 INSTANCE=60509551
@@ -82,6 +82,52 @@ def verify_inputs(student:Path,data:Path,output:Path,native:dict)->dict:
         raise RuntimeError('HOLD_HF_STUDENT_SHA')
     return manifest
 
+def _stop_active(stop_file:Path)->bool:
+    """Fail closed on any original OneHost or custom STOP sentinel.
+
+    A dangling symlink counts as STOP, not as an absent sentinel. No secrets,
+    extra service, GPU import or native write is needed for this check.
+    """
+    try:
+        for name in dict.fromkeys((*STOP_PATHS,str(stop_file))):
+            path=Path(name)
+            if path.exists() or path.is_symlink():
+                return True
+    except OSError:
+        return True
+    return False
+
+
+def _stop_callback(TrainerCallback,stop_file:Path):
+    """Transformers lifecycle STOP gate: one check on each supported event.
+
+    Raises instead of faking a completed optimizer/restore receipt. Works only
+    when the training loop yields to a callback; cannot preempt a stuck CUDA
+    kernel or replace owner-level hardware STOP.
+    """
+    class _NOXStopCallback(TrainerCallback):
+        def _check(self):
+            if _stop_active(stop_file):
+                raise RuntimeError('HOLD_STOP_DURING_TRAINING')
+        def on_train_begin(self,args,state,control,**kwargs):
+            self._check();return control
+        def on_epoch_begin(self,args,state,control,**kwargs):
+            self._check();return control
+        def on_step_begin(self,args,state,control,**kwargs):
+            self._check();return control
+        def on_substep_end(self,args,state,control,**kwargs):
+            self._check();return control
+        def on_step_end(self,args,state,control,**kwargs):
+            self._check();return control
+        def on_prediction_step(self,args,state,control,**kwargs):
+            self._check();return control
+        def on_evaluate(self,args,state,control,**kwargs):
+            self._check();return control
+        def on_save(self,args,state,control,**kwargs):
+            self._check();return control
+    return _NOXStopCallback()
+
+
 def make_dataset(file:Path,tokenizer,max_len:int):
     from torch.utils.data import Dataset
     items=[]
@@ -126,7 +172,7 @@ def run(args)->dict:
     manifest=verify_inputs(student,corpus_dir,out,native)
     if os.environ.get('CUDA_VISIBLE_DEVICES')!='1':
         raise RuntimeError('HOLD_GPU0_OWNER_CHAT_MUST_BE_RESERVED')
-    if Path(args.stop_file).exists():
+    if _stop_active(Path(args.stop_file)):
         raise RuntimeError('HOLD_STOP_ACTIVE')
     # Load GPU framework only AFTER all native admission, identity and restore gates.
     import torch
@@ -137,7 +183,7 @@ def run(args)->dict:
         try:metadata.version(pkg)
         except metadata.PackageNotFoundError as ex:
             raise RuntimeError('HOLD_DEPENDENCY_'+pkg.upper()) from ex
-    from transformers import AutoTokenizer,AutoModelForCausalLM,Trainer,TrainingArguments
+    from transformers import AutoTokenizer,AutoModelForCausalLM,Trainer,TrainingArguments,TrainerCallback
     config=zero3_cpu_config(micro_batch=1,grad_accum=args.accum,learning_rate=float(args.lr))
     out.mkdir(mode=0o700)
     config_path=out/'deepspeed_zero3_cpu.json'
@@ -182,22 +228,29 @@ def run(args)->dict:
                 'attention_mask':tensor('attention_mask',0),
                 'labels':tensor('labels',-100)}
     trainer=Trainer(model=model,args=settings,train_dataset=train,
-                    eval_dataset=held,data_collator=collate,processing_class=tok)
-    if Path(args.stop_file).exists():
+                    eval_dataset=held,data_collator=collate,processing_class=tok,
+                    callbacks=[_stop_callback(TrainerCallback,Path(args.stop_file))])
+    if _stop_active(Path(args.stop_file)):
         raise RuntimeError('HOLD_STOP_AFTER_MODEL_LOAD')
     before=trainer.evaluate(metric_key_prefix='holdout_before')
+    if _stop_active(Path(args.stop_file)):
+        raise RuntimeError('HOLD_STOP_BEFORE_TRAIN')
     result=trainer.train()
+    if _stop_active(Path(args.stop_file)):
+        raise RuntimeError('HOLD_STOP_AFTER_TRAIN')
     steps=trainer.state.global_step
     if type(steps) is not int or steps<1:
         raise RuntimeError('HOLD_REAL_OPTIMIZER_STEP')
     after=trainer.evaluate(metric_key_prefix='holdout_after')
+    if _stop_active(Path(args.stop_file)):
+        raise RuntimeError('HOLD_STOP_AFTER_EVALUATE')
     x=before.get('holdout_before_loss');y=after.get('holdout_after_loss')
     if not all(isinstance(z,(int,float)) and math.isfinite(z) and z>=0 for z in (x,y)):
         raise RuntimeError('HOLD_HOLDOUT_NONFINITE')
     checkpoints=[p for p in out.glob('checkpoint-*') if p.is_dir()]
     if not checkpoints:
         raise RuntimeError('HOLD_ZERO3_CHECKPOINT_NOT_WRITTEN')
-    if Path(args.stop_file).exists():
+    if _stop_active(Path(args.stop_file)):
         raise RuntimeError('HOLD_STOP_BEFORE_RECEIPT')
     receipt={
         'schema':'NOX_V135_NATIVE_BASE_WEIGHT_OPTIMIZER_LOCAL_RECEIPT_V1',
