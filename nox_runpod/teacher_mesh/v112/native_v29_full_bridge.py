@@ -111,7 +111,7 @@ def _sse_delta(line):
     try:
         obj = json.loads(wire)
         if not isinstance(obj,dict):
-            return '', ''
+            return 'malformed', ''
         # An upstream inference error is not a harmless empty delta. Never
         # permit a later [DONE] plus unrelated S03 proof to claim success.
         if 'error' in obj and obj['error'] is not None:
@@ -124,7 +124,8 @@ def _sse_delta(line):
                 if delta['content']:
                     return 'delta',delta['content']
     except (TypeError,ValueError):
-        pass
+        # Broken upstream data is a protocol error, not an ignorable token.
+        return 'malformed', ''
     return '', ''
 
 def _timestamp(value):
@@ -604,6 +605,9 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
                         kind,part=_sse_delta(frame)
                         if kind=='upstream_error':
                             yield _jsonl({'type':'error','error':'HOLD_UPSTREAM_SSE_ERROR'})
+                            return
+                        if kind=='malformed':
+                            yield _jsonl({'type':'error','error':'HOLD_UPSTREAM_SSE_MALFORMED'})
                             return
                         if kind=='done':complete=True
                         if kind=='delta':

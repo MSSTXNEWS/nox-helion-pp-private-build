@@ -69,6 +69,9 @@ class V112Tests(unittest.TestCase):
                 else:
                     yield ('data: '+json.dumps({'choices':[{'delta':{'content':answer[:11]}}]},ensure_ascii=False)+'\n\n')
                     yield ('data: '+json.dumps({'choices':[{'delta':{'content':answer[11:]}}]},ensure_ascii=False)+'\n\n')
+                if self.bulk_sse=='malformed_data_after_delta':
+                    # Previously ignored broken model data allowed false S03 done.
+                    yield 'data: {broken-json\n\n'
                 if self.bulk_sse=='upstream_error_after_delta':
                     # A model-side error after valid deltas is terminal even
                     # when a matching fixture S03 row is present.
@@ -212,6 +215,20 @@ class V112Tests(unittest.TestCase):
         hist=self.client.get('/api/ui/memory/dialogs/history',cookies=self.cookie,
             params={'dialog_id':d}).json()
         self.assertEqual(hist['messages'],[])
+
+    def test_malformed_upstream_sse_cannot_claim_s03_saved(self):
+        self.bulk_sse='malformed_data_after_delta'
+        created=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
+            json={'title':'V169 malformed upstream','confirmed':True}).json()
+        d=created['dialog_id']
+        r=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
+            json={'message':'malformed model data after answer','dialog_id':d})
+        frames=[json.loads(x) for x in r.text.splitlines() if x.strip()]
+        self.assertEqual(frames[-1],{'type':'error','error':'HOLD_UPSTREAM_SSE_MALFORMED'})
+        self.assertFalse(any(x.get('type')=='done' or x.get('saved') for x in frames))
+        history=self.client.get('/api/ui/memory/dialogs/history',cookies=self.cookie,
+            params={'dialog_id':d}).json()
+        self.assertEqual(history['messages'],[])
 
     def test_cross_dialog_id_is_rejected(self):
         before=len(self.calls)
