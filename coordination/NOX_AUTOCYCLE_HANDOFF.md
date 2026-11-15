@@ -633,3 +633,8 @@ Accepted shared HEAD `640bcdae71371faaaa66c3f92c35cd2341841a87`, latest MANUAL 2
 - Lesson: Validate entire SSE choice envelope before emitting a token or asserting S03 durability; one original model answer must have exactly one choice.
 - ONE next_action → AUTO 1B: Owner-approved existing V51 manual workflow_dispatch allow_native=YES at exact latest feature HEAD for READ-ONLY original OneHost V112 SSE TTFT/TPS, canonical S03 and signed queue readback, GPU1 PID/STOP and independent complete S03+optimizer offsite restore; native enqueue/deploy/delete requires separate fenced owner writer authorization and rollback.
 
+### AUTO 2B · 2026-11-15 21:23 Europe/Moscow · NOX-P0-V175-RETRY-MISSING-NATIVE-JOB-ID-20261115 · instructions_version 0.0.6
+- Accepted shared HEAD `31e1de06d2428f07975abaffa5be014a4384747e`; current owner V51 access historically read-only, no current native writer lease or complete independent S03+optimizer restore; verified queue job IDs 0/60.
+- Original V175 bug: FAILED legacy status with missing native job ID could propose owner retry of an unreclaimable worker. Fail closed on missing/invalid native job_id, include exact job_id in owner-approved recovery proposal. Original R60/V46 regression plus existing STOP/checkpoint/legacy tests.
+- Single CAS commit of original source/test/append-only error+receipt+handoff; exact SHA CI pending readback; no live model/S03/GPU/weights change, installed/deleted=[], freed=0.
+- ONE next action → AUTO 1C: exact-HEAD owner-approved V51 manual READ-ONLY OneHost native queue+S03/V112 SSE TTFT/TPS, GPU1 PID/STOP/lease, and independent complete S03+optimizer offsite restore; native writes require separate fenced owner authority and rollback.

@@ -119,6 +119,7 @@ class Priorities(unittest.TestCase):
 
     def test_failed_gpu_weights_requires_offsite_checkpoint_and_lease(self):
         row={'task_id':'NOX-V46-30','state':'FAILED','native_verified':True,
+             'job_id':'native-owner-job-030',
              'receipt_sha256':'a'*64,'attempt_count':1,
              'retry_after_unix':1000,'owner_lease_released':True,
              'terminal_verified':True,'checkpoint_restorable':False}
@@ -131,6 +132,30 @@ class Priorities(unittest.TestCase):
         row['attempt_count']=3
         self.assertFalse(audit_native_queue(self.m,x,now_unix=2000)['retry_eligible_proposals'])
 
+
+    def test_v179_failed_without_native_job_id_cannot_retry(self):
+        # Never propose a restart/reclaim for an unknown OneHost job.
+        for matrix,tid in ((self.m,'NOX-V46-30'),(self.master,'R60-030')):
+            base={'task_id':tid,'state':'FAILED','native_verified':True,
+                  'receipt_sha256':'a'*64,'attempt_count':1,
+                  'retry_after_unix':1000,'terminal_verified':True,
+                  'owner_lease_released':True,'checkpoint_restorable':True}
+            for invalid in (None,'',' ',False,'bad\\njob'):
+                with self.subTest(task_id=tid,job_id=invalid):
+                    row=dict(base)
+                    if invalid is not None:row['job_id']=invalid
+                    out=audit_native_queue(matrix,state(native_queue_verified=True,
+                        task_status={tid:row},now_unix=2000),now_unix=2000)
+                    self.assertEqual(out['retry_eligible_proposals'],[])
+                    self.assertIn(tid,out['protected_task_ids'])
+            good=dict(base,job_id='native-owner-job-030')
+            out=audit_native_queue(matrix,state(native_queue_verified=True,
+                task_status={tid:good},now_unix=2000),now_unix=2000)
+            self.assertEqual(out['retry_eligible_proposals'],[{
+                'task_id':tid,'job_id':'native-owner-job-030','next_attempt':2,
+                'owner_approval_required':True,'duplicate_check_required':True,
+                'may_enqueue_via_generic_plan':False}])
+            self.assertEqual(out['native_jobs_restarted'],0)
 
     def test_v175_canonical_r60_is_one_queue_not_sixty_new_jobs(self):
         # The canonical R60 document must reconcile to zero native jobs,
@@ -159,6 +184,7 @@ class Priorities(unittest.TestCase):
 
     def test_v175_canonical_gpu1_failure_requires_restorable_checkpoint(self):
         row={'task_id':'R60-030','state':'FAILED','native_verified':True,
+             'job_id':'native-owner-job-030',
              'receipt_sha256':'a'*64,'attempt_count':1,
              'retry_after_unix':1000,'owner_lease_released':True,
              'terminal_verified':True,'checkpoint_restorable':False}
@@ -172,6 +198,7 @@ class Priorities(unittest.TestCase):
 
     def test_v176_failed_gpu_retry_never_reenters_fresh_plan(self):
         row={'task_id':'NOX-V46-30','state':'FAILED','native_verified':True,
+             'job_id':'native-owner-job-030',
              'receipt_sha256':'a'*64,'attempt_count':1,'retry_after_unix':1000,
              'terminal_verified':True,'owner_lease_released':True,
              'checkpoint_restorable':True}
@@ -188,6 +215,7 @@ class Priorities(unittest.TestCase):
 
     def test_v176_canonical_failed_gpu_retry_requires_separate_owner_path(self):
         row={'task_id':'R60-030','state':'FAILED','native_verified':True,
+             'job_id':'native-owner-job-030',
              'receipt_sha256':'a'*64,'attempt_count':1,'retry_after_unix':1000,
              'terminal_verified':True,'owner_lease_released':True,
              'checkpoint_restorable':True}

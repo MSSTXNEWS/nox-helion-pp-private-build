@@ -135,8 +135,11 @@ def audit_native_queue(matrix, observations, *, now_unix: int, heartbeat_s: int=
         elif state=="FAILED":
             tries=obs.get("attempt_count")
             when=obs.get("retry_after_unix")
+            # A legacy signed FAILED status protects work, but owner recovery
+            # cannot reclaim a specific native worker without its unique ID.
             eligible=(obs.get("terminal_verified") is True
                 and obs.get("owner_lease_released") is True
+                and _valid_native_job_id(obs.get("job_id"))
                 and type(tries) is int and 0<=tries<max_attempts
                 and type(when) is int and 0<=when<=now_unix)
             # R60 uses resource_class / backup_restore_required / checkpoint,
@@ -156,7 +159,8 @@ def audit_native_queue(matrix, observations, *, now_unix: int, heartbeat_s: int=
             protected.add(tid)
             if eligible:
                 result["retry_eligible_proposals"].append({
-                    "task_id":tid,"next_attempt":tries+1,
+                    "task_id":tid,"job_id":obs["job_id"],
+                    "next_attempt":tries+1,
                     "owner_approval_required":True,"duplicate_check_required":True,
                     "may_enqueue_via_generic_plan":False})
         else:
