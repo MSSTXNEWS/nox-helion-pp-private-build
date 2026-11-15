@@ -67,7 +67,9 @@ class V135NoLossTests(unittest.TestCase):
                              m.OBS_SOURCE.read_bytes())
             self.assertEqual(z.read(m.NATIVE_SELF_MODULE),
                              m.NATIVE_SELF_SOURCE.read_bytes())
-        self.assertEqual(receipt["output_entries"], m.FROZEN_N+2+len(m.PAGES)+4)
+            self.assertEqual(z.read(m.NATIVE_RESPONSE_MODULE),
+                             m.NATIVE_RESPONSE_SOURCE.read_bytes())
+        self.assertEqual(receipt["output_entries"], m.FROZEN_N+2+len(m.PAGES)+5)
 
     def test_exact_same_source_is_bitwise_repeatable(self):
         a = m.build(self.stage, self.frozen, self.js, self.output,
