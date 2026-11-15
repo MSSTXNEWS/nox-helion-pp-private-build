@@ -103,6 +103,7 @@ def evaluate(reference, candidate, train_manifest, policy):
     require(isinstance(train_manifest, dict) and isinstance(train_manifest.get('prompt_sha256'), list), 'train manifest fingerprints missing')
     raw_train = train_manifest['prompt_sha256']
     require(all(digest_ok(x) for x in raw_train), 'train manifest malformed fingerprints')
+    require(bool(raw_train), 'empty train manifest cannot establish holdout separation')
     train = [value.lower() for value in raw_train]
     require(len(set(train)) == len(train), 'duplicate train fingerprints')
     holdout = {v['prompt_sha256'].lower() for v in r.values()}
@@ -183,6 +184,10 @@ def selftest():
                min_tps_ratio=1, max_vram_bytes=1000, max_logit_abs_delta=.02)
     result = evaluate(a, b, {'prompt_sha256': [h('train')]}, pol)
     assert result['source_consistency'] == 'PASS' and result['native_verified'] is False
+    # Empty train evidence must never pass as proof of separation.
+    try: evaluate(a, b, {'prompt_sha256': []}, pol)
+    except ValueError as exc: assert 'empty train manifest' in str(exc)
+    else: raise AssertionError('empty training provenance accepted')
     # SHA-256 hex is case-insensitive; mixed-case hashes must never bypass holdout separation.
     try: evaluate(a, b, {'prompt_sha256': [a['cases'][0]['prompt_sha256'].upper()]}, pol)
     except ValueError as exc: assert 'LEAKAGE' in str(exc)
@@ -205,13 +210,13 @@ def selftest():
     except ValueError as exc: assert 'LEAKAGE' in str(exc)
     else: raise AssertionError('leakage not detected')
     b['cases'][0]['checks'][next(iter(b['cases'][0]['checks']))] = False
-    assert evaluate(a, b, {'prompt_sha256': []}, pol)['source_consistency'] == 'FAIL'
+    assert evaluate(a, b, {'prompt_sha256': [h('train')]}, pol)['source_consistency'] == 'FAIL'
     b['cases'][0]['checks'] = a['cases'][0]['checks'].copy()
     del b['cases'][-1]['max_logit_abs_delta']
-    try: evaluate(a, b, {'prompt_sha256': []}, pol)
+    try: evaluate(a, b, {'prompt_sha256': [h('train')]}, pol)
     except ValueError as exc: assert 'logit delta' in str(exc)
     else: raise AssertionError('missing logit metric not detected')
-    print('SELFTEST 8/8 PASS (synthetic fixtures only; native HOLD)')
+    print('SELFTEST 9/9 PASS (synthetic fixtures only; native HOLD)')
 
 
 def main():
