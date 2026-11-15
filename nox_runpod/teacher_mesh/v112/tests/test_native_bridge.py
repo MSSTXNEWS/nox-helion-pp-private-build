@@ -66,6 +66,13 @@ class V112Tests(unittest.TestCase):
                     # fail closed even when the original S03 proof exists.
                     yield ('data: '+json.dumps({'choices':[{'delta':{'content':answer}}]},
                           ensure_ascii=False)+'\n\ndata: [DONE]\n\n')
+                elif self.bulk_sse=='multi_choice_truncated':
+                    # Old parser emitted choice 0's text without examining
+                    # the incomplete choice 1 in this same frame.
+                    yield ('data: '+json.dumps({'choices':[
+                           {'index':0,'delta':{'content':answer}},
+                           {'index':1,'delta':{},'finish_reason':'length'}]},
+                           ensure_ascii=False)+'\n\n')
                 else:
                     yield ('data: '+json.dumps({'choices':[{'delta':{'content':answer[:11]}}]},ensure_ascii=False)+'\n\n')
                     yield ('data: '+json.dumps({'choices':[{'delta':{'content':answer[11:]}}]},ensure_ascii=False)+'\n\n')
@@ -345,6 +352,27 @@ class V112Tests(unittest.TestCase):
 
     def test_trailing_incomplete_utf8_fails_closed_even_with_s03_fixture(self):
         self._assert_invalid_utf8_cannot_claim_durable_s03_success('trailing_utf8_partial')
+
+    def test_v177_multi_choice_sse_cannot_certify_s03(self):
+        suspect={'choices':[
+            {'index':0,'delta':{'content':'complete'}},
+            {'index':1,'delta':{},'finish_reason':'length'}]}
+        self.assertEqual(_sse_delta('data: '+json.dumps(suspect)),('malformed',''))
+        self.assertEqual(_sse_delta('data: '+json.dumps(
+            {'choices':[{'delta':{'content':'valid'}}]})),('delta','valid'))
+        self.bulk_sse='multi_choice_truncated'
+        created=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
+                                 json={'title':'V177 single model response','confirmed':True})
+        self.assertEqual(created.status_code,200,created.text)
+        dialog_id=created.json()['dialog_id']
+        reply=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
+                               json={'message':'one reply one receipt','dialog_id':dialog_id})
+        frames=[json.loads(line) for line in reply.text.splitlines() if line.strip()]
+        self.assertEqual(frames[-1],{'type':'error','error':'HOLD_UPSTREAM_SSE_MALFORMED'})
+        self.assertFalse(any(f.get('type')=='done' or f.get('saved') for f in frames))
+        history=self.client.get('/api/ui/memory/dialogs/history',cookies=self.cookie,
+                                params={'dialog_id':dialog_id})
+        self.assertEqual(history.json()['messages'],[])
 
     def test_v176_malformed_choice_envelope_fails_closed(self):
         bad=({'choices':'invalid'}, {'choices':None}, {'choices':[None]},

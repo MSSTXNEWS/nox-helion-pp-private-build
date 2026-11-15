@@ -132,7 +132,10 @@ def _sse_delta(line):
         if 'choices' not in obj and isinstance(obj.get('usage'),dict):
             return '', ''
         choices=obj.get('choices')
-        if not isinstance(choices,list):
+        # A single Resonance reply is bound to one S03 exchange. Returning
+        # the first delta before checking sibling choices could hide a later
+        # truncated/error choice in the SAME upstream SSE frame.
+        if not isinstance(choices,list) or len(choices)>1:
             return 'malformed', ''
         for row in choices:
             if not isinstance(row,dict):
