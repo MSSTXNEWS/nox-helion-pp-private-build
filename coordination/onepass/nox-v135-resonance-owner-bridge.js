@@ -14,6 +14,16 @@
   const enc=new TextEncoder();
   const ID=/^[a-f0-9]{32}$/;
   const MAX=200000;
+  // Only split ACTUAL upstream model deltas. Never invent text or report done
+  // before a native S03 receipt. A single late native delta still starts late.
+  // Limit event count for huge upstream chunks; preserve every codepoint.
+  function livePieces(text) {
+    const glyphs=Array.from(text);
+    const width=Math.max(24,Math.ceil(glyphs.length/64));
+    const pieces=[];
+    for(let pos=0;pos<glyphs.length;pos+=width)pieces.push(glyphs.slice(pos,pos+width).join(''));
+    return pieces;
+  }
   const errorResponse=(error,status=503)=>new Response(JSON.stringify({
     status:'HOLD',error,history_persisted:false,s03_integrated:false
   }),{status,headers:{'Content-Type':'application/json','Cache-Control':'no-store'}});
@@ -125,7 +135,9 @@
           const upstream=await nativePost('/api/nox/chat/stream',{
             message:data.message,dialog_id:id,task:'general',history:[]
           },nativeSignal);
-          const {answer,receipt}=await consume(upstream,t=>event({type:'token',t}),nativeSignal);
+          const {answer,receipt}=await consume(upstream,t=>{
+            for(const piece of livePieces(t))event({type:'token',t:piece});
+          },nativeSignal);
           if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
           if(!accepted(receipt,id))throw Error('HOLD_S03_COMMIT_RECEIPT');
           await checkHistory(id,data.message,answer,nativeSignal);
