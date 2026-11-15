@@ -223,6 +223,28 @@ class NativeRegistrationGates(unittest.TestCase):
         self.assertEqual(self.calls['enqueue'],0)
         self.assertEqual(self.calls['s03'],0)
 
+    def test_owner_approval_receives_current_per_item_native_snapshot(self):
+        """A refreshed queue lease must never be approved via stale inventory."""
+        from dataclasses import replace
+        reads={'count':0}
+        approvals=[]
+        original=self.ports()
+        def per_item_inventory():
+            reads['count']+=1
+            row=dict(self.snapshot)
+            # Initial inventory and per-item refresh are distinct snapshots.
+            row['now_unix']=2000 if reads['count']==1 else 2001
+            return row
+        def owner_approval(scope,digest,inventory):
+            approvals.append(inventory.get('now_unix'))
+            return scope==self.scope
+        native=replace(original,state=per_item_inventory,approve=owner_approval)
+        result=enqueue_approved(native,self.matrix,self.scope,limit=1)
+        self.assertEqual(result['state'],'NATIVE_QUEUE_READBACK_AND_S03_VERIFIED')
+        self.assertEqual(result['jobs_enqueued'],1)
+        self.assertGreaterEqual(reads['count'],2)
+        self.assertEqual(approvals,[2001])
+
     def test_native_lease_loss_between_two_batch_jobs_cannot_continue(self):
         prior=plan(self.matrix,self.snapshot,max_new=2)
         self.assertGreaterEqual(len(prior['planned']),2)

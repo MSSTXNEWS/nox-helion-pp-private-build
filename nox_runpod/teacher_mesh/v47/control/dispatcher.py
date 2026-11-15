@@ -337,7 +337,10 @@ def enqueue_approved(native:NativePorts,matrix:dict,owner_scope:str,*,limit:int=
             if proposal.get('legacy_task_id'):
                 payload['legacy_task_id']=proposal['legacy_task_id']
             digest=canonical_hash(payload)
-            if native.approve(owner_scope,digest,dict(inv)) is not True:
+            # Bind every owner approval to the FRESH per-item native readback.
+            # The initial inventory may predate a changed queue/lease epoch;
+            # approving its stale preimage after a fresh audit risks a TOCTOU.
+            if native.approve(owner_scope,digest,dict(fresh)) is not True:
                 return {'state':'HOLD_NATIVE_OWNER_APPROVAL','jobs_enqueued':len(receipts),'receipts':receipts}
             if not gate():return {'state':'HOLD_STOP_DURING_QUEUE','jobs_enqueued':len(receipts),'receipts':receipts}
             ticket=native.queue_enqueue(payload)
