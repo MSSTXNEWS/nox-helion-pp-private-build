@@ -343,7 +343,8 @@ test('V156 coalesced native NDJSON keeps valid short frames and rejects one over
   const id='abcd1234abcd1234abcd1234abcd1234';
   const piece='Ж'.repeat(22),count=7000,prompt='Coalesced native frame audit';
   const answer=piece.repeat(count);
-  const upstreamStart=JSON.stringify({type:'start',model:'NOX HELION'})+'\n';
+  const upstreamStart=JSON.stringify({type:'preparing',stream_mode:'NATIVE_TOKEN_STREAM'})+'\n'+
+    JSON.stringify({type:'start',model:'NOX HELION'})+'\n';
   const valid=upstreamStart+Array.from({length:count},()=>JSON.stringify({type:'delta',text:piece})+'\n').join('')+
     JSON.stringify({type:'done',saved:true,s03_integrated:true,dialog_id:id,exchange_id:'coalesced-qa-01'})+'\n';
   assert(valid.length>300000&&answer.length<200000,'valid source-level stress fixture');
@@ -418,7 +419,8 @@ test('V157 native done is terminal: reject trailing control frame before S03 REA
       body:JSON.stringify({message:prompt})});
     return {status:r.status,body:await r.json(),called};
   }
-  const start=JSON.stringify({type:'start',model:'NOX HELION'})+'\n';
+  const start=JSON.stringify({type:'preparing',stream_mode:'NATIVE_TOKEN_STREAM'})+'\n'+
+    JSON.stringify({type:'start',model:'NOX HELION'})+'\n';
   const clean=await attempt(start+delta+done+'\n');
   assert.equal(clean.status,200,'native done plus blank line is permitted');
   assert.equal(clean.body.history_persisted,true);
@@ -583,5 +585,55 @@ test('V160 preparing is unique and precedes native start; reject before S03 read
     assert.equal(bad.result.history_persisted,false);
     assert(!bad.calls.includes('/api/ui/memory/dialogs/history'),
       'invalid stream must never enter owner S03 acceptance');
+  }
+});
+
+
+test('V161 missing native preparing cannot become persisted S03 success',async()=>{
+  // The original V112 producer ALWAYS sends preparing before start.
+  // Missing preparing is not evidence of a valid original OneHost stream.
+  const p='V161 native preparing requirement',a='Verified upstream';
+  const full=[
+    {type:'preparing',stream_mode:'NATIVE_TOKEN_STREAM'},
+    {type:'start',model:'NOX HELION'},
+    {type:'delta',text:a},
+    {type:'done',saved:true,s03_integrated:true,dialog_id:id,exchange_id:'v161-native-receipt'}
+  ];
+  async function check(frames){
+    const calls=[];
+    const old=async path=>{
+      const u=new URL(String(path),'https://nox.local');calls.push(u.pathname);
+      if(u.pathname==='/api/ui/memory/dialogs/create')
+        return Response.json({dialog_id:id,title:'V161'});
+      if(u.pathname==='/api/ui/memory/dialogs/history')
+        return Response.json({status:'READY',dialog_id:id,messages:[
+          {role:'user',content:p},{role:'assistant',content:a}]});
+      if(u.pathname==='/api/nox/chat/stream')
+        return new Response(new ReadableStream({start(c){
+          c.enqueue(new TextEncoder().encode(frames.map(x=>JSON.stringify(x)+'\\n').join('')));
+          c.close();
+        }}),{headers:{'content-type':'application/x-ndjson'}});
+      return new Response('NO_ROUTE',{status:404});
+    };
+    const w={NOX_NATIVE_OWNER:true,fetch:old};
+    const loc={pathname:'/nox-web-v29/pc/resonance.html',
+      href:'https://nox.local/nox-web-v29/pc/resonance.html',origin:'https://nox.local'};
+    vm.runInNewContext(JS,{window:w,location:loc,URL,Request,Response,ReadableStream,
+      TextDecoder,TextEncoder,AbortController,performance,console,Intl,setTimeout});
+    const response=await w.fetch('/api/nox/chat',{method:'POST',
+      body:JSON.stringify({message:p})});
+    return {status:response.status,json:await response.json(),calls};
+  }
+  const good=await check(full);
+  assert.equal(good.status,200);
+  assert.equal(good.json.history_persisted,true);
+  assert(good.calls.includes('/api/ui/memory/dialogs/history'));
+  for(const frames of [full.slice(1),[full[1],full[3]]]){
+    const bad=await check(frames);
+    assert.equal(bad.status,503,'missing native preparing must HOLD');
+    assert.match(bad.json.error,/HOLD_NATIVE_PREPARING_REQUIRED/);
+    assert.equal(bad.json.history_persisted,false);
+    assert(!bad.calls.includes('/api/ui/memory/dialogs/history'),
+      'no original S03 acceptance after missing native preparing');
   }
 });
