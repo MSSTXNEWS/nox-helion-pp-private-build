@@ -223,6 +223,55 @@ class NativeRegistrationGates(unittest.TestCase):
         self.assertEqual(self.calls['enqueue'],0)
         self.assertEqual(self.calls['s03'],0)
 
+    def test_orphan_s03_repair_lease_revoked_by_approval_never_writes(self):
+        from dataclasses import replace
+        p=plan(self.canonical,self.snapshot,max_new=1)
+        self.dupe_alias=p['planned'][0]['legacy_task_id']
+        self.s03_present=False
+        original=self.ports()
+        def revoke(scope,digest,snapshot):
+            self.snapshot['owner_queue_writer_lease_verified']=False
+            return True
+        r=enqueue_approved(replace(original,approve=revoke),self.canonical,
+                           self.scope,limit=1)
+        self.assertEqual(r['state'],'HOLD_EXISTING_REGISTRATION_RECONCILIATION')
+        self.assertEqual(r['reason'],'HOLD_S03_REPAIR_LEASE_CHANGED_AFTER_APPROVAL')
+        self.assertEqual(self.calls['s03'],0)
+        self.assertEqual(self.calls['enqueue'],0)
+
+    def test_orphan_s03_repair_epoch_rotated_by_approval_never_writes(self):
+        from dataclasses import replace
+        p=plan(self.canonical,self.snapshot,max_new=1)
+        self.dupe_alias=p['planned'][0]['legacy_task_id']
+        self.s03_present=False
+        self.snapshot['owner_queue_writer_lease_epoch']='old'
+        original=self.ports()
+        def rotate(scope,digest,snapshot):
+            self.snapshot['owner_queue_writer_lease_epoch']='new'
+            return True
+        r=enqueue_approved(replace(original,approve=rotate),self.canonical,
+                           self.scope,limit=1)
+        self.assertEqual(r['reason'],'HOLD_S03_REPAIR_LEASE_CHANGED_AFTER_APPROVAL')
+        self.assertEqual(self.calls['s03'],0)
+        self.assertEqual(self.calls['enqueue'],0)
+
+    def test_orphan_s03_repair_registry_switch_after_approval_holds(self):
+        from dataclasses import replace
+        p=plan(self.canonical,self.snapshot,max_new=1)
+        self.dupe_alias=p['planned'][0]['legacy_task_id']
+        self.s03_present=False
+        original=self.ports()
+        def change_job(scope,digest,snapshot):
+            self.registry_override={'task_id':p['planned'][0]['task_id'],
+                'job_id':'native-job-replaced','state':'PENDING',
+                'native_verified':True,'owner_scope':self.scope,'receipt_sha256':'c'*64}
+            return True
+        r=enqueue_approved(replace(original,approve=change_job),self.canonical,
+                           self.scope,limit=1)
+        self.assertEqual(r['reason'],'HOLD_S03_REPAIR_NATIVE_JOB_CHANGED')
+        self.assertEqual(self.calls['s03'],0)
+        self.assertEqual(self.calls['enqueue'],0)
+
     def test_owner_approval_receives_current_per_item_native_snapshot(self):
         """A refreshed queue lease must never be approved via stale inventory."""
         from dataclasses import replace

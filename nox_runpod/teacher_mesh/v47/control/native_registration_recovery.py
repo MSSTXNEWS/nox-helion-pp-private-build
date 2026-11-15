@@ -39,7 +39,7 @@ def reconcile_existing_registration(native, *, owner_scope:str, task_id:str,
             or inventory.get("native_queue_verified") is not True
             or inventory.get("native_writes_available") is not True):
         return {**base,"state":"HOLD_OWNER_QUEUE_LEASE"}
-    ports=("stop","authorize","native_task_status","queue_readback",
+    ports=("stop","authorize","state","native_task_status","queue_readback",
            "s03_registration_lookup","approve","s03_audit","s03_verify")
     if any(not callable(getattr(native,key,None)) for key in ports):
         return {**base,"state":"HOLD_REGISTRATION_NATIVE_PORTS"}
@@ -104,10 +104,51 @@ def reconcile_existing_registration(native, *, owner_scope:str, task_id:str,
             return {**base,"state":"HOLD_EXISTING_S03_PROVENANCE"}
         # A missing S03 receipt is a repairable *metadata* gap, not
         # permission to re-enqueue / restart an already running job.
-        if not owner_gate() or native.approve(owner_scope,event_sha,dict(inventory)) is not True:
+        # Owner approval may revoke/rotate its OneHost writer lease. A caller's
+        # initial inventory cannot authorize a later S03 repair. Compare native
+        # fencing tokens both before and AFTER approval; native S03 must also
+        # enforce the lease atomically at its own append boundary.
+        def current_lease(previous):
+            snap=native.state()
+            if (not isinstance(snap,Mapping)
+                    or snap.get("native_queue_verified") is not True
+                    or snap.get("owner_queue_writer_lease_verified") is not True
+                    or snap.get("native_writes_available") is not True
+                    or snap.get("stop_active") is not False
+                    or not isinstance(snap.get("task_status"),Mapping)
+                    or type(snap.get("now_unix")) is not int
+                    or snap["now_unix"]<=0):
+                return None
+            fence=("owner_queue_writer_lease_id","owner_queue_writer_lease_epoch",
+                   "queue_epoch","owner_scope")
+            if any(snap.get(key)!=previous.get(key)
+                   for key in fence if key in snap or key in previous):
+                return None
+            return snap
+        before=current_lease(inventory)
+        if before is None:
+            return {**base,"state":"HOLD_S03_REPAIR_LEASE_CHANGED_BEFORE_APPROVAL"}
+        if not owner_gate() or native.approve(owner_scope,event_sha,dict(before)) is not True:
             return {**base,"state":"HOLD_S03_REPAIR_NOT_APPROVED"}
         if not owner_gate():
             return {**base,"state":"HOLD_S03_REPAIR_STOP_RACE"}
+        after=current_lease(before)
+        if after is None:
+            return {**base,"state":"HOLD_S03_REPAIR_LEASE_CHANGED_AFTER_APPROVAL"}
+        # Approval must still refer to the same original queue job, not a new
+        # task/status that raced with the S03 repair. Never re-enqueue it.
+        latest=native.native_task_status(task_id)
+        again=native.queue_readback(jid)
+        if (not isinstance(latest,Mapping) or latest.get("task_id")!=task_id
+                or latest.get("job_id")!=jid
+                or latest.get("owner_scope")!=owner_scope
+                or latest.get("native_verified") is not True
+                or latest.get("receipt_sha256")!=item["receipt_sha256"]
+                or latest.get("state") not in ("PENDING","RUNNING","CLAIMED")
+                or not isinstance(again,Mapping) or again.get("job_id")!=jid
+                or again.get("task_id") not in ids
+                or again.get("state") not in ("pending","running")):
+            return {**base,"state":"HOLD_S03_REPAIR_NATIVE_JOB_CHANGED"}
         proof=native.s03_audit(event)
         if native.s03_verify(proof,event) is not True:
             return {**base,"state":"HOLD_S03_REPAIR_READBACK","performed":"UNKNOWN"}
