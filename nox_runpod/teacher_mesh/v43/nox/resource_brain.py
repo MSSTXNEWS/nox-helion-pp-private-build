@@ -26,10 +26,19 @@ def plan_load(request, inventory, policy=Policy()):
     """
     if not isinstance(request,dict) or request.get('role') not in ('teacher','image','video'):
         return {'state':'HOLD_INVALID_REQUEST','performed':False}
-    models=inventory.get('models',[]);gpus=inventory.get('gpus',[])
+    # A proposal is meaningful only on an authenticated, complete OneHost
+    # snapshot. Missing fields are UNKNOWN, never "idle" or "available".
+    if not isinstance(inventory,dict) or inventory.get('native_verified') is not True:
+        return {'state':'HOLD_NATIVE_INVENTORY_UNVERIFIED','performed':False}
+    models=inventory.get('models');gpus=inventory.get('gpus')
     mid=request.get('model_id')
-    if not isinstance(mid,str) or not mid or not isinstance(models,list) or not isinstance(gpus,list):
+    if (type(mid) is not str or not mid or not isinstance(models,list)
+            or not isinstance(gpus,list)
+            or any(not isinstance(m,dict) for m in models)
+            or any(not isinstance(g,dict) for g in gpus)):
         return {'state':'HOLD_INVALID_INVENTORY','performed':False}
+    if any(type(m.get('loaded')) is not bool for m in models):
+        return {'state':'HOLD_MODEL_LOAD_STATE_UNVERIFIED','performed':False}
     if any(m.get('id')==mid and m.get('loaded') is True for m in models):
         return {'state':'ALREADY_LOADED','performed':False,'model_id':mid}
     source=next((m for m in models if m.get('id')==mid),None)
@@ -37,27 +46,48 @@ def plan_load(request, inventory, policy=Policy()):
         return {'state':'HOLD_NO_VERIFIED_LOCAL_ASSET','performed':False}
     if inventory.get('stop_active') is not False:
         return {'state':'HOLD_STOP_OR_SENSOR','performed':False}
-    if inventory.get('checkpoint_pending') is True or inventory.get('optimizer_step_active') is True:
+    if inventory.get('checkpoint_pending') is not False or inventory.get('optimizer_step_active') is not False:
         return {'state':'HOLD_CHECKPOINT_OR_ACTIVE_OPTIMIZER','performed':False}
+    if inventory.get('chat_gpu0_healthy') is not True:
+        return {'state':'HOLD_CHAT_GPU0_UNVERIFIED','performed':False}
+    # An optimizer can be BETWEEN steps while still holding GPU1. Read the
+    # lease and trainer/teacher activity explicitly; never infer "idle".
+    if (inventory.get('gpu1_trainer_active') is not False
+            or inventory.get('gpu1_teacher_in_flight') is not False
+            or inventory.get('onehost_gpu1_lease') is not True):
+        return {'state':'HOLD_GPU1_BUSY_OR_LEASE_UNVERIFIED','performed':False}
     # This is a loader for ALREADY LOCAL assets, not a model downloader.
     # Never silently fetch a teacher on the almost-full Vast disk.
-    if request.get('download_needed') is True or source.get('installed_locally') is False:
+    if request.get('download_needed') is True or source.get('installed_locally') is not True:
         return {'state':'REMOTE_PC_COLD_OR_DRIVE_ONLY','performed':False,
                 'reason':'NO_NEW_MODEL_DOWNLOAD_FROM_RESOURCE_BRAIN'}
     if request.get('new_disk_bytes',0)!=0:
         return {'state':'HOLD_NEW_DISK_WRITE_NEEDS_SEPARATE_VERIFIED_BUDGET',
                 'performed':False}
-    if inventory.get('ram_free_mib',0)<policy.min_ram_free_mib:
+    ram_free=inventory.get('ram_free_mib')
+    if type(ram_free) is not int or ram_free<0:
+        return {'state':'HOLD_RAM_SENSOR_UNVERIFIED','performed':False}
+    if ram_free<policy.min_ram_free_mib:
         return {'state':'REMOTE_PC_OR_HOLD','performed':False,'reason':'RAM_RESERVE'}
     if request['role'] in ('image','video') and source.get('runtime')!='dedicated_vetted_tool':
         return {'state':'HOLD_DIFFUSION_RUNTIME_NOT_VERIFIED','performed':False}
     peak=request.get('peak_vram_mib')
-    if not isinstance(peak,int) or peak<=0:return {'state':'HOLD_MISSING_VRAM_ESTIMATE','performed':False}
-    # Per GPU limits: memory in 2 separate cards cannot be added unless native
-    # scheduler has explicitly validated tensor parallel for this model.
-    fit=[g for g in gpus if isinstance(g,dict) and g.get('id')==1
-         and g.get('vram_free_mib',0)>=peak+policy.min_vram_free_mib
-         and g.get('protected_student') is not True]
+    if type(peak) is not int or peak<=0:
+        return {'state':'HOLD_MISSING_VRAM_ESTIMATE','performed':False}
+    # P0 must distinguish two *separate* V100 cards from one forged or
+    # aggregated 64 GiB value. Bool/str VRAM readings are not measurements.
+    ids=[g.get('id') for g in gpus]
+    if (len(ids)!=2 or any(type(x) is not int for x in ids)
+            or sorted(ids)!=[0,1]):
+        return {'state':'HOLD_GPU_TOPOLOGY_UNVERIFIED','performed':False}
+    gpu1=next(g for g in gpus if g['id']==1)
+    free=gpu1.get('vram_free_mib')
+    if (type(free) is not int or not 0<=free<=32768
+            or gpu1.get('protected_student') is not False):
+        return {'state':'HOLD_GPU1_NATIVE_SENSOR_UNVERIFIED','performed':False}
+    # Memory cannot be pooled across GPU0+GPU1 without a verified separate
+    # tensor-parallel admission. Resource Brain never performs that admission.
+    fit=free>=peak+policy.min_vram_free_mib
     active_teachers=sum(bool(m.get('loaded')) for m in models if m.get('role')=='teacher')
     if active_teachers>=policy.max_loaded_teachers:
         # only propose native unload of idle teacher owned by NOX, NOT arbitrary process
@@ -77,13 +107,21 @@ def apply_native_plan(plan, *, native_stop, native_authorize, native_act, native
     Real host must check signed approval and resource preimage itself. The
     function does not guess any auth token or create an HTTP endpoint.
     """
-    if plan.get('state')!='OWNER_NATIVE_APPROVAL_REQUIRED':
+    if (not isinstance(plan,dict) or
+            plan.get('state')!='OWNER_NATIVE_APPROVAL_REQUIRED' or
+            type(plan.get('target_gpu')) is not int or plan['target_gpu']!=1 or
+            plan.get('max_parallel')!=1 or plan.get('no_chat_pause') is not True or
+            not isinstance(plan.get('model_id'),str) or not plan['model_id'] or
+            plan.get('performed') is not False):
         return {'state':'HOLD_NOT_ADMITTED','performed':False}
     if any(not callable(f) for f in (native_stop,native_authorize,native_act,native_verify,native_readback)):
         return {'state':'HOLD_NATIVE_CALLBACKS_MISSING','performed':False}
     try:
         if native_stop() is not False or native_authorize(plan) is not True:
             return {'state':'HOLD_NATIVE_STOP_OR_SCOPE','performed':False}
+        # Re-check after authorization: STOP may have changed during approval.
+        if native_stop() is not False:
+            return {'state':'HOLD_NATIVE_STOP_RACE','performed':False}
         receipt=native_act(plan)
         if native_verify(plan,receipt) is not True:
             return {'state':'HOLD_EXECUTED_UNVERIFIED','performed':'UNKNOWN'}

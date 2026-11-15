@@ -49,9 +49,14 @@ class TestManifestAndVault(unittest.TestCase):
 
 class TestResourceBrain(unittest.TestCase):
     def setUp(self):
-        self.s={'models':[{'id':'m','sha_verified':True,'approved_license':True,'role':'teacher','loaded':False}],
-                'gpus':[{'id':0,'vram_free_mib':900,'protected_student':True},{'id':1,'vram_free_mib':30000}],
+        self.s={'models':[{'id':'m','sha_verified':True,'approved_license':True,
+                            'installed_locally':True,'role':'teacher','loaded':False}],
+                'gpus':[{'id':0,'vram_free_mib':900,'protected_student':True},
+                        {'id':1,'vram_free_mib':30000,'protected_student':False}],
+                'native_verified':True,'chat_gpu0_healthy':True,
                 'stop_active':False,'checkpoint_pending':False,'optimizer_step_active':False,
+                'gpu1_trainer_active':False,'gpu1_teacher_in_flight':False,
+                'onehost_gpu1_lease':True,
                 'disk_free_bytes':80_000_000_000,'ram_free_mib':30000}
         self.req={'model_id':'m','role':'teacher','peak_vram_mib':16000}
     def test_proposes_only(self):
@@ -88,6 +93,63 @@ class TestResourceBrain(unittest.TestCase):
     def test_diffusion_runtime_requires_adapter(self):
         self.req['role']='video';self.s['models'][0]['runtime']='none'
         self.assertEqual(plan_load(self.req,self.s)['state'],'HOLD_DIFFUSION_RUNTIME_NOT_VERIFIED')
+    def test_no_native_snapshot_or_malformed_rows_fail_closed(self):
+        self.assertEqual(plan_load(self.req,None)['state'],'HOLD_NATIVE_INVENTORY_UNVERIFIED')
+        self.s.pop('native_verified')
+        self.assertEqual(plan_load(self.req,self.s)['state'],'HOLD_NATIVE_INVENTORY_UNVERIFIED')
+        self.s['native_verified']=True
+        self.s['models']=[None]
+        self.assertEqual(plan_load(self.req,self.s)['state'],'HOLD_INVALID_INVENTORY')
+    def test_missing_checkpoint_or_optimizer_state_is_not_idle(self):
+        for key in ('checkpoint_pending','optimizer_step_active'):
+            with self.subTest(key=key):
+                data=dict(self.s);data.pop(key)
+                self.assertEqual(plan_load(self.req,data)['state'],
+                                 'HOLD_CHECKPOINT_OR_ACTIVE_OPTIMIZER')
+    def test_active_trainer_or_unknown_exclusive_lease_never_admitted(self):
+        for key,bad in (('gpu1_trainer_active',True),
+                        ('gpu1_teacher_in_flight',True),
+                        ('onehost_gpu1_lease',None)):
+            with self.subTest(key=key):
+                data=dict(self.s);data[key]=bad
+                self.assertEqual(plan_load(self.req,data)['state'],
+                                 'HOLD_GPU1_BUSY_OR_LEASE_UNVERIFIED')
+    def test_gpu0_chat_must_be_known_healthy(self):
+        self.s.pop('chat_gpu0_healthy')
+        self.assertEqual(plan_load(self.req,self.s)['state'],'HOLD_CHAT_GPU0_UNVERIFIED')
+    def test_asset_cannot_be_assumed_local_or_loaded(self):
+        self.s['models'][0].pop('installed_locally')
+        self.assertEqual(plan_load(self.req,self.s)['state'],'REMOTE_PC_COLD_OR_DRIVE_ONLY')
+        self.s['models'][0]['loaded']=None
+        self.assertEqual(plan_load(self.req,self.s)['state'],'HOLD_MODEL_LOAD_STATE_UNVERIFIED')
+    def test_invalid_gpu1_vram_and_aggregate_sensor_fail_closed(self):
+        for bad in (True,'30000',65536):
+            with self.subTest(bad=repr(bad)):
+                self.s['gpus'][1]['vram_free_mib']=bad
+                self.assertEqual(plan_load(self.req,self.s)['state'],
+                                 'HOLD_GPU1_NATIVE_SENSOR_UNVERIFIED')
+        self.s['gpus'][1]['vram_free_mib']=30000
+        self.s['gpus'][1].pop('protected_student')
+        self.assertEqual(plan_load(self.req,self.s)['state'],
+                         'HOLD_GPU1_NATIVE_SENSOR_UNVERIFIED')
+    def test_ram_free_mib_must_be_numeric(self):
+        self.s['ram_free_mib']='30000'
+        self.assertEqual(plan_load(self.req,self.s)['state'],'HOLD_RAM_SENSOR_UNVERIFIED')
+    def test_native_stop_appearing_during_authorization_prevents_activation(self):
+        plan=plan_load(self.req,self.s)
+        calls={'stop':0,'act':0}
+        def native_stop():
+            calls['stop']+=1
+            return calls['stop']>=2
+        def native_act(p):
+            calls['act']+=1
+            return {'status':'should_not_run'}
+        r=apply_native_plan(plan,native_stop=native_stop,
+             native_authorize=lambda p:True,native_act=native_act,
+             native_verify=lambda p,receipt:True,
+             native_readback=lambda p,receipt:{'model_id':'m','running':True})
+        self.assertEqual(r['state'],'HOLD_NATIVE_STOP_RACE')
+        self.assertEqual(calls['act'],0)
     def test_native_missing_holds(self):
         p=plan_load(self.req,self.s)
         self.assertEqual(apply_native_plan(p,native_stop=None,native_authorize=None,native_act=None,native_verify=None,native_readback=None)['state'], 'HOLD_NATIVE_CALLBACKS_MISSING')
