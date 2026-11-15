@@ -4,6 +4,123 @@
 **Объект:** ОДИН исходный NOX на Vast.ai instance **#60509551**. Приватный исходный репозиторий `MSSTXNEWS/nox-helion-pp-private-build`; координация [PR #256](https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/256).  
 **Назначение:** не искать заново работающий способ, не путать авторизацию Vast, SSH, HTTP и работоспособность модели. Все нижеописанные пути разной зрелости: не выдавать SOURCE или TCP за LIVE.
 
+
+## 0. ПОЛНЫЙ ДОСТУП К ИСХОДНОМУ NOX И СЕРВЕРУ, НЕ К GITHUB
+
+**Обязательное уточнение для всех MANUAL 1/2 и AUTO 1A/2A/1B/2B/1C/2C:** GitHub используется только как безопасный способ запуска авторизованного удалённого задания. ЦЕЛЬ — ОДИН существующий Vast.ai instance 60509551: shell исходного Linux, OneHost, локальный WEB, реальная модель, S03. Нет «12 одинаковых способов root»: каждый способ даёт свои отдельные права и требует отдельной проверки.
+
+### 0.1. Схема физических каналов
+
+~~~text
+Владелец / MANUAL / AUTO
+  [A] Vast owner NOX2 / NOX → GET API v1 → verify id 60509551/running
+       → actual SSH mapping (public_ipaddr + 22/tcp)
+  [B] Origin pinned ED25519 → existing V51 ephemeral SSH
+       → root on original Vast/Linux → /root/nox/scripts
+       → localhost:8080 owner WEB, :8081/:8082 original model
+       → original S03, GPU0/GPU1, RAM/SSD/processes/STOP
+       → remove exact temporary SSH public key + verify
+  [C] Owner PC: own SSH private key, independently approved/pinned
+       → SSH -L tunnel → browser to ORIGINAL Resonance and model APIs
+  [D] Other scoped paths: owner browser; Jupyter; V49 signed HMAC;
+       GitHub master agent; Windows-local NOX; Vercel; cloud storage
+~~~
+
+### 0.2. Все ключи и пароли: что нужно, где хранится, что реально работает
+
+| Реквизит | Для подключения к чему | Где должен оставаться | Реальный статус |
+|---|---|---|---|
+| NOX2 — Vast owner API Bearer | Vast v1 control plane, конкретный 60509551, управление временными SSH public keys | GitHub Actions Secrets/private owner vault, использовать только внутри разрешённой job | **PASS** owner API v1 HTTP 200; секрет действительный. Не публиковался |
+| NOX — отдельный Vast owner API key | Резервная идентификация и metadata | Отдельный GitHub Actions Secret NOX | V173 native API v1 ранее подтвердил; при новом запросе проверять |
+| V51 ephemeral ed25519 PRIVATE key | Одноразовый SSH root на исходный сервер | Генерируется только в ephemeral runner; не сохранять для повторного использования | **PASS** native SSH; ключ удалён после выполнения |
+| Server ED25519 fingerprint | Проверка подлинности SSH до key attach | Публичный pinned fingerprint SHA256:G4hmMllaT4uSfx+Gup9vjSySLXJT1cSc/9XePr7XmGc | **PASS** во время native SSH. Это НЕ пароль |
+| NOX_VAST_SSH_PRIVATE_KEY | Постоянный owner SSH из своего ПК или отдельной доверенной среды | SSH agent / password manager владельца, опциональный защищённый GitHub Secret | **НЕ НАСТРОЕН** в последнем GitHub test; такой постоянный SSH нельзя считать включённым |
+| NOX_VAST_SSH_KNOWN_HOSTS | Доверенные SSH host keys при постоянном SSH | Локальный known_hosts владельца/защищённый Secret | Текущее наличие не подтверждено; host fingerprint сверять каждый раз |
+| Owner WEB password | Штатный POST /chat/login → HttpOnly cookie | Внутри защищённой конфигурации оригинального OneHost; метод chat_proxy._read_chat_password() | Исторический owner login PASS, значение не извлекать |
+| Owner WEB HttpOnly session cookie | Защищённые owner HTML, POST /api/nox/chat/stream, S03 | Только авторизованный browser cookie jar, logout после теста | Старый native chat PASS, текущий Resonance требует отдельной E2E |
+| NOX_BRIDGE_HMAC_KEY | Подпись V49 owner команд и receipts | 32+ byte protected signer и защищённая original OneHost конфигурация | Native интеграция и подписанные live receipts НЕ подтверждены |
+| Scoped GitHub Contents token V49 | Только транспорт подписанного restricted bridge | Минимальные права токена в original native owner vault | Не путать с Vast NOX2; live writeback не доказан |
+| Jupyter token/HTTPS owner URL | Штатная работа с notebook на оригинальном instance | Vast owner console / защищённая серверная конфигурация | Текущий TLS/URL/token НЕ подтверждены, предыдущая RECORD_LAYER_FAILURE |
+| Owner Windows credentials | Локальные NOX Windows/EXE/18775/18877 | Только Windows Credential Manager/локальный owner login | Не являются доступом к Vast/Linux OneHost |
+| Drive OAuth / Tigris R2 S3 keys | Backup, пакеты и холодное хранение | Отдельные owner cloud vault/rclone | Tigris nox2 — не Vast NOX2, не SSH, не WEB пароль |
+| Vercel preview login | Просмотр frontend/preview | Отдельный Vercel owner account | НЕ даёт доступ к работающему inference и S03 |
+
+**Важное ограничение:** GitHub Secrets не позволяет извлечь значение секретного ключа обратно через GitHub API. Значения паролей, private SSH keys, HMAC keys, WEB cookies, Jupyter token запрещено сохранять в этом файле, в GitHub comments, Notion и ChatGPT. Здесь сохраняются точные имена, назначения, место защищённого хранения, команды и результаты проверки. Нельзя обходить owner ACL или использовать один пароль для всех 12 служб.
+
+### 0.3. Подключение напрямую к настоящему серверу — проверенный порядок
+
+1. Авторизованный GET https://cloud.vast.ai/api/v1/instances или https://console.vast.ai/api/v1/instances с Bearer NOX2 из GitHub Secrets. HTTP 200 и точный id=60509551, actual_status=running. Старый GET /api/v0/instances/ выведен из эксплуатации и возвращает 404/410; это не означает, что ключ испорчен.
+2. В этом же ответе получить ТЕКУЩИЕ public_ipaddr и ports с mapping 22/tcp. Не использовать слепо исторические 166.113.48.41:11234, ssh9.vast.ai:26622 или :26623 — адреса/порты могут меняться.
+3. До attach сверить SSH-2.0 banner и доверенный ED25519 fingerprint SHA256:G4hmMllaT4uSfx+Gup9vjSySLXJT1cSc/9XePr7XmGc; на несовпадении остановиться, никогда не использовать StrictHostKeyChecking=no.
+4. Запускать существующий owner-pinned ephemeral SSH V51 через ограниченную GitHub Actions job; генерировать одноразовый private key исключительно внутри runner, добавлять только public key на exact instance. На самом сервере читать реальные оригинальные скрипты и статусы, не создавать backend.
+5. После выполнения удалить именно временный key по exact public key ID, повторно проверить его отсутствие. Статус TEMP_SSH_CLEANUP=DETACHED_AND_VERIFIED обязателен для успешной приёмки.
+6. Команды исполнения, правки, установка пакетов, обучение и модельные переключения — отдельные scope с текущим PID/STOP/GPU lease/preimage SHA/backup+rollback и owner permission. Просто успешный SSH root не означает разрешение на разрушительные операции.
+
+**Реально проверено:** owner v1 [#43721473311](https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43721473311); native SSH + cleanup [#43721724993](https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43721724993); оригинальный OneHost WEB/S03 [#43721938273](https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43721938273); отдельный живой ответ модели [#43723425121](https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43723425121).
+
+### 0.4. Физическая карта NOX внутри контейнера
+
+| Настоящая локальная служба Vast/Linux | Установленный маршрут | Проверено |
+|---|---|---|
+| localhost:8080 | Original owner WEB: /health, /nox-web-v29/chat.html, /nox-web-v29/pc/resonance.html, POST /chat/login, GET /chat/session, POST /api/nox/chat/stream, оригинальные S03 dialog endpoints | Health 200, анонимный owner HTML 401 (нормальная защита); маршруты существуют |
+| localhost:8081 | Original llama/model /health, GET /v1/models, bounded POST /v1/chat/completions | Health 200, models 200, один модельный entry |
+| localhost:8082 | Ещё один уже существующий model endpoint | Health 200, models 200; это не просьба создавать второго NOX |
+| localhost:8095 | Вспомогательный сервис | Health 200, /v1/models 404; не считать основным LLM |
+| Original S03 SQLite | Через owner APIs и/или SQLite mode=ro в оригинальном контейнере | Схема подтверждена; конкретный новый persisted диалог надо проверять отдельно |
+| Vast :18775 и :8766 | Не активны на Vast в последнем audit | Исторические Windows-local адреса, не путать с 8080 |
+
+Физический static файл native-owner.js может отсутствовать: исходный _OwnerStatic выдаёт его динамически после owner cookie. Отсутствие физического V135 bridge.js в одном каталоге — подозрение, не автоматическое доказательство сломанного WEB; проверять настоящий auth browser network.
+
+### 0.5. Прямой SSH + туннель со своего Windows PC (не настроен без собственного ключа)
+
+Настраивается только при наличии собственноручно зарегистрированного owner private key, доверенного host fingerprint и ТЕКУЩЕГО host/port по Vast v1. Временный ключ V51 из runner извлекать нельзя.
+
+~~~powershell
+# В Windows PowerShell: подставить ТОЛЬКО текущие owner-authorized Vast v1 host и port.
+$HostName = "<CURRENT_AUTHORIZED_VAST_SSH_HOST>"
+$Port = <CURRENT_AUTHORIZED_VAST_SSH_PORT>
+$PrivateKey = "$env:USERPROFILE\.ssh\nox_onehost_ed25519"
+
+# Только уже доверенный known_hosts: не отключать проверку host key.
+ssh -N -T -i $PrivateKey -p $Port -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -L 18080:127.0.0.1:8080 -L 18081:127.0.0.1:8081 -L 18082:127.0.0.1:8082 "root@$HostName"
+
+# Во втором терминале (на том же PC):
+curl.exe http://127.0.0.1:18080/health
+curl.exe http://127.0.0.1:18081/v1/models
+# Owner WEB:
+# http://127.0.0.1:18080/nox-web-v29/pc/resonance.html
+# Штатно требуется /chat/login и HttpOnly cookie.
+~~~
+
+**Не заявлять что этот туннель уже настроен.** 18080/18081/18082 — локальные порты своего PC. Не открывать 8080/8081/8082 в интернет через 0.0.0.0, не создавать другой backend.
+
+### 0.6. Остальные способы и точные условия настройки
+
+- Прямой SSH и Vast SSH relay: получить mapping из API v1; TCP banner лишь подтверждает слушающий порт. Нужен реальный owner SSH private key. Временами bounded retry V51 успешно завершался после нескольких временных Permission denied/timeout.
+- Jupyter: нужен текущий owner HTTPS URL, проверенный TLS сертификат и штатный token. Старая TLS диагностика [#43594810937](https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43594810937) получила RECORD_LAYER_FAILURE. Не отключать TLS checks и не придумывать порт 8888. Возможен owner SSH tunnel к фактически существующему Jupyter localhost.
+- V49 HMAC-мост: отдельный NOX_BRIDGE_HMAC_KEY, owner signer и GitHub scoped write token + native S03 nonce/audit/readback. Код и [README](../nox_runpod/teacher_mesh/v49/README_RU.md) есть; фактическая signed native квитанция отсутствует. NOX2 не ключ этого моста.
+- GitHub master poller: source nоx-control/nox_agent.py принимает только allowlisted read-only tasks и сохраняет локальный result; нет доказанного remote writeback, не полноценный терминал.
+- Windows-local NOX: исторически 127.0.0.1:18775, :18877 и C:\NOX_HELION\NOX_NEW\NOX_START.ps1 — это другой компьютер, а не live Vast :8080.
+- Vast browser: только подтверждённый owner login/profile; прошлый browser profile не содержал подписанной сессии.
+- Vercel WEB: может показывать preview, но не гарантирует исходную модель и S03.
+- Drive / R2 / Tigris / RunPod: сторонние storage/compute services, не равны правам на исходный OneHost. Не передавать приватные веса в публичные buckets.
+
+### 0.7. Что именно ещё не настроено полностью
+
+| Уровень | Фактический статус |
+|---|---|
+| Vast owner v1 / конкретный instance 60509551 | **PASS** |
+| Ephemeral owner SSH + реальная native команда + подтверждённое удаление временного ключа | **PASS** |
+| Оригинальные WEB и native model ports + S03 schema | **READ-ONLY PASS** |
+| Реальная модель в native SSE (без browser S03) | **MODEL-ONLY PASS** |
+| Настоящий WEB owner session + S03 старого chat.html | **ИСТОРИЧЕСКИЙ PASS** |
+| Полная браузерная E2E именно pc/resonance.html с реальным stream и S03 | **HOLD (не подтверждено)** |
+| Постоянный SSH из Windows | **НЕ НАСТРОЕН** |
+| Рабочий Jupyter TLS/current auth, V49 подписанные native commands, master writeback | **HOLD** |
+| Все 12 каналов полностью настроены | **НЕТ, не заявлять** |
+
+**Обязательное для всех:** не просить пользователя снова перевыпускать уже рабочий NOX2 из-за старого API v0; не выводить пароли; не подменять настоящий NoX иллюстрацией, другим LLM, GitHub или Vercel; не объявлять NOX WEB релизом без owner browser+stream+S03 readback.
+
 ## Быстрая таблица — что реально работает
 
 | № | Канал | Проверенное состояние на 15.11.2026 | Для чего |
