@@ -25,13 +25,15 @@ class TarManifestNoLoss(unittest.TestCase):
                        'original_files_deleted':False}
 
     def bundle(self, *,extra=(),omit=(),duplicate=(),link=None,
-               second_manifest=False,manifest=None):
+               second_manifest=False,manifest=None,replace=None):
         manifest=self.manifest if manifest is None else manifest
         link={} if link is None else link
         buf=io.BytesIO()
         with tarfile.open(fileobj=buf,mode='w:gz') as tar:
             for name,data in [*self.rows,*extra,*duplicate]:
                 if name in omit:continue
+                if replace is not None and name==replace[0]:
+                    data=replace[1]
                 info=tarfile.TarInfo(name)
                 info.mtime=0
                 if name in link:
@@ -61,7 +63,8 @@ class TarManifestNoLoss(unittest.TestCase):
 
     def test_missing_manifest_file_fails_closed(self):
         with self.assertRaisesRegex(RuntimeError,'HOLD_TAR_MEMBER_COVERAGE'):
-            backup.verify_plaintext_tar(self.bundle(omit={self.rows[0][0]}))
+            backup.verify_plaintext_tar(self.bundle(omit={self.rows[0][0]},
+                extra=[('NOX_CHECKPOINTS/UNLISTED.pt',b'other')]))
 
     def test_duplicate_member_with_same_bytes_fails_closed(self):
         with self.assertRaisesRegex(RuntimeError,'HOLD_TAR_DUPLICATE_MEMBER'):
@@ -92,8 +95,7 @@ class TarManifestNoLoss(unittest.TestCase):
     def test_tampered_original_file_sha_is_never_accepted(self):
         replacement=(self.rows[0][0],b'fake optimizer XXX')
         with self.assertRaisesRegex(RuntimeError,'HOLD_CHECKPOINT_RESTORE_HASH'):
-            backup.verify_plaintext_tar(self.bundle(
-                omit={self.rows[0][0]},extra=[replacement]))
+            backup.verify_plaintext_tar(self.bundle(replace=replacement))
 
     def test_integrated_age_decryption_route_uses_strict_audit(self):
         raw=self.bundle()
