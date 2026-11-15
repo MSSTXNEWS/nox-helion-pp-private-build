@@ -245,7 +245,21 @@
     const url=samePath(input);
     if(!url)return nativeFetch(input,init);
     const method=String(init?.method||(input instanceof Request?input.method:'GET')).toUpperCase();
-    if(input instanceof Request&&!init?.body)return nativeFetch(input,init);
+    // Request objects carry their POST body and AbortSignal on input, not init.
+    // The original V24/V22 owner routes must work for both fetch(url, init)
+    // and fetch(new Request(url, init)); never bypass the scoped S03 gate.
+    if(input instanceof Request&&!init?.body){
+      const bridged=(url.pathname==='/api/nox/chat'&&method==='POST'&&!url.search)||
+        (url.pathname==='/api/nox/history'&&method==='GET')||
+        (url.pathname==='/api/nox/dialogs/new'&&method==='POST')||
+        (url.pathname==='/api/nox/dialog/rename'&&method==='POST');
+      if(!bridged)return nativeFetch(input,init);
+      return input.clone().text().then(body=>window.fetch(url.href,{
+        method,body:method==='GET'?undefined:body,
+        signal:init?.signal||input.signal,
+        headers:init?.headers||input.headers
+      })).catch(()=>errorResponse('HOLD_REQUEST_BODY_UNAVAILABLE',422));
+    }
     if(url.pathname==='/api/nox/chat'&&method==='POST'&&!url.search){
       let data;try{data=JSON.parse(init?.body);}catch{return Promise.resolve(errorResponse('INVALID_JSON',400));}
       if(!data||typeof data!=='object'||Array.isArray(data)||typeof data.message!=='string'||

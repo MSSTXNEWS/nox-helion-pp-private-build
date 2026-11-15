@@ -218,3 +218,40 @@ test('V137 received pieces appear across real paint frames, not only at done',as
   assert.equal(pieces.map(x=>x.t).join(''),text);
   assert.equal(others.at(-1).type,'done');
 });
+
+test('V141 Request-object POST still reaches original owner SSE + durable S03 gate',async()=>{
+  const f=fake();
+  const req=new Request('https://nox.local/api/nox/chat',{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({message:prompt,dialog_id:id,request_id:'request-object-01'})
+  });
+  const response=await f.fetch(req);
+  assert.equal(response.headers.get('content-type'),'text/event-stream');
+  const frames=await events(response);
+  assert.equal(frames.filter(x=>x.type==='done').length,1);
+  assert(f.calls.some(x=>x.path==='/api/nox/chat/stream'));
+  assert(!f.calls.some(x=>x.path==='/api/nox/chat'));
+});
+test('V141 Request-object GET history and non-owner routes remain scoped',async()=>{
+  const f=fake();
+  const response=await f.fetch(new Request('https://nox.local/api/nox/history'));
+  assert.equal(response.status,200);
+  const data=await response.json();
+  assert.equal(data.dialogs[0].id,id);
+  assert(f.calls.some(x=>x.path.startsWith('/api/ui/memory/dialogs?')));
+  assert(!f.calls.some(x=>x.path==='/api/nox/history'));
+  const unrelated=await f.fetch(new Request('https://nox.local/api/not-nox'));
+  assert.equal(unrelated.status,404);
+});
+test('V141 Request-object aborted input cannot start native inference',async()=>{
+  const f=fake(),controller=new AbortController();
+  const req=new Request('https://nox.local/api/nox/chat',{
+    method:'POST',signal:controller.signal,
+    body:JSON.stringify({message:prompt,dialog_id:id,request_id:'request-object-02'})
+  });
+  controller.abort();
+  const response=await f.fetch(req);
+  const frames=await events(response);
+  assert.equal(frames.filter(x=>x.type==='done').length,0);
+  assert(!f.calls.some(x=>x.path==='/api/nox/chat/stream'));
+});
