@@ -51,10 +51,19 @@ def plan_ram(snapshot:Mapping)->dict:
     out['cgroup_max_bytes']=limit
     out['cgroup_current_bytes']=used
     out['cgroup_actual_headroom_bytes']=limit-used
-    if snapshot.get('stop_active') is True:
-        out['state']='HOLD_OWNER_STOP'
+    # Admission is forbidden unless native STOP was explicitly checked and
+    # found inactive; an absent sensor is not proof that STOP is disabled.
+    if snapshot.get('stop_active') is not False:
+        out['state']=('HOLD_OWNER_STOP' if snapshot.get('stop_active') is True
+                      else 'HOLD_STOP_NOT_VERIFIED')
         return out
-    oom_delta=snapshot.get('cgroup_oom_kill_delta',0)
+    # memory.events provides cumulative counters. Only a verified delta from
+    # native observations can attest no *new* OOM; defaulting missing to zero
+    # silently admitted allocations on an uninspected host.
+    if snapshot.get('native_cgroup_oom_delta_verified') is not True:
+        out['state']='HOLD_UNVERIFIED_OOM_DELTA'
+        return out
+    oom_delta=snapshot.get('cgroup_oom_kill_delta')
     if type(oom_delta) is not int or oom_delta<0:
         out['state']='HOLD_UNVERIFIED_OOM_DELTA'
         return out

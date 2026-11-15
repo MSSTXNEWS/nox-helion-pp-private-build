@@ -18,7 +18,10 @@ def ram(**kwargs):
        "native_cgroup_verified":True,
        "cgroup_memory_max_bytes":194_065_203_200,
        "cgroup_memory_current_bytes":105_219_207_168,
-       "s03_native_revision_verified":True}
+       "s03_native_revision_verified":True,
+       "stop_active":False,
+       "native_cgroup_oom_delta_verified":True,
+       "cgroup_oom_kill_delta":0}
     s.update(kwargs)
     return s
 
@@ -89,6 +92,27 @@ class RamGate(unittest.TestCase):
         self.assertFalse(out['model_weights_downloaded'])
         self.assertFalse(out['disk_model_cache_created'])
         self.assertFalse(out['performed'])
+
+    def test_unknown_stop_and_oom_telemetry_never_admits_ram(self):
+        trusted=ram()
+        for val in (None, 0, 'false'):
+            with self.subTest(stop=val):
+                self.assertEqual(plan_ram(ram(stop_active=val))['state'],
+                                 'HOLD_STOP_NOT_VERIFIED')
+        missing_stop=dict(trusted)
+        del missing_stop['stop_active']
+        self.assertEqual(plan_ram(missing_stop)['state'],
+                         'HOLD_STOP_NOT_VERIFIED')
+        missing_oom=dict(trusted)
+        del missing_oom['cgroup_oom_kill_delta']
+        self.assertEqual(plan_ram(missing_oom)['state'],
+                         'HOLD_UNVERIFIED_OOM_DELTA')
+        self.assertEqual(plan_ram(ram(native_cgroup_oom_delta_verified=False))['state'],
+                         'HOLD_UNVERIFIED_OOM_DELTA')
+        self.assertEqual(plan_ram(ram(cgroup_oom_kill_delta=None))['state'],
+                         'HOLD_UNVERIFIED_OOM_DELTA')
+        self.assertEqual(plan_ram(trusted)['state'],
+                         'RAM_CACHE_AND_WORKSPACE_READY')
 
     def test_native_oom_delta_and_stop_fail_closed(self):
         self.assertEqual(plan_ram(ram(cgroup_oom_kill_delta=1))['state'],
