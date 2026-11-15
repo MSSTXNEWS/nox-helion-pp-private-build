@@ -1,5 +1,11 @@
 name: NOX V137 native self observation and progressive owner Resonance — source gates
 on:
+  pull_request:
+    branches: [feature/nox-v37-v100-firsthour-14d-20261113]
+    paths:
+      - 'coordination/onepass/nox-v137-owner-self-status.js'
+      - 'coordination/onepass/test_v137_owner_self_status.cjs'
+      - '.github/workflows/nox-v137-owner-self-source-ci.yml'
   push:
     branches: [fix/nox-v135-resonance-native-stream-20261115]
     paths:
