@@ -46,6 +46,11 @@ jobs:
         if: always()
         run: |
           python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup
+      - name: Existing single NOX model native streaming TTFT and token evidence
+        if: success()
+        run: |
+          set -euo pipefail
+          python3 -m nox_runpod.teacher_mesh.v104.one_model_thinking_benchmark
       - name: Explicit acceptance boundary
         if: success()
         run: |
