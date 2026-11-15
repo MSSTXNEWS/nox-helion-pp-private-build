@@ -71,8 +71,9 @@ def validate_run(run, label):
             require(locale == 'es', f'{label}/{cid}: wrong ES locale')
         for key in ('prompt_sha256', 'answer_sha256', 'evaluation_sha256'):
             require(digest_ok(case.get(key)), f'{label}/{cid}: missing {key}')
-        require(case['prompt_sha256'] not in fingerprints, f'{label}/{cid}: duplicated prompt fingerprint')
-        fingerprints.add(case['prompt_sha256'])
+        fingerprint = case['prompt_sha256'].lower()
+        require(fingerprint not in fingerprints, f'{label}/{cid}: duplicated prompt fingerprint')
+        fingerprints.add(fingerprint)
         checks = case.get('checks')
         require(isinstance(checks, dict) and REQUIRED_CHECKS[cat] <= checks.keys(), f'{label}/{cid}: checks incomplete')
         require(all(type(checks[key]) is bool for key in REQUIRED_CHECKS[cat]), f'{label}/{cid}: non-boolean check')
@@ -100,18 +101,23 @@ def evaluate(reference, candidate, train_manifest, policy):
     ref, r = validate_run(reference, 'reference')
     cand, c = validate_run(candidate, 'candidate')
     require(isinstance(train_manifest, dict) and isinstance(train_manifest.get('prompt_sha256'), list), 'train manifest fingerprints missing')
-    train = train_manifest['prompt_sha256']
-    require(all(digest_ok(x) for x in train), 'train manifest malformed fingerprints')
+    raw_train = train_manifest['prompt_sha256']
+    require(all(digest_ok(x) for x in raw_train), 'train manifest malformed fingerprints')
+    train = [value.lower() for value in raw_train]
     require(len(set(train)) == len(train), 'duplicate train fingerprints')
-    holdout = {v['prompt_sha256'] for v in r.values()}
+    holdout = {v['prompt_sha256'].lower() for v in r.values()}
     require(not (set(train) & holdout), 'TRAIN_HOLDOUT_LEAKAGE')
     require(set(r) == set(c), 'case_id coverage drift')
     for key in ('base_sha256', 'tokenizer_sha256', 'generation_sha256', 'dataset_sha256', 'hardware_id', 'engine_build'):
-        require(ref[key] == cand[key], f'UNPAIRED_COMPARISON:{key}')
+        a_value = ref[key].lower() if key.endswith('_sha256') else ref[key]
+        b_value = cand[key].lower() if key.endswith('_sha256') else cand[key]
+        require(a_value == b_value, f'UNPAIRED_COMPARISON:{key}')
     require(ref['variant'] != cand['variant'], 'same variant: comparison not meaningful')
     for cid in r:
         for k in ('prompt_sha256', 'category', 'locale', 'split'):
-            require(r[cid][k] == c[cid][k], f'{cid}: mismatched {k}')
+            a_value = r[cid][k].lower() if k == 'prompt_sha256' else r[cid][k]
+            b_value = c[cid][k].lower() if k == 'prompt_sha256' else c[cid][k]
+            require(a_value == b_value, f'{cid}: mismatched {k}')
     require(isinstance(policy, dict) and POLICY_KEYS <= policy.keys(), 'owner-approved numerical policy missing')
     require(all(finite(policy[k]) for k in POLICY_KEYS), 'invalid numerical policy')
     require(policy['min_tps_ratio'] > 0, 'min_tps_ratio must be positive')
@@ -177,6 +183,24 @@ def selftest():
                min_tps_ratio=1, max_vram_bytes=1000, max_logit_abs_delta=.02)
     result = evaluate(a, b, {'prompt_sha256': [h('train')]}, pol)
     assert result['source_consistency'] == 'PASS' and result['native_verified'] is False
+    # SHA-256 hex is case-insensitive; mixed-case hashes must never bypass holdout separation.
+    try: evaluate(a, b, {'prompt_sha256': [a['cases'][0]['prompt_sha256'].upper()]}, pol)
+    except ValueError as exc: assert 'LEAKAGE' in str(exc)
+    else: raise AssertionError('uppercase train fingerprint bypassed holdout')
+    try: evaluate(a, b, {'prompt_sha256': [h('train'), h('train').upper()]}, pol)
+    except ValueError as exc: assert 'duplicate train' in str(exc)
+    else: raise AssertionError('mixed-case train duplicate accepted')
+    duplicate_run = make_run('duplicate')
+    duplicate_run['cases'].append(dict(duplicate_run['cases'][0],
+                                      case_id='duplicate-shadow',
+                                      prompt_sha256=duplicate_run['cases'][0]['prompt_sha256'].upper()))
+    try: validate_run(duplicate_run, 'duplicate')
+    except ValueError as exc: assert 'duplicated prompt fingerprint' in str(exc)
+    else: raise AssertionError('mixed-case holdout duplicate accepted')
+    upper_candidate = make_run('merged')
+    upper_candidate['cases'][0]['prompt_sha256'] = upper_candidate['cases'][0]['prompt_sha256'].upper()
+    upper_candidate['run']['base_sha256'] = upper_candidate['run']['base_sha256'].upper()
+    assert evaluate(a, upper_candidate, {'prompt_sha256': [h('train')]}, pol)['source_consistency'] == 'PASS'
     try: evaluate(a, b, {'prompt_sha256': [a['cases'][0]['prompt_sha256']]}, pol)
     except ValueError as exc: assert 'LEAKAGE' in str(exc)
     else: raise AssertionError('leakage not detected')
@@ -187,7 +211,7 @@ def selftest():
     try: evaluate(a, b, {'prompt_sha256': []}, pol)
     except ValueError as exc: assert 'logit delta' in str(exc)
     else: raise AssertionError('missing logit metric not detected')
-    print('SELFTEST 4/4 PASS (synthetic fixtures only; native HOLD)')
+    print('SELFTEST 8/8 PASS (synthetic fixtures only; native HOLD)')
 
 
 def main():
