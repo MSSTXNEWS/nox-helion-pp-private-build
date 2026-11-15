@@ -124,6 +124,31 @@ class V130Tests(unittest.TestCase):
         self.assertNotEqual(response.json()['event_id'],first.json()['event_id'])
         self.assertEqual(self.calls,2)
 
+    def test_owner_fact_key_idempotency_paginates_beyond_100_same_text_rows(self):
+        original=self.post()
+        self.assertEqual(original.status_code,200,original.text)
+        original_id=original.json()['event_id']
+        # Real in-memory SQLite fixture; 112 independent owner-confirmed
+        # notes with the same content/source bury the old fact-key row.
+        with sqlite3.connect(self.db) as db:
+            for n in range(112):
+                meta={'schema':'NOX_OWNER_CONFIRMED_FACT_V1',
+                      'owner_scope':'nox-single-owner',
+                      'fact_key':f'OTHER-KEY-{n}',
+                      'source_ref':self.payload['source_ref'],
+                      'source_sha256':self.payload['source_sha256'],
+                      'valid_from':self.payload['valid_from']}
+                db.execute("INSERT INTO s03_items VALUES(?,?,?,?,?,?,?)",(
+                    uuid.uuid4().hex,'M2',self.payload['content'],
+                    'OWNER-CONFIRMED:'+self.payload['source_ref'],
+                    hashlib.sha256(f'other-{n}'.encode()).hexdigest(),
+                    json.dumps(meta),'2026-11-15T00:00:00Z'))
+        again=self.post()
+        self.assertEqual(again.status_code,200,again.text)
+        self.assertTrue(again.json()['duplicate'])
+        self.assertEqual(again.json()['event_id'],original_id)
+        self.assertEqual(self.calls,1,'no second native remember() for buried key')
+
     def test_schema_mismatch_holds_and_preserves_db(self):
         with sqlite3.connect(self.db) as db:
             db.execute('ALTER TABLE s03_items RENAME TO s03_items_old')

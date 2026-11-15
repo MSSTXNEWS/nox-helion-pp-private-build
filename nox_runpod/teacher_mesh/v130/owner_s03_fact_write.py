@@ -93,31 +93,49 @@ def _matching(data):
             raise RuntimeError('HOLD_ORIGINAL_S03_SCHEMA')
         if db.execute('PRAGMA quick_check').fetchone()[0]!='ok':
             raise RuntimeError('HOLD_ORIGINAL_S03_INTEGRITY')
-        rows=db.execute(
-          "SELECT id,sha256,provenance,meta,ts FROM s03_items "
-          "WHERE segment='M2' AND text=? AND provenance=? ORDER BY rowid DESC LIMIT 100",
-          (data['content'],'OWNER-CONFIRMED:'+data['source_ref'])).fetchall()
+        # Never infer "not found" from only the newest 100 same-text rows:
+        # unrelated fact_keys may bury an older valid owner-confirmed key.
+        # Keyset pagination is read-only. Fail closed on a pathological scan
+        # rather than issue a second native S03 write with false idempotency.
         found=[]
-        for row in rows:
-            # Original S03 row digest can hash structured/provenance fields,
-            # not just the submitted UTF-8 note. Verify it as native evidence,
-            # while the owner-supplied source_sha256 remains the text digest.
-            native_sha=str(row['sha256'] or '')
-            if not _HEX.fullmatch(native_sha):
-                continue
-            if row['provenance']!='OWNER-CONFIRMED:'+data['source_ref']:
-                continue
-            try:
-                meta=json.loads(row['meta']) if isinstance(row['meta'],str) else {}
-            except (ValueError,TypeError):
-                continue
-            if (isinstance(meta,dict) and meta.get('owner_scope')==_OWNER
-                and meta.get('fact_key')==data['fact_key']
-                and meta.get('source_sha256')==data['source_sha256']
-                and meta.get('valid_from')==data['valid_from']
-                and isinstance(row['id'],str) and len(row['id'])>=6):
-                found.append({'id':row['id'],'record_sha256':native_sha,
-                              'content_sha256':data['source_sha256']})
+        cursor=None
+        scanned=0
+        while True:
+            query=("SELECT rowid AS _nox_rowid,id,sha256,provenance,meta,ts FROM s03_items "
+                   "WHERE segment='M2' AND text=? AND provenance=?")
+            params=[data['content'],'OWNER-CONFIRMED:'+data['source_ref']]
+            if cursor is not None:
+                query+=" AND rowid<?"
+                params.append(cursor)
+            rows=db.execute(query+" ORDER BY rowid DESC LIMIT 100",params).fetchall()
+            for row in rows:
+                # Original S03 row digest can hash structured/provenance fields,
+                # not just the submitted UTF-8 note. Verify it as native evidence,
+                # while the owner-supplied source_sha256 remains the text digest.
+                native_sha=str(row['sha256'] or '')
+                if not _HEX.fullmatch(native_sha):
+                    continue
+                if row['provenance']!='OWNER-CONFIRMED:'+data['source_ref']:
+                    continue
+                try:
+                    meta=json.loads(row['meta']) if isinstance(row['meta'],str) else {}
+                except (ValueError,TypeError):
+                    continue
+                if (isinstance(meta,dict) and meta.get('owner_scope')==_OWNER
+                    and meta.get('fact_key')==data['fact_key']
+                    and meta.get('source_sha256')==data['source_sha256']
+                    and meta.get('valid_from')==data['valid_from']
+                    and isinstance(row['id'],str) and len(row['id'])>=6):
+                    found.append({'id':row['id'],'record_sha256':native_sha,
+                                  'content_sha256':data['source_sha256']})
+            if found:
+                return found
+            scanned+=len(rows)
+            if len(rows)<100:
+                break
+            if scanned>=10000:
+                raise RuntimeError('HOLD_S03_MATCH_SCAN_BUDGET')
+            cursor=rows[-1]['_nox_rowid']
         return found
 
 def _persist(data):
