@@ -19,7 +19,7 @@
   // Limit event count for huge upstream chunks; preserve every codepoint.
   function livePieces(text) {
     const glyphs=Array.from(text);
-    const width=Math.max(24,Math.ceil(glyphs.length/64));
+    const width=Math.max(8,Math.ceil(glyphs.length/64));
     const pieces=[];
     for(let pos=0;pos<glyphs.length;pos+=width)pieces.push(glyphs.slice(pos,pos+width).join(''));
     return pieces;
