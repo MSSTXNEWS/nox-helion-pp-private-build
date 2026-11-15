@@ -14,6 +14,8 @@ import sqlite3
 import subprocess
 from pathlib import Path
 from typing import Mapping
+from fastapi import Request
+from fastapi.responses import JSONResponse
 
 SCHEMA = "NOX_V137_OWNER_SELF_OBSERVATION_V1"
 TRAINING_VERIFICATION = "NO_OPTIMIZER_CHECKPOINT_RECEIPT"
@@ -206,8 +208,6 @@ def evidence_for_model(observation: Mapping, verified_memory: list[dict]) -> dic
 
 def register_nox_v137_self_observation(app, trusted: dict) -> None:
     """Optional mount INSIDE existing FastAPI OneHost, never a second app."""
-    from fastapi import Request
-    from fastapi.responses import JSONResponse
     session = trusted.get("_session_ok")
     reject = trusted.get("_unauthorized")
     if not callable(session) or not callable(reject):
