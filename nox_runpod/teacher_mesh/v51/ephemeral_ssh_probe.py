@@ -174,6 +174,61 @@ for label,root in [('workspace', '/workspace'),('nox_home', '/root')]:
                     dirs+=1
         except OSError:pass
     print('NATIVE_NOX_TOPLEVEL_DIRS_'+label.upper()+'='+str(dirs))
+
+# P0 read-only ownership forensics: GPU PID belongs to GPU index, NOT a writer lease.
+def gpu_pid_map(call,procroot):
+    rc,gpu=call(['nvidia-smi','--query-gpu=index,uuid','--format=csv,noheader,nounits'])
+    if rc:return {'status':'HOLD_GPU_UUID_QUERY'}
+    ids={}
+    for line in gpu.splitlines():
+        cols=[x.strip() for x in line.split(',')]
+        if len(cols)!=2 or cols[0] not in ('0','1') or not re.fullmatch(r'GPU-[A-Za-z0-9-]{15,80}',cols[1]):
+            return {'status':'HOLD_GPU_UUID_SCHEMA'}
+        if cols[1] in ids:return {'status':'HOLD_GPU_UUID_DUPLICATE'}
+        ids[cols[1]]=int(cols[0])
+    if set(ids.values())!={0,1}:return {'status':'HOLD_GPU_COUNT_UNVERIFIED'}
+    rc,apps=call(['nvidia-smi','--query-compute-apps=gpu_uuid,pid,used_gpu_memory','--format=csv,noheader,nounits'])
+    if rc:return {'status':'HOLD_GPU_APP_QUERY'}
+    rows=[]
+    for item in apps.splitlines():
+        if not item.strip() or item.strip()=='No running processes found':continue
+        x=[v.strip() for v in item.split(',')]
+        if len(x)!=3 or x[0] not in ids or not x[1].isdigit() or not x[2].isdigit():
+            return {'status':'HOLD_GPU_APP_BINDING'}
+        pid=int(x[1]);vram=int(x[2])
+        if not (1<=pid<=9999999 and 0<=vram<=32768):
+            return {'status':'HOLD_GPU_APP_RANGE'}
+        try:comm=(procroot/str(pid)/'comm').read_text().strip()
+        except OSError:comm='UNKNOWN'
+        if not re.fullmatch(r'[A-Za-z0-9_.:-]{1,40}',comm):comm='UNKNOWN'
+        rows.append({'gpu':ids[x[0]],'pid':pid,'vram_mib':vram,'comm':comm})
+        if len(rows)>12:return {'status':'HOLD_TOO_MANY_GPU_APPS'}
+    return {'status':'PID_ONLY_NO_OWNER_LEASE','processes':rows,'gpu1_owner_lease_verified':False}
+
+def cgroup_oom_pair(path,pause):
+    def read():
+        try:lines=path.read_text().splitlines()
+        except OSError:return None
+        values={}
+        for line in lines:
+            x=line.split()
+            if len(x)!=2 or not re.fullmatch(r'[a-z_]+',x[0]) or x[0] in values or not x[1].isdigit():
+                return None
+            values[x[0]]=int(x[1])
+        return values if {'oom','oom_kill'}<=set(values) else None
+    a=read()
+    if a is None:return {'verified':False,'reason':'HOLD_CGROUP_OOM_BEFORE'}
+    pause(1.0)
+    b=read()
+    if b is None or any(b[k]<a[k] for k in ('oom','oom_kill')):
+        return {'verified':False,'reason':'HOLD_CGROUP_OOM_AFTER_OR_RESET'}
+    return {'verified':True,'oom_delta':b['oom']-a['oom'],'oom_kill_delta':b['oom_kill']-a['oom_kill']}
+
+print('NATIVE_P0_GPU_PID_MAP='+json.dumps(gpu_pid_map(call,Path('/proc')),sort_keys=True,separators=(',',':'))[:740])
+print('NATIVE_P0_CGROUP_OOM='+json.dumps(cgroup_oom_pair(Path('/sys/fs/cgroup/memory.events'),__import__('time').sleep),sort_keys=True,separators=(',',':'))[:260])
+print('NATIVE_P0_WRITER_LEASE=HOLD_NOT_PROVEN_BY_PID_INVENTORY')
+print('NATIVE_P0_OFFSITE_RESTORE=HOLD_NOT_PROVEN_BY_READ_ONLY_PROBE')
+
 print('NATIVE_READ_ONLY_COMPLETE=true')
 PYREMOTE
 """
