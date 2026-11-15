@@ -170,6 +170,32 @@ class Priorities(unittest.TestCase):
         self.assertTrue(r['retry_eligible_proposals'][0]['owner_approval_required'])
         self.assertFalse(r['trainer_started'])
 
+    def test_v176_failed_gpu_retry_never_reenters_fresh_plan(self):
+        row={'task_id':'NOX-V46-30','state':'FAILED','native_verified':True,
+             'receipt_sha256':'a'*64,'attempt_count':1,'retry_after_unix':1000,
+             'terminal_verified':True,'owner_lease_released':True,
+             'checkpoint_restorable':True}
+        obs=state(native_queue_verified=True,task_status={row['task_id']:row},
+                  now_unix=2000,gpu1_peak_verified=True,gpu1_owner_lease=True,
+                  gpu1_teacher_active=False,gpu1_trainer_active=False,
+                  native_writes_available=True)
+        audit=audit_native_queue(self.m,obs,now_unix=2000)
+        self.assertIn(row['task_id'],audit['protected_task_ids'])
+        self.assertEqual(audit['retry_eligible_proposals'][0]['next_attempt'],2)
+        self.assertFalse(audit['retry_eligible_proposals'][0]['may_enqueue_via_generic_plan'])
+        self.assertNotIn(row['task_id'],{j['task_id'] for j in plan(self.m,obs)['planned']})
+        self.assertEqual(audit['native_jobs_restarted'],0)
+
+    def test_v176_canonical_failed_gpu_retry_requires_separate_owner_path(self):
+        row={'task_id':'R60-030','state':'FAILED','native_verified':True,
+             'receipt_sha256':'a'*64,'attempt_count':1,'retry_after_unix':1000,
+             'terminal_verified':True,'owner_lease_released':True,
+             'checkpoint_restorable':True}
+        obs=state(native_queue_verified=True,task_status={row['task_id']:row},now_unix=2000)
+        audit=audit_native_queue(self.master,obs,now_unix=2000)
+        self.assertIn(row['task_id'],audit['protected_task_ids'])
+        self.assertFalse(audit['retry_eligible_proposals'][0]['may_enqueue_via_generic_plan'])
+
     def test_unknown_lease_and_untrusted_complete_hold(self):
         row={'task_id':'NOX-V46-41','state':'COMPLETED','native_verified':True,
              'receipt_sha256':'bogus','independent_test_passed':True}
