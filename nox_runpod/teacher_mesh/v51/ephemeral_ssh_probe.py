@@ -103,7 +103,8 @@ def api(method: str, path: str, key: str, data: dict | None = None):
     if data is not None:
         raw = json.dumps(data, separators=(",", ":")).encode()
         headers["Content-Type"] = "application/json"
-    request = urllib.request.Request(API + path, headers=headers, data=raw, method=method)
+    url = ("https://console.vast.ai/api/v1" + path[3:]) if path.startswith("/v1/") else (API + path)
+    request = urllib.request.Request(url, headers=headers, data=raw, method=method)
     try:
         with urllib.request.urlopen(request, timeout=22) as response:
             body = response.read(250000)
@@ -173,8 +174,8 @@ def cleanup() -> bool:
 
 def probe() -> bool:
     key = os.environ.get("NOX2", "")
-    # Vast deprecated the v0 collection endpoint; single-instance GET still works.
-    d = api("GET", f"/instances/{INSTANCE}/", key)
+    # Vast v0 instance routes can return 404 in new API deployments; v1 lists instances.
+    d = api("GET", "/v1/instances/?owner=me&limit=25", key)
     d = d.get("instances", d) if isinstance(d, dict) else None
     if isinstance(d, list):
         d = next((row for row in d if str(row.get("id")) == str(INSTANCE)), None)
