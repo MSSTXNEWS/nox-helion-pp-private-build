@@ -91,7 +91,7 @@
   async function consume(response,emit,signal) {
     if(!response.ok||!response.body)throw Error('HOLD_NATIVE_STREAM_'+await reason(response));
     const reader=response.body.getReader(),decoder=new TextDecoder();
-    let buf='',answer='',done=null,doneSeen=false;
+    let buf='',answer='',done=null,doneSeen=false,startSeen=false;
     const line=async str=>{
       if(!str.trim())return;
       let e;
@@ -105,12 +105,17 @@
       }
       if(e.type==='error')throw Error('HOLD_NATIVE_'+String(e.error||'ERROR').slice(0,90));
       if(e.type==='delta'){
+        if(!startSeen)throw Error('HOLD_NATIVE_START_REQUIRED');
         if(doneSeen||typeof e.text!=='string'||answer.length+e.text.length>MAX)throw Error('HOLD_NATIVE_DELTA');
         answer+=e.text;await emit(e.text);
       } else if(e.type==='done') {
+        if(!startSeen)throw Error('HOLD_NATIVE_START_REQUIRED');
         if(doneSeen)throw Error('HOLD_DUPLICATE_DONE');
         doneSeen=true;done=e;
-      } else if(e.type!=='start'&&e.type!=='preparing') {
+      } else if(e.type==='start') {
+        if(startSeen)throw Error('HOLD_DUPLICATE_NATIVE_START');
+        startSeen=true;
+      } else if(e.type!=='preparing') {
         // Fail closed: an unrecognized native frame cannot precede a
         // trustworthy terminal receipt or persisted S03 history readback.
         throw Error('HOLD_NATIVE_UNKNOWN_FRAME');

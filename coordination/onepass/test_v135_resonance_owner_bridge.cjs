@@ -474,3 +474,59 @@ test('V158 unknown or missing native event before done cannot report persisted S
       'never perform S03 acceptance on unrecognized native event');
   }
 });
+
+test('V159 require real native start before delta/done and reject duplicate start',async()=>{
+  // Existing V112 OneHost emits preparing -> start -> delta -> done.
+  // A fake/incomplete startless sequence must never become an S03 success.
+  const p='V159 start contract',a='Valid upstream answer';
+  const good=[
+    {type:'preparing'},
+    {type:'start',model:'NOX HELION'},
+    {type:'delta',text:a},
+    {type:'done',saved:true,s03_integrated:true,dialog_id:id,exchange_id:'v159-real-start-001'}
+  ];
+  async function run(frames){
+    const called=[];
+    const original=async path=>{
+      const u=new URL(String(path),'https://nox.local');called.push(u.pathname);
+      if(u.pathname==='/api/ui/memory/dialogs/create')
+        return Response.json({dialog_id:id,title:'V159'});
+      if(u.pathname==='/api/ui/memory/dialogs/history')
+        return Response.json({status:'READY',dialog_id:id,messages:[
+          {role:'user',content:p},{role:'assistant',content:a}]});
+      if(u.pathname==='/api/nox/chat/stream')
+        return new Response(new ReadableStream({start(c){
+          c.enqueue(new TextEncoder().encode(frames.map(x=>JSON.stringify(x)+'\n').join('')));
+          c.close();
+        }}),{headers:{'content-type':'application/x-ndjson'}});
+      return new Response('NO_NATIVE_ROUTE',{status:404});
+    };
+    const w={NOX_NATIVE_OWNER:true,fetch:original};
+    const loc={pathname:'/nox-web-v29/pc/resonance.html',
+      href:'https://nox.local/nox-web-v29/pc/resonance.html',origin:'https://nox.local'};
+    vm.runInNewContext(JS,{window:w,location:loc,URL,Request,Response,ReadableStream,
+      TextDecoder,TextEncoder,AbortController,performance,console,Intl,setTimeout});
+    const r=await w.fetch('/api/nox/chat',{method:'POST',
+      body:JSON.stringify({message:p})});
+    return {status:r.status,result:await r.json(),called};
+  }
+  const valid=await run(good);
+  assert.equal(valid.status,200,'original OneHost start sequence must pass');
+  assert.equal(valid.result.history_persisted,true);
+  assert(valid.called.includes('/api/ui/memory/dialogs/history'));
+  const invalid=[
+    {frames:[good[2],good[3]],error:/HOLD_NATIVE_START_REQUIRED/},
+    {frames:[good[0],good[2],good[3]],error:/HOLD_NATIVE_START_REQUIRED/},
+    {frames:[good[0],good[3]],error:/HOLD_NATIVE_START_REQUIRED/},
+    {frames:[good[0],good[1],good[1],good[2],good[3]],
+     error:/HOLD_DUPLICATE_NATIVE_START/}
+  ];
+  for(const x of invalid){
+    const bad=await run(x.frames);
+    assert.equal(bad.status,503,'invalid native start contract must fail closed');
+    assert.match(bad.result.error,x.error);
+    assert.equal(bad.result.history_persisted,false);
+    assert(!bad.called.includes('/api/ui/memory/dialogs/history'),
+      'reject before S03 acceptance on invalid protocol');
+  }
+});
