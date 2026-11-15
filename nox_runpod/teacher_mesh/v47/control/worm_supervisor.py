@@ -10,6 +10,7 @@ import json
 import re
 
 TASKID=re.compile(r"^NOX-V46-(0[1-9]|[1-5][0-9]|60)$")
+R60ID=re.compile(r"^R60-(00[1-9]|0[1-5][0-9]|060)$")
 SHA=re.compile(r"^[a-f0-9]{64}$")
 RUNNING=frozenset(("RUNNING","PENDING","CLAIMED"))
 STATES=RUNNING | {"COMPLETED","FAILED","CANCELLED","PAUSED","BLOCKED"}
@@ -45,11 +46,33 @@ def audit_native_queue(matrix, observations, *, now_unix: int, heartbeat_s: int=
         result["state"]="HOLD_NATIVE_OWNER_STOP_S03_OR_CHAT";return result
     rows=matrix.get("tasks")
     status=observations.get("task_status")
-    if (not isinstance(rows,list) or len(rows)!=60
-            or any(not isinstance(t,dict) or not TASKID.fullmatch(str(t.get("task_id",""))) for t in rows)
-            or not isinstance(status,Mapping)):
+    # Source V46 and canonical coordination/R60 are two IDs for the SAME
+    # 60 logical tasks, not two queues. Reject mixed/duplicate/incomplete
+    # matrices before counting even one native registration.
+    if not isinstance(rows,list) or len(rows)!=60 or not isinstance(status,Mapping):
         result["state"]="HOLD_NATIVE_QUEUE_SCHEMA";return result
-    allowed={t["task_id"] for t in rows}
+    allowed=set()
+    family=None
+    for task in rows:
+        if not isinstance(task,dict):
+            result["state"]="HOLD_NATIVE_QUEUE_SCHEMA";return result
+        tid=task.get("task_id")
+        if isinstance(tid,str) and TASKID.fullmatch(tid):
+            kind="V46"
+        elif isinstance(tid,str) and R60ID.fullmatch(tid):
+            kind="R60"
+            if task.get("legacy_task_id")!=f"NOX-V46-{int(tid[-3:]):02d}":
+                result["state"]="HOLD_NATIVE_QUEUE_SCHEMA";return result
+        else:
+            result["state"]="HOLD_NATIVE_QUEUE_SCHEMA";return result
+        if family is not None and family!=kind or tid in allowed:
+            result["state"]="HOLD_NATIVE_QUEUE_SCHEMA";return result
+        family=kind
+        allowed.add(tid)
+    expected=({f"R60-{i:03d}" for i in range(1,61)} if family=="R60"
+              else {f"NOX-V46-{i:02d}" for i in range(1,61)})
+    if allowed!=expected:
+        result["state"]="HOLD_NATIVE_QUEUE_SCHEMA";return result
     if any(k not in allowed for k in status):
         result["state"]="HOLD_FOREIGN_TASK_IDS";return result
     protected=set()
@@ -90,7 +113,16 @@ def audit_native_queue(matrix, observations, *, now_unix: int, heartbeat_s: int=
                 and obs.get("owner_lease_released") is True
                 and type(tries) is int and 0<=tries<max_attempts
                 and type(when) is int and 0<=when<=now_unix)
-            if task.get("requires_backup_restore") or task.get("resource")=="GPU1_EXCLUSIVE":
+            # R60 uses resource_class / backup_restore_required / checkpoint,
+            # whereas V46 uses resource / requires_backup_restore. Ignoring
+            # these canonical fields previously admitted an unsafe GPU1 retry.
+            checkpoint=task.get("checkpoint")
+            backup_required=(task.get("requires_backup_restore") is True
+                or task.get("backup_restore_required") is True
+                or isinstance(checkpoint,Mapping) and checkpoint.get("required") is True)
+            gpu1=(task.get("resource")=="GPU1_EXCLUSIVE"
+                  or task.get("resource_class")=="GPU1_EXCLUSIVE")
+            if backup_required or gpu1:
                 eligible=eligible and obs.get("checkpoint_restorable") is True
             if eligible:
                 result["retry_eligible_proposals"].append({

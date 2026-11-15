@@ -131,6 +131,45 @@ class Priorities(unittest.TestCase):
         row['attempt_count']=3
         self.assertFalse(audit_native_queue(self.m,x,now_unix=2000)['retry_eligible_proposals'])
 
+
+    def test_v175_canonical_r60_is_one_queue_not_sixty_new_jobs(self):
+        # The canonical R60 document must reconcile to zero native jobs,
+        # not be silently discarded by the legacy-only NOX-V46 ID regex.
+        x=state(native_queue_verified=True,task_status={},now_unix=2000)
+        audit=audit_native_queue(self.master,x,now_unix=2000)
+        self.assertEqual(audit['state'],'NATIVE_QUEUE_RECONCILED_PROPOSALS_ONLY')
+        self.assertEqual(audit['native_registered_verified'],0)
+        self.assertEqual(audit['unregistered_count'],60)
+        self.assertEqual(audit['native_jobs_started'],0)
+
+    def test_v175_duplicate_or_mixed_matrix_ids_are_not_verified(self):
+        x=state(native_queue_verified=True,task_status={},now_unix=2000)
+        repeated=dict(self.m,tasks=[dict(t) for t in self.m['tasks']])
+        repeated['tasks'][1]['task_id']=repeated['tasks'][0]['task_id']
+        self.assertEqual(audit_native_queue(repeated,x,now_unix=2000)['state'],
+                         'HOLD_NATIVE_QUEUE_SCHEMA')
+        mixed=dict(self.master,tasks=[dict(t) for t in self.master['tasks']])
+        mixed['tasks'][1]['task_id']='NOX-V46-02'
+        self.assertEqual(audit_native_queue(mixed,x,now_unix=2000)['state'],
+                         'HOLD_NATIVE_QUEUE_SCHEMA')
+        wrong_mapping=dict(self.master,tasks=[dict(t) for t in self.master['tasks']])
+        wrong_mapping['tasks'][29]['legacy_task_id']='NOX-V46-29'
+        self.assertEqual(audit_native_queue(wrong_mapping,x,now_unix=2000)['state'],
+                         'HOLD_NATIVE_QUEUE_SCHEMA')
+
+    def test_v175_canonical_gpu1_failure_requires_restorable_checkpoint(self):
+        row={'task_id':'R60-030','state':'FAILED','native_verified':True,
+             'receipt_sha256':'a'*64,'attempt_count':1,
+             'retry_after_unix':1000,'owner_lease_released':True,
+             'terminal_verified':True,'checkpoint_restorable':False}
+        x=state(native_queue_verified=True,task_status={row['task_id']:row},now_unix=2000)
+        self.assertEqual(audit_native_queue(self.master,x,now_unix=2000)['retry_eligible_proposals'],[])
+        row['checkpoint_restorable']=True
+        r=audit_native_queue(self.master,x,now_unix=2000)
+        self.assertEqual([e['task_id'] for e in r['retry_eligible_proposals']],['R60-030'])
+        self.assertTrue(r['retry_eligible_proposals'][0]['owner_approval_required'])
+        self.assertFalse(r['trainer_started'])
+
     def test_unknown_lease_and_untrusted_complete_hold(self):
         row={'task_id':'NOX-V46-41','state':'COMPLETED','native_verified':True,
              'receipt_sha256':'bogus','independent_test_passed':True}

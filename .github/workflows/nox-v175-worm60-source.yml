@@ -1,7 +1,7 @@
 name: NOX V175 existing OneHost worm60 supervisor source QA
 on:
   push:
-    branches: [nox/v175-worm60-native-heartbeat-owner-recovery-20261115]
+    branches: [feature/nox-v38-synaptic-brain-20261114]
     paths:
       - 'nox_runpod/teacher_mesh/v47/control/**'
       - 'coordination/NOX_V175_WORM60*'
