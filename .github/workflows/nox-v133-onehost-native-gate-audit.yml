@@ -1,12 +1,12 @@
 name: NOX V133 source-only OneHost dangerous auto-run audit
 on:
   push:
-    branches: [nox/e2-v133-native-gates-atomic-20261115]
+    branches: [nox/e2-v133-native-gates-atomic-20261115, feature/nox-v38-synaptic-brain-20261114]
     paths:
       - '.github/workflows/nox-v133-onehost-native-gate-audit.yml'
       - 'coordination/onepass/native_job_gate_audit.py'
       - 'coordination/onepass/test_native_job_gate_audit.py'
-      - '.github/workflows/nox-*.yml'
+      - '.github/workflows/**'
   workflow_dispatch:
 permissions:
   contents: read
