@@ -1,15 +1,20 @@
 name: NOX V140 source Drive to original OneHost owner WEB integration read-only preflight
 on:
-  push:
-    branches: [feature/nox-v38-synaptic-brain-20261114]
-    paths: ['.github/workflows/nox-v140-drive-onehost-readonly-integration-preflight.yml']
+  workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Owner-approved read-only existing OneHost access only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
 permissions: {contents: read}
 concurrency:
   group: nox-v51-vast60509551-temp-ssh
   cancel-in-progress: false
 jobs:
   owner-web-preflight:
-    if: "${{ github.repository == 'MSSTXNEWS/nox-helion-pp-private-build' && github.actor == 'MSSTXNEWS' }}"
+    if: "${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.repository == 'MSSTXNEWS/nox-helion-pp-private-build' && github.actor == 'MSSTXNEWS' }}"
     runs-on: ubuntu-latest
     timeout-minutes: 7
     env:
