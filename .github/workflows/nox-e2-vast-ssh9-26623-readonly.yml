@@ -1,0 +1,75 @@
+name: NOX E2 current Vast SSH relay 26623 onepass read-only
+on:
+  push:
+    branches: [nox/e2-vast-official-v0-readonly-20261115]
+    paths:
+      - .github/workflows/nox-e2-vast-ssh9-26623-readonly.yml
+permissions:
+  contents: read
+concurrency:
+  group: nox-e2-vast-ssh9-26623-readonly
+  cancel-in-progress: false
+jobs:
+  ssh-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    env:
+      NOX_VAST_SSH_PRIVATE_KEY: ${{ secrets.NOX_VAST_SSH_PRIVATE_KEY }}
+      NOX_VAST_SSH_KNOWN_HOSTS: ${{ secrets.NOX_VAST_SSH_KNOWN_HOSTS }}
+    steps:
+      - name: Check exact owner supplied relay SSH TCP and banner
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import socket
+          host,port="ssh9.vast.ai",26623
+          try:
+              with socket.create_connection((host,port),timeout=12) as conn:
+                  conn.settimeout(6)
+                  banner=conn.recv(96)
+              print("NOX_SSH_RELAY_TCP=OPEN")
+              print("NOX_SSH_RELAY_BANNER_VALID="+str(banner.startswith(b"SSH-2.")).lower())
+              if not banner.startswith(b"SSH-2."): raise SystemExit(2)
+          except OSError as e:
+              print("NOX_SSH_RELAY_TCP=HOLD_"+type(e).__name__)
+              raise SystemExit(2)
+          PY
+      - name: Authenticate via already saved SSH identity only; remote read-only inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${NOX_VAST_SSH_PRIVATE_KEY:-}" ]; then
+            echo "NOX_SSH_AUTH=HOLD_PRIVATE_KEY_NOT_CONFIGURED"
+            exit 2
+          fi
+          if [ -z "${NOX_VAST_SSH_KNOWN_HOSTS:-}" ]; then
+            echo "NOX_SSH_AUTH=HOLD_KNOWN_HOST_NOT_PINNED"
+            exit 2
+          fi
+          umask 077
+          key="$RUNNER_TEMP/nox-ssh-key"
+          hosts="$RUNNER_TEMP/nox-known-hosts"
+          trap 'rm -f "$key" "$hosts"' EXIT
+          printf '%s\n' "$NOX_VAST_SSH_PRIVATE_KEY" > "$key"
+          printf '%s\n' "$NOX_VAST_SSH_KNOWN_HOSTS" > "$hosts"
+          ssh-keygen -y -f "$key" >/dev/null 2>&1 || { echo "NOX_SSH_AUTH=HOLD_BAD_SSH_IDENTITY"; exit 2; }
+          ssh-keygen -F '[ssh9.vast.ai]:26623' -f "$hosts" >/dev/null 2>&1 || { echo "NOX_SSH_AUTH=HOLD_RELAY_HOST_NOT_PINNED"; exit 2; }
+          ssh -T -i "$key" -p 26623 -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$hosts" -o ConnectTimeout=12 -o ServerAliveInterval=10 -o ServerAliveCountMax=2 root@ssh9.vast.ai 'bash -s' <<'REMOTE'
+          set -eu
+          echo "NOX_SSH_AUTH=PASS"
+          echo "NOX_NATIVE_UID=$(id -u)"
+          (nvidia-smi --query-gpu=index,name,memory.used,memory.total,utilization.gpu,temperature.gpu --format=csv,noheader,nounits 2>/dev/null | head -n 3 | sed 's/^/NOX_GPU=/') || true
+          (df -B1 /workspace 2>/dev/null | awk 'NR==2{print "NOX_WORKSPACE_FREE_BYTES="$4}') || true
+          (supervisorctl status 2>/dev/null | head -n 15 | awk '{print "NOX_SUPERVISOR="$1":"$2}') || true
+          for port in 8080 8081 8095; do
+            code=$(curl -s -o /dev/null --max-time 3 -w '%{http_code}' "http://127.0.0.1:$port/" || true)
+            echo "NOX_HTTP_${port}=${code:-000}"
+          done
+          echo "NOX_READONLY_NATIVE_PROBE_COMPLETE=true"
+          REMOTE
+      - name: Explicit guard
+        if: always()
+        run: |
+          echo 'NO_NEW_SERVER=true'
+          echo 'NO_MODEL_OR_S03_OR_CHECKPOINT_WRITE=true'
+          echo 'NO_RESTART_OR_TRAINER_CHANGE=true'
