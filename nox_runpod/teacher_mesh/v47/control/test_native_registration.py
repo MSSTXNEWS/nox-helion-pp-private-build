@@ -245,6 +245,33 @@ class NativeRegistrationGates(unittest.TestCase):
         self.assertGreaterEqual(reads['count'],2)
         self.assertEqual(approvals,[2001])
 
+    def test_approval_revokes_writer_lease_before_enqueue_fail_closed(self):
+        """Owner approval can invalidate the lease even before the first write."""
+        from dataclasses import replace
+        original=self.ports()
+        def revoke_during_approval(scope,digest,inventory):
+            self.snapshot['owner_queue_writer_lease_verified']=False
+            return scope==self.scope
+        native=replace(original,approve=revoke_during_approval)
+        result=enqueue_approved(native,self.matrix,self.scope,limit=1)
+        self.assertEqual(result['state'],'HOLD_NATIVE_LEASE_CHANGED_AFTER_APPROVAL')
+        self.assertEqual(result['jobs_enqueued_verified'],0)
+        self.assertEqual(self.calls['enqueue'],0)
+        self.assertEqual(self.calls['s03'],0)
+
+    def test_approval_rotates_owner_epoch_before_enqueue_fail_closed(self):
+        """A fresh valid-looking lease with a different owner epoch is not ours."""
+        from dataclasses import replace
+        self.snapshot['owner_queue_writer_lease_epoch']='e1'
+        original=self.ports()
+        def rotate_during_approval(scope,digest,inventory):
+            self.snapshot['owner_queue_writer_lease_epoch']='e2'
+            return scope==self.scope
+        native=replace(original,approve=rotate_during_approval)
+        result=enqueue_approved(native,self.matrix,self.scope,limit=1)
+        self.assertEqual(result['state'],'HOLD_NATIVE_LEASE_CHANGED_AFTER_APPROVAL')
+        self.assertEqual(self.calls['enqueue'],0)
+
     def test_native_lease_loss_between_two_batch_jobs_cannot_continue(self):
         prior=plan(self.matrix,self.snapshot,max_new=2)
         self.assertGreaterEqual(len(prior['planned']),2)

@@ -343,6 +343,31 @@ def enqueue_approved(native:NativePorts,matrix:dict,owner_scope:str,*,limit:int=
             if native.approve(owner_scope,digest,dict(fresh)) is not True:
                 return {'state':'HOLD_NATIVE_OWNER_APPROVAL','jobs_enqueued':len(receipts),'receipts':receipts}
             if not gate():return {'state':'HOLD_STOP_DURING_QUEUE','jobs_enqueued':len(receipts),'receipts':receipts}
+            # Owner approval is not a durable native writer lease. It may revoke
+            # or rotate that lease while signing this task. Verify admission
+            # again after approval and before any queue mutation.
+            after_approval=native.state()
+            if (not isinstance(after_approval,Mapping)
+                    or after_approval.get('native_queue_verified') is not True
+                    or after_approval.get('native_writes_available') is not True
+                    or after_approval.get('owner_queue_writer_lease_verified') is not True
+                    or after_approval.get('stop_active') is not False
+                    or not isinstance(after_approval.get('task_status'),Mapping)
+                    or type(after_approval.get('now_unix')) is not int
+                    or after_approval['now_unix']<=0
+                    or any(after_approval.get(key)!=fresh.get(key)
+                           for key in ('owner_queue_writer_lease_id',
+                                       'owner_queue_writer_lease_epoch',
+                                       'queue_epoch','owner_scope')
+                           if key in fresh or key in after_approval)):
+                return {'state':'HOLD_NATIVE_LEASE_CHANGED_AFTER_APPROVAL',
+                        'jobs_enqueued_verified':len(receipts),'receipts':receipts}
+            approved_audit=audit_native_queue(matrix,after_approval,
+                                             now_unix=after_approval['now_unix'])
+            if (approved_audit.get('state')!='NATIVE_QUEUE_RECONCILED_PROPOSALS_ONLY'
+                    or approved_audit.get('untrusted_count')!=0):
+                return {'state':'HOLD_NATIVE_QUEUE_CHANGED_AFTER_APPROVAL',
+                        'jobs_enqueued_verified':len(receipts),'receipts':receipts}
             ticket=native.queue_enqueue(payload)
             if (not isinstance(ticket,Mapping) or ticket.get('accepted') is not True
                     or not isinstance(ticket.get('job_id'),str)
