@@ -92,9 +92,14 @@ def assert_model(p):
     return p
 
 def assert_remote(remote):
-    if not remote.startswith(("noxdrive:", "noxr2:")) or chr(92) in remote:
-        raise ValueError("Provide explicit rclone remote:path (e.g. noxdrive:NOX_COLD)")
-    return remote.rstrip("/")
+    if not isinstance(remote, str) or not remote.startswith(("noxdrive:", "noxr2:")):
+        raise ValueError("HOLD_REMOTE_MUST_BE_AUTHORIZED_NOXDRIVE_OR_NOXR2")
+    payload = remote.split(":", 1)[1]
+    if not payload or payload.startswith("/") or ":" in payload or chr(92) in payload or any(
+        part in ("", ".", "..") for part in payload.split("/")
+    ):
+        raise ValueError("HOLD_UNSAFE_REMOTE_PATH")
+    return remote
 
 def upload(a):
     # The old --evict path could unlink weights using a user-written "active"
