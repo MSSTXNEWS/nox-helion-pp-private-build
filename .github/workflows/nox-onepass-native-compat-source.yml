@@ -1,7 +1,7 @@
 name: NOX ONEPASS owner-stage legacy JSON/SSE native stream compatibility - SOURCE ONLY
 on:
   push:
-    branches: [fix/nox-web-v293-onepass-native-compat-20261115]
+    branches: [fix/nox-web-v293-onepass-native-compat-20261115, feature/nox-v38-synaptic-brain-20261114]
     paths:
       - 'coordination/onepass/nox-legacy-chat-bridge-v293.js'
       - 'coordination/onepass/build_legacy_compat_v2.py'
@@ -38,6 +38,16 @@ jobs:
           set -euo pipefail
           python -m py_compile coordination/onepass/build_legacy_compat_v2.py
           python -m unittest -v coordination.onepass.test_build_legacy_compat_v2
+      - name: Export exact tested owner-stage compatibility source for V134 convergence
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_V134_OWNER_CHAT_COMPAT_SOURCE
+          path: |
+            coordination/onepass/nox-legacy-chat-bridge-v293.js
+            coordination/onepass/build_legacy_compat_v2.py
+            coordination/onepass/NOX_V293_NATIVE_COMPAT_ACCEPTANCE.json
+          if-no-files-found: error
+          retention-days: 14
       - name: Confirm no native Vast/Windows changes from source tests
         run: |
           echo 'NOX_ONEPASS_COMPAT_SOURCE_TESTED=true'
