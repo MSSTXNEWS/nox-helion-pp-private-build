@@ -30,7 +30,7 @@ function fake(owner=true,pathname='/nox-web-v29/pc/resonance.html',rejectReceipt
       const b=JSON.parse(opts.body);
       assert.equal(b.revision,2);
       assert.equal(b.confirmed,true);
-      return Response.json({dialog_id:id,title:b.title});
+      return Response.json({dialog_id:id,title:b.title,revision:3});
     }
     if(u.pathname==='/api/nox/chat/stream'){
       const b=JSON.parse(opts.body);
@@ -112,6 +112,8 @@ test('legacy dialogs use original real owner S03 and no invented message counts'
   const n=await(await f.fetch('/api/nox/dialog/rename',{method:'POST',
     body:JSON.stringify({dialog_id:id,title:'Новое имя'})})).json();
   assert.equal(n.dialog_id,id);
+  assert.equal(n.status,'READY','original V24 demands READY on rename');
+  assert.equal(n.revision,3);
 });
 test('not installed for anonymous pages, foreign origin, or non-Resonance',async()=>{
   for(const [owner,path] of [[false,'/nox-web-v29/pc/resonance.html'],[true,'/pc/resonance.html'],[true,'/nox-web-v29/chat.html']]){
