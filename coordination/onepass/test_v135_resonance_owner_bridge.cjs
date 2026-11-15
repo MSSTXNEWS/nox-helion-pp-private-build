@@ -343,10 +343,11 @@ test('V156 coalesced native NDJSON keeps valid short frames and rejects one over
   const id='abcd1234abcd1234abcd1234abcd1234';
   const piece='Ж'.repeat(22),count=7000,prompt='Coalesced native frame audit';
   const answer=piece.repeat(count);
-  const valid=Array.from({length:count},()=>JSON.stringify({type:'delta',text:piece})+'\n').join('')+
+  const upstreamStart=JSON.stringify({type:'start',model:'NOX HELION'})+'\n';
+  const valid=upstreamStart+Array.from({length:count},()=>JSON.stringify({type:'delta',text:piece})+'\n').join('')+
     JSON.stringify({type:'done',saved:true,s03_integrated:true,dialog_id:id,exchange_id:'coalesced-qa-01'})+'\n';
   assert(valid.length>300000&&answer.length<200000,'valid source-level stress fixture');
-  const tooLong=JSON.stringify({type:'delta',text:'small',unused:'x'.repeat(300100)})+'\n';
+  const tooLong=upstreamStart+JSON.stringify({type:'delta',text:'small',unused:'x'.repeat(300100)})+'\n';
   async function run(nativeFrames){
     const calls=[];
     const upstream=async path=>{
@@ -417,11 +418,12 @@ test('V157 native done is terminal: reject trailing control frame before S03 REA
       body:JSON.stringify({message:prompt})});
     return {status:r.status,body:await r.json(),called};
   }
-  const clean=await attempt(delta+done+'\n');
+  const start=JSON.stringify({type:'start',model:'NOX HELION'})+'\n';
+  const clean=await attempt(start+delta+done+'\n');
   assert.equal(clean.status,200,'native done plus blank line is permitted');
   assert.equal(clean.body.history_persisted,true);
   assert(clean.called.includes('/api/ui/memory/dialogs/history'));
-  const bad=await attempt(delta+done+unexpected);
+  const bad=await attempt(start+delta+done+unexpected);
   assert.equal(bad.status,503,'a control frame after done must fail closed');
   assert.match(bad.body.error,/HOLD_NATIVE_TRAILING_FRAME_AFTER_DONE/);
   assert.equal(bad.body.history_persisted,false,'never claim persisted on invalid protocol');
