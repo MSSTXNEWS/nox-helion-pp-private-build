@@ -24,7 +24,7 @@ RUNNING = {"RUNNING", "PENDING", "CLAIMED"}
 
 def digest(value: Mapping) -> str:
     return sha256(json.dumps(value, sort_keys=True, ensure_ascii=False,
-                             separators=(",", ":")).encode("utf-8")).hexdigest()
+                             separators=(",", ":"), allow_nan=False).encode("utf-8")).hexdigest()
 
 
 def reconcile(*, statuses, queues, events, s03, owner_scope, source_sha256,
@@ -116,13 +116,19 @@ def reconcile(*, statuses, queues, events, s03, owner_scope, source_sha256,
                            ("job_sha256", "native_queue_receipt_sha256"))):
             out["rejected"].append({"task_id": tid, "reason": "ORIGINAL_EVENT_MISMATCH"})
             continue
+        # Supplied queue events can be malformed; refuse them without crashing.
+        try:
+            expected_event_sha256 = digest(event)
+        except (TypeError, ValueError, OverflowError):
+            out["rejected"].append({"task_id": tid, "reason": "UNSERIALIZABLE_OR_NONFINITE_EVENT"})
+            continue
         if (not isinstance(proof, Mapping) or proof.get("state") != "PRESENT"
                 or proof.get("native_verified") is not True
                 or proof.get("owner_scope") != owner_scope
                 or proof.get("instance_id", instance_id) != instance_id
                 or proof.get("task_id", tid) != tid
                 or proof.get("job_id") != jid
-                or proof.get("event_sha256") != digest(event)):
+                or proof.get("event_sha256") != expected_event_sha256):
             out["rejected"].append({"task_id": tid, "reason": "S03_DURABLE_READBACK_MISSING_OR_MISMATCH"})
             continue
         if native_state == "RUNNING":
@@ -292,6 +298,18 @@ class ContractTests(unittest.TestCase):
         r = self.check(mutation)
         self.assertEqual(r["state"], "HOLD_FOREIGN_TASK_IDS")
         self.assertEqual(r["crosschecked_queue_s03_pairs"], 0)
+
+    def test_unserializable_event_fail_closed(self):
+        r = self.check(lambda d: d["events"]["native/001"].update(extraneous={3}))
+        self.assertEqual(r["crosschecked_queue_s03_pairs"], 0)
+        self.assertEqual(r["rejected"][0]["reason"], "UNSERIALIZABLE_OR_NONFINITE_EVENT")
+        self.assertFalse(r["native_pass"])
+
+    def test_nonfinite_event_fail_closed(self):
+        r = self.check(lambda d: d["events"]["native/001"].update(extraneous=float("nan")))
+        self.assertEqual(r["crosschecked_queue_s03_pairs"], 0)
+        self.assertEqual(r["rejected"][0]["reason"], "UNSERIALIZABLE_OR_NONFINITE_EVENT")
+        self.assertFalse(r["native_pass"])
 
     def test_empty_is_unknown(self):
         r = self.check(lambda d: (d["statuses"].clear(),d["queues"].clear(),d["s03"].clear(),d["events"].clear()))
