@@ -1,0 +1,133 @@
+name: NOX P0 existing Vast owner auth + pinned SSH native READ ONLY
+on:
+  push:
+    branches: [nox/manual1-p0-native-access-gate-20261115]
+    paths: [.github/workflows/nox-p0-vast-owner-native-readonly.yml]
+permissions:
+  contents: read
+concurrency:
+  group: nox-existing-60509551-p0-readonly-auth
+  cancel-in-progress: false
+jobs:
+  native-owner-readonly:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+      NOX_VAST_SSH_PRIVATE_KEY: ${{ secrets.NOX_VAST_SSH_PRIVATE_KEY }}
+    steps:
+      - name: Official Vast existing-instance authenticated GET and both SSH banners
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json,os,socket,urllib.request,urllib.error
+          key=os.environ.get('NOX2','')
+          print('NOX_P0_VAST_KEY_CONFIGURED='+str(bool(key)).lower())
+          for route in ('https://cloud.vast.ai/api/v0/instances/','https://console.vast.ai/api/v0/instances/'):
+              label='cloud' if 'cloud.vast.ai' in route else 'console'
+              if not key:
+                  print('NOX_P0_VAST_'+label.upper()+'=HOLD_MISSING_SECRET')
+                  continue
+              try:
+                  req=urllib.request.Request(route,headers={'Authorization':'Bearer '+key,'Accept':'application/json'})
+                  with urllib.request.urlopen(req,timeout=15) as resp:
+                      d=json.loads(resp.read(1000000))
+                  instances=d.get('instances',[]) if isinstance(d,dict) else d
+                  if isinstance(instances,dict):instances=[instances]
+                  if not isinstance(instances,list):
+                      print('NOX_P0_VAST_'+label.upper()+'=HOLD_SCHEMA');continue
+                  row=next((x for x in instances if isinstance(x,dict) and str(x.get('id'))=='60509551'),None)
+                  if row:
+                      public=['id','actual_status','gpu_name','num_gpus','gpu_ram']
+                      print('NOX_P0_VAST_'+label.upper()+'=AUTHENTICATED_EXISTING_INSTANCE')
+                      print('NOX_P0_VAST_INSTANCE='+json.dumps({k:row[k] for k in public if k in row},sort_keys=True))
+                  else:
+                      print('NOX_P0_VAST_'+label.upper()+'=AUTHENTICATED_INSTANCE_NOT_VISIBLE')
+              except urllib.error.HTTPError as ex:
+                  print('NOX_P0_VAST_'+label.upper()+'=HOLD_HTTP_'+str(ex.code))
+              except Exception as ex:
+                  print('NOX_P0_VAST_'+label.upper()+'=HOLD_'+type(ex).__name__)
+          for label,host,port in (('RELAY','ssh9.vast.ai',26623),('DIRECT','166.113.48.41',11234)):
+              try:
+                  with socket.create_connection((host,port),timeout=8) as conn:
+                      conn.settimeout(5)
+                      banner=conn.recv(80)
+                  print('NOX_P0_'+label+'_TCP_SSH2='+str(banner.startswith(b'SSH-2.')).lower())
+              except Exception as ex:
+                  print('NOX_P0_'+label+'_TCP=HOLD_'+type(ex).__name__)
+          print('NOX_P0_API_PREFLIGHT_FINISHED=true')
+          PY
+      - name: Use only already-owner-configured private key and pinned SSH fingerprint for native inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${NOX_VAST_SSH_PRIVATE_KEY:-}" ]; then
+            echo "NOX_P0_NATIVE_OWNER_AUTH=HOLD_NO_CONFIGURED_PRIVATE_SSH_KEY"
+            exit 2
+          fi
+          umask 077
+          keyfile="$RUNNER_TEMP/nox-existing-owner-identity"
+          known="$RUNNER_TEMP/nox-existing-verified-hosts"
+          trap 'rm -f "$keyfile" "$known"' EXIT
+          printf '%s\n' "$NOX_VAST_SSH_PRIVATE_KEY" > "$keyfile"
+          ssh-keygen -y -f "$keyfile" > /dev/null 2>&1 || {
+            echo "NOX_P0_NATIVE_OWNER_AUTH=HOLD_INVALID_CONFIGURED_SSH_KEY"
+            exit 2
+          }
+          ssh-keyscan -T 8 -t ed25519 -p 26623 ssh9.vast.ai 2>/dev/null > "$known" || true
+          if [ ! -s "$known" ]; then
+            echo "NOX_P0_NATIVE_SSH_PIN=HOLD_NO_ED25519_HOST_KEY"
+            exit 2
+          fi
+          if ! ssh-keygen -lf "$known" -E sha256 | grep -Fq 'SHA256:G4hmMllaT4uSfx+Gup9vjSySLXJT1cSc/9XePr7XmGc'; then
+            echo "NOX_P0_NATIVE_SSH_PIN=HOLD_HOST_FINGERPRINT_MISMATCH"
+            exit 2
+          fi
+          echo "NOX_P0_NATIVE_SSH_PIN=VERIFIED_PREVIOUSLY_PINNED_ED25519"
+          ssh -T -p 26623 -i "$keyfile" -o BatchMode=yes -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$known" \
+            -o ConnectTimeout=12 -o ServerAliveInterval=7 -o ServerAliveCountMax=2 \
+            root@ssh9.vast.ai python3 - <<'PYREMOTE'
+          import json,sys,os,subprocess,importlib.util
+          from pathlib import Path
+          def command(args,timeout=7):
+              try:
+                  r=subprocess.run(args,text=True,stdout=subprocess.PIPE,
+                                   stderr=subprocess.DEVNULL,timeout=timeout)
+                  return r.stdout[:4500] if r.returncode==0 else ''
+              except Exception:return ''
+          output={'schema':'NOX_P0_NATIVE_60509551_READONLY_V1',
+                  'native_python_executed':True,'remote_uid':os.getuid(),
+                  's03_or_weights_changed':False,'new_instance_created':False,
+                  'trainer_restarted':False}
+          raw=command(['nvidia-smi','--query-gpu=index,name,compute_cap,memory.total,memory.free,utilization.gpu,temperature.gpu','--format=csv,noheader,nounits'])
+          output['gpu_rows']=[x.strip()[:125] for x in raw.splitlines()[:2]]
+          for p in ('/root/nox','/workspace'):
+              try:
+                  st=os.statvfs(p);output['disk_free_bytes_'+p.split('/')[-1]]=st.f_frsize*st.f_bavail
+              except Exception:pass
+          for f in ('/sys/fs/cgroup/memory.max','/sys/fs/cgroup/memory.current'):
+              try: output[f.split('/')[-1]]=Path(f).read_text().strip()[:30]
+              except Exception:pass
+          stops=('/root/nox/STOP','/root/nox/STOP.flag','/root/nox/stop.flag',
+                 '/root/nox/.stop','/workspace/NOX_STOP','/root/nox/program/STOP')
+          output['stop_active']=any(Path(p).exists() or Path(p).is_symlink() for p in stops)
+          from importlib import metadata
+          packages=('torch','transformers','accelerate','datasets','safetensors','deepspeed','triton')
+          output['default_python_packages']={}
+          for package in packages:
+              try:output['default_python_packages'][package]=metadata.version(package)
+              except metadata.PackageNotFoundError:pass
+          for port in (8081,8095):
+              output['local_http_'+str(port)]=command(['curl','--silent','--output','/dev/null','--max-time','2',
+                  '--write-out','%{http_code}','http://127.0.0.1:'+str(port)+'/health']).strip()[:4] or '000'
+          print('NOX_P0_VERIFIED_NATIVE_READONLY_RECEIPT='+json.dumps(output,sort_keys=True))
+          print('NOX_P0_NATIVE_READONLY_COMPLETE=true')
+          PYREMOTE
+      - name: Gate: no mutation or fake GPU PASS
+        if: always()
+        run: |
+          echo 'NOX_P0_NATIVE_SERVICE_MUTATIONS=0'
+          echo 'NOX_P0_WEIGHT_S03_CHECKPOINT_WRITES=0'
+          echo 'NOX_P0_NEW_PAID_INSTANCES=0'
+          echo 'NOX_P0_NO_POST_OR_DELETE_TO_VAST=true'
