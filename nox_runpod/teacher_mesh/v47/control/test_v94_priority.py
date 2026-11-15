@@ -269,7 +269,7 @@ class Priorities(unittest.TestCase):
         # raw strings 'job' and ' job ' were still counted as distinct jobs.
         for matrix in (self.m, self.master):
             ids=[t['task_id'] for t in matrix['tasks'][:2]]
-            for bad in (' padded-job ', 'job\\nline', 'x'*129):
+            for bad in (' padded-job ', 'job'+chr(10)+'line', 'x'*129):
                 with self.subTest(schema=matrix['schema'],bad=repr(bad)):
                     rows={ids[0]:{'task_id':ids[0],'state':'RUNNING',
                                  'native_verified':True,'receipt_sha256':'a'*64,
