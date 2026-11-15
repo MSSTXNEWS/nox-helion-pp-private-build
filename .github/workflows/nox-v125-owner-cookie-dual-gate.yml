@@ -1,5 +1,13 @@
 name: NOX V125 owner-cookie exact-allowlist dual-backup one-shot
 on:
+  workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Explicit owner approval for original NOX OneHost only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
   push:
     branches: [nox/v125-live-owner-metrics-20261115]
     paths:
@@ -27,7 +35,7 @@ jobs:
           python -m unittest -v nox_runpod.teacher_mesh.v125.test_install_owner_readonly
   native:
     needs: source
-    if: ${{ github.actor == 'MSSTXNEWS' && github.event_name == 'push' }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' && (github.actor == 'MSSTXNEWS' && github.event_name == 'workflow_dispatch') }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
