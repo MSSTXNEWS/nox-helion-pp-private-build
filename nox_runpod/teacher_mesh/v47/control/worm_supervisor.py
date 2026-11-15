@@ -92,11 +92,16 @@ def audit_native_queue(matrix, observations, *, now_unix: int, heartbeat_s: int=
                 and type(when) is int and 0<=when<=now_unix)
             if task.get("requires_backup_restore") or task.get("resource")=="GPU1_EXCLUSIVE":
                 eligible=eligible and obs.get("checkpoint_restorable") is True
+            # FAILED is NEVER a fresh NEW task, even if independently
+            # eligible to retry. An existing native failed record must be
+            # claimed via a distinct owner-approved recovery path carrying
+            # the prior job_id, checkpoint and verified next_attempt.
+            protected.add(tid)
             if eligible:
                 result["retry_eligible_proposals"].append({
                     "task_id":tid,"next_attempt":tries+1,
-                    "owner_approval_required":True,"duplicate_check_required":True})
-            else:protected.add(tid)
+                    "owner_approval_required":True,"duplicate_check_required":True,
+                    "may_enqueue_via_generic_plan":False})
         else:
             protected.add(tid)
     result["protected_task_ids"]=sorted(protected)

@@ -131,6 +131,36 @@ class Priorities(unittest.TestCase):
         row['attempt_count']=3
         self.assertFalse(audit_native_queue(self.m,x,now_unix=2000)['retry_eligible_proposals'])
 
+    def test_failed_gpu_retry_never_becomes_new_task_or_second_trainer(self):
+        failed={'task_id':'NOX-V46-30','state':'FAILED','native_verified':True,
+                'receipt_sha256':'a'*64,'attempt_count':1,
+                'retry_after_unix':1000,'terminal_verified':True,
+                'owner_lease_released':True,'checkpoint_restorable':True}
+        inp=state(native_queue_verified=True,task_status={'NOX-V46-30':failed},
+                  now_unix=2000,gpu1_peak_verified=True,gpu1_owner_lease=True,
+                  gpu1_teacher_active=False,gpu1_trainer_active=False,
+                  native_writes_available=True,
+                  resources={'available_cpu_slots':8,'available_gpu1_slots':1,
+                             'disk_free_bytes':40_000_000_000,
+                             'checkpoint_disk_reserve_bytes':10_000_000_000})
+        audit=audit_native_queue(self.m,inp,now_unix=2000)
+        self.assertIn('NOX-V46-30',audit['protected_task_ids'])
+        self.assertEqual(audit['retry_eligible_proposals'][0]['next_attempt'],2)
+        self.assertFalse(audit['retry_eligible_proposals'][0]['may_enqueue_via_generic_plan'])
+        planned=plan(self.m,inp,max_new=8)
+        self.assertNotIn('NOX-V46-30',{r['task_id'] for r in planned['planned']})
+        self.assertEqual(audit['native_jobs_restarted'],0)
+
+    def test_failed_cpu_retry_also_not_fresh_task(self):
+        failed={'task_id':'NOX-V46-01','state':'FAILED','native_verified':True,
+                'receipt_sha256':'b'*64,'attempt_count':0,
+                'retry_after_unix':0,'terminal_verified':True,
+                'owner_lease_released':True}
+        inp=state(native_queue_verified=True,task_status={failed['task_id']:failed},now_unix=2000)
+        audit=audit_native_queue(self.m,inp,now_unix=2000)
+        self.assertIn(failed['task_id'],audit['protected_task_ids'])
+        self.assertNotIn(failed['task_id'],{r['task_id'] for r in plan(self.m,inp)['planned']})
+
     def test_unknown_lease_and_untrusted_complete_hold(self):
         row={'task_id':'NOX-V46-41','state':'COMPLETED','native_verified':True,
              'receipt_sha256':'bogus','independent_test_passed':True}

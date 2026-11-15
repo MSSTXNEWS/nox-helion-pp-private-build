@@ -1,0 +1,15 @@
+{
+  "schema": "NOX_V176_RECOVERY_NOT_NEW_TASK_V1",
+  "instructions_version": "0.0.6",
+  "accepted_head": "e9d3d4f2b86ed0c5795b2bda40191c1009b99d36",
+  "issue": "FAILED_NATIVE_TASK_WAS_ELIGIBLE_TO_REENTER_GENERIC_NEW_TASK_PLANNER",
+  "fix": "ALL_FAILED_NATIVE_RECEIPTS_PROTECTED_AND_RETRY_PROPOSALS_SEPARATE",
+  "scope": "EXISTING_V47_ONEHOST_DISPATCHER_ONLY",
+  "native_job_registration_confirmed": false,
+  "created_new_scheduler": false,
+  "created_new_model": false,
+  "checkpoint_or_s03_changed": false,
+  "ssd_delete_performed": false,
+  "retest": "PENDING_GITHUB_ACTIONS",
+  "next_native_action": "OWNER-AUTHORIZE_INSTANCE_V51_READONLY_QUEUE_AND_GPU1_OWNER_LEASE_THEN_NATIVE_QUEUE_CALLBACK_RECEIPT"
+}
