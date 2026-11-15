@@ -7,6 +7,7 @@ as --expected-source-sha, and preserve the original frozen file for no-loss.
 """
 from __future__ import annotations
 import argparse
+import copy
 import hashlib
 import json
 import os
@@ -96,9 +97,9 @@ def build(source: Path, frozen: Path, js_file: Path, output: Path,
                             raise ValueError("HOLD_HTML_SCRIPT_ANCHOR_" + name)
                         patch = html.replace("</head>", SCRIPT_TAG + "\n</head>", 1).encode("utf-8")
                         changed[name] = {"before_sha256": digest(blob), "after_sha256": digest(patch)}
-                        release.writestr(item, patch)
+                        release.writestr(copy.copy(item), patch)
                     else:
-                        release.writestr(item, blob)
+                        release.writestr(copy.copy(item), blob)
                 _zip_file(release, JS, script)
                 for name in sorted(PAGES):
                     _zip_file(release, ROLLBACK + name, base.read(name))
