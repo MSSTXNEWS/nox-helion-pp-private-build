@@ -40,7 +40,7 @@ class V104NativeTimingGate(unittest.TestCase):
         self.assertFalse(native_timing_evidence(rows()[:1]+rows()[2:]))
 
     def test_decode_tps_source_and_strict_evidence(self):
-        self.assertIn("'stream_options':{'include_usage':True}", REMOTE)
+        self.assertIn("if include_usage:request['stream_options']={'include_usage':True}", REMOTE)
         verified = dict(GOOD,decode_tokens_per_sec=45.0,
                         usage_source='NATIVE_STREAM_USAGE',completion_tokens=40)
         self.assertTrue(native_timing_evidence(rows(first=verified)))
