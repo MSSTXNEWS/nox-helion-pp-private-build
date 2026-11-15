@@ -86,7 +86,7 @@
     if(!response.ok||!response.body)throw Error('HOLD_NATIVE_STREAM_'+await reason(response));
     const reader=response.body.getReader(),decoder=new TextDecoder();
     let buf='',answer='',done=null,doneSeen=false;
-    const line=str=>{
+    const line=async str=>{
       if(!str.trim())return;
       let e;
       try{e=JSON.parse(str);}catch{throw Error('HOLD_NATIVE_FRAME_JSON');}
@@ -94,7 +94,7 @@
       if(e.type==='error')throw Error('HOLD_NATIVE_'+String(e.error||'ERROR').slice(0,90));
       if(e.type==='delta'){
         if(doneSeen||typeof e.text!=='string'||answer.length+e.text.length>MAX)throw Error('HOLD_NATIVE_DELTA');
-        answer+=e.text;emit(e.text);
+        answer+=e.text;await emit(e.text);
       } else if(e.type==='done') {
         if(doneSeen)throw Error('HOLD_DUPLICATE_DONE');
         doneSeen=true;done=e;
@@ -107,7 +107,7 @@
         if(chunk.done)break;
         buf+=decoder.decode(chunk.value,{stream:true});
         if(buf.length>300000)throw Error('HOLD_NATIVE_FRAME_TOO_LARGE');
-        let j;while((j=buf.indexOf('\n'))>=0){line(buf.slice(0,j).trim());buf=buf.slice(j+1);}
+        let j;while((j=buf.indexOf('\n'))>=0){await line(buf.slice(0,j).trim());buf=buf.slice(j+1);}
       }
       buf+=decoder.decode();
       if(buf.trim())throw Error('HOLD_INCOMPLETE_NATIVE_FRAME');
@@ -135,8 +135,18 @@
           const upstream=await nativePost('/api/nox/chat/stream',{
             message:data.message,dialog_id:id,task:'general',history:[]
           },nativeSignal);
-          const {answer,receipt}=await consume(upstream,t=>{
-            for(const piece of livePieces(t))event({type:'token',t:piece});
+          const {answer,receipt}=await consume(upstream,async t=>{
+            const parts=livePieces(t);
+            for(let index=0;index<parts.length;index++){
+              if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
+              event({type:'token',t:parts[index]});
+              // Bound visual pacing to 8 actual frames per incoming native chunk.
+              // This never invents text or changes upstream TTFT.
+              if(index<Math.min(parts.length-1,7)&&
+                 typeof requestAnimationFrame==='function'){
+                await new Promise(resolve=>requestAnimationFrame(resolve));
+              }
+            }
           },nativeSignal);
           if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
           if(!accepted(receipt,id))throw Error('HOLD_S03_COMMIT_RECEIPT');
