@@ -141,7 +141,14 @@
           const upstream=await nativePost('/api/nox/chat/stream',{
             message:data.message,dialog_id:id,task:'general',history:[]
           },nativeSignal);
-          const {answer,receipt}=await consume(upstream,async t=>{
+          // A native NDJSON frame may end MID-grapheme (ZWJ/combining mark).
+          // Keep one trailing grapheme until the next frame establishes its edge.
+          // Without a segmenter no safe incremental edge is known: buffer the
+          // bounded native answer until done instead of corrupting visual tokens.
+          const canSegment=typeof Intl!=='undefined' && typeof Intl.Segmenter==='function';
+          const segmenter=canSegment?new Intl.Segmenter(undefined,{granularity:'grapheme'}):null;
+          let trailing='';
+          const emitPieces=async t=>{
             const parts=livePieces(t);
             for(let index=0;index<parts.length;index++){
               if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
@@ -160,7 +167,15 @@
                 });
               }
             }
+          };
+          const {answer,receipt}=await consume(upstream,async t=>{
+            trailing+=t;
+            if(!segmenter)return;
+            const glyphs=Array.from(segmenter.segment(trailing),part=>part.segment);
+            trailing=glyphs.pop()||'';
+            if(glyphs.length)await emitPieces(glyphs.join(''));
           },nativeSignal);
+          if(trailing)await emitPieces(trailing);
           if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
           if(!accepted(receipt,id))throw Error('HOLD_S03_COMMIT_RECEIPT');
           await checkHistory(id,data.message,answer,nativeSignal);

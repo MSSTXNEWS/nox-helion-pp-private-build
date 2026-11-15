@@ -8,7 +8,7 @@ const JS=fs.readFileSync(file,'utf8');
 const id='abcd1234abcd1234abcd1234abcd1234';
 const answer='Живой поток NOX';
 const prompt='Привет, NOX';
-function fake(owner=true,pathname='/nox-web-v29/pc/resonance.html',rejectReceipt=false,reply=answer,revision=3,raf,legacyIntl=false){
+function fake(owner=true,pathname='/nox-web-v29/pc/resonance.html',rejectReceipt=false,reply=answer,revision=3,raf,legacyIntl=false,firstDeltaAt=5){
   const calls=[];
   let old=async (path,opts={})=>{
     const u=new URL(String(path),'https://nox.local');
@@ -42,10 +42,10 @@ function fake(owner=true,pathname='/nox-web-v29/pc/resonance.html',rejectReceipt
       const stream=new ReadableStream({async start(ctrl){
         ctrl.enqueue(bytes.encode(JSON.stringify({type:'preparing'})+'\n'));
         ctrl.enqueue(bytes.encode(JSON.stringify({type:'start',model:'NOX HELION'})+'\n'));
-        ctrl.enqueue(bytes.encode(JSON.stringify({type:'delta',text:reply.slice(0,5)})+'\n'));
+        ctrl.enqueue(bytes.encode(JSON.stringify({type:'delta',text:reply.slice(0,firstDeltaAt)})+'\n'));
         await new Promise(ok=>setTimeout(ok,110));
         if(opts.signal?.aborted){ctrl.close();return;}
-        ctrl.enqueue(bytes.encode(JSON.stringify({type:'delta',text:reply.slice(5)})+'\n'));
+        ctrl.enqueue(bytes.encode(JSON.stringify({type:'delta',text:reply.slice(firstDeltaAt)})+'\n'));
         ctrl.enqueue(bytes.encode(JSON.stringify({type:'done',saved:!rejectReceipt,
           s03_integrated:true,dialog_id:id,exchange_id:'verified-exchange-01'})+'\n'));
         ctrl.close();
@@ -296,7 +296,7 @@ test('V154 without Intl.Segmenter never splits a native delta within a grapheme'
   assert.equal(pieces.join(''),combined,'native answer must remain unaltered');
   // Fixture has two native delta events; without a grapheme segmenter the
   // safest fallback emits those exact deltas, not artificial codepoint pieces.
-  assert.equal(pieces.length,2,'fallback must not invent broken token boundaries');
+  assert.equal(pieces.length,1,'without grapheme support the bounded whole reply is the only guaranteed safe visual token');
   let offset=0;
   const boundaries=new Set();
   for(const g of new Intl.Segmenter(undefined,{granularity:'grapheme'}).segment(combined)){
@@ -311,4 +311,30 @@ test('V154 without Intl.Segmenter never splits a native delta within a grapheme'
   assert.equal(read.filter(x=>x.type==='done').length,1);
   assert(f.calls.some(x=>x.path.startsWith('/api/ui/memory/dialogs/history?')),
     'S03 owner history readback must still gate done');
+});
+
+test('V155 grapheme may span native NDJSON delta boundary; never tear at that edge',async()=>{
+  const combined='prefix👨‍👩‍👧‍👦suffix e\u0301 done';
+  const split=combined.indexOf('👨')+3; // first native frame ends with man+ZWJ
+  for(const legacyIntl of [false,true]){
+    const f=fake(true,'/nox-web-v29/pc/resonance.html',false,combined,3,undefined,legacyIntl,split);
+    const response=await f.fetch('/api/nox/chat',{method:'POST',
+      body:JSON.stringify({message:prompt,dialog_id:id,request_id:'v155-cross-delta'})});
+    const read=await events(response);
+    const tokens=read.filter(x=>x.type==='token').map(x=>x.t);
+    assert.equal(tokens.join(''),combined,'native text must stay byte-for-byte identical');
+    const boundaries=new Set();let offset=0;
+    for(const s of new Intl.Segmenter(undefined,{granularity:'grapheme'}).segment(combined)){
+      offset+=s.segment.length;boundaries.add(offset);
+    }
+    offset=0;
+    for(const token of tokens){offset+=token.length;
+      assert(boundaries.has(offset),'token ended inside a native cross-delta grapheme');
+    }
+    if(legacyIntl)assert.equal(tokens.length,1,'legacy must fail safe, not guess cluster edges');
+    else assert(tokens.length>=2,'modern browser still streams genuine prefix before native done');
+    assert.equal(read.filter(x=>x.type==='done').length,1);
+    assert.equal(read.find(x=>x.type==='done').history_persisted,true);
+    assert(f.calls.some(x=>x.path.startsWith('/api/ui/memory/dialogs/history?')));
+  }
 });
