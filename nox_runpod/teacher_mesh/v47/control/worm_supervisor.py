@@ -33,6 +33,7 @@ def audit_native_queue(matrix, observations, *, now_unix: int, heartbeat_s: int=
     result={"schema":"NOX_V175_WORM60_AUDIT_V1",
             "state":"HOLD_NATIVE_QUEUE_BINDINGS",
             "tasks_expected":60,"native_registered_verified":0,
+             "native_job_ids_verified":0,
             "native_completed_verified":0,"native_running_verified":0,
             "unregistered_count":0,"untrusted_count":0,
             "stale_heartbeat_holds":[],"retry_eligible_proposals":[],
@@ -110,6 +111,11 @@ def audit_native_queue(matrix, observations, *, now_unix: int, heartbeat_s: int=
             protected.add(tid)
             continue
         result["native_registered_verified"]+=1
+        # A legacy signed status WITHOUT a concrete native job ID is only
+        # telemetry; it cannot attest any of the owner's 60 real queue jobs.
+        # This count is strict and must not be confused with S03 receipts.
+        if "job_id" in obs:
+            result["native_job_ids_verified"]+=1
         state=obs["state"]
         if state in RUNNING:
             protected.add(tid)

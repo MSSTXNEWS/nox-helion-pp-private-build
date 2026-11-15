@@ -196,6 +196,31 @@ class Priorities(unittest.TestCase):
         self.assertIn(row['task_id'],audit['protected_task_ids'])
         self.assertFalse(audit['retry_eligible_proposals'][0]['may_enqueue_via_generic_plan'])
 
+    def test_v178_missing_native_job_id_never_inflates_strict_queue_count(self):
+        # Legacy status-only receipts retain compatibility, but are never
+        # evidence that one of the 60 physical OneHost jobs has a job ID.
+        for matrix in (self.m,self.master):
+            ids=[t['task_id'] for t in matrix['tasks'][:2]]
+            legacy={tid:{'task_id':tid,'state':'COMPLETED',
+                         'native_verified':True,'receipt_sha256':'a'*64,
+                         'independent_test_passed':True} for tid in ids}
+            observed=state(native_queue_verified=True,task_status=legacy,now_unix=2000)
+            report=audit_native_queue(matrix,observed,now_unix=2000)
+            self.assertEqual(report['native_registered_verified'],2)
+            self.assertEqual(report['native_job_ids_verified'],0)
+            self.assertEqual(report['native_jobs_started'],0)
+            distinct={tid:dict(row,job_id=f"native-{tid}") for tid,row in legacy.items()}
+            verified=audit_native_queue(matrix,
+                state(native_queue_verified=True,task_status=distinct,now_unix=2000),
+                now_unix=2000)
+            self.assertEqual(verified['native_job_ids_verified'],2)
+            duplicate={tid:dict(row,job_id="one-shared-job") for tid,row in legacy.items()}
+            rejected=audit_native_queue(matrix,
+                state(native_queue_verified=True,task_status=duplicate,now_unix=2000),
+                now_unix=2000)
+            self.assertEqual(rejected['native_job_ids_verified'],0)
+            self.assertEqual(rejected['untrusted_count'],2)
+
     def test_v177_duplicate_native_job_identity_never_double_counts(self):
         for matrix,ids in ((self.m,('NOX-V46-01','NOX-V46-02')),
                            (self.master,('R60-001','R60-002'))):
