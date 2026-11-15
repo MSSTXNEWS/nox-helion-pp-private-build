@@ -3,7 +3,7 @@ from types import SimpleNamespace
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'pc'));sys.path.insert(0,str(ROOT/'nox'))
 from download_models import manifest,disk_admit,digest_file,existing_status,fetch_one
-from resource_brain import plan_load,apply_native_plan
+from resource_brain import plan_load,apply_native_plan,plan_adaptive_gpu,plan_gpu_stop,execute_gpu_stop,plan_gpu_recovery,execute_gpu_recovery
 
 class TestManifestAndVault(unittest.TestCase):
     def setUp(self):self.models=manifest()['models']
@@ -237,5 +237,114 @@ class TestResourceBrain(unittest.TestCase):
     def test_native_missing_holds(self):
         p=plan_load(self.req,self.s)
         self.assertEqual(apply_native_plan(p,native_stop=None,native_authorize=None,native_act=None,native_verify=None,native_readback=None)['state'], 'HOLD_NATIVE_CALLBACKS_MISSING')
+
+
+class TestSafeGPUControl(unittest.TestCase):
+    """OneHost source-only admission: never represent a native GPU operation."""
+    def setUp(self):
+        self.inv={
+            'native_verified':True,'stop_active':False,
+            'gpus':[
+                {'id':0,'native_owner':'OneHost','utilization_pct':78,
+                 'vram_free_mib':10000,'temperature_c':46},
+                {'id':1,'native_owner':'OneHost','utilization_pct':84,
+                 'vram_free_mib':10000,'temperature_c':45}],
+            'manual_stop_latched':{'0':False,'1':False},
+            'onehost_gpu_lease':{'0':True,'1':True},
+            'gpu1_trainer_owner_verified':True,'gpu1_checkpoint_safe':True,
+            'cgroup_max_bytes':180*1024**3,
+            'cgroup_current_bytes':90*1024**3,'disk_free_bytes':20_000_000_000,
+            'pending_useful_work':{'0':2,'1':5}}
+    def test_steady_80_to_85_burst_to_95_no_artificial_gpu_work(self):
+        self.assertEqual(plan_adaptive_gpu(self.inv,1)['state'],'STEADY_80_85_PCT')
+        self.inv['gpus'][1]['utilization_pct']=89
+        self.assertEqual(plan_adaptive_gpu(self.inv,1)['state'],'PEAK_EXISTING_WORK_ONLY')
+        self.inv['gpus'][1]['utilization_pct']=95
+        r=plan_adaptive_gpu(self.inv,1)
+        self.assertEqual(r['state'],'BACKPRESSURE_AT_95_PCT')
+        self.assertIs(r['hard_gpu_util_cap_guaranteed'],False)
+        self.inv['gpus'][1]['utilization_pct']=77
+        self.assertEqual(plan_adaptive_gpu(self.inv,1)['state'],'OWNER_QUEUE_TUNING_CANDIDATE')
+        self.inv['pending_useful_work']['1']=0
+        self.assertEqual(plan_adaptive_gpu(self.inv,1)['state'],'IDLE_NO_ARTIFICIAL_GPU_LOAD')
+    def test_gpu0_independent_stop_and_resource_fail_closed(self):
+        self.inv['manual_stop_latched']['0']=True
+        self.assertEqual(plan_adaptive_gpu(self.inv,0)['state'],'HOLD_MANUAL_STOP_LATCHED')
+        self.assertEqual(plan_adaptive_gpu(self.inv,1)['state'],'STEADY_80_85_PCT')
+        self.inv['manual_stop_latched']['0']=False
+        self.inv['gpus'][0]['temperature_c']=70
+        self.assertEqual(plan_adaptive_gpu(self.inv,0)['state'],
+                         'HOLD_GPU_THERMAL_VRAM_DISK_OR_CGROUP_RESERVE')
+        self.inv['gpus'][0]['temperature_c']=50
+        self.inv['cgroup_current_bytes']=179*1024**3
+        self.assertEqual(plan_adaptive_gpu(self.inv,0)['state'],
+                         'HOLD_GPU_THERMAL_VRAM_DISK_OR_CGROUP_RESERVE')
+    def test_gpu_stop_latches_before_s03_or_checkpoint_and_verifies_stop(self):
+        p=plan_gpu_stop(self.inv,0)
+        calls=[]
+        def cb(name,result):
+            return lambda *args: (calls.append(name),result)[1]
+        proof={'s03_fsync_verified':True}
+        r=execute_gpu_stop(p,authorize=cb('authorize',True),
+          latch_stop=cb('latch',True),quiesce=cb('quiesce',True),
+          save_progress=cb('save',proof),verify_progress=cb('verify',True),
+          stop_owned=cb('stop',True),
+          readback=cb('readback',{'gpu_id':0,'native_owner':'OneHost',
+                                'owned_process_running':False,'manual_stop_latched':True}))
+        self.assertEqual(r['state'],'NATIVE_GPU_STOP_VERIFIED')
+        self.assertEqual(calls,['authorize','latch','quiesce','save','verify','stop','readback'])
+    def test_gpu1_stop_holds_when_optimizer_offsite_unverified(self):
+        p=plan_gpu_stop(self.inv,1)
+        called=[]
+        r=execute_gpu_stop(p,authorize=lambda x:True,
+          latch_stop=lambda x:True,quiesce=lambda x:True,
+          save_progress=lambda x:{'checkpoint_sha_verified':True,'optimizer_state_verified':True,
+                                   'offsite_restore_verified':False},
+          verify_progress=lambda p,r:True,
+          stop_owned=lambda *args:called.append('unsafe'),
+          readback=lambda *args:called.append('unsafe'))
+        self.assertEqual(r['state'],'HOLD_STOP_LATCHED_PERSISTENCE')
+        self.assertEqual(called,[])
+    def test_manual_stop_blocks_all_auto_restart(self):
+        self.inv['unexpected_owner_process_failure']={'0':True,'1':True}
+        self.inv['restart_attempts']={'0':0,'1':0}
+        self.inv['seconds_since_restart']={'0':75,'1':75}
+        self.inv['s03_restorable']=True
+        self.inv['checkpoint_optimizer_restorable']=True
+        self.inv['offsite_restore_verified']=True
+        self.inv['manual_stop_latched']['1']=True
+        self.assertEqual(plan_gpu_recovery(self.inv,1)['state'],
+                         'HOLD_MANUAL_STOP_REQUIRES_EXPLICIT_RESUME')
+        self.inv['manual_stop_latched']['1']=False
+        p=plan_gpu_recovery(self.inv,1)
+        self.assertEqual(p['state'],'OWNER_NATIVE_RECOVERY_ADMITTED')
+        self.inv['restart_attempts']['1']=3
+        self.assertEqual(plan_gpu_recovery(self.inv,1)['state'],
+                         'HOLD_RESTART_BACKOFF_OR_BUDGET')
+    def test_owned_recovery_needs_restored_progress_and_clean_readback(self):
+        self.inv['unexpected_owner_process_failure']={'0':True,'1':True}
+        self.inv['restart_attempts']={'0':0,'1':0}
+        self.inv['seconds_since_restart']={'0':75,'1':75}
+        self.inv['checkpoint_optimizer_restorable']=True
+        self.inv['offsite_restore_verified']=True
+        p=plan_gpu_recovery(self.inv,1)
+        events=[]
+        def cb(name,value):
+            return lambda *args:(events.append(name),value)[1]
+        r=execute_gpu_recovery(p,authorize=cb('auth',True),
+          stop_state=cb('stopped',False),restore=cb('restore',True),
+          start_existing=cb('start',True),
+          readback=cb('readback',{'gpu_id':1,'native_owner':'OneHost',
+                                 'owned_process_running':True,'manual_stop_latched':False}))
+        self.assertEqual(r['state'],'NATIVE_OWNER_PROCESS_RECOVERED')
+        self.assertEqual(events,['auth','stopped','restore','stopped','start','readback'])
+    def test_unknown_owner_or_sensors_never_stop_or_restart(self):
+        self.inv['gpus'][1]['native_owner']='UNKNOWN'
+        self.assertEqual(plan_gpu_stop(self.inv,1)['state'],'HOLD_UNOWNED_GPU_PROCESS')
+        self.assertEqual(plan_adaptive_gpu(self.inv,1)['state'],'HOLD_GPU_OWNER_TOPOLOGY')
+        self.inv['gpus'][1]['native_owner']='OneHost'
+        self.inv['gpus'][1]['utilization_pct']='85'
+        self.assertEqual(plan_adaptive_gpu(self.inv,1)['state'],
+                         'HOLD_GPU_MEMORY_THERMAL_OR_CGROUP_SENSOR')
 
 if __name__=='__main__':unittest.main()
