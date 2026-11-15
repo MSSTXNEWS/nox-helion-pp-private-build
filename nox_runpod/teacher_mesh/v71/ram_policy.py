@@ -141,6 +141,21 @@ def plan_warm_weight(snapshot:Mapping,candidate:Mapping)->dict:
     if snapshot.get('chat_gpu0_healthy') is not True:
         out['state']='HOLD_CHAT_HEALTH'
         return out
+    # The original V71 RAM planner already fails closed on cgroup trust/OOM;
+    # warming an OS page cache must obey those same admission conditions.
+    if snapshot.get('native_cgroup_verified') is not True:
+        out['state']='HOLD_NATIVE_CGROUP_TELEMETRY'
+        return out
+    if snapshot.get('native_cgroup_oom_delta_verified') is not True:
+        out['state']='HOLD_UNVERIFIED_OOM_DELTA'
+        return out
+    oom_delta=snapshot.get('cgroup_oom_kill_delta')
+    if type(oom_delta) is not int or oom_delta<0:
+        out['state']='HOLD_UNVERIFIED_OOM_DELTA'
+        return out
+    if oom_delta>0:
+        out['state']='HOLD_RECENT_CGROUP_OOM'
+        return out
     # First-token responsiveness always wins over prefetch.
     if (snapshot.get('chat_state')!='idle'
             or type(snapshot.get('prime_active_streams')) is not int
@@ -170,17 +185,29 @@ def plan_warm_weight(snapshot:Mapping,candidate:Mapping)->dict:
     if type(size) is not int or size<64*MIB:
         out['state']='HOLD_MODEL_SIZE_NOT_MEASURED'
         return out
-    cap=snapshot.get('cgroup_max_bytes')
-    current=snapshot.get('cgroup_current_bytes')
+    # Native V71 uses cgroup_memory_*; allow old keys, but fail closed if
+    # competing samples disagree. The larger host memory is never a fallback.
+    cap=snapshot.get('cgroup_memory_max_bytes',snapshot.get('cgroup_max_bytes'))
+    current=snapshot.get('cgroup_memory_current_bytes',snapshot.get('cgroup_current_bytes'))
     available=snapshot.get('ram_available_bytes')
-    if (any(type(v) is not int or v<0 for v in (cap,current,available))
+    if (('cgroup_memory_max_bytes' in snapshot and 'cgroup_max_bytes' in snapshot
+             and snapshot['cgroup_memory_max_bytes']!=snapshot['cgroup_max_bytes'])
+            or ('cgroup_memory_current_bytes' in snapshot and 'cgroup_current_bytes' in snapshot
+             and snapshot['cgroup_memory_current_bytes']!=snapshot['cgroup_current_bytes'])
+            or any(type(v) is not int or v<0 for v in (cap,current,available))
             or cap<=0 or current>=cap):
         out['state']='HOLD_CGROUP_OR_RAM_SENSOR'
         return out
-    # No promise to fill all RAM: use 85% cgroup utilization cap plus a
-    # hard reserve. Pages are reclaimed automatically on memory pressure.
-    headroom=min(int(cap*WEIGHT_WARM_CGROUP_TARGET)-current,
-                 cap-current-WEIGHT_WARM_RESERVE_BYTES,
+    high=snapshot.get('cgroup_memory_high_bytes')
+    if high is not None and (type(high) is not int or high<=0):
+        out['state']='HOLD_CGROUP_MEMORY_HIGH_SENSOR'
+        return out
+    # Reclaimable page cache still charges cgroup.current. Respect memory.high
+    # when it is tighter than both the 85% ceiling and mandatory chat reserve.
+    ceiling=min(int(cap*WEIGHT_WARM_CGROUP_TARGET),cap-WEIGHT_WARM_RESERVE_BYTES)
+    if high is not None:
+        ceiling=min(ceiling,high)
+    headroom=min(ceiling-current,
                  available-WEIGHT_WARM_RESERVE_BYTES)
     warm=min(size,WEIGHT_WARM_MAX_BYTES,max(0,headroom))
     out.update({'cgroup_max_bytes':cap,'cgroup_current_bytes':current,

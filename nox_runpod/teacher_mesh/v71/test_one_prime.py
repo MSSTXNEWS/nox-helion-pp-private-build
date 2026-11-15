@@ -145,6 +145,9 @@ class RamWeightTiers(unittest.TestCase):
     def s(self,**updates):
         data={'native_ram_verified':True,'owner_authorized':True,
               'stop_active':False,'chat_gpu0_healthy':True,
+              'native_cgroup_verified':True,
+              'native_cgroup_oom_delta_verified':True,
+              'cgroup_oom_kill_delta':0,
               'chat_state':'idle','prime_active_streams':0,
               'seconds_since_chat_activity':120.0,
               'cgroup_max_bytes':194_065_203_200,
@@ -197,6 +200,43 @@ class RamWeightTiers(unittest.TestCase):
 
     def test_cgroup_bool_sensor_rejected(self):
         out=plan_warm_weight(self.s(cgroup_current_bytes=True),self.model())
+        self.assertEqual(out['state'],'HOLD_CGROUP_OR_RAM_SENSOR')
+        self.assertEqual(out['warm_bytes_budget'],0)
+
+    def test_warmup_fails_closed_without_native_cgroup_and_oom_proof(self):
+        cases=(
+            (self.s(native_cgroup_verified=False),'HOLD_NATIVE_CGROUP_TELEMETRY'),
+            (self.s(native_cgroup_oom_delta_verified=False),'HOLD_UNVERIFIED_OOM_DELTA'),
+            (self.s(cgroup_oom_kill_delta=None),'HOLD_UNVERIFIED_OOM_DELTA'),
+            (self.s(cgroup_oom_kill_delta=1),'HOLD_RECENT_CGROUP_OOM'),
+        )
+        for snap,expected in cases:
+            with self.subTest(expected=expected):
+                out=plan_warm_weight(snap,self.model())
+                self.assertEqual(out['state'],expected)
+                self.assertEqual(out['warm_bytes_budget'],0)
+                self.assertFalse(out['performed'])
+
+    def test_warmup_obeys_cgroup_memory_high_pressure(self):
+        snap=self.s()
+        snap['cgroup_memory_high_bytes']=snap['cgroup_current_bytes']+32*MIB
+        out=plan_warm_weight(snap,self.model())
+        self.assertEqual(out['state'],'HOLD_RAM_HEADROOM_FOR_CHAT')
+        self.assertEqual(out['warm_bytes_budget'],32*MIB)
+        self.assertFalse(out['performed'])
+        self.assertEqual(plan_warm_weight(self.s(cgroup_memory_high_bytes='max'),
+                        self.model())['state'],'HOLD_CGROUP_MEMORY_HIGH_SENSOR')
+
+    def test_warmup_accepts_canonical_native_v71_keys_not_conflicts(self):
+        snap=self.s()
+        cap=snap.pop('cgroup_max_bytes')
+        current=snap.pop('cgroup_current_bytes')
+        snap.update(cgroup_memory_max_bytes=cap,cgroup_memory_current_bytes=current)
+        out=plan_warm_weight(snap,self.model())
+        self.assertEqual(out['state'],'READY_FOR_EXISTING_V95_V99_OWNER_PAGECACHE_WARMUP')
+        self.assertEqual(out['warm_bytes_budget'],2*GIB)
+        snap['cgroup_max_bytes']=cap+GIB
+        out=plan_warm_weight(snap,self.model())
         self.assertEqual(out['state'],'HOLD_CGROUP_OR_RAM_SENSOR')
         self.assertEqual(out['warm_bytes_budget'],0)
 
