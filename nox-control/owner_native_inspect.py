@@ -194,7 +194,7 @@ def controls():
         for arg in args:
             p=Path(arg)
             if p.parent==ROOT/'scripts' and re.fullmatch(r'[A-Za-z0-9_]*t866u\.(py|sh)',p.name) and p.name not in names:names.append(p.name)
-    rows=[];remaining=65000
+    rows=[];remaining=130000
     for name in names:
         p=ROOT/'scripts'/name
         if not p.is_file() or p.is_symlink(): continue
@@ -214,6 +214,23 @@ def controls():
             row['excerpts']=excerpts.splitlines();row['source_truncated']=True;remaining-=len(excerpts.encode())
         rows.append(row)
     rows.append({'record':'supervisor_configuration','services':configs})
+    pool=ROOT/'config/dispatcher_agents_t868u.json'
+    if pool.is_file() and not pool.is_symlink() and pool.stat().st_size<100000:
+        body=pool.read_bytes()
+        # The worker configuration is operational data. Never emit credential fields.
+        try:
+            data=json.loads(body)
+            def clean(value):
+                if isinstance(value,dict):
+                    return {key:clean(item) for key,item in value.items()
+                            if not re.search(SENSITIVE_NAME,str(key),re.I)}
+                if isinstance(value,list):return [clean(item) for item in value[:120]]
+                if isinstance(value,str):return redact(value)[:1500]
+                return value
+            rows.append({'record':'dispatcher_workers','path':str(pool),
+                         'sha256':hashlib.sha256(body).hexdigest(),'configuration':clean(data)})
+        except (ValueError,TypeError):
+            rows.append({'record':'dispatcher_workers','parse_error':True})
     for name in ('sft_trainer.py','utils.py'):
         for p in sorted(Path('/root/venv_volta/lib').glob('python3.*/site-packages/trl/trainer/'+name))[:1]:
             if not p.is_file() or p.is_symlink() or p.stat().st_size>1000000:continue
@@ -240,6 +257,12 @@ def chat_storage():
     for root in (ROOT/'memory',ROOT/'kb'):
         for p in root.glob('*.db'):
             st=p.stat();out['memory_files'].append({'path':str(p),'bytes':st.st_size,'mtime':st.st_mtime})
+    try:
+        with urllib.request.urlopen('http://127.0.0.1:8081/slots',timeout=3) as response:
+            slots=json.loads(response.read(100000))
+        out['model_slots']=[{key:slot[key] for key in ('id','is_processing','state','n_ctx') if key in slot}
+                            for slot in slots if isinstance(slot,dict)] if isinstance(slots,list) else None
+    except Exception as exc:out['model_slots_error']=type(exc).__name__
     return out
 
 def receipts():
@@ -258,5 +281,9 @@ def worker(i):
 if __name__=='__main__':
     with ProcessPoolExecutor(max_workers=6) as pool:
         for row in pool.map(worker,range(6)):
-            print('NOX_MAINT_INSPECT='+json.dumps(row,separators=(',',':')),flush=True)
+            # Each source record has its own bounded line; a long controller must
+            # not hide all controls behind the transport's per-line safety cap.
+            items=[dict(row,result=[item]) for item in row.get('result',[])] if row['section']=='controls' and isinstance(row.get('result'),list) else [row]
+            for item in items:
+                print('NOX_MAINT_INSPECT='+json.dumps(item,separators=(',',':')),flush=True)
     print('NOX_MAINT_INSPECT_COMPLETE=true',flush=True)
