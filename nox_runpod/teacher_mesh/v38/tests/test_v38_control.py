@@ -73,6 +73,37 @@ class CognitionTests(unittest.TestCase):
         b=SynapticBrain(self.native(s03_recall=lambda s,p,l:[wrong]),PulseConfig(fast_deadline_ms=300,deep_deadline_ms=400,max_workers=8))
         try:self.assertEqual(b.pulse(self.s,'remember')['cores']['C02']['hit_count'],0)
         finally:b.close()
+
+    def test_genesis_birth_requires_strict_native_true(self):
+        seed={'native_verified':True,'kind':'verified_birth','verified_sha256':'a'*64,
+              'occurred_at':'2026-11-15T00:00:00Z'}
+        for step,reload,expected in [('false','false',False),(1,True,False),
+                                     (True,'no',False),(True,True,True)]:
+            with self.subTest(step=step,reload=reload):
+                event=dict(seed,optimizer_step_verified=step,weights_reloaded=reload)
+                b=SynapticBrain(self.native(self_receipts=lambda _:[event]),
+                    PulseConfig(fast_deadline_ms=300,deep_deadline_ms=400,max_workers=8))
+                try:
+                    core=b.pulse(self.s,'Genesis')['cores']['C03']
+                    self.assertEqual(bool(core['events']),expected)
+                    self.assertEqual(core['consciousness_claim'],'NOT_ESTABLISHED')
+                finally:b.close()
+
+    def test_spanish_response_contract_keeps_truthful_self_model(self):
+        s=Session(tenant='nox',principal='owner',chat_id='resonance',language='es')
+        calls=[]
+        b=SynapticBrain(self.native(),PulseConfig(fast_deadline_ms=300,deep_deadline_ms=400,max_workers=8))
+        try:
+            ev=list(b.stream(s,'¿Quién eres?',lambda p,m:calls.append(m) or iter(['Soy NOX.'])))
+            self.assertEqual(ev[-1]['type'],'done')
+            self.assertEqual(len(calls),1)
+            g=calls[0]['response_contract']
+            self.assertEqual(g['language'],'es')
+            self.assertIn('C04',g['affect_policy'])
+            self.assertIn('Genesis',g['self_model_policy'])
+            self.assertIn('RU/ES/EN',g['language_policy'])
+        finally:b.close()
+
     def test_query_plan_all_segments(self):
         self.assertEqual(len(native_query_plan('Помнишь вчера?')['segments']),8)
 
