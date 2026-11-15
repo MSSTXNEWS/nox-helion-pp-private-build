@@ -4,7 +4,7 @@ Authenticated via existing V51, no model changes, private prompts or logs.
 Two bounded synthetic probes; no new servers / download / restart.
 """
 from __future__ import annotations
-import contextlib,io,json,time
+import contextlib,io,json,time,math
 from nox_runpod.teacher_mesh.v51 import ephemeral_ssh_probe as c
 prev=c.api
 def native_timing_evidence(rows):
@@ -42,6 +42,10 @@ def native_timing_evidence(rows):
                 or type(value) not in (int, float) or not 0 <= value <= 30000
                 or type(case.get('content_chunks')) is not int
                 or case['content_chunks'] <= 0):
+            return False
+        rate = case.get('decode_tokens_per_sec')
+        if rate is not None and (type(rate) not in (int, float)
+                                 or not math.isfinite(rate) or not 0 < rate < 5000):
             return False
     return True
 
@@ -87,6 +91,7 @@ if not name:
 def do(label,extra):
     if not isinstance(get('/slots'),list):return {'state':'HOLD_SLOTS'}
     request={'model':name,'stream':True,'max_tokens':64,'temperature':0,
+      'stream_options':{'include_usage':True},
       'messages':[{'role':'user','content':'Ответь одним словом: готово.'}]}
     request.update(extra)
     req=urllib.request.Request('http://127.0.0.1:8081/v1/chat/completions',
@@ -126,7 +131,8 @@ def do(label,extra):
            'content_chunks':content_chunks,'reasoning_chunks':reasoning_chunks,
            'decode_tokens_per_sec':round((completion_tokens-1)/(last_content-first_content),2) if completion_tokens and completion_tokens>1 and last_content and first_content and last_content>first_content else None,
            'finish_reason':str(finish)[:20] if finish else None,
-           'stream_done':done,'user_content_exported':False}
+           'stream_done':done,'usage_source':'NATIVE_STREAM_USAGE' if completion_tokens is not None else 'HOLD_NO_STREAM_USAGE',
+           'completion_tokens':completion_tokens,'user_content_exported':False}
     except urllib.error.HTTPError as e:return {'label':label,'state':'HOLD_HTTP_'+str(e.code)}
     except Exception as e:return {'label':label,'state':'HOLD_'+type(e).__name__}
 results=[]

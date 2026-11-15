@@ -38,6 +38,12 @@ class V104NativeTimingGate(unittest.TestCase):
         self.assertFalse(native_timing_evidence(rows()+['NATIVE_V104_CASE='+json.dumps(GOOD)]))
         self.assertFalse(native_timing_evidence(rows()[:1]+rows()[2:]))
 
+    def test_decode_tps_source_and_strict_evidence(self):
+        self.assertIn("'stream_options':{'include_usage':True}", REMOTE)
+        self.assertTrue(native_timing_evidence(rows(first=dict(GOOD,decode_tokens_per_sec=45.0))))
+        for rate in (-1, 0, '45', float('nan'), float('inf')):
+            self.assertFalse(native_timing_evidence(rows(first=dict(GOOD,decode_tokens_per_sec=rate))))
+
     def test_remote_source_compiles_without_connecting(self):
         remote = REMOTE.split("<<'PYREMOTE'\n",1)[1].rsplit('\nPYREMOTE',1)[0]
         compile(remote,'<read-only-v104-native>','exec')
