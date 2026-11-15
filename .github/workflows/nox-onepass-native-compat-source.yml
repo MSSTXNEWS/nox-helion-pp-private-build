@@ -79,6 +79,7 @@ jobs:
             coordination/onepass/NOX_V293_NATIVE_COMPAT_ACCEPTANCE.json
             coordination/onepass/v134_native_owner_compat_converger.py
             coordination/onepass/test_v134_native_owner_compat_converger.py
+            nox_runpod/teacher_mesh/v112/native_v29_full_bridge.py
           if-no-files-found: error
           retention-days: 14
       - name: Confirm no native Vast/Windows changes from source tests
