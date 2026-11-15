@@ -56,11 +56,18 @@ class V135NoLossTests(unittest.TestCase):
             for path in m.PAGES:
                 self.assertEqual(z.read(m.ROLLBACK+path), a.read(path))
                 self.assertIn(m.SCRIPT_URL.encode(), z.read(path))
+                self.assertIn(m.OBS_SCRIPT_URL.encode(), z.read(path))
             meta = json.loads(z.read(m.MANIFEST))
             self.assertFalse(meta["production_deployed"])
             self.assertTrue(meta["original_S03_unchanged"])
             self.assertTrue(meta["native_owner_only"])
-        self.assertEqual(receipt["output_entries"], m.FROZEN_N+2+len(m.PAGES)+2)
+            self.assertFalse(meta["native_observer_attached_in_live_onehost"])
+            self.assertFalse(meta["process_control_actions_enabled"])
+            self.assertEqual(z.read(m.OBS_JS),
+                             m.OBS_SOURCE.read_bytes())
+            self.assertEqual(z.read(m.NATIVE_SELF_MODULE),
+                             m.NATIVE_SELF_SOURCE.read_bytes())
+        self.assertEqual(receipt["output_entries"], m.FROZEN_N+2+len(m.PAGES)+4)
 
     def test_exact_same_source_is_bitwise_repeatable(self):
         a = m.build(self.stage, self.frozen, self.js, self.output,
