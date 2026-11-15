@@ -249,6 +249,41 @@ def _validated_history(data):
         clean.append({'role':row['role'],'content':content})
     return clean
 
+def _dialog_context(dialog_id):
+    """Load only the authenticated owner's committed pairs from the existing S03.
+
+    The Resonance client deliberately sends history=[] and a dialog_id. Its
+    displayed history is not an inference payload. Use the durable thread as
+    the authority, with the same 24-message/121 KB context limits as the
+    legacy client path. Incomplete pairs cannot enter model context.
+    """
+    with _db() as db:
+        found=_get_dialog(db,dialog_id)
+        if found is None:
+            return 'HOLD_DIALOG_SCOPE_NOT_BOUND',[]
+        if bool(found['archived']):
+            return 'HOLD_DIALOG_ARCHIVED',[]
+        rows=db.execute(
+            'SELECT substr(u.content,1,8000) AS question, '
+            'substr(a.content,1,8000) AS answer '
+            'FROM nox_v29_dialog_messages AS a '
+            'JOIN nox_v29_dialog_messages AS u '
+            'ON u.dialog_id=a.dialog_id AND u.exchange_id=a.exchange_id '
+            "AND u.role='user' WHERE a.dialog_id=? AND a.role='assistant' "
+            'ORDER BY a.row_id DESC LIMIT 12',(dialog_id,)).fetchall()
+    pairs=[];size=0
+    for row in rows:
+        question,answer=row['question'],row['answer']
+        if not isinstance(question,str) or not isinstance(answer,str):
+            raise RuntimeError('HOLD_S03_DIALOG_CONTEXT_CONTENT')
+        pair_size=len(question.encode('utf-8'))+len(answer.encode('utf-8'))
+        if size+pair_size>121000:
+            break
+        size+=pair_size
+        pairs.append([{'role':'user','content':question},
+                      {'role':'assistant','content':answer}])
+    return None,[message for pair in reversed(pairs) for message in pair]
+
 def _model_name(data):
     candidate = data.get('model')
     if isinstance(candidate,str):
@@ -597,11 +632,9 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
             if not _schema_ready():
                 return JSONResponse({'error':'HOLD_S03_DIALOG_SCHEMA'},status_code=503)
             try:
-                with _db() as db:found=_get_dialog(db,dialog_id)
-                if found is None:
-                    return JSONResponse({'error':'HOLD_DIALOG_SCOPE_NOT_BOUND'},status_code=409)
-                if bool(found['archived']):
-                    return JSONResponse({'error':'HOLD_DIALOG_ARCHIVED'},status_code=409)
+                issue,history=await asyncio.to_thread(_dialog_context,dialog_id)
+                if issue:
+                    return JSONResponse({'error':issue},status_code=409)
             except (OSError,RuntimeError,sqlite3.Error):
                 return JSONResponse({'error':'HOLD_DIALOG_SCOPE_NOT_VERIFIED'},status_code=503)
         elif dialog_id is not None and not isinstance(dialog_id,str):
