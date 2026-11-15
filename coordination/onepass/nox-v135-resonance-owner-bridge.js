@@ -107,26 +107,44 @@
   }
   function sseChat(data,signal) {
     let closed=false;const started=performance.now();
+    // Downstream reader cancellation must cancel the EXISTING native request.
+    // Abort is scoped to this generation, never global /api/nox/stop.
+    const upstreamAbort=new AbortController();
+    const onAbort=()=>upstreamAbort.abort();
+    if(signal?.aborted)upstreamAbort.abort();
+    else signal?.addEventListener?.('abort',onAbort,{once:true});
+    const nativeSignal=upstreamAbort.signal;
     const body=new ReadableStream({
       async start(controller){
         const event=payload=>{if(!closed)controller.enqueue(enc.encode('data: '+JSON.stringify(payload)+'\n\n'));};
         try {
-          const id=await dialogId(data,signal);
+          if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
+          const id=await dialogId(data,nativeSignal);
+          if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
           event({type:'meta',dialog_id:id,model_label:'NOX HELION',answer_source:'LIVE_NOX'});
           const upstream=await nativePost('/api/nox/chat/stream',{
             message:data.message,dialog_id:id,task:'general',history:[]
-          },signal);
-          const {answer,receipt}=await consume(upstream,t=>event({type:'token',t}),signal);
+          },nativeSignal);
+          const {answer,receipt}=await consume(upstream,t=>event({type:'token',t}),nativeSignal);
+          if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
           if(!accepted(receipt,id))throw Error('HOLD_S03_COMMIT_RECEIPT');
-          await checkHistory(id,data.message,answer,signal);
+          await checkHistory(id,data.message,answer,nativeSignal);
+          if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
           event({type:'done',status:'done',saved:true,s03_integrated:true,
             history_persisted:true,dialog_id:id,exchange_id:receipt.exchange_id,
             seconds:+((performance.now()-started)/1000).toFixed(2)});
         }catch(e){
-          event({type:'error',error:signal?.aborted?'STREAM_STOP_REQUESTED':String(e.message||'HOLD_NATIVE_STREAM').slice(0,150)});
-        }finally{if(!closed){closed=true;try{controller.close();}catch{}}}
+          event({type:'error',error:nativeSignal.aborted?'STREAM_STOP_REQUESTED':String(e.message||'HOLD_NATIVE_STREAM').slice(0,150)});
+        }finally{
+          signal?.removeEventListener?.('abort',onAbort);
+          if(!closed){closed=true;try{controller.close();}catch{}}
+        }
       },
-      cancel(){closed=true;}
+      cancel(){
+        closed=true;
+        upstreamAbort.abort();
+        signal?.removeEventListener?.('abort',onAbort);
+      }
     });
     return responseJSONStream(body);
   }

@@ -12,7 +12,7 @@ function fake(owner=true,pathname='/nox-web-v29/pc/resonance.html',rejectReceipt
   const calls=[];
   let old=async (path,opts={})=>{
     const u=new URL(String(path),'https://nox.local');
-    calls.push({path:u.pathname+u.search,method:opts.method||'GET',credentials:opts.credentials});
+    calls.push({path:u.pathname+u.search,method:opts.method||'GET',credentials:opts.credentials,signal:opts.signal});
     if(u.pathname==='/api/ui/memory/dialogs/create'){
       const body=JSON.parse(opts.body||'{}');
       assert.equal(body.confirmed,true);
@@ -44,6 +44,7 @@ function fake(owner=true,pathname='/nox-web-v29/pc/resonance.html',rejectReceipt
         ctrl.enqueue(bytes.encode(JSON.stringify({type:'start',model:'NOX HELION'})+'\n'));
         ctrl.enqueue(bytes.encode(JSON.stringify({type:'delta',text:answer.slice(0,5)})+'\n'));
         await new Promise(ok=>setTimeout(ok,110));
+        if(opts.signal?.aborted){ctrl.close();return;}
         ctrl.enqueue(bytes.encode(JSON.stringify({type:'delta',text:answer.slice(5)})+'\n'));
         ctrl.enqueue(bytes.encode(JSON.stringify({type:'done',saved:!rejectReceipt,
           s03_integrated:true,dialog_id:id,exchange_id:'verified-exchange-01'})+'\n'));
@@ -56,7 +57,7 @@ function fake(owner=true,pathname='/nox-web-v29/pc/resonance.html',rejectReceipt
   const window={NOX_NATIVE_OWNER:owner,fetch:old};
   const location={pathname,href:'https://nox.local'+pathname,origin:'https://nox.local'};
   const context={window,location,URL,Request,Response,ReadableStream,
-    TextDecoder,TextEncoder,performance,console};
+    TextDecoder,TextEncoder,AbortController,performance,console};
   vm.runInNewContext(JS,context,{filename:file});
   return {fetch:(...args)=>window.fetch(...args),calls,window};
 }
@@ -142,4 +143,30 @@ test('SSE bytes arrive before terminal event, without buffering full reply',asyn
   assert(first.value&&second.value);
   assert(performance.now()-t<95,'must emit actual delta before delayed model completion');
   await rd.cancel();
+});
+
+test('V135 SSE user cancel aborts the SAME native stream (no global STOP)',async()=>{
+  const f=fake();
+  const response=await f.fetch('/api/nox/chat',{method:'POST',
+    body:JSON.stringify({message:prompt,dialog_id:id,request_id:'cancel-01'})});
+  const reader=response.body.getReader();
+  assert((await reader.read()).value,'real owner meta');
+  assert((await reader.read()).value,'first delta before completion');
+  const calls=f.calls.filter(c=>c.path==='/api/nox/chat/stream');
+  assert.equal(calls.length,1);
+  assert(calls[0].signal && !calls[0].signal.aborted);
+  await reader.cancel('user closed Resonance stream');
+  assert.equal(calls[0].signal.aborted,true,'native fetch must abort on downstream cancel');
+  assert.equal(f.calls.some(c=>c.path==='/api/nox/stop'),false,
+    'never send global stop for scoped browser stream');
+});
+test('V135 already-aborted caller never starts a native inference',async()=>{
+  const f=fake(),abort=new AbortController();
+  abort.abort();
+  const response=await f.fetch('/api/nox/chat',{method:'POST',signal:abort.signal,
+    body:JSON.stringify({message:prompt,dialog_id:id,request_id:'cancel-02'})});
+  const frames=await events(response);
+  assert.equal(frames.filter(e=>e.type==='done').length,0);
+  assert(frames.some(e=>e.type==='error'&&e.error==='STREAM_STOP_REQUESTED'));
+  assert(!f.calls.some(c=>c.path==='/api/nox/chat/stream'));
 });
