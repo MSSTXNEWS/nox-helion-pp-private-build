@@ -16,10 +16,13 @@
   };
   const panel=()=>{
     const system=document.getElementById('v24System');
-    if(!system)return null;
-    if(system.querySelector('[data-nox-self-monitor="v137"]'))
-      return system.querySelector('[data-nox-self-monitor="v137"]');
-    const s=O('section',undefined,'v24-block v24-glass');
+    // V24 has a system drawer; original V22 only has the left sidebar.
+    // Keep the same read-only panel on both original Resonance pages.
+    const host=system||document.querySelector('.nox-v22-left');
+    if(!host)return null;
+    if(host.querySelector('[data-nox-self-monitor="v137"]'))
+      return host.querySelector('[data-nox-self-monitor="v137"]');
+    const s=O('section',undefined,system?'v24-block v24-glass':'nox-v22-card panel');
     s.dataset.noxSelfMonitor='v137';
     const h=O('h2','NOX · состояние собственных служб');
     const notice=O('p','Сведения появятся после чтения существующего OneHost.','v24-mini');
@@ -27,12 +30,12 @@
     const list=O('div','Нет проверенной телеметрии.','v24-mini');
     list.dataset.noxMonitorValues='true';
     list.style.whiteSpace='pre-wrap';
-    const btn=O('button','Обновить','v24-chip');
+    const btn=O('button','Обновить',system?'v24-chip':'nox-v22-btn');
     btn.type='button';
     btn.dataset.action='nox-self-refresh';
     btn.addEventListener('click',()=>{void refresh(s);});
     s.append(h,notice,list,btn);
-    system.append(s);
+    host.append(s);
     return s;
   };
   async function json(path){
