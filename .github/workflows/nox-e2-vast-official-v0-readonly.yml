@@ -1,0 +1,112 @@
+name: NOX E2 existing Vast official v0/v1 auth probe (READ ONLY)
+on:
+  push:
+    branches:
+      - nox/e2-vast-official-v0-readonly-20261115
+    paths:
+      - .github/workflows/nox-e2-vast-official-v0-readonly.yml
+permissions:
+  contents: read
+concurrency:
+  group: nox-e2-vast-v0-readonly-60509551
+  cancel-in-progress: false
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - name: Probe only published Vast read-only instance URLs
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import ssl
+          import sys
+          import urllib.error
+          import urllib.request
+
+          INSTANCE = "60509551"
+          key = os.environ.get("NOX2", "").strip()
+          if not key:
+              print("NOX_VAST_ACCESS=HOLD_NOX2_NOT_CONFIGURED")
+              sys.exit(2)
+
+          class NoRedirect(urllib.request.HTTPRedirectHandler):
+              def redirect_request(self, request, fp, code, msg, headers, newurl):
+                  return None
+
+          opener = urllib.request.build_opener(
+              NoRedirect(), urllib.request.HTTPSHandler(context=ssl.create_default_context())
+          )
+          urls = {
+              "cloud_v0": "https://cloud.vast.ai/api/v0/instances/",
+              "console_v0": "https://console.vast.ai/api/v0/instances/",
+              "cloud_v1": "https://cloud.vast.ai/api/v1/instances?limit=25",
+          }
+          results = []
+          for route, url in urls.items():
+              req = urllib.request.Request(
+                  url, method="GET",
+                  headers={
+                      "Authorization": "Bearer " + key,
+                      "Accept": "application/json",
+                      "User-Agent": "NOX-safe-readonly-access-probe/1",
+                  },
+              )
+              code = 0
+              body = b""
+              try:
+                  with opener.open(req, timeout=15) as response:
+                      code = response.status
+                      body = response.read(2_000_001)
+              except urllib.error.HTTPError as error:
+                  code = error.code
+                  body = error.read(8192)
+              except (OSError, ValueError):
+                  pass
+              error_class = None
+              found = None
+              status = None
+              if len(body) <= 2_000_000:
+                  try:
+                      payload = json.loads(body)
+                      if isinstance(payload, dict):
+                          if payload.get("error") == "auth_error":
+                              error_class = "auth_error"
+                          instances = payload.get("instances")
+                          if isinstance(instances, list):
+                              match = next((x for x in instances
+                                            if isinstance(x, dict) and str(x.get("id")) == INSTANCE), None)
+                          elif isinstance(instances, dict):
+                              match = instances if str(instances.get("id")) == INSTANCE else None
+                          elif isinstance(payload.get("results"), list):
+                              match = next((x for x in payload["results"]
+                                            if isinstance(x, dict) and str(x.get("id")) == INSTANCE), None)
+                          else:
+                              match = None
+                          if code == 200:
+                              found = match is not None
+                              if match is not None:
+                                  status = str(match.get("actual_status", "UNKNOWN"))[:25]
+                  except (ValueError, TypeError):
+                      pass
+              results.append({
+                  "route": route, "http": code, "error_class": error_class,
+                  "existing_instance_visible": found, "existing_instance_status": status,
+              })
+
+          connected = any(r["http"] == 200 and r["existing_instance_visible"] for r in results)
+          authenticated = any(r["http"] == 200 for r in results)
+          verdict = ("EXISTING_INSTANCE_READABLE" if connected else
+                     "AUTH_READ_ONLY_BUT_INSTANCE_NOT_VISIBLE" if authenticated else
+                     "AUTH_UNVERIFIED")
+          print("NOX_VAST_EXISTING_ONLY=" + json.dumps({
+              "instance": INSTANCE, "verdict": verdict, "routes": results,
+              "writes": 0, "ssh": False, "new_servers": 0,
+              "key_logged": False, "native_deploy": False,
+          }, separators=(",", ":")))
+          sys.exit(0 if connected else 2)
+          PY
