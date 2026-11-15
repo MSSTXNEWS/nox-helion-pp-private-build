@@ -287,7 +287,7 @@ test('V153 SSE tokens preserve real grapheme boundaries in original owner stream
 test('V154 without Intl.Segmenter never splits a native delta within a grapheme',async()=>{
   // E1 V153 protected Segmenter browsers. Its old codepoint fallback still
   // tears compound ZWJ emoji and combining accents in legacy browsers.
-  const combined='abcde'+('e\\u0301'+'👨‍👩‍👧‍👦').repeat(13);
+  const combined='abcde'+('e\u0301'+'👨‍👩‍👧‍👦').repeat(13);
   const f=fake(true,'/nox-web-v29/pc/resonance.html',false,combined,3,undefined,true);
   const response=await f.fetch('/api/nox/chat',{method:'POST',
     body:JSON.stringify({message:prompt,dialog_id:id,request_id:'v154-legacy-intl'})});
