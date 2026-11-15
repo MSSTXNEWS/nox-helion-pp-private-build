@@ -254,7 +254,8 @@ def enqueue_approved(native:NativePorts,matrix:dict,owner_scope:str,*,limit:int=
     if not isinstance(owner_scope,str) or not re.fullmatch(r'[A-Za-z0-9._:@/-]{4,128}',owner_scope):
         return {'state':'HOLD_OWNER_SCOPE','jobs_enqueued':0}
     req=['authorize','stop','state','native_task_status','native_duplicate_check','approve','queue_enqueue',
-         'queue_readback','verify_queue_receipt','s03_audit','s03_verify']
+         'queue_readback','verify_queue_receipt','s03_audit','s03_verify',
+         's03_registration_lookup']
     if any(not callable(getattr(native,k,None)) for k in req):return {'state':'HOLD_NATIVE_CALLBACKS','jobs_enqueued':0}
     def gate():
         try:return native.stop() is False and native.authorize(owner_scope) is True
@@ -401,6 +402,7 @@ def enqueue_approved(native:NativePorts,matrix:dict,owner_scope:str,*,limit:int=
                         'enqueues_may_have_occurred':True,'jobs_enqueued_verified':len(receipts),
                         'receipts':receipts}
             event={'schema':'NOX_V46_QUEUED_RECEIPT','task_id':tid,'job_id':ticket['job_id'],
+                   'owner_scope':owner_scope,
                    'job_sha256':payload['job_sha256'],
                    'native_queue_receipt_sha256':canonical_hash(dict(ticket)),
                    'native_task_status_receipt_sha256':status['receipt_sha256'],
@@ -408,6 +410,19 @@ def enqueue_approved(native:NativePorts,matrix:dict,owner_scope:str,*,limit:int=
             s03=native.s03_audit(event)
             if native.s03_verify(s03,event) is not True:
                 return {'state':'HOLD_S03_DURABILITY_UNVERIFIED','enqueues_may_have_occurred':True,
+                        'jobs_enqueued_verified':len(receipts),'receipts':receipts}
+            # The writer's own s03_verify ACK is NOT an independent durable
+            # readback. Require exact owner/job/event digest via the ORIGINAL
+            # S03 lookup callback before claiming a registered queue receipt.
+            s03_readback=native.s03_registration_lookup(event)
+            if (not isinstance(s03_readback,Mapping)
+                    or s03_readback.get('state')!='PRESENT'
+                    or s03_readback.get('native_verified') is not True
+                    or s03_readback.get('owner_scope')!=owner_scope
+                    or s03_readback.get('job_id')!=ticket['job_id']
+                    or s03_readback.get('event_sha256')!=canonical_hash(event)):
+                return {'state':'HOLD_S03_INDEPENDENT_READBACK',
+                        'enqueues_may_have_occurred':True,
                         'jobs_enqueued_verified':len(receipts),'receipts':receipts}
             receipts.append({'task_id':tid,'job_id':ticket['job_id'],'state':readback['state'],
                              'receipt_sha256':event['native_queue_receipt_sha256']})

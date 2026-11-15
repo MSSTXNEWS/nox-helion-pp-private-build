@@ -32,6 +32,7 @@ class NativeRegistrationGates(unittest.TestCase):
         self.fail_s03=False
         self.dupe_alias=None
         self.s03_present=True
+        self.s03_readback_fault=None
         self.approved=True
         self.native_status_conflict=False
         self.lease_lost_after_first=False
@@ -59,6 +60,12 @@ class NativeRegistrationGates(unittest.TestCase):
             self.last_s03_event=event
             return {'event_id':'durable-event-001'}
         def s03_lookup(event):
+            if event.get('schema')=='NOX_V46_QUEUED_RECEIPT' and self.s03_readback_fault:
+                if self.s03_readback_fault=='MISSING':
+                    return {'state':'MISSING','native_verified':True}
+                return {'state':'PRESENT','native_verified':True,
+                        'event_sha256':'e'*64,'job_id':event['job_id'],
+                        'owner_scope':event['owner_scope']}
             if self.s03_present or self.calls['s03']>0:
                 return {'state':'PRESENT','native_verified':True,'event_sha256':_hash(event),
                         'job_id':event['job_id'],'owner_scope':event['owner_scope']}
@@ -135,6 +142,28 @@ class NativeRegistrationGates(unittest.TestCase):
         self.assertEqual(r['state'],'HOLD_S03_DURABILITY_UNVERIFIED')
         self.assertTrue(r['enqueues_may_have_occurred'])
         self.assertEqual(self.calls['enqueue'],1)
+
+    def test_new_queue_s03_ack_without_independent_readback_is_hold(self):
+        # Previous V47 trusted s03_verify alone; an ACK does not prove the
+        # original S03 is durable or bound to this exact owner/job/event.
+        for fault in ('MISSING','WRONG_EVENT_DIGEST'):
+            with self.subTest(fault=fault):
+                self.setUp()
+                self.s03_readback_fault=fault
+                r=enqueue_approved(self.ports(),self.matrix,self.scope,limit=1)
+                self.assertEqual(r['state'],'HOLD_S03_INDEPENDENT_READBACK')
+                self.assertTrue(r['enqueues_may_have_occurred'])
+                self.assertEqual(r['jobs_enqueued_verified'],0)
+                self.assertEqual(self.calls['enqueue'],1)
+                self.assertEqual(self.calls['s03'],1)
+
+    def test_unbound_native_s03_readback_port_blocks_before_enqueue(self):
+        from dataclasses import replace
+        ports=replace(self.ports(),s03_registration_lookup=None)
+        r=enqueue_approved(ports,self.matrix,self.scope,limit=1)
+        self.assertEqual(r['state'],'HOLD_NATIVE_CALLBACKS')
+        self.assertEqual(self.calls['enqueue'],0)
+        self.assertEqual(self.calls['s03'],0)
 
     def test_canonical_r60_and_v46_are_not_two_schedulers(self):
         p=plan(self.canonical,self.snapshot,max_new=1)
