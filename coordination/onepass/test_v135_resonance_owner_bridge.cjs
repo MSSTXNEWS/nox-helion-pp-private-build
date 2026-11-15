@@ -8,7 +8,7 @@ const JS=fs.readFileSync(file,'utf8');
 const id='abcd1234abcd1234abcd1234abcd1234';
 const answer='Живой поток NOX';
 const prompt='Привет, NOX';
-function fake(owner=true,pathname='/nox-web-v29/pc/resonance.html',rejectReceipt=false){
+function fake(owner=true,pathname='/nox-web-v29/pc/resonance.html',rejectReceipt=false,reply=answer){
   const calls=[];
   let old=async (path,opts={})=>{
     const u=new URL(String(path),'https://nox.local');
@@ -24,7 +24,7 @@ function fake(owner=true,pathname='/nox-web-v29/pc/resonance.html',rejectReceipt
     if(u.pathname==='/api/ui/memory/dialogs/history'){
       return Response.json({status:'READY',dialog_id:id,messages:[
         {role:'user',content:prompt,ts:'2026-11-15T00:00:00Z'},
-        {role:'assistant',content:answer,ts:'2026-11-15T00:00:01Z'}]});
+        {role:'assistant',content:reply,ts:'2026-11-15T00:00:01Z'}]});
     }
     if(u.pathname==='/api/ui/memory/dialogs/update'){
       const b=JSON.parse(opts.body);
@@ -42,10 +42,10 @@ function fake(owner=true,pathname='/nox-web-v29/pc/resonance.html',rejectReceipt
       const stream=new ReadableStream({async start(ctrl){
         ctrl.enqueue(bytes.encode(JSON.stringify({type:'preparing'})+'\n'));
         ctrl.enqueue(bytes.encode(JSON.stringify({type:'start',model:'NOX HELION'})+'\n'));
-        ctrl.enqueue(bytes.encode(JSON.stringify({type:'delta',text:answer.slice(0,5)})+'\n'));
+        ctrl.enqueue(bytes.encode(JSON.stringify({type:'delta',text:reply.slice(0,5)})+'\n'));
         await new Promise(ok=>setTimeout(ok,110));
         if(opts.signal?.aborted){ctrl.close();return;}
-        ctrl.enqueue(bytes.encode(JSON.stringify({type:'delta',text:answer.slice(5)})+'\n'));
+        ctrl.enqueue(bytes.encode(JSON.stringify({type:'delta',text:reply.slice(5)})+'\n'));
         ctrl.enqueue(bytes.encode(JSON.stringify({type:'done',saved:!rejectReceipt,
           s03_integrated:true,dialog_id:id,exchange_id:'verified-exchange-01'})+'\n'));
         ctrl.close();
@@ -169,4 +169,18 @@ test('V135 already-aborted caller never starts a native inference',async()=>{
   assert.equal(frames.filter(e=>e.type==='done').length,0);
   assert(frames.some(e=>e.type==='error'&&e.error==='STREAM_STOP_REQUESTED'));
   assert(!f.calls.some(c=>c.path==='/api/nox/chat/stream'));
+});
+
+test('V136 received long model delta is emitted in small ordered real pieces', async () => {
+  const actual='Ж'.repeat(300)+'🧠'+'NOX'.repeat(105);
+  const f=fake(true,'/nox-web-v29/pc/resonance.html',false,actual);
+  const r=await f.fetch('/api/nox/chat',{method:'POST',
+    body:JSON.stringify({message:prompt,dialog_id:id,request_id:'v136-pieces'})});
+  const eventsRead=await events(r);
+  const parts=eventsRead.filter(e=>e.type==='token').map(e=>e.t);
+  assert(parts.length>8,'large native delta must not render as a single full answer');
+  assert(parts.every(s=>Array.from(s).length<=24),'split should keep small actual pieces');
+  assert.equal(parts.join(''),actual,'no lost, duplicated or fabricated text');
+  assert.equal(eventsRead.filter(e=>e.type==='done').length,1);
+  assert.equal(eventsRead.at(-1).type,'done');
 });
