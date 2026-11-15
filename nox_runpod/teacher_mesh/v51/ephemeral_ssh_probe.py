@@ -72,6 +72,89 @@ if rc==0:
     patterns={'python':'python','llama':'llama','ollama':'ollama','supervisor':'supervis','node':'node','jupyter':'jupyter'}
     for label,pattern in patterns.items():
         print('NATIVE_PROCESS_COUNT_'+label.upper()+'='+str(sum(pattern in name for name in names)))
+
+# P0 compatibility inventory: metadata only; no GPU allocations or package installs.
+from pathlib import Path
+print('NATIVE_P0_DEEP_INVENTORY_STARTED=true')
+print('NATIVE_CPU_LOGICAL_COUNT='+str(os.cpu_count()))
+for path,label in (
+    ('/sys/fs/cgroup/memory.max','CGROUP_MEMORY_MAX'),
+    ('/sys/fs/cgroup/memory.current','CGROUP_MEMORY_CURRENT')):
+    try:
+        value=Path(path).read_text().strip()
+        if re.fullmatch(r'(?:[0-9]{1,20}|max)',value):
+            print('NATIVE_'+label+'='+value)
+    except OSError:pass
+rc,out=call(['nvidia-smi','--query-gpu=index,driver_version,compute_cap','--format=csv,noheader,nounits'])
+if rc==0:
+    print('NATIVE_DRIVER_CCAP_QUERY=PASS')
+    for item in out.splitlines()[:2]:
+        if re.fullmatch(r'[0-9., ]{5,100}',item.strip()):
+            print('NATIVE_DRIVER_CCAP='+item.strip())
+else:print('NATIVE_DRIVER_CCAP_QUERY=HOLD')
+rc,out=call(['nvidia-smi','--query-compute-apps=gpu_uuid,pid,used_gpu_memory','--format=csv,noheader,nounits'])
+if rc==0:
+    print('NATIVE_COMPUTE_APPS_QUERY=PASS')
+    for item in out.splitlines()[:16]:
+        cols=[c.strip() for c in item.split(',')]
+        if len(cols)>=3 and cols[1].isdigit() and re.fullmatch(r'[0-9]+',cols[2]):
+            pid=cols[1]
+            try: process=Path('/proc',pid,'comm').read_text().strip()
+            except OSError:process='UNKNOWN'
+            if not re.fullmatch('[A-Za-z0-9_.:-]{1,40}',process):
+                process='UNKNOWN'
+            print('NATIVE_COMPUTE_APP_PID='+pid+',MEM_MIB='+cols[2]+',PROC='+process)
+else:print('NATIVE_COMPUTE_APPS_QUERY=HOLD')
+for root,label in (('/workspace','WORKSPACE'),('/root','ROOT')):
+    try:
+        items=[x.name for x in os.scandir(root)
+                if x.is_dir(follow_symlinks=False) and
+                   ('nox' in x.name.lower() or 'onehost' in x.name.lower())]
+        items=[x for x in items if re.fullmatch('[A-Za-z0-9_.-]{1,70}',x)]
+        print('NATIVE_NOX_DIR_NAMES_'+label+'='+json.dumps(items[:15]))
+    except OSError:pass
+for path,label in (
+    ('/usr/local/cuda/version.json','CUDA_VERSION_JSON_EXISTS'),
+    ('/usr/local/cuda/bin/nvcc','NVCC_EXISTS'),
+    ('/root/nox/STOP','STOP_ROOT_NOX'),
+    ('/workspace/NOX_STOP','STOP_WORKSPACE')):
+    print('NATIVE_'+label+'='+str(Path(path).exists()).lower())
+PY_META = '''
+import json,sys
+from importlib import metadata as m
+d={"python":sys.version.split()[0],"packages":{}}
+for name in ("torch","transformers","accelerate","datasets",
+             "safetensors","deepspeed","triton","llama-cpp-python"):
+    try:d["packages"][name]=m.version(name)
+    except m.PackageNotFoundError:pass
+if "torch" in d["packages"]:
+    try:
+        import torch
+        d["torch_cuda_build"]=str(torch.version.cuda)
+        d["torch_compiled_arch_list"]=torch.cuda.get_arch_list()
+        d["cudnn_version"]=torch.backends.cudnn.version()
+    except Exception as e:d["torch_probe_error_type"]=type(e).__name__
+print(json.dumps(d,sort_keys=True))
+'''
+candidates=[shutil.which('python3'),'/opt/venv/bin/python',
+            '/workspace/venv/bin/python','/root/nox/venv/bin/python']
+checked=set()
+for exe in candidates:
+    if not exe or exe in checked or not os.path.isfile(exe) or not os.access(exe,os.X_OK):
+        continue
+    checked.add(exe)
+    rc,out=call([exe,'-c',PY_META],seconds=20)
+    if rc==0:
+        try:
+            record=json.loads(out)
+            if isinstance(record,dict):
+                print('NATIVE_PYENV_'+str(len(checked))+'='+json.dumps(record,sort_keys=True)[:1900])
+        except ValueError:pass
+    else:
+        print('NATIVE_PYENV_'+str(len(checked))+'=HOLD_PACKAGE_INSPECT')
+    if len(checked)>=3:break
+print('NATIVE_P0_DEEP_INVENTORY_COMPLETE=true')
+
 rc,out=call(['supervisorctl','status'])
 if rc==0:
     known=[]
