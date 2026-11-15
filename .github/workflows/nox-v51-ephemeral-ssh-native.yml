@@ -86,6 +86,10 @@ jobs:
         if: success()
         run: |
           echo "NOX_VAST_NATIVE_READ_ONLY_SSH_RECEIPT=PASS"
-          echo "ONEHOST_NATIVE_QUEUE_REGISTERED=false"
+          # This read-only SSH/SSE job never calls original OneHost queue/S03 ports.
+          # A successful SSH receipt cannot certify how many native jobs exist.
+          echo "ONEHOST_NATIVE_QUEUE_READBACK=HOLD_NOT_QUERIED"
+          echo "ONEHOST_NATIVE_S03_RECEIPTS=HOLD_NOT_QUERIED"
+          echo "ONEHOST_NATIVE_JOB_IDS_VERIFIED=UNKNOWN_NOT_QUERIED"
           echo "PRODUCTION_NOT_MODIFIED=true"
           echo "TRAINER_NOT_RESTARTED=true"

@@ -357,4 +357,18 @@ class Priorities(unittest.TestCase):
                     self.assertIn(ids[1],a['protected_task_ids'])
                     self.assertEqual(a['native_jobs_restarted'],0)
 
+
+    def test_v181_v51_readonly_ssh_never_reports_native_queue_from_constant(self):
+        # A real V51 SSH/SSE receipt proves connectivity, not registration.
+        # No port is bound for original queue_readback/S03 lookup in this flow.
+        wf=(ROOT/'.github/workflows/nox-v51-ephemeral-ssh-native.yml').read_text()
+        self.assertIn("workflow_dispatch:",wf)
+        self.assertIn("inputs.allow_native == 'YES'",wf)
+        self.assertIn("github.actor == 'MSSTXNEWS'",wf)
+        self.assertIn("github.ref == 'refs/heads/feature/nox-v38-synaptic-brain-20261114'",wf)
+        self.assertNotIn("ONEHOST_NATIVE_QUEUE_REGISTERED=false",wf)
+        self.assertIn("ONEHOST_NATIVE_QUEUE_READBACK=HOLD_NOT_QUERIED",wf)
+        self.assertIn("ONEHOST_NATIVE_S03_RECEIPTS=HOLD_NOT_QUERIED",wf)
+        self.assertIn("ONEHOST_NATIVE_JOB_IDS_VERIFIED=UNKNOWN_NOT_QUERIED",wf)
+
 if __name__=='__main__':unittest.main()
