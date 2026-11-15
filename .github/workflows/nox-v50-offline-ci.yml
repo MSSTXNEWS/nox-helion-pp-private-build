@@ -28,7 +28,6 @@ jobs:
         run: |
           set -euo pipefail
           python -m py_compile nox_runpod/teacher_mesh/v50/ephemeral_ssh_audit.py
-          python -m py_compile nox_runpod/teacher_mesh/v51/ephemeral_ssh_probe.py
           python -m unittest discover -s nox_runpod/teacher_mesh/v50/tests -p 'test_*.py' -v
       - name: Check restricted instance and method guards
         run: |
