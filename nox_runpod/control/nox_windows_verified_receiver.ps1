@@ -41,19 +41,30 @@ print(json.dumps({"status":"READY","path":str(p),"cycle":obj.get("cycle"),"steps
  $local=Join-Path $root $name
  New-Item -ItemType Directory -Force -Path $local | Out-Null
  $marker=Join-Path $local 'NOX_WINDOWS_VERIFIED.json'
- if(Test-Path $marker){
-  $prior=Get-Content $marker -Raw|ConvertFrom-Json
+ if(Test-Path -LiteralPath $marker){
+  $prior=Get-Content -LiteralPath $marker -Raw | ConvertFrom-Json
   if($prior.status -eq 'SHA256_VERIFIED' -and $prior.cycle -eq $status.cycle -and $prior.steps -eq $status.steps){
-   # Existing marker alone is never durable proof; recheck on-disk receipt and every shard.
+   # A stored PASS marker is not proof if a shard disappeared since the last copy.
    $existingReceipt=Join-Path $local 'NOX_FULL_TRAIN_RECEIPT.json'
    if(!(Test-Path -LiteralPath $existingReceipt -PathType Leaf)){throw 'HOLD_VERIFIED_RECEIPT_MISSING'}
    $priorReceipt=Get-Content -LiteralPath $existingReceipt -Raw | ConvertFrom-Json
-   if($priorReceipt.cycle -ne $status.cycle -or $priorReceipt.steps -ne $status.steps){
-    throw 'HOLD_VERIFIED_RECEIPT_STALE'
+   if($priorReceipt.cycle -ne $status.cycle -or $priorReceipt.steps -ne $status.steps){throw 'HOLD_VERIFIED_RECEIPT_STALE'}
+   foreach($shard in $priorReceipt.shards){
+    $filename=[string]$shard.file
+    if($filename.Length -eq 0 -or $filename.Contains('..') -or $filename.Contains('/') -or $filename.Contains('\')){
+     throw 'HOLD_VERIFIED_SHARD_UNSAFE_NAME'
+    }
+    $existingShard=Join-Path $local $filename
+    if(!(Test-Path -LiteralPath $existingShard -PathType Leaf) -or
+       (Get-Item -LiteralPath $existingShard -Force).LinkType -or
+       (Get-FileHash -LiteralPath $existingShard -Algorithm SHA256).Hash -ine [string]$shard.sha256){
+     throw "HOLD_VERIFIED_SHARD_MISSING_OR_TAMPERED $filename"
+    }
    }
-   foreach($s in $priorReceipt.shards){
-    $filename=[string]$s.file
-    if($filename -notmatch '^[A-Za-z0-9_.-]+
+   Write-Host "NOX_ALREADY_VERIFIED $local";return
+  }
+  throw 'HOLD_EXISTING_MARKER_CONFLICT'
+ }
  $items=@($status.shards)+@([pscustomobject]@{file='NOX_FULL_TRAIN_RECEIPT.json';sha256=$null})
  foreach($item in $items){
   $file=[string]$item.file
