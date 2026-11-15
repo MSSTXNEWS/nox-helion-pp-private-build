@@ -343,10 +343,10 @@ test('V156 coalesced native NDJSON keeps valid short frames and rejects one over
   const id='abcd1234abcd1234abcd1234abcd1234';
   const piece='Ж'.repeat(22),count=7000,prompt='Coalesced native frame audit';
   const answer=piece.repeat(count);
-  const valid=Array.from({length:count},()=>JSON.stringify({type:'delta',text:piece})+'\\n').join('')+
-    JSON.stringify({type:'done',saved:true,s03_integrated:true,dialog_id:id,exchange_id:'coalesced-qa-01'})+'\\n';
+  const valid=Array.from({length:count},()=>JSON.stringify({type:'delta',text:piece})+'\n').join('')+
+    JSON.stringify({type:'done',saved:true,s03_integrated:true,dialog_id:id,exchange_id:'coalesced-qa-01'})+'\n';
   assert(valid.length>300000&&answer.length<200000,'valid source-level stress fixture');
-  const tooLong=JSON.stringify({type:'delta',text:'small',unused:'x'.repeat(300100)})+'\\n';
+  const tooLong=JSON.stringify({type:'delta',text:'small',unused:'x'.repeat(300100)})+'\n';
   async function run(nativeFrames){
     const calls=[];
     const upstream=async path=>{
