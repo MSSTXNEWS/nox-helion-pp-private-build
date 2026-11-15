@@ -1,0 +1,41 @@
+name: NOX FULL V134 owner-safe source export for physical offline acceptance
+on:
+  push:
+    branches: [qa/nox-full-v134-source-exact-20261115]
+    paths:
+      - '.github/workflows/nox-v134-exact-source-export.yml'
+permissions:
+  contents: read
+jobs:
+  source-export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Compile exact V134 builder / verify native JS and tests
+        run: |
+          set -euo pipefail
+          python -m py_compile coordination/onepass/v134_native_owner_compat_converger.py coordination/onepass/build_legacy_compat_v2.py
+          python -m unittest -v coordination.onepass.test_v134_native_owner_compat_converger
+          node --check coordination/onepass/nox-legacy-chat-bridge-v293.js
+          node coordination/onepass/test_chat_compat_node.cjs
+      - name: Export only exact tracked source and signed hash manifest
+        run: |
+          set -euo pipefail
+          mkdir -p source/coordination/onepass
+          cp coordination/onepass/v134_native_owner_compat_converger.py coordination/onepass/build_legacy_compat_v2.py coordination/onepass/nox-legacy-chat-bridge-v293.js coordination/onepass/test_v134_native_owner_compat_converger.py coordination/onepass/test_chat_compat_node.cjs source/coordination/onepass/
+          (cd source && find coordination -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum > SOURCE_SHA256SUMS.txt)
+          (cd source && zip -q -r ../NOX_V134_EXACT_SOURCE.zip .)
+          sha256sum NOX_V134_EXACT_SOURCE.zip
+          echo 'NOX_V134_FULL_WEB_NATIVE_NOT_DEPLOYED=true'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NOX_V134_EXACT_SOURCE
+          path: NOX_V134_EXACT_SOURCE.zip
+          if-no-files-found: error
+          retention-days: 7
