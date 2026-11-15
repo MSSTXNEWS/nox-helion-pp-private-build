@@ -12,7 +12,7 @@ async function one(opts){
   window:{NOX_NATIVE_OWNER:opts.native!==false,
    NoxWorkspace:{native:opts.native!==false,request:async(path,body)=>{
      calls.push([path,body]);
-     if(path==='/api/nox/status')return data.status || {host:'NOX_CHAT_V24.1',status:'READY',owner_authenticated:true};
+     if(path==='/api/nox/status')return data.status || {host:'NOX_CHAT_V24.1',status:'READY',owner_authenticated:true,windows_owner_pc:true};
      if(path==='/api/install/capabilities')return data.ability || {status:'READY',windows_owner_pc:true,owner_authenticated:true,backup_supported:true};
      if(path==='/api/install/backup')return data.backup || {status:'READY',sha256_verified:true,backup_sha256:'b'.repeat(64)};
      throw Error('UNKNOWN_ROUTE '+path);
@@ -37,6 +37,11 @@ async function one(opts){
  assert.match(r.err,/HOLD_WINDOWS_BACKUP_WRONG_HOST_OR_ANONYMOUS/);assert.equal(r.calls.length,0);
  r=await one({data:{status:{host:'NOX_CHAT_V24.1',status:'READY'}}});
  assert.match(r.err,/HOLD_WINDOWS_BACKUP_OWNER_IDENTITY_UNVERIFIED/);assert.deepEqual(r.calls.map(x=>x[0]),['/api/nox/status']);
+ // Source-only regression: the real 92-route map labels /api/nox/status
+ // OneHost-owned. A READY OneHost response is not Windows PC authority.
+ r=await one({data:{status:{host:'NOX_CHAT_V24.1',status:'READY',owner_authenticated:true}}});
+ assert.match(r.err,/HOLD_WINDOWS_BACKUP_OWNER_IDENTITY_UNVERIFIED/);
+ assert.deepEqual(r.calls.map(x=>x[0]),['/api/nox/status']);
  r=await one({data:{status:{host:'EXISTING_NATIVE_ONEHOST',status:'READY',owner_authenticated:true}}});
  assert.match(r.err,/HOLD_WINDOWS_BACKUP_OWNER_IDENTITY_UNVERIFIED/);assert.equal(r.calls.length,1);
  r=await one({data:{ability:{status:'READY',windows_owner_pc:false,owner_authenticated:true,backup_supported:true}}});
@@ -47,5 +52,5 @@ async function one(opts){
  assert.equal(r.err,null);assert.equal(r.result.backup_sha256,'b'.repeat(64));
  assert.deepEqual(r.calls.map(x=>x[0]),['/api/nox/status','/api/install/capabilities','/api/install/backup']);
  assert.deepEqual(JSON.stringify(r.calls[2][1]),'{"confirm":true}');
- console.log('V144_ORIGINAL_BROWSER_JS_GUARD_8_8_SOURCE_PASS');
+ console.log('V145_ORIGINAL_BROWSER_JS_GUARD_9_9_SOURCE_PASS');
 })().catch(e=>{console.error(e);process.exitCode=1});
