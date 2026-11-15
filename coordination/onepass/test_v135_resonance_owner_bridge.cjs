@@ -8,7 +8,7 @@ const JS=fs.readFileSync(file,'utf8');
 const id='abcd1234abcd1234abcd1234abcd1234';
 const answer='Живой поток NOX';
 const prompt='Привет, NOX';
-function fake(owner=true,pathname='/nox-web-v29/pc/resonance.html',rejectReceipt=false,reply=answer,revision=3){
+function fake(owner=true,pathname='/nox-web-v29/pc/resonance.html',rejectReceipt=false,reply=answer,revision=3,raf){
   const calls=[];
   let old=async (path,opts={})=>{
     const u=new URL(String(path),'https://nox.local');
@@ -57,7 +57,7 @@ function fake(owner=true,pathname='/nox-web-v29/pc/resonance.html',rejectReceipt
   const window={NOX_NATIVE_OWNER:owner,fetch:old};
   const location={pathname,href:'https://nox.local'+pathname,origin:'https://nox.local'};
   const context={window,location,URL,Request,Response,ReadableStream,
-    TextDecoder,TextEncoder,AbortController,performance,console};
+    TextDecoder,TextEncoder,AbortController,performance,console,requestAnimationFrame:raf};
   vm.runInNewContext(JS,context,{filename:file});
   return {fetch:(...args)=>window.fetch(...args),calls,window};
 }
@@ -195,4 +195,26 @@ test('V136 received long model delta is emitted in small ordered real pieces', a
   assert.equal(parts.join(''),actual,'no lost, duplicated or fabricated text');
   assert.equal(eventsRead.filter(e=>e.type==='done').length,1);
   assert.equal(eventsRead.at(-1).type,'done');
+});
+
+test('V137 received pieces appear across real paint frames, not only at done',async()=>{
+  let frames=0;
+  const render=cb=>{frames++;setTimeout(()=>cb(performance.now()),2);};
+  const text='Z'.repeat(300);
+  const f=fake(true,'/nox-web-v29/pc/resonance.html',false,text,3,render);
+  const r=await f.fetch('/api/nox/chat',{method:'POST',
+    body:JSON.stringify({message:prompt,dialog_id:id,request_id:'progressive-frames'})});
+  const reader=r.body.getReader(),dec=new TextDecoder();
+  const initial=await reader.read(),first=await reader.read();
+  assert.equal(JSON.parse(dec.decode(initial.value).slice(6).trim()).type,'meta');
+  assert.equal(JSON.parse(dec.decode(first.value).slice(6).trim()).type,'token');
+  const others=[];
+  while(true){
+    const chunk=await reader.read();if(chunk.done)break;
+    others.push(JSON.parse(dec.decode(chunk.value).slice(6).trim()));
+  }
+  assert(frames>=2&&frames<=7,'bounded animation frames are used only for actual native pieces');
+  const pieces=[JSON.parse(dec.decode(first.value).slice(6).trim()),...others].filter(x=>x.type==='token');
+  assert.equal(pieces.map(x=>x.t).join(''),text);
+  assert.equal(others.at(-1).type,'done');
 });
