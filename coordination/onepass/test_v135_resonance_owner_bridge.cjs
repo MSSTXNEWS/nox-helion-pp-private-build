@@ -8,7 +8,7 @@ const JS=fs.readFileSync(file,'utf8');
 const id='abcd1234abcd1234abcd1234abcd1234';
 const answer='Живой поток NOX';
 const prompt='Привет, NOX';
-function fake(owner=true,pathname='/nox-web-v29/pc/resonance.html',rejectReceipt=false,reply=answer,revision=3,raf,legacyIntl=false,firstDeltaAt=5,onHistory){
+function fake(owner=true,pathname='/nox-web-v29/pc/resonance.html',rejectReceipt=false,reply=answer,revision=3,raf,legacyIntl=false,firstDeltaAt=5,onHistory,historyExchangeId='verified-exchange-01'){
   const calls=[];
   let old=async (path,opts={})=>{
     const u=new URL(String(path),'https://nox.local');
@@ -24,8 +24,8 @@ function fake(owner=true,pathname='/nox-web-v29/pc/resonance.html',rejectReceipt
     if(u.pathname==='/api/ui/memory/dialogs/history'){
       onHistory?.();
       return Response.json({status:'READY',dialog_id:id,messages:[
-        {role:'user',content:prompt,ts:'2026-11-15T00:00:00Z'},
-        {role:'assistant',content:reply,ts:'2026-11-15T00:00:01Z'}]});
+        {role:'user',exchange_id:historyExchangeId,content:prompt,ts:'2026-11-15T00:00:00Z'},
+        {role:'assistant',exchange_id:historyExchangeId,content:reply,ts:'2026-11-15T00:00:01Z'}]});
     }
     if(u.pathname==='/api/ui/memory/dialogs/update'){
       const b=JSON.parse(opts.body);
@@ -358,7 +358,7 @@ test('V156 coalesced native NDJSON keeps valid short frames and rejects one over
         return Response.json({dialog_id:id,title:'QA'});
       if(u.pathname==='/api/ui/memory/dialogs/history')
         return Response.json({status:'READY',dialog_id:id,messages:[
-          {role:'user',content:prompt},{role:'assistant',content:answer}]});
+          {role:'user',exchange_id:'coalesced-qa-01',content:prompt},{role:'assistant',exchange_id:'coalesced-qa-01',content:answer}]});
       if(u.pathname==='/api/nox/chat/stream'){
         return new Response(new ReadableStream({start(c){
           c.enqueue(new TextEncoder().encode(nativeFrames));c.close();
@@ -403,7 +403,7 @@ test('V157 native done is terminal: reject trailing control frame before S03 REA
         return Response.json({dialog_id:did,title:'V157'});
       if(u.pathname==='/api/ui/memory/dialogs/history')
         return Response.json({status:'READY',dialog_id:did,messages:[
-          {role:'user',content:prompt},{role:'assistant',content:answer}]});
+          {role:'user',exchange_id:'v157-receipt-001',content:prompt},{role:'assistant',exchange_id:'v157-receipt-001',content:answer}]});
       if(u.pathname==='/api/nox/chat/stream')
         return new Response(new ReadableStream({start(c){
           c.enqueue(new TextEncoder().encode(payload));c.close();
@@ -449,7 +449,7 @@ test('V158 unknown or missing native event before done cannot report persisted S
       const u=new URL(String(path),'https://nox.local');calls.push(u.pathname);
       if(u.pathname==='/api/ui/memory/dialogs/create')return Response.json({dialog_id:id,title:'V158'});
       if(u.pathname==='/api/ui/memory/dialogs/history')return Response.json({
-        status:'READY',dialog_id:id,messages:[{role:'user',content:p},{role:'assistant',content:a}]
+        status:'READY',dialog_id:id,messages:[{role:'user',exchange_id:'v158-receipt-001',content:p},{role:'assistant',exchange_id:'v158-receipt-001',content:a}]
       });
       if(u.pathname==='/api/nox/chat/stream')
         return new Response(new ReadableStream({start(c){
@@ -498,7 +498,7 @@ test('V159 require real native start before delta/done and reject duplicate star
         return Response.json({dialog_id:id,title:'V159'});
       if(u.pathname==='/api/ui/memory/dialogs/history')
         return Response.json({status:'READY',dialog_id:id,messages:[
-          {role:'user',content:p},{role:'assistant',content:a}]});
+          {role:'user',exchange_id:'v159-real-start-001',content:p},{role:'assistant',exchange_id:'v159-real-start-001',content:a}]});
       if(u.pathname==='/api/nox/chat/stream')
         return new Response(new ReadableStream({start(c){
           c.enqueue(new TextEncoder().encode(frames.map(x=>JSON.stringify(x)+'\n').join('')));
@@ -553,7 +553,7 @@ test('V160 preparing is unique and precedes native start; reject before S03 read
         return Response.json({dialog_id:id,title:'V160'});
       if(u.pathname==='/api/ui/memory/dialogs/history')
         return Response.json({status:'READY',dialog_id:id,messages:[
-          {role:'user',content:prompt},{role:'assistant',content:answer}]});
+          {role:'user',exchange_id:'v160-order-001',content:prompt},{role:'assistant',exchange_id:'v160-order-001',content:answer}]});
       if(u.pathname==='/api/nox/chat/stream')
         return new Response(new ReadableStream({start(c){
           c.enqueue(new TextEncoder().encode(events.map(e=>JSON.stringify(e)+'\n').join('')));
@@ -608,7 +608,7 @@ test('V161 missing native preparing cannot become persisted S03 success',async()
         return Response.json({dialog_id:id,title:'V161'});
       if(u.pathname==='/api/ui/memory/dialogs/history')
         return Response.json({status:'READY',dialog_id:id,messages:[
-          {role:'user',content:p},{role:'assistant',content:a}]});
+          {role:'user',exchange_id:'v161-native-receipt',content:p},{role:'assistant',exchange_id:'v161-native-receipt',content:a}]});
       if(u.pathname==='/api/nox/chat/stream')
         return new Response(new ReadableStream({start(c){
           c.enqueue(new TextEncoder().encode(frames.map(x=>JSON.stringify(x)+'\n').join('')));
@@ -657,7 +657,7 @@ test('V162 original native preparing mode must match V112 before S03 acceptance'
         return Response.json({dialog_id:id,title:'V162'});
       if(u.pathname==='/api/ui/memory/dialogs/history')
         return Response.json({status:'READY',dialog_id:id,messages:[
-          {role:'user',content:question},{role:'assistant',content:answer}]});
+          {role:'user',exchange_id:'v162-mode-001',content:question},{role:'assistant',exchange_id:'v162-mode-001',content:answer}]});
       if(u.pathname==='/api/nox/chat/stream')
         return new Response(new ReadableStream({start(c){
           c.enqueue(new TextEncoder().encode(frames.map(e=>JSON.stringify(e)+'\n').join('')));
@@ -707,4 +707,28 @@ test('V163 JSON cancellation during S03 readback never reports persisted success
     'race must occur at real history readback boundary');
   assert(!f.calls.some(c=>c.path==='/api/nox/stop'),
     'do not send global STOP for a JSON request abort');
+});
+
+
+test('V164 S03 readback must bind BOTH saved rows to the native receipt exchange ID',async()=>{
+  // A previously committed identical prompt and answer cannot prove THIS
+  // generation was durably written. Missing IDs also fail closed.
+  for(const staleExchange of ['previous-exchange-01',null]){
+    const f=fake(true,'/nox-web-v29/pc/resonance.html',false,answer,3,
+      undefined,false,5,undefined,staleExchange);
+    const json=await f.fetch('/api/nox/chat',{method:'POST',
+      body:JSON.stringify({message:prompt})});
+    assert.equal(json.status,503,'JSON cannot accept stale or untagged S03 rows');
+    const failed=await json.json();
+    assert.equal(failed.history_persisted,false);
+    assert.equal(failed.s03_integrated,false);
+    assert.match(failed.error,/HOLD_DIALOG_HISTORY_READBACK/);
+    const stream=await f.fetch('/api/nox/chat',{method:'POST',
+      body:JSON.stringify({message:prompt,dialog_id:id,request_id:'v164-s03-identity'})});
+    const frames=await events(stream);
+    assert(!frames.some(x=>x.type==='done'),'SSE cannot claim a stale exchange');
+    assert(frames.some(x=>x.type==='error'&&/HOLD_DIALOG_HISTORY_READBACK/.test(x.error)));
+    assert(f.calls.some(x=>x.path.startsWith('/api/ui/memory/dialogs/history?')));
+    assert(!f.calls.some(x=>x.path==='/api/nox/stop'),'do not send global STOP');
+  }
 });

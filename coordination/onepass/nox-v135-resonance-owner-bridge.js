@@ -76,12 +76,14 @@
     if(typeof data.dialog_id!=='string'||!ID.test(data.dialog_id))throw Error('HOLD_INVALID_DIALOG_SCOPE');
     return data.dialog_id;
   }
-  async function checkHistory(id,prompt,answer,signal) {
+  async function checkHistory(id,prompt,answer,exchangeId,signal) {
     const data=await nativeJSON('/api/ui/memory/dialogs/history?dialog_id='+id+'&limit=100',{signal});
     if(data.status!=='READY'||data.dialog_id!==id||!Array.isArray(data.messages))throw Error('HOLD_DIALOG_HISTORY_CONTRACT');
     const pair=data.messages.slice(-2);
     if(pair.length!==2||pair[0].role!=='user'||pair[1].role!=='assistant'||
-       pair[0].content!==prompt||pair[1].content!==answer)throw Error('HOLD_DIALOG_HISTORY_READBACK');
+       pair[0].content!==prompt||pair[1].content!==answer||
+       pair[0].exchange_id!==exchangeId||pair[1].exchange_id!==exchangeId)
+      throw Error('HOLD_DIALOG_HISTORY_READBACK');
   }
   function accepted(done,id) {
     return done?.type==='done'&&done.saved===true&&done.s03_integrated===true&&
@@ -208,7 +210,7 @@
           if(trailing)await emitPieces(trailing);
           if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
           if(!accepted(receipt,id))throw Error('HOLD_S03_COMMIT_RECEIPT');
-          await checkHistory(id,data.message,answer,nativeSignal);
+          await checkHistory(id,data.message,answer,receipt.exchange_id,nativeSignal);
           if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
           event({type:'done',status:'done',saved:true,s03_integrated:true,
             history_persisted:true,dialog_id:id,exchange_id:receipt.exchange_id,
@@ -240,7 +242,7 @@
       const {answer,receipt}=await consume(upstream,()=>{},signal);
       if(signal?.aborted)throw Error('STREAM_STOP_REQUESTED');
       if(!accepted(receipt,id))throw Error('HOLD_S03_COMMIT_RECEIPT');
-      await checkHistory(id,data.message,answer,signal);
+      await checkHistory(id,data.message,answer,receipt.exchange_id,signal);
       // JSON clients also have a cancellation boundary: a late abort during
       // S03 readback must never produce a persisted-success response.
       if(signal?.aborted)throw Error('STREAM_STOP_REQUESTED');
