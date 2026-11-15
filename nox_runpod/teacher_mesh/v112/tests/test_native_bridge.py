@@ -13,7 +13,7 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.testclient import TestClient
 
 from nox_runpod.teacher_mesh.v112.native_v29_full_bridge import (
-    _timestamp, ensure_dialog_schema, register_native_v29_chat,
+    _sse_delta, _timestamp, ensure_dialog_schema, register_native_v29_chat,
 )
 
 class V112Tests(unittest.TestCase):
@@ -80,6 +80,8 @@ class V112Tests(unittest.TestCase):
                     # A model-side error after valid deltas is terminal even
                     # when a matching fixture S03 row is present.
                     yield 'data: '+json.dumps({'error':{'message':'fixture inference failed'}})+'\n\n'
+                if self.bulk_sse=='invalid_choice_after_delta':
+                    yield 'data: '+json.dumps({'choices':[{'delta':42}]})+'\n\n'
                 if self.record:
                     from datetime import datetime,timezone
                     stamp=datetime.now(timezone.utc).isoformat()
@@ -278,6 +280,33 @@ class V112Tests(unittest.TestCase):
 
     def test_trailing_incomplete_utf8_fails_closed_even_with_s03_fixture(self):
         self._assert_invalid_utf8_cannot_claim_durable_s03_success('trailing_utf8_partial')
+
+    def test_v176_malformed_choice_envelope_fails_closed(self):
+        bad=({'choices':'invalid'}, {'choices':None}, {'choices':[None]},
+             {'choices':[{'delta':42}]},
+             {'choices':[{'delta':{'content':['not a string']}}]},
+             {'status':'unrecognized model error'})
+        for obj in bad:
+            with self.subTest(obj=obj):
+                self.assertEqual(_sse_delta('data: '+json.dumps(obj)),('malformed',''))
+        for good in ({'choices':[],'usage':{'completion_tokens':3}},
+                     {'usage':{'completion_tokens':3}},
+                     {'choices':[{'delta':{},'finish_reason':'stop'}]}):
+            self.assertEqual(_sse_delta('data: '+json.dumps(good)),('',''))
+
+    def test_v176_invalid_choices_does_not_save_thread(self):
+        self.bulk_sse='invalid_choice_after_delta'
+        dialog=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
+            json={'title':'corrupt choices','confirmed':True}).json()['dialog_id']
+        reply=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
+            json={'message':'bad model stream','dialog_id':dialog})
+        frames=[json.loads(x) for x in reply.text.splitlines() if x.strip()]
+        self.assertTrue(any(f['type']=='delta' for f in frames))
+        self.assertEqual(frames[-1],{'type':'error','error':'HOLD_UPSTREAM_SSE_MALFORMED'})
+        self.assertFalse(any(f.get('type')=='done' or f.get('saved') for f in frames))
+        history=self.client.get('/api/ui/memory/dialogs/history',cookies=self.cookie,
+            params={'dialog_id':dialog}).json()
+        self.assertEqual(history['messages'],[])
 
     def test_cross_dialog_id_is_rejected(self):
         before=len(self.calls)

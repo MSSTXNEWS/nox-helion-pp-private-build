@@ -116,9 +116,16 @@ def _sse_delta(line):
         # permit a later [DONE] plus unrelated S03 proof to claim success.
         if 'error' in obj and obj['error'] is not None:
             return 'upstream_error', ''
-        for row in obj.get('choices') or []:
+        # Usage-only chunks are valid; malformed choices must invalidate
+        # previous output even if the upstream later sends [DONE].
+        if 'choices' not in obj and isinstance(obj.get('usage'),dict):
+            return '', ''
+        choices=obj.get('choices')
+        if not isinstance(choices,list):
+            return 'malformed', ''
+        for row in choices:
             if not isinstance(row,dict):
-                continue
+                return 'malformed', ''
             # A terminal finish_reason other than stop means incomplete or
             # unsupported generation. A later [DONE] plus matching S03 proof
             # cannot convert truncated/filter-blocked text into success.
@@ -126,9 +133,14 @@ def _sse_delta(line):
             if finish_reason is not None and finish_reason != 'stop':
                 return 'upstream_finish_incomplete', ''
             delta = row.get('delta')
-            if isinstance(delta,dict) and isinstance(delta.get('content'),str):
-                if delta['content']:
-                    return 'delta',delta['content']
+            if delta is not None and not isinstance(delta,dict):
+                return 'malformed', ''
+            if isinstance(delta,dict):
+                content=delta.get('content')
+                if content is not None and not isinstance(content,str):
+                    return 'malformed', ''
+                if content:
+                    return 'delta',content
     except (TypeError,ValueError):
         # Broken upstream data is a protocol error, not an ignorable token.
         return 'malformed', ''
