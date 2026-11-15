@@ -18,8 +18,9 @@ class SourceGateTests(unittest.TestCase):
         self.sample={'dataset':'curated','source':'example','id':'q100','license':'mit','split':'train',
                      'input':'Write a pure function','output':'Synthetic controlled response'}
         self.holdout={g.group_hash({**self.sample,'id':'q999'})}
+        self.holdout_questions={g.question_sha256('An unrelated sealed holdout question')}
     def check(self,rows=None):
-        return g.validate([self.sample] if rows is None else rows,self.catalogue,self.policy,self.holdout)
+        return g.validate([self.sample] if rows is None else rows,self.catalogue,self.policy,self.holdout,self.holdout_questions)
     def reject(self,change):
         change(self)
         with self.assertRaises(g.Hold):self.check()
@@ -56,4 +57,31 @@ class SourceGateTests(unittest.TestCase):
     def test_25_policy_wrong_repo(self):self.reject(lambda x:x.policy.update(repository='other/repo'))
     def test_26_empty_rows(self):
         with self.assertRaises(g.Hold):self.check([])
+    def test_27_old_id_group_bypass_is_blocked_by_exact_question_holdout(self):
+        self.holdout_questions.add(g.question_sha256(self.sample['input']))
+        with self.assertRaisesRegex(g.Hold,'HOLDOUT_QUESTION_CONTENT_OVERLAP'):self.check()
+    def test_28_fullwidth_nfkc_case_whitespace_holdout(self):
+        self.holdout_questions.add(g.question_sha256('ＷＲＩＴＥ   A PURE FUNCTION'))
+        with self.assertRaisesRegex(g.Hold,'HOLDOUT_QUESTION_CONTENT_OVERLAP'):self.check()
+    def test_29_same_source_id_different_question(self):
+        other={**self.sample,'input':'Implement a different function','output':'A different answer'}
+        with self.assertRaisesRegex(g.Hold,'SOURCE_ID_REUSED_FOR_DIFFERENT_QUESTION'):self.check([self.sample,other])
+    def test_30_duplicate_question_different_source_id(self):
+        other={**self.sample,'id':'q101','output':'Alternative synthetic response'}
+        with self.assertRaisesRegex(g.Hold,'DUPLICATE_QUESTION_ACROSS_SOURCE_IDS'):self.check([self.sample,other])
+    def test_31_no_sealed_question_set(self):
+        self.holdout_questions.clear()
+        with self.assertRaisesRegex(g.Hold,'NO_SEALED_HOLDOUT_QUESTION_SHA256'):self.check()
+    def test_32_malformed_question_fingerprint(self):
+        self.holdout_questions.add('not-a-real-sha')
+        with self.assertRaisesRegex(g.Hold,'NO_SEALED_HOLDOUT_QUESTION_SHA256'):self.check()
+    def test_33_multiple_answers_same_normalized_question_allowed(self):
+        other={**self.sample,'input':'  WRITE A  PURE FUNCTION  ','output':'Alternative synthetic response'}
+        self.assertEqual(self.check([self.sample,other])['reviewed_rows'],2)
+    def test_34_nfkc_ru_exact_match(self):
+        self.assertEqual(g.question_sha256('НАПИШИ   КОД'),g.question_sha256('Напиши код'))
+    def test_35_question_type_rejected(self):
+        self.sample['input']=123
+        with self.assertRaises(g.Hold):self.check()
+
 if __name__=='__main__':unittest.main()
