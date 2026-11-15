@@ -5,6 +5,8 @@ import unittest
 from nox_runpod.teacher_mesh.v47.control.dispatcher import (
     load_matrix,plan,_priority
 )
+from nox_runpod.teacher_mesh.v47.control.worm_supervisor import audit_native_queue,release_evidence
+
 ROOT=Path(__file__).resolve().parents[4]
 M=ROOT/'nox_runpod/teacher_mesh/v47/control/TASKS_60_V46.json'
 R=ROOT/'coordination/NOX_R60_MASTER.json'
@@ -97,6 +99,54 @@ class Priorities(unittest.TestCase):
             self.assertEqual(mapped['priority'],t['priority'])
             self.assertEqual(set(mapped['depends_on']),
                          {'R60-'+x[-2:].rjust(3,'0') for x in t['depends_on']})
+    def test_worm_register_zero_is_not_fake_sixty_processes(self):
+        x=state(native_queue_verified=True,task_status={},now_unix=2000)
+        result=audit_native_queue(self.m,x,now_unix=2000)
+        self.assertEqual(result['tasks_expected'],60)
+        self.assertEqual(result['native_registered_verified'],0)
+        self.assertEqual(result['unregistered_count'],60)
+        self.assertEqual(result['native_jobs_started'],0)
+
+    def test_stale_gpu_heartbeat_never_triggers_kill_or_duplicate(self):
+        row={'task_id':'NOX-V46-30','state':'RUNNING',
+             'native_verified':True,'receipt_sha256':'a'*64,
+             'heartbeat_unix':100}
+        x=state(native_queue_verified=True,task_status={row['task_id']:row},now_unix=2000)
+        audit=audit_native_queue(self.m,x,now_unix=2000)
+        self.assertEqual(len(audit['stale_heartbeat_holds']),1)
+        self.assertFalse(audit['stale_heartbeat_holds'][0]['restart_permitted'])
+        self.assertNotIn('NOX-V46-30',{r['task_id'] for r in plan(self.m,x)['planned']})
+
+    def test_failed_gpu_weights_requires_offsite_checkpoint_and_lease(self):
+        row={'task_id':'NOX-V46-30','state':'FAILED','native_verified':True,
+             'receipt_sha256':'a'*64,'attempt_count':1,
+             'retry_after_unix':1000,'owner_lease_released':True,
+             'terminal_verified':True,'checkpoint_restorable':False}
+        x=state(native_queue_verified=True,task_status={row['task_id']:row},now_unix=2000)
+        self.assertFalse(audit_native_queue(self.m,x,now_unix=2000)['retry_eligible_proposals'])
+        row['checkpoint_restorable']=True
+        audit=audit_native_queue(self.m,x,now_unix=2000)
+        self.assertEqual(len(audit['retry_eligible_proposals']),1)
+        self.assertTrue(audit['retry_eligible_proposals'][0]['owner_approval_required'])
+        row['attempt_count']=3
+        self.assertFalse(audit_native_queue(self.m,x,now_unix=2000)['retry_eligible_proposals'])
+
+    def test_unknown_lease_and_untrusted_complete_hold(self):
+        row={'task_id':'NOX-V46-41','state':'COMPLETED','native_verified':True,
+             'receipt_sha256':'bogus','independent_test_passed':True}
+        x=state(native_queue_verified=True,task_status={row['task_id']:row},now_unix=2000)
+        result=audit_native_queue(self.m,x,now_unix=2000)
+        self.assertEqual(result['native_completed_verified'],0)
+        self.assertIn(row['task_id'],result['protected_task_ids'])
+        x['native_queue_verified']=False
+        self.assertEqual(plan(self.m,x)['planned'],[])
+
+    def test_three_hour_release_does_not_invent_quality_from_commit(self):
+        r=release_evidence(old_source_sha='a'*64,new_source_sha='b'*64,
+            native_web_e2e=False,quality_holdout_improved=False,backup_restorable=True)
+        self.assertEqual(r['state'],'HOLD_NO_VERIFIED_IMPROVEMENT')
+        self.assertFalse(r['subjective_consciousness_proven'])
+
     def test_no_pending_fake_consciousness_or_gpu_trainer(self):
         self.assertEqual(self.master['registered_count'],0)
         self.assertTrue(self.m['dispatch_policy']['one_student_only'])
