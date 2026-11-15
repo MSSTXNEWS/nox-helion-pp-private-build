@@ -605,6 +605,12 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
                                 return
                             answer+=part
                             yield _jsonl({'type':'delta','text':part})
+                # EOF does not certify an unterminated SSE row. Fail closed
+                # rather than discarding a post-DONE frame and claiming S03.
+                if buffer.strip():
+                    yield _jsonl({'type':'error','error':
+                        'HOLD_SSE_FRAME_AFTER_DONE' if complete else 'HOLD_SSE_UNTERMINATED_FRAME'})
+                    return
                 if cancel.is_set():
                     yield _jsonl({'type':'error','error':'STREAM_STOP_REQUESTED'})
                     return
