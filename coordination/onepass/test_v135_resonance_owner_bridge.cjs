@@ -8,7 +8,7 @@ const JS=fs.readFileSync(file,'utf8');
 const id='abcd1234abcd1234abcd1234abcd1234';
 const answer='Живой поток NOX';
 const prompt='Привет, NOX';
-function fake(owner=true,pathname='/nox-web-v29/pc/resonance.html',rejectReceipt=false,reply=answer,revision=3,raf){
+function fake(owner=true,pathname='/nox-web-v29/pc/resonance.html',rejectReceipt=false,reply=answer,revision=3,raf,legacyIntl=false){
   const calls=[];
   let old=async (path,opts={})=>{
     const u=new URL(String(path),'https://nox.local');
@@ -58,6 +58,7 @@ function fake(owner=true,pathname='/nox-web-v29/pc/resonance.html',rejectReceipt
   const location={pathname,href:'https://nox.local'+pathname,origin:'https://nox.local'};
   const context={window,location,URL,Request,Response,ReadableStream,
     TextDecoder,TextEncoder,AbortController,performance,console,requestAnimationFrame:raf};
+  if(legacyIntl)context.Intl={}; // emulate old browsers with no Intl.Segmenter
   vm.runInNewContext(JS,context,{filename:file});
   return {fetch:(...args)=>window.fetch(...args),calls,window};
 }
@@ -281,4 +282,33 @@ test('V153 SSE tokens preserve real grapheme boundaries in original owner stream
   assert.equal(read.filter(e=>e.type==='done').length,1);
   assert(f.calls.some(c=>c.path.startsWith('/api/ui/memory/dialogs/history?')),
     'real S03 readback must still gate success');
+});
+
+test('V154 without Intl.Segmenter never splits a native delta within a grapheme',async()=>{
+  // E1 V153 protected Segmenter browsers. Its old codepoint fallback still
+  // tears compound ZWJ emoji and combining accents in legacy browsers.
+  const combined='abcde'+('e\\u0301'+'👨‍👩‍👧‍👦').repeat(13);
+  const f=fake(true,'/nox-web-v29/pc/resonance.html',false,combined,3,undefined,true);
+  const response=await f.fetch('/api/nox/chat',{method:'POST',
+    body:JSON.stringify({message:prompt,dialog_id:id,request_id:'v154-legacy-intl'})});
+  const read=await events(response);
+  const pieces=read.filter(x=>x.type==='token').map(x=>x.t);
+  assert.equal(pieces.join(''),combined,'native answer must remain unaltered');
+  // Fixture has two native delta events; without a grapheme segmenter the
+  // safest fallback emits those exact deltas, not artificial codepoint pieces.
+  assert.equal(pieces.length,2,'fallback must not invent broken token boundaries');
+  let offset=0;
+  const boundaries=new Set();
+  for(const g of new Intl.Segmenter(undefined,{granularity:'grapheme'}).segment(combined)){
+    offset+=g.segment.length;
+    boundaries.add(offset);
+  }
+  offset=0;
+  for(const piece of pieces){
+    offset+=piece.length;
+    assert(boundaries.has(offset),'legacy visual token ends inside a grapheme');
+  }
+  assert.equal(read.filter(x=>x.type==='done').length,1);
+  assert(f.calls.some(x=>x.path.startsWith('/api/ui/memory/dialogs/history?')),
+    'S03 owner history readback must still gate done');
 });

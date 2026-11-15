@@ -19,11 +19,12 @@
   // Limit event count for huge upstream chunks; preserve every codepoint.
   function livePieces(text) {
     // Keep complex emoji and combining accents intact at each visual token edge.
-    // The bytes and persisted upstream answer are unchanged; older browsers
-    // safely fall back to codepoint splitting if Segmenter is unavailable.
+    // The bytes and persisted upstream answer are unchanged. Without
+    // Intl.Segmenter, emit the complete native delta: codepoint splitting
+    // can tear ZWJ emoji/combining clusters into visibly broken tokens.
     const glyphs=typeof Intl!=='undefined' && typeof Intl.Segmenter==='function'
       ? Array.from(new Intl.Segmenter(undefined,{granularity:'grapheme'}).segment(text),part=>part.segment)
-      : Array.from(text);
+      : [text];
     const width=Math.max(8,Math.ceil(glyphs.length/64));
     const pieces=[];
     for(let pos=0;pos<glyphs.length;pos+=width)pieces.push(glyphs.slice(pos,pos+width).join(''));
