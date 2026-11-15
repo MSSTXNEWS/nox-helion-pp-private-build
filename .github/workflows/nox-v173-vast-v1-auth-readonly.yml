@@ -1,0 +1,82 @@
+name: NOX V173 existing Vast.ai v1 owner API authentication recovery READ ONLY
+on:
+  push:
+    branches: [nox/e2-v173-vast-v1-auth-recovery-20261115]
+    paths: ['.github/workflows/nox-v173-vast-v1-auth-readonly.yml']
+permissions:
+  contents: read
+jobs:
+  v1-readonly:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      NOX_KEY: ${{ secrets.NOX }}
+      NOX2_KEY: ${{ secrets.NOX2 }}
+    steps:
+      - name: Test official replacement Vast API v1 and secret identity without printing values
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os,json,urllib.request,urllib.error
+          ID='60509551'
+          def outcome(base,path,key):
+              if not key:return 'HOLD_SECRET_NOT_CONFIGURED',None
+              try:
+                  req=urllib.request.Request(base+path,headers={
+                    'Authorization':'Bearer '+key,'Accept':'application/json',
+                    'User-Agent':'NOX-HELION-OWNER-READONLY-V173'})
+                  with urllib.request.urlopen(req,timeout=14) as resp:
+                    d=json.loads(resp.read(800000))
+                  if isinstance(d,dict) and d.get('success') is False:
+                    e=str(d.get('error',''))[:40]
+                    return 'HOLD_SERVER_ERROR_'+e.upper(),None
+                  return 'HTTP_200_JSON',d
+              except urllib.error.HTTPError as ex:
+                  raw=ex.read(1500)
+                  try: body=json.loads(raw)
+                  except Exception:body={}
+                  error=str(body.get('error','')) if isinstance(body,dict) else ''
+                  return 'HTTP_'+str(ex.code)+('_DEPRECATED' if error=='deprecated_endpoint' else '_AUTH_ERROR' if error=='auth_error' else ''),None
+              except Exception as ex:
+                  return 'HOLD_'+type(ex).__name__,None
+          def locate(d):
+              if isinstance(d,dict):
+                  if str(d.get('id'))==ID:return d
+                  for key in ('instances','data','results','instance'):
+                      if key in d:
+                          ret=locate(d[key])
+                          if ret is not None:return ret
+                  return None
+              if isinstance(d,list):
+                  for row in d:
+                      r=locate(row)
+                      if r is not None:return r
+              return None
+          for key_name,key in (('NOX2',os.getenv('NOX2_KEY','')),('NOX',os.getenv('NOX_KEY',''))):
+              print('NOX_V173_'+key_name+'_SECRET_PRESENT='+str(bool(key)).lower())
+              for host in ('https://cloud.vast.ai','https://console.vast.ai'):
+                  host_name='CLOUD' if 'cloud.vast.ai' in host else 'CONSOLE'
+                  for route_label,path in (('LIST','/api/v1/instances/'),('SPECIFIC','/api/v1/instances/'+ID+'/')):
+                      label='NOX_V173_'+key_name+'_'+host_name+'_V1_'+route_label
+                      state,d=outcome(host,path,key)
+                      record=locate(d)
+                      if record is not None:
+                          if str(record.get('id'))!=ID: state='HOLD_WRONG_INSTANCE'
+                          else:
+                              state='OWNER_AUTHORIZED_INSTANCE_'+str(record.get('actual_status','unknown')).upper()[:24]
+                              allowed=('id','actual_status','gpu_name','num_gpus','gpu_ram','ssh_host','ssh_port','public_ipaddr')
+                              public={k:record[k] for k in allowed if k in record}
+                              print('NOX_V173_EXISTING_INSTANCE_SAFE_FIELDS='+json.dumps(public,sort_keys=True))
+                      elif state=='HTTP_200_JSON':
+                          state='AUTHENTICATED_BUT_INSTANCE_NOT_LISTED'
+                      print(label+'='+state)
+          print('NOX_V173_V1_API_DIAGNOSTIC_COMPLETE=true')
+          print('NOX_V173_NATIVE_SSH_AND_GPU_NOT_INFERRED=true')
+          PY
+      - name: Explicit safe operations boundary
+        if: always()
+        run: |
+          echo 'NOX_V173_ONLY_VAST_GET_REQUESTS=true'
+          echo 'NOX_V173_NATIVE_SERVER_WRITES=false'
+          echo 'NOX_V173_NEW_GPU_INSTANCES=0'
