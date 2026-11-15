@@ -1,7 +1,7 @@
 name: NOX V133 source-only OneHost dangerous auto-run audit
 on:
   push:
-    branches: [nox/e2-v133-native-workflow-single-gate-20261115]
+    branches: [nox/e2-v133-native-gates-atomic-20261115]
     paths:
       - '.github/workflows/nox-v133-onehost-native-gate-audit.yml'
       - 'coordination/onepass/native_job_gate_audit.py'
@@ -31,13 +31,15 @@ jobs:
       - name: Enumerate all sensitive NOX2 native jobs and accidental push triggers
         run: |
           set -euo pipefail
-          python -m coordination.onepass.native_job_gate_audit --root . --out nox_native_gate_audit.json
+          python -m coordination.onepass.native_job_gate_audit --root . --strict --out nox_native_gate_audit.json
           python - <<'PY'
           import json
           r=json.load(open('nox_native_gate_audit.json'))
           assert r['files_checked'] >= 100
           assert r['source_only'] and not r['ssh_connection_attempted']
-          assert r['release_state'] in ('HOLD','SOURCE_POLICY_PASS')
+          assert r['release_state']=='SOURCE_POLICY_PASS'
+          assert r['unsafe_auto_native_count']==0
+          assert r['yaml_parse_errors']==[]
           print('NOX_V133_GITHUB_NATIVE_SOURCE_AUDITED='+str(r['files_checked']))
           print('NOX_V133_UNSAFE_AUTO_NATIVE_COUNT='+str(r['unsafe_auto_native_count']))
           PY
