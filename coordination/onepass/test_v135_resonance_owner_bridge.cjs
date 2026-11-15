@@ -8,7 +8,7 @@ const JS=fs.readFileSync(file,'utf8');
 const id='abcd1234abcd1234abcd1234abcd1234';
 const answer='Живой поток NOX';
 const prompt='Привет, NOX';
-function fake(owner=true,pathname='/nox-web-v29/pc/resonance.html',rejectReceipt=false,reply=answer,revision=3,raf,legacyIntl=false,firstDeltaAt=5){
+function fake(owner=true,pathname='/nox-web-v29/pc/resonance.html',rejectReceipt=false,reply=answer,revision=3,raf,legacyIntl=false,firstDeltaAt=5,onHistory){
   const calls=[];
   let old=async (path,opts={})=>{
     const u=new URL(String(path),'https://nox.local');
@@ -22,6 +22,7 @@ function fake(owner=true,pathname='/nox-web-v29/pc/resonance.html',rejectReceipt
       return Response.json({status:'READY',dialogs:[{dialog_id:id,title:'Тест',revision:2}]});
     }
     if(u.pathname==='/api/ui/memory/dialogs/history'){
+      onHistory?.();
       return Response.json({status:'READY',dialog_id:id,messages:[
         {role:'user',content:prompt,ts:'2026-11-15T00:00:00Z'},
         {role:'assistant',content:reply,ts:'2026-11-15T00:00:01Z'}]});
@@ -685,4 +686,25 @@ test('V162 original native preparing mode must match V112 before S03 acceptance'
     assert(!bad.calls.includes('/api/ui/memory/dialogs/history'),
       'no S03 success/readback for missing or incorrect original native mode');
   }
+});
+
+test('V163 JSON cancellation during S03 readback never reports persisted success',async()=>{
+  // Original jsonChat path has no dialog_id or request_id: it creates a dialog.
+  // Abort exactly when the native owner history route is consulted, after
+  // model output and receipt have arrived. This reproduces the stale success.
+  const ctrl=new AbortController();
+  const f=fake(true,'/nox-web-v29/pc/resonance.html',false,answer,3,
+    undefined,false,5,()=>ctrl.abort());
+  const response=await f.fetch('/api/nox/chat',{
+    method:'POST',signal:ctrl.signal,body:JSON.stringify({message:prompt})
+  });
+  assert.equal(response.status,503,'a canceled JSON request cannot report durable success');
+  const result=await response.json();
+  assert.equal(result.history_persisted,false);
+  assert.equal(result.s03_integrated,false);
+  assert.match(result.error,/STREAM_STOP_REQUESTED/);
+  assert(f.calls.some(c=>c.path.startsWith('/api/ui/memory/dialogs/history?')),
+    'race must occur at real history readback boundary');
+  assert(!f.calls.some(c=>c.path==='/api/nox/stop'),
+    'do not send global STOP for a JSON request abort');
 });

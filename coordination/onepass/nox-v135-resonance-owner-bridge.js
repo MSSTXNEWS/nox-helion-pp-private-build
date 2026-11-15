@@ -238,8 +238,12 @@
         message:data.message,dialog_id:id,history:[],task:'general'
       },signal);
       const {answer,receipt}=await consume(upstream,()=>{},signal);
+      if(signal?.aborted)throw Error('STREAM_STOP_REQUESTED');
       if(!accepted(receipt,id))throw Error('HOLD_S03_COMMIT_RECEIPT');
       await checkHistory(id,data.message,answer,signal);
+      // JSON clients also have a cancellation boundary: a late abort during
+      // S03 readback must never produce a persisted-success response.
+      if(signal?.aborted)throw Error('STREAM_STOP_REQUESTED');
       return responseJSON({answer,model:'NOX HELION',dialog_id:id,
         exchange_id:receipt.exchange_id,history_persisted:true,s03_integrated:true});
     }catch(e){return errorResponse(String(e.message||'HOLD_NATIVE_JSON').slice(0,150));}
