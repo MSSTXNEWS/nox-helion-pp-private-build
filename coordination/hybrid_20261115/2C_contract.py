@@ -87,8 +87,11 @@ def stream_stats(rows):
             rejected += 1
             continue
         req, s03 = req.lower(), s03.lower()
-        signature = (s03, row.get('ttft_ms'), row.get('native_completion_tokens'),
-                     row.get('decode_elapsed_ms'), row.get('native_usage_source'))
+        signature = (s03, row.get('owner_authenticated'), row.get('completed'),
+                     row.get('s03_saved'), row.get('s03_integrated'),
+                     row.get('terminal_event'), row.get('ttft_ms'),
+                     row.get('native_completion_tokens'), row.get('decode_elapsed_ms'),
+                     row.get('native_usage_source'))
         if req in unique:
             rejected += 1
             if unique[req][1] != signature:
@@ -209,11 +212,13 @@ def selftest():
     assert stream_stats([s,s])['measured_source_receipts']==1
     assert stream_stats([s,s])['rejected_or_incomplete_receipts']==1
     assert stream_stats([s,dict(s,ttft_ms=300)])['measured_source_receipts']==0
+    assert stream_stats([s,dict(s,owner_authenticated=False)])['measured_source_receipts']==0
+    assert stream_stats([s,dict(s,s03_saved=False)])['measured_source_receipts']==0
     assert stream_stats([s,dict(s,request_sha256='b'*64)])['measured_source_receipts']==0
     assert stream_stats([dict(s,request_sha256=None)])['measured_source_receipts']==0
     assert route_coverage([dict(route,path='/not-in-original-inventory')], inventory)['owner_schema_200_source_receipts']==0
     assert audit({})['native_verified'] is False
-    print('SELFTEST 23/23 PASS - synthesized fixtures; native/live UNKNOWN')
+    print('SELFTEST 25/25 PASS - synthesized fixtures; native/live UNKNOWN')
 
 
 def main():
