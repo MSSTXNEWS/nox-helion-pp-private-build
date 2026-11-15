@@ -64,30 +64,91 @@ for (p,_),saved in zip(selected,manifest):
 """
 
 
+
+def verify_plaintext_tar(plaintext:bytes)->dict:
+    """Strict one-to-one manifest↔regular-file audit, without filesystem extraction.
+
+    Independent synthetic tar tests can call this without age, SSH, private keys
+    or a native checkpoint. This does not prove a production backup was restored.
+    """
+    import re
+    with tarfile.open(fileobj=io.BytesIO(plaintext),mode='r:gz') as archive:
+        members=archive.getmembers()
+        if not 11<=len(members)<=91:
+            raise RuntimeError('HOLD_TAR_MEMBER_COUNT')
+        names=[m.name for m in members]
+        if len(names)!=len(set(names)):
+            raise RuntimeError('HOLD_TAR_DUPLICATE_MEMBER')
+        # extractfile() follows tar symlinks/hardlinks, so validate types FIRST.
+        if any(not m.isfile() for m in members):
+            raise RuntimeError('HOLD_TAR_UNSAFE_MEMBER')
+        by_name={m.name:m for m in members}
+        manifest_member=by_name.get('RESTORE_MANIFEST.json')
+        if manifest_member is None or not 0<manifest_member.size<=1_000_000:
+            raise RuntimeError('HOLD_TAR_MANIFEST_MISSING_OR_OVERSIZED')
+        with archive.extractfile(manifest_member) as f:
+            try:
+                obj=json.loads(f.read().decode('utf-8'))
+            except (UnicodeError,ValueError) as exc:
+                raise RuntimeError('HOLD_MANIFEST_JSON') from exc
+        if (not isinstance(obj,dict) or
+            obj.get('schema')!='NOX_V61_CHECKPOINT_OPTIMIZER_MANIFEST_V1' or
+            obj.get('origin_instance_id')!=60509551 or
+            obj.get('original_files_deleted') is not False):
+            raise RuntimeError('HOLD_MANIFEST_SCHEMA')
+        items=obj.get('files')
+        if not isinstance(items,list) or not 10<=len(items)<=90:
+            raise RuntimeError('HOLD_UNEXPECTED_ITEMS')
+        expected={'RESTORE_MANIFEST.json'}
+        checked=[]
+        total=0
+        for item in items:
+            if not isinstance(item,dict) or set(item)!={'path','size_bytes','sha256'}:
+                raise RuntimeError('HOLD_MANIFEST_RECORD')
+            name=item['path']
+            if (not isinstance(name,str) or len(name)>4096 or
+                name.startswith('/') or '\\' in name or '\x00' in name or
+                len(name.split('/'))<2 or name.split('/')[0]!='NOX_CHECKPOINTS' or
+                any(x in ('','.', '..') for x in name.split('/')[1:])):
+                raise RuntimeError('HOLD_MANIFEST_PATH')
+            if name in expected:
+                raise RuntimeError('HOLD_MANIFEST_DUPLICATE_PATH')
+            size=item['size_bytes']; digest=item['sha256']
+            if (type(size) is not int or size<0 or size>2_000_000_000 or
+                not isinstance(digest,str) or
+                re.fullmatch('[0-9a-f]{64}',digest) is None):
+                raise RuntimeError('HOLD_MANIFEST_RECORD')
+            total+=size
+            if total>1_300_000_000:
+                raise RuntimeError('HOLD_MANIFEST_TOTAL_BYTES')
+            expected.add(name)
+            checked.append((name,size,digest))
+        # The original backup writer emits exactly N regular files + manifest.
+        # Unlisted files, missing files, duplicated names and link entries HOLD.
+        if set(names)!=expected or len(names)!=len(expected):
+            raise RuntimeError('HOLD_TAR_MEMBER_COVERAGE')
+        for name,expected_size,digest in checked:
+            member=by_name[name]
+            if member.size!=expected_size:
+                raise RuntimeError('HOLD_CHECKPOINT_RESTORE_HASH')
+            sha=hashlib.sha256();count=0
+            with archive.extractfile(member) as f:
+                while True:
+                    part=f.read(1048576)
+                    if not part:break
+                    count+=len(part)
+                    sha.update(part)
+            if count!=expected_size or sha.hexdigest()!=digest:
+                raise RuntimeError('HOLD_CHECKPOINT_RESTORE_HASH')
+        return {'count':len(checked),'total_bytes':total}
+
+
 def verify(encrypted:Path,test_identity:Path)->dict:
     p=subprocess.run(['age','-d','-i',str(test_identity),str(encrypted)],
                      capture_output=True,timeout=180)
     if p.returncode:raise RuntimeError('HOLD_TEST_RESTORE_DECRYPT')
-    with tarfile.open(fileobj=io.BytesIO(p.stdout),mode='r:gz') as archive:
-        obj=json.loads(archive.extractfile('RESTORE_MANIFEST.json').read())
-        if obj.get('schema')!='NOX_V61_CHECKPOINT_OPTIMIZER_MANIFEST_V1':
-            raise RuntimeError('HOLD_MANIFEST_SCHEMA')
-        items=obj['files']
-        if not 10<=len(items)<=90:raise RuntimeError('HOLD_UNEXPECTED_ITEMS')
-        checked=0
-        for record in items:
-            f=archive.extractfile(record['path'])
-            if f is None:raise RuntimeError('HOLD_MISSING_MEMBER')
-            h=hashlib.sha256();size=0
-            while True:
-                b=f.read(1048576)
-                if not b:break
-                size+=len(b);h.update(b)
-            if h.hexdigest()!=record['sha256'] or size!=record['size_bytes']:
-                raise RuntimeError('HOLD_CHECKPOINT_RESTORE_HASH')
-            checked+=1
-        return {'count':checked,'plaintext_sha256':hashlib.sha256(p.stdout).hexdigest(),
-                'total_bytes':sum(x['size_bytes'] for x in items)}
+    verified=verify_plaintext_tar(p.stdout)
+    return {**verified,'plaintext_sha256':hashlib.sha256(p.stdout).hexdigest()}
 
 
 def run():
