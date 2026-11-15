@@ -140,8 +140,18 @@ def apply_native_plan(plan, *, native_stop, native_authorize, native_act, native
         if native_verify(plan,receipt) is not True:
             return {'state':'HOLD_EXECUTED_UNVERIFIED','performed':'UNKNOWN'}
         actual=native_readback(plan,receipt)
-        if actual.get('model_id')!=plan['model_id'] or actual.get('running') is not True:
+        # A matching model name on GPU0 (or an unowned process) is not proof
+        # of a safe GPU1 activation. Require fresh native readback, not a
+        # caller-supplied proposal or an optimistic verifier alone.
+        if (not isinstance(actual,dict) or actual.get('model_id')!=plan['model_id']
+                or actual.get('running') is not True
+                or type(actual.get('gpu_id')) is not int or actual['gpu_id']!=1
+                or actual.get('native_owner')!='OneHost'
+                or actual.get('onehost_gpu1_lease') is not True
+                or actual.get('stop_active') is not False):
             return {'state':'HOLD_NATIVE_READBACK_FAILED','performed':'UNKNOWN'}
+        if native_stop() is not False:
+            return {'state':'HOLD_NATIVE_STOP_AFTER_READBACK','performed':'UNKNOWN'}
         return {'state':'NATIVE_ACTIVATED_VERIFIED','performed':True,'receipt':receipt}
     except Exception:
         return {'state':'HOLD_NATIVE_EXECUTION_ERROR','performed':'UNKNOWN'}

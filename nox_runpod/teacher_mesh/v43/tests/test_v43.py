@@ -189,6 +189,51 @@ class TestResourceBrain(unittest.TestCase):
         result=plan_load(self.req,self.s)
         self.assertEqual(result['state'],'REMOTE_PC_OR_HOLD')
         self.assertEqual(result['reason'],'CGROUP_OR_HOST_RAM_RESERVE')
+    def test_native_gpu1_readback_must_match_owner_lease_and_stop(self):
+        # Previously the same model_id and running=True on GPU0 incorrectly
+        # produced NATIVE_ACTIVATED_VERIFIED even without a GPU1 attestation.
+        plan=plan_load(self.req,self.s)
+        good={'model_id':'m','running':True,'gpu_id':1,'native_owner':'OneHost',
+              'onehost_gpu1_lease':True,'stop_active':False}
+        bad=[{'model_id':'m','running':True}, dict(good,gpu_id=0),
+             dict(good,gpu_id=True),dict(good,native_owner='unknown'),
+             dict(good,onehost_gpu1_lease=False),dict(good,stop_active=None),
+             None]
+        for evidence in bad:
+            with self.subTest(evidence=evidence):
+                result=apply_native_plan(plan,native_stop=lambda:False,
+                    native_authorize=lambda p:True,native_act=lambda p:{'id':'test'},
+                    native_verify=lambda p,r:True,
+                    native_readback=lambda p,r:evidence)
+                self.assertEqual(result['state'],'HOLD_NATIVE_READBACK_FAILED')
+                self.assertEqual(result['performed'],'UNKNOWN')
+
+    def test_native_gpu1_readback_passes_only_with_complete_attestation(self):
+        plan=plan_load(self.req,self.s)
+        evidence={'model_id':'m','running':True,'gpu_id':1,
+                  'native_owner':'OneHost','onehost_gpu1_lease':True,
+                  'stop_active':False}
+        result=apply_native_plan(plan,native_stop=lambda:False,
+            native_authorize=lambda p:True,native_act=lambda p:{'id':'test'},
+            native_verify=lambda p,r:True,native_readback=lambda p,r:evidence)
+        self.assertEqual(result['state'],'NATIVE_ACTIVATED_VERIFIED')
+        self.assertIs(result['performed'],True)
+
+    def test_native_stop_activating_after_readback_blocks_success(self):
+        plan=plan_load(self.req,self.s)
+        calls={'stop':0}
+        def stop():
+            calls['stop']+=1
+            return calls['stop']>=3
+        evidence={'model_id':'m','running':True,'gpu_id':1,
+                  'native_owner':'OneHost','onehost_gpu1_lease':True,
+                  'stop_active':False}
+        result=apply_native_plan(plan,native_stop=stop,
+            native_authorize=lambda p:True,native_act=lambda p:{'id':'test'},
+            native_verify=lambda p,r:True,native_readback=lambda p,r:evidence)
+        self.assertEqual(result['state'],'HOLD_NATIVE_STOP_AFTER_READBACK')
+        self.assertEqual(result['performed'],'UNKNOWN')
+
     def test_native_missing_holds(self):
         p=plan_load(self.req,self.s)
         self.assertEqual(apply_native_plan(p,native_stop=None,native_authorize=None,native_act=None,native_verify=None,native_readback=None)['state'], 'HOLD_NATIVE_CALLBACKS_MISSING')
