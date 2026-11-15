@@ -161,6 +161,9 @@ def evaluate(reference, candidate, train_manifest, policy):
 
 
 def selftest():
+    # Python -O / PYTHONOPTIMIZE strips assert statements; never report a false synthetic PASS.
+    if not __debug__:
+        raise SystemExit('SELFTEST HOLD: Python optimization disabled assertions; rerun without -O/PYTHONOPTIMIZE')
     h = lambda value: hashlib.sha256(value.encode()).hexdigest()
     def make_run(variant):
         cases = []
