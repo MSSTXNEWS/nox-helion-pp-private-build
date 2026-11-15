@@ -31,8 +31,13 @@ const windowsOwnerBackup = async () => {
   if (!pc || native !== true || window.NOX_NATIVE_OWNER !== true)
     throw Error('HOLD_WINDOWS_BACKUP_WRONG_HOST_OR_ANONYMOUS');
   const identity = await api('/api/nox/status');
+  // The 92-route baseline locates /api/nox/status on OneHost, NOT the
+  // Windows PC. OneHost's own READY+owner response cannot authorize a
+  // Windows-only backup even if a separate capability fixture says yes.
+  // A real Windows status handler must independently identify its PC role.
+  // Until its native schema/owner cookie is proven, this fails closed.
   if (identity?.status !== 'READY' || identity?.host !== 'NOX_CHAT_V24.1' ||
-      identity?.owner_authenticated !== true)
+      identity?.owner_authenticated !== true || identity?.windows_owner_pc !== true)
     throw Error('HOLD_WINDOWS_BACKUP_OWNER_IDENTITY_UNVERIFIED');
   const ability = await api('/api/install/capabilities');
   if (ability?.status !== 'READY' || ability?.windows_owner_pc !== true ||

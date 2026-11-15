@@ -30,6 +30,19 @@ class V144Contract(unittest.TestCase):
             self.assertIn('HOLD_WINDOWS_BACKUP_OWNER_CAPABILITY_UNVERIFIED',result)
             self.assertIn('HOLD_WINDOWS_BACKUP_NATIVE_SHA_RECEIPT_UNVERIFIED',result)
 
+    def test_v145_original_route_host_proof_blocks_onehost_as_windows(self):
+        # The canonical original V29.3 manifest is evidence of route
+        # provenance, not a claim that a Windows PC handler exists.
+        manifest = json.loads((HERE.parent/'NOX_WEB_V293_92_ROUTE_HOST_PLAN.json').read_text())
+        routes = {item['route']:item for item in manifest['functions']}
+        self.assertEqual(len(routes), 92)
+        self.assertEqual(routes['/api/nox/status']['host_boundary'], 'EXISTING_ONEHOST')
+        for path in ('/api/install/backup','/api/install/capabilities'):
+            self.assertEqual(routes[path]['host_boundary'], 'WINDOWS_OWNER_PC_REQUIRED_NOT_VAST_METRICS')
+            self.assertEqual(routes[path]['source_runtime_status'], 'NO_DIRECT_NATIVE_MATCH_IN_BASELINE')
+        self.assertIn("identity?.windows_owner_pc !== true", v144.GUARD)
+        self.assertIn("HOLD_WINDOWS_BACKUP_OWNER_IDENTITY_UNVERIFIED", v144.GUARD)
+
     def test_v23_fallback_only_calls_guard(self):
         before = ("const r = " + v144.FALLBACK_OLD + ';').encode()
         result = v144.patched(v144.TARGETS[2], before).decode()
