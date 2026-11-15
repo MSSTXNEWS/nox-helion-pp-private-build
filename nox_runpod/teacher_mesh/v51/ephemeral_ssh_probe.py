@@ -173,7 +173,8 @@ def cleanup() -> bool:
 
 def probe() -> bool:
     key = os.environ.get("NOX2", "")
-    d = api("GET", "/instances/", key)
+    # Vast deprecated the v0 collection endpoint; single-instance GET still works.
+    d = api("GET", f"/instances/{INSTANCE}/", key)
     d = d.get("instances", d) if isinstance(d, dict) else None
     if isinstance(d, list):
         d = next((row for row in d if str(row.get("id")) == str(INSTANCE)), None)
