@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import codecs
+from contextlib import contextmanager
 from datetime import datetime, timezone
 import hashlib
 import json
@@ -47,17 +48,27 @@ CREATE INDEX IF NOT EXISTS nox_v29_messages_order
  ON nox_v29_dialog_messages(dialog_id,row_id);
 """
 
+@contextmanager
 def _db(write=False):
+    """Preserve SQLite transaction semantics and CLOSE every original S03 handle.
+
+    sqlite3.Connection.__exit__ only commits/rolls back; it never closes.
+    Owner WEB chat/status/history routes use this existing context repeatedly.
+    """
     import s03_memory
     path = Path(s03_memory.DB)
     if not path.is_file() or path.is_symlink():
         raise RuntimeError('HOLD_EXISTING_S03_FILE')
     target = 'file:' + str(path) + ('?mode=rw' if write else '?mode=ro')
     conn = sqlite3.connect(target, uri=True, timeout=4)
-    conn.row_factory = sqlite3.Row
-    conn.execute('PRAGMA busy_timeout=4000')
-    conn.execute('PRAGMA foreign_keys=ON')
-    return conn
+    try:
+        conn.row_factory = sqlite3.Row
+        conn.execute('PRAGMA busy_timeout=4000')
+        conn.execute('PRAGMA foreign_keys=ON')
+        with conn:
+            yield conn
+    finally:
+        conn.close()
 
 def ensure_dialog_schema():
     """Add only two tables and indexes inside preexisting S03 SQLite (no new DB)."""

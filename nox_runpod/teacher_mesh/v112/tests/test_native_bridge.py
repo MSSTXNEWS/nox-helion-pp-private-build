@@ -110,6 +110,32 @@ class V112Tests(unittest.TestCase):
         self.cookie={'owner':'yes'}
         self.assertTrue(ensure_dialog_schema())
 
+    def test_original_s03_db_context_closes_commits_and_rolls_back(self):
+        # sqlite3.Connection is NOT itself a closing context manager.
+        # Repeated owner WEB streams must not leak a SQLite file descriptor.
+        from nox_runpod.teacher_mesh.v112.native_v29_full_bridge import _db
+        with _db(True) as writer:
+            writer.execute('INSERT INTO s03_items(id,sha256,text,ts) VALUES(?,?,?,?)',
+                           ('v112-db-success','a'*64,'committed record','2026-11-15'))
+        with self.assertRaises(sqlite3.ProgrammingError):
+            writer.execute('SELECT 1')
+        with _db() as reader:
+            found=reader.execute('SELECT text FROM s03_items WHERE id=?',
+                                 ('v112-db-success',)).fetchone()
+            self.assertEqual(found['text'],'committed record')
+        with self.assertRaises(sqlite3.ProgrammingError):
+            reader.execute('SELECT 1')
+        with self.assertRaisesRegex(RuntimeError,'forced fixture rollback'):
+            with _db(True) as failed:
+                failed.execute('INSERT INTO s03_items(id,sha256,text,ts) VALUES(?,?,?,?)',
+                               ('v112-db-rollback','b'*64,'must not persist','2026-11-15'))
+                raise RuntimeError('forced fixture rollback')
+        with self.assertRaises(sqlite3.ProgrammingError):
+            failed.execute('SELECT 1')
+        with _db() as check:
+            self.assertIsNone(check.execute('SELECT id FROM s03_items WHERE id=?',
+                                            ('v112-db-rollback',)).fetchone())
+
     def test_auth_is_essential(self):
         for url,method in [
             ('/api/nox/status','get'),
