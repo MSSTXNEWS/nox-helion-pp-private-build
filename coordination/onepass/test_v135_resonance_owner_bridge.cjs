@@ -553,7 +553,7 @@ test('V160 preparing is unique and precedes native start; reject before S03 read
           {role:'user',content:prompt},{role:'assistant',content:answer}]});
       if(u.pathname==='/api/nox/chat/stream')
         return new Response(new ReadableStream({start(c){
-          c.enqueue(new TextEncoder().encode(events.map(e=>JSON.stringify(e)+'\\n').join('')));
+          c.enqueue(new TextEncoder().encode(events.map(e=>JSON.stringify(e)+'\n').join('')));
           c.close();
         }}),{headers:{'content-type':'application/x-ndjson'}});
       return new Response('NO_NATIVE_ROUTE',{status:404});
