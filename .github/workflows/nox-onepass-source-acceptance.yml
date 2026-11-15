@@ -35,6 +35,24 @@ jobs:
           python -m unittest -v coordination.onepass.test_choice_overlay
           python -m py_compile coordination/onepass/v133_full_convergence.py
           python -m unittest -v coordination.onepass.test_v133_full_convergence
+          python - <<'PY'
+          import json
+          from coordination.onepass import v133_full_convergence as m
+          d=json.load(open('coordination/onepass/NOX_V133_CONVERGED_ACCEPTANCE.json',encoding='utf8'))
+          p=json.load(open('coordination/onepass/NOX_V133_DRIVE_PARTS_SHA256.json',encoding='utf8'))
+          assert d['original_site_paths_preserved']==1089
+          assert d['original_site_paths_deleted']==0
+          assert d['original_site_paths_changed']==9
+          assert d['source_frozen_zip_sha256']==m.FROZEN_SHA
+          assert d['owner_v122_ui_sha256']==m.OWNER_SHA
+          assert d['converged_zip_sha256']==p['archive_sha256']
+          assert d['drive']['independently_downloaded_from_drive'] is True
+          assert d['chromium_isolated_ui']['passed']==10
+          assert d['local_html_static_dependencies']['missing_local_references']==0
+          assert d['release']['production_promoted'] is False
+          assert d['release']['full_base_weight_optimizer_accepted'] is False
+          print('NOX_V133_SHA_LOCKED_SOURCE_CONVERGENCE_PASS=true')
+          PY
           python -m unittest -v nox_runpod.teacher_mesh.v130.tests.test_owner_s03_fact_write
           python -m unittest -v nox_runpod.teacher_mesh.v130.tests.test_install_native_owner_fact
       - name: No server or weight action in this workflow
