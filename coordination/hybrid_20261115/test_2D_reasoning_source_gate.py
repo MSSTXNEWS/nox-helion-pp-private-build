@@ -50,7 +50,7 @@ class SourceGateTests(unittest.TestCase):
         other={**self.sample,'output':'Different synthetic solution'}
         self.assertEqual(self.check([self.sample,other])['distinct_question_families'],1)
     def test_22_distinct_question(self):
-        other={**self.sample,'id':'q101'}
+        other={**self.sample,'id':'q101','input':'Write a pure sorting function'}
         self.assertEqual(self.check([self.sample,other])['distinct_question_families'],2)
     def test_23_empty_source(self):self.reject(lambda x:x.sample.update(source=''))
     def test_24_duplicate_policy_tuple(self):self.reject(lambda x:x.policy['approved_triplets'].append(copy.deepcopy(x.policy['approved_triplets'][0])))
