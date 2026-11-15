@@ -1,7 +1,7 @@
 name: NOX ONEPASS source acceptance (single branch, no native writes)
 on:
   push:
-    branches: [control/nox-web-onepass-release-candidate-20261115]
+    branches: [control/nox-web-onepass-release-candidate-20261115, feature/nox-v38-synaptic-brain-20261114]
     paths:
       - 'nox_runpod/teacher_mesh/v130/owner_s03_fact_write.py'
       - 'nox_runpod/teacher_mesh/v130/tests/test_owner_s03_fact_write.py'
@@ -33,6 +33,8 @@ jobs:
           python -m unittest -v coordination.onepass.test_vast_official_readonly
           python -m unittest -v coordination.onepass.test_frozen_web_contract
           python -m unittest -v coordination.onepass.test_choice_overlay
+          python -m py_compile coordination/onepass/v133_full_convergence.py
+          python -m unittest -v coordination.onepass.test_v133_full_convergence
           python -m unittest -v nox_runpod.teacher_mesh.v130.tests.test_owner_s03_fact_write
           python -m unittest -v nox_runpod.teacher_mesh.v130.tests.test_install_native_owner_fact
       - name: No server or weight action in this workflow
