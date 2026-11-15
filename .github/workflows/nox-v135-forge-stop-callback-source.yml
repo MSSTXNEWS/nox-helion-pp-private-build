@@ -1,0 +1,38 @@
+name: NOX FORGE real STOP callback lifecycle — source regression only
+on:
+  push:
+    branches: [fix/nox-forge-stop-callbacks-20261115]
+    paths:
+      - 'nox_runpod/teacher_mesh/v135/train_full_base_zero3.py'
+      - 'nox_runpod/teacher_mesh/v135/tests/test_training_stop_lifecycle.py'
+      - '.github/workflows/nox-v135-forge-stop-callback-source.yml'
+  pull_request:
+    paths:
+      - 'nox_runpod/teacher_mesh/v135/train_full_base_zero3.py'
+      - 'nox_runpod/teacher_mesh/v135/tests/test_training_stop_lifecycle.py'
+      - '.github/workflows/nox-v135-forge-stop-callback-source.yml'
+permissions:
+  contents: read
+jobs:
+  stop-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile original genuine full-base no-adapter trainer and source STOP integration
+        run: |
+          set -euo pipefail
+          python -m py_compile nox_runpod/teacher_mesh/v135/train_full_base_zero3.py
+          python -m unittest -v nox_runpod.teacher_mesh.v135.tests.test_training_stop_lifecycle
+          python -m unittest -v nox_runpod.teacher_mesh.v135.tests.test_fullbase_distillation
+      - name: Prove CI cannot be mistaken for physical optimizer acceptance
+        run: |
+          echo 'NOX_FORGE_STOP_LIFECYCLE_SOURCE_ONLY=true'
+          echo 'NOX_FORGE_NATIVE_OPTIMIZER_STEPS_VERIFIED=0'
+          echo 'NOX_GPU_HOST_UNCHANGED=true'
+          echo 'NOX_S03_AND_WEIGHTS_UNMODIFIED=true'
