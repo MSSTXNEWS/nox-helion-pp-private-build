@@ -254,8 +254,7 @@ def enqueue_approved(native:NativePorts,matrix:dict,owner_scope:str,*,limit:int=
     if not isinstance(owner_scope,str) or not re.fullmatch(r'[A-Za-z0-9._:@/-]{4,128}',owner_scope):
         return {'state':'HOLD_OWNER_SCOPE','jobs_enqueued':0}
     req=['authorize','stop','state','native_task_status','native_duplicate_check','approve','queue_enqueue',
-         'queue_readback','verify_queue_receipt','s03_audit','s03_verify',
-         's03_registration_lookup']
+         'queue_readback','verify_queue_receipt','s03_audit','s03_verify']
     if any(not callable(getattr(native,k,None)) for k in req):return {'state':'HOLD_NATIVE_CALLBACKS','jobs_enqueued':0}
     def gate():
         try:return native.stop() is False and native.authorize(owner_scope) is True
@@ -326,6 +325,12 @@ def enqueue_approved(native:NativePorts,matrix:dict,owner_scope:str,*,limit:int=
                 continue
             if any(x is not False for x in duplicate):
                 return {'state':'HOLD_NATIVE_DUPLICATE_STATE_UNKNOWN',
+                        'jobs_enqueued_verified':len(receipts),'receipts':receipts}
+            # The existing orphan reconciliation path has its own explicit
+            # missing-port HOLD. Only NEW queue writes require this port
+            # before approval/enqueue. Do not mask existing-job diagnostics.
+            if not callable(native.s03_registration_lookup):
+                return {'state':'HOLD_NATIVE_CALLBACKS',
                         'jobs_enqueued_verified':len(receipts),'receipts':receipts}
             payload={'task_id':tid,'lane':proposal['lane'],'priority':'P1','chat_priority':'P0',
                      'source_priority':proposal.get('source_priority'),

@@ -164,6 +164,7 @@ class NativeRegistrationGates(unittest.TestCase):
         self.assertEqual(r['state'],'HOLD_NATIVE_CALLBACKS')
         self.assertEqual(self.calls['enqueue'],0)
         self.assertEqual(self.calls['s03'],0)
+        self.assertTrue(self.calls['duplicate'])
 
     def test_canonical_r60_and_v46_are_not_two_schedulers(self):
         p=plan(self.canonical,self.snapshot,max_new=1)
