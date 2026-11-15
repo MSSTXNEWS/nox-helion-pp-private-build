@@ -121,6 +121,9 @@
         // A repeated/late preparation is an invalid wire sequence, even if
         // a forged done would otherwise match a healthy S03 history fixture.
         if(preparingSeen||startSeen)throw Error('HOLD_NATIVE_PREPARING_ORDER');
+        // The original V112 OneHost always advertises this exact native mode.
+        // A mismatched or absent mode cannot support a persisted-S03 receipt.
+        if(e.stream_mode!=='NATIVE_TOKEN_STREAM')throw Error('HOLD_NATIVE_STREAM_MODE');
         preparingSeen=true;
       } else {
         // Fail closed: an unrecognized native frame cannot precede a
