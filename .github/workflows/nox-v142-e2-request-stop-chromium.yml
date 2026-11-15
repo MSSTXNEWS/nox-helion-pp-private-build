@@ -97,8 +97,8 @@ jobs:
             if(path==='/api/ui/memory/dialogs/history'){
               window.nativeProof.historyCalls++;
               return Response.json({status:'READY',dialog_id:ownerId,messages:[
-                {role:'user',content:promptText},
-                {role:'assistant',content:modelText}
+                {role:'user',content:promptText,exchange_id:'v142-e2-browser-proof-01'},
+                {role:'assistant',content:modelText,exchange_id:'v142-e2-browser-proof-01'}
               ]});
             }
             return new Response('NO_OWNER_ROUTE',{status:418});

@@ -480,11 +480,12 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
                 if row is None:
                     return JSONResponse({'error':'DIALOG_NOT_FOUND'},status_code=404)
                 msgs=db.execute(
-                   'SELECT role,content,ts FROM nox_v29_dialog_messages '
+                   'SELECT role,content,ts,exchange_id FROM nox_v29_dialog_messages '
                    'WHERE dialog_id=? ORDER BY row_id DESC LIMIT ?',
                    (id,limit)).fetchall()
             return {'status':'READY','dialog_id':id,'revision':row['revision'],
-                    'messages':[{'role':x['role'],'content':x['content'],'ts':x['ts']} for x in reversed(msgs)]}
+                    'messages':[{'role':x['role'],'content':x['content'],'ts':x['ts'],
+                                 'exchange_id':x['exchange_id']} for x in reversed(msgs)]}
         except (OSError,RuntimeError,sqlite3.Error):
             return JSONResponse({'status':'HOLD','reason':'S03_DIALOG_HISTORY_FAILED'},status_code=503)
 
