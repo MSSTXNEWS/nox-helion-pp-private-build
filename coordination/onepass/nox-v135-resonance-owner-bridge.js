@@ -110,6 +110,10 @@
       } else if(e.type==='done') {
         if(doneSeen)throw Error('HOLD_DUPLICATE_DONE');
         doneSeen=true;done=e;
+      } else if(e.type!=='start'&&e.type!=='preparing') {
+        // Fail closed: an unrecognized native frame cannot precede a
+        // trustworthy terminal receipt or persisted S03 history readback.
+        throw Error('HOLD_NATIVE_UNKNOWN_FRAME');
       }
     };
     try{
