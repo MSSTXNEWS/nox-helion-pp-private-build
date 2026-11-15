@@ -7,6 +7,8 @@ on:
       - 'coordination/onepass/build_legacy_compat_v2.py'
       - 'coordination/onepass/test_chat_compat_node.cjs'
       - 'coordination/onepass/test_build_legacy_compat_v2.py'
+      - 'coordination/onepass/windows/**'
+      - 'coordination/onepass/test_windows_readonly_contract.py'
       - '.github/workflows/nox-onepass-native-compat-source.yml'
   pull_request:
     paths:
@@ -14,6 +16,8 @@ on:
       - 'coordination/onepass/build_legacy_compat_v2.py'
       - 'coordination/onepass/test_chat_compat_node.cjs'
       - 'coordination/onepass/test_build_legacy_compat_v2.py'
+      - 'coordination/onepass/windows/**'
+      - 'coordination/onepass/test_windows_readonly_contract.py'
       - '.github/workflows/nox-onepass-native-compat-source.yml'
 permissions:
   contents: read
@@ -38,6 +42,7 @@ jobs:
           set -euo pipefail
           python -m py_compile coordination/onepass/build_legacy_compat_v2.py
           python -m unittest -v coordination.onepass.test_build_legacy_compat_v2
+          python -m unittest -v coordination.onepass.test_windows_readonly_contract
       - name: Confirm no native Vast/Windows changes from source tests
         run: |
           echo 'NOX_ONEPASS_COMPAT_SOURCE_TESTED=true'
