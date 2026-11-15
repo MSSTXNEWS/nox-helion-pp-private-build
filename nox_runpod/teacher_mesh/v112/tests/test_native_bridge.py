@@ -57,6 +57,11 @@ class V112Tests(unittest.TestCase):
                            + (':'+'h'*160000+'\n')*2)
                 elif self.bulk_sse=='oversized':
                     yield 'data: '+'x'*300000+'\n'
+                elif self.bulk_sse=='duplicate_done':
+                    # First [DONE] is valid; a second terminal record must
+                    # fail closed even when the original S03 proof exists.
+                    yield ('data: '+json.dumps({'choices':[{'delta':{'content':answer}}]},
+                          ensure_ascii=False)+'\n\ndata: [DONE]\n\n')
                 else:
                     yield ('data: '+json.dumps({'choices':[{'delta':{'content':answer[:11]}}]},ensure_ascii=False)+'\n\n')
                     yield ('data: '+json.dumps({'choices':[{'delta':{'content':answer[11:]}}]},ensure_ascii=False)+'\n\n')
@@ -155,6 +160,21 @@ class V112Tests(unittest.TestCase):
         frames=[json.loads(x) for x in r.text.splitlines() if x.strip()]
         self.assertEqual(frames[-1],{'type':'error','error':'HOLD_SSE_FRAME_LIMIT'})
         self.assertFalse(any(f.get('saved') for f in frames))
+
+    def test_duplicate_upstream_sse_done_cannot_save_dialog_receipt(self):
+        self.bulk_sse='duplicate_done'
+        created=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
+            json={'title':'V166 terminal SSE','confirmed':True}).json()
+        d=created['dialog_id']
+        r=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
+            json={'message':'upstream duplicate terminal','dialog_id':d})
+        self.assertEqual(r.status_code,200,r.text[:300])
+        frames=[json.loads(x) for x in r.text.splitlines() if x.strip()]
+        self.assertEqual(frames[-1],{'type':'error','error':'HOLD_SSE_FRAME_AFTER_DONE'})
+        self.assertFalse(any(x.get('type')=='done' or x.get('saved') for x in frames))
+        history=self.client.get('/api/ui/memory/dialogs/history',cookies=self.cookie,
+            params={'dialog_id':d}).json()
+        self.assertEqual(history['messages'],[])
 
     def test_cross_dialog_id_is_rejected(self):
         before=len(self.calls)

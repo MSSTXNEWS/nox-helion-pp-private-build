@@ -589,7 +589,15 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
                         yield _jsonl({'type':'error','error':'HOLD_SSE_FRAME_LIMIT'})
                         return
                     for row in frames:
-                        kind,part=_sse_delta(row.strip())
+                        frame=row.strip()
+                        if not frame:
+                            continue
+                        # An upstream [DONE] is terminal. Extra nonblank SSE
+                        # frames must not fabricate a trustworthy S03 receipt.
+                        if complete:
+                            yield _jsonl({'type':'error','error':'HOLD_SSE_FRAME_AFTER_DONE'})
+                            return
+                        kind,part=_sse_delta(frame)
                         if kind=='done':complete=True
                         if kind=='delta':
                             if len(answer)+len(part)>2000000:
