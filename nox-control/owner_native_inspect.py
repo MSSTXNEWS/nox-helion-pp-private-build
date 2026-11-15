@@ -10,7 +10,11 @@ SENSITIVE_NAME = r'(?:password|secret|api[_-]?key|access[_-]?key|authorization|(
 SENSITIVE_ASSIGNMENT = re.compile(r'(?i)\b'+SENSITIVE_NAME+r'[\"\']?\s*[:=]\s*(?:[\"\'][^\"\'\n]*[\"\']|[^\s,;\n]+)')
 SERVICES = ('nox-train-volta-t866u', 'nox-teacher-serve-t811u',
             'nox-train-worm-t811u', 'nox-autoscale-t877u', 'nox-dispatcher-t855u',
-            'nox-gpu-watchdog-t865u', 'nox-vram-guard-t829u', 'nox-priority-scheduler')
+            'nox-gpu-watchdog-t865u', 'nox-vram-guard-t829u', 'nox-priority-scheduler',
+            'nox-selfheal', 'nox-distill-worm-t811u', 'nox-self-improve-t846u',
+            'nox-self-learning-loop', 'nox-agent-tuner-t858u', 'nox-agent-architect-t859u',
+            'nox-agent-integrator-t859u', 'nox-chat-8081', 'nox-proxy', 'nox-downloads-t802u',
+            'nox-checklist-worker', 'nox-dialog-miner', 'nox-offload-t850u', 'nox-watch-swap-t845u')
 
 def redact(value):
     value=re.sub(r'-----BEGIN [^-\n]*PRIVATE KEY-----[\s\S]*?-----END [^-\n]*PRIVATE KEY-----', '[REDACTED_PRIVATE_KEY]', value)
@@ -66,7 +70,7 @@ def hardware():
         arg = '--query-gpu=' if label == 'gpu' else '--query-compute-apps='
         rc, s = run(['nvidia-smi', arg+query, '--format=csv,noheader,nounits'])
         out[label] = {'rc':rc, 'rows':s.splitlines()[:40]}
-    out['cgroup'] = {n:text('/sys/fs/cgroup/'+n, 2048) for n in ('memory.max','memory.current','memory.events','cpu.max','cpu.stat')}
+    out['cgroup'] = {n:text('/sys/fs/cgroup/'+n, 6000) for n in ('memory.max','memory.high','memory.current','memory.stat','memory.events','cpu.max','cpu.stat')}
     out['disk'] = {p:dict(zip(('total','used','free'),shutil.disk_usage(p))) for p in ('/root/nox','/dev/shm') if Path(p).exists()}
     out['cpu_affinity'] = len(os.sched_getaffinity(0))
     return out
@@ -214,6 +218,52 @@ def controls():
             row['excerpts']=excerpts.splitlines();row['source_truncated']=True;remaining-=len(excerpts.encode())
         rows.append(row)
     rows.append({'record':'supervisor_configuration','services':configs})
+    extra=(Path('/root/nox_selfheal.py'),ROOT/'scripts/nox_priority_scheduler.py',
+           ROOT/'scripts/download_t802u.sh',ROOT/'scripts/chat_proxy.py',
+           ROOT/'scripts/nox_agent_architect_t859u.py',ROOT/'scripts/nox_agent_integrator_t859u.py',
+           ROOT/'scripts/nox_agent_tuner_t858u.py')
+    for p in extra:
+        if not p.is_file() or p.is_symlink() or p.stat().st_size>110000:continue
+        body=p.read_bytes();source=body.decode(errors='replace');safe=redact(source)
+        rows.append({'record':'extension_source','path':str(p),'sha256':hashlib.sha256(body).hexdigest(),
+                     'bytes':len(body),'source_redacted':safe!=source,'source':safe})
+    # Inventory package metadata without importing Torch or creating a CUDA context.
+    py=Path('/root/venv_volta/bin/python')
+    if py.is_file():
+        code="import importlib.metadata as m,json; names=['torch','transformers','accelerate','datasets','safetensors','peft','bitsandbytes','trl','deepspeed','psutil','nvidia-ml-py','sqlite-vec','playwright','pytest','ruff']; d={};\nfor n in names:\n try:d[n]=m.version(n)\n except m.PackageNotFoundError:d[n]=None\nprint(json.dumps(d))"
+        rc,output=run([str(py),'-c',code],20)
+        try:versions=json.loads(output) if rc==0 else {}
+        except ValueError:versions={}
+        rows.append({'record':'installed_package_versions','python':str(py),'rc':rc,'versions':versions})
+    # Only filenames and selected nonsecret routing fields, never credentials.
+    routes=[]
+    for p in sorted((ROOT/'config').glob('*.json'))[:120]:
+        if p.is_symlink() or not p.is_file() or p.stat().st_size>250000:continue
+        if not re.search(r'teacher|mentor|council|provider|brain|architect|integrator|download',p.name,re.I):continue
+        try:d=json.loads(p.read_text())
+        except (OSError,ValueError):continue
+        fields={}
+        def select(obj,prefix='',depth=0):
+            if depth>5:return
+            if isinstance(obj,dict):
+                for key,value in obj.items():
+                    if re.search(SENSITIVE_NAME,str(key),re.I):continue
+                    label=(prefix+'.'+str(key)).strip('.')
+                    if isinstance(value,(dict,list)):select(value,label,depth+1)
+                    elif re.fullmatch(r'enabled|model|model_id|provider|base_url|endpoint|port|role',str(key),re.I):
+                        fields[label]=redact(str(value)).split('?',1)[0][:350]
+            elif isinstance(obj,list):
+                for i,value in enumerate(obj[:20]):select(value,prefix+'.'+str(i),depth+1)
+        select(d);routes.append({'path':str(p),'routing':fields})
+    rows.append({'record':'model_routing_configuration','files':routes})
+    inventory=[]
+    for directory in (ROOT/'models',ROOT/'models/teachers',ROOT/'models/judge',ROOT/'lora/qlora_t866u'):
+        if not directory.is_dir():continue
+        for p in sorted(directory.iterdir())[:100]:
+            if p.is_file():
+                inventory.append({'path':str(p),'bytes':p.stat().st_size,'symlink':p.is_symlink(),
+                                  'target':str(p.resolve()) if p.is_symlink() else None})
+    rows.append({'record':'model_file_inventory','files':inventory})
     pool=ROOT/'config/dispatcher_agents_t868u.json'
     if pool.is_file() and not pool.is_symlink() and pool.stat().st_size<100000:
         body=pool.read_bytes()
