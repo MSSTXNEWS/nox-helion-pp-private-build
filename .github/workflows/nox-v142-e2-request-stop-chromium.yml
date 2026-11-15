@@ -224,7 +224,8 @@ jobs:
         if: success()
         run: |
           echo "NOX_V142_REAL_CHROMIUM_REQUEST_CASES=6"
-          echo "NOX_V142_ORIGINAL_V24_URL_PATH=true\n          echo 'NOX_V142_V134_HTML_FROM_ARCHIVE=false'"
+          echo "NOX_V142_ORIGINAL_V24_URL_PATH=true"
+          echo "NOX_V142_V134_HTML_FROM_ARCHIVE=false"
           echo "NOX_V142_NATIVE_BACKEND_FIXTURE_ONLY=true"
           echo "NOX_V142_VAST_NATIVE_DEPLOYED=false"
           echo "NOX_V142_ORIGINAL_S03_OR_GPU_CHANGED=false"
