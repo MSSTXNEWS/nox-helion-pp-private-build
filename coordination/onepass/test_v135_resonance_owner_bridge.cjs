@@ -414,7 +414,7 @@ test('V157 native done is terminal: reject trailing control frame before S03 REA
       TextDecoder,TextEncoder,AbortController,performance,console,Intl,setTimeout,
       requestAnimationFrame:cb=>cb(performance.now())});
     const r=await w.fetch('/api/nox/chat',{method:'POST',
-      body:JSON.stringify({message:prompt,dialog_id:did})});
+      body:JSON.stringify({message:prompt})});
     return {status:r.status,body:await r.json(),called};
   }
   const clean=await attempt(delta+done+'\n');
