@@ -1,0 +1,32 @@
+name: NOX V176 failure recovery cannot duplicate native GPU or CPU jobs
+on:
+  push:
+    branches: [nox/v176-retry-no-requeue-on-failed-native-20261115]
+    paths:
+      - 'nox_runpod/teacher_mesh/v47/control/worm_supervisor.py'
+      - 'nox_runpod/teacher_mesh/v47/control/test_v94_priority.py'
+      - '.github/workflows/nox-v176-failed-worm-no-duplicate-source.yml'
+permissions:
+  contents: read
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - name: Existing V94 priority plus V176 recovery regression tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile nox_runpod/teacher_mesh/v47/control/dispatcher.py nox_runpod/teacher_mesh/v47/control/worm_supervisor.py
+          python3 -m unittest -v nox_runpod.teacher_mesh.v47.control.test_v94_priority
+          python3 - <<'PY'
+          from nox_runpod.teacher_mesh.v47.control.worm_supervisor import audit_native_queue
+          import inspect
+          code=inspect.getsource(audit_native_queue)
+          assert 'protected.add(tid)' in code
+          assert 'may_enqueue_via_generic_plan' in code
+          print('NOX_V176_FAILED_NEVER_FRESH=SOURCE_VERIFIED')
+          print('NOX_V176_NATIVE_QUEUE_RESTART_PERFORMED=false')
+          PY
