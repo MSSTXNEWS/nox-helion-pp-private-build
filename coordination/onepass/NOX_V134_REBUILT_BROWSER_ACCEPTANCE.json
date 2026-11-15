@@ -1,0 +1,79 @@
+{
+  "schema": "NOX_V134_REBUILT_FULL_WEB_INDEPENDENT_OFFLINE_ACCEPTANCE_V1",
+  "instructions_version": "0.0.6",
+  "accepted_on": "2026-11-15",
+  "artifact": {
+    "name": "NOX_HELION_WEB_V134_NATIVE_OWNER_FULL_VERIFIED.zip",
+    "bytes": 107071440,
+    "sha256": "2fecf01f47079313c9b097052819574d93d372d7cbfcc4f2d73e5ab82ac4afd4",
+    "zip_entries": 1125,
+    "zip_crc_pass": true
+  },
+  "provenance": {
+    "frozen_v29_3_sha256": "166becb90fce63e2db3f9a74281d756995844552cddb7b67a190aa0",
+    "v133_converged_sha256": "2ac6be7b5f84e77f35f9b8b1dbfb25cab72e197f0d9f0aad70b886166a296bc4",
+    "original_frozen_paths_retained": 1089,
+    "original_paths_unchanged": 1071,
+    "modified_original_paths": 18,
+    "exact_stage_rollback_members_verified": 16,
+    "existing_native_owner_disk_source_sha256": "c5f6b23d5fc6c31c4c388a574bfa8c61243cda6000cefb0026732ebe4183b765",
+    "owner_js_deferred_to_existing_V122_response_overlay": true
+  },
+  "local_static_qa": {
+    "html_pages": 42,
+    "asset_references_resolved": 580,
+    "asset_references_missing": 0,
+    "internal_nav_links_resolved": 298,
+    "internal_nav_links_missing": 0,
+    "js_source_files_with_js_suffix": 509,
+    "executable_js_syntax_pass": 508,
+    "unexecuted_licence_text_js_files": 1,
+    "licence_file": "site/pc/pages/_vendor/chess/LICENSE-chess.js",
+    "licence_references_only_from_source_manifests": true
+  },
+  "local_chromium_qa": {
+    "original_html_pages": 5,
+    "viewports": [
+      "1440x900",
+      "390x844"
+    ],
+    "page_viewport_runs": 10,
+    "page_viewport_pass": 10,
+    "original_selects": 13,
+    "selection_change_events_verified": 26,
+    "selection_change_events_pass": 26,
+    "missing_dropdown_button_surfaces": 0,
+    "runtime_suppressed": "Other executable page dependencies omitted from isolated set_content checks",
+    "native_server_not_called": true
+  },
+  "github_source_ci": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43659136613",
+  "original_onehost": {
+    "instance_id": 60509551,
+    "last_verified_routes_matching_original_web": 23,
+    "original_expected_routes": 92,
+    "unmatched_direct_routes": 69,
+    "provider_access": "HOLD_AUTH_UNVERIFIED_404",
+    "not_proven_deleted": true,
+    "native_stream_s03_physical_evidence": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43650605385"
+  },
+  "windows_oneclick": {
+    "script": "coordination/onepass/windows/NOX_V134_READONLY_VERIFY.ps1",
+    "full_zip_sha_locked": true,
+    "host_execution": "NOT_EXECUTED",
+    "only_local_port_check": true
+  },
+  "no_loss": {
+    "original_frozen_zip_untouched": true,
+    "production_main_unchanged": true,
+    "no_new_backend": true,
+    "model_weights_unchanged": true,
+    "original_s03_unchanged": true,
+    "new_paid_gpu_instance_created": false
+  },
+  "full_release": "HOLD_NATIVE_69_ROUTES_WINDOWS_GPU_STOP_TRAINING_BACKUP_RESTORE",
+  "boundaries": [
+    "Source ZIP CRC/hash and isolated Chromium tests do not prove authenticated OneHost or real model work",
+    "Do not change owner production without fresh SHA/STOP/S03 backup & restore and owner acceptance",
+    "Do not publish all 92 API E2E or no-adapter optimizer checkpoint claims"
+  ]
+}
