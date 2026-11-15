@@ -1,7 +1,7 @@
 name: NOX V71 one PRIME chat-first RAM and 10GB policies source acceptance
 on:
   push:
-    branches: [nox/e2-v71-oneprime-chatfirst-20261114]
+    branches: [nox/e2-v71-oneprime-chatfirst-20261114, feature/nox-v38-synaptic-brain-20261114]
     paths:
       - '.github/workflows/nox-e2-v71-prime-source-ci.yml'
       - 'nox_runpod/teacher_mesh/v71/**'

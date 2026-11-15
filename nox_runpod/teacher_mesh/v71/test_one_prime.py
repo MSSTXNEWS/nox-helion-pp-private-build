@@ -15,6 +15,9 @@ def ram(**kwargs):
     s={"native_ram_verified":True,
        "ram_available_bytes":273_725_329_408,
        "shm_free_bytes":22_953_877_504,
+       "native_cgroup_verified":True,
+       "cgroup_memory_max_bytes":194_065_203_200,
+       "cgroup_memory_current_bytes":105_219_207_168,
        "s03_native_revision_verified":True}
     s.update(kwargs)
     return s
@@ -61,6 +64,51 @@ class RamGate(unittest.TestCase):
     def test_no_overcommit_on_small_tmpfs(self):
         r=plan_ram(ram(shm_free_bytes=3*GIB))
         self.assertEqual(r['temporary_workspace_bytes'],0)
+
+    def test_memavailable_cannot_override_unverified_cgroup(self):
+        out=plan_ram(ram(native_cgroup_verified=False))
+        self.assertEqual(out['state'],'HOLD_NATIVE_CGROUP_TELEMETRY')
+        self.assertEqual(out['cache_bytes'],0)
+        self.assertEqual(out['temporary_workspace_bytes'],0)
+
+    def test_container_budget_caps_oversized_host_ram(self):
+        out=plan_ram(ram(ram_available_bytes=900*GIB,
+            cgroup_memory_max_bytes=64*GIB,
+            cgroup_memory_current_bytes=53*GIB))
+        self.assertEqual(out['state'],'HOLD_RAM_CACHE_HEADROOM')
+        self.assertEqual(out['cache_bytes'],0)
+
+    def test_combined_cache_and_workspace_within_cgroup(self):
+        s=ram()
+        out=plan_ram(s)
+        self.assertEqual(out['state'],'RAM_CACHE_AND_WORKSPACE_READY')
+        self.assertTrue(out['cgroup_limit_verified'])
+        self.assertLessEqual(s['cgroup_memory_current_bytes']+
+            out['cache_bytes']+out['temporary_workspace_bytes'],
+            out['cgroup_safe_ceiling_bytes'])
+        self.assertFalse(out['model_weights_downloaded'])
+        self.assertFalse(out['disk_model_cache_created'])
+        self.assertFalse(out['performed'])
+
+    def test_native_oom_delta_and_stop_fail_closed(self):
+        self.assertEqual(plan_ram(ram(cgroup_oom_kill_delta=1))['state'],
+                         'HOLD_RECENT_CGROUP_OOM')
+        self.assertEqual(plan_ram(ram(stop_active=True))['state'],
+                         'HOLD_OWNER_STOP')
+
+    def test_cgroup_high_limit_tighter_than_max(self):
+        out=plan_ram(ram(cgroup_memory_high_bytes=108*GIB))
+        self.assertLessEqual(out['cgroup_safe_ceiling_bytes'],108*GIB)
+        if out['state']=='RAM_CACHE_AND_WORKSPACE_READY':
+            self.assertLessEqual(out['cgroup_safe_room_after_budget_bytes'],
+                                 108*GIB-105_219_207_168)
+
+    def test_native_inventory_reports_cgroup_not_host_only(self):
+        from nox_runpod.teacher_mesh.v71 import ram_inventory
+        for token in ('NATIVE_RAM_CGROUP_MAX_BYTES',
+                      'NATIVE_RAM_CGROUP_CURRENT_BYTES',
+                      'NATIVE_RAM_CGROUP_OOM_KILL_COUNT'):
+            self.assertIn(token,ram_inventory.REMOTE)
 
     def test_no_mmap_or_ram_s03_primary(self):
         r=plan_ram(ram())

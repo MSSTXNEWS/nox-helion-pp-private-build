@@ -26,6 +26,32 @@ try:
     for key in ('MemTotal','MemAvailable','MemFree','Cached','SwapTotal','SwapFree','Shmem'):
         print('NATIVE_RAM_'+key.upper()+'_BYTES='+str(m.get(key,'HOLD')))
 except (OSError,ValueError):print('NATIVE_RAM_MEMINFO=HOLD')
+# Container memory is authoritative, NOT the much larger host MemAvailable.
+# Read only, no path dumps, no S03 data, never infer that cache is already active.
+try:
+    cgroup=Path('/sys/fs/cgroup')
+    maxs=(cgroup/'memory.max').read_text().strip()
+    curs=(cgroup/'memory.current').read_text().strip()
+    if not maxs.isdecimal() or not curs.isdecimal():
+        raise ValueError('cgroup missing or unlimited')
+    maxb,current=int(maxs),int(curs)
+    if maxb<=0 or current<0 or current>maxb:
+        raise ValueError('invalid cgroup')
+    print('NATIVE_RAM_CGROUP_MAX_BYTES='+str(maxb))
+    print('NATIVE_RAM_CGROUP_CURRENT_BYTES='+str(current))
+    vals={}
+    for line in (cgroup/'memory.events').read_text().splitlines():
+        parts=line.split()
+        if len(parts)==2 and parts[0] in ('oom','oom_kill','high'):
+            vals[parts[0]]=int(parts[1])
+    print('NATIVE_RAM_CGROUP_OOM_KILL_COUNT='+str(vals.get('oom_kill','HOLD')))
+    print('NATIVE_RAM_CGROUP_HIGH_EVENT_COUNT='+str(vals.get('high','HOLD')))
+    high=(cgroup/'memory.high').read_text().strip()
+    print('NATIVE_RAM_CGROUP_MEMORY_HIGH_BYTES='+str(int(high) if high.isdecimal() else 'NONE'))
+except (OSError,ValueError):
+    print('NATIVE_RAM_CGROUP_VERIFIED=false')
+else:
+    print('NATIVE_RAM_CGROUP_VERIFIED=true')
 for name,location in [('dev_shm','/dev/shm'),('run_shm','/run/shm'),('workspace','/workspace')]:
     p=Path(location)
     try:

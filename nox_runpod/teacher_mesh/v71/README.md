@@ -28,3 +28,9 @@
 6. Only mark live activation PASS after a physical same-session OneHost receipt. Source tests or this document are not proof of deployed chat speed.
 
 **Actual status:** source integrated in V71 feature branch, not yet installed/activated in live P02/OneHost. 60 R60 source tasks remain separate from native verified job IDs, which must not be invented.
+
+## 2026-11-15 · AUTO 2C cgroup RAM admission correction (SOURCE ONLY)
+
+Earlier V71 cache admission trusted host `MemAvailable` (~273.7 GB) even though the physically measured cgroup was only 194,065,203,200 bytes maximum, with 105,219,207,168 used. New `plan_ram` fails closed until **current native cgroup memory.max/current** are verified by OneHost, caps the *combined* S03 RAM cache plus /dev/shm workspace below 85% of cgroup use (never forces 85% utilization), preserves independent RAM/tmpfs reserves, honors STOP and recent OOM, and allocates lazily. Existing S03 stays persistent and scoped; no claimed cloud→RAM loading or new backend. Native `ram_inventory` now reports the exact cgroup max/current/high/events without reading secrets. Existing OneHost native snapshot adapter must supply `native_cgroup_verified`, `cgroup_memory_max_bytes`, `cgroup_memory_current_bytes`, optional high and OOM delta; absent data means HOLD instead of host-memory overcommit.
+
+**Source and physical distinction:** source CI on the shared feature branch can validate the policy and regression tests. Actual cgroup readback, weight warm-loading, GPU1 ownership, optimizer lease, offsite restore, runtime deployment and safe SSD deletion remain independently gated by the existing owner-approved manual V51 SSH workflow. Never claim CUDA/model acceleration just from this RAM policy.
