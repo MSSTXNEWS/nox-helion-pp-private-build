@@ -28,7 +28,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 -m py_compile nox_runpod/teacher_mesh/v51/ephemeral_ssh_probe.py nox_runpod/teacher_mesh/v131/vast_no_billing_inventory.py
-          python3 -m unittest -q nox_runpod.teacher_mesh.v131.tests.test_v131_inventory nox_runpod.teacher_mesh.v50.tests.test_documented_vast_list nox_runpod.teacher_mesh.v104.test_one_model_thinking_benchmark
+          python3 -m unittest -q nox_runpod.teacher_mesh.v131.tests.test_v131_inventory nox_runpod.teacher_mesh.v50.tests.test_documented_vast_list nox_runpod.teacher_mesh.v104.test_one_model_thinking_benchmark nox_runpod.teacher_mesh.v112.tests.test_owner_status_readonly
       - name: Official owner-scoped v1 read-only instance ownership and status
         run: |
           set -euo pipefail
@@ -40,9 +40,10 @@ jobs:
           import contextlib,io,json
           from nox_runpod.teacher_mesh.v51 import ephemeral_ssh_probe as ssh
           from nox_runpod.teacher_mesh.v104 import one_model_thinking_benchmark as bench
+          from nox_runpod.teacher_mesh.v112 import owner_status_readonly as status
           # Both existing read-only programs share ONE authenticated SSH session.
           # No second attach/probe cycle while GPU1 is active.
-          ssh.REMOTE=ssh.REMOTE+"\n"+bench.REMOTE
+          ssh.REMOTE=ssh.REMOTE+"\n"+bench.REMOTE+"\n"+status.REMOTE
           ssh.api=bench.gate
           buffer=io.StringIO()
           healthy=False
@@ -57,7 +58,7 @@ jobs:
           for line in lines:
               if line.startswith(("NATIVE_V104_","TEMP_SSH_CLEANUP=","NATIVE_GPU=",
                                    "NATIVE_DRIVER_CCAP=","NATIVE_PYENV_","NATIVE_P0_",
-                                   "SSH_HOST_FINGERPRINT=")):
+                                   "SSH_HOST_FINGERPRINT=","NATIVE_V112_OWNER_STATUS=")):
                   print(line[:790])
           # Actual model stream must contain two complete cases and final DONE,
           # never success merely from SSH, a busy slot or a synthetic fixture.
@@ -76,6 +77,7 @@ jobs:
                       pass
           print("NOX_V104_DECODE_TPS_VERIFIED="+str(valid and len(native_rates)==2).lower())
           print("NOX_V104_TIMINGS_VERIFIED="+str(valid).lower())
+          print("NOX_V112_OWNER_S03_STATUS_VERIFIED="+str(healthy and status.native_status_evidence(lines)).lower())
           raise SystemExit(0 if valid else 2)
           PY
       - name: Mandatory second cleanup attempt on failure
