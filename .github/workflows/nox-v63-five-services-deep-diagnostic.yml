@@ -6,6 +6,13 @@ on:
       - .github/workflows/nox-v63-five-services-deep-diagnostic.yml
       - nox_runpod/teacher_mesh/v63/service_deep_inspect.py
   workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Owner-approved original NOX OneHost access only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
 permissions:
   contents: read
 concurrency:
@@ -13,6 +20,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   inspect:
+    if: "${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' }}"
     runs-on: ubuntu-latest
     timeout-minutes: 7
     env:

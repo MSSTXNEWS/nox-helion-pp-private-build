@@ -4,12 +4,20 @@ on:
     branches: [feature/nox-v38-synaptic-brain-20261114]
     paths: [.github/workflows/nox-v104-live-status.yml, nox_runpod/teacher_mesh/v104/native_status_live_once.py]
   workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Owner-approved original NOX OneHost access only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
 permissions: {contents: read}
 concurrency:
   group: nox-v104-single-status-route-patch
   cancel-in-progress: false
 jobs:
   production:
+    if: "${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' }}"
     runs-on: ubuntu-latest
     timeout-minutes: 9
     env:

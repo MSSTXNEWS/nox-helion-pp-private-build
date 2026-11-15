@@ -5,6 +5,13 @@ on:
     branches: [nox/e2-v72-onepass-live-20261114]
     paths: ['.github/workflows/nox-e2-v72-onepass.yml', 'nox_runpod/teacher_mesh/v72/test_onepass_contract.py']
   workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Owner-approved original NOX OneHost access only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
 permissions:
   contents: read
 concurrency:
@@ -12,7 +19,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   onepass:
-    if: ${{ github.actor == 'MSSTXNEWS' }}
+    if: "${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' && (github.actor == 'MSSTXNEWS') }}"
     runs-on: ubuntu-latest
     timeout-minutes: 9
     env:

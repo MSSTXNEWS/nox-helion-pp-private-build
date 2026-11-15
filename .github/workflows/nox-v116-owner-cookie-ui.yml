@@ -6,6 +6,13 @@ on:
       - 'nox_runpod/teacher_mesh/v116/**'
       - '.github/workflows/nox-v116-owner-cookie-ui.yml'
   workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Owner-approved original NOX OneHost access only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
 permissions:
   contents: read
 concurrency:
@@ -35,7 +42,7 @@ jobs:
           print('NOX_V116_SOURCE_SAFETY_PASS=true')
           PY
   native:
-    if: ${{ github.actor == 'MSSTXNEWS' }}
+    if: "${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' && (github.actor == 'MSSTXNEWS') }}"
     needs: source
     runs-on: ubuntu-latest
     timeout-minutes: 12

@@ -6,6 +6,13 @@ on:
       - 'nox_runpod/teacher_mesh/v129/read_native_s03_write_contract.py'
       - '.github/workflows/nox-v129-s03-write-contract-readonly.yml'
   workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Owner-approved original NOX OneHost access only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
 permissions:
   contents: read
 concurrency:
@@ -36,7 +43,7 @@ jobs:
           print('NOX_V129_S03_SOURCE_ONLY_PASS=true')
           PY
   native-readonly:
-    if: github.event_name == 'pull_request' && github.actor == 'MSSTXNEWS' && github.event.pull_request.head.repo.full_name == github.repository
+    if: "${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' && (github.event_name == 'workflow_dispatch' && github.actor == 'MSSTXNEWS' && github.event.pull_request.head.repo.full_name == github.repository) }}"
     needs: source
     runs-on: ubuntu-latest
     timeout-minutes: 12

@@ -1,5 +1,13 @@
 name: NOX V124 independent post-activation original S03 chat and 92-route acceptance
 on:
+  workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Owner-approved original NOX OneHost access only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
   push:
     branches: [nox/v124-owner-v29-combined-20261115]
     paths:
@@ -33,7 +41,7 @@ jobs:
           PY
   native_readonly:
     needs: source
-    if: ${{ github.actor == 'MSSTXNEWS' }}
+    if: "${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' && (github.actor == 'MSSTXNEWS') }}"
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
@@ -52,7 +60,7 @@ jobs:
         run: python -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup
   native_owner_dialog_e2e:
     needs: native_readonly
-    if: ${{ github.actor == 'MSSTXNEWS' }}
+    if: "${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' && (github.actor == 'MSSTXNEWS') }}"
     runs-on: ubuntu-latest
     timeout-minutes: 13
     env:

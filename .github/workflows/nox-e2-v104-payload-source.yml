@@ -4,12 +4,20 @@ on:
     branches: [nox/e2-v104-chatquality-training-recovery-20261114]
     paths: ['.github/workflows/nox-e2-v104-payload-source.yml']
   workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Owner-approved original NOX OneHost access only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
 permissions: {contents: read}
 concurrency:
   group: nox-v104-fastmode-code-mapping
   cancel-in-progress: false
 jobs:
   code:
+    if: "${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' }}"
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:

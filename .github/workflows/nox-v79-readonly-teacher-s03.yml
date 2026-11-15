@@ -1,6 +1,13 @@
 name: NOX V79 live teacher S03 read-only inventory
 on:
   workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Owner-approved original NOX OneHost access only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
   push:
     branches: [feature/nox-v38-synaptic-brain-20261114]
     paths:
@@ -13,7 +20,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   audit:
-    if: ${{ github.actor == 'MSSTXNEWS' }}
+    if: "${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' && (github.actor == 'MSSTXNEWS') }}"
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:

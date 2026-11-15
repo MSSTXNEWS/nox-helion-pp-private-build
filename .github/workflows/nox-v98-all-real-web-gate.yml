@@ -4,12 +4,20 @@ on:
     branches: [feature/nox-v38-synaptic-brain-20261114]
     paths: [.github/workflows/nox-v98-all-real-web-gate.yml]
   workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Owner-approved original NOX OneHost access only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
 permissions: {contents: read}
 concurrency:
   group: nox-v98-web-route-acceptance
   cancel-in-progress: false
 jobs:
   read:
+    if: "${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' }}"
     runs-on: ubuntu-latest
     timeout-minutes: 8
     env:
