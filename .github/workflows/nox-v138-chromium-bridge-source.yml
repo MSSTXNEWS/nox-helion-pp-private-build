@@ -205,13 +205,7 @@ jobs:
               }
             if ! grep -Fq "NOX_V138_CHROMIUM_PASS:$scenario" "$out";then
               echo "::error::HOLD_CHROMIUM_CONTRACT_$scenario"
-              python3 - "$out" <<'PYRESULT'
-              from pathlib import Path
-              import re,sys
-              html=Path(sys.argv[1]).read_text(errors='replace')
-              m=re.search(r'<div id="result">([^<]{0,220})</div>',html)
-              print('NOX_V138_DOM_RESULT='+(m.group(1) if m else 'HOLD_NO_DOM_RESULT'))
-              PYRESULT
+              grep -o '<div id="result">[^<]*</div>' "$out" | tail -n 1 || true
               exit 2
             fi
             echo "NOX_V138_REAL_CHROMIUM_$scenario=PASS"
