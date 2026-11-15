@@ -57,6 +57,10 @@ class V112Tests(unittest.TestCase):
                            + (':'+'h'*160000+'\n')*2)
                 elif self.bulk_sse=='oversized':
                     yield 'data: '+'x'*300000+'\n'
+                elif self.bulk_sse=='unterminated_postdone':
+                    # Terminal DONE plus a nonempty, un-terminated extra SSE row.
+                    yield ('data: '+json.dumps({'choices':[{'delta':{'content':answer}}]},
+                           ensure_ascii=False)+'\n\n')
                 elif self.bulk_sse=='duplicate_done':
                     # First [DONE] is valid; a second terminal record must
                     # fail closed even when the original S03 proof exists.
@@ -72,7 +76,8 @@ class V112Tests(unittest.TestCase):
                         db.execute('INSERT INTO s03_items VALUES(?,?,?,?)',(
                           'new-exchange-0001',hashlib.sha256((q+answer).encode()).hexdigest(),
                           'U:'+q+' A:'+answer,stamp))
-                yield 'data: [DONE]\n\n'
+                yield ('data: [DONE]\n\ndata: [DONE]' if self.bulk_sse=='unterminated_postdone'
+                       else 'data: [DONE]\n\n')
             return StreamingResponse(chunks(),media_type='text/event-stream')
         register_native_v29_chat(self.app,{
           '_session_ok':lambda request:request.cookies.get('owner')=='yes',
@@ -169,6 +174,20 @@ class V112Tests(unittest.TestCase):
         r=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
             json={'message':'upstream duplicate terminal','dialog_id':d})
         self.assertEqual(r.status_code,200,r.text[:300])
+        frames=[json.loads(x) for x in r.text.splitlines() if x.strip()]
+        self.assertEqual(frames[-1],{'type':'error','error':'HOLD_SSE_FRAME_AFTER_DONE'})
+        self.assertFalse(any(x.get('type')=='done' or x.get('saved') for x in frames))
+        history=self.client.get('/api/ui/memory/dialogs/history',cookies=self.cookie,
+            params={'dialog_id':d}).json()
+        self.assertEqual(history['messages'],[])
+
+    def test_unterminated_postdone_tail_never_yields_false_s03_receipt(self):
+        self.bulk_sse='unterminated_postdone'
+        created=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
+            json={'title':'V167 dangling SSE tail','confirmed':True}).json()
+        d=created['dialog_id']
+        r=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
+            json={'message':'unterminated after terminal','dialog_id':d})
         frames=[json.loads(x) for x in r.text.splitlines() if x.strip()]
         self.assertEqual(frames[-1],{'type':'error','error':'HOLD_SSE_FRAME_AFTER_DONE'})
         self.assertFalse(any(x.get('type')=='done' or x.get('saved') for x in frames))
