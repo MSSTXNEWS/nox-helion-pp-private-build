@@ -84,8 +84,25 @@ if source.is_file() and source.stat().st_size<180000:
            'stream','temperature','cache_prompt','_proxy_completion','owner_completion')
     emit('PROXY_SOURCE',{'sha256':hashlib.sha256(s.encode()).hexdigest(),
                          'references':{n:s.count(n) for n in names}})
-slots=get('/slots')
-if not isinstance(slots,list) or any(x.get('is_processing',x.get('processing',False)) for x in slots if isinstance(x,dict)):
+# No inference probes if a native STOP is present or the slot state is
+# empty, ambiguous, mixed, active, or not explicitly boolean idle.
+# This is NOT an exclusive native owner lease, only a fail-closed probe gate.
+STOP_PATHS=('/root/nox/STOP','/root/nox/STOP.flag','/root/nox/stop.flag',
+            '/root/nox/.stop','/root/nox/program/STOP','/workspace/NOX_STOP')
+def idle_slots():
+    if any(Path(p).exists() or Path(p).is_symlink() for p in STOP_PATHS):
+        return False
+    items=get('/slots')
+    if not isinstance(items,list) or not items:return False
+    for item in items:
+        if not isinstance(item,dict):return False
+        a=item.get('is_processing')
+        b=item.get('processing')
+        if any(x is not None and type(x) is not bool for x in (a,b)):return False
+        if a is True or b is True:return False
+        if a is not False and b is not False:return False
+    return True
+if not idle_slots():
     emit('RESULT',{'state':'HOLD_CHAT_BUSY_NO_SYNTHETIC_PROBES'})
     print('NATIVE_READ_ONLY_COMPLETE=true');raise SystemExit(0)
 mods=get('/v1/models')
@@ -99,7 +116,7 @@ if not name:
     emit('RESULT',{'state':'HOLD_ONE_NOX_MODEL_UNVERIFIED'})
     print('NATIVE_READ_ONLY_COMPLETE=true');raise SystemExit(0)
 def do(label,extra,include_usage=True):
-    if not isinstance(get('/slots'),list):return {'state':'HOLD_SLOTS'}
+    if not idle_slots():return {'label':label,'state':'HOLD_BUSY_STOP_OR_UNTRUSTED_SLOTS'}
     request={'model':name,'stream':True,'max_tokens':64,'temperature':0,
       'messages':[{'role':'user','content':'Ответь одним словом: готово.'}]}
     # Some existing OpenAI-compatible runtimes reject include_usage with HTTP 400.
@@ -150,18 +167,14 @@ def do(label,extra,include_usage=True):
 results=[]
 for label,extra in [('default',{}),
                     ('no_thinking',{'chat_template_kwargs':{'enable_thinking':False}})]:
-    slots=get('/slots')
-    if not isinstance(slots,list) or any(x.get('is_processing',x.get('processing',False)) for x in slots if isinstance(x,dict)):
-        results.append({'label':label,'state':'HOLD_CHAT_BECAME_BUSY'});break
+    if not idle_slots():
+        results.append({'label':label,'state':'HOLD_CHAT_BECAME_BUSY_STOP_OR_UNTRUSTED_SLOTS'});break
     x=do(label,extra)
     if x.get('state')=='HOLD_HTTP_400':
         # The first request was rejected before streaming. Only one retry,
         # only if the original OneHost model is currently idle. Preserve
         # real TTFT in engines that do not support stream_options.
-        live_slots=get('/slots')
-        if not isinstance(live_slots,list) or any(
-                s.get('is_processing',s.get('processing',False))
-                for s in live_slots if isinstance(s,dict)):
+        if not idle_slots():
             x={'label':label,'state':'HOLD_CHAT_BUSY_BEFORE_FALLBACK'}
         else:
             x=do(label,extra,include_usage=False)

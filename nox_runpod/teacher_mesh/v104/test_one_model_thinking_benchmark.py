@@ -1,5 +1,8 @@
 """P0 source regression: SSH banner/zero samples must never prove TTFT."""
+import ast
 import json
+from pathlib import Path
+from tempfile import TemporaryDirectory
 import unittest
 from nox_runpod.teacher_mesh.v104.one_model_thinking_benchmark import (
     REMOTE, native_timing_evidence,
@@ -64,6 +67,46 @@ class V104NativeTimingGate(unittest.TestCase):
             completion_tokens=12,reasoning_chunks=1))))
         self.assertIn('HTTP_400_FALLBACK_NO_USAGE', REMOTE)
         self.assertIn('if include_usage:', REMOTE)
+
+
+    def _execute_existing_remote_slot_guard(self, slots, stops=()):
+        # Extract the actual native function from the shipped SSH payload,
+        # rather than copy/paste a simulated gate into tests.
+        remote = REMOTE.split("<<'PYREMOTE'\\n",1)[1].rsplit('\\nPYREMOTE',1)[0]
+        tree = ast.parse(remote)
+        funcs = [node for node in tree.body if isinstance(node,ast.FunctionDef)
+                 and node.name == 'idle_slots']
+        self.assertEqual(1,len(funcs))
+        namespace = {'Path':Path,'STOP_PATHS':stops,'get':lambda path: slots}
+        exec(compile(ast.Module(body=funcs,type_ignores=[]),
+                     '<native-slot-guard>','exec'),namespace)
+        return namespace['idle_slots']()
+
+    def test_native_slot_gate_rejects_unknown_and_busy_and_conflicts(self):
+        invalid = (None, [], {}, [{}], ['invalid'],
+                   [{'is_processing':True}],
+                   [{'processing':True}],
+                   [{'is_processing':True,'processing':False}],
+                   [{'is_processing':False,'processing':True}],
+                   [{'processing':0}],
+                   [{'is_processing':False},{}])
+        for state in invalid:
+            with self.subTest(slots=state):
+                self.assertFalse(self._execute_existing_remote_slot_guard(state))
+        self.assertTrue(self._execute_existing_remote_slot_guard(
+            [{'is_processing':False}]))
+        self.assertTrue(self._execute_existing_remote_slot_guard(
+            [{'processing':False},{'is_processing':False,'processing':False}]))
+
+    def test_native_stop_gates_every_synthetic_request(self):
+        with TemporaryDirectory() as d:
+            stop=Path(d)/'STOP'
+            stop.write_text('1')
+            self.assertFalse(self._execute_existing_remote_slot_guard(
+                [{'is_processing':False}],stops=(str(stop),)))
+        self.assertIn("if not idle_slots():return {'label':label",REMOTE)
+        self.assertIn("if not idle_slots():\\n        results.append",REMOTE)
+        self.assertIn("if not idle_slots():\\n            x={'label':label",REMOTE)
 
     def test_remote_source_compiles_without_connecting(self):
         remote = REMOTE.split("<<'PYREMOTE'\n",1)[1].rsplit('\nPYREMOTE',1)[0]
