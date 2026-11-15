@@ -1,0 +1,32 @@
+name: NOX ONEPASS owner Windows safe one-click verification source CI
+on:
+  push:
+    branches: [fix/nox-onepass-windows-readonly-preflight-20261115]
+    paths:
+      - 'coordination/onepass/windows/**'
+      - 'coordination/onepass/test_windows_readonly_contract.py'
+      - '.github/workflows/nox-onepass-windows-safe-source.yml'
+  pull_request:
+    paths:
+      - 'coordination/onepass/windows/**'
+      - 'coordination/onepass/test_windows_readonly_contract.py'
+      - '.github/workflows/nox-onepass-windows-safe-source.yml'
+permissions:
+  contents: read
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Confirm Windows entrypoint only hashes archive and checks localhost, no native mutations
+        run: |
+          set -euo pipefail
+          python -m unittest -v coordination.onepass.test_windows_readonly_contract
+          echo 'NOX_WINDOWS_CHECK_SOURCE_ONLY=PASS'
+          echo 'NOX_WINDOWS_CHECK_PHYSICAL_HOST=NOT_TESTED'
