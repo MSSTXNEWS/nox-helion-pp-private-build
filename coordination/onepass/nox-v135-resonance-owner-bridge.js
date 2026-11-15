@@ -113,6 +113,7 @@
         if(doneSeen)throw Error('HOLD_DUPLICATE_DONE');
         doneSeen=true;done=e;
       } else if(e.type==='start') {
+        if(!preparingSeen)throw Error('HOLD_NATIVE_PREPARING_REQUIRED');
         if(startSeen)throw Error('HOLD_DUPLICATE_NATIVE_START');
         startSeen=true;
       } else if(e.type==='preparing') {
