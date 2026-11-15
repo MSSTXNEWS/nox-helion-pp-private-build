@@ -216,8 +216,10 @@
         },init?.signal);
         if(!r.ok)throw Error('HOLD_RENAME_'+await reason(r));
         const d=await r.json();
-        if(d.dialog_id!==data.dialog_id)throw Error('HOLD_RENAME_RECEIPT');
-        return responseJSON({dialog_id:d.dialog_id,title:d.title});
+        if(d.dialog_id!==data.dialog_id||d.title!==data.title||
+           !Number.isInteger(d.revision)||d.revision<=row.revision)
+          throw Error('HOLD_RENAME_RECEIPT');
+        return responseJSON({status:'READY',dialog_id:d.dialog_id,title:d.title,revision:d.revision});
       }
       return errorResponse('HOLD_UNSUPPORTED_LEGACY_ROUTE',405);
     }catch(e){return errorResponse(String(e.message||'HOLD_NATIVE_DIALOG').slice(0,150));}
