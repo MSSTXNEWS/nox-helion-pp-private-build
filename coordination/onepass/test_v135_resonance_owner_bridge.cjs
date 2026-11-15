@@ -255,3 +255,30 @@ test('V141 Request-object aborted input cannot start native inference',async()=>
   assert.equal(frames.filter(x=>x.type==='done').length,0);
   assert(!f.calls.some(x=>x.path==='/api/nox/chat/stream'));
 });
+
+test('V153 SSE tokens preserve real grapheme boundaries in original owner stream',async()=>{
+  // The fixture streams five ASCII characters, then emoji ZWJ and accent
+  // clusters. Splitting by codepoint visibly tears both during paint.
+  const combined='abcde'+('e\u0301'+'👨‍👩‍👧‍👦').repeat(13);
+  const f=fake(true,'/nox-web-v29/pc/resonance.html',false,combined);
+  const r=await f.fetch('/api/nox/chat',{method:'POST',
+    body:JSON.stringify({message:prompt,dialog_id:id,request_id:'v153-grapheme'})});
+  const read=await events(r);
+  const pieces=read.filter(e=>e.type==='token').map(e=>e.t);
+  assert(pieces.length>=2,'must deliver actual pieces before S03 done');
+  assert.equal(pieces.join(''),combined,'never change or fabricate the reply');
+  let offset=0;
+  const boundaries=new Set();
+  for(const g of new Intl.Segmenter(undefined,{granularity:'grapheme'}).segment(combined)){
+    offset+=g.segment.length;
+    boundaries.add(offset);
+  }
+  let cumulative=0;
+  for(const part of pieces){
+    cumulative+=part.length;
+    assert(boundaries.has(cumulative),'a visual token ended inside a grapheme');
+  }
+  assert.equal(read.filter(e=>e.type==='done').length,1);
+  assert(f.calls.some(c=>c.path.startsWith('/api/ui/memory/dialogs/history?')),
+    'real S03 readback must still gate success');
+});
