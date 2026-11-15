@@ -6,6 +6,13 @@ on:
       - '.github/workflows/nox-v112-native-deploy.yml'
       - 'nox_runpod/teacher_mesh/v112/native_install_v112.py'
   workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Owner-approved existing OneHost native access only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
 permissions:
   contents: read
 concurrency:
@@ -40,7 +47,7 @@ jobs:
           PY
           python -m unittest discover -s nox_runpod/teacher_mesh/v112/tests -p 'test_*.py' -v
   native:
-    if: ${{ github.actor == 'MSSTXNEWS' }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' && (github.actor == 'MSSTXNEWS') }}
     needs: regression
     runs-on: ubuntu-latest
     timeout-minutes: 15
