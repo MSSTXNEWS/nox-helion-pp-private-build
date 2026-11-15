@@ -69,6 +69,10 @@ class V112Tests(unittest.TestCase):
                 else:
                     yield ('data: '+json.dumps({'choices':[{'delta':{'content':answer[:11]}}]},ensure_ascii=False)+'\n\n')
                     yield ('data: '+json.dumps({'choices':[{'delta':{'content':answer[11:]}}]},ensure_ascii=False)+'\n\n')
+                if self.bulk_sse=='upstream_error_after_delta':
+                    # A model-side error after valid deltas is terminal even
+                    # when a matching fixture S03 row is present.
+                    yield 'data: '+json.dumps({'error':{'message':'fixture inference failed'}})+'\n\n'
                 if self.record:
                     from datetime import datetime,timezone
                     stamp=datetime.now(timezone.utc).isoformat()
@@ -194,6 +198,20 @@ class V112Tests(unittest.TestCase):
         history=self.client.get('/api/ui/memory/dialogs/history',cookies=self.cookie,
             params={'dialog_id':d}).json()
         self.assertEqual(history['messages'],[])
+
+    def test_upstream_model_error_must_not_claim_durable_s03_done(self):
+        self.bulk_sse='upstream_error_after_delta'
+        created=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
+            json={'title':'V168 upstream failure','confirmed':True}).json()
+        d=created['dialog_id']
+        r=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
+            json={'message':'model error after partial answer','dialog_id':d})
+        frames=[json.loads(x) for x in r.text.splitlines() if x.strip()]
+        self.assertEqual(frames[-1],{'type':'error','error':'HOLD_UPSTREAM_SSE_ERROR'})
+        self.assertFalse(any(x.get('type')=='done' or x.get('saved') for x in frames))
+        hist=self.client.get('/api/ui/memory/dialogs/history',cookies=self.cookie,
+            params={'dialog_id':d}).json()
+        self.assertEqual(hist['messages'],[])
 
     def test_cross_dialog_id_is_rejected(self):
         before=len(self.calls)
