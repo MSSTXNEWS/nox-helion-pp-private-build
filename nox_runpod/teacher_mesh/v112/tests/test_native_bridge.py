@@ -136,6 +136,45 @@ class V112Tests(unittest.TestCase):
             self.assertIsNone(check.execute('SELECT id FROM s03_items WHERE id=?',
                                             ('v112-db-rollback',)).fetchone())
 
+    def test_s03_exchange_receipt_collision_fails_closed(self):
+        # The original OneHost dialog must never accept old text as saved=True
+        # merely because an S03 exchange_id already has two rows.
+        from nox_runpod.teacher_mesh.v112.native_v29_full_bridge import _db, _save_exchange
+        created=self.client.post('/api/ui/memory/dialogs/create',
+                                 json={'confirmed':True,'title':'Receipt collision'},
+                                 cookies=self.cookie)
+        self.assertEqual(created.status_code,200)
+        dialog_id=created.json()['dialog_id']
+        exchange='s03-fixture-receipt-collision'
+        self.assertTrue(_save_exchange(dialog_id,'old question','old answer',exchange))
+        with _db() as db:
+            before=db.execute('SELECT revision FROM nox_v29_dialogs WHERE dialog_id=?',
+                              (dialog_id,)).fetchone()['revision']
+        self.assertFalse(_save_exchange(dialog_id,'new question','new answer',exchange))
+        # Identical retry is allowed without an artificial new revision.
+        self.assertTrue(_save_exchange(dialog_id,'old question','old answer',exchange))
+        with _db() as db:
+            rows=db.execute('SELECT role,content FROM nox_v29_dialog_messages '
+                            'WHERE dialog_id=? AND exchange_id=? ORDER BY role',
+                            (dialog_id,exchange)).fetchall()
+            revision=db.execute('SELECT revision FROM nox_v29_dialogs WHERE dialog_id=?',
+                                (dialog_id,)).fetchone()['revision']
+        self.assertEqual([(r['role'],r['content']) for r in rows],
+                         [('assistant','old answer'),('user','old question')])
+        self.assertEqual(revision,before)
+        partial='s03-fixture-partial'
+        with _db(True) as db:
+            db.execute('INSERT INTO nox_v29_dialog_messages '
+                       '(dialog_id,exchange_id,role,content,ts) VALUES(?,?,?,?,?)',
+                       (dialog_id,partial,'user','orphan message','2026-11-15'))
+        self.assertFalse(_save_exchange(dialog_id,'orphan message','answer',partial))
+        with _db() as db:
+            partial_rows=db.execute('SELECT role,content FROM nox_v29_dialog_messages '
+                                    'WHERE dialog_id=? AND exchange_id=?',
+                                    (dialog_id,partial)).fetchall()
+        self.assertEqual(len(partial_rows),1)
+        self.assertEqual(partial_rows[0]['role'],'user')
+
     def test_auth_is_essential(self):
         for url,method in [
             ('/api/nox/status','get'),

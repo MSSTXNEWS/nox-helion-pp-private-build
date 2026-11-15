@@ -198,18 +198,33 @@ def _save_exchange(dialog_id,question,answer,exchange_id):
             row=_get_dialog(db,dialog_id)
             if row is None or bool(row['archived']):
                 return False
-            for role,text in (('user',question),('assistant',answer)):
+            # A durable S03 exchange_id must never certify DIFFERENT dialog
+            # text. INSERT OR IGNORE + COUNT(*)=2 accepted a stale collision.
+            expected={'user':question,'assistant':answer}
+            existing=db.execute(
+                'SELECT role,content FROM nox_v29_dialog_messages '
+                'WHERE dialog_id=? AND exchange_id=?',
+                (dialog_id,exchange_id)).fetchall()
+            if existing:
+                observed={r['role']:r['content'] for r in existing}
+                if len(existing)!=2 or observed!=expected:
+                    raise RuntimeError('HOLD_DIALOG_RECEIPT_COLLISION')
+                # Exact replay: already persisted; do not fabricate a new
+                # revision or overwrite the original durable exchange.
+                return True
+            for role,content in expected.items():
                 db.execute(
-                    'INSERT OR IGNORE INTO nox_v29_dialog_messages '
+                    'INSERT INTO nox_v29_dialog_messages '
                     '(dialog_id,exchange_id,role,content,ts) VALUES(?,?,?,?,?)',
-                    (dialog_id,exchange_id,role,text,stamp))
+                    (dialog_id,exchange_id,role,content,stamp))
+            saved=db.execute(
+                'SELECT role,content FROM nox_v29_dialog_messages '
+                'WHERE dialog_id=? AND exchange_id=?',
+                (dialog_id,exchange_id)).fetchall()
+            if len(saved)!=2 or {r['role']:r['content'] for r in saved}!=expected:
+                raise RuntimeError('HOLD_DIALOG_RECEIPT_CONTENT')
             db.execute('UPDATE nox_v29_dialogs SET updated_at=?,revision=revision+1 '
                        'WHERE owner=? AND dialog_id=?',(stamp,OWNER,dialog_id))
-            count=db.execute(
-                'SELECT COUNT(*) FROM nox_v29_dialog_messages '
-                'WHERE dialog_id=? AND exchange_id=?',(dialog_id,exchange_id)).fetchone()[0]
-            if count!=2:
-                raise RuntimeError('HOLD_DIALOG_RECEIPT')
         return True
     except (OSError,sqlite3.Error,RuntimeError,ImportError,ValueError):
         return False
