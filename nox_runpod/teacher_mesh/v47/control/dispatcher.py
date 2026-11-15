@@ -372,7 +372,14 @@ def enqueue_approved(native:NativePorts,matrix:dict,owner_scope:str,*,limit:int=
             if (not isinstance(ticket,Mapping) or ticket.get('accepted') is not True
                     or not isinstance(ticket.get('job_id'),str)
                     or not re.fullmatch(r'[A-Za-z0-9._:@/-]{1,128}',ticket['job_id'])):
-                return {'state':'HOLD_QUEUE_NOT_ACCEPTED','jobs_enqueued':len(receipts),'receipts':receipts}
+                # The remote queue MAY have committed before returning a malformed
+                # or rejected-looking acknowledgment. Never describe an attempted
+                # native write as zero effect; next cycle must reconcile the exact
+                # original task/job/S03 receipt instead of blindly re-enqueueing.
+                return {'state':'HOLD_QUEUE_NOT_ACCEPTED',
+                        'enqueues_may_have_occurred':True,
+                        'jobs_enqueued_verified':len(receipts),
+                        'receipts':receipts}
             if native.verify_queue_receipt(ticket,payload) is not True:
                 return {'state':'HOLD_QUEUE_RECEIPT_NOT_VERIFIED','enqueues_may_have_occurred':True,
                         'jobs_enqueued_verified':len(receipts),'receipts':receipts}

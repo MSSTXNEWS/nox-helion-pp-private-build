@@ -340,6 +340,28 @@ class NativeRegistrationGates(unittest.TestCase):
         self.assertEqual(r['reason'],'HOLD_REGISTRATION_NATIVE_PORTS')
         self.assertEqual(self.calls['enqueue'],0)
 
+    def test_uncertain_native_enqueue_ack_reports_possible_side_effect(self):
+        """An invalid remote ACK can conceal a committed native queue job."""
+        from dataclasses import replace
+        for reply in ({'accepted':False}, {'accepted':True},
+                      {'accepted':True,'job_id':'invalid id'}):
+            with self.subTest(reply=reply):
+                self.calls['enqueue']=0
+                self.calls['s03']=0
+                original=self.ports()
+                def ack_after_side_effect(payload):
+                    # The remote write was invoked: negative/missing/invalid ACK
+                    # cannot prove that the job was NOT enqueued.
+                    self.calls['enqueue']+=1
+                    return reply
+                native=replace(original,queue_enqueue=ack_after_side_effect)
+                result=enqueue_approved(native,self.matrix,self.scope,limit=1)
+                self.assertEqual(result['state'],'HOLD_QUEUE_NOT_ACCEPTED')
+                self.assertTrue(result['enqueues_may_have_occurred'])
+                self.assertEqual(result['jobs_enqueued_verified'],0)
+                self.assertEqual(self.calls['enqueue'],1)
+                self.assertEqual(self.calls['s03'],0)
+
     def test_untrusted_native_queue_snapshot_never_enqueues(self):
         self.snapshot['task_status']={'NOX-V46-01':{
             'task_id':'NOX-V46-01','state':'RUNNING',
