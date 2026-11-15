@@ -189,9 +189,62 @@ jobs:
               except Exception:open_ports[str(port)]=False
               finally:sock.close()
           show('LOOPBACK_PORT_OPEN',open_ports)
+          # Read-only service and GPU process attribution; never print raw
+          # process cmdline or authentication-bearing HTTP response bodies.
+          import urllib.request,urllib.error
+          gpuapp=shutil.which('nvidia-smi')
+          if gpuapp:
+              try:
+                  v=subprocess.run([gpuapp,'--query-compute-apps=gpu_uuid,pid,used_gpu_memory',
+                     '--format=csv,noheader,nounits'],capture_output=True,text=True,timeout=9)
+                  processes=[]
+                  if v.returncode==0:
+                      for line in v.stdout.splitlines()[:24]:
+                          cols=[x.strip() for x in line.split(',')]
+                          if len(cols)!=3 or not cols[1].isdigit():continue
+                          pid=cols[1]
+                          try:comm=(Path('/proc')/pid/'comm').read_text().strip()[:45]
+                          except OSError:comm='UNKNOWN'
+                          processes.append({'gpu_uuid_suffix':cols[0][-12:],
+                              'pid':int(pid),'comm':comm,'vram_mib':cols[2][:12]})
+                  show('GPU_COMPUTE_PROCESS_OWNER',{'query_rc':v.returncode,'processes':processes})
+              except Exception as ex:show('GPU_COMPUTE_PROCESS_OWNER',type(ex).__name__)
+          status=shutil.which('supervisorctl')
+          if status:
+              try:
+                  z=subprocess.run([status,'status'],capture_output=True,text=True,timeout=8)
+                  entries=[]
+                  for line in z.stdout.splitlines()[:30]:
+                      cols=line.split()
+                      if len(cols)>=2 and all(c.isalnum() or c in '_-.:@' for c in cols[0][:70]):
+                          entries.append({'name':cols[0][:70],'state':cols[1][:24]})
+                  show('SUPERVISOR_SERVICE_STATE',{'query_rc':z.returncode,'services':entries})
+              except Exception as ex:show('SUPERVISOR_SERVICE_STATE',type(ex).__name__)
+          for port in (8080,8081,8082,8095):
+              if not open_ports.get(str(port)):continue
+              for route in ('/health','/v1/models','/slots'):
+                  req=urllib.request.Request('http://127.0.0.1:'+str(port)+route,
+                      headers={'Accept':'application/json'})
+                  try:
+                      with urllib.request.urlopen(req,timeout=3) as response:
+                          status=str(response.status)
+                          raw=response.read(1800)
+                          models=None
+                          if route=='/v1/models':
+                              try:
+                                  d=json.loads(raw)
+                                  models=len(d.get('data',[])) if isinstance(d,dict) and isinstance(d.get('data'),list) else None
+                              except Exception:pass
+                          show('HTTP_'+str(port)+route.replace('/','_').upper(),
+                              {'status':status,'model_count':models})
+                  except urllib.error.HTTPError as ex:show('HTTP_'+str(port)+route.replace('/','_').upper(),{'status':str(ex.code)})
+                  except Exception as ex:show('HTTP_'+str(port)+route.replace('/','_').upper(),{'status':'HOLD_'+type(ex).__name__})
+
           for env in ('/root/nox/venv/bin/python','/root/nox/.venv/bin/python'):
               if not Path(env).exists():continue
-              code='import json,importlib.metadata as m; a={}; exec("for p in (\"torch\",\"transformers\",\"accelerate\",\"datasets\",\"safetensors\",\"deepspeed\"):\\n try:a[p]=m.version(p)\\n except m.PackageNotFoundError:pass"); print(json.dumps(a))'
+              code=("import json,importlib.metadata as m;"
+                    "names={'torch','transformers','accelerate','datasets','safetensors','deepspeed','triton','numpy'};"
+                    "print(json.dumps({d.metadata.get('Name','').lower():d.version for d in m.distributions() if d.metadata.get('Name','').lower() in names}))")
               try:
                   p=subprocess.run([env,'-c',code],capture_output=True,text=True,timeout=9)
                   show('VENV_'+env.replace('/','_').upper(),{'exit_code':p.returncode,
