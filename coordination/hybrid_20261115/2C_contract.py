@@ -30,6 +30,22 @@ def _p95(values):
     return sorted(values)[math.ceil(0.95 * len(values)) - 1]
 
 
+def _canonical_route_inventory():
+    """Original V29.3 frozen route matrix; no caller-supplied pseudo-92 paths."""
+    path = Path(__file__).resolve().parents[1] / 'NOX_V98_WEB_FULL_REAL_API_MATRIX.json'
+    if path.is_symlink():
+        raise ValueError('HOLD_CANONICAL_92_ROUTE_INVENTORY')
+    try:
+        rows = json.loads(path.read_text(encoding='utf-8'))['functions']
+        routes = [row['route'] for row in rows]
+    except (OSError, ValueError, TypeError, KeyError) as exc:
+        raise ValueError('HOLD_CANONICAL_92_ROUTE_INVENTORY') from exc
+    if (len(routes) != EXPECTED_ROUTE_TARGET or len(set(routes)) != EXPECTED_ROUTE_TARGET or
+        any(not isinstance(x, str) or not x.startswith('/') for x in routes)):
+        raise ValueError('HOLD_CANONICAL_92_ROUTE_INVENTORY')
+    return frozenset(routes)
+
+
 def training_status(raw):
     """Explicit unknown/defaults: never promote a self-declared status to verified native."""
     row = raw if isinstance(raw, dict) else {}
@@ -57,14 +73,35 @@ def training_status(raw):
 
 
 def stream_stats(rows):
-    """TTFT is first actual delta onset; SSE chunk count is never token count."""
+    """Source-only metric consistency; replay cannot increase unique TTFT samples."""
     if not isinstance(rows, list) or len(rows) > MAX_ROWS:
         raise ValueError('INVALID_STREAM_RECEIPTS')
-    accepted = []
+    unique, conflicted, s03_owners = {}, set(), {}
     rejected = 0
-    tps_samples = []
     for row in rows:
         if not isinstance(row, dict):
+            rejected += 1
+            continue
+        req, s03 = row.get('request_sha256'), row.get('s03_receipt_sha256')
+        if not _hex64(req) or not _hex64(s03):
+            rejected += 1
+            continue
+        req, s03 = req.lower(), s03.lower()
+        signature = (s03, row.get('ttft_ms'), row.get('native_completion_tokens'),
+                     row.get('decode_elapsed_ms'), row.get('native_usage_source'))
+        if req in unique:
+            rejected += 1
+            if unique[req][1] != signature:
+                conflicted.add(req)
+        else:
+            unique[req] = (row, signature)
+        if s03 in s03_owners and s03_owners[s03] != req:
+            conflicted.update((req, s03_owners[s03]))
+        else:
+            s03_owners[s03] = req
+    accepted, tps_samples = [], []
+    for req, (row, signature) in unique.items():
+        if req in conflicted:
             rejected += 1
             continue
         if (row.get('owner_authenticated') is not True or
@@ -76,8 +113,7 @@ def stream_stats(rows):
             rejected += 1
             continue
         accepted.append(row['ttft_ms'])
-        n = row.get('native_completion_tokens')
-        duration = row.get('decode_elapsed_ms')
+        n, duration = row.get('native_completion_tokens'), row.get('decode_elapsed_ms')
         if (row.get('native_usage_source') == 'ORIGINAL_ENGINE_COMPLETION_TOKENS' and
             isinstance(n, int) and not isinstance(n, bool) and n > 0 and
             _number(duration, strictly_positive=True)):
@@ -85,6 +121,7 @@ def stream_stats(rows):
     return {
         'measured_source_receipts': len(accepted),
         'rejected_or_incomplete_receipts': rejected,
+        'conflicted_request_receipts': len(conflicted),
         'ttft_p50_ms': statistics.median(accepted) if accepted else None,
         'ttft_p95_ms': _p95(accepted) if accepted else None,
         'decode_tps_median': statistics.median(tps_samples) if tps_samples else None,
@@ -93,12 +130,16 @@ def stream_stats(rows):
     }
 
 
-def route_coverage(rows):
-    """Only observed owner-scoped successful HTTP responses count; never 92 by assumption."""
+def route_coverage(rows, inventory):
+    """Source receipts count only exact original frozen routes, never arbitrary URLs."""
     if not isinstance(rows, list) or len(rows) > MAX_ROWS:
         raise ValueError('INVALID_ROUTE_RECEIPTS')
+    if (not isinstance(inventory, (set, frozenset)) or len(inventory) != EXPECTED_ROUTE_TARGET or
+        any(not isinstance(p, str) or not p.startswith('/') for p in inventory)):
+        raise ValueError('HOLD_CANONICAL_92_ROUTE_INVENTORY')
     unique = set()
     rejected = 0
+    unmapped = 0
     for row in rows:
         if not isinstance(row, dict):
             rejected += 1
@@ -106,18 +147,21 @@ def route_coverage(rows):
         path = row.get('path')
         if (not isinstance(path, str) or not path.startswith('/') or
             len(path) > 256 or '://' in path or '?' in path or '#' in path or '..' in path or
-            row.get('owner_authenticated') is not True or
-            row.get('http_status') != 200 or
+            row.get('owner_authenticated') is not True or row.get('http_status') != 200 or
             row.get('schema_checked') is not True):
             rejected += 1
+            continue
+        if path not in inventory:
+            unmapped += 1
             continue
         unique.add(path)
     return {
         'expected_route_inventory_target_not_live_claim': EXPECTED_ROUTE_TARGET,
         'owner_schema_200_source_receipts': len(unique),
+        'owner_schema_200_outside_original_inventory': unmapped,
         'rejected_route_receipts': rejected,
         'full_live_92_route_e2e_verified': False,
-        'note': 'Some routes require POST or additional state; a source receipt is not a signed live E2E.'
+        'note': 'Exact frozen source paths only, never live 92-route E2E.',
     }
 
 
@@ -131,7 +175,7 @@ def audit(payload):
         'onehost_modified': False,
         'training': training_status(payload.get('training')),
         'stream': stream_stats(payload.get('streams', [])),
-        'routes': route_coverage(payload.get('routes', [])),
+        'routes': route_coverage(payload.get('routes', []), _canonical_route_inventory()),
         'lesson': 'Never count SSE deltas as tokens; do not enable STOP/RESUME or promote models from unsigned status or source-only route receipts.',
     }
 
@@ -139,7 +183,8 @@ def audit(payload):
 def selftest():
     h = 'a' * 64
     s = {'owner_authenticated': True, 'completed': True, 's03_saved': True,
-         's03_integrated': True, 'terminal_event': 'done', 'ttft_ms': 150.0}
+         's03_integrated': True, 'terminal_event': 'done', 'ttft_ms': 150.0,
+         'request_sha256': h, 's03_receipt_sha256': '1' * 64}
     assert stream_stats([])['ttft_p95_ms'] is None
     assert stream_stats([s])['ttft_p50_ms'] == 150
     assert stream_stats([s])['decode_tps_median'] is None
@@ -156,12 +201,19 @@ def selftest():
                              'global_step':100,'native_verified':True})['live_promoted_verified'] is False
     assert training_status({'stage':'lora','global_step':True})['global_step_reported_unverified'] is None
     assert training_status({})['stop_resume_controls'].startswith('DISABLED_')
-    route={'path':'/api/nox/status','http_status':200,'owner_authenticated':True,'schema_checked':True}
-    assert route_coverage([route,route])['owner_schema_200_source_receipts']==1
-    assert route_coverage([dict(route,owner_authenticated=False)])['owner_schema_200_source_receipts']==0
-    assert route_coverage([dict(route,path='/api/../admin')])['owner_schema_200_source_receipts']==0
+    inventory = _canonical_route_inventory()
+    route={'path':sorted(inventory)[0],'http_status':200,'owner_authenticated':True,'schema_checked':True}
+    assert route_coverage([route,route], inventory)['owner_schema_200_source_receipts']==1
+    assert route_coverage([dict(route,owner_authenticated=False)], inventory)['owner_schema_200_source_receipts']==0
+    assert route_coverage([dict(route,path='/api/../admin')], inventory)['owner_schema_200_source_receipts']==0
+    assert stream_stats([s,s])['measured_source_receipts']==1
+    assert stream_stats([s,s])['rejected_or_incomplete_receipts']==1
+    assert stream_stats([s,dict(s,ttft_ms=300)])['measured_source_receipts']==0
+    assert stream_stats([s,dict(s,request_sha256='b'*64)])['measured_source_receipts']==0
+    assert stream_stats([dict(s,request_sha256=None)])['measured_source_receipts']==0
+    assert route_coverage([dict(route,path='/not-in-original-inventory')], inventory)['owner_schema_200_source_receipts']==0
     assert audit({})['native_verified'] is False
-    print('SELFTEST 17/17 PASS - synthesized fixtures; native/live UNKNOWN')
+    print('SELFTEST 23/23 PASS - synthesized fixtures; native/live UNKNOWN')
 
 
 def main():
