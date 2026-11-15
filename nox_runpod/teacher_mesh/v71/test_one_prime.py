@@ -235,10 +235,30 @@ class RamWeightTiers(unittest.TestCase):
         snap['cgroup_memory_high_bytes']=snap['cgroup_current_bytes']+32*MIB
         out=plan_warm_weight(snap,self.model())
         self.assertEqual(out['state'],'HOLD_RAM_HEADROOM_FOR_CHAT')
-        self.assertEqual(out['warm_bytes_budget'],32*MIB)
+        self.assertEqual(out['warm_bytes_budget'],0)
         self.assertFalse(out['performed'])
         self.assertEqual(plan_warm_weight(self.s(cgroup_memory_high_bytes='max'),
                         self.model())['state'],'HOLD_CGROUP_MEMORY_HIGH_SENSOR')
+
+    def test_hold_never_exposes_executable_warm_bytes_near_threshold(self):
+        # Previously a 32 MiB HOLD still published 32 MiB as an actionable
+        # warm_bytes_budget. That ambiguous output must always fail closed.
+        for free in (1*MIB,32*MIB,63*MIB):
+            with self.subTest(high_minus_current=free):
+                snap=self.s()
+                snap['cgroup_memory_high_bytes']=snap['cgroup_current_bytes']+free
+                out=plan_warm_weight(snap,self.model())
+                self.assertEqual(out['state'],'HOLD_RAM_HEADROOM_FOR_CHAT')
+                self.assertEqual(out['warm_bytes_budget'],0)
+                self.assertEqual(out['headroom_after_budget_bytes'],
+                                 snap['cgroup_max_bytes']-snap['cgroup_current_bytes'])
+                self.assertFalse(out['performed'])
+        snap=self.s()
+        snap['cgroup_memory_high_bytes']=snap['cgroup_current_bytes']+64*MIB
+        ready=plan_warm_weight(snap,self.model())
+        self.assertEqual(ready['state'],'READY_FOR_EXISTING_V95_V99_OWNER_PAGECACHE_WARMUP')
+        self.assertEqual(ready['warm_bytes_budget'],64*MIB)
+        self.assertFalse(ready['performed'])
 
     def test_warmup_accepts_canonical_native_v71_keys_not_conflicts(self):
         snap=self.s()

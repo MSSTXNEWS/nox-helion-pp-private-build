@@ -215,12 +215,15 @@ def plan_warm_weight(snapshot:Mapping,candidate:Mapping)->dict:
     headroom=min(ceiling-current,
                  available-WEIGHT_WARM_RESERVE_BYTES)
     warm=min(size,WEIGHT_WARM_MAX_BYTES,max(0,headroom))
-    out.update({'cgroup_max_bytes':cap,'cgroup_current_bytes':current,
-                'headroom_after_budget_bytes':cap-current-warm,
-                'warm_bytes_budget':warm})
+    out.update({'cgroup_max_bytes':cap,'cgroup_current_bytes':current})
+    # Fail closed: a HOLD must never advertise bytes that a native consumer
+    # could mistakenly interpret as authorization to warm the page cache.
     if warm<64*MIB:
         out['state']='HOLD_RAM_HEADROOM_FOR_CHAT'
+        out['headroom_after_budget_bytes']=cap-current
         return out
+    out['headroom_after_budget_bytes']=cap-current-warm
+    out['warm_bytes_budget']=warm
     out['state']='READY_FOR_EXISTING_V95_V99_OWNER_PAGECACHE_WARMUP'
     out['next']='NATIVE_ONESHOT_WARM_WITH_STOP_CHAT_IOPREEMPT_AND_CGROUP_READBACK'
     return out
