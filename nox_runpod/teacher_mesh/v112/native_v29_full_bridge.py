@@ -575,7 +575,7 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
                     yield _jsonl({'type':'error','error':'HOLD_NATIVE_STREAM_MISSING'})
                     return
                 yield _jsonl({'type':'start','model':'NOX HELION','stream_mode':'NATIVE_TOKEN_STREAM'})
-                decoder=codecs.getincrementaldecoder('utf8')('replace')
+                decoder=codecs.getincrementaldecoder('utf8')('strict')
                 upstream=wire.body_iterator.__aiter__()
                 while True:
                     event,chunk=await _next_native_chunk_or_stop(upstream,cancel)
@@ -584,7 +584,13 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
                         return
                     if event=='eof':
                         break
-                    buffer+=decoder.decode(chunk if isinstance(chunk,bytes) else str(chunk).encode())
+                    try:
+                        buffer+=decoder.decode(chunk if isinstance(chunk,bytes) else str(chunk).encode())
+                    except UnicodeDecodeError:
+                        # Do not silently replace corrupted upstream bytes; an
+                        # otherwise matching S03 row must not certify this text.
+                        yield _jsonl({'type':'error','error':'HOLD_UPSTREAM_SSE_UTF8_INVALID'})
+                        return
                     # A read may contain many *complete* short SSE frames.
                     # Limit each frame and its unfinished tail, not the whole
                     # transport chunk (which may exceed 300 KB legitimately).
@@ -616,6 +622,13 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
                                 return
                             answer+=part
                             yield _jsonl({'type':'delta','text':part})
+                # Finalize incremental UTF-8 state: an incomplete multibyte
+                # suffix must not disappear after a valid terminal [DONE].
+                try:
+                    buffer+=decoder.decode(b'',final=True)
+                except UnicodeDecodeError:
+                    yield _jsonl({'type':'error','error':'HOLD_UPSTREAM_SSE_UTF8_INVALID'})
+                    return
                 # EOF does not certify an unterminated SSE row. Fail closed
                 # rather than discarding a post-DONE frame and claiming S03.
                 if buffer.strip():
