@@ -1,4 +1,4 @@
-"""V149: prevent silent loss of original Windows PC/owner and FORGE STOP CI gates.
+"""V149/V150: prevent silent loss of Windows/STOP/Resonance source CI gates.
 
 Only checks GitHub workflow scope. No remote host access, S03, GPU, backup POST,
 credentials or production promotion. The source-only result stays HOLD live.
@@ -12,6 +12,7 @@ ROOT = Path(__file__).resolve().parents[2]
 CANON = "feature/nox-v38-synaptic-brain-20261114"
 WINDOWS = ROOT / ".github/workflows/nox-onepass-windows-safe-source.yml"
 FORGE = ROOT / ".github/workflows/nox-v135-forge-stop-callback-source.yml"
+RESONANCE = ROOT / ".github/workflows/nox-v135-resonance-owner-source-ci.yml"
 
 
 def scoped_event(source: str, event: str) -> str:
@@ -80,6 +81,36 @@ class ContinuousGateCoverage(unittest.TestCase):
             assert_covered(source.replace(
                 "      - 'coordination/onepass/test_windows_pc_owner_probe.py'\n", ""
             ), ("coordination/onepass/test_windows_pc_owner_probe.py",))
+
+
+    def test_original_full_resonance_sse_s03_gate_covers_canonical_and_pr(self):
+        source = RESONANCE.read_text(encoding="utf8")
+        assert_covered(source, (
+            "coordination/onepass/nox-v135-resonance-owner-bridge.js",
+            "coordination/onepass/test_v135_resonance_owner_bridge.cjs",
+            "coordination/onepass/test_v135_resonance_owner_stage.py",
+            "coordination/onepass/test_ci_guard_coverage.py",
+        ))
+        for command in (
+            "node --test coordination/onepass/test_v135_resonance_owner_bridge.cjs",
+            "python3 -m unittest -v coordination.onepass.test_v135_resonance_owner_stage",
+            "python3 -m unittest -v coordination.onepass.test_ci_guard_coverage",
+            "NOX_V135_LIVE_SERVER_DEPLOYED=false",
+            "NOX_V135_NATIVE_COOKIE_E2E_VERIFIED=false",
+        ):
+            self.assertIn(command, source)
+
+    def test_resonance_gate_regression_rejects_missing_branch_or_sse_path(self):
+        source = RESONANCE.read_text(encoding="utf8")
+        with self.assertRaisesRegex(AssertionError, "HOLD_CANONICAL_PUSH_NOT_COVERED"):
+            assert_covered(source.replace(CANON, "fix/obsolete-branch"), (
+                "coordination/onepass/test_v135_resonance_owner_bridge.cjs",
+            ))
+        missing = "      - 'coordination/onepass/test_v135_resonance_owner_bridge.cjs'\n"
+        with self.assertRaisesRegex(AssertionError, "HOLD_CI_PATH_NOT_COVERED"):
+            assert_covered(source.replace(missing, ""), (
+                "coordination/onepass/test_v135_resonance_owner_bridge.cjs",
+            ))
 
 
 if __name__ == "__main__":
