@@ -251,6 +251,87 @@ jobs:
                        'packages_json':p.stdout.strip()[:400] if p.returncode==0 else '',
                        'stderr_class':'NONE' if p.returncode==0 else 'NONZERO'})
               except Exception as ex:show('VENV_'+env.replace('/','_').upper(),type(ex).__name__)
+
+          # A single bounded synthetic model-only inference, not the WEB/S03.
+          # No new model/server, no personal prompt, no checkpoint writes.
+          import time
+          def safe_get(port,path,limit=90000):
+              with urllib.request.urlopen('http://127.0.0.1:'+str(port)+path,timeout=5) as res:
+                  return json.loads(res.read(limit))
+          try:
+              if not open_ports.get('8081'):
+                  show('MODEL_SYNTHETIC_PROBE','HOLD_8081_NOT_LISTENING')
+              elif any(Path(p).exists() or Path(p).is_symlink() for p in (
+                  '/root/nox/STOP','/root/nox/STOP.flag','/root/nox/stop.flag',
+                  '/root/nox/.stop','/workspace/NOX_STOP','/root/nox/program/STOP')):
+                  show('MODEL_SYNTHETIC_PROBE','HOLD_NATIVE_STOP')
+              else:
+                  slots=safe_get(8081,'/slots')
+                  if not isinstance(slots,list) or not slots:
+                      show('MODEL_SYNTHETIC_PROBE','HOLD_UNKNOWN_SLOTS')
+                  elif any(not isinstance(slot,dict) or
+                      slot.get('is_processing',slot.get('processing',False)) is not False
+                      for slot in slots):
+                      show('MODEL_SYNTHETIC_PROBE','HOLD_MAIN_CHAT_BUSY')
+                  else:
+                      model=safe_get(8081,'/v1/models',9000)
+                      data=model.get('data',[]) if isinstance(model,dict) else []
+                      mid=data[0].get('id') if data and isinstance(data[0],dict) else None
+                      if not isinstance(mid,str) or not mid:
+                          show('MODEL_SYNTHETIC_PROBE','HOLD_MODEL_ID')
+                      else:
+                          request={'model':mid,'stream':True,'max_tokens':12,
+                                   'temperature':0.0,
+                                   'messages':[{'role':'user','content':'Reply with the digit 4 for 2+2.'}]}
+                          payload=json.dumps(request).encode('utf8')
+                          req=urllib.request.Request(
+                            'http://127.0.0.1:8081/v1/chat/completions',data=payload,
+                            headers={'Content-Type':'application/json','Accept':'text/event-stream'},
+                            method='POST')
+                          started=time.monotonic()
+                          first=None;last=None;chunks=0;done=False;size=0;completion_tokens=None
+                          with urllib.request.urlopen(req,timeout=25) as res:
+                              for b in res:
+                                  if time.monotonic()-started>25:break
+                                  if not b.startswith(b'data:'):continue
+                                  if b.strip()==b'data: [DONE]':
+                                      done=True;break
+                                  try: row=json.loads(b.split(b':',1)[1].strip())
+                                  except Exception:continue
+                                  usage=row.get('usage')
+                                  if isinstance(usage,dict) and isinstance(usage.get('completion_tokens'),int):
+                                      completion_tokens=usage['completion_tokens']
+                                  for choice in row.get('choices',[]):
+                                      if not isinstance(choice,dict):continue
+                                      delta=choice.get('delta')
+                                      content=delta.get('content') if isinstance(delta,dict) else None
+                                      if isinstance(content,str) and content:
+                                          first=first or time.monotonic()
+                                          chunks+=1;size+=len(content);last=time.monotonic()
+                          show('MODEL_SYNTHETIC_PROBE',{
+                              'state':'MODEL_ONLY_STREAM_VERIFIED' if done and first else 'HOLD_PARTIAL_STREAM',
+                              'first_content_ms':round((first-started)*1000,1) if first else None,
+                              'completed_ms':round((time.monotonic()-started)*1000,1),
+                              'content_chunks':chunks,'content_char_count':size,
+                              'stream_done':done,'completion_tokens':completion_tokens,
+                              'tokens_per_second':None if completion_tokens is None or not last or last<=first else
+                                  round(completion_tokens/(last-first),2),
+                              'original_s03_written':False,'web_owner_cookie_tested':False})
+          except Exception as ex:show('MODEL_SYNTHETIC_PROBE','HOLD_'+type(ex).__name__)
+          # Read installed PyTorch SM70 wheel capability without touching model files.
+          env='/root/nox/venv/bin/python'
+          if Path(env).exists():
+              try:
+                  torch_code=("import json,torch;"
+                    "print(json.dumps({'version':torch.__version__,"
+                    "'cuda_build':torch.version.cuda,"
+                    "'arch':torch.cuda.get_arch_list(),"
+                    "'device_count':torch.cuda.device_count()}))")
+                  c=subprocess.run([env,'-c',torch_code],capture_output=True,text=True,timeout=18)
+                  if c.returncode==0:
+                      show('TORCH_WHEEL_ARCH',json.loads(c.stdout.strip().splitlines()[-1]))
+                  else:show('TORCH_WHEEL_ARCH','HOLD_NONZERO_IMPORT')
+              except Exception as ex:show('TORCH_WHEEL_ARCH','HOLD_'+type(ex).__name__)
           print('NATIVE_READ_ONLY_COMPLETE=true')
           PYREMOTE
           """
