@@ -12,6 +12,7 @@ from collections.abc import Mapping
 
 from .zero3_fullbase_plan import fullbase_admission,zero3_cpu_config,sha256_manifest,STOP_PATHS
 from .curate_teacher_distillation import _file_sha
+from .verified_resume import admit_resume
 
 INSTANCE=60509551
 SIGN_ENV='NOX_EXISTING_ONEHOST_OWNER_HMAC'
@@ -53,10 +54,11 @@ def verify_owner(native:dict,approval:dict,secret:bytes,now:int|None=None)->dict
         raise RuntimeError('HOLD_LIVE_RESOURCE_ADMISSION')
     return plan
 
-def verify_inputs(student:Path,data:Path,output:Path,native:dict)->dict:
+def verify_inputs(student:Path,data:Path,output:Path,native:dict,*,resume:bool=False)->dict:
     if student.is_symlink() or data.is_symlink() or not student.is_dir() or not data.is_dir():
         raise RuntimeError('HOLD_ORIGINAL_HF_OR_CORPUS_MISSING')
-    if output.exists() or output.is_symlink() or student==output or student in output.parents or data in output.parents:
+    if (output.is_symlink() or student==output or student in output.parents or data in output.parents
+            or (output.exists() and not resume) or (resume and not output.is_dir())):
         raise RuntimeError('HOLD_OUTPUT_COLLISION')
     if not output.parent.is_dir() or output.parent.is_symlink():
         raise RuntimeError('HOLD_CHECKPOINT_PARENT')
@@ -212,7 +214,10 @@ def run(args)->dict:
     student=Path(args.student).resolve()
     corpus_dir=Path(args.dataset).resolve()
     out=Path(args.output).resolve()
-    manifest=verify_inputs(student,corpus_dir,out,native)
+    resume_path=Path(args.resume_checkpoint).absolute() if getattr(args,'resume_checkpoint',None) else None
+    manifest=verify_inputs(student,corpus_dir,out,native,resume=resume_path is not None)
+    config=zero3_cpu_config(micro_batch=1,grad_accum=args.accum,learning_rate=float(args.lr))
+    resumed=admit_resume(out,resume_path,native,max_steps=args.max_steps,expected_config=config) if resume_path else None
     if os.environ.get('CUDA_VISIBLE_DEVICES')!='1':
         raise RuntimeError('HOLD_GPU0_OWNER_CHAT_MUST_BE_RESERVED')
     if _stop_active(Path(args.stop_file)):
@@ -226,11 +231,12 @@ def run(args)->dict:
         except metadata.PackageNotFoundError as ex:
             raise RuntimeError('HOLD_DEPENDENCY_'+pkg.upper()) from ex
     from transformers import AutoTokenizer,AutoModelForCausalLM,Trainer,TrainingArguments,TrainerCallback
-    config=zero3_cpu_config(micro_batch=1,grad_accum=args.accum,learning_rate=float(args.lr))
-    out.mkdir(mode=0o700)
     config_path=out/'deepspeed_zero3_cpu.json'
-    config_path.write_text(json.dumps(config,indent=2,sort_keys=True)+'\n',encoding='utf8')
-    os.chmod(config_path,0o600)
+    if not resumed:
+        out.mkdir(mode=0o700)
+        config_path.write_text(json.dumps(config,indent=2,sort_keys=True)+'\n',encoding='utf8')
+        os.chmod(config_path,0o600)
+    # Resume never alters the original DeepSpeed config or overwrites output.
     torch.manual_seed(3407)
     settings=TrainingArguments(
         output_dir=str(out),run_name='NOX_V135_ONE_STUDENT',
@@ -277,11 +283,11 @@ def run(args)->dict:
     before=trainer.evaluate(metric_key_prefix='holdout_before')
     if _stop_active(Path(args.stop_file)):
         raise RuntimeError('HOLD_STOP_BEFORE_TRAIN')
-    result=trainer.train()
+    result=trainer.train(resume_from_checkpoint=resumed['checkpoint'] if resumed else None)
     if _stop_active(Path(args.stop_file)):
         raise RuntimeError('HOLD_STOP_AFTER_TRAIN')
     steps=trainer.state.global_step
-    if type(steps) is not int or steps<1:
+    if type(steps) is not int or steps<1 or (resumed and steps<=resumed['start_step']):
         raise RuntimeError('HOLD_REAL_OPTIMIZER_STEP')
     after=trainer.evaluate(metric_key_prefix='holdout_after')
     if _stop_active(Path(args.stop_file)):
@@ -300,6 +306,9 @@ def run(args)->dict:
         'train_sha256':manifest['train_sha256'],
         'holdout_sha256':manifest['holdout_sha256'],
         'optimizer_steps_actual':steps,'trainer_global_step':result.global_step,
+        'resumed_from_checkpoint':resumed['checkpoint'] if resumed else None,
+        'resume_original_step':resumed['start_step'] if resumed else None,
+        'resume_tree_sha256':resumed['checkpoint_sha256'] if resumed else None,
         'all_base_requires_grad':True,'uses_adapters':False,
         'deepspeed_zero3_cpu_offload':True,'gpu0_chat_untouched':True,
         'p0_existing_runtime_compat':p0_runtime,
@@ -311,7 +320,8 @@ def run(args)->dict:
         'original_live_weights_unchanged':True,'original_s03_unchanged':True,
         'production_promoted':False,'release_state':'HOLD_INDEPENDENT_CHECKPOINT_RESTORE'
     }
-    record=out/'NOX_V135_LOCAL_OPTIMIZER_RECEIPT.json'
+    record=out/(f'NOX_V135_RESUME_STEP_{steps}_RECEIPT.json' if resumed
+                else 'NOX_V135_LOCAL_OPTIMIZER_RECEIPT.json')
     if record.exists():raise RuntimeError('HOLD_EXISTING_RECEIPT')
     with record.open('x',encoding='utf8') as file:
         os.chmod(record,0o600);json.dump(receipt,file,sort_keys=True,indent=2);file.write('\n')
@@ -327,6 +337,7 @@ def main():
     p.add_argument('--max-tokens',type=int,default=256)
     p.add_argument('--accum',type=int,default=16)
     p.add_argument('--lr',type=float,default=5e-6)
+    p.add_argument('--resume-checkpoint',default=None)
     p.add_argument('--stop-file',default='/root/nox/STOP')
     p.add_argument('--execute',action='store_true')
     args=p.parse_args()
