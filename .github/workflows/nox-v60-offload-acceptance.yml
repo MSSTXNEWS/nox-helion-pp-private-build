@@ -1,0 +1,31 @@
+name: NOX V60 offload no-loss source acceptance
+on:
+  push:
+    branches: [fix/nox-cold-ram-noloss-20261115]
+    paths:
+      - 'nox-control/nox_cold_drive.py'
+      - 'nox-control/r2_archive.py'
+      - 'tests/test_nox_offload_v60.py'
+      - '.github/workflows/nox-v60-offload-acceptance.yml'
+  pull_request:
+    paths:
+      - 'nox-control/nox_cold_drive.py'
+      - 'nox-control/r2_archive.py'
+      - 'tests/test_nox_offload_v60.py'
+      - '.github/workflows/nox-v60-offload-acceptance.yml'
+permissions:
+  contents: read
+jobs:
+  source-acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate CLI and syntax
+        run: |
+          set -euo pipefail
+          python3 -m py_compile nox-control/nox_cold_drive.py nox-control/r2_archive.py tests/test_nox_offload_v60.py
+          python3 nox-control/nox_cold_drive.py --help >/dev/null
+          python3 nox-control/r2_archive.py --help >/dev/null
+      - name: Run no-loss offline unit tests
+        run: python3 -m unittest discover -s tests -p 'test_nox_offload_v60.py' -v
