@@ -1,0 +1,41 @@
+name: NOX V61 original checkpoint tar manifest 1-to-1 NO-LOSS source QA
+on:
+  push:
+    branches:
+      - fix/nox-v61-tar-verifier-noloss-20261115
+      - feature/nox-v38-synaptic-brain-20261114
+    paths:
+      - nox_runpod/teacher_mesh/v61/checkpoint_backup.py
+      - nox_runpod/teacher_mesh/v61/tests/test_checkpoint_tar_manifest.py
+      - .github/workflows/nox-v61-strict-tar-source-ci.yml
+  pull_request:
+    branches: [feature/nox-v38-synaptic-brain-20261114]
+    paths:
+      - nox_runpod/teacher_mesh/v61/checkpoint_backup.py
+      - nox_runpod/teacher_mesh/v61/tests/test_checkpoint_tar_manifest.py
+      - .github/workflows/nox-v61-strict-tar-source-ci.yml
+permissions:
+  contents: read
+jobs:
+  verify-tar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Run synthetic strict tar and existing offsite restore NO-LOSS regression
+        run: |
+          set -euo pipefail
+          python -m py_compile nox_runpod/teacher_mesh/v61/checkpoint_backup.py
+          python -m py_compile nox_runpod/teacher_mesh/v61/restore_offsite_chunks.py
+          python -m unittest -v nox_runpod.teacher_mesh.v61.tests.test_checkpoint_tar_manifest nox_runpod.teacher_mesh.v61.tests.test_offsite_restore
+      - name: Source only; no native access, decryption or optimizer receipt
+        run: |
+          echo 'NOX_TAR_MEMBERS_SYNTHETIC_ONLY=true'
+          echo 'NOX_NATIVE_S03_AND_WEIGHTS_UNMODIFIED=true'
+          echo 'NOX_OWNER_KEY_DECRYPTION=NOT_ATTEMPTED'
+          echo 'NOX_ACTUAL_OPTIMIZER_STEPS_VERIFIED=0'
