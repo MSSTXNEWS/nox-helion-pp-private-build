@@ -146,13 +146,18 @@ def stream_stats(rows):
 
 
 def route_coverage(rows, inventory):
-    """Source receipts count only exact original frozen routes, never arbitrary URLs."""
+    """Count consistent source-only successes from exact original routes.
+
+    A successful route receipt contradicted by a failed / unauthenticated /
+    schema-invalid receipt for the same exact path is quarantined rather than
+    spuriously reported as a passing original route.
+    """
     if not isinstance(rows, list) or len(rows) > MAX_ROWS:
         raise ValueError('INVALID_ROUTE_RECEIPTS')
     if (not isinstance(inventory, (set, frozenset)) or len(inventory) != EXPECTED_ROUTE_TARGET or
         any(not isinstance(p, str) or not p.startswith('/') for p in inventory)):
         raise ValueError('HOLD_CANONICAL_92_ROUTE_INVENTORY')
-    unique = set()
+    passed, contradicted = set(), set()
     rejected = 0
     unmapped = 0
     for row in rows:
@@ -161,22 +166,31 @@ def route_coverage(rows, inventory):
             continue
         path = row.get('path')
         if (not isinstance(path, str) or not path.startswith('/') or
-            len(path) > 256 or '://' in path or '?' in path or '#' in path or '..' in path or
-            row.get('owner_authenticated') is not True or row.get('http_status') != 200 or
-            row.get('schema_checked') is not True):
+            len(path) > 256 or '://' in path or '?' in path or '#' in path or '..' in path):
             rejected += 1
             continue
+        source_pass = (row.get('owner_authenticated') is True and
+                       row.get('http_status') == 200 and
+                       row.get('schema_checked') is True)
         if path not in inventory:
-            unmapped += 1
+            if source_pass:
+                unmapped += 1
+            else:
+                rejected += 1
             continue
-        unique.add(path)
+        if not source_pass:
+            contradicted.add(path)
+            rejected += 1
+            continue
+        passed.add(path)
     return {
         'expected_route_inventory_target_not_live_claim': EXPECTED_ROUTE_TARGET,
-        'owner_schema_200_source_receipts': len(unique),
+        'owner_schema_200_source_receipts': len(passed - contradicted),
+        'contradictory_route_source_paths': len(passed & contradicted),
         'owner_schema_200_outside_original_inventory': unmapped,
         'rejected_route_receipts': rejected,
         'full_live_92_route_e2e_verified': False,
-        'note': 'Exact frozen source paths only, never live 92-route E2E.',
+        'note': 'Conflicting same-path outcomes held; source checks only, not live 92-route E2E.',
     }
 
 
@@ -219,6 +233,13 @@ def selftest():
     inventory = _canonical_route_inventory()
     route={'path':sorted(inventory)[0],'http_status':200,'owner_authenticated':True,'schema_checked':True}
     assert route_coverage([route,route], inventory)['owner_schema_200_source_receipts']==1
+    # Mixed positive/negative source outcomes on the same route must fail closed.
+    assert route_coverage([route,dict(route,http_status=503)],inventory)['owner_schema_200_source_receipts']==0
+    assert route_coverage([dict(route,http_status=503),route],inventory)['owner_schema_200_source_receipts']==0
+    assert route_coverage([route,dict(route,schema_checked=False)],inventory)['owner_schema_200_source_receipts']==0
+    assert route_coverage([route,dict(route,owner_authenticated=False)],inventory)['owner_schema_200_source_receipts']==0
+    assert route_coverage([dict(route,http_status=503)],inventory)['owner_schema_200_source_receipts']==0
+    assert route_coverage([route,dict(route,http_status=503)],inventory)['contradictory_route_source_paths']==1
     assert route_coverage([dict(route,owner_authenticated=False)], inventory)['owner_schema_200_source_receipts']==0
     assert route_coverage([dict(route,path='/api/../admin')], inventory)['owner_schema_200_source_receipts']==0
     assert stream_stats([s,s])['measured_source_receipts']==1
@@ -248,7 +269,7 @@ def selftest():
         fresh = Path(tmp) / 'new.json'
         _write_report_exclusive(fresh, audit({}))
         assert json.loads(fresh.read_text(encoding='utf-8'))['native_verified'] is False
-    print('SELFTEST 32/32 PASS - synthesized fixtures; native/live UNKNOWN')
+    print('SELFTEST 38/38 PASS - synthesized fixtures; native/live UNKNOWN')
 
 
 def _write_report_exclusive(path: Path, report: dict) -> None:
