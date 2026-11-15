@@ -22,6 +22,8 @@ OBS_JS = "site/nox-v137-owner-self-status.js"
 OBS_SOURCE = Path("coordination/onepass/nox-v137-owner-self-status.js")
 NATIVE_SELF_MODULE = "integration/nox_v137_owner_self_observation.py"
 NATIVE_SELF_SOURCE = Path("nox_runpod/teacher_mesh/v137/owner_self_observation.py")
+NATIVE_RESPONSE_MODULE = "integration/nox_v137_owner_response_contract.py"
+NATIVE_RESPONSE_SOURCE = Path("nox_runpod/teacher_mesh/v137/owner_response_contract.py")
 MANIFEST = "NOX_V135_OWNER_RESONANCE_STREAM_MANIFEST.json"
 PAGES = ("site/pc/resonance.html", "site/pc/v22/resonance.template.html")
 ROLLBACK = "rollback/v135/"
@@ -77,6 +79,7 @@ def build(source: Path, frozen: Path, js_file: Path, output: Path,
         raise ValueError("HOLD_STREAM_RECEIPT_CONTRACT")
     monitor_js = OBS_SOURCE.read_bytes()
     native_self = NATIVE_SELF_SOURCE.read_bytes()
+    native_reply = NATIVE_RESPONSE_SOURCE.read_bytes()
     if (b"window.NOX_NATIVE_OWNER !== true" not in monitor_js
             or b"/api/nox/self/observations" not in monitor_js
             or b"/api/status" not in monitor_js
@@ -87,6 +90,11 @@ def build(source: Path, frozen: Path, js_file: Path, output: Path,
             or b"positive_optimizer_steps_verified" not in native_self):
         raise ValueError("HOLD_V137_SELF_OBSERVATION_SOURCE")
     compile(native_self, str(NATIVE_SELF_SOURCE), "exec")
+    if (b"def build_owner_response_contract(" not in native_reply
+            or b"native_cross_chat_sources" not in native_reply
+            or b"READY_FOR_EXISTING_SINGLE_MODEL" not in native_reply):
+        raise ValueError("HOLD_V137_GROUNDED_RESPONSE_CONTRACT")
+    compile(native_reply, str(NATIVE_RESPONSE_SOURCE), "exec")
     temp = output.with_name(output.name + ".pending-v135")
     if temp.exists():
         raise ValueError("HOLD_PENDING_EXISTS")
@@ -102,7 +110,7 @@ def build(source: Path, frozen: Path, js_file: Path, output: Path,
             if not set(original_names).issubset(source_names):
                 raise ValueError("HOLD_ORIGINAL_1089_MEMBER_LOSS")
             if (not set(PAGES).issubset(source_names) or
-                    any(name in source_names for name in (JS, OBS_JS, NATIVE_SELF_MODULE, MANIFEST))):
+                    any(name in source_names for name in (JS, OBS_JS, NATIVE_SELF_MODULE, NATIVE_RESPONSE_MODULE, MANIFEST))):
                 raise ValueError("HOLD_UNEXPECTED_STAGE_OR_EXISTING_PATCH")
             if base.testzip() is not None or original.testzip() is not None:
                 raise ValueError("HOLD_ZIP_CRC")
@@ -123,6 +131,7 @@ def build(source: Path, frozen: Path, js_file: Path, output: Path,
                 _zip_file(release, JS, script)
                 _zip_file(release, OBS_JS, monitor_js)
                 _zip_file(release, NATIVE_SELF_MODULE, native_self)
+                _zip_file(release, NATIVE_RESPONSE_MODULE, native_reply)
                 for name in sorted(PAGES):
                     _zip_file(release, ROLLBACK + name, base.read(name))
                 manifest = {
@@ -139,6 +148,8 @@ def build(source: Path, frozen: Path, js_file: Path, output: Path,
                     "added_status_js_sha256": digest(monitor_js),
                     "added_owner_self_observer": NATIVE_SELF_MODULE,
                     "added_owner_self_observer_sha256": digest(native_self),
+                    "added_owner_response_contract": NATIVE_RESPONSE_MODULE,
+                    "added_owner_response_contract_sha256": digest(native_reply),
                     "native_observer_attached_in_live_onehost": False,
                     "process_control_actions_enabled": False,
                     "rollback_dir": ROLLBACK,
@@ -177,7 +188,7 @@ def verify(output: Path, *, source: Path, frozen: Path) -> dict:
             raise ValueError("HOLD_MANIFEST")
         source_names = base.namelist()
         out_names = patch.namelist()
-        if (len(out_names) != len(source_names) + len(PAGES) + 4
+        if (len(out_names) != len(source_names) + len(PAGES) + 5
                 or len(set(out_names)) != len(out_names)
                 or not set(original.namelist()).issubset(out_names)):
             raise ValueError("HOLD_TOTAL_MEMBERS")
@@ -195,7 +206,8 @@ def verify(output: Path, *, source: Path, frozen: Path) -> dict:
         if digest(patch.read(JS)) != manifest["added_js_sha256"]:
             raise ValueError("HOLD_SCRIPT_HASH")
         if (digest(patch.read(OBS_JS)) != manifest.get("added_status_js_sha256")
-                or digest(patch.read(NATIVE_SELF_MODULE)) != manifest.get("added_owner_self_observer_sha256")):
+                or digest(patch.read(NATIVE_SELF_MODULE)) != manifest.get("added_owner_self_observer_sha256")
+                or digest(patch.read(NATIVE_RESPONSE_MODULE)) != manifest.get("added_owner_response_contract_sha256")):
             raise ValueError("HOLD_NATIVE_SELF_MONITOR_HASH")
         return {"source_entries": len(source_names), "output_entries": len(out_names),
                 "unchanged_source_entries": len(source_names)-len(PAGES),
