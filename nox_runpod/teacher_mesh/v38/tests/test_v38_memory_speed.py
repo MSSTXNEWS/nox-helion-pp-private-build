@@ -90,6 +90,30 @@ class RequiredMemory(unittest.TestCase):
         second[0]['content']='caller mutated copy'
         self.assertEqual(cache(S,'вспомни',8)[0]['content'],'cached 0')
 
+    def test_cache_nested_provenance_isolated_from_native_and_caller(self):
+        calls=[]
+        native=record(text='verified source')
+        native['provenance']={'source':{'uri':'s03://owner/original'}}
+        native['labels']=['owner-verified']
+        def recall(s,p,l):
+            calls.append(True)
+            return [native]
+        cache=WarmS03Cache(recall,lambda s:'revision-1')
+        first=cache(S,'remember genesis',8)
+        first[0]['provenance']['source']['uri']='s03://caller-poison'
+        first[0]['labels'].append('caller-poison')
+        native['provenance']['source']['uri']='s03://native-mutated'
+        native['labels'].append('native-mutated')
+        second=cache(S,'remember genesis',8)
+        self.assertEqual(second[0]['provenance']['source']['uri'],'s03://owner/original')
+        self.assertEqual(second[0]['labels'],['owner-verified'])
+        second[0]['provenance']['source']['uri']='s03://again'
+        second[0]['labels'].append('again')
+        third=cache(S,'remember genesis',8)
+        self.assertEqual(third[0]['provenance']['source']['uri'],'s03://owner/original')
+        self.assertEqual(third[0]['labels'],['owner-verified'])
+        self.assertEqual(len(calls),1)
+
     def test_cache_bypasses_foreign_chat_without_losing_authorised_record(self):
         calls=[]
         rows=[record(chat='other-chat',text='owner-granted cross chat')]

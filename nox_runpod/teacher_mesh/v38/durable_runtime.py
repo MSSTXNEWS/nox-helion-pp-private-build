@@ -8,6 +8,7 @@ pass can correct the user-visible draft only after real verification evidence.
 from __future__ import annotations
 
 from collections import OrderedDict
+from copy import deepcopy
 from collections.abc import Callable, Iterator, Mapping
 from dataclasses import dataclass
 from hashlib import sha256
@@ -89,7 +90,8 @@ class WarmS03Cache:
             found=self.entries.get(key)
             if found:
                 self.entries.move_to_end(key);self.stats['hits']+=1
-                return [dict(x) for x in found[2]]
+                # Never expose nested mutable provenance/tags from cached S03 rows.
+                return deepcopy(found[2])
         self.stats['misses']+=1
         got=self.recall(session,prompt,limit)
         if not isinstance(got,list):return got
@@ -107,8 +109,11 @@ class WarmS03Cache:
             or x.get('segment') not in SEGMENTS for x in got):
             self.stats['bypasses']+=1
             return got
-        safe=[dict(x) for x in got]
-        try:n=len(json.dumps(safe,ensure_ascii=False).encode('utf8'))
+        try:
+            # Isolate the RAM snapshot from the original native callback rows.
+            # A shallow dict copy still aliases nested provenance and lists.
+            safe=deepcopy(got)
+            n=len(json.dumps(safe,ensure_ascii=False).encode('utf8'))
         except (ValueError,TypeError):return got
         if n>self.max_bytes//2:return got
         with self.lock:
