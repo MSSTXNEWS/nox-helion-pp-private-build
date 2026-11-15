@@ -8,7 +8,7 @@ const JS=fs.readFileSync(file,'utf8');
 const id='abcd1234abcd1234abcd1234abcd1234';
 const answer='Живой поток NOX';
 const prompt='Привет, NOX';
-function fake(owner=true,pathname='/nox-web-v29/pc/resonance.html',rejectReceipt=false,reply=answer){
+function fake(owner=true,pathname='/nox-web-v29/pc/resonance.html',rejectReceipt=false,reply=answer,revision=3){
   const calls=[];
   let old=async (path,opts={})=>{
     const u=new URL(String(path),'https://nox.local');
@@ -30,7 +30,7 @@ function fake(owner=true,pathname='/nox-web-v29/pc/resonance.html',rejectReceipt
       const b=JSON.parse(opts.body);
       assert.equal(b.revision,2);
       assert.equal(b.confirmed,true);
-      return Response.json({dialog_id:id,title:b.title});
+      return Response.json({dialog_id:id,title:b.title,revision});
     }
     if(u.pathname==='/api/nox/chat/stream'){
       const b=JSON.parse(opts.body);
@@ -112,7 +112,19 @@ test('legacy dialogs use original real owner S03 and no invented message counts'
   const n=await(await f.fetch('/api/nox/dialog/rename',{method:'POST',
     body:JSON.stringify({dialog_id:id,title:'Новое имя'})})).json();
   assert.equal(n.dialog_id,id);
+  assert.equal(n.status,'READY','original V24 requires READY');
+  assert.equal(n.revision,3);
 });
+test('V24 rename rejects unchanged S03 revision and never reports false READY',async()=>{
+  const f=fake(true,'/nox-web-v29/pc/resonance.html',false,answer,2);
+  const r=await f.fetch('/api/nox/dialog/rename',{method:'POST',body:JSON.stringify({dialog_id:id,title:'Новое имя'})});
+  assert.equal(r.status,503);
+  const j=await r.json();
+  assert.equal(j.status,'HOLD');
+  assert.match(j.error,/HOLD_RENAME_RECEIPT/);
+  assert.equal(f.calls.filter(x=>x.path==='/api/ui/memory/dialogs/update').length,1);
+});
+
 test('not installed for anonymous pages, foreign origin, or non-Resonance',async()=>{
   for(const [owner,path] of [[false,'/nox-web-v29/pc/resonance.html'],[true,'/pc/resonance.html'],[true,'/nox-web-v29/chat.html']]){
     const f=fake(owner,path);
