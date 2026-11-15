@@ -4,6 +4,8 @@ on:
     branches: [fix/nox-v135-resonance-native-stream-20261115]
     paths:
       - 'coordination/onepass/nox-v135-resonance-owner-bridge.js'
+      - 'coordination/onepass/nox-v137-owner-self-status.js'
+      - 'nox_runpod/teacher_mesh/v137/**'
       - 'coordination/onepass/v135_resonance_owner_stage.py'
       - 'coordination/onepass/test_v135_resonance_owner_stage.py'
       - 'coordination/onepass/test_v135_resonance_owner_bridge.cjs'
@@ -43,13 +45,17 @@ jobs:
           from pathlib import Path
           paths=[
             'coordination/onepass/nox-v135-resonance-owner-bridge.js',
+            'coordination/onepass/nox-v137-owner-self-status.js',
+            'nox_runpod/teacher_mesh/v137/owner_self_observation.py',
+            'nox_runpod/teacher_mesh/v137/tests/test_owner_self_observation.py',
+            'coordination/onepass/test_v137_owner_self_status.cjs',
             'coordination/onepass/v135_resonance_owner_stage.py',
             'coordination/onepass/test_v135_resonance_owner_bridge.cjs',
             'coordination/onepass/test_v135_resonance_owner_stage.py'
           ]
           hashes={s:hashlib.sha256(Path(s).read_bytes()).hexdigest() for s in paths}
           readme=(
-            "NOX V135 - SOURCE PATCH, NOT A RUNNING SERVER OR COMPLETE WEB ZIP\n"
+            "NOX V135+V137 - SOURCE PATCH, NOT A RUNNING SERVER OR COMPLETE WEB ZIP\n"
             "Target: existing Vast.ai #60509551 OneHost owner staging, never a new host.\n"
             "Read-only verified original V29.3 ZIP: sha256 "
             "166becb90fce63e2db3f9a74281d756995844552cddb7b67a190aa0\n"
