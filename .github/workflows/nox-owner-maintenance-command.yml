@@ -1,0 +1,38 @@
+name: NOX owner maintenance - explicit command only
+on:
+  issue_comment:
+    types: [created]
+permissions:
+  contents: read
+concurrency:
+  group: nox-v51-vast60509551-temp-ssh
+  cancel-in-progress: false
+jobs:
+  owner-audit:
+    if: >-
+      github.repository == 'MSSTXNEWS/nox-helion-pp-private-build' &&
+      github.actor == 'MSSTXNEWS' &&
+      github.event.sender.id == 340718567 &&
+      github.event.comment.user.id == 340718567 &&
+      github.event.comment.author_association == 'OWNER' &&
+      github.event.issue.number == 256 &&
+      github.event.comment.body == '/nox-maintain 60509551 5a190aefbf45506d09a8ab4ccc60b95d480d4f19 audit'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: 5a190aefbf45506d09a8ab4ccc60b95d480d4f19
+          persist-credentials: false
+      - name: Compile exact pinned operator and six-process audit before credentials
+        run: python3 -m py_compile nox-control/owner_native_operator.py nox-control/owner_native_audit.py
+      - name: Explicitly authorized original-instance audit (not a deployment)
+        env:
+          NOX2: ${{ secrets.NOX2 }}
+          NOX_PINNED_SOURCE_SHA: 5a190aefbf45506d09a8ab4ccc60b95d480d4f19
+        run: python3 nox-control/owner_native_operator.py audit
+      - name: Always detach only this run temporary public key
+        if: always()
+        env:
+          NOX2: ${{ secrets.NOX2 }}
+        run: python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup
