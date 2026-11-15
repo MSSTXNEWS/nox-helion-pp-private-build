@@ -150,6 +150,24 @@ class V104NativeTimingGate(unittest.TestCase):
                 self.assertEqual(expected,result['state'])
                 self.assertFalse(result.get('stream_done',False))
 
+    def test_native_sse_remote_error_and_invalid_choice_schema_are_hold(self):
+        # Execute the embedded original native do() parser, not a mock parser.
+        def frame(event):
+            return ('data: '+json.dumps(event)+'\n').encode('utf8')
+        first=frame({'choices':[{'delta':{'content':'го'}}]})
+        finish=frame({'choices':[{'delta':{},'finish_reason':'stop'}]})
+        for bad,expected in (
+            ({'error':{'message':'backend overloaded'}},'HOLD_SSE_REMOTE_ERROR'),
+            ({'choices':'not-an-array'},'HOLD_SSE_CHOICES_SCHEMA'),
+            ({'choices':[42]},'HOLD_SSE_CHOICES_SCHEMA'),
+            ({'choices':[{'delta':[]}]},'HOLD_SSE_DELTA_SCHEMA'),
+        ):
+            with self.subTest(expected=expected):
+                result=self._execute_existing_remote_sse(
+                    [first,frame(bad),finish,b'data: [DONE]\n'])
+                self.assertEqual(expected,result['state'])
+                self.assertFalse(result.get('stream_done',False))
+
     def test_remote_source_compiles_without_connecting(self):
         remote = REMOTE.split("<<'PYREMOTE'\n",1)[1].rsplit('\nPYREMOTE',1)[0]
         compile(remote,'<read-only-v104-native>','exec')

@@ -142,13 +142,24 @@ def do(label,extra,include_usage=True):
                 try:v=json.loads(payload)
                 except ValueError:return {'label':label,'state':'HOLD_SSE_JSON_INVALID'}
                 if not isinstance(v,dict):return {'label':label,'state':'HOLD_SSE_NONOBJECT'}
+                # Error frames are not successful generation, even if
+                # a later finish_reason and [DONE] arrive.
+                if v.get('error') is not None:
+                    return {'label':label,'state':'HOLD_SSE_REMOTE_ERROR'}
+                choices=v.get('choices',[])
+                if not isinstance(choices,list):
+                    return {'label':label,'state':'HOLD_SSE_CHOICES_SCHEMA'}
                 usage=v.get('usage')
                 if isinstance(usage,dict):
                     count=usage.get('completion_tokens')
                     if type(count) is int and 0<count<=8192:completion_tokens=count
-                for c in (v.get('choices') or []):
-                    if not isinstance(c,dict):continue
-                    delta=c.get('delta') or {}
+                for c in choices:
+                    if not isinstance(c,dict):
+                        return {'label':label,'state':'HOLD_SSE_CHOICES_SCHEMA'}
+                    delta=c.get('delta')
+                    if delta is None:delta={}
+                    if not isinstance(delta,dict):
+                        return {'label':label,'state':'HOLD_SSE_DELTA_SCHEMA'}
                     if isinstance(delta,dict) and isinstance(delta.get('content'),str) and delta['content']:
                         content_chunks+=1
                         last_content=time.monotonic()
