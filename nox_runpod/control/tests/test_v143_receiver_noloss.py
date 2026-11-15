@@ -43,7 +43,7 @@ class ReceiverNoLossSourceTests(unittest.TestCase):
         self.assertIn("[System.IO.FileMode]::CreateNew", self.source)
 
     def test_existing_marker_never_skips_without_receipt_shard_rehash(self):
-        section=self.source.split("if(Test-Path $marker){",1)[1].split(" $items=",1)[0]
+        section=self.source.split("if(Test-Path -LiteralPath $marker){",1)[1].split(" $items=@($status.shards)",1)[0]
         for token in ("HOLD_VERIFIED_RECEIPT_MISSING","HOLD_VERIFIED_RECEIPT_STALE",
                       "HOLD_VERIFIED_SHARD_MISSING_OR_TAMPERED",
                       "Get-FileHash","$priorReceipt.shards",
