@@ -25,6 +25,8 @@ class WindowsOnepassReadOnlyContract(unittest.TestCase):
         self.assertIn("software_installed_or_services_restarted = $false",self.ps)
         self.assertIn("original_S03_weights_modified = $false",self.ps)
         self.assertIn("release_92_functions_accepted = $false",self.ps)
+        self.assertIn("windows_pc_handler_registration_verified = $false",self.ps)
+        self.assertIn("HTTP_404_AUTH_MASKED_OR_ROUTE_UNKNOWN",self.ps)
         self.assertIn("owner_authenticated_model_response = 'NOT_TESTED'",self.ps)
         self.assertIn("GPU_STOP_physical = 'NOT_TESTED'",self.ps)
     def test_one_click_only_executes_existing_verifier(self):

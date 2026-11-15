@@ -43,6 +43,9 @@ class Source(unittest.TestCase):
             self.assertIn(required,region)
         self.assertNotIn("'/api/install/backup'",region.split("function Test-AnonymousPcRoute",1)[1])
         self.assertIn("windows_pc_backup_handler_authenticated = $false",source)
+        self.assertIn("windows_pc_handler_registration_verified = $false",source)
+        self.assertIn("404 { return 'HTTP_404_AUTH_MASKED_OR_ROUTE_UNKNOWN' }",region)
+        self.assertNotIn("ROUTE_NOT_REGISTERED",region)
         self.assertIn("windows_pc_owner_cookie_e2e = 'NOT_TESTED'",source)
         self.assertIn("windows_pc_status_anonymous = Test-AnonymousPcRoute '/api/nox/status'",source)
         self.assertIn("windows_pc_capabilities_anonymous = Test-AnonymousPcRoute '/api/install/capabilities'",source)
@@ -71,7 +74,9 @@ class Source(unittest.TestCase):
             Fixture.codes["/api/install/capabilities"]=404
             r=run("Test-AnonymousPcRoute '/api/install/capabilities'")
             self.assertEqual(r.returncode,0,r.stderr)
-            self.assertEqual(r.stdout.strip(),"ROUTE_NOT_REGISTERED")
+            # Fixture implements the URL in do_GET but deliberately returns 404,
+            # reproducing an owner-cookie ACL that masks protected endpoints.
+            self.assertEqual(r.stdout.strip(),"HTTP_404_AUTH_MASKED_OR_ROUTE_UNKNOWN")
             before=len(Fixture.requests)
             r=run("Test-AnonymousPcRoute '/api/install/backup'")
             self.assertNotEqual(r.returncode,0)

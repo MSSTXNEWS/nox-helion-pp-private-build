@@ -25,6 +25,7 @@ $report = [ordered]@{
     windows_pc_capabilities_anonymous = 'NOT_TESTED'
     windows_pc_owner_cookie_e2e = 'NOT_TESTED'
     windows_pc_backup_handler_authenticated = $false
+    windows_pc_handler_registration_verified = $false
     owner_authenticated_model_response = 'NOT_TESTED'
     s03_write_readback = 'NOT_TESTED'
     GPU_STOP_physical = 'NOT_TESTED'
@@ -95,12 +96,13 @@ function Test-AnonymousPcRoute([string]$path) {
         } finally {
             if ($null -ne $response) { $response.Close() }
         }
-        # None of these are proof of a secure owner-cookie session or handler.
+        # An anonymous 404 can mask an existing owner-only route via ACL;
+        # neither 200 nor 404 attests handler registration or owner-cookie.
         switch ($code) {
             200 { return 'ANONYMOUS_200_NO_OWNER_PROOF' }
             401 { return 'AUTH_REQUIRED_NO_OWNER_PROOF' }
             403 { return 'AUTH_REQUIRED_NO_OWNER_PROOF' }
-            404 { return 'ROUTE_NOT_REGISTERED' }
+            404 { return 'HTTP_404_AUTH_MASKED_OR_ROUTE_UNKNOWN' }
             405 { return 'GET_NOT_ALLOWED_UNVERIFIED' }
             301 { return 'REDIRECT_REJECTED' }
             302 { return 'REDIRECT_REJECTED' }
