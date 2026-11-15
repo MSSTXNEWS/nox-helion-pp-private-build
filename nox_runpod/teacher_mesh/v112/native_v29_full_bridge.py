@@ -350,8 +350,12 @@ async def _next_native_chunk_or_stop(iterator, cancel: asyncio.Event):
         except StopAsyncIteration:
             return ('eof', None)
     finally:
+        # Browser disconnects cancel this coroutine directly, without setting
+        # the scoped STOP event. Drain its outstanding anext() as well, or the
+        # caller cannot aclose() the still-running native stream.
+        next_task.cancel()
         stop_task.cancel()
-        await asyncio.gather(stop_task, return_exceptions=True)
+        await asyncio.gather(next_task, stop_task, return_exceptions=True)
 
 
 class _OwnerStatic(StaticFiles):

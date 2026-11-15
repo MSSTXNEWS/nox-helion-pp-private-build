@@ -29,6 +29,30 @@ class RealStreamCancellation(unittest.IsolatedAsyncioTestCase):
             ('stop',None))
         self.assertTrue(closed.is_set())
 
+    async def test_disconnected_caller_closes_pending_upstream(self):
+        waiting=asyncio.Event()
+        closed=asyncio.Event()
+        async def blocked_source():
+            try:
+                waiting.set()
+                await asyncio.Event().wait()
+                yield 'unreachable'
+            finally:
+                # Cleanup may itself await HTTP-client resource release.
+                await asyncio.sleep(0)
+                closed.set()
+        iterator=blocked_source()
+        cancel=asyncio.Event()
+        task=asyncio.create_task(_next_native_chunk_or_stop(iterator,cancel))
+        await asyncio.wait_for(waiting.wait(),1)
+        task.cancel()  # HTTP client disconnected; no explicit STOP request.
+        with self.assertRaises(asyncio.CancelledError):
+            await asyncio.wait_for(task,timeout=2)
+        self.assertFalse(cancel.is_set())
+        self.assertTrue(closed.is_set())
+        # An orphaned anext() used to make this raise "already running".
+        await iterator.aclose()
+
     async def test_existing_unstopped_stream_and_eof_still_work(self):
         async def native_source():
             yield b'data: {"choices":[]}\n\n'
