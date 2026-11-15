@@ -112,8 +112,13 @@
         const chunk=await reader.read();
         if(chunk.done)break;
         buf+=decoder.decode(chunk.value,{stream:true});
+        // A transport read may coalesce MANY valid short NDJSON frames.
+        // Enforce the limit per unfinished frame, not on the entire read.
+        let j;while((j=buf.indexOf('\n'))>=0){
+          if(j>300000)throw Error('HOLD_NATIVE_FRAME_TOO_LARGE');
+          await line(buf.slice(0,j).trim());buf=buf.slice(j+1);
+        }
         if(buf.length>300000)throw Error('HOLD_NATIVE_FRAME_TOO_LARGE');
-        let j;while((j=buf.indexOf('\n'))>=0){await line(buf.slice(0,j).trim());buf=buf.slice(j+1);}
       }
       buf+=decoder.decode();
       if(buf.trim())throw Error('HOLD_INCOMPLETE_NATIVE_FRAME');

@@ -338,3 +338,48 @@ test('V155 grapheme may span native NDJSON delta boundary; never tear at that ed
     assert(f.calls.some(x=>x.path.startsWith('/api/ui/memory/dialogs/history?')));
   }
 });
+
+test('V156 coalesced native NDJSON keeps valid short frames and rejects one oversized frame',async()=>{
+  const id='abcd1234abcd1234abcd1234abcd1234';
+  const piece='Ж'.repeat(22),count=7000,prompt='Coalesced native frame audit';
+  const answer=piece.repeat(count);
+  const valid=Array.from({length:count},()=>JSON.stringify({type:'delta',text:piece})+'\\n').join('')+
+    JSON.stringify({type:'done',saved:true,s03_integrated:true,dialog_id:id,exchange_id:'coalesced-qa-01'})+'\\n';
+  assert(valid.length>300000&&answer.length<200000,'valid source-level stress fixture');
+  const tooLong=JSON.stringify({type:'delta',text:'small',unused:'x'.repeat(300100)})+'\\n';
+  async function run(nativeFrames){
+    const calls=[];
+    const upstream=async path=>{
+      const u=new URL(String(path),'https://nox.local');calls.push(u.pathname);
+      if(u.pathname==='/api/ui/memory/dialogs/create')
+        return Response.json({dialog_id:id,title:'QA'});
+      if(u.pathname==='/api/ui/memory/dialogs/history')
+        return Response.json({status:'READY',dialog_id:id,messages:[
+          {role:'user',content:prompt},{role:'assistant',content:answer}]});
+      if(u.pathname==='/api/nox/chat/stream'){
+        return new Response(new ReadableStream({start(c){
+          c.enqueue(new TextEncoder().encode(nativeFrames));c.close();
+        }}),{headers:{'content-type':'application/x-ndjson'}});
+      }
+      return new Response('NOT_NATIVE_ROUTE',{status:404});
+    };
+    const win={NOX_NATIVE_OWNER:true,fetch:upstream};
+    const loc={pathname:'/nox-web-v29/pc/resonance.html',
+      href:'https://nox.local/nox-web-v29/pc/resonance.html',origin:'https://nox.local'};
+    vm.runInNewContext(JS,{window:win,location:loc,URL,Request,Response,ReadableStream,
+      TextDecoder,TextEncoder,AbortController,performance,console,Intl,setTimeout,
+      requestAnimationFrame:cb=>cb(performance.now())});
+    const response=await win.fetch('/api/nox/chat',{method:'POST',
+      body:JSON.stringify({message:prompt})});
+    return {response,json:await response.json(),calls};
+  }
+  const good=await run(valid);
+  assert.equal(good.response.status,200,'coalesced valid frames are not oversized frames');
+  assert.equal(good.json.answer,answer,'lossless native answer');
+  assert.equal(good.json.history_persisted,true,'native S03 history still gates completion');
+  assert(good.calls.includes('/api/ui/memory/dialogs/history'));
+  const bad=await run(tooLong);
+  assert.equal(bad.response.status,503,'one oversized native frame must fail closed');
+  assert.match(bad.json.error,/HOLD_NATIVE_FRAME_TOO_LARGE/);
+  assert(!bad.calls.includes('/api/ui/memory/dialogs/history'),'no S03 success on oversized frame');
+});
