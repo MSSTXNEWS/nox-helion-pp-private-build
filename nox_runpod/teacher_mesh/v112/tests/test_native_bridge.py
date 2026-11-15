@@ -44,13 +44,22 @@ class V112Tests(unittest.TestCase):
             return {'model':'NOX PRIME 8B','ts':123}
         self.calls=[]
         self.record=True
+        self.bulk_sse=''
         async def native(payload):
             self.calls.append(payload)
             q=payload['messages'][-1]['content']
             answer='Готов. Это проверенный ответ.'
             async def chunks():
-                yield ('data: '+json.dumps({'choices':[{'delta':{'content':answer[:11]}}]},ensure_ascii=False)+'\n\n')
-                yield ('data: '+json.dumps({'choices':[{'delta':{'content':answer[11:]}}]},ensure_ascii=False)+'\n\n')
+                if self.bulk_sse=='coalesced':
+                    # Two individually valid 160 KB SSE comment frames in
+                    # ONE network read: aggregate >300 KB is not oversize.
+                    yield ('data: '+json.dumps({'choices':[{'delta':{'content':answer}}]},ensure_ascii=False)+'\n'
+                           + (':'+'h'*160000+'\n')*2)
+                elif self.bulk_sse=='oversized':
+                    yield 'data: '+'x'*300000+'\n'
+                else:
+                    yield ('data: '+json.dumps({'choices':[{'delta':{'content':answer[:11]}}]},ensure_ascii=False)+'\n\n')
+                    yield ('data: '+json.dumps({'choices':[{'delta':{'content':answer[11:]}}]},ensure_ascii=False)+'\n\n')
                 if self.record:
                     from datetime import datetime,timezone
                     stamp=datetime.now(timezone.utc).isoformat()
@@ -123,6 +132,29 @@ class V112Tests(unittest.TestCase):
         self.assertEqual(hist['messages'][1]['content'],'Готов. Это проверенный ответ.')
         listed=self.client.get('/api/ui/memory/dialogs',cookies=self.cookie).json()
         self.assertEqual(listed['dialogs'][0]['dialog_id'],d)
+
+    def test_coalesced_sse_transport_frames_preserve_native_s03_done(self):
+        self.bulk_sse='coalesced'
+        created=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
+            json={'title':'V165 SSE','confirmed':True}).json()
+        r=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
+            json={'message':'V165 coherent read', 'dialog_id':created['dialog_id']})
+        self.assertEqual(r.status_code,200,r.text[:300])
+        frames=[json.loads(x) for x in r.text.splitlines() if x.strip()]
+        self.assertEqual([f['type'] for f in frames],['preparing','start','delta','done'])
+        self.assertEqual(frames[-1]['exchange_id'],'new-exchange-0001')
+        self.assertTrue(frames[-1]['s03_integrated'])
+        self.assertEqual(''.join(f['text'] for f in frames if f['type']=='delta'),
+                         'Готов. Это проверенный ответ.')
+
+    def test_one_oversized_sse_frame_is_still_rejected(self):
+        self.bulk_sse='oversized'
+        self.record=False
+        r=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
+            json={'message':'oversized single frame'})
+        frames=[json.loads(x) for x in r.text.splitlines() if x.strip()]
+        self.assertEqual(frames[-1],{'type':'error','error':'HOLD_SSE_FRAME_LIMIT'})
+        self.assertFalse(any(f.get('saved') for f in frames))
 
     def test_cross_dialog_id_is_rejected(self):
         before=len(self.calls)
