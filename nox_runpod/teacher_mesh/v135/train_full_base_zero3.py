@@ -99,18 +99,20 @@ def _stop_active(stop_file:Path)->bool:
 
 
 def _stop_callback(TrainerCallback,stop_file:Path):
-    """Transformers lifecycle STOP gate: one check on each supported event.
+    """Transformers lifecycle STOP + bounded checkpoint I/O.
 
-    Raises instead of faking a completed optimizer/restore receipt. Works only
-    when the training loop yields to a callback; cannot preempt a stuck CUDA
-    kernel or replace owner-level hardware STOP.
+    Keep first optimizer checkpoint, then save at most once per five minutes
+    (measured after previous finished save), and at the final optimizer step.
+    A STOP aborts before triggering a new save. No extra process or scheduler.
     """
     class _NOXStopCallback(TrainerCallback):
+        def __init__(self):
+            self._last_save_at=time.monotonic()
         def _check(self):
             if _stop_active(stop_file):
                 raise RuntimeError('HOLD_STOP_DURING_TRAINING')
         def on_train_begin(self,args,state,control,**kwargs):
-            self._check();return control
+            self._check();self._last_save_at=time.monotonic();return control
         def on_epoch_begin(self,args,state,control,**kwargs):
             self._check();return control
         def on_step_begin(self,args,state,control,**kwargs):
@@ -118,13 +120,21 @@ def _stop_callback(TrainerCallback,stop_file:Path):
         def on_substep_end(self,args,state,control,**kwargs):
             self._check();return control
         def on_step_end(self,args,state,control,**kwargs):
-            self._check();return control
+            self._check()
+            step=getattr(state,'global_step',None)
+            total=getattr(state,'max_steps',None)
+            if type(step) is int and step>0 and (
+                step==1 or (type(total) is int and step>=total)
+                or time.monotonic()-self._last_save_at>=300
+            ):
+                control.should_save=True
+            return control
         def on_prediction_step(self,args,state,control,**kwargs):
             self._check();return control
         def on_evaluate(self,args,state,control,**kwargs):
             self._check();return control
         def on_save(self,args,state,control,**kwargs):
-            self._check();return control
+            self._check();self._last_save_at=time.monotonic();return control
     return _NOXStopCallback()
 
 
@@ -230,7 +240,7 @@ def run(args)->dict:
         fp16=True,bf16=False,deepspeed=str(config_path),
         max_steps=args.max_steps,gradient_checkpointing=True,
         logging_steps=1,eval_strategy='no',
-        save_strategy='steps',save_steps=1,save_total_limit=2,
+        save_strategy='steps',save_steps=args.max_steps,save_total_limit=2,
         report_to='none',dataloader_num_workers=0,remove_unused_columns=False,
         save_safetensors=True,seed=3407)
     tok=AutoTokenizer.from_pretrained(str(student),local_files_only=True,trust_remote_code=False)
@@ -295,6 +305,7 @@ def run(args)->dict:
         'p0_existing_runtime_compat':p0_runtime,
         'holdout_before_loss':float(x),'holdout_after_loss':float(y),
         'checkpoint_dirs_created':len(checkpoints),
+        'checkpoint_policy':'FIRST_STEP_OR_300_SECONDS_OR_FINAL',
         'new_checkpoint_external_restore_verified':False,
         'new_student_weights_sha_delta_verified':False,
         'original_live_weights_unchanged':True,'original_s03_unchanged':True,

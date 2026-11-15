@@ -61,9 +61,48 @@ class STOPDuringOptimizer(unittest.TestCase):
         self.assertIs(self.callback.on_step_begin(None,None,control),control)
         self.assertFalse(train._stop_active(self.custom))
 
+    def test_adaptive_save_at_first_step_five_minutes_and_final_step(self):
+        state=SimpleNamespace(global_step=1,max_steps=100)
+        control=SimpleNamespace(should_save=False)
+        with patch.object(train.time,"monotonic",return_value=100.0):
+            self.callback.on_train_begin(None,state,control)
+            self.callback.on_step_end(None,state,control)
+            self.assertTrue(control.should_save)
+            self.callback.on_save(None,state,control)
+        state.global_step=2
+        with patch.object(train.time,"monotonic",return_value=200.0):
+            control=SimpleNamespace(should_save=False)
+            self.callback.on_step_end(None,state,control)
+            self.assertFalse(control.should_save)
+        state.global_step=3
+        with patch.object(train.time,"monotonic",return_value=401.0):
+            control=SimpleNamespace(should_save=False)
+            self.callback.on_step_end(None,state,control)
+            self.assertTrue(control.should_save)
+            self.callback.on_save(None,state,control)
+        state.global_step=4
+        with patch.object(train.time,"monotonic",return_value=450.0):
+            control=SimpleNamespace(should_save=False)
+            self.callback.on_step_end(None,state,control)
+            self.assertFalse(control.should_save)
+        state.global_step=100
+        with patch.object(train.time,"monotonic",return_value=451.0):
+            control=SimpleNamespace(should_save=False)
+            self.callback.on_step_end(None,state,control)
+            self.assertTrue(control.should_save)
+
+    def test_adaptive_save_respects_stop(self):
+        state=SimpleNamespace(global_step=10,max_steps=100)
+        self.native.touch()
+        control=SimpleNamespace(should_save=False)
+        with self.assertRaisesRegex(RuntimeError,"HOLD_STOP_DURING_TRAINING"):
+            self.callback.on_step_end(None,state,control)
+        self.assertFalse(control.should_save)
+
     def test_training_script_wires_callback_and_checks_before_trainer_run(self):
         source=Path(train.__file__).read_text(encoding="utf8")
         self.assertIn("callbacks=[_stop_callback(TrainerCallback,Path(args.stop_file))]",source)
+        self.assertIn("save_steps=args.max_steps",source)
         self.assertIn("HOLD_STOP_BEFORE_TRAIN",source)
         self.assertIn("HOLD_STOP_AFTER_TRAIN",source)
         self.assertIn("HOLD_STOP_AFTER_EVALUATE",source)
