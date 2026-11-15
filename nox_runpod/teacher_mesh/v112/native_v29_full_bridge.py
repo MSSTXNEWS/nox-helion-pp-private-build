@@ -119,6 +119,12 @@ def _sse_delta(line):
         for row in obj.get('choices') or []:
             if not isinstance(row,dict):
                 continue
+            # A terminal finish_reason other than stop means incomplete or
+            # unsupported generation. A later [DONE] plus matching S03 proof
+            # cannot convert truncated/filter-blocked text into success.
+            finish_reason = row.get('finish_reason')
+            if finish_reason is not None and finish_reason != 'stop':
+                return 'upstream_finish_incomplete', ''
             delta = row.get('delta')
             if isinstance(delta,dict) and isinstance(delta.get('content'),str):
                 if delta['content']:
@@ -609,6 +615,9 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
                             yield _jsonl({'type':'error','error':'HOLD_SSE_FRAME_AFTER_DONE'})
                             return
                         kind,part=_sse_delta(frame)
+                        if kind=='upstream_finish_incomplete':
+                            yield _jsonl({'type':'error','error':'HOLD_UPSTREAM_FINISH_REASON'})
+                            return
                         if kind=='upstream_error':
                             yield _jsonl({'type':'error','error':'HOLD_UPSTREAM_SSE_ERROR'})
                             return
