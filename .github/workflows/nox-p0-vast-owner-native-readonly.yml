@@ -124,7 +124,7 @@ jobs:
           print('NOX_P0_VERIFIED_NATIVE_READONLY_RECEIPT='+json.dumps(output,sort_keys=True))
           print('NOX_P0_NATIVE_READONLY_COMPLETE=true')
           PYREMOTE
-      - name: Gate: no mutation or fake GPU PASS
+      - name: 'Gate - no mutation or fake GPU PASS'
         if: always()
         run: |
           echo 'NOX_P0_NATIVE_SERVICE_MUTATIONS=0'
