@@ -360,7 +360,7 @@ def probe() -> bool:
         try:
             result = subprocess.run(cmd,input=REMOTE,encoding="utf-8",
                                     stdout=subprocess.PIPE,stderr=subprocess.PIPE,
-                                    timeout=35)
+                                    timeout=95)
         except subprocess.TimeoutExpired:
             print("SSH_ATTEMPT_"+str(attempt+1)+"=TIMEOUT")
             continue

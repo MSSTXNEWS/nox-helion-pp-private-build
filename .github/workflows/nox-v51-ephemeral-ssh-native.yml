@@ -33,24 +33,47 @@ jobs:
         run: |
           set -euo pipefail
           python3 -m py_compile nox_runpod/teacher_mesh/v51/ephemeral_ssh_probe.py nox_runpod/teacher_mesh/v131/vast_no_billing_inventory.py
-          python3 -m unittest -q nox_runpod.teacher_mesh.v131.tests.test_v131_inventory nox_runpod.teacher_mesh.v50.tests.test_documented_vast_list
+          python3 -m unittest -q nox_runpod.teacher_mesh.v131.tests.test_v131_inventory nox_runpod.teacher_mesh.v50.tests.test_documented_vast_list nox_runpod.teacher_mesh.v104.test_one_model_thinking_benchmark
       - name: Official owner-scoped v1 read-only instance ownership and status
         run: |
           set -euo pipefail
           python3 -m nox_runpod.teacher_mesh.v131.vast_no_billing_inventory
-      - name: Per-instance ephemeral SSH attach, live read-only command, detach
+      - name: One pinned ephemeral SSH session - deep native inventory plus actual original model SSE TTFT
         run: |
           set -euo pipefail
-          python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe probe
+          python3 - <<'PY'
+          import contextlib,io
+          from nox_runpod.teacher_mesh.v51 import ephemeral_ssh_probe as ssh
+          from nox_runpod.teacher_mesh.v104 import one_model_thinking_benchmark as bench
+          # Both existing read-only programs share ONE authenticated SSH session.
+          # No second attach/probe cycle while GPU1 is active.
+          ssh.REMOTE=ssh.REMOTE+"\n"+bench.REMOTE
+          ssh.api=bench.gate
+          buffer=io.StringIO()
+          healthy=False
+          try:
+              with contextlib.redirect_stdout(buffer):
+                  healthy=ssh.probe()
+          except Exception as exc:
+              err=str(exc)
+              print("NOX_SINGLE_SSH_HOLD="+err if err.startswith("HOLD_") and len(err)<90
+                    else "NOX_SINGLE_SSH_HOLD=HOLD_REMOTE_OR_AUTH")
+          lines=buffer.getvalue().splitlines()
+          for line in lines:
+              if line.startswith(("NATIVE_V104_","TEMP_SSH_CLEANUP=","NATIVE_GPU=",
+                                   "NATIVE_DRIVER_CCAP=","NATIVE_PYENV_","NATIVE_P0_",
+                                   "SSH_HOST_FINGERPRINT=")):
+                  print(line[:790])
+          # Actual model stream must contain two complete cases and final DONE,
+          # never success merely from SSH, a busy slot or a synthetic fixture.
+          valid=healthy and bench.native_timing_evidence(lines)
+          print("NOX_V104_TIMINGS_VERIFIED="+str(valid).lower())
+          raise SystemExit(0 if valid else 2)
+          PY
       - name: Mandatory second cleanup attempt on failure
         if: always()
         run: |
           python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup
-      - name: Existing single NOX model native streaming TTFT and token evidence
-        if: success()
-        run: |
-          set -euo pipefail
-          python3 -m nox_runpod.teacher_mesh.v104.one_model_thinking_benchmark
       - name: Explicit acceptance boundary
         if: success()
         run: |
