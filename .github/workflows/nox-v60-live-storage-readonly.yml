@@ -1,0 +1,25 @@
+name: NOX V60 Vast read-only storage and R2/Drive route audit
+on:
+  push:
+    branches: [feature/nox-drive-ram-tiering-20261115]
+    paths:
+      - '.github/workflows/nox-v60-live-storage-readonly.yml'
+      - 'nox_runpod/teacher_mesh/v60/native_storage_probe.py'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: nox-60509551-v60-storage-readonly
+  cancel-in-progress: false
+jobs:
+  native-snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Inspect storage, GPU and configured remote names without changing data
+        run: python3 -m nox_runpod.teacher_mesh.v60.native_storage_probe
