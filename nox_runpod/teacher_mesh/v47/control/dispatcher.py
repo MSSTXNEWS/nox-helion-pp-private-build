@@ -55,6 +55,58 @@ def load_matrix(path:Path|None=None)->dict:
     return matrix
 
 
+def _working_source_matrix(matrix:dict)->dict:
+    """One queue, two source-ID families: canonical R60 or legacy V46.
+
+    Source schemas are metadata, not native signed approvals. Preserve R60 job
+    IDs when canonical source is selected, and require exact correspondence
+    with the single known-good local legacy V46 task matrix.
+    """
+    if not isinstance(matrix,dict):
+        raise ValueError('HOLD_SOURCE_MATRIX_INVALID')
+    if matrix.get('schema')=='NOX_V46_SIX_LANE_SIXTY_TASKS_V1':
+        return matrix
+    if matrix.get('schema')!='NOX_R60_SOURCE_PLAN_V1':
+        raise ValueError('HOLD_SOURCE_MATRIX_SCHEMA')
+    rows=matrix.get('tasks')
+    if not isinstance(rows,list) or len(rows)!=60:
+        raise ValueError('HOLD_R60_SOURCE_COUNT')
+    by_id={}
+    for row in rows:
+        if not isinstance(row,dict):
+            raise ValueError('HOLD_R60_ROW')
+        tid=row.get('task_id')
+        if (not isinstance(tid,str)
+                or not re.fullmatch(r'R60-(00[1-9]|0[1-5][0-9]|060)',tid)
+                or tid in by_id):
+            raise ValueError('HOLD_R60_DUPLICATE_OR_ID')
+        by_id[tid]=row
+    adapted=[]
+    for old in load_matrix()['tasks']:
+        n=old['number']
+        rid=f'R60-{n:03d}'
+        row=by_id.get(rid)
+        if not isinstance(row,dict) or row.get('legacy_task_id')!=old['task_id']:
+            raise ValueError('HOLD_R60_LEGACY_ALIAS')
+        expected={f'R60-{int(x[-2:]):03d}' for x in old['depends_on']}
+        deps=row.get('depends_on')
+        if not isinstance(deps,list) or len(set(deps))!=len(deps) or set(deps)!=expected:
+            raise ValueError('HOLD_R60_DEPENDENCY_DRIFT')
+        for k in ('priority','performance_wave','performance_order',
+                  'training_wave','training_order'):
+            if row.get(k)!=old.get(k):
+                raise ValueError('HOLD_R60_SOURCE_PRIORITY_DRIFT')
+        for canonical,legacy in (('resource_class','resource'),
+                                 ('backup_restore_required','requires_backup_restore'),
+                                 ('license_privacy_required','requires_license_and_privacy'),
+                                 ('modifies_live_system','modifies_live_system')):
+            if row.get(canonical)!=old.get(legacy):
+                raise ValueError('HOLD_R60_RESOURCE_SECURITY_DRIFT')
+        adapted.append({**old,'task_id':rid,'legacy_task_id':old['task_id'],
+                        'depends_on':deps})
+    return {'schema':'NOX_R60_SINGLE_QUEUE_NORMALIZED_V46','tasks':adapted,
+            'dispatch_policy':load_matrix()['dispatch_policy']}
+
 @dataclass(frozen=True)
 class NativePorts:
     """Injected by authenticated OneHost ONLY; all functions must be genuine native callbacks."""
@@ -100,6 +152,10 @@ def _priority(task:dict,progress:Mapping)->tuple:
 def plan(matrix:dict, observations:Mapping, *, max_new:int=8)->dict:
     """Pure read-only plan; fails closed without LIVE signed OneHost/S03 inventory."""
     source_hash=canonical_hash(matrix)
+    try: working=_working_source_matrix(matrix)
+    except (TypeError,ValueError,KeyError):
+        return {'state':'HOLD_SOURCE_MATRIX_ALIAS_OR_SCHEMA','planned':[],
+                'jobs_enqueued':0,'source_sha256':source_hash}
     if not isinstance(observations,Mapping):return {'state':'HOLD_NATIVE_INVENTORY','planned':[],'source_sha256':source_hash}
     if observations.get('native_verified') is not True or observations.get('s03_native_verified') is not True:
         return {'state':'HOLD_NATIVE_INVENTORY','planned':[],'source_sha256':source_hash}
@@ -134,7 +190,7 @@ def plan(matrix:dict, observations:Mapping, *, max_new:int=8)->dict:
         blocked_native=set(report['protected_task_ids'])
     selected=[];blocked=[]
     gpu_slots=min(1,budget_gpu);cpu_slots=min(8,budget_cpu)
-    for t in sorted(matrix['tasks'],key=lambda t:_priority(t,progress)):
+    for t in sorted(working['tasks'],key=lambda t:_priority(t,progress)):
         id=t['task_id']; reasons=[]
         if id in blocked_native or id in existing or _valid_completion(completed.get(id),id):continue
         for dep in t['depends_on']:
@@ -173,6 +229,8 @@ def plan(matrix:dict, observations:Mapping, *, max_new:int=8)->dict:
           'ai_acceleration_tasks':t.get('ai_acceleration_tasks',[]),
           'title':t['title'],'job_sha256':canonical_hash(t),'requires_native_owner':True,
           'requires_native_worker':True,'proposed_not_queued':True})
+        if t.get('legacy_task_id'):
+            selected[-1]['legacy_task_id']=t['legacy_task_id']
         if t['resource']=='GPU1_EXCLUSIVE':gpu_slots-=1
         else:cpu_slots-=1
     return {'state':'SOURCE_PLAN_ONLY','source_sha256':source_hash,'planned':selected,
@@ -200,15 +258,34 @@ def enqueue_approved(native:NativePorts,matrix:dict,owner_scope:str,*,limit:int=
         try:return native.stop() is False and native.authorize(owner_scope) is True
         except Exception:return False
     if not gate():return {'state':'HOLD_OWNER_OR_STOP','jobs_enqueued':0}
-    try:inv=native.state();p=plan(matrix,inv,max_new=limit)
-    except Exception:return {'state':'HOLD_NATIVE_STATE','jobs_enqueued':0}
+    try:
+        inv=native.state()
+        if (not isinstance(inv,Mapping) or inv.get('native_queue_verified') is not True
+                or inv.get('native_writes_available') is not True
+                or inv.get('owner_queue_writer_lease_verified') is not True
+                or not isinstance(inv.get('task_status'),Mapping)
+                or type(inv.get('now_unix')) is not int or inv['now_unix']<=0):
+            return {'state':'HOLD_NATIVE_QUEUE_WRITER_LEASE_OR_STATUS','jobs_enqueued':0}
+        from .worm_supervisor import audit_native_queue
+        evidence=audit_native_queue(matrix,inv,now_unix=inv['now_unix'])
+        if (evidence.get('state')!='NATIVE_QUEUE_RECONCILED_PROPOSALS_ONLY'
+                or evidence.get('untrusted_count')!=0):
+            return {'state':'HOLD_NATIVE_QUEUE_RECONCILE_OR_UNTRUSTED','jobs_enqueued':0}
+        p=plan(matrix,inv,max_new=limit)
+    except Exception:
+        return {'state':'HOLD_NATIVE_STATE','jobs_enqueued':0}
     if p['state']!='SOURCE_PLAN_ONLY':return {'state':p['state'],'jobs_enqueued':0}
     receipts=[]
     for proposal in p['planned']:
         try:
             if not gate():return {'state':'HOLD_STOP_DURING_QUEUE','jobs_enqueued':len(receipts),'receipts':receipts}
             tid=proposal['task_id']
-            if native.native_duplicate_check(tid) is not False:continue
+            identities=(tid,proposal['legacy_task_id']) if proposal.get('legacy_task_id') else (tid,)
+            duplicate=[native.native_duplicate_check(name) for name in identities]
+            if any(x is True for x in duplicate):continue
+            if any(x is not False for x in duplicate):
+                return {'state':'HOLD_NATIVE_DUPLICATE_STATE_UNKNOWN',
+                        'jobs_enqueued_verified':len(receipts),'receipts':receipts}
             payload={'task_id':tid,'lane':proposal['lane'],'priority':'P1','chat_priority':'P0',
                      'source_priority':proposal.get('source_priority'),
                      'performance_wave':proposal.get('performance_wave'),
@@ -217,12 +294,16 @@ def enqueue_approved(native:NativePorts,matrix:dict,owner_scope:str,*,limit:int=
                      'must_recheck_chat_before_work':True,
                      'job_sha256':proposal['job_sha256'],'matrix_sha256':p['source_sha256'],
                      'scope':owner_scope,'native_worker_required':True}
+            if proposal.get('legacy_task_id'):
+                payload['legacy_task_id']=proposal['legacy_task_id']
             digest=canonical_hash(payload)
             if native.approve(owner_scope,digest,dict(inv)) is not True:
                 return {'state':'HOLD_NATIVE_OWNER_APPROVAL','jobs_enqueued':len(receipts),'receipts':receipts}
             if not gate():return {'state':'HOLD_STOP_DURING_QUEUE','jobs_enqueued':len(receipts),'receipts':receipts}
             ticket=native.queue_enqueue(payload)
-            if not isinstance(ticket,Mapping) or ticket.get('accepted') is not True or not ticket.get('job_id'):
+            if (not isinstance(ticket,Mapping) or ticket.get('accepted') is not True
+                    or not isinstance(ticket.get('job_id'),str)
+                    or not re.fullmatch(r'[A-Za-z0-9._:@/-]{1,128}',ticket['job_id'])):
                 return {'state':'HOLD_QUEUE_NOT_ACCEPTED','jobs_enqueued':len(receipts),'receipts':receipts}
             if native.verify_queue_receipt(ticket,payload) is not True:
                 return {'state':'HOLD_QUEUE_RECEIPT_NOT_VERIFIED','enqueues_may_have_occurred':True,
@@ -232,8 +313,22 @@ def enqueue_approved(native:NativePorts,matrix:dict,owner_scope:str,*,limit:int=
                 or readback.get('task_id')!=tid or readback.get('state') not in ('pending','running')):
                 return {'state':'HOLD_NATIVE_READBACK','enqueues_may_have_occurred':True,
                         'jobs_enqueued_verified':len(receipts),'receipts':receipts}
+            # Native task registry must independently attest the exact job.
+            status=native.native_task_status(tid)
+            if (not isinstance(status,Mapping) or status.get('task_id')!=tid
+                    or status.get('job_id')!=ticket['job_id']
+                    or status.get('native_verified') is not True
+                    or status.get('owner_scope')!=owner_scope
+                    or status.get('state') not in ('PENDING','RUNNING','CLAIMED')
+                    or not isinstance(status.get('receipt_sha256'),str)
+                    or SHA.fullmatch(status['receipt_sha256']) is None):
+                return {'state':'HOLD_NATIVE_TASK_REGISTRY_READBACK',
+                        'enqueues_may_have_occurred':True,'jobs_enqueued_verified':len(receipts),
+                        'receipts':receipts}
             event={'schema':'NOX_V46_QUEUED_RECEIPT','task_id':tid,'job_id':ticket['job_id'],
-                   'job_sha256':payload['job_sha256'],'native_queue_receipt_sha256':canonical_hash(dict(ticket)),
+                   'job_sha256':payload['job_sha256'],
+                   'native_queue_receipt_sha256':canonical_hash(dict(ticket)),
+                   'native_task_status_receipt_sha256':status['receipt_sha256'],
                    'state':readback['state'],'source_matrix_sha256':p['source_sha256']}
             s03=native.s03_audit(event)
             if native.s03_verify(s03,event) is not True:
@@ -244,5 +339,6 @@ def enqueue_approved(native:NativePorts,matrix:dict,owner_scope:str,*,limit:int=
         except Exception:
             return {'state':'HOLD_NATIVE_QUEUE_EXCEPTION','enqueues_may_have_occurred':True,
                     'jobs_enqueued_verified':len(receipts),'receipts':receipts}
-    return {'state':'NATIVE_QUEUE_READBACK_AND_S03_VERIFIED','jobs_enqueued':len(receipts),'receipts':receipts,
+    return {'state':'NATIVE_QUEUE_READBACK_AND_S03_VERIFIED' if receipts else 'NATIVE_QUEUE_NO_NEW_JOBS',
+            'jobs_enqueued':len(receipts),'receipts':receipts,
             'training_completed':False,'weights_changed':False,'release_accepted':False}
