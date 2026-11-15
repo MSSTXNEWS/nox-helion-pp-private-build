@@ -72,7 +72,7 @@ class V104NativeTimingGate(unittest.TestCase):
     def _execute_existing_remote_slot_guard(self, slots, stops=()):
         # Extract the actual native function from the shipped SSH payload,
         # rather than copy/paste a simulated gate into tests.
-        remote = REMOTE.split("<<'PYREMOTE'\\n",1)[1].rsplit('\\nPYREMOTE',1)[0]
+        remote = REMOTE.split("<<'PYREMOTE'\n",1)[1].rsplit('\nPYREMOTE',1)[0]
         tree = ast.parse(remote)
         funcs = [node for node in tree.body if isinstance(node,ast.FunctionDef)
                  and node.name == 'idle_slots']
@@ -105,8 +105,8 @@ class V104NativeTimingGate(unittest.TestCase):
             self.assertFalse(self._execute_existing_remote_slot_guard(
                 [{'is_processing':False}],stops=(str(stop),)))
         self.assertIn("if not idle_slots():return {'label':label",REMOTE)
-        self.assertIn("if not idle_slots():\\n        results.append",REMOTE)
-        self.assertIn("if not idle_slots():\\n            x={'label':label",REMOTE)
+        self.assertIn("if not idle_slots():\n        results.append",REMOTE)
+        self.assertIn("if not idle_slots():\n            x={'label':label",REMOTE)
 
     def test_remote_source_compiles_without_connecting(self):
         remote = REMOTE.split("<<'PYREMOTE'\n",1)[1].rsplit('\nPYREMOTE',1)[0]
