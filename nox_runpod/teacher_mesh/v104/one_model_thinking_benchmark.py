@@ -2,6 +2,7 @@
 
 Authenticated via existing V51, no model changes, private prompts or logs.
 Two bounded synthetic probes; no new servers / download / restart.
+Fail-closed SSE transport integrity: malformed/oversized/invalid UTF-8 frames are HOLD, not discarded.
 """
 from __future__ import annotations
 import contextlib,io,json,time,math
@@ -132,14 +133,15 @@ def do(label,extra,include_usage=True):
             if r.status!=200:return {'state':'HOLD_HTTP'}
             for raw in r:
                 if time.monotonic()-start>15:break
-                if len(raw)>16000:continue
-                t=raw.decode('utf8','replace').strip()
+                if len(raw)>16000:return {'label':label,'state':'HOLD_SSE_OVERSIZE'}
+                try:t=raw.decode('utf8','strict').strip()
+                except UnicodeDecodeError:return {'label':label,'state':'HOLD_SSE_UTF8_INVALID'}
                 if not t.startswith('data:'):continue
                 payload=t[5:].strip()
                 if payload=='[DONE]':done=True;break
                 try:v=json.loads(payload)
-                except ValueError:continue
-                if not isinstance(v,dict):continue
+                except ValueError:return {'label':label,'state':'HOLD_SSE_JSON_INVALID'}
+                if not isinstance(v,dict):return {'label':label,'state':'HOLD_SSE_NONOBJECT'}
                 usage=v.get('usage')
                 if isinstance(usage,dict):
                     count=usage.get('completion_tokens')

@@ -1,6 +1,10 @@
 """P0 source regression: SSH banner/zero samples must never prove TTFT."""
 import ast
 import json
+import time
+import urllib.request
+import urllib.error
+from unittest.mock import patch
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
@@ -107,6 +111,44 @@ class V104NativeTimingGate(unittest.TestCase):
         self.assertIn("if not idle_slots():return {'label':label",REMOTE)
         self.assertIn("if not idle_slots():\n        results.append",REMOTE)
         self.assertIn("if not idle_slots():\n            x={'label':label",REMOTE)
+
+
+    def _execute_existing_remote_sse(self, frames):
+        # Exercise the actual bounded remote do(), no copied parser and no HTTP call.
+        remote = REMOTE.split("<<'PYREMOTE'\n",1)[1].rsplit('\nPYREMOTE',1)[0]
+        tree = ast.parse(remote)
+        funcs = [n for n in tree.body if isinstance(n,ast.FunctionDef) and n.name=='do']
+        self.assertEqual(1,len(funcs))
+        class SyntheticResponse:
+            status=200
+            def __enter__(self):return self
+            def __exit__(self,*args):return False
+            def __iter__(self):return iter(frames)
+        namespace = {'urllib':urllib,'json':json,'time':time,
+                     'idle_slots':lambda:True,
+                     'name':'/root/nox/models/current.gguf'}
+        exec(compile(ast.Module(body=funcs,type_ignores=[]),
+                     '<existing-native-v104-do>','exec'),namespace)
+        with patch('urllib.request.urlopen',return_value=SyntheticResponse()):
+            return namespace['do']('default',{})
+
+    def test_native_sse_fail_closed_real_parser_on_corruption(self):
+        def frame(payload):
+            return ('data: '+json.dumps(payload)+'\n').encode('utf8')
+        delta1=frame({'choices':[{'delta':{'content':'го'}}]})
+        delta2=frame({'choices':[{'delta':{'content':'тово'}}]})
+        finish=frame({'choices':[{'delta':{},'finish_reason':'stop'}]})
+        good=[delta1,delta2,finish,b'data: [DONE]\n']
+        self.assertEqual('COMPLETED',self._execute_existing_remote_sse(good)['state'])
+        for damaged,expected in (
+            (b'data: {\n','HOLD_SSE_JSON_INVALID'),
+            (b'data: \xff\n','HOLD_SSE_UTF8_INVALID'),
+            (b'data: '+b'x'*16001+b'\n','HOLD_SSE_OVERSIZE'),
+            (b'data: []\n','HOLD_SSE_NONOBJECT')):
+            with self.subTest(expected=expected):
+                result=self._execute_existing_remote_sse([delta1,damaged,delta2,finish,b'data: [DONE]\n'])
+                self.assertEqual(expected,result['state'])
+                self.assertFalse(result.get('stream_done',False))
 
     def test_remote_source_compiles_without_connecting(self):
         remote = REMOTE.split("<<'PYREMOTE'\n",1)[1].rsplit('\nPYREMOTE',1)[0]
