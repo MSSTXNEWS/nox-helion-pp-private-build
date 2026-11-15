@@ -41,5 +41,18 @@
   },
   "kit_filename": "NOX_HELION_WEB_V293_ONEPASS_NATIVE_COMPAT_KIT_20261115.zip",
   "kit_sha256": "dfe291784aa94a30e0feaebf80be44ffd63fe3a8a99f7c107f4eec9368ae9d9a",
-  "no_new_backend": true
+  "no_new_backend": true,
+  "windows_readonly_package_check": {
+    "script": "coordination/onepass/windows/NOX_ONEPASS_VERIFY_WINDOWS.ps1",
+    "click_to_run": "coordination/onepass/windows/RUN_ONEPASS_CHECK.cmd",
+    "purpose": "Verify exact derived ZIP SHA, 1091 entries and TCP only to existing owner NOX ports",
+    "source_regression": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43657943651",
+    "source_static_test": "PASS",
+    "physical_execution_on_owner_windows": "NOT_RUN",
+    "no_writes_except_local_report": true,
+    "no_installation_or_gpu_mutation": true
+  },
+  "ready_kit_filename": "NOX_HELION_WEB_V293_ONEPASS_NATIVE_COMPAT_READY_20261115.zip",
+  "ready_kit_sha256": "bbd91b5fa720558831fa41ce8124bf2834bf22b81bd6cd98fbf2f60e019372d9",
+  "ready_kit_file_count": 13
 }
