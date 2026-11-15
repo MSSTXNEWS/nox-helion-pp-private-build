@@ -18,3 +18,14 @@ The derived ZIP (`NOX_HELION_WEB_V29_3_ONEPASS_VERIFIED.zip`, SHA256 `e70f0439fd
 The last grounded physical census remains **23 exact native routes out of 92**; 69 have no direct native match in that snapshot. V132 source fixes the original S03-internal-hash vs submitted-content-hash confusion. No full 92-route, Windows or no-adapter model release should be marked PASS without physical acceptance. Do not merge to production `main` on source CI alone.
 
 Read machine-readable gate state in `NOX_WEB_V293_ONEPASS_MASTER.json`; retrieve original frozen WEB from [canonical Drive source](https://drive.google.com/file/d/1mRWUd7zwHNdJqTGelX7o0uSRSoNXyh01/view), and check [earlier native chat/S03 evidence](https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43650605385) plus [official provider recovery audit](https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43653284425).
+
+
+## Дополнение ONEPASS: совместимость старого WEB-чата с настоящим OneHost (2026-11-15)
+
+Исходный `/api/nox/chat` на страницах музыки и PC-kit использует старые форматы JSON/SSE, тогда как существующая проверенная модель NOX принимает `POST /api/nox/chat/stream` и возвращает NDJSON. Не создавать вторую модель или новый чат. `nox-legacy-chat-bridge-v293.js` перехватывает **только** запросы старого пути **только** при `window.NOX_NATIVE_OWNER === true` внутри `/nox-web-v29/` и направляет их через существующий сервер; остальные `fetch` и Windows-режим не меняются.
+
+Native owner-диалог создаётся через действующий `/api/ui/memory/dialogs/create`. Успех выдаётся лишь после `saved=true`, `s03_integrated=true` и сравнения реальных двух последних сообщений `/api/ui/memory/dialogs/history`; частичный поток, отказ авторизации и незавершённая запись возвращают HOLD, без имитации сохранения. SSE kit-вызов сохраняет оригинальные `input`/`change` и получает проверку `done` только для owner-stage.
+
+**Сборка:** `python -m coordination.onepass.build_legacy_compat_v2 --base NOX_HELION_WEB_V29_3_ONEPASS_VERIFIED.zip --output NOX_HELION_WEB_V293_ONEPASS_NATIVE_COMPAT.zip --script coordination/onepass/nox-legacy-chat-bridge-v293.js --receipt native_compat_receipt.json`. База V1 SHA-256 `e70f0439fdf0a028c1d52fc638a38086aa7863fb7b33733a9609532dd544a9d5`; результат 1091 файл, SHA-256 `45893adaf1fa49991dbb9f61f3d5cc4f2273eddf5d6f2e2548cf57d0b09fb947`; из 1090 исходных файлов 1075 побайтово не изменены. Добавлено 14 HTML подключений и один защищённый native owner SSE клиент.
+
+**Проверено:** исходный frozen ZIP CRC/хеш; 10/10 Node VM фикстуры, 8/8 Chromium фикстуры, ZIP CRC, 14 правильных относительных путей, статическая сохранность. См. `NOX_V293_NATIVE_COMPAT_ACCEPTANCE.json`. **НЕ подтверждено:** физический ответ с Vast #60509551 после доступа HTTP 404, реальное 92/92 API, Windows EXE, физический GPU STOP, полная дистилляция весов и checkpoint restore. Source-only PASS не заменяет native E2E; не переключать production `main`.
