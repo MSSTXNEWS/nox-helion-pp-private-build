@@ -14,18 +14,23 @@ import tempfile
 from pathlib import Path
 
 MAX_ROWS = 2048
+# Guard source-only timing samples against extreme finite numbers that can
+# overflow aggregation into non-standard JSON Infinity/NaN.
+MAX_OBSERVATION_MS = 86_400_000  # 24h, upper bound for one timing sample
 EXPECTED_ROUTE_TARGET = 92
 STAGES = {"baseline", "lora", "qlora", "merged_fp16", "full_distill", "quantized", "live_promoted"}
 
 
-def _number(value, *, strictly_positive=False):
+def _number(value, *, strictly_positive=False, max_value=None):
     if not isinstance(value, (int, float)) or isinstance(value, bool):
         return False
     try:
         numeric = float(value)
     except (OverflowError, ValueError, TypeError):
         return False
-    return math.isfinite(numeric) and (numeric > 0 if strictly_positive else numeric >= 0)
+    return (math.isfinite(numeric) and
+            (numeric > 0 if strictly_positive else numeric >= 0) and
+            (max_value is None or numeric <= max_value))
 
 
 def _hex64(value):
@@ -119,14 +124,16 @@ def stream_stats(rows):
             row.get('s03_saved') is not True or
             row.get('s03_integrated') is not True or
             row.get('terminal_event') != 'done' or
-            not _number(row.get('ttft_ms'), strictly_positive=True)):
+            not _number(row.get('ttft_ms'), strictly_positive=True,
+                        max_value=MAX_OBSERVATION_MS)):
             rejected += 1
             continue
         accepted.append(row['ttft_ms'])
         n, duration = row.get('native_completion_tokens'), row.get('decode_elapsed_ms')
         if (row.get('native_usage_source') == 'ORIGINAL_ENGINE_COMPLETION_TOKENS' and
             isinstance(n, int) and not isinstance(n, bool) and n > 0 and
-            _number(duration, strictly_positive=True)):
+            _number(duration, strictly_positive=True,
+                    max_value=MAX_OBSERVATION_MS)):
             try:
                 measured_tps = 1000 * n / duration
             except (OverflowError, ZeroDivisionError):
@@ -269,14 +276,28 @@ def selftest():
         fresh = Path(tmp) / 'new.json'
         _write_report_exclusive(fresh, audit({}))
         assert json.loads(fresh.read_text(encoding='utf-8'))['native_verified'] is False
-    print('SELFTEST 38/38 PASS - synthesized fixtures; native/live UNKNOWN')
+    # A syntactically finite but absurd TTFT can overflow statistics.median
+    # (1e308 + 1e308) / 2 into inf. It must not become a source metric.
+    extreme = dict(s, ttft_ms=1e308)
+    other_extreme = dict(extreme, request_sha256='b' * 64, s03_receipt_sha256='2' * 64)
+    extreme_result = stream_stats([extreme, other_extreme])
+    assert extreme_result['measured_source_receipts'] == 0
+    assert extreme_result['ttft_p50_ms'] is None
+    assert extreme_result['ttft_p95_ms'] is None
+    assert stream_stats([dict(s, ttft_ms=MAX_OBSERVATION_MS + 1)])['measured_source_receipts'] == 0
+    assert stream_stats([dict(s, native_completion_tokens=20, decode_elapsed_ms=1e308,
+                              native_usage_source='ORIGINAL_ENGINE_COMPLETION_TOKENS')])['decode_tps_samples'] == 0
+    # Source report must be valid strict JSON rather than Python-specific Infinity.
+    json.dumps(audit({'streams': [extreme, other_extreme]}), allow_nan=False)
+    print('SELFTEST 44/44 PASS - synthesized fixtures; native/live UNKNOWN')
 
 
 def _write_report_exclusive(path: Path, report: dict) -> None:
     """Never clobber an existing receipt, S03 path or symlink from --out."""
     try:
         with path.open('x', encoding='utf-8') as handle:
-            handle.write(json.dumps(report, ensure_ascii=False, sort_keys=True, indent=2) + '\n')
+            handle.write(json.dumps(report, ensure_ascii=False, sort_keys=True,
+                                        indent=2, allow_nan=False) + '\n')
     except FileExistsError as exc:
         raise ValueError('HOLD_OUTPUT_PATH_EXISTS') from exc
 
