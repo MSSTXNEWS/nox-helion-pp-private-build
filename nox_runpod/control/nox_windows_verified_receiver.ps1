@@ -44,8 +44,74 @@ print(json.dumps({"status":"READY","path":str(p),"cycle":obj.get("cycle"),"steps
  if(Test-Path $marker){
   $prior=Get-Content $marker -Raw|ConvertFrom-Json
   if($prior.status -eq 'SHA256_VERIFIED' -and $prior.cycle -eq $status.cycle -and $prior.steps -eq $status.steps){
+   # Existing marker alone is never durable proof; recheck on-disk receipt and every shard.
+   $existingReceipt=Join-Path $local 'NOX_FULL_TRAIN_RECEIPT.json'
+   if(!(Test-Path -LiteralPath $existingReceipt -PathType Leaf)){throw 'HOLD_VERIFIED_RECEIPT_MISSING'}
+   $priorReceipt=Get-Content -LiteralPath $existingReceipt -Raw | ConvertFrom-Json
+   if($priorReceipt.cycle -ne $status.cycle -or $priorReceipt.steps -ne $status.steps){
+    throw 'HOLD_VERIFIED_RECEIPT_STALE'
+   }
+   foreach($s in $priorReceipt.shards){
+    $filename=[string]$s.file
+    if($filename -notmatch '^[A-Za-z0-9_.-]+
+ $items=@($status.shards)+@([pscustomobject]@{file='NOX_FULL_TRAIN_RECEIPT.json';sha256=$null})
+ foreach($item in $items){
+  $file=[string]$item.file
+  if($file -notmatch '^[A-Za-z0-9_.-]+$' -or $file.Contains('..')){throw "UNSAFE_NAME $file"}
+  $dest=Join-Path $local $file
+  $expected=[string]$item.sha256
+  if(Test-Path -LiteralPath $dest){
+   if($expected -and -not (Get-Item -LiteralPath $dest -Force).LinkType -and
+      (Get-FileHash -LiteralPath $dest -Algorithm SHA256).Hash -ieq $expected){
+    Write-Host "SKIP_VERIFIED $file";continue
+   }
+   throw "HOLD_EXISTING_BACKUP_CONFLICT $file"
+  }
+  $temp="$dest.noxpart"
+  if(Test-Path -LiteralPath $temp){throw "HOLD_PARTIAL_BACKUP_CONFLICT $file"}
+  $remote="$($status.path)/$file"
+  $scpArgs=@('-C','-P','22088','-i',$key,'-o','BatchMode=yes','-o','ServerAliveInterval=30',"root@69.30.85.193:$remote",$temp)
+  Write-Host "COPY $file"
+  & scp.exe @scpArgs
+  if($LASTEXITCODE -ne 0){throw "SCP_FAILED $file"}
+  if($expected -and (Get-FileHash $temp -Algorithm SHA256).Hash -ine $expected){throw "SHA_FAILED $file"}
+  # Atomic no-replace: race with another owner's destination => fail, never overwrite.
+  [System.IO.File]::Move($temp,$dest)
+ }
+ $receipt=Get-Content (Join-Path $local 'NOX_FULL_TRAIN_RECEIPT.json') -Raw|ConvertFrom-Json
+ if($receipt.cycle -ne $status.cycle -or $receipt.steps -ne $status.steps){throw 'RECEIPT_MISMATCH'}
+ foreach($s in $receipt.shards){
+  $p=Join-Path $local $s.file
+  if(!(Test-Path $p) -or (Get-FileHash $p -Algorithm SHA256).Hash -ine $s.sha256){throw "FINAL_SHA_FAILED $($s.file)"}
+ }
+ $proof=[ordered]@{status='SHA256_VERIFIED';cycle=$receipt.cycle;steps=$receipt.steps;parameter_count=$receipt.parameter_count;teacher_counts=$receipt.teacher_counts;verified_utc=[DateTimeOffset]::UtcNow.ToString('o')}
+ $proofTemp="$marker.tmp"
+ if(Test-Path -LiteralPath $proofTemp){throw 'HOLD_PROOF_TEMP_CONFLICT'}
+ $raw=($proof|ConvertTo-Json -Depth 8)+[Environment]::NewLine
+ $bytes=[Text.Encoding]::UTF8.GetBytes($raw)
+ $stream=[System.IO.FileStream]::new($proofTemp,[System.IO.FileMode]::CreateNew,
+          [System.IO.FileAccess]::Write,[System.IO.FileShare]::None)
+ try{$stream.Write($bytes,0,$bytes.Length);$stream.Flush($true)}
+ finally{$stream.Dispose()}
+ [System.IO.File]::Move($proofTemp,$marker)
+ Write-Host "NOX_WINDOWS_CHECKPOINT_VERIFIED $local"
+} finally {
+ if($locked){[void]$mutex.ReleaseMutex()}
+ $mutex.Dispose()
+}
+ -or $filename.Contains('..')){
+     throw 'HOLD_VERIFIED_SHARD_UNSAFE_NAME'
+    }
+    $existingShard=Join-Path $local $filename
+    if(!(Test-Path -LiteralPath $existingShard -PathType Leaf) -or
+       (Get-Item -LiteralPath $existingShard -Force).LinkType -or
+       (Get-FileHash -LiteralPath $existingShard -Algorithm SHA256).Hash -ine [string]$s.sha256){
+     throw "HOLD_VERIFIED_SHARD_MISSING_OR_TAMPERED $filename"
+    }
+   }
    Write-Host "NOX_ALREADY_VERIFIED $local";return
   }
+  throw 'HOLD_EXISTING_MARKER_CONFLICT'
  }
  $items=@($status.shards)+@([pscustomobject]@{file='NOX_FULL_TRAIN_RECEIPT.json';sha256=$null})
  foreach($item in $items){
