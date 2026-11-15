@@ -10,13 +10,57 @@ import argparse,hashlib,hmac,json,os,re,time,math
 from pathlib import Path
 from collections.abc import Mapping
 
-from .zero3_fullbase_plan import fullbase_admission,zero3_cpu_config,sha256_manifest
+from .zero3_fullbase_plan import fullbase_admission,zero3_cpu_config,sha256_manifest,STOP_PATHS
 from .curate_teacher_distillation import _file_sha
 
 INSTANCE=60509551
 SIGN_ENV='NOX_EXISTING_ONEHOST_OWNER_HMAC'
 _SHA=re.compile(r'^[0-9a-f]{64}$')
 _ALLOWED_STEPS=(1,2,5,10,20,50,100,200,500,1000)
+
+
+def assert_native_stop_clear(stop_file:str)->None:
+    """Fail closed on ANY existing OneHost STOP marker, not just one CLI path.
+
+    Checks are read-only and lightweight. This is not an emergency kernel
+    preemption guarantee: a currently executing CUDA kernel must return
+    before a Python training callback can observe a new STOP.
+    """
+    if str(stop_file) not in STOP_PATHS:
+        raise RuntimeError('HOLD_UNAPPROVED_STOP_FILE')
+    for candidate in STOP_PATHS:
+        try:
+            p=Path(candidate)
+            active=p.exists() or p.is_symlink()
+        except OSError as exc:
+            raise RuntimeError('HOLD_STOP_SENSOR_UNAVAILABLE') from exc
+        if active:
+            raise RuntimeError('HOLD_NATIVE_STOP_ACTIVE')
+
+
+def make_native_stop_callback(stop_file:str,callback_base):
+    """Attach to the existing HF Trainer; never start a second watchdog."""
+    assert_native_stop_clear(stop_file)
+    class NativeOneHostStopCallback(callback_base):
+        def _guard(self,control):
+            assert_native_stop_clear(stop_file)
+            return control
+        def on_train_begin(self,args,state,control,**kwargs):
+            return self._guard(control)
+        def on_epoch_begin(self,args,state,control,**kwargs):
+            return self._guard(control)
+        def on_step_begin(self,args,state,control,**kwargs):
+            return self._guard(control)
+        def on_substep_end(self,args,state,control,**kwargs):
+            return self._guard(control)
+        def on_step_end(self,args,state,control,**kwargs):
+            return self._guard(control)
+        def on_evaluate(self,args,state,control,**kwargs):
+            return self._guard(control)
+        def on_save(self,args,state,control,**kwargs):
+            return self._guard(control)
+    return NativeOneHostStopCallback()
+
 
 def _json(path:Path,max_size:int=80000)->dict:
     if not path.is_file() or path.is_symlink() or not 0<path.stat().st_size<max_size:
@@ -126,8 +170,7 @@ def run(args)->dict:
     manifest=verify_inputs(student,corpus_dir,out,native)
     if os.environ.get('CUDA_VISIBLE_DEVICES')!='1':
         raise RuntimeError('HOLD_GPU0_OWNER_CHAT_MUST_BE_RESERVED')
-    if Path(args.stop_file).exists():
-        raise RuntimeError('HOLD_STOP_ACTIVE')
+    assert_native_stop_clear(args.stop_file)
     # Load GPU framework only AFTER all native admission, identity and restore gates.
     import torch
     if not torch.cuda.is_available() or torch.cuda.device_count()!=1 or torch.cuda.get_device_capability(0)!=(7,0):
@@ -137,7 +180,7 @@ def run(args)->dict:
         try:metadata.version(pkg)
         except metadata.PackageNotFoundError as ex:
             raise RuntimeError('HOLD_DEPENDENCY_'+pkg.upper()) from ex
-    from transformers import AutoTokenizer,AutoModelForCausalLM,Trainer,TrainingArguments
+    from transformers import AutoTokenizer,AutoModelForCausalLM,Trainer,TrainingArguments,TrainerCallback
     config=zero3_cpu_config(micro_batch=1,grad_accum=args.accum,learning_rate=float(args.lr))
     out.mkdir(mode=0o700)
     config_path=out/'deepspeed_zero3_cpu.json'
@@ -182,23 +225,27 @@ def run(args)->dict:
                 'attention_mask':tensor('attention_mask',0),
                 'labels':tensor('labels',-100)}
     trainer=Trainer(model=model,args=settings,train_dataset=train,
-                    eval_dataset=held,data_collator=collate,processing_class=tok)
-    if Path(args.stop_file).exists():
-        raise RuntimeError('HOLD_STOP_AFTER_MODEL_LOAD')
+                    eval_dataset=held,data_collator=collate,processing_class=tok,
+                    callbacks=[make_native_stop_callback(args.stop_file,TrainerCallback)])
+    assert_native_stop_clear(args.stop_file)
+    assert_native_stop_clear(args.stop_file)
     before=trainer.evaluate(metric_key_prefix='holdout_before')
+    assert_native_stop_clear(args.stop_file)
     result=trainer.train()
+    assert_native_stop_clear(args.stop_file)
     steps=trainer.state.global_step
     if type(steps) is not int or steps<1:
         raise RuntimeError('HOLD_REAL_OPTIMIZER_STEP')
+    assert_native_stop_clear(args.stop_file)
     after=trainer.evaluate(metric_key_prefix='holdout_after')
+    assert_native_stop_clear(args.stop_file)
     x=before.get('holdout_before_loss');y=after.get('holdout_after_loss')
     if not all(isinstance(z,(int,float)) and math.isfinite(z) and z>=0 for z in (x,y)):
         raise RuntimeError('HOLD_HOLDOUT_NONFINITE')
     checkpoints=[p for p in out.glob('checkpoint-*') if p.is_dir()]
     if not checkpoints:
         raise RuntimeError('HOLD_ZERO3_CHECKPOINT_NOT_WRITTEN')
-    if Path(args.stop_file).exists():
-        raise RuntimeError('HOLD_STOP_BEFORE_RECEIPT')
+    assert_native_stop_clear(args.stop_file)
     receipt={
         'schema':'NOX_V135_NATIVE_BASE_WEIGHT_OPTIMIZER_LOCAL_RECEIPT_V1',
         'student_original_sha256':native['student_base_sha256'],

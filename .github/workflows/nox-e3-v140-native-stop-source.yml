@@ -1,0 +1,46 @@
+name: NOX V140 existing FORGE full-base STOP callback source gate (no GPU)
+on:
+  push:
+    branches:
+      - nox/e3-fullbase-stop-callback-20261115
+    paths:
+      - 'nox_runpod/teacher_mesh/v135/train_full_base_zero3.py'
+      - 'nox_runpod/teacher_mesh/v135/tests/test_native_stop_callback.py'
+      - '.github/workflows/nox-e3-v140-native-stop-source.yml'
+permissions:
+  contents: read
+jobs:
+  source-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Check existing full-base trainer STOP source and independent tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile nox_runpod/teacher_mesh/v135/train_full_base_zero3.py
+          python -m unittest -v nox_runpod.teacher_mesh.v135.tests.test_native_stop_callback
+          python -m unittest -v nox_runpod.teacher_mesh.v135.tests.test_fullbase_distillation
+          python - <<'PY'
+          from pathlib import Path
+          code=Path('nox_runpod/teacher_mesh/v135/train_full_base_zero3.py').read_text()
+          assert 'callbacks=[make_native_stop_callback(args.stop_file,TrainerCallback)]' in code
+          assert 'for candidate in STOP_PATHS' in code
+          assert "HOLD_NATIVE_STOP_ACTIVE" in code
+          assert "trainer.train()" in code
+          assert "new_training_backend" not in code
+          print('NOX_V140_NATIVE_STOP_SOURCE_GATES=PASS')
+          PY
+      - name: State strict release boundary
+        if: success()
+        run: |
+          echo 'NOX_V140_SOURCE_ONLY=true'
+          echo 'NOX_V140_LIVE_GPU_STOP_TESTED=false'
+          echo 'NOX_V140_TRAINER_NOT_STARTED=true'
+          echo 'NOX_V140_WEIGHTS_S03_UNTOUCHED=true'
