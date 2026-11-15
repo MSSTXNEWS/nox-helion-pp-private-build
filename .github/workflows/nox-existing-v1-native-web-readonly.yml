@@ -1,15 +1,20 @@
 name: NOX original OneHost WEB Resonance native read-only audit
 on:
-  push:
-    branches: [feature/nox-v38-synaptic-brain-20261114]
-    paths: ['.github/workflows/nox-existing-v1-native-web-readonly.yml']
+  workflow_dispatch:
+    inputs:
+      allow_native:
+        description: "Owner authorized read-only existing Vast #60509551, no installs"
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
 permissions: {contents: read}
 concurrency:
   group: nox-v51-vast60509551-temp-ssh
   cancel-in-progress: false
 jobs:
   original-web:
-    if: "${{ github.repository == 'MSSTXNEWS/nox-helion-pp-private-build' && github.actor == 'MSSTXNEWS' }}"
+    if: "${{ github.repository == 'MSSTXNEWS/nox-helion-pp-private-build' && github.actor == 'MSSTXNEWS' && github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.ref == 'refs/heads/feature/nox-v38-synaptic-brain-20261114' }}"
     runs-on: ubuntu-latest
     timeout-minutes: 7
     env:
