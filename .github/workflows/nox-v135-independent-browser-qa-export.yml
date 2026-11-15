@@ -1,0 +1,35 @@
+name: NOX V135 exact owner Resonance source export for independent Chromium
+on:
+  push:
+    branches: [qa/nox-v135-original-resonance-browser-20261115]
+    paths:
+      - '.github/workflows/nox-v135-independent-browser-qa-export.yml'
+permissions:
+  contents: read
+jobs:
+  export-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Validate V135 owner script source and abort regression
+        run: |
+          set -euo pipefail
+          node --check coordination/onepass/nox-v135-resonance-owner-bridge.js
+          node --test coordination/onepass/test_v135_resonance_owner_bridge.cjs
+      - name: Export only exact tested source files
+        run: |
+          set -euo pipefail
+          mkdir -p source/coordination/onepass
+          cp coordination/onepass/nox-v135-resonance-owner-bridge.js coordination/onepass/test_v135_resonance_owner_bridge.cjs source/coordination/onepass/
+          (cd source && find coordination -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum > SHA256SUMS.txt)
+          (cd source && zip -q -r ../NOX_V135_OWNER_BROWSER_EXACT_SOURCE.zip .)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NOX_V135_OWNER_BROWSER_EXACT_SOURCE
+          path: NOX_V135_OWNER_BROWSER_EXACT_SOURCE.zip
+          retention-days: 7
+          if-no-files-found: error
