@@ -89,6 +89,32 @@ class V130Tests(unittest.TestCase):
         self.assertEqual(response.status_code,409)
         self.assertEqual(self.calls,0)
 
+    def test_dangling_owner_stop_symlink_blocks_native_fact_write(self):
+        # Path.exists() is False on a broken symlink. STOP must still block.
+        self.stop.symlink_to(self.stop.parent/'missing-owner-stop-target')
+        self.assertFalse(self.stop.exists())
+        self.assertTrue(self.stop.is_symlink())
+        response=self.post()
+        self.assertEqual(response.status_code,409,response.text)
+        self.assertIn('HOLD_NATIVE_STOP',response.text)
+        self.assertEqual(self.calls,0,'must not invoke native remember under STOP')
+
+    def test_owner_stop_symlink_existing_target_blocks_fact_write(self):
+        target=self.stop.parent/'owner-stop-target'
+        target.write_text('STOP')
+        self.stop.symlink_to(target)
+        self.assertTrue(api._stopped())
+        response=self.post()
+        self.assertEqual(response.status_code,409,response.text)
+        self.assertEqual(self.calls,0)
+
+    def test_owner_stop_failure_to_stat_is_fail_closed(self):
+        with patch.object(api.Path,'exists',side_effect=OSError('EACCES')):
+            self.assertTrue(api._stopped())
+            response=self.post()
+            self.assertEqual(response.status_code,409,response.text)
+        self.assertEqual(self.calls,0)
+
     def test_cross_origin_rejected(self):
         response=self.post(headers={'Origin':'https://example.evil'})
         self.assertEqual(response.status_code,403)
