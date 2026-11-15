@@ -3,8 +3,12 @@ on:
   push:
     branches:
       - nox/e2-v138-chromium-bridge-acceptance-20261115
+      - fix/nox-v135-resonance-native-stream-20261115
     paths:
       - .github/workflows/nox-v138-chromium-bridge-source.yml
+      - coordination/onepass/nox-v135-resonance-owner-bridge.js
+      - coordination/onepass/test_v135_resonance_owner_bridge.cjs
+      - coordination/onepass/v135_resonance_owner_stage.py
   workflow_dispatch:
 permissions:
   contents: read
