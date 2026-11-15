@@ -164,7 +164,7 @@ def validate_existing_v100_torch(torch_module)->dict:
     Inspect the already-installed runtime: NEVER pip-install over live NOX.
     """
     cuda_build=getattr(getattr(torch_module,'version',None),'cuda',None)
-    if not isinstance(cuda_build,str) or re.fullmatch(r'12\\.\\d+(?:\\.\\d+)?',cuda_build) is None:
+    if not isinstance(cuda_build,str) or re.fullmatch(r'12\.\d+(?:\.\d+)?',cuda_build) is None:
         raise RuntimeError('HOLD_CUDA12_TORCH_BUILD')
     cuda=getattr(torch_module,'cuda',None)
     if cuda is None:
