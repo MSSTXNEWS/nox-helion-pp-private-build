@@ -8,7 +8,7 @@ concurrency:
   group: nox-v51-vast60509551-temp-ssh
   cancel-in-progress: false
 jobs:
-  owner-audit:
+  owner-maintenance:
     if: >-
       github.repository == 'MSSTXNEWS/nox-helion-pp-private-build' &&
       github.actor == 'MSSTXNEWS' &&
@@ -16,21 +16,45 @@ jobs:
       github.event.comment.user.id == 340718567 &&
       github.event.comment.author_association == 'OWNER' &&
       github.event.issue.number == 256 &&
-      github.event.comment.body == '/nox-maintain 60509551 5a190aefbf45506d09a8ab4ccc60b95d480d4f19 audit'
+      startsWith(github.event.comment.body, '/nox-maintain 60509551 ')
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     steps:
+      - name: Validate exact manual request without credentials or shell interpolation
+        id: request
+        run: |
+          python3 - <<'PY'
+          import json,os,re
+          e=json.load(open(os.environ['GITHUB_EVENT_PATH']))
+          m=re.fullmatch(r'/nox-maintain 60509551 ([0-9a-f]{40}) (audit|inspect|stage|repair)',e['comment']['body'])
+          assert m, 'Invalid bounded maintenance command'
+          assert e['comment']['user']['id']==340718567 and e['sender']['id']==340718567
+          assert e['repository']['owner']['id']==340718567 and e['issue']['number']==256
+          with open(os.environ['GITHUB_OUTPUT'],'a') as f:
+              f.write('sha='+m[1]+'\naction='+m[2]+'\n')
+          PY
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
-          ref: 5a190aefbf45506d09a8ab4ccc60b95d480d4f19
+          ref: ${{ steps.request.outputs.sha }}
           persist-credentials: false
-      - name: Compile exact pinned operator and six-process audit before credentials
-        run: python3 -m py_compile nox-control/owner_native_operator.py nox-control/owner_native_audit.py
-      - name: Explicitly authorized original-instance audit (not a deployment)
+      - name: Validate reviewed checkout syntax before credentials
+        env:
+          NOX_ACTION: ${{ steps.request.outputs.action }}
+        run: |
+          python3 - <<'PY'
+          import os,py_compile
+          from pathlib import Path
+          a=os.environ['NOX_ACTION']
+          assert a in ('audit','inspect','stage','repair')
+          py_compile.compile('nox-control/owner_native_operator.py',doraise=True)
+          py_compile.compile('nox-control/owner_native_'+a+'.py',doraise=True)
+          PY
+      - name: Execute only this owner-approved original-instance operation
         env:
           NOX2: ${{ secrets.NOX2 }}
-          NOX_PINNED_SOURCE_SHA: 5a190aefbf45506d09a8ab4ccc60b95d480d4f19
-        run: python3 nox-control/owner_native_operator.py audit
+          NOX_PINNED_SOURCE_SHA: ${{ steps.request.outputs.sha }}
+          NOX_ACTION: ${{ steps.request.outputs.action }}
+        run: python3 nox-control/owner_native_operator.py "$NOX_ACTION"
       - name: Always detach only this run temporary public key
         if: always()
         env:
