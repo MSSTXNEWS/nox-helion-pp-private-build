@@ -52,6 +52,8 @@ jobs:
           const modelText='Реальный ответ тестового потока';
           const encoder=new TextEncoder();
           window.NOX_NATIVE_OWNER=(scenario!=='unauth');
+          // Simulate a suspended background tab: rAF callbacks never fire.
+          if(scenario==='rafblocked')window.requestAnimationFrame=()=>0;
           window.nativeProof={paths:[],signal:null,aborted:false,historyCalls:0};
           window.fetch=async function nativeFixture(input,options={}) {
             const path=new URL(String(input),location.href).pathname;
@@ -66,7 +68,7 @@ jobs:
                     try{control.error(new DOMException('Aborted','AbortError'));}catch{}
                   },{once:true});
                   control.enqueue(encoder.encode(JSON.stringify({type:'delta',text:modelText})+'\n'));
-                  if(scenario==='full'||scenario==='reject'){
+                  if(scenario==='full'||scenario==='reject'||scenario==='rafblocked'){
                     setTimeout(()=>{
                       if(options.signal?.aborted)return;
                       control.enqueue(encoder.encode(JSON.stringify({
@@ -138,14 +140,14 @@ jobs:
               assert(events.some(e=>e.type==='error'&&e.error==='STREAM_STOP_REQUESTED'),'no cancel error');
               assert(!events.some(e=>e.type==='done'),'false done on aborted request');
               assert(!window.nativeProof.paths.includes('/api/nox/chat/stream'),'inference began after abort');
-            }else if(scenario==='full'||scenario==='reject') {
+            }else if(scenario==='full'||scenario==='reject'||scenario==='rafblocked') {
               const response=await begin();
               assert(response.headers.get('Content-Type')==='text/event-stream','wrong SSE header');
               const events=await parseEvents(response);
               assert(events[0]?.type==='meta','missing meta');
               const tokens=events.filter(e=>e.type==='token').map(e=>e.t).join('');
               assert(tokens===modelText,'lost/duplicated/fake model text');
-              if(scenario==='full'){
+              if(scenario==='full'||scenario==='rafblocked'){
                 assert(events.filter(e=>e.type==='done').length===1,'missing/duplicate done');
                 assert(events.at(-1)?.history_persisted===true,'false S03 readback');
                 assert(window.nativeProof.historyCalls===1,'original S03 history not reread');
@@ -191,7 +193,7 @@ jobs:
             sleep 0.25
           done
           CHROME="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium)"
-          for scenario in unauth cancel preabort full reject; do
+          for scenario in unauth cancel preabort full reject rafblocked; do
             out="$RUNNER_TEMP/nox-v138-$scenario.html"
             timeout 45s "$CHROME" --headless --no-sandbox --disable-gpu --disable-dev-shm-usage \
               --no-first-run --disable-extensions --virtual-time-budget=3500 --dump-dom \
@@ -211,7 +213,7 @@ jobs:
       - name: Explicit proof boundary
         if: success()
         run: |
-          echo "NOX_V138_REAL_CHROMIUM_CASES=5"
+          echo "NOX_V138_REAL_CHROMIUM_CASES=6"
           echo "NOX_V138_ORIGINAL_V24_URL_PATH=true"
           echo "NOX_V138_NATIVE_BACKEND_FIXTURE_ONLY=true"
           echo "NOX_V138_VAST_NATIVE_DEPLOYED=false"
