@@ -25,7 +25,20 @@ def _hold(reason, code=503):
           headers={'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'})
 
 def _stopped():
-    return any(Path(name).exists() for name in _STOP)
+    """Fail closed on original owner STOP markers, including dangling symlinks.
+
+    pathlib.Path.exists() is False for a broken symlink: treating that as
+    STOP=off could allow native S03 writes despite an owner STOP sentinel.
+    An inaccessible marker is also not evidence that it is absent.
+    """
+    try:
+        for name in _STOP:
+            marker=Path(name)
+            if marker.exists() or marker.is_symlink():
+                return True
+    except OSError:
+        return True
+    return False
 
 def _safe_request(request):
     site=request.headers.get('sec-fetch-site','')
