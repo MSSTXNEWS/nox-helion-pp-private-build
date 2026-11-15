@@ -5,6 +5,7 @@ on:
       - feature/nox-v38-synaptic-brain-20261114
     paths:
       - "nox_runpod/teacher_mesh/v50/**"
+      - "nox_runpod/teacher_mesh/v51/ephemeral_ssh_probe.py"
       - ".github/workflows/nox-v50-offline-ci.yml"
   workflow_dispatch:
 permissions:
@@ -27,6 +28,7 @@ jobs:
         run: |
           set -euo pipefail
           python -m py_compile nox_runpod/teacher_mesh/v50/ephemeral_ssh_audit.py
+          python -m py_compile nox_runpod/teacher_mesh/v51/ephemeral_ssh_probe.py
           python -m unittest discover -s nox_runpod/teacher_mesh/v50/tests -p 'test_*.py' -v
       - name: Check restricted instance and method guards
         run: |

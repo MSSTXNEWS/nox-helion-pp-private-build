@@ -127,15 +127,20 @@ class Vast:
         self.key=key
 
     def api(self, path:str,method:str="GET",body:dict|None=None)->dict:
-        if not re.fullmatch(r"instances/60509551/(?:ssh/(?:[0-9]+/?)?|)",path):
-            raise RuntimeError("HOLD_API_PATH")
-        instance_path=f"instances/{INSTANCE}/"
-        keys_path=f"instances/{INSTANCE}/ssh/"
-        if ((path==instance_path and method!="GET") or
-            (path==keys_path and method not in ("GET","POST")) or
-            (path not in (instance_path,keys_path) and
-             (not re.fullmatch(r"instances/60509551/ssh/[0-9]+/",path) or method!="DELETE"))):
-            raise RuntimeError("HOLD_API_METHOD")
+        if path=="instances/":
+            # Documented GET /api/v0/instances/; never modify the list.
+            if method!="GET" or body is not None:
+                raise RuntimeError("HOLD_API_METHOD")
+        else:
+            if not re.fullmatch(r"instances/60509551/(?:ssh/(?:[0-9]+/?)?|)",path):
+                raise RuntimeError("HOLD_API_PATH")
+            instance_path=f"instances/{INSTANCE}/"
+            keys_path=f"instances/{INSTANCE}/ssh/"
+            if ((path==instance_path and method!="GET") or
+                (path==keys_path and method not in ("GET","POST")) or
+                (path not in (instance_path,keys_path) and
+                 (not re.fullmatch(r"instances/60509551/ssh/[0-9]+/",path) or method!="DELETE"))):
+                raise RuntimeError("HOLD_API_METHOD")
         headers={"Authorization":"Bearer "+self.key,
                  "Accept":"application/json"}
         raw=None
@@ -155,11 +160,12 @@ class Vast:
         return result
 
     def instance(self):
-        r=self.api(f"instances/{INSTANCE}/")
+        r=self.api("instances/")
         value=r.get("instances",r)
         if isinstance(value,list):
-            value=next((v for v in value if str(v.get("id"))==str(INSTANCE)),None)
-        if not isinstance(value,dict):
+            value=next((v for v in value
+                        if isinstance(v,dict) and str(v.get("id"))==str(INSTANCE)),None)
+        if not isinstance(value,dict) or str(value.get("id"))!=str(INSTANCE):
             raise RuntimeError("HOLD_VAST_INSTANCE_SCHEMA")
         return value
 

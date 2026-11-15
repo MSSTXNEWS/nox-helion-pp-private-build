@@ -46,5 +46,7 @@ jobs:
               receipts.append(item)
           print('NOX_V136_USER_SSH_READONLY='+json.dumps(receipts,separators=(',',':'),sort_keys=True))
           print('NOX_V136_NO_AUTH_OR_WRITE=true')
-          print('NOX_V136_REAL_NATIVE_REACHABLE='+str(any(x['ssh_banner'] for x in receipts)).lower())
+          print('NOX_V136_NATIVE_SSH_AUTHENTICATED=false')
+          print('NOX_V136_NATIVE_COMMAND_EXECUTED=false')
+          print('NOX_V136_SSH_LISTENER_REACHABLE='+str(any(x['ssh_banner'] for x in receipts)).lower())
           PY
