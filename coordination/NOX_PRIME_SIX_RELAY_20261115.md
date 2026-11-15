@@ -1,6 +1,9 @@
 # NOX PRIME · MASTER ORDER V2 · TWO MANUAL + SIX UNIVERSAL FULL-CYCLE AGENTS
 
 Дата решения: 2026-11-15 · instructions_version 0.0.6.
+
+**ОБЯЗАТЕЛЬНО ПРОЧИТАТЬ ПЕРЕД ЛЮБЫМ ПОДКЛЮЧЕНИЕМ (MANUAL №1/№2 и ВСЕ ШЕСТЬ AUTO):** [NOX ONEHOST — полный справочник 12 способов подключения, восстановление owner Vast API v1, pinned ephemeral SSH V51, WEB/«Резонанс»/S03, резервные пути, диагностика и безопасность](NOX_ONEHOST_ACCESS_PLAYBOOK_20261115.md). Рабочие физические проверки: [Vast owner API v1 #43721473311](https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43721473311), [native SSH + verified cleanup #43721724993](https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43721724993), [native WEB/S03 route read-only #43721938273](https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43721938273). **Старые 404/410 на Vast API v0 не означают недействительность NOX2.** Перед каждой операцией читать актуальный HEAD и фактические live receipts; источник — единый OneHost #60509551, без новых backend/VM, секретов или фальшивых PASS.
+
 **НОВЕЙШАЯ ВЛАДЕЛЬЧЕСКАЯ КОРРЕКЦИЯ: ОБЯЗАТЕЛЬНЫЙ ПОРЯДОК P0→P1→P2; ВСЕ 6 — ПОЛНЫЙ ЦИКЛ.** Старые таблицы "один отвечает только за teacher, другой за QA" и прошлый P2-first маршрут **ОТМЕНЕНЫ**. История прежнего варианта сохранена git history по blob `5789b818606c9e1794c42cbd20053fee5fd2d0f1`.
 
 1. **P0 СНАЧАЛА:** инвентаризировать и сразу установить/оптимизировать только отсутствующие, совместимые runtime ускорители GPU и обучения на существующем NOX. CUDA12.x SM70 FP16, DeepSpeed/PyTorch, native GGUF inference, CPU/RAM/SSD, scheduler, memory, streaming TTFT/token speed, telemetry/STOP и восстановление. Запрещать неподдерживаемые на V100 BF16/FP8/FlashAttention2/3/CUDA13 без отдельной реальной совместимой проверки. Никакого переустройства готового WEB.
