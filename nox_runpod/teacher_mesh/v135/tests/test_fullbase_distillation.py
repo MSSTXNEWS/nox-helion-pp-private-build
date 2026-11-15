@@ -119,6 +119,41 @@ class ZeRO3Safety(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError,'HOLD_OWNER_SIGNATURE'):
             training.verify_owner(native,approval,b'a'*40,now=1100)
 
+
+    def test_cuda12_binary_sm70_required_not_only_visible_gpu(self):
+        # SOURCE-ONLY simulated wheel metadata; no claim of native GPU probe.
+        from types import SimpleNamespace
+        def wheel(version='12.6',arches=('sm_70',),cap=(7,0),visible=True,devices=1):
+            cuda=SimpleNamespace(
+                is_available=lambda:visible,device_count=lambda:devices,
+                get_device_capability=lambda i:cap,
+                get_arch_list=lambda:list(arches))
+            return SimpleNamespace(version=SimpleNamespace(cuda=version),cuda=cuda)
+        for arches in (('sm_70',),('compute_70',)):
+            result=training.validate_existing_v100_torch(wheel(arches=arches))
+            self.assertTrue(result['compiled_sm70'])
+            self.assertEqual(result['precision'],'fp16')
+        cases=[
+            (wheel(version='13.0'), 'HOLD_CUDA12_TORCH_BUILD'),
+            (wheel(version=None), 'HOLD_CUDA12_TORCH_BUILD'),
+            (wheel(version='12.8',arches=('sm_75','sm_80')), 'HOLD_TORCH_WHEEL_SM70_ARCH'),
+            (wheel(version='12.6',cap=(7,5)), 'HOLD_V100_GPU1_SM70'),
+            (wheel(version='12.6',devices=2), 'HOLD_V100_GPU1_SM70'),
+            (wheel(version='12.6',visible=False), 'HOLD_V100_GPU1_SM70'),
+        ]
+        for value,reason in cases:
+            with self.subTest(reason=reason):
+                with self.assertRaisesRegex(RuntimeError,reason):
+                    training.validate_existing_v100_torch(value)
+        cuda=wheel().cuda
+        delattr(cuda,'get_arch_list')
+        with self.assertRaisesRegex(RuntimeError,'HOLD_TORCH_WHEEL_SM70_ARCH'):
+            training.validate_existing_v100_torch(
+                SimpleNamespace(version=SimpleNamespace(cuda='12.6'),cuda=cuda))
+        source=Path(training.__file__).read_text(encoding='utf8')
+        self.assertLess(source.index('p0_runtime=validate_existing_v100_torch(torch)'),
+                        source.index('out.mkdir(mode=0o700)'))
+
     def test_run_without_owner_cannot_import_gpu_or_train(self):
         class Args:
             max_steps=1;max_tokens=256;accum=16;lr=5e-6;execute=False

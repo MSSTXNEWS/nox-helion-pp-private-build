@@ -155,6 +155,39 @@ def make_dataset(file:Path,tokenizer,max_len:int):
         def __getitem__(self,i):return items[i]
     return Rows()
 
+
+def validate_existing_v100_torch(torch_module)->dict:
+    """P0 fail-closed ABI check before model load, allocations or checkpoint I/O.
+
+    A visible SM70 device alone does not prove that an installed PyTorch
+    wheel contains Volta kernels (notably newer CUDA 12.8/13.x wheels).
+    Inspect the already-installed runtime: NEVER pip-install over live NOX.
+    """
+    cuda_build=getattr(getattr(torch_module,'version',None),'cuda',None)
+    if not isinstance(cuda_build,str) or re.fullmatch(r'12\\.\\d+(?:\\.\\d+)?',cuda_build) is None:
+        raise RuntimeError('HOLD_CUDA12_TORCH_BUILD')
+    cuda=getattr(torch_module,'cuda',None)
+    if cuda is None:
+        raise RuntimeError('HOLD_V100_GPU1_SM70')
+    try:
+        visible=cuda.is_available()
+        count=cuda.device_count()
+        capability=tuple(cuda.get_device_capability(0)) if visible and count==1 else None
+    except Exception as ex:
+        raise RuntimeError('HOLD_V100_GPU1_SM70') from ex
+    if visible is not True or count!=1 or capability!=(7,0):
+        raise RuntimeError('HOLD_V100_GPU1_SM70')
+    try:
+        compiled_arches=cuda.get_arch_list()
+    except Exception as ex:
+        raise RuntimeError('HOLD_TORCH_WHEEL_SM70_ARCH') from ex
+    if not isinstance(compiled_arches,(list,tuple)) or not any(
+        name in compiled_arches for name in ('sm_70','compute_70')
+    ):
+        raise RuntimeError('HOLD_TORCH_WHEEL_SM70_ARCH')
+    return {'torch_cuda_build':cuda_build,'compiled_sm70':True,
+            'visible_v100_count':1,'precision':'fp16'}
+
 def run(args)->dict:
     if args.max_steps not in _ALLOWED_STEPS or not 64<=args.max_tokens<=1024 or not 1<=args.accum<=128:
         raise RuntimeError('HOLD_STEPS_OR_BATCH_SCOPE')
@@ -176,8 +209,7 @@ def run(args)->dict:
         raise RuntimeError('HOLD_STOP_ACTIVE')
     # Load GPU framework only AFTER all native admission, identity and restore gates.
     import torch
-    if not torch.cuda.is_available() or torch.cuda.device_count()!=1 or torch.cuda.get_device_capability(0)!=(7,0):
-        raise RuntimeError('HOLD_V100_GPU1_SM70')
+    p0_runtime=validate_existing_v100_torch(torch)
     import importlib.metadata as metadata
     for pkg in ('deepspeed','transformers','accelerate','safetensors'):
         try:metadata.version(pkg)
@@ -260,6 +292,7 @@ def run(args)->dict:
         'optimizer_steps_actual':steps,'trainer_global_step':result.global_step,
         'all_base_requires_grad':True,'uses_adapters':False,
         'deepspeed_zero3_cpu_offload':True,'gpu0_chat_untouched':True,
+        'p0_existing_runtime_compat':p0_runtime,
         'holdout_before_loss':float(x),'holdout_after_loss':float(y),
         'checkpoint_dirs_created':len(checkpoints),
         'new_checkpoint_external_restore_verified':False,
