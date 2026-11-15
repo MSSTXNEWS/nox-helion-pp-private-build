@@ -428,3 +428,49 @@ test('V157 native done is terminal: reject trailing control frame before S03 REA
   assert(!bad.called.includes('/api/ui/memory/dialogs/history'),
     'reject before accepting an invalid terminal receipt');
 });
+
+
+test('V158 unknown or missing native event before done cannot report persisted S03',async()=>{
+  const p='V158 unexpected protocol event',a='Verifiable original reply';
+  const good=[
+    {type:'preparing'},
+    {type:'start',model:'NOX HELION'},
+    {type:'delta',text:a},
+    {type:'done',saved:true,s03_integrated:true,dialog_id:id,exchange_id:'v158-receipt-001'}
+  ];
+  async function run(frames){
+    const calls=[];
+    const original=async path=>{
+      const u=new URL(String(path),'https://nox.local');calls.push(u.pathname);
+      if(u.pathname==='/api/ui/memory/dialogs/create')return Response.json({dialog_id:id,title:'V158'});
+      if(u.pathname==='/api/ui/memory/dialogs/history')return Response.json({
+        status:'READY',dialog_id:id,messages:[{role:'user',content:p},{role:'assistant',content:a}]
+      });
+      if(u.pathname==='/api/nox/chat/stream')
+        return new Response(new ReadableStream({start(c){
+          c.enqueue(new TextEncoder().encode(frames.map(x=>JSON.stringify(x)+'\n').join('')));
+          c.close();
+        }}),{headers:{'content-type':'application/x-ndjson'}});
+      return new Response('NO_MATCH',{status:404});
+    };
+    const w={NOX_NATIVE_OWNER:true,fetch:original};
+    const loc={pathname:'/nox-web-v29/pc/resonance.html',
+      href:'https://nox.local/nox-web-v29/pc/resonance.html',origin:'https://nox.local'};
+    vm.runInNewContext(JS,{window:w,location:loc,URL,Request,Response,ReadableStream,
+      TextDecoder,TextEncoder,AbortController,performance,console,Intl,setTimeout});
+    const r=await w.fetch('/api/nox/chat',{method:'POST',body:JSON.stringify({message:p})});
+    return {status:r.status,result:await r.json(),calls};
+  }
+  const valid=await run(good);
+  assert.equal(valid.status,200,'documented preparing/start frames remain valid');
+  assert.equal(valid.result.history_persisted,true);
+  assert(valid.calls.includes('/api/ui/memory/dialogs/history'));
+  for(const unexpected of [{type:'unexpected_native_admin'}, {payload:'missing type'}]){
+    const bad=await run([good[0],unexpected,...good.slice(1)]);
+    assert.equal(bad.status,503,'unknown native event must fail closed');
+    assert.match(bad.result.error,/HOLD_NATIVE_UNKNOWN_FRAME/);
+    assert.equal(bad.result.history_persisted,false);
+    assert(!bad.calls.includes('/api/ui/memory/dialogs/history'),
+      'never perform S03 acceptance on unrecognized native event');
+  }
+});
