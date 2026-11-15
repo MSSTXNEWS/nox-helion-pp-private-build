@@ -62,6 +62,13 @@ def reconcile(*, statuses, queues, events, s03, owner_scope, source_sha256,
         if isinstance(item, Mapping) and isinstance(item.get("job_id"), str):
             jid = item["job_id"]
             collisions[jid] = collisions.get(jid, 0) + 1
+    # The original V47 audit rejects foreign task IDs as an entire batch.
+    # Do the same before sorting: mixed string/non-string keys otherwise raise
+    # TypeError, and a partial audit must not be promoted as valid evidence.
+    if any(not isinstance(tid, str) or not TASK.fullmatch(tid)
+           for tid in statuses):
+        out["state"] = "HOLD_FOREIGN_TASK_IDS"
+        return out
     for tid, status in sorted(statuses.items()):
         if (not isinstance(tid, str) or not TASK.fullmatch(tid)
                 or not isinstance(status, Mapping)):
@@ -270,6 +277,21 @@ class ContractTests(unittest.TestCase):
             d["events"]["native/001"]["instance_id"] = 12345678
             d["s03"]["native/001"]["event_sha256"] = digest(d["events"]["native/001"])
         self.assertEqual(self.check(mismatch)["crosschecked_queue_s03_pairs"], 0)
+
+    def test_mixed_type_task_key_fail_closed(self):
+        def mutation(d):
+            d["statuses"][17] = d["statuses"]["NOX-V46-01"].copy()
+        r = self.check(mutation)
+        self.assertEqual(r["state"], "HOLD_FOREIGN_TASK_IDS")
+        self.assertEqual(r["crosschecked_queue_s03_pairs"], 0)
+        self.assertFalse(r["native_pass"])
+
+    def test_foreign_task_key_fail_closed(self):
+        def mutation(d):
+            d["statuses"]["OTHER-TASK-01"] = d["statuses"]["NOX-V46-01"].copy()
+        r = self.check(mutation)
+        self.assertEqual(r["state"], "HOLD_FOREIGN_TASK_IDS")
+        self.assertEqual(r["crosschecked_queue_s03_pairs"], 0)
 
     def test_empty_is_unknown(self):
         r = self.check(lambda d: (d["statuses"].clear(),d["queues"].clear(),d["s03"].clear(),d["events"].clear()))
