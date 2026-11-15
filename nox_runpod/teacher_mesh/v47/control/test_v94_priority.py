@@ -196,6 +196,50 @@ class Priorities(unittest.TestCase):
         self.assertIn(row['task_id'],audit['protected_task_ids'])
         self.assertFalse(audit['retry_eligible_proposals'][0]['may_enqueue_via_generic_plan'])
 
+    def test_v177_duplicate_native_job_identity_never_double_counts(self):
+        for matrix,ids in ((self.m,('NOX-V46-01','NOX-V46-02')),
+                           (self.master,('R60-001','R60-002'))):
+            receipts={tid:{'task_id':tid,'job_id':'native-job-one',
+                            'state':'RUNNING','native_verified':True,
+                            'receipt_sha256':'a'*64,'heartbeat_unix':2000}
+                      for tid in ids}
+            result=audit_native_queue(matrix,state(native_queue_verified=True,
+                task_status=receipts),now_unix=2000)
+            self.assertEqual(result['native_registered_verified'],0)
+            self.assertEqual(result['native_running_verified'],0)
+            self.assertEqual(result['untrusted_count'],2)
+            self.assertEqual(result['native_jobs_started'],0)
+            self.assertEqual(set(result['protected_task_ids']),set(ids))
+
+    def test_v177_invalid_native_job_id_fails_closed(self):
+        for bad in ('', ' ', None, 1, ['native-job']):
+            with self.subTest(bad=bad):
+                tid='NOX-V46-01'
+                receipt={'task_id':tid,'job_id':bad,'state':'COMPLETED',
+                         'native_verified':True,'receipt_sha256':'b'*64,
+                         'independent_test_passed':True}
+                result=audit_native_queue(self.m,state(native_queue_verified=True,
+                    task_status={tid:receipt}),now_unix=2000)
+                self.assertEqual(result['native_registered_verified'],0)
+                self.assertEqual(result['native_completed_verified'],0)
+                self.assertIn(tid,result['protected_task_ids'])
+
+    def test_v177_distinct_job_ids_preserve_valid_legacy_receipts(self):
+        for use_job_id in (False,True):
+            receipts={}
+            for i in (1,2):
+                tid=f'NOX-V46-{i:02d}'
+                receipt={'task_id':tid,'state':'COMPLETED',
+                         'native_verified':True,'receipt_sha256':'c'*64,
+                         'independent_test_passed':True}
+                if use_job_id:
+                    receipt['job_id']=f'native-job-{i}'
+                receipts[tid]=receipt
+            result=audit_native_queue(self.m,state(native_queue_verified=True,
+                task_status=receipts),now_unix=2000)
+            self.assertEqual(result['native_registered_verified'],2)
+            self.assertEqual(result['native_completed_verified'],2)
+
     def test_unknown_lease_and_untrusted_complete_hold(self):
         row={'task_id':'NOX-V46-41','state':'COMPLETED','native_verified':True,
              'receipt_sha256':'bogus','independent_test_passed':True}
