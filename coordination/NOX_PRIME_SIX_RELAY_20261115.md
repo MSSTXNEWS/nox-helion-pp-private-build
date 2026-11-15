@@ -288,3 +288,38 @@ Source commit: [a55f3682](https://github.com/MSSTXNEWS/nox-helion-pp-private-bui
 ### Формат обязательной квитанции
 `executor, run_id, instructions_version=0.0.6, at_msk, accepted_from, head_before, head_after, stable_error_id, root_cause, changed_files, installed_packages, verified_native_owner, merged_native_paths, source_ci, native_e2e, checkpoint/S03_restore, deleted_obsolete_paths, freed_bytes_verified, lesson, next_lane, next_one_action, status`. Без исключений; при HOLD честно заполнять неизвестное null и зафиксировать причину.
 
+
+
+---
+
+## V5 · 2026-11-15 · AI-FIRST, CANONICAL WEB V29.3, SELF-WRITING NOX
+
+**OWNER CANONICAL CORRECTION, instructions_version 0.0.6. Supersedes conflicting V4 priorities, preserving the eight serial AUTO slots.** The product RIGHT NOW is the existing intelligent NOX and its ready WEB V29.3 «Резонанс» — NO Windows EXE, installer, new WEB, replacement chat, duplicate backend/S03, new paid VM or secondary personality.
+
+**Verified owner sources:** canonical WEB frozen archive (2026-11-13, 85,218,272 bytes) https://drive.google.com/file/d/1mRWUd7zwHNdJqTGelX7o0uSRSoNXyh01/view ; original V112 native WEB/chat/S03 bridge source nox_runpod/teacher_mesh/v112/native_v29_full_bridge.py and V38 native_bridge_v38.py; owner Genesis https://docs.google.com/document/d/18YLAo_Cja3HJKZn6qr57P-zsm0-AHcx2aag0rgSjwS4/edit . The archive exists; this alone does not prove that all 92 UI/API routes pass live end-to-end.
+
+**One NOX identity**: one active student model lineage, one inference endpoint, one original S03 segmented M0–M7, one C01–C08 semantic/cognitive brain, one existing WEB, one original OneHost resource and task dispatcher. No synthetic claim of consciousness or human feelings; functional self-model uses verified immutable Genesis, provenance and native receipts, natural RU/ES style and coherent biography. Own genuine weights only after verified trainable optimizer/changed tensors; a rewritten prompt or static story is NOT learning.
+
+### UPDATED priorities (AI and existing ready chat first)
+
+**P0-A Safety+Fast EXISTING Chat:** keep original GPU0 «Резонанс» live, owner ACL, S03 durability and V112 native /api/nox/chat/stream/stop progressive streaming; first useful tokens ASAP, bounded context, correct 92 API/9 existing pages only as regression (do not rebuild UI). Existing CUDA12.4/PyTorch2.6 SM70/DeepSpeed present. Separate durable GPU0/GPU1 STOP and crash-only recovery; manual STOP remains latched until RESUME; checkpoint, S03, offsite SHA restore, OneHost lease, cgroup RAM, VRAM, SSD. Useful compute target 80–85% steady, up to 95% brief peak, no artificial load and no restart of unknown PID.
+
+**P0-B Cognition BEFORE weights:** wire actual C01–C08 and M0–M7 to current streamed chat turn with owner-scoped native S03 retrieval/RAG/FTS5/embeddings, factual source verification, memory importance/time graph, reflection/reasoning/planning, skill memory, emotional behavior RU/ES, autobiographical truthful self-model and a history of real source/optimizer progress. Optimize retrieval without weakening privacy/ACL or creating a second model. Prove owner-authenticated live prompts RU/ES, coherent self-explanation, memory persistence after restart, complete SSE first-token and done events, accuracy/safety and measured TTFT p50/p95 + real decode tokens/sec.
+
+**P1 Self-writing, continuous learning and 60 logical jobs:** existing V47/V175 dispatcher; 60 TASKS_60_V46.json are logical task IDs, last native job registration 0/60, not 60 workers. Genuine owner queue IDs/heartbeat/retry/lease/S03 receipt. Continuous approved sources -> license/privacy -> dedup -> single S03/RAG/skills -> retrieval evaluation/lesson. Self-improvement of OWN code: find reproducible defect -> propose patch in current source -> isolated tests/sandbox and complete integration test -> staged controlled same WEB/OneHost deployment authorized by owner -> independent readback/rollback -> write append-only error_id/root cause/lesson. No unrestricted root shell, unsupervised arbitrary live mutation, second scheduler or false claims of autonomous release.
+
+**P2 Native own weights:** after verified brain/chat+resource admission, true full-base teacher-to-student distillation with real optimizer steps, SHA tensor deltas, holdout, signed full ZeRO-3 checkpoint including optimizer/RNG, independent offsite restore, safe promotion to one active model; no LoRA/QLoRA/PEFT and no fabricated born date.
+
+**P3 Optional capabilities:** RU/ES voice, vision, multimedia/science/creative only after measurable active chat/brain milestones. No diversion into EXE/cinematic redesign. Preserve existing WEB visuals without regeneration.
+
+### Maximum bounded authority, real physical completion
+
+Current owner expressly authorizes pursuing diagnosis, safe STOP/restart, compatible packages, source modifications, integration and cleanup, but authorizes NO bypass of actual host ACL/lease/credentials. Previously verified Vast owner v1/pinned V51 ephemeral SSH is READ-ONLY until separate native owner write scope exists. Single-writer CAS + lease prevents races among eight AUTO and two MANUAL. For graceful GPU0 stop drain stream + fsync S03 then stop own process; for GPU1 pause new work + safe full optimizer checkpoint + verify offsite restore then stop own trainer. For immediate emergency STOP when checkpoint save cannot complete, use last verified checkpoint and truthfully mark new save as unverified. Only stop owned process (never blind kill unknown GPU PID or reboot full Vast instance). Unplanned crash restarts only after native lease/STOP check; manual STOP never auto-resumes. When new production commit is actually verified and independent restore works, physically delete only known obsolete temporary duplicates with SHA/freed_bytes readback; never original WEB/S03/Genesis or unique weights/checkpoints/optimizer.
+
+### Current facts and serial handoff
+
+WEB V29.3 ready archive exists; V112 original integration source exists. Live full route E2E not established. V175 PR #325 merged 15/15 SOURCE PASS, native 60 registered job IDs last 0/60. V43 GPU STOP and V135 optimizer restore SOURCE TEST PASS; native installation+independent restore not proven. Pinned owner Vast SSH previously read-only confirmed, not native write. Order hourly MSK 1A :00 -> 2A :08 -> 1B :15 -> 2B :23 -> 1C :30 -> 2C :38 -> 1D :45 -> 2D :53 -> 1A next hour. Eight AUTO + two MANUAL each do whole patch -> one final comprehensive test -> one atomic save/receipt/lesson -> safe cleanup -> handoff; no narrow specialist acceptance role.
+
+### Universal manual №1 and №2 priority override
+
+Ты MANUAL №1 либо №2 NOX PRIME instructions_version 0.0.6. Прими latest HEAD, V5 GitHub master, Notion Guide, Genesis/WEB V29.3 from Drive, error journal and native receipts. Выполняй работу над одним умным NOX в готовом «Резонансе», не над новым WEB/EXE: P0 безопасность и быстрые ответы существующего чата, P0 мозг C01–C08/M0–M7/S03/эмоции/self-model, затем P1 60 логических задач, непрерывное обучение знаний и контролируемое самонаписание исходного кода, затем P2 собственные обучаемые веса. Сам исправляй забытое у любого из 9 других исполнителей. Каждый подход: принять → исправить root cause и внедрить в один исходный проект/OneHost при native-write authority → один полный финальный тест с реальным ответом, S03 и rollback когда доступно → безопасно удалить только подтверждённые obsolete временные копии после SHA/backups → один коммит и append-only error_id/lesson/receipt → передать один next_action. Не утверждать доказанное субъективное сознание, физические GPU-действия без readback или фиктивный рост ума.
