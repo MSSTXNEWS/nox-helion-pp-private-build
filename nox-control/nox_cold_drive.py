@@ -3,8 +3,6 @@
 No credentials are logged or embedded. No automatic deletion or training launch.
 """
 import argparse
-import fcntl
-import stat
 import hashlib
 import json
 import os
@@ -71,7 +69,7 @@ def ensure_linux_tmpfs(dest):
             parts = left.split()
             after = right.split()
             if len(parts) > 4 and after:
-                mp = parts[4].replace("\\\\040", " ")
+                mp = parts[4].replace(chr(92) + "040", " ")
                 if str(dest) == mp or str(dest).startswith(mp.rstrip("/") + "/"):
                     candidates.append((len(mp), after[0]))
     if not candidates or max(candidates)[1] != "tmpfs":
@@ -83,15 +81,18 @@ def ensure_linux_tmpfs(dest):
         raise RuntimeError("HOLD_RAM_AVAILABLE_UNKNOWN") from None
 
 def assert_model(p):
-    p = Path(p).resolve(strict=True)
-    if not p.is_file() or p.is_symlink() or p.suffix.lower() not in ALLOWED_SUFFIX:
+    candidate = Path(p)
+    if candidate.is_symlink():
+        raise ValueError("Symlink model candidates are not allowed")
+    p = candidate.resolve(strict=True)
+    if not p.is_file() or p.suffix.lower() not in ALLOWED_SUFFIX:
         raise ValueError("Not an eligible regular model file")
     if any(part.lower() in BLOCKED_PARTS for part in p.parts) or any(x in p.name.lower() for x in ("checkpoint", "optimizer", "s03", "trainer")):
         raise ValueError("Protected training, checkpoint or S03 path")
     return p
 
 def assert_remote(remote):
-    if not remote.startswith(("noxdrive:", "noxr2:")) or ".." in remote.split(":")[-1].split("/") or "\\\\" in remote:
+    if not remote.startswith(("noxdrive:", "noxr2:")) or chr(92) in remote:
         raise ValueError("Provide explicit rclone remote:path (e.g. noxdrive:NOX_COLD)")
     return remote.rstrip("/")
 
