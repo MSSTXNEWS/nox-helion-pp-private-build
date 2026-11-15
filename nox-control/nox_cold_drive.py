@@ -83,8 +83,8 @@ def load(a):
     if "/" not in remote.split(":", 1)[1]:
         raise ValueError("Specify the complete remote file path")
     dest_dir = Path(a.ram_dir).resolve()
-    if not dest_dir.is_dir() or not os.path.ismount(dest_dir):
-        raise ValueError("RAM destination must be an existing mount")
+    if not dest_dir.is_dir() or not dest_dir.resolve().is_relative_to(Path("/dev/shm")):
+        raise ValueError("RAM destination must be an existing directory under /dev/shm (tmpfs)")
     name = remote.rsplit("/", 1)[-1]
     if Path(name).suffix.lower() not in ALLOWED_SUFFIX:
         raise ValueError("Not a model file")
