@@ -18,11 +18,17 @@ from pathlib import Path
 FROZEN_SHA = "166becb90fce63e2db3f9a74281d756995844552cddb7b67a0ac4bd67a190aa0"
 FROZEN_N = 1089
 JS = "site/nox-v135-resonance-owner-bridge.js"
+OBS_JS = "site/nox-v137-owner-self-status.js"
+OBS_SOURCE = Path("coordination/onepass/nox-v137-owner-self-status.js")
+NATIVE_SELF_MODULE = "integration/nox_v137_owner_self_observation.py"
+NATIVE_SELF_SOURCE = Path("nox_runpod/teacher_mesh/v137/owner_self_observation.py")
 MANIFEST = "NOX_V135_OWNER_RESONANCE_STREAM_MANIFEST.json"
 PAGES = ("site/pc/resonance.html", "site/pc/v22/resonance.template.html")
 ROLLBACK = "rollback/v135/"
 SCRIPT_URL = "/nox-web-v29/nox-v135-resonance-owner-bridge.js"
 SCRIPT_TAG = '<script defer src="' + SCRIPT_URL + '" data-nox-owner-v135="1"></script>'
+OBS_SCRIPT_URL = "/nox-web-v29/nox-v137-owner-self-status.js"
+OBS_SCRIPT_TAG = '<script defer src="' + OBS_SCRIPT_URL + '" data-nox-owner-v137="1"></script>'
 
 
 def digest(data: bytes) -> str:
@@ -69,6 +75,18 @@ def build(source: Path, frozen: Path, js_file: Path, output: Path,
         raise ValueError("HOLD_OWNER_BRIDGE_CONTRACT")
     if b"HOLD_DIALOG_HISTORY_READBACK" not in script or b"status:'done'" not in script:
         raise ValueError("HOLD_STREAM_RECEIPT_CONTRACT")
+    monitor_js = OBS_SOURCE.read_bytes()
+    native_self = NATIVE_SELF_SOURCE.read_bytes()
+    if (b"window.NOX_NATIVE_OWNER !== true" not in monitor_js
+            or b"/api/nox/self/observations" not in monitor_js
+            or b"/api/status" not in monitor_js
+            or b"HOLD" not in monitor_js):
+        raise ValueError("HOLD_V137_REAL_MONITOR_CONTRACT")
+    if (b"def register_nox_v137_self_observation(" not in native_self
+            or b"subjective_consciousness_established" not in native_self
+            or b"positive_optimizer_steps_verified" not in native_self):
+        raise ValueError("HOLD_V137_SELF_OBSERVATION_SOURCE")
+    compile(native_self, str(NATIVE_SELF_SOURCE), "exec")
     temp = output.with_name(output.name + ".pending-v135")
     if temp.exists():
         raise ValueError("HOLD_PENDING_EXISTS")
@@ -83,7 +101,8 @@ def build(source: Path, frozen: Path, js_file: Path, output: Path,
                 raise ValueError("HOLD_ARCHIVE_MEMBER_INTEGRITY")
             if not set(original_names).issubset(source_names):
                 raise ValueError("HOLD_ORIGINAL_1089_MEMBER_LOSS")
-            if not set(PAGES).issubset(source_names) or JS in source_names or MANIFEST in source_names:
+            if (not set(PAGES).issubset(source_names) or
+                    any(name in source_names for name in (JS, OBS_JS, NATIVE_SELF_MODULE, MANIFEST))):
                 raise ValueError("HOLD_UNEXPECTED_STAGE_OR_EXISTING_PATCH")
             if base.testzip() is not None or original.testzip() is not None:
                 raise ValueError("HOLD_ZIP_CRC")
@@ -93,14 +112,17 @@ def build(source: Path, frozen: Path, js_file: Path, output: Path,
                     blob = base.read(item)
                     if name in PAGES:
                         html = blob.decode("utf-8")
-                        if html.count("</head>") != 1 or "nox-v135-resonance-owner-bridge.js" in html:
+                        if (html.count("</head>") != 1 or
+                                any(q in html for q in ("nox-v135-resonance-owner-bridge.js", "nox-v137-owner-self-status.js"))):
                             raise ValueError("HOLD_HTML_SCRIPT_ANCHOR_" + name)
-                        patch = html.replace("</head>", SCRIPT_TAG + "\n</head>", 1).encode("utf-8")
+                        patch = html.replace("</head>", SCRIPT_TAG + "\n" + OBS_SCRIPT_TAG + "\n</head>", 1).encode("utf-8")
                         changed[name] = {"before_sha256": digest(blob), "after_sha256": digest(patch)}
                         release.writestr(copy.copy(item), patch)
                     else:
                         release.writestr(copy.copy(item), blob)
                 _zip_file(release, JS, script)
+                _zip_file(release, OBS_JS, monitor_js)
+                _zip_file(release, NATIVE_SELF_MODULE, native_self)
                 for name in sorted(PAGES):
                     _zip_file(release, ROLLBACK + name, base.read(name))
                 manifest = {
@@ -113,6 +135,12 @@ def build(source: Path, frozen: Path, js_file: Path, output: Path,
                     "patched_html": list(PAGES),
                     "added_js": JS,
                     "added_js_sha256": digest(script),
+                    "added_status_js": OBS_JS,
+                    "added_status_js_sha256": digest(monitor_js),
+                    "added_owner_self_observer": NATIVE_SELF_MODULE,
+                    "added_owner_self_observer_sha256": digest(native_self),
+                    "native_observer_attached_in_live_onehost": False,
+                    "process_control_actions_enabled": False,
                     "rollback_dir": ROLLBACK,
                     "original_source_unchanged": True,
                     "native_owner_only": True,
@@ -149,7 +177,7 @@ def verify(output: Path, *, source: Path, frozen: Path) -> dict:
             raise ValueError("HOLD_MANIFEST")
         source_names = base.namelist()
         out_names = patch.namelist()
-        if (len(out_names) != len(source_names) + len(PAGES) + 2
+        if (len(out_names) != len(source_names) + len(PAGES) + 4
                 or len(set(out_names)) != len(out_names)
                 or not set(original.namelist()).issubset(out_names)):
             raise ValueError("HOLD_TOTAL_MEMBERS")
@@ -159,12 +187,16 @@ def verify(output: Path, *, source: Path, frozen: Path) -> dict:
                 if (digest(patch.read(name)) != patchinfo["after_sha256"]
                         or digest(base.read(name)) != patchinfo["before_sha256"]
                         or patch.read(ROLLBACK + name) != base.read(name)
-                        or SCRIPT_URL.encode() not in patch.read(name)):
+                        or SCRIPT_URL.encode() not in patch.read(name)
+                        or OBS_SCRIPT_URL.encode() not in patch.read(name)):
                     raise ValueError("HOLD_PATCH_OR_ROLLBACK_" + name)
             elif patch.read(name) != base.read(name):
                 raise ValueError("HOLD_SOURCE_FILE_MODIFIED_" + name)
         if digest(patch.read(JS)) != manifest["added_js_sha256"]:
             raise ValueError("HOLD_SCRIPT_HASH")
+        if (digest(patch.read(OBS_JS)) != manifest.get("added_status_js_sha256")
+                or digest(patch.read(NATIVE_SELF_MODULE)) != manifest.get("added_owner_self_observer_sha256")):
+            raise ValueError("HOLD_NATIVE_SELF_MONITOR_HASH")
         return {"source_entries": len(source_names), "output_entries": len(out_names),
                 "unchanged_source_entries": len(source_names)-len(PAGES),
                 "original_frozen_entries_retained": FROZEN_N,
