@@ -71,6 +71,7 @@ def reconcile(*, statuses, queues, events, s03, owner_scope, source_sha256,
         if (not isinstance(jid, str) or not JOB.fullmatch(jid)
                 or status.get("task_id") != tid
                 or status.get("owner_scope") != owner_scope
+                or status.get("instance_id", instance_id) != instance_id
                 or status.get("native_verified") is not True
                 or not SHA.fullmatch(str(status.get("receipt_sha256", "")))):
             out["rejected"].append({"task_id": tid, "reason": "UNTRUSTED_STATUS"})
@@ -88,6 +89,8 @@ def reconcile(*, statuses, queues, events, s03, owner_scope, source_sha256,
         queue, event, proof = queues.get(jid), events.get(jid), s03.get(jid)
         if (not isinstance(queue, Mapping) or queue.get("job_id") != jid
                 or queue.get("task_id") != tid
+                or queue.get("owner_scope", owner_scope) != owner_scope
+                or queue.get("instance_id", instance_id) != instance_id
                 or queue.get("state") not in ("pending", "running")):
             out["rejected"].append({"task_id": tid, "reason": "QUEUE_READBACK_MISSING_OR_MISMATCH"})
             continue
@@ -98,6 +101,7 @@ def reconcile(*, statuses, queues, events, s03, owner_scope, source_sha256,
         if (not isinstance(event, Mapping) or event.get("schema") != "NOX_V46_QUEUED_RECEIPT"
                 or event.get("job_id") != jid or event.get("task_id") != tid
                 or event.get("owner_scope") != owner_scope
+                or event.get("instance_id", instance_id) != instance_id
                 or event.get("state") != queue.get("state")
                 or event.get("source_matrix_sha256") != source_sha256
                 or event.get("native_task_status_receipt_sha256") != status.get("receipt_sha256")
@@ -108,6 +112,8 @@ def reconcile(*, statuses, queues, events, s03, owner_scope, source_sha256,
         if (not isinstance(proof, Mapping) or proof.get("state") != "PRESENT"
                 or proof.get("native_verified") is not True
                 or proof.get("owner_scope") != owner_scope
+                or proof.get("instance_id", instance_id) != instance_id
+                or proof.get("task_id", tid) != tid
                 or proof.get("job_id") != jid
                 or proof.get("event_sha256") != digest(event)):
             out["rejected"].append({"task_id": tid, "reason": "S03_DURABLE_READBACK_MISSING_OR_MISMATCH"})
@@ -229,6 +235,41 @@ class ContractTests(unittest.TestCase):
 
     def test_wrong_source_matrix(self):
         self.assertEqual(self.check(lambda d: d["events"]["native/001"].update(source_matrix_sha256="f"*64))["crosschecked_queue_s03_pairs"], 0)
+
+    def test_foreign_owner_in_original_queue(self):
+        r = self.check(lambda d: d["queues"]["native/001"].update(owner_scope="other-owner"))
+        self.assertEqual(r["crosschecked_queue_s03_pairs"], 0)
+
+    def test_foreign_instance_in_original_queue(self):
+        r = self.check(lambda d: d["queues"]["native/001"].update(instance_id=12345678))
+        self.assertEqual(r["crosschecked_queue_s03_pairs"], 0)
+
+    def test_foreign_instance_in_native_status(self):
+        r = self.check(lambda d: d["statuses"]["NOX-V46-01"].update(instance_id=12345678))
+        self.assertEqual(r["crosschecked_queue_s03_pairs"], 0)
+
+    def test_foreign_task_in_original_s03_receipt(self):
+        r = self.check(lambda d: d["s03"]["native/001"].update(task_id="NOX-V46-02"))
+        self.assertEqual(r["crosschecked_queue_s03_pairs"], 0)
+
+    def test_foreign_instance_in_original_s03_receipt(self):
+        r = self.check(lambda d: d["s03"]["native/001"].update(instance_id=12345678))
+        self.assertEqual(r["crosschecked_queue_s03_pairs"], 0)
+
+    def test_matching_optional_cross_source_identity(self):
+        def identity(d):
+            d["statuses"]["NOX-V46-01"]["instance_id"] = INSTANCE_ID
+            d["queues"]["native/001"].update(owner_scope=d["owner_scope"], instance_id=INSTANCE_ID)
+            d["events"]["native/001"]["instance_id"] = INSTANCE_ID
+            d["s03"]["native/001"].update(task_id="NOX-V46-01", instance_id=INSTANCE_ID,
+                                            event_sha256=digest(d["events"]["native/001"]))
+        self.assertEqual(self.check(identity)["crosschecked_queue_s03_pairs"], 1)
+
+    def test_foreign_instance_in_original_event(self):
+        def mismatch(d):
+            d["events"]["native/001"]["instance_id"] = 12345678
+            d["s03"]["native/001"]["event_sha256"] = digest(d["events"]["native/001"])
+        self.assertEqual(self.check(mismatch)["crosschecked_queue_s03_pairs"], 0)
 
     def test_empty_is_unknown(self):
         r = self.check(lambda d: (d["statuses"].clear(),d["queues"].clear(),d["s03"].clear(),d["events"].clear()))
