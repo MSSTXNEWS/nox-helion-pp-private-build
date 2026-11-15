@@ -1,0 +1,43 @@
+name: NOX V135 final merged original WEB source verification and export
+on:
+  push:
+    branches: [qa/nox-v135-final-merged-source-receipt-20261115]
+    paths:
+      - '.github/workflows/nox-v135-final-merged-source-export.yml'
+permissions:
+  contents: read
+jobs:
+  exact-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Test merged V135/V137 source without new native or Windows writes
+        run: |
+          set -euo pipefail
+          node --check coordination/onepass/nox-v135-resonance-owner-bridge.js
+          node --test coordination/onepass/test_v135_resonance_owner_bridge.cjs
+          python -m unittest -v coordination.onepass.test_v135_resonance_owner_stage
+          python -m py_compile coordination/onepass/v135_resonance_owner_stage.py nox_runpod/teacher_mesh/v137/owner_self_observation.py nox_runpod/teacher_mesh/v137/owner_response_contract.py
+      - name: Export SHA-pinned exact merged originals, V137 dependencies and no-loss builder
+        run: |
+          set -euo pipefail
+          mkdir -p export/coordination/onepass export/nox_runpod/teacher_mesh/v137
+          cp coordination/onepass/nox-v135-resonance-owner-bridge.js coordination/onepass/nox-v137-owner-self-status.js coordination/onepass/test_v135_resonance_owner_bridge.cjs coordination/onepass/test_v135_resonance_owner_stage.py coordination/onepass/v135_resonance_owner_stage.py export/coordination/onepass/
+          cp nox_runpod/teacher_mesh/v137/owner_self_observation.py nox_runpod/teacher_mesh/v137/owner_response_contract.py export/nox_runpod/teacher_mesh/v137/
+          (cd export && find coordination nox_runpod -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum > SHA256SUMS.txt)
+          (cd export && zip -q -r ../NOX_V135_EXACT_MERGED_SOURCE.zip .)
+          sha256sum NOX_V135_EXACT_MERGED_SOURCE.zip
+          echo 'NOX_V135_FULL_SOURCE_TESTED=PASS'
+          echo 'NOX_V135_NATIVE_DEPLOYED=false'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NOX_V135_EXACT_MERGED_SOURCE
+          path: NOX_V135_EXACT_MERGED_SOURCE.zip
+          retention-days: 7
+          if-no-files-found: error
