@@ -10,7 +10,7 @@ OWNER_ID=340718567
 INSTANCE=60509551
 PIN='SHA256:G4hmMllaT4uSfx+Gup9vjSySLXJT1cSc/9XePr7XmGc'
 FILES={'audit':'nox-control/owner_native_audit.py','inspect':'nox-control/owner_native_inspect.py',
-       'stage':'nox-control/owner_native_stage.py','repair':'nox-control/owner_chat_probe_entry.py'}
+       'stage':'nox-control/owner_native_stage.py','repair':'nox-control/owner_media_prepare_entry.py'}
 MASTER=None
 
 def authorize_event(action):
@@ -94,7 +94,8 @@ def run_native(action,request_id):
                      'nox-control/owner_native_inspect.py','nox-control/hybrid_training_entry.py',
                      'nox-control/owner_capacity_probe.py','nox-control/owner_component_tasks.py',
                      'nox-control/owner_dispatcher_mentor.py','nox-control/nox_pc_export.py',
-                     'nox-control/owner_chat_probe.py',
+                     'nox-control/owner_chat_probe.py','nox-control/owner_native_repair.py',
+                     'nox-control/owner_media_install.py','nox-control/owner_media_runtime.py',
                      'coordination/NOX_STORAGE_STREAMING_20261115/download_manifest.json'):
             p=Path(path)
             if p.is_file():assets[p.name]=base64.b64encode(p.read_bytes()).decode('ascii')

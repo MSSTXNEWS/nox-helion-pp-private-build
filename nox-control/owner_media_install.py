@@ -1,0 +1,574 @@
+#!/usr/bin/env python3
+"""Pinned, bounded SDXL/Wan preparation for NOX's existing media dispatcher.
+
+No model promotion, deletion, driver installation, or trainer-environment write.
+Model files go directly to their admitted destination and receive a full SHA256
+check. A failed/interrupted download remains resumable and is never advertised
+as ready. The optional supervised engine binds loopback and uses physical GPU1.
+"""
+from __future__ import annotations
+import argparse
+from contextlib import contextmanager
+import fcntl
+import hashlib
+import importlib.util
+import json
+import os
+from pathlib import Path, PurePosixPath
+import re
+import shutil
+import socket
+import stat
+import subprocess
+import sys
+import tarfile
+import tempfile
+import time
+import urllib.error
+import urllib.parse
+import urllib.request
+
+ROOT = Path('/root/nox')
+MEDIA = ROOT/'media'
+SHM = Path('/dev/shm/nox_media')
+BASE_PYTHON = Path('/root/venv_volta/bin/python')
+SERVICE = 'nox-media-comfyui'
+CONFIG = ROOT/'config/owner_media_runtime.json'
+STATE = ROOT/'state/owner_media'
+GIB = 1024**3
+DISK_RESERVE = 6*GIB
+SHM_RESERVE = 3*GIB
+CGROUP_RESERVE = 16*GIB
+SETUP_ALLOWANCE = 2*GIB
+COMFY_COMMIT = '9aac21f894a122ddb8d825c57ad61c0db5e630db'
+COMFY_ARCHIVE = {
+    'url':'https://codeload.github.com/Comfy-Org/ComfyUI/tar.gz/'+COMFY_COMMIT,
+    'bytes':4452974,
+    'sha256':'9e298ea612b659823789bf107adf533e76270baa2ebfe8cd7a2ca57c1230463f',
+}
+SDXL_REVISION = 'c9a24f48e1c025556787b0c58dd67a091ece2e44'
+WAN_REVISION = '123acf1cc74bccbb9bfff8ac1ee72edc08c2341d'
+ASSETS = (
+    {'kind':'image','role':'checkpoint','subdir':'checkpoints',
+     'repo':'ByteDance/SDXL-Lightning','revision':SDXL_REVISION,
+     'source_path':'sdxl_lightning_4step.safetensors','filename':'sdxl_lightning_4step.safetensors',
+     'bytes':6938040682,'sha256':'e0d996ee0013e79d9d3561f50fcafb9a17e3ff07b780358e3b66d67932c4d490',
+     'license':'openrail++','workflow':'sdxl_lightning_4step'},
+    {'kind':'video','role':'unet','subdir':'diffusion_models',
+     'repo':'Comfy-Org/Wan-2.1','revision':WAN_REVISION,
+     'source_path':'split_files/diffusion_models/wan2.1_t2v_1.3B_fp16.safetensors',
+     'filename':'wan2.1_t2v_1.3B_fp16.safetensors','bytes':2838303560,
+     'sha256':'be531024cd9018cb5b48c40cfbb6a6191645b1c792eb8bf4f8c1c6e10f924dc5',
+     'license':'apache-2.0','workflow':'wan21_t2v_13b'},
+    {'kind':'video','role':'clip','subdir':'text_encoders',
+     'repo':'Comfy-Org/Wan-2.1','revision':WAN_REVISION,
+     'source_path':'split_files/text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors',
+     'filename':'umt5_xxl_fp8_e4m3fn_scaled.safetensors','bytes':6735906897,
+     'sha256':'c3355d30191f1f066b26d93fba017ae9809dce6c627dda5f6a66eaa651204f68',
+     'license':'apache-2.0','workflow':'wan21_t2v_13b'},
+    {'kind':'video','role':'vae','subdir':'vae','repo':'Comfy-Org/Wan-2.1',
+     'revision':WAN_REVISION,'source_path':'split_files/vae/wan_2.1_vae.safetensors',
+     'filename':'wan_2.1_vae.safetensors','bytes':253815318,
+     'sha256':'2fc39d31359a4b0a64f55876d8ff7fa8d780956ae2cb13463b0223e15148976b',
+     'license':'apache-2.0','workflow':'wan21_t2v_13b'},
+)
+# --no-deps prevents pip from changing/reinstalling the shared CUDA/Torch stack.
+# Dependencies not listed here are inherited read-only from the trainer venv.
+PYPI_PINS = (
+    'comfyui-frontend-package==1.12.14','torchsde==0.2.6','trampoline==0.1.2',
+    'numpy==1.26.4','einops==0.8.1','transformers==4.49.0','tokenizers==0.21.0',
+    'huggingface-hub==0.29.3','sentencepiece==0.2.0','safetensors==0.5.3',
+    'aiohttp==3.11.13','yarl==1.18.3','PyYAML==6.0.2','Pillow==11.1.0',
+    'scipy==1.15.2','tqdm==4.67.1','psutil==7.0.0','kornia==0.8.0',
+    'kornia_rs==0.1.8','spandrel==0.4.1','soundfile==0.13.1','av==14.2.0',
+    'cffi==1.17.1','pycparser==2.22',
+)
+CUDA_PINS = ('torchvision==0.21.0+cu124','torchaudio==2.6.0+cu124')
+REQUIRED_NODES = ('CheckpointLoaderSimple','CLIPTextEncode','EmptyLatentImage',
+                  'KSampler','VAEDecode','SaveImage','UNETLoader','CLIPLoader',
+                  'VAELoader','ModelSamplingSD3','EmptyHunyuanLatentVideo','SaveWEBM')
+
+
+def fail(code):
+    raise RuntimeError(code)
+
+
+def emit(phase, **data):
+    print('NOX_MEDIA_INSTALL='+json.dumps({'phase':phase, **data},separators=(',',':')), flush=True)
+
+
+def plain(value):
+    path = Path(os.path.abspath(value))
+    for probe in (*reversed(path.parents),path):
+        if probe.is_symlink(): fail('HOLD_MEDIA_SYMLINK_PATH')
+    return path
+
+
+def sha256(path):
+    digest = hashlib.sha256()
+    with plain(path).open('rb') as source:
+        for block in iter(lambda:source.read(4*1024*1024),b''):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def atomic_json(path, obj):
+    path = plain(path)
+    path.parent.mkdir(mode=0o700,parents=True,exist_ok=True)
+    fd,tmp = tempfile.mkstemp(prefix='.media-',dir=path.parent)
+    try:
+        with os.fdopen(fd,'w') as target:
+            json.dump(obj,target,indent=2,ensure_ascii=False)
+            target.write('\n'); target.flush(); os.fsync(target.fileno())
+        os.replace(tmp,path)
+    finally:
+        if os.path.exists(tmp): os.unlink(tmp)
+
+
+@contextmanager
+def lock(name):
+    STATE.mkdir(mode=0o700,parents=True,exist_ok=True)
+    fd = os.open(plain(STATE/name),os.O_CREAT|os.O_RDWR|os.O_NOFOLLOW,0o600)
+    try:
+        try: fcntl.flock(fd,fcntl.LOCK_EX|fcntl.LOCK_NB)
+        except BlockingIOError: fail('HOLD_MEDIA_OPERATION_BUSY')
+        yield
+    finally:
+        os.close(fd)
+
+
+@contextmanager
+def gpu_lease():
+    # The existing hybrid trainer and media runtime use this exact GPU1 lease.
+    path = plain(ROOT/'state/forge_training.lock')
+    path.parent.mkdir(mode=0o700,parents=True,exist_ok=True)
+    fd = os.open(path,os.O_CREAT|os.O_RDWR|os.O_NOFOLLOW,0o600)
+    try:
+        try: fcntl.flock(fd,fcntl.LOCK_EX|fcntl.LOCK_NB)
+        except BlockingIOError: fail('HOLD_MEDIA_GPU1_LEASE_BUSY')
+        yield
+    finally:
+        os.close(fd)
+
+
+def run(args, timeout=120, env=None, cwd=None):
+    try:
+        result = subprocess.run(list(map(str,args)),capture_output=True,text=True,
+                                timeout=timeout,env=env,cwd=cwd)
+    except subprocess.TimeoutExpired:
+        fail('HOLD_MEDIA_COMMAND_TIMEOUT')
+    if result.returncode:
+        # Provider output, environment and arbitrary subprocess text stay private.
+        fail('HOLD_MEDIA_COMMAND_EXIT_'+str(result.returncode))
+    return result.stdout
+
+
+def cgroup_headroom():
+    try:
+        limit = int(Path('/sys/fs/cgroup/memory.max').read_text())
+        used = int(Path('/sys/fs/cgroup/memory.current').read_text())
+    except (OSError,ValueError): fail('HOLD_FINITE_CGROUP_MEMORY_REQUIRED')
+    if not 0 <= used < limit: fail('HOLD_CGROUP_MEMORY_EXHAUSTED')
+    return limit-used
+
+
+def resources():
+    return {'disk_free':shutil.disk_usage(ROOT).free,
+            'shm_free':shutil.disk_usage('/dev/shm').free,
+            'memory_free':cgroup_headroom()}
+
+
+def asset_path(asset, storage):
+    base = SHM if storage=='ram' else MEDIA/'weights'
+    return plain(base/'models'/asset['subdir']/asset['filename'])
+
+
+def plan_assets(budget, existing=None, partials=None):
+    """Prefer existing verified assets, then all-RAM, then a bounded split."""
+    existing = existing or {}
+    partials = partials or {}
+    pending = [a for a in ASSETS if a['filename'] not in existing]
+    total = sum(a['bytes']-partials.get(a['filename'],{}).get('bytes',0) for a in pending)
+    if budget['disk_free'] < DISK_RESERVE+SETUP_ALLOWANCE:
+        fail('HOLD_MEDIA_DISK_SETUP_RESERVE')
+    if budget['memory_free'] < total+32*GIB:
+        fail('HOLD_MEDIA_CGROUP_CACHE_AND_RUNTIME_RESERVE')
+    placement = None
+    for split in (False,True):
+        trial = {a['filename']:partials.get(a['filename'],{}).get('storage',
+                 'disk' if split and a['role']=='clip' else 'ram') for a in pending}
+        ram = sum(a['bytes']-partials.get(a['filename'],{}).get('bytes',0)
+                  for a in pending if trial[a['filename']]=='ram')
+        disk = total-ram
+        if budget['shm_free'] >= ram+SHM_RESERVE and budget['disk_free'] >= disk+DISK_RESERVE+SETUP_ALLOWANCE:
+            placement = trial
+            break
+    if placement is None: fail('HOLD_MEDIA_MODEL_STORAGE_RESERVE')
+    rows = []
+    for asset in ASSETS:
+        if asset['filename'] in existing:
+            row = {**asset, **existing[asset['filename']], 'reused':True}
+        else:
+            storage = placement[asset['filename']]
+            row = {**asset,'storage':storage,'path':str(asset_path(asset,storage)),'reused':False}
+        row['source_url'] = 'https://huggingface.co/'+asset['repo']+'/resolve/'+asset['revision']+'/'+asset['source_path']
+        row['model_card'] = 'https://huggingface.co/'+asset['repo']+'/blob/'+asset['revision']+'/README.md'
+        rows.append(row)
+    return rows
+
+
+def validate_file(path, expected):
+    path = plain(path)
+    if not path.exists(): return None
+    info = path.stat()
+    if not stat.S_ISREG(info.st_mode) or info.st_size != expected['bytes']:
+        fail('HOLD_MEDIA_EXISTING_FILE_SIZE')
+    before = (info.st_dev,info.st_ino,info.st_size,info.st_mtime_ns,info.st_ctime_ns)
+    if sha256(path) != expected['sha256']: fail('HOLD_MEDIA_EXISTING_FILE_SHA')
+    info = path.stat()
+    if before != (info.st_dev,info.st_ino,info.st_size,info.st_mtime_ns,info.st_ctime_ns):
+        fail('HOLD_MEDIA_FILE_CHANGED_WHILE_HASHING')
+    return {'path':str(path),'verified':True,'stat_mtime_ns':info.st_mtime_ns,
+            'stat_device':info.st_dev,'stat_inode':info.st_ino}
+
+
+def find_existing_assets(engine=None):
+    found = {}
+    for asset in ASSETS:
+        candidates = [asset_path(asset,'ram'),asset_path(asset,'disk')]
+        if engine: candidates.append(plain(engine)/'models'/asset['subdir']/asset['filename'])
+        for path in candidates:
+            if path.exists():
+                checked = validate_file(path,asset)
+                storage = 'ram' if path.is_relative_to(SHM) else 'disk'
+                found[asset['filename']] = {**checked,'storage':storage}
+                break
+    return found
+
+
+def existing_partials():
+    found = {}
+    for asset in ASSETS:
+        for storage in ('ram','disk'):
+            path = plain(asset_path(asset,storage).with_name(asset['filename']+'.partial'))
+            if not path.exists(): continue
+            if not path.is_file() or not 0 <= path.stat().st_size <= asset['bytes']:
+                fail('HOLD_MEDIA_PARTIAL_SIZE')
+            if asset['filename'] in found: fail('HOLD_MEDIA_DUPLICATE_PARTIAL')
+            found[asset['filename']] = {'storage':storage,'bytes':path.stat().st_size}
+    return found
+
+
+def get_json(url, limit=2*1024*1024):
+    try:
+        with urllib.request.urlopen(urllib.request.Request(url,headers={'User-Agent':'NOX-owner-media/1'}),timeout=45) as response:
+            raw = response.read(limit+1)
+    except urllib.error.HTTPError as exc: fail('HOLD_MEDIA_METADATA_HTTP_'+str(exc.code))
+    except (OSError,urllib.error.URLError): fail('HOLD_MEDIA_METADATA_UNAVAILABLE')
+    if len(raw)>limit: fail('HOLD_MEDIA_METADATA_OVERSIZE')
+    return json.loads(raw)
+
+
+def verify_hf_metadata():
+    for repo,revision in sorted({(a['repo'],a['revision']) for a in ASSETS}):
+        metadata = get_json('https://huggingface.co/api/models/'+repo+'/revision/'+revision+'?blobs=true')
+        if metadata.get('sha') != revision or metadata.get('gated') not in (False,None):
+            fail('HOLD_MEDIA_SOURCE_REVISION_OR_GATING')
+        files = {row['rfilename']:row for row in metadata.get('siblings',[])}
+        for asset in (a for a in ASSETS if a['repo']==repo):
+            row = files.get(asset['source_path'],{})
+            if row.get('size') != asset['bytes'] or row.get('lfs',{}).get('sha256') != asset['sha256']:
+                fail('HOLD_MEDIA_SOURCE_LFS_PIN_MISMATCH')
+
+
+def check_write_space(directory, pending, reserve):
+    if shutil.disk_usage(directory).free < pending+reserve: fail('HOLD_MEDIA_STORAGE_RESERVE')
+    if cgroup_headroom() < CGROUP_RESERVE: fail('HOLD_MEDIA_CGROUP_RESERVE')
+
+
+def download(url, path, expected, reserve=DISK_RESERVE):
+    """One resumable file, no Hugging Face cache duplicate, full SHA before rename."""
+    path = plain(path)
+    if path.exists(): return validate_file(path,expected)
+    path.parent.mkdir(mode=0o700,parents=True,exist_ok=True)
+    part = plain(path.with_name(path.name+'.partial'))
+    if part.exists() and (not part.is_file() or part.stat().st_size>expected['bytes']):
+        fail('HOLD_MEDIA_PARTIAL_SIZE')
+    offset = part.stat().st_size if part.exists() else 0
+    check_write_space(path.parent,expected['bytes']-offset,reserve)
+    headers = {'User-Agent':'NOX-owner-media/1'}
+    if offset: headers['Range']='bytes='+str(offset)+'-'
+    if offset < expected['bytes']:
+        try:
+            response = urllib.request.urlopen(urllib.request.Request(url,headers=headers),timeout=60)
+        except urllib.error.HTTPError as exc: fail('HOLD_MEDIA_DOWNLOAD_HTTP_'+str(exc.code))
+        except (OSError,urllib.error.URLError): fail('HOLD_MEDIA_DOWNLOAD_UNAVAILABLE')
+        with response:
+            if offset and response.status == 206:
+                if not response.headers.get('Content-Range','').startswith('bytes '+str(offset)+'-'):
+                    fail('HOLD_MEDIA_RESUME_RANGE')
+            elif response.status == 200:
+                offset = 0
+            else: fail('HOLD_MEDIA_DOWNLOAD_STATUS')
+            fd = os.open(part,os.O_CREAT|os.O_WRONLY|os.O_NOFOLLOW|(os.O_APPEND if offset else os.O_TRUNC),0o600)
+            with os.fdopen(fd,'ab' if offset else 'wb') as target:
+                count = offset; last = 0
+                while True:
+                    block = response.read(4*1024*1024)
+                    if not block: break
+                    if count+len(block)>expected['bytes']: fail('HOLD_MEDIA_DOWNLOAD_OVERSIZE')
+                    check_write_space(path.parent,len(block),reserve)
+                    target.write(block); count += len(block)
+                    if time.monotonic()-last>30:
+                        emit('download',file=path.name,bytes=count,total=expected['bytes']); last=time.monotonic()
+                target.flush(); os.fsync(target.fileno())
+                if count != expected['bytes']: fail('HOLD_MEDIA_DOWNLOAD_INCOMPLETE')
+    checked = validate_file(part,expected)
+    if path.exists(): fail('HOLD_MEDIA_DESTINATION_RACE')
+    os.rename(part,path)
+    return {**checked,'path':str(path),'stat_mtime_ns':path.stat().st_mtime_ns}
+
+
+def discover_engine():
+    candidates = [MEDIA/'ComfyUI',Path('/root/ComfyUI'),ROOT/'ComfyUI',Path('/workspace/ComfyUI')]
+    if CONFIG.is_file() and not CONFIG.is_symlink():
+        old = json.loads(CONFIG.read_text())
+        if old.get('engine_root'): candidates.insert(0,Path(old['engine_root']))
+    found = []
+    for path in candidates:
+        path = plain(path)
+        if (path/'main.py').is_file() and (path/'comfy').is_dir() and path not in found:
+            found.append(path)
+    if len(found)>1: fail('HOLD_MEDIA_MULTIPLE_EXISTING_ENGINES')
+    return found[0] if found else None
+
+
+def extract_source(archive, destination):
+    destination = plain(destination)
+    if destination.exists(): fail('HOLD_MEDIA_ENGINE_DESTINATION_EXISTS')
+    staging = Path(tempfile.mkdtemp(prefix='.comfy-source-',dir=destination.parent))
+    total = 0
+    with tarfile.open(archive,'r:gz') as source:
+        for member in source:
+            parts = PurePosixPath(member.name).parts
+            if not parts or parts[0] != 'ComfyUI-'+COMFY_COMMIT or '..' in parts or PurePosixPath(member.name).is_absolute():
+                fail('HOLD_MEDIA_ARCHIVE_PATH')
+            if len(parts)==1: continue
+            if not member.isdir() and not member.isfile(): fail('HOLD_MEDIA_ARCHIVE_LINK_OR_TYPE')
+            target = plain(staging.joinpath(*parts[1:]))
+            if member.isdir(): target.mkdir(parents=True,exist_ok=True); continue
+            total += member.size
+            if total>128*1024*1024: fail('HOLD_MEDIA_ARCHIVE_EXPANSION')
+            target.parent.mkdir(parents=True,exist_ok=True)
+            with source.extractfile(member) as inp,target.open('xb') as out:
+                shutil.copyfileobj(inp,out,1024*1024)
+    if not (staging/'main.py').is_file(): fail('HOLD_MEDIA_ARCHIVE_MAIN_MISSING')
+    atomic_json(staging/'nox-source.json',{'commit':COMFY_COMMIT,'archive_sha256':COMFY_ARCHIVE['sha256']})
+    staging.rename(destination)
+    return destination
+
+
+def ensure_engine(existing):
+    if existing:
+        emit('existing_engine_reused',path=str(existing))
+        return existing
+    MEDIA.mkdir(mode=0o700,parents=True,exist_ok=True)
+    archive = MEDIA/'source'/('ComfyUI-'+COMFY_COMMIT+'.tar.gz')
+    download(COMFY_ARCHIVE['url'],archive,COMFY_ARCHIVE)
+    return extract_source(archive,MEDIA/'ComfyUI')
+
+
+def base_environment():
+    code = "import json,sys,sysconfig,torch;print(json.dumps({'python':sys.version.split()[0],'purelib':sysconfig.get_path('purelib'),'torch':torch.__version__,'torch_file':torch.__file__,'cuda':torch.version.cuda,'arch':(torch._C._cuda_getArchFlags() or '').split()}))"
+    data = json.loads(run([BASE_PYTHON,'-c',code],60,env={**os.environ,'PYTHONDONTWRITEBYTECODE':'1','CUDA_VISIBLE_DEVICES':''}))
+    if data.get('torch')!='2.6.0+cu124' or data.get('cuda')!='12.4' or 'sm_70' not in data.get('arch',[]):
+        fail('HOLD_MEDIA_SHARED_TORCH_SM70_PIN')
+    if not str(data.get('purelib','')).startswith('/root/venv_volta/lib/'):
+        fail('HOLD_MEDIA_SHARED_ENV_PATH')
+    return data
+
+
+def ensure_environment(base):
+    environment = plain(MEDIA/'venv'); python = environment/'bin/python'
+    marker = environment/'nox-environment.json'
+    spec = {'schema':1,'shared_purelib':base['purelib'],'shared_torch':base['torch'],
+            'torch_file':base['torch_file'],'pypi_pins':list(PYPI_PINS),'cuda_pins':list(CUDA_PINS)}
+    if environment.exists():
+        if not marker.is_file() or json.loads(marker.read_text())!=spec:
+            fail('HOLD_MEDIA_EXISTING_ENVIRONMENT_SCOPE')
+    else:
+        run([BASE_PYTHON,'-m','venv',environment],120)
+        atomic_json(marker,spec)
+    purelib = Path(run([python,'-c','import sysconfig;print(sysconfig.get_path("purelib"))']).strip())
+    if not purelib.is_relative_to(environment): fail('HOLD_MEDIA_ISOLATED_INSTALL_PATH')
+    # The isolated environment sees the existing CUDA/Torch wheels. All pip
+    # targets remain in this new venv; the trainer's dependencies are untouched.
+    plain(purelib/'nox_shared_torch.pth').write_text(base['purelib']+'\n')
+    env = {**os.environ,'PIP_DISABLE_PIP_VERSION_CHECK':'1','PIP_NO_CACHE_DIR':'1',
+           'PIP_REQUIRE_VIRTUALENV':'1','PYTHONNOUSERSITE':'1','PYTHONDONTWRITEBYTECODE':'1',
+           'CUDA_VISIBLE_DEVICES':''}
+    emit('isolated_environment_installing',packages=len(PYPI_PINS)+len(CUDA_PINS),shared_torch=base['torch'])
+    run([python,'-m','pip','install','--no-deps','--ignore-installed','--only-binary=:all:',
+         '--index-url','https://pypi.org/simple',*PYPI_PINS],900,env=env)
+    run([python,'-m','pip','install','--no-deps','--ignore-installed','--only-binary=:all:',
+         '--index-url','https://download.pytorch.org/whl/cu124',*CUDA_PINS],600,env=env)
+    code = "import json,torch,torchvision,torchaudio,transformers,aiohttp,yarl,torchsde,kornia,spandrel,soundfile,sentencepiece,av;from av.codec import Codec;print(json.dumps({'torch':torch.__version__,'torch_file':torch.__file__,'transformers':transformers.__version__,'torchvision':torchvision.__version__,'torchaudio':torchaudio.__version__,'av':av.__version__,'vp9_encoder':Codec('libvpx-vp9','w').name}))"
+    check = json.loads(run([python,'-c',code],120,env=env))
+    if check.get('torch_file')!=base['torch_file'] or check.get('torch')!=base['torch']:
+        fail('HOLD_MEDIA_TORCH_REUSE_CHANGED')
+    if check.get('vp9_encoder')!='libvpx-vp9': fail('HOLD_MEDIA_VP9_ENCODER_MISSING')
+    emit('isolated_environment_verified',**check)
+    return python,check
+
+
+def model_paths_config(rows):
+    # JSON is also valid YAML; ComfyUI accepts lists as newline-separated paths.
+    return {'nox_media':{'base_path':'/', **{
+        subdir:'\n'.join(sorted({str(Path(row['path']).parent) for row in rows if row['subdir']==subdir}))
+        for subdir in sorted({row['subdir'] for row in rows})}}}
+
+
+def health_chat():
+    with urllib.request.urlopen('http://127.0.0.1:8081/health',timeout=8) as response:
+        if response.status!=200: fail('HOLD_MEDIA_CHAT_HEALTH')
+
+
+def process_identity(pid):
+    p = Path('/proc')/str(pid)
+    fields = (p/'stat').read_text().split(') ',1)[1].split()
+    env = dict(part.split('=',1) for part in (p/'environ').read_text().split('\0') if '=' in part)
+    argv = [x.decode(errors='replace') for x in (p/'cmdline').read_bytes().split(b'\0') if x]
+    return {'pid':pid,'start_ticks':fields[19],'cuda':env.get('CUDA_VISIBLE_DEVICES'),
+            'service':env.get('SUPERVISOR_PROCESS_NAME'),'argv':argv}
+
+
+def service_status():
+    result = subprocess.run(['supervisorctl','status',SERVICE],capture_output=True,text=True,timeout=15)
+    match = re.match('^'+SERVICE+r'\s+(\w+)(?:\s+pid\s+(\d+))?',result.stdout.strip())
+    return {'state':match[1] if match else 'UNKNOWN','pid':int(match[2]) if match and match[2] else None}
+
+
+def start_engine(config):
+    with lock('media.lock'),gpu_lease():
+        if not plain(ROOT/'state/TRAIN_HOLD.flag').is_file(): fail('HOLD_MEDIA_TRAINING_MUST_YIELD')
+        health_chat()
+        current = service_status()
+        if current['state']=='RUNNING':
+            identity = process_identity(current['pid'])
+            if identity['cuda']!='1' or str(Path(config['engine_root'])/'main.py') not in identity['argv']:
+                fail('HOLD_MEDIA_EXISTING_SERVICE_IDENTITY')
+        else:
+            memory = run(['nvidia-smi','-i','1','--query-gpu=memory.free','--format=csv,noheader,nounits']).strip()
+            if not memory.isdigit() or int(memory)<27000: fail('HOLD_MEDIA_GPU1_ADMISSION')
+            if cgroup_headroom()<32*GIB: fail('HOLD_MEDIA_RUNTIME_RAM_ADMISSION')
+            with socket.socket() as s:
+                s.settimeout(2)
+                if s.connect_ex(('127.0.0.1',8188))==0: fail('HOLD_MEDIA_PORT_ALREADY_OWNED')
+            command = [config['python'],str(Path(config['engine_root'])/'main.py'),
+                       '--listen','127.0.0.1','--port','8188','--disable-auto-launch',
+                       '--disable-all-custom-nodes','--disable-xformers','--use-pytorch-cross-attention',
+                       '--fp16-unet','--fp16-text-enc','--fp32-vae','--reserve-vram','4',
+                       '--disable-smart-memory','--extra-model-paths-config',config['extra_model_paths'],
+                       '--output-directory',config['output_root']]
+            # All executable paths are fixed local paths without shell expansion.
+            if any(re.search(r'[\s%\r\n]',a) for a in command): fail('HOLD_MEDIA_SERVICE_ARGUMENT')
+            source = ('[program:'+SERVICE+']\ncommand='+' '.join(command)+'\n'
+                      'directory='+config['engine_root']+'\nautostart=false\nautorestart=false\n'
+                      'startsecs=3\nstopwaitsecs=30\nstopasgroup=true\nkillasgroup=true\n'
+                      'environment=CUDA_VISIBLE_DEVICES="1",OMP_NUM_THREADS="4",MKL_NUM_THREADS="4",OPENBLAS_NUM_THREADS="1",PYTHONNOUSERSITE="1",PYTHONDONTWRITEBYTECODE="1",TOKENIZERS_PARALLELISM="false"\n'
+                      'stdout_logfile='+str(MEDIA/'engine.log')+'\nstderr_logfile='+str(MEDIA/'engine-error.log')+'\n')
+            destination = plain('/etc/supervisor/conf.d/'+SERVICE+'.conf')
+            if destination.exists() and destination.read_text()!=source: fail('HOLD_MEDIA_SERVICE_CONFIG_CONFLICT')
+            if not destination.exists():
+                fd = os.open(destination,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600)
+                with os.fdopen(fd,'w') as out: out.write(source); out.flush(); os.fsync(out.fileno())
+            run(['supervisorctl','reread'],30)
+            run(['supervisorctl','update',SERVICE],30)
+            run(['supervisorctl','start',SERVICE],45)
+        deadline = time.monotonic()+120
+        nodes = None
+        while time.monotonic()<deadline:
+            current = service_status()
+            if current['state'] not in ('RUNNING','STARTING'): fail('HOLD_MEDIA_ENGINE_FAILED_TO_START')
+            try:
+                nodes = get_json('http://127.0.0.1:8188/object_info',limit=8*1024*1024)
+                if all(name in nodes for name in REQUIRED_NODES): break
+            except (RuntimeError,ValueError): pass
+            time.sleep(2)
+        if not isinstance(nodes,dict) or any(name not in nodes for name in REQUIRED_NODES):
+            fail('HOLD_MEDIA_REQUIRED_NODES_MISSING')
+        identity = process_identity(service_status()['pid'])
+        if identity['cuda']!='1' or identity['service']!=SERVICE or str(Path(config['engine_root'])/'main.py') not in identity['argv']:
+            fail('HOLD_MEDIA_ENGINE_PROCESS_IDENTITY')
+        options = {'checkpoint':('CheckpointLoaderSimple','ckpt_name'),'unet':('UNETLoader','unet_name'),
+                   'clip':('CLIPLoader','clip_name'),'vae':('VAELoader','vae_name')}
+        for asset in config['assets']:
+            node,field = options[asset['role']]
+            if asset['filename'] not in nodes[node]['input']['required'][field][0]:
+                fail('HOLD_MEDIA_MODEL_OPTION_MISSING')
+        health_chat()
+        config.update(enabled=True,engine_pid=identity['pid'],start_ticks=identity['start_ticks'],
+                      ready_at=time.time(),readiness_scope='ENGINE_AND_FILES_READY_GENERATION_ACCEPTANCE_PENDING')
+        atomic_json(CONFIG,config)
+        return config
+
+
+def install(start=False):
+    with lock('install.lock'):
+        MEDIA.mkdir(mode=0o700,parents=True,exist_ok=True)
+        existing_engine = discover_engine()
+        rows = plan_assets(resources(),find_existing_assets(existing_engine),existing_partials())
+        emit('admitted',assets=[{k:r[k] for k in ('filename','bytes','storage','reused')} for r in rows])
+        verify_hf_metadata()
+        base = base_environment()
+        engine = ensure_engine(existing_engine)
+        python,environment = ensure_environment(base)
+        # Environment setup has a bounded allowance; recheck actual free space
+        # before the first large transfer, then on every streamed block.
+        for row in rows:
+            checked = download(row['source_url'],row['path'],row,
+                               SHM_RESERVE if row['storage']=='ram' else DISK_RESERVE)
+            row.update(checked)
+            emit('asset_sha_verified',filename=row['filename'],bytes=row['bytes'],sha256=row['sha256'],storage=row['storage'])
+        paths_file = MEDIA/'extra_model_paths.json'
+        atomic_json(paths_file,model_paths_config(rows))
+        output = plain(MEDIA/'outputs'); output.mkdir(mode=0o700,parents=True,exist_ok=True)
+        config = {'schema_version':1,'enabled':False,'engine_root':str(engine),'python':str(python),
+                  'engine_service':SERVICE,'engine_url':'http://127.0.0.1:8188',
+                  'extra_model_paths':str(paths_file),'output_root':str(output),
+                  'assets':rows,'workflows':['sdxl_lightning_4step','wan21_t2v_13b'],
+                  'source_commit':COMFY_COMMIT if not existing_engine else None,
+                  'engine_reused':bool(existing_engine),'engine_main_sha256':sha256(engine/'main.py'),
+                  'environment':environment,'prepared_at':time.time(),
+                  'shm_reserve_bytes':SHM_RESERVE,'disk_reserve_bytes':DISK_RESERVE,
+                  'cgroup_reserve_bytes':CGROUP_RESERVE,'ephemeral_cache_rehydrate_required_after_reboot':True,
+                  'native_fp8_compute_enabled':False,'training_environment_modified':False,
+                  'readiness_scope':'FILES_VERIFIED_ENGINE_NOT_STARTED'}
+        atomic_json(CONFIG,config)
+        if start: config = start_engine(config)
+        emit('prepared',enabled=config['enabled'],config=str(CONFIG),scope=config['readiness_scope'])
+        return config
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('command',choices=('plan','install','start'))
+    parser.add_argument('--start',action='store_true')
+    args = parser.parse_args()
+    if args.command=='plan':
+        engine = discover_engine()
+        emit('plan',engine=str(engine) if engine else None,
+             assets=plan_assets(resources(),find_existing_assets(engine),existing_partials()))
+    elif args.command=='install': install(args.start)
+    else:
+        config = json.loads(plain(CONFIG).read_text())
+        for row in config['assets']: validate_file(row['path'],row)
+        start_engine(config)
+
+
+if __name__=='__main__':
+    try: main()
+    except Exception as exc:
+        code = str(exc)
+        emit('held',code=code if re.fullmatch(r'HOLD_[A-Z0-9_]+',code) else type(exc).__name__)
+        raise SystemExit(2)
