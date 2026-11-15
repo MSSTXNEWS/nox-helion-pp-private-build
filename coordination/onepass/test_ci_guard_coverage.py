@@ -128,6 +128,49 @@ PC_ONLY = frozenset((
 ))
 WINDOWS_BOUNDARY = "WINDOWS_OWNER_PC_REQUIRED_NOT_VAST_METRICS"
 ONEHOST_BOUNDARY = "EXISTING_ONEHOST"
+# V152: pinned source host classifications from V151, not native proof.
+# Any host reclassification requires a reviewed baseline and new acceptance.
+FROZEN_EXISTING_ONEHOST = frozenset((
+    "/api/health",
+    "/api/nox/activity",
+    "/api/nox/chat/stream",
+    "/api/nox/experience",
+    "/api/nox/history",
+    "/api/nox/memory",
+    "/api/nox/model",
+    "/api/nox/premium/capabilities",
+    "/api/nox/premium/status",
+    "/api/nox/status",
+    "/api/nox/stop",
+    "/api/nox/system/processes",
+    "/api/nox/training/status",
+    "/api/status",
+    "/api/training/status",
+    "/api/ui/capabilities",
+    "/api/ui/memory/dialogs",
+    "/api/ui/memory/dialogs/create",
+    "/api/ui/memory/dialogs/history",
+    "/api/ui/memory/dialogs/status",
+    "/api/ui/memory/dialogs/update",
+    "/api/ui/memory/facts/history",
+    "/api/ui/memory/status",
+))
+FROZEN_EXTERNAL_CONSENT = frozenset((
+    "/api/push/ack",
+    "/api/push/status",
+    "/api/push/subscribe",
+    "/api/push/test",
+    "/api/push/unsubscribe",
+    "/api/ui/push/",
+    "/api/ui/push/ack",
+    "/api/ui/push/status",
+    "/api/ui/services/fx",
+    "/api/ui/services/geocode",
+    "/api/ui/services/news",
+    "/api/ui/services/weather",
+))
+UNVERIFIED_BOUNDARY = "REQUIRES_ORIGINAL_CALLSITE_AND_OWNER_HOST_VERIFICATION"
+EXTERNAL_BOUNDARY = "BROWSER_CONSENT_OR_EXTERNAL_PROVIDER_REVIEW"
 
 
 def assert_original_92_owner_boundary(plan: dict, frozen: dict) -> None:
@@ -147,6 +190,21 @@ def assert_original_92_owner_boundary(plan: dict, frozen: dict) -> None:
                  if item.get("host_boundary") == WINDOWS_BOUNDARY}
     if pc_actual != PC_ONLY:
         raise AssertionError("HOLD_92_WINDOWS_OWNER_HOST_BOUNDARY_DRIFT")
+    # V151 pinned 16 Windows routes and three OneHost routes only.
+    # Any other reclassification, including equal-count swaps, used to pass.
+    onehost_actual = {route for route, item in by_path.items()
+                      if item.get("host_boundary") == ONEHOST_BOUNDARY}
+    if onehost_actual != FROZEN_EXISTING_ONEHOST:
+        raise AssertionError("HOLD_92_ONEHOST_ROUTE_BOUNDARY_DRIFT")
+    external_actual = {route for route, item in by_path.items()
+                       if item.get("host_boundary") == EXTERNAL_BOUNDARY}
+    if external_actual != FROZEN_EXTERNAL_CONSENT:
+        raise AssertionError("HOLD_92_EXTERNAL_CONSENT_BOUNDARY_DRIFT")
+    unresolved_expected = set(names) - PC_ONLY - FROZEN_EXISTING_ONEHOST - FROZEN_EXTERNAL_CONSENT
+    unresolved_actual = {route for route, item in by_path.items()
+                         if item.get("host_boundary") == UNVERIFIED_BOUNDARY}
+    if unresolved_actual != unresolved_expected:
+        raise AssertionError("HOLD_92_UNVERIFIED_HOST_BOUNDARY_DRIFT")
     for path in ("/api/nox/status", "/api/nox/chat/stream", "/api/nox/memory"):
         if by_path[path].get("host_boundary") != ONEHOST_BOUNDARY:
             raise AssertionError("HOLD_92_ONEHOST_BOUNDARY_DRIFT_" + path)
@@ -193,6 +251,30 @@ class Original92WindowsOwnerBoundary(unittest.TestCase):
              if item["route"] == "/api/install/backup")["functional_e2e"] = "PASS"
         with self.assertRaisesRegex(AssertionError, "HOLD_92_UNATTESTED_FUNCTIONAL_PASS"):
             assert_original_92_owner_boundary(false_pass, frozen)
+
+    def test_regression_rejects_equal_count_host_swap_and_external_consent_drift(self):
+        # V152 reproduction: before patch, this equal-count swap passed V151.
+        from copy import deepcopy
+        plan, frozen = self.fixtures()
+        swapped = deepcopy(plan)
+        next(x for x in swapped["functions"] if x["route"] == "/api/health")[
+            "host_boundary"] = UNVERIFIED_BOUNDARY
+        next(x for x in swapped["functions"] if x["route"] == "/api/chat")[
+            "host_boundary"] = ONEHOST_BOUNDARY
+        with self.assertRaisesRegex(AssertionError, "HOLD_92_ONEHOST_ROUTE_BOUNDARY_DRIFT"):
+            assert_original_92_owner_boundary(swapped, frozen)
+
+        external = deepcopy(plan)
+        next(x for x in external["functions"] if x["route"] == "/api/ui/services/news")[
+            "host_boundary"] = UNVERIFIED_BOUNDARY
+        with self.assertRaisesRegex(AssertionError, "HOLD_92_EXTERNAL_CONSENT_BOUNDARY_DRIFT"):
+            assert_original_92_owner_boundary(external, frozen)
+
+        unexpected = deepcopy(plan)
+        next(x for x in unexpected["functions"] if x["route"] == "/api/chat")[
+            "host_boundary"] = "INVENTED_NATIVE_OWNER_PASS"
+        with self.assertRaisesRegex(AssertionError, "HOLD_92_UNVERIFIED_HOST_BOUNDARY_DRIFT"):
+            assert_original_92_owner_boundary(unexpected, frozen)
 
 if __name__ == "__main__":
     unittest.main()
