@@ -123,11 +123,20 @@ def plan(matrix:dict, observations:Mapping, *, max_new:int=8)->dict:
     reserve=resources.get('checkpoint_disk_reserve_bytes',10_000_000_000)
     if type(disk) is not int or type(reserve) is not int or disk<0 or reserve<10_000_000_000:
         return {'state':'HOLD_DISK_TELEMETRY','planned':[],'source_sha256':source_hash}
+    # Reconcile real OneHost queue state before proposing any new work.
+    # Never re-enqueue a running or unknown task on stale heartbeat alone.
+    blocked_native=set()
+    if 'task_status' in observations or 'native_queue_verified' in observations:
+        from .worm_supervisor import audit_native_queue
+        report=audit_native_queue(matrix,observations,now_unix=observations.get('now_unix'))
+        if report['state']!='NATIVE_QUEUE_RECONCILED_PROPOSALS_ONLY':
+            return {'state':report['state'],'planned':[],'jobs_enqueued':0,'source_sha256':source_hash}
+        blocked_native=set(report['protected_task_ids'])
     selected=[];blocked=[]
     gpu_slots=min(1,budget_gpu);cpu_slots=min(8,budget_cpu)
     for t in sorted(matrix['tasks'],key=lambda t:_priority(t,progress)):
         id=t['task_id']; reasons=[]
-        if id in existing or _valid_completion(completed.get(id),id):continue
+        if id in blocked_native or id in existing or _valid_completion(completed.get(id),id):continue
         for dep in t['depends_on']:
             if not _valid_completion(completed.get(dep),dep):reasons.append('PENDING_DEPENDENCY:'+dep)
         if t['requires_backup_restore'] and observations.get('offsite_restore_verified') is not True:reasons.append('BACKUP_RESTORE_GATE')

@@ -1,0 +1,32 @@
+name: NOX V175 existing OneHost worm60 supervisor source QA
+on:
+  push:
+    branches: [nox/v175-worm60-native-heartbeat-owner-recovery-20261115]
+    paths:
+      - 'nox_runpod/teacher_mesh/v47/control/**'
+      - 'coordination/NOX_V175_WORM60*'
+      - '.github/workflows/nox-v175-worm60-source.yml'
+permissions:
+  contents: read
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - name: Test existing V46 V94 and strict native lifecycle gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile nox_runpod/teacher_mesh/v47/control/dispatcher.py nox_runpod/teacher_mesh/v47/control/worm_supervisor.py
+          python3 -m unittest -v nox_runpod.teacher_mesh.v47.control.test_v94_priority
+          python3 - <<'PY'
+          import json,pathlib
+          p=json.loads(pathlib.Path('coordination/NOX_V175_WORM60_OWNER_POLICY.json').read_text())
+          assert p['expected_worm_tasks']==60 and p['verified_native_registered_at_audit']==0
+          assert p['concurrent_gpu1_trainers_max']==1
+          assert p['stale_heartbeat_never_kill']
+          print('NOX_V175_SOURCE_WORMS_QA=PASS')
+          print('NOX_V175_NATIVE_WORMS_LAUNCHED=false')
+          PY
