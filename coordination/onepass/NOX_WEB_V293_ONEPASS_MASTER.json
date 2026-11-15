@@ -88,6 +88,26 @@
       "status": "HOLD"
     }
   ],
-  "next_hinge": "Restore authorized provider access or existing private SSH without new VM, read exact source SHAs and durable backup receipts, then gated native E2E and Windows owner acceptance. No automatic production promotion.",
-  "release_status": "HOLD_FULL_WEB_V293"
+  "next_hinge": "Verify original authorized Vast provider access; install source-pinned derived full WEB only in staging and run native owner cookie chat/S03 plus Windows physical QA; no new backend. No server install while Vast HTTP404 persists.",
+  "release_status": "HOLD_FULL_WEB_V293",
+  "legacy_protocol_compat_candidate": {
+    "filename": "NOX_HELION_WEB_V293_ONEPASS_NATIVE_COMPAT.zip",
+    "sha256": "45893adaf1fa49991dbb9f61f3d5cc4f2273eddf5d6f2e2548cf57d0b09fb947",
+    "base_sha256": "e70f0439fdf0a028c1d52fc638a38086aa7863fb7b33733a9609532dd544a9d5",
+    "entries": 1091,
+    "original_v1_entries_unchanged": 1075,
+    "html_pages_injected": 14,
+    "guarded_legacy_sse_consumer": 1,
+    "new_js_module": "coordination/onepass/nox-legacy-chat-bridge-v293.js",
+    "js_sha256": "f953f83cb49087847b7125ff85a8cbf791ecc9de2f9efb44b7140e548b5f2c4d",
+    "bridge_scope": "ONLY_SAME_ORIGIN_AUTHENTICATED_NOX_NATIVE_OWNER_AT_/nox-web-v29",
+    "real_backend": "EXISTING_/api/nox/chat/stream",
+    "requests": "LEGACY_JSON_OR_SSE_TO_REAL_NATIVE_NDJSON",
+    "s03_commit_gate": "saved=true AND s03_integrated=true AND matching original dialog history",
+    "offline_node_tests": "10/10 PASS",
+    "local_chromium_mocked_backend_tests": "8/8 PASS",
+    "physical_owner_onehost_e2e": "HOLD_VAST_ACCESS",
+    "real_windows_e2e": "NOT_TESTED",
+    "native_training": "NOT_CHANGED"
+  }
 }
