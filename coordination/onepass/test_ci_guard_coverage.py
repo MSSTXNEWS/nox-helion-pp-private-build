@@ -154,9 +154,13 @@ def assert_original_92_owner_boundary(plan: dict, frozen: dict) -> None:
             "REQUIRES_ORIGINAL_CALLSITE_AND_OWNER_HOST_VERIFICATION"):
         raise AssertionError("HOLD_92_S03_WRITER_OWNER_UNVERIFIED_BOUNDARY_DRIFT")
     for route, item in by_path.items():
-        if item.get("functional_e2e") not in (
-                "NOT_CLAIMED", "SCOPED_PHYSICAL_OWNER_HTTP_S03_EVIDENCE"):
+        evidence = item.get("functional_e2e")
+        if evidence not in (
+                "NOT_CLAIMED", "SCOPED_PHYSICAL_OWNER_HTTP_S03_EVIDENCE",
+                "SCOPED_REAL_READ_ONLY_HTTP_ACCEPTED"):
             raise AssertionError("HOLD_92_UNATTESTED_FUNCTIONAL_PASS_" + route)
+        if evidence != "NOT_CLAIMED" and item.get("host_boundary") != ONEHOST_BOUNDARY:
+            raise AssertionError("HOLD_92_SCOPED_HTTP_EVIDENCE_WRONG_HOST_" + route)
     if plan.get("gate_policy", "").find("independent live acceptance") < 0:
         raise AssertionError("HOLD_92_NO_LIVE_ACCEPTANCE_GATE")
 
