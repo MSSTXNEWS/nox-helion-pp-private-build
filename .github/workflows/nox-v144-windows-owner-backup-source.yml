@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - fix/nox-e1-v144-windows-owner-backup-guard
+      - fix/nox-e2-v145-windows-status-owner-host-guard
       - feature/nox-v38-synaptic-brain-20261114
     paths:
       - 'coordination/onepass/v144_windows_backup_owner_guard.py'
@@ -37,7 +38,7 @@ jobs:
           python -m py_compile coordination/onepass/v144_windows_backup_owner_guard.py
           python -m unittest discover -s coordination/onepass -p 'test_v144_windows_backup_owner_guard.py' -v
           echo 'NOX_V144_CI_EXACT_V140_ZIP_NOT_ATTACHED=true'
-      - name: Execute real Javascript source guard in isolated Node VM (8 scenarios)
+      - name: Execute real Javascript source guard in isolated Node VM (9 scenarios, including OneHost != Windows)
         run: |
           set -euo pipefail
           python - <<'PY'
@@ -52,6 +53,7 @@ jobs:
         run: |
           echo 'NOX_V144_FULL_V140_ARCHIVE_VERIFIED_BY_OWNER_LOCAL_RUN_NOT_CI=true'
           echo 'NOX_V144_NATIVE_WINDOWS_OWNER_BACKUP=HOLD'
+          echo 'NOX_V145_ONEHOST_STATUS_NOT_PC_AUTHORITY=true'
           echo 'NOX_V144_NATIVE_VAST_ONEHOST_AUTH=HOLD'
           echo 'NOX_V144_ORIGINAL_S03_WEIGHT_CHECKPOINT_UNTOUCHED=true'
           echo 'NOX_V144_PRODUCTION_PROMOTION=false'
