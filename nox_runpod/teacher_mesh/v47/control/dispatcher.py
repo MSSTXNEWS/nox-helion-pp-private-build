@@ -374,6 +374,16 @@ def enqueue_approved(native:NativePorts,matrix:dict,owner_scope:str,*,limit:int=
                     or approved_audit.get('untrusted_count')!=0):
                 return {'state':'HOLD_NATIVE_QUEUE_CHANGED_AFTER_APPROVAL',
                         'jobs_enqueued_verified':len(receipts),'receipts':receipts}
+            # A valid new queue row can appear while approve() executes,
+            # without changing the owner lease epoch. The source plan was
+            # computed BEFORE this approval, so re-check *this* task's aliases
+            # against original native registry AND original duplicate port.
+            # Never queue a second GPU worker for an already-present task.
+            if (any(name in after_approval['task_status'] for name in identities)
+                    or any(native.native_duplicate_check(name) is not False
+                           for name in identities)):
+                return {'state':'HOLD_NATIVE_TASK_APPEARED_AFTER_APPROVAL',
+                        'jobs_enqueued_verified':len(receipts),'receipts':receipts}
             ticket=native.queue_enqueue(payload)
             if (not isinstance(ticket,Mapping) or ticket.get('accepted') is not True
                     or not isinstance(ticket.get('job_id'),str)

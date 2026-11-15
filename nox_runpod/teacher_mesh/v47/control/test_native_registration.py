@@ -401,5 +401,38 @@ class NativeRegistrationGates(unittest.TestCase):
         self.assertEqual(self.calls['enqueue'],0)
 
 
+    def test_owner_approval_native_registry_task_appears_never_enqueues(self):
+        """A newly visible valid native job is protected even if the lease remains valid."""
+        p=plan(self.matrix,self.snapshot,max_new=1)
+        tid=p['planned'][0]['task_id']
+        from dataclasses import replace
+        old=self.ports()
+        def external_registration_during_approval(scope,digest,inventory):
+            self.snapshot['task_status']={tid:{
+                'task_id':tid,'state':'PENDING','native_verified':True,
+                'receipt_sha256':'c'*64,'job_id':'native-job-external'}}
+            return True
+        native=replace(old,approve=external_registration_during_approval)
+        r=enqueue_approved(native,self.matrix,self.scope,limit=1)
+        self.assertEqual(r['state'],'HOLD_NATIVE_TASK_APPEARED_AFTER_APPROVAL')
+        self.assertEqual(self.calls['enqueue'],0)
+        self.assertEqual(self.calls['s03'],0)
+
+    def test_owner_approval_duplicate_port_changes_never_enqueues(self):
+        """Native duplicate registry can change even when state snapshot lags."""
+        p=plan(self.matrix,self.snapshot,max_new=1)
+        tid=p['planned'][0]['task_id']
+        from dataclasses import replace
+        old=self.ports()
+        def external_duplicate_during_approval(scope,digest,inventory):
+            self.dupe_alias=tid
+            return True
+        native=replace(old,approve=external_duplicate_during_approval)
+        r=enqueue_approved(native,self.matrix,self.scope,limit=1)
+        self.assertEqual(r['state'],'HOLD_NATIVE_TASK_APPEARED_AFTER_APPROVAL')
+        self.assertEqual(self.calls['enqueue'],0)
+        self.assertEqual(self.calls['s03'],0)
+
+
 if __name__=='__main__':
     unittest.main()
