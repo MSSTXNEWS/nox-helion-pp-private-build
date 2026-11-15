@@ -1,0 +1,27 @@
+name: NOX V104 P0 truthful native TTFT source regression
+on:
+  push:
+    branches: [feature/nox-v38-synaptic-brain-20261114]
+    paths:
+      - '.github/workflows/nox-v104-p0-timings-source.yml'
+      - 'nox_runpod/teacher_mesh/v104/one_model_thinking_benchmark.py'
+      - 'nox_runpod/teacher_mesh/v104/test_one_model_thinking_benchmark.py'
+  workflow_dispatch:
+permissions: {contents: read}
+concurrency:
+  group: nox-v104-p0-timings-source
+  cancel-in-progress: false
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    env:
+      PYTHONPATH: "."
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - name: One offline comprehensive source test; no Vast credentials or inference calls
+        run: |
+          set -euo pipefail
+          python3 -m py_compile nox_runpod/teacher_mesh/v104/one_model_thinking_benchmark.py
+          python3 -m unittest -v nox_runpod.teacher_mesh.v104.test_one_model_thinking_benchmark

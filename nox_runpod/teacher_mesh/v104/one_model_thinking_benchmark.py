@@ -4,9 +4,47 @@ Authenticated via existing V51, no model changes, private prompts or logs.
 Two bounded synthetic probes; no new servers / download / restart.
 """
 from __future__ import annotations
-import contextlib,io,time
+import contextlib,io,json,time
 from nox_runpod.teacher_mesh.v51 import ephemeral_ssh_probe as c
 prev=c.api
+def native_timing_evidence(rows):
+    """Require two genuine completed native streams, never just an SSH banner."""
+    cases = {}
+    summary = None
+    for row in rows:
+        if row.startswith('NATIVE_V104_CASE='):
+            try:
+                item = json.loads(row.split('=', 1)[1])
+            except (TypeError, ValueError):
+                return False
+            if not isinstance(item, dict) or item.get('label') not in ('default', 'no_thinking'):
+                return False
+            if item['label'] in cases:
+                return False
+            cases[item['label']] = item
+        elif row.startswith('NATIVE_V104_RESULT='):
+            if summary is not None:
+                return False
+            try:
+                summary = json.loads(row.split('=', 1)[1])
+            except (TypeError, ValueError):
+                return False
+    if not isinstance(summary, dict) or set(cases) != {'default', 'no_thinking'}:
+        return False
+    if (summary.get('state') != 'READ_ONLY_MODEL_PROBES_COMPLETE'
+            or summary.get('cases') != 2 or summary.get('completed') != 2
+            or summary.get('no_model_config_changed') is not True):
+        return False
+    for case in cases.values():
+        value = case.get('ttft_ms')
+        if (case.get('state') != 'COMPLETED'
+                or case.get('stream_done') is not True
+                or type(value) not in (int, float) or not 0 <= value <= 30000
+                or type(case.get('content_chunks')) is not int
+                or case['content_chunks'] <= 0):
+            return False
+    return True
+
 def gate(method,path,key,data=None):
     r=prev(method,path,key,data)
     if method=="POST" and path.endswith("/ssh/"):time.sleep(12)
@@ -54,7 +92,7 @@ def do(label,extra):
     req=urllib.request.Request('http://127.0.0.1:8081/v1/chat/completions',
       data=json.dumps(request,ensure_ascii=False).encode('utf-8'),
       headers={'Content-Type':'application/json','Accept':'text/event-stream'},method='POST')
-    start=time.monotonic();first_content=None;finish=None;done=False;content_chunks=0;reasoning_chunks=0
+    start=time.monotonic();first_content=None;last_content=None;finish=None;done=False;content_chunks=0;reasoning_chunks=0;completion_tokens=None
     try:
         with urllib.request.urlopen(req,timeout=12) as r:
             if r.status!=200:return {'state':'HOLD_HTTP'}
@@ -67,19 +105,26 @@ def do(label,extra):
                 if payload=='[DONE]':done=True;break
                 try:v=json.loads(payload)
                 except ValueError:continue
+                if not isinstance(v,dict):continue
+                usage=v.get('usage')
+                if isinstance(usage,dict):
+                    count=usage.get('completion_tokens')
+                    if type(count) is int and 0<count<=8192:completion_tokens=count
                 for c in (v.get('choices') or []):
                     if not isinstance(c,dict):continue
                     delta=c.get('delta') or {}
                     if isinstance(delta,dict) and isinstance(delta.get('content'),str) and delta['content']:
                         content_chunks+=1
-                        if first_content is None:first_content=time.monotonic()
+                        last_content=time.monotonic()
+                        if first_content is None:first_content=last_content
                     if isinstance(delta,dict) and delta.get('reasoning_content'):
                         reasoning_chunks+=1
                     if c.get('finish_reason'):finish=c['finish_reason']
-        return {'label':label,'state':'COMPLETED' if done else 'HOLD_INCOMPLETE',
+        return {'label':label,'state':'COMPLETED' if done and first_content is not None and finish not in ('length','content_filter') else 'HOLD_INCOMPLETE',
            'ttft_ms':round((first_content-start)*1000,1) if first_content else None,
            'total_ms':round((time.monotonic()-start)*1000,1),
            'content_chunks':content_chunks,'reasoning_chunks':reasoning_chunks,
+           'decode_tokens_per_sec':round((completion_tokens-1)/(last_content-first_content),2) if completion_tokens and completion_tokens>1 and last_content and first_content and last_content>first_content else None,
            'finish_reason':str(finish)[:20] if finish else None,
            'stream_done':done,'user_content_exported':False}
     except urllib.error.HTTPError as e:return {'label':label,'state':'HOLD_HTTP_'+str(e.code)}
@@ -110,6 +155,6 @@ if __name__=="__main__":
         except Exception:ok=False
     rows=[x for x in buf.getvalue().splitlines() if x.startswith(('NATIVE_V104_','TEMP_SSH_CLEANUP='))]
     for x in rows:print(x[:790])
-    accepted=ok and any(x.startswith('NATIVE_V104_RESULT=') for x in rows)
+    accepted=ok and native_timing_evidence(rows)
     print('NOX_V104_TIMINGS_VERIFIED='+str(bool(accepted)).lower())
     raise SystemExit(0 if accepted else 2)
