@@ -5,6 +5,8 @@ on:
     paths:
       - 'coordination/onepass/nox-legacy-chat-bridge-v293.js'
       - 'coordination/onepass/build_legacy_compat_v2.py'
+      - 'coordination/onepass/v134_native_owner_compat_converger.py'
+      - 'coordination/onepass/test_v134_native_owner_compat_converger.py'
       - 'coordination/onepass/test_chat_compat_node.cjs'
       - 'coordination/onepass/test_build_legacy_compat_v2.py'
       - '.github/workflows/nox-onepass-native-compat-source.yml'
@@ -12,6 +14,8 @@ on:
     paths:
       - 'coordination/onepass/nox-legacy-chat-bridge-v293.js'
       - 'coordination/onepass/build_legacy_compat_v2.py'
+      - 'coordination/onepass/v134_native_owner_compat_converger.py'
+      - 'coordination/onepass/test_v134_native_owner_compat_converger.py'
       - 'coordination/onepass/test_chat_compat_node.cjs'
       - 'coordination/onepass/test_build_legacy_compat_v2.py'
       - '.github/workflows/nox-onepass-native-compat-source.yml'
@@ -38,6 +42,8 @@ jobs:
           set -euo pipefail
           python -m py_compile coordination/onepass/build_legacy_compat_v2.py
           python -m unittest -v coordination.onepass.test_build_legacy_compat_v2
+          python -m py_compile coordination/onepass/v134_native_owner_compat_converger.py
+          python -m unittest -v coordination.onepass.test_v134_native_owner_compat_converger
       - name: Export exact tested owner-stage compatibility source for V134 convergence
         uses: actions/upload-artifact@v4
         with:
@@ -46,6 +52,8 @@ jobs:
             coordination/onepass/nox-legacy-chat-bridge-v293.js
             coordination/onepass/build_legacy_compat_v2.py
             coordination/onepass/NOX_V293_NATIVE_COMPAT_ACCEPTANCE.json
+            coordination/onepass/v134_native_owner_compat_converger.py
+            coordination/onepass/test_v134_native_owner_compat_converger.py
           if-no-files-found: error
           retention-days: 14
       - name: Confirm no native Vast/Windows changes from source tests
