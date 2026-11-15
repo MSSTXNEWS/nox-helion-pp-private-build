@@ -1,16 +1,18 @@
 name: NOX FORGE real STOP callback lifecycle — source regression only
 on:
   push:
-    branches: [fix/nox-forge-stop-callbacks-20261115]
+    branches: [fix/nox-forge-stop-callbacks-20261115, feature/nox-v38-synaptic-brain-20261114]
     paths:
       - 'nox_runpod/teacher_mesh/v135/train_full_base_zero3.py'
       - 'nox_runpod/teacher_mesh/v135/tests/test_training_stop_lifecycle.py'
       - '.github/workflows/nox-v135-forge-stop-callback-source.yml'
+      - 'coordination/onepass/test_ci_guard_coverage.py'
   pull_request:
     paths:
       - 'nox_runpod/teacher_mesh/v135/train_full_base_zero3.py'
       - 'nox_runpod/teacher_mesh/v135/tests/test_training_stop_lifecycle.py'
       - '.github/workflows/nox-v135-forge-stop-callback-source.yml'
+      - 'coordination/onepass/test_ci_guard_coverage.py'
 permissions:
   contents: read
 jobs:
@@ -30,6 +32,7 @@ jobs:
           python -m py_compile nox_runpod/teacher_mesh/v135/train_full_base_zero3.py
           python -m unittest -v nox_runpod.teacher_mesh.v135.tests.test_training_stop_lifecycle
           python -m unittest -v nox_runpod.teacher_mesh.v135.tests.test_fullbase_distillation
+          python -m unittest -v coordination.onepass.test_ci_guard_coverage
       - name: Prove CI cannot be mistaken for physical optimizer acceptance
         run: |
           echo 'NOX_FORGE_STOP_LIFECYCLE_SOURCE_ONLY=true'
