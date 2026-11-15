@@ -1,0 +1,52 @@
+{
+  "instructions_version": "0.0.6",
+  "executor": "MANUAL_2",
+  "date": "2026-11-15",
+  "accepted_common_head": "4eaeda2fb640e43efec2a9f079cb8b882ed0ff39",
+  "source_origin": "main:nox-control/nox_cold_drive.py",
+  "original_blob": "a2455fca402e7994b41287e2f040849f6e76b0c8",
+  "source_state": "LOCAL_TESTED_COMMON_BRANCH_INTEGRATION",
+  "native_state": "NOT_DEPLOYED",
+  "server_modified": false,
+  "server_bytes_moved": 0,
+  "server_bytes_deleted": 0,
+  "new_gpu_packages_installed_on_server": 0,
+  "source_sha256": "5093641452fb6500b407ce8d755768fb9e0e2d28a0b942731ad05485373ddbdb",
+  "tests_sha256": "6d5ed001d30d0724b658cf08c4f0ee626707c795b91de60e96571973b5ea0f26",
+  "local_test_count": 37,
+  "local_test_pass": 37,
+  "local_test_fail": 0,
+  "parallel_fixture": {
+    "scope": "LOCAL_FILES_AND_TEST_TRANSPORT_NOT_VAST_OR_DRIVE",
+    "worker_pids": [826, 827, 828, 829, 830, 831],
+    "copies_verified": 6,
+    "bytes_verified": 6291456,
+    "sources_deleted": false
+  },
+  "fixed": [
+    "upload was always rejected by reserve_gib default 0 although upload has no such argument",
+    "readback allocated another full model-sized SSD copy; now full bounded rclone cat SHA-256 stream",
+    "symlink rejection happened after resolve and could not detect the input link",
+    "equal basenames could overwrite different cold models; now content-addressed destinations",
+    "batch uses six OS workers, serial eviction only after every copy verifies",
+    "fresh active/protected/explicit eviction paths and native open-file/mmap checks before deletion",
+    "RAM admission checks cgroup headroom and MemAvailable, not host RAM total alone",
+    "RAM publication is atomic no-replace and expected SHA is validated before downloading"
+  ],
+  "lessons": [
+    "An existing helper on main can still be absent from the common integration branch",
+    "Test the real CLI entry path, not only imported functions",
+    "Use a streaming independent readback when SSD reserve prevents a second model copy",
+    "Six local process receipts are not six native GPU jobs or six cloud uploads",
+    "Never turn an ordinary source push into credential-bearing native execution"
+  ],
+  "current_access_blockers": [
+    "current local execution environment has no usable external DNS and no ssh-keyscan",
+    "bounded direct TCP attempt to the historical owner endpoint was refused",
+    "GitHub connector can read/write repository but did not expose workflow_dispatch",
+    "prior TinyFish run was non-retryably blocked by wallet balance",
+    "prior alternate portal fetch returned HTTP 401 without an authorized session"
+  ],
+  "historical_native_evidence_not_a_new_deploy": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43721965340",
+  "handoff": "Use the existing authorized OneHost maintenance session and its shared writer lease. Discover current native paths and configured rclone remote without exporting secrets; refresh active/protected model inventory. Integrate this exact tested helper, perform real copy/readback on inactive models, refresh eviction manifest before serial deletion, preserve HF config/tokenizer/index files and restore the complete model bundle. Then resolve the combined download manifest against the actual environment and benchmark existing Resonance. Do not repeat read-only inventory as a deployment."
+}

@@ -1,0 +1,43 @@
+{
+  "instructions_version": "0.0.6",
+  "date": "2026-11-15",
+  "instance_id": 60509551,
+  "scope": "existing NOX OneHost and ready WEB Resonance only",
+  "policy": {
+    "workers": 6,
+    "workers_are": "OS processes, not AI subagents",
+    "chat_priority": true,
+    "target_sustained_utilization_percent": [80, 85],
+    "target_peak_utilization_percent": 95,
+    "no_fake_load": true,
+    "one_active_chat_model": true,
+    "combined_training": ["LoRA skill acquisition", "validated merge into matching base", "periodic full-parameter distillation", "measured inference quantization"],
+    "latest_owner_LoRA_permission_supersedes_older_no_LoRA_text": true,
+    "quantization_lossless_guarantee": false,
+    "no_new_backend": true,
+    "no_windows_exe": true,
+    "no_blind_torch_upgrade": true,
+    "training_state_and_S03_protected": true
+  },
+  "download_state_this_run": "NO_NEW_SERVER_DOWNLOAD_CONFIRMED",
+  "components": [
+    {"name":"rclone","priority":"P0","state":"NATIVE_INSTALL_AND_REMOTE_AUTH_UNKNOWN","source":"https://rclone.org/install/","use":"Existing Drive or owner PC SFTP remote, immutable copy and streaming readback; do not create public storage"},
+    {"name":"PyTorch CUDA SM70","priority":"P0","state":"PRESERVE_AND_REVERIFY_EXISTING","observed_earlier":"2.6.0+cu124 with sm_70","source":"https://pytorch.org/get-started/previous-versions/","use":"Real FP16 CUDA smoke and existing engine benchmark before any replacement"},
+    {"name":"DeepSpeed","priority":"P0","state":"PRESERVE_AND_REVERIFY_EXISTING","observed_earlier":"0.20.0","source":"https://www.deepspeed.ai/tutorials/zero-offload/","use":"Verify built CPUAdam/optimizer paths, compare ZeRO/offload against measured baseline"},
+    {"name":"Transformers/Accelerate/Datasets/Safetensors","priority":"P0","state":"PRESERVE_AND_REVERIFY_EXISTING","source":"https://huggingface.co/docs/transformers/installation","use":"Reuse installed environment; freeze exact versions and wheel hashes before staged changes"},
+    {"name":"PEFT LoRA and merge","priority":"P0","state":"NATIVE_PRESENCE_UNKNOWN_NEWLY_ALLOWED","source":"https://huggingface.co/docs/peft/main/package_reference/lora","use":"Train only against the exact student revision and tokenizer; merge only after holdout and checkpoint restoration"},
+    {"name":"bitsandbytes 8-bit optimizer or NF4/FP4","priority":"P0","state":"CONDITIONAL_NATIVE_SM70_SMOKE_REQUIRED","source":"https://huggingface.co/docs/bitsandbytes/main/installation","use":"Linux CUDA12 build including sm70; LLM.int8 requires CC7.5 and is not the V100 path"},
+    {"name":"existing llama.cpp CUDA inference","priority":"P0","state":"TUNE_EXISTING_NOT_REPLACE_BLINDLY","source":"https://github.com/ggml-org/llama.cpp","use":"Prompt cache, supported KV formats, batching, thread counts and actual SSE TTFT/tokens per second; inspect existing PIDs before stopping anything"},
+    {"name":"PyTorch data pipeline","priority":"P0","state":"CONFIGURATION_REQUIRES_NATIVE_BENCHMARK","source":"https://docs.pytorch.org/docs/2.6/data.html","use":"Pinned buffers, persistent workers, bounded prefetch, tokenization caching, length bucketing and gradient accumulation"},
+    {"name":"psutil and nvidia-ml-py","priority":"P0","state":"NATIVE_PRESENCE_UNKNOWN","source":"https://pypi.org/project/nvidia-ml-py/","use":"Existing GPU Resource Brain telemetry; cgroup RAM, STOP, restart backoff, no competing scheduler"},
+    {"name":"S03 semantic retrieval","priority":"P1","state":"REUSE_EXISTING_EMBEDDING_AND_INDEX_FIRST","source":"https://github.com/asg017/sqlite-vec","use":"Optional compatible extension only if needed; same S03, bounded parallel retrieval, no duplicate memory database"},
+    {"name":"C01-C08/M0-M7/Reflection/Self-model","priority":"P1","state":"EXISTING_NOX_RUNTIME_WIRING_NOT_DOWNLOADABLE_CONSCIOUSNESS","source":"coordination/NOX_PRIME_SIX_RELAY_20261115.md","use":"Grounded facts, provenance, bounded context and real conversation tests; a package install is not proof of intelligence or consciousness"},
+    {"name":"third-party adapters and new teacher weights","priority":"P2","state":"NOT_SELECTED_UNTIL_EXACT_STUDENT_AND_LICENSE_VERIFIED","source":"https://huggingface.co/models?library=peft","use":"No random consciousness/emotion adapters. Verify architecture, base revision, tokenizer, license, holdout and actual measured benefit before acquiring large files"}
+  ],
+  "storage_layout": {
+    "hot":"active chat model and active training state stay local",
+    "warm":"bounded RAM cache with cgroup reserve; cache is not backup",
+    "cold":"verified inactive model objects on an existing authorized Drive or PC storage",
+    "eviction":"only after byte-level remote readback, current explicit inactive inventory and shared native writer lease; never S03, active model, unique checkpoints or sole backups"
+  }
+}
