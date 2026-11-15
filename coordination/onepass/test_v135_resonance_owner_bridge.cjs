@@ -532,3 +532,56 @@ test('V159 require real native start before delta/done and reject duplicate star
       'reject before S03 acceptance on invalid protocol');
   }
 });
+
+
+test('V160 preparing is unique and precedes native start; reject before S03 readback',async()=>{
+  const prompt='V160 preparing order',answer='Upstream token';
+  const good=[
+    {type:'preparing',stream_mode:'NATIVE_TOKEN_STREAM'},
+    {type:'start',model:'NOX HELION',stream_mode:'NATIVE_TOKEN_STREAM'},
+    {type:'delta',text:answer},
+    {type:'done',saved:true,s03_integrated:true,dialog_id:id,exchange_id:'v160-order-001'}
+  ];
+  async function attempt(events){
+    const calls=[];
+    const original=async path=>{
+      const u=new URL(String(path),'https://nox.local');calls.push(u.pathname);
+      if(u.pathname==='/api/ui/memory/dialogs/create')
+        return Response.json({dialog_id:id,title:'V160'});
+      if(u.pathname==='/api/ui/memory/dialogs/history')
+        return Response.json({status:'READY',dialog_id:id,messages:[
+          {role:'user',content:prompt},{role:'assistant',content:answer}]});
+      if(u.pathname==='/api/nox/chat/stream')
+        return new Response(new ReadableStream({start(c){
+          c.enqueue(new TextEncoder().encode(events.map(e=>JSON.stringify(e)+'\n').join('')));
+          c.close();
+        }}),{headers:{'content-type':'application/x-ndjson'}});
+      return new Response('NO_NATIVE_ROUTE',{status:404});
+    };
+    const w={NOX_NATIVE_OWNER:true,fetch:original};
+    const loc={pathname:'/nox-web-v29/pc/resonance.html',
+      href:'https://nox.local/nox-web-v29/pc/resonance.html',origin:'https://nox.local'};
+    vm.runInNewContext(JS,{window:w,location:loc,URL,Request,Response,ReadableStream,
+      TextDecoder,TextEncoder,AbortController,performance,console,Intl,setTimeout});
+    const r=await w.fetch('/api/nox/chat',{method:'POST',
+      body:JSON.stringify({message:prompt})});
+    return {status:r.status,result:await r.json(),calls};
+  }
+  const normal=await attempt(good);
+  assert.equal(normal.status,200,'original V112 sequence accepted');
+  assert.equal(normal.result.history_persisted,true);
+  assert(normal.calls.includes('/api/ui/memory/dialogs/history'));
+  const invalid=[
+    [good[0],good[0],good[1],good[2],good[3]],
+    [good[1],good[0],good[2],good[3]],
+    [good[1],good[2],good[0],good[3]],
+  ];
+  for(const frames of invalid){
+    const bad=await attempt(frames);
+    assert.equal(bad.status,503,'invalid native preparing order must HOLD');
+    assert.match(bad.result.error,/HOLD_NATIVE_PREPARING_ORDER/);
+    assert.equal(bad.result.history_persisted,false);
+    assert(!bad.calls.includes('/api/ui/memory/dialogs/history'),
+      'invalid stream must never enter owner S03 acceptance');
+  }
+});

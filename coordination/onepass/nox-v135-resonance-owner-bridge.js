@@ -91,7 +91,7 @@
   async function consume(response,emit,signal) {
     if(!response.ok||!response.body)throw Error('HOLD_NATIVE_STREAM_'+await reason(response));
     const reader=response.body.getReader(),decoder=new TextDecoder();
-    let buf='',answer='',done=null,doneSeen=false,startSeen=false;
+    let buf='',answer='',done=null,doneSeen=false,startSeen=false,preparingSeen=false;
     const line=async str=>{
       if(!str.trim())return;
       let e;
@@ -115,7 +115,13 @@
       } else if(e.type==='start') {
         if(startSeen)throw Error('HOLD_DUPLICATE_NATIVE_START');
         startSeen=true;
-      } else if(e.type!=='preparing') {
+      } else if(e.type==='preparing') {
+        // Original V112 emits one preparing frame before its native start.
+        // A repeated/late preparation is an invalid wire sequence, even if
+        // a forged done would otherwise match a healthy S03 history fixture.
+        if(preparingSeen||startSeen)throw Error('HOLD_NATIVE_PREPARING_ORDER');
+        preparingSeen=true;
+      } else {
         // Fail closed: an unrecognized native frame cannot precede a
         // trustworthy terminal receipt or persisted S03 history readback.
         throw Error('HOLD_NATIVE_UNKNOWN_FRAME');
