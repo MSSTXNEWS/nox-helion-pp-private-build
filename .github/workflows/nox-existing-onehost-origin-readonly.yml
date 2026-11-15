@@ -1,0 +1,73 @@
+name: NOX existing OneHost Vast API hostname discovery (GET only)
+on:
+  push:
+    branches: [feature/nox-v38-synaptic-brain-20261114]
+    paths: ['.github/workflows/nox-existing-onehost-origin-readonly.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: nox-existing-onehost-api-origin-readonly
+  cancel-in-progress: false
+jobs:
+  discover:
+    if: "${{ github.repository == 'MSSTXNEWS/nox-helion-pp-private-build' && github.actor == 'MSSTXNEWS' }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - name: Existing owner key / fixed Vast GET endpoints only; never print response or secret
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, time, urllib.request, urllib.error
+          key = os.environ.get('NOX2','')
+          if not key:
+              print('NOX_OWNER_KEY=HOLD_MISSING')
+              raise SystemExit(2)
+          print('NOX_OWNER_KEY=PRESENT_NOT_AUTHENTICATED')
+          target = 60509551
+          urls = [
+              ('CONSOLE_V0_LIST','https://console.vast.ai/api/v0/instances/'),
+              ('CLOUD_V0_LIST','https://cloud.vast.ai/api/v0/instances/'),
+              ('CONSOLE_V0_DETAIL','https://console.vast.ai/api/v0/instances/60509551/'),
+              ('CLOUD_V0_DETAIL','https://cloud.vast.ai/api/v0/instances/60509551/'),
+              ('CONSOLE_V1_LIST','https://console.vast.ai/api/v1/instances?limit=25'),
+              ('CLOUD_V1_LIST','https://cloud.vast.ai/api/v1/instances?limit=25'),
+          ]
+          outcomes = []
+          for tag, url in urls:
+              req=urllib.request.Request(url,headers={
+                  'Authorization':'Bearer '+key, 'Accept':'application/json',
+                  'User-Agent':'NOX-existing-OneHost-readonly/1'},method='GET')
+              code=0; found=False
+              try:
+                  with urllib.request.urlopen(req,timeout=12) as res:
+                      code=res.status
+                      raw=res.read(262145)
+                  if len(raw)<=262144 and code==200:
+                      body=json.loads(raw)
+                      items=body.get('instances',body) if isinstance(body,dict) else body
+                      if isinstance(items,dict):
+                          items=[items]
+                      if isinstance(items,list):
+                          found=any(isinstance(x,dict) and str(x.get('id'))==str(target) for x in items)
+              except urllib.error.HTTPError as exc:
+                  code=exc.code
+              except Exception as exc:
+                  print('NOX_API_'+tag+'_ERROR='+type(exc).__name__)
+              print('NOX_API_'+tag+'_STATUS='+str(code))
+              print('NOX_API_'+tag+'_ORIGINAL_INSTANCE_FOUND='+str(found).lower())
+              outcomes.append((tag,code,found))
+              time.sleep(1.2)
+          key=''
+          verified=[tag for tag,code,found in outcomes if code==200 and found]
+          print('NOX_VAST_ORIGINAL_INSTANCE_OWNER_GET='+('PASS' if verified else 'HOLD'))
+          print('NOX_VAST_ACCEPTED_ORIGINS='+','.join(verified))
+          print('NOX_VAST_API_ONLY_GET=true')
+          print('NOX_VAST_SSH_OR_WEB_MUTATION=false')
+          print('NOX_VAST_KEYS_OR_RESPONSE_EXPORTED=false')
+          raise SystemExit(0 if verified else 2)
+          PY
