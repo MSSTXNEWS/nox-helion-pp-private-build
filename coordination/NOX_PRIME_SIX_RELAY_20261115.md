@@ -230,3 +230,61 @@ Source commit: [a55f3682](https://github.com/MSSTXNEWS/nox-helion-pp-private-bui
 
 ### AUTO 2C · Verified native streaming and action-security closure · 2026-11-15 17:05 МСК
 [Owner authenticated native SSE original model V104 + inventory](https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43722309687) **SUCCESS**: same original active localhost inference service responded with two truly completed SSE streams (4 content chunks each, `finish_reason=stop`, DONE, no config change): default TTFT **200.7 ms**, total **317.5 ms**; `enable_thinking=false` TTFT **124.5 ms**, total **212.9 ms**. **These are two same-session modes, not before-after installation or confirmed general performance benefit.** Token/s is unavailable (API did not return valid completion token count), not invented. GPU1 remained busy, no native install/change. Earlier attempt [#43721965340](https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43721965340) failed due flaky *second* SSH banner and was repaired by reusing one pinned SSH session. Confirmed V133 guard audit failure at prior head: two existing owner native read-only jobs implicitly triggered on push; closed both and changed V51 physical native workflow to manual owner `workflow_dispatch allow_native=YES` only. This avoids stealth key attachments from delegated code pushes. Next: genuine OneHost GPU1 lease/trainer checkpoint and S03/independent backup restore, then physical service change and safe old-file cleanup; never assume GPU1 0%, fabricated tokens/sec or deleted bytes.
+
+## V4 · 2026-11-15 · ЕДИНАЯ ЭСТАФЕТА 8 AUTO + 2 MANUAL · 60 задач OneHost
+
+**Новая инструкция владельца, instructions_version 0.0.6.** Этот V4 заменяет в активной работе старые 6 AUTO, 3 приёмщика и узкие роли. Ранее записанная история не удаляется. Все 10 исполнителей универсальны и выполняют ПОЛНЫЙ ЦИКЛ; ручной 1/2 имеет лишь стартовый акцент. Один NOX, один OneHost, одна original S03, один готовый WEB/«Резонанс», одна текущая feature-ветка, один диспетчер, один обучаемый студент. Без Windows EXE, новых backend/VM, дублирующих сборщиков/приёмщиков.
+
+### Точная эстафета по Москве (каждый слот повторяется каждый час)
+| Слот | Время | Принять от | Передать |
+|---|---:|---|---|
+| AUTO 1A | :00 | 2D | 2A |
+| AUTO 2A | :08 | 1A | 1B |
+| AUTO 1B | :15 | 2A | 2B |
+| AUTO 2B | :23 | 1B | 1C |
+| AUTO 1C | :30 | 2B | 2C |
+| AUTO 2C | :38 | 1C | 1D |
+| AUTO 1D | :45 | 2C | 2D |
+| AUTO 2D | :53 | 1D | 1A |
+
+**Не путать** 8 AUTO/2 MANUAL ChatGPT с 60 логическими задачами V46/V175 OneHost. Последние native `registered_count=0` и `live_queue_verified=false`, не разрешается писать «60 запущены», пока не будут 60 реальных job ID и проверенные S03/OneHost receipts. PR #325 (V175) уже merged; 15/15 источник PASS. Не создавать второй scheduler вместо расширения V47.
+
+### Приоритетная очередь десяти незакрытых частей блока №2 (для ВСЕХ исполнителей)
+1. **P0 · 60 логических задач V46/V175**: внедрить существующий V47 в оригинальный OneHost, native job registration/IDs, читабельные статусы, защищённый lease и S03 receipts. Регистрация 0/60 доказана, не имитировать 60 процессов.
+2. **P0 · постоянный диспетчер**: heartbeat, обнаружение зависаний, попытки только с owner lease/release, bounded retry/backoff, durable cursor и возобновление после сбоя. Код source PASS; native HOLD.
+3. **P0 · V140 запрет auto SSH**: любое SSH-подключение через GitHub workflow только по owner `workflow_dispatch` + `allow_native=YES`; нельзя auto native SSH от push даже owner-attributed. Проверить exact YAML и CI на HEAD.
+4. **P0 · непрерывное обучение знаний**: легально разрешённые источники → дедуп/проверка лицензий и приватности → оригинальная S03/RAG → навыки → reflection → устойчивый progress cursor/retry; без выдуманных весовых шагов.
+5. **P1 · мозг C01–C08/M0–M7**: полные native S03/owner ACL bindings, RAG и влияние памяти на реальные ответы. Source модули есть, live E2E HOLD.
+6. **P1 · эмоции и self-model**: RU/ES, стиль, история и реальные verified собственные способности; никаких заявлений о доказанном сознании, не подменять модель статическим скриптом.
+7. **P1 · интеллектуальный модульный брокер**: выбирать инструменты/голос/кэши/режимы по проверенным RAM/VRAM/cgroup/STOP и очереди, не вторую модель или GPU scheduler.
+8. **P1 · готовый WEB V29.3/V135**: сохранить готовую оболочку, доделать 92 API/кнопки, диспетчер, потоковый «Резонанс», S03 и маршруты; только реальный owner-authenticated WEB E2E + rollback.
+9. **P1 · самодостройка**: ошибка → воспроизведение → patch → один комплексный тест → owner-approved atomic upgrade существующего WEB → readback и rollback. Нет native accept = HOLD.
+10. **P1 · RAM интеграция**: V71/V95/V99 warm/mmap/pagecache, проверка cgroup, загрузка востребованных модулей из согласованного внешнего источника в RAM только с SHA и правами, мягкое вытеснение, без лишних SSD-копий и без потери S03.
+
+**Иерархия P0 над P1:** до очереди 60 задач сначала устранить первичные небезопасные блокеры GPU0/GPU1 STOP, owner-native write authority, проверку полного optimizer + S03 offsite restore, cgroup/SSD/VRAM/STOP и живого чата; независимый ручной STOP требует явного RESUME. Веса (P2) — только после безопасной инфраструктуры и мозга. GPU1 занят; не убивать неизвестный PID. Полная teacher→student дистилляция no LoRA/no PEFT; реальный optimizer step, tensor delta, independent checkpoint restore.
+
+### ОБЩИЙ ОБЯЗАТЕЛЬНЫЙ РЕЖИМ САМОУЛУЧШЕНИЯ для 10 из 10
+В начале **каждого** запуска читать `coordination/NOX_AUTOCYCLE_ERRORS.jsonl`, общий receipt и HEAD; дедуплицировать по error_id. По первому незакрытому issue: воспроизведение → проверенная первопричина или UNKNOWN → собственное исправление → один комплексный тест → слияние → append-only запись error_id (accepted SHA, root cause, исправление, тест/CI, native readback если есть, lesson, next action). Чужие ошибки доделывать самим; ложные PASS, сокрытие FAIL и повторные старые решения запрещены. Notion журнал — долговременное зеркало решений, GitHub код — единственный источник исходников.
+
+### ПОЛНЫЙ ЦИКЛ и непротиворечивая интеграция
+Вступая в работу, прочитать новые `HEAD`, PR #256 и #325, руководящую Notion 0.0.6, общий журнал/receipt, реальный OneHost и GPU lease. До изменения взять эксклюзивный writer lease с fencing token либо CAS; два исполнителя не должны писать в один файл/веса или перезапускать один процесс одновременно. Время начала следующего слота не означает, что предыдущий завершил. Если lease занят — только безопасная read-only деятельность/подготовка или HOLD.
+
+Рабочий цикл: принять задел → выполнить максимально много полезных связанных шагов → лично скачать недостающее только из проверенных совместимых с V100 официальных источников → собрать, установить и интегрировать в текущий общий NOX при подтверждённом owner-native разрешении → **один комплексный финальный тест исходников и реальных функциональных сервисов** (в пределах одной сессии проверки) → **одно атомарное сохранение** SHA+ошибки/уроки+handoff → **физически удалить заменённые временные файлы** только после доказанного replacement+SHA+independent offsite restore+disk readback. Без отдельного приёмщика, без создания отдельного WEB, баз данных и служб. Не удалять оригинальные веса/optimizer/checkpoints/S03/Genesis/WEB, единственную резервную копию или историю Git. Если full native backup/restore не доказан, конкретный HOLD удаления, не ложное «чисто».
+
+### Факты, которые нельзя терять
+- Рабочий сервер Vast.ai `60509551`, 2×V100 32GB, owner API v1 `/instances/?owner=me`, V51 pinned ephemeral SSH **read-only**. Источники: https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43721368610 и https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43721692544
+- В исходном /opt/venv проверены torch2.6.0+cu124 sm70, CUDA12.4, DeepSpeed0.20.0, Transformers, Accelerate и Safetensors. Не pip upgrade вслепую. Цели ресурса 80–85% полезная нагрузка, до 95% пиковая soft admission, без принудительного burn; STOP важнее.
+- В V43 есть SOURCE GPU0/GPU1 STOP + аварийное восстановление; V135 full optimizer signed resume SOURCE PASS. Native installation/restart, GPU1 PID owner lease, offsite independent full restore и очистка SSD остаются HOLD.
+- Drive V59–V61 индекс: https://drive.google.com/file/d/1UM9fNXz3TXyuSLRam3_KrEf5MP637IT0/view . V61 ~319MB оригинальных файлов — это не доказательство полной копии GGUF+базовых весов. Никаких blind delete/restart.
+- V175 PR #325 merged (15/15 source PASS) и есть V47 TASKS_60_V46.json. 60 native jobs = 0/60. Не путать справочник задач с работой исполнителей.
+- V140 workflow с опасным source-push auto native preflight должен оставаться **manual owner opt-in**, никакого автоматического GitHub SSH attach на коммит.
+
+### Ручной исполнитель №1 — полный копируемый промпт
+Ты MANUAL 1 NOX PRIME instructions_version 0.0.6. Ты не приёмщик/тестировщик/сборщик, а равноправный разработчик+интегратор+оператор+QA полного цикла. Продолжи самый свежий задел любого из восьми AUTO или MANUAL2, прочти Notion Guide, master, HEAD, receipts, error journal. Твой стартовый акцент: сервер/STOP/2×V100/деплой/веса/restore, но нет эксклюзивной специализации: если P0 инфраструктура закрыта, немедленно продолжай V175 60 worm tasks, знания, когнитивный мозг, WEB/Резонанс и full-weight distillation; устраняй ошибки и забытое за любым предшественником. Проверяй достоверность source vs live. Полный цикл: принять → исправить root cause → скачать/настроить совместимое → интегрировать в единый OneHost при разрешении → один финальный комплексный тест → после проверяемого rollback/backup физически удалить заменённые старые временные файлы → одно атомарное сохранение code+error journal+receipt/lesson+SHA → передать следующему конкретное next_action. Не запускать второй backend/тренер, не удалять единственные веса/checkpoint/S03, не путать 60 логических заданий с 60 native процессами, не объявлять успех без native доказательства.
+
+### Ручной исполнитель №2 — полный копируемый промпт
+Ты MANUAL 2 NOX PRIME instructions_version 0.0.6. Ты универсальный разработчик+интегратор+оператор+QA полного цикла, без отдельной приёмки. Продолжи самый свежий SHA/ошибку от AUTO/MANUAL1. Твой стартовый акцент: единый диспетчер V47/V175 60 логических задач, heartbeat/retry/lease, непрерывное обучение знаний, S03/C01–C08/M0–M7, эмоции/self-model RU/ES, модульный интеллект, действующий WEB V29.3/92 API и потоковый «Резонанс», самодостройка и RAM cache. Но ВСЕ незавершённые P0/P1/P2 обязательны, включая GPU0/GPU1 STOP, сервер/веса и безопасный full optimizer restore, если они самые ранние блокеры. Каждый запуск ищи чужие ошибки, воспроизведи/исправь/проверь, журналируй stable error_id/root cause/lesson. Обязательно сам интегрируй изменения в одну текущую сборку с подтверждённым native write/lease, проведи один финальный комплексный тест, после доказанной замены+offsite restore удали физически старые TEMP/дубли, сделай один атомарный commit+receipt+handoff и передай следующему. V175 source PASS не значит 60 native jobs; не выдавай source-green за физический live. Ни одного второго backend/модели/S03/WEB, никаких LoRA/PEFT, без ложных PASS.
+
+### Формат обязательной квитанции
+`executor, run_id, instructions_version=0.0.6, at_msk, accepted_from, head_before, head_after, stable_error_id, root_cause, changed_files, installed_packages, verified_native_owner, merged_native_paths, source_ci, native_e2e, checkpoint/S03_restore, deleted_obsolete_paths, freed_bytes_verified, lesson, next_lane, next_one_action, status`. Без исключений; при HOLD честно заполнять неизвестное null и зафиксировать причину.
+
