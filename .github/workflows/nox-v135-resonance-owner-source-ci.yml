@@ -1,0 +1,43 @@
+name: NOX V135 original Resonance owner SSE and S03 real route source acceptance
+on:
+  push:
+    branches: [fix/nox-v135-resonance-native-stream-20261115]
+    paths:
+      - 'coordination/onepass/nox-v135-resonance-owner-bridge.js'
+      - 'coordination/onepass/v135_resonance_owner_stage.py'
+      - 'coordination/onepass/test_v135_resonance_owner_stage.py'
+      - 'coordination/onepass/test_v135_resonance_owner_bridge.cjs'
+      - '.github/workflows/nox-v135-resonance-owner-source-ci.yml'
+  workflow_dispatch:
+permissions: {contents: read}
+jobs:
+  source-acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Compile Python builder and JavaScript
+        run: |
+          set -euo pipefail
+          python3 -m py_compile coordination/onepass/v135_resonance_owner_stage.py
+          node --check coordination/onepass/nox-v135-resonance-owner-bridge.js
+          node --check coordination/onepass/test_v135_resonance_owner_bridge.cjs
+      - name: Real streaming fixture with delayed native terminal event
+        run: |
+          set -euo pipefail
+          node --test coordination/onepass/test_v135_resonance_owner_bridge.cjs
+      - name: Byte-level ZIP no-loss and SHA-pinned rollback fixtures
+        run: |
+          set -euo pipefail
+          python3 -m unittest -v coordination.onepass.test_v135_resonance_owner_stage
+      - name: Declare scope accurately
+        run: |
+          echo 'NOX_V135_SOURCE_ACCEPTANCE=PASS'
+          echo 'NOX_V135_LIVE_SERVER_DEPLOYED=false'
+          echo 'NOX_V135_NATIVE_COOKIE_E2E_VERIFIED=false'
+          echo 'NOX_V135_MODEL_WEIGHTS_OR_S03_TOUCHED=false'
