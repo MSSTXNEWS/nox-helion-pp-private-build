@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Explicit owner-command transport; no push/PR activation or exported keys.
-Separate from V51 read-only probe, reusing verified API and key-cleanup helpers.
+"""Explicit owner-command transport; one authenticated SSH session, pinned source.
+No push/PR activation, no secret export, no blind retry of native mutations.
 """
 from __future__ import annotations
 import argparse, base64, contextlib, ipaddress, json, os, re, socket, subprocess, sys, time
@@ -11,6 +11,7 @@ INSTANCE=60509551
 PIN='SHA256:G4hmMllaT4uSfx+Gup9vjSySLXJT1cSc/9XePr7XmGc'
 FILES={'audit':'nox-control/owner_native_audit.py','inspect':'nox-control/owner_native_inspect.py',
        'stage':'nox-control/owner_native_stage.py','repair':'nox-control/owner_native_repair.py'}
+MASTER=None
 
 def authorize_event(action):
     e=json.loads(Path(os.environ['GITHUB_EVENT_PATH']).read_text())
@@ -25,6 +26,7 @@ def authorize_event(action):
     return c['id']
 
 def run_native(action,request_id):
+    global MASTER
     sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
     from nox_runpod.teacher_mesh.v51 import ephemeral_ssh_probe as s
     key=os.environ.get('NOX2','')
@@ -65,16 +67,25 @@ def run_native(action,request_id):
         time.sleep(2)
     if len(ids)!=1:raise RuntimeError('HOLD_KEY_ATTACH_NOT_VERIFIED')
     s.TRACK.write_text(json.dumps({'public':public,'key_id':ids[0]}))
-    cmd=['ssh','-T','-i',str(s.KEY),'-p',str(port),'-o','BatchMode=yes','-o','IdentitiesOnly=yes',
-         '-o','ConnectTimeout=12','-o','ServerAliveInterval=15','-o','ServerAliveCountMax=3','-o','NumberOfPasswordPrompts=0',
-         '-o','StrictHostKeyChecking=yes','-o','UserKnownHostsFile='+str(known),'root@'+ip]
-    authed=False
-    for _ in range(4):
-        try:r=subprocess.run(cmd+['true'],capture_output=True,text=True,timeout=25)
-        except subprocess.TimeoutExpired:continue
-        if r.returncode==0:authed=True;break
-        time.sleep(4)
-    if not authed:raise RuntimeError('HOLD_SSH_AUTHENTICATION')
+    sock=s.RUNNER/'owner-ssh.sock'
+    common=['ssh','-T','-i',str(s.KEY),'-p',str(port),'-o','BatchMode=yes','-o','IdentitiesOnly=yes',
+         '-o','ConnectTimeout=15','-o','ServerAliveInterval=15','-o','ServerAliveCountMax=3','-o','NumberOfPasswordPrompts=0',
+         '-o','StrictHostKeyChecking=yes','-o','UserKnownHostsFile='+str(known),'-o','ControlPath='+str(sock)]
+    host='root@'+ip
+    # Authenticate the persistent connection, not a disposable 'true' session.
+    # Retry only before any payload has been sent.
+    for attempt in range(8):
+        try:
+            r=subprocess.run(common+['-o','ControlMaster=yes','-o','ControlPersist=90','-N','-f',host],capture_output=True,text=True,timeout=25)
+        except subprocess.TimeoutExpired:r=None
+        if r is not None and r.returncode==0 and sock.exists():
+            MASTER=common+['-O','exit',host]
+            break
+        print('NOX_MAINT_AUTH_ATTEMPT='+str(attempt+1)+'_RETRY',flush=True)
+        time.sleep(5)
+    else:raise RuntimeError('HOLD_SSH_AUTHENTICATION')
+    check=subprocess.run(common+['-O','check',host],capture_output=True,text=True,timeout=8)
+    if check.returncode:raise RuntimeError('HOLD_SSH_MASTER_NOT_ALIVE')
     print('NOX_MAINT_AUTHENTICATED_INSTANCE=60509551',flush=True)
     payload=Path(FILES[action]).read_text()
     if action in ('stage','repair'):
@@ -85,12 +96,17 @@ def run_native(action,request_id):
         payload=payload.replace('__NOX_BUNDLE_JSON__',json.dumps(assets))
     sha=os.environ['NOX_PINNED_SOURCE_SHA']
     script=f"set -euo pipefail\nNOX_OWNER_SOURCE_SHA={sha} NOX_OWNER_REQUEST_ID={int(request_id)} python3 - <<'NOX_OWNER_PAYLOAD'\n"+payload+"\nNOX_OWNER_PAYLOAD\n"
-    # Execute ONCE after authenticated preflight. Never replay an uncertain mutation.
-    timeout=120 if action in ('audit','inspect') else 900
-    r=subprocess.run(cmd+['bash','-se'],input=script,capture_output=True,text=True,timeout=timeout)
+    timeout=150 if action in ('audit','inspect') else 900
+    # Reuse the authenticated channel. A dead master must not fall back to
+    # a fresh, potentially ambiguous TCP connection while starting a mutation.
+    r=subprocess.run(common+['-o','ControlMaster=no','-o','ProxyCommand=false',host,'bash','-se'],input=script,capture_output=True,text=True,timeout=timeout)
     for line in r.stdout.splitlines():
         if line.startswith('NOX_MAINT_') and len(line)<180000:print(line,flush=True)
     print('NOX_MAINT_REMOTE_EXIT_CODE='+str(r.returncode),flush=True)
+    if r.returncode:
+        err=r.stderr.lower()
+        cls='AUTH' if 'permission denied' in err else 'TIMEOUT' if 'timed out' in err else 'CONNECTION' if 'connect' in err else 'PAYLOAD'
+        print('NOX_MAINT_FAILURE_CLASS='+cls,flush=True)
     marker='NOX_MAINT_'+action.upper()+'_COMPLETE=true'
     if r.returncode or marker not in r.stdout:raise RuntimeError('HOLD_NATIVE_PAYLOAD_INCOMPLETE')
     return True
@@ -105,6 +121,8 @@ def main():
         code=str(e)
         print('NOX_MAINT_RESULT='+(code if re.fullmatch('HOLD_[A-Z0-9_]+',code) else 'HOLD_'+type(e).__name__.upper()),flush=True)
     finally:
+        if MASTER:
+            with contextlib.suppress(Exception):subprocess.run(MASTER,capture_output=True,timeout=8)
         sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
         from nox_runpod.teacher_mesh.v51 import ephemeral_ssh_probe as s
         try:
