@@ -97,6 +97,12 @@
       let e;
       try{e=JSON.parse(str);}catch{throw Error('HOLD_NATIVE_FRAME_JSON');}
       if(!e||typeof e!=='object'||Array.isArray(e))throw Error('HOLD_NATIVE_FRAME_TYPE');
+      // Native done is terminal. Never accept extra protocol frames as
+      // a successful persisted exchange (blank lines remain permitted).
+      if(doneSeen){
+        if(e.type==='done')throw Error('HOLD_DUPLICATE_DONE');
+        throw Error('HOLD_NATIVE_TRAILING_FRAME_AFTER_DONE');
+      }
       if(e.type==='error')throw Error('HOLD_NATIVE_'+String(e.error||'ERROR').slice(0,90));
       if(e.type==='delta'){
         if(doneSeen||typeof e.text!=='string'||answer.length+e.text.length>MAX)throw Error('HOLD_NATIVE_DELTA');

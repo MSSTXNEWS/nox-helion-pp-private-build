@@ -383,3 +383,48 @@ test('V156 coalesced native NDJSON keeps valid short frames and rejects one over
   assert.match(bad.json.error,/HOLD_NATIVE_FRAME_TOO_LARGE/);
   assert(!bad.calls.includes('/api/ui/memory/dialogs/history'),'no S03 success on oversized frame');
 });
+
+
+test('V157 native done is terminal: reject trailing control frame before S03 READY',async()=>{
+  const did='abcd1234abcd1234abcd1234abcd1234',prompt='V157 terminal NDJSON audit';
+  const answer='Native verified reply';
+  const delta=JSON.stringify({type:'delta',text:answer})+'\n';
+  const done=JSON.stringify({type:'done',saved:true,s03_integrated:true,
+    dialog_id:did,exchange_id:'v157-receipt-001'})+'\n';
+  const unexpected=JSON.stringify({type:'start',model:'unexpected after commit'})+'\n';
+  async function attempt(payload){
+    const called=[];
+    const original=async path=>{
+      const u=new URL(String(path),'https://nox.local');called.push(u.pathname);
+      if(u.pathname==='/api/ui/memory/dialogs/create')
+        return Response.json({dialog_id:did,title:'V157'});
+      if(u.pathname==='/api/ui/memory/dialogs/history')
+        return Response.json({status:'READY',dialog_id:did,messages:[
+          {role:'user',content:prompt},{role:'assistant',content:answer}]});
+      if(u.pathname==='/api/nox/chat/stream')
+        return new Response(new ReadableStream({start(c){
+          c.enqueue(new TextEncoder().encode(payload));c.close();
+        }}),{headers:{'content-type':'application/x-ndjson'}});
+      return new Response('NO_MATCH',{status:404});
+    };
+    const w={NOX_NATIVE_OWNER:true,fetch:original};
+    const loc={pathname:'/nox-web-v29/pc/resonance.html',
+      href:'https://nox.local/nox-web-v29/pc/resonance.html',origin:'https://nox.local'};
+    vm.runInNewContext(JS,{window:w,location:loc,URL,Request,Response,ReadableStream,
+      TextDecoder,TextEncoder,AbortController,performance,console,Intl,setTimeout,
+      requestAnimationFrame:cb=>cb(performance.now())});
+    const r=await w.fetch('/api/nox/chat',{method:'POST',
+      body:JSON.stringify({message:prompt,dialog_id:did})});
+    return {status:r.status,body:await r.json(),called};
+  }
+  const clean=await attempt(delta+done+'\n');
+  assert.equal(clean.status,200,'native done plus blank line is permitted');
+  assert.equal(clean.body.history_persisted,true);
+  assert(clean.called.includes('/api/ui/memory/dialogs/history'));
+  const bad=await attempt(delta+done+unexpected);
+  assert.equal(bad.status,503,'a control frame after done must fail closed');
+  assert.match(bad.body.error,/HOLD_NATIVE_TRAILING_FRAME_AFTER_DONE/);
+  assert.equal(bad.body.history_persisted,false,'never claim persisted on invalid protocol');
+  assert(!bad.called.includes('/api/ui/memory/dialogs/history'),
+    'reject before accepting an invalid terminal receipt');
+});
