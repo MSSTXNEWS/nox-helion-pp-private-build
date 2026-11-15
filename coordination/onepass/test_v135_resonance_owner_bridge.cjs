@@ -575,8 +575,8 @@ test('V160 preparing is unique and precedes native start; reject before S03 read
   assert(normal.calls.includes('/api/ui/memory/dialogs/history'));
   const invalid=[
     [good[0],good[0],good[1],good[2],good[3]],
-    [good[1],good[0],good[2],good[3]],
-    [good[1],good[2],good[0],good[3]],
+    [good[0],good[1],good[0],good[2],good[3]],
+    [good[0],good[1],good[2],good[0],good[3]],
   ];
   for(const frames of invalid){
     const bad=await attempt(frames);
