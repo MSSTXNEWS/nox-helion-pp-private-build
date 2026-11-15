@@ -56,6 +56,19 @@ jobs:
                           found=any(isinstance(x,dict) and str(x.get('id'))==str(target) for x in items)
               except urllib.error.HTTPError as exc:
                   code=exc.code
+                  # Do not print response content, free-text errors or headers.
+                  # The following closed allowlist identifies only a provider API error class.
+                  err='NON_JSON_OR_UNCLASSIFIED'
+                  try:
+                      data=json.loads(exc.read(4096))
+                      value=data.get('error','') if isinstance(data,dict) else ''
+                      if value in ('auth_error','not_found','invalid_id','invalid_args',
+                                   'not_authorized','invalid_api_key','api_key_invalid',
+                                   'missing_api_key','permission_denied'):
+                          err=value
+                  except Exception:
+                      pass
+                  print('NOX_API_'+tag+'_ERROR_CLASS='+err)
               except Exception as exc:
                   print('NOX_API_'+tag+'_ERROR='+type(exc).__name__)
               print('NOX_API_'+tag+'_STATUS='+str(code))
