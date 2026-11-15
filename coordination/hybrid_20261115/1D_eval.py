@@ -71,6 +71,9 @@ def validate_run(run, label):
             require(locale == 'es', f'{label}/{cid}: wrong ES locale')
         for key in ('prompt_sha256', 'answer_sha256', 'evaluation_sha256'):
             require(digest_ok(case.get(key)), f'{label}/{cid}: missing {key}')
+        # A semantic/source family binds translations and paraphrases to one held-out unit.
+        # It is owner-provided evidence, not a computed or trusted semantic proof.
+        require(digest_ok(case.get('source_group_sha256')), f'{label}/{cid}: missing source group fingerprint')
         fingerprint = case['prompt_sha256'].lower()
         require(fingerprint not in fingerprints, f'{label}/{cid}: duplicated prompt fingerprint')
         fingerprints.add(fingerprint)
@@ -104,10 +107,17 @@ def evaluate(reference, candidate, train_manifest, policy):
     raw_train = train_manifest['prompt_sha256']
     require(all(digest_ok(x) for x in raw_train), 'train manifest malformed fingerprints')
     require(bool(raw_train), 'empty train manifest cannot establish holdout separation')
+    raw_groups = train_manifest.get('source_group_sha256')
+    require(isinstance(raw_groups, list) and len(raw_groups) == len(raw_train)
+            and all(digest_ok(x) for x in raw_groups),
+            'training source groups missing, malformed or not one-to-one with prompts')
     train = [value.lower() for value in raw_train]
     require(len(set(train)) == len(train), 'duplicate train fingerprints')
     holdout = {v['prompt_sha256'].lower() for v in r.values()}
     require(not (set(train) & holdout), 'TRAIN_HOLDOUT_LEAKAGE')
+    train_groups = {x.lower() for x in raw_groups}
+    holdout_groups = {x['source_group_sha256'].lower() for x in r.values()}
+    require(not (train_groups & holdout_groups), 'TRAIN_HOLDOUT_SOURCE_GROUP_LEAKAGE')
     require(set(r) == set(c), 'case_id coverage drift')
     for key in ('base_sha256', 'tokenizer_sha256', 'generation_sha256', 'dataset_sha256', 'hardware_id', 'engine_build'):
         a_value = ref[key].lower() if key.endswith('_sha256') else ref[key]
@@ -115,9 +125,9 @@ def evaluate(reference, candidate, train_manifest, policy):
         require(a_value == b_value, f'UNPAIRED_COMPARISON:{key}')
     require(ref['variant'] != cand['variant'], 'same variant: comparison not meaningful')
     for cid in r:
-        for k in ('prompt_sha256', 'category', 'locale', 'split'):
-            a_value = r[cid][k].lower() if k == 'prompt_sha256' else r[cid][k]
-            b_value = c[cid][k].lower() if k == 'prompt_sha256' else c[cid][k]
+        for k in ('prompt_sha256', 'source_group_sha256', 'category', 'locale', 'split'):
+            a_value = r[cid][k].lower() if k in ('prompt_sha256', 'source_group_sha256') else r[cid][k]
+            b_value = c[cid][k].lower() if k in ('prompt_sha256', 'source_group_sha256') else c[cid][k]
             require(a_value == b_value, f'{cid}: mismatched {k}')
     require(isinstance(policy, dict) and POLICY_KEYS <= policy.keys(), 'owner-approved numerical policy missing')
     require(all(finite(policy[k]) for k in POLICY_KEYS), 'invalid numerical policy')
@@ -171,7 +181,8 @@ def selftest():
             checks = {k: True for k in REQUIRED_CHECKS[cat]}
             row = dict(case_id=f't{i}', split='holdout', category=cat,
                        locale='es' if cat == 'es_dialogue' else 'ru',
-                       prompt_sha256=h('prompt'+str(i)), answer_sha256=h(variant+str(i)),
+                       prompt_sha256=h('prompt'+str(i)), source_group_sha256=h('group'+str(i)),
+                       answer_sha256=h(variant+str(i)),
                        evaluation_sha256=h('review'+str(i)), checks=checks,
                        reviewer_receipt='isolated-fixture-only', ttft_ms=100,
                        decode_tps=25, peak_vram_bytes=1000, max_logit_abs_delta=0.01)
@@ -185,17 +196,17 @@ def selftest():
     a, b = make_run('adapter'), make_run('merged')
     pol = dict(max_quality_drop_pp=0, max_ttft_p95_increase_pct=0,
                min_tps_ratio=1, max_vram_bytes=1000, max_logit_abs_delta=.02)
-    result = evaluate(a, b, {'prompt_sha256': [h('train')]}, pol)
+    result = evaluate(a, b, {'prompt_sha256': [h('train')], 'source_group_sha256': [h('train_group')]}, pol)
     assert result['source_consistency'] == 'PASS' and result['native_verified'] is False
     # Empty train evidence must never pass as proof of separation.
-    try: evaluate(a, b, {'prompt_sha256': []}, pol)
+    try: evaluate(a, b, {'prompt_sha256': [], 'source_group_sha256': []}, pol)
     except ValueError as exc: assert 'empty train manifest' in str(exc)
     else: raise AssertionError('empty training provenance accepted')
     # SHA-256 hex is case-insensitive; mixed-case hashes must never bypass holdout separation.
-    try: evaluate(a, b, {'prompt_sha256': [a['cases'][0]['prompt_sha256'].upper()]}, pol)
+    try: evaluate(a, b, {'prompt_sha256': [a['cases'][0]['prompt_sha256'].upper()], 'source_group_sha256': [h('train_group')]}, pol)
     except ValueError as exc: assert 'LEAKAGE' in str(exc)
     else: raise AssertionError('uppercase train fingerprint bypassed holdout')
-    try: evaluate(a, b, {'prompt_sha256': [h('train'), h('train').upper()]}, pol)
+    try: evaluate(a, b, {'prompt_sha256': [h('train'), h('train').upper()], 'source_group_sha256': [h('train_group'), h('train_group')]}, pol)
     except ValueError as exc: assert 'duplicate train' in str(exc)
     else: raise AssertionError('mixed-case train duplicate accepted')
     duplicate_run = make_run('duplicate')
@@ -208,18 +219,33 @@ def selftest():
     upper_candidate = make_run('merged')
     upper_candidate['cases'][0]['prompt_sha256'] = upper_candidate['cases'][0]['prompt_sha256'].upper()
     upper_candidate['run']['base_sha256'] = upper_candidate['run']['base_sha256'].upper()
-    assert evaluate(a, upper_candidate, {'prompt_sha256': [h('train')]}, pol)['source_consistency'] == 'PASS'
-    try: evaluate(a, b, {'prompt_sha256': [a['cases'][0]['prompt_sha256']]}, pol)
+    assert evaluate(a, upper_candidate, {'prompt_sha256': [h('train')], 'source_group_sha256': [h('train_group')]}, pol)['source_consistency'] == 'PASS'
+    try: evaluate(a, b, {'prompt_sha256': [a['cases'][0]['prompt_sha256']], 'source_group_sha256': [h('train_group')]}, pol)
     except ValueError as exc: assert 'LEAKAGE' in str(exc)
     else: raise AssertionError('leakage not detected')
+    # Distinct prompt SHA can still be a translated/paraphrased training example.
+    # The upstream owner must assign a stable group fingerprint to both versions.
+    try: evaluate(a, b, {'prompt_sha256': [h('different-language-prompt')],
+                         'source_group_sha256': [a['cases'][0]['source_group_sha256'].upper()]}, pol)
+    except ValueError as exc: assert 'SOURCE_GROUP_LEAKAGE' in str(exc)
+    else: raise AssertionError('cross-language family leakage accepted')
+    try: evaluate(a, b, {'prompt_sha256': [h('train')]}, pol)
+    except ValueError as exc: assert 'training source groups' in str(exc)
+    else: raise AssertionError('unbound training groups accepted')
+    group_drift = make_run('merged')
+    group_drift['cases'][0]['source_group_sha256'] = h('different-family')
+    try: evaluate(a, group_drift, {'prompt_sha256': [h('train')],
+                                  'source_group_sha256': [h('train_group')]}, pol)
+    except ValueError as exc: assert 'mismatched source_group_sha256' in str(exc)
+    else: raise AssertionError('paired source-group drift accepted')
     b['cases'][0]['checks'][next(iter(b['cases'][0]['checks']))] = False
-    assert evaluate(a, b, {'prompt_sha256': [h('train')]}, pol)['source_consistency'] == 'FAIL'
+    assert evaluate(a, b, {'prompt_sha256': [h('train')], 'source_group_sha256': [h('train_group')]}, pol)['source_consistency'] == 'FAIL'
     b['cases'][0]['checks'] = a['cases'][0]['checks'].copy()
     del b['cases'][-1]['max_logit_abs_delta']
-    try: evaluate(a, b, {'prompt_sha256': [h('train')]}, pol)
+    try: evaluate(a, b, {'prompt_sha256': [h('train')], 'source_group_sha256': [h('train_group')]}, pol)
     except ValueError as exc: assert 'logit delta' in str(exc)
     else: raise AssertionError('missing logit metric not detected')
-    print('SELFTEST 9/9 PASS (synthetic fixtures only; native HOLD)')
+    print('SELFTEST 12/12 PASS (synthetic fixtures only; native HOLD)')
 
 
 def main():
