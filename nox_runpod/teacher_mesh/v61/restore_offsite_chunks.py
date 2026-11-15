@@ -34,6 +34,8 @@ def restore(directory: Path, output: Path, *, expected_sha: str = EXPECTED_SHA,
     output=Path(output)
     if len(expected_sha)!=64 or type(expected_bytes) is not int or expected_bytes<=0:
         raise ValueError("HOLD_PINNED_MANIFEST")
+    if output.is_symlink():
+        raise ValueError("HOLD_OUTPUT_SYMLINK")
     if output.exists():
         if output.is_file() and output.stat().st_size==expected_bytes and _sha(output)==expected_sha:
             return {"state":"ALREADY_PRESENT_SHA_VERIFIED","file":str(output),
@@ -51,12 +53,13 @@ def restore(directory: Path, output: Path, *, expected_sha: str = EXPECTED_SHA,
             tmp=Path(sink.name)
             for i in range(1,5):
                 archive=directory/f"NOX_V61_CIPHERTEXT_PART_{i:02d}_20261114.zip"
-                if not archive.is_file():
+                if not archive.is_file() or archive.is_symlink():
                     raise ValueError("HOLD_PART_MISSING")
                 with zipfile.ZipFile(archive) as z:
-                    names=set(z.namelist())
+                    # A set hides duplicate ZIP entries; check exact member count.
+                    names=z.namelist()
                     part_name=f"NOX_V61_CIPHER.part{i:02d}"
-                    if names!={part_name,"NOX_V61_CHUNK_INDEX.json"}:
+                    if len(names)!=2 or set(names)!={part_name,"NOX_V61_CHUNK_INDEX.json"}:
                         raise ValueError("HOLD_ARCHIVE_MEMBERS")
                     index=json.loads(z.read("NOX_V61_CHUNK_INDEX.json"))
                     if reference_index is None:
@@ -93,9 +96,14 @@ def restore(directory: Path, output: Path, *, expected_sha: str = EXPECTED_SHA,
             os.fsync(sink.fileno())
         if total!=expected_bytes or full_digest.hexdigest()!=expected_sha:
             raise ValueError("HOLD_TOTAL_SHA_MISMATCH")
-        if output.exists():
-            raise ValueError("HOLD_CONCURRENT_OUTPUT")
-        os.rename(tmp,output)
+        # Never os.rename() onto output: another process could create it
+        # after exists() and lose its bytes. Hard-link publish is atomic
+        # no-replace on the same filesystem as the verified temp file.
+        try:
+            os.link(tmp,output)
+        except FileExistsError as ex:
+            raise ValueError("HOLD_CONCURRENT_OUTPUT") from ex
+        tmp.unlink()
         tmp=None
         return {"state":"REASSEMBLED_SHA_VERIFIED","file":str(output),
                 "sha256":expected_sha,"bytes":total,"parts":4}
