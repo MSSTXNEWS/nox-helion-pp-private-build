@@ -580,11 +580,15 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
                     if event=='eof':
                         break
                     buffer+=decoder.decode(chunk if isinstance(chunk,bytes) else str(chunk).encode())
-                    if len(buffer)>300000:
+                    # A read may contain many *complete* short SSE frames.
+                    # Limit each frame and its unfinished tail, not the whole
+                    # transport chunk (which may exceed 300 KB legitimately).
+                    frames=buffer.split('\n')
+                    buffer=frames.pop()
+                    if len(buffer)>300000 or any(len(row)>300000 for row in frames):
                         yield _jsonl({'type':'error','error':'HOLD_SSE_FRAME_LIMIT'})
                         return
-                    while '\n' in buffer:
-                        row,buffer=buffer.split('\n',1)
+                    for row in frames:
                         kind,part=_sse_delta(row.strip())
                         if kind=='done':complete=True
                         if kind=='delta':
