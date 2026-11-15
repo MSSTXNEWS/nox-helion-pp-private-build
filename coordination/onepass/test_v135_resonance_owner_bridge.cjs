@@ -610,7 +610,7 @@ test('V161 missing native preparing cannot become persisted S03 success',async()
           {role:'user',content:p},{role:'assistant',content:a}]});
       if(u.pathname==='/api/nox/chat/stream')
         return new Response(new ReadableStream({start(c){
-          c.enqueue(new TextEncoder().encode(frames.map(x=>JSON.stringify(x)+'\\n').join('')));
+          c.enqueue(new TextEncoder().encode(frames.map(x=>JSON.stringify(x)+'\n').join('')));
           c.close();
         }}),{headers:{'content-type':'application/x-ndjson'}});
       return new Response('NO_ROUTE',{status:404});
