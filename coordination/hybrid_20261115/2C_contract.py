@@ -10,6 +10,7 @@ import argparse
 import json
 import math
 import statistics
+import tempfile
 from pathlib import Path
 
 MAX_ROWS = 2048
@@ -18,8 +19,13 @@ STAGES = {"baseline", "lora", "qlora", "merged_fp16", "full_distill", "quantized
 
 
 def _number(value, *, strictly_positive=False):
-    return (isinstance(value, (int, float)) and not isinstance(value, bool)
-            and math.isfinite(value) and (value > 0 if strictly_positive else value >= 0))
+    if not isinstance(value, (int, float)) or isinstance(value, bool):
+        return False
+    try:
+        numeric = float(value)
+    except (OverflowError, ValueError, TypeError):
+        return False
+    return math.isfinite(numeric) and (numeric > 0 if strictly_positive else numeric >= 0)
 
 
 def _hex64(value):
@@ -49,7 +55,8 @@ def _canonical_route_inventory():
 def training_status(raw):
     """Explicit unknown/defaults: never promote a self-declared status to verified native."""
     row = raw if isinstance(raw, dict) else {}
-    stage = row.get('stage') if row.get('stage') in STAGES else 'UNKNOWN'
+    raw_stage = row.get('stage')
+    stage = raw_stage if isinstance(raw_stage, str) and raw_stage in STAGES else 'UNKNOWN'
     lineage = (row.get('base_sha256') if _hex64(row.get('base_sha256')) else None)
     tokenizer = (row.get('tokenizer_sha256') if _hex64(row.get('tokenizer_sha256')) else None)
     step = row.get('global_step')
@@ -120,7 +127,12 @@ def stream_stats(rows):
         if (row.get('native_usage_source') == 'ORIGINAL_ENGINE_COMPLETION_TOKENS' and
             isinstance(n, int) and not isinstance(n, bool) and n > 0 and
             _number(duration, strictly_positive=True)):
-            tps_samples.append(1000 * n / duration)
+            try:
+                measured_tps = 1000 * n / duration
+            except (OverflowError, ZeroDivisionError):
+                measured_tps = None
+            if _number(measured_tps, strictly_positive=True):
+                tps_samples.append(measured_tps)
     return {
         'measured_source_receipts': len(accepted),
         'rejected_or_incomplete_receipts': rejected,
@@ -218,7 +230,34 @@ def selftest():
     assert stream_stats([dict(s,request_sha256=None)])['measured_source_receipts']==0
     assert route_coverage([dict(route,path='/not-in-original-inventory')], inventory)['owner_schema_200_source_receipts']==0
     assert audit({})['native_verified'] is False
-    print('SELFTEST 25/25 PASS - synthesized fixtures; native/live UNKNOWN')
+    assert training_status({'stage': []})['stage_reported_unverified'] == 'UNKNOWN'
+    assert training_status({'stage': {}})['stage_reported_unverified'] == 'UNKNOWN'
+    assert stream_stats([dict(s, ttft_ms=10**400)])['measured_source_receipts'] == 0
+    assert stream_stats([dict(s, native_completion_tokens=10**400, decode_elapsed_ms=1000,
+                              native_usage_source='ORIGINAL_ENGINE_COMPLETION_TOKENS')])['decode_tps_samples'] == 0
+    with tempfile.TemporaryDirectory() as tmp:
+        output = Path(tmp) / 'existing.json'
+        output.write_text('PRESERVE_ORIGINAL', encoding='utf-8')
+        try:
+            _write_report_exclusive(output, audit({}))
+        except ValueError as exc:
+            assert str(exc) == 'HOLD_OUTPUT_PATH_EXISTS'
+        else:
+            raise AssertionError('OUTPUT_OVERWRITE_NOT_BLOCKED')
+        assert output.read_text(encoding='utf-8') == 'PRESERVE_ORIGINAL'
+        fresh = Path(tmp) / 'new.json'
+        _write_report_exclusive(fresh, audit({}))
+        assert json.loads(fresh.read_text(encoding='utf-8'))['native_verified'] is False
+    print('SELFTEST 32/32 PASS - synthesized fixtures; native/live UNKNOWN')
+
+
+def _write_report_exclusive(path: Path, report: dict) -> None:
+    """Never clobber an existing receipt, S03 path or symlink from --out."""
+    try:
+        with path.open('x', encoding='utf-8') as handle:
+            handle.write(json.dumps(report, ensure_ascii=False, sort_keys=True, indent=2) + '\n')
+    except FileExistsError as exc:
+        raise ValueError('HOLD_OUTPUT_PATH_EXISTS') from exc
 
 
 def main():
@@ -235,7 +274,10 @@ def main():
     data = json.loads(a.input.read_text(encoding='utf-8'))
     report = audit(data)
     # Do not serialize input: even a malformed user-provided field could contain credentials.
-    a.out.write_text(json.dumps(report,ensure_ascii=False,sort_keys=True,indent=2)+'\n',encoding='utf-8')
+    try:
+        _write_report_exclusive(a.out, report)
+    except ValueError as exc:
+        p.error(str(exc))
     print('NOX_2C_SOURCE_AUDIT_WRITTEN; native_verified=false; web_deployed=false')
     return 0
 
