@@ -1,43 +1,275 @@
 {
   "instructions_version": "0.0.6",
-  "date": "2026-11-15",
+  "date": "2026-11-16",
   "instance_id": 60509551,
   "scope": "existing NOX OneHost and ready WEB Resonance only",
   "policy": {
     "workers": 6,
-    "workers_are": "OS processes, not AI subagents",
+    "workers_are": "existing dispatcher executors with atomic unique claims; different tasks execute concurrently",
     "chat_priority": true,
-    "target_sustained_utilization_percent": [80, 85],
+    "target_sustained_utilization_percent": [
+      80,
+      85
+    ],
     "target_peak_utilization_percent": 95,
     "no_fake_load": true,
     "one_active_chat_model": true,
-    "combined_training": ["LoRA skill acquisition", "validated merge into matching base", "periodic full-parameter distillation", "measured inference quantization"],
+    "combined_training": [
+      "LoRA skill acquisition",
+      "validated merge into matching base",
+      "periodic full-parameter distillation",
+      "measured inference quantization"
+    ],
     "latest_owner_LoRA_permission_supersedes_older_no_LoRA_text": true,
     "quantization_lossless_guarantee": false,
     "no_new_backend": true,
     "no_windows_exe": true,
     "no_blind_torch_upgrade": true,
-    "training_state_and_S03_protected": true
+    "training_state_and_S03_protected": true,
+    "chatgpt_agents_including_coordinator": 4,
+    "nox_chat_and_coordinator_roles": 1,
+    "total_roles": 11,
+    "resource_quota": {
+      "cpu_cores": 19.2,
+      "memory_max_bytes": 194065203200
+    },
+    "modes": [
+      "NORMAL",
+      "TASK_BOOST"
+    ],
+    "training_in_boost": "collect verified work experiences; model optimizer paused for resource-intensive integration",
+    "model_merge": "exact compatible base and evaluated adapters only; heterogeneous teacher knowledge through validated distillation",
+    "new_visual_request": true
   },
-  "download_state_this_run": "NO_NEW_SERVER_DOWNLOAD_CONFIRMED",
+  "download_state_this_run": "STACK_ALREADY_INSTALLED_NATIVE_VERIFIED_NO_NEW_MODEL_DOWNLOAD",
   "components": [
-    {"name":"rclone","priority":"P0","state":"NATIVE_INSTALL_AND_REMOTE_AUTH_UNKNOWN","source":"https://rclone.org/install/","use":"Existing Drive or owner PC SFTP remote, immutable copy and streaming readback; do not create public storage"},
-    {"name":"PyTorch CUDA SM70","priority":"P0","state":"PRESERVE_AND_REVERIFY_EXISTING","observed_earlier":"2.6.0+cu124 with sm_70","source":"https://pytorch.org/get-started/previous-versions/","use":"Real FP16 CUDA smoke and existing engine benchmark before any replacement"},
-    {"name":"DeepSpeed","priority":"P0","state":"PRESERVE_AND_REVERIFY_EXISTING","observed_earlier":"0.20.0","source":"https://www.deepspeed.ai/tutorials/zero-offload/","use":"Verify built CPUAdam/optimizer paths, compare ZeRO/offload against measured baseline"},
-    {"name":"Transformers/Accelerate/Datasets/Safetensors","priority":"P0","state":"PRESERVE_AND_REVERIFY_EXISTING","source":"https://huggingface.co/docs/transformers/installation","use":"Reuse installed environment; freeze exact versions and wheel hashes before staged changes"},
-    {"name":"PEFT LoRA and merge","priority":"P0","state":"NATIVE_PRESENCE_UNKNOWN_NEWLY_ALLOWED","source":"https://huggingface.co/docs/peft/main/package_reference/lora","use":"Train only against the exact student revision and tokenizer; merge only after holdout and checkpoint restoration"},
-    {"name":"bitsandbytes 8-bit optimizer or NF4/FP4","priority":"P0","state":"CONDITIONAL_NATIVE_SM70_SMOKE_REQUIRED","source":"https://huggingface.co/docs/bitsandbytes/main/installation","use":"Linux CUDA12 build including sm70; LLM.int8 requires CC7.5 and is not the V100 path"},
-    {"name":"existing llama.cpp CUDA inference","priority":"P0","state":"TUNE_EXISTING_NOT_REPLACE_BLINDLY","source":"https://github.com/ggml-org/llama.cpp","use":"Prompt cache, supported KV formats, batching, thread counts and actual SSE TTFT/tokens per second; inspect existing PIDs before stopping anything"},
-    {"name":"PyTorch data pipeline","priority":"P0","state":"CONFIGURATION_REQUIRES_NATIVE_BENCHMARK","source":"https://docs.pytorch.org/docs/2.6/data.html","use":"Pinned buffers, persistent workers, bounded prefetch, tokenization caching, length bucketing and gradient accumulation"},
-    {"name":"psutil and nvidia-ml-py","priority":"P0","state":"NATIVE_PRESENCE_UNKNOWN","source":"https://pypi.org/project/nvidia-ml-py/","use":"Existing GPU Resource Brain telemetry; cgroup RAM, STOP, restart backoff, no competing scheduler"},
-    {"name":"S03 semantic retrieval","priority":"P1","state":"REUSE_EXISTING_EMBEDDING_AND_INDEX_FIRST","source":"https://github.com/asg017/sqlite-vec","use":"Optional compatible extension only if needed; same S03, bounded parallel retrieval, no duplicate memory database"},
-    {"name":"C01-C08/M0-M7/Reflection/Self-model","priority":"P1","state":"EXISTING_NOX_RUNTIME_WIRING_NOT_DOWNLOADABLE_CONSCIOUSNESS","source":"coordination/NOX_PRIME_SIX_RELAY_20261115.md","use":"Grounded facts, provenance, bounded context and real conversation tests; a package install is not proof of intelligence or consciousness"},
-    {"name":"third-party adapters and new teacher weights","priority":"P2","state":"NOT_SELECTED_UNTIL_EXACT_STUDENT_AND_LICENSE_VERIFIED","source":"https://huggingface.co/models?library=peft","use":"No random consciousness/emotion adapters. Verify architecture, base revision, tokenizer, license, holdout and actual measured benefit before acquiring large files"}
+    {
+      "name": "rclone",
+      "priority": "P0",
+      "state": "INSTALLED_REMOTE_AUTH_MISSING",
+      "source": "https://rclone.org/install/",
+      "use": "Existing Drive or owner PC SFTP remote, immutable copy and streaming readback; do not create public storage",
+      "id": "component-1",
+      "owner_executor": "nox-agent-05",
+      "decision": "CONFIGURE_OWNER_PC_OAUTH"
+    },
+    {
+      "name": "PyTorch CUDA SM70",
+      "priority": "P0",
+      "state": "INSTALLED_NATIVE_VERIFIED",
+      "observed_earlier": "2.6.0+cu124 with sm_70",
+      "source": "https://pytorch.org/get-started/previous-versions/",
+      "use": "Real FP16 CUDA smoke and existing engine benchmark before any replacement",
+      "id": "component-2",
+      "owner_executor": "nox-agent-02",
+      "package": "torch",
+      "installed_version": "2.6.0+cu124",
+      "decision": "REUSE_EXISTING_AND_INTEGRATE"
+    },
+    {
+      "name": "DeepSpeed",
+      "priority": "P0",
+      "state": "INSTALLED_NATIVE_VERIFIED",
+      "observed_earlier": "0.20.0",
+      "source": "https://www.deepspeed.ai/tutorials/zero-offload/",
+      "use": "Verify built CPUAdam/optimizer paths, compare ZeRO/offload against measured baseline",
+      "id": "component-3",
+      "owner_executor": "nox-agent-03",
+      "package": "deepspeed",
+      "installed_version": "0.20.0",
+      "decision": "REUSE_EXISTING_AND_INTEGRATE"
+    },
+    {
+      "name": "Transformers/Accelerate/Datasets/Safetensors",
+      "priority": "P0",
+      "state": "INSTALLED_NATIVE_VERIFIED",
+      "source": "https://huggingface.co/docs/transformers/installation",
+      "use": "Reuse installed environment; freeze exact versions and wheel hashes before staged changes",
+      "id": "component-4",
+      "owner_executor": "nox-agent-04",
+      "package": "transformers",
+      "installed_version": "5.23.0",
+      "decision": "REUSE_EXISTING_AND_INTEGRATE"
+    },
+    {
+      "name": "PEFT LoRA and merge",
+      "priority": "P0",
+      "state": "INSTALLED_NATIVE_VERIFIED",
+      "source": "https://huggingface.co/docs/peft/main/package_reference/lora",
+      "use": "Train only against the exact student revision and tokenizer; merge only after holdout and checkpoint restoration",
+      "id": "component-5",
+      "owner_executor": "nox-agent-05",
+      "package": "peft",
+      "installed_version": "0.21.3",
+      "decision": "REUSE_EXISTING_AND_INTEGRATE"
+    },
+    {
+      "name": "bitsandbytes 8-bit optimizer or NF4/FP4",
+      "priority": "P0",
+      "state": "INSTALLED_NATIVE_VERIFIED",
+      "source": "https://huggingface.co/docs/bitsandbytes/main/installation",
+      "use": "Linux CUDA12 build including sm70; LLM.int8 requires CC7.5 and is not the V100 path",
+      "id": "component-6",
+      "owner_executor": "nox-agent-06",
+      "package": "bitsandbytes",
+      "installed_version": "0.50.2",
+      "decision": "REUSE_EXISTING_AND_INTEGRATE"
+    },
+    {
+      "name": "existing llama.cpp CUDA inference",
+      "priority": "P0",
+      "state": "RUNNING_NATIVE_HEALTH_200_SIX_SLOTS",
+      "source": "https://github.com/ggml-org/llama.cpp",
+      "use": "Prompt cache, supported KV formats, batching, thread counts and actual SSE TTFT/tokens per second; inspect existing PIDs before stopping anything",
+      "id": "component-7",
+      "owner_executor": "nox-agent-03",
+      "decision": "REUSE_AND_PATCH_EXISTING_CHAT"
+    },
+    {
+      "name": "PyTorch data pipeline",
+      "priority": "P0",
+      "state": "CONFIGURATION_REQUIRES_NATIVE_BENCHMARK",
+      "source": "https://docs.pytorch.org/docs/2.6/data.html",
+      "use": "Pinned buffers, persistent workers, bounded prefetch, tokenization caching, length bucketing and gradient accumulation",
+      "id": "component-8",
+      "owner_executor": "nox-agent-02"
+    },
+    {
+      "name": "psutil and nvidia-ml-py",
+      "priority": "P0",
+      "state": "INSTALLED_NATIVE_VERIFIED",
+      "source": "https://pypi.org/project/nvidia-ml-py/",
+      "use": "Existing GPU Resource Brain telemetry; cgroup RAM, STOP, restart backoff, no competing scheduler",
+      "id": "component-9",
+      "owner_executor": "nox-agent-03",
+      "package": "psutil",
+      "installed_version": "7.2.2",
+      "decision": "REUSE_EXISTING_AND_INTEGRATE"
+    },
+    {
+      "name": "S03 semantic retrieval",
+      "priority": "P1",
+      "state": "EXISTING_BGE_M3_ENDPOINT_8082_HEALTH_200_SQLITE_VEC_ABSENT_IN_TRAINING_VENV",
+      "source": "https://github.com/asg017/sqlite-vec",
+      "use": "Optional compatible extension only if needed; same S03, bounded parallel retrieval, no duplicate memory database",
+      "id": "component-10",
+      "owner_executor": "nox-agent-04",
+      "decision": "VERIFY_EXISTING_S03_BEFORE_OPTIONAL_EXTENSION"
+    },
+    {
+      "name": "C01-C08/M0-M7/Reflection/Self-model",
+      "priority": "P1",
+      "state": "EXISTING_NOX_RUNTIME_WIRING_NOT_DOWNLOADABLE_CONSCIOUSNESS",
+      "source": "coordination/NOX_PRIME_SIX_RELAY_20261115.md",
+      "use": "Grounded facts, provenance, bounded context and real conversation tests; a package install is not proof of intelligence or consciousness",
+      "id": "component-11",
+      "owner_executor": "nox-agent-05",
+      "decision": "INTEGRATE_EXISTING_SOURCE_AND_VERIFY_LIVE"
+    },
+    {
+      "name": "third-party adapters and new teacher weights",
+      "priority": "P3",
+      "state": "NOT_SELECTED_UNTIL_EXACT_STUDENT_AND_LICENSE_VERIFIED",
+      "source": "https://huggingface.co/models?library=peft",
+      "use": "No random consciousness/emotion adapters. Verify architecture, base revision, tokenizer, license, holdout and actual measured benefit before acquiring large files",
+      "id": "component-12",
+      "owner_executor": "nox-agent-06",
+      "decision": "DO_NOT_DUPLICATE_EXISTING_TEACHERS_OR_MERGE_INCOMPATIBLE_WEIGHTS"
+    },
+    {
+      "id": "nox-image-engine",
+      "name": "FLUX.2 klein 4B distilled image/editing candidate",
+      "priority": "P1",
+      "owner_executor": "nox-agent-06",
+      "state": "PRIMARY_SOURCE_VERIFIED_NOT_NATIVE_INSTALLED",
+      "decision": "CHECK_EXISTING_MEDIA_RUNTIME_EXACT_FILES_FP16_AND_RAM_ADMISSION",
+      "source": "https://huggingface.co/black-forest-labs/FLUX.2-klein-4B",
+      "license": "Apache-2.0",
+      "use": "Expose as NOX image feature while retaining model/license metadata; V100 latency and numerical path unverified"
+    },
+    {
+      "id": "nox-video-engine",
+      "name": "Wan2.2 TI2V 5B FP16 candidate",
+      "priority": "P1",
+      "owner_executor": "nox-agent-06",
+      "state": "PRIMARY_SOURCE_RESEARCH_NOT_NATIVE_INSTALLED",
+      "decision": "CHECK_EXISTING_MEDIA_RUNTIME_EXACT_FILES_DTYPE_AND_RAM_ADMISSION",
+      "source": "https://huggingface.co/Wan-AI/Wan2.2-TI2V-5B",
+      "license": "Verify exact repository license before install",
+      "use": "Text/image to video through existing ComfyUI if available; serialize GPU1 generation with checkpointed training when memory is insufficient"
+    },
+    {
+      "id": "work-experience-learning",
+      "name": "Verified work experience and error corrections",
+      "priority": "P0",
+      "owner_executor": "nox-agent-02",
+      "state": "SOURCE_IMPLEMENTATION_IN_PROGRESS",
+      "decision": "QUARANTINE_UNVERIFIED_FAILURES_AND_MENTOR_ADVICE",
+      "source": "nox-control/owner_dispatcher_mentor.py",
+      "use": "Evidence-backed accepted examples with provenance and holdout; no claims that task logs are optimizer updates"
+    }
   ],
   "storage_layout": {
-    "hot":"active chat model and active training state stay local",
-    "warm":"bounded RAM cache with cgroup reserve; cache is not backup",
-    "cold":"verified inactive model objects on an existing authorized Drive or PC storage",
-    "eviction":"only after byte-level remote readback, current explicit inactive inventory and shared native writer lease; never S03, active model, unique checkpoints or sole backups"
+    "hot": "active chat model and active training state stay local",
+    "warm": "bounded RAM cache with cgroup reserve; cache is not backup",
+    "cold": "verified inactive model objects on an existing authorized Drive or PC storage",
+    "eviction": "only after byte-level remote readback, current explicit inactive inventory and shared native writer lease; never S03, active model, unique checkpoints or sole backups"
+  },
+  "schema_version": 2,
+  "native_inventory_source": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43773699907",
+  "installed_package_versions": {
+    "torch": "2.6.0+cu124",
+    "transformers": "5.23.0",
+    "accelerate": "1.15.0",
+    "datasets": "5.2.0",
+    "safetensors": "0.8.0",
+    "peft": "0.21.3",
+    "bitsandbytes": "0.50.2",
+    "trl": "1.18.0",
+    "deepspeed": "0.20.0",
+    "psutil": "7.2.2",
+    "nvidia-ml-py": "13.615.71",
+    "sqlite-vec": null,
+    "playwright": null,
+    "pytest": null,
+    "ruff": null
+  },
+  "native_tasks": [
+    {
+      "executor_preference": "nox-agent-01",
+      "task": "owner.training_stack",
+      "claim": "atomic; any idle executor can claim the next ready unique task"
+    },
+    {
+      "executor_preference": "nox-agent-02",
+      "task": "owner.dispatcher",
+      "claim": "atomic; any idle executor can claim the next ready unique task"
+    },
+    {
+      "executor_preference": "nox-agent-03",
+      "task": "owner.chat",
+      "claim": "atomic; any idle executor can claim the next ready unique task"
+    },
+    {
+      "executor_preference": "nox-agent-04",
+      "task": "owner.memory",
+      "claim": "atomic; any idle executor can claim the next ready unique task"
+    },
+    {
+      "executor_preference": "nox-agent-05",
+      "task": "owner.storage",
+      "claim": "atomic; any idle executor can claim the next ready unique task"
+    },
+    {
+      "executor_preference": "nox-agent-06",
+      "task": "owner.downloads",
+      "claim": "atomic; any idle executor can claim the next ready unique task"
+    }
+  ],
+  "large_download_admission": {
+    "disk_free_bytes_at_inspection": 16387645440,
+    "shm_free_bytes_at_inspection": 18033119232,
+    "full_new_models_fit_not_verified": true,
+    "no_deletion_before_two_verified_copies": true
   }
 }

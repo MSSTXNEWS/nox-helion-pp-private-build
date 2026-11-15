@@ -1,0 +1,153 @@
+"""Native transform, unique claims, verified-learning and advice boundary tests."""
+import ast
+from concurrent.futures import ThreadPoolExecutor
+import hashlib
+import importlib.util
+import json
+import os
+from pathlib import Path
+import sys
+import tempfile
+import time
+import unittest
+from unittest.mock import patch
+
+HERE = Path(__file__).parent
+def module(name):
+    spec = importlib.util.spec_from_file_location(name, HERE / (name + '.py'))
+    value = importlib.util.module_from_spec(spec)
+    sys.modules[name] = value
+    spec.loader.exec_module(value)
+    return value
+
+mentor = module('owner_dispatcher_mentor')
+FIXTURE = Path('/tmp/nox_native_sources/nox_dispatcher_t855u.py')
+
+
+class MentorTests(unittest.TestCase):
+    def test_no_generated_commands_or_arbitrary_service_actions(self):
+        for advice in ({'action': 'shell', 'reason_code': 'fix', 'service': None},
+                       {'action': 'restart_service', 'reason_code': 'fix', 'service': 'nox-train-volta-t866u'},
+                       {'action': 'escalate', 'reason_code': 'fix', 'service': None, 'command': 'anything'}):
+            with self.assertRaises(RuntimeError):
+                mentor.validate_advice(advice, ['nox-priority-scheduler'])
+
+    def test_no_senior_config_means_explicit_block_and_no_fake_consult(self):
+        with tempfile.TemporaryDirectory() as root, patch.object(mentor, 'ROOT', Path(root)), patch.object(mentor, 'consult') as call:
+            task = {'id': 'fixture', 'handler': 'verify_q4', 'retries': 1, 'max_retries': 3}
+            result = mentor.on_failure(task, 'file missing')
+            self.assertEqual(result['state'], 'BLOCKED_SENIOR_NOT_CONFIGURED')
+            self.assertEqual(task['status'], 'blocked')
+            call.assert_not_called()
+            self.assertTrue((Path(root) / 'memory/dispatcher_mentor/events.jsonl').exists())
+
+    def test_nox_chat_is_never_substituted_for_senior(self):
+        with tempfile.TemporaryDirectory() as root, patch.object(mentor, 'ROOT', Path(root)):
+            path = Path(root) / 'config/senior_model.json'
+            path.parent.mkdir()
+            path.write_text(json.dumps({'enabled': True, 'role': 'senior', 'base_url': 'http://127.0.0.1:8081/v1', 'model': 'pretend-senior'}))
+            self.assertIsNone(mentor.discover_senior())
+
+    def test_repeated_incident_calls_senior_only_once_and_never_replays_exec(self):
+        with tempfile.TemporaryDirectory() as root, patch.object(mentor, 'ROOT', Path(root)), patch.object(mentor, 'discover_senior', return_value={'model': 'configured-senior', 'config_sha256': 'a' * 64}), patch.object(mentor, 'consult', return_value={'action': 'retry_task', 'reason_code': 'transient', 'service': None}) as call:
+            task = {'id': 'fixture', 'handler': 'exec_plan', 'retries': 1, 'max_retries': 3}
+            self.assertEqual(mentor.on_failure(task, 'timeout')['state'], 'BLOCKED_ESCALATED')
+            self.assertEqual(mentor.on_failure(task, 'timeout')['state'], 'BLOCKED_DUPLICATE_OR_CONSULT_BUDGET')
+            self.assertEqual(call.call_count, 1)
+            context = call.call_args.args[1]
+            self.assertNotIn('error_text', context)
+
+    def test_failure_and_unverified_success_never_enter_training(self):
+        with tempfile.TemporaryDirectory() as root, patch.object(mentor, 'ROOT', Path(root)):
+            accepted = Path(root) / 'accepted.jsonl'
+            for ok in (False, True):
+                row = mentor.record_experience(ok, {'id': 'fixture', 'handler': 'track'}, 'work', {'guess': True}, 'unverified suggestion', accepted)
+                self.assertFalse(row['accepted'])
+                self.assertEqual(row['partition'], 'quarantine')
+            self.assertFalse(accepted.exists())
+
+    def test_component_receipt_preserves_scope_and_blockers_and_rejects_tampering(self):
+        with tempfile.TemporaryDirectory() as root, patch.object(mentor, 'ROOT', Path(root)):
+            base = Path(root)
+            script = base / 'scripts/owner_component_tasks.py'
+            script.parent.mkdir()
+            script.write_text('# native fixture\n')
+            task = {'id': 'owner.storage', 'handler': 'owner_component', 'owner_claim_epoch': time.time() - 1}
+            receipt = base / 'state/owner_components/owner.storage.json'
+            receipt.parent.mkdir(parents=True)
+            doc = {'schema': 'NOX_OWNER_COMPONENT_V1', 'schema_version': 1, 'task_id': task['id'],
+                   'success': True, 'verified': True, 'started_at': time.time(), 'pid': os.getpid(),
+                   'source_sha256': hashlib.sha256(script.read_bytes()).hexdigest(),
+                   'evidence': {'verified': True, 'scope': 'STORAGE_INVENTORY_ONLY', 'blockers': ['OAUTH_REQUIRED']}}
+            receipt.write_text(json.dumps(doc))
+            evidence = {'schema': 'NOX_OWNER_COMPONENT_V1', 'schema_version': 1,
+                        'receipt_path': str(receipt), 'receipt_sha256': hashlib.sha256(receipt.read_bytes()).hexdigest(),
+                        'scope': 'STORAGE_INVENTORY_ONLY', 'blockers': ['OAUTH_REQUIRED']}
+            row = mentor.record_experience(True, task, 'storage check', evidence, accepted_path=base / 'accepted.jsonl')
+            self.assertEqual(row['verification']['scope'], 'STORAGE_INVENTORY_ONLY')
+            self.assertEqual(row['verification']['blockers'], ['OAUTH_REQUIRED'])
+            again = mentor.record_experience(True, task, 'storage check', evidence, accepted_path=base / 'accepted.jsonl')
+            self.assertTrue(again['duplicate'])
+            receipt.write_text('{}')
+            self.assertIsNone(mentor.verify_success(task, evidence))
+
+    def test_secret_redaction_is_not_the_broken_native_capture_group(self):
+        output = mentor.redact('api_key="example-secret-value" Bearer abcdef123456 hf_abcdefghijklmnop')
+        self.assertNotIn('example-secret-value', output)
+        self.assertNotIn('abcdef123456', output)
+        self.assertNotIn('hf_abcdefghijklmnop', output)
+
+
+@unittest.skipUnless(FIXTURE.exists(), 'Requires retrieved pinned native dispatcher fixture')
+class NativeTransformTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        repair = module('owner_native_repair')
+        module('owner_component_tasks')
+        original = FIXTURE.read_text()
+        cls.source = mentor.transform_dispatcher(repair.patch_dispatcher(original))
+        cls.native = {'__name__': 'native_test'}
+        exec(compile(cls.source, '<native-transform>', 'exec'), cls.native)
+
+    def test_transform_is_idempotent_and_worker_count_is_real_six(self):
+        self.assertEqual(mentor.transform_dispatcher(self.source), self.source)
+        self.assertEqual(self.native['WORKERS'], 6)
+        self.assertEqual(len(self.native['_wstate']), 6)
+        self.assertEqual(mentor.worker_config({'workers': 32})['min_workers'], 6)
+
+    def test_all_backoffs_and_zero_priority_are_respected(self):
+        tasks = {name: {'id': name, 'status': 'pending', 'class': 'owner_order', 'priority': priority, 'deps': [], 'next_try': after}
+                 for name, priority, after in (('a-delayed', 0, time.time() + 200), ('b-delayed', 0, time.time() + 200), ('c-one', 1, 0), ('z-zero', 0, 0))}
+        with patch.dict(self.native, {'_nox_owner_task_admitted': lambda task: True}):
+            self.assertEqual(self.native['pick_ready']({'tasks': tasks}, set())['id'], 'z-zero')
+
+    def test_concurrent_claims_are_unique_and_saved_before_return(self):
+        tasks = {str(i): {'id': str(i), 'status': 'pending', 'class': 'owner_order', 'priority': 0, 'deps': [], 'locks': []} for i in range(6)}
+        state = {'tasks': tasks}
+        busy = set()
+        saved = []
+        def save(st):
+            saved.append(sum(task['status'] == 'running' for task in st['tasks'].values()))
+        with patch.dict(self.native, {'_nox_owner_task_admitted': lambda task: True,
+              'ingest_architect_patch': lambda st: None, 'ingest_owner_orders': lambda st: None, 'save_state': save}):
+            with ThreadPoolExecutor(max_workers=12) as pool:
+                claims = list(pool.map(lambda i: self.native['owner_claim_ready'](state, busy, 'test-' + str(i)), range(12)))
+        claims = [task for task in claims if task]
+        self.assertEqual(len(claims), 6)
+        self.assertEqual(len({task['id'] for task in claims}), 6)
+        self.assertEqual(len({task['owner_claim']['nonce'] for task in claims}), 6)
+        self.assertEqual(saved, [1, 2, 3, 4, 5, 6])
+
+    def test_cold_restart_does_not_replay_an_unverified_child(self):
+        main = next(node for node in ast.parse(self.source).body if isinstance(node, ast.FunctionDef) and node.name == 'main')
+        recovery = next(node for node in main.body if isinstance(node, ast.For))
+        state = {'tasks': {'old': {'id': 'old', 'status': 'running'}}}
+        namespace = {**self.native, 'st': state}
+        exec(compile(ast.Module(body=[recovery], type_ignores=[]), '<recovery>', 'exec'), namespace)
+        self.assertEqual(state['tasks']['old']['status'], 'blocked')
+        self.native['upsert'](state, {'id': 'old', 'status': 'pending'})
+        self.assertEqual(state['tasks']['old']['status'], 'blocked')
+
+
+if __name__ == '__main__':
+    unittest.main()
