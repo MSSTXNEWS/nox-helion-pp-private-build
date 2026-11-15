@@ -323,6 +323,36 @@ def receipts():
         except (OSError,ValueError):pass
     return rows
 
+def owner_component_readback():
+    rows=[]
+    for name in ('owner.training_stack','owner.dispatcher','owner.chat','owner.memory','owner.storage','owner.downloads'):
+        p=ROOT/'state/owner_components'/(name+'.json')
+        if p.is_file() and not p.is_symlink() and p.stat().st_size<100000:
+            try:rows.append({'path':str(p),'receipt':json.loads(p.read_text())})
+            except (OSError,ValueError):pass
+    queue=ROOT/'state/dispatcher/state.json'
+    tasks=[]
+    if queue.is_file() and not queue.is_symlink() and queue.stat().st_size<3000000:
+        try:
+            state=json.loads(queue.read_text())
+            tasks=[{key:value for key,value in task.items() if key in
+                    ('id','status','retries','claimed_by','owner_claim','owner_claim_epoch','finished_at','result')}
+                   for name,task in state.get('tasks',{}).items() if name.startswith('owner.')]
+        except (OSError,ValueError,TypeError):pass
+    print('NOX_MAINT_COMPONENTS='+json.dumps({'receipts':rows,'tasks':tasks},separators=(',',':')),flush=True)
+
+def bounded_capacity_readback():
+    probe=ROOT/'scripts/owner_capacity_probe.py'
+    expected='7ce19fe09a2af1571efc9e3c43751f8243d3cba7e7c60678053b334cede70d31'
+    if not probe.is_file() or probe.is_symlink() or hashlib.sha256(probe.read_bytes()).hexdigest()!=expected:
+        print('NOX_MAINT_CAPACITY_HOLD=PINNED_NATIVE_PROBE_MISSING',flush=True);return
+    # Public short fixtures only; existing probe checks idle chat, native BOOST
+    # state and cgroup pressure before admitting any model work.
+    p=subprocess.run(['python3',str(probe),'--mode','TASK_BOOST','--samples','6',
+                      '--reserve-slots','0','--deadline-sec','90'],capture_output=True,text=True,timeout=115)
+    for line in p.stdout.splitlines():
+        if line.startswith('NOX_MAINT_CAPACITY') and len(line)<150000:print(line,flush=True)
+
 def worker(i):
     f=(hardware,processes,training,controls,chat_storage,receipts)[i]
     try: return {'section':f.__name__,'worker_pid':os.getpid(),'result':f()}
@@ -336,4 +366,6 @@ if __name__=='__main__':
             items=[dict(row,result=[item]) for item in row.get('result',[])] if row['section']=='controls' and isinstance(row.get('result'),list) else [row]
             for item in items:
                 print('NOX_MAINT_INSPECT='+json.dumps(item,separators=(',',':')),flush=True)
+    owner_component_readback()
+    bounded_capacity_readback()
     print('NOX_MAINT_INSPECT_COMPLETE=true',flush=True)
