@@ -9,7 +9,8 @@ $file = Join-Path $dir 'NOX_HELION_WEB_V293_ONEPASS_NATIVE_COMPAT.zip'
 $report = [ordered]@{
     schema = 'NOX_ONEPASS_WINDOWS_READONLY_PROBE_V1'
     at_utc = [DateTime]::UtcNow.ToString('o')
-    machine = 'WINDOWS_OWNER_HOST'
+    machine = 'LOCAL_EXECUTION_HOST_NOT_OWNER_ATTESTED'
+    windows_owner_pc_identity_attested = $false
     package_status = 'HOLD_NOT_VERIFIED'
     package_sha256 = $null
     package_entries = $null
@@ -44,6 +45,24 @@ function Test-LocalPort([int]$port) {
     } catch { return 'UNREACHABLE' }
     finally { $client.Close() }
 }
+# NOX_V147_RECEIPT_NO_CLOBBER_BEGIN
+# Atomic exclusive creation: repeated same-second receipts must never be overwritten.
+function Write-NoClobberOnepassReceipt([string]$receiptPath, [string]$json) {
+    $bytes = ([System.Text.UTF8Encoding]::new($false)).GetBytes($json)
+    $stream = [System.IO.FileStream]::new(
+        $receiptPath,
+        [System.IO.FileMode]::CreateNew,
+        [System.IO.FileAccess]::Write,
+        [System.IO.FileShare]::None
+    )
+    try {
+        $stream.Write($bytes, 0, $bytes.Length)
+        $stream.Flush($true)
+    } finally {
+        $stream.Dispose()
+    }
+}
+# NOX_V147_RECEIPT_NO_CLOBBER_END
 # NOX_V146_WINDOWS_PC_PROBE_BEGIN
 # Anonymous, read-only Windows PC route discovery: NOT authenticated E2E.
 # Strictly GET two allowlisted localhost routes, never POST /api/install/backup.
@@ -122,7 +141,12 @@ $report.windows_owner_pc_port_8766 = Test-LocalPort 8766
 $report.windows_pc_status_anonymous = Test-AnonymousPcRoute '/api/nox/status'
 $report.windows_pc_capabilities_anonymous = Test-AnonymousPcRoute '/api/install/capabilities'
 $report_path = Join-Path $dir ('NOX_ONEPASS_WINDOWS_READONLY_RECEIPT_'+[DateTime]::UtcNow.ToString('yyyyMMdd_HHmmss')+'.json')
-$report | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $report_path -Encoding UTF8
+try {
+    Write-NoClobberOnepassReceipt $report_path ($report | ConvertTo-Json -Depth 8)
+} catch {
+    Write-Host ('HOLD_RECEIPT_NO_REPLACE_FAILED: '+$_.Exception.GetType().Name)
+    exit 3
+}
 Write-Host ('NOX · Пакет: '+$report.package_status)
 Write-Host ('NOX · Локальная WEB-служба: '+$report.localhost_web_port_18775)
 Write-Host ('NOX · Локальный чат-порт: '+$report.localhost_chat_port_18877)
