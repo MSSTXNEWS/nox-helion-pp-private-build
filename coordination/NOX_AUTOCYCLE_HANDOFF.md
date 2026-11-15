@@ -584,3 +584,9 @@ Accepted shared HEAD `640bcdae71371faaaa66c3f92c35cd2341841a87`, latest MANUAL 2
 - Code+ledger+receipt patched in ONE CAS commit, source CI pending. Native installed/merged/deleted=[], freed bytes 0, production WEB/S03/weights/STOP unchanged; last independently native 0/60.
 - ONE next action → AUTO 2B: Owner-approved existing manual V51 workflow_dispatch allow_native=YES on current feature SHA to read-only reconcile original OneHost queue job IDs with S03 receipts, V29 SSE TTFT/TPS, GPU1 PID/STOP/cgroup and independent full S03+optimizer offsite restore; no owner-native writer lease => no enqueue/deploy/delete.
 
+
+
+### AUTO 2B · 2026-11-15 20:26 МСК · original V175 strict queue identity proof
+- Accepted single PR #256 feature HEAD `f373a171f69385f2b67632b24478d0bd3a122207`, AUTO 1B receipt; existing V175 latest source CI SUCCESS (not native). Corrected NOX-P0-V175-STRICT-JOB-ID-QUEUE-GRAMMAR-MISMATCH-20261115: V175 previously called printable Unicode/punctuation 'real job IDs' even though the existing V47 native enqueue/recovery refuses them. Unified original V175 validation with exact V47 job-ID grammar, preserved legacy status counting and zero native side effects, added original source regression across both canonical/legacy matrices.
+- One CAS source+test+append-only error+receipt+handoff, exact head and CI must be verified after push. Native V51 previous owner-v1 pinned SSH read-only exists; current SHA native owner-writer approval, full independent restore and live WEB E2E NOT proven. last physical queue native job IDs=0/60; installed/merged/deleted=[], freed bytes=0; original WEB/S03/GPU/weights/STOP unchanged.
+- Next ONE action → AUTO 1C: Owner-approved exact-HEAD V51 workflow_dispatch allow_native=YES: READ-ONLY original OneHost queue + signed S03 job IDs, original V112 live SSE TTFT/TPS, GPU1 UUID/PID/STOP and complete independent offsite S03/optimizer restore; no native writes until separate fenced owner lease.

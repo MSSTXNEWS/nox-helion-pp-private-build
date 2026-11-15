@@ -265,6 +265,26 @@ class Priorities(unittest.TestCase):
             self.assertEqual(result['native_registered_verified'],2)
             self.assertEqual(result['native_completed_verified'],2)
 
+    def test_v179_strict_job_id_matches_native_queue_contract(self):
+        # V175 used isprintable(): a native status with job?bad or Unicode
+        # inflated the 'real job ID' counter even though V47 refuses that ID.
+        # This is SOURCE regression only, never a native queue registration.
+        for matrix in (self.m, self.master):
+            tid=matrix['tasks'][0]['task_id']
+            for bad in ('native?job','native#job','native+job','native☃job'):
+                with self.subTest(schema=matrix['schema'],job_id=bad):
+                    row={'task_id':tid,'state':'RUNNING','native_verified':True,
+                         'receipt_sha256':'a'*64,'heartbeat_unix':2000,
+                         'job_id':bad}
+                    observed=state(native_queue_verified=True,
+                                   task_status={tid:row})
+                    result=audit_native_queue(matrix,observed,now_unix=2000)
+                    self.assertEqual(result['native_job_ids_verified'],0)
+                    self.assertEqual(result['native_registered_verified'],0)
+                    self.assertEqual(result['untrusted_count'],1)
+                    self.assertIn(tid,result['protected_task_ids'])
+                    self.assertEqual(result['native_jobs_started'],0)
+
     def test_unknown_lease_and_untrusted_complete_hold(self):
         row={'task_id':'NOX-V46-41','state':'COMPLETED','native_verified':True,
              'receipt_sha256':'bogus','independent_test_passed':True}

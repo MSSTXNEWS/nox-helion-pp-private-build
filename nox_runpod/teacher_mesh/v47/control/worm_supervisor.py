@@ -12,13 +12,14 @@ import re
 TASKID=re.compile(r"^NOX-V46-(0[1-9]|[1-5][0-9]|60)$")
 R60ID=re.compile(r"^R60-(00[1-9]|0[1-5][0-9]|060)$")
 SHA=re.compile(r"^[a-f0-9]{64}$")
+# Must match the original V47 enqueue/recovery native queue-ID contract.
+JOBID=re.compile(r"^[A-Za-z0-9._:@/-]{1,128}$")
 RUNNING=frozenset(("RUNNING","PENDING","CLAIMED"))
 STATES=RUNNING | {"COMPLETED","FAILED","CANCELLED","PAUSED","BLOCKED"}
 
 def _valid_native_job_id(value) -> bool:
     """Opaque owner job IDs are canonical; padding/control aliases are unsafe."""
-    return (type(value) is str and 1 <= len(value) <= 128
-            and value == value.strip() and value.isprintable())
+    return type(value) is str and JOBID.fullmatch(value) is not None
 
 
 
