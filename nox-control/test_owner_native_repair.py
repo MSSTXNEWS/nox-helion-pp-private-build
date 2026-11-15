@@ -43,10 +43,39 @@ class HaltTests(unittest.TestCase):
                  patch.object(m,'process_table',side_effect=[{10:wrapper_row,11:child},{}]), \
                  patch.object(m,'process',return_value=None), \
                  patch.object(m,'command',side_effect=command),contextlib.redirect_stdout(io.StringIO()):
-                self.assertEqual(m.main(),0)
+                self.assertEqual(m.halt_main(),0)
             self.assertEqual(calls,[['supervisorctl','stop',m.SERVICE]])
             receipt=json.loads((root/'state/owner_maintenance_123.json').read_text())
             self.assertTrue(receipt['halt_verified']);self.assertTrue(receipt['hold_retained'])
             self.assertFalse(receipt['training_started']);self.assertEqual(receipt['weights_deleted'],0)
+
+    def test_budget_uses_container_quota_and_preserves_ram_reserve(self):
+        gib=1024**3
+        budget=m.resource_budget(180*gib,90*gib,19,80)
+        self.assertEqual(budget['train_cpu_gib'],64)
+        self.assertEqual(budget['omp_threads'],4)
+        with self.assertRaisesRegex(RuntimeError,'RAM_HEADROOM'):
+            m.resource_budget(180*gib,150*gib,19,80)
+
+    def test_guard_checks_held_lock_not_persistent_lock_file(self):
+        import fcntl
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);(root/'state').mkdir();p=root/'state/owner_maintenance.lock'
+            p.touch();namespace={'ROOT':root}
+            exec(m.OWNER_GUARD,namespace)
+            self.assertFalse(namespace['_nox_owner_maintenance_busy']())
+            with p.open('rb') as f:
+                fcntl.flock(f.fileno(),fcntl.LOCK_EX|fcntl.LOCK_NB)
+                self.assertTrue(namespace['_nox_owner_maintenance_busy']())
+            (root/'state/TRAIN_HOLD.flag').touch()
+            self.assertTrue(namespace['_nox_owner_admission_reason'](m.SERVICE))
+
+    def test_wrapper_uses_same_entry_and_no_port_kill(self):
+        source=m.wrapper_source('123')
+        self.assertIn('--max-steps 5 --planned-steps 1000',source)
+        self.assertIn('TRAIN_HOLD.flag',source)
+        self.assertNotIn('kill -',source)
+        self.assertNotIn('--smoke',source)
+        self.assertIn('--resume',m.wrapper_source('123',1000,True))
 
 if __name__=='__main__':unittest.main()
