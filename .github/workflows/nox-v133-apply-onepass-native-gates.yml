@@ -1,17 +1,14 @@
 name: NOX V133 atomic source-only native workflow collision repair
 on:
-  push:
-    branches: [nox/e2-v133-native-workflow-single-gate-20261115]
-    paths:
-      - '.github/workflows/nox-v133-apply-onepass-native-gates.yml'
+  workflow_dispatch:
 permissions:
-  contents: write
+  contents: read
 concurrency:
   group: nox-v133-source-only-single-commit-gates
   cancel-in-progress: false
 jobs:
   guarded-source-write:
-    if: github.repository == 'MSSTXNEWS/nox-helion-pp-private-build' && github.ref == 'refs/heads/nox/e2-v133-native-workflow-single-gate-20261115'
+    if: false # Historical one-shot evidence; preserved but intentionally disabled
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
