@@ -69,6 +69,10 @@ class V112Tests(unittest.TestCase):
                 else:
                     yield ('data: '+json.dumps({'choices':[{'delta':{'content':answer[:11]}}]},ensure_ascii=False)+'\n\n')
                     yield ('data: '+json.dumps({'choices':[{'delta':{'content':answer[11:]}}]},ensure_ascii=False)+'\n\n')
+                if self.bulk_sse=='finish_reason_length_after_delta':
+                    # OpenAI-compatible finish_reason=length is a truncated
+                    # generation, even if native fixture S03 later matches.
+                    yield 'data: '+json.dumps({'choices':[{'delta':{},'finish_reason':'length'}]})+'\n\n'
                 if self.bulk_sse=='malformed_data_after_delta':
                     # Previously ignored broken model data allowed false S03 done.
                     yield 'data: {broken-json\n\n'
@@ -237,6 +241,21 @@ class V112Tests(unittest.TestCase):
             params={'dialog_id':d}).json()
         self.assertEqual(history['messages'],[])
 
+
+    def test_truncated_upstream_finish_reason_never_certifies_s03_saved(self):
+        self.bulk_sse='finish_reason_length_after_delta'
+        created=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
+            json={'title':'V171 truncated upstream','confirmed':True}).json()
+        dialog_id=created['dialog_id']
+        reply=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
+            json={'message':'finish reason length after delta','dialog_id':dialog_id})
+        frames=[json.loads(line) for line in reply.text.splitlines() if line.strip()]
+        self.assertEqual(frames[-1],{'type':'error','error':'HOLD_UPSTREAM_FINISH_REASON'})
+        self.assertTrue(any(frame.get('type')=='delta' for frame in frames))
+        self.assertFalse(any(frame.get('type')=='done' or frame.get('saved') for frame in frames))
+        history=self.client.get('/api/ui/memory/dialogs/history',cookies=self.cookie,
+            params={'dialog_id':dialog_id}).json()
+        self.assertEqual(history['messages'],[])
 
     def _assert_invalid_utf8_cannot_claim_durable_s03_success(self, mode):
         # One independently initialized fixture DB per test. A loop of two
