@@ -28,5 +28,11 @@ jobs:
         run: |
           set -euo pipefail
           python -m unittest -v coordination.onepass.test_windows_readonly_contract
+          command -v pwsh
+          pwsh -NoLogo -NoProfile -NonInteractive -Command '$tokens=$null; $errors=$null; [System.Management.Automation.Language.Parser]::ParseFile("coordination/onepass/windows/NOX_ONEPASS_VERIFY_WINDOWS.ps1", [ref]$tokens, [ref]$errors) | Out-Null; if ($errors.Count -ne 0) { $errors | Out-String | Write-Error; exit 1 }'
+          python -m unittest -v coordination.onepass.test_windows_pc_owner_probe
+          echo 'NOX_WINDOWS_PC_ANONYMOUS_GET_ONLY=true'
+          echo 'NOX_WINDOWS_PC_OWNER_COOKIE_E2E=HOLD'
+          echo 'NOX_WINDOWS_BACKUP_NATIVE_HANDLER=HOLD'
           echo 'NOX_WINDOWS_CHECK_SOURCE_ONLY=PASS'
           echo 'NOX_WINDOWS_CHECK_PHYSICAL_HOST=NOT_TESTED'
