@@ -1,0 +1,142 @@
+{
+  "schema": "NOX_HYBRID_DOWNLOAD_CANDIDATES_V1",
+  "instructions_version": "0.0.6",
+  "reviewed_on": "2026-11-15",
+  "owner_policy": "coordination/NOX_HYBRID_TRAINING_OWNER_APPROVAL_20261115.md",
+  "target_instance": 60509551,
+  "target_hardware": "2 x V100 32 GB; retain tested CUDA12/SM70 runtime",
+  "active_trainable_base_model": null,
+  "active_trainable_base_revision": null,
+  "production_adapter_compatibility_verified": false,
+  "server_downloads_performed_this_run": false,
+  "server_installs_performed_this_run": false,
+  "server_restart_performed_this_run": false,
+  "runtime_training_mode_changed": false,
+  "candidates": [
+    {
+      "id": "peft",
+      "kind": "training_library",
+      "priority": "FIRST_STAGE",
+      "source": "https://huggingface.co/docs/peft/developer_guides/lora",
+      "package": "peft",
+      "purpose": "LoRA/rsLoRA baseline, controlled merge_and_unload; DoRA/LoftQ only as separately evaluated alternatives",
+      "status": "DOCUMENTATION_REVIEWED_NOT_SERVER_INSTALLED",
+      "pinned_version": null,
+      "gate": "Resolve compatible version against existing Python/Torch/Transformers without upgrading live environment; exact base modules and tokenizer"
+    },
+    {
+      "id": "trl",
+      "kind": "training_library",
+      "priority": "FIRST_STAGE_IF_EXISTING_TRAINER_NEEDS_IT",
+      "source": "https://huggingface.co/docs/trl/peft_integration",
+      "package": "trl[peft]",
+      "purpose": "SFT and later reviewed preference-training integration; not another scheduler or public model",
+      "status": "DOCUMENTATION_REVIEWED_NOT_SERVER_INSTALLED",
+      "pinned_version": null,
+      "gate": "Do not add unnecessary duplicate trainer; compare existing HF Trainer integration first"
+    },
+    {
+      "id": "bitsandbytes",
+      "kind": "optional_training_library",
+      "priority": "AFTER_FP16_LORA_MEMORY_TEST",
+      "source": "https://huggingface.co/docs/bitsandbytes/installation",
+      "package": "bitsandbytes",
+      "purpose": "8-bit optimizer state or NF4 QLoRA with FP16 compute when beneficial",
+      "status": "DOCUMENTATION_REVIEWED_NOT_SERVER_INSTALLED",
+      "pinned_version": null,
+      "gate": "Linux x86-64 CUDA12 build containing sm70; feature-specific test. LLM.int8 currently requires CC7.5 and is not the V100 path. Do not use CUDA13 sm75+ wheel"
+    },
+    {
+      "id": "unsloth_core",
+      "kind": "optional_training_accelerator",
+      "priority": "BENCHMARK_ONLY",
+      "source": "https://unsloth.ai/docs/get-started/fine-tuning-for-beginners/unsloth-requirements",
+      "package": "unsloth",
+      "status": "GENERIC_V100_SUPPORT_DOCUMENTED_EXACT_MODEL_KERNEL_UNVERIFIED",
+      "pinned_version": null,
+      "gate": "Isolated environment only; dependency resolver may upgrade Torch/Transformers. Benchmark exact student/SM70 backward kernel before use; no extra WEB Studio required"
+    },
+    {
+      "id": "rk500/Born-9B-Qwen3.5-9B-Preview",
+      "kind": "third_party_lora",
+      "priority": "QUARANTINE_EVALUATION_ONLY",
+      "source": "https://huggingface.co/rk500/Born-9B-Qwen3.5-9B-Preview",
+      "declared_base": "Qwen/Qwen3.5-9B",
+      "declared_license": "apache-2.0",
+      "purpose": "Coding-agent behavior, code repair, tool use and explicit checks",
+      "status": "MODEL_CARD_REVIEWED_WEIGHTS_NOT_DOWNLOADED",
+      "revision": null,
+      "sha256": null,
+      "bytes": null,
+      "gate": "Exact active NOX base unknown. Verify adapter config/tensor shapes/revision/tokenizer; model-card local evaluations are not independent NOX proof. Separate benchmark-like training rows from evaluation"
+    },
+    {
+      "id": "6cf/qwen35-9b-deepseek-v4-pro-agent-lora",
+      "kind": "third_party_lora",
+      "priority": "RESEARCH_ONLY_NOT_FIRST_INSTALL",
+      "source": "https://huggingface.co/6cf/qwen35-9b-deepseek-v4-pro-agent-lora",
+      "declared_base": "Qwen/Qwen3.5-9B",
+      "declared_license": null,
+      "purpose": "Experimental coding/terminal-agent trajectories",
+      "status": "MODEL_CARD_REVIEWED_LICENSE_AND_COMPATIBILITY_UNVERIFIED",
+      "revision": null,
+      "sha256": null,
+      "bytes": null,
+      "gate": "Licence/provenance, exact base match and independent holdout. Authors report 66 usable examples, not broad capability absorption; no general-chat superiority claim"
+    },
+    {
+      "id": "OpenAssistant/oasst2",
+      "kind": "dataset",
+      "source": "https://huggingface.co/datasets/OpenAssistant/oasst2",
+      "declared_license": "apache-2.0",
+      "purpose": "Filter reviewed Russian/Spanish multi-turn dialogue for NOX-specific LoRA curriculum",
+      "status": "DATASET_CARD_REVIEWED_NOT_DOWNLOADED",
+      "gate": "Tree-level train/holdout split, quality/PII filters, preserve provenance; do not train all raw rows blindly"
+    },
+    {
+      "id": "open-thoughts/OpenThoughts3-1.2M",
+      "kind": "dataset",
+      "source": "https://huggingface.co/datasets/open-thoughts/OpenThoughts3-1.2M",
+      "declared_license": "apache-2.0",
+      "purpose": "Selected validated math/code/science reasoning examples, bounded by token/disk budget",
+      "status": "DATASET_CARD_REVIEWED_NOT_DOWNLOADED",
+      "gate": "No full 1.2M download by default; reviewed task mix, independent heldout, answer correctness and tokenizer/context limits"
+    },
+    {
+      "id": "google-research-datasets/go_emotions",
+      "kind": "optional_auxiliary_dataset",
+      "source": "https://huggingface.co/datasets/google-research-datasets/go_emotions",
+      "declared_license": "apache-2.0",
+      "purpose": "English emotion-labelled examples for auxiliary evaluation/curation only",
+      "status": "DATASET_CARD_REVIEWED_NOT_DOWNLOADED",
+      "gate": "Not a ready RU/ES empathy model, not consciousness, not a substitute for owner-requested main-model GPU learning. Adaptation/translation needs review; do not repeat rejected tiny CPU emotion prototype"
+    },
+    {
+      "id": "NOX_GENESIS_SELF_MODEL_CURRICULUM",
+      "kind": "owner_specific_dataset_to_build",
+      "source": "existing verified Genesis/S03 native facts and approved source receipts",
+      "purpose": "Truthful architecture, provenance, capabilities, limits, error correction and autobiographical consistency",
+      "status": "TO_BUILD_FROM_VERIFIED_OWNER_DATA_NOT_PUBLIC_WEIGHTS",
+      "gate": "No raw secrets/sensitive private data; uncertain facts labelled unknown, dynamically changing facts stay in S03/RAG; no fabricated consciousness or birth claims"
+    },
+    {
+      "id": "NOX_CODE_SELF_IMPROVEMENT_CURRICULUM",
+      "kind": "owner_specific_dataset_to_build",
+      "source": "existing repository fixes and independently passing sandbox tests",
+      "purpose": "Own-code diagnosis, patches, regression tests, controlled original-WEB integration and rollback",
+      "status": "TO_BUILD_FROM_VERIFIED_PATCH_AND_TEST_PAIRS",
+      "gate": "Keep heldout tasks separate; no execution of untrusted downloaded code on production; model-proposed patch is not deployment authority"
+    }
+  ],
+  "promotion_gates": [
+    "actual_base_revision_tokenizer_architecture_licence_verified",
+    "one_gpu1_training_writer_and_gpu0_chat_priority",
+    "fresh_cgroup_vram_ssd_checkpoint_budget",
+    "real_optimizer_steps_loss_and_adapter_tensor_delta",
+    "independent_ru_es_code_memory_emotion_regression_evaluation",
+    "adapter_base_vs_merged_equivalence_with_unquantized_master",
+    "quantized_candidate_quality_and_latency_comparison",
+    "restorable_parent_base_adapter_optimizer_rng_and_s03",
+    "single_operator_atomic_deploy_and_native_readback"
+  ]
+}
