@@ -43,10 +43,20 @@ def native_timing_evidence(rows):
                 or type(case.get('content_chunks')) is not int
                 or case['content_chunks'] <= 0):
             return False
-        rate = case.get('decode_tokens_per_sec')
-        if rate is not None and (type(rate) not in (int, float)
-                                 or not math.isfinite(rate) or not 0 < rate < 5000):
+        if case.get('finish_reason') not in ('stop','eos_token'):
             return False
+        rate = case.get('decode_tokens_per_sec')
+        if rate is not None:
+            if (type(rate) not in (int,float) or not math.isfinite(rate)
+                    or not 0 < rate < 5000
+                    or case.get('usage_source') != 'NATIVE_STREAM_USAGE'
+                    or type(case.get('completion_tokens')) is not int
+                    or case['completion_tokens'] < 2
+                    or case.get('reasoning_chunks') != 0):
+                return False
+        if case.get('usage_negotiation') == 'HTTP_400_FALLBACK_NO_USAGE':
+            if rate is not None or case.get('usage_source') != 'UNSUPPORTED_FALLBACK_NO_USAGE':
+                return False
     return True
 
 def gate(method,path,key,data=None):
@@ -88,11 +98,13 @@ if isinstance(mods,dict):
 if not name:
     emit('RESULT',{'state':'HOLD_ONE_NOX_MODEL_UNVERIFIED'})
     print('NATIVE_READ_ONLY_COMPLETE=true');raise SystemExit(0)
-def do(label,extra):
+def do(label,extra,include_usage=True):
     if not isinstance(get('/slots'),list):return {'state':'HOLD_SLOTS'}
     request={'model':name,'stream':True,'max_tokens':64,'temperature':0,
-      'stream_options':{'include_usage':True},
       'messages':[{'role':'user','content':'Ответь одним словом: готово.'}]}
+    # Some existing OpenAI-compatible runtimes reject include_usage with HTTP 400.
+    # Negotiate once; no persistent service/model changes.
+    if include_usage:request['stream_options']={'include_usage':True}
     request.update(extra)
     req=urllib.request.Request('http://127.0.0.1:8081/v1/chat/completions',
       data=json.dumps(request,ensure_ascii=False).encode('utf-8'),
@@ -125,13 +137,13 @@ def do(label,extra):
                     if isinstance(delta,dict) and delta.get('reasoning_content'):
                         reasoning_chunks+=1
                     if c.get('finish_reason'):finish=c['finish_reason']
-        return {'label':label,'state':'COMPLETED' if done and first_content is not None and finish not in ('length','content_filter') else 'HOLD_INCOMPLETE',
+        return {'label':label,'state':'COMPLETED' if done and first_content is not None and finish in ('stop','eos_token') else 'HOLD_INCOMPLETE',
            'ttft_ms':round((first_content-start)*1000,1) if first_content else None,
            'total_ms':round((time.monotonic()-start)*1000,1),
            'content_chunks':content_chunks,'reasoning_chunks':reasoning_chunks,
-           'decode_tokens_per_sec':round((completion_tokens-1)/(last_content-first_content),2) if completion_tokens and completion_tokens>1 and last_content and first_content and last_content>first_content else None,
+           'decode_tokens_per_sec':round((completion_tokens-1)/(last_content-first_content),2) if completion_tokens and completion_tokens>1 and reasoning_chunks==0 and last_content and first_content and last_content>first_content else None,
            'finish_reason':str(finish)[:20] if finish else None,
-           'stream_done':done,'usage_source':'NATIVE_STREAM_USAGE' if completion_tokens is not None else 'HOLD_NO_STREAM_USAGE',
+           'stream_done':done,'usage_source':'NATIVE_STREAM_USAGE' if completion_tokens is not None else ('HOLD_NO_STREAM_USAGE' if include_usage else 'UNSUPPORTED_FALLBACK_NO_USAGE'),
            'completion_tokens':completion_tokens,'user_content_exported':False}
     except urllib.error.HTTPError as e:return {'label':label,'state':'HOLD_HTTP_'+str(e.code)}
     except Exception as e:return {'label':label,'state':'HOLD_'+type(e).__name__}
@@ -141,7 +153,20 @@ for label,extra in [('default',{}),
     slots=get('/slots')
     if not isinstance(slots,list) or any(x.get('is_processing',x.get('processing',False)) for x in slots if isinstance(x,dict)):
         results.append({'label':label,'state':'HOLD_CHAT_BECAME_BUSY'});break
-    x=do(label,extra);results.append(x);emit('CASE',x)
+    x=do(label,extra)
+    if x.get('state')=='HOLD_HTTP_400':
+        # The first request was rejected before streaming. Only one retry,
+        # only if the original OneHost model is currently idle. Preserve
+        # real TTFT in engines that do not support stream_options.
+        live_slots=get('/slots')
+        if not isinstance(live_slots,list) or any(
+                s.get('is_processing',s.get('processing',False))
+                for s in live_slots if isinstance(s,dict)):
+            x={'label':label,'state':'HOLD_CHAT_BUSY_BEFORE_FALLBACK'}
+        else:
+            x=do(label,extra,include_usage=False)
+            x['usage_negotiation']='HTTP_400_FALLBACK_NO_USAGE'
+    results.append(x);emit('CASE',x)
 emit('RESULT',{'state':'READ_ONLY_MODEL_PROBES_COMPLETE','cases':len(results),
    'completed':sum(x.get('state')=='COMPLETED' for x in results),
    'no_model_config_changed':True})

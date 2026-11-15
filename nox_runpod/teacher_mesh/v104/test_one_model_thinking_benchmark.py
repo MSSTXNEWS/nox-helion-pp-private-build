@@ -6,7 +6,8 @@ from nox_runpod.teacher_mesh.v104.one_model_thinking_benchmark import (
 )
 
 GOOD = {'label':'default','state':'COMPLETED','stream_done':True,
-        'ttft_ms':120.0,'content_chunks':3}
+        'ttft_ms':120.0,'content_chunks':3,'finish_reason':'stop',
+        'usage_source':'HOLD_NO_STREAM_USAGE','completion_tokens':None,'reasoning_chunks':0}
 SUMMARY = {'state':'READ_ONLY_MODEL_PROBES_COMPLETE','cases':2,
            'completed':2,'no_model_config_changed':True}
 
@@ -40,9 +41,29 @@ class V104NativeTimingGate(unittest.TestCase):
 
     def test_decode_tps_source_and_strict_evidence(self):
         self.assertIn("'stream_options':{'include_usage':True}", REMOTE)
-        self.assertTrue(native_timing_evidence(rows(first=dict(GOOD,decode_tokens_per_sec=45.0))))
+        verified = dict(GOOD,decode_tokens_per_sec=45.0,
+                        usage_source='NATIVE_STREAM_USAGE',completion_tokens=40)
+        self.assertTrue(native_timing_evidence(rows(first=verified)))
+        self.assertFalse(native_timing_evidence(rows(first=dict(GOOD,decode_tokens_per_sec=45.0))))
         for rate in (-1, 0, '45', float('nan'), float('inf')):
-            self.assertFalse(native_timing_evidence(rows(first=dict(GOOD,decode_tokens_per_sec=rate))))
+            self.assertFalse(native_timing_evidence(rows(first=dict(verified,decode_tokens_per_sec=rate))))
+
+    def test_fallback_is_only_allowed_without_fabricated_throughput(self):
+        fallback = dict(GOOD,usage_negotiation='HTTP_400_FALLBACK_NO_USAGE',
+                        usage_source='UNSUPPORTED_FALLBACK_NO_USAGE',completion_tokens=None,
+                        decode_tokens_per_sec=None)
+        self.assertTrue(native_timing_evidence(rows(first=fallback)))
+        self.assertFalse(native_timing_evidence(rows(first=dict(fallback,decode_tokens_per_sec=35.0))))
+        self.assertFalse(native_timing_evidence(rows(first=dict(fallback,usage_source='NATIVE_STREAM_USAGE'))))
+
+    def test_requires_actual_finish_reason_and_no_reasoning_rate(self):
+        self.assertFalse(native_timing_evidence(rows(first=dict(GOOD,finish_reason=None))))
+        self.assertFalse(native_timing_evidence(rows(first=dict(GOOD,finish_reason='length'))))
+        self.assertFalse(native_timing_evidence(rows(first=dict(GOOD,
+            decode_tokens_per_sec=55.0,usage_source='NATIVE_STREAM_USAGE',
+            completion_tokens=12,reasoning_chunks=1))))
+        self.assertIn('HTTP_400_FALLBACK_NO_USAGE', REMOTE)
+        self.assertIn('if include_usage:', REMOTE)
 
     def test_remote_source_compiles_without_connecting(self):
         remote = REMOTE.split("<<'PYREMOTE'\n",1)[1].rsplit('\nPYREMOTE',1)[0]
