@@ -75,6 +75,16 @@ def audit_native_queue(matrix, observations, *, now_unix: int, heartbeat_s: int=
         result["state"]="HOLD_NATIVE_QUEUE_SCHEMA";return result
     if any(k not in allowed for k in status):
         result["state"]="HOLD_FOREIGN_TASK_IDS";return result
+    # Two logical tasks must never be counted as two native registrations
+    # when owner readback identifies the same native job for both. A missing
+    # job_id is legacy telemetry (handled by existing receipt gates); an
+    # explicitly supplied invalid or duplicated ID is untrusted.
+    job_counts={}
+    for obs in status.values():
+        if isinstance(obs,Mapping) and "job_id" in obs:
+            jid=obs["job_id"]
+            if isinstance(jid,str) and jid.strip():
+                job_counts[jid]=job_counts.get(jid,0)+1
     protected=set()
     for task in rows:
         tid=task["task_id"]
@@ -86,7 +96,11 @@ def audit_native_queue(matrix, observations, *, now_unix: int, heartbeat_s: int=
                 or obs.get("native_verified") is not True
                 or not isinstance(obs.get("receipt_sha256"),str)
                 or SHA.fullmatch(obs["receipt_sha256"]) is None
-                or obs.get("state") not in STATES):
+                or obs.get("state") not in STATES
+                or ("job_id" in obs and (
+                    not isinstance(obs["job_id"],str)
+                    or not obs["job_id"].strip()
+                    or job_counts.get(obs["job_id"],0)!=1))):
             result["untrusted_count"]+=1
             protected.add(tid)
             continue
