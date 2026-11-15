@@ -57,7 +57,8 @@ class TestResourceBrain(unittest.TestCase):
                 'stop_active':False,'checkpoint_pending':False,'optimizer_step_active':False,
                 'gpu1_trainer_active':False,'gpu1_teacher_in_flight':False,
                 'onehost_gpu1_lease':True,
-                'disk_free_bytes':80_000_000_000,'ram_free_mib':30000}
+                'disk_free_bytes':80_000_000_000,'ram_free_mib':30000,
+                'cgroup_max_bytes':128*1024**3,'cgroup_current_bytes':16*1024**3}
         self.req={'model_id':'m','role':'teacher','peak_vram_mib':16000}
     def test_proposes_only(self):
         r=plan_load(self.req,self.s)
@@ -150,6 +151,44 @@ class TestResourceBrain(unittest.TestCase):
              native_readback=lambda p,receipt:{'model_id':'m','running':True})
         self.assertEqual(r['state'],'HOLD_NATIVE_STOP_RACE')
         self.assertEqual(calls['act'],0)
+    def test_unload_unknown_inflight_or_pinned_is_never_proposed(self):
+        # Existing teacher is present, but may be busy or pinned; no
+        # auto-unload candidate from default/missing evidence.
+        self.s['models'].append({'id':'old','role':'teacher','loaded':True,
+                                 'native_owner':'OneHost'})
+        for changes in ({},{'in_flight':0},{'in_flight':0,'pinned':None},
+                        {'in_flight':False,'pinned':False},
+                        {'in_flight':1,'pinned':False}):
+            with self.subTest(changes=changes):
+                m=self.s['models'][-1]
+                for key in ('in_flight','pinned'):
+                    m.pop(key,None)
+                m.update(changes)
+                result=plan_load(self.req,self.s)
+                self.assertEqual(result['state'],'HOLD_TEACHER_LIMIT')
+                self.assertEqual(result['unload_candidates'],[])
+    def test_verified_unpinned_idle_teacher_still_only_proposed(self):
+        self.s['models'].append({'id':'old','role':'teacher','loaded':True,
+                                 'in_flight':0,'pinned':False,
+                                 'native_owner':'OneHost'})
+        result=plan_load(self.req,self.s)
+        self.assertEqual(result['state'],'OWNER_NATIVE_UNLOAD_AND_RETRY_REQUIRED')
+        self.assertEqual(result['unload_candidates'],['old'])
+        self.assertFalse(result['performed'])
+    def test_missing_or_unbounded_cgroup_does_not_admit_new_gpu1_load(self):
+        for change in ({'cgroup_max_bytes':None},
+                       {'cgroup_max_bytes':'max'},
+                       {'cgroup_current_bytes':None},
+                       {'cgroup_current_bytes':200*1024**3}):
+            with self.subTest(change=change):
+                snapshot=dict(self.s);snapshot.update(change)
+                self.assertEqual(plan_load(self.req,snapshot)['state'],
+                                 'HOLD_CGROUP_RAM_UNVERIFIED')
+    def test_host_ram_cannot_override_nearly_full_cgroup(self):
+        self.s['cgroup_current_bytes']=self.s['cgroup_max_bytes']-5*1024**3
+        result=plan_load(self.req,self.s)
+        self.assertEqual(result['state'],'REMOTE_PC_OR_HOLD')
+        self.assertEqual(result['reason'],'CGROUP_OR_HOST_RAM_RESERVE')
     def test_native_missing_holds(self):
         p=plan_load(self.req,self.s)
         self.assertEqual(apply_native_plan(p,native_stop=None,native_authorize=None,native_act=None,native_verify=None,native_readback=None)['state'], 'HOLD_NATIVE_CALLBACKS_MISSING')

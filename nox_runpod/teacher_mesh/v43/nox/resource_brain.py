@@ -67,8 +67,16 @@ def plan_load(request, inventory, policy=Policy()):
     ram_free=inventory.get('ram_free_mib')
     if type(ram_free) is not int or ram_free<0:
         return {'state':'HOLD_RAM_SENSOR_UNVERIFIED','performed':False}
-    if ram_free<policy.min_ram_free_mib:
-        return {'state':'REMOTE_PC_OR_HOLD','performed':False,'reason':'RAM_RESERVE'}
+    # Host MemAvailable is not the OneHost container's usable RAM. GPU1
+    # teacher load must preserve chat/cgroup headroom as well as host RAM.
+    limit=inventory.get('cgroup_max_bytes')
+    used=inventory.get('cgroup_current_bytes')
+    if (type(limit) is not int or type(used) is not int
+            or limit<=0 or used<0 or used>limit):
+        return {'state':'HOLD_CGROUP_RAM_UNVERIFIED','performed':False}
+    effective_free=min(ram_free,(limit-used)//(1024*1024))
+    if effective_free<policy.min_ram_free_mib:
+        return {'state':'REMOTE_PC_OR_HOLD','performed':False,'reason':'CGROUP_OR_HOST_RAM_RESERVE'}
     if request['role'] in ('image','video') and source.get('runtime')!='dedicated_vetted_tool':
         return {'state':'HOLD_DIFFUSION_RUNTIME_NOT_VERIFIED','performed':False}
     peak=request.get('peak_vram_mib')
@@ -91,8 +99,14 @@ def plan_load(request, inventory, policy=Policy()):
     active_teachers=sum(bool(m.get('loaded')) for m in models if m.get('role')=='teacher')
     if active_teachers>=policy.max_loaded_teachers:
         # only propose native unload of idle teacher owned by NOX, NOT arbitrary process
-        idle=[m['id'] for m in models if m.get('loaded') and m.get('role')=='teacher'
-              and m.get('in_flight',0)==0 and not m.get('pinned') and m.get('native_owner')=='OneHost']
+        # Unknown in-flight/pinned state MUST NOT suggest unloading a model.
+        # Only a confirmed idle, explicitly unpinned, OneHost-owned teacher
+        # with a valid ID can ever become a *proposal*, never auto-eviction.
+        idle=[m['id'] for m in models
+              if m.get('loaded') is True and m.get('role')=='teacher'
+              and type(m.get('in_flight')) is int and m['in_flight']==0
+              and m.get('pinned') is False and m.get('native_owner')=='OneHost'
+              and isinstance(m.get('id'),str) and bool(m['id'])]
         return {'state':'OWNER_NATIVE_UNLOAD_AND_RETRY_REQUIRED' if idle else 'HOLD_TEACHER_LIMIT',
                 'unload_candidates':idle,'performed':False}
     if not fit:
