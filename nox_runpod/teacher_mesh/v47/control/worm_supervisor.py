@@ -15,6 +15,12 @@ SHA=re.compile(r"^[a-f0-9]{64}$")
 RUNNING=frozenset(("RUNNING","PENDING","CLAIMED"))
 STATES=RUNNING | {"COMPLETED","FAILED","CANCELLED","PAUSED","BLOCKED"}
 
+def _valid_native_job_id(value) -> bool:
+    """Opaque owner job IDs are canonical; padding/control aliases are unsafe."""
+    return (type(value) is str and 1 <= len(value) <= 128
+            and value == value.strip() and value.isprintable())
+
+
 
 def audit_native_queue(matrix, observations, *, now_unix: int, heartbeat_s: int=600,
                        max_attempts: int=3) -> dict:
@@ -83,7 +89,7 @@ def audit_native_queue(matrix, observations, *, now_unix: int, heartbeat_s: int=
     for obs in status.values():
         if isinstance(obs,Mapping) and "job_id" in obs:
             jid=obs["job_id"]
-            if isinstance(jid,str) and jid.strip():
+            if _valid_native_job_id(jid):
                 job_counts[jid]=job_counts.get(jid,0)+1
     protected=set()
     for task in rows:
@@ -98,8 +104,7 @@ def audit_native_queue(matrix, observations, *, now_unix: int, heartbeat_s: int=
                 or SHA.fullmatch(obs["receipt_sha256"]) is None
                 or obs.get("state") not in STATES
                 or ("job_id" in obs and (
-                    not isinstance(obs["job_id"],str)
-                    or not obs["job_id"].strip()
+                    not _valid_native_job_id(obs["job_id"])
                     or job_counts.get(obs["job_id"],0)!=1))):
             result["untrusted_count"]+=1
             protected.add(tid)

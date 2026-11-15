@@ -263,4 +263,25 @@ class Priorities(unittest.TestCase):
         self.assertEqual(self.m['dispatch_policy']['max_gpu1_training_jobs'],1)
         self.assertEqual(self.master['training_compute_target_pct'],85)
         self.assertEqual(self.master['cpu_worker_fraction_max'],0.85)
+
+    def test_native_job_id_padding_control_and_bounded_identity(self):
+        # The preceding duplicate-ID regression covers exact equality, but
+        # raw strings 'job' and ' job ' were still counted as distinct jobs.
+        for matrix in (self.m, self.master):
+            ids=[t['task_id'] for t in matrix['tasks'][:2]]
+            for bad in (' padded-job ', 'job\\nline', 'x'*129):
+                with self.subTest(schema=matrix['schema'],bad=repr(bad)):
+                    rows={ids[0]:{'task_id':ids[0],'state':'RUNNING',
+                                 'native_verified':True,'receipt_sha256':'a'*64,
+                                 'heartbeat_unix':2000,'job_id':'padded-job'},
+                          ids[1]:{'task_id':ids[1],'state':'RUNNING',
+                                 'native_verified':True,'receipt_sha256':'b'*64,
+                                 'heartbeat_unix':2000,'job_id':bad}}
+                    observed=state(native_queue_verified=True,task_status=rows)
+                    a=audit_native_queue(matrix,observed,now_unix=2000)
+                    self.assertEqual(a['native_registered_verified'],1)
+                    self.assertEqual(a['untrusted_count'],1)
+                    self.assertIn(ids[1],a['protected_task_ids'])
+                    self.assertEqual(a['native_jobs_restarted'],0)
+
 if __name__=='__main__':unittest.main()
