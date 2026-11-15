@@ -20,7 +20,7 @@ from nox_runpod.teacher_mesh.v41.training.priority_autonomy import (
 from nox_runpod.teacher_mesh.v43.nox.resource_brain import (
     Policy as ResourcePolicy, plan_load,
 )
-from .ram_policy import plan_ram
+from .ram_policy import plan_ram, plan_warm_weight
 from .offload_policy import plan_offload
 
 MODEL_IDENTITY="NOX PRIME"
@@ -134,6 +134,10 @@ class OnePrime:
     def ram_admission(self)->dict:
         """Allocate nothing until the installed native OneHost opts in."""
         return plan_ram(self.observe())
+
+    def warm_weight_admission(self,candidate:Mapping)->dict:
+        """Pure RAM warm-up gate. Existing V95/V99 performs owner-native reads."""
+        return plan_warm_weight(self.observe(),candidate)
 
     def offload_admission(self) -> dict:
         """10GB trigger only; archive and deletion require independent receipts."""

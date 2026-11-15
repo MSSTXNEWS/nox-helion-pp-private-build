@@ -6,7 +6,7 @@ from types import SimpleNamespace
 from nox_runpod.teacher_mesh.v38.native_bridge_v38 import HostBindings
 from nox_runpod.teacher_mesh.v38.synaptic_brain import Session
 from nox_runpod.teacher_mesh.v71.disk_budget import verify_new_write_space
-from nox_runpod.teacher_mesh.v71.ram_policy import plan_ram, GIB, MIB
+from nox_runpod.teacher_mesh.v71.ram_policy import plan_ram, plan_warm_weight, GIB, MIB
 from nox_runpod.teacher_mesh.v71.offload_policy import plan_offload
 from nox_runpod.teacher_mesh.v71.one_prime import OnePrime, NativeOneHost
 
@@ -67,6 +67,66 @@ class RamGate(unittest.TestCase):
         self.assertEqual(r['s03_canonical'],'PERSISTENT_SQLITE_WAL')
         self.assertTrue(r['warm_cache_requires_native_revision'])
 
+
+
+class RamWeightTiers(unittest.TestCase):
+    def s(self,**updates):
+        data={'native_ram_verified':True,'owner_authorized':True,
+              'stop_active':False,'chat_gpu0_healthy':True,
+              'chat_state':'idle','prime_active_streams':0,
+              'seconds_since_chat_activity':120.0,
+              'cgroup_max_bytes':194_065_203_200,
+              'cgroup_current_bytes':104_872_435_712,
+              'ram_available_bytes':86*GIB}
+        data.update(updates)
+        return data
+
+    def model(self,**updates):
+        data={'kind':'HF_SAFETENSORS','source_state':'LOCAL_VERIFIED',
+              'sha_verified':True,'sha256':'a'*64,'license_verified':True,
+              'in_use':False,'source_file_open':False,'size_bytes':26*GIB}
+        data.update(updates)
+        return data
+
+    def test_bounded_reclaimable_pagecache_without_ssd_write(self):
+        result=plan_warm_weight(self.s(),self.model())
+        self.assertEqual(result['state'],'READY_FOR_EXISTING_V95_V99_OWNER_PAGECACHE_WARMUP')
+        self.assertEqual(result['warm_bytes_budget'],2*GIB)
+        self.assertEqual(result['new_disk_bytes'],0)
+        self.assertFalse(result['performed'])
+        self.assertFalse(result['new_model_instance'])
+        self.assertFalse(result['physical_warmup_verified'])
+        self.assertEqual(result['s03_canonical'],'PERSISTENT_SQLITE_WAL')
+
+    def test_recent_chat_or_unknown_stop_preempts_warmup(self):
+        for status in (self.s(chat_state='generating'),self.s(prime_active_streams=1),
+                       self.s(seconds_since_chat_activity=3),self.s(stop_active=None)):
+            with self.subTest(status=status):
+                self.assertTrue(plan_warm_weight(status,self.model())['state'].startswith('HOLD'))
+
+    def test_remote_verified_never_claims_diskless_loader(self):
+        out=plan_warm_weight(self.s(),self.model(source_state='REMOTE_VERIFIED'))
+        self.assertEqual(out['state'],'HOLD_RAM_ONLY_REMOTE_LOADER_NOT_NATIVE_BOUND')
+        self.assertFalse(out['diskless_model_loader_running'])
+        self.assertEqual(out['new_disk_bytes'],0)
+
+    def test_unknown_file_or_sha_holds(self):
+        for model in (self.model(sha_verified=False),self.model(license_verified=False),
+                      self.model(source_file_open=None),self.model(in_use=True),
+                      self.model(sha256='not-a-digest')):
+            with self.subTest(model=model):
+                self.assertTrue(plan_warm_weight(self.s(),model)['state'].startswith('HOLD'))
+
+    def test_cgroup_and_chat_reserve_prevents_oom(self):
+        snap=self.s(cgroup_current_bytes=191*GIB,cgroup_max_bytes=194*GIB)
+        out=plan_warm_weight(snap,self.model())
+        self.assertEqual(out['state'],'HOLD_RAM_HEADROOM_FOR_CHAT')
+        self.assertEqual(out['warm_bytes_budget'],0)
+
+    def test_cgroup_bool_sensor_rejected(self):
+        out=plan_warm_weight(self.s(cgroup_current_bytes=True),self.model())
+        self.assertEqual(out['state'],'HOLD_CGROUP_OR_RAM_SENSOR')
+        self.assertEqual(out['warm_bytes_budget'],0)
 
 class Disk10GB(unittest.TestCase):
     def test_10gb_floor_mandatory_only_for_new_writes(self):
