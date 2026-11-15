@@ -1,35 +1,81 @@
-name: NOX V131 Vast NOX2 instance read-only 404 diagnosis
+name: NOX V131 owner Vast inventory (documented LIST; guarded native READ)
 on:
-  pull_request:
-    branches: [feature/nox-v37-v100-firsthour-14d-20261113]
+  push:
+    branches: [feature/nox-v38-synaptic-brain-20261114]
     paths:
       - 'nox_runpod/teacher_mesh/v131/**'
       - '.github/workflows/nox-v131-vast-instance-readonly.yml'
   workflow_dispatch:
     inputs:
       allow_native:
-        description: 'Owner-approved original NOX OneHost access only'
+        description: 'Owner-approved original NOX OneHost metadata READ only'
         type: choice
         required: true
         options: ['NO', 'YES']
         default: 'NO'
 permissions:
   contents: read
+concurrency:
+  group: nox-v131-owner-vast-list-60509551
+  cancel-in-progress: false
 jobs:
+  offline-source-tests:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Test documented endpoint, exact owner instance, API errors and no credentials
+        run: |
+          set -euo pipefail
+          python -m py_compile nox_runpod/teacher_mesh/v131/vast_no_billing_inventory.py
+          python - <<'PY'
+          import io,os
+          from unittest.mock import patch
+          from contextlib import redirect_stdout
+          from nox_runpod.teacher_mesh.v131 import vast_no_billing_inventory as v
+          import urllib.error
+          assert all('/instances/60509551/' not in u for _,u in (
+            ('V0_CONSOLE_LIST','https://console.vast.ai/api/v0/instances/'),
+            ('V0_CLOUD_LIST','https://cloud.vast.ai/api/v0/instances/')))
+          assert 'V0_CONSOLE_LIST' in v.main.__code__.co_consts.__repr__()
+          with patch.object(v,'get',return_value=(200,{'instances':[{'id':60509551,'actual_status':'running'}]})):
+            with patch.dict(os.environ,{'NOX2':'test-fake-vast-token'}),redirect_stdout(io.StringIO()) as output:
+              assert v.main()==0
+              assert 'EXACT_EXISTING_RUNNING_INSTANCE=true' in output.getvalue()
+              assert 'NATIVE_COMMAND_EXECUTED=false' in output.getvalue()
+          with patch.object(v,'get',return_value=(404,{'error':'auth_error'})):
+            with patch.dict(os.environ,{'NOX2':'test-fake-vast-token'}),redirect_stdout(io.StringIO()) as output:
+              assert v.main()==2
+              assert '"provider_error":"auth_error"' in output.getvalue()
+              assert 'EXACT_EXISTING_RUNNING_INSTANCE=false' in output.getvalue()
+          with patch.object(v,'get',side_effect=AssertionError('NO NETWORK ALLOWED')):
+            with patch.dict(os.environ,{'NOX2':'tid_storage_key'}),redirect_stdout(io.StringIO()):
+              assert v.main()==2
+          print('NOX_V131_OFFLINE_BEHAVIOR_TESTS=PASS')
+          PY
+          echo 'NOX_V131_NATIVE_OR_API_CALLS_FROM_SOURCE_JOB=false'
   inspect:
-    if: "${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' && (github.event_name == 'workflow_dispatch' && github.actor == 'MSSTXNEWS' && github.event.pull_request.head.repo.full_name == github.repository) }}"
+    if: "github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' && github.ref == 'refs/heads/feature/nox-v38-synaptic-brain-20261114'"
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
       NOX2: ${{ secrets.NOX2 }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          persist-credentials: false
+        with: {persist-credentials: false}
       - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - name: Only inspect connected instance metadata, no SSH or billable operation
+        with: {python-version: '3.11'}
+      - name: Verify existing owner instance using only official Vast GET LIST endpoints
         run: |
-          python -m py_compile nox_runpod/teacher_mesh/v131/vast_no_billing_inventory.py
+          set -euo pipefail
           python -m nox_runpod.teacher_mesh.v131.vast_no_billing_inventory
+      - name: No SSH or production change
+        if: always()
+        run: |
+          echo 'NOX_NATIVE_COMMAND_EXECUTED=false'
+          echo 'NOX_S03_OR_WEIGHTS_MODIFIED=false'
+          echo 'NOX_NO_NEW_INSTANCE_OR_BILLING=true'

@@ -14,14 +14,19 @@ def get(url,key):
         except urllib.error.HTTPError as exc:
             if exc.code==429 and attempt<2:
                 time.sleep((5,10)[attempt]);continue
-            return exc.code,None
+            try:
+                error = json.loads(exc.read(4096))
+                reason = error.get('error') if isinstance(error, dict) else None
+            except (ValueError, UnicodeError):
+                reason = None
+            return exc.code, {'error': reason} if reason in ('auth_error','invalid_token','not_found') else None
         except (OSError,ValueError):
             return 0,None
     return 0,None
 def unpack(payload):
     if isinstance(payload,list):return payload
     if isinstance(payload,dict):
-        for key in ('instances','results','data'):
+        for key in ('instances','results','data','items'):
             value=payload.get(key)
             if isinstance(value,list):return value
             if isinstance(value,dict) and isinstance(value.get('instances'),list):
@@ -29,15 +34,15 @@ def unpack(payload):
     return None
 def main():
     key=os.environ.get('NOX2','')
-    if not key:
-        print('NOX_V131_HOLD=NOX2_MISSING')
+    if not key or key.startswith(('tid_', 'tsec_', 'github_pat_')):
+        print('NOX_V131_HOLD=VAST_KEY_MISSING_OR_WRONG_PROVIDER')
         return 2
     outcomes=[]
     urls=(
       ('V1_CONSOLE_LIST','https://console.vast.ai/api/v1/instances?limit=25'),
       ('V1_CLOUD_LIST','https://cloud.vast.ai/api/v1/instances?limit=25'),
-      ('V0_CONSOLE_DETAIL','https://console.vast.ai/api/v0/instances/'+str(INSTANCE)+'/'),
-      ('V0_CLOUD_DETAIL','https://cloud.vast.ai/api/v0/instances/'+str(INSTANCE)+'/'))
+      ('V0_CONSOLE_LIST','https://console.vast.ai/api/v0/instances/'),
+      ('V0_CLOUD_LIST','https://cloud.vast.ai/api/v0/instances/'))
     for label,url in urls:
         code,value=get(url,key)
         records=unpack(value)
@@ -54,6 +59,8 @@ def main():
     print('NOX_V131_VAST_READ_ONLY='+json.dumps({'instance':INSTANCE,'checks':outcomes,
         'ssh_key_created':False,'server_modified':False,'no_new_billing':True},separators=(',',':')))
     print('NOX_V131_READONLY_COMPLETE=true')
+    print('NOX_V131_NATIVE_SSH_AUTHENTICATED=false')
+    print('NOX_V131_NATIVE_COMMAND_EXECUTED=false')
     # Access to any account-level API is insufficient: the exact existing
     # instance must belong to this account and be RUNNING before native writes.
     confirmed=any(x['http']==200 and x['target_present'] is True and
