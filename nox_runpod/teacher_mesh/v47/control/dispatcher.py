@@ -11,6 +11,7 @@ from hashlib import sha256
 from pathlib import Path
 from typing import Any
 import json, re
+from .native_registration_recovery import reconcile_existing_registration
 
 HERE=Path(__file__).resolve().parent
 SHA=re.compile(r'^[0-9a-f]{64}$')
@@ -121,6 +122,7 @@ class NativePorts:
     verify_queue_receipt:Callable[[Mapping,Mapping],bool]
     s03_audit:Callable[[Mapping],Mapping]
     s03_verify:Callable[[Mapping,Mapping],bool]
+    s03_registration_lookup:Callable[[Mapping],Mapping]|None=None
 
 
 def _valid_completion(native:Mapping|None,tid:str)->bool:
@@ -276,13 +278,51 @@ def enqueue_approved(native:NativePorts,matrix:dict,owner_scope:str,*,limit:int=
         return {'state':'HOLD_NATIVE_STATE','jobs_enqueued':0}
     if p['state']!='SOURCE_PLAN_ONLY':return {'state':p['state'],'jobs_enqueued':0}
     receipts=[]
+    repaired=[]
+    previously_verified=[]
     for proposal in p['planned']:
         try:
             if not gate():return {'state':'HOLD_STOP_DURING_QUEUE','jobs_enqueued':len(receipts),'receipts':receipts}
+            # Reread the ONE native owner lease before *every* batch item.
+            # A lease valid for the first task may be revoked before the next.
+            fresh=native.state()
+            if (not isinstance(fresh,Mapping)
+                    or fresh.get('native_queue_verified') is not True
+                    or fresh.get('native_writes_available') is not True
+                    or fresh.get('owner_queue_writer_lease_verified') is not True
+                    or fresh.get('stop_active') is not False
+                    or not isinstance(fresh.get('task_status'),Mapping)
+                    or type(fresh.get('now_unix')) is not int):
+                return {'state':'HOLD_NATIVE_LEASE_REVOKED_DURING_BATCH',
+                        'jobs_enqueued_verified':len(receipts),'receipts':receipts}
+            from .worm_supervisor import audit_native_queue
+            current=audit_native_queue(matrix,fresh,now_unix=fresh['now_unix'])
+            if (current.get('state')!='NATIVE_QUEUE_RECONCILED_PROPOSALS_ONLY'
+                    or current.get('untrusted_count')!=0):
+                return {'state':'HOLD_NATIVE_QUEUE_CHANGED_DURING_BATCH',
+                        'jobs_enqueued_verified':len(receipts),'receipts':receipts}
             tid=proposal['task_id']
             identities=(tid,proposal['legacy_task_id']) if proposal.get('legacy_task_id') else (tid,)
             duplicate=[native.native_duplicate_check(name) for name in identities]
-            if any(x is True for x in duplicate):continue
+            if any(x is True for x in duplicate):
+                # An earlier attempt may have queued the job but crashed
+                # before durable S03 receipt: never abandon or re-enqueue it.
+                repair=reconcile_existing_registration(
+                    native,owner_scope=owner_scope,task_id=tid,
+                    legacy_task_id=proposal.get('legacy_task_id'),
+                    matrix_sha256=p['source_sha256'],inventory=fresh)
+                if repair.get('state') not in (
+                    'EXISTING_JOB_AND_S03_VERIFIED',
+                    'ORPHANED_NATIVE_S03_RECEIPT_RECOVERED'):
+                    return {'state':'HOLD_EXISTING_REGISTRATION_RECONCILIATION',
+                            'reason':repair.get('state'),
+                            'enqueues_may_have_occurred':False,
+                            'jobs_enqueued_verified':len(receipts),'receipts':receipts}
+                if repair['state']=='ORPHANED_NATIVE_S03_RECEIPT_RECOVERED':
+                    repaired.append({'task_id':tid,'job_id':repair['job_id']})
+                else:
+                    previously_verified.append({'task_id':tid,'job_id':repair['job_id']})
+                continue
             if any(x is not False for x in duplicate):
                 return {'state':'HOLD_NATIVE_DUPLICATE_STATE_UNKNOWN',
                         'jobs_enqueued_verified':len(receipts),'receipts':receipts}
@@ -339,6 +379,10 @@ def enqueue_approved(native:NativePorts,matrix:dict,owner_scope:str,*,limit:int=
         except Exception:
             return {'state':'HOLD_NATIVE_QUEUE_EXCEPTION','enqueues_may_have_occurred':True,
                     'jobs_enqueued_verified':len(receipts),'receipts':receipts}
-    return {'state':'NATIVE_QUEUE_READBACK_AND_S03_VERIFIED' if receipts else 'NATIVE_QUEUE_NO_NEW_JOBS',
+    return {'state':'NATIVE_QUEUE_READBACK_AND_S03_VERIFIED' if receipts else
+                    'NATIVE_S03_RECONCILIATION_VERIFIED' if repaired else
+                    'NATIVE_QUEUE_NO_NEW_JOBS',
             'jobs_enqueued':len(receipts),'receipts':receipts,
+            'existing_jobs_s03_verified':previously_verified,
+            'orphaned_s03_receipts_recovered':repaired,
             'training_completed':False,'weights_changed':False,'release_accepted':False}

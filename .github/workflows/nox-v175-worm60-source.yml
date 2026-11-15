@@ -19,7 +19,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 -m py_compile nox_runpod/teacher_mesh/v47/control/dispatcher.py nox_runpod/teacher_mesh/v47/control/worm_supervisor.py nox_runpod/teacher_mesh/v47/control/test_native_registration.py
+          python3 -m py_compile nox_runpod/teacher_mesh/v47/control/dispatcher.py nox_runpod/teacher_mesh/v47/control/worm_supervisor.py nox_runpod/teacher_mesh/v47/control/test_native_registration.py nox_runpod/teacher_mesh/v47/control/native_registration_recovery.py
           python3 -m unittest -v nox_runpod.teacher_mesh.v47.control.test_v94_priority nox_runpod.teacher_mesh.v47.control.test_native_registration
           python3 - <<'PY'
           import json,pathlib

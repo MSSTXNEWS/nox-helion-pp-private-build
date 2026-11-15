@@ -12,6 +12,7 @@ import unittest
 from nox_runpod.teacher_mesh.v47.control.dispatcher import (
     load_matrix,plan,enqueue_approved,NativePorts,
 )
+from nox_runpod.teacher_mesh.v47.control.native_registration_recovery import _hash
 from nox_runpod.teacher_mesh.v47.control.test_v94_priority import state
 
 ROOT=Path(__file__).resolve().parents[4]
@@ -30,6 +31,10 @@ class NativeRegistrationGates(unittest.TestCase):
         self.registry_override=None
         self.fail_s03=False
         self.dupe_alias=None
+        self.s03_present=True
+        self.approved=True
+        self.native_status_conflict=False
+        self.lease_lost_after_first=False
 
     def ports(self):
         def duplicate(tid):
@@ -41,8 +46,11 @@ class NativeRegistrationGates(unittest.TestCase):
             return {'accepted':True,'job_id':'native-job-001','native_verified':True}
         def task_status(tid):
             self.calls['task_status']+=1
-            if self.registry_override is not None:
-                return self.registry_override
+            if self.registry_override is not None:return self.registry_override
+            if self.native_status_conflict and tid.startswith('NOX-V46-'):
+                return {'task_id':tid,'job_id':'native-job-ALT','state':'PENDING',
+                        'native_verified':True,'owner_scope':self.scope,
+                        'receipt_sha256':'c'*64}
             return {'task_id':tid,'job_id':'native-job-001',
                     'state':'PENDING','native_verified':True,
                     'owner_scope':self.scope,'receipt_sha256':'c'*64}
@@ -50,21 +58,32 @@ class NativeRegistrationGates(unittest.TestCase):
             self.calls['s03']+=1
             self.last_s03_event=event
             return {'event_id':'durable-event-001'}
+        def s03_lookup(event):
+            if self.s03_present or self.calls['s03']>0:
+                return {'state':'PRESENT','native_verified':True,'event_sha256':_hash(event),
+                        'job_id':event['job_id'],'owner_scope':event['owner_scope']}
+            return {'state':'MISSING','native_verified':True}
+        def native_state():
+            x=dict(self.snapshot)
+            if self.lease_lost_after_first and self.calls['enqueue']>=1:
+                x['owner_queue_writer_lease_verified']=False
+            return x
         def readback(jid):
             self.calls['readback']+=1
-            return {'job_id':jid,'task_id':self.queued['task_id'],'state':'pending'}
+            return {'job_id':jid,'task_id':self.queued['task_id'] if self.queued else (self.dupe_alias or 'NOX-V46-01'),'state':'pending'}
         return NativePorts(
             authorize=lambda scope:scope==self.scope,
             stop=lambda:False,
-            state=lambda:self.snapshot,
+            state=native_state,
             native_task_status=task_status,
             native_duplicate_check=duplicate,
-            approve=lambda scope,digest,inventory:scope==self.scope,
+            approve=lambda scope,digest,inventory:scope==self.scope and self.approved,
             queue_enqueue=enqueue,
             queue_readback=readback,
             verify_queue_receipt=lambda ticket,payload:True,
             s03_audit=audit,
             s03_verify=lambda receipt,event:not self.fail_s03,
+            s03_registration_lookup=s03_lookup,
         )
 
     def test_verified_single_native_registration_requires_registry_and_s03(self):
@@ -156,6 +175,72 @@ class NativeRegistrationGates(unittest.TestCase):
                 result=plan(obj,self.snapshot,max_new=1)
                 self.assertEqual(result['state'],'HOLD_SOURCE_MATRIX_ALIAS_OR_SCHEMA')
                 self.assertEqual(result['planned'],[])
+
+
+    def test_orphaned_native_registration_recovers_s03_not_gpu_process(self):
+        p=plan(self.canonical,self.snapshot,max_new=1)
+        self.dupe_alias=p['planned'][0]['legacy_task_id']
+        self.s03_present=False
+        r=enqueue_approved(self.ports(),self.canonical,self.scope,limit=1)
+        self.assertEqual(r['state'],'NATIVE_S03_RECONCILIATION_VERIFIED')
+        self.assertEqual(r['jobs_enqueued'],0)
+        self.assertEqual(self.calls['enqueue'],0)
+        self.assertEqual(self.calls['s03'],1)
+        self.assertEqual(len(r['orphaned_s03_receipts_recovered']),1)
+        self.assertEqual(self.last_s03_event['schema'],
+                         'NOX_V175_EXISTING_REGISTRATION_S03_RECONCILE_V1')
+        self.assertEqual(self.last_s03_event['owner_scope'],self.scope)
+
+    def test_orphan_registration_requires_independent_s03_proof(self):
+        p=plan(self.canonical,self.snapshot,max_new=1)
+        self.dupe_alias=p['planned'][0]['legacy_task_id']
+        self.s03_present=False
+        self.approved=False
+        r=enqueue_approved(self.ports(),self.canonical,self.scope,limit=1)
+        self.assertEqual(r['state'],'HOLD_EXISTING_REGISTRATION_RECONCILIATION')
+        self.assertEqual(r['reason'],'HOLD_S03_REPAIR_NOT_APPROVED')
+        self.assertEqual(self.calls['enqueue'],0)
+        self.assertEqual(self.calls['s03'],0)
+
+    def test_s03_repair_fails_closed_after_uncertain_write(self):
+        p=plan(self.canonical,self.snapshot,max_new=1)
+        self.dupe_alias=p['planned'][0]['legacy_task_id']
+        self.s03_present=False
+        self.fail_s03=True
+        r=enqueue_approved(self.ports(),self.canonical,self.scope,limit=1)
+        self.assertEqual(r['state'],'HOLD_EXISTING_REGISTRATION_RECONCILIATION')
+        self.assertEqual(r['reason'],'HOLD_S03_REPAIR_READBACK')
+        self.assertEqual(self.calls['enqueue'],0)
+        self.assertEqual(self.calls['s03'],1)
+
+    def test_duplicate_registration_mismatched_alias_job_blocks_repair(self):
+        p=plan(self.canonical,self.snapshot,max_new=1)
+        self.dupe_alias=p['planned'][0]['legacy_task_id']
+        self.native_status_conflict=True
+        r=enqueue_approved(self.ports(),self.canonical,self.scope,limit=1)
+        self.assertEqual(r['state'],'HOLD_EXISTING_REGISTRATION_RECONCILIATION')
+        self.assertEqual(r['reason'],'HOLD_EXISTING_JOB_MISSING_OR_AMBIGUOUS')
+        self.assertEqual(self.calls['enqueue'],0)
+        self.assertEqual(self.calls['s03'],0)
+
+    def test_native_lease_loss_between_two_batch_jobs_cannot_continue(self):
+        prior=plan(self.matrix,self.snapshot,max_new=2)
+        self.assertGreaterEqual(len(prior['planned']),2)
+        self.lease_lost_after_first=True
+        r=enqueue_approved(self.ports(),self.matrix,self.scope,limit=2)
+        self.assertEqual(r['state'],'HOLD_NATIVE_LEASE_REVOKED_DURING_BATCH')
+        self.assertEqual(r['jobs_enqueued_verified'],1)
+        self.assertEqual(self.calls['enqueue'],1)
+
+    def test_unknown_s03_receipt_lookup_never_requeues_duplicate(self):
+        from dataclasses import replace
+        p=plan(self.canonical,self.snapshot,max_new=1)
+        self.dupe_alias=p['planned'][0]['legacy_task_id']
+        ports=replace(self.ports(),s03_registration_lookup=None)
+        r=enqueue_approved(ports,self.canonical,self.scope,limit=1)
+        self.assertEqual(r['state'],'HOLD_EXISTING_REGISTRATION_RECONCILIATION')
+        self.assertEqual(r['reason'],'HOLD_REGISTRATION_NATIVE_PORTS')
+        self.assertEqual(self.calls['enqueue'],0)
 
     def test_untrusted_native_queue_snapshot_never_enqueues(self):
         self.snapshot['task_status']={'NOX-V46-01':{
