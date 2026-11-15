@@ -27,13 +27,14 @@ _POLICY = {
 }
 
 
-def _scope_ok(row: Mapping, session: Mapping) -> bool:
+def _scope_ok(row: Mapping, session: Mapping, native_grants: frozenset[str]) -> bool:
     if any(row.get(k) != session.get(k)
            for k in ("tenant", "principal")):
         return False
-    # Cross-dialog recall only when native owner callback granted it.
+    # Never trust a permission flag supplied BY a memory row. Cross-dialog
+    # authorization must be a separate source-URI grant from trusted OneHost.
     if row.get("chat_id") != session.get("chat_id"):
-        if row.get("native_owner_cross_chat_granted") is not True:
+        if row.get("source_uri") not in native_grants:
             return False
     if row.get("persona_id") not in (None, ""):
         return (session.get("persona_enabled") is True
@@ -44,7 +45,8 @@ def _scope_ok(row: Mapping, session: Mapping) -> bool:
 def build_owner_response_contract(
         question: str, *, session: Mapping, observations: Mapping,
         retrieved_s03: list[dict], stop_active: bool,
-        owner_verified: bool, max_chars: int = 3400) -> dict:
+        owner_verified: bool, max_chars: int = 3400,
+        native_cross_chat_sources: frozenset[str] = frozenset()) -> dict:
     """Inputs MUST come from trusted native host ports, not browser JSON."""
     if (owner_verified is not True or stop_active is not False
             or not isinstance(session, Mapping)):
@@ -60,6 +62,8 @@ def build_owner_response_contract(
         return {"state": "HOLD_SELF_OBSERVATION_UNVERIFIED"}
     if observations.get("service_observation", {}).get("state") != "OBSERVED":
         return {"state": "HOLD_NATIVE_SERVICES_UNVERIFIED"}
+    if not isinstance(native_cross_chat_sources, frozenset) or len(native_cross_chat_sources)>100:
+        return {"state": "HOLD_UNVERIFIED_OWNER_CROSS_CHAT_GRANTS"}
     if not isinstance(retrieved_s03, list):
         return {"state": "HOLD_NATIVE_S03_UNAVAILABLE"}
     if not all(isinstance(session.get(k), str) and session.get(k)
@@ -69,7 +73,7 @@ def build_owner_response_contract(
     for row in retrieved_s03[:40]:
         if not isinstance(row, Mapping) or row.get("verified") is not True:
             continue
-        if not _scope_ok(row, session):
+        if not _scope_ok(row, session, native_cross_chat_sources):
             continue
         uri = row.get("source_uri")
         sha = row.get("sha256")
