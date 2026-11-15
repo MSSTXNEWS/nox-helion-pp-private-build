@@ -113,5 +113,82 @@ class ContinuousGateCoverage(unittest.TestCase):
             ))
 
 
+
+# V151: the 92 WEB routes and Windows/OneHost authority must not drift silently.
+# This audits source manifests only; no native route, owner cookie or backup is called.
+ROUTE_PLAN = ROOT / "coordination/NOX_WEB_V293_92_ROUTE_HOST_PLAN.json"
+FROZEN_92 = ROOT / "coordination/NOX_V98_WEB_FULL_REAL_API_MATRIX.json"
+PC_ONLY = frozenset((
+    "/api/install/", "/api/install/apply", "/api/install/backup",
+    "/api/install/capabilities", "/api/install/operation", "/api/install/report",
+    "/api/install/scan", "/api/install/source", "/api/install/verify",
+    "/api/install/voice", "/api/pc-metrics", "/api/unified/build",
+    "/api/voice/speech", "/api/voice/status", "/api/voice/transcribe",
+    "/api/voice/transcribe/stop",
+))
+WINDOWS_BOUNDARY = "WINDOWS_OWNER_PC_REQUIRED_NOT_VAST_METRICS"
+ONEHOST_BOUNDARY = "EXISTING_ONEHOST"
+
+
+def assert_original_92_owner_boundary(plan: dict, frozen: dict) -> None:
+    """Reject a missing/duplicate route or an unreviewed Windows authority change."""
+    rows = plan.get("functions")
+    original = frozen.get("functions")
+    if not isinstance(rows, list) or not isinstance(original, list):
+        raise AssertionError("HOLD_92_ROUTE_MATRIX_MISSING")
+    names = [item.get("route") for item in rows]
+    frozen_names = [item.get("route") for item in original]
+    if (len(names) != 92 or len(set(names)) != 92 or
+            len(frozen_names) != 92 or len(set(frozen_names)) != 92 or
+            set(names) != set(frozen_names)):
+        raise AssertionError("HOLD_92_FROZEN_ROUTE_SET_DRIFT")
+    by_path = {item["route"]: item for item in rows}
+    pc_actual = {route for route, item in by_path.items()
+                 if item.get("host_boundary") == WINDOWS_BOUNDARY}
+    if pc_actual != PC_ONLY:
+        raise AssertionError("HOLD_92_WINDOWS_OWNER_HOST_BOUNDARY_DRIFT")
+    for path in ("/api/nox/status", "/api/nox/chat/stream", "/api/nox/memory"):
+        if by_path[path].get("host_boundary") != ONEHOST_BOUNDARY:
+            raise AssertionError("HOLD_92_ONEHOST_BOUNDARY_DRIFT_" + path)
+    if by_path["/api/nox/memory/facts"].get("host_boundary") != (
+            "REQUIRES_ORIGINAL_CALLSITE_AND_OWNER_HOST_VERIFICATION"):
+        raise AssertionError("HOLD_92_S03_WRITER_OWNER_UNVERIFIED_BOUNDARY_DRIFT")
+    for route, item in by_path.items():
+        if item.get("functional_e2e") not in (
+                "NOT_CLAIMED", "SCOPED_PHYSICAL_OWNER_HTTP_S03_EVIDENCE"):
+            raise AssertionError("HOLD_92_UNATTESTED_FUNCTIONAL_PASS_" + route)
+    if plan.get("gate_policy", "").find("independent live acceptance") < 0:
+        raise AssertionError("HOLD_92_NO_LIVE_ACCEPTANCE_GATE")
+
+
+class Original92WindowsOwnerBoundary(unittest.TestCase):
+    @staticmethod
+    def fixtures():
+        import json
+        return (json.loads(ROUTE_PLAN.read_text(encoding="utf8")),
+                json.loads(FROZEN_92.read_text(encoding="utf8")))
+
+    def test_frozen_92_routes_are_not_conflated_with_windows_or_onehost(self):
+        assert_original_92_owner_boundary(*self.fixtures())
+
+    def test_regression_rejects_wrong_host_missing_route_and_false_e2e(self):
+        from copy import deepcopy
+        plan, frozen = self.fixtures()
+        wrong = deepcopy(plan)
+        next(item for item in wrong["functions"]
+             if item["route"] == "/api/install/backup")["host_boundary"] = ONEHOST_BOUNDARY
+        with self.assertRaisesRegex(AssertionError, "HOLD_92_WINDOWS_OWNER_HOST_BOUNDARY_DRIFT"):
+            assert_original_92_owner_boundary(wrong, frozen)
+        incomplete = deepcopy(plan)
+        incomplete["functions"] = [x for x in incomplete["functions"]
+                                   if x["route"] != "/api/nox/memory/facts"]
+        with self.assertRaisesRegex(AssertionError, "HOLD_92_FROZEN_ROUTE_SET_DRIFT"):
+            assert_original_92_owner_boundary(incomplete, frozen)
+        false_pass = deepcopy(plan)
+        next(item for item in false_pass["functions"]
+             if item["route"] == "/api/install/backup")["functional_e2e"] = "PASS"
+        with self.assertRaisesRegex(AssertionError, "HOLD_92_UNATTESTED_FUNCTIONAL_PASS"):
+            assert_original_92_owner_boundary(false_pass, frozen)
+
 if __name__ == "__main__":
     unittest.main()
