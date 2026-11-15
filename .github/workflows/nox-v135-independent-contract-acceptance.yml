@@ -1,0 +1,40 @@
+name: NOX V135 actual V24 rename and stream contract independent source acceptance
+on:
+  push:
+    branches: [qa/nox-v135-original-resonance-browser-20261115]
+    paths:
+      - 'coordination/onepass/nox-v135-resonance-owner-bridge.js'
+      - 'coordination/onepass/test_v135_resonance_owner_bridge.cjs'
+      - '.github/workflows/nox-v135-independent-contract-acceptance.yml'
+  pull_request:
+    paths:
+      - 'coordination/onepass/nox-v135-resonance-owner-bridge.js'
+      - 'coordination/onepass/test_v135_resonance_owner_bridge.cjs'
+      - '.github/workflows/nox-v135-independent-contract-acceptance.yml'
+permissions:
+  contents: read
+jobs:
+  independent-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Match original V24 rename READY response and strict revision readback
+        run: |
+          set -euo pipefail
+          node --check coordination/onepass/nox-v135-resonance-owner-bridge.js
+          node --test coordination/onepass/test_v135_resonance_owner_bridge.cjs
+      - name: Keep full frozen V134 original member/rollback source contract intact
+        run: |
+          set -euo pipefail
+          python -m unittest -v coordination.onepass.test_v135_resonance_owner_stage
+      - name: Native access not simulated
+        run: |
+          echo 'NOX_V135_REAL_CHROMIUM_ORIGINAL_HTML_OFFLINE=SEPARATE_INDEPENDENT_RECEIPT'
+          echo 'NOX_V135_NATIVE_S03_ONESHOT=NOT_TESTED'
+          echo 'NOX_V135_WINDOWS_EXE=NOT_TESTED'
