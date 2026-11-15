@@ -121,5 +121,10 @@ class NativeCompatV134(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,'HOLD_ORIGINAL_NATIVE_SSE_CLIENT_PIN'):
                 m.build(self.stage,self.frozen,self.script,self.out)
 
+    def test_v134_blocker_lives_in_source_fixture_not_workflow(self):
+        acceptance=Path('coordination/onepass/NOX_V134_CONVERGED_ACCEPTANCE.json')
+        facts=json.loads(acceptance.read_text(encoding='utf8'))
+        self.assertEqual(facts['blockers']['vast_noX2_secret'],'HOLD_AUTH_ERROR')
+
 if __name__=='__main__':
     unittest.main()

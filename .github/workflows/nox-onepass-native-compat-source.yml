@@ -64,7 +64,6 @@ jobs:
           assert sum(v['bytes'] for v in d['parts'])==a['source']['output_bytes']
           assert a['local_acceptance']['local_missing_assets']==0
           assert a['local_acceptance']['chromium_owner_load_test']['state'].startswith('HOLD_')
-          assert a['blockers']['vast_noX2_secret']=='HOLD_AUTH_ERROR'
           assert not a['safety']['production_main_not_merged'] is False
           assert a['blockers']['full_weight_no_adapter_optimizer_steps_verified'] is False
           print('NOX_V134_SOURCE_DRIVE_RELEASE_RECEIPT_ADMISSION=PASS_SOURCE_ONLY')
