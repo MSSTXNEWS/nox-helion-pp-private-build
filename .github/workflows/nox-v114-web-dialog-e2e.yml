@@ -6,6 +6,13 @@ on:
       - 'nox_runpod/teacher_mesh/v114/owner_v29_dialog_acceptance.py'
       - '.github/workflows/nox-v114-web-dialog-e2e.yml'
   workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Owner-approved original NOX OneHost access only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
 permissions: {contents: read}
 concurrency:
   group: nox-v114-unique-owner-dialog-e2e
@@ -13,7 +20,7 @@ concurrency:
 jobs:
   authentic:
     runs-on: ubuntu-latest
-    if: ${{ github.actor == 'MSSTXNEWS' }}
+    if: "${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' && (github.actor == 'MSSTXNEWS') }}"
     timeout-minutes: 12
     env:
       NOX2: ${{ secrets.NOX2 }}

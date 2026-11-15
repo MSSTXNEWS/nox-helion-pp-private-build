@@ -6,6 +6,13 @@ on:
       - "nox_runpod/teacher_mesh/v111/**"
       - ".github/workflows/nox-v111-owner-teacher-patch.yml"
   workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Owner-approved original NOX OneHost access only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
 permissions:
   contents: read
 concurrency:
@@ -33,7 +40,7 @@ jobs:
           assert 'HOLD_BACKUP_SHA' in REMOTE
           PY
   gated-native:
-    if: ${{ github.actor == 'MSSTXNEWS' }}
+    if: "${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' && (github.actor == 'MSSTXNEWS') }}"
     needs: validate
     runs-on: ubuntu-latest
     timeout-minutes: 12

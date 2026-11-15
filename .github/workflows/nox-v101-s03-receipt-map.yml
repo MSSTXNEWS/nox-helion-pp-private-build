@@ -4,12 +4,20 @@ on:
     branches: [feature/nox-v38-synaptic-brain-20261114]
     paths: [.github/workflows/nox-v101-s03-receipt-map.yml]
   workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Owner-approved original NOX OneHost access only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
 permissions: {contents: read}
 concurrency:
   group: nox-v101-s03-contract-readonly
   cancel-in-progress: false
 jobs:
   schema:
+    if: "${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' }}"
     runs-on: ubuntu-latest
     timeout-minutes: 8
     env:

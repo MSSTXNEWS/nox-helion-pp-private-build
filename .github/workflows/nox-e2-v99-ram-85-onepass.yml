@@ -6,6 +6,13 @@ on:
       - '.github/workflows/nox-e2-v99-ram-85-onepass.yml'
       - 'nox_runpod/teacher_mesh/v99/ram_first_weight_policy.py'
   workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Owner-approved original NOX OneHost access only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
 permissions:
   contents: read
 concurrency:
@@ -13,6 +20,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   cache-warm:
+    if: "${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' }}"
     runs-on: ubuntu-latest
     timeout-minutes: 7
     env:

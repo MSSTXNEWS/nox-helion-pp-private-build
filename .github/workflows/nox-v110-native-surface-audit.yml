@@ -6,12 +6,20 @@ on:
       - "nox_runpod/teacher_mesh/v110/native_web_surface_audit.py"
       - ".github/workflows/nox-v110-native-surface-audit.yml"
   workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Owner-approved original NOX OneHost access only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
 permissions: {contents: read}
 concurrency:
   group: nox-v110-v29-audit
   cancel-in-progress: false
 jobs:
   inspect:
+    if: "${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' }}"
     runs-on: ubuntu-latest
     timeout-minutes: 12
     env:

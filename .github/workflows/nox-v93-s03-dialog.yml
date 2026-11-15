@@ -4,12 +4,20 @@ on:
     branches: [feature/nox-v38-synaptic-brain-20261114]
     paths: [.github/workflows/nox-v93-s03-dialog.yml, nox_runpod/teacher_mesh/v93/native_dialog_scope_once.py]
   workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Owner-approved original NOX OneHost access only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
 permissions: {contents: read}
 concurrency:
   group: nox-v93-onehost-s03-dialog
   cancel-in-progress: false
 jobs:
   connect:
+    if: "${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' }}"
     runs-on: ubuntu-latest
     timeout-minutes: 9
     env:

@@ -4,6 +4,13 @@ on:
     branches: [feature/nox-v38-synaptic-brain-20261114]
     paths: [.github/workflows/nox-v66-live-pip-cache-cleanup.yml]
   workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Explicit owner approval for original NOX OneHost only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
 permissions:
   contents: read
 concurrency:
@@ -11,7 +18,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   one-safe-clean:
-    if: ${{ github.actor == 'MSSTXNEWS' }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' && (github.actor == 'MSSTXNEWS') }}
     runs-on: ubuntu-latest
     timeout-minutes: 8
     env:

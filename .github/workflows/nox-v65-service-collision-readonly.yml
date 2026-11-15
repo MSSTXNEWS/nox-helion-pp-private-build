@@ -6,6 +6,13 @@ on:
       - .github/workflows/nox-v65-service-collision-readonly.yml
       - nox_runpod/teacher_mesh/v65/service_process_collision.py
   workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Owner-approved original NOX OneHost access only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
 permissions:
   contents: read
 concurrency:
@@ -13,6 +20,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   native-process-read:
+    if: "${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' }}"
     runs-on: ubuntu-latest
     timeout-minutes: 7
     env:

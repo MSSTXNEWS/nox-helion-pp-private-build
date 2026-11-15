@@ -6,6 +6,13 @@ on:
       - "nox_runpod/teacher_mesh/v98/**"
       - ".github/workflows/nox-v98-owner-stream-s03.yml"
   workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Explicit owner approval for original NOX OneHost only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
 permissions:
   contents: read
 concurrency:
@@ -27,7 +34,7 @@ jobs:
           python -m py_compile nox_runpod/teacher_mesh/v98/deferred_s03_stream_patch.py
           python -m unittest discover -s nox_runpod/teacher_mesh/v98/tests -p 'test_*.py' -v
   gated-live:
-    if: ${{ github.actor == 'MSSTXNEWS' }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' && (github.actor == 'MSSTXNEWS') }}
     needs: regression
     runs-on: ubuntu-latest
     timeout-minutes: 12

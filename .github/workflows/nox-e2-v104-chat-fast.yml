@@ -5,6 +5,13 @@ on:
     paths:
       - '.github/workflows/nox-e2-v104-chat-fast.yml'
   workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Owner-approved original NOX OneHost access only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
 permissions:
   contents: read
 concurrency:
@@ -12,6 +19,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   smoke:
+    if: "${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' }}"
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:

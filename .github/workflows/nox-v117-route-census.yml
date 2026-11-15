@@ -6,9 +6,17 @@ on:
       - 'nox_runpod/teacher_mesh/v117/v29_route_census.py'
       - '.github/workflows/nox-v117-route-census.yml'
   workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Owner-approved original NOX OneHost access only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
 permissions: {contents: read}
 jobs:
   native-readonly:
+    if: "${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' }}"
     runs-on: ubuntu-latest
     timeout-minutes: 11
     env:

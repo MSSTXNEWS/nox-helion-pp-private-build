@@ -1,5 +1,13 @@
 name: NOX V125 independent live 92-route and genuine owner chat S03 after deployment
 on:
+  workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Owner-approved original NOX OneHost access only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
   push:
     branches: [nox/v125-live-owner-metrics-20261115]
     paths:
@@ -26,7 +34,7 @@ jobs:
           python -m unittest -v nox_runpod.teacher_mesh.v125.test_postdeploy_owner_chat_e2e
   native_routes:
     needs: source
-    if: ${{ github.actor == 'MSSTXNEWS' }}
+    if: "${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' && (github.actor == 'MSSTXNEWS') }}"
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
@@ -45,7 +53,7 @@ jobs:
         run: python -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup
   native_owner_chat_e2e:
     needs: native_routes
-    if: ${{ github.actor == 'MSSTXNEWS' }}
+    if: "${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' && (github.actor == 'MSSTXNEWS') }}"
     runs-on: ubuntu-latest
     timeout-minutes: 13
     env:

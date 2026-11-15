@@ -6,6 +6,13 @@ on:
       - 'nox_runpod/teacher_mesh/v108/**'
       - '.github/workflows/nox-v108-native-v29-binding.yml'
   workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Explicit owner approval for original NOX OneHost only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
 permissions:
   contents: read
 concurrency:
@@ -36,7 +43,7 @@ jobs:
           print('NOX_V108_CODE_SOURCE_COMPILES=PASS')
           PY
   native:
-    if: ${{ github.actor == 'MSSTXNEWS' }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' && (github.actor == 'MSSTXNEWS') }}
     needs: source
     runs-on: ubuntu-latest
     timeout-minutes: 13

@@ -7,6 +7,13 @@ on:
       - nox_runpod/teacher_mesh/v73/tests/test_prime_priority.py
       - nox_runpod/teacher_mesh/v73/prime_chat_priority.py
   workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Owner-approved original NOX OneHost access only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
 permissions:
   contents: read
 concurrency:
@@ -14,7 +21,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   p0:
-    if: ${{ github.actor == 'MSSTXNEWS' }}
+    if: "${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' && (github.actor == 'MSSTXNEWS') }}"
     runs-on: ubuntu-latest
     timeout-minutes: 8
     env:
