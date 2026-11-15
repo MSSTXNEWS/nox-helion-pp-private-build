@@ -238,23 +238,27 @@ class V112Tests(unittest.TestCase):
         self.assertEqual(history['messages'],[])
 
 
-    def test_invalid_utf8_cannot_claim_durable_s03_success(self):
-        # The native fixture already inserted a correctly matching S03 row.
-        # Corrupted upstream comment bytes must still cause a terminal HOLD.
-        for mode in ('invalid_utf8_comment','trailing_utf8_partial'):
-            with self.subTest(mode=mode):
-                self.bulk_sse=mode
-                created=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
-                    json={'title':'V170 UTF8 corruption '+mode,'confirmed':True}).json()
-                dialog_id=created['dialog_id']
-                reply=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
-                    json={'message':'unicode integrity '+mode,'dialog_id':dialog_id})
-                frames=[json.loads(line) for line in reply.text.splitlines() if line.strip()]
-                self.assertEqual(frames[-1],{'type':'error','error':'HOLD_UPSTREAM_SSE_UTF8_INVALID'})
-                self.assertFalse(any(f.get('type')=='done' or f.get('saved') for f in frames))
-                hist=self.client.get('/api/ui/memory/dialogs/history',cookies=self.cookie,
-                    params={'dialog_id':dialog_id}).json()
-                self.assertEqual(hist['messages'],[])
+    def _assert_invalid_utf8_cannot_claim_durable_s03_success(self, mode):
+        # One independently initialized fixture DB per test. A loop of two
+        # requests shared a fixed test exchange_id and collided on SQLite PK.
+        self.bulk_sse=mode
+        created=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
+            json={'title':'V170 UTF8 corruption '+mode,'confirmed':True}).json()
+        dialog_id=created['dialog_id']
+        reply=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
+            json={'message':'unicode integrity '+mode,'dialog_id':dialog_id})
+        frames=[json.loads(line) for line in reply.text.splitlines() if line.strip()]
+        self.assertEqual(frames[-1],{'type':'error','error':'HOLD_UPSTREAM_SSE_UTF8_INVALID'})
+        self.assertFalse(any(f.get('type')=='done' or f.get('saved') for f in frames))
+        hist=self.client.get('/api/ui/memory/dialogs/history',cookies=self.cookie,
+            params={'dialog_id':dialog_id}).json()
+        self.assertEqual(hist['messages'],[])
+
+    def test_invalid_utf8_comment_fails_closed_even_with_s03_fixture(self):
+        self._assert_invalid_utf8_cannot_claim_durable_s03_success('invalid_utf8_comment')
+
+    def test_trailing_incomplete_utf8_fails_closed_even_with_s03_fixture(self):
+        self._assert_invalid_utf8_cannot_claim_durable_s03_success('trailing_utf8_partial')
 
     def test_cross_dialog_id_is_rejected(self):
         before=len(self.calls)
