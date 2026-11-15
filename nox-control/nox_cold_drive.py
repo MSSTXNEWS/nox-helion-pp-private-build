@@ -12,7 +12,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-BLOCKED_PARTS = {"s03", "checkpoint", "checkpoints", "optimizer", "training", "sqlite", "database", "db"}
+BLOCKED_PARTS = {"s03", "checkpoint", "checkpoints", "optimizer", "training", "sqlite", "database", "db", "trainer", "optim"}
 ALLOWED_SUFFIX = {".safetensors", ".gguf", ".bin", ".pt", ".pth"}
 GIB = 1024 ** 3
 
@@ -24,22 +24,88 @@ def sha256(path):
     return h.hexdigest()
 
 def command(args):
-    subprocess.run(args, check=True)
+    # Never include provider stderr or credentials in public workflow logs.
+    try:
+        proc = subprocess.run(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                              check=False, timeout=14400)
+    except (OSError, subprocess.TimeoutExpired):
+        raise RuntimeError("HOLD_REMOTE_TRANSFER_UNAVAILABLE") from None
+    if proc.returncode:
+        raise RuntimeError("HOLD_REMOTE_TRANSFER_FAILED")
+
+
+def remote_sha256(remote):
+    """Stream R2/Drive readback to SHA256 without a second large disk file."""
+    try:
+        p = subprocess.Popen(["rclone", "--timeout", "120s", "--contimeout", "30s", "cat", remote],
+                             stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+    except OSError:
+        raise RuntimeError("HOLD_REMOTE_READBACK_UNAVAILABLE") from None
+    h = hashlib.sha256()
+    size = 0
+    try:
+        for block in iter(lambda: p.stdout.read(8 * 1024 * 1024), b""):
+            h.update(block)
+            size += len(block)
+        if p.wait(timeout=120) != 0:
+            raise RuntimeError("HOLD_REMOTE_READBACK_FAILED")
+        return h.hexdigest(), size
+    finally:
+        if p.poll() is None:
+            p.kill()
+            p.wait()
+        if p.stdout:
+            p.stdout.close()
+
+
+def ensure_linux_tmpfs(dest):
+    """Never accidentally fill SSD under a mistyped /dev/shm path."""
+    if os.name != "posix":
+        raise RuntimeError("HOLD_LINUX_TMPFS_ONLY")
+    candidates = []
+    with open("/proc/self/mountinfo", encoding="utf-8") as f:
+        for line in f:
+            left, _, right = line.partition(" - ")
+            parts = left.split()
+            after = right.split()
+            if len(parts) > 4 and after:
+                mp = parts[4].replace(chr(92) + "040", " ")
+                if str(dest) == mp or str(dest).startswith(mp.rstrip("/") + "/"):
+                    candidates.append((len(mp), after[0]))
+    if not candidates or max(candidates)[1] != "tmpfs":
+        raise RuntimeError("HOLD_DEST_NOT_TMPFS")
+    try:
+        data = open("/proc/meminfo", encoding="utf-8").read()
+        return int(next(x for x in data.splitlines() if x.startswith("MemAvailable:")).split()[1]) * 1024
+    except (OSError, ValueError, StopIteration):
+        raise RuntimeError("HOLD_RAM_AVAILABLE_UNKNOWN") from None
 
 def assert_model(p):
-    p = Path(p).resolve(strict=True)
-    if not p.is_file() or p.is_symlink() or p.suffix.lower() not in ALLOWED_SUFFIX:
+    candidate = Path(p)
+    if candidate.is_symlink():
+        raise ValueError("Symlink model candidates are not allowed")
+    p = candidate.resolve(strict=True)
+    if not p.is_file() or p.suffix.lower() not in ALLOWED_SUFFIX:
         raise ValueError("Not an eligible regular model file")
-    if any(part.lower() in BLOCKED_PARTS for part in p.parts):
+    if any(part.lower() in BLOCKED_PARTS for part in p.parts) or any(x in p.name.lower() for x in ("checkpoint", "optimizer", "s03", "trainer")):
         raise ValueError("Protected training, checkpoint or S03 path")
     return p
 
 def assert_remote(remote):
-    if ":" not in remote or remote.startswith(":") or ".." in remote.split(":")[-1].split("/"):
-        raise ValueError("Provide explicit rclone remote:path (e.g. noxdrive:NOX_COLD)")
-    return remote.rstrip("/")
+    if not isinstance(remote, str) or not remote.startswith(("noxdrive:", "noxr2:")):
+        raise ValueError("HOLD_REMOTE_MUST_BE_AUTHORIZED_NOXDRIVE_OR_NOXR2")
+    payload = remote.split(":", 1)[1]
+    if not payload or payload.startswith("/") or ":" in payload or chr(92) in payload or any(
+        part in ("", ".", "..") for part in payload.split("/")
+    ):
+        raise ValueError("HOLD_UNSAFE_REMOTE_PATH")
+    return remote
 
 def upload(a):
+    # The old --evict path could unlink weights using a user-written "active"
+    # manifest, without a native OneHost lease or restore acceptance.
+    if a.evict:
+        raise RuntimeError("HOLD_EVICTION_DISABLED_UNTIL_NATIVE_OWNER_LEASE")
     src = assert_model(a.file)
     remote = assert_remote(a.remote)
     if a.active_manifest:
@@ -47,18 +113,19 @@ def upload(a):
         if str(src) in {str(Path(x).resolve()) for x in active}:
             raise ValueError("Refusing to evict active model")
     dest = remote + "/" + src.name
+    before = src.stat()
     digest = sha256(src)
     size = src.stat().st_size
-    command(["rclone", "copyto", "--retries", "3", "--checkers", "4", str(src), dest])
-    # Stream back from remote to local hash; do not trust Drive MD5 for non-MD5 backends.
-    with tempfile.TemporaryDirectory(prefix="nox_cold_verify_") as tmp:
-        check = Path(tmp) / src.name
-        free = shutil.disk_usage(tmp).free
-        if free < size + GIB:
-            raise RuntimeError("Not enough local space to independently verify uploaded model")
-        command(["rclone", "copyto", dest, str(check)])
-        if check.stat().st_size != size or sha256(check) != digest:
-            raise RuntimeError("Remote readback hash mismatch: original retained")
+    if before.st_mtime_ns != src.stat().st_mtime_ns or before.st_size != size:
+        raise RuntimeError("HOLD_SOURCE_CHANGED_DURING_HASH")
+    command(["rclone", "copyto", "--immutable", "--retries", "3", "--checkers", "4", str(src), dest])
+    # Independent readback: streamed bytes, not S3 ETag and no local SSD duplicate.
+    remote_hash, remote_size = remote_sha256(dest)
+    if (remote_size, remote_hash) != (size, digest):
+        raise RuntimeError("HOLD_REMOTE_SHA256_MISMATCH")
+    after = src.stat()
+    if (before.st_size, before.st_mtime_ns, before.st_ino) != (after.st_size, after.st_mtime_ns, after.st_ino):
+        raise RuntimeError("HOLD_SOURCE_CHANGED_DURING_UPLOAD")
     receipt = {"source": str(src), "destination": dest, "size": size,
                "sha256": digest, "readback_verified": True, "source_deleted": False}
     receipt_path = Path(a.receipt_dir).resolve() / (src.name + "." + digest[:16] + ".json")
@@ -68,15 +135,6 @@ def upload(a):
         out.flush()
         os.fsync(out.fileno())
     print(json.dumps({"receipt": str(receipt_path), **receipt}, ensure_ascii=False))
-    if a.evict:
-        # Require operator supplied manifest generated from live process inspection.
-        if not a.active_manifest:
-            raise RuntimeError("Verified upload complete; eviction requires --active-manifest")
-        # Only source from completed receipt; never recursive deletion.
-        src.unlink()
-        receipt["source_deleted"] = True
-        receipt_path.write_text(json.dumps(receipt, indent=2))
-        print("EVICTED VERIFIED INACTIVE MODEL:", src)
 
 def load(a):
     remote = assert_remote(a.remote)
@@ -90,8 +148,9 @@ def load(a):
         raise ValueError("Not a model file")
     size_text = subprocess.check_output(["rclone", "size", "--json", remote], text=True)
     size = int(json.loads(size_text)["bytes"])
-    if size <= 0 or shutil.disk_usage(dest_dir).free < size + a.reserve_gib * GIB:
-        raise RuntimeError("Insufficient tmpfs free space after RAM reserve")
+    available = ensure_linux_tmpfs(dest_dir)
+    if size <= 0 or shutil.disk_usage(dest_dir).free < size + min(a.reserve_gib, 4) * GIB or available < size + a.reserve_gib * GIB:
+        raise RuntimeError("HOLD_INSUFFICIENT_RAM_RESERVE")
     dest = dest_dir / name
     if dest.exists():
         raise FileExistsError(dest)
@@ -119,7 +178,7 @@ def main():
     u.add_argument("--remote", required=True)
     u.add_argument("--receipt-dir", default="./cold_receipts")
     u.add_argument("--active-manifest", help="JSON with active_paths populated from current process inspection")
-    u.add_argument("--evict", action="store_true", help="Delete ONLY verified inactive source")
+    u.add_argument("--evict", action="store_true", help="DISABLED until OneHost owner-lease/restore acceptance")
     l = sp.add_parser("load")
     l.add_argument("--remote", required=True)
     l.add_argument("--ram-dir", default="/dev/shm/nox_models")
