@@ -29,7 +29,7 @@ jobs:
           set -euo pipefail
           mkdir -p source/coordination/onepass source/nox_runpod/teacher_mesh/v137
           cp coordination/onepass/nox-v135-resonance-owner-bridge.js coordination/onepass/v135_resonance_owner_stage.py coordination/onepass/test_v135_resonance_owner_bridge.cjs coordination/onepass/test_v135_resonance_owner_stage.py coordination/onepass/nox-v137-owner-self-status.js source/coordination/onepass/
-          cp nox_runpod/teacher_mesh/v137/owner_self_observation.py source/nox_runpod/teacher_mesh/v137/
+          cp nox_runpod/teacher_mesh/v137/owner_self_observation.py nox_runpod/teacher_mesh/v137/owner_response_contract.py source/nox_runpod/teacher_mesh/v137/
           (cd source && find coordination nox_runpod -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum > SOURCE_SHA256SUMS.txt)
           (cd source && zip -q -r ../NOX_V135_FULL_RELEASE_EXACT_SOURCE.zip .)
           sha256sum NOX_V135_FULL_RELEASE_EXACT_SOURCE.zip
