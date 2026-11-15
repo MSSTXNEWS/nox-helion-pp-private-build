@@ -23,10 +23,12 @@ class El {
   addEventListener(type,cb){(this.listeners[type]??=[]).push(cb);}
   click(){for(const cb of this.listeners.click??[])cb({target:this});}
 }
-function harness({owner=true,path='/nox-web-v29/pc/resonance.html',reply=null}={}){
-  const doc={readyState:'complete',visibilityState:'visible',listeners:{},system:null};
-  doc.system=new El('aside',doc);
+function harness({owner=true,path='/nox-web-v29/pc/resonance.html',reply=null,v22=false}={}){
+  const doc={readyState:'complete',visibilityState:'visible',listeners:{},system:null,aside:null};
+  if(v22)doc.aside=new El('aside',doc);
+  else doc.system=new El('aside',doc);
   doc.getElementById=id=>id==='v24System'?doc.system:null;
+  doc.querySelector=selector=>selector==='.nox-v22-left'?doc.aside:null;
   doc.createElement=tag=>new El(tag,doc);
   doc.addEventListener=(kind,cb)=>{(doc.listeners[kind]??=[]).push(cb);};
   let requests=0;
@@ -45,7 +47,7 @@ function harness({owner=true,path='/nox-web-v29/pc/resonance.html',reply=null}={
     trigger:()=>{for(const f of doc.listeners.click??[])f({
       target:{closest:()=>({dataset:{action:'open-system'}})}
     });},
-    update:async()=>{const s=doc.system.children[0];
+    update:async()=>{const s=(doc.system||doc.aside).children[0];
       const btn=s.children.find(x=>x.dataset.action==='nox-self-refresh');
       assert(btn);btn.click();await new Promise(ok=>setImmediate(ok));
       return s;}
@@ -104,4 +106,15 @@ test('existing V125 endpoints are bounded and labeled as incomplete fallback',as
  assert(text.includes('GPU0: 18%'));
  assert(text.includes('Тренер: HOLD'));
  assert(text.includes('S03: не проверялась'));
+});
+
+test('original V22 owner sees source-gated read-only monitor in existing sidebar',async()=>{
+ const h=harness({v22:true,path:'/nox-web-v29/pc/v22/resonance.template.html'});
+ assert.equal(h.doc.system,null);
+ assert.equal(h.doc.aside.children.length,1);
+ const box=await h.update();
+ assert.equal(box.className,'nox-v22-card panel');
+ assert.equal(box.dataset.status,'HOLD');
+ assert(box.querySelector('[data-nox-monitor-values]').textContent.includes('HOLD'));
+ assert(h.requests>=4);
 });
