@@ -32,5 +32,14 @@ class DocumentedVastList(unittest.TestCase):
         self.assertIn('api("GET", "/instances/", key)',source)
         self.assertNotIn('api("GET", f"/instances/{INSTANCE}/", key)',source)
 
+    def test_v51_v1_owner_list_and_pinned_host_before_attach(self):
+        self.assertEqual(v51.LIST_API,
+                         "https://console.vast.ai/api/v1/instances/?owner=me")
+        self.assertIn("LIST_API if method", inspect.getsource(v51.api))
+        source=inspect.getsource(v51.probe)
+        self.assertLess(source.index("HOLD_UNVERIFIED_REMOTE_HOST_KEY"),
+                        source.index('api("POST",'))
+        self.assertIn("StrictHostKeyChecking=yes",source)
+
 if __name__=="__main__":
     unittest.main()

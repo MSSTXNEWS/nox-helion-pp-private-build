@@ -38,11 +38,12 @@ def main():
         print('NOX_V131_HOLD=VAST_KEY_MISSING_OR_WRONG_PROVIDER')
         return 2
     outcomes=[]
+    # Vast deprecated v0 account-wide listing in August 2026.
+    # Query the owner-scoped documented v1 collection; never infer absence
+    # from a deprecated 404 or an unbounded external account list.
     urls=(
-      ('V1_CONSOLE_LIST','https://console.vast.ai/api/v1/instances?limit=25'),
-      ('V1_CLOUD_LIST','https://cloud.vast.ai/api/v1/instances?limit=25'),
-      ('V0_CONSOLE_LIST','https://console.vast.ai/api/v0/instances/'),
-      ('V0_CLOUD_LIST','https://cloud.vast.ai/api/v0/instances/'))
+      ('V1_CONSOLE_LIST','https://console.vast.ai/api/v1/instances/?owner=me'),
+      ('V1_CLOUD_LIST','https://cloud.vast.ai/api/v1/instances/?owner=me'))
     for label,url in urls:
         code,value=get(url,key)
         records=unpack(value)

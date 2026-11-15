@@ -7,11 +7,13 @@ from nox_runpod.teacher_mesh.v131 import vast_no_billing_inventory as v
 
 
 class VastInventorySource(unittest.TestCase):
-    def test_v0_documented_list_not_unsupported_detail(self):
+    def test_v1_owner_scoped_list_not_deprecated_v0(self):
         script = v.main.__code__.co_consts.__repr__()
-        self.assertIn("V0_CONSOLE_LIST", script)
-        self.assertIn("V0_CLOUD_LIST", script)
-        self.assertNotIn("V0_CONSOLE_DETAIL", script)
+        self.assertIn("V1_CONSOLE_LIST", script)
+        self.assertIn("V1_CLOUD_LIST", script)
+        self.assertIn("owner=me", script)
+        self.assertNotIn("V0_CONSOLE_LIST", script)
+        self.assertNotIn("V0_CLOUD_LIST", script)
 
     def test_exact_owner_running_passes_metadata_only(self):
         with patch.object(v,"get",return_value=(200,{"instances":[

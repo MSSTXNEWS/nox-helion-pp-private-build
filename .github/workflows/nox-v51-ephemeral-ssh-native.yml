@@ -20,7 +20,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   verify-native:
-    if: "${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' && (github.actor == 'MSSTXNEWS') }}"
+    if: "${{ (github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS') || (github.event_name == 'push' && github.ref == 'refs/heads/feature/nox-v38-synaptic-brain-20261114' && github.actor == 'MSSTXNEWS') }}"
     runs-on: ubuntu-latest
     timeout-minutes: 6
     env:
@@ -29,9 +29,15 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - name: Python source syntax check
+      - name: Single source regression and compile (no native writes)
         run: |
-          python3 -m py_compile nox_runpod/teacher_mesh/v51/ephemeral_ssh_probe.py
+          set -euo pipefail
+          python3 -m py_compile nox_runpod/teacher_mesh/v51/ephemeral_ssh_probe.py nox_runpod/teacher_mesh/v131/vast_no_billing_inventory.py
+          python3 -m unittest -q nox_runpod.teacher_mesh.v131.tests.test_v131_inventory nox_runpod.teacher_mesh.v50.tests.test_documented_vast_list
+      - name: Official owner-scoped v1 read-only instance ownership and status
+        run: |
+          set -euo pipefail
+          python3 -m nox_runpod.teacher_mesh.v131.vast_no_billing_inventory
       - name: Per-instance ephemeral SSH attach, live read-only command, detach
         run: |
           set -euo pipefail

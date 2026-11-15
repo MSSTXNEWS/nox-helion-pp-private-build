@@ -19,7 +19,8 @@ import urllib.error
 import urllib.request
 
 INSTANCE = 60509551
-API = "https://console.vast.ai/api/v0"
+API = "https://console.vast.ai/api/v0"  # Per-instance SSH key operations remain v0
+LIST_API = "https://console.vast.ai/api/v1/instances/?owner=me"  # v0 account listing deprecated
 RUNNER = Path(os.environ.get("RUNNER_TEMP", "/tmp")) / "nox-v51-ephemeral"
 KEY = RUNNER / "identity"
 TRACK = RUNNER / "cleanup.json"
@@ -103,7 +104,8 @@ def api(method: str, path: str, key: str, data: dict | None = None):
     if data is not None:
         raw = json.dumps(data, separators=(",", ":")).encode()
         headers["Content-Type"] = "application/json"
-    request = urllib.request.Request(API + path, headers=headers, data=raw, method=method)
+    endpoint = LIST_API if method == "GET" and path == "/instances/" else API + path
+    request = urllib.request.Request(endpoint, headers=headers, data=raw, method=method)
     try:
         with urllib.request.urlopen(request, timeout=22) as response:
             body = response.read(250000)
@@ -218,6 +220,25 @@ def probe() -> bool:
         raise RuntimeError("HOLD_DIRECT_SSH_BANNER_UNAVAILABLE")
     print("SSH_ROUTE=VAST_API_DIRECT_MAPPED_22_WITH_BANNER")
     RUNNER.mkdir(mode=0o700,parents=True,exist_ok=True)
+    # Existing owner-pinned Ed25519 fingerprint, verified BEFORE any SSH key
+    # is attached to the live instance. TCP banner alone does not authenticate.
+    known = RUNNER / "known_hosts"
+    try:
+        scanned = subprocess.run(
+            ["ssh-keyscan", "-T", "8", "-t", "ed25519", "-p", str(port), host],
+            capture_output=True, text=True, timeout=11, check=False)
+        known.write_text(scanned.stdout[:8000])
+        known.chmod(0o600)
+        fingerprint = subprocess.run(
+            ["ssh-keygen", "-lf", str(known), "-E", "sha256"],
+            capture_output=True, text=True, timeout=8, check=False)
+    except (OSError, subprocess.TimeoutExpired):
+        raise RuntimeError("HOLD_UNVERIFIED_REMOTE_HOST_KEY") from None
+    if (scanned.returncode != 0 or fingerprint.returncode != 0
+            or "SHA256:G4hmMllaT4uSfx+Gup9vjSySLXJT1cSc/9XePr7XmGc"
+            not in fingerprint.stdout):
+        raise RuntimeError("HOLD_UNVERIFIED_REMOTE_HOST_KEY")
+    print("SSH_HOST_FINGERPRINT=OWNER_PIN_MATCH_BEFORE_ATTACH")
     subprocess.run(
         ["ssh-keygen", "-q", "-t", "ed25519", "-N", "", "-C",
          "nox-v51-github-action-" + os.environ.get("GITHUB_RUN_ID", "ephemeral"),
@@ -246,11 +267,10 @@ def probe() -> bool:
     TRACK.write_text(json.dumps({"public":public,"key_id":found[0]}))
     print("VAST_EPHEMERAL_KEY_MATCHED_BY_EXACT_PUBLIC_KEY=true")
     print("VAST_INSTANCE_RUNNING_PRESERVED=true")
-    known = RUNNER / "known_hosts"
     cmd = ["ssh","-vv","-T","-i",str(KEY),"-p",str(port),
            "-o","BatchMode=yes","-o","IdentitiesOnly=yes",
            "-o","ConnectTimeout=12","-o","NumberOfPasswordPrompts=0",
-           "-o","StrictHostKeyChecking=accept-new",
+           "-o","StrictHostKeyChecking=yes",
            "-o","UserKnownHostsFile="+str(known),
            "root@"+host,"bash","-se"]
     for attempt in range(4):
@@ -266,7 +286,7 @@ def probe() -> bool:
                 if len(line)<800 and line.startswith(("NOX_NATIVE_","NATIVE_")):
                     print(line)
             print("SSH_READONLY_REMOTE_EXIT_CODE=0")
-            print("SSH_HOST_IDENTITY_POLICY=TOFU_EPHEMERAL_READ_ONLY")
+            print("SSH_HOST_IDENTITY_POLICY=OWNER_PINNED_ED25519_READ_ONLY")
             return True
         stderr = result.stderr.lower()
         checks = [
