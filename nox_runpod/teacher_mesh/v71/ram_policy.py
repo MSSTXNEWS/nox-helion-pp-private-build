@@ -141,6 +141,11 @@ def plan_warm_weight(snapshot:Mapping,candidate:Mapping)->dict:
     if snapshot.get('chat_gpu0_healthy') is not True:
         out['state']='HOLD_CHAT_HEALTH'
         return out
+    # Page-cache warmup competes with the canonical S03 WAL/retrieval IO.
+    # An unhealthy or unverified original memory service always wins.
+    if snapshot.get('s03_native_healthy') is not True:
+        out['state']='HOLD_S03_HEALTH_NOT_VERIFIED'
+        return out
     # The original V71 RAM planner already fails closed on cgroup trust/OOM;
     # warming an OS page cache must obey those same admission conditions.
     if snapshot.get('native_cgroup_verified') is not True:

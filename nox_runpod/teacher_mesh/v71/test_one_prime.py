@@ -145,6 +145,7 @@ class RamWeightTiers(unittest.TestCase):
     def s(self,**updates):
         data={'native_ram_verified':True,'owner_authorized':True,
               'stop_active':False,'chat_gpu0_healthy':True,
+              's03_native_healthy':True,
               'native_cgroup_verified':True,
               'native_cgroup_oom_delta_verified':True,
               'cgroup_oom_kill_delta':0,
@@ -178,6 +179,18 @@ class RamWeightTiers(unittest.TestCase):
                        self.s(seconds_since_chat_activity=3),self.s(stop_active=None)):
             with self.subTest(status=status):
                 self.assertTrue(plan_warm_weight(status,self.model())['state'].startswith('HOLD'))
+
+    def test_unverified_s03_health_never_admits_page_cache_pressure(self):
+        for health in (False, None, 0, 'true'):
+            with self.subTest(s03_health=health):
+                out=plan_warm_weight(self.s(s03_native_healthy=health),self.model())
+                self.assertEqual(out['state'],'HOLD_S03_HEALTH_NOT_VERIFIED')
+                self.assertEqual(out['warm_bytes_budget'],0)
+                self.assertFalse(out['performed'])
+        missing=self.s()
+        del missing['s03_native_healthy']
+        self.assertEqual(plan_warm_weight(missing,self.model())['state'],
+                         'HOLD_S03_HEALTH_NOT_VERIFIED')
 
     def test_remote_verified_never_claims_diskless_loader(self):
         out=plan_warm_weight(self.s(),self.model(source_state='REMOTE_VERIFIED'))
