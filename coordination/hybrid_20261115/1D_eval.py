@@ -125,9 +125,9 @@ def evaluate(reference, candidate, train_manifest, policy):
         require(a_value == b_value, f'UNPAIRED_COMPARISON:{key}')
     require(ref['variant'] != cand['variant'], 'same variant: comparison not meaningful')
     for cid in r:
-        for k in ('prompt_sha256', 'source_group_sha256', 'category', 'locale', 'split'):
-            a_value = r[cid][k].lower() if k in ('prompt_sha256', 'source_group_sha256') else r[cid][k]
-            b_value = c[cid][k].lower() if k in ('prompt_sha256', 'source_group_sha256') else c[cid][k]
+        for k in ('prompt_sha256', 'source_group_sha256', 'evaluation_sha256', 'category', 'locale', 'split'):
+            a_value = r[cid][k].lower() if k in ('prompt_sha256', 'source_group_sha256', 'evaluation_sha256') else r[cid][k]
+            b_value = c[cid][k].lower() if k in ('prompt_sha256', 'source_group_sha256', 'evaluation_sha256') else c[cid][k]
             require(a_value == b_value, f'{cid}: mismatched {k}')
     require(isinstance(policy, dict) and POLICY_KEYS <= policy.keys(), 'owner-approved numerical policy missing')
     require(all(finite(policy[k]) for k in POLICY_KEYS), 'invalid numerical policy')
@@ -238,6 +238,18 @@ def selftest():
                                   'source_group_sha256': [h('train_group')]}, pol)
     except ValueError as exc: assert 'mismatched source_group_sha256' in str(exc)
     else: raise AssertionError('paired source-group drift accepted')
+    # A paired score comparison is invalid if its scoring rubric changes, even when prompts match.
+    rubric_drift = make_run('merged')
+    rubric_drift['cases'][0]['evaluation_sha256'] = h('different-scoring-rubric')
+    try: evaluate(a, rubric_drift, {'prompt_sha256': [h('train')],
+                                    'source_group_sha256': [h('train_group')]}, pol)
+    except ValueError as exc: assert 'mismatched evaluation_sha256' in str(exc)
+    else: raise AssertionError('paired grading-rubric drift accepted')
+    # A SHA-256 display-case change does not change the scoring rubric's identity.
+    rubric_case_only = make_run('merged')
+    rubric_case_only['cases'][0]['evaluation_sha256'] = rubric_case_only['cases'][0]['evaluation_sha256'].upper()
+    assert evaluate(a, rubric_case_only, {'prompt_sha256': [h('train')],
+                                          'source_group_sha256': [h('train_group')]}, pol)['source_consistency'] == 'PASS'
     b['cases'][0]['checks'][next(iter(b['cases'][0]['checks']))] = False
     assert evaluate(a, b, {'prompt_sha256': [h('train')], 'source_group_sha256': [h('train_group')]}, pol)['source_consistency'] == 'FAIL'
     b['cases'][0]['checks'] = a['cases'][0]['checks'].copy()
@@ -245,7 +257,7 @@ def selftest():
     try: evaluate(a, b, {'prompt_sha256': [h('train')], 'source_group_sha256': [h('train_group')]}, pol)
     except ValueError as exc: assert 'logit delta' in str(exc)
     else: raise AssertionError('missing logit metric not detected')
-    print('SELFTEST 12/12 PASS (synthetic fixtures only; native HOLD)')
+    print('SELFTEST 14/14 PASS (synthetic fixtures only; native HOLD)')
 
 
 def main():
