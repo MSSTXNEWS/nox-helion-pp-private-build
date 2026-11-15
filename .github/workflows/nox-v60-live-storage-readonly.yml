@@ -5,6 +5,7 @@ on:
     paths:
       - '.github/workflows/nox-v60-live-storage-readonly.yml'
       - 'nox_runpod/teacher_mesh/v60/native_storage_probe.py'
+      - 'nox_runpod/teacher_mesh/v51/ephemeral_ssh_probe.py'
   workflow_dispatch:
 permissions:
   contents: read
@@ -21,5 +22,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+      - name: Syntax-check probe
+        run: python3 -m py_compile nox_runpod/teacher_mesh/v51/ephemeral_ssh_probe.py nox_runpod/teacher_mesh/v60/native_storage_probe.py
       - name: Inspect storage, GPU and configured remote names without changing data
         run: python3 -m nox_runpod.teacher_mesh.v60.native_storage_probe
