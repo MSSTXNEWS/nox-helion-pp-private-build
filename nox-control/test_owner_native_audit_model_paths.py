@@ -76,6 +76,39 @@ class PinnedModelPathTests(unittest.TestCase):
         self.assertEqual(set(result),{'pinned_model_paths'})
         self.assertEqual(audit.models.__code__.co_names,('pinned_model_paths',))
 
+class ProcessIdentityTests(unittest.TestCase):
+    @staticmethod
+    def stat_row(pid, ticks, comm='nox worker) main'):
+        # stat field 22 is index 19 after the final ') ' separator.
+        return f"{pid} ({comm}) S " + " ".join(['0']*18+[str(ticks)]) + "\\n"
+
+    def test_start_ticks_parses_parentheses_and_spaces_in_comm(self):
+        with tempfile.TemporaryDirectory() as temp:
+            p=Path(temp)
+            (p/'stat').write_text(self.stat_row(123,98765))
+            self.assertEqual(audit.proc_start_ticks(p,123),98765)
+
+    def test_process_identity_rejects_wrong_pid_and_bad_stat(self):
+        with tempfile.TemporaryDirectory() as temp:
+            p=Path(temp)
+            (p/'stat').write_text(self.stat_row(234,98765))
+            with self.assertRaises(ValueError):audit.proc_start_ticks(p,123)
+            (p/'stat').write_text("123 (nox) S 1 2")
+            with self.assertRaises(ValueError):audit.proc_start_ticks(p,123)
+
+    def test_proc_inventory_emits_stable_start_ticks_without_raw_stat(self):
+        with tempfile.TemporaryDirectory() as temp:
+            p=Path(temp)/'123';p.mkdir()
+            (p/'stat').write_text(self.stat_row(123,123456))
+            (p/'cmdline').write_bytes(b'/usr/bin/python3\\0/root/nox/worker.py\\0')
+            (p/'comm').write_text('nox-worker\\n')
+            rows=audit.process_rows(proc_root=Path(temp))
+            self.assertEqual(len(rows),1)
+            self.assertEqual(rows[0]['pid'],123)
+            self.assertEqual(rows[0]['start_ticks'],123456)
+            self.assertNotIn('stat',rows[0])
+            self.assertNotIn('raw_stat',rows[0])
+
 from test_owner_native_audit_pinned_v10 import PinnedModelInventoryAdmissionTest
 
 if __name__=='__main__':
