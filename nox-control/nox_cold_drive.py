@@ -25,7 +25,8 @@ import tempfile
 import time
 
 GIB = 1024 ** 3
-BLOCKED_PARTS = {'s03', 'checkpoint', 'checkpoints', 'optimizer', 'training', 'sqlite', 'database', 'db', 'genesis'}
+BLOCKED_PARTS = {'s03', 'checkpoint', 'checkpoints', 'optimizer', 'training', 'sqlite', 'database', 'db', 'genesis',
+                 'lora', 'qlora', 'adapter', 'adapters', 'runs_owner_hybrid'}
 ALLOWED_SUFFIX = {'.safetensors', '.gguf', '.bin', '.pt', '.pth'}
 SHA = re.compile(r'^[0-9a-f]{64}$')
 
@@ -47,7 +48,7 @@ def assert_model(value):
         raise ValueError('HOLD_NOT_REGULAR_MODEL')
     if any(x.lower() in BLOCKED_PARTS or x.lower().startswith('checkpoint-') for x in p.parts):
         raise ValueError('HOLD_PROTECTED_PATH')
-    if re.match(r'^(optimizer|scheduler|scaler|rng_state|training_args)([._-]|$)', p.name.lower()):
+    if re.match(r'^(optimizer|scheduler|scaler|rng_state|training_args|adapter|lora|qlora)([._-]|$)', p.name.lower()):
         raise ValueError('HOLD_PROTECTED_TRAINING_STATE')
     if s.st_nlink != 1:
         raise ValueError('HOLD_HARDLINK_MODEL')

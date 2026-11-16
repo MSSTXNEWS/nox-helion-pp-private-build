@@ -93,6 +93,32 @@ class ColdTests(unittest.TestCase):
     def test_checkpoint_folder_rejected(self):
         p=self.root/'checkpoint-12'/'m.safetensors';p.parent.mkdir();p.write_bytes(b'1')
         with self.assertRaises(ValueError):cold.assert_model(p)
+    def test_qwen_lora_run_is_not_an_evictable_model(self):
+        p=self.root/'LoRA'/'qlora_t866u'/'runs_owner_hybrid'/'adapter_model.safetensors'
+        p.parent.mkdir(parents=True);p.write_bytes(b'checkpoint adapter')
+        with self.assertRaisesRegex(ValueError,'HOLD_PROTECTED_PATH'):
+            cold.assert_model(p)
+        with patch.object(cold,'command') as transfer,self.assertRaises(ValueError):
+            cold.copy_verified({**self.job,'source':str(p)})
+        transfer.assert_not_called()
+
+    def test_adapter_file_outside_lora_folder_is_protected(self):
+        for name in ('adapter.safetensors','adapter_model.safetensors',
+                     'LoRA-merged.gguf','QLoRA.bin'):
+            p=self.root/name;p.write_bytes(b'unique adapter or training state')
+            with self.subTest(name=name),self.assertRaisesRegex(
+                    ValueError,'HOLD_PROTECTED_TRAINING_STATE'):
+                cold.assert_model(p)
+
+    def test_adapter_directory_not_evictable(self):
+        p=self.root/'adapters'/'unique.safetensors'
+        p.parent.mkdir(parents=True);p.write_bytes(b'not a cold-eviction candidate')
+        with self.assertRaisesRegex(ValueError,'HOLD_PROTECTED_PATH'):
+            cold.assert_model(p)
+
+    def test_ordinary_inactive_gguf_stays_eligible_for_copy(self):
+        self.assertEqual(cold.assert_model(self.src),self.src)
+
     def test_optimizer_filename_rejected(self):
         p=self.root/'optimizer.pt';p.write_bytes(b'1')
         with self.assertRaises(ValueError):cold.assert_model(p)
