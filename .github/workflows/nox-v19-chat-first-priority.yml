@@ -1,0 +1,33 @@
+name: NOX V19 chat first + worm 60 bounded source regression
+on:
+  push:
+    paths:
+      - 'nox_runpod/teacher_mesh/v47/control/dispatcher.py'
+      - 'nox_runpod/teacher_mesh/v47/control/worm_supervisor.py'
+      - 'nox_runpod/teacher_mesh/v47/control/test_v19_chat_first.py'
+      - 'nox_runpod/teacher_mesh/v47/control/test_v94_priority.py'
+      - '.github/workflows/nox-v19-chat-first-priority.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  bounded-priority:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Test all 60 immutable task IDs, CHAT P0, direct orders P0 and sleep-only gated GPU
+        run: |
+          python3 -m py_compile nox_runpod/teacher_mesh/v47/control/dispatcher.py nox_runpod/teacher_mesh/v47/control/worm_supervisor.py
+          python3 -m unittest -v nox_runpod.teacher_mesh.v47.control.test_v19_chat_first nox_runpod.teacher_mesh.v47.control.test_v94_priority
+      - name: Assert source-only (not native training or false 60 OS PIDs)
+        run: |
+          python3 - <<'PY'
+          from nox_runpod.teacher_mesh.v47.control import worm_supervisor as w
+          assert w.BACKGROUND_POLICY=='NOX_CHAT_FIRST_BACKGROUND_V18'
+          x=w.recommend_background_admission({'stop_active':True})
+          assert x['native_mutations']==0 and not x['background_training_allowed']
+          print('SOURCE_TESTED_POLICY_ONLY; NO_NEW_NATIVE_WORMS_OR_OPTIMIZER_STEPS')
+          PY
