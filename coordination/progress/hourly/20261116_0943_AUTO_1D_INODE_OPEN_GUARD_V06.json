@@ -65,9 +65,20 @@
     "first_ci_run_id": 43820060031,
     "first_ci_status": "RED_60_PASS_2_FAIL",
     "first_ci_root_cause": "GitHub Actions runner denies enumeration of unrelated /proc PIDs; production fail-closed HOLD_PROCESS_SCAN_PERMISSION was correct. New fixture should supply a synthetic isolated proc_root.",
-    "exact_ci": "PENDING",
-    "native_test": "NOT_RUN"
+    "exact_ci": "SUCCESS_43820308393_62_OF_62",
+    "native_test": "NOT_RUN",
+    "exact_source_sha": "281baaf603e1f5dce01f5856924dd9641a42bace",
+    "source_python_compile": "PASS",
+    "passed": 62,
+    "total": 62,
+    "finished_at_utc": "2026-11-16T06:57:19Z",
+    "link": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43820308393"
   },
   "next": "Run exact-source CI; current authorized OneHost STOP/lease/OAuth/SSD/current-Qwen and independent S03 optimizer restore; resume one missing DeepSeek shard only if claim+capacity; cleanup exact proven inactive duplicate with fresh accepted chat/S03.",
-  "error_lesson": "Tests of /proc scanning must isolate the PID namespace rather than expect privileged enumeration in GitHub Actions. Do not weaken production PermissionError HOLD; keep inode-based alias checks."
+  "error_lesson": "Tests of /proc scanning must isolate the PID namespace rather than expect privileged enumeration in GitHub Actions. Do not weaken production PermissionError HOLD; keep inode-based alias checks.",
+  "source_code_commit": "281baaf603e1f5dce01f5856924dd9641a42bace",
+  "source_code_blob": "8a3accce6e13fb339d7611f2658915c6bcbf20fe",
+  "test_blob": "e3c9f2627181a7bd2f9732bbe763ec41121b08d8",
+  "source_readback_verified": true,
+  "final_status": "SOURCE_TESTED_62_OF_62_NATIVE_HOLD"
 }
