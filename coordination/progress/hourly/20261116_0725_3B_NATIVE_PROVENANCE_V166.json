@@ -1,0 +1,65 @@
+{
+  "schema": "NOX_3B_SOURCE_RECEIPT_V1",
+  "instructions_version": "0.0.6",
+  "slot": "3B",
+  "at_msk": "2026-11-16 07:25 Europe/Moscow",
+  "accepted_head": "59ec895f6c70984f96d5b574adb3e1a6bf8fcb76",
+  "status": "SOURCE_PATCH_PENDING_EXACT_SHA_CI; LIVE_HOLD",
+  "error_id": "NOX-P1-V166-META-EARLY-LIVE-MODEL-PROVENANCE-20261116",
+  "root_cause": "Existing V135 emits answer_source LIVE_NOX and a fixed NOX HELION label before receiving the native response; JSON answer also hardcodes model. This can mislead users after 503/aborted responses and hides unverified active weights.",
+  "fix": "Initial SSE metadata is NATIVE_PENDING/UNKNOWN, then after first non-whitespace native delta a model-reported label is announced with model_identity_verified=false. Native start model is bounded/sanitized; JSON returns model label from native start, never a claimed weights SHA. No new backend/S03, no fabricated tokens, no changed rendering assets.",
+  "changed_paths": [
+    "coordination/onepass/nox-v135-resonance-owner-bridge.js",
+    "coordination/onepass/test_v135_resonance_owner_bridge.cjs",
+    "coordination/progress/hourly/20261116_0725_3B_NATIVE_PROVENANCE_V166.json"
+  ],
+  "validation": "2 new source regressions added; exact GitHub Actions needed",
+  "five_tasks": [
+    {
+      "task": "1 owner endpoint/model/SSE",
+      "status": "SOURCE_PATCH; LIVE_HOLD",
+      "reason": "Native connected after real delta is guarded; current OneHost model SHA/owner session not read live"
+    },
+    {
+      "task": "2 first meaningful delta",
+      "status": "SOURCE_PATCH",
+      "reason": "Preserves native token path; no early false LIVE"
+    },
+    {
+      "task": "3 S03 persisted completion",
+      "status": "SOURCE_EXISTING_GUARD",
+      "reason": "done remains gated by exact exchange ID history readback; native E2E not verified"
+    },
+    {
+      "task": "4 scoped abort",
+      "status": "SOURCE_EXISTING_GUARD",
+      "reason": "No global STOP; existing abort regression retained; native E2E not verified"
+    },
+    {
+      "task": "5 RU/ES p50/p95 and quick replies",
+      "status": "HOLD_NATIVE",
+      "reason": "No fresh authenticated E2E metrics or resource lease; no fake benchmark"
+    }
+  ],
+  "weights": {
+    "native_successful_updates": null,
+    "checkpoint_restore_verified": null,
+    "source": "Latest native receipt indicates old T866U FATAL; never infer successful Qwen/DeepSeek training"
+  },
+  "knowledge": {
+    "native_hunter_job_id": null,
+    "s03_recall_verified": null
+  },
+  "dispatcher_resources": {
+    "latest_native_audit": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43801309236",
+    "native_worker_pids_verified": 0,
+    "source_only": true
+  },
+  "native_effects": {
+    "server_modified": false,
+    "model_switched": false,
+    "web_deployed": false,
+    "files_deleted": false
+  },
+  "next_action": "Read exact-SHA V135/V139 GitHub CI for new source commit; owner-authorized V51 original OneHost browser SSE/STOP/S03+model identity and RU/ES p50/p95, then native fenced deploy only after rollback."
+}

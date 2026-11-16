@@ -832,3 +832,35 @@ test('V165 abort dislodges stalled native stream and never reports S03 done',asy
   assert.equal(calls.some(c=>c.path==='/api/ui/memory/dialogs/history'),false,
     'no S03 success readback for a cancelled generation');
 });
+
+
+test('V166 native provenance: model is PENDING until a meaningful upstream SSE delta',async()=>{
+  const f=fake();
+  const response=await f.fetch('/api/nox/chat',{method:'POST',
+    body:JSON.stringify({message:prompt,dialog_id:id,request_id:'v166-native-provenance'})});
+  const frames=await events(response);
+  const pending=frames[0];
+  assert.equal(pending.type,'meta');
+  assert.equal(pending.answer_source,'NATIVE_PENDING');
+  assert.equal(pending.model_label,'UNKNOWN');
+  assert.equal(pending.model_identity_verified,false);
+  const firstLive=frames.findIndex(e=>e.type==='meta'&&e.answer_source==='LIVE_NOX');
+  const firstText=frames.findIndex(e=>e.type==='token'&&e.t.trim());
+  assert(firstLive>0&&firstLive<firstText,'native label must follow a real meaningful model delta, before first meaningful visual token');
+  assert.equal(frames[firstLive].model_label,'NOX HELION');
+  assert.equal(frames[firstLive].model_identity_verified,false,'native label alone is not a weights manifest SHA');
+  assert.equal(frames.filter(e=>e.type==='done').length,1);
+  assert.equal(frames.find(e=>e.type==='done').history_persisted,true);
+});
+
+test('V166 JSON provenance: relay returns actual native-reported label but not verified weights ID',async()=>{
+  const f=fake();
+  const response=await f.fetch('/api/nox/chat',{method:'POST',
+    body:JSON.stringify({message:prompt})});
+  const data=await response.json();
+  assert.equal(response.status,200);
+  assert.equal(data.model,'NOX HELION');
+  assert.equal(data.model_identity_verified,false);
+  assert.equal(data.history_persisted,true);
+  assert(f.calls.some(c=>c.path.includes('/api/ui/memory/dialogs/history')));
+});

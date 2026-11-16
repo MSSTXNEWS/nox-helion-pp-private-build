@@ -109,10 +109,11 @@
     try{return await Promise.race([reader.read(),aborted]);}
     finally{signal.removeEventListener('abort',onAbort);}
   }
-  async function consume(response,emit,signal) {
+  async function consume(response,emit,signal,onMeaningfulDelta) {
     if(!response.ok||!response.body)throw Error('HOLD_NATIVE_STREAM_'+await reason(response));
     const reader=response.body.getReader(),decoder=new TextDecoder();
     let buf='',answer='',done=null,doneSeen=false,startSeen=false,preparingSeen=false;
+    let nativeModel='UNKNOWN',sourceAnnounced=false;
     const line=async str=>{
       if(!str.trim())return;
       let e;
@@ -128,7 +129,15 @@
       if(e.type==='delta'){
         if(!startSeen)throw Error('HOLD_NATIVE_START_REQUIRED');
         if(doneSeen||typeof e.text!=='string'||answer.length+e.text.length>MAX)throw Error('HOLD_NATIVE_DELTA');
-        answer+=e.text;await emit(e.text);
+        answer+=e.text;
+        // A chat is not LIVE merely because a browser requested a connection.
+        // Report actual upstream activity only on the first meaningful delta;
+        // native start.model is a reported label, NOT a verified weights SHA.
+        if(!sourceAnnounced&&e.text.trim()){
+          sourceAnnounced=true;
+          if(onMeaningfulDelta)onMeaningfulDelta(nativeModel);
+        }
+        await emit(e.text);
       } else if(e.type==='done') {
         if(!startSeen)throw Error('HOLD_NATIVE_START_REQUIRED');
         if(doneSeen)throw Error('HOLD_DUPLICATE_DONE');
@@ -137,6 +146,9 @@
         if(!preparingSeen)throw Error('HOLD_NATIVE_PREPARING_REQUIRED');
         if(startSeen)throw Error('HOLD_DUPLICATE_NATIVE_START');
         startSeen=true;
+        nativeModel=typeof e.model==='string'
+          ?e.model.replace(/[\x00-\x1F\x7F]/g,' ').trim().slice(0,96)||'UNKNOWN'
+          :'UNKNOWN';
       } else if(e.type==='preparing') {
         // Original V112 emits one preparing frame before its native start.
         // A repeated/late preparation is an invalid wire sequence, even if
@@ -169,7 +181,7 @@
       buf+=decoder.decode();
       if(buf.trim())throw Error('HOLD_INCOMPLETE_NATIVE_FRAME');
       if(!done||!answer.trim())throw Error('HOLD_INCOMPLETE_NATIVE_RESPONSE');
-      return {answer,receipt:done};
+      return {answer,receipt:done,nativeModel};
     }finally{
       try{
         const cancelling=reader.cancel('STREAM_CLOSED');
@@ -200,7 +212,8 @@
           if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
           const id=await dialogId(data,nativeSignal);
           if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
-          event({type:'meta',dialog_id:id,model_label:'NOX HELION',answer_source:'LIVE_NOX'});
+          event({type:'meta',dialog_id:id,model_label:'UNKNOWN',
+            answer_source:'NATIVE_PENDING',model_identity_verified:false});
           const upstream=await nativePost('/api/nox/chat/stream',{
             message:data.message,dialog_id:id,task:'general',history:[]
           },nativeSignal);
@@ -237,7 +250,8 @@
             const glyphs=Array.from(segmenter.segment(trailing),part=>part.segment);
             trailing=glyphs.pop()||'';
             if(glyphs.length)await emitPieces(glyphs.join(''));
-          },nativeSignal);
+          },nativeSignal,model=>event({type:'meta',dialog_id:id,
+            model_label:model,answer_source:'LIVE_NOX',model_identity_verified:false}));
           if(trailing)await emitPieces(trailing);
           if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
           if(!accepted(receipt,id))throw Error('HOLD_S03_COMMIT_RECEIPT');
@@ -272,14 +286,14 @@
       const upstream=await nativePost('/api/nox/chat/stream',{
         message:data.message,dialog_id:id,history:[],task:'general'
       },signal);
-      const {answer,receipt}=await consume(upstream,()=>{},signal);
+      const {answer,receipt,nativeModel}=await consume(upstream,()=>{},signal);
       if(signal?.aborted)throw Error('STREAM_STOP_REQUESTED');
       if(!accepted(receipt,id))throw Error('HOLD_S03_COMMIT_RECEIPT');
       await checkHistory(id,data.message,answer,receipt.exchange_id,signal);
       // JSON clients also have a cancellation boundary: a late abort during
       // S03 readback must never produce a persisted-success response.
       if(signal?.aborted)throw Error('STREAM_STOP_REQUESTED');
-      return responseJSON({answer,model:'NOX HELION',dialog_id:id,
+      return responseJSON({answer,model:nativeModel,model_identity_verified:false,dialog_id:id,
         exchange_id:receipt.exchange_id,history_persisted:true,s03_integrated:true});
     }catch(e){return errorResponse(String(e.message||'HOLD_NATIVE_JSON').slice(0,150));}
   }
