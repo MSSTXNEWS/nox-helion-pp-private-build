@@ -27,7 +27,7 @@ SHA256 = re.compile(r"[0-9a-f]{64}\Z")
 
 
 def evaluate_source_plan(*, stop_present, gpu_ids, tp, max_context, reserve_mib,
-                         verified_files, tensor_types):
+                         verified_files, tensor_types, packer_output_absent=None):
     """Return only SOURCE_ONLY_* or HOLD; this function has no launch action."""
     # Only an explicit owner-confirmed False may pass this source gate.
     if stop_present is not False:
@@ -60,6 +60,10 @@ def evaluate_source_plan(*, stop_present, gpu_ids, tp, max_context, reserve_mib,
     if not types or unknown:
         return {"state": "HOLD_UNCONFIRMED_TENSOR_KERNEL", "launchable": False,
                 "unknown_types": unknown}
+    # pack_gguf.py opens ds4.txt/tensors.txt/engram.bin with truncating modes;
+    # only an independently observed absent output path protects existing artifacts.
+    if packer_output_absent is not True:
+        return {"state": "HOLD_PACKER_OUTPUT_NOT_ABSENT", "launchable": False}
     return {
         "state": "SOURCE_ONLY_PLAN_READY_NOT_LAUNCHABLE",
         "launchable": False,
@@ -70,6 +74,8 @@ def evaluate_source_plan(*, stop_present, gpu_ids, tp, max_context, reserve_mib,
         "unique_verified_files": len(rows),
         "unique_bytes": sum(row["bytes"] for row in rows.values()),
         "tensor_types": sorted(types),
+        "packer_output_dir": "maya-ds4",
+        "packer_non_clobber_precondition": True,
         "command_contract": ["--pack", "--gpus 0,1", "--tp 2",
                              "--max-context", "--reserve-mib", "--serve"],
     }
