@@ -1,7 +1,7 @@
 name: NOX Future V28 WOW150 Unified Source QA
 on:
   push:
-    branches: [feature/nox-teacher-mycelium-20261112]
+    branches: [feature/nox-teacher-mycelium-20261112, feature/nox-v38-synaptic-brain-20261114]
     paths:
       - '.github/workflows/nox-future-v28-wow150-ci.yml'
       - 'nox_runpod/teacher_mesh/nox_*v28.py'
@@ -28,6 +28,7 @@ jobs:
         run: |
           set -Eeuo pipefail
           python3 -m unittest discover -s nox_runpod/teacher_mesh/tests -p 'test_v28_future_lab.py' -v
+          python3 -m unittest discover -s nox_runpod/teacher_mesh/tests -p 'test_v28_arena_owner_provenance.py' -v
           python3 -m unittest discover -s nox_runpod/teacher_mesh/tests -p 'test_v28_bridge_emotion.py' -v
           python3 -m unittest discover -s nox_runpod/teacher_mesh/tests -p 'test_autonomous_hunt_v27.py' -v
           python3 -m unittest discover -s nox_runpod/teacher_mesh/tests -p 'test_genesis_recall_contract.py' -v

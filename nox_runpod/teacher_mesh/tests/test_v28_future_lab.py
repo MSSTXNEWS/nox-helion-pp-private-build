@@ -45,13 +45,16 @@ def advice(ident="teacher1",text="Independent tested solution with evidence",sco
             "text_sha256":hashlib.sha256(text.encode()).hexdigest(),
             "source_uri":"https://example.org/sources/"+ident,
             "training_data_rights_verified":True,"deidentified":True,
-            "owner_sample_approved":True,
+            "source_license_verified":True,"source_provenance_verified":True,
+            "pii_review":"PASS","owner_sample_approved":True,
             "independent_grade":{"verified":True,"harness_sha256":HARNESS,
                 "source_receipt_sha256":RECEIPT,"quality_score":score}}
 def arena_policy():
     return {"signed_by_native_owner":True,"stop_requested":False,
             "allowed_teacher_ids":["teacher1","teacher2"],"max_evidence_capsules":2,
-            "user_data_private":False}
+            "user_data_private":False,"scope":"owner",
+            "accepted_source_receipt_shas":[RECEIPT],
+            "training_approved_source_receipt_shas":[RECEIPT]}
 def speed_signals():
     return {"measured":True,"sensor_valid":True,"machine_signature_verified":True,
             "source_model_sha256_verified":True,

@@ -1,0 +1,49 @@
+{
+  "schema": "NOX_PRIME_AUTO_2C_FIVE_TASK_RECEIPT_V1",
+  "instructions_version": "0.0.6",
+  "slot": "AUTO_2C",
+  "at_msk": "2026-11-16 05:38 Europe/Moscow",
+  "accepted_head": "3081ec202b8d977a176ccd343977fe6e384806c1",
+  "source_after": "COMMIT_CONTAINING_THIS_RECEIPT",
+  "scope": "SOURCE_ONLY_NO_NATIVE_MUTATION",
+  "error_id": "NOX-P1-V28-TEACHER-ARENA-UNTRUSTED-PROVENANCE-TRAINING-20261116",
+  "symptom": "Independently graded teacher answer with arbitrary S03 URI could be returned without owner S03 ACL; training_candidate_count could be positive without owner-pinned source receipt, verified licence, source provenance or PII review.",
+  "root_cause": "V28 teacher arena trusted candidate-supplied verified booleans; no distinct native-owner receipt allowlists for evidence vs training or scoped S03 evidence.",
+  "lesson": "Require owner-pinned source receipt and per-scope S03 ACL for evidence; training rights require separate allowlist, licence, provenance and PII review. Source-only gate is not proof native receipt authenticity.",
+  "tasks": [
+    {
+      "n": 1,
+      "status": "DONE_SOURCE_AUDIT",
+      "detail": "HuntDirector V27 owner-signed scoped policy, source HEAD, STOP and callbacks inspected; no native tick evidence."
+    },
+    {
+      "n": 2,
+      "status": "HOLD_NATIVE_ERROR_S03",
+      "detail": "Curriculum V28 requires independent heldout SHA but current signed real S03 error receipts are unavailable; no fabricated gap/train."
+    },
+    {
+      "n": 3,
+      "status": "DONE_SOURCE_PATCH_LOCAL_12_PASS_CI_PENDING",
+      "detail": "Teacher Arena source receipt allowlists, licence/provenance/PII and owner S03 scoped ACL; twelve locally executed synthetic regressions."
+    },
+    {
+      "n": 4,
+      "status": "HOLD_QUEUE_NO_FENCED_OWNER",
+      "detail": "No authenticated native owner writer lease, signed job ID and queue readback; no research job enqueued."
+    },
+    {
+      "n": 5,
+      "status": "HOLD_S03_NATIVE_READBACK",
+      "detail": "Original S03 job receipt/owner ACL readback unavailable for this run; no native learning inferred."
+    }
+  ],
+  "test": "LOCAL 12/12 SOURCE SYNTHETIC PASS; PY_COMPILE PASS; exact SHA CI pending",
+  "verified_native_job_ids": null,
+  "verified_s03_job_receipts": null,
+  "ttft_p50_ms": null,
+  "tokens_per_sec": null,
+  "installed_native_paths": [],
+  "deleted_native_paths": [],
+  "freed_bytes": 0,
+  "next_action": "One native owner READ-ONLY audit of real S03 error receipt/queue job ids and current scoped lease; only then bind one HuntDirector research task."
+}

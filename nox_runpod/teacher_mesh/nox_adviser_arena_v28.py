@@ -50,10 +50,33 @@ def evaluate_teacher_arena(candidates:list[dict], policy:dict)->dict:
     allow=policy.get("allowed_teacher_ids")
     if not isinstance(allow,list) or not isinstance(candidates,list) or len(candidates)>50:
         return {"schema":SCHEMA,"state":"HOLD_TEACHER_INPUT","evidence_capsules":[]}
+    # A teacher-supplied verified=True flag is not an owner-authenticated
+    # source receipt. The native owner must explicitly pin each accepted
+    # source receipt before its text can enter a NOX evidence capsule.
+    trusted=policy.get("accepted_source_receipt_shas")
+    if (not isinstance(trusted,list) or not trusted or len(trusted)>100
+            or any(not isinstance(x,str) or not SHA.fullmatch(x) for x in trusted)):
+        return {"schema":SCHEMA,"state":"HOLD_OWNER_SOURCE_RECEIPT_ALLOWLIST",
+                "evidence_capsules":[]}
+    training=policy.get("training_approved_source_receipt_shas",[])
+    if (not isinstance(training,list) or len(training)>100
+            or any(not isinstance(x,str) or not SHA.fullmatch(x) or x not in trusted
+                   for x in training)):
+        return {"schema":SCHEMA,"state":"HOLD_TRAINING_SOURCE_RECEIPT_ALLOWLIST",
+                "evidence_capsules":[]}
     accepted=[]
     seen=set()
     for candidate in candidates:
         if not _valid(candidate,allow):continue
+        receipt=candidate["independent_grade"]["source_receipt_sha256"]
+        if receipt not in trusted:continue
+        is_s03=candidate["source_uri"].startswith("s03://")
+        if is_s03 and not (
+            policy.get("allow_owner_s03_evidence") is True
+            and isinstance(policy.get("scope"),str)
+            and candidate.get("scope")==policy["scope"]
+            and candidate.get("s03_owner_acl_verified") is True
+        ):continue
         key=candidate["text_sha256"]
         if key in seen:continue
         seen.add(key)
@@ -65,9 +88,14 @@ def evaluate_teacher_arena(candidates:list[dict], policy:dict)->dict:
             "quality_score_from_independent_receipt":q,
             "text":candidate["text"], # quoted UNTRUSTED source DATA, not instructions
             "harness_sha256":candidate["independent_grade"]["harness_sha256"],
-            "eligible_for_training":candidate.get("training_data_rights_verified") is True and
+            "eligible_for_training":receipt in training and
+                candidate.get("training_data_rights_verified") is True and
+                candidate.get("source_license_verified") is True and
+                candidate.get("source_provenance_verified") is True and
+                candidate.get("pii_review")=="PASS" and
                 candidate.get("deidentified") is True and
-                candidate.get("owner_sample_approved") is True,
+                candidate.get("owner_sample_approved") is True and
+                (not is_s03 or policy.get("allow_owner_s03_training") is True),
         })
     accepted.sort(key=lambda v:(-v["quality_score_from_independent_receipt"],v["teacher_id"]))
     best=accepted[:min(3,int(policy.get("max_evidence_capsules",3)) if
