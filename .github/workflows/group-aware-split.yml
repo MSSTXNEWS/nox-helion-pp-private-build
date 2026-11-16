@@ -1,0 +1,24 @@
+name: Group-aware splitter regression
+
+on:
+  pull_request:
+    paths:
+      - "nox-control/group_aware_split.py"
+      - "nox-control/test_group_aware_split.py"
+      - ".github/workflows/group-aware-split.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  group-aware-split:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Compile source and tests
+        run: python -m py_compile nox-control/group_aware_split.py nox-control/test_group_aware_split.py
+      - name: Run synthetic regression fixtures
+        run: python -m unittest discover -s nox-control -p 'test_group_aware_split.py' -v
