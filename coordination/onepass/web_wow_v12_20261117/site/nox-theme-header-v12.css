@@ -1,0 +1,96 @@
+/* NOX HELION V12 · ONE MENU / FIVE MATERIAL LANGUAGES.
+   Same HOME atmosphere across all pages; this stylesheet only re-materializes the
+   global header/navigation and primary controls. No new canvas, no dropdown.
+   Author-approved worlds: HELION, CHRONOS, SOMNIUM, FORGE, SYNAPSE. */
+:root{--nox-header-glow:rgba(233,180,101,.38)}
+html[data-nox-world] body.nox-shared-glass .nox-shared-header-v10{
+ --nox-head-rgb:var(--nox-world-rgb,233,180,101);--nox-head-edge:rgba(var(--nox-head-rgb),.42);
+ position:sticky!important;top:0;display:flex;isolation:isolate;align-items:center;
+ background:linear-gradient(170deg,rgba(25,30,39,.16),rgba(6,10,16,.36))!important;
+ border-bottom:1px solid var(--nox-head-edge)!important;
+ border-radius:0!important;backdrop-filter:blur(18px) saturate(145%)!important;
+ -webkit-backdrop-filter:blur(18px) saturate(145%)!important;
+ box-shadow:inset 0 1px rgba(255,255,255,.14),0 10px 38px rgba(0,0,0,.2),0 2px 21px rgba(var(--nox-head-rgb),.075)!important;
+ transition:border-color .35s,box-shadow .4s,background-color .4s;
+}
+html[data-nox-world] .nox-shared-header-v10::before{content:'';position:absolute;inset:0;pointer-events:none;z-index:-1;opacity:.78;}
+html[data-nox-world] .nox-shared-header-v10::after{content:'';position:absolute;left:0;right:0;bottom:0;height:1px;pointer-events:none;background:linear-gradient(90deg,transparent,rgba(var(--nox-head-rgb),.92),transparent);opacity:.65;}
+html[data-nox-world] .nox-shared-signature-v10{position:relative;color:rgb(var(--nox-head-rgb));isolation:isolate;text-shadow:0 0 18px rgba(var(--nox-head-rgb),.25);font-weight:800!important}
+html[data-nox-world] .nox-signature-eclipse-v10{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;font-size:19px;color:rgb(var(--nox-head-rgb));background:radial-gradient(circle at center,rgba(0,0,0,.96) 33%,rgba(var(--nox-head-rgb),.55) 43%,rgba(0,0,0,.5) 57%,transparent 70%);-webkit-background-clip:border-box;background-clip:border-box;filter:drop-shadow(0 0 9px rgba(var(--nox-head-rgb),.42));}
+html[data-nox-world] .nox-shared-signature-v10::after{content:var(--nox-header-world-label,'HELION');display:block;position:absolute;top:calc(100% + 2px);left:34px;color:rgba(var(--nox-head-rgb),.68);font:700 7px/1 Tektur,system-ui,sans-serif;letter-spacing:.18em;white-space:nowrap;}
+html[data-nox-world] .nox-shared-links-v10{gap:clamp(4px,.55vw,12px);padding:4px 2px 6px;align-items:center;scrollbar-width:thin;scrollbar-color:rgba(var(--nox-head-rgb),.38) transparent;}
+html[data-nox-world] .nox-shared-links-v10 a,
+html[data-nox-world] .nox-shared-catalog-v11{
+ --nox-nav-clip:none;position:relative;isolation:isolate;overflow:hidden;
+ min-height:51px;padding:6px 7px;color:#e6dbcd!important;white-space:nowrap;
+ font:700 9px/1.15 Tektur,system-ui,sans-serif!important;letter-spacing:.058em;
+ border:1px solid rgba(var(--nox-head-rgb),.2)!important;
+ border-radius:var(--nox-head-radius,12px)!important;
+ background:linear-gradient(144deg,rgba(235,241,255,.06),rgba(5,10,18,.28) 55%,rgba(var(--nox-head-rgb),.06))!important;
+ backdrop-filter:blur(11px) saturate(136%);-webkit-backdrop-filter:blur(11px) saturate(136%);
+ box-shadow:inset 0 1px rgba(255,255,255,.10),inset 0 -7px 12px rgba(0,0,0,.08),0 3px 11px rgba(0,0,0,.08)!important;
+ transform:translateZ(0);transition:transform .22s ease,border-color .28s,background-color .28s,box-shadow .3s!important;
+ clip-path:var(--nox-nav-clip);
+}
+html[data-nox-world] .nox-shared-links-v10 a svg{flex:0 0 auto;width:20px;height:20px;stroke:rgb(var(--nox-head-rgb));filter:drop-shadow(0 0 6px rgba(var(--nox-head-rgb),.35));transition:filter .3s,transform .3s;}
+html[data-nox-world] .nox-shared-links-v10 a::before,
+html[data-nox-world] .nox-shared-catalog-v11::before{content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;opacity:.72;}
+html[data-nox-world] .nox-shared-links-v10 a::after,
+html[data-nox-world] .nox-shared-catalog-v11::after{content:'';position:absolute;bottom:0;left:15%;width:70%;height:1px;background:linear-gradient(90deg,transparent,rgba(var(--nox-head-rgb),.9),transparent);opacity:.25;pointer-events:none;}
+html[data-nox-world] .nox-shared-links-v10 a:is(:hover,:focus-visible),html[data-nox-world] .nox-shared-catalog-v11:is(:hover,:focus-visible){transform:translateY(-2px);border-color:rgba(var(--nox-head-rgb),.66)!important;color:#fff!important;box-shadow:inset 0 1px rgba(255,255,255,.18),0 4px 21px rgba(var(--nox-head-rgb),.16)!important}
+html[data-nox-world] .nox-shared-links-v10 a:is(:hover,:focus-visible) svg{transform:scale(1.09);filter:drop-shadow(0 0 8px rgba(var(--nox-head-rgb),.65))}
+html[data-nox-world] .nox-shared-links-v10 a[aria-current=page]{border-color:rgba(var(--nox-head-rgb),.72)!important;color:#fffaf4!important;background:linear-gradient(155deg,rgba(var(--nox-head-rgb),.22),rgba(6,10,18,.2) 70%)!important;box-shadow:inset 0 1px rgba(255,255,255,.19),0 0 17px rgba(var(--nox-head-rgb),.2)!important}
+html[data-nox-world] .nox-shared-links-v10 a[aria-current=page]::after{opacity:1;height:2px}
+html[data-nox-world] .nox-shared-links-v10 a:focus-visible,html[data-nox-world] .nox-shared-signature-v10:focus-visible,html[data-nox-world] .nox-shared-catalog-v11:focus-visible{outline:2px solid rgb(var(--nox-head-rgb))!important;outline-offset:2px!important}
+/* HELION — black liquid-metal sun, solar flare moving through beveled plates */
+html[data-nox-world=helion]{--nox-head-radius:15px;--nox-header-world-label:'HELION'}
+html[data-nox-world=helion] .nox-shared-header-v10::before{background:radial-gradient(ellipse at 13% 60%,rgba(var(--nox-head-rgb),.14),transparent 28%),linear-gradient(90deg,transparent,rgba(var(--nox-head-rgb),.035) 57%,transparent)}
+html[data-nox-world=helion] .nox-shared-links-v10 a{border-radius:16px 4px 16px 4px!important}
+html[data-nox-world=helion] .nox-shared-links-v10 a::before{background:linear-gradient(115deg,transparent 25%,rgba(var(--nox-head-rgb),.10) 47%,rgba(255,255,255,.12) 50%,transparent 56%);background-size:230% 100%;background-position:100% 0}
+html[data-nox-world=helion] .nox-shared-links-v10 a:is(:hover,[aria-current=page])::before{animation:nox-v12-solar-sweep 3.6s linear infinite}
+@keyframes nox-v12-solar-sweep{0%{background-position:100% 0}100%{background-position:-130% 0}}
+/* CHRONOS — brass horology, engraved ticks, circular joints */
+html[data-nox-world=chronos]{--nox-head-radius:3px;--nox-header-world-label:'CHRONOS'}
+html[data-nox-world=chronos] .nox-shared-header-v10::before{background:repeating-linear-gradient(90deg,rgba(var(--nox-head-rgb),.035) 0 1px,transparent 1px 26px),linear-gradient(180deg,rgba(180,139,80,.07),transparent 90%)}
+html[data-nox-world=chronos] .nox-shared-links-v10 a{border-radius:3px 15px 3px 15px!important;border-style:double!important;border-width:2px!important;letter-spacing:.10em!important;}
+html[data-nox-world=chronos] .nox-shared-links-v10 a::before{background:repeating-conic-gradient(from 0deg at 50% 22%,rgba(var(--nox-head-rgb),.10) 0 3deg,transparent 3deg 27deg);mask:radial-gradient(circle at 50% 22%,transparent 0 8px,#000 8.5px 11px,transparent 12px);-webkit-mask:radial-gradient(circle at 50% 22%,transparent 0 8px,#000 8.5px 11px,transparent 12px)}
+html[data-nox-world=chronos] .nox-shared-links-v10 a:is(:hover,[aria-current=page])::before{animation:nox-v12-clockwork 12s linear infinite}
+@keyframes nox-v12-clockwork{to{transform:rotate(360deg)}}
+html[data-nox-world=chronos] .nox-signature-eclipse-v10{border:2px double rgba(var(--nox-head-rgb),.65);box-shadow:inset 0 0 9px rgba(var(--nox-head-rgb),.2)}
+/* SOMNIUM — asymmetric mother-of-pearl with iridescent refraction */
+html[data-nox-world=somnium]{--nox-head-radius:25px;--nox-header-world-label:'SOMNIUM'}
+html[data-nox-world=somnium] .nox-shared-header-v10::before{background:radial-gradient(ellipse at 20% 10%,rgba(192,132,247,.17),transparent 47%),radial-gradient(ellipse at 76% 140%,rgba(71,188,220,.14),transparent 51%)}
+html[data-nox-world=somnium] .nox-shared-links-v10 a{border-radius:30% 18% 30% 17% / 22% 32% 24% 34%!important;border-color:rgba(var(--nox-head-rgb),.34)!important}
+html[data-nox-world=somnium] .nox-shared-links-v10 a::before{background:linear-gradient(125deg,rgba(67,173,223,.17),transparent 42%,rgba(199,103,246,.19) 67%,transparent),radial-gradient(circle at 7% 8%,rgba(255,255,255,.15),transparent 47%);background-size:160% 160%}
+html[data-nox-world=somnium] .nox-shared-links-v10 a:is(:hover,[aria-current=page])::before{animation:nox-v12-prism-flow 7s ease-in-out infinite alternate}
+@keyframes nox-v12-prism-flow{to{background-position:100% 100%;filter:hue-rotate(33deg)}}
+html[data-nox-world=somnium] .nox-signature-eclipse-v10{border-radius:35% 65% 45% 55%}
+/* FORGE — cut titanium riveted plates, furnace undercut */
+html[data-nox-world=forge]{--nox-head-radius:1px;--nox-header-world-label:'FORGE'}
+html[data-nox-world=forge] .nox-shared-header-v10::before{background:repeating-linear-gradient(140deg,transparent 0 15px,rgba(210,164,118,.032) 16px 18px,transparent 19px 34px),linear-gradient(180deg,rgba(88,55,30,.12),transparent)}
+html[data-nox-world=forge] .nox-shared-links-v10 a{--nox-nav-clip:polygon(0 0,90% 0,100% 18%,100% 100%,10% 100%,0 82%);border-radius:0!important;box-shadow:inset 0 2px rgba(255,255,255,.12),inset 0 -6px rgba(0,0,0,.22),0 6px 17px #0005!important;}
+html[data-nox-world=forge] .nox-shared-links-v10 a::before{background:repeating-linear-gradient(105deg,rgba(255,255,255,.025) 0 1px,transparent 1px 6px),linear-gradient(0deg,rgba(248,113,57,.11),transparent 43%)}
+html[data-nox-world=forge] .nox-shared-links-v10 a:is(:hover,[aria-current=page])::before{animation:nox-v12-forge-heat 4s ease-in-out infinite alternate}
+@keyframes nox-v12-forge-heat{to{filter:brightness(1.75);opacity:.9}}
+html[data-nox-world=forge] .nox-shared-links-v10 a svg{filter:drop-shadow(0 1px 1px #000) drop-shadow(0 0 5px rgba(var(--nox-head-rgb),.42))}
+html[data-nox-world=forge] .nox-signature-eclipse-v10{border:1px solid rgba(var(--nox-head-rgb),.5);border-radius:0;clip-path:polygon(12% 0,100% 0,100% 88%,88% 100%,0 100%,0 12%)}
+/* SYNAPSE — rounded bioluminescent cells and flowing neural signals */
+html[data-nox-world=synapse]{--nox-head-radius:25px;--nox-header-world-label:'SYNAPSE'}
+html[data-nox-world=synapse] .nox-shared-header-v10::before{background:repeating-linear-gradient(125deg,transparent 0 23px,rgba(70,241,191,.035) 24px 25px,transparent 26px 49px),radial-gradient(ellipse at 76% 40%,rgba(30,199,150,.10),transparent 60%)}
+html[data-nox-world=synapse] .nox-shared-links-v10 a{border-radius:27px 16px 26px 16px!important;}
+html[data-nox-world=synapse] .nox-shared-links-v10 a::before{background:radial-gradient(circle at 13% 17%,rgba(var(--nox-head-rgb),.34) 0 1px,transparent 2px),radial-gradient(circle at 85% 78%,rgba(var(--nox-head-rgb),.34) 0 1px,transparent 2px),linear-gradient(125deg,transparent 18%,rgba(var(--nox-head-rgb),.08) 50%,transparent 82%);background-size:100% 100%,100% 100%,210% 100%}
+html[data-nox-world=synapse] .nox-shared-links-v10 a:is(:hover,[aria-current=page])::before{animation:nox-v12-synaptic-signal 4.5s ease-in-out infinite}
+@keyframes nox-v12-synaptic-signal{0%,100%{background-position:0 0,0 0,100% 0}50%{background-position:0 0,0 0,-100% 0}}
+html[data-nox-world=synapse] .nox-signature-eclipse-v10{box-shadow:0 0 12px rgba(var(--nox-head-rgb),.25),inset 0 0 6px rgba(var(--nox-head-rgb),.33)}
+/* User selected button material also affects the fixed global header WITHOUT changing its world composition. */
+html[data-nox-ui-button=glass] .nox-shared-links-v10 a{backdrop-filter:blur(23px) saturate(170%);-webkit-backdrop-filter:blur(23px) saturate(170%);}
+html[data-nox-ui-button=liquid] .nox-shared-links-v10 a{box-shadow:inset 1px 2px rgba(255,255,255,.19),inset -5px -8px 15px rgba(0,0,0,.13),0 6px 20px rgba(var(--nox-head-rgb),.11)!important}
+html[data-nox-ui-button=metal] .nox-shared-links-v10 a,html[data-nox-ui-button=gear] .nox-shared-links-v10 a{box-shadow:inset 0 2px rgba(255,255,255,.15),inset 0 -4px rgba(0,0,0,.22),0 4px 12px #0005!important}
+html[data-nox-ui-button=plasma] .nox-shared-links-v10 a{box-shadow:inset 0 0 17px rgba(var(--nox-head-rgb),.08),0 0 11px rgba(var(--nox-head-rgb),.14)!important}
+html[data-nox-ui-button=mineral] .nox-shared-links-v10 a{border-radius:11px 2px 14px 3px!important}
+/* Quality gates. An active scene continues behind this small glass layer. */
+html[data-nox-demo-mode=ECO] .nox-shared-links-v10 a::before{animation:none!important;}
+html[data-nox-demo-mode=ECO] .nox-shared-header-v10{backdrop-filter:blur(7px)!important;-webkit-backdrop-filter:blur(7px)!important;}
+@media(max-width:800px){html[data-nox-world] .nox-shared-signature-v10::after{display:none}html[data-nox-world] .nox-shared-links-v10 a{padding:4px 5px;min-height:45px;min-width:55px;font-size:8px!important}}
+@media(max-width:390px){html[data-nox-world] .nox-shared-links-v10{gap:4px}html[data-nox-world] .nox-shared-links-v10 a{min-width:51px;min-height:43px;font-size:8px!important}html[data-nox-world] .nox-signature-eclipse-v10{width:25px;height:25px}}
+@media(prefers-reduced-motion:reduce){html[data-nox-world] .nox-shared-header-v10 *,html[data-nox-world] .nox-shared-header-v10 *::before,html[data-nox-world] .nox-shared-header-v10 *::after{animation:none!important;transition:none!important;transform:none!important}html[data-nox-world] .nox-shared-header-v10{backdrop-filter:blur(5px)!important;-webkit-backdrop-filter:blur(5px)!important}}
