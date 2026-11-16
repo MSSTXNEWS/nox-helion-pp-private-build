@@ -33,7 +33,37 @@
     "native_rclone_remote_count": 0,
     "native_writer_lease": "UNKNOWN",
     "native_seekable_external_storage": "NOT_PROVEN",
-    "d3_metadata_crosscheck": "LOCAL_SOURCE_VERIFIED_72_ROWS_TWO_SMALL_FILE_SHA_39_PART_METADATA"
+    "d3_metadata_crosscheck": "LOCAL_SOURCE_VERIFIED_72_ROWS_TWO_SMALL_FILE_SHA_39_PART_METADATA",
+    "v13_split_archive_ci": {
+      "status": "SOURCE_TESTED_NATIVE_HOLD",
+      "scope": "Offline split ZIP reuse guard for D2 starter kit and D3 wheelhouse; NOT proof of payload SHA or native installation",
+      "source_path": "nox-control/v13_split_archive.py",
+      "source_preimage_blob": "d761c21516c4159eafb92b0a1e29a24104af822f",
+      "source_blob": "a66d3d5a6ddf7220bc2511fe5852036e0180a658",
+      "test_path": "nox-control/test_v13_split_archive.py",
+      "test_blob": "270c2789b94851bfb18bef96d76d265edfc588b9",
+      "ci_workflow": ".github/workflows/nox-hybrid-2d-source-acceptance.yml",
+      "ci_workflow_blob": "327e75b97e36882031f731ec15a64068990cda46",
+      "ci_run": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43954743059",
+      "ci_job_id": 133606189374,
+      "verification": "GitHub success; split test suite 12 synthetic cases normal and -O; compiled source+test; no native changes",
+      "checks": [
+        "bounded 1MiB manifest before JSON allocation",
+        "strict rejects NaN/Infinity and duplicate keys",
+        "1024 part count maximum",
+        "non-object root rejected",
+        "atomic no-clobber publication preserved"
+      ],
+      "code_commits": [
+        "ab5258b0e334251b74652b0f76cf01252eb792a5",
+        "693a6352cac5e739d618ca859773fcd6366749ab",
+        "a8814d5d1ca9ce42657c5debdf540d300ba3b285"
+      ],
+      "rollback": "Use exact original source/test/workflow blob SHA via GitHub CAS, no OneHost rollback because no native deployment",
+      "real_archive_payload_digest_reverified": false,
+      "native_installed": false,
+      "owner_stop_changed": false
+    }
   },
   "requirements": {
     "D1": {
@@ -210,7 +240,12 @@
         "test_blob": "46bf234f3e90be8541ccf7622778dad810e004c2",
         "ci_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43952659869",
         "test_scope": "21/21 focused offline media tests PASS",
-        "new_guards": ["state/STOP.flag", "state/OWNER_MAINTENANCE.flag", "owner_maintenance.lock flock", "recheck after engine/GPU lock acquisition"],
+        "new_guards": [
+          "state/STOP.flag",
+          "state/OWNER_MAINTENANCE.flag",
+          "owner_maintenance.lock flock",
+          "recheck after engine/GPU lock acquisition"
+        ],
         "native_install": false,
         "gpu_test": "NOT_RUN",
         "model_generation": "NOT_RUN",
