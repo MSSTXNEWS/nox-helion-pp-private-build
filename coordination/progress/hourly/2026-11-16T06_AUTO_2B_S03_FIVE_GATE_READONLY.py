@@ -18,6 +18,62 @@ import urllib.parse
 CANONICAL = Path('/root/nox/kb/knowledge.sqlite')
 EXPECTED_VECTOR_DIM = 1024
 AUDIT_ROW_LIMIT = 20000
+# Pinned to the existing owner_s03_gateway.py content_identity() contract.
+# Recheck that file's pinned model SHA/protocol before changing these values.
+GATEWAY_MODEL_CONTENT_SHA256 = '6d39681b26c61279ac1f82db35a04a05009e94c415b51c858ff571489a82fc06'
+GATEWAY_IDENTITY_SCHEMA = 'NOX_S03_BGE_CONTENT_IDENTITY_V1'
+GATEWAY_EMBEDDING_PROTOCOL = 'BGE_M3_LLAMA_FLOAT32_L2_NORMALIZED_1024_V1'
+GATEWAY_MODEL_BYTES = 437778496
+
+
+def expected_gateway_identity():
+    payload = {
+        'schema': GATEWAY_IDENTITY_SCHEMA,
+        'model_sha256': GATEWAY_MODEL_CONTENT_SHA256,
+        'dimensions': EXPECTED_VECTOR_DIM,
+        'embedding_protocol': GATEWAY_EMBEDDING_PROTOCOL,
+    }
+    return hashlib.sha256(json.dumps(
+        payload, ensure_ascii=False, sort_keys=True, separators=(',', ':'),
+        allow_nan=False).encode('utf-8')).hexdigest()
+
+
+def gateway_identity_record_ok(db, names):
+    """The persisted indexer attestation must match the pinned source contract.
+
+    This does NOT independently hash the native model; it prevents arbitrary
+    64-hex vector labels from being accepted as the current BGE identity.
+    """
+    if 'nox_s03_gateway_meta' not in names:
+        return False
+    try:
+        identity_row = db.execute(
+            "SELECT value FROM nox_s03_gateway_meta WHERE key='model_content_identity'"
+        ).fetchone()
+        stat_row = db.execute(
+            "SELECT value FROM nox_s03_gateway_meta WHERE key='model_file_stat'"
+        ).fetchone()
+        if not identity_row or not stat_row:
+            return False
+        record = json.loads(identity_row[0])
+        observed = json.loads(stat_row[0])
+        return bool(
+            isinstance(record, dict)
+            and record.get('schema') == GATEWAY_IDENTITY_SCHEMA
+            and record.get('content_sha256') == GATEWAY_MODEL_CONTENT_SHA256
+            and record.get('identity') == expected_gateway_identity()
+            and record.get('embedding_protocol') == GATEWAY_EMBEDDING_PROTOCOL
+            and type(record.get('dimensions')) is int
+            and record['dimensions'] == EXPECTED_VECTOR_DIM
+            and record.get('full_file_hash_verified') is True
+            and isinstance(observed, list) and len(observed) == 5
+            and all(type(x) is int for x in observed)
+            and observed[2] == GATEWAY_MODEL_BYTES
+            and record.get('file_stat') == observed
+        )
+    except (ValueError, TypeError, sqlite3.Error):
+        return False
+
 
 
 def sidecar_safety(path: Path, info):
@@ -131,9 +187,12 @@ def inspect(path: Path, *, fixture=False):
                     valid_shape += int(shape_ok)
                     valid_hash += int(hash_ok)
                     valid_both += int(shape_ok and hash_ok)
+            gateway_record_ok = gateway_identity_record_ok(db, names)
             identity_ok = (vector_scan_complete and vectors > 0
                            and invalid_or_missing_model_ids == 0
-                           and len(active_models) == 1)
+                           and len(active_models) == 1
+                           and expected_gateway_identity() in active_models
+                           and gateway_record_ok)
             complete = bool(
                 fts_ok and items > 0 and eligible > 0 and fts_rows == items
                 and fts_bad == 0 and fts_orphans == 0
@@ -154,6 +213,8 @@ def inspect(path: Path, *, fixture=False):
                                 distinct_vector_model_ids=len(active_models),
                                 invalid_or_missing_vector_model_ids=invalid_or_missing_model_ids,
                                 active_model_sha_identity_valid=identity_ok,
+                                model_identity_matches_pinned_gateway=(expected_gateway_identity() in active_models),
+                                gateway_model_attestation_consistent=gateway_record_ok,
                                 native_embedding_model_artifact_verified=False))
             origins = db.execute('SELECT count(*) FROM nox_s03_origins').fetchone()[0] if 'nox_s03_origins' in names else 0
             imported = 0
@@ -206,9 +267,24 @@ def selftest():
             CREATE VIRTUAL TABLE s03_fts USING fts5(id UNINDEXED,text,segment UNINDEXED);
             CREATE TABLE nox_s03_vectors(item_id TEXT PRIMARY KEY,content_sha256 TEXT,model_identity TEXT,dimensions INTEGER,embedding BLOB,created_at REAL);
             CREATE TABLE nox_s03_origins(item_id TEXT,source_key TEXT,source_row_key TEXT,version_sha256 TEXT,chunk_index INTEGER,chunk_sha256 TEXT);
+            CREATE TABLE nox_s03_gateway_meta(key TEXT PRIMARY KEY,value TEXT NOT NULL);
             CREATE TABLE nox_v29_dialogs(dialog_id TEXT PRIMARY KEY);
             CREATE TABLE nox_v29_dialog_messages(row_id INTEGER PRIMARY KEY);
             ''')
+            synthetic_stat = [1, 2, GATEWAY_MODEL_BYTES, 4, 5]
+            synthetic_attestation = {
+                'schema': GATEWAY_IDENTITY_SCHEMA,
+                'content_sha256': GATEWAY_MODEL_CONTENT_SHA256,
+                'identity': expected_gateway_identity(),
+                'embedding_protocol': GATEWAY_EMBEDDING_PROTOCOL,
+                'dimensions': EXPECTED_VECTOR_DIM,
+                'full_file_hash_verified': True,
+                'file_stat': synthetic_stat,
+            }
+            db.executemany('INSERT INTO nox_s03_gateway_meta VALUES(?,?)', [
+                ('model_content_identity', json.dumps(synthetic_attestation)),
+                ('model_file_stat', json.dumps(synthetic_stat)),
+            ])
             text = 'PUBLIC_SYNTHETIC_FIXTURE'
             db.execute('INSERT INTO s03_items VALUES (?,?,?,?,?,?,?,?)',
                        ('item','M1',text,'synthetic','a'*64,.5,'2026','{"history_import":true}'))
@@ -241,7 +317,7 @@ def selftest():
         assert inspect(path, fixture=True)[2]['fts_mismatched_or_missing'] == 1
         with sqlite3.connect(path) as db:
             db.execute('UPDATE s03_fts SET segment=? WHERE id=?', ('M1', 'item'))
-            db.execute('UPDATE nox_s03_vectors SET model_identity=? WHERE item_id=?', ('a'*64, 'item'))
+            db.execute('UPDATE nox_s03_vectors SET model_identity=? WHERE item_id=?', (expected_gateway_identity(), 'item'))
             second = 'SECOND_PUBLIC_SYNTHETIC_FIXTURE'
             db.execute('INSERT INTO s03_items VALUES (?,?,?,?,?,?,?,?)',
                        ('second', 'M2', second, 'synthetic', 'a'*64, .5, '2026', '{}'))
@@ -274,10 +350,33 @@ def selftest():
                        ('{"history_import":true,"persona_id":"p"}', 'item'))
             db.execute('UPDATE s03_items SET meta=? WHERE id=?', ('{}', 'second'))
             db.execute('UPDATE nox_s03_vectors SET model_identity=? WHERE item_id=?',
-                       ('a'*64, 'second'))
+                       (expected_gateway_identity(), 'second'))
         clean = inspect(path, fixture=True)
         assert clean[2]['state'] == 'DONE_SOURCE'
         assert clean[3]['state'] == 'DONE_SOURCE' and clean[3]['invalid_meta_rows'] == 0
+        assert clean[2]['gateway_model_attestation_consistent']
+        assert clean[2]['model_identity_matches_pinned_gateway']
+        assert clean[2]['active_model_sha_identity_valid']
+        # A 64-hex digest alone is NOT the canonical BGE model identity.
+        with sqlite3.connect(path) as db:
+            db.execute('UPDATE nox_s03_vectors SET model_identity=? WHERE item_id=?',
+                       ('f'*64, 'item'))
+        wrong_vector_model = inspect(path, fixture=True)[2]
+        assert wrong_vector_model['state'] == 'HOLD'
+        assert not wrong_vector_model['active_model_sha_identity_valid']
+        with sqlite3.connect(path) as db:
+            db.execute('UPDATE nox_s03_vectors SET model_identity=? WHERE item_id=?',
+                       (expected_gateway_identity(), 'item'))
+            forged = dict(synthetic_attestation, full_file_hash_verified=False)
+            db.execute("UPDATE nox_s03_gateway_meta SET value=? WHERE key='model_content_identity'",
+                       (json.dumps(forged),))
+        unverified_attestation = inspect(path, fixture=True)[2]
+        assert unverified_attestation['state'] == 'HOLD'
+        assert not unverified_attestation['gateway_model_attestation_consistent']
+        with sqlite3.connect(path) as db:
+            db.execute("UPDATE nox_s03_gateway_meta SET value=? WHERE key='model_content_identity'",
+                       (json.dumps(synthetic_attestation),))
+        assert inspect(path, fixture=True)[2]['state'] == 'DONE_SOURCE'
         wal = path.with_name(path.name + '-wal')
         wal.write_bytes(b'SYNTHETIC_NO_REAL_S03')
         wal.chmod(0o644)
