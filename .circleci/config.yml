@@ -12,9 +12,9 @@ jobs:
             python -m py_compile coordination/hybrid_20261115/deepseek_compatible_distill/verify_manifest.py coordination/hybrid_20261115/deepseek_compatible_distill/score_ru_es_holdout.py
             python -m unittest discover -s coordination/hybrid_20261115/deepseek_compatible_distill -p 'test_*.py'
             python coordination/hybrid_20261115/deepseek_compatible_distill/verify_manifest.py
-            python -m py_compile nox-control/owner_storage_reclaim.py nox-control/test_owner_storage_reclaim.py nox-control/owner_native_stage.py nox-control/test_owner_native_stage.py
+            python -m py_compile nox-control/owner_storage_reclaim.py nox-control/test_owner_storage_reclaim.py nox-control/owner_native_stage.py nox-control/test_owner_native_stage.py nox-control/test_deepseek_manifest_identity_regressions.py
             cd nox-control
-            python -m unittest -v test_owner_storage_reclaim test_owner_native_stage
+            python -m unittest -v test_owner_storage_reclaim test_owner_native_stage test_deepseek_manifest_identity_regressions
             echo 'SOURCE TESTS ONLY. No GPU, trainer, model, STOP, S03, or native host actions.'
 
 workflows:
