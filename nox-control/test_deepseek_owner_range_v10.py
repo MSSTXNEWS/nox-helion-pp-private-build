@@ -303,7 +303,26 @@ class DeepSeekP0Offline(unittest.TestCase):
         with patch.object(m,'RESERVE',0):
             with self.assertRaisesRegex(m.Hold,'OWNER_STOP'):
                 self.do(limit=6,opener=interrupted)
-        self.assertEqual((self.dst/(self.name+'.part')).read_bytes(),self.content[:6])
+        # STOP raised while response.read() was blocked: do not append those
+        # six newly received bytes even though the response returned them.
+        self.assertEqual((self.dst/(self.name+'.part')).read_bytes(),b'')
+
+    def test_lease_expires_during_range_read_never_appends(self):
+        def interrupted(request,timeout=30):
+            response=self.opener(request,timeout)
+            original=response.read
+            def read(n):
+                chunk=original(n)
+                lease_data=json.loads(self.lease.read_text())
+                lease_data['expires_unix']=time.time()-1
+                self.lease.write_text(json.dumps(lease_data))
+                return chunk
+            response.read=read
+            return response
+        with patch.object(m,'RESERVE',0):
+            with self.assertRaisesRegex(m.Hold,'ORIGINAL_LEASE'):
+                self.do(limit=6,opener=interrupted)
+        self.assertEqual((self.dst/(self.name+'.part')).read_bytes(),b'')
 
     def test_stop_during_complete_reuse_digest_prevents_ack(self):
         final=self.dst/self.name;final.write_bytes(self.content)
