@@ -95,7 +95,7 @@ class ReceiptPrivacyTests(unittest.TestCase):
         self.assertEqual(row["result_state"], "HOLD_SAFE")
 
 
-    def test_qwen_progress_never_leaks_private_text_or_nonfinite_metrics(self):
+    def test_qwen_progress_never_leaks_private_text_or_invalid_metrics(self):
         run = self.root / "lora/qwen35_9b/20261116_01"
         run.mkdir(parents=True)
         (run / "owner_last_result.json").write_text(json.dumps({
@@ -106,7 +106,7 @@ class ReceiptPrivacyTests(unittest.TestCase):
             "request": "owner-private-conversation-identifier",
             "successful_optimizer_steps": 8,
             "step": True,
-            "loss": float("nan"),
+            "loss": None,
             "finished_at": "private_timestamp_or_chat_text"
         }))
         rows = INSPECT.qwen_training_readback()
@@ -119,6 +119,30 @@ class ReceiptPrivacyTests(unittest.TestCase):
             self.assertNotIn(key, fields)
         self.assertNotIn("private S03", str(rows))
         self.assertNotIn("PERSONAL_SECRET", str(rows))
+
+    def test_qwen_duplicate_and_nonfinite_receipts_fail_closed(self):
+        run = self.root / "lora/qwen35_9b/20261116_02"
+        run.mkdir(parents=True)
+        receipt = run / "owner_progress.json"
+        malformed = (
+            '{"state":"RUNNING","successful_optimizer_steps":25,"successful_optimizer_steps":2500}',
+            '{"state":"RUNNING","metadata":{"revision":"original","revision":"swapped"},"successful_optimizer_steps":25}',
+            '{"state":"RUNNING","successful_optimizer_steps":25,"loss":NaN}',
+            '{"state":"RUNNING","successful_optimizer_steps":25,"loss":Infinity}',
+        )
+        for payload in malformed:
+            with self.subTest(payload=payload[:32]):
+                receipt.write_text(payload)
+                rows = INSPECT.qwen_training_readback()
+                hit = next(row for row in rows if row.get("receipt") == "owner_progress.json")
+                self.assertEqual(hit["state"], "READ_OR_PARSE_HOLD")
+                self.assertNotIn("fields", hit)
+                self.assertNotIn("successful_optimizer_steps", str(hit))
+        receipt.write_text('{"state":"HOLD_TRAINING","successful_optimizer_steps":25,"loss":1.25}')
+        rows = INSPECT.qwen_training_readback()
+        hit = next(row for row in rows if row.get("receipt") == "owner_progress.json")
+        self.assertEqual(hit["state"], "METADATA_READ_ONLY")
+        self.assertEqual(hit["fields"]["successful_optimizer_steps"], 25)
 
     def test_qwen_status_codes_and_finite_metrics_are_bounded(self):
         fields = INSPECT.safe_qwen_receipt_fields({

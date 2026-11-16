@@ -288,9 +288,26 @@ def qwen_training_readback():
                 st=path.stat()
                 if st.st_size>200000:
                     row['state']='SIZE_HOLD';rows.append(row);continue
-                raw=path.read_bytes()
+                # No optimizer counter may come from an ambiguous or torn receipt.
+                # Python json.loads otherwise accepts duplicate keys and NaN/Infinity.
+                with path.open('rb') as stream:
+                    raw=stream.read(200001)
+                after=path.stat()
+                if (len(raw)!=st.st_size or len(raw)>200000 or
+                    (st.st_dev,st.st_ino,st.st_size,st.st_mtime_ns)!=
+                    (after.st_dev,after.st_ino,after.st_size,after.st_mtime_ns)):
+                    raise ValueError('QWEN_RECEIPT_CHANGED_DURING_READ')
+                def reject_duplicate_keys(pairs):
+                    unique={}
+                    for key,value in pairs:
+                        if key in unique:raise ValueError('QWEN_RECEIPT_DUPLICATE_FIELD')
+                        unique[key]=value
+                    return unique
+                def reject_nonfinite(_):
+                    raise ValueError('QWEN_RECEIPT_NONFINITE_JSON')
                 row.update(bytes=len(raw),mtime=st.st_mtime,sha256=hashlib.sha256(raw).hexdigest())
-                data=json.loads(raw)
+                data=json.loads(raw,object_pairs_hook=reject_duplicate_keys,
+                                parse_constant=reject_nonfinite)
                 if not isinstance(data,dict):
                     row['state']='UNEXPECTED_FORMAT';rows.append(row);continue
                 # Receipt text is owner-private and counters are not independent proof.
