@@ -25,8 +25,9 @@ except NameError:
 
 DEPLOY_SHA = 'f17e8f5337f84ea5a3466053e08a8625c31d9b4b31e3963feecec874f145db36'
 EVIDENCE_ENTRY_SHA = 'f97ba189dcadc5e951f317fb9603259a8cbf3756ea4e139540edbf2f53e4882c'
-STATUS_SHA = '72732887e7bf4e4032cb99289b7620301ba48d04d583200464942ebffbd4ff2e'
+STATUS_SHA = '1688fc70b8663434beed02b6d4488ca8e5f636af71aa8e5498e5606f2b69751a'
 PREVIOUS_STATUS_SHA = 'feda14757700e4d0b10d7dcace3d1ff007539c2be2bd51d6a86f0ecde7f8c828'
+LAST_INSTALLED_STATUS_SHA = '72732887e7bf4e4032cb99289b7620301ba48d04d583200464942ebffbd4ff2e'
 BINDING_SHA = '91df0894f52e07ae36f6f05bcb17c846c1b06da88427f45bfe52faf8e50fc1fa'
 STREAM_SHA = '5b7bafde0c25fa26d6b8f98dfbb4958f0faa42ee77292da561834a63097a2e8e'
 EVIDENCE_SHA = 'ea66e05f30472b066444058ac18d0c7af74def410bde760396d1e2431161e8b2'
@@ -83,7 +84,7 @@ def sources(deploy, status, binding, context):
                       ('owner_training_status_binding.py', BINDING_SHA)):
         path = deploy.plain(deploy.SCRIPTS/name)
         old = deploy.read(path) if path.exists() else None
-        allowed = {pin,PREVIOUS_STATUS_SHA} if name == 'owner_training_status.py' else {pin}
+        allowed = {pin,PREVIOUS_STATUS_SHA,LAST_INSTALLED_STATUS_SHA} if name == 'owner_training_status.py' else {pin}
         if old is not None and digest(old) not in allowed:
             fail('HOLD_TRAINING_STATUS_INSTALL_MODULE_PREIMAGE')
         new = bundle(name[:-3], pin); compile(new, str(path), 'exec')

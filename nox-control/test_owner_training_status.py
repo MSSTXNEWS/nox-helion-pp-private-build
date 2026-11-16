@@ -77,6 +77,52 @@ class TrainingStatusTests(unittest.TestCase):
         self.assertEqual(value['verification_state'],'VERIFIED_SAVED_CHECKPOINT_WITHOUT_OPTIMIZER_UPDATE')
         self.assertEqual(value['latest_verified_checkpoint']['checkpoint_file_count'],7)
 
+    def test_hash_verified_hf_grad_norm_nan_does_not_hide_saved_zero_update_state(self):
+        row=self.checkpoint(good=0,skipped=5,before='1'*64,after='1'*64)
+        raw=b'{"global_step":5,"log_history":[{"step":1,"grad_norm":NaN,"private_note":"PRIVATE_HISTORY_SENTINEL"}]}'
+        path=g.output()/'checkpoint-5/trainer_state.json';path.write_bytes(raw)
+        row['checkpoint']['files_sha256']['trainer_state.json']=g.digest(raw)
+        self.write(g.output()/'owner_receipt_step_5.json',row)
+        (self.root/'state/TRAIN_HOLD.flag').write_text('OWNER_HYBRID_FAILED request=123\n')
+        value=g.snapshot(self.context)
+        self.assertEqual(value['state'],'HELD_AFTER_FAILURE')
+        self.assertEqual(value['global_step'],5);self.assertEqual(value['optimizer_steps'],0)
+        self.assertEqual(value['skipped_optimizer_steps'],5)
+        self.assertTrue(value['checkpoint_saved_verified']);self.assertFalse(value['positive_optimizer_steps_verified'])
+        metadata=value['latest_verified_checkpoint']['trainer_state_metadata']
+        self.assertEqual(metadata['nonfinite_grad_norm_diagnostics'],1)
+        self.assertEqual(metadata['raw_sha256'],g.digest(raw))
+        self.assertFalse(metadata['metadata_used_as_optimizer_evidence'])
+        self.assertNotIn('PRIVATE_HISTORY_SENTINEL',json.dumps(value,allow_nan=False))
+        self.assertEqual(path.read_bytes(),raw)
+        path.write_bytes(raw+b' ')
+        self.assertEqual(g.snapshot(self.context)['reason'],'HOLD_TRAINING_STATUS_CHECKPOINT_HASH')
+
+    def test_trainer_metadata_exceptions_are_narrow_and_hash_bound(self):
+        raw=b'{"global_step":5,"log_history":[{"grad_norm":NaN},{"grad_norm":Infinity},{"grad_norm":-Infinity},{"grad_norm":1e999}]}'
+        value=g.trainer_state_projection(raw,5,g.digest(raw))
+        self.assertEqual(value['nonfinite_grad_norm_diagnostics'],4)
+        with self.assertRaisesRegex(g.StatusHold,'TRAINER_STATE_HASH'):
+            g.trainer_state_projection(raw,5,'f'*64)
+        for bad in (b'{"global_step":NaN}',b'{"global_step":true}',b'{"global_step":5.0}',
+                    b'{"global_step":5,"log_history":[{"loss":NaN}]}',
+                    b'{"global_step":5,"log_history":[{"grad_norm":{"nested":NaN}}]}',
+                    b'{"global_step":5,"other":NaN}',
+                    b'{"global_step":5,"log_history":[{"grad_norm":NaN,"grad_norm":1}]}'):
+            with self.assertRaises(g.StatusHold):
+                g.trainer_state_projection(bad,5,g.digest(bad))
+
+    def test_receipt_and_lineage_nonfinite_json_remains_rejected(self):
+        for path in (g.output()/'owner_receipt_step_5.json',g.output()/'owner_lineage.json'):
+            path.write_bytes(b'{"global_step":5,"log_history":[{"grad_norm":NaN}]}')
+            with self.assertRaisesRegex(g.StatusHold,'NONFINITE_JSON'):
+                g.document(path)
+
+    def test_trainer_metadata_depth_is_bounded_before_projection(self):
+        raw=b'{"global_step":5,"metadata":'+b'['*34+b'0'+b']'*34+b'}'
+        with self.assertRaisesRegex(g.StatusHold,'TRAINER_METADATA_BUDGET'):
+            g.trainer_state_projection(raw,5,g.digest(raw))
+
     def test_zero_update_claim_cannot_hide_changed_weights_or_bad_counters(self):
         value=self.checkpoint(good=0,skipped=5,before='1'*64,after='1'*64)
         for change in ({'after_tensor_sha256':'2'*64},{'adapter_delta_verified':True},

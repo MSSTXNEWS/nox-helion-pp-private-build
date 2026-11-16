@@ -1,10 +1,12 @@
 """Local bounded/archive tests; no keys generated and no native actions."""
 import copy
+import contextlib
 import io
 import json
 import os
 from pathlib import Path
 import unittest
+from types import SimpleNamespace
 from unittest.mock import patch
 import zipfile
 import owner_checkpoint_backup_transport as core
@@ -48,6 +50,55 @@ class CheckpointBackupTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError,'FILES'):core.archive_payload(bad)
         with patch.object(core,'MAX_ARCHIVE',100):
             with self.assertRaisesRegex(RuntimeError,'FILES'):core.archive_payload(self.files)
+
+    def test_nonfinite_amp_gradient_diagnostic_is_archived_byte_exact(self):
+        raw=b'{"global_step":5,"log_history":[{"step":5,"loss":1.5,"grad_norm":NaN}]}'
+        files=dict(self.files);files['trainer_state.json']=raw
+        receipt=json.loads(files['owner_receipt_step_5.json'])
+        receipt['checkpoint']['files_sha256']['trainer_state.json']=core.digest(raw)
+        files['owner_receipt_step_5.json']=core.canonical(receipt)
+        with patch.object(core,'RECEIPT_SHA',core.digest(files['owner_receipt_step_5.json'])):
+            archive,manifest=core.archive_payload(files)
+            proof=core.verify_archive(archive,manifest)
+            with zipfile.ZipFile(io.BytesIO(archive)) as zipped:
+                self.assertEqual(zipped.read('trainer_state.json'),raw)
+            self.assertEqual(proof['successful_optimizer_steps'],0)
+            row=next(item for item in proof['manifest']['files'] if item['filename']=='trainer_state.json')
+            self.assertEqual(row['sha256'],core.digest(raw))
+
+    def test_nonfinite_numbers_remain_forbidden_outside_exact_gradient_diagnostic(self):
+        for token in ('NaN','Infinity','-Infinity','1e999'):
+            raw=('{"global_step":5,"log_history":[{"grad_norm":'+token+'}]}').encode()
+            self.assertEqual(core.trainer_state_step(raw),5)
+            for bad in (('{"global_step":'+token+'}').encode(),
+                        ('{"global_step":5,"loss":'+token+'}').encode(),
+                        ('{"global_step":5,"log_history":[{"loss":'+token+'}]}').encode(),
+                        ('{"global_step":5,"log_history":[{"nested":{"grad_norm":'+token+'}}]}').encode()):
+                with self.assertRaises(RuntimeError):core.trainer_state_step(bad)
+        for raw in (b'{"global_step":true}',b'{"global_step":5.0}',b'{"global_step":5,"global_step":5}'):
+            with self.assertRaises(RuntimeError):core.trainer_state_step(raw)
+        for field in ('loss','log_history'):
+            with self.assertRaisesRegex(RuntimeError,'JSON_NUMBER'):
+                core.decode_json(('{"'+field+'":NaN}').encode())
+
+    def test_failed_child_exposes_only_fixed_stage_and_reason_never_stderr(self):
+        value={'kind':'checkpoint_backup_export_failure','data':{
+            'stage':'COLLECT_AND_SEAL','reason':'HOLD_CHECKPOINT_BACKUP_JSON_NUMBER'}}
+        raw=('NOX_MAINT_REPAIR='+json.dumps(value)+'\n').encode()
+        self.assertEqual(exporter.child_failure_projection(raw),value['data'])
+        bad=copy.deepcopy(value);bad['data']['reason']='HOLD_PRIVATE_CREDENTIAL_VALUE'
+        projection=exporter.child_failure_projection(('NOX_MAINT_REPAIR='+json.dumps(bad)).encode())
+        self.assertNotIn('PRIVATE',json.dumps(projection))
+        output=io.StringIO()
+        with patch.dict(os.environ,{'NOX_OWNER_REQUEST_ID':'123','NOX_OWNER_SOURCE_SHA':'a'*40}), \
+             patch.object(exporter,'bundle',return_value=b'{}'), \
+             patch.object(exporter.subprocess,'run',return_value=SimpleNamespace(
+                 returncode=2,stdout=raw,stderr=b'private token and file content')), \
+             contextlib.redirect_stdout(output):
+            with self.assertRaisesRegex(RuntimeError,'NATIVE_EXPORT_FAILED'):exporter.main()
+        self.assertIn('COLLECT_AND_SEAL',output.getvalue())
+        self.assertIn('HOLD_CHECKPOINT_BACKUP_JSON_NUMBER',output.getvalue())
+        self.assertNotIn('private token',output.getvalue())
 
     def test_compressed_or_traversal_zip_is_never_restored(self):
         _,manifest=core.archive_payload(self.files)

@@ -134,6 +134,44 @@ def valid_sha(value):
     return isinstance(value, str) and bool(SHA.fullmatch(value))
 
 
+def trainer_state_projection(raw, expected_step, expected_sha):
+    """Project one hash-bound HF state without exporting its private history.
+
+    AMP skips may leave nonfinite grad_norm diagnostics in log_history. Only
+    that immediate metadata field is admitted; it is never optimizer evidence.
+    All receipts, lineage and other documents retain their strict JSON decoder.
+    """
+    require(isinstance(raw, bytes) and len(raw) <= 1024**2 and valid_sha(expected_sha)
+            and digest(raw) == expected_sha, 'HOLD_TRAINING_STATUS_TRAINER_STATE_HASH')
+    diagnostic_number = object()
+    try:
+        value = json.loads(raw, object_pairs_hook=unique, parse_constant=lambda _: diagnostic_number)
+    except RecursionError:
+        raise StatusHold('HOLD_TRAINING_STATUS_TRAINER_METADATA_BUDGET') from None
+    require(isinstance(value, dict) and bounded_int(value.get('global_step'),1)
+            and value['global_step'] == expected_step, 'HOLD_TRAINING_STATUS_TRAINER_STATE')
+    history = value.get('log_history', [])
+    require(isinstance(history, list) and len(history) <= 1024
+            and all(isinstance(row, dict) for row in history),
+            'HOLD_TRAINING_STATUS_TRAINER_DIAGNOSTIC_SCOPE')
+    pending = [(value, (), 0)]; visited = nonfinite = 0
+    while pending:
+        item, path, depth = pending.pop(); visited += 1
+        require(depth <= 32 and visited <= 20000, 'HOLD_TRAINING_STATUS_TRAINER_METADATA_BUDGET')
+        if item is diagnostic_number or (type(item) is float and not math.isfinite(item)):
+            require(len(path) == 3 and path[0] == 'log_history' and type(path[1]) is int
+                    and path[2] == 'grad_norm', 'HOLD_TRAINING_STATUS_TRAINER_DIAGNOSTIC_SCOPE')
+            nonfinite += 1
+        elif isinstance(item, dict):
+            pending.extend((child, path+(key,), depth+1) for key,child in item.items())
+        elif isinstance(item, list):
+            pending.extend((child, path+(index,), depth+1) for index,child in enumerate(item))
+    return {'global_step': value['global_step'], 'raw_sha256': expected_sha,
+            'nonfinite_grad_norm_diagnostics': nonfinite,
+            'nonfinite_metadata_scope': 'HF_LOG_HISTORY_GRAD_NORM_ONLY',
+            'metadata_used_as_optimizer_evidence': False, 'history_text_exported': False}
+
+
 def context_value(context=None):
     if context is None:
         value, _ = document(ROOT/'config/owner_training_status.json', 16384)
@@ -241,8 +279,8 @@ def verify_checkpoint(value, lineage_sha, deadline, accounting):
         total += plain(directory/name).stat(follow_symlinks=False).st_size
         require(total <= 8*1024**3, 'HOLD_TRAINING_STATUS_CHECKPOINT_TOTAL_BOUND')
         verified_file(directory/name, hashes[name], deadline, accounting)
-    trainer_state, _ = document(directory/'trainer_state.json', 1024**2)
-    require(trainer_state.get('global_step') == record['global_step'], 'HOLD_TRAINING_STATUS_TRAINER_STATE')
+    record['trainer_state_metadata'] = trainer_state_projection(
+        read(directory/'trainer_state.json',1024**2), record['global_step'], hashes['trainer_state.json'])
     return record
 
 

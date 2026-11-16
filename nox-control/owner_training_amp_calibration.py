@@ -40,7 +40,7 @@ PINS={'owner_native_repair':'b3d1887b92cb805076301f6631e56b6e42c48e7dae02d62f2a2
       'owner_training_resume':'3ea9dd892810255acafac0a188d873e98e16b87c4185466c2e9dd3bce2b0f9bc',
       'owner_training_recovery_entry':'7884571d05a9df7d20fb71dfe8e58feabd4941eeec23534f5ec0e2b28c502854',
       'owner_training_disk_guard':'9fab629c442e572f89dac9f078e43d505c7d93c9feb94ebc34182c56ca5b94e8',
-      'owner_training_scaler_probe':'dc84c33518243d48d7e00200be34006cc733c3f5416201134c991d386d705465'}
+      'owner_training_scaler_probe':'c659e6179086bad59265689e54b6b990ab22c842a82f63885773cee4ce91d686'}
 START=5;TARGET=20
 
 

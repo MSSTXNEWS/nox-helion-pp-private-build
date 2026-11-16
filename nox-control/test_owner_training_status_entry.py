@@ -92,6 +92,18 @@ class InstallTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError,'MODULE_PREIMAGE'):
             e.sources(self.deploy,self.proof,b,self.context)
 
+    def test_exact_installed_727_reader_upgrade_preserves_existing_bindings(self):
+        self.assertEqual(e.LAST_INSTALLED_STATUS_SHA,'72732887e7bf4e4032cb99289b7620301ba48d04d583200464942ebffbd4ff2e')
+        previous=b'# exact installed 727 fixture\n'
+        for row in e.sources(self.deploy,self.proof,b,self.context):
+            self.atomic(row['path'],row['new'])
+        self.atomic(self.scripts/'owner_training_status.py',previous)
+        with patch.object(e,'LAST_INSTALLED_STATUS_SHA',e.digest(previous)):
+            rows=e.sources(self.deploy,self.proof,b,self.context)
+        changed=[row['path'].name for row in rows if row['changed']]
+        self.assertEqual(changed,['owner_training_status.py'])
+        self.assertEqual(self.events,[])
+
     def test_missing_or_unsealed_context_never_stops_proxy(self):
         with patch.dict(os.environ,{'NOX_TRAINING_RECOVERY_CONTEXT':''}):
             with self.assertRaisesRegex(RuntimeError,'CONTEXT_REQUIRED'):e.read_context(self.proof)

@@ -50,6 +50,38 @@ def decode_json(raw,maximum=MAX_JSON):
         parse_constant=lambda _:(_ for _ in ()).throw(BackupHold('HOLD_CHECKPOINT_BACKUP_JSON_NUMBER')))
 
 
+def trainer_state_step(raw):
+    """Read only the saved step; diagnostic NaN never becomes a proof value.
+
+    Transformers can retain nonfinite gradient diagnostics in log_history after
+    skipped AMP attempts. Those exact, already hash-checked bytes are archived
+    unchanged. Receipt, lineage and all other JSON still use decode_json().
+    """
+    require(isinstance(raw,bytes) and len(raw)<=MAX_JSON,'HOLD_CHECKPOINT_BACKUP_JSON_SIZE')
+    diagnostic_number=object()
+    state=json.loads(raw,object_pairs_hook=primitives.unique,
+                     parse_constant=lambda _:diagnostic_number)
+    require(isinstance(state,dict) and type(state.get('global_step')) is int
+            and state['global_step']==STEP,'HOLD_CHECKPOINT_BACKUP_TRAINER_STEP')
+    history=state.get('log_history',[])
+    require(isinstance(history,list) and len(history)<=1024
+            and all(isinstance(row,dict) for row in history),
+            'HOLD_CHECKPOINT_BACKUP_TRAINER_DIAGNOSTIC_SCOPE')
+    pending=[(state,(),0)];visited=0
+    while pending:
+        value,path,depth=pending.pop();visited+=1
+        require(depth<=32 and visited<=20000,'HOLD_CHECKPOINT_BACKUP_TRAINER_METADATA_BUDGET')
+        if value is diagnostic_number or (type(value) is float and not math.isfinite(value)):
+            require(len(path)==3 and path[0]=='log_history' and type(path[1]) is int
+                    and path[2]=='grad_norm',
+                    'HOLD_CHECKPOINT_BACKUP_TRAINER_DIAGNOSTIC_SCOPE')
+        elif isinstance(value,dict):
+            pending.extend((item,path+(key,),depth+1) for key,item in value.items())
+        elif isinstance(value,list):
+            pending.extend((item,path+(index,),depth+1) for index,item in enumerate(value))
+    return state['global_step']
+
+
 def scope():
     return {'schema':'NOX_CHECKPOINT_BACKUP_SCOPE_V1','instance_id':INSTANCE_ID,
         'checkpoint_step':STEP,'origin_admission':dict(ORIGIN),'checkpoint_receipt_sha256':RECEIPT_SHA,
@@ -109,9 +141,7 @@ def validate_payload(files):
         and all(sha(v) for v in hashes.values()),'HOLD_CHECKPOINT_BACKUP_CHECKPOINT_SCOPE')
     require(all(digest(files[name])==hashes[name] for name in CHECKPOINT_NAMES),
         'HOLD_CHECKPOINT_BACKUP_FILE_SHA')
-    state=decode_json(files['trainer_state.json'])
-    require(type(state.get('global_step')) is int and state['global_step']==STEP,
-        'HOLD_CHECKPOINT_BACKUP_TRAINER_STEP')
+    trainer_state_step(files['trainer_state.json'])
     return [{'filename':name,'bytes':len(files[name]),'sha256':digest(files[name])} for name in NAMES]
 
 
