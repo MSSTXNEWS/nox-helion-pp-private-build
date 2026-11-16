@@ -3,7 +3,7 @@
   "instructions_version": "0.0.6",
   "slot": "AUTO_2A",
   "at_utc": "2026-11-16T17:15:35.526Z",
-  "at_msk": "2026-11-16T20:08:00+03:00",
+  "at_msk": "2026-11-16T20:15:35+03:00",
   "starting_source_head": "18784d6579c6204638853cb3d4f02bb3548e329b",
   "source_preimages": {
     "nox-control/deepseek_owner_range_v10.py": "4c8686a5c05a3e8b182d48098dffc6590fdd4f86",
@@ -12,7 +12,7 @@
   "tasks": [
     {
       "id": "S2-07",
-      "state": "SOURCE_PATCH_PENDING_CI_NATIVE_HOLD",
+      "state": "SOURCE_TESTED_NATIVE_HOLD",
       "evidence": "DeepSeek metadata ELOOP/error guard regression"
     },
     {
@@ -54,6 +54,20 @@
   },
   "native_model_switched": false,
   "native_installed": false,
-  "ci": "PENDING_GITHUB_ACTIONS",
-  "next": "Verify SOURCE CI, then original owner-auth STOP/lease, independent restore, seekable 248834257920 B+reserve; no model switch without real Maya+Resonance RU/ES SSE."
+  "ci": "SUCCESS_SOURCE_ONLY_42_DEEPSEEK_4_MAYA_COMPAT_16_PREFLIGHT_16_MAYA_LAUNCH",
+  "next": "Verify SOURCE CI, then original owner-auth STOP/lease, independent restore, seekable 248834257920 B+reserve; no model switch without real Maya+Resonance RU/ES SSE.",
+  "source_commit": "6825f271f81b70ec662823ca5131174454a9dc21",
+  "source_blobs": {
+    "nox-control/deepseek_owner_range_v10.py": "d6d006460cf5d6191871037eed6d1246b9ae478b",
+    "nox-control/test_deepseek_owner_range_v10.py": "b32cfeeb3e60bf139124e1b4a26d53069cb9e5dd"
+  },
+  "source_ci": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43916766363",
+  "tests": {
+    "deepseek": "42/42 PASS",
+    "maya_compatibility": "4/4 PASS",
+    "maya_preflight": "16/16 PASS",
+    "maya_launch_plan": "16/16 PASS",
+    "total": "78/78 TEST INVOCATIONS PASS",
+    "native_execution": false
+  }
 }
