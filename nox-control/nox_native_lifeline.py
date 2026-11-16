@@ -130,9 +130,12 @@ def read_state(path):
             raise ValueError("HOLD_STATE_PERMISSIONS")
         with os.fdopen(fd, "r", encoding="utf-8") as stream:
             fd = -1
-            obj = json.load(stream, object_pairs_hook=_unique_state_pairs,
-                            parse_constant=_reject_state_nonfinite)
-    except (OSError, UnicodeError, ValueError) as exc:
+            try:
+                obj = json.load(stream, object_pairs_hook=_unique_state_pairs,
+                                parse_constant=_reject_state_nonfinite)
+            except (ValueError, UnicodeError) as exc:
+                raise ValueError("HOLD_STATE_CORRUPT") from exc
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
         raise ValueError("HOLD_STATE_CORRUPT") from exc
     finally:
         if fd >= 0:
