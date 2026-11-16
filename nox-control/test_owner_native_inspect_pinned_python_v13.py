@@ -113,5 +113,64 @@ class PinnedInterpreterAdmissionTests(unittest.TestCase):
         self.assertEqual(kwargs['timeout'], 30)
 
 
+    def test_v14_package_metadata_untrusted_never_runs(self):
+        with mock.patch.object(module, 'pinned_python_path_status',
+                               return_value='HOLD_PINNED_NATIVE_PYTHON_UNTRUSTED'), \
+             mock.patch.object(module, 'run') as execute:
+            got = module.installed_package_versions_readback(
+                Path('/root/venv_volta/bin/python'))
+        self.assertEqual(got['status'], 'HOLD_PINNED_NATIVE_PYTHON_UNTRUSTED')
+        self.assertIsNone(got['rc'])
+        self.assertEqual(got['versions'], {})
+        execute.assert_not_called()
+
+    def test_v14_package_metadata_trusted_uses_isolation_and_child_identity(self):
+        import json
+        names = ['torch','transformers','accelerate','datasets','safetensors',
+                 'peft','bitsandbytes','trl','deepspeed','psutil','nvidia-ml-py',
+                 'sqlite-vec','playwright','pytest','ruff']
+        payload = json.dumps({name: '1.2.3' for name in names})
+        with mock.patch.object(module, 'pinned_python_path_status',
+                               return_value='PINNED_NATIVE_PYTHON_TRUSTED'), \
+             mock.patch.object(module, 'run', return_value=(0, payload)) as execute:
+            got = module.installed_package_versions_readback(
+                Path('/root/venv_volta/bin/python'))
+        self.assertEqual(got['status'], 'READ_ONLY_VERSION_METADATA')
+        self.assertEqual(got['versions']['torch'], '1.2.3')
+        argv = execute.call_args.args[0]
+        self.assertEqual(argv[:3], ['/root/venv_volta/bin/python', '-I', '-c'])
+        self.assertIn("sys.version_info[:2] != (3, 12)", argv[3])
+        self.assertIn("os.path.realpath(sys.prefix)", argv[3])
+        self.assertIn("importlib.metadata", argv[3])
+        self.assertNotIn('import torch', argv[3])
+        self.assertEqual(execute.call_args.kwargs['timeout'], 20)
+        self.assertFalse(got['cuda_context_created'])
+        self.assertFalse(got['trainer_started'])
+
+    def test_v14_package_metadata_failed_or_forged_output_holds(self):
+        for rc, payload, state in (
+            (1, '', 'HOLD_PACKAGE_METADATA_PROBE_FAILED'),
+            (0, '{broken', 'HOLD_PACKAGE_METADATA_INVALID'),
+            (0, '{}', 'HOLD_PACKAGE_METADATA_INVALID'),
+            (0, '1', 'HOLD_PACKAGE_METADATA_INVALID'),
+            (0, 'x' * 16385, 'HOLD_PACKAGE_METADATA_PROBE_FAILED'),
+        ):
+            with self.subTest(rc=rc, state=state), \
+                 mock.patch.object(module, 'pinned_python_path_status',
+                                   return_value='PINNED_NATIVE_PYTHON_TRUSTED'), \
+                 mock.patch.object(module, 'run', return_value=(rc, payload)):
+                got = module.installed_package_versions_readback(
+                    Path('/root/venv_volta/bin/python'))
+            self.assertEqual(got['status'], state)
+            self.assertEqual(got['versions'], {})
+
+    def test_v14_controls_reuses_pinned_probe_not_raw_python_exec(self):
+        import inspect
+        source = inspect.getsource(module.controls)
+        self.assertIn('rows.append(installed_package_versions_readback(py))', source)
+        self.assertNotIn("run([str(py),'-c',code],20)", source)
+
+
+
 if __name__ == '__main__':
     unittest.main()
