@@ -127,3 +127,58 @@ Owner request: consolidate all verified improvements into ONE existing NOX, safe
 
 ### Completion gate
 ONE_NOX_COMPLETE only when original WEB29 + Resonance, OneHost, S03, compatible training/restore and verified knowledge pipeline run together on a single accepted release SHA, with model promotion rollback and measured native end-to-end evidence. Until then, report exact outstanding gates. Never claim installation or physical deletion from updated prompts or Git commits.
+
+## 10. UNIVERSAL 14-WORKER BATON V08 — 2026-11-16
+Policy NOX_WEB_WEIGHTS_UNIVERSAL_V08 · instructions_version 0.0.6. Latest owner instruction supersedes **all stream-specific ownership and specialised worker roles** in older sections/prompts, including the lane table in §9 and original six-relay specialisation in §5. The labels 1A–3D and the two control slots are scheduling identifiers only. All FOURTEEN ChatGPT AUTO executors are equally UNIVERSAL and full-cycle. Native OneHost dispatcher already declares work stealing: lanes are *preferences only*, ready task ownership determined by dependency, owner STOP and exact lease.
+
+### ONE product and ONE queue
+Existing running Vast.ai #60509551, original NOX WEB29 D02/14 worlds, Resonance/8081, OneHost, original dispatcher, one S03 and one training writer. Nothing new for Windows/EXE or alternative frontend/backend/server. Source code stays in the existing GitHub repository. Keep current approved Qwen student and active GGUF distinct from unpromoted DeepSeek candidate. Historical task matrix 1–40, 41–100, 101–140 is grouping/provenance, NOT evidence of individually verified 140/160 tasks; rebuild unique TaskID from actual source ledgers and receipts, deduplicate per immutable identity, never fabricate count.
+
+### Universal FIVE-task pass — each of 14 equally
+On each scheduled run, read current owner guide/memory, exact HEAD of this master, source manifests, owner STOP/lease, shared handoff/errors/receipts and queue actual state. Compare latest accepted checkpoint SHA and changed native/CI facts. Select the first FIVE *currently READY* unique jobs from across ALL THREE streams, regardless of original label; prioritize (1) live server/STOP/lease/restore, (2) restart-safe genuine training and checkpoint proof, (3) S03/Hunter/data/model, (4) live existing Resonance+WEB29, (5) no-loss cleanup and quality. Selection is dynamic, not a 1A-versus-3B restriction. A ready task does not have to wait for any named group/worker. If a task is in progress under a healthy owner lease, do NOT duplicate it; steal another ready independent task. At least five task **outcomes** where possible; five DONE are NOT guaranteed. For every task attempt: CLAIM unique TaskID+input SHA/owner → inspect root cause → fix same existing code/procedure → one focused real verification → SAVE commit/native receipt/S03 as admitted → mark SOURCE_TESTED/INSTALLED/LIVE_VERIFIED/HOLD/FAILED with proof → hand off exact next cursor. If a dependency cannot be verified, immediately record HOLD and take next independent ready task, not a full-stop. Shared global queue rather than 14 separate task lists; once task becomes DONE_NATIVE it stays done unless evidence of regression.
+Before any native mutation require accurate current instance+process starttime/owner native lease, explicit STOP state, snapshot/preimage/rollback and no conflicting worker. Honour deliberate owner STOP, do not clear HOLD/PAUSE blindly, do not restart a healthy trainer/chat, do not kill unknown process; do not mistake SIGSTOP for memory release. One owner per resource and one writer for optimizer / serving-promotion / cleanup. Model and memory safety over maximum utilization. No scheduler changes or new watchdog.
+
+### Current outstanding inventory — verified against Nov 16 logs; NOT exhaustive 140 unique TaskIDs
+STREAM 1 [historical 1..40] server/queue:
+S1-01 authenticate fresh native V51 read-only OneHost, instance identity;
+S1-02 reconcile five critical Supervisor entries, 8081 actual listening PID/starttime (an orphan llama-server PID 7637 served 8081 while supervisor reported STOPPED at 10:14Z);
+S1-03 current native owner STOP/lease, 3 OS workers jobIDs/heartbeat vs six in-process threads, stale claims;
+S1-04 2xV100 GPU memory/utilization, cgroup CPU/RAM/shm and SSD admission, no false PASS;
+S1-05 reconcile TRAIN_HOLD/PAUSE/owner handback and trainer wrapper PID, terminal state, no duplicate process;
+S1-06 normalize and deploy reviewed Supervisor/JSON evidence, STOP aliases, safe in-flight rclone abort, queue-claim and checkpoint pointer fixes under exact CAS;
+S1-07 independent offsite restore checkpoint+optimizer/scaler/RNG and S03 before cleanup/restart;
+S1-08 service recovery of proven failed dependency with bounded retry and live readback;
+S1-09 verify native downloader ownership+download progress; no duplicate bytes or model shard claims;
+S1-10 path/hash/role allowlist, independently verified backup, precise safe deletion only after new serving E2E and measured freed bytes.
+
+STREAM 2 [historical 41..100] brain/weights:
+S2-01 inventory exact Qwen3.5-9B HF base/tokenizer/shards and active GGUF independently;
+S2-02 validate checkpoint25 historical 25 successful updates, optimizer/scaler/RNG, current pointer SHA and independent restore (do not relabel historical updates as fresh);
+S2-03 inspect GPU1 training restart/exit from actual native final state and trainer PID;
+S2-04 correct resource-capacity and Volta V100 FP16 hazards before re-admission; old 35B process failed '_amp_foreach_non_finite_check_and_unscale_cuda not implemented for BFloat16' and older autocast unknown-device-type; do NOT apply incompatible optimizer/adapters to 9B;
+S2-05 record optimizer updates (successful, attempted, AMP-skipped), tensor differences, finite loss, checkpoint and holdout after accepted train window;
+S2-06 distinguish student/base from teachers and candidate, check license and corpus dedup train/dev/holdout;
+S2-07 complete four missing DeepSeek shard downloads only after free-space/auth/claim+SHA verification; DeepSeek IQ2 GGUF cannot be treated as Qwen optimizer checkpoint;
+S2-08 run verified Hunter source → S03 write/readback/recall → curriculum candidate, with original owner ACL;
+S2-09 verify C01–C08 / M0–M7/self-model/skill-memory callbacks through existing S03, not fake separate cognition runtime;
+S2-10 independent RU/ES reasoning, code, generalization and anti-forgetting exam before accepting/merging any model;
+S2-11 integrate measured improvements into ONE trained, restorable identity; never silently swap the user model.
+
+STREAM 3 [historical 101..140] existing WEB29/chat:
+S3-01 confirm current live WEB29 preimage and accepted D02/14-world source SHA;
+S3-02 reconcile source-ready WEB29 patches (HUB path safety/retry, compact layout, Development page and event stream) with live preimage under CAS;
+S3-03 owner-auth original HOME→Resonance→Development browser E2E with rollback;
+S3-04 real first meaningful SSE token, no fake streaming; TTFT p50/p95 and tokens/sec baseline+after;
+S3-05 verify STOP/cancel/disconnect, full answer/history/S03 durable readback+restart;
+S3-06 connect verified model without new frontend/backend; model version display and rollback;
+S3-07 verify Development self-improvement/knowledge/weights channels, hourly cards and evidence vs NULL/UNKNOWN;
+S3-08 preserve original cinematic assets, responsive/reduced motion without blocking token delivery;
+S3-09 final live single-release SHA, measured RU/ES quality and S03/STOP/dispatcher training consistency.
+
+### Root-cause lessons already verified — apply to NOX, do not just repeat a report
+At 2026-11-16 06:15:54Z owner-native handback task was DONE and training reported RUNNING (GitHub Actions run 43815393580). At 06:17:56Z the trainer wrapper/student PID 746484/746485 were live, but 8 published successful updates referred to preceding PID, not this restarted process (run 43815648488). At 10:14:54Z latest inspected NOX: GPU1 ~474 MiB, free SSD ~16.9GB, /dev/shm ~3.37GB free, active llama-server PID7637 listening 8081 although Supervisor nox-chat-8081 STOPPED (run 43846952110); current GPU1 training is not proven. Historical legacy 35B BF16 AMP failure and unknown device type are not proof current Qwen9B cause. A previous handback failed on changed file preimage; bounded one-task retry + exact queue snapshot was subsequently executed. The trainer wrapper latches TRAIN_HOLD on nonzero child exit. Success of a *dispatch* or *start command* is not success of resumed optimizer steps. Distinguish stale status files (old PID) from live PID/starttime. Diagnose the **present** terminal checkpoint reason and STOP/PAUSE owner before deciding on any restart.
+For any newly seen failure, write root-cause → evidence and exact SHA → safe fix → regression test → rollback → native verification (or explicitly HOLD) into existing `coordination/NOX_AUTOCYCLE_ERRORS.jsonl` plus handoff. The code should feed verified learning results into existing NOX S03 and skill memory via its current trusted callback once the owner-native endpoint is authenticated; do NOT claim a GitHub note changed model weights. Prevent repeated cause (bounded <=2 retries/h for same signature, lease/STOP first, SHA exact preimage) without freezing independent ready jobs.
+
+### Acceptance and cleanup
+5 attempted task outcomes per pass if available, no fabricated DONE. To declare full integration: existing original WEB29 and live Resonance on single OneHost, S03 valid readback+restart, active model identity, safe live training or a justified owner STOP, verified checkpoint restore, no duplicate writer, native E2E quality and no-loss cleanup with exact freed bytes. Preserve all unique originals until live proof. Historical sources and old prompts are superseded for execution; preserve Git history for traceability.
+
