@@ -62,18 +62,18 @@
     "range_reads_after_mount": "exact byte range, length, strong ETag and HTTPS are enforced"
   },
   "preflight_resume": {
-    "scope": "six unique GGUF source files; shared Engram alias adds no duplicate bytes",
-    "checkpoint_granularity": "one completed whole file",
+    "scope": "six unique GGUF source files; the shared Engram alias adds no duplicate bytes",
+    "checkpoint_granularity": "one completed 128 MiB HTTP Range, with a serializable SHA256_CTX cursor",
     "receipt_binding": [
       "repository and immutable revision",
-      "exact source path, size and pinned SHA-256",
-      "observed strong ETag",
-      "numeric owner request ID",
-      "SHA-256 of canonical active OneHost lease payload and lease path"
+      "exact source path, size, pinned SHA-256 and strong ETag",
+      "current owner request ID",
+      "exact live OneHost lease path, request ID and SHA-256 of canonical lease payload",
+      "OpenSSL SHA-256 backend/version and context ABI"
     ],
-    "receipt_write": "same-directory atomic no-clobber file, mode 0600, fsync before reuse",
-    "interrupted_file": "restart that file's SHA stream from offset zero; completed prior-file receipts remain reusable only under the exact same live lease/request",
-    "failure_policy": "no mount or model launch; never clear or replace OWNER_STOP; HOLD remains fail-closed"
+    "receipt_write": "atomic mode-0600 per-range progress receipt with fsync; final full-file SHA receipt is atomic no-clobber",
+    "interrupted_file": "resume from last durable range cursor only when the pinned source ETag and exact live lease/request/backend match; otherwise HOLD",
+    "failure_policy": "physical OWNER_STOP remains present during hash and pack; the exact request-bound PREPARE token allows only the pinned GGUF FUSE reads and isolated writable pack path; no full model shard is spooled to disk"
   },
   "alias": {
     "path": "DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00006-of-00006.gguf",
