@@ -95,5 +95,46 @@ class ReceiptPrivacyTests(unittest.TestCase):
         self.assertEqual(row["result_state"], "HOLD_SAFE")
 
 
+    def test_qwen_progress_never_leaks_private_text_or_nonfinite_metrics(self):
+        run = self.root / "lora/qwen35_9b/20261116_01"
+        run.mkdir(parents=True)
+        (run / "owner_last_result.json").write_text(json.dumps({
+            "schema": "NOX_QWEN_PROGRESS_V1",
+            "state": "HOLD_TRAINING",
+            "reason": "private S03 dialogue must not print",
+            "error": "password=PERSONAL_SECRET_EXAMPLE",
+            "request": "owner-private-conversation-identifier",
+            "successful_optimizer_steps": 8,
+            "step": True,
+            "loss": float("nan"),
+            "finished_at": "private_timestamp_or_chat_text"
+        }))
+        rows = INSPECT.qwen_training_readback()
+        hit = next(row for row in rows if row.get("receipt") == "owner_last_result.json")
+        fields = hit["fields"]
+        self.assertEqual(hit["scope"], "SELF_REPORTED_NOT_LIVE_PROOF")
+        self.assertEqual(fields["successful_optimizer_steps"], 8)
+        self.assertEqual(fields["state"], "HOLD_TRAINING")
+        for key in ("error", "reason", "request", "step", "loss", "finished_at"):
+            self.assertNotIn(key, fields)
+        self.assertNotIn("private S03", str(rows))
+        self.assertNotIn("PERSONAL_SECRET", str(rows))
+
+    def test_qwen_status_codes_and_finite_metrics_are_bounded(self):
+        fields = INSPECT.safe_qwen_receipt_fields({
+            "request": "6908923245", "schema": "NOX_QWEN_PROGRESS_V1",
+            "optimizer_steps_verified": False, "successful_updates": 8,
+            "loss": 1.25, "reason": "HOLD_BACKUP", "step": -3,
+            "updated_at": float("inf"), "checkpoint_verified": "true"
+        })
+        self.assertEqual(fields["request"], "6908923245")
+        self.assertEqual(fields["successful_updates"], 8)
+        self.assertEqual(fields["loss"], 1.25)
+        self.assertEqual(fields["reason"], "HOLD_BACKUP")
+        self.assertIs(fields["optimizer_steps_verified"], False)
+        for key in ("step", "updated_at", "checkpoint_verified"):
+            self.assertNotIn(key, fields)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
