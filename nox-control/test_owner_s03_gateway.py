@@ -97,6 +97,37 @@ class GatewayTests(unittest.TestCase):
         self.assertEqual(sum(row['how']=='fts' for row in rows),8)
         self.assertTrue(all(row['retrieval_kind']=='LEXICAL_BOUNDED_PINS' for row in rows))
 
+    def test_recent_current_event_beats_late_ingested_old_history(self):
+        with g.connection(self.db, write=True) as c:
+            item(c, 'current', 'current owner preference', 'M1')
+            c.execute('UPDATE s03_items SET ts=? WHERE id=?',
+                      ('2026-11-16T22:00:00Z', 'current'))
+            item(c, 'older_import', 'unverified old history', 'M1')
+            c.execute('UPDATE s03_items SET ts=?,meta=? WHERE id=?',
+                      ('2024-01-01', '{"history_import":true,"training_verified":false}', 'older_import'))
+        before = hashlib.sha256(self.db.read_bytes()).hexdigest()
+        answer = g.recall('nomatchtoken', db=self.db,
+                          identity_fn=lambda: (_ for _ in ()).throw(OSError('offline')))
+        self.assertEqual([row['id'] for row in answer[:2]], ['current', 'older_import'])
+        self.assertTrue(answer[1]['historical_unverified'])
+        self.assertEqual(before, hashlib.sha256(self.db.read_bytes()).hexdigest())
+
+    def test_recent_rejects_future_clock_and_oversized_request(self):
+        with g.connection(self.db, write=True) as c:
+            item(c, 'valid', 'valid current fact', 'M1')
+            c.execute('UPDATE s03_items SET ts=? WHERE id=?',
+                      ('2026-11-16T22:00:00+00:00', 'valid'))
+            item(c, 'future', 'future forged fact', 'M1')
+            c.execute('UPDATE s03_items SET ts=? WHERE id=?',
+                      ('2099-01-01T00:00:00Z', 'future'))
+            item(c, 'invalid', 'malformed date fact', 'M1')
+            c.execute('UPDATE s03_items SET ts=? WHERE id=?',
+                      ('not-a-date', 'invalid'))
+        with g.connection(self.db) as c:
+            self.assertEqual(g.recent_rows(c)[0]['id'], 'valid')
+            with self.assertRaisesRegex(g.MemoryHold, 'HOLD_S03_RECENT_LIMIT'):
+                g.recent_rows(c, limit=1024)
+
     def test_semantic_recall_finds_nonlexical_memory_and_rejects_stale_text(self):
         with g.connection(self.db,write=True) as c:
             item(c,'old','Я люблю гулять среди деревьев')

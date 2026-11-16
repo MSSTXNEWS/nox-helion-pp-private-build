@@ -17,6 +17,7 @@ import json
 import math
 import os
 from pathlib import Path
+from datetime import datetime, timezone
 import re
 import shutil
 import sqlite3
@@ -397,6 +398,40 @@ def _meta(row):
     return value if isinstance(value,dict) else {}
 
 
+def _recent_event_timestamp(row):
+    """Event time is different from the time old history was imported."""
+    value = row.get('ts')
+    if not isinstance(value, str) or not 10 <= len(value) <= 48:
+        return 0.0
+    try:
+        moment = datetime.fromisoformat(value.strip().replace('Z', '+00:00'))
+        if moment.tzinfo is None:
+            moment = moment.replace(tzinfo=timezone.utc)
+        seconds = moment.timestamp()
+    except (TypeError, ValueError, OverflowError):
+        return 0.0
+    if not math.isfinite(seconds) or seconds < 0 or seconds > time.time() + 86400:
+        return 0.0
+    return seconds
+
+
+def recent_rows(conn, limit=12):
+    """Bounded, read-only fallback; prefer original current to imported history.
+
+    Recency is not a truth or semantic contradiction proof. Do not promote
+    unverified history merely because it arrived later in SQLite.
+    """
+    if type(limit) is not int or not 1 <= limit <= 12:
+        hold('HOLD_S03_RECENT_LIMIT')
+    candidates = [dict(row) for row in conn.execute(
+        'SELECT * FROM s03_items WHERE segment=? ORDER BY rowid DESC LIMIT 256', ('M1',))]
+    ordered = sorted(enumerate(candidates), key=lambda entry: (
+        _meta(entry[1]).get('history_import') is not True,
+        _recent_event_timestamp(entry[1]),
+        -entry[0]), reverse=True)
+    return [row for _, row in ordered[:limit]]
+
+
 def chunks(text):
     # Exact original text remains in the private record and source snapshot.
     # Overlap keeps a fact straddling a chunk boundary available to retrieval.
@@ -590,7 +625,7 @@ def recall(query,k=6,db=DB,embedder=embed,identity_fn=model_identity):
         for segment in ('M7','M5'):
             row=conn.execute('SELECT * FROM s03_items WHERE segment=? ORDER BY salience DESC,ts DESC LIMIT 1',(segment,)).fetchone()
             if row:pin_rows.append(dict(row))
-        recent=[dict(row) for row in conn.execute('SELECT * FROM s03_items WHERE segment=? ORDER BY rowid DESC LIMIT 12',('M1',))]
+        recent=recent_rows(conn)
         if query_vector is not None and columns(conn,'nox_s03_vectors')==list(DERIVED['nox_s03_vectors']):
             best=[];deadline=time.monotonic()+.55;scanned=0
             for row in conn.execute('SELECT s.*,v.content_sha256,v.dimensions,v.embedding FROM nox_s03_vectors v JOIN s03_items s ON s.id=v.item_id WHERE v.model_identity=? ORDER BY v.created_at DESC LIMIT ?', (identity,MAX_ITEMS)):
