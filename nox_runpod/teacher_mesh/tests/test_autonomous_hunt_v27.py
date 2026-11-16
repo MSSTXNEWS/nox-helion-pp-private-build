@@ -221,5 +221,46 @@ class TestAutonomy(unittest.TestCase):
                     result=HuntDirector(h.callbacks()).tick("owner",now=NOW)
                     self.assertEqual(result["gpu"],"HOLD_DISK_OR_VRAM_BUDGET")
                     self.assertFalse(h.downloads or h.training_jobs)
+    def test_malformed_owner_model_allowlist_fails_closed(self):
+        # A signed string is not a typed list of approved model IDs.
+        for bad in (None, "Qwen/Qwen3-8B", {"Qwen/Qwen3-8B":True},
+                    [None,"Qwen/Qwen3-8B"], True):
+            with self.subTest(allowlist=repr(bad)):
+                h=NativeHarness();h.policy["allowed_model_ids"]=bad
+                result=HuntDirector(h.callbacks()).tick("owner",now=NOW)
+                self.assertNotIn("model_download",result)
+                self.assertEqual(h.downloads,[])
+
+    def test_malformed_owner_model_byte_budget_fails_closed(self):
+        for bad in (None, True, "2000000000", float("nan"),
+                    float("inf"), -1, 0):
+            with self.subTest(max_bytes=repr(bad)):
+                h=NativeHarness();h.policy["max_model_bytes"]=bad
+                result=HuntDirector(h.callbacks()).tick("owner",now=NOW)
+                self.assertNotIn("model_download",result)
+                self.assertEqual(h.downloads,[])
+        h=NativeHarness();h.models[0]["license_id"]=None
+        self.assertNotIn("model_download",
+                         HuntDirector(h.callbacks()).tick("owner",now=NOW))
+        self.assertEqual(h.downloads,[])
+
+    def test_malformed_owner_optimizer_budget_fails_closed(self):
+        for bad in (None, True, "30", float("nan"),
+                    float("inf"), -1, 0):
+            with self.subTest(max_steps=repr(bad)):
+                h=NativeHarness();h.policy["max_optimizer_steps_per_job"]=bad
+                result=HuntDirector(h.callbacks()).tick("owner",now=NOW)
+                self.assertNotIn("gpu_train",result)
+                self.assertEqual(h.training_jobs,[])
+
+    def test_boolean_download_bytes_is_not_verified_staging(self):
+        h=NativeHarness();base=h.callbacks()
+        callbacks=NativeCallbacks(**{**vars(base),
+           "stage_model_existing":lambda scope,task:{
+               "sha256_verified":True,"sha256":"f"*64,"bytes":True}})
+        result=HuntDirector(callbacks).tick("owner",now=NOW)
+        self.assertEqual(result["model_download"],"HOLD_DOWNLOAD_NOT_VERIFIED")
+        self.assertEqual(result["training_weight_updates_verified"],0)
+
 if __name__=="__main__":
     unittest.main()

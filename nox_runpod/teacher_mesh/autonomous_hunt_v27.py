@@ -244,7 +244,7 @@ class HuntDirector:
                     response["model_download"]=(
                         "VERIFIED_STAGING_ONLY" if isinstance(download,dict)
                         and download.get("sha256_verified") is True
-                        and isinstance(download.get("bytes"),int)
+                        and type(download.get("bytes")) is int
                         and 0<download["bytes"]<=candidate["max_bytes"] and
                         isinstance(download.get("sha256"),str)
                         and SHA_RE.fullmatch(download["sha256"]) and
@@ -273,20 +273,33 @@ class HuntDirector:
 
     @staticmethod
     def _eligible_model(candidate,policy):
+        # Native-owner policy shape is part of admission. A string allowlist
+        # previously allowed substring membership; malformed budgets could
+        # raise TypeError and abort the existing HuntDirector tick.
+        allowed=policy.get("allowed_model_ids")
+        max_bytes=policy.get("max_model_bytes",8_000_000_000)
+        if (not isinstance(allowed,list)
+                or any(not isinstance(x,str) or not ID_RE.fullmatch(x) for x in allowed)
+                or type(max_bytes) is not int or max_bytes<1000):
+            return False
+        license_id=candidate.get("license_id")
         return (candidate.get("type")=="frozen_teacher"
            and isinstance(candidate.get("model_id"),str)
            and bool(ID_RE.fullmatch(candidate["model_id"]))
-           and candidate["model_id"] in policy.get("allowed_model_ids",[])
+           and candidate["model_id"] in allowed
            and isinstance(candidate.get("revision"),str)
            and bool(REV_RE.fullmatch(candidate["revision"]))
            and candidate.get("license_verified_by_owner") is True
            and candidate.get("training_rights_verified") is True
-           and bool(LICENSE_RE.fullmatch(candidate.get("license_id","")))
+           and isinstance(license_id,str) and bool(LICENSE_RE.fullmatch(license_id))
            and type(candidate.get("max_bytes")) is int
-           and 1000<=candidate["max_bytes"]<=policy.get("max_model_bytes",8_000_000_000)
+           and 1000<=candidate["max_bytes"]<=max_bytes
            and candidate.get("source_origin")=="trusted_model_registry")
     @staticmethod
     def _eligible_train(train,state,policy):
+        max_steps=policy.get("max_optimizer_steps_per_job",100)
+        if type(max_steps) is not int or max_steps<1:
+            return False
         return (train.get("training_rights_verified") is True
             and train.get("holdout_independent") is True
             and train.get("dataset_reviewed") is True
@@ -297,4 +310,4 @@ class HuntDirector:
             and isinstance(train.get("dataset_sha256"),str)
             and bool(SHA_RE.fullmatch(train["dataset_sha256"]))
             and type(train.get("optimizer_steps_budget")) is int
-            and 1<=train["optimizer_steps_budget"]<=policy.get("max_optimizer_steps_per_job",100))
+            and 1<=train["optimizer_steps_budget"]<=max_steps)
