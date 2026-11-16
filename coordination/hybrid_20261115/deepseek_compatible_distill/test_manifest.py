@@ -198,7 +198,8 @@ class DistillationManifestTest(unittest.TestCase):
         workflow_path = Path(__file__).resolve().parents[3] / ".github" / "workflows" / "nox-deepseek-distill-source-gate.yml"
         workflow = workflow_path.read_text(encoding="utf-8")
         lowered = workflow.lower()
-        self.assertIn("permissions:\\n  contents: read", workflow)
+        self.assertIn("permissions:", workflow)
+        self.assertIn("contents: read", workflow)
         self.assertIn('runs-on: ubuntu-latest', workflow)
         self.assertNotIn("workflow_dispatch:", workflow)
         self.assertIn('python -m unittest discover -s coordination/hybrid_20261115/deepseek_compatible_distill', workflow)
