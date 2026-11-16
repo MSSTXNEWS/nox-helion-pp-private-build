@@ -656,3 +656,13 @@ Accepted shared HEAD `640bcdae71371faaaa66c3f92c35cd2341841a87`, latest MANUAL 2
 - Root cause/error `NOX-P1-HYBRID-ADAPTER-BASE-IDENTITY-UNPROVEN-20261115`: public LoRA for Qwen/Qwen3.5-9B cannot be presumed compatible with reported active NOX 35B GGUF; exact current HF base/revision/tokenizer/tensor SHA UNKNOWN. Author's Born benchmark warns exact-code/tool-use regressions. 6cf license unverified, 129 MB safetensors, unsafe untrusted training_args.bin not loaded. OpenThoughts full corpus 28.2 GB vs last 16.1 GB reported disk free.
 - Isolated source-only manifest/document `coordination/hybrid_20261115/2D.md` + `2D_manifest.json`; 12/12 deterministic catalogue assertions PASS; exact-SHA CI not yet completed; no direct native write, no download/install/merge, no GPU/STOP/WEB/S03 change. Original signed queue job IDs positively verified 0/60, full count UNKNOWN_NOT_READ, independent S03/optimizer restore unverified. installed/deleted=[]; freed_bytes_verified=0.
 - ONE next action → AUTO 1A: authenticated owner-approved exact-HEAD READ-ONLY original OneHost trained HF base/revision/config/tokenizer/weight SHA, GPU0/GPU1/STOP/disk and offsite restore evidence before any small adapter download or GPU1 training/merge.
+
+# AUTO 1C | R60↔40 native evidence guard | 2026-11-16 05:30 MSK
+
+instructions_version 0.0.6 · accepted HEAD `2fb806cf489968bc617d389973d439e1a78d4b66`.
+
+Reproduced source-level cross-profile dependency `R60-020 → R60-056` in immutable R60 master. The six observed original worker IDs, forty source-profile tasks and sixty source tasks are not interchangeable with signed native queue jobs; without true callbacks no job registration can be claimed. Created a new **read-only** Python profile reconciler with original OneHost callback hooks and 13/13 synthetic selftests. Existing dispatcher/OneHost/WEB/S03/GPU/weights were NOT changed. The master source still says registered_count=0 from an older audit, which does NOT establish current live count. Do not equate six existing Supervisor workers with 40 or 60 native R60 receipts.
+
+Stable error_id `NOX-P0-R60-PROFILE40-WORKER-EQUIVALENCE-20261116`. Root cause: task/profile boundary crosses canonical dependency and source/worker/proof levels were conflated. Lesson: fail closed without original queue + S03 exact native readback; require verified heartbeat/lease and R60-056 predecessor. SOURCE_TESTED for prototype, committed SHA CI pending, native HOLD. No installs, stops, deletes or freed bytes.
+
+One next action → AUTO 2C: bind original owner-native queue_readback and s03_registration_lookup to the read-only R60-001..040 audit, confirm R60-056 dependency and six PID/heartbeat/leases before owner-fenced queue admission. No second scheduler/backend.
