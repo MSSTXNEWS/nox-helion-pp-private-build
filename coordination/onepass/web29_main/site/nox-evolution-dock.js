@@ -25,9 +25,10 @@
  }
  function installChat(){
   const composer=document.getElementById('chatForm');
-  if(!composer||document.getElementById('nox-evolution-dock'))return;
+  if(!composer)return false;
+  if(document.getElementById('nox-evolution-dock'))return true;
   const region=document.querySelector('.v24-main,.chat-conversation,.nox-v22-center')||composer.parentElement;
-  if(!region)return;
+  if(!region)return false;
   trigger=document.createElement('button');trigger.type='button';trigger.className='nox-evolution-trigger';trigger.innerHTML=icon;
   const label=document.createElement('span');label.textContent='Развитие NOX';trigger.append(label);
   trigger.setAttribute('aria-controls','nox-evolution-dock');trigger.setAttribute('aria-expanded','false');trigger.title='Три потока прогресса — открыть внутри чата';trigger.addEventListener('click',open);
@@ -41,6 +42,7 @@
   // Overlay only inside the original chat region; messages, draft and STOP remain mounted.
   region.classList.add('nox-evolution-host');
   panel.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();close();}});
+  return true;
  }
  function installHome(){
   if(document.body.dataset.page!=='index')return;
@@ -49,7 +51,16 @@
    const a=anchor('Развитие NOX','nox-evolution-home');a.dataset.noxEvolutionHome='';a.title='Развитие NOX · самоулучшение · знания · веса';nav.append(a);};
   insert();const ob=new MutationObserver(insert);ob.observe(document.body,{childList:true,subtree:true});setTimeout(()=>ob.disconnect(),12000);
  }
- function init(){installChat();installHome();}
+ function init(){
+  if(!installChat()){
+   // Original chat may mount after DOMContentLoaded: keep one bounded observer.
+   const pending=new MutationObserver(()=>{if(installChat())pending.disconnect();});
+   pending.observe(document.body,{childList:true,subtree:true});
+   setTimeout(()=>pending.disconnect(),12000);
+   window.addEventListener('pagehide',()=>pending.disconnect(),{once:true});
+  }
+  installHome();
+ }
  window.addEventListener('message',e=>{if(e.origin!==location.origin||!frame||e.source!==frame.contentWindow)return;if(e.data?.type==='nox-evolution:close')close();});
  window.addEventListener('pagehide',close);
  window.NoxEvolutionDock=Object.freeze({open,close,progressURL:fullURL.href,embedURL:pageURL.href,diagnostics:()=>({attached:!!panel,expanded:!!panel&&!panel.hidden,frameCount:frame?1:0,origin:pageURL.origin,modelCalls:0})});
