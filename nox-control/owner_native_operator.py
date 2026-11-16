@@ -10,11 +10,18 @@ OWNER_ID=340718567
 INSTANCE=60509551
 PIN='SHA256:G4hmMllaT4uSfx+Gup9vjSySLXJT1cSc/9XePr7XmGc'
 FILES={'audit':'nox-control/owner_native_audit.py','inspect':'nox-control/owner_native_inspect.py',
-       'stage':'nox-control/owner_native_stage.py','repair':'nox-control/owner_media_job_inventory.py',
+       'stage':'nox-control/owner_native_stage.py','repair':'nox-control/owner_qwen_held_media_smoke_v2_entry.py',
        'lifeline':'nox-control/owner_native_lifeline.py'}
 MASTER=None
 
 SCOPED_REPAIR_BUNDLES={
+    'nox-control/owner_qwen_held_media_smoke_v2_entry.py':(
+        'owner_qwen_held_media_smoke_v2.py','owner_media_acceptance_entry.py',
+        'owner_qwen_revision_install.py','owner_native_repair.py','owner_download_status_entry.py'),
+    'nox-control/owner_browser_normal_motion_entry.py':(
+        'owner_browser_stream_only_entry.py','owner_chat_browser_qa.py',
+        'owner_chat_browser_transport_qa.py','owner_chat_browser_release_qa.py',
+        'owner_chat_stream_only_qa.py','owner_chat_normal_motion_qa.py'),
     'nox-control/owner_qwen_held_media_smoke_entry.py':(
         'owner_qwen_held_media_smoke.py','owner_media_acceptance_entry.py',
         'owner_qwen_revision_install.py','owner_native_repair.py','owner_download_status_entry.py'),
@@ -27,6 +34,10 @@ SCOPED_REPAIR_BUNDLES={
         'owner_download_status_entry.py','owner_native_repair.py','owner_qwen_disk_rearm_entry.py'),
 }
 SCOPED_REPAIR_EXTRA_PATHS={
+    'nox-control/owner_qwen_held_media_smoke_v2_entry.py':(
+        'nox-control/owner_qwen_held_media_smoke_v2.py',),
+    'nox-control/owner_browser_normal_motion_entry.py':(
+        'nox-control/owner_chat_normal_motion_qa.py',),
     'nox-control/owner_qwen_transport_install_entry.py':(
         'nox-control/owner_qwen_transport_revision_install.py',
         'nox-control/qwen_student_training_entry_transport_candidate.py'),
