@@ -59,5 +59,26 @@
   "cleanup": "HOLD_NEW_DEEPSEEK_NOT_ACCEPTED",
   "native_deployed": false,
   "credentials_exported": false,
-  "next": "Run the updated pinned stream-only QA through the existing owner-authorized maintenance path once, then distinguish actual native inference, S03 evidence and measured RU/ES timings. Do not blindly retry old QA payload."
+  "next": "Run the updated pinned stream-only QA through the existing owner-authorized maintenance path once, then distinguish actual native inference, S03 evidence and measured RU/ES timings. Do not blindly retry old QA payload.",
+  "source_ci": {
+    "scope": "SOURCE_ONLY_NO_NATIVE_DEPLOY",
+    "final_commit": "91599a2c29e27004b202117bd87c168baacc4cab",
+    "v135": {
+      "run_id": 43825293300,
+      "conclusion": "SUCCESS",
+      "node_sse_stop_s03_tests": "35/35",
+      "stream_only_python_tests": "16/16",
+      "stage_tests": "6/6",
+      "ci_guard_tests": "8/8",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43825293300"
+    },
+    "v139": {
+      "run_id": 43825293470,
+      "conclusion": "SUCCESS",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43825293470"
+    }
+  },
+  "first_source_ci_failed": true,
+  "first_source_ci_reason": "Test asserted a substring was an exact Python code constant; corrected test, no production code change",
+  "final_source_test_scope": "PASS"
 }
