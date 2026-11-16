@@ -70,6 +70,35 @@ class DistillationManifestTest(unittest.TestCase):
         self.assertIn("V100_FP16_ONLY", result["blockers"])
         self.assertIn("LORA_TARGET_MODULES_UNSUPPORTED", result["blockers"])
 
+    def test_staged_pair_has_provenance_hash_and_explicit_split(self):
+        corpus = MANIFEST["corpus"]
+        self.assertEqual(corpus["staged_examples_count"], 1)
+        pair = corpus["staged_pairs"][0]
+        self.assertEqual(pair["status"], "STAGED")
+        self.assertEqual(pair["split_assignment"], "train_candidate")
+        self.assertEqual(pair["excluded_from"], "dev,holdout")
+        self.assertEqual(len(pair["pair_sha256"]), 64)
+        self.assertIn("STAGED_PAIR_HOLDOUT_NOT_VERIFIABLE",
+                      validate(MANIFEST)["blockers"])
+
+    def test_staged_pair_hash_and_holdout_leakage_are_checked(self):
+        changed = copy.deepcopy(MANIFEST)
+        pair = changed["corpus"]["staged_pairs"][0]
+        changed["corpus"]["splits"]["holdout"]["membership_complete"] = True
+        changed["corpus"]["splits"]["holdout"]["example_hashes"] = [pair["pair_sha256"]]
+        self.assertIn("STAGED_PAIR_HOLDOUT_LEAKAGE", validate(changed)["blockers"])
+
+        changed = copy.deepcopy(MANIFEST)
+        changed["corpus"]["staged_pairs"][0]["completion"] += " changed"
+        self.assertIn("STAGED_PAIR_COMPLETION_HASH_MISMATCH",
+                      validate(changed)["blockers"])
+
+    def test_staged_pair_rejects_credential_or_personal_data_patterns(self):
+        changed = copy.deepcopy(MANIFEST)
+        changed["corpus"]["staged_pairs"][0]["completion"] += " token=abcdef1234567890"
+        self.assertIn("STAGED_PAIR_SENSITIVE_DATA_DETECTED",
+                      validate(changed)["blockers"])
+
     def test_training_flag_never_clears_other_gates(self):
         changed = copy.deepcopy(MANIFEST)
         changed["training_enabled"] = True

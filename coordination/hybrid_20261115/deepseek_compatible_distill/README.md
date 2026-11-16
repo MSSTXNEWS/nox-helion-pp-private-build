@@ -25,3 +25,8 @@ DeepSeek-V4.1-Flash-1017 / the pinned ISTA-DASLab IQ2_XXS quantization is listed
 - Baseline and post-training RU/ES evaluation on the same frozen holdout, plus quality review and measured memory/latency. No promotion without an accepted improvement.
 
 The source tests validate this manifest and its fail-closed state only. They do not run inference, training, native preflight, or license interpretation.
+
+
+## Staged session example
+
+One user-requested session correction is recorded in the manifest as `STAGED` with prompt, completion, provenance context, SHA-256 hashes, and `train_candidate` assignment. It is excluded from dev/holdout and is not an admitted training corpus row. Since the frozen holdout membership is not yet populated, the verifier reports `STAGED_PAIR_HOLDOUT_NOT_VERIFIABLE`; the pair is not cleared for training. Tests cover hash tampering, holdout collision, sensitive-pattern detection, and STOP preservation. No quality improvement or training run is claimed.

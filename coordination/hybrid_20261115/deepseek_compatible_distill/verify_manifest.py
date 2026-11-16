@@ -3,11 +3,67 @@
 This file does not download weights, inspect host paths, or start training.
 """
 from __future__ import annotations
+import hashlib
+import json
 import re
 
 SCHEMA = "NOX_DEEPSEEK_TEACHER_STUDENT_SOURCE_MANIFEST_V1"
 HEX64 = re.compile(r"^[a-f0-9]{64}$")
 HEX40 = re.compile(r"^[a-f0-9]{40}$")
+SENSITIVE_PATTERN = re.compile(r"(?i)\\b(?:bearer\\s+[a-z0-9._-]{12,}|(?:api[_-]?key|token|password|secret)\\s*[:=]\\s*[^\\s,]{8,}|gh[pousr]_[A-Za-z0-9]{20,}|sk-[A-Za-z0-9]{20,})|[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}")
+
+
+def canonical_sha256(value: dict) -> str:
+    encoded = json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def staged_pair_blockers(corpus: dict) -> list[str]:
+    blockers: list[str] = []
+    pairs = corpus.get("staged_pairs", [])
+    holdout = corpus.get("splits", {}).get("holdout", {})
+    holdout_hashes = holdout.get("example_hashes", [])
+    if not isinstance(pairs, list):
+        return ["STAGED_PAIR_SCHEMA_INVALID"]
+    if not isinstance(holdout_hashes, list) or any(not isinstance(x, str) or not HEX64.fullmatch(x) for x in holdout_hashes):
+        blockers.append("HOLDOUT_HASH_LIST_INVALID")
+        holdout_hashes = []
+    seen = set()
+    for pair in pairs:
+        if not isinstance(pair, dict):
+            blockers.append("STAGED_PAIR_SCHEMA_INVALID")
+            continue
+        if pair.get("status") != "STAGED" or pair.get("split_assignment") != "train_candidate" or pair.get("excluded_from") != "dev,holdout":
+            blockers.append("STAGED_PAIR_SPLIT_INVALID")
+        if pair.get("id") in seen or not isinstance(pair.get("id"), str) or not pair.get("id"):
+            blockers.append("STAGED_PAIR_ID_DUPLICATE_OR_INVALID")
+        seen.add(pair.get("id"))
+        for key in ("prompt", "completion"):
+            text_value = pair.get(key)
+            if not isinstance(text_value, str) or not text_value.strip():
+                blockers.append("STAGED_PAIR_TEXT_MISSING")
+            elif SENSITIVE_PATTERN.search(text_value):
+                blockers.append("STAGED_PAIR_SENSITIVE_DATA_DETECTED")
+        if pair.get("prompt_sha256") != hashlib.sha256(pair.get("prompt", "").encode("utf-8")).hexdigest():
+            blockers.append("STAGED_PAIR_PROMPT_HASH_MISMATCH")
+        if pair.get("completion_sha256") != hashlib.sha256(pair.get("completion", "").encode("utf-8")).hexdigest():
+            blockers.append("STAGED_PAIR_COMPLETION_HASH_MISMATCH")
+        hash_input = {key: value for key, value in pair.items() if key != "pair_sha256"}
+        pair_hash = canonical_sha256(hash_input)
+        if pair.get("pair_sha256") != pair_hash:
+            blockers.append("STAGED_PAIR_HASH_MISMATCH")
+        if pair_hash in holdout_hashes:
+            blockers.append("STAGED_PAIR_HOLDOUT_LEAKAGE")
+        source = pair.get("source", {})
+        safety = pair.get("safety", {})
+        if source.get("type") != "session_and_canonical_memory_context" or not source.get("verified_claim") or not source.get("unverified_claim"):
+            blockers.append("STAGED_PAIR_PROVENANCE_INCOMPLETE")
+        if (safety.get("contains_credentials") is not False or safety.get("contains_personal_data") is not False
+                or safety.get("stop_gate") != "PRESERVE"):
+            blockers.append("STAGED_PAIR_SAFETY_GATE_FAILED")
+    if pairs and holdout.get("membership_complete") is not True:
+        blockers.append("STAGED_PAIR_HOLDOUT_NOT_VERIFIABLE")
+    return sorted(set(blockers))
 KNOWN_LORA_MODULES = {"q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"}
 
 
@@ -90,6 +146,7 @@ def validate(manifest: dict) -> dict:
             or gates.get("license_review") is not True):
         blockers.append("STUDENT_LICENSE_REVIEW_REQUIRED")
 
+    blockers.extend(staged_pair_blockers(corpus))
     splits = corpus.get("splits", {})
     if corpus.get("status") != "VERIFIED_OWNER_CORPUS":
         blockers.append("CORPUS_NOT_VERIFIED")
