@@ -170,18 +170,38 @@
   }
   function sseChat(data,signal) {
     let closed=false,finished=false,canceling=false,modelStarted=false,streamDone=false,stopJob=null;
+    let stopTransportOutcome='not_requested',stopNotified=false;
     const started=performance.now();let firstVisibleMs=null;
     const upstreamAbort=new AbortController();
+    const publishStopOutcome=()=>{
+      if(stopNotified)return;stopNotified=true;
+      if(typeof window.dispatchEvent==='function'&&typeof CustomEvent==='function')
+        window.dispatchEvent(new CustomEvent('nox:native-stop-result',{detail:{
+          transport_outcome:stopTransportOutcome,
+          signal_accepted:stopTransportOutcome==='signal_accepted',
+          gpu_stop_verified:false
+        }}));
+    };
     const stopThenAbort=()=>{
       if(finished)return;
       canceling=true;
       return stopJob||(stopJob=(async()=>{
         if(modelStarted&&!streamDone){
           const c=new AbortController(),t=setTimeout(()=>c.abort(),1000);
-          try{await nativePost('/api/nox/stop',{},c.signal);}catch{}
+          try{
+            const r=await nativePost('/api/nox/stop',{},c.signal);
+            if(!r.ok)stopTransportOutcome='rejected';
+            else{
+              let receipt=null;
+              try{receipt=await nativeBodyJSON(r,c.signal);}catch{}
+              stopTransportOutcome=receipt?.status==='STOP_REQUESTED'&&
+                receipt?.stream_cancellation_signalled===true?'signal_accepted':'unconfirmed';
+            }
+          }catch{stopTransportOutcome=c.signal.aborted?'timeout':'unknown';}
           finally{if(typeof clearTimeout==='function')clearTimeout(t);}
         }
         upstreamAbort.abort();
+        publishStopOutcome();
       })());
     };
     const onAbort=stopThenAbort;
@@ -266,7 +286,9 @@
           event({type:'error',
             error:(nativeSignal.aborted||canceling)?'STREAM_STOP_REQUESTED':String(e.message||'HOLD_NATIVE_STREAM').slice(0,150),
             // GPU cancellation is unverified.
-            gpu_stop_verified:false});
+            gpu_stop_verified:false,
+            stop_transport_outcome:stopTransportOutcome,
+            stop_signal_accepted:stopTransportOutcome==='signal_accepted'});
         }finally{
           finished=true;
           signal?.removeEventListener?.('abort',onAbort);
@@ -277,7 +299,7 @@
         closed=true;
         const stopping=stopThenAbort();
         if(typeof window.dispatchEvent==='function'&&typeof CustomEvent==='function')
-          window.dispatchEvent(new CustomEvent('nox:native-phase',{detail:{phase:'stopped'}}));
+          window.dispatchEvent(new CustomEvent('nox:native-phase',{detail:{phase:'stopping'}}));
         signal?.removeEventListener?.('abort',onAbort);
         return stopping;
       }
