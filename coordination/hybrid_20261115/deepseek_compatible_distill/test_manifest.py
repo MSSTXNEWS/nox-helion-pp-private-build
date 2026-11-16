@@ -4,7 +4,7 @@ import json
 import unittest
 from pathlib import Path
 
-from verify_manifest import validate
+from verify_manifest import canonical_sha256, validate
 
 MANIFEST = json.loads(Path(__file__).with_name("manifest.v1.json").read_text(encoding="utf-8"))
 
@@ -34,6 +34,44 @@ class DistillationManifestTest(unittest.TestCase):
         self.assertEqual(sum(x["bytes"] for x in student["weight_shards"]),
                          student["expected_weight_bytes"])
         self.assertNotIn("Qwen", student["model_id"])
+
+    def test_teacher_is_explicitly_inference_only(self):
+        self.assertIs(MANIFEST["teacher"]["inference_only"], True)
+        self.assertEqual(MANIFEST["method"]["teacher_role"],
+                         "GGUF inference and teacher-response generation only")
+        changed = copy.deepcopy(MANIFEST)
+        changed["teacher"]["inference_only"] = False
+        result = validate(changed)
+        self.assertIn("GGUF_TEACHER_IS_INFERENCE_ONLY", result["blockers"])
+
+    def test_student_cannot_alias_teacher_or_quantized_repo(self):
+        changed = copy.deepcopy(MANIFEST)
+        changed["student"]["model_id"] = changed["teacher"]["model_id"]
+        self.assertIn("STUDENT_MUST_BE_DISTINCT_PINNED_HF_TARGET",
+                      validate(changed)["blockers"])
+        changed["student"]["model_id"] = changed["teacher"]["quantization_source_id"]
+        self.assertIn("STUDENT_MUST_BE_DISTINCT_PINNED_HF_TARGET",
+                      validate(changed)["blockers"])
+
+    def test_student_requires_runtime_metadata_and_weight_manifest_hashes(self):
+        result = validate(MANIFEST)
+        self.assertIn("STUDENT_WEIGHT_MANIFEST_SHA256_MISMATCH", result["blockers"])
+        self.assertIn("STUDENT_METADATA_RUNTIME_HASH_MISSING", result["blockers"])
+        changed = copy.deepcopy(MANIFEST)
+        student = changed["student"]
+        student["weight_manifest_sha256"] = canonical_sha256(
+            {"weight_shards": student["weight_shards"]}
+        )
+        for name in ("config.json", "model.safetensors.index.json",
+                     "tokenizer.json", "tokenizer_config.json"):
+            student["metadata_blobs"][name]["runtime_sha256"] = "a" * 64
+        student["config_sha256"] = "a" * 64
+        student["tokenizer_sha256"] = "a" * 64
+        result = validate(changed)
+        self.assertNotIn("STUDENT_WEIGHT_MANIFEST_SHA256_MISMATCH", result["blockers"])
+        self.assertNotIn("STUDENT_METADATA_RUNTIME_HASH_MISSING", result["blockers"])
+        self.assertNotIn("STUDENT_CONFIG_HASH_MISMATCH", result["blockers"])
+        self.assertNotIn("STUDENT_TOKENIZER_HASH_MISMATCH", result["blockers"])
 
     def test_gguf_cannot_become_trainable_target(self):
         changed = copy.deepcopy(MANIFEST)
