@@ -914,9 +914,9 @@ def maya_elf_linkage_readback(root=None):
               'path':str(root / MAYA_P0_BINARY_REL),
               'pinned_sha256':MAYA_P0_BINARY_SHA256,
               'observed_sha256':None,'bytes':None,'state':'HOLD_UNKNOWN',
-              'needed_sonames':[],'rpath':[],'cuda_driver_needed':False,
+              'needed_sonames':[],'rpath':[],'cuda_driver_direct_needed':False,'cuda_driver_expected_at_runtime':False,
               'cuda_runtime_needed':False,'cublas_needed':False,
-              'maya_executable_invoked':False,'cuda_context_created':False}
+              'maya_executable_invoked':False,'cuda_context_created':False,\n              'dependency_resolution':'NOT_TESTED'}
     pin = maya_p0_binary_readback(root=root)
     result['observed_sha256'] = pin.get('observed_sha256')
     result['bytes'] = pin.get('bytes')
@@ -941,8 +941,8 @@ def maya_elf_linkage_readback(root=None):
     paths = re.findall(r'\((?:RPATH|RUNPATH)\).*?\[([^\]]*)\]', cp.stdout)
     result['needed_sonames'] = needed[:128]
     result['rpath'] = paths[:8]
-    result['cuda_driver_needed'] = any(x.startswith('libcuda.so') for x in needed)
-    result['cuda_runtime_needed'] = any(x.startswith('libcudart.so') for x in needed)
+    result['cuda_driver_direct_needed'] = any(x.startswith('libcuda.so') for x in needed)
+    result['cuda_runtime_needed'] = any(x.startswith('libcudart.so') for x in needed)\n    result['cuda_driver_expected_at_runtime'] = result['cuda_runtime_needed']
     result['cublas_needed'] = any(x.startswith(('libcublas.so', 'libcublasLt.so')) for x in needed)
     result['state'] = 'ELF_LINKAGE_READ_ONLY'
     return result
