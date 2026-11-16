@@ -117,6 +117,41 @@ class StorageTests(unittest.TestCase):
                 path = cache_dir / ('c' * 56 + alias)
                 self.assertIsNone(storage.deletion_kind(path), str(path))
 
+    def test_registered_teacher_paths_never_reclaim_even_with_spoofed_backup_flags(self):
+        expected = {
+            '/root/nox/models/teachers/Dolphin3.0-Llama3.1-8B-Q4_K_M.gguf': 4920745856,
+            '/root/nox/models/teachers/Hermes-3-Llama-3.1-8B.Q4_K_M.gguf': 4920733824,
+            '/root/nox/models/teachers/NousResearch_DeepHermes-3-Llama-3-8B-Preview-Q4_K_M.gguf': 4920740800,
+            '/root/nox/models/teachers/saiga_nemo_12b.Q4_K_M.gguf': 7477204832,
+            '/root/nox/models/teachers/vikhr-nemo-12b-instruct-r-21-09-24-q4_k_m.gguf': 7477218656,
+        }
+        self.assertEqual(storage.LEGACY_TEACHERS, expected)
+        # Simulate a future generic allowlist regression: the exact registered
+        # path guard must remain stronger than suffix/category protections.
+        with patch.object(storage, 'WEIGHT_SUFFIX', set()), patch.object(storage, 'PROTECTED_WORDS', set()):
+            for registered, expected_bytes in expected.items():
+                with self.subTest(path=registered):
+                    path = Path(registered)
+                    normalized_alias = path.parent / '..' / path.parent.name / path.name
+                    for candidate_path in (path, normalized_alias):
+                        candidate = {
+                            'path': str(candidate_path),
+                            'category': 'PIP_DOWNLOAD_CACHE',
+                            'identity': [1, 2, expected_bytes, 3, 4, 0, 1],
+                            'prefix_sha256': 'a' * 64,
+                            # Caller supplied flags/digests are untrusted and
+                            # cannot authorize weight eviction.
+                            'backup_pc_verified': True,
+                            'backup_drive_verified': True,
+                            'backup_pc_sha256': 'b' * 64,
+                            'backup_drive_sha256': 'c' * 64,
+                            'restore_receipt': 'PASS',
+                            'full_size': True,
+                        }
+                        self.assertIsNone(storage.deletion_kind(candidate_path))
+                        with self.assertRaisesRegex(storage.StorageHold, 'HOLD_STORAGE_PROTECTED_TARGET'):
+                            storage.reclaim_candidate(candidate, time.monotonic() + 2)
+
     def test_core_requires_real_elf_et_core_header(self):
         path = self.file(self.root / 'core.1234', b'not a core')
         self.assertEqual(storage.qualify(path, path.stat(), self.now, self.usage)[1], 'NOT_ELF_CORE')

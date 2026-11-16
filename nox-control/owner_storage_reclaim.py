@@ -322,6 +322,10 @@ def teacher_candidate_review(path, info=None, usage=None, observation_error=None
 def deletion_kind(path):
     """A closed allowlist, not a general filesystem cleanup predicate."""
     path = Path(path)
+    # Exact legacy teacher paths stay denied even if a future generic allowlist,
+    # suffix set, or backup-registration flag changes.
+    if os.path.abspath(os.fspath(path)) in LEGACY_TEACHERS:
+        return None
     if path.suffix.lower() in WEIGHT_SUFFIX or PARTIAL.search(path.name):
         return None
     parts = {part.lower() for part in path.parts}
