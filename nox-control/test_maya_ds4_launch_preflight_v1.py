@@ -17,6 +17,10 @@ INSPECT_SPEC = importlib.util.spec_from_file_location(
     "owner_native_inspect_linkage_test", HERE / "owner_native_inspect.py")
 INSPECT = importlib.util.module_from_spec(INSPECT_SPEC)
 INSPECT_SPEC.loader.exec_module(INSPECT)
+PROFILE_SPEC = importlib.util.spec_from_file_location(
+    "maya_ds4_v100_launch_profile_v1", HERE / "maya_ds4_v100_launch_profile_v1.py")
+PROFILE = importlib.util.module_from_spec(PROFILE_SPEC)
+PROFILE_SPEC.loader.exec_module(PROFILE)
 
 MAYA_BASE = "https://raw.githubusercontent.com/mw00/project-maya/c81fab6c9d63cf69b928f92460e0a662b28aa9ec/"
 
@@ -115,6 +119,53 @@ class MayaLinkageReadOnlyTests(unittest.TestCase):
 
 
 class MayaLaunchPlanTests(unittest.TestCase):
+
+    def test_v100_profile_uses_supported_cli_and_omits_ineffective_gguf_mmap_flag(self):
+        fake_preflight = {
+            "state": "SOURCE_ONLY_PLAN_READY_NOT_LAUNCHABLE",
+            "packer_output_dir": "/synthetic/model/maya-ds4",
+        }
+        with patch.object(PROFILE.preflight, "evaluate_source_plan", return_value=fake_preflight):
+            got = PROFILE.build_source_plan(
+                owner_stop=False,
+                observed_binary_sha256=PROFILE.MAYA_BINARY_SHA256,
+                gpu_names=PROFILE.GPU_NAMES,
+                verified_files=complete_rows(),
+                tensor_types=("BF16", "IQ2_XXS", "IQ4_NL"),
+                model_file_paths=["synthetic"] * 6)
+        self.assertEqual(got["state"], "SOURCE_ONLY_COMMAND_READY_NOT_LAUNCHABLE")
+        self.assertFalse(got["launchable"])
+        argv = got["argv"]
+        self.assertIn("--pack", argv)
+        self.assertIn("--gpus", argv)
+        self.assertIn("--tp", argv)
+        self.assertIn("--max-context", argv)
+        self.assertIn("--reserve-mib", argv)
+        self.assertIn("--expert-profile", argv)
+        self.assertIn("--dspark", argv)
+        self.assertIn("--parallel", argv)
+        self.assertIn("--serve", argv)
+        self.assertNotIn("--mmap-experts", argv)
+        self.assertEqual(got["expert_mapping"],
+                         "GGUF hot experts in VRAM cache; CPU-lane experts read in-place from model files")
+        self.assertEqual(got["kv_cache_fit"], "HOLD_LIVE_VRAM_AND_RAM_READBACK_REQUIRED")
+        self.assertEqual(got["runtime_fit"], "HOLD_LIVE_FREE_MEMORY_PREFLIGHT_REQUIRED")
+        self.assertEqual(got["context_tokens"], 4096)
+        self.assertEqual(got["vram_reserve_mib"], 3072)
+
+    def test_v100_profile_holds_unknown_stop_before_preflight(self):
+        with patch.object(PROFILE.preflight, "evaluate_source_plan") as evaluate:
+            got = PROFILE.build_source_plan(
+                owner_stop=None,
+                observed_binary_sha256=PROFILE.MAYA_BINARY_SHA256,
+                gpu_names=PROFILE.GPU_NAMES,
+                verified_files=complete_rows(),
+                tensor_types=("BF16", "IQ2_XXS", "IQ4_NL"),
+                model_file_paths=["synthetic"] * 6)
+        self.assertEqual(got["state"], "HOLD_OWNER_STOP")
+        self.assertFalse(got["launchable"])
+        evaluate.assert_not_called()
+
     def test_stop_blocks_launch_even_with_complete_inputs(self):
         got = PLAN.evaluate_source_plan(
             stop_present=True, gpu_ids=(0, 1), tp=2, max_context=65536,
@@ -355,6 +406,62 @@ class MayaLaunchPlanTests(unittest.TestCase):
         self.assertIn("Volta (sm_70: GLM, maya-ds4 and maya-mm3 run on V100s)", cmake)
         self.assertIn("tensor parallel across pairs of equal GPUs", setup)
         self.assertIn("64K", setup)
+
+
+class MayaLaunchProfileCliContractTests(unittest.TestCase):
+    def test_profile_uses_only_pinned_maya_cli_and_keeps_live_fit_on_hold(self):
+        checked = {
+            "state": "SOURCE_ONLY_PLAN_READY_NOT_LAUNCHABLE",
+            "packer_output_dir": "/synthetic/model/maya-ds4",
+        }
+        with patch.object(PROFILE.preflight, "evaluate_source_plan", return_value=checked):
+            got = PROFILE.build_source_plan(
+                owner_stop=False,
+                observed_binary_sha256=PROFILE.MAYA_BINARY_SHA256,
+                gpu_names=PROFILE.GPU_NAMES,
+                verified_files=complete_rows(),
+                tensor_types=("BF16", "IQ2_XXS", "IQ4_NL"),
+                model_file_paths=["synthetic"] * 6,
+            )
+        self.assertEqual(got["state"], "SOURCE_ONLY_COMMAND_READY_NOT_LAUNCHABLE")
+        self.assertFalse(got["launchable"])
+        self.assertEqual(got["argv"][1:], [
+            "--pack", "/synthetic/model/maya-ds4", "--gpus", "0,1", "--tp", "2",
+            "--max-context", "4096", "--reserve-mib", "3072", "--expert-profile", "none",
+            "--dspark", "none", "--parallel", "1", "--serve",
+        ])
+        self.assertEqual(got["protocol"], "Maya stdin/stdout engine protocol; not an HTTP endpoint")
+        self.assertIn("HOLD", got["kv_cache_fit"])
+        self.assertIn("HOLD", got["runtime_fit"])
+        self.assertIn("file-backed CPU-lane", got["expert_mapping"])
+        self.assertNotIn("--mmap-experts", got["argv"])
+        self.assertFalse(got["measured"])
+
+    def test_profile_stop_and_unknown_stop_block_before_preflight(self):
+        for stop in (True, None, 0, "unknown"):
+            with self.subTest(owner_stop=repr(stop)):
+                with patch.object(PROFILE.preflight, "evaluate_source_plan") as run:
+                    got = PROFILE.build_source_plan(
+                        owner_stop=stop,
+                        observed_binary_sha256=PROFILE.MAYA_BINARY_SHA256,
+                        gpu_names=PROFILE.GPU_NAMES,
+                        verified_files=complete_rows(),
+                        tensor_types=("BF16", "IQ2_XXS", "IQ4_NL"),
+                        model_file_paths=["synthetic"] * 6,
+                    )
+                self.assertEqual(got["state"], "HOLD_OWNER_STOP")
+                self.assertFalse(got["launchable"])
+                run.assert_not_called()
+
+    def test_pinned_maya_source_exposes_supported_cli_and_gguf_mapping_contract(self):
+        main = maya_source("src/ds4/ds4_main.cpp")
+        model = maya_source("src/ds4/ds4_model.cu")
+        for option in ("--gpus", "--tp", "--max-context", "--reserve-mib",
+                       "--cpu-threads", "--prefill-chunk", "--mmap-experts", "--parallel",
+                       "--serve"):
+            self.assertIn(option, main)
+        self.assertIn("if (pk.gguf) file_experts = true;", model)
+        self.assertIn("file_experts", model)
 
 
 if __name__ == "__main__":
