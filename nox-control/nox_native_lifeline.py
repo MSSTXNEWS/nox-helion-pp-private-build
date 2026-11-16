@@ -62,7 +62,7 @@ def policy_load(path):
     fd = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
     try:
         info = os.fstat(fd)
-        if not stat.S_ISREG(info.st_mode) or info.st_size > 32768:
+        if not stat.S_ISREG(info.st_mode) or info.st_size > 32768 or info.st_nlink != 1:
             raise ValueError("HOLD_POLICY_FILE")
         if (info.st_mode & 0o022) or info.st_uid not in (0, os.geteuid()):
             raise ValueError("HOLD_POLICY_PERMISSIONS")
@@ -107,8 +107,12 @@ def read_state(path):
         raise ValueError("HOLD_STATE_ACCESS") from exc
     try:
         info = os.fstat(fd)
-        if not stat.S_ISREG(info.st_mode) or info.st_size > 262144:
+        if not stat.S_ISREG(info.st_mode) or info.st_size > 262144 or info.st_nlink != 1:
             raise ValueError("HOLD_STATE_FILE")
+        # Repair attempts are a security boundary: a mutable or foreign-owned
+        # history file could erase hourly/daily limits and authorize extra starts.
+        if (info.st_mode & 0o022) or info.st_uid not in (0, os.geteuid()):
+            raise ValueError("HOLD_STATE_PERMISSIONS")
         with os.fdopen(fd, "r", encoding="utf-8") as stream:
             fd = -1
             obj = json.load(stream)
