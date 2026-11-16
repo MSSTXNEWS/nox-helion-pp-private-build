@@ -4,8 +4,8 @@
   "slot": "1B",
   "time_utc": "2026-11-16T04:20:00Z",
   "source_head_accepted": "5cc19f758d7c1899b39122853f53cd91ac7cfe03",
-  "source_status": "SOURCE_PATCH_PENDING_CI",
-  "native_status": "HOLD_NO_OWNER_NATIVE_WRITER_OR_DRIVE_PROFILE",
+  "source_status": "SOURCE_TESTED_EXACT_CI_47_OF_47_PASS",
+  "native_status": "HOLD_NO_CURRENT_SAME_SLOT_OWNER_NATIVE_LEASE_NO_PERSISTENT_DRIVE_PROFILE",
   "source_files": [
     "nox-control/nox_cold_drive.py",
     "nox-control/test_nox_cold_drive.py"
@@ -23,17 +23,17 @@
     },
     {
       "number": 3,
-      "state": "SOURCE_PATCH_PENDING_CI",
+      "state": "SOURCE_TESTED_CI_47_OF_47_PASS",
       "evidence": "Existing nox_cold_drive rclone cat --offset --count bounded 1MiB exact-block SHA, no FUSE/mmap claim"
     },
     {
       "number": 4,
-      "state": "SOURCE_PATCH_PENDING_CI",
+      "state": "SOURCE_TESTED_CI_47_OF_47_PASS",
       "evidence": "fixture tests STOP, bounds, corrupt, oversized, failed process, timeout and object-size mismatch; no Drive credentials"
     },
     {
       "number": 5,
-      "state": "HOLD_NATIVE_AB_UNAVAILABLE",
+      "state": "HOLD_NO_PAIRED_NATIVE_ENGINE_AB",
       "evidence": "No paired real Maya inference/cache benchmark; full weights not present, no model switched"
     }
   ],
@@ -57,5 +57,21 @@
   "deleted_files": [],
   "freed_bytes": 0,
   "cleanup": "HOLD no successful replacement or independent restore",
-  "next_action": "Owner-native authenticated Drive rclone profile+block hash manifest and a 1MiB range readback before Maya filesystem adapter/bench"
+  "next_action": "Owner-native existing OneHost authorization: verify durable Drive profile, immutable object/version + per-block hash manifest and one 1MiB GET readback; only then bind seekable Maya with measured A/B and STOP",
+  "test_evidence": {
+    "workflow": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43803889046",
+    "exact_commit": "c6e107227de4452a0541582a7402728d5ad0004e",
+    "test_count": 47,
+    "passed": 47,
+    "failed": 0,
+    "compile": "PASS",
+    "suite": "python3 -m unittest discover -s nox-control -p test_nox_cold_drive.py -v",
+    "proof_scope": "SOURCE_ONLY_FAKE_RCLONE_NO_REAL_CLOUD_NO_NATIVE_DEPLOY",
+    "initial_red_workflow": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43803754154"
+  },
+  "source_sha": "c6e107227de4452a0541582a7402728d5ad0004e",
+  "error_id": "NOX-P1-1B-RCLONE-RANGE-FIXTURE-SIZE-OPTION-20261116",
+  "symptom": "5 initially failing range tests, subprocess rclone size returns exit1 in fixture",
+  "root_cause": "original fake rclone `size` assumed remote at argv[1], while production uses rclone size --json remote",
+  "lesson": "run exact test suite and inspect red CI; fix fake transport argument parsing and prove green. SOURCE test is not native Range/Drive performance"
 }
