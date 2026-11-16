@@ -233,9 +233,13 @@ def checkpoint_proof(contract, lineage, deadline):
             'CHECKPOINT_STATE')
     read(directory / 'checkpoint_manifest.json', expected=manifest_meta['sha256'])
     after, after_meta = document(OUTPUT / 'latest_checkpoint.json')
+    # A concurrent checkpoint publisher may advance this pointer while we hash
+    # the old 500 MiB checkpoint. Never present a stale version as CURRENT.
+    require(after_meta['sha256'] == pointer_meta['sha256'] and after == pointer,
+            'CHECKPOINT_POINTER_CHANGED')
     proof.update(directory=name, manifest_sha256=manifest_meta['sha256'], files=rows, verified_bytes=total,
                  all_manifest_files_sha256_verified=True, required_files=9,
-                 latest_pointer_unchanged=after_meta['sha256'] == pointer_meta['sha256'] and after == pointer)
+                 latest_pointer_unchanged=True)
     return proof, manifest, state
 
 

@@ -1,0 +1,99 @@
+{
+  "schema": "NOX_WEB_WEIGHTS_V06_AUTO_2D_POINTER_ATOMICITY_V1",
+  "instructions_version": "0.0.6",
+  "slot": "2D",
+  "stream": "2/3",
+  "run_start_utc": "2026-11-16T04:52:28Z",
+  "run_start_msk": "2026-11-16T07:52:28+03:00",
+  "head_before": "ec22d200523d16c87cd79d4042b66fedf97ccc79",
+  "head_after": "COMMIT_CONTAINING_RECEIPT",
+  "error_id": "NOX-P1-2D-QWEN-CHECKPOINT-POINTER-RACE-20261116",
+  "root_cause": "Existing read-only Qwen checkpoint_proof re-read latest_checkpoint.json but only exposed latest_pointer_unchanged=false instead of rejecting stale evidence; a concurrently published new checkpoint could make a prior 5-step checkpoint look like current accepted proof.",
+  "source_fix": "Require SHA-and-structure equality of latest pointer before positive checkpoint proof; reject changed pointer with stable HOLD_QWEN_OBSERVE_CHECKPOINT_POINTER_CHANGED. Existing checksum, lineage and full 9-file checks are retained.",
+  "tasks": [
+    {
+      "task": 1,
+      "state": "DONE_NATIVE_PREVIOUS_EVIDENCE",
+      "detail": "Owner OneHost verified pinned Qwen/Qwen3.5-9B revision c202236235762e1c871ad0ccb60c8ee5ba337b9a, 16 base files 19329393661 bytes, original 128 train rows (119 tokenized) and distinct 16 holdout rows; current DeepSeek serving candidate distinct."
+    },
+    {
+      "task": 2,
+      "state": "HOLD_CURRENT_LEASE_OFFSITE",
+      "detail": "Authenticated earlier owner inspection resource snapshot, stop completion flag and train service EXITED. Current writer lease/STOP/CP311/cu126 precise fit and independent offsite S03+optimizer recovery not rechecked in this slot."
+    },
+    {
+      "task": 3,
+      "state": "DONE_NATIVE_HISTORICAL_NOT_THIS_SLOT",
+      "detail": "Verified 6 actual successful optimizer updates, attempted=6 skipped=0; PID646468 first five and restart PID661633 sixth; this slot performed 0 optimizer steps."
+    },
+    {
+      "task": 4,
+      "state": "DONE_NATIVE_ONHOST_RESTORE_AND_SHA;HOLD_OFFSITE",
+      "detail": "6th update after on-host checkpoint5 reload; checkpoint6 10 files 519882866 bytes fully SHA re-read, optimizer/scaler/scheduler/RNG included, exact offsite restore absent."
+    },
+    {
+      "task": 5,
+      "state": "DONE_NATIVE_FIXED_DISJOINT_NEXT_TOKEN_LOSS;HOLD_ANTI_FORGETTING",
+      "detail": "16 fixed held-out examples loss 1.5214923173189163 -> 1.3033105581998825; independent RU/ES code tool anti-forgetting and merge/promotion not performed."
+    }
+  ],
+  "WEIGHTS": {
+    "scope": "PREVIOUS_AUTHENTICATED_OWNER_NATIVE",
+    "source_run": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43806455891",
+    "successful_optimizer_updates_total": 6,
+    "updates_this_slot": 0,
+    "skipped": 0,
+    "checkpoint_path": "/root/nox/lora/qwen35_9b/6907283384/checkpoint-u00000006-a00000006-g01794804416868029665",
+    "manifest_sha256": "bbe6ff24861fdcf33d28eba089edba583406ffbb9184c68e5a43d305a619b293",
+    "acceptance_sha256": "2076f7050169692e0333747d07abb5c290b429c1b30d56fd55928fc215edfc00",
+    "adapter_tensor_sha256": "66779f2ec6dcfa9f82b37cc22c83500c66947c4d6b46660d8312dc8bdca0d674",
+    "loss_train_last_5": 0.8615515837445855,
+    "loss_train_6": null,
+    "holdout_initial_loss": 1.5214923173189163,
+    "holdout_after_six": 1.3033105581998825,
+    "checkpoint_bytes": 519882866,
+    "reload_verified": true,
+    "offsite_restore_verified": false,
+    "training_service_after": "EXITED_OWNER_COMPLETION_HOLD",
+    "new_student_chat_promotion": false
+  },
+  "KNOWLEDGE": {
+    "state": "HOLD",
+    "hunter_verified_source_to_s03_write_readback_recall": false,
+    "three_native_s03_review_receipts": "CANDIDATE_NOT_APPLIED_NOT_WEIGHT_UPDATES"
+  },
+  "DISPATCHER_RESOURCES": {
+    "state": "PRIOR_AUTH_NATIVE_NOT_FRESH",
+    "director_pid": 652295,
+    "os_worker_pids": [
+      652465,
+      652466,
+      652467
+    ],
+    "gpu0_mib_used_0437utc": 21562,
+    "gpu1_mib_used_0437utc": 474,
+    "ssd_free_bytes_0437utc": 12228141056,
+    "cgroup_ram_current_bytes_0437utc": 87492591616,
+    "cgroup_ram_max_bytes_0437utc": 194065203200,
+    "stop_owned_completion": true,
+    "current_writer_lease": null,
+    "current_gpu_temperature": null,
+    "restarted_this_slot": false
+  },
+  "patch_files": [
+    "nox-control/owner_qwen_training_observe.py",
+    "nox-control/test_owner_qwen_training_observe.py",
+    "coordination/progress/hourly/20261116_0752_AUTO_2D_QWEN_POINTER_ATOMICITY_V06.json"
+  ],
+  "tests": {
+    "static_source_anchor_and_new_regression_verified": true,
+    "prior_unchanged_checkpoint_positive_test_exists": true,
+    "new_python_test_execution": "PENDING_EXACT_SHA_CI",
+    "native_test_execution_this_slot": false
+  },
+  "cleanup": {
+    "files_deleted": [],
+    "freed_bytes_verified": 0
+  },
+  "next_action": "Under the sole owner-native writer lease and verified external recoverable S03+optimizer backup, run an isolated fixed code/RU/ES/Genesis anti-forgetting evaluation of checkpoint6; do not restart for reporting, clear TRAIN_HOLD, switch main chat or merge by tensor SHA alone."
+}

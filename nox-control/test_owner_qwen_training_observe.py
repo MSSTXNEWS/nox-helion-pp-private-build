@@ -151,6 +151,27 @@ class QwenObservationTests(unittest.TestCase):
         with self.assertRaisesRegex(OBS.Hold, 'TERMINAL_HOLDOUT'):
             OBS.terminal_proof(path, self.contract, lineage, manifest, state, acceptance=True)
 
+    def test_checkpoint_pointer_replaced_during_rehash_fails_closed(self):
+        lineage, _, _, _, _ = self.fixture()
+        pointer = self.output / 'latest_checkpoint.json'
+        original = OBS.document
+        pointer_reads = []
+
+        def advance_during_read(path, expected=None):
+            if Path(path) == pointer:
+                pointer_reads.append(1)
+                if len(pointer_reads) == 2:
+                    write(pointer, {
+                        'directory': 'checkpoint-u00000007-a00000007-g00000000000000000123',
+                        'manifest_sha256': '0' * 64
+                    })
+            return original(path, expected)
+
+        with patch.object(OBS, 'document', side_effect=advance_during_read):
+            with self.assertRaisesRegex(OBS.Hold, 'CHECKPOINT_POINTER_CHANGED'):
+                OBS.checkpoint_proof(self.contract, lineage, time.monotonic() + 10)
+        self.assertEqual(len(pointer_reads), 2)
+
     def test_wrong_contract_bytes_never_execute(self):
         scripts = Path(self.temp.name) / 'scripts'; scripts.mkdir()
         marker = Path(self.temp.name) / 'executed'
