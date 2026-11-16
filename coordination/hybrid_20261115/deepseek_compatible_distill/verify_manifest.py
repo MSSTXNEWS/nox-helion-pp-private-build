@@ -184,11 +184,48 @@ def validate(manifest: dict) -> dict:
         blockers.append("CHECKPOINT_STATE_INCOMPLETE")
     if checkpoint.get("independent_restore_tested") is not True:
         blockers.append("CHECKPOINT_RESTORE_NOT_TESTED")
+    restore = checkpoint.get("restore_evidence", {})
+    restore_hash_fields = (
+        "checkpoint_sha256", "optimizer_state_sha256", "scheduler_state_sha256",
+        "scaler_state_sha256", "rng_state_sha256", "verifier_source_sha256",
+    )
+    if restore.get("status") != "VERIFIED" or any(
+            not isinstance(restore.get(key), str) or not HEX64.fullmatch(restore[key])
+            for key in restore_hash_fields):
+        blockers.append("CHECKPOINT_RESTORE_RECEIPT_INVALID")
 
     if evaluation.get("status") != "VERIFIED_IMPROVEMENT":
         blockers.append("HOLDOUT_EVALUATION_NOT_ACCEPTED")
     if evaluation.get("quality_reviewed") is not True:
         blockers.append("QUALITY_REVIEW_REQUIRED")
+    if evaluation.get("frozen_holdout_same_for_baseline_and_candidate") is not True:
+        blockers.append("EVAL_HOLDOUT_NOT_IDENTICAL")
+    holdout_sha = splits.get("holdout", {}).get("sha256")
+    if (not isinstance(holdout_sha, str) or not HEX64.fullmatch(holdout_sha)
+            or evaluation.get("holdout_sha256") != holdout_sha):
+        blockers.append("EVAL_HOLDOUT_HASH_MISMATCH")
+    for key in ("baseline_student_sha256", "candidate_adapter_sha256",
+                "fixed_ru_es_case_set_sha256"):
+        value = evaluation.get(key)
+        if not isinstance(value, str) or not HEX64.fullmatch(value):
+            blockers.append("EVAL_ARTIFACT_HASH_MISSING")
+    threshold = evaluation.get("minimum_improvement_threshold")
+    metrics = evaluation.get("before_after_metrics")
+    if (type(threshold) not in {int, float} or threshold <= 0
+            or not isinstance(metrics, dict)):
+        blockers.append("RU_ES_BASELINE_METRICS_MISSING")
+    else:
+        for language in ("ru", "es"):
+            pair = metrics.get(language)
+            if (not isinstance(pair, dict)
+                    or type(pair.get("baseline")) not in {int, float}
+                    or type(pair.get("candidate")) not in {int, float}
+                    or not 0.0 <= pair["baseline"] <= 1.0
+                    or not 0.0 <= pair["candidate"] <= 1.0):
+                blockers.append("RU_ES_BASELINE_METRICS_MISSING")
+                continue
+            if pair["candidate"] - pair["baseline"] < threshold:
+                blockers.append("RU_ES_IMPROVEMENT_THRESHOLD_NOT_MET")
     for key, label in (
         ("existing_onehost_owner_lease", "OWNER_LEASE_NOT_VERIFIED"),
         ("owner_stop_admission", "STOP_ADMISSION_NOT_VERIFIED"),
