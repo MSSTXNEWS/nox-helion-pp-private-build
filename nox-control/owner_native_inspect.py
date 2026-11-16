@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Six bounded read-only probes of existing NOX, without env/credential dumps."""
 from concurrent.futures import ProcessPoolExecutor
-from maya_elf_linkage_readonly_v1 import read_elf_linkage
 from pathlib import Path
 import configparser, hashlib, json, math, os, re, shlex, shutil, stat, subprocess, time, urllib.request
 ROOT = Path('/root/nox')
@@ -906,6 +905,46 @@ def maya_p0_binary_readback(root=None, expected_sha256=None):
         result['state']='HOLD_BINARY_NOT_PRESENT'
     except (OSError, ValueError):
         result['state']='HOLD_BINARY_IO_OR_PATH'
+    return result
+
+def maya_elf_linkage_readback(root=None):
+    """Read the pinned Maya ELF's dynamic section with readelf; never invoke Maya."""
+    root = ROOT if root is None else Path(root)
+    result = {'schema':'NOX_MAYA_ELF_LINKAGE_READONLY_V1',
+              'path':str(root / MAYA_P0_BINARY_REL),
+              'pinned_sha256':MAYA_P0_BINARY_SHA256,
+              'observed_sha256':None,'bytes':None,'state':'HOLD_UNKNOWN',
+              'needed_sonames':[],'rpath':[],'cuda_driver_needed':False,
+              'cuda_runtime_needed':False,'cublas_needed':False,
+              'maya_executable_invoked':False,'cuda_context_created':False}
+    pin = maya_p0_binary_readback(root=root)
+    result['observed_sha256'] = pin.get('observed_sha256')
+    result['bytes'] = pin.get('bytes')
+    if pin.get('state') != 'SHA_PIN_MATCH_ELF_ONLY':
+        result['state'] = 'HOLD_BINARY_PIN'
+        return result
+    readelf = shutil.which('readelf')
+    if not readelf:
+        result['state'] = 'HOLD_READELF_UNAVAILABLE'
+        return result
+    try:
+        cp = subprocess.run([readelf, '-d', '--wide', result['path']],
+                            shell=False, check=False, capture_output=True,
+                            text=True, timeout=8)
+    except (OSError, subprocess.TimeoutExpired):
+        result['state'] = 'HOLD_READELF_FAILED'
+        return result
+    if cp.returncode != 0:
+        result['state'] = 'HOLD_READELF_FAILED'
+        return result
+    needed = re.findall(r'\\(NEEDED\\).*?\\[([^\\]]+)\\]', cp.stdout)
+    paths = re.findall(r'\\((?:RPATH|RUNPATH)\\).*?\\[([^\\]]*)\\]', cp.stdout)
+    result['needed_sonames'] = needed[:128]
+    result['rpath'] = paths[:8]
+    result['cuda_driver_needed'] = any(x.startswith('libcuda.so') for x in needed)
+    result['cuda_runtime_needed'] = any(x.startswith('libcudart.so') for x in needed)
+    result['cublas_needed'] = any(x.startswith(('libcublas.so', 'libcublasLt.so')) for x in needed)
+    result['state'] = 'ELF_LINKAGE_READ_ONLY'
     return result
 
 def worker(i):
