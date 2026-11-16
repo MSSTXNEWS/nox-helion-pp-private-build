@@ -12,6 +12,8 @@ from unittest.mock import patch
 
 SPEC=importlib.util.spec_from_file_location('owner_s03_gateway',Path(__file__).with_name('owner_s03_gateway.py'))
 g=importlib.util.module_from_spec(SPEC);SPEC.loader.exec_module(g)
+# Preserve the production STOP implementation: setUp mocks it for other tests.
+REAL_STOP_ACTIVE=g.stop_active
 
 
 def database(path):
@@ -47,6 +49,27 @@ class GatewayTests(unittest.TestCase):
     def tearDown(self):
         for p in reversed(self.patches):p.stop()
         self.tmp.cleanup()
+
+    def test_owner_state_stop_flag_fails_closed(self):
+        # The canonical manual eighth STOP flag must block S03 indexing.
+        # A dangling symlink is still a deliberate STOP, never "not observed".
+        flag=self.root/'state/STOP.flag'
+        for style in ('regular','dangling_symlink'):
+            with self.subTest(style=style):
+                if style=='regular':
+                    flag.write_text('OWNER_MODEL_UPDATE\\n',encoding='utf8')
+                else:
+                    flag.symlink_to(self.root/'missing-owner-stop')
+                try:
+                    with patch.object(g,'stop_active',REAL_STOP_ACTIVE):
+                        self.assertTrue(g.stop_active())
+                        with self.assertRaisesRegex(g.MemoryHold,'HOLD_S03_OWNER_STOP'):
+                            g.index_batch(self.db,identity_fn=lambda:'a'*64,
+                                          embedder=lambda *args,**kwargs: [])
+                finally:
+                    flag.unlink()
+        with patch.object(g,'stop_active',REAL_STOP_ACTIVE):
+            self.assertFalse(g.stop_active())
 
     def test_bounded_pins_leave_real_query_results(self):
         pins=[{'id':'p'+str(i),'text':'identity '+str(i),'how':'pin'} for i in range(14)]
