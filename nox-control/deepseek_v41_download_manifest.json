@@ -46,7 +46,9 @@
     "runtime_prerequisites": [
       "Linux with an available FUSE device/kernel interface",
       "fusepy installed in the owner process Python environment",
-      "the active OneHost owner lease for p0.model_download"
+      "the active OneHost owner lease for p0.model_download",
+      "a separate owner-private writable local pack directory with at least 3 GiB free",
+      "an owner-private writable SHA-receipt directory under /root/nox/state"
     ],
     "mount_mode": "read-only pinned GGUF files; only virtual /maya-ds4 maps to local writable pack-root",
     "cache": "bounded in-process RAM LRU, default 4 GiB",
