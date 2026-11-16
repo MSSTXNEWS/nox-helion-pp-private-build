@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Bind actual stopped-training evidence and export its exact saved checkpoint."""
+"""Bind the actual failed resume and measure a lossless checkpoint transfer."""
 import base64
 import hashlib
 import json
@@ -10,10 +10,11 @@ import types
 
 try:BUNDLE=__NOX_BUNDLE_JSON__
 except NameError:BUNDLE={}
-PINS={'owner_training_status_entry':'1f00315ec965166a06161283f5d79200c1c3c50031c83ffe34b42e867a8a66e7',
-      'owner_checkpoint_backup_export':'a8b7d140c02fa27e2d7839ddb42e12652e0499b956f6faea88e54c5b5e4f59e9'}
-ORIGIN={'request':'6905764817','source_sha':'e4549616aa13295febc44dc78a3a033870f9071d',
-        'receipt_sha256':'960e96fba9d24bb0835df1a46bf9971f770aaab78c0587e20a897b53fd6aeb46'}
+PINS={'owner_training_status_entry':'9b938d80a8e8769467b219f0497f00897b4cfe103cfcc693c6a70fea28491301',
+      'owner_training_restore_probe':'00edcbcc0d57a215aa30b42e77661edd3a58b4b5714f4144f334e04c2cff6e30',
+      'owner_checkpoint_backup_size_probe':'dcfc277d026bd67e7986c83de096283a4e596b100b9d917d66d7077400ea44ae'}
+ORIGIN={'request':'6906626126','source_sha':'c88d33ed8fbacaf58238921f600ec7641782b516',
+        'receipt_sha256':'8981703e8b6e65a23b4556d2eac06a851561a3cc8159716d6d740c32bcf10d2c'}
 def load(name):
     raw=base64.b64decode(BUNDLE.get(name+'.py',''),validate=True)
     if not raw or len(raw)>262144 or hashlib.sha256(raw).hexdigest()!=PINS[name]:
@@ -39,7 +40,8 @@ def main():
     finally:
         if previous is None:os.environ.pop('NOX_TRAINING_RECOVERY_CONTEXT',None)
         else:os.environ['NOX_TRAINING_RECOVERY_CONTEXT']=previous
-    backup=stage('owner_checkpoint_backup_export')
-    if status==0 and backup==0:print('NOX_MAINT_REPAIR_COMPLETE=true',flush=True)
-    return 0 if status==0 and backup==0 else 2
+    restore=stage('owner_training_restore_probe')
+    backup=stage('owner_checkpoint_backup_size_probe')
+    if status==0 and restore==0 and backup==0:print('NOX_MAINT_REPAIR_COMPLETE=true',flush=True)
+    return 0 if status==0 and restore==0 and backup==0 else 2
 if __name__=='__main__':raise SystemExit(main())
