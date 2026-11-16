@@ -145,7 +145,7 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
         for unwanted in trailing:
             with self.subTest(unwanted=unwanted):
                 chunks=Chunks([frame('early'),frame(finish='stop'),unwanted,
-                               b'data: [DONE]\\n\\n'])
+                               b'data: [DONE]\n\n'])
                 _,factory=self.transport([chunks])
                 native=self.native()
                 payload={'messages':[{'role':'user','content':'¿Prueba?'}]}
@@ -159,9 +159,9 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
                 self.assertTrue(chunks.closed)
 
     async def test_usage_only_after_terminal_still_completes_normally(self):
-        usage=b'data: {"choices":[],"usage":{"completion_tokens":1}}\\n\\n'
+        usage=b'data: {"choices":[],"usage":{"completion_tokens":1}}\n\n'
         chunks=Chunks([frame('¡Respuesta!'),frame(finish='stop'),usage,
-                       b'data: [DONE]\\n\\n'])
+                       b'data: [DONE]\n\n'])
         _,factory=self.transport([chunks])
         native=self.native()
         payload={'messages':[{'role':'user','content':'Responde'}]}
