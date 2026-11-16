@@ -1,0 +1,9 @@
+{
+  "status": "HOLD",
+  "training_started": false,
+  "target_model": "deepseek-v4.1-flash-1017-trainable",
+  "trainable_base": false,
+  "license_status": "UNVERIFIED",
+  "source_revision": null,
+  "quantized_inference_only": true
+}
