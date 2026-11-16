@@ -106,7 +106,8 @@
         "name": "mmproj-DeepSeek-V4.1-Flash-1017-BF16.gguf",
         "reason": "This candidate is text-only; vision projector is not part of student training."
       }
-    ]
+    ],
+    "inference_only": true
   },
   "student": {
     "model_id": "deepseek-ai/DeepSeek-R1-Distill-Llama-8B",
@@ -159,7 +160,11 @@
     "license_file_source": "https://huggingface.co/deepseek-ai/DeepSeek-R1-Distill-Llama-8B/resolve/6a6f4aa4197940add57724a7707d069478df56b1/LICENSE",
     "local_weight_readback": false,
     "architecture_load_tested": false,
-    "memory_fit_tested": false
+    "memory_fit_tested": false,
+    "training_target": true,
+    "config_sha256": null,
+    "tokenizer_sha256": null,
+    "weight_manifest_sha256": null
   },
   "corpus": {
     "status": "NOT_PREPARED",
