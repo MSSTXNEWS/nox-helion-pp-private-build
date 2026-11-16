@@ -58,7 +58,35 @@ class StorageTests(unittest.TestCase):
                      self.root / 'logs/owner_audit.log.8', self.root / 'logs/training.log.9',
                      self.root / 'media/models/model.safetensors.partial'):
             self.assertIsNone(storage.deletion_kind(path), path)
-        self.assertEqual(storage.deletion_kind(self.root / 'logs/chat.log.3.gz')[0], 'OLD_DEBUG_LOG_ROTATION')
+        self.assertIsNone(storage.deletion_kind(self.root / 'logs/chat.log.3.gz'))
+
+    def test_logs_and_nonregenerable_names_cannot_reclaim_with_forged_backup_flags(self):
+        paths = (
+            self.root / 'logs/chat.log.3.gz',
+            self.root / 'logs/conversation_history.log.99.gz',
+            self.root / 'logs/S03_journal.log.8.xz',
+            self.root / 'logs/skill_memory.log.7.zst',
+            self.root / 'logs/model_checkpoint.log.12.gz',
+            self.root / 'logs/history/events.log.22.gz',
+            self.root / 'logs/skills/decisions.log.16.gz',
+        )
+        for index, path in enumerate(paths):
+            with self.subTest(path=path.name, parent=path.parent.name):
+                self.file(path, b'unique conversation or state data', size=2 * 1024 * 1024)
+                self.assertIsNone(storage.deletion_kind(path))
+                candidate = {
+                    'path': str(path), 'category': 'OLD_DEBUG_LOG_ROTATION',
+                    'identity': [1, 2, 2 * 1024 * 1024, 3, 4, 0, 1],
+                    'prefix_sha256': 'a' * 64, 'backup_pc_verified': True,
+                    'backup_drive_verified': True, 'backup_pc_full_size': True,
+                    'backup_drive_full_size': True, 'backup_pc_sha256': 'b' * 64,
+                    'backup_drive_sha256': 'c' * 64, 'restore_receipt': 'PASS',
+                }
+                with self.assertRaisesRegex(storage.StorageHold, 'HOLD_STORAGE_PROTECTED_TARGET'):
+                    storage.reclaim_candidate(candidate, time.monotonic() + 2)
+                self.assertTrue(path.is_file())
+                self.assertEqual(path.stat().st_size, 2 * 1024 * 1024)
+
 
     def test_disguised_weight_header_and_partial_are_never_cache_candidates(self):
         for head in (b'GGUF' + b'0' * 20, struct.pack('<Q', 100) + b'{"tensor":', b'\x80\x04pickle'):
@@ -152,12 +180,14 @@ class StorageTests(unittest.TestCase):
                         with self.assertRaisesRegex(storage.StorageHold, 'HOLD_STORAGE_PROTECTED_TARGET'):
                             storage.reclaim_candidate(candidate, time.monotonic() + 2)
 
-    def test_core_requires_real_elf_et_core_header(self):
-        path = self.file(self.root / 'core.1234', b'not a core')
-        self.assertEqual(storage.qualify(path, path.stat(), self.now, self.usage)[1], 'NOT_ELF_CORE')
+    def test_core_files_are_not_cleanup_candidates_without_restore_evidence(self):
+        path = self.root / 'core.1234'
         head = bytearray(32); head[:4] = b'\x7fELF'; head[4] = 2; head[5] = 1; head[16:18] = b'\x04\x00'
         self.file(path, bytes(head))
-        self.assertEqual(self.candidate(path)['category'], 'INACTIVE_ELF_CORE')
+        candidate, reason = storage.qualify(path, path.stat(), self.now, self.usage)
+        self.assertIsNone(candidate)
+        self.assertEqual(reason, 'PROTECTED_OR_NOT_ALLOWLISTED')
+        self.assertIsNone(storage.deletion_kind(path))
 
     def test_exact_unlink_rechecks_identity_and_does_not_follow_link(self):
         path = self.pip_file()
