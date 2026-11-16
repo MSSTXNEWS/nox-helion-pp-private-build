@@ -67,12 +67,25 @@ def policy_load(path):
             raise ValueError("HOLD_POLICY_FILE")
         if (info.st_mode & 0o022) or info.st_uid not in (0, os.geteuid()):
             raise ValueError("HOLD_POLICY_PERMISSIONS")
-        with os.fdopen(fd, "r", encoding="utf-8") as stream:
+        # Bound the actual read, not just the pre-read size: another writer
+        # can grow a file between fstat and JSON parsing.
+        with os.fdopen(fd, "rb") as stream:
             fd = -1
-            value = json.load(stream)
+            raw = stream.read(32769)
+        if len(raw) > 32768:
+            raise ValueError("HOLD_POLICY_FILE")
     finally:
         if fd >= 0:
             os.close(fd)
+    try:
+        # A duplicate 'enabled'/'restart' key must not silently replace an
+        # earlier owner value. JSON NaN/Infinity or fractional policy numbers
+        # are not a supported admission format.
+        value = json.loads(raw, object_pairs_hook=_unique_state_pairs,
+                           parse_constant=_reject_state_nonfinite,
+                           parse_float=_reject_state_nonfinite)
+    except (ValueError, UnicodeError, TypeError) as exc:
+        raise ValueError("HOLD_POLICY_CORRUPT") from exc
     return policy_check(value)
 
 def atomic(path, obj):
