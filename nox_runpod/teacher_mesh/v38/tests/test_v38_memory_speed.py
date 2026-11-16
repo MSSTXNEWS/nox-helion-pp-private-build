@@ -1,6 +1,6 @@
 """Regression: C02 never silently omitted to make TTFT look faster."""
 from __future__ import annotations
-import json,time, unittest
+import json,time, unittest, threading
 from ..synaptic_brain import SynapticBrain, NativePorts, Session, PulseConfig
 from ..native_bridge_v38 import AttachedNOX, HostBindings, automatic_quality_mode
 from ..durable_runtime import WarmS03Cache
@@ -147,6 +147,40 @@ class RequiredMemory(unittest.TestCase):
         self.assertEqual(cache(es,'same prompt',8)[0]['content'],'native-language-es')
         self.assertEqual(cache(S,'same prompt',8)[0]['content'],'native-language-ru')
         self.assertEqual(calls,['ru','es'])
+
+    def test_cache_inflight_invalidation_never_resurrects_stale_rows(self):
+        # Same native revision before and after a global or scoped revoke.
+        # A late pre-revocation callback must never warm RAM after revoke.
+        for global_revoke in (False, True):
+            with self.subTest(global_revoke=global_revoke):
+                entered=threading.Event()
+                release=threading.Event()
+                calls=[]
+                def native(s,p,l):
+                    calls.append(True)
+                    if len(calls)==1:
+                        entered.set()
+                        release.wait(3)
+                    return [record(text='native-call-'+str(len(calls)))]
+                cache=WarmS03Cache(native,lambda s:'same-revision')
+                first=[]
+                thread=threading.Thread(
+                    target=lambda:first.extend(cache(S,'genesis',8)),daemon=True)
+                thread.start()
+                try:
+                    self.assertTrue(entered.wait(2),'native recall did not start')
+                    cache.invalidate(None if global_revoke else S)
+                finally:
+                    release.set()
+                    thread.join(3)
+                self.assertFalse(thread.is_alive())
+                self.assertEqual(len(calls),1)
+                self.assertEqual(first[0]['content'],'native-call-1')
+                fresh=cache(S,'genesis',8)
+                self.assertEqual(fresh[0]['content'],'native-call-2')
+                self.assertEqual(len(calls),2)
+                self.assertEqual(cache(S,'genesis',8)[0]['content'],'native-call-2')
+                self.assertEqual(len(calls),2)
 
     def test_cache_bypasses_foreign_chat_without_losing_authorised_record(self):
         calls=[]
