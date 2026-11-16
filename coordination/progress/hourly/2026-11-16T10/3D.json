@@ -2,8 +2,8 @@
   "schema": "NOX_WEB_WEIGHTS_V06_3D_RELAY_RECEIPT_V5",
   "instructions_version": "0.0.6",
   "slot": "3D",
-  "recorded_at_utc": "2026-11-16T07:09:30.365Z",
-  "recorded_at_msk": "2026-11-16T10:09:30.365+03:00",
+  "recorded_at_utc": "2026-11-16T07:11:30.284Z",
+  "recorded_at_msk": "2026-11-16T10:11:30.284+03:00",
   "source_head_before": "d79e5989ef965e42e2b5f4323490d5ec663e2b50",
   "scope": "SOURCE_PATCH_AND_REAL_CHROMIUM_OFFLINE_DOM_NOT_OWNER_HTTP",
   "root_cause": "Base WEB29 tablet CSS telemetry grid-column:1/-1 collided with forced one-row grid-template-rows:minmax(0,1fr), collapsing message track to 6px at 761-1399px. Existing 3D CSS had no tablet override.",
@@ -14,8 +14,8 @@
     "coordination/onepass/web29_3d_20261116/tests/test_responsive_3d_source.mjs"
   ],
   "original_base_archive_sha256": "611a3cf21b37ff79dbaece57f4c65c5efb70e0c302b5fc4b4f64dbfa060f15bc",
-  "staged_archive_sha256": "3b02e8feab56e06dce687a4dbe606d01d545aad5cc67fa8d2187b968cbcc277e",
-  "staged_archive_bytes": 84227555,
+  "staged_archive_sha256": "c3e945f60533a5e82f0ab057bfa30223867486be0fba77776a1b999b194abd5d",
+  "staged_archive_bytes": 84227519,
   "staged_archive_members": 1214,
   "staged_input_sha256": "48fa3a189b100242a3ff965e15da3ef83e426c443e275df03bdaae76dfaf413a",
   "browser_evidence": {
@@ -57,7 +57,10 @@
     "zip_crc": "PASS",
     "idle_loader_node_vm": "4/4 PASS",
     "chromium_offline_viewports": "10/10 PASS",
-    "node_source_regression": "PENDING_CI"
+    "node_source_regression": "PENDING_CI",
+    "css_git_blob_sha": "682b90bf6c3d6c0092752d67386f743e6f274cbb",
+    "staging_script_matches_css": true,
+    "stage_rolling_correction": "Fixed pin from provisional offline CSS to exact GitHub-reviewed CSS blob after readback; restaged output ZIP and reran 10 Chromium offline viewports."
   },
   "five_tasks": [
     {
