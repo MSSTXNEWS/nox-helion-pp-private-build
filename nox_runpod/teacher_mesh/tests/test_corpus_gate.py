@@ -133,7 +133,7 @@ class NightlyCorpusTests(unittest.TestCase):
             groups.setdefault(split,digest)
             if len(groups)==3:break
         self.assertEqual(set(groups),{"train","dev","holdout"})
-        data=[];owner_groups={};privacy=[]
+        data=[];owner_groups={};privacy=[];approved_content={};privacy_by_source={}
         for i,(split,group) in enumerate(sorted(groups.items())):
             source=hashlib.sha256(("receipt-%s"%split).encode()).hexdigest()
             priv=hashlib.sha256(("privacy-%s"%split).encode()).hexdigest()
@@ -144,10 +144,14 @@ class NightlyCorpusTests(unittest.TestCase):
                           privacy_receipt_sha256=priv,
                           source_provenance_verified=True,pii_review="PASS")
             data.append(record)
+            approved_content[source]=c.reviewed_payload_sha256(record)
+            privacy_by_source[source]=priv
         policy={"signed_by_native_owner":True,
                 "allow_source_disjoint_corpus":True,"stop_requested":False,
                 "source_group_sha_by_receipt":owner_groups,
-                "accepted_privacy_receipt_shas":privacy}
+                "accepted_privacy_receipt_shas":privacy,
+                "approved_content_sha_by_source_receipt":approved_content,
+                "privacy_receipt_sha_by_source_receipt":privacy_by_source}
         return data,policy
 
     def test_owner_pinned_source_disjoint_threeway(self):
@@ -186,6 +190,32 @@ class NightlyCorpusTests(unittest.TestCase):
         result=c.build_owner_pinned_threeway_sft(data,policy)
         self.assertEqual(result["status"],"HOLD_THREEWAY_SOURCE_COVERAGE")
         self.assertEqual(result["rejected"]["CROSS_SOURCE_DUPLICATE"],1)
+
+    def test_unrelated_approved_privacy_receipt_cannot_clear_source(self):
+        data,policy=self._approved_threeway()
+        data[0]["privacy_receipt_sha256"]=data[1]["privacy_receipt_sha256"]
+        result=c.build_owner_pinned_threeway_sft(data,policy)
+        self.assertEqual(result["status"],"HOLD_THREEWAY_SOURCE_COVERAGE")
+        self.assertEqual(result["rejected"]["UNPINNED_PRIVACY_RECEIPT"],1)
+
+    def test_substituted_answer_cannot_reuse_approved_source_receipt(self):
+        data,policy=self._approved_threeway()
+        data[0]["completion"]="Unreviewed replacement training response"
+        result=c.build_owner_pinned_threeway_sft(data,policy)
+        self.assertEqual(result["status"],"HOLD_THREEWAY_SOURCE_COVERAGE")
+        self.assertEqual(result["rejected"]["UNPINNED_REVIEWED_PAYLOAD"],1)
+        data,policy=self._approved_threeway()
+        data[0]["license"]="mit"
+        result=c.build_owner_pinned_threeway_sft(data,policy)
+        self.assertEqual(result["rejected"]["UNPINNED_REVIEWED_PAYLOAD"],1)
+
+    def test_owner_content_privacy_binding_required(self):
+        data,policy=self._approved_threeway()
+        for key in ("approved_content_sha_by_source_receipt",
+                    "privacy_receipt_sha_by_source_receipt"):
+            partial={k:v for k,v in policy.items() if k!=key}
+            result=c.build_owner_pinned_threeway_sft(data,partial)
+            self.assertEqual(result["status"],"HOLD_OWNER_SOURCE_CONTENT_PRIVACY_BINDINGS")
 
     def test_wrong_source_group_is_not_controlled_by_client_cluster(self):
         data,policy=self._approved_threeway()

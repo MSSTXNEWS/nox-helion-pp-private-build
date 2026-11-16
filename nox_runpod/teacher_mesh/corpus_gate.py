@@ -33,6 +33,20 @@ def canonical_hash(text: str) -> str:
     return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
 
 
+def reviewed_payload_sha256(record: dict) -> str:
+    """Exact sample attestation supplied independently by the existing owner callback.
+
+    Bind rights, teacher identity and actual training text to one source receipt.
+    No teacher or downloaded page may calculate its own trusted policy map.
+    """
+    fields=("prompt","completion","teacher_model","model_card_url",
+            "source_kind","license")
+    payload={key:record[key] for key in fields}
+    encoded=json.dumps(payload,ensure_ascii=False,sort_keys=True,
+                       separators=(",",":")).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
 def quality_gate(record: Any) -> tuple[bool,str]:
     """Fail closed. Assertions/quality must be supplied by an independent evaluator.
     A teacher reply alone does not constitute independent correctness evidence.
@@ -133,8 +147,9 @@ def build_owner_pinned_threeway_sft(records: list[dict], policy: dict,
                                     *, dev_rate: int=10, holdout_rate: int=15) -> dict:
     """Prepare a candidate; NEVER enqueue training or export without native 2D.
 
-    source_group_sha_by_receipt and privacy receipt allowlist must be supplied by
-    authenticated owner-native callbacks, NOT records, teachers or downloaded sites.
+    The source-group, exact reviewed-payload, privacy source-pair bindings and
+    privacy allowlist must be supplied by authenticated owner-native callbacks,
+    NOT records, teachers or downloaded sites.
     This function checks their shape but does not verify a cryptographic signature.
     No fixture can establish actual OneHost auth or a live Hunter/S03 receipt.
     """
@@ -164,6 +179,18 @@ def build_owner_pinned_threeway_sft(records: list[dict], policy: dict,
             or any(not isinstance(x,str) or not sha_pattern.fullmatch(x)
                    for x in privacy_shas)):
         return hold("HOLD_OWNER_PRIVACY_RECEIPTS")
+    # An approved source SHA by itself cannot certify arbitrary substituted
+    # answers, and an unrelated approved privacy receipt cannot clear this row.
+    # Both mappings are owner-provided and bound to the very same source receipt.
+    reviewed=policy.get("approved_content_sha_by_source_receipt")
+    privacy_pairs=policy.get("privacy_receipt_sha_by_source_receipt")
+    if (not isinstance(reviewed,dict) or not isinstance(privacy_pairs,dict)
+            or set(reviewed)!=set(group_map) or set(privacy_pairs)!=set(group_map)
+            or any(not isinstance(value,str) or not sha_pattern.fullmatch(value)
+                   for value in reviewed.values())
+            or any(not isinstance(value,str) or not sha_pattern.fullmatch(value)
+                   for value in privacy_pairs.values())):
+        return hold("HOLD_OWNER_SOURCE_CONTENT_PRIVACY_BINDINGS")
     privacy_allow=set(privacy_shas)
     seen_prompts,seen_completions=set(),set()
     accepted,rejected=[],{}
@@ -178,7 +205,11 @@ def build_owner_pinned_threeway_sft(records: list[dict], policy: dict,
                 or record.get("source_provenance_verified") is not True):
             rejected["UNPINNED_SOURCE_RECEIPT"]=rejected.get("UNPINNED_SOURCE_RECEIPT",0)+1
             continue
+        if reviewed_payload_sha256(record)!=reviewed[source_sha]:
+            rejected["UNPINNED_REVIEWED_PAYLOAD"]=rejected.get("UNPINNED_REVIEWED_PAYLOAD",0)+1
+            continue
         if (not isinstance(privacy_sha,str) or privacy_sha not in privacy_allow
+                or privacy_sha!=privacy_pairs[source_sha]
                 or record.get("pii_review") != "PASS"):
             rejected["UNPINNED_PRIVACY_RECEIPT"]=rejected.get("UNPINNED_PRIVACY_RECEIPT",0)+1
             continue

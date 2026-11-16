@@ -1,0 +1,59 @@
+{
+  "schema": "NOX_WEB_WEIGHTS_V06_AUTO_2C",
+  "instructions_version": "0.0.6",
+  "slot": "2C",
+  "recorded_utc": "2026-11-16T07:40:00Z",
+  "recorded_msk": "2026-11-16T10:40:00+03:00",
+  "head_before": "f5568e7725992ea58bc7e75ac5f61845c93e8073",
+  "head_after": "COMMIT_CONTAINING_THIS_RECEIPT",
+  "error_id": "NOX-P1-2C-SOURCE-RECEIPT-REPLAY-UNBOUND-PAYLOAD-PRIVACY-20261116",
+  "root_cause": "Source-group receipt only bound a group; a record could substitute unseen licensed-looking training text or borrow an unrelated owner-approved privacy receipt with self-asserted review flags.",
+  "correction": "Require independent owner-native SHA mapping of exact prompt/completion/teacher/source/license to source receipt and privacy receipt to same source receipt; reject unbound data before candidate output. Existing exporter/trainer unchanged.",
+  "lesson": "A source receipt, rights flag and global privacy allowlist are not row-specific evidence. Fail closed unless immutable owner-reviewed content and privacy are pair-bound.",
+  "source_preimage_blob_shas": {
+    "nox_runpod/teacher_mesh/corpus_gate.py": "93ccd3f647b6689e29e8890f4b3a13dc0910da22",
+    "nox_runpod/teacher_mesh/tests/test_corpus_gate.py": "76c6c63c27e9def57c93a4af4cc0b513a16cbbd3"
+  },
+  "tasks": [
+    {
+      "n": 1,
+      "state": "SOURCE_EXISTING_V27_VERIFIED_UNCHANGED"
+    },
+    {
+      "n": 2,
+      "state": "HOLD_NATIVE_NO_CURRENT_SIGNED_POLICY_STOP_LEASE_OWNER_QUEUE_CALLBACK"
+    },
+    {
+      "n": 3,
+      "state": "SOURCE_V28_REUSED_NO_NEW_MEASURED_ERROR_RECEIPTS"
+    },
+    {
+      "n": 4,
+      "state": "SOURCE_PATCHED_OWNER_PINNED_CONTENT_AND_PRIVACY_PAIR_3_REGRESSIONS_CI_PENDING_REAL_ROWS_NONE"
+    },
+    {
+      "n": 5,
+      "state": "HOLD_NATIVE_NO_CURRENT_ADMITTED_HUNTER_JOB_AND_S03_RECALL"
+    }
+  ],
+  "source_tests": "NEW_THREE_REGRESSIONS_AND_EXISTING_CORPUS_CI_PENDING_AFTER_PUSH",
+  "WEIGHTS": {
+    "successful_optimizer_updates_this_slot": null,
+    "independent_checkpoint_restore_verified": false,
+    "last_evidence": "Historical Qwen3.5-9B checkpoint8 / 8 optimizer updates; not measured this slot; no new DeepSeek distillation."
+  },
+  "KNOWLEDGE": {
+    "new_hunter_job_id": null,
+    "source_s03_readback_recall_verified": false,
+    "student_candidate_verified": false
+  },
+  "DISPATCHER_RESOURCES": {
+    "current_pid_job_lease_gpu_cgroup_ssd_readback": null,
+    "restarts": 0,
+    "downloaded_bytes": 0,
+    "deleted_bytes": 0
+  },
+  "native_deploy": false,
+  "source_scope_only": true,
+  "next_action": "Run exact SHA corpus/V28 CI; native 1C STOP/lease/owner signed policy and S03 source+privacy receipts; admit at most one original Hunter job and confirm S03 recall before handing source-disjoint corpus to 2D."
+}
