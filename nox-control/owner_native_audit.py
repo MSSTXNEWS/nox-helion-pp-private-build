@@ -111,7 +111,7 @@ def pinned_model_paths(root=MODEL_ROOT,lstat=os.lstat):
                                   'bytes':None,'expected_bytes':size,'sha_status':'NOT_CHECKED',
                                   'path_status':'HOLD_MODEL_PATH_SYMLINK'}
                                  for name,size,_ in PINNED_MODEL_FILES]}
-            if ancestor!=root_path and not __import__('stat').S_ISDIR(mode):
+            if not __import__('stat').S_ISDIR(mode):
                 return {'status':'HOLD_MODEL_ROOT_COMPONENT_TYPE','root':str(root_path),'manifest_revision':MODEL_MANIFEST_REVISION,
                         'files':[{'path':str(root_path/name),'exists':None,'type':'blocked',
                                   'bytes':None,'expected_bytes':size,'sha_status':'NOT_CHECKED',
@@ -155,7 +155,19 @@ def pinned_model_paths(root=MODEL_ROOT,lstat=os.lstat):
         except OSError as exc:
             row.update({'type':'unknown','path_status':'HOLD_MODEL_PATH_STAT_'+type(exc).__name__.upper()})
             results.append(row)
-    status='HOLD_MODEL_PATH_SYMLINK' if any(x.get('path_status')=='HOLD_MODEL_PATH_SYMLINK' for x in results) else 'OK'
+    # Overall status must fail closed. The caller must not treat unreadable, bad-sized,
+    # or nonregular candidates as a clean model inventory just because other rows passed.
+    path_holds=[r['path_status'] for r in results if r.get('path_status')]
+    if 'HOLD_MODEL_PATH_SYMLINK' in path_holds:
+        status='HOLD_MODEL_PATH_SYMLINK'
+    elif path_holds:
+        status=path_holds[0]
+    elif any(r['type'] not in ('regular','missing') for r in results):
+        status='HOLD_MODEL_TARGET_TYPE'
+    elif any(r.get('size_status')=='MISMATCH' for r in results):
+        status='HOLD_MODEL_FILE_SIZE_MISMATCH'
+    else:
+        status='OK'  # Metadata was readable; NOT a claim of full weights or SHA verification.
     return {'status':status,'root':str(root_path),'manifest_revision':MODEL_MANIFEST_REVISION,
             'files':results}
 
