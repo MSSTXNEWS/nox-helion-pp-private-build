@@ -1,0 +1,87 @@
+{
+  "schema": "NOX_WEB_WEIGHTS_V06_AUTO_2A_FAILURE_CLASSIFICATION_V1",
+  "instructions_version": "0.0.6",
+  "slot": "2A",
+  "stream": "2/3",
+  "at_utc": "2026-11-16T06:08:00Z",
+  "at_msk": "2026-11-16T09:08:00+03:00",
+  "head_before": "89fb092d573b62a89b128abaeec54356d2575698",
+  "head_after": "COMMIT_CONTAINING_RECEIPT",
+  "native_owner_evidence": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43813584758/job/133120453901",
+  "native_at_utc": "2026-11-16T05:59:25Z",
+  "issue": "NOX-P1-QWEN-FAILED-TRAINER-MISCLASSIFIED-COOPERATIVE-PAUSE-20261116",
+  "root_cause": "Read-only observers classify cooperative terminal first, hiding owned_failure=true and FATAL service",
+  "source_fixes": [
+    "nox-control/owner_qwen_window_observe_entry.py",
+    "nox-control/owner_qwen_training_status.py",
+    "nox-control/test_owner_qwen_window_observe_entry.py",
+    "nox-control/test_owner_qwen_training_status.py",
+    "coordination/hybrid_20261115/2A.md",
+    "coordination/progress/hourly/20261116_0908_AUTO_2A_QWEN_FAILURE_CLASSIFICATION_V06.json"
+  ],
+  "read_only": true,
+  "new_native_deploy": false,
+  "tasks": [
+    {
+      "n": 1,
+      "state": "HOLD_GGUF_FULL_SHA;SOURCE_ROLES_SEPARATED"
+    },
+    {
+      "n": 2,
+      "state": "PRIOR_NATIVE_16_FILES_PINNED;NO_NEW_DOWNLOAD"
+    },
+    {
+      "n": 3,
+      "state": "DONE_PREVIOUS_9B_SEPARATE_LINEAGE;NO_35B_OPTIMIZER_IMPORT"
+    },
+    {
+      "n": 4,
+      "state": "SOURCE_PREVIOUS_SFTCONFIG_FIXED;NATIVE_TRL_SIGNATURE_HOLD"
+    },
+    {
+      "n": 5,
+      "state": "SOURCE_PATCH_FAILURE_PRIORITY;NATIVE_CHECKPOINT8_VERIFIED;TRAINER_FATAL_HOLD"
+    }
+  ],
+  "tests": {
+    "native_structured_assertions": 16,
+    "native_structured_assertions_passed": 16,
+    "isolated_python_classifier_regression": "6/6_PASS",
+    "repository_unit": "ADDED_NOT_EXECUTED",
+    "native_install": "NOT_PERFORMED"
+  },
+  "WEIGHTS": {
+    "historical_owner_successful_updates": 8,
+    "delta_since_last_2A": 2,
+    "updates_by_this_slot": 0,
+    "attempted": 8,
+    "skipped": 0,
+    "checkpoint8_sha256": "107f26c33c62b7e9ee4326013bafd75ed2cc3ad03de14f5da24bcd99c57f78b2",
+    "checkpoint_files": 10,
+    "checkpoint_bytes": 519884896,
+    "holdout_latest_evaluated_update": 6,
+    "independent_offsite_restore": false,
+    "training_service": "FATAL",
+    "trainer_pid": null
+  },
+  "KNOWLEDGE": {
+    "new_hunter_s03_recall": false,
+    "new_s03_writes": 0
+  },
+  "DISPATCHER_RESOURCES": {
+    "director_pid": 724331,
+    "chat_pid": 7637,
+    "native_reviewers_verified": 0,
+    "physical_reviewer_target": 3,
+    "internal_threads": 6,
+    "cpu_quota_cores": 19.2,
+    "gpu1_mib_used": 474,
+    "live_current_lease_verified": false,
+    "quality_acceptance": "FAIL_5_OF_6",
+    "downloads_bytes": 0,
+    "restarts": 0,
+    "deleted_files": 0
+  },
+  "lesson": "Fail-close on FATAL/owned_failure before nominal cooperative pause; a SHA-verified saved optimizer update is not an active trainer or accepted held-out benchmark",
+  "next_action": "Owner-authorized existing OneHost read-only failure/handback/lease and checkpoint8 inspection; only with offsite restore and sole writer lease bounded trainer recovery plus fresh holdout."
+}

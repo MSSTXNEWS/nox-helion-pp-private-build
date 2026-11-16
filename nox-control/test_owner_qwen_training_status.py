@@ -97,7 +97,7 @@ class QwenStatusTests(unittest.TestCase):
             with self.assertRaisesRegex(status.StatusHold, 'FILE_SHA'):
                 status.checkpoint(obs, self.contract, lineage, directory.name, pin, time.monotonic() + 2)
 
-    def snapshot_fixture(self, live=False, race=False):
+    def snapshot_fixture(self, live=False, race=False, failure=False):
         lineage, saved, manifest, terminal, directory = self.checkpoint_fixture()
         fixtures.write(self.output / 'owner_lineage.json', lineage)
         fixtures.write(self.output / 'owner_progress.json', {'pid': 1234, 'successful_optimizer_steps': 5,
@@ -105,12 +105,12 @@ class QwenStatusTests(unittest.TestCase):
         obs = status.observer()
         process = {'pid': 9876, 'start_ticks': 5555, 'exact_admitted_argv': True,
                    'cuda_visible_devices_1': True, 'supervisor_ancestry_verified': True}
-        service = {'state': 'RUNNING' if live else 'EXITED', 'pid': 8888 if live else None}
+        service = {'state': 'RUNNING' if live else ('FATAL' if failure else 'EXITED'), 'pid': 8888 if live else None}
         context = dict(status.INITIAL)
         gate = {'goal': 6 if live else 5, 'current_context': context, 'configured_anchor': context,
                 'continuation_acceptance_anchor': None, 'pointer_sha256': '1' * 64, 'wrapper_sha256': '2' * 64}
         admitted = ({}, {'student_profile': {'runtime_versions': {'test': True}}}, [], gate)
-        flag = {'TRAIN_HOLD.flag': {'present': not live, 'owned_complete': not live, 'owned_failure': False},
+        flag = {'TRAIN_HOLD.flag': {'present': not live, 'owned_complete': not live and not failure, 'owned_failure': failure},
                 'TRAIN_PAUSE_REQUEST.flag': {'present': False}, 'global_stop_present': False}
         calls = [0]
         def admit(*_):
@@ -144,6 +144,12 @@ class QwenStatusTests(unittest.TestCase):
         self.assertTrue(result['live_admitted_process_verified'])
         self.assertFalse(result['current_process_model_loaded_verified'])
         self.assertTrue(result['progress_telemetry']['stale_relative_to_observed_child'])
+
+    def test_owned_failure_remains_failure_even_if_pause_helper_would_accept(self):
+        with patch.object(status, 'cooperative_pause', return_value=True):
+            result = self.snapshot_fixture(failure=True)
+        self.assertEqual(result['state'], 'HELD_AFTER_FAILURE')
+        self.assertFalse(result['live_admitted_process_verified'])
 
     def test_admission_race_cannot_leave_positive_terminal_facts_in_projection(self):
         result = self.snapshot_fixture(race=True)

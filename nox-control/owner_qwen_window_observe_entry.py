@@ -195,6 +195,20 @@ def health():
     return result
 
 
+def classify_window_state(*, live, complete, service_state, hold, cooperative_pause_verified):
+    """A failure latch or FATAL Supervisor must never be disguised as a benign pause."""
+    if (hold.get('owned_failure') or hold.get('owned_advance_failure')
+            or service_state in ('FATAL', 'BACKOFF')):
+        return 'HELD_AFTER_FAILURE'
+    if live:
+        return 'RUNNING_CURRENT_WINDOW1000'
+    if complete:
+        return 'WINDOW1000_COMPLETE_VERIFIED'
+    if service_state in ENDED and cooperative_pause_verified:
+        return 'CHECKPOINTED_OR_PAUSED'
+    return 'ADMITTED_WINDOW1000_NOT_RUNNING'
+
+
 def observe(window_context, previous_checkpoint=None):
     require(isinstance(window_context, dict), 'EXPLICIT_WINDOW_CONTEXT_REQUIRED')
     prior = previous_hint(previous_checkpoint)
@@ -292,16 +306,11 @@ def observe(window_context, previous_checkpoint=None):
                         and terminal.get('state') == 'STUDENT_RESTART_AND_UPDATES_VERIFIED'
                         and terminal.get('independent_holdout_accepted') is True and hold.get('owned_complete'))
         result['requested_window_complete'] = complete
-        if live:
-            result['state'] = 'RUNNING_CURRENT_WINDOW1000'
-        elif complete:
-            result['state'] = 'WINDOW1000_COMPLETE_VERIFIED'
-        elif after_service['state'] in ENDED and status.cooperative_pause(terminal, result['flags'], admitted['admission_started_at']):
-            result['state'] = 'CHECKPOINTED_OR_PAUSED'
-        elif hold.get('owned_failure') or hold.get('owned_advance_failure') or after_service['state'] in ('FATAL', 'BACKOFF'):
-            result['state'] = 'HELD_AFTER_FAILURE'
-        else:
-            result['state'] = 'ADMITTED_WINDOW1000_NOT_RUNNING'
+        result['state'] = classify_window_state(
+            live=live, complete=complete, service_state=after_service['state'],
+            hold=hold, cooperative_pause_verified=(
+                after_service['state'] in ENDED and status.cooperative_pause(
+                    terminal, result['flags'], admitted['admission_started_at'])))
         result['observation_completed'] = True
     except Exception as exc:
         result.update(state='HOLD_QWEN_WINDOW_OBSERVATION', reason=safe(exc), observation_completed=False,

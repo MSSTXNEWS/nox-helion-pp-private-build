@@ -79,6 +79,25 @@ class ObservationTests(unittest.TestCase):
         self.assertNotIn('PRIVATE_FIXTURE', repr(value))
         self.assertEqual(value['last_successful_updates'], 20)
 
+    def test_failure_latch_and_fatal_take_precedence_over_cooperative_pause(self):
+        cases = (
+            ('FATAL', {'owned_failure': True}, True, False, 'HELD_AFTER_FAILURE'),
+            ('EXITED', {'owned_failure': True}, True, False, 'HELD_AFTER_FAILURE'),
+            ('EXITED', {'owned_advance_failure': True}, True, False, 'HELD_AFTER_FAILURE'),
+            ('BACKOFF', {}, True, False, 'HELD_AFTER_FAILURE'),
+            ('EXITED', {}, True, False, 'CHECKPOINTED_OR_PAUSED'),
+            ('RUNNING', {}, False, True, 'RUNNING_CURRENT_WINDOW1000'),
+            ('EXITED', {}, False, False, 'ADMITTED_WINDOW1000_NOT_RUNNING'),
+        )
+        for service_state, hold, paused, live, expected in cases:
+            with self.subTest(state=service_state, hold=hold):
+                self.assertEqual(M.classify_window_state(
+                    live=live, complete=False, service_state=service_state,
+                    hold=hold, cooperative_pause_verified=paused), expected)
+        self.assertEqual(M.classify_window_state(
+            live=False, complete=True, service_state='FATAL',
+            hold={}, cooperative_pause_verified=False), 'HELD_AFTER_FAILURE')
+
     def test_source_has_no_mutating_or_model_execution_calls(self):
         source = (HERE / 'owner_qwen_window_observe_entry.py').read_text(); tree = ast.parse(source)
         forbidden = {'atomic', 'atomic_state', 'create_job', 'update_job', 'tick', 'unlink', 'mkdir', 'rename',

@@ -515,13 +515,14 @@ def snapshot(context=None):
             and proof['process_identity'].get('start_ticks') == process['start_ticks'])
         hold = result['flags']['TRAIN_HOLD.flag']
         last = result.get('last_terminal', {})
-        if live:
+        if (hold.get('owned_failure') or hold.get('owned_advance_failure')
+                or service_after['state'] in {'FATAL', 'BACKOFF'}):
+            result['state'] = 'HELD_AFTER_FAILURE'
+        elif live:
             result['state'] = 'RUNNING_CURRENT_QWEN_ADMISSION'
         elif service_after['state'] in {'STOPPED', 'EXITED', 'FATAL', 'BACKOFF'} and cooperative_pause(
                 last, result['flags'], gate.get('admission_started_at')):
             result['state'] = 'CHECKPOINTED_OR_PAUSED'
-        elif hold.get('owned_failure') or hold.get('owned_advance_failure') or service_after['state'] in {'FATAL', 'BACKOFF'}:
-            result['state'] = 'HELD_AFTER_FAILURE'
         elif last.get('successful_optimizer_steps') == gate['goal'] and hold.get('owned_complete'):
             result['state'] = last['state']
         elif result['flags']['global_stop_present'] or hold.get('present') or result['flags']['TRAIN_PAUSE_REQUEST.flag']['present']:
