@@ -264,7 +264,12 @@ def verify_distinct_native_processes(rows, *, requested, instance_id=60509551):
         pid=row.get('pid');start=row.get('process_starttime')
         if (row.get('instance_id')!=instance_id or row.get('origin')!='existing_onehost'
             or row.get('native_pid_verified') is not True or row.get('state')!='RUNNING'
-            or type(pid) is not int or pid<=1 or type(start) is not int or start<=0):continue
+            or type(pid) is not int or pid<=1 or type(start) is not int or start<=0
+            # A live PID/starttime is not enough: reject stale or unverified heartbeat.
+            or row.get('native_heartbeat_verified') is not True
+            or type(row.get('heartbeat_age_seconds')) not in (int,float)
+            or not math.isfinite(row['heartbeat_age_seconds'])
+            or not 0 <= row['heartbeat_age_seconds'] <= 600):continue
         identity=(pid,start)
         if identity in seen or pid in seen_pids:raise AutoHold('HOLD_DUPLICATE_NATIVE_PROCESS')
         seen.add(identity);seen_pids.add(pid);live.append(row)
@@ -303,6 +308,11 @@ def admit_native_tick(native, *, tasks, status, mode, memory_ratio, cpu_pressure
         return {'state':'HOLD_NATIVE_PROCESS_START','jobs_started':0}
     try:workers=verify_distinct_native_processes(native.process_readback(),requested=target,instance_id=instance_id)
     except AutoHold as e:return {'state':str(e),'jobs_started':0}
+    # ensure_processes/process_readback may cross a STOP/lease transition.
+    # In particular, an idle pool must not be reported ready after revocation.
+    if (native.owner_allowed() is not True or native.stop_active() is not False
+        or native.writer_lease() is not True):
+        return {'state':'HOLD_STOP_OR_LEASE_CHANGED','jobs_started':0}
     receipts=[];seen_job_ids=set()
     for task in ready:
         if (native.owner_allowed() is not True or native.stop_active() is not False or native.writer_lease() is not True):

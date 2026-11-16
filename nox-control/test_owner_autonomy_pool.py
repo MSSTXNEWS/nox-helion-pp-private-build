@@ -44,7 +44,8 @@ class PoolTests(unittest.TestCase):
         n.owner_allowed.return_value=True;n.stop_active.return_value=False;n.writer_lease.return_value=True
         n.ensure_processes.return_value=True;n.native_duplicate_check.return_value=False
         n.process_readback.return_value=[{'pid':30+i,'process_starttime':100+i,'native_pid_verified':True,
-            'state':'RUNNING','instance_id':60509551,'origin':'existing_onehost'} for i in range(3)]
+            'state':'RUNNING','instance_id':60509551,'origin':'existing_onehost',
+            'native_heartbeat_verified':True,'heartbeat_age_seconds':1} for i in range(3)]
         n.native_queue_claim.side_effect=lambda task,owner_pids:{'job_id':'native-'+task['id']}
         n.s03_readback.side_effect=lambda tid,jid:{'task_id':tid,'job_id':jid,'native_verified':True,
             'receipt_sha256':'b'*64}
@@ -88,7 +89,8 @@ class PoolTests(unittest.TestCase):
         self.assertEqual(len(pool.choose_ready(rows,status={'job.00000':'done'},mode='NORMAL',memory_ratio=.4)),3)
 
     def test_no_thread_alias_as_os_process(self):
-        bad=[{'pid':777,'process_starttime':1,'native_pid_verified':True,'state':'RUNNING','instance_id':60509551,'origin':'existing_onehost'}]*3
+        bad=[{'pid':777,'process_starttime':1,'native_pid_verified':True,'state':'RUNNING','instance_id':60509551,'origin':'existing_onehost',
+            'native_heartbeat_verified':True,'heartbeat_age_seconds':1}]*3
         with self.assertRaisesRegex(pool.AutoHold,'DUPLICATE_NATIVE_PROCESS'):
             pool.verify_distinct_native_processes(bad,requested=3)
 
@@ -109,7 +111,8 @@ class PoolTests(unittest.TestCase):
         n=Mock();n.owner_allowed.return_value=True;n.stop_active.return_value=False;n.writer_lease.return_value=True
         n.ensure_processes.return_value=True
         for mode,count in [('NORMAL',3),('FORSAZH',6)]:
-            n.process_readback.return_value=[{'pid':20+i,'process_starttime':100+i,'native_pid_verified':True,'state':'RUNNING','instance_id':60509551,'origin':'existing_onehost'} for i in range(count)]
+            n.process_readback.return_value=[{'pid':20+i,'process_starttime':100+i,'native_pid_verified':True,'state':'RUNNING','instance_id':60509551,'origin':'existing_onehost',
+            'native_heartbeat_verified':True,'heartbeat_age_seconds':1} for i in range(count)]
             result=pool.admit_native_tick(n,tasks=[],status={},mode=mode,memory_ratio=.5)
             self.assertEqual(result['state'],'NATIVE_POOL_READY_IDLE')
             self.assertEqual(result['active_subexecutor_processes'],count)
@@ -124,7 +127,8 @@ class PoolTests(unittest.TestCase):
         n.owner_allowed.return_value=True;n.stop_active.return_value=False;n.writer_lease.return_value=True
         n.ensure_processes.return_value=True
         n.process_readback.return_value=[{'pid':60+i,'process_starttime':100+i,'native_pid_verified':True,
-            'state':'RUNNING','instance_id':60509551,'origin':'existing_onehost'} for i in range(3)]
+            'state':'RUNNING','instance_id':60509551,'origin':'existing_onehost',
+            'native_heartbeat_verified':True,'heartbeat_age_seconds':1} for i in range(3)]
         r=pool.tick_existing_dispatcher({'_nox_owner_autonomy_native':n},{},mode='NORMAL')
         self.assertEqual(r['state'],'NATIVE_POOL_READY_IDLE')
         self.assertEqual(r['active_subexecutor_processes'],3)
@@ -133,7 +137,8 @@ class PoolTests(unittest.TestCase):
         task=pool.validate_page({'schema':pool.SCHEMA,'tasks':self.make_rows(3)},allowed_handlers={'owner_component'})
         n=Mock();n.owner_allowed.return_value=True;n.stop_active.return_value=False;n.writer_lease.return_value=True
         n.ensure_processes.return_value=True
-        n.process_readback.return_value=[{'pid':10+i,'process_starttime':100+i,'native_pid_verified':True,'state':'RUNNING','instance_id':60509551,'origin':'existing_onehost'} for i in range(3)]
+        n.process_readback.return_value=[{'pid':10+i,'process_starttime':100+i,'native_pid_verified':True,'state':'RUNNING','instance_id':60509551,'origin':'existing_onehost',
+            'native_heartbeat_verified':True,'heartbeat_age_seconds':1} for i in range(3)]
         n.native_duplicate_check.return_value=False
         n.native_queue_claim.side_effect=lambda task,owner_pids:{'job_id':'native-'+task['id']}
         n.s03_readback.side_effect=lambda tid,jid:{'task_id':tid,'job_id':jid,'native_verified':True,'receipt_sha256':'b'*64}
@@ -153,7 +158,8 @@ class PoolTests(unittest.TestCase):
         n.native_duplicate_check.return_value=False
         n.process_readback.return_value=[
             {'pid':500+i,'process_starttime':1000+i,'native_pid_verified':True,
-             'state':'RUNNING','instance_id':60509551,'origin':'existing_onehost'}
+             'state':'RUNNING','instance_id':60509551,'origin':'existing_onehost',
+            'native_heartbeat_verified':True,'heartbeat_age_seconds':1}
             for i in range(3)]
         n.native_queue_claim.side_effect=lambda task,owner_pids:{'job_id':'native-'+task['id']}
         n.s03_readback.side_effect=lambda tid,jid:{
@@ -193,7 +199,8 @@ class PoolTests(unittest.TestCase):
 
     def test_reused_pid_with_different_starttime_not_extra_worker(self):
         rows=[{'pid':777,'process_starttime':100+i,'native_pid_verified':True,
-               'state':'RUNNING','instance_id':60509551,'origin':'existing_onehost'}
+               'state':'RUNNING','instance_id':60509551,'origin':'existing_onehost',
+            'native_heartbeat_verified':True,'heartbeat_age_seconds':1}
               for i in range(3)]
         with self.assertRaisesRegex(pool.AutoHold,'DUPLICATE_NATIVE_PROCESS'):
             pool.verify_distinct_native_processes(rows,requested=3)
@@ -221,5 +228,41 @@ class PoolTests(unittest.TestCase):
         self.assertEqual(pool.classify_native_job_proof({'terminal_state':'COMPLETED',
             'execution_verified':True,'result_sha256':'c'*64,
             'task_note':'ADMITTED_NOT_EXECUTED'}),'ADMITTED_NOT_EXECUTED')
+
+    def test_native_process_requires_recent_independent_heartbeat(self):
+        valid=[{'pid':701+i,'process_starttime':2000+i,'native_pid_verified':True,
+                'native_heartbeat_verified':True,'heartbeat_age_seconds':1,
+                'state':'RUNNING','instance_id':60509551,'origin':'existing_onehost'}
+               for i in range(3)]
+        self.assertEqual(len(pool.verify_distinct_native_processes(valid,requested=3)),3)
+        for delta in ({'native_heartbeat_verified':False},
+                      {'native_heartbeat_verified':None},
+                      {'heartbeat_age_seconds':601},
+                      {'heartbeat_age_seconds':-1},
+                      {'heartbeat_age_seconds':float('nan')},
+                      {'heartbeat_age_seconds':True}):
+            rows=[dict(x) for x in valid]
+            rows[1].update(delta)
+            with self.subTest(delta=str(delta)), self.assertRaisesRegex(pool.AutoHold,'UNVERIFIED_OS_PROCESS_COUNT'):
+                pool.verify_distinct_native_processes(rows,requested=3)
+        rows=[dict(x) for x in valid]
+        del rows[1]['heartbeat_age_seconds']
+        with self.assertRaisesRegex(pool.AutoHold,'UNVERIFIED_OS_PROCESS_COUNT'):
+            pool.verify_distinct_native_processes(rows,requested=3)
+
+    def test_stop_revoked_while_ensuring_idle_processes(self):
+        n=self._native_claim_mock()
+        n.stop_active.side_effect=[False,True]
+        out=pool.admit_native_tick(n,tasks=[],status={},mode='NORMAL',memory_ratio=.5)
+        self.assertEqual(out['state'],'HOLD_STOP_OR_LEASE_CHANGED')
+        self.assertEqual(out['jobs_started'],0)
+        n.native_queue_claim.assert_not_called()
+
+    def test_writer_lease_revoked_before_idle_readback_acceptance(self):
+        n=self._native_claim_mock()
+        n.writer_lease.side_effect=[True,False]
+        out=pool.admit_native_tick(n,tasks=[],status={},mode='NORMAL',memory_ratio=.5)
+        self.assertEqual(out['state'],'HOLD_STOP_OR_LEASE_CHANGED')
+        n.native_queue_claim.assert_not_called()
 
 if __name__=='__main__':unittest.main()
