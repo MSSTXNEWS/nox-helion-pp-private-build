@@ -32,7 +32,8 @@
     "native_external_mount": "NOT_DETECTED_IN_ALLOWLISTED_MOUNT_PATHS",
     "native_rclone_remote_count": 0,
     "native_writer_lease": "UNKNOWN",
-    "native_seekable_external_storage": "NOT_PROVEN"
+    "native_seekable_external_storage": "NOT_PROVEN",
+    "d3_metadata_crosscheck": "LOCAL_SOURCE_VERIFIED_72_ROWS_TWO_SMALL_FILE_SHA_39_PART_METADATA"
   },
   "requirements": {
     "D1": {
@@ -76,7 +77,28 @@
       "abi": "CP311_LINUX_CU126",
       "historical_existing_native_abi": "PY312_CU124_SM70",
       "admission": "HOLD_ISOLATED_ABI_AND_SM70_SMOKE",
-      "payload_digest_this_run": "NOT_CHECKED"
+      "payload_digest_this_run": "NOT_CHECKED",
+      "lock_manifest_crosscheck": {
+        "status": "SOURCE_METADATA_SHA_VERIFIED_NOT_NATIVE_INSTALLED",
+        "source": "Google Drive original files: training_wheelhouse_manifest.json, requirements-cp311-linux-cu126.lock, parts_manifest.json, training_wheelhouse_archive.json",
+        "wheelhouse_manifest_sha256": "58795a1d71d32aa390b6765fd97c64639832b3672a5726dae9820ab2e20cca3d",
+        "requirements_lock_sha256": "8484b77f5020abd8e8d62f667845ee5da23684be7b4e738ec8f5833b98f3c362",
+        "wheelhouse_archive_expected_sha256": "7f1b932f38df0872ee21e009eb8f3005da5eb99b662a372dcb389e8d4e056b95",
+        "split_parts": 39,
+        "split_part_metadata_exact_name_and_size_matches": 39,
+        "split_parts_total_bytes": 3831295823,
+        "lock_entries": 72,
+        "matching_entries": 72,
+        "manifest_distinct_artifacts": 72,
+        "manifest_official_sha_rows": 72,
+        "target_tag_compatible_metadata_rows": 72,
+        "target_python_compatible_metadata_rows": 72,
+        "wheel_payload_sum_bytes": 3831088888,
+        "verification_scope": "Direct SHA256 of two retrieved small metadata files, local 72-row lock/manifest semantic crosscheck, Google Drive 39 part names/sizes; 3.831GB archive payload and individual part contents NOT rehashed on OneHost in this pass",
+        "native_python_312_cuda_124_sm70": "HOLD_UNMATCHED_ABI_NO_GPU_SMOKE",
+        "package_install": "NOT_ATTEMPTED",
+        "owner_stop_lease": "UNKNOWN_CURRENT"
+      }
     },
     "D4": {
       "kind": "REUSE_IF_HASH_VERIFIED",
