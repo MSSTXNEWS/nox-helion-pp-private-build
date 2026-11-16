@@ -1,0 +1,71 @@
+{
+  "schema": "NOX_WEB29_PRIMARY_V2",
+  "instructions_version": "0.0.6",
+  "owner_decision_date": "2026-11-16",
+  "owner_decision": "Use the original WEB29 with 14 planets/objects and cinematic D02 as primary. Proper separate progress page in that template with menu entry. The already-ready progress panel is temporarily allowed inside the current NOX chat. Never replace the template with a newly drawn shell.",
+  "visual_family": "NOX_WEB29_ORIGINAL_14_WORLDS_D02",
+  "integration_build_numbers_are_not_visual_versions": ["V135", "V137", "V140"],
+  "primary_archive": {
+    "drive_id": "1R9RXZN0FJUJJUq8sJ_n1k3Rh1YcY3R5N",
+    "url": "https://drive.google.com/file/d/1R9RXZN0FJUJJUq8sJ_n1k3Rh1YcY3R5N/view",
+    "filename": "NOX_HELION_WEB29_MAIN_20261116.zip",
+    "bytes": 84223045,
+    "sha256": "611a3cf21b37ff79dbaece57f4c65c5efb70e0c302b5fc4b4f64dbfa060f15bc",
+    "drive_metadata_readback": true,
+    "local_crc_verified": true
+  },
+  "source_patch": {
+    "drive_id": "1UhCrgNTCqx51LMB3LLP3ovPgubjwPIYI",
+    "url": "https://drive.google.com/file/d/1UhCrgNTCqx51LMB3LLP3ovPgubjwPIYI/view",
+    "bytes": 215462,
+    "sha256": "0ed57b69297bdf07415d1cc9bb50121dfb66ef5dff4c91b84ce9d7a18177b25b",
+    "contains": ["SHA-pinned staging script", "overlay source", "original-S03 progress journal", "six-process portable tests", "visual source locks"]
+  },
+  "source_base": {
+    "drive_id": "1gXuvcoep-5LT49GFF60XfKGC1igxVijH",
+    "filename": "NOX_HELION_WEB_V29_3_UNIFIED_ALL_HISTORY_20261115.zip",
+    "sha256": "cf5a4bbec37a4224a03f814f6c89d3417d6406dac03dfdea2085689295492826"
+  },
+  "routes": {
+    "home": "site/index.html",
+    "progress_template_page": "site/progress.html",
+    "main_chat": "site/chat.html",
+    "existing_pc_chat_compatibility": "site/pc/resonance.html",
+    "temporary_ready_panel": "site/pc/progress.html?embedded=1",
+    "owner_static_prefix": "/nox-web-v29/",
+    "progress_data": "/api/nox/evolution?hours=24",
+    "existing_model_stream": "/api/nox/chat/stream"
+  },
+  "preservation": {
+    "original_paths_retained": 1162,
+    "deleted_original_paths": [],
+    "protected_cinematic_files": 512,
+    "protected_bytes_identical": true,
+    "versions_compared": ["V29.3 frozen", "V29.5 WEB", "V29.3 unified history", "V29.3 accelerated candidate"],
+    "original_main_scene_not_redrawn": true,
+    "obsolete_duplicate_progress_menu_entry_removed": "work.02",
+    "original_and_new_rollback_preimages_preserved": true,
+    "drive_old_sources_deleted": false
+  },
+  "checks": {
+    "parallel_processes": 6,
+    "overlap_verified": true,
+    "local_comparison_and_ui_assertions_passed": 101,
+    "portable_pack_assertions_passed": 96,
+    "portable_pack_assertions_total": 96,
+    "scope": "LOCAL_SOURCE_SQLITE_FIXTURES_AND_OFFLINE_BROWSER_DOM",
+    "browser_http_navigation": "BLOCKED_BY_ADMINISTRATOR; no bypass attempted; local DOM test harness used",
+    "draft_and_original_STOP_nodes_retained": true,
+    "frame_disposed_on_close": true,
+    "source_snapshot_not_counted_as_native_training": true,
+    "roundtrip_stage_sha_verified": true,
+    "existing_target_overwrite_refused": true
+  },
+  "status": "SOURCE_PACKAGE_SAVED_NOT_NATIVE_DEPLOYED",
+  "native_deployed": false,
+  "native_progress_writer_bound": false,
+  "native_hourly_dispatcher_bound": false,
+  "new_backend_created": false,
+  "new_trainer_created": false,
+  "next_action": "Use this primary artifact, not an alternate visual shell. Through the existing authorized OneHost deployment path validate current serving preimages, stage with rollback, bind the prepared progress module to original owner/S03/dispatcher, then verify authenticated browser navigation, stream, STOP, S03 and hourly readback. Do not infer production installation from this source receipt."
+}
