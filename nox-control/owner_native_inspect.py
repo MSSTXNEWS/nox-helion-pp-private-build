@@ -550,16 +550,21 @@ def memory_metadata_inventory(roots):
     files=[];seen=set()
     for root in roots:
         if root.is_symlink() or not root.is_dir(): continue
+        # Sort candidate names together before inode deduplication: per-extension
+        # traversal once kept c_alias.sqlite instead of canonical c.sqlite3.
+        # Preserve the existing 50-per-extension and 100-total bounds.
+        candidates=set()
         for pattern in ('*.db','*.sqlite','*.sqlite3'):
-            for p in sorted(root.glob(pattern))[:50]:
-                if p.is_symlink() or not p.is_file(): continue
-                try: st=p.stat()
-                except OSError: continue
-                key=(st.st_dev,st.st_ino)
-                if key in seen: continue
-                seen.add(key)
-                files.append({'path':str(p),'bytes':st.st_size,'mtime':st.st_mtime})
-                if len(files)>=100: return files
+            candidates.update(sorted(root.glob(pattern))[:50])
+        for p in sorted(candidates):
+            if p.is_symlink() or not p.is_file(): continue
+            try: st=p.stat()
+            except OSError: continue
+            key=(st.st_dev,st.st_ino)
+            if key in seen: continue
+            seen.add(key)
+            files.append({'path':str(p),'bytes':st.st_size,'mtime':st.st_mtime})
+            if len(files)>=100: return files
     return files
 
 def chat_storage():
