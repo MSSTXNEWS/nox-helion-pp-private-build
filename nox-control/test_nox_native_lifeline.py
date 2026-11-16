@@ -240,5 +240,39 @@ class LifelineTests(unittest.TestCase):
             self.assertEqual(result["results"][0]["action"], "owner_investigation_required")
             self.assertTrue(all(cmd[1] == "status" for cmd in seen))
 
+    def test_persisted_malformed_service_record_preserves_existing_file(self):
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "state.json"
+            raw = '{"services":{"nox-dispatcher-t855u":null}}'
+            path.write_text(raw, encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "HOLD_STATE_SERVICE_ROW"):
+                lifeline.read_state(path)
+            self.assertEqual(path.read_text(encoding="utf-8"), raw)
+
+    def test_corrupt_in_memory_repair_ledger_is_not_reset_or_restarted(self):
+        with tempfile.TemporaryDirectory() as d:
+            for value in (None, ["damaged"]):
+                state = {"_path": Path(d) / "state.json", "services": value}
+                with self.assertRaisesRegex(ValueError, "HOLD_REPAIR_HISTORY_CORRUPT"):
+                    lifeline.tick(policy(), state, now=1000,
+                        status_fn=lambda *_: {"state": "STOPPED", "pid": None},
+                        stop_fn=lambda: False)
+                self.assertEqual(state["services"], value)
+            state = {"_path": Path(d) / "state.json",
+                     "services": {"nox-dispatcher-t855u": "damaged"}}
+            with self.assertRaisesRegex(ValueError, "HOLD_REPAIR_HISTORY_CORRUPT"):
+                lifeline.tick(policy(), state, now=1000,
+                    status_fn=lambda *_: {"state": "STOPPED", "pid": None},
+                    stop_fn=lambda: False)
+            self.assertEqual(state["services"]["nox-dispatcher-t855u"], "damaged")
+
+    def test_supervisor_nonzero_rc_never_reports_running_from_stdout(self):
+        with patch.object(lifeline.subprocess, "run") as run:
+            run.return_value.stdout = "nox-dispatcher-t855u RUNNING pid 123, uptime 0:01:00\\n"
+            run.return_value.returncode = 1
+            status = lifeline.supervise("nox-dispatcher-t855u")
+            self.assertEqual(status, {"state": "UNKNOWN", "pid": None, "rc": 1})
+
+
 if __name__=="__main__":
     unittest.main()
