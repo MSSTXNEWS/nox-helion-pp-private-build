@@ -126,7 +126,7 @@ def atomic_json(path,value):
 def stop_active():
     return any(path.exists() or path.is_symlink() for path in (
         ROOT/'STOP',ROOT/'STOP.flag',ROOT/'stop.flag',ROOT/'.stop',ROOT/'program/STOP',
-        ROOT/'state/STOP',ROOT/'state/MEMORY_STOP.flag',Path('/workspace/NOX_STOP')))
+        ROOT/'state/STOP',ROOT/'state/STOP.flag',ROOT/'state/MEMORY_STOP.flag',Path('/workspace/NOX_STOP')))
 
 
 @contextlib.contextmanager
