@@ -170,9 +170,28 @@ class StorageTests(unittest.TestCase):
         self.assertIn('OPEN_OR_MEMORY_MAPPED', row['hold_codes'])
         self.assertTrue(path.exists())
 
-        row = storage.teacher_candidate_review(path, observation_error=PermissionError(13, 'denied'))
+        row = storage.teacher_candidate_review(path, observation_error=PermissionError(
+            13, 'API_KEY=secret-value path=/root/private traceback=private-stack'))
         self.assertIn('OSERROR_EACCES', row['hold_codes'])
+        self.assertEqual(row['safe_exception_reason'], 'OSERROR_EACCES')
+        serialized = json.dumps(row)
+        for private in ('secret-value', '/root/private', 'private-stack'):
+            self.assertNotIn(private, serialized)
+
+        SecretNamedError = type('API_KEY_secret-value_/root/private_traceback', (Exception,), {})
+        for bad_error in (
+            SecretNamedError('API_KEY=secret-value /root/private traceback=private-stack'),
+            storage.StorageHold('API_KEY_SECRET_VALUE'),
+        ):
+            row = storage.teacher_candidate_review(path, observation_error=bad_error)
+            self.assertEqual(row['safe_exception_reason'],
+                             'OBSERVATION_ERROR_UNCLASSIFIED' if isinstance(bad_error, SecretNamedError)
+                             else 'STORAGE_HOLD_UNCLASSIFIED')
+            serialized = json.dumps(row)
+            for private in ('secret-value', 'API_KEY_SECRET_VALUE', '/root/private', 'private-stack'):
+                self.assertNotIn(private, serialized)
         row = storage.teacher_candidate_review(path, observation_error=storage.StorageHold('HOLD_STORAGE_SYMLINK'))
+        self.assertEqual(row['safe_exception_reason'], 'HOLD_STORAGE_SYMLINK')
         self.assertIn('HOLD_STORAGE_SYMLINK', row['hold_codes'])
         row = storage.teacher_candidate_review(path, observation_error='SYMLINK_NOT_FOLLOWED')
         self.assertIn('SYMLINK_NOT_FOLLOWED', row['hold_codes'])

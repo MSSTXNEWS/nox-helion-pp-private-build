@@ -44,6 +44,11 @@ LEGACY_TEACHERS = {
     '/root/nox/models/teachers/saiga_nemo_12b.Q4_K_M.gguf': 7477204832,
     '/root/nox/models/teachers/vikhr-nemo-12b-instruct-r-21-09-24-q4_k_m.gguf': 7477218656,
 }
+SAFE_TEACHER_STORAGE_HOLD_CODES = frozenset({
+    'HOLD_STORAGE_SYMLINK',
+    'HOLD_STORAGE_FILE_SCOPE',
+    'HOLD_NOT_REGULAR_EPHEMERAL_FILE',
+})
 PARTIAL = re.compile(r'(?i)(?:\.part(?:ial)?|\.incomplete|\.download|\.tmp|\.lock)(?:[.-]|$)')
 WEIGHT_SUFFIX = {'.gguf', '.safetensors', '.pt', '.pth', '.bin', '.ckpt', '.onnx', '.h5', '.npz'}
 PROTECTED_WORDS = {'s03', 'memory', 'memories', 'checkpoints', 'checkpoint', 'ckpt', 'lora',
@@ -276,19 +281,23 @@ def teacher_candidate_review(path, info=None, usage=None, observation_error=None
     codes = ['TEACHER_WEIGHTS_PROTECTED',
              'TWO_INDEPENDENT_SHA_VERIFIED_PC_AND_DRIVE_COPIES_REQUIRED']
     observation = 'OBSERVED_METADATA' if info is not None else 'NOT_OBSERVED_WITHIN_BOUNDED_AUDIT'
+    safe_exception_reason = None
     if observation_error is not None:
         observation = 'OBSERVATION_ERROR'
         if observation_error == 'SYMLINK_NOT_FOLLOWED':
-            codes.append('SYMLINK_NOT_FOLLOWED')
+            safe_exception_reason = 'SYMLINK_NOT_FOLLOWED'
         elif isinstance(observation_error, StorageHold):
             token = str(observation_error)
-            codes.append(token if re.fullmatch(r'[A-Z0-9_]{1,96}', token)
-                         else 'STORAGE_HOLD_UNCLASSIFIED')
+            safe_exception_reason = (token if token in SAFE_TEACHER_STORAGE_HOLD_CODES
+                                     else 'STORAGE_HOLD_UNCLASSIFIED')
         elif isinstance(observation_error, OSError):
             code = errno.errorcode.get(observation_error.errno, 'UNKNOWN')
-            codes.append('OSERROR_' + code)
+            if not re.fullmatch(r'E[A-Z0-9]+|UNKNOWN', code):
+                code = 'UNKNOWN'
+            safe_exception_reason = 'OSERROR_' + code
         else:
-            codes.append('OBSERVATION_ERROR_' + type(observation_error).__name__)
+            safe_exception_reason = 'OBSERVATION_ERROR_UNCLASSIFIED'
+        codes.append(safe_exception_reason)
     if info is None and observation_error is None:
         codes.append('NOT_OBSERVED_WITHIN_BOUNDED_AUDIT')
     if info is not None:
@@ -306,6 +315,7 @@ def teacher_candidate_review(path, info=None, usage=None, observation_error=None
             codes.append('OPEN_OR_MEMORY_MAPPED')
     return {'path_id': digest_bytes(path.encode())[:20], 'observation': observation,
             'expected_bytes': expected, 'observed_bytes': info.st_size if info is not None else None,
+            'safe_exception_reason': safe_exception_reason,
             'hold_codes': list(dict.fromkeys(codes)), 'deletion_authorized': False}
 
 
