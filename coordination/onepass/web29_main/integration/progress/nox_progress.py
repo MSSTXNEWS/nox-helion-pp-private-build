@@ -153,11 +153,21 @@ class ProgressJournal:
         if collector_complete is not True or kind not in KINDS:raise ValueError('COMPLETE_NATIVE_COLLECTOR_REQUIRED')
         h=iso(hour(stamp(hour_utc)))
         with self.db(True) as db:db.execute('INSERT OR IGNORE INTO nox_evolution_coverage VALUES(?,?,?)',(owner,h,kind))
-    def _events(self,owner,start,end,limit=5001):
+    def _events(self,owner,start,end,limit=5001,*,allow_sentinel=False):
         with self.db() as db:
-            rows=db.execute('SELECT payload FROM nox_evolution_events WHERE owner=? AND at_utc>=? AND at_utc<? ORDER BY at_utc DESC,event_id DESC LIMIT ?',(owner,iso(start),iso(end),limit)).fetchall()
-        if len(rows)>=limit:raise ValueError('WINDOW_TOO_DENSE_REDUCE_RANGE')
-        return [json.loads(x[0]) for x in rows]
+            rows=db.execute('SELECT payload,digest FROM nox_evolution_events WHERE owner=? AND at_utc>=? AND at_utc<? ORDER BY at_utc DESC,event_id DESC LIMIT ?',(owner,iso(start),iso(end),limit)).fetchall()
+        if len(rows)>=limit and not allow_sentinel:raise ValueError('WINDOW_TOO_DENSE_REDUCE_RANGE')
+        # The snapshot requests one overflow sentinel; finalization must
+        # still reject a dense hour instead of publishing an incomplete card.
+        events=[]
+        for payload,recorded_sha in rows:
+            try: event=json.loads(payload)
+            except (TypeError,ValueError) as exc: raise ValueError('EVENT_DIGEST_MISMATCH') from exc
+            if not (isinstance(event,dict) and isinstance(recorded_sha,str) and
+                    SHA.fullmatch(recorded_sha) and digest(event)==recorded_sha):
+                raise ValueError('EVENT_DIGEST_MISMATCH')
+            events.append(event)
+        return events
     def _coverage(self,owner,h):
         with self.db() as db:return {x[0] for x in db.execute('SELECT kind FROM nox_evolution_coverage WHERE owner=? AND hour_utc=?',(owner,iso(h)))}
     def finalize_hour(self,owner,h,*,now=None):
@@ -207,7 +217,7 @@ class ProgressJournal:
         start=hour(now)-timedelta(hours=hours-1);end=hour(now)+timedelta(hours=1)
         # Query one extra row to detect overflow, but never ship >5000 records
         # to the existing browser contract (which rejects an oversized response).
-        fetched=self._events(owner,start,min(end,now+timedelta(seconds=1)),limit=5001)
+        fetched=self._events(owner,start,min(end,now+timedelta(seconds=1)),limit=5001,allow_sentinel=True)
         truncated=len(fetched)>5000
         events=fetched[:5000]
         cards=[];all_coverage=set(KINDS);expected_closed=0;verified_closed=0
@@ -245,7 +255,7 @@ class ProgressJournal:
                     for kind,group in groups.items()}
         return {'schema':SCHEMA,'mode':'native','generated_at':iso(now),'window_start':iso(start),'timezone':'Europe/Moscow','groups':groups,'metrics':metrics,'hours':list(reversed(cards)),'events':events,'truncated':truncated,
                 'hourly_readback':{'expected_closed':expected_closed,'persisted_verified':verified_closed,
-                                   'complete':expected_closed==verified_closed}}
+                                   'complete':not truncated and expected_closed==verified_closed}}
 
 def register_progress(app, trusted, journal):
     """Mount read-only owner-auth route inside the existing FastAPI app."""

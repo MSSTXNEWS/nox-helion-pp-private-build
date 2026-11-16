@@ -1,0 +1,77 @@
+{
+  "schema": "NOX_WEB_WEIGHTS_V07_3C_RECEIPT",
+  "instructions_version": "0.0.6",
+  "slot": "3C",
+  "at_utc": "2026-11-16T12:51:18.252Z",
+  "base_head": "bab1e38999f6792039e850218fcfefda453a63c2",
+  "source_commit": "THIS_COMMIT",
+  "source_blobs_before": {
+    "coordination/onepass/web29_main/integration/progress/nox_progress.py": "30a1a20c23da6b832860ce5d28afc0aea0a19ba5",
+    "coordination/onepass/web29_main/test_nox_progress_hourly_v3c.py": "ce87dcdc01335af3094ae44d3d551665cbb3ab78"
+  },
+  "fix": "Native S03 _events() rejected 5001 sentinel rows before snapshot could return truncated 5000-event HOLD; event rows were not digest-checked on read. Preserve dense-hour rejection for finalized hourly cards, allow read-only snapshot sentinel and validate original S03 event digest.",
+  "five_tasks": [
+    {
+      "n": 1,
+      "state": "DONE_SOURCE",
+      "evidence": "Original /api/nox/evolution contract unchanged; sentinel query repaired and native S03 readback integrity checked"
+    },
+    {
+      "n": 2,
+      "state": "DONE_SOURCE",
+      "evidence": "Three independent self_improvement/knowledge/weights groups marked UNKNOWN/HOLD for truncated window; no new callback/DB"
+    },
+    {
+      "n": 3,
+      "state": "DONE_SOURCE_EXISTING",
+      "evidence": "Existing header metrics, 3 event columns, provenance, status filters left untouched; snapshot under overflow delivers bounded events without fake totals"
+    },
+    {
+      "n": 4,
+      "state": "DONE_SOURCE_EXISTING_HOLD_NATIVE",
+      "evidence": "Persisted hourly cards protected: finalize_hour keeps dense-hour rejection; hourly_readback.complete false under clipped window; live S03 owner hour unverified"
+    },
+    {
+      "n": 5,
+      "state": "DONE_SOURCE_TEST_PENDING_CI_HOLD_NATIVE",
+      "evidence": "Two real SQLite regression tests added for 5001 overflow and payload digest mismatch; native auth/browser/device acceptance unverified"
+    }
+  ],
+  "relay_control": [
+    {
+      "lane": "WEIGHTS",
+      "state": "HOLD_NO_NEW_NATIVE_RECEIPT",
+      "student": "Qwen3.5-9B historical checkpoint25",
+      "new_successful_optimizer_updates": 0,
+      "checkpoint_restore_verified": false,
+      "trainer_pid": null
+    },
+    {
+      "lane": "KNOWLEDGE",
+      "state": "HOLD_NO_NEW_NATIVE_HUNTER_S03_RECALL",
+      "verified_hunter_to_s03_recall": false
+    },
+    {
+      "lane": "DISPATCHER+RESOURCES",
+      "state": "HOLD_NO_FRESH_NATIVE_STOP_LEASE",
+      "pid": null,
+      "three_workers": null,
+      "stop": null,
+      "writer_lease": null,
+      "gpu": null,
+      "ssd": null,
+      "downloads_bytes": 0,
+      "restarts": 0,
+      "deleted_bytes": 0
+    }
+  ],
+  "proof_scope": "SOURCE_PATCH_ONLY; tested by existing GitHub CI after commit if triggered; not native-deployed",
+  "native_actions": {
+    "server_write": false,
+    "stop_reset": false,
+    "train_restart": false,
+    "delete": false,
+    "model_switch": false
+  },
+  "next": "Existing owner-authorized V51 read-only STOP/lease, current WEB29 module SHA and recoverable rollback, then one fenced deployment and real authenticated S03 hourly/browser readback"
+}

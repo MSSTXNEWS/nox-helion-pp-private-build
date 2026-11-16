@@ -176,4 +176,48 @@ class S03HoursTest(unittest.TestCase):
       endpoint=self._owner_route(invalid,owner,lambda:types.SimpleNamespace(status_code=401))
       self.assertEqual(asyncio.run(endpoint(request)).status_code,401)
 
+
+  def test_real_s03_5001_event_overflow_is_bounded_without_false_pass(self):
+    # Use actual SQLite, not a mocked _events() result. The extra row is
+    # the sentinel and must never become a failed/503 snapshot.
+    at='2026-11-16T01:25:00Z'
+    def row(i):
+      event={'id':f'dense-{i}','kind':'knowledge','subject_key':f'dense-{i}',
+             'at':at,'title':'source event','summary':'source','detail':'source only',
+             'state':'source','evidence':'source','tags':[],'sources':[],
+             'proof':{},'delta':None}
+      return OWNER,event['id'],'knowledge',event['subject_key'],at,mod.encode(event),mod.digest(event)
+    with sqlite3.connect(self.path) as db:
+      db.executemany('INSERT INTO nox_evolution_events VALUES(?,?,?,?,?,?,?)',
+                     (row(i) for i in range(5001)))
+    snap=self.j.snapshot(OWNER,NOW,2)
+    self.assertEqual(len(snap['events']),5000)
+    self.assertTrue(snap['truncated'])
+    self.assertFalse(snap['hourly_readback']['complete'])
+    for kind in mod.KINDS:
+      self.assertFalse(snap['groups'][kind]['complete'])
+      self.assertIsNone(snap['groups'][kind]['value'])
+      self.assertEqual(snap['groups'][kind]['state'],'blocked')
+    # The native dispatcher may not finalize a partial hour.
+    with self.assertRaisesRegex(ValueError,'WINDOW_TOO_DENSE_REDUCE_RANGE'):
+      self.j.finalize_hour(OWNER,mod.hour(NOW)-timedelta(hours=1),now=NOW)
+    with sqlite3.connect(self.path) as db:
+      db.execute('DELETE FROM nox_evolution_events WHERE owner=? AND event_id=?',
+                 (OWNER,'dense-5000'))
+    exact=self.j.snapshot(OWNER,NOW,2)
+    self.assertFalse(exact['truncated'])
+    self.assertEqual(len(exact['events']),5000)
+
+  def test_existing_s03_event_payload_digest_mismatch_fails_closed(self):
+    event={'id':'tamper-1','kind':'knowledge','subject_key':'tamper-1',
+           'at':'2026-11-16T01:25:00Z','title':'original','summary':'original',
+           'detail':'native not claimed','state':'source','evidence':'source',
+           'tags':['source'],'sources':[],'proof':{}}
+    self.j.record(OWNER,event,now=NOW)
+    with sqlite3.connect(self.path) as db:
+      db.execute('UPDATE nox_evolution_events SET payload=? WHERE owner=? AND event_id=?',
+                 (mod.encode({**event,'title':'tampered'}),OWNER,'tamper-1'))
+    with self.assertRaisesRegex(ValueError,'EVENT_DIGEST_MISMATCH'):
+      self.j.snapshot(OWNER,NOW,2)
+
 if __name__=='__main__':unittest.main(verbosity=2)
