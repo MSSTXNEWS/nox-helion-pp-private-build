@@ -363,6 +363,17 @@ def save_checkpoint(output, model, optimizer, scheduler, scaler, state, lineage,
     target = output / name
     if target.exists():
         raise Hold("HOLD_STUDENT_CHECKPOINT_COLLISION")
+    # Fail before writing a new checkpoint if its ownership ledger is invalid.
+    # This cannot repair an old failed publication, but preserves the last
+    # acknowledged pointer and every existing optimizer/RNG snapshot.
+    ledger_path = output / "owner_checkpoints.json"
+    ledger = read_json(ledger_path) if ledger_path.exists() else {
+        "schema": "NOX_QWEN_OWNED_CHECKPOINTS_V1",
+        "lineage_sha256": canonical_sha(lineage), "checkpoints": []}
+    if (ledger.get("schema") != "NOX_QWEN_OWNED_CHECKPOINTS_V1"
+            or ledger.get("lineage_sha256") != canonical_sha(lineage)
+            or not isinstance(ledger.get("checkpoints"), list)):
+        raise Hold("HOLD_CHECKPOINT_OWNERSHIP_LEDGER")
     temporary = Path(tempfile.mkdtemp(prefix=".checkpoint-", dir=output))
     model.save_pretrained(temporary, safe_serialization=True, save_embedding_layers=False)
     torch.save(optimizer.state_dict(), temporary / "optimizer.pt")
@@ -392,19 +403,17 @@ def save_checkpoint(output, model, optimizer, scheduler, scaler, state, lineage,
         os.fsync(fd)
     finally:
         os.close(fd)
-    atomic_json(output / "latest_checkpoint.json", {"directory": name,
-                "manifest_sha256": sha256_file(target / "checkpoint_manifest.json")})
-    ledger_path = output / "owner_checkpoints.json"
-    ledger = read_json(ledger_path) if ledger_path.exists() else {
-        "schema": "NOX_QWEN_OWNED_CHECKPOINTS_V1", "lineage_sha256": canonical_sha(lineage), "checkpoints": []}
-    if ledger.get("schema") != "NOX_QWEN_OWNED_CHECKPOINTS_V1" or ledger.get("lineage_sha256") != canonical_sha(lineage):
-        raise Hold("HOLD_CHECKPOINT_OWNERSHIP_LEDGER")
     ledger["checkpoints"].append({"directory": name,
         "manifest_sha256": sha256_file(target / "checkpoint_manifest.json"),
         "successful_total": state["successful_total"], "attempted_total": state["attempted_total"],
         "evaluated_at_current_step": state["holdout_evaluated_successful_total"] == state["successful_total"],
         "holdout_loss": state["last_holdout_loss"], "retained": True})
     atomic_json(ledger_path, ledger)
+    # Commit the owner ledger before publishing the new latest pointer.
+    # A failed ledger write leaves the old pointer intact. Do not delete
+    # the new checkpoint folder: it may contain the only fresh optimizer.
+    atomic_json(output / "latest_checkpoint.json", {"directory": name,
+                "manifest_sha256": sha256_file(target / "checkpoint_manifest.json")})
     prune_checkpoints(output, lineage)
     return target, record
 

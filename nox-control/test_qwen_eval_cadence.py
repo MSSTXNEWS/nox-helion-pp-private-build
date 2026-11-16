@@ -163,5 +163,119 @@ class CheckpointRetentionNoLossTest(unittest.TestCase):
                        if isinstance(x, ast.Call) and isinstance(x.func, ast.Attribute)}
             self.assertFalse(methods & {"unlink", "rmdir", "rmtree", "remove"})
 
+
+class CheckpointPublicationOrderingTest(unittest.TestCase):
+    """Exercise the real save_checkpoint function with file-only fake dependencies."""
+
+    def _exercise(self, *, fail_ledger=False, invalid_ledger=False):
+        import hashlib
+        import json
+        import os
+        import random
+        import tempfile
+        import time
+        import types
+
+        tree = ast.parse(SOURCE.read_text(encoding="utf-8"), filename=str(SOURCE))
+        fn = [n for n in tree.body if isinstance(n, ast.FunctionDef)
+              and n.name == "save_checkpoint"]
+        self.assertEqual(len(fn), 1)
+
+        class Model:
+            def save_pretrained(self, path, **_kwargs):
+                (path / "adapter_model.safetensors").write_bytes(b"unique-new-adapter")
+                (path / "adapter_config.json").write_text("{}")
+
+        class Torch:
+            cuda = types.SimpleNamespace(get_rng_state_all=lambda: [b"cuda"])
+            get_rng_state = staticmethod(lambda: b"cpu")
+            save = staticmethod(lambda value, path: Path(path).write_bytes(repr(value).encode()))
+
+        digest = lambda value: hashlib.sha256(json.dumps(
+            value, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+        sha_file = lambda path: hashlib.sha256(Path(path).read_bytes()).hexdigest()
+        lineage = {"base": "exact-qwen-pinned-test"}
+        old_pointer = {"directory": "checkpoint-u00000001-a00000001-g00000000000000000001",
+                       "manifest_sha256": "a" * 64}
+        previous_ledger = {"schema": "NOX_QWEN_OWNED_CHECKPOINTS_V1",
+                           "lineage_sha256": digest(lineage), "checkpoints": []}
+        if invalid_ledger:
+            previous_ledger["lineage_sha256"] = "b" * 64
+
+        with tempfile.TemporaryDirectory() as d:
+            output = Path(d)
+            pointer_path = output / "latest_checkpoint.json"
+            ledger_path = output / "owner_checkpoints.json"
+            pointer_path.write_text(json.dumps(old_pointer))
+            ledger_path.write_text(json.dumps(previous_ledger))
+            calls = []
+
+            def write(path, value, **_kwargs):
+                path = Path(path)
+                calls.append(path.name)
+                if fail_ledger and path == ledger_path:
+                    raise OSError("injected ledger disk-write failure")
+                path.write_text(json.dumps(value, sort_keys=True, allow_nan=False))
+
+            def read(path):
+                return json.loads(Path(path).read_text())
+
+            namespace = {"Path": Path, "GIB": 1024 ** 3, "Hold": Hold,
+                         "ROOT": output, "tempfile": tempfile, "time": time,
+                         "os": os, "random": random, "torch": Torch,
+                         "check_resources": lambda *_args, **_kwargs: None,
+                         "read_json": read, "atomic_json": write,
+                         "canonical_sha": digest, "sha256_file": sha_file,
+                         "adapter_hash": lambda *_: "c" * 64,
+                         "process_identity": lambda: {"pid": 1},
+                         "prune_checkpoints": lambda *_: calls.append("prune")}
+            exec(compile(ast.Module(body=fn, type_ignores=[]),
+                         str(SOURCE), "exec"), namespace)
+            fake = types.SimpleNamespace(state_dict=lambda: {"ok": True})
+            invoke = lambda: namespace["save_checkpoint"](
+                output, Model(), fake, fake, fake,
+                {"successful_total": 2, "attempted_total": 2,
+                 "holdout_evaluated_successful_total": 2,
+                 "last_holdout_loss": 1.2},
+                lineage, Torch)
+
+            if invalid_ledger:
+                with self.assertRaises(Hold):
+                    invoke()
+                self.assertFalse(any(p.name.startswith("checkpoint-u") for p in output.iterdir()))
+                self.assertNotIn("owner_checkpoints.json", calls)
+            elif fail_ledger:
+                with self.assertRaises(OSError):
+                    invoke()
+                # No orphan is silently deleted; latest still points to the prior
+                # acknowledged version, and the original ledger is unchanged.
+                self.assertTrue(any(p.name.startswith("checkpoint-u") for p in output.iterdir()))
+                self.assertIn("owner_checkpoints.json", calls)
+                self.assertNotIn("latest_checkpoint.json", calls)
+            else:
+                folder, record = invoke()
+                self.assertTrue((folder / "optimizer.pt").is_file())
+                pointer = read(pointer_path)
+                ledger = read(ledger_path)
+                self.assertEqual(pointer["directory"], folder.name)
+                self.assertEqual(ledger["checkpoints"][-1]["directory"], folder.name)
+                self.assertEqual(pointer["manifest_sha256"], sha_file(folder / "checkpoint_manifest.json"))
+                self.assertLess(calls.index("owner_checkpoints.json"),
+                                calls.index("latest_checkpoint.json"))
+                self.assertEqual(calls[-1], "prune")
+            if fail_ledger or invalid_ledger:
+                self.assertEqual(read(pointer_path), old_pointer)
+                self.assertEqual(read(ledger_path), previous_ledger)
+
+    def test_successful_checkpoint_publishes_owner_ledger_first(self):
+        self._exercise()
+
+    def test_failed_ledger_write_does_not_advance_latest_pointer(self):
+        self._exercise(fail_ledger=True)
+
+    def test_invalid_ledger_fails_before_large_checkpoint_write(self):
+        self._exercise(invalid_ledger=True)
+
+
 if __name__ == "__main__":
     unittest.main()
