@@ -41,17 +41,17 @@
     "model_merge": "exact compatible base and evaluated adapters only; heterogeneous teacher knowledge through validated distillation",
     "new_visual_request": true
   },
-  "download_state_this_run": "STACK_ALREADY_INSTALLED_NATIVE_VERIFIED_NO_NEW_MODEL_DOWNLOAD",
+  "download_state_this_run": "MEDIA_DEPENDENCY_REPAIR_DISPATCHED_SELECTED_ASSETS_PENDING_NATIVE_SHA",
   "components": [
     {
       "name": "rclone",
       "priority": "P0",
-      "state": "INSTALLED_REMOTE_AUTH_MISSING",
+      "state": "PC_HELPERS_INSTALLED_PC_CONNECTION_AND_DRIVE_AUTH_PENDING",
       "source": "https://rclone.org/install/",
       "use": "Existing Drive or owner PC SFTP remote, immutable copy and streaming readback; do not create public storage",
       "id": "component-1",
       "owner_executor": "nox-agent-05",
-      "decision": "CONFIGURE_OWNER_PC_OAUTH"
+      "decision": "PC_FIRST_SHA_COPY_THEN_DRIVE_COPY_READBACK"
     },
     {
       "name": "PyTorch CUDA SM70",
@@ -118,12 +118,18 @@
     {
       "name": "existing llama.cpp CUDA inference",
       "priority": "P0",
-      "state": "RUNNING_NATIVE_HEALTH_200_SIX_SLOTS",
+      "state": "LIVE_STREAM_S03_HISTORY_NATIVE_VERIFIED",
       "source": "https://github.com/ggml-org/llama.cpp",
       "use": "Prompt cache, supported KV formats, batching, thread counts and actual SSE TTFT/tokens per second; inspect existing PIDs before stopping anything",
       "id": "component-7",
       "owner_executor": "nox-agent-03",
-      "decision": "REUSE_AND_PATCH_EXISTING_CHAT"
+      "decision": "KEEP_CURRENT_MODEL_MEASURE_BEFORE_QUANTIZATION_CHANGE",
+      "acceptance": {
+        "first_turn_total_ms": 4479,
+        "history_turn_total_ms": 760,
+        "workers_turn_first_ms": 592,
+        "browser_visual_qa": "PENDING"
+      }
     },
     {
       "name": "PyTorch data pipeline",
@@ -149,12 +155,12 @@
     {
       "name": "S03 semantic retrieval",
       "priority": "P1",
-      "state": "EXISTING_BGE_M3_ENDPOINT_8082_HEALTH_200_SQLITE_VEC_ABSENT_IN_TRAINING_VENV",
+      "state": "BGE_ENDPOINT_HEALTH_200_S03_RECALL_LEXICAL_WITH_PINS",
       "source": "https://github.com/asg017/sqlite-vec",
-      "use": "Optional compatible extension only if needed; same S03, bounded parallel retrieval, no duplicate memory database",
+      "use": "One S03 database; inspect actual schema, index the same records with the existing BGE service and verify retrieval quality; do not label FTS as semantic retrieval",
       "id": "component-10",
       "owner_executor": "nox-agent-04",
-      "decision": "VERIFY_EXISTING_S03_BEFORE_OPTIONAL_EXTENSION"
+      "decision": "FIX_PIN_PRIORITY_AND_INTEGRATE_EXISTING_BGE"
     },
     {
       "name": "C01-C08/M0-M7/Reflection/Self-model",
@@ -177,46 +183,119 @@
       "decision": "DO_NOT_DUPLICATE_EXISTING_TEACHERS_OR_MERGE_INCOMPATIBLE_WEIGHTS"
     },
     {
-      "id": "nox-image-engine",
-      "name": "FLUX.2 klein 4B distilled image/editing candidate",
-      "priority": "P1",
-      "owner_executor": "nox-agent-06",
-      "state": "PRIMARY_SOURCE_VERIFIED_NOT_NATIVE_INSTALLED",
-      "decision": "CHECK_EXISTING_MEDIA_RUNTIME_EXACT_FILES_FP16_AND_RAM_ADMISSION",
-      "source": "https://huggingface.co/black-forest-labs/FLUX.2-klein-4B",
-      "license": "Apache-2.0",
-      "use": "Expose as NOX image feature while retaining model/license metadata; V100 latency and numerical path unverified"
-    },
-    {
-      "id": "nox-video-engine",
-      "name": "Wan2.2 TI2V 5B FP16 candidate",
-      "priority": "P1",
-      "owner_executor": "nox-agent-06",
-      "state": "PRIMARY_SOURCE_RESEARCH_NOT_NATIVE_INSTALLED",
-      "decision": "CHECK_EXISTING_MEDIA_RUNTIME_EXACT_FILES_DTYPE_AND_RAM_ADMISSION",
-      "source": "https://huggingface.co/Wan-AI/Wan2.2-TI2V-5B",
-      "license": "Verify exact repository license before install",
-      "use": "Text/image to video through existing ComfyUI if available; serialize GPU1 generation with checkpointed training when memory is insufficient"
-    },
-    {
       "id": "work-experience-learning",
       "name": "Verified work experience and error corrections",
       "priority": "P0",
       "owner_executor": "nox-agent-02",
-      "state": "SOURCE_IMPLEMENTATION_IN_PROGRESS",
+      "state": "REVIEWED_LIFECYCLE_READY_NATIVE_INSTALL_PENDING",
       "decision": "QUARANTINE_UNVERIFIED_FAILURES_AND_MENTOR_ADVICE",
       "source": "nox-control/owner_dispatcher_mentor.py",
-      "use": "Evidence-backed accepted examples with provenance and holdout; no claims that task logs are optimizer updates"
+      "use": "Claim-bound receipts and verified train/holdout examples; optimizer changes require separate training evidence"
+    },
+    {
+      "id": "nox-image-engine",
+      "name": "NOX image / SDXL-Lightning 4 step",
+      "priority": "P1",
+      "owner_executor": "nox-agent-06",
+      "state": "SELECTED_PREPARATION_BLOCKED_DEPENDENCY_REPAIR_DISPATCHED",
+      "source": "https://huggingface.co/ByteDance/SDXL-Lightning",
+      "license": "openrail++",
+      "workflow": "sdxl_lightning_4step",
+      "artifact_ids": [
+        "media-sdxl-lightning-4step"
+      ],
+      "use": "Loopback ComfyUI through existing authenticated NOX media queue; actual decoded PNG required"
+    },
+    {
+      "id": "nox-video-engine",
+      "name": "NOX video / Wan2.1 T2V 1.3B",
+      "priority": "P1",
+      "owner_executor": "nox-agent-06",
+      "state": "SELECTED_PREPARATION_BLOCKED_DEPENDENCY_REPAIR_DISPATCHED",
+      "source": "https://huggingface.co/Comfy-Org/Wan-2.1",
+      "license": "apache-2.0",
+      "workflow": "wan21_t2v_13b",
+      "artifact_ids": [
+        "media-wan21-13b",
+        "media-umt5-scaled",
+        "media-wan-vae"
+      ],
+      "use": "FP16 compute on V100, scaled FP8 text-encoder storage with non-FP8 fallback; decoded multi-frame WEBM required"
+    },
+    {
+      "id": "senior-model-gateway",
+      "name": "Bounded senior adviser gateway",
+      "priority": "P1",
+      "owner_executor": "nox-agent-01",
+      "state": "REVIEWED_SOURCE_READY_NATIVE_INSTALL_AND_API_ACCESS_PENDING",
+      "source": "nox-control/owner_senior_gateway.py",
+      "use": "One verified adviser works; a council requires 2+ actual replies; no private S03 text or secrets sent; advice is evaluated before application"
+    },
+    {
+      "id": "pc-warm-storage",
+      "name": "PC / Drive warm weights and verified backups",
+      "priority": "P0",
+      "owner_executor": "nox-agent-05",
+      "state": "SERVER_HELPERS_INSTALLED_PC_LINK_NOT_YET_VERIFIED",
+      "source": "nox-control/NOX_CONNECT_PC.ps1",
+      "use": "PC copy first, full SHA verification, then authenticated Drive copy and readback; RAM is a cache and never a backup"
+    },
+    {
+      "id": "owner-proactive-reports",
+      "name": "Durable owner event outbox",
+      "priority": "P1",
+      "owner_executor": "nox-agent-02",
+      "state": "AUTHENTICATED_API_AND_UI_INSTALLED_DISPATCHER_BIND_PENDING",
+      "source": "nox-control/owner_event_outbox.py",
+      "use": "Persist reports without an open browser and replay them on reconnect; external push channel not configured"
     }
   ],
   "storage_layout": {
-    "hot": "active chat model and active training state stay local",
-    "warm": "bounded RAM cache with cgroup reserve; cache is not backup",
-    "cold": "verified inactive model objects on an existing authorized Drive or PC storage",
-    "eviction": "only after byte-level remote readback, current explicit inactive inventory and shared native writer lease; never S03, active model, unique checkpoints or sole backups"
+    "SSD": {
+      "keep": [
+        "active GGUF",
+        "exact active training base",
+        "current resumable optimizer checkpoint",
+        "S03 and dialog history",
+        "code and small configuration"
+      ],
+      "evict_after_verified_copies": [
+        "inactive old GGUFs",
+        "inactive teacher files",
+        "superseded compatible checkpoints",
+        "large archived source weights"
+      ]
+    },
+    "RAM": {
+      "use": [
+        "admitted selected media cache",
+        "one requested warm weight object at a time"
+      ],
+      "reserve_bytes": 3221225472,
+      "cgroup_headroom_reserve_bytes": 17179869184,
+      "backup": false,
+      "all_73GB_HF_base_fits_current_tmpfs": false
+    },
+    "PC": {
+      "use": [
+        "first durable backup",
+        "inactive weights",
+        "Drive overflow"
+      ],
+      "state": "CONNECTION_PENDING"
+    },
+    "Google_Drive": {
+      "use": [
+        "second verified copy",
+        "portable cold store"
+      ],
+      "state": "AUTH_PENDING"
+    },
+    "eviction": "Only inactive exact objects after PC + Drive readback verification; safe reproducible caches may be reclaimed separately",
+    "warm_rehydration": "REQUEST_COPY_VERIFY_ADMIT_LOAD_READY_NOT_YET_END_TO_END_VERIFIED"
   },
-  "schema_version": 2,
-  "native_inventory_source": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43773699907",
+  "schema_version": 3,
+  "native_inventory_source": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43778292660",
   "installed_package_versions": {
     "torch": "2.6.0+cu124",
     "transformers": "5.23.0",
@@ -267,9 +346,161 @@
     }
   ],
   "large_download_admission": {
-    "disk_free_bytes_at_inspection": 16387645440,
-    "shm_free_bytes_at_inspection": 18033119232,
+    "disk_free_bytes_at_inspection": 15729852416,
+    "shm_free_bytes_at_inspection": 20749209600,
     "full_new_models_fit_not_verified": true,
-    "no_deletion_before_two_verified_copies": true
+    "no_deletion_before_two_verified_copies": true,
+    "selected_media_bytes": 16766066457
+  },
+  "updated_at": "2026-11-16T00:27:18.076985+00:00",
+  "evidence": {
+    "inventory_run": 43778292660,
+    "chat_acceptance_run": 43779355450,
+    "pc_helper_install_run": 43778550498,
+    "media_repair_source": "e88dc6f974f33552336143e553c0a0d0cd1ce7ce",
+    "media_repair_run": 43780220533,
+    "browser_acceptance": "STARTUP_FAILED_TARGET_CLOSED_DIAGNOSIS_PENDING"
+  },
+  "artifacts": [
+    {
+      "kind": "image",
+      "role": "checkpoint",
+      "subdir": "checkpoints",
+      "repo": "ByteDance/SDXL-Lightning",
+      "revision": "c9a24f48e1c025556787b0c58dd67a091ece2e44",
+      "source_path": "sdxl_lightning_4step.safetensors",
+      "filename": "sdxl_lightning_4step.safetensors",
+      "bytes": 6938040682,
+      "sha256": "e0d996ee0013e79d9d3561f50fcafb9a17e3ff07b780358e3b66d67932c4d490",
+      "license": "openrail++",
+      "workflow": "sdxl_lightning_4step",
+      "id": "media-sdxl-lightning-4step",
+      "source": "https://huggingface.co/ByteDance/SDXL-Lightning/resolve/c9a24f48e1c025556787b0c58dd67a091ece2e44/sdxl_lightning_4step.safetensors",
+      "state": "SELECTED_WAITING_FOR_NATIVE_SHA_VERIFICATION",
+      "selected": true,
+      "preferred_tier": "RAM_CACHE",
+      "fallback_tier": "SSD_IF_ADMITTED",
+      "cold_tiers": [
+        "OWNER_PC",
+        "OWNER_GOOGLE_DRIVE"
+      ],
+      "download_max_parallel": 3
+    },
+    {
+      "kind": "video",
+      "role": "unet",
+      "subdir": "diffusion_models",
+      "repo": "Comfy-Org/Wan-2.1",
+      "revision": "123acf1cc74bccbb9bfff8ac1ee72edc08c2341d",
+      "source_path": "split_files/diffusion_models/wan2.1_t2v_1.3B_fp16.safetensors",
+      "filename": "wan2.1_t2v_1.3B_fp16.safetensors",
+      "bytes": 2838303560,
+      "sha256": "be531024cd9018cb5b48c40cfbb6a6191645b1c792eb8bf4f8c1c6e10f924dc5",
+      "license": "apache-2.0",
+      "workflow": "wan21_t2v_13b",
+      "id": "media-wan21-13b",
+      "source": "https://huggingface.co/Comfy-Org/Wan-2.1/resolve/123acf1cc74bccbb9bfff8ac1ee72edc08c2341d/split_files/diffusion_models/wan2.1_t2v_1.3B_fp16.safetensors",
+      "state": "SELECTED_WAITING_FOR_NATIVE_SHA_VERIFICATION",
+      "selected": true,
+      "preferred_tier": "RAM_CACHE",
+      "fallback_tier": "SSD_IF_ADMITTED",
+      "cold_tiers": [
+        "OWNER_PC",
+        "OWNER_GOOGLE_DRIVE"
+      ],
+      "download_max_parallel": 3
+    },
+    {
+      "kind": "video",
+      "role": "clip",
+      "subdir": "text_encoders",
+      "repo": "Comfy-Org/Wan-2.1",
+      "revision": "123acf1cc74bccbb9bfff8ac1ee72edc08c2341d",
+      "source_path": "split_files/text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+      "filename": "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+      "bytes": 6735906897,
+      "sha256": "c3355d30191f1f066b26d93fba017ae9809dce6c627dda5f6a66eaa651204f68",
+      "license": "apache-2.0",
+      "workflow": "wan21_t2v_13b",
+      "id": "media-umt5-scaled",
+      "source": "https://huggingface.co/Comfy-Org/Wan-2.1/resolve/123acf1cc74bccbb9bfff8ac1ee72edc08c2341d/split_files/text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+      "state": "SELECTED_WAITING_FOR_NATIVE_SHA_VERIFICATION",
+      "selected": true,
+      "preferred_tier": "RAM_CACHE",
+      "fallback_tier": "SSD_IF_ADMITTED",
+      "cold_tiers": [
+        "OWNER_PC",
+        "OWNER_GOOGLE_DRIVE"
+      ],
+      "download_max_parallel": 3
+    },
+    {
+      "kind": "video",
+      "role": "vae",
+      "subdir": "vae",
+      "repo": "Comfy-Org/Wan-2.1",
+      "revision": "123acf1cc74bccbb9bfff8ac1ee72edc08c2341d",
+      "source_path": "split_files/vae/wan_2.1_vae.safetensors",
+      "filename": "wan_2.1_vae.safetensors",
+      "bytes": 253815318,
+      "sha256": "2fc39d31359a4b0a64f55876d8ff7fa8d780956ae2cb13463b0223e15148976b",
+      "license": "apache-2.0",
+      "workflow": "wan21_t2v_13b",
+      "id": "media-wan-vae",
+      "source": "https://huggingface.co/Comfy-Org/Wan-2.1/resolve/123acf1cc74bccbb9bfff8ac1ee72edc08c2341d/split_files/vae/wan_2.1_vae.safetensors",
+      "state": "SELECTED_WAITING_FOR_NATIVE_SHA_VERIFICATION",
+      "selected": true,
+      "preferred_tier": "RAM_CACHE",
+      "fallback_tier": "SSD_IF_ADMITTED",
+      "cold_tiers": [
+        "OWNER_PC",
+        "OWNER_GOOGLE_DRIVE"
+      ],
+      "download_max_parallel": 3
+    }
+  ],
+  "selected_asset_bytes": 16766066457,
+  "optional_unselected_candidates": [
+    {
+      "id": "flux2-klein-4b",
+      "reason": "Separate challenger only after baseline quality/latency and storage admission; not a missing required download"
+    },
+    {
+      "id": "wan22-ti2v-5b",
+      "reason": "Larger optional challenger, not required for selected Wan2.1 integration"
+    }
+  ],
+  "current_brain": {
+    "state": "ACTIVE_MMAP_INODE_VERIFIED",
+    "file": "nox36-mix_final_pref-Q4_K_M.gguf",
+    "bytes": 21836629568,
+    "architecture": "qwen35moe",
+    "gpu": 0,
+    "slots": 6,
+    "total_context_tokens": 196608,
+    "slot_context_tokens": 32768,
+    "kv_cache": "Q8",
+    "model_format": "Q4_K_M",
+    "hash_or_lineage_does_not_prove_all_adapters_merged": true
+  },
+  "training": {
+    "state": "OWNER_HOLD_OPTIMIZED_ENTRY_INSTALLED_NOT_RUNNING",
+    "gpu": 1,
+    "approach": "NF4 exact-base LoRA with FP32 trainable adapters and FP16 AMP on SM70",
+    "smoke_steps_required": 5,
+    "continuation_target_steps": 1000,
+    "verified_new_optimizer_steps": 0,
+    "same_optimizer_lineage_required": true,
+    "checkpoint_artifacts": [
+      "adapter_model.safetensors",
+      "adapter_config.json",
+      "optimizer.pt",
+      "scheduler.pt",
+      "rng_state.pth",
+      "trainer_state.json",
+      "scaler.pt"
+    ],
+    "merged_promotion": "EXACT_BASE_AND_EVALUATION_REQUIRED",
+    "teachers_distilled": 0
   }
 }

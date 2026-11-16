@@ -1,0 +1,44 @@
+{
+  "schema": "NOX_OWNER_TASK_LIFECYCLE_V1",
+  "s03_source_sha256": "82c592ea5a59281fb5fc1061d133ac4e149b8e95a6d0947a254882715cba7f91",
+  "shared_memory_retrieval": "LEXICAL_WITH_PINS",
+  "parallelism": {
+    "global_worker_cap": 6,
+    "normal_target": 3,
+    "task_boost_target": 6,
+    "minimum_decomposable_branches": 3,
+    "maximum_decomposable_branches": 6,
+    "maximum_branch_depth": 1,
+    "adaptive": true,
+    "preserve_dependencies_and_exclusive_locks": true
+  },
+  "core_availability": {
+    "preserve": ["chat", "shared_memory", "dispatcher", "owner_reports"],
+    "training_yield": "CHECKPOINT",
+    "no_browser_connection_required": true
+  },
+  "reporting": {
+    "delivery": "EXISTING_OWNER_SESSION_ONLY",
+    "verified_completion_required": true,
+    "error_cooldown_seconds": 300,
+    "progress_cooldown_seconds": 60,
+    "emit_idle_cards": false
+  },
+  "senior_consultation": {
+    "module": "owner_senior_gateway",
+    "per_distinct_plan": true,
+    "caller_budget_seconds": 2.0,
+    "export_private_memory_text": false,
+    "execute_generated_commands": false,
+    "new_optimization_candidates": "EVALUATE_BEFORE_APPLYING"
+  },
+  "coverage": {
+    "task_execution": "EXISTING_DISPATCHER_REVIEWED_PLANS",
+    "standalone_supervisor_worm_lifecycle": "NOT_IMPLEMENTED",
+    "legacy_failure_gateway_adapter": "NOT_IMPLEMENTED",
+    "training_mutation_route": "WAIT_TRAINING_ADMISSION",
+    "download_mutation_route": "WAIT_DOWNLOAD_ADMISSION",
+    "automatic_candidate_evaluation": "NOT_IMPLEMENTED",
+    "internet_research": "NOT_IMPLEMENTED"
+  }
+}
