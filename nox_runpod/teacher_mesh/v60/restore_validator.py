@@ -423,6 +423,9 @@ def verify_offsite_candidate(
     except Exception:
         raise RuntimeError("HOLD_OWNER_DECRYPTION_FAILED") from None
     result = verify_plaintext_tar(plaintext)
+    if (result["plaintext_sha256"] != receipt["plaintext_tar_sha256"]
+            or result["verified_files"] != receipt["restored_file_sha256_count"]):
+        raise RuntimeError("HOLD_RECEIPT_PLAINTEXT_BINDING")
     return {
         **result,
         "outer_zip_sha256": hashlib.sha256(outer_bytes).hexdigest(),
