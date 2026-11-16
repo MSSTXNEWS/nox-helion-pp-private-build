@@ -15,6 +15,13 @@ FILES={'audit':'nox-control/owner_native_audit.py','inspect':'nox-control/owner_
 MASTER=None
 
 SCOPED_REPAIR_BUNDLES={
+    'nox-control/owner_qwen_transport_budget_entry.py':(
+        'owner_qwen_revision_install.py','qwen_student_training_entry_revision.py',
+        'owner_qwen_transport_budget_install.py','qwen_student_training_entry_transport_budget.py',
+        'owner_qwen_execution_revision.py','owner_qwen_revision_guard.py','owner_qwen_revision_status.py',
+        'owner_qwen_revision_media_handoff.py','owner_qwen_revision_media_guard.py',
+        'owner_qwen_revision_handback_retry.py','owner_hermes_revision_hydrate.py',
+        'owner_download_status_entry.py','owner_native_repair.py','owner_qwen_disk_rearm_entry.py'),
     'nox-control/owner_chat_stream_asset_install.py':(
         'nox-v135-resonance-owner-bridge-coalesced.js','owner_media_acceptance_entry.py','owner_native_repair.py'),
     'nox-control/owner_browser_asset_identity_entry.py':(
@@ -41,6 +48,8 @@ SCOPED_REPAIR_BUNDLES={
         'owner_download_status_entry.py','owner_native_repair.py','owner_qwen_disk_rearm_entry.py'),
 }
 SCOPED_REPAIR_EXTRA_PATHS={
+    'nox-control/owner_qwen_transport_budget_entry.py':(
+        'nox-control/owner_qwen_transport_budget_install.py','nox-control/qwen_student_training_entry_transport_budget.py'),
     'nox-control/owner_chat_stream_asset_install.py':(
         'coordination/onepass/nox-v135-resonance-owner-bridge-coalesced.js',),
     'nox-control/owner_browser_asset_identity_entry.py':(
