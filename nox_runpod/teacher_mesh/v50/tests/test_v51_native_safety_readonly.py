@@ -7,6 +7,8 @@ import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 import urllib.error
+import io
+from contextlib import redirect_stdout
 from nox_runpod.teacher_mesh.v51 import ephemeral_ssh_probe as probe
 from nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe import REMOTE
 
@@ -255,5 +257,73 @@ class ReadOnlySafety(unittest.TestCase):
                 probe.api("GET","/instances/","test-key")
         self.assertEqual(urlopen.call_count,1)
         sleep.assert_not_called()
+
+
+    def test_attach_post_429_is_never_replayed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            record=Path(tmp)/"cleanup.json"
+            record.write_text(json.dumps({"public":"ssh-ed25519 AAAA KEY","key_id":None}))
+            output=io.StringIO()
+            with patch.object(probe,"TRACK",record), \
+                 patch.object(probe,"api",side_effect=RuntimeError("HOLD_VAST_API_HTTP_429")) as post, \
+                 patch.object(probe,"reconcile_attach_after_429",return_value=73) as reconcile, \
+                 redirect_stdout(output):
+                self.assertEqual(probe.attach_ephemeral_key("API-TOKEN-SECRET","ssh-ed25519 AAAA KEY"),[73])
+            self.assertEqual(post.call_count,1)
+            post.assert_called_once_with("POST","/instances/60509551/ssh/","API-TOKEN-SECRET",
+                                        {"ssh_key":"ssh-ed25519 AAAA KEY"})
+            reconcile.assert_called_once_with("API-TOKEN-SECRET","ssh-ed25519 AAAA KEY")
+            self.assertNotIn("API-TOKEN-SECRET",output.getvalue())
+            self.assertNotIn("ssh-ed25519 AAAA KEY",output.getvalue())
+            self.assertEqual(json.loads(record.read_text())["attach_state"],"ATTACHED_VERIFIED")
+
+    def test_cleanup_keeps_receipt_when_ambiguous_attach_is_not_visible_yet(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            record=Path(tmp)/"cleanup.json"
+            record.write_text(json.dumps({
+                "public":"ssh-ed25519 AAAA PUBLIC", "key_id":None,
+                "attach_state":"ATTACH_AMBIGUOUS_HTTP_429"}))
+            output=io.StringIO()
+            with patch.object(probe,"TRACK",record), \
+                 patch.dict(probe.os.environ,{"NOX2":"TOKEN-SECRET"}), \
+                 patch.object(probe,"match",return_value=[]), \
+                 redirect_stdout(output):
+                self.assertFalse(probe.cleanup())
+            self.assertTrue(record.exists())
+            self.assertIn("TEMP_SSH_CLEANUP=HOLD_ATTACH_STATE_UNRESOLVED",output.getvalue())
+            self.assertNotIn("TOKEN-SECRET",output.getvalue())
+            self.assertNotIn("ssh-ed25519",output.getvalue())
+
+    def test_attach_429_reconciles_exact_public_key_once(self):
+        with patch.object(probe,"match",return_value=[73]) as lookup:
+            key_id=probe.reconcile_attach_after_429("NOX2-SECRET","ssh-ed25519 AAAA GENERATED")
+        self.assertEqual(key_id,73)
+        lookup.assert_called_once_with("NOX2-SECRET","ssh-ed25519 AAAA GENERATED")
+
+    def test_attach_429_unmatched_key_holds_without_post_retry_or_key_output(self):
+        secret="ssh-ed25519 AAAA GENERATED-SECRET"
+        with patch.object(probe,"match",return_value=[]) as lookup:
+            with self.assertRaisesRegex(RuntimeError,"RECONCILE_ABSENT") as caught:
+                probe.reconcile_attach_after_429("API-TOKEN-SECRET",secret)
+        lookup.assert_called_once_with("API-TOKEN-SECRET",secret)
+        self.assertNotIn(secret,str(caught.exception))
+        self.assertNotIn("API-TOKEN-SECRET",str(caught.exception))
+
+    def test_attach_429_missing_list_endpoint_holds_with_safe_method_path_status(self):
+        with patch.object(probe,"match",side_effect=RuntimeError("HOLD_VAST_API_HTTP_404")) as lookup:
+            with self.assertRaisesRegex(RuntimeError,"GET_INSTANCE_SSH_HTTP_404") as caught:
+                probe.reconcile_attach_after_429("API-TOKEN-SECRET","ssh-ed25519 AAAA SECRET")
+        lookup.assert_called_once()
+        self.assertNotIn("SECRET",str(caught.exception))
+        self.assertNotIn("API-TOKEN-SECRET",str(caught.exception))
+
+    def test_attach_reconcile_sanitizes_unexpected_exception_text(self):
+        with patch.object(probe,"match",side_effect=RuntimeError("secret key and token leaked")) as lookup:
+            with self.assertRaisesRegex(RuntimeError,"GET_INSTANCE_SSH_RECONCILE_FAILED") as caught:
+                probe.reconcile_attach_after_429("TOKEN-SECRET","ssh-ed25519 AAAA KEY-SECRET")
+        lookup.assert_called_once()
+        self.assertNotIn("secret",str(caught.exception).lower())
+        self.assertNotIn("TOKEN-SECRET",str(caught.exception))
+        self.assertNotIn("KEY-SECRET",str(caught.exception))
 
 if __name__=='__main__':unittest.main()
