@@ -79,12 +79,14 @@ class StorageTests(unittest.TestCase):
         os.link(path, path.with_name('another-link'))
         self.assertEqual(storage.qualify(path, path.stat(), self.now, self.usage)[1], 'OWNERSHIP_LINK_TYPE_OR_SMALL_FILE')
 
-    def test_core_requires_real_elf_et_core_header(self):
-        path = self.file(self.root / 'core.1234', b'not a core')
-        self.assertEqual(storage.qualify(path, path.stat(), self.now, self.usage)[1], 'NOT_ELF_CORE')
-        head = bytearray(32); head[:4] = b'\x7fELF'; head[4] = 2; head[5] = 1; head[16:18] = b'\x04\x00'
-        self.file(path, bytes(head))
-        self.assertEqual(self.candidate(path)['category'], 'INACTIVE_ELF_CORE')
+    def test_elf_core_remains_protected_as_arbitrary_process_memory(self):
+        path = self.file(self.root / 'core.1234', b'\x7fELF' + b'\x00' * 8 + b'S03_PRIVATE_SENTINEL')
+        self.assertIsNone(storage.deletion_kind(path))
+        candidate, reason = storage.qualify(path, path.stat(), self.now, self.usage)
+        self.assertIsNone(candidate)
+        self.assertEqual(reason, 'PROTECTED_OR_NOT_ALLOWLISTED')
+        self.assertTrue(path.exists())
+        self.assertIn(b'S03_PRIVATE_SENTINEL', path.read_bytes())
 
     def test_exact_unlink_rechecks_identity_and_does_not_follow_link(self):
         path = self.pip_file()
