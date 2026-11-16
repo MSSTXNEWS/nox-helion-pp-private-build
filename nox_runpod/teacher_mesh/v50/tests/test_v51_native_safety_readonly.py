@@ -8,8 +8,8 @@ from nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe import REMOTE
 
 code=REMOTE.split("<<'PYREMOTE'\n",1)[1].rsplit("\nPYREMOTE",1)[0]
 tree=ast.parse(code)
-nodes=[x for x in tree.body if isinstance(x,ast.FunctionDef) and x.name in {'gpu_pid_map','cgroup_oom_pair'}]
-assert len(nodes)==2
+nodes=[x for x in tree.body if isinstance(x,ast.FunctionDef) and x.name in {'gpu_pid_map','cgroup_oom_pair','supervisor_projection'}]
+assert len(nodes)==3
 context={'re':re}
 exec(compile(ast.Module(body=nodes,type_ignores=[]),'<v51-native-functions>','exec'),context)
 
@@ -47,5 +47,42 @@ class ReadOnlySafety(unittest.TestCase):
         self.assertIn('HOLD_NOT_PROVEN_BY_PID_INVENTORY',REMOTE)
         self.assertIn('NATIVE_P0_CGROUP_OOM=',REMOTE)
         self.assertIn('NATIVE_READ_ONLY_COMPLETE=true',REMOTE)
+
+    def test_supervisor_rc3_preserves_actual_fatal_and_running_pid_without_raw_reason(self):
+        raw=('caddy RUNNING pid 179, uptime 2 days\n'
+             'nox-dispatcher-t855u RUNNING pid 498177, uptime 1 hour\n'
+             'nox-priority-scheduler RUNNING pid 498221, uptime 1 hour\n'
+             'nox-selfheal RUNNING pid 498241, uptime 1 hour\n'
+             'nox-train-volta-t866u FATAL Exited too quickly private=secret\n'
+             'nox-chat-8081 STOPPED Nov 14\n')
+        row=context['supervisor_projection'](3,raw)
+        self.assertEqual(row['state'],'OBSERVED_PARTIAL')
+        self.assertEqual(row['supervisor_rc'],3)
+        self.assertFalse(row['all_running_verified'])
+        self.assertEqual(len(row['services']),5)
+        self.assertEqual(row['services'][0]['pid'],498177)
+        self.assertEqual(row['services'][-2]['status'],'FATAL')
+        self.assertNotIn('secret',str(row))
+        self.assertNotIn('caddy',str(row))
+
+    def test_supervisor_zero_and_partial_starting(self):
+        parse=context['supervisor_projection']
+        self.assertEqual(parse(0,'nox-selfheal RUNNING pid 498241, uptime 1 hour\n')['state'],'OBSERVED_ALL_RUNNING')
+        self.assertFalse(parse(3,'nox-train-volta-t866u STARTING\n')['all_running_verified'])
+
+    def test_supervisor_rejects_ambiguous_or_unbounded_rows(self):
+        parse=context['supervisor_projection']
+        self.assertEqual(parse(99,'nox-selfheal RUNNING pid 1,\n')['state'],'HOLD_SUPERVISOR_COMMAND')
+        self.assertEqual(parse(3,'nox-selfheal OKAY pid 1,\n')['state'],'HOLD_SUPERVISOR_SCHEMA')
+        self.assertEqual(parse(3,'nox-selfheal RUNNING uptime 12\n')['state'],'HOLD_SUPERVISOR_PID')
+        self.assertEqual(parse(3,'caddy STOPPED\n')['state'],'HOLD_SUPERVISOR_NO_CORE')
+        self.assertEqual(parse(3,'nox-selfheal RUNNING pid 1,\n'*41)['state'],'HOLD_SUPERVISOR_BOUNDS')
+        self.assertEqual(parse(3,'')['state'],'HOLD_SUPERVISOR_BOUNDS')
+
+    def test_supervisor_uses_existing_owner_only_p0_forwarding(self):
+        workflow=(Path(__file__).resolve().parents[4]/'.github/workflows/nox-v51-ephemeral-ssh-native.yml').read_text()
+        self.assertIn('"NATIVE_P0_"',workflow)
+        self.assertIn("inputs.allow_native == 'YES'",workflow)
+        self.assertIn('NATIVE_P0_SUPERVISOR_STATUS=',REMOTE)
 
 if __name__=='__main__':unittest.main()
