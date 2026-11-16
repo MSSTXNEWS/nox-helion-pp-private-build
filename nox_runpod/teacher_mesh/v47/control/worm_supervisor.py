@@ -104,7 +104,7 @@ def audit_native_queue(matrix, observations, *, now_unix: int, heartbeat_s: int=
                 or obs.get("native_verified") is not True
                 or not isinstance(obs.get("receipt_sha256"),str)
                 or SHA.fullmatch(obs["receipt_sha256"]) is None
-                or obs.get("state") not in STATES
+                or not isinstance(obs.get("state"),str) or obs["state"] not in STATES
                 or ("job_id" in obs and (
                     not _valid_native_job_id(obs["job_id"])
                     or job_counts.get(obs["job_id"],0)!=1))):
