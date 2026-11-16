@@ -59,7 +59,9 @@ LOG_PROTECTED = re.compile(r'(?i)(?:journal|audit|memory|s03|dialog|train|checkp
 
 
 class StorageHold(RuntimeError):
-    pass
+    def __init__(self, code, quarantine_path=None):
+        super().__init__(code)
+        self.quarantine_path = quarantine_path
 
 
 def digest_bytes(value):
@@ -664,7 +666,7 @@ def reclaim_candidate(candidate, deadline):
             if restore_quarantined_entry(quarantine_fd, entry_name, parent_fd, path.name):
                 staged = False
                 raise StorageHold('HOLD_STORAGE_IDENTITY_CHANGED')
-            raise StorageHold('HOLD_STORAGE_QUARANTINE_PRESERVED')
+            raise StorageHold('HOLD_STORAGE_QUARANTINE_PRESERVED', quarantine_path=str(path.parent / quarantine_name))
 
         # The private staging directory blocks ordinary users from swapping the
         # verified name between the last descriptor check and unlink.
@@ -674,7 +676,7 @@ def reclaim_candidate(candidate, deadline):
             if restore_quarantined_entry(quarantine_fd, entry_name, parent_fd, path.name):
                 staged = False
                 raise StorageHold('HOLD_STORAGE_IDENTITY_CHANGED')
-            raise StorageHold('HOLD_STORAGE_QUARANTINE_PRESERVED')
+            raise StorageHold('HOLD_STORAGE_QUARANTINE_PRESERVED', quarantine_path=str(path.parent / quarantine_name))
         os.unlink(entry_name, dir_fd=quarantine_fd)
         staged = False
         os.close(fd); fd = None  # Release our read handle before measuring free space.
@@ -695,7 +697,7 @@ def reclaim_candidate(candidate, deadline):
             if restore_quarantined_entry(quarantine_fd, entry_name, parent_fd, path.name):
                 staged = False
             else:
-                raise StorageHold('HOLD_STORAGE_QUARANTINE_PRESERVED')
+                raise StorageHold('HOLD_STORAGE_QUARANTINE_PRESERVED', quarantine_path=str(path.parent / quarantine_name))
         raise
     finally:
         if fd is not None:
@@ -747,8 +749,11 @@ def reclaim(request, source, audit_request, expected_sha):
                 receipt['allocated_bytes_unlinked'] += row['allocated_bytes_unlinked']
             except (OSError, StorageHold) as exc:
                 code = str(exc)
-                receipt['skipped'].append({'path_id': candidate.get('path_id'),
-                    'reason': code if re.fullmatch(r'HOLD_[A-Z_]+', code) else 'HOLD_STORAGE_OS_OPERATION'})
+                skipped = {'path_id': candidate.get('path_id'),
+                    'reason': code if re.fullmatch(r'HOLD_[A-Z_]+', code) else 'HOLD_STORAGE_OS_OPERATION'}
+                if isinstance(exc, StorageHold) and exc.quarantine_path:
+                    skipped['quarantine_path'] = exc.quarantine_path
+                receipt['skipped'].append(skipped)
             receipt['inflight'] = None
             write_receipt(output, receipt, replace=True)
         receipt.update(state='BOUNDED_EPHEMERAL_RECLAIM_COMPLETE', finished_at=time.time(), after=filesystem_budget())
