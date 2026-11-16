@@ -65,7 +65,14 @@ def _prompt_fingerprint(row:object)->str|None:
     normalized=" ".join(normalized.split())
     return sha256(normalized.encode("utf-8")).hexdigest()
 
-def _inspect_corpus_file(file:Path,expected_rows:int,train_fingerprints:set[str]|None)->dict:
+def _source_row_sha256(value:str)->str:
+    """Match the original V28 canonical_hash used for owner-pinned row proofs."""
+    normalized=unicodedata.normalize("NFKC",value.strip().casefold())
+    normalized="".join(ch for ch in normalized if unicodedata.category(ch)!="Cf")
+    return sha256(re.sub(r"\\s+"," ",normalized).encode("utf-8")).hexdigest()
+
+def _inspect_corpus_file(file:Path,expected_rows:int,train_fingerprints:set[str]|None,
+                         owner_proofs:list[dict]|None=None)->dict:
     """Stream/hash/parse bounded JSONL. Exact-text disjointness, not semantic proof."""
     digest=sha256()
     seen=set()
@@ -85,6 +92,14 @@ def _inspect_corpus_file(file:Path,expected_rows:int,train_fingerprints:set[str]
             fp=_prompt_fingerprint(row)
             if fp is None:
                 return {"state":"HOLD_CORPUS_JSONL_FORMAT"}
+            # Bind each exported source receipt to the exact on-disk JSONL row.
+            # Matching file hashes alone do not authenticate the claimed group.
+            if owner_proofs is not None:
+                proof=owner_proofs[rows] if rows<len(owner_proofs) else None
+                if (proof is None
+                        or _source_row_sha256(row["prompt"][0]["content"])!=proof["prompt_sha256"]
+                        or _source_row_sha256(row["completion"][0]["content"])!=proof["answer_sha256"]):
+                    return {"state":"HOLD_CORPUS_ROW_PROVENANCE_MISMATCH"}
             if fp in seen:
                 return {"state":"HOLD_CORPUS_DUPLICATE_PROMPT"}
             if train_fingerprints is not None and fp in train_fingerprints:
@@ -153,6 +168,34 @@ def verify_corpus(corpus_dir:str)->dict:
                 if all_groups.intersection(group_shas):
                     return {"state":"HOLD_CORPUS_OWNER_GROUP_OVERLAP"}
                 all_groups.update(group_shas)
+            owner_proofs=manifest.get("source_receipts")
+            if (not isinstance(owner_proofs,list)
+                    or len(owner_proofs)!=sum(counts.values())):
+                return {"state":"HOLD_CORPUS_SOURCE_RECEIPT_PROOF"}
+            proof_fields={"part","task_id","group","source","privacy",
+                          "prompt_sha256","answer_sha256"}
+            proof_by_split={part:[] for part in expected_splits}
+            seen_sources=set()
+            for proof in owner_proofs:
+                if not isinstance(proof,dict) or set(proof)!=proof_fields:
+                    return {"state":"HOLD_CORPUS_SOURCE_RECEIPT_PROOF"}
+                part=proof["part"]
+                if (not isinstance(part,str) or part not in proof_by_split
+                        or not isinstance(proof["task_id"],str)
+                        or re.fullmatch(r"[A-Za-z0-9_-]{8,100}",proof["task_id"]) is None
+                        or any(not isinstance(proof[k],str)
+                               or re.fullmatch(r"[a-f0-9]{64}",proof[k]) is None
+                               for k in ("group","source","privacy",
+                                         "prompt_sha256","answer_sha256"))):
+                    return {"state":"HOLD_CORPUS_SOURCE_RECEIPT_PROOF"}
+                if proof["source"] in seen_sources:
+                    return {"state":"HOLD_CORPUS_SOURCE_RECEIPT_REPLAY"}
+                seen_sources.add(proof["source"])
+                proof_by_split[part].append(proof)
+            if any(len(proof_by_split[k])!=counts[k]
+                   or {proof["group"] for proof in proof_by_split[k]}!=set(owner_groups[k])
+                   for k in expected_splits):
+                return {"state":"HOLD_CORPUS_SOURCE_RECEIPT_GROUPS"}
         all_prompts=set()
         verified_shas={}
         for part in expected_splits:
@@ -160,7 +203,8 @@ def verify_corpus(corpus_dir:str)->dict:
             file=p/filename
             if not file.is_file() or file.is_symlink():
                 return {"state":"HOLD_CORPUS_FILE"}
-            details=_inspect_corpus_file(file,counts[part],all_prompts if all_prompts else None)
+            details=_inspect_corpus_file(file,counts[part],all_prompts if all_prompts else None,
+                                         proof_by_split[part] if threeway else None)
             if details["state"]!="SOURCE_ROWS_PARSED":
                 return {"state":details["state"]}
             if details["sha256"]!=manifest.get(filename+"_sha256"):
