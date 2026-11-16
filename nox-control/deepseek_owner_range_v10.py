@@ -390,6 +390,24 @@ def finalize_complete_partial(row, partial, final, destination, root, lease_file
     atomic_receipt(destination/(row['path']+'.verified.json'),receipt)
     return {'state':'VERIFIED_FINAL','file':row['path'],'new_bytes':new_bytes,'sha256':actual}
 
+def _write_checked(output, chunk, root, lease_file, request):
+    """Drain short regular-file writes without overstating verified bytes.
+
+    FileIO.write may return fewer bytes than requested. Recheck the original
+    owner STOP and lease before every remaining write; zero progress is HOLD.
+    """
+    view = memoryview(chunk)
+    pos = 0
+    while pos < len(view):
+        stop(root)
+        lease(lease_file, request, time.time(), root)
+        count = output.write(view[pos:])
+        require(type(count) is int and 0 < count <= len(view) - pos,
+                'HOLD_PARTIAL_WRITE_NO_PROGRESS')
+        pos += count
+    return pos
+
+
 def download_one(row,destination,root,lease_file,request,limit=MAX_RANGE,opener=urlopen):
     """One bounded transfer. Require correct 206 Content-Range even at offset zero.
     Final path is published only after full SHA. Partial is left untouched on HOLD."""
@@ -514,7 +532,7 @@ def download_one(row,destination,root,lease_file,request,limit=MAX_RANGE,opener=
                     # revocation. Do not append a chunk after either occurs.
                     stop(root);lease(lease_file,request,time.time(),root)
                     check_download_lock()
-                    output.write(chunk);wrote+=len(chunk)
+                    wrote += _write_checked(output, chunk, root, lease_file, request)
                 output.flush();os.fsync(output.fileno())
         # Never acknowledge a partial Range after owner STOP, lease expiry or inode swap.
         stop(root);lease(lease_file,request,time.time(),root)
