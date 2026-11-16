@@ -1,0 +1,92 @@
+{
+  "schema": "NOX_MAYA_BUILD_RECEIPT_V1",
+  "request": "6906295096",
+  "source_sha": "6908ef70a8fc6936a748a519dc353938ccb2e829",
+  "state": "BUILT_NOT_LOADED_OR_RUNTIME_VALIDATED",
+  "plan": {
+    "schema": "NOX_MAYA_BUILD_OWNER_V1",
+    "maya": "c81fab6c9d63cf69b928f92460e0a662b28aa9ec",
+    "llama": "3cf03257f219afbe7334045ff7c6a06ac68c627d",
+    "cuda": "/usr/local/cuda-12.4",
+    "cmake": "4.4.5",
+    "arch": "70",
+    "target": "maya-ds4",
+    "jobs": 2,
+    "portable": true,
+    "tests": false,
+    "source_manifest_sha256": "efa83e0bc417da78d9b774eb799a4858f5a45bd2113b710920ae6fc0603a0496",
+    "artifacts": {
+      "llama.tar.gz": {
+        "url": "https://codeload.github.com/ggml-org/llama.cpp/tar.gz/3cf03257f219afbe7334045ff7c6a06ac68c627d",
+        "bytes": 37513049,
+        "sha256": "c076d7534afa0e5d0ec2a0d425b11e791c16f3de0d727221aea071cef156a280",
+        "expanded_max": 209715200,
+        "members_max": 4500
+      },
+      "cmake.whl": {
+        "url": "https://files.pythonhosted.org/packages/61/e3/0d24bb452ebc819ab03bbc01b1f4d92863e5c106a93755a4eb38761495da/cmake-4.4.5-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+        "bytes": 30246479,
+        "sha256": "85625a9b6d5e88ff99c7eb79123d85570844e77ac076366cf75c609cc0b1b579",
+        "expanded_max": 104857600,
+        "members_max": 4500
+      }
+    }
+  },
+  "before": {
+    "disk_free_bytes": 13935648768,
+    "memory_max_bytes": 194065203200,
+    "memory_current_bytes": 85586771968,
+    "memory_headroom_bytes": 108478431232
+  },
+  "phases": [
+    {
+      "phase": "nvcc-version",
+      "returncode": 0,
+      "seconds": 0.406,
+      "log_sha256": "3c71ed984d2ca98770b0cba5c23a849a87209351e105433929c3062fb66d1915",
+      "log_path": "/root/nox/engine_builds/maya-c81fab6c9d63-cu124-sm70-v1/nvcc-version.log"
+    },
+    {
+      "phase": "cmake-version",
+      "returncode": 0,
+      "seconds": 0.405,
+      "log_sha256": "30d9c504b2b91d7683a1b8d25f9f987cb24ff9f35fd553950540cd847f8e23de",
+      "log_path": "/root/nox/engine_builds/maya-c81fab6c9d63-cu124-sm70-v1/cmake-version.log"
+    },
+    {
+      "phase": "configure",
+      "returncode": 0,
+      "seconds": 4.38,
+      "log_sha256": "23dbf819cc4f97817d491b0ffd66de7931bc3ed9d68f1498b43887515ae34110",
+      "log_path": "/root/nox/engine_builds/maya-c81fab6c9d63-cu124-sm70-v1/configure.log"
+    },
+    {
+      "phase": "compile",
+      "returncode": 0,
+      "seconds": 577.355,
+      "log_sha256": "1495206dac21affffb2822dbac2295280f8fc225be535a4c80351c9c94f7380a",
+      "log_path": "/root/nox/engine_builds/maya-c81fab6c9d63-cu124-sm70-v1/compile.log"
+    }
+  ],
+  "inference_executed": false,
+  "installed": false,
+  "services_changed": false,
+  "training_changed": false,
+  "base": "/root/nox/engine_builds/maya-c81fab6c9d63-cu124-sm70-v1",
+  "wall_limit_seconds": 780,
+  "disk_max_bytes": 4294967296,
+  "disk_reserve_bytes": 8589934592,
+  "rss_watchdog_limit_bytes": 8589934592,
+  "resource_poll_seconds": 0.25,
+  "per_process_address_space_limit_bytes": 6442450944,
+  "memory_reserve_bytes": 21474836480,
+  "gpu_visible_to_build": false,
+  "active_phase": "compile",
+  "binary": "/root/nox/engine_builds/maya-c81fab6c9d63-cu124-sm70-v1/build/maya-ds4",
+  "binary_bytes": 71289520,
+  "binary_sha256": "3783980bb65861de36fe4d93b8e6bbd6b6a631207677bcabf330bf7830c21b20",
+  "peak_build_rss_bytes": 2794672128,
+  "directory_bytes": 621338624,
+  "finished_at_epoch": 1794799639.376522,
+  "receipt_path": "/root/nox/engine_builds/maya-c81fab6c9d63-cu124-sm70-v1/receipt-6906295096.json"
+}

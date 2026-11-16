@@ -1,0 +1,1160 @@
+{
+  "schema": "NOX_NIGHT_RUNTIME_PROBE_EXPORT_V1",
+  "run_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43799988405",
+  "job_id": 133078409605,
+  "request_id": "6906683150",
+  "source_sha": "e30a2508d75686142952cd9045028a2a3be2b945",
+  "sections": [
+    {
+      "section": "identity",
+      "value": {
+        "schema": "NOX_NIGHT_RUNTIME_PROBE_V1",
+        "request": "6906683150",
+        "source_sha": "e30a2508d75686142952cd9045028a2a3be2b945",
+        "time_epoch": 1794800873.724761,
+        "read_only": true
+      }
+    },
+    {
+      "section": "resources",
+      "value": {
+        "cgroup": {
+          "memory.max": "194065203200\n",
+          "memory.current": "86276792320\n",
+          "memory.high": "max\n",
+          "memory.pressure": "some avg10=0.00 avg60=0.04 avg300=0.02 total=6738184\nfull avg10=0.00 avg60=0.04 avg300=0.02 total=6738089\n",
+          "cpu.max": "1920000 100000\n",
+          "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0\n"
+        },
+        "disk": {
+          "/root/nox": {
+            "total": 183609851904,
+            "used": 170339323904,
+            "free": 13270528000
+          },
+          "/dev/shm": {
+            "total": 50465865728,
+            "used": 42482380800,
+            "free": 7983484928
+          }
+        },
+        "stops": [
+          {
+            "path": "/root/nox/state/TRAIN_HOLD.flag",
+            "bytes": 39,
+            "allocated_bytes": 4096,
+            "mtime_ns": 1794800818291540000,
+            "inode": 72067335,
+            "uid": 0,
+            "mode": "0o600",
+            "symlink": false
+          },
+          {
+            "path": "/root/nox/state/forge_training.lock",
+            "bytes": 0,
+            "allocated_bytes": 0,
+            "mtime_ns": 1794786650682290200,
+            "inode": 59886208,
+            "uid": 0,
+            "mode": "0o600",
+            "symlink": false
+          },
+          {
+            "path": "/root/nox/state/owner_maintenance.lock",
+            "bytes": 0,
+            "allocated_bytes": 0,
+            "mtime_ns": 1794780081378651600,
+            "inode": 59886214,
+            "uid": 0,
+            "mode": "0o600",
+            "symlink": false
+          }
+        ],
+        "mutations_performed": false,
+        "cap_sys_admin_present": false,
+        "supervisor": {
+          "returncode": 3,
+          "stdout": "caddy                            RUNNING   pid 179, uptime 1 day, 4:15:35\ncron                             RUNNING   pid 181, uptime 1 day, 4:15:35\ninstance_portal                  RUNNING   pid 184, uptime 1 day, 4:15:35\njupyter                          EXITED    Nov 14 11:32 PM\nnox-agent-architect-t859u        STOPPED   Nov 15 11:25 PM\nnox-agent-integrator-t859u       RUNNING   pid 165, uptime 1 day, 4:15:35\nnox-agent-tuner-t858u            STOPPED   Nov 15 11:25 PM\nnox-chat-8081                    STOPPED   Nov 14 11:32 PM\nnox-checklist-worker             RUNNING   pid 134, uptime 1 day, 4:15:35\nnox-cores                        RUNNING   pid 132, uptime 1 day, 4:15:35\nnox-dialog-miner                 RUNNING   pid 135, uptime 1 day, 4:15:35\nnox-dispatcher-t855u             RUNNING   pid 498177, uptime 1:55:28\nnox-distill-worm-t811u           STOPPED   Nov 15 11:24 PM\nnox-downloads-t802u              STOPPED   Nov 15 11:25 PM\nnox-embed                        RUNNING   pid 137, uptime 1 day, 4:15:35\nnox-gpu-watchdog-t865u           RUNNING   pid 127, uptime 1 day, 4:15:35\nnox-hidden-router                RUNNING   pid 191, uptime 1 day, 4:15:35\nnox-media-comfyui                RUNNING   pid 447681, uptime 2:50:15\nnox-offload-t850u                STOPPED   Nov 15 11:25 PM\nnox-priority-scheduler           RUNNING   pid 498221, uptime 1:55:24\nnox-proxy                        RUNNING   pid 598157, uptime 0:13:18\nnox-report-heartbeat-t811u       RUNNING   pid 155, uptime 1 day, 4:15:35\nnox-self-improve-t846u           STOPPED   Nov 15 11:25 PM\nnox-self-learning-loop           STOPPED   Nov 15 11:25 PM\nnox-selfheal                     RUNNING   pid 498241, uptime 1:55:22\nnox-teacher-bringup              STOPPED   Not started\nnox-teacher-serve-t811u          STOPPED   Nov 15 11:25 PM\nnox-train-volta-t866u            FATAL     Exited too quickly (process log may have details)\nnox-train-worm-t811u             STOPPED   Not started\nnox-vram-guard-t829u             RUNNING   pid 147, uptime 1 day, 4:15:35\nnox-watch-swap-t845u             STOPPED   Nov 15 11:25 PM\npyworker                         EXITED    Nov 14 11:32 PM\nsyncthing                        RUNNING   pid 212, uptime 1 day, 4:15:35\ntensorboard                      RUNNING   pid 222, uptime 1 day, 4:15:35\ntunnel_manager                   RUNNING   pid 228, uptime 1 day, 4:15:35\n",
+          "stderr_tail": ""
+        },
+        "gpu": {
+          "returncode": 0,
+          "stdout": "0, Tesla V100-SXM2-32GB, 32768, 21562, 10933, 0, 21\n1, Tesla V100-SXM2-32GB, 32768, 474, 32021, 0, 24\n",
+          "stderr_tail": ""
+        }
+      }
+    },
+    {
+      "section": "python",
+      "value": [
+        {
+          "path": "/root/venv_volta/bin/python",
+          "returncode": 0,
+          "stdout": "{\"executable\": \"/root/venv_volta/bin/python\", \"packages\": {\"accelerate\": {\"location\": \"/root/venv_volta/lib/python3.12/site-packages\", \"version\": \"1.15.0\"}, \"bitsandbytes\": {\"location\": \"/root/venv_volta/lib/python3.12/site-packages\", \"version\": \"0.50.2\"}, \"datasets\": {\"location\": \"/root/venv_volta/lib/python3.12/site-packages\", \"version\": \"5.2.0\"}, \"numpy\": {\"location\": \"/root/venv_volta/lib/python3.12/site-packages\", \"version\": \"2.5.4\"}, \"peft\": {\"location\": \"/root/venv_volta/lib/python3.12/site-packages\", \"version\": \"0.21.3\"}, \"safetensors\": {\"location\": \"/root/venv_volta/lib/python3.12/site-packages\", \"version\": \"0.8.0\"}, \"tokenizers\": {\"location\": \"/root/venv_volta/lib/python3.12/site-packages\", \"version\": \"0.23.3\"}, \"torch\": {\"location\": \"/root/venv_volta/lib/python3.12/site-packages\", \"version\": \"2.6.0+cu124\"}, \"transformers\": {\"location\": \"/root/venv_volta/lib/python3.12/site-packages\", \"version\": \"5.23.0\"}, \"trl\": {\"location\": \"/root/venv_volta/lib/python3.12/site-packages\", \"version\": \"1.18.0\"}}, \"platform\": \"Linux-6.8.0-147-generic-x86_64-with-glibc2.35\", \"python\": \"3.12.16 (main, Oct 26 2026, 15:28:01) [GCC 11.4.0]\", \"torch\": {\"arch_flags\": \"sm_50 sm_60 sm_70 sm_75 sm_80 sm_86 sm_90\", \"cuda_build\": \"12.4\", \"cuda_initialized\": false, \"version\": \"2.6.0+cu124\"}}\n",
+          "stderr_tail": ""
+        },
+        {
+          "path": "/root/nox/venv/bin/python",
+          "returncode": 0,
+          "stdout": "{\"executable\": \"/root/nox/venv/bin/python\", \"packages\": {\"accelerate\": {\"location\": \"/root/nox/venv/lib/python3.12/site-packages\", \"version\": \"1.15.0\"}, \"bitsandbytes\": {\"location\": \"/root/nox/venv/lib/python3.12/site-packages\", \"version\": \"0.50.2\"}, \"datasets\": {\"location\": \"/root/nox/venv/lib/python3.12/site-packages\", \"version\": \"5.2.0\"}, \"numpy\": {\"location\": \"/root/nox/venv/lib/python3.12/site-packages\", \"version\": \"2.5.4\"}, \"peft\": {\"location\": \"/root/nox/venv/lib/python3.12/site-packages\", \"version\": \"0.21.3\"}, \"safetensors\": {\"location\": \"/root/nox/venv/lib/python3.12/site-packages\", \"version\": \"0.8.0\"}, \"tokenizers\": {\"location\": \"/root/nox/venv/lib/python3.12/site-packages\", \"version\": \"0.23.3\"}, \"torch\": {\"location\": \"/root/nox/venv/lib/python3.12/site-packages\", \"version\": \"2.6.0+cu124\"}, \"transformers\": {\"location\": \"/root/nox/venv/lib/python3.12/site-packages\", \"version\": \"5.23.0\"}, \"trl\": {\"location\": \"/root/nox/venv/lib/python3.12/site-packages\", \"version\": \"1.17.1\"}}, \"platform\": \"Linux-6.8.0-147-generic-x86_64-with-glibc2.35\", \"python\": \"3.12.16 (main, Oct 26 2026, 15:28:01) [GCC 11.4.0]\", \"torch\": {\"arch_flags\": \"sm_50 sm_60 sm_70 sm_75 sm_80 sm_86 sm_90\", \"cuda_build\": \"12.4\", \"cuda_initialized\": false, \"version\": \"2.6.0+cu124\"}}\n",
+          "stderr_tail": ""
+        },
+        {
+          "path": "/usr/bin/python3",
+          "returncode": 0,
+          "stdout": "{\"executable\": \"/usr/bin/python3\", \"packages\": {\"accelerate\": null, \"bitsandbytes\": null, \"datasets\": null, \"numpy\": {\"location\": \"/usr/local/lib/python3.10/dist-packages\", \"version\": \"2.2.6\"}, \"peft\": null, \"safetensors\": null, \"tokenizers\": null, \"torch\": null, \"transformers\": null, \"trl\": null}, \"platform\": \"Linux-6.8.0-147-generic-x86_64-with-glibc2.35\", \"python\": \"3.10.12 (main, Aug 31 2026, 10:18:17) [GCC 11.4.0]\", \"torch_error\": {\"message\": \"No module named 'torch'\", \"type\": \"ModuleNotFoundError\"}}\n",
+          "stderr_tail": ""
+        }
+      ]
+    },
+    {
+      "section": "shm",
+      "value": {
+        "top_entries": [
+          {
+            "path": "/dev/shm/nox_drive",
+            "bytes": 60,
+            "allocated_bytes": 0,
+            "mtime_ns": 1794791521549685200,
+            "inode": 279,
+            "uid": 0,
+            "mode": "0o700",
+            "symlink": false,
+            "logical_bytes": 920362812,
+            "allocated_total_bytes": 920383488
+          },
+          {
+            "path": "/dev/shm/nox_media",
+            "bytes": 60,
+            "allocated_bytes": 0,
+            "mtime_ns": 1794790042346859300,
+            "inode": 263,
+            "uid": 0,
+            "mode": "0o775",
+            "symlink": false,
+            "logical_bytes": 16766066457,
+            "allocated_total_bytes": 16766074880
+          },
+          {
+            "path": "/dev/shm/nox_t802u",
+            "bytes": 160,
+            "allocated_bytes": 0,
+            "mtime_ns": 1794699138549068500,
+            "inode": 2,
+            "uid": 0,
+            "mode": "0o755",
+            "symlink": false,
+            "logical_bytes": 24795910144,
+            "allocated_total_bytes": 24795914240
+          }
+        ],
+        "large_files": [
+          {
+            "path": "/dev/shm/nox_t802u/teachers/vikhr-nemo-12b-instruct-r-21-09-24-q4_k_m.gguf",
+            "bytes": 7477218656,
+            "allocated_bytes": 7477219328,
+            "mtime_ns": 1794699495725617000,
+            "inode": 33,
+            "uid": 0,
+            "mode": "0o644",
+            "symlink": false,
+            "observed_readers": []
+          },
+          {
+            "path": "/dev/shm/nox_t802u/teachers/saiga_nemo_12b.Q4_K_M.gguf",
+            "bytes": 7477204832,
+            "allocated_bytes": 7477207040,
+            "mtime_ns": 1794699457389980000,
+            "inode": 29,
+            "uid": 0,
+            "mode": "0o644",
+            "symlink": false,
+            "observed_readers": []
+          },
+          {
+            "path": "/dev/shm/nox_media/models/checkpoints/sdxl_lightning_4step.safetensors",
+            "bytes": 6938040682,
+            "allocated_bytes": 6938042368,
+            "mtime_ns": 1794790641728000800,
+            "inode": 270,
+            "uid": 0,
+            "mode": "0o600",
+            "symlink": false,
+            "observed_readers": []
+          },
+          {
+            "path": "/dev/shm/nox_media/models/text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+            "bytes": 6735906897,
+            "allocated_bytes": 6735908864,
+            "mtime_ns": 1794790587474803000,
+            "inode": 268,
+            "uid": 0,
+            "mode": "0o600",
+            "symlink": false,
+            "observed_readers": []
+          },
+          {
+            "path": "/dev/shm/nox_t802u/teachers/Dolphin3.0-Llama3.1-8B-Q4_K_M.gguf",
+            "bytes": 4920745856,
+            "allocated_bytes": 4920745984,
+            "mtime_ns": 1794699306528423700,
+            "inode": 21,
+            "uid": 0,
+            "mode": "0o644",
+            "symlink": false,
+            "observed_readers": []
+          },
+          {
+            "path": "/dev/shm/nox_t802u/teachers/NousResearch_DeepHermes-3-Llama-3-8B-Preview-Q4_K_M.gguf",
+            "bytes": 4920740800,
+            "allocated_bytes": 4920741888,
+            "mtime_ns": 1794699358547922700,
+            "inode": 25,
+            "uid": 0,
+            "mode": "0o644",
+            "symlink": false,
+            "observed_readers": []
+          },
+          {
+            "path": "/dev/shm/nox_media/models/diffusion_models/wan2.1_t2v_1.3B_fp16.safetensors",
+            "bytes": 2838303560,
+            "allocated_bytes": 2838306816,
+            "mtime_ns": 1794790347879635700,
+            "inode": 269,
+            "uid": 0,
+            "mode": "0o600",
+            "symlink": false,
+            "observed_readers": []
+          },
+          {
+            "path": "/dev/shm/nox_drive/3t724u/t724u_intellect_best_holdout.safetensors",
+            "bytes": 306787336,
+            "allocated_bytes": 306790400,
+            "mtime_ns": 1794791566105157600,
+            "inode": 285,
+            "uid": 0,
+            "mode": "0o600",
+            "symlink": false,
+            "observed_readers": []
+          },
+          {
+            "path": "/dev/shm/nox_drive/3t724u/t724u_builder_best_holdout.safetensors",
+            "bytes": 306787336,
+            "allocated_bytes": 306790400,
+            "mtime_ns": 1794791565290167300,
+            "inode": 282,
+            "uid": 0,
+            "mode": "0o600",
+            "symlink": false,
+            "observed_readers": []
+          },
+          {
+            "path": "/dev/shm/nox_drive/3t724u/t724u_core_self_final.safetensors",
+            "bytes": 306787336,
+            "allocated_bytes": 306790400,
+            "mtime_ns": 1794791564303179000,
+            "inode": 286,
+            "uid": 0,
+            "mode": "0o600",
+            "symlink": false,
+            "observed_readers": []
+          },
+          {
+            "path": "/dev/shm/nox_media/models/vae/wan_2.1_vae.safetensors",
+            "bytes": 253815318,
+            "allocated_bytes": 253816832,
+            "mtime_ns": 1794790399639761000,
+            "inode": 272,
+            "uid": 0,
+            "mode": "0o600",
+            "symlink": false,
+            "observed_readers": []
+          }
+        ],
+        "file_count_scanned": 21,
+        "processes_scanned": 56,
+        "reader_scan_truncated": false,
+        "absence_of_observed_reader_is_not_reclaim_authorization": true
+      }
+    },
+    {
+      "section": "source",
+      "value": [
+        {
+          "path": "/root/nox/scripts/nox_dispatcher_t855u.py",
+          "bytes": 66170,
+          "allocated_bytes": 69632,
+          "mtime_ns": 1794793945032674600,
+          "inode": 1145484807,
+          "uid": 0,
+          "mode": "0o755",
+          "symlink": false,
+          "sha256": "a4097dae395f4289a7c67faa0047c0027dc128a9607f3f8189b4270bc5f7426b",
+          "public_functions": []
+        },
+        {
+          "path": "/root/nox/scripts/owner_task_plans.py",
+          "bytes": 36715,
+          "allocated_bytes": 36864,
+          "mtime_ns": 1794789804054321200,
+          "inode": 1145484800,
+          "uid": 0,
+          "mode": "0o600",
+          "symlink": false,
+          "sha256": "7eb207b361086d3c34299b44fb36d96758cf824a7bf68a05e7868408d646f773",
+          "public_functions": []
+        },
+        {
+          "path": "/root/nox/scripts/owner_task_lifecycle.py",
+          "bytes": 47179,
+          "allocated_bytes": 49152,
+          "mtime_ns": 1794793704828476000,
+          "inode": 1145484804,
+          "uid": 0,
+          "mode": "0o600",
+          "symlink": false,
+          "sha256": "909502a75799096e094a622639fe959ecfa835cc70db705a4062541940cea27e",
+          "public_functions": []
+        },
+        {
+          "path": "/root/nox/scripts/owner_dispatcher_mentor.py",
+          "bytes": 37583,
+          "allocated_bytes": 40960,
+          "mtime_ns": 1794785102857540000,
+          "inode": 1248389732,
+          "uid": 0,
+          "mode": "0o755",
+          "symlink": false,
+          "sha256": "12211a29f77de8e5181d4dd78c35d5da2ed5de0dc6ea529149d32f0896809292",
+          "public_functions": []
+        },
+        {
+          "path": "/root/nox/scripts/owner_event_outbox.py",
+          "bytes": 26784,
+          "allocated_bytes": 28672,
+          "mtime_ns": 1794793704821476000,
+          "inode": 1145484829,
+          "uid": 0,
+          "mode": "0o644",
+          "symlink": false,
+          "sha256": "e15d458f9d1f03b23fcbf0267206621769ff92f2bfe00d3baf79217e2ab74a02",
+          "public_functions": []
+        },
+        {
+          "path": "/root/nox/scripts/s03_memory.py",
+          "bytes": 14436,
+          "allocated_bytes": 16384,
+          "mtime_ns": 1794793704836476000,
+          "inode": 1145484832,
+          "uid": 0,
+          "mode": "0o644",
+          "symlink": false,
+          "sha256": "3ebdc3585f32bafbd0e1210ceee286b174a657c37696e16fce9fcafb57c43e10",
+          "public_functions": [
+            {
+              "name": "now_iso",
+              "args": [],
+              "calls": [
+                "time.gmtime",
+                "time.strftime"
+              ]
+            },
+            {
+              "name": "sha",
+              "args": [
+                "s"
+              ],
+              "calls": [
+                "hashlib.sha256",
+                "hashlib.sha256(s.encode('utf-8')).hexdigest",
+                "s.encode"
+              ]
+            },
+            {
+              "name": "connect",
+              "args": [
+                "db"
+              ],
+              "calls": [
+                "con.execute",
+                "db.parent.mkdir",
+                "sqlite3.connect",
+                "str"
+              ]
+            },
+            {
+              "name": "init_db",
+              "args": [
+                "db"
+              ],
+              "calls": [
+                "con.commit",
+                "con.executescript",
+                "connect"
+              ]
+            },
+            {
+              "name": "remember",
+              "args": [
+                "text",
+                "segment",
+                "provenance",
+                "salience",
+                "meta",
+                "db"
+              ],
+              "calls": [
+                "(text or '').strip",
+                "ValueError",
+                "con.close",
+                "con.commit",
+                "con.execute",
+                "con.execute('SELECT id FROM s03_items WHERE sha256=?', (h,)).fetchone",
+                "float",
+                "init_db",
+                "json.dumps",
+                "now_iso",
+                "sha",
+                "uuid.uuid4"
+              ]
+            },
+            {
+              "name": "ledger_append",
+              "args": [
+                "event",
+                "payload",
+                "db"
+              ],
+              "calls": [
+                "LEDGER_DOC.parent.mkdir",
+                "con.close",
+                "con.commit",
+                "con.execute",
+                "con.execute('SELECT sha256 FROM s03_ledger ORDER BY seq DESC LIMIT 1').fetchone",
+                "f.write",
+                "init_db",
+                "json.dumps",
+                "now_iso",
+                "open",
+                "sha"
+              ]
+            },
+            {
+              "name": "recall",
+              "args": [
+                "query",
+                "k",
+                "db"
+              ],
+              "calls": [
+                "' '.join",
+                "(query or '').strip",
+                "_json.dumps",
+                "_json.dumps({'query': query[:500], 'docs': [(it.get('text') or '')[:800] for it in out]}).encode",
+                "_json.loads",
+                "_json.loads(resp.read().decode()).get",
+                "add",
+                "con.close",
+                "con.execute",
+                "float",
+                "init_db",
+                "it.get",
+                "len",
+                "max",
+                "out.append",
+                "pinned.add",
+                "query.replace",
+                "query.replace('\"', ' ').split",
+                "resp.read",
+                "resp.read().decode",
+                "seen.add",
+                "set",
+                "sorted",
+                "urllib.request.Request",
+                "urllib.request.urlopen",
+                "x.get",
+                "zip"
+              ]
+            },
+            {
+              "name": "format_for_prompt",
+              "args": [
+                "items"
+              ],
+              "calls": [
+                "'\\n'.join",
+                "lines.append"
+              ]
+            },
+            {
+              "name": "counts",
+              "args": [
+                "db"
+              ],
+              "calls": [
+                "con.close",
+                "con.execute",
+                "con.execute('SELECT count(*) FROM s03_items WHERE segment=?', (s,)).fetchone",
+                "con.execute('SELECT count(*) FROM s03_ledger').fetchone",
+                "init_db",
+                "str"
+              ]
+            },
+            {
+              "name": "adopt_birth",
+              "args": [
+                "birth_path",
+                "db"
+              ],
+              "calls": [
+                "(ev.get('base_model') or {}).get",
+                "(ev.get('holdout_eval') or {}).get",
+                "(ev.get('holdout_eval') or {}).get('identity', {}).get",
+                "BIRTH_COPY.parent.mkdir",
+                "BIRTH_COPY.write_text",
+                "Path",
+                "Path(birth_path).read_text",
+                "STATUS.parent.mkdir",
+                "STATUS.write_text",
+                "checks.get",
+                "counts",
+                "ev.get",
+                "hashlib.sha256",
+                "hashlib.sha256(raw.encode('utf-8')).hexdigest",
+                "json.dumps",
+                "json.loads",
+                "ledger_append",
+                "now_iso",
+                "raw.encode",
+                "remember"
+              ]
+            },
+            {
+              "name": "persist_turn",
+              "args": [
+                "user",
+                "assistant",
+                "db"
+              ],
+              "calls": [
+                "(user or '').lower",
+                "STATUS.exists",
+                "STATUS.parent.mkdir",
+                "STATUS.read_text",
+                "STATUS.with_suffix",
+                "_de",
+                "_mem0_hook",
+                "_sys.path.insert",
+                "any",
+                "con.close",
+                "con.commit",
+                "con.execute",
+                "con.executemany",
+                "counts",
+                "init_db",
+                "isinstance",
+                "json.dumps",
+                "json.loads",
+                "len",
+                "now_iso",
+                "remember",
+                "tmp.replace",
+                "tmp.write_text"
+              ]
+            }
+          ],
+          "database_paths": [
+            "/root/nox/kb/knowledge.sqlite"
+          ]
+        },
+        {
+          "path": "/root/nox/scripts/nox_journal.py",
+          "bytes": 8374,
+          "allocated_bytes": 12288,
+          "mtime_ns": 1794589224865567000,
+          "inode": 1157000526,
+          "uid": 0,
+          "mode": "0o755",
+          "symlink": false,
+          "sha256": "e03f208ec823e1e76afeaac3ccf701fc757bae46a0ab85ae7b75412e9ef10528",
+          "public_functions": [
+            {
+              "name": "now_msk",
+              "args": [],
+              "calls": [
+                "datetime.now",
+                "datetime.now(MSK).strftime"
+              ]
+            },
+            {
+              "name": "now_iso",
+              "args": [],
+              "calls": [
+                "datetime.now",
+                "datetime.now(MSK).isoformat"
+              ]
+            },
+            {
+              "name": "log_error",
+              "args": [
+                "source",
+                "what",
+                "evidence",
+                "root_cause",
+                "fix",
+                "verified",
+                "impact"
+              ],
+              "calls": [
+                "_append",
+                "_redact",
+                "extra.pop",
+                "isinstance",
+                "json.dumps",
+                "now_iso"
+              ]
+            },
+            {
+              "name": "log_improvement",
+              "args": [
+                "source",
+                "what",
+                "evidence",
+                "root_cause",
+                "fix",
+                "verified",
+                "impact"
+              ],
+              "calls": [
+                "_append",
+                "_redact",
+                "extra.pop",
+                "isinstance",
+                "json.dumps",
+                "now_iso"
+              ]
+            },
+            {
+              "name": "iter_records",
+              "args": [
+                "path",
+                "limit"
+              ],
+              "calls": [
+                "json.loads",
+                "len",
+                "line.strip",
+                "out.append",
+                "path.exists",
+                "path.open"
+              ]
+            },
+            {
+              "name": "recent_errors",
+              "args": [
+                "n"
+              ],
+              "calls": [
+                "iter_records"
+              ]
+            },
+            {
+              "name": "recent_improvements",
+              "args": [
+                "n"
+              ],
+              "calls": [
+                "iter_records"
+              ]
+            },
+            {
+              "name": "cluster_errors",
+              "args": [
+                "records",
+                "n"
+              ],
+              "calls": [
+                "(g['sample'] or {}).get",
+                "f\"{r.get('source')}|{r.get('what')}|{r.get('root_cause')}\".encode",
+                "g['sources'].add",
+                "groups.setdefault",
+                "groups.values",
+                "hashlib.sha1",
+                "hashlib.sha1(f\"{r.get('source')}|{r.get('what')}|{r.get('root_cause')}\".encode('utf-8', 'replace')).hexdigest",
+                "int",
+                "out.append",
+                "out.sort",
+                "r.get",
+                "recent_errors",
+                "set",
+                "sorted",
+                "str",
+                "x.get"
+              ]
+            },
+            {
+              "name": "log_owner_feedback",
+              "args": [
+                "kind",
+                "user_text",
+                "assistant_text",
+                "extra"
+              ],
+              "calls": [
+                "log_error"
+              ]
+            },
+            {
+              "name": "log_failed_tool",
+              "args": [
+                "tool",
+                "error",
+                "args"
+              ],
+              "calls": [
+                "_redact",
+                "log_error"
+              ]
+            },
+            {
+              "name": "log_canned_repeat",
+              "args": [
+                "text",
+                "count"
+              ],
+              "calls": [
+                "log_error"
+              ]
+            },
+            {
+              "name": "atomic_write_json",
+              "args": [
+                "path",
+                "obj"
+              ],
+              "calls": [
+                "f.fileno",
+                "f.flush",
+                "f.write",
+                "json.dump",
+                "os.fdopen",
+                "os.fsync",
+                "os.replace",
+                "os.unlink",
+                "path.parent.mkdir",
+                "str",
+                "tempfile.mkstemp"
+              ]
+            }
+          ],
+          "database_paths": []
+        },
+        {
+          "path": "/root/nox/scripts/hybrid_training_entry.py",
+          "bytes": 23926,
+          "allocated_bytes": 24576,
+          "mtime_ns": 1794796780270923800,
+          "inode": 1142131366,
+          "uid": 0,
+          "mode": "0o755",
+          "symlink": false,
+          "sha256": "f2ba60d6556ba3662713db0e503773f2361b82b6c83391be4e56a506aad8c0af",
+          "public_functions": []
+        },
+        {
+          "path": "/root/nox/scripts/train_qlora_35b_t866u.py",
+          "bytes": 29251,
+          "allocated_bytes": 32768,
+          "mtime_ns": 1794604519579136300,
+          "inode": 1163968213,
+          "uid": 0,
+          "mode": "0o755",
+          "symlink": false,
+          "sha256": "703da2adf5620ce4979bd559c73a15446c743e6608f39d34a6b17e016b47920a",
+          "public_functions": []
+        },
+        {
+          "path": "/root/nox/scripts/owner_autonomy_pool.py",
+          "error": "FileNotFoundError"
+        },
+        {
+          "path": "/root/nox/scripts/owner_subagent_processes.py",
+          "error": "FileNotFoundError"
+        }
+      ]
+    },
+    {
+      "section": "dispatcher",
+      "value": {
+        "metadata": {
+          "path": "/root/nox/state/dispatcher/state.json",
+          "bytes": 326653,
+          "allocated_bytes": 327680,
+          "mtime_ns": 1794800875217010200,
+          "inode": 3326582171,
+          "uid": 0,
+          "mode": "0o600",
+          "symlink": false
+        },
+        "counts": {
+          "done": 318,
+          "pending": 4,
+          "blocked": 9,
+          "failed": 3
+        },
+        "running": []
+      }
+    },
+    {
+      "section": "supervisor_config",
+      "value": [
+        {
+          "stopasgroup": "false",
+          "killasgroup": "false",
+          "autostart": "true",
+          "autorestart": "true",
+          "stopwaitsecs": "10",
+          "stopsignal": "TERM",
+          "path": "/etc/supervisor/conf.d/nox-chat-8081.conf",
+          "section": "program:nox-chat-8081",
+          "sha256": "1bf23d140aeb7719344ce7ca282d223eb47f670c9d50f49e85d206063fac5341"
+        },
+        {
+          "stopasgroup": "true",
+          "killasgroup": "true",
+          "autostart": "true",
+          "autorestart": "true",
+          "stopwaitsecs": "15",
+          "stopsignal": "TERM",
+          "path": "/etc/supervisor/conf.d/nox-cores.conf",
+          "section": "program:nox-cores",
+          "sha256": "148e35642f3b960560293e90873e27289e86a7e70a4f7e26574da6bab8191fe2"
+        },
+        {
+          "stopasgroup": "true",
+          "killasgroup": "true",
+          "autostart": "true",
+          "autorestart": "true",
+          "stopwaitsecs": "20",
+          "stopsignal": "TERM",
+          "path": "/etc/supervisor/conf.d/nox-embed.conf",
+          "section": "program:nox-embed",
+          "sha256": "5d0d6c887d37b506609c46e1c87553b1dce3bb79c108541b270e4717c4be86ea"
+        },
+        {
+          "stopasgroup": "true",
+          "killasgroup": "true",
+          "autostart": "true",
+          "autorestart": "true",
+          "stopwaitsecs": "15",
+          "stopsignal": "TERM",
+          "path": "/etc/supervisor/conf.d/nox-gpu-watchdog-t865u.conf",
+          "section": "program:nox-gpu-watchdog-t865u",
+          "sha256": "b6ef45af0524898916bac447c36d8a471e762c5311bb8b63440fda64b1f225a8"
+        },
+        {
+          "stopasgroup": "true",
+          "killasgroup": "true",
+          "autostart": "true",
+          "autorestart": "true",
+          "stopsignal": "TERM",
+          "path": "/etc/supervisor/conf.d/nox-hidden-router.conf",
+          "section": "program:nox-hidden-router",
+          "sha256": "33d3536b31ecd12a8a5b1b9051649c1043054603657cfc027e1df562d9bc3ccb"
+        },
+        {
+          "stopasgroup": "true",
+          "killasgroup": "true",
+          "autostart": "false",
+          "autorestart": "false",
+          "stopwaitsecs": "30",
+          "path": "/etc/supervisor/conf.d/nox-media-comfyui.conf",
+          "section": "program:nox-media-comfyui",
+          "sha256": "5d64ea4b947f2061e258547f1966ae657d34b53e1d6755bde6ab3ac3194581b8"
+        },
+        {
+          "stopasgroup": "true",
+          "killasgroup": "true",
+          "autostart": "true",
+          "autorestart": "true",
+          "stopwaitsecs": "15",
+          "stopsignal": "TERM",
+          "path": "/etc/supervisor/conf.d/nox-offload-t850u.conf",
+          "section": "program:nox-offload-t850u",
+          "sha256": "d6b3302fde043201a71dd3c197c302e0d755f4f14c5a83c23befb93b81a488e1"
+        },
+        {
+          "stopasgroup": "true",
+          "killasgroup": "true",
+          "autostart": "true",
+          "autorestart": "true",
+          "stopwaitsecs": "20",
+          "stopsignal": "TERM",
+          "path": "/etc/supervisor/conf.d/nox-proxy.conf",
+          "section": "program:nox-proxy",
+          "sha256": "ddec2af7e644f9bfae231ae47d1975542b9eddf6f2bee1d2e14a0ff34db3c18b"
+        },
+        {
+          "autostart": "true",
+          "autorestart": "true",
+          "path": "/etc/supervisor/conf.d/nox-report.conf.bak_t648u",
+          "section": "program:nox-report",
+          "sha256": "f154d85c413fb45fba7979f4afe9f94dae8e572d785ef652ce54142bd5fa39e5"
+        },
+        {
+          "stopasgroup": "true",
+          "killasgroup": "true",
+          "autostart": "true",
+          "autorestart": "true",
+          "stopwaitsecs": "20",
+          "stopsignal": "TERM",
+          "path": "/etc/supervisor/conf.d/nox-selfheal.conf",
+          "section": "program:nox-selfheal",
+          "sha256": "9f8a294d6341ac456c3b1dbb3ef848ee66c03ddbb5844990f1bed523fa1fbe80"
+        },
+        {
+          "stopasgroup": "true",
+          "killasgroup": "true",
+          "autostart": "true",
+          "autorestart": "true",
+          "stopwaitsecs": "30",
+          "stopsignal": "TERM",
+          "path": "/etc/supervisor/conf.d/nox-t802u.conf",
+          "section": "program:nox-downloads-t802u",
+          "sha256": "6f78469d6e8f41698710b947f213bfa1f4934ed2d3aabf8d728807c03899c152"
+        },
+        {
+          "stopasgroup": "true",
+          "killasgroup": "true",
+          "autostart": "true",
+          "autorestart": "true",
+          "stopwaitsecs": "15",
+          "stopsignal": "TERM",
+          "path": "/etc/supervisor/conf.d/nox-t802u.conf",
+          "section": "program:nox-dialog-miner",
+          "sha256": "6f78469d6e8f41698710b947f213bfa1f4934ed2d3aabf8d728807c03899c152"
+        },
+        {
+          "stopasgroup": "true",
+          "killasgroup": "true",
+          "autostart": "true",
+          "autorestart": "true",
+          "stopwaitsecs": "15",
+          "stopsignal": "TERM",
+          "path": "/etc/supervisor/conf.d/nox-t802u.conf",
+          "section": "program:nox-self-learning-loop",
+          "sha256": "6f78469d6e8f41698710b947f213bfa1f4934ed2d3aabf8d728807c03899c152"
+        },
+        {
+          "stopasgroup": "true",
+          "killasgroup": "true",
+          "autostart": "true",
+          "autorestart": "true",
+          "stopwaitsecs": "20",
+          "stopsignal": "TERM",
+          "path": "/etc/supervisor/conf.d/nox-t802u.conf",
+          "section": "program:nox-checklist-worker",
+          "sha256": "6f78469d6e8f41698710b947f213bfa1f4934ed2d3aabf8d728807c03899c152"
+        },
+        {
+          "stopasgroup": "true",
+          "killasgroup": "true",
+          "autostart": "false",
+          "autorestart": "true",
+          "stopwaitsecs": "25",
+          "stopsignal": "TERM",
+          "path": "/etc/supervisor/conf.d/nox-t802u.conf",
+          "section": "program:nox-teacher-bringup",
+          "sha256": "6f78469d6e8f41698710b947f213bfa1f4934ed2d3aabf8d728807c03899c152"
+        },
+        {
+          "stopasgroup": "false",
+          "killasgroup": "false",
+          "autostart": "true",
+          "autorestart": "true",
+          "stopwaitsecs": "10",
+          "stopsignal": "TERM",
+          "path": "/etc/supervisor/conf.d/nox-t811u.conf",
+          "section": "program:nox-teacher-serve-t811u",
+          "sha256": "94270f1c9a5795cd6f6a9fa959df2addfc1000dc50ba5cb9b6d2273e6e5ef426"
+        },
+        {
+          "stopasgroup": "true",
+          "killasgroup": "true",
+          "autostart": "true",
+          "autorestart": "true",
+          "stopwaitsecs": "20",
+          "stopsignal": "TERM",
+          "path": "/etc/supervisor/conf.d/nox-t811u.conf",
+          "section": "program:nox-distill-worm-t811u",
+          "sha256": "94270f1c9a5795cd6f6a9fa959df2addfc1000dc50ba5cb9b6d2273e6e5ef426"
+        },
+        {
+          "stopasgroup": "true",
+          "killasgroup": "true",
+          "autostart": "false",
+          "autorestart": "false",
+          "stopwaitsecs": "30",
+          "stopsignal": "TERM",
+          "path": "/etc/supervisor/conf.d/nox-t811u.conf",
+          "section": "program:nox-train-worm-t811u",
+          "sha256": "94270f1c9a5795cd6f6a9fa959df2addfc1000dc50ba5cb9b6d2273e6e5ef426"
+        },
+        {
+          "stopasgroup": "true",
+          "killasgroup": "true",
+          "autostart": "true",
+          "autorestart": "true",
+          "stopwaitsecs": "10",
+          "stopsignal": "TERM",
+          "path": "/etc/supervisor/conf.d/nox-t811u.conf",
+          "section": "program:nox-report-heartbeat-t811u",
+          "sha256": "94270f1c9a5795cd6f6a9fa959df2addfc1000dc50ba5cb9b6d2273e6e5ef426"
+        },
+        {
+          "stopasgroup": "false",
+          "killasgroup": "false",
+          "autostart": "true",
+          "autorestart": "true",
+          "stopwaitsecs": "10",
+          "stopsignal": "TERM",
+          "path": "/etc/supervisor/conf.d/nox-t811u.conf.bak_t846u",
+          "section": "program:nox-teacher-serve-t811u",
+          "sha256": "9e839ee40b59e40a8fe3088cc09974e7bed6ee2c695b7f743d65df9bd1238271"
+        },
+        {
+          "stopasgroup": "true",
+          "killasgroup": "true",
+          "autostart": "true",
+          "autorestart": "true",
+          "stopwaitsecs": "20",
+          "stopsignal": "TERM",
+          "path": "/etc/supervisor/conf.d/nox-t811u.conf.bak_t846u",
+          "section": "program:nox-distill-worm-t811u",
+          "sha256": "9e839ee40b59e40a8fe3088cc09974e7bed6ee2c695b7f743d65df9bd1238271"
+        },
+        {
+          "stopasgroup": "true",
+          "killasgroup": "true",
+          "autostart": "true",
+          "autorestart": "true",
+          "stopwaitsecs": "30",
+          "stopsignal": "TERM",
+          "path": "/etc/supervisor/conf.d/nox-t811u.conf.bak_t846u",
+          "section": "program:nox-train-worm-t811u",
+          "sha256": "9e839ee40b59e40a8fe3088cc09974e7bed6ee2c695b7f743d65df9bd1238271"
+        },
+        {
+          "stopasgroup": "true",
+          "killasgroup": "true",
+          "autostart": "true",
+          "autorestart": "true",
+          "stopwaitsecs": "10",
+          "stopsignal": "TERM",
+          "path": "/etc/supervisor/conf.d/nox-t811u.conf.bak_t846u",
+          "section": "program:nox-report-heartbeat-t811u",
+          "sha256": "9e839ee40b59e40a8fe3088cc09974e7bed6ee2c695b7f743d65df9bd1238271"
+        },
+        {
+          "stopasgroup": "true",
+          "killasgroup": "true",
+          "autostart": "true",
+          "autorestart": "true",
+          "stopwaitsecs": "10",
+          "stopsignal": "TERM",
+          "path": "/etc/supervisor/conf.d/nox-t829u.conf",
+          "section": "program:nox-vram-guard-t829u",
+          "sha256": "6db8d503755dc23ce7631a8b7888c885035870224b316ec61db993b8f3cc4c88"
+        },
+        {
+          "stopasgroup": "true",
+          "killasgroup": "true",
+          "autostart": "true",
+          "autorestart": "unexpected",
+          "stopwaitsecs": "30",
+          "stopsignal": "TERM",
+          "path": "/etc/supervisor/conf.d/nox-t845u-swap.conf",
+          "section": "program:nox-watch-swap-t845u",
+          "sha256": "ff1b0d755f1820804dd6deda42b3b4289be19c0ba100fd18eea6ffa56b607080"
+        },
+        {
+          "stopasgroup": "true",
+          "killasgroup": "true",
+          "autostart": "true",
+          "autorestart": "true",
+          "stopwaitsecs": "15",
+          "stopsignal": "TERM",
+          "path": "/etc/supervisor/conf.d/nox-t846u.conf",
+          "section": "program:nox-self-improve-t846u",
+          "sha256": "9456da633ed54622d6a55f97ae024023256d62b561ecd0f18c17fa07bff7f788"
+        },
+        {
+          "stopasgroup": "true",
+          "killasgroup": "true",
+          "autostart": "true",
+          "autorestart": "true",
+          "stopwaitsecs": "10",
+          "stopsignal": "TERM",
+          "path": "/etc/supervisor/conf.d/nox-t855u.conf",
+          "section": "program:nox-priority-scheduler",
+          "sha256": "f9ec50e6feb5b39307666b109623234624c30e5c3dd8ec496d7f5d51a69f41b5"
+        },
+        {
+          "stopasgroup": "true",
+          "killasgroup": "true",
+          "autostart": "true",
+          "autorestart": "true",
+          "stopwaitsecs": "20",
+          "stopsignal": "TERM",
+          "path": "/etc/supervisor/conf.d/nox-t855u.conf",
+          "section": "program:nox-dispatcher-t855u",
+          "sha256": "f9ec50e6feb5b39307666b109623234624c30e5c3dd8ec496d7f5d51a69f41b5"
+        },
+        {
+          "stopasgroup": "true",
+          "killasgroup": "true",
+          "autostart": "true",
+          "autorestart": "true",
+          "stopwaitsecs": "10",
+          "stopsignal": "TERM",
+          "path": "/etc/supervisor/conf.d/nox-t855u.conf",
+          "section": "program:nox-agent-tuner-t858u",
+          "sha256": "f9ec50e6feb5b39307666b109623234624c30e5c3dd8ec496d7f5d51a69f41b5"
+        },
+        {
+          "stopasgroup": "true",
+          "killasgroup": "true",
+          "autostart": "true",
+          "autorestart": "true",
+          "stopwaitsecs": "10",
+          "stopsignal": "TERM",
+          "path": "/etc/supervisor/conf.d/nox-t855u.conf",
+          "section": "program:nox-agent-integrator-t859u",
+          "sha256": "f9ec50e6feb5b39307666b109623234624c30e5c3dd8ec496d7f5d51a69f41b5"
+        },
+        {
+          "stopasgroup": "true",
+          "killasgroup": "true",
+          "autostart": "true",
+          "autorestart": "true",
+          "stopwaitsecs": "10",
+          "stopsignal": "TERM",
+          "path": "/etc/supervisor/conf.d/nox-t855u.conf",
+          "section": "program:nox-agent-architect-t859u",
+          "sha256": "f9ec50e6feb5b39307666b109623234624c30e5c3dd8ec496d7f5d51a69f41b5"
+        },
+        {
+          "stopasgroup": "true",
+          "killasgroup": "true",
+          "autostart": "false",
+          "autorestart": "unexpected",
+          "stopwaitsecs": "60",
+          "stopsignal": "TERM",
+          "path": "/etc/supervisor/conf.d/nox-train-volta-t866u.conf",
+          "section": "program:nox-train-volta-t866u",
+          "sha256": "6f9562bf9a159b380875c35731b9ae5b8161bd4fa803ceccaec59be8f697f3e4"
+        }
+      ]
+    }
+  ]
+}

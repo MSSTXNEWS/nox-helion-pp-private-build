@@ -1,0 +1,206 @@
+{
+  "schema": "NOX_REMAINING_EXECUTION_SNAPSHOT_V1",
+  "observed_at_utc": "2026-11-16T03:47:57Z",
+  "instructions_version": "0.0.6",
+  "scope": "CURRENT_RELAY_TASKS_AND_REMAINING_DOWNLOADS_NOT_A_NEW_SCHEDULER",
+  "native_task_registration_performed": false,
+  "relay_preserved": true,
+  "runtime_primary_changed": false,
+  "primary_model": "DeepSeek-V4.1-Flash-1017",
+  "primary_revision": "65d53bc8be65123e255ff02f3ded958b6dbf54fd",
+  "remaining_primary_unique_bytes": 248828477216,
+  "primary_download_queue": [
+    {
+      "path": "DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00002-of-00006.gguf",
+      "bytes": 39535781184,
+      "sha256": "25af3785ccf925f54137e1ead4c481a8952315dc0b1af6519a99407f67bce8f3",
+      "url": "https://huggingface.co/ISTA-DASLab/DeepSeek-V4.1-Flash-1017-GSQ-RCO-GGUF/resolve/65d53bc8be65123e255ff02f3ded958b6dbf54fd/DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00002-of-00006.gguf",
+      "download_state": "NOT_DOWNLOADED"
+    },
+    {
+      "path": "DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00003-of-00006.gguf",
+      "bytes": 39736712000,
+      "sha256": "8168d0998fc494def2e1952d83c131425a108660aae9d29190f5a8670ab62b48",
+      "url": "https://huggingface.co/ISTA-DASLab/DeepSeek-V4.1-Flash-1017-GSQ-RCO-GGUF/resolve/65d53bc8be65123e255ff02f3ded958b6dbf54fd/DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00003-of-00006.gguf",
+      "download_state": "NOT_DOWNLOADED"
+    },
+    {
+      "path": "DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00004-of-00006.gguf",
+      "bytes": 39036908384,
+      "sha256": "9eb9b4de1968f150dfc207eb31c27be9cd9b5666a9a6246bde8a22b184b4bee0",
+      "url": "https://huggingface.co/ISTA-DASLab/DeepSeek-V4.1-Flash-1017-GSQ-RCO-GGUF/resolve/65d53bc8be65123e255ff02f3ded958b6dbf54fd/DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00004-of-00006.gguf",
+      "download_state": "NOT_DOWNLOADED"
+    },
+    {
+      "path": "DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00005-of-00006.gguf",
+      "bytes": 19923784832,
+      "sha256": "7e35f6b4e6fc46f6c4b152b593d84d683c5ece695ae6ad734f556198c041bec1",
+      "url": "https://huggingface.co/ISTA-DASLab/DeepSeek-V4.1-Flash-1017-GSQ-RCO-GGUF/resolve/65d53bc8be65123e255ff02f3ded958b6dbf54fd/DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00005-of-00006.gguf",
+      "download_state": "NOT_DOWNLOADED"
+    },
+    {
+      "path": "DeepSeek-V4.1-Flash-Engram-IQ4_NL.gguf",
+      "bytes": 110595290816,
+      "sha256": "3dac4c54893ad7aa89103c0028500eadc78e74112cef3a2930a97e67dc9fb4f3",
+      "url": "https://huggingface.co/ISTA-DASLab/DeepSeek-V4.1-Flash-1017-GSQ-RCO-GGUF/resolve/65d53bc8be65123e255ff02f3ded958b6dbf54fd/DeepSeek-V4.1-Flash-Engram-IQ4_NL.gguf",
+      "download_state": "NOT_DOWNLOADED"
+    }
+  ],
+  "already_downloaded_local": {
+    "qwen": {
+      "revision": "c202236235762e1c871ad0ccb60c8ee5ba337b9a",
+      "bytes_with_metadata": 19329393661,
+      "native_training_verified": false
+    },
+    "training_wheelhouse": {
+      "wheels": 72,
+      "archive_bytes": 3831295823,
+      "role": "portable_CP311_cu126_candidate_not_required_to_reinstall_existing_native_runtime"
+    },
+    "combined_archive": {
+      "bytes": 24497061011,
+      "sha256": "c702efb747cc0259a0c70839b04b507b42cfb04dd55310029f170d6b97b28a6a",
+      "primary_weights_missing": true,
+      "durable_transfer_state": "PARTIAL_IN_PROGRESS_READ_VOLUME_LEDGER"
+    }
+  },
+  "observed_native_training_environment": {
+    "python": "3.12.16",
+    "torch": "2.6.0+cu124",
+    "sm70_compiled": true,
+    "transformers": "5.23.0",
+    "peft": "0.21.3",
+    "accelerate": "1.15.0",
+    "bitsandbytes": "0.50.2",
+    "safetensors": "0.8.0",
+    "kernel_training_acceptance": false
+  },
+  "remaining_or_accepted_tasks": [
+    {
+      "slot": "1A",
+      "task": "native_runtime_inventory",
+      "state": "DONE_NATIVE",
+      "evidence": "night-runtime-probe-6906683150.json",
+      "requires": []
+    },
+    {
+      "slot": "1B",
+      "task": "maya_sm70_build",
+      "state": "DONE_NATIVE_NOT_RUNTIME_ACCEPTED",
+      "evidence": "maya-build-6906295096-receipt.json",
+      "requires": []
+    },
+    {
+      "slot": "1D",
+      "task": "main_weight_storage_and_download",
+      "state": "WAIT_VERIFIED_PLACEMENT",
+      "evidence": null,
+      "requires": [
+        "server_drive_oauth_or_other_approved_seekable_storage"
+      ]
+    },
+    {
+      "slot": "2A",
+      "task": "qwen_native_memfd_and_kernel_admission",
+      "state": "SOURCE_IN_PROGRESS",
+      "evidence": null,
+      "requires": [
+        "single_trainer_lease",
+        "automatic_vs_manual_train_hold_classification",
+        "small_native_memfd_bnb_probe"
+      ]
+    },
+    {
+      "slot": "2D",
+      "task": "qwen_successful_updates_checkpoint_restore",
+      "state": "WAIT_QWEN_NATIVE_ADMISSION",
+      "evidence": null,
+      "requires": [
+        "qwen_native_memfd_and_kernel_admission",
+        "approved_corpus",
+        "new_student_lineage"
+      ]
+    },
+    {
+      "slot": "1C",
+      "task": "nox_director_three_process_binding",
+      "state": "SOURCE_IN_PROGRESS",
+      "evidence": null,
+      "requires": [
+        "exact_installed_source_hashes",
+        "single_dispatcher_writer",
+        "policy_file_sha_ack"
+      ]
+    },
+    {
+      "slot": "2B",
+      "task": "s03_live_recall_and_knowledge_results",
+      "state": "PARTIAL_NATIVE_API_PRESENT",
+      "evidence": null,
+      "requires": [
+        "real_job_result_write_readback"
+      ]
+    },
+    {
+      "slot": "2C",
+      "task": "hunter_curriculum_and_knowledge_learning",
+      "state": "WAIT_NATIVE_CALLBACK_RECEIPT",
+      "evidence": null,
+      "requires": [
+        "nox_director_three_process_binding",
+        "s03_live_recall_and_knowledge_results"
+      ]
+    },
+    {
+      "slot": "3B",
+      "task": "main_model_through_existing_nox_chat",
+      "state": "WAIT_FULL_PRIMARY_WEIGHTS",
+      "evidence": null,
+      "requires": [
+        "main_weight_storage_and_download",
+        "bounded_maya_load",
+        "same_s03_and_tools_adapter"
+      ]
+    },
+    {
+      "slot": "3B",
+      "task": "new_chat_image_roundtrip",
+      "state": "WAIT_NEW_CHAT_ACCEPTANCE",
+      "evidence": null,
+      "requires": [
+        "main_model_through_existing_nox_chat",
+        "media_gpu_lease"
+      ]
+    },
+    {
+      "slot": "1D",
+      "task": "retire_old_serving_weights",
+      "state": "WAIT_ACCEPTED_REPLACEMENT",
+      "evidence": null,
+      "requires": [
+        "main_model_through_existing_nox_chat",
+        "no_open_handles_or_training_dependencies",
+        "independent_verified_restore"
+      ]
+    },
+    {
+      "slot": "3A/3C/3D",
+      "task": "existing_web29_live_integration",
+      "state": "FOLLOW_EXISTING_RELAY",
+      "evidence": null,
+      "requires": [
+        "exact_current_web_preimages",
+        "native_writer_lease",
+        "browser_acceptance"
+      ]
+    },
+    {
+      "slot": "1A-3D",
+      "task": "additional_nightly_control",
+      "state": "DONE_CONFIG_VERIFIED_12_OF_12",
+      "evidence": "relay_control_append_receipt.json",
+      "requires": []
+    }
+  ],
+  "policy": "Keep slot roles/schedules, append-only control block. Claims and native execution require current state and existing lease. No blind restart of healthy work."
+}
