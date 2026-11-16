@@ -19,4 +19,4 @@ jobs:
         with:
           python-version: "3.11"
       - name: Run isolated admission tests
-        run: python -m unittest discover -s nox_runpod/stage0/tests -v
+        run: PYTHONPATH=nox_runpod/stage0 python -m unittest discover -s nox_runpod/stage0/tests -v
