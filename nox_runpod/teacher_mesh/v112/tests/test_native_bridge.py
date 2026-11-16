@@ -13,7 +13,8 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.testclient import TestClient
 
 from nox_runpod.teacher_mesh.v112.native_v29_full_bridge import (
-    _sse_delta, _timestamp, ensure_dialog_schema, register_native_v29_chat,
+    S03_REQUEST_RECEIPT_SCHEMA, _sse_delta, _validate_s03_request_receipt,
+    ensure_dialog_schema, register_native_v29_chat,
 )
 
 LESSON_FIXTURE=Path(__file__).parent/'fixtures/session_access_evidence_lesson.json'
@@ -21,6 +22,17 @@ LESSON_SOURCE_COMMIT='d96e96613f1d285fde2cb32f7b526610dc2cbea9'
 LESSON_GIT_BLOB_SHA='f45bc617899b8e0365460bbfb5e1bfde0cc3e52c'
 
 class V112Tests(unittest.TestCase):
+    def make_request_receipt(self,request_id,session_id,question,answer,record_id=None,sha256=None,**extra):
+        return {
+            'schema':S03_REQUEST_RECEIPT_SCHEMA,'committed':True,'verified':True,
+            'request_id':request_id,'session_id':session_id,
+            'record_id':record_id or ('receipt-'+request_id),
+            'sha256':sha256 or hashlib.sha256((question+answer).encode()).hexdigest(),
+            'question_sha256':hashlib.sha256(question.encode()).hexdigest(),
+            'answer_sha256':hashlib.sha256(answer.encode()).hexdigest(),
+            'owner_scope':'nox-single-owner','acl':'owner',**extra,
+        }
+
     def setUp(self):
         tmp=tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
@@ -52,6 +64,8 @@ class V112Tests(unittest.TestCase):
             return {'model':'NOX PRIME 8B','ts':123}
         self.calls=[]
         self.recall_calls=[]
+        self.receipts={}
+        self.receipt_calls=[]
         self.record=True
         self.bulk_sse=''
         async def native(payload):
@@ -101,10 +115,15 @@ class V112Tests(unittest.TestCase):
                 if self.record:
                     from datetime import datetime,timezone
                     stamp=datetime.now(timezone.utc).isoformat()
+                    request_id=payload['_nox_request_id']
+                    session_id=payload['_nox_session_id']
+                    record_id='new-exchange-'+request_id
+                    record_sha=hashlib.sha256((q+answer).encode()).hexdigest()
                     with sqlite3.connect(self.db) as db:
                         db.execute('INSERT INTO s03_items(id,sha256,text,ts) VALUES(?,?,?,?)',(
-                          'new-exchange-0001',hashlib.sha256((q+answer).encode()).hexdigest(),
-                          'U:'+q+' A:'+answer,stamp))
+                          record_id,record_sha,'U:'+q+' A:'+answer,stamp))
+                    self.receipts[(request_id,session_id)]=self.make_request_receipt(
+                        request_id,session_id,q,answer,record_id=record_id,sha256=record_sha)
                 if self.bulk_sse=='invalid_utf8_comment':
                     # Original model answer and S03 fixture proof exist, but
                     # upstream sends invalid UTF-8 in a syntactically ignorable comment.
@@ -123,12 +142,21 @@ class V112Tests(unittest.TestCase):
                                 'FROM s03_items ORDER BY ts DESC LIMIT ?', (k,)).fetchall()
             return [dict(row,verified=row['verified'] is True or row['verified']==1)
                     for row in rows]
+        def request_receipt(*,request_id,session_id,question_sha256,answer_sha256,owner_scope):
+            self.receipt_calls.append((request_id,session_id,question_sha256,answer_sha256,owner_scope))
+            receipt=self.receipts.get((request_id,session_id))
+            if (receipt is None or receipt.get('question_sha256')!=question_sha256 or
+                receipt.get('answer_sha256')!=answer_sha256 or receipt.get('owner_scope')!=owner_scope):
+                return None
+            return dict(receipt)
         self.trusted={
           '_session_ok':lambda request:request.cookies.get('owner')=='yes',
           '_unauthorized':lambda:JSONResponse({'error':'AUTH'},status_code=401),
           '_proxy_completion':native,
           'nox_status':old_status,
           'recall':recall,
+          '_s03_request_receipt_schema':S03_REQUEST_RECEIPT_SCHEMA,
+          '_s03_request_receipt':request_receipt,
           'stop_active':lambda:False,
         }
         register_native_v29_chat(self.app,self.trusted,site_dir=self.site)
@@ -245,7 +273,8 @@ class V112Tests(unittest.TestCase):
         self.assertTrue(frames[-1]['saved'])
         self.assertTrue(frames[-1]['s03_integrated'])
         self.assertEqual(frames[-1]['dialog_id'],d)
-        self.assertEqual(frames[-1]['exchange_id'],'new-exchange-0001')
+        self.assertEqual(frames[-1]['exchange_id'],
+                         'new-exchange-'+self.calls[-1]['_nox_request_id'])
         self.assertTrue(self.calls[-1]['_owner'])
         hist=self.client.get('/api/ui/memory/dialogs/history',
              cookies=self.cookie,params={'dialog_id':d}).json()
@@ -264,7 +293,8 @@ class V112Tests(unittest.TestCase):
         self.assertEqual(r.status_code,200,r.text[:300])
         frames=[json.loads(x) for x in r.text.splitlines() if x.strip()]
         self.assertEqual([f['type'] for f in frames],['preparing','start','delta','done'])
-        self.assertEqual(frames[-1]['exchange_id'],'new-exchange-0001')
+        self.assertEqual(frames[-1]['exchange_id'],
+                         'new-exchange-'+self.calls[-1]['_nox_request_id'])
         self.assertTrue(frames[-1]['s03_integrated'])
         self.assertEqual(''.join(f['text'] for f in frames if f['type']=='delta'),
                          'Готов. Это проверенный ответ.')
@@ -468,6 +498,31 @@ class V112Tests(unittest.TestCase):
         self.assertEqual(len(self.recall_calls),before)
         self.assertEqual(self.calls,[])
 
+    def test_missing_request_receipt_contract_blocks_before_recall_and_provider(self):
+        self.trusted.pop('_s03_request_receipt_schema')
+        before=len(self.recall_calls)
+        response=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
+                                  json={'message':'No request-scoped S03 writer'})
+        self.assertEqual(response.status_code,503)
+        self.assertEqual(response.json()['error'],'HOLD_S03_REQUEST_RECEIPT_CONTRACT')
+        self.assertEqual(len(self.recall_calls),before)
+        self.assertEqual(self.calls,[])
+
+    def test_plain_string_s03_writer_receipt_cannot_claim_saved_or_history(self):
+        self.record=False
+        self.trusted['_s03_request_receipt']=lambda **kwargs:'ambiguous-row-id'
+        dialog=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
+            json={'title':'Ambiguous writer receipt','confirmed':True}).json()['dialog_id']
+        response=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
+            json={'message':'Writer must provide correlated receipt','dialog_id':dialog})
+        frames=[json.loads(line) for line in response.text.splitlines() if line.strip()]
+        self.assertEqual(frames[-1],{'type':'error',
+            'error':'HOLD_S03_REQUEST_RECEIPT_NOT_VERIFIED'})
+        self.assertFalse(any(frame.get('type')=='done' or frame.get('saved') for frame in frames))
+        history=self.client.get('/api/ui/memory/dialogs/history',cookies=self.cookie,
+            params={'dialog_id':dialog}).json()
+        self.assertEqual(history['messages'],[])
+
     def test_s03_recall_is_skipped_if_owner_session_expires_before_lookup(self):
         checks={'count':0}
         def expires(request):
@@ -506,19 +561,26 @@ class V112Tests(unittest.TestCase):
             after=db.execute('SELECT COUNT(*) FROM s03_items').fetchone()[0]
         self.assertEqual(after,before)
 
-    def test_global_stop_after_s03_readback_blocks_dialog_history_write(self):
+    def test_global_stop_after_s03_request_receipt_blocks_dialog_history_write(self):
         from unittest.mock import patch
         state={'stop':False}
         self.record=False
         self.trusted['stop_active']=lambda:state['stop']
         dialog=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
             json={'title':'STOP write boundary','confirmed':True}).json()['dialog_id']
-        def stop_during_readback(question,answer,started_at):
+        def stop_during_receipt(*,request_id,session_id,question_sha256,answer_sha256,
+                                owner_scope):
             state['stop']=True
-            return {'record_id':'fixture-proof-after-stop'}
-        with patch('nox_runpod.teacher_mesh.v112.native_v29_full_bridge._readback',
-                   side_effect=stop_during_readback), \
-             patch('nox_runpod.teacher_mesh.v112.native_v29_full_bridge._save_exchange',
+            question='Do not persist after STOP'
+            answer='Готов. Это проверенный ответ.'
+            receipt=self.make_request_receipt(request_id,session_id,question,answer,
+                record_id='fixture-proof-after-stop')
+            self.assertEqual(receipt['question_sha256'],question_sha256)
+            self.assertEqual(receipt['answer_sha256'],answer_sha256)
+            self.assertEqual(owner_scope,'nox-single-owner')
+            return receipt
+        self.trusted['_s03_request_receipt']=stop_during_receipt
+        with patch('nox_runpod.teacher_mesh.v112.native_v29_full_bridge._save_exchange',
                    side_effect=AssertionError('dialog writer called after global STOP')):
             response=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
                 json={'message':'Do not persist after STOP','dialog_id':dialog})
@@ -661,14 +723,76 @@ class V112Tests(unittest.TestCase):
         self.assertEqual(response.json()['error'],'HOLD_DIALOG_SCOPE_NOT_BOUND')
         self.assertEqual(self.calls,[])
 
-    def test_no_fresh_s03_row_means_no_fake_done(self):
+    def test_stale_same_prefix_s03_row_without_receipt_cannot_complete(self):
+        from datetime import datetime,timedelta,timezone
         self.record=False
+        question='Stale S03 prefix with no current request receipt'
+        answer='Готов. Это проверенный ответ.'
+        stale_ts=(datetime.now(timezone.utc)-timedelta(seconds=.5)).isoformat()
+        with sqlite3.connect(self.db) as db:
+            db.execute('INSERT INTO s03_items(id,sha256,text,ts) VALUES(?,?,?,?)',(
+                'stale-prefix-row-0001',hashlib.sha256((question+answer).encode()).hexdigest(),
+                'U:'+question+' A:'+answer,stale_ts))
+        dialog=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
+            json={'title':'Stale S03 receipt','confirmed':True}).json()['dialog_id']
         r=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
-          json={'message':'Другой уникальный вопрос'})
+          json={'message':question,'dialog_id':dialog})
         frames=[json.loads(x) for x in r.text.splitlines() if x.strip()]
         self.assertEqual(frames[-1]['type'],'error')
-        self.assertEqual(frames[-1]['error'],'HOLD_S03_COMMIT_NOT_VERIFIED')
-        self.assertFalse(any(x.get('saved') for x in frames))
+        self.assertEqual(frames[-1]['error'],'HOLD_S03_REQUEST_RECEIPT_NOT_VERIFIED')
+        self.assertFalse(any(x.get('type')=='done' or x.get('saved') for x in frames))
+        history=self.client.get('/api/ui/memory/dialogs/history',cookies=self.cookie,
+            params={'dialog_id':dialog}).json()
+        self.assertEqual(history['messages'],[])
+
+    def test_exact_s03_request_session_receipt_is_accepted(self):
+        request_id='a'*32
+        session_id='b'*64
+        question='Проверка точной квитанции'
+        answer='Проверенный ответ.'
+        receipt=self.make_request_receipt(request_id,session_id,question,answer,
+            record_id='exact-receipt-0001')
+        self.assertEqual(_validate_s03_request_receipt(
+            receipt,request_id,session_id,question,answer),
+            {'record_id':'exact-receipt-0001','sha256':receipt['sha256']})
+
+    def test_s03_request_receipt_rejects_mismatched_request_id(self):
+        request_id='a'*32
+        session_id='b'*64
+        question='Question'
+        answer='Answer'
+        receipt=self.make_request_receipt(request_id,session_id,question,answer)
+        self.assertIsNone(_validate_s03_request_receipt(
+            receipt,'c'*32,session_id,question,answer))
+
+    def test_s03_request_receipt_rejects_mismatched_session_id(self):
+        request_id='a'*32
+        session_id='b'*64
+        question='Question'
+        answer='Answer'
+        receipt=self.make_request_receipt(request_id,session_id,question,answer)
+        self.assertIsNone(_validate_s03_request_receipt(
+            receipt,request_id,'d'*64,question,answer))
+
+    def test_concurrent_identical_prefix_receipts_do_not_cross_sessions(self):
+        question_a='Q'*160+' request A'
+        question_b='Q'*160+' request B'
+        answer_a='A'*150+' answer A'
+        answer_b='A'*150+' answer B'
+        request_a,session_a='a'*32,'b'*64
+        request_b,session_b='c'*32,'d'*64
+        receipt_a=self.make_request_receipt(request_a,session_a,question_a,answer_a,
+            record_id='session-a-receipt')
+        receipt_b=self.make_request_receipt(request_b,session_b,question_b,answer_b,
+            record_id='session-b-receipt')
+        # The old prefix-based readback would regard both pairs as identical.
+        self.assertEqual(question_a[:160],question_b[:160])
+        self.assertEqual(answer_a[:150],answer_b[:150])
+        self.assertIsNone(_validate_s03_request_receipt(
+            receipt_a,request_b,session_b,question_b,answer_b))
+        self.assertEqual(_validate_s03_request_receipt(
+            receipt_b,request_b,session_b,question_b,answer_b)['record_id'],
+            'session-b-receipt')
 
     def test_dialog_revision_and_archive(self):
         created=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
@@ -699,8 +823,18 @@ class V112Tests(unittest.TestCase):
         self.assertEqual(r.status_code,409)
         self.assertNotIn('gpu_stop_verified',r.json())
 
-    def test_s03_timestamp_guard(self):
-        self.assertLess(_timestamp('2025-01-01T00:00:00Z'), _timestamp('2026-11-14T00:00:00Z'))
+    def test_s03_request_receipt_rejects_wrong_owner_or_acl(self):
+        request_id='a'*32
+        session_id='b'*64
+        question='Question'
+        answer='Answer'
+        wrong_owner=self.make_request_receipt(request_id,session_id,question,answer,
+            owner_scope='other-owner')
+        wrong_acl=self.make_request_receipt(request_id,session_id,question,answer,acl='public')
+        self.assertIsNone(_validate_s03_request_receipt(
+            wrong_owner,request_id,session_id,question,answer))
+        self.assertIsNone(_validate_s03_request_receipt(
+            wrong_acl,request_id,session_id,question,answer))
 
 if __name__=='__main__':
     unittest.main()
