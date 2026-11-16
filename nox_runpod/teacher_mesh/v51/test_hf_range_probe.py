@@ -71,7 +71,7 @@ class ReadOnlyRangeContractTests(unittest.TestCase):
                 "ETag": etag,
                 "Content-Encoding": "identity",
             }),
-            FakeResponse(b"\\x7f", status=206, headers={
+            FakeResponse(bytes([127]), status=206, headers={
                 "Content-Length": "1",
                 "Content-Range": f"bytes 0-0/{self.pin['bytes']}",
                 "ETag": etag,
