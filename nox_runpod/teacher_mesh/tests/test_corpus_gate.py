@@ -187,6 +187,11 @@ class NightlyCorpusTests(unittest.TestCase):
         data,policy=self._approved_threeway()
         self.assertEqual(c.canonical_hash("\u200bАБВ"),c.canonical_hash("АБВ"))
         data[1]["prompt"]="\u200b"+data[0]["prompt"]
+        # Re-pin this altered row as independently owner-reviewed, so this
+        # regression reaches the duplicate gate rather than the stricter
+        # exact reviewed-payload gate.
+        policy["approved_content_sha_by_source_receipt"][
+            data[1]["source_receipt_sha256"]]=c.reviewed_payload_sha256(data[1])
         result=c.build_owner_pinned_threeway_sft(data,policy)
         self.assertEqual(result["status"],"HOLD_THREEWAY_SOURCE_COVERAGE")
         self.assertEqual(result["rejected"]["CROSS_SOURCE_DUPLICATE"],1)
