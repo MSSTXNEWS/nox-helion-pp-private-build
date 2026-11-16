@@ -58,6 +58,8 @@ def _strict_json_loads(value):
 
 MAX_CORPUS_ROW_BYTES=65536
 MAX_CORPUS_ROWS=50000
+# Hard bound even if owner receipt metadata is tampered; max ~150k row proofs.
+MAX_MANIFEST_BYTES=96*1024*1024
 
 def _prompt_fingerprint(row:object)->str|None:
     """Check the intended TRL message shape, not merely a hash of arbitrary JSONL."""
@@ -156,7 +158,13 @@ def verify_corpus(corpus_dir:str)->dict:
         mf=p/"manifest.json"
         if not mf.is_file() or mf.is_symlink():
             return {"state":"HOLD_CORPUS_MANIFEST_FILE"}
-        manifest=_strict_json_loads(mf.read_text("utf-8"))
+        # read_text() was unbounded even though JSONL reads were capped.
+        # Bound the manifest before JSON decoding/provenance inspection.
+        with mf.open("rb") as manifest_stream:
+            manifest_bytes=manifest_stream.read(MAX_MANIFEST_BYTES+1)
+        if len(manifest_bytes)>MAX_MANIFEST_BYTES:
+            return {"state":"HOLD_CORPUS_MANIFEST_TOO_LARGE"}
+        manifest=_strict_json_loads(manifest_bytes.decode("utf-8"))
         if not isinstance(manifest,dict):
             return {"state":"HOLD_CORPUS_SCHEMA"}
         schema=manifest.get("schema")

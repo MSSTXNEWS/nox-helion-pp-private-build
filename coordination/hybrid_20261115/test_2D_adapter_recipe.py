@@ -81,6 +81,24 @@ class ForgeRecipeTest(unittest.TestCase):
         p.write_bytes(b.replace(b"safe",b"fake"))
         self.assertEqual(p.stat().st_size,len(b))
         self.assertEqual(recipe.verify_corpus(str(self.corpus))["state"],"HOLD_CORPUS_HASH")
+    def test_manifest_read_is_bounded_and_preserves_valid_corpus(self):
+        manifest_file=self.corpus/"manifest.json"
+        original_len=len(manifest_file.read_bytes())
+        with patch.object(recipe,"MAX_MANIFEST_BYTES",original_len-1):
+            with patch.object(Path,"read_text",side_effect=AssertionError("unbounded manifest")):
+                self.assertEqual(recipe.verify_corpus(str(self.corpus))["state"],
+                                 "HOLD_CORPUS_MANIFEST_TOO_LARGE")
+        with patch.object(Path,"read_text",side_effect=AssertionError("unbounded manifest")):
+            self.assertEqual(recipe.verify_corpus(str(self.corpus))["state"],
+                             "VERIFIED_SOURCE_CORPUS")
+
+    def test_oversized_manifest_rejected_before_json_decode(self):
+        manifest_file=self.corpus/"manifest.json"
+        manifest_file.write_bytes(b'{"a":' + b' '*8192 + b'1}')
+        with patch.object(recipe,"MAX_MANIFEST_BYTES",1024):
+            self.assertEqual(recipe.verify_corpus(str(self.corpus))["state"],
+                             "HOLD_CORPUS_MANIFEST_TOO_LARGE")
+
     def test_manifest_symlink_hold(self):
         f=self.corpus/"manifest.json"
         dest=self.root/"actual_manifest.json"
