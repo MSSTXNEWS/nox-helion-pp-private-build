@@ -67,6 +67,36 @@
         "tests_scope": "owner storage reclaim and native audit source fixtures: 36/36 PASS; no native OneHost deployment",
         "native_file_rehash_completed": false,
         "native_model_replacement_completed": false
+      },
+      "provider_storage_constraints": {
+        "evidence_id": "V13-05_PROVIDER_STORAGE_PATH_20261116",
+        "verified_on_utc": "2026-11-16",
+        "scope": "SOURCE_PROVIDER_DOCUMENTATION_ONLY_NOT_GUEST_MOUNT",
+        "root_overlay_bytes_from_last_authenticated_guest": 183609851904,
+        "root_free_bytes_last_authenticated_guest": 43158585344,
+        "missing_unique_model_bytes": 248828477216,
+        "missing_bytes_minus_root_free": 205669891872,
+        "extra_required": "positive rollback/workspace reserve; exact amount depends on verified runtime/pack size",
+        "provider_container_disk_resize": "NOT_SUPPORTED_AFTER_INSTANCE_CREATION",
+        "provider_local_volumes": "PHYSICALLY_TIED_TO_ONE_HOST; guides document mounting when creating an instance, not verified hot attach to this running #60509551",
+        "provider_network_volume": "NO_CONFIRMED_SHARED_NETWORK_VOLUME_PRODUCT",
+        "provider_cloud_copy": "TRANSFER_NOT_RANDOM_ACCESS_SEEKABLE_MODEL_MOUNT",
+        "owner_same_instance_restriction": "ACTIVE; do not create replacement, volume, paid resource or delete any instance without explicit owner authorization",
+        "gate": "HOLD_NO_AUTHENTICATED_PERSISTENT_SEEKABLE_MOUNT_AND_OWNER_LEASE",
+        "acceptable_next_evidence": "A current authorized guest mount + mount identity/read-write/seek/hole-read test, quota/free>=all unique remaining GGUF bytes+reserve, same-device performance and independent rollback readback, under original owner lease",
+        "source_links": [
+          "https://github.com/vast-ai/docs/blob/main/guides/instances/storage/types.mdx",
+          "https://github.com/vast-ai/docs/blob/main/guides/instances/storage/volumes.mdx",
+          "https://github.com/vast-ai/vast-codex-plugin/blob/main/skills/vastai/SKILL.md",
+          "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/ffe15c2a415aa3daa792e5224c213afc63c1ae8d/coordination/progress/hourly/2026-11-16T23/2A_V13_OWNER_READONLY_RECHECK_2009Z.json"
+        ],
+        "not_evidence_of": [
+          "native mount",
+          "paid volume created",
+          "full GGUF payload hash",
+          "Maya TP2 inference",
+          "owner writer lease"
+        ]
       }
     },
     "D2": {
