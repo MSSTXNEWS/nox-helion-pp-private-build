@@ -1,8 +1,10 @@
 """Offline/synthetic and immutable-source checks; no model, CUDA, or inference."""
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 from pathlib import Path
+import tempfile
 import unittest
 from unittest.mock import patch
 
@@ -120,33 +122,78 @@ class MayaLaunchPlanTests(unittest.TestCase):
         self.assertFalse(got["launchable"])
 
     def test_complete_inputs_produce_non_launchable_plan_only(self):
-        got = PLAN.evaluate_source_plan(
-            stop_present=False, gpu_ids=(0, 1), tp=2, max_context=65536,
-            reserve_mib=1024, verified_files=complete_rows(),
-            tensor_types=("BF16", "Q5_K", "Q6_K", "Q8_0", "IQ2_XXS", "IQ4_NL"),
-            packer_output_absent=True)
+        with patch.object(PLAN, "observe_packer_output", return_value={
+                "state": "PACKER_OUTPUT_ABSENT_VERIFIED",
+                "model_dir": "/synthetic/model",
+                "output_dir": "/synthetic/model/maya-ds4"}):
+            got = PLAN.evaluate_source_plan(
+                stop_present=False, gpu_ids=(0, 1), tp=2, max_context=65536,
+                reserve_mib=1024, verified_files=complete_rows(),
+                tensor_types=("BF16", "Q5_K", "Q6_K", "Q8_0", "IQ2_XXS", "IQ4_NL"),
+                model_file_paths=["synthetic"] * 6)
         self.assertEqual(got["state"], "SOURCE_ONLY_PLAN_READY_NOT_LAUNCHABLE")
         self.assertFalse(got["launchable"])
         self.assertEqual(got["unique_verified_files"], 6)
         self.assertEqual(got["unique_bytes"], 248_834_257_920)
         self.assertIn("--serve", got["command_contract"])
-        self.assertEqual(got["packer_output_dir"], "maya-ds4")
+        self.assertEqual(got["packer_model_dir"], "/synthetic/model")
+        self.assertEqual(got["packer_output_dir"], "/synthetic/model/maya-ds4")
         self.assertTrue(got["packer_non_clobber_precondition"])
 
-    def test_packer_output_must_be_absent_to_prevent_clobber(self):
-        common = dict(stop_present=False, gpu_ids=(0, 1), tp=2,
-                      max_context=4096, reserve_mib=1024,
-                      verified_files=complete_rows(),
-                      tensor_types=("BF16", "IQ2_XXS", "IQ4_NL"))
-        for observed in (None, False, 0, "false"):
-            with self.subTest(output_absent=repr(observed)):
-                got = PLAN.evaluate_source_plan(
-                    **{**common, "packer_output_absent": observed})
-                self.assertEqual(got["state"], "HOLD_PACKER_OUTPUT_NOT_ABSENT")
-                self.assertFalse(got["launchable"])
-        passed = PLAN.evaluate_source_plan(
-            **{**common, "packer_output_absent": True})
-        self.assertEqual(passed["state"], "SOURCE_ONLY_PLAN_READY_NOT_LAUNCHABLE")
+    def test_output_observation_rejects_existing_directory_symlink_and_unknown_paths(self):
+        names = PLAN.EXPECTED_FILES
+        payloads = {name: ("fixture:" + name).encode() for name in names}
+        facts = {name: (len(data), hashlib.sha256(data).hexdigest())
+                 for name, data in payloads.items()}
+        with tempfile.TemporaryDirectory() as tmp, \
+             patch.object(PLAN, "PINNED_FILE_FACTS", facts):
+            model = Path(tmp) / "model"
+            model.mkdir()
+            paths = []
+            for name, data in payloads.items():
+                path = model / name
+                path.write_bytes(data)
+                paths.append(path)
+            absent = PLAN.observe_packer_output(paths)
+            self.assertEqual(absent["state"], "PACKER_OUTPUT_ABSENT_VERIFIED")
+            self.assertEqual(absent["output_dir"], str(model / "maya-ds4"))
+            self.assertFalse((model / "maya-ds4").exists())
+
+            output = model / "maya-ds4"
+            output.mkdir()
+            self.assertEqual(PLAN.observe_packer_output(paths)["state"],
+                             "HOLD_PACKER_OUTPUT_EXISTS")
+            output.rmdir()
+
+            target = Path(tmp) / "existing-output"
+            target.mkdir()
+            output.symlink_to(target, target_is_directory=True)
+            self.assertEqual(PLAN.observe_packer_output(paths)["state"],
+                             "HOLD_PACKER_OUTPUT_EXISTS")
+            output.unlink()
+
+            self.assertEqual(PLAN.observe_packer_output(None)["state"],
+                             "HOLD_PACKER_MODEL_PATH_UNKNOWN")
+            self.assertEqual(PLAN.observe_packer_output(
+                [Path(tmp) / "missing" / name for name in names])["state"],
+                "HOLD_PACKER_MODEL_INPUT_MISSING")
+            self.assertEqual(PLAN.observe_packer_output(paths[:-1])["state"],
+                             "HOLD_PACKER_MODEL_PATH_UNKNOWN")
+
+    def test_caller_cannot_spoof_output_absence_boolean(self):
+        with self.assertRaises(TypeError):
+            PLAN.evaluate_source_plan(
+                stop_present=False, gpu_ids=(0, 1), tp=2, max_context=4096,
+                reserve_mib=1024, verified_files=complete_rows(),
+                tensor_types=("BF16", "IQ2_XXS", "IQ4_NL"),
+                packer_output_absent=True)
+
+    def test_source_plan_without_path_observation_holds(self):
+        got = PLAN.evaluate_source_plan(
+            stop_present=False, gpu_ids=(0, 1), tp=2, max_context=4096,
+            reserve_mib=1024, verified_files=complete_rows(),
+            tensor_types=("BF16", "IQ2_XXS", "IQ4_NL"))
+        self.assertEqual(got["state"], "HOLD_PACKER_MODEL_PATH_UNKNOWN")
 
     def test_exact_manifest_and_packer_shard_contract(self):
         expected = tuple(
@@ -229,8 +276,7 @@ class MayaLaunchPlanTests(unittest.TestCase):
                 got = PLAN.evaluate_source_plan(
                     stop_present=False, gpu_ids=(0, 1), tp=2, max_context=65536,
                     reserve_mib=1024, verified_files=complete_rows(),
-                    tensor_types=("BF16", "IQ2_XXS", "IQ4_NL", unsupported),
-                    packer_output_absent=True)
+                    tensor_types=("BF16", "IQ2_XXS", "IQ4_NL", unsupported))
                 self.assertEqual(got["state"], "HOLD_UNCONFIRMED_TENSOR_KERNEL")
                 self.assertIn(unsupported, got["unknown_types"])
 
