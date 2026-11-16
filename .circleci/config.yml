@@ -1,0 +1,26 @@
+version: 2.1
+
+jobs:
+  nox-preview-source:
+    docker:
+      - image: cimg/python:3.11
+    steps:
+      - checkout
+      - run:
+          name: Validate source-only preview gates
+          command: |
+            python -m py_compile coordination/hybrid_20261115/deepseek_compatible_distill/verify_manifest.py coordination/hybrid_20261115/deepseek_compatible_distill/score_ru_es_holdout.py
+            python -m unittest discover -s coordination/hybrid_20261115/deepseek_compatible_distill -p 'test_*.py'
+            python coordination/hybrid_20261115/deepseek_compatible_distill/verify_manifest.py
+            python -m py_compile nox-control/owner_storage_reclaim.py nox-control/test_owner_storage_reclaim.py nox-control/owner_native_stage.py nox-control/test_owner_native_stage.py
+            cd nox-control
+            python -m unittest -v test_owner_storage_reclaim test_owner_native_stage
+            echo 'SOURCE TESTS ONLY. No GPU, trainer, model, STOP, S03, or native host actions.'
+
+workflows:
+  nox-preview-source:
+    jobs:
+      - nox-preview-source:
+          filters:
+            branches:
+              only: codex/nox-integration-preview-06r-20261116
