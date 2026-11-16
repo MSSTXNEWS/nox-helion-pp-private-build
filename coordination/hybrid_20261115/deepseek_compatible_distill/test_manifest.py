@@ -123,6 +123,55 @@ class DistillationManifestTest(unittest.TestCase):
         self.assertIn("STAGED_PAIR_SENSITIVE_DATA_DETECTED",
                       validate(changed)["blockers"])
 
+    def test_verified_status_or_step_count_cannot_replace_ru_es_holdout_metrics(self):
+        changed = copy.deepcopy(MANIFEST)
+        changed["evaluation"].update({
+            "status": "VERIFIED_IMPROVEMENT",
+            "quality_reviewed": True,
+            "frozen_holdout_same_for_baseline_and_candidate": True,
+            "optimizer_steps": 1000000,
+            "holdout_sha256": changed["corpus"]["splits"]["holdout"]["sha256"],
+            "baseline_student_sha256": "a" * 64,
+            "candidate_adapter_sha256": "b" * 64,
+            "fixed_ru_es_case_set_sha256": "c" * 64,
+            "minimum_improvement_threshold": 0.01,
+            "before_after_metrics": {},
+        })
+        self.assertIn("RU_ES_BASELINE_METRICS_MISSING", validate(changed)["blockers"])
+
+    def test_both_ru_and_es_must_clear_the_metric_threshold(self):
+        changed = copy.deepcopy(MANIFEST)
+        changed["evaluation"].update({
+            "status": "VERIFIED_IMPROVEMENT",
+            "quality_reviewed": True,
+            "frozen_holdout_same_for_baseline_and_candidate": True,
+            "holdout_sha256": changed["corpus"]["splits"]["holdout"]["sha256"],
+            "baseline_student_sha256": "a" * 64,
+            "candidate_adapter_sha256": "b" * 64,
+            "fixed_ru_es_case_set_sha256": "c" * 64,
+            "minimum_improvement_threshold": 0.01,
+            "before_after_metrics": {
+                "ru": {"baseline": 0.70, "candidate": 0.72},
+                "es": {"baseline": 0.70, "candidate": 0.705},
+            },
+        })
+        self.assertIn("RU_ES_IMPROVEMENT_THRESHOLD_NOT_MET", validate(changed)["blockers"])
+
+    def test_checkpoint_restore_requires_state_hash_receipt(self):
+        changed = copy.deepcopy(MANIFEST)
+        changed["checkpoint"]["independent_restore_tested"] = True
+        self.assertIn("CHECKPOINT_RESTORE_RECEIPT_INVALID", validate(changed)["blockers"])
+        changed["checkpoint"]["restore_evidence"] = {
+            "status": "VERIFIED",
+            "checkpoint_sha256": "a" * 64,
+            "optimizer_state_sha256": "b" * 64,
+            "scheduler_state_sha256": "c" * 64,
+            "scaler_state_sha256": "d" * 64,
+            "rng_state_sha256": "e" * 64,
+            "verifier_source_sha256": "f" * 64,
+        }
+        self.assertNotIn("CHECKPOINT_RESTORE_RECEIPT_INVALID", validate(changed)["blockers"])
+
     def test_training_flag_never_clears_other_gates(self):
         changed = copy.deepcopy(MANIFEST)
         changed["training_enabled"] = True
