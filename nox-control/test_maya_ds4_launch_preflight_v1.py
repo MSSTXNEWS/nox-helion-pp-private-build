@@ -37,7 +37,7 @@ def complete_rows():
 class MayaLinkageReadOnlyTests(unittest.TestCase):
     def test_readelf_reports_dynamic_needs_without_running_maya(self):
         output = """Dynamic section at offset 0x1000 contains 4 entries:
- 0x0000000000000001 (NEEDED) Shared library: [libcuda.so.1]
+ 0x0000000000000001 (NEEDED) Shared library: [libcudart.so.12]
  0x0000000000000001 (NEEDED) Shared library: [libcublas.so.12]
  0x000000000000001d (RUNPATH) Library runpath: [/usr/local/cuda/lib64]
 """
@@ -48,10 +48,10 @@ class MayaLinkageReadOnlyTests(unittest.TestCase):
              patch.object(INSPECT.subprocess, "run", return_value=cp) as run:
             got = INSPECT.maya_elf_linkage_readback(Path("/tmp/nox"))
         self.assertEqual(got["state"], "ELF_LINKAGE_READ_ONLY")
-        self.assertEqual(got["needed_sonames"], ["libcuda.so.1", "libcublas.so.12"])
-        self.assertTrue(got["cuda_driver_needed"])
+        self.assertEqual(got["needed_sonames"], ["libcudart.so.12", "libcublas.so.12"])
+        self.assertFalse(got["cuda_driver_direct_needed"])\n        self.assertTrue(got["cuda_driver_expected_at_runtime"])\n        self.assertEqual(got["dependency_resolution"], "NOT_TESTED")
         self.assertTrue(got["cublas_needed"])
-        self.assertFalse(got["cuda_runtime_needed"])
+        self.assertTrue(got["cuda_runtime_needed"])
         self.assertFalse(got["maya_executable_invoked"])
         self.assertFalse(got["cuda_context_created"])
         self.assertIs(run.call_args.kwargs["shell"], False)
