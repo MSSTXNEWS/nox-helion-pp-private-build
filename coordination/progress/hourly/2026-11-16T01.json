@@ -1,0 +1,215 @@
+{
+  "schema": "NOX_HOURLY_PROGRESS_V1",
+  "instructions_version": "0.0.6",
+  "scope": "SOURCE",
+  "stable_hour_id": "NOX-HOURLY-2026-11-16T01Z",
+  "utc_hour_start": "2026-11-16T01:00:00Z",
+  "utc_hour_end_exclusive": "2026-11-16T02:00:00Z",
+  "msk_hour": "2026-11-16 04:00–04:59 Europe/Moscow",
+  "generated_from": {
+    "repository": "MSSTXNEWS/nox-helion-pp-private-build",
+    "branch": "feature/nox-v38-synaptic-brain-20261114",
+    "pr": 256,
+    "accepted_feature_head_at_write": "579c7c12690f2b76590670626dc20b47751bb94f",
+    "last_commit_within_hour": "4c1de82ab1e3307de63a7b60639497841cda6d41",
+    "source_hour_commit_count": 16,
+    "source_hour_commit_filter": "authenticated GitHub commits for feature branch since 2026-11-16T01:00:00Z until 2026-11-16T01:59:59Z; committer dates",
+    "note": "HEAD includes later commits; source anchor does not prove deployed runtime",
+    "onepass_evolution_board_contract": "coordination/onepass/evolution_board/README.md NOT_FOUND at inspected feature HEAD; absent contract not asserted"
+  },
+  "executive_summary": "16 source commits this UTC hour. Owner-authenticated native S03 reindexed 514 existing content-bound embeddings with bounded hybrid retrieval, but browser native acceptance failed; separate owner-authenticated single existing trainer start ended FATAL with no optimizer proof; a third owner operation downloaded four SHA-pinned source trees, partially failed, and reduced free SSD by 602697728 bytes. Live quality gain or weight training progress not verified.",
+  "self_improvement": {
+    "color": "RED_NATIVE_FAIL_WITH_SOURCE_PASS",
+    "status": "SOURCE_PASS_PARTIAL__LIVE_BROWSER_HOLD__TRAINER_FATAL__PARTIAL_DOWNLOAD_HOLD",
+    "source_commit_count": 16,
+    "source_cutoff_sha": "4c1de82ab1e3307de63a7b60639497841cda6d41",
+    "source_changes": [
+      "Original chat layout and owner browser semantic streaming evidence; fail-closed UI gates",
+      "Bounded S03 content-identity and recovery tooling",
+      "Hybrid training admission/source-mode code, bilingual RU/ES holdout and forgetting replay guards",
+      "Owner Drive/RAM cold-to-warm data handling, download/media queue source, queue heartbeat validation"
+    ],
+    "source_ci": {
+      "run_id": 43788683141,
+      "status": "SUCCESS",
+      "scope": "SOURCE_ONLY",
+      "head_sha": "4c1de82ab1e3307de63a7b60639497841cda6d41",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43788683141"
+    },
+    "misleading_green_workflows": {
+      "guarded_web": {
+        "run_id": 43788683367,
+        "source_job": "success",
+        "native_job": "skipped"
+      },
+      "original_s03_one_shot": {
+        "run_id": 43788683236,
+        "source_job": "success",
+        "native_job": "skipped"
+      },
+      "original_web_e2e": {
+        "run_id": 43788683379,
+        "source_job": "success",
+        "native_job": "skipped"
+      }
+    },
+    "actual_owner_native_mutations": [
+      {
+        "run_id": 43788323697,
+        "scope": "OWNER_AUTHENTICATED_ONEHOST",
+        "result": "FAIL_HOLD_BROWSER_NATIVE_ACCEPTANCE",
+        "details": "S03 reindex, original gateway updates, bounded native recall route, proxy/layout changes; browser did not prove original model streaming; services paused/restarted in the native sequence",
+        "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43788323697"
+      },
+      {
+        "run_id": 43788683872,
+        "scope": "OWNER_AUTHENTICATED_ONEHOST",
+        "result": "FAIL_HOLD_TRAINER_EXITED_WITHOUT_OPTIMIZER_PROOF",
+        "details": "existing GPU1 trainer started once then Supervisor FATAL; five named source files explicitly installed in log and training flags released; no evidence of successful optimizer step",
+        "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43788683872"
+      },
+      {
+        "run_id": 43788998933,
+        "scope": "OWNER_AUTHENTICATED_ONEHOST",
+        "result": "FAIL_HOLD_PARTIAL_DOWNLOAD",
+        "details": "four pinned source trees downloaded and SHA verified, two held for tracked-size mismatch; no engine build/install/service change",
+        "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43788998933"
+      }
+    ],
+    "live_chat": {
+      "original_model_restarted": false,
+      "complete_native_web_acceptance": "HOLD",
+      "browser_failure": "HOLD_BROWSER_NATIVE_ACCEPTANCE",
+      "relevant_route": "LIVE_EXISTING_S03_RECALL_ROUTE",
+      "ttft_p50_p95": "нет данных",
+      "new_ttft": "нет данных",
+      "tokens_per_sec": "нет данных",
+      "paired_quality_delta": "нет данных"
+    },
+    "disk": {
+      "before_download_free_bytes": 14851194880,
+      "after_download_free_bytes": 14248497152,
+      "delta_free_bytes": -602697728,
+      "verified_bytes_freed": 0
+    },
+    "summary": "Source passed on exact in-hour commit, with real native S03 and owner trainer changes in three FAIL/HOLD maintenance runs. No full WEB or latency quality acceptance."
+  },
+  "knowledge_training": {
+    "color": "YELLOW_INDEX_CONFIRMED_INGEST_UNVERIFIED",
+    "status": "LIVE_EXISTING_S03_CONTENT_REINDEX_VERIFIED__NEW_KNOWLEDGE_HOLD",
+    "owner_native_run_id": 43788323697,
+    "s03_reindex_state": "CONTENT_IDENTITY_AND_REEMBEDDED_INDEX_VERIFIED",
+    "canonical_items_at_snapshot": 514,
+    "original_history_records_preserved": 1014,
+    "original_origin_links": 1029,
+    "indexed_existing_embeddings_in_action": 514,
+    "current_embeddings_after": 514,
+    "stale_embeddings_after": 0,
+    "embedding_dimensions": 1024,
+    "accepted_training_examples_in_that_action": 0,
+    "newly_accepted_sources": "нет данных",
+    "independently_attested_new_s03_write_readback": "нет данных",
+    "s03_revision": "нет данных",
+    "retrieval_in_original_gateway": {
+      "rows": 10,
+      "hybrid": 8,
+      "pins": 2,
+      "elapsed_ms": 201.147,
+      "scope": "single bounded recall; not general retrieval quality"
+    },
+    "synthetic_retrieval_fixtures": {
+      "passed": 2,
+      "total": 2,
+      "scope": "public synthetic, not owner RU/ES memory quality"
+    },
+    "ru_es_quality_delta": "нет данных",
+    "c01_c08_m0_m7_emotion_quality": "нет данных",
+    "independent_offsite_s03_restore": "не подтверждён",
+    "note": "514 reindexed existing embeddings are not 514 newly ingested source records; older 302-row inventory is not a verified same-table before baseline. Memory activation reports new model stream browser HOLD.",
+    "evidence_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43788323697",
+    "summary": "Physical content-bound reindex of existing canonical S03 verified in owner receipt, but new accepted sources, owner-durable knowledge growth and bilingual retrieval-quality increase unverified."
+  },
+  "weight_training": {
+    "color": "RED",
+    "status": "OWNER_NATIVE_SINGLE_EXISTING_TRAINER_STARTED_THEN_FATAL",
+    "owner_run_id": 43788683872,
+    "maintenance_request_id": "6905113544",
+    "actual_training_run_id": "нет данных",
+    "mode_observed_status": "loading_owner_hybrid",
+    "actual_optimizer_mode": "нет данных",
+    "supervisor_service": "nox-train-volta-t866u",
+    "supervisor_initial": {
+      "pid": 498281,
+      "state": "RUNNING",
+      "child_pid": 498282
+    },
+    "supervisor_final": {
+      "state": "FATAL",
+      "pid": null
+    },
+    "observed_status_step": 0,
+    "observed_status_step_is_verified_optimizer_global_step": false,
+    "actual_optimizer_global_step": "нет данных",
+    "same_run_optimizer_step_delta": "нет данных",
+    "loss": null,
+    "checkpoint_sha": "нет данных",
+    "updated_weight_sha": "нет данных",
+    "independent_full_optimizer_weights_s03_restore": "не подтверждён",
+    "hold_error": "HOLD_TRAINER_EXITED_WITHOUT_OPTIMIZER_PROOF",
+    "bf16_error": "historical, not proven as the root cause of this new FATAL",
+    "resource_snapshot_end": {
+      "gpu0": {
+        "used_mib": 21562,
+        "util_percent": 0
+      },
+      "gpu1": {
+        "used_mib": 474,
+        "util_percent": 0
+      }
+    },
+    "cgroup_snapshot_at_start": {
+      "memory_current_bytes": 83973980160,
+      "memory_limit_bytes": 194065203200,
+      "cpu_quota_cores": 19
+    },
+    "throughput_tokens_per_sec": "нет данных",
+    "evaluated_quality_delta": "нет данных",
+    "evidence_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43788683872",
+    "summary": "Real one-service GPU1 start occurred but ended FATAL. No verified positive optimizer step, checkpoint, changed weights SHA, or independent restore. No successful full-model training claim."
+  },
+  "bounded_queue": {
+    "path": "coordination/NOX_R60_MASTER.json",
+    "planned_source_tasks": 60,
+    "pending_native_registration_in_source": 60,
+    "verified_native_job_id_and_s03_receipt_pairs": 0,
+    "displayed_status": "0/60 positively verified, live queue size нет данных",
+    "original_actual_queue_size": "нет данных",
+    "six_workers_not_equivalent_to_sixty_jobs": true,
+    "media_artifact_job_ids_not_equivalent_to_r60_s03_receipts": true
+  },
+  "publication": {
+    "original_s03_authenticated_writer_in_this_reporting_context": false,
+    "original_s03_mutation_attempted": false,
+    "web_publish": "WEB_PUBLISH_HOLD",
+    "path": "coordination/progress/hourly/2026-11-16T01.json",
+    "save_policy": "ONE_SOURCE_CREATE_IF_ABSENT_CAS_NO_FORCE_NO_OVERWRITE",
+    "report_scope": "SOURCE",
+    "notion_write": "NOT_ATTEMPTED; hourly report source of truth remains repo; journal already includes latest native handoffs"
+  },
+  "reporter_actions": {
+    "native_operations": [],
+    "trainer_starts": 0,
+    "second_schedulers": 0,
+    "production_restarts": 0,
+    "native_deletions": 0,
+    "source_runtime_patches": 0,
+    "report_created_once": true
+  },
+  "one_next_action": "One owner-authenticated read-only post-failure OneHost acceptance: exact Supervisor stderr+service PID/STOP/lease and executable SHA after failed single trainer start, original Resonance streaming/TTFT and S03 durability, checkpoint/optimizer/S03 independent restore, before considering any restart or model/WEB promotion.",
+  "primary_evidence": [
+    "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43788323697",
+    "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43788683872",
+    "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43788998933",
+    "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43788683141"
+  ]
+}
