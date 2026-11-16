@@ -282,7 +282,7 @@ os._exit(0)
         with g.connection(self.db,write=True) as c:item(c,'x','new memory')
         saves=[];namespace={'HANDLERS':{},'ingest_owner_orders':lambda state:None,'save_state':lambda state:saves.append(1),'_qlock':threading.RLock()}
         state={'tasks':{}}
-        with patch.object(g,'MODEL',model):
+        with patch.object(g,'MODEL',model),patch.object(g.time,'monotonic',return_value=1000):
             g.bind_dispatcher(namespace);namespace['ingest_owner_orders'](state);namespace['ingest_owner_orders'](state)
         self.assertEqual(len(state['tasks']),1);self.assertEqual(len(saves),1)
         task=next(iter(state['tasks'].values()))
