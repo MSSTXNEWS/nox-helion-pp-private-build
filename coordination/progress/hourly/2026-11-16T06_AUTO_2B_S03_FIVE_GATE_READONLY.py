@@ -12,11 +12,12 @@ import json
 from pathlib import Path
 import sqlite3
 import stat
+import time
 import urllib.parse
 
 CANONICAL = Path('/root/nox/kb/knowledge.sqlite')
 EXPECTED_VECTOR_DIM = 1024
-EXPECTED_REINDEX_TARGET = 514  # Prepared activation target, not a native observation.
+# Coverage derives from fresh canonical DB rows, never a historical fixed vector goal.
 
 
 def gate(name, state, reason, **counts):
@@ -44,40 +45,75 @@ def inspect(path: Path, *, fixture=False):
         db.execute('PRAGMA query_only=ON')
         db.execute('PRAGMA trusted_schema=OFF')
         db.execute('PRAGMA busy_timeout=200')
+        deadline = time.monotonic() + 3.0
+        db.set_progress_handler(lambda: int(time.monotonic() > deadline), 1000)
         names = {row[0]: row[1] for row in db.execute(
             "SELECT name, sql FROM sqlite_master WHERE type='table'")}
         required = {'s03_items', 's03_fts'}
         ready = required <= names.keys()
-        results.append(gate(1, 'DONE_SOURCE' if ready else 'HOLD',
-                            'CANONICAL_SCHEMA_READ_ONLY' if ready else 'MISSING_CANONICAL_TABLES',
+        mode_private = (stat.S_IMODE(info.st_mode) & 0o077) == 0
+        integrity_ok = db.execute('PRAGMA quick_check').fetchone()[0] == 'ok'
+        schema_safe = ready and mode_private and integrity_ok
+        results.append(gate(1, 'DONE_SOURCE' if schema_safe else 'HOLD',
+                            'CANONICAL_SCHEMA_MODE_INTEGRITY_READ_ONLY' if schema_safe else 'S03_SCHEMA_MODE_OR_INTEGRITY_HOLD',
                             canonical_path=bool(path == CANONICAL),
+                            mode_private=mode_private, sqlite_quick_check_ok=integrity_ok,
                             s03_items=int(db.execute('SELECT count(*) FROM s03_items').fetchone()[0]) if ready else None))
         results.append(gate(2, 'HOLD', 'LIVE_PROXY_ALIAS_AND_OWNER_SCOPE_REQUIRE_NATIVE_CALLBACK_READBACK'))
         if ready:
             fts_ok = 'using fts5' in (names.get('s03_fts') or '').lower()
             items = db.execute('SELECT count(*) FROM s03_items').fetchone()[0]
+            eligible = db.execute(
+                "SELECT count(*) FROM s03_items WHERE typeof(text)='text' AND length(trim(text))>0"
+            ).fetchone()[0]
             fts_rows = db.execute('SELECT count(*) FROM s03_fts').fetchone()[0]
-            dims_good = 0
-            hash_good = 0
-            vectors = 0
+            # Row-count equality is not sufficient: an orphan and a missing row cancel.
+            fts_bad = db.execute(
+                'SELECT count(*) FROM s03_items i LEFT JOIN s03_fts f ON f.id=i.id '
+                'WHERE f.id IS NULL OR f.text != i.text OR f.segment != i.segment'
+            ).fetchone()[0]
+            fts_orphans = db.execute(
+                'SELECT count(*) FROM s03_fts f LEFT JOIN s03_items i ON i.id=f.id '
+                'WHERE i.id IS NULL'
+            ).fetchone()[0]
+            valid_shape = valid_hash = valid_both = vectors = 0
             active_models = set()
+            vector_orphans = 0
             if 'nox_s03_vectors' in names:
+                vector_orphans = db.execute(
+                    'SELECT count(*) FROM nox_s03_vectors v '
+                    'LEFT JOIN s03_items i ON i.id=v.item_id WHERE i.id IS NULL'
+                ).fetchone()[0]
                 for item_text, content_sha, model, dims, blob_size in db.execute(
                     'SELECT i.text,v.content_sha256,v.model_identity,v.dimensions,length(v.embedding) '
                     'FROM nox_s03_vectors v JOIN s03_items i ON i.id=v.item_id LIMIT 20001'):
                     vectors += 1
-                    active_models.add(str(model))
-                    if dims == EXPECTED_VECTOR_DIM and blob_size == 4 * EXPECTED_VECTOR_DIM:
-                        dims_good += 1
-                    if isinstance(item_text, str) and hashlib.sha256(item_text.encode()).hexdigest() == content_sha:
-                        hash_good += 1
-            covered = min(dims_good, hash_good)
-            results.append(gate(3, 'DONE_SOURCE' if fts_ok and fts_rows == items and covered >= EXPECTED_REINDEX_TARGET and len(active_models) == 1 else 'HOLD',
-                                'METADATA_VECTOR_AND_FTS_COVERAGE' if fts_ok and fts_rows == items and covered >= EXPECTED_REINDEX_TARGET and len(active_models) == 1 else 'VECTOR_FTS_OR_514_READBACK_INCOMPLETE',
-                                fts5=fts_ok, items=items, fts_rows=fts_rows, vector_rows=vectors,
-                                valid_shape=dims_good, valid_content_sha=hash_good,
-                                reindex_target=EXPECTED_REINDEX_TARGET,
-                                distinct_vector_model_ids=len(active_models)))
+                    if isinstance(model, str) and model:
+                        active_models.add(model)
+                    shape_ok = dims == EXPECTED_VECTOR_DIM and blob_size == 4 * EXPECTED_VECTOR_DIM
+                    hash_ok = isinstance(item_text, str) and hashlib.sha256(item_text.encode()).hexdigest() == content_sha
+                    valid_shape += int(shape_ok)
+                    valid_hash += int(hash_ok)
+                    valid_both += int(shape_ok and hash_ok)
+            identity_ok = len(active_models) == 1 and all(
+                len(model) == 64 and all(c in '0123456789abcdef' for c in model)
+                for model in active_models
+            )
+            complete = bool(
+                fts_ok and items > 0 and eligible > 0 and fts_rows == items
+                and fts_bad == 0 and fts_orphans == 0
+                and vectors == eligible == valid_both and vector_orphans == 0
+                and identity_ok
+            )
+            results.append(gate(3, 'DONE_SOURCE' if complete else 'HOLD',
+                                'CURRENT_CANONICAL_VECTOR_AND_FTS_COVERAGE' if complete else 'LIVE_VECTOR_FTS_COVERAGE_INCOMPLETE',
+                                fts5=fts_ok, items=items, eligible_nonblank_items=eligible,
+                                fts_rows=fts_rows, fts_mismatched_or_missing=fts_bad, fts_orphans=fts_orphans,
+                                vector_rows=vectors, vector_orphans=vector_orphans, valid_shape=valid_shape,
+                                valid_content_sha=valid_hash, valid_shape_and_content=valid_both,
+                                observed_coverage_percent=round(100 * valid_both / eligible, 2) if eligible else None,
+                                distinct_vector_model_ids=len(active_models),
+                                active_model_sha_identity_valid=identity_ok))
             origins = db.execute('SELECT count(*) FROM nox_s03_origins').fetchone()[0] if 'nox_s03_origins' in names else 0
             imported = 0
             unscoped_imports = 0
@@ -123,22 +159,30 @@ def selftest():
             db.execute('INSERT INTO s03_fts VALUES (?,?,?)', ('item', text, 'M1'))
             db.execute('INSERT INTO nox_s03_vectors VALUES (?,?,?,?,?,?)',
                        ('item',hashlib.sha256(text.encode()).hexdigest(),'model',1024,b'\0'*4096,0))
+        path.chmod(0o600)
         before = hashlib.sha256(path.read_bytes()).hexdigest()
         report = inspect(path, fixture=True)
         after = hashlib.sha256(path.read_bytes()).hexdigest()
         assert len(report) == 5 and [x['task'] for x in report] == [1,2,3,4,5]
         assert report[0]['state'] == 'DONE_SOURCE' and report[1]['state'] == 'HOLD'
         assert report[2]['valid_content_sha'] == 1 and report[2]['fts5'] is True
+        assert report[2]['eligible_nonblank_items'] == 1 and 'reindex_target' not in report[2]
+        assert report[0]['mode_private'] and report[0]['sqlite_quick_check_ok']
         assert report[2]['state'] == 'HOLD' and report[3]['imported_without_persona_scope'] == 1
         assert report[4]['state'] == 'HOLD' and before == after
         assert not any('PUBLIC_SYNTHETIC_FIXTURE' in json.dumps(x) for x in report)
+        with sqlite3.connect(path) as db:
+            db.execute('UPDATE s03_fts SET text=? WHERE id=?', ('MISMATCH_SYNTHETIC', 'item'))
+        bad_fts = inspect(path, fixture=True)
+        assert bad_fts[2]['fts_mismatched_or_missing'] == 1 and bad_fts[2]['state'] == 'HOLD'
+        assert 'MISMATCH_SYNTHETIC' not in json.dumps(bad_fts)
         try:
             inspect(Path(temp) / 'other.sqlite')
         except ValueError as exc:
             assert str(exc) == 'HOLD_NONCANONICAL_DB_PATH'
         else:
             raise AssertionError('noncanonical path admitted')
-    return '7/7 SOURCE_SELFTEST_PASS; synthetic fixture only; native state not measured'
+    return 'SOURCE_SELFTEST_PASS; synthetic SQLite fixtures only; native state not measured'
 
 
 if __name__ == '__main__':
