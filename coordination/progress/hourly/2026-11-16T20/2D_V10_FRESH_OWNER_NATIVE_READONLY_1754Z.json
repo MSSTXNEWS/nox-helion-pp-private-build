@@ -1,0 +1,123 @@
+{
+  "schema": "NOX_UNIVERSAL_V10_OWNER_NATIVE_INSPECT_RECEIPT_V1",
+  "instructions_version": "0.0.6",
+  "slot": "AUTO_2D",
+  "observed_utc": "2026-11-16T17:54:57Z",
+  "observed_msk": "2026-11-16T20:54:57+03:00",
+  "source_head_before": "22c1d1841edc4a7ef13467a8c8027d44d68f8993",
+  "owner_approved_replay": {
+    "workflow_run": 43887943803,
+    "job_id": 133495640855,
+    "action": "inspect",
+    "original_owner_comment_id": 6919505894,
+    "pinned_source_commit": "ec8f885d04981d3e8fcd76e836c4e1d41cd869f3",
+    "result": "SUCCESS",
+    "host_pin": "VERIFIED",
+    "instance_id": 60509551,
+    "temporary_ssh_key": "DETACHED_AND_VERIFIED",
+    "native_operation": "READ_ONLY_NO_RESTART_NO_DELETE_NO_TRAINER"
+  },
+  "tasks": [
+    {
+      "task_id": "S1-01",
+      "status": "LIVE_VERIFIED_READONLY",
+      "proof": "Authenticated owner-pinned native inspection on original instance; task-specific writer claim NONE"
+    },
+    {
+      "task_id": "S1-03",
+      "status": "HOLD_OWNER_STOP_AND_LEASE",
+      "proof": "/root/nox/STOP, owner MAINTENANCE and TRAIN_HOLD/PAUSE present, writer_lease UNKNOWN_NO_OWNER_CAS_READBACK; no safe native write claim"
+    },
+    {
+      "task_id": "S1-07",
+      "status": "HOLD_INDEPENDENT_RESTORE",
+      "proof": "No independent restore evidence for S03/Genesis and checkpoint optimizer/scaler/RNG; historical checkpoint25 cannot be promoted"
+    },
+    {
+      "task_id": "S2-07",
+      "status": "HOLD_SEEKABLE_STORAGE",
+      "proof": "43,158,749,184 B free SSD; requirement 248,828,477,216 unique GGUF B plus reserve, no rclone remotes; metadata shard != full weights"
+    },
+    {
+      "task_id": "S3-04",
+      "status": "HOLD_REAL_MAYA_AND_SSE",
+      "proof": "Maya ELF pinned SHA matched, not inference; HTTP :8080/:8081/:8082 unavailable and critical supervisors STOPPED"
+    }
+  ],
+  "native": {
+    "instance_status": "running",
+    "stop": "PRESENT",
+    "owner_maintenance": "PRESENT",
+    "train_hold": "PRESENT",
+    "train_pause": "PRESENT",
+    "writer_lease": "UNKNOWN_NO_OWNER_CAS_READBACK",
+    "five_supervisors": {
+      "nox-chat-8081": "STOPPED",
+      "nox-dispatcher-t855u": "STOPPED",
+      "nox-priority-scheduler": "STOPPED",
+      "nox-selfheal": "STOPPED",
+      "nox-gpu-watchdog-t865u": "STOPPED"
+    },
+    "serving_port_8081_listener_pids": [],
+    "dispatcher_os_worker_pids_confirmed": [],
+    "gpu": [
+      {
+        "index": 0,
+        "vram_used_mib": 0,
+        "temperature_c": 18
+      },
+      {
+        "index": 1,
+        "vram_used_mib": 0,
+        "temperature_c": 20
+      }
+    ],
+    "gpu_compute_app_pids": [],
+    "cpu_quota_cores": 19.2,
+    "cgroup_ram_used_bytes": 60390379520,
+    "cgroup_ram_max_bytes": 194065203200,
+    "ssd_total_bytes": 183609851904,
+    "ssd_free_bytes": 43158749184,
+    "shm_total_bytes": 50465865728,
+    "shm_used_bytes": 47099154432,
+    "shm_free_bytes": 3366711296,
+    "rclone_remotes": [],
+    "http_8080": "URLError",
+    "http_8081": "URLError",
+    "http_8082": "URLError",
+    "maya_binary_bytes": 71289520,
+    "maya_binary_sha256": "3783980bb65861de36fe4d93b8e6bbd6b6a631207677bcabf330bf7830c21b20",
+    "maya_cuda_sm70_inference": "NOT_TESTED",
+    "native_cp311_cu126_train": "NOT_VERIFIED",
+    "legacy_volta_python": "/root/venv_volta/bin/python",
+    "legacy_volta_torch": "2.6.0+cu124",
+    "legacy_volta_trl": "1.18.0",
+    "native_trainer_pid_start_ticks": null,
+    "native_trainer_healthy": false,
+    "historical_train_heartbeat_step": 5,
+    "historical_train_heartbeat_not_current": true
+  },
+  "WEIGHTS": {
+    "new_successful_optimizer_updates": 0,
+    "new_global_step": null,
+    "new_loss": null,
+    "new_tensor_sha": null,
+    "independent_optimizer_scaler_rng_restore": false,
+    "model_promoted": false
+  },
+  "KNOWLEDGE": {
+    "new_verified_hunter_source_s03_write_readback_recall": 0,
+    "new_s03_job_ids": []
+  },
+  "DISPATCHER_RESOURCES": {
+    "native_readonly_job_id": 133495640855,
+    "native_writer_claims": 0,
+    "new_verified_dispatcher_worker_pids": [],
+    "new_downloaded_bytes": 0,
+    "new_deleted_bytes": 0,
+    "restarts": 0,
+    "owner_stop_reset": false
+  },
+  "rollback": "No native mutations; Git receipt removal/revert only after checking exact path blob, original owner maintenance and model intact.",
+  "next": "Owner-authorized current writer lease and independent S03/Genesis/checkpoint restore, verify seekable 248828477216 B+reserve capacity and shard hashes before any download, Maya model load or chat switch. Never clear owner STOP without owner authorization."
+}
