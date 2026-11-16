@@ -357,5 +357,66 @@ class MayaLaunchPlanTests(unittest.TestCase):
         self.assertIn("64K", setup)
 
 
+class MayaV14PackReadinessTests(unittest.TestCase):
+    """Isolated source-only safety regressions; never execute Maya or pack weights."""
+
+    def _profile(self):
+        spec = importlib.util.spec_from_file_location(
+            "maya_ds4_v100_launch_profile_v14_test",
+            HERE / "maya_ds4_v100_launch_profile_v1.py")
+        profile = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(profile)
+        return profile
+
+    def test_absent_pack_never_exposes_executable_serve_argv(self):
+        profile = self._profile()
+        observed = {"state": "SOURCE_ONLY_PLAN_READY_NOT_LAUNCHABLE",
+                    "packer_output_dir": "/synthetic/pinned/maya-ds4"}
+        with patch.object(profile.preflight, "evaluate_source_plan", return_value=observed) as gate:
+            result = profile.build_source_plan(
+                owner_stop=False, observed_binary_sha256=profile.MAYA_BINARY_SHA256,
+                gpu_names=profile.GPU_NAMES, verified_files=[],
+                tensor_types=[], model_file_paths=[])
+        self.assertEqual(result["state"], "SOURCE_ONLY_PACKING_REQUIRED_NOT_LAUNCHABLE")
+        self.assertFalse(result["launchable"])
+        self.assertFalse(result["production_serve_ready"])
+        self.assertEqual(result["pack_state"], "ABSENT_VERIFIED_REQUIRES_REVIEWED_PACKER")
+        self.assertNotIn("argv", result)
+        template = result["argv_template_not_executable"]
+        self.assertEqual(template[0], str(profile.MAYA_BINARY))
+        self.assertEqual(template[template.index("--pack") + 1], observed["packer_output_dir"])
+        self.assertIn("--serve", template)
+        self.assertEqual(gate.call_count, 1)
+
+    def test_failed_source_preflight_never_returns_even_a_template(self):
+        profile = self._profile()
+        with patch.object(profile.preflight, "evaluate_source_plan",
+                          return_value={"state": "HOLD_PACKER_MODEL_SHA256_MISMATCH"}):
+            result = profile.build_source_plan(
+                owner_stop=False, observed_binary_sha256=profile.MAYA_BINARY_SHA256,
+                gpu_names=profile.GPU_NAMES, verified_files=[],
+                tensor_types=[], model_file_paths=[])
+        self.assertEqual(result["state"], "HOLD_PACKER_MODEL_SHA256_MISMATCH")
+        self.assertNotIn("argv_template_not_executable", result)
+        self.assertNotIn("argv", result)
+
+    def test_owner_stop_and_bad_binary_prevent_template_calculation(self):
+        profile = self._profile()
+        with patch.object(profile.preflight, "evaluate_source_plan") as gate:
+            for stop, sha, expected in (
+                (True, profile.MAYA_BINARY_SHA256, "HOLD_OWNER_STOP"),
+                (None, profile.MAYA_BINARY_SHA256, "HOLD_OWNER_STOP"),
+                (False, "0" * 64, "HOLD_MAYA_BINARY_SHA256"),
+            ):
+                result = profile.build_source_plan(
+                    owner_stop=stop, observed_binary_sha256=sha,
+                    gpu_names=profile.GPU_NAMES, verified_files=[],
+                    tensor_types=[], model_file_paths=[])
+                self.assertEqual(result["state"], expected)
+                self.assertNotIn("argv", result)
+                self.assertNotIn("argv_template_not_executable", result)
+            gate.assert_not_called()
+
+
 if __name__ == "__main__":
     unittest.main()
