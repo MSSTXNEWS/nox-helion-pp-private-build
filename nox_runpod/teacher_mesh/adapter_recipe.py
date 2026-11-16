@@ -12,7 +12,7 @@ import json
 import re
 
 SCHEMA="nox-mycelium-sft-recipe-v1"
-SUPPORTED_PRECISIONS={"bf16","fp16"}
+SUPPORTED_PRECISIONS={"fp16"}  # Existing 2x V100 SM70: never silently request BF16.
 ALLOWED_ROOTS=(Path("/root/nox"),Path("/tmp/nox"),Path("/dev/shm/nox"))
 ALLOWED_RANKS={8,16,32,64,128}
 KNOWN_MODULES={
@@ -26,12 +26,25 @@ def _under_allowed_root(path):
     p=Path(path).resolve(strict=False)
     return p.is_absolute() and any(root==p or root in p.parents for root in ALLOWED_ROOTS)
 
+def _file_sha256_streamed(file:Path)->str:
+    """Bounded RAM hashing: do not load entire training JSONL into memory."""
+    hasher=sha256()
+    with file.open("rb") as stream:
+        for chunk in iter(lambda:stream.read(1024*1024),b""):
+            hasher.update(chunk)
+    return hasher.hexdigest()
+
 def verify_corpus(corpus_dir:str)->dict:
     p=Path(corpus_dir)
     if not _under_allowed_root(p):
         return {"state":"HOLD_NONLOCAL_CORPUS"}
+    if p.is_symlink() or not p.is_dir():
+        return {"state":"HOLD_CORPUS_DIRECTORY"}
     try:
-        manifest=json.loads((p/"manifest.json").read_text("utf-8"))
+        mf=p/"manifest.json"
+        if not mf.is_file() or mf.is_symlink():
+            return {"state":"HOLD_CORPUS_MANIFEST_FILE"}
+        manifest=json.loads(mf.read_text("utf-8"))
         if manifest.get("schema")!="nox-teacher-approved-sft-v1":
             return {"state":"HOLD_CORPUS_SCHEMA"}
         if manifest.get("status")!="REVIEWED_NOT_OPTIMIZER_TRAINED":
@@ -41,12 +54,12 @@ def verify_corpus(corpus_dir:str)->dict:
             file=p/filename
             if not file.is_file() or file.is_symlink():
                 return {"state":"HOLD_CORPUS_FILE"}
-            if sha256(file.read_bytes()).hexdigest()!=manifest.get(filename+"_sha256"):
+            if _file_sha256_streamed(file)!=manifest.get(filename+"_sha256"):
                 return {"state":"HOLD_CORPUS_HASH"}
         if not manifest.get("response_only_loss_required"):
             return {"state":"HOLD_LOSS_MASK"}
         counts=manifest["counts"]
-        if counts["train"]<1 or counts["holdout"]<1:
+        if any(type(counts.get(k)) is not int or counts[k]<1 for k in ("train","holdout")):
             return {"state":"HOLD_CORPUS_NO_HOLDOUT"}
         return {"state":"VERIFIED_SOURCE_CORPUS","counts":counts,
                 "train_sha256":manifest["train.jsonl_sha256"],
@@ -65,8 +78,14 @@ def plan_adapter(
     alpha:int=64,
     learning_rate:float=0.00008,
     max_steps:int=500,
-    precision:str="bf16",
-    expert_target_parameters:list[str]|None=None
+    precision:str="fp16",
+    expert_target_parameters:list[str]|None=None,
+    base_revision:str|None=None,
+    base_architecture:str|None=None,
+    base_config_sha256:str|None=None,
+    tokenizer_sha256:str|None=None,
+    base_weight_manifest_sha256:str|None=None,
+    use_rslora:bool=False
 ) -> dict:
     """The plan is *not* a proof the model's named modules exist.
     Actual architecture verification and memory fit precede any trainer launch.
@@ -74,10 +93,18 @@ def plan_adapter(
     if (not isinstance(base_model_id,str)
             or not re.fullmatch(r"[A-Za-z0-9._:/-]{4,160}",base_model_id)):
         return {"state":"HOLD_BASE_ID"}
-    if not re.fullmatch(r"[a-f0-9]{64}",base_model_sha256) or not re.fullmatch(
-       r"[a-f0-9]{64}",checkpoint_sha256
-    ):
+    if base_model_id.lower().endswith(".gguf"):
+        return {"state":"HOLD_GGUF_NOT_TRAINABLE_HF_BASE"}
+    if not isinstance(base_revision,str) or not re.fullmatch(r"[a-f0-9]{40}",base_revision):
+        return {"state":"HOLD_IMMUTABLE_HF_REVISION"}
+    if not isinstance(base_architecture,str) or not re.fullmatch(r"[A-Za-z][A-Za-z0-9_]{3,127}",base_architecture):
+        return {"state":"HOLD_HF_ARCHITECTURE"}
+    if any(not isinstance(value,str) or re.fullmatch(r"[a-f0-9]{64}",value) is None
+           for value in (base_model_sha256,checkpoint_sha256,base_config_sha256,
+                         tokenizer_sha256,base_weight_manifest_sha256)):
         return {"state":"HOLD_PROVENANCE_HASH"}
+    if type(use_rslora) is not bool:
+        return {"state":"HOLD_RSLORA_MODE"}
     if rank not in ALLOWED_RANKS or not 1<=alpha<=512:
         return {"state":"HOLD_LORA_RANK"}
     if precision not in SUPPORTED_PRECISIONS or not 0.0<learning_rate<0.001:
@@ -101,6 +128,15 @@ def plan_adapter(
       "state":"RECIPE_ONLY_NOT_TRAINED",
       "base_model_id":base_model_id,
       "base_model_sha256":base_model_sha256,
+      "base_revision":base_revision,
+      "base_architecture":base_architecture,
+      "base_config_sha256":base_config_sha256,
+      "tokenizer_sha256":tokenizer_sha256,
+      "base_weight_manifest_sha256":base_weight_manifest_sha256,
+      "training_mode":"RSLORA_FP16" if use_rslora else "LORA_FP16",
+      "hf_identity_native_verified":False,
+      "native_writer_lease_verified":False,
+      "original_optimizer_resume_allowed":False,
       "resume_checkpoint_sha256":checkpoint_sha256,
       "corpus":corpus_dir,
       "training_data_sha256":corpus["train_sha256"],
@@ -109,7 +145,7 @@ def plan_adapter(
       "peft":{
         "type":"LORA", "target_modules":sorted(set(target_modules)),
         "rank":rank,"alpha":alpha,"dropout":0.05,
-        "use_rslora":True,
+        "use_rslora":use_rslora,
         "target_parameters":sorted(set(expert_target_parameters or []))
       },
       "trl":{
@@ -120,6 +156,9 @@ def plan_adapter(
         "max_steps":max_steps
       },
       "acceptance_gates":[
+        "owner_native_original_HF_base_revision_config_tokenizer_shards_sha_readback",
+        "signed_owner_GPU1_lease_STOP_S03_full_optimizer_offsite_restore",
+        "one_optimizer_namespace_per_training_mode",
         "model_architecture_matches_target_modules",
         "expert_target_parameters_supported_by_installed_peft",
         "VRAM_BUDGET_MEASURED",
@@ -130,6 +169,7 @@ def plan_adapter(
       ],
       "teacher_weights_copied":False,
       "model_weights_updated":False,
-      "optimizer_steps_verified":0
+      "optimizer_steps_verified":0,
+      "live_model_promoted":False
     }
     return payload

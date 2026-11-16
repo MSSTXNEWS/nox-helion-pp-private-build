@@ -1,0 +1,98 @@
+"""NOX 2D bounded FORGE recipe source-only regressions; no GPU/network/native access."""
+import importlib.util
+import hashlib
+import json
+import tempfile
+import unittest
+from pathlib import Path
+from unittest.mock import patch
+
+ROOT=Path(__file__).resolve().parents[2]
+SPEC=importlib.util.spec_from_file_location(
+    "nox_original_adapter_recipe",ROOT/"nox_runpod/teacher_mesh/adapter_recipe.py")
+recipe=importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(recipe)
+SHA="a"*64
+
+class ForgeRecipeTest(unittest.TestCase):
+    def setUp(self):
+        self.tmp=tempfile.TemporaryDirectory(prefix="nox_2d_")
+        self.addCleanup(self.tmp.cleanup)
+        self.root=Path(self.tmp.name)
+        self.old_roots=recipe.ALLOWED_ROOTS
+        recipe.ALLOWED_ROOTS=(self.root,)
+        self.addCleanup(setattr,recipe,"ALLOWED_ROOTS",self.old_roots)
+        self.corpus=self.root/"approved"
+        self.corpus.mkdir()
+        self.rows={"train":b'{"prompt":"safe train"}\n',"holdout":b'{"prompt":"safe hold"}\n'}
+        for kind,data in self.rows.items():
+            (self.corpus/(kind+".jsonl")).write_bytes(data)
+        manifest={
+            "schema":"nox-teacher-approved-sft-v1",
+            "status":"REVIEWED_NOT_OPTIMIZER_TRAINED",
+            "response_only_loss_required":True,
+            "counts":{"train":1,"holdout":1}}
+        for kind,data in self.rows.items():
+            manifest[kind+".jsonl_sha256"]=hashlib.sha256(data).hexdigest()
+        (self.corpus/"manifest.json").write_text(json.dumps(manifest),encoding="utf8")
+        self.kwargs=dict(
+            corpus_dir=str(self.corpus),base_model_id="owner/nox-hf-student",
+            base_model_sha256=SHA,checkpoint_sha256=SHA,
+            base_revision="b"*40,base_architecture="QwenForCausalLM",
+            base_config_sha256=SHA,tokenizer_sha256=SHA,
+            base_weight_manifest_sha256=SHA,target_modules=["q_proj"])
+    def test_exact_pins_create_recipe_only(self):
+        out=recipe.plan_adapter(**self.kwargs)
+        self.assertEqual(out["state"],"RECIPE_ONLY_NOT_TRAINED")
+        self.assertEqual(out["precision"],"fp16")
+        self.assertFalse(out["native_writer_lease_verified"])
+        self.assertFalse(out["original_optimizer_resume_allowed"])
+        self.assertEqual(out["optimizer_steps_verified"],0)
+        self.assertEqual(out["training_mode"],"LORA_FP16")
+    def test_explicit_rslora_only(self):
+        out=recipe.plan_adapter(**self.kwargs,use_rslora=True)
+        self.assertEqual(out["training_mode"],"RSLORA_FP16")
+        self.assertTrue(out["peft"]["use_rslora"])
+        self.assertFalse(recipe.plan_adapter(**self.kwargs)["peft"]["use_rslora"])
+    def test_missing_base_revision_hold(self):
+        k=dict(self.kwargs);k.pop("base_revision")
+        self.assertEqual(recipe.plan_adapter(**k)["state"],"HOLD_IMMUTABLE_HF_REVISION")
+    def test_moving_revision_hold(self):
+        self.assertEqual(recipe.plan_adapter(**(self.kwargs|{"base_revision":"main"}))["state"],"HOLD_IMMUTABLE_HF_REVISION")
+    def test_gguf_cannot_be_hf_training_source(self):
+        self.assertEqual(recipe.plan_adapter(**(self.kwargs|{"base_model_id":"old-35B.gguf"}))["state"],"HOLD_GGUF_NOT_TRAINABLE_HF_BASE")
+    def test_missing_tokenizer_hash_hold(self):
+        self.assertEqual(recipe.plan_adapter(**(self.kwargs|{"tokenizer_sha256":None}))["state"],"HOLD_PROVENANCE_HASH")
+    def test_missing_config_hash_hold(self):
+        self.assertEqual(recipe.plan_adapter(**(self.kwargs|{"base_config_sha256":None}))["state"],"HOLD_PROVENANCE_HASH")
+    def test_invalid_architecture_hold(self):
+        self.assertEqual(recipe.plan_adapter(**(self.kwargs|{"base_architecture":""}))["state"],"HOLD_HF_ARCHITECTURE")
+    def test_bf16_v100_hold(self):
+        self.assertEqual(recipe.plan_adapter(**(self.kwargs|{"precision":"bf16"}))["state"],"HOLD_PRECISION_OR_LR")
+    def test_corpus_hash_streams_without_read_bytes(self):
+        with patch.object(Path,"read_bytes",side_effect=AssertionError("unbounded read")):
+            self.assertEqual(recipe.verify_corpus(str(self.corpus))["state"],"VERIFIED_SOURCE_CORPUS")
+    def test_same_size_corpus_mutation_hold(self):
+        p=self.corpus/"train.jsonl"
+        b=p.read_bytes()
+        p.write_bytes(b.replace(b"safe",b"fake"))
+        self.assertEqual(p.stat().st_size,len(b))
+        self.assertEqual(recipe.verify_corpus(str(self.corpus))["state"],"HOLD_CORPUS_HASH")
+    def test_manifest_symlink_hold(self):
+        f=self.corpus/"manifest.json"
+        dest=self.root/"actual_manifest.json"
+        f.rename(dest);f.symlink_to(dest)
+        self.assertEqual(recipe.verify_corpus(str(self.corpus))["state"],"HOLD_CORPUS_MANIFEST_FILE")
+    def test_corpus_symlink_hold(self):
+        alias=self.root/"alias";alias.symlink_to(self.corpus,target_is_directory=True)
+        self.assertEqual(recipe.verify_corpus(str(alias))["state"],"HOLD_CORPUS_DIRECTORY")
+    def test_boolean_row_count_hold(self):
+        f=self.corpus/"manifest.json"
+        m=json.loads(f.read_text());m["counts"]["train"]=True
+        f.write_text(json.dumps(m))
+        self.assertEqual(recipe.verify_corpus(str(self.corpus))["state"],"HOLD_CORPUS_NO_HOLDOUT")
+    def test_incorrect_mode_type_hold(self):
+        self.assertEqual(recipe.plan_adapter(**self.kwargs,use_rslora="yes")["state"],"HOLD_RSLORA_MODE")
+
+if __name__=="__main__":
+    unittest.main()
